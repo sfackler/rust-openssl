@@ -1,3 +1,5 @@
+use std; // FIXME https://github.com/graydon/rust/issues/1127
+
 import core::ptr;
 import core::str;
 import core::unsafe;
