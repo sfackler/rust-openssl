@@ -17,7 +17,7 @@ native mod _native {
     fn EVP_PKEY_new() -> *EVP_PKEY;
     fn EVP_PKEY_free(k: *EVP_PKEY);
     fn EVP_PKEY_assign(k: *EVP_PKEY, t: int, inner: *ANYKEY);
-    fn EVP_PKEY_get0(k: *EVP_PKEY) -> *ANYKEY;
+    fn EVP_PKEY_get1_RSA(k: *EVP_PKEY) -> *RSA;
 
     fn i2d_PublicKey(k: *EVP_PKEY, buf: **u8) -> int;
     fn d2i_PublicKey(t: int, k: **EVP_PKEY, buf: **u8, len: uint) -> *EVP_PKEY;
@@ -217,7 +217,7 @@ fn mk_pkey() -> pkey {
             st.parts = both;
         }
         fn size() -> uint {
-            _native::RSA_size(any_to_rsa(_native::EVP_PKEY_get0(st.evp)))
+            _native::RSA_size(_native::EVP_PKEY_get1_RSA(st.evp))
         }
         fn can(r: pkeyrole) -> bool {
             alt r {
@@ -228,13 +228,13 @@ fn mk_pkey() -> pkey {
             }
         }
         fn max_data() -> uint unsafe {
-            let rsa = any_to_rsa(_native::EVP_PKEY_get0(st.evp));
+            let rsa = _native::EVP_PKEY_get1_RSA(st.evp);
             let len = _native::RSA_size(rsa);
             // 41 comes from RSA_public_encrypt(3) for OAEP
             ret len - 41u;
         }
         fn encrypt(s: [u8]) -> [u8] unsafe {
-            let rsa = any_to_rsa(_native::EVP_PKEY_get0(st.evp));
+            let rsa = _native::EVP_PKEY_get1_RSA(st.evp);
             let len = _native::RSA_size(rsa);
             // 41 comes from RSA_public_encrypt(3) for OAEP
             assert(vec::len(s) < _native::RSA_size(rsa) - 41u);
@@ -247,7 +247,7 @@ fn mk_pkey() -> pkey {
             ret vec::slice::<u8>(r, 0u, rv as uint);
         }
         fn decrypt(s: [u8]) -> [u8] unsafe {
-            let rsa = any_to_rsa(_native::EVP_PKEY_get0(st.evp));
+            let rsa = _native::EVP_PKEY_get1_RSA(st.evp);
             let len = _native::RSA_size(rsa);
             assert(vec::len(s) == _native::RSA_size(rsa));
             let r: [mutable u8] = vec::init_elt_mut::<u8>(0u8, len + 1u);
@@ -259,7 +259,7 @@ fn mk_pkey() -> pkey {
             ret vec::slice::<u8>(r, 0u, rv as uint);
         }
         fn sign(s: [u8]) -> [u8] unsafe {
-            let rsa = any_to_rsa(_native::EVP_PKEY_get0(st.evp));
+            let rsa = _native::EVP_PKEY_get1_RSA(st.evp);
             let len = _native::RSA_size(rsa);
             let r: [mutable u8] = vec::init_elt_mut::<u8>(0u8, len + 1u);
             let pr: *u8 = vec::unsafe::to_ptr::<u8>(r);
@@ -271,7 +271,7 @@ fn mk_pkey() -> pkey {
             ret vec::slice::<u8>(r, 0u, *plen as uint);
         }
         fn verify(m: [u8], s: [u8]) -> bool unsafe {
-            let rsa = any_to_rsa(_native::EVP_PKEY_get0(st.evp));
+            let rsa = _native::EVP_PKEY_get1_RSA(st.evp);
             let pm: *u8 = vec::unsafe::to_ptr::<u8>(m);
             let ps: *u8 = vec::unsafe::to_ptr::<u8>(s);
             // XXX: 672 == NID_sha256
