@@ -1,8 +1,6 @@
-use std;
-
-import std::ptr;
-import std::str;
-import std::vec;
+import core::ptr;
+import core::str;
+import core::vec;
 
 export crypter;
 export cryptermode;

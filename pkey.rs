@@ -1,9 +1,7 @@
-use std;
-
-import std::ptr;
-import std::str;
-import std::unsafe;
-import std::vec;
+import core::ptr;
+import core::str;
+import core::unsafe;
+import core::vec;
 
 export pkeyrole, encrypt, decrypt, sign, verify;
 export pkey, mk_pkey;
