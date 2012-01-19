@@ -1,6 +1,10 @@
+use std;
+
 import core::ptr;
 import core::str;
 import core::vec;
+
+import ctypes::c_int;
 
 export crypter;
 export cryptermode;
@@ -18,7 +22,7 @@ native mod _native {
     type EVP_CIPHER;
 
     fn EVP_CIPHER_CTX_new() -> EVP_CIPHER_CTX;
-    fn EVP_CIPHER_CTX_set_padding(ctx: EVP_CIPHER_CTX, padding: int);
+    fn EVP_CIPHER_CTX_set_padding(ctx: EVP_CIPHER_CTX, padding: c_int);
 
     fn EVP_aes_128_ecb() -> EVP_CIPHER;
     fn EVP_aes_128_cbc() -> EVP_CIPHER;
@@ -28,7 +32,7 @@ native mod _native {
     fn EVP_aes_256_cbc() -> EVP_CIPHER;
 
     fn EVP_CipherInit(ctx: EVP_CIPHER_CTX, evp: EVP_CIPHER,
-                       key: *u8, iv: *u8, mode: int);
+                       key: *u8, iv: *u8, mode: c_int);
     fn EVP_CipherUpdate(ctx: EVP_CIPHER_CTX, outbuf: *u8, outlen: *u32,
                          inbuf: *u8, inlen: u32);
     fn EVP_CipherFinal(ctx: EVP_CIPHER_CTX, res: *u8, len: *u32);
@@ -39,7 +43,7 @@ Object: crypter
 
 Represents a symmetric cipher context.
 */
-type crypter = obj {
+iface crypter {
     /*
     Method: pad
 
@@ -69,7 +73,7 @@ type crypter = obj {
     Finish crypting. Returns the remaining partial block of output, if any.
     */
     fn final() -> [u8];
-};
+}
 
 tag cryptermode {
     encryptmode;
@@ -96,37 +100,37 @@ fn mk_crypter(t: cryptertype) -> crypter {
         blocksize: uint
     };
 
-    obj crypter(st: crypterstate) {
+    impl of crypter for crypterstate {
         fn pad(padding: bool) {
-            let v = padding ? 1 : 0;
-            _native::EVP_CIPHER_CTX_set_padding(st.ctx, v);
+            let v = (padding ? 1 : 0) as c_int;
+            _native::EVP_CIPHER_CTX_set_padding(self.ctx, v);
         }
 
         fn init (mode: cryptermode, key: [u8], iv: [u8]) unsafe {
-            let m = alt mode { encryptmode. { 1 } decryptmode. { 0 } };
-            assert(vec::len(key) == st.keylen);
+            let m = alt mode { encryptmode. { 1 } decryptmode. { 0 } } as c_int;
+            assert(vec::len(key) == self.keylen);
             let pkey: *u8 = vec::unsafe::to_ptr::<u8>(key);
             let piv: *u8 = vec::unsafe::to_ptr::<u8>(iv);
-            _native::EVP_CipherInit(st.ctx, st.evp, pkey, piv, m);
+            _native::EVP_CipherInit(self.ctx, self.evp, pkey, piv, m);
         }
 
         fn update(data: [u8]) -> [u8] unsafe {
             let pdata: *u8 = vec::unsafe::to_ptr::<u8>(data);
             let datalen: u32 = vec::len(data) as u32;
-            let reslen: u32 = datalen + (st.blocksize as u32);
+            let reslen: u32 = datalen + (self.blocksize as u32);
             let preslen: *u32 = ptr::addr_of(reslen);
             let res: [mutable u8] = vec::init_elt_mut::<u8>(0u8, reslen as uint);
             let pres: *u8 = vec::unsafe::to_ptr::<u8>(res);
-            _native::EVP_CipherUpdate(st.ctx, pres, preslen, pdata, datalen);
+            _native::EVP_CipherUpdate(self.ctx, pres, preslen, pdata, datalen);
             ret vec::slice::<u8>(res, 0u, *preslen as uint);
         }
 
         fn final() -> [u8] unsafe {
-            let reslen: u32 = st.blocksize as u32;
+            let reslen: u32 = self.blocksize as u32;
             let preslen: *u32 = ptr::addr_of(reslen);
             let res: [mutable u8] = vec::init_elt_mut::<u8>(0u8, reslen as uint);
             let pres: *u8 = vec::unsafe::to_ptr::<u8>(res);
-            _native::EVP_CipherFinal(st.ctx, pres, preslen);
+            _native::EVP_CipherFinal(self.ctx, pres, preslen);
             ret vec::slice::<u8>(res, 0u, *preslen as uint);
         }
     }
@@ -134,7 +138,7 @@ fn mk_crypter(t: cryptertype) -> crypter {
     let ctx = _native::EVP_CIPHER_CTX_new();
     let (evp, keylen, blocksz) = evpc(t);
     let st = { evp: evp, ctx: ctx, keylen: keylen, blocksize: blocksz };
-    let h = crypter(st);
+    let h = st as crypter;
     ret h;
 }
 
