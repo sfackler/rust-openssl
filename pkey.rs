@@ -5,6 +5,8 @@ import core::str;
 import core::unsafe;
 import core::vec;
 
+import ctypes::{c_int, c_uint};
+
 export pkeyrole, encrypt, decrypt, sign, verify;
 export pkey, mk_pkey;
 export _native;
@@ -18,21 +20,25 @@ native mod _native {
 
     fn EVP_PKEY_new() -> *EVP_PKEY;
     fn EVP_PKEY_free(k: *EVP_PKEY);
-    fn EVP_PKEY_assign(k: *EVP_PKEY, t: int, inner: *ANYKEY);
+    fn EVP_PKEY_assign(k: *EVP_PKEY, t: c_int, inner: *ANYKEY);
     fn EVP_PKEY_get1_RSA(k: *EVP_PKEY) -> *RSA;
 
-    fn i2d_PublicKey(k: *EVP_PKEY, buf: **u8) -> int;
-    fn d2i_PublicKey(t: int, k: **EVP_PKEY, buf: **u8, len: uint) -> *EVP_PKEY;
-    fn i2d_PrivateKey(k: *EVP_PKEY, buf: **u8) -> int;
-    fn d2i_PrivateKey(t: int, k: **EVP_PKEY, buf: **u8, len: uint) -> *EVP_PKEY;
+    fn i2d_PublicKey(k: *EVP_PKEY, buf: **u8) -> c_int;
+    fn d2i_PublicKey(t: c_int, k: **EVP_PKEY, buf: **u8, len: c_uint) -> *EVP_PKEY;
+    fn i2d_PrivateKey(k: *EVP_PKEY, buf: **u8) -> c_int;
+    fn d2i_PrivateKey(t: c_int, k: **EVP_PKEY, buf: **u8, len: c_uint) -> *EVP_PKEY;
 
-    fn RSA_generate_key(modsz: uint, e: uint, cb: *u8, cbarg: *u8) -> *RSA;
-    fn RSA_size(k: *RSA) -> uint;
+    fn RSA_generate_key(modsz: c_uint, e: c_uint, cb: *u8, cbarg: *u8) -> *RSA;
+    fn RSA_size(k: *RSA) -> c_uint;
 
-    fn RSA_public_encrypt(flen: uint, from: *u8, to: *u8, k: *RSA, pad: int) -> int;
-    fn RSA_private_decrypt(flen: uint, from: *u8, to: *u8, k: *RSA, pad: int) -> int;
-    fn RSA_sign(t: int, m: *u8, mlen: uint, sig: *u8, siglen: *uint, k: *RSA) -> int;
-    fn RSA_verify(t: int, m: *u8, mlen: uint, sig: *u8, siglen: uint, k: *RSA) -> int;
+    fn RSA_public_encrypt(flen: c_uint, from: *u8, to: *u8, k: *RSA,
+                          pad: c_int) -> c_int;
+    fn RSA_private_decrypt(flen: c_uint, from: *u8, to: *u8, k: *RSA,
+                           pad: c_int) -> c_int;
+    fn RSA_sign(t: c_int, m: *u8, mlen: c_uint, sig: *u8, siglen: *c_uint,
+                k: *RSA) -> c_int;
+    fn RSA_verify(t: c_int, m: *u8, mlen: c_uint, sig: *u8, siglen: c_uint,
+                  k: *RSA) -> c_int;
 }
 
 tag pkeyparts {
@@ -58,7 +64,7 @@ Object: pkey
 
 Represents a public key, optionally with a private key attached.
 */
-type pkey = obj {
+iface pkey {
     /*
     Method: save_pub
 
@@ -148,7 +154,7 @@ type pkey = obj {
     message m. Returns true if the signature is valid, and false otherwise.
     */
     fn verify(m: [u8], s: [u8]) -> bool;
-};
+}
 
 fn rsa_to_any(rsa: *_native::RSA) -> *_native::ANYKEY unsafe {
     unsafe::reinterpret_cast::<*_native::RSA, *_native::ANYKEY>(rsa)
@@ -165,9 +171,9 @@ fn mk_pkey() -> pkey {
     };
 
     fn _tostr(st: pkeystate,
-              f: fn@(*_native::EVP_PKEY, **u8) -> int) -> [u8] unsafe {
+              f: fn@(*_native::EVP_PKEY, **u8) -> c_int) -> [u8] unsafe {
         let len = f(st.evp, ptr::null());
-        if len < 0 { ret []; }
+        if len < 0 as c_int { ret []; }
         let s: [mutable u8] = vec::init_elt_mut::<u8>(0u8, len as uint);
         let ps: *u8 = vec::unsafe::to_ptr::<u8>(s);
         let pps: **u8 = ptr::addr_of(ps);
@@ -177,113 +183,120 @@ fn mk_pkey() -> pkey {
     }
 
     fn _fromstr(st: pkeystate,
-                f: fn@(int, **_native::EVP_PKEY, **u8, uint) -> *_native::EVP_PKEY,
+                f: fn@(c_int, **_native::EVP_PKEY, **u8, c_uint) -> *_native::EVP_PKEY,
                 s: [u8]) unsafe {
             let ps: *u8 = vec::unsafe::to_ptr::<u8>(s);
             let pps: **u8 = ptr::addr_of(ps);
             let evp: *_native::EVP_PKEY = ptr::null();
             let pevp: **_native::EVP_PKEY = ptr::addr_of(evp);
-            f(6, pevp, pps, vec::len(s));
+            f(6 as c_int, pevp, pps, vec::len(s) as c_uint);
             st.evp = *pevp;
     }
 
-    obj pkey(st: pkeystate) {
+    impl of pkey for pkeystate {
         fn gen(keysz: uint) unsafe {
-            let rsa = _native::RSA_generate_key(keysz, 65537u, ptr::null(), ptr::null());
+            let rsa = _native::RSA_generate_key(keysz as c_uint, 65537u as c_uint,
+                                                ptr::null(), ptr::null());
             let rsa_ = rsa_to_any(rsa);
             // XXX: 6 == NID_rsaEncryption
-            _native::EVP_PKEY_assign(st.evp, 6, rsa_);
-            st.parts = both;
+            _native::EVP_PKEY_assign(self.evp, 6 as c_int, rsa_);
+            self.parts = both;
         }
 
         fn save_pub() -> [u8] {
             // FIXME: https://github.com/graydon/rust/issues/1281
             let f = bind _native::i2d_PublicKey(_, _);
-            _tostr(st, f)
+            _tostr(self, f)
         }
         fn load_pub(s: [u8]) {
             // FIXME: https://github.com/graydon/rust/issues/1281
             let f = bind _native::d2i_PublicKey(_, _, _, _);
-            _fromstr(st, f, s);
-            st.parts = public;
+            _fromstr(self, f, s);
+            self.parts = public;
         }
         fn save_priv() -> [u8] {
             // FIXME: https://github.com/graydon/rust/issues/1281
             let f = bind _native::i2d_PrivateKey(_, _);
-            _tostr(st, f)
+            _tostr(self, f)
         }
         fn load_priv(s: [u8]) {
             // FIXME: https://github.com/graydon/rust/issues/1281
             let f = bind _native::d2i_PrivateKey(_, _, _, _);
-            _fromstr(st, f, s);
-            st.parts = both;
+            _fromstr(self, f, s);
+            self.parts = both;
         }
         fn size() -> uint {
-            _native::RSA_size(_native::EVP_PKEY_get1_RSA(st.evp))
+            _native::RSA_size(_native::EVP_PKEY_get1_RSA(self.evp)) as uint
         }
         fn can(r: pkeyrole) -> bool {
             alt r {
-                encrypt. { st.parts != neither }
-                verify. { st.parts != neither }
-                decrypt. { st.parts == both }
-                sign. { st.parts == both }
+                encrypt. { self.parts != neither }
+                verify. { self.parts != neither }
+                decrypt. { self.parts == both }
+                sign. { self.parts == both }
             }
         }
         fn max_data() -> uint unsafe {
-            let rsa = _native::EVP_PKEY_get1_RSA(st.evp);
+            let rsa = _native::EVP_PKEY_get1_RSA(self.evp);
             let len = _native::RSA_size(rsa);
             // 41 comes from RSA_public_encrypt(3) for OAEP
-            ret len - 41u;
+            ret len as uint - 41u;
         }
         fn encrypt(s: [u8]) -> [u8] unsafe {
-            let rsa = _native::EVP_PKEY_get1_RSA(st.evp);
+            let rsa = _native::EVP_PKEY_get1_RSA(self.evp);
             let len = _native::RSA_size(rsa);
             // 41 comes from RSA_public_encrypt(3) for OAEP
-            assert(vec::len(s) < _native::RSA_size(rsa) - 41u);
-            let r: [mutable u8] = vec::init_elt_mut::<u8>(0u8, len + 1u);
+            assert(vec::len(s) < _native::RSA_size(rsa) as uint - 41u);
+            let r: [mutable u8] = vec::init_elt_mut::<u8>(0u8, len as uint + 1u);
             let pr: *u8 = vec::unsafe::to_ptr::<u8>(r);
             let ps: *u8 = vec::unsafe::to_ptr::<u8>(s);
             // XXX: 4 == RSA_PKCS1_OAEP_PADDING
-            let rv = _native::RSA_public_encrypt(vec::len(s), ps, pr, rsa, 4);
-            if rv < 0 { ret []; }
+            let rv = _native::RSA_public_encrypt(vec::len(s) as c_uint, ps, pr,
+                                                 rsa, 4 as c_int);
+            if rv < 0 as c_int { ret []; }
             ret vec::slice::<u8>(r, 0u, rv as uint);
         }
         fn decrypt(s: [u8]) -> [u8] unsafe {
-            let rsa = _native::EVP_PKEY_get1_RSA(st.evp);
+            let rsa = _native::EVP_PKEY_get1_RSA(self.evp);
             let len = _native::RSA_size(rsa);
-            assert(vec::len(s) == _native::RSA_size(rsa));
-            let r: [mutable u8] = vec::init_elt_mut::<u8>(0u8, len + 1u);
+            assert(vec::len(s) as c_uint == _native::RSA_size(rsa));
+            let r: [mutable u8] = vec::init_elt_mut::<u8>(0u8, len as uint + 1u);
             let pr: *u8 = vec::unsafe::to_ptr::<u8>(r);
             let ps: *u8 = vec::unsafe::to_ptr::<u8>(s);
             // XXX: 4 == RSA_PKCS1_OAEP_PADDING
-            let rv = _native::RSA_private_decrypt(vec::len(s), ps, pr, rsa, 4);
-            if rv < 0 { ret []; }
+            let rv = _native::RSA_private_decrypt(vec::len(s) as c_uint, ps,
+                                                  pr, rsa, 4 as c_int);
+            if rv < 0 as c_int { ret []; }
             ret vec::slice::<u8>(r, 0u, rv as uint);
         }
         fn sign(s: [u8]) -> [u8] unsafe {
-            let rsa = _native::EVP_PKEY_get1_RSA(st.evp);
+            let rsa = _native::EVP_PKEY_get1_RSA(self.evp);
             let len = _native::RSA_size(rsa);
-            let r: [mutable u8] = vec::init_elt_mut::<u8>(0u8, len + 1u);
+            let r: [mutable u8] = vec::init_elt_mut::<u8>(0u8, len as uint + 1u);
             let pr: *u8 = vec::unsafe::to_ptr::<u8>(r);
             let ps: *u8 = vec::unsafe::to_ptr::<u8>(s);
-            let plen: *uint = ptr::addr_of(len);
+            let plen: *c_uint = ptr::addr_of(len);
             // XXX: 672 == NID_sha256
-            let rv = _native::RSA_sign(672, ps, vec::len(s), pr, plen, rsa);
-            if rv < 0 { ret []; }
+            let rv = _native::RSA_sign(672 as c_int, ps,
+                                       vec::len(s) as c_uint, pr,
+                                       plen, rsa);
+            if rv < 0 as c_int { ret []; }
             ret vec::slice::<u8>(r, 0u, *plen as uint);
         }
         fn verify(m: [u8], s: [u8]) -> bool unsafe {
-            let rsa = _native::EVP_PKEY_get1_RSA(st.evp);
+            let rsa = _native::EVP_PKEY_get1_RSA(self.evp);
             let pm: *u8 = vec::unsafe::to_ptr::<u8>(m);
             let ps: *u8 = vec::unsafe::to_ptr::<u8>(s);
             // XXX: 672 == NID_sha256
-            let rv = _native::RSA_verify(672, pm, vec::len(m), ps, vec::len(s), rsa);
-            ret rv == 1;
+            let rv = _native::RSA_verify(672 as c_int, pm,
+                                         vec::len(m) as c_uint, ps,
+                                         vec::len(s) as c_uint, rsa);
+            ret rv == 1 as c_int;
         }
     }
 
     let st = { mutable evp: _native::EVP_PKEY_new(), mutable parts: neither };
-    let p = pkey(st);
+    let p = st as pkey;
     ret p;
 }
 
