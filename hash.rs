@@ -1,6 +1,10 @@
+use std;
+
 import core::ptr;
 import core::str;
 import core::vec;
+
+import ctypes::c_uint;
 
 export hasher;
 export hashtype;
@@ -10,7 +14,7 @@ export _native;
 
 export md5, sha1, sha224, sha256, sha384, sha512;
 
-type hasher = obj {
+iface hasher {
     /*
     Method: init
 
@@ -32,7 +36,7 @@ type hasher = obj {
     initialization
     */
     fn final() -> [u8];
-};
+}
 
 tag hashtype {
     md5;
@@ -59,7 +63,7 @@ native mod _native {
     fn EVP_sha512() -> EVP_MD;
 
     fn EVP_DigestInit(ctx: EVP_MD_CTX, typ: EVP_MD);
-    fn EVP_DigestUpdate(ctx: EVP_MD_CTX, data: *u8, n: uint);
+    fn EVP_DigestUpdate(ctx: EVP_MD_CTX, data: *u8, n: c_uint);
     fn EVP_DigestFinal(ctx: EVP_MD_CTX, res: *u8, n: *u32);
 }
 
@@ -81,20 +85,20 @@ fn mk_hasher(ht: hashtype) -> hasher {
         len: uint
     };
 
-    obj hasher(st: hasherstate) {
+    impl of hasher for hasherstate {
         fn init() unsafe {
-            _native::EVP_DigestInit(st.ctx, st.evp);
+            _native::EVP_DigestInit(self.ctx, self.evp);
         }
 
         fn update(data: [u8]) unsafe {
             let pdata: *u8 = vec::unsafe::to_ptr::<u8>(data);
-            _native::EVP_DigestUpdate(st.ctx, pdata, vec::len(data));
+            _native::EVP_DigestUpdate(self.ctx, pdata, vec::len(data) as c_uint);
         }
 
         fn final() -> [u8] unsafe {
-            let res: [mutable u8] = vec::init_elt_mut::<u8>(0u8, st.len);
+            let res: [mutable u8] = vec::init_elt_mut::<u8>(0u8, self.len);
             let pres: *u8 = vec::unsafe::to_ptr::<u8>(res);
-            _native::EVP_DigestFinal(st.ctx, pres, ptr::null::<u32>());
+            _native::EVP_DigestFinal(self.ctx, pres, ptr::null::<u32>());
             vec::from_mut::<u8>(res)
         }
     }
@@ -102,7 +106,7 @@ fn mk_hasher(ht: hashtype) -> hasher {
     let ctx = _native::EVP_MD_CTX_create();
     let (evp, mdlen) = evpmd(ht);
     let st = { evp: evp, ctx: ctx, len: mdlen };
-    let h = hasher(st);
+    let h = st as hasher;
     h.init();
     ret h;
 }
@@ -113,15 +117,10 @@ Function: hash
 Hashes the supplied input data using hash t, returning the resulting hash value
 */
 fn hash(t: hashtype, data: [u8]) -> [u8] unsafe {
-    let ctx = _native::EVP_MD_CTX_create();
-    let (evp, mdlen) = evpmd(t);
-    let res: [mutable u8] = vec::init_elt_mut::<u8>(0u8, mdlen);
-    let pres: *u8 = vec::unsafe::to_ptr::<u8>(res);
-    let pdata: *u8 = vec::unsafe::to_ptr::<u8>(data);
-    _native::EVP_DigestInit(ctx, evp);
-    _native::EVP_DigestUpdate(ctx, pdata, vec::len(data));
-    _native::EVP_DigestFinal(ctx, pres, ptr::null::<u32>());
-    ret vec::from_mut::<u8>(res);
+    let h = mk_hasher(t);
+    h.init();
+    h.update(data);
+    ret h.final();
 }
 
 #[cfg(test)]
@@ -156,12 +155,4 @@ mod tests {
              0xb4u8, 0x10u8, 0xffu8, 0x61u8, 0xf2u8, 0x00u8, 0x15u8, 0xadu8];
         assert(hash(sha256, s0) == d0);
     }
-}
-
-fn main() {
-    let h = mk_hasher(sha512);
-    h.init();
-    h.update(str::bytes(""));
-    log h.final();
-    log hash(sha512, str::bytes(""));
 }
