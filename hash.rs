@@ -4,7 +4,7 @@ import core::ptr;
 import core::str;
 import core::vec;
 
-import ctypes::c_uint;
+import libc::c_uint;
 
 export hasher;
 export hashtype;
@@ -38,21 +38,21 @@ iface hasher {
     fn final() -> [u8];
 }
 
-tag hashtype {
-    md5;
-    sha1;
-    sha224;
-    sha256;
-    sha384;
-    sha512;
+enum hashtype {
+    md5,
+    sha1,
+    sha224,
+    sha256,
+    sha384,
+    sha512
 }
+
+type EVP_MD_CTX = *libc::c_void;
+type EVP_MD = *libc::c_void;
 
 #[link_name = "crypto"]
 #[abi = "cdecl"]
 native mod _native {
-    type EVP_MD_CTX;
-    type EVP_MD;
-
     fn EVP_MD_CTX_create() -> EVP_MD_CTX;
 
     fn EVP_md5() -> EVP_MD;
@@ -67,21 +67,21 @@ native mod _native {
     fn EVP_DigestFinal(ctx: EVP_MD_CTX, res: *u8, n: *u32);
 }
 
-fn evpmd(t: hashtype) -> (_native::EVP_MD, uint) {
+fn evpmd(t: hashtype) -> (EVP_MD, uint) {
     alt t {
-        md5. { (_native::EVP_md5(), 16u) }
-        sha1. { (_native::EVP_sha1(), 20u) }
-        sha224. { (_native::EVP_sha224(), 28u) }
-        sha256. { (_native::EVP_sha256(), 32u) }
-        sha384. { (_native::EVP_sha384(), 48u) }
-        sha512. { (_native::EVP_sha512(), 64u) }
+        md5 { (_native::EVP_md5(), 16u) }
+        sha1 { (_native::EVP_sha1(), 20u) }
+        sha224 { (_native::EVP_sha224(), 28u) }
+        sha256 { (_native::EVP_sha256(), 32u) }
+        sha384 { (_native::EVP_sha384(), 48u) }
+        sha512 { (_native::EVP_sha512(), 64u) }
     }
 }
 
 fn mk_hasher(ht: hashtype) -> hasher {
     type hasherstate = {
-        evp: _native::EVP_MD,
-        ctx: _native::EVP_MD_CTX,
+        evp: EVP_MD,
+        ctx: EVP_MD_CTX,
         len: uint
     };
 
@@ -96,7 +96,7 @@ fn mk_hasher(ht: hashtype) -> hasher {
         }
 
         fn final() -> [u8] unsafe {
-            let res: [mutable u8] = vec::init_elt_mut::<u8>(0u8, self.len);
+            let res: [mut u8] = vec::to_mut(vec::from_elem::<u8>(self.len, 0u8));
             let pres: *u8 = vec::unsafe::to_ptr::<u8>(res);
             _native::EVP_DigestFinal(self.ctx, pres, ptr::null::<u32>());
             vec::from_mut::<u8>(res)

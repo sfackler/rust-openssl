@@ -1,23 +1,21 @@
-use std; // FIXME https://github.com/graydon/rust/issues/1127
-
 import core::ptr;
 import core::str;
 import core::unsafe;
 import core::vec;
 
-import ctypes::{c_int, c_uint};
+import libc::{c_int, c_uint};
 
 export pkeyrole, encrypt, decrypt, sign, verify;
 export pkey, mk_pkey;
 export _native;
 
+type EVP_PKEY = *libc::c_void;
+type ANYKEY = *libc::c_void;
+type RSA = *libc::c_void;
+
 #[link_name = "crypto"]
 #[abi = "cdecl"]
 native mod _native {
-    type EVP_PKEY;
-    type ANYKEY;
-    type RSA;
-
     fn EVP_PKEY_new() -> *EVP_PKEY;
     fn EVP_PKEY_free(k: *EVP_PKEY);
     fn EVP_PKEY_assign(k: *EVP_PKEY, t: c_int, inner: *ANYKEY);
@@ -41,10 +39,10 @@ native mod _native {
                   k: *RSA) -> c_int;
 }
 
-tag pkeyparts {
-    neither;
-    public;
-    both;
+enum pkeyparts {
+    neither,
+    public,
+    both
 }
 
 /*
@@ -52,11 +50,11 @@ Tag: pkeyrole
 
 Represents a role an asymmetric key might be appropriate for.
 */
-tag pkeyrole {
-    encrypt;
-    decrypt;
-    sign;
-    verify;
+enum pkeyrole {
+    encrypt,
+    decrypt,
+    sign,
+    verify
 }
 
 /*
@@ -156,25 +154,25 @@ iface pkey {
     fn verify(m: [u8], s: [u8]) -> bool;
 }
 
-fn rsa_to_any(rsa: *_native::RSA) -> *_native::ANYKEY unsafe {
-    unsafe::reinterpret_cast::<*_native::RSA, *_native::ANYKEY>(rsa)
+fn rsa_to_any(rsa: *RSA) -> *ANYKEY unsafe {
+    unsafe::reinterpret_cast::<*RSA, *ANYKEY>(rsa)
 }
 
-fn any_to_rsa(anykey: *_native::ANYKEY) -> *_native::RSA unsafe {
-    unsafe::reinterpret_cast::<*_native::ANYKEY, *_native::RSA>(anykey)
+fn any_to_rsa(anykey: *ANYKEY) -> *RSA unsafe {
+    unsafe::reinterpret_cast::<*ANYKEY, *RSA>(anykey)
 }
 
 fn mk_pkey() -> pkey {
     type pkeystate = {
-        mutable evp: *_native::EVP_PKEY,
-        mutable parts: pkeyparts
+        mut evp: *EVP_PKEY,
+        mut parts: pkeyparts
     };
 
     fn _tostr(st: pkeystate,
-              f: fn@(*_native::EVP_PKEY, **u8) -> c_int) -> [u8] unsafe {
+              f: fn@(*EVP_PKEY, **u8) -> c_int) -> [u8] unsafe {
         let len = f(st.evp, ptr::null());
         if len < 0 as c_int { ret []; }
-        let s: [mutable u8] = vec::init_elt_mut::<u8>(0u8, len as uint);
+        let s: [mut u8] = vec::to_mut(vec::from_elem::<u8>(len as uint, 0u8));
         let ps: *u8 = vec::unsafe::to_ptr::<u8>(s);
         let pps: **u8 = ptr::addr_of(ps);
         let r = f(st.evp, pps);
@@ -183,12 +181,12 @@ fn mk_pkey() -> pkey {
     }
 
     fn _fromstr(st: pkeystate,
-                f: fn@(c_int, **_native::EVP_PKEY, **u8, c_uint) -> *_native::EVP_PKEY,
+                f: fn@(c_int, **EVP_PKEY, **u8, c_uint) -> *EVP_PKEY,
                 s: [u8]) unsafe {
             let ps: *u8 = vec::unsafe::to_ptr::<u8>(s);
             let pps: **u8 = ptr::addr_of(ps);
-            let evp: *_native::EVP_PKEY = ptr::null();
-            let pevp: **_native::EVP_PKEY = ptr::addr_of(evp);
+            let evp: *EVP_PKEY = ptr::null();
+            let pevp: **EVP_PKEY = ptr::addr_of(evp);
             f(6 as c_int, pevp, pps, vec::len(s) as c_uint);
             st.evp = *pevp;
     }
@@ -230,10 +228,10 @@ fn mk_pkey() -> pkey {
         }
         fn can(r: pkeyrole) -> bool {
             alt r {
-                encrypt. { self.parts != neither }
-                verify. { self.parts != neither }
-                decrypt. { self.parts == both }
-                sign. { self.parts == both }
+                encrypt { self.parts != neither }
+                verify { self.parts != neither }
+                decrypt { self.parts == both }
+                sign { self.parts == both }
             }
         }
         fn max_data() -> uint unsafe {
@@ -247,7 +245,7 @@ fn mk_pkey() -> pkey {
             let len = _native::RSA_size(rsa);
             // 41 comes from RSA_public_encrypt(3) for OAEP
             assert(vec::len(s) < _native::RSA_size(rsa) as uint - 41u);
-            let r: [mutable u8] = vec::init_elt_mut::<u8>(0u8, len as uint + 1u);
+            let r: [mut u8] = vec::to_mut(vec::from_elem::<u8>(len as uint + 1u, 0u8));
             let pr: *u8 = vec::unsafe::to_ptr::<u8>(r);
             let ps: *u8 = vec::unsafe::to_ptr::<u8>(s);
             // XXX: 4 == RSA_PKCS1_OAEP_PADDING
@@ -260,7 +258,7 @@ fn mk_pkey() -> pkey {
             let rsa = _native::EVP_PKEY_get1_RSA(self.evp);
             let len = _native::RSA_size(rsa);
             assert(vec::len(s) as c_uint == _native::RSA_size(rsa));
-            let r: [mutable u8] = vec::init_elt_mut::<u8>(0u8, len as uint + 1u);
+            let r: [mut u8] = vec::to_mut(vec::from_elem::<u8>(len as uint + 1u, 0u8));
             let pr: *u8 = vec::unsafe::to_ptr::<u8>(r);
             let ps: *u8 = vec::unsafe::to_ptr::<u8>(s);
             // XXX: 4 == RSA_PKCS1_OAEP_PADDING
@@ -272,7 +270,7 @@ fn mk_pkey() -> pkey {
         fn sign(s: [u8]) -> [u8] unsafe {
             let rsa = _native::EVP_PKEY_get1_RSA(self.evp);
             let len = _native::RSA_size(rsa);
-            let r: [mutable u8] = vec::init_elt_mut::<u8>(0u8, len as uint + 1u);
+            let r: [mut u8] = vec::to_mut(vec::from_elem::<u8>(len as uint + 1u, 0u8));
             let pr: *u8 = vec::unsafe::to_ptr::<u8>(r);
             let ps: *u8 = vec::unsafe::to_ptr::<u8>(s);
             let plen: *c_uint = ptr::addr_of(len);
@@ -295,7 +293,7 @@ fn mk_pkey() -> pkey {
         }
     }
 
-    let st = { mutable evp: _native::EVP_PKEY_new(), mutable parts: neither };
+    let st = { mut evp: _native::EVP_PKEY_new(), mut parts: neither };
     let p = st as pkey;
     ret p;
 }
