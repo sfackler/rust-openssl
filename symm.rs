@@ -1,9 +1,3 @@
-use std;
-
-import core::ptr;
-import core::str;
-import core::vec;
-
 import libc::c_int;
 
 export crypter;
@@ -11,7 +5,6 @@ export cryptermode;
 export encryptmode, decryptmode;
 export cryptertype;
 export aes_256_ecb, aes_256_cbc;
-export mk_crypter;
 export encrypt, decrypt;
 export _native;
 
@@ -38,40 +31,26 @@ native mod _native {
     fn EVP_CipherFinal(ctx: EVP_CIPHER_CTX, res: *u8, len: *u32);
 }
 
-/*
-Object: crypter
-
-Represents a symmetric cipher context.
-*/
+#[doc = "Represents a symmetric cipher context."]
 iface crypter {
-    /*
-    Method: pad
-
+    #[doc = "
     Enables or disables padding. If padding is disabled, total amount of data
     encrypted must be a multiple of block size.
-    */
+    "]
     fn pad(padding: bool);
 
-    /*
-    Method: init
-
-    Initializes this crypter.
-    */
+    #[doc = "Initializes this crypter."]
     fn init(mode: cryptermode, key: [u8], iv: [u8]);
 
-    /*
-    Method: update
-
+    #[doc = "
     Update this crypter with more data to encrypt or decrypt. Returns encrypted
     or decrypted bytes.
-    */
+    "]
     fn update(data: [u8]) -> [u8];
 
-    /*
-    Method: final
-
+    #[doc = "
     Finish crypting. Returns the remaining partial block of output, if any.
-    */
+    "]
     fn final() -> [u8];
 }
 
@@ -92,7 +71,7 @@ fn evpc(t: cryptertype) -> (EVP_CIPHER, uint, uint) {
     }
 }
 
-fn mk_crypter(t: cryptertype) -> crypter {
+fn crypter(t: cryptertype) -> crypter {
     type crypterstate = {
         evp: EVP_CIPHER,
         ctx: EVP_CIPHER_CTX,
@@ -142,28 +121,24 @@ fn mk_crypter(t: cryptertype) -> crypter {
     ret h;
 }
 
-/*
-Function: encrypt
-
+#[doc = "
 Encrypts data, using the specified crypter type in encrypt mode with the
 specified key and iv; returns the resulting (encrypted) data.
-*/
+"]
 fn encrypt(t: cryptertype, key: [u8], iv: [u8], data: [u8]) -> [u8] {
-    let c = mk_crypter(t);
+    let c = crypter(t);
     c.init(encryptmode, key, iv);
     let r = c.update(data);
     let rest = c.final();
     ret r + rest;
 }
 
-/*
-Function: decrypt
-
+#[doc = "
 Decrypts data, using the specified crypter type in decrypt mode with the
 specified key and iv; returns the resulting (decrypted) data.
-*/
+"]
 fn decrypt(t: cryptertype, key: [u8], iv: [u8], data: [u8]) -> [u8] {
-    let c = mk_crypter(t);
+    let c = crypter(t);
     c.init(decryptmode, key, iv);
     let r = c.update(data);
     let rest = c.final();
@@ -187,7 +162,7 @@ mod tests {
         let c0 =
             [ 0x8eu8, 0xa2u8, 0xb7u8, 0xcau8, 0x51u8, 0x67u8, 0x45u8, 0xbfu8,
               0xeau8, 0xfcu8, 0x49u8, 0x90u8, 0x4bu8, 0x49u8, 0x60u8, 0x89u8 ];
-        let c = mk_crypter(aes_256_ecb);
+        let c = crypter(aes_256_ecb);
         c.init(encryptmode, k0, []);
         c.pad(false);
         let r0 = c.update(p0) + c.final();
