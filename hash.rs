@@ -1,40 +1,23 @@
-use std;
-
-import core::ptr;
-import core::str;
-import core::vec;
-
 import libc::c_uint;
 
 export hasher;
 export hashtype;
-export mk_hasher;
 export hash;
 export _native;
 
 export md5, sha1, sha224, sha256, sha384, sha512;
 
 iface hasher {
-    /*
-    Method: init
-
-    Initializes this hasher
-    */
+    #[doc = "Initializes this hasher"]
     fn init();
 
-    /*
-    Method: update
-
-    Update this hasher with more input bytes
-    */
+    #[doc = "Update this hasher with more input bytes"]
     fn update([u8]);
 
-    /*
-    Method: final
-
+    #[doc = "
     Return the digest of all bytes added to this hasher since its last
     initialization
-    */
+    "]
     fn final() -> [u8];
 }
 
@@ -78,7 +61,7 @@ fn evpmd(t: hashtype) -> (EVP_MD, uint) {
     }
 }
 
-fn mk_hasher(ht: hashtype) -> hasher {
+fn hasher(ht: hashtype) -> hasher {
     type hasherstate = {
         evp: EVP_MD,
         ctx: EVP_MD_CTX,
@@ -111,13 +94,11 @@ fn mk_hasher(ht: hashtype) -> hasher {
     ret h;
 }
 
-/*
-Function: hash
-
+#[doc = "
 Hashes the supplied input data using hash t, returning the resulting hash value
-*/
+"]
 fn hash(t: hashtype, data: [u8]) -> [u8] unsafe {
-    let h = mk_hasher(t);
+    let h = hasher(t);
     h.init();
     h.update(data);
     ret h.final();

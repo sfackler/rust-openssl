@@ -1,12 +1,7 @@
-import core::ptr;
-import core::str;
-import core::unsafe;
-import core::vec;
-
 import libc::{c_int, c_uint};
 
 export pkeyrole, encrypt, decrypt, sign, verify;
-export pkey, mk_pkey;
+export pkey;
 export _native;
 
 type EVP_PKEY = *libc::c_void;
@@ -45,11 +40,7 @@ enum pkeyparts {
     both
 }
 
-/*
-Tag: pkeyrole
-
-Represents a role an asymmetric key might be appropriate for.
-*/
+#[doc = "Represents a role an asymmetric key might be appropriate for."]
 enum pkeyrole {
     encrypt,
     decrypt,
@@ -57,100 +48,68 @@ enum pkeyrole {
     verify
 }
 
-/*
-Object: pkey
-
-Represents a public key, optionally with a private key attached.
-*/
+#[doc = "Represents a public key, optionally with a private key attached."]
 iface pkey {
-    /*
-    Method: save_pub
-
+    #[doc = "
     Returns a serialized form of the public key, suitable for load_pub().
-    */
+    "]
     fn save_pub() -> [u8];
 
-    /*
-    Method: load_pub
-
+    #[doc = "
     Loads a serialized form of the public key, as produced by save_pub().
-    */
+    "]
     fn load_pub(s: [u8]);
 
-    /*
-    Method: save_priv
-
+    #[doc = "
     Returns a serialized form of the public and private keys, suitable for
     load_priv().
-    */
+    "]
     fn save_priv() -> [u8];
 
-    /*
-    Method: load_priv
-
+    #[doc = "
     Loads a serialized form of the public and private keys, as produced by
     save_priv().
-    */
+    "]
     fn load_priv(s: [u8]);
 
-    /*
-    Method: size()
-
-    Returns the size of the public key modulus.
-    */
+    #[doc = "Returns the size of the public key modulus."]
     fn size() -> uint;
 
-    /*
-    Method: gen()
-
-    Generates a public/private keypair of the specified size.
-    */
+    #[doc = "Generates a public/private keypair of the specified size."]
     fn gen(keysz: uint);
 
-    /*
-    Method: can()
-
+    #[doc = "
     Returns whether this pkey object can perform the specified role.
-    */
+    "]
     fn can(role: pkeyrole) -> bool;
 
-    /*
-    Method: max_data()
-
+    #[doc = "
     Returns the maximum amount of data that can be encrypted by an encrypt()
     call.
-    */
+    "]
     fn max_data() -> uint;
 
-    /*
-    Method: encrypt()
-
+    #[doc = "
     Encrypts data using OAEP padding, returning the encrypted data. The supplied
     data must not be larger than max_data().
-    */
+    "]
     fn encrypt(s: [u8]) -> [u8];
 
-    /*
-    Method: decrypt()
-
+    #[doc = "
     Decrypts data, expecting OAEP padding, returning the decrypted data.
-    */
+    "]
     fn decrypt(s: [u8]) -> [u8];
 
-    /*
-    Method: sign()
-
+    #[doc = "
     Signs data, using OpenSSL's default scheme and sha256. Unlike encrypt(), can
     process an arbitrary amount of data; returns the signature.
-    */
+    "]
     fn sign(s: [u8]) -> [u8];
 
-    /*
-    Method: verify()
-
+    #[doc = "
     Verifies a signature s (using OpenSSL's default scheme and sha256) on a
     message m. Returns true if the signature is valid, and false otherwise.
-    */
+    "]
     fn verify(m: [u8], s: [u8]) -> bool;
 }
 
@@ -162,7 +121,7 @@ fn any_to_rsa(anykey: *ANYKEY) -> *RSA unsafe {
     unsafe::reinterpret_cast::<*ANYKEY, *RSA>(anykey)
 }
 
-fn mk_pkey() -> pkey {
+fn pkey() -> pkey {
     type pkeystate = {
         mut evp: *EVP_PKEY,
         mut parts: pkeyparts
@@ -302,8 +261,8 @@ fn mk_pkey() -> pkey {
 mod tests {
     #[test]
     fn test_gen_pub() {
-        let k0 = mk_pkey();
-        let k1 = mk_pkey();
+        let k0 = pkey();
+        let k1 = pkey();
         k0.gen(512u);
         k1.load_pub(k0.save_pub());
         assert(k0.save_pub() == k1.save_pub());
@@ -320,8 +279,8 @@ mod tests {
 
     #[test]
     fn test_gen_priv() {
-        let k0 = mk_pkey();
-        let k1 = mk_pkey();
+        let k0 = pkey();
+        let k1 = pkey();
         k0.gen(512u);
         k1.load_priv(k0.save_priv());
         assert(k0.save_priv() == k1.save_priv());
@@ -338,8 +297,8 @@ mod tests {
 
     #[test]
     fn test_encrypt() {
-        let k0 = mk_pkey();
-        let k1 = mk_pkey();
+        let k0 = pkey();
+        let k1 = pkey();
         let msg: [u8] = [0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
         k0.gen(512u);
         k1.load_pub(k0.save_pub());
@@ -350,8 +309,8 @@ mod tests {
 
     #[test]
     fn test_sign() {
-        let k0 = mk_pkey();
-        let k1 = mk_pkey();
+        let k0 = pkey();
+        let k1 = pkey();
         let msg: [u8] = [0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
         k0.gen(512u);
         k1.load_pub(k0.save_pub());
