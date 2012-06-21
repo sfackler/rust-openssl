@@ -161,25 +161,17 @@ fn pkey() -> pkey {
         }
 
         fn save_pub() -> [u8] {
-            // FIXME: https://github.com/graydon/rust/issues/1281
-            let f = bind _native::i2d_PublicKey(_, _);
-            _tostr(self, f)
+            _tostr(self, _native::i2d_PublicKey)
         }
         fn load_pub(s: [u8]) {
-            // FIXME: https://github.com/graydon/rust/issues/1281
-            let f = bind _native::d2i_PublicKey(_, _, _, _);
-            _fromstr(self, f, s);
+            _fromstr(self, _native::d2i_PublicKey, s);
             self.parts = public;
         }
         fn save_priv() -> [u8] {
-            // FIXME: https://github.com/graydon/rust/issues/1281
-            let f = bind _native::i2d_PrivateKey(_, _);
-            _tostr(self, f)
+            _tostr(self, _native::i2d_PrivateKey)
         }
         fn load_priv(s: [u8]) {
-            // FIXME: https://github.com/graydon/rust/issues/1281
-            let f = bind _native::d2i_PrivateKey(_, _, _, _);
-            _fromstr(self, f, s);
+            _fromstr(self, _native::d2i_PrivateKey, s);
             self.parts = both;
         }
         fn size() -> uint {
