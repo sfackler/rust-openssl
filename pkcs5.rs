@@ -31,8 +31,9 @@ fn pbkdf2_hmac_sha1(pass: str, salt: [u8], iter: uint, keylen: uint) -> [u8] {
                 if r != 1 as c_int { fail; }
 
                 unsafe { vec::unsafe::set_len(out, keylen); }
-                out
             }
+
+            out
         }
     }
 }

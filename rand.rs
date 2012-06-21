@@ -15,8 +15,9 @@ fn rand_bytes(len: uint) -> [u8] {
         if r != 1 as c_int { fail }
 
         unsafe { vec::unsafe::set_len(out, len); }
-        out
     }
+
+    out
 }
 
 #[cfg(test)]
