@@ -2,16 +2,16 @@ import libc::{c_uchar, c_int};
 
 #[link_name = "crypto"]
 #[abi = "cdecl"]
-native mod _native {
+extern mod libcrypto {
     fn RAND_bytes(buf: *c_uchar, num: c_int) -> c_int;
 }
 
-fn rand_bytes(len: uint) -> [u8] {
-    let mut out = [];
+fn rand_bytes(len: uint) -> ~[u8] {
+    let mut out = ~[];
     vec::reserve(out, len);
 
-    vec::as_buf(out) { |out_buf|
-        let r = _native::RAND_bytes(out_buf, len as c_int);
+    do vec::as_buf(out) |out_buf| {
+        let r = libcrypto::RAND_bytes(out_buf, len as c_int);
         if r != 1 as c_int { fail }
 
         unsafe { vec::unsafe::set_len(out, len); }
