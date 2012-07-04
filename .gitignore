@@ -1,0 +1,4 @@
+*.sw[po]
+libcrypto*.dylib
+*.dSYM/
+crypto
