@@ -1,11 +1,12 @@
-import libc::{c_int, c_uint};
+use libc::{c_int, c_uint};
 
-export pkeyrole, encrypt, decrypt, sign, verify;
-export pkey;
-export libcrypto;
-
+#[allow(non_camel_case_types)]
 type EVP_PKEY = *libc::c_void;
+
+#[allow(non_camel_case_types)]
 type ANYKEY = *libc::c_void;
+
+#[allow(non_camel_case_types)]
 type RSA = *libc::c_void;
 
 #[link_name = "crypto"]
@@ -16,281 +17,336 @@ extern mod libcrypto {
     fn EVP_PKEY_assign(k: *EVP_PKEY, t: c_int, inner: *ANYKEY);
     fn EVP_PKEY_get1_RSA(k: *EVP_PKEY) -> *RSA;
 
-    fn i2d_PublicKey(k: *EVP_PKEY, buf: **u8) -> c_int;
-    fn d2i_PublicKey(t: c_int, k: **EVP_PKEY, buf: **u8, len: c_uint) -> *EVP_PKEY;
-    fn i2d_PrivateKey(k: *EVP_PKEY, buf: **u8) -> c_int;
-    fn d2i_PrivateKey(t: c_int, k: **EVP_PKEY, buf: **u8, len: c_uint) -> *EVP_PKEY;
+    fn i2d_PublicKey(k: *EVP_PKEY, buf: &*mut u8) -> c_int;
+    fn d2i_PublicKey(t: c_int, k: &*EVP_PKEY, buf: &*u8, len: c_uint) -> *EVP_PKEY;
+    fn i2d_PrivateKey(k: *EVP_PKEY, buf: &*mut u8) -> c_int;
+    fn d2i_PrivateKey(t: c_int, k: &*EVP_PKEY, buf: &*u8, len: c_uint) -> *EVP_PKEY;
 
     fn RSA_generate_key(modsz: c_uint, e: c_uint, cb: *u8, cbarg: *u8) -> *RSA;
     fn RSA_size(k: *RSA) -> c_uint;
 
-    fn RSA_public_encrypt(flen: c_uint, from: *u8, to: *u8, k: *RSA,
+    fn RSA_public_encrypt(flen: c_uint, from: *u8, to: *mut u8, k: *RSA,
                           pad: c_int) -> c_int;
-    fn RSA_private_decrypt(flen: c_uint, from: *u8, to: *u8, k: *RSA,
+    fn RSA_private_decrypt(flen: c_uint, from: *u8, to: *mut u8, k: *RSA,
                            pad: c_int) -> c_int;
-    fn RSA_sign(t: c_int, m: *u8, mlen: c_uint, sig: *u8, siglen: *c_uint,
+    fn RSA_sign(t: c_int, m: *u8, mlen: c_uint, sig: *mut u8, siglen: *c_uint,
                 k: *RSA) -> c_int;
     fn RSA_verify(t: c_int, m: *u8, mlen: c_uint, sig: *u8, siglen: c_uint,
                   k: *RSA) -> c_int;
 }
 
-enum pkeyparts {
-    neither,
-    public,
-    both
+enum Parts {
+    Neither,
+    Public,
+    Both
 }
 
 #[doc = "Represents a role an asymmetric key might be appropriate for."]
-enum pkeyrole {
-    encrypt,
-    decrypt,
-    sign,
-    verify
-}
-
-#[doc = "Represents a public key, optionally with a private key attached."]
-iface pkey {
-    #[doc = "
-    Returns a serialized form of the public key, suitable for load_pub().
-    "]
-    fn save_pub() -> ~[u8];
-
-    #[doc = "
-    Loads a serialized form of the public key, as produced by save_pub().
-    "]
-    fn load_pub(s: ~[u8]);
-
-    #[doc = "
-    Returns a serialized form of the public and private keys, suitable for
-    load_priv().
-    "]
-    fn save_priv() -> ~[u8];
-
-    #[doc = "
-    Loads a serialized form of the public and private keys, as produced by
-    save_priv().
-    "]
-    fn load_priv(s: ~[u8]);
-
-    #[doc = "Returns the size of the public key modulus."]
-    fn size() -> uint;
-
-    #[doc = "Generates a public/private keypair of the specified size."]
-    fn gen(keysz: uint);
-
-    #[doc = "
-    Returns whether this pkey object can perform the specified role.
-    "]
-    fn can(role: pkeyrole) -> bool;
-
-    #[doc = "
-    Returns the maximum amount of data that can be encrypted by an encrypt()
-    call.
-    "]
-    fn max_data() -> uint;
-
-    #[doc = "
-    Encrypts data using OAEP padding, returning the encrypted data. The supplied
-    data must not be larger than max_data().
-    "]
-    fn encrypt(s: ~[u8]) -> ~[u8];
-
-    #[doc = "
-    Decrypts data, expecting OAEP padding, returning the decrypted data.
-    "]
-    fn decrypt(s: ~[u8]) -> ~[u8];
-
-    #[doc = "
-    Signs data, using OpenSSL's default scheme and sha256. Unlike encrypt(), can
-    process an arbitrary amount of data; returns the signature.
-    "]
-    fn sign(s: ~[u8]) -> ~[u8];
-
-    #[doc = "
-    Verifies a signature s (using OpenSSL's default scheme and sha256) on a
-    message m. Returns true if the signature is valid, and false otherwise.
-    "]
-    fn verify(m: ~[u8], s: ~[u8]) -> bool;
+pub enum Role {
+    Encrypt,
+    Decrypt,
+    Sign,
+    Verify
 }
 
 fn rsa_to_any(rsa: *RSA) -> *ANYKEY unsafe {
-    unsafe::reinterpret_cast::<*RSA, *ANYKEY>(rsa)
+    cast::reinterpret_cast(&rsa)
 }
 
 fn any_to_rsa(anykey: *ANYKEY) -> *RSA unsafe {
-    unsafe::reinterpret_cast::<*ANYKEY, *RSA>(anykey)
+    cast::reinterpret_cast(&anykey)
 }
 
-fn pkey() -> pkey {
-    type pkeystate = {
-        mut evp: *EVP_PKEY,
-        mut parts: pkeyparts
-    };
+pub struct PKey {
+    priv mut evp: *EVP_PKEY,
+    priv mut parts: Parts,
+}
 
-    fn _tostr(st: pkeystate,
-              f: fn@(*EVP_PKEY, **u8) -> c_int) -> ~[u8] unsafe {
-        let len = f(st.evp, ptr::null());
-        if len < 0 as c_int { ret ~[]; }
-        let s = vec::to_mut(vec::from_elem::<u8>(len as uint, 0u8));
-        let ps = vec::unsafe::to_ptr::<u8>(s);
-        let pps = ptr::addr_of(ps);
-        let r = f(st.evp, pps);
-        let bytes = vec::slice::<u8>(s, 0u, r as uint);
-        ret bytes;
+pub fn PKey() -> PKey {
+    PKey { evp: libcrypto::EVP_PKEY_new(), parts: Neither }
+}
+
+priv impl PKey {
+    fn _tostr(f: fn@(*EVP_PKEY, &*mut u8) -> c_int) -> ~[u8] unsafe {
+        let buf = ptr::mut_null();
+        let len = f(self.evp, &buf);
+        if len < 0 as c_int { return ~[]; }
+        let mut s = vec::from_elem(len as uint, 0u8);
+
+        let r = do vec::as_mut_buf(s) |ps, _len| {
+            f(self.evp, &ps)
+        };
+
+        vec::slice(s, 0u, r as uint)
     }
 
-    fn _fromstr(st: pkeystate,
-                f: fn@(c_int, **EVP_PKEY, **u8, c_uint) -> *EVP_PKEY,
-                s: ~[u8]) unsafe {
-            let ps: *u8 = vec::unsafe::to_ptr::<u8>(s);
-            let pps: **u8 = ptr::addr_of(ps);
-            let evp: *EVP_PKEY = ptr::null();
-            let pevp: **EVP_PKEY = ptr::addr_of(evp);
-            f(6 as c_int, pevp, pps, vec::len(s) as c_uint);
-            st.evp = *pevp;
+    fn _fromstr(
+        s: &[u8],
+        f: fn@(c_int, &*EVP_PKEY, &*u8, c_uint) -> *EVP_PKEY
+    ) unsafe {
+        do vec::as_imm_buf(s) |ps, len| {
+            let evp = ptr::null();
+            f(6 as c_int, &evp, &ps, len as c_uint);
+            self.evp = evp;
+        }
+    }
+}
+
+///Represents a public key, optionally with a private key attached.
+pub impl PKey {
+    fn gen(keysz: uint) unsafe {
+        let rsa = libcrypto::RSA_generate_key(
+            keysz as c_uint,
+            65537u as c_uint,
+            ptr::null(),
+            ptr::null()
+        );
+
+        let rsa_ = rsa_to_any(rsa);
+        // XXX: 6 == NID_rsaEncryption
+        libcrypto::EVP_PKEY_assign(self.evp, 6 as c_int, rsa_);
+        self.parts = Both;
     }
 
-    impl of pkey for pkeystate {
-        fn gen(keysz: uint) unsafe {
-            let rsa = libcrypto::RSA_generate_key(keysz as c_uint, 65537u as c_uint,
-                                                ptr::null(), ptr::null());
-            let rsa_ = rsa_to_any(rsa);
-            // XXX: 6 == NID_rsaEncryption
-            libcrypto::EVP_PKEY_assign(self.evp, 6 as c_int, rsa_);
-            self.parts = both;
-        }
+    /**
+     * Returns a serialized form of the public key, suitable for load_pub().
+     */
+    fn save_pub() -> ~[u8] {
+        self._tostr(libcrypto::i2d_PublicKey)
+    }
 
-        fn save_pub() -> ~[u8] {
-            _tostr(self, libcrypto::i2d_PublicKey)
+    /**
+     * Loads a serialized form of the public key, as produced by save_pub().
+     */
+    fn load_pub(s: &[u8]) {
+        self._fromstr(s, libcrypto::d2i_PublicKey);
+        self.parts = Public;
+    }
+
+    /**
+     * Returns a serialized form of the public and private keys, suitable for
+     * load_priv().
+     */
+    fn save_priv() -> ~[u8] {
+        self._tostr(libcrypto::i2d_PrivateKey)
+    }
+    /**
+     * Loads a serialized form of the public and private keys, as produced by
+     * save_priv().
+     */
+    fn load_priv(s: &[u8]) {
+        self._fromstr(s, libcrypto::d2i_PrivateKey);
+        self.parts = Both;
+    }
+
+    /**
+     * Returns the size of the public key modulus.
+     */
+    fn size() -> uint {
+        libcrypto::RSA_size(libcrypto::EVP_PKEY_get1_RSA(self.evp)) as uint
+    }
+
+    /**
+     * Returns whether this pkey object can perform the specified role.
+     */
+    fn can(r: Role) -> bool {
+        match r {
+            Encrypt =>
+                match self.parts {
+                    Neither => false,
+                    _ => true,
+                },
+            Verify =>
+                match self.parts {
+                    Neither => false,
+                    _ => true,
+                },
+            Decrypt =>
+                match self.parts {
+                    Both => true,
+                    _ => false,
+                },
+            Sign =>
+                match self.parts {
+                    Both => true,
+                    _ => false,
+                },
         }
-        fn load_pub(s: ~[u8]) {
-            _fromstr(self, libcrypto::d2i_PublicKey, s);
-            self.parts = public;
-        }
-        fn save_priv() -> ~[u8] {
-            _tostr(self, libcrypto::i2d_PrivateKey)
-        }
-        fn load_priv(s: ~[u8]) {
-            _fromstr(self, libcrypto::d2i_PrivateKey, s);
-            self.parts = both;
-        }
-        fn size() -> uint {
-            libcrypto::RSA_size(libcrypto::EVP_PKEY_get1_RSA(self.evp)) as uint
-        }
-        fn can(r: pkeyrole) -> bool {
-            alt r {
-                encrypt { self.parts != neither }
-                verify { self.parts != neither }
-                decrypt { self.parts == both }
-                sign { self.parts == both }
+    }
+
+    /**
+     * Returns the maximum amount of data that can be encrypted by an encrypt()
+     * call.
+     */
+    fn max_data() -> uint unsafe {
+        let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
+        let len = libcrypto::RSA_size(rsa);
+
+        // 41 comes from RSA_public_encrypt(3) for OAEP
+        len as uint - 41u
+    }
+
+    /**
+     * Encrypts data using OAEP padding, returning the encrypted data. The
+     * supplied data must not be larger than max_data().
+     */
+    fn encrypt(s: &[u8]) -> ~[u8] unsafe {
+        let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
+        let len = libcrypto::RSA_size(rsa);
+
+        // 41 comes from RSA_public_encrypt(3) for OAEP
+        assert s.len() < libcrypto::RSA_size(rsa) as uint - 41u;
+
+        let mut r = vec::from_elem(len as uint + 1u, 0u8);
+
+        do vec::as_mut_buf(r) |pr, _len| {
+            do vec::as_imm_buf(s) |ps, s_len| {
+                // XXX: 4 == RSA_PKCS1_OAEP_PADDING
+                let rv = libcrypto::RSA_public_encrypt(
+                    s_len as c_uint,
+                    ps,
+                    pr,
+                    rsa, 4 as c_int
+                );
+
+                if rv < 0 as c_int {
+                    ~[]
+                } else {
+                    vec::slice(r, 0u, rv as uint)
+                }
             }
         }
-        fn max_data() -> uint unsafe {
-            let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
-            let len = libcrypto::RSA_size(rsa);
-            // 41 comes from RSA_public_encrypt(3) for OAEP
-            ret len as uint - 41u;
-        }
-        fn encrypt(s: ~[u8]) -> ~[u8] unsafe {
-            let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
-            let len = libcrypto::RSA_size(rsa);
-            // 41 comes from RSA_public_encrypt(3) for OAEP
-            assert(vec::len(s) < libcrypto::RSA_size(rsa) as uint - 41u);
-            let r = vec::to_mut(vec::from_elem::<u8>(len as uint + 1u, 0u8));
-            let pr = vec::unsafe::to_ptr::<u8>(r);
-            let ps = vec::unsafe::to_ptr::<u8>(s);
-            // XXX: 4 == RSA_PKCS1_OAEP_PADDING
-            let rv = libcrypto::RSA_public_encrypt(vec::len(s) as c_uint, ps, pr,
-                                                 rsa, 4 as c_int);
-            if rv < 0 as c_int { ret ~[]; }
-            ret vec::slice::<u8>(r, 0u, rv as uint);
-        }
-        fn decrypt(s: ~[u8]) -> ~[u8] unsafe {
-            let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
-            let len = libcrypto::RSA_size(rsa);
-            assert(vec::len(s) as c_uint == libcrypto::RSA_size(rsa));
-            let r = vec::to_mut(vec::from_elem::<u8>(len as uint + 1u, 0u8));
-            let pr = vec::unsafe::to_ptr::<u8>(r);
-            let ps = vec::unsafe::to_ptr::<u8>(s);
-            // XXX: 4 == RSA_PKCS1_OAEP_PADDING
-            let rv = libcrypto::RSA_private_decrypt(vec::len(s) as c_uint, ps,
-                                                  pr, rsa, 4 as c_int);
-            if rv < 0 as c_int { ret ~[]; }
-            ret vec::slice::<u8>(r, 0u, rv as uint);
-        }
-        fn sign(s: ~[u8]) -> ~[u8] unsafe {
-            let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
-            let len = libcrypto::RSA_size(rsa);
-            let r = vec::to_mut(vec::from_elem::<u8>(len as uint + 1u, 0u8));
-            let pr = vec::unsafe::to_ptr::<u8>(r);
-            let ps = vec::unsafe::to_ptr::<u8>(s);
-            let plen = ptr::addr_of(len);
-            // XXX: 672 == NID_sha256
-            let rv = libcrypto::RSA_sign(672 as c_int, ps,
-                                       vec::len(s) as c_uint, pr,
-                                       plen, rsa);
-            if rv < 0 as c_int { ret ~[]; }
-            ret vec::slice::<u8>(r, 0u, *plen as uint);
-        }
-        fn verify(m: ~[u8], s: ~[u8]) -> bool unsafe {
-            let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
-            let pm: *u8 = vec::unsafe::to_ptr::<u8>(m);
-            let ps: *u8 = vec::unsafe::to_ptr::<u8>(s);
-            // XXX: 672 == NID_sha256
-            let rv = libcrypto::RSA_verify(672 as c_int, pm,
-                                         vec::len(m) as c_uint, ps,
-                                         vec::len(s) as c_uint, rsa);
-            ret rv == 1 as c_int;
+    }
+
+    /**
+     * Decrypts data, expecting OAEP padding, returning the decrypted data.
+     */
+    fn decrypt(s: &[u8]) -> ~[u8] unsafe {
+        let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
+        let len = libcrypto::RSA_size(rsa);
+
+        assert s.len() as c_uint == libcrypto::RSA_size(rsa);
+
+        let mut r = vec::from_elem(len as uint + 1u, 0u8);
+
+        do vec::as_mut_buf(r) |pr, _len| {
+            do vec::as_imm_buf(s) |ps, s_len| {
+                // XXX: 4 == RSA_PKCS1_OAEP_PADDING
+                let rv = libcrypto::RSA_private_decrypt(
+                    s_len as c_uint,
+                    ps,
+                    pr,
+                    rsa,
+                    4 as c_int
+                );
+
+                if rv < 0 as c_int {
+                    ~[]
+                } else {
+                    vec::slice(r, 0u, rv as uint)
+                }
+            }
         }
     }
 
-    let st = { mut evp: libcrypto::EVP_PKEY_new(), mut parts: neither };
-    let p = st as pkey;
-    ret p;
+    /**
+     * Signs data, using OpenSSL's default scheme and sha256. Unlike encrypt(),
+     * can process an arbitrary amount of data; returns the signature.
+     */
+    fn sign(s: &[u8]) -> ~[u8] unsafe {
+        let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
+        let len = libcrypto::RSA_size(rsa);
+        let mut r = vec::from_elem(len as uint + 1u, 0u8);
+
+        do vec::as_mut_buf(r) |pr, _len| {
+            do vec::as_imm_buf(s) |ps, s_len| {
+                let plen = ptr::addr_of(len);
+
+                // XXX: 672 == NID_sha256
+                let rv = libcrypto::RSA_sign(
+                    672 as c_int,
+                    ps,
+                    s_len as c_uint,
+                    pr,
+                    plen,
+                    rsa);
+
+                if rv < 0 as c_int {
+                    ~[]
+                } else {
+                    vec::slice(r, 0u, *plen as uint)
+                }
+            }
+        }
+    }
+
+    /**
+     * Verifies a signature s (using OpenSSL's default scheme and sha256) on a
+     * message m. Returns true if the signature is valid, and false otherwise.
+     */
+    fn verify(m: &[u8], s: &[u8]) -> bool unsafe {
+        let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
+
+        do vec::as_imm_buf(m) |pm, m_len| {
+            do vec::as_imm_buf(s) |ps, s_len| {
+                // XXX: 672 == NID_sha256
+                let rv = libcrypto::RSA_verify(
+                    672 as c_int,
+                    pm,
+                    m_len as c_uint,
+                    ps,
+                    s_len as c_uint,
+                    rsa
+                );
+
+                rv == 1 as c_int
+            }
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     #[test]
     fn test_gen_pub() {
-        let k0 = pkey();
-        let k1 = pkey();
+        let k0 = PKey();
+        let k1 = PKey();
         k0.gen(512u);
         k1.load_pub(k0.save_pub());
         assert(k0.save_pub() == k1.save_pub());
         assert(k0.size() == k1.size());
-        assert(k0.can(encrypt));
-        assert(k0.can(decrypt));
-        assert(k0.can(verify));
-        assert(k0.can(sign));
-        assert(k1.can(encrypt));
-        assert(!k1.can(decrypt));
-        assert(k1.can(verify));
-        assert(!k1.can(sign));
+        assert(k0.can(Encrypt));
+        assert(k0.can(Decrypt));
+        assert(k0.can(Verify));
+        assert(k0.can(Sign));
+        assert(k1.can(Encrypt));
+        assert(!k1.can(Decrypt));
+        assert(k1.can(Verify));
+        assert(!k1.can(Sign));
     }
 
     #[test]
     fn test_gen_priv() {
-        let k0 = pkey();
-        let k1 = pkey();
+        let k0 = PKey();
+        let k1 = PKey();
         k0.gen(512u);
         k1.load_priv(k0.save_priv());
         assert(k0.save_priv() == k1.save_priv());
         assert(k0.size() == k1.size());
-        assert(k0.can(encrypt));
-        assert(k0.can(decrypt));
-        assert(k0.can(verify));
-        assert(k0.can(sign));
-        assert(k1.can(encrypt));
-        assert(k1.can(decrypt));
-        assert(k1.can(verify));
-        assert(k1.can(sign));
+        assert(k0.can(Encrypt));
+        assert(k0.can(Decrypt));
+        assert(k0.can(Verify));
+        assert(k0.can(Sign));
+        assert(k1.can(Encrypt));
+        assert(k1.can(Decrypt));
+        assert(k1.can(Verify));
+        assert(k1.can(Sign));
     }
 
     #[test]
     fn test_encrypt() {
-        let k0 = pkey();
-        let k1 = pkey();
+        let k0 = PKey();
+        let k1 = PKey();
         let msg = ~[0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
         k0.gen(512u);
         k1.load_pub(k0.save_pub());
@@ -301,8 +357,8 @@ mod tests {
 
     #[test]
     fn test_sign() {
-        let k0 = pkey();
-        let k1 = pkey();
+        let k0 = PKey();
+        let k1 = PKey();
         let msg = ~[0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
         k0.gen(512u);
         k1.load_pub(k0.save_pub());

@@ -1,14 +1,13 @@
-import libc::c_int;
+use libc::{c_int, c_uint};
 
-export crypter;
-export cryptermode;
 export encryptmode, decryptmode;
-export cryptertype;
-export aes_256_ecb, aes_256_cbc;
 export encrypt, decrypt;
 export libcrypto;
 
+#[allow(non_camel_case_types)]
 type EVP_CIPHER_CTX = *libc::c_void;
+
+#[allow(non_camel_case_types)]
 type EVP_CIPHER = *libc::c_void;
 
 #[link_name = "crypto"]
@@ -25,124 +24,141 @@ extern mod libcrypto {
     fn EVP_aes_256_cbc() -> EVP_CIPHER;
 
     fn EVP_CipherInit(ctx: EVP_CIPHER_CTX, evp: EVP_CIPHER,
-                       key: *u8, iv: *u8, mode: c_int);
-    fn EVP_CipherUpdate(ctx: EVP_CIPHER_CTX, outbuf: *u8, outlen: *u32,
-                         inbuf: *u8, inlen: u32);
-    fn EVP_CipherFinal(ctx: EVP_CIPHER_CTX, res: *u8, len: *u32);
+                      key: *u8, iv: *u8, mode: c_int);
+    fn EVP_CipherUpdate(ctx: EVP_CIPHER_CTX, outbuf: *mut u8,
+                        outlen: &mut c_uint, inbuf: *u8, inlen: c_int);
+    fn EVP_CipherFinal(ctx: EVP_CIPHER_CTX, res: *mut u8, len: &mut c_int);
 }
 
-#[doc = "Represents a symmetric cipher context."]
-iface crypter {
-    #[doc = "
-    Enables or disables padding. If padding is disabled, total amount of data
-    encrypted must be a multiple of block size.
-    "]
-    fn pad(padding: bool);
-
-    #[doc = "Initializes this crypter."]
-    fn init(mode: cryptermode, key: ~[u8], iv: ~[u8]);
-
-    #[doc = "
-    Update this crypter with more data to encrypt or decrypt. Returns encrypted
-    or decrypted bytes.
-    "]
-    fn update(data: ~[u8]) -> ~[u8];
-
-    #[doc = "
-    Finish crypting. Returns the remaining partial block of output, if any.
-    "]
-    fn final() -> ~[u8];
+pub enum Mode {
+    Encrypt,
+    Decrypt,
 }
 
-enum cryptermode {
-    encryptmode,
-    decryptmode
+#[allow(non_camel_case_types)]
+pub enum Type {
+    AES_256_ECB,
+    AES_256_CBC,
 }
 
-enum cryptertype {
-    aes_256_ecb,
-    aes_256_cbc
-}
-
-fn evpc(t: cryptertype) -> (EVP_CIPHER, uint, uint) {
-    alt t {
-        aes_256_ecb { (libcrypto::EVP_aes_256_ecb(), 32u, 16u) }
-        aes_256_cbc { (libcrypto::EVP_aes_256_cbc(), 32u, 16u) }
+fn evpc(t: Type) -> (EVP_CIPHER, uint, uint) {
+    match t {
+        AES_256_ECB => (libcrypto::EVP_aes_256_ecb(), 32u, 16u),
+        AES_256_CBC => (libcrypto::EVP_aes_256_cbc(), 32u, 16u),
     }
 }
 
-fn crypter(t: cryptertype) -> crypter {
-    type crypterstate = {
-        evp: EVP_CIPHER,
-        ctx: EVP_CIPHER_CTX,
-        keylen: uint,
-        blocksize: uint
-    };
+/// Represents a symmetric cipher context.
+pub struct Crypter {
+    priv evp: EVP_CIPHER,
+    priv ctx: EVP_CIPHER_CTX,
+    priv keylen: uint,
+    priv blocksize: uint
+}
 
-    impl of crypter for crypterstate {
-        fn pad(padding: bool) {
-            let v = if padding { 1 } else { 0} as c_int;
-            libcrypto::EVP_CIPHER_CTX_set_padding(self.ctx, v);
-        }
-
-        fn init (mode: cryptermode, key: ~[u8], iv: ~[u8]) unsafe {
-            let m = alt mode { encryptmode { 1 } decryptmode { 0 } } as c_int;
-            assert(vec::len(key) == self.keylen);
-            let pkey: *u8 = vec::unsafe::to_ptr::<u8>(key);
-            let piv: *u8 = vec::unsafe::to_ptr::<u8>(iv);
-            libcrypto::EVP_CipherInit(self.ctx, self.evp, pkey, piv, m);
-        }
-
-        fn update(data: ~[u8]) -> ~[u8] unsafe {
-            let pdata = vec::unsafe::to_ptr::<u8>(data);
-            let datalen = vec::len(data) as u32;
-            let reslen = datalen + (self.blocksize as u32);
-            let preslen = ptr::addr_of(reslen);
-            let res = vec::to_mut(vec::from_elem::<u8>(reslen as uint, 0u8));
-            let pres = vec::unsafe::to_ptr::<u8>(res);
-            libcrypto::EVP_CipherUpdate(self.ctx, pres, preslen, pdata, datalen);
-            ret vec::slice::<u8>(res, 0u, *preslen as uint);
-        }
-
-        fn final() -> ~[u8] unsafe {
-            let reslen = self.blocksize as u32;
-            let preslen = ptr::addr_of(reslen);
-            let res = vec::to_mut(vec::from_elem::<u8>(reslen as uint, 0u8));
-            let pres = vec::unsafe::to_ptr::<u8>(res);
-            libcrypto::EVP_CipherFinal(self.ctx, pres, preslen);
-            ret vec::slice::<u8>(res, 0u, *preslen as uint);
-        }
-    }
-
+pub fn Crypter(t: Type) -> Crypter {
     let ctx = libcrypto::EVP_CIPHER_CTX_new();
     let (evp, keylen, blocksz) = evpc(t);
-    let st = { evp: evp, ctx: ctx, keylen: keylen, blocksize: blocksz };
-    let h = st as crypter;
-    ret h;
+    Crypter { evp: evp, ctx: ctx, keylen: keylen, blocksize: blocksz }
 }
 
-#[doc = "
-Encrypts data, using the specified crypter type in encrypt mode with the
-specified key and iv; returns the resulting (encrypted) data.
-"]
-fn encrypt(t: cryptertype, key: ~[u8], iv: ~[u8], data: ~[u8]) -> ~[u8] {
-    let c = crypter(t);
-    c.init(encryptmode, key, iv);
-    let r = c.update(data);
-    let rest = c.final();
-    ret r + rest;
+pub impl Crypter {
+    /**
+     * Enables or disables padding. If padding is disabled, total amount of
+     * data encrypted must be a multiple of block size.
+     */
+    fn pad(padding: bool) {
+        let v = if padding { 1 } else { 0} as c_int;
+        libcrypto::EVP_CIPHER_CTX_set_padding(self.ctx, v);
+    }
+
+    /**
+     * Initializes this crypter.
+     */
+    fn init(mode: Mode, key: &[u8], iv: &[u8]) unsafe {
+        let mode = match mode {
+            Encrypt => 1 as c_int,
+            Decrypt => 0 as c_int,
+        };
+        assert key.len() == self.keylen;
+
+        do vec::as_imm_buf(key) |pkey, _len| {
+            do vec::as_imm_buf(iv) |piv, _len| {
+                libcrypto::EVP_CipherInit(
+                    self.ctx,
+                    self.evp,
+                    pkey,
+                    piv,
+                    mode
+                )
+            }
+        }
+    }
+
+    /**
+     * Update this crypter with more data to encrypt or decrypt. Returns
+     * encrypted or decrypted bytes.
+     */
+    fn update(data: &[u8]) -> ~[u8] unsafe {
+        do vec::as_imm_buf(data) |pdata, len| {
+            let mut res = vec::from_elem(len + self.blocksize, 0u8);
+
+            let reslen = do vec::as_mut_buf(res) |pres, _len| {
+                let mut reslen = (len + self.blocksize) as u32;
+
+                libcrypto::EVP_CipherUpdate(
+                    self.ctx,
+                    pres,
+                    &mut reslen,
+                    pdata,
+                    len as c_int
+                );
+
+                reslen
+            };
+
+            vec::slice(res, 0u, reslen as uint)
+        }
+    }
+
+    /**
+     * Finish crypting. Returns the remaining partial block of output, if any.
+     */
+    fn final() -> ~[u8] unsafe {
+        let res = vec::to_mut(vec::from_elem(self.blocksize, 0u8));
+
+        let reslen = do vec::as_mut_buf(res) |pres, _len| {
+            let mut reslen = self.blocksize as c_int;
+            libcrypto::EVP_CipherFinal(self.ctx, pres, &mut reslen);
+            reslen
+        };
+
+        vec::slice(res, 0u, reslen as uint)
+    }
 }
 
-#[doc = "
-Decrypts data, using the specified crypter type in decrypt mode with the
-specified key and iv; returns the resulting (decrypted) data.
-"]
-fn decrypt(t: cryptertype, key: ~[u8], iv: ~[u8], data: ~[u8]) -> ~[u8] {
-    let c = crypter(t);
-    c.init(decryptmode, key, iv);
+/**
+ * Encrypts data, using the specified crypter type in encrypt mode with the
+ * specified key and iv; returns the resulting (encrypted) data.
+ */
+fn encrypt(t: Type, key: &[u8], iv: ~[u8], data: &[u8]) -> ~[u8] {
+    let c = Crypter(t);
+    c.init(Encrypt, key, iv);
     let r = c.update(data);
     let rest = c.final();
-    ret r + rest;
+    r + rest
+}
+
+/**
+ * Decrypts data, using the specified crypter type in decrypt mode with the
+ * specified key and iv; returns the resulting (decrypted) data.
+ */
+fn decrypt(t: Type, key: &[u8], iv: ~[u8], data: &[u8]) -> ~[u8] {
+    let c = Crypter(t);
+    c.init(Decrypt, key, iv);
+    let r = c.update(data);
+    let rest = c.final();
+    r + rest
 }
 
 #[cfg(test)]
@@ -162,12 +178,12 @@ mod tests {
         let c0 =
            ~[ 0x8eu8, 0xa2u8, 0xb7u8, 0xcau8, 0x51u8, 0x67u8, 0x45u8, 0xbfu8,
               0xeau8, 0xfcu8, 0x49u8, 0x90u8, 0x4bu8, 0x49u8, 0x60u8, 0x89u8 ];
-        let c = crypter(aes_256_ecb);
-        c.init(encryptmode, k0, ~[]);
+        let c = Crypter(AES_256_ECB);
+        c.init(Encrypt, k0, ~[]);
         c.pad(false);
         let r0 = c.update(p0) + c.final();
         assert(r0 == c0);
-        c.init(decryptmode, k0, ~[]);
+        c.init(Decrypt, k0, ~[]);
         c.pad(false);
         let p1 = c.update(r0) + c.final();
         assert(p1 == p0);

@@ -1,21 +1,20 @@
-import libc::{c_uchar, c_int};
+use libc::{c_uchar, c_int};
 
 #[link_name = "crypto"]
 #[abi = "cdecl"]
 extern mod libcrypto {
-    fn RAND_bytes(buf: *c_uchar, num: c_int) -> c_int;
+    fn RAND_bytes(buf: *mut u8, num: c_int) -> c_int;
 }
 
-fn rand_bytes(len: uint) -> ~[u8] {
-    let mut out = ~[];
-    vec::reserve(out, len);
+pub fn rand_bytes(len: uint) -> ~[u8] {
+    let mut out = vec::with_capacity(len);
 
-    do vec::as_buf(out) |out_buf| {
+    do vec::as_mut_buf(out) |out_buf, len| {
         let r = libcrypto::RAND_bytes(out_buf, len as c_int);
         if r != 1 as c_int { fail }
-
-        unsafe { vec::unsafe::set_len(out, len); }
     }
+
+    unsafe { vec::raw::set_len(out, len); }
 
     out
 }
