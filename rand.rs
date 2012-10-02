@@ -14,7 +14,7 @@ pub fn rand_bytes(len: uint) -> ~[u8] {
         if r != 1 as c_int { fail }
     }
 
-    unsafe { vec::raw::set_len(out, len); }
+    unsafe { vec::raw::set_len(&mut out, len); }
 
     out
 }

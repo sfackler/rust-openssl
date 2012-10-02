@@ -260,7 +260,7 @@ pub impl PKey {
 
         do vec::as_mut_buf(r) |pr, _len| {
             do vec::as_imm_buf(s) |ps, s_len| {
-                let plen = ptr::addr_of(len);
+                let plen = ptr::addr_of(&len);
 
                 // XXX: 672 == NID_sha256
                 let rv = libcrypto::RSA_sign(
