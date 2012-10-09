@@ -21,8 +21,8 @@
 
 extern mod std; // FIXME https://github.com/mozilla/rust/issues/1127
 
-mod hash;
-mod pkey;
-mod symm;
-mod pkcs5;
-mod rand;
+pub mod hash;
+pub mod pkey;
+pub mod symm;
+pub mod pkcs5;
+pub mod rand;
