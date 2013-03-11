@@ -49,6 +49,19 @@ pub enum Role {
     Verify
 }
 
+#[doc = "Type of encryption padding to use."]
+pub enum EncryptionPadding {
+    OAEP,
+    PKCS1v15
+}
+
+fn openssl_padding_code(padding: EncryptionPadding) -> c_int {
+    match padding {
+        OAEP => 4,
+        PKCS1v15 => 1
+    }
+}
+
 fn rsa_to_any(rsa: *RSA) -> *ANYKEY unsafe {
     cast::reinterpret_cast(&rsa)
 }
@@ -186,27 +199,22 @@ pub impl PKey {
         len as uint - 41u
     }
 
-    /**
-     * Encrypts data using OAEP padding, returning the encrypted data. The
-     * supplied data must not be larger than max_data().
-     */
-    fn encrypt(s: &[u8]) -> ~[u8] unsafe {
+    fn encrypt_with_padding(s: &[u8], padding: EncryptionPadding) -> ~[u8] unsafe {
         let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
         let len = libcrypto::RSA_size(rsa);
 
-        // 41 comes from RSA_public_encrypt(3) for OAEP
-        assert s.len() < libcrypto::RSA_size(rsa) as uint - 41u;
+        assert s.len() < self.max_data();
 
         let mut r = vec::from_elem(len as uint + 1u, 0u8);
 
         do vec::as_mut_buf(r) |pr, _len| {
             do vec::as_imm_buf(s) |ps, s_len| {
-                // XXX: 4 == RSA_PKCS1_OAEP_PADDING
                 let rv = libcrypto::RSA_public_encrypt(
                     s_len as c_uint,
                     ps,
                     pr,
-                    rsa, 4 as c_int
+                    rsa,
+                    openssl_padding_code(padding)
                 );
 
                 if rv < 0 as c_int {
@@ -218,10 +226,7 @@ pub impl PKey {
         }
     }
 
-    /**
-     * Decrypts data, expecting OAEP padding, returning the decrypted data.
-     */
-    fn decrypt(s: &[u8]) -> ~[u8] unsafe {
+    fn decrypt_with_padding(s: &[u8], padding: EncryptionPadding) -> ~[u8] unsafe {
         let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
         let len = libcrypto::RSA_size(rsa);
 
@@ -231,13 +236,12 @@ pub impl PKey {
 
         do vec::as_mut_buf(r) |pr, _len| {
             do vec::as_imm_buf(s) |ps, s_len| {
-                // XXX: 4 == RSA_PKCS1_OAEP_PADDING
                 let rv = libcrypto::RSA_private_decrypt(
                     s_len as c_uint,
                     ps,
                     pr,
                     rsa,
-                    4 as c_int
+                    openssl_padding_code(padding)
                 );
 
                 if rv < 0 as c_int {
@@ -248,6 +252,17 @@ pub impl PKey {
             }
         }
     }
+
+    /**
+     * Encrypts data using OAEP padding, returning the encrypted data. The
+     * supplied data must not be larger than max_data().
+     */
+    fn encrypt(s: &[u8]) -> ~[u8] unsafe { self.encrypt_with_padding(s, OAEP) }
+
+    /**
+     * Decrypts data, expecting OAEP padding, returning the decrypted data.
+     */
+    fn decrypt(s: &[u8]) -> ~[u8] unsafe { self.decrypt_with_padding(s, OAEP) }
 
     /**
      * Signs data, using OpenSSL's default scheme and sha256. Unlike encrypt(),
@@ -352,6 +367,18 @@ mod tests {
         k1.load_pub(k0.save_pub());
         let emsg = k1.encrypt(msg);
         let dmsg = k0.decrypt(emsg);
+        assert(msg == dmsg);
+    }
+
+    #[test]
+    fn test_encrypt_pkcs() {
+        let k0 = PKey();
+        let k1 = PKey();
+        let msg = ~[0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
+        k0.gen(512u);
+        k1.load_pub(k0.save_pub());
+        let emsg = k1.encrypt_with_padding(msg, PKCS1v15);
+        let dmsg = k0.decrypt_with_padding(emsg, PKCS1v15);
         assert(msg == dmsg);
     }
 
