@@ -1,4 +1,5 @@
 use libc::{c_int, c_uint};
+use hash::{HashType, MD5, SHA1, SHA224, SHA256, SHA384, SHA512};
 
 #[allow(non_camel_case_types)]
 type EVP_PKEY = *libc::c_void;
@@ -59,6 +60,17 @@ fn openssl_padding_code(padding: EncryptionPadding) -> c_int {
     match padding {
         OAEP => 4,
         PKCS1v15 => 1
+    }
+}
+
+fn openssl_hash_nid(hash: HashType) -> c_int {
+    match hash {
+        MD5    => 4,   // NID_md5,
+        SHA1   => 64,  // NID_sha1
+        SHA224 => 675, // NID_sha224
+        SHA256 => 672, // NID_sha256
+        SHA384 => 673, // NID_sha384
+        SHA512 => 674, // NID_sha512
     }
 }
 
@@ -268,7 +280,15 @@ pub impl PKey {
      * Signs data, using OpenSSL's default scheme and sha256. Unlike encrypt(),
      * can process an arbitrary amount of data; returns the signature.
      */
-    fn sign(s: &[u8]) -> ~[u8] unsafe {
+    fn sign(s: &[u8]) -> ~[u8] unsafe { self.sign_with_hash(s, SHA256) }
+
+    /**
+     * Verifies a signature s (using OpenSSL's default scheme and sha256) on a
+     * message m. Returns true if the signature is valid, and false otherwise.
+     */
+    fn verify(m: &[u8], s: &[u8]) -> bool unsafe { self.verify_with_hash(m, s, SHA256) }
+
+    fn sign_with_hash(s: &[u8], hash: HashType) -> ~[u8] unsafe {
         let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
         let len = libcrypto::RSA_size(rsa);
         let mut r = vec::from_elem(len as uint + 1u, 0u8);
@@ -277,9 +297,8 @@ pub impl PKey {
             do vec::as_imm_buf(s) |ps, s_len| {
                 let plen = ptr::addr_of(&len);
 
-                // XXX: 672 == NID_sha256
                 let rv = libcrypto::RSA_sign(
-                    672 as c_int,
+                    openssl_hash_nid(hash),
                     ps,
                     s_len as c_uint,
                     pr,
@@ -295,18 +314,13 @@ pub impl PKey {
         }
     }
 
-    /**
-     * Verifies a signature s (using OpenSSL's default scheme and sha256) on a
-     * message m. Returns true if the signature is valid, and false otherwise.
-     */
-    fn verify(m: &[u8], s: &[u8]) -> bool unsafe {
+    fn verify_with_hash(m: &[u8], s: &[u8], hash: HashType) -> bool unsafe {
         let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
 
         do vec::as_imm_buf(m) |pm, m_len| {
             do vec::as_imm_buf(s) |ps, s_len| {
-                // XXX: 672 == NID_sha256
                 let rv = libcrypto::RSA_verify(
-                    672 as c_int,
+                    openssl_hash_nid(hash),
                     pm,
                     m_len as c_uint,
                     ps,
@@ -393,4 +407,19 @@ mod tests {
         let rv = k1.verify(msg, sig);
         assert(rv == true);
     }
+
+    #[test]
+    fn test_sign_hashes() {
+        let k0 = PKey();
+        let k1 = PKey();
+        let msg = ~[0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
+        k0.gen(512u);
+        k1.load_pub(k0.save_pub());
+
+        let sig = k0.sign_with_hash(msg, MD5);
+
+        assert k1.verify_with_hash(msg, sig, MD5);
+        assert !k1.verify_with_hash(msg, sig, SHA1);
+    }
+
 }
