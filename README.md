@@ -10,9 +10,9 @@ libcrypto. Currently provided:
 * Keypair generation (pkey.rs)
   * RSA, all key lengths
 * Asymmetric encryption (pkey.rs)
-  * RSA with PKCS#1 OAEP padding
+  * RSA with PKCS #1 OAEP padding or PKCS #1 v1.5 padding
 * Digital signatures (pkey.rs)
-  * RSA with whatever your system openssl does (PKCS#1 on my system) and sha256
+  * RSA with PKCS #1 v1.5 padding and any supported hash
 
 Each module provides two interfaces: a low-level API which wraps the OpenSSL
 interfaces as directly as possible and a high-level API which presents the
