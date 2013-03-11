@@ -6,7 +6,8 @@ libcrypto. Currently provided:
   * SHA-1
   * SHA-2 (224, 256, 384, 512)
 * Symmetric crypto (symm.rs)
-  * AES in ECB or CBC mode, all key lengths
+  * AES-128 or AES-256 in ECB or CBC mode
+  * RC4-128
 * Keypair generation (pkey.rs)
   * RSA, all key lengths
 * Asymmetric encryption (pkey.rs)

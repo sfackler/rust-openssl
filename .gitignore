@@ -1,4 +1,5 @@
 *.sw[po]
 libcrypto*.dylib
+libcrypto*.so
 *.dSYM/
 crypto
