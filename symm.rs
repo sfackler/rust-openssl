@@ -18,10 +18,13 @@ extern mod libcrypto {
 
     fn EVP_aes_128_ecb() -> EVP_CIPHER;
     fn EVP_aes_128_cbc() -> EVP_CIPHER;
-    fn EVP_aes_192_ecb() -> EVP_CIPHER;
-    fn EVP_aes_192_cbc() -> EVP_CIPHER;
+    fn EVP_aes_128_ctr() -> EVP_CIPHER;
+    fn EVP_aes_128_gcm() -> EVP_CIPHER;
+
     fn EVP_aes_256_ecb() -> EVP_CIPHER;
     fn EVP_aes_256_cbc() -> EVP_CIPHER;
+    fn EVP_aes_256_ctr() -> EVP_CIPHER;
+    fn EVP_aes_256_gcm() -> EVP_CIPHER;
 
     fn EVP_rc4() -> EVP_CIPHER;
 
@@ -41,9 +44,13 @@ pub enum Mode {
 pub enum Type {
     AES_128_ECB,
     AES_128_CBC,
+    AES_128_CTR,
+    AES_128_GCM,
 
     AES_256_ECB,
     AES_256_CBC,
+    AES_256_CTR,
+    AES_256_GCM,
 
     RC4_128,
 }
@@ -52,9 +59,13 @@ fn evpc(t: Type) -> (EVP_CIPHER, uint, uint) {
     match t {
         AES_128_ECB => (libcrypto::EVP_aes_128_ecb(), 16u, 16u),
         AES_128_CBC => (libcrypto::EVP_aes_128_cbc(), 16u, 16u),
+        AES_128_CTR => (libcrypto::EVP_aes_128_ctr(), 16u, 16u),
+        AES_128_GCM => (libcrypto::EVP_aes_128_gcm(), 16u, 16u),
 
         AES_256_ECB => (libcrypto::EVP_aes_256_ecb(), 32u, 16u),
         AES_256_CBC => (libcrypto::EVP_aes_256_cbc(), 32u, 16u),
+        AES_256_CTR => (libcrypto::EVP_aes_256_ctr(), 32u, 16u),
+        AES_256_GCM => (libcrypto::EVP_aes_256_gcm(), 32u, 16u),
 
         RC4_128 => (libcrypto::EVP_rc4(), 16u, 0u),
     }
@@ -177,6 +188,8 @@ fn decrypt(t: Type, key: &[u8], iv: ~[u8], data: &[u8]) -> ~[u8] {
 
 #[cfg(test)]
 mod tests {
+    use hex::FromHex;
+
     // Test vectors from FIPS-197:
     // http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
     #[test]
@@ -203,21 +216,24 @@ mod tests {
         assert(p1 == p0);
     }
 
+    fn cipher_test(ciphertype: Type, pt: ~str, ct: ~str, key: ~str, iv: ~str) {
+        let cipher = Crypter(ciphertype);
+        cipher.init(Encrypt, key.from_hex(), iv.from_hex());
+
+        let computed = cipher.update(pt.from_hex());
+
+        assert computed == ct.from_hex();
+    }
+
     #[test]
-    pub fn test_rc4() {
-        use hex::FromHex;
+    fn test_rc4() {
 
         let pt = ~"0000000000000000000000000000000000000000000000000000000000000000000000000000";
         let ct = ~"A68686B04D686AA107BD8D4CAB191A3EEC0A6294BC78B60F65C25CB47BD7BB3A48EFC4D26BE4";
         let key = ~"97CD440324DA5FD1F7955C1C13B6B466";
         let iv = ~"";
 
-        let cipher = Crypter(RC4_128);
-        cipher.init(Encrypt, key.from_hex(), iv.from_hex());
-
-        let computed = cipher.update(pt.from_hex());
-
-        assert computed == ct.from_hex();
+        cipher_test(RC4_128, pt, ct, key, iv);
     }
 
 }
