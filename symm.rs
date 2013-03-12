@@ -45,12 +45,12 @@ pub enum Type {
     AES_128_ECB,
     AES_128_CBC,
     AES_128_CTR,
-    AES_128_GCM,
+    //AES_128_GCM,
 
     AES_256_ECB,
     AES_256_CBC,
     AES_256_CTR,
-    AES_256_GCM,
+    //AES_256_GCM,
 
     RC4_128,
 }
@@ -59,13 +59,13 @@ fn evpc(t: Type) -> (EVP_CIPHER, uint, uint) {
     match t {
         AES_128_ECB => (libcrypto::EVP_aes_128_ecb(), 16u, 16u),
         AES_128_CBC => (libcrypto::EVP_aes_128_cbc(), 16u, 16u),
-        AES_128_CTR => (libcrypto::EVP_aes_128_ctr(), 16u, 16u),
-        AES_128_GCM => (libcrypto::EVP_aes_128_gcm(), 16u, 16u),
+        AES_128_CTR => (libcrypto::EVP_aes_128_ctr(), 16u, 0u),
+        //AES_128_GCM => (libcrypto::EVP_aes_128_gcm(), 16u, 16u),
 
         AES_256_ECB => (libcrypto::EVP_aes_256_ecb(), 32u, 16u),
         AES_256_CBC => (libcrypto::EVP_aes_256_cbc(), 32u, 16u),
-        AES_256_CTR => (libcrypto::EVP_aes_256_ctr(), 32u, 16u),
-        AES_256_GCM => (libcrypto::EVP_aes_256_gcm(), 32u, 16u),
+        AES_256_CTR => (libcrypto::EVP_aes_256_ctr(), 32u, 0u),
+        //AES_256_GCM => (libcrypto::EVP_aes_256_gcm(), 32u, 16u),
 
         RC4_128 => (libcrypto::EVP_rc4(), 16u, 0u),
     }
@@ -152,11 +152,15 @@ pub impl Crypter {
     fn final() -> ~[u8] unsafe {
         let res = vec::to_mut(vec::from_elem(self.blocksize, 0u8));
 
+        io::println(fmt!("final, res %? long", res.len()));
+
         let reslen = do vec::as_mut_buf(res) |pres, _len| {
             let mut reslen = self.blocksize as c_int;
             libcrypto::EVP_CipherFinal(self.ctx, pres, &mut reslen);
             reslen
         };
+
+        io::println(fmt!("openssl says %? bytes", reslen));
 
         vec::slice(res, 0u, reslen as uint)
     }
@@ -217,12 +221,23 @@ mod tests {
     }
 
     fn cipher_test(ciphertype: Type, pt: ~str, ct: ~str, key: ~str, iv: ~str) {
+        use hex::ToHex;
+
         let cipher = Crypter(ciphertype);
         cipher.init(Encrypt, key.from_hex(), iv.from_hex());
 
-        let computed = cipher.update(pt.from_hex());
+        let expected = ct.from_hex();
+        let computed = cipher.update(pt.from_hex()) + cipher.final();
 
-        assert computed == ct.from_hex();
+        if computed != expected {
+            io::println(fmt!("Computed: %s", computed.to_hex()));
+            io::println(fmt!("Expected: %s", expected.to_hex()));
+            if computed.len() != expected.len() {
+                io::println(fmt!("Lengths differ: %u in computed vs %u expected",
+                                 computed.len(), expected.len()));
+            }
+            fail ~"test failure";
+        }
     }
 
     #[test]
@@ -234,6 +249,28 @@ mod tests {
         let iv = ~"";
 
         cipher_test(RC4_128, pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes128_ctr() {
+
+        let pt = ~"6BC1BEE22E409F96E93D7E117393172AAE2D8A571E03AC9C9EB76FAC45AF8E5130C81C46A35CE411E5FBC1191A0A52EFF69F2445DF4F9B17AD2B417BE66C3710";
+        let ct = ~"874D6191B620E3261BEF6864990DB6CE9806F66B7970FDFF8617187BB9FFFDFF5AE4DF3EDBD5D35E5B4F09020DB03EAB1E031DDA2FBE03D1792170A0F3009CEE";
+        let key = ~"2B7E151628AED2A6ABF7158809CF4F3C";
+        let iv = ~"F0F1F2F3F4F5F6F7F8F9FAFBFCFDFEFF";
+
+        cipher_test(AES_128_CTR, pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes128_gcm() {
+        // Test case 3 in GCM spec
+        let pt = ~"d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b391aafd255";
+        let ct = ~"42831ec2217774244b7221b784d0d49ce3aa212f2c02a4e035c17e2329aca12e21d514b25466931c7d8f6a5aac84aa051ba30b396a0aac973d58e091473f59854d5c2af327cd64a62cf35abd2ba6fab4";
+        let key = ~"feffe9928665731c6d6a8f9467308308";
+        let iv = ~"cafebabefacedbaddecaf888";
+
+        cipher_test(AES_128_GCM, pt, ct, key, iv);
     }
 
 }
