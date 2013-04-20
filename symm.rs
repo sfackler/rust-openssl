@@ -159,15 +159,11 @@ pub impl Crypter {
         unsafe {
             let mut res = vec::from_elem(self.blocksize, 0u8);
 
-            io::println(fmt!("final, res %? long", res.len()));
-
             let reslen = do vec::as_mut_buf(res) |pres, _len| {
                 let mut reslen = self.blocksize as c_int;
                 libcrypto::EVP_CipherFinal(self.ctx, pres, &mut reslen);
                 reslen
             };
-
-            io::println(fmt!("openssl says %? bytes", reslen));
 
             vec::slice(res, 0u, reslen as uint).to_owned()
         }
