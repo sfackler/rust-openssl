@@ -1,4 +1,4 @@
-use libc::c_uint;
+use core::libc::c_uint;
 
 pub enum HashType {
     MD5,
@@ -10,10 +10,10 @@ pub enum HashType {
 }
 
 #[allow(non_camel_case_types)]
-type EVP_MD_CTX = *libc::c_void;
+pub type EVP_MD_CTX = *libc::c_void;
 
 #[allow(non_camel_case_types)]
-type EVP_MD = *libc::c_void;
+pub type EVP_MD = *libc::c_void;
 
 #[link_name = "crypto"]
 #[abi = "cdecl"]
@@ -32,14 +32,16 @@ extern mod libcrypto {
     fn EVP_DigestFinal(ctx: EVP_MD_CTX, res: *mut u8, n: *u32);
 }
 
-fn evpmd(t: HashType) -> (EVP_MD, uint) {
-    match t {
-        MD5 => (libcrypto::EVP_md5(), 16u),
-        SHA1 => (libcrypto::EVP_sha1(), 20u),
-        SHA224 => (libcrypto::EVP_sha224(), 28u),
-        SHA256 => (libcrypto::EVP_sha256(), 32u),
-        SHA384 => (libcrypto::EVP_sha384(), 48u),
-        SHA512 => (libcrypto::EVP_sha512(), 64u),
+pub fn evpmd(t: HashType) -> (EVP_MD, uint) {
+    unsafe {
+        match t {
+            MD5 => (libcrypto::EVP_md5(), 16u),
+            SHA1 => (libcrypto::EVP_sha1(), 20u),
+            SHA224 => (libcrypto::EVP_sha224(), 28u),
+            SHA256 => (libcrypto::EVP_sha256(), 32u),
+            SHA384 => (libcrypto::EVP_sha384(), 48u),
+            SHA512 => (libcrypto::EVP_sha512(), 64u),
+        }
     }
 }
 
@@ -50,23 +52,29 @@ pub struct Hasher {
 }
 
 pub fn Hasher(ht: HashType) -> Hasher {
-    let ctx = libcrypto::EVP_MD_CTX_create();
-    let (evp, mdlen) = evpmd(ht);
-    let h = Hasher { evp: evp, ctx: ctx, len: mdlen };
-    h.init();
-    h
+    unsafe {
+        let ctx = libcrypto::EVP_MD_CTX_create();
+        let (evp, mdlen) = evpmd(ht);
+        let h = Hasher { evp: evp, ctx: ctx, len: mdlen };
+        h.init();
+        h
+    }
 }
 
 pub impl Hasher {
     /// Initializes this hasher
-    fn init() unsafe {
-        libcrypto::EVP_DigestInit(self.ctx, self.evp);
+    fn init(&self) {
+        unsafe {
+            libcrypto::EVP_DigestInit(self.ctx, self.evp);
+        }
     }
 
     /// Update this hasher with more input bytes
-    fn update(data: &[u8]) unsafe {
-        do vec::as_imm_buf(data) |pdata, len| {
-            libcrypto::EVP_DigestUpdate(self.ctx, pdata, len as c_uint)
+    fn update(&self, data: &[u8]) {
+        unsafe {
+            do vec::as_imm_buf(data) |pdata, len| {
+                libcrypto::EVP_DigestUpdate(self.ctx, pdata, len as c_uint)
+            }
         }
     }
 
@@ -74,12 +82,14 @@ pub impl Hasher {
      * Return the digest of all bytes added to this hasher since its last
      * initialization
      */
-    fn final() -> ~[u8] unsafe {
-        let mut res = vec::from_elem(self.len, 0u8);
-        do vec::as_mut_buf(res) |pres, _len| {
-            libcrypto::EVP_DigestFinal(self.ctx, pres, ptr::null());
+    fn final(&self) -> ~[u8] {
+        unsafe {
+            let mut res = vec::from_elem(self.len, 0u8);
+            do vec::as_mut_buf(res) |pres, _len| {
+                libcrypto::EVP_DigestFinal(self.ctx, pres, ptr::null());
+            }
+            res
         }
-        res
     }
 }
 
@@ -87,14 +97,17 @@ pub impl Hasher {
  * Hashes the supplied input data using hash t, returning the resulting hash
  * value
  */
-pub fn hash(t: HashType, data: &[u8]) -> ~[u8] unsafe {
-    let h = Hasher(t);
-    h.update(data);
-    h.final()
+pub fn hash(t: HashType, data: &[u8]) -> ~[u8] {
+    unsafe {
+        let h = Hasher(t);
+        h.update(data);
+        h.final()
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use hex::FromHex;
     use hex::ToHex;
 
@@ -117,7 +130,7 @@ mod tests {
             io::println(fmt!("Test failed - %s != %s", calced, hashtest.expected_output));
         }
 
-        assert calced == hashtest.expected_output;
+        assert!(calced == hashtest.expected_output);
     }
 
     // Test vectors from http://www.nsrl.nist.gov/testdata/

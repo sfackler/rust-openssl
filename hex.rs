@@ -17,13 +17,13 @@
 extern mod std;
 
 pub trait ToHex {
-    pure fn to_hex() -> ~str;
+    fn to_hex(&self) -> ~str;
 }
 
-impl &[u8]: ToHex {
-    pure fn to_hex() -> ~str {
+impl<'self> ToHex for &'self [u8] {
+    fn to_hex(&self) -> ~str {
 
-        let chars = str::chars(~"0123456789ABCDEF");
+        let chars = str::to_chars(~"0123456789ABCDEF");
 
         let mut s = ~"";
 
@@ -45,20 +45,20 @@ impl &[u8]: ToHex {
 }
 
 pub trait FromHex {
-    pure fn from_hex() -> ~[u8];
+    fn from_hex(&self) -> ~[u8];
 }
 
-impl &str: FromHex {
-    pure fn from_hex() -> ~[u8] {
+impl<'self> FromHex for &'self str {
+    fn from_hex(&self) -> ~[u8] {
         let mut vec = vec::with_capacity(self.len() / 2);
 
-        for str::each_chari(self) |i,c| {
+        for str::each_chari(*self) |i,c| {
 
             let nibble =
                 if c >= '0' && c <= '9' { (c as u8) - 0x30 }
                 else if c >= 'a' && c <= 'f' { (c as u8) - (0x61 - 10) }
                 else if c >= 'A' && c <= 'F' { (c as u8) - (0x41 - 10) }
-                else { fail ~"bad hex character"; };
+                else { fail!(~"bad hex character"); };
 
             if i % 2 == 0 {
                 unsafe {
@@ -76,15 +76,16 @@ impl &str: FromHex {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
 
     #[test]
     pub fn test() {
 
-        assert [05u8, 0xffu8, 0x00u8, 0x59u8].to_hex() == ~"05FF0059";
+        assert!([05u8, 0xffu8, 0x00u8, 0x59u8].to_hex() == ~"05FF0059");
 
-        assert "00FFA9D1F5".from_hex() == ~[0, 0xff, 0xa9, 0xd1, 0xf5];
+        assert!("00FFA9D1F5".from_hex() == ~[0, 0xff, 0xa9, 0xd1, 0xf5]);
 
-        assert "00FFA9D1F5".from_hex().to_hex() == ~"00FFA9D1F5";
+        assert!("00FFA9D1F5".from_hex().to_hex() == ~"00FFA9D1F5");
     }
 
 

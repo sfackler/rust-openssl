@@ -17,13 +17,13 @@
 use hash::*;
 
 #[allow(non_camel_case_types)]
-struct HMAC_CTX {
-    mut md: EVP_MD,
-    mut md_ctx: EVP_MD_CTX,
-    mut i_ctx: EVP_MD_CTX,
-    mut o_ctx: EVP_MD_CTX,
-    mut key_length: libc::c_uint,
-    mut key: [libc::c_uchar * 128]
+pub struct HMAC_CTX {
+    md: EVP_MD,
+    md_ctx: EVP_MD_CTX,
+    i_ctx: EVP_MD_CTX,
+    o_ctx: EVP_MD_CTX,
+    key_length: libc::c_uint,
+    key: [libc::c_uchar, ..128]
 }
 
 #[link_name = "crypto"]
@@ -38,7 +38,7 @@ extern mod libcrypto {
 }
 
 pub struct HMAC {
-    priv mut ctx: HMAC_CTX,
+    priv ctx: HMAC_CTX,
     priv len: uint,
 }
 
@@ -66,25 +66,29 @@ pub fn HMAC(ht: HashType, key: ~[u8]) -> HMAC {
 }
 
 pub impl HMAC {
-    fn update(data: &[u8]) unsafe {
-        do vec::as_imm_buf(data) |pdata, len| {
-            libcrypto::HMAC_Update(&mut self.ctx, pdata, len as libc::c_uint)
+    fn update(&mut self, data: &[u8]) {
+        unsafe {
+            do vec::as_imm_buf(data) |pdata, len| {
+                libcrypto::HMAC_Update(&mut self.ctx, pdata, len as libc::c_uint)
+            }
         }
     }
 
-    fn final() -> ~[u8] unsafe {
-        let mut res = vec::from_elem(self.len, 0u8);
-        let mut outlen: libc::c_uint = 0;
-        do vec::as_mut_buf(res) |pres, _len| {
-            libcrypto::HMAC_Final(&mut self.ctx, pres, &mut outlen);
-            assert self.len == outlen as uint
+    fn final(&mut self) -> ~[u8] {
+        unsafe {
+            let mut res = vec::from_elem(self.len, 0u8);
+            let mut outlen: libc::c_uint = 0;
+            do vec::as_mut_buf(res) |pres, _len| {
+                libcrypto::HMAC_Final(&mut self.ctx, pres, &mut outlen);
+                assert!(self.len == outlen as uint)
+            }
+            res
         }
-        res
     }
 }
 
 fn main() {
-    let h = HMAC(SHA512, ~[00u8]);
+    let mut h = HMAC(SHA512, ~[00u8]);
 
     h.update(~[00u8]);
 
