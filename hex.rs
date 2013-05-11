@@ -34,10 +34,8 @@ impl<'self> ToHex for &'self [u8] {
             let xhi = (x >> 4) & 0x0F;
             let xlo = (x     ) & 0x0F;
 
-            unsafe {
-                str::push_char(&mut s, chars[xhi]);
-                str::push_char(&mut s, chars[xlo]);
-            }
+            str::push_char(&mut s, chars[xhi]);
+            str::push_char(&mut s, chars[xlo]);
         }
 
         s
@@ -61,9 +59,7 @@ impl<'self> FromHex for &'self str {
                 else { fail!(~"bad hex character"); };
 
             if i % 2 == 0 {
-                unsafe {
-                    vec::push(&mut vec, nibble << 4);
-                }
+                vec::push(&mut vec, nibble << 4);
             }
             else {
                 vec[i/2] |= nibble;

@@ -98,11 +98,9 @@ pub impl Hasher {
  * value
  */
 pub fn hash(t: HashType, data: &[u8]) -> ~[u8] {
-    unsafe {
-        let h = Hasher(t);
-        h.update(data);
-        h.final()
-    }
+    let h = Hasher(t);
+    h.update(data);
+    h.final()
 }
 
 #[cfg(test)]

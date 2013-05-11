@@ -100,18 +100,16 @@ pub fn PKey() -> PKey {
 ///Represents a public key, optionally with a private key attached.
 priv impl PKey {
     priv fn _tostr(&self, f: @fn(*EVP_PKEY, &*mut u8) -> c_int) -> ~[u8] {
-        unsafe {
-            let buf = ptr::mut_null();
-            let len = f(self.evp, &buf);
-            if len < 0 as c_int { return ~[]; }
-            let mut s = vec::from_elem(len as uint, 0u8);
+        let buf = ptr::mut_null();
+        let len = f(self.evp, &buf);
+        if len < 0 as c_int { return ~[]; }
+        let mut s = vec::from_elem(len as uint, 0u8);
 
-            let r = do vec::as_mut_buf(s) |ps, _len| {
-                f(self.evp, &ps)
-            };
+        let r = do vec::as_mut_buf(s) |ps, _len| {
+            f(self.evp, &ps)
+        };
 
-            vec::slice(s, 0u, r as uint).to_owned()
-        }
+        vec::slice(s, 0u, r as uint).to_owned()
     }
 
     priv fn _fromstr(
@@ -119,12 +117,10 @@ priv impl PKey {
         s: &[u8],
         f: @fn(c_int, &*EVP_PKEY, &*u8, c_uint) -> *EVP_PKEY
     ) {
-        unsafe {
-            do vec::as_imm_buf(s) |ps, len| {
-                let evp = ptr::null();
-                f(6 as c_int, &evp, &ps, len as c_uint);
-                self.evp = evp;
-            }
+        do vec::as_imm_buf(s) |ps, len| {
+            let evp = ptr::null();
+            f(6 as c_int, &evp, &ps, len as c_uint);
+            self.evp = evp;
         }
     }
 }
@@ -298,24 +294,24 @@ pub impl PKey {
      * Encrypts data using OAEP padding, returning the encrypted data. The
      * supplied data must not be larger than max_data().
      */
-    fn encrypt(&self, s: &[u8]) -> ~[u8] { unsafe { self.encrypt_with_padding(s, OAEP) } }
+    fn encrypt(&self, s: &[u8]) -> ~[u8] { self.encrypt_with_padding(s, OAEP) }
 
     /**
      * Decrypts data, expecting OAEP padding, returning the decrypted data.
      */
-    fn decrypt(&self, s: &[u8]) -> ~[u8] { unsafe { self.decrypt_with_padding(s, OAEP) } }
+    fn decrypt(&self, s: &[u8]) -> ~[u8] { self.decrypt_with_padding(s, OAEP) }
 
     /**
      * Signs data, using OpenSSL's default scheme and sha256. Unlike encrypt(),
      * can process an arbitrary amount of data; returns the signature.
      */
-    fn sign(&self, s: &[u8]) -> ~[u8] { unsafe { self.sign_with_hash(s, SHA256) } }
+    fn sign(&self, s: &[u8]) -> ~[u8] { self.sign_with_hash(s, SHA256) }
 
     /**
      * Verifies a signature s (using OpenSSL's default scheme and sha256) on a
      * message m. Returns true if the signature is valid, and false otherwise.
      */
-    fn verify(&self, m: &[u8], s: &[u8]) -> bool { unsafe { self.verify_with_hash(m, s, SHA256) } }
+    fn verify(&self, m: &[u8], s: &[u8]) -> bool { self.verify_with_hash(m, s, SHA256) }
 
     fn sign_with_hash(&self, s: &[u8], hash: HashType) -> ~[u8] {
         unsafe {
