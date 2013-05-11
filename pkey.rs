@@ -76,13 +76,13 @@ fn openssl_hash_nid(hash: HashType) -> c_int {
 
 fn rsa_to_any(rsa: *RSA) -> *ANYKEY {
     unsafe {
-        cast::reinterpret_cast(&rsa)
+        cast::transmute_copy(&rsa)
     }
 }
 
 fn any_to_rsa(anykey: *ANYKEY) -> *RSA {
     unsafe {
-        cast::reinterpret_cast(&anykey)
+        cast::transmute_copy(&anykey)
     }
 }
 
@@ -325,20 +325,18 @@ pub impl PKey {
 
             do vec::as_mut_buf(r) |pr, _len| {
                 do vec::as_imm_buf(s) |ps, s_len| {
-                    let plen = ptr::addr_of(&len);
-
                     let rv = libcrypto::RSA_sign(
                         openssl_hash_nid(hash),
                         ps,
                         s_len as c_uint,
                         pr,
-                        plen,
+                        &len,
                         rsa);
 
                     if rv < 0 as c_int {
                         ~[]
                     } else {
-                        vec::const_slice(r, 0u, *plen as uint).to_owned()
+                        vec::const_slice(r, 0u, len as uint).to_owned()
                     }
                 }
             }
