@@ -1,8 +1,8 @@
-use core::libc::c_int;
+use std::libc::c_int;
 
-#[link_name = "crypto"]
+#[link_args = "-lcrypto"]
 #[abi = "cdecl"]
-extern mod libcrypto {
+extern {
     fn RAND_bytes(buf: *mut u8, num: c_int) -> c_int;
 }
 
@@ -11,7 +11,7 @@ pub fn rand_bytes(len: uint) -> ~[u8] {
 
     do vec::as_mut_buf(out) |out_buf, len| {
         unsafe {
-            let r = libcrypto::RAND_bytes(out_buf, len as c_int);
+            let r = RAND_bytes(out_buf, len as c_int);
             if r != 1 as c_int { fail!() }
         }
     }

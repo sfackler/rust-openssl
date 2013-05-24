@@ -1,4 +1,4 @@
-use core::libc::c_uint;
+use std::libc::c_uint;
 
 pub enum HashType {
     MD5,
@@ -15,9 +15,9 @@ pub type EVP_MD_CTX = *libc::c_void;
 #[allow(non_camel_case_types)]
 pub type EVP_MD = *libc::c_void;
 
-#[link_name = "crypto"]
 #[abi = "cdecl"]
-extern mod libcrypto {
+#[link_args = "-lcrypto"]
+extern {
     fn EVP_MD_CTX_create() -> EVP_MD_CTX;
 
     fn EVP_md5() -> EVP_MD;
@@ -35,12 +35,12 @@ extern mod libcrypto {
 pub fn evpmd(t: HashType) -> (EVP_MD, uint) {
     unsafe {
         match t {
-            MD5 => (libcrypto::EVP_md5(), 16u),
-            SHA1 => (libcrypto::EVP_sha1(), 20u),
-            SHA224 => (libcrypto::EVP_sha224(), 28u),
-            SHA256 => (libcrypto::EVP_sha256(), 32u),
-            SHA384 => (libcrypto::EVP_sha384(), 48u),
-            SHA512 => (libcrypto::EVP_sha512(), 64u),
+            MD5 => (EVP_md5(), 16u),
+            SHA1 => (EVP_sha1(), 20u),
+            SHA224 => (EVP_sha224(), 28u),
+            SHA256 => (EVP_sha256(), 32u),
+            SHA384 => (EVP_sha384(), 48u),
+            SHA512 => (EVP_sha512(), 64u),
         }
     }
 }
@@ -53,7 +53,7 @@ pub struct Hasher {
 
 pub fn Hasher(ht: HashType) -> Hasher {
     unsafe {
-        let ctx = libcrypto::EVP_MD_CTX_create();
+        let ctx = EVP_MD_CTX_create();
         let (evp, mdlen) = evpmd(ht);
         let h = Hasher { evp: evp, ctx: ctx, len: mdlen };
         h.init();
@@ -65,7 +65,7 @@ pub impl Hasher {
     /// Initializes this hasher
     fn init(&self) {
         unsafe {
-            libcrypto::EVP_DigestInit(self.ctx, self.evp);
+            EVP_DigestInit(self.ctx, self.evp);
         }
     }
 
@@ -73,7 +73,7 @@ pub impl Hasher {
     fn update(&self, data: &[u8]) {
         unsafe {
             do vec::as_imm_buf(data) |pdata, len| {
-                libcrypto::EVP_DigestUpdate(self.ctx, pdata, len as c_uint)
+                EVP_DigestUpdate(self.ctx, pdata, len as c_uint)
             }
         }
     }
@@ -86,7 +86,7 @@ pub impl Hasher {
         unsafe {
             let mut res = vec::from_elem(self.len, 0u8);
             do vec::as_mut_buf(res) |pres, _len| {
-                libcrypto::EVP_DigestFinal(self.ctx, pres, ptr::null());
+                EVP_DigestFinal(self.ctx, pres, ptr::null());
             }
             res
         }

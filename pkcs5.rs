@@ -1,12 +1,12 @@
-use core::libc::c_int;
+use std::libc::c_int;
 
-#[link_name = "crypto"]
+#[link_args = "-lcrypto"]
 #[abi = "cdecl"]
-extern mod libcrypto {
+extern {
     fn PKCS5_PBKDF2_HMAC_SHA1(pass: *u8, passlen: c_int,
-                              salt: *u8, saltlen: c_int,
-                              iter: c_int, keylen: c_int,
-                              out: *mut u8) -> c_int;
+                            salt: *u8, saltlen: c_int,
+                            iter: c_int, keylen: c_int,
+                            out: *mut u8) -> c_int;
 }
 
 #[doc = "
@@ -23,7 +23,7 @@ pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint,
 
             do vec::as_mut_buf(out) |out_buf, _out_len| {
                 unsafe {
-                    let r = libcrypto::PKCS5_PBKDF2_HMAC_SHA1(
+                    let r = PKCS5_PBKDF2_HMAC_SHA1(
                         pass_buf, pass_len as c_int,
                         salt_buf, salt_len as c_int,
                         iter as c_int, keylen as c_int,

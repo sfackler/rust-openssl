@@ -20,8 +20,6 @@
        uuid = "38297409-b4c2-4499-8131-a99a7e44dad3")];
 #[crate_type = "lib"];
 
-extern mod std; // FIXME https://github.com/mozilla/rust/issues/1127
-
 pub mod hex;
 pub mod hash;
 pub mod hmac;

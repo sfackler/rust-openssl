@@ -23,7 +23,7 @@ pub trait ToHex {
 impl<'self> ToHex for &'self [u8] {
     fn to_hex(&self) -> ~str {
 
-        let chars = str::to_chars(~"0123456789ABCDEF");
+        let chars = str::to_chars("0123456789ABCDEF");
 
         let mut s = ~"";
 
