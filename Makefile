@@ -5,3 +5,5 @@ crypto: crypto.rc $(wildcard *.rs)
 
 clean:
 	rm -f crypto libcrypto-*.so
+	rm libcrypto-*.dylib
+	rm -rf *.dSYM

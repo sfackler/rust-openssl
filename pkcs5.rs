@@ -1,4 +1,5 @@
 use std::libc::c_int;
+use std::{vec,str};
 
 #[link_args = "-lcrypto"]
 #[abi = "cdecl"]
@@ -43,6 +44,7 @@ pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint,
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::str;
 
     // Test vectors from
     // http://tools.ietf.org/html/draft-josefsson-pbkdf2-test-vectors-06

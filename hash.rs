@@ -1,4 +1,5 @@
 use std::libc::c_uint;
+use std::{libc,vec,ptr};
 
 pub enum HashType {
     MD5,
@@ -108,6 +109,7 @@ mod tests {
     use super::*;
     use hex::FromHex;
     use hex::ToHex;
+    use std::vec;
 
     struct HashTest {
         input: ~[u8],
@@ -125,7 +127,7 @@ mod tests {
         let calced = calced_raw.to_hex();
 
         if calced != hashtest.expected_output {
-            io::println(fmt!("Test failed - %s != %s", calced, hashtest.expected_output));
+            println(fmt!("Test failed - %s != %s", calced, hashtest.expected_output));
         }
 
         assert!(calced == hashtest.expected_output);

@@ -1,4 +1,5 @@
 use std::libc::{c_int, c_uint};
+use std::{libc,cast,ptr,vec};
 use hash::{HashType, MD5, SHA1, SHA224, SHA256, SHA384, SHA512};
 
 #[allow(non_camel_case_types)]
@@ -99,7 +100,7 @@ pub fn PKey() -> PKey {
 
 ///Represents a public key, optionally with a private key attached.
 priv impl PKey {
-    priv fn _tostr(&self, f: extern "C" unsafe fn(*EVP_PKEY, &*mut u8) -> c_int) -> ~[u8] {
+    priv unsafe fn _tostr(&self, f: extern "C" unsafe fn(*EVP_PKEY, &*mut u8) -> c_int) -> ~[u8] {
         let buf = ptr::mut_null();
         let len = f(self.evp, &buf);
         if len < 0 as c_int { return ~[]; }
@@ -112,7 +113,7 @@ priv impl PKey {
         vec::slice(s, 0u, r as uint).to_owned()
     }
 
-    priv fn _fromstr(
+    priv unsafe fn _fromstr(
         &mut self,
         s: &[u8],
         f: extern "C" unsafe fn(c_int, &*EVP_PKEY, &*u8, c_uint) -> *EVP_PKEY

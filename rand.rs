@@ -1,4 +1,5 @@
 use std::libc::c_int;
+use std::vec;
 
 #[link_args = "-lcrypto"]
 #[abi = "cdecl"]
@@ -28,6 +29,6 @@ mod tests {
     #[test]
     fn test_rand_bytes() {
         let bytes = rand_bytes(32u);
-        io::println(fmt!("%?", bytes));
+        println(fmt!("%?", bytes));
     }
 }

@@ -1,4 +1,5 @@
 use std::libc::{c_int, c_uint};
+use std::{libc,vec};
 
 #[allow(non_camel_case_types)]
 type EVP_CIPHER_CTX = *libc::c_void;
@@ -236,11 +237,11 @@ mod tests {
         let computed = cipher.update(pt.from_hex()) + cipher.final();
 
         if computed != expected {
-            io::println(fmt!("Computed: %s", computed.to_hex()));
-            io::println(fmt!("Expected: %s", expected.to_hex()));
+            println(fmt!("Computed: %s", computed.to_hex()));
+            println(fmt!("Expected: %s", expected.to_hex()));
             if computed.len() != expected.len() {
-                io::println(fmt!("Lengths differ: %u in computed vs %u expected",
-                                 computed.len(), expected.len()));
+                println(fmt!("Lengths differ: %u in computed vs %u expected",
+                             computed.len(), expected.len()));
             }
             fail!(~"test failure");
         }

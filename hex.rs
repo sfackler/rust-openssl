@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-extern mod std;
+use std::{str,uint,vec};
 
 pub trait ToHex {
     fn to_hex(&self) -> ~str;

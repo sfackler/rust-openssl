@@ -15,6 +15,7 @@
  */
 
 use hash::*;
+use std::{libc,ptr,vec};
 
 #[allow(non_camel_case_types)]
 pub struct HMAC_CTX {
@@ -47,12 +48,12 @@ pub fn HMAC(ht: HashType, key: ~[u8]) -> HMAC {
         let (evp, mdlen) = evpmd(ht);
 
         let mut ctx : HMAC_CTX = HMAC_CTX {
-            mut md: ptr::null(),
-            mut md_ctx: ptr::null(),
-            mut i_ctx: ptr::null(),
-            mut o_ctx: ptr::null(),
-            mut key_length: 0,
-            mut key: [0u8, .. 128]
+            md: ptr::null(),
+            md_ctx: ptr::null(),
+            i_ctx: ptr::null(),
+            o_ctx: ptr::null(),
+            key_length: 0,
+            key: [0u8, .. 128]
         };
 
         HMAC_CTX_init(&mut ctx,
@@ -91,5 +92,5 @@ fn main() {
 
     h.update([00u8]);
 
-    io::println(fmt!("%?", h.final()))
+    println(fmt!("%?", h.final()))
 }
