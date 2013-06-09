@@ -15,6 +15,7 @@
  */
 
 use std::{str,uint,vec};
+use std::iterator::*;
 
 pub trait ToHex {
     fn to_hex(&self) -> ~str;
@@ -50,8 +51,7 @@ impl<'self> FromHex for &'self str {
     fn from_hex(&self) -> ~[u8] {
         let mut vec = vec::with_capacity(self.len() / 2);
 
-        for str::each_chari(*self) |i,c| {
-
+        for self.iter().enumerate().advance() |(i,c)| {
             let nibble =
                 if c >= '0' && c <= '9' { (c as u8) - 0x30 }
                 else if c >= 'a' && c <= 'f' { (c as u8) - (0x61 - 10) }

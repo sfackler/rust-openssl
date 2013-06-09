@@ -99,7 +99,7 @@ pub fn PKey() -> PKey {
 }
 
 ///Represents a public key, optionally with a private key attached.
-priv impl PKey {
+impl PKey {
     priv unsafe fn _tostr(&self, f: extern "C" unsafe fn(*EVP_PKEY, &*mut u8) -> c_int) -> ~[u8] {
         let buf = ptr::mut_null();
         let len = f(self.evp, &buf);
@@ -126,8 +126,8 @@ priv impl PKey {
     }
 }
 
-pub impl PKey {
-    fn gen(&mut self, keysz: uint) {
+impl PKey {
+    pub fn gen(&mut self, keysz: uint) {
         unsafe {
             let rsa = RSA_generate_key(
                 keysz as c_uint,
@@ -146,7 +146,7 @@ pub impl PKey {
     /**
      * Returns a serialized form of the public key, suitable for load_pub().
      */
-    fn save_pub(&self) -> ~[u8] {
+    pub fn save_pub(&self) -> ~[u8] {
         unsafe {
             self._tostr(i2d_PublicKey)
         }
@@ -155,7 +155,7 @@ pub impl PKey {
     /**
      * Loads a serialized form of the public key, as produced by save_pub().
      */
-    fn load_pub(&mut self, s: &[u8]) {
+    pub fn load_pub(&mut self, s: &[u8]) {
         unsafe {
             self._fromstr(s, d2i_PublicKey);
             self.parts = Public;
@@ -166,7 +166,7 @@ pub impl PKey {
      * Returns a serialized form of the public and private keys, suitable for
      * load_priv().
      */
-    fn save_priv(&self, ) -> ~[u8] {
+    pub fn save_priv(&self, ) -> ~[u8] {
         unsafe {
             self._tostr(i2d_PrivateKey)
         }
@@ -175,7 +175,7 @@ pub impl PKey {
      * Loads a serialized form of the public and private keys, as produced by
      * save_priv().
      */
-    fn load_priv(&mut self, s: &[u8]) {
+    pub fn load_priv(&mut self, s: &[u8]) {
         unsafe {
             self._fromstr(s, d2i_PrivateKey);
             self.parts = Both;
@@ -185,7 +185,7 @@ pub impl PKey {
     /**
      * Returns the size of the public key modulus.
      */
-    fn size(&self) -> uint {
+    pub fn size(&self) -> uint {
         unsafe {
             RSA_size(EVP_PKEY_get1_RSA(self.evp)) as uint
         }
@@ -194,7 +194,7 @@ pub impl PKey {
     /**
      * Returns whether this pkey object can perform the specified role.
      */
-    fn can(&self, r: Role) -> bool {
+    pub fn can(&self, r: Role) -> bool {
         match r {
             Encrypt =>
                 match self.parts {
@@ -223,7 +223,7 @@ pub impl PKey {
      * Returns the maximum amount of data that can be encrypted by an encrypt()
      * call.
      */
-    fn max_data(&self) -> uint {
+    pub fn max_data(&self) -> uint {
         unsafe {
             let rsa = EVP_PKEY_get1_RSA(self.evp);
             let len = RSA_size(rsa);
@@ -233,7 +233,7 @@ pub impl PKey {
         }
     }
 
-    fn encrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> ~[u8] {
+    pub fn encrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> ~[u8] {
         unsafe {
             let rsa = EVP_PKEY_get1_RSA(self.evp);
             let len = RSA_size(rsa);
@@ -261,7 +261,7 @@ pub impl PKey {
         }
     }
 
-    fn decrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> ~[u8] {
+    pub fn decrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> ~[u8] {
         unsafe {
             let rsa = EVP_PKEY_get1_RSA(self.evp);
             let len = RSA_size(rsa);
@@ -294,26 +294,26 @@ pub impl PKey {
      * Encrypts data using OAEP padding, returning the encrypted data. The
      * supplied data must not be larger than max_data().
      */
-    fn encrypt(&self, s: &[u8]) -> ~[u8] { self.encrypt_with_padding(s, OAEP) }
+    pub fn encrypt(&self, s: &[u8]) -> ~[u8] { self.encrypt_with_padding(s, OAEP) }
 
     /**
      * Decrypts data, expecting OAEP padding, returning the decrypted data.
      */
-    fn decrypt(&self, s: &[u8]) -> ~[u8] { self.decrypt_with_padding(s, OAEP) }
+    pub fn decrypt(&self, s: &[u8]) -> ~[u8] { self.decrypt_with_padding(s, OAEP) }
 
     /**
      * Signs data, using OpenSSL's default scheme and sha256. Unlike encrypt(),
      * can process an arbitrary amount of data; returns the signature.
      */
-    fn sign(&self, s: &[u8]) -> ~[u8] { self.sign_with_hash(s, SHA256) }
+    pub fn sign(&self, s: &[u8]) -> ~[u8] { self.sign_with_hash(s, SHA256) }
 
     /**
      * Verifies a signature s (using OpenSSL's default scheme and sha256) on a
      * message m. Returns true if the signature is valid, and false otherwise.
      */
-    fn verify(&self, m: &[u8], s: &[u8]) -> bool { self.verify_with_hash(m, s, SHA256) }
+    pub fn verify(&self, m: &[u8], s: &[u8]) -> bool { self.verify_with_hash(m, s, SHA256) }
 
-    fn sign_with_hash(&self, s: &[u8], hash: HashType) -> ~[u8] {
+    pub fn sign_with_hash(&self, s: &[u8], hash: HashType) -> ~[u8] {
         unsafe {
             let rsa = EVP_PKEY_get1_RSA(self.evp);
             let len = RSA_size(rsa);
@@ -339,7 +339,7 @@ pub impl PKey {
         }
     }
 
-    fn verify_with_hash(&self, m: &[u8], s: &[u8], hash: HashType) -> bool {
+    pub fn verify_with_hash(&self, m: &[u8], s: &[u8], hash: HashType) -> bool {
         unsafe {
             let rsa = EVP_PKEY_get1_RSA(self.evp);
 

@@ -86,12 +86,12 @@ pub fn Crypter(t: Type) -> Crypter {
     }
 }
 
-pub impl Crypter {
+impl Crypter {
     /**
      * Enables or disables padding. If padding is disabled, total amount of
      * data encrypted must be a multiple of block size.
      */
-    fn pad(&self, padding: bool) {
+    pub fn pad(&self, padding: bool) {
         if self.blocksize > 0 {
             unsafe {
                 let v = if padding { 1 } else { 0 } as c_int;
@@ -103,7 +103,7 @@ pub impl Crypter {
     /**
      * Initializes this crypter.
      */
-    fn init(&self, mode: Mode, key: &[u8], iv: &[u8]) {
+    pub fn init(&self, mode: Mode, key: &[u8], iv: &[u8]) {
         unsafe {
             let mode = match mode {
                 Encrypt => 1 as c_int,
@@ -129,7 +129,7 @@ pub impl Crypter {
      * Update this crypter with more data to encrypt or decrypt. Returns
      * encrypted or decrypted bytes.
      */
-    fn update(&self, data: &[u8]) -> ~[u8] {
+    pub fn update(&self, data: &[u8]) -> ~[u8] {
         unsafe {
             do vec::as_imm_buf(data) |pdata, len| {
                 let mut res = vec::from_elem(len + self.blocksize, 0u8);
@@ -156,7 +156,7 @@ pub impl Crypter {
     /**
      * Finish crypting. Returns the remaining partial block of output, if any.
      */
-    fn final(&self) -> ~[u8] {
+    pub fn final(&self) -> ~[u8] {
         unsafe {
             let mut res = vec::from_elem(self.blocksize, 0u8);
 

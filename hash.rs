@@ -62,16 +62,16 @@ pub fn Hasher(ht: HashType) -> Hasher {
     }
 }
 
-pub impl Hasher {
+impl Hasher {
     /// Initializes this hasher
-    fn init(&self) {
+    pub fn init(&self) {
         unsafe {
             EVP_DigestInit(self.ctx, self.evp);
         }
     }
 
     /// Update this hasher with more input bytes
-    fn update(&self, data: &[u8]) {
+    pub fn update(&self, data: &[u8]) {
         unsafe {
             do vec::as_imm_buf(data) |pdata, len| {
                 EVP_DigestUpdate(self.ctx, pdata, len as c_uint)
@@ -83,7 +83,7 @@ pub impl Hasher {
      * Return the digest of all bytes added to this hasher since its last
      * initialization
      */
-    fn final(&self) -> ~[u8] {
+    pub fn final(&self) -> ~[u8] {
         unsafe {
             let mut res = vec::from_elem(self.len, 0u8);
             do vec::as_mut_buf(res) |pres, _len| {
