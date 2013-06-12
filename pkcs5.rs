@@ -44,7 +44,6 @@ pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::str;
 
     // Test vectors from
     // http://tools.ietf.org/html/draft-josefsson-pbkdf2-test-vectors-06
@@ -52,7 +51,7 @@ mod tests {
     fn test_pbkdf2_hmac_sha1() {
         assert!(pbkdf2_hmac_sha1(
             "password",
-            str::to_bytes("salt"),
+            "salt".as_bytes(),
             1u,
             20u
         ) == ~[
@@ -63,7 +62,7 @@ mod tests {
 
         assert!(pbkdf2_hmac_sha1(
             "password",
-            str::to_bytes("salt"),
+            "salt".as_bytes(),
             2u,
             20u
         ) == ~[
@@ -74,7 +73,7 @@ mod tests {
 
         assert!(pbkdf2_hmac_sha1(
             "password",
-            str::to_bytes("salt"),
+            "salt".as_bytes(),
             4096u,
             20u
         ) == ~[
@@ -85,7 +84,7 @@ mod tests {
 
         assert!(pbkdf2_hmac_sha1(
             "password",
-            str::to_bytes("salt"),
+            "salt".as_bytes(),
             16777216u,
             20u
         ) == ~[
@@ -96,7 +95,7 @@ mod tests {
 
         assert!(pbkdf2_hmac_sha1(
             "passwordPASSWORDpassword",
-            str::to_bytes("saltSALTsaltSALTsaltSALTsaltSALTsalt"),
+            "saltSALTsaltSALTsaltSALTsaltSALTsalt".as_bytes(),
             4096u,
             25u
         ) == ~[
@@ -108,7 +107,7 @@ mod tests {
 
         assert!(pbkdf2_hmac_sha1(
             "pass\x00word",
-            str::to_bytes("sa\x00lt"),
+            "sa\x00lt".as_bytes(),
             4096u,
             16u
         ) == ~[

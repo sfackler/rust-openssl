@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::{str,uint,vec};
+use std::{uint,vec};
 use std::iterator::*;
 
 pub trait ToHex {
@@ -24,7 +24,7 @@ pub trait ToHex {
 impl<'self> ToHex for &'self [u8] {
     fn to_hex(&self) -> ~str {
 
-        let chars = str::to_chars("0123456789ABCDEF");
+        let chars = "0123456789ABCDEF".iter().collect::<~[char]>();
 
         let mut s = ~"";
 
@@ -35,8 +35,8 @@ impl<'self> ToHex for &'self [u8] {
             let xhi = (x >> 4) & 0x0F;
             let xlo = (x     ) & 0x0F;
 
-            str::push_char(&mut s, chars[xhi]);
-            str::push_char(&mut s, chars[xlo]);
+            s.push_char(chars[xhi]);
+            s.push_char(chars[xlo]);
         }
 
         s
