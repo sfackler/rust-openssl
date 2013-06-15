@@ -15,7 +15,6 @@
  */
 
 use std::{uint,vec};
-use std::iterator::*;
 
 pub trait ToHex {
     fn to_hex(&self) -> ~str;
