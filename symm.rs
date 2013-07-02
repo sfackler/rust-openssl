@@ -148,7 +148,7 @@ impl Crypter {
                     reslen
                 };
 
-                vec::slice(res, 0u, reslen as uint).to_owned()
+                res.slice(0u, reslen as uint).to_owned()
             }
         }
     }
@@ -166,7 +166,7 @@ impl Crypter {
                 reslen
             };
 
-            vec::slice(res, 0u, reslen as uint).to_owned()
+            res.slice(0u, reslen as uint).to_owned()
         }
     }
 }

@@ -110,7 +110,7 @@ impl PKey {
             f(self.evp, &ps)
         };
 
-        vec::slice(s, 0u, r as uint).to_owned()
+        s.slice(0u, r as uint).to_owned()
     }
 
     priv unsafe fn _fromstr(
@@ -256,7 +256,7 @@ impl PKey {
             if rv < 0 as c_int {
                 ~[]
             } else {
-                vec::slice(r, 0u, rv as uint).to_owned()
+                r.slice(0u, rv as uint).to_owned()
             }
         }
     }
@@ -285,7 +285,7 @@ impl PKey {
             if rv < 0 as c_int {
                 ~[]
             } else {
-                vec::slice(r, 0u, rv as uint).to_owned()
+                r.slice(0u, rv as uint).to_owned()
             }
         }
     }
@@ -334,7 +334,7 @@ impl PKey {
             if rv < 0 as c_int {
                 ~[]
             } else {
-                vec::slice(r, 0u, len as uint).to_owned()
+                r.slice(0u, len as uint).to_owned()
             }
         }
     }

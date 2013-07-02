@@ -58,7 +58,7 @@ impl<'self> FromHex for &'self str {
                 else { fail!(~"bad hex character"); };
 
             if i % 2 == 0 {
-                vec::push(&mut vec, nibble << 4);
+                vec.push(nibble << 4);
             }
             else {
                 vec[i/2] |= nibble;
