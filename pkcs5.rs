@@ -19,10 +19,10 @@ pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint,
     assert!(keylen >= 1u);
 
     do str::as_buf(pass) |pass_buf, pass_len| {
-        do vec::as_imm_buf(salt) |salt_buf, salt_len| {
+        do salt.as_imm_buf |salt_buf, salt_len| {
             let mut out = vec::with_capacity(keylen);
 
-            do vec::as_mut_buf(out) |out_buf, _out_len| {
+            do out.as_mut_buf |out_buf, _out_len| {
                 unsafe {
                     let r = PKCS5_PBKDF2_HMAC_SHA1(
                         pass_buf, pass_len as c_int,

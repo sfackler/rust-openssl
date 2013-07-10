@@ -111,8 +111,8 @@ impl Crypter {
             };
             assert!(key.len() == self.keylen);
 
-            do vec::as_imm_buf(key) |pkey, _len| {
-                do vec::as_imm_buf(iv) |piv, _len| {
+            do key.as_imm_buf |pkey, _len| {
+                do iv.as_imm_buf |piv, _len| {
                     EVP_CipherInit(
                         self.ctx,
                         self.evp,
@@ -131,10 +131,10 @@ impl Crypter {
      */
     pub fn update(&self, data: &[u8]) -> ~[u8] {
         unsafe {
-            do vec::as_imm_buf(data) |pdata, len| {
+            do data.as_imm_buf |pdata, len| {
                 let mut res = vec::from_elem(len + self.blocksize, 0u8);
 
-                let reslen = do vec::as_mut_buf(res) |pres, _len| {
+                let reslen = do res.as_mut_buf |pres, _len| {
                     let mut reslen = (len + self.blocksize) as u32;
 
                     EVP_CipherUpdate(
@@ -160,7 +160,7 @@ impl Crypter {
         unsafe {
             let mut res = vec::from_elem(self.blocksize, 0u8);
 
-            let reslen = do vec::as_mut_buf(res) |pres, _len| {
+            let reslen = do res.as_mut_buf |pres, _len| {
                 let mut reslen = self.blocksize as c_int;
                 EVP_CipherFinal(self.ctx, pres, &mut reslen);
                 reslen

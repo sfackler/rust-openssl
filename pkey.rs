@@ -106,7 +106,7 @@ impl PKey {
         if len < 0 as c_int { return ~[]; }
         let mut s = vec::from_elem(len as uint, 0u8);
 
-        let r = do vec::as_mut_buf(s) |ps, _len| {
+        let r = do s.as_mut_buf |ps, _len| {
             f(self.evp, &ps)
         };
 
@@ -118,7 +118,7 @@ impl PKey {
         s: &[u8],
         f: extern "C" unsafe fn(c_int, &*EVP_PKEY, &*u8, c_uint) -> *EVP_PKEY
     ) {
-        do vec::as_imm_buf(s) |ps, len| {
+        do s.as_imm_buf |ps, len| {
             let evp = ptr::null();
             f(6 as c_int, &evp, &ps, len as c_uint);
             self.evp = evp;
@@ -242,8 +242,8 @@ impl PKey {
 
             let mut r = vec::from_elem(len as uint + 1u, 0u8);
 
-            let rv = do vec::as_mut_buf(r) |pr, _len| {
-                        do vec::as_imm_buf(s) |ps, s_len| {
+            let rv = do r.as_mut_buf |pr, _len| {
+                        do s.as_imm_buf |ps, s_len| {
                             RSA_public_encrypt(
                                 s_len as c_uint,
                                 ps,
@@ -270,8 +270,8 @@ impl PKey {
 
             let mut r = vec::from_elem(len as uint + 1u, 0u8);
 
-            let rv = do vec::as_mut_buf(r) |pr, _len| {
-                        do vec::as_imm_buf(s) |ps, s_len| {
+            let rv = do r.as_mut_buf |pr, _len| {
+                        do s.as_imm_buf |ps, s_len| {
                             RSA_private_decrypt(
                                 s_len as c_uint,
                                 ps,
@@ -319,8 +319,8 @@ impl PKey {
             let len = RSA_size(rsa);
             let mut r = vec::from_elem(len as uint + 1u, 0u8);
 
-            let rv = do vec::as_mut_buf(r) |pr, _len| {
-                        do vec::as_imm_buf(s) |ps, s_len| {
+            let rv = do r.as_mut_buf |pr, _len| {
+                        do s.as_imm_buf |ps, s_len| {
                             RSA_sign(
                                 openssl_hash_nid(hash),
                                 ps,
@@ -343,8 +343,8 @@ impl PKey {
         unsafe {
             let rsa = EVP_PKEY_get1_RSA(self.evp);
 
-            do vec::as_imm_buf(m) |pm, m_len| {
-                do vec::as_imm_buf(s) |ps, s_len| {
+            do m.as_imm_buf |pm, m_len| {
+                do s.as_imm_buf |ps, s_len| {
                     let rv = RSA_verify(
                         openssl_hash_nid(hash),
                         pm,

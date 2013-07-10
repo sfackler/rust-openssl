@@ -10,7 +10,7 @@ extern {
 pub fn rand_bytes(len: uint) -> ~[u8] {
     let mut out = vec::with_capacity(len);
 
-    do vec::as_mut_buf(out) |out_buf, len| {
+    do out.as_mut_buf |out_buf, len| {
         unsafe {
             let r = RAND_bytes(out_buf, len as c_int);
             if r != 1 as c_int { fail!() }

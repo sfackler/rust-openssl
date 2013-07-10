@@ -73,7 +73,7 @@ impl Hasher {
     /// Update this hasher with more input bytes
     pub fn update(&self, data: &[u8]) {
         unsafe {
-            do vec::as_imm_buf(data) |pdata, len| {
+            do data.as_imm_buf |pdata, len| {
                 EVP_DigestUpdate(self.ctx, pdata, len as c_uint)
             }
         }
@@ -86,7 +86,7 @@ impl Hasher {
     pub fn final(&self) -> ~[u8] {
         unsafe {
             let mut res = vec::from_elem(self.len, 0u8);
-            do vec::as_mut_buf(res) |pres, _len| {
+            do res.as_mut_buf |pres, _len| {
                 EVP_DigestFinal(self.ctx, pres, ptr::null());
             }
             res
