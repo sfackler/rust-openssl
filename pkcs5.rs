@@ -1,5 +1,5 @@
 use std::libc::c_int;
-use std::{vec,str};
+use std::vec;
 
 #[link_args = "-lcrypto"]
 #[abi = "cdecl"]
@@ -18,7 +18,7 @@ pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint,
     assert!(iter >= 1u);
     assert!(keylen >= 1u);
 
-    do str::as_buf(pass) |pass_buf, pass_len| {
+    do pass.as_imm_buf |pass_buf, pass_len| {
         do salt.as_imm_buf |salt_buf, salt_len| {
             let mut out = vec::with_capacity(keylen);
 
