@@ -151,7 +151,7 @@ mod tests {
             HashTest(~"A510CD18F7A56852EB0319", ~"577E216843DD11573574D3FB209B97D8"),
             HashTest(~"AAED18DBE8938C19ED734A8D", ~"6F80FB775F27E0A4CE5C2F42FC72C5F1")];
 
-        for tests.iter().advance |test| {
+        for test in tests.iter() {
             hash_test(MD5, test);
         }
     }
@@ -163,7 +163,7 @@ mod tests {
             HashTest(~"616263", ~"A9993E364706816ABA3E25717850C26C9CD0D89D"),
             ];
 
-        for tests.iter().advance |test| {
+        for test in tests.iter() {
             hash_test(SHA1, test);
         }
     }
@@ -174,7 +174,7 @@ mod tests {
             HashTest(~"616263", ~"BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD")
             ];
 
-        for tests.iter().advance |test| {
+        for test in tests.iter() {
             hash_test(SHA256, test);
         }
     }
