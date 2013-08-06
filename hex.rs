@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::{uint,vec};
+use std::vec;
 
 pub trait ToHex {
     fn to_hex(&self) -> ~str;
@@ -27,7 +27,7 @@ impl<'self> ToHex for &'self [u8] {
 
         let mut s = ~"";
 
-        for uint::range(0, self.len()) |i| {
+        for i in range(0u, self.len()) {
 
             let x = self[i];
 
@@ -50,7 +50,7 @@ impl<'self> FromHex for &'self str {
     fn from_hex(&self) -> ~[u8] {
         let mut vec = vec::with_capacity(self.len() / 2);
 
-        for self.iter().enumerate().advance() |(i,c)| {
+        for (i,c) in self.iter().enumerate() {
             let nibble =
                 if c >= '0' && c <= '9' { (c as u8) - 0x30 }
                 else if c >= 'a' && c <= 'f' { (c as u8) - (0x61 - 10) }
