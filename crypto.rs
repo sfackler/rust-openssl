@@ -20,8 +20,8 @@
        uuid = "38297409-b4c2-4499-8131-a99a7e44dad3")];
 #[crate_type = "lib"];
 
-pub mod hex;
 pub mod hash;
+pub mod hex;
 pub mod hmac;
 pub mod pkcs5;
 pub mod pkey;

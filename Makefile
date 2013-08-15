@@ -1,7 +1,7 @@
 
-crypto: crypto.rc $(wildcard *.rs)
-	rustc crypto.rc
-	rustc --test crypto.rc
+crypto: $(wildcard *.rs)
+	rustc crypto.rs
+	rustc --test crypto.rs
 
 clean:
 	rm -f crypto libcrypto-*.so
