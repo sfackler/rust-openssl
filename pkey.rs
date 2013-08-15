@@ -7,21 +7,19 @@ use std::vec;
 #[allow(non_camel_case_types)]
 pub type EVP_PKEY = *libc::c_void;
 
-#[allow(non_camel_case_types)]
-pub type ANYKEY = *libc::c_void;
 
 #[allow(non_camel_case_types)]
 pub type RSA = *libc::c_void;
 
 mod libcrypto {
     use super::*;
-    use std::libc::{c_int, c_uint};
+    use std::libc::{c_char, c_int, c_uint};
 
     #[link_args = "-lcrypto"]
     extern "C" {
         fn EVP_PKEY_new() -> *EVP_PKEY;
         fn EVP_PKEY_free(k: *EVP_PKEY);
-        fn EVP_PKEY_assign(k: *EVP_PKEY, t: c_int, inner: *ANYKEY) -> c_int;
+        fn EVP_PKEY_assign(pkey: *EVP_PKEY, typ: c_int, key: *c_char) -> c_int;
         fn EVP_PKEY_get1_RSA(k: *EVP_PKEY) -> *RSA;
 
         fn i2d_PublicKey(k: *EVP_PKEY, buf: **mut u8) -> c_int;
@@ -55,18 +53,6 @@ pub enum Role {
     Decrypt,
     Sign,
     Verify
-}
-
-fn rsa_to_any(rsa: *RSA) -> *ANYKEY {
-    unsafe {
-        cast::transmute(rsa)
-    }
-}
-
-fn any_to_rsa(anykey: *ANYKEY) -> *RSA {
-    unsafe {
-        cast::transmute(anykey)
-    }
 }
 
 pub struct PKey {
@@ -117,9 +103,12 @@ impl PKey {
                 ptr::null()
             );
 
-            let rsa_ = rsa_to_any(rsa);
             // XXX: 6 == NID_rsaEncryption
-            libcrypto::EVP_PKEY_assign(self.evp, 6 as c_int, rsa_);
+            libcrypto::EVP_PKEY_assign(
+                self.evp,
+                6 as c_int,
+                cast::transmute(rsa));
+
             self.parts = Both;
         }
     }
