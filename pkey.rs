@@ -100,7 +100,7 @@ pub fn PKey() -> PKey {
 
 ///Represents a public key, optionally with a private key attached.
 impl PKey {
-    priv unsafe fn _tostr(&self, f: extern "C" unsafe fn(*EVP_PKEY, &*mut u8) -> c_int) -> ~[u8] {
+    unsafe fn _tostr(&self, f: extern "C" unsafe fn(*EVP_PKEY, &*mut u8) -> c_int) -> ~[u8] {
         let buf = ptr::mut_null();
         let len = f(self.evp, &buf);
         if len < 0 as c_int { return ~[]; }
@@ -113,7 +113,7 @@ impl PKey {
         s.slice(0u, r as uint).to_owned()
     }
 
-    priv unsafe fn _fromstr(
+    unsafe fn _fromstr(
         &mut self,
         s: &[u8],
         f: extern "C" unsafe fn(c_int, &*EVP_PKEY, &*u8, c_uint) -> *EVP_PKEY
