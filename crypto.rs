@@ -1,5 +1,6 @@
 /*
  * Copyright 2011 Google Inc.
+ *           2013 Jack Lloyd
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +16,14 @@
  */
 
 #[link(name = "crypto",
-       vers = "0.2",
+       vers = "0.3",
        uuid = "38297409-b4c2-4499-8131-a99a7e44dad3")];
 #[crate_type = "lib"];
 
 pub mod hash;
-pub mod pkey;
-pub mod symm;
+pub mod hex;
+pub mod hmac;
 pub mod pkcs5;
+pub mod pkey;
 pub mod rand;
+pub mod symm;

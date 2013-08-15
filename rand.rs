@@ -29,6 +29,7 @@ mod tests {
 
     #[test]
     fn test_rand_bytes() {
-        let _bytes = rand_bytes(5u);
+        let bytes = rand_bytes(32u);
+        println(fmt!("%?", bytes));
     }
 }

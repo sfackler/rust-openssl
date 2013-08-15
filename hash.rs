@@ -40,7 +40,7 @@ mod libcrypto {
     }
 }
 
-fn evpmd(t: HashType) -> (EVP_MD, uint) {
+pub fn evpmd(t: HashType) -> (EVP_MD, uint) {
     unsafe {
         match t {
             MD5 => (libcrypto::EVP_md5(), 16u),
@@ -115,35 +115,73 @@ pub fn hash(t: HashType, data: &[u8]) -> ~[u8] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hex::FromHex;
+    use hex::ToHex;
+
+    struct HashTest {
+        input: ~[u8],
+        expected_output: ~str
+    }
+
+    fn HashTest(input: ~str, output: ~str) -> HashTest {
+        HashTest { input: input.from_hex(),
+                   expected_output: output }
+    }
+
+    fn hash_test(hashtype: HashType, hashtest: &HashTest) {
+        let calced_raw = hash(hashtype, hashtest.input);
+
+        let calced = calced_raw.to_hex();
+
+        if calced != hashtest.expected_output {
+            println(fmt!("Test failed - %s != %s", calced, hashtest.expected_output));
+        }
+
+        assert!(calced == hashtest.expected_output);
+    }
 
     // Test vectors from http://www.nsrl.nist.gov/testdata/
     #[test]
     fn test_md5() {
-        let s0 = ~[0x61u8, 0x62u8, 0x63u8];
-        let d0 = 
-           ~[0x90u8, 0x01u8, 0x50u8, 0x98u8, 0x3cu8, 0xd2u8, 0x4fu8, 0xb0u8,
-             0xd6u8, 0x96u8, 0x3fu8, 0x7du8, 0x28u8, 0xe1u8, 0x7fu8, 0x72u8];
-        assert!(hash(MD5, s0) == d0);
+        let tests = [
+            HashTest(~"", ~"D41D8CD98F00B204E9800998ECF8427E"),
+            HashTest(~"7F", ~"83ACB6E67E50E31DB6ED341DD2DE1595"),
+            HashTest(~"EC9C", ~"0B07F0D4CA797D8AC58874F887CB0B68"),
+            HashTest(~"FEE57A", ~"E0D583171EB06D56198FC0EF22173907"),
+            HashTest(~"42F497E0", ~"7C430F178AEFDF1487FEE7144E9641E2"),
+            HashTest(~"C53B777F1C", ~"75EF141D64CB37EC423DA2D9D440C925"),
+            HashTest(~"89D5B576327B", ~"EBBAF15EB0ED784C6FAA9DC32831BF33"),
+            HashTest(~"5D4CCE781EB190", ~"CE175C4B08172019F05E6B5279889F2C"),
+            HashTest(~"81901FE94932D7B9", ~"CD4D2F62B8CDB3A0CF968A735A239281"),
+            HashTest(~"C9FFDEE7788EFB4EC9", ~"E0841A231AB698DB30C6C0F3F246C014"),
+            HashTest(~"66AC4B7EBA95E53DC10B", ~"A3B3CEA71910D9AF56742AA0BB2FE329"),
+            HashTest(~"A510CD18F7A56852EB0319", ~"577E216843DD11573574D3FB209B97D8"),
+            HashTest(~"AAED18DBE8938C19ED734A8D", ~"6F80FB775F27E0A4CE5C2F42FC72C5F1")];
+
+        for test in tests.iter() {
+            hash_test(MD5, test);
+        }
     }
 
     #[test]
     fn test_sha1() {
-        let s0 = ~[0x61u8, 0x62u8, 0x63u8];
-        let d0 =
-           ~[0xa9u8, 0x99u8, 0x3eu8, 0x36u8, 0x47u8, 0x06u8, 0x81u8, 0x6au8,
-             0xbau8, 0x3eu8, 0x25u8, 0x71u8, 0x78u8, 0x50u8, 0xc2u8, 0x6cu8,
-             0x9cu8, 0xd0u8, 0xd8u8, 0x9du8];
-        assert!(hash(SHA1, s0) == d0);
+        let tests = [
+            HashTest(~"616263", ~"A9993E364706816ABA3E25717850C26C9CD0D89D"),
+            ];
+
+        for test in tests.iter() {
+            hash_test(SHA1, test);
+        }
     }
 
     #[test]
     fn test_sha256() {
-        let s0 = ~[0x61u8, 0x62u8, 0x63u8];
-        let d0 =
-           ~[0xbau8, 0x78u8, 0x16u8, 0xbfu8, 0x8fu8, 0x01u8, 0xcfu8, 0xeau8,
-             0x41u8, 0x41u8, 0x40u8, 0xdeu8, 0x5du8, 0xaeu8, 0x22u8, 0x23u8,
-             0xb0u8, 0x03u8, 0x61u8, 0xa3u8, 0x96u8, 0x17u8, 0x7au8, 0x9cu8,
-             0xb4u8, 0x10u8, 0xffu8, 0x61u8, 0xf2u8, 0x00u8, 0x15u8, 0xadu8];
-        assert!(hash(SHA256, s0) == d0);
+        let tests = [
+            HashTest(~"616263", ~"BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD")
+            ];
+
+        for test in tests.iter() {
+            hash_test(SHA256, test);
+        }
     }
 }
