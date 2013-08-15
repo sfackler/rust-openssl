@@ -61,13 +61,13 @@ pub struct Crypter {
     priv blocksize: uint
 }
 
-pub fn Crypter(t: Type) -> Crypter {
-    let ctx = unsafe { libcrypto::EVP_CIPHER_CTX_new() };
-    let (evp, keylen, blocksz) = evpc(t);
-    Crypter { evp: evp, ctx: ctx, keylen: keylen, blocksize: blocksz }
-}
-
 impl Crypter {
+    pub fn new(t: Type) -> Crypter {
+        let ctx = unsafe { libcrypto::EVP_CIPHER_CTX_new() };
+        let (evp, keylen, blocksz) = evpc(t);
+        Crypter { evp: evp, ctx: ctx, keylen: keylen, blocksize: blocksz }
+    }
+
     /**
      * Enables or disables padding. If padding is disabled, total amount of
      * data encrypted must be a multiple of block size.
@@ -163,7 +163,7 @@ impl Drop for Crypter {
  * specified key and iv; returns the resulting (encrypted) data.
  */
 pub fn encrypt(t: Type, key: &[u8], iv: ~[u8], data: &[u8]) -> ~[u8] {
-    let c = Crypter(t);
+    let c = Crypter::new(t);
     c.init(Encrypt, key, iv);
     let r = c.update(data);
     let rest = c.final();
@@ -175,7 +175,7 @@ pub fn encrypt(t: Type, key: &[u8], iv: ~[u8], data: &[u8]) -> ~[u8] {
  * specified key and iv; returns the resulting (decrypted) data.
  */
 pub fn decrypt(t: Type, key: &[u8], iv: ~[u8], data: &[u8]) -> ~[u8] {
-    let c = Crypter(t);
+    let c = Crypter::new(t);
     c.init(Decrypt, key, iv);
     let r = c.update(data);
     let rest = c.final();
@@ -201,7 +201,7 @@ mod tests {
         let c0 =
            ~[ 0x8eu8, 0xa2u8, 0xb7u8, 0xcau8, 0x51u8, 0x67u8, 0x45u8, 0xbfu8,
               0xeau8, 0xfcu8, 0x49u8, 0x90u8, 0x4bu8, 0x49u8, 0x60u8, 0x89u8 ];
-        let c = Crypter(AES_256_ECB);
+        let c = Crypter::new(AES_256_ECB);
         c.init(Encrypt, k0, []);
         c.pad(false);
         let r0 = c.update(p0) + c.final();

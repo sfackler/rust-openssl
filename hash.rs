@@ -59,18 +59,15 @@ pub struct Hasher {
     priv len: uint,
 }
 
-pub fn Hasher(ht: HashType) -> Hasher {
-    let ctx = unsafe { libcrypto::EVP_MD_CTX_create() };
-    let (evp, mdlen) = evpmd(ht);
-    let h = Hasher { evp: evp, ctx: ctx, len: mdlen };
-    h.init();
-    h
-}
-
 impl Hasher {
-    /// Initializes this hasher
-    pub fn init(&self) {
-        unsafe { libcrypto::EVP_DigestInit(self.ctx, self.evp) }
+    pub fn new(ht: HashType) -> Hasher {
+        let ctx = unsafe { libcrypto::EVP_MD_CTX_create() };
+        let (evp, mdlen) = evpmd(ht);
+        unsafe {
+            libcrypto::EVP_DigestInit(ctx, evp);
+        }
+
+        Hasher { evp: evp, ctx: ctx, len: mdlen }
     }
 
     /// Update this hasher with more input bytes
@@ -110,7 +107,7 @@ impl Drop for Hasher {
  * value
  */
 pub fn hash(t: HashType, data: &[u8]) -> ~[u8] {
-    let h = Hasher(t);
+    let h = Hasher::new(t);
     h.update(data);
     h.final()
 }

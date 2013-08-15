@@ -74,15 +74,15 @@ pub struct PKey {
     priv parts: Parts,
 }
 
-pub fn PKey() -> PKey {
-    PKey {
-        evp: unsafe { libcrypto::EVP_PKEY_new() },
-        parts: Neither
-    }
-}
-
 ///Represents a public key, optionally with a private key attached.
 impl PKey {
+    pub fn new() -> PKey {
+        PKey {
+            evp: unsafe { libcrypto::EVP_PKEY_new() },
+            parts: Neither,
+        }
+    }
+
     fn _tostr(&self, f: extern "C" unsafe fn(*EVP_PKEY, **mut u8) -> c_int) -> ~[u8] {
         unsafe {
             let len = f(self.evp, ptr::null());
@@ -350,8 +350,8 @@ mod tests {
 
     #[test]
     fn test_gen_pub() {
-        let mut k0 = PKey();
-        let mut k1 = PKey();
+        let mut k0 = PKey::new();
+        let mut k1 = PKey::new();
         k0.gen(512u);
         k1.load_pub(k0.save_pub());
         assert!(k0.save_pub() == k1.save_pub());
@@ -368,8 +368,8 @@ mod tests {
 
     #[test]
     fn test_gen_priv() {
-        let mut k0 = PKey();
-        let mut k1 = PKey();
+        let mut k0 = PKey::new();
+        let mut k1 = PKey::new();
         k0.gen(512u);
         k1.load_priv(k0.save_priv());
         assert!(k0.save_priv() == k1.save_priv());
@@ -386,8 +386,8 @@ mod tests {
 
     #[test]
     fn test_encrypt() {
-        let mut k0 = PKey();
-        let mut k1 = PKey();
+        let mut k0 = PKey::new();
+        let mut k1 = PKey::new();
         let msg = ~[0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
         k0.gen(512u);
         k1.load_pub(k0.save_pub());
@@ -398,8 +398,8 @@ mod tests {
 
     #[test]
     fn test_sign() {
-        let mut k0 = PKey();
-        let mut k1 = PKey();
+        let mut k0 = PKey::new();
+        let mut k1 = PKey::new();
         let msg = ~[0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
         k0.gen(512u);
         k1.load_pub(k0.save_pub());
