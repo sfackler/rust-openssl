@@ -25,6 +25,7 @@ mod libcrypto {
     #[link_args = "-lcrypto"]
     extern {
         fn EVP_MD_CTX_create() -> EVP_MD_CTX;
+        fn EVP_MD_CTX_destroy(ctx: EVP_MD_CTX);
 
         fn EVP_md5() -> EVP_MD;
         fn EVP_sha1() -> EVP_MD;
@@ -93,6 +94,14 @@ impl Hasher {
             }
         }
         res
+    }
+}
+
+impl Drop for Hasher {
+    fn drop(&self) {
+        unsafe {
+            libcrypto::EVP_MD_CTX_destroy(self.ctx);
+        }
     }
 }
 

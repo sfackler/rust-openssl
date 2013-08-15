@@ -336,6 +336,14 @@ impl PKey {
     }
 }
 
+impl Drop for PKey {
+    fn drop(&self) {
+        unsafe {
+            libcrypto::EVP_PKEY_free(self.evp);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

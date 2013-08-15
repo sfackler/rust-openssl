@@ -16,6 +16,7 @@ pub mod libcrypto {
     #[link_args = "-lcrypto"]
         fn EVP_CIPHER_CTX_new() -> EVP_CIPHER_CTX;
         fn EVP_CIPHER_CTX_set_padding(ctx: EVP_CIPHER_CTX, padding: c_int);
+        fn EVP_CIPHER_CTX_free(ctx: EVP_CIPHER_CTX);
 
         fn EVP_aes_128_ecb() -> EVP_CIPHER;
         fn EVP_aes_128_cbc() -> EVP_CIPHER;
@@ -145,6 +146,14 @@ impl Crypter {
 
             res.truncate(reslen as uint);
             res
+        }
+    }
+}
+
+impl Drop for Crypter {
+    fn drop(&self) {
+        unsafe {
+            libcrypto::EVP_CIPHER_CTX_free(self.ctx);
         }
     }
 }
