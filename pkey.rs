@@ -47,7 +47,7 @@ enum Parts {
     Both
 }
 
-#[doc = "Represents a role an asymmetric key might be appropriate for."]
+/// Represents a role an asymmetric key might be appropriate for.
 pub enum Role {
     Encrypt,
     Decrypt,
@@ -55,7 +55,7 @@ pub enum Role {
     Verify
 }
 
-#[doc = "Type of encryption padding to use."]
+/// Type of encryption padding to use.
 pub enum EncryptionPadding {
     OAEP,
     PKCS1v15
@@ -84,9 +84,10 @@ pub struct PKey {
     priv parts: Parts,
 }
 
-///Represents a public key, optionally with a private key attached.
+/// Represents a public key, optionally with a private key attached.
 impl PKey {
     pub fn new() -> PKey {
+        #[fixed_stack_segment]; #[inline(never)];
         PKey {
             evp: unsafe { libcrypto::EVP_PKEY_new() },
             parts: Neither,
@@ -94,6 +95,7 @@ impl PKey {
     }
 
     fn _tostr(&self, f: extern "C" unsafe fn(*EVP_PKEY, **mut u8) -> c_int) -> ~[u8] {
+        #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             let len = f(self.evp, ptr::null());
             if len < 0 as c_int { return ~[]; }
@@ -109,6 +111,7 @@ impl PKey {
     }
 
     fn _fromstr(&mut self, s: &[u8], f: extern "C" unsafe fn(c_int, **EVP_PKEY, **u8, c_uint) -> *EVP_PKEY) {
+        #[fixed_stack_segment]; #[inline(never)];
         do s.as_imm_buf |ps, len| {
             let evp = ptr::null();
             unsafe {
@@ -119,6 +122,7 @@ impl PKey {
     }
 
     pub fn gen(&mut self, keysz: uint) {
+        #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             let rsa = libcrypto::RSA_generate_key(
                 keysz as c_uint,
@@ -172,6 +176,7 @@ impl PKey {
      * Returns the size of the public key modulus.
      */
     pub fn size(&self) -> uint {
+        #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             libcrypto::RSA_size(libcrypto::EVP_PKEY_get1_RSA(self.evp)) as uint
         }
@@ -210,6 +215,7 @@ impl PKey {
      * call.
      */
     pub fn max_data(&self) -> uint {
+        #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
             let len = libcrypto::RSA_size(rsa);
@@ -220,6 +226,7 @@ impl PKey {
     }
 
     pub fn encrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> ~[u8] {
+        #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
             let len = libcrypto::RSA_size(rsa);
@@ -249,6 +256,7 @@ impl PKey {
     }
 
     pub fn decrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> ~[u8] {
+        #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
             let len = libcrypto::RSA_size(rsa);
@@ -302,6 +310,7 @@ impl PKey {
     pub fn verify(&self, m: &[u8], s: &[u8]) -> bool { self.verify_with_hash(m, s, SHA256) }
 
     pub fn sign_with_hash(&self, s: &[u8], hash: HashType) -> ~[u8] {
+        #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
             let mut len = libcrypto::RSA_size(rsa);
@@ -329,6 +338,7 @@ impl PKey {
     }
 
     pub fn verify_with_hash(&self, m: &[u8], s: &[u8], hash: HashType) -> bool {
+        #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
 
@@ -352,6 +362,7 @@ impl PKey {
 
 impl Drop for PKey {
     fn drop(&self) {
+        #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             libcrypto::EVP_PKEY_free(self.evp);
         }

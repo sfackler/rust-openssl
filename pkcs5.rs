@@ -13,9 +13,9 @@ mod libcrypto {
     }
 }
 
-#[doc = "
-Derives a key from a password and salt using the PBKDF2-HMAC-SHA1 algorithm.
-"]
+/// Derives a key from a password and salt using the PBKDF2-HMAC-SHA1 algorithm.
+#[fixed_stack_segment]
+#[inline(never)]
 pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint,
                         keylen: uint) -> ~[u8] {
     assert!(iter >= 1u);
