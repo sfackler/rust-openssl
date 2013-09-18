@@ -99,7 +99,7 @@ impl Hasher {
 }
 
 impl Drop for Hasher {
-    fn drop(&self) {
+    fn drop(&mut self) {
         #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             libcrypto::EVP_MD_CTX_destroy(self.ctx);

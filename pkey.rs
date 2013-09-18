@@ -361,7 +361,7 @@ impl PKey {
 }
 
 impl Drop for PKey {
-    fn drop(&self) {
+    fn drop(&mut self) {
         #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             libcrypto::EVP_PKEY_free(self.evp);

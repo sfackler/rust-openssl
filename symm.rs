@@ -184,7 +184,7 @@ impl Crypter {
 }
 
 impl Drop for Crypter {
-    fn drop(&self) {
+    fn drop(&mut self) {
         #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             libcrypto::EVP_CIPHER_CTX_free(self.ctx);
