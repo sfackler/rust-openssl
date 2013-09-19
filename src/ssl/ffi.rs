@@ -1,6 +1,6 @@
 #[doc(hidden)];
 
-use std::libc::{c_int, c_long, c_void};
+use std::libc::{c_int, c_void};
 
 // openssl/ssl.h
 pub type SSL_CTX = c_void;
@@ -35,6 +35,8 @@ externfn!(fn SSL_set_bio(ssl: *SSL, rbio: *BIO, wbio: *BIO))
 externfn!(fn SSL_set_connect_state(ssl: *SSL))
 externfn!(fn SSL_connect(ssl: *SSL) -> c_int)
 externfn!(fn SSL_get_error(ssl: *SSL, ret: c_int) -> c_int)
+externfn!(fn SSL_read(ssl: *SSL, buf: *c_void, num: c_int) -> c_int)
+externfn!(fn SSL_write(ssl: *SSL, buf: *c_void, num: c_int) -> c_int)
 
 externfn!(fn BIO_s_mem() -> *BIO_METHOD)
 externfn!(fn BIO_new(type_: *BIO_METHOD) -> *BIO)

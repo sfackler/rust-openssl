@@ -1,4 +1,4 @@
-use std::rt::io::{Stream, Decorator};
+use std::rt::io::{Reader, Writer, Stream, Decorator};
 use std::unstable::atomics::{AtomicBool, INIT_ATOMIC_BOOL, Acquire, Release};
 use std::task;
 use std::ptr;
@@ -70,6 +70,7 @@ impl Drop for Ssl {
     }
 }
 
+#[deriving(Eq, TotalEq, ToStr)]
 enum SslError {
     ErrorNone,
     ErrorSsl,
@@ -114,6 +115,20 @@ impl Ssl {
             _ => unreachable!()
         }
     }
+
+    fn read(&self, buf: &[u8]) -> int {
+        unsafe {
+            ffi::SSL_read(self.ssl, vec::raw::to_ptr(buf) as *c_void,
+                          buf.len() as c_int) as int
+        }
+    }
+
+    fn write(&self, buf: &[u8]) -> int {
+        unsafe {
+            ffi::SSL_write(self.ssl, vec::raw::to_ptr(buf) as *c_void,
+                           buf.len() as c_int) as int
+        }
+    }
 }
 
 struct MemBio {
@@ -150,9 +165,10 @@ impl MemBio {
             let ret = ffi::BIO_read(self.bio, vec::raw::to_ptr(buf) as *c_void,
                                     buf.len() as c_int);
             if ret < 0 {
-                fail2!("read returned {}", ret);
+                0
+            } else {
+                ret as uint
             }
-            ret as uint
         }
     }
 }
@@ -179,47 +195,86 @@ impl<S: Stream> SslStream<S> {
         let mut stream = SslStream {
             ctx: ctx,
             ssl: ssl,
+            // Max record size for SSLv3/TLSv1 is 16k
             buf: vec::from_elem(16 * 1024, 0u8),
             rbio: rbio,
             wbio: wbio,
             stream: stream
         };
 
-        stream.connect();
+        do stream.in_retry_wrapper |ssl| {
+            ssl.ssl.connect()
+        };
 
         stream
     }
 
-    fn connect(&mut self) {
-        info!("in connect");
+    fn in_retry_wrapper(&mut self, blk: &fn(&mut SslStream<S>) -> int)
+                        -> Result<int, SslError> {
         loop {
-            let ret = self.ssl.connect();
-            info2!("connect returned {}", ret);
-            if ret == 1 {
-                return;
+            let ret = blk(self);
+            if ret > 0 {
+                return Ok(ret);
             }
 
             match self.ssl.get_error(ret) {
                 ErrorWantRead => {
-                    info2!("want read");
                     self.flush();
                     match self.stream.read(self.buf) {
                         Some(len) => self.rbio.write(self.buf.slice_to(len)),
-                        None => unreachable!()
+                        None => unreachable!() // FIXME
                     }
                 }
-                ErrorWantWrite => {
-                    info2!("want write");
-                    self.flush();
-                }
-                _ => unreachable!()
+                ErrorWantWrite => self.flush(),
+                err => return Err(err)
             }
         }
     }
 
+    fn write_through(&mut self) {
+        loop {
+            let len = self.wbio.read(self.buf);
+            if len == 0 {
+                return;
+            }
+            self.stream.write(self.buf.slice_to(len));
+        }
+    }
+}
+
+impl<S: Stream> Reader for SslStream<S> {
+    fn read(&mut self, buf: &mut [u8]) -> Option<uint> {
+        let ret = do self.in_retry_wrapper |ssl| {
+            ssl.ssl.read(buf)
+        };
+
+        match ret {
+            Ok(num) => Some(num as uint),
+            Err(_) => None
+        }
+    }
+
+    fn eof(&mut self) -> bool {
+        self.stream.eof()
+    }
+}
+
+impl<S: Stream> Writer for SslStream<S> {
+    fn write(&mut self, buf: &[u8]) {
+        let ret = do self.in_retry_wrapper |ssl| {
+            ssl.ssl.write(buf)
+        };
+
+        match ret {
+            Ok(_) => (),
+            Err(err) => fail2!("Write error: {}", err.to_str())
+        }
+
+        self.write_through();
+    }
+
     fn flush(&mut self) {
-        let len = self.wbio.read(self.buf);
-        self.stream.write(self.buf.slice_to(len));
+        self.write_through();
         self.stream.flush();
     }
 }
