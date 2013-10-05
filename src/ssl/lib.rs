@@ -2,6 +2,8 @@ use std::rt::io::{Stream, Decorator};
 use std::unstable::atomics::{AtomicBool, INIT_ATOMIC_BOOL, Acquire, Release};
 use std::task;
 use std::ptr;
+use std::vec;
+use std::libc::{c_int, c_void};
 
 mod ffi;
 
@@ -68,6 +70,17 @@ impl Drop for Ssl {
     }
 }
 
+enum SslError {
+    ErrorNone,
+    ErrorSsl,
+    ErrorWantRead,
+    ErrorWantWrite,
+    ErrorWantX509Lookup,
+    ErrorZeroReturn,
+    ErrorWantConnect,
+    ErrorWantAccept,
+}
+
 impl Ssl {
     fn new(ctx: &SslCtx) -> Ssl {
         let ssl = unsafe { ffi::SSL_new(ctx.ctx) };
@@ -82,6 +95,24 @@ impl Ssl {
 
     fn set_connect_state(&self) {
         unsafe { ffi::SSL_set_connect_state(self.ssl); }
+    }
+
+    fn connect(&self) -> int {
+        unsafe { ffi::SSL_connect(self.ssl) as int }
+    }
+
+    fn get_error(&self, ret: int) -> SslError {
+        match unsafe { ffi::SSL_get_error(self.ssl, ret as c_int) } {
+            ffi::SSL_ERROR_NONE => ErrorNone,
+            ffi::SSL_ERROR_SSL => ErrorSsl,
+            ffi::SSL_ERROR_WANT_READ => ErrorWantRead,
+            ffi::SSL_ERROR_WANT_WRITE => ErrorWantWrite,
+            ffi::SSL_ERROR_WANT_X509_LOOKUP => ErrorWantX509Lookup,
+            ffi::SSL_ERROR_ZERO_RETURN => ErrorZeroReturn,
+            ffi::SSL_ERROR_WANT_CONNECT => ErrorWantConnect,
+            ffi::SSL_ERROR_WANT_ACCEPT => ErrorWantAccept,
+            _ => unreachable!()
+        }
     }
 }
 
@@ -102,11 +133,34 @@ impl MemBio {
 
         MemBio { bio: bio }
     }
+
+    fn write(&self, buf: &[u8]) {
+        unsafe {
+            let ret = ffi::BIO_write(self.bio,
+                                     vec::raw::to_ptr(buf) as *c_void,
+                                     buf.len() as c_int);
+            if ret < 0 {
+                fail2!("write returned {}", ret);
+            }
+        }
+    }
+
+    fn read(&self, buf: &[u8]) -> uint {
+        unsafe {
+            let ret = ffi::BIO_read(self.bio, vec::raw::to_ptr(buf) as *c_void,
+                                    buf.len() as c_int);
+            if ret < 0 {
+                fail2!("read returned {}", ret);
+            }
+            ret as uint
+        }
+    }
 }
 
 pub struct SslStream<S> {
     priv ctx: SslCtx,
     priv ssl: Ssl,
+    priv buf: ~[u8],
     priv rbio: MemBio,
     priv wbio: MemBio,
     priv stream: S
@@ -122,15 +176,51 @@ impl<S: Stream> SslStream<S> {
         ssl.set_bio(&rbio, &wbio);
         ssl.set_connect_state();
 
-        let stream = SslStream {
+        let mut stream = SslStream {
             ctx: ctx,
             ssl: ssl,
+            buf: vec::from_elem(16 * 1024, 0u8),
             rbio: rbio,
             wbio: wbio,
             stream: stream
-        }
+        };
+
+        stream.connect();
 
         stream
+    }
+
+    fn connect(&mut self) {
+        info!("in connect");
+        loop {
+            let ret = self.ssl.connect();
+            info2!("connect returned {}", ret);
+            if ret == 1 {
+                return;
+            }
+
+            match self.ssl.get_error(ret) {
+                ErrorWantRead => {
+                    info2!("want read");
+                    self.flush();
+                    match self.stream.read(self.buf) {
+                        Some(len) => self.rbio.write(self.buf.slice_to(len)),
+                        None => unreachable!()
+                    }
+                }
+                ErrorWantWrite => {
+                    info2!("want write");
+                    self.flush();
+                }
+                _ => unreachable!()
+            }
+        }
+    }
+
+    fn flush(&mut self) {
+        let len = self.wbio.read(self.buf);
+        self.stream.write(self.buf.slice_to(len));
+        self.stream.flush();
     }
 }
 

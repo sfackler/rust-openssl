@@ -12,5 +12,5 @@ fn test_new_ctx() {
 #[test]
 fn test_new_sslstream() {
     let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap());
-    let stream = SslStream::new(SslCtx::new(Sslv23), stream);
+    SslStream::new(SslCtx::new(Sslv23), stream);
 }
