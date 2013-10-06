@@ -1,3 +1,5 @@
+#[link(name="ssl")];
+
 use std::rt::io::{Reader, Writer, Stream, Decorator};
 use std::unstable::atomics::{AtomicBool, INIT_ATOMIC_BOOL, Acquire, Release};
 use std::task;
@@ -60,6 +62,19 @@ impl SslCtx {
     }
 }
 
+#[deriving(Eq, TotalEq, ToStr)]
+enum SslError {
+    ErrorNone,
+    ErrorSsl,
+    ErrorWantRead,
+    ErrorWantWrite,
+    ErrorWantX509Lookup,
+    ErrorSyscall,
+    ErrorZeroReturn,
+    ErrorWantConnect,
+    ErrorWantAccept,
+}
+
 struct Ssl {
     ssl: *ffi::SSL
 }
@@ -68,18 +83,6 @@ impl Drop for Ssl {
     fn drop(&mut self) {
         unsafe { ffi::SSL_free(self.ssl); }
     }
-}
-
-#[deriving(Eq, TotalEq, ToStr)]
-enum SslError {
-    ErrorNone,
-    ErrorSsl,
-    ErrorWantRead,
-    ErrorWantWrite,
-    ErrorWantX509Lookup,
-    ErrorZeroReturn,
-    ErrorWantConnect,
-    ErrorWantAccept,
 }
 
 impl Ssl {
@@ -109,10 +112,11 @@ impl Ssl {
             ffi::SSL_ERROR_WANT_READ => ErrorWantRead,
             ffi::SSL_ERROR_WANT_WRITE => ErrorWantWrite,
             ffi::SSL_ERROR_WANT_X509_LOOKUP => ErrorWantX509Lookup,
+            ffi::SSL_ERROR_SYSCALL => ErrorSyscall,
             ffi::SSL_ERROR_ZERO_RETURN => ErrorZeroReturn,
             ffi::SSL_ERROR_WANT_CONNECT => ErrorWantConnect,
             ffi::SSL_ERROR_WANT_ACCEPT => ErrorWantAccept,
-            _ => unreachable!()
+            err => fail2!("Unknown error {}", err)
         }
     }
 
@@ -129,16 +133,15 @@ impl Ssl {
                            buf.len() as c_int) as int
         }
     }
+
+    fn shutdown(&self) -> int {
+        unsafe { ffi::SSL_shutdown(self.ssl) as int }
+    }
 }
 
+// BIOs are freed by SSL_free
 struct MemBio {
     bio: *ffi::BIO
-}
-
-impl Drop for MemBio {
-    fn drop(&mut self) {
-        unsafe { ffi::BIO_free(self.bio); }
-    }
 }
 
 impl MemBio {
@@ -238,6 +241,18 @@ impl<S: Stream> SslStream<S> {
                 return;
             }
             self.stream.write(self.buf.slice_to(len));
+        }
+    }
+
+    pub fn shutdown(&mut self) {
+        loop {
+            let ret = do self.in_retry_wrapper |ssl| {
+                ssl.ssl.shutdown()
+            };
+
+            if ret != Ok(0) {
+                break;
+            }
         }
     }
 }
