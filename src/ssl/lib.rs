@@ -225,7 +225,7 @@ impl<S: Stream> SslStream<S> {
                     self.flush();
                     match self.stream.read(self.buf) {
                         Some(len) => self.rbio.write(self.buf.slice_to(len)),
-                        None => unreachable!() // FIXME
+                        None => return Err(ErrorZeroReturn) // FIXME
                     }
                 }
                 ErrorWantWrite => self.flush(),
