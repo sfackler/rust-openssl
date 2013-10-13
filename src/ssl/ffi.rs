@@ -1,6 +1,6 @@
 #[doc(hidden)];
 
-use std::libc::{c_int, c_void};
+use std::libc::{c_int, c_void, c_ulong, c_char};
 
 // openssl/ssl.h
 pub type SSL_CTX = c_void;
@@ -8,6 +8,7 @@ pub type SSL_METHOD = c_void;
 pub type SSL = c_void;
 pub type BIO = c_void;
 pub type BIO_METHOD = c_void;
+pub type X509_STORE_CTX = c_void;
 
 pub static SSL_ERROR_NONE: c_int = 0;
 pub static SSL_ERROR_SSL: c_int = 1;
@@ -19,15 +20,21 @@ pub static SSL_ERROR_ZERO_RETURN: c_int = 6;
 pub static SSL_ERROR_WANT_CONNECT: c_int = 7;
 pub static SSL_ERROR_WANT_ACCEPT: c_int = 8;
 
+pub static SSL_VERIFY_NONE: c_int = 0;
+pub static SSL_VERIFY_PEER: c_int = 1;
+
 #[link_args = "-lssl"]
 extern "C" { }
 
+externfn!(fn ERR_get_error() -> c_ulong)
+
 externfn!(fn SSL_library_init() -> c_int)
-externfn!(fn SSL_load_error_strings())
 
 externfn!(fn SSLv23_method() -> *SSL_METHOD)
 externfn!(fn SSL_CTX_new(method: *SSL_METHOD) -> *SSL_CTX)
 externfn!(fn SSL_CTX_free(ctx: *SSL_CTX))
+externfn!(fn SSL_CTX_set_verify(ctx: *SSL_CTX, mode: c_int,
+                                verify_callback: Option<extern "C" fn(int, *X509_STORE_CTX)>))
 
 externfn!(fn SSL_new(ctx: *SSL_CTX) -> *SSL)
 externfn!(fn SSL_free(ssl: *SSL))

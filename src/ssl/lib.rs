@@ -22,7 +22,6 @@ pub fn init() {
         }
 
         ffi::SSL_library_init();
-        ffi::SSL_load_error_strings();
         FINISHED_INIT.store(true, Release);
     }
 }
@@ -60,6 +59,15 @@ impl SslCtx {
             ctx: ctx
         }
     }
+
+    pub fn set_verify(&mut self, mode: SslVerifyMode) {
+        unsafe { ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, None) }
+    }
+}
+
+pub enum SslVerifyMode {
+    SslVerifyNone = ffi::SSL_VERIFY_NONE,
+    SslVerifyPeer = ffi::SSL_VERIFY_PEER
 }
 
 #[deriving(Eq, TotalEq, ToStr)]
@@ -186,7 +194,7 @@ pub struct SslStream<S> {
 }
 
 impl<S: Stream> SslStream<S> {
-    pub fn new(ctx: SslCtx, stream: S) -> SslStream<S> {
+    pub fn new(ctx: SslCtx, stream: S) -> Result<SslStream<S>, uint> {
         let ssl = Ssl::new(&ctx);
 
         let rbio = MemBio::new();
@@ -205,11 +213,15 @@ impl<S: Stream> SslStream<S> {
             stream: stream
         };
 
-        do stream.in_retry_wrapper |ssl| {
+        let ret = do stream.in_retry_wrapper |ssl| {
             ssl.ssl.connect()
         };
 
-        stream
+        match ret {
+            Ok(_) => Ok(stream),
+            // FIXME
+            Err(_err) => Err(unsafe { ffi::ERR_get_error() as uint })
+        }
     }
 
     fn in_retry_wrapper(&mut self, blk: &fn(&mut SslStream<S>) -> int)
