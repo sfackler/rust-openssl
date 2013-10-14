@@ -1,9 +1,8 @@
 extern mod ssl;
 
-use std::rt::io::{Writer, Reader};
-use std::rt::io::extensions::{ReaderUtil};
+use std::rt::io::Writer;
+use std::rt::io::extensions::ReaderUtil;
 use std::rt::io::net::tcp::TcpStream;
-use std::vec;
 use std::str;
 
 use ssl::{Sslv23, SslCtx, SslStream, SslVerifyPeer};
@@ -20,13 +19,25 @@ fn test_new_sslstream() {
 }
 
 #[test]
-fn test_verify() {
+fn test_verify_untrusted() {
     let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
     let mut ctx = SslCtx::new(Sslv23);
     ctx.set_verify(SslVerifyPeer);
     match SslStream::new(ctx, stream) {
         Ok(_) => fail2!("expected failure"),
         Err(err) => println!("error {}", err)
+    }
+}
+
+#[test]
+fn test_verify_trusted() {
+    let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
+    let mut ctx = SslCtx::new(Sslv23);
+    ctx.set_verify(SslVerifyPeer);
+    ctx.set_verify_locations("cert.pem");
+    match SslStream::new(ctx, stream) {
+        Ok(_) => (),
+        Err(err) => fail2!("Expected success, got {:?}", err)
     }
 }
 

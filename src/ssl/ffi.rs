@@ -35,6 +35,8 @@ externfn!(fn SSL_CTX_new(method: *SSL_METHOD) -> *SSL_CTX)
 externfn!(fn SSL_CTX_free(ctx: *SSL_CTX))
 externfn!(fn SSL_CTX_set_verify(ctx: *SSL_CTX, mode: c_int,
                                 verify_callback: Option<extern "C" fn(int, *X509_STORE_CTX) -> c_int>))
+externfn!(fn SSL_CTX_load_verify_locations(ctx: *SSL_CTX, CAfile: *c_char,
+                                           CApath: *c_char) -> c_int)
 
 externfn!(fn SSL_new(ctx: *SSL_CTX) -> *SSL)
 externfn!(fn SSL_free(ssl: *SSL))

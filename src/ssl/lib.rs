@@ -63,6 +63,13 @@ impl SslCtx {
     pub fn set_verify(&mut self, mode: SslVerifyMode) {
         unsafe { ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, None) }
     }
+
+    pub fn set_verify_locations(&mut self, CAfile: &str) {
+        do CAfile.with_c_str |CAfile| {
+            unsafe { ffi::SSL_CTX_load_verify_locations(self.ctx, CAfile,
+                                                        ptr::null()); }
+        }
+    }
 }
 
 pub enum SslVerifyMode {
