@@ -70,17 +70,17 @@ pub enum SslVerifyMode {
     SslVerifyPeer = ffi::SSL_VERIFY_PEER
 }
 
-#[deriving(Eq, TotalEq, ToStr)]
+#[deriving(Eq, FromPrimitive)]
 enum SslError {
-    ErrorNone,
-    ErrorSsl,
-    ErrorWantRead,
-    ErrorWantWrite,
-    ErrorWantX509Lookup,
-    ErrorSyscall,
-    ErrorZeroReturn,
-    ErrorWantConnect,
-    ErrorWantAccept,
+    ErrorNone = ffi::SSL_ERROR_NONE,
+    ErrorSsl = ffi::SSL_ERROR_SSL,
+    ErrorWantRead = ffi::SSL_ERROR_WANT_READ,
+    ErrorWantWrite = ffi::SSL_ERROR_WANT_WRITE,
+    ErrorWantX509Lookup = ffi::SSL_ERROR_WANT_X509_LOOKUP,
+    ErrorSyscall = ffi::SSL_ERROR_SYSCALL,
+    ErrorZeroReturn = ffi::SSL_ERROR_ZERO_RETURN,
+    ErrorWantConnect = ffi::SSL_ERROR_WANT_CONNECT,
+    ErrorWantAccept = ffi::SSL_ERROR_WANT_ACCEPT,
 }
 
 struct Ssl {
@@ -114,17 +114,10 @@ impl Ssl {
     }
 
     fn get_error(&self, ret: int) -> SslError {
-        match unsafe { ffi::SSL_get_error(self.ssl, ret as c_int) } {
-            ffi::SSL_ERROR_NONE => ErrorNone,
-            ffi::SSL_ERROR_SSL => ErrorSsl,
-            ffi::SSL_ERROR_WANT_READ => ErrorWantRead,
-            ffi::SSL_ERROR_WANT_WRITE => ErrorWantWrite,
-            ffi::SSL_ERROR_WANT_X509_LOOKUP => ErrorWantX509Lookup,
-            ffi::SSL_ERROR_SYSCALL => ErrorSyscall,
-            ffi::SSL_ERROR_ZERO_RETURN => ErrorZeroReturn,
-            ffi::SSL_ERROR_WANT_CONNECT => ErrorWantConnect,
-            ffi::SSL_ERROR_WANT_ACCEPT => ErrorWantAccept,
-            err => fail2!("Unknown error {}", err)
+        let err = unsafe { ffi::SSL_get_error(self.ssl, ret as c_int) };
+        match FromPrimitive::from_int(err as int) {
+            Some(err) => err,
+            None => fail2!("Unknown error {}", err)
         }
     }
 
@@ -294,7 +287,7 @@ impl<S: Stream> Writer for SslStream<S> {
 
         match ret {
             Ok(_) => (),
-            Err(err) => fail2!("Write error: {}", err.to_str())
+            Err(err) => fail2!("Write error: {:?}", err)
         }
 
         self.write_through();
