@@ -6,7 +6,7 @@ mod libcrypto {
 
     #[link_args = "-lcrypto"]
     extern {
-        fn RAND_bytes(buf: *mut u8, num: c_int) -> c_int;
+        pub fn RAND_bytes(buf: *mut u8, num: c_int) -> c_int;
     }
 }
 
@@ -31,6 +31,6 @@ mod tests {
     #[test]
     fn test_rand_bytes() {
         let bytes = rand_bytes(32u);
-        println(fmt!("%?", bytes));
+        println!("{:?}", bytes);
     }
 }

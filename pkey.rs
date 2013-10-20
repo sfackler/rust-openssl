@@ -17,27 +17,27 @@ mod libcrypto {
 
     #[link_args = "-lcrypto"]
     extern {
-        fn EVP_PKEY_new() -> *EVP_PKEY;
-        fn EVP_PKEY_free(k: *EVP_PKEY);
-        fn EVP_PKEY_assign(pkey: *EVP_PKEY, typ: c_int, key: *c_char) -> c_int;
-        fn EVP_PKEY_get1_RSA(k: *EVP_PKEY) -> *RSA;
+        pub fn EVP_PKEY_new() -> *EVP_PKEY;
+        pub fn EVP_PKEY_free(k: *EVP_PKEY);
+        pub fn EVP_PKEY_assign(pkey: *EVP_PKEY, typ: c_int, key: *c_char) -> c_int;
+        pub fn EVP_PKEY_get1_RSA(k: *EVP_PKEY) -> *RSA;
 
-        fn i2d_PublicKey(k: *EVP_PKEY, buf: **mut u8) -> c_int;
-        fn d2i_PublicKey(t: c_int, k: **EVP_PKEY, buf: **u8, len: c_uint) -> *EVP_PKEY;
-        fn i2d_PrivateKey(k: *EVP_PKEY, buf: **mut u8) -> c_int;
-        fn d2i_PrivateKey(t: c_int, k: **EVP_PKEY, buf: **u8, len: c_uint) -> *EVP_PKEY;
+        pub fn i2d_PublicKey(k: *EVP_PKEY, buf: **mut u8) -> c_int;
+        pub fn d2i_PublicKey(t: c_int, k: **EVP_PKEY, buf: **u8, len: c_uint) -> *EVP_PKEY;
+        pub fn i2d_PrivateKey(k: *EVP_PKEY, buf: **mut u8) -> c_int;
+        pub fn d2i_PrivateKey(t: c_int, k: **EVP_PKEY, buf: **u8, len: c_uint) -> *EVP_PKEY;
 
-        fn RSA_generate_key(modsz: c_uint, e: c_uint, cb: *u8, cbarg: *u8) -> *RSA;
-        fn RSA_size(k: *RSA) -> c_uint;
+        pub fn RSA_generate_key(modsz: c_uint, e: c_uint, cb: *u8, cbarg: *u8) -> *RSA;
+        pub fn RSA_size(k: *RSA) -> c_uint;
 
-        fn RSA_public_encrypt(flen: c_uint, from: *u8, to: *mut u8, k: *RSA,
-                              pad: c_int) -> c_int;
-        fn RSA_private_decrypt(flen: c_uint, from: *u8, to: *mut u8, k: *RSA,
-                               pad: c_int) -> c_int;
-        fn RSA_sign(t: c_int, m: *u8, mlen: c_uint, sig: *mut u8, siglen: *mut c_uint,
-                    k: *RSA) -> c_int;
-        fn RSA_verify(t: c_int, m: *u8, mlen: c_uint, sig: *u8, siglen: c_uint,
-                      k: *RSA) -> c_int;
+        pub fn RSA_public_encrypt(flen: c_uint, from: *u8, to: *mut u8, k: *RSA,
+                                  pad: c_int) -> c_int;
+        pub fn RSA_private_decrypt(flen: c_uint, from: *u8, to: *mut u8, k: *RSA,
+                                   pad: c_int) -> c_int;
+        pub fn RSA_sign(t: c_int, m: *u8, mlen: c_uint, sig: *mut u8, siglen: *mut c_uint,
+                        k: *RSA) -> c_int;
+        pub fn RSA_verify(t: c_int, m: *u8, mlen: c_uint, sig: *u8, siglen: c_uint,
+                          k: *RSA) -> c_int;
     }
 }
 

@@ -24,19 +24,19 @@ mod libcrypto {
 
     #[link_args = "-lcrypto"]
     extern {
-        fn EVP_MD_CTX_create() -> EVP_MD_CTX;
-        fn EVP_MD_CTX_destroy(ctx: EVP_MD_CTX);
+        pub fn EVP_MD_CTX_create() -> EVP_MD_CTX;
+        pub fn EVP_MD_CTX_destroy(ctx: EVP_MD_CTX);
 
-        fn EVP_md5() -> EVP_MD;
-        fn EVP_sha1() -> EVP_MD;
-        fn EVP_sha224() -> EVP_MD;
-        fn EVP_sha256() -> EVP_MD;
-        fn EVP_sha384() -> EVP_MD;
-        fn EVP_sha512() -> EVP_MD;
+        pub fn EVP_md5() -> EVP_MD;
+        pub fn EVP_sha1() -> EVP_MD;
+        pub fn EVP_sha224() -> EVP_MD;
+        pub fn EVP_sha256() -> EVP_MD;
+        pub fn EVP_sha384() -> EVP_MD;
+        pub fn EVP_sha512() -> EVP_MD;
 
-        fn EVP_DigestInit(ctx: EVP_MD_CTX, typ: EVP_MD);
-        fn EVP_DigestUpdate(ctx: EVP_MD_CTX, data: *u8, n: c_uint);
-        fn EVP_DigestFinal(ctx: EVP_MD_CTX, res: *mut u8, n: *u32);
+        pub fn EVP_DigestInit(ctx: EVP_MD_CTX, typ: EVP_MD);
+        pub fn EVP_DigestUpdate(ctx: EVP_MD_CTX, data: *u8, n: c_uint);
+        pub fn EVP_DigestFinal(ctx: EVP_MD_CTX, res: *mut u8, n: *u32);
     }
 }
 
@@ -139,7 +139,7 @@ mod tests {
         let calced = calced_raw.to_hex();
 
         if calced != hashtest.expected_output {
-            println(fmt!("Test failed - %s != %s", calced, hashtest.expected_output));
+            println!("Test failed - {} != {}", calced, hashtest.expected_output);
         }
 
         assert!(calced == hashtest.expected_output);

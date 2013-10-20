@@ -6,10 +6,10 @@ mod libcrypto {
 
     #[link_args = "-lcrypto"]
     extern {
-        fn PKCS5_PBKDF2_HMAC_SHA1(pass: *u8, passlen: c_int,
-                                  salt: *u8, saltlen: c_int,
-                                  iter: c_int, keylen: c_int,
-                                  out: *mut u8) -> c_int;
+        pub fn PKCS5_PBKDF2_HMAC_SHA1(pass: *u8, passlen: c_int,
+                                      salt: *u8, saltlen: c_int,
+                                      iter: c_int, keylen: c_int,
+                                      out: *mut u8) -> c_int;
     }
 }
 

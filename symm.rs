@@ -14,27 +14,27 @@ mod libcrypto {
 
     extern {
     #[link_args = "-lcrypto"]
-        fn EVP_CIPHER_CTX_new() -> EVP_CIPHER_CTX;
-        fn EVP_CIPHER_CTX_set_padding(ctx: EVP_CIPHER_CTX, padding: c_int);
-        fn EVP_CIPHER_CTX_free(ctx: EVP_CIPHER_CTX);
+        pub fn EVP_CIPHER_CTX_new() -> EVP_CIPHER_CTX;
+        pub fn EVP_CIPHER_CTX_set_padding(ctx: EVP_CIPHER_CTX, padding: c_int);
+        pub fn EVP_CIPHER_CTX_free(ctx: EVP_CIPHER_CTX);
 
-        fn EVP_aes_128_ecb() -> EVP_CIPHER;
-        fn EVP_aes_128_cbc() -> EVP_CIPHER;
-        // fn EVP_aes_128_ctr() -> EVP_CIPHER;
-        // fn EVP_aes_128_gcm() -> EVP_CIPHER;
+        pub fn EVP_aes_128_ecb() -> EVP_CIPHER;
+        pub fn EVP_aes_128_cbc() -> EVP_CIPHER;
+        // pub fn EVP_aes_128_ctr() -> EVP_CIPHER;
+        // pub fn EVP_aes_128_gcm() -> EVP_CIPHER;
 
-        fn EVP_aes_256_ecb() -> EVP_CIPHER;
-        fn EVP_aes_256_cbc() -> EVP_CIPHER;
-        // fn EVP_aes_256_ctr() -> EVP_CIPHER;
-        // fn EVP_aes_256_gcm() -> EVP_CIPHER;
+        pub fn EVP_aes_256_ecb() -> EVP_CIPHER;
+        pub fn EVP_aes_256_cbc() -> EVP_CIPHER;
+        // pub fn EVP_aes_256_ctr() -> EVP_CIPHER;
+        // pub fn EVP_aes_256_gcm() -> EVP_CIPHER;
 
-        fn EVP_rc4() -> EVP_CIPHER;
+        pub fn EVP_rc4() -> EVP_CIPHER;
 
-        fn EVP_CipherInit(ctx: EVP_CIPHER_CTX, evp: EVP_CIPHER,
+        pub fn EVP_CipherInit(ctx: EVP_CIPHER_CTX, evp: EVP_CIPHER,
                           key: *u8, iv: *u8, mode: c_int);
-        fn EVP_CipherUpdate(ctx: EVP_CIPHER_CTX, outbuf: *mut u8,
+        pub fn EVP_CipherUpdate(ctx: EVP_CIPHER_CTX, outbuf: *mut u8,
                             outlen: &mut c_uint, inbuf: *u8, inlen: c_int);
-        fn EVP_CipherFinal(ctx: EVP_CIPHER_CTX, res: *mut u8, len: &mut c_int);
+        pub fn EVP_CipherFinal(ctx: EVP_CIPHER_CTX, res: *mut u8, len: &mut c_int);
     }
 }
 
@@ -258,13 +258,13 @@ mod tests {
         let computed = cipher.update(pt.from_hex()) + cipher.final();
 
         if computed != expected {
-            println(fmt!("Computed: %s", computed.to_hex()));
-            println(fmt!("Expected: %s", expected.to_hex()));
+            println!("Computed: {}", computed.to_hex());
+            println!("Expected: {}", expected.to_hex());
             if computed.len() != expected.len() {
-                println(fmt!("Lengths differ: %u in computed vs %u expected",
-                             computed.len(), expected.len()));
+                println!("Lengths differ: {} in computed vs {} expected",
+                         computed.len(), expected.len());
             }
-            fail!(~"test failure");
+            fail!("test failure");
         }
     }
 

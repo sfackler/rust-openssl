@@ -95,5 +95,5 @@ fn main() {
 
     h.update([00u8]);
 
-    println(fmt!("%?", h.final()))
+    println!("{:?}", h.final())
 }
