@@ -1,5 +1,3 @@
-#[link(name="ssl")];
-
 use std::rt::io::{Reader, Writer, Stream, Decorator};
 use std::unstable::atomics::{AtomicBool, INIT_ATOMIC_BOOL, Acquire, Release};
 use std::task;
@@ -30,12 +28,18 @@ pub fn init() {
 }
 
 pub enum SslMethod {
+    Sslv2,
+    Sslv3,
+    Tlsv1,
     Sslv23
 }
 
 impl SslMethod {
-    unsafe fn to_raw(&self) -> *ffi::SSL_METHOD {
+    unsafe fn to_fn(&self) -> *ffi::SSL_METHOD {
         match *self {
+            Sslv2 => ffi::SSLv2_method(),
+            Sslv3 => ffi::SSLv3_method(),
+            Tlsv1 => ffi::TLSv1_method(),
             Sslv23 => ffi::SSLv23_method()
         }
     }
@@ -55,7 +59,7 @@ impl SslCtx {
     pub fn new(method: SslMethod) -> SslCtx {
         init();
 
-        let ctx = unsafe { ffi::SSL_CTX_new(method.to_raw()) };
+        let ctx = unsafe { ffi::SSL_CTX_new(method.to_fn()) };
         assert!(ctx != ptr::null());
 
         SslCtx {

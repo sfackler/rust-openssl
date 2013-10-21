@@ -30,7 +30,11 @@ externfn!(fn ERR_get_error() -> c_ulong)
 
 externfn!(fn SSL_library_init() -> c_int)
 
+externfn!(fn SSLv2_method() -> *SSL_METHOD)
+externfn!(fn SSLv3_method() -> *SSL_METHOD)
+externfn!(fn TLSv1_method() -> *SSL_METHOD)
 externfn!(fn SSLv23_method() -> *SSL_METHOD)
+
 externfn!(fn SSL_CTX_new(method: *SSL_METHOD) -> *SSL_CTX)
 externfn!(fn SSL_CTX_free(ctx: *SSL_CTX))
 externfn!(fn SSL_CTX_set_verify(ctx: *SSL_CTX, mode: c_int,
