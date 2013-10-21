@@ -23,7 +23,7 @@ pub static SSL_ERROR_WANT_ACCEPT: c_int = 8;
 pub static SSL_VERIFY_NONE: c_int = 0;
 pub static SSL_VERIFY_PEER: c_int = 1;
 
-#[link_args = "-lssl"]
+#[link_args = "-lssl -lcrypto"]
 extern "C" { }
 
 externfn!(fn ERR_get_error() -> c_ulong)

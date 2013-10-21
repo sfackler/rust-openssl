@@ -1,11 +1,9 @@
-extern mod ssl;
-
 use std::rt::io::Writer;
 use std::rt::io::extensions::ReaderUtil;
 use std::rt::io::net::tcp::TcpStream;
 use std::str;
 
-use ssl::{Sslv23, SslCtx, SslStream, SslVerifyPeer};
+use super::{Sslv23, SslCtx, SslStream, SslVerifyPeer};
 
 #[test]
 fn test_new_ctx() {

@@ -9,6 +9,9 @@ use std::libc::{c_int, c_void};
 
 mod ffi;
 
+#[cfg(test)]
+mod tests;
+
 static mut STARTED_INIT: AtomicBool = INIT_ATOMIC_BOOL;
 static mut FINISHED_INIT: AtomicBool = INIT_ATOMIC_BOOL;
 
