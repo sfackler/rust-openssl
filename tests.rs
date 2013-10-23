@@ -22,7 +22,7 @@ fn test_verify_untrusted() {
     let mut ctx = SslContext::new(Sslv23);
     ctx.set_verify(SslVerifyPeer);
     match SslStream::try_new(&ctx, stream) {
-        Ok(_) => fail2!("expected failure"),
+        Ok(_) => fail!("expected failure"),
         Err(err) => println!("error {:?}", err)
     }
 }
@@ -35,7 +35,7 @@ fn test_verify_trusted() {
     assert!(ctx.set_CA_file("cert.pem").is_none());
     match SslStream::try_new(&ctx, stream) {
         Ok(_) => (),
-        Err(err) => fail2!("Expected success, got {:?}", err)
+        Err(err) => fail!("Expected success, got {:?}", err)
     }
 }
 
