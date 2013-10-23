@@ -41,7 +41,6 @@ pub fn init() {
 }
 
 pub enum SslMethod {
-    Sslv2,
     Sslv3,
     Tlsv1,
     Sslv23
@@ -50,7 +49,6 @@ pub enum SslMethod {
 impl SslMethod {
     unsafe fn to_raw(&self) -> *ffi::SSL_METHOD {
         match *self {
-            Sslv2 => ffi::SSLv2_method(),
             Sslv3 => ffi::SSLv3_method(),
             Tlsv1 => ffi::TLSv1_method(),
             Sslv23 => ffi::SSLv23_method()
