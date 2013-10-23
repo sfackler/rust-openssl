@@ -1,6 +1,6 @@
 #[doc(hidden)];
 
-use std::libc::{c_int, c_void, c_ulong, c_char};
+use std::libc::{c_int, c_void, c_long, c_ulong, c_char};
 
 // openssl/ssl.h
 pub type SSL_CTX = c_void;
@@ -9,6 +9,19 @@ pub type SSL = c_void;
 pub type BIO = c_void;
 pub type BIO_METHOD = c_void;
 pub type X509_STORE_CTX = c_void;
+pub type CRYPTO_EX_DATA = c_void;
+
+pub type CRYPTO_EX_new = Option<extern "C" fn(parent: *c_void, ptr: *c_void,
+                                              ad: *CRYPTO_EX_DATA, idx: c_int,
+                                              argl: c_long, argp: *c_void)
+                                              -> c_int>;
+pub type CRYPTO_EX_dup = extern "C" fn(to: *CRYPTO_EX_DATA,
+                                       from: *CRYPTO_EX_DATA, from_d: *c_void,
+                                       idx: c_int, argl: c_long, argp: *c_void)
+                                       -> c_int;
+pub type CRYPTO_EX_free = extern "C" fn(parent: *c_void, ptr: *c_void,
+                                        ad: *CRYPTO_EX_DATA, idx: c_int,
+                                        argl: c_long, argp: *c_void);
 
 pub static SSL_ERROR_NONE: c_int = 0;
 pub static SSL_ERROR_SSL: c_int = 1;
@@ -38,9 +51,20 @@ externfn!(fn SSLv23_method() -> *SSL_METHOD)
 externfn!(fn SSL_CTX_new(method: *SSL_METHOD) -> *SSL_CTX)
 externfn!(fn SSL_CTX_free(ctx: *SSL_CTX))
 externfn!(fn SSL_CTX_set_verify(ctx: *SSL_CTX, mode: c_int,
-                                verify_callback: Option<extern "C" fn(int, *X509_STORE_CTX) -> c_int>))
+                                verify_callback: Option<extern "C" fn(c_int, *X509_STORE_CTX) -> c_int>))
 externfn!(fn SSL_CTX_load_verify_locations(ctx: *SSL_CTX, CAfile: *c_char,
                                            CApath: *c_char) -> c_int)
+externfn!(fn SSL_CTX_get_ex_new_index(argl: c_long, argp: *c_void,
+                                      new_func: Option<CRYPTO_EX_new>,
+                                      dup_func: Option<CRYPTO_EX_dup>,
+                                      free_func: Option<CRYPTO_EX_free>)
+                                      -> c_int)
+externfn!(fn SSL_CTX_set_ex_data(ctx: *SSL_CTX, idx: c_int, data: *c_void)
+                                 -> c_int)
+externfn!(fn SSL_CTX_get_ex_data(ctx: *SSL_CTX, idx: c_int) -> *c_void)
+
+externfn!(fn X509_STORE_CTX_get_ex_data(ctx: *X509_STORE_CTX, idx: c_int)
+                                        -> *c_void)
 
 externfn!(fn SSL_new(ctx: *SSL_CTX) -> *SSL)
 externfn!(fn SSL_free(ssl: *SSL))
@@ -53,6 +77,8 @@ externfn!(fn SSL_get_error(ssl: *SSL, ret: c_int) -> c_int)
 externfn!(fn SSL_read(ssl: *SSL, buf: *c_void, num: c_int) -> c_int)
 externfn!(fn SSL_write(ssl: *SSL, buf: *c_void, num: c_int) -> c_int)
 externfn!(fn SSL_shutdown(ssl: *SSL) -> c_int)
+externfn!(fn SSL_get_ex_data_X509_STORE_CTX_idx() -> c_int)
+externfn!(fn SSL_get_SSL_CTX(ssl: *SSL) -> *SSL_CTX)
 
 externfn!(fn BIO_s_mem() -> *BIO_METHOD)
 externfn!(fn BIO_new(type_: *BIO_METHOD) -> *BIO)

@@ -1,7 +1,9 @@
+use std::cast;
 use std::libc::{c_int, c_void};
 use std::ptr;
 use std::task;
-use std::unstable::atomics::{AtomicBool, INIT_ATOMIC_BOOL, Acquire, Release};
+use std::unstable::atomics::{AtomicBool, INIT_ATOMIC_BOOL, AtomicInt,
+                             INIT_ATOMIC_INT, Acquire, Release, SeqCst};
 use std::rt::io::{Stream, Reader, Writer, Decorator};
 use std::vec;
 
@@ -17,6 +19,8 @@ mod ffi;
 static mut STARTED_INIT: AtomicBool = INIT_ATOMIC_BOOL;
 static mut FINISHED_INIT: AtomicBool = INIT_ATOMIC_BOOL;
 
+static mut VERIFY_IDX: AtomicInt = INIT_ATOMIC_INT;
+
 pub fn init() {
     unsafe {
         if STARTED_INIT.swap(true, Acquire) {
@@ -27,6 +31,11 @@ pub fn init() {
         }
 
         ffi::SSL_library_init();
+        let verify_idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
+                                                       None, None);
+        assert!(verify_idx >= 0);
+        VERIFY_IDX.store(verify_idx as int, SeqCst);
+
         FINISHED_INIT.store(true, Release);
     }
 }
@@ -53,6 +62,25 @@ pub enum SslVerifyMode {
     SslVerifyPeer = ffi::SSL_VERIFY_PEER,
     SslVerifyNone = ffi::SSL_VERIFY_NONE
 }
+
+extern "C" fn raw_verify(preverify_ok: c_int, x509_ctx: *ffi::X509_STORE_CTX)
+        -> c_int {
+    unsafe {
+        let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
+        let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
+        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
+        let idx = VERIFY_IDX.load(SeqCst) as c_int;
+        let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, idx);
+        let verify: Option<VerifyCallback> = cast::transmute(verify);
+
+        match verify {
+            None => preverify_ok,
+            Some(verify) => verify(preverify_ok != 0) as c_int
+        }
+    }
+}
+
+pub type VerifyCallback = extern "Rust" fn(preverify_ok: bool) -> bool;
 
 pub struct SslContext {
     priv ctx: *ffi::SSL_CTX
@@ -84,9 +112,13 @@ impl SslContext {
     }
 
     // TODO: support callback (see SSL_CTX_set_ex_data)
-    pub fn set_verify(&mut self, mode: SslVerifyMode) {
+    pub fn set_verify(&mut self, mode: SslVerifyMode,
+                      verify: Option<VerifyCallback>) {
         unsafe {
-            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, None);
+            let idx = VERIFY_IDX.load(SeqCst) as c_int;
+            ffi::SSL_CTX_set_ex_data(self.ctx, idx,
+                                     cast::transmute(verify));
+            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(raw_verify));
         }
     }
 

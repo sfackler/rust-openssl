@@ -2,6 +2,7 @@ use std::libc::c_ulong;
 
 use super::ffi;
 
+#[deriving(ToStr)]
 pub enum SslError {
     StreamEof,
     SslSessionClosed,
