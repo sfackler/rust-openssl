@@ -6,6 +6,11 @@ use super::ffi;
 pub enum SslError {
     StreamEof,
     SslSessionClosed,
+    OpenSslErrors(~[OpensslError])
+}
+
+#[deriving(ToStr)]
+pub enum OpensslError {
     UnknownError {
         library: u8,
         function: u16,
@@ -26,14 +31,18 @@ fn get_reason(err: c_ulong) -> u16 {
 }
 
 impl SslError {
-    pub fn get() -> Option<SslError> {
-        match unsafe { ffi::ERR_get_error() } {
-            0 => None,
-            err => Some(UnknownError {
-                library: get_lib(err),
-                function: get_func(err),
-                reason: get_reason(err)
-            })
+    pub fn get() -> SslError {
+        let mut errs = ~[];
+        loop {
+            match unsafe { ffi::ERR_get_error() } {
+                0 => break,
+                err => errs.push(UnknownError {
+                    library: get_lib(err),
+                    function: get_func(err),
+                    reason: get_reason(err)
+                })
+            }
         }
+        OpenSslErrors(errs)
     }
 }

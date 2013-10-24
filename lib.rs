@@ -98,7 +98,7 @@ impl SslContext {
 
         let ctx = unsafe { ffi::SSL_CTX_new(method.to_raw()) };
         if ctx == ptr::null() {
-            return Err(SslError::get().unwrap());
+            return Err(SslError::get());
         }
 
         Ok(SslContext { ctx: ctx })
@@ -130,7 +130,7 @@ impl SslContext {
         };
 
         if ret == 0 {
-            Some(SslError::get().unwrap())
+            Some(SslError::get())
         } else {
             None
         }
@@ -151,19 +151,19 @@ impl Ssl {
     fn try_new(ctx: &SslContext) -> Result<Ssl, SslError> {
         let ssl = unsafe { ffi::SSL_new(ctx.ctx) };
         if ssl == ptr::null() {
-            return Err(SslError::get().unwrap());
+            return Err(SslError::get());
         }
         let ssl = Ssl { ssl: ssl };
 
         let rbio = unsafe { ffi::BIO_new(ffi::BIO_s_mem()) };
         if rbio == ptr::null() {
-            return Err(SslError::get().unwrap());
+            return Err(SslError::get());
         }
 
         let wbio = unsafe { ffi::BIO_new(ffi::BIO_s_mem()) };
         if wbio == ptr::null() {
             unsafe { ffi::BIO_free_all(rbio) }
-            return Err(SslError::get().unwrap());
+            return Err(SslError::get());
         }
 
         unsafe { ffi::SSL_set_bio(ssl.ssl, rbio, wbio) }
@@ -307,7 +307,7 @@ impl<S: Stream> SslStream<S> {
                 }
                 ErrorWantWrite => self.flush(),
                 ErrorZeroReturn => return Err(SslSessionClosed),
-                ErrorSsl => return Err(SslError::get().unwrap()),
+                ErrorSsl => return Err(SslError::get()),
                 _ => unreachable!()
             }
         }
