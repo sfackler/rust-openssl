@@ -1,3 +1,5 @@
+#[feature(struct_variant)];
+
 use std::cast;
 use std::libc::{c_int, c_void};
 use std::ptr;

@@ -32,7 +32,10 @@ fn test_verify_trusted() {
     let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
     let mut ctx = SslContext::new(Sslv23);
     ctx.set_verify(SslVerifyPeer, None);
-    assert!(ctx.set_CA_file("test/cert.pem").is_none());
+    match ctx.set_CA_file("test/cert.pem") {
+        None => {}
+        Some(err) => fail!("Unexpected error {:?}", err)
+    }
     match SslStream::try_new(&ctx, stream) {
         Ok(_) => (),
         Err(err) => fail!("Expected success, got {:?}", err)
@@ -72,7 +75,10 @@ fn test_verify_trusted_callback_override_ok() {
     let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
     let mut ctx = SslContext::new(Sslv23);
     ctx.set_verify(SslVerifyPeer, Some(callback));
-    assert!(ctx.set_CA_file("test/cert.pem").is_none());
+    match ctx.set_CA_file("test/cert.pem") {
+        None => {}
+        Some(err) => fail!("Unexpected error {:?}", err)
+    }
     match SslStream::try_new(&ctx, stream) {
         Ok(_) => (),
         Err(err) => fail!("Expected success, got {:?}", err)
@@ -87,7 +93,10 @@ fn test_verify_trusted_callback_override_bad() {
     let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
     let mut ctx = SslContext::new(Sslv23);
     ctx.set_verify(SslVerifyPeer, Some(callback));
-    assert!(ctx.set_CA_file("test/cert.pem").is_none());
+    match ctx.set_CA_file("test/cert.pem") {
+        None => {}
+        Some(err) => fail!("Unexpected error {:?}", err)
+    }
     assert!(SslStream::try_new(&ctx, stream).is_err());
 }
 
