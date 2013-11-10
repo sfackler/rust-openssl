@@ -1,5 +1,10 @@
 #[feature(struct_variant)];
 
+// Needed for rustdoc-ng
+#[link(name="rust-ssl", vers="0.1",
+       package_id="github.com/sfackler/rust-ssl")];
+#[doc(html_root_url="http://docs.octayn.net/rust-ssl/")];
+
 use std::cast;
 use std::libc::{c_int, c_void};
 use std::ptr;
