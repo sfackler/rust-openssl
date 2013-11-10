@@ -20,6 +20,10 @@ static mut FINISHED_INIT: AtomicBool = INIT_ATOMIC_BOOL;
 
 static mut VERIFY_IDX: AtomicInt = INIT_ATOMIC_INT;
 
+/// Initializes the library.
+///
+/// This does not need to be manually called. It will automatically be called
+/// when needed. Can be safely called multiple times on different threads.
 pub fn init() {
     unsafe {
         if STARTED_INIT.swap(true, Acquire) {
@@ -39,9 +43,13 @@ pub fn init() {
     }
 }
 
+/// Determines the SSL method supported
 pub enum SslMethod {
+    /// Only support the SSLv3 protocol
     Sslv3,
+    /// Only support the TLSv1 protocol
     Tlsv1,
+    /// Support the SSLv2, SSLv3 and TLSv1 protocols
     Sslv23
 }
 
@@ -55,8 +63,11 @@ impl SslMethod {
     }
 }
 
+/// Determines the type of certificate verification used
 pub enum SslVerifyMode {
+    /// Verify that the server's certificate is trusted
     SslVerifyPeer = ffi::SSL_VERIFY_PEER,
+    /// Do not verify the server's certificate
     SslVerifyNone = ffi::SSL_VERIFY_NONE
 }
 
@@ -77,8 +88,10 @@ extern "C" fn raw_verify(preverify_ok: c_int, x509_ctx: *ffi::X509_STORE_CTX)
     }
 }
 
+/// The signature of functions that can be used to manually verify certificates
 pub type VerifyCallback = extern "Rust" fn(preverify_ok: bool) -> bool;
 
+/// An SSL context object
 pub struct SslContext {
     priv ctx: *ffi::SSL_CTX
 }
@@ -90,6 +103,7 @@ impl Drop for SslContext {
 }
 
 impl SslContext {
+    /// Attempts to create a new SSL context.
     pub fn try_new(method: SslMethod) -> Result<SslContext, SslError> {
         init();
 
@@ -101,6 +115,7 @@ impl SslContext {
         Ok(SslContext { ctx: ctx })
     }
 
+    /// A convenience wrapper around `try_new`.
     pub fn new(method: SslMethod) -> SslContext {
         match SslContext::try_new(method) {
             Ok(ctx) => ctx,
@@ -108,7 +123,7 @@ impl SslContext {
         }
     }
 
-    // TODO: support callback (see SSL_CTX_set_ex_data)
+    /// Configures the certificate verification method for new connections.
     pub fn set_verify(&mut self, mode: SslVerifyMode,
                       verify: Option<VerifyCallback>) {
         unsafe {
@@ -119,6 +134,7 @@ impl SslContext {
         }
     }
 
+    /// Specifies the file that contains trusted CA certificates.
     pub fn set_CA_file(&mut self, file: &str) -> Option<SslError> {
         let ret = do file.with_c_str |file| {
             unsafe {
@@ -251,6 +267,7 @@ impl<'self> MemBio<'self> {
     }
 }
 
+/// A stream wrapper which handles SSL encryption for an underlying stream.
 pub struct SslStream<S> {
     priv stream: S,
     priv ssl: Ssl,
@@ -258,6 +275,7 @@ pub struct SslStream<S> {
 }
 
 impl<S: Stream> SslStream<S> {
+    /// Attempts to create a new SSL stream
     pub fn try_new(ctx: &SslContext, stream: S) -> Result<SslStream<S>,
                                                           SslError> {
         let ssl = match Ssl::try_new(ctx) {
@@ -278,6 +296,7 @@ impl<S: Stream> SslStream<S> {
         }
     }
 
+    /// A convenience wrapper around `try_new`.
     pub fn new(ctx: &SslContext, stream: S) -> SslStream<S> {
         match SslStream::try_new(ctx, stream) {
             Ok(stream) => stream,
