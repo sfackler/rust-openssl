@@ -9,12 +9,9 @@ use std::unstable::atomics::{AtomicBool, INIT_ATOMIC_BOOL, AtomicInt,
 use std::rt::io::{Stream, Reader, Writer, Decorator};
 use std::vec;
 
-use error::{SslError, SslSessionClosed, StreamEof};
+use self::error::{SslError, SslSessionClosed, StreamEof};
 
 pub mod error;
-
-#[cfg(test)]
-mod tests;
 
 mod ffi;
 

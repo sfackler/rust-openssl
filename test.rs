@@ -1,9 +1,12 @@
+#[feature(struct_variant)];
+
 use std::rt::io::Writer;
-use std::rt::io::extensions::ReaderUtil;
 use std::rt::io::net::tcp::TcpStream;
 use std::str;
 
-use super::{Sslv23, SslContext, SslStream, SslVerifyPeer};
+use lib::{Sslv23, SslContext, SslStream, SslVerifyPeer};
+
+mod lib;
 
 #[test]
 fn test_new_ctx() {
