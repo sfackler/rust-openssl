@@ -25,11 +25,7 @@ static mut FINISHED_INIT: AtomicBool = INIT_ATOMIC_BOOL;
 
 static mut VERIFY_IDX: AtomicInt = INIT_ATOMIC_INT;
 
-/// Initializes the library.
-///
-/// This does not need to be manually called. It will automatically be called
-/// when needed. Can be safely called multiple times on different threads.
-pub fn init() {
+fn init() {
     unsafe {
         if STARTED_INIT.swap(true, Acquire) {
             while !FINISHED_INIT.load(Release) {
