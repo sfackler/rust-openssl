@@ -12,9 +12,8 @@ pub type X509_STORE_CTX = c_void;
 pub type CRYPTO_EX_DATA = c_void;
 
 pub type CRYPTO_EX_new = extern "C" fn(parent: *c_void, ptr: *c_void,
-                                              ad: *CRYPTO_EX_DATA, idx: c_int,
-                                              argl: c_long, argp: *c_void)
-                                              -> c_int;
+                                       ad: *CRYPTO_EX_DATA, idx: c_int,
+                                       argl: c_long, argp: *c_void) -> c_int;
 pub type CRYPTO_EX_dup = extern "C" fn(to: *CRYPTO_EX_DATA,
                                        from: *CRYPTO_EX_DATA, from_d: *c_void,
                                        idx: c_int, argl: c_long, argp: *c_void)
@@ -49,20 +48,20 @@ extern "C" {
     pub fn SSL_CTX_new(method: *SSL_METHOD) -> *SSL_CTX;
     pub fn SSL_CTX_free(ctx: *SSL_CTX);
     pub fn SSL_CTX_set_verify(ctx: *SSL_CTX, mode: c_int,
-                                    verify_callback: Option<extern "C" fn(c_int, *X509_STORE_CTX) -> c_int>);
+                              verify_callback: Option<extern "C" fn(c_int, *X509_STORE_CTX) -> c_int>);
     pub fn SSL_CTX_load_verify_locations(ctx: *SSL_CTX, CAfile: *c_char,
                                                CApath: *c_char) -> c_int;
     pub fn SSL_CTX_get_ex_new_index(argl: c_long, argp: *c_void,
-                                          new_func: Option<CRYPTO_EX_new>,
-                                          dup_func: Option<CRYPTO_EX_dup>,
-                                          free_func: Option<CRYPTO_EX_free>)
-                                          -> c_int;
+                                    new_func: Option<CRYPTO_EX_new>,
+                                    dup_func: Option<CRYPTO_EX_dup>,
+                                    free_func: Option<CRYPTO_EX_free>)
+                                    -> c_int;
     pub fn SSL_CTX_set_ex_data(ctx: *SSL_CTX, idx: c_int, data: *c_void)
-                                     -> c_int;
+                               -> c_int;
     pub fn SSL_CTX_get_ex_data(ctx: *SSL_CTX, idx: c_int) -> *c_void;
 
     pub fn X509_STORE_CTX_get_ex_data(ctx: *X509_STORE_CTX, idx: c_int)
-                                            -> *c_void;
+                                      -> *c_void;
 
     pub fn SSL_new(ctx: *SSL_CTX) -> *SSL;
     pub fn SSL_free(ssl: *SSL);
