@@ -11,7 +11,7 @@ use std::ptr;
 use std::task;
 use std::unstable::atomics::{AtomicBool, INIT_ATOMIC_BOOL, AtomicInt,
                              INIT_ATOMIC_INT, Acquire, Release, SeqCst};
-use std::rt::io::{Stream, Reader, Writer, Decorator};
+use std::io::{Stream, Reader, Writer, Decorator};
 use std::vec;
 
 use self::error::{SslError, SslSessionClosed, StreamEof};

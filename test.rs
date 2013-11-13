@@ -1,7 +1,7 @@
 #[feature(struct_variant)];
 
-use std::rt::io::Writer;
-use std::rt::io::net::tcp::TcpStream;
+use std::io::Writer;
+use std::io::net::tcp::TcpStream;
 use std::str;
 
 use lib::{Sslv23, SslContext, SslStream, SslVerifyPeer};
