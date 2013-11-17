@@ -9,6 +9,7 @@ pub type SSL = c_void;
 pub type BIO = c_void;
 pub type BIO_METHOD = c_void;
 pub type X509_STORE_CTX = c_void;
+pub type X509 = c_void;
 pub type CRYPTO_EX_DATA = c_void;
 
 pub type CRYPTO_EX_new = extern "C" fn(parent: *c_void, ptr: *c_void,
@@ -62,6 +63,7 @@ extern "C" {
 
     pub fn X509_STORE_CTX_get_ex_data(ctx: *X509_STORE_CTX, idx: c_int)
                                       -> *c_void;
+    pub fn X509_STORE_CTX_get_current_cert(ct: *X509_STORE_CTX) -> *X509;
 
     pub fn SSL_new(ctx: *SSL_CTX) -> *SSL;
     pub fn SSL_free(ssl: *SSL);
