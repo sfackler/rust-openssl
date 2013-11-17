@@ -2,7 +2,6 @@
 
 use std::libc::{c_int, c_void, c_long, c_ulong, c_char};
 
-// openssl/ssl.h
 pub type SSL_CTX = c_void;
 pub type SSL_METHOD = c_void;
 pub type SSL = c_void;
@@ -36,6 +35,70 @@ pub static SSL_ERROR_WANT_ACCEPT: c_int = 8;
 pub static SSL_VERIFY_NONE: c_int = 0;
 pub static SSL_VERIFY_PEER: c_int = 1;
 
+pub static X509_V_OK: c_int = 0;
+/* illegal error (for uninitialized values, to avoid X509_V_OK): 1 */
+
+pub static X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT: c_int = 2;
+pub static X509_V_ERR_UNABLE_TO_GET_CRL: c_int = 3;
+pub static X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE: c_int = 4;
+pub static X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE: c_int = 5;
+pub static X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY: c_int = 6;
+pub static X509_V_ERR_CERT_SIGNATURE_FAILURE: c_int = 7;
+pub static X509_V_ERR_CRL_SIGNATURE_FAILURE: c_int = 8;
+pub static X509_V_ERR_CERT_NOT_YET_VALID: c_int = 9;
+pub static X509_V_ERR_CERT_HAS_EXPIRED: c_int = 10;
+pub static X509_V_ERR_CRL_NOT_YET_VALID: c_int = 11;
+pub static X509_V_ERR_CRL_HAS_EXPIRED: c_int = 12;
+pub static X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD: c_int = 13;
+pub static X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD: c_int = 14;
+pub static X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD: c_int = 15;
+pub static X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD: c_int = 16;
+pub static X509_V_ERR_OUT_OF_MEM: c_int = 17;
+pub static X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT: c_int = 18;
+pub static X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN: c_int = 19;
+pub static X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY: c_int = 20;
+pub static X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE: c_int = 21;
+pub static X509_V_ERR_CERT_CHAIN_TOO_LONG: c_int = 22;
+pub static X509_V_ERR_CERT_REVOKED: c_int = 23;
+pub static X509_V_ERR_INVALID_CA: c_int = 24;
+pub static X509_V_ERR_PATH_LENGTH_EXCEEDED: c_int = 25;
+pub static X509_V_ERR_INVALID_PURPOSE: c_int = 26;
+pub static X509_V_ERR_CERT_UNTRUSTED: c_int = 27;
+pub static X509_V_ERR_CERT_REJECTED: c_int = 28;
+/* These are 'informational' when looking for issuer cert */
+pub static X509_V_ERR_SUBJECT_ISSUER_MISMATCH: c_int = 29;
+pub static X509_V_ERR_AKID_SKID_MISMATCH: c_int = 30;
+pub static X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH: c_int = 31;
+pub static X509_V_ERR_KEYUSAGE_NO_CERTSIGN: c_int = 32;
+
+pub static X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER: c_int = 33;
+pub static X509_V_ERR_UNHANDLED_CRITICAL_EXTENSION: c_int = 34;
+pub static X509_V_ERR_KEYUSAGE_NO_CRL_SIGN: c_int = 35;
+pub static X509_V_ERR_UNHANDLED_CRITICAL_CRL_EXTENSION: c_int = 36;
+pub static X509_V_ERR_INVALID_NON_CA: c_int = 37;
+pub static X509_V_ERR_PROXY_PATH_LENGTH_EXCEEDED: c_int = 38;
+pub static X509_V_ERR_KEYUSAGE_NO_DIGITAL_SIGNATURE: c_int = 39;
+pub static X509_V_ERR_PROXY_CERTIFICATES_NOT_ALLOWED: c_int = 40;
+
+pub static X509_V_ERR_INVALID_EXTENSION: c_int = 41;
+pub static X509_V_ERR_INVALID_POLICY_EXTENSION: c_int = 42;
+pub static X509_V_ERR_NO_EXPLICIT_POLICY: c_int = 43;
+pub static X509_V_ERR_DIFFERENT_CRL_SCOPE: c_int = 44;
+pub static X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE: c_int = 45;
+
+pub static X509_V_ERR_UNNESTED_RESOURCE: c_int = 46;
+
+pub static X509_V_ERR_PERMITTED_VIOLATION: c_int = 47;
+pub static X509_V_ERR_EXCLUDED_VIOLATION: c_int = 48;
+pub static X509_V_ERR_SUBTREE_MINMAX: c_int = 49;
+pub static X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE: c_int = 51;
+pub static X509_V_ERR_UNSUPPORTED_CONSTRAINT_SYNTAX: c_int = 52;
+pub static X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
+pub static X509_V_ERR_CRL_PATH_VALIDATION_ERROR: c_int = 54;
+
+/* The application is not happy */
+pub static X509_V_ERR_APPLICATION_VERIFICATION: c_int = 50;
+
 #[link_args = "-lssl -lcrypto"]
 extern "C" {
     pub fn ERR_get_error() -> c_ulong;
@@ -64,6 +127,7 @@ extern "C" {
     pub fn X509_STORE_CTX_get_ex_data(ctx: *X509_STORE_CTX, idx: c_int)
                                       -> *c_void;
     pub fn X509_STORE_CTX_get_current_cert(ct: *X509_STORE_CTX) -> *X509;
+    pub fn X509_STORE_CTX_get_error(ctx: *X509_STORE_CTX) -> c_int;
 
     pub fn SSL_new(ctx: *SSL_CTX) -> *SSL;
     pub fn SSL_free(ssl: *SSL);

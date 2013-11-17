@@ -1,4 +1,4 @@
-#[feature(struct_variant)];
+#[feature(struct_variant, macro_rules)];
 
 use std::io::Writer;
 use std::io::net::tcp::TcpStream;
@@ -113,6 +113,34 @@ fn test_verify_callback_load_certs() {
     let mut ctx = SslContext::new(Sslv23);
     ctx.set_verify(SslVerifyPeer, Some(callback));
     assert!(SslStream::try_new(&ctx, stream).is_ok());
+}
+
+#[test]
+fn test_verify_trusted_get_error_ok() {
+    fn callback(_preverify_ok: bool, x509_ctx: X509StoreContext) -> bool {
+        assert!(x509_ctx.get_error().is_none());
+        true
+    }
+    let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
+    let mut ctx = SslContext::new(Sslv23);
+    ctx.set_verify(SslVerifyPeer, Some(callback));
+    match ctx.set_CA_file("test/cert.pem") {
+        None => {}
+        Some(err) => fail!("Unexpected error {:?}", err)
+    }
+    assert!(SslStream::try_new(&ctx, stream).is_ok());
+}
+
+#[test]
+fn test_verify_trusted_get_error_err() {
+    fn callback(_preverify_ok: bool, x509_ctx: X509StoreContext) -> bool {
+        assert!(x509_ctx.get_error().is_some());
+        false
+    }
+    let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
+    let mut ctx = SslContext::new(Sslv23);
+    ctx.set_verify(SslVerifyPeer, Some(callback));
+    assert!(SslStream::try_new(&ctx, stream).is_err());
 }
 
 #[test]

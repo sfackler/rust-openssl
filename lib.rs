@@ -1,4 +1,4 @@
-#[feature(struct_variant)];
+#[feature(struct_variant, macro_rules)];
 
 // Needed for rustdoc-ng
 #[link(name="rust-ssl", vers="0.1",
@@ -15,6 +15,7 @@ use std::io::{Stream, Reader, Writer, Decorator};
 use std::vec;
 
 use self::error::{SslError, SslSessionClosed, StreamEof};
+use self::hack::X509ValidationError;
 
 pub mod error;
 
@@ -159,6 +160,11 @@ pub struct X509StoreContext {
 }
 
 impl X509StoreContext {
+    pub fn get_error(&self) -> Option<X509ValidationError> {
+        let err = unsafe { ffi::X509_STORE_CTX_get_error(self.ctx) };
+        X509ValidationError::from_raw(err)
+    }
+
     pub fn get_current_cert(&self) -> Option<X509> {
         let ptr = unsafe { ffi::X509_STORE_CTX_get_current_cert(self.ctx) };
 
@@ -174,6 +180,86 @@ impl X509StoreContext {
 pub struct X509 {
     priv x509: *ffi::X509
 }
+
+macro_rules! make_validation_error(
+    ($ok_val:ident, $($name:ident = $val:ident,)+) => (
+        pub mod hack {
+            use std::libc::c_int;
+
+            pub enum X509ValidationError {
+                $($name,)+
+                X509UnknownError(c_int)
+            }
+
+            impl X509ValidationError {
+                #[doc(hidden)]
+                pub fn from_raw(err: c_int) -> Option<X509ValidationError> {
+                    match err {
+                        super::ffi::$ok_val => None,
+                        $(super::ffi::$val => Some($name),)+
+                        err => Some(X509UnknownError(err))
+                    }
+                }
+            }
+        }
+    )
+)
+
+make_validation_error!(X509_V_OK,
+    X509UnableToGetIssuerCert = X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT,
+    X509UnableToGetCrl = X509_V_ERR_UNABLE_TO_GET_CRL,
+    X509UnableToDecryptCertSignature = X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE,
+    X509UnableToDecryptCrlSignature = X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE,
+    X509UnableToDecodeIssuerPublicKey = X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY,
+    X509CertSignatureFailure = X509_V_ERR_CERT_SIGNATURE_FAILURE,
+    X509CrlSignatureFailure = X509_V_ERR_CRL_SIGNATURE_FAILURE,
+    X509CertNotYetValid = X509_V_ERR_CERT_NOT_YET_VALID,
+    X509CertHasExpired = X509_V_ERR_CERT_HAS_EXPIRED,
+    X509CrlNotYetValid = X509_V_ERR_CRL_NOT_YET_VALID,
+    X509CrlHasExpired = X509_V_ERR_CRL_HAS_EXPIRED,
+    X509ErrorInCertNotBeforeField = X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD,
+    X509ErrorInCertNotAfterField = X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD,
+    X509ErrorInCrlLastUpdateField = X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD,
+    X509ErrorInCrlNextUpdateField = X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD,
+    X509OutOfMem = X509_V_ERR_OUT_OF_MEM,
+    X509DepthZeroSelfSignedCert = X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT,
+    X509SelfSignedCertInChain = X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN,
+    X509UnableToGetIssuerCertLocally = X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY,
+    X509UnableToVerifyLeafSignature = X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE,
+    X509CertChainTooLong = X509_V_ERR_CERT_CHAIN_TOO_LONG,
+    X509CertRevoked = X509_V_ERR_CERT_REVOKED,
+    X509InvalidCA = X509_V_ERR_INVALID_CA,
+    X509PathLengthExceeded = X509_V_ERR_PATH_LENGTH_EXCEEDED,
+    X509InvalidPurpose = X509_V_ERR_INVALID_PURPOSE,
+    X509CertUntrusted = X509_V_ERR_CERT_UNTRUSTED,
+    X509CertRejected = X509_V_ERR_CERT_REJECTED,
+    X509SubjectIssuerMismatch = X509_V_ERR_SUBJECT_ISSUER_MISMATCH,
+    X509AkidSkidMismatch = X509_V_ERR_AKID_SKID_MISMATCH,
+    X509AkidIssuerSerialMismatch = X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH,
+    X509KeyusageNoCertsign = X509_V_ERR_KEYUSAGE_NO_CERTSIGN,
+    X509UnableToGetCrlIssuer = X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER,
+    X509UnhandledCriticalExtension = X509_V_ERR_UNHANDLED_CRITICAL_EXTENSION,
+    X509KeyusageNoCrlSign = X509_V_ERR_KEYUSAGE_NO_CRL_SIGN,
+    X509UnhandledCriticalCrlExtension = X509_V_ERR_UNHANDLED_CRITICAL_CRL_EXTENSION,
+    X509InvalidNonCA = X509_V_ERR_INVALID_NON_CA,
+    X509ProxyPathLengthExceeded = X509_V_ERR_PROXY_PATH_LENGTH_EXCEEDED,
+    X509KeyusageNoDigitalSignature = X509_V_ERR_KEYUSAGE_NO_DIGITAL_SIGNATURE,
+    X509ProxyCertificatesNotAllowed = X509_V_ERR_PROXY_CERTIFICATES_NOT_ALLOWED,
+    X509InvalidExtension = X509_V_ERR_INVALID_EXTENSION,
+    X509InavlidPolicyExtension = X509_V_ERR_INVALID_POLICY_EXTENSION,
+    X509NoExplicitPolicy = X509_V_ERR_NO_EXPLICIT_POLICY,
+    X509DifferentCrlScope = X509_V_ERR_DIFFERENT_CRL_SCOPE,
+    X509UnsupportedExtensionFeature = X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE,
+    X509UnnestedResource = X509_V_ERR_UNNESTED_RESOURCE,
+    X509PermittedVolation = X509_V_ERR_PERMITTED_VIOLATION,
+    X509ExcludedViolation = X509_V_ERR_EXCLUDED_VIOLATION,
+    X509SubtreeMinmax = X509_V_ERR_SUBTREE_MINMAX,
+    X509UnsupportedConstraintType = X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
+    X509UnsupportedConstraintSyntax = X509_V_ERR_UNSUPPORTED_CONSTRAINT_SYNTAX,
+    X509UnsupportedNameSyntax = X509_V_ERR_UNSUPPORTED_NAME_SYNTAX,
+    X509CrlPathValidationError= X509_V_ERR_CRL_PATH_VALIDATION_ERROR,
+    X509ApplicationVerification = X509_V_ERR_APPLICATION_VERIFICATION,
+)
 
 struct Ssl {
     ssl: *ffi::SSL
