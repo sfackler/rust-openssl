@@ -6,11 +6,12 @@
 #[doc(html_root_url="http://sfackler.com/doc/rust-ssl/")];
 
 use std::cast;
-use std::libc::{c_int, c_void};
+use std::libc::{c_int, c_void, c_char};
 use std::ptr;
 use std::task;
-use std::unstable::atomics::{AtomicBool, INIT_ATOMIC_BOOL, AtomicInt,
-                             INIT_ATOMIC_INT, Acquire, Release, SeqCst};
+use std::unstable::atomics::{AtomicBool, INIT_ATOMIC_BOOL, AtomicUint,
+                             INIT_ATOMIC_UINT, Acquire, Release, SeqCst};
+use std::unstable::mutex::Mutex;
 use std::io::{Stream, Reader, Writer, Decorator};
 use std::vec;
 
@@ -24,7 +25,10 @@ mod ffi;
 static mut STARTED_INIT: AtomicBool = INIT_ATOMIC_BOOL;
 static mut FINISHED_INIT: AtomicBool = INIT_ATOMIC_BOOL;
 
-static mut VERIFY_IDX: AtomicInt = INIT_ATOMIC_INT;
+static mut VERIFY_IDX: AtomicUint = INIT_ATOMIC_UINT;
+
+// actually a *~[Mutex]
+static mut MUTEXES: AtomicUint = INIT_ATOMIC_UINT;
 
 fn init() {
     unsafe {
@@ -39,7 +43,13 @@ fn init() {
         let verify_idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
                                                        None, None);
         assert!(verify_idx >= 0);
-        VERIFY_IDX.store(verify_idx as int, SeqCst);
+        VERIFY_IDX.store(verify_idx as uint, Release);
+
+        let num_locks = ffi::CRYPTO_num_locks();
+        let mutexes = ~vec::from_fn(num_locks as uint, |_| Mutex::new());
+        MUTEXES.store(cast::transmute(mutexes), Release);
+
+        ffi::CRYPTO_set_locking_callback(locking_function);
 
         FINISHED_INIT.store(true, Release);
     }
@@ -73,13 +83,27 @@ pub enum SslVerifyMode {
     SslVerifyNone = ffi::SSL_VERIFY_NONE
 }
 
+extern "C" fn locking_function(mode: c_int, n: c_int, _file: *c_char,
+                               _line: c_int) {
+    unsafe {
+        let mutexes: *mut ~[Mutex] = cast::transmute(MUTEXES.load(Acquire));
+        let mutex = &mut (*mutexes)[n as uint];
+
+        if mode & ffi::CRYPTO_LOCK != 0 {
+            mutex.lock();
+        } else {
+            mutex.unlock();
+        }
+    }
+}
+
 extern "C" fn raw_verify(preverify_ok: c_int, x509_ctx: *ffi::X509_STORE_CTX)
         -> c_int {
     unsafe {
         let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
         let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
-        let idx = VERIFY_IDX.load(SeqCst) as c_int;
+        let idx = VERIFY_IDX.load(Acquire) as c_int;
         let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, idx);
         let verify: Option<VerifyCallback> = cast::transmute(verify);
 

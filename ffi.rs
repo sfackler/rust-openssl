@@ -22,6 +22,8 @@ pub type CRYPTO_EX_free = extern "C" fn(parent: *c_void, ptr: *c_void,
                                         ad: *CRYPTO_EX_DATA, idx: c_int,
                                         argl: c_long, argp: *c_void);
 
+pub static CRYPTO_LOCK: c_int = 1;
+
 pub static SSL_ERROR_NONE: c_int = 0;
 pub static SSL_ERROR_SSL: c_int = 1;
 pub static SSL_ERROR_WANT_READ: c_int = 2;
@@ -101,6 +103,12 @@ pub static X509_V_ERR_APPLICATION_VERIFICATION: c_int = 50;
 
 #[link_args = "-lssl -lcrypto"]
 extern "C" {
+    pub fn CRYPTO_num_locks() -> c_int;
+    pub fn CRYPTO_set_locking_callback(func: extern "C" fn(mode: c_int,
+                                                           n: c_int,
+                                                           file: *c_char,
+                                                           line: c_int));
+
     pub fn ERR_get_error() -> c_ulong;
 
     pub fn SSL_library_init() -> c_int;
