@@ -47,7 +47,7 @@ fn test_verify_trusted() {
 
 #[test]
 fn test_verify_untrusted_callback_override_ok() {
-    fn callback(_preverify_ok: bool, _x509_ctx: X509StoreContext) -> bool {
+    fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
         true
     }
     let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
@@ -61,7 +61,7 @@ fn test_verify_untrusted_callback_override_ok() {
 
 #[test]
 fn test_verify_untrusted_callback_override_bad() {
-    fn callback(_preverify_ok: bool, _x509_ctx: X509StoreContext) -> bool {
+    fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
         false
     }
     let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
@@ -72,7 +72,7 @@ fn test_verify_untrusted_callback_override_bad() {
 
 #[test]
 fn test_verify_trusted_callback_override_ok() {
-    fn callback(_preverify_ok: bool, _x509_ctx: X509StoreContext) -> bool {
+    fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
         true
     }
     let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
@@ -90,7 +90,7 @@ fn test_verify_trusted_callback_override_ok() {
 
 #[test]
 fn test_verify_trusted_callback_override_bad() {
-    fn callback(_preverify_ok: bool, _x509_ctx: X509StoreContext) -> bool {
+    fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
         false
     }
     let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
@@ -105,7 +105,7 @@ fn test_verify_trusted_callback_override_bad() {
 
 #[test]
 fn test_verify_callback_load_certs() {
-    fn callback(_preverify_ok: bool, x509_ctx: X509StoreContext) -> bool {
+    fn callback(_preverify_ok: bool, x509_ctx: &X509StoreContext) -> bool {
         assert!(x509_ctx.get_current_cert().is_some());
         true
     }
@@ -117,7 +117,7 @@ fn test_verify_callback_load_certs() {
 
 #[test]
 fn test_verify_trusted_get_error_ok() {
-    fn callback(_preverify_ok: bool, x509_ctx: X509StoreContext) -> bool {
+    fn callback(_preverify_ok: bool, x509_ctx: &X509StoreContext) -> bool {
         assert!(x509_ctx.get_error().is_none());
         true
     }
@@ -133,7 +133,7 @@ fn test_verify_trusted_get_error_ok() {
 
 #[test]
 fn test_verify_trusted_get_error_err() {
-    fn callback(_preverify_ok: bool, x509_ctx: X509StoreContext) -> bool {
+    fn callback(_preverify_ok: bool, x509_ctx: &X509StoreContext) -> bool {
         assert!(x509_ctx.get_error().is_some());
         false
     }

@@ -111,14 +111,14 @@ extern "C" fn raw_verify(preverify_ok: c_int, x509_ctx: *ffi::X509_STORE_CTX)
 
         match verify {
             None => preverify_ok,
-            Some(verify) => verify(preverify_ok != 0, ctx) as c_int
+            Some(verify) => verify(preverify_ok != 0, &ctx) as c_int
         }
     }
 }
 
 /// The signature of functions that can be used to manually verify certificates
 pub type VerifyCallback = extern "Rust" fn(preverify_ok: bool,
-                                           x509_ctx: X509StoreContext) -> bool;
+                                           x509_ctx: &X509StoreContext) -> bool;
 
 /// An SSL context object
 pub struct SslContext {
@@ -189,7 +189,7 @@ impl X509StoreContext {
         X509ValidationError::from_raw(err)
     }
 
-    pub fn get_current_cert(&self) -> Option<X509> {
+    pub fn get_current_cert<'a>(&'a self) -> Option<X509<'a>> {
         let ptr = unsafe { ffi::X509_STORE_CTX_get_current_cert(self.ctx) };
 
         if ptr.is_null() {
@@ -201,7 +201,7 @@ impl X509StoreContext {
 }
 
 /// A public key certificate
-pub struct X509 {
+pub struct X509<'ctx> {
     priv x509: *ffi::X509
 }
 
