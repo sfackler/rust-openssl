@@ -205,6 +205,16 @@ pub struct X509<'ctx> {
     priv x509: *ffi::X509
 }
 
+pub struct X509Name<'x> {
+    priv name: *ffi::X509_NAME
+}
+
+pub enum X509NameFormat {
+    Rfc2253 = ffi::XN_FLAG_RFC2253,
+    Oneline = ffi::XN_FLAG_ONELINE,
+    Multiline = ffi::XN_FLAG_MULTILINE
+}
+
 macro_rules! make_validation_error(
     ($ok_val:ident, $($name:ident = $val:ident,)+) => (
         pub mod hack {
@@ -323,8 +333,8 @@ impl Ssl {
         assert!(bio != ptr::null());
 
         MemBio {
-            ssl: self,
-            bio: bio
+            bio: bio,
+            owned: false
         }
     }
 
@@ -333,8 +343,8 @@ impl Ssl {
         assert!(bio != ptr::null());
 
         MemBio {
-            ssl: self,
-            bio: bio
+            bio: bio,
+            owned: false
         }
     }
 
@@ -374,9 +384,19 @@ enum LibSslError {
     ErrorWantAccept = ffi::SSL_ERROR_WANT_ACCEPT,
 }
 
-struct MemBio<'self> {
-    ssl: &'self Ssl,
-    bio: *ffi::BIO
+struct MemBio<'ssl> {
+    bio: *ffi::BIO,
+    owned: bool
+}
+
+impl<'ssl> Drop for MemBio<'ssl> {
+    fn drop(&mut self) {
+        if self.owned {
+            unsafe {
+                ffi::BIO_free_all(self.bio);
+            }
+        }
+    }
 }
 
 impl<'self> MemBio<'self> {

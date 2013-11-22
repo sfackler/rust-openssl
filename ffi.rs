@@ -9,6 +9,7 @@ pub type BIO = c_void;
 pub type BIO_METHOD = c_void;
 pub type X509_STORE_CTX = c_void;
 pub type X509 = c_void;
+pub type X509_NAME = c_void;
 pub type CRYPTO_EX_DATA = c_void;
 
 pub type CRYPTO_EX_new = extern "C" fn(parent: *c_void, ptr: *c_void,
@@ -38,8 +39,6 @@ pub static SSL_VERIFY_NONE: c_int = 0;
 pub static SSL_VERIFY_PEER: c_int = 1;
 
 pub static X509_V_OK: c_int = 0;
-/* illegal error (for uninitialized values, to avoid X509_V_OK): 1 */
-
 pub static X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT: c_int = 2;
 pub static X509_V_ERR_UNABLE_TO_GET_CRL: c_int = 3;
 pub static X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE: c_int = 4;
@@ -67,12 +66,10 @@ pub static X509_V_ERR_PATH_LENGTH_EXCEEDED: c_int = 25;
 pub static X509_V_ERR_INVALID_PURPOSE: c_int = 26;
 pub static X509_V_ERR_CERT_UNTRUSTED: c_int = 27;
 pub static X509_V_ERR_CERT_REJECTED: c_int = 28;
-/* These are 'informational' when looking for issuer cert */
 pub static X509_V_ERR_SUBJECT_ISSUER_MISMATCH: c_int = 29;
 pub static X509_V_ERR_AKID_SKID_MISMATCH: c_int = 30;
 pub static X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH: c_int = 31;
 pub static X509_V_ERR_KEYUSAGE_NO_CERTSIGN: c_int = 32;
-
 pub static X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER: c_int = 33;
 pub static X509_V_ERR_UNHANDLED_CRITICAL_EXTENSION: c_int = 34;
 pub static X509_V_ERR_KEYUSAGE_NO_CRL_SIGN: c_int = 35;
@@ -81,15 +78,12 @@ pub static X509_V_ERR_INVALID_NON_CA: c_int = 37;
 pub static X509_V_ERR_PROXY_PATH_LENGTH_EXCEEDED: c_int = 38;
 pub static X509_V_ERR_KEYUSAGE_NO_DIGITAL_SIGNATURE: c_int = 39;
 pub static X509_V_ERR_PROXY_CERTIFICATES_NOT_ALLOWED: c_int = 40;
-
 pub static X509_V_ERR_INVALID_EXTENSION: c_int = 41;
 pub static X509_V_ERR_INVALID_POLICY_EXTENSION: c_int = 42;
 pub static X509_V_ERR_NO_EXPLICIT_POLICY: c_int = 43;
 pub static X509_V_ERR_DIFFERENT_CRL_SCOPE: c_int = 44;
 pub static X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE: c_int = 45;
-
 pub static X509_V_ERR_UNNESTED_RESOURCE: c_int = 46;
-
 pub static X509_V_ERR_PERMITTED_VIOLATION: c_int = 47;
 pub static X509_V_ERR_EXCLUDED_VIOLATION: c_int = 48;
 pub static X509_V_ERR_SUBTREE_MINMAX: c_int = 49;
@@ -97,9 +91,11 @@ pub static X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE: c_int = 51;
 pub static X509_V_ERR_UNSUPPORTED_CONSTRAINT_SYNTAX: c_int = 52;
 pub static X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
 pub static X509_V_ERR_CRL_PATH_VALIDATION_ERROR: c_int = 54;
-
-/* The application is not happy */
 pub static X509_V_ERR_APPLICATION_VERIFICATION: c_int = 50;
+
+pub static XN_FLAG_RFC2253: c_ulong = 0x1110317;
+pub static XN_FLAG_ONELINE: c_ulong = 0x82031f;
+pub static XN_FLAG_MULTILINE: c_ulong = 0x2a40006;
 
 #[link_args = "-lssl -lcrypto"]
 extern "C" {
@@ -136,6 +132,11 @@ extern "C" {
                                       -> *c_void;
     pub fn X509_STORE_CTX_get_current_cert(ct: *X509_STORE_CTX) -> *X509;
     pub fn X509_STORE_CTX_get_error(ctx: *X509_STORE_CTX) -> c_int;
+
+    pub fn X509_get_subject_name(x: *X509) -> *X509_NAME;
+
+    pub fn X509_NAME_print_ex(out: *BIO, nm: *X509_NAME, ident: c_int,
+                              flags: c_ulong) -> c_int;
 
     pub fn SSL_new(ctx: *SSL_CTX) -> *SSL;
     pub fn SSL_free(ssl: *SSL);
