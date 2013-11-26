@@ -59,7 +59,6 @@ pub enum Type {
 }
 
 fn evpc(t: Type) -> (EVP_CIPHER, uint, uint) {
-    #[fixed_stack_segment]; #[inline(never)];
     unsafe {
         match t {
             AES_128_ECB => (libcrypto::EVP_aes_128_ecb(), 16u, 16u),
@@ -87,7 +86,6 @@ pub struct Crypter {
 
 impl Crypter {
     pub fn new(t: Type) -> Crypter {
-        #[fixed_stack_segment]; #[inline(never)];
         let ctx = unsafe { libcrypto::EVP_CIPHER_CTX_new() };
         let (evp, keylen, blocksz) = evpc(t);
         Crypter { evp: evp, ctx: ctx, keylen: keylen, blocksize: blocksz }
@@ -98,7 +96,6 @@ impl Crypter {
      * data encrypted must be a multiple of block size.
      */
     pub fn pad(&self, padding: bool) {
-        #[fixed_stack_segment]; #[inline(never)];
         if self.blocksize > 0 {
             unsafe {
                 let v = if padding { 1 } else { 0 } as c_int;
@@ -111,7 +108,6 @@ impl Crypter {
      * Initializes this crypter.
      */
     pub fn init(&self, mode: Mode, key: &[u8], iv: &[u8]) {
-        #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             let mode = match mode {
                 Encrypt => 1 as c_int,
@@ -138,7 +134,6 @@ impl Crypter {
      * encrypted or decrypted bytes.
      */
     pub fn update(&self, data: &[u8]) -> ~[u8] {
-        #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             do data.as_imm_buf |pdata, len| {
                 let mut res = vec::from_elem(len + self.blocksize, 0u8);
@@ -167,7 +162,6 @@ impl Crypter {
      * Finish crypting. Returns the remaining partial block of output, if any.
      */
     pub fn final(&self) -> ~[u8] {
-        #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             let mut res = vec::from_elem(self.blocksize, 0u8);
 
@@ -185,7 +179,6 @@ impl Crypter {
 
 impl Drop for Crypter {
     fn drop(&mut self) {
-        #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             libcrypto::EVP_CIPHER_CTX_free(self.ctx);
         }

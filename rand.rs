@@ -11,7 +11,6 @@ mod libcrypto {
 }
 
 pub fn rand_bytes(len: uint) -> ~[u8] {
-    #[fixed_stack_segment]; #[inline(never)];
     let mut out = vec::with_capacity(len);
 
     do out.as_mut_buf |out_buf, len| {

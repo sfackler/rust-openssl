@@ -41,7 +41,6 @@ mod libcrypto {
 }
 
 pub fn evpmd(t: HashType) -> (EVP_MD, uint) {
-    #[fixed_stack_segment]; #[inline(never)];
     unsafe {
         match t {
             MD5 => (libcrypto::EVP_md5(), 16u),
@@ -62,7 +61,6 @@ pub struct Hasher {
 
 impl Hasher {
     pub fn new(ht: HashType) -> Hasher {
-        #[fixed_stack_segment]; #[inline(never)];
         let ctx = unsafe { libcrypto::EVP_MD_CTX_create() };
         let (evp, mdlen) = evpmd(ht);
         unsafe {
@@ -74,7 +72,6 @@ impl Hasher {
 
     /// Update this hasher with more input bytes
     pub fn update(&self, data: &[u8]) {
-        #[fixed_stack_segment]; #[inline(never)];
         do data.as_imm_buf |pdata, len| {
             unsafe {
                 libcrypto::EVP_DigestUpdate(self.ctx, pdata, len as c_uint)
@@ -87,7 +84,6 @@ impl Hasher {
      * initialization
      */
     pub fn final(&self) -> ~[u8] {
-        #[fixed_stack_segment]; #[inline(never)];
         let mut res = vec::from_elem(self.len, 0u8);
         do res.as_mut_buf |pres, _len| {
             unsafe {
@@ -100,7 +96,6 @@ impl Hasher {
 
 impl Drop for Hasher {
     fn drop(&mut self) {
-        #[fixed_stack_segment]; #[inline(never)];
         unsafe {
             libcrypto::EVP_MD_CTX_destroy(self.ctx);
         }
