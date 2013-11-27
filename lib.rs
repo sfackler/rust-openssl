@@ -16,7 +16,6 @@ use std::io::{Stream, Reader, Writer, Decorator};
 use std::vec;
 
 use self::error::{SslError, SslSessionClosed, StreamEof};
-use self::hack::X509ValidationError;
 
 pub mod error;
 
@@ -165,11 +164,11 @@ impl SslContext {
 
     /// Specifies the file that contains trusted CA certificates.
     pub fn set_CA_file(&mut self, file: &str) -> Option<SslError> {
-        let ret = do file.with_c_str |file| {
+        let ret = file.with_c_str(|file| {
             unsafe {
                 ffi::SSL_CTX_load_verify_locations(self.ctx, file, ptr::null())
             }
-        };
+        });
 
         if ret == 0 {
             Some(SslError::get())
@@ -217,22 +216,18 @@ pub enum X509NameFormat {
 
 macro_rules! make_validation_error(
     ($ok_val:ident, $($name:ident = $val:ident,)+) => (
-        pub mod hack {
-            use std::libc::c_int;
+        pub enum X509ValidationError {
+            $($name,)+
+            X509UnknownError(c_int)
+        }
 
-            pub enum X509ValidationError {
-                $($name,)+
-                X509UnknownError(c_int)
-            }
-
-            impl X509ValidationError {
-                #[doc(hidden)]
-                pub fn from_raw(err: c_int) -> Option<X509ValidationError> {
-                    match err {
-                        super::ffi::$ok_val => None,
-                        $(super::ffi::$val => Some($name),)+
-                        err => Some(X509UnknownError(err))
-                    }
+        impl X509ValidationError {
+            #[doc(hidden)]
+            pub fn from_raw(err: c_int) -> Option<X509ValidationError> {
+                match err {
+                    self::ffi::$ok_val => None,
+                    $(self::ffi::$val => Some($name),)+
+                    err => Some(X509UnknownError(err))
                 }
             }
         }
@@ -459,7 +454,7 @@ impl<S: Stream> SslStream<S> {
         }
     }
 
-    fn in_retry_wrapper(&mut self, blk: &fn(&Ssl) -> c_int)
+    fn in_retry_wrapper(&mut self, blk: |&Ssl| -> c_int)
             -> Result<c_int, SslError> {
         loop {
             let ret = blk(&self.ssl);
@@ -512,9 +507,9 @@ impl<S: Stream> Writer for SslStream<S> {
     fn write(&mut self, buf: &[u8]) {
         let mut start = 0;
         while start < buf.len() {
-            let ret = do self.in_retry_wrapper |ssl| {
+            let ret = self.in_retry_wrapper(|ssl| {
                 ssl.write(buf.slice_from(start))
-            };
+            });
             match ret {
                 Ok(len) => start += len as uint,
                 _ => unreachable!()
