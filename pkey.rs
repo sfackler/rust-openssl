@@ -99,9 +99,9 @@ impl PKey {
             if len < 0 as c_int { return ~[]; }
             let mut s = vec::from_elem(len as uint, 0u8);
 
-            let r = do s.as_mut_buf |buf, _| {
+            let r = s.as_mut_buf(|buf, _| {
                 f(self.evp, &buf)
-            };
+            });
 
             s.truncate(r as uint);
             s
@@ -109,13 +109,13 @@ impl PKey {
     }
 
     fn _fromstr(&mut self, s: &[u8], f: extern "C" unsafe fn(c_int, **EVP_PKEY, **u8, c_uint) -> *EVP_PKEY) {
-        do s.as_imm_buf |ps, len| {
+        s.as_imm_buf(|ps, len| {
             let evp = ptr::null();
             unsafe {
                 f(6 as c_int, &evp, &ps, len as c_uint);
             }
             self.evp = evp;
-        }
+        });
     }
 
     pub fn gen(&mut self, keysz: uint) {
@@ -228,8 +228,8 @@ impl PKey {
 
             let mut r = vec::from_elem(len as uint + 1u, 0u8);
 
-            let rv = do r.as_mut_buf |pr, _len| {
-                        do s.as_imm_buf |ps, s_len| {
+            let rv = r.as_mut_buf(|pr, _len| {
+                        s.as_imm_buf(|ps, s_len| {
                             libcrypto::RSA_public_encrypt(
                                 s_len as c_uint,
                                 ps,
@@ -237,8 +237,8 @@ impl PKey {
                                 rsa,
                                 openssl_padding_code(padding)
                             )
-                        }
-                     };
+                        })
+                     });
             if rv < 0 as c_int {
                 ~[]
             } else {
@@ -257,8 +257,8 @@ impl PKey {
 
             let mut r = vec::from_elem(len as uint + 1u, 0u8);
 
-            let rv = do r.as_mut_buf |pr, _len| {
-                        do s.as_imm_buf |ps, s_len| {
+            let rv = r.as_mut_buf(|pr, _len| {
+                        s.as_imm_buf(|ps, s_len| {
                             libcrypto::RSA_private_decrypt(
                                 s_len as c_uint,
                                 ps,
@@ -266,8 +266,8 @@ impl PKey {
                                 rsa,
                                 openssl_padding_code(padding)
                             )
-                        }
-                     };
+                        })
+                     });
 
             if rv < 0 as c_int {
                 ~[]
@@ -307,8 +307,8 @@ impl PKey {
             let mut len = libcrypto::RSA_size(rsa);
             let mut r = vec::from_elem(len as uint + 1u, 0u8);
 
-            let rv = do r.as_mut_buf |pr, _len| {
-                        do s.as_imm_buf |ps, s_len| {
+            let rv = r.as_mut_buf(|pr, _len| {
+                        s.as_imm_buf(|ps, s_len| {
                             libcrypto::RSA_sign(
                                 openssl_hash_nid(hash),
                                 ps,
@@ -316,8 +316,8 @@ impl PKey {
                                 pr,
                                 &mut len,
                                 rsa)
-                        }
-                     };
+                        })
+                     });
 
             if rv < 0 as c_int {
                 ~[]
@@ -332,8 +332,8 @@ impl PKey {
         unsafe {
             let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
 
-            do m.as_imm_buf |pm, m_len| {
-                do s.as_imm_buf |ps, s_len| {
+            m.as_imm_buf(|pm, m_len| {
+                s.as_imm_buf(|ps, s_len| {
                     let rv = libcrypto::RSA_verify(
                         openssl_hash_nid(hash),
                         pm,
@@ -344,8 +344,8 @@ impl PKey {
                     );
 
                     rv == 1 as c_int
-                }
-            }
+                })
+            })
         }
     }
 }

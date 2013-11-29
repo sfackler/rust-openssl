@@ -13,10 +13,10 @@ mod libcrypto {
 pub fn rand_bytes(len: uint) -> ~[u8] {
     let mut out = vec::with_capacity(len);
 
-    do out.as_mut_buf |out_buf, len| {
+    out.as_mut_buf(|out_buf, len| {
         let r = unsafe { libcrypto::RAND_bytes(out_buf, len as c_int) };
         if r != 1 as c_int { fail!() }
-    }
+    });
 
     unsafe { vec::raw::set_len(&mut out, len); }
 

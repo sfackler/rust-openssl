@@ -19,11 +19,11 @@ pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint,
     assert!(iter >= 1u);
     assert!(keylen >= 1u);
 
-    do pass.as_imm_buf |pass_buf, pass_len| {
-        do salt.as_imm_buf |salt_buf, salt_len| {
+    pass.as_imm_buf(|pass_buf, pass_len| {
+        salt.as_imm_buf(|salt_buf, salt_len| {
             let mut out = vec::with_capacity(keylen);
 
-            do out.as_mut_buf |out_buf, _out_len| {
+            out.as_mut_buf(|out_buf, _out_len| {
                 let r = unsafe {
                     libcrypto::PKCS5_PBKDF2_HMAC_SHA1(
                         pass_buf, pass_len as c_int,
@@ -33,13 +33,13 @@ pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint,
                 };
 
                 if r != 1 as c_int { fail!(); }
-            }
+            });
 
             unsafe { vec::raw::set_len(&mut out, keylen); }
 
             out
-        }
-    }
+        })
+    })
 }
 
 #[cfg(test)]

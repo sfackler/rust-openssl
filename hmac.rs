@@ -67,9 +67,9 @@ pub fn HMAC(ht: HashType, key: ~[u8]) -> HMAC {
 impl HMAC {
     pub fn update(&mut self, data: &[u8]) {
         unsafe {
-            do data.as_imm_buf |pdata, len| {
+            data.as_imm_buf(|pdata, len| {
                 HMAC_Update(&mut self.ctx, pdata, len as libc::c_uint)
-            }
+            });
         }
     }
 
@@ -77,10 +77,10 @@ impl HMAC {
         unsafe {
             let mut res = vec::from_elem(self.len, 0u8);
             let mut outlen: libc::c_uint = 0;
-            do res.as_mut_buf |pres, _len| {
+            res.as_mut_buf(|pres, _len| {
                 HMAC_Final(&mut self.ctx, pres, &mut outlen);
                 assert!(self.len == outlen as uint)
-            }
+            });
             res
         }
     }

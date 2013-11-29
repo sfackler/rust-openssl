@@ -115,8 +115,8 @@ impl Crypter {
             };
             assert_eq!(key.len(), self.keylen);
 
-            do key.as_imm_buf |pkey, _len| {
-                do iv.as_imm_buf |piv, _len| {
+            key.as_imm_buf(|pkey, _len| {
+                iv.as_imm_buf(|piv, _len| {
                     libcrypto::EVP_CipherInit(
                         self.ctx,
                         self.evp,
@@ -124,8 +124,8 @@ impl Crypter {
                         piv,
                         mode
                     )
-                }
-            }
+                });
+            });
         }
     }
 
@@ -135,10 +135,10 @@ impl Crypter {
      */
     pub fn update(&self, data: &[u8]) -> ~[u8] {
         unsafe {
-            do data.as_imm_buf |pdata, len| {
+            data.as_imm_buf(|pdata, len| {
                 let mut res = vec::from_elem(len + self.blocksize, 0u8);
 
-                let reslen = do res.as_mut_buf |pres, _len| {
+                let reslen = res.as_mut_buf(|pres, _len| {
                     let mut reslen = (len + self.blocksize) as u32;
 
                     libcrypto::EVP_CipherUpdate(
@@ -150,11 +150,11 @@ impl Crypter {
                     );
 
                     reslen
-                };
+                });
 
                 res.truncate(reslen as uint);
                 res
-            }
+            })
         }
     }
 
@@ -165,11 +165,11 @@ impl Crypter {
         unsafe {
             let mut res = vec::from_elem(self.blocksize, 0u8);
 
-            let reslen = do res.as_mut_buf |pres, _len| {
+            let reslen = res.as_mut_buf(|pres, _len| {
                 let mut reslen = self.blocksize as c_int;
                 libcrypto::EVP_CipherFinal(self.ctx, pres, &mut reslen);
                 reslen
-            };
+            });
 
             res.truncate(reslen as uint);
             res
