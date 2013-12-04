@@ -97,7 +97,8 @@ pub static XN_FLAG_RFC2253: c_ulong = 0x1110317;
 pub static XN_FLAG_ONELINE: c_ulong = 0x82031f;
 pub static XN_FLAG_MULTILINE: c_ulong = 0x2a40006;
 
-#[link_args = "-lssl -lcrypto"]
+#[link(name="ssl")]
+#[link(name="crypto")]
 extern "C" {
     pub fn CRYPTO_num_locks() -> c_int;
     pub fn CRYPTO_set_locking_callback(func: extern "C" fn(mode: c_int,
