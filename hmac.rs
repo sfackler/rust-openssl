@@ -27,7 +27,7 @@ pub struct HMAC_CTX {
     key: [libc::c_uchar, ..128]
 }
 
-#[link_args = "-lcrypto"]
+#[link(name = "crypto")]
 extern {
     fn HMAC_CTX_init(ctx: *mut HMAC_CTX, key: *u8, keylen: libc::c_int, md: EVP_MD);
 

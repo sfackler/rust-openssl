@@ -22,7 +22,7 @@ mod libcrypto {
     use super::*;
     use std::libc::c_uint;
 
-    #[link_args = "-lcrypto"]
+    #[link(name = "crypto")]
     extern {
         pub fn EVP_MD_CTX_create() -> EVP_MD_CTX;
         pub fn EVP_MD_CTX_destroy(ctx: EVP_MD_CTX);

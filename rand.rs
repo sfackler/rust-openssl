@@ -4,7 +4,7 @@ use std::vec;
 mod libcrypto {
     use std::libc::c_int;
 
-    #[link_args = "-lcrypto"]
+    #[link(name = "crypto")]
     extern {
         pub fn RAND_bytes(buf: *mut u8, num: c_int) -> c_int;
     }

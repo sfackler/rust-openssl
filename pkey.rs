@@ -15,7 +15,7 @@ mod libcrypto {
     use super::*;
     use std::libc::{c_char, c_int, c_uint};
 
-    #[link_args = "-lcrypto"]
+    #[link(name = "crypto")]
     extern {
         pub fn EVP_PKEY_new() -> *EVP_PKEY;
         pub fn EVP_PKEY_free(k: *EVP_PKEY);
