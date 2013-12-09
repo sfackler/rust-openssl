@@ -332,23 +332,22 @@ impl Ssl {
         Ok(ssl)
     }
 
-    fn get_rbio<'a>(&'a self) -> MemBio<'a> {
-        let bio = unsafe { ffi::SSL_get_rbio(self.ssl) };
-        assert!(bio != ptr::null());
-
-        MemBio {
-            bio: bio,
-            owned: false
-        }
+    fn get_rbio<'a>(&'a self) -> MemBioRef<'a> {
+        unsafe { self.wrap_bio(ffi::SSL_get_rbio(self.ssl)) }
     }
 
-    fn get_wbio<'a>(&'a self) -> MemBio<'a> {
-        let bio = unsafe { ffi::SSL_get_wbio(self.ssl) };
-        assert!(bio != ptr::null());
+    fn get_wbio<'a>(&'a self) -> MemBioRef<'a> {
+        unsafe { self.wrap_bio(ffi::SSL_get_wbio(self.ssl)) }
+    }
 
-        MemBio {
-            bio: bio,
-            owned: false
+    fn wrap_bio<'a>(&'a self, bio: *ffi::BIO) -> MemBioRef<'a> {
+        assert!(bio != ptr::null());
+        MemBioRef {
+            ssl: self,
+            bio: MemBio {
+                bio: bio,
+                owned: false
+            }
         }
     }
 
@@ -388,12 +387,27 @@ enum LibSslError {
     ErrorWantAccept = ffi::SSL_ERROR_WANT_ACCEPT,
 }
 
-struct MemBio<'ssl> {
+struct MemBioRef<'ssl> {
+    ssl: &'ssl Ssl,
+    bio: MemBio,
+}
+
+impl<'ssl> MemBioRef<'ssl> {
+    fn read(&self, buf: &mut [u8]) -> Option<uint> {
+        self.bio.read(buf)
+    }
+
+    fn write(&self, buf: &[u8]) {
+        self.bio.write(buf)
+    }
+}
+
+struct MemBio {
     bio: *ffi::BIO,
     owned: bool
 }
 
-impl<'ssl> Drop for MemBio<'ssl> {
+impl Drop for MemBio {
     fn drop(&mut self) {
         if self.owned {
             unsafe {
@@ -403,7 +417,7 @@ impl<'ssl> Drop for MemBio<'ssl> {
     }
 }
 
-impl<'self> MemBio<'self> {
+impl MemBio {
     fn read(&self, buf: &mut [u8]) -> Option<uint> {
         let ret = unsafe {
             ffi::BIO_read(self.bio, vec::raw::to_ptr(buf) as *c_void,
