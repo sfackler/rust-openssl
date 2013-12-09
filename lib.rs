@@ -194,17 +194,26 @@ impl X509StoreContext {
         if ptr.is_null() {
             None
         } else {
-            Some(X509 { x509: ptr })
+            Some(X509 { ctx: self, x509: ptr })
         }
     }
 }
 
 /// A public key certificate
 pub struct X509<'ctx> {
+    priv ctx: &'ctx X509StoreContext,
     priv x509: *ffi::X509
 }
 
+impl<'ctx> X509<'ctx> {
+    pub fn subject_name<'a>(&'a self) -> X509Name<'a> {
+        let name = unsafe { ffi::X509_get_subject_name(self.x509) };
+        X509Name { x509: self, name: name }
+    }
+}
+
 pub struct X509Name<'x> {
+    priv x509: &'x X509<'x>,
     priv name: *ffi::X509_NAME
 }
 
