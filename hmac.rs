@@ -85,11 +85,3 @@ impl HMAC {
         }
     }
 }
-
-fn main() {
-    let mut h = HMAC(SHA512, ~[00u8]);
-
-    h.update([00u8]);
-
-    println!("{:?}", h.final())
-}
