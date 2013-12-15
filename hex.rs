@@ -20,7 +20,7 @@ pub trait ToHex {
     fn to_hex(&self) -> ~str;
 }
 
-impl<'self> ToHex for &'self [u8] {
+impl<'a> ToHex for &'a [u8] {
     fn to_hex(&self) -> ~str {
 
         let chars = "0123456789ABCDEF".chars().collect::<~[char]>();
@@ -46,7 +46,7 @@ pub trait FromHex {
     fn from_hex(&self) -> ~[u8];
 }
 
-impl<'self> FromHex for &'self str {
+impl<'a> FromHex for &'a str {
     fn from_hex(&self) -> ~[u8] {
         let mut vec = vec::with_capacity(self.len() / 2);
 
