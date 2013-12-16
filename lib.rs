@@ -356,12 +356,12 @@ impl Ssl {
     }
 
     fn read(&self, buf: &mut [u8]) -> c_int {
-        unsafe { ffi::SSL_read(self.ssl, vec::raw::to_ptr(buf) as *c_void,
+        unsafe { ffi::SSL_read(self.ssl, buf.as_ptr() as *c_void,
                                buf.len() as c_int) }
     }
 
     fn write(&self, buf: &[u8]) -> c_int {
-        unsafe { ffi::SSL_write(self.ssl, vec::raw::to_ptr(buf) as *c_void,
+        unsafe { ffi::SSL_write(self.ssl, buf.as_ptr() as *c_void,
                                 buf.len() as c_int) }
     }
 
@@ -420,7 +420,7 @@ impl Drop for MemBio {
 impl MemBio {
     fn read(&self, buf: &mut [u8]) -> Option<uint> {
         let ret = unsafe {
-            ffi::BIO_read(self.bio, vec::raw::to_ptr(buf) as *c_void,
+            ffi::BIO_read(self.bio, buf.as_ptr() as *c_void,
                           buf.len() as c_int)
         };
 
@@ -433,7 +433,7 @@ impl MemBio {
 
     fn write(&self, buf: &[u8]) {
         let ret = unsafe {
-            ffi::BIO_write(self.bio, vec::raw::to_ptr(buf) as *c_void,
+            ffi::BIO_write(self.bio, buf.as_ptr() as *c_void,
                            buf.len() as c_int)
         };
         assert_eq!(buf.len(), ret as uint);
