@@ -1,8 +1,5 @@
 #[feature(struct_variant, macro_rules)];
-
-// Needed for rustdoc-ng
-#[link(name="rust-ssl", vers="0.1",
-       package_id="github.com/sfackler/rust-ssl")];
+#[pkgid="github.com/sfackler/rust-ssl"];
 #[doc(html_root_url="http://sfackler.github.io/rust-ssl/doc/rust-ssl/")];
 
 use std::cast;
