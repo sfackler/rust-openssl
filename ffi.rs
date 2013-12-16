@@ -144,12 +144,10 @@ extern "C" {
     pub fn SSL_set_bio(ssl: *SSL, rbio: *BIO, wbio: *BIO);
     pub fn SSL_get_rbio(ssl: *SSL) -> *BIO;
     pub fn SSL_get_wbio(ssl: *SSL) -> *BIO;
-    pub fn SSL_set_connect_state(ssl: *SSL);
     pub fn SSL_connect(ssl: *SSL) -> c_int;
     pub fn SSL_get_error(ssl: *SSL, ret: c_int) -> c_int;
     pub fn SSL_read(ssl: *SSL, buf: *c_void, num: c_int) -> c_int;
     pub fn SSL_write(ssl: *SSL, buf: *c_void, num: c_int) -> c_int;
-    pub fn SSL_shutdown(ssl: *SSL) -> c_int;
     pub fn SSL_get_ex_data_X509_STORE_CTX_idx() -> c_int;
     pub fn SSL_get_SSL_CTX(ssl: *SSL) -> *SSL_CTX;
 
