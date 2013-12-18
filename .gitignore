@@ -1,5 +1,9 @@
 *.sw[po]
-libcrypto*.dylib
-libcrypto*.so
+*.dylib
+*.so
 *.dSYM/
-crypto
+/.rust
+/bin/
+/build/
+/lib/
+/src/crypto/lib

@@ -1,9 +1,13 @@
+RUSTPKG ?= rustpkg
+RUSTC ?= rustc
+RUST_FLAGS ?= -Z debug-info -O
 
-crypto: $(wildcard *.rs)
-	rustc crypto.rs
-	rustc --test crypto.rs
+all:
+	$(RUSTPKG) $(RUST_FLAGS) install crypto
+
+test:
+	$(RUSTC) $(RUST_FLAGS) --test src/crypto/lib.rs
+	./src/crypto/lib
 
 clean:
-	rm -f crypto libcrypto-*.so
-	rm -f libcrypto-*.dylib
-	rm -rf *.dSYM
+	rm -rf bin/ lib/ build/ src/crypto/lib
