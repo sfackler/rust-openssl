@@ -56,7 +56,7 @@ pub fn HMAC(ht: HashType, key: ~[u8]) -> HMAC {
         };
 
         HMAC_CTX_init(&mut ctx,
-                                 vec::raw::to_ptr(key),
+                                 key.as_ptr(),
                                  key.len() as libc::c_int,
                                  evp);
 

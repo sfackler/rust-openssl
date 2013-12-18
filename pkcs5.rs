@@ -35,7 +35,7 @@ pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint,
                 if r != 1 as c_int { fail!(); }
             });
 
-            unsafe { vec::raw::set_len(&mut out, keylen); }
+            unsafe { out.set_len(keylen); }
 
             out
         })
