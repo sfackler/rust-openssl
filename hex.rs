@@ -20,10 +20,10 @@ pub trait ToHex {
     fn to_hex(&self) -> ~str;
 }
 
-impl<'self> ToHex for &'self [u8] {
+impl<'a> ToHex for &'a [u8] {
     fn to_hex(&self) -> ~str {
 
-        let chars = "0123456789ABCDEF".iter().collect::<~[char]>();
+        let chars = "0123456789ABCDEF".chars().collect::<~[char]>();
 
         let mut s = ~"";
 
@@ -46,11 +46,11 @@ pub trait FromHex {
     fn from_hex(&self) -> ~[u8];
 }
 
-impl<'self> FromHex for &'self str {
+impl<'a> FromHex for &'a str {
     fn from_hex(&self) -> ~[u8] {
         let mut vec = vec::with_capacity(self.len() / 2);
 
-        for (i,c) in self.iter().enumerate() {
+        for (i,c) in self.chars().enumerate() {
             let nibble =
                 if c >= '0' && c <= '9' { (c as u8) - 0x30 }
                 else if c >= 'a' && c <= 'f' { (c as u8) - (0x61 - 10) }

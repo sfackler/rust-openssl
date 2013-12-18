@@ -22,21 +22,21 @@ mod libcrypto {
     use super::*;
     use std::libc::c_uint;
 
-    #[link_args = "-lcrypto"]
+    #[link(name = "crypto")]
     extern {
-        fn EVP_MD_CTX_create() -> EVP_MD_CTX;
-        fn EVP_MD_CTX_destroy(ctx: EVP_MD_CTX);
+        pub fn EVP_MD_CTX_create() -> EVP_MD_CTX;
+        pub fn EVP_MD_CTX_destroy(ctx: EVP_MD_CTX);
 
-        fn EVP_md5() -> EVP_MD;
-        fn EVP_sha1() -> EVP_MD;
-        fn EVP_sha224() -> EVP_MD;
-        fn EVP_sha256() -> EVP_MD;
-        fn EVP_sha384() -> EVP_MD;
-        fn EVP_sha512() -> EVP_MD;
+        pub fn EVP_md5() -> EVP_MD;
+        pub fn EVP_sha1() -> EVP_MD;
+        pub fn EVP_sha224() -> EVP_MD;
+        pub fn EVP_sha256() -> EVP_MD;
+        pub fn EVP_sha384() -> EVP_MD;
+        pub fn EVP_sha512() -> EVP_MD;
 
-        fn EVP_DigestInit(ctx: EVP_MD_CTX, typ: EVP_MD);
-        fn EVP_DigestUpdate(ctx: EVP_MD_CTX, data: *u8, n: c_uint);
-        fn EVP_DigestFinal(ctx: EVP_MD_CTX, res: *mut u8, n: *u32);
+        pub fn EVP_DigestInit(ctx: EVP_MD_CTX, typ: EVP_MD);
+        pub fn EVP_DigestUpdate(ctx: EVP_MD_CTX, data: *u8, n: c_uint);
+        pub fn EVP_DigestFinal(ctx: EVP_MD_CTX, res: *mut u8, n: *u32);
     }
 }
 
@@ -72,11 +72,11 @@ impl Hasher {
 
     /// Update this hasher with more input bytes
     pub fn update(&self, data: &[u8]) {
-        do data.as_imm_buf |pdata, len| {
+        data.as_imm_buf(|pdata, len| {
             unsafe {
                 libcrypto::EVP_DigestUpdate(self.ctx, pdata, len as c_uint)
             }
-        }
+        });
     }
 
     /**
@@ -85,17 +85,17 @@ impl Hasher {
      */
     pub fn final(&self) -> ~[u8] {
         let mut res = vec::from_elem(self.len, 0u8);
-        do res.as_mut_buf |pres, _len| {
+        res.as_mut_buf(|pres, _len| {
             unsafe {
                 libcrypto::EVP_DigestFinal(self.ctx, pres, ptr::null());
             }
-        }
+        });
         res
     }
 }
 
 impl Drop for Hasher {
-    fn drop(&self) {
+    fn drop(&mut self) {
         unsafe {
             libcrypto::EVP_MD_CTX_destroy(self.ctx);
         }
@@ -134,7 +134,7 @@ mod tests {
         let calced = calced_raw.to_hex();
 
         if calced != hashtest.expected_output {
-            println(fmt!("Test failed - %s != %s", calced, hashtest.expected_output));
+            println!("Test failed - {} != {}", calced, hashtest.expected_output);
         }
 
         assert!(calced == hashtest.expected_output);

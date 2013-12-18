@@ -4,28 +4,26 @@ use std::vec;
 mod libcrypto {
     use std::libc::c_int;
 
-    #[link_args = "-lcrypto"]
+    #[link(name = "crypto")]
     extern {
-        fn PKCS5_PBKDF2_HMAC_SHA1(pass: *u8, passlen: c_int,
-                                  salt: *u8, saltlen: c_int,
-                                  iter: c_int, keylen: c_int,
-                                  out: *mut u8) -> c_int;
+        pub fn PKCS5_PBKDF2_HMAC_SHA1(pass: *u8, passlen: c_int,
+                                      salt: *u8, saltlen: c_int,
+                                      iter: c_int, keylen: c_int,
+                                      out: *mut u8) -> c_int;
     }
 }
 
-#[doc = "
-Derives a key from a password and salt using the PBKDF2-HMAC-SHA1 algorithm.
-"]
+/// Derives a key from a password and salt using the PBKDF2-HMAC-SHA1 algorithm.
 pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint,
                         keylen: uint) -> ~[u8] {
     assert!(iter >= 1u);
     assert!(keylen >= 1u);
 
-    do pass.as_imm_buf |pass_buf, pass_len| {
-        do salt.as_imm_buf |salt_buf, salt_len| {
+    pass.as_imm_buf(|pass_buf, pass_len| {
+        salt.as_imm_buf(|salt_buf, salt_len| {
             let mut out = vec::with_capacity(keylen);
 
-            do out.as_mut_buf |out_buf, _out_len| {
+            out.as_mut_buf(|out_buf, _out_len| {
                 let r = unsafe {
                     libcrypto::PKCS5_PBKDF2_HMAC_SHA1(
                         pass_buf, pass_len as c_int,
@@ -35,13 +33,13 @@ pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint,
                 };
 
                 if r != 1 as c_int { fail!(); }
-            }
+            });
 
             unsafe { vec::raw::set_len(&mut out, keylen); }
 
             out
-        }
-    }
+        })
+    })
 }
 
 #[cfg(test)]

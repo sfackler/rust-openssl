@@ -27,8 +27,7 @@ pub struct HMAC_CTX {
     key: [libc::c_uchar, ..128]
 }
 
-#[link_args = "-lcrypto"]
-#[abi = "cdecl"]
+#[link(name = "crypto")]
 extern {
     fn HMAC_CTX_init(ctx: *mut HMAC_CTX, key: *u8, keylen: libc::c_int, md: EVP_MD);
 
@@ -68,9 +67,9 @@ pub fn HMAC(ht: HashType, key: ~[u8]) -> HMAC {
 impl HMAC {
     pub fn update(&mut self, data: &[u8]) {
         unsafe {
-            do data.as_imm_buf |pdata, len| {
+            data.as_imm_buf(|pdata, len| {
                 HMAC_Update(&mut self.ctx, pdata, len as libc::c_uint)
-            }
+            });
         }
     }
 
@@ -78,19 +77,11 @@ impl HMAC {
         unsafe {
             let mut res = vec::from_elem(self.len, 0u8);
             let mut outlen: libc::c_uint = 0;
-            do res.as_mut_buf |pres, _len| {
+            res.as_mut_buf(|pres, _len| {
                 HMAC_Final(&mut self.ctx, pres, &mut outlen);
                 assert!(self.len == outlen as uint)
-            }
+            });
             res
         }
     }
-}
-
-fn main() {
-    let mut h = HMAC(SHA512, ~[00u8]);
-
-    h.update([00u8]);
-
-    println(fmt!("%?", h.final()))
 }

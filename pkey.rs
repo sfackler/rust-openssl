@@ -15,29 +15,29 @@ mod libcrypto {
     use super::*;
     use std::libc::{c_char, c_int, c_uint};
 
-    #[link_args = "-lcrypto"]
+    #[link(name = "crypto")]
     extern {
-        fn EVP_PKEY_new() -> *EVP_PKEY;
-        fn EVP_PKEY_free(k: *EVP_PKEY);
-        fn EVP_PKEY_assign(pkey: *EVP_PKEY, typ: c_int, key: *c_char) -> c_int;
-        fn EVP_PKEY_get1_RSA(k: *EVP_PKEY) -> *RSA;
+        pub fn EVP_PKEY_new() -> *EVP_PKEY;
+        pub fn EVP_PKEY_free(k: *EVP_PKEY);
+        pub fn EVP_PKEY_assign(pkey: *EVP_PKEY, typ: c_int, key: *c_char) -> c_int;
+        pub fn EVP_PKEY_get1_RSA(k: *EVP_PKEY) -> *RSA;
 
-        fn i2d_PublicKey(k: *EVP_PKEY, buf: **mut u8) -> c_int;
-        fn d2i_PublicKey(t: c_int, k: **EVP_PKEY, buf: **u8, len: c_uint) -> *EVP_PKEY;
-        fn i2d_PrivateKey(k: *EVP_PKEY, buf: **mut u8) -> c_int;
-        fn d2i_PrivateKey(t: c_int, k: **EVP_PKEY, buf: **u8, len: c_uint) -> *EVP_PKEY;
+        pub fn i2d_PublicKey(k: *EVP_PKEY, buf: **mut u8) -> c_int;
+        pub fn d2i_PublicKey(t: c_int, k: **EVP_PKEY, buf: **u8, len: c_uint) -> *EVP_PKEY;
+        pub fn i2d_PrivateKey(k: *EVP_PKEY, buf: **mut u8) -> c_int;
+        pub fn d2i_PrivateKey(t: c_int, k: **EVP_PKEY, buf: **u8, len: c_uint) -> *EVP_PKEY;
 
-        fn RSA_generate_key(modsz: c_uint, e: c_uint, cb: *u8, cbarg: *u8) -> *RSA;
-        fn RSA_size(k: *RSA) -> c_uint;
+        pub fn RSA_generate_key(modsz: c_uint, e: c_uint, cb: *u8, cbarg: *u8) -> *RSA;
+        pub fn RSA_size(k: *RSA) -> c_uint;
 
-        fn RSA_public_encrypt(flen: c_uint, from: *u8, to: *mut u8, k: *RSA,
-                              pad: c_int) -> c_int;
-        fn RSA_private_decrypt(flen: c_uint, from: *u8, to: *mut u8, k: *RSA,
-                               pad: c_int) -> c_int;
-        fn RSA_sign(t: c_int, m: *u8, mlen: c_uint, sig: *mut u8, siglen: *mut c_uint,
-                    k: *RSA) -> c_int;
-        fn RSA_verify(t: c_int, m: *u8, mlen: c_uint, sig: *u8, siglen: c_uint,
-                      k: *RSA) -> c_int;
+        pub fn RSA_public_encrypt(flen: c_uint, from: *u8, to: *mut u8, k: *RSA,
+                                  pad: c_int) -> c_int;
+        pub fn RSA_private_decrypt(flen: c_uint, from: *u8, to: *mut u8, k: *RSA,
+                                   pad: c_int) -> c_int;
+        pub fn RSA_sign(t: c_int, m: *u8, mlen: c_uint, sig: *mut u8, siglen: *mut c_uint,
+                        k: *RSA) -> c_int;
+        pub fn RSA_verify(t: c_int, m: *u8, mlen: c_uint, sig: *u8, siglen: c_uint,
+                          k: *RSA) -> c_int;
     }
 }
 
@@ -47,7 +47,7 @@ enum Parts {
     Both
 }
 
-#[doc = "Represents a role an asymmetric key might be appropriate for."]
+/// Represents a role an asymmetric key might be appropriate for.
 pub enum Role {
     Encrypt,
     Decrypt,
@@ -55,7 +55,7 @@ pub enum Role {
     Verify
 }
 
-#[doc = "Type of encryption padding to use."]
+/// Type of encryption padding to use.
 pub enum EncryptionPadding {
     OAEP,
     PKCS1v15
@@ -84,7 +84,7 @@ pub struct PKey {
     priv parts: Parts,
 }
 
-///Represents a public key, optionally with a private key attached.
+/// Represents a public key, optionally with a private key attached.
 impl PKey {
     pub fn new() -> PKey {
         PKey {
@@ -99,9 +99,9 @@ impl PKey {
             if len < 0 as c_int { return ~[]; }
             let mut s = vec::from_elem(len as uint, 0u8);
 
-            let r = do s.as_mut_buf |buf, _| {
+            let r = s.as_mut_buf(|buf, _| {
                 f(self.evp, &buf)
-            };
+            });
 
             s.truncate(r as uint);
             s
@@ -109,13 +109,13 @@ impl PKey {
     }
 
     fn _fromstr(&mut self, s: &[u8], f: extern "C" unsafe fn(c_int, **EVP_PKEY, **u8, c_uint) -> *EVP_PKEY) {
-        do s.as_imm_buf |ps, len| {
+        s.as_imm_buf(|ps, len| {
             let evp = ptr::null();
             unsafe {
                 f(6 as c_int, &evp, &ps, len as c_uint);
             }
             self.evp = evp;
-        }
+        });
     }
 
     pub fn gen(&mut self, keysz: uint) {
@@ -228,8 +228,8 @@ impl PKey {
 
             let mut r = vec::from_elem(len as uint + 1u, 0u8);
 
-            let rv = do r.as_mut_buf |pr, _len| {
-                        do s.as_imm_buf |ps, s_len| {
+            let rv = r.as_mut_buf(|pr, _len| {
+                        s.as_imm_buf(|ps, s_len| {
                             libcrypto::RSA_public_encrypt(
                                 s_len as c_uint,
                                 ps,
@@ -237,8 +237,8 @@ impl PKey {
                                 rsa,
                                 openssl_padding_code(padding)
                             )
-                        }
-                     };
+                        })
+                     });
             if rv < 0 as c_int {
                 ~[]
             } else {
@@ -257,8 +257,8 @@ impl PKey {
 
             let mut r = vec::from_elem(len as uint + 1u, 0u8);
 
-            let rv = do r.as_mut_buf |pr, _len| {
-                        do s.as_imm_buf |ps, s_len| {
+            let rv = r.as_mut_buf(|pr, _len| {
+                        s.as_imm_buf(|ps, s_len| {
                             libcrypto::RSA_private_decrypt(
                                 s_len as c_uint,
                                 ps,
@@ -266,8 +266,8 @@ impl PKey {
                                 rsa,
                                 openssl_padding_code(padding)
                             )
-                        }
-                     };
+                        })
+                     });
 
             if rv < 0 as c_int {
                 ~[]
@@ -307,8 +307,8 @@ impl PKey {
             let mut len = libcrypto::RSA_size(rsa);
             let mut r = vec::from_elem(len as uint + 1u, 0u8);
 
-            let rv = do r.as_mut_buf |pr, _len| {
-                        do s.as_imm_buf |ps, s_len| {
+            let rv = r.as_mut_buf(|pr, _len| {
+                        s.as_imm_buf(|ps, s_len| {
                             libcrypto::RSA_sign(
                                 openssl_hash_nid(hash),
                                 ps,
@@ -316,8 +316,8 @@ impl PKey {
                                 pr,
                                 &mut len,
                                 rsa)
-                        }
-                     };
+                        })
+                     });
 
             if rv < 0 as c_int {
                 ~[]
@@ -332,8 +332,8 @@ impl PKey {
         unsafe {
             let rsa = libcrypto::EVP_PKEY_get1_RSA(self.evp);
 
-            do m.as_imm_buf |pm, m_len| {
-                do s.as_imm_buf |ps, s_len| {
+            m.as_imm_buf(|pm, m_len| {
+                s.as_imm_buf(|ps, s_len| {
                     let rv = libcrypto::RSA_verify(
                         openssl_hash_nid(hash),
                         pm,
@@ -344,14 +344,14 @@ impl PKey {
                     );
 
                     rv == 1 as c_int
-                }
-            }
+                })
+            })
         }
     }
 }
 
 impl Drop for PKey {
-    fn drop(&self) {
+    fn drop(&mut self) {
         unsafe {
             libcrypto::EVP_PKEY_free(self.evp);
         }
