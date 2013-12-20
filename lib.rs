@@ -1,5 +1,5 @@
 #[feature(struct_variant, macro_rules)];
-#[pkgid="github.com/sfackler/rust-ssl"];
+#[crate_id="github.com/sfackler/rust-ssl"];
 #[doc(html_root_url="http://sfackler.github.io/rust-ssl/doc/")];
 
 use std::cast;
