@@ -6,8 +6,8 @@ use std::cast;
 use std::libc::{c_int, c_void, c_char};
 use std::ptr;
 use std::task;
-use std::unstable::atomics::{AtomicBool, INIT_ATOMIC_BOOL, AtomicUint,
-                             INIT_ATOMIC_UINT, Acquire, Release, SeqCst};
+use std::sync::atomics::{AtomicBool, INIT_ATOMIC_BOOL, AtomicUint,
+                         INIT_ATOMIC_UINT, Acquire, Release, SeqCst};
 use std::unstable::mutex::Mutex;
 use std::io::{Stream, Reader, Writer, Decorator};
 use std::vec;
