@@ -14,26 +14,26 @@
  * limitations under the License.
  */
 
-use hash::*;
-use std::{libc,ptr,vec};
+use std::libc::{c_uchar, c_int, c_uint};
+use std::ptr;
+use std::vec;
+use hash;
 
 #[allow(non_camel_case_types)]
 pub struct HMAC_CTX {
-    md: EVP_MD,
-    md_ctx: EVP_MD_CTX,
-    i_ctx: EVP_MD_CTX,
-    o_ctx: EVP_MD_CTX,
-    key_length: libc::c_uint,
-    key: [libc::c_uchar, ..128]
+    md: hash::EVP_MD,
+    md_ctx: hash::EVP_MD_CTX,
+    i_ctx: hash::EVP_MD_CTX,
+    o_ctx: hash::EVP_MD_CTX,
+    key_length: c_uint,
+    key: [c_uchar, ..128]
 }
 
 #[link(name = "crypto")]
 extern {
-    fn HMAC_CTX_init(ctx: *mut HMAC_CTX, key: *u8, keylen: libc::c_int, md: EVP_MD);
-
-    fn HMAC_Update(ctx: *mut HMAC_CTX, input: *u8, len: libc::c_uint);
-
-    fn HMAC_Final(ctx: *mut HMAC_CTX, output: *mut u8, len: *mut libc::c_uint);
+    fn HMAC_CTX_init(ctx: *mut HMAC_CTX, key: *u8, keylen: c_int, md: hash::EVP_MD);
+    fn HMAC_Update(ctx: *mut HMAC_CTX, input: *u8, len: c_uint);
+    fn HMAC_Final(ctx: *mut HMAC_CTX, output: *mut u8, len: *mut c_uint);
 }
 
 pub struct HMAC {
@@ -41,10 +41,9 @@ pub struct HMAC {
     priv len: uint,
 }
 
-pub fn HMAC(ht: HashType, key: ~[u8]) -> HMAC {
+pub fn HMAC(ht: hash::HashType, key: ~[u8]) -> HMAC {
     unsafe {
-
-        let (evp, mdlen) = evpmd(ht);
+        let (evp, mdlen) = hash::evpmd(ht);
 
         let mut ctx : HMAC_CTX = HMAC_CTX {
             md: ptr::null(),
@@ -57,7 +56,7 @@ pub fn HMAC(ht: HashType, key: ~[u8]) -> HMAC {
 
         HMAC_CTX_init(&mut ctx,
                                  key.as_ptr(),
-                                 key.len() as libc::c_int,
+                                 key.len() as c_int,
                                  evp);
 
         HMAC { ctx: ctx, len: mdlen }
@@ -67,20 +66,16 @@ pub fn HMAC(ht: HashType, key: ~[u8]) -> HMAC {
 impl HMAC {
     pub fn update(&mut self, data: &[u8]) {
         unsafe {
-            data.as_imm_buf(|pdata, len| {
-                HMAC_Update(&mut self.ctx, pdata, len as libc::c_uint)
-            });
+            HMAC_Update(&mut self.ctx, data.as_ptr(), data.len() as c_uint)
         }
     }
 
     pub fn final(&mut self) -> ~[u8] {
         unsafe {
             let mut res = vec::from_elem(self.len, 0u8);
-            let mut outlen: libc::c_uint = 0;
-            res.as_mut_buf(|pres, _len| {
-                HMAC_Final(&mut self.ctx, pres, &mut outlen);
-                assert!(self.len == outlen as uint)
-            });
+            let mut outlen = 0;
+            HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut outlen);
+            assert!(self.len == outlen as uint)
             res
         }
     }

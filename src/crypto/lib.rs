@@ -15,13 +15,7 @@
  * limitations under the License.
  */
 
-#[link(name = "crypto",
-       package_id = "crypto",
-       vers = "0.3",
-       uuid = "38297409-b4c2-4499-8131-a99a7e44dad3")];
-#[crate_type = "lib"];
-
-#[feature(globs)];
+#[crate_id = "crypto#0.3"];
 
 pub mod hash;
 pub mod hex;

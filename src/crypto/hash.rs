@@ -18,37 +18,32 @@ pub type EVP_MD_CTX = *libc::c_void;
 #[allow(non_camel_case_types)]
 pub type EVP_MD = *libc::c_void;
 
-mod libcrypto {
-    use super::*;
-    use std::libc::c_uint;
+#[link(name = "crypto")]
+extern {
+    fn EVP_MD_CTX_create() -> EVP_MD_CTX;
+    fn EVP_MD_CTX_destroy(ctx: EVP_MD_CTX);
 
-    #[link(name = "crypto")]
-    extern {
-        pub fn EVP_MD_CTX_create() -> EVP_MD_CTX;
-        pub fn EVP_MD_CTX_destroy(ctx: EVP_MD_CTX);
+    fn EVP_md5() -> EVP_MD;
+    fn EVP_sha1() -> EVP_MD;
+    fn EVP_sha224() -> EVP_MD;
+    fn EVP_sha256() -> EVP_MD;
+    fn EVP_sha384() -> EVP_MD;
+    fn EVP_sha512() -> EVP_MD;
 
-        pub fn EVP_md5() -> EVP_MD;
-        pub fn EVP_sha1() -> EVP_MD;
-        pub fn EVP_sha224() -> EVP_MD;
-        pub fn EVP_sha256() -> EVP_MD;
-        pub fn EVP_sha384() -> EVP_MD;
-        pub fn EVP_sha512() -> EVP_MD;
-
-        pub fn EVP_DigestInit(ctx: EVP_MD_CTX, typ: EVP_MD);
-        pub fn EVP_DigestUpdate(ctx: EVP_MD_CTX, data: *u8, n: c_uint);
-        pub fn EVP_DigestFinal(ctx: EVP_MD_CTX, res: *mut u8, n: *u32);
-    }
+    fn EVP_DigestInit(ctx: EVP_MD_CTX, typ: EVP_MD);
+    fn EVP_DigestUpdate(ctx: EVP_MD_CTX, data: *u8, n: c_uint);
+    fn EVP_DigestFinal(ctx: EVP_MD_CTX, res: *mut u8, n: *u32);
 }
 
 pub fn evpmd(t: HashType) -> (EVP_MD, uint) {
     unsafe {
         match t {
-            MD5 => (libcrypto::EVP_md5(), 16u),
-            SHA1 => (libcrypto::EVP_sha1(), 20u),
-            SHA224 => (libcrypto::EVP_sha224(), 28u),
-            SHA256 => (libcrypto::EVP_sha256(), 32u),
-            SHA384 => (libcrypto::EVP_sha384(), 48u),
-            SHA512 => (libcrypto::EVP_sha512(), 64u),
+            MD5 => (EVP_md5(), 16u),
+            SHA1 => (EVP_sha1(), 20u),
+            SHA224 => (EVP_sha224(), 28u),
+            SHA256 => (EVP_sha256(), 32u),
+            SHA384 => (EVP_sha384(), 48u),
+            SHA512 => (EVP_sha512(), 64u),
         }
     }
 }
@@ -61,10 +56,10 @@ pub struct Hasher {
 
 impl Hasher {
     pub fn new(ht: HashType) -> Hasher {
-        let ctx = unsafe { libcrypto::EVP_MD_CTX_create() };
+        let ctx = unsafe { EVP_MD_CTX_create() };
         let (evp, mdlen) = evpmd(ht);
         unsafe {
-            libcrypto::EVP_DigestInit(ctx, evp);
+            EVP_DigestInit(ctx, evp);
         }
 
         Hasher { evp: evp, ctx: ctx, len: mdlen }
@@ -72,11 +67,9 @@ impl Hasher {
 
     /// Update this hasher with more input bytes
     pub fn update(&self, data: &[u8]) {
-        data.as_imm_buf(|pdata, len| {
-            unsafe {
-                libcrypto::EVP_DigestUpdate(self.ctx, pdata, len as c_uint)
-            }
-        });
+        unsafe {
+            EVP_DigestUpdate(self.ctx, data.as_ptr(), data.len() as c_uint)
+        }
     }
 
     /**
@@ -84,20 +77,18 @@ impl Hasher {
      * initialization
      */
     pub fn final(&self) -> ~[u8] {
-        let mut res = vec::from_elem(self.len, 0u8);
-        res.as_mut_buf(|pres, _len| {
-            unsafe {
-                libcrypto::EVP_DigestFinal(self.ctx, pres, ptr::null());
-            }
-        });
-        res
+        unsafe {
+            let mut res = vec::from_elem(self.len, 0u8);
+            EVP_DigestFinal(self.ctx, res.as_mut_ptr(), ptr::null());
+            res
+        }
     }
 }
 
 impl Drop for Hasher {
     fn drop(&mut self) {
         unsafe {
-            libcrypto::EVP_MD_CTX_destroy(self.ctx);
+            EVP_MD_CTX_destroy(self.ctx);
         }
     }
 }
@@ -114,7 +105,6 @@ pub fn hash(t: HashType, data: &[u8]) -> ~[u8] {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use hex::FromHex;
     use hex::ToHex;
 
@@ -128,8 +118,8 @@ mod tests {
                    expected_output: output }
     }
 
-    fn hash_test(hashtype: HashType, hashtest: &HashTest) {
-        let calced_raw = hash(hashtype, hashtest.input);
+    fn hash_test(hashtype: super::HashType, hashtest: &HashTest) {
+        let calced_raw = super::hash(hashtype, hashtest.input);
 
         let calced = calced_raw.to_hex();
 
@@ -159,7 +149,7 @@ mod tests {
             HashTest(~"AAED18DBE8938C19ED734A8D", ~"6F80FB775F27E0A4CE5C2F42FC72C5F1")];
 
         for test in tests.iter() {
-            hash_test(MD5, test);
+            hash_test(super::MD5, test);
         }
     }
 
@@ -170,7 +160,7 @@ mod tests {
             ];
 
         for test in tests.iter() {
-            hash_test(SHA1, test);
+            hash_test(super::SHA1, test);
         }
     }
 
@@ -181,7 +171,7 @@ mod tests {
             ];
 
         for test in tests.iter() {
-            hash_test(SHA256, test);
+            hash_test(super::SHA256, test);
         }
     }
 }

@@ -7,7 +7,7 @@ all:
 
 test:
 	$(RUSTC) $(RUST_FLAGS) --test src/crypto/lib.rs
-	./src/crypto/lib
+	./src/crypto/crypto
 
 clean:
 	rm -rf bin/ lib/ build/ src/crypto/lib

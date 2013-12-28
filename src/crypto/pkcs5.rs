@@ -1,57 +1,44 @@
 use std::libc::c_int;
 use std::vec;
 
-mod libcrypto {
-    use std::libc::c_int;
-
-    #[link(name = "crypto")]
-    extern {
-        pub fn PKCS5_PBKDF2_HMAC_SHA1(pass: *u8, passlen: c_int,
-                                      salt: *u8, saltlen: c_int,
-                                      iter: c_int, keylen: c_int,
-                                      out: *mut u8) -> c_int;
-    }
+#[link(name = "crypto")]
+extern {
+    fn PKCS5_PBKDF2_HMAC_SHA1(pass: *u8, passlen: c_int,
+                              salt: *u8, saltlen: c_int,
+                              iter: c_int, keylen: c_int,
+                              out: *mut u8) -> c_int;
 }
 
 /// Derives a key from a password and salt using the PBKDF2-HMAC-SHA1 algorithm.
-pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint,
-                        keylen: uint) -> ~[u8] {
-    assert!(iter >= 1u);
-    assert!(keylen >= 1u);
+pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint, keylen: uint) -> ~[u8] {
+    unsafe {
+        assert!(iter >= 1);
+        assert!(keylen >= 1);
 
-    pass.as_imm_buf(|pass_buf, pass_len| {
-        salt.as_imm_buf(|salt_buf, salt_len| {
-            let mut out = vec::with_capacity(keylen);
+        let mut out = vec::with_capacity(keylen);
 
-            out.as_mut_buf(|out_buf, _out_len| {
-                let r = unsafe {
-                    libcrypto::PKCS5_PBKDF2_HMAC_SHA1(
-                        pass_buf, pass_len as c_int,
-                        salt_buf, salt_len as c_int,
-                        iter as c_int, keylen as c_int,
-                        out_buf)
-                };
+        let r = PKCS5_PBKDF2_HMAC_SHA1(
+                pass.as_ptr(), pass.len() as c_int,
+                salt.as_ptr(), salt.len() as c_int,
+                iter as c_int, keylen as c_int,
+                out.as_mut_ptr());
 
-                if r != 1 as c_int { fail!(); }
-            });
+        if r != 1 { fail!(); }
 
-            unsafe { out.set_len(keylen); }
+        out.set_len(keylen);
 
-            out
-        })
-    })
+        out
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // Test vectors from
     // http://tools.ietf.org/html/draft-josefsson-pbkdf2-test-vectors-06
     #[test]
     fn test_pbkdf2_hmac_sha1() {
         assert_eq!(
-            pbkdf2_hmac_sha1(
+            super::pbkdf2_hmac_sha1(
                 "password",
                 "salt".as_bytes(),
                 1u,
@@ -65,7 +52,7 @@ mod tests {
         );
 
         assert_eq!(
-            pbkdf2_hmac_sha1(
+            super::pbkdf2_hmac_sha1(
                 "password",
                 "salt".as_bytes(),
                 2u,
@@ -79,7 +66,7 @@ mod tests {
         );
 
         assert_eq!(
-            pbkdf2_hmac_sha1(
+            super::pbkdf2_hmac_sha1(
                 "password",
                 "salt".as_bytes(),
                 4096u,
@@ -93,7 +80,7 @@ mod tests {
         );
 
         assert_eq!(
-            pbkdf2_hmac_sha1(
+            super::pbkdf2_hmac_sha1(
                 "password",
                 "salt".as_bytes(),
                 16777216u,
@@ -107,7 +94,7 @@ mod tests {
         );
 
         assert_eq!(
-            pbkdf2_hmac_sha1(
+            super::pbkdf2_hmac_sha1(
                 "passwordPASSWORDpassword",
                 "saltSALTsaltSALTsaltSALTsaltSALTsalt".as_bytes(),
                 4096u,
@@ -122,7 +109,7 @@ mod tests {
         );
 
         assert_eq!(
-            pbkdf2_hmac_sha1(
+            super::pbkdf2_hmac_sha1(
                 "pass\x00word",
                 "sa\x00lt".as_bytes(),
                 4096u,

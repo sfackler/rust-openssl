@@ -71,17 +71,12 @@ impl<'a> FromHex for &'a str {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     pub fn test() {
-
         assert!([05u8, 0xffu8, 0x00u8, 0x59u8].to_hex() == ~"05FF0059");
 
         assert!("00FFA9D1F5".from_hex() == ~[0, 0xff, 0xa9, 0xd1, 0xf5]);
 
         assert!("00FFA9D1F5".from_hex().to_hex() == ~"00FFA9D1F5");
     }
-
-
 }
