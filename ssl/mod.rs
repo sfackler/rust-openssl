@@ -1,7 +1,3 @@
-#[feature(struct_variant, macro_rules)];
-#[crate_id="github.com/sfackler/rust-ssl"];
-#[doc(html_root_url="http://sfackler.github.io/rust-ssl/doc/")];
-
 use std::cast;
 use std::libc::{c_int, c_void, c_char};
 use std::ptr;
@@ -12,11 +8,12 @@ use std::unstable::mutex::Mutex;
 use std::io::{Stream, Reader, Writer, Decorator};
 use std::vec;
 
-use self::error::{SslError, SslSessionClosed, StreamEof};
+use ssl::error::{SslError, SslSessionClosed, StreamEof};
 
 pub mod error;
-
 mod ffi;
+#[cfg(test)]
+mod tests;
 
 static mut STARTED_INIT: AtomicBool = INIT_ATOMIC_BOOL;
 static mut FINISHED_INIT: AtomicBool = INIT_ATOMIC_BOOL;

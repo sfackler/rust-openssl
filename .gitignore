@@ -1,2 +1,4 @@
 /.rust/
 /doc/
+/rust-openssl
+/rust-openssl.dSYM/

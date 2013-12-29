@@ -1,12 +1,8 @@
-#[feature(struct_variant, macro_rules)];
-
 use std::io::Writer;
 use std::io::net::tcp::TcpStream;
 use std::str;
 
-use lib::{Sslv23, SslContext, SslStream, SslVerifyPeer, X509StoreContext};
-
-mod lib;
+use ssl::{Sslv23, SslContext, SslStream, SslVerifyPeer, X509StoreContext};
 
 #[test]
 fn test_new_ctx() {

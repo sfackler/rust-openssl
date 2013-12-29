@@ -3,7 +3,7 @@ use std::libc::{c_char, c_int, c_uint};
 use std::libc;
 use std::ptr;
 use std::vec;
-use hash::{HashType, MD5, SHA1, SHA224, SHA256, SHA384, SHA512};
+use crypto::hash::{HashType, MD5, SHA1, SHA224, SHA256, SHA384, SHA512};
 
 #[allow(non_camel_case_types)]
 pub type EVP_PKEY = *libc::c_void;
@@ -336,7 +336,7 @@ impl Drop for PKey {
 
 #[cfg(test)]
 mod tests {
-    use hash::{MD5, SHA1};
+    use crypto::hash::{MD5, SHA1};
 
     #[test]
     fn test_gen_pub() {

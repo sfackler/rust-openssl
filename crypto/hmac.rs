@@ -17,7 +17,7 @@
 use std::libc::{c_uchar, c_int, c_uint};
 use std::ptr;
 use std::vec;
-use hash;
+use crypto::hash;
 
 #[allow(non_camel_case_types)]
 pub struct HMAC_CTX {

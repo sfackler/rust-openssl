@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-#[crate_id = "crypto#0.3"];
-
 pub mod hash;
 pub mod hex;
 pub mod hmac;

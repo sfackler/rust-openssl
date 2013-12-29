@@ -105,8 +105,8 @@ pub fn hash(t: HashType, data: &[u8]) -> ~[u8] {
 
 #[cfg(test)]
 mod tests {
-    use hex::FromHex;
-    use hex::ToHex;
+    use crypto::hex::FromHex;
+    use crypto::hex::ToHex;
 
     struct HashTest {
         input: ~[u8],
