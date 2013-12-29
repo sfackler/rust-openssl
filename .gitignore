@@ -1,9 +1,0 @@
-*.sw[po]
-*.dylib
-*.so
-*.dSYM/
-/.rust
-/bin/
-/build/
-/lib/
-/src/crypto/crypto

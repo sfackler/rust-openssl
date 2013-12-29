@@ -1,6 +1,0 @@
-{
-	"uuid": "38297409-b4c2-4499-8131-a99a7e44dad3",
-	"name": "rustcrypto",
-	"install": "git://github.com/elly/rustcrypto",
-	"license": "apache-2.0"
-}
