@@ -1,10 +1,9 @@
 use std::cast;
 use std::libc::{c_int, c_void, c_char};
 use std::ptr;
-use std::task;
-use std::sync::atomics::{AtomicBool, INIT_ATOMIC_BOOL, AtomicUint,
-                         INIT_ATOMIC_UINT, Acquire, Release, SeqCst};
-use std::unstable::mutex::Mutex;
+use std::sync::atomics::{AtomicUint, INIT_ATOMIC_UINT, Acquire, Release, SeqCst};
+use std::unstable::finally::Finally;
+use std::unstable::mutex::{Mutex, MUTEX_INIT};
 use std::io::{Stream, Reader, Writer, Decorator};
 use std::vec;
 
@@ -15,8 +14,8 @@ mod ffi;
 #[cfg(test)]
 mod tests;
 
-static mut STARTED_INIT: AtomicBool = INIT_ATOMIC_BOOL;
-static mut FINISHED_INIT: AtomicBool = INIT_ATOMIC_BOOL;
+static mut INIT_LOCK: Mutex = MUTEX_INIT;
+static mut INITIALIZED: bool = false;
 
 static mut VERIFY_IDX: AtomicUint = INIT_ATOMIC_UINT;
 
@@ -25,26 +24,28 @@ static mut MUTEXES: AtomicUint = INIT_ATOMIC_UINT;
 
 fn init() {
     unsafe {
-        if STARTED_INIT.swap(true, Acquire) {
-            while !FINISHED_INIT.load(Release) {
-                task::deschedule();
+        INIT_LOCK.lock();
+        (|| {
+            if INITIALIZED {
+                return;
             }
-            return;
-        }
 
-        ffi::SSL_library_init();
-        let verify_idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
-                                                       None, None);
-        assert!(verify_idx >= 0);
-        VERIFY_IDX.store(verify_idx as uint, Release);
+            ffi::SSL_library_init();
+            let verify_idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
+                                                           None, None);
+            assert!(verify_idx >= 0);
+            VERIFY_IDX.store(verify_idx as uint, Release);
 
-        let num_locks = ffi::CRYPTO_num_locks();
-        let mutexes = ~vec::from_fn(num_locks as uint, |_| Mutex::new());
-        MUTEXES.store(cast::transmute(mutexes), Release);
+            let num_locks = ffi::CRYPTO_num_locks();
+            let mutexes = ~vec::from_fn(num_locks as uint, |_| Mutex::new());
+            MUTEXES.store(cast::transmute(mutexes), Release);
 
-        ffi::CRYPTO_set_locking_callback(locking_function);
+            ffi::CRYPTO_set_locking_callback(locking_function);
 
-        FINISHED_INIT.store(true, Release);
+            INITIALIZED = true;
+        }).finally(|| {
+            INIT_LOCK.unlock();
+        })
     }
 }
 
