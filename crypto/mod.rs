@@ -16,7 +16,6 @@
  */
 
 pub mod hash;
-pub mod hex;
 pub mod hmac;
 pub mod pkcs5;
 pub mod pkey;

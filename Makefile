@@ -9,5 +9,7 @@ test:
 	$(RUSTC) $(RUST_FLAGS) --test lib.rs
 	./rust-openssl
 
+.PHONY: test
+
 clean:
-	rm -rf bin/ lib/ build/ src/crypto/lib
+	rm -rf .rust rust-openssl rust-openssl.dSYM

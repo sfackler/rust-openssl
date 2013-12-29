@@ -194,7 +194,7 @@ pub fn decrypt(t: Type, key: &[u8], iv: ~[u8], data: &[u8]) -> ~[u8] {
 
 #[cfg(test)]
 mod tests {
-    use crypto::hex::FromHex;
+    use extra::hex::FromHex;
 
     // Test vectors from FIPS-197:
     // http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
@@ -223,13 +223,13 @@ mod tests {
     }
 
     fn cipher_test(ciphertype: super::Type, pt: ~str, ct: ~str, key: ~str, iv: ~str) {
-        use crypto::hex::ToHex;
+        use extra::hex::ToHex;
 
         let cipher = super::Crypter::new(ciphertype);
-        cipher.init(super::Encrypt, key.from_hex(), iv.from_hex());
+        cipher.init(super::Encrypt, key.from_hex().unwrap(), iv.from_hex().unwrap());
 
-        let expected = ct.from_hex();
-        let computed = cipher.update(pt.from_hex()) + cipher.final();
+        let expected = ct.from_hex().unwrap();
+        let computed = cipher.update(pt.from_hex().unwrap()) + cipher.final();
 
         if computed != expected {
             println!("Computed: {}", computed.to_hex());
