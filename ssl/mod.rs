@@ -1,7 +1,6 @@
 use std::cast;
 use std::libc::{c_int, c_void, c_char};
 use std::ptr;
-use std::sync::atomics::{AtomicUint, INIT_ATOMIC_UINT, Acquire, Release, SeqCst};
 use std::unstable::finally::Finally;
 use std::unstable::mutex::{Mutex, MUTEX_INIT};
 use std::io::{Stream, Reader, Writer, Decorator};
@@ -17,10 +16,8 @@ mod tests;
 static mut INIT_LOCK: Mutex = MUTEX_INIT;
 static mut INITIALIZED: bool = false;
 
-static mut VERIFY_IDX: AtomicUint = INIT_ATOMIC_UINT;
-
-// actually a *~[Mutex]
-static mut MUTEXES: AtomicUint = INIT_ATOMIC_UINT;
+static mut VERIFY_IDX: c_int = -1;
+static mut MUTEXES: Option<*mut ~[Mutex]> = None;
 
 fn init() {
     unsafe {
@@ -34,11 +31,11 @@ fn init() {
             let verify_idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
                                                            None, None);
             assert!(verify_idx >= 0);
-            VERIFY_IDX.store(verify_idx as uint, Release);
+            VERIFY_IDX = verify_idx;
 
             let num_locks = ffi::CRYPTO_num_locks();
             let mutexes = ~vec::from_fn(num_locks as uint, |_| Mutex::new());
-            MUTEXES.store(cast::transmute(mutexes), Release);
+            MUTEXES = Some(cast::transmute(mutexes));
 
             ffi::CRYPTO_set_locking_callback(locking_function);
 
@@ -80,8 +77,7 @@ pub enum SslVerifyMode {
 extern "C" fn locking_function(mode: c_int, n: c_int, _file: *c_char,
                                _line: c_int) {
     unsafe {
-        let mutexes: *mut ~[Mutex] = cast::transmute(MUTEXES.load(Acquire));
-        let mutex = &mut (*mutexes)[n as uint];
+        let mutex = &mut (*MUTEXES.unwrap())[n as uint];
 
         if mode & ffi::CRYPTO_LOCK != 0 {
             mutex.lock();
@@ -97,8 +93,7 @@ extern "C" fn raw_verify(preverify_ok: c_int, x509_ctx: *ffi::X509_STORE_CTX)
         let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
         let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
-        let idx = VERIFY_IDX.load(Acquire) as c_int;
-        let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, idx);
+        let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, VERIFY_IDX);
         let verify: Option<VerifyCallback> = cast::transmute(verify);
 
         let ctx = X509StoreContext { ctx: x509_ctx };
@@ -150,8 +145,7 @@ impl SslContext {
     pub fn set_verify(&mut self, mode: SslVerifyMode,
                       verify: Option<VerifyCallback>) {
         unsafe {
-            let idx = VERIFY_IDX.load(SeqCst) as c_int;
-            ffi::SSL_CTX_set_ex_data(self.ctx, idx,
+            ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX,
                                      cast::transmute(verify));
             ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(raw_verify));
         }
