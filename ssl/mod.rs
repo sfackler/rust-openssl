@@ -106,8 +106,8 @@ extern "C" fn raw_verify(preverify_ok: c_int, x509_ctx: *ffi::X509_STORE_CTX)
 }
 
 /// The signature of functions that can be used to manually verify certificates
-pub type VerifyCallback = extern "Rust" fn(preverify_ok: bool,
-                                           x509_ctx: &X509StoreContext) -> bool;
+pub type VerifyCallback = fn(preverify_ok: bool,
+                             x509_ctx: &X509StoreContext) -> bool;
 
 /// An SSL context object
 pub struct SslContext {
