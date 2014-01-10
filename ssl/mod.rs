@@ -3,7 +3,7 @@ use std::libc::{c_int, c_void, c_char};
 use std::ptr;
 use std::unstable::finally::Finally;
 use std::unstable::mutex::{Mutex, MUTEX_INIT};
-use std::io::{Stream, Reader, Writer, Decorator};
+use std::io::{Stream, Reader, Writer};
 use std::vec;
 
 use ssl::error::{SslError, SslSessionClosed, StreamEof};
@@ -509,10 +509,6 @@ impl<S: Stream> Reader for SslStream<S> {
             _ => unreachable!()
         }
     }
-
-    fn eof(&mut self) -> bool {
-        self.stream.eof()
-    }
 }
 
 impl<S: Stream> Writer for SslStream<S> {
@@ -533,19 +529,5 @@ impl<S: Stream> Writer for SslStream<S> {
     fn flush(&mut self) {
         self.write_through();
         self.stream.flush()
-    }
-}
-
-impl<S> Decorator<S> for SslStream<S> {
-    fn inner(self) -> S {
-        self.stream
-    }
-
-    fn inner_ref<'a>(&'a self) -> &'a S {
-        &self.stream
-    }
-
-    fn inner_mut_ref<'a>(&'a mut self) -> &'a mut S {
-        &mut self.stream
     }
 }
