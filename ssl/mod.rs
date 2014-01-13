@@ -1,8 +1,7 @@
 use std::cast;
 use std::libc::{c_int, c_void, c_char};
 use std::ptr;
-use std::unstable::finally::Finally;
-use std::unstable::mutex::{Mutex, MUTEX_INIT};
+use std::unstable::mutex::{Mutex, Once, ONCE_INIT};
 use std::io::{Stream, Reader, Writer};
 use std::vec;
 
@@ -13,20 +12,14 @@ mod ffi;
 #[cfg(test)]
 mod tests;
 
-static mut INIT_LOCK: Mutex = MUTEX_INIT;
-static mut INITIALIZED: bool = false;
+static mut INIT: Once = ONCE_INIT;
 
 static mut VERIFY_IDX: c_int = -1;
 static mut MUTEXES: Option<*mut ~[Mutex]> = None;
 
 fn init() {
     unsafe {
-        INIT_LOCK.lock();
-        (|| {
-            if INITIALIZED {
-                return;
-            }
-
+        INIT.doit(|| {
             ffi::SSL_library_init();
             let verify_idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
                                                            None, None);
@@ -38,11 +31,7 @@ fn init() {
             MUTEXES = Some(cast::transmute(mutexes));
 
             ffi::CRYPTO_set_locking_callback(locking_function);
-
-            INITIALIZED = true;
-        }).finally(|| {
-            INIT_LOCK.unlock();
-        })
+        });
     }
 }
 
