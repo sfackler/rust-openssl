@@ -27,6 +27,9 @@ $(OPENSSL_TEST): $(OPENSSL_LIB) | $(BUILDDIR)
 clean:
 	rm -rf $(BUILDDIR)
 
+doc: $(OPENSSL)
+	rustdoc $(OPENSSL_LIB)
+
 print-target:
 	@echo $(OPENSSL)
 
