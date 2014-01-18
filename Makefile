@@ -27,4 +27,7 @@ $(OPENSSL_TEST): $(OPENSSL_LIB) | $(BUILDDIR)
 clean:
 	rm -rf $(BUILDDIR)
 
-.PHONY: all check clean
+print-target:
+	@echo $(OPENSSL)
+
+.PHONY: all check clean print-target
