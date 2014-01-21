@@ -1,6 +1,7 @@
 RUSTC = rustc
 BUILDDIR = build
 RUSTFLAGS = -O -Z debug-info
+INSTALL_DIR = %PREFIX%
 
 OPENSSL_LIB = lib.rs
 OPENSSL = $(BUILDDIR)/$(shell $(RUSTC) --crate-file-name $(OPENSSL_LIB))
@@ -29,6 +30,9 @@ clean:
 
 doc: $(OPENSSL)
 	rustdoc $(OPENSSL_LIB)
+
+install: $(OPENSSL)
+	install $(OPENSSL) $(INSTALL_DIR)
 
 print-target:
 	@echo $(OPENSSL)
