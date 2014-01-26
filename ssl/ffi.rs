@@ -136,9 +136,6 @@ extern "C" {
 
     pub fn X509_get_subject_name(x: *X509) -> *X509_NAME;
 
-    pub fn X509_NAME_print_ex(out: *BIO, nm: *X509_NAME, ident: c_int,
-                              flags: c_ulong) -> c_int;
-
     pub fn SSL_new(ctx: *SSL_CTX) -> *SSL;
     pub fn SSL_free(ssl: *SSL);
     pub fn SSL_set_bio(ssl: *SSL, rbio: *BIO, wbio: *BIO);
