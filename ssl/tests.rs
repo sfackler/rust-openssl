@@ -155,6 +155,6 @@ fn test_read() {
     let mut stream = SslStream::new(&SslContext::new(Sslv23), stream);
     stream.write("GET /\r\n\r\n".as_bytes());
     stream.flush();
-    let buf = stream.read_to_end();
+    let buf = stream.read_to_end().ok().expect("read error");
     print!("{}", str::from_utf8(buf));
 }

@@ -1,12 +1,13 @@
 use std::libc::c_ulong;
+use std::io::IoError;
 
-use super::ffi;
+use ssl::ffi;
 
 /// An SSL error
 #[deriving(ToStr)]
 pub enum SslError {
-    /// The underlying stream has reported an EOF
-    StreamEof,
+    /// The underlying stream has reported an error
+    StreamError(IoError),
     /// The SSL session has been closed by the other end
     SslSessionClosed,
     /// An error in the OpenSSL library

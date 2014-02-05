@@ -1,11 +1,12 @@
+use extra::sync::one::{Once, ONCE_INIT};
 use std::cast;
 use std::libc::{c_int, c_void, c_char};
 use std::ptr;
-use std::unstable::mutex::{Mutex, Once, ONCE_INIT};
-use std::io::{Stream, Reader, Writer};
+use std::io::{IoResult, IoError, OtherIoError, Stream, Reader, Writer};
+use std::unstable::mutex::Mutex;
 use std::vec;
 
-use ssl::error::{SslError, SslSessionClosed, StreamEof};
+use ssl::error::{SslError, SslSessionClosed, StreamError};
 
 pub mod error;
 mod ffi;
@@ -467,12 +468,12 @@ impl<S: Stream> SslStream<S> {
                 ErrorWantRead => {
                     self.flush();
                     match self.stream.read(self.buf) {
-                        Some(len) =>
+                        Ok(len) =>
                             self.ssl.get_rbio().write(self.buf.slice_to(len)),
-                        None => return Err(StreamEof)
+                        Err(err) => return Err(StreamError(err))
                     }
                 }
-                ErrorWantWrite => self.flush(),
+                ErrorWantWrite => { self.flush(); }
                 ErrorZeroReturn => return Err(SslSessionClosed),
                 ErrorSsl => return Err(SslError::get()),
                 _ => unreachable!()
@@ -482,26 +483,33 @@ impl<S: Stream> SslStream<S> {
 
     fn write_through(&mut self) {
         loop {
+            // TODO propogate errors
             match self.ssl.get_wbio().read(self.buf) {
                 Some(len) => self.stream.write(self.buf.slice_to(len)),
                 None => break
-            }
+            };
         }
     }
 }
 
 impl<S: Stream> Reader for SslStream<S> {
-    fn read(&mut self, buf: &mut [u8]) -> Option<uint> {
+    fn read(&mut self, buf: &mut [u8]) -> IoResult<uint> {
         match self.in_retry_wrapper(|ssl| { ssl.read(buf) }) {
-            Ok(len) => Some(len as uint),
-            Err(StreamEof) | Err(SslSessionClosed) => None,
+            Ok(len) => Ok(len as uint),
+            Err(SslSessionClosed) =>
+                Err(IoError {
+                    kind: OtherIoError,
+                    desc: "SSL session closed",
+                    detail: None
+                }),
+            Err(StreamError(e)) => Err(e),
             _ => unreachable!()
         }
     }
 }
 
 impl<S: Stream> Writer for SslStream<S> {
-    fn write(&mut self, buf: &[u8]) {
+    fn write(&mut self, buf: &[u8]) -> IoResult<()> {
         let mut start = 0;
         while start < buf.len() {
             let ret = self.in_retry_wrapper(|ssl| {
@@ -513,9 +521,10 @@ impl<S: Stream> Writer for SslStream<S> {
             }
             self.write_through();
         }
+        Ok(())
     }
 
-    fn flush(&mut self) {
+    fn flush(&mut self) -> IoResult<()> {
         self.write_through();
         self.stream.flush()
     }
