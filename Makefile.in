@@ -1,11 +1,11 @@
-RUSTC = rustc
-BUILDDIR = build
-RUSTFLAGS = -O -g --cfg ndebug
-INSTALL_DIR = %PREFIX%
+RUSTC := rustc
+BUILDDIR := build
+RUSTFLAGS := -O -g --cfg ndebug
+INSTALL_DIR := %PREFIX%
 
-OPENSSL_LIB = lib.rs
-OPENSSL = $(foreach file,$(shell $(RUSTC) --crate-file-name $(OPENSSL_LIB)),$(BUILDDIR)/$(file))
-OPENSSL_TEST = $(BUILDDIR)/$(shell $(RUSTC) --test --crate-file-name $(OPENSSL_LIB))
+OPENSSL_LIB := lib.rs
+OPENSSL := $(foreach file,$(shell $(RUSTC) --crate-file-name $(OPENSSL_LIB)),$(BUILDDIR)/$(file))
+OPENSSL_TEST := $(BUILDDIR)/$(shell $(RUSTC) --test --crate-file-name $(OPENSSL_LIB))
 
 all: $(OPENSSL)
 
