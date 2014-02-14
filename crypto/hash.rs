@@ -105,7 +105,7 @@ pub fn hash(t: HashType, data: &[u8]) -> ~[u8] {
 
 #[cfg(test)]
 mod tests {
-    use extra::hex::{FromHex, ToHex};
+    use serialize::hex::{FromHex, ToHex};
 
     struct HashTest {
         input: ~[u8],

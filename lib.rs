@@ -5,6 +5,8 @@
 #[doc(html_root_url="http://www.rust-ci.org/sfackler/rust-openssl/doc")];
 
 extern mod extra;
+#[cfg(test)]
+extern mod serialize;
 extern mod sync;
 
 pub mod ssl;
