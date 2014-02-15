@@ -4,10 +4,10 @@
 #[crate_type="dylib"];
 #[doc(html_root_url="http://www.rust-ci.org/sfackler/rust-openssl/doc")];
 
-extern mod extra;
+extern crate extra;
 #[cfg(test)]
-extern mod serialize;
-extern mod sync;
+extern crate serialize;
+extern crate sync;
 
 pub mod ssl;
 pub mod crypto;
