@@ -1,6 +1,6 @@
 RUSTC := rustc
 BUILDDIR := build
-RUSTFLAGS := -O -g --cfg ndebug
+RUSTFLAGS := -O --cfg ndebug
 INSTALL_DIR := %PREFIX%
 
 OPENSSL_LIB := lib.rs
