@@ -3,7 +3,7 @@ use std::cast;
 use std::libc::{c_int, c_void, c_char};
 use std::ptr;
 use std::io::{IoResult, IoError, OtherIoError, Stream, Reader, Writer};
-use std::unstable::mutex::Mutex;
+use std::unstable::mutex::NativeMutex;
 use std::vec;
 
 use ssl::error::{SslError, SslSessionClosed, StreamError};
@@ -16,7 +16,7 @@ mod tests;
 static mut INIT: Once = ONCE_INIT;
 
 static mut VERIFY_IDX: c_int = -1;
-static mut MUTEXES: Option<*mut ~[Mutex]> = None;
+static mut MUTEXES: Option<*mut ~[NativeMutex]> = None;
 
 fn init() {
     unsafe {
@@ -28,7 +28,7 @@ fn init() {
             VERIFY_IDX = verify_idx;
 
             let num_locks = ffi::CRYPTO_num_locks();
-            let mutexes = ~vec::from_fn(num_locks as uint, |_| Mutex::new());
+            let mutexes = ~vec::from_fn(num_locks as uint, |_| NativeMutex::new());
             MUTEXES = Some(cast::transmute(mutexes));
 
             ffi::CRYPTO_set_locking_callback(locking_function);
@@ -70,9 +70,9 @@ extern "C" fn locking_function(mode: c_int, n: c_int, _file: *c_char,
         let mutex = &mut (*MUTEXES.unwrap())[n as uint];
 
         if mode & ffi::CRYPTO_LOCK != 0 {
-            mutex.lock();
+            mutex.lock_noguard();
         } else {
-            mutex.unlock();
+            mutex.unlock_noguard();
         }
     }
 }
