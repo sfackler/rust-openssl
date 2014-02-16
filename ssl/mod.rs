@@ -16,7 +16,7 @@ mod tests;
 static mut INIT: Once = ONCE_INIT;
 
 static mut VERIFY_IDX: c_int = -1;
-static mut MUTEXES: Option<*mut ~[NativeMutex]> = None;
+static mut MUTEXES: *mut ~[NativeMutex] = 0 as *mut ~[NativeMutex];
 
 fn init() {
     unsafe {
@@ -29,7 +29,7 @@ fn init() {
 
             let num_locks = ffi::CRYPTO_num_locks();
             let mutexes = ~vec::from_fn(num_locks as uint, |_| NativeMutex::new());
-            MUTEXES = Some(cast::transmute(mutexes));
+            MUTEXES = cast::transmute(mutexes);
 
             ffi::CRYPTO_set_locking_callback(locking_function);
         });
@@ -67,7 +67,7 @@ pub enum SslVerifyMode {
 extern "C" fn locking_function(mode: c_int, n: c_int, _file: *c_char,
                                _line: c_int) {
     unsafe {
-        let mutex = &mut (*MUTEXES.unwrap())[n as uint];
+        let mutex = &mut (*MUTEXES)[n as uint];
 
         if mode & ffi::CRYPTO_LOCK != 0 {
             mutex.lock_noguard();
