@@ -4,7 +4,7 @@ use std::io::IoError;
 use ssl::ffi;
 
 /// An SSL error
-#[deriving(ToStr)]
+#[deriving(Show)]
 pub enum SslError {
     /// The underlying stream has reported an error
     StreamError(IoError),
@@ -15,7 +15,7 @@ pub enum SslError {
 }
 
 /// An error from the OpenSSL library
-#[deriving(ToStr)]
+#[deriving(Show)]
 pub enum OpensslError {
     /// An unknown error
     UnknownError {
