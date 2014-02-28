@@ -111,6 +111,8 @@ extern "C" {
 
     pub fn SSL_library_init() -> c_int;
 
+    #[cfg(sslv2)]
+    pub fn SSLv2_method() -> *SSL_METHOD;
     pub fn SSLv3_method() -> *SSL_METHOD;
     pub fn TLSv1_method() -> *SSL_METHOD;
     pub fn SSLv23_method() -> *SSL_METHOD;

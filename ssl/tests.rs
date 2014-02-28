@@ -1,3 +1,4 @@
+use std::from_str::FromStr;
 use std::io::Writer;
 use std::io::net::tcp::TcpStream;
 use std::str;

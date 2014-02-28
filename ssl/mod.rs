@@ -38,15 +38,29 @@ fn init() {
 
 /// Determines the SSL method supported
 pub enum SslMethod {
+    #[cfg(sslv2)]
+    /// Only support the SSLv2 protocol
+    Sslv2,
     /// Only support the SSLv3 protocol
     Sslv3,
     /// Only support the TLSv1 protocol
     Tlsv1,
     /// Support the SSLv2, SSLv3 and TLSv1 protocols
-    Sslv23
+    Sslv23,
 }
 
 impl SslMethod {
+    #[cfg(sslv2)]
+    unsafe fn to_raw(&self) -> *ffi::SSL_METHOD {
+        match *self {
+            Sslv2 => ffi::SSLv2_method(),
+            Sslv3 => ffi::SSLv3_method(),
+            Tlsv1 => ffi::TLSv1_method(),
+            Sslv23 => ffi::SSLv23_method()
+        }
+    }
+
+    #[cfg(not(sslv2))]
     unsafe fn to_raw(&self) -> *ffi::SSL_METHOD {
         match *self {
             Sslv3 => ffi::SSLv3_method(),
