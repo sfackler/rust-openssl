@@ -13,8 +13,6 @@ mod ffi;
 #[cfg(test)]
 mod tests;
 
-static mut INIT: Once = ONCE_INIT;
-
 static mut VERIFY_IDX: c_int = -1;
 static mut MUTEXES: *mut ~[NativeMutex] = 0 as *mut ~[NativeMutex];
 
@@ -28,6 +26,8 @@ macro_rules! try_ssl(
 )
 
 fn init() {
+    static mut INIT: Once = ONCE_INIT;
+
     unsafe {
         INIT.doit(|| {
             ffi::SSL_library_init();

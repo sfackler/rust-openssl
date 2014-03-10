@@ -2,19 +2,27 @@
 
 cd $(dirname $0)
 
-TEMP=`getopt -o "" --long prefix: -n "$0" -- "$@"`
+TEMP=`getopt -o "" --long prefix:,enable-sslv2 -n "$0" -- "$@"`
 
 if [ $? != 0 ]; then exit 1; fi
 
 eval set -- "$TEMP"
 
 PREFIX=/usr/lib
+RUSTCFGS=
 
 while true ; do
     case "$1" in
         --prefix) PREFIX=$2; shift 2;;
+        --enable-sslv2)
+            RUSTCFGS="$RUSTCFGS --cfg sslv2"
+            shift
+            break
+            ;;
         --) shift; break;;
     esac
 done
 
-sed -e "s|%PREFIX%|$PREFIX|" < Makefile.in > Makefile
+sed -e "s|%PREFIX%|$PREFIX|" \
+    -e "s|%RUSTCFGS%|$RUSTCFGS|" \
+    < Makefile.in > Makefile

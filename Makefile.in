@@ -1,6 +1,7 @@
 RUSTC := rustc
 BUILDDIR := build
-RUSTFLAGS := -O --cfg ndebug
+RUSTCFGS := %RUSTCFGS%
+RUSTFLAGS := -O --cfg ndebug $(RUSTCFGS)
 INSTALL_DIR := %PREFIX%
 
 OPENSSL_LIB := lib.rs
@@ -29,7 +30,7 @@ clean:
 	rm -rf $(BUILDDIR)
 
 doc: $(OPENSSL)
-	rustdoc $(OPENSSL_LIB)
+	rustdoc $(RUSTCFGS) $(OPENSSL_LIB)
 
 install: $(OPENSSL)
 	install $(OPENSSL) $(INSTALL_DIR)
