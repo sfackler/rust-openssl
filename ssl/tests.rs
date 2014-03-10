@@ -144,18 +144,18 @@ fn test_verify_trusted_get_error_err() {
 fn test_write() {
     let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
     let mut stream = SslStream::new(&SslContext::new(Sslv23), stream);
-    stream.write("hello".as_bytes());
-    stream.flush();
-    stream.write(" there".as_bytes());
-    stream.flush();
+    stream.write("hello".as_bytes()).unwrap();
+    stream.flush().unwrap();
+    stream.write(" there".as_bytes()).unwrap();
+    stream.flush().unwrap();
 }
 
 #[test]
 fn test_read() {
     let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
     let mut stream = SslStream::new(&SslContext::new(Sslv23), stream);
-    stream.write("GET /\r\n\r\n".as_bytes());
-    stream.flush();
+    stream.write("GET /\r\n\r\n".as_bytes()).unwrap();
+    stream.flush().unwrap();
     let buf = stream.read_to_end().ok().expect("read error");
     print!("{}", str::from_utf8(buf));
 }
