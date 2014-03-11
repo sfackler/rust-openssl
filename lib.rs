@@ -4,7 +4,6 @@
 #[crate_type="dylib"];
 #[doc(html_root_url="http://www.rust-ci.org/sfackler/rust-openssl/doc")];
 
-extern crate extra;
 #[cfg(test)]
 extern crate serialize;
 extern crate sync;
