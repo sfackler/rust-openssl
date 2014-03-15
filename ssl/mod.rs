@@ -4,7 +4,7 @@ use std::libc::{c_int, c_void, c_char};
 use std::ptr;
 use std::io::{IoResult, IoError, OtherIoError, Stream, Reader, Writer};
 use std::unstable::mutex::NativeMutex;
-use std::vec;
+use std::vec_ng::Vec;
 
 use ssl::error::{SslError, SslSessionClosed, StreamError};
 
@@ -14,7 +14,7 @@ mod ffi;
 mod tests;
 
 static mut VERIFY_IDX: c_int = -1;
-static mut MUTEXES: *mut ~[NativeMutex] = 0 as *mut ~[NativeMutex];
+static mut MUTEXES: *mut Vec<NativeMutex> = 0 as *mut Vec<NativeMutex>;
 
 macro_rules! try_ssl(
     ($e:expr) => (
@@ -37,7 +37,7 @@ fn init() {
             VERIFY_IDX = verify_idx;
 
             let num_locks = ffi::CRYPTO_num_locks();
-            let mutexes = ~vec::from_fn(num_locks as uint, |_| NativeMutex::new());
+            let mutexes = ~Vec::from_fn(num_locks as uint, |_| NativeMutex::new());
             MUTEXES = cast::transmute(mutexes);
 
             ffi::CRYPTO_set_locking_callback(locking_function);
@@ -90,7 +90,7 @@ pub enum SslVerifyMode {
 extern "C" fn locking_function(mode: c_int, n: c_int, _file: *c_char,
                                _line: c_int) {
     unsafe {
-        let mutex = &mut (*MUTEXES)[n as uint];
+        let mutex = (*MUTEXES).get_mut(n as uint);
 
         if mode & ffi::CRYPTO_LOCK != 0 {
             mutex.lock_noguard();
@@ -446,7 +446,7 @@ impl MemBio {
 pub struct SslStream<S> {
     priv stream: S,
     priv ssl: Ssl,
-    priv buf: ~[u8]
+    priv buf: Vec<u8>
 }
 
 impl<S: Stream> SslStream<S> {
@@ -462,7 +462,7 @@ impl<S: Stream> SslStream<S> {
             stream: stream,
             ssl: ssl,
             // Maximum TLS record size is 16k
-            buf: vec::from_elem(16 * 1024, 0u8)
+            buf: Vec::from_elem(16 * 1024, 0u8)
         };
 
         match ssl.in_retry_wrapper(|ssl| { ssl.connect() }) {
@@ -490,7 +490,7 @@ impl<S: Stream> SslStream<S> {
             match self.ssl.get_error(ret) {
                 ErrorWantRead => {
                     try_ssl!(self.flush());
-                    let len = try_ssl!(self.stream.read(self.buf));
+                    let len = try_ssl!(self.stream.read(self.buf.as_mut_slice()));
                     self.ssl.get_rbio().write(self.buf.slice_to(len));
                 }
                 ErrorWantWrite => { try_ssl!(self.flush()) }
@@ -503,7 +503,7 @@ impl<S: Stream> SslStream<S> {
 
     fn write_through(&mut self) -> IoResult<()> {
         loop {
-            match self.ssl.get_wbio().read(self.buf) {
+            match self.ssl.get_wbio().read(self.buf.as_mut_slice()) {
                 Some(len) => try!(self.stream.write(self.buf.slice_to(len))),
                 None => break
             };

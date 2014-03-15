@@ -1,5 +1,6 @@
 use std::libc::c_ulong;
 use std::io::IoError;
+use std::vec_ng::Vec;
 
 use ssl::ffi;
 
@@ -11,7 +12,7 @@ pub enum SslError {
     /// The SSL session has been closed by the other end
     SslSessionClosed,
     /// An error in the OpenSSL library
-    OpenSslErrors(~[OpensslError])
+    OpenSslErrors(Vec<OpensslError>)
 }
 
 /// An error from the OpenSSL library
@@ -44,7 +45,7 @@ impl SslError {
     /// Creates a new `OpenSslErrors` with the current contents of the error
     /// stack.
     pub fn get() -> SslError {
-        let mut errs = ~[];
+        let mut errs = vec!();
         loop {
             match unsafe { ffi::ERR_get_error() } {
                 0 => break,
