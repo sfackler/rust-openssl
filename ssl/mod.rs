@@ -2,7 +2,7 @@ use sync::one::{Once, ONCE_INIT};
 use std::cast;
 use std::libc::{c_int, c_void, c_char};
 use std::ptr;
-use std::io::{IoResult, IoError, OtherIoError, Stream, Reader, Writer};
+use std::io::{IoResult, IoError, OtherIoError, EndOfFile, Stream, Reader, Writer};
 use std::unstable::mutex::NativeMutex;
 use std::vec_ng::Vec;
 
@@ -518,7 +518,7 @@ impl<S: Stream> Reader for SslStream<S> {
             Ok(len) => Ok(len as uint),
             Err(SslSessionClosed) =>
                 Err(IoError {
-                    kind: OtherIoError,
+                    kind: EndOfFile,
                     desc: "SSL session closed",
                     detail: None
                 }),
