@@ -102,10 +102,14 @@ pub static XN_FLAG_MULTILINE: c_ulong = 0x2a40006;
 #[link(name="crypto")]
 extern "C" {
     pub fn CRYPTO_num_locks() -> c_int;
-    pub fn CRYPTO_set_locking_callback(func: extern "C" fn(mode: c_int,
-                                                           n: c_int,
-                                                           file: *c_char,
-                                                           line: c_int));
+    pub fn CRYPTO_set_locking_callback(
+        func: extern fn(mode: c_int, n: c_int, file: *c_char, line: c_int));
+    pub fn CRYPTO_set_dynlock_create_callback(
+        func: extern fn(file: *c_char, line: c_int) -> *c_void);
+    pub fn CRYPTO_set_dynlock_lock_callback(
+        func: extern fn(mode: c_int, l: *c_void, file: *c_char, line: c_int));
+    pub fn CRYPTO_set_dynlock_destroy_callback(
+        func: extern fn(l: *c_void, file: *c_char, line: c_int));
 
     pub fn ERR_get_error() -> c_ulong;
 
