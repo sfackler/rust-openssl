@@ -1,7 +1,7 @@
 use std::libc::c_uint;
 use std::libc;
 use std::ptr;
-use std::vec;
+use std::slice;
 
 pub enum HashType {
     MD5,
@@ -78,7 +78,7 @@ impl Hasher {
      */
     pub fn final(&self) -> ~[u8] {
         unsafe {
-            let mut res = vec::from_elem(self.len, 0u8);
+            let mut res = slice::from_elem(self.len, 0u8);
             EVP_DigestFinal(self.ctx, res.as_mut_ptr(), ptr::null());
             res
         }

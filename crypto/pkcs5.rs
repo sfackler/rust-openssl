@@ -1,5 +1,5 @@
 use std::libc::c_int;
-use std::vec;
+use std::slice;
 
 #[link(name = "crypto")]
 extern {
@@ -15,7 +15,7 @@ pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint, keylen: uint) -> ~[
         assert!(iter >= 1);
         assert!(keylen >= 1);
 
-        let mut out = vec::with_capacity(keylen);
+        let mut out = slice::with_capacity(keylen);
 
         let r = PKCS5_PBKDF2_HMAC_SHA1(
                 pass.as_ptr(), pass.len() as c_int,

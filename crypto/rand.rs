@@ -1,5 +1,5 @@
 use std::libc::c_int;
-use std::vec;
+use std::slice;
 
 #[link(name = "crypto")]
 extern {
@@ -8,7 +8,7 @@ extern {
 
 pub fn rand_bytes(len: uint) -> ~[u8] {
     unsafe {
-        let mut out = vec::with_capacity(len);
+        let mut out = slice::with_capacity(len);
 
         let r = RAND_bytes(out.as_mut_ptr(), len as c_int);
         if r != 1 as c_int { fail!() }

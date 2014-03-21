@@ -1,6 +1,6 @@
 use std::libc::{c_int, c_uint};
 use std::libc;
-use std::vec;
+use std::slice;
 
 #[allow(non_camel_case_types)]
 pub type EVP_CIPHER_CTX = *libc::c_void;
@@ -126,7 +126,7 @@ impl Crypter {
      */
     pub fn update(&self, data: &[u8]) -> ~[u8] {
         unsafe {
-            let mut res = vec::from_elem(data.len() + self.blocksize, 0u8);
+            let mut res = slice::from_elem(data.len() + self.blocksize, 0u8);
             let mut reslen = (data.len() + self.blocksize) as u32;
 
             EVP_CipherUpdate(
@@ -147,7 +147,7 @@ impl Crypter {
      */
     pub fn final(&self) -> ~[u8] {
         unsafe {
-            let mut res = vec::from_elem(self.blocksize, 0u8);
+            let mut res = slice::from_elem(self.blocksize, 0u8);
             let mut reslen = self.blocksize as c_int;
 
             EVP_CipherFinal(self.ctx,
