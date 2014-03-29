@@ -1,5 +1,4 @@
-#[doc(hidden)];
-#[allow(non_camel_case_types)];
+#![allow(non_camel_case_types)]
 
 use std::libc::{c_int, c_void, c_long, c_ulong, c_char};
 
