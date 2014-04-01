@@ -75,8 +75,8 @@ fn openssl_hash_nid(hash: HashType) -> c_int {
 }
 
 pub struct PKey {
-    priv evp: *EVP_PKEY,
-    priv parts: Parts,
+    evp: *EVP_PKEY,
+    parts: Parts,
 }
 
 /// Represents a public key, optionally with a private key attached.

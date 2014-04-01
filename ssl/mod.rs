@@ -139,7 +139,7 @@ pub type VerifyCallback = fn(preverify_ok: bool,
 
 /// An SSL context object
 pub struct SslContext {
-    priv ctx: *ffi::SSL_CTX
+    ctx: *ffi::SSL_CTX
 }
 
 impl Drop for SslContext {
@@ -196,7 +196,7 @@ impl SslContext {
 }
 
 pub struct X509StoreContext {
-    priv ctx: *ffi::X509_STORE_CTX
+    ctx: *ffi::X509_STORE_CTX
 }
 
 impl X509StoreContext {
@@ -218,8 +218,8 @@ impl X509StoreContext {
 
 /// A public key certificate
 pub struct X509<'ctx> {
-    priv ctx: &'ctx X509StoreContext,
-    priv x509: *ffi::X509
+    ctx: &'ctx X509StoreContext,
+    x509: *ffi::X509
 }
 
 impl<'ctx> X509<'ctx> {
@@ -230,8 +230,8 @@ impl<'ctx> X509<'ctx> {
 }
 
 pub struct X509Name<'x> {
-    priv x509: &'x X509<'x>,
-    priv name: *ffi::X509_NAME
+    x509: &'x X509<'x>,
+    name: *ffi::X509_NAME
 }
 
 pub enum X509NameFormat {
@@ -459,9 +459,9 @@ impl MemBio {
 
 /// A stream wrapper which handles SSL encryption for an underlying stream.
 pub struct SslStream<S> {
-    priv stream: S,
-    priv ssl: Ssl,
-    priv buf: Vec<u8>
+    stream: S,
+    ssl: Ssl,
+    buf: Vec<u8>
 }
 
 impl<S: Stream> SslStream<S> {

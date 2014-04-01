@@ -37,8 +37,8 @@ extern {
 }
 
 pub struct HMAC {
-    priv ctx: HMAC_CTX,
-    priv len: uint,
+    ctx: HMAC_CTX,
+    len: uint,
 }
 
 pub fn HMAC(ht: hash::HashType, key: ~[u8]) -> HMAC {

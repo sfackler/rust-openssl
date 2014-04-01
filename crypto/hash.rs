@@ -49,9 +49,9 @@ pub fn evpmd(t: HashType) -> (EVP_MD, uint) {
 }
 
 pub struct Hasher {
-    priv evp: EVP_MD,
-    priv ctx: EVP_MD_CTX,
-    priv len: uint,
+    evp: EVP_MD,
+    ctx: EVP_MD_CTX,
+    len: uint,
 }
 
 impl Hasher {

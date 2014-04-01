@@ -73,10 +73,10 @@ fn evpc(t: Type) -> (EVP_CIPHER, uint, uint) {
 
 /// Represents a symmetric cipher context.
 pub struct Crypter {
-    priv evp: EVP_CIPHER,
-    priv ctx: EVP_CIPHER_CTX,
-    priv keylen: uint,
-    priv blocksize: uint
+    evp: EVP_CIPHER,
+    ctx: EVP_CIPHER_CTX,
+    keylen: uint,
+    blocksize: uint
 }
 
 impl Crypter {
