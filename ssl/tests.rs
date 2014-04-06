@@ -23,7 +23,7 @@ fn test_verify_untrusted() {
     ctx.set_verify(SslVerifyPeer, None);
     match SslStream::try_new(&ctx, stream) {
         Ok(_) => fail!("expected failure"),
-        Err(err) => println!("error {:?}", err)
+        Err(err) => println!("error {}", err)
     }
 }
 
@@ -34,11 +34,11 @@ fn test_verify_trusted() {
     ctx.set_verify(SslVerifyPeer, None);
     match ctx.set_CA_file("test/cert.pem") {
         None => {}
-        Some(err) => fail!("Unexpected error {:?}", err)
+        Some(err) => fail!("Unexpected error {}", err)
     }
     match SslStream::try_new(&ctx, stream) {
         Ok(_) => (),
-        Err(err) => fail!("Expected success, got {:?}", err)
+        Err(err) => fail!("Expected success, got {}", err)
     }
 }
 
@@ -52,7 +52,7 @@ fn test_verify_untrusted_callback_override_ok() {
     ctx.set_verify(SslVerifyPeer, Some(callback));
     match SslStream::try_new(&ctx, stream) {
         Ok(_) => (),
-        Err(err) => fail!("Expected success, got {:?}", err)
+        Err(err) => fail!("Expected success, got {}", err)
     }
 }
 
@@ -77,11 +77,11 @@ fn test_verify_trusted_callback_override_ok() {
     ctx.set_verify(SslVerifyPeer, Some(callback));
     match ctx.set_CA_file("test/cert.pem") {
         None => {}
-        Some(err) => fail!("Unexpected error {:?}", err)
+        Some(err) => fail!("Unexpected error {}", err)
     }
     match SslStream::try_new(&ctx, stream) {
         Ok(_) => (),
-        Err(err) => fail!("Expected success, got {:?}", err)
+        Err(err) => fail!("Expected success, got {}", err)
     }
 }
 
@@ -95,7 +95,7 @@ fn test_verify_trusted_callback_override_bad() {
     ctx.set_verify(SslVerifyPeer, Some(callback));
     match ctx.set_CA_file("test/cert.pem") {
         None => {}
-        Some(err) => fail!("Unexpected error {:?}", err)
+        Some(err) => fail!("Unexpected error {}", err)
     }
     assert!(SslStream::try_new(&ctx, stream).is_err());
 }
@@ -123,7 +123,7 @@ fn test_verify_trusted_get_error_ok() {
     ctx.set_verify(SslVerifyPeer, Some(callback));
     match ctx.set_CA_file("test/cert.pem") {
         None => {}
-        Some(err) => fail!("Unexpected error {:?}", err)
+        Some(err) => fail!("Unexpected error {}", err)
     }
     assert!(SslStream::try_new(&ctx, stream).is_ok());
 }

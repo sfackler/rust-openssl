@@ -165,7 +165,7 @@ impl SslContext {
     pub fn new(method: SslMethod) -> SslContext {
         match SslContext::try_new(method) {
             Ok(ctx) => ctx,
-            Err(err) => fail!("Error creating SSL context: {:?}", err)
+            Err(err) => fail!("Error creating SSL context: {}", err)
         }
     }
 
@@ -490,7 +490,7 @@ impl<S: Stream> SslStream<S> {
     pub fn new(ctx: &SslContext, stream: S) -> SslStream<S> {
         match SslStream::try_new(ctx, stream) {
             Ok(stream) => stream,
-            Err(err) => fail!("Error creating SSL stream: {:?}", err)
+            Err(err) => fail!("Error creating SSL stream: {}", err)
         }
     }
 
