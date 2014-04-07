@@ -1,5 +1,5 @@
-use std::libc::c_uint;
-use std::libc;
+use libc;
+use libc::c_uint;
 use std::ptr;
 use std::slice;
 

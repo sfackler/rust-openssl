@@ -1,5 +1,5 @@
-use std::libc::{c_int, c_uint};
-use std::libc;
+use libc::{c_int, c_uint};
+use libc;
 use std::slice;
 
 #[allow(non_camel_case_types)]

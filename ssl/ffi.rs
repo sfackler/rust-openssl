@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types)]
 
-use std::libc::{c_int, c_void, c_long, c_ulong, c_char};
+use libc::{c_int, c_void, c_long, c_ulong, c_char};
 
 pub type SSL_CTX = c_void;
 pub type SSL_METHOD = c_void;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::libc::{c_uchar, c_int, c_uint};
+use libc::{c_uchar, c_int, c_uint};
 use std::ptr;
 use std::slice;
 use crypto::hash;
