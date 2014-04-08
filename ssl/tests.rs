@@ -157,5 +157,5 @@ fn test_read() {
     stream.write("GET /\r\n\r\n".as_bytes()).unwrap();
     stream.flush().unwrap();
     let buf = stream.read_to_end().ok().expect("read error");
-    print!("{}", str::from_utf8(buf));
+    print!("{}", str::from_utf8(buf.as_slice()));
 }
