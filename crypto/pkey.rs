@@ -1,6 +1,6 @@
 use std::cast;
-use libc::{c_char, c_int, c_uint};
-use libc;
+use std::libc;
+use std::libc::{c_char, c_int, c_uint};
 use std::ptr;
 use std::slice;
 use crypto::hash::{HashType, MD5, SHA1, SHA224, SHA256, SHA384, SHA512};

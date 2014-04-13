@@ -1,4 +1,4 @@
-use libc::c_ulong;
+use std::libc::c_ulong;
 use std::io::IoError;
 
 use ssl::ffi;
