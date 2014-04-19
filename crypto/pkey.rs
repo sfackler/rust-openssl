@@ -2,7 +2,6 @@ use std::cast;
 use libc::{c_char, c_int, c_uint};
 use libc;
 use std::ptr;
-use std::slice;
 use crypto::hash::{HashType, MD5, SHA1, SHA224, SHA256, SHA384, SHA512};
 
 #[allow(non_camel_case_types)]
@@ -90,11 +89,11 @@ impl PKey {
         }
     }
 
-    fn _tostr(&self, f: extern "C" unsafe fn(*EVP_PKEY, **mut u8) -> c_int) -> ~[u8] {
+    fn _tostr(&self, f: extern "C" unsafe fn(*EVP_PKEY, **mut u8) -> c_int) -> Vec<u8> {
         unsafe {
             let len = f(self.evp, ptr::null());
-            if len < 0 as c_int { return ~[]; }
-            let mut s = slice::from_elem(len as uint, 0u8);
+            if len < 0 as c_int { return vec!(); }
+            let mut s = Vec::from_elem(len as uint, 0u8);
 
             let r = f(self.evp, &s.as_mut_ptr());
 
@@ -133,7 +132,7 @@ impl PKey {
     /**
      * Returns a serialized form of the public key, suitable for load_pub().
      */
-    pub fn save_pub(&self) -> ~[u8] {
+    pub fn save_pub(&self) -> Vec<u8> {
         self._tostr(i2d_PublicKey)
     }
 
@@ -149,7 +148,7 @@ impl PKey {
      * Returns a serialized form of the public and private keys, suitable for
      * load_priv().
      */
-    pub fn save_priv(&self) -> ~[u8] {
+    pub fn save_priv(&self) -> Vec<u8> {
         self._tostr(i2d_PrivateKey)
     }
     /**
@@ -212,14 +211,14 @@ impl PKey {
         }
     }
 
-    pub fn encrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> ~[u8] {
+    pub fn encrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> {
         unsafe {
             let rsa = EVP_PKEY_get1_RSA(self.evp);
             let len = RSA_size(rsa);
 
             assert!(s.len() < self.max_data());
 
-            let mut r = slice::from_elem(len as uint + 1u, 0u8);
+            let mut r = Vec::from_elem(len as uint + 1u, 0u8);
 
             let rv = RSA_public_encrypt(
                 s.len() as c_uint,
@@ -229,7 +228,7 @@ impl PKey {
                 openssl_padding_code(padding));
 
             if rv < 0 as c_int {
-                ~[]
+                vec!()
             } else {
                 r.truncate(rv as uint);
                 r
@@ -237,14 +236,14 @@ impl PKey {
         }
     }
 
-    pub fn decrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> ~[u8] {
+    pub fn decrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> {
         unsafe {
             let rsa = EVP_PKEY_get1_RSA(self.evp);
             let len = RSA_size(rsa);
 
             assert_eq!(s.len() as c_uint, RSA_size(rsa));
 
-            let mut r = slice::from_elem(len as uint + 1u, 0u8);
+            let mut r = Vec::from_elem(len as uint + 1u, 0u8);
 
             let rv = RSA_private_decrypt(
                 s.len() as c_uint,
@@ -254,7 +253,7 @@ impl PKey {
                 openssl_padding_code(padding));
 
             if rv < 0 as c_int {
-                ~[]
+                vec!()
             } else {
                 r.truncate(rv as uint);
                 r
@@ -266,18 +265,18 @@ impl PKey {
      * Encrypts data using OAEP padding, returning the encrypted data. The
      * supplied data must not be larger than max_data().
      */
-    pub fn encrypt(&self, s: &[u8]) -> ~[u8] { self.encrypt_with_padding(s, OAEP) }
+    pub fn encrypt(&self, s: &[u8]) -> Vec<u8> { self.encrypt_with_padding(s, OAEP) }
 
     /**
      * Decrypts data, expecting OAEP padding, returning the decrypted data.
      */
-    pub fn decrypt(&self, s: &[u8]) -> ~[u8] { self.decrypt_with_padding(s, OAEP) }
+    pub fn decrypt(&self, s: &[u8]) -> Vec<u8> { self.decrypt_with_padding(s, OAEP) }
 
     /**
      * Signs data, using OpenSSL's default scheme and sha256. Unlike encrypt(),
      * can process an arbitrary amount of data; returns the signature.
      */
-    pub fn sign(&self, s: &[u8]) -> ~[u8] { self.sign_with_hash(s, SHA256) }
+    pub fn sign(&self, s: &[u8]) -> Vec<u8> { self.sign_with_hash(s, SHA256) }
 
     /**
      * Verifies a signature s (using OpenSSL's default scheme and sha256) on a
@@ -285,11 +284,11 @@ impl PKey {
      */
     pub fn verify(&self, m: &[u8], s: &[u8]) -> bool { self.verify_with_hash(m, s, SHA256) }
 
-    pub fn sign_with_hash(&self, s: &[u8], hash: HashType) -> ~[u8] {
+    pub fn sign_with_hash(&self, s: &[u8], hash: HashType) -> Vec<u8> {
         unsafe {
             let rsa = EVP_PKEY_get1_RSA(self.evp);
             let mut len = RSA_size(rsa);
-            let mut r = slice::from_elem(len as uint + 1u, 0u8);
+            let mut r = Vec::from_elem(len as uint + 1u, 0u8);
 
             let rv = RSA_sign(
                 openssl_hash_nid(hash),
@@ -300,7 +299,7 @@ impl PKey {
                 rsa);
 
             if rv < 0 as c_int {
-                ~[]
+                vec!()
             } else {
                 r.truncate(len as uint);
                 r
@@ -343,7 +342,7 @@ mod tests {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
         k0.gen(512u);
-        k1.load_pub(k0.save_pub());
+        k1.load_pub(k0.save_pub().as_slice());
         assert_eq!(k0.save_pub(), k1.save_pub());
         assert_eq!(k0.size(), k1.size());
         assert!(k0.can(super::Encrypt));
@@ -361,7 +360,7 @@ mod tests {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
         k0.gen(512u);
-        k1.load_priv(k0.save_priv());
+        k1.load_priv(k0.save_priv().as_slice());
         assert_eq!(k0.save_priv(), k1.save_priv());
         assert_eq!(k0.size(), k1.size());
         assert!(k0.can(super::Encrypt));
@@ -378,11 +377,11 @@ mod tests {
     fn test_encrypt() {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
-        let msg = ~[0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
+        let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
         k0.gen(512u);
-        k1.load_pub(k0.save_pub());
-        let emsg = k1.encrypt(msg);
-        let dmsg = k0.decrypt(emsg);
+        k1.load_pub(k0.save_pub().as_slice());
+        let emsg = k1.encrypt(msg.as_slice());
+        let dmsg = k0.decrypt(emsg.as_slice());
         assert!(msg == dmsg);
     }
 
@@ -390,11 +389,11 @@ mod tests {
     fn test_encrypt_pkcs() {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
-        let msg = ~[0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
+        let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
         k0.gen(512u);
-        k1.load_pub(k0.save_pub());
-        let emsg = k1.encrypt_with_padding(msg, super::PKCS1v15);
-        let dmsg = k0.decrypt_with_padding(emsg, super::PKCS1v15);
+        k1.load_pub(k0.save_pub().as_slice());
+        let emsg = k1.encrypt_with_padding(msg.as_slice(), super::PKCS1v15);
+        let dmsg = k0.decrypt_with_padding(emsg.as_slice(), super::PKCS1v15);
         assert!(msg == dmsg);
     }
 
@@ -402,11 +401,11 @@ mod tests {
     fn test_sign() {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
-        let msg = ~[0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
+        let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
         k0.gen(512u);
-        k1.load_pub(k0.save_pub());
-        let sig = k0.sign(msg);
-        let rv = k1.verify(msg, sig);
+        k1.load_pub(k0.save_pub().as_slice());
+        let sig = k0.sign(msg.as_slice());
+        let rv = k1.verify(msg.as_slice(), sig.as_slice());
         assert!(rv == true);
     }
 
@@ -414,13 +413,13 @@ mod tests {
     fn test_sign_hashes() {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
-        let msg = ~[0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
+        let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
         k0.gen(512u);
-        k1.load_pub(k0.save_pub());
+        k1.load_pub(k0.save_pub().as_slice());
 
-        let sig = k0.sign_with_hash(msg, MD5);
+        let sig = k0.sign_with_hash(msg.as_slice(), MD5);
 
-        assert!(k1.verify_with_hash(msg, sig, MD5));
-        assert!(!k1.verify_with_hash(msg, sig, SHA1));
+        assert!(k1.verify_with_hash(msg.as_slice(), sig.as_slice(), MD5));
+        assert!(!k1.verify_with_hash(msg.as_slice(), sig.as_slice(), SHA1));
     }
 }

@@ -16,7 +16,6 @@
 
 use libc::{c_uchar, c_int, c_uint};
 use std::ptr;
-use std::slice;
 use crypto::hash;
 
 #[allow(non_camel_case_types)]
@@ -70,9 +69,9 @@ impl HMAC {
         }
     }
 
-    pub fn final(&mut self) -> ~[u8] {
+    pub fn final(&mut self) -> Vec<u8> {
         unsafe {
-            let mut res = slice::from_elem(self.len, 0u8);
+            let mut res = Vec::from_elem(self.len, 0u8);
             let mut outlen = 0;
             HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut outlen);
             assert!(self.len == outlen as uint)

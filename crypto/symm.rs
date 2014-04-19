@@ -1,6 +1,5 @@
 use libc::{c_int, c_uint};
 use libc;
-use std::slice;
 
 #[allow(non_camel_case_types)]
 pub type EVP_CIPHER_CTX = *libc::c_void;
@@ -124,9 +123,9 @@ impl Crypter {
      * Update this crypter with more data to encrypt or decrypt. Returns
      * encrypted or decrypted bytes.
      */
-    pub fn update(&self, data: &[u8]) -> ~[u8] {
+    pub fn update(&self, data: &[u8]) -> Vec<u8> {
         unsafe {
-            let mut res = slice::from_elem(data.len() + self.blocksize, 0u8);
+            let mut res = Vec::from_elem(data.len() + self.blocksize, 0u8);
             let mut reslen = (data.len() + self.blocksize) as u32;
 
             EVP_CipherUpdate(
@@ -145,9 +144,9 @@ impl Crypter {
     /**
      * Finish crypting. Returns the remaining partial block of output, if any.
      */
-    pub fn final(&self) -> ~[u8] {
+    pub fn final(&self) -> Vec<u8> {
         unsafe {
-            let mut res = slice::from_elem(self.blocksize, 0u8);
+            let mut res = Vec::from_elem(self.blocksize, 0u8);
             let mut reslen = self.blocksize as c_int;
 
             EVP_CipherFinal(self.ctx,
@@ -172,24 +171,24 @@ impl Drop for Crypter {
  * Encrypts data, using the specified crypter type in encrypt mode with the
  * specified key and iv; returns the resulting (encrypted) data.
  */
-pub fn encrypt(t: Type, key: &[u8], iv: ~[u8], data: &[u8]) -> ~[u8] {
+pub fn encrypt(t: Type, key: &[u8], iv: ~[u8], data: &[u8]) -> Vec<u8> {
     let c = Crypter::new(t);
     c.init(Encrypt, key, iv);
     let r = c.update(data);
     let rest = c.final();
-    r + rest
+    r.append(rest.as_slice())
 }
 
 /**
  * Decrypts data, using the specified crypter type in decrypt mode with the
  * specified key and iv; returns the resulting (decrypted) data.
  */
-pub fn decrypt(t: Type, key: &[u8], iv: ~[u8], data: &[u8]) -> ~[u8] {
+pub fn decrypt(t: Type, key: &[u8], iv: ~[u8], data: &[u8]) -> Vec<u8> {
     let c = Crypter::new(t);
     c.init(Decrypt, key, iv);
     let r = c.update(data);
     let rest = c.final();
-    r + rest
+    r.append(rest.as_slice())
 }
 
 #[cfg(test)]
@@ -201,24 +200,24 @@ mod tests {
     #[test]
     fn test_aes_256_ecb() {
         let k0 =
-           ~[ 0x00u8, 0x01u8, 0x02u8, 0x03u8, 0x04u8, 0x05u8, 0x06u8, 0x07u8,
+           vec!(0x00u8, 0x01u8, 0x02u8, 0x03u8, 0x04u8, 0x05u8, 0x06u8, 0x07u8,
               0x08u8, 0x09u8, 0x0au8, 0x0bu8, 0x0cu8, 0x0du8, 0x0eu8, 0x0fu8,
               0x10u8, 0x11u8, 0x12u8, 0x13u8, 0x14u8, 0x15u8, 0x16u8, 0x17u8,
-              0x18u8, 0x19u8, 0x1au8, 0x1bu8, 0x1cu8, 0x1du8, 0x1eu8, 0x1fu8 ];
+              0x18u8, 0x19u8, 0x1au8, 0x1bu8, 0x1cu8, 0x1du8, 0x1eu8, 0x1fu8);
         let p0 =
-           ~[ 0x00u8, 0x11u8, 0x22u8, 0x33u8, 0x44u8, 0x55u8, 0x66u8, 0x77u8,
-              0x88u8, 0x99u8, 0xaau8, 0xbbu8, 0xccu8, 0xddu8, 0xeeu8, 0xffu8 ];
+           vec!(0x00u8, 0x11u8, 0x22u8, 0x33u8, 0x44u8, 0x55u8, 0x66u8, 0x77u8,
+              0x88u8, 0x99u8, 0xaau8, 0xbbu8, 0xccu8, 0xddu8, 0xeeu8, 0xffu8);
         let c0 =
-           ~[ 0x8eu8, 0xa2u8, 0xb7u8, 0xcau8, 0x51u8, 0x67u8, 0x45u8, 0xbfu8,
-              0xeau8, 0xfcu8, 0x49u8, 0x90u8, 0x4bu8, 0x49u8, 0x60u8, 0x89u8 ];
+           vec!(0x8eu8, 0xa2u8, 0xb7u8, 0xcau8, 0x51u8, 0x67u8, 0x45u8, 0xbfu8,
+              0xeau8, 0xfcu8, 0x49u8, 0x90u8, 0x4bu8, 0x49u8, 0x60u8, 0x89u8);
         let c = super::Crypter::new(super::AES_256_ECB);
-        c.init(super::Encrypt, k0, []);
+        c.init(super::Encrypt, k0.as_slice(), []);
         c.pad(false);
-        let r0 = c.update(p0) + c.final();
+        let r0 = c.update(p0.as_slice()).append(c.final().as_slice());
         assert!(r0 == c0);
-        c.init(super::Decrypt, k0, []);
+        c.init(super::Decrypt, k0.as_slice(), []);
         c.pad(false);
-        let p1 = c.update(r0) + c.final();
+        let p1 = c.update(r0.as_slice()).append(c.final().as_slice());
         assert!(p1 == p0);
     }
 
@@ -228,12 +227,12 @@ mod tests {
         let cipher = super::Crypter::new(ciphertype);
         cipher.init(super::Encrypt, key.from_hex().unwrap(), iv.from_hex().unwrap());
 
-        let expected = ct.from_hex().unwrap();
-        let computed = cipher.update(pt.from_hex().unwrap()) + cipher.final();
+        let expected = Vec::from_slice(ct.from_hex().unwrap());
+        let computed = cipher.update(pt.from_hex().unwrap()).append(cipher.final().as_slice());
 
         if computed != expected {
-            println!("Computed: {}", computed.to_hex());
-            println!("Expected: {}", expected.to_hex());
+            println!("Computed: {}", computed.as_slice().to_hex());
+            println!("Expected: {}", expected.as_slice().to_hex());
             if computed.len() != expected.len() {
                 println!("Lengths differ: {} in computed vs {} expected",
                          computed.len(), expected.len());

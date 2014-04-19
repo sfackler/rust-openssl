@@ -1,7 +1,6 @@
 use libc;
 use libc::c_uint;
 use std::ptr;
-use std::slice;
 
 pub enum HashType {
     MD5,
@@ -76,9 +75,9 @@ impl Hasher {
      * Return the digest of all bytes added to this hasher since its last
      * initialization
      */
-    pub fn final(&self) -> ~[u8] {
+    pub fn final(&self) -> Vec<u8> {
         unsafe {
-            let mut res = slice::from_elem(self.len, 0u8);
+            let mut res = Vec::from_elem(self.len, 0u8);
             EVP_DigestFinal(self.ctx, res.as_mut_ptr(), ptr::null());
             res
         }
@@ -97,7 +96,7 @@ impl Drop for Hasher {
  * Hashes the supplied input data using hash t, returning the resulting hash
  * value
  */
-pub fn hash(t: HashType, data: &[u8]) -> ~[u8] {
+pub fn hash(t: HashType, data: &[u8]) -> Vec<u8> {
     let h = Hasher::new(t);
     h.update(data);
     h.final()
@@ -120,7 +119,7 @@ mod tests {
     fn hash_test(hashtype: super::HashType, hashtest: &HashTest) {
         let calced_raw = super::hash(hashtype, hashtest.input);
 
-        let calced = calced_raw.to_hex();
+        let calced = calced_raw.as_slice().to_hex();
 
         if calced != hashtest.expected_output {
             println!("Test failed - {} != {}", calced, hashtest.expected_output);
