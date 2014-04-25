@@ -58,19 +58,10 @@ pub enum SslMethod {
 }
 
 impl SslMethod {
-    #[cfg(sslv2)]
     unsafe fn to_raw(&self) -> *ffi::SSL_METHOD {
         match *self {
+            #[cfg(sslv2)]
             Sslv2 => ffi::SSLv2_method(),
-            Sslv3 => ffi::SSLv3_method(),
-            Tlsv1 => ffi::TLSv1_method(),
-            Sslv23 => ffi::SSLv23_method()
-        }
-    }
-
-    #[cfg(not(sslv2))]
-    unsafe fn to_raw(&self) -> *ffi::SSL_METHOD {
-        match *self {
             Sslv3 => ffi::SSLv3_method(),
             Tlsv1 => ffi::TLSv1_method(),
             Sslv23 => ffi::SSLv23_method()
