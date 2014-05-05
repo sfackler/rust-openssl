@@ -156,3 +156,8 @@ extern "C" {
     pub fn BIO_read(b: *BIO, buf: *c_void, len: c_int) -> c_int;
     pub fn BIO_write(b: *BIO, buf: *c_void, len: c_int) -> c_int;
 }
+
+#[cfg(target_os = "win32")]
+#[link(name="gdi32")]
+#[link(name="wsock32")]
+extern { }
