@@ -160,5 +160,4 @@ extern "C" {
 #[cfg(target_os = "win32")]
 #[link(name="gdi32")]
 #[link(name="wsock32")]
-#[link(name="m")]
 extern { }
