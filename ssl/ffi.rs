@@ -99,9 +99,6 @@ pub static XN_FLAG_MULTILINE: c_ulong = 0x2a40006;
 
 #[link(name="ssl")]
 #[link(name="crypto")]
-#[link(name="gdi32")]
-#[link(name="wsock32")]
-#[link(name="m")]
 extern "C" {
     pub fn CRYPTO_num_locks() -> c_int;
     pub fn CRYPTO_set_locking_callback(func: extern "C" fn(mode: c_int,
@@ -159,3 +156,9 @@ extern "C" {
     pub fn BIO_read(b: *BIO, buf: *c_void, len: c_int) -> c_int;
     pub fn BIO_write(b: *BIO, buf: *c_void, len: c_int) -> c_int;
 }
+
+#[cfg(target_os = "win32")]
+#[link(name="gdi32")]
+#[link(name="wsock32")]
+#[link(name="m")]
+extern { }
