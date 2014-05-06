@@ -111,9 +111,9 @@ mod tests {
         expected_output: ~str
     }
 
-    fn HashTest(input: ~str, output: ~str) -> HashTest {
+    fn HashTest(input: &str, output: &str) -> HashTest {
         HashTest { input: input.from_hex().unwrap(),
-                   expected_output: output }
+                   expected_output: output.to_owned() }
     }
 
     fn hash_test(hashtype: super::HashType, hashtest: &HashTest) {
@@ -132,19 +132,19 @@ mod tests {
     #[test]
     fn test_md5() {
         let tests = [
-            HashTest(~"", ~"d41d8cd98f00b204e9800998ecf8427e"),
-            HashTest(~"7F", ~"83acb6e67e50e31db6ed341dd2de1595"),
-            HashTest(~"EC9C", ~"0b07f0d4ca797d8ac58874f887cb0b68"),
-            HashTest(~"FEE57A", ~"e0d583171eb06d56198fc0ef22173907"),
-            HashTest(~"42F497E0", ~"7c430f178aefdf1487fee7144e9641e2"),
-            HashTest(~"C53B777F1C", ~"75ef141d64cb37ec423da2d9d440c925"),
-            HashTest(~"89D5B576327B", ~"ebbaf15eb0ed784c6faa9dc32831bf33"),
-            HashTest(~"5D4CCE781EB190", ~"ce175c4b08172019f05e6b5279889f2c"),
-            HashTest(~"81901FE94932D7B9", ~"cd4d2f62b8cdb3a0cf968a735a239281"),
-            HashTest(~"C9FFDEE7788EFB4EC9", ~"e0841a231ab698db30c6c0f3f246c014"),
-            HashTest(~"66AC4B7EBA95E53DC10B", ~"a3b3cea71910d9af56742aa0bb2fe329"),
-            HashTest(~"A510CD18F7A56852EB0319", ~"577e216843dd11573574d3fb209b97d8"),
-            HashTest(~"AAED18DBE8938C19ED734A8D", ~"6f80fb775f27e0a4ce5c2f42fc72c5f1")];
+            HashTest("", "d41d8cd98f00b204e9800998ecf8427e"),
+            HashTest("7F", "83acb6e67e50e31db6ed341dd2de1595"),
+            HashTest("EC9C", "0b07f0d4ca797d8ac58874f887cb0b68"),
+            HashTest("FEE57A", "e0d583171eb06d56198fc0ef22173907"),
+            HashTest("42F497E0", "7c430f178aefdf1487fee7144e9641e2"),
+            HashTest("C53B777F1C", "75ef141d64cb37ec423da2d9d440c925"),
+            HashTest("89D5B576327B", "ebbaf15eb0ed784c6faa9dc32831bf33"),
+            HashTest("5D4CCE781EB190", "ce175c4b08172019f05e6b5279889f2c"),
+            HashTest("81901FE94932D7B9", "cd4d2f62b8cdb3a0cf968a735a239281"),
+            HashTest("C9FFDEE7788EFB4EC9", "e0841a231ab698db30c6c0f3f246c014"),
+            HashTest("66AC4B7EBA95E53DC10B", "a3b3cea71910d9af56742aa0bb2fe329"),
+            HashTest("A510CD18F7A56852EB0319", "577e216843dd11573574d3fb209b97d8"),
+            HashTest("AAED18DBE8938C19ED734A8D", "6f80fb775f27e0a4ce5c2f42fc72c5f1")];
 
         for test in tests.iter() {
             hash_test(super::MD5, test);
@@ -154,7 +154,7 @@ mod tests {
     #[test]
     fn test_sha1() {
         let tests = [
-            HashTest(~"616263", ~"a9993e364706816aba3e25717850c26c9cd0d89d"),
+            HashTest("616263", "a9993e364706816aba3e25717850c26c9cd0d89d"),
             ];
 
         for test in tests.iter() {
@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn test_sha256() {
         let tests = [
-            HashTest(~"616263", ~"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+            HashTest("616263", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
             ];
 
         for test in tests.iter() {
