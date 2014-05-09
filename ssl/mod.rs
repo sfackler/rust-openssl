@@ -36,7 +36,7 @@ fn init() {
             VERIFY_IDX = verify_idx;
 
             let num_locks = ffi::CRYPTO_num_locks();
-            let mutexes = ~Vec::from_fn(num_locks as uint, |_| NativeMutex::new());
+            let mutexes = box Vec::from_fn(num_locks as uint, |_| NativeMutex::new());
             MUTEXES = cast::transmute(mutexes);
 
             ffi::CRYPTO_set_locking_callback(locking_function);
