@@ -225,10 +225,10 @@ mod tests {
         use serialize::hex::ToHex;
 
         let cipher = super::Crypter::new(ciphertype);
-        cipher.init(super::Encrypt, key.from_hex().unwrap(), iv.from_hex().unwrap());
+        cipher.init(super::Encrypt, key.from_hex().unwrap().as_slice(), iv.from_hex().unwrap().as_slice());
 
-        let expected = Vec::from_slice(ct.from_hex().unwrap());
-        let computed = cipher.update(pt.from_hex().unwrap()).append(cipher.final().as_slice());
+        let expected = Vec::from_slice(ct.from_hex().unwrap().as_slice());
+        let computed = cipher.update(pt.from_hex().unwrap().as_slice()).append(cipher.final().as_slice());
 
         if computed != expected {
             println!("Computed: {}", computed.as_slice().to_hex());

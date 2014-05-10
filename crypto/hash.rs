@@ -107,7 +107,7 @@ mod tests {
     use serialize::hex::{FromHex, ToHex};
 
     struct HashTest {
-        input: ~[u8],
+        input: Vec<u8>,
         expected_output: ~str
     }
 
@@ -117,7 +117,7 @@ mod tests {
     }
 
     fn hash_test(hashtype: super::HashType, hashtest: &HashTest) {
-        let calced_raw = super::hash(hashtype, hashtest.input);
+        let calced_raw = super::hash(hashtype, hashtest.input.as_slice());
 
         let calced = calced_raw.as_slice().to_hex();
 
