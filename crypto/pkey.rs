@@ -89,7 +89,7 @@ impl PKey {
         }
     }
 
-    fn _tostr(&self, f: extern "C" unsafe fn(*EVP_PKEY, **mut u8) -> c_int) -> Vec<u8> {
+    fn _tostr(&self, f: unsafe extern "C" fn(*EVP_PKEY, **mut u8) -> c_int) -> Vec<u8> {
         unsafe {
             let len = f(self.evp, ptr::null());
             if len < 0 as c_int { return vec!(); }
@@ -102,7 +102,7 @@ impl PKey {
         }
     }
 
-    fn _fromstr(&mut self, s: &[u8], f: extern "C" unsafe fn(c_int, **EVP_PKEY, **u8, c_uint) -> *EVP_PKEY) {
+    fn _fromstr(&mut self, s: &[u8], f: unsafe extern "C" fn(c_int, **EVP_PKEY, **u8, c_uint) -> *EVP_PKEY) {
         unsafe {
             let evp = ptr::null();
             f(6 as c_int, &evp, &s.as_ptr(), s.len() as c_uint);
