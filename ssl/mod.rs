@@ -1,9 +1,9 @@
-use sync::one::{Once, ONCE_INIT};
-use std::cast;
 use libc::{c_int, c_void, c_char};
-use std::ptr;
 use std::io::{IoResult, IoError, EndOfFile, Stream, Reader, Writer};
+use std::mem;
+use std::ptr;
 use std::unstable::mutex::NativeMutex;
+use sync::one::{Once, ONCE_INIT};
 
 use ssl::error::{SslError, SslSessionClosed, StreamError};
 
@@ -37,7 +37,7 @@ fn init() {
 
             let num_locks = ffi::CRYPTO_num_locks();
             let mutexes = box Vec::from_fn(num_locks as uint, |_| NativeMutex::new());
-            MUTEXES = cast::transmute(mutexes);
+            MUTEXES = mem::transmute(mutexes);
 
             ffi::CRYPTO_set_locking_callback(locking_function);
         });
@@ -97,7 +97,7 @@ extern fn raw_verify(preverify_ok: c_int, x509_ctx: *ffi::X509_STORE_CTX)
         let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
         let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, VERIFY_IDX);
-        let verify: Option<VerifyCallback> = cast::transmute(verify);
+        let verify: Option<VerifyCallback> = mem::transmute(verify);
 
         let ctx = X509StoreContext { ctx: x509_ctx };
 
@@ -149,7 +149,7 @@ impl SslContext {
                       verify: Option<VerifyCallback>) {
         unsafe {
             ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX,
-                                     cast::transmute(verify));
+                                     mem::transmute(verify));
             ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(raw_verify));
         }
     }
