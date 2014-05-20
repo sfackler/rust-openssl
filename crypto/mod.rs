@@ -21,3 +21,6 @@ pub mod pkcs5;
 pub mod pkey;
 pub mod rand;
 pub mod symm;
+pub mod primarity_tests;
+pub mod prime_number_generator;
+pub mod rsa;
