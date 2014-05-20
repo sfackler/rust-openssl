@@ -5,6 +5,8 @@
 #![doc(html_root_url="http://sfackler.github.io/rust-openssl/doc")]
 
 extern crate libc;
+extern crate num;
+extern crate rand;
 #[cfg(test)]
 extern crate serialize;
 extern crate sync;
