@@ -23,3 +23,4 @@ pub mod rand;
 pub mod symm;
 pub mod mod_operations;
 pub mod primarity_tests;
+pub mod prime_generator;
