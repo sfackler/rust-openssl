@@ -22,3 +22,4 @@ pub mod pkey;
 pub mod rand;
 pub mod symm;
 pub mod mod_operations;
+pub mod primarity_tests;
