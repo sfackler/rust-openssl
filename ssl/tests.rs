@@ -1,4 +1,3 @@
-use std::from_str::FromStr;
 use std::io::Writer;
 use std::io::net::tcp::TcpStream;
 use std::str;
@@ -12,13 +11,13 @@ fn test_new_ctx() {
 
 #[test]
 fn test_new_sslstream() {
-    let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
+    let stream = TcpStream::connect("127.0.0.1", 15418).unwrap();
     SslStream::new(&SslContext::new(Sslv23), stream);
 }
 
 #[test]
 fn test_verify_untrusted() {
-    let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
+    let stream = TcpStream::connect("127.0.0.1", 15418).unwrap();
     let mut ctx = SslContext::new(Sslv23);
     ctx.set_verify(SslVerifyPeer, None);
     match SslStream::try_new(&ctx, stream) {
@@ -29,7 +28,7 @@ fn test_verify_untrusted() {
 
 #[test]
 fn test_verify_trusted() {
-    let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
+    let stream = TcpStream::connect("127.0.0.1", 15418).unwrap();
     let mut ctx = SslContext::new(Sslv23);
     ctx.set_verify(SslVerifyPeer, None);
     match ctx.set_CA_file("test/cert.pem") {
@@ -47,7 +46,7 @@ fn test_verify_untrusted_callback_override_ok() {
     fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
         true
     }
-    let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
+    let stream = TcpStream::connect("127.0.0.1", 15418).unwrap();
     let mut ctx = SslContext::new(Sslv23);
     ctx.set_verify(SslVerifyPeer, Some(callback));
     match SslStream::try_new(&ctx, stream) {
@@ -61,7 +60,7 @@ fn test_verify_untrusted_callback_override_bad() {
     fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
         false
     }
-    let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
+    let stream = TcpStream::connect("127.0.0.1", 15418).unwrap();
     let mut ctx = SslContext::new(Sslv23);
     ctx.set_verify(SslVerifyPeer, Some(callback));
     assert!(SslStream::try_new(&ctx, stream).is_err());
@@ -72,7 +71,7 @@ fn test_verify_trusted_callback_override_ok() {
     fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
         true
     }
-    let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
+    let stream = TcpStream::connect("127.0.0.1", 15418).unwrap();
     let mut ctx = SslContext::new(Sslv23);
     ctx.set_verify(SslVerifyPeer, Some(callback));
     match ctx.set_CA_file("test/cert.pem") {
@@ -90,7 +89,7 @@ fn test_verify_trusted_callback_override_bad() {
     fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
         false
     }
-    let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
+    let stream = TcpStream::connect("127.0.0.1", 15418).unwrap();
     let mut ctx = SslContext::new(Sslv23);
     ctx.set_verify(SslVerifyPeer, Some(callback));
     match ctx.set_CA_file("test/cert.pem") {
@@ -106,7 +105,7 @@ fn test_verify_callback_load_certs() {
         assert!(x509_ctx.get_current_cert().is_some());
         true
     }
-    let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
+    let stream = TcpStream::connect("127.0.0.1", 15418).unwrap();
     let mut ctx = SslContext::new(Sslv23);
     ctx.set_verify(SslVerifyPeer, Some(callback));
     assert!(SslStream::try_new(&ctx, stream).is_ok());
@@ -118,7 +117,7 @@ fn test_verify_trusted_get_error_ok() {
         assert!(x509_ctx.get_error().is_none());
         true
     }
-    let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
+    let stream = TcpStream::connect("127.0.0.1", 15418).unwrap();
     let mut ctx = SslContext::new(Sslv23);
     ctx.set_verify(SslVerifyPeer, Some(callback));
     match ctx.set_CA_file("test/cert.pem") {
@@ -134,7 +133,7 @@ fn test_verify_trusted_get_error_err() {
         assert!(x509_ctx.get_error().is_some());
         false
     }
-    let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
+    let stream = TcpStream::connect("127.0.0.1", 15418).unwrap();
     let mut ctx = SslContext::new(Sslv23);
     ctx.set_verify(SslVerifyPeer, Some(callback));
     assert!(SslStream::try_new(&ctx, stream).is_err());
@@ -142,7 +141,7 @@ fn test_verify_trusted_get_error_err() {
 
 #[test]
 fn test_write() {
-    let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
+    let stream = TcpStream::connect("127.0.0.1", 15418).unwrap();
     let mut stream = SslStream::new(&SslContext::new(Sslv23), stream);
     stream.write("hello".as_bytes()).unwrap();
     stream.flush().unwrap();
@@ -152,7 +151,7 @@ fn test_write() {
 
 #[test]
 fn test_read() {
-    let stream = TcpStream::connect(FromStr::from_str("127.0.0.1:15418").unwrap()).unwrap();
+    let stream = TcpStream::connect("127.0.0.1", 15418).unwrap();
     let mut stream = SslStream::new(&SslContext::new(Sslv23), stream);
     stream.write("GET /\r\n\r\n".as_bytes()).unwrap();
     stream.flush().unwrap();
