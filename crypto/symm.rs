@@ -221,7 +221,7 @@ mod tests {
         assert!(p1 == p0);
     }
 
-    fn cipher_test(ciphertype: super::Type, pt: ~str, ct: ~str, key: ~str, iv: ~str) {
+    fn cipher_test(ciphertype: super::Type, pt: &str, ct: &str, key: &str, iv: &str) {
         use serialize::hex::ToHex;
 
         let cipher = super::Crypter::new(ciphertype);
@@ -244,10 +244,10 @@ mod tests {
     #[test]
     fn test_rc4() {
 
-        let pt = "0000000000000000000000000000000000000000000000000000000000000000000000000000".to_owned();
-        let ct = "A68686B04D686AA107BD8D4CAB191A3EEC0A6294BC78B60F65C25CB47BD7BB3A48EFC4D26BE4".to_owned();
-        let key = "97CD440324DA5FD1F7955C1C13B6B466".to_owned();
-        let iv = "".to_owned();
+        let pt = "0000000000000000000000000000000000000000000000000000000000000000000000000000";
+        let ct = "A68686B04D686AA107BD8D4CAB191A3EEC0A6294BC78B60F65C25CB47BD7BB3A48EFC4D26BE4";
+        let key = "97CD440324DA5FD1F7955C1C13B6B466";
+        let iv = "";
 
         cipher_test(super::RC4_128, pt, ct, key, iv);
     }

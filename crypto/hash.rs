@@ -108,7 +108,7 @@ mod tests {
 
     struct HashTest {
         input: Vec<u8>,
-        expected_output: ~str
+        expected_output: StrBuf
     }
 
     fn HashTest(input: &str, output: &str) -> HashTest {
