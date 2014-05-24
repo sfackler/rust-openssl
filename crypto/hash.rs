@@ -119,7 +119,7 @@ mod tests {
     fn hash_test(hashtype: super::HashType, hashtest: &HashTest) {
         let calced_raw = super::hash(hashtype, hashtest.input.as_slice());
 
-        let calced = calced_raw.as_slice().to_hex();
+        let calced = calced_raw.as_slice().to_hex().into_owned();
 
         if calced != hashtest.expected_output {
             println!("Test failed - {} != {}", calced, hashtest.expected_output);
