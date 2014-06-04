@@ -12,29 +12,39 @@ pub enum HashType {
 }
 
 #[allow(non_camel_case_types)]
-pub type EVP_MD_CTX = *libc::c_void;
+pub struct EVP_MD_CTX {
+    digest: *EVP_MD,
+    engine: *libc::c_void,
+    flags: libc::c_ulong,
+    md_data: *libc::c_void,
+    pctx: *EVP_PKEY_CTX,
+    update: *libc::c_void
+}
 
 #[allow(non_camel_case_types)]
-pub type EVP_MD = *libc::c_void;
+pub struct EVP_MD;
+
+#[allow(non_camel_case_types)]
+pub struct EVP_PKEY_CTX;
 
 #[link(name = "crypto")]
 extern {
-    fn EVP_MD_CTX_create() -> EVP_MD_CTX;
-    fn EVP_MD_CTX_destroy(ctx: EVP_MD_CTX);
+    fn EVP_MD_CTX_create() -> *EVP_MD_CTX;
+    fn EVP_MD_CTX_destroy(ctx: *EVP_MD_CTX);
 
-    fn EVP_md5() -> EVP_MD;
-    fn EVP_sha1() -> EVP_MD;
-    fn EVP_sha224() -> EVP_MD;
-    fn EVP_sha256() -> EVP_MD;
-    fn EVP_sha384() -> EVP_MD;
-    fn EVP_sha512() -> EVP_MD;
+    fn EVP_md5() -> *EVP_MD;
+    fn EVP_sha1() -> *EVP_MD;
+    fn EVP_sha224() -> *EVP_MD;
+    fn EVP_sha256() -> *EVP_MD;
+    fn EVP_sha384() -> *EVP_MD;
+    fn EVP_sha512() -> *EVP_MD;
 
-    fn EVP_DigestInit(ctx: EVP_MD_CTX, typ: EVP_MD);
-    fn EVP_DigestUpdate(ctx: EVP_MD_CTX, data: *u8, n: c_uint);
-    fn EVP_DigestFinal(ctx: EVP_MD_CTX, res: *mut u8, n: *u32);
+    fn EVP_DigestInit(ctx: *EVP_MD_CTX, typ: *EVP_MD);
+    fn EVP_DigestUpdate(ctx: *EVP_MD_CTX, data: *u8, n: c_uint);
+    fn EVP_DigestFinal(ctx: *EVP_MD_CTX, res: *mut u8, n: *u32);
 }
 
-pub fn evpmd(t: HashType) -> (EVP_MD, uint) {
+pub fn evpmd(t: HashType) -> (*EVP_MD, uint) {
     unsafe {
         match t {
             MD5 => (EVP_md5(), 16u),
@@ -48,8 +58,8 @@ pub fn evpmd(t: HashType) -> (EVP_MD, uint) {
 }
 
 pub struct Hasher {
-    evp: EVP_MD,
-    ctx: EVP_MD_CTX,
+    evp: *EVP_MD,
+    ctx: *EVP_MD_CTX,
     len: uint,
 }
 
@@ -108,18 +118,18 @@ mod tests {
 
     struct HashTest {
         input: Vec<u8>,
-        expected_output: StrBuf
+        expected_output: String
     }
 
     fn HashTest(input: &str, output: &str) -> HashTest {
         HashTest { input: input.from_hex().unwrap(),
-                   expected_output: output.to_owned() }
+                   expected_output: output.to_string() }
     }
 
     fn hash_test(hashtype: super::HashType, hashtest: &HashTest) {
         let calced_raw = super::hash(hashtype, hashtest.input.as_slice());
 
-        let calced = calced_raw.as_slice().to_hex().into_owned();
+        let calced = calced_raw.as_slice().to_hex().into_string();
 
         if calced != hashtest.expected_output {
             println!("Test failed - {} != {}", calced, hashtest.expected_output);
