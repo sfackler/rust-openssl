@@ -2,7 +2,7 @@ use libc::{c_int, c_void, c_char};
 use std::io::{IoResult, IoError, EndOfFile, Stream, Reader, Writer};
 use std::mem;
 use std::ptr;
-use std::unstable::mutex::NativeMutex;
+use std::rt::mutex::NativeMutex;
 use sync::one::{Once, ONCE_INIT};
 
 use ssl::error::{SslError, SslSessionClosed, StreamError};
