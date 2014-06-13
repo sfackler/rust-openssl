@@ -101,7 +101,7 @@ impl Crypter {
     /**
      * Initializes this crypter.
      */
-    pub fn init(&self, mode: Mode, key: &[u8], iv: &[u8]) {
+    pub fn init(&self, mode: Mode, key: &[u8], iv: Vec<u8>) {
         unsafe {
             let mode = match mode {
                 Encrypt => 1 as c_int,
@@ -171,7 +171,7 @@ impl Drop for Crypter {
  * Encrypts data, using the specified crypter type in encrypt mode with the
  * specified key and iv; returns the resulting (encrypted) data.
  */
-pub fn encrypt(t: Type, key: &[u8], iv: ~[u8], data: &[u8]) -> Vec<u8> {
+pub fn encrypt(t: Type, key: &[u8], iv: Vec<u8>, data: &[u8]) -> Vec<u8> {
     let c = Crypter::new(t);
     c.init(Encrypt, key, iv);
     let r = c.update(data);
@@ -183,7 +183,7 @@ pub fn encrypt(t: Type, key: &[u8], iv: ~[u8], data: &[u8]) -> Vec<u8> {
  * Decrypts data, using the specified crypter type in decrypt mode with the
  * specified key and iv; returns the resulting (decrypted) data.
  */
-pub fn decrypt(t: Type, key: &[u8], iv: ~[u8], data: &[u8]) -> Vec<u8> {
+pub fn decrypt(t: Type, key: &[u8], iv: Vec<u8>, data: &[u8]) -> Vec<u8> {
     let c = Crypter::new(t);
     c.init(Decrypt, key, iv);
     let r = c.update(data);
@@ -211,11 +211,11 @@ mod tests {
            vec!(0x8eu8, 0xa2u8, 0xb7u8, 0xcau8, 0x51u8, 0x67u8, 0x45u8, 0xbfu8,
               0xeau8, 0xfcu8, 0x49u8, 0x90u8, 0x4bu8, 0x49u8, 0x60u8, 0x89u8);
         let c = super::Crypter::new(super::AES_256_ECB);
-        c.init(super::Encrypt, k0.as_slice(), []);
+        c.init(super::Encrypt, k0.as_slice(), vec![]);
         c.pad(false);
         let r0 = c.update(p0.as_slice()).append(c.final().as_slice());
         assert!(r0 == c0);
-        c.init(super::Decrypt, k0.as_slice(), []);
+        c.init(super::Decrypt, k0.as_slice(), vec![]);
         c.pad(false);
         let p1 = c.update(r0.as_slice()).append(c.final().as_slice());
         assert!(p1 == p0);
@@ -225,7 +225,7 @@ mod tests {
         use serialize::hex::ToHex;
 
         let cipher = super::Crypter::new(ciphertype);
-        cipher.init(super::Encrypt, key.from_hex().unwrap().as_slice(), iv.from_hex().unwrap().as_slice());
+        cipher.init(super::Encrypt, key.from_hex().unwrap().as_slice(), iv.from_hex().unwrap());
 
         let expected = Vec::from_slice(ct.from_hex().unwrap().as_slice());
         let computed = cipher.update(pt.from_hex().unwrap().as_slice()).append(cipher.final().as_slice());
