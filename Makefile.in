@@ -6,6 +6,7 @@ INSTALL_DIR := %PREFIX%
 
 OPENSSL_LIB := lib.rs
 OPENSSL := $(foreach file,$(shell $(RUSTC) --crate-file-name $(OPENSSL_LIB)),$(BUILDDIR)/$(file))
+OPENSSL_STAMP := $(BUILDDIR)/openssl.stamp
 OPENSSL_TEST := $(BUILDDIR)/$(shell $(RUSTC) --test --crate-file-name $(OPENSSL_LIB))
 
 all: $(OPENSSL)
@@ -16,8 +17,11 @@ all: $(OPENSSL)
 $(BUILDDIR):
 	mkdir -p $@
 
-$(OPENSSL): $(OPENSSL_LIB) | $(BUILDDIR)
+$(OPENSSL): $(OPENSSL_STAMP)
+
+$(OPENSSL_STAMP): $(OPENSSL_LIB) | $(BUILDDIR)
 	$(RUSTC) $(RUSTFLAGS) --dep-info $(@D)/openssl.d --out-dir $(@D) $<
+	touch $(OPENSSL_STAMP)
 
 check: $(OPENSSL_TEST)
 	$<
