@@ -11,6 +11,7 @@ pub enum HashType {
     SHA512
 }
 
+#[allow(dead_code)]
 #[allow(non_camel_case_types)]
 pub struct EVP_MD_CTX {
     digest: *EVP_MD,
@@ -57,6 +58,7 @@ pub fn evpmd(t: HashType) -> (*EVP_MD, uint) {
     }
 }
 
+#[allow(dead_code)]
 pub struct Hasher {
     evp: *EVP_MD,
     ctx: *EVP_MD_CTX,

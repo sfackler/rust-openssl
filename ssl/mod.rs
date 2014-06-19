@@ -154,6 +154,7 @@ impl SslContext {
         }
     }
 
+    #[allow(non_snake_case_functions)]
     /// Specifies the file that contains trusted CA certificates.
     pub fn set_CA_file(&mut self, file: &str) -> Option<SslError> {
         let ret = file.with_c_str(|file| {
@@ -191,6 +192,7 @@ impl X509StoreContext {
     }
 }
 
+#[allow(dead_code)]
 /// A public key certificate
 pub struct X509<'ctx> {
     ctx: &'ctx X509StoreContext,
@@ -204,6 +206,7 @@ impl<'ctx> X509<'ctx> {
     }
 }
 
+#[allow(dead_code)]
 pub struct X509Name<'x> {
     x509: &'x X509<'x>,
     name: *ffi::X509_NAME
@@ -379,6 +382,7 @@ enum LibSslError {
     ErrorWantAccept = ffi::SSL_ERROR_WANT_ACCEPT,
 }
 
+#[allow(dead_code)]
 struct MemBioRef<'ssl> {
     ssl: &'ssl Ssl,
     bio: MemBio,
