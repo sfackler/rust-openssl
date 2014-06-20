@@ -17,6 +17,7 @@
 use libc::{c_uchar, c_int, c_uint};
 use crypto::hash;
 
+#[allow(dead_code)]
 #[allow(non_camel_case_types)]
 pub struct HMAC_CTX {
     md: *hash::EVP_MD,
@@ -43,6 +44,7 @@ pub struct HMAC {
     len: uint,
 }
 
+#[allow(non_snake_case_functions)]
 pub fn HMAC(ht: hash::HashType, key: &[u8]) -> HMAC {
     unsafe {
         let (evp, mdlen) = hash::evpmd(ht);
