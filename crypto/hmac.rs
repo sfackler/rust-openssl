@@ -89,10 +89,10 @@ mod tests {
     fn test_hmac_md5() {
         // test vectors from RFC 2202
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>), ..7] = [
-            (Vec::from_elem(16, 0x0b_u8), Vec::from_slice(bytes!("Hi There")),
+            (Vec::from_elem(16, 0x0b_u8), Vec::from_slice(b"Hi There"),
              "9294727a3638bb1c13f48ef8158bfc9d".from_hex().unwrap()),
-            (Vec::from_slice(bytes!("Jefe")),
-             Vec::from_slice(bytes!("what do ya want for nothing?")),
+            (Vec::from_slice(b"Jefe"),
+             Vec::from_slice(b"what do ya want for nothing?"),
              "750c783e6ab0b503eaa86e310a5db738".from_hex().unwrap()),
             (Vec::from_elem(16, 0xaa_u8), Vec::from_elem(50, 0xdd_u8),
              "56be34521d144c88dbb8c733f0e8b3f6".from_hex().unwrap()),
@@ -100,14 +100,14 @@ mod tests {
              Vec::from_elem(50, 0xcd_u8),
              "697eaf0aca3a3aea3a75164746ffaa79".from_hex().unwrap()),
             (Vec::from_elem(16, 0x0c_u8),
-             Vec::from_slice(bytes!("Test With Truncation")),
+             Vec::from_slice(b"Test With Truncation"),
              "56461ef2342edc00f9bab995690efd4c".from_hex().unwrap()),
             (Vec::from_elem(80, 0xaa_u8),
-             Vec::from_slice(bytes!("Test Using Larger Than Block-Size Key - Hash Key First")),
+             Vec::from_slice(b"Test Using Larger Than Block-Size Key - Hash Key First"),
              "6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd".from_hex().unwrap()),
             (Vec::from_elem(80, 0xaa_u8),
-             Vec::from_slice(bytes!("Test Using Larger Than Block-Size Key \
-                                     and Larger Than One Block-Size Data")),
+             Vec::from_slice(b"Test Using Larger Than Block-Size Key \
+                               and Larger Than One Block-Size Data"),
              "6f630fad67cda0ee1fb1f562db3aa53e".from_hex().unwrap())
         ];
 
@@ -122,10 +122,10 @@ mod tests {
     fn test_hmac_sha1() {
         // test vectors from RFC 2202
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>), ..7] = [
-            (Vec::from_elem(20, 0x0b_u8), Vec::from_slice(bytes!("Hi There")),
+            (Vec::from_elem(20, 0x0b_u8), Vec::from_slice(b"Hi There"),
              "b617318655057264e28bc0b6fb378c8ef146be00".from_hex().unwrap()),
-            (Vec::from_slice(bytes!("Jefe")),
-             Vec::from_slice(bytes!("what do ya want for nothing?")),
+            (Vec::from_slice(b"Jefe"),
+             Vec::from_slice(b"what do ya want for nothing?"),
              "effcdf6ae5eb2fa2d27416d5f184df9c259a7c79".from_hex().unwrap()),
             (Vec::from_elem(20, 0xaa_u8), Vec::from_elem(50, 0xdd_u8),
              "125d7342b9ac11cd91a39af48aa17b4f63f175d3".from_hex().unwrap()),
@@ -133,14 +133,14 @@ mod tests {
              Vec::from_elem(50, 0xcd_u8),
              "4c9007f4026250c6bc8414f9bf50c86c2d7235da".from_hex().unwrap()),
             (Vec::from_elem(20, 0x0c_u8),
-             Vec::from_slice(bytes!("Test With Truncation")),
+             Vec::from_slice(b"Test With Truncation"),
              "4c1a03424b55e07fe7f27be1d58bb9324a9a5a04".from_hex().unwrap()),
             (Vec::from_elem(80, 0xaa_u8),
-             Vec::from_slice(bytes!("Test Using Larger Than Block-Size Key - Hash Key First")),
+             Vec::from_slice(b"Test Using Larger Than Block-Size Key - Hash Key First"),
              "aa4ae5e15272d00e95705637ce8a3b55ed402112".from_hex().unwrap()),
             (Vec::from_elem(80, 0xaa_u8),
-             Vec::from_slice(bytes!("Test Using Larger Than Block-Size Key \
-                                     and Larger Than One Block-Size Data")),
+             Vec::from_slice(b"Test Using Larger Than Block-Size Key \
+                               and Larger Than One Block-Size Data"),
              "e8e99d0f45237d786d6bbaa7965c7808bbff1a91".from_hex().unwrap())
         ];
 
@@ -154,18 +154,18 @@ mod tests {
     fn test_sha2(ty: HashType, results: &[Vec<u8>]) {
         // test vectors from RFC 4231
         let tests: [(Vec<u8>, Vec<u8>), ..6] = [
-            (Vec::from_elem(20, 0x0b_u8), Vec::from_slice(bytes!("Hi There"))),
-            (Vec::from_slice(bytes!("Jefe")),
-             Vec::from_slice(bytes!("what do ya want for nothing?"))),
+            (Vec::from_elem(20, 0x0b_u8), Vec::from_slice(b"Hi There")),
+            (Vec::from_slice(b"Jefe"),
+             Vec::from_slice(b"what do ya want for nothing?")),
             (Vec::from_elem(20, 0xaa_u8), Vec::from_elem(50, 0xdd_u8)),
             ("0102030405060708090a0b0c0d0e0f10111213141516171819".from_hex().unwrap(),
              Vec::from_elem(50, 0xcd_u8)),
             (Vec::from_elem(131, 0xaa_u8),
-             Vec::from_slice(bytes!("Test Using Larger Than Block-Size Key - Hash Key First"))),
+             Vec::from_slice(b"Test Using Larger Than Block-Size Key - Hash Key First")),
             (Vec::from_elem(131, 0xaa_u8),
-             Vec::from_slice(bytes!("This is a test using a larger than block-size key and a \
-                                     larger than block-size data. The key needs to be hashed \
-                                     before being used by the HMAC algorithm.")))
+             Vec::from_slice(b"This is a test using a larger than block-size key and a \
+                               larger than block-size data. The key needs to be hashed \
+                               before being used by the HMAC algorithm."))
         ];
 
         for (&(ref key, ref data), res) in tests.iter().zip(results.iter()) {
