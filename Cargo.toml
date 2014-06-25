@@ -1,0 +1,10 @@
+[package]
+
+name = "openssl"
+version = "0.0.1"
+authors = ["Steven Fackler <sfackler@gmail.com"]
+
+[[lib]]
+
+name = "openssl"
+path = "lib.rs"
