@@ -2,10 +2,10 @@ use libc::{c_int, c_uint};
 use libc;
 
 #[allow(non_camel_case_types)]
-pub type EVP_CIPHER_CTX = *libc::c_void;
+pub type EVP_CIPHER_CTX = *mut libc::c_void;
 
 #[allow(non_camel_case_types)]
-pub type EVP_CIPHER = *libc::c_void;
+pub type EVP_CIPHER = *mut libc::c_void;
 
 #[link(name = "crypto")]
 extern {
@@ -26,9 +26,9 @@ extern {
     fn EVP_rc4() -> EVP_CIPHER;
 
     fn EVP_CipherInit(ctx: EVP_CIPHER_CTX, evp: EVP_CIPHER,
-                      key: *u8, iv: *u8, mode: c_int);
+                      key: *const u8, iv: *const u8, mode: c_int);
     fn EVP_CipherUpdate(ctx: EVP_CIPHER_CTX, outbuf: *mut u8,
-                        outlen: &mut c_uint, inbuf: *u8, inlen: c_int);
+                        outlen: &mut c_uint, inbuf: *const u8, inlen: c_int);
     fn EVP_CipherFinal(ctx: EVP_CIPHER_CTX, res: *mut u8, len: &mut c_int);
 }
 

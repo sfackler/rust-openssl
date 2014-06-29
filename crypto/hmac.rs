@@ -20,7 +20,7 @@ use crypto::hash;
 #[allow(dead_code)]
 #[allow(non_camel_case_types)]
 pub struct HMAC_CTX {
-    md: *hash::EVP_MD,
+    md: *mut hash::EVP_MD,
     md_ctx: hash::EVP_MD_CTX,
     i_ctx: hash::EVP_MD_CTX,
     o_ctx: hash::EVP_MD_CTX,
@@ -31,8 +31,8 @@ pub struct HMAC_CTX {
 #[link(name = "crypto")]
 extern {
     fn HMAC_CTX_init(ctx: *mut HMAC_CTX);
-    fn HMAC_Init_ex(ctx: *mut HMAC_CTX, key: *u8, keylen: c_int, md: *hash::EVP_MD, imple: *ENGINE);
-    fn HMAC_Update(ctx: *mut HMAC_CTX, input: *u8, len: c_uint);
+    fn HMAC_Init_ex(ctx: *mut HMAC_CTX, key: *const u8, keylen: c_int, md: *const hash::EVP_MD, imple: *const ENGINE);
+    fn HMAC_Update(ctx: *mut HMAC_CTX, input: *const u8, len: c_uint);
     fn HMAC_Final(ctx: *mut HMAC_CTX, output: *mut u8, len: *mut c_uint);
 }
 
@@ -55,7 +55,7 @@ pub fn HMAC(ht: hash::HashType, key: &[u8]) -> HMAC {
         HMAC_Init_ex(&mut ctx,
                      key.as_ptr(),
                      key.len() as c_int,
-                     evp, 0 as *_);
+                     evp, 0 as *const _);
 
         HMAC { ctx: ctx, len: mdlen }
     }

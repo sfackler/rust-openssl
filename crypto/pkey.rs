@@ -5,34 +5,34 @@ use std::ptr;
 use crypto::hash::{HashType, MD5, SHA1, SHA224, SHA256, SHA384, SHA512};
 
 #[allow(non_camel_case_types)]
-pub type EVP_PKEY = *libc::c_void;
+pub type EVP_PKEY = *mut libc::c_void;
 
 #[allow(non_camel_case_types)]
-pub type RSA = *libc::c_void;
+pub type RSA = *mut libc::c_void;
 
 #[link(name = "crypto")]
 extern {
-    fn EVP_PKEY_new() -> *EVP_PKEY;
-    fn EVP_PKEY_free(k: *EVP_PKEY);
-    fn EVP_PKEY_assign(pkey: *EVP_PKEY, typ: c_int, key: *c_char) -> c_int;
-    fn EVP_PKEY_get1_RSA(k: *EVP_PKEY) -> *RSA;
+    fn EVP_PKEY_new() -> *mut EVP_PKEY;
+    fn EVP_PKEY_free(k: *mut EVP_PKEY);
+    fn EVP_PKEY_assign(pkey: *mut EVP_PKEY, typ: c_int, key: *const c_char) -> c_int;
+    fn EVP_PKEY_get1_RSA(k: *mut EVP_PKEY) -> *mut RSA;
 
-    fn i2d_PublicKey(k: *EVP_PKEY, buf: **mut u8) -> c_int;
-    fn d2i_PublicKey(t: c_int, k: **EVP_PKEY, buf: **u8, len: c_uint) -> *EVP_PKEY;
-    fn i2d_PrivateKey(k: *EVP_PKEY, buf: **mut u8) -> c_int;
-    fn d2i_PrivateKey(t: c_int, k: **EVP_PKEY, buf: **u8, len: c_uint) -> *EVP_PKEY;
+    fn i2d_PublicKey(k: *mut EVP_PKEY, buf: *const *mut u8) -> c_int;
+    fn d2i_PublicKey(t: c_int, k: *const *mut EVP_PKEY, buf: *const *const u8, len: c_uint) -> *mut EVP_PKEY;
+    fn i2d_PrivateKey(k: *mut EVP_PKEY, buf: *const *mut u8) -> c_int;
+    fn d2i_PrivateKey(t: c_int, k: *const *mut EVP_PKEY, buf: *const *const u8, len: c_uint) -> *mut EVP_PKEY;
 
-    fn RSA_generate_key(modsz: c_uint, e: c_uint, cb: *u8, cbarg: *u8) -> *RSA;
-    fn RSA_size(k: *RSA) -> c_uint;
+    fn RSA_generate_key(modsz: c_uint, e: c_uint, cb: *const u8, cbarg: *const u8) -> *mut RSA;
+    fn RSA_size(k: *mut RSA) -> c_uint;
 
-    fn RSA_public_encrypt(flen: c_uint, from: *u8, to: *mut u8, k: *RSA,
+    fn RSA_public_encrypt(flen: c_uint, from: *const u8, to: *mut u8, k: *mut RSA,
                           pad: c_int) -> c_int;
-    fn RSA_private_decrypt(flen: c_uint, from: *u8, to: *mut u8, k: *RSA,
+    fn RSA_private_decrypt(flen: c_uint, from: *const u8, to: *mut u8, k: *mut RSA,
                            pad: c_int) -> c_int;
-    fn RSA_sign(t: c_int, m: *u8, mlen: c_uint, sig: *mut u8, siglen: *mut c_uint,
-                k: *RSA) -> c_int;
-    fn RSA_verify(t: c_int, m: *u8, mlen: c_uint, sig: *u8, siglen: c_uint,
-                  k: *RSA) -> c_int;
+    fn RSA_sign(t: c_int, m: *const u8, mlen: c_uint, sig: *mut u8, siglen: *mut c_uint,
+                k: *mut RSA) -> c_int;
+    fn RSA_verify(t: c_int, m: *const u8, mlen: c_uint, sig: *const u8, siglen: c_uint,
+                  k: *mut RSA) -> c_int;
 }
 
 enum Parts {
@@ -74,7 +74,7 @@ fn openssl_hash_nid(hash: HashType) -> c_int {
 }
 
 pub struct PKey {
-    evp: *EVP_PKEY,
+    evp: *mut EVP_PKEY,
     parts: Parts,
 }
 
@@ -89,7 +89,7 @@ impl PKey {
         }
     }
 
-    fn _tostr(&self, f: unsafe extern "C" fn(*EVP_PKEY, **mut u8) -> c_int) -> Vec<u8> {
+    fn _tostr(&self, f: unsafe extern "C" fn(*mut EVP_PKEY, *const *mut u8) -> c_int) -> Vec<u8> {
         unsafe {
             let len = f(self.evp, ptr::null());
             if len < 0 as c_int { return vec!(); }
@@ -102,9 +102,9 @@ impl PKey {
         }
     }
 
-    fn _fromstr(&mut self, s: &[u8], f: unsafe extern "C" fn(c_int, **EVP_PKEY, **u8, c_uint) -> *EVP_PKEY) {
+    fn _fromstr(&mut self, s: &[u8], f: unsafe extern "C" fn(c_int, *const *mut EVP_PKEY, *const *const u8, c_uint) -> *mut EVP_PKEY) {
         unsafe {
-            let evp = ptr::null();
+            let evp = ptr::mut_null();
             f(6 as c_int, &evp, &s.as_ptr(), s.len() as c_uint);
             self.evp = evp;
         }

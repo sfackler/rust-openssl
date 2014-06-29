@@ -14,12 +14,12 @@ pub enum HashType {
 #[allow(dead_code)]
 #[allow(non_camel_case_types)]
 pub struct EVP_MD_CTX {
-    digest: *EVP_MD,
-    engine: *libc::c_void,
+    digest: *mut EVP_MD,
+    engine: *mut libc::c_void,
     flags: libc::c_ulong,
-    md_data: *libc::c_void,
-    pctx: *EVP_PKEY_CTX,
-    update: *libc::c_void
+    md_data: *mut libc::c_void,
+    pctx: *mut EVP_PKEY_CTX,
+    update: *mut libc::c_void
 }
 
 #[allow(non_camel_case_types)]
@@ -30,22 +30,22 @@ pub struct EVP_PKEY_CTX;
 
 #[link(name = "crypto")]
 extern {
-    fn EVP_MD_CTX_create() -> *EVP_MD_CTX;
-    fn EVP_MD_CTX_destroy(ctx: *EVP_MD_CTX);
+    fn EVP_MD_CTX_create() -> *mut EVP_MD_CTX;
+    fn EVP_MD_CTX_destroy(ctx: *mut EVP_MD_CTX);
 
-    fn EVP_md5() -> *EVP_MD;
-    fn EVP_sha1() -> *EVP_MD;
-    fn EVP_sha224() -> *EVP_MD;
-    fn EVP_sha256() -> *EVP_MD;
-    fn EVP_sha384() -> *EVP_MD;
-    fn EVP_sha512() -> *EVP_MD;
+    fn EVP_md5() -> *const EVP_MD;
+    fn EVP_sha1() -> *const EVP_MD;
+    fn EVP_sha224() -> *const EVP_MD;
+    fn EVP_sha256() -> *const EVP_MD;
+    fn EVP_sha384() -> *const EVP_MD;
+    fn EVP_sha512() -> *const EVP_MD;
 
-    fn EVP_DigestInit(ctx: *EVP_MD_CTX, typ: *EVP_MD);
-    fn EVP_DigestUpdate(ctx: *EVP_MD_CTX, data: *u8, n: c_uint);
-    fn EVP_DigestFinal(ctx: *EVP_MD_CTX, res: *mut u8, n: *u32);
+    fn EVP_DigestInit(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD);
+    fn EVP_DigestUpdate(ctx: *mut EVP_MD_CTX, data: *const u8, n: c_uint);
+    fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32);
 }
 
-pub fn evpmd(t: HashType) -> (*EVP_MD, uint) {
+pub fn evpmd(t: HashType) -> (*const EVP_MD, uint) {
     unsafe {
         match t {
             MD5 => (EVP_md5(), 16u),
@@ -60,8 +60,8 @@ pub fn evpmd(t: HashType) -> (*EVP_MD, uint) {
 
 #[allow(dead_code)]
 pub struct Hasher {
-    evp: *EVP_MD,
-    ctx: *EVP_MD_CTX,
+    evp: *const EVP_MD,
+    ctx: *mut EVP_MD_CTX,
     len: uint,
 }
 
@@ -90,7 +90,7 @@ impl Hasher {
     pub fn final(&self) -> Vec<u8> {
         unsafe {
             let mut res = Vec::from_elem(self.len, 0u8);
-            EVP_DigestFinal(self.ctx, res.as_mut_ptr(), ptr::null());
+            EVP_DigestFinal(self.ctx, res.as_mut_ptr(), ptr::mut_null());
             res
         }
     }

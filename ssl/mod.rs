@@ -58,7 +58,7 @@ pub enum SslMethod {
 }
 
 impl SslMethod {
-    unsafe fn to_raw(&self) -> *ffi::SSL_METHOD {
+    unsafe fn to_raw(&self) -> *const ffi::SSL_METHOD {
         match *self {
             #[cfg(sslv2)]
             Sslv2 => ffi::SSLv2_method(),
@@ -77,7 +77,7 @@ pub enum SslVerifyMode {
     SslVerifyNone = ffi::SSL_VERIFY_NONE
 }
 
-extern fn locking_function(mode: c_int, n: c_int, _file: *c_char,
+extern fn locking_function(mode: c_int, n: c_int, _file: *const c_char,
                                _line: c_int) {
     unsafe {
         let mutex = (*MUTEXES).get_mut(n as uint);
@@ -90,7 +90,7 @@ extern fn locking_function(mode: c_int, n: c_int, _file: *c_char,
     }
 }
 
-extern fn raw_verify(preverify_ok: c_int, x509_ctx: *ffi::X509_STORE_CTX)
+extern fn raw_verify(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX)
         -> c_int {
     unsafe {
         let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
@@ -114,7 +114,7 @@ pub type VerifyCallback = fn(preverify_ok: bool,
 
 /// An SSL context object
 pub struct SslContext {
-    ctx: *ffi::SSL_CTX
+    ctx: *mut ffi::SSL_CTX
 }
 
 impl Drop for SslContext {
@@ -129,7 +129,7 @@ impl SslContext {
         init();
 
         let ctx = unsafe { ffi::SSL_CTX_new(method.to_raw()) };
-        if ctx == ptr::null() {
+        if ctx == ptr::mut_null() {
             return Err(SslError::get());
         }
 
@@ -172,7 +172,7 @@ impl SslContext {
 }
 
 pub struct X509StoreContext {
-    ctx: *ffi::X509_STORE_CTX
+    ctx: *mut ffi::X509_STORE_CTX
 }
 
 impl X509StoreContext {
@@ -196,7 +196,7 @@ impl X509StoreContext {
 /// A public key certificate
 pub struct X509<'ctx> {
     ctx: &'ctx X509StoreContext,
-    x509: *ffi::X509
+    x509: *mut ffi::X509
 }
 
 impl<'ctx> X509<'ctx> {
@@ -209,7 +209,7 @@ impl<'ctx> X509<'ctx> {
 #[allow(dead_code)]
 pub struct X509Name<'x> {
     x509: &'x X509<'x>,
-    name: *ffi::X509_NAME
+    name: *mut ffi::X509_NAME
 }
 
 pub enum X509NameFormat {
@@ -295,7 +295,7 @@ make_validation_error!(X509_V_OK,
 )
 
 struct Ssl {
-    ssl: *ffi::SSL
+    ssl: *mut ffi::SSL
 }
 
 impl Drop for Ssl {
@@ -307,18 +307,18 @@ impl Drop for Ssl {
 impl Ssl {
     fn try_new(ctx: &SslContext) -> Result<Ssl, SslError> {
         let ssl = unsafe { ffi::SSL_new(ctx.ctx) };
-        if ssl == ptr::null() {
+        if ssl == ptr::mut_null() {
             return Err(SslError::get());
         }
         let ssl = Ssl { ssl: ssl };
 
         let rbio = unsafe { ffi::BIO_new(ffi::BIO_s_mem()) };
-        if rbio == ptr::null() {
+        if rbio == ptr::mut_null() {
             return Err(SslError::get());
         }
 
         let wbio = unsafe { ffi::BIO_new(ffi::BIO_s_mem()) };
-        if wbio == ptr::null() {
+        if wbio == ptr::mut_null() {
             unsafe { ffi::BIO_free_all(rbio) }
             return Err(SslError::get());
         }
@@ -335,8 +335,8 @@ impl Ssl {
         unsafe { self.wrap_bio(ffi::SSL_get_wbio(self.ssl)) }
     }
 
-    fn wrap_bio<'a>(&'a self, bio: *ffi::BIO) -> MemBioRef<'a> {
-        assert!(bio != ptr::null());
+    fn wrap_bio<'a>(&'a self, bio: *mut ffi::BIO) -> MemBioRef<'a> {
+        assert!(bio != ptr::mut_null());
         MemBioRef {
             ssl: self,
             bio: MemBio {
@@ -351,12 +351,12 @@ impl Ssl {
     }
 
     fn read(&self, buf: &mut [u8]) -> c_int {
-        unsafe { ffi::SSL_read(self.ssl, buf.as_ptr() as *c_void,
+        unsafe { ffi::SSL_read(self.ssl, buf.as_ptr() as *mut c_void,
                                buf.len() as c_int) }
     }
 
     fn write(&self, buf: &[u8]) -> c_int {
-        unsafe { ffi::SSL_write(self.ssl, buf.as_ptr() as *c_void,
+        unsafe { ffi::SSL_write(self.ssl, buf.as_ptr() as *const c_void,
                                 buf.len() as c_int) }
     }
 
@@ -399,7 +399,7 @@ impl<'ssl> MemBioRef<'ssl> {
 }
 
 struct MemBio {
-    bio: *ffi::BIO,
+    bio: *mut ffi::BIO,
     owned: bool
 }
 
@@ -416,7 +416,7 @@ impl Drop for MemBio {
 impl MemBio {
     fn read(&self, buf: &mut [u8]) -> Option<uint> {
         let ret = unsafe {
-            ffi::BIO_read(self.bio, buf.as_ptr() as *c_void,
+            ffi::BIO_read(self.bio, buf.as_ptr() as *mut c_void,
                           buf.len() as c_int)
         };
 
@@ -429,7 +429,7 @@ impl MemBio {
 
     fn write(&self, buf: &[u8]) {
         let ret = unsafe {
-            ffi::BIO_write(self.bio, buf.as_ptr() as *c_void,
+            ffi::BIO_write(self.bio, buf.as_ptr() as *const c_void,
                            buf.len() as c_int)
         };
         assert_eq!(buf.len(), ret as uint);

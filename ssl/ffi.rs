@@ -12,16 +12,16 @@ pub type X509 = c_void;
 pub type X509_NAME = c_void;
 pub type CRYPTO_EX_DATA = c_void;
 
-pub type CRYPTO_EX_new = extern "C" fn(parent: *c_void, ptr: *c_void,
-                                       ad: *CRYPTO_EX_DATA, idx: c_int,
-                                       argl: c_long, argp: *c_void) -> c_int;
-pub type CRYPTO_EX_dup = extern "C" fn(to: *CRYPTO_EX_DATA,
-                                       from: *CRYPTO_EX_DATA, from_d: *c_void,
-                                       idx: c_int, argl: c_long, argp: *c_void)
+pub type CRYPTO_EX_new = extern "C" fn(parent: *mut c_void, ptr: *mut c_void,
+                                       ad: *const CRYPTO_EX_DATA, idx: c_int,
+                                       argl: c_long, argp: *const c_void) -> c_int;
+pub type CRYPTO_EX_dup = extern "C" fn(to: *mut CRYPTO_EX_DATA,
+                                       from: *mut CRYPTO_EX_DATA, from_d: *mut c_void,
+                                       idx: c_int, argl: c_long, argp: *mut c_void)
                                        -> c_int;
-pub type CRYPTO_EX_free = extern "C" fn(parent: *c_void, ptr: *c_void,
-                                        ad: *CRYPTO_EX_DATA, idx: c_int,
-                                        argl: c_long, argp: *c_void);
+pub type CRYPTO_EX_free = extern "C" fn(parent: *mut c_void, ptr: *mut c_void,
+                                        ad: *mut CRYPTO_EX_DATA, idx: c_int,
+                                        argl: c_long, argp: *mut c_void);
 
 pub static CRYPTO_LOCK: c_int = 1;
 
@@ -103,7 +103,7 @@ extern "C" {
     pub fn CRYPTO_num_locks() -> c_int;
     pub fn CRYPTO_set_locking_callback(func: extern "C" fn(mode: c_int,
                                                            n: c_int,
-                                                           file: *c_char,
+                                                           file: *const c_char,
                                                            line: c_int));
 
     pub fn ERR_get_error() -> c_ulong;
@@ -111,50 +111,50 @@ extern "C" {
     pub fn SSL_library_init() -> c_int;
 
     #[cfg(sslv2)]
-    pub fn SSLv2_method() -> *SSL_METHOD;
-    pub fn SSLv3_method() -> *SSL_METHOD;
-    pub fn TLSv1_method() -> *SSL_METHOD;
-    pub fn SSLv23_method() -> *SSL_METHOD;
+    pub fn SSLv2_method() -> *const SSL_METHOD;
+    pub fn SSLv3_method() -> *const SSL_METHOD;
+    pub fn TLSv1_method() -> *const SSL_METHOD;
+    pub fn SSLv23_method() -> *const SSL_METHOD;
 
-    pub fn SSL_CTX_new(method: *SSL_METHOD) -> *SSL_CTX;
-    pub fn SSL_CTX_free(ctx: *SSL_CTX);
-    pub fn SSL_CTX_set_verify(ctx: *SSL_CTX, mode: c_int,
-                              verify_callback: Option<extern fn(c_int, *X509_STORE_CTX) -> c_int>);
-    pub fn SSL_CTX_load_verify_locations(ctx: *SSL_CTX, CAfile: *c_char,
-                                         CApath: *c_char) -> c_int;
-    pub fn SSL_CTX_get_ex_new_index(argl: c_long, argp: *c_void,
+    pub fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
+    pub fn SSL_CTX_free(ctx: *mut SSL_CTX);
+    pub fn SSL_CTX_set_verify(ctx: *mut SSL_CTX, mode: c_int,
+                              verify_callback: Option<extern fn(c_int, *mut X509_STORE_CTX) -> c_int>);
+    pub fn SSL_CTX_load_verify_locations(ctx: *mut SSL_CTX, CAfile: *const c_char,
+                                         CApath: *const c_char) -> c_int;
+    pub fn SSL_CTX_get_ex_new_index(argl: c_long, argp: *const c_void,
                                     new_func: Option<CRYPTO_EX_new>,
                                     dup_func: Option<CRYPTO_EX_dup>,
                                     free_func: Option<CRYPTO_EX_free>)
                                     -> c_int;
-    pub fn SSL_CTX_set_ex_data(ctx: *SSL_CTX, idx: c_int, data: *c_void)
+    pub fn SSL_CTX_set_ex_data(ctx: *mut SSL_CTX, idx: c_int, data: *mut c_void)
                                -> c_int;
-    pub fn SSL_CTX_get_ex_data(ctx: *SSL_CTX, idx: c_int) -> *c_void;
+    pub fn SSL_CTX_get_ex_data(ctx: *mut SSL_CTX, idx: c_int) -> *mut c_void;
 
-    pub fn X509_STORE_CTX_get_ex_data(ctx: *X509_STORE_CTX, idx: c_int)
-                                      -> *c_void;
-    pub fn X509_STORE_CTX_get_current_cert(ct: *X509_STORE_CTX) -> *X509;
-    pub fn X509_STORE_CTX_get_error(ctx: *X509_STORE_CTX) -> c_int;
+    pub fn X509_STORE_CTX_get_ex_data(ctx: *mut X509_STORE_CTX, idx: c_int)
+                                      -> *mut c_void;
+    pub fn X509_STORE_CTX_get_current_cert(ct: *mut X509_STORE_CTX) -> *mut X509;
+    pub fn X509_STORE_CTX_get_error(ctx: *mut X509_STORE_CTX) -> c_int;
 
-    pub fn X509_get_subject_name(x: *X509) -> *X509_NAME;
+    pub fn X509_get_subject_name(x: *mut X509) -> *mut X509_NAME;
 
-    pub fn SSL_new(ctx: *SSL_CTX) -> *SSL;
-    pub fn SSL_free(ssl: *SSL);
-    pub fn SSL_set_bio(ssl: *SSL, rbio: *BIO, wbio: *BIO);
-    pub fn SSL_get_rbio(ssl: *SSL) -> *BIO;
-    pub fn SSL_get_wbio(ssl: *SSL) -> *BIO;
-    pub fn SSL_connect(ssl: *SSL) -> c_int;
-    pub fn SSL_get_error(ssl: *SSL, ret: c_int) -> c_int;
-    pub fn SSL_read(ssl: *SSL, buf: *c_void, num: c_int) -> c_int;
-    pub fn SSL_write(ssl: *SSL, buf: *c_void, num: c_int) -> c_int;
+    pub fn SSL_new(ctx: *mut SSL_CTX) -> *mut SSL;
+    pub fn SSL_free(ssl: *mut SSL);
+    pub fn SSL_set_bio(ssl: *mut SSL, rbio: *mut BIO, wbio: *mut BIO);
+    pub fn SSL_get_rbio(ssl: *mut SSL) -> *mut BIO;
+    pub fn SSL_get_wbio(ssl: *mut SSL) -> *mut BIO;
+    pub fn SSL_connect(ssl: *mut SSL) -> c_int;
+    pub fn SSL_get_error(ssl: *mut SSL, ret: c_int) -> c_int;
+    pub fn SSL_read(ssl: *mut SSL, buf: *mut c_void, num: c_int) -> c_int;
+    pub fn SSL_write(ssl: *mut SSL, buf: *const c_void, num: c_int) -> c_int;
     pub fn SSL_get_ex_data_X509_STORE_CTX_idx() -> c_int;
-    pub fn SSL_get_SSL_CTX(ssl: *SSL) -> *SSL_CTX;
+    pub fn SSL_get_SSL_CTX(ssl: *mut SSL) -> *mut SSL_CTX;
 
-    pub fn BIO_s_mem() -> *BIO_METHOD;
-    pub fn BIO_new(type_: *BIO_METHOD) -> *BIO;
-    pub fn BIO_free_all(a: *BIO);
-    pub fn BIO_read(b: *BIO, buf: *c_void, len: c_int) -> c_int;
-    pub fn BIO_write(b: *BIO, buf: *c_void, len: c_int) -> c_int;
+    pub fn BIO_s_mem() -> *const BIO_METHOD;
+    pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
+    pub fn BIO_free_all(a: *mut BIO);
+    pub fn BIO_read(b: *mut BIO, buf: *mut c_void, len: c_int) -> c_int;
+    pub fn BIO_write(b: *mut BIO, buf: *const c_void, len: c_int) -> c_int;
 }
 
 #[cfg(target_os = "win32")]
