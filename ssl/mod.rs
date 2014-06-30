@@ -70,6 +70,7 @@ impl SslMethod {
 }
 
 /// Determines the type of certificate verification used
+#[repr(i32)]
 pub enum SslVerifyMode {
     /// Verify that the server's certificate is trusted
     SslVerifyPeer = ffi::SSL_VERIFY_PEER,
@@ -212,6 +213,7 @@ pub struct X509Name<'x> {
     name: *mut ffi::X509_NAME
 }
 
+#[repr(u64)]
 pub enum X509NameFormat {
     Rfc2253 = ffi::XN_FLAG_RFC2253,
     Oneline = ffi::XN_FLAG_ONELINE,
@@ -370,6 +372,7 @@ impl Ssl {
 }
 
 #[deriving(FromPrimitive)]
+#[repr(i32)]
 enum LibSslError {
     ErrorNone = ffi::SSL_ERROR_NONE,
     ErrorSsl = ffi::SSL_ERROR_SSL,
