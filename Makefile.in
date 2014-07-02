@@ -1,5 +1,5 @@
 RUSTC ?= rustc
-BUILDDIR := build
+BUILDDIR := target
 RUSTCFGS := %RUSTCFGS%
 RUSTFLAGS += -O --cfg ndebug $(RUSTCFGS)
 INSTALL_DIR := %PREFIX%
