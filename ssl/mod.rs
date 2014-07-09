@@ -213,13 +213,6 @@ pub struct X509Name<'x> {
     name: *mut ffi::X509_NAME
 }
 
-#[repr(u64)]
-pub enum X509NameFormat {
-    Rfc2253 = ffi::XN_FLAG_RFC2253,
-    Oneline = ffi::XN_FLAG_ONELINE,
-    Multiline = ffi::XN_FLAG_MULTILINE
-}
-
 macro_rules! make_validation_error(
     ($ok_val:ident, $($name:ident = $val:ident,)+) => (
         pub enum X509ValidationError {

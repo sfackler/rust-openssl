@@ -93,10 +93,6 @@ pub static X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
 pub static X509_V_ERR_CRL_PATH_VALIDATION_ERROR: c_int = 54;
 pub static X509_V_ERR_APPLICATION_VERIFICATION: c_int = 50;
 
-pub static XN_FLAG_RFC2253: c_ulong = 0x1110317;
-pub static XN_FLAG_ONELINE: c_ulong = 0x82031f;
-pub static XN_FLAG_MULTILINE: c_ulong = 0x2a40006;
-
 #[link(name="ssl")]
 #[link(name="crypto")]
 extern "C" {
