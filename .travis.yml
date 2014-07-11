@@ -1,6 +1,7 @@
 env:
   global:
     - secure: qLvBJoJOJcPPZ+e31175O6sMUGBHgHe/kBuI0FCPeifYmpFyeRAkEvGddEkf8t3rojV+wE14CNYzzGsT/W/+JY7xW0C1FQKW3r+8SZ1Cave/8ahee0aCQVXGf0XY8c52uG6MrLGiUlNZbOsyFSdFUc/Io+kYZas4DxrinRSOIEA=
+    - LD_LIBRARY_PATH: /usr/local/lib
 install:
   - curl -O http://static.rust-lang.org/dist/rust-nightly-x86_64-unknown-linux-gnu.tar.gz
   - tar xfz rust-nightly-x86_64-unknown-linux-gnu.tar.gz
