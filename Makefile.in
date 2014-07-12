@@ -5,7 +5,8 @@ RUSTFLAGS += -O --cfg ndebug $(RUSTCFGS)
 INSTALL_DIR := %PREFIX%
 
 OPENSSL_LIB := lib.rs
-OPENSSL := $(foreach file,$(shell $(RUSTC) --print-file-name $(OPENSSL_LIB)),$(BUILDDIR)/$(file))
+OPENSSL := $(foreach file, \
+	$(shell $(RUSTC) $(RUSTFLAGS) --print-file-name $(OPENSSL_LIB)),$(BUILDDIR)/$(file))
 OPENSSL_TEST := $(BUILDDIR)/$(shell $(RUSTC) --test --print-file-name $(OPENSSL_LIB))
 
 all: $(OPENSSL)
