@@ -11,3 +11,4 @@ extern crate sync;
 
 pub mod ssl;
 pub mod crypto;
+pub mod bn;
