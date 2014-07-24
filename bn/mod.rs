@@ -1,5 +1,5 @@
 
-use libc::{c_void, c_int, c_uint};
+use libc::{c_void, c_int, c_ulong};
 use std::ptr;
 
 use ssl::error::SslError;
@@ -24,9 +24,9 @@ extern {
     fn BN_CTX_new() -> *mut BN_CTX;
     fn BN_CTX_free(ctx: *mut BN_CTX);
 
-    fn BN_set_word(bn: *mut BIGNUM, n: c_uint) -> c_int;
+    fn BN_set_word(bn: *mut BIGNUM, n: c_ulong) -> c_int;
     fn BN_set_negative(bn: *mut BIGNUM, n: c_int);
-    fn BN_num_bits(bn: *mut BIGNUM) -> c_uint;
+    fn BN_num_bits(bn: *mut BIGNUM) -> c_int;
 
     /* Arithmetic operations on BIGNUMs */
     fn BN_add(r: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM) -> c_int;
@@ -50,9 +50,9 @@ extern {
     fn BN_clear_bit(a: *mut BIGNUM, n: c_int) -> c_int;
     fn BN_is_bit_set(a: *mut BIGNUM, n: c_int) -> c_int;
     fn BN_mask_bits(a: *mut BIGNUM, n: c_int) -> c_int;
-    fn BN_lshift(r: *mut BIGNUM, a: *mut BIGNUM, n: c_uint) -> c_int;
+    fn BN_lshift(r: *mut BIGNUM, a: *mut BIGNUM, n: c_int) -> c_int;
     fn BN_lshift1(r: *mut BIGNUM, a: *mut BIGNUM) -> c_int;
-    fn BN_rshift(r: *mut BIGNUM, a: *mut BIGNUM, n: c_uint) -> c_int;
+    fn BN_rshift(r: *mut BIGNUM, a: *mut BIGNUM, n: c_int) -> c_int;
     fn BN_rshift1(r: *mut BIGNUM, a: *mut BIGNUM) -> c_int;
 
     /* Comparisons on BIGNUMs */
@@ -122,11 +122,14 @@ macro_rules! with_bn_in_ctx(
                 if ($ctx_name).is_null() {
                     Err(SslError::get())
                 } else {
-                    if $action {
-                        Ok($name)
-                    } else {
-                        Err(SslError::get())
-                    }
+                    let r =
+                        if $action {
+                            Ok($name)
+                        } else {
+                            Err(SslError::get())
+                        };
+                    BN_CTX_free($ctx_name);
+                    r
                 }
             },
             Err(err) => Err(err),
@@ -146,10 +149,10 @@ impl BigNum {
         }
     }
 
-    pub fn new_from(n: uint) -> Result<BigNum, SslError> {
+    pub fn new_from(n: u64) -> Result<BigNum, SslError> {
         unsafe {
             let bn = BN_new();
-            if bn.is_null() || BN_set_word(bn, n as c_uint) == 0 {
+            if bn.is_null() || BN_set_word(bn, n as c_ulong) == 0 {
                 Err(SslError::get())
             } else {
                 Ok(BigNum(bn))
@@ -160,7 +163,7 @@ impl BigNum {
     pub fn new_from_slice(n: &[u8]) -> Result<BigNum, SslError> {
         unsafe {
             let bn = BN_new();
-            if bn.is_null() || BN_bin2bn(n.as_ptr(), n.len() as i32, bn).is_null() {
+            if bn.is_null() || BN_bin2bn(n.as_ptr(), n.len() as c_int, bn).is_null() {
                 Err(SslError::get())
             } else {
                 Ok(BigNum(bn))
@@ -228,7 +231,7 @@ impl BigNum {
         }
     }
 
-    pub fn checked_generate_prime(bits: uint, safe: bool, add: Option<&BigNum>, rem: Option<&BigNum>) -> Result<BigNum, SslError> {
+    pub fn checked_generate_prime(bits: i32, safe: bool, add: Option<&BigNum>, rem: Option<&BigNum>) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 let add_arg = add.map(|a| a.raw()).unwrap_or(ptr::mut_null());
@@ -239,7 +242,7 @@ impl BigNum {
         }
     }
 
-    pub fn is_prime(&self, checks: uint) -> Result<bool, SslError> {
+    pub fn is_prime(&self, checks: i32) -> Result<bool, SslError> {
         unsafe {
             with_ctx!(ctx, {
                 Ok(BN_is_prime_ex(self.raw(), checks as c_int, ctx, ptr::null()) == 1)
@@ -247,7 +250,7 @@ impl BigNum {
         }
     }
 
-    pub fn is_prime_fast(&self, checks: uint, do_trial_division: bool) -> Result<bool, SslError> {
+    pub fn is_prime_fast(&self, checks: i32, do_trial_division: bool) -> Result<bool, SslError> {
         unsafe {
             with_ctx!(ctx, {
                 Ok(BN_is_prime_fasttest_ex(self.raw(), checks as c_int, ctx, do_trial_division as c_int, ptr::null()) == 1)
@@ -255,13 +258,13 @@ impl BigNum {
         }
     }
 
-    pub fn checked_new_random(bits: uint, prop: RNGProperty, odd: bool) -> Result<BigNum, SslError> {
+    pub fn checked_new_random(bits: i32, prop: RNGProperty, odd: bool) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, { BN_rand(r.raw(), bits as c_int, prop as c_int, odd as c_int) == 1 })
         }
     }
 
-    pub fn checked_new_pseudo_random(bits: uint, prop: RNGProperty, odd: bool) -> Result<BigNum, SslError> {
+    pub fn checked_new_pseudo_random(bits: i32, prop: RNGProperty, odd: bool) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, { BN_pseudo_rand(r.raw(), bits as c_int, prop as c_int, odd as c_int) == 1 })
         }
@@ -279,7 +282,7 @@ impl BigNum {
         }
     }
 
-    pub fn set_bit(&mut self, n: uint) -> Result<(), SslError> {
+    pub fn set_bit(&mut self, n: i32) -> Result<(), SslError> {
         unsafe {
             if BN_set_bit(self.raw(), n as c_int) == 1 {
                 Ok(())
@@ -289,7 +292,7 @@ impl BigNum {
         }
     }
 
-    pub fn clear_bit(&mut self, n: uint) -> Result<(), SslError> {
+    pub fn clear_bit(&mut self, n: i32) -> Result<(), SslError> {
         unsafe {
             if BN_clear_bit(self.raw(), n as c_int) == 1 {
                 Ok(())
@@ -299,13 +302,13 @@ impl BigNum {
         }
     }
 
-    pub fn is_bit_set(&self, n: uint) -> bool {
+    pub fn is_bit_set(&self, n: i32) -> bool {
         unsafe {
             BN_is_bit_set(self.raw(), n as c_int) == 1
         }
     }
 
-    pub fn mask_bits(&mut self, n: uint) -> Result<(), SslError> {
+    pub fn mask_bits(&mut self, n: i32) -> Result<(), SslError> {
         unsafe {
             if BN_mask_bits(self.raw(), n as c_int) == 1 {
                 Ok(())
@@ -357,15 +360,15 @@ impl BigNum {
         }
     }
 
-    pub fn checked_shl(&self, a: &uint) -> Result<BigNum, SslError> {
+    pub fn checked_shl(&self, a: &i32) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn!(r, { BN_lshift(r.raw(), self.raw(), *a as c_uint) == 1 })
+            with_bn!(r, { BN_lshift(r.raw(), self.raw(), *a as c_int) == 1 })
         }
     }
 
-    pub fn checked_shr(&self, a: &uint) -> Result<BigNum, SslError> {
+    pub fn checked_shr(&self, a: &i32) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn!(r, { BN_rshift(r.raw(), self.raw(), *a as c_uint) == 1 })
+            with_bn!(r, { BN_rshift(r.raw(), self.raw(), *a as c_int) == 1 })
         }
     }
 
@@ -377,7 +380,7 @@ impl BigNum {
 
     pub fn abs_cmp(&self, oth: BigNum) -> Ordering {
         unsafe {
-            let res = BN_ucmp(self.raw(), oth.raw()) as int;
+            let res = BN_ucmp(self.raw(), oth.raw()) as i32;
             if res < 0 {
                 Less
             } else if res > 0 {
@@ -394,13 +397,13 @@ impl BigNum {
         }
     }
 
-    pub fn num_bits(&self) -> uint {
+    pub fn num_bits(&self) -> i32 {
         unsafe {
-            BN_num_bits(self.raw()) as uint
+            BN_num_bits(self.raw()) as i32
         }
     }
 
-    pub fn num_bytes(&self) -> uint {
+    pub fn num_bytes(&self) -> i32 {
         (self.num_bits() + 7) / 8
     }
 
@@ -410,7 +413,7 @@ impl BigNum {
     }
 
     pub fn to_vec(&self) -> Vec<u8> {
-        let size = self.num_bytes();
+        let size = self.num_bytes() as uint;
         let mut v = Vec::with_capacity(size);
         unsafe {
             BN_bn2bin(self.raw(), v.as_mut_ptr());
@@ -499,14 +502,14 @@ pub mod unchecked {
         }
     }
 
-    impl Shl<uint, BigNum> for BigNum {
-        fn shl(&self, n: &uint) -> BigNum {
+    impl Shl<i32, BigNum> for BigNum {
+        fn shl(&self, n: &i32) -> BigNum {
             self.checked_shl(n).unwrap()
         }
     }
 
-    impl Shr<uint, BigNum> for BigNum {
-        fn shr(&self, n: &uint) -> BigNum {
+    impl Shr<i32, BigNum> for BigNum {
+        fn shr(&self, n: &i32) -> BigNum {
             self.checked_shr(n).unwrap()
         }
     }
@@ -539,7 +542,7 @@ mod tests {
 
     #[test]
     fn test_to_from_slice() {
-        let v0 = BigNum::new_from(10203004u).unwrap();
+        let v0 = BigNum::new_from(10203004_u64).unwrap();
         let vec = v0.to_vec();
         let v1 = BigNum::new_from_slice(vec.as_slice()).unwrap();
 
@@ -548,7 +551,7 @@ mod tests {
 
     #[test]
     fn test_negation() {
-        let a = BigNum::new_from(909829283u).unwrap();
+        let a = BigNum::new_from(909829283_u64).unwrap();
 
         assert!(!a.is_negative());
         assert!((-a).is_negative());
@@ -557,10 +560,10 @@ mod tests {
 
     #[test]
     fn test_prime_numbers() {
-        let a = BigNum::new_from(19029017u).unwrap();
-        let p = BigNum::checked_generate_prime(128u, true, None, Some(&a)).unwrap();
+        let a = BigNum::new_from(19029017_u64).unwrap();
+        let p = BigNum::checked_generate_prime(128, true, None, Some(&a)).unwrap();
 
-        assert!(p.is_prime(100u).unwrap());
-        assert!(p.is_prime_fast(100u, true).unwrap());
+        assert!(p.is_prime(100).unwrap());
+        assert!(p.is_prime_fast(100, true).unwrap());
     }
 }
