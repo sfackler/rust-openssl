@@ -2,7 +2,7 @@ use libc::{c_char, c_int, c_uint};
 use libc;
 use std::mem;
 use std::ptr;
-use crypto::hash::{HashType, MD5, SHA1, SHA224, SHA256, SHA384, SHA512};
+use crypto::hash::{HashType, MD5, SHA1, SHA224, SHA256, SHA384, SHA512, RIPEMD160};
 
 #[allow(non_camel_case_types)]
 pub type EVP_PKEY = *mut libc::c_void;
@@ -64,12 +64,13 @@ fn openssl_padding_code(padding: EncryptionPadding) -> c_int {
 
 fn openssl_hash_nid(hash: HashType) -> c_int {
     match hash {
-        MD5    => 4,   // NID_md5,
-        SHA1   => 64,  // NID_sha1
-        SHA224 => 675, // NID_sha224
-        SHA256 => 672, // NID_sha256
-        SHA384 => 673, // NID_sha384
-        SHA512 => 674, // NID_sha512
+        MD5       => 4,   // NID_md5,
+        SHA1      => 64,  // NID_sha1
+        SHA224    => 675, // NID_sha224
+        SHA256    => 672, // NID_sha256
+        SHA384    => 673, // NID_sha384
+        SHA512    => 674, // NID_sha512
+        RIPEMD160 => 117, // NID_ripemd160
     }
 }
 

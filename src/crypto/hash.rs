@@ -8,7 +8,8 @@ pub enum HashType {
     SHA224,
     SHA256,
     SHA384,
-    SHA512
+    SHA512,
+    RIPEMD160
 }
 
 #[allow(dead_code)]
@@ -39,6 +40,7 @@ extern {
     fn EVP_sha256() -> *const EVP_MD;
     fn EVP_sha384() -> *const EVP_MD;
     fn EVP_sha512() -> *const EVP_MD;
+    fn EVP_ripemd160() -> *const EVP_MD;
 
     fn EVP_DigestInit(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD);
     fn EVP_DigestUpdate(ctx: *mut EVP_MD_CTX, data: *const u8, n: c_uint);
@@ -54,6 +56,7 @@ pub fn evpmd(t: HashType) -> (*const EVP_MD, uint) {
             SHA256 => (EVP_sha256(), 32u),
             SHA384 => (EVP_sha384(), 48u),
             SHA512 => (EVP_sha512(), 64u),
+            RIPEMD160 => (EVP_ripemd160(), 20u),
         }
     }
 }
@@ -182,6 +185,17 @@ mod tests {
 
         for test in tests.iter() {
             hash_test(super::SHA256, test);
+        }
+    }
+
+    #[test]
+    fn test_ripemd160() {
+        let tests = [
+            HashTest("616263", "8eb208f7e05d987a9b044a8e98c6b087f15a0bfc")
+            ];
+
+        for test in tests.iter() {
+            hash_test(super::RIPEMD160, test);
         }
     }
 }
