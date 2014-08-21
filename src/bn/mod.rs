@@ -34,7 +34,6 @@ extern {
     fn BN_mul(r: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     fn BN_sqr(r: *mut BIGNUM, a: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     fn BN_div(dv: *mut BIGNUM, rem: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
-    fn BN_mod(rem: *mut BIGNUM, a: *mut BIGNUM, m: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     fn BN_nnmod(rem: *mut BIGNUM, a: *mut BIGNUM, m: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     fn BN_mod_add(r: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, m: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     fn BN_mod_sub(r: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, m: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
@@ -356,7 +355,7 @@ impl BigNum {
 
     pub fn checked_mod(&self, a: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { BN_mod(r.raw(), self.raw(), a.raw(), ctx) == 1 })
+            with_bn_in_ctx!(r, ctx, { BN_div(ptr::mut_null(), r.raw(), self.raw(), a.raw(), ctx) == 1 })
         }
     }
 
