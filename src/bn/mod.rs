@@ -5,6 +5,7 @@ use std::ptr;
 use ssl::error::SslError;
 
 #[allow(dead_code)]
+#[repr(C)]
 struct BIGNUM {
     d: *mut c_void,
     top: c_int,

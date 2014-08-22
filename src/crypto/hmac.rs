@@ -19,6 +19,7 @@ use crypto::hash;
 
 #[allow(dead_code)]
 #[allow(non_camel_case_types)]
+#[repr(C)]
 pub struct HMAC_CTX {
     md: *mut hash::EVP_MD,
     md_ctx: hash::EVP_MD_CTX,
@@ -37,6 +38,7 @@ extern {
 }
 
 #[allow(non_camel_case_types)]
+#[repr(C)]
 struct ENGINE;
 
 pub struct HMAC {

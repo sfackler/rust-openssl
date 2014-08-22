@@ -14,6 +14,7 @@ pub enum HashType {
 
 #[allow(dead_code)]
 #[allow(non_camel_case_types)]
+#[repr(C)]
 pub struct EVP_MD_CTX {
     digest: *mut EVP_MD,
     engine: *mut libc::c_void,
@@ -24,9 +25,11 @@ pub struct EVP_MD_CTX {
 }
 
 #[allow(non_camel_case_types)]
+#[repr(C)]
 pub struct EVP_MD;
 
 #[allow(non_camel_case_types)]
+#[repr(C)]
 pub struct EVP_PKEY_CTX;
 
 #[link(name = "crypto")]
