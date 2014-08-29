@@ -92,7 +92,7 @@ impl Crypter {
     pub fn pad(&self, padding: bool) {
         if self.blocksize > 0 {
             unsafe {
-                let v = if padding { 1 } else { 0 } as c_int;
+                let v = if padding { 1 as c_int } else { 0 };
                 EVP_CIPHER_CTX_set_padding(self.ctx, v);
             }
         }
