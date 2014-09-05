@@ -291,7 +291,7 @@ make_validation_error!(X509_V_OK,
     X509ApplicationVerification = X509_V_ERR_APPLICATION_VERIFICATION,
 )
 
-struct Ssl {
+pub struct Ssl {
     ssl: *mut ffi::SSL
 }
 
@@ -302,7 +302,7 @@ impl Drop for Ssl {
 }
 
 impl Ssl {
-    fn try_new(ctx: &SslContext) -> Result<Ssl, SslError> {
+    pub fn try_new(ctx: &SslContext) -> Result<Ssl, SslError> {
         let ssl = unsafe { ffi::SSL_new(ctx.ctx) };
         if ssl == ptr::mut_null() {
             return Err(SslError::get());
@@ -364,6 +364,29 @@ impl Ssl {
             None => unreachable!()
         }
     }
+
+    /// Set the host name to be used with SNI (Server Name Indication).
+    pub fn set_hostname(&self, hostname: &str) -> Result<(), SslError> {
+        let ret = hostname.with_c_str(|hostname| {
+            unsafe {
+                // This is defined as a macro:
+                //      #define SSL_set_tlsext_host_name(s,name) \
+                //          SSL_ctrl(s,SSL_CTRL_SET_TLSEXT_HOSTNAME,TLSEXT_NAMETYPE_host_name,(char *)name)
+
+                ffi::SSL_ctrl(self.ssl, ffi::SSL_CTRL_SET_TLSEXT_HOSTNAME,
+                              ffi::TLSEXT_NAMETYPE_host_name,
+                              hostname as *const c_void as *mut c_void)
+            }
+        });
+
+        // For this case, 0 indicates failure.
+        if ret == 0 {
+            Err(SslError::get())
+        } else {
+            Ok(())
+        }
+    }
+
 }
 
 #[deriving(FromPrimitive)]
@@ -442,14 +465,8 @@ pub struct SslStream<S> {
 }
 
 impl<S: Stream> SslStream<S> {
-    /// Attempts to create a new SSL stream
-    pub fn try_new(ctx: &SslContext, stream: S) -> Result<SslStream<S>,
-                                                          SslError> {
-        let ssl = match Ssl::try_new(ctx) {
-            Ok(ssl) => ssl,
-            Err(err) => return Err(err)
-        };
-
+    /// Attempts to create a new SSL stream from a given `Ssl` instance.
+    pub fn new_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
         let mut ssl = SslStream {
             stream: stream,
             ssl: ssl,
@@ -461,6 +478,17 @@ impl<S: Stream> SslStream<S> {
             Ok(_) => Ok(ssl),
             Err(err) => Err(err)
         }
+    }
+
+    /// Attempts to create a new SSL stream
+    pub fn try_new(ctx: &SslContext, stream: S) -> Result<SslStream<S>,
+                                                          SslError> {
+        let ssl = match Ssl::try_new(ctx) {
+            Ok(ssl) => ssl,
+            Err(err) => return Err(err)
+        };
+
+        SslStream::new_from(ssl, stream)
     }
 
     /// A convenience wrapper around `try_new`.
