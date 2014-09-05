@@ -46,7 +46,7 @@ pub struct HMAC {
     len: uint,
 }
 
-#[allow(non_snake_case_functions)]
+#[allow(non_snake_case)]
 pub fn HMAC(ht: hash::HashType, key: &[u8]) -> HMAC {
     unsafe {
         let (evp, mdlen) = hash::evpmd(ht);

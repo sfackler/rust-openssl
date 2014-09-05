@@ -156,7 +156,7 @@ impl SslContext {
         }
     }
 
-    #[allow(non_snake_case_functions)]
+    #[allow(non_snake_case)]
     /// Specifies the file that contains trusted CA certificates.
     pub fn set_CA_file(&mut self, file: &str) -> Option<SslError> {
         let ret = file.with_c_str(|file| {

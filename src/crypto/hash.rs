@@ -129,6 +129,7 @@ mod tests {
         expected_output: String
     }
 
+    #[allow(non_snake_case)]
     fn HashTest(input: &str, output: &str) -> HashTest {
         HashTest { input: input.from_hex().unwrap(),
                    expected_output: output.to_string() }
