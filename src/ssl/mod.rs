@@ -3,6 +3,7 @@ use std::io::{IoResult, IoError, EndOfFile, Stream, Reader, Writer};
 use std::mem;
 use std::ptr;
 use std::rt::mutex::NativeMutex;
+use std::string;
 use sync::one::{Once, ONCE_INIT};
 
 use ssl::error::{SslError, SslSessionClosed, StreamError};
@@ -500,6 +501,21 @@ impl<S: Stream> SslStream<S> {
             };
         }
         Ok(())
+    }
+
+    /// Get the compression currently in use.  The result will be
+    /// either None, indicating no compression is in use, or a string
+    /// with the compression name.
+    pub fn get_compression(&self) -> Option<String> {
+        let ptr = unsafe { ffi::SSL_get_current_compression(self.ssl.ssl) };
+        if ptr == ptr::null() {
+            return None;
+        }
+
+        let meth = unsafe { ffi::SSL_COMP_get_name(ptr) };
+        let s = unsafe { string::raw::from_buf(meth as *const u8) };
+
+        Some(s)
     }
 }
 
