@@ -38,6 +38,10 @@ pub static SSL_ERROR_WANT_ACCEPT: c_int = 8;
 pub static SSL_VERIFY_NONE: c_int = 0;
 pub static SSL_VERIFY_PEER: c_int = 1;
 
+pub static SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
+
+pub static TLSEXT_NAMETYPE_host_name: c_long = 0;
+
 pub static X509_V_OK: c_int = 0;
 pub static X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT: c_int = 2;
 pub static X509_V_ERR_UNABLE_TO_GET_CRL: c_int = 3;
@@ -140,6 +144,8 @@ extern "C" {
     pub fn SSL_get_rbio(ssl: *mut SSL) -> *mut BIO;
     pub fn SSL_get_wbio(ssl: *mut SSL) -> *mut BIO;
     pub fn SSL_connect(ssl: *mut SSL) -> c_int;
+    pub fn SSL_ctrl(ssl: *mut SSL, cmd: c_int, larg: c_long,
+                    parg: *mut c_void) -> c_long;
     pub fn SSL_get_error(ssl: *mut SSL, ret: c_int) -> c_int;
     pub fn SSL_read(ssl: *mut SSL, buf: *mut c_void, num: c_int) -> c_int;
     pub fn SSL_write(ssl: *mut SSL, buf: *const c_void, num: c_int) -> c_int;

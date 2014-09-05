@@ -362,6 +362,29 @@ impl Ssl {
             None => unreachable!()
         }
     }
+
+    /// Set the host name to be used with SNI (Server Name Indication).
+    pub fn set_hostname(&self, hostname: &str) -> Result<(), SslError> {
+        let ret = hostname.with_c_str(|hostname| {
+            unsafe {
+                // This is defined as a macro:
+                //      #define SSL_set_tlsext_host_name(s,name) \
+                //          SSL_ctrl(s,SSL_CTRL_SET_TLSEXT_HOSTNAME,TLSEXT_NAMETYPE_host_name,(char *)name)
+
+                ffi::SSL_ctrl(self.ssl, ffi::SSL_CTRL_SET_TLSEXT_HOSTNAME,
+                              ffi::TLSEXT_NAMETYPE_host_name,
+                              hostname as *const c_void as *mut c_void)
+            }
+        });
+
+        // For this case, 0 indicates failure.
+        if ret == 0 {
+            Err(SslError::get())
+        } else {
+            Ok(())
+        }
+    }
+
 }
 
 #[deriving(FromPrimitive)]
