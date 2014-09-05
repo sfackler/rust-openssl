@@ -4,6 +4,7 @@ use libc::{c_int, c_void, c_long, c_ulong, c_char};
 
 pub type SSL_CTX = c_void;
 pub type SSL_METHOD = c_void;
+pub type COMP_METHOD = c_void;
 pub type SSL = c_void;
 pub type BIO = c_void;
 pub type BIO_METHOD = c_void;
@@ -145,12 +146,15 @@ extern "C" {
     pub fn SSL_write(ssl: *mut SSL, buf: *const c_void, num: c_int) -> c_int;
     pub fn SSL_get_ex_data_X509_STORE_CTX_idx() -> c_int;
     pub fn SSL_get_SSL_CTX(ssl: *mut SSL) -> *mut SSL_CTX;
+    pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const COMP_METHOD;
 
     pub fn BIO_s_mem() -> *const BIO_METHOD;
     pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
     pub fn BIO_free_all(a: *mut BIO);
     pub fn BIO_read(b: *mut BIO, buf: *mut c_void, len: c_int) -> c_int;
     pub fn BIO_write(b: *mut BIO, buf: *const c_void, len: c_int) -> c_int;
+
+    pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
 }
 
 #[cfg(target_os = "win32")]
