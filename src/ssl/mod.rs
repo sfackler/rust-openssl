@@ -289,7 +289,7 @@ make_validation_error!(X509_V_OK,
     X509ApplicationVerification = X509_V_ERR_APPLICATION_VERIFICATION,
 )
 
-struct Ssl {
+pub struct Ssl {
     ssl: *mut ffi::SSL
 }
 
@@ -300,7 +300,7 @@ impl Drop for Ssl {
 }
 
 impl Ssl {
-    fn try_new(ctx: &SslContext) -> Result<Ssl, SslError> {
+    pub fn try_new(ctx: &SslContext) -> Result<Ssl, SslError> {
         let ssl = unsafe { ffi::SSL_new(ctx.ctx) };
         if ssl == ptr::mut_null() {
             return Err(SslError::get());
@@ -463,14 +463,8 @@ pub struct SslStream<S> {
 }
 
 impl<S: Stream> SslStream<S> {
-    /// Attempts to create a new SSL stream
-    pub fn try_new(ctx: &SslContext, stream: S) -> Result<SslStream<S>,
-                                                          SslError> {
-        let ssl = match Ssl::try_new(ctx) {
-            Ok(ssl) => ssl,
-            Err(err) => return Err(err)
-        };
-
+    /// Attempts to create a new SSL stream from a given `Ssl` instance.
+    pub fn new_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
         let mut ssl = SslStream {
             stream: stream,
             ssl: ssl,
@@ -482,6 +476,17 @@ impl<S: Stream> SslStream<S> {
             Ok(_) => Ok(ssl),
             Err(err) => Err(err)
         }
+    }
+
+    /// Attempts to create a new SSL stream
+    pub fn try_new(ctx: &SslContext, stream: S) -> Result<SslStream<S>,
+                                                          SslError> {
+        let ssl = match Ssl::try_new(ctx) {
+            Ok(ssl) => ssl,
+            Err(err) => return Err(err)
+        };
+
+        SslStream::new_from(ssl, stream)
     }
 
     /// A convenience wrapper around `try_new`.
