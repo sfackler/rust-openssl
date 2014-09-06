@@ -127,8 +127,8 @@ impl Drop for SslContext {
 }
 
 impl SslContext {
-    /// Attempts to create a new SSL context.
-    pub fn try_new(method: SslMethod) -> Result<SslContext, SslError> {
+    /// Creates a new SSL context.
+    pub fn new(method: SslMethod) -> Result<SslContext, SslError> {
         init();
 
         let ctx = unsafe { ffi::SSL_CTX_new(method.to_raw()) };
@@ -137,14 +137,6 @@ impl SslContext {
         }
 
         Ok(SslContext { ctx: ctx })
-    }
-
-    /// A convenience wrapper around `try_new`.
-    pub fn new(method: SslMethod) -> SslContext {
-        match SslContext::try_new(method) {
-            Ok(ctx) => ctx,
-            Err(err) => fail!("Error creating SSL context: {}", err)
-        }
     }
 
     /// Configures the certificate verification method for new connections.
@@ -302,7 +294,7 @@ impl Drop for Ssl {
 }
 
 impl Ssl {
-    pub fn try_new(ctx: &SslContext) -> Result<Ssl, SslError> {
+    pub fn new(ctx: &SslContext) -> Result<Ssl, SslError> {
         let ssl = unsafe { ffi::SSL_new(ctx.ctx) };
         if ssl == ptr::mut_null() {
             return Err(SslError::get());
@@ -480,23 +472,14 @@ impl<S: Stream> SslStream<S> {
         }
     }
 
-    /// Attempts to create a new SSL stream
-    pub fn try_new(ctx: &SslContext, stream: S) -> Result<SslStream<S>,
-                                                          SslError> {
-        let ssl = match Ssl::try_new(ctx) {
+    /// Creates a new SSL stream
+    pub fn new(ctx: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
+        let ssl = match Ssl::new(ctx) {
             Ok(ssl) => ssl,
             Err(err) => return Err(err)
         };
 
         SslStream::new_from(ssl, stream)
-    }
-
-    /// A convenience wrapper around `try_new`.
-    pub fn new(ctx: &SslContext, stream: S) -> SslStream<S> {
-        match SslStream::try_new(ctx, stream) {
-            Ok(stream) => stream,
-            Err(err) => fail!("Error creating SSL stream: {}", err)
-        }
     }
 
     fn in_retry_wrapper(&mut self, blk: |&Ssl| -> c_int)
