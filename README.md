@@ -22,7 +22,7 @@ For some reason, the OpenSSL distribution for Windows is structured differently,
   * 32-bit: `C:\Program Files (x86)\Rust\bin\rustlib\i686-pc-mingw32\lib`
   * 64-bit: TODO
 4. Rename `libeay32.a` and `ssleay32.a` to `libcrypto.a` and `libssl.a`, respectively. 
-5. `cargo build`.
+5. Run `cargo build`.
 
 ###Testing
 Several tests expect a local test server to be running to bounce requests off of. It's easy to do this. Open a separate terminal window and `cd` to the rust-openssl directory. Then run one of the following commands:
