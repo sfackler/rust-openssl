@@ -18,8 +18,8 @@ extern {
     fn EVP_PKEY_get1_RSA(k: *mut EVP_PKEY) -> *mut RSA;
     fn EVP_PKEY_set1_RSA(k: *mut EVP_PKEY, r: *mut RSA) -> c_int;
 
-    fn i2d_RSAPublicKey(k: *mut RSA, buf: *const *mut u8) -> c_int;
-    fn d2i_RSAPublicKey(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
+    fn i2d_RSA_PUBKEY(k: *mut RSA, buf: *const *mut u8) -> c_int;
+    fn d2i_RSA_PUBKEY(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
     fn i2d_RSAPrivateKey(k: *mut RSA, buf: *const *mut u8) -> c_int;
     fn d2i_RSAPrivateKey(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
 
@@ -136,14 +136,14 @@ impl PKey {
      * Returns a serialized form of the public key, suitable for load_pub().
      */
     pub fn save_pub(&self) -> Vec<u8> {
-        self._tostr(i2d_RSAPublicKey)
+        self._tostr(i2d_RSA_PUBKEY)
     }
 
     /**
      * Loads a serialized form of the public key, as produced by save_pub().
      */
     pub fn load_pub(&mut self, s: &[u8]) {
-        self._fromstr(s, d2i_RSAPublicKey);
+        self._fromstr(s, d2i_RSA_PUBKEY);
         self.parts = Public;
     }
 
