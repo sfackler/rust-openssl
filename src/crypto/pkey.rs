@@ -16,11 +16,12 @@ extern {
     fn EVP_PKEY_free(k: *mut EVP_PKEY);
     fn EVP_PKEY_assign(pkey: *mut EVP_PKEY, typ: c_int, key: *const c_char) -> c_int;
     fn EVP_PKEY_get1_RSA(k: *mut EVP_PKEY) -> *mut RSA;
+    fn EVP_PKEY_set1_RSA(k: *mut EVP_PKEY, r: *mut RSA) -> c_int;
 
-    fn i2d_PublicKey(k: *mut EVP_PKEY, buf: *const *mut u8) -> c_int;
-    fn d2i_PublicKey(t: c_int, k: *const *mut EVP_PKEY, buf: *const *const u8, len: c_uint) -> *mut EVP_PKEY;
-    fn i2d_PrivateKey(k: *mut EVP_PKEY, buf: *const *mut u8) -> c_int;
-    fn d2i_PrivateKey(t: c_int, k: *const *mut EVP_PKEY, buf: *const *const u8, len: c_uint) -> *mut EVP_PKEY;
+    fn i2d_RSAPublicKey(k: *mut RSA, buf: *const *mut u8) -> c_int;
+    fn d2i_RSAPublicKey(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
+    fn i2d_RSAPrivateKey(k: *mut RSA, buf: *const *mut u8) -> c_int;
+    fn d2i_RSAPrivateKey(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
 
     fn RSA_generate_key(modsz: c_uint, e: c_uint, cb: *const u8, cbarg: *const u8) -> *mut RSA;
     fn RSA_size(k: *mut RSA) -> c_uint;
@@ -90,24 +91,25 @@ impl PKey {
         }
     }
 
-    fn _tostr(&self, f: unsafe extern "C" fn(*mut EVP_PKEY, *const *mut u8) -> c_int) -> Vec<u8> {
+    fn _tostr(&self, f: unsafe extern "C" fn(*mut RSA, *const *mut u8) -> c_int) -> Vec<u8> {
         unsafe {
-            let len = f(self.evp, ptr::null());
+            let rsa = EVP_PKEY_get1_RSA(self.evp);
+            let len = f(rsa, ptr::null());
             if len < 0 as c_int { return vec!(); }
             let mut s = Vec::from_elem(len as uint, 0u8);
 
-            let r = f(self.evp, &s.as_mut_ptr());
+            let r = f(rsa, &s.as_mut_ptr());
 
             s.truncate(r as uint);
             s
         }
     }
 
-    fn _fromstr(&mut self, s: &[u8], f: unsafe extern "C" fn(c_int, *const *mut EVP_PKEY, *const *const u8, c_uint) -> *mut EVP_PKEY) {
+    fn _fromstr(&mut self, s: &[u8], f: unsafe extern "C" fn(*const *mut RSA, *const *const u8, c_uint) -> *mut RSA) {
         unsafe {
-            let evp = ptr::mut_null();
-            f(6 as c_int, &evp, &s.as_ptr(), s.len() as c_uint);
-            self.evp = evp;
+            let rsa = ptr::mut_null();
+            f(&rsa, &s.as_ptr(), s.len() as c_uint);
+            EVP_PKEY_set1_RSA(self.evp, rsa);
         }
     }
 
@@ -134,14 +136,14 @@ impl PKey {
      * Returns a serialized form of the public key, suitable for load_pub().
      */
     pub fn save_pub(&self) -> Vec<u8> {
-        self._tostr(i2d_PublicKey)
+        self._tostr(i2d_RSAPublicKey)
     }
 
     /**
      * Loads a serialized form of the public key, as produced by save_pub().
      */
     pub fn load_pub(&mut self, s: &[u8]) {
-        self._fromstr(s, d2i_PublicKey);
+        self._fromstr(s, d2i_RSAPublicKey);
         self.parts = Public;
     }
 
@@ -150,14 +152,14 @@ impl PKey {
      * load_priv().
      */
     pub fn save_priv(&self) -> Vec<u8> {
-        self._tostr(i2d_PrivateKey)
+        self._tostr(i2d_RSAPrivateKey)
     }
     /**
      * Loads a serialized form of the public and private keys, as produced by
      * save_priv().
      */
     pub fn load_priv(&mut self, s: &[u8]) {
-        self._fromstr(s, d2i_PrivateKey);
+        self._fromstr(s, d2i_RSAPrivateKey);
         self.parts = Both;
     }
 
