@@ -103,8 +103,17 @@ pub static X509_FILETYPE_PEM: c_int = 1;
 pub static X509_FILETYPE_ASN1: c_int = 2;
 pub static X509_FILETYPE_DEFAULT: c_int = 3;
 
+#[cfg(target_os = "macos")]
+#[link(name="ssl.1.0.0")]
+#[link(name="crypto.1.0.0")]
+extern {}
+
+
+#[cfg(not(target_os = "macos"))]
 #[link(name="ssl")]
 #[link(name="crypto")]
+extern {}
+
 extern "C" {
     pub fn CRYPTO_num_locks() -> c_int;
     pub fn CRYPTO_set_locking_callback(func: extern "C" fn(mode: c_int,
@@ -120,6 +129,8 @@ extern "C" {
     pub fn SSLv2_method() -> *const SSL_METHOD;
     pub fn SSLv3_method() -> *const SSL_METHOD;
     pub fn TLSv1_method() -> *const SSL_METHOD;
+    pub fn TLSv1_1_method() -> *const SSL_METHOD;
+    pub fn TLSv1_2_method() -> *const SSL_METHOD;
     pub fn SSLv23_method() -> *const SSL_METHOD;
 
     pub fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
