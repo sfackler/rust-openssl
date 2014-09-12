@@ -115,6 +115,23 @@ extern fn raw_verify(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX)
 pub type VerifyCallback = fn(preverify_ok: bool,
                              x509_ctx: &X509StoreContext) -> bool;
 
+#[repr(i32)]
+pub enum X509FileType {
+    PEM = ffi::X509_FILETYPE_PEM,
+    ASN1 = ffi::X509_FILETYPE_ASN1,
+    Default = ffi::X509_FILETYPE_DEFAULT
+}
+
+// FIXME: macro may be instead of inlining?
+#[inline]
+fn wrap_ssl_result(res: c_int) -> Option<SslError> {
+    if res == 0 {
+        Some(SslError::get())
+    } else {
+        None
+    }
+}
+
 /// An SSL context object
 pub struct SslContext {
     ctx: *mut ffi::SSL_CTX
@@ -152,17 +169,31 @@ impl SslContext {
     #[allow(non_snake_case)]
     /// Specifies the file that contains trusted CA certificates.
     pub fn set_CA_file(&mut self, file: &str) -> Option<SslError> {
-        let ret = file.with_c_str(|file| {
+        wrap_ssl_result(file.with_c_str(|file| {
             unsafe {
                 ffi::SSL_CTX_load_verify_locations(self.ctx, file, ptr::null())
             }
-        });
+        }))
+    }
 
-        if ret == 0 {
-            Some(SslError::get())
-        } else {
-            None
-        }
+    /// Specifies the file that is client certificate
+    pub fn set_certificate_file(&mut self, file: &str,
+                                file_type: X509FileType) -> Option<SslError> {
+        wrap_ssl_result(file.with_c_str(|file| {
+            unsafe {
+                ffi::SSL_CTX_use_certificate_file(self.ctx, file, file_type as c_int)
+            }
+        }))
+    }
+
+    /// Specifies the file that is client certificate
+    pub fn set_private_key_file(&mut self, file: &str,
+                                file_type: X509FileType) -> Option<SslError> {
+        wrap_ssl_result(file.with_c_str(|file| {
+            unsafe {
+                ffi::SSL_CTX_use_PrivateKey_file(self.ctx, file, file_type as c_int)
+            }
+        }))
     }
 }
 
