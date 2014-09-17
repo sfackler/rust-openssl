@@ -1,6 +1,7 @@
 #![allow(non_camel_case_types)]
 
-use libc::{c_int, c_void, c_long, c_ulong, c_char};
+use libc::{c_int, c_void, c_long, c_ulong, c_char, c_uint};
+use crypto::hash::{EVP_MD};
 
 pub type SSL_CTX = c_void;
 pub type SSL_METHOD = c_void;
@@ -145,6 +146,7 @@ extern "C" {
     pub fn X509_STORE_CTX_get_error(ctx: *mut X509_STORE_CTX) -> c_int;
 
     pub fn X509_get_subject_name(x: *mut X509) -> *mut X509_NAME;
+    pub fn X509_digest(x: *mut X509, digest: *const EVP_MD, buf: *mut c_char, len: *mut c_uint) -> c_int;
 
     pub fn SSL_new(ctx: *mut SSL_CTX) -> *mut SSL;
     pub fn SSL_free(ssl: *mut SSL);
