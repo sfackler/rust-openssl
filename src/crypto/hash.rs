@@ -96,7 +96,7 @@ impl Hasher {
     pub fn final(&self) -> Vec<u8> {
         unsafe {
             let mut res = Vec::from_elem(self.len, 0u8);
-            EVP_DigestFinal(self.ctx, res.as_mut_ptr(), ptr::mut_null());
+            EVP_DigestFinal(self.ctx, res.as_mut_ptr(), ptr::null_mut());
             res
         }
     }
