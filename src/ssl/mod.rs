@@ -186,7 +186,7 @@ impl SslContext {
         }))
     }
 
-    /// Specifies the file that is client certificate
+    /// Specifies the file that is client private key
     pub fn set_private_key_file(&mut self, file: &str,
                                 file_type: X509FileType) -> Option<SslError> {
         wrap_ssl_result(file.with_c_str(|file| {
