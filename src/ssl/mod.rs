@@ -132,7 +132,7 @@ impl SslContext {
         init();
 
         let ctx = unsafe { ffi::SSL_CTX_new(method.to_raw()) };
-        if ctx == ptr::mut_null() {
+        if ctx == ptr::null_mut() {
             return Err(SslError::get());
         }
 
@@ -296,18 +296,18 @@ impl Drop for Ssl {
 impl Ssl {
     pub fn new(ctx: &SslContext) -> Result<Ssl, SslError> {
         let ssl = unsafe { ffi::SSL_new(ctx.ctx) };
-        if ssl == ptr::mut_null() {
+        if ssl == ptr::null_mut() {
             return Err(SslError::get());
         }
         let ssl = Ssl { ssl: ssl };
 
         let rbio = unsafe { ffi::BIO_new(ffi::BIO_s_mem()) };
-        if rbio == ptr::mut_null() {
+        if rbio == ptr::null_mut() {
             return Err(SslError::get());
         }
 
         let wbio = unsafe { ffi::BIO_new(ffi::BIO_s_mem()) };
-        if wbio == ptr::mut_null() {
+        if wbio == ptr::null_mut() {
             unsafe { ffi::BIO_free_all(rbio) }
             return Err(SslError::get());
         }

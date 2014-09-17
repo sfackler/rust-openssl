@@ -107,7 +107,7 @@ impl PKey {
 
     fn _fromstr(&mut self, s: &[u8], f: unsafe extern "C" fn(*const *mut RSA, *const *const u8, c_uint) -> *mut RSA) {
         unsafe {
-            let rsa = ptr::mut_null();
+            let rsa = ptr::null_mut();
             f(&rsa, &s.as_ptr(), s.len() as c_uint);
             EVP_PKEY_set1_RSA(self.evp, rsa);
         }
