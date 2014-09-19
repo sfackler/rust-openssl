@@ -98,6 +98,10 @@ pub static X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
 pub static X509_V_ERR_CRL_PATH_VALIDATION_ERROR: c_int = 54;
 pub static X509_V_ERR_APPLICATION_VERIFICATION: c_int = 50;
 
+pub static X509_FILETYPE_PEM: c_int = 1;
+pub static X509_FILETYPE_ASN1: c_int = 2;
+pub static X509_FILETYPE_DEFAULT: c_int = 3;
+
 #[link(name="ssl")]
 #[link(name="crypto")]
 extern "C" {
@@ -131,6 +135,9 @@ extern "C" {
     pub fn SSL_CTX_set_ex_data(ctx: *mut SSL_CTX, idx: c_int, data: *mut c_void)
                                -> c_int;
     pub fn SSL_CTX_get_ex_data(ctx: *mut SSL_CTX, idx: c_int) -> *mut c_void;
+
+    pub fn SSL_CTX_use_certificate_file(ctx: *mut SSL_CTX, cert_file: *const c_char, file_type: c_int) -> c_int;
+    pub fn SSL_CTX_use_PrivateKey_file(ctx: *mut SSL_CTX, key_file: *const c_char, file_type: c_int) -> c_int;
 
     pub fn X509_STORE_CTX_get_ex_data(ctx: *mut X509_STORE_CTX, idx: c_int)
                                       -> *mut c_void;
