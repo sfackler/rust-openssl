@@ -1,4 +1,4 @@
-use libc::{c_int, c_void, c_char};
+use libc::{c_int, c_uint, c_void, c_char};
 use std::io::{IoResult, IoError, EndOfFile, Stream, Reader, Writer};
 use std::mem;
 use std::ptr;
@@ -6,6 +6,7 @@ use std::rt::mutex::NativeMutex;
 use std::string;
 use sync::one::{Once, ONCE_INIT};
 
+use crypto::hash::{HashType, evpmd};
 use ssl::error::{SslError, SslSessionClosed, StreamError};
 
 pub mod error;
@@ -229,6 +230,29 @@ impl<'ctx> X509<'ctx> {
     pub fn subject_name<'a>(&'a self) -> X509Name<'a> {
         let name = unsafe { ffi::X509_get_subject_name(self.x509) };
         X509Name { x509: self, name: name }
+    }
+
+    /// Returns certificate fingerprint calculated using provided hash
+    pub fn fingerprint(&self, hash_type: HashType) -> Option<Vec<u8>> {
+        let (evp, len) = evpmd(hash_type);
+        let v: Vec<u8> = Vec::from_elem(len, 0);
+        let act_len: c_uint = 0;
+        let res = unsafe {
+            ffi::X509_digest(self.x509, evp, mem::transmute(v.as_ptr()),
+                             mem::transmute(&act_len))
+        };
+
+        match res {
+            0 => None,
+            _ => {
+                let act_len = act_len as uint;
+                match len.cmp(&act_len) {
+                    Greater => None,
+                    Equal => Some(v),
+                    Less => fail!("Fingerprint buffer was corrupted!")
+                }
+            }
+        }
     }
 }
 
