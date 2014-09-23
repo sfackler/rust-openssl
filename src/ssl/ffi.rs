@@ -103,13 +103,14 @@ pub static X509_FILETYPE_PEM: c_int = 1;
 pub static X509_FILETYPE_ASN1: c_int = 2;
 pub static X509_FILETYPE_DEFAULT: c_int = 3;
 
-#[cfg(target_os = "macos")]
+#[cfg(target_os = "macos", feature = "tlsv1_1")]
+#[cfg(target_os = "macos", feature = "tlsv1_2")]
 #[link(name="ssl.1.0.0")]
 #[link(name="crypto.1.0.0")]
 extern {}
 
-
 #[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "macos", not(feature = "tlsv1_1"), not(feature = "tlsv1_2"))]
 #[link(name="ssl")]
 #[link(name="crypto")]
 extern {}
@@ -125,11 +126,13 @@ extern "C" {
 
     pub fn SSL_library_init() -> c_int;
 
-    #[cfg(sslv2)]
+    #[cfg(feature = "sslv2")]
     pub fn SSLv2_method() -> *const SSL_METHOD;
     pub fn SSLv3_method() -> *const SSL_METHOD;
     pub fn TLSv1_method() -> *const SSL_METHOD;
+    #[cfg(feature = "tlsv1_1")]
     pub fn TLSv1_1_method() -> *const SSL_METHOD;
+    #[cfg(feature = "tlsv1_2")]
     pub fn TLSv1_2_method() -> *const SSL_METHOD;
     pub fn SSLv23_method() -> *const SSL_METHOD;
 

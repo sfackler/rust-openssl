@@ -8,3 +8,8 @@ authors = ["Steven Fackler <sfackler@gmail.com"]
 
 name = "openssl"
 path = "src/lib.rs"
+
+[features]
+tlsv1_2 = []
+tlsv1_1 = []
+sslv2 = []

@@ -2,11 +2,16 @@ language: rust
 env:
   global:
     - secure: qLvBJoJOJcPPZ+e31175O6sMUGBHgHe/kBuI0FCPeifYmpFyeRAkEvGddEkf8t3rojV+wE14CNYzzGsT/W/+JY7xW0C1FQKW3r+8SZ1Cave/8ahee0aCQVXGf0XY8c52uG6MrLGiUlNZbOsyFSdFUc/Io+kYZas4DxrinRSOIEA=
+os:
+  - osx
+  - linux
 before_script:
   - openssl s_server -accept 15418 -www -cert test/cert.pem -key test/key.pem >/dev/null &
 script:
   - cargo build
   - cargo test
   - rustdoc src/lib.rs
+  - cargo build --features "sslv2"
+  - cargo build --features "tlsv1_1 tlsv1_2"
 after_script:
   - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh
