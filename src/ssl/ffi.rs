@@ -12,6 +12,8 @@ pub type BIO_METHOD = c_void;
 pub type X509_STORE_CTX = c_void;
 pub type X509 = c_void;
 pub type X509_NAME = c_void;
+pub type X509_NAME_ENTRY = c_void;
+pub type ASN1_STRING = c_void;
 pub type CRYPTO_EX_DATA = c_void;
 
 pub type CRYPTO_EX_new = extern "C" fn(parent: *mut c_void, ptr: *mut c_void,
@@ -158,6 +160,16 @@ extern "C" {
 
     pub fn X509_get_subject_name(x: *mut X509) -> *mut X509_NAME;
     pub fn X509_digest(x: *mut X509, digest: *const EVP_MD, buf: *mut c_char, len: *mut c_uint) -> c_int;
+
+    pub fn X509_NAME_get_index_by_NID(n: *mut X509_NAME, nid: c_int, last_pos: c_int) ->c_int;
+    pub fn X509_NAME_get_entry(n: *mut X509_NAME, loc: c_int) -> *mut X509_NAME_ENTRY;
+
+    pub fn X509_NAME_ENTRY_get_data(ne: *mut X509_NAME_ENTRY) -> *mut ASN1_STRING;
+
+    pub fn ASN1_STRING_to_UTF8(out: *mut *mut c_char, s: *mut ASN1_STRING) -> c_int;
+
+    /* OPENSSL_free() */
+    pub fn CRYPTO_free(thing: *mut c_void);
 
     pub fn ERR_lib_error_string(e: c_ulong) -> *const c_char;
     pub fn ERR_func_error_string(e: c_ulong) -> *const c_char;
