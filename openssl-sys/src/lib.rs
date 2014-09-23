@@ -33,6 +33,7 @@ pub type X509 = c_void;
 pub type X509_CRL = c_void;
 pub type X509_EXTENSION = c_void;
 pub type X509_NAME = c_void;
+pub type X509_NAME_ENTRY = c_void;
 pub type X509_REQ = c_void;
 pub type X509_STORE_CTX = c_void;
 
@@ -455,6 +456,11 @@ extern "C" {
     pub fn X509_EXTENSION_free(ext: *mut X509_EXTENSION);
 
     pub fn X509_NAME_add_entry_by_txt(x: *mut X509, field: *const c_char, ty: c_int, bytes: *const c_char, len: c_int, loc: c_int, set: c_int) -> c_int;
+    pub fn X509_NAME_get_index_by_NID(n: *mut X509_NAME, nid: c_int, last_pos: c_int) ->c_int;
+    pub fn X509_NAME_get_entry(n: *mut X509_NAME, loc: c_int) -> *mut X509_NAME_ENTRY;
+    pub fn X509_NAME_ENTRY_get_data(ne: *mut X509_NAME_ENTRY) -> *mut ASN1_STRING;
+
+    pub fn ASN1_STRING_to_UTF8(out: *mut *mut c_char, s: *mut ASN1_STRING) -> c_int;
 
     pub fn X509_STORE_CTX_get_current_cert(ct: *mut X509_STORE_CTX) -> *mut X509;
     pub fn X509_STORE_CTX_get_error(ctx: *mut X509_STORE_CTX) -> c_int;
