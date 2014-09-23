@@ -148,6 +148,10 @@ extern "C" {
     pub fn X509_get_subject_name(x: *mut X509) -> *mut X509_NAME;
     pub fn X509_digest(x: *mut X509, digest: *const EVP_MD, buf: *mut c_char, len: *mut c_uint) -> c_int;
 
+    pub fn ERR_lib_error_string(e: c_ulong) -> *const c_char;
+    pub fn ERR_func_error_string(e: c_ulong) -> *const c_char;
+    pub fn ERR_reason_error_string(e: c_ulong) -> *const c_char;
+
     pub fn SSL_new(ctx: *mut SSL_CTX) -> *mut SSL;
     pub fn SSL_free(ssl: *mut SSL);
     pub fn SSL_set_bio(ssl: *mut SSL, rbio: *mut BIO, wbio: *mut BIO);
