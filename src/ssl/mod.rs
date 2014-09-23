@@ -214,6 +214,14 @@ impl SslContext {
             }
         }))
     }
+
+    pub fn set_cipher_list(&mut self, cipher_list: &str) -> Option<SslError> {
+        wrap_ssl_result(cipher_list.with_c_str(|cipher_list| {
+            unsafe {
+                ffi::SSL_CTX_set_cipher_list(self.ctx, cipher_list)
+            }
+        }))
+    }
 }
 
 pub struct X509StoreContext {
