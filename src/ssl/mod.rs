@@ -4,6 +4,7 @@ use std::mem;
 use std::ptr;
 use std::rt::mutex::NativeMutex;
 use std::string;
+use std::c_str::CString;
 use sync::one::{Once, ONCE_INIT};
 
 use crypto::hash::{HashType, evpmd};
@@ -296,6 +297,68 @@ impl<'ctx> X509<'ctx> {
 pub struct X509Name<'x> {
     x509: &'x X509<'x>,
     name: *mut ffi::X509_NAME
+}
+
+#[allow(dead_code)]
+pub struct X509NameEntry<'x> {
+    x509_name: &'x X509Name<'x>,
+    ne: *mut ffi::X509_NAME_ENTRY
+}
+
+#[allow(dead_code)]
+pub struct Asn1String<'x> {
+    x509_name_entry: &'x X509NameEntry<'x>,
+    asn1_str: *mut ffi::ASN1_STRING
+}
+
+pub struct SslCString {
+    c_str : CString
+}
+
+impl Drop for SslCString {
+    fn drop(&mut self) {
+        unsafe { ffi::OPENSSL_free(self.c_str.as_mut_ptr() as *mut c_void); }
+    }
+}
+
+impl SslCString {
+    pub unsafe fn new(buf: *const i8) -> SslCString {
+        SslCString {
+            c_str : CString::new(buf, false)
+        }
+    }
+}
+
+impl <'x> X509Name<'x> {
+    pub fn text_by_nid(&self, nid: c_int) -> Option<SslCString> {
+        unsafe {
+            let loc = ffi::X509_NAME_get_index_by_NID(self.name, nid, -1);
+            if loc == -1 {
+                return None;
+            }
+
+            let ne = ffi::X509_NAME_get_entry(self.name, loc);
+            if ne.is_null() {
+                return None;
+            }
+
+            let asn1_str = ffi::X509_NAME_ENTRY_get_data(ne);
+            if asn1_str.is_null() {
+                return None;
+            }
+
+            let mut str_from_asn1 : *mut c_char = ptr::null_mut();
+            let utf8_succ = ffi::ASN1_STRING_to_UTF8(&mut str_from_asn1, asn1_str);
+
+            if utf8_succ < 0 {
+                return None
+            }
+
+            assert!(!str_from_asn1.is_null());
+
+            Some(SslCString::new(str_from_asn1 as *const i8))
+        }
+    }
 }
 
 macro_rules! make_validation_error(
@@ -683,3 +746,4 @@ impl<S: Stream> Writer for SslStream<S> {
         self.stream.flush()
     }
 }
+
