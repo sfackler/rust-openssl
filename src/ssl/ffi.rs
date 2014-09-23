@@ -115,12 +115,19 @@ extern "C" {
     pub fn ERR_get_error() -> c_ulong;
 
     pub fn SSL_library_init() -> c_int;
+    pub fn SSL_load_error_strings();
 
     #[cfg(sslv2)]
     pub fn SSLv2_method() -> *const SSL_METHOD;
     pub fn SSLv3_method() -> *const SSL_METHOD;
     pub fn TLSv1_method() -> *const SSL_METHOD;
     pub fn SSLv23_method() -> *const SSL_METHOD;
+
+    #[cfg(sslv2)]
+    pub fn SSLv2_server_method() -> *const SSL_METHOD;
+    pub fn SSLv3_server_method() -> *const SSL_METHOD;
+    pub fn TLSv1_server_method() -> *const SSL_METHOD;
+    pub fn SSLv23_server_method() -> *const SSL_METHOD;
 
     pub fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
     pub fn SSL_CTX_free(ctx: *mut SSL_CTX);
@@ -158,6 +165,7 @@ extern "C" {
     pub fn SSL_get_rbio(ssl: *mut SSL) -> *mut BIO;
     pub fn SSL_get_wbio(ssl: *mut SSL) -> *mut BIO;
     pub fn SSL_connect(ssl: *mut SSL) -> c_int;
+    pub fn SSL_accept(ssl: *mut SSL) -> c_int;
     pub fn SSL_ctrl(ssl: *mut SSL, cmd: c_int, larg: c_long,
                     parg: *mut c_void) -> c_long;
     pub fn SSL_get_error(ssl: *mut SSL, ret: c_int) -> c_int;
