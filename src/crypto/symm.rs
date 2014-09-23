@@ -174,9 +174,10 @@ impl Drop for Crypter {
 pub fn encrypt(t: Type, key: &[u8], iv: Vec<u8>, data: &[u8]) -> Vec<u8> {
     let c = Crypter::new(t);
     c.init(Encrypt, key, iv);
-    let r = c.update(data);
+    let mut r = c.update(data);
     let rest = c.final();
-    r.append(rest.as_slice())
+    r.extend(rest.into_iter());
+    r
 }
 
 /**
@@ -186,9 +187,10 @@ pub fn encrypt(t: Type, key: &[u8], iv: Vec<u8>, data: &[u8]) -> Vec<u8> {
 pub fn decrypt(t: Type, key: &[u8], iv: Vec<u8>, data: &[u8]) -> Vec<u8> {
     let c = Crypter::new(t);
     c.init(Decrypt, key, iv);
-    let r = c.update(data);
+    let mut r = c.update(data);
     let rest = c.final();
-    r.append(rest.as_slice())
+    r.extend(rest.into_iter());
+    r
 }
 
 #[cfg(test)]
@@ -213,11 +215,13 @@ mod tests {
         let c = super::Crypter::new(super::AES_256_ECB);
         c.init(super::Encrypt, k0.as_slice(), vec![]);
         c.pad(false);
-        let r0 = c.update(p0.as_slice()).append(c.final().as_slice());
+        let mut r0 = c.update(p0.as_slice());
+        r0.extend(c.final().into_iter());
         assert!(r0 == c0);
         c.init(super::Decrypt, k0.as_slice(), vec![]);
         c.pad(false);
-        let p1 = c.update(r0.as_slice()).append(c.final().as_slice());
+        let mut p1 = c.update(r0.as_slice());
+        p1.extend(c.final().into_iter());
         assert!(p1 == p0);
     }
 
@@ -227,8 +231,9 @@ mod tests {
         let cipher = super::Crypter::new(ciphertype);
         cipher.init(super::Encrypt, key.from_hex().unwrap().as_slice(), iv.from_hex().unwrap());
 
-        let expected = Vec::from_slice(ct.from_hex().unwrap().as_slice());
-        let computed = cipher.update(pt.from_hex().unwrap().as_slice()).append(cipher.final().as_slice());
+        let expected = ct.from_hex().unwrap().as_slice().to_vec();
+        let mut computed = cipher.update(pt.from_hex().unwrap().as_slice());
+        computed.extend(cipher.final().into_iter());
 
         if computed != expected {
             println!("Computed: {}", computed.as_slice().to_hex());
