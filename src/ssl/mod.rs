@@ -77,12 +77,22 @@ impl SslMethod {
 }
 
 /// Determines the type of certificate verification used
-#[repr(i32)]
-pub enum SslVerifyMode {
-    /// Verify that the server's certificate is trusted
-    SslVerifyPeer = ffi::SSL_VERIFY_PEER,
-    /// Do not verify the server's certificate
-    SslVerifyNone = ffi::SSL_VERIFY_NONE
+bitflags! {
+    flags SslVerifyMode: c_int {
+        #[doc="Server mode: request a certificate from the client and verify.
+        Client mode: verify that the server's certificate is trusted"]
+        const SSL_VERIFY_PEER = ffi::SSL_VERIFY_PEER,
+        #[doc="Server mode: Server will not requst a client certificate.
+        Client mode: Do not verify the server's certificate."]
+        const SSL_VERIFY_NONE = ffi::SSL_VERIFY_NONE,
+        #[doc="Server mode: require a client certificate. Must be used together with SslVerifyPeer.
+        Client mode: ignored."]
+        const SSL_VERIFY_FAIL_IF_NO_PEER_CERT = ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+        #[doc="Server mode: only request a client certificate durring initial handshake, note
+        durring renegotiation.
+        Client mode: ignored."]
+        const SSL_VERIFY_CLIENT_ONCE = ffi::SSL_VERIFY_CLIENT_ONCE,
+    }
 }
 
 // Creates a static index for user data of type T
@@ -219,7 +229,7 @@ impl SslContext {
         unsafe {
             ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX,
                                      mem::transmute(verify));
-            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(raw_verify));
+            ffi::SSL_CTX_set_verify(self.ctx, mode.bits() as c_int, Some(raw_verify));
         }
     }
 
@@ -236,7 +246,7 @@ impl SslContext {
                                      mem::transmute(Some(verify)));
             ffi::SSL_CTX_set_ex_data(self.ctx, get_verify_data_idx::<T>(),
                                      mem::transmute(data));
-            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(raw_verify_with_data::<T>));
+            ffi::SSL_CTX_set_verify(self.ctx, mode.bits() as c_int, Some(raw_verify_with_data::<T>));
         }
     }
 
