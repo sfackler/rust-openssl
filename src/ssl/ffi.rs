@@ -37,8 +37,10 @@ pub static SSL_ERROR_ZERO_RETURN: c_int = 6;
 pub static SSL_ERROR_WANT_CONNECT: c_int = 7;
 pub static SSL_ERROR_WANT_ACCEPT: c_int = 8;
 
-pub static SSL_VERIFY_NONE: c_int = 0;
-pub static SSL_VERIFY_PEER: c_int = 1;
+pub static SSL_VERIFY_NONE: c_uint = 0;
+pub static SSL_VERIFY_PEER: c_uint = 1;
+pub static SSL_VERIFY_FAIL_IF_NO_PEER_CERT: c_uint = 2;
+pub static SSL_VERIFY_CLIENT_ONCE: c_uint = 4;
 
 pub static SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
 
