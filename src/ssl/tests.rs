@@ -2,7 +2,9 @@ use std::io::Writer;
 use std::io::net::tcp::TcpStream;
 use std::str;
 
-use ssl::{Sslv23, SslContext, SslStream, SslVerifyPeer, X509StoreContext};
+use crypto::hash::{SHA256};
+use ssl::{Sslv23, SslContext, SslStream, SslVerifyPeer};
+use x509::{X509Generator, X509, DigitalSignature, KeyEncipherment, ClientAuth, ServerAuth, X509StoreContext};
 
 #[test]
 fn test_new_ctx() {
@@ -157,4 +159,20 @@ fn test_read() {
     stream.flush().unwrap();
     let buf = stream.read_to_end().ok().expect("read error");
     print!("{}", str::from_utf8(buf.as_slice()));
+}
+
+#[test]
+fn test_cert_gen() {
+    let gen = X509Generator::new()
+        .set_bitlength(2048)
+        .set_valid_period(365*2)
+        .set_CN("test_me")
+        .set_sign_hash(SHA256)
+        .set_usage([DigitalSignature, KeyEncipherment])
+        .set_ext_usage([ClientAuth, ServerAuth]);
+
+    let res = gen.generate();
+    assert!(res.is_ok());
+    // FIXME: check data in result to be correct, needs implementation
+    // of X509 getters
 }

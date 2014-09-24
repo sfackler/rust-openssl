@@ -1,14 +1,19 @@
-use libc::{c_char, c_int, c_uint};
+use libc::{c_char, c_int, c_uint, c_void};
 use libc;
 use std::mem;
 use std::ptr;
+use bio::{mod, MemBio};
 use crypto::hash::{HashType, MD5, SHA1, SHA224, SHA256, SHA384, SHA512, RIPEMD160};
+use crypto::symm::{EVP_CIPHER};
+use ssl::error::{SslError, StreamError};
 
 #[allow(non_camel_case_types)]
 pub type EVP_PKEY = *mut libc::c_void;
 
 #[allow(non_camel_case_types)]
 pub type RSA = *mut libc::c_void;
+
+pub type PrivateKeyWriteCallback = extern "C" fn(buf: *mut c_char, size: c_int, rwflag: c_int, user_data: *mut c_void) -> c_int;
 
 #[link(name = "crypto")]
 extern {
@@ -34,6 +39,11 @@ extern {
                 k: *mut RSA) -> c_int;
     fn RSA_verify(t: c_int, m: *const u8, mlen: c_uint, sig: *const u8, siglen: c_uint,
                   k: *mut RSA) -> c_int;
+
+    fn PEM_write_bio_PrivateKey(bio: *mut bio::ffi::BIO, pkey: *mut EVP_PKEY, cipher: *const EVP_CIPHER,
+                                kstr: *mut c_char, klen: c_int,
+                                callback: *mut c_void,
+                                user_data: *mut c_void) -> c_int;
 }
 
 enum Parts {
@@ -161,6 +171,19 @@ impl PKey {
     pub fn load_priv(&mut self, s: &[u8]) {
         self._fromstr(s, d2i_RSAPrivateKey);
         self.parts = Both;
+    }
+
+    /// Stores private key as a PEM
+    // FIXME: also add password and encryption
+    pub fn write_pem(&self, writer: &mut Writer/*, password: Option<String>*/) -> Result<(), SslError> {
+        let mut mem_bio = try!(MemBio::new());
+        unsafe {
+            try_ssl!(PEM_write_bio_PrivateKey(mem_bio.get_handle(), self.evp, ptr::null(),
+                                              ptr::null_mut(), -1, ptr::null_mut(), ptr::null_mut()));
+
+        }
+        let buf = try!(mem_bio.read_to_end().map_err(StreamError));
+        writer.write(buf.as_slice()).map_err(StreamError)
     }
 
     /**
@@ -325,6 +348,10 @@ impl PKey {
 
             rv == 1 as c_int
         }
+    }
+
+    pub unsafe fn get_handle(&self) -> *mut EVP_PKEY {
+        return self.evp
     }
 }
 
