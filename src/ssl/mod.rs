@@ -91,12 +91,22 @@ impl SslMethod {
 }
 
 /// Determines the type of certificate verification used
-#[repr(i32)]
-pub enum SslVerifyMode {
-    /// Verify that the server's certificate is trusted
-    SslVerifyPeer = ffi::SSL_VERIFY_PEER,
-    /// Do not verify the server's certificate
-    SslVerifyNone = ffi::SSL_VERIFY_NONE
+bitflags! {
+    flags SslVerifyMode: c_uint {
+        #[doc="Server mode: request a certificate from the client and verify.
+        Client mode: verify that the server's certificate is trusted"]
+        static SslVerifyPeer = ffi::SSL_VERIFY_PEER,
+        #[doc="Server mode: Server will not requst a client certificate.
+        Client mode: Do not verify the server's certificate."]
+        static SslVerifyNone = ffi::SSL_VERIFY_NONE,
+        #[doc="Server mode: require a client certificate. Must be used together with SslVerifyPeer.
+        Client mode: ignored."]
+        static SslVerifyFailIfNoPeerCert = ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+        #[doc="Server mode: only request a client certificate durring initial handshake, note
+        durring renegotiation.
+        Client mode: ignored."]
+        static SslVerifyClientOnce = ffi::SSL_VERIFY_CLIENT_ONCE,
+    }
 }
 
 extern fn locking_function(mode: c_int, n: c_int, _file: *const c_char,
@@ -181,7 +191,7 @@ impl SslContext {
         unsafe {
             ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX,
                                      mem::transmute(verify));
-            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(raw_verify));
+            ffi::SSL_CTX_set_verify(self.ctx, mode.bits as c_int, Some(raw_verify));
         }
     }
 
