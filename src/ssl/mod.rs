@@ -4,6 +4,7 @@ use std::mem;
 use std::ptr;
 use std::rt::mutex::NativeMutex;
 use std::string;
+use std::c_str::CString;
 use sync::one::{Once, ONCE_INIT};
 
 use crypto::hash::{HashType, evpmd};
@@ -42,6 +43,8 @@ fn init() {
             MUTEXES = mem::transmute(mutexes);
 
             ffi::CRYPTO_set_locking_callback(locking_function);
+
+            ffi::SSL_load_error_strings();
         });
     }
 }
@@ -58,6 +61,16 @@ pub enum SslMethod {
     Tlsv1,
     /// Support the SSLv2, SSLv3 and TLSv1 protocols
     Sslv23,
+
+    #[cfg(sslv2)]
+    /// Only support the SSLv2 protocol
+    Sslv2Server,
+    /// Only support the SSLv3 protocol
+    Sslv3Server,
+    /// Only support the TLSv1 protocol
+    Tlsv1Server,
+    /// Support the SSLv2, SSLv3 and TLSv1 protocols
+    Sslv23Server,
 }
 
 impl SslMethod {
@@ -67,18 +80,34 @@ impl SslMethod {
             Sslv2 => ffi::SSLv2_method(),
             Sslv3 => ffi::SSLv3_method(),
             Tlsv1 => ffi::TLSv1_method(),
-            Sslv23 => ffi::SSLv23_method()
+            Sslv23 => ffi::SSLv23_method(),
+
+            #[cfg(sslv2)]
+            Sslv2Server => ffi::SSLv2_server_method(),
+            Sslv3Server => ffi::SSLv3_server_method(),
+            Tlsv1Server => ffi::TLSv1_server_method(),
+            Sslv23Server => ffi::SSLv23_server_method(),
         }
     }
 }
 
 /// Determines the type of certificate verification used
-#[repr(i32)]
-pub enum SslVerifyMode {
-    /// Verify that the server's certificate is trusted
-    SslVerifyPeer = ffi::SSL_VERIFY_PEER,
-    /// Do not verify the server's certificate
-    SslVerifyNone = ffi::SSL_VERIFY_NONE
+bitflags! {
+    flags SslVerifyMode: c_uint {
+        // Server mode: request a certificate from the client and verify
+        // Verify that the server's certificate is trusted
+        static SslVerifyPeer = ffi::SSL_VERIFY_PEER,
+        // Server mode: Server will not requst a client certificate
+        // Client mode: Do not verify the server's certificate
+        static SslVerifyNone = ffi::SSL_VERIFY_NONE,
+        // Server mode: require a client certificate. Must be used together with SslVerifyPeer
+        // Client mode: ignored
+        static SslVerifyFailIfNoPeerCert = ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+        // Server mode: only request a client certificate durring initial handshake, note durring
+        // renegotiation
+        // Client mode: ignored
+        static SslVerifyClientOnce = ffi::SSL_VERIFY_CLIENT_ONCE,
+    }
 }
 
 extern fn locking_function(mode: c_int, n: c_int, _file: *const c_char,
@@ -163,7 +192,7 @@ impl SslContext {
         unsafe {
             ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX,
                                      mem::transmute(verify));
-            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(raw_verify));
+            ffi::SSL_CTX_set_verify(self.ctx, mode.bits as c_int, Some(raw_verify));
         }
     }
 
@@ -193,6 +222,14 @@ impl SslContext {
         wrap_ssl_result(file.with_c_str(|file| {
             unsafe {
                 ffi::SSL_CTX_use_PrivateKey_file(self.ctx, file, file_type as c_int)
+            }
+        }))
+    }
+
+    pub fn set_cipher_list(&mut self, cipher_list: &str) -> Option<SslError> {
+        wrap_ssl_result(cipher_list.with_c_str(|cipher_list| {
+            unsafe {
+                ffi::SSL_CTX_set_cipher_list(self.ctx, cipher_list)
             }
         }))
     }
@@ -260,6 +297,68 @@ impl<'ctx> X509<'ctx> {
 pub struct X509Name<'x> {
     x509: &'x X509<'x>,
     name: *mut ffi::X509_NAME
+}
+
+#[allow(dead_code)]
+pub struct X509NameEntry<'x> {
+    x509_name: &'x X509Name<'x>,
+    ne: *mut ffi::X509_NAME_ENTRY
+}
+
+#[allow(dead_code)]
+pub struct Asn1String<'x> {
+    x509_name_entry: &'x X509NameEntry<'x>,
+    asn1_str: *mut ffi::ASN1_STRING
+}
+
+pub struct SslCString {
+    c_str : CString
+}
+
+impl Drop for SslCString {
+    fn drop(&mut self) {
+        unsafe { ffi::OPENSSL_free(self.c_str.as_mut_ptr() as *mut c_void); }
+    }
+}
+
+impl SslCString {
+    pub unsafe fn new(buf: *const i8) -> SslCString {
+        SslCString {
+            c_str : CString::new(buf, false)
+        }
+    }
+}
+
+impl <'x> X509Name<'x> {
+    pub fn text_by_nid(&self, nid: c_int) -> Option<SslCString> {
+        unsafe {
+            let loc = ffi::X509_NAME_get_index_by_NID(self.name, nid, -1);
+            if loc == -1 {
+                return None;
+            }
+
+            let ne = ffi::X509_NAME_get_entry(self.name, loc);
+            if ne.is_null() {
+                return None;
+            }
+
+            let asn1_str = ffi::X509_NAME_ENTRY_get_data(ne);
+            if asn1_str.is_null() {
+                return None;
+            }
+
+            let mut str_from_asn1 : *mut c_char = ptr::null_mut();
+            let utf8_succ = ffi::ASN1_STRING_to_UTF8(&mut str_from_asn1, asn1_str);
+
+            if utf8_succ < 0 {
+                return None
+            }
+
+            assert!(!str_from_asn1.is_null());
+
+            Some(SslCString::new(str_from_asn1 as *const i8))
+        }
+    }
 }
 
 macro_rules! make_validation_error(
@@ -380,7 +479,7 @@ impl Ssl {
     }
 
     fn wrap_bio<'a>(&'a self, bio: *mut ffi::BIO) -> MemBioRef<'a> {
-        assert!(bio != ptr::mut_null());
+        assert!(bio != ptr::null_mut());
         MemBioRef {
             ssl: self,
             bio: MemBio {
@@ -392,6 +491,10 @@ impl Ssl {
 
     fn connect(&self) -> c_int {
         unsafe { ffi::SSL_connect(self.ssl) }
+    }
+
+    fn accept(&self) -> c_int {
+        unsafe { ffi::SSL_accept(self.ssl) }
     }
 
     fn read(&self, buf: &mut [u8]) -> c_int {
@@ -512,15 +615,26 @@ pub struct SslStream<S> {
 }
 
 impl<S: Stream> SslStream<S> {
-    /// Attempts to create a new SSL stream from a given `Ssl` instance.
-    pub fn new_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        let mut ssl = SslStream {
+    fn new_base(ssl:Ssl, stream: S) -> SslStream<S> {
+        SslStream {
             stream: stream,
             ssl: ssl,
             // Maximum TLS record size is 16k
             buf: Vec::from_elem(16 * 1024, 0u8)
-        };
+        }
+    }
 
+    pub fn new_server_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
+        let mut ssl = SslStream::new_base(ssl, stream);
+        match ssl.in_retry_wrapper(|ssl| { ssl.accept() }) {
+            Ok(_) => Ok(ssl),
+            Err(err) => Err(err)
+        }
+    }
+
+    /// Attempts to create a new SSL stream from a given `Ssl` instance.
+    pub fn new_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
+        let mut ssl = SslStream::new_base(ssl, stream);
         match ssl.in_retry_wrapper(|ssl| { ssl.connect() }) {
             Ok(_) => Ok(ssl),
             Err(err) => Err(err)
@@ -535,6 +649,16 @@ impl<S: Stream> SslStream<S> {
         };
 
         SslStream::new_from(ssl, stream)
+    }
+
+    /// Creates a new SSL server stream
+    pub fn new_server(ctx: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
+        let ssl = match Ssl::new(ctx) {
+            Ok(ssl) => ssl,
+            Err(err) => return Err(err)
+        };
+
+        SslStream::new_server_from(ssl, stream)
     }
 
     fn in_retry_wrapper(&mut self, blk: |&Ssl| -> c_int)
@@ -622,3 +746,4 @@ impl<S: Stream> Writer for SslStream<S> {
         self.stream.flush()
     }
 }
+

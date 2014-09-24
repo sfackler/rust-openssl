@@ -12,6 +12,8 @@ pub type BIO_METHOD = c_void;
 pub type X509_STORE_CTX = c_void;
 pub type X509 = c_void;
 pub type X509_NAME = c_void;
+pub type X509_NAME_ENTRY = c_void;
+pub type ASN1_STRING = c_void;
 pub type CRYPTO_EX_DATA = c_void;
 
 pub type CRYPTO_EX_new = extern "C" fn(parent: *mut c_void, ptr: *mut c_void,
@@ -37,8 +39,10 @@ pub static SSL_ERROR_ZERO_RETURN: c_int = 6;
 pub static SSL_ERROR_WANT_CONNECT: c_int = 7;
 pub static SSL_ERROR_WANT_ACCEPT: c_int = 8;
 
-pub static SSL_VERIFY_NONE: c_int = 0;
-pub static SSL_VERIFY_PEER: c_int = 1;
+pub static SSL_VERIFY_NONE: c_uint = 0;
+pub static SSL_VERIFY_PEER: c_uint = 1;
+pub static SSL_VERIFY_FAIL_IF_NO_PEER_CERT: c_uint = 2;
+pub static SSL_VERIFY_CLIENT_ONCE: c_uint = 4;
 
 pub static SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
 
@@ -115,12 +119,19 @@ extern "C" {
     pub fn ERR_get_error() -> c_ulong;
 
     pub fn SSL_library_init() -> c_int;
+    pub fn SSL_load_error_strings();
 
     #[cfg(sslv2)]
     pub fn SSLv2_method() -> *const SSL_METHOD;
     pub fn SSLv3_method() -> *const SSL_METHOD;
     pub fn TLSv1_method() -> *const SSL_METHOD;
     pub fn SSLv23_method() -> *const SSL_METHOD;
+
+    #[cfg(sslv2)]
+    pub fn SSLv2_server_method() -> *const SSL_METHOD;
+    pub fn SSLv3_server_method() -> *const SSL_METHOD;
+    pub fn TLSv1_server_method() -> *const SSL_METHOD;
+    pub fn SSLv23_server_method() -> *const SSL_METHOD;
 
     pub fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
     pub fn SSL_CTX_free(ctx: *mut SSL_CTX);
@@ -140,6 +151,8 @@ extern "C" {
     pub fn SSL_CTX_use_certificate_file(ctx: *mut SSL_CTX, cert_file: *const c_char, file_type: c_int) -> c_int;
     pub fn SSL_CTX_use_PrivateKey_file(ctx: *mut SSL_CTX, key_file: *const c_char, file_type: c_int) -> c_int;
 
+    pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;
+
     pub fn X509_STORE_CTX_get_ex_data(ctx: *mut X509_STORE_CTX, idx: c_int)
                                       -> *mut c_void;
     pub fn X509_STORE_CTX_get_current_cert(ct: *mut X509_STORE_CTX) -> *mut X509;
@@ -148,12 +161,28 @@ extern "C" {
     pub fn X509_get_subject_name(x: *mut X509) -> *mut X509_NAME;
     pub fn X509_digest(x: *mut X509, digest: *const EVP_MD, buf: *mut c_char, len: *mut c_uint) -> c_int;
 
+    pub fn OBJ_txt2nid(str: *const c_char) -> c_int;
+
+    pub fn X509_NAME_get_index_by_NID(n: *mut X509_NAME, nid: c_int, last_pos: c_int) ->c_int;
+    pub fn X509_NAME_get_entry(n: *mut X509_NAME, loc: c_int) -> *mut X509_NAME_ENTRY;
+
+    pub fn X509_NAME_ENTRY_get_data(ne: *mut X509_NAME_ENTRY) -> *mut ASN1_STRING;
+
+    pub fn ASN1_STRING_to_UTF8(out: *mut *mut c_char, s: *mut ASN1_STRING) -> c_int;
+
+    pub fn OPENSSL_free(thing: *mut c_void);
+
+    pub fn ERR_lib_error_string(e: c_ulong) -> *const c_char;
+    pub fn ERR_func_error_string(e: c_ulong) -> *const c_char;
+    pub fn ERR_reason_error_string(e: c_ulong) -> *const c_char;
+
     pub fn SSL_new(ctx: *mut SSL_CTX) -> *mut SSL;
     pub fn SSL_free(ssl: *mut SSL);
     pub fn SSL_set_bio(ssl: *mut SSL, rbio: *mut BIO, wbio: *mut BIO);
     pub fn SSL_get_rbio(ssl: *mut SSL) -> *mut BIO;
     pub fn SSL_get_wbio(ssl: *mut SSL) -> *mut BIO;
     pub fn SSL_connect(ssl: *mut SSL) -> c_int;
+    pub fn SSL_accept(ssl: *mut SSL) -> c_int;
     pub fn SSL_ctrl(ssl: *mut SSL, cmd: c_int, larg: c_long,
                     parg: *mut c_void) -> c_long;
     pub fn SSL_get_error(ssl: *mut SSL, ret: c_int) -> c_int;
