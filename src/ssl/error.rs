@@ -1,7 +1,7 @@
 use libc::c_ulong;
 use std::io::IoError;
 
-use ssl::ffi;
+use ffi;
 
 /// An SSL error
 #[deriving(Show, Clone, PartialEq, Eq)]

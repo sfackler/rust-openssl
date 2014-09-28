@@ -3,6 +3,7 @@ use std::io::{IoResult, IoError, OtherIoError};
 use std::io::{Reader, Writer};
 use std::ptr;
 
+use ffi;
 use ssl::error::{SslError};
 
 pub struct MemBio {
@@ -82,22 +83,5 @@ impl Writer for MemBio {
         } else {
             Ok(())
         }
-    }
-}
-
-pub mod ffi {
-    #![allow(non_camel_case_types)]
-
-    use libc::{c_int, c_void};
-
-    pub type BIO = c_void;
-    pub type BIO_METHOD = c_void;
-
-    extern "C" {
-        pub fn BIO_s_mem() -> *const BIO_METHOD;
-        pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
-        pub fn BIO_free_all(a: *mut BIO);
-        pub fn BIO_read(b: *mut BIO, buf: *mut c_void, len: c_int) -> c_int;
-        pub fn BIO_write(b: *mut BIO, buf: *const c_void, len: c_int) -> c_int;
     }
 }

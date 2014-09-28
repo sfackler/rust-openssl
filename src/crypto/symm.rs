@@ -1,36 +1,6 @@
-use libc::{c_int, c_uint};
-use libc;
+use libc::{c_int};
 
-#[allow(non_camel_case_types)]
-pub type EVP_CIPHER_CTX = *mut libc::c_void;
-
-#[allow(non_camel_case_types)]
-pub type EVP_CIPHER = *mut libc::c_void;
-
-#[link(name = "crypto")]
-extern {
-    fn EVP_CIPHER_CTX_new() -> EVP_CIPHER_CTX;
-    fn EVP_CIPHER_CTX_set_padding(ctx: EVP_CIPHER_CTX, padding: c_int);
-    fn EVP_CIPHER_CTX_free(ctx: EVP_CIPHER_CTX);
-
-    fn EVP_aes_128_ecb() -> EVP_CIPHER;
-    fn EVP_aes_128_cbc() -> EVP_CIPHER;
-    // fn EVP_aes_128_ctr() -> EVP_CIPHER;
-    // fn EVP_aes_128_gcm() -> EVP_CIPHER;
-
-    fn EVP_aes_256_ecb() -> EVP_CIPHER;
-    fn EVP_aes_256_cbc() -> EVP_CIPHER;
-    // fn EVP_aes_256_ctr() -> EVP_CIPHER;
-    // fn EVP_aes_256_gcm() -> EVP_CIPHER;
-
-    fn EVP_rc4() -> EVP_CIPHER;
-
-    fn EVP_CipherInit(ctx: EVP_CIPHER_CTX, evp: EVP_CIPHER,
-                      key: *const u8, iv: *const u8, mode: c_int);
-    fn EVP_CipherUpdate(ctx: EVP_CIPHER_CTX, outbuf: *mut u8,
-                        outlen: &mut c_uint, inbuf: *const u8, inlen: c_int);
-    fn EVP_CipherFinal(ctx: EVP_CIPHER_CTX, res: *mut u8, len: &mut c_int);
-}
+use ffi;
 
 pub enum Mode {
     Encrypt,
@@ -52,35 +22,35 @@ pub enum Type {
     RC4_128,
 }
 
-fn evpc(t: Type) -> (EVP_CIPHER, uint, uint) {
+fn evpc(t: Type) -> (ffi::EVP_CIPHER, uint, uint) {
     unsafe {
         match t {
-            AES_128_ECB => (EVP_aes_128_ecb(), 16u, 16u),
-            AES_128_CBC => (EVP_aes_128_cbc(), 16u, 16u),
+            AES_128_ECB => (ffi::EVP_aes_128_ecb(), 16u, 16u),
+            AES_128_CBC => (ffi::EVP_aes_128_cbc(), 16u, 16u),
             // AES_128_CTR => (EVP_aes_128_ctr(), 16u, 0u),
             //AES_128_GCM => (EVP_aes_128_gcm(), 16u, 16u),
 
-            AES_256_ECB => (EVP_aes_256_ecb(), 32u, 16u),
-            AES_256_CBC => (EVP_aes_256_cbc(), 32u, 16u),
+            AES_256_ECB => (ffi::EVP_aes_256_ecb(), 32u, 16u),
+            AES_256_CBC => (ffi::EVP_aes_256_cbc(), 32u, 16u),
             // AES_256_CTR => (EVP_aes_256_ctr(), 32u, 0u),
             //AES_256_GCM => (EVP_aes_256_gcm(), 32u, 16u),
 
-            RC4_128 => (EVP_rc4(), 16u, 0u),
+            RC4_128 => (ffi::EVP_rc4(), 16u, 0u),
         }
     }
 }
 
 /// Represents a symmetric cipher context.
 pub struct Crypter {
-    evp: EVP_CIPHER,
-    ctx: EVP_CIPHER_CTX,
+    evp: ffi::EVP_CIPHER,
+    ctx: ffi::EVP_CIPHER_CTX,
     keylen: uint,
     blocksize: uint
 }
 
 impl Crypter {
     pub fn new(t: Type) -> Crypter {
-        let ctx = unsafe { EVP_CIPHER_CTX_new() };
+        let ctx = unsafe { ffi::EVP_CIPHER_CTX_new() };
         let (evp, keylen, blocksz) = evpc(t);
         Crypter { evp: evp, ctx: ctx, keylen: keylen, blocksize: blocksz }
     }
@@ -93,7 +63,7 @@ impl Crypter {
         if self.blocksize > 0 {
             unsafe {
                 let v = if padding { 1 as c_int } else { 0 };
-                EVP_CIPHER_CTX_set_padding(self.ctx, v);
+                ffi::EVP_CIPHER_CTX_set_padding(self.ctx, v);
             }
         }
     }
@@ -109,7 +79,7 @@ impl Crypter {
             };
             assert_eq!(key.len(), self.keylen);
 
-            EVP_CipherInit(
+            ffi::EVP_CipherInit(
                 self.ctx,
                 self.evp,
                 key.as_ptr(),
@@ -128,7 +98,7 @@ impl Crypter {
             let mut res = Vec::from_elem(data.len() + self.blocksize, 0u8);
             let mut reslen = (data.len() + self.blocksize) as u32;
 
-            EVP_CipherUpdate(
+            ffi::EVP_CipherUpdate(
                 self.ctx,
                 res.as_mut_ptr(),
                 &mut reslen,
@@ -149,7 +119,7 @@ impl Crypter {
             let mut res = Vec::from_elem(self.blocksize, 0u8);
             let mut reslen = self.blocksize as c_int;
 
-            EVP_CipherFinal(self.ctx,
+            ffi::EVP_CipherFinal(self.ctx,
                                        res.as_mut_ptr(),
                                        &mut reslen);
 
@@ -162,7 +132,7 @@ impl Crypter {
 impl Drop for Crypter {
     fn drop(&mut self) {
         unsafe {
-            EVP_CIPHER_CTX_free(self.ctx);
+            ffi::EVP_CIPHER_CTX_free(self.ctx);
         }
     }
 }
