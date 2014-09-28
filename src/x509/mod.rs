@@ -184,8 +184,8 @@ impl X509Generator {
     fn add_extension(x509: *mut ffi::X509, extension: c_int, value: &str) -> Result<(), SslError> {
         unsafe {
             // FIXME: RAII
-            let ctx: ffi::X509V3_CTX = mem::zeroed();
-            ffi::X509V3_set_ctx(mem::transmute(&ctx), x509, x509,
+            let mut ctx: ffi::X509V3_CTX = mem::zeroed();
+            ffi::X509V3_set_ctx(&mut ctx, x509, x509,
                                 ptr::null_mut(), ptr::null_mut(), 0);
             let ext = value.with_c_str(|value|
                                        ffi::X509V3_EXT_conf_nid(ptr::null_mut(), mem::transmute(&ctx), extension, mem::transmute(value)));

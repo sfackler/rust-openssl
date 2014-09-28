@@ -43,10 +43,9 @@ impl MemBio {
     /// Consumes current bio and returns wrapped value
     /// Note that data ownership is lost and
     /// should be handled manually
-    pub unsafe fn unwrap(self) -> *mut ffi::BIO {
-        let mut t = self;
-        t.owned = false;
-        t.bio
+    pub unsafe fn unwrap(mut self) -> *mut ffi::BIO {
+        self.owned = false;
+        self.bio
     }
 
     /// Temporarily gets wrapped value
@@ -57,7 +56,6 @@ impl MemBio {
 
 impl Reader for MemBio {
     fn read(&mut self, buf: &mut [u8]) -> IoResult<uint> {
-        // FIXME: merge with read
         let ret = unsafe {
             ffi::BIO_read(self.bio, buf.as_ptr() as *mut c_void,
                           buf.len() as c_int)
@@ -74,7 +72,6 @@ impl Reader for MemBio {
 
 impl Writer for MemBio {
     fn write(&mut self, buf: &[u8]) -> IoResult<()> {
-        // FIXME: merge with write
         let ret = unsafe {
             ffi::BIO_write(self.bio, buf.as_ptr() as *const c_void,
                            buf.len() as c_int)
