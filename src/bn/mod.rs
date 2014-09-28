@@ -83,9 +83,7 @@ extern {
 
     /* Conversion from/to string representation */
     fn BN_bn2dec(a: *mut BIGNUM) -> *const c_char;
-/*
-    fn OpenSSL_free(buf: *const c_char);
-*/
+    fn CRYPTO_free(buf: *const c_char);
 }
 
 pub struct BigNum(*mut BIGNUM);
@@ -441,9 +439,7 @@ impl BigNum {
             assert!(!buf.is_null());
             let c_str = CString::new(buf, false);
             let str = c_str.as_str().unwrap().to_string();
-/* XXX
-            OpenSSL_free(buf);
-*/
+            CRYPTO_free(buf);
             str
         }
     }
