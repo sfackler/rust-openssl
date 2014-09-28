@@ -28,7 +28,6 @@ extern {
     fn BN_CTX_free(ctx: *mut BN_CTX);
 
     fn BN_set_word(bn: *mut BIGNUM, n: c_ulong) -> c_int;
-    fn BN_sub_word(bn: *mut BIGNUM, n: c_ulong) -> c_int;
     fn BN_set_negative(bn: *mut BIGNUM, n: c_int);
     fn BN_num_bits(bn: *mut BIGNUM) -> c_int;
 
