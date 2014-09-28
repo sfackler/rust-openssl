@@ -1,6 +1,8 @@
 
-use libc::{c_void, c_int, c_ulong};
-use std::ptr;
+use libc::{c_void, c_int, c_ulong, c_char};
+use std::{fmt, ptr};
+use std::c_str::CString;
+use std::num::{One, Zero};
 
 use ssl::error::SslError;
 
@@ -26,6 +28,7 @@ extern {
     fn BN_CTX_free(ctx: *mut BN_CTX);
 
     fn BN_set_word(bn: *mut BIGNUM, n: c_ulong) -> c_int;
+    fn BN_sub_word(bn: *mut BIGNUM, n: c_ulong) -> c_int;
     fn BN_set_negative(bn: *mut BIGNUM, n: c_int);
     fn BN_num_bits(bn: *mut BIGNUM) -> c_int;
 
@@ -42,7 +45,7 @@ extern {
     fn BN_mod_sqr(r: *mut BIGNUM, a: *mut BIGNUM, m: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     fn BN_exp(r: *mut BIGNUM, a: *mut BIGNUM, p: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     fn BN_mod_exp(r: *mut BIGNUM, a: *mut BIGNUM, p: *mut BIGNUM, m: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
-    fn BN_mod_inverse(r: *mut BIGNUM, a: *mut BIGNUM, n: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    fn BN_mod_inverse(r: *mut BIGNUM, a: *mut BIGNUM, n: *mut BIGNUM, ctx: *mut BN_CTX) -> *const BIGNUM;
     fn BN_gcd(r: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
 
     /* Bit operations on BIGNUMs */
@@ -58,6 +61,10 @@ extern {
     /* Comparisons on BIGNUMs */
     fn BN_cmp(a: *mut BIGNUM, b: *mut BIGNUM) -> c_int;
     fn BN_ucmp(a: *mut BIGNUM, b: *mut BIGNUM) -> c_int;
+    fn BN_is_zero(a: *mut BIGNUM) -> c_int;
+    fn BN_is_one(a: *mut BIGNUM) -> c_int;
+    fn BN_is_word(a: *mut BIGNUM) -> c_int;
+    fn BN_is_odd(a: *mut BIGNUM) -> c_int;
 
     /* Prime handling */
     fn BN_generate_prime_ex(r: *mut BIGNUM, bits: c_int, safe: c_int, add: *mut BIGNUM, rem: *mut BIGNUM, cb: *const c_void) -> c_int;
@@ -73,6 +80,12 @@ extern {
     /* Conversion from/to binary representation */
     fn BN_bn2bin(a: *mut BIGNUM, to: *mut u8) -> c_int;
     fn BN_bin2bn(s: *const u8, size: c_int, ret: *mut BIGNUM) -> *mut BIGNUM;
+
+    /* Conversion from/to string representation */
+    fn BN_bn2dec(a: *mut BIGNUM) -> *const c_char;
+/*
+    fn OpenSSL_free(buf: *const c_char);
+*/
 }
 
 pub struct BigNum(*mut BIGNUM);
@@ -221,7 +234,7 @@ impl BigNum {
 
     pub fn checked_mod_inv(&self, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { BN_mod_inverse(r.raw(), self.raw(), n.raw(), ctx) == 1 })
+            with_bn_in_ctx!(r, ctx, { !BN_mod_inverse(r.raw(), self.raw(), n.raw(), ctx).is_null() })
         }
     }
 
@@ -420,6 +433,42 @@ impl BigNum {
             v.set_len(size);
         }
         v
+    }
+
+    pub fn to_dec_str(&self) -> String {
+        unsafe {
+            let buf = BN_bn2dec(self.raw());
+            assert!(!buf.is_null());
+            let c_str = CString::new(buf, false);
+            let str = c_str.as_str().unwrap().to_string();
+/* XXX
+            OpenSSL_free(buf);
+*/
+            str
+        }
+    }
+}
+
+impl fmt::Show for BigNum {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_dec_str())
+    }
+}
+
+impl One for BigNum {
+    fn one() -> BigNum {
+        BigNum::new_from(1).unwrap()
+    }
+}
+
+impl Zero for BigNum {
+    fn zero() -> BigNum {
+        BigNum::new_from(0).unwrap()
+    }
+    fn is_zero(&self) -> bool {
+        unsafe {
+            BN_is_zero(self.raw()) == 1
+        }
     }
 }
 
