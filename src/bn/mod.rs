@@ -62,9 +62,6 @@ extern {
     fn BN_cmp(a: *mut BIGNUM, b: *mut BIGNUM) -> c_int;
     fn BN_ucmp(a: *mut BIGNUM, b: *mut BIGNUM) -> c_int;
     fn BN_is_zero(a: *mut BIGNUM) -> c_int;
-    fn BN_is_one(a: *mut BIGNUM) -> c_int;
-    fn BN_is_word(a: *mut BIGNUM) -> c_int;
-    fn BN_is_odd(a: *mut BIGNUM) -> c_int;
 
     /* Prime handling */
     fn BN_generate_prime_ex(r: *mut BIGNUM, bits: c_int, safe: c_int, add: *mut BIGNUM, rem: *mut BIGNUM, cb: *const c_void) -> c_int;
