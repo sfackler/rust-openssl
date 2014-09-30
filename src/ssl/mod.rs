@@ -242,7 +242,7 @@ impl Ssl {
     }
 
     fn wrap_bio<'a>(&'a self, bio: *mut ffi::BIO) -> MemBioRef<'a> {
-        assert!(bio != ptr::mut_null());
+        assert!(bio != ptr::null_mut());
         MemBioRef {
             ssl: self,
             bio: MemBio::borrowed(bio)

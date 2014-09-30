@@ -165,8 +165,8 @@ impl BigNum {
     pub fn checked_generate_prime(bits: i32, safe: bool, add: Option<&BigNum>, rem: Option<&BigNum>) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
-                let add_arg = add.map(|a| a.raw()).unwrap_or(ptr::mut_null());
-                let rem_arg = rem.map(|r| r.raw()).unwrap_or(ptr::mut_null());
+                let add_arg = add.map(|a| a.raw()).unwrap_or(ptr::null_mut());
+                let rem_arg = rem.map(|r| r.raw()).unwrap_or(ptr::null_mut());
 
                 ffi::BN_generate_prime_ex(r.raw(), bits as c_int, safe as c_int, add_arg, rem_arg, ptr::null()) == 1
             })
@@ -281,13 +281,13 @@ impl BigNum {
 
     pub fn checked_div(&self, a: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_div(r.raw(), ptr::mut_null(), self.raw(), a.raw(), ctx) == 1 })
+            with_bn_in_ctx!(r, ctx, { ffi::BN_div(r.raw(), ptr::null_mut(), self.raw(), a.raw(), ctx) == 1 })
         }
     }
 
     pub fn checked_mod(&self, a: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_div(ptr::mut_null(), r.raw(), self.raw(), a.raw(), ctx) == 1 })
+            with_bn_in_ctx!(r, ctx, { ffi::BN_div(ptr::null_mut(), r.raw(), self.raw(), a.raw(), ctx) == 1 })
         }
     }
 
