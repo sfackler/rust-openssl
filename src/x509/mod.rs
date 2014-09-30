@@ -2,11 +2,11 @@ use libc::{c_int, c_long, c_uint};
 use std::mem;
 use std::ptr;
 
-use asn1;
 use bio::{MemBio};
 use crypto::hash::{HashType, evpmd, SHA1};
 use crypto::pkey::{PKey};
 use crypto::rand::rand_bytes;
+use ffi;
 use ssl::error::{SslError, StreamError};
 
 
@@ -200,7 +200,7 @@ impl X509Generator {
         let value_len = value.len() as c_int;
         lift_ssl!(key.with_c_str(|key| {
             value.with_c_str(|value| unsafe {
-                    ffi::X509_NAME_add_entry_by_txt(name, key, asn1::ffi::MBSTRING_UTF8,
+                    ffi::X509_NAME_add_entry_by_txt(name, key, ffi::MBSTRING_UTF8,
                                                     value, value_len, -1, 0)
             })
         }))
@@ -227,7 +227,7 @@ impl X509Generator {
             let x509 = ffi::X509_new();
             try_ssl_null!(x509);
             try_ssl!(ffi::X509_set_version(x509, 2));
-            try_ssl!(asn1::ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509), X509Generator::random_serial()));
+            try_ssl!(ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509), X509Generator::random_serial()));
 
             let not_before = ffi::X509_gmtime_adj(ptr::null_mut(), 0);
             try_ssl_null!(not_before);
@@ -317,129 +317,6 @@ pub struct X509Name<'x> {
     name: *mut ffi::X509_NAME
 }
 
-
-pub mod ffi {
-    #![allow(non_camel_case_types)]
-    use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint};
-
-    use asn1::ffi::{ASN1_INTEGER, ASN1_TIME};
-    use bio::ffi::{BIO};
-    use crypto::hash::{EVP_MD};
-    use crypto::pkey::{EVP_PKEY};
-
-    pub type X509_STORE_CTX = c_void;
-    pub type X509 = c_void;
-    pub type X509_NAME = c_void;
-    pub type X509_CRL = c_void;
-    pub type X509_REQ = c_void;
-    pub type X509_EXTENSION = c_void;
-
-    #[repr(C)]
-    pub struct X509V3_CTX {
-        flags: c_int,
-        issuer_cert: *mut c_void,
-        subject_cert: *mut c_void,
-        subject_req: *mut c_void,
-        crl: *mut c_void,
-        db_meth: *mut c_void,
-        db: *mut c_void,
-        // I like the last comment line, it is copied from OpenSSL sources:
-        // Maybe more here
-    }
-
-    pub static X509_V_OK: c_int = 0;
-    pub static X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT: c_int = 2;
-    pub static X509_V_ERR_UNABLE_TO_GET_CRL: c_int = 3;
-    pub static X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE: c_int = 4;
-    pub static X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE: c_int = 5;
-    pub static X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY: c_int = 6;
-    pub static X509_V_ERR_CERT_SIGNATURE_FAILURE: c_int = 7;
-    pub static X509_V_ERR_CRL_SIGNATURE_FAILURE: c_int = 8;
-    pub static X509_V_ERR_CERT_NOT_YET_VALID: c_int = 9;
-    pub static X509_V_ERR_CERT_HAS_EXPIRED: c_int = 10;
-    pub static X509_V_ERR_CRL_NOT_YET_VALID: c_int = 11;
-    pub static X509_V_ERR_CRL_HAS_EXPIRED: c_int = 12;
-    pub static X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD: c_int = 13;
-    pub static X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD: c_int = 14;
-    pub static X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD: c_int = 15;
-    pub static X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD: c_int = 16;
-    pub static X509_V_ERR_OUT_OF_MEM: c_int = 17;
-    pub static X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT: c_int = 18;
-    pub static X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN: c_int = 19;
-    pub static X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY: c_int = 20;
-    pub static X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE: c_int = 21;
-    pub static X509_V_ERR_CERT_CHAIN_TOO_LONG: c_int = 22;
-    pub static X509_V_ERR_CERT_REVOKED: c_int = 23;
-    pub static X509_V_ERR_INVALID_CA: c_int = 24;
-    pub static X509_V_ERR_PATH_LENGTH_EXCEEDED: c_int = 25;
-    pub static X509_V_ERR_INVALID_PURPOSE: c_int = 26;
-    pub static X509_V_ERR_CERT_UNTRUSTED: c_int = 27;
-    pub static X509_V_ERR_CERT_REJECTED: c_int = 28;
-    pub static X509_V_ERR_SUBJECT_ISSUER_MISMATCH: c_int = 29;
-    pub static X509_V_ERR_AKID_SKID_MISMATCH: c_int = 30;
-    pub static X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH: c_int = 31;
-    pub static X509_V_ERR_KEYUSAGE_NO_CERTSIGN: c_int = 32;
-    pub static X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER: c_int = 33;
-    pub static X509_V_ERR_UNHANDLED_CRITICAL_EXTENSION: c_int = 34;
-    pub static X509_V_ERR_KEYUSAGE_NO_CRL_SIGN: c_int = 35;
-    pub static X509_V_ERR_UNHANDLED_CRITICAL_CRL_EXTENSION: c_int = 36;
-    pub static X509_V_ERR_INVALID_NON_CA: c_int = 37;
-    pub static X509_V_ERR_PROXY_PATH_LENGTH_EXCEEDED: c_int = 38;
-    pub static X509_V_ERR_KEYUSAGE_NO_DIGITAL_SIGNATURE: c_int = 39;
-    pub static X509_V_ERR_PROXY_CERTIFICATES_NOT_ALLOWED: c_int = 40;
-    pub static X509_V_ERR_INVALID_EXTENSION: c_int = 41;
-    pub static X509_V_ERR_INVALID_POLICY_EXTENSION: c_int = 42;
-    pub static X509_V_ERR_NO_EXPLICIT_POLICY: c_int = 43;
-    pub static X509_V_ERR_DIFFERENT_CRL_SCOPE: c_int = 44;
-    pub static X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE: c_int = 45;
-    pub static X509_V_ERR_UNNESTED_RESOURCE: c_int = 46;
-    pub static X509_V_ERR_PERMITTED_VIOLATION: c_int = 47;
-    pub static X509_V_ERR_EXCLUDED_VIOLATION: c_int = 48;
-    pub static X509_V_ERR_SUBTREE_MINMAX: c_int = 49;
-    pub static X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE: c_int = 51;
-    pub static X509_V_ERR_UNSUPPORTED_CONSTRAINT_SYNTAX: c_int = 52;
-    pub static X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
-    pub static X509_V_ERR_CRL_PATH_VALIDATION_ERROR: c_int = 54;
-    pub static X509_V_ERR_APPLICATION_VERIFICATION: c_int = 50;
-
-    pub static X509_FILETYPE_PEM: c_int = 1;
-    pub static X509_FILETYPE_ASN1: c_int = 2;
-    pub static X509_FILETYPE_DEFAULT: c_int = 3;
-
-    pub static NID_key_usage:     c_int = 83;
-    pub static NID_ext_key_usage: c_int = 126;
-
-
-
-    extern "C" {
-        pub fn X509_STORE_CTX_get_ex_data(ctx: *mut X509_STORE_CTX, idx: c_int) -> *mut c_void;
-        pub fn X509_STORE_CTX_get_current_cert(ct: *mut X509_STORE_CTX) -> *mut X509;
-        pub fn X509_STORE_CTX_get_error(ctx: *mut X509_STORE_CTX) -> c_int;
-
-        pub fn X509_add_ext(x: *mut X509, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
-        pub fn X509_digest(x: *mut X509, digest: *const EVP_MD, buf: *mut c_char, len: *mut c_uint) -> c_int;
-        pub fn X509_get_serialNumber(x: *mut X509) -> *mut ASN1_INTEGER;
-        pub fn X509_get_subject_name(x: *mut X509) -> *mut X509_NAME;
-        pub fn X509_gmtime_adj(time: *mut ASN1_TIME, adj: c_long) -> *mut ASN1_TIME;
-        pub fn X509_new() -> *mut X509;
-        pub fn X509_set_issuer_name(x: *mut X509, name: *mut X509_NAME) -> c_int;
-        pub fn X509_set_notAfter(x: *mut X509, tm: *const ASN1_TIME) -> c_int;
-        pub fn X509_set_notBefore(x: *mut X509, tm: *const ASN1_TIME) -> c_int;
-        pub fn X509_set_version(x: *mut X509, version: c_ulong) -> c_int;
-        pub fn X509_set_pubkey(x: *mut X509, pkey: *mut EVP_PKEY) -> c_int;
-        pub fn X509_sign(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
-
-        pub fn X509_NAME_add_entry_by_txt(x: *mut X509, field: *const c_char, ty: c_int, bytes: *const c_char, len: c_int, loc: c_int, set: c_int) -> c_int;
-
-        pub fn X509V3_EXT_conf_nid(conf: *mut c_void, ctx: *mut X509V3_CTX, ext_nid: c_int, value: *mut c_char) -> *mut X509_EXTENSION;
-        pub fn X509V3_set_ctx(ctx: *mut X509V3_CTX, issuer: *mut X509, subject: *mut X509, req: *mut X509_REQ, crl: *mut X509_CRL, flags: c_int);
-
-        pub fn X509_EXTENSION_free(ext: *mut X509_EXTENSION);
-
-        pub fn PEM_write_bio_X509(bio: *mut BIO, x509: *mut X509) -> c_int;
-    }
-}
-
 macro_rules! make_validation_error(
     ($ok_val:ident, $($name:ident = $val:ident,)+) => (
         pub enum X509ValidationError {
@@ -451,8 +328,8 @@ macro_rules! make_validation_error(
             #[doc(hidden)]
             pub fn from_raw(err: c_int) -> Option<X509ValidationError> {
                 match err {
-                    self::ffi::$ok_val => None,
-                    $(self::ffi::$val => Some($name),)+
+                    ffi::$ok_val => None,
+                    $(ffi::$val => Some($name),)+
                     err => Some(X509UnknownError(err))
                 }
             }

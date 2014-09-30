@@ -1,6 +1,7 @@
-use libc;
 use libc::c_uint;
 use std::ptr;
+
+use ffi;
 
 pub enum HashType {
     MD5,
@@ -12,71 +13,33 @@ pub enum HashType {
     RIPEMD160
 }
 
-#[allow(dead_code)]
-#[allow(non_camel_case_types)]
-#[repr(C)]
-pub struct EVP_MD_CTX {
-    digest: *mut EVP_MD,
-    engine: *mut libc::c_void,
-    flags: libc::c_ulong,
-    md_data: *mut libc::c_void,
-    pctx: *mut EVP_PKEY_CTX,
-    update: *mut libc::c_void
-}
-
-#[allow(non_camel_case_types)]
-#[repr(C)]
-pub struct EVP_MD;
-
-#[allow(non_camel_case_types)]
-#[repr(C)]
-pub struct EVP_PKEY_CTX;
-
-#[link(name = "crypto")]
-extern {
-    fn EVP_MD_CTX_create() -> *mut EVP_MD_CTX;
-    fn EVP_MD_CTX_destroy(ctx: *mut EVP_MD_CTX);
-
-    fn EVP_md5() -> *const EVP_MD;
-    fn EVP_sha1() -> *const EVP_MD;
-    fn EVP_sha224() -> *const EVP_MD;
-    fn EVP_sha256() -> *const EVP_MD;
-    fn EVP_sha384() -> *const EVP_MD;
-    fn EVP_sha512() -> *const EVP_MD;
-    fn EVP_ripemd160() -> *const EVP_MD;
-
-    fn EVP_DigestInit(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD);
-    fn EVP_DigestUpdate(ctx: *mut EVP_MD_CTX, data: *const u8, n: c_uint);
-    fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32);
-}
-
-pub fn evpmd(t: HashType) -> (*const EVP_MD, uint) {
+pub fn evpmd(t: HashType) -> (*const ffi::EVP_MD, uint) {
     unsafe {
         match t {
-            MD5 => (EVP_md5(), 16u),
-            SHA1 => (EVP_sha1(), 20u),
-            SHA224 => (EVP_sha224(), 28u),
-            SHA256 => (EVP_sha256(), 32u),
-            SHA384 => (EVP_sha384(), 48u),
-            SHA512 => (EVP_sha512(), 64u),
-            RIPEMD160 => (EVP_ripemd160(), 20u),
+            MD5 => (ffi::EVP_md5(), 16u),
+            SHA1 => (ffi::EVP_sha1(), 20u),
+            SHA224 => (ffi::EVP_sha224(), 28u),
+            SHA256 => (ffi::EVP_sha256(), 32u),
+            SHA384 => (ffi::EVP_sha384(), 48u),
+            SHA512 => (ffi::EVP_sha512(), 64u),
+            RIPEMD160 => (ffi::EVP_ripemd160(), 20u),
         }
     }
 }
 
 #[allow(dead_code)]
 pub struct Hasher {
-    evp: *const EVP_MD,
-    ctx: *mut EVP_MD_CTX,
+    evp: *const ffi::EVP_MD,
+    ctx: *mut ffi::EVP_MD_CTX,
     len: uint,
 }
 
 impl Hasher {
     pub fn new(ht: HashType) -> Hasher {
-        let ctx = unsafe { EVP_MD_CTX_create() };
+        let ctx = unsafe { ffi::EVP_MD_CTX_create() };
         let (evp, mdlen) = evpmd(ht);
         unsafe {
-            EVP_DigestInit(ctx, evp);
+            ffi::EVP_DigestInit(ctx, evp);
         }
 
         Hasher { evp: evp, ctx: ctx, len: mdlen }
@@ -85,7 +48,7 @@ impl Hasher {
     /// Update this hasher with more input bytes
     pub fn update(&self, data: &[u8]) {
         unsafe {
-            EVP_DigestUpdate(self.ctx, data.as_ptr(), data.len() as c_uint)
+            ffi::EVP_DigestUpdate(self.ctx, data.as_ptr(), data.len() as c_uint)
         }
     }
 
@@ -96,7 +59,7 @@ impl Hasher {
     pub fn final(&self) -> Vec<u8> {
         unsafe {
             let mut res = Vec::from_elem(self.len, 0u8);
-            EVP_DigestFinal(self.ctx, res.as_mut_ptr(), ptr::null_mut());
+            ffi::EVP_DigestFinal(self.ctx, res.as_mut_ptr(), ptr::null_mut());
             res
         }
     }
@@ -105,7 +68,7 @@ impl Hasher {
 impl Drop for Hasher {
     fn drop(&mut self) {
         unsafe {
-            EVP_MD_CTX_destroy(self.ctx);
+            ffi::EVP_MD_CTX_destroy(self.ctx);
         }
     }
 }

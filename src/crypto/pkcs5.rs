@@ -1,12 +1,5 @@
 use libc::c_int;
-
-#[link(name = "crypto")]
-extern {
-    fn PKCS5_PBKDF2_HMAC_SHA1(pass: *const u8, passlen: c_int,
-                              salt: *const u8, saltlen: c_int,
-                              iter: c_int, keylen: c_int,
-                              out: *mut u8) -> c_int;
-}
+use ffi;
 
 /// Derives a key from a password and salt using the PBKDF2-HMAC-SHA1 algorithm.
 pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint, keylen: uint) -> Vec<u8> {
@@ -16,7 +9,7 @@ pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint, keylen: uint) -> Ve
 
         let mut out = Vec::with_capacity(keylen);
 
-        let r = PKCS5_PBKDF2_HMAC_SHA1(
+        let r = ffi::PKCS5_PBKDF2_HMAC_SHA1(
                 pass.as_ptr(), pass.len() as c_int,
                 salt.as_ptr(), salt.len() as c_int,
                 iter as c_int, keylen as c_int,

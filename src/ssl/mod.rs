@@ -6,12 +6,12 @@ use std::rt::mutex::NativeMutex;
 use std::string;
 use sync::one::{Once, ONCE_INIT};
 
-use bio::{mod, MemBio};
+use bio::{MemBio};
+use ffi;
 use ssl::error::{SslError, SslSessionClosed, StreamError};
-use x509::{mod, X509StoreContext, X509FileType};
+use x509::{X509StoreContext, X509FileType};
 
 pub mod error;
-mod ffi;
 #[cfg(test)]
 mod tests;
 
@@ -95,11 +95,11 @@ extern fn locking_function(mode: c_int, n: c_int, _file: *const c_char,
     }
 }
 
-extern fn raw_verify(preverify_ok: c_int, x509_ctx: *mut x509::ffi::X509_STORE_CTX)
+extern fn raw_verify(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX)
         -> c_int {
     unsafe {
         let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
-        let ssl = x509::ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
+        let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
         let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, VERIFY_IDX);
         let verify: Option<VerifyCallback> = mem::transmute(verify);
@@ -241,7 +241,7 @@ impl Ssl {
         unsafe { self.wrap_bio(ffi::SSL_get_wbio(self.ssl)) }
     }
 
-    fn wrap_bio<'a>(&'a self, bio: *mut bio::ffi::BIO) -> MemBioRef<'a> {
+    fn wrap_bio<'a>(&'a self, bio: *mut ffi::BIO) -> MemBioRef<'a> {
         assert!(bio != ptr::mut_null());
         MemBioRef {
             ssl: self,
