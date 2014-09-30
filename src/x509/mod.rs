@@ -16,6 +16,7 @@ pub enum X509FileType {
     ASN1 = ffi::X509_FILETYPE_ASN1,
     Default = ffi::X509_FILETYPE_DEFAULT
 }
+
 pub struct X509StoreContext {
     ctx: *mut ffi::X509_STORE_CTX
 }
