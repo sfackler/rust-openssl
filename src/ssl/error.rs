@@ -1,5 +1,6 @@
 use libc::c_ulong;
 use std::io::IoError;
+use std::c_str::CString;
 
 use ffi;
 
@@ -20,24 +21,24 @@ pub enum OpensslError {
     /// An unknown error
     UnknownError {
         /// The library reporting the error
-        library: u8,
+        library: CString,
         /// The function reporting the error
-        function: u16,
+        function: CString,
         /// The reason for the error
-        reason: u16
+        reason: CString
     }
 }
 
-fn get_lib(err: c_ulong) -> u8 {
-    ((err >> 24) & 0xff) as u8
+fn get_lib(err: c_ulong) -> CString {
+    unsafe { CString::new(ffi::ERR_lib_error_string(err), false) }
 }
 
-fn get_func(err: c_ulong) -> u16 {
-    ((err >> 12) & 0xfff) as u16
+fn get_func(err: c_ulong) -> CString {
+    unsafe { CString::new(ffi::ERR_func_error_string(err), false) }
 }
 
-fn get_reason(err: c_ulong) -> u16 {
-    (err & 0xfff) as u16
+fn get_reason(err: c_ulong) -> CString {
+    unsafe { CString::new(ffi::ERR_reason_error_string(err), false) }
 }
 
 impl SslError {
