@@ -7,16 +7,16 @@ pub type ASN1_STRING = c_void;
 pub type ASN1_TIME = c_void;
 pub type BIO = c_void;
 pub type BIO_METHOD = c_void;
-pub type BN_CTX = *mut c_void;
+pub type BN_CTX = c_void;
 pub type COMP_METHOD = c_void;
 pub type CRYPTO_EX_DATA = c_void;
 pub type ENGINE = c_void;
-pub type EVP_CIPHER = *mut c_void;
-pub type EVP_CIPHER_CTX = *mut c_void;
+pub type EVP_CIPHER = c_void;
+pub type EVP_CIPHER_CTX = c_void;
 pub type EVP_MD = c_void;
-pub type EVP_PKEY = *mut c_void;
+pub type EVP_PKEY = c_void;
 pub type EVP_PKEY_CTX = c_void;
-pub type RSA = *mut c_void;
+pub type RSA = c_void;
 pub type SSL = c_void;
 pub type SSL_CTX = c_void;
 pub type SSL_METHOD = c_void;
@@ -276,25 +276,25 @@ extern "C" {
     pub fn EVP_sha384() -> *const EVP_MD;
     pub fn EVP_sha512() -> *const EVP_MD;
 
-    pub fn EVP_aes_128_cbc() -> EVP_CIPHER;
-    pub fn EVP_aes_128_ecb() -> EVP_CIPHER;
+    pub fn EVP_aes_128_cbc() -> *const EVP_CIPHER;
+    pub fn EVP_aes_128_ecb() -> *const EVP_CIPHER;
     // fn EVP_aes_128_ctr() -> EVP_CIPHER;
     // fn EVP_aes_128_gcm() -> EVP_CIPHER;
-    pub fn EVP_aes_256_cbc() -> EVP_CIPHER;
-    pub fn EVP_aes_256_ecb() -> EVP_CIPHER;
+    pub fn EVP_aes_256_cbc() -> *const EVP_CIPHER;
+    pub fn EVP_aes_256_ecb() -> *const EVP_CIPHER;
     // fn EVP_aes_256_ctr() -> EVP_CIPHER;
     // fn EVP_aes_256_gcm() -> EVP_CIPHER;
-    pub fn EVP_rc4() -> EVP_CIPHER;
+    pub fn EVP_rc4() -> *const EVP_CIPHER;
 
-    pub fn EVP_CIPHER_CTX_new() -> EVP_CIPHER_CTX;
-    pub fn EVP_CIPHER_CTX_set_padding(ctx: EVP_CIPHER_CTX, padding: c_int);
-    pub fn EVP_CIPHER_CTX_free(ctx: EVP_CIPHER_CTX);
+    pub fn EVP_CIPHER_CTX_new() -> *mut EVP_CIPHER_CTX;
+    pub fn EVP_CIPHER_CTX_set_padding(ctx: *mut EVP_CIPHER_CTX, padding: c_int);
+    pub fn EVP_CIPHER_CTX_free(ctx: *mut EVP_CIPHER_CTX);
 
-    pub fn EVP_CipherInit(ctx: EVP_CIPHER_CTX, evp: EVP_CIPHER,
+    pub fn EVP_CipherInit(ctx: *mut EVP_CIPHER_CTX, evp: *const EVP_CIPHER,
                           key: *const u8, iv: *const u8, mode: c_int);
-    pub fn EVP_CipherUpdate(ctx: EVP_CIPHER_CTX, outbuf: *mut u8,
+    pub fn EVP_CipherUpdate(ctx: *mut EVP_CIPHER_CTX, outbuf: *mut u8,
                             outlen: &mut c_uint, inbuf: *const u8, inlen: c_int);
-    pub fn EVP_CipherFinal(ctx: EVP_CIPHER_CTX, res: *mut u8, len: &mut c_int);
+    pub fn EVP_CipherFinal(ctx: *mut EVP_CIPHER_CTX, res: *mut u8, len: &mut c_int);
 
     pub fn EVP_DigestInit(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD);
     pub fn EVP_DigestUpdate(ctx: *mut EVP_MD_CTX, data: *const u8, n: c_uint);
