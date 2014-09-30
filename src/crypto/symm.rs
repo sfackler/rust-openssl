@@ -22,7 +22,7 @@ pub enum Type {
     RC4_128,
 }
 
-fn evpc(t: Type) -> (ffi::EVP_CIPHER, uint, uint) {
+fn evpc(t: Type) -> (*const ffi::EVP_CIPHER, uint, uint) {
     unsafe {
         match t {
             AES_128_ECB => (ffi::EVP_aes_128_ecb(), 16u, 16u),
@@ -42,8 +42,8 @@ fn evpc(t: Type) -> (ffi::EVP_CIPHER, uint, uint) {
 
 /// Represents a symmetric cipher context.
 pub struct Crypter {
-    evp: ffi::EVP_CIPHER,
-    ctx: ffi::EVP_CIPHER_CTX,
+    evp: *const ffi::EVP_CIPHER,
+    ctx: *mut ffi::EVP_CIPHER_CTX,
     keylen: uint,
     blocksize: uint
 }
