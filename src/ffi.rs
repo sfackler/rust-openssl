@@ -192,6 +192,7 @@ pub unsafe fn BN_is_zero(a: *mut BIGNUM) -> c_int { bn_is_zero(a) }
 extern "C" {
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
+    pub fn ASN1_TIME_free(tm: *mut ASN1_TIME);
 
     pub fn BIO_free_all(a: *mut BIO);
     pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
@@ -402,6 +403,7 @@ extern "C" {
 
     pub fn X509_add_ext(x: *mut X509, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
     pub fn X509_digest(x: *mut X509, digest: *const EVP_MD, buf: *mut c_char, len: *mut c_uint) -> c_int;
+    pub fn X509_free(x: *mut X509);
     pub fn X509_get_serialNumber(x: *mut X509) -> *mut ASN1_INTEGER;
     pub fn X509_get_subject_name(x: *mut X509) -> *mut X509_NAME;
     pub fn X509_gmtime_adj(time: *mut ASN1_TIME, adj: c_long) -> *mut ASN1_TIME;

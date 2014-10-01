@@ -1,4 +1,4 @@
-#![feature(struct_variant, macro_rules)]
+#![feature(struct_variant, macro_rules, unsafe_destructor)]
 #![crate_name="openssl"]
 #![crate_type="rlib"]
 #![crate_type="dylib"]
@@ -11,7 +11,7 @@ extern crate sync;
 
 mod macros;
 
-mod asn1;
+pub mod asn1;
 pub mod bn;
 pub mod bio;
 pub mod crypto;
