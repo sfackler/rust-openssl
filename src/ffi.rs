@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
-use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar};
+use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
 
 pub type ASN1_INTEGER = c_void;
 pub type ASN1_STRING = c_void;
@@ -265,6 +265,8 @@ extern "C" {
                                                            file: *const c_char,
                                                            line: c_int));
     pub fn CRYPTO_free(buf: *const c_char);
+    pub fn CRYPTO_memcmp(a: *const c_void, b: *const c_void,
+                         len: size_t) -> c_int;
 
     pub fn ERR_get_error() -> c_ulong;
 
