@@ -171,14 +171,12 @@ pub static X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE: c_int = 45;
 pub static X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
 pub static X509_V_OK: c_int = 0;
 
-#[cfg(target_os = "macos", feature = "tlsv1_1")]
-#[cfg(target_os = "macos", feature = "tlsv1_2")]
+#[cfg( any( all(target_os = "macos", feature = "tlsv1_1"),all(target_os = "macos", feature = "tlsv1_2")))]
 #[link(name="ssl.1.0.0")]
 #[link(name="crypto.1.0.0")]
 extern {}
 
-#[cfg(not(target_os = "macos"))]
-#[cfg(target_os = "macos", not(feature = "tlsv1_1"), not(feature = "tlsv1_2"))]
+#[cfg(any( not( target_os = "macos"), all(target_os = "macos", not(feature = "tlsv1_1"), not(feature = "tlsv1_2"))))]
 #[link(name="ssl")]
 #[link(name="crypto")]
 extern {}
