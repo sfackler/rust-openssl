@@ -48,9 +48,9 @@ fn test_uknown_error_should_have_correct_messages() {
     let function = get_func(err);
     let reason = get_reason(err);
 
-    assert_eq!(library.as_slice(),"20");
-    assert_eq!(function.as_slice(), "119");
-    assert_eq!(reason.as_slice(), "1040");
+    assert_eq!(library.as_slice(),"SSL routines");
+    assert_eq!(function.as_slice(), "SSL23_GET_SERVER_HELLO");
+    assert_eq!(reason.as_slice(), "sslv3 alert handshake failure");
 }
 
 impl SslError {
