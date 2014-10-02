@@ -21,24 +21,36 @@ pub enum OpensslError {
     /// An unknown error
     UnknownError {
         /// The library reporting the error
-        library: CString,
+        library: String,
         /// The function reporting the error
-        function: CString,
+        function: String,
         /// The reason for the error
-        reason: CString
+        reason: String
     }
 }
 
-fn get_lib(err: c_ulong) -> CString {
-    unsafe { CString::new(ffi::ERR_lib_error_string(err), false) }
+fn get_lib(err: c_ulong) -> String {
+    unsafe { CString::new(ffi::ERR_lib_error_string(err), false) }.to_string()
 }
 
-fn get_func(err: c_ulong) -> CString {
-    unsafe { CString::new(ffi::ERR_func_error_string(err), false) }
+fn get_func(err: c_ulong) -> String {
+    unsafe { CString::new(ffi::ERR_func_error_string(err), false).to_string() }
 }
 
-fn get_reason(err: c_ulong) -> CString {
-    unsafe { CString::new(ffi::ERR_reason_error_string(err), false) }
+fn get_reason(err: c_ulong) -> String {
+    unsafe { CString::new(ffi::ERR_reason_error_string(err), false).to_string() }
+}
+
+#[test]
+fn test_uknown_error_should_have_correct_messages() {
+    let err = 336032784;
+    let library = get_lib(err);
+    let function = get_func(err);
+    let reason = get_reason(err);
+
+    assert_eq!(library.as_slice(),"20");
+    assert_eq!(function.as_slice(), "119");
+    assert_eq!(reason.as_slice(), "1040");
 }
 
 impl SslError {
