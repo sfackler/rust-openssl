@@ -411,7 +411,7 @@ impl<S: Stream> Writer for SslStream<S> {
         let mut start = 0;
         while start < buf.len() {
             let ret = self.in_retry_wrapper(|ssl| {
-                ssl.write(buf.split_at(start).val1())
+                ssl.write(buf[start..])
             });
             match ret {
                 Ok(len) => start += len as uint,
