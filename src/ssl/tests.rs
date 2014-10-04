@@ -176,7 +176,7 @@ fn test_verify_callback_data() {
     // Please update if "test/cert.pem" will ever change
     let node_hash_str = "6204f6617e1af7495394250655f43600cd483e2dfc2005e92d0fe439d0723c34";
     let node_id = hash_str_to_vec(node_hash_str);
-    ctx.set_verify_with_data(SslVerifyNone, Some(callback), node_id);
+    ctx.set_verify_with_data(SslVerifyNone, callback, node_id);
     ctx.set_verify_depth(1);
 
     match SslStream::new(&ctx, stream) {

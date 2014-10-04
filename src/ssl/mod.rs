@@ -222,13 +222,15 @@ impl SslContext {
 
     /// Configures the certificate verification method for new connections also
     /// carrying supplied data.
+    // Note: no option because there is no point to set data without providing
+    // a function handling it
     pub fn set_verify_with_data<T>(&mut self, mode: SslVerifyMode,
-                                   verify: Option<VerifyCallbackData<T>>,
+                                   verify: VerifyCallbackData<T>,
                                    data: T) {
         let data = box data;
         unsafe {
             ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX,
-                                     mem::transmute(verify));
+                                     mem::transmute(Some(verify)));
             ffi::SSL_CTX_set_ex_data(self.ctx, get_verify_data_idx::<T>(),
                                      mem::transmute(data));
             ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(raw_verify_with_data::<T>));
