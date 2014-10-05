@@ -1,4 +1,4 @@
-use libc::{c_int, c_void, c_char};
+use libc::{c_int, c_void, c_char, c_long};
 use std::io::{IoResult, IoError, EndOfFile, Stream, Reader, Writer};
 use std::mem;
 use std::ptr;
@@ -82,6 +82,30 @@ pub enum SslVerifyMode {
     SslVerifyNone = ffi::SSL_VERIFY_NONE
 }
 
+// Creates a static index for user data of type T
+// Registers a destructor for the data which will be called
+// when context is freed
+fn get_verify_data_idx<T>() -> c_int {
+    static mut VERIFY_DATA_IDX: c_int = -1;
+    static mut INIT: Once = ONCE_INIT;
+
+    extern fn free_data_box<T>(_parent: *mut c_void, ptr: *mut c_void,
+                               _ad: *mut ffi::CRYPTO_EX_DATA, _idx: c_int,
+                               _argl: c_long, _argp: *mut c_void) {
+        let _: Box<T> = unsafe { mem::transmute(ptr) };
+    }
+
+    unsafe {
+        INIT.doit(|| {
+            let idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
+                                                    None, Some(free_data_box::<T>));
+            assert!(idx >= 0);
+            VERIFY_DATA_IDX = idx;
+        });
+        VERIFY_DATA_IDX
+    }
+}
+
 extern fn locking_function(mode: c_int, n: c_int, _file: *const c_char,
                                _line: c_int) {
     unsafe {
@@ -113,9 +137,44 @@ extern fn raw_verify(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX)
     }
 }
 
+extern fn raw_verify_with_data<T>(preverify_ok: c_int,
+                                  x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int {
+    unsafe {
+        let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
+        let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
+        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
+
+        let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, VERIFY_IDX);
+        let verify: Option<VerifyCallbackData<T>> = mem::transmute(verify);
+
+        let data = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_verify_data_idx::<T>());
+        let data: Box<T> = mem::transmute(data);
+
+        let ctx = X509StoreContext::new(x509_ctx);
+
+        let res = match verify {
+            None => preverify_ok,
+            Some(verify) => verify(preverify_ok != 0, &ctx, &*data) as c_int
+        };
+
+        // Since data might be required on the next verification
+        // it is time to forget about it and avoid dropping
+        // data will be freed once OpenSSL considers it is time
+        // to free all context data
+        mem::forget(data);
+        res
+    }
+}
+
 /// The signature of functions that can be used to manually verify certificates
 pub type VerifyCallback = fn(preverify_ok: bool,
                              x509_ctx: &X509StoreContext) -> bool;
+
+/// The signature of functions that can be used to manually verify certificates
+/// when user-data should be carried for all verification process
+pub type VerifyCallbackData<T> = fn(preverify_ok: bool,
+                                    x509_ctx: &X509StoreContext,
+                                    data: &T) -> bool;
 
 // FIXME: macro may be instead of inlining?
 #[inline]
@@ -158,6 +217,30 @@ impl SslContext {
             ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX,
                                      mem::transmute(verify));
             ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(raw_verify));
+        }
+    }
+
+    /// Configures the certificate verification method for new connections also
+    /// carrying supplied data.
+    // Note: no option because there is no point to set data without providing
+    // a function handling it
+    pub fn set_verify_with_data<T>(&mut self, mode: SslVerifyMode,
+                                   verify: VerifyCallbackData<T>,
+                                   data: T) {
+        let data = box data;
+        unsafe {
+            ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX,
+                                     mem::transmute(Some(verify)));
+            ffi::SSL_CTX_set_ex_data(self.ctx, get_verify_data_idx::<T>(),
+                                     mem::transmute(data));
+            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(raw_verify_with_data::<T>));
+        }
+    }
+
+    /// Sets verification depth
+    pub fn set_verify_depth(&mut self, depth: uint) {
+        unsafe {
+            ffi::SSL_CTX_set_verify_depth(self.ctx, depth as c_int);
         }
     }
 
