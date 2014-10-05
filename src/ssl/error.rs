@@ -42,6 +42,7 @@ fn get_reason(err: c_ulong) -> String {
 }
 
 #[test]
+#[ignore] // FIXME #65
 fn test_uknown_error_should_have_correct_messages() {
     let err = 336032784;
     let library = get_lib(err);
