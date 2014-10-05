@@ -1,5 +1,6 @@
 use libc::c_ulong;
 use std::io::IoError;
+use std::c_str::CString;
 
 use ffi;
 
@@ -20,24 +21,36 @@ pub enum OpensslError {
     /// An unknown error
     UnknownError {
         /// The library reporting the error
-        library: u8,
+        library: String,
         /// The function reporting the error
-        function: u16,
+        function: String,
         /// The reason for the error
-        reason: u16
+        reason: String
     }
 }
 
-fn get_lib(err: c_ulong) -> u8 {
-    ((err >> 24) & 0xff) as u8
+fn get_lib(err: c_ulong) -> String {
+    unsafe { CString::new(ffi::ERR_lib_error_string(err), false) }.to_string()
 }
 
-fn get_func(err: c_ulong) -> u16 {
-    ((err >> 12) & 0xfff) as u16
+fn get_func(err: c_ulong) -> String {
+    unsafe { CString::new(ffi::ERR_func_error_string(err), false).to_string() }
 }
 
-fn get_reason(err: c_ulong) -> u16 {
-    (err & 0xfff) as u16
+fn get_reason(err: c_ulong) -> String {
+    unsafe { CString::new(ffi::ERR_reason_error_string(err), false).to_string() }
+}
+
+#[test]
+fn test_uknown_error_should_have_correct_messages() {
+    let err = 336032784;
+    let library = get_lib(err);
+    let function = get_func(err);
+    let reason = get_reason(err);
+
+    assert_eq!(library.as_slice(),"SSL routines");
+    assert_eq!(function.as_slice(), "SSL23_GET_SERVER_HELLO");
+    assert_eq!(reason.as_slice(), "sslv3 alert handshake failure");
 }
 
 impl SslError {

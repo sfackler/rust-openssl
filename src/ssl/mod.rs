@@ -24,6 +24,8 @@ fn init() {
     unsafe {
         INIT.doit(|| {
             ffi::SSL_library_init();
+            ffi::SSL_load_error_strings();
+            ffi::ERR_load_crypto_strings();
             let verify_idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
                                                            None, None);
             assert!(verify_idx >= 0);

@@ -272,6 +272,12 @@ extern "C" {
 
     pub fn ERR_get_error() -> c_ulong;
 
+    pub fn ERR_lib_error_string(err: c_ulong) -> *const c_char;
+    pub fn ERR_func_error_string(err: c_ulong) -> *const c_char;
+    pub fn ERR_reason_error_string(err: c_ulong) -> *const c_char;
+
+    pub fn ERR_load_crypto_strings();
+
     pub fn EVP_md5() -> *const EVP_MD;
     pub fn EVP_ripemd160() -> *const EVP_MD;
     pub fn EVP_sha1() -> *const EVP_MD;
@@ -344,6 +350,8 @@ extern "C" {
                       k: *mut RSA) -> c_int;
 
     pub fn SSL_library_init() -> c_int;
+
+    pub fn SSL_load_error_strings();
 
     #[cfg(feature = "sslv2")]
     pub fn SSLv2_method() -> *const SSL_METHOD;
@@ -421,4 +429,3 @@ extern "C" {
     pub fn i2d_RSAPrivateKey(k: *mut RSA, buf: *const *mut u8) -> c_int;
     pub fn d2i_RSAPrivateKey(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
 }
-
