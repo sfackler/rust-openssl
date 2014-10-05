@@ -1,4 +1,5 @@
 #![feature(struct_variant, macro_rules)]
+#![feature(slicing_syntax)]
 #![crate_name="openssl"]
 #![crate_type="rlib"]
 #![crate_type="dylib"]
