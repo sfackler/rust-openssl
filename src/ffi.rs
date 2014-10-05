@@ -84,7 +84,6 @@ pub type PrivateKeyWriteCallback = extern "C" fn(buf: *mut c_char, size: c_int,
                                                  rwflag: c_int, user_data: *mut c_void)
                                                  -> c_int;
 
-
 pub static CRYPTO_LOCK: c_int = 1;
 
 pub static MBSTRING_ASC:  c_int = MBSTRING_FLAG | 1;
@@ -189,6 +188,9 @@ extern {}
 #[link(name="wsock32")]
 extern { }
 
+/* Since the openssl BN_is_zero is sometimes a macro, this wrapper is necessary. */
+pub unsafe fn BN_is_zero(a: *mut BIGNUM) -> c_int { bn_is_zero(a) }
+
 extern "C" {
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
@@ -239,7 +241,9 @@ extern "C" {
     /* Comparisons on BIGNUMs */
     pub fn BN_cmp(a: *mut BIGNUM, b: *mut BIGNUM) -> c_int;
     pub fn BN_ucmp(a: *mut BIGNUM, b: *mut BIGNUM) -> c_int;
-    pub fn BN_is_zero(a: *mut BIGNUM) -> c_int;
+
+    /* Special import from native/bn_is_zero.c */
+    pub fn bn_is_zero(a: *mut BIGNUM) -> c_int;
 
     /* Prime handling */
     pub fn BN_generate_prime_ex(r: *mut BIGNUM, bits: c_int, safe: c_int, add: *mut BIGNUM, rem: *mut BIGNUM, cb: *const c_void) -> c_int;
@@ -418,3 +422,4 @@ extern "C" {
     pub fn i2d_RSAPrivateKey(k: *mut RSA, buf: *const *mut u8) -> c_int;
     pub fn d2i_RSAPrivateKey(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
 }
+
