@@ -122,7 +122,7 @@ trait ToStr {
 impl<'a, T: AsStr<'a>> ToStr for Vec<T> {
     fn to_str(&self) -> String {
         self.iter().enumerate().fold(String::new(), |mut acc, (idx, v)| {
-            if idx > 0 { acc.push_char(',') };
+            if idx > 0 { acc.push(',') };
             acc.push_str(v.as_str());
             acc
         })

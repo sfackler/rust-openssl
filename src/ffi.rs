@@ -1,4 +1,4 @@
-#![allow(non_camel_case_types)]
+#![allow(non_camel_case_types, non_uppercase_statics, non_snake_case)]
 #![allow(dead_code)]
 use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
 
