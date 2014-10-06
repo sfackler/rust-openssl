@@ -26,7 +26,11 @@ macro_rules! try_ssl{
 
 /// Shortcut return with SSL if got a null result
 macro_rules! try_ssl_null{
-    ($e:expr) => (try_ssl_if!($e == ptr::null_mut()))
+    ($e:expr) => ({
+        let t = $e;
+        try_ssl_if!(t == ptr::null_mut());
+        t
+    })
 }
 
 

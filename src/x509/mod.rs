@@ -2,6 +2,7 @@ use libc::{c_int, c_long, c_uint};
 use std::mem;
 use std::ptr;
 
+use asn1::{Asn1Time};
 use bio::{MemBio};
 use crypto::hash::{HashType, evpmd, SHA1};
 use crypto::pkey::{PKey};
@@ -39,7 +40,7 @@ impl X509StoreContext {
         if ptr.is_null() {
             None
         } else {
-            Some(X509 { ctx: Some(self), x509: ptr })
+            Some(X509 { ctx: Some(self), handle: ptr, owned: false })
         }
     }
 }
@@ -184,16 +185,21 @@ impl X509Generator {
 
     fn add_extension(x509: *mut ffi::X509, extension: c_int, value: &str) -> Result<(), SslError> {
         unsafe {
-            // FIXME: RAII
             let mut ctx: ffi::X509V3_CTX = mem::zeroed();
             ffi::X509V3_set_ctx(&mut ctx, x509, x509,
                                 ptr::null_mut(), ptr::null_mut(), 0);
             let ext = value.with_c_str(|value|
-                                       ffi::X509V3_EXT_conf_nid(ptr::null_mut(), mem::transmute(&ctx), extension, mem::transmute(value)));
-            try_ssl_null!(ext);
-            try_ssl!(ffi::X509_add_ext(x509, ext, -1));
-            ffi::X509_EXTENSION_free(ext);
-            Ok(())
+                                       ffi::X509V3_EXT_conf_nid(ptr::null_mut(),
+                                                                mem::transmute(&ctx),
+                                                                extension,
+                                                                mem::transmute(value)));
+
+            let mut success = false;
+            if ext != ptr::null_mut() {
+                success = ffi::X509_add_ext(x509, ext, -1) != 0;
+                ffi::X509_EXTENSION_free(ext);
+            }
+            lift_ssl_if!(!success)
         }
     }
 
@@ -222,44 +228,47 @@ impl X509Generator {
         let mut p_key = PKey::new();
         p_key.gen(self.bits);
 
-        // FIXME: all allocated resources should be correctly
-        // dropped in case of failure
         unsafe {
             let x509 = ffi::X509_new();
             try_ssl_null!(x509);
-            try_ssl!(ffi::X509_set_version(x509, 2));
-            try_ssl!(ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509), X509Generator::random_serial()));
 
-            let not_before = ffi::X509_gmtime_adj(ptr::null_mut(), 0);
-            try_ssl_null!(not_before);
+            let x509 = X509 { handle: x509, ctx: None, owned: true};
 
-            let not_after = ffi::X509_gmtime_adj(ptr::null_mut(), 60*60*24*self.days as i64);
-            try_ssl_null!(not_after);
+            try_ssl!(ffi::X509_set_version(x509.handle, 2));
+            try_ssl!(ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509.handle), X509Generator::random_serial()));
 
-            try_ssl!(ffi::X509_set_notBefore(x509, mem::transmute(not_before)));
-            try_ssl!(ffi::X509_set_notAfter(x509, mem::transmute(not_after)));
+            let not_before = try!(Asn1Time::days_from_now(0));
+            let not_after = try!(Asn1Time::days_from_now(self.days));
 
-            try_ssl!(ffi::X509_set_pubkey(x509, p_key.get_handle()));
+            try_ssl!(ffi::X509_set_notBefore(x509.handle, mem::transmute(not_before.get_handle())));
+            // If prev line succeded - ownership should go to cert
+            mem::forget(not_before);
 
-            let name = ffi::X509_get_subject_name(x509);
+            try_ssl!(ffi::X509_set_notAfter(x509.handle, mem::transmute(not_after.get_handle())));
+            // If prev line succeded - ownership should go to cert
+            mem::forget(not_after);
+
+            try_ssl!(ffi::X509_set_pubkey(x509.handle, p_key.get_handle()));
+
+            let name = ffi::X509_get_subject_name(x509.handle);
             try_ssl_null!(name);
 
             try!(X509Generator::add_name(name, "CN", self.CN.as_slice()));
-            ffi::X509_set_issuer_name(x509, name);
+            ffi::X509_set_issuer_name(x509.handle, name);
 
             if self.key_usage.len() > 0 {
-                try!(X509Generator::add_extension(x509, ffi::NID_key_usage,
+                try!(X509Generator::add_extension(x509.handle, ffi::NID_key_usage,
                                                   self.key_usage.to_str().as_slice()));
             }
 
             if self.ext_key_usage.len() > 0 {
-                try!(X509Generator::add_extension(x509, ffi::NID_ext_key_usage,
+                try!(X509Generator::add_extension(x509.handle, ffi::NID_ext_key_usage,
                                                   self.ext_key_usage.to_str().as_slice()));
             }
 
             let (hash_fn, _) = evpmd(self.hash_type);
-            try_ssl!(ffi::X509_sign(x509, p_key.get_handle(), hash_fn));
-            Ok((X509 { x509: x509, ctx: None }, p_key))
+            try_ssl!(ffi::X509_sign(x509.handle, p_key.get_handle(), hash_fn));
+            Ok((x509, p_key))
         }
     }
 }
@@ -268,12 +277,13 @@ impl X509Generator {
 /// A public key certificate
 pub struct X509<'ctx> {
     ctx: Option<&'ctx X509StoreContext>,
-    x509: *mut ffi::X509
+    handle: *mut ffi::X509,
+    owned: bool
 }
 
 impl<'ctx> X509<'ctx> {
     pub fn subject_name<'a>(&'a self) -> X509Name<'a> {
-        let name = unsafe { ffi::X509_get_subject_name(self.x509) };
+        let name = unsafe { ffi::X509_get_subject_name(self.handle) };
         X509Name { x509: self, name: name }
     }
 
@@ -283,7 +293,7 @@ impl<'ctx> X509<'ctx> {
         let v: Vec<u8> = Vec::from_elem(len, 0);
         let act_len: c_uint = 0;
         let res = unsafe {
-            ffi::X509_digest(self.x509, evp, mem::transmute(v.as_ptr()),
+            ffi::X509_digest(self.handle, evp, mem::transmute(v.as_ptr()),
                              mem::transmute(&act_len))
         };
 
@@ -305,10 +315,19 @@ impl<'ctx> X509<'ctx> {
         let mut mem_bio = try!(MemBio::new());
         unsafe {
             try_ssl!(ffi::PEM_write_bio_X509(mem_bio.get_handle(),
-                                         self.x509));
+                                         self.handle));
         }
         let buf = try!(mem_bio.read_to_end().map_err(StreamError));
         writer.write(buf.as_slice()).map_err(StreamError)
+    }
+}
+
+#[unsafe_destructor]
+impl<'ctx> Drop for X509<'ctx> {
+    fn drop(&mut self) {
+        if self.owned {
+            unsafe { ffi::X509_free(self.handle) };
+        }
     }
 }
 
