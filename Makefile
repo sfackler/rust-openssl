@@ -1,4 +1,9 @@
+ifneq ($(findstring i686,$(TARGET)),)
+	CFLAGS += -m32
+else
+	CFLAGS += -m64
+endif
+
 default:
-	rm -f $(OUT_DIR)/bin_is_zero.o
-	$(CC) -O -shared native/bn_is_zero.c -o bn_is_zero.o
-	mv bn_is_zero.o $(OUT_DIR)
+	$(CC) $(CFLAGS) -c native/bn_is_zero.c -o $(OUT_DIR)/bn_is_zero.o
+	$(AR) crus $(OUT_DIR)/libwrapped.a $(OUT_DIR)/bn_is_zero.o
