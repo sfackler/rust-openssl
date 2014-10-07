@@ -1,6 +1,7 @@
 #![allow(non_camel_case_types, non_uppercase_statics, non_snake_case)]
 #![allow(dead_code)]
 use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
+use std::ptr;
 
 pub type ASN1_INTEGER = c_void;
 pub type ASN1_STRING = c_void;
@@ -83,6 +84,8 @@ pub type CRYPTO_EX_free = extern "C" fn(parent: *mut c_void, ptr: *mut c_void,
 pub type PrivateKeyWriteCallback = extern "C" fn(buf: *mut c_char, size: c_int,
                                                  rwflag: c_int, user_data: *mut c_void)
                                                  -> c_int;
+
+pub static BIO_CTRL_EOF: c_int = 2;
 
 pub static CRYPTO_LOCK: c_int = 1;
 
@@ -195,12 +198,19 @@ extern "C" {
     pub fn bn_is_zero(a: *mut BIGNUM) -> c_int;
 }
 
+// Functions converted from macros
+pub unsafe fn BIO_eof(b: *mut BIO) -> bool {
+    BIO_ctrl(b, BIO_CTRL_EOF, 0, ptr::null_mut()) == 1
+}
+
+// True functions
 extern "C" {
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
     pub fn ASN1_TIME_free(tm: *mut ASN1_TIME);
 
-    pub fn BIO_free_all(a: *mut BIO);
+    pub fn BIO_ctrl(b: *mut BIO, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
+    pub fn BIO_free_all(b: *mut BIO);
     pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
     pub fn BIO_read(b: *mut BIO, buf: *mut c_void, len: c_int) -> c_int;
     pub fn BIO_write(b: *mut BIO, buf: *const c_void, len: c_int) -> c_int;
