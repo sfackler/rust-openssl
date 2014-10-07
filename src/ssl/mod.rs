@@ -248,7 +248,7 @@ impl SslContext {
 
     #[allow(non_snake_case)]
     /// Specifies the file that contains trusted CA certificates.
-    pub fn set_CA_file(&mut self, file: &str) -> Option<SslError> {
+    pub fn set_CA_file(&mut self, file: &Path) -> Option<SslError> {
         wrap_ssl_result(file.with_c_str(|file| {
             unsafe {
                 ffi::SSL_CTX_load_verify_locations(self.ctx, file, ptr::null())
@@ -257,7 +257,7 @@ impl SslContext {
     }
 
     /// Specifies the file that is client certificate
-    pub fn set_certificate_file(&mut self, file: &str,
+    pub fn set_certificate_file(&mut self, file: &Path,
                                 file_type: X509FileType) -> Option<SslError> {
         wrap_ssl_result(file.with_c_str(|file| {
             unsafe {
@@ -267,7 +267,7 @@ impl SslContext {
     }
 
     /// Specifies the file that is client private key
-    pub fn set_private_key_file(&mut self, file: &str,
+    pub fn set_private_key_file(&mut self, file: &Path,
                                 file_type: X509FileType) -> Option<SslError> {
         wrap_ssl_result(file.with_c_str(|file| {
             unsafe {
