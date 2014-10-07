@@ -1,4 +1,4 @@
-use std::io::Writer;
+use std::io::{File, Open, Write, Writer};
 use std::io::net::tcp::TcpStream;
 use std::num::FromStrRadix;
 use std::str;
@@ -218,6 +218,22 @@ fn test_cert_gen() {
 
     let res = gen.generate();
     assert!(res.is_ok());
+
+    let (cert, pkey) = res.unwrap();
+
+    #[cfg(unix)]
+    static NULL_PATH: &'static str = "/dev/null";
+    #[cfg(windows)]
+    static NULL_PATH: &'static str = "nul";
+
+    let cert_path = Path::new(NULL_PATH);
+    let mut file = File::open_mode(&cert_path, Open, Write).unwrap();
+    assert!(cert.write_pem(&mut file).is_ok());
+
+    let key_path = Path::new(NULL_PATH);
+    let mut file = File::open_mode(&key_path, Open, Write).unwrap();
+    assert!(pkey.write_pem(&mut file).is_ok());
+
     // FIXME: check data in result to be correct, needs implementation
     // of X509 getters
 }

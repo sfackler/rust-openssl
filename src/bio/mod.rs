@@ -1,5 +1,5 @@
 use libc::{c_void, c_int};
-use std::io::{IoResult, IoError, OtherIoError};
+use std::io::{EndOfFile, IoResult, IoError, OtherIoError};
 use std::io::{Reader, Writer};
 use std::ptr;
 
@@ -62,9 +62,22 @@ impl Reader for MemBio {
                           buf.len() as c_int)
         };
 
-        if ret < 0 {
-            // FIXME: provide details from OpenSSL
-            Err(IoError{kind: OtherIoError, desc: "mem bio read error", detail: None})
+        if ret <= 0 {
+            let is_eof = unsafe { ffi::BIO_eof(self.bio) };
+            let err = if is_eof {
+                IoError {
+                    kind: EndOfFile,
+                    desc: "MemBio EOF",
+                    detail: None
+                }
+            } else {
+                IoError {
+                    kind: OtherIoError,
+                    desc: "MemBio read error",
+                    detail: Some(format!("{}", SslError::get()))
+                }
+            };
+            Err(err)
         } else {
             Ok(ret as uint)
         }
@@ -78,8 +91,11 @@ impl Writer for MemBio {
                            buf.len() as c_int)
         };
         if buf.len() != ret as uint {
-            // FIXME: provide details from OpenSSL
-            Err(IoError{kind: OtherIoError, desc: "mem bio write error", detail: None})
+            Err(IoError {
+                kind: OtherIoError,
+                desc: "MemBio write error",
+                detail: Some(format!("{}", SslError::get()))
+            })
         } else {
             Ok(())
         }
