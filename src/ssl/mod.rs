@@ -45,17 +45,19 @@ fn init() {
 #[allow(non_camel_case_types)]
 pub enum SslMethod {
     #[cfg(feature = "sslv2")]
-    /// Only support the SSLv2 protocol
+    /// Only support the SSLv2 protocol, requires `feature="sslv2"`
     Sslv2,
+    /// Support the SSLv2, SSLv3 and TLSv1 protocols
+    Sslv23,
     /// Only support the SSLv3 protocol
     Sslv3,
     /// Only support the TLSv1 protocol
     Tlsv1,
-    /// Support the SSLv2, SSLv3 and TLSv1 protocols
-    Sslv23,
     #[cfg(feature = "tlsv1_1")]
+    /// Support TLSv1.1 protocol, requires `feature="tlsv1_1"`
     Tlsv1_1,
     #[cfg(feature = "tlsv1_2")]
+    /// Support TLSv1.2 protocol, requires `feature="tlsv1_2"`
     Tlsv1_2,
 }
 
@@ -256,7 +258,7 @@ impl SslContext {
         }))
     }
 
-    /// Specifies the file that is client certificate
+    /// Specifies the file that contains certificate
     pub fn set_certificate_file(&mut self, file: &Path,
                                 file_type: X509FileType) -> Option<SslError> {
         wrap_ssl_result(file.with_c_str(|file| {
@@ -266,7 +268,7 @@ impl SslContext {
         }))
     }
 
-    /// Specifies the file that is client private key
+    /// Specifies the file that contains private key
     pub fn set_private_key_file(&mut self, file: &Path,
                                 file_type: X509FileType) -> Option<SslError> {
         wrap_ssl_result(file.with_c_str(|file| {

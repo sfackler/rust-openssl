@@ -43,7 +43,7 @@ impl MemBio {
 
     /// Consumes current bio and returns wrapped value
     /// Note that data ownership is lost and
-    /// should be handled manually
+    /// should be managed manually
     pub unsafe fn unwrap(mut self) -> *mut ffi::BIO {
         self.owned = false;
         self.bio
