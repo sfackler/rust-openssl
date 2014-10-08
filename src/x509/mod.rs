@@ -45,6 +45,7 @@ impl X509StoreContext {
     }
 }
 
+#[doc(hidden)]
 trait AsStr<'a> {
     fn as_str(&self) -> &'a str;
 }
@@ -116,6 +117,7 @@ impl AsStr<'static> for ExtKeyUsage {
 // FIXME: a dirty hack as there is no way to
 // implement ToString for Vec as both are defined
 // in another crate
+#[doc(hidden)]
 trait ToStr {
     fn to_str(&self) -> String;
 }
@@ -141,6 +143,15 @@ pub struct X509Generator {
 }
 
 impl X509Generator {
+    /// Creates a new generator with the following defaults:
+    ///
+    /// bit length: 1024
+    ///
+    /// validity period: 365 days
+    ///
+    /// CN: "rust-openssl"
+    ///
+    /// hash: SHA1
     pub fn new() -> X509Generator {
         X509Generator {
             bits: 1024,
@@ -152,27 +163,32 @@ impl X509Generator {
         }
     }
 
+    /// Sets desired bit length
     pub fn set_bitlength(mut self, bits: uint) -> X509Generator {
         self.bits = bits;
         self
     }
 
+    /// Sets certificate validity period in days since today
     pub fn set_valid_period(mut self, days: uint) -> X509Generator {
         self.days = days;
         self
     }
 
     #[allow(non_snake_case)]
+    /// Sets Common Name of certificate
     pub fn set_CN(mut self, CN: &str) -> X509Generator {
         self.CN = CN.to_string();
         self
     }
 
+    /// Sets what for certificate could be used
     pub fn set_usage(mut self, purposes: &[KeyUsage]) -> X509Generator {
         self.key_usage = purposes.to_vec();
         self
     }
 
+    /// Sets allowed extended usage of certificate
     pub fn set_ext_usage(mut self, purposes: &[ExtKeyUsage]) -> X509Generator {
         self.ext_key_usage = purposes.to_vec();
         self
@@ -224,6 +240,7 @@ impl X509Generator {
         res
     }
 
+    /// Generates a private key and a signed certificate and returns them
     pub fn generate<'a>(&self) -> Result<(X509<'a>, PKey), SslError> {
         let mut p_key = PKey::new();
         p_key.gen(self.bits);
@@ -315,7 +332,7 @@ impl<'ctx> X509<'ctx> {
         let mut mem_bio = try!(MemBio::new());
         unsafe {
             try_ssl!(ffi::PEM_write_bio_X509(mem_bio.get_handle(),
-                                         self.handle));
+                                             self.handle));
         }
         let buf = try!(mem_bio.read_to_end().map_err(StreamError));
         writer.write(buf.as_slice()).map_err(StreamError)
