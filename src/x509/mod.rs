@@ -133,6 +133,36 @@ impl<'a, T: AsStr<'a>> ToStr for Vec<T> {
 }
 
 #[allow(non_snake_case)]
+/// Generator of private key/certificate pairs
+///
+/// # Example
+///
+/// ```
+/// use std::io::{File, Open, Write};
+/// # use std::io::fs;
+///
+/// use openssl::crypto::hash::SHA256;
+/// use openssl::x509::{DigitalSignature, X509Generator};
+///
+/// let gen = X509Generator::new()
+///        .set_bitlength(2048)
+///        .set_valid_period(365*2)
+///        .set_CN("SuperMegaCorp Inc.")
+///        .set_sign_hash(SHA256)
+///        .set_usage([DigitalSignature]);
+///
+/// let (cert, pkey) = gen.generate().unwrap();
+///
+/// let cert_path = Path::new("doc_cert.pem");
+/// let mut file = File::open_mode(&cert_path, Open, Write).unwrap();
+/// assert!(cert.write_pem(&mut file).is_ok());
+/// # let _ = fs::unlink(&cert_path);
+///
+/// let pkey_path = Path::new("doc_key.pem");
+/// let mut file = File::open_mode(&pkey_path, Open, Write).unwrap();
+/// assert!(pkey.write_pem(&mut file).is_ok());
+/// # let _ = fs::unlink(&pkey_path);
+/// ```
 pub struct X509Generator {
     bits: uint,
     days: uint,

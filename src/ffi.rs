@@ -193,7 +193,7 @@ extern { }
 pub unsafe fn BN_is_zero(a: *mut BIGNUM) -> c_int { bn_is_zero(a) }
 
 /* Special import from native/bn_is_zero.c */
-#[link(name="wrapped")]
+#[link(name = "wrapped", kind = "static")]
 extern "C" {
     pub fn bn_is_zero(a: *mut BIGNUM) -> c_int;
 }
