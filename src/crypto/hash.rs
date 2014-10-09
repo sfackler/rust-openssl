@@ -56,7 +56,7 @@ impl Hasher {
      * Return the digest of all bytes added to this hasher since its last
      * initialization
      */
-    pub fn final(&self) -> Vec<u8> {
+    pub fn finalize(&self) -> Vec<u8> {
         unsafe {
             let mut res = Vec::from_elem(self.len, 0u8);
             ffi::EVP_DigestFinal(self.ctx, res.as_mut_ptr(), ptr::null_mut());
@@ -80,7 +80,7 @@ impl Drop for Hasher {
 pub fn hash(t: HashType, data: &[u8]) -> Vec<u8> {
     let h = Hasher::new(t);
     h.update(data);
-    h.final()
+    h.finalize()
 }
 
 #[cfg(test)]
