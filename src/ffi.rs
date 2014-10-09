@@ -3,6 +3,8 @@
 use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
 use std::ptr;
 
+pub use bn::BIGNUM;
+
 pub type ASN1_INTEGER = c_void;
 pub type ASN1_STRING = c_void;
 pub type ASN1_TIME = c_void;
@@ -27,16 +29,6 @@ pub type X509_EXTENSION = c_void;
 pub type X509_NAME = c_void;
 pub type X509_REQ = c_void;
 pub type X509_STORE_CTX = c_void;
-
-#[allow(dead_code)]
-#[repr(C)]
-pub struct BIGNUM {
-    d: *mut c_void,
-    top: c_int,
-    dmax: c_int,
-    pub neg: c_int,
-    flags: c_int,
-}
 
 #[repr(C)]
 pub struct EVP_MD_CTX {
@@ -188,15 +180,6 @@ extern {}
 #[link(name="gdi32")]
 #[link(name="wsock32")]
 extern { }
-
-/* Since the openssl BN_is_zero is sometimes a macro, this wrapper is necessary. */
-pub unsafe fn BN_is_zero(a: *mut BIGNUM) -> c_int { bn_is_zero(a) }
-
-/* Special import from native/bn_is_zero.c */
-#[link(name = "wrapped", kind = "static")]
-extern "C" {
-    pub fn bn_is_zero(a: *mut BIGNUM) -> c_int;
-}
 
 // Functions converted from macros
 pub unsafe fn BIO_eof(b: *mut BIO) -> bool {

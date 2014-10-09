@@ -237,16 +237,3 @@ fn test_cert_gen() {
     // FIXME: check data in result to be correct, needs implementation
     // of X509 getters
 }
-
-#[test]
-fn test_bn_is_zero() {
-    use ffi;
-    use std::ptr;
-
-    unsafe {
-        let bn = ffi::BN_new();
-        assert!(bn != ptr::null_mut());
-        // Just make sure it is linked and resolved correctly
-        ffi::BN_is_zero(bn);
-    }
-}
