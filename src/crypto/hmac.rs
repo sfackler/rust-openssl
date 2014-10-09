@@ -48,7 +48,7 @@ impl HMAC {
         }
     }
 
-    pub fn final(&mut self) -> Vec<u8> {
+    pub fn finalize(&mut self) -> Vec<u8> {
         unsafe {
             let mut res = Vec::from_elem(self.len, 0u8);
             let mut outlen = 0;
@@ -94,7 +94,7 @@ mod tests {
         for &(ref key, ref data, ref res) in tests.iter() {
             let mut hmac = HMAC(MD5, key.as_slice());
             hmac.update(data.as_slice());
-            assert_eq!(hmac.final(), *res);
+            assert_eq!(hmac.finalize(), *res);
         }
     }
 
@@ -127,7 +127,7 @@ mod tests {
         for &(ref key, ref data, ref res) in tests.iter() {
             let mut hmac = HMAC(SHA1, key.as_slice());
             hmac.update(data.as_slice());
-            assert_eq!(hmac.final(), *res);
+            assert_eq!(hmac.finalize(), *res);
         }
     }
 
@@ -151,7 +151,7 @@ mod tests {
         for (&(ref key, ref data), res) in tests.iter().zip(results.iter()) {
             let mut hmac = HMAC(ty, key.as_slice());
             hmac.update(data.as_slice());
-            assert_eq!(hmac.final(), *res);
+            assert_eq!(hmac.finalize(), *res);
         }
     }
 

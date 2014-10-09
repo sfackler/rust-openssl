@@ -114,7 +114,7 @@ impl Crypter {
     /**
      * Finish crypting. Returns the remaining partial block of output, if any.
      */
-    pub fn final(&self) -> Vec<u8> {
+    pub fn finalize(&self) -> Vec<u8> {
         unsafe {
             let mut res = Vec::from_elem(self.blocksize, 0u8);
             let mut reslen = self.blocksize as c_int;
@@ -145,7 +145,7 @@ pub fn encrypt(t: Type, key: &[u8], iv: Vec<u8>, data: &[u8]) -> Vec<u8> {
     let c = Crypter::new(t);
     c.init(Encrypt, key, iv);
     let mut r = c.update(data);
-    let rest = c.final();
+    let rest = c.finalize();
     r.extend(rest.into_iter());
     r
 }
@@ -158,7 +158,7 @@ pub fn decrypt(t: Type, key: &[u8], iv: Vec<u8>, data: &[u8]) -> Vec<u8> {
     let c = Crypter::new(t);
     c.init(Decrypt, key, iv);
     let mut r = c.update(data);
-    let rest = c.final();
+    let rest = c.finalize();
     r.extend(rest.into_iter());
     r
 }
@@ -186,12 +186,12 @@ mod tests {
         c.init(super::Encrypt, k0.as_slice(), vec![]);
         c.pad(false);
         let mut r0 = c.update(p0.as_slice());
-        r0.extend(c.final().into_iter());
+        r0.extend(c.finalize().into_iter());
         assert!(r0 == c0);
         c.init(super::Decrypt, k0.as_slice(), vec![]);
         c.pad(false);
         let mut p1 = c.update(r0.as_slice());
-        p1.extend(c.final().into_iter());
+        p1.extend(c.finalize().into_iter());
         assert!(p1 == p0);
     }
 
@@ -203,7 +203,7 @@ mod tests {
 
         let expected = ct.from_hex().unwrap().as_slice().to_vec();
         let mut computed = cipher.update(pt.from_hex().unwrap().as_slice());
-        computed.extend(cipher.final().into_iter());
+        computed.extend(cipher.finalize().into_iter());
 
         if computed != expected {
             println!("Computed: {}", computed.as_slice().to_hex());
