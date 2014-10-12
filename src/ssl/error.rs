@@ -41,19 +41,6 @@ fn get_reason(err: c_ulong) -> String {
     unsafe { CString::new(ffi::ERR_reason_error_string(err), false).to_string() }
 }
 
-#[test]
-#[ignore] // FIXME #65
-fn test_uknown_error_should_have_correct_messages() {
-    let err = 336032784;
-    let library = get_lib(err);
-    let function = get_func(err);
-    let reason = get_reason(err);
-
-    assert_eq!(library.as_slice(),"SSL routines");
-    assert_eq!(function.as_slice(), "SSL23_GET_SERVER_HELLO");
-    assert_eq!(reason.as_slice(), "sslv3 alert handshake failure");
-}
-
 impl SslError {
     /// Creates a new `OpenSslErrors` with the current contents of the error
     /// stack.
@@ -62,13 +49,37 @@ impl SslError {
         loop {
             match unsafe { ffi::ERR_get_error() } {
                 0 => break,
-                err => errs.push(UnknownError {
-                    library: get_lib(err),
-                    function: get_func(err),
-                    reason: get_reason(err)
-                })
+                err => errs.push(SslError::from_error_code(err))
             }
         }
         OpenSslErrors(errs)
     }
+
+    /// Creates an `SslError` from the raw numeric error code.
+    pub fn from_error(err: c_ulong) -> SslError {
+        OpenSslErrors(vec![SslError::from_error_code(err)])
+    }
+
+    fn from_error_code(err: c_ulong) -> OpensslError {
+        ffi::init();
+        UnknownError {
+            library: get_lib(err),
+            function: get_func(err),
+            reason: get_reason(err)
+        }
+    }
+}
+
+#[test]
+fn test_uknown_error_should_have_correct_messages() {
+    let errs = match SslError::from_error(336032784) {
+        OpenSslErrors(errs) => errs,
+        _ => fail!("This should always be an `OpenSslErrors` variant.")
+    };
+
+    let UnknownError { ref library, ref function, ref reason } = errs[0];
+
+    assert_eq!(library.as_slice(),"SSL routines");
+    assert_eq!(function.as_slice(), "SSL23_GET_SERVER_HELLO");
+    assert_eq!(reason.as_slice(), "sslv3 alert handshake failure");
 }

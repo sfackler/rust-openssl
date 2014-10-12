@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
 use std::ptr;
+use sync::one::{Once, ONCE_INIT};
 
 pub use bn::BIGNUM;
 
@@ -180,6 +181,17 @@ extern {}
 #[link(name="gdi32")]
 #[link(name="wsock32")]
 extern { }
+
+pub fn init() {
+    static mut INIT: Once = ONCE_INIT;
+
+    unsafe {
+        INIT.doit(|| {
+            SSL_library_init();
+            SSL_load_error_strings()
+        })
+    }
+}
 
 // Functions converted from macros
 pub unsafe fn BIO_eof(b: *mut BIO) -> bool {
