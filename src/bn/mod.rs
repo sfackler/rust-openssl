@@ -79,8 +79,10 @@ macro_rules! with_bn_in_ctx(
 )
 
 impl BigNum {
+    // FIXME: squash 3 constructors into one
     pub fn new() -> Result<BigNum, SslError> {
         unsafe {
+            ffi::init();
             let v = ffi::BN_new();
             if v.is_null() {
                 Err(SslError::get())
@@ -92,6 +94,7 @@ impl BigNum {
 
     pub fn new_from(n: u64) -> Result<BigNum, SslError> {
         unsafe {
+            ffi::init();
             let bn = ffi::BN_new();
             if bn.is_null() || ffi::BN_set_word(bn, n as c_ulong) == 0 {
                 Err(SslError::get())
@@ -103,6 +106,7 @@ impl BigNum {
 
     pub fn new_from_slice(n: &[u8]) -> Result<BigNum, SslError> {
         unsafe {
+            ffi::init();
             let bn = ffi::BN_new();
             if bn.is_null() || ffi::BN_bin2bn(n.as_ptr(), n.len() as c_int, bn).is_null() {
                 Err(SslError::get())

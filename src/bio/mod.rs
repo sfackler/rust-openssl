@@ -24,6 +24,8 @@ impl Drop for MemBio {
 impl MemBio {
     /// Creates a new owned memory based BIO
     pub fn new() -> Result<MemBio, SslError> {
+        ffi::init();
+
         let bio = unsafe { ffi::BIO_new(ffi::BIO_s_mem()) };
         try_ssl_null!(bio);
 

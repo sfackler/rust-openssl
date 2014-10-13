@@ -272,6 +272,8 @@ impl X509Generator {
 
     /// Generates a private key and a signed certificate and returns them
     pub fn generate<'a>(&self) -> Result<(X509<'a>, PKey), SslError> {
+        ffi::init();
+
         let mut p_key = PKey::new();
         p_key.gen(self.bits);
 

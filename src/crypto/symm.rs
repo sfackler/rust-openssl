@@ -50,6 +50,8 @@ pub struct Crypter {
 
 impl Crypter {
     pub fn new(t: Type) -> Crypter {
+        ffi::init();
+
         let ctx = unsafe { ffi::EVP_CIPHER_CTX_new() };
         let (evp, keylen, blocksz) = evpc(t);
         Crypter { evp: evp, ctx: ctx, keylen: keylen, blocksize: blocksz }

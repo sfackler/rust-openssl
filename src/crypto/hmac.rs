@@ -27,6 +27,8 @@ pub struct HMAC {
 #[allow(non_snake_case)]
 pub fn HMAC(ht: hash::HashType, key: &[u8]) -> HMAC {
     unsafe {
+        ffi::init();
+
         let (evp, mdlen) = hash::evpmd(ht);
 
         let mut ctx : ffi::HMAC_CTX = ::std::mem::uninitialized();
