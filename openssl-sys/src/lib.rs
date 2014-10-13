@@ -295,7 +295,7 @@ extern "C" {
                                                            n: c_int,
                                                            file: *const c_char,
                                                            line: c_int));
-    pub fn CRYPTO_free(buf: *const c_char);
+    pub fn CRYPTO_free(buf: *mut c_void);
     pub fn CRYPTO_memcmp(a: *const c_void, b: *const c_void,
                          len: size_t) -> c_int;
 
