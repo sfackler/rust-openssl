@@ -55,6 +55,8 @@ pub struct PKey {
 impl PKey {
     pub fn new() -> PKey {
         unsafe {
+            ffi::init();
+
             PKey {
                 evp: ffi::EVP_PKEY_new(),
                 parts: Neither,

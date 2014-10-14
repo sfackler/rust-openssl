@@ -20,6 +20,8 @@ impl Asn1Time {
     }
 
     fn new_with_period(period: u64) -> Result<Asn1Time, SslError> {
+        ffi::init();
+
         let handle = unsafe {
             try_ssl_null!(ffi::X509_gmtime_adj(ptr::null_mut(),
                                                period as c_long))

@@ -36,6 +36,8 @@ pub struct Hasher {
 
 impl Hasher {
     pub fn new(ht: HashType) -> Hasher {
+        ffi::init();
+
         let ctx = unsafe { ffi::EVP_MD_CTX_create() };
         let (evp, mdlen) = evpmd(ht);
         unsafe {

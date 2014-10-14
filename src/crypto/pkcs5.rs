@@ -9,6 +9,8 @@ pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint, keylen: uint) -> Ve
 
         let mut out = Vec::with_capacity(keylen);
 
+        ffi::init();
+
         let r = ffi::PKCS5_PBKDF2_HMAC_SHA1(
                 pass.as_ptr(), pass.len() as c_int,
                 salt.as_ptr(), salt.len() as c_int,
