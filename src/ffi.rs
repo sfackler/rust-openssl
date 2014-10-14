@@ -76,9 +76,9 @@ pub type CRYPTO_EX_dup = extern "C" fn(to: *mut CRYPTO_EX_DATA,
 pub type CRYPTO_EX_free = extern "C" fn(parent: *mut c_void, ptr: *mut c_void,
                                         ad: *mut CRYPTO_EX_DATA, idx: c_int,
                                         argl: c_long, argp: *mut c_void);
-pub type PrivateKeyWriteCallback = extern "C" fn(buf: *mut c_char, size: c_int,
-                                                 rwflag: c_int, user_data: *mut c_void)
-                                                 -> c_int;
+pub type PasswordCallback = extern "C" fn(buf: *mut c_char, size: c_int,
+                                          rwflag: c_int, user_data: *mut c_void)
+                                          -> c_int;
 
 pub const BIO_CTRL_EOF: c_int = 2;
 
@@ -356,9 +356,12 @@ extern "C" {
     pub fn HMAC_Final(ctx: *mut HMAC_CTX, output: *mut u8, len: *mut c_uint);
     pub fn HMAC_Update(ctx: *mut HMAC_CTX, input: *const u8, len: c_uint);
 
+
+    pub fn PEM_read_bio_X509(bio: *mut BIO, out: *mut *mut X509, callback: Option<PasswordCallback>,
+                             user_data: *mut c_void) -> *mut X509;
     pub fn PEM_write_bio_PrivateKey(bio: *mut BIO, pkey: *mut EVP_PKEY, cipher: *const EVP_CIPHER,
                                     kstr: *mut c_char, klen: c_int,
-                                    callback: *mut c_void,
+                                    callback: Option<PasswordCallback>,
                                     user_data: *mut c_void) -> c_int;
     pub fn PEM_write_bio_X509(bio: *mut BIO, x509: *mut X509) -> c_int;
 

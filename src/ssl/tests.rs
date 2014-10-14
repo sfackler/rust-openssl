@@ -1,11 +1,11 @@
-use std::io::{File, Open, Write, Writer};
+use serialize::hex::FromHex;
+use std::io::{Writer};
 use std::io::net::tcp::TcpStream;
-use std::num::FromStrRadix;
 use std::str;
 
 use crypto::hash::{SHA256};
-use ssl::{Sslv23, SslContext, SslStream, SslVerifyPeer, SslVerifyNone};
-use x509::{X509Generator, DigitalSignature, KeyEncipherment, ClientAuth, ServerAuth, X509StoreContext};
+use ssl::{Sslv23, SslContext, SslStream, SslVerifyPeer};
+use x509::{X509StoreContext};
 
 #[test]
 fn test_new_ctx() {
@@ -142,19 +142,6 @@ fn test_verify_trusted_get_error_err() {
     assert!(SslStream::new(&ctx, stream).is_err());
 }
 
-fn hash_str_to_vec(s: &str) -> Vec<u8> {
-    let mut res = Vec::new();
-    assert!(s.len() % 2 == 0, "Hash str should have len = 2 * n");
-    for i in range(0, s.len() / 2) {
-        let substr = s.slice(i, i + 2);
-        let t: Option<u8> = FromStrRadix::from_str_radix(substr, 16);
-        assert!(t.is_some(), "Hash str must contain only hex digits, i.e. [0-9a-f]");
-        res.push(t.unwrap());
-    }
-
-    res
-}
-
 #[test]
 fn test_verify_callback_data() {
     fn callback(_preverify_ok: bool, x509_ctx: &X509StoreContext, node_id: &Vec<u8>) -> bool {
@@ -175,8 +162,8 @@ fn test_verify_callback_data() {
     // Command: openssl x509 -in test/cert.pem  -outform DER | openssl dgst -sha256
     // Please update if "test/cert.pem" will ever change
     let node_hash_str = "6204f6617e1af7495394250655f43600cd483e2dfc2005e92d0fe439d0723c34";
-    let node_id = hash_str_to_vec(node_hash_str);
-    ctx.set_verify_with_data(SslVerifyNone, callback, node_id);
+    let node_id = node_hash_str.from_hex().unwrap();
+    ctx.set_verify_with_data(SslVerifyPeer, callback, node_id);
     ctx.set_verify_depth(1);
 
     match SslStream::new(&ctx, stream) {
@@ -204,36 +191,4 @@ fn test_read() {
     stream.flush().unwrap();
     let buf = stream.read_to_end().ok().expect("read error");
     print!("{}", str::from_utf8(buf.as_slice()));
-}
-
-#[test]
-fn test_cert_gen() {
-    let gen = X509Generator::new()
-        .set_bitlength(2048)
-        .set_valid_period(365*2)
-        .set_CN("test_me")
-        .set_sign_hash(SHA256)
-        .set_usage([DigitalSignature, KeyEncipherment])
-        .set_ext_usage([ClientAuth, ServerAuth]);
-
-    let res = gen.generate();
-    assert!(res.is_ok());
-
-    let (cert, pkey) = res.unwrap();
-
-    #[cfg(unix)]
-    static NULL_PATH: &'static str = "/dev/null";
-    #[cfg(windows)]
-    static NULL_PATH: &'static str = "nul";
-
-    let cert_path = Path::new(NULL_PATH);
-    let mut file = File::open_mode(&cert_path, Open, Write).unwrap();
-    assert!(cert.write_pem(&mut file).is_ok());
-
-    let key_path = Path::new(NULL_PATH);
-    let mut file = File::open_mode(&key_path, Open, Write).unwrap();
-    assert!(pkey.write_pem(&mut file).is_ok());
-
-    // FIXME: check data in result to be correct, needs implementation
-    // of X509 getters
 }
