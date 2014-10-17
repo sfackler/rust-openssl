@@ -500,3 +500,4 @@ impl<S: Stream> Writer for SslStream<S> {
         self.stream.flush()
     }
 }
+

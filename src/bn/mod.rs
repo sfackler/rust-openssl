@@ -359,7 +359,7 @@ impl BigNum {
             assert!(!buf.is_null());
             let c_str = CString::new(buf, false);
             let str = c_str.as_str().unwrap().to_string();
-            ffi::CRYPTO_free(buf);
+            ffi::CRYPTO_free(buf as *mut c_void);
             str
         }
     }

@@ -1,4 +1,4 @@
-use libc::{c_int, c_long, c_uint};
+use libc::{c_int, c_long, c_uint, c_void, c_char};
 use std::mem;
 use std::ptr;
 
@@ -9,7 +9,79 @@ use crypto::pkey::{PKey};
 use crypto::rand::rand_bytes;
 use ffi;
 use ssl::error::{SslError, StreamError};
+use std::c_str::CString;
+use std::collections::enum_set::CLike;
 
+pub use ffi::nid as nid;
+
+#[allow(dead_code)]
+pub struct X509Name<'x> {
+    x509: &'x ffi::X509,
+    name: *mut ffi::X509_NAME
+}
+
+#[allow(dead_code)]
+pub struct X509NameEntry<'x> {
+    x509_name: &'x X509Name<'x>,
+    ne: *mut ffi::X509_NAME_ENTRY
+}
+
+#[allow(dead_code)]
+pub struct Asn1String<'x> {
+    x509_name_entry: &'x X509NameEntry<'x>,
+    asn1_str: *mut ffi::ASN1_STRING
+}
+
+#[deriving(Show)]
+pub struct SslCString {
+    c_str : CString
+}
+
+impl Drop for SslCString {
+    fn drop(&mut self) {
+        unsafe { ffi::CRYPTO_free(self.c_str.as_mut_ptr() as *mut c_void); }
+    }
+}
+
+impl SslCString {
+    pub unsafe fn new(buf: *const i8) -> SslCString {
+        SslCString {
+            c_str : CString::new(buf, false)
+        }
+    }
+}
+
+impl <'x> X509Name<'x> {
+    pub fn text_by_nid(&self, nid: nid::Nid) -> Option<SslCString> {
+        unsafe {
+            let loc = ffi::X509_NAME_get_index_by_NID(self.name, nid.to_uint() as c_int, -1);
+            if loc == -1 {
+                return None;
+            }
+
+            let ne = ffi::X509_NAME_get_entry(self.name, loc);
+            if ne.is_null() {
+                return None;
+            }
+
+            let asn1_str = ffi::X509_NAME_ENTRY_get_data(ne);
+            if asn1_str.is_null() {
+                return None;
+            }
+
+            let mut str_from_asn1 : *mut c_char = ptr::null_mut();
+            let utf8_succ = ffi::ASN1_STRING_to_UTF8(&mut str_from_asn1, asn1_str);
+
+            if utf8_succ < 0 {
+                return None
+            }
+
+            assert!(!str_from_asn1.is_null());
+
+            Some(SslCString::new(str_from_asn1 as *const i8))
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests;
