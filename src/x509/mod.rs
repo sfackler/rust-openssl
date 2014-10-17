@@ -11,6 +11,9 @@ use ffi;
 use ssl::error::{SslError, StreamError};
 
 
+#[cfg(test)]
+mod tests;
+
 #[repr(i32)]
 pub enum X509FileType {
     PEM = ffi::X509_FILETYPE_PEM,
@@ -322,6 +325,7 @@ impl X509Generator {
     }
 }
 
+
 #[allow(dead_code)]
 /// A public key certificate
 pub struct X509<'ctx> {
@@ -331,6 +335,39 @@ pub struct X509<'ctx> {
 }
 
 impl<'ctx> X509<'ctx> {
+    /// Creates new from handle with desired ownership.
+    pub fn new(handle: *mut ffi::X509, owned: bool) -> X509<'ctx> {
+        X509 {
+            ctx: None,
+            handle: handle,
+            owned: owned,
+        }
+    }
+
+    /// Creates a new certificate from context. Doesn't take ownership
+    /// of handle.
+    pub fn new_in_ctx(handle: *mut ffi::X509, ctx: &'ctx X509StoreContext) -> X509<'ctx> {
+        X509 {
+            ctx: Some(ctx),
+            handle: handle,
+            owned: false
+        }
+    }
+
+    /// Reads certificate from PEM, takes ownership of handle
+    pub fn from_pem(reader: &mut Reader) -> Result<X509<'ctx>, SslError> {
+        let mut mem_bio = try!(MemBio::new());
+        let buf = try!(reader.read_to_end().map_err(StreamError));
+        try!(mem_bio.write(buf.as_slice()).map_err(StreamError));
+
+        unsafe {
+            let handle = try_ssl_null!(ffi::PEM_read_bio_X509(mem_bio.get_handle(),
+                                                              ptr::null_mut(),
+                                                              None, ptr::null_mut()));
+            Ok(X509::new(handle, true))
+        }
+    }
+
     pub fn subject_name<'a>(&'a self) -> X509Name<'a> {
         let name = unsafe { ffi::X509_get_subject_name(self.handle) };
         X509Name { x509: self, name: name }
