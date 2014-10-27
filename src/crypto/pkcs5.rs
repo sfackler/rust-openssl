@@ -1,6 +1,49 @@
 use libc::c_int;
 use ffi;
 
+use crypto::symm;
+use crypto::hash;
+
+/// Derives a key and an IV from various parameters.
+#[allow(unused_variable)]
+pub fn evp_bytestokey(typ: symm::Type, message_digest: hash::HashType,
+                      salt: &[u8], data: &[u8],
+                      count: u32) -> (Vec<u8>, Vec<u8>) {
+    unsafe {
+
+        ffi::init();
+
+        let (evp, keylen, blocksz) = symm::evpc(typ);
+
+        let cipher_digest = match message_digest {
+            hash::MD5 => ffi::EVP_md5(),
+            hash::SHA1 => ffi::EVP_sha1(),
+            hash::SHA224 => ffi::EVP_sha224(),
+            hash::SHA256 => ffi::EVP_sha256(),
+            hash::SHA384 => ffi::EVP_sha384(),
+            hash::SHA512 => ffi::EVP_sha512(),
+            hash::RIPEMD160 => ffi::EVP_ripemd160(),
+        };
+
+        let len = keylen;
+        let mut key = Vec::from_elem(len, 0u8);
+        let mut iv = Vec::from_elem(len, 0u8);
+
+
+        let ret: c_int = ffi::EVP_BytesToKey(evp,
+                                             cipher_digest,
+                                             salt.as_ptr(),
+                                             data.as_ptr(),
+                                             data.len().to_i32().unwrap(),
+                                             count as c_int,
+                                             key.as_mut_ptr(),
+                                             iv.as_mut_ptr());
+        assert!(ret == len as c_int);
+        return (key, iv);
+    }
+}
+
+
 /// Derives a key from a password and salt using the PBKDF2-HMAC-SHA1 algorithm.
 pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint, keylen: uint) -> Vec<u8> {
     unsafe {

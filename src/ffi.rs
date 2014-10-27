@@ -370,6 +370,10 @@ extern "C" {
                                   iter: c_int, keylen: c_int,
                                   out: *mut u8) -> c_int;
 
+    pub fn EVP_BytesToKey(typ: *const EVP_CIPHER, md: *const EVP_MD,
+                          salt: *const u8, data: *const u8, datalen: c_int,
+                          count: c_int, key: *mut u8, iv: *mut u8) -> c_int;
+
 
     pub fn RAND_bytes(buf: *mut u8, num: c_int) -> c_int;
 

@@ -22,7 +22,7 @@ pub enum Type {
     RC4_128,
 }
 
-fn evpc(t: Type) -> (*const ffi::EVP_CIPHER, uint, uint) {
+pub fn evpc(t: Type) -> (*const ffi::EVP_CIPHER, uint, uint) {
     unsafe {
         match t {
             AES_128_ECB => (ffi::EVP_aes_128_ecb(), 16u, 16u),
