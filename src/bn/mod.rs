@@ -1,20 +1,10 @@
-use libc::{c_int, c_ulong, c_void};
+use libc::{c_int, c_ulong};
 use std::{fmt, ptr};
 use std::c_str::CString;
 use std::num::{One, Zero};
 
 use ffi;
 use ssl::error::SslError;
-
-#[allow(dead_code)]
-#[repr(C)]
-pub struct BIGNUM {
-    d: *mut c_void,
-    top: c_int,
-    dmax: c_int,
-    neg: c_int,
-    flags: c_int,
-}
 
 pub struct BigNum(*mut ffi::BIGNUM);
 

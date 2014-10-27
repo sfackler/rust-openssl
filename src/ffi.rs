@@ -6,8 +6,6 @@ use std::ptr;
 use std::rt::mutex::NativeMutex;
 use sync::one::{Once, ONCE_INIT};
 
-pub use bn::BIGNUM;
-
 pub type ASN1_INTEGER = c_void;
 pub type ASN1_STRING = c_void;
 pub type ASN1_TIME = c_void;
@@ -64,6 +62,15 @@ pub struct X509V3_CTX {
     db: *mut c_void,
     // I like the last comment line, it is copied from OpenSSL sources:
     // Maybe more here
+}
+
+#[repr(C)]
+pub struct BIGNUM {
+    pub d: *mut c_void,
+    pub top: c_int,
+    pub dmax: c_int,
+    pub neg: c_int,
+    pub flags: c_int,
 }
 
 pub type CRYPTO_EX_new = extern "C" fn(parent: *mut c_void, ptr: *mut c_void,
