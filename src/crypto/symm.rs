@@ -197,6 +197,45 @@ mod tests {
         assert!(p1 == p0);
     }
 
+    #[test]
+    fn test_aes_256_cbc_decrypt() {
+        let cr = super::Crypter::new(super::AES_256_CBC);
+        let iv = vec![
+            4_u8, 223_u8, 153_u8, 219_u8, 28_u8, 142_u8, 234_u8, 68_u8, 227_u8,
+            69_u8, 98_u8, 107_u8, 208_u8, 14_u8, 236_u8, 60_u8, 0_u8, 0_u8,
+            0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
+            0_u8, 0_u8, 0_u8
+        ];
+        let data = [
+            143_u8, 210_u8, 75_u8, 63_u8, 214_u8, 179_u8, 155_u8,
+            241_u8, 242_u8, 31_u8, 154_u8, 56_u8, 198_u8, 145_u8, 192_u8, 64_u8,
+            2_u8, 245_u8, 167_u8, 220_u8, 55_u8, 119_u8, 233_u8, 136_u8, 139_u8,
+            27_u8, 71_u8, 242_u8, 119_u8, 175_u8, 65_u8, 207_u8
+        ];
+        let ciphered_data = [
+            0x4a_u8, 0x2e_u8, 0xe5_u8, 0x6_u8, 0xbf_u8, 0xcf_u8, 0xf2_u8, 0xd7_u8,
+            0xea_u8, 0x2d_u8, 0xb1_u8, 0x85_u8, 0x6c_u8, 0x93_u8, 0x65_u8, 0x6f_u8
+            ];
+        cr.init(super::Decrypt, data, iv);
+        cr.pad(false);
+        let unciphered_data_1 = cr.update(ciphered_data);
+        let unciphered_data_2 = cr.finalize();
+
+        // A string translating to "I love turtles." with a trailing
+        // 0x1 as last byte.
+        let expected_unciphered_data = vec![
+            0x49_u8, 0x20_u8, 0x6c_u8, 0x6f_u8, 0x76_u8, 0x65_u8, 0x20_u8, 0x74_u8, 
+            0x75_u8, 0x72_u8, 0x74_u8, 0x6c_u8, 0x65_u8, 0x73_u8, 0x2e_u8, 0x1_u8
+        ];
+
+        assert!(unciphered_data_2.len() == 0);
+
+        assert_eq!(
+            unciphered_data_1,
+            expected_unciphered_data
+        );
+    }
+
     fn cipher_test(ciphertype: super::Type, pt: &str, ct: &str, key: &str, iv: &str) {
         use serialize::hex::ToHex;
 
