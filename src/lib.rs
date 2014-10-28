@@ -15,6 +15,6 @@ pub mod asn1;
 pub mod bn;
 pub mod bio;
 pub mod crypto;
-pub mod ffi;
+mod ffi;
 pub mod ssl;
 pub mod x509;
