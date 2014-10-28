@@ -221,17 +221,12 @@ mod tests {
         let unciphered_data_1 = cr.update(ciphered_data);
         let unciphered_data_2 = cr.finalize();
 
-        // A string translating to "I love turtles." with a trailing
-        // 0x1 as last byte.
-        let expected_unciphered_data = vec![
-            0x49_u8, 0x20_u8, 0x6c_u8, 0x6f_u8, 0x76_u8, 0x65_u8, 0x20_u8, 0x74_u8, 
-            0x75_u8, 0x72_u8, 0x74_u8, 0x6c_u8, 0x65_u8, 0x73_u8, 0x2e_u8, 0x1_u8
-        ];
+        let expected_unciphered_data = b"I love turtles.\x01";
 
         assert!(unciphered_data_2.len() == 0);
 
         assert_eq!(
-            unciphered_data_1,
+            unciphered_data_1.as_slice(),
             expected_unciphered_data
         );
     }
