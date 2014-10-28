@@ -70,6 +70,8 @@ pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint, keylen: uint) -> Ve
 
 #[cfg(test)]
 mod tests {
+    use crypto::symm;
+    use crypto::hash;
     // Test vectors from
     // http://tools.ietf.org/html/draft-josefsson-pbkdf2-test-vectors-06
     #[test]
@@ -157,6 +159,49 @@ mod tests {
                 0x9d_u8, 0xcc_u8, 0x37_u8, 0xd7_u8, 0xf0_u8, 0x34_u8, 0x25_u8,
                 0xe0_u8, 0xc3_u8
             )
+        );
+    }
+
+    #[test]
+    fn test_evp_bytestokey() {
+        let salt = [
+            16_u8, 34_u8, 19_u8, 23_u8, 141_u8, 4_u8, 207_u8,
+            221_u8, 91_u8, 23_u8, 159_u8, 26_u8, 58_u8, 216_u8, 222_u8, 157_u8,
+            121_u8, 191_u8, 72_u8, 152_u8, 255_u8, 166_u8, 235_u8, 74_u8,
+            212_u8, 23_u8, 81_u8, 33_u8, 81_u8, 53_u8, 96_u8, 9_u8
+        ];
+
+        let data = [
+            143_u8, 210_u8, 75_u8, 63_u8, 214_u8, 179_u8, 155_u8,
+            241_u8, 242_u8, 31_u8, 154_u8, 56_u8, 198_u8, 145_u8, 192_u8, 64_u8,
+            2_u8, 245_u8, 167_u8, 220_u8, 55_u8, 119_u8, 233_u8, 136_u8, 139_u8,
+            27_u8, 71_u8, 242_u8, 119_u8, 175_u8, 65_u8, 207_u8
+        ];
+
+
+
+        let expected_key = vec![
+            249_u8, 115_u8, 114_u8, 97_u8, 32_u8, 213_u8, 165_u8, 146_u8, 58_u8,
+            87_u8, 234_u8, 3_u8, 43_u8, 250_u8, 97_u8, 114_u8, 26_u8, 98_u8,
+            245_u8, 246_u8, 238_u8, 177_u8, 229_u8, 161_u8, 183_u8, 224_u8,
+            174_u8, 3_u8, 6_u8, 244_u8, 236_u8, 255_u8
+        ];
+        let expected_iv = vec![
+            4_u8, 223_u8, 153_u8, 219_u8, 28_u8, 142_u8, 234_u8, 68_u8, 227_u8,
+            69_u8, 98_u8, 107_u8, 208_u8, 14_u8, 236_u8, 60_u8, 0_u8, 0_u8,
+            0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
+            0_u8, 0_u8, 0_u8
+        ];
+
+        assert_eq!(
+            super::evp_bytestokey(
+                symm::AES_256_CBC,
+                hash::SHA1,
+                salt,
+                data,
+                1
+            ),
+            (expected_key, expected_iv)
         );
     }
 }
