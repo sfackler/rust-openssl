@@ -5,7 +5,7 @@ use crypto::symm;
 use crypto::hash;
 
 /// Derives a key and an IV from various parameters.
-pub fn evp_bytestokey(typ: symm::Type, message_digest: hash::HashType,
+pub fn evp_bytestokey(typ: symm::Type, message_digest_type: hash::HashType,
                       salt: &[u8], data: &[u8],
                       count: u32) -> (Vec<u8>, Vec<u8>) {
     unsafe {
@@ -14,15 +14,7 @@ pub fn evp_bytestokey(typ: symm::Type, message_digest: hash::HashType,
 
         let (evp, keylen, _) = symm::evpc(typ);
 
-        let cipher_digest = match message_digest {
-            hash::MD5 => ffi::EVP_md5(),
-            hash::SHA1 => ffi::EVP_sha1(),
-            hash::SHA224 => ffi::EVP_sha224(),
-            hash::SHA256 => ffi::EVP_sha256(),
-            hash::SHA384 => ffi::EVP_sha384(),
-            hash::SHA512 => ffi::EVP_sha512(),
-            hash::RIPEMD160 => ffi::EVP_ripemd160(),
-        };
+        let (message_digest, _) = hash::evpmd(message_digest_type);
 
         let len = keylen;
         let mut key = Vec::from_elem(len, 0u8);
@@ -30,7 +22,7 @@ pub fn evp_bytestokey(typ: symm::Type, message_digest: hash::HashType,
 
 
         let ret: c_int = ffi::EVP_BytesToKey(evp,
-                                             cipher_digest,
+                                             message_digest,
                                              salt.as_ptr(),
                                              data.as_ptr(),
                                              data.len().to_i32().unwrap(),
