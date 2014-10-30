@@ -17,7 +17,7 @@ pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: uint, keylen: uint) -> Ve
                 iter as c_int, keylen as c_int,
                 out.as_mut_ptr());
 
-        if r != 1 { fail!(); }
+        if r != 1 { panic!(); }
 
         out.set_len(keylen);
 

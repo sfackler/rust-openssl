@@ -8,7 +8,7 @@ use ffi;
 ///
 /// # Failure
 ///
-/// This function will fail the current task if `a` and `b` do not have the same
+/// This function will panic the current task if `a` and `b` do not have the same
 /// length.
 pub fn eq(a: &[u8], b: &[u8]) -> bool {
     assert!(a.len() == b.len());
