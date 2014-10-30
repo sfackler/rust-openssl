@@ -74,7 +74,7 @@ impl SslError {
 fn test_uknown_error_should_have_correct_messages() {
     let errs = match SslError::from_error(336032784) {
         OpenSslErrors(errs) => errs,
-        _ => fail!("This should always be an `OpenSslErrors` variant.")
+        _ => panic!("This should always be an `OpenSslErrors` variant.")
     };
 
     let UnknownError { ref library, ref function, ref reason } = errs[0];

@@ -483,7 +483,7 @@ pub mod unchecked {
             unsafe {
                 let r = ffi::BN_dup(self.raw());
                 if r.is_null() {
-                    fail!("Unexpected null pointer from BN_dup(..)")
+                    panic!("Unexpected null pointer from BN_dup(..)")
                 } else {
                     BigNum(r)
                 }
