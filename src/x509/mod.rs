@@ -390,7 +390,7 @@ impl<'ctx> X509<'ctx> {
                 match len.cmp(&act_len) {
                     Greater => None,
                     Equal => Some(v),
-                    Less => fail!("Fingerprint buffer was corrupted!")
+                    Less => panic!("Fingerprint buffer was corrupted!")
                 }
             }
         }

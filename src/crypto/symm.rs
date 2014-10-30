@@ -214,7 +214,7 @@ mod tests {
                 println!("Lengths differ: {} in computed vs {} expected",
                          computed.len(), expected.len());
             }
-            fail!("test failure");
+            panic!("test failure");
         }
     }
 

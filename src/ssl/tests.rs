@@ -24,7 +24,7 @@ fn test_verify_untrusted() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SslVerifyPeer, None);
     match SslStream::new(&ctx, stream) {
-        Ok(_) => fail!("expected failure"),
+        Ok(_) => panic!("expected failure"),
         Err(err) => println!("error {}", err)
     }
 }
@@ -36,11 +36,11 @@ fn test_verify_trusted() {
     ctx.set_verify(SslVerifyPeer, None);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         None => {}
-        Some(err) => fail!("Unexpected error {}", err)
+        Some(err) => panic!("Unexpected error {}", err)
     }
     match SslStream::new(&ctx, stream) {
         Ok(_) => (),
-        Err(err) => fail!("Expected success, got {}", err)
+        Err(err) => panic!("Expected success, got {}", err)
     }
 }
 
@@ -54,7 +54,7 @@ fn test_verify_untrusted_callback_override_ok() {
     ctx.set_verify(SslVerifyPeer, Some(callback));
     match SslStream::new(&ctx, stream) {
         Ok(_) => (),
-        Err(err) => fail!("Expected success, got {}", err)
+        Err(err) => panic!("Expected success, got {}", err)
     }
 }
 
@@ -79,11 +79,11 @@ fn test_verify_trusted_callback_override_ok() {
     ctx.set_verify(SslVerifyPeer, Some(callback));
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         None => {}
-        Some(err) => fail!("Unexpected error {}", err)
+        Some(err) => panic!("Unexpected error {}", err)
     }
     match SslStream::new(&ctx, stream) {
         Ok(_) => (),
-        Err(err) => fail!("Expected success, got {}", err)
+        Err(err) => panic!("Expected success, got {}", err)
     }
 }
 
@@ -97,7 +97,7 @@ fn test_verify_trusted_callback_override_bad() {
     ctx.set_verify(SslVerifyPeer, Some(callback));
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         None => {}
-        Some(err) => fail!("Unexpected error {}", err)
+        Some(err) => panic!("Unexpected error {}", err)
     }
     assert!(SslStream::new(&ctx, stream).is_err());
 }
@@ -125,7 +125,7 @@ fn test_verify_trusted_get_error_ok() {
     ctx.set_verify(SslVerifyPeer, Some(callback));
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         None => {}
-        Some(err) => fail!("Unexpected error {}", err)
+        Some(err) => panic!("Unexpected error {}", err)
     }
     assert!(SslStream::new(&ctx, stream).is_ok());
 }
@@ -168,7 +168,7 @@ fn test_verify_callback_data() {
 
     match SslStream::new(&ctx, stream) {
         Ok(_) => (),
-        Err(err) => fail!("Expected success, got {}", err)
+        Err(err) => panic!("Expected success, got {}", err)
     }
 }
 
