@@ -1,4 +1,4 @@
-#![allow(non_camel_case_types, non_uppercase_statics, non_snake_case)]
+#![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
 use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
 use std::mem;
@@ -196,7 +196,7 @@ static mut MUTEXES: *mut Vec<NativeMutex> = 0 as *mut Vec<NativeMutex>;
 extern fn locking_function(mode: c_int, n: c_int, _file: *const c_char,
                                _line: c_int) {
     unsafe {
-        let mutex = (*MUTEXES).get_mut(n as uint);
+        let mutex = &(*MUTEXES)[n as uint];
 
         if mode & CRYPTO_LOCK != 0 {
             mutex.lock_noguard();
