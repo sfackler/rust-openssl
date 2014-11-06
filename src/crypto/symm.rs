@@ -11,11 +11,13 @@ pub enum Mode {
 pub enum Type {
     AES_128_ECB,
     AES_128_CBC,
+    AES_128_XTS,
     // AES_128_CTR,
     //AES_128_GCM,
 
     AES_256_ECB,
     AES_256_CBC,
+    AES_256_XTS,
     // AES_256_CTR,
     //AES_256_GCM,
 
@@ -27,11 +29,13 @@ fn evpc(t: Type) -> (*const ffi::EVP_CIPHER, uint, uint) {
         match t {
             AES_128_ECB => (ffi::EVP_aes_128_ecb(), 16u, 16u),
             AES_128_CBC => (ffi::EVP_aes_128_cbc(), 16u, 16u),
+            AES_128_XTS => (ffi::EVP_aes_128_xts(), 32u, 16u),
             // AES_128_CTR => (EVP_aes_128_ctr(), 16u, 0u),
             //AES_128_GCM => (EVP_aes_128_gcm(), 16u, 16u),
 
             AES_256_ECB => (ffi::EVP_aes_256_ecb(), 32u, 16u),
             AES_256_CBC => (ffi::EVP_aes_256_cbc(), 32u, 16u),
+            AES_256_XTS => (ffi::EVP_aes_256_xts(), 64u, 16u),
             // AES_256_CTR => (EVP_aes_256_ctr(), 32u, 0u),
             //AES_256_GCM => (EVP_aes_256_gcm(), 32u, 16u),
 
@@ -261,6 +265,18 @@ mod tests {
         let iv = "";
 
         cipher_test(super::RC4_128, pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes256_xts() {
+        // Test case 174 from
+        // http://csrc.nist.gov/groups/STM/cavp/documents/aes/XTSTestVectors.zip
+        let pt = "77f4ef63d734ebd028508da66c22cdebdd52ecd6ee2ab0a50bc8ad0cfd692ca5fcd4e6dedc45df7f6503f462611dc542";
+        let ct = "ce7d905a7776ac72f240d22aafed5e4eb7566cdc7211220e970da634ce015f131a5ecb8d400bc9e84f0b81d8725dbbc7";
+        let key = "b6bfef891f83b5ff073f2231267be51eb084b791fa19a154399c0684c8b2dfcb37de77d28bbda3b4180026ad640b74243b3133e7b9fae629403f6733423dae28";
+        let iv = "db200efb7eaaa737dbdf40babb68953f";
+
+        cipher_test(super::AES_256_XTS, pt, ct, key, iv);
     }
 
     /*#[test]
