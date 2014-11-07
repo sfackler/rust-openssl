@@ -1,5 +1,6 @@
 use libc::c_uint;
 use std::ptr;
+use std::io;
 
 use ffi;
 
@@ -32,6 +33,13 @@ pub struct Hasher {
     evp: *const ffi::EVP_MD,
     ctx: *mut ffi::EVP_MD_CTX,
     len: uint,
+}
+
+impl io::Writer for Hasher {
+    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+        self.update(buf);
+        Ok(())
+    }
 }
 
 impl Hasher {
@@ -112,6 +120,12 @@ mod tests {
         assert!(calced == hashtest.expected_output);
     }
 
+    pub fn hash_writer(t: super::HashType, data: &[u8]) -> Vec<u8> {
+        let mut h = super::Hasher::new(t);
+        h.write(data);
+        h.finalize()
+    }
+
     // Test vectors from http://www.nsrl.nist.gov/testdata/
     #[test]
     fn test_md5() {
@@ -166,5 +180,12 @@ mod tests {
         for test in tests.iter() {
             hash_test(super::RIPEMD160, test);
         }
+    }
+
+    #[test]
+    fn test_writer() {
+        let tv = "rust-openssl".as_bytes();
+        let ht = super::RIPEMD160;
+        assert!(hash_writer(ht, tv) == super::hash(ht, tv));
     }
 }
