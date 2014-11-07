@@ -1,5 +1,6 @@
 use libc::c_uint;
 use std::ptr;
+use std::io;
 
 use ffi;
 
@@ -32,6 +33,13 @@ pub struct Hasher {
     evp: *const ffi::EVP_MD,
     ctx: *mut ffi::EVP_MD_CTX,
     len: uint,
+}
+
+impl io::Writer for Hasher {
+    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+        self.update(buf);
+        Ok(())
+    }
 }
 
 impl Hasher {
