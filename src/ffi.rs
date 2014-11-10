@@ -176,20 +176,26 @@ pub const X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE: c_int = 45;
 pub const X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
 pub const X509_V_OK: c_int = 0;
 
-#[cfg( any( all(target_os = "macos", feature = "tlsv1_1"),all(target_os = "macos", feature = "tlsv1_2")))]
-#[link(name="ssl.1.0.0")]
-#[link(name="crypto.1.0.0")]
-extern {}
+#[cfg(not(target_os = "nacl"))]
+mod link {
+    #[cfg( any( all(target_os = "macos", feature = "tlsv1_1"),
+                all(target_os = "macos", feature = "tlsv1_2")))]
+    #[link(name="ssl.1.0.0")]
+    #[link(name="crypto.1.0.0")]
+    extern {}
 
-#[cfg(any( not( target_os = "macos"), all(target_os = "macos", not(feature = "tlsv1_1"), not(feature = "tlsv1_2"))))]
-#[link(name="ssl")]
-#[link(name="crypto")]
-extern {}
+    #[cfg(any( not( target_os = "macos"),
+               all(target_os = "macos", not(feature = "tlsv1_1"),
+                   not(feature = "tlsv1_2"))))]
+    #[link(name="ssl")]
+    #[link(name="crypto")]
+    extern {}
 
-#[cfg(target_os = "win32")]
-#[link(name="gdi32")]
-#[link(name="wsock32")]
-extern { }
+    #[cfg(target_os = "win32")]
+    #[link(name="gdi32")]
+    #[link(name="wsock32")]
+    extern { }
+}
 
 static mut MUTEXES: *mut Vec<NativeMutex> = 0 as *mut Vec<NativeMutex>;
 

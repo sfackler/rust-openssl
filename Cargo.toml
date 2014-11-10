@@ -26,11 +26,12 @@ sslv2 = []
   git = "https://github.com/alexcrichton/openssl-sys"
 [target.x86_64-unknown-freebsd.dependencies.openssl-sys]
   git = "https://github.com/alexcrichton/openssl-sys"
-[target.le32-unknown-nacl.dependencies.openssl-sys]
-  git = "https://github.com/alexcrichton/openssl-sys"
-[target.arm-unknown-nacl.dependencies.openssl-sys]
-  git = "https://github.com/alexcrichton/openssl-sys"
-[target.i686-unknown-nacl.dependencies.openssl-sys]
-  git = "https://github.com/alexcrichton/openssl-sys"
-[target.x86_64-unknown-nacl.dependencies.openssl-sys]
-  git = "https://github.com/alexcrichton/openssl-sys"
+
+[target.le32-unknown-nacl.dependencies.libressl-pnacl-sys]
+git = "https://github.com/DiamondLovesYou/libressl-pnacl-sys.git"
+[target.arm-unknown-nacl.dependencies.libressl-pnacl-sys]
+git = "https://github.com/DiamondLovesYou/libressl-pnacl-sys.git"
+[target.i686-unknown-nacl.dependencies.libressl-pnacl-sys]
+git = "https://github.com/DiamondLovesYou/libressl-pnacl-sys.git"
+[target.x86_64-unknown-nacl.dependencies.libressl-pnacl-sys]
+git = "https://github.com/DiamondLovesYou/libressl-pnacl-sys.git"
