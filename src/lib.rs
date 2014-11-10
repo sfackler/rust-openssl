@@ -9,6 +9,9 @@ extern crate libc;
 extern crate serialize;
 extern crate sync;
 
+#[cfg(target_os = "nacl")]
+extern crate "openssl-sys" as _unused;
+
 mod macros;
 
 pub mod asn1;
