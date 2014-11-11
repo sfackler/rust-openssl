@@ -1,5 +1,9 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
+
+extern crate libc;
+extern crate sync;
+
 use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
 use std::mem;
 use std::ptr;
@@ -175,27 +179,6 @@ pub const X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE: c_int = 51;
 pub const X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE: c_int = 45;
 pub const X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
 pub const X509_V_OK: c_int = 0;
-
-#[cfg(not(target_os = "nacl"))]
-mod link {
-    #[cfg( any( all(target_os = "macos", feature = "tlsv1_1"),
-                all(target_os = "macos", feature = "tlsv1_2")))]
-    #[link(name="ssl.1.0.0")]
-    #[link(name="crypto.1.0.0")]
-    extern {}
-
-    #[cfg(any( not( target_os = "macos"),
-               all(target_os = "macos", not(feature = "tlsv1_1"),
-                   not(feature = "tlsv1_2"))))]
-    #[link(name="ssl")]
-    #[link(name="crypto")]
-    extern {}
-
-    #[cfg(target_os = "win32")]
-    #[link(name="gdi32")]
-    #[link(name="wsock32")]
-    extern { }
-}
 
 static mut MUTEXES: *mut Vec<NativeMutex> = 0 as *mut Vec<NativeMutex>;
 
@@ -479,3 +462,5 @@ extern "C" {
     pub fn i2d_RSAPrivateKey(k: *mut RSA, buf: *const *mut u8) -> c_int;
     pub fn d2i_RSAPrivateKey(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
 }
+
+pub mod probe;

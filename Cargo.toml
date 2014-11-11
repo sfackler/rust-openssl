@@ -4,28 +4,27 @@ name = "openssl"
 version = "0.0.1"
 authors = ["Steven Fackler <sfackler@gmail.com"]
 
-[lib]
-
-name = "openssl"
-path = "src/lib.rs"
-
 [features]
-tlsv1_2 = []
-tlsv1_1 = []
-sslv2 = []
+tlsv1_2 = ["openssl-sys/tlsv1_2"]
+tlsv1_1 = ["openssl-sys/tlsv1_1"]
+sslv2 = ["openssl-sys/sslv2"]
 
 [target.i686-apple-darwin.dependencies.openssl-sys]
-  git = "https://github.com/alexcrichton/openssl-sys"
+  path = "openssl-sys"
 [target.x86_64-apple-darwin.dependencies.openssl-sys]
-  git = "https://github.com/alexcrichton/openssl-sys"
+  path = "openssl-sys"
 [target.i686-unknown-linux-gnu.dependencies.openssl-sys]
-  git = "https://github.com/alexcrichton/openssl-sys"
+  path = "openssl-sys"
 [target.x86_64-unknown-linux-gnu.dependencies.openssl-sys]
-  git = "https://github.com/alexcrichton/openssl-sys"
+  path = "openssl-sys"
 [target.i686-unknown-freebsd.dependencies.openssl-sys]
-  git = "https://github.com/alexcrichton/openssl-sys"
+  path = "openssl-sys"
 [target.x86_64-unknown-freebsd.dependencies.openssl-sys]
-  git = "https://github.com/alexcrichton/openssl-sys"
+  path = "openssl-sys"
+[target.arm-apple-ios.dependencies.openssl-sys]
+  path = "openssl-sys"
+[target.i386-apple-ios.dependencies.openssl-sys]
+  path = "openssl-sys"
 
 [target.le32-unknown-nacl.dependencies.libressl-pnacl-sys]
 git = "https://github.com/DiamondLovesYou/libressl-pnacl-sys.git"

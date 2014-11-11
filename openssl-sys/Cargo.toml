@@ -1,0 +1,15 @@
+[package]
+
+name = "openssl-sys"
+version = "0.0.1"
+authors = ["Alex Crichton <alex@alexcrichton.com>"]
+links = "openssl"
+build = "src/build.rs"
+
+[features]
+tlsv1_2 = []
+tlsv1_1 = []
+sslv2 = []
+
+[build-dependencies.pkg-config]
+git = "https://github.com/alexcrichton/pkg-config-rs"
