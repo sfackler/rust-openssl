@@ -4,7 +4,7 @@ env:
     - secure: qLvBJoJOJcPPZ+e31175O6sMUGBHgHe/kBuI0FCPeifYmpFyeRAkEvGddEkf8t3rojV+wE14CNYzzGsT/W/+JY7xW0C1FQKW3r+8SZ1Cave/8ahee0aCQVXGf0XY8c52uG6MrLGiUlNZbOsyFSdFUc/Io+kYZas4DxrinRSOIEA=
   matrix:
     - FEATURES=""
-    - FEATURES="tlsv1_1 tlsv1_2"
+    - FEATURES="tlsv1_1 tlsv1_2 aes_xts"
 os:
   - osx
   - linux
@@ -13,7 +13,7 @@ before_script:
 script:
   - cargo build --features "$FEATURES"
   - cargo test --features "$FEATURES"
-  - cargo doc --features "sslv2 tlsv1_1 tlsv1_2 aes_xtc"
+  - cargo doc --features "sslv2 tlsv1_1 tlsv1_2 aes_xts"
 after_success: |
   [ $TRAVIS_BRANCH = master ] &&
   [ $TRAVIS_PULL_REQUEST = false ] &&
