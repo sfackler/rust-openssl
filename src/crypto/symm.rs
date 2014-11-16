@@ -11,12 +11,16 @@ pub enum Mode {
 pub enum Type {
     AES_128_ECB,
     AES_128_CBC,
+    /// Requires the `aes_xts` feature
+    #[cfg(feature = "aes_xts")]
     AES_128_XTS,
     // AES_128_CTR,
     //AES_128_GCM,
 
     AES_256_ECB,
     AES_256_CBC,
+    /// Requires the `aes_xts` feature
+    #[cfg(feature = "aes_xts")]
     AES_256_XTS,
     // AES_256_CTR,
     //AES_256_GCM,
@@ -29,12 +33,14 @@ fn evpc(t: Type) -> (*const ffi::EVP_CIPHER, uint, uint) {
         match t {
             AES_128_ECB => (ffi::EVP_aes_128_ecb(), 16u, 16u),
             AES_128_CBC => (ffi::EVP_aes_128_cbc(), 16u, 16u),
+            #[cfg(feature = "aes_xts")]
             AES_128_XTS => (ffi::EVP_aes_128_xts(), 32u, 16u),
             // AES_128_CTR => (EVP_aes_128_ctr(), 16u, 0u),
             //AES_128_GCM => (EVP_aes_128_gcm(), 16u, 16u),
 
             AES_256_ECB => (ffi::EVP_aes_256_ecb(), 32u, 16u),
             AES_256_CBC => (ffi::EVP_aes_256_cbc(), 32u, 16u),
+            #[cfg(feature = "aes_xts")]
             AES_256_XTS => (ffi::EVP_aes_256_xts(), 64u, 16u),
             // AES_256_CTR => (EVP_aes_256_ctr(), 32u, 0u),
             //AES_256_GCM => (EVP_aes_256_gcm(), 32u, 16u),
@@ -268,6 +274,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "aes_xts")]
     fn test_aes256_xts() {
         // Test case 174 from
         // http://csrc.nist.gov/groups/STM/cavp/documents/aes/XTSTestVectors.zip

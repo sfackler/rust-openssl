@@ -10,6 +10,7 @@ build = "src/build.rs"
 tlsv1_2 = []
 tlsv1_1 = []
 sslv2 = []
+aes_xts = []
 
 [build-dependencies.pkg-config]
 git = "https://github.com/alexcrichton/pkg-config-rs"

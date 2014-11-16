@@ -13,7 +13,7 @@ before_script:
 script:
   - cargo build --features "$FEATURES"
   - cargo test --features "$FEATURES"
-  - cargo doc --features "sslv2 tlsv1_1 tlsv1_2"
+  - cargo doc --features "sslv2 tlsv1_1 tlsv1_2 aes_xtc"
 after_success: |
   [ $TRAVIS_BRANCH = master ] &&
   [ $TRAVIS_PULL_REQUEST = false ] &&
