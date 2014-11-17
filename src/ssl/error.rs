@@ -1,4 +1,8 @@
+pub use self::SslError::*;
+pub use self::OpensslError::*;
+
 use libc::c_ulong;
+use std::error;
 use std::io::IoError;
 use std::c_str::CString;
 
@@ -7,12 +11,29 @@ use ffi;
 /// An SSL error
 #[deriving(Show, Clone, PartialEq, Eq)]
 pub enum SslError {
-    /// The underlying stream has reported an error
+    /// The underlying stream reported an error
     StreamError(IoError),
     /// The SSL session has been closed by the other end
     SslSessionClosed,
     /// An error in the OpenSSL library
     OpenSslErrors(Vec<OpensslError>)
+}
+
+impl error::Error for SslError {
+    fn description(&self) -> &str {
+        match *self {
+            StreamError(_) => "The underlying stream reported an error",
+            SslSessionClosed => "The SSL session has been closed by the other end",
+            OpenSslErrors(_) => "An error in the OpenSSL library",
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            StreamError(ref err) => Some(err as &error::Error),
+            _ => None
+        }
+    }
 }
 
 /// An error from the OpenSSL library
