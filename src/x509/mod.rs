@@ -4,7 +4,7 @@ use std::ptr;
 
 use asn1::{Asn1Time};
 use bio::{MemBio};
-use crypto::hash::{HashType, evpmd, SHA1};
+use crypto::hash::{HashType, evpmd};
 use crypto::pkey::{PKey};
 use crypto::rand::rand_bytes;
 use ffi;
@@ -69,15 +69,15 @@ pub enum KeyUsage {
 impl AsStr<'static> for KeyUsage {
     fn as_str(&self) -> &'static str {
         match self {
-            &DigitalSignature => "digitalSignature",
-            &NonRepudiation => "nonRepudiation",
-            &KeyEncipherment => "keyEncipherment",
-            &DataEncipherment => "dataEncipherment",
-            &KeyAgreement => "keyAgreement",
-            &KeyCertSign => "keyCertSign",
-            &CRLSign => "cRLSign",
-            &EncipherOnly => "encipherOnly",
-            &DecipherOnly => "decipherOnly"
+            &KeyUsage::DigitalSignature => "digitalSignature",
+            &KeyUsage::NonRepudiation => "nonRepudiation",
+            &KeyUsage::KeyEncipherment => "keyEncipherment",
+            &KeyUsage::DataEncipherment => "dataEncipherment",
+            &KeyUsage::KeyAgreement => "keyAgreement",
+            &KeyUsage::KeyCertSign => "keyCertSign",
+            &KeyUsage::CRLSign => "cRLSign",
+            &KeyUsage::EncipherOnly => "encipherOnly",
+            &KeyUsage::DecipherOnly => "decipherOnly"
         }
     }
 }
@@ -101,17 +101,17 @@ pub enum ExtKeyUsage {
 impl AsStr<'static> for ExtKeyUsage {
     fn as_str(&self) -> &'static str {
         match self {
-            &ServerAuth => "serverAuth",
-            &ClientAuth => "clientAuth",
-            &CodeSigning => "codeSigning",
-            &EmailProtection => "emailProtection",
-            &TimeStamping => "timeStamping",
-            &MsCodeInd => "msCodeInd",
-            &MsCodeCom => "msCodeCom",
-            &MsCtlSign => "msCTLSign",
-            &MsSgc => "msSGC",
-            &MsEfs => "msEFS",
-            &NsSgc =>"nsSGC"
+            &ExtKeyUsage::ServerAuth => "serverAuth",
+            &ExtKeyUsage::ClientAuth => "clientAuth",
+            &ExtKeyUsage::CodeSigning => "codeSigning",
+            &ExtKeyUsage::EmailProtection => "emailProtection",
+            &ExtKeyUsage::TimeStamping => "timeStamping",
+            &ExtKeyUsage::MsCodeInd => "msCodeInd",
+            &ExtKeyUsage::MsCodeCom => "msCodeCom",
+            &ExtKeyUsage::MsCtlSign => "msCTLSign",
+            &ExtKeyUsage::MsSgc => "msSGC",
+            &ExtKeyUsage::MsEfs => "msEFS",
+            &ExtKeyUsage::NsSgc =>"nsSGC"
         }
     }
 }
@@ -192,7 +192,7 @@ impl X509Generator {
             CN: "rust-openssl".to_string(),
             key_usage: Vec::new(),
             ext_key_usage: Vec::new(),
-            hash_type: SHA1
+            hash_type: HashType::SHA1
         }
     }
 
@@ -435,8 +435,8 @@ macro_rules! make_validation_error(
             pub fn from_raw(err: c_int) -> Option<X509ValidationError> {
                 match err {
                     ffi::$ok_val => None,
-                    $(ffi::$val => Some($name),)+
-                    err => Some(X509UnknownError(err))
+                    $(ffi::$val => Some(X509ValidationError::$name),)+
+                    err => Some(X509ValidationError::X509UnknownError(err))
                 }
             }
         }

@@ -17,13 +17,13 @@ pub enum HashType {
 pub fn evpmd(t: HashType) -> (*const ffi::EVP_MD, uint) {
     unsafe {
         match t {
-            MD5 => (ffi::EVP_md5(), 16u),
-            SHA1 => (ffi::EVP_sha1(), 20u),
-            SHA224 => (ffi::EVP_sha224(), 28u),
-            SHA256 => (ffi::EVP_sha256(), 32u),
-            SHA384 => (ffi::EVP_sha384(), 48u),
-            SHA512 => (ffi::EVP_sha512(), 64u),
-            RIPEMD160 => (ffi::EVP_ripemd160(), 20u),
+            HashType::MD5 => (ffi::EVP_md5(), 16u),
+            HashType::SHA1 => (ffi::EVP_sha1(), 20u),
+            HashType::SHA224 => (ffi::EVP_sha224(), 28u),
+            HashType::SHA256 => (ffi::EVP_sha256(), 32u),
+            HashType::SHA384 => (ffi::EVP_sha384(), 48u),
+            HashType::SHA512 => (ffi::EVP_sha512(), 64u),
+            HashType::RIPEMD160 => (ffi::EVP_ripemd160(), 20u),
         }
     }
 }
@@ -145,7 +145,7 @@ mod tests {
             HashTest("AAED18DBE8938C19ED734A8D", "6f80fb775f27e0a4ce5c2f42fc72c5f1")];
 
         for test in tests.iter() {
-            hash_test(super::MD5, test);
+            hash_test(super::HashType::MD5, test);
         }
     }
 
@@ -156,7 +156,7 @@ mod tests {
             ];
 
         for test in tests.iter() {
-            hash_test(super::SHA1, test);
+            hash_test(super::HashType::SHA1, test);
         }
     }
 
@@ -167,7 +167,7 @@ mod tests {
             ];
 
         for test in tests.iter() {
-            hash_test(super::SHA256, test);
+            hash_test(super::HashType::SHA256, test);
         }
     }
 
@@ -178,14 +178,14 @@ mod tests {
             ];
 
         for test in tests.iter() {
-            hash_test(super::RIPEMD160, test);
+            hash_test(super::HashType::RIPEMD160, test);
         }
     }
 
     #[test]
     fn test_writer() {
         let tv = "rust-openssl".as_bytes();
-        let ht = super::RIPEMD160;
+        let ht = super::HashType::RIPEMD160;
         assert!(hash_writer(ht, tv) == super::hash(ht, tv));
     }
 }

@@ -3,8 +3,10 @@ use std::io::{Writer};
 use std::io::net::tcp::TcpStream;
 use std::str;
 
-use crypto::hash::{SHA256};
-use ssl::{Sslv23, SslContext, SslStream, SslVerifyPeer};
+use crypto::hash::HashType::{SHA256};
+use ssl::SslMethod::Sslv23;
+use ssl::{SslContext, SslStream};
+use ssl::SslVerifyMode::SslVerifyPeer;
 use x509::{X509StoreContext};
 
 #[test]
