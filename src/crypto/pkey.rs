@@ -2,7 +2,7 @@ use libc::{c_int, c_uint};
 use std::mem;
 use std::ptr;
 use bio::{MemBio};
-use crypto::hash::{HashType, MD5, SHA1, SHA224, SHA256, SHA384, SHA512, RIPEMD160};
+use crypto::hash::HashType;
 use ffi;
 use ssl::error::{SslError, StreamError};
 
@@ -29,20 +29,20 @@ pub enum EncryptionPadding {
 
 fn openssl_padding_code(padding: EncryptionPadding) -> c_int {
     match padding {
-        OAEP => 4,
-        PKCS1v15 => 1
+        EncryptionPadding::OAEP => 4,
+        EncryptionPadding::PKCS1v15 => 1
     }
 }
 
 fn openssl_hash_nid(hash: HashType) -> c_int {
     match hash {
-        MD5       => 4,   // NID_md5,
-        SHA1      => 64,  // NID_sha1
-        SHA224    => 675, // NID_sha224
-        SHA256    => 672, // NID_sha256
-        SHA384    => 673, // NID_sha384
-        SHA512    => 674, // NID_sha512
-        RIPEMD160 => 117, // NID_ripemd160
+        HashType::MD5       => 4,   // NID_md5,
+        HashType::SHA1      => 64,  // NID_sha1
+        HashType::SHA224    => 675, // NID_sha224
+        HashType::SHA256    => 672, // NID_sha256
+        HashType::SHA384    => 673, // NID_sha384
+        HashType::SHA512    => 674, // NID_sha512
+        HashType::RIPEMD160 => 117, // NID_ripemd160
     }
 }
 
@@ -59,7 +59,7 @@ impl PKey {
 
             PKey {
                 evp: ffi::EVP_PKEY_new(),
-                parts: Neither,
+                parts: Parts::Neither,
             }
         }
     }
@@ -101,7 +101,7 @@ impl PKey {
                 6 as c_int,
                 mem::transmute(rsa));
 
-            self.parts = Both;
+            self.parts = Parts::Both;
         }
     }
 
@@ -117,7 +117,7 @@ impl PKey {
      */
     pub fn load_pub(&mut self, s: &[u8]) {
         self._fromstr(s, ffi::d2i_RSA_PUBKEY);
-        self.parts = Public;
+        self.parts = Parts::Public;
     }
 
     /**
@@ -133,7 +133,7 @@ impl PKey {
      */
     pub fn load_priv(&mut self, s: &[u8]) {
         self._fromstr(s, ffi::d2i_RSAPrivateKey);
-        self.parts = Both;
+        self.parts = Parts::Both;
     }
 
     /// Stores private key as a PEM
@@ -163,24 +163,24 @@ impl PKey {
      */
     pub fn can(&self, r: Role) -> bool {
         match r {
-            Encrypt =>
+            Role::Encrypt =>
                 match self.parts {
-                    Neither => false,
+                    Parts::Neither => false,
                     _ => true,
                 },
-            Verify =>
+            Role::Verify =>
                 match self.parts {
-                    Neither => false,
+                    Parts::Neither => false,
                     _ => true,
                 },
-            Decrypt =>
+            Role::Decrypt =>
                 match self.parts {
-                    Both => true,
+                    Parts::Both => true,
                     _ => false,
                 },
-            Sign =>
+            Role::Sign =>
                 match self.parts {
-                    Both => true,
+                    Parts::Both => true,
                     _ => false,
                 },
         }
@@ -254,24 +254,24 @@ impl PKey {
      * Encrypts data using OAEP padding, returning the encrypted data. The
      * supplied data must not be larger than max_data().
      */
-    pub fn encrypt(&self, s: &[u8]) -> Vec<u8> { self.encrypt_with_padding(s, OAEP) }
+    pub fn encrypt(&self, s: &[u8]) -> Vec<u8> { self.encrypt_with_padding(s, EncryptionPadding::OAEP) }
 
     /**
      * Decrypts data, expecting OAEP padding, returning the decrypted data.
      */
-    pub fn decrypt(&self, s: &[u8]) -> Vec<u8> { self.decrypt_with_padding(s, OAEP) }
+    pub fn decrypt(&self, s: &[u8]) -> Vec<u8> { self.decrypt_with_padding(s, EncryptionPadding::OAEP) }
 
     /**
      * Signs data, using OpenSSL's default scheme and sha256. Unlike encrypt(),
      * can process an arbitrary amount of data; returns the signature.
      */
-    pub fn sign(&self, s: &[u8]) -> Vec<u8> { self.sign_with_hash(s, SHA256) }
+    pub fn sign(&self, s: &[u8]) -> Vec<u8> { self.sign_with_hash(s, HashType::SHA256) }
 
     /**
      * Verifies a signature s (using OpenSSL's default scheme and sha256) on a
      * message m. Returns true if the signature is valid, and false otherwise.
      */
-    pub fn verify(&self, m: &[u8], s: &[u8]) -> bool { self.verify_with_hash(m, s, SHA256) }
+    pub fn verify(&self, m: &[u8], s: &[u8]) -> bool { self.verify_with_hash(m, s, HashType::SHA256) }
 
     pub fn sign_with_hash(&self, s: &[u8], hash: HashType) -> Vec<u8> {
         unsafe {
@@ -328,7 +328,7 @@ impl Drop for PKey {
 
 #[cfg(test)]
 mod tests {
-    use crypto::hash::{MD5, SHA1};
+    use crypto::hash::HashType::{MD5, SHA1};
 
     #[test]
     fn test_gen_pub() {
@@ -338,14 +338,14 @@ mod tests {
         k1.load_pub(k0.save_pub().as_slice());
         assert_eq!(k0.save_pub(), k1.save_pub());
         assert_eq!(k0.size(), k1.size());
-        assert!(k0.can(super::Encrypt));
-        assert!(k0.can(super::Decrypt));
-        assert!(k0.can(super::Verify));
-        assert!(k0.can(super::Sign));
-        assert!(k1.can(super::Encrypt));
-        assert!(!k1.can(super::Decrypt));
-        assert!(k1.can(super::Verify));
-        assert!(!k1.can(super::Sign));
+        assert!(k0.can(super::Role::Encrypt));
+        assert!(k0.can(super::Role::Decrypt));
+        assert!(k0.can(super::Role::Verify));
+        assert!(k0.can(super::Role::Sign));
+        assert!(k1.can(super::Role::Encrypt));
+        assert!(!k1.can(super::Role::Decrypt));
+        assert!(k1.can(super::Role::Verify));
+        assert!(!k1.can(super::Role::Sign));
     }
 
     #[test]
@@ -356,14 +356,14 @@ mod tests {
         k1.load_priv(k0.save_priv().as_slice());
         assert_eq!(k0.save_priv(), k1.save_priv());
         assert_eq!(k0.size(), k1.size());
-        assert!(k0.can(super::Encrypt));
-        assert!(k0.can(super::Decrypt));
-        assert!(k0.can(super::Verify));
-        assert!(k0.can(super::Sign));
-        assert!(k1.can(super::Encrypt));
-        assert!(k1.can(super::Decrypt));
-        assert!(k1.can(super::Verify));
-        assert!(k1.can(super::Sign));
+        assert!(k0.can(super::Role::Encrypt));
+        assert!(k0.can(super::Role::Decrypt));
+        assert!(k0.can(super::Role::Verify));
+        assert!(k0.can(super::Role::Sign));
+        assert!(k1.can(super::Role::Encrypt));
+        assert!(k1.can(super::Role::Decrypt));
+        assert!(k1.can(super::Role::Verify));
+        assert!(k1.can(super::Role::Sign));
     }
 
     #[test]
@@ -385,8 +385,8 @@ mod tests {
         let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
         k0.gen(512u);
         k1.load_pub(k0.save_pub().as_slice());
-        let emsg = k1.encrypt_with_padding(msg.as_slice(), super::PKCS1v15);
-        let dmsg = k0.decrypt_with_padding(emsg.as_slice(), super::PKCS1v15);
+        let emsg = k1.encrypt_with_padding(msg.as_slice(), super::EncryptionPadding::PKCS1v15);
+        let dmsg = k0.decrypt_with_padding(emsg.as_slice(), super::EncryptionPadding::PKCS1v15);
         assert!(msg == dmsg);
     }
 

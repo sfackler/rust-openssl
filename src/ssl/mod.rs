@@ -56,14 +56,14 @@ impl SslMethod {
     unsafe fn to_raw(&self) -> *const ffi::SSL_METHOD {
         match *self {
             #[cfg(feature = "sslv2")]
-            Sslv2 => ffi::SSLv2_method(),
-            Sslv3 => ffi::SSLv3_method(),
-            Tlsv1 => ffi::TLSv1_method(),
-            Sslv23 => ffi::SSLv23_method(),
+            SslMethod::Sslv2 => ffi::SSLv2_method(),
+            SslMethod::Sslv3 => ffi::SSLv3_method(),
+            SslMethod::Tlsv1 => ffi::TLSv1_method(),
+            SslMethod::Sslv23 => ffi::SSLv23_method(),
             #[cfg(feature = "tlsv1_1")]
-            Tlsv1_1 => ffi::TLSv1_1_method(),
+            SslMethod::Tlsv1_1 => ffi::TLSv1_1_method(),
             #[cfg(feature = "tlsv1_2")]
-            Tlsv1_2 => ffi::TLSv1_2_method()
+            SslMethod::Tlsv1_2 => ffi::TLSv1_2_method()
         }
     }
 }
@@ -424,14 +424,14 @@ impl<S: Stream> SslStream<S> {
             }
 
             match self.ssl.get_error(ret) {
-                ErrorWantRead => {
+                LibSslError::ErrorWantRead => {
                     try_ssl_stream!(self.flush());
                     let len = try_ssl_stream!(self.stream.read(self.buf.as_mut_slice()));
                     self.ssl.get_rbio().write(self.buf.slice_to(len));
                 }
-                ErrorWantWrite => { try_ssl_stream!(self.flush()) }
-                ErrorZeroReturn => return Err(SslSessionClosed),
-                ErrorSsl => return Err(SslError::get()),
+                LibSslError::ErrorWantWrite => { try_ssl_stream!(self.flush()) }
+                LibSslError::ErrorZeroReturn => return Err(SslSessionClosed),
+                LibSslError::ErrorSsl => return Err(SslError::get()),
                 _ => unreachable!()
             }
         }

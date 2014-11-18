@@ -2,8 +2,10 @@ use serialize::hex::FromHex;
 use std::io::{File, Open, Read};
 use std::io::util::NullWriter;
 
-use crypto::hash::{SHA256};
-use x509::{X509, X509Generator, DigitalSignature, KeyEncipherment, ClientAuth, ServerAuth};
+use crypto::hash::HashType::{SHA256};
+use x509::{X509, X509Generator};
+use x509::KeyUsage::{DigitalSignature, KeyEncipherment};
+use x509::ExtKeyUsage::{ClientAuth, ServerAuth};
 
 #[test]
 fn test_cert_gen() {
