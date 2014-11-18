@@ -1,7 +1,6 @@
 use libc::{c_int, c_ulong};
 use std::{fmt, ptr};
 use std::c_str::CString;
-use std::num::{One, Zero};
 
 use ffi;
 use ssl::error::SslError;
@@ -358,25 +357,6 @@ impl BigNum {
 impl fmt::Show for BigNum {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.to_dec_str())
-    }
-}
-
-impl One for BigNum {
-    fn one() -> BigNum {
-        BigNum::new_from(1).unwrap()
-    }
-}
-
-impl Zero for BigNum {
-    fn zero() -> BigNum {
-        BigNum::new_from(0).unwrap()
-    }
-
-    fn is_zero(&self) -> bool {
-        unsafe {
-            // It is raw contents of BN_is_zero macro
-            (*self.raw()).top == 0
-        }
     }
 }
 
