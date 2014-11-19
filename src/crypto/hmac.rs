@@ -167,7 +167,7 @@ mod tests {
             "95e9a0db962095adaebe9b2d6f0dbce2d499f112f2d2b7273fa6870e".from_hex().unwrap(),
             "3a854166ac5d9f023f54d517d0b39dbd946770db9c2b95c9f6f565d1".from_hex().unwrap()
         ];
-        test_sha2(SHA224, results);
+        test_sha2(SHA224, &results);
     }
 
     #[test]
@@ -180,7 +180,7 @@ mod tests {
             "60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54".from_hex().unwrap(),
             "9b09ffa71b942fcb27635fbcd5b0e944bfdc63644f0713938a7f51535c3a35e2".from_hex().unwrap()
         ];
-        test_sha2(SHA256, results);
+        test_sha2(SHA256, &results);
     }
 
     #[test]
@@ -205,7 +205,7 @@ mod tests {
              602420feb0b8fb9adccebb82461e99c5\
              a678cc31e799176d3860e6110c46523e".from_hex().unwrap()
         ];
-        test_sha2(SHA384, results);
+        test_sha2(SHA384, &results);
     }
 
     #[test]
@@ -236,6 +236,6 @@ mod tests {
              b6022cac3c4982b10d5eeb55c3e4de15\
              134676fb6de0446065c97440fa8c6a58".from_hex().unwrap()
         ];
-        test_sha2(SHA512, results);
+        test_sha2(SHA512, &results);
     }
 }

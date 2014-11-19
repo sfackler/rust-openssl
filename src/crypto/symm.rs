@@ -226,9 +226,9 @@ mod tests {
             0x4a_u8, 0x2e_u8, 0xe5_u8, 0x6_u8, 0xbf_u8, 0xcf_u8, 0xf2_u8, 0xd7_u8,
             0xea_u8, 0x2d_u8, 0xb1_u8, 0x85_u8, 0x6c_u8, 0x93_u8, 0x65_u8, 0x6f_u8
             ];
-        cr.init(super::Mode::Decrypt, data, iv);
+        cr.init(super::Mode::Decrypt, &data, iv);
         cr.pad(false);
-        let unciphered_data_1 = cr.update(ciphered_data);
+        let unciphered_data_1 = cr.update(&ciphered_data);
         let unciphered_data_2 = cr.finalize();
 
         let expected_unciphered_data = b"I love turtles.\x01";

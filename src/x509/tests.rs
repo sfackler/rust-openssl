@@ -14,8 +14,8 @@ fn test_cert_gen() {
         .set_valid_period(365*2)
         .set_CN("test_me")
         .set_sign_hash(SHA256)
-        .set_usage([DigitalSignature, KeyEncipherment])
-        .set_ext_usage([ClientAuth, ServerAuth]);
+        .set_usage(&[DigitalSignature, KeyEncipherment])
+        .set_ext_usage(&[ClientAuth, ServerAuth]);
 
     let res = gen.generate();
     assert!(res.is_ok());
