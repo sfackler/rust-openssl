@@ -326,6 +326,10 @@ impl Ssl {
         unsafe { ffi::SSL_connect(self.ssl) }
     }
 
+    fn accept(&self) -> c_int {
+        unsafe { ffi::SSL_accept(self.ssl) }
+    }
+
     fn read(&self, buf: &mut [u8]) -> c_int {
         unsafe { ffi::SSL_read(self.ssl, buf.as_ptr() as *mut c_void,
                                buf.len() as c_int) }
@@ -390,29 +394,36 @@ pub struct SslStream<S> {
 }
 
 impl<S: Stream> SslStream<S> {
-    /// Attempts to create a new SSL stream from a given `Ssl` instance.
-    pub fn new_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        let mut ssl = SslStream {
+    fn new_base(ssl:Ssl, stream: S) -> SslStream<S> {
+        SslStream {
             stream: stream,
             ssl: ssl,
             // Maximum TLS record size is 16k
             buf: Vec::from_elem(16 * 1024, 0u8)
-        };
-
-        match ssl.in_retry_wrapper(|ssl| { ssl.connect() }) {
-            Ok(_) => Ok(ssl),
-            Err(err) => Err(err)
         }
+    }
+
+    pub fn new_server_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
+        let mut ssl = SslStream::new_base(ssl, stream);
+        ssl.in_retry_wrapper(|ssl| { ssl.accept() }).and(Ok(ssl))
+    }
+
+    /// Attempts to create a new SSL stream from a given `Ssl` instance.
+    pub fn new_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
+        let mut ssl = SslStream::new_base(ssl, stream);
+        ssl.in_retry_wrapper(|ssl| { ssl.connect() }).and(Ok(ssl))
     }
 
     /// Creates a new SSL stream
     pub fn new(ctx: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
-        let ssl = match Ssl::new(ctx) {
-            Ok(ssl) => ssl,
-            Err(err) => return Err(err)
-        };
-
+        let ssl = try!(Ssl::new(ctx));
         SslStream::new_from(ssl, stream)
+    }
+
+    /// Creates a new SSL server stream
+    pub fn new_server(ctx: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
+        let ssl = try!(Ssl::new(ctx));
+        SslStream::new_server_from(ssl, stream)
     }
 
     fn in_retry_wrapper(&mut self, blk: |&Ssl| -> c_int)

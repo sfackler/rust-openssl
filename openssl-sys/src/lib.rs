@@ -403,6 +403,7 @@ extern "C" {
     pub fn SSL_set_bio(ssl: *mut SSL, rbio: *mut BIO, wbio: *mut BIO);
     pub fn SSL_get_rbio(ssl: *mut SSL) -> *mut BIO;
     pub fn SSL_get_wbio(ssl: *mut SSL) -> *mut BIO;
+    pub fn SSL_accept(ssl: *mut SSL) -> c_int;
     pub fn SSL_connect(ssl: *mut SSL) -> c_int;
     pub fn SSL_ctrl(ssl: *mut SSL, cmd: c_int, larg: c_long,
                     parg: *mut c_void) -> c_long;
