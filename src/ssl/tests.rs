@@ -163,7 +163,7 @@ fn test_verify_callback_data() {
     // in DER format.
     // Command: openssl x509 -in test/cert.pem  -outform DER | openssl dgst -sha256
     // Please update if "test/cert.pem" will ever change
-    let node_hash_str = "6204f6617e1af7495394250655f43600cd483e2dfc2005e92d0fe439d0723c34";
+    let node_hash_str = "46e3f1a6d17a41ce70d0c66ef51cee2ab4ba67cac8940e23f10c1f944b49fb5c";
     let node_id = node_hash_str.from_hex().unwrap();
     ctx.set_verify_with_data(SslVerifyPeer, callback, node_id);
     ctx.set_verify_depth(1);
