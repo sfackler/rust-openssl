@@ -28,10 +28,32 @@ pub fn evpmd(t: HashType) -> (*const ffi::EVP_MD, uint) {
     }
 }
 
+pub struct HasherContext {
+    ptr: *mut ffi::EVP_MD_CTX
+}
+
+impl HasherContext {
+    pub fn new() -> HasherContext {
+        ffi::init();
+
+        unsafe {
+            HasherContext { ptr: ffi::EVP_MD_CTX_create() }
+        }
+    }
+}
+
+impl Drop for HasherContext {
+    fn drop(&mut self) {
+        unsafe {
+            ffi::EVP_MD_CTX_destroy(self.ptr);
+        }
+    }
+}
+
 #[allow(dead_code)]
 pub struct Hasher {
     evp: *const ffi::EVP_MD,
-    ctx: *mut ffi::EVP_MD_CTX,
+    ctx: HasherContext,
     len: uint,
 }
 
@@ -44,21 +66,23 @@ impl io::Writer for Hasher {
 
 impl Hasher {
     pub fn new(ht: HashType) -> Hasher {
-        ffi::init();
+        let ctx = HasherContext::new();
+        Hasher::with_context(ctx, ht)
+    }
 
-        let ctx = unsafe { ffi::EVP_MD_CTX_create() };
+    pub fn with_context(ctx: HasherContext, ht: HashType) -> Hasher {
         let (evp, mdlen) = evpmd(ht);
         unsafe {
-            ffi::EVP_DigestInit(ctx, evp);
+            ffi::EVP_DigestInit_ex(ctx.ptr, evp, 0 as *const _);
         }
 
         Hasher { evp: evp, ctx: ctx, len: mdlen }
     }
 
     /// Update this hasher with more input bytes
-    pub fn update(&self, data: &[u8]) {
+    pub fn update(&mut self, data: &[u8]) {
         unsafe {
-            ffi::EVP_DigestUpdate(self.ctx, data.as_ptr(), data.len() as c_uint)
+            ffi::EVP_DigestUpdate(self.ctx.ptr, data.as_ptr(), data.len() as c_uint)
         }
     }
 
@@ -66,20 +90,21 @@ impl Hasher {
      * Return the digest of all bytes added to this hasher since its last
      * initialization
      */
-    pub fn finalize(&self) -> Vec<u8> {
-        unsafe {
-            let mut res = Vec::from_elem(self.len, 0u8);
-            ffi::EVP_DigestFinal(self.ctx, res.as_mut_ptr(), ptr::null_mut());
-            res
-        }
+    pub fn finalize(self) -> Vec<u8> {
+        let (res, _) = self.finalize_reuse();
+        res
     }
-}
 
-impl Drop for Hasher {
-    fn drop(&mut self) {
+    /**
+     * Return the digest of all bytes added to this hasher since its last
+     * initialization and its context for reuse
+     */
+    pub fn finalize_reuse(self) -> (Vec<u8>, HasherContext) {
+        let mut res = Vec::from_elem(self.len, 0u8);
         unsafe {
-            ffi::EVP_MD_CTX_destroy(self.ctx);
-        }
+            ffi::EVP_DigestFinal_ex(self.ctx.ptr, res.as_mut_ptr(), ptr::null_mut())
+        };
+        (res, self.ctx)
     }
 }
 
@@ -88,7 +113,7 @@ impl Drop for Hasher {
  * value
  */
 pub fn hash(t: HashType, data: &[u8]) -> Vec<u8> {
-    let h = Hasher::new(t);
+    let mut h = Hasher::new(t);
     h.update(data);
     h.finalize()
 }
@@ -108,9 +133,7 @@ mod tests {
                    expected_output: output.to_string() }
     }
 
-    fn hash_test(hashtype: super::HashType, hashtest: &HashTest) {
-        let calced_raw = super::hash(hashtype, hashtest.input.as_slice());
-
+    fn compare(calced_raw: Vec<u8>, hashtest: &HashTest) {
         let calced = calced_raw.as_slice().to_hex().into_string();
 
         if calced != hashtest.expected_output {
@@ -118,6 +141,22 @@ mod tests {
         }
 
         assert!(calced == hashtest.expected_output);
+    }
+
+    fn hash_test(hashtype: super::HashType, hashtest: &HashTest) {
+        let calced_raw = super::hash(hashtype, hashtest.input.as_slice());
+        compare(calced_raw, hashtest);
+    }
+
+    fn hash_reuse_test(ctx: super::HasherContext, hashtype: super::HashType,
+                       hashtest: &HashTest) -> super::HasherContext {
+        let mut h = super::Hasher::with_context(ctx, hashtype);
+        h.update(hashtest.input.as_slice());
+        let (calced_raw, ctx) = h.finalize_reuse();
+
+        compare(calced_raw, hashtest);
+
+        ctx
     }
 
     pub fn hash_writer(t: super::HashType, data: &[u8]) -> Vec<u8> {
@@ -144,8 +183,10 @@ mod tests {
             HashTest("A510CD18F7A56852EB0319", "577e216843dd11573574d3fb209b97d8"),
             HashTest("AAED18DBE8938C19ED734A8D", "6f80fb775f27e0a4ce5c2f42fc72c5f1")];
 
+        let mut ctx = super::HasherContext::new();
+
         for test in tests.iter() {
-            hash_test(super::HashType::MD5, test);
+            ctx = hash_reuse_test(ctx, super::HashType::MD5, test);
         }
     }
 
