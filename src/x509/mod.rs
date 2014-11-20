@@ -152,7 +152,7 @@ impl<'a, T: AsStr<'a>> ToStr for Vec<T> {
 ///        .set_valid_period(365*2)
 ///        .set_CN("SuperMegaCorp Inc.")
 ///        .set_sign_hash(SHA256)
-///        .set_usage([DigitalSignature]);
+///        .set_usage(&[DigitalSignature]);
 ///
 /// let (cert, pkey) = gen.generate().unwrap();
 ///
