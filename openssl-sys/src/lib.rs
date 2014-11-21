@@ -2,12 +2,13 @@
 #![allow(dead_code)]
 
 extern crate libc;
+extern crate rustrt;
 extern crate sync;
 
 use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
 use std::mem;
 use std::ptr;
-use std::rt::mutex::NativeMutex;
+use rustrt::mutex::NativeMutex;
 use sync::one::{Once, ONCE_INIT};
 
 pub type ASN1_INTEGER = c_void;
