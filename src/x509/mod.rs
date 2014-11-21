@@ -1,5 +1,6 @@
 use libc::{c_int, c_long, c_uint};
 use std::mem;
+use std::num::SignedInt;
 use std::ptr;
 
 use asn1::{Asn1Time};
@@ -270,7 +271,11 @@ impl X509Generator {
             res = res << 8;
             res |= (*b as c_long) & 0xff;
         }
-        res
+
+        // While OpenSSL is actually OK to have negative serials
+        // other libraries (for example, Go crypto) can drop
+        // such certificates as invalid
+        res.abs()
     }
 
     /// Generates a private key and a signed certificate and returns them
@@ -498,3 +503,12 @@ make_validation_error!(X509_V_OK,
     X509CrlPathValidationError= X509_V_ERR_CRL_PATH_VALIDATION_ERROR,
     X509ApplicationVerification = X509_V_ERR_APPLICATION_VERIFICATION,
 )
+
+
+#[test]
+fn test_negative_serial() {
+    // I guess that's enough to get a random negative number
+    for _ in range(0u, 1000) {
+        assert!(X509Generator::random_serial() > 0, "All serials should be positive");
+    }
+}
