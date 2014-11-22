@@ -1,9 +1,13 @@
 [package]
 name = "openssl"
 version = "0.0.2"
-authors = ["Steven Fackler <sfackler@gmail.com"]
+authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
+repository = "https://github.com/sfackler/rust-openssl"
+documentation = "https://sfackler.github.io/doc/openssl"
+readme = "README.md"
+keywords = ["crypto", "tls", "ssl"]
 
 [features]
 tlsv1_2 = ["openssl-sys/tlsv1_2"]
