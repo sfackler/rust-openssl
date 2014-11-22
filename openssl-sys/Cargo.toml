@@ -1,8 +1,12 @@
 [package]
 
 name = "openssl-sys"
-version = "0.0.1"
-authors = ["Alex Crichton <alex@alexcrichton.com>"]
+version = "0.0.2"
+authors = ["Alex Crichton <alex@alexcrichton.com>",
+           "Steven Fackler <sfackler@gmail.com>"]
+license = "Apache-2.0"
+description = "FFI bindings to OpenSSL"
+
 links = "openssl"
 build = "src/build.rs"
 
@@ -12,5 +16,5 @@ tlsv1_1 = []
 sslv2 = []
 aes_xts = []
 
-[build-dependencies.pkg-config]
-git = "https://github.com/alexcrichton/pkg-config-rs"
+[build-dependencies]
+pkg-config = "*"

@@ -1,9 +1,8 @@
 [package]
-
 name = "openssl"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Steven Fackler <sfackler@gmail.com"]
-license = "ASL2.0"
+license = "Apache-2.0"
 description = "OpenSSL bindings"
 
 [features]
@@ -14,26 +13,30 @@ aes_xts = ["openssl-sys/aes_xts"]
 
 [target.i686-apple-darwin.dependencies.openssl-sys]
 path = "openssl-sys"
+version = "0.0.2"
 [target.x86_64-apple-darwin.dependencies.openssl-sys]
 path = "openssl-sys"
+version = "0.0.2"
 [target.i686-unknown-linux-gnu.dependencies.openssl-sys]
 path = "openssl-sys"
+version = "0.0.2"
 [target.x86_64-unknown-linux-gnu.dependencies.openssl-sys]
 path = "openssl-sys"
+version = "0.0.2"
 [target.i686-unknown-freebsd.dependencies.openssl-sys]
 path = "openssl-sys"
+version = "0.0.2"
 [target.x86_64-unknown-freebsd.dependencies.openssl-sys]
 path = "openssl-sys"
+version = "0.0.2"
 [target.arm-apple-ios.dependencies.openssl-sys]
 path = "openssl-sys"
+version = "0.0.2"
 [target.i386-apple-ios.dependencies.openssl-sys]
 path = "openssl-sys"
+version = "0.0.2"
 
 [target.le32-unknown-nacl.dependencies.libressl-pnacl-sys]
-git = "https://github.com/DiamondLovesYou/libressl-pnacl-sys.git"
 [target.arm-unknown-nacl.dependencies.libressl-pnacl-sys]
-git = "https://github.com/DiamondLovesYou/libressl-pnacl-sys.git"
 [target.i686-unknown-nacl.dependencies.libressl-pnacl-sys]
-git = "https://github.com/DiamondLovesYou/libressl-pnacl-sys.git"
 [target.x86_64-unknown-nacl.dependencies.libressl-pnacl-sys]
-git = "https://github.com/DiamondLovesYou/libressl-pnacl-sys.git"
