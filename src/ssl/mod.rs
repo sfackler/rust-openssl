@@ -2,7 +2,6 @@ use libc::{c_int, c_void, c_long};
 use std::io::{IoResult, IoError, EndOfFile, Stream, Reader, Writer};
 use std::mem;
 use std::ptr;
-use std::string;
 use sync::one::{Once, ONCE_INIT};
 
 use bio::{MemBio};
@@ -479,7 +478,7 @@ impl<S: Stream> SslStream<S> {
         }
 
         let meth = unsafe { ffi::SSL_COMP_get_name(ptr) };
-        let s = unsafe { string::raw::from_buf(meth as *const u8) };
+        let s = unsafe { String::from_raw_buf(meth as *const u8) };
 
         Some(s)
     }
