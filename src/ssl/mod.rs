@@ -8,7 +8,7 @@ use sync::one::{Once, ONCE_INIT};
 use bio::{MemBio};
 use ffi;
 use ssl::error::{SslError, SslSessionClosed, StreamError};
-use x509::{X509StoreContext, X509FileType};
+use x509::{X509StoreContext, X509FileType, X509};
 
 pub mod error;
 #[cfg(test)]
@@ -367,6 +367,17 @@ impl Ssl {
             Err(SslError::get())
         } else {
             Ok(())
+        }
+    }
+
+    pub fn get_peer_certificate(&self) -> Option<X509> {
+        unsafe {
+            let ptr = ffi::SSL_get_peer_certificate(self.ssl);
+            if ptr.is_null() {
+                None
+            } else {
+                Some(X509::new(ptr, true))
+            }
         }
     }
 
