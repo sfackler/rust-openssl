@@ -7,7 +7,6 @@
 extern crate libc;
 #[cfg(test)]
 extern crate serialize;
-extern crate sync;
 
 extern crate "openssl-sys" as ffi;
 
