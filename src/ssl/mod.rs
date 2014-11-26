@@ -2,7 +2,7 @@ use libc::{c_int, c_void, c_long};
 use std::io::{IoResult, IoError, EndOfFile, Stream, Reader, Writer};
 use std::mem;
 use std::ptr;
-use sync::one::{Once, ONCE_INIT};
+use std::sync::{Once, ONCE_INIT};
 
 use bio::{MemBio};
 use ffi;
