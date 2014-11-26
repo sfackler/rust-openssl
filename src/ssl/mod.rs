@@ -436,6 +436,15 @@ impl<S: Stream> SslStream<S> {
         SslStream::new_server_from(ssl, stream)
     }
 
+    /// Returns a mutable reference to the underlying stream
+    ///
+    /// ## Warning
+    /// `read`ing or `write`ing directly to the underlying stream will most
+    /// likely desynchronize the SSL session.
+    pub fn get_inner(&mut self) -> &mut S {
+        &mut self.stream
+    }
+
     fn in_retry_wrapper(&mut self, blk: |&Ssl| -> c_int)
             -> Result<c_int, SslError> {
         loop {
