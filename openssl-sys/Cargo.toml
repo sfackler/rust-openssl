@@ -18,4 +18,4 @@ sslv2 = []
 aes_xts = []
 
 [build-dependencies]
-pkg-config = "*"
+pkg-config = "0.1"
