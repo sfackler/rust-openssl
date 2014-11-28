@@ -1,6 +1,6 @@
 [package]
 name = "openssl"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
@@ -15,38 +15,6 @@ tlsv1_1 = ["openssl-sys/tlsv1_1"]
 sslv2 = ["openssl-sys/sslv2"]
 aes_xts = ["openssl-sys/aes_xts"]
 
-[target.i686-apple-darwin.dependencies.openssl-sys]
+[dependencies.openssl-sys]
 path = "openssl-sys"
-version = "0.1.1"
-[target.x86_64-apple-darwin.dependencies.openssl-sys]
-path = "openssl-sys"
-version = "0.1.1"
-[target.i686-unknown-linux-gnu.dependencies.openssl-sys]
-path = "openssl-sys"
-version = "0.1.1"
-[target.x86_64-unknown-linux-gnu.dependencies.openssl-sys]
-path = "openssl-sys"
-version = "0.1.1"
-[target.i686-unknown-freebsd.dependencies.openssl-sys]
-path = "openssl-sys"
-version = "0.1.1"
-[target.x86_64-unknown-freebsd.dependencies.openssl-sys]
-path = "openssl-sys"
-version = "0.1.1"
-[target.arm-apple-ios.dependencies.openssl-sys]
-path = "openssl-sys"
-version = "0.1.1"
-[target.i386-apple-ios.dependencies.openssl-sys]
-path = "openssl-sys"
-version = "0.1.1"
-[target.i386-pc-windows-gnu.dependencies.openssl-sys]
-path = "openssl-sys"
-version = "0.1.1"
-[target.x86_64-pc-windows-gnu.dependencies.openssl-sys]
-path = "openssl-sys"
-version = "0.1.1"
-
-[target.le32-unknown-nacl.dependencies.libressl-pnacl-sys]
-[target.arm-unknown-nacl.dependencies.libressl-pnacl-sys]
-[target.i686-unknown-nacl.dependencies.libressl-pnacl-sys]
-[target.x86_64-unknown-nacl.dependencies.libressl-pnacl-sys]
+version = "0.2.0"
