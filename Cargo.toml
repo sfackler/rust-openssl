@@ -39,10 +39,10 @@ version = "0.1.1"
 [target.i386-apple-ios.dependencies.openssl-sys]
 path = "openssl-sys"
 version = "0.1.1"
-[target.i386-pc-windows-gnu.openssl-sys]
+[target.i386-pc-windows-gnu.dependencies.openssl-sys]
 path = "openssl-sys"
 version = "0.1.1"
-[target.x86_64-pc-windows-gnu.openssl-sys]
+[target.x86_64-pc-windows-gnu.dependencies.openssl-sys]
 path = "openssl-sys"
 version = "0.1.1"
 
