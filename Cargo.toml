@@ -39,6 +39,12 @@ version = "0.1.1"
 [target.i386-apple-ios.dependencies.openssl-sys]
 path = "openssl-sys"
 version = "0.1.1"
+[target.i386-pc-windows-gnu.openssl-sys]
+path = "openssl-sys"
+version = "0.1.1"
+[target.x86_64-pc-windows-gnu.openssl-sys]
+path = "openssl-sys"
+version = "0.1.1"
 
 [target.le32-unknown-nacl.dependencies.libressl-pnacl-sys]
 [target.arm-unknown-nacl.dependencies.libressl-pnacl-sys]
