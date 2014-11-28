@@ -436,12 +436,29 @@ impl<S: Stream> SslStream<S> {
         SslStream::new_server_from(ssl, stream)
     }
 
-    /// Returns a mutable reference to the underlying stream
+    /// Returns a mutable reference to the underlying stream.
     ///
     /// ## Warning
+    ///
     /// `read`ing or `write`ing directly to the underlying stream will most
     /// likely desynchronize the SSL session.
+    #[deprecated="use get_mut instead"]
     pub fn get_inner(&mut self) -> &mut S {
+        self.get_mut()
+    }
+
+    /// Returns a reference to the underlying stream.
+    pub fn get_ref(&self) -> &S {
+        &self.stream
+    }
+
+    /// Returns a mutable reference to the underlying stream.
+    ///
+    /// ## Warning
+    ///
+    /// It is inadvisable to read from or write to the underlying stream as it
+    /// will most likely desynchronize the SSL session.
+    pub fn get_mut(&mut self) -> &mut S {
         &mut self.stream
     }
 
@@ -528,5 +545,60 @@ impl<S: Stream> Writer for SslStream<S> {
     fn flush(&mut self) -> IoResult<()> {
         try!(self.write_through());
         self.stream.flush()
+    }
+}
+
+/// A utility type to help in cases where the use of SSL is decided at runtime.
+pub enum MaybeSslStream<S> where S: Stream {
+    /// A connection using SSL
+    Ssl(SslStream<S>),
+    /// A connection not using SSL
+    Normal(S),
+}
+
+impl<S> Reader for MaybeSslStream<S> where S: Stream {
+    fn read(&mut self, buf: &mut [u8]) -> IoResult<uint> {
+        match *self {
+            MaybeSslStream::Ssl(ref mut s) => s.read(buf),
+            MaybeSslStream::Normal(ref mut s) => s.read(buf),
+        }
+    }
+}
+
+impl<S> Writer for MaybeSslStream<S> where S: Stream{
+    fn write(&mut self, buf: &[u8]) -> IoResult<()> {
+        match *self {
+            MaybeSslStream::Ssl(ref mut s) => s.write(buf),
+            MaybeSslStream::Normal(ref mut s) => s.write(buf),
+        }
+    }
+
+    fn flush(&mut self) -> IoResult<()> {
+        match *self {
+            MaybeSslStream::Ssl(ref mut s) => s.flush(),
+            MaybeSslStream::Normal(ref mut s) => s.flush(),
+        }
+    }
+}
+
+impl<S> MaybeSslStream<S> where S: Stream {
+    /// Returns a reference to the underlying stream.
+    pub fn get_ref(&self) -> &S {
+        match *self {
+            MaybeSslStream::Ssl(ref s) => s.get_ref(),
+            MaybeSslStream::Normal(ref s) => s,
+        }
+    }
+
+    /// Returns a mutable reference to the underlying stream.
+    ///
+    /// ## Warning
+    ///
+    /// It is inadvisable to read from or write to the underlying stream.
+    pub fn get_mut(&mut self) -> &mut S {
+        match *self {
+            MaybeSslStream::Ssl(ref mut s) => s.get_mut(),
+            MaybeSslStream::Normal(ref mut s) => s,
+        }
     }
 }
