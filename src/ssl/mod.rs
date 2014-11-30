@@ -1,47 +1,31 @@
-use libc::{c_int, c_uint, c_void, c_char};
+use libc::{c_int, c_void, c_long};
 use std::io::{IoResult, IoError, EndOfFile, Stream, Reader, Writer};
 use std::mem;
 use std::ptr;
-use std::rt::mutex::NativeMutex;
-use std::string;
-use sync::one::{Once, ONCE_INIT};
+use std::sync::{Once, ONCE_INIT, Arc};
 
-use crypto::hash::{HashType, evpmd};
+use bio::{MemBio};
+use ffi;
 use ssl::error::{SslError, SslSessionClosed, StreamError};
+use x509::{X509StoreContext, X509FileType, X509};
 
 pub mod error;
-mod ffi;
 #[cfg(test)]
 mod tests;
 
 static mut VERIFY_IDX: c_int = -1;
-static mut MUTEXES: *mut Vec<NativeMutex> = 0 as *mut Vec<NativeMutex>;
-
-macro_rules! try_ssl(
-    ($e:expr) => (
-        match $e {
-            Ok(ok) => ok,
-            Err(err) => return Err(StreamError(err))
-        }
-    )
-)
 
 fn init() {
     static mut INIT: Once = ONCE_INIT;
 
     unsafe {
         INIT.doit(|| {
-            ffi::SSL_library_init();
+            ffi::init();
+
             let verify_idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
                                                            None, None);
             assert!(verify_idx >= 0);
             VERIFY_IDX = verify_idx;
-
-            let num_locks = ffi::CRYPTO_num_locks();
-            let mutexes = box Vec::from_fn(num_locks as uint, |_| NativeMutex::new());
-            MUTEXES = mem::transmute(mutexes);
-
-            ffi::CRYPTO_set_locking_callback(locking_function);
         });
     }
 }
@@ -51,17 +35,19 @@ fn init() {
 #[allow(non_camel_case_types)]
 pub enum SslMethod {
     #[cfg(feature = "sslv2")]
-    /// Only support the SSLv2 protocol
+    /// Only support the SSLv2 protocol, requires `feature="sslv2"`
     Sslv2,
+    /// Support the SSLv2, SSLv3 and TLSv1 protocols
+    Sslv23,
     /// Only support the SSLv3 protocol
     Sslv3,
     /// Only support the TLSv1 protocol
     Tlsv1,
-    /// Support the SSLv2, SSLv3 and TLSv1 protocols
-    Sslv23,
     #[cfg(feature = "tlsv1_1")]
+    /// Support TLSv1.1 protocol, requires `feature="tlsv1_1"`
     Tlsv1_1,
     #[cfg(feature = "tlsv1_2")]
+    /// Support TLSv1.2 protocol, requires `feature="tlsv1_2"`
     Tlsv1_2,
 }
 
@@ -69,14 +55,14 @@ impl SslMethod {
     unsafe fn to_raw(&self) -> *const ffi::SSL_METHOD {
         match *self {
             #[cfg(feature = "sslv2")]
-            Sslv2 => ffi::SSLv2_method(),
-            Sslv3 => ffi::SSLv3_method(),
-            Tlsv1 => ffi::TLSv1_method(),
-            Sslv23 => ffi::SSLv23_method(),
+            SslMethod::Sslv2 => ffi::SSLv2_method(),
+            SslMethod::Sslv3 => ffi::SSLv3_method(),
+            SslMethod::Tlsv1 => ffi::TLSv1_method(),
+            SslMethod::Sslv23 => ffi::SSLv23_method(),
             #[cfg(feature = "tlsv1_1")]
-            Tlsv1_1 => ffi::TLSv1_1_method(),
+            SslMethod::Tlsv1_1 => ffi::TLSv1_1_method(),
             #[cfg(feature = "tlsv1_2")]
-            Tlsv1_2 => ffi::TLSv1_2_method()
+            SslMethod::Tlsv1_2 => ffi::TLSv1_2_method()
         }
     }
 }
@@ -90,16 +76,27 @@ pub enum SslVerifyMode {
     SslVerifyNone = ffi::SSL_VERIFY_NONE
 }
 
-extern fn locking_function(mode: c_int, n: c_int, _file: *const c_char,
-                               _line: c_int) {
-    unsafe {
-        let mutex = (*MUTEXES).get_mut(n as uint);
+// Creates a static index for user data of type T
+// Registers a destructor for the data which will be called
+// when context is freed
+fn get_verify_data_idx<T>() -> c_int {
+    static mut VERIFY_DATA_IDX: c_int = -1;
+    static mut INIT: Once = ONCE_INIT;
 
-        if mode & ffi::CRYPTO_LOCK != 0 {
-            mutex.lock_noguard();
-        } else {
-            mutex.unlock_noguard();
-        }
+    extern fn free_data_box<T>(_parent: *mut c_void, ptr: *mut c_void,
+                               _ad: *mut ffi::CRYPTO_EX_DATA, _idx: c_int,
+                               _argl: c_long, _argp: *mut c_void) {
+        let _: Box<T> = unsafe { mem::transmute(ptr) };
+    }
+
+    unsafe {
+        INIT.doit(|| {
+            let idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
+                                                    None, Some(free_data_box::<T>));
+            assert!(idx >= 0);
+            VERIFY_DATA_IDX = idx;
+        });
+        VERIFY_DATA_IDX
     }
 }
 
@@ -112,7 +109,7 @@ extern fn raw_verify(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX)
         let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, VERIFY_IDX);
         let verify: Option<VerifyCallback> = mem::transmute(verify);
 
-        let ctx = X509StoreContext { ctx: x509_ctx };
+        let ctx = X509StoreContext::new(x509_ctx);
 
         match verify {
             None => preverify_ok,
@@ -121,16 +118,44 @@ extern fn raw_verify(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX)
     }
 }
 
+extern fn raw_verify_with_data<T>(preverify_ok: c_int,
+                                  x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int {
+    unsafe {
+        let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
+        let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
+        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
+
+        let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, VERIFY_IDX);
+        let verify: Option<VerifyCallbackData<T>> = mem::transmute(verify);
+
+        let data = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_verify_data_idx::<T>());
+        let data: Box<T> = mem::transmute(data);
+
+        let ctx = X509StoreContext::new(x509_ctx);
+
+        let res = match verify {
+            None => preverify_ok,
+            Some(verify) => verify(preverify_ok != 0, &ctx, &*data) as c_int
+        };
+
+        // Since data might be required on the next verification
+        // it is time to forget about it and avoid dropping
+        // data will be freed once OpenSSL considers it is time
+        // to free all context data
+        mem::forget(data);
+        res
+    }
+}
+
 /// The signature of functions that can be used to manually verify certificates
 pub type VerifyCallback = fn(preverify_ok: bool,
                              x509_ctx: &X509StoreContext) -> bool;
 
-#[repr(i32)]
-pub enum X509FileType {
-    PEM = ffi::X509_FILETYPE_PEM,
-    ASN1 = ffi::X509_FILETYPE_ASN1,
-    Default = ffi::X509_FILETYPE_DEFAULT
-}
+/// The signature of functions that can be used to manually verify certificates
+/// when user-data should be carried for all verification process
+pub type VerifyCallbackData<T> = fn(preverify_ok: bool,
+                                    x509_ctx: &X509StoreContext,
+                                    data: &T) -> bool;
 
 // FIXME: macro may be instead of inlining?
 #[inline]
@@ -176,9 +201,33 @@ impl SslContext {
         }
     }
 
+    /// Configures the certificate verification method for new connections also
+    /// carrying supplied data.
+    // Note: no option because there is no point to set data without providing
+    // a function handling it
+    pub fn set_verify_with_data<T>(&mut self, mode: SslVerifyMode,
+                                   verify: VerifyCallbackData<T>,
+                                   data: T) {
+        let data = box data;
+        unsafe {
+            ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX,
+                                     mem::transmute(Some(verify)));
+            ffi::SSL_CTX_set_ex_data(self.ctx, get_verify_data_idx::<T>(),
+                                     mem::transmute(data));
+            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(raw_verify_with_data::<T>));
+        }
+    }
+
+    /// Sets verification depth
+    pub fn set_verify_depth(&mut self, depth: uint) {
+        unsafe {
+            ffi::SSL_CTX_set_verify_depth(self.ctx, depth as c_int);
+        }
+    }
+
     #[allow(non_snake_case)]
     /// Specifies the file that contains trusted CA certificates.
-    pub fn set_CA_file(&mut self, file: &str) -> Option<SslError> {
+    pub fn set_CA_file(&mut self, file: &Path) -> Option<SslError> {
         wrap_ssl_result(file.with_c_str(|file| {
             unsafe {
                 ffi::SSL_CTX_load_verify_locations(self.ctx, file, ptr::null())
@@ -186,8 +235,8 @@ impl SslContext {
         }))
     }
 
-    /// Specifies the file that is client certificate
-    pub fn set_certificate_file(&mut self, file: &str,
+    /// Specifies the file that contains certificate
+    pub fn set_certificate_file(&mut self, file: &Path,
                                 file_type: X509FileType) -> Option<SslError> {
         wrap_ssl_result(file.with_c_str(|file| {
             unsafe {
@@ -196,8 +245,8 @@ impl SslContext {
         }))
     }
 
-    /// Specifies the file that is client private key
-    pub fn set_private_key_file(&mut self, file: &str,
+    /// Specifies the file that contains private key
+    pub fn set_private_key_file(&mut self, file: &Path,
                                 file_type: X509FileType) -> Option<SslError> {
         wrap_ssl_result(file.with_c_str(|file| {
             unsafe {
@@ -205,147 +254,31 @@ impl SslContext {
             }
         }))
     }
-}
 
-pub struct X509StoreContext {
-    ctx: *mut ffi::X509_STORE_CTX
-}
-
-impl X509StoreContext {
-    pub fn get_error(&self) -> Option<X509ValidationError> {
-        let err = unsafe { ffi::X509_STORE_CTX_get_error(self.ctx) };
-        X509ValidationError::from_raw(err)
-    }
-
-    pub fn get_current_cert<'a>(&'a self) -> Option<X509<'a>> {
-        let ptr = unsafe { ffi::X509_STORE_CTX_get_current_cert(self.ctx) };
-
-        if ptr.is_null() {
-            None
-        } else {
-            Some(X509 { ctx: self, x509: ptr })
-        }
+    pub fn set_cipher_list(&mut self, cipher_list: &str) -> Option<SslError> {
+        wrap_ssl_result(cipher_list.with_c_str(|cipher_list| {
+            unsafe {
+                ffi::SSL_CTX_set_cipher_list(self.ctx, cipher_list)
+            }
+        }))
     }
 }
 
 #[allow(dead_code)]
-/// A public key certificate
-pub struct X509<'ctx> {
-    ctx: &'ctx X509StoreContext,
-    x509: *mut ffi::X509
+struct MemBioRef<'ssl> {
+    ssl: &'ssl Ssl,
+    bio: MemBio,
 }
 
-impl<'ctx> X509<'ctx> {
-    pub fn subject_name<'a>(&'a self) -> X509Name<'a> {
-        let name = unsafe { ffi::X509_get_subject_name(self.x509) };
-        X509Name { x509: self, name: name }
+impl<'ssl> MemBioRef<'ssl> {
+    fn read(&mut self, buf: &mut [u8]) -> Option<uint> {
+        (&mut self.bio as &mut Reader).read(buf).ok()
     }
 
-    /// Returns certificate fingerprint calculated using provided hash
-    pub fn fingerprint(&self, hash_type: HashType) -> Option<Vec<u8>> {
-        let (evp, len) = evpmd(hash_type);
-        let v: Vec<u8> = Vec::from_elem(len, 0);
-        let act_len: c_uint = 0;
-        let res = unsafe {
-            ffi::X509_digest(self.x509, evp, mem::transmute(v.as_ptr()),
-                             mem::transmute(&act_len))
-        };
-
-        match res {
-            0 => None,
-            _ => {
-                let act_len = act_len as uint;
-                match len.cmp(&act_len) {
-                    Greater => None,
-                    Equal => Some(v),
-                    Less => fail!("Fingerprint buffer was corrupted!")
-                }
-            }
-        }
+    fn write(&mut self, buf: &[u8]) {
+        let _ = (&mut self.bio as &mut Writer).write(buf);
     }
 }
-
-#[allow(dead_code)]
-pub struct X509Name<'x> {
-    x509: &'x X509<'x>,
-    name: *mut ffi::X509_NAME
-}
-
-macro_rules! make_validation_error(
-    ($ok_val:ident, $($name:ident = $val:ident,)+) => (
-        pub enum X509ValidationError {
-            $($name,)+
-            X509UnknownError(c_int)
-        }
-
-        impl X509ValidationError {
-            #[doc(hidden)]
-            pub fn from_raw(err: c_int) -> Option<X509ValidationError> {
-                match err {
-                    self::ffi::$ok_val => None,
-                    $(self::ffi::$val => Some($name),)+
-                    err => Some(X509UnknownError(err))
-                }
-            }
-        }
-    )
-)
-
-make_validation_error!(X509_V_OK,
-    X509UnableToGetIssuerCert = X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT,
-    X509UnableToGetCrl = X509_V_ERR_UNABLE_TO_GET_CRL,
-    X509UnableToDecryptCertSignature = X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE,
-    X509UnableToDecryptCrlSignature = X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE,
-    X509UnableToDecodeIssuerPublicKey = X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY,
-    X509CertSignatureFailure = X509_V_ERR_CERT_SIGNATURE_FAILURE,
-    X509CrlSignatureFailure = X509_V_ERR_CRL_SIGNATURE_FAILURE,
-    X509CertNotYetValid = X509_V_ERR_CERT_NOT_YET_VALID,
-    X509CertHasExpired = X509_V_ERR_CERT_HAS_EXPIRED,
-    X509CrlNotYetValid = X509_V_ERR_CRL_NOT_YET_VALID,
-    X509CrlHasExpired = X509_V_ERR_CRL_HAS_EXPIRED,
-    X509ErrorInCertNotBeforeField = X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD,
-    X509ErrorInCertNotAfterField = X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD,
-    X509ErrorInCrlLastUpdateField = X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD,
-    X509ErrorInCrlNextUpdateField = X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD,
-    X509OutOfMem = X509_V_ERR_OUT_OF_MEM,
-    X509DepthZeroSelfSignedCert = X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT,
-    X509SelfSignedCertInChain = X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN,
-    X509UnableToGetIssuerCertLocally = X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY,
-    X509UnableToVerifyLeafSignature = X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE,
-    X509CertChainTooLong = X509_V_ERR_CERT_CHAIN_TOO_LONG,
-    X509CertRevoked = X509_V_ERR_CERT_REVOKED,
-    X509InvalidCA = X509_V_ERR_INVALID_CA,
-    X509PathLengthExceeded = X509_V_ERR_PATH_LENGTH_EXCEEDED,
-    X509InvalidPurpose = X509_V_ERR_INVALID_PURPOSE,
-    X509CertUntrusted = X509_V_ERR_CERT_UNTRUSTED,
-    X509CertRejected = X509_V_ERR_CERT_REJECTED,
-    X509SubjectIssuerMismatch = X509_V_ERR_SUBJECT_ISSUER_MISMATCH,
-    X509AkidSkidMismatch = X509_V_ERR_AKID_SKID_MISMATCH,
-    X509AkidIssuerSerialMismatch = X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH,
-    X509KeyusageNoCertsign = X509_V_ERR_KEYUSAGE_NO_CERTSIGN,
-    X509UnableToGetCrlIssuer = X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER,
-    X509UnhandledCriticalExtension = X509_V_ERR_UNHANDLED_CRITICAL_EXTENSION,
-    X509KeyusageNoCrlSign = X509_V_ERR_KEYUSAGE_NO_CRL_SIGN,
-    X509UnhandledCriticalCrlExtension = X509_V_ERR_UNHANDLED_CRITICAL_CRL_EXTENSION,
-    X509InvalidNonCA = X509_V_ERR_INVALID_NON_CA,
-    X509ProxyPathLengthExceeded = X509_V_ERR_PROXY_PATH_LENGTH_EXCEEDED,
-    X509KeyusageNoDigitalSignature = X509_V_ERR_KEYUSAGE_NO_DIGITAL_SIGNATURE,
-    X509ProxyCertificatesNotAllowed = X509_V_ERR_PROXY_CERTIFICATES_NOT_ALLOWED,
-    X509InvalidExtension = X509_V_ERR_INVALID_EXTENSION,
-    X509InavlidPolicyExtension = X509_V_ERR_INVALID_POLICY_EXTENSION,
-    X509NoExplicitPolicy = X509_V_ERR_NO_EXPLICIT_POLICY,
-    X509DifferentCrlScope = X509_V_ERR_DIFFERENT_CRL_SCOPE,
-    X509UnsupportedExtensionFeature = X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE,
-    X509UnnestedResource = X509_V_ERR_UNNESTED_RESOURCE,
-    X509PermittedVolation = X509_V_ERR_PERMITTED_VIOLATION,
-    X509ExcludedViolation = X509_V_ERR_EXCLUDED_VIOLATION,
-    X509SubtreeMinmax = X509_V_ERR_SUBTREE_MINMAX,
-    X509UnsupportedConstraintType = X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
-    X509UnsupportedConstraintSyntax = X509_V_ERR_UNSUPPORTED_CONSTRAINT_SYNTAX,
-    X509UnsupportedNameSyntax = X509_V_ERR_UNSUPPORTED_NAME_SYNTAX,
-    X509CrlPathValidationError= X509_V_ERR_CRL_PATH_VALIDATION_ERROR,
-    X509ApplicationVerification = X509_V_ERR_APPLICATION_VERIFICATION,
-)
 
 pub struct Ssl {
     ssl: *mut ffi::SSL
@@ -365,18 +298,10 @@ impl Ssl {
         }
         let ssl = Ssl { ssl: ssl };
 
-        let rbio = unsafe { ffi::BIO_new(ffi::BIO_s_mem()) };
-        if rbio == ptr::null_mut() {
-            return Err(SslError::get());
-        }
+        let rbio = try!(MemBio::new());
+        let wbio = try!(MemBio::new());
 
-        let wbio = unsafe { ffi::BIO_new(ffi::BIO_s_mem()) };
-        if wbio == ptr::null_mut() {
-            unsafe { ffi::BIO_free_all(rbio) }
-            return Err(SslError::get());
-        }
-
-        unsafe { ffi::SSL_set_bio(ssl.ssl, rbio, wbio) }
+        unsafe { ffi::SSL_set_bio(ssl.ssl, rbio.unwrap(), wbio.unwrap()) }
         Ok(ssl)
     }
 
@@ -389,18 +314,19 @@ impl Ssl {
     }
 
     fn wrap_bio<'a>(&'a self, bio: *mut ffi::BIO) -> MemBioRef<'a> {
-        assert!(bio != ptr::mut_null());
+        assert!(bio != ptr::null_mut());
         MemBioRef {
             ssl: self,
-            bio: MemBio {
-                bio: bio,
-                owned: false
-            }
+            bio: MemBio::borrowed(bio)
         }
     }
 
     fn connect(&self) -> c_int {
         unsafe { ffi::SSL_connect(self.ssl) }
+    }
+
+    fn accept(&self) -> c_int {
+        unsafe { ffi::SSL_accept(self.ssl) }
     }
 
     fn read(&self, buf: &mut [u8]) -> c_int {
@@ -443,6 +369,17 @@ impl Ssl {
         }
     }
 
+    pub fn get_peer_certificate(&self) -> Option<X509> {
+        unsafe {
+            let ptr = ffi::SSL_get_peer_certificate(self.ssl);
+            if ptr.is_null() {
+                None
+            } else {
+                Some(X509::new(ptr, true))
+            }
+        }
+    }
+
 }
 
 #[deriving(FromPrimitive)]
@@ -459,110 +396,90 @@ enum LibSslError {
     ErrorWantAccept = ffi::SSL_ERROR_WANT_ACCEPT,
 }
 
-#[allow(dead_code)]
-struct MemBioRef<'ssl> {
-    ssl: &'ssl Ssl,
-    bio: MemBio,
-}
-
-impl<'ssl> MemBioRef<'ssl> {
-    fn read(&self, buf: &mut [u8]) -> Option<uint> {
-        self.bio.read(buf)
-    }
-
-    fn write(&self, buf: &[u8]) {
-        self.bio.write(buf)
-    }
-}
-
-struct MemBio {
-    bio: *mut ffi::BIO,
-    owned: bool
-}
-
-impl Drop for MemBio {
-    fn drop(&mut self) {
-        if self.owned {
-            unsafe {
-                ffi::BIO_free_all(self.bio);
-            }
-        }
-    }
-}
-
-impl MemBio {
-    fn read(&self, buf: &mut [u8]) -> Option<uint> {
-        let ret = unsafe {
-            ffi::BIO_read(self.bio, buf.as_ptr() as *mut c_void,
-                          buf.len() as c_int)
-        };
-
-        if ret < 0 {
-            None
-        } else {
-            Some(ret as uint)
-        }
-    }
-
-    fn write(&self, buf: &[u8]) {
-        let ret = unsafe {
-            ffi::BIO_write(self.bio, buf.as_ptr() as *const c_void,
-                           buf.len() as c_int)
-        };
-        assert_eq!(buf.len(), ret as uint);
-    }
-}
-
 /// A stream wrapper which handles SSL encryption for an underlying stream.
+#[deriving(Clone)]
 pub struct SslStream<S> {
     stream: S,
-    ssl: Ssl,
+    ssl: Arc<Ssl>,
     buf: Vec<u8>
 }
 
 impl<S: Stream> SslStream<S> {
-    /// Attempts to create a new SSL stream from a given `Ssl` instance.
-    pub fn new_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        let mut ssl = SslStream {
+    fn new_base(ssl:Ssl, stream: S) -> SslStream<S> {
+        SslStream {
             stream: stream,
-            ssl: ssl,
+            ssl: Arc::new(ssl),
             // Maximum TLS record size is 16k
             buf: Vec::from_elem(16 * 1024, 0u8)
-        };
-
-        match ssl.in_retry_wrapper(|ssl| { ssl.connect() }) {
-            Ok(_) => Ok(ssl),
-            Err(err) => Err(err)
         }
+    }
+
+    pub fn new_server_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
+        let mut ssl = SslStream::new_base(ssl, stream);
+        ssl.in_retry_wrapper(|ssl| { ssl.accept() }).and(Ok(ssl))
+    }
+
+    /// Attempts to create a new SSL stream from a given `Ssl` instance.
+    pub fn new_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
+        let mut ssl = SslStream::new_base(ssl, stream);
+        ssl.in_retry_wrapper(|ssl| { ssl.connect() }).and(Ok(ssl))
     }
 
     /// Creates a new SSL stream
     pub fn new(ctx: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
-        let ssl = match Ssl::new(ctx) {
-            Ok(ssl) => ssl,
-            Err(err) => return Err(err)
-        };
-
+        let ssl = try!(Ssl::new(ctx));
         SslStream::new_from(ssl, stream)
+    }
+
+    /// Creates a new SSL server stream
+    pub fn new_server(ctx: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
+        let ssl = try!(Ssl::new(ctx));
+        SslStream::new_server_from(ssl, stream)
+    }
+
+    /// Returns a mutable reference to the underlying stream.
+    ///
+    /// ## Warning
+    ///
+    /// `read`ing or `write`ing directly to the underlying stream will most
+    /// likely desynchronize the SSL session.
+    #[deprecated="use get_mut instead"]
+    pub fn get_inner(&mut self) -> &mut S {
+        self.get_mut()
+    }
+
+    /// Returns a reference to the underlying stream.
+    pub fn get_ref(&self) -> &S {
+        &self.stream
+    }
+
+    /// Returns a mutable reference to the underlying stream.
+    ///
+    /// ## Warning
+    ///
+    /// It is inadvisable to read from or write to the underlying stream as it
+    /// will most likely desynchronize the SSL session.
+    pub fn get_mut(&mut self) -> &mut S {
+        &mut self.stream
     }
 
     fn in_retry_wrapper(&mut self, blk: |&Ssl| -> c_int)
             -> Result<c_int, SslError> {
         loop {
-            let ret = blk(&self.ssl);
+            let ret = blk(&*self.ssl);
             if ret > 0 {
                 return Ok(ret);
             }
 
             match self.ssl.get_error(ret) {
-                ErrorWantRead => {
-                    try_ssl!(self.flush());
-                    let len = try_ssl!(self.stream.read(self.buf.as_mut_slice()));
+                LibSslError::ErrorWantRead => {
+                    try_ssl_stream!(self.flush());
+                    let len = try_ssl_stream!(self.stream.read(self.buf.as_mut_slice()));
                     self.ssl.get_rbio().write(self.buf.slice_to(len));
                 }
-                ErrorWantWrite => { try_ssl!(self.flush()) }
-                ErrorZeroReturn => return Err(SslSessionClosed),
-                ErrorSsl => return Err(SslError::get()),
+                LibSslError::ErrorWantWrite => { try_ssl_stream!(self.flush()) }
+                LibSslError::ErrorZeroReturn => return Err(SslSessionClosed),
+                LibSslError::ErrorSsl => return Err(SslError::get()),
                 _ => unreachable!()
             }
         }
@@ -588,7 +505,7 @@ impl<S: Stream> SslStream<S> {
         }
 
         let meth = unsafe { ffi::SSL_COMP_get_name(ptr) };
-        let s = unsafe { string::raw::from_buf(meth as *const u8) };
+        let s = unsafe { String::from_raw_buf(meth as *const u8) };
 
         Some(s)
     }
@@ -615,7 +532,7 @@ impl<S: Stream> Writer for SslStream<S> {
         let mut start = 0;
         while start < buf.len() {
             let ret = self.in_retry_wrapper(|ssl| {
-                ssl.write(buf.slice_from(start))
+                ssl.write(buf.split_at(start).val1())
             });
             match ret {
                 Ok(len) => start += len as uint,
@@ -629,5 +546,60 @@ impl<S: Stream> Writer for SslStream<S> {
     fn flush(&mut self) -> IoResult<()> {
         try!(self.write_through());
         self.stream.flush()
+    }
+}
+
+/// A utility type to help in cases where the use of SSL is decided at runtime.
+pub enum MaybeSslStream<S> where S: Stream {
+    /// A connection using SSL
+    Ssl(SslStream<S>),
+    /// A connection not using SSL
+    Normal(S),
+}
+
+impl<S> Reader for MaybeSslStream<S> where S: Stream {
+    fn read(&mut self, buf: &mut [u8]) -> IoResult<uint> {
+        match *self {
+            MaybeSslStream::Ssl(ref mut s) => s.read(buf),
+            MaybeSslStream::Normal(ref mut s) => s.read(buf),
+        }
+    }
+}
+
+impl<S> Writer for MaybeSslStream<S> where S: Stream{
+    fn write(&mut self, buf: &[u8]) -> IoResult<()> {
+        match *self {
+            MaybeSslStream::Ssl(ref mut s) => s.write(buf),
+            MaybeSslStream::Normal(ref mut s) => s.write(buf),
+        }
+    }
+
+    fn flush(&mut self) -> IoResult<()> {
+        match *self {
+            MaybeSslStream::Ssl(ref mut s) => s.flush(),
+            MaybeSslStream::Normal(ref mut s) => s.flush(),
+        }
+    }
+}
+
+impl<S> MaybeSslStream<S> where S: Stream {
+    /// Returns a reference to the underlying stream.
+    pub fn get_ref(&self) -> &S {
+        match *self {
+            MaybeSslStream::Ssl(ref s) => s.get_ref(),
+            MaybeSslStream::Normal(ref s) => s,
+        }
+    }
+
+    /// Returns a mutable reference to the underlying stream.
+    ///
+    /// ## Warning
+    ///
+    /// It is inadvisable to read from or write to the underlying stream.
+    pub fn get_mut(&mut self) -> &mut S {
+        match *self {
+            MaybeSslStream::Ssl(ref mut s) => s.get_mut(),
+            MaybeSslStream::Normal(ref mut s) => s,
+        }
     }
 }

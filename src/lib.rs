@@ -1,14 +1,20 @@
-#![feature(struct_variant, macro_rules)]
+#![feature(macro_rules, unsafe_destructor, globs)]
 #![crate_name="openssl"]
 #![crate_type="rlib"]
 #![crate_type="dylib"]
-#![doc(html_root_url="http://www.rust-ci.org/sfackler/rust-openssl/doc")]
+#![doc(html_root_url="https://sfackler.github.io/doc/openssl")]
 
 extern crate libc;
 #[cfg(test)]
 extern crate serialize;
-extern crate sync;
 
-pub mod ssl;
-pub mod crypto;
+extern crate "openssl-sys" as ffi;
+
+mod macros;
+
+pub mod asn1;
 pub mod bn;
+pub mod bio;
+pub mod crypto;
+pub mod ssl;
+pub mod x509;

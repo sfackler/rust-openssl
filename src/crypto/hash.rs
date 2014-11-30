@@ -1,6 +1,8 @@
-use libc;
 use libc::c_uint;
 use std::ptr;
+use std::io;
+
+use ffi;
 
 pub enum HashType {
     MD5,
@@ -12,80 +14,75 @@ pub enum HashType {
     RIPEMD160
 }
 
-#[allow(dead_code)]
-#[allow(non_camel_case_types)]
-#[repr(C)]
-pub struct EVP_MD_CTX {
-    digest: *mut EVP_MD,
-    engine: *mut libc::c_void,
-    flags: libc::c_ulong,
-    md_data: *mut libc::c_void,
-    pctx: *mut EVP_PKEY_CTX,
-    update: *mut libc::c_void
-}
-
-#[allow(non_camel_case_types)]
-#[repr(C)]
-pub struct EVP_MD;
-
-#[allow(non_camel_case_types)]
-#[repr(C)]
-pub struct EVP_PKEY_CTX;
-
-#[link(name = "crypto")]
-extern {
-    fn EVP_MD_CTX_create() -> *mut EVP_MD_CTX;
-    fn EVP_MD_CTX_destroy(ctx: *mut EVP_MD_CTX);
-
-    fn EVP_md5() -> *const EVP_MD;
-    fn EVP_sha1() -> *const EVP_MD;
-    fn EVP_sha224() -> *const EVP_MD;
-    fn EVP_sha256() -> *const EVP_MD;
-    fn EVP_sha384() -> *const EVP_MD;
-    fn EVP_sha512() -> *const EVP_MD;
-    fn EVP_ripemd160() -> *const EVP_MD;
-
-    fn EVP_DigestInit(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD);
-    fn EVP_DigestUpdate(ctx: *mut EVP_MD_CTX, data: *const u8, n: c_uint);
-    fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32);
-}
-
-pub fn evpmd(t: HashType) -> (*const EVP_MD, uint) {
+pub fn evpmd(t: HashType) -> (*const ffi::EVP_MD, uint) {
     unsafe {
         match t {
-            MD5 => (EVP_md5(), 16u),
-            SHA1 => (EVP_sha1(), 20u),
-            SHA224 => (EVP_sha224(), 28u),
-            SHA256 => (EVP_sha256(), 32u),
-            SHA384 => (EVP_sha384(), 48u),
-            SHA512 => (EVP_sha512(), 64u),
-            RIPEMD160 => (EVP_ripemd160(), 20u),
+            HashType::MD5 => (ffi::EVP_md5(), 16u),
+            HashType::SHA1 => (ffi::EVP_sha1(), 20u),
+            HashType::SHA224 => (ffi::EVP_sha224(), 28u),
+            HashType::SHA256 => (ffi::EVP_sha256(), 32u),
+            HashType::SHA384 => (ffi::EVP_sha384(), 48u),
+            HashType::SHA512 => (ffi::EVP_sha512(), 64u),
+            HashType::RIPEMD160 => (ffi::EVP_ripemd160(), 20u),
+        }
+    }
+}
+
+pub struct HasherContext {
+    ptr: *mut ffi::EVP_MD_CTX
+}
+
+impl HasherContext {
+    pub fn new() -> HasherContext {
+        ffi::init();
+
+        unsafe {
+            HasherContext { ptr: ffi::EVP_MD_CTX_create() }
+        }
+    }
+}
+
+impl Drop for HasherContext {
+    fn drop(&mut self) {
+        unsafe {
+            ffi::EVP_MD_CTX_destroy(self.ptr);
         }
     }
 }
 
 #[allow(dead_code)]
 pub struct Hasher {
-    evp: *const EVP_MD,
-    ctx: *mut EVP_MD_CTX,
+    evp: *const ffi::EVP_MD,
+    ctx: HasherContext,
     len: uint,
+}
+
+impl io::Writer for Hasher {
+    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+        self.update(buf);
+        Ok(())
+    }
 }
 
 impl Hasher {
     pub fn new(ht: HashType) -> Hasher {
-        let ctx = unsafe { EVP_MD_CTX_create() };
+        let ctx = HasherContext::new();
+        Hasher::with_context(ctx, ht)
+    }
+
+    pub fn with_context(ctx: HasherContext, ht: HashType) -> Hasher {
         let (evp, mdlen) = evpmd(ht);
         unsafe {
-            EVP_DigestInit(ctx, evp);
+            ffi::EVP_DigestInit_ex(ctx.ptr, evp, 0 as *const _);
         }
 
         Hasher { evp: evp, ctx: ctx, len: mdlen }
     }
 
     /// Update this hasher with more input bytes
-    pub fn update(&self, data: &[u8]) {
+    pub fn update(&mut self, data: &[u8]) {
         unsafe {
-            EVP_DigestUpdate(self.ctx, data.as_ptr(), data.len() as c_uint)
+            ffi::EVP_DigestUpdate(self.ctx.ptr, data.as_ptr(), data.len() as c_uint)
         }
     }
 
@@ -93,20 +90,21 @@ impl Hasher {
      * Return the digest of all bytes added to this hasher since its last
      * initialization
      */
-    pub fn final(&self) -> Vec<u8> {
-        unsafe {
-            let mut res = Vec::from_elem(self.len, 0u8);
-            EVP_DigestFinal(self.ctx, res.as_mut_ptr(), ptr::null_mut());
-            res
-        }
+    pub fn finalize(self) -> Vec<u8> {
+        let (res, _) = self.finalize_reuse();
+        res
     }
-}
 
-impl Drop for Hasher {
-    fn drop(&mut self) {
+    /**
+     * Return the digest of all bytes added to this hasher since its last
+     * initialization and its context for reuse
+     */
+    pub fn finalize_reuse(self) -> (Vec<u8>, HasherContext) {
+        let mut res = Vec::from_elem(self.len, 0u8);
         unsafe {
-            EVP_MD_CTX_destroy(self.ctx);
-        }
+            ffi::EVP_DigestFinal_ex(self.ctx.ptr, res.as_mut_ptr(), ptr::null_mut())
+        };
+        (res, self.ctx)
     }
 }
 
@@ -115,9 +113,9 @@ impl Drop for Hasher {
  * value
  */
 pub fn hash(t: HashType, data: &[u8]) -> Vec<u8> {
-    let h = Hasher::new(t);
+    let mut h = Hasher::new(t);
     h.update(data);
-    h.final()
+    h.finalize()
 }
 
 #[cfg(test)]
@@ -135,9 +133,7 @@ mod tests {
                    expected_output: output.to_string() }
     }
 
-    fn hash_test(hashtype: super::HashType, hashtest: &HashTest) {
-        let calced_raw = super::hash(hashtype, hashtest.input.as_slice());
-
+    fn compare(calced_raw: Vec<u8>, hashtest: &HashTest) {
         let calced = calced_raw.as_slice().to_hex().into_string();
 
         if calced != hashtest.expected_output {
@@ -145,6 +141,28 @@ mod tests {
         }
 
         assert!(calced == hashtest.expected_output);
+    }
+
+    fn hash_test(hashtype: super::HashType, hashtest: &HashTest) {
+        let calced_raw = super::hash(hashtype, hashtest.input.as_slice());
+        compare(calced_raw, hashtest);
+    }
+
+    fn hash_reuse_test(ctx: super::HasherContext, hashtype: super::HashType,
+                       hashtest: &HashTest) -> super::HasherContext {
+        let mut h = super::Hasher::with_context(ctx, hashtype);
+        h.update(hashtest.input.as_slice());
+        let (calced_raw, ctx) = h.finalize_reuse();
+
+        compare(calced_raw, hashtest);
+
+        ctx
+    }
+
+    pub fn hash_writer(t: super::HashType, data: &[u8]) -> Vec<u8> {
+        let mut h = super::Hasher::new(t);
+        h.write(data).unwrap();
+        h.finalize()
     }
 
     // Test vectors from http://www.nsrl.nist.gov/testdata/
@@ -165,8 +183,10 @@ mod tests {
             HashTest("A510CD18F7A56852EB0319", "577e216843dd11573574d3fb209b97d8"),
             HashTest("AAED18DBE8938C19ED734A8D", "6f80fb775f27e0a4ce5c2f42fc72c5f1")];
 
+        let mut ctx = super::HasherContext::new();
+
         for test in tests.iter() {
-            hash_test(super::MD5, test);
+            ctx = hash_reuse_test(ctx, super::HashType::MD5, test);
         }
     }
 
@@ -177,7 +197,7 @@ mod tests {
             ];
 
         for test in tests.iter() {
-            hash_test(super::SHA1, test);
+            hash_test(super::HashType::SHA1, test);
         }
     }
 
@@ -188,7 +208,7 @@ mod tests {
             ];
 
         for test in tests.iter() {
-            hash_test(super::SHA256, test);
+            hash_test(super::HashType::SHA256, test);
         }
     }
 
@@ -199,7 +219,14 @@ mod tests {
             ];
 
         for test in tests.iter() {
-            hash_test(super::RIPEMD160, test);
+            hash_test(super::HashType::RIPEMD160, test);
         }
+    }
+
+    #[test]
+    fn test_writer() {
+        let tv = "rust-openssl".as_bytes();
+        let ht = super::HashType::RIPEMD160;
+        assert!(hash_writer(ht, tv) == super::hash(ht, tv));
     }
 }

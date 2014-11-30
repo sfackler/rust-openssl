@@ -1,36 +1,6 @@
-use libc::{c_int, c_uint};
-use libc;
+use libc::{c_int};
 
-#[allow(non_camel_case_types)]
-pub type EVP_CIPHER_CTX = *mut libc::c_void;
-
-#[allow(non_camel_case_types)]
-pub type EVP_CIPHER = *mut libc::c_void;
-
-#[link(name = "crypto")]
-extern {
-    fn EVP_CIPHER_CTX_new() -> EVP_CIPHER_CTX;
-    fn EVP_CIPHER_CTX_set_padding(ctx: EVP_CIPHER_CTX, padding: c_int);
-    fn EVP_CIPHER_CTX_free(ctx: EVP_CIPHER_CTX);
-
-    fn EVP_aes_128_ecb() -> EVP_CIPHER;
-    fn EVP_aes_128_cbc() -> EVP_CIPHER;
-    // fn EVP_aes_128_ctr() -> EVP_CIPHER;
-    // fn EVP_aes_128_gcm() -> EVP_CIPHER;
-
-    fn EVP_aes_256_ecb() -> EVP_CIPHER;
-    fn EVP_aes_256_cbc() -> EVP_CIPHER;
-    // fn EVP_aes_256_ctr() -> EVP_CIPHER;
-    // fn EVP_aes_256_gcm() -> EVP_CIPHER;
-
-    fn EVP_rc4() -> EVP_CIPHER;
-
-    fn EVP_CipherInit(ctx: EVP_CIPHER_CTX, evp: EVP_CIPHER,
-                      key: *const u8, iv: *const u8, mode: c_int);
-    fn EVP_CipherUpdate(ctx: EVP_CIPHER_CTX, outbuf: *mut u8,
-                        outlen: &mut c_uint, inbuf: *const u8, inlen: c_int);
-    fn EVP_CipherFinal(ctx: EVP_CIPHER_CTX, res: *mut u8, len: &mut c_int);
-}
+use ffi;
 
 pub enum Mode {
     Encrypt,
@@ -41,46 +11,58 @@ pub enum Mode {
 pub enum Type {
     AES_128_ECB,
     AES_128_CBC,
+    /// Requires the `aes_xts` feature
+    #[cfg(feature = "aes_xts")]
+    AES_128_XTS,
     // AES_128_CTR,
     //AES_128_GCM,
 
     AES_256_ECB,
     AES_256_CBC,
+    /// Requires the `aes_xts` feature
+    #[cfg(feature = "aes_xts")]
+    AES_256_XTS,
     // AES_256_CTR,
     //AES_256_GCM,
 
     RC4_128,
 }
 
-fn evpc(t: Type) -> (EVP_CIPHER, uint, uint) {
+fn evpc(t: Type) -> (*const ffi::EVP_CIPHER, uint, uint) {
     unsafe {
         match t {
-            AES_128_ECB => (EVP_aes_128_ecb(), 16u, 16u),
-            AES_128_CBC => (EVP_aes_128_cbc(), 16u, 16u),
+            Type::AES_128_ECB => (ffi::EVP_aes_128_ecb(), 16u, 16u),
+            Type::AES_128_CBC => (ffi::EVP_aes_128_cbc(), 16u, 16u),
+            #[cfg(feature = "aes_xts")]
+            Type::AES_128_XTS => (ffi::EVP_aes_128_xts(), 32u, 16u),
             // AES_128_CTR => (EVP_aes_128_ctr(), 16u, 0u),
             //AES_128_GCM => (EVP_aes_128_gcm(), 16u, 16u),
 
-            AES_256_ECB => (EVP_aes_256_ecb(), 32u, 16u),
-            AES_256_CBC => (EVP_aes_256_cbc(), 32u, 16u),
+            Type::AES_256_ECB => (ffi::EVP_aes_256_ecb(), 32u, 16u),
+            Type::AES_256_CBC => (ffi::EVP_aes_256_cbc(), 32u, 16u),
+            #[cfg(feature = "aes_xts")]
+            Type::AES_256_XTS => (ffi::EVP_aes_256_xts(), 64u, 16u),
             // AES_256_CTR => (EVP_aes_256_ctr(), 32u, 0u),
             //AES_256_GCM => (EVP_aes_256_gcm(), 32u, 16u),
 
-            RC4_128 => (EVP_rc4(), 16u, 0u),
+            Type::RC4_128 => (ffi::EVP_rc4(), 16u, 0u),
         }
     }
 }
 
 /// Represents a symmetric cipher context.
 pub struct Crypter {
-    evp: EVP_CIPHER,
-    ctx: EVP_CIPHER_CTX,
+    evp: *const ffi::EVP_CIPHER,
+    ctx: *mut ffi::EVP_CIPHER_CTX,
     keylen: uint,
     blocksize: uint
 }
 
 impl Crypter {
     pub fn new(t: Type) -> Crypter {
-        let ctx = unsafe { EVP_CIPHER_CTX_new() };
+        ffi::init();
+
+        let ctx = unsafe { ffi::EVP_CIPHER_CTX_new() };
         let (evp, keylen, blocksz) = evpc(t);
         Crypter { evp: evp, ctx: ctx, keylen: keylen, blocksize: blocksz }
     }
@@ -93,7 +75,7 @@ impl Crypter {
         if self.blocksize > 0 {
             unsafe {
                 let v = if padding { 1 as c_int } else { 0 };
-                EVP_CIPHER_CTX_set_padding(self.ctx, v);
+                ffi::EVP_CIPHER_CTX_set_padding(self.ctx, v);
             }
         }
     }
@@ -104,12 +86,12 @@ impl Crypter {
     pub fn init(&self, mode: Mode, key: &[u8], iv: Vec<u8>) {
         unsafe {
             let mode = match mode {
-                Encrypt => 1 as c_int,
-                Decrypt => 0 as c_int,
+                Mode::Encrypt => 1 as c_int,
+                Mode::Decrypt => 0 as c_int,
             };
             assert_eq!(key.len(), self.keylen);
 
-            EVP_CipherInit(
+            ffi::EVP_CipherInit(
                 self.ctx,
                 self.evp,
                 key.as_ptr(),
@@ -128,7 +110,7 @@ impl Crypter {
             let mut res = Vec::from_elem(data.len() + self.blocksize, 0u8);
             let mut reslen = (data.len() + self.blocksize) as u32;
 
-            EVP_CipherUpdate(
+            ffi::EVP_CipherUpdate(
                 self.ctx,
                 res.as_mut_ptr(),
                 &mut reslen,
@@ -144,12 +126,12 @@ impl Crypter {
     /**
      * Finish crypting. Returns the remaining partial block of output, if any.
      */
-    pub fn final(&self) -> Vec<u8> {
+    pub fn finalize(&self) -> Vec<u8> {
         unsafe {
             let mut res = Vec::from_elem(self.blocksize, 0u8);
             let mut reslen = self.blocksize as c_int;
 
-            EVP_CipherFinal(self.ctx,
+            ffi::EVP_CipherFinal(self.ctx,
                                        res.as_mut_ptr(),
                                        &mut reslen);
 
@@ -162,7 +144,7 @@ impl Crypter {
 impl Drop for Crypter {
     fn drop(&mut self) {
         unsafe {
-            EVP_CIPHER_CTX_free(self.ctx);
+            ffi::EVP_CIPHER_CTX_free(self.ctx);
         }
     }
 }
@@ -173,9 +155,9 @@ impl Drop for Crypter {
  */
 pub fn encrypt(t: Type, key: &[u8], iv: Vec<u8>, data: &[u8]) -> Vec<u8> {
     let c = Crypter::new(t);
-    c.init(Encrypt, key, iv);
+    c.init(Mode::Encrypt, key, iv);
     let mut r = c.update(data);
-    let rest = c.final();
+    let rest = c.finalize();
     r.extend(rest.into_iter());
     r
 }
@@ -186,9 +168,9 @@ pub fn encrypt(t: Type, key: &[u8], iv: Vec<u8>, data: &[u8]) -> Vec<u8> {
  */
 pub fn decrypt(t: Type, key: &[u8], iv: Vec<u8>, data: &[u8]) -> Vec<u8> {
     let c = Crypter::new(t);
-    c.init(Decrypt, key, iv);
+    c.init(Mode::Decrypt, key, iv);
     let mut r = c.update(data);
-    let rest = c.final();
+    let rest = c.finalize();
     r.extend(rest.into_iter());
     r
 }
@@ -212,28 +194,62 @@ mod tests {
         let c0 =
            vec!(0x8eu8, 0xa2u8, 0xb7u8, 0xcau8, 0x51u8, 0x67u8, 0x45u8, 0xbfu8,
               0xeau8, 0xfcu8, 0x49u8, 0x90u8, 0x4bu8, 0x49u8, 0x60u8, 0x89u8);
-        let c = super::Crypter::new(super::AES_256_ECB);
-        c.init(super::Encrypt, k0.as_slice(), vec![]);
+        let c = super::Crypter::new(super::Type::AES_256_ECB);
+        c.init(super::Mode::Encrypt, k0.as_slice(), vec![]);
         c.pad(false);
         let mut r0 = c.update(p0.as_slice());
-        r0.extend(c.final().into_iter());
+        r0.extend(c.finalize().into_iter());
         assert!(r0 == c0);
-        c.init(super::Decrypt, k0.as_slice(), vec![]);
+        c.init(super::Mode::Decrypt, k0.as_slice(), vec![]);
         c.pad(false);
         let mut p1 = c.update(r0.as_slice());
-        p1.extend(c.final().into_iter());
+        p1.extend(c.finalize().into_iter());
         assert!(p1 == p0);
+    }
+
+    #[test]
+    fn test_aes_256_cbc_decrypt() {
+        let cr = super::Crypter::new(super::Type::AES_256_CBC);
+        let iv = vec![
+            4_u8, 223_u8, 153_u8, 219_u8, 28_u8, 142_u8, 234_u8, 68_u8, 227_u8,
+            69_u8, 98_u8, 107_u8, 208_u8, 14_u8, 236_u8, 60_u8, 0_u8, 0_u8,
+            0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
+            0_u8, 0_u8, 0_u8
+        ];
+        let data = [
+            143_u8, 210_u8, 75_u8, 63_u8, 214_u8, 179_u8, 155_u8,
+            241_u8, 242_u8, 31_u8, 154_u8, 56_u8, 198_u8, 145_u8, 192_u8, 64_u8,
+            2_u8, 245_u8, 167_u8, 220_u8, 55_u8, 119_u8, 233_u8, 136_u8, 139_u8,
+            27_u8, 71_u8, 242_u8, 119_u8, 175_u8, 65_u8, 207_u8
+        ];
+        let ciphered_data = [
+            0x4a_u8, 0x2e_u8, 0xe5_u8, 0x6_u8, 0xbf_u8, 0xcf_u8, 0xf2_u8, 0xd7_u8,
+            0xea_u8, 0x2d_u8, 0xb1_u8, 0x85_u8, 0x6c_u8, 0x93_u8, 0x65_u8, 0x6f_u8
+            ];
+        cr.init(super::Mode::Decrypt, &data, iv);
+        cr.pad(false);
+        let unciphered_data_1 = cr.update(&ciphered_data);
+        let unciphered_data_2 = cr.finalize();
+
+        let expected_unciphered_data = b"I love turtles.\x01";
+
+        assert!(unciphered_data_2.len() == 0);
+
+        assert_eq!(
+            unciphered_data_1.as_slice(),
+            expected_unciphered_data
+        );
     }
 
     fn cipher_test(ciphertype: super::Type, pt: &str, ct: &str, key: &str, iv: &str) {
         use serialize::hex::ToHex;
 
         let cipher = super::Crypter::new(ciphertype);
-        cipher.init(super::Encrypt, key.from_hex().unwrap().as_slice(), iv.from_hex().unwrap());
+        cipher.init(super::Mode::Encrypt, key.from_hex().unwrap().as_slice(), iv.from_hex().unwrap());
 
         let expected = ct.from_hex().unwrap().as_slice().to_vec();
         let mut computed = cipher.update(pt.from_hex().unwrap().as_slice());
-        computed.extend(cipher.final().into_iter());
+        computed.extend(cipher.finalize().into_iter());
 
         if computed != expected {
             println!("Computed: {}", computed.as_slice().to_hex());
@@ -242,7 +258,7 @@ mod tests {
                 println!("Lengths differ: {} in computed vs {} expected",
                          computed.len(), expected.len());
             }
-            fail!("test failure");
+            panic!("test failure");
         }
     }
 
@@ -254,7 +270,20 @@ mod tests {
         let key = "97CD440324DA5FD1F7955C1C13B6B466";
         let iv = "";
 
-        cipher_test(super::RC4_128, pt, ct, key, iv);
+        cipher_test(super::Type::RC4_128, pt, ct, key, iv);
+    }
+
+    #[test]
+    #[cfg(feature = "aes_xts")]
+    fn test_aes256_xts() {
+        // Test case 174 from
+        // http://csrc.nist.gov/groups/STM/cavp/documents/aes/XTSTestVectors.zip
+        let pt = "77f4ef63d734ebd028508da66c22cdebdd52ecd6ee2ab0a50bc8ad0cfd692ca5fcd4e6dedc45df7f6503f462611dc542";
+        let ct = "ce7d905a7776ac72f240d22aafed5e4eb7566cdc7211220e970da634ce015f131a5ecb8d400bc9e84f0b81d8725dbbc7";
+        let key = "b6bfef891f83b5ff073f2231267be51eb084b791fa19a154399c0684c8b2dfcb37de77d28bbda3b4180026ad640b74243b3133e7b9fae629403f6733423dae28";
+        let iv = "db200efb7eaaa737dbdf40babb68953f";
+
+        cipher_test(super::Type::AES_256_XTS, pt, ct, key, iv);
     }
 
     /*#[test]

@@ -14,50 +14,30 @@
  * limitations under the License.
  */
 
-use libc::{c_uchar, c_int, c_uint};
+use libc::{c_int, c_uint};
+
 use crypto::hash;
-
-#[allow(dead_code)]
-#[allow(non_camel_case_types)]
-#[repr(C)]
-pub struct HMAC_CTX {
-    md: *mut hash::EVP_MD,
-    md_ctx: hash::EVP_MD_CTX,
-    i_ctx: hash::EVP_MD_CTX,
-    o_ctx: hash::EVP_MD_CTX,
-    key_length: c_uint,
-    key: [c_uchar, ..128]
-}
-
-#[link(name = "crypto")]
-extern {
-    fn HMAC_CTX_init(ctx: *mut HMAC_CTX);
-    fn HMAC_Init_ex(ctx: *mut HMAC_CTX, key: *const u8, keylen: c_int, md: *const hash::EVP_MD, imple: *const ENGINE);
-    fn HMAC_Update(ctx: *mut HMAC_CTX, input: *const u8, len: c_uint);
-    fn HMAC_Final(ctx: *mut HMAC_CTX, output: *mut u8, len: *mut c_uint);
-}
-
-#[allow(non_camel_case_types)]
-#[repr(C)]
-struct ENGINE;
+use ffi;
 
 pub struct HMAC {
-    ctx: HMAC_CTX,
+    ctx: ffi::HMAC_CTX,
     len: uint,
 }
 
 #[allow(non_snake_case)]
 pub fn HMAC(ht: hash::HashType, key: &[u8]) -> HMAC {
     unsafe {
+        ffi::init();
+
         let (evp, mdlen) = hash::evpmd(ht);
 
-        let mut ctx : HMAC_CTX = ::std::mem::uninitialized();
+        let mut ctx : ffi::HMAC_CTX = ::std::mem::uninitialized();
 
-        HMAC_CTX_init(&mut ctx);
-        HMAC_Init_ex(&mut ctx,
-                     key.as_ptr(),
-                     key.len() as c_int,
-                     evp, 0 as *const _);
+        ffi::HMAC_CTX_init(&mut ctx);
+        ffi::HMAC_Init_ex(&mut ctx,
+                          key.as_ptr(),
+                          key.len() as c_int,
+                          evp, 0 as *const _);
 
         HMAC { ctx: ctx, len: mdlen }
     }
@@ -66,15 +46,15 @@ pub fn HMAC(ht: hash::HashType, key: &[u8]) -> HMAC {
 impl HMAC {
     pub fn update(&mut self, data: &[u8]) {
         unsafe {
-            HMAC_Update(&mut self.ctx, data.as_ptr(), data.len() as c_uint)
+            ffi::HMAC_Update(&mut self.ctx, data.as_ptr(), data.len() as c_uint)
         }
     }
 
-    pub fn final(&mut self) -> Vec<u8> {
+    pub fn finalize(&mut self) -> Vec<u8> {
         unsafe {
             let mut res = Vec::from_elem(self.len, 0u8);
             let mut outlen = 0;
-            HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut outlen);
+            ffi::HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut outlen);
             assert!(self.len == outlen as uint)
             res
         }
@@ -84,7 +64,7 @@ impl HMAC {
 #[cfg(test)]
 mod tests {
     use serialize::hex::FromHex;
-    use crypto::hash::{HashType, MD5, SHA1, SHA224, SHA256, SHA384, SHA512};
+    use crypto::hash::HashType::{mod, MD5, SHA1, SHA224, SHA256, SHA384, SHA512};
     use super::HMAC;
 
     #[test]
@@ -116,7 +96,7 @@ mod tests {
         for &(ref key, ref data, ref res) in tests.iter() {
             let mut hmac = HMAC(MD5, key.as_slice());
             hmac.update(data.as_slice());
-            assert_eq!(hmac.final(), *res);
+            assert_eq!(hmac.finalize(), *res);
         }
     }
 
@@ -149,7 +129,7 @@ mod tests {
         for &(ref key, ref data, ref res) in tests.iter() {
             let mut hmac = HMAC(SHA1, key.as_slice());
             hmac.update(data.as_slice());
-            assert_eq!(hmac.final(), *res);
+            assert_eq!(hmac.finalize(), *res);
         }
     }
 
@@ -173,7 +153,7 @@ mod tests {
         for (&(ref key, ref data), res) in tests.iter().zip(results.iter()) {
             let mut hmac = HMAC(ty, key.as_slice());
             hmac.update(data.as_slice());
-            assert_eq!(hmac.final(), *res);
+            assert_eq!(hmac.finalize(), *res);
         }
     }
 
@@ -187,7 +167,7 @@ mod tests {
             "95e9a0db962095adaebe9b2d6f0dbce2d499f112f2d2b7273fa6870e".from_hex().unwrap(),
             "3a854166ac5d9f023f54d517d0b39dbd946770db9c2b95c9f6f565d1".from_hex().unwrap()
         ];
-        test_sha2(SHA224, results);
+        test_sha2(SHA224, &results);
     }
 
     #[test]
@@ -200,7 +180,7 @@ mod tests {
             "60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54".from_hex().unwrap(),
             "9b09ffa71b942fcb27635fbcd5b0e944bfdc63644f0713938a7f51535c3a35e2".from_hex().unwrap()
         ];
-        test_sha2(SHA256, results);
+        test_sha2(SHA256, &results);
     }
 
     #[test]
@@ -225,7 +205,7 @@ mod tests {
              602420feb0b8fb9adccebb82461e99c5\
              a678cc31e799176d3860e6110c46523e".from_hex().unwrap()
         ];
-        test_sha2(SHA384, results);
+        test_sha2(SHA384, &results);
     }
 
     #[test]
@@ -256,6 +236,6 @@ mod tests {
              b6022cac3c4982b10d5eeb55c3e4de15\
              134676fb6de0446065c97440fa8c6a58".from_hex().unwrap()
         ];
-        test_sha2(SHA512, results);
+        test_sha2(SHA512, &results);
     }
 }
