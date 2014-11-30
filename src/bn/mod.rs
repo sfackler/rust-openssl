@@ -45,6 +45,7 @@ extern {
     fn BN_exp(r: *mut BIGNUM, a: *mut BIGNUM, p: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     fn BN_mod_exp(r: *mut BIGNUM, a: *mut BIGNUM, p: *mut BIGNUM, m: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     fn BN_mod_inverse(r: *mut BIGNUM, a: *mut BIGNUM, n: *mut BIGNUM, ctx: *mut BN_CTX) -> *const BIGNUM;
+    fn BN_mod_word(r: *mut BIGNUM, w: c_ulong) -> c_ulong;
     fn BN_gcd(r: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
 
     /* Bit operations on BIGNUMs */
@@ -229,6 +230,12 @@ impl BigNum {
     pub fn checked_mod_inv(&self, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, { !BN_mod_inverse(r.raw(), self.raw(), n.raw(), ctx).is_null() })
+        }
+    }
+
+    pub fn mod_word(&self, w: c_ulong) -> c_ulong {
+        unsafe {
+            return BN_mod_word(self.raw(), w);
         }
     }
 
