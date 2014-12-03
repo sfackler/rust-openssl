@@ -145,15 +145,15 @@ impl<'a, T: AsStr<'a>> ToStr for Vec<T> {
 /// use std::io::{File, Open, Write};
 /// # use std::io::fs;
 ///
-/// use openssl::crypto::hash::SHA256;
-/// use openssl::x509::{DigitalSignature, X509Generator};
+/// use openssl::crypto::hash::HashType;
+/// use openssl::x509::{KeyUsage, X509Generator};
 ///
 /// let gen = X509Generator::new()
 ///        .set_bitlength(2048)
 ///        .set_valid_period(365*2)
 ///        .set_CN("SuperMegaCorp Inc.")
-///        .set_sign_hash(SHA256)
-///        .set_usage(&[DigitalSignature]);
+///        .set_sign_hash(HashType::SHA256)
+///        .set_usage(&[KeyUsage::DigitalSignature]);
 ///
 /// let (cert, pkey) = gen.generate().unwrap();
 ///
