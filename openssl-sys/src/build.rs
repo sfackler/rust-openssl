@@ -17,6 +17,16 @@ fn main() {
         if win_pos.is_some() {
            flags.push_str(" -l gdi32 -l wsock32");
         }
+
+        // Android doesn't have libcrypto/libssl,
+        // the toplevel Rust program should compile it themselves
+        if target.find_str("android").is_some() {
+            os::getenv("OPENSSL_PATH").expect("Android does not provide openssl libraries, please \
+                                               build them yourselves (instructions in the README) \
+                                               and provide their location through $OPENSSL_PATH.");
+            flags.push_str(" -L ${OPENSSL_PATH}");
+        }
+
         println!("cargo:rustc-flags={}", flags);
     }
 }
