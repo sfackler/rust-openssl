@@ -18,3 +18,12 @@ aes_xts = []
 
 [build-dependencies]
 pkg-config = "0.1"
+
+[target.le32-unknown-nacl.dependencies]
+libressl-pnacl-sys = "2.1.0"
+[target.x86_64-unknown-nacl.dependencies]
+libressl-pnacl-sys = "2.1.0"
+[target.i686-unknown-nacl.dependencies]
+libressl-pnacl-sys = "2.1.0"
+[target.arm-unknown-nacl.dependencies]
+libressl-pnacl-sys = "2.1.0"

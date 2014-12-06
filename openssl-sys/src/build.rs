@@ -3,6 +3,11 @@ extern crate "pkg-config" as pkg_config;
 use std::os;
 
 fn main() {
+    // Without hackory, pkg-config will only look for host libraries.
+    // So, abandon ship if we're cross compiling.
+    if os::getenv("HOST") != os::getenv("TARGET") { return; }
+
+
     if pkg_config::find_library("openssl").is_err() {
         let mut flags = " -l crypto -l ssl".to_string();
 
