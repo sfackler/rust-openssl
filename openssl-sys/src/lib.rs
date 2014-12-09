@@ -4,6 +4,9 @@
 extern crate libc;
 extern crate rustrt;
 
+#[cfg(feature = "libressl-pnacl-sys")]
+extern crate "libressl-pnacl-sys" as _for_linkage;
+
 use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
 use std::mem;
 use std::ptr;
