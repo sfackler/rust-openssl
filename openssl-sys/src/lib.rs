@@ -361,6 +361,7 @@ extern "C" {
     pub fn HMAC_Init_ex(ctx: *mut HMAC_CTX, key: *const u8, keylen: c_int, md: *const EVP_MD, imple: *const ENGINE);
     pub fn HMAC_Final(ctx: *mut HMAC_CTX, output: *mut u8, len: *mut c_uint);
     pub fn HMAC_Update(ctx: *mut HMAC_CTX, input: *const u8, len: c_uint);
+    pub fn HMAC_CTX_cleanup(ctx: *mut HMAC_CTX);
 
 
     pub fn PEM_read_bio_X509(bio: *mut BIO, out: *mut *mut X509, callback: Option<PasswordCallback>,

@@ -61,6 +61,14 @@ impl HMAC {
     }
 }
 
+impl Drop for HMAC {
+    fn drop(&mut self) {
+        unsafe {
+            ffi::HMAC_CTX_cleanup(&mut self.ctx);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use serialize::hex::FromHex;
