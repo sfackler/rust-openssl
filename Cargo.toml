@@ -17,4 +17,4 @@ aes_xts = ["openssl-sys/aes_xts"]
 
 [dependencies.openssl-sys]
 path = "openssl-sys"
-version = "0.2.2"
+version = "0.2.3"
