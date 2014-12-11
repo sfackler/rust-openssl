@@ -84,6 +84,10 @@ impl BigNum {
         })
     }
 
+    pub fn one() -> BigNum {
+        BigNum::new_from(1).unwrap()
+    }
+
     pub fn new_from_slice(n: &[u8]) -> Result<BigNum, SslError> {
         BigNum::new().and_then(|v| unsafe {
             try_ssl_null!(ffi::BN_bin2bn(n.as_ptr(), n.len() as c_int, v.raw()));
