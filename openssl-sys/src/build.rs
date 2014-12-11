@@ -3,6 +3,11 @@ extern crate "pkg-config" as pkg_config;
 use std::os;
 
 fn main() {
+    // Without hackory, pkg-config will only look for host libraries.
+    // So, abandon ship if we're cross compiling.
+    if !pkg_config::target_supported() { return; }
+
+
     if pkg_config::find_library("openssl").is_err() {
         let mut flags = " -l crypto -l ssl".to_string();
 
@@ -17,6 +22,14 @@ fn main() {
         if win_pos.is_some() {
            flags.push_str(" -l gdi32 -l wsock32");
         }
+
+        if target.find_str("android").is_some() {
+            let path = os::getenv("OPENSSL_PATH").expect("Android does not provide openssl libraries, please \
+                                                          build them yourselves (instructions in the README) \
+                                                          and provide their location through $OPENSSL_PATH.");
+            flags.push_str(format!(" -L {}", path).as_slice());
+        }
+
         println!("cargo:rustc-flags={}", flags);
     }
 }

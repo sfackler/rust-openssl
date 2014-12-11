@@ -410,7 +410,14 @@ impl<S: Stream> SslStream<S> {
             stream: stream,
             ssl: Arc::new(ssl),
             // Maximum TLS record size is 16k
-            buf: Vec::from_elem(16 * 1024, 0u8)
+            // We're just using this as a buffer, so there's no reason to pay
+            // to memset it
+            buf: {
+                const CAP: uint = 16 * 1024;
+                let mut v = Vec::with_capacity(CAP);
+                unsafe { v.set_len(CAP); }
+                v
+            }
         }
     }
 

@@ -14,6 +14,11 @@ For some reason, the OpenSSL distribution for Windows is structured differently,
 1. Run `sudo apt-get install libssl-dev`.
 2. Run `cargo build`.
 
+###Android
+1. Follow the steps [here](wiki.openssl.org/index.php/Android) to build OpenSSL for android
+2. Provide the path to the libssl and libcrypto binaries via `$OPENSSL_PATH`
+3. Build the package with `cargo build`
+
 ###Windows
 
 1. Grab the latest Win32 OpenSSL installer [here][1]. At the time of this writing, it's v1.0.1i. If you're using 64-bit Rust (coming to Windows soon), then you should get the Win64 installer instead.
