@@ -15,6 +15,7 @@ use ssl::error::{SslError, StreamError};
 #[cfg(test)]
 mod tests;
 
+#[deriving(Copy)]
 #[repr(i32)]
 pub enum X509FileType {
     PEM = ffi::X509_FILETYPE_PEM,
@@ -22,6 +23,7 @@ pub enum X509FileType {
     Default = ffi::X509_FILETYPE_DEFAULT
 }
 
+#[allow(missing_copy_implementations)]
 pub struct X509StoreContext {
     ctx: *mut ffi::X509_STORE_CTX
 }
@@ -54,7 +56,7 @@ trait AsStr<'a> {
     fn as_str(&self) -> &'a str;
 }
 
-#[deriving(Clone)]
+#[deriving(Clone, Copy)]
 pub enum KeyUsage {
     DigitalSignature,
     NonRepudiation,
@@ -84,7 +86,7 @@ impl AsStr<'static> for KeyUsage {
 }
 
 
-#[deriving(Clone)]
+#[deriving(Clone, Copy)]
 pub enum ExtKeyUsage {
     ServerAuth,
     ClientAuth,
@@ -430,6 +432,7 @@ pub struct X509Name<'x> {
 
 macro_rules! make_validation_error(
     ($ok_val:ident, $($name:ident = $val:ident,)+) => (
+        #[deriving(Copy)]
         pub enum X509ValidationError {
             $($name,)+
             X509UnknownError(c_int)

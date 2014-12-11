@@ -4,6 +4,7 @@ use std::io;
 
 use ffi;
 
+#[deriving(Copy)]
 pub enum HashType {
     MD5,
     SHA1,

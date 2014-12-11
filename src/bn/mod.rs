@@ -7,6 +7,7 @@ use ssl::error::SslError;
 
 pub struct BigNum(*mut ffi::BIGNUM);
 
+#[deriving(Copy)]
 #[repr(C)]
 pub enum RNGProperty {
     MsbMaybeZero = -1,
