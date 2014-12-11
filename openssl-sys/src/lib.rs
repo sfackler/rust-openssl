@@ -39,6 +39,7 @@ pub type X509_NAME_ENTRY = c_void;
 pub type X509_REQ = c_void;
 pub type X509_STORE_CTX = c_void;
 
+#[allow(missing_copy_implementations)]
 #[repr(C)]
 pub struct EVP_MD_CTX {
     digest: *mut EVP_MD,
@@ -49,6 +50,7 @@ pub struct EVP_MD_CTX {
     update: *mut c_void
 }
 
+#[allow(missing_copy_implementations)]
 #[repr(C)]
 pub struct HMAC_CTX {
     md: *mut EVP_MD,
@@ -59,6 +61,7 @@ pub struct HMAC_CTX {
     key: [c_uchar, ..128]
 }
 
+#[allow(missing_copy_implementations)]
 #[repr(C)]
 pub struct X509V3_CTX {
     flags: c_int,
@@ -72,6 +75,7 @@ pub struct X509V3_CTX {
     // Maybe more here
 }
 
+#[allow(missing_copy_implementations)]
 #[repr(C)]
 pub struct BIGNUM {
     pub d: *mut c_void,

@@ -33,6 +33,7 @@ fn init() {
 /// Determines the SSL method supported
 #[deriving(Show, Hash, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
+#[deriving(Copy)]
 pub enum SslMethod {
     #[cfg(feature = "sslv2")]
     /// Only support the SSLv2 protocol, requires `feature="sslv2"`
@@ -68,6 +69,7 @@ impl SslMethod {
 }
 
 /// Determines the type of certificate verification used
+#[deriving(Copy)]
 #[repr(i32)]
 pub enum SslVerifyMode {
     /// Verify that the server's certificate is trusted
