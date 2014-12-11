@@ -147,7 +147,7 @@ impl BigNum {
 
     pub fn mod_word(&self, w: c_ulong) -> c_ulong {
         unsafe {
-            BN_mod_word(self.raw(), w)
+            ffi::BN_mod_word(self.raw(), w)
         }
     }
 
