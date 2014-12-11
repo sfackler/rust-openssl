@@ -255,6 +255,7 @@ extern "C" {
     pub fn BN_mod_sub(r: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, m: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn BN_mul(r: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn BN_nnmod(rem: *mut BIGNUM, a: *mut BIGNUM, m: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn BN_mod_word(r: *mut BIGNUM, w: c_ulong) -> c_ulong;
     pub fn BN_sqr(r: *mut BIGNUM, a: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn BN_sub(r: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM) -> c_int;
 

@@ -145,13 +145,11 @@ impl BigNum {
         }
     }
 
-/*XXX
     pub fn mod_word(&self, w: c_ulong) -> c_ulong {
         unsafe {
             BN_mod_word(self.raw(), w)
         }
     }
-*/
 
     pub fn checked_gcd(&self, a: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
