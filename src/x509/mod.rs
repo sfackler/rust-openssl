@@ -362,7 +362,7 @@ impl<'ctx> X509<'ctx> {
     }
 
     /// Reads certificate from PEM, takes ownership of handle
-    pub fn from_pem(reader: &mut Reader) -> Result<X509<'ctx>, SslError> {
+    pub fn from_pem<R>(reader: &mut R) -> Result<X509<'ctx>, SslError> where R: Reader {
         let mut mem_bio = try!(MemBio::new());
         let buf = try!(reader.read_to_end().map_err(StreamError));
         try!(mem_bio.write(buf.as_slice()).map_err(StreamError));
@@ -404,7 +404,7 @@ impl<'ctx> X509<'ctx> {
     }
 
     /// Writes certificate as PEM
-    pub fn write_pem(&self, writer: &mut Writer) -> Result<(), SslError> {
+    pub fn write_pem<W>(&self, writer: &mut W) -> Result<(), SslError> where W: Writer{
         let mut mem_bio = try!(MemBio::new());
         unsafe {
             try_ssl!(ffi::PEM_write_bio_X509(mem_bio.get_handle(),
