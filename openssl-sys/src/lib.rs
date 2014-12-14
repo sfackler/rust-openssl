@@ -81,6 +81,11 @@ pub struct BIGNUM {
     pub flags: c_int,
 }
 
+#[repr(C)]
+pub struct BIGNUM_PTR {
+    pub ptr: *mut BIGNUM,
+}
+
 pub type CRYPTO_EX_new = extern "C" fn(parent: *mut c_void, ptr: *mut c_void,
                                        ad: *const CRYPTO_EX_DATA, idx: c_int,
                                        argl: c_long, argp: *const c_void) -> c_int;
@@ -291,8 +296,13 @@ extern "C" {
     pub fn BN_bin2bn(s: *const u8, size: c_int, ret: *mut BIGNUM) -> *mut BIGNUM;
     pub fn BN_bn2bin(a: *mut BIGNUM, to: *mut u8) -> c_int;
 
-    /* Conversion from/to string representation */
+    /* Conversion from/to decimal string representation */
+    pub fn BN_dec2bn(a: *mut BIGNUM_PTR, s: *const i8) -> c_int;
     pub fn BN_bn2dec(a: *mut BIGNUM) -> *const c_char;
+
+    /* Conversion from/to hexidecimal string representation */
+    pub fn BN_hex2bn(a: *mut BIGNUM_PTR, s: *const i8) -> c_int;
+    pub fn BN_bn2hex(a: *mut BIGNUM) -> *const c_char;
 
     pub fn CRYPTO_num_locks() -> c_int;
     pub fn CRYPTO_set_locking_callback(func: extern "C" fn(mode: c_int,

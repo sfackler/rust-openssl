@@ -84,8 +84,22 @@ impl BigNum {
         })
     }
 
-    pub fn one() -> BigNum {
-        BigNum::new_from(1).unwrap()
+    pub fn from_dec_str(s: &str) -> Result<BigNum, SslError> {
+        BigNum::new().and_then(|v| unsafe {
+            let ref mut bn_ptr = ffi::BIGNUM_PTR { ptr: v.raw(), };
+            let c_str = s.to_c_str();
+            try_ssl!(ffi::BN_dec2bn(bn_ptr, c_str.as_ptr()));
+            Ok(v)
+        })
+    }
+
+    pub fn from_hex_str(s: &str) -> Result<BigNum, SslError> {
+        BigNum::new().and_then(|v| unsafe {
+            let ref mut bn_ptr = ffi::BIGNUM_PTR { ptr: v.raw(), };
+            let c_str = s.to_c_str();
+            try_ssl!(ffi::BN_hex2bn(bn_ptr, c_str.as_ptr()));
+            Ok(v)
+        })
     }
 
     pub fn new_from_slice(n: &[u8]) -> Result<BigNum, SslError> {
@@ -355,6 +369,17 @@ impl BigNum {
     pub fn to_dec_str(&self) -> String {
         unsafe {
             let buf = ffi::BN_bn2dec(self.raw());
+            assert!(!buf.is_null());
+            let c_str = CString::new(buf, false);
+            let str = c_str.as_str().unwrap().to_string();
+            ffi::CRYPTO_free(buf as *mut c_void);
+            str
+        }
+    }
+
+    pub fn to_hex_str(&self) -> String {
+        unsafe {
+            let buf = ffi::BN_bn2hex(self.raw());
             assert!(!buf.is_null());
             let c_str = CString::new(buf, false);
             let str = c_str.as_str().unwrap().to_string();
