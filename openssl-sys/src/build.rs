@@ -3,6 +3,13 @@ extern crate "pkg-config" as pkg_config;
 use std::os;
 
 fn main() {
+	// pkg-config doesn't support Win64, so do this instead:
+	if cfg!(all(target_os = "windows", target_word_size = "64")) {
+		let flags = "-l crypto -l ssl -l gdi32 -l wsock32".to_string();
+		println!("cargo:rustc-flags={}", flags);
+		return;
+	}
+	
     // Without hackory, pkg-config will only look for host libraries.
     // So, abandon ship if we're cross compiling.
     if !pkg_config::target_supported() { return; }
