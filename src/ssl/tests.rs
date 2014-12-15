@@ -198,7 +198,7 @@ fn test_clone() {
     let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
     let mut stream = SslStream::new(&SslContext::new(Sslv23).unwrap(), stream).unwrap();
     let mut stream2 = stream.clone();
-    spawn(proc() {
+    spawn(move || {
         stream2.write("GET /\r\n\r\n".as_bytes()).unwrap();
         stream2.flush().unwrap();
     });
