@@ -25,7 +25,7 @@ For some reason, the OpenSSL distribution for Windows is structured differently,
 2. Run the installer, making note of where it's installing OpenSSL. The option to copy the libraries to the Windows system directory or `[OpenSSL folder]/bin` is your choice. The latter is probably preferable, and the default.
 3. Navigate to `[OpenSSL folder]/lib/MinGW/`, and copy `libeay32.a` and `ssleay32.a` (If 64-bit, then they will have `64` instead of `32`.) to your Rust install's libs folder. The default should be: 
   * 32-bit: `C:\Program Files (x86)\Rust\bin\rustlib\i686-pc-mingw32\lib`
-  * 64-bit: TODO
+  * 64-bit: `C:\Program Files (x86)\Rust\bin\rustlib\x86_64-pc-windows-gnu\lib`
 4. Rename `libeay32.a` and `ssleay32.a` to `libcrypto.a` and `libssl.a`, respectively. 
 5. Run `cargo build`.
 
