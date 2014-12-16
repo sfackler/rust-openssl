@@ -1,6 +1,6 @@
 [package]
 name = "openssl"
-version = "0.2.4"
+version = "0.2.5"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
@@ -17,4 +17,4 @@ aes_xts = ["openssl-sys/aes_xts"]
 
 [dependencies.openssl-sys]
 path = "openssl-sys"
-version = "0.2.4"
+version = "0.2.5"
