@@ -26,7 +26,7 @@ macro_rules! with_ctx(
             r
         }
     });
-)
+);
 
 macro_rules! with_bn(
     ($name:ident, $action:block) => ({
@@ -42,7 +42,7 @@ macro_rules! with_bn(
             Err(err) => Err(err),
         }
     });
-)
+);
 
 macro_rules! with_bn_in_ctx(
     ($name:ident, $ctx_name:ident, $action:block) => ({
@@ -66,7 +66,7 @@ macro_rules! with_bn_in_ctx(
             Err(err) => Err(err),
         }
     });
-)
+);
 
 impl BigNum {
     pub fn new() -> Result<BigNum, SslError> {

@@ -449,7 +449,7 @@ macro_rules! make_validation_error(
             }
         }
     )
-)
+);
 
 make_validation_error!(X509_V_OK,
     X509UnableToGetIssuerCert = X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT,
@@ -505,7 +505,7 @@ make_validation_error!(X509_V_OK,
     X509UnsupportedNameSyntax = X509_V_ERR_UNSUPPORTED_NAME_SYNTAX,
     X509CrlPathValidationError= X509_V_ERR_CRL_PATH_VALIDATION_ERROR,
     X509ApplicationVerification = X509_V_ERR_APPLICATION_VERIFICATION,
-)
+);
 
 
 #[test]
