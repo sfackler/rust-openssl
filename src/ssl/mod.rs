@@ -384,7 +384,7 @@ impl Ssl {
 
 }
 
-#[deriving(FromPrimitive)]
+#[deriving(FromPrimitive, Show)]
 #[repr(i32)]
 enum LibSslError {
     ErrorNone = ffi::SSL_ERROR_NONE,
@@ -489,7 +489,7 @@ impl<S: Stream> SslStream<S> {
                 LibSslError::ErrorWantWrite => { try_ssl_stream!(self.flush()) }
                 LibSslError::ErrorZeroReturn => return Err(SslSessionClosed),
                 LibSslError::ErrorSsl => return Err(SslError::get()),
-                _ => unreachable!()
+                err => panic!("unexpected error {}", err),
             }
         }
     }
