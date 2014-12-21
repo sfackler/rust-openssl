@@ -463,7 +463,7 @@ pub mod unchecked {
     }
 
     impl Neg<BigNum> for BigNum {
-        fn neg(&self) -> BigNum {
+        fn neg(self) -> BigNum {
             let mut n = self.clone();
             n.negate();
             n

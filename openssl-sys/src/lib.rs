@@ -2,7 +2,6 @@
 #![allow(dead_code)]
 
 extern crate libc;
-extern crate rustrt;
 
 #[cfg(feature = "libressl-pnacl-sys")]
 extern crate "libressl-pnacl-sys" as _for_linkage;
@@ -10,7 +9,7 @@ extern crate "libressl-pnacl-sys" as _for_linkage;
 use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
 use std::mem;
 use std::ptr;
-use rustrt::mutex::NativeMutex;
+use std::sync::{StaticMutex, StaticMutexGuard, MUTEX_INIT};
 use std::sync::{Once, ONCE_INIT};
 
 pub type ASN1_INTEGER = c_void;
@@ -192,7 +191,8 @@ pub const X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE: c_int = 45;
 pub const X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
 pub const X509_V_OK: c_int = 0;
 
-static mut MUTEXES: *mut Vec<NativeMutex> = 0 as *mut Vec<NativeMutex>;
+static mut MUTEXES: *mut Vec<StaticMutex> = 0 as *mut Vec<StaticMutex>;
+static mut GUARDS: *mut Vec<Option<StaticMutexGuard>> = 0 as *mut Vec<Option<StaticMutexGuard>>;
 
 extern fn locking_function(mode: c_int, n: c_int, _file: *const c_char,
                                _line: c_int) {
@@ -200,9 +200,9 @@ extern fn locking_function(mode: c_int, n: c_int, _file: *const c_char,
         let mutex = &(*MUTEXES)[n as uint];
 
         if mode & CRYPTO_LOCK != 0 {
-            mutex.lock_noguard();
+            (*GUARDS)[n as uint] = Some(mutex.lock());
         } else {
-            mutex.unlock_noguard();
+            &(*GUARDS)[n as uint].take();
         }
     }
 }
@@ -216,8 +216,10 @@ pub fn init() {
             SSL_load_error_strings();
 
             let num_locks = CRYPTO_num_locks();
-            let mutexes = box Vec::from_fn(num_locks as uint, |_| NativeMutex::new());
+            let mutexes = box Vec::from_fn(num_locks as uint, |_| MUTEX_INIT);
             MUTEXES = mem::transmute(mutexes);
+            let guards: Box<Vec<Option<StaticMutexGuard>>> = box Vec::from_fn(num_locks as uint, |_| None);
+            GUARDS = mem::transmute(guards);
 
             CRYPTO_set_locking_callback(locking_function);
         })
