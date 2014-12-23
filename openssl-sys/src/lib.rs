@@ -93,6 +93,8 @@ pub struct BIGNUM_PTR {
     pub ptr: *mut BIGNUM,
 }
 
+impl Copy for BIGNUM_PTR {}
+
 pub type CRYPTO_EX_new = extern "C" fn(parent: *mut c_void, ptr: *mut c_void,
                                        ad: *const CRYPTO_EX_DATA, idx: c_int,
                                        argl: c_long, argp: *const c_void) -> c_int;
