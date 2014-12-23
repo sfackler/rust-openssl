@@ -15,6 +15,7 @@ use ssl::error::{SslError, StreamError};
 #[cfg(test)]
 mod tests;
 
+#[deriving(Copy)]
 #[repr(i32)]
 pub enum X509FileType {
     PEM = ffi::X509_FILETYPE_PEM,
@@ -22,6 +23,7 @@ pub enum X509FileType {
     Default = ffi::X509_FILETYPE_DEFAULT
 }
 
+#[allow(missing_copy_implementations)]
 pub struct X509StoreContext {
     ctx: *mut ffi::X509_STORE_CTX
 }
@@ -54,7 +56,7 @@ trait AsStr<'a> {
     fn as_str(&self) -> &'a str;
 }
 
-#[deriving(Clone)]
+#[deriving(Clone, Copy)]
 pub enum KeyUsage {
     DigitalSignature,
     NonRepudiation,
@@ -84,7 +86,7 @@ impl AsStr<'static> for KeyUsage {
 }
 
 
-#[deriving(Clone)]
+#[deriving(Clone, Copy)]
 pub enum ExtKeyUsage {
     ServerAuth,
     ClientAuth,
@@ -360,7 +362,7 @@ impl<'ctx> X509<'ctx> {
     }
 
     /// Reads certificate from PEM, takes ownership of handle
-    pub fn from_pem(reader: &mut Reader) -> Result<X509<'ctx>, SslError> {
+    pub fn from_pem<R>(reader: &mut R) -> Result<X509<'ctx>, SslError> where R: Reader {
         let mut mem_bio = try!(MemBio::new());
         let buf = try!(reader.read_to_end().map_err(StreamError));
         try!(mem_bio.write(buf.as_slice()).map_err(StreamError));
@@ -402,7 +404,7 @@ impl<'ctx> X509<'ctx> {
     }
 
     /// Writes certificate as PEM
-    pub fn write_pem(&self, writer: &mut Writer) -> Result<(), SslError> {
+    pub fn write_pem<W>(&self, writer: &mut W) -> Result<(), SslError> where W: Writer{
         let mut mem_bio = try!(MemBio::new());
         unsafe {
             try_ssl!(ffi::PEM_write_bio_X509(mem_bio.get_handle(),
@@ -430,6 +432,7 @@ pub struct X509Name<'x> {
 
 macro_rules! make_validation_error(
     ($ok_val:ident, $($name:ident = $val:ident,)+) => (
+        #[deriving(Copy)]
         pub enum X509ValidationError {
             $($name,)+
             X509UnknownError(c_int)
@@ -446,7 +449,7 @@ macro_rules! make_validation_error(
             }
         }
     )
-)
+);
 
 make_validation_error!(X509_V_OK,
     X509UnableToGetIssuerCert = X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT,
@@ -502,7 +505,7 @@ make_validation_error!(X509_V_OK,
     X509UnsupportedNameSyntax = X509_V_ERR_UNSUPPORTED_NAME_SYNTAX,
     X509CrlPathValidationError= X509_V_ERR_CRL_PATH_VALIDATION_ERROR,
     X509ApplicationVerification = X509_V_ERR_APPLICATION_VERIFICATION,
-)
+);
 
 
 #[test]

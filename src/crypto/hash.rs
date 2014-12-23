@@ -4,6 +4,7 @@ use std::io;
 
 use ffi;
 
+#[deriving(Copy)]
 pub enum HashType {
     MD5,
     SHA1,
@@ -134,7 +135,7 @@ mod tests {
     }
 
     fn compare(calced_raw: Vec<u8>, hashtest: &HashTest) {
-        let calced = calced_raw.as_slice().to_hex().into_string();
+        let calced = calced_raw.as_slice().to_hex().to_string();
 
         if calced != hashtest.expected_output {
             println!("Test failed - {} != {}", calced, hashtest.expected_output);

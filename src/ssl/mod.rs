@@ -33,6 +33,7 @@ fn init() {
 /// Determines the SSL method supported
 #[deriving(Show, Hash, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
+#[deriving(Copy)]
 pub enum SslMethod {
     #[cfg(feature = "sslv2")]
     /// Only support the SSLv2 protocol, requires `feature="sslv2"`
@@ -68,6 +69,7 @@ impl SslMethod {
 }
 
 /// Determines the type of certificate verification used
+#[deriving(Copy)]
 #[repr(i32)]
 pub enum SslVerifyMode {
     /// Verify that the server's certificate is trusted
@@ -91,8 +93,9 @@ fn get_verify_data_idx<T>() -> c_int {
 
     unsafe {
         INIT.doit(|| {
+            let f: ffi::CRYPTO_EX_free = free_data_box::<T>;
             let idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
-                                                    None, Some(free_data_box::<T>));
+                                                    None, Some(f));
             assert!(idx >= 0);
             VERIFY_DATA_IDX = idx;
         });
@@ -197,7 +200,9 @@ impl SslContext {
         unsafe {
             ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX,
                                      mem::transmute(verify));
-            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(raw_verify));
+            let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
+                                raw_verify;
+            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(f));
         }
     }
 
@@ -214,7 +219,9 @@ impl SslContext {
                                      mem::transmute(Some(verify)));
             ffi::SSL_CTX_set_ex_data(self.ctx, get_verify_data_idx::<T>(),
                                      mem::transmute(data));
-            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(raw_verify_with_data::<T>));
+            let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
+                                raw_verify_with_data::<T>;
+            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(f));
         }
     }
 
@@ -382,7 +389,7 @@ impl Ssl {
 
 }
 
-#[deriving(FromPrimitive)]
+#[deriving(FromPrimitive, Show)]
 #[repr(i32)]
 enum LibSslError {
     ErrorNone = ffi::SSL_ERROR_NONE,
@@ -487,7 +494,7 @@ impl<S: Stream> SslStream<S> {
                 LibSslError::ErrorWantWrite => { try_ssl_stream!(self.flush()) }
                 LibSslError::ErrorZeroReturn => return Err(SslSessionClosed),
                 LibSslError::ErrorSsl => return Err(SslError::get()),
-                _ => unreachable!()
+                err => panic!("unexpected error {}", err),
             }
         }
     }
@@ -539,7 +546,7 @@ impl<S: Stream> Writer for SslStream<S> {
         let mut start = 0;
         while start < buf.len() {
             let ret = self.in_retry_wrapper(|ssl| {
-                ssl.write(buf.split_at(start).val1())
+                ssl.write(buf.split_at(start).1)
             });
             match ret {
                 Ok(len) => start += len as uint,

@@ -55,7 +55,7 @@ impl HMAC {
             let mut res = Vec::from_elem(self.len, 0u8);
             let mut outlen = 0;
             ffi::HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut outlen);
-            assert!(self.len == outlen as uint)
+            assert!(self.len == outlen as uint);
             res
         }
     }

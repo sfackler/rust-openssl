@@ -9,9 +9,14 @@ fn main() {
 
 
     if pkg_config::find_library("openssl").is_err() {
-        let mut flags = " -l crypto -l ssl".to_string();
-
         let target = os::getenv("TARGET").unwrap();
+        let is_android = target.find_str("android").is_some();
+
+        let mut flags = if is_android {
+            " -l crypto:static -l ssl:static"
+        } else {
+            " -l crypto -l ssl"
+        }.to_string();
 
         let win_pos = target.find_str("windows")
                             .or(target.find_str("win32"))
@@ -23,7 +28,7 @@ fn main() {
            flags.push_str(" -l gdi32 -l wsock32");
         }
 
-        if target.find_str("android").is_some() {
+        if is_android {
             let path = os::getenv("OPENSSL_PATH").expect("Android does not provide openssl libraries, please \
                                                           build them yourselves (instructions in the README) \
                                                           and provide their location through $OPENSSL_PATH.");

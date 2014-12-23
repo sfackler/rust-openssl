@@ -7,6 +7,7 @@ use ssl::error::SslError;
 
 pub struct BigNum(*mut ffi::BIGNUM);
 
+#[deriving(Copy)]
 #[repr(C)]
 pub enum RNGProperty {
     MsbMaybeZero = -1,
@@ -25,7 +26,7 @@ macro_rules! with_ctx(
             r
         }
     });
-)
+);
 
 macro_rules! with_bn(
     ($name:ident, $action:block) => ({
@@ -41,7 +42,7 @@ macro_rules! with_bn(
             Err(err) => Err(err),
         }
     });
-)
+);
 
 macro_rules! with_bn_in_ctx(
     ($name:ident, $ctx_name:ident, $action:block) => ({
@@ -65,7 +66,7 @@ macro_rules! with_bn_in_ctx(
             Err(err) => Err(err),
         }
     });
-)
+);
 
 impl BigNum {
     pub fn new() -> Result<BigNum, SslError> {
@@ -441,45 +442,45 @@ pub mod unchecked {
     use ffi;
     use super::{BigNum};
 
-    impl Add<BigNum, BigNum> for BigNum {
-        fn add(&self, oth: &BigNum) -> BigNum {
+    impl<'a> Add<&'a BigNum, BigNum> for &'a BigNum {
+        fn add(self, oth: &'a BigNum) -> BigNum {
             self.checked_add(oth).unwrap()
         }
     }
 
-    impl Sub<BigNum, BigNum> for BigNum {
-        fn sub(&self, oth: &BigNum) -> BigNum {
+    impl<'a> Sub<&'a BigNum, BigNum> for &'a BigNum {
+        fn sub(self, oth: &'a BigNum) -> BigNum {
             self.checked_sub(oth).unwrap()
         }
     }
 
-    impl Mul<BigNum, BigNum> for BigNum {
-        fn mul(&self, oth: &BigNum) -> BigNum {
+    impl<'a> Mul<&'a BigNum, BigNum> for &'a BigNum {
+        fn mul(self, oth: &'a BigNum) -> BigNum {
             self.checked_mul(oth).unwrap()
         }
     }
 
-    impl Div<BigNum, BigNum> for BigNum {
-        fn div(&self, oth: &BigNum) -> BigNum {
+    impl<'a> Div<&'a BigNum, BigNum> for &'a BigNum {
+        fn div(self, oth: &'a BigNum) -> BigNum {
             self.checked_div(oth).unwrap()
         }
     }
 
-    impl Rem<BigNum, BigNum> for BigNum {
-        fn rem(&self, oth: &BigNum) -> BigNum {
+    impl<'a> Rem<&'a BigNum, BigNum> for &'a BigNum {
+        fn rem(self, oth: &'a BigNum) -> BigNum {
             self.checked_mod(oth).unwrap()
         }
     }
 
-    impl Shl<i32, BigNum> for BigNum {
-        fn shl(&self, n: &i32) -> BigNum {
-            self.checked_shl(n).unwrap()
+    impl<'a> Shl<i32, BigNum> for &'a BigNum {
+        fn shl(self, n: i32) -> BigNum {
+            self.checked_shl(&n).unwrap()
         }
     }
 
-    impl Shr<i32, BigNum> for BigNum {
-        fn shr(&self, n: &i32) -> BigNum {
-            self.checked_shr(n).unwrap()
+    impl<'a> Shr<i32, BigNum> for &'a BigNum {
+        fn shr(self, n: i32) -> BigNum {
+            self.checked_shr(&n).unwrap()
         }
     }
 
@@ -497,7 +498,7 @@ pub mod unchecked {
     }
 
     impl Neg<BigNum> for BigNum {
-        fn neg(&self) -> BigNum {
+        fn neg(self) -> BigNum {
             let mut n = self.clone();
             n.negate();
             n
