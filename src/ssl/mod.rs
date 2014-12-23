@@ -93,8 +93,9 @@ fn get_verify_data_idx<T>() -> c_int {
 
     unsafe {
         INIT.doit(|| {
+            let f: ffi::CRYPTO_EX_free = free_data_box::<T>;
             let idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
-                                                    None, Some(free_data_box::<T>));
+                                                    None, Some(f));
             assert!(idx >= 0);
             VERIFY_DATA_IDX = idx;
         });
@@ -199,7 +200,9 @@ impl SslContext {
         unsafe {
             ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX,
                                      mem::transmute(verify));
-            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(raw_verify));
+            let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
+                                raw_verify;
+            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(f));
         }
     }
 
@@ -216,7 +219,9 @@ impl SslContext {
                                      mem::transmute(Some(verify)));
             ffi::SSL_CTX_set_ex_data(self.ctx, get_verify_data_idx::<T>(),
                                      mem::transmute(data));
-            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(raw_verify_with_data::<T>));
+            let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
+                                raw_verify_with_data::<T>;
+            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(f));
         }
     }
 
