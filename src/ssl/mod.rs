@@ -172,12 +172,12 @@ fn wrap_ssl_result(res: c_int) -> Option<SslError> {
 
 /// An SSL context object
 pub struct SslContext {
-    ctx: *mut ffi::SSL_CTX
+    ctx: ptr::Unique<ffi::SSL_CTX>
 }
 
 impl Drop for SslContext {
     fn drop(&mut self) {
-        unsafe { ffi::SSL_CTX_free(self.ctx) }
+        unsafe { ffi::SSL_CTX_free(self.ctx.0) }
     }
 }
 
@@ -191,18 +191,18 @@ impl SslContext {
             return Err(SslError::get());
         }
 
-        Ok(SslContext { ctx: ctx })
+        Ok(SslContext { ctx: ptr::Unique(ctx) })
     }
 
     /// Configures the certificate verification method for new connections.
     pub fn set_verify(&mut self, mode: SslVerifyMode,
                       verify: Option<VerifyCallback>) {
         unsafe {
-            ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX,
+            ffi::SSL_CTX_set_ex_data(self.ctx.0, VERIFY_IDX,
                                      mem::transmute(verify));
             let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
                                 raw_verify;
-            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(f));
+            ffi::SSL_CTX_set_verify(self.ctx.0, mode as c_int, Some(f));
         }
     }
 
@@ -215,20 +215,20 @@ impl SslContext {
                                    data: T) {
         let data = box data;
         unsafe {
-            ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX,
+            ffi::SSL_CTX_set_ex_data(self.ctx.0, VERIFY_IDX,
                                      mem::transmute(Some(verify)));
-            ffi::SSL_CTX_set_ex_data(self.ctx, get_verify_data_idx::<T>(),
+            ffi::SSL_CTX_set_ex_data(self.ctx.0, get_verify_data_idx::<T>(),
                                      mem::transmute(data));
             let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
                                 raw_verify_with_data::<T>;
-            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(f));
+            ffi::SSL_CTX_set_verify(self.ctx.0, mode as c_int, Some(f));
         }
     }
 
     /// Sets verification depth
     pub fn set_verify_depth(&mut self, depth: uint) {
         unsafe {
-            ffi::SSL_CTX_set_verify_depth(self.ctx, depth as c_int);
+            ffi::SSL_CTX_set_verify_depth(self.ctx.0, depth as c_int);
         }
     }
 
@@ -237,7 +237,7 @@ impl SslContext {
     pub fn set_CA_file(&mut self, file: &Path) -> Option<SslError> {
         wrap_ssl_result(file.with_c_str(|file| {
             unsafe {
-                ffi::SSL_CTX_load_verify_locations(self.ctx, file, ptr::null())
+                ffi::SSL_CTX_load_verify_locations(self.ctx.0, file, ptr::null())
             }
         }))
     }
@@ -247,7 +247,7 @@ impl SslContext {
                                 file_type: X509FileType) -> Option<SslError> {
         wrap_ssl_result(file.with_c_str(|file| {
             unsafe {
-                ffi::SSL_CTX_use_certificate_file(self.ctx, file, file_type as c_int)
+                ffi::SSL_CTX_use_certificate_file(self.ctx.0, file, file_type as c_int)
             }
         }))
     }
@@ -257,7 +257,7 @@ impl SslContext {
                                 file_type: X509FileType) -> Option<SslError> {
         wrap_ssl_result(file.with_c_str(|file| {
             unsafe {
-                ffi::SSL_CTX_use_PrivateKey_file(self.ctx, file, file_type as c_int)
+                ffi::SSL_CTX_use_PrivateKey_file(self.ctx.0, file, file_type as c_int)
             }
         }))
     }
@@ -265,7 +265,7 @@ impl SslContext {
     pub fn set_cipher_list(&mut self, cipher_list: &str) -> Option<SslError> {
         wrap_ssl_result(cipher_list.with_c_str(|cipher_list| {
             unsafe {
-                ffi::SSL_CTX_set_cipher_list(self.ctx, cipher_list)
+                ffi::SSL_CTX_set_cipher_list(self.ctx.0, cipher_list)
             }
         }))
     }
@@ -288,36 +288,36 @@ impl<'ssl> MemBioRef<'ssl> {
 }
 
 pub struct Ssl {
-    ssl: *mut ffi::SSL
+    ssl: ptr::Unique<ffi::SSL>
 }
 
 impl Drop for Ssl {
     fn drop(&mut self) {
-        unsafe { ffi::SSL_free(self.ssl) }
+        unsafe { ffi::SSL_free(self.ssl.0) }
     }
 }
 
 impl Ssl {
     pub fn new(ctx: &SslContext) -> Result<Ssl, SslError> {
-        let ssl = unsafe { ffi::SSL_new(ctx.ctx) };
+        let ssl = unsafe { ffi::SSL_new(ctx.ctx.0) };
         if ssl == ptr::null_mut() {
             return Err(SslError::get());
         }
-        let ssl = Ssl { ssl: ssl };
+        let ssl = Ssl { ssl: ptr::Unique(ssl) };
 
         let rbio = try!(MemBio::new());
         let wbio = try!(MemBio::new());
 
-        unsafe { ffi::SSL_set_bio(ssl.ssl, rbio.unwrap(), wbio.unwrap()) }
+        unsafe { ffi::SSL_set_bio(ssl.ssl.0, rbio.unwrap(), wbio.unwrap()) }
         Ok(ssl)
     }
 
     fn get_rbio<'a>(&'a self) -> MemBioRef<'a> {
-        unsafe { self.wrap_bio(ffi::SSL_get_rbio(self.ssl)) }
+        unsafe { self.wrap_bio(ffi::SSL_get_rbio(self.ssl.0)) }
     }
 
     fn get_wbio<'a>(&'a self) -> MemBioRef<'a> {
-        unsafe { self.wrap_bio(ffi::SSL_get_wbio(self.ssl)) }
+        unsafe { self.wrap_bio(ffi::SSL_get_wbio(self.ssl.0)) }
     }
 
     fn wrap_bio<'a>(&'a self, bio: *mut ffi::BIO) -> MemBioRef<'a> {
@@ -329,25 +329,25 @@ impl Ssl {
     }
 
     fn connect(&self) -> c_int {
-        unsafe { ffi::SSL_connect(self.ssl) }
+        unsafe { ffi::SSL_connect(self.ssl.0) }
     }
 
     fn accept(&self) -> c_int {
-        unsafe { ffi::SSL_accept(self.ssl) }
+        unsafe { ffi::SSL_accept(self.ssl.0) }
     }
 
     fn read(&self, buf: &mut [u8]) -> c_int {
-        unsafe { ffi::SSL_read(self.ssl, buf.as_ptr() as *mut c_void,
+        unsafe { ffi::SSL_read(self.ssl.0, buf.as_ptr() as *mut c_void,
                                buf.len() as c_int) }
     }
 
     fn write(&self, buf: &[u8]) -> c_int {
-        unsafe { ffi::SSL_write(self.ssl, buf.as_ptr() as *const c_void,
+        unsafe { ffi::SSL_write(self.ssl.0, buf.as_ptr() as *const c_void,
                                 buf.len() as c_int) }
     }
 
     fn get_error(&self, ret: c_int) -> LibSslError {
-        let err = unsafe { ffi::SSL_get_error(self.ssl, ret) };
+        let err = unsafe { ffi::SSL_get_error(self.ssl.0, ret) };
         match FromPrimitive::from_int(err as int) {
             Some(err) => err,
             None => unreachable!()
@@ -362,7 +362,7 @@ impl Ssl {
                 //      #define SSL_set_tlsext_host_name(s,name) \
                 //          SSL_ctrl(s,SSL_CTRL_SET_TLSEXT_HOSTNAME,TLSEXT_NAMETYPE_host_name,(char *)name)
 
-                ffi::SSL_ctrl(self.ssl, ffi::SSL_CTRL_SET_TLSEXT_HOSTNAME,
+                ffi::SSL_ctrl(self.ssl.0, ffi::SSL_CTRL_SET_TLSEXT_HOSTNAME,
                               ffi::TLSEXT_NAMETYPE_host_name,
                               hostname as *const c_void as *mut c_void)
             }
@@ -378,7 +378,7 @@ impl Ssl {
 
     pub fn get_peer_certificate(&self) -> Option<X509> {
         unsafe {
-            let ptr = ffi::SSL_get_peer_certificate(self.ssl);
+            let ptr = ffi::SSL_get_peer_certificate(self.ssl.0);
             if ptr.is_null() {
                 None
             } else {
@@ -513,7 +513,7 @@ impl<S: Stream> SslStream<S> {
     /// either None, indicating no compression is in use, or a string
     /// with the compression name.
     pub fn get_compression(&self) -> Option<String> {
-        let ptr = unsafe { ffi::SSL_get_current_compression(self.ssl.ssl) };
+        let ptr = unsafe { ffi::SSL_get_current_compression(self.ssl.ssl.0) };
         if ptr == ptr::null() {
             return None;
         }
