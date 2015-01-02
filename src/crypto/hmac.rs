@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn test_hmac_md5() {
         // test vectors from RFC 2202
-        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>), ..7] = [
+        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [
             (Vec::from_elem(16, 0x0b_u8), b"Hi There".to_vec(),
              "9294727a3638bb1c13f48ef8158bfc9d".from_hex().unwrap()),
             (b"Jefe".to_vec(),
@@ -111,7 +111,7 @@ mod tests {
     #[test]
     fn test_hmac_sha1() {
         // test vectors from RFC 2202
-        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>), ..7] = [
+        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [
             (Vec::from_elem(20, 0x0b_u8), b"Hi There".to_vec(),
              "b617318655057264e28bc0b6fb378c8ef146be00".from_hex().unwrap()),
             (b"Jefe".to_vec(),
@@ -143,7 +143,7 @@ mod tests {
 
     fn test_sha2(ty: HashType, results: &[Vec<u8>]) {
         // test vectors from RFC 4231
-        let tests: [(Vec<u8>, Vec<u8>), ..6] = [
+        let tests: [(Vec<u8>, Vec<u8>); 6] = [
             (Vec::from_elem(20, 0x0b_u8), b"Hi There".to_vec()),
             (b"Jefe".to_vec(),
              b"what do ya want for nothing?".to_vec()),

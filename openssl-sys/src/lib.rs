@@ -3,13 +3,13 @@
 
 extern crate libc;
 
-#[cfg(feature = "libressl-pnacl-sys")]
+#[cfg(target_os = "nacl")]
 extern crate "libressl-pnacl-sys" as _for_linkage;
 
 use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
 use std::mem;
 use std::ptr;
-use std::sync::{StaticMutex, StaticMutexGuard, MUTEX_INIT};
+use std::sync::{StaticMutex, MutexGuard, MUTEX_INIT};
 use std::sync::{Once, ONCE_INIT};
 
 pub type ASN1_INTEGER = c_void;
@@ -57,7 +57,7 @@ pub struct HMAC_CTX {
     i_ctx: EVP_MD_CTX,
     o_ctx: EVP_MD_CTX,
     key_length: c_uint,
-    key: [c_uchar, ..128]
+    key: [c_uchar; 128]
 }
 
 impl Copy for HMAC_CTX {}
@@ -199,7 +199,7 @@ pub const X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
 pub const X509_V_OK: c_int = 0;
 
 static mut MUTEXES: *mut Vec<StaticMutex> = 0 as *mut Vec<StaticMutex>;
-static mut GUARDS: *mut Vec<Option<StaticMutexGuard>> = 0 as *mut Vec<Option<StaticMutexGuard>>;
+static mut GUARDS: *mut Vec<Option<MutexGuard<'static, ()>>> = 0 as *mut Vec<Option<MutexGuard<'static, ()>>>;
 
 extern fn locking_function(mode: c_int, n: c_int, _file: *const c_char,
                                _line: c_int) {
@@ -207,7 +207,7 @@ extern fn locking_function(mode: c_int, n: c_int, _file: *const c_char,
         let mutex = &(*MUTEXES)[n as uint];
 
         if mode & CRYPTO_LOCK != 0 {
-            (*GUARDS)[n as uint] = Some(mutex.lock());
+            (*GUARDS)[n as uint] = Some(mutex.lock().unwrap());
         } else {
             &(*GUARDS)[n as uint].take();
         }
@@ -225,7 +225,7 @@ pub fn init() {
             let num_locks = CRYPTO_num_locks();
             let mutexes = box Vec::from_fn(num_locks as uint, |_| MUTEX_INIT);
             MUTEXES = mem::transmute(mutexes);
-            let guards: Box<Vec<Option<StaticMutexGuard>>> = box Vec::from_fn(num_locks as uint, |_| None);
+            let guards: Box<Vec<Option<MutexGuard<()>>>> = box Vec::from_fn(num_locks as uint, |_| None);
             GUARDS = mem::transmute(guards);
 
             CRYPTO_set_locking_callback(locking_function);
