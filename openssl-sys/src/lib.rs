@@ -57,7 +57,7 @@ pub struct HMAC_CTX {
     i_ctx: EVP_MD_CTX,
     o_ctx: EVP_MD_CTX,
     key_length: c_uint,
-    key: [c_uchar, ..128]
+    key: [c_uchar; 128]
 }
 
 impl Copy for HMAC_CTX {}
