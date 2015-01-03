@@ -9,7 +9,7 @@ use std::c_str::CString;
 use ffi;
 
 /// An SSL error
-#[deriving(Show, Clone, PartialEq, Eq)]
+#[derive(Show, Clone, PartialEq, Eq)]
 pub enum SslError {
     /// The underlying stream reported an error
     StreamError(IoError),
@@ -37,7 +37,7 @@ impl error::Error for SslError {
 }
 
 /// An error from the OpenSSL library
-#[deriving(Show, Clone, PartialEq, Eq)]
+#[derive(Show, Clone, PartialEq, Eq)]
 pub enum OpensslError {
     /// An unknown error
     UnknownError {

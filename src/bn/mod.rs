@@ -1,13 +1,14 @@
 use libc::{c_int, c_ulong, c_void};
-use std::{fmt, ptr};
 use std::c_str::CString;
+use std::cmp::Ordering;
+use std::{fmt, ptr};
 
 use ffi;
 use ssl::error::SslError;
 
 pub struct BigNum(*mut ffi::BIGNUM);
 
-#[deriving(Copy)]
+#[derive(Copy)]
 #[repr(C)]
 pub enum RNGProperty {
     MsbMaybeZero = -1,
@@ -303,11 +304,11 @@ impl BigNum {
         unsafe {
             let res = ffi::BN_ucmp(self.raw(), oth.raw()) as i32;
             if res < 0 {
-                Less
+                Ordering::Less
             } else if res > 0 {
-                Greater
+                Ordering::Greater
             } else {
-                Equal
+                Ordering::Equal
             }
         }
     }
@@ -382,11 +383,11 @@ impl PartialOrd for BigNum {
             let v = ffi::BN_cmp(self.raw(), oth.raw());
             let ret =
                 if v == 0 {
-                    Equal
+                    Ordering::Equal
                 } else if v < 0 {
-                    Less
+                    Ordering::Less
                 } else {
-                    Greater
+                    Ordering::Greater
                 };
             Some(ret)
         }
@@ -404,6 +405,7 @@ impl Drop for BigNum {
 }
 
 pub mod unchecked {
+    use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub};
     use ffi;
     use super::{BigNum};
 

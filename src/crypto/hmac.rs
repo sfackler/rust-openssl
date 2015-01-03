@@ -72,7 +72,7 @@ impl Drop for HMAC {
 #[cfg(test)]
 mod tests {
     use serialize::hex::FromHex;
-    use crypto::hash::HashType::{mod, MD5, SHA1, SHA224, SHA256, SHA384, SHA512};
+    use crypto::hash::HashType::{self, MD5, SHA1, SHA224, SHA256, SHA384, SHA512};
     use super::HMAC;
 
     #[test]
