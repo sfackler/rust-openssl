@@ -211,14 +211,15 @@ pub fn init() {
     static mut INIT: Once = ONCE_INIT;
 
     unsafe {
-        INIT.doit(|| {
+        INIT.call_once(|| {
             SSL_library_init();
             SSL_load_error_strings();
 
             let num_locks = CRYPTO_num_locks();
-            let mutexes = box Vec::from_fn(num_locks as uint, |_| MUTEX_INIT);
+            let mutexes = box range(0, num_locks).map(|_| MUTEX_INIT).collect::<Vec<_>>();
             MUTEXES = mem::transmute(mutexes);
-            let guards: Box<Vec<Option<MutexGuard<()>>>> = box Vec::from_fn(num_locks as uint, |_| None);
+            let guards: Box<Vec<Option<MutexGuard<()>>>> =
+                box range(0, num_locks).map(|_| None).collect();
             GUARDS = mem::transmute(guards);
 
             CRYPTO_set_locking_callback(locking_function);

@@ -1,6 +1,7 @@
 use libc::c_uint;
 use std::ptr;
 use std::io;
+use std::iter::repeat;
 
 use ffi;
 
@@ -101,7 +102,7 @@ impl Hasher {
      * initialization and its context for reuse
      */
     pub fn finalize_reuse(self) -> (Vec<u8>, HasherContext) {
-        let mut res = Vec::from_elem(self.len, 0u8);
+        let mut res = repeat(0u8).take(self.len).collect::<Vec<_>>();
         unsafe {
             ffi::EVP_DigestFinal_ex(self.ctx.ptr, res.as_mut_ptr(), ptr::null_mut())
         };

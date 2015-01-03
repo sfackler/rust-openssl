@@ -21,7 +21,7 @@ fn init() {
     static mut INIT: Once = ONCE_INIT;
 
     unsafe {
-        INIT.doit(|| {
+        INIT.call_once(|| {
             ffi::init();
 
             let verify_idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
@@ -94,7 +94,7 @@ fn get_verify_data_idx<T>() -> c_int {
     }
 
     unsafe {
-        INIT.doit(|| {
+        INIT.call_once(|| {
             let f: ffi::CRYPTO_EX_free = free_data_box::<T>;
             let idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
                                                     None, Some(f));

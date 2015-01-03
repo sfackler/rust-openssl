@@ -1,6 +1,7 @@
 use libc::{c_int, c_long, c_uint};
 use std::c_str::ToCStr;
 use std::cmp::Ordering;
+use std::iter::repeat;
 use std::mem;
 use std::num::SignedInt;
 use std::ptr;
@@ -385,7 +386,7 @@ impl<'ctx> X509<'ctx> {
     /// Returns certificate fingerprint calculated using provided hash
     pub fn fingerprint(&self, hash_type: HashType) -> Option<Vec<u8>> {
         let (evp, len) = evpmd(hash_type);
-        let v: Vec<u8> = Vec::from_elem(len, 0);
+        let v: Vec<u8> = repeat(0).take(len).collect();
         let act_len: c_uint = 0;
         let res = unsafe {
             ffi::X509_digest(self.handle, evp, mem::transmute(v.as_ptr()),
