@@ -88,13 +88,6 @@ pub struct BIGNUM {
 
 impl Copy for BIGNUM {}
 
-#[repr(C)]
-pub struct BIGNUM_PTR {
-    pub ptr: *mut BIGNUM,
-}
-
-impl Copy for BIGNUM_PTR {}
-
 pub type CRYPTO_EX_new = extern "C" fn(parent: *mut c_void, ptr: *mut c_void,
                                        ad: *const CRYPTO_EX_DATA, idx: c_int,
                                        argl: c_long, argp: *const c_void) -> c_int;
@@ -275,7 +268,11 @@ extern "C" {
     pub fn BN_mod_sub(r: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, m: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn BN_mul(r: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn BN_nnmod(rem: *mut BIGNUM, a: *mut BIGNUM, m: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
-    pub fn BN_mod_word(r: *mut BIGNUM, w: c_ulong) -> c_ulong;
+    pub fn BN_add_word(r: *mut BIGNUM, w: c_ulong) -> c_int;
+    pub fn BN_sub_word(r: *mut BIGNUM, w: c_ulong) -> c_int;
+    pub fn BN_mul_word(r: *mut BIGNUM, w: c_ulong) -> c_int;
+    pub fn BN_div_word(r: *mut BIGNUM, w: c_ulong) -> c_ulong;
+    pub fn BN_mod_word(r: *const BIGNUM, w: c_ulong) -> c_ulong;
     pub fn BN_sqr(r: *mut BIGNUM, a: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn BN_sub(r: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM) -> c_int;
 
@@ -309,11 +306,11 @@ extern "C" {
     pub fn BN_bn2bin(a: *mut BIGNUM, to: *mut u8) -> c_int;
 
     /* Conversion from/to decimal string representation */
-    pub fn BN_dec2bn(a: *mut BIGNUM_PTR, s: *const i8) -> c_int;
+    pub fn BN_dec2bn(a: *const *mut BIGNUM, s: *const i8) -> c_int;
     pub fn BN_bn2dec(a: *mut BIGNUM) -> *const c_char;
 
     /* Conversion from/to hexidecimal string representation */
-    pub fn BN_hex2bn(a: *mut BIGNUM_PTR, s: *const i8) -> c_int;
+    pub fn BN_hex2bn(a: *const *mut BIGNUM, s: *const i8) -> c_int;
     pub fn BN_bn2hex(a: *mut BIGNUM) -> *const c_char;
 
     pub fn CRYPTO_num_locks() -> c_int;

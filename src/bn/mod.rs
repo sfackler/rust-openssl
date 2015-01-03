@@ -87,18 +87,16 @@ impl BigNum {
 
     pub fn from_dec_str(s: &str) -> Result<BigNum, SslError> {
         BigNum::new().and_then(|v| unsafe {
-            let ref mut bn_ptr = ffi::BIGNUM_PTR { ptr: v.raw(), };
             let c_str = s.to_c_str();
-            try_ssl!(ffi::BN_dec2bn(bn_ptr, c_str.as_ptr()));
+            try_ssl!(ffi::BN_dec2bn(v.raw_ptr(), c_str.as_ptr()));
             Ok(v)
         })
     }
 
     pub fn from_hex_str(s: &str) -> Result<BigNum, SslError> {
         BigNum::new().and_then(|v| unsafe {
-            let ref mut bn_ptr = ffi::BIGNUM_PTR { ptr: v.raw(), };
             let c_str = s.to_c_str();
-            try_ssl!(ffi::BN_hex2bn(bn_ptr, c_str.as_ptr()));
+            try_ssl!(ffi::BN_hex2bn(v.raw_ptr(), c_str.as_ptr()));
             Ok(v)
         })
     }
@@ -164,9 +162,55 @@ impl BigNum {
         }
     }
 
-    pub fn mod_word(&self, w: c_ulong) -> c_ulong {
+    pub fn add_word(&mut self, w: c_ulong) -> Result<(), SslError> {
         unsafe {
-            ffi::BN_mod_word(self.raw(), w)
+            if ffi::BN_add_word(self.raw(), w) == 1 {
+                Ok(())
+            } else {
+                Err(SslError::get())
+            }
+        }
+    }
+
+    pub fn sub_word(&mut self, w: c_ulong) -> Result<(), SslError> {
+        unsafe {
+            if ffi::BN_sub_word(self.raw(), w) == 1 {
+                Ok(())
+            } else {
+                Err(SslError::get())
+            }
+        }
+    }
+
+    pub fn mul_word(&mut self, w: c_ulong) -> Result<(), SslError> {
+        unsafe {
+            if ffi::BN_mul_word(self.raw(), w) == 1 {
+                Ok(())
+            } else {
+                Err(SslError::get())
+            }
+        }
+    }
+
+    pub fn div_word(&mut self, w: c_ulong) -> Result<c_ulong, SslError> {
+        unsafe {
+            let result = ffi::BN_div_word(self.raw(), w);
+            if result != -1 as c_ulong {
+                Ok(result)
+            } else {
+                Err(SslError::get())
+            }
+        }
+    }
+
+    pub fn mod_word(&self, w: c_ulong) -> Result<c_ulong, SslError> {
+        unsafe {
+            let result = ffi::BN_mod_word(self.raw(), w);
+            if result != -1 as c_ulong {
+                Ok(result)
+            } else {
+                Err(SslError::get())
+            }
         }
     }
 
@@ -354,6 +398,11 @@ impl BigNum {
 
     unsafe fn raw(&self) -> *mut ffi::BIGNUM {
         let BigNum(n) = *self;
+        n
+    }
+
+    unsafe fn raw_ptr(&self) -> *const *mut ffi::BIGNUM {
+        let BigNum(ref n) = *self;
         n
     }
 
