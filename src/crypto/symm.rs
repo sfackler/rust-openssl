@@ -2,14 +2,14 @@ use libc::{c_int};
 
 use ffi;
 
-#[deriving(Copy)]
+#[derive(Copy)]
 pub enum Mode {
     Encrypt,
     Decrypt,
 }
 
 #[allow(non_camel_case_types)]
-#[deriving(Copy)]
+#[derive(Copy)]
 pub enum Type {
     AES_128_ECB,
     AES_128_CBC,
