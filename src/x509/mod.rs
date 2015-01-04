@@ -1,4 +1,7 @@
 use libc::{c_int, c_long, c_uint};
+use std::c_str::ToCStr;
+use std::cmp::Ordering;
+use std::iter::repeat;
 use std::mem;
 use std::num::SignedInt;
 use std::ptr;
@@ -15,7 +18,7 @@ use ssl::error::{SslError, StreamError};
 #[cfg(test)]
 mod tests;
 
-#[deriving(Copy)]
+#[derive(Copy)]
 #[repr(i32)]
 pub enum X509FileType {
     PEM = ffi::X509_FILETYPE_PEM,
@@ -56,7 +59,7 @@ trait AsStr<'a> {
     fn as_str(&self) -> &'a str;
 }
 
-#[deriving(Clone, Copy)]
+#[derive(Clone, Copy)]
 pub enum KeyUsage {
     DigitalSignature,
     NonRepudiation,
@@ -86,7 +89,7 @@ impl AsStr<'static> for KeyUsage {
 }
 
 
-#[deriving(Clone, Copy)]
+#[derive(Clone, Copy)]
 pub enum ExtKeyUsage {
     ServerAuth,
     ClientAuth,
@@ -383,7 +386,7 @@ impl<'ctx> X509<'ctx> {
     /// Returns certificate fingerprint calculated using provided hash
     pub fn fingerprint(&self, hash_type: HashType) -> Option<Vec<u8>> {
         let (evp, len) = evpmd(hash_type);
-        let v: Vec<u8> = Vec::from_elem(len, 0);
+        let v: Vec<u8> = repeat(0).take(len).collect();
         let act_len: c_uint = 0;
         let res = unsafe {
             ffi::X509_digest(self.handle, evp, mem::transmute(v.as_ptr()),
@@ -395,9 +398,9 @@ impl<'ctx> X509<'ctx> {
             _ => {
                 let act_len = act_len as uint;
                 match len.cmp(&act_len) {
-                    Greater => None,
-                    Equal => Some(v),
-                    Less => panic!("Fingerprint buffer was corrupted!")
+                    Ordering::Greater => None,
+                    Ordering::Equal => Some(v),
+                    Ordering::Less => panic!("Fingerprint buffer was corrupted!")
                 }
             }
         }
@@ -432,7 +435,7 @@ pub struct X509Name<'x> {
 
 macro_rules! make_validation_error(
     ($ok_val:ident, $($name:ident = $val:ident,)+) => (
-        #[deriving(Copy)]
+        #[derive(Copy)]
         pub enum X509ValidationError {
             $($name,)+
             X509UnknownError(c_int)

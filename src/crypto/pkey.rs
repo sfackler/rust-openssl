@@ -1,4 +1,5 @@
 use libc::{c_int, c_uint};
+use std::iter::repeat;
 use std::mem;
 use std::ptr;
 use bio::{MemBio};
@@ -6,7 +7,7 @@ use crypto::hash::HashType;
 use ffi;
 use ssl::error::{SslError, StreamError};
 
-#[deriving(Copy)]
+#[derive(Copy)]
 enum Parts {
     Neither,
     Public,
@@ -14,7 +15,7 @@ enum Parts {
 }
 
 /// Represents a role an asymmetric key might be appropriate for.
-#[deriving(Copy)]
+#[derive(Copy)]
 pub enum Role {
     Encrypt,
     Decrypt,
@@ -23,7 +24,7 @@ pub enum Role {
 }
 
 /// Type of encryption padding to use.
-#[deriving(Copy)]
+#[derive(Copy)]
 pub enum EncryptionPadding {
     OAEP,
     PKCS1v15
@@ -71,7 +72,7 @@ impl PKey {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
             let len = f(rsa, ptr::null());
             if len < 0 as c_int { return vec!(); }
-            let mut s = Vec::from_elem(len as uint, 0u8);
+            let mut s = repeat(0u8).take(len as uint).collect::<Vec<_>>();
 
             let r = f(rsa, &s.as_mut_ptr());
 
@@ -209,7 +210,7 @@ impl PKey {
 
             assert!(s.len() < self.max_data());
 
-            let mut r = Vec::from_elem(len as uint + 1u, 0u8);
+            let mut r = repeat(0u8).take(len as uint + 1).collect::<Vec<_>>();
 
             let rv = ffi::RSA_public_encrypt(
                 s.len() as c_uint,
@@ -234,7 +235,7 @@ impl PKey {
 
             assert_eq!(s.len() as c_uint, ffi::RSA_size(rsa));
 
-            let mut r = Vec::from_elem(len as uint + 1u, 0u8);
+            let mut r = repeat(0u8).take(len as uint + 1).collect::<Vec<_>>();
 
             let rv = ffi::RSA_private_decrypt(
                 s.len() as c_uint,
@@ -279,7 +280,7 @@ impl PKey {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
             let mut len = ffi::RSA_size(rsa);
-            let mut r = Vec::from_elem(len as uint + 1u, 0u8);
+            let mut r = repeat(0u8).take(len as uint + 1).collect::<Vec<_>>();
 
             let rv = ffi::RSA_sign(
                 openssl_hash_nid(hash),

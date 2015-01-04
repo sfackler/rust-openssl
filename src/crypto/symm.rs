@@ -1,15 +1,16 @@
+use std::iter::repeat;
 use libc::{c_int};
 
 use ffi;
 
-#[deriving(Copy)]
+#[derive(Copy)]
 pub enum Mode {
     Encrypt,
     Decrypt,
 }
 
 #[allow(non_camel_case_types)]
-#[deriving(Copy)]
+#[derive(Copy)]
 pub enum Type {
     AES_128_ECB,
     AES_128_CBC,
@@ -109,7 +110,7 @@ impl Crypter {
      */
     pub fn update(&self, data: &[u8]) -> Vec<u8> {
         unsafe {
-            let mut res = Vec::from_elem(data.len() + self.blocksize, 0u8);
+            let mut res = repeat(0u8).take(data.len() + self.blocksize).collect::<Vec<_>>();
             let mut reslen = (data.len() + self.blocksize) as u32;
 
             ffi::EVP_CipherUpdate(
@@ -130,7 +131,7 @@ impl Crypter {
      */
     pub fn finalize(&self) -> Vec<u8> {
         unsafe {
-            let mut res = Vec::from_elem(self.blocksize, 0u8);
+            let mut res = repeat(0u8).take(self.blocksize).collect::<Vec<_>>();
             let mut reslen = self.blocksize as c_int;
 
             ffi::EVP_CipherFinal(self.ctx,

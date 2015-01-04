@@ -1,6 +1,8 @@
 use libc::{c_int, c_void, c_long};
+use std::c_str::ToCStr;
 use std::io::{IoResult, IoError, EndOfFile, Stream, Reader, Writer};
 use std::mem;
+use std::num::FromPrimitive;
 use std::ptr;
 use std::sync::{Once, ONCE_INIT, Arc};
 
@@ -19,7 +21,7 @@ fn init() {
     static mut INIT: Once = ONCE_INIT;
 
     unsafe {
-        INIT.doit(|| {
+        INIT.call_once(|| {
             ffi::init();
 
             let verify_idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
@@ -31,9 +33,9 @@ fn init() {
 }
 
 /// Determines the SSL method supported
-#[deriving(Show, Hash, PartialEq, Eq)]
+#[derive(Show, Hash, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
-#[deriving(Copy)]
+#[derive(Copy)]
 pub enum SslMethod {
     #[cfg(feature = "sslv2")]
     /// Only support the SSLv2 protocol, requires `feature="sslv2"`
@@ -69,7 +71,7 @@ impl SslMethod {
 }
 
 /// Determines the type of certificate verification used
-#[deriving(Copy)]
+#[derive(Copy)]
 #[repr(i32)]
 pub enum SslVerifyMode {
     /// Verify that the server's certificate is trusted
@@ -92,7 +94,7 @@ fn get_verify_data_idx<T>() -> c_int {
     }
 
     unsafe {
-        INIT.doit(|| {
+        INIT.call_once(|| {
             let f: ffi::CRYPTO_EX_free = free_data_box::<T>;
             let idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
                                                     None, Some(f));
@@ -389,7 +391,7 @@ impl Ssl {
 
 }
 
-#[deriving(FromPrimitive, Show)]
+#[derive(FromPrimitive, Show)]
 #[repr(i32)]
 enum LibSslError {
     ErrorNone = ffi::SSL_ERROR_NONE,
@@ -404,7 +406,7 @@ enum LibSslError {
 }
 
 /// A stream wrapper which handles SSL encryption for an underlying stream.
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct SslStream<S> {
     stream: S,
     ssl: Arc<Ssl>,
