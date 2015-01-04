@@ -1,5 +1,5 @@
 use libc::{c_int, c_ulong, c_void};
-use std::c_str::CString;
+use std::c_str::{CString, ToCStr};
 use std::cmp::Ordering;
 use std::{fmt, ptr};
 
