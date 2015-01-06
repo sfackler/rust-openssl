@@ -269,6 +269,11 @@ extern "C" {
     pub fn BN_mod_sub(r: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, m: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn BN_mul(r: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn BN_nnmod(rem: *mut BIGNUM, a: *mut BIGNUM, m: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn BN_add_word(r: *mut BIGNUM, w: c_ulong) -> c_int;
+    pub fn BN_sub_word(r: *mut BIGNUM, w: c_ulong) -> c_int;
+    pub fn BN_mul_word(r: *mut BIGNUM, w: c_ulong) -> c_int;
+    pub fn BN_div_word(r: *mut BIGNUM, w: c_ulong) -> c_ulong;
+    pub fn BN_mod_word(r: *const BIGNUM, w: c_ulong) -> c_ulong;
     pub fn BN_sqr(r: *mut BIGNUM, a: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn BN_sub(r: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM) -> c_int;
 
@@ -301,8 +306,13 @@ extern "C" {
     pub fn BN_bin2bn(s: *const u8, size: c_int, ret: *mut BIGNUM) -> *mut BIGNUM;
     pub fn BN_bn2bin(a: *mut BIGNUM, to: *mut u8) -> c_int;
 
-    /* Conversion from/to string representation */
+    /* Conversion from/to decimal string representation */
+    pub fn BN_dec2bn(a: *const *mut BIGNUM, s: *const i8) -> c_int;
     pub fn BN_bn2dec(a: *mut BIGNUM) -> *const c_char;
+
+    /* Conversion from/to hexidecimal string representation */
+    pub fn BN_hex2bn(a: *const *mut BIGNUM, s: *const i8) -> c_int;
+    pub fn BN_bn2hex(a: *mut BIGNUM) -> *const c_char;
 
     pub fn CRYPTO_num_locks() -> c_int;
     pub fn CRYPTO_set_locking_callback(func: extern "C" fn(mode: c_int,

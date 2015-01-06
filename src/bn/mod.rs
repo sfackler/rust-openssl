@@ -1,5 +1,5 @@
 use libc::{c_int, c_ulong, c_void};
-use std::c_str::CString;
+use std::c_str::{CString, ToCStr};
 use std::cmp::Ordering;
 use std::{fmt, ptr};
 
@@ -86,6 +86,22 @@ impl BigNum {
         })
     }
 
+    pub fn from_dec_str(s: &str) -> Result<BigNum, SslError> {
+        BigNum::new().and_then(|v| unsafe {
+            let c_str = s.to_c_str();
+            try_ssl!(ffi::BN_dec2bn(v.raw_ptr(), c_str.as_ptr()));
+            Ok(v)
+        })
+    }
+
+    pub fn from_hex_str(s: &str) -> Result<BigNum, SslError> {
+        BigNum::new().and_then(|v| unsafe {
+            let c_str = s.to_c_str();
+            try_ssl!(ffi::BN_hex2bn(v.raw_ptr(), c_str.as_ptr()));
+            Ok(v)
+        })
+    }
+
     pub fn new_from_slice(n: &[u8]) -> Result<BigNum, SslError> {
         BigNum::new().and_then(|v| unsafe {
             try_ssl_null!(ffi::BN_bin2bn(n.as_ptr(), n.len() as c_int, v.raw()));
@@ -144,6 +160,58 @@ impl BigNum {
     pub fn checked_mod_inv(&self, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, { !ffi::BN_mod_inverse(r.raw(), self.raw(), n.raw(), ctx).is_null() })
+        }
+    }
+
+    pub fn add_word(&mut self, w: c_ulong) -> Result<(), SslError> {
+        unsafe {
+            if ffi::BN_add_word(self.raw(), w) == 1 {
+                Ok(())
+            } else {
+                Err(SslError::get())
+            }
+        }
+    }
+
+    pub fn sub_word(&mut self, w: c_ulong) -> Result<(), SslError> {
+        unsafe {
+            if ffi::BN_sub_word(self.raw(), w) == 1 {
+                Ok(())
+            } else {
+                Err(SslError::get())
+            }
+        }
+    }
+
+    pub fn mul_word(&mut self, w: c_ulong) -> Result<(), SslError> {
+        unsafe {
+            if ffi::BN_mul_word(self.raw(), w) == 1 {
+                Ok(())
+            } else {
+                Err(SslError::get())
+            }
+        }
+    }
+
+    pub fn div_word(&mut self, w: c_ulong) -> Result<c_ulong, SslError> {
+        unsafe {
+            let result = ffi::BN_div_word(self.raw(), w);
+            if result != -1 as c_ulong {
+                Ok(result)
+            } else {
+                Err(SslError::get())
+            }
+        }
+    }
+
+    pub fn mod_word(&self, w: c_ulong) -> Result<c_ulong, SslError> {
+        unsafe {
+            let result = ffi::BN_mod_word(self.raw(), w);
+            if result != -1 as c_ulong {
+                Ok(result)
+            } else {
+                Err(SslError::get())
+            }
         }
     }
 
@@ -334,6 +402,11 @@ impl BigNum {
         n
     }
 
+    unsafe fn raw_ptr(&self) -> *const *mut ffi::BIGNUM {
+        let BigNum(ref n) = *self;
+        n
+    }
+
     pub fn to_vec(&self) -> Vec<u8> {
         let size = self.num_bytes() as uint;
         let mut v = Vec::with_capacity(size);
@@ -347,6 +420,17 @@ impl BigNum {
     pub fn to_dec_str(&self) -> String {
         unsafe {
             let buf = ffi::BN_bn2dec(self.raw());
+            assert!(!buf.is_null());
+            let c_str = CString::new(buf, false);
+            let str = c_str.as_str().unwrap().to_string();
+            ffi::CRYPTO_free(buf as *mut c_void);
+            str
+        }
+    }
+
+    pub fn to_hex_str(&self) -> String {
+        unsafe {
+            let buf = ffi::BN_bn2hex(self.raw());
             assert!(!buf.is_null());
             let c_str = CString::new(buf, false);
             let str = c_str.as_str().unwrap().to_string();
