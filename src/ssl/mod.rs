@@ -479,8 +479,8 @@ impl<S: Stream> SslStream<S> {
         &mut self.stream
     }
 
-    fn in_retry_wrapper(&mut self, blk: |&Ssl| -> c_int)
-            -> Result<c_int, SslError> {
+    fn in_retry_wrapper<F>(&mut self, mut blk: F)
+            -> Result<c_int, SslError> where F: FnMut(&Ssl) -> c_int {
         loop {
             let ret = blk(&*self.ssl);
             if ret > 0 {
