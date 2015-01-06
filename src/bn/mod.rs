@@ -493,43 +493,57 @@ pub mod unchecked {
     use ffi;
     use super::{BigNum};
 
-    impl<'a> Add<&'a BigNum, BigNum> for &'a BigNum {
+    impl<'a> Add<&'a BigNum> for &'a BigNum {
+        type Output = BigNum;
+
         fn add(self, oth: &'a BigNum) -> BigNum {
             self.checked_add(oth).unwrap()
         }
     }
 
-    impl<'a> Sub<&'a BigNum, BigNum> for &'a BigNum {
+    impl<'a> Sub<&'a BigNum> for &'a BigNum {
+        type Output = BigNum;
+
         fn sub(self, oth: &'a BigNum) -> BigNum {
             self.checked_sub(oth).unwrap()
         }
     }
 
-    impl<'a> Mul<&'a BigNum, BigNum> for &'a BigNum {
+    impl<'a> Mul<&'a BigNum> for &'a BigNum {
+        type Output = BigNum;
+
         fn mul(self, oth: &'a BigNum) -> BigNum {
             self.checked_mul(oth).unwrap()
         }
     }
 
-    impl<'a> Div<&'a BigNum, BigNum> for &'a BigNum {
+    impl<'a> Div<&'a BigNum> for &'a BigNum {
+        type Output = BigNum;
+
         fn div(self, oth: &'a BigNum) -> BigNum {
             self.checked_div(oth).unwrap()
         }
     }
 
-    impl<'a> Rem<&'a BigNum, BigNum> for &'a BigNum {
+    impl<'a> Rem<&'a BigNum> for &'a BigNum {
+        type Output = BigNum;
+
         fn rem(self, oth: &'a BigNum) -> BigNum {
             self.checked_mod(oth).unwrap()
         }
     }
 
-    impl<'a> Shl<i32, BigNum> for &'a BigNum {
+    impl<'a> Shl<i32> for &'a BigNum {
+        type Output = BigNum;
+
         fn shl(self, n: i32) -> BigNum {
             self.checked_shl(&n).unwrap()
         }
     }
 
-    impl<'a> Shr<i32, BigNum> for &'a BigNum {
+    impl<'a> Shr<i32> for &'a BigNum {
+        type Output = BigNum;
+
         fn shr(self, n: i32) -> BigNum {
             self.checked_shr(&n).unwrap()
         }
@@ -548,7 +562,9 @@ pub mod unchecked {
         }
     }
 
-    impl Neg<BigNum> for BigNum {
+    impl Neg for BigNum {
+        type Output = BigNum;
+
         fn neg(self) -> BigNum {
             let mut n = self.clone();
             n.negate();
