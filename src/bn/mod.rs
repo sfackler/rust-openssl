@@ -1,5 +1,5 @@
 use libc::{c_int, c_ulong, c_void};
-use std::c_str::{CString, ToCStr};
+use std::ffi::{CString, c_str_to_bytes};
 use std::cmp::Ordering;
 use std::{fmt, ptr};
 
@@ -88,7 +88,7 @@ impl BigNum {
 
     pub fn from_dec_str(s: &str) -> Result<BigNum, SslError> {
         BigNum::new().and_then(|v| unsafe {
-            let c_str = s.to_c_str();
+            let c_str = CString::from_slice(s.as_bytes());
             try_ssl!(ffi::BN_dec2bn(v.raw_ptr(), c_str.as_ptr()));
             Ok(v)
         })
@@ -96,7 +96,7 @@ impl BigNum {
 
     pub fn from_hex_str(s: &str) -> Result<BigNum, SslError> {
         BigNum::new().and_then(|v| unsafe {
-            let c_str = s.to_c_str();
+            let c_str = CString::from_slice(s.as_bytes());
             try_ssl!(ffi::BN_hex2bn(v.raw_ptr(), c_str.as_ptr()));
             Ok(v)
         })
@@ -421,8 +421,7 @@ impl BigNum {
         unsafe {
             let buf = ffi::BN_bn2dec(self.raw());
             assert!(!buf.is_null());
-            let c_str = CString::new(buf, false);
-            let str = c_str.as_str().unwrap().to_string();
+            let str = String::from_utf8(c_str_to_bytes(&buf).to_vec()).unwrap();
             ffi::CRYPTO_free(buf as *mut c_void);
             str
         }
@@ -432,8 +431,7 @@ impl BigNum {
         unsafe {
             let buf = ffi::BN_bn2hex(self.raw());
             assert!(!buf.is_null());
-            let c_str = CString::new(buf, false);
-            let str = c_str.as_str().unwrap().to_string();
+            let str = String::from_utf8(c_str_to_bytes(&buf).to_vec()).unwrap();
             ffi::CRYPTO_free(buf as *mut c_void);
             str
         }
