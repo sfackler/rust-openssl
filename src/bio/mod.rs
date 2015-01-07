@@ -76,7 +76,7 @@ impl Reader for MemBio {
                 IoError {
                     kind: OtherIoError,
                     desc: "MemBio read error",
-                    detail: Some(format!("{}", SslError::get()))
+                    detail: Some(format!("{:?}", SslError::get()))
                 }
             };
             Err(err)
@@ -96,7 +96,7 @@ impl Writer for MemBio {
             Err(IoError {
                 kind: OtherIoError,
                 desc: "MemBio write error",
-                detail: Some(format!("{}", SslError::get()))
+                detail: Some(format!("{:?}", SslError::get()))
             })
         } else {
             Ok(())

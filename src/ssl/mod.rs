@@ -1,5 +1,5 @@
 use libc::{c_int, c_void, c_long};
-use std::c_str::ToCStr;
+use std::ffi::{CString, c_str_to_bytes};
 use std::io::{IoResult, IoError, EndOfFile, Stream, Reader, Writer};
 use std::mem;
 use std::num::FromPrimitive;
@@ -237,39 +237,39 @@ impl SslContext {
     #[allow(non_snake_case)]
     /// Specifies the file that contains trusted CA certificates.
     pub fn set_CA_file(&mut self, file: &Path) -> Option<SslError> {
-        wrap_ssl_result(file.with_c_str(|file| {
+        wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_load_verify_locations(self.ctx.0, file, ptr::null())
-            }
-        }))
+                let file = CString::from_slice(file.as_vec());
+                ffi::SSL_CTX_load_verify_locations(self.ctx.0, file.as_ptr(), ptr::null())
+            })
     }
 
     /// Specifies the file that contains certificate
     pub fn set_certificate_file(&mut self, file: &Path,
                                 file_type: X509FileType) -> Option<SslError> {
-        wrap_ssl_result(file.with_c_str(|file| {
+        wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_use_certificate_file(self.ctx.0, file, file_type as c_int)
-            }
-        }))
+                let file = CString::from_slice(file.as_vec());
+                ffi::SSL_CTX_use_certificate_file(self.ctx.0, file.as_ptr(), file_type as c_int)
+            })
     }
 
     /// Specifies the file that contains private key
     pub fn set_private_key_file(&mut self, file: &Path,
                                 file_type: X509FileType) -> Option<SslError> {
-        wrap_ssl_result(file.with_c_str(|file| {
+        wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_use_PrivateKey_file(self.ctx.0, file, file_type as c_int)
-            }
-        }))
+                let file = CString::from_slice(file.as_vec());
+                ffi::SSL_CTX_use_PrivateKey_file(self.ctx.0, file.as_ptr(), file_type as c_int)
+            })
     }
 
     pub fn set_cipher_list(&mut self, cipher_list: &str) -> Option<SslError> {
-        wrap_ssl_result(cipher_list.with_c_str(|cipher_list| {
+        wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_set_cipher_list(self.ctx.0, cipher_list)
-            }
-        }))
+                let cipher_list = CString::from_slice(cipher_list.as_bytes());
+                ffi::SSL_CTX_set_cipher_list(self.ctx.0, cipher_list.as_ptr())
+            })
     }
 }
 
@@ -358,17 +358,16 @@ impl Ssl {
 
     /// Set the host name to be used with SNI (Server Name Indication).
     pub fn set_hostname(&self, hostname: &str) -> Result<(), SslError> {
-        let ret = hostname.with_c_str(|hostname| {
-            unsafe {
+        let ret = unsafe {
                 // This is defined as a macro:
                 //      #define SSL_set_tlsext_host_name(s,name) \
                 //          SSL_ctrl(s,SSL_CTRL_SET_TLSEXT_HOSTNAME,TLSEXT_NAMETYPE_host_name,(char *)name)
 
+                let hostname = CString::from_slice(hostname.as_bytes());
                 ffi::SSL_ctrl(self.ssl.0, ffi::SSL_CTRL_SET_TLSEXT_HOSTNAME,
                               ffi::TLSEXT_NAMETYPE_host_name,
-                              hostname as *const c_void as *mut c_void)
-            }
-        });
+                              hostname.as_ptr() as *mut c_void)
+        };
 
         // For this case, 0 indicates failure.
         if ret == 0 {
@@ -496,7 +495,7 @@ impl<S: Stream> SslStream<S> {
                 LibSslError::ErrorWantWrite => { try_ssl_stream!(self.flush()) }
                 LibSslError::ErrorZeroReturn => return Err(SslSessionClosed),
                 LibSslError::ErrorSsl => return Err(SslError::get()),
-                err => panic!("unexpected error {}", err),
+                err => panic!("unexpected error {:?}", err),
             }
         }
     }
@@ -521,7 +520,9 @@ impl<S: Stream> SslStream<S> {
         }
 
         let meth = unsafe { ffi::SSL_COMP_get_name(ptr) };
-        let s = unsafe { String::from_raw_buf(meth as *const u8) };
+        let s = unsafe {
+            String::from_utf8(c_str_to_bytes(&meth).to_vec()).unwrap()
+        };
 
         Some(s)
     }
