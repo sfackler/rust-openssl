@@ -147,6 +147,8 @@ impl<'a, T: AsStr<'a>> ToStr for Vec<T> {
 /// # Example
 ///
 /// ```
+/// # #[allow(unstable)]
+/// # fn main() {
 /// use std::io::{File, Open, Write};
 /// # use std::io::fs;
 ///
@@ -171,6 +173,7 @@ impl<'a, T: AsStr<'a>> ToStr for Vec<T> {
 /// let mut file = File::open_mode(&pkey_path, Open, Write).unwrap();
 /// assert!(pkey.write_pem(&mut file).is_ok());
 /// # let _ = fs::unlink(&pkey_path);
+/// # }
 /// ```
 pub struct X509Generator {
     bits: u32,
