@@ -58,7 +58,7 @@ impl MemBio {
 }
 
 impl Reader for MemBio {
-    fn read(&mut self, buf: &mut [u8]) -> IoResult<uint> {
+    fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
         let ret = unsafe {
             ffi::BIO_read(self.bio, buf.as_ptr() as *mut c_void,
                           buf.len() as c_int)
@@ -81,7 +81,7 @@ impl Reader for MemBio {
             };
             Err(err)
         } else {
-            Ok(ret as uint)
+            Ok(ret as usize)
         }
     }
 }
@@ -92,7 +92,7 @@ impl Writer for MemBio {
             ffi::BIO_write(self.bio, buf.as_ptr() as *const c_void,
                            buf.len() as c_int)
         };
-        if buf.len() != ret as uint {
+        if buf.len() != ret as usize {
             Err(IoError {
                 kind: OtherIoError,
                 desc: "MemBio write error",

@@ -72,11 +72,11 @@ impl PKey {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
             let len = f(rsa, ptr::null());
             if len < 0 as c_int { return vec!(); }
-            let mut s = repeat(0u8).take(len as uint).collect::<Vec<_>>();
+            let mut s = repeat(0u8).take(len as usize).collect::<Vec<_>>();
 
             let r = f(rsa, &s.as_mut_ptr());
 
-            s.truncate(r as uint);
+            s.truncate(r as usize);
             s
         }
     }
@@ -89,11 +89,11 @@ impl PKey {
         }
     }
 
-    pub fn gen(&mut self, keysz: uint) {
+    pub fn gen(&mut self, keysz: usize) {
         unsafe {
             let rsa = ffi::RSA_generate_key(
                 keysz as c_uint,
-                65537u as c_uint,
+                65537 as c_uint,
                 ptr::null(),
                 ptr::null()
             );
@@ -155,9 +155,9 @@ impl PKey {
     /**
      * Returns the size of the public key modulus.
      */
-    pub fn size(&self) -> uint {
+    pub fn size(&self) -> usize {
         unsafe {
-            ffi::RSA_size(ffi::EVP_PKEY_get1_RSA(self.evp)) as uint
+            ffi::RSA_size(ffi::EVP_PKEY_get1_RSA(self.evp)) as usize
         }
     }
 
@@ -193,13 +193,13 @@ impl PKey {
      * Returns the maximum amount of data that can be encrypted by an encrypt()
      * call.
      */
-    pub fn max_data(&self) -> uint {
+    pub fn max_data(&self) -> usize {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
             let len = ffi::RSA_size(rsa);
 
             // 41 comes from RSA_public_encrypt(3) for OAEP
-            len as uint - 41u
+            len as usize - 41
         }
     }
 
@@ -210,7 +210,7 @@ impl PKey {
 
             assert!(s.len() < self.max_data());
 
-            let mut r = repeat(0u8).take(len as uint + 1).collect::<Vec<_>>();
+            let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
 
             let rv = ffi::RSA_public_encrypt(
                 s.len() as c_uint,
@@ -222,7 +222,7 @@ impl PKey {
             if rv < 0 as c_int {
                 vec!()
             } else {
-                r.truncate(rv as uint);
+                r.truncate(rv as usize);
                 r
             }
         }
@@ -235,7 +235,7 @@ impl PKey {
 
             assert_eq!(s.len() as c_uint, ffi::RSA_size(rsa));
 
-            let mut r = repeat(0u8).take(len as uint + 1).collect::<Vec<_>>();
+            let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
 
             let rv = ffi::RSA_private_decrypt(
                 s.len() as c_uint,
@@ -247,7 +247,7 @@ impl PKey {
             if rv < 0 as c_int {
                 vec!()
             } else {
-                r.truncate(rv as uint);
+                r.truncate(rv as usize);
                 r
             }
         }
@@ -280,7 +280,7 @@ impl PKey {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
             let mut len = ffi::RSA_size(rsa);
-            let mut r = repeat(0u8).take(len as uint + 1).collect::<Vec<_>>();
+            let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
 
             let rv = ffi::RSA_sign(
                 openssl_hash_nid(hash),
@@ -293,7 +293,7 @@ impl PKey {
             if rv < 0 as c_int {
                 vec!()
             } else {
-                r.truncate(len as uint);
+                r.truncate(len as usize);
                 r
             }
         }
@@ -337,7 +337,7 @@ mod tests {
     fn test_gen_pub() {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
-        k0.gen(512u);
+        k0.gen(512);
         k1.load_pub(k0.save_pub().as_slice());
         assert_eq!(k0.save_pub(), k1.save_pub());
         assert_eq!(k0.size(), k1.size());
@@ -355,7 +355,7 @@ mod tests {
     fn test_gen_priv() {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
-        k0.gen(512u);
+        k0.gen(512);
         k1.load_priv(k0.save_priv().as_slice());
         assert_eq!(k0.save_priv(), k1.save_priv());
         assert_eq!(k0.size(), k1.size());
@@ -374,7 +374,7 @@ mod tests {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
         let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
-        k0.gen(512u);
+        k0.gen(512);
         k1.load_pub(k0.save_pub().as_slice());
         let emsg = k1.encrypt(msg.as_slice());
         let dmsg = k0.decrypt(emsg.as_slice());
@@ -386,7 +386,7 @@ mod tests {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
         let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
-        k0.gen(512u);
+        k0.gen(512);
         k1.load_pub(k0.save_pub().as_slice());
         let emsg = k1.encrypt_with_padding(msg.as_slice(), super::EncryptionPadding::PKCS1v15);
         let dmsg = k0.decrypt_with_padding(emsg.as_slice(), super::EncryptionPadding::PKCS1v15);
@@ -398,7 +398,7 @@ mod tests {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
         let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
-        k0.gen(512u);
+        k0.gen(512);
         k1.load_pub(k0.save_pub().as_slice());
         let sig = k0.sign(msg.as_slice());
         let rv = k1.verify(msg.as_slice(), sig.as_slice());
@@ -410,7 +410,7 @@ mod tests {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
         let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
-        k0.gen(512u);
+        k0.gen(512);
         k1.load_pub(k0.save_pub().as_slice());
 
         let sig = k0.sign_with_hash(msg.as_slice(), MD5);

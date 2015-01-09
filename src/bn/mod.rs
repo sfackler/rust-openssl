@@ -408,7 +408,7 @@ impl BigNum {
     }
 
     pub fn to_vec(&self) -> Vec<u8> {
-        let size = self.num_bytes() as uint;
+        let size = self.num_bytes() as usize;
         let mut v = Vec::with_capacity(size);
         unsafe {
             ffi::BN_bn2bin(self.raw(), v.as_mut_ptr());

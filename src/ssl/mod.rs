@@ -215,7 +215,7 @@ impl SslContext {
     pub fn set_verify_with_data<T>(&mut self, mode: SslVerifyMode,
                                    verify: VerifyCallbackData<T>,
                                    data: T) {
-        let data = box data;
+        let data = Box::new(data);
         unsafe {
             ffi::SSL_CTX_set_ex_data(self.ctx.0, VERIFY_IDX,
                                      mem::transmute(Some(verify)));
@@ -228,7 +228,7 @@ impl SslContext {
     }
 
     /// Sets verification depth
-    pub fn set_verify_depth(&mut self, depth: uint) {
+    pub fn set_verify_depth(&mut self, depth: u32) {
         unsafe {
             ffi::SSL_CTX_set_verify_depth(self.ctx.0, depth as c_int);
         }
@@ -280,7 +280,7 @@ struct MemBioRef<'ssl> {
 }
 
 impl<'ssl> MemBioRef<'ssl> {
-    fn read(&mut self, buf: &mut [u8]) -> Option<uint> {
+    fn read(&mut self, buf: &mut [u8]) -> Option<usize> {
         (&mut self.bio as &mut Reader).read(buf).ok()
     }
 
@@ -350,7 +350,7 @@ impl Ssl {
 
     fn get_error(&self, ret: c_int) -> LibSslError {
         let err = unsafe { ffi::SSL_get_error(self.ssl.0, ret) };
-        match FromPrimitive::from_int(err as int) {
+        match FromPrimitive::from_int(err as isize) {
             Some(err) => err,
             None => unreachable!()
         }
@@ -421,7 +421,7 @@ impl<S: Stream> SslStream<S> {
             // We're just using this as a buffer, so there's no reason to pay
             // to memset it
             buf: {
-                const CAP: uint = 16 * 1024;
+                const CAP: usize = 16 * 1024;
                 let mut v = Vec::with_capacity(CAP);
                 unsafe { v.set_len(CAP); }
                 v
@@ -529,9 +529,9 @@ impl<S: Stream> SslStream<S> {
 }
 
 impl<S: Stream> Reader for SslStream<S> {
-    fn read(&mut self, buf: &mut [u8]) -> IoResult<uint> {
+    fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
         match self.in_retry_wrapper(|ssl| { ssl.read(buf) }) {
-            Ok(len) => Ok(len as uint),
+            Ok(len) => Ok(len as usize),
             Err(SslSessionClosed) =>
                 Err(IoError {
                     kind: EndOfFile,
@@ -552,7 +552,7 @@ impl<S: Stream> Writer for SslStream<S> {
                 ssl.write(buf.split_at(start).1)
             });
             match ret {
-                Ok(len) => start += len as uint,
+                Ok(len) => start += len as usize,
                 _ => unreachable!()
             }
             try!(self.write_through());
@@ -575,7 +575,7 @@ pub enum MaybeSslStream<S> where S: Stream {
 }
 
 impl<S> Reader for MaybeSslStream<S> where S: Stream {
-    fn read(&mut self, buf: &mut [u8]) -> IoResult<uint> {
+    fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
         match *self {
             MaybeSslStream::Ssl(ref mut s) => s.read(buf),
             MaybeSslStream::Normal(ref mut s) => s.read(buf),

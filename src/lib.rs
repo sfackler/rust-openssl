@@ -1,4 +1,5 @@
-#![feature(unsafe_destructor, old_orphan_check)]
+#![feature(unsafe_destructor)]
+#![allow(unstable)]
 #![crate_name="openssl"]
 #![crate_type="rlib"]
 #![crate_type="dylib"]

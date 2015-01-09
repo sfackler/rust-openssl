@@ -22,7 +22,7 @@ use ffi;
 
 pub struct HMAC {
     ctx: ffi::HMAC_CTX,
-    len: uint,
+    len: u32,
 }
 
 #[allow(non_snake_case)]
@@ -53,10 +53,10 @@ impl HMAC {
 
     pub fn finalize(&mut self) -> Vec<u8> {
         unsafe {
-            let mut res: Vec<u8> = repeat(0).take(self.len).collect();
+            let mut res: Vec<u8> = repeat(0).take(self.len as usize).collect();
             let mut outlen = 0;
             ffi::HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut outlen);
-            assert!(self.len == outlen as uint);
+            assert!(self.len == outlen as u32);
             res
         }
     }

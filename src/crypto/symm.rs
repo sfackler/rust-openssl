@@ -31,24 +31,24 @@ pub enum Type {
     RC4_128,
 }
 
-fn evpc(t: Type) -> (*const ffi::EVP_CIPHER, uint, uint) {
+fn evpc(t: Type) -> (*const ffi::EVP_CIPHER, u32, u32) {
     unsafe {
         match t {
-            Type::AES_128_ECB => (ffi::EVP_aes_128_ecb(), 16u, 16u),
-            Type::AES_128_CBC => (ffi::EVP_aes_128_cbc(), 16u, 16u),
+            Type::AES_128_ECB => (ffi::EVP_aes_128_ecb(), 16, 16),
+            Type::AES_128_CBC => (ffi::EVP_aes_128_cbc(), 16, 16),
             #[cfg(feature = "aes_xts")]
-            Type::AES_128_XTS => (ffi::EVP_aes_128_xts(), 32u, 16u),
-            // AES_128_CTR => (EVP_aes_128_ctr(), 16u, 0u),
-            //AES_128_GCM => (EVP_aes_128_gcm(), 16u, 16u),
+            Type::AES_128_XTS => (ffi::EVP_aes_128_xts(), 32, 16),
+            // AES_128_CTR => (EVP_aes_128_ctr(), 16, 0),
+            //AES_128_GCM => (EVP_aes_128_gcm(), 16, 16),
 
-            Type::AES_256_ECB => (ffi::EVP_aes_256_ecb(), 32u, 16u),
-            Type::AES_256_CBC => (ffi::EVP_aes_256_cbc(), 32u, 16u),
+            Type::AES_256_ECB => (ffi::EVP_aes_256_ecb(), 32, 16),
+            Type::AES_256_CBC => (ffi::EVP_aes_256_cbc(), 32, 16),
             #[cfg(feature = "aes_xts")]
-            Type::AES_256_XTS => (ffi::EVP_aes_256_xts(), 64u, 16u),
-            // AES_256_CTR => (EVP_aes_256_ctr(), 32u, 0u),
-            //AES_256_GCM => (EVP_aes_256_gcm(), 32u, 16u),
+            Type::AES_256_XTS => (ffi::EVP_aes_256_xts(), 64, 16),
+            // AES_256_CTR => (EVP_aes_256_ctr(), 32, 0),
+            //AES_256_GCM => (EVP_aes_256_gcm(), 32, 16),
 
-            Type::RC4_128 => (ffi::EVP_rc4(), 16u, 0u),
+            Type::RC4_128 => (ffi::EVP_rc4(), 16, 0),
         }
     }
 }
@@ -57,8 +57,8 @@ fn evpc(t: Type) -> (*const ffi::EVP_CIPHER, uint, uint) {
 pub struct Crypter {
     evp: *const ffi::EVP_CIPHER,
     ctx: *mut ffi::EVP_CIPHER_CTX,
-    keylen: uint,
-    blocksize: uint
+    keylen: u32,
+    blocksize: u32,
 }
 
 impl Crypter {
@@ -92,7 +92,7 @@ impl Crypter {
                 Mode::Encrypt => 1 as c_int,
                 Mode::Decrypt => 0 as c_int,
             };
-            assert_eq!(key.len(), self.keylen);
+            assert_eq!(key.len(), self.keylen as usize);
 
             ffi::EVP_CipherInit(
                 self.ctx,
@@ -110,8 +110,9 @@ impl Crypter {
      */
     pub fn update(&self, data: &[u8]) -> Vec<u8> {
         unsafe {
-            let mut res = repeat(0u8).take(data.len() + self.blocksize).collect::<Vec<_>>();
-            let mut reslen = (data.len() + self.blocksize) as u32;
+            let sum = data.len() + (self.blocksize as usize);
+            let mut res = repeat(0u8).take(sum).collect::<Vec<_>>();
+            let mut reslen = sum as u32;
 
             ffi::EVP_CipherUpdate(
                 self.ctx,
@@ -121,7 +122,7 @@ impl Crypter {
                 data.len() as c_int
             );
 
-            res.truncate(reslen as uint);
+            res.truncate(reslen as usize);
             res
         }
     }
@@ -131,14 +132,14 @@ impl Crypter {
      */
     pub fn finalize(&self) -> Vec<u8> {
         unsafe {
-            let mut res = repeat(0u8).take(self.blocksize).collect::<Vec<_>>();
+            let mut res = repeat(0u8).take(self.blocksize as usize).collect::<Vec<_>>();
             let mut reslen = self.blocksize as c_int;
 
             ffi::EVP_CipherFinal(self.ctx,
                                        res.as_mut_ptr(),
                                        &mut reslen);
 
-            res.truncate(reslen as uint);
+            res.truncate(reslen as usize);
             res
         }
     }

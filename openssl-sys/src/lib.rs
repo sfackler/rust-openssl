@@ -1,5 +1,5 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
-#![allow(dead_code)]
+#![allow(dead_code, unstable)]
 
 extern crate libc;
 
@@ -197,12 +197,12 @@ static mut GUARDS: *mut Vec<Option<MutexGuard<'static, ()>>> = 0 as *mut Vec<Opt
 extern fn locking_function(mode: c_int, n: c_int, _file: *const c_char,
                                _line: c_int) {
     unsafe {
-        let mutex = &(*MUTEXES)[n as uint];
+        let mutex = &(*MUTEXES)[n as usize];
 
         if mode & CRYPTO_LOCK != 0 {
-            (*GUARDS)[n as uint] = Some(mutex.lock().unwrap());
+            (*GUARDS)[n as usize] = Some(mutex.lock().unwrap());
         } else {
-            &(*GUARDS)[n as uint].take();
+            &(*GUARDS)[n as usize].take();
         }
     }
 }
@@ -216,10 +216,10 @@ pub fn init() {
             SSL_load_error_strings();
 
             let num_locks = CRYPTO_num_locks();
-            let mutexes = box range(0, num_locks).map(|_| MUTEX_INIT).collect::<Vec<_>>();
+            let mutexes = Box::new(range(0, num_locks).map(|_| MUTEX_INIT).collect::<Vec<_>>());
             MUTEXES = mem::transmute(mutexes);
             let guards: Box<Vec<Option<MutexGuard<()>>>> =
-                box range(0, num_locks).map(|_| None).collect();
+                Box::new(range(0, num_locks).map(|_| None).collect());
             GUARDS = mem::transmute(guards);
 
             CRYPTO_set_locking_callback(locking_function);
