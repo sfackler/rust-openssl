@@ -30,7 +30,7 @@ impl Asn1Time {
     }
 
     /// Creates a new time on specified interval in days from now
-    pub fn days_from_now(days: uint) -> Result<Asn1Time, SslError> {
+    pub fn days_from_now(days: u32) -> Result<Asn1Time, SslError> {
         Asn1Time::new_with_period(days as u64 * 60 * 60 * 24)
     }
 

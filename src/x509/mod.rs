@@ -173,8 +173,8 @@ impl<'a, T: AsStr<'a>> ToStr for Vec<T> {
 /// # let _ = fs::unlink(&pkey_path);
 /// ```
 pub struct X509Generator {
-    bits: uint,
-    days: uint,
+    bits: u32,
+    days: u32,
     CN: String,
     key_usage: Vec<KeyUsage>,
     ext_key_usage: Vec<ExtKeyUsage>,
@@ -203,13 +203,13 @@ impl X509Generator {
     }
 
     /// Sets desired bit length
-    pub fn set_bitlength(mut self, bits: uint) -> X509Generator {
+    pub fn set_bitlength(mut self, bits: u32) -> X509Generator {
         self.bits = bits;
         self
     }
 
     /// Sets certificate validity period in days since today
-    pub fn set_valid_period(mut self, days: uint) -> X509Generator {
+    pub fn set_valid_period(mut self, days: u32) -> X509Generator {
         self.days = days;
         self
     }
@@ -288,7 +288,7 @@ impl X509Generator {
         ffi::init();
 
         let mut p_key = PKey::new();
-        p_key.gen(self.bits);
+        p_key.gen(self.bits as usize);
 
         unsafe {
             let x509 = ffi::X509_new();
@@ -386,7 +386,7 @@ impl<'ctx> X509<'ctx> {
     /// Returns certificate fingerprint calculated using provided hash
     pub fn fingerprint(&self, hash_type: HashType) -> Option<Vec<u8>> {
         let (evp, len) = evpmd(hash_type);
-        let v: Vec<u8> = repeat(0).take(len).collect();
+        let v: Vec<u8> = repeat(0).take(len as usize).collect();
         let act_len: c_uint = 0;
         let res = unsafe {
             ffi::X509_digest(self.handle, evp, mem::transmute(v.as_ptr()),
@@ -396,7 +396,7 @@ impl<'ctx> X509<'ctx> {
         match res {
             0 => None,
             _ => {
-                let act_len = act_len as uint;
+                let act_len = act_len as u32;
                 match len.cmp(&act_len) {
                     Ordering::Greater => None,
                     Ordering::Equal => Some(v),
@@ -514,7 +514,7 @@ make_validation_error!(X509_V_OK,
 #[test]
 fn test_negative_serial() {
     // I guess that's enough to get a random negative number
-    for _ in range(0u, 1000) {
+    for _ in range(0, 1000) {
         assert!(X509Generator::random_serial() > 0, "All serials should be positive");
     }
 }

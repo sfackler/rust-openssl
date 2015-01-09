@@ -16,16 +16,16 @@ pub enum HashType {
     RIPEMD160
 }
 
-pub fn evpmd(t: HashType) -> (*const ffi::EVP_MD, uint) {
+pub fn evpmd(t: HashType) -> (*const ffi::EVP_MD, u32) {
     unsafe {
         match t {
-            HashType::MD5 => (ffi::EVP_md5(), 16u),
-            HashType::SHA1 => (ffi::EVP_sha1(), 20u),
-            HashType::SHA224 => (ffi::EVP_sha224(), 28u),
-            HashType::SHA256 => (ffi::EVP_sha256(), 32u),
-            HashType::SHA384 => (ffi::EVP_sha384(), 48u),
-            HashType::SHA512 => (ffi::EVP_sha512(), 64u),
-            HashType::RIPEMD160 => (ffi::EVP_ripemd160(), 20u),
+            HashType::MD5 => (ffi::EVP_md5(), 16),
+            HashType::SHA1 => (ffi::EVP_sha1(), 20),
+            HashType::SHA224 => (ffi::EVP_sha224(), 28),
+            HashType::SHA256 => (ffi::EVP_sha256(), 32),
+            HashType::SHA384 => (ffi::EVP_sha384(), 48),
+            HashType::SHA512 => (ffi::EVP_sha512(), 64),
+            HashType::RIPEMD160 => (ffi::EVP_ripemd160(), 20),
         }
     }
 }
@@ -56,7 +56,7 @@ impl Drop for HasherContext {
 pub struct Hasher {
     evp: *const ffi::EVP_MD,
     ctx: HasherContext,
-    len: uint,
+    len: u32,
 }
 
 impl io::Writer for Hasher {
@@ -102,7 +102,7 @@ impl Hasher {
      * initialization and its context for reuse
      */
     pub fn finalize_reuse(self) -> (Vec<u8>, HasherContext) {
-        let mut res = repeat(0u8).take(self.len).collect::<Vec<_>>();
+        let mut res = repeat(0u8).take(self.len as usize).collect::<Vec<_>>();
         unsafe {
             ffi::EVP_DigestFinal_ex(self.ctx.ptr, res.as_mut_ptr(), ptr::null_mut())
         };

@@ -1,7 +1,7 @@
 use libc::c_int;
 use ffi;
 
-pub fn rand_bytes(len: uint) -> Vec<u8> {
+pub fn rand_bytes(len: usize) -> Vec<u8> {
     unsafe {
         let mut out = Vec::with_capacity(len);
 
@@ -21,7 +21,7 @@ mod tests {
 
     #[test]
     fn test_rand_bytes() {
-        let bytes = rand_bytes(32u);
-        println!("{}", bytes);
+        let bytes = rand_bytes(32);
+        println!("{:?}", bytes);
     }
 }
