@@ -2,6 +2,7 @@ use libc::{c_int, c_void, c_long};
 use std::ffi::{CString, c_str_to_bytes};
 use std::io::{IoResult, IoError, EndOfFile, Stream, Reader, Writer};
 use std::mem;
+use std::fmt;
 use std::num::FromPrimitive;
 use std::ptr;
 use std::sync::{Once, ONCE_INIT, Arc};
@@ -33,9 +34,8 @@ fn init() {
 }
 
 /// Determines the SSL method supported
-#[derive(Show, Hash, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
-#[derive(Copy)]
+#[derive(Copy, Clone, Show, Hash, PartialEq, Eq)]
 pub enum SslMethod {
     #[cfg(feature = "sslv2")]
     /// Only support the SSLv2 protocol, requires `feature="sslv2"`
@@ -71,7 +71,7 @@ impl SslMethod {
 }
 
 /// Determines the type of certificate verification used
-#[derive(Copy)]
+#[derive(Copy, Clone, Show)]
 #[repr(i32)]
 pub enum SslVerifyMode {
     /// Verify that the server's certificate is trusted
@@ -175,6 +175,13 @@ fn wrap_ssl_result(res: c_int) -> Option<SslError> {
 /// An SSL context object
 pub struct SslContext {
     ctx: ptr::Unique<ffi::SSL_CTX>
+}
+
+// TODO: add useful info here
+impl fmt::Show for SslContext {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "SslContext")
+    }
 }
 
 impl Drop for SslContext {
@@ -291,6 +298,13 @@ impl<'ssl> MemBioRef<'ssl> {
 
 pub struct Ssl {
     ssl: ptr::Unique<ffi::SSL>
+}
+
+// TODO: put useful information here
+impl fmt::Show for Ssl {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "Ssl")
+    }
 }
 
 impl Drop for Ssl {
@@ -410,6 +424,12 @@ pub struct SslStream<S> {
     stream: S,
     ssl: Arc<Ssl>,
     buf: Vec<u8>
+}
+
+impl<S> fmt::Show for SslStream<S> where S: fmt::Show {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "SslStream {{ stream: {:?}, ssl: {:?} }}", self.stream, self.ssl)
+    }
 }
 
 impl<S: Stream> SslStream<S> {
@@ -567,6 +587,7 @@ impl<S: Stream> Writer for SslStream<S> {
 }
 
 /// A utility type to help in cases where the use of SSL is decided at runtime.
+#[derive(Show)]
 pub enum MaybeSslStream<S> where S: Stream {
     /// A connection using SSL
     Ssl(SslStream<S>),
