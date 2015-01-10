@@ -8,7 +8,7 @@ use std::ptr;
 
 use asn1::{Asn1Time};
 use bio::{MemBio};
-use crypto::hash::{HashType, evpmd};
+use crypto::hash::{HashType};
 use crypto::pkey::{PKey};
 use crypto::rand::rand_bytes;
 use ffi;
@@ -331,7 +331,7 @@ impl X509Generator {
                                                   self.ext_key_usage.to_str().as_slice()));
             }
 
-            let (hash_fn, _) = evpmd(self.hash_type);
+            let hash_fn = self.hash_type.evp_md();
             try_ssl!(ffi::X509_sign(x509.handle, p_key.get_handle(), hash_fn));
             Ok((x509, p_key))
         }
@@ -388,7 +388,8 @@ impl<'ctx> X509<'ctx> {
 
     /// Returns certificate fingerprint calculated using provided hash
     pub fn fingerprint(&self, hash_type: HashType) -> Option<Vec<u8>> {
-        let (evp, len) = evpmd(hash_type);
+        let evp = hash_type.evp_md();
+        let len = hash_type.md_len();
         let v: Vec<u8> = repeat(0).take(len as usize).collect();
         let act_len: c_uint = 0;
         let res = unsafe {
@@ -399,7 +400,7 @@ impl<'ctx> X509<'ctx> {
         match res {
             0 => None,
             _ => {
-                let act_len = act_len as u32;
+                let act_len = act_len as usize;
                 match len.cmp(&act_len) {
                     Ordering::Greater => None,
                     Ordering::Equal => Some(v),

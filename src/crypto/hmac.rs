@@ -16,66 +16,201 @@
 
 use libc::{c_int, c_uint};
 use std::iter::repeat;
+use std::old_io::{IoError, Writer};
 
-use crypto::hash;
+use crypto::hash::HashType;
 use ffi;
 
-pub struct HMAC {
-    ctx: ffi::HMAC_CTX,
-    len: u32,
+#[derive(PartialEq, Copy)]
+enum State {
+    Reset,
+    Updated,
+    Finalized,
 }
 
-#[allow(non_snake_case)]
-pub fn HMAC(ht: hash::HashType, key: &[u8]) -> HMAC {
-    unsafe {
-        ffi::init();
+use self::State::*;
 
-        let (evp, mdlen) = hash::evpmd(ht);
-
-        let mut ctx : ffi::HMAC_CTX = ::std::mem::uninitialized();
-
-        ffi::HMAC_CTX_init(&mut ctx);
-        ffi::HMAC_Init_ex(&mut ctx,
-                          key.as_ptr(),
-                          key.len() as c_int,
-                          evp, 0 as *const _);
-
-        HMAC { ctx: ctx, len: mdlen }
-    }
+/// Provides HMAC computation.
+///
+/// # Examples
+///
+/// Calculate a HMAC in one go.
+///
+/// ```
+/// use openssl::crypto::hash::HashType;
+/// use openssl::crypto::hmac::hmac;
+/// let key = b"Jefe";
+/// let data = b"what do ya want for nothing?";
+/// let spec = b"\x75\x0c\x78\x3e\x6a\xb0\xb5\x03\xea\xa8\x6e\x31\x0a\x5d\xb7\x38";
+/// let res = hmac(HashType::MD5, key, data);
+/// assert_eq!(spec, res);
+/// ```
+///
+/// Use the `Writer` trait to supply the input in chunks.
+///
+/// ```
+/// use openssl::crypto::hash::HashType;
+/// use std::old_io::Writer;
+/// use openssl::crypto::hmac::HMAC;
+/// let key = b"Jefe";
+/// let data = [b"what do ya ", b"want for nothing?"];
+/// let spec = b"\x75\x0c\x78\x3e\x6a\xb0\xb5\x03\xea\xa8\x6e\x31\x0a\x5d\xb7\x38";
+/// let mut h = HMAC::new(HashType::MD5, &*key);
+/// h.write_all(data[0]);
+/// h.write_all(data[1]);
+/// let res = h.finish();
+/// assert_eq!(spec, res);
+/// ```
+pub struct HMAC {
+    ctx: ffi::HMAC_CTX,
+    type_: HashType,
+    state: State,
 }
 
 impl HMAC {
-    pub fn update(&mut self, data: &[u8]) {
-        unsafe {
-            ffi::HMAC_Update(&mut self.ctx, data.as_ptr(), data.len() as c_uint);
-        }
+    /// Creates a new `HMAC` with the specified hash type using the `key`.
+    pub fn new(ty: HashType, key: &[u8]) -> HMAC {
+        ffi::init();
+
+        let ctx = unsafe {
+            let mut ctx = ::std::mem::uninitialized();
+            ffi::HMAC_CTX_init(&mut ctx);
+            ctx
+        };
+        let md = ty.evp_md();
+
+        let mut h = HMAC { ctx: ctx, type_: ty, state: Finalized };
+        h.init_once(md, key);
+        h
     }
 
-    pub fn finalize(&mut self) -> Vec<u8> {
+    #[inline]
+    fn init_once(&mut self, md: *const ffi::EVP_MD, key: &[u8]) {
         unsafe {
-            let mut res: Vec<u8> = repeat(0).take(self.len as usize).collect();
-            let mut outlen = 0;
-            ffi::HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut outlen);
-            assert!(self.len == outlen as u32);
-            res
+            let r = ffi::HMAC_Init_ex(&mut self.ctx,
+                                      key.as_ptr(), key.len() as c_int,
+                                      md, 0 as *const _);
+            assert_eq!(r, 1);
         }
+        self.state = Reset;
+    }
+
+    #[inline]
+    fn init(&mut self) {
+        match self.state {
+            Reset => return,
+            Updated => { self.finalize(); },
+            Finalized => (),
+        }
+        // If the key and/or md is not supplied it's reused from the last time
+        // avoiding redundant initializations
+        unsafe {
+            let r = ffi::HMAC_Init_ex(&mut self.ctx,
+                                      0 as *const _, 0,
+                                      0 as *const _, 0 as *const _);
+            assert_eq!(r, 1);
+        }
+        self.state = Reset;
+    }
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        if self.state == Finalized {
+            self.init();
+        }
+        unsafe {
+            let r = ffi::HMAC_Update(&mut self.ctx, data.as_ptr(),
+                                     data.len() as c_uint);
+            assert_eq!(r, 1);
+        }
+        self.state = Updated;
+    }
+
+    #[inline]
+    fn finalize(&mut self) -> Vec<u8> {
+        if self.state == Finalized {
+            self.init();
+        }
+        let md_len = self.type_.md_len();
+        let mut res: Vec<u8> = repeat(0).take(md_len).collect();
+        unsafe {
+            let mut len = 0;
+            let r = ffi::HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut len);
+            assert_eq!(len as usize, md_len);
+            assert_eq!(r, 1);
+        }
+        self.state = Finalized;
+        res
+    }
+
+    /// Returns the hash of the data written since creation or
+    /// the last `finish` and resets the hasher.
+    #[inline]
+    pub fn finish(&mut self) -> Vec<u8> {
+        self.finalize()
+    }
+}
+
+impl Writer for HMAC {
+    #[inline]
+    fn write_all(&mut self, buf: &[u8]) -> Result<(), IoError> {
+        self.update(buf);
+        Ok(())
+    }
+}
+
+impl Clone for HMAC {
+    fn clone(&self) -> HMAC {
+        let mut ctx: ffi::HMAC_CTX;
+        unsafe {
+            ctx = ::std::mem::uninitialized();
+            let r = ffi::HMAC_CTX_copy(&mut ctx, &self.ctx);
+            assert_eq!(r, 1);
+        }
+        HMAC { ctx: ctx, type_: self.type_, state: self.state }
     }
 }
 
 impl Drop for HMAC {
     fn drop(&mut self) {
         unsafe {
+            if self.state != Finalized {
+                let mut buf: Vec<u8> = repeat(0).take(self.type_.md_len()).collect();
+                let mut len = 0;
+                ffi::HMAC_Final(&mut self.ctx, buf.as_mut_ptr(), &mut len);
+            }
             ffi::HMAC_CTX_cleanup(&mut self.ctx);
         }
     }
+}
+
+/// Computes the HMAC of the `data` with the hash `t` and `key`.
+pub fn hmac(t: HashType, key: &[u8], data: &[u8]) -> Vec<u8> {
+    let mut h = HMAC::new(t, key);
+    let _ = h.write_all(data);
+    h.finish()
 }
 
 #[cfg(test)]
 mod tests {
     use std::iter::repeat;
     use serialize::hex::FromHex;
-    use crypto::hash::HashType::{self, MD5, SHA1, SHA224, SHA256, SHA384, SHA512};
-    use super::HMAC;
+    use crypto::hash::HashType;
+    use crypto::hash::HashType::*;
+    use super::{hmac, HMAC};
+    use std::old_io::Writer;
+
+    fn test_hmac(ty: HashType, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
+        for &(ref key, ref data, ref res) in tests.iter() {
+            assert_eq!(hmac(ty, &**key, &**data), *res);
+        }
+    }
+
+    fn test_hmac_recycle(h: &mut HMAC, test: &(Vec<u8>, Vec<u8>, Vec<u8>)) {
+        let &(_, ref data, ref res) = test;
+        let _ = h.write_all(&**data);
+        assert_eq!(h.finish(), *res);
+    }
 
     #[test]
     fn test_hmac_md5() {
@@ -103,11 +238,76 @@ mod tests {
              "6f630fad67cda0ee1fb1f562db3aa53e".from_hex().unwrap())
         ];
 
-        for &(ref key, ref data, ref res) in tests.iter() {
-            let mut hmac = HMAC(MD5, key.as_slice());
-            hmac.update(data.as_slice());
-            assert_eq!(hmac.finalize(), *res);
+        test_hmac(MD5, &tests);
+    }
+
+    #[test]
+    fn test_hmac_md5_recycle() {
+        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 2] = [
+            (repeat(0xaa_u8).take(80).collect(),
+             b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
+             "6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd".from_hex().unwrap()),
+            (repeat(0xaa_u8).take(80).collect(),
+             b"Test Using Larger Than Block-Size Key \
+               and Larger Than One Block-Size Data".to_vec(),
+             "6f630fad67cda0ee1fb1f562db3aa53e".from_hex().unwrap())
+        ];
+
+        let mut h = HMAC::new(MD5, &*tests[0].0);
+        for i in 0..100us {
+            let test = &tests[i % 2];
+            test_hmac_recycle(&mut h, test);
         }
+    }
+
+    #[test]
+    fn test_finish_twice() {
+        let test: (Vec<u8>, Vec<u8>, Vec<u8>) =
+            (repeat(0xaa_u8).take(80).collect(),
+             b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
+             "6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd".from_hex().unwrap());
+
+        let mut h = HMAC::new(HashType::MD5, &*test.0);
+        let _ = h.write_all(&*test.1);
+        let _ = h.finish();
+        let res = h.finish();
+        let null = hmac(HashType::MD5, &*test.0, &[]);
+        assert_eq!(res, null);
+    }
+
+    #[test]
+    fn test_clone() {
+        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 2] = [
+            (repeat(0xaa_u8).take(80).collect(),
+             b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
+             "6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd".from_hex().unwrap()),
+            (repeat(0xaa_u8).take(80).collect(),
+             b"Test Using Larger Than Block-Size Key \
+               and Larger Than One Block-Size Data".to_vec(),
+             "6f630fad67cda0ee1fb1f562db3aa53e".from_hex().unwrap()),
+        ];
+        let p = tests[0].0.len() / 2;
+        let h0 = HMAC::new(HashType::MD5, &*tests[0].0);
+
+        println!("Clone a new hmac");
+        let mut h1 = h0.clone();
+        let _ = h1.write_all(&tests[0].1[..p]);
+        {
+            println!("Clone an updated hmac");
+            let mut h2 = h1.clone();
+            let _ = h2.write_all(&tests[0].1[p..]);
+            let res = h2.finish();
+            assert_eq!(res, tests[0].2);
+        }
+        let _ = h1.write_all(&tests[0].1[p..]);
+        let res = h1.finish();
+        assert_eq!(res, tests[0].2);
+
+        println!("Clone a finished hmac");
+        let mut h3 = h1.clone();
+        let _ = h3.write_all(&*tests[1].1);
+        let res = h3.finish();
+        assert_eq!(res, tests[1].2);
     }
 
     #[test]
@@ -136,12 +336,29 @@ mod tests {
              "e8e99d0f45237d786d6bbaa7965c7808bbff1a91".from_hex().unwrap())
         ];
 
-        for &(ref key, ref data, ref res) in tests.iter() {
-            let mut hmac = HMAC(SHA1, key.as_slice());
-            hmac.update(data.as_slice());
-            assert_eq!(hmac.finalize(), *res);
+        test_hmac(SHA1, &tests);
+    }
+
+    #[test]
+    fn test_hmac_sha1_recycle() {
+        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 2] = [
+            (repeat(0xaa_u8).take(80).collect(),
+             b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
+             "aa4ae5e15272d00e95705637ce8a3b55ed402112".from_hex().unwrap()),
+            (repeat(0xaa_u8).take(80).collect(),
+             b"Test Using Larger Than Block-Size Key \
+               and Larger Than One Block-Size Data".to_vec(),
+             "e8e99d0f45237d786d6bbaa7965c7808bbff1a91".from_hex().unwrap())
+        ];
+
+        let mut h = HMAC::new(SHA1, &*tests[0].0);
+        for i in 0..100us {
+            let test = &tests[i % 2];
+            test_hmac_recycle(&mut h, test);
         }
     }
+
+
 
     fn test_sha2(ty: HashType, results: &[Vec<u8>]) {
         // test vectors from RFC 4231
@@ -161,9 +378,15 @@ mod tests {
         ];
 
         for (&(ref key, ref data), res) in tests.iter().zip(results.iter()) {
-            let mut hmac = HMAC(ty, key.as_slice());
-            hmac.update(data.as_slice());
-            assert_eq!(hmac.finalize(), *res);
+            assert_eq!(hmac(ty, &**key, &**data), *res);
+        }
+
+        // recycle test
+        let mut h = HMAC::new(ty, &*tests[5].0);
+        for i in 0..100us {
+            let test = &tests[4 + i % 2];
+            let tup = (test.0.clone(), test.1.clone(), results[4 + i % 2].clone());
+            test_hmac_recycle(&mut h, &tup);
         }
     }
 
