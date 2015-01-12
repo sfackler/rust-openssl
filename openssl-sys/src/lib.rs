@@ -307,11 +307,11 @@ extern "C" {
     pub fn BN_bn2bin(a: *mut BIGNUM, to: *mut u8) -> c_int;
 
     /* Conversion from/to decimal string representation */
-    pub fn BN_dec2bn(a: *const *mut BIGNUM, s: *const i8) -> c_int;
+    pub fn BN_dec2bn(a: *const *mut BIGNUM, s: *const c_char) -> c_int;
     pub fn BN_bn2dec(a: *mut BIGNUM) -> *const c_char;
 
     /* Conversion from/to hexidecimal string representation */
-    pub fn BN_hex2bn(a: *const *mut BIGNUM, s: *const i8) -> c_int;
+    pub fn BN_hex2bn(a: *const *mut BIGNUM, s: *const c_char) -> c_int;
     pub fn BN_bn2hex(a: *mut BIGNUM) -> *const c_char;
 
     pub fn CRYPTO_num_locks() -> c_int;
