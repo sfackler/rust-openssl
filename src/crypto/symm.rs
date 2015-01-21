@@ -100,7 +100,7 @@ impl Crypter {
                 key.as_ptr(),
                 iv.as_ptr(),
                 mode
-            )
+            );
         }
     }
 
@@ -112,7 +112,7 @@ impl Crypter {
         unsafe {
             let sum = data.len() + (self.blocksize as usize);
             let mut res = repeat(0u8).take(sum).collect::<Vec<_>>();
-            let mut reslen = sum as u32;
+            let mut reslen = sum as c_int;
 
             ffi::EVP_CipherUpdate(
                 self.ctx,

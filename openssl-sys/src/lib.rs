@@ -354,34 +354,34 @@ extern "C" {
     pub fn EVP_rc4() -> *const EVP_CIPHER;
 
     pub fn EVP_CIPHER_CTX_new() -> *mut EVP_CIPHER_CTX;
-    pub fn EVP_CIPHER_CTX_set_padding(ctx: *mut EVP_CIPHER_CTX, padding: c_int);
+    pub fn EVP_CIPHER_CTX_set_padding(ctx: *mut EVP_CIPHER_CTX, padding: c_int) -> c_int;
     pub fn EVP_CIPHER_CTX_free(ctx: *mut EVP_CIPHER_CTX);
 
     pub fn EVP_CipherInit(ctx: *mut EVP_CIPHER_CTX, evp: *const EVP_CIPHER,
-                          key: *const u8, iv: *const u8, mode: c_int);
+                          key: *const u8, iv: *const u8, mode: c_int) -> c_int;
     pub fn EVP_CipherUpdate(ctx: *mut EVP_CIPHER_CTX, outbuf: *mut u8,
-                            outlen: &mut c_uint, inbuf: *const u8, inlen: c_int);
-    pub fn EVP_CipherFinal(ctx: *mut EVP_CIPHER_CTX, res: *mut u8, len: &mut c_int);
+                            outlen: &mut c_int, inbuf: *const u8, inlen: c_int) -> c_int;
+    pub fn EVP_CipherFinal(ctx: *mut EVP_CIPHER_CTX, res: *mut u8, len: &mut c_int) -> c_int;
 
-    pub fn EVP_DigestInit(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD);
-    pub fn EVP_DigestInit_ex(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD, imple: *const ENGINE);
-    pub fn EVP_DigestUpdate(ctx: *mut EVP_MD_CTX, data: *const u8, n: c_uint);
-    pub fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32);
-    pub fn EVP_DigestFinal_ex(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32);
+    pub fn EVP_DigestInit(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD) -> c_int;
+    pub fn EVP_DigestInit_ex(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD, imple: *const ENGINE) -> c_int;
+    pub fn EVP_DigestUpdate(ctx: *mut EVP_MD_CTX, data: *const u8, n: c_uint) -> c_int;
+    pub fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
+    pub fn EVP_DigestFinal_ex(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
 
     pub fn EVP_MD_CTX_create() -> *mut EVP_MD_CTX;
     pub fn EVP_MD_CTX_destroy(ctx: *mut EVP_MD_CTX);
 
     pub fn EVP_PKEY_new() -> *mut EVP_PKEY;
     pub fn EVP_PKEY_free(k: *mut EVP_PKEY);
-    pub fn EVP_PKEY_assign(pkey: *mut EVP_PKEY, typ: c_int, key: *const c_char) -> c_int;
+    pub fn EVP_PKEY_assign(pkey: *mut EVP_PKEY, typ: c_int, key: *const c_void) -> c_int;
     pub fn EVP_PKEY_get1_RSA(k: *mut EVP_PKEY) -> *mut RSA;
     pub fn EVP_PKEY_set1_RSA(k: *mut EVP_PKEY, r: *mut RSA) -> c_int;
 
     pub fn HMAC_CTX_init(ctx: *mut HMAC_CTX);
-    pub fn HMAC_Init_ex(ctx: *mut HMAC_CTX, key: *const u8, keylen: c_int, md: *const EVP_MD, imple: *const ENGINE);
-    pub fn HMAC_Final(ctx: *mut HMAC_CTX, output: *mut u8, len: *mut c_uint);
-    pub fn HMAC_Update(ctx: *mut HMAC_CTX, input: *const u8, len: c_uint);
+    pub fn HMAC_Init_ex(ctx: *mut HMAC_CTX, key: *const u8, keylen: c_int, md: *const EVP_MD, imple: *const ENGINE) -> c_int;
+    pub fn HMAC_Final(ctx: *mut HMAC_CTX, output: *mut u8, len: *mut c_uint) -> c_int;
+    pub fn HMAC_Update(ctx: *mut HMAC_CTX, input: *const u8, len: c_uint) -> c_int;
     pub fn HMAC_CTX_cleanup(ctx: *mut HMAC_CTX);
 
 
@@ -401,14 +401,14 @@ extern "C" {
 
     pub fn RAND_bytes(buf: *mut u8, num: c_int) -> c_int;
 
-    pub fn RSA_generate_key(modsz: c_uint, e: c_uint, cb: *const u8, cbarg: *const u8) -> *mut RSA;
-    pub fn RSA_private_decrypt(flen: c_uint, from: *const u8, to: *mut u8, k: *mut RSA,
+    pub fn RSA_generate_key(modsz: c_int, e: c_ulong, cb: *const c_void, cbarg: *const c_void) -> *mut RSA;
+    pub fn RSA_private_decrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA,
                                pad: c_int) -> c_int;
-    pub fn RSA_public_encrypt(flen: c_uint, from: *const u8, to: *mut u8, k: *mut RSA,
+    pub fn RSA_public_encrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA,
                               pad: c_int) -> c_int;
     pub fn RSA_sign(t: c_int, m: *const u8, mlen: c_uint, sig: *mut u8, siglen: *mut c_uint,
                     k: *mut RSA) -> c_int;
-    pub fn RSA_size(k: *mut RSA) -> c_uint;
+    pub fn RSA_size(k: *mut RSA) -> c_int;
     pub fn RSA_verify(t: c_int, m: *const u8, mlen: c_uint, sig: *const u8, siglen: c_uint,
                       k: *mut RSA) -> c_int;
 
