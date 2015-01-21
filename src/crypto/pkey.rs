@@ -1,4 +1,4 @@
-use libc::{c_int, c_uint};
+use libc::{c_int, c_uint, c_ulong};
 use std::iter::repeat;
 use std::mem;
 use std::ptr;
@@ -92,8 +92,8 @@ impl PKey {
     pub fn gen(&mut self, keysz: usize) {
         unsafe {
             let rsa = ffi::RSA_generate_key(
-                keysz as c_uint,
-                65537 as c_uint,
+                keysz as c_int,
+                65537 as c_ulong,
                 ptr::null(),
                 ptr::null()
             );
@@ -213,7 +213,7 @@ impl PKey {
             let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
 
             let rv = ffi::RSA_public_encrypt(
-                s.len() as c_uint,
+                s.len() as c_int,
                 s.as_ptr(),
                 r.as_mut_ptr(),
                 rsa,
@@ -233,12 +233,12 @@ impl PKey {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
             let len = ffi::RSA_size(rsa);
 
-            assert_eq!(s.len() as c_uint, ffi::RSA_size(rsa));
+            assert_eq!(s.len() as c_int, ffi::RSA_size(rsa));
 
             let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
 
             let rv = ffi::RSA_private_decrypt(
-                s.len() as c_uint,
+                s.len() as c_int,
                 s.as_ptr(),
                 r.as_mut_ptr(),
                 rsa,
@@ -279,9 +279,10 @@ impl PKey {
     pub fn sign_with_hash(&self, s: &[u8], hash: HashType) -> Vec<u8> {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
-            let mut len = ffi::RSA_size(rsa);
+            let len = ffi::RSA_size(rsa);
             let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
 
+            let mut len = 0;
             let rv = ffi::RSA_sign(
                 openssl_hash_nid(hash),
                 s.as_ptr(),

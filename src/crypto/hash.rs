@@ -84,7 +84,7 @@ impl Hasher {
     /// Update this hasher with more input bytes
     pub fn update(&mut self, data: &[u8]) {
         unsafe {
-            ffi::EVP_DigestUpdate(self.ctx.ptr, data.as_ptr(), data.len() as c_uint)
+            ffi::EVP_DigestUpdate(self.ctx.ptr, data.as_ptr(), data.len() as c_uint);
         }
     }
 

@@ -47,7 +47,7 @@ pub fn HMAC(ht: hash::HashType, key: &[u8]) -> HMAC {
 impl HMAC {
     pub fn update(&mut self, data: &[u8]) {
         unsafe {
-            ffi::HMAC_Update(&mut self.ctx, data.as_ptr(), data.len() as c_uint)
+            ffi::HMAC_Update(&mut self.ctx, data.as_ptr(), data.len() as c_uint);
         }
     }
 
