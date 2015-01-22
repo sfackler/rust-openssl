@@ -2,7 +2,7 @@ use serialize::hex::FromHex;
 use std::old_io::{File, Open, Read};
 use std::old_io::util::NullWriter;
 
-use crypto::hash::HashType::{SHA256};
+use crypto::hash::Type::{SHA256};
 use x509::{X509, X509Generator};
 use x509::KeyUsage::{DigitalSignature, KeyEncipherment};
 use x509::ExtKeyUsage::{ClientAuth, ServerAuth};

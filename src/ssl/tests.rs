@@ -3,7 +3,7 @@ use std::old_io::net::tcp::TcpStream;
 use std::old_io::{Writer};
 use std::thread::Thread;
 
-use crypto::hash::HashType::{SHA256};
+use crypto::hash::Type::{SHA256};
 use ssl::SslMethod::Sslv23;
 use ssl::{SslContext, SslStream, VerifyCallback};
 use ssl::SslVerifyMode::SslVerifyPeer;

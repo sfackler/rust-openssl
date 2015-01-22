@@ -3,7 +3,8 @@ use std::iter::repeat;
 use std::mem;
 use std::ptr;
 use bio::{MemBio};
-use crypto::hash::HashType;
+use crypto::hash;
+use crypto::hash::Type as HashType;
 use ffi;
 use ssl::error::{SslError, StreamError};
 
@@ -276,7 +277,7 @@ impl PKey {
      */
     pub fn verify(&self, m: &[u8], s: &[u8]) -> bool { self.verify_with_hash(m, s, HashType::SHA256) }
 
-    pub fn sign_with_hash(&self, s: &[u8], hash: HashType) -> Vec<u8> {
+    pub fn sign_with_hash(&self, s: &[u8], hash: hash::Type) -> Vec<u8> {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
             let len = ffi::RSA_size(rsa);
@@ -300,7 +301,7 @@ impl PKey {
         }
     }
 
-    pub fn verify_with_hash(&self, m: &[u8], s: &[u8], hash: HashType) -> bool {
+    pub fn verify_with_hash(&self, m: &[u8], s: &[u8], hash: hash::Type) -> bool {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
 
@@ -332,7 +333,7 @@ impl Drop for PKey {
 
 #[cfg(test)]
 mod tests {
-    use crypto::hash::HashType::{MD5, SHA1};
+    use crypto::hash::Type::{MD5, SHA1};
 
     #[test]
     fn test_gen_pub() {

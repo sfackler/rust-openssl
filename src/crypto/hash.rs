@@ -6,7 +6,7 @@ use ffi;
 
 /// Message digest (hash) type.
 #[derive(Copy)]
-pub enum HashType {
+pub enum Type {
     MD5,
     SHA1,
     SHA224,
@@ -16,11 +16,11 @@ pub enum HashType {
     RIPEMD160
 }
 
-impl HashType {
+impl Type {
     /// Returns the length of the message digest.
     #[inline]
     pub fn md_len(&self) -> usize {
-        use self::HashType::*;
+        use self::Type::*;
         match *self {
             MD5 => 16,
             SHA1 => 20,
@@ -36,7 +36,7 @@ impl HashType {
     #[inline]
     pub fn evp_md(&self) -> *const ffi::EVP_MD {
         unsafe {
-            use self::HashType::*;
+            use self::Type::*;
             match *self {
                 MD5 => ffi::EVP_md5(),
                 SHA1 => ffi::EVP_sha1(),
@@ -66,10 +66,10 @@ use self::State::*;
 /// Calculate a hash in one go.
 ///
 /// ```
-/// use openssl::crypto::hash::{hash, HashType};
+/// use openssl::crypto::hash::{hash, Type};
 /// let data = b"\x42\xF4\x97\xE0";
 /// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
-/// let res = hash(HashType::MD5, data);
+/// let res = hash(Type::MD5, data);
 /// assert_eq!(res, spec);
 /// ```
 ///
@@ -77,10 +77,10 @@ use self::State::*;
 ///
 /// ```
 /// use std::old_io::Writer;
-/// use openssl::crypto::hash::{Hasher, HashType};
+/// use openssl::crypto::hash::{Hasher, Type};
 /// let data = [b"\x42\xF4", b"\x97\xE0"];
 /// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
-/// let mut h = Hasher::new(HashType::MD5);
+/// let mut h = Hasher::new(Type::MD5);
 /// h.write_all(data[0]);
 /// h.write_all(data[1]);
 /// let res = h.finish();
@@ -95,13 +95,13 @@ use self::State::*;
 pub struct Hasher {
     ctx: *mut ffi::EVP_MD_CTX,
     md: *const ffi::EVP_MD,
-    type_: HashType,
+    type_: Type,
     state: State,
 }
 
 impl Hasher {
     /// Creates a new `Hasher` with the specified hash type.
-    pub fn new(ty: HashType) -> Hasher {
+    pub fn new(ty: Type) -> Hasher {
         ffi::init();
 
         let ctx = unsafe {
@@ -203,7 +203,7 @@ impl Drop for Hasher {
 }
 
 /// Computes the hash of the `data` with the hash `t`.
-pub fn hash(t: HashType, data: &[u8]) -> Vec<u8> {
+pub fn hash(t: Type, data: &[u8]) -> Vec<u8> {
     let mut h = Hasher::new(t);
     let _ = h.write_all(data);
     h.finish()
@@ -212,10 +212,10 @@ pub fn hash(t: HashType, data: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use serialize::hex::{FromHex, ToHex};
-    use super::{hash, Hasher, HashType};
+    use super::{hash, Hasher, Type};
     use std::old_io::Writer;
 
-    fn hash_test(hashtype: HashType, hashtest: &(&str, &str)) {
+    fn hash_test(hashtype: Type, hashtest: &(&str, &str)) {
         let res = hash(hashtype, &*hashtest.0.from_hex().unwrap());
         assert_eq!(res.to_hex(), hashtest.1);
     }
@@ -247,13 +247,13 @@ mod tests {
     #[test]
     fn test_md5() {
         for test in md5_tests.iter() {
-            hash_test(HashType::MD5, test);
+            hash_test(Type::MD5, test);
         }
     }
 
     #[test]
     fn test_md5_recycle() {
-        let mut h = Hasher::new(HashType::MD5);
+        let mut h = Hasher::new(Type::MD5);
         for test in md5_tests.iter() {
             hash_recycle_test(&mut h, test);
         }
@@ -261,11 +261,11 @@ mod tests {
 
     #[test]
     fn test_finish_twice() {
-        let mut h = Hasher::new(HashType::MD5);
+        let mut h = Hasher::new(Type::MD5);
         let _ = h.write_all(&*md5_tests[6].0.from_hex().unwrap());
         let _ = h.finish();
         let res = h.finish();
-        let null = hash(HashType::MD5, &[]);
+        let null = hash(Type::MD5, &[]);
         assert_eq!(res, null);
     }
 
@@ -275,7 +275,7 @@ mod tests {
         let inp = md5_tests[i].0.from_hex().unwrap();
         assert!(inp.len() > 2);
         let p = inp.len() / 2;
-        let h0 = Hasher::new(HashType::MD5);
+        let h0 = Hasher::new(Type::MD5);
 
         println!("Clone a new hasher");
         let mut h1 = h0.clone();
@@ -305,7 +305,7 @@ mod tests {
             ];
 
         for test in tests.iter() {
-            hash_test(HashType::SHA1, test);
+            hash_test(Type::SHA1, test);
         }
     }
 
@@ -316,7 +316,7 @@ mod tests {
             ];
 
         for test in tests.iter() {
-            hash_test(HashType::SHA256, test);
+            hash_test(Type::SHA256, test);
         }
     }
 
@@ -327,7 +327,7 @@ mod tests {
             ];
 
         for test in tests.iter() {
-            hash_test(HashType::RIPEMD160, test);
+            hash_test(Type::RIPEMD160, test);
         }
     }
 }

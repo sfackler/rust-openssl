@@ -18,7 +18,7 @@ use libc::{c_int, c_uint};
 use std::iter::repeat;
 use std::old_io::{IoError, Writer};
 
-use crypto::hash::HashType;
+use crypto::hash::Type;
 use ffi;
 
 #[derive(PartialEq, Copy)]
@@ -37,25 +37,25 @@ use self::State::*;
 /// Calculate a HMAC in one go.
 ///
 /// ```
-/// use openssl::crypto::hash::HashType;
+/// use openssl::crypto::hash::Type;
 /// use openssl::crypto::hmac::hmac;
 /// let key = b"Jefe";
 /// let data = b"what do ya want for nothing?";
 /// let spec = b"\x75\x0c\x78\x3e\x6a\xb0\xb5\x03\xea\xa8\x6e\x31\x0a\x5d\xb7\x38";
-/// let res = hmac(HashType::MD5, key, data);
+/// let res = hmac(Type::MD5, key, data);
 /// assert_eq!(spec, res);
 /// ```
 ///
 /// Use the `Writer` trait to supply the input in chunks.
 ///
 /// ```
-/// use openssl::crypto::hash::HashType;
 /// use std::old_io::Writer;
+/// use openssl::crypto::hash::Type;
 /// use openssl::crypto::hmac::HMAC;
 /// let key = b"Jefe";
 /// let data = [b"what do ya ", b"want for nothing?"];
 /// let spec = b"\x75\x0c\x78\x3e\x6a\xb0\xb5\x03\xea\xa8\x6e\x31\x0a\x5d\xb7\x38";
-/// let mut h = HMAC::new(HashType::MD5, &*key);
+/// let mut h = HMAC::new(Type::MD5, &*key);
 /// h.write_all(data[0]);
 /// h.write_all(data[1]);
 /// let res = h.finish();
@@ -63,13 +63,13 @@ use self::State::*;
 /// ```
 pub struct HMAC {
     ctx: ffi::HMAC_CTX,
-    type_: HashType,
+    type_: Type,
     state: State,
 }
 
 impl HMAC {
     /// Creates a new `HMAC` with the specified hash type using the `key`.
-    pub fn new(ty: HashType, key: &[u8]) -> HMAC {
+    pub fn new(ty: Type, key: &[u8]) -> HMAC {
         ffi::init();
 
         let ctx = unsafe {
@@ -185,7 +185,7 @@ impl Drop for HMAC {
 }
 
 /// Computes the HMAC of the `data` with the hash `t` and `key`.
-pub fn hmac(t: HashType, key: &[u8], data: &[u8]) -> Vec<u8> {
+pub fn hmac(t: Type, key: &[u8], data: &[u8]) -> Vec<u8> {
     let mut h = HMAC::new(t, key);
     let _ = h.write_all(data);
     h.finish()
@@ -195,12 +195,12 @@ pub fn hmac(t: HashType, key: &[u8], data: &[u8]) -> Vec<u8> {
 mod tests {
     use std::iter::repeat;
     use serialize::hex::FromHex;
-    use crypto::hash::HashType;
-    use crypto::hash::HashType::*;
+    use crypto::hash::Type;
+    use crypto::hash::Type::*;
     use super::{hmac, HMAC};
     use std::old_io::Writer;
 
-    fn test_hmac(ty: HashType, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
+    fn test_hmac(ty: Type, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
         for &(ref key, ref data, ref res) in tests.iter() {
             assert_eq!(hmac(ty, &**key, &**data), *res);
         }
@@ -267,11 +267,11 @@ mod tests {
              b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
              "6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd".from_hex().unwrap());
 
-        let mut h = HMAC::new(HashType::MD5, &*test.0);
+        let mut h = HMAC::new(Type::MD5, &*test.0);
         let _ = h.write_all(&*test.1);
         let _ = h.finish();
         let res = h.finish();
-        let null = hmac(HashType::MD5, &*test.0, &[]);
+        let null = hmac(Type::MD5, &*test.0, &[]);
         assert_eq!(res, null);
     }
 
@@ -287,7 +287,7 @@ mod tests {
              "6f630fad67cda0ee1fb1f562db3aa53e".from_hex().unwrap()),
         ];
         let p = tests[0].0.len() / 2;
-        let h0 = HMAC::new(HashType::MD5, &*tests[0].0);
+        let h0 = HMAC::new(Type::MD5, &*tests[0].0);
 
         println!("Clone a new hmac");
         let mut h1 = h0.clone();
@@ -360,7 +360,7 @@ mod tests {
 
 
 
-    fn test_sha2(ty: HashType, results: &[Vec<u8>]) {
+    fn test_sha2(ty: Type, results: &[Vec<u8>]) {
         // test vectors from RFC 4231
         let tests: [(Vec<u8>, Vec<u8>); 6] = [
             (repeat(0xb_u8).take(20).collect(), b"Hi There".to_vec()),
