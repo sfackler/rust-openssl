@@ -35,7 +35,7 @@ fn init() {
 
 /// Determines the SSL method supported
 #[allow(non_camel_case_types)]
-#[derive(Copy, Clone, Show, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum SslMethod {
     #[cfg(feature = "sslv2")]
     /// Only support the SSLv2 protocol, requires `feature="sslv2"`
@@ -71,7 +71,7 @@ impl SslMethod {
 }
 
 /// Determines the type of certificate verification used
-#[derive(Copy, Clone, Show)]
+#[derive(Copy, Clone, Debug)]
 #[repr(i32)]
 pub enum SslVerifyMode {
     /// Verify that the server's certificate is trusted
@@ -178,7 +178,7 @@ pub struct SslContext {
 }
 
 // TODO: add useful info here
-impl fmt::Show for SslContext {
+impl fmt::Debug for SslContext {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "SslContext")
     }
@@ -301,7 +301,7 @@ pub struct Ssl {
 }
 
 // TODO: put useful information here
-impl fmt::Show for Ssl {
+impl fmt::Debug for Ssl {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "Ssl")
     }
@@ -404,7 +404,7 @@ impl Ssl {
 
 }
 
-#[derive(FromPrimitive, Show)]
+#[derive(FromPrimitive, Debug)]
 #[repr(i32)]
 enum LibSslError {
     ErrorNone = ffi::SSL_ERROR_NONE,
@@ -426,7 +426,7 @@ pub struct SslStream<S> {
     buf: Vec<u8>
 }
 
-impl<S> fmt::Show for SslStream<S> where S: fmt::Show {
+impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "SslStream {{ stream: {:?}, ssl: {:?} }}", self.stream, self.ssl)
     }
@@ -510,7 +510,7 @@ impl<S: Stream> SslStream<S> {
                 LibSslError::ErrorWantRead => {
                     try_ssl_stream!(self.flush());
                     let len = try_ssl_stream!(self.stream.read(self.buf.as_mut_slice()));
-                    self.ssl.get_rbio().write(self.buf.slice_to(len));
+                    self.ssl.get_rbio().write(&self.buf[..len]);
                 }
                 LibSslError::ErrorWantWrite => { try_ssl_stream!(self.flush()) }
                 LibSslError::ErrorZeroReturn => return Err(SslSessionClosed),
@@ -523,7 +523,7 @@ impl<S: Stream> SslStream<S> {
     fn write_through(&mut self) -> IoResult<()> {
         loop {
             match self.ssl.get_wbio().read(self.buf.as_mut_slice()) {
-                Some(len) => try!(self.stream.write(self.buf.slice_to(len))),
+                Some(len) => try!(self.stream.write(&self.buf[..len])),
                 None => break
             };
         }
@@ -587,7 +587,7 @@ impl<S: Stream> Writer for SslStream<S> {
 }
 
 /// A utility type to help in cases where the use of SSL is decided at runtime.
-#[derive(Show)]
+#[derive(Debug)]
 pub enum MaybeSslStream<S> where S: Stream {
     /// A connection using SSL
     Ssl(SslStream<S>),

@@ -438,7 +438,7 @@ impl BigNum {
     }
 }
 
-impl fmt::Show for BigNum {
+impl fmt::Debug for BigNum {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.to_dec_str())
     }

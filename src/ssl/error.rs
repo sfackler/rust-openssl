@@ -3,6 +3,7 @@ pub use self::OpensslError::*;
 
 use libc::c_ulong;
 use std::error;
+use std::fmt;
 use std::ffi::c_str_to_bytes;
 use std::io::IoError;
 
@@ -17,6 +18,12 @@ pub enum SslError {
     SslSessionClosed,
     /// An error in the OpenSSL library
     OpenSslErrors(Vec<OpensslError>)
+}
+
+impl fmt::Display for SslError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.write_str(error::Error::description(self))
+    }
 }
 
 impl error::Error for SslError {
