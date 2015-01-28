@@ -8,7 +8,8 @@ use std::ptr;
 
 use asn1::{Asn1Time};
 use bio::{MemBio};
-use crypto::hash::{HashType, evpmd};
+use crypto::hash;
+use crypto::hash::Type as HashType;
 use crypto::pkey::{PKey};
 use crypto::rand::rand_bytes;
 use ffi;
@@ -152,14 +153,14 @@ impl<'a, T: AsStr<'a>> ToStr for Vec<T> {
 /// use std::old_io::{File, Open, Write};
 /// # use std::old_io::fs;
 ///
-/// use openssl::crypto::hash::HashType;
+/// use openssl::crypto::hash::Type;
 /// use openssl::x509::{KeyUsage, X509Generator};
 ///
 /// let gen = X509Generator::new()
 ///        .set_bitlength(2048)
 ///        .set_valid_period(365*2)
 ///        .set_CN("SuperMegaCorp Inc.")
-///        .set_sign_hash(HashType::SHA256)
+///        .set_sign_hash(Type::SHA256)
 ///        .set_usage(&[KeyUsage::DigitalSignature]);
 ///
 /// let (cert, pkey) = gen.generate().unwrap();
@@ -236,7 +237,7 @@ impl X509Generator {
         self
     }
 
-    pub fn set_sign_hash(mut self, hash_type: HashType) -> X509Generator {
+    pub fn set_sign_hash(mut self, hash_type: hash::Type) -> X509Generator {
         self.hash_type = hash_type;
         self
     }
@@ -331,7 +332,7 @@ impl X509Generator {
                                                   self.ext_key_usage.to_str().as_slice()));
             }
 
-            let (hash_fn, _) = evpmd(self.hash_type);
+            let hash_fn = self.hash_type.evp_md();
             try_ssl!(ffi::X509_sign(x509.handle, p_key.get_handle(), hash_fn));
             Ok((x509, p_key))
         }
@@ -387,8 +388,9 @@ impl<'ctx> X509<'ctx> {
     }
 
     /// Returns certificate fingerprint calculated using provided hash
-    pub fn fingerprint(&self, hash_type: HashType) -> Option<Vec<u8>> {
-        let (evp, len) = evpmd(hash_type);
+    pub fn fingerprint(&self, hash_type: hash::Type) -> Option<Vec<u8>> {
+        let evp = hash_type.evp_md();
+        let len = hash_type.md_len();
         let v: Vec<u8> = repeat(0).take(len as usize).collect();
         let act_len: c_uint = 0;
         let res = unsafe {
@@ -399,7 +401,7 @@ impl<'ctx> X509<'ctx> {
         match res {
             0 => None,
             _ => {
-                let act_len = act_len as u32;
+                let act_len = act_len as usize;
                 match len.cmp(&act_len) {
                     Ordering::Greater => None,
                     Ordering::Equal => Some(v),

@@ -370,6 +370,7 @@ extern "C" {
     pub fn EVP_DigestFinal_ex(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
 
     pub fn EVP_MD_CTX_create() -> *mut EVP_MD_CTX;
+    pub fn EVP_MD_CTX_copy_ex(dst: *mut EVP_MD_CTX, src: *const EVP_MD_CTX) -> c_int;
     pub fn EVP_MD_CTX_destroy(ctx: *mut EVP_MD_CTX);
 
     pub fn EVP_PKEY_new() -> *mut EVP_PKEY;
@@ -383,6 +384,7 @@ extern "C" {
     pub fn HMAC_Final(ctx: *mut HMAC_CTX, output: *mut u8, len: *mut c_uint) -> c_int;
     pub fn HMAC_Update(ctx: *mut HMAC_CTX, input: *const u8, len: c_uint) -> c_int;
     pub fn HMAC_CTX_cleanup(ctx: *mut HMAC_CTX);
+    pub fn HMAC_CTX_copy(dst: *mut HMAC_CTX, src: *const HMAC_CTX) -> c_int;
 
 
     pub fn PEM_read_bio_X509(bio: *mut BIO, out: *mut *mut X509, callback: Option<PasswordCallback>,
