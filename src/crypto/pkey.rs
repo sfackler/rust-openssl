@@ -149,7 +149,7 @@ impl PKey {
 
         }
         let buf = try!(mem_bio.read_to_end().map_err(StreamError));
-        writer.write(buf.as_slice()).map_err(StreamError)
+        writer.write_all(buf.as_slice()).map_err(StreamError)
     }
 
     /**

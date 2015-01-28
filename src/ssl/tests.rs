@@ -1,6 +1,6 @@
 use serialize::hex::FromHex;
-use std::io::net::tcp::TcpStream;
-use std::io::{Writer};
+use std::old_io::net::tcp::TcpStream;
+use std::old_io::{Writer};
 use std::thread::Thread;
 
 use crypto::hash::HashType::{SHA256};
