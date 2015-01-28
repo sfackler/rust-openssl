@@ -1,6 +1,6 @@
 use serialize::hex::FromHex;
-use std::io::{File, Open, Read};
-use std::io::util::NullWriter;
+use std::old_io::{File, Open, Read};
+use std::old_io::util::NullWriter;
 
 use crypto::hash::HashType::{SHA256};
 use x509::{X509, X509Generator};

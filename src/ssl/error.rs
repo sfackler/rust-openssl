@@ -5,7 +5,7 @@ use libc::c_ulong;
 use std::error;
 use std::fmt;
 use std::ffi::c_str_to_bytes;
-use std::io::IoError;
+use std::old_io::IoError;
 
 use ffi;
 

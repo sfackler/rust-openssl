@@ -1,6 +1,6 @@
 use libc::{c_void, c_int};
-use std::io::{EndOfFile, IoResult, IoError, OtherIoError};
-use std::io::{Reader, Writer};
+use std::old_io::{EndOfFile, IoResult, IoError, OtherIoError};
+use std::old_io::{Reader, Writer};
 use std::ptr;
 
 use ffi;
@@ -87,7 +87,7 @@ impl Reader for MemBio {
 }
 
 impl Writer for MemBio {
-    fn write(&mut self, buf: &[u8]) -> IoResult<()> {
+    fn write_all(&mut self, buf: &[u8]) -> IoResult<()> {
         let ret = unsafe {
             ffi::BIO_write(self.bio, buf.as_ptr() as *const c_void,
                            buf.len() as c_int)

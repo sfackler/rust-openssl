@@ -149,8 +149,8 @@ impl<'a, T: AsStr<'a>> ToStr for Vec<T> {
 /// ```
 /// # #[allow(unstable)]
 /// # fn main() {
-/// use std::io::{File, Open, Write};
-/// # use std::io::fs;
+/// use std::old_io::{File, Open, Write};
+/// # use std::old_io::fs;
 ///
 /// use openssl::crypto::hash::HashType;
 /// use openssl::x509::{KeyUsage, X509Generator};
@@ -371,7 +371,7 @@ impl<'ctx> X509<'ctx> {
     pub fn from_pem<R>(reader: &mut R) -> Result<X509<'ctx>, SslError> where R: Reader {
         let mut mem_bio = try!(MemBio::new());
         let buf = try!(reader.read_to_end().map_err(StreamError));
-        try!(mem_bio.write(buf.as_slice()).map_err(StreamError));
+        try!(mem_bio.write_all(buf.as_slice()).map_err(StreamError));
 
         unsafe {
             let handle = try_ssl_null!(ffi::PEM_read_bio_X509(mem_bio.get_handle(),
@@ -417,7 +417,7 @@ impl<'ctx> X509<'ctx> {
                                              self.handle));
         }
         let buf = try!(mem_bio.read_to_end().map_err(StreamError));
-        writer.write(buf.as_slice()).map_err(StreamError)
+        writer.write_all(buf.as_slice()).map_err(StreamError)
     }
 }
 

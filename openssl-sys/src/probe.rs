@@ -1,5 +1,5 @@
 use std::os;
-use std::io::fs::PathExtensions;
+use std::old_io::fs::PathExtensions;
 
 pub struct ProbeResult {
     pub cert_file: Option<Path>,
