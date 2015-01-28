@@ -1,6 +1,6 @@
 use libc::c_uint;
 use std::ptr;
-use std::io;
+use std::old_io;
 use std::iter::repeat;
 
 use ffi;
@@ -59,8 +59,8 @@ pub struct Hasher {
     len: u32,
 }
 
-impl io::Writer for Hasher {
-    fn write(&mut self, buf: &[u8]) -> io::IoResult<()> {
+impl old_io::Writer for Hasher {
+    fn write_all(&mut self, buf: &[u8]) -> old_io::IoResult<()> {
         self.update(buf);
         Ok(())
     }
@@ -163,7 +163,7 @@ mod tests {
 
     pub fn hash_writer(t: super::HashType, data: &[u8]) -> Vec<u8> {
         let mut h = super::Hasher::new(t);
-        h.write(data).unwrap();
+        h.write_all(data).unwrap();
         h.finalize()
     }
 

@@ -1,6 +1,6 @@
 use libc::{c_int, c_void, c_long};
 use std::ffi::{CString, c_str_to_bytes};
-use std::io::{IoResult, IoError, EndOfFile, Stream, Reader, Writer};
+use std::old_io::{IoResult, IoError, EndOfFile, Stream, Reader, Writer};
 use std::mem;
 use std::fmt;
 use std::num::FromPrimitive;
@@ -292,7 +292,7 @@ impl<'ssl> MemBioRef<'ssl> {
     }
 
     fn write(&mut self, buf: &[u8]) {
-        let _ = (&mut self.bio as &mut Writer).write(buf);
+        let _ = (&mut self.bio as &mut Writer).write_all(buf);
     }
 }
 
@@ -523,7 +523,7 @@ impl<S: Stream> SslStream<S> {
     fn write_through(&mut self) -> IoResult<()> {
         loop {
             match self.ssl.get_wbio().read(self.buf.as_mut_slice()) {
-                Some(len) => try!(self.stream.write(&self.buf[..len])),
+                Some(len) => try!(self.stream.write_all(&self.buf[..len])),
                 None => break
             };
         }
@@ -565,7 +565,7 @@ impl<S: Stream> Reader for SslStream<S> {
 }
 
 impl<S: Stream> Writer for SslStream<S> {
-    fn write(&mut self, buf: &[u8]) -> IoResult<()> {
+    fn write_all(&mut self, buf: &[u8]) -> IoResult<()> {
         let mut start = 0;
         while start < buf.len() {
             let ret = self.in_retry_wrapper(|ssl| {
@@ -605,10 +605,10 @@ impl<S> Reader for MaybeSslStream<S> where S: Stream {
 }
 
 impl<S> Writer for MaybeSslStream<S> where S: Stream{
-    fn write(&mut self, buf: &[u8]) -> IoResult<()> {
+    fn write_all(&mut self, buf: &[u8]) -> IoResult<()> {
         match *self {
-            MaybeSslStream::Ssl(ref mut s) => s.write(buf),
-            MaybeSslStream::Normal(ref mut s) => s.write(buf),
+            MaybeSslStream::Ssl(ref mut s) => s.write_all(buf),
+            MaybeSslStream::Normal(ref mut s) => s.write_all(buf),
         }
     }
 

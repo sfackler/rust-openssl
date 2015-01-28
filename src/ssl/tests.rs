@@ -1,6 +1,6 @@
 use serialize::hex::FromHex;
-use std::io::net::tcp::TcpStream;
-use std::io::{Writer};
+use std::old_io::net::tcp::TcpStream;
+use std::old_io::{Writer};
 use std::thread::Thread;
 
 use crypto::hash::HashType::{SHA256};
@@ -179,9 +179,9 @@ fn test_verify_callback_data() {
 fn test_write() {
     let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
     let mut stream = SslStream::new(&SslContext::new(Sslv23).unwrap(), stream).unwrap();
-    stream.write("hello".as_bytes()).unwrap();
+    stream.write_all("hello".as_bytes()).unwrap();
     stream.flush().unwrap();
-    stream.write(" there".as_bytes()).unwrap();
+    stream.write_all(" there".as_bytes()).unwrap();
     stream.flush().unwrap();
 }
 
@@ -189,7 +189,7 @@ fn test_write() {
 fn test_read() {
     let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
     let mut stream = SslStream::new(&SslContext::new(Sslv23).unwrap(), stream).unwrap();
-    stream.write("GET /\r\n\r\n".as_bytes()).unwrap();
+    stream.write_all("GET /\r\n\r\n".as_bytes()).unwrap();
     stream.flush().unwrap();
     stream.read_to_end().ok().expect("read error");
 }
@@ -200,7 +200,7 @@ fn test_clone() {
     let mut stream = SslStream::new(&SslContext::new(Sslv23).unwrap(), stream).unwrap();
     let mut stream2 = stream.clone();
     let _t = Thread::spawn(move || {
-        stream2.write("GET /\r\n\r\n".as_bytes()).unwrap();
+        stream2.write_all("GET /\r\n\r\n".as_bytes()).unwrap();
         stream2.flush().unwrap();
     });
     stream.read_to_end().ok().expect("read error");
