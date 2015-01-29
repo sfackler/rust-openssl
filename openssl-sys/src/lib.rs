@@ -364,9 +364,13 @@ extern "C" {
 
     pub fn EVP_CipherInit(ctx: *mut EVP_CIPHER_CTX, evp: *const EVP_CIPHER,
                           key: *const u8, iv: *const u8, mode: c_int) -> c_int;
+    pub fn EVP_CipherInit_ex(ctx: *mut EVP_CIPHER_CTX, evp: *const EVP_CIPHER,
+                             imple: *const ENGINE, key: *const u8, iv: *const u8,
+                             mode: c_int) -> c_int;
     pub fn EVP_CipherUpdate(ctx: *mut EVP_CIPHER_CTX, outbuf: *mut u8,
                             outlen: &mut c_int, inbuf: *const u8, inlen: c_int) -> c_int;
     pub fn EVP_CipherFinal(ctx: *mut EVP_CIPHER_CTX, res: *mut u8, len: &mut c_int) -> c_int;
+    pub fn EVP_CipherFinal_ex(ctx: *mut EVP_CIPHER_CTX, res: *mut u8, len: &mut c_int) -> c_int;
 
     pub fn EVP_DigestInit(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD) -> c_int;
     pub fn EVP_DigestInit_ex(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD, imple: *const ENGINE) -> c_int;
