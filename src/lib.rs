@@ -1,5 +1,4 @@
-#![feature(unsafe_destructor)]
-#![allow(unstable)]
+#![feature(unsafe_destructor, core, io, std_misc, libc, hash, path, collections)]
 #![crate_name="openssl"]
 #![crate_type="rlib"]
 #![crate_type="dylib"]
@@ -7,7 +6,7 @@
 
 extern crate libc;
 #[cfg(test)]
-extern crate serialize;
+extern crate "rustc-serialize" as serialize;
 
 extern crate "openssl-sys" as ffi;
 
