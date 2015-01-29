@@ -45,6 +45,40 @@ trait EVPC {
     fn evpc(&self) -> *const ffi::EVP_CIPHER;
 }
 
+trait Transcoder {
+    fn transcode(&mut self, data: &[u8], buf: &mut [u8]) -> usize;
+    fn finish(&mut self, buf: &mut [u8]) -> usize;
+}
+
+pub struct WriterAdapter<'a, T: 'a> {
+    parent: &'a mut T,
+    sink: &'a mut (Writer + 'a),
+}
+
+impl <'a, T: Transcoder> Writer for WriterAdapter<'a, T> {
+    fn write_all(&mut self, data: &[u8]) -> Result<(), IoError> {
+        let mut buf = [0; DEFAULT_BUF_LEN + MAX_BLOCK_LEN];
+        for chunk in data.chunks(DEFAULT_BUF_LEN) {
+            let len = self.parent.transcode(chunk, &mut buf);
+            if len > 0 {
+                let _ = self.sink.write_all(&buf[..len]);
+            }
+        }
+        Ok(())
+    }
+}
+
+#[unsafe_destructor]
+impl <'a, T: Transcoder> Drop for WriterAdapter<'a, T> {
+    fn drop(&mut self) {
+        let mut buf = [0; MAX_BLOCK_LEN];
+        let len = self.parent.finish(&mut buf);
+        if len > 0 {
+            let _ = self.sink.write_all(&buf[..len]);
+        }
+    }
+}
+
 impl Context {
     fn new(cipher: *const ffi::EVP_CIPHER, dir: Direction, key: &[u8]) -> Context {
         ffi::init();
@@ -65,7 +99,7 @@ impl Context {
     }
 
     fn init(&mut self) {
-        assert!(self.state == Finalized);
+        assert!(self.state == Finalized, "Illegal call order");
         unsafe {
             chk!(ffi::EVP_CipherInit_ex(self.ctx, 0 as *const _, 0 as *const _,
                                         0 as *const _, 0 as *const _, -1));
@@ -85,13 +119,11 @@ impl Context {
     */
 
     unsafe fn update(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
-        assert!(self.state != Finalized);
-        let len = unsafe {
-            let mut l = 0;
-            chk!(ffi::EVP_CipherUpdate(self.ctx, buf.as_mut_ptr(), &mut l,
-                                       data.as_ptr(), data.len() as c_int));
-            l as usize
-        };
+        assert!(self.state != Finalized, "Illegal call order");
+        let mut len = 0;
+        chk!(ffi::EVP_CipherUpdate(self.ctx, buf.as_mut_ptr(), &mut len,
+                                   data.as_ptr(), data.len() as c_int));
+        let len = len as usize;
         assert!(len <= buf.len());
         self.state = Updated;
         len
@@ -103,12 +135,10 @@ impl Context {
     }
 
     unsafe fn finalize(&mut self, buf: &mut [u8]) -> usize {
-        assert!(self.state != Finalized);
-        let len = unsafe {
-            let mut l = 0;
-            chk!(ffi::EVP_CipherFinal_ex(self.ctx, buf.as_mut_ptr(), &mut l));
-            l as usize
-        };
+        assert!(self.state != Finalized, "Illegal call order");
+        let mut len = 0;
+        chk!(ffi::EVP_CipherFinal_ex(self.ctx, buf.as_mut_ptr(), &mut len));
+        let len = len as usize;
         assert!(len <= buf.len());
         self.state = Finalized;
         len
@@ -179,51 +209,37 @@ impl EVPC for ECBType {
     }
 }
 
-pub struct ECB<'a> {
+pub struct ECB {
     context: Context,
-    sink: Option<&'a mut (Writer + 'a)>,
 }
 
-impl <'a> ECB<'a> {
-    pub fn new_encrypt(ty: ECBType, key: &[u8]) -> ECB<'a> {
+impl ECB {
+    pub fn new_encrypt(ty: ECBType, key: &[u8]) -> ECB {
         let mut c = Context::new(ty.evpc(), Direction::Encrypt, key);
         c.set_padding(ty.padding());
-        ECB { context: c, sink: None }
+        ECB { context: c }
     }
 
-    pub fn start(&mut self, sink: &'a mut (Writer + 'a)) {
-        if self.context.state != Finalized {
-            self.finish();
-        }
-        self.sink = Some(sink);
+    pub fn start(&mut self) {
         self.context.init();
     }
 
-    pub fn finish(&mut self) {
-        assert!(self.context.state != Finalized);
-        let mut sink = self.sink.as_mut().expect("start() never called");
-        let mut buf = [0; MAX_BLOCK_LEN];
-        let len = self.context.checked_finalize(&mut buf, MAX_BLOCK_LEN);
-        if len > 0 {
-            let _ = sink.write_all(&buf[..len]);
-        }
+    pub fn start_writer<'a>(&'a mut self, sink: &'a mut (Writer + 'a))
+                -> WriterAdapter<'a, ECB> {
+        self.start();
+        WriterAdapter { parent: self, sink: sink }
     }
 }
 
-impl <'a> Writer for ECB<'a> {
-    fn write_all(&mut self, data: &[u8]) -> Result<(), IoError> {
-        if self.context.state == Finalized {
-            self.context.init();
-        }
-        let mut sink = self.sink.as_mut().expect("start() never called");
-        let mut buf = [0; DEFAULT_BUF_LEN + MAX_BLOCK_LEN];
-        for chunk in data.chunks(DEFAULT_BUF_LEN) {
-            let len = self.context.checked_update(chunk, &mut buf, MAX_BLOCK_LEN);
-            if len > 0 {
-                let _ = sink.write_all(&buf[..len]);
-            }
-        }
-        Ok(())
+impl Transcoder for ECB {
+    fn transcode(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
+        let len = self.context.checked_update(data, buf, MAX_BLOCK_LEN);
+        len
+    }
+
+    fn finish(&mut self, buf: &mut [u8]) -> usize {
+        let len = self.context.checked_finalize(buf, MAX_BLOCK_LEN);
+        len
     }
 }
 
@@ -242,11 +258,10 @@ impl <'a> Writer for ECB<'a> {
               0xeau8, 0xfcu8, 0x49u8, 0x90u8, 0x4bu8, 0x49u8, 0x60u8, 0x89u8);
 
         let mut r0 = Vec::new();
+        let mut c = ECB::new_encrypt(ECBType::AES_256_RAW, &*k0);
         {
-            let mut c = ECB::new_encrypt(ECBType::AES_256_RAW, &*k0);
-            c.start(&mut r0);
-            let _ = ::std::old_io::util::copy(&mut &*p0, &mut c);
-            c.finish();
+            let mut w = c.start_writer(&mut r0);
+            let _ = ::std::old_io::util::copy(&mut &*p0, &mut w);
         }
         assert!(r0 == c0);
     }
