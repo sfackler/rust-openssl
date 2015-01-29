@@ -153,10 +153,10 @@ impl Hasher {
         unsafe {
             let mut len = 0;
             let r = ffi::EVP_DigestFinal_ex(self.ctx, res.as_mut_ptr(), &mut len);
+            self.state = Finalized;
             assert_eq!(len as usize, md_len);
             assert_eq!(r, 1);
         }
-        self.state = Finalized;
         res
     }
 
