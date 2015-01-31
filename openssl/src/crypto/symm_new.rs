@@ -45,8 +45,8 @@ trait EVPC {
     fn evpc(&self) -> *const ffi::EVP_CIPHER;
 }
 
-trait Transcoder {
-    fn transcode(&mut self, data: &[u8], buf: &mut [u8]) -> usize;
+trait Coder {
+    fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize;
     fn finish(&mut self, buf: &mut [u8]) -> usize;
 }
 
@@ -55,11 +55,11 @@ pub struct WriterAdapter<'a, T: 'a> {
     sink: &'a mut (Writer + 'a),
 }
 
-impl <'a, T: Transcoder> Writer for WriterAdapter<'a, T> {
+impl <'a, T: Coder> Writer for WriterAdapter<'a, T> {
     fn write_all(&mut self, data: &[u8]) -> Result<(), IoError> {
         let mut buf = [0; DEFAULT_BUF_LEN + MAX_BLOCK_LEN];
         for chunk in data.chunks(DEFAULT_BUF_LEN) {
-            let len = self.parent.transcode(chunk, &mut buf);
+            let len = self.parent.apply(chunk, &mut buf);
             if len > 0 {
                 let _ = self.sink.write_all(&buf[..len]);
             }
@@ -69,7 +69,7 @@ impl <'a, T: Transcoder> Writer for WriterAdapter<'a, T> {
 }
 
 #[unsafe_destructor]
-impl <'a, T: Transcoder> Drop for WriterAdapter<'a, T> {
+impl <'a, T: Coder> Drop for WriterAdapter<'a, T> {
     fn drop(&mut self) {
         let mut buf = [0; MAX_BLOCK_LEN];
         let len = self.parent.finish(&mut buf);
@@ -220,6 +220,12 @@ impl ECB {
         ECB { context: c }
     }
 
+    pub fn new_decrypt(ty: ECBType, key: &[u8]) -> ECB {
+        let mut c = Context::new(ty.evpc(), Direction::Decrypt, key);
+        c.set_padding(ty.padding());
+        ECB { context: c }
+    }
+
     pub fn start(&mut self) {
         self.context.init();
     }
@@ -231,8 +237,8 @@ impl ECB {
     }
 }
 
-impl Transcoder for ECB {
-    fn transcode(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
+impl Coder for ECB {
+    fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
         let len = self.context.checked_update(data, buf, MAX_BLOCK_LEN);
         len
     }
@@ -264,4 +270,12 @@ impl Transcoder for ECB {
             let _ = ::std::old_io::util::copy(&mut &*p0, &mut w);
         }
         assert!(r0 == c0);
+
+        let mut p1 = Vec::new();
+        let mut d = ECB::new_decrypt(ECBType::AES_256_RAW, &*k0);
+        {
+            let mut w = d.start_writer(&mut p1);
+            let _ = ::std::old_io::util::copy(&mut &*c0, &mut w);
+        }
+        assert!(p0 == p1);
     }
