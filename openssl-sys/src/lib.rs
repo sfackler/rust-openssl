@@ -1,5 +1,6 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
-#![allow(dead_code, unstable)]
+#![allow(dead_code)]
+#![feature(core, io, libc, os, path, std_misc)]
 
 extern crate libc;
 
