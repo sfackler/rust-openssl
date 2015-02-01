@@ -249,6 +249,39 @@ impl Coder for ECB {
     }
 }
 
+#[cfg(test)]
+mod test {
+    use super::{ECB, ECBType, Coder};
+    use std::iter::repeat;
+    use serialize::hex::FromHex;
+
+    const ECB_Vec: [(u16, &'static str, &'static str, &'static str); 1] = [
+        (128, "00000000000000000000000000000000",
+              "ffffffffffffffff8000000000000000",
+              "41f992a856fb278b389a62f5d274d7e9"),
+    ];
+
+    #[test]
+    fn test_ecb_128_apply() {
+        for &(_, key, pt, ct) in ECB_Vec.iter().filter(|&x| x.0 == 128) {
+            let key = key.from_hex().unwrap();
+            let pt = pt.from_hex().unwrap();
+            let ct = ct.from_hex().unwrap();
+
+            let mut res_ct: Vec<u8> = repeat(0).take(pt.len() + super::MAX_BLOCK_LEN).collect();
+            let mut c = ECB::new_encrypt(ECBType::AES_128_RAW, &*key);
+            c.start();
+            let len = c.apply(&*pt, &mut *res_ct);
+            let len2 = c.finish(&mut res_ct[len..]);
+            res_ct.truncate(len + len2);
+            assert_eq!(ct, res_ct);
+
+            //let mut res_pt = repeat(0).take(pt.len() + super::MAX_BLOCK_LEN);
+            //let mut d = ECB::new_decrypt(ECBType::AES_128_RAW, &*key);
+
+        }
+    }
+
     #[test]
     fn test_symm_new_aes_256_ecb() {
         let k0 =
@@ -279,3 +312,4 @@ impl Coder for ECB {
         }
         assert!(p0 == p1);
     }
+}
