@@ -10,7 +10,7 @@ use std::old_io::IoError;
 use ffi;
 
 /// An SSL error
-#[derive(Show, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SslError {
     /// The underlying stream reported an error
     StreamError(IoError),
@@ -44,7 +44,7 @@ impl error::Error for SslError {
 }
 
 /// An error from the OpenSSL library
-#[derive(Show, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OpensslError {
     /// An unknown error
     UnknownError {
