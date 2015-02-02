@@ -444,7 +444,9 @@ mod test {
             let mut c = ECB::new_encrypt(ty, &*key);
             {
                 let mut w = c.start_writer(&mut res_ct);
-                let _ = ::std::old_io::util::copy(&mut &*pt, &mut w);
+                for byte in pt.iter() {
+                    let _ = w.write_all(&[*byte]);
+                }
             }
             assert!(ct == res_ct, "{:?} encrypt #{}", ty, n);
 
@@ -452,7 +454,9 @@ mod test {
             let mut d = ECB::new_decrypt(ty, &*key);
             {
                 let mut w = d.start_writer(&mut res_pt);
-                let _ = ::std::old_io::util::copy(&mut &*res_ct, &mut w);
+                for byte in res_ct.iter() {
+                    let _ = w.write_all(&[*byte]);
+                }
             }
             assert!(pt == res_pt, "{:?} decrypt #{}", ty, n);
 
@@ -496,7 +500,9 @@ mod test {
             let mut c = CBC::new_encrypt(ty, &*key);
             {
                 let mut w = c.start_writer(&*iv, &mut res_ct);
-                let _ = ::std::old_io::util::copy(&mut &*pt, &mut w);
+                for byte in pt.iter() {
+                    let _ = w.write_all(&[*byte]);
+                }
             }
             assert!(ct == res_ct, "{:?} encrypt #{}", ty, n);
 
@@ -504,7 +510,9 @@ mod test {
             let mut d = CBC::new_decrypt(ty, &*key);
             {
                 let mut w = d.start_writer(&*iv, &mut res_pt);
-                let _ = ::std::old_io::util::copy(&mut &*res_ct, &mut w);
+                for byte in res_ct.iter() {
+                    let _ = w.write_all(&[*byte]);
+                }
             }
             assert!(pt == res_pt, "{:?} decrypt #{}", ty, n);
 
