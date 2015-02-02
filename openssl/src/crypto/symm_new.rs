@@ -28,6 +28,7 @@ macro_rules! chk {
     );
 }
 
+/// A common cipher interface
 struct Context {
     ctx: *mut ffi::EVP_CIPHER_CTX,
     state: State,
@@ -36,11 +37,14 @@ struct Context {
 const MAX_BLOCK_LEN: usize = 16;
 const DEFAULT_BUF_LEN: usize = 16384;
 
+/// A cipher that {en|de}codes bytes from one buffer into another
 trait Coder {
     fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize;
     fn finish(&mut self, buf: &mut [u8]) -> usize;
 }
 
+/// Provides a way to use ciphers as `Writer`s
+// Subject to changes after std::io stabilization
 pub struct WriterAdapter<'a, T: 'a> {
     parent: &'a mut T,
     sink: &'a mut (Writer + 'a),
@@ -63,6 +67,7 @@ impl <'a, T: Coder> Writer for WriterAdapter<'a, T> {
 impl <'a, T: Coder> Drop for WriterAdapter<'a, T> {
     fn drop(&mut self) {
         let mut buf = [0; MAX_BLOCK_LEN];
+        // this could panic
         let len = self.parent.finish(&mut buf);
         if len > 0 {
             let _ = self.sink.write_all(&buf[..len]);
@@ -229,7 +234,6 @@ pub mod ecb{
             len
         }
     }
-
 }
 
 pub mod cbc {
@@ -304,8 +308,8 @@ pub mod cbc {
             len
         }
     }
-
 }
+
 #[cfg(test)]
 mod test {
     use super::Coder;
