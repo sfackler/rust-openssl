@@ -18,6 +18,12 @@ enum Direction {
     Encrypt,
 }
 
+#[derive(Copy, PartialEq)]
+pub enum Algo {
+    Aes128,
+    Aes256,
+}
+
 macro_rules! chk {
     ($inp:expr) => (
         {
@@ -37,24 +43,56 @@ struct Context {
 const MAX_BLOCK_LEN: usize = 16;
 const DEFAULT_BUF_LEN: usize = 16384;
 
-/// A cipher that {en|de}codes bytes from one buffer into another
-trait Coder {
+/// A block mode cipher
+trait BlockMode {
     fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize;
     fn finish(&mut self, buf: &mut [u8]) -> usize;
 }
 
+/// A stream(-like) mode cipher
+trait StreamMode {
+    fn apply(&mut self, data: &[u8], buf: &mut [u8]);
+    fn finish(&mut self);
+}
+
+/// A cipher that works on large blocks (sectors)
+trait SectorMode {
+    fn apply(&mut self, iv: &[u8], data: &[u8], buf: &mut [u8]);
+    fn finish(&mut self);
+}
+
+/// An authenticated stream(-like) mode cipher encryption
+trait AuthStreamModeEncrypt {
+    fn apply(&mut self, data: &[u8], buf: &mut [u8]);
+    fn finish(&mut self) -> Vec<u8>;
+}
+
+/// An authenticated stream(-like) mode cipher decryption
+trait AuthStreamModeDecrypt {
+    fn apply(&mut self, data: &[u8], buf: &mut [u8]);
+    fn finish(&mut self) -> bool;
+}
+
 /// Provides a way to use ciphers as `Writer`s
 // Subject to changes after std::io stabilization
-pub struct WriterAdapter<'a, T: 'a> {
-    parent: &'a mut T,
+pub struct Filter<'a, T: 'a> {
+    cipher: &'a mut T,
     sink: &'a mut (Writer + 'a),
 }
 
-impl <'a, T: Coder> Writer for WriterAdapter<'a, T> {
+impl <'a, T> Filter<'a, T> {
+    /// Create a `Writer` adapter for the `cipher`. The `cipher` has to be `start`ed.
+    pub fn new(cipher: &'a mut T, sink: &'a mut (Writer + 'a))
+          -> Filter<'a, T> {
+        Filter { cipher: cipher, sink: sink }
+    }
+}
+
+impl <'a, T: BlockMode> Writer for Filter<'a, T> {
     fn write_all(&mut self, data: &[u8]) -> Result<(), IoError> {
         let mut buf = [0; DEFAULT_BUF_LEN + MAX_BLOCK_LEN];
         for chunk in data.chunks(DEFAULT_BUF_LEN) {
-            let len = self.parent.apply(chunk, &mut buf);
+            let len = self.cipher.apply(chunk, &mut buf);
             if len > 0 {
                 let _ = self.sink.write_all(&buf[..len]);
             }
@@ -64,11 +102,12 @@ impl <'a, T: Coder> Writer for WriterAdapter<'a, T> {
 }
 
 #[unsafe_destructor]
-impl <'a, T: Coder> Drop for WriterAdapter<'a, T> {
+impl <'a, T: BlockMode> Drop for Filter<'a, T> {
+    // this should've been close()
     fn drop(&mut self) {
         let mut buf = [0; MAX_BLOCK_LEN];
         // this could panic
-        let len = self.parent.finish(&mut buf);
+        let len = self.cipher.finish(&mut buf);
         if len > 0 {
             let _ = self.sink.write_all(&buf[..len]);
         }
@@ -163,67 +202,75 @@ impl Drop for Context {
 }
 
 pub mod ecb{
-    use super::{Coder, Context, Direction, WriterAdapter};
+    use super::{Algo, BlockMode, Context, Direction};
     use ffi;
 
-    #[allow(non_camel_case_types)]
-    #[derive(Copy, PartialEq, Debug)]
-    pub enum Type {
-        AES_128_PADDED,
-        AES_256_PADDED,
-        AES_128_RAW,
-        AES_256_RAW,
-    }
-
-    impl Type {
-        fn padding(&self) -> bool {
-            use self::Type::*;
-            match *self {
-                AES_128_PADDED | AES_256_PADDED => true,
-                AES_128_RAW | AES_256_RAW => false,
-            }
-        }
-
-        fn evpc(&self) -> *const ffi::EVP_CIPHER {
-            use self::Type::*;
-            unsafe {
-                match *self {
-                    AES_128_PADDED | AES_128_RAW => ffi::EVP_aes_128_ecb(),
-                    AES_256_PADDED | AES_256_RAW => ffi::EVP_aes_256_ecb(),
-                }
+    fn evpc(algo: Algo) -> *const ffi::EVP_CIPHER {
+        unsafe {
+            match algo {
+                Algo::Aes128 => ffi::EVP_aes_128_ecb(),
+                Algo::Aes256 => ffi::EVP_aes_256_ecb(),
             }
         }
     }
 
-    pub struct ECB {
+    pub struct EcbRaw {
         context: Context,
     }
 
-    impl ECB {
-        pub fn new_encrypt(ty: Type, key: &[u8]) -> ECB {
-            let mut c = Context::new(ty.evpc(), Direction::Encrypt, key);
-            c.set_padding(ty.padding());
-            ECB { context: c }
+    impl EcbRaw {
+        pub fn new_encrypt(algo: Algo, key: &[u8]) -> EcbRaw {
+            let mut c = Context::new(evpc(algo), Direction::Encrypt, key);
+            c.set_padding(false);
+            EcbRaw { context: c }
         }
 
-        pub fn new_decrypt(ty: Type, key: &[u8]) -> ECB {
-            let mut c = Context::new(ty.evpc(), Direction::Decrypt, key);
-            c.set_padding(ty.padding());
-            ECB { context: c }
+        pub fn new_decrypt(algo: Algo, key: &[u8]) -> EcbRaw {
+            let mut c = Context::new(evpc(algo), Direction::Decrypt, key);
+            c.set_padding(false);
+            EcbRaw { context: c }
         }
 
         pub fn start(&mut self) {
             self.context.init();
         }
+    }
 
-        pub fn start_writer<'a>(&'a mut self, sink: &'a mut (Writer + 'a))
-                    -> WriterAdapter<'a, ECB> {
-            self.start();
-            WriterAdapter { parent: self, sink: sink }
+    impl BlockMode for EcbRaw {
+        fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
+            let len = self.context.checked_update(data, buf, super::MAX_BLOCK_LEN);
+            len
+        }
+
+        fn finish(&mut self, buf: &mut [u8]) -> usize {
+            self.context.checked_finalize(buf, 0);
+            0
         }
     }
 
-    impl Coder for ECB {
+    pub struct EcbPadded {
+        context: Context,
+    }
+
+    impl EcbPadded {
+        pub fn new_encrypt(algo: Algo, key: &[u8]) -> EcbPadded {
+            let mut c = Context::new(evpc(algo), Direction::Encrypt, key);
+            c.set_padding(true);
+            EcbPadded { context: c }
+        }
+
+        pub fn new_decrypt(algo: Algo, key: &[u8]) -> EcbPadded {
+            let mut c = Context::new(evpc(algo), Direction::Decrypt, key);
+            c.set_padding(true);
+            EcbPadded { context: c }
+        }
+
+        pub fn start(&mut self) {
+            self.context.init();
+        }
+    }
+
+    impl BlockMode for EcbPadded {
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
             let len = self.context.checked_update(data, buf, super::MAX_BLOCK_LEN);
             len
@@ -237,67 +284,75 @@ pub mod ecb{
 }
 
 pub mod cbc {
-    use super::{Coder, Context, Direction, WriterAdapter};
+    use super::{Algo, BlockMode, Context, Direction};
     use ffi;
 
-    #[allow(non_camel_case_types)]
-    #[derive(Copy, PartialEq, Debug)]
-    pub enum Type {
-        AES_128_PADDED,
-        AES_256_PADDED,
-        AES_128_RAW,
-        AES_256_RAW,
-    }
-
-    impl Type {
-        fn padding(&self) -> bool {
-            use self::Type::*;
-            match *self {
-                AES_128_PADDED | AES_256_PADDED => true,
-                AES_128_RAW | AES_256_RAW => false,
-            }
-        }
-
-        fn evpc(&self) -> *const ffi::EVP_CIPHER {
-            use self::Type::*;
-            unsafe {
-                match *self {
-                    AES_128_PADDED | AES_128_RAW => ffi::EVP_aes_128_cbc(),
-                    AES_256_PADDED | AES_256_RAW => ffi::EVP_aes_256_cbc(),
-                }
+    fn evpc(algo: Algo) -> *const ffi::EVP_CIPHER {
+        unsafe {
+            match algo {
+                Algo::Aes128 => ffi::EVP_aes_128_cbc(),
+                Algo::Aes256 => ffi::EVP_aes_256_cbc(),
             }
         }
     }
 
-    pub struct CBC {
+    pub struct CbcRaw {
         context: Context,
     }
 
-    impl CBC {
-        pub fn new_encrypt(ty: Type, key: &[u8]) -> CBC {
-            let mut c = Context::new(ty.evpc(), Direction::Encrypt, key);
-            c.set_padding(ty.padding());
-            CBC { context: c }
+    impl CbcRaw {
+        pub fn new_encrypt(algo: Algo, key: &[u8]) -> CbcRaw {
+            let mut c = Context::new(evpc(algo), Direction::Encrypt, key);
+            c.set_padding(false);
+            CbcRaw { context: c }
         }
 
-        pub fn new_decrypt(ty: Type, key: &[u8]) -> CBC {
-            let mut c = Context::new(ty.evpc(), Direction::Decrypt, key);
-            c.set_padding(ty.padding());
-            CBC { context: c }
+        pub fn new_decrypt(algo: Algo, key: &[u8]) -> CbcRaw {
+            let mut c = Context::new(evpc(algo), Direction::Decrypt, key);
+            c.set_padding(false);
+            CbcRaw { context: c }
         }
 
         pub fn start(&mut self, iv: &[u8]) {
             unsafe { self.context.init_with_iv(iv); }
         }
+    }
 
-        pub fn start_writer<'a>(&'a mut self, iv: &[u8], sink: &'a mut (Writer + 'a))
-                    -> WriterAdapter<'a, CBC> {
-            self.start(iv);
-            WriterAdapter { parent: self, sink: sink }
+    impl BlockMode for CbcRaw {
+        fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
+            let len = self.context.checked_update(data, buf, super::MAX_BLOCK_LEN);
+            len
+        }
+
+        fn finish(&mut self, buf: &mut [u8]) -> usize {
+            self.context.checked_finalize(buf, 0);
+            0
         }
     }
 
-    impl Coder for CBC {
+    pub struct CbcPadded {
+        context: Context,
+    }
+
+    impl CbcPadded {
+        pub fn new_encrypt(algo: Algo, key: &[u8]) -> CbcPadded {
+            let mut c = Context::new(evpc(algo), Direction::Encrypt, key);
+            c.set_padding(true);
+            CbcPadded { context: c }
+        }
+
+        pub fn new_decrypt(algo: Algo, key: &[u8]) -> CbcPadded {
+            let mut c = Context::new(evpc(algo), Direction::Decrypt, key);
+            c.set_padding(true);
+            CbcPadded { context: c }
+        }
+
+        pub fn start(&mut self, iv: &[u8]) {
+            unsafe { self.context.init_with_iv(iv); }
+        }
+    }
+
+    impl BlockMode for CbcPadded {
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
             let len = self.context.checked_update(data, buf, super::MAX_BLOCK_LEN);
             len
@@ -312,10 +367,12 @@ pub mod cbc {
 
 #[cfg(test)]
 mod test {
-    use super::Coder;
-    use super::ecb::{self, ECB};
-    use super::cbc::{self, CBC};
+    use super::{Algo, BlockMode, Filter};
+    use super::Algo::*;
+    use super::ecb::{EcbRaw, EcbPadded};
+    use super::cbc::{CbcRaw, CbcPadded};
     use std::iter::repeat;
+    use std::cmp::max;
     use serialize::hex::FromHex;
 
     fn unpack3<T: Copy>(tup: &(T, &str, &str, &str))
@@ -330,139 +387,193 @@ mod test {
          tup.3.from_hex().unwrap(), tup.4.from_hex().unwrap())
     }
 
-    const ECB_VEC: [(ecb::Type, &'static str, &'static str, &'static str); 8] = [
+    const ECB_RAW_VEC: [(Algo, &'static str, &'static str, &'static str); 4] = [
         // One block
-        (ecb::Type::AES_128_RAW,
-         "99a5758d22880b01a4922f094dafceaa",
-         "d47b00a342faacdb9d7655c1bff4b8c3",
-         "5e69f8b8b97ebbf7e2754a3d7fb9fa99"),
-        (ecb::Type::AES_128_PADDED,
-         "99a5758d22880b01a4922f094dafceaa",
-         "d47b00a342faacdb9d7655c1",
-         "56ff92fb78bb6a00d0bd5165ae89b64d"),
-        (ecb::Type::AES_256_RAW,
+        (Aes128,                                // algo
+         "99a5758d22880b01a4922f094dafceaa",    // key
+         "d47b00a342faacdb9d7655c1bff4b8c3",    // plaintext
+         "5e69f8b8b97ebbf7e2754a3d7fb9fa99"),   // ciphertext
+        (Aes256,
          "16bd7e90a390f53e11cfe51c6c44cefbd6bcd87e1b1925fdc679edc21985f0de",
          "d47b00a342faacdb9d7655c1bff4b8c3",
          "00512f8c8717266aa0b91eec01604d7c"),
-        (ecb::Type::AES_256_PADDED,
+        // Two blocks
+        (Aes128,
+         "99a5758d22880b01a4922f094dafceaa",
+         "707071c411335f0acfc5aea1698eaf2bd47b00a342faacdb9d7655c1bff4b8c3",
+         "5cdd30b18d67d8a3670c0ed76913b5605e69f8b8b97ebbf7e2754a3d7fb9fa99"),
+        (Aes256,
+         "16bd7e90a390f53e11cfe51c6c44cefbd6bcd87e1b1925fdc679edc21985f0de",
+         "707071c411335f0acfc5aea1698eaf2bd47b00a342faacdb9d7655c1bff4b8c3",
+         "9d1001068827dd328ed86a540d4496b200512f8c8717266aa0b91eec01604d7c"),
+    ];
+
+    const ECB_PADDED_VEC: [(Algo, &'static str, &'static str, &'static str); 4] = [
+        // One block
+        (Aes128,
+         "99a5758d22880b01a4922f094dafceaa",
+         "d47b00a342faacdb9d7655c1",
+         "56ff92fb78bb6a00d0bd5165ae89b64d"),
+        (Aes256,
          "16bd7e90a390f53e11cfe51c6c44cefbd6bcd87e1b1925fdc679edc21985f0de",
          "d47b00a342faacdb9d7655c1",
          "80c1deb5f8a465f00daf7c2f67fc861d"),
         // Two blocks
-        (ecb::Type::AES_128_RAW,
-         "99a5758d22880b01a4922f094dafceaa",
-         "707071c411335f0acfc5aea1698eaf2bd47b00a342faacdb9d7655c1bff4b8c3",
-         "5cdd30b18d67d8a3670c0ed76913b5605e69f8b8b97ebbf7e2754a3d7fb9fa99"),
-        (ecb::Type::AES_128_PADDED,
+        (Aes128,
          "99a5758d22880b01a4922f094dafceaa",
          "707071c411335f0acfc5aea1698eaf2bd47b00a342faacdb9d7655c1",
          "5cdd30b18d67d8a3670c0ed76913b56056ff92fb78bb6a00d0bd5165ae89b64d"),
-        (ecb::Type::AES_256_RAW,
-         "16bd7e90a390f53e11cfe51c6c44cefbd6bcd87e1b1925fdc679edc21985f0de",
-         "707071c411335f0acfc5aea1698eaf2bd47b00a342faacdb9d7655c1bff4b8c3",
-         "9d1001068827dd328ed86a540d4496b200512f8c8717266aa0b91eec01604d7c"),
-        (ecb::Type::AES_256_PADDED,
+        (Aes256,
          "16bd7e90a390f53e11cfe51c6c44cefbd6bcd87e1b1925fdc679edc21985f0de",
          "707071c411335f0acfc5aea1698eaf2bd47b00a342faacdb9d7655c1",
          "9d1001068827dd328ed86a540d4496b280c1deb5f8a465f00daf7c2f67fc861d"),
     ];
 
-    const CBC_VEC: [(cbc::Type, &'static str, &'static str, &'static str, &'static str); 8] = [
+    const CBC_RAW_VEC: [(Algo, &'static str, &'static str, &'static str, &'static str); 4] = [
         // One block
-        (cbc::Type::AES_128_RAW,
-         "99a5758d22880b01a4922f094dafceaa",
-         "4002ddc1cd72650c32b895b026a3bda4",
-         "d47b00a342faacdb9d7655c1bff4b8c3",
-         "3a44bd0d547d82235effd2da38dbafc3"),
-        (cbc::Type::AES_128_PADDED,
-         "99a5758d22880b01a4922f094dafceaa",
-         "4002ddc1cd72650c32b895b026a3bda4",
-         "d47b00a342faacdb9d7655c1",
-         "b0dfa61dc8f7fd500d03899d875bbd2a"),
-        (cbc::Type::AES_256_RAW,
+        (Aes128,                                // algo
+         "99a5758d22880b01a4922f094dafceaa",    // key
+         "4002ddc1cd72650c32b895b026a3bda4",    // iv
+         "d47b00a342faacdb9d7655c1bff4b8c3",    // plaintext
+         "3a44bd0d547d82235effd2da38dbafc3"),   // ciphertext
+        (Aes256,
          "16bd7e90a390f53e11cfe51c6c44cefbd6bcd87e1b1925fdc679edc21985f0de",
          "4002ddc1cd72650c32b895b026a3bda4",
          "d47b00a342faacdb9d7655c1bff4b8c3",
          "7b9a09eabe4bd9eef5fb8af84c7ee8dd"),
-        (cbc::Type::AES_256_PADDED,
+        // Two blocks
+        (Aes128,
+         "99a5758d22880b01a4922f094dafceaa",
+         "4002ddc1cd72650c32b895b026a3bda4",
+         "707071c411335f0acfc5aea1698eaf2bd47b00a342faacdb9d7655c1bff4b8c3",
+         "698d24fa0a2fd282a3b724aafb8a1f547141be417fb40de785304c58452e713a"),
+        (Aes256,
+         "16bd7e90a390f53e11cfe51c6c44cefbd6bcd87e1b1925fdc679edc21985f0de",
+         "4002ddc1cd72650c32b895b026a3bda4",
+         "707071c411335f0acfc5aea1698eaf2bd47b00a342faacdb9d7655c1bff4b8c3",
+         "19a066de723ca454666290f8e8147a6d98288504b7ec8b80f3699954d1d930ff"),
+    ];
+
+    const CBC_PADDED_VEC: [(Algo, &'static str, &'static str, &'static str, &'static str); 4] = [
+        // One block
+        (Aes128,
+         "99a5758d22880b01a4922f094dafceaa",
+         "4002ddc1cd72650c32b895b026a3bda4",
+         "d47b00a342faacdb9d7655c1",
+         "b0dfa61dc8f7fd500d03899d875bbd2a"),
+        (Aes256,
          "16bd7e90a390f53e11cfe51c6c44cefbd6bcd87e1b1925fdc679edc21985f0de",
          "4002ddc1cd72650c32b895b026a3bda4",
          "d47b00a342faacdb9d7655c1",
          "53fe2c0e77d663c454ffd9d3c53e2632"),
         // Two blocks
-        (cbc::Type::AES_128_RAW,
-         "99a5758d22880b01a4922f094dafceaa",
-         "4002ddc1cd72650c32b895b026a3bda4",
-         "707071c411335f0acfc5aea1698eaf2bd47b00a342faacdb9d7655c1bff4b8c3",
-         "698d24fa0a2fd282a3b724aafb8a1f547141be417fb40de785304c58452e713a"),
-        (cbc::Type::AES_128_PADDED,
+        (Aes128,
          "99a5758d22880b01a4922f094dafceaa",
          "4002ddc1cd72650c32b895b026a3bda4",
          "707071c411335f0acfc5aea1698eaf2bd47b00a342faacdb9d7655c1",
          "698d24fa0a2fd282a3b724aafb8a1f5484046b796f05238ef8a6b551ab5fba66"),
-        (cbc::Type::AES_256_RAW,
-         "16bd7e90a390f53e11cfe51c6c44cefbd6bcd87e1b1925fdc679edc21985f0de",
-         "4002ddc1cd72650c32b895b026a3bda4",
-         "707071c411335f0acfc5aea1698eaf2bd47b00a342faacdb9d7655c1bff4b8c3",
-         "19a066de723ca454666290f8e8147a6d98288504b7ec8b80f3699954d1d930ff"),
-        (cbc::Type::AES_256_PADDED,
+        (Aes256,
          "16bd7e90a390f53e11cfe51c6c44cefbd6bcd87e1b1925fdc679edc21985f0de",
          "4002ddc1cd72650c32b895b026a3bda4",
          "707071c411335f0acfc5aea1698eaf2bd47b00a342faacdb9d7655c1",
          "19a066de723ca454666290f8e8147a6ddde9fb1e6dbb8a52b5b09b24e228bc2d"),
     ];
 
+    fn test_block_mode_apply<T: BlockMode>(vec_name: &str, n: i32, pt: &[u8],
+                                           ct: &[u8], enc: &mut T, dec: &mut T) {
+        let buf_len = max(pt.len(), ct.len()) + super::MAX_BLOCK_LEN;
+        let mut res: Vec<u8> = repeat(0).take(buf_len).collect();
+        let mut len;
+
+        len = enc.apply(pt, &mut *res);
+        len += enc.finish(&mut res[len..]);
+        assert!(ct == &res[..len], "{}[{}] encrypt", vec_name, n);
+
+        len = dec.apply(ct, &mut *res);
+        len += dec.finish(&mut res[len..]);
+        assert!(pt == &res[..len], "{}[{}] decrypt", vec_name, n);
+    }
+
+    fn test_block_mode_write<T: BlockMode>(vec_name: &str, n: i32, pt: &[u8],
+                                           ct: &[u8], enc: &mut T, dec: &mut T) {
+        let mut res: Vec<u8> = Vec::new();
+
+        {
+            let mut w = Filter::new(enc, &mut res);
+            for byte in pt.iter() {
+                let _ = w.write_all(&[*byte]);
+            }
+        }
+        assert!(ct == res, "{}[{}] encrypt", vec_name, n);
+
+        res.truncate(0);
+
+        {
+            let mut w = Filter::new(dec, &mut res);
+            for byte in ct.iter() {
+                let _ = w.write_all(&[*byte]);
+            }
+        }
+        assert!(pt == res, "{}[{}] decrypt", vec_name, n);
+    }
+
     #[test]
     fn test_ecb_apply() {
-        let mut n = 0;
-        for item in ECB_VEC.iter() {
-            let (ty, key, pt, ct) = unpack3(item);
+        let mut n;
 
-            let mut res_ct: Vec<u8> = repeat(0).take(pt.len() + super::MAX_BLOCK_LEN).collect();
-            let mut c = ECB::new_encrypt(ty, &*key);
-            c.start();
-            let len = c.apply(&*pt, &mut *res_ct);
-            let len2 = c.finish(&mut res_ct[len..]);
-            res_ct.truncate(len + len2);
-            assert!(ct == res_ct, "{:?} encrypt #{}", ty, n);
+        n = 0;
+        for item in ECB_RAW_VEC.iter() {
+            let (algo, key, pt, ct) = unpack3(item);
 
-            let mut res_pt: Vec<u8> = repeat(0).take(res_ct.len() + super::MAX_BLOCK_LEN).collect();
-            let mut d = ECB::new_decrypt(ty, &*key);
-            d.start();
-            let len = d.apply(&*res_ct, &mut *res_pt);
-            let len2 = d.finish(&mut res_pt[len..]);
-            res_pt.truncate(len + len2);
-            assert!(pt == res_pt, "{:?} decrypt #{}", ty, n);
+            let mut enc = EcbRaw::new_encrypt(algo, &*key);
+            enc.start();
+            let mut dec = EcbRaw::new_decrypt(algo, &*key);
+            dec.start();
+            test_block_mode_apply("ECB_RAW_VEC", n, &*pt, &*ct, &mut enc, &mut dec);
+
+            n += 1;
+        }
+
+        n = 0;
+        for item in ECB_PADDED_VEC.iter() {
+            let (algo, key, pt, ct) = unpack3(item);
+
+            let mut enc = EcbPadded::new_encrypt(algo, &*key);
+            enc.start();
+            let mut dec = EcbPadded::new_decrypt(algo, &*key);
+            dec.start();
+            test_block_mode_apply("ECB_PADDED_VEC", n, &*pt, &*ct, &mut enc, &mut dec);
 
             n += 1;
         }
     }
 
     #[test]
-    fn test_ecb_writer() {
-        let mut n = 0;
-        for item in ECB_VEC.iter() {
-            let (ty, key, pt, ct) = unpack3(item);
+    fn test_ecb_write() {
+        let mut n;
 
-            let mut res_ct = Vec::new();
-            let mut c = ECB::new_encrypt(ty, &*key);
-            {
-                let mut w = c.start_writer(&mut res_ct);
-                for byte in pt.iter() {
-                    let _ = w.write_all(&[*byte]);
-                }
-            }
-            assert!(ct == res_ct, "{:?} encrypt #{}", ty, n);
+        n = 0;
+        for item in ECB_RAW_VEC.iter() {
+            let (algo, key, pt, ct) = unpack3(item);
 
-            let mut res_pt = Vec::new();
-            let mut d = ECB::new_decrypt(ty, &*key);
-            {
-                let mut w = d.start_writer(&mut res_pt);
-                for byte in res_ct.iter() {
-                    let _ = w.write_all(&[*byte]);
-                }
-            }
-            assert!(pt == res_pt, "{:?} decrypt #{}", ty, n);
+            let mut enc = EcbRaw::new_encrypt(algo, &*key);
+            enc.start();
+            let mut dec = EcbRaw::new_decrypt(algo, &*key);
+            dec.start();
+            test_block_mode_write("ECB_RAW_VEC", n, &*pt, &*ct, &mut enc, &mut dec);
+
+            n += 1;
+        }
+
+        n = 0;
+        for item in ECB_PADDED_VEC.iter() {
+            let (algo, key, pt, ct) = unpack3(item);
+
+            let mut enc = EcbPadded::new_encrypt(algo, &*key);
+            enc.start();
+            let mut dec = EcbPadded::new_decrypt(algo, &*key);
+            dec.start();
+            test_block_mode_write("ECB_PADDED_VEC", n, &*pt, &*ct, &mut enc, &mut dec);
 
             n += 1;
         }
@@ -470,55 +581,61 @@ mod test {
 
     #[test]
     fn test_cbc_apply() {
-        let mut n = 0;
-        for item in CBC_VEC.iter() {
-            let (ty, key, iv, pt, ct) = unpack4(item);
+        let mut n;
 
-            let mut res_ct: Vec<u8> = repeat(0).take(pt.len() + super::MAX_BLOCK_LEN).collect();
-            let mut c = CBC::new_encrypt(ty, &*key);
-            c.start(&*iv);
-            let len = c.apply(&*pt, &mut *res_ct);
-            let len2 = c.finish(&mut res_ct[len..]);
-            res_ct.truncate(len + len2);
-            assert!(ct == res_ct, "{:?} encrypt #{}", ty, n);
+        n = 0;
+        for item in CBC_RAW_VEC.iter() {
+            let (algo, key, iv, pt, ct) = unpack4(item);
 
-            let mut res_pt: Vec<u8> = repeat(0).take(res_ct.len() + super::MAX_BLOCK_LEN).collect();
-            let mut d = CBC::new_decrypt(ty, &*key);
-            d.start(&*iv);
-            let len = d.apply(&*res_ct, &mut *res_pt);
-            let len2 = d.finish(&mut res_pt[len..]);
-            res_pt.truncate(len + len2);
-            assert!(pt == res_pt, "{:?} decrypt #{}", ty, n);
+            let mut enc = CbcRaw::new_encrypt(algo, &*key);
+            enc.start(&*iv);
+            let mut dec = CbcRaw::new_decrypt(algo, &*key);
+            dec.start(&*iv);
+            test_block_mode_apply("CBC_RAW_VEC", n, &*pt, &*ct, &mut enc, &mut dec);
+
+            n += 1;
+        }
+
+        n = 0;
+        for item in CBC_PADDED_VEC.iter() {
+            let (algo, key, iv, pt, ct) = unpack4(item);
+
+            let mut enc = CbcPadded::new_encrypt(algo, &*key);
+            enc.start(&*iv);
+            let mut dec = CbcPadded::new_decrypt(algo, &*key);
+            dec.start(&*iv);
+            test_block_mode_apply("CBC_PADDED_VEC", n, &*pt, &*ct, &mut enc, &mut dec);
 
             n += 1;
         }
     }
 
     #[test]
-    fn test_cbc_writer() {
-        let mut n = 0;
-        for item in CBC_VEC.iter() {
-            let (ty, key, iv, pt, ct) = unpack4(item);
+    fn test_cbc_write() {
+        let mut n;
 
-            let mut res_ct = Vec::new();
-            let mut c = CBC::new_encrypt(ty, &*key);
-            {
-                let mut w = c.start_writer(&*iv, &mut res_ct);
-                for byte in pt.iter() {
-                    let _ = w.write_all(&[*byte]);
-                }
-            }
-            assert!(ct == res_ct, "{:?} encrypt #{}", ty, n);
+        n = 0;
+        for item in CBC_RAW_VEC.iter() {
+            let (algo, key, iv, pt, ct) = unpack4(item);
 
-            let mut res_pt = Vec::new();
-            let mut d = CBC::new_decrypt(ty, &*key);
-            {
-                let mut w = d.start_writer(&*iv, &mut res_pt);
-                for byte in res_ct.iter() {
-                    let _ = w.write_all(&[*byte]);
-                }
-            }
-            assert!(pt == res_pt, "{:?} decrypt #{}", ty, n);
+            let mut enc = CbcRaw::new_encrypt(algo, &*key);
+            enc.start(&*iv);
+            let mut dec = CbcRaw::new_decrypt(algo, &*key);
+            dec.start(&*iv);
+            test_block_mode_write("CBC_RAW_VEC", n, &*pt, &*ct, &mut enc, &mut dec);
+
+            n += 1;
+        }
+
+        n = 0;
+        for item in CBC_PADDED_VEC.iter() {
+            let (algo, key, iv, pt, ct) = unpack4(item);
+
+            let mut enc = CbcPadded::new_encrypt(algo, &*key);
+            enc.start(&*iv);
+            let mut dec = CbcPadded::new_decrypt(algo, &*key);
+            dec.start(&*iv);
+            test_block_mode_write("CBC_PADDED_VEC", n, &*pt, &*ct, &mut enc, &mut dec);
 
             n += 1;
         }
