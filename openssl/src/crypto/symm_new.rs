@@ -19,7 +19,7 @@ enum Direction {
 }
 
 #[derive(Copy, PartialEq)]
-pub enum Algo {
+pub enum Aes {
     Aes128,
     Aes256,
 }
@@ -44,33 +44,19 @@ const MAX_BLOCK_LEN: usize = 16;
 const DEFAULT_BUF_LEN: usize = 16384;
 
 /// A block mode cipher
-trait BlockMode {
+trait BlockApply {
     fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize;
     fn finish(&mut self, buf: &mut [u8]) -> usize;
 }
 
 /// A stream(-like) mode cipher
-trait StreamMode {
+trait Apply {
     fn apply(&mut self, data: &[u8], buf: &mut [u8]);
-    fn finish(&mut self);
 }
 
 /// A cipher that works on large blocks (sectors)
 trait SectorMode {
     fn apply(&mut self, iv: &[u8], data: &[u8], buf: &mut [u8]);
-    fn finish(&mut self);
-}
-
-/// An authenticated stream(-like) mode cipher encryption
-trait AuthStreamModeEncrypt {
-    fn apply(&mut self, data: &[u8], buf: &mut [u8]);
-    fn finish(&mut self) -> Vec<u8>;
-}
-
-/// An authenticated stream(-like) mode cipher decryption
-trait AuthStreamModeDecrypt {
-    fn apply(&mut self, data: &[u8], buf: &mut [u8]);
-    fn finish(&mut self) -> bool;
 }
 
 /// Provides a way to use ciphers as `Writer`s
@@ -88,7 +74,7 @@ impl <'a, T> Filter<'a, T> {
     }
 }
 
-impl <'a, T: BlockMode> Writer for Filter<'a, T> {
+impl <'a, T: BlockApply> Writer for Filter<'a, T> {
     fn write_all(&mut self, data: &[u8]) -> Result<(), IoError> {
         let mut buf = [0; DEFAULT_BUF_LEN + MAX_BLOCK_LEN];
         for chunk in data.chunks(DEFAULT_BUF_LEN) {
@@ -102,7 +88,7 @@ impl <'a, T: BlockMode> Writer for Filter<'a, T> {
 }
 
 #[unsafe_destructor]
-impl <'a, T: BlockMode> Drop for Filter<'a, T> {
+impl <'a, T: BlockApply> Drop for Filter<'a, T> {
     // this should've been close()
     fn drop(&mut self) {
         let mut buf = [0; MAX_BLOCK_LEN];
@@ -202,14 +188,14 @@ impl Drop for Context {
 }
 
 pub mod ecb{
-    use super::{Algo, BlockMode, Context, Direction};
+    use super::{Aes, BlockApply, Context, Direction};
     use ffi;
 
-    fn evpc(algo: Algo) -> *const ffi::EVP_CIPHER {
+    fn evpc(algo: Aes) -> *const ffi::EVP_CIPHER {
         unsafe {
             match algo {
-                Algo::Aes128 => ffi::EVP_aes_128_ecb(),
-                Algo::Aes256 => ffi::EVP_aes_256_ecb(),
+                Aes::Aes128 => ffi::EVP_aes_128_ecb(),
+                Aes::Aes256 => ffi::EVP_aes_256_ecb(),
             }
         }
     }
@@ -219,13 +205,13 @@ pub mod ecb{
     }
 
     impl EcbRaw {
-        pub fn new_encrypt(algo: Algo, key: &[u8]) -> EcbRaw {
+        pub fn new_encrypt(algo: Aes, key: &[u8]) -> EcbRaw {
             let mut c = Context::new(evpc(algo), Direction::Encrypt, key);
             c.set_padding(false);
             EcbRaw { context: c }
         }
 
-        pub fn new_decrypt(algo: Algo, key: &[u8]) -> EcbRaw {
+        pub fn new_decrypt(algo: Aes, key: &[u8]) -> EcbRaw {
             let mut c = Context::new(evpc(algo), Direction::Decrypt, key);
             c.set_padding(false);
             EcbRaw { context: c }
@@ -236,7 +222,7 @@ pub mod ecb{
         }
     }
 
-    impl BlockMode for EcbRaw {
+    impl BlockApply for EcbRaw {
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
             let len = self.context.checked_update(data, buf, super::MAX_BLOCK_LEN);
             len
@@ -253,13 +239,13 @@ pub mod ecb{
     }
 
     impl EcbPadded {
-        pub fn new_encrypt(algo: Algo, key: &[u8]) -> EcbPadded {
+        pub fn new_encrypt(algo: Aes, key: &[u8]) -> EcbPadded {
             let mut c = Context::new(evpc(algo), Direction::Encrypt, key);
             c.set_padding(true);
             EcbPadded { context: c }
         }
 
-        pub fn new_decrypt(algo: Algo, key: &[u8]) -> EcbPadded {
+        pub fn new_decrypt(algo: Aes, key: &[u8]) -> EcbPadded {
             let mut c = Context::new(evpc(algo), Direction::Decrypt, key);
             c.set_padding(true);
             EcbPadded { context: c }
@@ -270,7 +256,7 @@ pub mod ecb{
         }
     }
 
-    impl BlockMode for EcbPadded {
+    impl BlockApply for EcbPadded {
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
             let len = self.context.checked_update(data, buf, super::MAX_BLOCK_LEN);
             len
@@ -284,14 +270,14 @@ pub mod ecb{
 }
 
 pub mod cbc {
-    use super::{Algo, BlockMode, Context, Direction};
+    use super::{Aes, BlockApply, Context, Direction};
     use ffi;
 
-    fn evpc(algo: Algo) -> *const ffi::EVP_CIPHER {
+    fn evpc(algo: Aes) -> *const ffi::EVP_CIPHER {
         unsafe {
             match algo {
-                Algo::Aes128 => ffi::EVP_aes_128_cbc(),
-                Algo::Aes256 => ffi::EVP_aes_256_cbc(),
+                Aes::Aes128 => ffi::EVP_aes_128_cbc(),
+                Aes::Aes256 => ffi::EVP_aes_256_cbc(),
             }
         }
     }
@@ -301,13 +287,13 @@ pub mod cbc {
     }
 
     impl CbcRaw {
-        pub fn new_encrypt(algo: Algo, key: &[u8]) -> CbcRaw {
+        pub fn new_encrypt(algo: Aes, key: &[u8]) -> CbcRaw {
             let mut c = Context::new(evpc(algo), Direction::Encrypt, key);
             c.set_padding(false);
             CbcRaw { context: c }
         }
 
-        pub fn new_decrypt(algo: Algo, key: &[u8]) -> CbcRaw {
+        pub fn new_decrypt(algo: Aes, key: &[u8]) -> CbcRaw {
             let mut c = Context::new(evpc(algo), Direction::Decrypt, key);
             c.set_padding(false);
             CbcRaw { context: c }
@@ -318,7 +304,7 @@ pub mod cbc {
         }
     }
 
-    impl BlockMode for CbcRaw {
+    impl BlockApply for CbcRaw {
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
             let len = self.context.checked_update(data, buf, super::MAX_BLOCK_LEN);
             len
@@ -335,13 +321,13 @@ pub mod cbc {
     }
 
     impl CbcPadded {
-        pub fn new_encrypt(algo: Algo, key: &[u8]) -> CbcPadded {
+        pub fn new_encrypt(algo: Aes, key: &[u8]) -> CbcPadded {
             let mut c = Context::new(evpc(algo), Direction::Encrypt, key);
             c.set_padding(true);
             CbcPadded { context: c }
         }
 
-        pub fn new_decrypt(algo: Algo, key: &[u8]) -> CbcPadded {
+        pub fn new_decrypt(algo: Aes, key: &[u8]) -> CbcPadded {
             let mut c = Context::new(evpc(algo), Direction::Decrypt, key);
             c.set_padding(true);
             CbcPadded { context: c }
@@ -352,7 +338,7 @@ pub mod cbc {
         }
     }
 
-    impl BlockMode for CbcPadded {
+    impl BlockApply for CbcPadded {
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
             let len = self.context.checked_update(data, buf, super::MAX_BLOCK_LEN);
             len
@@ -367,8 +353,8 @@ pub mod cbc {
 
 #[cfg(test)]
 mod test {
-    use super::{Algo, BlockMode, Filter};
-    use super::Algo::*;
+    use super::{Aes, BlockApply, Filter};
+    use super::Aes::*;
     use super::ecb::{EcbRaw, EcbPadded};
     use super::cbc::{CbcRaw, CbcPadded};
     use std::iter::repeat;
@@ -387,7 +373,7 @@ mod test {
          tup.3.from_hex().unwrap(), tup.4.from_hex().unwrap())
     }
 
-    const ECB_RAW_VEC: [(Algo, &'static str, &'static str, &'static str); 4] = [
+    const ECB_RAW_VEC: [(Aes, &'static str, &'static str, &'static str); 4] = [
         // One block
         (Aes128,                                // algo
          "99a5758d22880b01a4922f094dafceaa",    // key
@@ -408,7 +394,7 @@ mod test {
          "9d1001068827dd328ed86a540d4496b200512f8c8717266aa0b91eec01604d7c"),
     ];
 
-    const ECB_PADDED_VEC: [(Algo, &'static str, &'static str, &'static str); 4] = [
+    const ECB_PADDED_VEC: [(Aes, &'static str, &'static str, &'static str); 4] = [
         // One block
         (Aes128,
          "99a5758d22880b01a4922f094dafceaa",
@@ -429,7 +415,7 @@ mod test {
          "9d1001068827dd328ed86a540d4496b280c1deb5f8a465f00daf7c2f67fc861d"),
     ];
 
-    const CBC_RAW_VEC: [(Algo, &'static str, &'static str, &'static str, &'static str); 4] = [
+    const CBC_RAW_VEC: [(Aes, &'static str, &'static str, &'static str, &'static str); 4] = [
         // One block
         (Aes128,                                // algo
          "99a5758d22880b01a4922f094dafceaa",    // key
@@ -454,7 +440,7 @@ mod test {
          "19a066de723ca454666290f8e8147a6d98288504b7ec8b80f3699954d1d930ff"),
     ];
 
-    const CBC_PADDED_VEC: [(Algo, &'static str, &'static str, &'static str, &'static str); 4] = [
+    const CBC_PADDED_VEC: [(Aes, &'static str, &'static str, &'static str, &'static str); 4] = [
         // One block
         (Aes128,
          "99a5758d22880b01a4922f094dafceaa",
@@ -479,7 +465,7 @@ mod test {
          "19a066de723ca454666290f8e8147a6ddde9fb1e6dbb8a52b5b09b24e228bc2d"),
     ];
 
-    fn test_block_mode_apply<T: BlockMode>(vec_name: &str, n: i32, pt: &[u8],
+    fn test_block_mode_apply<T: BlockApply>(vec_name: &str, n: i32, pt: &[u8],
                                            ct: &[u8], enc: &mut T, dec: &mut T) {
         let buf_len = max(pt.len(), ct.len()) + super::MAX_BLOCK_LEN;
         let mut res: Vec<u8> = repeat(0).take(buf_len).collect();
@@ -494,7 +480,7 @@ mod test {
         assert!(pt == &res[..len], "{}[{}] decrypt", vec_name, n);
     }
 
-    fn test_block_mode_write<T: BlockMode>(vec_name: &str, n: i32, pt: &[u8],
+    fn test_block_mode_write<T: BlockApply>(vec_name: &str, n: i32, pt: &[u8],
                                            ct: &[u8], enc: &mut T, dec: &mut T) {
         let mut res: Vec<u8> = Vec::new();
 
