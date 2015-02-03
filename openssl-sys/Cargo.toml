@@ -8,7 +8,7 @@ description = "FFI bindings to OpenSSL"
 repository = "https://github.com/sfackler/rust-openssl"
 
 links = "openssl"
-build = "src/build.rs"
+build = "build.rs"
 
 [features]
 tlsv1_2 = []
