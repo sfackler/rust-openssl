@@ -1,4 +1,4 @@
-#![feature(unsafe_destructor, core, io, std_misc, libc, hash, path, collections)]
+#![feature(unsafe_destructor, core, io, std_misc, libc, hash, path)]
 #![crate_name="openssl"]
 #![crate_type="rlib"]
 #![crate_type="dylib"]
