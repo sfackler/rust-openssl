@@ -5,15 +5,16 @@ extern crate "pkg-config" as pkg_config;
 use std::os;
 
 fn main() {
+    let target = os::getenv("TARGET").unwrap();
+    let is_android = target.find_str("android").is_some();
+
     // Without hackory, pkg-config will only look for host libraries.
     // So, abandon ship if we're cross compiling.
-    if !pkg_config::target_supported() { return; }
-
+    if !is_android && !pkg_config::target_supported() {
+        panic!("unsupported target");
+    }
 
     if pkg_config::find_library("openssl").is_err() {
-        let target = os::getenv("TARGET").unwrap();
-        let is_android = target.find_str("android").is_some();
-
         let mut flags = if is_android {
             " -l crypto:static -l ssl:static"
         } else {
