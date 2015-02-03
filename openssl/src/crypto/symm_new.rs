@@ -471,11 +471,11 @@ mod test {
         let mut res: Vec<u8> = repeat(0).take(buf_len).collect();
         let mut len;
 
-        len = enc.apply(pt, &mut *res);
+        len = enc.apply(pt, &mut res);
         len += enc.finish(&mut res[len..]);
         assert!(ct == &res[..len], "{}[{}] encrypt", vec_name, n);
 
-        len = dec.apply(ct, &mut *res);
+        len = dec.apply(ct, &mut res);
         len += dec.finish(&mut res[len..]);
         assert!(pt == &res[..len], "{}[{}] decrypt", vec_name, n);
     }
@@ -511,11 +511,11 @@ mod test {
         for item in ECB_RAW_VEC.iter() {
             let (algo, key, pt, ct) = unpack3(item);
 
-            let mut enc = EcbRaw::new_encrypt(algo, &*key);
+            let mut enc = EcbRaw::new_encrypt(algo, &key);
             enc.start();
-            let mut dec = EcbRaw::new_decrypt(algo, &*key);
+            let mut dec = EcbRaw::new_decrypt(algo, &key);
             dec.start();
-            test_block_mode_apply("ECB_RAW_VEC", n, &*pt, &*ct, &mut enc, &mut dec);
+            test_block_mode_apply("ECB_RAW_VEC", n, &pt, &ct, &mut enc, &mut dec);
 
             n += 1;
         }
@@ -524,11 +524,11 @@ mod test {
         for item in ECB_PADDED_VEC.iter() {
             let (algo, key, pt, ct) = unpack3(item);
 
-            let mut enc = EcbPadded::new_encrypt(algo, &*key);
+            let mut enc = EcbPadded::new_encrypt(algo, &key);
             enc.start();
-            let mut dec = EcbPadded::new_decrypt(algo, &*key);
+            let mut dec = EcbPadded::new_decrypt(algo, &key);
             dec.start();
-            test_block_mode_apply("ECB_PADDED_VEC", n, &*pt, &*ct, &mut enc, &mut dec);
+            test_block_mode_apply("ECB_PADDED_VEC", n, &pt, &ct, &mut enc, &mut dec);
 
             n += 1;
         }
@@ -542,11 +542,11 @@ mod test {
         for item in ECB_RAW_VEC.iter() {
             let (algo, key, pt, ct) = unpack3(item);
 
-            let mut enc = EcbRaw::new_encrypt(algo, &*key);
+            let mut enc = EcbRaw::new_encrypt(algo, &key);
             enc.start();
-            let mut dec = EcbRaw::new_decrypt(algo, &*key);
+            let mut dec = EcbRaw::new_decrypt(algo, &key);
             dec.start();
-            test_block_mode_write("ECB_RAW_VEC", n, &*pt, &*ct, &mut enc, &mut dec);
+            test_block_mode_write("ECB_RAW_VEC", n, &pt, &ct, &mut enc, &mut dec);
 
             n += 1;
         }
@@ -555,11 +555,11 @@ mod test {
         for item in ECB_PADDED_VEC.iter() {
             let (algo, key, pt, ct) = unpack3(item);
 
-            let mut enc = EcbPadded::new_encrypt(algo, &*key);
+            let mut enc = EcbPadded::new_encrypt(algo, &key);
             enc.start();
-            let mut dec = EcbPadded::new_decrypt(algo, &*key);
+            let mut dec = EcbPadded::new_decrypt(algo, &key);
             dec.start();
-            test_block_mode_write("ECB_PADDED_VEC", n, &*pt, &*ct, &mut enc, &mut dec);
+            test_block_mode_write("ECB_PADDED_VEC", n, &pt, &ct, &mut enc, &mut dec);
 
             n += 1;
         }
@@ -573,11 +573,11 @@ mod test {
         for item in CBC_RAW_VEC.iter() {
             let (algo, key, iv, pt, ct) = unpack4(item);
 
-            let mut enc = CbcRaw::new_encrypt(algo, &*key);
-            enc.start(&*iv);
-            let mut dec = CbcRaw::new_decrypt(algo, &*key);
-            dec.start(&*iv);
-            test_block_mode_apply("CBC_RAW_VEC", n, &*pt, &*ct, &mut enc, &mut dec);
+            let mut enc = CbcRaw::new_encrypt(algo, &key);
+            enc.start(&iv);
+            let mut dec = CbcRaw::new_decrypt(algo, &key);
+            dec.start(&iv);
+            test_block_mode_apply("CBC_RAW_VEC", n, &pt, &ct, &mut enc, &mut dec);
 
             n += 1;
         }
@@ -586,11 +586,11 @@ mod test {
         for item in CBC_PADDED_VEC.iter() {
             let (algo, key, iv, pt, ct) = unpack4(item);
 
-            let mut enc = CbcPadded::new_encrypt(algo, &*key);
-            enc.start(&*iv);
-            let mut dec = CbcPadded::new_decrypt(algo, &*key);
-            dec.start(&*iv);
-            test_block_mode_apply("CBC_PADDED_VEC", n, &*pt, &*ct, &mut enc, &mut dec);
+            let mut enc = CbcPadded::new_encrypt(algo, &key);
+            enc.start(&iv);
+            let mut dec = CbcPadded::new_decrypt(algo, &key);
+            dec.start(&iv);
+            test_block_mode_apply("CBC_PADDED_VEC", n, &pt, &ct, &mut enc, &mut dec);
 
             n += 1;
         }
@@ -604,11 +604,11 @@ mod test {
         for item in CBC_RAW_VEC.iter() {
             let (algo, key, iv, pt, ct) = unpack4(item);
 
-            let mut enc = CbcRaw::new_encrypt(algo, &*key);
-            enc.start(&*iv);
-            let mut dec = CbcRaw::new_decrypt(algo, &*key);
-            dec.start(&*iv);
-            test_block_mode_write("CBC_RAW_VEC", n, &*pt, &*ct, &mut enc, &mut dec);
+            let mut enc = CbcRaw::new_encrypt(algo, &key);
+            enc.start(&iv);
+            let mut dec = CbcRaw::new_decrypt(algo, &key);
+            dec.start(&iv);
+            test_block_mode_write("CBC_RAW_VEC", n, &pt, &ct, &mut enc, &mut dec);
 
             n += 1;
         }
@@ -617,11 +617,11 @@ mod test {
         for item in CBC_PADDED_VEC.iter() {
             let (algo, key, iv, pt, ct) = unpack4(item);
 
-            let mut enc = CbcPadded::new_encrypt(algo, &*key);
-            enc.start(&*iv);
-            let mut dec = CbcPadded::new_decrypt(algo, &*key);
-            dec.start(&*iv);
-            test_block_mode_write("CBC_PADDED_VEC", n, &*pt, &*ct, &mut enc, &mut dec);
+            let mut enc = CbcPadded::new_encrypt(algo, &key);
+            enc.start(&iv);
+            let mut dec = CbcPadded::new_decrypt(algo, &key);
+            dec.start(&iv);
+            test_block_mode_write("CBC_PADDED_VEC", n, &pt, &ct, &mut enc, &mut dec);
 
             n += 1;
         }
