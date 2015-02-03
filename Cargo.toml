@@ -1,6 +1,6 @@
 [package]
 name = "openssl"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
@@ -17,7 +17,7 @@ aes_xts = ["openssl-sys/aes_xts"]
 
 [dependencies.openssl-sys]
 path = "openssl-sys"
-version = "0.3.0"
+version = "0.3.1"
 
 [dev-dependencies]
 rustc-serialize = "0.2"
