@@ -1138,6 +1138,48 @@ mod test {
     }
 
     #[test]
+    fn test_ecb_padded_write_twice() {
+        let mut n = 0;
+
+        for item in ECB_PADDED_VEC.iter() {
+            let (algo, key, pt, ct) = unpack3(item);
+
+            let mut res: Vec<u8> = Vec::new();
+
+            let mut enc = EcbPadded::new_encrypt(algo, &key);
+            enc.start();
+            {
+                let mut w = Filter::new(&mut enc, &mut res);
+                for byte in pt.iter() {
+                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                }
+            }
+            {
+                let w = PaddedFilter::new(&mut enc, &mut res);
+                assert!(w.close().is_ok(), "vec #{}", n);
+            }
+            assert!(ct == res, "vec #{}", n);
+
+            res.truncate(0);
+            let mut dec = EcbPadded::new_decrypt(algo, &key);
+            dec.start();
+            {
+                let mut w = Filter::new(&mut dec, &mut res);
+                for byte in ct.iter() {
+                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                }
+            }
+            {
+                let w = PaddedFilter::new(&mut dec, &mut res);
+                assert!(w.close().is_ok(), "vec #{}", n);
+            }
+            assert!(pt == res, "vec #{}", n);
+
+            n += 1;
+        }
+    }
+
+    #[test]
     fn test_cbc_raw_apply() {
         let mut n = 0;
         for item in CBC_RAW_VEC.iter() {
@@ -1337,6 +1379,48 @@ mod test {
                 for byte in ct.iter() {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
+                assert!(w.close().is_ok(), "vec #{}", n);
+            }
+            assert!(pt == res, "vec #{}", n);
+
+            n += 1;
+        }
+    }
+
+    #[test]
+    fn test_cbc_padded_write_twice() {
+        let mut n = 0;
+
+        for item in CBC_PADDED_VEC.iter() {
+            let (algo, key, iv, pt, ct) = unpack4(item);
+
+            let mut res: Vec<u8> = Vec::new();
+
+            let mut enc = CbcPadded::new_encrypt(algo, &key);
+            enc.start(&iv);
+            {
+                let mut w = Filter::new(&mut enc, &mut res);
+                for byte in pt.iter() {
+                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                }
+            }
+            {
+                let w = PaddedFilter::new(&mut enc, &mut res);
+                assert!(w.close().is_ok(), "vec #{}", n);
+            }
+            assert!(ct == res, "vec #{}", n);
+
+            res.truncate(0);
+            let mut dec = CbcPadded::new_decrypt(algo, &key);
+            dec.start(&iv);
+            {
+                let mut w = Filter::new(&mut dec, &mut res);
+                for byte in ct.iter() {
+                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                }
+            }
+            {
+                let w = PaddedFilter::new(&mut dec, &mut res);
                 assert!(w.close().is_ok(), "vec #{}", n);
             }
             assert!(pt == res, "vec #{}", n);
