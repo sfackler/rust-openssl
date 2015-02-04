@@ -26,12 +26,17 @@ pub enum Aes {
     Aes256,
 }
 
+/// Indicates a symmetric cipher error
 #[derive(Clone, Debug, PartialEq)]
 pub enum Error {
-    IoError(Box<IoError>),
+    /// The data doesn't end on a cipher block boundary as required by the mode
     IncompleteBlock,
+    /// The padding at the end of data is malformed or missing
     InvalidPadding,
+    /// Authentication of the data has failed. The data may have been altered.
     AuthFailed,
+    /// An external IO error
+    IoError(Box<IoError>),
 }
 
 impl error::Error for Error {
@@ -79,23 +84,28 @@ struct Context {
     state: State,
 }
 
-
-/// A cipher
+/// A trait for ciphers that allow transcoding several chunks of data consequtively.
 trait Apply {
+    /// Transcode the `data` into the `buf`.
+    ///
+    /// The `buf` have enough space to fit `data` (plus a cipher block length
+    /// in ECB and CBC modes).
     fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize;
 }
 
-/// A padded block mode cipher finalization
+/// A trait for block mode ciphers that may not return the last bytes of data until finished.
 trait PaddedFinish: Apply {
     fn finish(&mut self, buf: &mut [u8]) -> Result<usize, Error>;
 }
 
+/*
 /// A cipher that works on large blocks (sectors)
 trait SectorMode {
     fn apply(&mut self, iv: &[u8], data: &[u8], buf: &mut [u8]);
 }
+*/
 
-/// Provides a way to use ciphers as `Writer`s
+/// An adapter for using ciphers as `Writer`s
 // Subject to changes after std::io stabilization
 pub struct Filter<'a, T: 'a> {
     cipher: &'a mut T,
@@ -105,7 +115,10 @@ pub struct Filter<'a, T: 'a> {
 const FILTER_BUFFER_LEN: usize = 16384;
 
 impl <'a, T> Filter<'a, T> {
-    /// Create a `Writer` adapter for the `cipher`. The `cipher` has to be `start`ed.
+    /// Create a `Writer` adapter for the `cipher`. The output is written
+    /// to the `sink`.
+    /// The `cipher` has to be `start`ed beforehand and `finish`ed after
+    /// destroying the adapter.
     pub fn new(cipher: &'a mut T, sink: &'a mut (Writer + 'a))
           -> Filter<'a, T> {
         Filter { cipher: cipher, sink: sink }
@@ -125,18 +138,24 @@ impl <'a, T: Apply> Writer for Filter<'a, T> {
     }
 }
 
-/// Finishes the cipher after the last write
+/// A `Writer` adapter that finishes the padded cipher after writing.
 pub struct PaddedFilter<'a, T: 'a> {
     inner: Filter<'a, T>,
     closed: bool,
 }
 
 impl <'a, T: PaddedFinish> PaddedFilter<'a, T> {
+    /// Create a `Writer` adapter that finishes the padded cipher after writing.
+    /// The output is written to the `sink`.
+    /// The cipher has to be `start`ed beforehand and is finished explicitly
+    /// with `close` or implicitly when the adapter is destroyed (in which case
+    /// the last bytes won't reach the sink).
     pub fn new(cipher: &'a mut T, sink: &'a mut (Writer + 'a))
           -> PaddedFilter<'a, T> {
         PaddedFilter { inner: Filter::new(cipher, sink), closed: false }
     }
 
+    /// Finish the cipher and write the remaining data to the sink.
     pub fn close(mut self) -> Result<(), Error> {
         let mut buf = [0; ffi::EVP_MAX_BLOCK_LENGTH];
         self.closed = true;
@@ -308,27 +327,40 @@ pub mod ecb{
         }
     }
 
+    /// AES in ECB mode without padding.
+    ///
+    /// The data length needs to be a multiple of AES block length.
+    /// This mode doesn't use IVs so is not supposed to be used.
     pub struct EcbRaw {
         context: Context,
     }
 
     impl EcbRaw {
+        /// Creates a new AES ECB unpadded encryptor.
         pub fn new_encrypt(algo: Aes, key: &[u8]) -> EcbRaw {
             let mut c = Context::new(evpc(algo), Direction::Encrypt, key);
             c.set_padding(false);
             EcbRaw { context: c }
         }
 
+        /// Creates a new AES ECB unpadded decryptor.
         pub fn new_decrypt(algo: Aes, key: &[u8]) -> EcbRaw {
             let mut c = Context::new(evpc(algo), Direction::Decrypt, key);
             c.set_padding(false);
             EcbRaw { context: c }
         }
 
+        /// Prepares the cipher for use.
+        ///
+        /// The cipher can only be operated between calls to `start` and `finish`.
         pub fn start(&mut self) {
             self.context.init();
         }
 
+        /// Finishes the cipher.
+        ///
+        /// Returns an `IncompleteBlock` error if the data doesn't end on the block
+        /// boundary.
         pub fn finish(&mut self) -> Result<(), Error> {
             if self.context.clean_finalize().is_ok() {
                 Ok(())
@@ -347,23 +379,29 @@ pub mod ecb{
 
     }
 
+    /// AES in ECB mode with padding.
     pub struct EcbPadded {
         context: Context,
     }
 
     impl EcbPadded {
+        /// Creates a new AES ECB padded encryptor.
         pub fn new_encrypt(algo: Aes, key: &[u8]) -> EcbPadded {
             let mut c = Context::new(evpc(algo), Direction::Encrypt, key);
             c.set_padding(true);
             EcbPadded { context: c }
         }
 
+        /// Creates a new AES ECB padded decryptor.
         pub fn new_decrypt(algo: Aes, key: &[u8]) -> EcbPadded {
             let mut c = Context::new(evpc(algo), Direction::Decrypt, key);
             c.set_padding(true);
             EcbPadded { context: c }
         }
 
+        /// Prepares the cipher for use.
+        ///
+        /// The cipher can only be operated between calls to `start` and `finish`.
         pub fn start(&mut self) {
             self.context.init();
         }
@@ -401,27 +439,40 @@ pub mod cbc {
         }
     }
 
+    /// AES in CBC mode without padding.
+    ///
+    /// The data length needs to be a multiple of AES block length.
+    /// This mode doesn't use IVs so is not supposed to be used.
     pub struct CbcRaw {
         context: Context,
     }
 
     impl CbcRaw {
+        /// Creates a new AES CBC unpadded encryptor.
         pub fn new_encrypt(algo: Aes, key: &[u8]) -> CbcRaw {
             let mut c = Context::new(evpc(algo), Direction::Encrypt, key);
             c.set_padding(false);
             CbcRaw { context: c }
         }
 
+        /// Creates a new AES CBC unpadded decryptor.
         pub fn new_decrypt(algo: Aes, key: &[u8]) -> CbcRaw {
             let mut c = Context::new(evpc(algo), Direction::Decrypt, key);
             c.set_padding(false);
             CbcRaw { context: c }
         }
 
+        /// Prepares the cipher for use.
+        ///
+        /// The cipher can only be operated between calls to `start` and `finish`.
         pub fn start(&mut self, iv: &[u8]) {
             unsafe { self.context.init_with_iv(iv); }
         }
 
+        /// Finishes the cipher.
+        ///
+        /// Returns an `IncompleteBlock` error if the data doesn't end on the block
+        /// boundary.
         pub fn finish(&mut self) -> Result<(), Error> {
             if self.context.clean_finalize().is_ok() {
                 Ok(())
@@ -439,23 +490,29 @@ pub mod cbc {
         }
     }
 
+    /// AES in CBC mode with padding.
     pub struct CbcPadded {
         context: Context,
     }
 
     impl CbcPadded {
+        /// Creates a new AES CBC padded encryptor.
         pub fn new_encrypt(algo: Aes, key: &[u8]) -> CbcPadded {
             let mut c = Context::new(evpc(algo), Direction::Encrypt, key);
             c.set_padding(true);
             CbcPadded { context: c }
         }
 
+        /// Creates a new AES CBC padded decryptor.
         pub fn new_decrypt(algo: Aes, key: &[u8]) -> CbcPadded {
             let mut c = Context::new(evpc(algo), Direction::Decrypt, key);
             c.set_padding(true);
             CbcPadded { context: c }
         }
 
+        /// Prepares the cipher for use.
+        ///
+        /// The cipher can only be operated between calls to `start` and `finish`.
         pub fn start(&mut self, iv: &[u8]) {
             unsafe { self.context.init_with_iv(iv); }
         }
@@ -496,18 +553,25 @@ pub mod gcm {
         }
     }
 
-    ///
+    /// AES in GCM mode authenticated encryption.
     pub struct GcmEncrypt {
         context: Context,
     }
 
     impl GcmEncrypt {
+        /// Creates a new AES GCM encryptor.
         pub fn new(algo: Aes, key: &[u8]) -> GcmEncrypt {
             GcmEncrypt {
                 context: Context::new(evpc(algo), Direction::Encrypt, key),
             }
         }
 
+        /// Prepares the encryptor for use.
+        ///
+        /// `aad` (additional authenticated data) is optional unencrypted
+        /// data to authenticate.
+        ///
+        /// The cipher can only be operated between calls to `start` and `finish`.
         pub fn start(&mut self, iv: &[u8], aad: Option<&[u8]>) {
             unsafe {
                 self.context.init_with_iv(iv);
@@ -517,6 +581,9 @@ pub mod gcm {
             }
         }
 
+        /// Finishes the cipher.
+        ///
+        /// Returns the authetication tag. It can be truncated if needed.
         pub fn finish(&mut self) -> Vec<u8> {
             assert!(self.context.clean_finalize().is_ok());
             let mut res = vec![0; BLOCK_LENGTH];
@@ -533,18 +600,29 @@ pub mod gcm {
         }
     }
 
-    ///
+    /// AES in GCM mode authenticated decryption.
     pub struct GcmDecrypt {
         context: Context,
     }
 
     impl GcmDecrypt {
+        /// Creates a new AES GCM decryptor.
         pub fn new(algo: Aes, key: &[u8]) -> GcmDecrypt {
             GcmDecrypt {
                 context: Context::new(evpc(algo), Direction::Decrypt, key),
             }
         }
 
+        /// Prepares the decryptor for use.
+        ///
+        /// `aad` (additional authenticated data) is optional unencrypted
+        /// data to authenticate.
+        ///
+        /// `tag` is the authentication tag. Passing a truncated tag will not
+        /// lead to authentication error. Allowed tag lengths
+        /// are 4, 8, 12, 13, 14, 15 and 16 bytes.
+        ///
+        /// The cipher can only be operated between calls to `start` and `finish`.
         pub fn start(&mut self, iv: &[u8], aad: Option<&[u8]>, tag: &[u8]) {
             unsafe {
                 self.context.init_with_iv(iv);
@@ -555,6 +633,11 @@ pub mod gcm {
             }
         }
 
+        /// Finishes the cipher.
+        ///
+        /// Returns AuthFailed if the data and AAD (if any) didn't match
+        /// the authentication tag. In this case the data should be considered
+        /// untrusted and discarded.
         pub fn finish(&mut self) -> Result<(), Error> {
             if self.context.clean_finalize().is_ok() {
                 Ok(())
