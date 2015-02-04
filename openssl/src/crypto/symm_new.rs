@@ -1,3 +1,42 @@
+//! Symmetric encryption support
+//!
+//! # Examples
+//!
+//! * Zero copy API:
+//!
+//! ```rust
+//! use openssl::crypto::symm_new::{Aes, Apply, PaddedFinish};
+//! use openssl::crypto::symm_new::cbc::{CbcPadded};
+//! let key = b"\xc3\xb3\xc4\x1f\x11\x3a\x31\xb7\x3d\x9a\x5c\xd4\x32\x10\x30\x69";
+//! let iv = b"\x93\xfe\x7d\x9e\x9b\xfd\x10\x34\x8a\x56\x06\xe5\xca\xfa\x73\x54";
+//! let pt = b"secret!";
+//! let mut res = vec![0; 32];
+//! let mut enc = CbcPadded::new_encrypt(Aes::Aes128, key);
+//! enc.start(iv);
+//! let mut len = enc.apply(pt, &mut res);
+//! len += enc.finish(&mut res[len..]).unwrap();
+//! assert!(&res[..len] == b"\x3a\x41\xfe\x79\xaa\x90\x77\x2a\x16\xa1\xc0\x92\x6d\x11\x82\xc4");
+//! ```
+//!
+//! * `Writer` adapter
+//!
+//! ```rust
+//! use openssl::crypto::symm_new::{Aes, Apply, PaddedFinish, PaddedFilter};
+//! use openssl::crypto::symm_new::cbc::{CbcPadded};
+//! let key = b"\xc3\xb3\xc4\x1f\x11\x3a\x31\xb7\x3d\x9a\x5c\xd4\x32\x10\x30\x69";
+//! let iv = b"\x93\xfe\x7d\x9e\x9b\xfd\x10\x34\x8a\x56\x06\xe5\xca\xfa\x73\x54";
+//! let ct = b"\x3a\x41\xfe\x79\xaa\x90\x77\x2a\x16\xa1\xc0\x92\x6d\x11\x82\xc4";
+//! let mut res: Vec<u8> = Vec::new();
+//! let mut dec = CbcPadded::new_decrypt(Aes::Aes128, key);
+//! dec.start(iv);
+//! {
+//!     let mut w = PaddedFilter::new(&mut dec, &mut res);
+//!     assert!(w.write_all(ct).is_ok());
+//!     assert!(w.close().is_ok());
+//! }
+//! assert!(res == b"secret!");
+//! ```
+
 use std::{error, fmt, mem, ptr};
 use std::error::Error as StdError;
 use libc::{c_int, c_void};
@@ -20,6 +59,7 @@ enum Direction {
     Encrypt,
 }
 
+/// Selects AES key size
 #[derive(Copy, PartialEq)]
 pub enum Aes {
     Aes128,
@@ -85,7 +125,7 @@ struct Context {
 }
 
 /// A trait for ciphers that allow transcoding several chunks of data consequtively.
-trait Apply {
+pub trait Apply {
     /// Transcode the `data` into the `buf`.
     ///
     /// The `buf` have enough space to fit `data` (plus a cipher block length
@@ -94,7 +134,7 @@ trait Apply {
 }
 
 /// A trait for block mode ciphers that may not return the last bytes of data until finished.
-trait PaddedFinish: Apply {
+pub trait PaddedFinish: Apply {
     fn finish(&mut self, buf: &mut [u8]) -> Result<usize, Error>;
 }
 
@@ -315,6 +355,8 @@ impl Drop for Context {
 }
 
 pub mod ecb{
+    //! ECB mode
+
     use super::{Aes, Apply, Context, Direction, Error, PaddedFinish};
     use ffi;
 
@@ -326,6 +368,9 @@ pub mod ecb{
             }
         }
     }
+
+    // We only support AES right now.
+    const BLOCK_LENGTH: usize = 16;
 
     /// AES in ECB mode without padding.
     ///
@@ -373,7 +418,7 @@ pub mod ecb{
 
     impl Apply for EcbRaw {
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
-            let len = self.context.checked_update(data, buf, ffi::EVP_MAX_BLOCK_LENGTH);
+            let len = self.context.checked_update(data, buf, BLOCK_LENGTH);
             len
         }
 
@@ -409,14 +454,14 @@ pub mod ecb{
 
     impl Apply for EcbPadded {
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
-            let len = self.context.checked_update(data, buf, ffi::EVP_MAX_BLOCK_LENGTH);
+            let len = self.context.checked_update(data, buf, BLOCK_LENGTH);
             len
         }
     }
 
     impl PaddedFinish for EcbPadded {
         fn finish(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
-            if let Ok(len) = self.context.checked_finalize(buf, ffi::EVP_MAX_BLOCK_LENGTH) {
+            if let Ok(len) = self.context.checked_finalize(buf, BLOCK_LENGTH) {
                 Ok(len)
             }
             else {
@@ -427,6 +472,8 @@ pub mod ecb{
 }
 
 pub mod cbc {
+    //! CBC mode
+
     use super::{Aes, Apply, Context, Direction, Error, PaddedFinish};
     use ffi;
 
@@ -438,6 +485,9 @@ pub mod cbc {
             }
         }
     }
+
+    // We only support AES right now.
+    const BLOCK_LENGTH: usize = 16;
 
     /// AES in CBC mode without padding.
     ///
@@ -485,7 +535,7 @@ pub mod cbc {
 
     impl Apply for CbcRaw {
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
-            let len = self.context.checked_update(data, buf, ffi::EVP_MAX_BLOCK_LENGTH);
+            let len = self.context.checked_update(data, buf, BLOCK_LENGTH);
             len
         }
     }
@@ -520,14 +570,14 @@ pub mod cbc {
 
     impl Apply for CbcPadded {
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
-            let len = self.context.checked_update(data, buf, ffi::EVP_MAX_BLOCK_LENGTH);
+            let len = self.context.checked_update(data, buf, BLOCK_LENGTH);
             len
         }
     }
 
     impl PaddedFinish for CbcPadded {
         fn finish(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
-            if let Ok(len) = self.context.checked_finalize(buf, ffi::EVP_MAX_BLOCK_LENGTH) {
+            if let Ok(len) = self.context.checked_finalize(buf, BLOCK_LENGTH) {
                 Ok(len)
             }
             else {
@@ -538,6 +588,8 @@ pub mod cbc {
 }
 
 pub mod gcm {
+    //! GCM mode
+
     use super::{Aes, Apply, Context, Direction, Error};
     use ffi;
 
