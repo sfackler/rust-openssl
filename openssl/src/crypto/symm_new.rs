@@ -790,7 +790,7 @@ mod test {
     ];
 
     const GCM_VEC: [(Aes, &'static str, &'static str, &'static str,
-                     &'static str, &'static str, &'static str); 8] = [
+                     &'static str, &'static str, &'static str); 12] = [
         (Aes128,                                // algo
          "7fddb57453c241d03efbed3ac44e371c",    // key
          "ee283a3fc75575e33efd4887",            // iv
@@ -819,6 +819,20 @@ mod test {
           "3803a0727eeb0ade441e0ec107161ded2d425ec0d102f21f51bf2cf9947c7ec4aa72795b2f69b041596e8817d0a3c16f8fadeb",
           "b9a535864f48ea7b6b1367914978f9bfa087d854bb0e269bed8d279d2eea1210e48947338b22f9bad09093276a331e9c79c7f4",
           "4f71e72bde0018f555c5adcce062e005"),
+         (Aes128,
+          "2370e320d4344208e0ff5683f243b213",
+          "04dbb82f044d30831c441228",
+          "d43a8e5089eea0d026c03a85178b27da",
+          "",
+          "",
+          "2a049c049d25aa95969b451d93c31c6e"),
+         (Aes128,
+          "762da58bb000f5d499818bc859989a30",
+          "584c291ff1aa388a5112521e",
+          "91f92e8bbda7b5ec967ade766f4f26e9189eaafad416f37b4891d3e37d70cb9a267aa843dd202858ade020261223dfce",
+          "",
+          "",
+          "9ac7eb2d762facae06086c957959880e"),
          (Aes256,
           "4c8ebfe1444ec1b2d503c6986659af2c94fafe945f72c1e8486a5acfedb8a0f8",
           "473360e0ad24889959858995",
@@ -847,6 +861,20 @@ mod test {
           "b4d0ecc410c430b61c11a1a42802858a0e9ee12f9a912f2f6b0570c99177f6de4bd79830cf9efb30759055e1f70d21e3f74957",
           "b20542b61b8fa6f847198334cb82fdbcb2311be855a6b2b3662bdb06ff0796238bea092a8ea21b585d38ace950378f41224269",
           "3bdd1d0cc2bbcefffe0ed2121aecbd00"),
+         (Aes256,
+          "6dfdafd6703c285c01f14fd10a6012862b2af950d4733abb403b2e745b26945d",
+          "3749d0b3d5bacb71be06ade6",
+          "c0d249871992e70302ae008193d1e89f",
+          "",
+          "",
+          "4aa4cc69f84ee6ac16d9bfb4e05de500"),
+         (Aes256,
+          "752a9b3cc5f29bba64e773460c7396c13f911fe77de054097da5b682ea525d79",
+          "f93e50fe23883216de85d3b4",
+          "346dd8f25abaf85221fcbbccf794fe3c6794c0f16557e2ba14f9c03bffc99ee5539b9142d1952e66af35df91250e690b",
+          "",
+          "",
+          "f02936676e36e7598258c37210b4470f"),
     ];
 
     #[test]
