@@ -104,6 +104,41 @@ pub type PasswordCallback = extern "C" fn(buf: *mut c_char, size: c_int,
                                           rwflag: c_int, user_data: *mut c_void)
                                           -> c_int;
 
+pub const EVP_MAX_KEY_LENGTH: usize = 64;
+pub const EVP_MAX_IV_LENGTH: usize = 16;
+pub const EVP_MAX_BLOCK_LENGTH: usize = 32;
+
+pub const EVP_CTRL_INIT: c_int = 0x0;
+pub const EVP_CTRL_SET_KEY_LENGTH: c_int = 0x1;
+pub const EVP_CTRL_GET_RC2_KEY_BITS: c_int = 0x2;
+pub const EVP_CTRL_SET_RC2_KEY_BITS: c_int = 0x3;
+pub const EVP_CTRL_GET_RC5_ROUNDS: c_int = 0x4;
+pub const EVP_CTRL_SET_RC5_ROUNDS: c_int = 0x5;
+pub const EVP_CTRL_RAND_KEY: c_int = 0x6;
+pub const EVP_CTRL_PBE_PRF_NID: c_int = 0x7;
+pub const EVP_CTRL_COPY: c_int = 0x8;
+pub const EVP_CTRL_GCM_SET_IVLEN: c_int = 0x9;
+pub const EVP_CTRL_GCM_GET_TAG: c_int = 0x10;
+pub const EVP_CTRL_GCM_SET_TAG: c_int = 0x11;
+pub const EVP_CTRL_GCM_SET_IV_FIXED: c_int = 0x12;
+pub const EVP_CTRL_GCM_IV_GEN: c_int = 0x13;
+pub const EVP_CTRL_CCM_SET_IVLEN: c_int = EVP_CTRL_GCM_SET_IVLEN;
+pub const EVP_CTRL_CCM_GET_TAG: c_int = EVP_CTRL_GCM_GET_TAG;
+pub const EVP_CTRL_CCM_SET_TAG: c_int = EVP_CTRL_GCM_SET_TAG;
+pub const EVP_CTRL_CCM_SET_L: c_int = 0x14;
+pub const EVP_CTRL_CCM_SET_MSGLEN: c_int = 0x15;
+pub const EVP_CTRL_AEAD_TLS1_AAD: c_int = 0x16;
+pub const EVP_CTRL_AEAD_SET_MAC_KEY: c_int = 0x17;
+pub const EVP_CTRL_GCM_SET_IV_INV: c_int = 0x18;
+pub const EVP_CTRL_TLS1_1_MULTIBLOCK_AAD: c_int = 0x19;
+pub const EVP_CTRL_TLS1_1_MULTIBLOCK_ENCRYPT: c_int = 0x1a;
+pub const EVP_CTRL_TLS1_1_MULTIBLOCK_DECRYPT: c_int = 0x1b;
+pub const EVP_CTRL_TLS1_1_MULTIBLOCK_MAX_BUFSIZE: c_int = 0x1c;
+pub const EVP_CTRL_SET_IVLEN: c_int = EVP_CTRL_GCM_SET_IVLEN;
+pub const EVP_CTRL_GET_TAG: c_int = EVP_CTRL_GCM_GET_TAG;
+pub const EVP_CTRL_SET_TAG: c_int = EVP_CTRL_GCM_SET_TAG;
+pub const EVP_CTRL_OCB_SET_TAGLEN: c_int = 0x1c;
+
 pub const BIO_CTRL_EOF: c_int = 2;
 
 pub const CRYPTO_LOCK: c_int = 1;
@@ -349,18 +384,20 @@ extern "C" {
     #[cfg(feature = "aes_xts")]
     pub fn EVP_aes_128_xts() -> *const EVP_CIPHER;
     // fn EVP_aes_128_ctr() -> EVP_CIPHER;
-    // fn EVP_aes_128_gcm() -> EVP_CIPHER;
+    pub fn EVP_aes_128_gcm() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_cbc() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_ecb() -> *const EVP_CIPHER;
     #[cfg(feature = "aes_xts")]
     pub fn EVP_aes_256_xts() -> *const EVP_CIPHER;
     // fn EVP_aes_256_ctr() -> EVP_CIPHER;
-    // fn EVP_aes_256_gcm() -> EVP_CIPHER;
+    pub fn EVP_aes_256_gcm() -> *const EVP_CIPHER;
     pub fn EVP_rc4() -> *const EVP_CIPHER;
 
     pub fn EVP_CIPHER_CTX_new() -> *mut EVP_CIPHER_CTX;
     pub fn EVP_CIPHER_CTX_set_padding(ctx: *mut EVP_CIPHER_CTX, padding: c_int) -> c_int;
     pub fn EVP_CIPHER_CTX_free(ctx: *mut EVP_CIPHER_CTX);
+    pub fn EVP_CIPHER_CTX_ctrl(ctx: *mut EVP_CIPHER_CTX, type_: c_int,
+                               arg: c_int, ptr: *mut c_void) -> c_int;
 
     pub fn EVP_CipherInit(ctx: *mut EVP_CIPHER_CTX, evp: *const EVP_CIPHER,
                           key: *const u8, iv: *const u8, mode: c_int) -> c_int;
