@@ -356,6 +356,8 @@ impl Drop for Context {
 
 pub mod ecb{
     //! ECB mode
+    //!
+    //! This mode doesn't use IVs so is not supposed to be used.
 
     use super::{Aes, Apply, Context, Direction, Error, PaddedFinish};
     use ffi;
@@ -375,7 +377,6 @@ pub mod ecb{
     /// AES in ECB mode without padding.
     ///
     /// The data length needs to be a multiple of AES block length.
-    /// This mode doesn't use IVs so is not supposed to be used.
     pub struct EcbRaw {
         context: Context,
     }
@@ -492,7 +493,6 @@ pub mod cbc {
     /// AES in CBC mode without padding.
     ///
     /// The data length needs to be a multiple of AES block length.
-    /// This mode doesn't use IVs so is not supposed to be used.
     pub struct CbcRaw {
         context: Context,
     }
