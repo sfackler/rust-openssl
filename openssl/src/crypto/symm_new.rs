@@ -75,6 +75,8 @@ pub enum Error {
     InvalidPadding,
     /// Authentication of the data has failed. The data may have been altered.
     AuthFailed,
+    /// Unspecified openssl error
+    Unspecified,
     /// An external IO error
     IoError(Box<IoError>),
 }
@@ -87,6 +89,7 @@ impl error::Error for Error {
             Error::InvalidPadding => "Malformed or missing padding at the end",
             Error::AuthFailed => "The supplied data has failed authentication.
                            Any cipher output should be discarded",
+            Error::Unspecified => "Unspecified openssl error",
         }
     }
 }
@@ -709,6 +712,80 @@ pub mod gcm {
     }
 }
 
+pub mod ctr {
+    //! CTR mode
+
+    use std::mem;
+    use std::num::Int;
+    use super::{Aes, Apply, Context, Direction, Error};
+    use ffi;
+
+    // We only support AES right now
+    const BLOCK_LENGTH: usize = 16;
+
+    fn evpc(algo: Aes) -> *const ffi::EVP_CIPHER {
+        unsafe {
+            match algo {
+                Aes::Aes128 => ffi::EVP_aes_128_ctr(),
+                Aes::Aes256 => ffi::EVP_aes_256_ctr(),
+            }
+        }
+    }
+
+    /// AES in CTR mode.
+    pub struct Ctr {
+        context: Context,
+        counter: u64,
+        block_ofs: u8,
+    }
+
+    impl Ctr {
+        /// Creates a new AES CTR en/decryptor (which are the same).
+        ///
+        /// Panics if counter overflow is detected.
+        pub fn new(algo: Aes, key: &[u8]) -> Ctr {
+            Ctr { context: Context::new(evpc(algo), Direction::Encrypt, key),
+                  counter: 0, block_ofs: 0 }
+        }
+
+        /// Prepares the cipher for use.
+        ///
+        /// The cipher can only be operated between calls to `start` and `finish`.
+        pub fn start(&mut self, iv: u64, initial_counter: u64) {
+            unsafe {
+                let buf: [u64; 2] = [iv.to_be(), initial_counter.to_be()];
+                let buf: &[u8; 16] = mem::transmute(&buf);
+                self.context.init_with_iv(buf);
+            }
+            self.counter = initial_counter;
+            self.block_ofs = 0;
+        }
+
+        /// Finishes the cipher.
+        ///
+        /// Returns the next safe to use initial counter value.
+        pub fn finish(&mut self) -> Result<u64, Error> {
+            if self.context.clean_finalize().is_ok() {
+                Ok(self.counter + if self.block_ofs > 0 { 1 } else { 0 })
+            }
+            else {
+                Err(Error::Unspecified)
+            }
+        }
+    }
+
+    impl Apply for Ctr {
+        fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
+            let len = self.context.checked_update(data, buf, 0);
+            let len_with_carried = len + self.block_ofs as usize;
+            self.counter = self.counter.checked_add((len_with_carried / BLOCK_LENGTH) as u64)
+                .expect("Counter overflow");
+            self.block_ofs = (len_with_carried % BLOCK_LENGTH) as u8;
+            len
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::{Aes, Apply, PaddedFinish, Error, Filter, PaddedFilter};
@@ -716,9 +793,11 @@ mod test {
     use super::ecb::{EcbRaw, EcbPadded};
     use super::cbc::{CbcRaw, CbcPadded};
     use super::gcm::{GcmEncrypt, GcmDecrypt};
+    use super::ctr::{Ctr};
     use ffi;
     use std::iter::repeat;
     use std::cmp::max;
+    use std::num::from_str_radix;
     use serialize::hex::FromHex;
 
     fn unpack3<T: Copy>(tup: &(T, &str, &str, &str))
@@ -733,14 +812,12 @@ mod test {
          tup.3.from_hex().unwrap(), tup.4.from_hex().unwrap())
     }
 
-    /*
     fn unpack5<T: Copy>(tup: &(T, &str, &str, &str, &str, &str))
                        -> (T, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) {
         (tup.0, tup.1.from_hex().unwrap(), tup.2.from_hex().unwrap(),
          tup.3.from_hex().unwrap(), tup.4.from_hex().unwrap(),
          tup.5.from_hex().unwrap())
     }
-    */
 
     fn unpack6<T: Copy>(tup: &(T, &str, &str, &str, &str, &str, &str))
                        -> (T, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) {
@@ -927,6 +1004,34 @@ mod test {
           "",
           "",
           "f02936676e36e7598258c37210b4470f"),
+    ];
+
+    const CTR_VEC: [(Aes, &'static str, &'static str, &'static str,
+                     &'static str, &'static str); 4] = [
+        (Aes128,                                        // algo
+         "ba90370e3acbaf88e078634282702eb6",            // key
+         "61c189f3f5b0b413",                            // iv
+         "01",                                          // ctr in hex
+         "36c9eabd56bc125814df3684ceffada4dc758782",    // plaintext
+         "bc07dfa74afa44ae85ed4b02d47e0c036da21c21"),   // ciphertext
+        (Aes128,
+         "2b7e151628aed2a6abf7158809cf4f3c",
+         "f0f1f2f3f4f5f6f7",
+         "f8f9fafbfcfdfeff",
+         "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e51",
+         "874d6191b620e3261bef6864990db6ce9806f66b7970fdff8617187bb9fffdff"),
+        (Aes256,
+         "3baa31fe106c801ed56f88b600f64e70c4d9db48ca388a0702e9a92cc915b6b0",
+         "61c189f3f5b0b413",
+         "0100",
+         "36c9eabd56bc125814df3684ceffada4dc758782",
+         "c54f04aacf5b1229106f9a82a0170a0082120c18"),
+        (Aes256,
+         "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4",
+         "f0f1f2f3f4f5f6f7",
+         "f8f9fafbfcfdfeff",
+         "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e51",
+         "601ec313775789a5b7a7f504bbf3d228f443e3ca4d62b59aca84e990cacaf5c5"),
     ];
 
     #[test]
@@ -1623,5 +1728,108 @@ mod test {
 
             n += 1;
         }
+    }
+
+    #[test]
+    fn test_ctr_apply() {
+        let mut n = 0;
+        for item in CTR_VEC.iter() {
+            let (algo, key, _, _, pt, ct) = unpack5(item);
+            let iv: u64 = from_str_radix(item.2, 16).unwrap();
+            let ctr: u64 = from_str_radix(item.3, 16).unwrap();
+            let mut res: Vec<u8> = repeat(0).take(pt.len()).collect();
+
+            let mut enc = Ctr::new(algo, &key);
+            enc.start(iv, ctr);
+            enc.apply(&pt, &mut res);
+            assert!(enc.finish().is_ok(), "CTR_VEC[{}]", n);
+            assert!(ct == res, "CTR_VEC[{}]", n);
+
+            n += 1;
+        }
+    }
+
+    #[test]
+    fn test_ctr_recycle() {
+        let dummy_iv = 0xcdcdcdcdabababab;
+        let dummy = vec![0xcd; 23];
+        let mut dummy_res = vec![0; 256];
+        let mut n = 0;
+        for item in CTR_VEC.iter() {
+            let (algo, key, _, _, pt, ct) = unpack5(item);
+            let iv: u64 = from_str_radix(item.2, 16).unwrap();
+            let ctr: u64 = from_str_radix(item.3, 16).unwrap();
+            let mut res: Vec<u8> = repeat(0).take(pt.len()).collect();
+
+            let mut enc = Ctr::new(algo, &key);
+            enc.start(dummy_iv, dummy_iv);
+            enc.apply(&dummy, &mut dummy_res);
+            let _ = enc.finish();
+
+            enc.start(iv, ctr);
+            enc.apply(&pt, &mut res);
+            assert!(enc.finish().is_ok(), "CTR_VEC[{}]", n);
+            assert!(ct == res, "CTR_VEC[{}]", n);
+
+            n += 1;
+        }
+    }
+
+    #[test]
+    fn test_ctr_write() {
+        let mut n = 0;
+        for item in CTR_VEC.iter() {
+            let (algo, key, _, _, pt, ct) = unpack5(item);
+            let iv: u64 = from_str_radix(item.2, 16).unwrap();
+            let ctr: u64 = from_str_radix(item.3, 16).unwrap();
+            let mut res: Vec<u8> = Vec::new();
+
+            let mut enc = Ctr::new(algo, &key);
+            enc.start(iv, ctr);
+            {
+                let mut w = Filter::new(&mut enc, &mut res);
+                for byte in pt.iter() {
+                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                }
+            }
+            assert!(enc.finish().is_ok(), "CTR_VEC[{}]", n);
+            assert!(ct == res, "CTR_VEC[{}]", n);
+
+            n += 1;
+        }
+    }
+
+    #[test]
+    fn test_ctr_counter_arithmetic() {
+        let dummy_iv = 0u64;
+        let dummy = vec![0; 256];
+        let mut res = vec![0; 256];
+        let mut enc = Ctr::new(Aes128, &dummy[..16]);
+
+        let mut test = |cnt: u64, len: usize| -> u64 {
+            enc.start(dummy_iv, cnt);
+            enc.apply(&dummy[..len], &mut res);
+            enc.finish().unwrap()
+        };
+
+        assert!(test(0, 0) == 0);
+        assert!(test(0, 1) == 1);
+        assert!(test(0, 16) == 1);
+        assert!(test(0, 17) == 2);
+        assert!(test(0, 32) == 2);
+        assert!(test(0, 33) == 3);
+        assert!(test(100, 1) == 101);
+    }
+
+    #[test]
+    #[should_fail]
+    fn test_ctr_counter_overflow_panic() {
+        let dummy_iv = 0u64;
+        let ctr = -4i64 as u64;
+        let dummy = vec![0; 256];
+        let mut res = vec![0; 256];
+        let mut enc = Ctr::new(Aes128, &dummy[..16]);
+        enc.start(dummy_iv, ctr);
+        enc.apply(&dummy, &mut res);
     }
 }
