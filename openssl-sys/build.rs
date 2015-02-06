@@ -1,11 +1,11 @@
-#![feature(core, collections, os)]
+#![feature(core, collections, env)]
 
 extern crate "pkg-config" as pkg_config;
 
-use std::os;
+use std::env;
 
 fn main() {
-    let target = os::getenv("TARGET").unwrap();
+    let target = env::var_string("TARGET").unwrap();
     let is_android = target.find_str("android").is_some();
 
     // Without hackory, pkg-config will only look for host libraries.
@@ -32,9 +32,10 @@ fn main() {
         }
 
         if is_android {
-            let path = os::getenv("OPENSSL_PATH").expect("Android does not provide openssl libraries, please \
-                                                          build them yourselves (instructions in the README) \
-                                                          and provide their location through $OPENSSL_PATH.");
+            let path = env::var_string("OPENSSL_PATH").ok()
+                .expect("Android does not provide openssl libraries, please build them yourselves \
+                         (instructions in the README) and provide their location through \
+                         $OPENSSL_PATH.");
             flags.push_str(format!(" -L {}", path).as_slice());
         }
 

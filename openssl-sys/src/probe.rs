@@ -1,4 +1,4 @@
-use std::os;
+use std::env;
 use std::old_io::fs::PathExtensions;
 
 pub struct ProbeResult {
@@ -41,17 +41,17 @@ pub fn init_ssl_cert_env_vars() {
 
     fn put(var: &str, path: Path) {
         // Don't stomp over what anyone else has set
-        match os::getenv(var) {
+        match env::var(var) {
             Some(..) => {}
-            None => os::setenv(var, path),
+            None => env::set_var(var, &path),
         }
     }
 }
 
 pub fn probe() -> ProbeResult {
     let mut result = ProbeResult {
-        cert_file: os::getenv("SSL_CERT_FILE").map(Path::new),
-        cert_dir: os::getenv("SSL_CERT_DIR").map(Path::new),
+        cert_file: env::var_string("SSL_CERT_FILE").ok().map(Path::new),
+        cert_dir: env::var_string("SSL_CERT_DIR").ok().map(Path::new),
     };
     for certs_dir in find_certs_dirs().iter() {
         // cert.pem looks to be an openssl 1.0.1 thing, while
