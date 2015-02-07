@@ -29,6 +29,17 @@ For some reason, the OpenSSL distribution for Windows is structured differently,
 4. Rename `libeay32.a` and `ssleay32.a` to `libcrypto.a` and `libssl.a`, respectively. 
 5. Run `cargo build`.
 
+###OS X
+
+OS X is shipped with extremely outdated openssl. We recommend to update it. If you're using Homebrew it should be as easy as:
+
+```bash
+brew install openssl
+brew link openssl --force
+```
+
+Note that you need to execute `cargo clean` in your project directory to rebuild `rust-openssl` with the new version of `openssl`.
+
 ###Testing
 Several tests expect a local test server to be running to bounce requests off of. It's easy to do this. Open a separate terminal window and `cd` to the rust-openssl directory. Then run one of the following commands:
 
