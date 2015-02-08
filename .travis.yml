@@ -10,4 +10,4 @@ script:
 - (cd openssl && cargo test --features $FEATURES)
 - ./.travis/build_docs.sh
 after_success:
-- $TRAVIS_PULL_REQUEST == "false" && test $TRAVIS_BRANCH == "master" && ./.travis/update_docs.sh
+- test $TRAVIS_PULL_REQUEST == "false" && test $TRAVIS_BRANCH == "master" && ./.travis/update_docs.sh
