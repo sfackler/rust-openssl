@@ -2,7 +2,7 @@
 #![crate_name="openssl"]
 #![crate_type="rlib"]
 #![crate_type="dylib"]
-#![doc(html_root_url="https://sfackler.github.io/doc/openssl")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/openssl")]
 
 extern crate libc;
 #[cfg(test)]

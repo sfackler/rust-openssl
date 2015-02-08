@@ -1,12 +1,12 @@
 rust-openssl [![Build Status](https://travis-ci.org/sfackler/rust-openssl.svg?branch=master)](https://travis-ci.org/sfackler/rust-openssl)
 ============
 
-See the [rustdoc output](https://sfackler.github.io/doc/openssl).
+See the [rustdoc output](https://sfackler.github.io/rust-openssl/doc/openssl).
 
 Building
 --------
 
-rust-openssl needs to link against the OpenSSL devleopment libraries on your system. It's very easy to get them on Linux.  
+rust-openssl needs to link against the OpenSSL devleopment libraries on your system. It's very easy to get them on Linux.
 For some reason, the OpenSSL distribution for Windows is structured differently, so it's a little more involved, but it *is* possible to build rust-openssl successfully on Windows.
 
 ###Linux

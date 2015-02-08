@@ -1,12 +1,17 @@
 language: rust
 env:
   matrix:
-    - FEATURES=""
-    - FEATURES="tlsv1_1 tlsv1_2 aes_xts"
+  - FEATURES=""
+  - FEATURES="tlsv1_1 tlsv1_2 aes_xts"
+  global:
+    secure: J4i75AV4KMrU/UQrLIzzIh35Xix40Ki0uWjm8j05oxlXVl5aPU2zB30AemDne2QXYzkN4kRG/iRnNORE/8D0lF7YipQNSNxgfiBVoOEfj/NSogvI2BftYX9vlLZJUvt+s/nbE3xa/Pyge1IPv7itDYGO7SMe8RTSqitgqyfE2Eg=
 os:
-  - osx
-  - linux
+- osx
+- linux
 before_script:
-  - openssl s_server -accept 15418 -www -cert test/cert.pem -key test/key.pem >/dev/null 2>&1 &
+- openssl s_server -accept 15418 -www -cert test/cert.pem -key test/key.pem >/dev/null 2>&1 &
 script:
-  - cargo test --features "$FEATURES"
+- (cd openssl && cargo test --features "$FEATURES")
+- ./.travis/build_docs.sh
+after_success:
+- test $TRAVIS_PULL_REQUEST == "false" && test $TRAVIS_BRANCH == "master" && ./.travis/update_docs.sh
