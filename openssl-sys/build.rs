@@ -1,44 +1,50 @@
-#![feature(core, collections, env)]
+#![feature(env)]
 
 extern crate "pkg-config" as pkg_config;
+extern crate gcc;
 
 use std::env;
+use std::default::Default;
 
 fn main() {
     let target = env::var_string("TARGET").unwrap();
-    let is_android = target.find_str("android").is_some();
 
-    // Without hackory, pkg-config will only look for host libraries.
-    // So, abandon ship if we're cross compiling.
-    if !is_android && !pkg_config::target_supported() {
-        panic!("unsupported target");
+    if target.contains("android") {
+        let path = env::var_string("OPENSSL_PATH").ok()
+            .expect("Android does not provide openssl libraries, please build them yourself \
+                     (instructions in the README) and provide their location through \
+                     $OPENSSL_PATH.");
+        println!("cargo:rustc-flags=-L native={} -l crypto:static -l ssl:static", path);
+        return;
     }
 
-    if pkg_config::find_library("openssl").is_err() {
-        let mut flags = if is_android {
-            " -l crypto:static -l ssl:static"
-        } else {
-            " -l crypto -l ssl"
-        }.to_string();
-
-        let win_pos = target.find_str("windows")
-                            .or(target.find_str("win32"))
-                            .or(target.find_str("win64"));
-
-        // It's fun, but it looks like win32 and win64 both
-        // have all the libs with 32 sufix
-        if win_pos.is_some() {
-           flags.push_str(" -l gdi32 -l wsock32");
-        }
-
-        if is_android {
-            let path = env::var_string("OPENSSL_PATH").ok()
-                .expect("Android does not provide openssl libraries, please build them yourselves \
-                         (instructions in the README) and provide their location through \
-                         $OPENSSL_PATH.");
-            flags.push_str(format!(" -L {}", path).as_slice());
-        }
-
-        println!("cargo:rustc-flags={}", flags);
+    if target.contains("win32") || target.contains("win64") {
+        println!("cargo:rustc-flags=-l crypto -l ssl -l gdi32 -l wsock32");
+        return;
     }
+
+    if pkg_config::Config::new().atleast_version("1.0.0").find("openssl").is_ok() {
+        build_old_openssl_shim(false);
+        return;
+    }
+
+    if pkg_config::find_library("openssl").is_ok() {
+        build_old_openssl_shim(true);
+        return;
+    }
+
+    panic!("Unable to find openssl libraries");
+}
+
+fn build_old_openssl_shim(is_old: bool) {
+        let mut config: gcc::Config = Default::default();
+        if is_old {
+            config.definitions.push(("OLD_OPENSSL".to_string(), None));
+        }
+
+        gcc::compile_library("libold_openssl_shim.a",
+                             &config,
+                             &["src/old_openssl_shim.c"]);
+        let out_dir = env::var_string("OUT_DIR").unwrap();
+        println!("cargo:rustc-flags=-L native={} -l old_openssl_shim:static", out_dir);
 }
