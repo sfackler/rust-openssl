@@ -15,11 +15,15 @@ fn main() {
                      (instructions in the README) and provide their location through \
                      $OPENSSL_PATH.");
         println!("cargo:rustc-flags=-L native={} -l crypto:static -l ssl:static", path);
+        // going to assume the user built a new version of openssl
+        build_old_openssl_shim(false);
         return;
     }
 
     if target.contains("win32") || target.contains("win64") {
         println!("cargo:rustc-flags=-l crypto -l ssl -l gdi32 -l wsock32");
+        // going to assume the user has a new version of openssl
+        build_old_openssl_shim(false);
         return;
     }
 
