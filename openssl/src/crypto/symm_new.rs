@@ -127,11 +127,11 @@ struct Context {
     state: State,
 }
 
-/// A trait for ciphers that allow transcoding several chunks of data consequtively.
+/// A trait for ciphers that allow transcoding several chunks of data consecutively.
 pub trait Apply {
     /// Transcode the `data` into the `buf`.
     ///
-    /// The `buf` have enough space to fit `data` (plus a cipher block length
+    /// The `buf` must have enough space to fit `data` (plus a cipher block length
     /// in ECB and CBC modes).
     fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize;
 }
