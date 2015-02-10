@@ -10,7 +10,7 @@ before_script:
 - openssl s_server -accept 15418 -www -cert openssl/test/cert.pem -key openssl/test/key.pem >/dev/null 2>&1 &
 script:
 - (cd openssl && cargo test)
-- (cd openssl && cargo test --features $FEATURES)
+- (test $TRAVIS_OS_NAME != "osx" && cd openssl && cargo test --features $FEATURES)
 - ./.travis/build_docs.sh
 after_success:
 - test $TRAVIS_PULL_REQUEST == "false" && test $TRAVIS_BRANCH == "master" && ./.travis/update_docs.sh
