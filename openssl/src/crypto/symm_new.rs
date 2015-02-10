@@ -37,6 +37,7 @@
 //! assert!(res == b"secret!");
 //! ```
 
+#![allow(unused_imports)]
 use std::{error, fmt, mem, ptr};
 use std::error::Error as StdError;
 use libc::{c_int, c_void};
@@ -272,6 +273,7 @@ impl Context {
         len
     }
 
+    #[cfg(feature = "aes_gcm")]
     fn update_aad(&mut self, data: &[u8]) {
         assert!(self.state != Finalized, "Illegal call order");
         unsafe {
@@ -325,6 +327,7 @@ impl Context {
         }
     }
 
+    #[cfg(feature = "aes_gcm")]
     fn get_tag(&mut self, buf: &mut [u8]) {
         assert!(self.state == Finalized, "Illegal call order");
         let len = buf.len() as c_int;
@@ -335,6 +338,7 @@ impl Context {
         }
     }
 
+    #[cfg(feature = "aes_gcm")]
     fn set_tag(&mut self, buf: &[u8]) {
         assert!(self.state == Reset, "Illegal call order");
         let len = buf.len() as c_int;
@@ -590,6 +594,7 @@ pub mod cbc {
     }
 }
 
+#[cfg(feature = "aes_gcm")]
 pub mod gcm {
     //! GCM mode
 
@@ -712,6 +717,7 @@ pub mod gcm {
     }
 }
 
+#[cfg(feature = "aes_ctr")]
 pub mod ctr {
     //! CTR mode
 
@@ -792,13 +798,15 @@ mod test {
     use super::Aes::*;
     use super::ecb::{EcbRaw, EcbPadded};
     use super::cbc::{CbcRaw, CbcPadded};
-    use super::gcm::{GcmEncrypt, GcmDecrypt};
-    use super::ctr::{Ctr};
     use ffi;
     use std::iter::repeat;
     use std::cmp::max;
     use std::num::from_str_radix;
     use serialize::hex::FromHex;
+    #[cfg(feature = "aes_ctr")]
+    use super::ctr::{Ctr};
+    #[cfg(feature = "aes_gcm")]
+    use super::gcm::{GcmEncrypt, GcmDecrypt};
 
     fn unpack3<T: Copy>(tup: &(T, &str, &str, &str))
                        -> (T, Vec<u8>, Vec<u8>, Vec<u8>) {
@@ -812,6 +820,7 @@ mod test {
          tup.3.from_hex().unwrap(), tup.4.from_hex().unwrap())
     }
 
+    #[allow(dead_code)]
     fn unpack5<T: Copy>(tup: &(T, &str, &str, &str, &str, &str))
                        -> (T, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) {
         (tup.0, tup.1.from_hex().unwrap(), tup.2.from_hex().unwrap(),
@@ -819,6 +828,7 @@ mod test {
          tup.5.from_hex().unwrap())
     }
 
+    #[allow(dead_code)]
     fn unpack6<T: Copy>(tup: &(T, &str, &str, &str, &str, &str, &str))
                        -> (T, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) {
         (tup.0, tup.1.from_hex().unwrap(), tup.2.from_hex().unwrap(),
@@ -918,6 +928,7 @@ mod test {
          "19a066de723ca454666290f8e8147a6ddde9fb1e6dbb8a52b5b09b24e228bc2d"),
     ];
 
+    #[cfg(feature = "aes_gcm")]
     const GCM_VEC: [(Aes, &'static str, &'static str, &'static str,
                      &'static str, &'static str, &'static str); 12] = [
         (Aes128,                                // algo
@@ -1006,6 +1017,7 @@ mod test {
           "f02936676e36e7598258c37210b4470f"),
     ];
 
+    #[cfg(feature = "aes_ctr")]
     const CTR_VEC: [(Aes, &'static str, &'static str, &'static str,
                      &'static str, &'static str); 4] = [
         (Aes128,                                        // algo
@@ -1535,6 +1547,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "aes_gcm")]
     fn test_gcm_apply() {
         let mut n = 0;
         for item in GCM_VEC.iter() {
@@ -1570,6 +1583,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "aes_gcm")]
     fn test_gcm_write() {
         let mut n = 0;
         for item in GCM_VEC.iter() {
@@ -1616,6 +1630,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "aes_gcm")]
     fn test_gcm_recycle() {
         let dummy = vec![0xcd; 256];
         let mut dummy_res = vec![0; 256];
@@ -1663,6 +1678,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "aes_gcm")]
     fn test_gcm_auth_fail() {
         let garbage = b"This is dummy invalid input";
         let mut n = 0;
@@ -1698,6 +1714,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "aes_gcm")]
     fn test_gcm_var_tag_len() {
         let test_lens = vec![4, 8, 12, 13, 14, 15, 16];
         let mut n = 0;
@@ -1731,6 +1748,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "aes_ctr")]
     fn test_ctr_apply() {
         let mut n = 0;
         for item in CTR_VEC.iter() {
@@ -1750,6 +1768,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "aes_ctr")]
     fn test_ctr_recycle() {
         let dummy_iv = 0xcdcdcdcdabababab;
         let dummy = vec![0xcd; 23];
@@ -1776,6 +1795,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "aes_ctr")]
     fn test_ctr_write() {
         let mut n = 0;
         for item in CTR_VEC.iter() {
@@ -1800,6 +1820,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "aes_ctr")]
     fn test_ctr_counter_arithmetic() {
         let dummy_iv = 0u64;
         let dummy = vec![0; 256];
@@ -1823,6 +1844,7 @@ mod test {
 
     #[test]
     #[should_fail]
+    #[cfg(feature = "aes_ctr")]
     fn test_ctr_counter_overflow_panic() {
         let dummy_iv = 0u64;
         let ctr = -4i64 as u64;

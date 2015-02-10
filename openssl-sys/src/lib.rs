@@ -383,13 +383,17 @@ extern "C" {
     pub fn EVP_aes_128_ecb() -> *const EVP_CIPHER;
     #[cfg(feature = "aes_xts")]
     pub fn EVP_aes_128_xts() -> *const EVP_CIPHER;
+    #[cfg(feature = "aes_ctr")]
     pub fn EVP_aes_128_ctr() -> *const EVP_CIPHER;
+    #[cfg(feature = "aes_gcm")]
     pub fn EVP_aes_128_gcm() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_cbc() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_ecb() -> *const EVP_CIPHER;
     #[cfg(feature = "aes_xts")]
     pub fn EVP_aes_256_xts() -> *const EVP_CIPHER;
+    #[cfg(feature = "aes_ctr")]
     pub fn EVP_aes_256_ctr() -> *const EVP_CIPHER;
+    #[cfg(feature = "aes_gcm")]
     pub fn EVP_aes_256_gcm() -> *const EVP_CIPHER;
     pub fn EVP_rc4() -> *const EVP_CIPHER;
 
