@@ -42,12 +42,12 @@ fn build_old_openssl_shim(is_old: bool) {
     let mut config: gcc::Config = Default::default();
     if is_old {
         config.definitions.push(("OLD_OPENSSL".to_string(), None));
+    }
 
-        gcc::compile_library("libold_openssl_shim.a",
+    gcc::compile_library("libold_openssl_shim.a",
             &config,
             &["src/old_openssl_shim.c"]);
 
-        let out_dir = env::var_string("OUT_DIR").unwrap();
-        println!("cargo:rustc-flags=-L native={} -l old_openssl_shim:static", out_dir);
-    }
+    let out_dir = env::var_string("OUT_DIR").unwrap();
+    println!("cargo:rustc-flags=-L native={} -l old_openssl_shim:static", out_dir);
 }
