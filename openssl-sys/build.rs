@@ -27,6 +27,7 @@ fn main() {
         return;
     }
 
+    // pkg-config doesn't know of OpenSSL on FreeBSD 10.1 and OpenBSD uses LibreSSL
     if target.contains("bsd") {
         println!("cargo:rustc-flags=-l crypto -l ssl");
         // going to assume the base system includes a new version of openssl
