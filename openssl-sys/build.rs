@@ -15,12 +15,10 @@ fn main() {
                      (instructions in the README) and provide their location through \
                      $OPENSSL_PATH.");
         println!("cargo:rustc-flags=-L native={} -l crypto:static -l ssl:static", path);
-        // going to assume the user built a new version of openssl
-        build_old_openssl_shim(false);
         return;
     }
 
-    if target.contains("win32") || target.contains("win64") {
+    if target.contains("win32") || target.contains("win64") || target.contains("i386-pc-windows-gnu") || target.contains("x86_64-pc-windows-gnu") {
         println!("cargo:rustc-flags=-l crypto -l ssl -l gdi32 -l wsock32");
         // going to assume the user has a new version of openssl
         build_old_openssl_shim(false);
@@ -41,14 +39,15 @@ fn main() {
 }
 
 fn build_old_openssl_shim(is_old: bool) {
-        let mut config: gcc::Config = Default::default();
-        if is_old {
-            config.definitions.push(("OLD_OPENSSL".to_string(), None));
-        }
+    let mut config: gcc::Config = Default::default();
+    if is_old {
+        config.definitions.push(("OLD_OPENSSL".to_string(), None));
+    }
 
-        gcc::compile_library("libold_openssl_shim.a",
-                             &config,
-                             &["src/old_openssl_shim.c"]);
-        let out_dir = env::var_string("OUT_DIR").unwrap();
-        println!("cargo:rustc-flags=-L native={} -l old_openssl_shim:static", out_dir);
+    gcc::compile_library("libold_openssl_shim.a",
+            &config,
+            &["src/old_openssl_shim.c"]);
+
+    let out_dir = env::var_string("OUT_DIR").unwrap();
+    println!("cargo:rustc-flags=-L native={} -l old_openssl_shim:static", out_dir);
 }
