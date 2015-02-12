@@ -7,10 +7,10 @@ use std::env;
 use std::default::Default;
 
 fn main() {
-    let target = env::var_string("TARGET").unwrap();
+    let target = env::var("TARGET").unwrap();
 
     if target.contains("android") {
-        let path = env::var_string("OPENSSL_PATH").ok()
+        let path = env::var("OPENSSL_PATH").ok()
             .expect("Android does not provide openssl libraries, please build them yourself \
                      (instructions in the README) and provide their location through \
                      $OPENSSL_PATH.");
@@ -56,6 +56,6 @@ fn build_old_openssl_shim(is_old: bool) {
             &config,
             &["src/old_openssl_shim.c"]);
 
-    let out_dir = env::var_string("OUT_DIR").unwrap();
+    let out_dir = env::var("OUT_DIR").unwrap();
     println!("cargo:rustc-flags=-L native={} -l old_openssl_shim:static", out_dir);
 }
