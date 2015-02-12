@@ -31,7 +31,7 @@ fn main() {
     }
 
     let err = match pkg_config::find_library("openssl") {
-        Ok(()) => {
+        Ok(..) => {
             build_old_openssl_shim(true);
             return;
         }
