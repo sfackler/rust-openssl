@@ -25,6 +25,19 @@ fn main() {
         return;
     }
 
+    if pkg_config::Config::new().atleast_version("1.0.0").find("openssl").is_ok() {
+        build_old_openssl_shim(false);
+        return;
+    }
+
+    let err = match pkg_config::find_library("openssl") {
+        Ok(()) => {
+            build_old_openssl_shim(true);
+            return;
+        }
+        Err(err) => err,
+    };
+
     // pkg-config doesn't know of OpenSSL on FreeBSD 10.1 and OpenBSD uses LibreSSL
     if target.contains("bsd") {
         println!("cargo:rustc-flags=-l crypto -l ssl");
@@ -33,17 +46,7 @@ fn main() {
         return;
     }
 
-    if pkg_config::Config::new().atleast_version("1.0.0").find("openssl").is_ok() {
-        build_old_openssl_shim(false);
-        return;
-    }
-
-    if pkg_config::find_library("openssl").is_ok() {
-        build_old_openssl_shim(true);
-        return;
-    }
-
-    panic!("Unable to find openssl libraries");
+    panic!("unable to find openssl: {}", err);
 }
 
 fn build_old_openssl_shim(is_old: bool) {
