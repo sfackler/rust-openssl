@@ -18,7 +18,7 @@ fn main() {
         return;
     }
 
-    if target.contains("win32") || target.contains("win64") || target.contains("i386-pc-windows-gnu") || target.contains("x86_64-pc-windows-gnu") {
+    if target.contains("win32") || target.contains("win64") || target.contains("windows") {
         println!("cargo:rustc-flags=-l crypto -l ssl -l gdi32 -l wsock32");
         // going to assume the user has a new version of openssl
         build_old_openssl_shim(false);
