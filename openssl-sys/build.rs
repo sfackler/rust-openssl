@@ -24,8 +24,8 @@ fn main() {
         return;
     }
 
-    if pkg_config::Config::new().atleast_version("1.0.0").find("openssl").is_ok() {
-        build_old_openssl_shim(false, vec![]);
+    if let Ok(info) =  pkg_config::Config::new().atleast_version("1.0.0").find("openssl") {
+        build_old_openssl_shim(false, info.include_paths);
         return;
     }
 
