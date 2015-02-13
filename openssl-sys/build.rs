@@ -24,6 +24,16 @@ fn main() {
         return;
     }
 
+    if target.contains("apple-darwin") {
+        match pkg_config::find_library("openssl") {
+            Ok(info) => {
+                build_old_openssl_shim(true, info.include_paths);
+                return;
+            }
+            _ => panic!("unable to find openssl")
+        };
+    }
+
     if pkg_config::Config::new().atleast_version("1.0.0").find("openssl").is_ok() {
         build_old_openssl_shim(false, vec![]);
         return;
