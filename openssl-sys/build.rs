@@ -60,7 +60,4 @@ fn build_old_openssl_shim(is_old: bool, include_paths: Vec<Path>) {
 
     config.file("src/old_openssl_shim.c")
         .compile("libold_openssl_shim.a");
-
-    let out_dir = env::var("OUT_DIR").unwrap();
-    println!("cargo:rustc-flags=-L native={} -l old_openssl_shim:static", out_dir);
 }
