@@ -1,46 +1,62 @@
-rust-openssl [![Build Status](https://travis-ci.org/sfackler/rust-openssl.svg?branch=master)](https://travis-ci.org/sfackler/rust-openssl)
-============
+# rust-openssl
+
+[![Build Status](https://travis-ci.org/sfackler/rust-openssl.svg?branch=master)](https://travis-ci.org/sfackler/rust-openssl)
 
 See the [rustdoc output](https://sfackler.github.io/rust-openssl/doc/openssl).
 
-Building
---------
+## Building
 
-rust-openssl needs to link against the OpenSSL devleopment libraries on your
-system. It's very easy to get them on Linux. For some reason, the OpenSSL
-distribution for Windows is structured differently, so it's a little more
-involved, but it *is* possible to build rust-openssl successfully on Windows.
+rust-openssl depends on both the OpenSSL runtime libraries and headers.
 
-###Linux
+### Linux
 
-1. Run `sudo apt-get install libssl-dev`.
-2. Run `cargo build`.
+On Linux, you can install them via your package manager. The headers are
+sometimes provided in a separate package than the runtime libraries - look for
+something like `openssl-devel` or `libssl-dev`.
 
-###Android
-1. Follow the steps [here](wiki.openssl.org/index.php/Android) to build OpenSSL
-   for android
-2. Provide the path to the libssl and libcrypto binaries via `$OPENSSL_PATH`
-3. Build the package with `cargo build`
+```bash
+# On Ubuntu
+sudo apt-get install libssl-dev
+# On Arch Linux
+sudo pacman -S openssl
+```
 
-###Windows
+### OSX
 
-1. Grab the latest Win32 OpenSSL installer [here][1]. At the time of this
-   writing, it's v1.0.1i. If you're using 64-bit Rust (coming to Windows soon),
-then you should get the Win64 installer instead.
-2. Run the installer, making note of where it's installing OpenSSL. The option
-   to copy the libraries to the Windows system directory or `[OpenSSL
-folder]/bin` is your choice. The latter is probably preferable, and the
-default.
-3. Navigate to `[OpenSSL folder]/lib/MinGW/`, and copy `libeay32.a` and
-`ssleay32.a` (If 64-bit, then they will have `64` instead of `32`.) to your
-Rust install's libs folder. The default should be:
-  * 32-bit: `C:\Program Files (x86)\Rust\bin\rustlib\i686-pc-mingw32\lib`
-  * 64-bit: `C:\Program Files (x86)\Rust\bin\rustlib\x86_64-pc-windows-gnu\lib`
-4. Rename `libeay32.a` and `ssleay32.a` to `libcrypto.a` and `libssl.a`,
-respectively.
-5. Run `cargo build`.
+OpenSSL 0.9.8 is preinstalled on OSX. Some features are only available when
+linking against OpenSSL 1.0.0 or greater; See below on how to point
+rust-openssl to a separate installation.
 
-###Testing
+### Windows
+
+Install OpenSSL from [here][1]. Cargo will not be able to find OpenSSL if it's
+installed to the default location. You can either copy the `include/openssl`
+directory, `libssl32.dll`, and `libeay32.dll` to locations that Cargo can find
+or pass the location to Cargo via environment variables:
+
+```bash
+env OPENSSL_LIB_DIR=/c/OpenSSL-Win64 OPENSSL_INCLUDE_DIR=/c/OpenSSL-Win64/include cargo build
+```
+
+### Manual configuration
+
+rust-openssl's build script will by default attempt to locate OpenSSL via
+pkg-config. This will not work in some situations, for example, on systems that
+don't have pkg-config, when cross compiling, or when using a copy of OpenSSL
+other than the normal system install.
+
+The build script can be configured via environment variables:
+* `OPENSSL_LIB_DIR` - If specified, a directory that will be used to find
+    OpenSSL runtime libraries.
+* `OPENSSL_INCLUDE_DIR` - If specified, a directory that will be used to find
+    OpenSSL headers.
+* `OPENSSL_STATIC` - If specified, OpenSSL libraries will be statically rather
+    than dynamically linked.
+
+If either `OPENSSL_LIB_DIR` or `OPENSSL_INCLUDE_DIR` are specified, then the
+build script will skip the pkg-config step.
+
+## Testing
 Several tests expect a local test server to be running to bounce requests off
 of. It's easy to do this. Open a separate terminal window and `cd` to the
 rust-openssl directory. Then run one of the following commands:
