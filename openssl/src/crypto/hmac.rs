@@ -176,7 +176,7 @@ impl Drop for HMAC {
             if self.state != Finalized {
                 let mut buf: Vec<u8> = repeat(0).take(self.type_.md_len()).collect();
                 let mut len = 0;
-                ffi::HMAC_Final(&mut self.ctx, buf.as_mut_ptr(), &mut len);
+                ffi::HMAC_Final_shim(&mut self.ctx, buf.as_mut_ptr(), &mut len);
             }
             ffi::HMAC_CTX_cleanup(&mut self.ctx);
         }

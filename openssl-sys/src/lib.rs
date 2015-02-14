@@ -382,12 +382,6 @@ extern "C" {
     pub fn EVP_PKEY_set1_RSA(k: *mut EVP_PKEY, r: *mut RSA) -> c_int;
 
     pub fn HMAC_CTX_init(ctx: *mut HMAC_CTX);
-    #[deprecated = "use HMAC_Init_ex_shim instead"]
-    pub fn HMAC_Init_ex(ctx: *mut HMAC_CTX, key: *const u8, keylen: c_int, md: *const EVP_MD, imple: *const ENGINE) -> c_int;
-    #[deprecated = "use HMAC_Final_shim instead"]
-    pub fn HMAC_Final(ctx: *mut HMAC_CTX, output: *mut u8, len: *mut c_uint) -> c_int;
-    #[deprecated = "use HMAC_Update_shim instead"]
-    pub fn HMAC_Update(ctx: *mut HMAC_CTX, input: *const u8, len: c_uint) -> c_int;
     pub fn HMAC_CTX_cleanup(ctx: *mut HMAC_CTX);
     pub fn HMAC_CTX_copy(dst: *mut HMAC_CTX, src: *const HMAC_CTX) -> c_int;
 
