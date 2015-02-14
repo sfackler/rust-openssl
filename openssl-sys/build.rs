@@ -6,9 +6,14 @@ extern crate gcc;
 use std::env;
 
 fn main() {
-    if let Ok(info) = pkg_config::find_library("openssl") {
-        build_old_openssl_shim(info.include_paths);
-        return;
+    let lib_dir = env::var("OPENSSL_LIB_DIR").ok();
+    let include_dir = env::var("OPENSSL_INCLUDE_DIR").ok();
+
+    if lib_dir.is_none() && include_dir.is_none() {
+        if let Ok(info) = pkg_config::find_library("openssl") {
+            build_old_openssl_shim(info.include_paths);
+            return;
+        }
     }
 
     let (libcrypto, libssl) = if env::var("TARGET").unwrap().contains("windows") {
@@ -23,7 +28,7 @@ fn main() {
     	"dylib"
     };
 
-    if let Ok(lib_dir) = env::var("OPENSSL_LIB_DIR") {
+    if let Some(lib_dir) = lib_dir {
     	println!("cargo:rustc-flags=-L native={}", lib_dir);
     }
 
@@ -31,7 +36,7 @@ fn main() {
 
     let mut include_dirs = vec![];
 
-    if let Ok(include_dir) = env::var("OPENSSL_INCLUDE_DIR") {
+    if let Some(include_dir) = include_dir {
     	include_dirs.push(Path::new(include_dir));
     }
 
