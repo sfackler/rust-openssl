@@ -1,4 +1,4 @@
-#![feature(env, path)]
+#![feature(env, path, core)]
 
 extern crate "pkg-config" as pkg_config;
 extern crate gcc;
@@ -6,39 +6,36 @@ extern crate gcc;
 use std::env;
 
 fn main() {
-    let target = env::var("TARGET").unwrap();
-
-    if target.contains("android") {
-        let path = env::var("OPENSSL_PATH").ok()
-            .expect("Android does not provide openssl libraries, please build them yourself \
-                     (instructions in the README) and provide their location through \
-                     $OPENSSL_PATH.");
-        println!("cargo:rustc-flags=-L native={} -l crypto:static -l ssl:static", path);
+    if let Ok(info) = pkg_config::find_library("openssl") {
+        build_old_openssl_shim(info.include_paths);
         return;
     }
 
-    if target.contains("win32") || target.contains("win64") || target.contains("windows") {
-        println!("cargo:rustc-flags=-l crypto -l ssl -l gdi32 -l wsock32");
-        build_old_openssl_shim(vec![]);
-        return;
-    }
-
-    let err = match pkg_config::find_library("openssl") {
-        Ok(info) => {
-            build_old_openssl_shim(info.include_paths);
-            return;
-        }
-        Err(err) => err,
+    let (libcrypto, libssl) = if env::var("TARGET").unwrap().contains("windows") {
+    	("eay32", "ssl32")
+    } else {
+    	("crypto", "ssl")
     };
 
-    // pkg-config doesn't know of OpenSSL on FreeBSD 10.1 and OpenBSD uses LibreSSL
-    if target.contains("bsd") {
-        println!("cargo:rustc-flags=-l crypto -l ssl");
-        build_old_openssl_shim(vec![]);
-        return;
+    let mode = if env::var_os("OPENSSL_STATIC").is_some() {
+    	"static"
+    } else {
+    	"dylib"
+    };
+
+    if let Ok(lib_dir) = env::var("OPENSSL_LIB_DIR") {
+    	println!("cargo:rustc-flags=-L native={}", lib_dir);
     }
 
-    panic!("unable to find openssl: {}", err);
+    println!("cargo:rustc-flags=-l {0}={1} -l {0}={2}", mode, libcrypto, libssl);
+
+    let mut include_dirs = vec![];
+
+    if let Ok(include_dir) = env::var("OPENSSL_INCLUDE_DIR") {
+    	include_dirs.push(Path::new(include_dir));
+    }
+
+    build_old_openssl_shim(include_dirs);
 }
 
 fn build_old_openssl_shim(include_paths: Vec<Path>) {
