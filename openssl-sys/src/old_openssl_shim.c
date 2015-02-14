@@ -1,6 +1,6 @@
 #include <openssl/hmac.h>
 
-#ifdef OLD_OPENSSL
+#if OPENSSL_VERSION_NUMBER < 0x1000000L
 // Copied from openssl crypto/hmac/hmac.c
 int HMAC_CTX_copy(HMAC_CTX *dctx, HMAC_CTX *sctx)
      {
@@ -33,7 +33,7 @@ int HMAC_Final_shim(HMAC_CTX *ctx, unsigned char *md, unsigned int *len) {
     return 1;
 }
 
-#else /* OLD_OPENSSL */
+#else
 
 int HMAC_Init_ex_shim(HMAC_CTX *ctx, const void *key, int key_len, const EVP_MD *md, ENGINE *impl) {
     return HMAC_Init_ex(ctx, key, key_len, md, impl);
@@ -46,4 +46,4 @@ int HMAC_Update_shim(HMAC_CTX *ctx, const unsigned char *data, int len) {
 int HMAC_Final_shim(HMAC_CTX *ctx, unsigned char *md, unsigned int *len) {
     return HMAC_Final(ctx, md, len);
 }
-#endif /* OLD_OPENSSL */
+#endif
