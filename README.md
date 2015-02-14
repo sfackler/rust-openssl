@@ -10,7 +10,7 @@ rust-openssl depends on both the OpenSSL runtime libraries and headers.
 
 ### Linux
 
-On Linux, you can install them via your package manager. The headers are
+On Linux, you can install OpenSSL via your package manager. The headers are
 sometimes provided in a separate package than the runtime libraries - look for
 something like `openssl-devel` or `libssl-dev`.
 
@@ -24,7 +24,7 @@ sudo pacman -S openssl
 ### OSX
 
 OpenSSL 0.9.8 is preinstalled on OSX. Some features are only available when
-linking against OpenSSL 1.0.0 or greater; See below on how to point
+linking against OpenSSL 1.0.0 or greater; see below on how to point
 rust-openssl to a separate installation.
 
 ### Windows
