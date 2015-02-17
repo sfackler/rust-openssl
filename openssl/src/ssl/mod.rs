@@ -357,7 +357,7 @@ impl Ssl {
                                buf.len() as c_int) }
     }
 
-    fn write_all(&self, buf: &[u8]) -> c_int {
+    fn write(&self, buf: &[u8]) -> c_int {
         unsafe { ffi::SSL_write(self.ssl.ptr, buf.as_ptr() as *const c_void,
                                 buf.len() as c_int) }
     }
@@ -574,7 +574,7 @@ impl<S: Stream> Reader for SslStream<S> {
 impl<S: Stream> Writer for SslStream<S> {
     fn write_all(&mut self, mut buf: &[u8]) -> IoResult<()> {
         while !buf.is_empty() {
-            match self.in_retry_wrapper(|ssl| ssl.write_all(buf)) {
+            match self.in_retry_wrapper(|ssl| ssl.write(buf)) {
                 Ok(len) => buf = &buf[len as usize..],
                 Err(SslSessionClosed) => {
                     return Err(IoError {
