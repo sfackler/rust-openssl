@@ -22,7 +22,23 @@ pub enum SslError {
 
 impl fmt::Display for SslError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.write_str(error::Error::description(self))
+        try!(fmt.write_str(error::Error::description(self)));
+        if let OpenSslErrors(ref errs) = *self {
+            let mut first = true;
+            for err in errs {
+                if first {
+                    try!(fmt.write_str(": "));
+                    first = false;
+                } else {
+                    try!(fmt.write_str(", "));
+                }
+                match *err {
+                    UnknownError { ref reason, .. } => try!(fmt.write_str(reason)),
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 

@@ -1,6 +1,6 @@
 use libc::{c_int, c_void, c_long};
 use std::ffi::{CString, c_str_to_bytes};
-use std::old_io::{IoResult, IoError, EndOfFile, Stream, Reader, Writer};
+use std::old_io::{IoResult, IoError, EndOfFile, OtherIoError, Stream, Reader, Writer};
 use std::mem;
 use std::fmt;
 use std::num::FromPrimitive;
@@ -9,7 +9,7 @@ use std::sync::{Once, ONCE_INIT, Arc};
 
 use bio::{MemBio};
 use ffi;
-use ssl::error::{SslError, SslSessionClosed, StreamError};
+use ssl::error::{SslError, SslSessionClosed, StreamError, OpenSslErrors};
 use x509::{X509StoreContext, X509FileType, X509};
 
 pub mod error;
@@ -559,7 +559,13 @@ impl<S: Stream> Reader for SslStream<S> {
                     detail: None
                 }),
             Err(StreamError(e)) => Err(e),
-            _ => unreachable!()
+            Err(e @ OpenSslErrors(_)) => {
+                Err(IoError {
+                    kind: OtherIoError,
+                    desc: "SSL error",
+                    detail: Some(format!("{}", e)),
+                })
+            }
         }
     }
 }
