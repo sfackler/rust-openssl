@@ -38,19 +38,19 @@ fn init() {
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum SslMethod {
     #[cfg(feature = "sslv2")]
-    /// Only support the SSLv2 protocol, requires `feature="sslv2"`
+    /// Only support the SSLv2 protocol, requires the `sslv2` feature.
     Sslv2,
-    /// Support the SSLv2, SSLv3 and TLSv1 protocols
+    /// Support the SSLv2, SSLv3 and TLSv1 protocols.
     Sslv23,
-    /// Only support the SSLv3 protocol
+    /// Only support the SSLv3 protocol.
     Sslv3,
-    /// Only support the TLSv1 protocol
+    /// Only support the TLSv1 protocol.
     Tlsv1,
     #[cfg(feature = "tlsv1_1")]
-    /// Support TLSv1.1 protocol, requires `feature="tlsv1_1"`
+    /// Support TLSv1.1 protocol, requires the `tlsv1_1` feature.
     Tlsv1_1,
     #[cfg(feature = "tlsv1_2")]
-    /// Support TLSv1.2 protocol, requires `feature="tlsv1_2"`
+    /// Support TLSv1.2 protocol, requires the `tlsv1_2` feature.
     Tlsv1_2,
 }
 
@@ -552,17 +552,18 @@ impl<S: Stream> Reader for SslStream<S> {
     fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
         match self.in_retry_wrapper(|ssl| { ssl.read(buf) }) {
             Ok(len) => Ok(len as usize),
-            Err(SslSessionClosed) =>
+            Err(SslSessionClosed) => {
                 Err(IoError {
                     kind: EndOfFile,
                     desc: "SSL session closed",
                     detail: None
-                }),
+                })
+            }
             Err(StreamError(e)) => Err(e),
             Err(e @ OpenSslErrors(_)) => {
                 Err(IoError {
                     kind: OtherIoError,
-                    desc: "SSL error",
+                    desc: "OpenSSL error",
                     detail: Some(format!("{}", e)),
                 })
             }
@@ -571,15 +572,25 @@ impl<S: Stream> Reader for SslStream<S> {
 }
 
 impl<S: Stream> Writer for SslStream<S> {
-    fn write_all(&mut self, buf: &[u8]) -> IoResult<()> {
-        let mut start = 0;
-        while start < buf.len() {
-            let ret = self.in_retry_wrapper(|ssl| {
-                ssl.write_all(buf.split_at(start).1)
-            });
-            match ret {
-                Ok(len) => start += len as usize,
-                _ => unreachable!()
+    fn write_all(&mut self, mut buf: &[u8]) -> IoResult<()> {
+        while !buf.is_empty() {
+            match self.in_retry_wrapper(|ssl| ssl.write_all(buf)) {
+                Ok(len) => buf = &buf[len as usize..],
+                Err(SslSessionClosed) => {
+                    return Err(IoError {
+                        kind: EndOfFile,
+                        desc: "SSL session closed",
+                        detail: None,
+                    });
+                }
+                Err(StreamError(e)) => return Err(e),
+                Err(e @ OpenSslErrors(_)) => {
+                    return Err(IoError {
+                        kind: OtherIoError,
+                        desc: "OpenSSL error",
+                        detail: Some(format!("{}", e)),
+                    });
+                }
             }
             try!(self.write_through());
         }
