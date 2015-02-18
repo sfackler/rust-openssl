@@ -360,10 +360,9 @@ impl Context {
     }
 
     #[cfg(feature = "aes_gcm")]
-    fn get_tag(&mut self, buf: &mut [u8]) {
+    fn gcm_get_tag(&mut self, buf: &mut [u8]) {
         assert!(self.state == Finalized, "Illegal call order");
         let len = buf.len() as c_int;
-        assert!(len == 4 || len == 8 || 12 <= len && len <= 16);
         unsafe {
             chk!(ffi::EVP_CIPHER_CTX_ctrl(self.ctx, ffi::EVP_CTRL_GCM_GET_TAG,
                                           len, buf.as_mut_ptr() as *mut c_void));
@@ -371,10 +370,9 @@ impl Context {
     }
 
     #[cfg(feature = "aes_gcm")]
-    fn set_tag(&mut self, buf: &[u8]) {
+    fn gcm_set_tag(&mut self, buf: &[u8]) {
         assert!(self.state == Reset, "Illegal call order");
         let len = buf.len() as c_int;
-        assert!(len == 4 || len == 8 || 12 <= len && len <= 16);
         unsafe {
             chk!(ffi::EVP_CIPHER_CTX_ctrl(self.ctx, ffi::EVP_CTRL_GCM_SET_TAG,
                                           len, buf.as_ptr() as *mut c_void));
@@ -721,7 +719,7 @@ pub mod gcm {
         pub fn finish(&mut self) -> Vec<u8> {
             assert!(self.context.clean_finalize().is_ok());
             let mut res = vec![0; TAG_LEN];
-            self.context.get_tag(&mut res);
+            self.context.gcm_get_tag(&mut res);
             res
         }
     }
@@ -759,7 +757,9 @@ pub mod gcm {
         /// The cipher can only be operated between calls to `start` and `finish`.
         pub fn start(&mut self, iv: &[u8], aad: Option<&[u8]>, tag: &[u8]) {
             self.context.init_with_iv(iv);
-            self.context.set_tag(tag);
+            let len = tag.len();
+            assert!(len == 4 || len == 8 || 12 <= len && len <= 16);
+            self.context.gcm_set_tag(tag);
             if let Some(aad) = aad {
                 self.context.update_aad(aad);
             }
