@@ -47,6 +47,7 @@ use ffi;
 
 #[derive(PartialEq, Copy)]
 enum State {
+    Created,
     Reset,
     Updated,
     Finalized,
@@ -259,11 +260,11 @@ impl Context {
                                         key.as_ptr(), 0 as *const _, enc));
         };
 
-        Context { ctx: ctx, state: Finalized }
+        Context { ctx: ctx, state: Created }
     }
 
     fn init(&mut self) {
-        assert!(self.state == Finalized, "Illegal call order");
+        assert!(self.state == Created || self.state == Finalized, "Illegal call order");
         unsafe {
             chk!(ffi::EVP_CipherInit_ex(self.ctx, 0 as *const _, 0 as *const _,
                                         0 as *const _, 0 as *const _, -1));
@@ -272,14 +273,14 @@ impl Context {
     }
 
     unsafe fn init_with_iv(&mut self, iv: &[u8]) {
-        assert!(self.state == Finalized, "Illegal call order");
+        assert!(self.state == Created || self.state == Finalized, "Illegal call order");
         chk!(ffi::EVP_CipherInit_ex(self.ctx, 0 as *const _, 0 as *const _,
                                     0 as *const _, iv.as_ptr(), -1));
         self.state = Reset;
     }
 
     unsafe fn update(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
-        assert!(self.state != Finalized, "Illegal call order");
+        assert!(self.state == Reset || self.state == Updated, "Illegal call order");
         let mut len = 0;
         chk!(ffi::EVP_CipherUpdate(self.ctx, buf.as_mut_ptr(), &mut len,
                                    data.as_ptr(), data.len() as c_int));
@@ -291,7 +292,7 @@ impl Context {
 
     #[cfg(feature = "aes_gcm")]
     fn update_aad(&mut self, data: &[u8]) {
-        assert!(self.state != Finalized, "Illegal call order");
+        assert!(self.state == Reset || self.state == Updated, "Illegal call order");
         unsafe {
             let mut len = 0;
             chk!(ffi::EVP_CipherUpdate(self.ctx, ptr::null_mut(), &mut len,
