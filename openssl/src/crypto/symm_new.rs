@@ -601,8 +601,7 @@ pub mod gcm {
     use super::{Aes, Apply, Context, Direction, Error};
     use ffi;
 
-    // GCM mode is defined for 128-bit block ciphers
-    const BLOCK_LENGTH: usize = 16;
+    const TAG_LEN: usize = 16;
 
     fn evpc(algo: Aes) -> *const ffi::EVP_CIPHER {
         unsafe {
@@ -646,7 +645,7 @@ pub mod gcm {
         /// Returns the authetication tag. It can be truncated if needed.
         pub fn finish(&mut self) -> Vec<u8> {
             assert!(self.context.clean_finalize().is_ok());
-            let mut res = vec![0; BLOCK_LENGTH];
+            let mut res = vec![0; TAG_LEN];
             self.context.get_tag(&mut res);
             res
         }
