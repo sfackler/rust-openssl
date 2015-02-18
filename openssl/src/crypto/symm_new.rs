@@ -139,12 +139,6 @@ macro_rules! chk {
     );
 }
 
-/// A common cipher interface
-struct Context {
-    ctx: *mut ffi::EVP_CIPHER_CTX,
-    state: State,
-}
-
 /// A trait for ciphers that allow transcoding several chunks of data consecutively.
 pub trait Apply {
     /// Transcode the `data` into the `buf`.
@@ -244,27 +238,44 @@ impl <'a, T: PaddedFinish> Drop for PaddedFilter<'a, T> {
     }
 }
 
+trait EvpCipher: Sized {
+    fn evp_cipher(&self) -> *const ffi::EVP_CIPHER;
+    fn key_len(&self) -> usize;
+    fn iv_len(&self) -> Option<usize>;
+}
+
+/// A common cipher interface
+struct Context {
+    ctx: *mut ffi::EVP_CIPHER_CTX,
+    iv_len: Option<usize>,
+    state: State,
+}
+
 impl Context {
-    fn new(cipher: *const ffi::EVP_CIPHER, dir: Direction, key: &[u8]) -> Context {
+    fn new<C: EvpCipher>(cipher: C, dir: Direction, key: &[u8]) -> Context {
         ffi::init();
 
         let mut ctx;
         unsafe {
+            let evp_cipher = cipher.evp_cipher();
+            assert!(key.len() == cipher.key_len(), "Incorrect key length");
+            debug_assert_eq!(key.len(), ffi::EVP_CIPHER_key_length(evp_cipher) as usize);
             ctx = ffi::EVP_CIPHER_CTX_new();
             assert!(!ctx.is_null());
             let enc = match dir {
                 Direction::Decrypt => 0,
                 Direction::Encrypt => 1,
             };
-            chk!(ffi::EVP_CipherInit_ex(ctx, cipher, 0 as *const _,
+            chk!(ffi::EVP_CipherInit_ex(ctx, evp_cipher, 0 as *const _,
                                         key.as_ptr(), 0 as *const _, enc));
         };
 
-        Context { ctx: ctx, state: Created }
+        Context { ctx: ctx, iv_len: cipher.iv_len(), state: Created }
     }
 
     fn init(&mut self) {
         assert!(self.state == Created || self.state == Finalized, "Illegal call order");
+        assert!(self.iv_len.is_none(), "IV required");
         unsafe {
             chk!(ffi::EVP_CipherInit_ex(self.ctx, 0 as *const _, 0 as *const _,
                                         0 as *const _, 0 as *const _, -1));
@@ -272,10 +283,14 @@ impl Context {
         self.state = Reset;
     }
 
-    unsafe fn init_with_iv(&mut self, iv: &[u8]) {
+    fn init_with_iv(&mut self, iv: &[u8]) {
         assert!(self.state == Created || self.state == Finalized, "Illegal call order");
-        chk!(ffi::EVP_CipherInit_ex(self.ctx, 0 as *const _, 0 as *const _,
-                                    0 as *const _, iv.as_ptr(), -1));
+        assert!(iv.len() == self.iv_len.unwrap(), "Incorrect IV length");
+        unsafe {
+            debug_assert_eq!(iv.len(), ffi::EVP_CIPHER_CTX_iv_length(self.ctx) as usize);
+            chk!(ffi::EVP_CipherInit_ex(self.ctx, 0 as *const _, 0 as *const _,
+                                        0 as *const _, iv.as_ptr(), -1));
+        }
         self.state = Reset;
     }
 
@@ -386,12 +401,29 @@ pub mod ecb{
     use super::{Aes, Apply, Context, Direction, Error, PaddedFinish};
     use ffi;
 
-    fn evpc(algo: Aes) -> *const ffi::EVP_CIPHER {
-        unsafe {
-            match algo {
-                Aes::Aes128 => ffi::EVP_aes_128_ecb(),
-                Aes::Aes256 => ffi::EVP_aes_256_ecb(),
+    struct EvpC {
+        algo: Aes,
+    }
+
+    impl super::EvpCipher for EvpC {
+        fn evp_cipher(&self) -> *const ffi::EVP_CIPHER {
+            unsafe {
+                match self.algo {
+                    Aes::Aes128 => ffi::EVP_aes_128_ecb(),
+                    Aes::Aes256 => ffi::EVP_aes_256_ecb(),
+                }
             }
+        }
+
+        fn key_len(&self) -> usize {
+            match self.algo {
+                Aes::Aes128 => 16,
+                Aes::Aes256 => 32,
+            }
+        }
+
+        fn iv_len(&self) -> Option<usize> {
+            None
         }
     }
 
@@ -405,14 +437,14 @@ pub mod ecb{
     impl EcbRaw {
         /// Creates a new AES ECB unpadded encryptor.
         pub fn new_encrypt(algo: Aes, key: &[u8]) -> EcbRaw {
-            let mut c = Context::new(evpc(algo), Direction::Encrypt, key);
+            let mut c = Context::new(EvpC { algo: algo }, Direction::Encrypt, key);
             c.set_padding(false);
             EcbRaw { context: c }
         }
 
         /// Creates a new AES ECB unpadded decryptor.
         pub fn new_decrypt(algo: Aes, key: &[u8]) -> EcbRaw {
-            let mut c = Context::new(evpc(algo), Direction::Decrypt, key);
+            let mut c = Context::new(EvpC { algo: algo }, Direction::Decrypt, key);
             c.set_padding(false);
             EcbRaw { context: c }
         }
@@ -454,14 +486,14 @@ pub mod ecb{
     impl EcbPadded {
         /// Creates a new AES ECB padded encryptor.
         pub fn new_encrypt(algo: Aes, key: &[u8]) -> EcbPadded {
-            let mut c = Context::new(evpc(algo), Direction::Encrypt, key);
+            let mut c = Context::new(EvpC { algo: algo }, Direction::Encrypt, key);
             c.set_padding(true);
             EcbPadded { context: c }
         }
 
         /// Creates a new AES ECB padded decryptor.
         pub fn new_decrypt(algo: Aes, key: &[u8]) -> EcbPadded {
-            let mut c = Context::new(evpc(algo), Direction::Decrypt, key);
+            let mut c = Context::new(EvpC { algo: algo }, Direction::Decrypt, key);
             c.set_padding(true);
             EcbPadded { context: c }
         }
@@ -499,12 +531,29 @@ pub mod cbc {
     use super::{Aes, Apply, Context, Direction, Error, PaddedFinish};
     use ffi;
 
-    fn evpc(algo: Aes) -> *const ffi::EVP_CIPHER {
-        unsafe {
-            match algo {
-                Aes::Aes128 => ffi::EVP_aes_128_cbc(),
-                Aes::Aes256 => ffi::EVP_aes_256_cbc(),
+    struct EvpC {
+        algo: Aes,
+    }
+
+    impl super::EvpCipher for EvpC {
+        fn evp_cipher(&self) -> *const ffi::EVP_CIPHER {
+            unsafe {
+                match self.algo {
+                    Aes::Aes128 => ffi::EVP_aes_128_cbc(),
+                    Aes::Aes256 => ffi::EVP_aes_256_cbc(),
+                }
             }
+        }
+
+        fn key_len(&self) -> usize {
+            match self.algo {
+                Aes::Aes128 => 16,
+                Aes::Aes256 => 32,
+            }
+        }
+
+        fn iv_len(&self) -> Option<usize> {
+            Some(16)
         }
     }
 
@@ -518,14 +567,14 @@ pub mod cbc {
     impl CbcRaw {
         /// Creates a new AES CBC unpadded encryptor.
         pub fn new_encrypt(algo: Aes, key: &[u8]) -> CbcRaw {
-            let mut c = Context::new(evpc(algo), Direction::Encrypt, key);
+            let mut c = Context::new(EvpC { algo: algo }, Direction::Encrypt, key);
             c.set_padding(false);
             CbcRaw { context: c }
         }
 
         /// Creates a new AES CBC unpadded decryptor.
         pub fn new_decrypt(algo: Aes, key: &[u8]) -> CbcRaw {
-            let mut c = Context::new(evpc(algo), Direction::Decrypt, key);
+            let mut c = Context::new(EvpC { algo: algo }, Direction::Decrypt, key);
             c.set_padding(false);
             CbcRaw { context: c }
         }
@@ -534,7 +583,7 @@ pub mod cbc {
         ///
         /// The cipher can only be operated between calls to `start` and `finish`.
         pub fn start(&mut self, iv: &[u8]) {
-            unsafe { self.context.init_with_iv(iv); }
+            self.context.init_with_iv(iv);
         }
 
         /// Finishes the cipher.
@@ -566,14 +615,14 @@ pub mod cbc {
     impl CbcPadded {
         /// Creates a new AES CBC padded encryptor.
         pub fn new_encrypt(algo: Aes, key: &[u8]) -> CbcPadded {
-            let mut c = Context::new(evpc(algo), Direction::Encrypt, key);
+            let mut c = Context::new(EvpC { algo: algo }, Direction::Encrypt, key);
             c.set_padding(true);
             CbcPadded { context: c }
         }
 
         /// Creates a new AES CBC padded decryptor.
         pub fn new_decrypt(algo: Aes, key: &[u8]) -> CbcPadded {
-            let mut c = Context::new(evpc(algo), Direction::Decrypt, key);
+            let mut c = Context::new(EvpC { algo: algo }, Direction::Decrypt, key);
             c.set_padding(true);
             CbcPadded { context: c }
         }
@@ -582,7 +631,7 @@ pub mod cbc {
         ///
         /// The cipher can only be operated between calls to `start` and `finish`.
         pub fn start(&mut self, iv: &[u8]) {
-            unsafe { self.context.init_with_iv(iv); }
+            self.context.init_with_iv(iv);
         }
     }
 
@@ -612,16 +661,33 @@ pub mod gcm {
     use super::{Aes, Apply, Context, Direction, Error};
     use ffi;
 
-    const TAG_LEN: usize = 16;
+    struct EvpC {
+        algo: Aes,
+    }
 
-    fn evpc(algo: Aes) -> *const ffi::EVP_CIPHER {
-        unsafe {
-            match algo {
-                Aes::Aes128 => ffi::EVP_aes_128_gcm(),
-                Aes::Aes256 => ffi::EVP_aes_256_gcm(),
+    impl super::EvpCipher for EvpC {
+        fn evp_cipher(&self) -> *const ffi::EVP_CIPHER {
+            unsafe {
+                match self.algo {
+                    Aes::Aes128 => ffi::EVP_aes_128_gcm(),
+                    Aes::Aes256 => ffi::EVP_aes_256_gcm(),
+                }
             }
         }
+
+        fn key_len(&self) -> usize {
+            match self.algo {
+                Aes::Aes128 => 16,
+                Aes::Aes256 => 32,
+            }
+        }
+
+        fn iv_len(&self) -> Option<usize> {
+            Some(12)
+        }
     }
+
+    const TAG_LEN: usize = 16;
 
     /// AES in GCM mode authenticated encryption.
     pub struct GcmEncrypt {
@@ -632,7 +698,7 @@ pub mod gcm {
         /// Creates a new AES GCM encryptor.
         pub fn new(algo: Aes, key: &[u8]) -> GcmEncrypt {
             GcmEncrypt {
-                context: Context::new(evpc(algo), Direction::Encrypt, key),
+                context: Context::new(EvpC { algo: algo }, Direction::Encrypt, key),
             }
         }
 
@@ -643,11 +709,9 @@ pub mod gcm {
         ///
         /// The cipher can only be operated between calls to `start` and `finish`.
         pub fn start(&mut self, iv: &[u8], aad: Option<&[u8]>) {
-            unsafe {
-                self.context.init_with_iv(iv);
-                if let Some(aad) = aad {
-                    self.context.update_aad(aad);
-                }
+            self.context.init_with_iv(iv);
+            if let Some(aad) = aad {
+                self.context.update_aad(aad);
             }
         }
 
@@ -679,7 +743,7 @@ pub mod gcm {
         /// Creates a new AES GCM decryptor.
         pub fn new(algo: Aes, key: &[u8]) -> GcmDecrypt {
             GcmDecrypt {
-                context: Context::new(evpc(algo), Direction::Decrypt, key),
+                context: Context::new(EvpC { algo: algo }, Direction::Decrypt, key),
             }
         }
 
@@ -694,12 +758,10 @@ pub mod gcm {
         ///
         /// The cipher can only be operated between calls to `start` and `finish`.
         pub fn start(&mut self, iv: &[u8], aad: Option<&[u8]>, tag: &[u8]) {
-            unsafe {
-                self.context.init_with_iv(iv);
-                self.context.set_tag(tag);
-                if let Some(aad) = aad {
-                    self.context.update_aad(aad);
-                }
+            self.context.init_with_iv(iv);
+            self.context.set_tag(tag);
+            if let Some(aad) = aad {
+                self.context.update_aad(aad);
             }
         }
 
@@ -736,12 +798,29 @@ pub mod ctr {
     use super::{Aes, Apply, Context, Direction, Error};
     use ffi;
 
-    fn evpc(algo: Aes) -> *const ffi::EVP_CIPHER {
-        unsafe {
-            match algo {
-                Aes::Aes128 => ffi::EVP_aes_128_ctr(),
-                Aes::Aes256 => ffi::EVP_aes_256_ctr(),
+    struct EvpC {
+        algo: Aes,
+    }
+
+    impl super::EvpCipher for EvpC {
+        fn evp_cipher(&self) -> *const ffi::EVP_CIPHER {
+            unsafe {
+                match self.algo {
+                    Aes::Aes128 => ffi::EVP_aes_128_ctr(),
+                    Aes::Aes256 => ffi::EVP_aes_256_ctr(),
+                }
             }
+        }
+
+        fn key_len(&self) -> usize {
+            match self.algo {
+                Aes::Aes128 => 16,
+                Aes::Aes256 => 32,
+            }
+        }
+
+        fn iv_len(&self) -> Option<usize> {
+            Some(16)
         }
     }
 
@@ -757,7 +836,7 @@ pub mod ctr {
         ///
         /// Panics if counter overflow is detected.
         pub fn new(algo: Aes, key: &[u8]) -> Ctr {
-            Ctr { context: Context::new(evpc(algo), Direction::Encrypt, key),
+            Ctr { context: Context::new(EvpC { algo: algo }, Direction::Encrypt, key),
                   counter: 0, block_ofs: 0 }
         }
 
