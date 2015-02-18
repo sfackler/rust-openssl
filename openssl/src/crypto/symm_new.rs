@@ -1049,7 +1049,7 @@ mod test {
     #[test]
     fn test_ecb_raw_apply() {
         let mut n = 0;
-        for item in ECB_RAW_VEC.iter() {
+        for item in &ECB_RAW_VEC {
             let (algo, key, pt, ct) = unpack3(item);
             let mut res: Vec<u8> = repeat(0).take(
                 max(pt.len(), ct.len()) + ffi::EVP_MAX_BLOCK_LENGTH).collect();
@@ -1073,7 +1073,7 @@ mod test {
     #[test]
     fn test_ecb_padded_apply() {
         let mut n = 0;
-        for item in ECB_PADDED_VEC.iter() {
+        for item in &ECB_PADDED_VEC {
             let (algo, key, pt, ct) = unpack3(item);
             let mut res: Vec<u8> = repeat(0).take(
                 max(pt.len(), ct.len()) + ffi::EVP_MAX_BLOCK_LENGTH).collect();
@@ -1122,7 +1122,7 @@ mod test {
         let mut n;
 
         n = 0;
-        for item in ECB_RAW_VEC.iter() {
+        for item in &ECB_RAW_VEC {
             let (algo, key, pt, ct) = unpack3(item);
 
             let mut enc = EcbRaw::new_encrypt(algo, &key);
@@ -1156,7 +1156,7 @@ mod test {
         let mut n;
 
         n = 0;
-        for item in ECB_PADDED_VEC.iter() {
+        for item in &ECB_PADDED_VEC {
             let (algo, key, pt, ct) = unpack3(item);
 
             let mut enc = EcbPadded::new_encrypt(algo, &key);
@@ -1187,7 +1187,7 @@ mod test {
     fn test_ecb_raw_write() {
         let mut n = 0;
 
-        for item in ECB_RAW_VEC.iter() {
+        for item in &ECB_RAW_VEC {
             let (algo, key, pt, ct) = unpack3(item);
             let mut res: Vec<u8> = Vec::new();
 
@@ -1195,7 +1195,7 @@ mod test {
             enc.start();
             {
                 let mut w = Filter::new(&mut enc, &mut res);
-                for byte in pt.iter() {
+                for byte in &pt {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
             }
@@ -1207,7 +1207,7 @@ mod test {
             dec.start();
             {
                 let mut w = Filter::new(&mut dec, &mut res);
-                for byte in ct.iter() {
+                for byte in &ct {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
             }
@@ -1222,7 +1222,7 @@ mod test {
     fn test_ecb_padded_write() {
         let mut n = 0;
 
-        for item in ECB_PADDED_VEC.iter() {
+        for item in &ECB_PADDED_VEC {
             let (algo, key, pt, ct) = unpack3(item);
 
             let mut res: Vec<u8> = Vec::new();
@@ -1231,7 +1231,7 @@ mod test {
             enc.start();
             {
                 let mut w = PaddedFilter::new(&mut enc, &mut res);
-                for byte in pt.iter() {
+                for byte in &pt {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
                 assert!(w.close().is_ok(), "vec #{}", n);
@@ -1243,7 +1243,7 @@ mod test {
             dec.start();
             {
                 let mut w = PaddedFilter::new(&mut dec, &mut res);
-                for byte in ct.iter() {
+                for byte in &ct {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
                 assert!(w.close().is_ok(), "vec #{}", n);
@@ -1258,7 +1258,7 @@ mod test {
     fn test_ecb_padded_write_twice() {
         let mut n = 0;
 
-        for item in ECB_PADDED_VEC.iter() {
+        for item in &ECB_PADDED_VEC {
             let (algo, key, pt, ct) = unpack3(item);
 
             let mut res: Vec<u8> = Vec::new();
@@ -1267,7 +1267,7 @@ mod test {
             enc.start();
             {
                 let mut w = Filter::new(&mut enc, &mut res);
-                for byte in pt.iter() {
+                for byte in &pt {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
             }
@@ -1282,7 +1282,7 @@ mod test {
             dec.start();
             {
                 let mut w = Filter::new(&mut dec, &mut res);
-                for byte in ct.iter() {
+                for byte in &ct {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
             }
@@ -1299,7 +1299,7 @@ mod test {
     #[test]
     fn test_cbc_raw_apply() {
         let mut n = 0;
-        for item in CBC_RAW_VEC.iter() {
+        for item in &CBC_RAW_VEC {
             let (algo, key, iv, pt, ct) = unpack4(item);
             let mut res: Vec<u8> = repeat(0).take(
                 max(pt.len(), ct.len()) + ffi::EVP_MAX_BLOCK_LENGTH).collect();
@@ -1323,7 +1323,7 @@ mod test {
     #[test]
     fn test_cbc_padded_apply() {
         let mut n = 0;
-        for item in CBC_PADDED_VEC.iter() {
+        for item in &CBC_PADDED_VEC {
             let (algo, key, iv, pt, ct) = unpack4(item);
             let mut res: Vec<u8> = repeat(0).take(
                 max(pt.len(), ct.len()) + ffi::EVP_MAX_BLOCK_LENGTH).collect();
@@ -1372,7 +1372,7 @@ mod test {
         let mut n;
 
         n = 0;
-        for item in CBC_RAW_VEC.iter() {
+        for item in &CBC_RAW_VEC {
             let (algo, key, iv, pt, ct) = unpack4(item);
 
             let mut enc = CbcRaw::new_encrypt(algo, &key);
@@ -1406,7 +1406,7 @@ mod test {
         let mut n;
 
         n = 0;
-        for item in CBC_PADDED_VEC.iter() {
+        for item in &CBC_PADDED_VEC {
             let (algo, key, iv, pt, ct) = unpack4(item);
 
             let mut enc = CbcPadded::new_encrypt(algo, &key);
@@ -1437,7 +1437,7 @@ mod test {
     fn test_cbc_raw_write() {
         let mut n = 0;
 
-        for item in CBC_RAW_VEC.iter() {
+        for item in &CBC_RAW_VEC {
             let (algo, key, iv, pt, ct) = unpack4(item);
             let mut res: Vec<u8> = Vec::new();
 
@@ -1445,7 +1445,7 @@ mod test {
             enc.start(&iv);
             {
                 let mut w = Filter::new(&mut enc, &mut res);
-                for byte in pt.iter() {
+                for byte in &pt {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
             }
@@ -1457,7 +1457,7 @@ mod test {
             dec.start(&iv);
             {
                 let mut w = Filter::new(&mut dec, &mut res);
-                for byte in ct.iter() {
+                for byte in &ct {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
             }
@@ -1472,7 +1472,7 @@ mod test {
     fn test_cbc_padded_write() {
         let mut n = 0;
 
-        for item in CBC_PADDED_VEC.iter() {
+        for item in &CBC_PADDED_VEC {
             let (algo, key, iv, pt, ct) = unpack4(item);
 
             let mut res: Vec<u8> = Vec::new();
@@ -1481,7 +1481,7 @@ mod test {
             enc.start(&iv);
             {
                 let mut w = PaddedFilter::new(&mut enc, &mut res);
-                for byte in pt.iter() {
+                for byte in &pt {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
                 assert!(w.close().is_ok(), "vec #{}", n);
@@ -1493,7 +1493,7 @@ mod test {
             dec.start(&iv);
             {
                 let mut w = PaddedFilter::new(&mut dec, &mut res);
-                for byte in ct.iter() {
+                for byte in &ct {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
                 assert!(w.close().is_ok(), "vec #{}", n);
@@ -1508,7 +1508,7 @@ mod test {
     fn test_cbc_padded_write_twice() {
         let mut n = 0;
 
-        for item in CBC_PADDED_VEC.iter() {
+        for item in &CBC_PADDED_VEC {
             let (algo, key, iv, pt, ct) = unpack4(item);
 
             let mut res: Vec<u8> = Vec::new();
@@ -1517,7 +1517,7 @@ mod test {
             enc.start(&iv);
             {
                 let mut w = Filter::new(&mut enc, &mut res);
-                for byte in pt.iter() {
+                for byte in &pt {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
             }
@@ -1532,7 +1532,7 @@ mod test {
             dec.start(&iv);
             {
                 let mut w = Filter::new(&mut dec, &mut res);
-                for byte in ct.iter() {
+                for byte in &ct {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
             }
@@ -1550,7 +1550,7 @@ mod test {
     #[cfg(feature = "aes_gcm")]
     fn test_gcm_apply() {
         let mut n = 0;
-        for item in GCM_VEC.iter() {
+        for item in &GCM_VEC {
             let (algo, key, iv, aad, pt, ct, tag) = unpack6(item);
             let mut res: Vec<u8> = repeat(0).take(pt.len()).collect();
 
@@ -1586,7 +1586,7 @@ mod test {
     #[cfg(feature = "aes_gcm")]
     fn test_gcm_write() {
         let mut n = 0;
-        for item in GCM_VEC.iter() {
+        for item in &GCM_VEC {
             let (algo, key, iv, aad, pt, ct, tag) = unpack6(item);
             let mut res: Vec<u8> = Vec::new();
 
@@ -1599,7 +1599,7 @@ mod test {
             }
             {
                 let mut w = Filter::new(&mut enc, &mut res);
-                for byte in pt.iter() {
+                for byte in &pt {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
             }
@@ -1617,7 +1617,7 @@ mod test {
             }
             {
                 let mut w = Filter::new(&mut dec, &mut res);
-                for byte in ct.iter() {
+                for byte in &ct {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
             }
@@ -1635,7 +1635,7 @@ mod test {
         let dummy = vec![0xcd; 256];
         let mut dummy_res = vec![0; 256];
         let mut n = 0;
-        for item in GCM_VEC.iter() {
+        for item in &GCM_VEC {
             let (algo, key, iv, aad, pt, ct, tag) = unpack6(item);
             let mut res: Vec<u8> = repeat(0).take(pt.len()).collect();
 
@@ -1682,7 +1682,7 @@ mod test {
     fn test_gcm_auth_fail() {
         let garbage = b"This is dummy invalid input";
         let mut n = 0;
-        for item in GCM_VEC.iter() {
+        for item in &GCM_VEC {
             let (algo, key, iv, aad, pt, _, tag) = unpack6(item);
             let buf_len = max(pt.len(), garbage.len());
             let mut res: Vec<u8> = repeat(0).take(buf_len).collect();
@@ -1718,13 +1718,13 @@ mod test {
     fn test_gcm_var_tag_len() {
         let test_lens = vec![4, 8, 12, 13, 14, 15, 16];
         let mut n = 0;
-        for item in GCM_VEC.iter() {
+        for item in &GCM_VEC {
             let (algo, key, iv, aad, pt, ct, tag) = unpack6(item);
             let mut res: Vec<u8> = repeat(0).take(pt.len()).collect();
             let mut enc = GcmEncrypt::new(algo, &key);
             let mut dec = GcmDecrypt::new(algo, &key);
 
-            for tag_len in test_lens.iter() {
+            for tag_len in &test_lens {
                 let range = ..*tag_len;
                 if aad.len() > 0 {
                     enc.start(&iv, Some(&aad));
@@ -1751,7 +1751,7 @@ mod test {
     #[cfg(feature = "aes_ctr")]
     fn test_ctr_apply() {
         let mut n = 0;
-        for item in CTR_VEC.iter() {
+        for item in &CTR_VEC {
             let (algo, key, _, _, pt, ct) = unpack5(item);
             let iv: u64 = from_str_radix(item.2, 16).unwrap();
             let ctr: u64 = from_str_radix(item.3, 16).unwrap();
@@ -1774,7 +1774,7 @@ mod test {
         let dummy = vec![0xcd; 23];
         let mut dummy_res = vec![0; 256];
         let mut n = 0;
-        for item in CTR_VEC.iter() {
+        for item in &CTR_VEC {
             let (algo, key, _, _, pt, ct) = unpack5(item);
             let iv: u64 = from_str_radix(item.2, 16).unwrap();
             let ctr: u64 = from_str_radix(item.3, 16).unwrap();
@@ -1798,7 +1798,7 @@ mod test {
     #[cfg(feature = "aes_ctr")]
     fn test_ctr_write() {
         let mut n = 0;
-        for item in CTR_VEC.iter() {
+        for item in &CTR_VEC {
             let (algo, key, _, _, pt, ct) = unpack5(item);
             let iv: u64 = from_str_radix(item.2, 16).unwrap();
             let ctr: u64 = from_str_radix(item.3, 16).unwrap();
@@ -1808,7 +1808,7 @@ mod test {
             enc.start(iv, ctr);
             {
                 let mut w = Filter::new(&mut enc, &mut res);
-                for byte in pt.iter() {
+                for byte in &pt {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
             }
