@@ -67,6 +67,22 @@ pub enum Aes {
     Aes256,
 }
 
+impl Aes {
+    #[inline]
+    pub fn key_len(&self) -> usize {
+        use self::Aes::*;
+        match *self {
+            Aes128 => 16,
+            Aes256 => 32,
+        }
+    }
+
+    #[inline]
+    pub fn block_len() -> usize {
+        16
+    }
+}
+
 /// Indicates a symmetric cipher error
 #[derive(Clone, Debug, PartialEq)]
 pub enum Error {
@@ -378,9 +394,6 @@ pub mod ecb{
         }
     }
 
-    // We only support AES right now.
-    const BLOCK_LENGTH: usize = 16;
-
     /// AES in ECB mode without padding.
     ///
     /// The data length needs to be a multiple of AES block length.
@@ -426,7 +439,7 @@ pub mod ecb{
 
     impl Apply for EcbRaw {
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
-            let len = self.context.checked_update(data, buf, BLOCK_LENGTH);
+            let len = self.context.checked_update(data, buf, Aes::block_len());
             len
         }
 
@@ -462,14 +475,14 @@ pub mod ecb{
 
     impl Apply for EcbPadded {
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
-            let len = self.context.checked_update(data, buf, BLOCK_LENGTH);
+            let len = self.context.checked_update(data, buf, Aes::block_len());
             len
         }
     }
 
     impl PaddedFinish for EcbPadded {
         fn finish(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
-            if let Ok(len) = self.context.checked_finalize(buf, BLOCK_LENGTH) {
+            if let Ok(len) = self.context.checked_finalize(buf, Aes::block_len()) {
                 Ok(len)
             }
             else {
@@ -493,9 +506,6 @@ pub mod cbc {
             }
         }
     }
-
-    // We only support AES right now.
-    const BLOCK_LENGTH: usize = 16;
 
     /// AES in CBC mode without padding.
     ///
@@ -542,7 +552,7 @@ pub mod cbc {
 
     impl Apply for CbcRaw {
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
-            let len = self.context.checked_update(data, buf, BLOCK_LENGTH);
+            let len = self.context.checked_update(data, buf, Aes::block_len());
             len
         }
     }
@@ -577,14 +587,14 @@ pub mod cbc {
 
     impl Apply for CbcPadded {
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
-            let len = self.context.checked_update(data, buf, BLOCK_LENGTH);
+            let len = self.context.checked_update(data, buf, Aes::block_len());
             len
         }
     }
 
     impl PaddedFinish for CbcPadded {
         fn finish(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
-            if let Ok(len) = self.context.checked_finalize(buf, BLOCK_LENGTH) {
+            if let Ok(len) = self.context.checked_finalize(buf, Aes::block_len()) {
                 Ok(len)
             }
             else {
@@ -725,9 +735,6 @@ pub mod ctr {
     use super::{Aes, Apply, Context, Direction, Error};
     use ffi;
 
-    // We only support AES right now
-    const BLOCK_LENGTH: usize = 16;
-
     fn evpc(algo: Aes) -> *const ffi::EVP_CIPHER {
         unsafe {
             match algo {
@@ -783,9 +790,9 @@ pub mod ctr {
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
             let len = self.context.checked_update(data, buf, 0);
             let len_with_carried = len + self.block_ofs as usize;
-            self.counter = self.counter.checked_add((len_with_carried / BLOCK_LENGTH) as u64)
+            self.counter = self.counter.checked_add((len_with_carried / Aes::block_len()) as u64)
                 .expect("Counter overflow");
-            self.block_ofs = (len_with_carried % BLOCK_LENGTH) as u8;
+            self.block_ofs = (len_with_carried % Aes::block_len()) as u8;
             len
         }
     }
