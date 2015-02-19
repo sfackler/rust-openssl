@@ -1,4 +1,4 @@
-#![feature(env, path, core)]
+#![feature(env, old_path)]
 
 extern crate "pkg-config" as pkg_config;
 extern crate gcc;
