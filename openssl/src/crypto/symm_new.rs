@@ -164,7 +164,7 @@ trait SectorMode {
 // Subject to changes after std::io stabilization
 pub struct Filter<'a, T: 'a> {
     cipher: &'a mut T,
-    sink: &'a mut (Writer + 'a),
+    sink: &'a mut Writer,
 }
 
 const FILTER_BUFFER_LEN: usize = 16384;
@@ -174,7 +174,7 @@ impl <'a, T> Filter<'a, T> {
     /// to the `sink`.
     /// The `cipher` has to be `start`ed beforehand and `finish`ed after
     /// destroying the adapter.
-    pub fn new(cipher: &'a mut T, sink: &'a mut (Writer + 'a))
+    pub fn new(cipher: &'a mut T, sink: &'a mut Writer)
           -> Filter<'a, T> {
         Filter { cipher: cipher, sink: sink }
     }
@@ -205,7 +205,7 @@ impl <'a, T: PaddedFinish> PaddedFilter<'a, T> {
     /// The cipher has to be `start`ed beforehand and is finished explicitly
     /// with `close` or implicitly when the adapter is destroyed (in which case
     /// the last bytes won't reach the sink).
-    pub fn new(cipher: &'a mut T, sink: &'a mut (Writer + 'a))
+    pub fn new(cipher: &'a mut T, sink: &'a mut Writer)
           -> PaddedFilter<'a, T> {
         PaddedFilter { inner: Filter::new(cipher, sink), closed: false }
     }
