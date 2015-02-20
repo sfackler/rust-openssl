@@ -4,7 +4,7 @@ pub use self::OpensslError::*;
 use libc::c_ulong;
 use std::error;
 use std::fmt;
-use std::ffi::c_str_to_bytes;
+use std::ffi::CStr;
 use std::old_io::IoError;
 
 use ffi;
@@ -75,21 +75,21 @@ pub enum OpensslError {
 
 fn get_lib(err: c_ulong) -> String {
     unsafe {
-        let bytes = c_str_to_bytes(&ffi::ERR_lib_error_string(err)).to_vec();
+        let bytes = CStr::from_ptr(ffi::ERR_lib_error_string(err)).to_bytes().to_vec();
         String::from_utf8(bytes).unwrap()
     }
 }
 
 fn get_func(err: c_ulong) -> String {
     unsafe {
-        let bytes = c_str_to_bytes(&ffi::ERR_func_error_string(err)).to_vec();
+        let bytes = CStr::from_ptr(ffi::ERR_func_error_string(err)).to_bytes().to_vec();
         String::from_utf8(bytes).unwrap()
     }
 }
 
 fn get_reason(err: c_ulong) -> String {
     unsafe {
-        let bytes = c_str_to_bytes(&ffi::ERR_reason_error_string(err)).to_vec();
+        let bytes = CStr::from_ptr(ffi::ERR_reason_error_string(err)).to_bytes().to_vec();
         String::from_utf8(bytes).unwrap()
     }
 }

@@ -253,7 +253,7 @@ mod tests {
         ];
 
         let mut h = HMAC::new(MD5, &*tests[0].0);
-        for i in 0..100us {
+        for i in 0..100usize {
             let test = &tests[i % 2];
             test_hmac_recycle(&mut h, test);
         }
@@ -351,7 +351,7 @@ mod tests {
         ];
 
         let mut h = HMAC::new(SHA1, &*tests[0].0);
-        for i in 0..100us {
+        for i in 0..100usize {
             let test = &tests[i % 2];
             test_hmac_recycle(&mut h, test);
         }
@@ -382,7 +382,7 @@ mod tests {
 
         // recycle test
         let mut h = HMAC::new(ty, &*tests[5].0);
-        for i in 0..100us {
+        for i in 0..100usize {
             let test = &tests[4 + i % 2];
             let tup = (test.0.clone(), test.1.clone(), results[4 + i % 2].clone());
             test_hmac_recycle(&mut h, &tup);

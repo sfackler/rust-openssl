@@ -1,5 +1,5 @@
 use libc::{c_int, c_void, c_long};
-use std::ffi::{CString, c_str_to_bytes};
+use std::ffi::{CStr, CString};
 use std::old_io::{IoResult, IoError, EndOfFile, OtherIoError, Stream, Reader, Writer};
 use std::mem;
 use std::fmt;
@@ -247,7 +247,7 @@ impl SslContext {
     pub fn set_CA_file(&mut self, file: &Path) -> Option<SslError> {
         wrap_ssl_result(
             unsafe {
-                let file = CString::from_slice(file.as_vec());
+                let file = CString::new(file.as_vec()).unwrap();
                 ffi::SSL_CTX_load_verify_locations(*self.ctx, file.as_ptr(), ptr::null())
             })
     }
@@ -257,7 +257,7 @@ impl SslContext {
                                 file_type: X509FileType) -> Option<SslError> {
         wrap_ssl_result(
             unsafe {
-                let file = CString::from_slice(file.as_vec());
+                let file = CString::new(file.as_vec()).unwrap();
                 ffi::SSL_CTX_use_certificate_file(*self.ctx, file.as_ptr(), file_type as c_int)
             })
     }
@@ -267,7 +267,7 @@ impl SslContext {
                                 file_type: X509FileType) -> Option<SslError> {
         wrap_ssl_result(
             unsafe {
-                let file = CString::from_slice(file.as_vec());
+                let file = CString::new(file.as_vec()).unwrap();
                 ffi::SSL_CTX_use_PrivateKey_file(*self.ctx, file.as_ptr(), file_type as c_int)
             })
     }
@@ -275,7 +275,7 @@ impl SslContext {
     pub fn set_cipher_list(&mut self, cipher_list: &str) -> Option<SslError> {
         wrap_ssl_result(
             unsafe {
-                let cipher_list = CString::from_slice(cipher_list.as_bytes());
+                let cipher_list = CString::new(cipher_list.as_bytes()).unwrap();
                 ffi::SSL_CTX_set_cipher_list(*self.ctx, cipher_list.as_ptr())
             })
     }
@@ -378,7 +378,7 @@ impl Ssl {
                 //      #define SSL_set_tlsext_host_name(s,name) \
                 //          SSL_ctrl(s,SSL_CTRL_SET_TLSEXT_HOSTNAME,TLSEXT_NAMETYPE_host_name,(char *)name)
 
-                let hostname = CString::from_slice(hostname.as_bytes());
+                let hostname = CString::new(hostname.as_bytes()).unwrap();
                 ffi::SSL_ctrl(*self.ssl, ffi::SSL_CTRL_SET_TLSEXT_HOSTNAME,
                               ffi::TLSEXT_NAMETYPE_host_name,
                               hostname.as_ptr() as *mut c_void)
@@ -542,7 +542,7 @@ impl<S: Stream> SslStream<S> {
 
         let meth = unsafe { ffi::SSL_COMP_get_name(ptr) };
         let s = unsafe {
-            String::from_utf8(c_str_to_bytes(&meth).to_vec()).unwrap()
+            String::from_utf8(CStr::from_ptr(meth).to_bytes().to_vec()).unwrap()
         };
 
         Some(s)

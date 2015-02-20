@@ -1,7 +1,7 @@
 use serialize::hex::FromHex;
 use std::old_io::net::tcp::TcpStream;
 use std::old_io::{Writer};
-use std::thread::Thread;
+use std::thread;
 
 use crypto::hash::Type::{SHA256};
 use ssl::SslMethod::Sslv23;
@@ -199,7 +199,7 @@ fn test_clone() {
     let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
     let mut stream = SslStream::new(&SslContext::new(Sslv23).unwrap(), stream).unwrap();
     let mut stream2 = stream.clone();
-    let _t = Thread::spawn(move || {
+    let _t = thread::spawn(move || {
         stream2.write_all("GET /\r\n\r\n".as_bytes()).unwrap();
         stream2.flush().unwrap();
     });

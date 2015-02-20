@@ -247,7 +247,7 @@ impl X509Generator {
             let mut ctx: ffi::X509V3_CTX = mem::zeroed();
             ffi::X509V3_set_ctx(&mut ctx, x509, x509,
                                 ptr::null_mut(), ptr::null_mut(), 0);
-            let value = CString::from_slice(value.as_bytes());
+            let value = CString::new(value.as_bytes()).unwrap();
             let ext = ffi::X509V3_EXT_conf_nid(ptr::null_mut(),
                                                mem::transmute(&ctx),
                                                extension,
@@ -265,8 +265,8 @@ impl X509Generator {
     fn add_name(name: *mut ffi::X509_NAME, key: &str, value: &str) -> Result<(), SslError> {
         let value_len = value.len() as c_int;
         lift_ssl!(unsafe {
-            let key = CString::from_slice(key.as_bytes());
-            let value = CString::from_slice(value.as_bytes());
+            let key = CString::new(key.as_bytes()).unwrap();
+            let value = CString::new(value.as_bytes()).unwrap();
             ffi::X509_NAME_add_entry_by_txt(name, key.as_ptr(), ffi::MBSTRING_UTF8,
                                             value.as_ptr(), value_len, -1, 0)
         })
