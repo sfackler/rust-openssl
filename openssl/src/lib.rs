@@ -1,4 +1,4 @@
-#![feature(unsafe_destructor, core, old_io, std_misc, libc, old_path)]
+#![feature(unsafe_destructor, core, old_io, std_misc, old_path)]
 #![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/openssl")]
 
 extern crate libc;

@@ -19,5 +19,8 @@ aes_xts = ["openssl-sys/aes_xts"]
 path = "../openssl-sys"
 version = "0.4.3"
 
+[dependencies]
+libc = "0.1"
+
 [dev-dependencies]
 rustc-serialize = "0.2"

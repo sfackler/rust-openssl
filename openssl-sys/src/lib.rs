@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
-#![feature(core, old_io, libc, old_path, std_misc, env)]
+#![feature(core, old_io, old_path, std_misc, env)]
 #![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/openssl-sys")]
 
 extern crate libc;
