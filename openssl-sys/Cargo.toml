@@ -18,8 +18,8 @@ sslv2 = []
 aes_xts = []
 
 [build-dependencies]
-pkg-config = "0.2.1"
-gcc = "0.2"
+pkg-config = "0.3"
+gcc = "0.3"
 
 [target.le32-unknown-nacl.dependencies]
 libressl-pnacl-sys = "2.1.0"

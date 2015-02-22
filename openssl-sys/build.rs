@@ -1,9 +1,10 @@
-#![feature(env, old_path)]
+#![feature(env, path)]
 
 extern crate "pkg-config" as pkg_config;
 extern crate gcc;
 
 use std::env;
+use std::path::PathBuf;
 
 fn main() {
     let lib_dir = env::var("OPENSSL_LIB_DIR").ok();
@@ -11,7 +12,7 @@ fn main() {
 
     if lib_dir.is_none() && include_dir.is_none() {
         if let Ok(info) = pkg_config::find_library("openssl") {
-            build_old_openssl_shim(info.include_paths);
+            build_old_openssl_shim(&info.include_paths);
             return;
         }
     }
@@ -37,13 +38,13 @@ fn main() {
     let mut include_dirs = vec![];
 
     if let Some(include_dir) = include_dir {
-    	include_dirs.push(Path::new(include_dir));
+    	include_dirs.push(PathBuf::new(&include_dir));
     }
 
-    build_old_openssl_shim(include_dirs);
+    build_old_openssl_shim(&include_dirs);
 }
 
-fn build_old_openssl_shim(include_paths: Vec<Path>) {
+fn build_old_openssl_shim(include_paths: &[PathBuf]) {
     let mut config = gcc::Config::new();
 
     for path in include_paths {
