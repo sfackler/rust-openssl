@@ -1,7 +1,4 @@
 #![feature(unsafe_destructor, core, old_io, std_misc, libc, old_path)]
-#![crate_name="openssl"]
-#![crate_type="rlib"]
-#![crate_type="dylib"]
 #![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/openssl")]
 
 extern crate libc;
