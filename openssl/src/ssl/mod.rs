@@ -279,6 +279,18 @@ impl SslContext {
                 ffi::SSL_CTX_set_cipher_list(*self.ctx, cipher_list.as_ptr())
             })
     }
+
+    pub fn set_options(&mut self, option: c_long) -> c_long {
+        unsafe {
+            ffi::SSL_CTX_set_options(*self.ctx, option)
+        }
+    }
+
+    pub fn get_options(&mut self) -> c_long {
+        unsafe {
+            ffi::SSL_CTX_get_options(*self.ctx)
+        }
+    }
 }
 
 #[allow(dead_code)]

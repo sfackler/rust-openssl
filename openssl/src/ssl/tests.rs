@@ -174,6 +174,20 @@ fn test_verify_callback_data() {
     }
 }
 
+#[test]
+fn test_get_ctx_options() {
+    let mut ctx = SslContext::new(Sslv23).unwrap();
+    ctx.get_options();
+}
+
+#[test]
+fn test_set_ctx_options() {
+    let mut ctx = SslContext::new(Sslv23).unwrap();
+    let start_opts = ctx.get_options();
+    let ssl_op_no_sslv3 = 0x02000000;
+    let res = ctx.set_options(ssl_op_no_sslv3);
+    assert_eq!(res, start_opts | ssl_op_no_sslv3);
+}
 
 #[test]
 fn test_write() {

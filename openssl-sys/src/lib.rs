@@ -117,6 +117,8 @@ pub const MBSTRING_UTF8: c_int = MBSTRING_FLAG;
 pub const NID_ext_key_usage: c_int = 126;
 pub const NID_key_usage:     c_int = 83;
 
+pub const SSL_CTRL_OPTIONS: c_int = 32;
+
 pub const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
 pub const SSL_ERROR_NONE: c_int = 0;
 pub const SSL_ERROR_SSL: c_int = 1;
@@ -235,6 +237,14 @@ pub fn init() {
 // Functions converted from macros
 pub unsafe fn BIO_eof(b: *mut BIO) -> bool {
     BIO_ctrl(b, BIO_CTRL_EOF, 0, ptr::null_mut()) == 1
+}
+
+pub unsafe fn SSL_CTX_set_options(ssl: *mut SSL_CTX, op: c_long) -> c_long {
+    SSL_CTX_ctrl(ssl, SSL_CTRL_OPTIONS, op, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_get_options(ssl: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ssl, SSL_CTRL_OPTIONS, 0, ptr::null_mut())
 }
 
 // True functions
@@ -474,6 +484,8 @@ extern "C" {
     pub fn SSL_CTX_use_PrivateKey_file(ctx: *mut SSL_CTX, key_file: *const c_char, file_type: c_int) -> c_int;
 
     pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;
+
+    pub fn SSL_CTX_ctrl(ssl: *mut SSL_CTX, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
 
     pub fn X509_add_ext(x: *mut X509, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
     pub fn X509_digest(x: *mut X509, digest: *const EVP_MD, buf: *mut c_char, len: *mut c_uint) -> c_int;
