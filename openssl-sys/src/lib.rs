@@ -118,6 +118,7 @@ pub const NID_ext_key_usage: c_int = 126;
 pub const NID_key_usage:     c_int = 83;
 
 pub const SSL_CTRL_OPTIONS: c_int = 32;
+pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
 
 pub const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
 pub const SSL_ERROR_NONE: c_int = 0;
@@ -245,6 +246,10 @@ pub unsafe fn SSL_CTX_set_options(ssl: *mut SSL_CTX, op: c_long) -> c_long {
 
 pub unsafe fn SSL_CTX_get_options(ssl: *mut SSL_CTX) -> c_long {
     SSL_CTX_ctrl(ssl, SSL_CTRL_OPTIONS, 0, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_clear_options(ssl: *mut SSL_CTX, op: c_long) -> c_long {
+    SSL_CTX_ctrl(ssl, SSL_CTRL_CLEAR_OPTIONS, (op), ptr::null_mut())
 }
 
 // True functions

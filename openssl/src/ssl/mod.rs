@@ -33,6 +33,39 @@ fn init() {
     }
 }
 
+bitflags! {
+    flags SslContextOptions: c_long {
+        const SSL_OP_LEGACY_SERVER_CONNECT = 0x00000004,
+        const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG = 0x00000008,
+        const SSL_OP_TLSEXT_PADDING = 0x00000010,
+        const SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER = 0x00000020,
+        const SSL_OP_SAFARI_ECDHE_ECDSA_BUG = 0x00000040,
+        const SSL_OP_SSLEAY_080_CLIENT_DH_BUG = 0x00000080,
+        const SSL_OP_TLS_D5_BUG = 0x00000100,
+        const SSL_OP_TLS_BLOCK_PADDING_BUG = 0x00000200,
+        const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS = 0x00000800,
+        const SSL_OP_ALL = 0x80000BFF,
+        const SSL_OP_NO_QUERY_MTU = 0x00001000,
+        const SSL_OP_COOKIE_EXCHANGE = 0x00002000,
+        const SSL_OP_NO_TICKET = 0x00004000,
+        const SSL_OP_CISCO_ANYCONNECT = 0x00008000,
+        const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION = 0x00010000,
+        const SSL_OP_NO_COMPRESSION = 0x00020000,
+        const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION = 0x00040000,
+        const SSL_OP_SINGLE_ECDH_USE = 0x00080000,
+        const SSL_OP_SINGLE_DH_USE = 0x00100000,
+        const SSL_OP_CIPHER_SERVER_PREFERENCE = 0x00400000,
+        const SSL_OP_TLS_ROLLBACK_BUG = 0x00800000,
+        const SSL_OP_NO_SSLV2 = 0x00000000,
+        const SSL_OP_NO_SSLV3 = 0x02000000,
+        const SSL_OP_NO_TLSV1 = 0x04000000,
+        const SSL_OP_NO_TLSV1_2 = 0x08000000,
+        const SSL_OP_NO_TLSV1_1 = 0x10000000,
+        const SSL_OP_NO_DTLSV1 = 0x04000000,
+        const SSL_OP_NO_DTLSV1_2 = 0x08000000
+    }
+}
+
 /// Determines the SSL method supported
 #[allow(non_camel_case_types)]
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
@@ -280,16 +313,27 @@ impl SslContext {
             })
     }
 
-    pub fn set_options(&mut self, option: c_long) -> c_long {
-        unsafe {
-            ffi::SSL_CTX_set_options(*self.ctx, option)
-        }
+    pub fn set_options(&mut self, option: SslContextOptions) -> SslContextOptions {
+        let raw_bits = option.bits();
+        let ret = unsafe {
+            ffi::SSL_CTX_set_options(*self.ctx, raw_bits)
+        };
+        SslContextOptions::from_bits(ret).unwrap()
     }
 
-    pub fn get_options(&mut self) -> c_long {
-        unsafe {
+    pub fn get_options(&mut self) -> SslContextOptions {
+        let ret = unsafe {
             ffi::SSL_CTX_get_options(*self.ctx)
-        }
+        };
+        SslContextOptions::from_bits(ret).unwrap()
+    }
+
+    pub fn clear_options(&mut self, option: SslContextOptions) -> SslContextOptions {
+        let raw_bits = option.bits();
+        let ret = unsafe {
+            ffi::SSL_CTX_clear_options(*self.ctx, raw_bits)
+        };
+        SslContextOptions::from_bits(ret).unwrap()
     }
 }
 
