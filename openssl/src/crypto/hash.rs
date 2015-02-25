@@ -1,6 +1,7 @@
 use libc::c_uint;
 use std::iter::repeat;
-use std::old_io::{IoError, Writer};
+use std::io::prelude::*;
+use std::io;
 
 use ffi;
 
@@ -73,10 +74,10 @@ use self::State::*;
 /// assert_eq!(res, spec);
 /// ```
 ///
-/// Use the `Writer` trait to supply the input in chunks.
+/// Use the `Write` trait to supply the input in chunks.
 ///
 /// ```
-/// use std::old_io::Writer;
+/// use std::io::prelude::*;
 /// use openssl::crypto::hash::{Hasher, Type};
 /// let data = [b"\x42\xF4", b"\x97\xE0"];
 /// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
@@ -168,10 +169,14 @@ impl Hasher {
     }
 }
 
-impl Writer for Hasher {
+impl Write for Hasher {
     #[inline]
-    fn write_all(&mut self, buf: &[u8]) -> Result<(), IoError> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.update(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
         Ok(())
     }
 }
@@ -213,7 +218,7 @@ pub fn hash(t: Type, data: &[u8]) -> Vec<u8> {
 mod tests {
     use serialize::hex::{FromHex, ToHex};
     use super::{hash, Hasher, Type};
-    use std::old_io::Writer;
+    use std::io::prelude::*;
 
     fn hash_test(hashtype: Type, hashtest: &(&str, &str)) {
         let res = hash(hashtype, &*hashtest.0.from_hex().unwrap());

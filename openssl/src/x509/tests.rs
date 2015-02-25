@@ -1,6 +1,7 @@
 use serialize::hex::FromHex;
-use std::old_io::{File, Open, Read};
-use std::old_io::util::NullWriter;
+use std::io;
+use std::path::Path;
+use std::fs::File;
 
 use crypto::hash::Type::{SHA256};
 use x509::{X509, X509Generator};
@@ -22,9 +23,8 @@ fn test_cert_gen() {
 
     let (cert, pkey) = res.unwrap();
 
-    let mut writer = NullWriter;
-    assert!(cert.write_pem(&mut writer).is_ok());
-    assert!(pkey.write_pem(&mut writer).is_ok());
+    assert!(cert.write_pem(&mut io::sink()).is_ok());
+    assert!(pkey.write_pem(&mut io::sink()).is_ok());
 
     // FIXME: check data in result to be correct, needs implementation
     // of X509 getters
@@ -33,7 +33,7 @@ fn test_cert_gen() {
 #[test]
 fn test_cert_loading() {
     let cert_path = Path::new("test/cert.pem");
-    let mut file = File::open_mode(&cert_path, Open, Read)
+    let mut file = File::open(&cert_path)
         .ok()
         .expect("Failed to open `test/cert.pem`");
 

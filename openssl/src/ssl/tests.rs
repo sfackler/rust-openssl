@@ -1,7 +1,8 @@
 use serialize::hex::FromHex;
-use std::old_io::net::tcp::TcpStream;
-use std::old_io::{Writer};
-use std::thread;
+use std::net::TcpStream;
+use std::io;
+use std::io::prelude::*;
+use std::path::Path;
 
 use crypto::hash::Type::{SHA256};
 use ssl::SslMethod::Sslv23;
@@ -191,17 +192,6 @@ fn test_read() {
     let mut stream = SslStream::new(&SslContext::new(Sslv23).unwrap(), stream).unwrap();
     stream.write_all("GET /\r\n\r\n".as_bytes()).unwrap();
     stream.flush().unwrap();
-    stream.read_to_end().ok().expect("read error");
-}
-
-#[test]
-fn test_clone() {
-    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
-    let mut stream = SslStream::new(&SslContext::new(Sslv23).unwrap(), stream).unwrap();
-    let mut stream2 = stream.clone();
-    let _t = thread::spawn(move || {
-        stream2.write_all("GET /\r\n\r\n".as_bytes()).unwrap();
-        stream2.flush().unwrap();
-    });
-    stream.read_to_end().ok().expect("read error");
+    println!("written");
+    io::copy(&mut stream, &mut io::sink()).ok().expect("read error");
 }

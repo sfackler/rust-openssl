@@ -1,4 +1,6 @@
 use libc::{c_char, c_int, c_long, c_uint};
+use std::io;
+use std::io::prelude::*;
 use std::cmp::Ordering;
 use std::ffi::CString;
 use std::iter::repeat;
@@ -150,8 +152,10 @@ impl<'a, T: AsStr<'a>> ToStr for Vec<T> {
 /// ```
 /// # #[allow(unstable)]
 /// # fn main() {
-/// use std::old_io::{File, Open, Write};
-/// # use std::old_io::fs;
+/// use std::fs;
+/// use std::fs::File;
+/// use std::io::prelude::*;
+/// use std::path::Path;
 ///
 /// use openssl::crypto::hash::Type;
 /// use openssl::x509::{KeyUsage, X509Generator};
@@ -165,15 +169,15 @@ impl<'a, T: AsStr<'a>> ToStr for Vec<T> {
 ///
 /// let (cert, pkey) = gen.generate().unwrap();
 ///
-/// let cert_path = Path::new("doc_cert.pem");
-/// let mut file = File::open_mode(&cert_path, Open, Write).unwrap();
+/// let cert_path = "doc_cert.pem";
+/// let mut file = File::create(cert_path).unwrap();
 /// assert!(cert.write_pem(&mut file).is_ok());
-/// # let _ = fs::unlink(&cert_path);
+/// # let _ = fs::remove_file(cert_path);
 ///
-/// let pkey_path = Path::new("doc_key.pem");
-/// let mut file = File::open_mode(&pkey_path, Open, Write).unwrap();
+/// let pkey_path = "doc_key.pem";
+/// let mut file = File::create(pkey_path).unwrap();
 /// assert!(pkey.write_pem(&mut file).is_ok());
-/// # let _ = fs::unlink(&pkey_path);
+/// # let _ = fs::remove_file(pkey_path);
 /// # }
 /// ```
 pub struct X509Generator {
@@ -369,10 +373,9 @@ impl<'ctx> X509<'ctx> {
     }
 
     /// Reads certificate from PEM, takes ownership of handle
-    pub fn from_pem<R>(reader: &mut R) -> Result<X509<'ctx>, SslError> where R: Reader {
+    pub fn from_pem<R>(reader: &mut R) -> Result<X509<'ctx>, SslError> where R: Read {
         let mut mem_bio = try!(MemBio::new());
-        let buf = try!(reader.read_to_end().map_err(StreamError));
-        try!(mem_bio.write_all(buf.as_slice()).map_err(StreamError));
+        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
 
         unsafe {
             let handle = try_ssl_null!(ffi::PEM_read_bio_X509(mem_bio.get_handle(),
@@ -412,14 +415,13 @@ impl<'ctx> X509<'ctx> {
     }
 
     /// Writes certificate as PEM
-    pub fn write_pem<W>(&self, writer: &mut W) -> Result<(), SslError> where W: Writer{
+    pub fn write_pem<W>(&self, writer: &mut W) -> Result<(), SslError> where W: Write {
         let mut mem_bio = try!(MemBio::new());
         unsafe {
             try_ssl!(ffi::PEM_write_bio_X509(mem_bio.get_handle(),
                                              self.handle));
         }
-        let buf = try!(mem_bio.read_to_end().map_err(StreamError));
-        writer.write_all(buf.as_slice()).map_err(StreamError)
+        io::copy(&mut mem_bio, writer).map_err(StreamError).map(|_| ())
     }
 }
 

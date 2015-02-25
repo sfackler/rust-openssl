@@ -5,7 +5,7 @@ use libc::c_ulong;
 use std::error;
 use std::fmt;
 use std::ffi::CStr;
-use std::old_io::IoError;
+use std::io;
 
 use ffi;
 
@@ -13,7 +13,7 @@ use ffi;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SslError {
     /// The underlying stream reported an error
-    StreamError(IoError),
+    StreamError(io::Error),
     /// The SSL session has been closed by the other end
     SslSessionClosed,
     /// An error in the OpenSSL library
