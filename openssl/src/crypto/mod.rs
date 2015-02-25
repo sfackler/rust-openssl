@@ -21,5 +21,4 @@ pub mod pkcs5;
 pub mod pkey;
 pub mod rand;
 pub mod symm;
-pub mod symm_new;
 pub mod memcmp;
