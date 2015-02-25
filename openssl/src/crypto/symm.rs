@@ -18,9 +18,10 @@
 //! assert!(&res[..len] == b"\x3a\x41\xfe\x79\xaa\x90\x77\x2a\x16\xa1\xc0\x92\x6d\x11\x82\xc4");
 //! ```
 //!
-//! * `Writer` adapter
+//! * `Write` adapter
 //!
 //! ```rust
+//! use std::io::prelude::*;
 //! use openssl::crypto::symm::{Aes, Apply, PaddedFinish, PaddedFilter};
 //! use openssl::crypto::symm::cbc::{CbcPadded};
 //! let key = b"\xc3\xb3\xc4\x1f\x11\x3a\x31\xb7\x3d\x9a\x5c\xd4\x32\x10\x30\x69";
@@ -41,7 +42,8 @@
 use std::{error, fmt, mem, ptr};
 use std::error::Error as StdError;
 use libc::{c_int, c_void};
-use std::old_io::{IoError, Writer};
+use std::io;
+use std::io::prelude::*;
 
 use ffi;
 
@@ -96,7 +98,7 @@ pub enum Error {
     /// Unspecified openssl error
     Unspecified,
     /// An external IO error
-    IoError(Box<IoError>),
+    IoError(io::Error),
 }
 
 impl error::Error for Error {
@@ -123,9 +125,9 @@ impl fmt::Display for Error {
     }
 }
 
-impl error::FromError<IoError> for Error {
-    fn from_error(err: IoError) -> Error {
-        Error::IoError(Box::new(err))
+impl error::FromError<io::Error> for Error {
+    fn from_error(err: io::Error) -> Error {
+        Error::IoError(err)
     }
 }
 
@@ -160,28 +162,28 @@ trait SectorMode {
 }
 */
 
-/// An adapter for using ciphers as `Writer`s
+/// An adapter for using ciphers as `Write`rs
 // Subject to changes after std::io stabilization
 pub struct Filter<'a, T: 'a> {
     cipher: &'a mut T,
-    sink: &'a mut Writer,
+    sink: &'a mut Write,
 }
 
 const FILTER_BUFFER_LEN: usize = 16384;
 
 impl <'a, T> Filter<'a, T> {
-    /// Create a `Writer` adapter for the `cipher`. The output is written
+    /// Create a `Write` adapter for the `cipher`. The output is written
     /// to the `sink`.
     /// The `cipher` has to be `start`ed beforehand and `finish`ed after
     /// destroying the adapter.
-    pub fn new(cipher: &'a mut T, sink: &'a mut Writer)
+    pub fn new(cipher: &'a mut T, sink: &'a mut Write)
           -> Filter<'a, T> {
         Filter { cipher: cipher, sink: sink }
     }
 }
 
-impl <'a, T: Apply> Writer for Filter<'a, T> {
-    fn write_all(&mut self, data: &[u8]) -> Result<(), IoError> {
+impl <'a, T: Apply> Write for Filter<'a, T> {
+    fn write(&mut self, data: &[u8]) -> io::Result<usize> {
         let mut buf = [0; FILTER_BUFFER_LEN + ffi::EVP_MAX_BLOCK_LENGTH];
         for chunk in data.chunks(FILTER_BUFFER_LEN) {
             let len = self.cipher.apply(chunk, &mut buf);
@@ -189,23 +191,27 @@ impl <'a, T: Apply> Writer for Filter<'a, T> {
                 try!(self.sink.write_all(&buf[..len]));
             }
         }
-        Ok(())
+        Ok(data.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.sink.flush()
     }
 }
 
-/// A `Writer` adapter that finishes the padded cipher after writing.
+/// A `Write`r adapter that finishes the padded cipher after writing.
 pub struct PaddedFilter<'a, T: 'a> {
     inner: Filter<'a, T>,
     closed: bool,
 }
 
 impl <'a, T: PaddedFinish> PaddedFilter<'a, T> {
-    /// Create a `Writer` adapter that finishes the padded cipher after writing.
+    /// Create a `Write` adapter that finishes the padded cipher after writing.
     /// The output is written to the `sink`.
     /// The cipher has to be `start`ed beforehand and is finished explicitly
     /// with `close` or implicitly when the adapter is destroyed (in which case
     /// the last bytes won't reach the sink).
-    pub fn new(cipher: &'a mut T, sink: &'a mut Writer)
+    pub fn new(cipher: &'a mut T, sink: &'a mut Write)
           -> PaddedFilter<'a, T> {
         PaddedFilter { inner: Filter::new(cipher, sink), closed: false }
     }
@@ -222,9 +228,13 @@ impl <'a, T: PaddedFinish> PaddedFilter<'a, T> {
     }
 }
 
-impl <'a, T: PaddedFinish> Writer for PaddedFilter<'a, T> {
-    fn write_all(&mut self, data: &[u8]) -> Result<(), IoError> {
-        self.inner.write_all(data)
+impl <'a, T: PaddedFinish> Write for PaddedFilter<'a, T> {
+    fn write(&mut self, data: &[u8]) -> io::Result<usize> {
+        self.inner.write(data)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.inner.flush()
     }
 }
 
@@ -886,6 +896,7 @@ mod tests {
     use super::cbc::{CbcRaw, CbcPadded};
     use ffi;
     use std::iter::repeat;
+    use std::io::prelude::*;
     use std::cmp::max;
     use std::num::from_str_radix;
     use serialize::hex::FromHex;
