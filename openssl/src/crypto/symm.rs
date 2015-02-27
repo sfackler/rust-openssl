@@ -5,8 +5,8 @@
 //! * Zero copy API:
 //!
 //! ```rust
-//! use openssl::crypto::symm::{Aes, Apply, PaddedFinish};
-//! use openssl::crypto::symm::cbc::{CbcPadded};
+//! use openssl::crypto::symm::{Aes, Cipher};
+//! use openssl::crypto::symm::cbc::CbcPadded;
 //! let key = b"\xc3\xb3\xc4\x1f\x11\x3a\x31\xb7\x3d\x9a\x5c\xd4\x32\x10\x30\x69";
 //! let iv = b"\x93\xfe\x7d\x9e\x9b\xfd\x10\x34\x8a\x56\x06\xe5\xca\xfa\x73\x54";
 //! let pt = b"secret!";
@@ -22,8 +22,8 @@
 //!
 //! ```rust
 //! use std::io::prelude::*;
-//! use openssl::crypto::symm::{Aes, Apply, PaddedFinish, PaddedFilter};
-//! use openssl::crypto::symm::cbc::{CbcPadded};
+//! use openssl::crypto::symm::{Aes, Cipher, Writer};
+//! use openssl::crypto::symm::cbc::CbcPadded;
 //! let key = b"\xc3\xb3\xc4\x1f\x11\x3a\x31\xb7\x3d\x9a\x5c\xd4\x32\x10\x30\x69";
 //! let iv = b"\x93\xfe\x7d\x9e\x9b\xfd\x10\x34\x8a\x56\x06\xe5\xca\xfa\x73\x54";
 //! let ct = b"\x3a\x41\xfe\x79\xaa\x90\x77\x2a\x16\xa1\xc0\x92\x6d\x11\x82\xc4";
@@ -31,9 +31,9 @@
 //! let mut dec = CbcPadded::new_decrypt(Aes::Aes128, key);
 //! dec.start(iv);
 //! {
-//!     let mut w = PaddedFilter::new(&mut dec, &mut res);
+//!     let mut w = Writer::new(&mut dec, &mut res);
 //!     assert!(w.write_all(ct).is_ok());
-//!     assert!(w.close().is_ok());
+//!     assert!(w.end().is_ok());
 //! }
 //! assert!(res == b"secret!");
 //! ```
@@ -46,6 +46,8 @@ use std::io;
 use std::io::prelude::*;
 
 use ffi;
+
+const MAX_BLOCK_LEN: usize = ffi::EVP_MAX_BLOCK_LENGTH;
 
 #[derive(PartialEq, Copy)]
 enum State {
@@ -141,18 +143,24 @@ macro_rules! chk {
     );
 }
 
-/// A trait for ciphers that allow transcoding several chunks of data consecutively.
-pub trait Apply {
-    /// Transcode the `data` into the `buf`.
+/// A trait for ciphers that allow (de)ciphering several chunks of data consecutively.
+pub trait Cipher {
+    type FinishRetType;
+
+    /// Ciphers the `data` into the `buf`.
     ///
     /// The `buf` must have enough space to fit `data` (plus a cipher block length
     /// in ECB and CBC modes).
     fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize;
-}
 
-/// A trait for block mode ciphers that may not return the last bytes of data until finished.
-pub trait PaddedFinish: Apply {
-    fn finish(&mut self, buf: &mut [u8]) -> Result<usize, Error>;
+    /// Finishes the cipher, writes any remaining data to `buf` and returns
+    /// a cipher mode-specific result.
+    ///
+    /// For padded modes `buf` should have enough space to fit a cipher block length.
+    ///
+    /// The number of bytes written to `buf` is assigned to `out_len`.
+    fn unified_finish(&mut self, buf: &mut [u8], out_len: &mut usize)
+                    -> Result<Self::FinishRetType, Error>;
 }
 
 /*
@@ -163,88 +171,50 @@ trait SectorMode {
 */
 
 /// An adapter for using ciphers as `Write`rs
-// Subject to changes after std::io stabilization
-pub struct Filter<'a, T: 'a> {
+pub struct Writer<'a, T: 'a> {
     cipher: &'a mut T,
-    sink: &'a mut Write,
+    writer: &'a mut Write,
 }
 
-const FILTER_BUFFER_LEN: usize = 16384;
+const WRITER_BUFFER_LEN: usize = 16384;
 
-impl <'a, T> Filter<'a, T> {
-    /// Create a `Write` adapter for the `cipher`. The output is written
-    /// to the `sink`.
-    /// The `cipher` has to be `start`ed beforehand and `finish`ed after
-    /// destroying the adapter.
-    pub fn new(cipher: &'a mut T, sink: &'a mut Write)
-          -> Filter<'a, T> {
-        Filter { cipher: cipher, sink: sink }
+impl <'a, T: Cipher> Writer<'a, T> {
+    /// Creates a `Write` adapter for the `cipher`. The output is written
+    /// to the `writer`.
+    /// The `cipher` has to be `start`ed beforehand.
+    pub fn new(cipher: &'a mut T, writer: &'a mut Write) -> Writer<'a, T> {
+        Writer { cipher: cipher, writer: writer }
+    }
+
+    /// Finishes the cipher and writes any remaining data to the writer.
+    ///
+    /// Returns a cipher mode-specific result.
+    pub fn end(self) -> Result<<T as Cipher>::FinishRetType, Error> {
+        let mut buf = [0; MAX_BLOCK_LEN];
+        let mut len = 0;
+        let res = try!(self.cipher.unified_finish(&mut buf, &mut len));
+        if len > 0 {
+            try!(self.writer.write_all(&buf[..len]));
+        }
+        self.writer.flush();
+        Ok(res)
     }
 }
 
-impl <'a, T: Apply> Write for Filter<'a, T> {
+impl <'a, T: Cipher> Write for Writer<'a, T> {
     fn write(&mut self, data: &[u8]) -> io::Result<usize> {
-        let mut buf = [0; FILTER_BUFFER_LEN + ffi::EVP_MAX_BLOCK_LENGTH];
-        for chunk in data.chunks(FILTER_BUFFER_LEN) {
+        let mut buf = [0; WRITER_BUFFER_LEN + MAX_BLOCK_LEN];
+        for chunk in data.chunks(WRITER_BUFFER_LEN) {
             let len = self.cipher.apply(chunk, &mut buf);
             if len > 0 {
-                try!(self.sink.write_all(&buf[..len]));
+                try!(self.writer.write_all(&buf[..len]));
             }
         }
         Ok(data.len())
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.sink.flush()
-    }
-}
-
-/// A `Write`r adapter that finishes the padded cipher after writing.
-pub struct PaddedFilter<'a, T: 'a> {
-    inner: Filter<'a, T>,
-    closed: bool,
-}
-
-impl <'a, T: PaddedFinish> PaddedFilter<'a, T> {
-    /// Create a `Write` adapter that finishes the padded cipher after writing.
-    /// The output is written to the `sink`.
-    /// The cipher has to be `start`ed beforehand and is finished explicitly
-    /// with `close` or implicitly when the adapter is destroyed (in which case
-    /// the last bytes won't reach the sink).
-    pub fn new(cipher: &'a mut T, sink: &'a mut Write)
-          -> PaddedFilter<'a, T> {
-        PaddedFilter { inner: Filter::new(cipher, sink), closed: false }
-    }
-
-    /// Finish the cipher and write the remaining data to the sink.
-    pub fn close(mut self) -> Result<(), Error> {
-        let mut buf = [0; ffi::EVP_MAX_BLOCK_LENGTH];
-        self.closed = true;
-        let len = try!(self.inner.cipher.finish(&mut buf));
-        if len > 0 {
-            try!(self.inner.sink.write_all(&buf[..len]));
-        }
-        Ok(())
-    }
-}
-
-impl <'a, T: PaddedFinish> Write for PaddedFilter<'a, T> {
-    fn write(&mut self, data: &[u8]) -> io::Result<usize> {
-        self.inner.write(data)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        self.inner.flush()
-    }
-}
-
-#[unsafe_destructor]
-impl <'a, T: PaddedFinish> Drop for PaddedFilter<'a, T> {
-    fn drop(&mut self) {
-        if !self.closed {
-            let mut buf = [0; ffi::EVP_MAX_BLOCK_LENGTH];
-            let _ = self.inner.cipher.finish(&mut buf);
-        }
+        self.writer.flush()
     }
 }
 
@@ -331,7 +301,7 @@ impl Context {
         unsafe { self.update(data, buf) }
     }
 
-    unsafe fn finalize(&mut self, buf: &mut [u8]) -> Result<usize, ()> {
+    unsafe fn finalize(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
         assert!(self.state != Finalized, "Illegal call order");
         let mut len = 0;
         let res = ffi::EVP_CipherFinal_ex(self.ctx, buf.as_mut_ptr(), &mut len);
@@ -342,22 +312,22 @@ impl Context {
             Ok(len)
         }
         else {
-            Err(())
+            Err(Error::Unspecified)
         }
     }
 
-    fn checked_finalize(&mut self, buf: &mut [u8], block_len: usize) -> Result<usize, ()> {
+    fn checked_finalize(&mut self, buf: &mut [u8], block_len: usize) -> Result<usize, Error> {
         assert!(buf.len() >= block_len);
         unsafe { self.finalize(buf) }
     }
 
-    fn clean_finalize(&mut self) -> Result<(), ()> {
+    fn clean_finalize(&mut self) -> Result<(), Error> {
         assert!(self.state != Finalized, "Illegal call order");
         unsafe {
-            let mut buf: [u8; ffi::EVP_MAX_BLOCK_LENGTH] = mem::uninitialized();
+            let mut buf: [u8; MAX_BLOCK_LEN] = mem::uninitialized();
             match self.finalize(&mut buf) {
                 Ok(_) => Ok(()),
-                Err(_) => Err(()),
+                Err(e) => Err(e),
             }
         }
     }
@@ -406,7 +376,7 @@ pub mod ecb{
     //!
     //! This mode doesn't use IVs so is not supposed to be used.
 
-    use super::{Aes, Apply, Context, Direction, Error, PaddedFinish};
+    use super::{Aes, Cipher, Context, Direction, Error};
     use ffi;
 
     struct EvpC {
@@ -478,12 +448,18 @@ pub mod ecb{
         }
     }
 
-    impl Apply for EcbRaw {
+    impl Cipher for EcbRaw {
+        type FinishRetType = ();
+
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
             let len = self.context.checked_update(data, buf, Aes::block_len());
             len
         }
 
+        fn unified_finish(&mut self, _: &mut [u8], out_len: &mut usize) -> Result<(), Error> {
+            *out_len = 0;
+            self.finish()
+        }
     }
 
     /// AES in ECB mode with padding.
@@ -512,17 +488,11 @@ pub mod ecb{
         pub fn start(&mut self) {
             self.context.init();
         }
-    }
 
-    impl Apply for EcbPadded {
-        fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
-            let len = self.context.checked_update(data, buf, Aes::block_len());
-            len
-        }
-    }
-
-    impl PaddedFinish for EcbPadded {
-        fn finish(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
+        /// Finishes the cipher.
+        ///
+        /// Writes the last block of data to `buf` and returns the number of bytes written.
+        pub fn finish(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
             if let Ok(len) = self.context.checked_finalize(buf, Aes::block_len()) {
                 Ok(len)
             }
@@ -531,12 +501,26 @@ pub mod ecb{
             }
         }
     }
+
+    impl Cipher for EcbPadded {
+        type FinishRetType = ();
+
+        fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
+            let len = self.context.checked_update(data, buf, Aes::block_len());
+            len
+        }
+
+        fn unified_finish(&mut self, buf: &mut [u8], out_len: &mut usize) -> Result<(), Error> {
+            *out_len = try!(self.finish(buf));
+            Ok(())
+        }
+    }
 }
 
 pub mod cbc {
     //! CBC mode
 
-    use super::{Aes, Apply, Context, Direction, Error, PaddedFinish};
+    use super::{Aes, Cipher, Context, Direction, Error};
     use ffi;
 
     struct EvpC {
@@ -608,10 +592,17 @@ pub mod cbc {
         }
     }
 
-    impl Apply for CbcRaw {
+    impl Cipher for CbcRaw {
+        type FinishRetType = ();
+
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
             let len = self.context.checked_update(data, buf, Aes::block_len());
             len
+        }
+
+        fn unified_finish(&mut self, _: &mut [u8], out_len: &mut usize) -> Result<(), Error> {
+            *out_len = 0;
+            self.finish()
         }
     }
 
@@ -641,17 +632,11 @@ pub mod cbc {
         pub fn start(&mut self, iv: &[u8]) {
             self.context.init_with_iv(iv);
         }
-    }
 
-    impl Apply for CbcPadded {
-        fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
-            let len = self.context.checked_update(data, buf, Aes::block_len());
-            len
-        }
-    }
-
-    impl PaddedFinish for CbcPadded {
-        fn finish(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
+        /// Finishes the cipher.
+        ///
+        /// Writes the last block of data to `buf` and returns the number of bytes written.
+        pub fn finish(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
             if let Ok(len) = self.context.checked_finalize(buf, Aes::block_len()) {
                 Ok(len)
             }
@@ -660,13 +645,27 @@ pub mod cbc {
             }
         }
     }
+
+    impl Cipher for CbcPadded {
+        type FinishRetType = ();
+
+        fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
+            let len = self.context.checked_update(data, buf, Aes::block_len());
+            len
+        }
+
+        fn unified_finish(&mut self, buf: &mut [u8], out_len: &mut usize) -> Result<(), Error> {
+            *out_len = try!(self.finish(buf));
+            Ok(())
+        }
+    }
 }
 
 #[cfg(feature = "aes_gcm")]
 pub mod gcm {
     //! GCM mode
 
-    use super::{Aes, Apply, Context, Direction, Error};
+    use super::{Aes, Cipher, Context, Direction, Error};
     use ffi;
 
     struct EvpC {
@@ -734,11 +733,18 @@ pub mod gcm {
         }
     }
 
-    impl Apply for GcmEncrypt {
+    impl Cipher for GcmEncrypt {
+        type FinishRetType = Vec<u8>;
+
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
             assert!(buf.len() >= data.len());
             unsafe { self.context.update(data, buf); }
             data.len()
+        }
+
+        fn unified_finish(&mut self, _: &mut [u8], out_len: &mut usize) -> Result<Vec<u8>, Error> {
+            *out_len = 0;
+            Ok(self.finish())
         }
     }
 
@@ -790,11 +796,18 @@ pub mod gcm {
         }
     }
 
-    impl Apply for GcmDecrypt {
+    impl Cipher for GcmDecrypt {
+        type FinishRetType = ();
+
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
             assert!(buf.len() >= data.len());
             unsafe { self.context.update(data, buf); }
             data.len()
+        }
+
+        fn unified_finish(&mut self, _: &mut [u8], out_len: &mut usize) -> Result<(), Error> {
+            *out_len = 0;
+            self.finish()
         }
     }
 }
@@ -805,7 +818,7 @@ pub mod ctr {
 
     use std::mem;
     use std::num::Int;
-    use super::{Aes, Apply, Context, Direction, Error};
+    use super::{Aes, Cipher, Context, Direction, Error};
     use ffi;
 
     struct EvpC {
@@ -868,7 +881,12 @@ pub mod ctr {
         /// Returns the next safe to use initial counter value.
         pub fn finish(&mut self) -> Result<u64, Error> {
             if self.context.clean_finalize().is_ok() {
-                Ok(self.counter + if self.block_ofs > 0 { 1 } else { 0 })
+                if self.block_ofs > 0 {
+                    Ok(self.counter.checked_add(1).expect("Counter overflow"))
+                }
+                else {
+                    Ok(self.counter)
+                }
             }
             else {
                 Err(Error::Unspecified)
@@ -876,7 +894,9 @@ pub mod ctr {
         }
     }
 
-    impl Apply for Ctr {
+    impl Cipher for Ctr {
+        type FinishRetType = u64;
+
         fn apply(&mut self, data: &[u8], buf: &mut [u8]) -> usize {
             let len = self.context.checked_update(data, buf, 0);
             let len_with_carried = len + self.block_ofs as usize;
@@ -885,16 +905,20 @@ pub mod ctr {
             self.block_ofs = (len_with_carried % Aes::block_len()) as u8;
             len
         }
+
+        fn unified_finish(&mut self, _: &mut [u8], out_len: &mut usize) -> Result<u64, Error> {
+            *out_len = 0;
+            self.finish()
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Aes, Apply, PaddedFinish, Error, Filter, PaddedFilter};
+    use super::{Aes, Cipher, Error, Writer};
     use super::Aes::*;
     use super::ecb::{EcbRaw, EcbPadded};
     use super::cbc::{CbcRaw, CbcPadded};
-    use ffi;
     use std::iter::repeat;
     use std::io::prelude::*;
     use std::cmp::max;
@@ -1149,7 +1173,7 @@ mod tests {
         for item in &ECB_RAW_VEC {
             let (algo, key, pt, ct) = unpack3(item);
             let mut res: Vec<u8> = repeat(0).take(
-                max(pt.len(), ct.len()) + ffi::EVP_MAX_BLOCK_LENGTH).collect();
+                max(pt.len(), ct.len()) + super::MAX_BLOCK_LEN).collect();
 
             let mut enc = EcbRaw::new_encrypt(algo, &key);
             enc.start();
@@ -1173,7 +1197,7 @@ mod tests {
         for item in &ECB_PADDED_VEC {
             let (algo, key, pt, ct) = unpack3(item);
             let mut res: Vec<u8> = repeat(0).take(
-                max(pt.len(), ct.len()) + ffi::EVP_MAX_BLOCK_LENGTH).collect();
+                max(pt.len(), ct.len()) + super::MAX_BLOCK_LEN).collect();
 
             let mut enc = EcbPadded::new_encrypt(algo, &key);
             enc.start();
@@ -1291,7 +1315,7 @@ mod tests {
             let mut enc = EcbRaw::new_encrypt(algo, &key);
             enc.start();
             {
-                let mut w = Filter::new(&mut enc, &mut res);
+                let mut w = Writer::new(&mut enc, &mut res);
                 for byte in &pt {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
@@ -1303,7 +1327,7 @@ mod tests {
             let mut dec = EcbRaw::new_decrypt(algo, &key);
             dec.start();
             {
-                let mut w = Filter::new(&mut dec, &mut res);
+                let mut w = Writer::new(&mut dec, &mut res);
                 for byte in &ct {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
@@ -1327,11 +1351,11 @@ mod tests {
             let mut enc = EcbPadded::new_encrypt(algo, &key);
             enc.start();
             {
-                let mut w = PaddedFilter::new(&mut enc, &mut res);
+                let mut w = Writer::new(&mut enc, &mut res);
                 for byte in &pt {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
-                assert!(w.close().is_ok(), "vec #{}", n);
+                assert!(w.end().is_ok(), "vec #{}", n);
             }
             assert!(ct == res, "vec #{}", n);
 
@@ -1339,11 +1363,11 @@ mod tests {
             let mut dec = EcbPadded::new_decrypt(algo, &key);
             dec.start();
             {
-                let mut w = PaddedFilter::new(&mut dec, &mut res);
+                let mut w = Writer::new(&mut dec, &mut res);
                 for byte in &ct {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
-                assert!(w.close().is_ok(), "vec #{}", n);
+                assert!(w.end().is_ok(), "vec #{}", n);
             }
             assert!(pt == res, "vec #{}", n);
 
@@ -1363,14 +1387,14 @@ mod tests {
             let mut enc = EcbPadded::new_encrypt(algo, &key);
             enc.start();
             {
-                let mut w = Filter::new(&mut enc, &mut res);
+                let mut w = Writer::new(&mut enc, &mut res);
                 for byte in &pt {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
             }
             {
-                let w = PaddedFilter::new(&mut enc, &mut res);
-                assert!(w.close().is_ok(), "vec #{}", n);
+                let w = Writer::new(&mut enc, &mut res);
+                assert!(w.end().is_ok(), "vec #{}", n);
             }
             assert!(ct == res, "vec #{}", n);
 
@@ -1378,14 +1402,14 @@ mod tests {
             let mut dec = EcbPadded::new_decrypt(algo, &key);
             dec.start();
             {
-                let mut w = Filter::new(&mut dec, &mut res);
+                let mut w = Writer::new(&mut dec, &mut res);
                 for byte in &ct {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
             }
             {
-                let w = PaddedFilter::new(&mut dec, &mut res);
-                assert!(w.close().is_ok(), "vec #{}", n);
+                let w = Writer::new(&mut dec, &mut res);
+                assert!(w.end().is_ok(), "vec #{}", n);
             }
             assert!(pt == res, "vec #{}", n);
 
@@ -1399,7 +1423,7 @@ mod tests {
         for item in &CBC_RAW_VEC {
             let (algo, key, iv, pt, ct) = unpack4(item);
             let mut res: Vec<u8> = repeat(0).take(
-                max(pt.len(), ct.len()) + ffi::EVP_MAX_BLOCK_LENGTH).collect();
+                max(pt.len(), ct.len()) + super::MAX_BLOCK_LEN).collect();
 
             let mut enc = CbcRaw::new_encrypt(algo, &key);
             enc.start(&iv);
@@ -1423,7 +1447,7 @@ mod tests {
         for item in &CBC_PADDED_VEC {
             let (algo, key, iv, pt, ct) = unpack4(item);
             let mut res: Vec<u8> = repeat(0).take(
-                max(pt.len(), ct.len()) + ffi::EVP_MAX_BLOCK_LENGTH).collect();
+                max(pt.len(), ct.len()) + super::MAX_BLOCK_LEN).collect();
 
             let mut enc = CbcPadded::new_encrypt(algo, &key);
             enc.start(&iv);
@@ -1541,7 +1565,7 @@ mod tests {
             let mut enc = CbcRaw::new_encrypt(algo, &key);
             enc.start(&iv);
             {
-                let mut w = Filter::new(&mut enc, &mut res);
+                let mut w = Writer::new(&mut enc, &mut res);
                 for byte in &pt {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
@@ -1553,7 +1577,7 @@ mod tests {
             let mut dec = CbcRaw::new_decrypt(algo, &key);
             dec.start(&iv);
             {
-                let mut w = Filter::new(&mut dec, &mut res);
+                let mut w = Writer::new(&mut dec, &mut res);
                 for byte in &ct {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
@@ -1577,11 +1601,11 @@ mod tests {
             let mut enc = CbcPadded::new_encrypt(algo, &key);
             enc.start(&iv);
             {
-                let mut w = PaddedFilter::new(&mut enc, &mut res);
+                let mut w = Writer::new(&mut enc, &mut res);
                 for byte in &pt {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
-                assert!(w.close().is_ok(), "vec #{}", n);
+                assert!(w.end().is_ok(), "vec #{}", n);
             }
             assert!(ct == res, "vec #{}", n);
 
@@ -1589,11 +1613,11 @@ mod tests {
             let mut dec = CbcPadded::new_decrypt(algo, &key);
             dec.start(&iv);
             {
-                let mut w = PaddedFilter::new(&mut dec, &mut res);
+                let mut w = Writer::new(&mut dec, &mut res);
                 for byte in &ct {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
-                assert!(w.close().is_ok(), "vec #{}", n);
+                assert!(w.end().is_ok(), "vec #{}", n);
             }
             assert!(pt == res, "vec #{}", n);
 
@@ -1613,14 +1637,14 @@ mod tests {
             let mut enc = CbcPadded::new_encrypt(algo, &key);
             enc.start(&iv);
             {
-                let mut w = Filter::new(&mut enc, &mut res);
+                let mut w = Writer::new(&mut enc, &mut res);
                 for byte in &pt {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
             }
             {
-                let w = PaddedFilter::new(&mut enc, &mut res);
-                assert!(w.close().is_ok(), "vec #{}", n);
+                let w = Writer::new(&mut enc, &mut res);
+                assert!(w.end().is_ok(), "vec #{}", n);
             }
             assert!(ct == res, "vec #{}", n);
 
@@ -1628,14 +1652,14 @@ mod tests {
             let mut dec = CbcPadded::new_decrypt(algo, &key);
             dec.start(&iv);
             {
-                let mut w = Filter::new(&mut dec, &mut res);
+                let mut w = Writer::new(&mut dec, &mut res);
                 for byte in &ct {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
             }
             {
-                let w = PaddedFilter::new(&mut dec, &mut res);
-                assert!(w.close().is_ok(), "vec #{}", n);
+                let w = Writer::new(&mut dec, &mut res);
+                assert!(w.end().is_ok(), "vec #{}", n);
             }
             assert!(pt == res, "vec #{}", n);
 
@@ -1695,7 +1719,7 @@ mod tests {
                 enc.start(&iv, None);
             }
             {
-                let mut w = Filter::new(&mut enc, &mut res);
+                let mut w = Writer::new(&mut enc, &mut res);
                 for byte in &pt {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
@@ -1713,7 +1737,7 @@ mod tests {
                 dec.start(&iv, None, &tag);
             }
             {
-                let mut w = Filter::new(&mut dec, &mut res);
+                let mut w = Writer::new(&mut dec, &mut res);
                 for byte in &ct {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
@@ -1904,7 +1928,7 @@ mod tests {
             let mut enc = Ctr::new(algo, &key);
             enc.start(iv, ctr);
             {
-                let mut w = Filter::new(&mut enc, &mut res);
+                let mut w = Writer::new(&mut enc, &mut res);
                 for byte in &pt {
                     assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
                 }
