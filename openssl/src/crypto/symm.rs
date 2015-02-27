@@ -1171,6 +1171,7 @@ mod tests {
     fn test_ecb_raw_apply() {
         let mut n = 0;
         for item in &ECB_RAW_VEC {
+            println!("vec #{}", n);
             let (algo, key, pt, ct) = unpack3(item);
             let mut res: Vec<u8> = repeat(0).take(
                 max(pt.len(), ct.len()) + super::MAX_BLOCK_LEN).collect();
@@ -1178,14 +1179,14 @@ mod tests {
             let mut enc = EcbRaw::new_encrypt(algo, &key);
             enc.start();
             let len = enc.apply(&pt, &mut res);
-            assert!(enc.finish().is_ok(), "vec #{}", n);
-            assert!(ct == &res[..len], "vec #{}", n);
+            assert!(enc.finish().is_ok());
+            assert_eq!(ct, &res[..len]);
 
             let mut dec = EcbRaw::new_decrypt(algo, &key);
             dec.start();
             let len = dec.apply(&ct, &mut res);
-            assert!(dec.finish().is_ok(), "vec #{}", n);
-            assert!(pt == &res[..len], "vec #{}", n);
+            assert!(dec.finish().is_ok());
+            assert_eq!(pt, &res[..len]);
 
             n += 1;
         }
@@ -1195,6 +1196,7 @@ mod tests {
     fn test_ecb_padded_apply() {
         let mut n = 0;
         for item in &ECB_PADDED_VEC {
+            println!("vec #{}", n);
             let (algo, key, pt, ct) = unpack3(item);
             let mut res: Vec<u8> = repeat(0).take(
                 max(pt.len(), ct.len()) + super::MAX_BLOCK_LEN).collect();
@@ -1203,13 +1205,13 @@ mod tests {
             enc.start();
             let mut len = enc.apply(&pt, &mut res);
             len += enc.finish(&mut res[len..]).unwrap();
-            assert!(ct == &res[..len], "vec #{}", n);
+            assert_eq!(ct, &res[..len]);
 
             let mut dec = EcbPadded::new_decrypt(algo, &key);
             dec.start();
             let mut len = dec.apply(&ct, &mut res);
             len += dec.finish(&mut res[len..]).unwrap();
-            assert!(pt == &res[..len], "vec #{}", n);
+            assert_eq!(pt, &res[..len]);
 
             n += 1;
         }
@@ -1223,17 +1225,17 @@ mod tests {
         let mut enc = EcbRaw::new_encrypt(Aes::Aes128, &dummy[..16]);
         enc.start();
         enc.apply(&dummy, &mut res);
-        assert!(enc.finish() == Err(Error::IncompleteBlock));
+        assert_eq!(enc.finish(), Err(Error::IncompleteBlock));
 
         let mut dec = EcbRaw::new_decrypt(Aes::Aes128, &dummy[..16]);
         dec.start();
         dec.apply(&dummy, &mut res);
-        assert!(dec.finish() == Err(Error::IncompleteBlock));
+        assert_eq!(dec.finish(), Err(Error::IncompleteBlock));
 
         let mut dec = EcbPadded::new_decrypt(Aes::Aes128, &dummy[..16]);
         dec.start();
         dec.apply(&dummy, &mut res);
-        assert!(dec.finish(&mut res) == Err(Error::InvalidPadding));
+        assert_eq!(dec.finish(&mut res), Err(Error::InvalidPadding));
     }
 
     #[test]
@@ -1244,6 +1246,7 @@ mod tests {
 
         n = 0;
         for item in &ECB_RAW_VEC {
+            println!("vec #{}", n);
             let (algo, key, pt, ct) = unpack3(item);
 
             let mut enc = EcbRaw::new_encrypt(algo, &key);
@@ -1258,13 +1261,13 @@ mod tests {
 
             enc.start();
             let len = enc.apply(&pt, &mut res);
-            assert!(enc.finish().is_ok(), "vec #{}", n);
-            assert!(ct == &res[..len], "vec #{}", n);
+            assert!(enc.finish().is_ok());
+            assert_eq!(ct, &res[..len]);
 
             dec.start();
             let len = dec.apply(&ct, &mut res);
-            assert!(dec.finish().is_ok(), "vec #{}", n);
-            assert!(pt == &res[..len], "vec #{}", n);
+            assert!(dec.finish().is_ok());
+            assert_eq!(pt, &res[..len]);
 
             n += 1;
         }
@@ -1278,6 +1281,7 @@ mod tests {
 
         n = 0;
         for item in &ECB_PADDED_VEC {
+            println!("vec #{}", n);
             let (algo, key, pt, ct) = unpack3(item);
 
             let mut enc = EcbPadded::new_encrypt(algo, &key);
@@ -1293,12 +1297,12 @@ mod tests {
             enc.start();
             let mut len = enc.apply(&pt, &mut res);
             len += enc.finish(&mut res[len..]).unwrap();
-            assert!(ct == &res[..len], "vec #{}", n);
+            assert_eq!(ct, &res[..len]);
 
             dec.start();
             let mut len = dec.apply(&ct, &mut res);
             len += dec.finish(&mut res[len..]).unwrap();
-            assert!(pt == &res[..len], "vec #{}", n);
+            assert_eq!(pt, &res[..len]);
 
             n += 1;
         }
@@ -1309,6 +1313,7 @@ mod tests {
         let mut n = 0;
 
         for item in &ECB_RAW_VEC {
+            println!("vec #{}", n);
             let (algo, key, pt, ct) = unpack3(item);
             let mut res: Vec<u8> = Vec::new();
 
@@ -1317,11 +1322,11 @@ mod tests {
             {
                 let mut w = Writer::new(&mut enc, &mut res);
                 for byte in &pt {
-                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                    assert!(w.write_all(&[*byte]).is_ok());
                 }
             }
-            assert!(enc.finish().is_ok(), "vec #{}", n);
-            assert!(ct == res, "vec #{}", n);
+            assert!(enc.finish().is_ok());
+            assert_eq!(ct, res);
 
             res.truncate(0);
             let mut dec = EcbRaw::new_decrypt(algo, &key);
@@ -1329,11 +1334,11 @@ mod tests {
             {
                 let mut w = Writer::new(&mut dec, &mut res);
                 for byte in &ct {
-                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                    assert!(w.write_all(&[*byte]).is_ok());
                 }
             }
-            assert!(dec.finish().is_ok(), "vec #{}", n);
-            assert!(pt == res, "vec #{}", n);
+            assert!(dec.finish().is_ok());
+            assert_eq!(pt, res);
 
             n += 1;
         }
@@ -1344,6 +1349,7 @@ mod tests {
         let mut n = 0;
 
         for item in &ECB_PADDED_VEC {
+            println!("vec #{}", n);
             let (algo, key, pt, ct) = unpack3(item);
 
             let mut res: Vec<u8> = Vec::new();
@@ -1353,11 +1359,11 @@ mod tests {
             {
                 let mut w = Writer::new(&mut enc, &mut res);
                 for byte in &pt {
-                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                    assert!(w.write_all(&[*byte]).is_ok());
                 }
-                assert!(w.end().is_ok(), "vec #{}", n);
+                assert!(w.end().is_ok());
             }
-            assert!(ct == res, "vec #{}", n);
+            assert_eq!(ct, res);
 
             res.truncate(0);
             let mut dec = EcbPadded::new_decrypt(algo, &key);
@@ -1365,11 +1371,11 @@ mod tests {
             {
                 let mut w = Writer::new(&mut dec, &mut res);
                 for byte in &ct {
-                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                    assert!(w.write_all(&[*byte]).is_ok());
                 }
-                assert!(w.end().is_ok(), "vec #{}", n);
+                assert!(w.end().is_ok());
             }
-            assert!(pt == res, "vec #{}", n);
+            assert_eq!(pt, res);
 
             n += 1;
         }
@@ -1380,6 +1386,7 @@ mod tests {
         let mut n = 0;
 
         for item in &ECB_PADDED_VEC {
+            println!("vec #{}", n);
             let (algo, key, pt, ct) = unpack3(item);
 
             let mut res: Vec<u8> = Vec::new();
@@ -1389,14 +1396,14 @@ mod tests {
             {
                 let mut w = Writer::new(&mut enc, &mut res);
                 for byte in &pt {
-                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                    assert!(w.write_all(&[*byte]).is_ok());
                 }
             }
             {
                 let w = Writer::new(&mut enc, &mut res);
-                assert!(w.end().is_ok(), "vec #{}", n);
+                assert!(w.end().is_ok());
             }
-            assert!(ct == res, "vec #{}", n);
+            assert_eq!(ct, res);
 
             res.truncate(0);
             let mut dec = EcbPadded::new_decrypt(algo, &key);
@@ -1404,14 +1411,14 @@ mod tests {
             {
                 let mut w = Writer::new(&mut dec, &mut res);
                 for byte in &ct {
-                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                    assert!(w.write_all(&[*byte]).is_ok());
                 }
             }
             {
                 let w = Writer::new(&mut dec, &mut res);
-                assert!(w.end().is_ok(), "vec #{}", n);
+                assert!(w.end().is_ok());
             }
-            assert!(pt == res, "vec #{}", n);
+            assert_eq!(pt, res);
 
             n += 1;
         }
@@ -1421,6 +1428,7 @@ mod tests {
     fn test_cbc_raw_apply() {
         let mut n = 0;
         for item in &CBC_RAW_VEC {
+            println!("vec #{}", n);
             let (algo, key, iv, pt, ct) = unpack4(item);
             let mut res: Vec<u8> = repeat(0).take(
                 max(pt.len(), ct.len()) + super::MAX_BLOCK_LEN).collect();
@@ -1428,14 +1436,14 @@ mod tests {
             let mut enc = CbcRaw::new_encrypt(algo, &key);
             enc.start(&iv);
             let len = enc.apply(&pt, &mut res);
-            assert!(enc.finish().is_ok(), "vec #{}", n);
-            assert!(ct == &res[..len], "vec #{}", n);
+            assert!(enc.finish().is_ok());
+            assert_eq!(ct, &res[..len]);
 
             let mut dec = CbcRaw::new_decrypt(algo, &key);
             dec.start(&iv);
             let len = dec.apply(&ct, &mut res);
-            assert!(dec.finish().is_ok(), "vec #{}", n);
-            assert!(pt == &res[..len], "vec #{}", n);
+            assert!(dec.finish().is_ok());
+            assert_eq!(pt, &res[..len]);
 
             n += 1;
         }
@@ -1445,6 +1453,7 @@ mod tests {
     fn test_cbc_padded_apply() {
         let mut n = 0;
         for item in &CBC_PADDED_VEC {
+            println!("vec #{}", n);
             let (algo, key, iv, pt, ct) = unpack4(item);
             let mut res: Vec<u8> = repeat(0).take(
                 max(pt.len(), ct.len()) + super::MAX_BLOCK_LEN).collect();
@@ -1453,13 +1462,13 @@ mod tests {
             enc.start(&iv);
             let mut len = enc.apply(&pt, &mut res);
             len += enc.finish(&mut res[len..]).unwrap();
-            assert!(ct == &res[..len], "vec #{}", n);
+            assert_eq!(ct, &res[..len]);
 
             let mut dec = CbcPadded::new_decrypt(algo, &key);
             dec.start(&iv);
             let mut len = dec.apply(&ct, &mut res);
             len += dec.finish(&mut res[len..]).unwrap();
-            assert!(pt == &res[..len], "vec #{}", n);
+            assert_eq!(pt, &res[..len]);
 
             n += 1;
         }
@@ -1473,17 +1482,17 @@ mod tests {
         let mut enc = CbcRaw::new_encrypt(Aes::Aes128, &dummy[..16]);
         enc.start(&dummy[..16]);
         enc.apply(&dummy, &mut res);
-        assert!(enc.finish() == Err(Error::IncompleteBlock));
+        assert_eq!(enc.finish(), Err(Error::IncompleteBlock));
 
         let mut dec = CbcRaw::new_decrypt(Aes::Aes128, &dummy[..16]);
         dec.start(&dummy[..16]);
         dec.apply(&dummy, &mut res);
-        assert!(dec.finish() == Err(Error::IncompleteBlock));
+        assert_eq!(dec.finish(), Err(Error::IncompleteBlock));
 
         let mut dec = CbcPadded::new_decrypt(Aes::Aes128, &dummy[..16]);
         dec.start(&dummy[..16]);
         dec.apply(&dummy, &mut res);
-        assert!(dec.finish(&mut res) == Err(Error::InvalidPadding));
+        assert_eq!(dec.finish(&mut res), Err(Error::InvalidPadding));
     }
 
     #[test]
@@ -1494,6 +1503,7 @@ mod tests {
 
         n = 0;
         for item in &CBC_RAW_VEC {
+            println!("vec #{}", n);
             let (algo, key, iv, pt, ct) = unpack4(item);
 
             let mut enc = CbcRaw::new_encrypt(algo, &key);
@@ -1508,13 +1518,13 @@ mod tests {
 
             enc.start(&iv);
             let len = enc.apply(&pt, &mut res);
-            assert!(enc.finish().is_ok(), "vec #{}", n);
-            assert!(ct == &res[..len], "vec #{}", n);
+            assert!(enc.finish().is_ok());
+            assert_eq!(ct, &res[..len]);
 
             dec.start(&iv);
             let len = dec.apply(&ct, &mut res);
-            assert!(dec.finish().is_ok(), "vec #{}", n);
-            assert!(pt == &res[..len], "vec #{}", n);
+            assert!(dec.finish().is_ok());
+            assert_eq!(pt, &res[..len]);
 
             n += 1;
         }
@@ -1528,6 +1538,7 @@ mod tests {
 
         n = 0;
         for item in &CBC_PADDED_VEC {
+            println!("vec #{}", n);
             let (algo, key, iv, pt, ct) = unpack4(item);
 
             let mut enc = CbcPadded::new_encrypt(algo, &key);
@@ -1543,12 +1554,12 @@ mod tests {
             enc.start(&iv);
             let mut len = enc.apply(&pt, &mut res);
             len += enc.finish(&mut res[len..]).unwrap();
-            assert!(ct == &res[..len], "vec #{}", n);
+            assert_eq!(ct, &res[..len]);
 
             dec.start(&iv);
             let mut len = dec.apply(&ct, &mut res);
             len += dec.finish(&mut res[len..]).unwrap();
-            assert!(pt == &res[..len], "vec #{}", n);
+            assert_eq!(pt, &res[..len]);
 
             n += 1;
         }
@@ -1559,6 +1570,7 @@ mod tests {
         let mut n = 0;
 
         for item in &CBC_RAW_VEC {
+            println!("vec #{}", n);
             let (algo, key, iv, pt, ct) = unpack4(item);
             let mut res: Vec<u8> = Vec::new();
 
@@ -1567,11 +1579,11 @@ mod tests {
             {
                 let mut w = Writer::new(&mut enc, &mut res);
                 for byte in &pt {
-                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                    assert!(w.write_all(&[*byte]).is_ok());
                 }
             }
-            assert!(enc.finish().is_ok(), "vec #{}", n);
-            assert!(ct == res, "vec #{}", n);
+            assert!(enc.finish().is_ok());
+            assert_eq!(ct, res);
 
             res.truncate(0);
             let mut dec = CbcRaw::new_decrypt(algo, &key);
@@ -1579,11 +1591,11 @@ mod tests {
             {
                 let mut w = Writer::new(&mut dec, &mut res);
                 for byte in &ct {
-                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                    assert!(w.write_all(&[*byte]).is_ok());
                 }
             }
-            assert!(dec.finish().is_ok(), "vec #{}", n);
-            assert!(pt == res, "vec #{}", n);
+            assert!(dec.finish().is_ok());
+            assert_eq!(pt, res);
 
             n += 1;
         }
@@ -1594,6 +1606,7 @@ mod tests {
         let mut n = 0;
 
         for item in &CBC_PADDED_VEC {
+            println!("vec #{}", n);
             let (algo, key, iv, pt, ct) = unpack4(item);
 
             let mut res: Vec<u8> = Vec::new();
@@ -1603,11 +1616,11 @@ mod tests {
             {
                 let mut w = Writer::new(&mut enc, &mut res);
                 for byte in &pt {
-                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                    assert!(w.write_all(&[*byte]).is_ok());
                 }
-                assert!(w.end().is_ok(), "vec #{}", n);
+                assert!(w.end().is_ok());
             }
-            assert!(ct == res, "vec #{}", n);
+            assert_eq!(ct, res);
 
             res.truncate(0);
             let mut dec = CbcPadded::new_decrypt(algo, &key);
@@ -1615,11 +1628,11 @@ mod tests {
             {
                 let mut w = Writer::new(&mut dec, &mut res);
                 for byte in &ct {
-                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                    assert!(w.write_all(&[*byte]).is_ok());
                 }
-                assert!(w.end().is_ok(), "vec #{}", n);
+                assert!(w.end().is_ok());
             }
-            assert!(pt == res, "vec #{}", n);
+            assert_eq!(pt, res);
 
             n += 1;
         }
@@ -1630,6 +1643,7 @@ mod tests {
         let mut n = 0;
 
         for item in &CBC_PADDED_VEC {
+            println!("vec #{}", n);
             let (algo, key, iv, pt, ct) = unpack4(item);
 
             let mut res: Vec<u8> = Vec::new();
@@ -1639,14 +1653,14 @@ mod tests {
             {
                 let mut w = Writer::new(&mut enc, &mut res);
                 for byte in &pt {
-                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                    assert!(w.write_all(&[*byte]).is_ok());
                 }
             }
             {
                 let w = Writer::new(&mut enc, &mut res);
-                assert!(w.end().is_ok(), "vec #{}", n);
+                assert!(w.end().is_ok());
             }
-            assert!(ct == res, "vec #{}", n);
+            assert_eq!(ct, res);
 
             res.truncate(0);
             let mut dec = CbcPadded::new_decrypt(algo, &key);
@@ -1654,14 +1668,14 @@ mod tests {
             {
                 let mut w = Writer::new(&mut dec, &mut res);
                 for byte in &ct {
-                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                    assert!(w.write_all(&[*byte]).is_ok());
                 }
             }
             {
                 let w = Writer::new(&mut dec, &mut res);
-                assert!(w.end().is_ok(), "vec #{}", n);
+                assert!(w.end().is_ok());
             }
-            assert!(pt == res, "vec #{}", n);
+            assert_eq!(pt, res);
 
             n += 1;
         }
@@ -1672,6 +1686,7 @@ mod tests {
     fn test_gcm_apply() {
         let mut n = 0;
         for item in &GCM_VEC {
+            println!("vec #{}", n);
             let (algo, key, iv, aad, pt, ct, tag) = unpack6(item);
             let mut res: Vec<u8> = repeat(0).take(pt.len()).collect();
 
@@ -1684,8 +1699,8 @@ mod tests {
             }
             enc.apply(&pt, &mut res);
             let tag_res = enc.finish();
-            assert!(ct == res, "vec #{}", n);
-            assert!(tag == tag_res, "vec #{}", n);
+            assert_eq!(ct, res);
+            assert_eq!(tag, tag_res);
 
             let mut dec = GcmDecrypt::new(algo, &key);
             if aad.len() > 0 {
@@ -1696,8 +1711,8 @@ mod tests {
             }
             dec.apply(&ct, &mut res);
             let auth = dec.finish();
-            assert!(pt == res, "vec #{}", n);
-            assert!(auth.is_ok(), "vec #{}", n);
+            assert_eq!(pt, res);
+            assert!(auth.is_ok());
 
             n += 1;
         }
@@ -1708,6 +1723,7 @@ mod tests {
     fn test_gcm_write() {
         let mut n = 0;
         for item in &GCM_VEC {
+            println!("vec #{}", n);
             let (algo, key, iv, aad, pt, ct, tag) = unpack6(item);
             let mut res: Vec<u8> = Vec::new();
 
@@ -1721,12 +1737,12 @@ mod tests {
             {
                 let mut w = Writer::new(&mut enc, &mut res);
                 for byte in &pt {
-                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                    assert!(w.write_all(&[*byte]).is_ok());
                 }
             }
             let tag_res = enc.finish();
-            assert!(ct == res, "vec #{}", n);
-            assert!(tag == tag_res, "vec #{}", n);
+            assert_eq!(ct, res);
+            assert_eq!(tag, tag_res);
 
             res.truncate(0);
             let mut dec = GcmDecrypt::new(algo, &key);
@@ -1739,12 +1755,12 @@ mod tests {
             {
                 let mut w = Writer::new(&mut dec, &mut res);
                 for byte in &ct {
-                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                    assert!(w.write_all(&[*byte]).is_ok());
                 }
             }
             let auth = dec.finish();
-            assert!(pt == res, "vec #{}", n);
-            assert!(auth.is_ok(), "vec #{}", n);
+            assert_eq!(pt, res);
+            assert!(auth.is_ok());
 
             n += 1;
         }
@@ -1757,6 +1773,7 @@ mod tests {
         let mut dummy_res = vec![0; 256];
         let mut n = 0;
         for item in &GCM_VEC {
+            println!("vec #{}", n);
             let (algo, key, iv, aad, pt, ct, tag) = unpack6(item);
             let mut res: Vec<u8> = repeat(0).take(pt.len()).collect();
 
@@ -1774,8 +1791,8 @@ mod tests {
             }
             enc.apply(&pt, &mut res);
             let tag_res = enc.finish();
-            assert!(ct == res, "vec #{}", n);
-            assert!(tag == tag_res, "vec #{}", n);
+            assert_eq!(ct, res);
+            assert_eq!(tag, tag_res);
 
             let mut dec = GcmDecrypt::new(algo, &key);
 
@@ -1791,8 +1808,8 @@ mod tests {
             }
             dec.apply(&ct, &mut res);
             let auth = dec.finish();
-            assert!(pt == res, "vec #{}", n);
-            assert!(auth.is_ok(), "vec #{}", n);
+            assert_eq!(pt, res);
+            assert!(auth.is_ok());
 
             n += 1;
         }
@@ -1804,6 +1821,7 @@ mod tests {
         let garbage = b"This is dummy invalid input";
         let mut n = 0;
         for item in &GCM_VEC {
+            println!("vec #{}", n);
             let (algo, key, iv, aad, pt, _, tag) = unpack6(item);
             let buf_len = max(pt.len(), garbage.len());
             let mut res: Vec<u8> = repeat(0).take(buf_len).collect();
@@ -1817,7 +1835,7 @@ mod tests {
             }
             dec.apply(&pt, &mut res);
             let auth = dec.finish();
-            assert!(auth == Err(Error::AuthFailed), "vec #{}", n);
+            assert_eq!(auth, Err(Error::AuthFailed));
 
             let mut dec = GcmDecrypt::new(algo, &key);
             if aad.len() > 0 {
@@ -1828,7 +1846,7 @@ mod tests {
             }
             dec.apply(&garbage, &mut res);
             let auth = dec.finish();
-            assert!(auth == Err(Error::AuthFailed), "vec #{}", n);
+            assert_eq!(auth, Err(Error::AuthFailed));
 
             n += 1;
         }
@@ -1840,6 +1858,7 @@ mod tests {
         let test_lens = vec![4, 8, 12, 13, 14, 15, 16];
         let mut n = 0;
         for item in &GCM_VEC {
+            println!("vec #{}", n);
             let (algo, key, iv, aad, pt, ct, tag) = unpack6(item);
             let mut res: Vec<u8> = repeat(0).take(pt.len()).collect();
             let mut enc = GcmEncrypt::new(algo, &key);
@@ -1860,8 +1879,8 @@ mod tests {
 
                 let tag_res = enc.finish();
                 let auth = dec.finish();
-                assert!(tag[range] == tag_res[range], "vec #{}, len {}", n, tag_len);
-                assert!(auth.is_ok(), "vec #{}, len {}", n, tag_len);
+                assert!(tag[range] == tag_res[range], "len {}", tag_len);
+                assert!(auth.is_ok(), "len {}", tag_len);
             }
 
             n += 1;
@@ -1873,6 +1892,7 @@ mod tests {
     fn test_ctr_apply() {
         let mut n = 0;
         for item in &CTR_VEC {
+            println!("vec #{}", n);
             let (algo, key, _, _, pt, ct) = unpack5(item);
             let iv: u64 = from_str_radix(item.2, 16).unwrap();
             let ctr: u64 = from_str_radix(item.3, 16).unwrap();
@@ -1881,8 +1901,8 @@ mod tests {
             let mut enc = Ctr::new(algo, &key);
             enc.start(iv, ctr);
             enc.apply(&pt, &mut res);
-            assert!(enc.finish().is_ok(), "CTR_VEC[{}]", n);
-            assert!(ct == res, "CTR_VEC[{}]", n);
+            assert!(enc.finish().is_ok());
+            assert_eq!(ct, res);
 
             n += 1;
         }
@@ -1896,6 +1916,7 @@ mod tests {
         let mut dummy_res = vec![0; 256];
         let mut n = 0;
         for item in &CTR_VEC {
+            println!("vec #{}", n);
             let (algo, key, _, _, pt, ct) = unpack5(item);
             let iv: u64 = from_str_radix(item.2, 16).unwrap();
             let ctr: u64 = from_str_radix(item.3, 16).unwrap();
@@ -1908,8 +1929,8 @@ mod tests {
 
             enc.start(iv, ctr);
             enc.apply(&pt, &mut res);
-            assert!(enc.finish().is_ok(), "CTR_VEC[{}]", n);
-            assert!(ct == res, "CTR_VEC[{}]", n);
+            assert!(enc.finish().is_ok());
+            assert_eq!(ct, res);
 
             n += 1;
         }
@@ -1920,6 +1941,7 @@ mod tests {
     fn test_ctr_write() {
         let mut n = 0;
         for item in &CTR_VEC {
+            println!("vec #{}", n);
             let (algo, key, _, _, pt, ct) = unpack5(item);
             let iv: u64 = from_str_radix(item.2, 16).unwrap();
             let ctr: u64 = from_str_radix(item.3, 16).unwrap();
@@ -1930,11 +1952,11 @@ mod tests {
             {
                 let mut w = Writer::new(&mut enc, &mut res);
                 for byte in &pt {
-                    assert!(w.write_all(&[*byte]).is_ok(), "vec #{}", n);
+                    assert!(w.write_all(&[*byte]).is_ok());
                 }
             }
-            assert!(enc.finish().is_ok(), "CTR_VEC[{}]", n);
-            assert!(ct == res, "CTR_VEC[{}]", n);
+            assert!(enc.finish().is_ok());
+            assert_eq!(ct, res);
 
             n += 1;
         }
@@ -1954,13 +1976,13 @@ mod tests {
             enc.finish().unwrap()
         };
 
-        assert!(test(0, 0) == 0);
-        assert!(test(0, 1) == 1);
-        assert!(test(0, 16) == 1);
-        assert!(test(0, 17) == 2);
-        assert!(test(0, 32) == 2);
-        assert!(test(0, 33) == 3);
-        assert!(test(100, 1) == 101);
+        assert_eq!(test(0, 0), 0);
+        assert_eq!(test(0, 1), 1);
+        assert_eq!(test(0, 16), 1);
+        assert_eq!(test(0, 17), 2);
+        assert_eq!(test(0, 32), 2);
+        assert_eq!(test(0, 33), 3);
+        assert_eq!(test(100, 1), 101);
     }
 
     #[test]
