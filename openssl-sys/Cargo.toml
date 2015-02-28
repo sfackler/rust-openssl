@@ -17,6 +17,9 @@ tlsv1_1 = []
 sslv2 = []
 aes_xts = []
 
+[dependencies]
+libc = "0.1"
+
 [build-dependencies]
 pkg-config = "0.3"
 gcc = "0.3"

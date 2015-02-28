@@ -1,4 +1,5 @@
-#![feature(unsafe_destructor, core, old_io, std_misc, libc, old_path, unique)]
+#![feature(unsafe_destructor, core, io, std_misc, path, os, unique)]
+#![cfg_attr(test, feature(net, fs))]
 #![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/openssl")]
 
 extern crate libc;

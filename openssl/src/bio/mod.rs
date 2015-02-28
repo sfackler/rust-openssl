@@ -1,7 +1,9 @@
 use libc::{c_void, c_int};
-use std::old_io::{EndOfFile, IoResult, IoError, OtherIoError};
-use std::old_io::{Reader, Writer};
+use std::io;
+use std::io::prelude::*;
 use std::ptr;
+use std::cmp;
+use std::num::Int;
 
 use ffi;
 use ssl::error::{SslError};
@@ -57,49 +59,45 @@ impl MemBio {
     }
 }
 
-impl Reader for MemBio {
-    fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
+impl Read for MemBio {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let len = cmp::min(<c_int as Int>::max_value() as usize, buf.len()) as c_int;
         let ret = unsafe {
-            ffi::BIO_read(self.bio, buf.as_ptr() as *mut c_void,
-                          buf.len() as c_int)
+            ffi::BIO_read(self.bio, buf.as_ptr() as *mut c_void, len)
         };
 
         if ret <= 0 {
             let is_eof = unsafe { ffi::BIO_eof(self.bio) };
-            let err = if is_eof {
-                IoError {
-                    kind: EndOfFile,
-                    desc: "MemBio EOF",
-                    detail: None
-                }
+            if is_eof {
+                Ok(0)
             } else {
-                IoError {
-                    kind: OtherIoError,
-                    desc: "MemBio read error",
-                    detail: Some(format!("{:?}", SslError::get()))
-                }
-            };
-            Err(err)
+                Err(io::Error::new(io::ErrorKind::Other,
+                                   "MemBio read error",
+                                   Some(format!("{:?}", SslError::get()))))
+            }
         } else {
             Ok(ret as usize)
         }
     }
 }
 
-impl Writer for MemBio {
-    fn write_all(&mut self, buf: &[u8]) -> IoResult<()> {
+impl Write for MemBio {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let len = cmp::min(<c_int as Int>::max_value() as usize, buf.len()) as c_int;
         let ret = unsafe {
-            ffi::BIO_write(self.bio, buf.as_ptr() as *const c_void,
-                           buf.len() as c_int)
+            ffi::BIO_write(self.bio, buf.as_ptr() as *const c_void, len)
         };
-        if buf.len() != ret as usize {
-            Err(IoError {
-                kind: OtherIoError,
-                desc: "MemBio write error",
-                detail: Some(format!("{:?}", SslError::get()))
-            })
+
+        if ret < 0 {
+                Err(io::Error::new(io::ErrorKind::Other,
+                                   "MemBio write error",
+                                   Some(format!("{:?}", SslError::get()))))
         } else {
-            Ok(())
+            Ok(ret as usize)
         }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
     }
 }

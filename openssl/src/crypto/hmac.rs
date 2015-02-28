@@ -16,7 +16,8 @@
 
 use libc::{c_int, c_uint};
 use std::iter::repeat;
-use std::old_io::{IoError, Writer};
+use std::io;
+use std::io::prelude::*;
 
 use crypto::hash::Type;
 use ffi;
@@ -46,10 +47,10 @@ use self::State::*;
 /// assert_eq!(spec, res);
 /// ```
 ///
-/// Use the `Writer` trait to supply the input in chunks.
+/// Use the `Write` trait to supply the input in chunks.
 ///
 /// ```
-/// use std::old_io::Writer;
+/// use std::io::prelude::*;
 /// use openssl::crypto::hash::Type;
 /// use openssl::crypto::hmac::HMAC;
 /// let key = b"Jefe";
@@ -150,10 +151,14 @@ impl HMAC {
     }
 }
 
-impl Writer for HMAC {
+impl Write for HMAC {
     #[inline]
-    fn write_all(&mut self, buf: &[u8]) -> Result<(), IoError> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.update(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
         Ok(())
     }
 }
@@ -197,7 +202,7 @@ mod tests {
     use crypto::hash::Type;
     use crypto::hash::Type::*;
     use super::{hmac, HMAC};
-    use std::old_io::Writer;
+    use std::io::prelude::*;
 
     fn test_hmac(ty: Type, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
         for &(ref key, ref data, ref res) in tests.iter() {

@@ -1,4 +1,5 @@
 use libc::{c_int, c_uint, c_ulong};
+use std::io::prelude::*;
 use std::iter::repeat;
 use std::mem;
 use std::ptr;
@@ -142,15 +143,16 @@ impl PKey {
 
     /// Stores private key as a PEM
     // FIXME: also add password and encryption
-    pub fn write_pem(&self, writer: &mut Writer/*, password: Option<String>*/) -> Result<(), SslError> {
+    pub fn write_pem<W: Write>(&self, writer: &mut W/*, password: Option<String>*/) -> Result<(), SslError> {
         let mut mem_bio = try!(MemBio::new());
         unsafe {
             try_ssl!(ffi::PEM_write_bio_PrivateKey(mem_bio.get_handle(), self.evp, ptr::null(),
                                                    ptr::null_mut(), -1, None, ptr::null_mut()));
 
         }
-        let buf = try!(mem_bio.read_to_end().map_err(StreamError));
-        writer.write_all(buf.as_slice()).map_err(StreamError)
+        let mut buf = vec![];
+        try!(mem_bio.read_to_end(&mut buf).map_err(StreamError));
+        writer.write_all(&buf).map_err(StreamError)
     }
 
     /**

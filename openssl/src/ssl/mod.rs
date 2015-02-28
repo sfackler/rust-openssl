@@ -1,11 +1,17 @@
 use libc::{c_int, c_void, c_long};
 use std::ffi::{CStr, CString};
-use std::old_io::{IoResult, IoError, EndOfFile, OtherIoError, Stream, Reader, Writer};
-use std::mem;
 use std::fmt;
+use std::io;
+use std::io::prelude::*;
+use std::ffi::AsOsStr;
+use std::mem;
 use std::num::FromPrimitive;
+use std::num::Int;
+use std::path::Path;
 use std::ptr;
 use std::sync::{Once, ONCE_INIT, Arc};
+use std::ops::{Deref, DerefMut};
+use std::cmp;
 
 use bio::{MemBio};
 use ffi;
@@ -245,9 +251,9 @@ impl SslContext {
     #[allow(non_snake_case)]
     /// Specifies the file that contains trusted CA certificates.
     pub fn set_CA_file(&mut self, file: &Path) -> Option<SslError> {
+        let file = CString::new(file.as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(
             unsafe {
-                let file = CString::new(file.as_vec()).unwrap();
                 ffi::SSL_CTX_load_verify_locations(*self.ctx, file.as_ptr(), ptr::null())
             })
     }
@@ -255,9 +261,9 @@ impl SslContext {
     /// Specifies the file that contains certificate
     pub fn set_certificate_file(&mut self, file: &Path,
                                 file_type: X509FileType) -> Option<SslError> {
+        let file = CString::new(file.as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(
             unsafe {
-                let file = CString::new(file.as_vec()).unwrap();
                 ffi::SSL_CTX_use_certificate_file(*self.ctx, file.as_ptr(), file_type as c_int)
             })
     }
@@ -265,9 +271,9 @@ impl SslContext {
     /// Specifies the file that contains private key
     pub fn set_private_key_file(&mut self, file: &Path,
                                 file_type: X509FileType) -> Option<SslError> {
+        let file = CString::new(file.as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(
             unsafe {
-                let file = CString::new(file.as_vec()).unwrap();
                 ffi::SSL_CTX_use_PrivateKey_file(*self.ctx, file.as_ptr(), file_type as c_int)
             })
     }
@@ -287,13 +293,17 @@ struct MemBioRef<'ssl> {
     bio: MemBio,
 }
 
-impl<'ssl> MemBioRef<'ssl> {
-    fn read(&mut self, buf: &mut [u8]) -> Option<usize> {
-        (&mut self.bio as &mut Reader).read(buf).ok()
-    }
+impl<'ssl> Deref for MemBioRef<'ssl> {
+    type Target = MemBio;
 
-    fn write_all(&mut self, buf: &[u8]) {
-        let _ = (&mut self.bio as &mut Writer).write_all(buf);
+    fn deref(&self) -> &MemBio {
+        &self.bio
+    }
+}
+
+impl<'ssl> DerefMut for MemBioRef<'ssl> {
+    fn deref_mut(&mut self) -> &mut MemBio {
+        &mut self.bio
     }
 }
 
@@ -354,13 +364,13 @@ impl Ssl {
     }
 
     fn read(&self, buf: &mut [u8]) -> c_int {
-        unsafe { ffi::SSL_read(*self.ssl, buf.as_ptr() as *mut c_void,
-                               buf.len() as c_int) }
+        let len = cmp::min(<c_int as Int>::max_value() as usize, buf.len()) as c_int;
+        unsafe { ffi::SSL_read(*self.ssl, buf.as_ptr() as *mut c_void, len) }
     }
 
     fn write(&self, buf: &[u8]) -> c_int {
-        unsafe { ffi::SSL_write(*self.ssl, buf.as_ptr() as *const c_void,
-                                buf.len() as c_int) }
+        let len = cmp::min(<c_int as Int>::max_value() as usize, buf.len()) as c_int;
+        unsafe { ffi::SSL_write(*self.ssl, buf.as_ptr() as *const c_void, len) }
     }
 
     fn get_error(&self, ret: c_int) -> LibSslError {
@@ -433,7 +443,7 @@ impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug {
     }
 }
 
-impl<S: Stream> SslStream<S> {
+impl<S: Read+Write> SslStream<S> {
     fn new_base(ssl:Ssl, stream: S) -> SslStream<S> {
         SslStream {
             stream: stream,
@@ -507,11 +517,15 @@ impl<S: Stream> SslStream<S> {
                 return Ok(ret);
             }
 
-            match self.ssl.get_error(ret) {
+            let e = self.ssl.get_error(ret);
+            match e {
                 LibSslError::ErrorWantRead => {
                     try_ssl_stream!(self.flush());
                     let len = try_ssl_stream!(self.stream.read(self.buf.as_mut_slice()));
-                    self.ssl.get_rbio().write_all(&self.buf[..len]);
+                    if len == 0 {
+                        return Ok(0);
+                    }
+                    try_ssl_stream!(self.ssl.get_rbio().write_all(&self.buf[..len]));
                 }
                 LibSslError::ErrorWantWrite => { try_ssl_stream!(self.flush()) }
                 LibSslError::ErrorZeroReturn => return Err(SslSessionClosed),
@@ -521,14 +535,8 @@ impl<S: Stream> SslStream<S> {
         }
     }
 
-    fn write_through(&mut self) -> IoResult<()> {
-        loop {
-            match self.ssl.get_wbio().read(self.buf.as_mut_slice()) {
-                Some(len) => try!(self.stream.write_all(&self.buf[..len])),
-                None => break
-            };
-        }
-        Ok(())
+    fn write_through(&mut self) -> io::Result<()> {
+        io::copy(&mut *self.ssl.get_wbio(), &mut self.stream).map(|_| ())
     }
 
     /// Get the compression currently in use.  The result will be
@@ -549,56 +557,32 @@ impl<S: Stream> SslStream<S> {
     }
 }
 
-impl<S: Stream> Reader for SslStream<S> {
-    fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
+impl<S: Read+Write> Read for SslStream<S> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         match self.in_retry_wrapper(|ssl| { ssl.read(buf) }) {
             Ok(len) => Ok(len as usize),
-            Err(SslSessionClosed) => {
-                Err(IoError {
-                    kind: EndOfFile,
-                    desc: "SSL session closed",
-                    detail: None
-                })
-            }
+            Err(SslSessionClosed) => Ok(0),
             Err(StreamError(e)) => Err(e),
             Err(e @ OpenSslErrors(_)) => {
-                Err(IoError {
-                    kind: OtherIoError,
-                    desc: "OpenSSL error",
-                    detail: Some(format!("{}", e)),
-                })
+                Err(io::Error::new(io::ErrorKind::Other, "OpenSSL error", Some(format!("{}", e))))
             }
         }
     }
 }
 
-impl<S: Stream> Writer for SslStream<S> {
-    fn write_all(&mut self, mut buf: &[u8]) -> IoResult<()> {
-        while !buf.is_empty() {
-            match self.in_retry_wrapper(|ssl| ssl.write(buf)) {
-                Ok(len) => buf = &buf[len as usize..],
-                Err(SslSessionClosed) => {
-                    return Err(IoError {
-                        kind: EndOfFile,
-                        desc: "SSL session closed",
-                        detail: None,
-                    });
-                }
-                Err(StreamError(e)) => return Err(e),
-                Err(e @ OpenSslErrors(_)) => {
-                    return Err(IoError {
-                        kind: OtherIoError,
-                        desc: "OpenSSL error",
-                        detail: Some(format!("{}", e)),
-                    });
-                }
+impl<S: Read+Write> Write for SslStream<S> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        match self.in_retry_wrapper(|ssl| ssl.write(buf)) {
+            Ok(len) => Ok(len as usize),
+            Err(SslSessionClosed) => Ok(0),
+            Err(StreamError(e)) => return Err(e),
+            Err(e @ OpenSslErrors(_)) => {
+                Err(io::Error::new(io::ErrorKind::Other, "OpenSSL error", Some(format!("{}", e))))
             }
-            try!(self.write_through());
         }
-        Ok(())
     }
 
-    fn flush(&mut self) -> IoResult<()> {
+    fn flush(&mut self) -> io::Result<()> {
         try!(self.write_through());
         self.stream.flush()
     }
@@ -606,15 +590,15 @@ impl<S: Stream> Writer for SslStream<S> {
 
 /// A utility type to help in cases where the use of SSL is decided at runtime.
 #[derive(Debug)]
-pub enum MaybeSslStream<S> where S: Stream {
+pub enum MaybeSslStream<S> where S: Read+Write {
     /// A connection using SSL
     Ssl(SslStream<S>),
     /// A connection not using SSL
     Normal(S),
 }
 
-impl<S> Reader for MaybeSslStream<S> where S: Stream {
-    fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
+impl<S> Read for MaybeSslStream<S> where S: Read+Write {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         match *self {
             MaybeSslStream::Ssl(ref mut s) => s.read(buf),
             MaybeSslStream::Normal(ref mut s) => s.read(buf),
@@ -622,15 +606,15 @@ impl<S> Reader for MaybeSslStream<S> where S: Stream {
     }
 }
 
-impl<S> Writer for MaybeSslStream<S> where S: Stream{
-    fn write_all(&mut self, buf: &[u8]) -> IoResult<()> {
+impl<S> Write for MaybeSslStream<S> where S: Read+Write {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match *self {
-            MaybeSslStream::Ssl(ref mut s) => s.write_all(buf),
-            MaybeSslStream::Normal(ref mut s) => s.write_all(buf),
+            MaybeSslStream::Ssl(ref mut s) => s.write(buf),
+            MaybeSslStream::Normal(ref mut s) => s.write(buf),
         }
     }
 
-    fn flush(&mut self) -> IoResult<()> {
+    fn flush(&mut self) -> io::Result<()> {
         match *self {
             MaybeSslStream::Ssl(ref mut s) => s.flush(),
             MaybeSslStream::Normal(ref mut s) => s.flush(),
@@ -638,7 +622,7 @@ impl<S> Writer for MaybeSslStream<S> where S: Stream{
     }
 }
 
-impl<S> MaybeSslStream<S> where S: Stream {
+impl<S> MaybeSslStream<S> where S: Read+Write {
     /// Returns a reference to the underlying stream.
     pub fn get_ref(&self) -> &S {
         match *self {
