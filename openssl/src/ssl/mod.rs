@@ -5,6 +5,7 @@ use std::io;
 use std::io::prelude::*;
 use std::ffi::AsOsStr;
 use std::mem;
+use std::net;
 use std::num::FromPrimitive;
 use std::num::Int;
 use std::path::Path;
@@ -435,6 +436,17 @@ pub struct SslStream<S> {
     stream: S,
     ssl: Arc<Ssl>,
     buf: Vec<u8>
+}
+
+impl SslStream<net::TcpStream> {
+    /// Create a new independently owned handle to the underlying socket.
+    pub fn try_clone(&self) -> io::Result<SslStream<net::TcpStream>> {
+        Ok(SslStream { 
+            stream: try!(self.stream.try_clone()),
+            ssl: self.ssl.clone(),
+            buf: self.buf.clone(),
+        })
+    }
 }
 
 impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug {
