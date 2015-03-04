@@ -25,6 +25,7 @@ use x509::{X509StoreContext, X509FileType, X509};
 use crypto::pkey::PKey;
 
 pub mod error;
+pub mod connected_socket;
 #[cfg(test)]
 mod tests;
 
@@ -97,6 +98,9 @@ pub enum SslMethod {
     #[cfg(feature = "tlsv1_2")]
     /// Support TLSv1.2 protocol, requires the `tlsv1_2` feature.
     Tlsv1_2,
+    #[cfg(feature = "dtlsv1")]
+    /// Support DTLSv1 protocol, requires the `dtlsv1` feature.
+    Dtlsv1,
 }
 
 impl SslMethod {
@@ -110,7 +114,9 @@ impl SslMethod {
             #[cfg(feature = "tlsv1_1")]
             SslMethod::Tlsv1_1 => ffi::TLSv1_1_method(),
             #[cfg(feature = "tlsv1_2")]
-            SslMethod::Tlsv1_2 => ffi::TLSv1_2_method()
+            SslMethod::Tlsv1_2 => ffi::TLSv1_2_method(),
+            #[cfg(feature = "dtlsv1")]
+            SslMethod::Dtlsv1 => ffi::TLSv1_method(),
         }
     }
 }

@@ -482,6 +482,8 @@ extern "C" {
     pub fn TLSv1_1_method() -> *const SSL_METHOD;
     #[cfg(feature = "tlsv1_2")]
     pub fn TLSv1_2_method() -> *const SSL_METHOD;
+    #[cfg(feature = "dtlsv1")]
+    pub fn DTLSv1_method() -> *const SSL_METHOD;
     pub fn SSLv23_method() -> *const SSL_METHOD;
 
     pub fn SSL_new(ctx: *mut SSL_CTX) -> *mut SSL;
