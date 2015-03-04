@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
-#![feature(core, old_io, old_path, std_misc, env)]
+#![feature(path, fs)]
 #![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/openssl-sys")]
 
 extern crate libc;
@@ -11,7 +11,7 @@ extern crate "libressl-pnacl-sys" as _for_linkage;
 use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
 use std::mem;
 use std::ptr;
-use std::sync::{StaticMutex, MutexGuard, MUTEX_INIT};
+use std::sync::{Mutex, MutexGuard};
 use std::sync::{Once, ONCE_INIT};
 
 pub type ASN1_INTEGER = c_void;
@@ -193,7 +193,7 @@ pub const X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE: c_int = 45;
 pub const X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
 pub const X509_V_OK: c_int = 0;
 
-static mut MUTEXES: *mut Vec<StaticMutex> = 0 as *mut Vec<StaticMutex>;
+static mut MUTEXES: *mut Vec<Mutex<()>> = 0 as *mut Vec<Mutex<()>>;
 static mut GUARDS: *mut Vec<Option<MutexGuard<'static, ()>>> = 0 as *mut Vec<Option<MutexGuard<'static, ()>>>;
 
 extern fn locking_function(mode: c_int, n: c_int, _file: *const c_char,
@@ -220,11 +220,11 @@ pub fn init() {
             let num_locks = CRYPTO_num_locks();
             let mut mutexes = Box::new(Vec::new());
             for _ in 0..num_locks {
-                mutexes.push(MUTEX_INIT);
+                mutexes.push(Mutex::new(()));
             }
             MUTEXES = mem::transmute(mutexes);
             let guards: Box<Vec<Option<MutexGuard<()>>>> =
-                Box::new(range(0, num_locks).map(|_| None).collect());
+                Box::new((0..num_locks).map(|_| None).collect());
             GUARDS = mem::transmute(guards);
 
             CRYPTO_set_locking_callback(locking_function);

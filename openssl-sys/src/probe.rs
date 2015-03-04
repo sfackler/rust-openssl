@@ -1,16 +1,17 @@
 use std::env;
-use std::old_io::fs::PathExtensions;
+use std::fs::PathExt;
+use std::path::PathBuf;
 
 pub struct ProbeResult {
-    pub cert_file: Option<Path>,
-    pub cert_dir: Option<Path>,
+    pub cert_file: Option<PathBuf>,
+    pub cert_dir: Option<PathBuf>,
 }
 
 /// Probe the system for the directory in which CA certificates should likely be
 /// found.
 ///
 /// This will only search known system locations.
-pub fn find_certs_dirs() -> Vec<Path> {
+pub fn find_certs_dirs() -> Vec<PathBuf> {
     // see http://gagravarr.org/writing/openssl-certs/others.shtml
     [
         "/var/ssl",
@@ -23,7 +24,7 @@ pub fn find_certs_dirs() -> Vec<Path> {
         "/etc/openssl",
         "/etc/pki/tls",
         "/etc/ssl",
-    ].iter().map(|s| Path::new(*s)).filter(|p| {
+    ].iter().map(|s| PathBuf::new(*s)).filter(|p| {
         p.exists()
     }).collect()
 }
@@ -39,7 +40,7 @@ pub fn init_ssl_cert_env_vars() {
         None => {}
     }
 
-    fn put(var: &str, path: Path) {
+    fn put(var: &str, path: PathBuf) {
         // Don't stomp over what anyone else has set
         match env::var(var) {
             Ok(..) => {}
@@ -50,8 +51,8 @@ pub fn init_ssl_cert_env_vars() {
 
 pub fn probe() -> ProbeResult {
     let mut result = ProbeResult {
-        cert_file: env::var("SSL_CERT_FILE").ok().map(Path::new),
-        cert_dir: env::var("SSL_CERT_DIR").ok().map(Path::new),
+        cert_file: env::var_os("SSL_CERT_FILE").map(|s| PathBuf::new(&s)),
+        cert_dir: env::var_os("SSL_CERT_DIR").map(|s| PathBuf::new(&s)),
     };
     for certs_dir in find_certs_dirs().iter() {
         // cert.pem looks to be an openssl 1.0.1 thing, while
@@ -65,7 +66,7 @@ pub fn probe() -> ProbeResult {
     result
 }
 
-fn try(dst: &mut Option<Path>, val: Path) {
+fn try(dst: &mut Option<PathBuf>, val: PathBuf) {
     if dst.is_none() && val.exists() {
         *dst = Some(val);
     }
