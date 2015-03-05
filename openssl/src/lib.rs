@@ -1,4 +1,4 @@
-#![feature(unsafe_destructor, core, io, std_misc, path, os, unique)]
+#![feature(unsafe_destructor, core, io, std_misc, net, path, os, unique)]
 #![cfg_attr(test, feature(net, fs))]
 #![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/openssl")]
 
