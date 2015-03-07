@@ -24,3 +24,6 @@ libc = "0.1"
 
 [dev-dependencies]
 rustc-serialize = "0.2"
+
+[dependencies]
+bitflags = "0.1.1"

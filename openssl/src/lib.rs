@@ -2,6 +2,9 @@
 #![cfg_attr(test, feature(net, fs))]
 #![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/openssl")]
 
+#[macro_use]
+extern crate bitflags;
+
 extern crate libc;
 #[cfg(test)]
 extern crate "rustc-serialize" as serialize;

@@ -5,6 +5,7 @@ use std::io::prelude::*;
 use std::path::Path;
 
 use crypto::hash::Type::{SHA256};
+use ssl;
 use ssl::SslMethod::Sslv23;
 use ssl::{SslContext, SslStream, VerifyCallback};
 use ssl::SslVerifyMode::SslVerifyPeer;
@@ -175,6 +176,30 @@ fn test_verify_callback_data() {
     }
 }
 
+#[test]
+fn test_get_ctx_options() {
+    let mut ctx = SslContext::new(Sslv23).unwrap();
+    ctx.get_options();
+}
+
+#[test]
+fn test_set_ctx_options() {
+    let mut ctx = SslContext::new(Sslv23).unwrap();
+    let opts = ctx.set_options(ssl::SSL_OP_NO_TICKET);
+    assert!(opts.contains(ssl::SSL_OP_NO_TICKET));
+    assert!(!opts.contains(ssl::SSL_OP_CISCO_ANYCONNECT));
+    let more_opts = ctx.set_options(ssl::SSL_OP_CISCO_ANYCONNECT);
+    assert!(more_opts.contains(ssl::SSL_OP_NO_TICKET));
+    assert!(more_opts.contains(ssl::SSL_OP_CISCO_ANYCONNECT));
+}
+
+#[test]
+fn test_clear_ctx_options() {
+    let mut ctx = SslContext::new(Sslv23).unwrap();
+    ctx.set_options(ssl::SSL_OP_ALL);
+    let opts = ctx.clear_options(ssl::SSL_OP_ALL);
+    assert!(!opts.contains(ssl::SSL_OP_ALL));
+}
 
 #[test]
 fn test_write() {
