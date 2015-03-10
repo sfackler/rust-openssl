@@ -18,3 +18,5 @@ pub mod bio;
 pub mod crypto;
 pub mod ssl;
 pub mod x509;
+#[macro_use]
+extern crate log;

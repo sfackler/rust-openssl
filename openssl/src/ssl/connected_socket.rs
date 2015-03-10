@@ -81,7 +81,6 @@ impl IntoSockaddrIn for SocketAddr {
 				if res == 1 {
 					Ok(SockaddrIn::V4(addr))
 				} else {
-					warn!("inet_pton() failed for IPv4: {}", ip);
 					Err(Error::new(ErrorKind::Other,
 						"calling inet_pton() for ipv4", None))
 				}
@@ -158,12 +157,10 @@ impl<S: AsRawFd+?Sized> Read for ConnectedSocket<S> {
 		let flags = 0;
 		let ptr = buf.as_mut_ptr() as *mut c_void;
 
-		debug!("recv'ing...");
 		let len = unsafe {
 			recv(self.as_raw_fd(), ptr, buf.len() as u64, flags)
 		};
 
-		debug!("recv'ed len={:?}", len);
 		match len {
 			-1 => {
 				match errno() {
@@ -184,14 +181,12 @@ impl<S: AsRawFd+?Sized> Write for ConnectedSocket<S> {
 		let flags = 0;
 		let ptr = buf.as_ptr() as *const c_void;
 
-		debug!("sending {:?}", buf.len());
 		let res = unsafe {
 			send(self.as_raw_fd(), ptr, buf.len() as u64, flags)
 		};
 		if res == (buf.len() as i64) {
 			Ok(res as usize)
 		} else {
-			warn!("send() found {}, expected {}", res, buf.len());
 			Err(Error::new(ErrorKind::Other, "send() failed", Some(os::error_string(os::errno() as i32))))
 		}
 	}
@@ -223,8 +218,8 @@ impl<S:AsRawFd> SetTimeout for S {
 fn connect4_works() {
 	let socket1 = UdpSocket::bind("127.0.0.1:34200").unwrap();
 	let socket2 = UdpSocket::bind("127.0.0.1:34201").unwrap();
-	let conn1 = socket1.connect("127.0.0.1:34200").unwrap();
-	let conn2 = socket2.connect("127.0.0.1:34201").unwrap();
+	socket1.connect("127.0.0.1:34200").unwrap();
+	socket2.connect("127.0.0.1:34201").unwrap();
 }
 
 #[test]
@@ -273,26 +268,26 @@ fn sendrecv_respects_packet_borders() {
 fn connect6_works() {
 	let socket1 = UdpSocket::bind("::1:34200").unwrap();
 	let socket2 = UdpSocket::bind("::1:34201").unwrap();
-	let conn1 = socket1.connect("::1:34200").unwrap();
-	let conn2 = socket2.connect("::1:34201").unwrap();
+	socket1.connect("::1:34200").unwrap();
+	socket2.connect("::1:34201").unwrap();
 }
 
 #[test]
-#[should_fail]
+#[should_panic]
 fn detect_invalid_ipv4() {
 	let s = UdpSocket::bind("127.0.0.1:34300").unwrap();
 	s.connect("254.254.254.254:34200").unwrap();
 }
 
 #[test]
-#[should_fail]
+#[should_panic]
 fn detect_invalid_ipv6() {
 	let s = UdpSocket::bind("::1:34300").unwrap();
 	s.connect("1200::AB00:1234::2552:7777:1313:34300").unwrap();
 }
 
 #[test]
-#[should_fail]
+#[should_panic]
 fn double_bind() {
 	let socket1 = UdpSocket::bind("127.0.0.1:34301").unwrap();
 	let socket2 = UdpSocket::bind("127.0.0.1:34301").unwrap();

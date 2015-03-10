@@ -134,6 +134,7 @@ pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
 pub const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
 pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
 
+pub const SSL_CTRL_SET_READ_AHEAD: c_int = 41;
 pub const SSL_ERROR_NONE: c_int = 0;
 pub const SSL_ERROR_SSL: c_int = 1;
 pub const SSL_ERROR_SYSCALL: c_int = 5;
@@ -484,6 +485,8 @@ extern "C" {
     pub fn TLSv1_2_method() -> *const SSL_METHOD;
     #[cfg(feature = "dtlsv1")]
     pub fn DTLSv1_method() -> *const SSL_METHOD;
+    #[cfg(feature = "dtlsv1_2")]
+    pub fn DTLSv1_2_method() -> *const SSL_METHOD;
     pub fn SSLv23_method() -> *const SSL_METHOD;
 
     pub fn SSL_new(ctx: *mut SSL_CTX) -> *mut SSL;
@@ -507,6 +510,7 @@ extern "C" {
 
     pub fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
     pub fn SSL_CTX_free(ctx: *mut SSL_CTX);
+    pub fn SSL_CTX_ctrl(ctx: *mut SSL_CTX, cmd: c_int, mode: c_long, parg: *mut c_void) -> c_long;
     pub fn SSL_CTX_set_verify(ctx: *mut SSL_CTX, mode: c_int,
                               verify_callback: Option<extern fn(c_int, *mut X509_STORE_CTX) -> c_int>);
     pub fn SSL_CTX_set_verify_depth(ctx: *mut SSL_CTX, depth: c_int);

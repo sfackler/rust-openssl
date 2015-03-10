@@ -15,6 +15,7 @@ build = "build.rs"
 tlsv1_2 = []
 tlsv1_1 = []
 dtlsv1 = []
+dtlsv1_2 = []
 sslv2 = []
 aes_xts = []
 npn = []
