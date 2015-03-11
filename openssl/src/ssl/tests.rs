@@ -58,8 +58,8 @@ macro_rules! run_test(
             use std::net::UdpSocket;
             use std::net::TcpStream;
             use ssl::SslMethod::Sslv23;
-            #[cfg(feature="dtlsv1")]
             use ssl;
+            #[cfg(feature="dtlsv1")]
             use ssl::SslMethod::Dtlsv1;
             use ssl::{SslContext, SslStream, VerifyCallback};
             use ssl::connected_socket::Connect;
@@ -288,13 +288,28 @@ run_test!(clear_ctx_options, |method, _| {
     assert!(!opts.contains(ssl::SSL_OP_ALL));
 });
 
-run_test!(write, |method, stream| {
-    let mut s = SslStream::new(&SslContext::new(method).unwrap(), stream).unwrap();
-    s.write_all("hello".as_bytes()).unwrap();
-    s.flush().unwrap();
-    s.write_all(" there".as_bytes()).unwrap();
-    s.flush().unwrap();
-});
+#[test]
+fn test_write() {
+    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
+    let mut stream = SslStream::new(&SslContext::new(Sslv23).unwrap(), stream).unwrap();
+    stream.write_all("hello".as_bytes()).unwrap();
+    stream.flush().unwrap();
+    stream.write_all(" there".as_bytes()).unwrap();
+    stream.flush().unwrap();
+}
+
+#[test]
+#[cfg(feature = "dtlsv1")]
+fn test_write_dtlsv1() {
+    let sock = UdpSocket::bind("127.0.0.1:0").unwrap();
+    let stream = sock.connect("127.0.0.1:15410").unwrap();
+
+    let mut stream = SslStream::new(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
+    stream.write_all("hello".as_bytes()).unwrap();
+    stream.flush().unwrap();
+    stream.write_all(" there".as_bytes()).unwrap();
+    stream.flush().unwrap();
+}
 
 #[test]
 fn test_read() {
