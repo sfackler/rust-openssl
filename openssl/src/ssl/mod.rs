@@ -432,7 +432,7 @@ impl Ssl {
 
     fn get_error(&self, ret: c_int) -> LibSslError {
         let err = unsafe { ffi::SSL_get_error(*self.ssl, ret) };
-        match FromPrimitive::from_int(err as isize) {
+        match FromPrimitive::from_isize(err as isize) {
             Some(err) => err,
             None => unreachable!()
         }

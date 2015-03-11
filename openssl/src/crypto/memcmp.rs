@@ -32,7 +32,7 @@ mod tests {
     }
 
     #[test]
-    #[should_fail]
+    #[should_panic]
     fn test_diff_lens() {
         eq(&[], &[1]);
     }
