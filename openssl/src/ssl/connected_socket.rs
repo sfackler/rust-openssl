@@ -323,7 +323,7 @@ fn connect6_works() {
 #[should_panic]
 fn detect_invalid_ipv4() {
 	let s = UdpSocket::bind("127.0.0.1:34300").unwrap();
-	s.connect("254.254.254.254:34200").unwrap();
+	s.connect("255.255.255.255:34200").unwrap();
 }
 
 #[test]
