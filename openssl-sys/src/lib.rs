@@ -132,6 +132,7 @@ pub const SSL_ERROR_WANT_X509_LOOKUP: c_int = 4;
 pub const SSL_ERROR_ZERO_RETURN: c_int = 6;
 pub const SSL_VERIFY_NONE: c_int = 0;
 pub const SSL_VERIFY_PEER: c_int = 1;
+pub const SSL_VERIFY_FAIL_IF_NO_PEER_CERT: c_int = 2;
 
 pub const TLSEXT_NAMETYPE_host_name: c_long = 0;
 

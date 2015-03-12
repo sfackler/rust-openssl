@@ -111,13 +111,16 @@ impl SslMethod {
 }
 
 /// Determines the type of certificate verification used
-#[derive(Copy, Clone, Debug)]
-#[repr(i32)]
-pub enum SslVerifyMode {
-    /// Verify that the server's certificate is trusted
-    SslVerifyPeer = ffi::SSL_VERIFY_PEER,
-    /// Do not verify the server's certificate
-    SslVerifyNone = ffi::SSL_VERIFY_NONE
+bitflags! {
+    flags SslVerifyMode: i32 {
+        /// Verify that the server's certificate is trusted
+        const SSL_VERIFY_PEER = ffi::SSL_VERIFY_PEER,
+        /// Do not verify the server's certificate
+        const SSL_VERIFY_NONE = ffi::SSL_VERIFY_NONE,
+        /// Terminate handshake if client did not return a certificate.
+        /// Use together with SSL_VERIFY_PEER.
+        const SSL_VERIFY_FAIL_IF_NO_PEER_CERT = ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+    }
 }
 
 // Creates a static index for user data of type T
@@ -252,7 +255,7 @@ impl SslContext {
                                      mem::transmute(verify));
             let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
                                 raw_verify;
-            ffi::SSL_CTX_set_verify(*self.ctx, mode as c_int, Some(f));
+            ffi::SSL_CTX_set_verify(*self.ctx, mode.bits as c_int, Some(f));
         }
     }
 
@@ -271,7 +274,7 @@ impl SslContext {
                                      mem::transmute(data));
             let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
                                 raw_verify_with_data::<T>;
-            ffi::SSL_CTX_set_verify(*self.ctx, mode as c_int, Some(f));
+            ffi::SSL_CTX_set_verify(*self.ctx, mode.bits as c_int, Some(f));
         }
     }
 
