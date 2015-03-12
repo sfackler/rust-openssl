@@ -21,7 +21,7 @@ aes_xts = []
 libc = "0.1"
 
 [build-dependencies]
-pkg-config = "0.3"
+pkg-config = "0.3.1"
 gcc = "0.3"
 
 [target.le32-unknown-nacl.dependencies]
