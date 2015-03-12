@@ -71,7 +71,7 @@ fn new_sockaddr_in() -> sockaddr_in {
 	target_os = "windows")))]
 fn new_sockaddr_in() -> sockaddr_in {
 	sockaddr_in {
-		sin_len:    mem::size_of::<sockaddr_in>(),
+		sin_len:    mem::size_of::<sockaddr_in>() as u8,
 		sin_family: AF_INET as sa_family_t,
 		sin_port:   0,
 		sin_zero:   [0; 8],
@@ -99,7 +99,7 @@ fn new_sockaddr_in6() -> sockaddr_in6 {
 	target_os = "windows")))]
 fn new_sockaddr_in6() -> sockaddr_in6 {
 	sockaddr_in6 {
-		sin6_len:      mem::size_of::<sockaddr_in6>(),
+		sin6_len:      mem::size_of::<sockaddr_in6>() as u8,
 		sin6_family:   AF_INET6 as sa_family_t,
 		sin6_port:     0,
 		sin6_flowinfo: 0,
@@ -256,7 +256,7 @@ impl<S:AsRawFd> SetTimeout for S {
 
 		unsafe {
 			setsockopt(self.as_raw_fd(), SOL_SOCKET, SO_RCVTIMEO,
-				mem::transmute(&tv), mem::size_of_val(&tv) as u32)
+				mem::transmute(&tv), mem::size_of_val(&tv) as socklen_t)
 		};
 	}
 }
