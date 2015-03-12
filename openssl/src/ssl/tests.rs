@@ -52,7 +52,7 @@ macro_rules! run_test(
     ($module:ident, $blk:expr) => (
         #[cfg(test)]
         mod $module {
-            use ssl::tests::udp;
+            use super::udp;
             use std::io;
             use std::io::prelude::*;
             use std::path::Path;
