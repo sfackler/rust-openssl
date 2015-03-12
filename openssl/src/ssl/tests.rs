@@ -31,6 +31,7 @@ use std::net::UdpSocket;
 
 const PROTOCOL:SslMethod = Sslv23;
 
+#[cfg(test)]
 mod udp {
     static mut udp_port:u16 = 15410;
 
@@ -57,10 +58,8 @@ macro_rules! run_test(
             use std::path::Path;
             use std::net::UdpSocket;
             use std::net::TcpStream;
-            use ssl::SslMethod::Sslv23;
             use ssl;
-            #[cfg(feature="dtlsv1")]
-            use ssl::SslMethod::Dtlsv1;
+            use ssl::SslMethod;
             use ssl::{SslContext, SslStream, VerifyCallback};
             use ssl::connected_socket::Connect;
             use ssl::SslVerifyMode::SSL_VERIFY_PEER;
@@ -72,7 +71,7 @@ macro_rules! run_test(
             #[test]
             fn sslv23() {
                 let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
-                $blk(Sslv23, stream);
+                $blk(SslMethod::Sslv23, stream);
             }
             
             #[test]
@@ -81,7 +80,7 @@ macro_rules! run_test(
                 let sock = UdpSocket::bind("127.0.0.1:0").unwrap();
                 let stream = sock.connect(udp::next_server().as_slice()).unwrap();
 
-                $blk(Dtlsv1, stream);
+                $blk(SslMethod::Dtlsv1, stream);
             }
         }
     );

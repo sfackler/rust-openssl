@@ -16,6 +16,7 @@ use libc::types::os::common::bsd44::sockaddr_in;
 use libc::types::os::common::bsd44::sockaddr_in6;
 use libc::types::os::common::bsd44::in_addr;
 use libc::types::os::common::bsd44::in6_addr;
+use libc::types::os::common::bsd44::sa_family_t;
 use libc::types::os::common::posix01::timeval;
 use libc::funcs::bsd43::setsockopt;
 use libc::consts::os::bsd44::SOL_SOCKET;
@@ -53,6 +54,62 @@ enum SockaddrIn {
 	V6(sockaddr_in6),
 }
 
+#[cfg(any(target_os = "linux", target_os = "android", target_os = "nacl",
+	target_os = "windows"))]
+fn new_sockaddr_in() -> sockaddr_in {
+	sockaddr_in {
+		sin_family: AF_INET as sa_family_t,
+		sin_port:   9,
+		sin_zero:   [0; 8],
+		sin_addr:   in_addr {
+			s_addr: 0
+		}
+	}
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "android", target_os = "nacl",
+	target_os = "windows")))]
+fn new_sockaddr_in() -> sockaddr_in {
+	sockaddr_in {
+		sin_len:    0,
+		sin_family: AF_INET as sa_family_t,
+		sin_port:   0,
+		sin_zero:   [0; 8],
+		sin_addr:   in_addr {
+			s_addr: 0
+		}
+	}
+}
+
+#[cfg(any(target_os = "linux", target_os = "android", target_os = "nacl",
+	target_os = "windows"))]
+fn new_sockaddr_in6() -> sockaddr_in6 {
+	sockaddr_in6 {
+		sin6_family:   AF_INET6 as sa_family_t,
+		sin6_port:     0,
+		sin6_flowinfo: 0,
+		sin6_scope_id: 0,
+		sin6_addr:   in6_addr {
+			s6_addr: [0; 8],
+		}
+	}
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "android", target_os = "nacl",
+	target_os = "windows")))]
+fn new_sockaddr_in6() -> sockaddr_in6 {
+	sockaddr_in6 {
+		sin6_family:   AF_INET6 as sa_family_t,
+		sin6_port:     0,
+		sin6_flowinfo: 0,
+		sin6_scope_id: 0,
+		sin6_addr:   in6_addr {
+			s6_addr: [0; 8],
+		}
+	}
+}
+
+
 trait IntoSockaddrIn {
 	fn into_sockaddr_in(self) -> Result<SockaddrIn, Error>;
 }
@@ -63,14 +120,9 @@ impl IntoSockaddrIn for SocketAddr {
 
 		match self.ip() {
 			IpAddr::V4(_) => {
-				let mut addr = sockaddr_in {
-					sin_zero:   [0; 8],
-					sin_family: AF_INET as u16,
-					sin_port:   Int::to_be(self.port()),
-					sin_addr:   in_addr {
-						s_addr: 0
-					}
-				};
+				let mut addr = new_sockaddr_in();
+				addr.sin_port = Int::to_be(self.port());
+
 				let cstr = CString::new(ip.clone()).unwrap();
 				let res = unsafe {
 					inet_pton(addr.sin_family as c_int,
@@ -87,15 +139,9 @@ impl IntoSockaddrIn for SocketAddr {
 			},
 
 			IpAddr::V6(_) => {
-				let mut addr = sockaddr_in6 {
-					sin6_family:   AF_INET6 as u16,
-					sin6_port:     Int::to_be(self.port()),
-					sin6_flowinfo: 0,
-					sin6_scope_id: 0,
-					sin6_addr:   in6_addr {
-						s6_addr: [0; 8],
-					}
-				};
+				let mut addr = new_sockaddr_in6();
+				addr.sin6_port = Int::to_be(self.port());
+
 				let cstr = CString::new(ip.clone()).unwrap();
 				let res = unsafe {
 					inet_pton(addr.sin6_family as c_int,

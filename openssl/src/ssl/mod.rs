@@ -132,7 +132,7 @@ impl SslMethod {
 
     #[cfg(feature = "dtlsv1_2")]
     pub fn is_dtlsv1_2(&self) -> bool {
-        *self == SslMethod::Dtlsv1
+        *self == SslMethod::Dtlsv1_2
     }
 
     pub fn is_dtls(&self) -> bool {
