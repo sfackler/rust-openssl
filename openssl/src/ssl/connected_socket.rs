@@ -213,7 +213,8 @@ impl<S: AsRawFd+?Sized> Read for ConnectedSocket<S> {
 				match errno() {
 					EAGAIN => Err(Error::new(ErrorKind::Interrupted, "EAGAIN", None)),
 					_ => Err(Error::new(ErrorKind::Other,
-							"recv() returned -1", None)),
+							"recv() returned -1",
+							Some(os::error_string(os::errno() as i32)))),
 				}
 			},
 			0 => Err(Error::new(ErrorKind::Other,
@@ -234,7 +235,9 @@ impl<S: AsRawFd+?Sized> Write for ConnectedSocket<S> {
 		if res == (buf.len() as i64) {
 			Ok(res as usize)
 		} else {
-			Err(Error::new(ErrorKind::Other, "send() failed", Some(os::error_string(os::errno() as i32))))
+			Err(Error::new(ErrorKind::Other,
+				"send() failed",
+				Some(os::error_string(os::errno() as i32))))
 		}
 	}
 
