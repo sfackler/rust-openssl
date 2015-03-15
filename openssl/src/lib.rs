@@ -10,6 +10,9 @@ extern crate openssl_sys as ffi;
 #[cfg(test)]
 extern crate rustc_serialize as serialize;
 
+#[cfg(any(feature="dtlsv1", feature="dtlsv1_2"))]
+extern crate connected_socket;
+
 mod macros;
 
 pub mod asn1;

@@ -12,8 +12,8 @@ keywords = ["crypto", "tls", "ssl", "dtls"]
 [features]
 tlsv1_2 = ["openssl-sys/tlsv1_2"]
 tlsv1_1 = ["openssl-sys/tlsv1_1"]
-dtlsv1 = ["openssl-sys/dtlsv1"]
-dtlsv1_2 = ["openssl-sys/dtlsv1_2"]
+dtlsv1 = ["openssl-sys/dtlsv1", "connected_socket"]
+dtlsv1_2 = ["openssl-sys/dtlsv1_2", "connected_socket"]
 sslv2 = ["openssl-sys/sslv2"]
 aes_xts = ["openssl-sys/aes_xts"]
 npn = ["openssl-sys/npn"]
@@ -29,3 +29,10 @@ libc = "0.1"
 
 [dev-dependencies]
 rustc-serialize = "0.3"
+
+[dependencies]
+bitflags = "0.1.1"
+
+[dependencies-dev.connected_socket]
+connected_socket = "0.0.1"
+optional = true

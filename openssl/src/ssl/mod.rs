@@ -25,7 +25,6 @@ use x509::{X509StoreContext, X509FileType, X509};
 use crypto::pkey::PKey;
 
 pub mod error;
-pub mod connected_socket;
 #[cfg(test)]
 mod tests;
 
@@ -377,7 +376,7 @@ impl SslContext {
         let ctx = SslContext { ctx: ctx };
 
         if method.is_dtls() {
-            ctx.set_read_ahead();
+            ctx.set_read_ahead(1);
         }
 
         Ok(ctx)
@@ -424,9 +423,9 @@ impl SslContext {
         }
     }
 
-    pub fn set_read_ahead(&self) {
+    pub fn set_read_ahead(&self, m: c_long) {
         unsafe {
-            ffi::SSL_CTX_ctrl(*self.ctx, ffi::SSL_CTRL_SET_READ_AHEAD, 1, ptr::null_mut());
+            ffi::SSL_CTX_set_read_ahead(*self.ctx, m);
         }
     }
 

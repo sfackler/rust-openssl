@@ -14,8 +14,6 @@ use crypto::hash::Type::{SHA256};
 use ssl;
 use ssl::SslMethod;
 use ssl::SslMethod::Sslv23;
-#[cfg(feature="dtlsv1")]
-use ssl::SslMethod::Dtlsv1;
 use ssl::{SslContext, SslStream, VerifyCallback};
 use ssl::SSL_VERIFY_PEER;
 use x509::X509StoreContext;
@@ -29,7 +27,10 @@ use ssl::connected_socket::Connect;
 #[cfg(feature="dtlsv1")]
 use std::net::UdpSocket;
 
-const PROTOCOL:SslMethod = Sslv23;
+#[cfg(feature="dtlsv1")]
+use ssl::SslMethod::Dtlsv1;
+#[cfg(feature="dtlsv1")]
+use connected_socket::Connect;
 
 #[cfg(test)]
 mod udp {
@@ -61,7 +62,8 @@ macro_rules! run_test(
             use ssl;
             use ssl::SslMethod;
             use ssl::{SslContext, SslStream, VerifyCallback};
-            use ssl::connected_socket::Connect;
+            #[cfg(feature="dtlsv1")]
+            use connected_socket::Connect;
             use ssl::SslVerifyMode::SSL_VERIFY_PEER;
             use crypto::hash::Type::SHA256;
             use x509::X509StoreContext;
@@ -318,7 +320,6 @@ fn test_read() {
     stream.flush().unwrap();
     io::copy(&mut stream, &mut io::sink()).ok().expect("read error");
 }
-
 
 /// Tests that connecting with the client using NPN, but the server not does not
 /// break the existing connection behavior.
