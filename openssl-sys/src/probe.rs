@@ -1,5 +1,5 @@
 use std::env;
-use std::fs::PathExt;
+use std::fs;
 use std::path::PathBuf;
 
 pub struct ProbeResult {
@@ -25,7 +25,7 @@ pub fn find_certs_dirs() -> Vec<PathBuf> {
         "/etc/pki/tls",
         "/etc/ssl",
     ].iter().map(|s| PathBuf::new(*s)).filter(|p| {
-        p.exists()
+        fs::metadata(p).is_ok()
     }).collect()
 }
 
@@ -67,7 +67,7 @@ pub fn probe() -> ProbeResult {
 }
 
 fn try(dst: &mut Option<PathBuf>, val: PathBuf) {
-    if dst.is_none() && val.exists() {
+    if dst.is_none() && fs::metadata(&val).is_ok() {
         *dst = Some(val);
     }
 }
