@@ -8,6 +8,7 @@ env:
   - FEATURES="tlsv1_1 tlsv1_2 aes_xts npn"
 before_script:
 - openssl s_server -accept 15418 -www -cert openssl/test/cert.pem -key openssl/test/key.pem >/dev/null 2>&1 &
+- openssl s_server -accept 15419 -www -cert openssl/test/cert.pem -key openssl/test/key.pem -nextprotoneg "http/1.1,spdy/3.1" >/dev/null 2>&1 &
 script:
 - (cd openssl && cargo test)
 - (test $TRAVIS_OS_NAME == "osx" || (cd openssl && cargo test --features "$FEATURES"))

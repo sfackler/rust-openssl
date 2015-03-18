@@ -1,15 +1,16 @@
 use serialize::hex::FromHex;
-use std::net::TcpStream;
+use std::net::{TcpStream, TcpListener};
 use std::io;
 use std::io::prelude::*;
 use std::path::Path;
+use std::thread;
 
 use crypto::hash::Type::{SHA256};
 use ssl;
 use ssl::SslMethod::Sslv23;
 use ssl::{SslContext, SslStream, VerifyCallback};
 use ssl::SslVerifyMode::SslVerifyPeer;
-use x509::{X509StoreContext};
+use x509::{X509StoreContext, X509FileType};
 
 #[test]
 fn test_new_ctx() {
@@ -219,4 +220,75 @@ fn test_read() {
     stream.flush().unwrap();
     println!("written");
     io::copy(&mut stream, &mut io::sink()).ok().expect("read error");
+}
+
+/// Tests that connecting with the client using NPN, but the server not does not
+/// break the existing connection behavior.
+#[test]
+#[cfg(feature = "npn")]
+fn test_connect_with_unilateral_npn() {
+    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
+    let mut ctx = SslContext::new(Sslv23).unwrap();
+    ctx.set_verify(SslVerifyPeer, None);
+    ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]);
+    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+        None => {}
+        Some(err) => panic!("Unexpected error {:?}", err)
+    }
+    let stream = match SslStream::new(&ctx, stream) {
+        Ok(stream) => stream,
+        Err(err) => panic!("Expected success, got {:?}", err)
+    };
+    // Since the socket to which we connected is not configured to use NPN,
+    // there should be no selected protocol...
+    assert!(stream.get_selected_npn_protocol().is_none());
+}
+
+/// Tests that when both the client as well as the server use NPN and their
+/// lists of supported protocols have an overlap, the correct protocol is chosen.
+#[test]
+#[cfg(feature = "npn")]
+fn test_connect_with_npn_successful_multiple_matching() {
+    // A different port than the other tests: an `openssl` process that has
+    // NPN enabled.
+    let stream = TcpStream::connect("127.0.0.1:15419").unwrap();
+    let mut ctx = SslContext::new(Sslv23).unwrap();
+    ctx.set_verify(SslVerifyPeer, None);
+    ctx.set_npn_protocols(&[b"spdy/3.1", b"http/1.1"]);
+    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+        None => {}
+        Some(err) => panic!("Unexpected error {:?}", err)
+    }
+    let stream = match SslStream::new(&ctx, stream) {
+        Ok(stream) => stream,
+        Err(err) => panic!("Expected success, got {:?}", err)
+    };
+    // The server prefers "http/1.1", so that is chosen, even though the client
+    // would prefer "spdy/3.1"
+    assert_eq!(b"http/1.1", stream.get_selected_npn_protocol().unwrap());
+}
+
+/// Tests that when both the client as well as the server use NPN and their
+/// lists of supported protocols have an overlap -- with only ONE protocol
+/// being valid for both.
+#[test]
+#[cfg(feature = "npn")]
+fn test_connect_with_npn_successful_single_match() {
+    // A different port than the other tests: an `openssl` process that has
+    // NPN enabled.
+    let stream = TcpStream::connect("127.0.0.1:15419").unwrap();
+    let mut ctx = SslContext::new(Sslv23).unwrap();
+    ctx.set_verify(SslVerifyPeer, None);
+    ctx.set_npn_protocols(&[b"spdy/3.1"]);
+    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+        None => {}
+        Some(err) => panic!("Unexpected error {:?}", err)
+    }
+    let stream = match SslStream::new(&ctx, stream) {
+        Ok(stream) => stream,
+        Err(err) => panic!("Expected success, got {:?}", err)
+    };
+    // The client now only supports one of the server's protocols, so that one
+    // is used.
+    assert_eq!(b"spdy/3.1", stream.get_selected_npn_protocol().unwrap());
 }
