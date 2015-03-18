@@ -556,6 +556,28 @@ impl Ssl {
         }
     }
 
+    /// Returns the protocol selected by performing Next Protocol Negotiation, if any.
+    ///
+    /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
+    /// to interpret it.
+    ///
+    /// This method needs the `npn` feature.
+    #[cfg(feature = "npn")]
+    pub fn get_selected_npn_protocol(&self) -> Option<&[u8]> {
+        unsafe {
+            let mut data: *const c_uchar = ptr::null();
+            let mut len: c_uint = 0;
+            // Get the negotiated protocol from the SSL instance.
+            // `data` will point at a `c_uchar` array; `len` will contain the length of this array.
+            ffi::SSL_get0_next_proto_negotiated(*self.ssl, &mut data, &mut len);
+
+            if data.is_null() {
+                None
+            } else {
+                Some(slice::from_raw_parts(data, len as usize))
+            }
+        }
+    }
 }
 
 #[derive(FromPrimitive, Debug)]
@@ -708,6 +730,17 @@ impl<S: Read+Write> SslStream<S> {
         };
 
         Some(s)
+    }
+
+    /// Returns the protocol selected by performing Next Protocol Negotiation, if any.
+    ///
+    /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
+    /// to interpret it.
+    ///
+    /// This method needs the `npn` feature.
+    #[cfg(feature = "npn")]
+    pub fn get_selected_npn_protocol(&self) -> Option<&[u8]> {
+        self.ssl.get_selected_npn_protocol()
     }
 }
 
