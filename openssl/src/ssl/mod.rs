@@ -249,6 +249,36 @@ extern fn raw_next_proto_select_cb(ssl: *mut ffi::SSL,
     ffi::SSL_TLSEXT_ERR_OK
 }
 
+/// The function is given as the callback to `SSL_CTX_set_next_protos_advertised_cb`.
+///
+/// It causes the parameter `out` to point at a `*const c_uchar` instance that
+/// represents the list of protocols that the server should advertise as those
+/// that it supports.
+/// The list of supported protocols is found in the extra data of the OpenSSL
+/// context.
+#[cfg(feature = "npn")]
+extern fn raw_next_protos_advertise_cb(ssl: *mut ffi::SSL,
+                                       out: *mut *const c_uchar, outlen: *mut c_uint,
+                                       _arg: *mut c_void) -> c_int {
+    unsafe {
+        // First, get the list of (supported) protocols saved in the context extra data.
+        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
+        let protocols = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_npn_protos_idx());
+        if protocols.is_null() {
+            *out = b"".as_ptr();
+            *outlen = 0;
+        } else {
+            // If the pointer is valid, put the pointer to the actual byte array into the
+            // output parameter `out`, as well as its length into `outlen`.
+            let protocols: &Vec<u8> = mem::transmute(protocols);
+            *out = protocols.as_ptr();
+            *outlen = protocols.len() as c_uint;
+        }
+    }
+
+    ffi::SSL_TLSEXT_ERR_OK
+}
+
 /// The signature of functions that can be used to manually verify certificates
 pub type VerifyCallback = fn(preverify_ok: bool,
                              x509_ctx: &X509StoreContext) -> bool;
@@ -426,6 +456,9 @@ impl SslContext {
             // matching based on the client-supported list of protocols that
             // has been saved.
             ffi::SSL_CTX_set_next_proto_select_cb(*self.ctx, raw_next_proto_select_cb, ptr::null_mut());
+            // Also register the callback to advertise these protocols, if a server socket is
+            // created with the context.
+            ffi::SSL_CTX_set_next_protos_advertised_cb(*self.ctx, raw_next_protos_advertise_cb, ptr::null_mut());
         }
     }
 }
