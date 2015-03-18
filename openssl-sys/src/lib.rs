@@ -134,6 +134,13 @@ pub const SSL_VERIFY_PEER: c_int = 1;
 
 pub const TLSEXT_NAMETYPE_host_name: c_long = 0;
 
+#[cfg(feature = "npn")]
+pub const OPENSSL_NPN_UNSUPPORTED: c_int = 0;
+#[cfg(feature = "npn")]
+pub const OPENSSL_NPN_NEGOTIATED: c_int = 1;
+#[cfg(feature = "npn")]
+pub const OPENSSL_NPN_NO_OVERLAP: c_int = 2;
+
 pub const V_ASN1_GENERALIZEDTIME: c_int = 24;
 pub const V_ASN1_UTCTIME:         c_int = 23;
 
@@ -490,6 +497,28 @@ extern "C" {
     pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;
 
     pub fn SSL_CTX_ctrl(ssl: *mut SSL_CTX, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
+    #[cfg(feature = "npn")]
+    pub fn SSL_CTX_set_next_protos_advertised_cb(ssl: *mut SSL_CTX,
+                                                 cb: extern "C" fn(ssl: *mut SSL,
+                                                                   out: *mut *const c_uchar,
+                                                                   outlen: *mut c_uint,
+                                                                   arg: *mut c_void) -> c_int,
+                                                 arg: *mut c_void);
+    #[cfg(feature = "npn")]
+    pub fn SSL_CTX_set_next_proto_select_cb(ssl: *mut SSL_CTX,
+                                            cb: extern "C" fn(ssl: *mut SSL,
+                                                              out: *mut *mut c_uchar,
+                                                              outlen: *mut c_uchar,
+                                                              inbuf: *const c_uchar,
+                                                              inlen: c_uint,
+                                                              arg: *mut c_void) -> c_int,
+                                            arg: *mut c_void);
+    #[cfg(feature = "npn")]
+    pub fn SSL_select_next_proto(out: *mut *mut c_uchar, outlen: *mut c_uchar,
+                                 inbuf: *const c_uchar, inlen: c_uint,
+                                 client: *const c_uchar, client_len: c_uint) -> c_int;
+    #[cfg(feature = "npn")]
+    pub fn SSL_get0_next_proto_negotiated(s: *const SSL, data: *mut *const c_uchar, len: *mut c_uint);
 
     pub fn X509_add_ext(x: *mut X509, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
     pub fn X509_digest(x: *mut X509, digest: *const EVP_MD, buf: *mut c_char, len: *mut c_uint) -> c_int;
