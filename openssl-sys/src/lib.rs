@@ -134,6 +134,11 @@ pub const SSL_VERIFY_PEER: c_int = 1;
 
 pub const TLSEXT_NAMETYPE_host_name: c_long = 0;
 
+pub const SSL_TLSEXT_ERR_OK: c_int = 0;
+pub const SSL_TLSEXT_ERR_ALERT_WARNING: c_int = 1;
+pub const SSL_TLSEXT_ERR_ALERT_FATAL: c_int = 2;
+pub const SSL_TLSEXT_ERR_NOACK: c_int = 3;
+
 #[cfg(feature = "npn")]
 pub const OPENSSL_NPN_UNSUPPORTED: c_int = 0;
 #[cfg(feature = "npn")]
