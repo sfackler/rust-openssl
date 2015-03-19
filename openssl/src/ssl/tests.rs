@@ -48,8 +48,8 @@ fn test_verify_trusted() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, None);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
-        None => {}
-        Some(err) => panic!("Unexpected error {:?}", err)
+        Ok(_) => {}
+        Err(err) => panic!("Unexpected error {:?}", err)
     }
     match SslStream::new(&ctx, stream) {
         Ok(_) => (),
@@ -91,8 +91,8 @@ fn test_verify_trusted_callback_override_ok() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
-        None => {}
-        Some(err) => panic!("Unexpected error {:?}", err)
+        Ok(_) => {}
+        Err(err) => panic!("Unexpected error {:?}", err)
     }
     match SslStream::new(&ctx, stream) {
         Ok(_) => (),
@@ -109,8 +109,8 @@ fn test_verify_trusted_callback_override_bad() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
-        None => {}
-        Some(err) => panic!("Unexpected error {:?}", err)
+        Ok(_) => {}
+        Err(err) => panic!("Unexpected error {:?}", err)
     }
     assert!(SslStream::new(&ctx, stream).is_err());
 }
@@ -137,8 +137,8 @@ fn test_verify_trusted_get_error_ok() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
-        None => {}
-        Some(err) => panic!("Unexpected error {:?}", err)
+        Ok(_) => {}
+        Err(err) => panic!("Unexpected error {:?}", err)
     }
     assert!(SslStream::new(&ctx, stream).is_ok());
 }
@@ -200,10 +200,10 @@ fn test_set_certificate_and_private_key() {
     let cert = X509::from_pem(&mut cert_file).unwrap();
 
     let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_private_key(&key);
-    ctx.set_certificate(&cert);
+    ctx.set_private_key(&key).unwrap();
+    ctx.set_certificate(&cert).unwrap();
 
-    assert!(ctx.check_private_key().is_none());
+    assert!(ctx.check_private_key().is_ok());
 }
 
 #[test]
