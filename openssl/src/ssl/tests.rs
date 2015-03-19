@@ -26,6 +26,9 @@ use crypto::pkey::PKey;
 use ssl::connected_socket::Connect;
 #[cfg(feature="dtlsv1")]
 use std::net::UdpSocket;
+use ssl::SslVerifyMode::SslVerifyPeer;
+use x509::{X509StoreContext,X509};
+use crypto::pkey::PKey;
 
 #[cfg(feature="dtlsv1")]
 use ssl::SslMethod::Dtlsv1;
@@ -119,7 +122,7 @@ run_test!(verify_trusted, |method, stream| {
         Err(err) => panic!("Expected success, got {:?}", err)
     }
 });
-/*
+
 run_test!(verify_untrusted_callback_override_ok, |method, stream| {
     fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
         true
@@ -288,7 +291,7 @@ run_test!(clear_ctx_options, |method, _| {
     let opts = ctx.clear_options(ssl::SSL_OP_ALL);
     assert!(!opts.contains(ssl::SSL_OP_ALL));
 });
-*/
+
 #[test]
 fn test_write() {
     let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
