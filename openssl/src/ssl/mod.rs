@@ -409,6 +409,15 @@ impl SslContext {
             })
     }
 
+    /// Adds a certificate to the certificate chain presented together with the
+    /// certificate specified using set_certificate()
+    pub fn add_extra_chain_cert(&mut self, cert: &X509) -> Option<SslError> {
+        wrap_ssl_result(
+            unsafe {
+                ffi::SSL_CTX_add_extra_chain_cert(*self.ctx, cert.get_handle()) as c_int
+            })
+    }
+
     /// Specifies the file that contains private key
     pub fn set_private_key_file(&mut self, file: &Path,
                                 file_type: X509FileType) -> Option<SslError> {

@@ -352,7 +352,6 @@ impl Drop for PKey {
 
 #[cfg(test)]
 mod tests {
-    use std::io;
     use std::path::Path;
     use std::fs::File;
     use crypto::hash::Type::{MD5, SHA1};

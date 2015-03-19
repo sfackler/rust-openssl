@@ -132,6 +132,8 @@ pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
 
 pub const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
+pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
+
 pub const SSL_ERROR_NONE: c_int = 0;
 pub const SSL_ERROR_SSL: c_int = 1;
 pub const SSL_ERROR_SYSCALL: c_int = 5;
@@ -275,6 +277,11 @@ pub unsafe fn SSL_CTX_get_options(ssl: *mut SSL_CTX) -> c_long {
 pub unsafe fn SSL_CTX_clear_options(ssl: *mut SSL_CTX, op: c_long) -> c_long {
     SSL_CTX_ctrl(ssl, SSL_CTRL_CLEAR_OPTIONS, (op), ptr::null_mut())
 }
+
+pub unsafe fn SSL_CTX_add_extra_chain_cert(ssl: *mut SSL_CTX, cert: *mut X509) -> c_long {
+    SSL_CTX_ctrl(ssl, SSL_CTRL_EXTRA_CHAIN_CERT, 0, cert)
+}
+
 
 // True functions
 extern "C" {
@@ -513,7 +520,8 @@ extern "C" {
     pub fn SSL_CTX_get_ex_data(ctx: *mut SSL_CTX, idx: c_int) -> *mut c_void;
 
     pub fn SSL_CTX_use_certificate_file(ctx: *mut SSL_CTX, cert_file: *const c_char, file_type: c_int) -> c_int;
-    pub fn SSL_CTX_use_certificate(ctx: *mut SSL_CTX, cert_file: *mut X509) -> c_int;
+    pub fn SSL_CTX_use_certificate(ctx: *mut SSL_CTX, cert: *mut X509) -> c_int;
+
     pub fn SSL_CTX_use_PrivateKey_file(ctx: *mut SSL_CTX, key_file: *const c_char, file_type: c_int) -> c_int;
     pub fn SSL_CTX_use_PrivateKey(ctx: *mut SSL_CTX, key: *mut EVP_PKEY) -> c_int;
     pub fn SSL_CTX_check_private_key(ctx: *mut SSL_CTX) -> c_int;
