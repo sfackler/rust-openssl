@@ -26,7 +26,7 @@ use crypto::pkey::PKey;
 use ssl::connected_socket::Connect;
 #[cfg(feature="dtlsv1")]
 use std::net::UdpSocket;
-use ssl::SslVerifyMode::SslVerifyPeer;
+use ssl::SSL_VERIFY_PEER;
 use x509::{X509StoreContext,X509};
 use crypto::pkey::PKey;
 
