@@ -7,6 +7,7 @@ use std::path::Path;
 use std::net::TcpListener;
 #[cfg(feature = "npn")]
 use std::thread;
+use std::fs::File;
 
 use crypto::hash::Type::{SHA256};
 use ssl;
@@ -16,7 +17,8 @@ use ssl::SSL_VERIFY_PEER;
 use x509::X509StoreContext;
 #[cfg(feature = "npn")]
 use x509::X509FileType;
-use x509::{X509StoreContext};
+use x509::X509;
+use crypto::pkey::PKey;
 
 #[test]
 fn test_new_ctx() {
@@ -181,6 +183,27 @@ fn test_verify_callback_data() {
         Ok(_) => (),
         Err(err) => panic!("Expected success, got {:?}", err)
     }
+}
+
+#[test]
+fn test_set_certificate_and_private_key() {
+    let key_path = Path::new("test/key.pem");
+    let cert_path = Path::new("test/cert.pem");
+    let mut key_file = File::open(&key_path)
+        .ok()
+        .expect("Failed to open `test/key.pem`");
+    let mut cert_file = File::open(&cert_path)
+        .ok()
+        .expect("Failed to open `test/cert.pem`");
+
+    let key = PKey::private_key_from_pem(&mut key_file).unwrap();
+    let cert = X509::from_pem(&mut cert_file).unwrap();
+
+    let mut ctx = SslContext::new(Sslv23).unwrap();
+    ctx.set_private_key(&key);
+    ctx.set_certificate(&cert);
+
+    assert!(ctx.check_private_key().is_none());
 }
 
 #[test]

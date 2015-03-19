@@ -435,6 +435,9 @@ extern "C" {
 
     pub fn PEM_read_bio_X509(bio: *mut BIO, out: *mut *mut X509, callback: Option<PasswordCallback>,
                              user_data: *mut c_void) -> *mut X509;
+    pub fn PEM_read_bio_PrivateKey(bio: *mut BIO, out: *mut *mut EVP_PKEY, callback: Option<PasswordCallback>,
+                             user_data: *mut c_void) -> *mut X509;
+
     pub fn PEM_write_bio_PrivateKey(bio: *mut BIO, pkey: *mut EVP_PKEY, cipher: *const EVP_CIPHER,
                                     kstr: *mut c_char, klen: c_int,
                                     callback: Option<PasswordCallback>,
@@ -510,7 +513,10 @@ extern "C" {
     pub fn SSL_CTX_get_ex_data(ctx: *mut SSL_CTX, idx: c_int) -> *mut c_void;
 
     pub fn SSL_CTX_use_certificate_file(ctx: *mut SSL_CTX, cert_file: *const c_char, file_type: c_int) -> c_int;
+    pub fn SSL_CTX_use_certificate(ctx: *mut SSL_CTX, cert_file: *mut X509) -> c_int;
     pub fn SSL_CTX_use_PrivateKey_file(ctx: *mut SSL_CTX, key_file: *const c_char, file_type: c_int) -> c_int;
+    pub fn SSL_CTX_use_PrivateKey(ctx: *mut SSL_CTX, key: *mut EVP_PKEY) -> c_int;
+    pub fn SSL_CTX_check_private_key(ctx: *mut SSL_CTX) -> c_int;
 
     pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;
 

@@ -22,6 +22,7 @@ use bio::{MemBio};
 use ffi;
 use ssl::error::{SslError, SslSessionClosed, StreamError, OpenSslErrors};
 use x509::{X509StoreContext, X509FileType, X509};
+use crypto::pkey::PKey;
 
 pub mod error;
 #[cfg(test)]
@@ -400,6 +401,14 @@ impl SslContext {
             })
     }
 
+    /// Specifies the certificate
+    pub fn set_certificate(&mut self, cert: &X509) -> Option<SslError> {
+        wrap_ssl_result(
+            unsafe {
+                ffi::SSL_CTX_use_certificate(*self.ctx, cert.get_handle())
+            })
+    }
+
     /// Specifies the file that contains private key
     pub fn set_private_key_file(&mut self, file: &Path,
                                 file_type: X509FileType) -> Option<SslError> {
@@ -407,6 +416,22 @@ impl SslContext {
         wrap_ssl_result(
             unsafe {
                 ffi::SSL_CTX_use_PrivateKey_file(self.ctx, file.as_ptr(), file_type as c_int)
+            })
+    }
+
+    /// Specifies the private key
+    pub fn set_private_key(&mut self, key: &PKey) -> Option<SslError> {
+        wrap_ssl_result(
+            unsafe {
+                ffi::SSL_CTX_use_PrivateKey(*self.ctx, key.get_handle())
+            })
+    }
+
+    /// Check consistency of private key and certificate
+    pub fn check_private_key(&mut self) -> Option<SslError> {
+        wrap_ssl_result(
+            unsafe {
+                ffi::SSL_CTX_check_private_key(*self.ctx)
             })
     }
 
