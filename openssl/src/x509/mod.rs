@@ -521,7 +521,7 @@ make_validation_error!(X509_V_OK,
 #[test]
 fn test_negative_serial() {
     // I guess that's enough to get a random negative number
-    for _ in range(0, 1000) {
+    for _ in 0..1000 {
         assert!(X509Generator::random_serial() > 0, "All serials should be positive");
     }
 }

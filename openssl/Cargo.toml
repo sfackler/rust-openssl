@@ -23,7 +23,7 @@ version = "0.5.0"
 libc = "0.1"
 
 [dev-dependencies]
-rustc-serialize = "0.2"
+rustc-serialize = "0.3"
 
 [dependencies]
 bitflags = "0.1.1"
