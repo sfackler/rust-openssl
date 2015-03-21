@@ -54,7 +54,7 @@ use self::State::*;
 /// use openssl::crypto::hash::Type;
 /// use openssl::crypto::hmac::HMAC;
 /// let key = b"Jefe";
-/// let data = [b"what do ya ", b"want for nothing?"];
+/// let data: &[&[u8]] = &[b"what do ya ", b"want for nothing?"];
 /// let spec = b"\x75\x0c\x78\x3e\x6a\xb0\xb5\x03\xea\xa8\x6e\x31\x0a\x5d\xb7\x38";
 /// let mut h = HMAC::new(Type::MD5, &*key);
 /// h.write_all(data[0]);
