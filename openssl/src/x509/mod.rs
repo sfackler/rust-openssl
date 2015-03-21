@@ -298,6 +298,15 @@ impl X509Generator {
         let mut p_key = PKey::new();
         p_key.gen(self.bits as usize);
 
+        let x509 = try!(self.sign(&p_key));
+        Ok((x509, p_key))
+    }
+
+    /// Signs certificate with a private key and returns it
+    /// Note: That the bit-length of the private key is used (set_bitlength is ignored)
+    pub fn sign<'a>(&self, p_key: &PKey) -> Result<X509<'a>, SslError> {
+        ffi::init();
+
         unsafe {
             let x509 = ffi::X509_new();
             try_ssl_null!(x509);
@@ -338,7 +347,7 @@ impl X509Generator {
 
             let hash_fn = self.hash_type.evp_md();
             try_ssl!(ffi::X509_sign(x509.handle, p_key.get_handle(), hash_fn));
-            Ok((x509, p_key))
+            Ok(x509)
         }
     }
 }
