@@ -1,4 +1,4 @@
-use libc::{c_int, c_void, c_long};
+use libc::{c_int, c_void, c_long, c_uint, c_uchar};
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::io;
@@ -6,6 +6,7 @@ use std::io::prelude::*;
 use std::ffi::AsOsStr;
 use std::mem;
 use std::net;
+use std::slice;
 use std::num::FromPrimitive;
 use std::num::Int;
 use std::path::Path;
@@ -145,6 +146,34 @@ fn get_verify_data_idx<T>() -> c_int {
     }
 }
 
+/// Creates a static index for the list of NPN protocols.
+/// Registers a destructor for the data which will be called
+/// when the context is freed.
+#[cfg(feature = "npn")]
+fn get_npn_protos_idx() -> c_int {
+    static mut NPN_PROTOS_IDX: c_int = -1;
+    static mut INIT: Once = ONCE_INIT;
+
+    extern fn free_data_box(_parent: *mut c_void, ptr: *mut c_void,
+                            _ad: *mut ffi::CRYPTO_EX_DATA, _idx: c_int,
+                            _argl: c_long, _argp: *mut c_void) {
+        if !ptr.is_null() {
+            let _: Box<Vec<u8>> = unsafe { mem::transmute(ptr) };
+        }
+    }
+
+    unsafe {
+        INIT.call_once(|| {
+            let f: ffi::CRYPTO_EX_free = free_data_box;
+            let idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
+                                                    None, Some(f));
+            assert!(idx >= 0);
+            NPN_PROTOS_IDX = idx;
+        });
+        NPN_PROTOS_IDX
+    }
+}
+
 extern fn raw_verify(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX)
         -> c_int {
     unsafe {
@@ -190,6 +219,64 @@ extern fn raw_verify_with_data<T>(preverify_ok: c_int,
         mem::forget(data);
         res
     }
+}
+
+/// The function is given as the callback to `SSL_CTX_set_next_proto_select_cb`.
+///
+/// It chooses the protocol that the client wishes to use, out of the given list of protocols
+/// supported by the server. It achieves this by delegating to the `SSL_select_next_proto`
+/// function. The list of protocols supported by the client is found in the extra data of the
+/// OpenSSL context.
+#[cfg(feature = "npn")]
+extern fn raw_next_proto_select_cb(ssl: *mut ffi::SSL,
+                                   out: *mut *mut c_uchar, outlen: *mut c_uchar,
+                                   inbuf: *const c_uchar, inlen: c_uint,
+                                   _arg: *mut c_void) -> c_int {
+    unsafe {
+        // First, get the list of protocols (that the client should support) saved in the context
+        // extra data.
+        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
+        let protocols = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_npn_protos_idx());
+        let protocols: &Vec<u8> = mem::transmute(protocols);
+        // Prepare the client list parameters to be passed to the OpenSSL function...
+        let client = protocols.as_ptr();
+        let client_len = protocols.len() as c_uint;
+        // Finally, let OpenSSL find a protocol to be used, by matching the given server and
+        // client lists.
+        ffi::SSL_select_next_proto(out, outlen, inbuf, inlen, client, client_len);
+    }
+
+    ffi::SSL_TLSEXT_ERR_OK
+}
+
+/// The function is given as the callback to `SSL_CTX_set_next_protos_advertised_cb`.
+///
+/// It causes the parameter `out` to point at a `*const c_uchar` instance that
+/// represents the list of protocols that the server should advertise as those
+/// that it supports.
+/// The list of supported protocols is found in the extra data of the OpenSSL
+/// context.
+#[cfg(feature = "npn")]
+extern fn raw_next_protos_advertise_cb(ssl: *mut ffi::SSL,
+                                       out: *mut *const c_uchar, outlen: *mut c_uint,
+                                       _arg: *mut c_void) -> c_int {
+    unsafe {
+        // First, get the list of (supported) protocols saved in the context extra data.
+        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
+        let protocols = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_npn_protos_idx());
+        if protocols.is_null() {
+            *out = b"".as_ptr();
+            *outlen = 0;
+        } else {
+            // If the pointer is valid, put the pointer to the actual byte array into the
+            // output parameter `out`, as well as its length into `outlen`.
+            let protocols: &Vec<u8> = mem::transmute(protocols);
+            *out = protocols.as_ptr();
+            *outlen = protocols.len() as c_uint;
+        }
+    }
+
+    ffi::SSL_TLSEXT_ERR_OK
 }
 
 /// The signature of functions that can be used to manually verify certificates
@@ -342,6 +429,38 @@ impl SslContext {
         };
         SslContextOptions::from_bits(ret).unwrap()
     }
+
+    /// Set the protocols to be used during Next Protocol Negotiation (the protocols
+    /// supported by the application).
+    ///
+    /// This method needs the `npn` feature.
+    #[cfg(feature = "npn")]
+    pub fn set_npn_protocols(&mut self, protocols: &[&[u8]]) {
+        // Firstly, convert the list of protocols to a byte-array that can be passed to OpenSSL
+        // APIs -- a list of length-prefixed strings.
+        let mut npn_protocols = Vec::new();
+        for protocol in protocols {
+            let len = protocol.len() as u8;
+            npn_protocols.push(len);
+            // If the length is greater than the max `u8`, this truncates the protocol name.
+            npn_protocols.extend(protocol[..len as usize].to_vec());
+        }
+        let protocols: Box<Vec<u8>> = Box::new(npn_protocols);
+
+        unsafe {
+            // Attach the protocol list to the OpenSSL context structure,
+            // so that we can refer to it within the callback.
+            ffi::SSL_CTX_set_ex_data(*self.ctx, get_npn_protos_idx(),
+                                     mem::transmute(protocols));
+            // Now register the callback that performs the default protocol
+            // matching based on the client-supported list of protocols that
+            // has been saved.
+            ffi::SSL_CTX_set_next_proto_select_cb(*self.ctx, raw_next_proto_select_cb, ptr::null_mut());
+            // Also register the callback to advertise these protocols, if a server socket is
+            // created with the context.
+            ffi::SSL_CTX_set_next_protos_advertised_cb(*self.ctx, raw_next_protos_advertise_cb, ptr::null_mut());
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -470,6 +589,28 @@ impl Ssl {
         }
     }
 
+    /// Returns the protocol selected by performing Next Protocol Negotiation, if any.
+    ///
+    /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
+    /// to interpret it.
+    ///
+    /// This method needs the `npn` feature.
+    #[cfg(feature = "npn")]
+    pub fn get_selected_npn_protocol(&self) -> Option<&[u8]> {
+        unsafe {
+            let mut data: *const c_uchar = ptr::null();
+            let mut len: c_uint = 0;
+            // Get the negotiated protocol from the SSL instance.
+            // `data` will point at a `c_uchar` array; `len` will contain the length of this array.
+            ffi::SSL_get0_next_proto_negotiated(*self.ssl, &mut data, &mut len);
+
+            if data.is_null() {
+                None
+            } else {
+                Some(slice::from_raw_parts(data, len as usize))
+            }
+        }
+    }
 }
 
 #[derive(FromPrimitive, Debug)]
@@ -622,6 +763,17 @@ impl<S: Read+Write> SslStream<S> {
         };
 
         Some(s)
+    }
+
+    /// Returns the protocol selected by performing Next Protocol Negotiation, if any.
+    ///
+    /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
+    /// to interpret it.
+    ///
+    /// This method needs the `npn` feature.
+    #[cfg(feature = "npn")]
+    pub fn get_selected_npn_protocol(&self) -> Option<&[u8]> {
+        self.ssl.get_selected_npn_protocol()
     }
 }
 

@@ -16,6 +16,7 @@ tlsv1_2 = []
 tlsv1_1 = []
 sslv2 = []
 aes_xts = []
+npn = []
 
 [dependencies]
 libc = "0.1"

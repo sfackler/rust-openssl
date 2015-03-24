@@ -5,9 +5,10 @@ os:
 env:
   global:
   - secure: J4i75AV4KMrU/UQrLIzzIh35Xix40Ki0uWjm8j05oxlXVl5aPU2zB30AemDne2QXYzkN4kRG/iRnNORE/8D0lF7YipQNSNxgfiBVoOEfj/NSogvI2BftYX9vlLZJUvt+s/nbE3xa/Pyge1IPv7itDYGO7SMe8RTSqitgqyfE2Eg=
-  - FEATURES="tlsv1_1 tlsv1_2 aes_xts"
+  - FEATURES="tlsv1_1 tlsv1_2 aes_xts npn"
 before_script:
 - openssl s_server -accept 15418 -www -cert openssl/test/cert.pem -key openssl/test/key.pem >/dev/null 2>&1 &
+- openssl s_server -accept 15419 -www -cert openssl/test/cert.pem -key openssl/test/key.pem -nextprotoneg "http/1.1,spdy/3.1" >/dev/null 2>&1 &
 script:
 - (cd openssl && cargo test)
 - (test $TRAVIS_OS_NAME == "osx" || (cd openssl && cargo test --features "$FEATURES"))
