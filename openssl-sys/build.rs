@@ -1,4 +1,6 @@
-extern crate "pkg-config" as pkg_config;
+#![feature(convert)]
+
+extern crate pkg_config;
 extern crate gcc;
 
 use std::env;
@@ -36,7 +38,7 @@ fn main() {
     let mut include_dirs = vec![];
 
     if let Some(include_dir) = include_dir {
-    	include_dirs.push(PathBuf::new(&include_dir));
+        include_dirs.push(PathBuf::from(&include_dir));
     }
 
     build_old_openssl_shim(&include_dirs);

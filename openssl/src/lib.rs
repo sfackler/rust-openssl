@@ -6,9 +6,9 @@ extern crate bitflags;
 
 extern crate libc;
 #[cfg(test)]
-extern crate "rustc-serialize" as serialize;
+extern crate rustc_serialize as serialize;
 
-extern crate "openssl-sys" as ffi;
+extern crate openssl_sys as ffi;
 
 mod macros;
 
