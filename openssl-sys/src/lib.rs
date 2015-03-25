@@ -1,11 +1,12 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
 #![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/openssl-sys")]
+#![feature(convert)]
 
 extern crate libc;
 
 #[cfg(target_os = "nacl")]
-extern crate "libressl-pnacl-sys" as _for_linkage;
+extern crate libressl_pnacl_sys;
 
 use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
 use std::mem;

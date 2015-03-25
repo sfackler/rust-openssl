@@ -24,7 +24,7 @@ pub fn find_certs_dirs() -> Vec<PathBuf> {
         "/etc/openssl",
         "/etc/pki/tls",
         "/etc/ssl",
-    ].iter().map(|s| PathBuf::new(*s)).filter(|p| {
+    ].iter().map(|s| PathBuf::from(*s)).filter(|p| {
         fs::metadata(p).is_ok()
     }).collect()
 }
@@ -51,8 +51,8 @@ pub fn init_ssl_cert_env_vars() {
 
 pub fn probe() -> ProbeResult {
     let mut result = ProbeResult {
-        cert_file: env::var_os("SSL_CERT_FILE").map(|s| PathBuf::new(&s)),
-        cert_dir: env::var_os("SSL_CERT_DIR").map(|s| PathBuf::new(&s)),
+        cert_file: env::var_os("SSL_CERT_FILE").map(PathBuf::from),
+        cert_dir: env::var_os("SSL_CERT_DIR").map(PathBuf::from),
     };
     for certs_dir in find_certs_dirs().iter() {
         // cert.pem looks to be an openssl 1.0.1 thing, while
