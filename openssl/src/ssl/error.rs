@@ -132,7 +132,7 @@ fn test_uknown_error_should_have_correct_messages() {
 
     let UnknownError { ref library, ref function, ref reason } = errs[0];
 
-    assert_eq!(library.as_slice(), "SSL routines");
-    assert_eq!(function.as_slice(), "SSL23_GET_SERVER_HELLO");
-    assert_eq!(reason.as_slice(), "sslv3 alert handshake failure");
+    assert_eq!(&library[..], "SSL routines");
+    assert_eq!(&function[..], "SSL23_GET_SERVER_HELLO");
+    assert_eq!(&reason[..], "sslv3 alert handshake failure");
 }

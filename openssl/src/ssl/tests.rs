@@ -1,16 +1,15 @@
 use serialize::hex::FromHex;
-use std::net::{TcpStream, TcpListener};
+use std::net::TcpStream;
 use std::io;
 use std::io::prelude::*;
 use std::path::Path;
-use std::thread;
 
 use crypto::hash::Type::{SHA256};
 use ssl;
 use ssl::SslMethod::Sslv23;
 use ssl::{SslContext, SslStream, VerifyCallback};
 use ssl::SslVerifyMode::SslVerifyPeer;
-use x509::{X509StoreContext, X509FileType};
+use x509::X509StoreContext;
 
 #[test]
 fn test_new_ctx() {
@@ -155,7 +154,7 @@ fn test_verify_callback_data() {
             None => false,
             Some(cert) => {
                 let fingerprint = cert.fingerprint(SHA256).unwrap();
-                fingerprint.as_slice() == node_id.as_slice()
+                &fingerprint == node_id
             }
         }
     }

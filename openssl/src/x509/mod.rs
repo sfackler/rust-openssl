@@ -332,17 +332,17 @@ impl X509Generator {
             let name = ffi::X509_get_subject_name(x509.handle);
             try_ssl_null!(name);
 
-            try!(X509Generator::add_name(name, "CN", self.CN.as_slice()));
+            try!(X509Generator::add_name(name, "CN", &self.CN));
             ffi::X509_set_issuer_name(x509.handle, name);
 
             if self.key_usage.len() > 0 {
                 try!(X509Generator::add_extension(x509.handle, ffi::NID_key_usage,
-                                                  self.key_usage.to_str().as_slice()));
+                                                  &self.key_usage.to_str()));
             }
 
             if self.ext_key_usage.len() > 0 {
                 try!(X509Generator::add_extension(x509.handle, ffi::NID_ext_key_usage,
-                                                  self.ext_key_usage.to_str().as_slice()));
+                                                  &self.ext_key_usage.to_str()));
             }
 
             let hash_fn = self.hash_type.evp_md();

@@ -47,5 +47,5 @@ fn test_cert_loading() {
     let hash_str = "46e3f1a6d17a41ce70d0c66ef51cee2ab4ba67cac8940e23f10c1f944b49fb5c";
     let hash_vec = hash_str.from_hex().unwrap();
 
-    assert_eq!(fingerprint.as_slice(), hash_vec.as_slice());
+    assert_eq!(fingerprint, hash_vec);
 }

@@ -199,14 +199,14 @@ mod tests {
            vec!(0x8eu8, 0xa2u8, 0xb7u8, 0xcau8, 0x51u8, 0x67u8, 0x45u8, 0xbfu8,
               0xeau8, 0xfcu8, 0x49u8, 0x90u8, 0x4bu8, 0x49u8, 0x60u8, 0x89u8);
         let c = super::Crypter::new(super::Type::AES_256_ECB);
-        c.init(super::Mode::Encrypt, k0.as_slice(), vec![]);
+        c.init(super::Mode::Encrypt, &k0, vec![]);
         c.pad(false);
-        let mut r0 = c.update(p0.as_slice());
+        let mut r0 = c.update(&p0);
         r0.extend(c.finalize().into_iter());
         assert!(r0 == c0);
-        c.init(super::Mode::Decrypt, k0.as_slice(), vec![]);
+        c.init(super::Mode::Decrypt, &k0, vec![]);
         c.pad(false);
-        let mut p1 = c.update(r0.as_slice());
+        let mut p1 = c.update(&r0);
         p1.extend(c.finalize().into_iter());
         assert!(p1 == p0);
     }
@@ -239,25 +239,22 @@ mod tests {
 
         assert!(unciphered_data_2.len() == 0);
 
-        assert_eq!(
-            unciphered_data_1.as_slice(),
-            expected_unciphered_data
-        );
+        assert_eq!(&unciphered_data_1, expected_unciphered_data);
     }
 
     fn cipher_test(ciphertype: super::Type, pt: &str, ct: &str, key: &str, iv: &str) {
         use serialize::hex::ToHex;
 
         let cipher = super::Crypter::new(ciphertype);
-        cipher.init(super::Mode::Encrypt, key.from_hex().unwrap().as_slice(), iv.from_hex().unwrap());
+        cipher.init(super::Mode::Encrypt, &key.from_hex().unwrap(), iv.from_hex().unwrap());
 
-        let expected = ct.from_hex().unwrap().as_slice().to_vec();
-        let mut computed = cipher.update(pt.from_hex().unwrap().as_slice());
+        let expected = ct.from_hex().unwrap();
+        let mut computed = cipher.update(&pt.from_hex().unwrap());
         computed.extend(cipher.finalize().into_iter());
 
         if computed != expected {
-            println!("Computed: {}", computed.as_slice().to_hex());
-            println!("Expected: {}", expected.as_slice().to_hex());
+            println!("Computed: {}", computed.to_hex());
+            println!("Expected: {}", expected.to_hex());
             if computed.len() != expected.len() {
                 println!("Lengths differ: {} in computed vs {} expected",
                          computed.len(), expected.len());

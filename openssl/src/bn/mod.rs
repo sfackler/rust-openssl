@@ -579,7 +579,7 @@ mod tests {
     fn test_to_from_slice() {
         let v0 = BigNum::new_from(10203004_u64).unwrap();
         let vec = v0.to_vec();
-        let v1 = BigNum::new_from_slice(vec.as_slice()).unwrap();
+        let v1 = BigNum::new_from_slice(&vec).unwrap();
 
         assert!(v0 == v1);
     }

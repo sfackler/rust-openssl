@@ -342,7 +342,7 @@ mod tests {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
         k0.gen(512);
-        k1.load_pub(k0.save_pub().as_slice());
+        k1.load_pub(&k0.save_pub());
         assert_eq!(k0.save_pub(), k1.save_pub());
         assert_eq!(k0.size(), k1.size());
         assert!(k0.can(super::Role::Encrypt));
@@ -360,7 +360,7 @@ mod tests {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
         k0.gen(512);
-        k1.load_priv(k0.save_priv().as_slice());
+        k1.load_priv(&k0.save_priv());
         assert_eq!(k0.save_priv(), k1.save_priv());
         assert_eq!(k0.size(), k1.size());
         assert!(k0.can(super::Role::Encrypt));
@@ -379,9 +379,9 @@ mod tests {
         let mut k1 = super::PKey::new();
         let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
         k0.gen(512);
-        k1.load_pub(k0.save_pub().as_slice());
-        let emsg = k1.encrypt(msg.as_slice());
-        let dmsg = k0.decrypt(emsg.as_slice());
+        k1.load_pub(&k0.save_pub());
+        let emsg = k1.encrypt(&msg);
+        let dmsg = k0.decrypt(&emsg);
         assert!(msg == dmsg);
     }
 
@@ -391,9 +391,9 @@ mod tests {
         let mut k1 = super::PKey::new();
         let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
         k0.gen(512);
-        k1.load_pub(k0.save_pub().as_slice());
-        let emsg = k1.encrypt_with_padding(msg.as_slice(), super::EncryptionPadding::PKCS1v15);
-        let dmsg = k0.decrypt_with_padding(emsg.as_slice(), super::EncryptionPadding::PKCS1v15);
+        k1.load_pub(&k0.save_pub());
+        let emsg = k1.encrypt_with_padding(&msg, super::EncryptionPadding::PKCS1v15);
+        let dmsg = k0.decrypt_with_padding(&emsg, super::EncryptionPadding::PKCS1v15);
         assert!(msg == dmsg);
     }
 
@@ -403,9 +403,9 @@ mod tests {
         let mut k1 = super::PKey::new();
         let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
         k0.gen(512);
-        k1.load_pub(k0.save_pub().as_slice());
-        let sig = k0.sign(msg.as_slice());
-        let rv = k1.verify(msg.as_slice(), sig.as_slice());
+        k1.load_pub(&k0.save_pub());
+        let sig = k0.sign(&msg);
+        let rv = k1.verify(&msg, &sig);
         assert!(rv == true);
     }
 
@@ -415,11 +415,11 @@ mod tests {
         let mut k1 = super::PKey::new();
         let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
         k0.gen(512);
-        k1.load_pub(k0.save_pub().as_slice());
+        k1.load_pub(&k0.save_pub());
 
-        let sig = k0.sign_with_hash(msg.as_slice(), MD5);
+        let sig = k0.sign_with_hash(&msg, MD5);
 
-        assert!(k1.verify_with_hash(msg.as_slice(), sig.as_slice(), MD5));
-        assert!(!k1.verify_with_hash(msg.as_slice(), sig.as_slice(), SHA1));
+        assert!(k1.verify_with_hash(&msg, &sig, MD5));
+        assert!(!k1.verify_with_hash(&msg, &sig, SHA1));
     }
 }

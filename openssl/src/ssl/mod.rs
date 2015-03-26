@@ -1,4 +1,4 @@
-use libc::{c_int, c_void, c_long, c_uint, c_uchar};
+use libc::{c_int, c_void, c_long};
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::io;
@@ -6,7 +6,6 @@ use std::io::prelude::*;
 use std::ffi::AsOsStr;
 use std::mem;
 use std::net;
-use std::slice;
 use std::num::FromPrimitive;
 use std::num::Int;
 use std::path::Path;
