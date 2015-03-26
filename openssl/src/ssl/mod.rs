@@ -13,6 +13,10 @@ use std::ptr;
 use std::sync::{Once, ONCE_INIT, Arc};
 use std::ops::{Deref, DerefMut};
 use std::cmp;
+#[cfg(feature = "npn")]
+use libc::{c_uchar, c_uint};
+#[cfg(feature = "npn")]
+use std::slice;
 
 use bio::{MemBio};
 use ffi;

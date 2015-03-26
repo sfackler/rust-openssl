@@ -3,6 +3,10 @@ use std::net::TcpStream;
 use std::io;
 use std::io::prelude::*;
 use std::path::Path;
+#[cfg(feature = "npn")]
+use std::net::TcpListener;
+#[cfg(feature = "npn")]
+use std::thread;
 
 use crypto::hash::Type::{SHA256};
 use ssl;
@@ -10,6 +14,8 @@ use ssl::SslMethod::Sslv23;
 use ssl::{SslContext, SslStream, VerifyCallback};
 use ssl::SslVerifyMode::SslVerifyPeer;
 use x509::X509StoreContext;
+#[cfg(feature = "npn")]
+use x509::X509FileType;
 
 #[test]
 fn test_new_ctx() {
