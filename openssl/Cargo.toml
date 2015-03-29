@@ -21,10 +21,9 @@ path = "../openssl-sys"
 version = "0.5.2"
 
 [dependencies]
+bitflags = "0.1.1"
+lazy_static = "0.1"
 libc = "0.1"
 
 [dev-dependencies]
 rustc-serialize = "0.3"
-
-[dependencies]
-bitflags = "0.1.1"

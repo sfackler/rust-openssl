@@ -1,4 +1,6 @@
 use libc::{c_int, c_void, c_long};
+use std::any::TypeId;
+use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::io;
@@ -10,9 +12,10 @@ use std::num::FromPrimitive;
 use std::num::Int;
 use std::path::Path;
 use std::ptr;
-use std::sync::{Once, ONCE_INIT, Arc};
+use std::sync::{Once, ONCE_INIT, Arc, Mutex};
 use std::ops::{Deref, DerefMut};
 use std::cmp;
+use std::marker::Reflect;
 #[cfg(feature = "npn")]
 use libc::{c_uchar, c_uint};
 #[cfg(feature = "npn")]
@@ -124,29 +127,30 @@ pub enum SslVerifyMode {
     SslVerifyNone = ffi::SSL_VERIFY_NONE
 }
 
+lazy_static! {
+    static ref INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
+}
+
 // Creates a static index for user data of type T
 // Registers a destructor for the data which will be called
 // when context is freed
-fn get_verify_data_idx<T>() -> c_int {
-    static mut VERIFY_DATA_IDX: c_int = -1;
-    static mut INIT: Once = ONCE_INIT;
-
+fn get_verify_data_idx<T: Reflect + 'static>() -> c_int {
     extern fn free_data_box<T>(_parent: *mut c_void, ptr: *mut c_void,
                                _ad: *mut ffi::CRYPTO_EX_DATA, _idx: c_int,
                                _argl: c_long, _argp: *mut c_void) {
-        let _: Box<T> = unsafe { mem::transmute(ptr) };
+        if ptr != 0 as *mut _ {
+            let _: Box<T> = unsafe { mem::transmute(ptr) };
+        }
     }
 
-    unsafe {
-        INIT.call_once(|| {
+    *INDEXES.lock().unwrap().entry(TypeId::of::<T>()).or_insert_with(|| {
+        unsafe {
             let f: ffi::CRYPTO_EX_free = free_data_box::<T>;
-            let idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
-                                                    None, Some(f));
+            let idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None, None, Some(f));
             assert!(idx >= 0);
-            VERIFY_DATA_IDX = idx;
-        });
-        VERIFY_DATA_IDX
-    }
+            idx
+        }
+    })
 }
 
 /// Creates a static index for the list of NPN protocols.
@@ -196,7 +200,8 @@ extern fn raw_verify(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX)
 }
 
 extern fn raw_verify_with_data<T>(preverify_ok: c_int,
-                                  x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int {
+                                  x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
+                                  where T: Reflect + 'static {
     unsafe {
         let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
         let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
@@ -352,7 +357,8 @@ impl SslContext {
     // a function handling it
     pub fn set_verify_with_data<T>(&mut self, mode: SslVerifyMode,
                                    verify: VerifyCallbackData<T>,
-                                   data: T) {
+                                   data: T)
+                                   where T: Reflect + 'static {
         let data = Box::new(data);
         unsafe {
             ffi::SSL_CTX_set_ex_data(*self.ctx, VERIFY_IDX,
