@@ -733,7 +733,7 @@ impl<S: Read+Write> SslStream<S> {
             match e {
                 LibSslError::ErrorWantRead => {
                     try_ssl_stream!(self.flush());
-                    let len = try_ssl_stream!(self.stream.read(self.buf.as_mut_slice()));
+                    let len = try_ssl_stream!(self.stream.read(&mut self.buf[..]));
                     if len == 0 {
                         return Ok(0);
                     }
