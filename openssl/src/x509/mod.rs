@@ -434,7 +434,6 @@ impl<'ctx> X509<'ctx> {
     }
 }
 
-#[unsafe_destructor]
 impl<'ctx> Drop for X509<'ctx> {
     fn drop(&mut self) {
         if self.owned {

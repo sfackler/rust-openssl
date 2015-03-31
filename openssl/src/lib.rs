@@ -1,4 +1,4 @@
-#![feature(unsafe_destructor, core, io, std_misc, unique, collections)]
+#![feature(core, io, std_misc, unique, collections)]
 #![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/openssl")]
 
 #[macro_use]
