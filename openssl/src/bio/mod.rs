@@ -3,7 +3,6 @@ use std::io;
 use std::io::prelude::*;
 use std::ptr;
 use std::cmp;
-use std::num::Int;
 
 use ffi;
 use ssl::error::{SslError};
@@ -61,7 +60,7 @@ impl MemBio {
 
 impl Read for MemBio {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let len = cmp::min(<c_int as Int>::max_value() as usize, buf.len()) as c_int;
+        let len = cmp::min(c_int::max_value() as usize, buf.len()) as c_int;
         let ret = unsafe {
             ffi::BIO_read(self.bio, buf.as_ptr() as *mut c_void, len)
         };
@@ -83,7 +82,7 @@ impl Read for MemBio {
 
 impl Write for MemBio {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let len = cmp::min(<c_int as Int>::max_value() as usize, buf.len()) as c_int;
+        let len = cmp::min(c_int::max_value() as usize, buf.len()) as c_int;
         let ret = unsafe {
             ffi::BIO_write(self.bio, buf.as_ptr() as *const c_void, len)
         };

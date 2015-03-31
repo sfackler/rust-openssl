@@ -1,11 +1,10 @@
-use libc::{c_char, c_int, c_long, c_uint};
+use libc::{c_char, c_int, c_long, c_ulong, c_uint};
 use std::io;
 use std::io::prelude::*;
 use std::cmp::Ordering;
 use std::ffi::CString;
 use std::iter::repeat;
 use std::mem;
-use std::num::SignedInt;
 use std::ptr;
 
 use asn1::{Asn1Time};
@@ -287,8 +286,8 @@ impl X509Generator {
 
         // While OpenSSL is actually OK to have negative serials
         // other libraries (for example, Go crypto) can drop
-        // such certificates as invalid
-        res.abs()
+        // such certificates as invalid, so we clear the high bit
+        ((res as c_ulong) >> 1) as c_long
     }
 
     /// Generates a private key and a signed certificate and returns them

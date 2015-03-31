@@ -8,8 +8,6 @@ use std::io::prelude::*;
 use std::ffi::AsOsStr;
 use std::mem;
 use std::net;
-use std::num::FromPrimitive;
-use std::num::Int;
 use std::path::Path;
 use std::ptr;
 use std::sync::{Once, ONCE_INIT, Arc, Mutex};
@@ -549,18 +547,18 @@ impl Ssl {
     }
 
     fn read(&self, buf: &mut [u8]) -> c_int {
-        let len = cmp::min(<c_int as Int>::max_value() as usize, buf.len()) as c_int;
+        let len = cmp::min(c_int::max_value() as usize, buf.len()) as c_int;
         unsafe { ffi::SSL_read(*self.ssl, buf.as_ptr() as *mut c_void, len) }
     }
 
     fn write(&self, buf: &[u8]) -> c_int {
-        let len = cmp::min(<c_int as Int>::max_value() as usize, buf.len()) as c_int;
+        let len = cmp::min(c_int::max_value() as usize, buf.len()) as c_int;
         unsafe { ffi::SSL_write(*self.ssl, buf.as_ptr() as *const c_void, len) }
     }
 
     fn get_error(&self, ret: c_int) -> LibSslError {
         let err = unsafe { ffi::SSL_get_error(*self.ssl, ret) };
-        match FromPrimitive::from_isize(err as isize) {
+        match LibSslError::from_i32(err as i32) {
             Some(err) => err,
             None => unreachable!()
         }
@@ -622,18 +620,35 @@ impl Ssl {
     }
 }
 
-#[derive(FromPrimitive, Debug)]
-#[repr(i32)]
-enum LibSslError {
-    ErrorNone = ffi::SSL_ERROR_NONE,
-    ErrorSsl = ffi::SSL_ERROR_SSL,
-    ErrorWantRead = ffi::SSL_ERROR_WANT_READ,
-    ErrorWantWrite = ffi::SSL_ERROR_WANT_WRITE,
-    ErrorWantX509Lookup = ffi::SSL_ERROR_WANT_X509_LOOKUP,
-    ErrorSyscall = ffi::SSL_ERROR_SYSCALL,
-    ErrorZeroReturn = ffi::SSL_ERROR_ZERO_RETURN,
-    ErrorWantConnect = ffi::SSL_ERROR_WANT_CONNECT,
-    ErrorWantAccept = ffi::SSL_ERROR_WANT_ACCEPT,
+macro_rules! make_LibSslError {
+    ($($variant:ident = $value:ident),+) => {
+        #[derive(Debug)]
+        #[repr(i32)]
+        enum LibSslError {
+            $($variant = ffi::$value),+
+        }
+
+        impl LibSslError {
+            fn from_i32(val: i32) -> Option<LibSslError> {
+                match val {
+                    $(ffi::$value => Some(LibSslError::$variant),)+
+                    _ => None
+                }
+            }
+        }
+    }
+}
+
+make_LibSslError! {
+    ErrorNone = SSL_ERROR_NONE,
+    ErrorSsl = SSL_ERROR_SSL,
+    ErrorWantRead = SSL_ERROR_WANT_READ,
+    ErrorWantWrite = SSL_ERROR_WANT_WRITE,
+    ErrorWantX509Lookup = SSL_ERROR_WANT_X509_LOOKUP,
+    ErrorSyscall = SSL_ERROR_SYSCALL,
+    ErrorZeroReturn = SSL_ERROR_ZERO_RETURN,
+    ErrorWantConnect = SSL_ERROR_WANT_CONNECT,
+    ErrorWantAccept = SSL_ERROR_WANT_ACCEPT
 }
 
 /// A stream wrapper which handles SSL encryption for an underlying stream.
