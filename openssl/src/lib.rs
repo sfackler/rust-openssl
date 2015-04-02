@@ -1,4 +1,4 @@
-#![feature(core, std_misc, unique)]
+#![feature(unique)]
 #![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/openssl")]
 
 #[macro_use]

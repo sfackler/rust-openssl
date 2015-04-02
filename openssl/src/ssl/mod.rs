@@ -5,7 +5,6 @@ use std::ffi::{CStr, CString};
 use std::fmt;
 use std::io;
 use std::io::prelude::*;
-use std::ffi::AsOsStr;
 use std::mem;
 use std::net;
 use std::path::Path;
@@ -13,7 +12,7 @@ use std::ptr;
 use std::sync::{Once, ONCE_INIT, Arc, Mutex};
 use std::ops::{Deref, DerefMut};
 use std::cmp;
-use std::marker::Reflect;
+use std::any::Any;
 #[cfg(feature = "npn")]
 use libc::{c_uchar, c_uint};
 #[cfg(feature = "npn")]
@@ -132,7 +131,7 @@ lazy_static! {
 // Creates a static index for user data of type T
 // Registers a destructor for the data which will be called
 // when context is freed
-fn get_verify_data_idx<T: Reflect + 'static>() -> c_int {
+fn get_verify_data_idx<T: Any + 'static>() -> c_int {
     extern fn free_data_box<T>(_parent: *mut c_void, ptr: *mut c_void,
                                _ad: *mut ffi::CRYPTO_EX_DATA, _idx: c_int,
                                _argl: c_long, _argp: *mut c_void) {
@@ -199,7 +198,7 @@ extern fn raw_verify(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX)
 
 extern fn raw_verify_with_data<T>(preverify_ok: c_int,
                                   x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
-                                  where T: Reflect + 'static {
+                                  where T: Any + 'static {
     unsafe {
         let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
         let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
@@ -356,7 +355,7 @@ impl SslContext {
     pub fn set_verify_with_data<T>(&mut self, mode: SslVerifyMode,
                                    verify: VerifyCallbackData<T>,
                                    data: T)
-                                   where T: Reflect + 'static {
+                                   where T: Any + 'static {
         let data = Box::new(data);
         unsafe {
             ffi::SSL_CTX_set_ex_data(*self.ctx, VERIFY_IDX,
