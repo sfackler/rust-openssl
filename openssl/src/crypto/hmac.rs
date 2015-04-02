@@ -44,7 +44,7 @@ use self::State::*;
 /// let data = b"what do ya want for nothing?";
 /// let spec = b"\x75\x0c\x78\x3e\x6a\xb0\xb5\x03\xea\xa8\x6e\x31\x0a\x5d\xb7\x38";
 /// let res = hmac(Type::MD5, key, data);
-/// assert_eq!(spec, res);
+/// assert_eq!(res, spec);
 /// ```
 ///
 /// Use the `Write` trait to supply the input in chunks.
@@ -60,7 +60,7 @@ use self::State::*;
 /// h.write_all(data[0]);
 /// h.write_all(data[1]);
 /// let res = h.finish();
-/// assert_eq!(spec, res);
+/// assert_eq!(res, spec);
 /// ```
 pub struct HMAC {
     ctx: ffi::HMAC_CTX,
