@@ -71,8 +71,7 @@ impl Read for MemBio {
                 Ok(0)
             } else {
                 Err(io::Error::new(io::ErrorKind::Other,
-                                   "MemBio read error",
-                                   Some(format!("{:?}", SslError::get()))))
+                                   SslError::get()))
             }
         } else {
             Ok(ret as usize)
@@ -89,8 +88,7 @@ impl Write for MemBio {
 
         if ret < 0 {
                 Err(io::Error::new(io::ErrorKind::Other,
-                                   "MemBio write error",
-                                   Some(format!("{:?}", SslError::get()))))
+                                   SslError::get()))
         } else {
             Ok(ret as usize)
         }
