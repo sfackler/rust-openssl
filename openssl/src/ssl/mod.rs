@@ -808,7 +808,7 @@ impl<S: Read+Write> Read for SslStream<S> {
             Err(SslSessionClosed) => Ok(0),
             Err(StreamError(e)) => Err(e),
             Err(e @ OpenSslErrors(_)) => {
-                Err(io::Error::new(io::ErrorKind::Other, "OpenSSL error", Some(format!("{}", e))))
+                Err(io::Error::new(io::ErrorKind::Other, e))
             }
         }
     }
@@ -821,7 +821,7 @@ impl<S: Read+Write> Write for SslStream<S> {
             Err(SslSessionClosed) => Ok(0),
             Err(StreamError(e)) => return Err(e),
             Err(e @ OpenSslErrors(_)) => {
-                Err(io::Error::new(io::ErrorKind::Other, "OpenSSL error", Some(format!("{}", e))))
+                Err(io::Error::new(io::ErrorKind::Other, e))
             }
         }
     }

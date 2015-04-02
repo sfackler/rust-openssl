@@ -10,7 +10,7 @@ use std::io;
 use ffi;
 
 /// An SSL error
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum SslError {
     /// The underlying stream reported an error
     StreamError(io::Error),
