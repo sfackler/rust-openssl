@@ -49,11 +49,6 @@ pub struct EVP_MD_CTX {
     update: *mut c_void
 }
 
-impl Copy for EVP_MD_CTX {}
-impl Clone for EVP_MD_CTX {
-    fn clone(&self) -> EVP_MD_CTX { *self }
-}
-
 #[repr(C)]
 pub struct HMAC_CTX {
     md: *mut EVP_MD,
@@ -62,11 +57,6 @@ pub struct HMAC_CTX {
     o_ctx: EVP_MD_CTX,
     key_length: c_uint,
     key: [c_uchar; 128]
-}
-
-impl Copy for HMAC_CTX {}
-impl Clone for HMAC_CTX {
-    fn clone(&self) -> HMAC_CTX { *self }
 }
 
 #[repr(C)]
@@ -82,11 +72,6 @@ pub struct X509V3_CTX {
     // Maybe more here
 }
 
-impl Copy for X509V3_CTX {}
-impl Clone for X509V3_CTX {
-    fn clone(&self) -> X509V3_CTX { *self }
-}
-
 #[repr(C)]
 pub struct BIGNUM {
     pub d: *mut c_void,
@@ -94,11 +79,6 @@ pub struct BIGNUM {
     pub dmax: c_int,
     pub neg: c_int,
     pub flags: c_int,
-}
-
-impl Copy for BIGNUM {}
-impl Clone for BIGNUM {
-    fn clone(&self) -> BIGNUM { *self }
 }
 
 pub type CRYPTO_EX_new = extern "C" fn(parent: *mut c_void, ptr: *mut c_void,
