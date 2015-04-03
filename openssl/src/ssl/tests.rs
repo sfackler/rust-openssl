@@ -26,8 +26,6 @@ use crypto::pkey::PKey;
 use ssl::connected_socket::Connect;
 #[cfg(feature="dtlsv1")]
 use std::net::UdpSocket;
-use ssl::SSL_VERIFY_PEER;
-use x509::{X509StoreContext,X509};
 use crypto::pkey::PKey;
 
 #[cfg(feature="dtlsv1")]
@@ -47,11 +45,6 @@ mod udp {
     }
 }
 
-#[test]
-fn test_new_ctx() {
-    SslContext::new(PROTOCOL).unwrap();
-}
-
 macro_rules! run_test(
     ($module:ident, $blk:expr) => (
         #[cfg(test)]
@@ -67,7 +60,7 @@ macro_rules! run_test(
             use ssl::{SslContext, SslStream, VerifyCallback};
             #[cfg(feature="dtlsv1")]
             use connected_socket::Connect;
-            use ssl::SslVerifyMode::SSL_VERIFY_PEER;
+            use ssl::SSL_VERIFY_PEER;
             use crypto::hash::Type::SHA256;
             use x509::X509StoreContext;
             use serialize::hex::FromHex;
