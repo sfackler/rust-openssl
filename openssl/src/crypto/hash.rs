@@ -6,7 +6,7 @@ use std::io;
 use ffi;
 
 /// Message digest (hash) type.
-#[derive(Copy)]
+#[derive(Copy, Clone)]
 pub enum Type {
     MD5,
     SHA1,
@@ -51,7 +51,7 @@ impl Type {
     }
 }
 
-#[derive(PartialEq, Copy)]
+#[derive(PartialEq, Copy, Clone)]
 enum State {
     Reset,
     Updated,

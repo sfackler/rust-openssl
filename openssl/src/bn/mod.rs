@@ -8,7 +8,7 @@ use ssl::error::SslError;
 
 pub struct BigNum(*mut ffi::BIGNUM);
 
-#[derive(Copy)]
+#[derive(Copy, Clone)]
 #[repr(C)]
 pub enum RNGProperty {
     MsbMaybeZero = -1,
@@ -196,7 +196,7 @@ impl BigNum {
     pub fn div_word(&mut self, w: c_ulong) -> Result<c_ulong, SslError> {
         unsafe {
             let result = ffi::BN_div_word(self.raw(), w);
-            if result != -1 as c_ulong {
+            if result != !0 as c_ulong {
                 Ok(result)
             } else {
                 Err(SslError::get())
@@ -207,7 +207,7 @@ impl BigNum {
     pub fn mod_word(&self, w: c_ulong) -> Result<c_ulong, SslError> {
         unsafe {
             let result = ffi::BN_mod_word(self.raw(), w);
-            if result != -1 as c_ulong {
+            if result != !0 as c_ulong {
                 Ok(result)
             } else {
                 Err(SslError::get())

@@ -22,7 +22,7 @@ use std::io::prelude::*;
 use crypto::hash::Type;
 use ffi;
 
-#[derive(PartialEq, Copy)]
+#[derive(PartialEq, Copy, Clone)]
 enum State {
     Reset,
     Updated,
