@@ -1,6 +1,6 @@
 [package]
 name = "openssl"
-version = "0.5.4"
+version = "0.5.5"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
@@ -18,7 +18,7 @@ npn = ["openssl-sys/npn"]
 
 [dependencies.openssl-sys]
 path = "../openssl-sys"
-version = "0.5.4"
+version = "0.5.5"
 
 [dependencies]
 bitflags = "0.1.1"
