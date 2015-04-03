@@ -258,11 +258,11 @@ fn test_read() {
 fn test_connect_with_unilateral_npn() {
     let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
     let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SslVerifyPeer, None);
+    ctx.set_verify(SSL_VERIFY_PEER, None);
     ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
-        None => {}
-        Some(err) => panic!("Unexpected error {:?}", err)
+        Ok(_)=> {}
+        Err(err) => panic!("Unexpected error {:?}", err)
     }
     let stream = match SslStream::new(&ctx, stream) {
         Ok(stream) => stream,
@@ -282,11 +282,11 @@ fn test_connect_with_npn_successful_multiple_matching() {
     // NPN enabled.
     let stream = TcpStream::connect("127.0.0.1:15419").unwrap();
     let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SslVerifyPeer, None);
+    ctx.set_verify(SSL_VERIFY_PEER, None);
     ctx.set_npn_protocols(&[b"spdy/3.1", b"http/1.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
-        None => {}
-        Some(err) => panic!("Unexpected error {:?}", err)
+        Ok(_)=> {}
+        Err(err) => panic!("Unexpected error {:?}", err)
     }
     let stream = match SslStream::new(&ctx, stream) {
         Ok(stream) => stream,
@@ -307,11 +307,11 @@ fn test_connect_with_npn_successful_single_match() {
     // NPN enabled.
     let stream = TcpStream::connect("127.0.0.1:15419").unwrap();
     let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SslVerifyPeer, None);
+    ctx.set_verify(SSL_VERIFY_PEER, None);
     ctx.set_npn_protocols(&[b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
-        None => {}
-        Some(err) => panic!("Unexpected error {:?}", err)
+        Ok(_)=> {}
+        Err(err) => panic!("Unexpected error {:?}", err)
     }
     let stream = match SslStream::new(&ctx, stream) {
         Ok(stream) => stream,
@@ -332,12 +332,12 @@ fn test_npn_server_advertise_multiple() {
     // We create a different context instance for the server...
     let listener_ctx = {
         let mut ctx = SslContext::new(Sslv23).unwrap();
-        ctx.set_verify(SslVerifyPeer, None);
+        ctx.set_verify(SSL_VERIFY_PEER, None);
         ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]);
-        ctx.set_certificate_file(
-                &Path::new("test/cert.pem"), X509FileType::PEM);
+        assert!(ctx.set_certificate_file(
+                &Path::new("test/cert.pem"), X509FileType::PEM).is_ok());
         ctx.set_private_key_file(
-                &Path::new("test/key.pem"), X509FileType::PEM);
+                &Path::new("test/key.pem"), X509FileType::PEM).unwrap();
         ctx
     };
     // Have the listener wait on the connection in a different thread.
@@ -347,11 +347,11 @@ fn test_npn_server_advertise_multiple() {
     });
 
     let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SslVerifyPeer, None);
+    ctx.set_verify(SSL_VERIFY_PEER, None);
     ctx.set_npn_protocols(&[b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
-        None => {}
-        Some(err) => panic!("Unexpected error {:?}", err)
+        Ok(_)=> {}
+        Err(err) => panic!("Unexpected error {:?}", err)
     }
     // Now connect to the socket and make sure the protocol negotiation works...
     let stream = TcpStream::connect(localhost).unwrap();
