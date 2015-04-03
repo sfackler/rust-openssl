@@ -9,7 +9,7 @@ use crypto::hash::Type as HashType;
 use ffi;
 use ssl::error::{SslError, StreamError};
 
-#[derive(Copy)]
+#[derive(Copy, Clone)]
 enum Parts {
     Neither,
     Public,
@@ -17,7 +17,7 @@ enum Parts {
 }
 
 /// Represents a role an asymmetric key might be appropriate for.
-#[derive(Copy)]
+#[derive(Copy, Clone)]
 pub enum Role {
     Encrypt,
     Decrypt,
@@ -26,7 +26,7 @@ pub enum Role {
 }
 
 /// Type of encryption padding to use.
-#[derive(Copy)]
+#[derive(Copy, Clone)]
 pub enum EncryptionPadding {
     OAEP,
     PKCS1v15

@@ -20,7 +20,7 @@ use ssl::error::{SslError, StreamError};
 #[cfg(test)]
 mod tests;
 
-#[derive(Copy)]
+#[derive(Copy, Clone)]
 #[repr(i32)]
 pub enum X509FileType {
     PEM = ffi::X509_FILETYPE_PEM,
@@ -449,7 +449,7 @@ pub struct X509Name<'x> {
 
 macro_rules! make_validation_error(
     ($ok_val:ident, $($name:ident = $val:ident,)+) => (
-        #[derive(Copy)]
+        #[derive(Copy, Clone)]
         pub enum X509ValidationError {
             $($name,)+
             X509UnknownError(c_int)
