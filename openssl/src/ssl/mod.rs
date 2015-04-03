@@ -350,7 +350,7 @@ impl SslContext {
                                      mem::transmute(verify));
             let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
                                 raw_verify;
-            ffi::SSL_CTX_set_verify(*self.ctx, mode.bits as c_int, Some(f));
+            ffi::SSL_CTX_set_verify(self.ctx, mode.bits as c_int, Some(f));
         }
     }
 
@@ -370,7 +370,7 @@ impl SslContext {
                                      mem::transmute(data));
             let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
                                 raw_verify_with_data::<T>;
-            ffi::SSL_CTX_set_verify(*self.ctx, mode.bits as c_int, Some(f));
+            ffi::SSL_CTX_set_verify(self.ctx, mode.bits as c_int, Some(f));
         }
     }
 
@@ -405,7 +405,7 @@ impl SslContext {
     pub fn set_certificate(&mut self, cert: &X509) -> Result<(),SslError> {
         wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_use_certificate(*self.ctx, cert.get_handle())
+                ffi::SSL_CTX_use_certificate(self.ctx, cert.get_handle())
             })
     }
 
@@ -414,7 +414,7 @@ impl SslContext {
     pub fn add_extra_chain_cert(&mut self, cert: &X509) -> Result<(),SslError> {
         wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_add_extra_chain_cert(*self.ctx, cert.get_handle()) as c_int
+                ffi::SSL_CTX_add_extra_chain_cert(self.ctx, cert.get_handle()) as c_int
             })
     }
 
@@ -432,7 +432,7 @@ impl SslContext {
     pub fn set_private_key(&mut self, key: &PKey) -> Result<(),SslError> {
         wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_use_PrivateKey(*self.ctx, key.get_handle())
+                ffi::SSL_CTX_use_PrivateKey(self.ctx, key.get_handle())
             })
     }
 
@@ -440,7 +440,7 @@ impl SslContext {
     pub fn check_private_key(&mut self) -> Result<(),SslError> {
         wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_check_private_key(*self.ctx)
+                ffi::SSL_CTX_check_private_key(self.ctx)
             })
     }
 
