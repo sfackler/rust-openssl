@@ -306,8 +306,11 @@ fn wrap_ssl_result(res: c_int) -> Option<SslError> {
 
 /// An SSL context object
 pub struct SslContext {
-    ctx: ptr::Unique<ffi::SSL_CTX>
+    ctx: *mut ffi::SSL_CTX
 }
+
+unsafe impl Send for SslContext {}
+unsafe impl Sync for SslContext {}
 
 // TODO: add useful info here
 impl fmt::Debug for SslContext {
@@ -318,7 +321,7 @@ impl fmt::Debug for SslContext {
 
 impl Drop for SslContext {
     fn drop(&mut self) {
-        unsafe { ffi::SSL_CTX_free(*self.ctx) }
+        unsafe { ffi::SSL_CTX_free(self.ctx) }
     }
 }
 
@@ -332,19 +335,18 @@ impl SslContext {
             return Err(SslError::get());
         }
 
-        let ctx = unsafe { SslContext { ctx: ptr::Unique::new(ctx) } };
-        Ok(ctx)
+        Ok(SslContext { ctx: ctx })
     }
 
     /// Configures the certificate verification method for new connections.
     pub fn set_verify(&mut self, mode: SslVerifyMode,
                       verify: Option<VerifyCallback>) {
         unsafe {
-            ffi::SSL_CTX_set_ex_data(*self.ctx, VERIFY_IDX,
+            ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX,
                                      mem::transmute(verify));
             let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
                                 raw_verify;
-            ffi::SSL_CTX_set_verify(*self.ctx, mode as c_int, Some(f));
+            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(f));
         }
     }
 
@@ -358,20 +360,20 @@ impl SslContext {
                                    where T: Any + 'static {
         let data = Box::new(data);
         unsafe {
-            ffi::SSL_CTX_set_ex_data(*self.ctx, VERIFY_IDX,
+            ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX,
                                      mem::transmute(Some(verify)));
-            ffi::SSL_CTX_set_ex_data(*self.ctx, get_verify_data_idx::<T>(),
+            ffi::SSL_CTX_set_ex_data(self.ctx, get_verify_data_idx::<T>(),
                                      mem::transmute(data));
             let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
                                 raw_verify_with_data::<T>;
-            ffi::SSL_CTX_set_verify(*self.ctx, mode as c_int, Some(f));
+            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(f));
         }
     }
 
     /// Sets verification depth
     pub fn set_verify_depth(&mut self, depth: u32) {
         unsafe {
-            ffi::SSL_CTX_set_verify_depth(*self.ctx, depth as c_int);
+            ffi::SSL_CTX_set_verify_depth(self.ctx, depth as c_int);
         }
     }
 
@@ -381,7 +383,7 @@ impl SslContext {
         let file = CString::new(file.as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_load_verify_locations(*self.ctx, file.as_ptr(), ptr::null())
+                ffi::SSL_CTX_load_verify_locations(self.ctx, file.as_ptr(), ptr::null())
             })
     }
 
@@ -391,7 +393,7 @@ impl SslContext {
         let file = CString::new(file.as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_use_certificate_file(*self.ctx, file.as_ptr(), file_type as c_int)
+                ffi::SSL_CTX_use_certificate_file(self.ctx, file.as_ptr(), file_type as c_int)
             })
     }
 
@@ -401,7 +403,7 @@ impl SslContext {
         let file = CString::new(file.as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_use_PrivateKey_file(*self.ctx, file.as_ptr(), file_type as c_int)
+                ffi::SSL_CTX_use_PrivateKey_file(self.ctx, file.as_ptr(), file_type as c_int)
             })
     }
 
@@ -409,21 +411,21 @@ impl SslContext {
         wrap_ssl_result(
             unsafe {
                 let cipher_list = CString::new(cipher_list.as_bytes()).unwrap();
-                ffi::SSL_CTX_set_cipher_list(*self.ctx, cipher_list.as_ptr())
+                ffi::SSL_CTX_set_cipher_list(self.ctx, cipher_list.as_ptr())
             })
     }
 
     pub fn set_options(&mut self, option: SslContextOptions) -> SslContextOptions {
         let raw_bits = option.bits();
         let ret = unsafe {
-            ffi::SSL_CTX_set_options(*self.ctx, raw_bits)
+            ffi::SSL_CTX_set_options(self.ctx, raw_bits)
         };
         SslContextOptions::from_bits(ret).unwrap()
     }
 
     pub fn get_options(&mut self) -> SslContextOptions {
         let ret = unsafe {
-            ffi::SSL_CTX_get_options(*self.ctx)
+            ffi::SSL_CTX_get_options(self.ctx)
         };
         SslContextOptions::from_bits(ret).unwrap()
     }
@@ -431,7 +433,7 @@ impl SslContext {
     pub fn clear_options(&mut self, option: SslContextOptions) -> SslContextOptions {
         let raw_bits = option.bits();
         let ret = unsafe {
-            ffi::SSL_CTX_clear_options(*self.ctx, raw_bits)
+            ffi::SSL_CTX_clear_options(self.ctx, raw_bits)
         };
         SslContextOptions::from_bits(ret).unwrap()
     }
@@ -456,15 +458,15 @@ impl SslContext {
         unsafe {
             // Attach the protocol list to the OpenSSL context structure,
             // so that we can refer to it within the callback.
-            ffi::SSL_CTX_set_ex_data(*self.ctx, get_npn_protos_idx(),
+            ffi::SSL_CTX_set_ex_data(self.ctx, get_npn_protos_idx(),
                                      mem::transmute(protocols));
             // Now register the callback that performs the default protocol
             // matching based on the client-supported list of protocols that
             // has been saved.
-            ffi::SSL_CTX_set_next_proto_select_cb(*self.ctx, raw_next_proto_select_cb, ptr::null_mut());
+            ffi::SSL_CTX_set_next_proto_select_cb(self.ctx, raw_next_proto_select_cb, ptr::null_mut());
             // Also register the callback to advertise these protocols, if a server socket is
             // created with the context.
-            ffi::SSL_CTX_set_next_protos_advertised_cb(*self.ctx, raw_next_protos_advertise_cb, ptr::null_mut());
+            ffi::SSL_CTX_set_next_protos_advertised_cb(self.ctx, raw_next_protos_advertise_cb, ptr::null_mut());
         }
     }
 }
@@ -490,8 +492,11 @@ impl<'ssl> DerefMut for MemBioRef<'ssl> {
 }
 
 pub struct Ssl {
-    ssl: ptr::Unique<ffi::SSL>
+    ssl: *mut ffi::SSL
 }
+
+unsafe impl Send for Ssl {}
+unsafe impl Sync for Ssl {}
 
 // TODO: put useful information here
 impl fmt::Debug for Ssl {
@@ -502,31 +507,31 @@ impl fmt::Debug for Ssl {
 
 impl Drop for Ssl {
     fn drop(&mut self) {
-        unsafe { ffi::SSL_free(*self.ssl) }
+        unsafe { ffi::SSL_free(self.ssl) }
     }
 }
 
 impl Ssl {
     pub fn new(ctx: &SslContext) -> Result<Ssl, SslError> {
-        let ssl = unsafe { ffi::SSL_new(*ctx.ctx) };
+        let ssl = unsafe { ffi::SSL_new(ctx.ctx) };
         if ssl == ptr::null_mut() {
             return Err(SslError::get());
         }
-        let ssl = unsafe { Ssl { ssl: ptr::Unique::new(ssl) } };
+        let ssl = Ssl { ssl: ssl };
 
         let rbio = try!(MemBio::new());
         let wbio = try!(MemBio::new());
 
-        unsafe { ffi::SSL_set_bio(*ssl.ssl, rbio.unwrap(), wbio.unwrap()) }
+        unsafe { ffi::SSL_set_bio(ssl.ssl, rbio.unwrap(), wbio.unwrap()) }
         Ok(ssl)
     }
 
     fn get_rbio<'a>(&'a self) -> MemBioRef<'a> {
-        unsafe { self.wrap_bio(ffi::SSL_get_rbio(*self.ssl)) }
+        unsafe { self.wrap_bio(ffi::SSL_get_rbio(self.ssl)) }
     }
 
     fn get_wbio<'a>(&'a self) -> MemBioRef<'a> {
-        unsafe { self.wrap_bio(ffi::SSL_get_wbio(*self.ssl)) }
+        unsafe { self.wrap_bio(ffi::SSL_get_wbio(self.ssl)) }
     }
 
     fn wrap_bio<'a>(&'a self, bio: *mut ffi::BIO) -> MemBioRef<'a> {
@@ -538,25 +543,25 @@ impl Ssl {
     }
 
     fn connect(&self) -> c_int {
-        unsafe { ffi::SSL_connect(*self.ssl) }
+        unsafe { ffi::SSL_connect(self.ssl) }
     }
 
     fn accept(&self) -> c_int {
-        unsafe { ffi::SSL_accept(*self.ssl) }
+        unsafe { ffi::SSL_accept(self.ssl) }
     }
 
     fn read(&self, buf: &mut [u8]) -> c_int {
         let len = cmp::min(c_int::max_value() as usize, buf.len()) as c_int;
-        unsafe { ffi::SSL_read(*self.ssl, buf.as_ptr() as *mut c_void, len) }
+        unsafe { ffi::SSL_read(self.ssl, buf.as_ptr() as *mut c_void, len) }
     }
 
     fn write(&self, buf: &[u8]) -> c_int {
         let len = cmp::min(c_int::max_value() as usize, buf.len()) as c_int;
-        unsafe { ffi::SSL_write(*self.ssl, buf.as_ptr() as *const c_void, len) }
+        unsafe { ffi::SSL_write(self.ssl, buf.as_ptr() as *const c_void, len) }
     }
 
     fn get_error(&self, ret: c_int) -> LibSslError {
-        let err = unsafe { ffi::SSL_get_error(*self.ssl, ret) };
+        let err = unsafe { ffi::SSL_get_error(self.ssl, ret) };
         match LibSslError::from_i32(err as i32) {
             Some(err) => err,
             None => unreachable!()
@@ -571,7 +576,7 @@ impl Ssl {
                 //          SSL_ctrl(s,SSL_CTRL_SET_TLSEXT_HOSTNAME,TLSEXT_NAMETYPE_host_name,(char *)name)
 
                 let hostname = CString::new(hostname.as_bytes()).unwrap();
-                ffi::SSL_ctrl(*self.ssl, ffi::SSL_CTRL_SET_TLSEXT_HOSTNAME,
+                ffi::SSL_ctrl(self.ssl, ffi::SSL_CTRL_SET_TLSEXT_HOSTNAME,
                               ffi::TLSEXT_NAMETYPE_host_name,
                               hostname.as_ptr() as *mut c_void)
         };
@@ -586,7 +591,7 @@ impl Ssl {
 
     pub fn get_peer_certificate(&self) -> Option<X509> {
         unsafe {
-            let ptr = ffi::SSL_get_peer_certificate(*self.ssl);
+            let ptr = ffi::SSL_get_peer_certificate(self.ssl);
             if ptr.is_null() {
                 None
             } else {
@@ -608,7 +613,7 @@ impl Ssl {
             let mut len: c_uint = 0;
             // Get the negotiated protocol from the SSL instance.
             // `data` will point at a `c_uchar` array; `len` will contain the length of this array.
-            ffi::SSL_get0_next_proto_negotiated(*self.ssl, &mut data, &mut len);
+            ffi::SSL_get0_next_proto_negotiated(self.ssl, &mut data, &mut len);
 
             if data.is_null() {
                 None
@@ -744,7 +749,7 @@ impl<S: Read+Write> SslStream<S> {
     fn in_retry_wrapper<F>(&mut self, mut blk: F)
             -> Result<c_int, SslError> where F: FnMut(&Ssl) -> c_int {
         loop {
-            let ret = blk(&*self.ssl);
+            let ret = blk(&self.ssl);
             if ret > 0 {
                 return Ok(ret);
             }
@@ -775,7 +780,7 @@ impl<S: Read+Write> SslStream<S> {
     /// either None, indicating no compression is in use, or a string
     /// with the compression name.
     pub fn get_compression(&self) -> Option<String> {
-        let ptr = unsafe { ffi::SSL_get_current_compression(*self.ssl.ssl) };
+        let ptr = unsafe { ffi::SSL_get_current_compression(self.ssl.ssl) };
         if ptr == ptr::null() {
             return None;
         }
