@@ -1,4 +1,5 @@
 use libc::{c_int, c_uint, c_ulong};
+use std::io;
 use std::io::prelude::*;
 use std::iter::repeat;
 use std::mem;
@@ -66,6 +67,22 @@ impl PKey {
                 evp: ffi::EVP_PKEY_new(),
                 parts: Parts::Neither,
             }
+        }
+    }
+
+    /// Reads private key from PEM, takes ownership of handle
+    pub fn private_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError> where R: Read {
+        let mut mem_bio = try!(MemBio::new());
+        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+
+        unsafe {
+            let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.get_handle(),
+                                                                 ptr::null_mut(),
+                                                                 None, ptr::null_mut()));
+            Ok(PKey {
+                evp:   evp,
+                parts: Parts::Both,
+            })
         }
     }
 
@@ -335,6 +352,8 @@ impl Drop for PKey {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+    use std::fs::File;
     use crypto::hash::Type::{MD5, SHA1};
 
     #[test]
@@ -371,6 +390,16 @@ mod tests {
         assert!(k1.can(super::Role::Decrypt));
         assert!(k1.can(super::Role::Verify));
         assert!(k1.can(super::Role::Sign));
+    }
+
+    #[test]
+    fn test_private_key_from_pem() {
+        let key_path = Path::new("test/key.pem");
+        let mut file = File::open(&key_path)
+            .ok()
+            .expect("Failed to open `test/key.pem`");
+
+        super::PKey::private_key_from_pem(&mut file).unwrap();
     }
 
     #[test]

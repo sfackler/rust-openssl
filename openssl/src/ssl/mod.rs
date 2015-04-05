@@ -22,6 +22,7 @@ use bio::{MemBio};
 use ffi;
 use ssl::error::{SslError, SslSessionClosed, StreamError, OpenSslErrors};
 use x509::{X509StoreContext, X509FileType, X509};
+use crypto::pkey::PKey;
 
 pub mod error;
 #[cfg(test)]
@@ -115,13 +116,16 @@ impl SslMethod {
 }
 
 /// Determines the type of certificate verification used
-#[derive(Copy, Clone, Debug)]
-#[repr(i32)]
-pub enum SslVerifyMode {
-    /// Verify that the server's certificate is trusted
-    SslVerifyPeer = ffi::SSL_VERIFY_PEER,
-    /// Do not verify the server's certificate
-    SslVerifyNone = ffi::SSL_VERIFY_NONE
+bitflags! {
+    flags SslVerifyMode: i32 {
+        /// Verify that the server's certificate is trusted
+        const SSL_VERIFY_PEER = ffi::SSL_VERIFY_PEER,
+        /// Do not verify the server's certificate
+        const SSL_VERIFY_NONE = ffi::SSL_VERIFY_NONE,
+        /// Terminate handshake if client did not return a certificate.
+        /// Use together with SSL_VERIFY_PEER.
+        const SSL_VERIFY_FAIL_IF_NO_PEER_CERT = ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+    }
 }
 
 lazy_static! {
@@ -296,11 +300,11 @@ pub type VerifyCallbackData<T> = fn(preverify_ok: bool,
 
 // FIXME: macro may be instead of inlining?
 #[inline]
-fn wrap_ssl_result(res: c_int) -> Option<SslError> {
+fn wrap_ssl_result(res: c_int) -> Result<(),SslError> {
     if res == 0 {
-        Some(SslError::get())
+        Err(SslError::get())
     } else {
-        None
+        Ok(())
     }
 }
 
@@ -346,7 +350,7 @@ impl SslContext {
                                      mem::transmute(verify));
             let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
                                 raw_verify;
-            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(f));
+            ffi::SSL_CTX_set_verify(self.ctx, mode.bits as c_int, Some(f));
         }
     }
 
@@ -366,7 +370,7 @@ impl SslContext {
                                      mem::transmute(data));
             let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
                                 raw_verify_with_data::<T>;
-            ffi::SSL_CTX_set_verify(self.ctx, mode as c_int, Some(f));
+            ffi::SSL_CTX_set_verify(self.ctx, mode.bits as c_int, Some(f));
         }
     }
 
@@ -379,7 +383,7 @@ impl SslContext {
 
     #[allow(non_snake_case)]
     /// Specifies the file that contains trusted CA certificates.
-    pub fn set_CA_file(&mut self, file: &Path) -> Option<SslError> {
+    pub fn set_CA_file(&mut self, file: &Path) -> Result<(),SslError> {
         let file = CString::new(file.as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(
             unsafe {
@@ -389,7 +393,7 @@ impl SslContext {
 
     /// Specifies the file that contains certificate
     pub fn set_certificate_file(&mut self, file: &Path,
-                                file_type: X509FileType) -> Option<SslError> {
+                                file_type: X509FileType) -> Result<(),SslError> {
         let file = CString::new(file.as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(
             unsafe {
@@ -397,9 +401,26 @@ impl SslContext {
             })
     }
 
+    /// Specifies the certificate
+    pub fn set_certificate(&mut self, cert: &X509) -> Result<(),SslError> {
+        wrap_ssl_result(
+            unsafe {
+                ffi::SSL_CTX_use_certificate(self.ctx, cert.get_handle())
+            })
+    }
+
+    /// Adds a certificate to the certificate chain presented together with the
+    /// certificate specified using set_certificate()
+    pub fn add_extra_chain_cert(&mut self, cert: &X509) -> Result<(),SslError> {
+        wrap_ssl_result(
+            unsafe {
+                ffi::SSL_CTX_add_extra_chain_cert(self.ctx, cert.get_handle()) as c_int
+            })
+    }
+
     /// Specifies the file that contains private key
     pub fn set_private_key_file(&mut self, file: &Path,
-                                file_type: X509FileType) -> Option<SslError> {
+                                file_type: X509FileType) -> Result<(),SslError> {
         let file = CString::new(file.as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(
             unsafe {
@@ -407,7 +428,23 @@ impl SslContext {
             })
     }
 
-    pub fn set_cipher_list(&mut self, cipher_list: &str) -> Option<SslError> {
+    /// Specifies the private key
+    pub fn set_private_key(&mut self, key: &PKey) -> Result<(),SslError> {
+        wrap_ssl_result(
+            unsafe {
+                ffi::SSL_CTX_use_PrivateKey(self.ctx, key.get_handle())
+            })
+    }
+
+    /// Check consistency of private key and certificate
+    pub fn check_private_key(&mut self) -> Result<(),SslError> {
+        wrap_ssl_result(
+            unsafe {
+                ffi::SSL_CTX_check_private_key(self.ctx)
+            })
+    }
+
+    pub fn set_cipher_list(&mut self, cipher_list: &str) -> Result<(),SslError> {
         wrap_ssl_result(
             unsafe {
                 let cipher_list = CString::new(cipher_list.as_bytes()).unwrap();
