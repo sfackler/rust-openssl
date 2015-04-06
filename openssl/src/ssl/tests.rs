@@ -23,11 +23,7 @@ use x509::X509;
 use crypto::pkey::PKey;
 
 #[cfg(feature="dtlsv1")]
-use ssl::connected_socket::Connect;
-#[cfg(feature="dtlsv1")]
 use std::net::UdpSocket;
-use crypto::pkey::PKey;
-
 #[cfg(feature="dtlsv1")]
 use ssl::SslMethod::Dtlsv1;
 #[cfg(feature="dtlsv1")]
@@ -64,7 +60,6 @@ macro_rules! run_test(
             use crypto::hash::Type::SHA256;
             use x509::X509StoreContext;
             use serialize::hex::FromHex;
-            use std::time::duration::Duration;
             
             #[test]
             fn sslv23() {
@@ -76,7 +71,8 @@ macro_rules! run_test(
             #[cfg(feature="dtlsv1")]
             fn dtlsv1() {
                 let sock = UdpSocket::bind("127.0.0.1:0").unwrap();
-                let stream = sock.connect(udp::next_server().as_slice()).unwrap();
+                let server = udp::next_server();
+                let stream = sock.connect(&server[..]).unwrap();
 
                 $blk(SslMethod::Dtlsv1, stream);
             }
@@ -433,7 +429,7 @@ fn test_npn_server_advertise_multiple() {
 #[cfg(test)]
 mod dtlsv1 {
     use serialize::hex::FromHex;
-    use std::old_io::net::tcp::TcpStream;
+    use std::net::TcpStream;
     use std::old_io::{Writer};
     use std::thread;
 
@@ -441,7 +437,7 @@ mod dtlsv1 {
     use ssl::SslMethod;
     use ssl::SslMethod::Dtlsv1;
     use ssl::{SslContext, SslStream, VerifyCallback};
-    use ssl::SslVerifyMode::SSL_VERIFY_PEER;
+    use ssl::SSL_VERIFY_PEER;
     use x509::{X509StoreContext};
 
     const PROTOCOL:SslMethod = Dtlsv1;
@@ -456,7 +452,8 @@ mod dtlsv1 {
 #[cfg(feature = "dtlsv1")]
 fn test_read_dtlsv1() {
     let sock = UdpSocket::bind("127.0.0.1:0").unwrap();
-    let stream = sock.connect(udp::next_server().as_slice()).unwrap();
+    let server = udp::next_server();
+    let stream = sock.connect(&server[..]).unwrap();
 
     let mut stream = SslStream::new(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
     let mut buf = [0u8;100];
