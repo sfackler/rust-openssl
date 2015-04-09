@@ -45,7 +45,6 @@ macro_rules! run_test(
     ($module:ident, $blk:expr) => (
         #[cfg(test)]
         mod $module {
-            use super::udp;
             use std::io;
             use std::io::prelude::*;
             use std::path::Path;
@@ -54,8 +53,6 @@ macro_rules! run_test(
             use ssl;
             use ssl::SslMethod;
             use ssl::{SslContext, SslStream, VerifyCallback};
-            #[cfg(feature="dtlsv1")]
-            use connected_socket::Connect;
             use ssl::SSL_VERIFY_PEER;
             use crypto::hash::Type::SHA256;
             use x509::X509StoreContext;
@@ -70,8 +67,10 @@ macro_rules! run_test(
             #[test]
             #[cfg(feature="dtlsv1")]
             fn dtlsv1() {
+                use connected_socket::Connect;
+
                 let sock = UdpSocket::bind("127.0.0.1:0").unwrap();
-                let server = udp::next_server();
+                let server = super::udp::next_server();
                 let stream = sock.connect(&server[..]).unwrap();
 
                 $blk(SslMethod::Dtlsv1, stream);
