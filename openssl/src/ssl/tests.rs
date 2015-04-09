@@ -1,4 +1,5 @@
-use serialize::hex::FromHex;
+#![allow(unused_imports)]
+
 use std::net::TcpStream;
 use std::io;
 use std::io::prelude::*;
@@ -11,6 +12,7 @@ use std::fs::File;
 
 use crypto::hash::Type::{SHA256};
 use ssl;
+use ssl::SslMethod;
 use ssl::SslMethod::Sslv23;
 use ssl::{SslContext, SslStream, VerifyCallback};
 use ssl::SSL_VERIFY_PEER;
@@ -20,33 +22,86 @@ use x509::X509FileType;
 use x509::X509;
 use crypto::pkey::PKey;
 
-#[test]
-fn test_new_ctx() {
-    SslContext::new(Sslv23).unwrap();
+#[cfg(feature="dtlsv1")]
+use std::net::UdpSocket;
+#[cfg(feature="dtlsv1")]
+use ssl::SslMethod::Dtlsv1;
+#[cfg(feature="dtlsv1")]
+use connected_socket::Connect;
+
+#[cfg(test)]
+mod udp {
+    static mut udp_port:u16 = 15410;
+
+    pub fn next_server<'a>() -> String {
+        unsafe {
+            udp_port += 1;
+            format!("127.0.0.1:{}", udp_port)
+        }
+    }
 }
 
-#[test]
-fn test_new_sslstream() {
-    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
-    SslStream::new(&SslContext::new(Sslv23).unwrap(), stream).unwrap();
-}
+macro_rules! run_test(
+    ($module:ident, $blk:expr) => (
+        #[cfg(test)]
+        mod $module {
+            use super::udp;
+            use std::io;
+            use std::io::prelude::*;
+            use std::path::Path;
+            use std::net::UdpSocket;
+            use std::net::TcpStream;
+            use ssl;
+            use ssl::SslMethod;
+            use ssl::{SslContext, SslStream, VerifyCallback};
+            #[cfg(feature="dtlsv1")]
+            use connected_socket::Connect;
+            use ssl::SSL_VERIFY_PEER;
+            use crypto::hash::Type::SHA256;
+            use x509::X509StoreContext;
+            use serialize::hex::FromHex;
+            
+            #[test]
+            fn sslv23() {
+                let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
+                $blk(SslMethod::Sslv23, stream);
+            }
+            
+            #[test]
+            #[cfg(feature="dtlsv1")]
+            fn dtlsv1() {
+                let sock = UdpSocket::bind("127.0.0.1:0").unwrap();
+                let server = udp::next_server();
+                let stream = sock.connect(&server[..]).unwrap();
 
-#[test]
-fn test_verify_untrusted() {
-    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
-    let mut ctx = SslContext::new(Sslv23).unwrap();
+                $blk(SslMethod::Dtlsv1, stream);
+            }
+        }
+    );
+);
+
+run_test!(new_ctx, |method, _| {
+    SslContext::new(method).unwrap();
+});
+
+run_test!(new_sslstream, |method, stream| {
+    SslStream::new(&SslContext::new(method).unwrap(), stream).unwrap();
+});
+
+run_test!(verify_untrusted, |method, stream| {
+    let mut ctx = SslContext::new(method).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, None);
+
     match SslStream::new(&ctx, stream) {
         Ok(_) => panic!("expected failure"),
         Err(err) => println!("error {:?}", err)
     }
-}
+});
 
-#[test]
-fn test_verify_trusted() {
-    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
-    let mut ctx = SslContext::new(Sslv23).unwrap();
+run_test!(verify_trusted, |method, stream| {
+    let mut ctx = SslContext::new(method).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, None);
+
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
@@ -55,41 +110,41 @@ fn test_verify_trusted() {
         Ok(_) => (),
         Err(err) => panic!("Expected success, got {:?}", err)
     }
-}
+});
 
-#[test]
-fn test_verify_untrusted_callback_override_ok() {
+run_test!(verify_untrusted_callback_override_ok, |method, stream| {
     fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
         true
     }
-    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
-    let mut ctx = SslContext::new(Sslv23).unwrap();
+
+    let mut ctx = SslContext::new(method).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
+
     match SslStream::new(&ctx, stream) {
         Ok(_) => (),
         Err(err) => panic!("Expected success, got {:?}", err)
     }
-}
+});
 
-#[test]
-fn test_verify_untrusted_callback_override_bad() {
+run_test!(verify_untrusted_callback_override_bad, |method, stream| {
     fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
         false
     }
-    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
-    let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
-    assert!(SslStream::new(&ctx, stream).is_err());
-}
 
-#[test]
-fn test_verify_trusted_callback_override_ok() {
+    let mut ctx = SslContext::new(method).unwrap();
+    ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
+
+    assert!(SslStream::new(&ctx, stream).is_err());
+});
+
+run_test!(verify_trusted_callback_override_ok, |method, stream| {
     fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
         true
     }
-    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
-    let mut ctx = SslContext::new(Sslv23).unwrap();
+
+    let mut ctx = SslContext::new(method).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
+
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
@@ -98,65 +153,64 @@ fn test_verify_trusted_callback_override_ok() {
         Ok(_) => (),
         Err(err) => panic!("Expected success, got {:?}", err)
     }
-}
+});
 
-#[test]
-fn test_verify_trusted_callback_override_bad() {
+run_test!(verify_trusted_callback_override_bad, |method, stream| {
     fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
         false
     }
-    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
-    let mut ctx = SslContext::new(Sslv23).unwrap();
+
+    let mut ctx = SslContext::new(method).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
+
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
     }
     assert!(SslStream::new(&ctx, stream).is_err());
-}
+});
 
-#[test]
-fn test_verify_callback_load_certs() {
+run_test!(verify_callback_load_certs, |method, stream| {
     fn callback(_preverify_ok: bool, x509_ctx: &X509StoreContext) -> bool {
         assert!(x509_ctx.get_current_cert().is_some());
         true
     }
-    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
-    let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
-    assert!(SslStream::new(&ctx, stream).is_ok());
-}
 
-#[test]
-fn test_verify_trusted_get_error_ok() {
+    let mut ctx = SslContext::new(method).unwrap();
+    ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
+
+    assert!(SslStream::new(&ctx, stream).is_ok());
+});
+
+run_test!(verify_trusted_get_error_ok, |method, stream| {
     fn callback(_preverify_ok: bool, x509_ctx: &X509StoreContext) -> bool {
         assert!(x509_ctx.get_error().is_none());
         true
     }
-    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
-    let mut ctx = SslContext::new(Sslv23).unwrap();
+
+    let mut ctx = SslContext::new(method).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
+
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
     }
     assert!(SslStream::new(&ctx, stream).is_ok());
-}
+});
 
-#[test]
-fn test_verify_trusted_get_error_err() {
+run_test!(verify_trusted_get_error_err, |method, stream| {
     fn callback(_preverify_ok: bool, x509_ctx: &X509StoreContext) -> bool {
         assert!(x509_ctx.get_error().is_some());
         false
     }
-    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
-    let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
-    assert!(SslStream::new(&ctx, stream).is_err());
-}
 
-#[test]
-fn test_verify_callback_data() {
+    let mut ctx = SslContext::new(method).unwrap();
+    ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
+
+    assert!(SslStream::new(&ctx, stream).is_err());
+});
+
+run_test!(verify_callback_data, |method, stream| {
     fn callback(_preverify_ok: bool, x509_ctx: &X509StoreContext, node_id: &Vec<u8>) -> bool {
         let cert = x509_ctx.get_current_cert();
         match cert {
@@ -167,8 +221,7 @@ fn test_verify_callback_data() {
             }
         }
     }
-    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
-    let mut ctx = SslContext::new(Sslv23).unwrap();
+    let mut ctx = SslContext::new(method).unwrap();
 
     // Node id was generated as SHA256 hash of certificate "test/cert.pem"
     // in DER format.
@@ -183,7 +236,7 @@ fn test_verify_callback_data() {
         Ok(_) => (),
         Err(err) => panic!("Expected success, got {:?}", err)
     }
-}
+});
 
 #[test]
 fn test_set_certificate_and_private_key() {
@@ -206,30 +259,27 @@ fn test_set_certificate_and_private_key() {
     assert!(ctx.check_private_key().is_ok());
 }
 
-#[test]
-fn test_get_ctx_options() {
-    let mut ctx = SslContext::new(Sslv23).unwrap();
+run_test!(get_ctx_options, |method, _| {
+    let mut ctx = SslContext::new(method).unwrap();
     ctx.get_options();
-}
+});
 
-#[test]
-fn test_set_ctx_options() {
-    let mut ctx = SslContext::new(Sslv23).unwrap();
+run_test!(set_ctx_options, |method, _| {
+    let mut ctx = SslContext::new(method).unwrap();
     let opts = ctx.set_options(ssl::SSL_OP_NO_TICKET);
     assert!(opts.contains(ssl::SSL_OP_NO_TICKET));
     assert!(!opts.contains(ssl::SSL_OP_CISCO_ANYCONNECT));
     let more_opts = ctx.set_options(ssl::SSL_OP_CISCO_ANYCONNECT);
     assert!(more_opts.contains(ssl::SSL_OP_NO_TICKET));
     assert!(more_opts.contains(ssl::SSL_OP_CISCO_ANYCONNECT));
-}
+});
 
-#[test]
-fn test_clear_ctx_options() {
-    let mut ctx = SslContext::new(Sslv23).unwrap();
+run_test!(clear_ctx_options, |method, _| {
+    let mut ctx = SslContext::new(method).unwrap();
     ctx.set_options(ssl::SSL_OP_ALL);
     let opts = ctx.clear_options(ssl::SSL_OP_ALL);
     assert!(!opts.contains(ssl::SSL_OP_ALL));
-}
+});
 
 #[test]
 fn test_write() {
@@ -242,12 +292,24 @@ fn test_write() {
 }
 
 #[test]
+#[cfg(feature = "dtlsv1")]
+fn test_write_dtlsv1() {
+    let sock = UdpSocket::bind("127.0.0.1:0").unwrap();
+    let stream = sock.connect("127.0.0.1:15410").unwrap();
+
+    let mut stream = SslStream::new(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
+    stream.write_all("hello".as_bytes()).unwrap();
+    stream.flush().unwrap();
+    stream.write_all(" there".as_bytes()).unwrap();
+    stream.flush().unwrap();
+}
+
+#[test]
 fn test_read() {
-    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
-    let mut stream = SslStream::new(&SslContext::new(Sslv23).unwrap(), stream).unwrap();
+    let tcp = TcpStream::connect("127.0.0.1:15418").unwrap();
+    let mut stream = SslStream::new(&SslContext::new(Sslv23).unwrap(), tcp).unwrap();
     stream.write_all("GET /\r\n\r\n".as_bytes()).unwrap();
     stream.flush().unwrap();
-    println!("written");
     io::copy(&mut stream, &mut io::sink()).ok().expect("read error");
 }
 
@@ -261,7 +323,7 @@ fn test_connect_with_unilateral_npn() {
     ctx.set_verify(SSL_VERIFY_PEER, None);
     ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
-        Ok(_)=> {}
+        Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
     }
     let stream = match SslStream::new(&ctx, stream) {
@@ -285,7 +347,7 @@ fn test_connect_with_npn_successful_multiple_matching() {
     ctx.set_verify(SSL_VERIFY_PEER, None);
     ctx.set_npn_protocols(&[b"spdy/3.1", b"http/1.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
-        Ok(_)=> {}
+        Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
     }
     let stream = match SslStream::new(&ctx, stream) {
@@ -310,7 +372,7 @@ fn test_connect_with_npn_successful_single_match() {
     ctx.set_verify(SSL_VERIFY_PEER, None);
     ctx.set_npn_protocols(&[b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
-        Ok(_)=> {}
+        Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
     }
     let stream = match SslStream::new(&ctx, stream) {
@@ -350,7 +412,7 @@ fn test_npn_server_advertise_multiple() {
     ctx.set_verify(SSL_VERIFY_PEER, None);
     ctx.set_npn_protocols(&[b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
-        Ok(_)=> {}
+        Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
     }
     // Now connect to the socket and make sure the protocol negotiation works...
@@ -361,4 +423,39 @@ fn test_npn_server_advertise_multiple() {
     };
     // SPDY is selected since that's the only thing the client supports.
     assert_eq!(b"spdy/3.1", stream.get_selected_npn_protocol().unwrap());
+}
+
+#[cfg(feature="dtlsv1")]
+#[cfg(test)]
+mod dtlsv1 {
+    use serialize::hex::FromHex;
+    use std::net::TcpStream;
+    use std::old_io::{Writer};
+    use std::thread;
+
+    use crypto::hash::Type::{SHA256};
+    use ssl::SslMethod;
+    use ssl::SslMethod::Dtlsv1;
+    use ssl::{SslContext, SslStream, VerifyCallback};
+    use ssl::SSL_VERIFY_PEER;
+    use x509::{X509StoreContext};
+
+    const PROTOCOL:SslMethod = Dtlsv1;
+
+    #[test]
+    fn test_new_ctx() {
+        SslContext::new(PROTOCOL).unwrap();
+    }
+}
+
+#[test]
+#[cfg(feature = "dtlsv1")]
+fn test_read_dtlsv1() {
+    let sock = UdpSocket::bind("127.0.0.1:0").unwrap();
+    let server = udp::next_server();
+    let stream = sock.connect(&server[..]).unwrap();
+
+    let mut stream = SslStream::new(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
+    let mut buf = [0u8;100];
+    assert!(stream.read(&mut buf).is_ok());
 }

@@ -63,12 +63,15 @@ rust-openssl directory. Then run one of the following commands:
 
 * Windows: `openssl s_server -accept 15418 -www -cert test/cert.pem -key
   test/key.pem > NUL`
-* Linux: `openssl s_server -accept 15418 -www -cert test/cert.pem -key
+* Linux: `openssl s_server -accept 15418 -www -cert test/cert.pem -key \
   test/key.pem >/dev/null`
 
 Then in the original terminal, run `cargo test`. If everything is set up
 correctly, all tests should pass. You might get some warnings in the `openssl
 s_server` window. Those aren't anything to worry about. You can stop the server
 using Control-C.
+
+For DTLS testing each test requires its own instance of OpenSSL's s_server. On
+Linux you can run the bash script in `openssl/tests/test.sh`.
 
 [1]: http://slproweb.com/products/Win32OpenSSL.html

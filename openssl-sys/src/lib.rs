@@ -134,6 +134,7 @@ pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
 pub const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
 pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
 
+pub const SSL_CTRL_SET_READ_AHEAD: c_int = 41;
 pub const SSL_ERROR_NONE: c_int = 0;
 pub const SSL_ERROR_SSL: c_int = 1;
 pub const SSL_ERROR_SYSCALL: c_int = 5;
@@ -282,6 +283,9 @@ pub unsafe fn SSL_CTX_add_extra_chain_cert(ssl: *mut SSL_CTX, cert: *mut X509) -
     SSL_CTX_ctrl(ssl, SSL_CTRL_EXTRA_CHAIN_CERT, 0, cert)
 }
 
+pub unsafe fn SSL_CTX_set_read_ahead(ctx: *mut SSL_CTX, m: c_long) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_READ_AHEAD, m, ptr::null_mut())
+}
 
 // True functions
 extern "C" {
@@ -482,6 +486,10 @@ extern "C" {
     pub fn TLSv1_1_method() -> *const SSL_METHOD;
     #[cfg(feature = "tlsv1_2")]
     pub fn TLSv1_2_method() -> *const SSL_METHOD;
+    #[cfg(feature = "dtlsv1")]
+    pub fn DTLSv1_method() -> *const SSL_METHOD;
+    #[cfg(feature = "dtlsv1_2")]
+    pub fn DTLSv1_2_method() -> *const SSL_METHOD;
     pub fn SSLv23_method() -> *const SSL_METHOD;
 
     pub fn SSL_new(ctx: *mut SSL_CTX) -> *mut SSL;

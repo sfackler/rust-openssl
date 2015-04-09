@@ -97,6 +97,12 @@ pub enum SslMethod {
     #[cfg(feature = "tlsv1_2")]
     /// Support TLSv1.2 protocol, requires the `tlsv1_2` feature.
     Tlsv1_2,
+    #[cfg(feature = "dtlsv1")]
+    /// Support DTLSv1 protocol, requires the `dtlsv1` feature.
+    Dtlsv1,
+    #[cfg(feature = "dtlsv1_2")]
+    /// Support DTLSv1.2 protocol, requires the `dtlsv1_2` feature.
+    Dtlsv1_2,
 }
 
 impl SslMethod {
@@ -110,8 +116,36 @@ impl SslMethod {
             #[cfg(feature = "tlsv1_1")]
             SslMethod::Tlsv1_1 => ffi::TLSv1_1_method(),
             #[cfg(feature = "tlsv1_2")]
-            SslMethod::Tlsv1_2 => ffi::TLSv1_2_method()
+            SslMethod::Tlsv1_2 => ffi::TLSv1_2_method(),
+            #[cfg(feature = "dtlsv1")]
+            SslMethod::Dtlsv1 => ffi::DTLSv1_method(),
+            #[cfg(feature = "dtlsv1_2")]
+            SslMethod::Dtlsv1_2 => ffi::DTLSv1_2_method(),
         }
+    }
+
+    #[cfg(feature = "dtlsv1")]
+    pub fn is_dtlsv1(&self) -> bool {
+        *self == SslMethod::Dtlsv1
+    }
+
+    #[cfg(feature = "dtlsv1_2")]
+    pub fn is_dtlsv1_2(&self) -> bool {
+        *self == SslMethod::Dtlsv1_2
+    }
+
+    pub fn is_dtls(&self) -> bool {
+        self.is_dtlsv1() || self.is_dtlsv1_2()
+    }
+
+    #[cfg(not(feature = "dtlsv1"))]
+    pub fn is_dtlsv1(&self) -> bool {
+        false
+    }
+
+    #[cfg(not(feature = "dtlsv1_2"))]
+    pub fn is_dtlsv1_2(&self) -> bool {
+        false
     }
 }
 
@@ -339,7 +373,13 @@ impl SslContext {
             return Err(SslError::get());
         }
 
-        Ok(SslContext { ctx: ctx })
+        let ctx = SslContext { ctx: ctx };
+
+        if method.is_dtls() {
+            ctx.set_read_ahead(1);
+        }
+
+        Ok(ctx)
     }
 
     /// Configures the certificate verification method for new connections.
@@ -350,6 +390,7 @@ impl SslContext {
                                      mem::transmute(verify));
             let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
                                 raw_verify;
+
             ffi::SSL_CTX_set_verify(self.ctx, mode.bits as c_int, Some(f));
         }
     }
@@ -370,6 +411,7 @@ impl SslContext {
                                      mem::transmute(data));
             let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
                                 raw_verify_with_data::<T>;
+
             ffi::SSL_CTX_set_verify(self.ctx, mode.bits as c_int, Some(f));
         }
     }
@@ -378,6 +420,12 @@ impl SslContext {
     pub fn set_verify_depth(&mut self, depth: u32) {
         unsafe {
             ffi::SSL_CTX_set_verify_depth(self.ctx, depth as c_int);
+        }
+    }
+
+    pub fn set_read_ahead(&self, m: u32) {
+        unsafe {
+            ffi::SSL_CTX_set_read_ahead(self.ctx, m as c_long);
         }
     }
 
