@@ -29,15 +29,15 @@ use ssl::SslMethod::Dtlsv1;
 #[cfg(feature="dtlsv1")]
 use connected_socket::Connect;
 
-#[cfg(test)]
+#[cfg(feature = "dtlsv1")]
 mod udp {
-    static mut udp_port:u16 = 15410;
+    use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
+
+    static UDP_PORT: AtomicUsize = ATOMIC_USIZE_INIT;
 
     pub fn next_server<'a>() -> String {
-        unsafe {
-            udp_port += 1;
-            format!("127.0.0.1:{}", udp_port)
-        }
+        let diff = UDP_PORT.fetch_add(1, Ordering::SeqCst);
+        format!("127.0.0.1:{}", 15411 + diff)
     }
 }
 
@@ -60,13 +60,13 @@ macro_rules! run_test(
             use crypto::hash::Type::SHA256;
             use x509::X509StoreContext;
             use serialize::hex::FromHex;
-            
+
             #[test]
             fn sslv23() {
                 let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
                 $blk(SslMethod::Sslv23, stream);
             }
-            
+
             #[test]
             #[cfg(feature="dtlsv1")]
             fn dtlsv1() {
