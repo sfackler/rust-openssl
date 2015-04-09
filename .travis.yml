@@ -7,23 +7,12 @@ env:
   - secure: J4i75AV4KMrU/UQrLIzzIh35Xix40Ki0uWjm8j05oxlXVl5aPU2zB30AemDne2QXYzkN4kRG/iRnNORE/8D0lF7YipQNSNxgfiBVoOEfj/NSogvI2BftYX9vlLZJUvt+s/nbE3xa/Pyge1IPv7itDYGO7SMe8RTSqitgqyfE2Eg=
   - FEATURES="tlsv1_1 tlsv1_2 dtlsv1 aes_xts npn"
 before_install:
-  - DIR=`pwd`
-  - (test $TRAVIS_OS_NAME == "osx" || (sudo apt-get install gcc make))
-  - (test $TRAVIS_OS_NAME == "osx" || (wget https://openssl.org/source/openssl-1.0.2-latest.tar.gz -O /tmp/openssl-1.0.2-latest.tar.gz))
-  - (test $TRAVIS_OS_NAME == "osx" || (cd /tmp && tar xzf openssl-1.0.2-latest.tar.gz))
-  - (test $TRAVIS_OS_NAME == "osx" || (cd /tmp/openssl-1.0.2*/ && ./config --prefix=/usr/ shared))
-  - (test $TRAVIS_OS_NAME == "osx" || (cd /tmp/openssl-1.0.2*/ && make))
-  - (test $TRAVIS_OS_NAME == "osx" || (cd /tmp/openssl-1.0.2*/ && sudo make install))
-  - cd ${DIR}
+- (test $TRAVIS_OS_NAME == "osx" || ./openssl/test/build.sh)
 before_script:
-  - openssl version
-  - openssl s_server -accept 15418 -www -cert openssl/test/cert.pem -key openssl/test/key.pem >/dev/null 2>&1 &
-  - openssl s_server -accept 15419 -www -cert openssl/test/cert.pem -key openssl/test/key.pem -nextprotoneg "http/1.1,spdy/3.1" >/dev/null 2>&1 &
+- ./openssl/test/test.sh
 script:
 - (cd openssl && LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH cargo test)
-- (test $TRAVIS_OS_NAME == "osx" || (./openssl/test/test.sh &))
 - (test $TRAVIS_OS_NAME == "osx" || (cd openssl && LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH cargo test --features "$FEATURES"))
-- (test $TRAVIS_OS_NAME == "osx" || killall openssl)
 - ./.travis/build_docs.sh
 after_success:
 - test $TRAVIS_PULL_REQUEST == "false" && test $TRAVIS_BRANCH == "master" && ./.travis/update_docs.sh
