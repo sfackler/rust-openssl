@@ -878,6 +878,10 @@ impl<S: Read+Write> SslStream<S> {
         Some(s)
     }
 
+    pub fn pending(&self) -> usize {
+        unsafe { ffi::SSL_pending(self.ssl.ssl) as usize }
+    }
+
     /// Returns the protocol selected by performing Next Protocol Negotiation, if any.
     ///
     /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
