@@ -8,7 +8,7 @@ use std::mem;
 use std::ptr;
 
 use asn1::{Asn1Time};
-use bio::{MemBio};
+use bio::{MemBio,Bio};
 use crypto::hash;
 use crypto::hash::Type as HashType;
 use crypto::pkey::{PKey};

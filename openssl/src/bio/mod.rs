@@ -1,11 +1,26 @@
 use libc::{c_void, c_int};
 use std::io;
 use std::io::prelude::*;
+use std::os::unix::io::RawFd;
 use std::ptr;
 use std::cmp;
 
 use ffi;
 use ssl::error::{SslError};
+
+pub trait Bio {
+    fn borrowed(bio: *mut ffi::BIO) -> Self;
+    unsafe fn unwrap(mut self) -> *mut ffi::BIO;
+    unsafe fn get_handle(&self) -> *mut ffi::BIO;
+
+    fn is_eof(&self) -> bool {
+        unsafe { ffi::BIO_eof(self.get_handle()) }
+    }
+
+    fn method_type(&self) -> c_int {
+        unsafe { ffi::BIO_method_type(self.get_handle()) }
+    }
+}
 
 pub struct MemBio {
     bio: *mut ffi::BIO,
@@ -35,9 +50,11 @@ impl MemBio {
             owned: true
         })
     }
+}
 
+impl Bio for MemBio {
     /// Returns a "borrow", i.e. it has no ownership
-    pub fn borrowed(bio: *mut ffi::BIO) -> MemBio {
+    fn borrowed(bio: *mut ffi::BIO) -> MemBio {
         MemBio {
             bio: bio,
             owned: false
@@ -47,13 +64,13 @@ impl MemBio {
     /// Consumes current bio and returns wrapped value
     /// Note that data ownership is lost and
     /// should be managed manually
-    pub unsafe fn unwrap(mut self) -> *mut ffi::BIO {
+    unsafe fn unwrap(mut self) -> *mut ffi::BIO {
         self.owned = false;
         self.bio
     }
 
     /// Temporarily gets wrapped value
-    pub unsafe fn get_handle(&self) -> *mut ffi::BIO {
+    unsafe fn get_handle(&self) -> *mut ffi::BIO {
         self.bio
     }
 }
@@ -96,5 +113,62 @@ impl Write for MemBio {
 
     fn flush(&mut self) -> io::Result<()> {
         Ok(())
+    }
+}
+
+pub struct SocketBio {
+    bio: *mut ffi::BIO,
+    owned: bool
+}
+
+impl Drop for SocketBio {
+    fn drop(&mut self) {
+        if self.owned {
+            unsafe {
+                ffi::BIO_free_all(self.bio);
+            }
+        }
+    }
+}
+
+impl SocketBio {
+    pub fn new(fd: RawFd) -> Result<SocketBio, SslError>
+    {
+        ffi::init();
+
+        let bio = unsafe { ffi::BIO_new(ffi::BIO_s_fd()) };
+        try_ssl_null!(bio);
+
+        unsafe {
+            ffi::BIO_set_fd(bio, fd, ffi::BIO_CLOSE)
+        }
+
+        Ok(SocketBio {
+            bio: bio,
+            owned: true
+        })
+    }
+}
+
+impl Bio for SocketBio {
+    /// Returns a "borrow", i.e. it has no ownership
+    fn borrowed(bio: *mut ffi::BIO) -> SocketBio {
+        SocketBio {
+            bio: bio,
+            owned: false
+        }
+    }
+
+    /// Consumes current bio and returns wrapped value
+    /// Note that data ownership is lost and
+    /// should be managed manually
+    unsafe fn unwrap(mut self) -> *mut ffi::BIO {
+        self.owned = false;
+        self.bio
+    }
+
+    /// Temporarily gets wrapped value
+    unsafe fn get_handle(&self) -> *mut ffi::BIO {
+        self.bio
     }
 }

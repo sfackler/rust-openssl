@@ -4,7 +4,7 @@ use std::io::prelude::*;
 use std::iter::repeat;
 use std::mem;
 use std::ptr;
-use bio::{MemBio};
+use bio::{MemBio,Bio};
 use crypto::hash;
 use crypto::hash::Type as HashType;
 use ffi;

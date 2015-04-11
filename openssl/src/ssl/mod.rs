@@ -5,6 +5,7 @@ use std::ffi::{CStr, CString};
 use std::fmt;
 use std::io;
 use std::io::prelude::*;
+use std::os::unix::io::AsRawFd;
 use std::mem;
 use std::net;
 use std::path::Path;
@@ -18,7 +19,7 @@ use libc::{c_uchar, c_uint};
 #[cfg(feature = "npn")]
 use std::slice;
 
-use bio::{MemBio};
+use bio::{MemBio,SocketBio,Bio};
 use ffi;
 use ssl::error::{SslError, SslSessionClosed, StreamError, OpenSslErrors};
 use x509::{X509StoreContext, X509FileType, X509};
@@ -557,21 +558,21 @@ impl SslContext {
 }
 
 #[allow(dead_code)]
-struct MemBioRef<'ssl> {
+struct BioRef<'ssl,B:Bio> {
     ssl: &'ssl Ssl,
-    bio: MemBio,
+    bio: B,
 }
 
-impl<'ssl> Deref for MemBioRef<'ssl> {
-    type Target = MemBio;
+impl<'ssl,B:Bio> Deref for BioRef<'ssl,B> {
+    type Target = B;
 
-    fn deref(&self) -> &MemBio {
+    fn deref(&self) -> &B {
         &self.bio
     }
 }
 
-impl<'ssl> DerefMut for MemBioRef<'ssl> {
-    fn deref_mut(&mut self) -> &mut MemBio {
+impl<'ssl,B:Bio> DerefMut for BioRef<'ssl,B> {
+    fn deref_mut(&mut self) -> &mut B {
         &mut self.bio
     }
 }
@@ -598,32 +599,51 @@ impl Drop for Ssl {
 
 impl Ssl {
     pub fn new(ctx: &SslContext) -> Result<Ssl, SslError> {
+        let rbio = try!(MemBio::new());
+        let wbio = try!(MemBio::new());
+        
+        Ssl::create(ctx, rbio, wbio)
+    }
+
+    pub fn new_from_socket<F:AsRawFd>(ctx: &SslContext, fd: F) -> Result<Ssl, SslError> {
+        let rbio = try!(SocketBio::new(fd.as_raw_fd()));
+        let wbio = try!(SocketBio::new(fd.as_raw_fd()));
+        
+        Ssl::create(ctx, rbio, wbio)
+    }
+
+    fn create<B:Bio>(ctx: &SslContext, rbio: B, wbio: B) -> Result<Ssl, SslError> {
         let ssl = unsafe { ffi::SSL_new(ctx.ctx) };
         if ssl == ptr::null_mut() {
             return Err(SslError::get());
         }
         let ssl = Ssl { ssl: ssl };
 
-        let rbio = try!(MemBio::new());
-        let wbio = try!(MemBio::new());
-
         unsafe { ffi::SSL_set_bio(ssl.ssl, rbio.unwrap(), wbio.unwrap()) }
         Ok(ssl)
     }
 
-    fn get_rbio<'a>(&'a self) -> MemBioRef<'a> {
-        unsafe { self.wrap_bio(ffi::SSL_get_rbio(self.ssl)) }
+    fn get_rbio<'a,B:Bio>(&'a self) -> BioRef<'a,B> {
+        unsafe {
+            let bio = ffi::SSL_get_rbio(self.ssl);
+
+            self.wrap_bio::<'a,B>(bio)
+        }
     }
 
-    fn get_wbio<'a>(&'a self) -> MemBioRef<'a> {
-        unsafe { self.wrap_bio(ffi::SSL_get_wbio(self.ssl)) }
+    fn get_wbio<'a,B:Bio>(&'a self) -> BioRef<'a,B> {
+        unsafe {
+            let bio = ffi::SSL_get_wbio(self.ssl);
+
+            self.wrap_bio::<'a,B>(bio)
+        }
     }
 
-    fn wrap_bio<'a>(&'a self, bio: *mut ffi::BIO) -> MemBioRef<'a> {
+    fn wrap_bio<'a,B:Bio>(&'a self, bio: *mut ffi::BIO) -> BioRef<'a,B> {
         assert!(bio != ptr::null_mut());
-        MemBioRef {
+        BioRef {
             ssl: self,
-            bio: MemBio::borrowed(bio)
+            bio: B::borrowed(bio)
         }
     }
 
@@ -765,6 +785,8 @@ impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug {
     }
 }
 
+
+
 impl<S: Read+Write> SslStream<S> {
     fn new_base(ssl:Ssl, stream: S) -> SslStream<S> {
         SslStream {
@@ -847,7 +869,7 @@ impl<S: Read+Write> SslStream<S> {
                     if len == 0 {
                         return Ok(0);
                     }
-                    try_ssl_stream!(self.ssl.get_rbio().write_all(&self.buf[..len]));
+                    try_ssl_stream!(self.ssl.get_rbio::<MemBio>().write_all(&self.buf[..len]));
                 }
                 LibSslError::ErrorWantWrite => { try_ssl_stream!(self.flush()) }
                 LibSslError::ErrorZeroReturn => return Err(SslSessionClosed),
@@ -858,7 +880,7 @@ impl<S: Read+Write> SslStream<S> {
     }
 
     fn write_through(&mut self) -> io::Result<()> {
-        io::copy(&mut *self.ssl.get_wbio(), &mut self.stream).map(|_| ())
+        io::copy(&mut *self.ssl.get_wbio::<MemBio>(), &mut self.stream).map(|_| ())
     }
 
     /// Get the compression currently in use.  The result will be
@@ -878,8 +900,16 @@ impl<S: Read+Write> SslStream<S> {
         Some(s)
     }
 
-    pub fn pending(&self) -> usize {
-        unsafe { ffi::SSL_pending(self.ssl.ssl) as usize }
+    pub fn pending(&mut self) -> Result<usize, SslError> {
+//        assert_eq!(self.ssl.get_rbio().is_eof(), true);
+        if self.ssl.get_rbio::<MemBio>().is_eof() {
+            try_ssl_stream!(self.flush());
+            let len = try_ssl_stream!(self.stream.read(&mut self.buf[..]));
+            try_ssl_stream!(self.ssl.get_rbio::<MemBio>().write_all(&self.buf[..len]));
+        }
+
+        let len = unsafe { ffi::SSL_pending(self.ssl.ssl) as usize };
+        Ok(len)
     }
 
     /// Returns the protocol selected by performing Next Protocol Negotiation, if any.

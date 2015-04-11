@@ -323,9 +323,15 @@ fn test_pending() {
     let mut buf = [0u8; 16*1024];
     stream.read(&mut buf[..1]).unwrap();
 
-    let pending = stream.pending();
+    let pending = stream.pending().unwrap();
     let len = stream.read(&mut buf[1..]).unwrap();
 
+    assert_eq!(pending, len);
+
+    stream.read(&mut buf[..1]).unwrap();
+
+    let pending = stream.pending().unwrap();
+    let len = stream.read(&mut buf[1..]).unwrap();
     assert_eq!(pending, len);
 }
 
@@ -466,7 +472,7 @@ mod dtlsv1 {
 
 #[test]
 #[cfg(feature = "dtlsv1")]
-fn test_read_dtlsv1() {
+fn test_pending_dtlsv1() {
     let sock = UdpSocket::bind("127.0.0.1:0").unwrap();
     let server = udp::next_server();
     let stream = sock.connect(&server[..]).unwrap();
@@ -474,4 +480,21 @@ fn test_read_dtlsv1() {
     let mut stream = SslStream::new(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
     let mut buf = [0u8;100];
     assert!(stream.read(&mut buf).is_ok());
+}
+
+#[test]
+#[cfg(feature = "dtlsv1")]
+fn test_read_dtlsv1() {
+    let sock = UdpSocket::bind("127.0.0.1:0").unwrap();
+    let server = udp::next_server();
+    let stream = sock.connect(&server[..]).unwrap();
+
+    let mut stream = SslStream::new(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
+    let mut buf = [0u8; 16*1024];
+    assert!(stream.read(&mut buf[..1]).is_ok());
+
+    let pending = stream.pending().unwrap();
+    let len = stream.read(&mut buf[1..]).unwrap();
+
+    assert_eq!(pending, len);
 }
