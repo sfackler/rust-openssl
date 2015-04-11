@@ -760,38 +760,29 @@ make_LibSslError! {
     ErrorWantAccept = SSL_ERROR_WANT_ACCEPT
 }
 
-/// A stream wrapper which handles SSL encryption for an underlying stream.
-#[derive(Clone)]
-pub struct SslStream<S> {
+pub trait Io {
+    fn in_retry_wrapper<F>(&mut self, ssl: &Arc<Ssl>, mut blk: F)
+            -> Result<c_int, SslError> where F: FnMut(&Arc<Ssl>) -> c_int;
+}
+
+pub struct SocketIo;
+
+impl Io for SocketIo {
+    fn in_retry_wrapper<F>(&mut self, ssl: &Arc<Ssl>, mut blk: F)
+        -> Result<c_int, SslError> where F: FnMut(&Arc<Ssl>) -> c_int {
+        unimplemented!()
+    }
+}
+
+pub struct StreamIo<S:Read+Write> {
     stream: S,
-    ssl: Arc<Ssl>,
-    buf: Vec<u8>
+    buf: Vec<u8>,
 }
 
-impl SslStream<net::TcpStream> {
-    /// Create a new independently owned handle to the underlying socket.
-    pub fn try_clone(&self) -> io::Result<SslStream<net::TcpStream>> {
-        Ok(SslStream { 
-            stream: try!(self.stream.try_clone()),
-            ssl: self.ssl.clone(),
-            buf: self.buf.clone(),
-        })
-    }
-}
-
-impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "SslStream {{ stream: {:?}, ssl: {:?} }}", self.stream, self.ssl)
-    }
-}
-
-
-
-impl<S: Read+Write> SslStream<S> {
-    fn new_base(ssl:Ssl, stream: S) -> SslStream<S> {
-        SslStream {
+impl<S:Read+Write> StreamIo<S> {
+    pub fn new(stream: S) -> StreamIo<S> {
+        StreamIo {
             stream: stream,
-            ssl: Arc::new(ssl),
             // Maximum TLS record size is 16k
             // We're just using this as a buffer, so there's no reason to pay
             // to memset it
@@ -804,83 +795,78 @@ impl<S: Read+Write> SslStream<S> {
         }
     }
 
-    pub fn new_server_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        let mut ssl = SslStream::new_base(ssl, stream);
-        ssl.in_retry_wrapper(|ssl| { ssl.accept() }).and(Ok(ssl))
+    fn write_through(&mut self, ssl: &Arc<Ssl>) -> io::Result<()> {
+        io::copy(&mut *ssl.get_wbio::<MemBio>(), &mut self.stream).map(|_| ())
     }
+}
 
-    /// Attempts to create a new SSL stream from a given `Ssl` instance.
-    pub fn new_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        let mut ssl = SslStream::new_base(ssl, stream);
-        ssl.in_retry_wrapper(|ssl| { ssl.connect() }).and(Ok(ssl))
-    }
 
-    /// Creates a new SSL stream
-    pub fn new(ctx: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
-        let ssl = try!(Ssl::new(ctx));
-        SslStream::new_from(ssl, stream)
-    }
-
-    /// Creates a new SSL server stream
-    pub fn new_server(ctx: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
-        let ssl = try!(Ssl::new(ctx));
-        SslStream::new_server_from(ssl, stream)
-    }
-
-    /// Returns a mutable reference to the underlying stream.
-    ///
-    /// ## Warning
-    ///
-    /// `read`ing or `write`ing directly to the underlying stream will most
-    /// likely desynchronize the SSL session.
-    #[deprecated="use get_mut instead"]
-    pub fn get_inner(&mut self) -> &mut S {
-        self.get_mut()
-    }
-
-    /// Returns a reference to the underlying stream.
-    pub fn get_ref(&self) -> &S {
-        &self.stream
-    }
-
-    /// Returns a mutable reference to the underlying stream.
-    ///
-    /// ## Warning
-    ///
-    /// It is inadvisable to read from or write to the underlying stream as it
-    /// will most likely desynchronize the SSL session.
-    pub fn get_mut(&mut self) -> &mut S {
-        &mut self.stream
-    }
-
-    fn in_retry_wrapper<F>(&mut self, mut blk: F)
-            -> Result<c_int, SslError> where F: FnMut(&Ssl) -> c_int {
+impl<S:Read+Write> Io for StreamIo<S> {
+    fn in_retry_wrapper<F>(&mut self, ssl: &Arc<Ssl>, mut blk: F)
+            -> Result<c_int, SslError> where F: FnMut(&Arc<Ssl>) -> c_int {
         loop {
-            let ret = blk(&self.ssl);
+            let ret = blk(ssl);
             if ret > 0 {
                 return Ok(ret);
             }
 
-            let e = self.ssl.get_error(ret);
+            let e = ssl.get_error(ret);
             match e {
                 LibSslError::ErrorWantRead => {
-                    try_ssl_stream!(self.flush());
+                    try_ssl_stream!(self.flush(ssl));
                     let len = try_ssl_stream!(self.stream.read(&mut self.buf[..]));
                     if len == 0 {
                         return Ok(0);
                     }
-                    try_ssl_stream!(self.ssl.get_rbio::<MemBio>().write_all(&self.buf[..len]));
+                    try_ssl_stream!(ssl.get_rbio::<MemBio>().write_all(&self.buf[..len]));
                 }
-                LibSslError::ErrorWantWrite => { try_ssl_stream!(self.flush()) }
+                LibSslError::ErrorWantWrite => { try_ssl_stream!(self.flush(ssl)) }
                 LibSslError::ErrorZeroReturn => return Err(SslSessionClosed),
                 LibSslError::ErrorSsl => return Err(SslError::get()),
                 err => panic!("unexpected error {:?}", err),
             }
         }
     }
+}
 
-    fn write_through(&mut self) -> io::Result<()> {
-        io::copy(&mut *self.ssl.get_wbio::<MemBio>(), &mut self.stream).map(|_| ())
+/// A stream wrapper which handles SSL encryption for an underlying stream.
+#[derive(Clone)]
+pub struct SslStream<I:Io> {
+    io: I,
+    ssl: Arc<Ssl>,
+}
+
+impl SslStream<StreamIo<net::TcpStream>> {
+    /// Create a new independently owned handle to the underlying socket.
+    pub fn try_clone(&self) -> io::Result<SslStream<StreamIo<net::TcpStream>>> {
+        Ok(SslStream { 
+            io: StreamIo {
+                stream: try!(self.io.stream.try_clone()),
+                buf: self.io.buf.clone(),
+            },
+            ssl: self.ssl.clone(),
+        })
+    }
+}
+
+impl<S> fmt::Debug for SslStream<StreamIo<S>> where S: fmt::Debug+Read+Write {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "SslStream {{ stream: {:?}, ssl: {:?} }}", self.io.stream, self.ssl)
+    }
+}
+
+impl fmt::Debug for SslStream<SocketIo> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "SslStream {{ ssl: {:?} }}", self.ssl)
+    }
+}
+
+impl<I:Io> SslStream<I> {
+    fn new_base(ssl:Ssl, io: I) -> SslStream<I> {
+        SslStream {
+            io: io,
+            ssl: Arc::new(ssl),
+        }
     }
 
     /// Get the compression currently in use.  The result will be
@@ -900,18 +886,6 @@ impl<S: Read+Write> SslStream<S> {
         Some(s)
     }
 
-    pub fn pending(&mut self) -> Result<usize, SslError> {
-//        assert_eq!(self.ssl.get_rbio().is_eof(), true);
-        if self.ssl.get_rbio::<MemBio>().is_eof() {
-            try_ssl_stream!(self.flush());
-            let len = try_ssl_stream!(self.stream.read(&mut self.buf[..]));
-            try_ssl_stream!(self.ssl.get_rbio::<MemBio>().write_all(&self.buf[..len]));
-        }
-
-        let len = unsafe { ffi::SSL_pending(self.ssl.ssl) as usize };
-        Ok(len)
-    }
-
     /// Returns the protocol selected by performing Next Protocol Negotiation, if any.
     ///
     /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
@@ -924,9 +898,90 @@ impl<S: Read+Write> SslStream<S> {
     }
 }
 
-impl<S: Read+Write> Read for SslStream<S> {
+impl<S:Read+Write> SslStream<StreamIo<S>> {
+    pub fn new_server_from(ssl: Ssl, stream: S) -> Result<SslStream<StreamIo<S>>, SslError> {
+        let mut s = SslStream::new_base(ssl, StreamIo::new(stream));
+        s.io.in_retry_wrapper(&s.ssl, |ssl| { ssl.accept() }).and(Ok(s))
+    }
+
+    /// Attempts to create a new SSL stream from a given `Ssl` instance.
+    pub fn new_from(ssl: Ssl, stream: S) -> Result<SslStream<StreamIo<S>>, SslError> {
+        let mut s = SslStream::new_base(ssl, StreamIo::new(stream));
+        s.io.in_retry_wrapper(&s.ssl, |ssl| { ssl.connect() }).and(Ok(s))
+    }
+
+    /// Creates a new SSL stream
+    pub fn new(ctx: &SslContext, stream: S) -> Result<SslStream<StreamIo<S>>, SslError> {
+        let ssl = try!(Ssl::new(ctx));
+        SslStream::new_from(ssl, stream)
+    }
+
+    /// Creates a new SSL server stream
+    pub fn new_server(ctx: &SslContext, stream: S) -> Result<SslStream<StreamIo<S>>, SslError> {
+        let ssl = try!(Ssl::new(ctx));
+        SslStream::new_server_from(ssl, stream)
+    }
+
+    /// Returns a mutable reference to the underlying stream.
+    ///
+    /// ## Warning
+    ///
+    /// `read`ing or `write`ing directly to the underlying stream will most
+    /// likely desynchronize the SSL session.
+    #[deprecated="use get_mut instead"]
+    pub fn get_inner(&mut self) -> &mut S {
+        self.get_mut()
+    }
+
+    /// Returns a reference to the underlying stream.
+    pub fn get_ref(&self) -> &S {
+        &self.io.stream
+    }
+
+    /// Returns a mutable reference to the underlying stream.
+    ///
+    /// ## Warning
+    ///
+    /// It is inadvisable to read from or write to the underlying stream as it
+    /// will most likely desynchronize the SSL session.
+    pub fn get_mut(&mut self) -> &mut S {
+        &mut self.io.stream
+    }
+
+    pub fn pending(&mut self) -> Result<usize, SslError> {
+        self.io.pending(&self.ssl)
+    }
+}
+
+pub trait SslRead {
+    fn read(&mut self, ssl: &Arc<Ssl>, buf: &mut [u8]) -> io::Result<usize>;
+    fn pending(&mut self, ssl: &Arc<Ssl>) -> Result<usize, SslError>;
+}
+
+trait SslWrite {
+    fn write(&mut self, ssl: &Arc<Ssl>, buf: &[u8]) -> io::Result<usize>;
+    fn flush(&mut self, ssl: &Arc<Ssl>) -> io::Result<()>;
+}
+
+impl<I: Io+SslRead> Read for SslStream<I> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        match self.in_retry_wrapper(|ssl| { ssl.read(buf) }) {
+        self.io.read(&self.ssl, buf)
+    }
+}
+
+impl SslRead for SocketIo {
+    fn read(&mut self, ssl: &Arc<Ssl>, buf: &mut [u8]) -> io::Result<usize> {
+        unimplemented!()
+    }
+
+    fn pending(&mut self, ssl: &Arc<Ssl>) -> Result<usize, SslError> {
+        unimplemented!()
+    }
+}
+
+impl<S:Read+Write> SslRead for StreamIo<S> {
+    fn read(&mut self, ssl: &Arc<Ssl>, buf: &mut [u8]) -> io::Result<usize> {
+        match self.in_retry_wrapper(&ssl, |ssl| { ssl.read(buf) }) {
             Ok(len) => Ok(len as usize),
             Err(SslSessionClosed) => Ok(0),
             Err(StreamError(e)) => Err(e),
@@ -935,11 +990,32 @@ impl<S: Read+Write> Read for SslStream<S> {
             }
         }
     }
+
+    fn pending(&mut self, ssl: &Arc<Ssl>) -> Result<usize, SslError> {
+        if ssl.get_rbio::<MemBio>().is_eof() {
+            try_ssl_stream!(self.flush(ssl));
+            let len = try_ssl_stream!(self.stream.read(&mut self.buf[..]));
+            try_ssl_stream!(ssl.get_rbio::<MemBio>().write_all(&self.buf[..len]));
+        }
+
+        let len = unsafe { ffi::SSL_pending(ssl.ssl) as usize };
+        Ok(len)
+    }
 }
 
-impl<S: Read+Write> Write for SslStream<S> {
+impl<I:Io+SslWrite> Write for SslStream<I> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        match self.in_retry_wrapper(|ssl| ssl.write(buf)) {
+        self.io.write(&self.ssl, buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.io.flush(&self.ssl)
+    }
+}
+
+impl<S:Read+Write> SslWrite for StreamIo<S> {
+    fn write(&mut self, ssl: &Arc<Ssl>, buf: &[u8]) -> io::Result<usize> {
+        match self.in_retry_wrapper(ssl, |ssl| ssl.write(buf)) {
             Ok(len) => Ok(len as usize),
             Err(SslSessionClosed) => Ok(0),
             Err(StreamError(e)) => return Err(e),
@@ -949,9 +1025,19 @@ impl<S: Read+Write> Write for SslStream<S> {
         }
     }
 
-    fn flush(&mut self) -> io::Result<()> {
-        try!(self.write_through());
+    fn flush(&mut self, ssl: &Arc<Ssl>) -> io::Result<()> {
+        try!(self.write_through(ssl));
         self.stream.flush()
+    }
+}
+
+impl SslWrite for SocketIo {
+    fn write(&mut self, ssl: &Arc<Ssl>, buf: &[u8]) -> io::Result<usize> {
+        unimplemented!()
+    }
+
+    fn flush(&mut self, ssl: &Arc<Ssl>) -> io::Result<()> {
+        unimplemented!()
     }
 }
 
@@ -959,7 +1045,7 @@ impl<S: Read+Write> Write for SslStream<S> {
 #[derive(Debug)]
 pub enum MaybeSslStream<S> where S: Read+Write {
     /// A connection using SSL
-    Ssl(SslStream<S>),
+    Ssl(SslStream<StreamIo<S>>),
     /// A connection not using SSL
     Normal(S),
 }

@@ -52,7 +52,7 @@ macro_rules! run_test(
             use std::net::TcpStream;
             use ssl;
             use ssl::SslMethod;
-            use ssl::{SslContext, SslStream, VerifyCallback};
+            use ssl::{SslContext, StreamIo, SslStream, VerifyCallback};
             use ssl::SSL_VERIFY_PEER;
             use crypto::hash::Type::SHA256;
             use x509::X509StoreContext;
@@ -84,7 +84,7 @@ run_test!(new_ctx, |method, _| {
 });
 
 run_test!(new_sslstream, |method, stream| {
-    SslStream::new(&SslContext::new(method).unwrap(), stream).unwrap();
+    SslStream::<StreamIo<TcpStream>>::new(&SslContext::new(method).unwrap(), stream).unwrap();
 });
 
 run_test!(verify_untrusted, |method, stream| {
