@@ -137,16 +137,36 @@ impl SocketBio {
         ffi::init();
 
         let bio = unsafe { ffi::BIO_new(ffi::BIO_s_fd()) };
+//        let bio = unsafe { ffi::BIO_new(ffi::BIO_s_socket()) };
+        //let bio = unsafe { ffi::BIO_new(ffi::BIO_s_datagram()) };
+        //let bio = unsafe { ffi::BIO_new_dgram(fd, ffi::BIO_NOCLOSE as c_int) };
+
         try_ssl_null!(bio);
 
+        /*let BIO_CTRL_DGRAM_SET_CONNECTED = 32;
         unsafe {
-            ffi::BIO_set_fd(bio, fd, ffi::BIO_CLOSE)
-        }
+            ffi::BIO_ctrl(bio, BIO_CTRL_DGRAM_SET_CONNECTED, 0, ptr::null_mut());
+        }*/
 
+        
+        unsafe {
+            ffi::BIO_set_fd(bio, fd, ffi::BIO_NOCLOSE)
+        }
+        
         Ok(SocketBio {
             bio: bio,
             owned: true
         })
+    }
+
+    pub fn flush(&self) -> bool {
+        unsafe { ffi::BIO_flush(self.get_handle()) }
+    }
+
+    pub fn pending(&self) -> usize {
+        unsafe {
+            ffi::BIO_pending(self.get_handle()) as usize
+        }
     }
 }
 
@@ -172,3 +192,4 @@ impl Bio for SocketBio {
         self.bio
     }
 }
+

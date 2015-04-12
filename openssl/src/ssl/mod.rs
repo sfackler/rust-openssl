@@ -5,7 +5,7 @@ use std::ffi::{CStr, CString};
 use std::fmt;
 use std::io;
 use std::io::prelude::*;
-use std::os::unix::io::AsRawFd;
+use std::os::unix::io::RawFd;
 use std::mem;
 use std::net;
 use std::path::Path;
@@ -558,7 +558,7 @@ impl SslContext {
 }
 
 #[allow(dead_code)]
-struct BioRef<'ssl,B:Bio> {
+pub struct BioRef<'ssl,B:Bio> {
     ssl: &'ssl Ssl,
     bio: B,
 }
@@ -605,9 +605,9 @@ impl Ssl {
         Ssl::create(ctx, rbio, wbio)
     }
 
-    pub fn new_from_socket<F:AsRawFd>(ctx: &SslContext, fd: F) -> Result<Ssl, SslError> {
-        let rbio = try!(SocketBio::new(fd.as_raw_fd()));
-        let wbio = try!(SocketBio::new(fd.as_raw_fd()));
+    pub fn new_from_socket(ctx: &SslContext, fd: RawFd) -> Result<Ssl, SslError> {
+        let rbio = try!(SocketBio::new(fd));
+        let wbio = try!(SocketBio::new(fd));
         
         Ssl::create(ctx, rbio, wbio)
     }
@@ -623,7 +623,7 @@ impl Ssl {
         Ok(ssl)
     }
 
-    fn get_rbio<'a,B:Bio>(&'a self) -> BioRef<'a,B> {
+    pub fn get_rbio<'a,B:Bio>(&'a self) -> BioRef<'a,B> {
         unsafe {
             let bio = ffi::SSL_get_rbio(self.ssl);
 
@@ -767,10 +767,31 @@ pub trait Io {
 
 pub struct SocketIo;
 
+impl SocketIo {
+    pub fn new() -> SocketIo {
+        SocketIo 
+    }
+}
+
 impl Io for SocketIo {
     fn in_retry_wrapper<F>(&mut self, ssl: &Arc<Ssl>, mut blk: F)
-        -> Result<c_int, SslError> where F: FnMut(&Arc<Ssl>) -> c_int {
-        unimplemented!()
+            -> Result<c_int, SslError> where F: FnMut(&Arc<Ssl>) -> c_int
+    {
+        loop {
+            let ret = blk(ssl);
+            if ret > 0 {
+                return Ok(ret);
+            } else {
+                let e = ssl.get_error(ret);
+                match e {
+                    LibSslError::ErrorWantRead => return Ok(0),
+                    LibSslError::ErrorWantWrite => { try_ssl_stream!(self.flush(ssl)) }
+                    LibSslError::ErrorZeroReturn => return Err(SslSessionClosed),
+                    LibSslError::ErrorSsl => return Err(SslError::get()),
+                    err => panic!("unexpected error {:?} {:?}", err, io::Error::last_os_error()),
+                }
+            }
+        }
     }
 }
 
@@ -823,7 +844,7 @@ impl<S:Read+Write> Io for StreamIo<S> {
                 LibSslError::ErrorWantWrite => { try_ssl_stream!(self.flush(ssl)) }
                 LibSslError::ErrorZeroReturn => return Err(SslSessionClosed),
                 LibSslError::ErrorSsl => return Err(SslError::get()),
-                err => panic!("unexpected error {:?}", err),
+                err => panic!("unexpected error {:?} {:?}", err, io::Error::last_os_error()),
             }
         }
     }
@@ -833,7 +854,7 @@ impl<S:Read+Write> Io for StreamIo<S> {
 #[derive(Clone)]
 pub struct SslStream<I:Io> {
     io: I,
-    ssl: Arc<Ssl>,
+    pub ssl: Arc<Ssl>,
 }
 
 impl SslStream<StreamIo<net::TcpStream>> {
@@ -861,7 +882,7 @@ impl fmt::Debug for SslStream<SocketIo> {
     }
 }
 
-impl<I:Io> SslStream<I> {
+impl<I:Io+SslRead> SslStream<I> {
     fn new_base(ssl:Ssl, io: I) -> SslStream<I> {
         SslStream {
             io: io,
@@ -895,6 +916,35 @@ impl<I:Io> SslStream<I> {
     #[cfg(feature = "npn")]
     pub fn get_selected_npn_protocol(&self) -> Option<&[u8]> {
         self.ssl.get_selected_npn_protocol()
+    }
+
+    pub fn pending(&mut self) -> Result<usize, SslError> {
+        self.io.pending(&self.ssl)
+    }
+}
+
+impl SslStream<SocketIo> {
+    pub fn new_server_from_socket_from(ssl: Ssl) -> Result<SslStream<SocketIo>, SslError> {
+        let mut s = SslStream::new_base(ssl, SocketIo::new());
+        s.io.in_retry_wrapper(&s.ssl, |ssl| { ssl.accept() }).and(Ok(s))
+    }
+
+    /// Attempts to create a new SSL stream from a given `Ssl` instance.
+    pub fn new_from_socket_from(ssl: Ssl) -> Result<SslStream<SocketIo>, SslError> {
+        let mut s = SslStream::new_base(ssl, SocketIo::new());
+        s.io.in_retry_wrapper(&s.ssl, |ssl| { ssl.connect() }).and(Ok(s))
+    }
+
+    /// Creates a new SSL stream
+    pub fn new_from_socket(ctx: &SslContext, socket: RawFd) -> Result<SslStream<SocketIo>, SslError> {
+        let ssl = try!(Ssl::new_from_socket(ctx, socket));
+        SslStream::new_from_socket_from(ssl)
+    }
+
+    /// Creates a new SSL server stream
+    pub fn new_server_from_socket(ctx: &SslContext, socket: RawFd) -> Result<SslStream<SocketIo>, SslError> {
+        let ssl = try!(Ssl::new_from_socket(ctx, socket));
+        SslStream::new_server_from_socket_from(ssl)
     }
 }
 
@@ -947,10 +997,6 @@ impl<S:Read+Write> SslStream<StreamIo<S>> {
     pub fn get_mut(&mut self) -> &mut S {
         &mut self.io.stream
     }
-
-    pub fn pending(&mut self) -> Result<usize, SslError> {
-        self.io.pending(&self.ssl)
-    }
 }
 
 pub trait SslRead {
@@ -971,11 +1017,19 @@ impl<I: Io+SslRead> Read for SslStream<I> {
 
 impl SslRead for SocketIo {
     fn read(&mut self, ssl: &Arc<Ssl>, buf: &mut [u8]) -> io::Result<usize> {
-        unimplemented!()
+        match self.in_retry_wrapper(&ssl, |ssl| { ssl.read(buf) }) {
+            Ok(len) => Ok(len as usize),
+            Err(SslSessionClosed) => Ok(0),
+            Err(StreamError(e)) => Err(e),
+            Err(e @ OpenSslErrors(_)) => {
+                Err(io::Error::new(io::ErrorKind::Other, e))
+            }
+        }
     }
 
     fn pending(&mut self, ssl: &Arc<Ssl>) -> Result<usize, SslError> {
-        unimplemented!()
+        let len = unsafe { ffi::SSL_pending(ssl.ssl) as usize };
+        Ok(len)
     }
 }
 
@@ -1033,11 +1087,22 @@ impl<S:Read+Write> SslWrite for StreamIo<S> {
 
 impl SslWrite for SocketIo {
     fn write(&mut self, ssl: &Arc<Ssl>, buf: &[u8]) -> io::Result<usize> {
-        unimplemented!()
+        match self.in_retry_wrapper(ssl, |ssl| ssl.write(buf)) {
+            Ok(len) => Ok(len as usize),
+            Err(SslSessionClosed) => Ok(0),
+            Err(StreamError(e)) => return Err(e),
+            Err(e @ OpenSslErrors(_)) => {
+                Err(io::Error::new(io::ErrorKind::Other, e))
+            }
+        }
     }
 
     fn flush(&mut self, ssl: &Arc<Ssl>) -> io::Result<()> {
-        unimplemented!()
+        if ssl.get_rbio::<SocketBio>().flush() {
+            Ok(())
+        } else {
+            Err(io::Error::new(io::ErrorKind::Other, "SocketBio::flush() failed"))
+        }
     }
 }
 

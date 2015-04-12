@@ -291,6 +291,17 @@ fn test_write() {
 }
 
 #[test]
+fn test_write_socket() {
+    let socket = TcpStream::connect("127.0.0.1:15418").unwrap();
+    let mut stream = SslStream::new_from_socket(&SslContext::new(Sslv23).unwrap(), socket.as_raw_fd()).unwrap();
+    stream.write_all("hello".as_bytes()).unwrap();
+    stream.flush().unwrap();
+    stream.write_all(" there".as_bytes()).unwrap();
+    stream.flush().unwrap();
+    drop(socket);
+}
+
+#[test]
 #[cfg(feature = "dtlsv1")]
 fn test_write_dtlsv1() {
     let sock = UdpSocket::bind("127.0.0.1:0").unwrap();

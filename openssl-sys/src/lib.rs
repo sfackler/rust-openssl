@@ -116,6 +116,8 @@ pub type PasswordCallback = extern "C" fn(buf: *mut c_char, size: c_int,
                                           -> c_int;
 
 pub const BIO_CTRL_EOF: c_int = 2;
+pub const BIO_CTRL_PENDING: c_int = 10;
+pub const BIO_CTRL_FLUSH: c_int = 11;
 pub const BIO_C_SET_FD: c_int = 104;
 
 pub const BIO_NOCLOSE: c_long = 0x00;
@@ -278,6 +280,14 @@ pub unsafe fn BIO_set_fd(b: *mut BIO, fd: c_int, c: c_long) {
     BIO_int_ctrl(b, BIO_C_SET_FD, c, fd); // BIO_set_fd() always returns 1
 }
 
+pub unsafe fn BIO_flush(b: *mut BIO) -> bool {
+    BIO_ctrl(b, BIO_CTRL_FLUSH, 0, ptr::null_mut()) == 1
+}
+
+pub unsafe fn BIO_pending(b: *mut BIO) -> c_long {
+    BIO_ctrl(b, BIO_CTRL_PENDING, 0, ptr::null_mut())
+}
+
 pub unsafe fn SSL_CTX_set_options(ssl: *mut SSL_CTX, op: c_long) -> c_long {
     SSL_CTX_ctrl(ssl, SSL_CTRL_OPTIONS, op, ptr::null_mut())
 }
@@ -312,6 +322,9 @@ extern "C" {
     pub fn BIO_write(b: *mut BIO, buf: *const c_void, len: c_int) -> c_int;
     pub fn BIO_s_mem() -> *const BIO_METHOD;
     pub fn BIO_s_fd() -> *const BIO_METHOD;
+    pub fn BIO_s_socket() -> *const BIO_METHOD;
+    pub fn BIO_s_datagram() -> *const BIO_METHOD;
+    pub fn BIO_new_dgram(fd: c_int, close_flag: c_int) -> *mut BIO_METHOD;
     pub fn BIO_method_type(b: *mut BIO) -> c_int;
     
     pub fn BN_new() -> *mut BIGNUM;
