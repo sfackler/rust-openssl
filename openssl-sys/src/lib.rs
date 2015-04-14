@@ -116,6 +116,15 @@ pub type PasswordCallback = extern "C" fn(buf: *mut c_char, size: c_int,
                                           -> c_int;
 
 pub const BIO_CTRL_EOF: c_int = 2;
+pub const BIO_CTRL_PENDING: c_int = 10;
+pub const BIO_CTRL_FLUSH: c_int = 11;
+pub const BIO_C_SET_FD: c_int = 104;
+
+pub const BIO_NOCLOSE: c_long = 0x00;
+pub const BIO_CLOSE:   c_long = 0x01;
+
+pub const BIO_TYPE_MEM:    c_int = (1|0x0400);
+pub const BIO_TYPE_SOCKET: c_int = (5|0x0400|0x0100);
 
 pub const CRYPTO_LOCK: c_int = 1;
 
@@ -267,6 +276,18 @@ pub unsafe fn BIO_eof(b: *mut BIO) -> bool {
     BIO_ctrl(b, BIO_CTRL_EOF, 0, ptr::null_mut()) == 1
 }
 
+pub unsafe fn BIO_set_fd(b: *mut BIO, fd: c_int, c: c_long) {
+    BIO_int_ctrl(b, BIO_C_SET_FD, c, fd); // BIO_set_fd() always returns 1
+}
+
+pub unsafe fn BIO_flush(b: *mut BIO) -> bool {
+    BIO_ctrl(b, BIO_CTRL_FLUSH, 0, ptr::null_mut()) == 1
+}
+
+pub unsafe fn BIO_pending(b: *mut BIO) -> c_long {
+    BIO_ctrl(b, BIO_CTRL_PENDING, 0, ptr::null_mut())
+}
+
 pub unsafe fn SSL_CTX_set_options(ssl: *mut SSL_CTX, op: c_long) -> c_long {
     SSL_CTX_ctrl(ssl, SSL_CTRL_OPTIONS, op, ptr::null_mut())
 }
@@ -293,13 +314,19 @@ extern "C" {
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
     pub fn ASN1_TIME_free(tm: *mut ASN1_TIME);
 
+    pub fn BIO_int_ctrl(b: *mut BIO, cmd: c_int, larg: c_long, iarg: c_int) -> c_long;
     pub fn BIO_ctrl(b: *mut BIO, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
     pub fn BIO_free_all(b: *mut BIO);
     pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
     pub fn BIO_read(b: *mut BIO, buf: *mut c_void, len: c_int) -> c_int;
     pub fn BIO_write(b: *mut BIO, buf: *const c_void, len: c_int) -> c_int;
     pub fn BIO_s_mem() -> *const BIO_METHOD;
-
+    pub fn BIO_s_fd() -> *const BIO_METHOD;
+    pub fn BIO_s_socket() -> *const BIO_METHOD;
+    pub fn BIO_s_datagram() -> *const BIO_METHOD;
+    pub fn BIO_new_dgram(fd: c_int, close_flag: c_int) -> *mut BIO_METHOD;
+    pub fn BIO_method_type(b: *mut BIO) -> c_int;
+    
     pub fn BN_new() -> *mut BIGNUM;
     pub fn BN_dup(n: *mut BIGNUM) -> *mut BIGNUM;
     pub fn BN_clear_free(bn: *mut BIGNUM);
@@ -504,6 +531,7 @@ extern "C" {
     pub fn SSL_get_error(ssl: *mut SSL, ret: c_int) -> c_int;
     pub fn SSL_read(ssl: *mut SSL, buf: *mut c_void, num: c_int) -> c_int;
     pub fn SSL_write(ssl: *mut SSL, buf: *const c_void, num: c_int) -> c_int;
+    pub fn SSL_pending(ssl: *mut SSL) -> c_int;
     pub fn SSL_get_ex_data_X509_STORE_CTX_idx() -> c_int;
     pub fn SSL_get_SSL_CTX(ssl: *mut SSL) -> *mut SSL_CTX;
     pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const COMP_METHOD;

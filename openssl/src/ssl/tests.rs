@@ -9,6 +9,7 @@ use std::net::TcpListener;
 #[cfg(feature = "npn")]
 use std::thread;
 use std::fs::File;
+use std::os::unix::io::AsRawFd;
 
 use crypto::hash::Type::{SHA256};
 use ssl;
@@ -52,7 +53,7 @@ macro_rules! run_test(
             use std::net::TcpStream;
             use ssl;
             use ssl::SslMethod;
-            use ssl::{SslContext, SslStream, VerifyCallback};
+            use ssl::{SslContext, StreamIo, SslStream, VerifyCallback};
             use ssl::SSL_VERIFY_PEER;
             use crypto::hash::Type::SHA256;
             use x509::X509StoreContext;
@@ -84,7 +85,7 @@ run_test!(new_ctx, |method, _| {
 });
 
 run_test!(new_sslstream, |method, stream| {
-    SslStream::new(&SslContext::new(method).unwrap(), stream).unwrap();
+    SslStream::<StreamIo<TcpStream>>::new(&SslContext::new(method).unwrap(), stream).unwrap();
 });
 
 run_test!(verify_untrusted, |method, stream| {
@@ -291,6 +292,17 @@ fn test_write() {
 }
 
 #[test]
+fn test_write_socket() {
+    let socket = TcpStream::connect("127.0.0.1:15418").unwrap();
+    let mut stream = SslStream::new_from_socket(&SslContext::new(Sslv23).unwrap(), socket.as_raw_fd()).unwrap();
+    stream.write_all("hello".as_bytes()).unwrap();
+    stream.flush().unwrap();
+    stream.write_all(" there".as_bytes()).unwrap();
+    stream.flush().unwrap();
+    drop(socket);
+}
+
+#[test]
 #[cfg(feature = "dtlsv1")]
 fn test_write_dtlsv1() {
     let sock = UdpSocket::bind("127.0.0.1:0").unwrap();
@@ -311,7 +323,30 @@ fn test_read() {
     stream.flush().unwrap();
     io::copy(&mut stream, &mut io::sink()).ok().expect("read error");
 }
+/*
+#[test]
+fn test_pending() {
+    let tcp = TcpStream::connect("127.0.0.1:15418").unwrap();
+    let mut stream = SslStream::new(&SslContext::new(Sslv23).unwrap(), tcp).unwrap();
+    stream.write_all("GET /\r\n\r\n".as_bytes()).unwrap();
+    stream.flush().unwrap();
 
+    // wait for the response and read first byte...
+    let mut buf = [0u8; 16*1024];
+    stream.read(&mut buf[..1]).unwrap();
+
+    let pending = stream.pending().unwrap();
+    let len = stream.read(&mut buf[1..]).unwrap();
+
+    assert_eq!(pending, len);
+
+    stream.read(&mut buf[..1]).unwrap();
+
+    let pending = stream.pending().unwrap();
+    let len = stream.read(&mut buf[1..]).unwrap();
+    assert_eq!(pending, len);
+}
+*/
 /// Tests that connecting with the client using NPN, but the server not does not
 /// break the existing connection behavior.
 #[test]
@@ -446,6 +481,18 @@ mod dtlsv1 {
         SslContext::new(PROTOCOL).unwrap();
     }
 }
+/*
+#[test]
+#[cfg(feature = "dtlsv1")]
+fn test_pending_dtlsv1() {
+    let sock = UdpSocket::bind("127.0.0.1:0").unwrap();
+    let server = udp::next_server();
+    let stream = sock.connect(&server[..]).unwrap();
+
+    let mut stream = SslStream::new(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
+    let mut buf = [0u8;100];
+    assert!(stream.read(&mut buf).is_ok());
+}
 
 #[test]
 #[cfg(feature = "dtlsv1")]
@@ -455,6 +502,12 @@ fn test_read_dtlsv1() {
     let stream = sock.connect(&server[..]).unwrap();
 
     let mut stream = SslStream::new(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
-    let mut buf = [0u8;100];
-    assert!(stream.read(&mut buf).is_ok());
+    let mut buf = [0u8; 16*1024];
+    assert!(stream.read(&mut buf[..1]).is_ok());
+
+    let pending = stream.pending().unwrap();
+    let len = stream.read(&mut buf[1..]).unwrap();
+
+    assert_eq!(pending, len);
 }
+*/

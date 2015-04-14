@@ -1,15 +1,14 @@
 use libc::{c_int, c_void, c_long};
 use std::any::TypeId;
 use std::collections::HashMap;
-use std::ffi::{CStr, CString};
+use std::ffi::{CString};
 use std::fmt;
-use std::io;
 use std::io::prelude::*;
+use std::os::unix::io::RawFd;
 use std::mem;
-use std::net;
 use std::path::Path;
 use std::ptr;
-use std::sync::{Once, ONCE_INIT, Arc, Mutex};
+use std::sync::{Once, ONCE_INIT, Mutex};
 use std::ops::{Deref, DerefMut};
 use std::cmp;
 use std::any::Any;
@@ -18,13 +17,17 @@ use libc::{c_uchar, c_uint};
 #[cfg(feature = "npn")]
 use std::slice;
 
-use bio::{MemBio};
+use bio::{MemBio,SocketBio,Bio};
 use ffi;
-use ssl::error::{SslError, SslSessionClosed, StreamError, OpenSslErrors};
+use ssl::error::{SslError};
 use x509::{X509StoreContext, X509FileType, X509};
 use crypto::pkey::PKey;
 
 pub mod error;
+pub mod ssl_stream;
+
+pub use self::ssl_stream::{SslStream,StreamIo};
+
 #[cfg(test)]
 mod tests;
 
@@ -557,21 +560,21 @@ impl SslContext {
 }
 
 #[allow(dead_code)]
-struct MemBioRef<'ssl> {
+pub struct BioRef<'ssl,B:Bio> {
     ssl: &'ssl Ssl,
-    bio: MemBio,
+    bio: B,
 }
 
-impl<'ssl> Deref for MemBioRef<'ssl> {
-    type Target = MemBio;
+impl<'ssl,B:Bio> Deref for BioRef<'ssl,B> {
+    type Target = B;
 
-    fn deref(&self) -> &MemBio {
+    fn deref(&self) -> &B {
         &self.bio
     }
 }
 
-impl<'ssl> DerefMut for MemBioRef<'ssl> {
-    fn deref_mut(&mut self) -> &mut MemBio {
+impl<'ssl,B:Bio> DerefMut for BioRef<'ssl,B> {
+    fn deref_mut(&mut self) -> &mut B {
         &mut self.bio
     }
 }
@@ -598,32 +601,51 @@ impl Drop for Ssl {
 
 impl Ssl {
     pub fn new(ctx: &SslContext) -> Result<Ssl, SslError> {
+        let rbio = try!(MemBio::new());
+        let wbio = try!(MemBio::new());
+        
+        Ssl::create(ctx, rbio, wbio)
+    }
+
+    pub fn new_from_socket(ctx: &SslContext, fd: RawFd) -> Result<Ssl, SslError> {
+        let rbio = try!(SocketBio::new(fd));
+        let wbio = try!(SocketBio::new(fd));
+        
+        Ssl::create(ctx, rbio, wbio)
+    }
+
+    fn create<B:Bio>(ctx: &SslContext, rbio: B, wbio: B) -> Result<Ssl, SslError> {
         let ssl = unsafe { ffi::SSL_new(ctx.ctx) };
         if ssl == ptr::null_mut() {
             return Err(SslError::get());
         }
         let ssl = Ssl { ssl: ssl };
 
-        let rbio = try!(MemBio::new());
-        let wbio = try!(MemBio::new());
-
         unsafe { ffi::SSL_set_bio(ssl.ssl, rbio.unwrap(), wbio.unwrap()) }
         Ok(ssl)
     }
 
-    fn get_rbio<'a>(&'a self) -> MemBioRef<'a> {
-        unsafe { self.wrap_bio(ffi::SSL_get_rbio(self.ssl)) }
+    pub fn get_rbio<'a,B:Bio>(&'a self) -> BioRef<'a,B> {
+        unsafe {
+            let bio = ffi::SSL_get_rbio(self.ssl);
+
+            self.wrap_bio::<'a,B>(bio)
+        }
     }
 
-    fn get_wbio<'a>(&'a self) -> MemBioRef<'a> {
-        unsafe { self.wrap_bio(ffi::SSL_get_wbio(self.ssl)) }
+    fn get_wbio<'a,B:Bio>(&'a self) -> BioRef<'a,B> {
+        unsafe {
+            let bio = ffi::SSL_get_wbio(self.ssl);
+
+            self.wrap_bio::<'a,B>(bio)
+        }
     }
 
-    fn wrap_bio<'a>(&'a self, bio: *mut ffi::BIO) -> MemBioRef<'a> {
+    fn wrap_bio<'a,B:Bio>(&'a self, bio: *mut ffi::BIO) -> BioRef<'a,B> {
         assert!(bio != ptr::null_mut());
-        MemBioRef {
+        BioRef {
             ssl: self,
-            bio: MemBio::borrowed(bio)
+            bio: B::borrowed(bio)
         }
     }
 
@@ -738,241 +760,4 @@ make_LibSslError! {
     ErrorZeroReturn = SSL_ERROR_ZERO_RETURN,
     ErrorWantConnect = SSL_ERROR_WANT_CONNECT,
     ErrorWantAccept = SSL_ERROR_WANT_ACCEPT
-}
-
-/// A stream wrapper which handles SSL encryption for an underlying stream.
-#[derive(Clone)]
-pub struct SslStream<S> {
-    stream: S,
-    ssl: Arc<Ssl>,
-    buf: Vec<u8>
-}
-
-impl SslStream<net::TcpStream> {
-    /// Create a new independently owned handle to the underlying socket.
-    pub fn try_clone(&self) -> io::Result<SslStream<net::TcpStream>> {
-        Ok(SslStream { 
-            stream: try!(self.stream.try_clone()),
-            ssl: self.ssl.clone(),
-            buf: self.buf.clone(),
-        })
-    }
-}
-
-impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "SslStream {{ stream: {:?}, ssl: {:?} }}", self.stream, self.ssl)
-    }
-}
-
-impl<S: Read+Write> SslStream<S> {
-    fn new_base(ssl:Ssl, stream: S) -> SslStream<S> {
-        SslStream {
-            stream: stream,
-            ssl: Arc::new(ssl),
-            // Maximum TLS record size is 16k
-            // We're just using this as a buffer, so there's no reason to pay
-            // to memset it
-            buf: {
-                const CAP: usize = 16 * 1024;
-                let mut v = Vec::with_capacity(CAP);
-                unsafe { v.set_len(CAP); }
-                v
-            }
-        }
-    }
-
-    pub fn new_server_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        let mut ssl = SslStream::new_base(ssl, stream);
-        ssl.in_retry_wrapper(|ssl| { ssl.accept() }).and(Ok(ssl))
-    }
-
-    /// Attempts to create a new SSL stream from a given `Ssl` instance.
-    pub fn new_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        let mut ssl = SslStream::new_base(ssl, stream);
-        ssl.in_retry_wrapper(|ssl| { ssl.connect() }).and(Ok(ssl))
-    }
-
-    /// Creates a new SSL stream
-    pub fn new(ctx: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
-        let ssl = try!(Ssl::new(ctx));
-        SslStream::new_from(ssl, stream)
-    }
-
-    /// Creates a new SSL server stream
-    pub fn new_server(ctx: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
-        let ssl = try!(Ssl::new(ctx));
-        SslStream::new_server_from(ssl, stream)
-    }
-
-    /// Returns a mutable reference to the underlying stream.
-    ///
-    /// ## Warning
-    ///
-    /// `read`ing or `write`ing directly to the underlying stream will most
-    /// likely desynchronize the SSL session.
-    #[deprecated="use get_mut instead"]
-    pub fn get_inner(&mut self) -> &mut S {
-        self.get_mut()
-    }
-
-    /// Returns a reference to the underlying stream.
-    pub fn get_ref(&self) -> &S {
-        &self.stream
-    }
-
-    /// Returns a mutable reference to the underlying stream.
-    ///
-    /// ## Warning
-    ///
-    /// It is inadvisable to read from or write to the underlying stream as it
-    /// will most likely desynchronize the SSL session.
-    pub fn get_mut(&mut self) -> &mut S {
-        &mut self.stream
-    }
-
-    fn in_retry_wrapper<F>(&mut self, mut blk: F)
-            -> Result<c_int, SslError> where F: FnMut(&Ssl) -> c_int {
-        loop {
-            let ret = blk(&self.ssl);
-            if ret > 0 {
-                return Ok(ret);
-            }
-
-            let e = self.ssl.get_error(ret);
-            match e {
-                LibSslError::ErrorWantRead => {
-                    try_ssl_stream!(self.flush());
-                    let len = try_ssl_stream!(self.stream.read(&mut self.buf[..]));
-                    if len == 0 {
-                        return Ok(0);
-                    }
-                    try_ssl_stream!(self.ssl.get_rbio().write_all(&self.buf[..len]));
-                }
-                LibSslError::ErrorWantWrite => { try_ssl_stream!(self.flush()) }
-                LibSslError::ErrorZeroReturn => return Err(SslSessionClosed),
-                LibSslError::ErrorSsl => return Err(SslError::get()),
-                err => panic!("unexpected error {:?}", err),
-            }
-        }
-    }
-
-    fn write_through(&mut self) -> io::Result<()> {
-        io::copy(&mut *self.ssl.get_wbio(), &mut self.stream).map(|_| ())
-    }
-
-    /// Get the compression currently in use.  The result will be
-    /// either None, indicating no compression is in use, or a string
-    /// with the compression name.
-    pub fn get_compression(&self) -> Option<String> {
-        let ptr = unsafe { ffi::SSL_get_current_compression(self.ssl.ssl) };
-        if ptr == ptr::null() {
-            return None;
-        }
-
-        let meth = unsafe { ffi::SSL_COMP_get_name(ptr) };
-        let s = unsafe {
-            String::from_utf8(CStr::from_ptr(meth).to_bytes().to_vec()).unwrap()
-        };
-
-        Some(s)
-    }
-
-    /// Returns the protocol selected by performing Next Protocol Negotiation, if any.
-    ///
-    /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
-    /// to interpret it.
-    ///
-    /// This method needs the `npn` feature.
-    #[cfg(feature = "npn")]
-    pub fn get_selected_npn_protocol(&self) -> Option<&[u8]> {
-        self.ssl.get_selected_npn_protocol()
-    }
-}
-
-impl<S: Read+Write> Read for SslStream<S> {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        match self.in_retry_wrapper(|ssl| { ssl.read(buf) }) {
-            Ok(len) => Ok(len as usize),
-            Err(SslSessionClosed) => Ok(0),
-            Err(StreamError(e)) => Err(e),
-            Err(e @ OpenSslErrors(_)) => {
-                Err(io::Error::new(io::ErrorKind::Other, e))
-            }
-        }
-    }
-}
-
-impl<S: Read+Write> Write for SslStream<S> {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        match self.in_retry_wrapper(|ssl| ssl.write(buf)) {
-            Ok(len) => Ok(len as usize),
-            Err(SslSessionClosed) => Ok(0),
-            Err(StreamError(e)) => return Err(e),
-            Err(e @ OpenSslErrors(_)) => {
-                Err(io::Error::new(io::ErrorKind::Other, e))
-            }
-        }
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        try!(self.write_through());
-        self.stream.flush()
-    }
-}
-
-/// A utility type to help in cases where the use of SSL is decided at runtime.
-#[derive(Debug)]
-pub enum MaybeSslStream<S> where S: Read+Write {
-    /// A connection using SSL
-    Ssl(SslStream<S>),
-    /// A connection not using SSL
-    Normal(S),
-}
-
-impl<S> Read for MaybeSslStream<S> where S: Read+Write {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        match *self {
-            MaybeSslStream::Ssl(ref mut s) => s.read(buf),
-            MaybeSslStream::Normal(ref mut s) => s.read(buf),
-        }
-    }
-}
-
-impl<S> Write for MaybeSslStream<S> where S: Read+Write {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        match *self {
-            MaybeSslStream::Ssl(ref mut s) => s.write(buf),
-            MaybeSslStream::Normal(ref mut s) => s.write(buf),
-        }
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        match *self {
-            MaybeSslStream::Ssl(ref mut s) => s.flush(),
-            MaybeSslStream::Normal(ref mut s) => s.flush(),
-        }
-    }
-}
-
-impl<S> MaybeSslStream<S> where S: Read+Write {
-    /// Returns a reference to the underlying stream.
-    pub fn get_ref(&self) -> &S {
-        match *self {
-            MaybeSslStream::Ssl(ref s) => s.get_ref(),
-            MaybeSslStream::Normal(ref s) => s,
-        }
-    }
-
-    /// Returns a mutable reference to the underlying stream.
-    ///
-    /// ## Warning
-    ///
-    /// It is inadvisable to read from or write to the underlying stream.
-    pub fn get_mut(&mut self) -> &mut S {
-        match *self {
-            MaybeSslStream::Ssl(ref mut s) => s.get_mut(),
-            MaybeSslStream::Normal(ref mut s) => s,
-        }
-    }
 }
