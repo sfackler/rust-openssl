@@ -429,7 +429,6 @@ fn test_npn_server_advertise_multiple() {
 mod dtlsv1 {
     use serialize::hex::FromHex;
     use std::net::TcpStream;
-    use std::old_io::{Writer};
     use std::thread;
 
     use crypto::hash::Type::{SHA256};

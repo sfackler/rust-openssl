@@ -805,13 +805,7 @@ impl<S: Read+Write> SslStream<S> {
         SslStream::new_server_from(ssl, stream)
     }
 
-    /// Returns a mutable reference to the underlying stream.
-    ///
-    /// ## Warning
-    ///
-    /// `read`ing or `write`ing directly to the underlying stream will most
-    /// likely desynchronize the SSL session.
-    #[deprecated="use get_mut instead"]
+    #[doc(hidden)]
     pub fn get_inner(&mut self) -> &mut S {
         self.get_mut()
     }
