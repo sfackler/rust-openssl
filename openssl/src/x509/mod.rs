@@ -11,7 +11,7 @@ use asn1::{Asn1Time};
 use bio::{MemBio};
 use crypto::hash;
 use crypto::hash::Type as HashType;
-use crypto::pkey::{PKey};
+use crypto::pkey::{PKey,Parts};
 use crypto::rand::rand_bytes;
 use ffi;
 use ssl::error::{SslError, StreamError};
@@ -400,6 +400,13 @@ impl<'ctx> X509<'ctx> {
     pub fn subject_name<'a>(&'a self) -> X509Name<'a> {
         let name = unsafe { ffi::X509_get_subject_name(self.handle) };
         X509Name { x509: self, name: name }
+    }
+
+    pub fn public_key(&self) -> PKey {
+        let pkey = unsafe { ffi::X509_get_pubkey(self.handle) };
+        assert!(!pkey.is_null());
+
+        PKey::from_handle(pkey, Parts::Public)
     }
 
     /// Returns certificate fingerprint calculated using provided hash

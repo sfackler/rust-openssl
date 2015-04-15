@@ -11,7 +11,7 @@ use ffi;
 use ssl::error::{SslError, StreamError};
 
 #[derive(Copy, Clone)]
-enum Parts {
+pub enum Parts {
     Neither,
     Public,
     Both
@@ -67,6 +67,16 @@ impl PKey {
                 evp: ffi::EVP_PKEY_new(),
                 parts: Parts::Neither,
             }
+        }
+    }
+
+    pub fn from_handle(handle: *mut ffi::EVP_PKEY, parts: Parts) -> PKey {
+        ffi::init();
+        assert!(!handle.is_null());
+
+        PKey {
+            evp: handle,
+            parts: parts,
         }
     }
 

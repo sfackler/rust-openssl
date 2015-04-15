@@ -2,6 +2,7 @@ use serialize::hex::FromHex;
 use std::io;
 use std::path::Path;
 use std::fs::File;
+use std::str;
 
 use crypto::hash::Type::{SHA256};
 use x509::{X509, X509Generator};
@@ -28,6 +29,8 @@ fn test_cert_gen() {
 
     // FIXME: check data in result to be correct, needs implementation
     // of X509 getters
+
+    assert_eq!(pkey.save_pub(), cert.public_key().save_pub());
 }
 
 #[test]
