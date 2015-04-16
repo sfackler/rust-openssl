@@ -6,7 +6,7 @@ authors = ["Alex Crichton <alex@alexcrichton.com>",
 license = "MIT"
 description = "FFI bindings to OpenSSL"
 repository = "https://github.com/sfackler/rust-openssl"
-documentation = "https://sfackler.github.io/rust-openssl/doc/openssl-sys"
+documentation = "https://sfackler.github.io/rust-openssl/doc/openssl_sys"
 
 links = "openssl"
 build = "build.rs"
