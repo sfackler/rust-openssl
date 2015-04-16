@@ -573,6 +573,7 @@ extern "C" {
     pub fn X509_set_version(x: *mut X509, version: c_ulong) -> c_int;
     pub fn X509_set_pubkey(x: *mut X509, pkey: *mut EVP_PKEY) -> c_int;
     pub fn X509_sign(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
+    pub fn X509_get_pubkey(x: *mut X509) -> *mut EVP_PKEY;
 
     pub fn X509_EXTENSION_free(ext: *mut X509_EXTENSION);
 
