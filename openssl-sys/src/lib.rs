@@ -433,6 +433,7 @@ extern "C" {
     pub fn EVP_PKEY_assign(pkey: *mut EVP_PKEY, typ: c_int, key: *const c_void) -> c_int;
     pub fn EVP_PKEY_get1_RSA(k: *mut EVP_PKEY) -> *mut RSA;
     pub fn EVP_PKEY_set1_RSA(k: *mut EVP_PKEY, r: *mut RSA) -> c_int;
+    pub fn EVP_PKEY_cmp(a: *const EVP_PKEY, b: *const EVP_PKEY) -> c_int;
 
     pub fn HMAC_CTX_init(ctx: *mut HMAC_CTX);
     pub fn HMAC_CTX_cleanup(ctx: *mut HMAC_CTX);
