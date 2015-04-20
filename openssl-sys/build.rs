@@ -5,6 +5,11 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
+    let target = env::var("TARGET").unwrap();
+
+    // libressl_pnacl_sys links the libs needed.
+    if target.ends_with("nacl") { return; }
+
     let lib_dir = env::var("OPENSSL_LIB_DIR").ok();
     let include_dir = env::var("OPENSSL_INCLUDE_DIR").ok();
 
@@ -15,7 +20,7 @@ fn main() {
         }
     }
 
-    let (libcrypto, libssl) = if env::var("TARGET").unwrap().contains("windows") {
+    let (libcrypto, libssl) = if target.contains("windows") {
     	("eay32", "ssl32")
     } else {
     	("crypto", "ssl")
