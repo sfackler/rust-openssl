@@ -1,4 +1,7 @@
 language: rust
+rust:
+- nightly
+- beta
 os:
 - osx
 - linux
@@ -15,4 +18,4 @@ script:
 - (test $TRAVIS_OS_NAME == "osx" || (cd openssl && LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH cargo test --features "$FEATURES"))
 - ./.travis/build_docs.sh
 after_success:
-- test $TRAVIS_PULL_REQUEST == "false" && test $TRAVIS_BRANCH == "master" && ./.travis/update_docs.sh
+- test $TRAVIS_PULL_REQUEST == "false" && test $TRAVIS_BRANCH == "master" && test $TRAVIS_RUST_VERSION == "nightly" && ./.travis/update_docs.sh
