@@ -63,7 +63,7 @@ rust-openssl directory. Then run one of the following commands:
 
 * Windows: `openssl s_server -accept 15418 -www -cert test/cert.pem -key
   test/key.pem > NUL`
-* Linux: `openssl s_server -accept 15418 -www -cert test/cert.pem -key \
+* Linux: `openssl s_server -accept 15418 -www -cert test/cert.pem -key
   test/key.pem >/dev/null`
 
 Then in the original terminal, run `cargo test`. If everything is set up
