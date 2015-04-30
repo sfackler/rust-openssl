@@ -337,6 +337,30 @@ fn test_read() {
     io::copy(&mut stream, &mut io::sink()).ok().expect("read error");
 }
 
+
+#[test]
+fn test_pending() {
+    let tcp = TcpStream::connect("127.0.0.1:15418").unwrap();
+    let mut stream = SslStream::new(&SslContext::new(Sslv23).unwrap(), tcp).unwrap();
+    stream.write_all("GET /\r\n\r\n".as_bytes()).unwrap();
+    stream.flush().unwrap();
+
+    // wait for the response and read first byte...
+    let mut buf = [0u8; 16*1024];
+    stream.read(&mut buf[..1]).unwrap();
+
+    let pending = stream.pending();
+    let len = stream.read(&mut buf[1..]).unwrap();
+
+    assert_eq!(pending, len);
+
+    stream.read(&mut buf[..1]).unwrap();
+
+    let pending = stream.pending();
+    let len = stream.read(&mut buf[1..]).unwrap();
+    assert_eq!(pending, len);
+} 
+
 /// Tests that connecting with the client using NPN, but the server not does not
 /// break the existing connection behavior.
 #[test]
