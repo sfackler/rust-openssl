@@ -899,14 +899,14 @@ impl<S: Read+Write> Read for SslStream<S> {
 
 impl<S: Read+Write> Write for SslStream<S> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        match self.in_retry_wrapper(|ssl| ssl.write(buf)) {
-            Ok(len) => Ok(len as usize),
-            Err(SslSessionClosed) => Ok(0),
+        let count = match self.in_retry_wrapper(|ssl| ssl.write(buf)) {
+            Ok(len) => len as usize,
+            Err(SslSessionClosed) => 0,
             Err(StreamError(e)) => return Err(e),
-            Err(e @ OpenSslErrors(_)) => {
-                Err(io::Error::new(io::ErrorKind::Other, e))
-            }
-        }
+            Err(e @ OpenSslErrors(_)) => return Err(io::Error::new(io::ErrorKind::Other, e)),
+        };
+        try!(self.write_through());
+        Ok(count)
     }
 
     fn flush(&mut self) -> io::Result<()> {

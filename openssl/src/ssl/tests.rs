@@ -4,9 +4,7 @@ use std::net::TcpStream;
 use std::io;
 use std::io::prelude::*;
 use std::path::Path;
-#[cfg(feature = "npn")]
 use std::net::TcpListener;
-#[cfg(feature = "npn")]
 use std::thread;
 use std::fs::File;
 
@@ -17,7 +15,6 @@ use ssl::SslMethod::Sslv23;
 use ssl::{SslContext, SslStream, VerifyCallback};
 use ssl::SSL_VERIFY_PEER;
 use x509::X509StoreContext;
-#[cfg(feature = "npn")]
 use x509::X509FileType;
 use x509::X509;
 use crypto::pkey::PKey;
@@ -236,6 +233,34 @@ run_test!(verify_callback_data, |method, stream| {
         Err(err) => panic!("Expected success, got {:?}", err)
     }
 });
+
+// Make sure every write call translates to a write call to the underlying socket.
+#[test]
+fn test_write_hits_stream() {
+    let listener = TcpListener::bind("localhost:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+
+    let guard = thread::spawn(move || {
+        let ctx = SslContext::new(Sslv23).unwrap();
+        let stream = TcpStream::connect(addr).unwrap();
+        let mut stream = SslStream::new(&ctx, stream).unwrap();
+
+        stream.write_all(b"hello").unwrap();
+        stream
+    });
+
+    let mut ctx = SslContext::new(Sslv23).unwrap();
+    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM).unwrap();
+    ctx.set_private_key_file(&Path::new("test/key.pem"), X509FileType::PEM).unwrap();
+    let stream = listener.accept().unwrap().0;
+    let mut stream = SslStream::new_server(&ctx, stream).unwrap();
+
+    let mut buf = [0; 5];
+    assert_eq!(5, stream.read(&mut buf).unwrap());
+    assert_eq!(&b"hello"[..], &buf[..]);
+    guard.join().unwrap();
+}
 
 #[test]
 fn test_set_certificate_and_private_key() {

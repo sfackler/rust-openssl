@@ -2,7 +2,6 @@ use serialize::hex::FromHex;
 use std::io;
 use std::path::Path;
 use std::fs::File;
-use std::str;
 
 use crypto::hash::Type::{SHA256};
 use x509::{X509, X509Generator};
