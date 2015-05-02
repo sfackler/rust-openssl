@@ -431,8 +431,8 @@ impl SslContext {
 
     #[allow(non_snake_case)]
     /// Specifies the file that contains trusted CA certificates.
-    pub fn set_CA_file(&mut self, file: &Path) -> Result<(),SslError> {
-        let file = CString::new(file.as_os_str().to_str().expect("invalid utf8")).unwrap();
+    pub fn set_CA_file<P: AsRef<Path>>(&mut self, file: P) -> Result<(),SslError> {
+        let file = CString::new(file.as_ref().as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(
             unsafe {
                 ffi::SSL_CTX_load_verify_locations(self.ctx, file.as_ptr(), ptr::null())
@@ -440,9 +440,9 @@ impl SslContext {
     }
 
     /// Specifies the file that contains certificate
-    pub fn set_certificate_file(&mut self, file: &Path,
-                                file_type: X509FileType) -> Result<(),SslError> {
-        let file = CString::new(file.as_os_str().to_str().expect("invalid utf8")).unwrap();
+    pub fn set_certificate_file<P: AsRef<Path>>(&mut self, file: P, file_type: X509FileType)
+                                                -> Result<(),SslError> {
+        let file = CString::new(file.as_ref().as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(
             unsafe {
                 ffi::SSL_CTX_use_certificate_file(self.ctx, file.as_ptr(), file_type as c_int)
@@ -467,9 +467,9 @@ impl SslContext {
     }
 
     /// Specifies the file that contains private key
-    pub fn set_private_key_file(&mut self, file: &Path,
+    pub fn set_private_key_file<P: AsRef<Path>>(&mut self, file: P,
                                 file_type: X509FileType) -> Result<(),SslError> {
-        let file = CString::new(file.as_os_str().to_str().expect("invalid utf8")).unwrap();
+        let file = CString::new(file.as_ref().as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(
             unsafe {
                 ffi::SSL_CTX_use_PrivateKey_file(self.ctx, file.as_ptr(), file_type as c_int)
