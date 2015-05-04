@@ -350,6 +350,10 @@ impl PKey {
     pub unsafe fn get_handle(&self) -> *mut ffi::EVP_PKEY {
         return self.evp
     }
+
+    pub fn public_eq(&self, other: &PKey) -> bool {
+        unsafe { ffi::EVP_PKEY_cmp(self.evp, other.evp) == 1 }
+    }
 }
 
 impl Drop for PKey {
@@ -373,6 +377,7 @@ mod tests {
         k0.gen(512);
         k1.load_pub(&k0.save_pub());
         assert_eq!(k0.save_pub(), k1.save_pub());
+        assert!(k0.public_eq(&k1));
         assert_eq!(k0.size(), k1.size());
         assert!(k0.can(super::Role::Encrypt));
         assert!(k0.can(super::Role::Decrypt));
@@ -391,6 +396,7 @@ mod tests {
         k0.gen(512);
         k1.load_priv(&k0.save_priv());
         assert_eq!(k0.save_priv(), k1.save_priv());
+        assert!(k0.public_eq(&k1));
         assert_eq!(k0.size(), k1.size());
         assert!(k0.can(super::Role::Encrypt));
         assert!(k0.can(super::Role::Decrypt));
@@ -460,5 +466,29 @@ mod tests {
 
         assert!(k1.verify_with_hash(&msg, &sig, MD5));
         assert!(!k1.verify_with_hash(&msg, &sig, SHA1));
+    }
+
+    #[test]
+    fn test_eq() {
+        let mut k0 = super::PKey::new();
+        let mut p0 = super::PKey::new();
+        let mut k1 = super::PKey::new();
+        let mut p1 = super::PKey::new();
+        k0.gen(512);
+        k1.gen(512);
+        p0.load_pub(&k0.save_pub());
+        p1.load_pub(&k1.save_pub());
+
+        assert!(k0.public_eq(&k0));
+        assert!(k1.public_eq(&k1));
+        assert!(p0.public_eq(&p0));
+        assert!(p1.public_eq(&p1));
+        assert!(k0.public_eq(&p0));
+        assert!(k1.public_eq(&p1));
+
+        assert!(!k0.public_eq(&k1));
+        assert!(!p0.public_eq(&p1));
+        assert!(!k0.public_eq(&p1));
+        assert!(!p0.public_eq(&k1));
     }
 }
