@@ -707,6 +707,13 @@ impl Ssl {
             }
         }
     }
+
+    /// pending() takes into account only bytes from the TLS/SSL record that is currently being processed (if any).
+    pub fn pending(&self) -> usize {
+        unsafe {
+            ffi::SSL_pending(self.ssl) as usize
+        }
+    }
 }
 
 macro_rules! make_LibSslError {
@@ -881,6 +888,11 @@ impl<S: Read+Write> SslStream<S> {
     #[cfg(feature = "npn")]
     pub fn get_selected_npn_protocol(&self) -> Option<&[u8]> {
         self.ssl.get_selected_npn_protocol()
+    }
+
+    /// pending() takes into account only bytes from the TLS/SSL record that is currently being processed (if any).
+    pub fn pending(&self) -> usize {
+        self.ssl.pending()
     }
 }
 

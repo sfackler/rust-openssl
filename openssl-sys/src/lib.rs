@@ -497,6 +497,7 @@ extern "C" {
     pub fn SSLv23_method() -> *const SSL_METHOD;
 
     pub fn SSL_new(ctx: *mut SSL_CTX) -> *mut SSL;
+    pub fn SSL_pending(ssl: *const SSL) -> c_int;
     pub fn SSL_free(ssl: *mut SSL);
     pub fn SSL_set_bio(ssl: *mut SSL, rbio: *mut BIO, wbio: *mut BIO);
     pub fn SSL_get_rbio(ssl: *mut SSL) -> *mut BIO;
