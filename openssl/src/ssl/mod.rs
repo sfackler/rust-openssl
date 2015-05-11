@@ -822,6 +822,11 @@ impl<S: Read+Write> SslStream<S> {
         &self.stream
     }
 
+    /// Return the certificate of the peer
+    pub fn get_peer_certificate(&self) -> Option<X509> {
+        self.ssl.get_peer_certificate()
+    }
+
     /// Returns a mutable reference to the underlying stream.
     ///
     /// ## Warning
