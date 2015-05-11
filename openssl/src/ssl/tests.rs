@@ -223,7 +223,7 @@ run_test!(verify_callback_data, |method, stream| {
     // in DER format.
     // Command: openssl x509 -in test/cert.pem  -outform DER | openssl dgst -sha256
     // Please update if "test/cert.pem" will ever change
-    let node_hash_str = "46e3f1a6d17a41ce70d0c66ef51cee2ab4ba67cac8940e23f10c1f944b49fb5c";
+    let node_hash_str = "db400bb62f1b1f29c3b8f323b8f7d9dea724fdcd67104ef549c772ae3749655b";
     let node_id = node_hash_str.from_hex().unwrap();
     ctx.set_verify_with_data(SSL_VERIFY_PEER, callback, node_id);
     ctx.set_verify_depth(1);
@@ -320,7 +320,7 @@ run_test!(get_peer_certificate, |method, stream| {
     let stream = SslStream::new(&SslContext::new(method).unwrap(), stream).unwrap();
     let cert = stream.get_peer_certificate().unwrap();
     let fingerprint = cert.fingerprint(SHA256).unwrap();
-    let node_hash_str = "46e3f1a6d17a41ce70d0c66ef51cee2ab4ba67cac8940e23f10c1f944b49    fb5c";
+    let node_hash_str = "db400bb62f1b1f29c3b8f323b8f7d9dea724fdcd67104ef549c772ae3749655b";
     let node_id = node_hash_str.from_hex().unwrap();
     assert_eq!(node_id, fingerprint)
 });
