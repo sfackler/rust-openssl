@@ -1,4 +1,4 @@
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/openssl")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc")]
 
 #[macro_use]
 extern crate bitflags;
