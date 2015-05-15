@@ -23,7 +23,7 @@ fn main() {
     let libs_env = env::var("OPENSSL_LIBS").ok();
     let libs = match libs_env {
         Some(ref v) => v.split(":").collect(),
-        None => if target.contains("windows") && env::var_os("MSYSTEM").is_none() {
+        None => if target.contains("windows") {
             vec!("eay32", "ssl32")
         } else {
             vec!("crypto", "ssl")
