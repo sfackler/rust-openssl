@@ -315,6 +315,16 @@ fn test_write() {
     stream.flush().unwrap();
 }
 
+run_test!(get_peer_certificate, |method, stream| {
+    //let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
+    let stream = SslStream::new(&SslContext::new(method).unwrap(), stream).unwrap();
+    let cert = stream.get_peer_certificate().unwrap();
+    let fingerprint = cert.fingerprint(SHA256).unwrap();
+    let node_hash_str = "46e3f1a6d17a41ce70d0c66ef51cee2ab4ba67cac8940e23f10c1f944b49    fb5c";
+    let node_id = node_hash_str.from_hex().unwrap();
+    assert_eq!(node_id, fingerprint)
+});
+
 #[test]
 #[cfg(feature = "dtlsv1")]
 fn test_write_dtlsv1() {
