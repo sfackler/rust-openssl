@@ -24,17 +24,17 @@ use nid;
 #[cfg(test)]
 mod tests;
 
-pub struct SslString<'s> {
-    s : &'s str
+pub struct SslString {
+    s : &'static str
 }
 
-impl<'s> Drop for SslString<'s> {
+impl<'s> Drop for SslString {
     fn drop(&mut self) {
         unsafe { ffi::CRYPTO_free(self.s.as_ptr() as *mut c_void); }
     }
 }
 
-impl<'s> Deref for SslString<'s> {
+impl Deref for SslString {
     type Target = str;
 
     fn deref(&self) -> &str {
@@ -42,23 +42,23 @@ impl<'s> Deref for SslString<'s> {
     }
 }
 
-impl<'s> SslString<'s> {
-    pub unsafe fn new(buf: *const c_char) -> SslString<'s> {
+impl SslString {
+    unsafe fn new(buf: *const c_char) -> SslString {
         SslString {
             s: str::from_utf8(CStr::from_ptr(buf).to_bytes()).unwrap()
         }
     }
 }
 
-impl<'s> fmt::Display for SslString<'s> {
+impl fmt::Display for SslString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
+        fmt::Display::fmt(self.s, f)
     }
 }
 
-impl<'s> fmt::Debug for SslString<'s> {
+impl fmt::Debug for SslString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
+        fmt::Debug::fmt(self.s, f)
     }
 }
 
