@@ -22,3 +22,4 @@ pub mod bio;
 pub mod crypto;
 pub mod ssl;
 pub mod x509;
+pub mod nid;

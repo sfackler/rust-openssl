@@ -1,11 +1,14 @@
-use libc::{c_char, c_int, c_long, c_ulong, c_uint};
+use libc::{c_char, c_int, c_long, c_ulong, c_uint, c_void};
 use std::io;
 use std::io::prelude::*;
 use std::cmp::Ordering;
-use std::ffi::CString;
+use std::ffi::{CString, CStr};
 use std::iter::repeat;
 use std::mem;
 use std::ptr;
+use std::ops::Deref;
+use std::fmt;
+use std::str;
 
 use asn1::{Asn1Time};
 use bio::{MemBio};
@@ -15,10 +18,49 @@ use crypto::pkey::{PKey,Parts};
 use crypto::rand::rand_bytes;
 use ffi;
 use ssl::error::{SslError, StreamError};
+use nid;
 
 
 #[cfg(test)]
 mod tests;
+
+pub struct SslString<'s> {
+    s : &'s str
+}
+
+impl<'s> Drop for SslString<'s> {
+    fn drop(&mut self) {
+        unsafe { ffi::CRYPTO_free(self.s.as_ptr() as *mut c_void); }
+    }
+}
+
+impl<'s> Deref for SslString<'s> {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        self.s
+    }
+}
+
+impl<'s> SslString<'s> {
+    pub unsafe fn new(buf: *const c_char) -> SslString<'s> {
+        SslString {
+            s: str::from_utf8(CStr::from_ptr(buf).to_bytes()).unwrap()
+        }
+    }
+}
+
+impl<'s> fmt::Display for SslString<'s> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl<'s> fmt::Debug for SslString<'s> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
 
 #[derive(Copy, Clone)]
 #[repr(i32)]
@@ -456,6 +498,44 @@ impl<'ctx> Drop for X509<'ctx> {
 pub struct X509Name<'x> {
     x509: &'x X509<'x>,
     name: *mut ffi::X509_NAME
+}
+
+#[allow(dead_code)]
+pub struct X509NameEntry<'x> {
+    x509_name: &'x X509Name<'x>,
+    ne: *mut ffi::X509_NAME_ENTRY
+}
+
+impl <'x> X509Name<'x> {
+    pub fn text_by_nid(&self, nid: nid::Nid) -> Option<SslString> {
+        unsafe {
+            let loc = ffi::X509_NAME_get_index_by_NID(self.name, nid as c_int, -1);
+            if loc == -1 {
+                return None;
+            }
+
+            let ne = ffi::X509_NAME_get_entry(self.name, loc);
+            if ne.is_null() {
+                return None;
+            }
+
+            let asn1_str = ffi::X509_NAME_ENTRY_get_data(ne);
+            if asn1_str.is_null() {
+                return None;
+            }
+
+            let mut str_from_asn1 : *mut c_char = ptr::null_mut();
+            let len = ffi::ASN1_STRING_to_UTF8(&mut str_from_asn1, asn1_str);
+
+            if len < 0 {
+                return None
+            }
+
+            assert!(!str_from_asn1.is_null());
+
+            Some(SslString::new(str_from_asn1))
+        }
+    }
 }
 
 macro_rules! make_validation_error(

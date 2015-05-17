@@ -7,6 +7,7 @@ use crypto::hash::Type::{SHA256};
 use x509::{X509, X509Generator};
 use x509::KeyUsage::{DigitalSignature, KeyEncipherment};
 use x509::ExtKeyUsage::{ClientAuth, ServerAuth};
+use nid::Nid;
 
 #[test]
 fn test_cert_gen() {
@@ -46,8 +47,25 @@ fn test_cert_loading() {
     // in DER format.
     // Command: openssl x509 -in test/cert.pem  -outform DER | openssl dgst -sha256
     // Please update if "test/cert.pem" will ever change
-    let hash_str = "46e3f1a6d17a41ce70d0c66ef51cee2ab4ba67cac8940e23f10c1f944b49fb5c";
+    let hash_str = "db400bb62f1b1f29c3b8f323b8f7d9dea724fdcd67104ef549c772ae3749655b";
     let hash_vec = hash_str.from_hex().unwrap();
 
     assert_eq!(fingerprint, hash_vec);
+}
+
+#[test]
+fn test_subject_read_cn() {
+    let cert_path = Path::new("test/cert.pem");
+    let mut file = File::open(&cert_path)
+        .ok()
+        .expect("Failed to open `test/cert.pem`");
+
+    let cert = X509::from_pem(&mut file).ok().expect("Failed to load PEM");
+    let subject = cert.subject_name();
+    let cn = match subject.text_by_nid(Nid::CN) {
+        Some(x) => x,
+        None => panic!("Failed to read CN from cert")
+    };
+
+    assert_eq!(&cn as &str, "test_cert")
 }
