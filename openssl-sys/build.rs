@@ -20,10 +20,14 @@ fn main() {
         }
     }
 
-    let (libcrypto, libssl) = if target.contains("windows") {
-    	("eay32", "ssl32")
-    } else {
-    	("crypto", "ssl")
+    let libs_env = env::var("OPENSSL_LIBS").ok();
+    let libs = match libs_env {
+        Some(ref v) => v.split(":").collect(),
+        None => if target.contains("windows") {
+            vec!("eay32", "ssl32")
+        } else {
+            vec!("crypto", "ssl")
+        }
     };
 
     let mode = if env::var_os("OPENSSL_STATIC").is_some() {
@@ -36,7 +40,8 @@ fn main() {
     	println!("cargo:rustc-flags=-L native={}", lib_dir);
     }
 
-    println!("cargo:rustc-flags=-l {0}={1} -l {0}={2}", mode, libcrypto, libssl);
+    let libs_arg = libs.iter().fold(String::new(), |args, lib| args + &format!(" -l {0}={1}", mode, lib));
+    println!("cargo:rustc-flags={0}", libs_arg);
 
     let mut include_dirs = vec![];
 
