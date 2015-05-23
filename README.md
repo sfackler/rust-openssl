@@ -35,7 +35,7 @@ directory, `libssl32.dll`, and `libeay32.dll` to locations that Cargo can find
 or pass the location to Cargo via environment variables:
 
 ```bash
-env OPENSSL_LIB_DIR=/c/OpenSSL-Win64 OPENSSL_INCLUDE_DIR=/c/OpenSSL-Win64/include cargo build
+env OPENSSL_LIB_DIR=C:/OpenSSL-Win64 OPENSSL_INCLUDE_DIR=C:/OpenSSL-Win64/include cargo build
 ```
 
 ### Manual configuration
