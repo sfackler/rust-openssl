@@ -332,7 +332,7 @@ impl X509Generator {
         ((res as c_ulong) >> 1) as c_long
     }
 
-    /// Generates a private key and a signed certificate and returns them
+    /// Generates a private key and a self-signed certificate and returns them
     pub fn generate<'a>(&self) -> Result<(X509<'a>, PKey), SslError> {
         ffi::init();
 
@@ -343,7 +343,7 @@ impl X509Generator {
         Ok((x509, p_key))
     }
 
-    /// Signs certificate with a private key and returns it
+    /// Sets the certificate public-key, then self-sign and return it
     /// Note: That the bit-length of the private key is used (set_bitlength is ignored)
     pub fn sign<'a>(&self, p_key: &PKey) -> Result<X509<'a>, SslError> {
         ffi::init();
