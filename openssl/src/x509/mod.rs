@@ -552,7 +552,6 @@ impl <'x> X509Name<'x> {
     }
 }
 
-#[allow(dead_code)]
 /// A certificate signing request
 pub struct X509Req {
     handle: *mut ffi::X509_REQ,
