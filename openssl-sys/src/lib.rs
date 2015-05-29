@@ -450,6 +450,8 @@ extern "C" {
 
     pub fn PEM_read_bio_X509(bio: *mut BIO, out: *mut *mut X509, callback: Option<PasswordCallback>,
                              user_data: *mut c_void) -> *mut X509;
+    pub fn PEM_read_bio_X509_REQ(bio: *mut BIO, out: *mut *mut X509_REQ, callback: Option<PasswordCallback>,
+                             user_data: *mut c_void) -> *mut X509_REQ;
     pub fn PEM_read_bio_PrivateKey(bio: *mut BIO, out: *mut *mut EVP_PKEY, callback: Option<PasswordCallback>,
                              user_data: *mut c_void) -> *mut X509;
 
@@ -458,6 +460,7 @@ extern "C" {
                                     callback: Option<PasswordCallback>,
                                     user_data: *mut c_void) -> c_int;
     pub fn PEM_write_bio_X509(bio: *mut BIO, x509: *mut X509) -> c_int;
+    pub fn PEM_write_bio_X509_REQ(bio: *mut BIO, x509: *mut X509_REQ) -> c_int;
 
     pub fn PKCS5_PBKDF2_HMAC_SHA1(pass: *const u8, passlen: c_int,
                                   salt: *const u8, saltlen: c_int,
@@ -568,6 +571,7 @@ extern "C" {
     pub fn X509_add_ext(x: *mut X509, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
     pub fn X509_digest(x: *mut X509, digest: *const EVP_MD, buf: *mut c_char, len: *mut c_uint) -> c_int;
     pub fn X509_free(x: *mut X509);
+    pub fn X509_REQ_free(x: *mut X509_REQ);
     pub fn X509_get_serialNumber(x: *mut X509) -> *mut ASN1_INTEGER;
     pub fn X509_get_subject_name(x: *mut X509) -> *mut X509_NAME;
     pub fn X509_gmtime_adj(time: *mut ASN1_TIME, adj: c_long) -> *mut ASN1_TIME;
@@ -579,6 +583,7 @@ extern "C" {
     pub fn X509_set_pubkey(x: *mut X509, pkey: *mut EVP_PKEY) -> c_int;
     pub fn X509_sign(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
     pub fn X509_get_pubkey(x: *mut X509) -> *mut EVP_PKEY;
+    pub fn X509_to_X509_REQ(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> *mut X509_REQ;
 
     pub fn X509_EXTENSION_free(ext: *mut X509_EXTENSION);
 

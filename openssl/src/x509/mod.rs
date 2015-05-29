@@ -391,6 +391,20 @@ impl X509Generator {
             Ok(x509)
         }
     }
+
+    /// Obtain a certificate signing request (CSR)
+    pub fn request(&self, p_key: &PKey) -> Result<X509Req, SslError> {
+        let cert=match self.sign(p_key) {
+            Ok(c) => c,
+            Err(x) => return Err(x)
+        };
+
+        let hash_fn = self.hash_type.evp_md();
+        let req = unsafe { ffi::X509_to_X509_REQ(cert.handle, p_key.get_handle(), hash_fn) };
+        try_ssl_null!(req);
+
+        Ok(X509Req::new(req))
+    }
 }
 
 
@@ -535,6 +549,49 @@ impl <'x> X509Name<'x> {
 
             Some(SslString::new(str_from_asn1))
         }
+    }
+}
+
+/// A certificate signing request
+pub struct X509Req {
+    handle: *mut ffi::X509_REQ,
+}
+
+impl X509Req {
+    /// Creates new from handle
+    pub fn new(handle: *mut ffi::X509_REQ) -> X509Req {
+        X509Req {
+            handle: handle,
+        }
+    }
+
+    /// Reads CSR from PEM
+    pub fn from_pem<R>(reader: &mut R) -> Result<X509Req, SslError> where R: Read {
+        let mut mem_bio = try!(MemBio::new());
+        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+
+        unsafe {
+            let handle = try_ssl_null!(ffi::PEM_read_bio_X509_REQ(mem_bio.get_handle(),
+                                                              ptr::null_mut(),
+                                                              None, ptr::null_mut()));
+            Ok(X509Req::new(handle))
+        }
+    }
+
+    /// Writes CSR as PEM
+    pub fn write_pem<W>(&self, writer: &mut W) -> Result<(), SslError> where W: Write {
+        let mut mem_bio = try!(MemBio::new());
+        unsafe {
+            try_ssl!(ffi::PEM_write_bio_X509_REQ(mem_bio.get_handle(),
+                                             self.handle));
+        }
+        io::copy(&mut mem_bio, writer).map_err(StreamError).map(|_| ())
+    }
+}
+
+impl Drop for X509Req {
+    fn drop(&mut self) {
+        unsafe { ffi::X509_REQ_free(self.handle) };
     }
 }
 
