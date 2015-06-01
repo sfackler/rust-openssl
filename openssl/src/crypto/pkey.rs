@@ -295,17 +295,26 @@ impl PKey {
     pub fn decrypt(&self, s: &[u8]) -> Vec<u8> { self.decrypt_with_padding(s, EncryptionPadding::OAEP) }
 
     /**
-     * Signs data, using OpenSSL's default scheme and sha256. Unlike encrypt(),
-     * can process an arbitrary amount of data; returns the signature.
+     * Signs data, using OpenSSL's default scheme and adding sha256 ASN.1 information to the
+     * signature.
+     * The bytes to sign must be the result of a sha256 hashing;
+     * returns the signature.
      */
     pub fn sign(&self, s: &[u8]) -> Vec<u8> { self.sign_with_hash(s, HashType::SHA256) }
 
     /**
-     * Verifies a signature s (using OpenSSL's default scheme and sha256) on a
-     * message m. Returns true if the signature is valid, and false otherwise.
+     * Verifies a signature s (using OpenSSL's default scheme and sha256) on the SHA256 hash of a
+     * message.
+     * Returns true if the signature is valid, and false otherwise.
      */
-    pub fn verify(&self, m: &[u8], s: &[u8]) -> bool { self.verify_with_hash(m, s, HashType::SHA256) }
+    pub fn verify(&self, h: &[u8], s: &[u8]) -> bool { self.verify_with_hash(h, s, HashType::SHA256) }
 
+    /**
+     * Signs data, using OpenSSL's default scheme and add ASN.1 information for the given hash type to the
+     * signature.
+     * The bytes to sign must be the result of this type of hashing;
+     * returns the signature.
+     */
     pub fn sign_with_hash(&self, s: &[u8], hash: hash::Type) -> Vec<u8> {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
@@ -330,14 +339,14 @@ impl PKey {
         }
     }
 
-    pub fn verify_with_hash(&self, m: &[u8], s: &[u8], hash: hash::Type) -> bool {
+    pub fn verify_with_hash(&self, h: &[u8], s: &[u8], hash: hash::Type) -> bool {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
 
             let rv = ffi::RSA_verify(
                 openssl_hash_nid(hash),
-                m.as_ptr(),
-                m.len() as c_uint,
+                h.as_ptr(),
+                h.len() as c_uint,
                 s.as_ptr(),
                 s.len() as c_uint,
                 rsa
