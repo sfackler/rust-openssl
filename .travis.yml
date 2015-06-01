@@ -2,13 +2,10 @@ language: rust
 rust:
 - nightly
 - beta
+- stable
 os:
 - osx
 - linux
-env:
-  global:
-  - secure: J4i75AV4KMrU/UQrLIzzIh35Xix40Ki0uWjm8j05oxlXVl5aPU2zB30AemDne2QXYzkN4kRG/iRnNORE/8D0lF7YipQNSNxgfiBVoOEfj/NSogvI2BftYX9vlLZJUvt+s/nbE3xa/Pyge1IPv7itDYGO7SMe8RTSqitgqyfE2Eg=
-  - FEATURES="tlsv1_1 tlsv1_2 dtlsv1 aes_xts npn"
 before_install:
 - (test $TRAVIS_OS_NAME == "osx" || ./openssl/test/build.sh)
 before_script:
@@ -16,6 +13,3 @@ before_script:
 script:
 - (cd openssl && LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH cargo test)
 - (test $TRAVIS_OS_NAME == "osx" || (cd openssl && LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH cargo test --features "$FEATURES"))
-- ./.travis/build_docs.sh
-after_success:
-- test $TRAVIS_PULL_REQUEST == "false" && test $TRAVIS_BRANCH == "master" && test $TRAVIS_RUST_VERSION == "nightly" && ./.travis/update_docs.sh
