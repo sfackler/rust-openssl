@@ -23,7 +23,7 @@ path = "../openssl-sys"
 version = "0.6.2"
 
 [dependencies]
-bitflags = "0.1.1"
+bitflags = "0.2"
 lazy_static = "0.1"
 libc = "0.1"
 
