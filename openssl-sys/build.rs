@@ -24,7 +24,14 @@ fn main() {
     let libs = match libs_env {
         Some(ref v) => v.split(":").collect(),
         None => if target.contains("windows") {
-            vec!("eay32", "ssl32")
+            if let Some(mingw_paths) = check_mingw_path() {
+                for path in mingw_paths {
+                    println!("cargo:rustc-flags=-L native={}", path);
+                }
+                vec!("eay32", "ssleay32")
+            } else {
+                vec!("eay32", "ssl32")
+            }
         } else {
             vec!("crypto", "ssl")
         }
@@ -61,4 +68,26 @@ fn build_old_openssl_shim(include_paths: &[PathBuf]) {
 
     config.file("src/old_openssl_shim.c")
         .compile("libold_openssl_shim.a");
+}
+
+fn check_mingw_path() -> Option<Vec<String>> {
+    use std::ascii::AsciiExt;
+
+    let mut paths = vec![];
+
+    if let Some(env_path) = env::var("PATH").ok() {
+        for path in env::split_paths(&env_path) {
+            if let Some(path_str) = path.to_str() {
+                if path_str.to_ascii_lowercase().contains("mingw") {
+                    paths.push(path_str.to_string());
+                }
+            }
+        }
+    }
+
+    if paths.len() > 0 {
+        Option::Some(paths)
+    } else {
+        Option::None
+    }
 }
