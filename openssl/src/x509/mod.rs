@@ -184,7 +184,10 @@ impl X509Generator {
     }
 
     #[allow(non_snake_case)]
-    /// Sets Common Name of certificate
+    /// (deprecated) Sets Common Name of certificate
+    ///
+    /// This function is deprecated, use `X509Generator.add_name` instead.
+    /// Don't use this function AND the `add_name` method
     pub fn set_CN(mut self, CN: &str) -> X509Generator {
         match self.names.get_mut(0) {
             Some(&mut(_,ref mut val)) => *val=CN.to_string(),
@@ -193,6 +196,16 @@ impl X509Generator {
         if self.names.len()==0 {
             self.names.push(("CN".to_string(),CN.to_string()));
         }
+        self
+    }
+
+    /// Add attribute to the name of the certificate
+    ///
+    /// ```ignore
+    /// generator.add_name("CN".to_string(),"example.com".to_string())
+    /// ```
+    pub fn add_name(mut self, attr_type: String, attr_value: String) -> X509Generator {
+        self.names.push((attr_type,attr_value));
         self
     }
 
@@ -273,7 +286,7 @@ impl X509Generator {
         }
     }
 
-    fn add_name(name: *mut ffi::X509_NAME, key: &str, value: &str) -> Result<(), SslError> {
+    fn add_name_internal(name: *mut ffi::X509_NAME, key: &str, value: &str) -> Result<(), SslError> {
         let value_len = value.len() as c_int;
         lift_ssl!(unsafe {
             let key = CString::new(key.as_bytes()).unwrap();
@@ -346,7 +359,7 @@ impl X509Generator {
                 if self.names.len()==0 { default_iter } else { arg_iter };
 
             for (key,val) in iter {
-                try!(X509Generator::add_name(name, &key, &val));
+                try!(X509Generator::add_name_internal(name, &key, &val));
             }
             ffi::X509_set_issuer_name(x509.handle, name);
 
