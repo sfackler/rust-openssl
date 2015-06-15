@@ -18,16 +18,18 @@ fn main() {
             build_old_openssl_shim(&info.include_paths);
             return;
         }
+        if let Some(mingw_paths) = get_mingw_in_path() {
+            for path in mingw_paths {
+                println!("cargo:rustc-flags=-L native={}", path);
+            }
+        }
     }
 
     let libs_env = env::var("OPENSSL_LIBS").ok();
     let libs = match libs_env {
         Some(ref v) => v.split(":").collect(),
         None => if target.contains("windows") {
-            if let Some(mingw_paths) = check_mingw_path() {
-                for path in mingw_paths {
-                    println!("cargo:rustc-flags=-L native={}", path);
-                }
+            if get_mingw_in_path().is_some() && lib_dir.is_none() && include_dir.is_none() {
                 vec!("eay32", "ssleay32")
             } else {
                 vec!("eay32", "ssl32")
@@ -70,24 +72,24 @@ fn build_old_openssl_shim(include_paths: &[PathBuf]) {
         .compile("libold_openssl_shim.a");
 }
 
-fn check_mingw_path() -> Option<Vec<String>> {
-    use std::ascii::AsciiExt;
+fn get_mingw_in_path() -> Option<Vec<String>> {
+    match env::var_os("PATH") {
+        Some(env_path) => {
+            let paths: Vec<String> = env::split_paths(&env_path).filter_map(|path| {
+                use std::ascii::AsciiExt;
 
-    let mut paths = vec![];
-
-    if let Some(env_path) = env::var("PATH").ok() {
-        for path in env::split_paths(&env_path) {
-            if let Some(path_str) = path.to_str() {
-                if path_str.to_ascii_lowercase().contains("mingw") {
-                    paths.push(path_str.to_string());
+                match path.to_str() {
+                    Some(path_str) => {
+                        if path_str.to_ascii_lowercase().contains("mingw") {
+                            Some(path_str.to_string())
+                        } else { None }
+                    },
+                    None => None
                 }
-            }
-        }
-    }
+            }).collect();
 
-    if paths.len() > 0 {
-        Option::Some(paths)
-    } else {
-        Option::None
+            if paths.len() > 0 { Some(paths) } else { None }
+        },
+        None => None
     }
 }
