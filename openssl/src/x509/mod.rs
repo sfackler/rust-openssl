@@ -145,7 +145,7 @@ pub use self::extension::ExtKeyUsageOption as ExtKeyUsage;
 pub struct X509Generator {
     bits: u32,
     days: u32,
-    CN: String,
+    names: Vec<(String,String)>,
     // RFC 3280 §4.2: A certificate MUST NOT include more than one instance of a particular extension.
     extensions: HashMap<ExtensionType,Extension>,
     hash_type: HashType,
@@ -165,7 +165,7 @@ impl X509Generator {
         X509Generator {
             bits: 1024,
             days: 365,
-            CN: "rust-openssl".to_string(),
+            names: vec![],
             extensions: HashMap::new(),
             hash_type: HashType::SHA1
         }
@@ -186,7 +186,13 @@ impl X509Generator {
     #[allow(non_snake_case)]
     /// Sets Common Name of certificate
     pub fn set_CN(mut self, CN: &str) -> X509Generator {
-        self.CN = CN.to_string();
+        match self.names.get_mut(0) {
+            Some(&mut(_,ref mut val)) => *val=CN.to_string(),
+            _ => {} /* would move push here, but borrow checker won't let me */
+        }
+        if self.names.len()==0 {
+            self.names.push(("CN".to_string(),CN.to_string()));
+        }
         self
     }
 
@@ -333,7 +339,15 @@ impl X509Generator {
             let name = ffi::X509_get_subject_name(x509.handle);
             try_ssl_null!(name);
 
-            try!(X509Generator::add_name(name, "CN", &self.CN));
+            let default=[("CN","rust-openssl")];
+            let default_iter=&mut default.iter().map(|&(k,v)|(k,v));
+            let arg_iter=&mut self.names.iter().map(|&(ref k,ref v)|(&k[..],&v[..]));
+            let iter: &mut Iterator<Item=(&str,&str)> =
+                if self.names.len()==0 { default_iter } else { arg_iter };
+
+            for (key,val) in iter {
+                try!(X509Generator::add_name(name, &key, &val));
+            }
             ffi::X509_set_issuer_name(x509.handle, name);
 
             for (exttype,ext) in self.extensions.iter() {
