@@ -1,5 +1,4 @@
 use std::iter::repeat;
-use std::convert::AsRef;
 use libc::{c_int};
 
 use crypto::symm_internal::evpc;
@@ -75,7 +74,7 @@ impl Crypter {
     /**
      * Initializes this crypter.
      */
-    pub fn init<T: AsRef<[u8]>>(&self, mode: Mode, key: &[u8], iv: T) {
+    pub fn init(&self, mode: Mode, key: &[u8], iv: &[u8]) {
         unsafe {
             let mode = match mode {
                 Mode::Encrypt => 1 as c_int,
@@ -87,7 +86,7 @@ impl Crypter {
                 self.ctx,
                 self.evp,
                 key.as_ptr(),
-                iv.as_ref().as_ptr(),
+                iv.as_ptr(),
                 mode
             );
         }
@@ -146,7 +145,7 @@ impl Drop for Crypter {
  * Encrypts data, using the specified crypter type in encrypt mode with the
  * specified key and iv; returns the resulting (encrypted) data.
  */
-pub fn encrypt<T: AsRef<[u8]>>(t: Type, key: &[u8], iv: T, data: &[u8]) -> Vec<u8> {
+pub fn encrypt(t: Type, key: &[u8], iv: &[u8], data: &[u8]) -> Vec<u8> {
     let c = Crypter::new(t);
     c.init(Mode::Encrypt, key, iv);
     let mut r = c.update(data);
@@ -159,7 +158,7 @@ pub fn encrypt<T: AsRef<[u8]>>(t: Type, key: &[u8], iv: T, data: &[u8]) -> Vec<u
  * Decrypts data, using the specified crypter type in decrypt mode with the
  * specified key and iv; returns the resulting (decrypted) data.
  */
-pub fn decrypt<T: AsRef<[u8]>>(t: Type, key: &[u8], iv: T, data: &[u8]) -> Vec<u8> {
+pub fn decrypt(t: Type, key: &[u8], iv: &[u8], data: &[u8]) -> Vec<u8> {
     let c = Crypter::new(t);
     c.init(Mode::Decrypt, key, iv);
     let mut r = c.update(data);
