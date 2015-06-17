@@ -1,4 +1,5 @@
 use std::iter::repeat;
+use std::convert::AsRef;
 use libc::{c_int};
 
 use ffi;
@@ -86,7 +87,7 @@ impl Crypter {
     /**
      * Initializes this crypter.
      */
-    pub fn init(&self, mode: Mode, key: &[u8], iv: Vec<u8>) {
+    pub fn init<T: AsRef<[u8]>>(&self, mode: Mode, key: &[u8], iv: T) {
         unsafe {
             let mode = match mode {
                 Mode::Encrypt => 1 as c_int,
@@ -98,7 +99,7 @@ impl Crypter {
                 self.ctx,
                 self.evp,
                 key.as_ptr(),
-                iv.as_ptr(),
+                iv.as_ref().as_ptr(),
                 mode
             );
         }
@@ -157,7 +158,7 @@ impl Drop for Crypter {
  * Encrypts data, using the specified crypter type in encrypt mode with the
  * specified key and iv; returns the resulting (encrypted) data.
  */
-pub fn encrypt(t: Type, key: &[u8], iv: Vec<u8>, data: &[u8]) -> Vec<u8> {
+pub fn encrypt<T: AsRef<[u8]>>(t: Type, key: &[u8], iv: T, data: &[u8]) -> Vec<u8> {
     let c = Crypter::new(t);
     c.init(Mode::Encrypt, key, iv);
     let mut r = c.update(data);
@@ -170,7 +171,7 @@ pub fn encrypt(t: Type, key: &[u8], iv: Vec<u8>, data: &[u8]) -> Vec<u8> {
  * Decrypts data, using the specified crypter type in decrypt mode with the
  * specified key and iv; returns the resulting (decrypted) data.
  */
-pub fn decrypt(t: Type, key: &[u8], iv: Vec<u8>, data: &[u8]) -> Vec<u8> {
+pub fn decrypt<T: AsRef<[u8]>>(t: Type, key: &[u8], iv: T, data: &[u8]) -> Vec<u8> {
     let c = Crypter::new(t);
     c.init(Mode::Decrypt, key, iv);
     let mut r = c.update(data);
@@ -188,23 +189,23 @@ mod tests {
     #[test]
     fn test_aes_256_ecb() {
         let k0 =
-           vec!(0x00u8, 0x01u8, 0x02u8, 0x03u8, 0x04u8, 0x05u8, 0x06u8, 0x07u8,
-              0x08u8, 0x09u8, 0x0au8, 0x0bu8, 0x0cu8, 0x0du8, 0x0eu8, 0x0fu8,
-              0x10u8, 0x11u8, 0x12u8, 0x13u8, 0x14u8, 0x15u8, 0x16u8, 0x17u8,
-              0x18u8, 0x19u8, 0x1au8, 0x1bu8, 0x1cu8, 0x1du8, 0x1eu8, 0x1fu8);
+           [0x00u8, 0x01u8, 0x02u8, 0x03u8, 0x04u8, 0x05u8, 0x06u8, 0x07u8,
+            0x08u8, 0x09u8, 0x0au8, 0x0bu8, 0x0cu8, 0x0du8, 0x0eu8, 0x0fu8,
+            0x10u8, 0x11u8, 0x12u8, 0x13u8, 0x14u8, 0x15u8, 0x16u8, 0x17u8,
+            0x18u8, 0x19u8, 0x1au8, 0x1bu8, 0x1cu8, 0x1du8, 0x1eu8, 0x1fu8];
         let p0 =
-           vec!(0x00u8, 0x11u8, 0x22u8, 0x33u8, 0x44u8, 0x55u8, 0x66u8, 0x77u8,
-              0x88u8, 0x99u8, 0xaau8, 0xbbu8, 0xccu8, 0xddu8, 0xeeu8, 0xffu8);
+           [0x00u8, 0x11u8, 0x22u8, 0x33u8, 0x44u8, 0x55u8, 0x66u8, 0x77u8,
+            0x88u8, 0x99u8, 0xaau8, 0xbbu8, 0xccu8, 0xddu8, 0xeeu8, 0xffu8];
         let c0 =
-           vec!(0x8eu8, 0xa2u8, 0xb7u8, 0xcau8, 0x51u8, 0x67u8, 0x45u8, 0xbfu8,
-              0xeau8, 0xfcu8, 0x49u8, 0x90u8, 0x4bu8, 0x49u8, 0x60u8, 0x89u8);
+           [0x8eu8, 0xa2u8, 0xb7u8, 0xcau8, 0x51u8, 0x67u8, 0x45u8, 0xbfu8,
+            0xeau8, 0xfcu8, 0x49u8, 0x90u8, 0x4bu8, 0x49u8, 0x60u8, 0x89u8];
         let c = super::Crypter::new(super::Type::AES_256_ECB);
-        c.init(super::Mode::Encrypt, &k0, vec![]);
+        c.init(super::Mode::Encrypt, &k0, &[]);
         c.pad(false);
         let mut r0 = c.update(&p0);
         r0.extend(c.finalize().into_iter());
         assert!(r0 == c0);
-        c.init(super::Mode::Decrypt, &k0, vec![]);
+        c.init(super::Mode::Decrypt, &k0, &[]);
         c.pad(false);
         let mut p1 = c.update(&r0);
         p1.extend(c.finalize().into_iter());
@@ -214,7 +215,7 @@ mod tests {
     #[test]
     fn test_aes_256_cbc_decrypt() {
         let cr = super::Crypter::new(super::Type::AES_256_CBC);
-        let iv = vec![
+        let iv = [
             4_u8, 223_u8, 153_u8, 219_u8, 28_u8, 142_u8, 234_u8, 68_u8, 227_u8,
             69_u8, 98_u8, 107_u8, 208_u8, 14_u8, 236_u8, 60_u8, 0_u8, 0_u8,
             0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
@@ -230,7 +231,7 @@ mod tests {
             0x4a_u8, 0x2e_u8, 0xe5_u8, 0x6_u8, 0xbf_u8, 0xcf_u8, 0xf2_u8, 0xd7_u8,
             0xea_u8, 0x2d_u8, 0xb1_u8, 0x85_u8, 0x6c_u8, 0x93_u8, 0x65_u8, 0x6f_u8
             ];
-        cr.init(super::Mode::Decrypt, &data, iv);
+        cr.init(super::Mode::Decrypt, &data, &iv);
         cr.pad(false);
         let unciphered_data_1 = cr.update(&ciphered_data);
         let unciphered_data_2 = cr.finalize();
@@ -246,7 +247,7 @@ mod tests {
         use serialize::hex::ToHex;
 
         let cipher = super::Crypter::new(ciphertype);
-        cipher.init(super::Mode::Encrypt, &key.from_hex().unwrap(), iv.from_hex().unwrap());
+        cipher.init(super::Mode::Encrypt, &key.from_hex().unwrap(), &iv.from_hex().unwrap());
 
         let expected = ct.from_hex().unwrap();
         let mut computed = cipher.update(&pt.from_hex().unwrap());
