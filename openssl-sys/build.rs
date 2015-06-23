@@ -101,9 +101,7 @@ fn generate_options_shim() -> PathBuf {
     writeln!(shim,"long rust_openssl_ssl_ctx_options_rust_to_c(uint64_t rustval) {{").unwrap();
     writeln!(shim,"    long cval=rustval&COPY_MASK;").unwrap();
     for &(name,_) in options {
-        writeln!(shim,"#if RUST_{0}!={0}",name).unwrap();
         writeln!(shim,"    if (rustval&RUST_{0}) cval|={0};",name).unwrap();
-        writeln!(shim,"#endif").unwrap();
     }
     writeln!(shim,"    return cval;").unwrap();
     writeln!(shim,"}}").unwrap();
@@ -111,9 +109,7 @@ fn generate_options_shim() -> PathBuf {
     writeln!(shim,"uint64_t rust_openssl_ssl_ctx_options_c_to_rust(long cval) {{").unwrap();
     writeln!(shim,"    uint64_t rustval=cval&COPY_MASK;").unwrap();
     for &(name,_) in options {
-        writeln!(shim,"#if RUST_{0}!={0}",name).unwrap();
         writeln!(shim,"    if (cval&{0}) rustval|=RUST_{0};",name).unwrap();
-        writeln!(shim,"#endif").unwrap();
     }
     writeln!(shim,"    return rustval;").unwrap();
     writeln!(shim,"}}").unwrap();
