@@ -170,49 +170,33 @@ lazy_static! {
 // Registers a destructor for the data which will be called
 // when context is freed
 fn get_verify_data_idx<T: Any + 'static>() -> c_int {
+    *INDEXES.lock().unwrap().entry(TypeId::of::<T>()).or_insert_with(|| {
+        get_new_idx::<T>()
+    })
+}
+
+#[cfg(feature = "npn")]
+lazy_static! {
+    static ref NPN_PROTOS_IDX: c_int = get_new_idx::<Vec<u8>>();
+}
+
+/// Determine a new index to use for SSL CTX ex data.
+/// Registers a destruct for the data which will be called by openssl when the context is freed.
+fn get_new_idx<T>() -> c_int {
     extern fn free_data_box<T>(_parent: *mut c_void, ptr: *mut c_void,
-                               _ad: *mut ffi::CRYPTO_EX_DATA, _idx: c_int,
-                               _argl: c_long, _argp: *mut c_void) {
-        if ptr != 0 as *mut _ {
+                            _ad: *mut ffi::CRYPTO_EX_DATA, _idx: c_int,
+                            _argl: c_long, _argp: *mut c_void) {
+        if !ptr.is_null() {
             let _: Box<T> = unsafe { mem::transmute(ptr) };
         }
     }
 
-    *INDEXES.lock().unwrap().entry(TypeId::of::<T>()).or_insert_with(|| {
-        unsafe {
-            let f: ffi::CRYPTO_EX_free = free_data_box::<T>;
-            let idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None, None, Some(f));
-            assert!(idx >= 0);
-            idx
-        }
-    })
-}
-
-/// Creates a static index for the list of NPN protocols.
-/// Registers a destructor for the data which will be called
-/// when the context is freed.
-#[cfg(feature = "npn")]
-fn get_npn_protos_idx() -> c_int {
-    static mut NPN_PROTOS_IDX: c_int = -1;
-    static mut INIT: Once = ONCE_INIT;
-
-    extern fn free_data_box(_parent: *mut c_void, ptr: *mut c_void,
-                            _ad: *mut ffi::CRYPTO_EX_DATA, _idx: c_int,
-                            _argl: c_long, _argp: *mut c_void) {
-        if !ptr.is_null() {
-            let _: Box<Vec<u8>> = unsafe { mem::transmute(ptr) };
-        }
-    }
-
     unsafe {
-        INIT.call_once(|| {
-            let f: ffi::CRYPTO_EX_free = free_data_box;
-            let idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
-                                                    None, Some(f));
-            assert!(idx >= 0);
-            NPN_PROTOS_IDX = idx;
-        });
-        NPN_PROTOS_IDX
+        let f: ffi::CRYPTO_EX_free = free_data_box::<T>;
+        let idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
+                                                None, Some(f));
+        assert!(idx >= 0);
+        idx
     }
 }
 
@@ -279,7 +263,7 @@ extern fn raw_next_proto_select_cb(ssl: *mut ffi::SSL,
         // First, get the list of protocols (that the client should support) saved in the context
         // extra data.
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
-        let protocols = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_npn_protos_idx());
+        let protocols = ffi::SSL_CTX_get_ex_data(ssl_ctx, *NPN_PROTOS_IDX);
         let protocols: &Vec<u8> = mem::transmute(protocols);
         // Prepare the client list parameters to be passed to the OpenSSL function...
         let client = protocols.as_ptr();
@@ -306,7 +290,7 @@ extern fn raw_next_protos_advertise_cb(ssl: *mut ffi::SSL,
     unsafe {
         // First, get the list of (supported) protocols saved in the context extra data.
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
-        let protocols = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_npn_protos_idx());
+        let protocols = ffi::SSL_CTX_get_ex_data(ssl_ctx, *NPN_PROTOS_IDX);
         if protocols.is_null() {
             *out = b"".as_ptr();
             *outlen = 0;
@@ -543,7 +527,7 @@ impl SslContext {
         unsafe {
             // Attach the protocol list to the OpenSSL context structure,
             // so that we can refer to it within the callback.
-            ffi::SSL_CTX_set_ex_data(self.ctx, get_npn_protos_idx(),
+            ffi::SSL_CTX_set_ex_data(self.ctx, *NPN_PROTOS_IDX,
                                      mem::transmute(protocols));
             // Now register the callback that performs the default protocol
             // matching based on the client-supported list of protocols that
