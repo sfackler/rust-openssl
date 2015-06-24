@@ -306,6 +306,24 @@ extern fn raw_next_protos_advertise_cb(ssl: *mut ffi::SSL,
     ffi::SSL_TLSEXT_ERR_OK
 }
 
+/// Convert a set of byte slices into a series of byte strings encoded for SSL. Encoding is a byte
+/// containing the length followed by the string.
+#[cfg(feature = "npn")]
+fn ssl_encode_byte_strings(strings: &[&[u8]]) -> Vec<u8>
+{
+    let mut enc = Vec::new();
+    for string in strings {
+        let len = string.len() as u8;
+        if len as usize != string.len() {
+            // If the item does not fit, discard it
+            continue;
+        }
+        enc.push(len);
+        enc.extend(string[..len as usize].to_vec());
+    }
+    enc
+}
+
 /// The signature of functions that can be used to manually verify certificates
 pub type VerifyCallback = fn(preverify_ok: bool,
                              x509_ctx: &X509StoreContext) -> bool;
@@ -515,14 +533,7 @@ impl SslContext {
     pub fn set_npn_protocols(&mut self, protocols: &[&[u8]]) {
         // Firstly, convert the list of protocols to a byte-array that can be passed to OpenSSL
         // APIs -- a list of length-prefixed strings.
-        let mut npn_protocols = Vec::new();
-        for protocol in protocols {
-            let len = protocol.len() as u8;
-            npn_protocols.push(len);
-            // If the length is greater than the max `u8`, this truncates the protocol name.
-            npn_protocols.extend(protocol[..len as usize].to_vec());
-        }
-        let protocols: Box<Vec<u8>> = Box::new(npn_protocols);
+        let protocols: Box<Vec<u8>> = Box::new(ssl_encode_byte_strings(protocols));
 
         unsafe {
             // Attach the protocol list to the OpenSSL context structure,
