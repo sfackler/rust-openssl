@@ -758,7 +758,7 @@ pub struct SslStream<S> {
 impl SslStream<net::TcpStream> {
     /// Create a new independently owned handle to the underlying socket.
     pub fn try_clone(&self) -> io::Result<SslStream<net::TcpStream>> {
-        Ok(SslStream { 
+        Ok(SslStream {
             stream: try!(self.stream.try_clone()),
             ssl: self.ssl.clone(),
             buf: self.buf.clone(),
@@ -851,14 +851,16 @@ impl<S: Read+Write> SslStream<S> {
                     try_ssl_stream!(self.flush());
                     let len = try_ssl_stream!(self.stream.read(&mut self.buf[..]));
                     if len == 0 {
-                        return Ok(0);
+                        self.ssl.get_rbio().set_eof(true);
+                    } else {
+                        try_ssl_stream!(self.ssl.get_rbio().write_all(&self.buf[..len]));
                     }
-                    try_ssl_stream!(self.ssl.get_rbio().write_all(&self.buf[..len]));
                 }
                 LibSslError::ErrorWantWrite => { try_ssl_stream!(self.flush()) }
                 LibSslError::ErrorZeroReturn => return Err(SslSessionClosed),
                 LibSslError::ErrorSsl => return Err(SslError::get()),
-                err => panic!("unexpected error {:?}", err),
+                LibSslError::ErrorSyscall if ret == 0 => return Ok(0),
+                err => panic!("unexpected error {:?} with ret {}", err, ret),
             }
         }
     }

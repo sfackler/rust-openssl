@@ -56,6 +56,12 @@ impl MemBio {
     pub unsafe fn get_handle(&self) -> *mut ffi::BIO {
         self.bio
     }
+
+    /// Sets the BIO's EOF state.
+    pub fn set_eof(&self, eof: bool) {
+        let v = if eof { 0 } else { -1 };
+        unsafe { ffi::BIO_set_mem_eof_return(self.bio, v); }
+    }
 }
 
 impl Read for MemBio {

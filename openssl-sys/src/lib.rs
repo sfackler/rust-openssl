@@ -116,6 +116,7 @@ pub type PasswordCallback = extern "C" fn(buf: *mut c_char, size: c_int,
                                           -> c_int;
 
 pub const BIO_CTRL_EOF: c_int = 2;
+pub const BIO_C_SET_BUF_MEM_EOF_RETURN: c_int = 130;
 
 pub const CRYPTO_LOCK: c_int = 1;
 
@@ -269,6 +270,10 @@ pub unsafe fn BIO_eof(b: *mut BIO) -> bool {
 
 pub unsafe fn SSL_CTX_set_options(ssl: *mut SSL_CTX, op: c_long) -> c_long {
     SSL_CTX_ctrl(ssl, SSL_CTRL_OPTIONS, op, ptr::null_mut())
+}
+
+pub unsafe fn BIO_set_mem_eof_return(b: *mut BIO, v: c_int) {
+    BIO_ctrl(b, BIO_C_SET_BUF_MEM_EOF_RETURN, v as c_long, ptr::null_mut());
 }
 
 pub unsafe fn SSL_CTX_get_options(ssl: *mut SSL_CTX) -> c_long {

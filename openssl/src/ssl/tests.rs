@@ -369,7 +369,7 @@ fn test_pending() {
     let pending = stream.pending();
     let len = stream.read(&mut buf[1..]).unwrap();
     assert_eq!(pending, len);
-} 
+}
 
 /// Tests that connecting with the client using NPN, but the server not does not
 /// break the existing connection behavior.
