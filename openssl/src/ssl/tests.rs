@@ -23,6 +23,8 @@ use crypto::pkey::PKey;
 use std::net::UdpSocket;
 #[cfg(feature="dtlsv1")]
 use ssl::SslMethod::Dtlsv1;
+#[cfg(feature="sslv2")]
+use ssl::SslMethod::Sslv2;
 #[cfg(feature="dtlsv1")]
 use connected_socket::Connect;
 
@@ -447,7 +449,7 @@ fn test_connect_with_npn_successful_single_match() {
 #[test]
 #[cfg(feature = "npn")]
 fn test_npn_server_advertise_multiple() {
-    let localhost = "127.0.0.1:15420";
+    let localhost = "127.0.0.1:15450";
     let listener = TcpListener::bind(localhost).unwrap();
     // We create a different context instance for the server...
     let listener_ctx = {
@@ -515,4 +517,11 @@ fn test_read_dtlsv1() {
     let mut stream = SslStream::new(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
     let mut buf = [0u8;100];
     assert!(stream.read(&mut buf).is_ok());
+}
+
+#[test]
+#[cfg(feature = "sslv2")]
+fn test_sslv2_connect_failure() {
+    let tcp = TcpStream::connect("127.0.0.1:15420").unwrap();
+    SslStream::new(&SslContext::new(Sslv2).unwrap(), tcp).err().unwrap();
 }

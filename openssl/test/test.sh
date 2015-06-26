@@ -5,6 +5,7 @@ cd $(dirname $0)
 openssl s_server -accept 15418 -www -cert cert.pem -key key.pem >/dev/null 2>&1 &
 openssl s_server -accept 15419 -www -cert cert.pem -key key.pem \
     -nextprotoneg "http/1.1,spdy/3.1" >/dev/null 2>&1 &
+openssl s_server -no_ssl2 -accept 15420 -www -cert cert.pem -key key.pem >/dev/null 2>&1 &
 
 if test "$TRAVIS_OS_NAME" == "osx"; then
 	return
