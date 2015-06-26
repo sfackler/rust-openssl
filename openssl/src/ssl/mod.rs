@@ -886,6 +886,23 @@ impl<S: Read+Write> SslStream<S> {
         Some(s)
     }
 
+    /// Get the cipher currently in use. The result will be
+    /// either None, indicating no session has been established, or
+    /// a string with the ciphersuite name.
+    pub fn get_current_cipher(&self) -> Option<String> {
+        let ptr = unsafe { ffi::SSL_get_current_cipher(self.ssl.ssl) };
+        if ptr == ptr::null() {
+            return None;
+        }
+
+        let cipher = unsafe { ffi::SSL_CIPHER_get_name(ptr) };
+        let s = unsafe {
+            String::from_utf8(CStr::from_ptr(cipher).to_bytes().to_vec()).unwrap()
+        };
+        Some(s)
+    }
+
+
     /// Returns the protocol selected by performing Next Protocol Negotiation, if any.
     ///
     /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client

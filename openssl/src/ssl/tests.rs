@@ -525,3 +525,19 @@ fn test_sslv2_connect_failure() {
     let tcp = TcpStream::connect("127.0.0.1:15420").unwrap();
     SslStream::new(&SslContext::new(Sslv2).unwrap(), tcp).err().unwrap();
 }
+
+run_test!(get_current_cipher, |method, stream| {
+    let ctx = SslContext::new(method).unwrap();
+    match SslStream::new(&ctx, stream) {
+        Ok(ssl_stream) => {
+            match ssl_stream.get_current_cipher() {
+                Some(c) => {
+                    println!("cipher in use: {} ", c)
+                },
+                None => panic!("cipher not returned for active session")
+            }
+        }
+        Err(e) => panic!("connection failure: {}", e)
+    }
+});
+

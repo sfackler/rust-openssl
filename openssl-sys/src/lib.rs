@@ -31,6 +31,7 @@ pub type RSA = c_void;
 pub type SSL = c_void;
 pub type SSL_CTX = c_void;
 pub type SSL_METHOD = c_void;
+pub type SSL_CIPHER = c_void;
 pub type X509 = c_void;
 pub type X509_CRL = c_void;
 pub type X509_EXTENSION = c_void;
@@ -292,6 +293,7 @@ pub unsafe fn SSL_CTX_set_read_ahead(ctx: *mut SSL_CTX, m: c_long) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_READ_AHEAD, m, ptr::null_mut())
 }
 
+
 // True functions
 extern "C" {
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
@@ -521,6 +523,12 @@ extern "C" {
     pub fn SSL_get_SSL_CTX(ssl: *mut SSL) -> *mut SSL_CTX;
     pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const COMP_METHOD;
     pub fn SSL_get_peer_certificate(ssl: *mut SSL) -> *mut X509;
+
+    pub fn SSL_get_current_cipher(ssl: *const SSL) -> *const SSL_CIPHER;
+    pub fn SSL_CIPHER_get_bits(c: *const SSL_CIPHER, bits: *mut c_int) -> c_int;
+    pub fn SSL_CIPHER_get_version(c: *const SSL_CIPHER) -> *mut c_char;
+    pub fn SSL_CIPHER_get_name(c: *const SSL_CIPHER) -> *const c_char;
+    pub fn SSL_CIPHER_get_id(c: *const SSL_CIPHER) -> c_ulong;
 
     pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
 
