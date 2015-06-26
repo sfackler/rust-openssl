@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/sfackler/rust-openssl.svg?branch=master)](https://travis-ci.org/sfackler/rust-openssl)
 
-See the [rustdoc output](https://sfackler.github.io/rust-openssl/doc/openssl).
+[Documentation](https://sfackler.github.io/rust-openssl/doc/v0.6.3/openssl).
 
 ## Building
 
@@ -67,19 +67,15 @@ build script will skip the pkg-config step.
 ## Testing
 Several tests expect a local test server to be running to bounce requests off
 of. It's easy to do this. Open a separate terminal window and `cd` to the
-rust-openssl directory. Then run one of the following commands:
+rust-openssl directory. Then run one of the following command:
 
-* Windows: `openssl s_server -accept 15418 -www -cert test/cert.pem -key
-  test/key.pem > NUL`
-* Linux: `openssl s_server -accept 15418 -www -cert test/cert.pem -key
-  test/key.pem >/dev/null`
+```bash
+./openssl/test/test.sh
+```
 
-Then in the original terminal, run `cargo test`. If everything is set up
-correctly, all tests should pass. You might get some warnings in the `openssl
-s_server` window. Those aren't anything to worry about. You can stop the server
-using Control-C.
-
-For DTLS testing each test requires its own instance of OpenSSL's s_server. On
-Linux you can run the bash script in `openssl/tests/test.sh`.
+This will boot a bunch of `openssl s_server` processes that the tests connect
+to. Then in the original terminal, run `cargo test`. If everything is set up
+correctly, all tests should pass. You can stop the servers with `killall
+openssl`.
 
 [1]: http://slproweb.com/products/Win32OpenSSL.html
