@@ -15,7 +15,7 @@ fn main() {
 
     if lib_dir.is_none() && include_dir.is_none() {
         if let Ok(info) = pkg_config::find_library("openssl") {
-            build_old_openssl_shim(&info.include_paths);
+            build_openssl_shim(&info.include_paths);
             return;
         }
         if let Some(mingw_paths) = get_mingw_in_path() {
@@ -58,18 +58,18 @@ fn main() {
         include_dirs.push(PathBuf::from(&include_dir));
     }
 
-    build_old_openssl_shim(&include_dirs);
+    build_openssl_shim(&include_dirs);
 }
 
-fn build_old_openssl_shim(include_paths: &[PathBuf]) {
+fn build_openssl_shim(include_paths: &[PathBuf]) {
     let mut config = gcc::Config::new();
 
     for path in include_paths {
         config.include(path);
     }
 
-    config.file("src/old_openssl_shim.c")
-        .compile("libold_openssl_shim.a");
+    config.file("src/openssl_shim.c")
+        .compile("libopenssl_shim.a");
 }
 
 fn get_mingw_in_path() -> Option<Vec<String>> {

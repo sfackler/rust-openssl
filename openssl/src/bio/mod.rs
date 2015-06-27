@@ -73,7 +73,7 @@ impl Read for MemBio {
 
         if ret <= 0 {
             let is_eof = unsafe { ffi::BIO_eof(self.bio) };
-            if is_eof {
+            if is_eof != 0 {
                 Ok(0)
             } else {
                 Err(io::Error::new(io::ErrorKind::Other,

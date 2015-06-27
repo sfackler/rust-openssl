@@ -9,7 +9,6 @@ extern crate libressl_pnacl_sys;
 
 use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
 use std::mem;
-use std::ptr;
 use std::sync::{Mutex, MutexGuard};
 use std::sync::{Once, ONCE_INIT};
 
@@ -261,35 +260,6 @@ pub fn init() {
             CRYPTO_set_locking_callback(locking_function);
         })
     }
-}
-
-// Functions converted from macros
-pub unsafe fn BIO_eof(b: *mut BIO) -> bool {
-    BIO_ctrl(b, BIO_CTRL_EOF, 0, ptr::null_mut()) == 1
-}
-
-pub unsafe fn SSL_CTX_set_options(ssl: *mut SSL_CTX, op: c_long) -> c_long {
-    SSL_CTX_ctrl(ssl, SSL_CTRL_OPTIONS, op, ptr::null_mut())
-}
-
-pub unsafe fn BIO_set_mem_eof_return(b: *mut BIO, v: c_int) {
-    BIO_ctrl(b, BIO_C_SET_BUF_MEM_EOF_RETURN, v as c_long, ptr::null_mut());
-}
-
-pub unsafe fn SSL_CTX_get_options(ssl: *mut SSL_CTX) -> c_long {
-    SSL_CTX_ctrl(ssl, SSL_CTRL_OPTIONS, 0, ptr::null_mut())
-}
-
-pub unsafe fn SSL_CTX_clear_options(ssl: *mut SSL_CTX, op: c_long) -> c_long {
-    SSL_CTX_ctrl(ssl, SSL_CTRL_CLEAR_OPTIONS, (op), ptr::null_mut())
-}
-
-pub unsafe fn SSL_CTX_add_extra_chain_cert(ssl: *mut SSL_CTX, cert: *mut X509) -> c_long {
-    SSL_CTX_ctrl(ssl, SSL_CTRL_EXTRA_CHAIN_CERT, 0, cert)
-}
-
-pub unsafe fn SSL_CTX_set_read_ahead(ctx: *mut SSL_CTX, m: c_long) -> c_long {
-    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_READ_AHEAD, m, ptr::null_mut())
 }
 
 // True functions
@@ -610,6 +580,22 @@ extern "C" {
     pub fn d2i_RSA_PUBKEY(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
     pub fn i2d_RSAPrivateKey(k: *mut RSA, buf: *const *mut u8) -> c_int;
     pub fn d2i_RSAPrivateKey(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
+
+    // These functions are defined in OpenSSL as macros, so we shim them
+    #[link_name = "BIO_eof_shim"]
+    pub fn BIO_eof(b: *mut BIO) -> c_int;
+    #[link_name = "BIO_set_mem_eof_return_shim"]
+    pub fn BIO_set_mem_eof_return(b: *mut BIO, v: c_int);
+    #[link_name = "SSL_CTX_set_options_shim"]
+    pub fn SSL_CTX_set_options(ctx: *mut SSL_CTX, options: c_long) -> c_long;
+    #[link_name = "SSL_CTX_get_options_shim"]
+    pub fn SSL_CTX_get_options(ctx: *mut SSL_CTX) -> c_long;
+    #[link_name = "SSL_CTX_clear_options_shim"]
+    pub fn SSL_CTX_clear_options(ctx: *mut SSL_CTX, options: c_long) -> c_long;
+    #[link_name = "SSL_CTX_add_extra_chain_cert_shim"]
+    pub fn SSL_CTX_add_extra_chain_cert(ctx: *mut SSL_CTX, x509: *mut X509) -> c_long;
+    #[link_name = "SSL_CTX_set_read_ahead_shim"]
+    pub fn SSL_CTX_set_read_ahead(ctx: *mut SSL_CTX, m: c_long) -> c_long;
 }
 
 pub mod probe;

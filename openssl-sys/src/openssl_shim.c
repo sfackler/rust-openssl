@@ -1,4 +1,5 @@
 #include <openssl/hmac.h>
+#include <openssl/ssl.h>
 
 #if OPENSSL_VERSION_NUMBER < 0x1000000L
 // Copied from openssl crypto/hmac/hmac.c
@@ -47,3 +48,33 @@ int HMAC_Final_shim(HMAC_CTX *ctx, unsigned char *md, unsigned int *len) {
     return HMAC_Final(ctx, md, len);
 }
 #endif
+
+// shims for OpenSSL macros
+
+int BIO_eof_shim(BIO *b) {
+    return BIO_eof(b);
+}
+
+void BIO_set_mem_eof_return_shim(BIO *b, int v) {
+    BIO_set_mem_eof_return(b, v);
+}
+
+long SSL_CTX_set_options_shim(SSL_CTX *ctx, long options) {
+    return SSL_CTX_set_options(ctx, options);
+}
+
+long SSL_CTX_get_options_shim(SSL_CTX *ctx) {
+    return SSL_CTX_get_options(ctx);
+}
+
+long SSL_CTX_clear_options_shim(SSL_CTX *ctx, long options) {
+    return SSL_CTX_clear_options(ctx, options);
+}
+
+long SSL_CTX_add_extra_chain_cert_shim(SSL_CTX *ctx, X509 *x509) {
+    return SSL_CTX_add_extra_chain_cert(ctx, x509);
+}
+
+long SSL_CTX_set_read_ahead_shim(SSL_CTX *ctx, long m) {
+    return SSL_CTX_set_read_ahead(ctx, m);
+}
