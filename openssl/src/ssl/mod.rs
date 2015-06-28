@@ -1022,7 +1022,7 @@ impl<S: ::std::os::unix::io::AsRawFd> SslStream<S> {
     /// `connect_direct` creates a more efficient `SslStream` than `connect`
     /// does, but requires that the stream implement `AsRawFd` on Unix and
     /// `AsRawSocket` on Windows.
-    pub fn connect_direct<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let ssl = try!(ssl.into_ssl());
         let fd = stream.as_raw_fd() as c_int;
         let stream = try!(DirectStream::connect(ssl, stream, fd));
@@ -1036,7 +1036,7 @@ impl<S: ::std::os::unix::io::AsRawFd> SslStream<S> {
     /// `accept_direct` creates a more efficient `SslStream` than `accept`
     /// does, but requires that the stream implement `AsRawFd` on Unix and
     /// `AsRawSocket` on Windows.
-    pub fn accept_direct<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let ssl = try!(ssl.into_ssl());
         let fd = stream.as_raw_fd() as c_int;
         let stream = try!(DirectStream::accept(ssl, stream, fd));
@@ -1053,7 +1053,7 @@ impl<S: ::std::os::windows::io::AsRawSocket> SslStream<S> {
     /// `connect_direct` creates a more efficient `SslStream` than `connect`
     /// does, but requires that the stream implement `AsRawFd` on Unix and
     /// `AsRawSocket` on Windows.
-    pub fn new_client_direct<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let fd = stream.as_raw_socket() as c_int;
         let stream = try!(DirectStream::connect(ssl, stream, fd));
         Ok(SslStream {
@@ -1066,7 +1066,7 @@ impl<S: ::std::os::windows::io::AsRawSocket> SslStream<S> {
     /// `accept_direct` creates a more efficient `SslStream` than `accept`
     /// does, but requires that the stream implement `AsRawFd` on Unix and
     /// `AsRawSocket` on Windows.
-    pub fn new_server_direct<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let fd = stream.as_raw_socket() as c_int;
         let stream = try!(DirectStream::accept(ssl, stream, fd));
         Ok(SslStream {
@@ -1077,7 +1077,7 @@ impl<S: ::std::os::windows::io::AsRawSocket> SslStream<S> {
 
 impl<S: Read+Write> SslStream<S> {
     /// Creates an SSL/TLS client operating over the provided stream.
-    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+    pub fn connect_generic<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let stream = try!(IndirectStream::connect(ssl, stream));
         Ok(SslStream {
             kind: StreamKind::Indirect(stream)
@@ -1085,7 +1085,7 @@ impl<S: Read+Write> SslStream<S> {
     }
 
     /// Creates an SSL/TLS server operating over the provided stream.
-    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+    pub fn accept_generic<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let stream = try!(IndirectStream::accept(ssl, stream));
         Ok(SslStream {
             kind: StreamKind::Indirect(stream)
@@ -1094,22 +1094,22 @@ impl<S: Read+Write> SslStream<S> {
 
     /// # Deprecated
     pub fn new_server(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        SslStream::accept(ssl, stream)
+        SslStream::accept_generic(ssl, stream)
     }
 
     /// # Deprecated
     pub fn new_server_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        SslStream::accept(ssl, stream)
+        SslStream::accept_generic(ssl, stream)
     }
 
     /// # Deprecated
     pub fn new_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        SslStream::connect(ssl, stream)
+        SslStream::connect_generic(ssl, stream)
     }
 
     /// # Deprecated
     pub fn new(ctx: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
-        SslStream::connect(ctx, stream)
+        SslStream::connect_generic(ctx, stream)
     }
 
     /// # Deprecated
