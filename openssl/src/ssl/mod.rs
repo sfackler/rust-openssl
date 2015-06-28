@@ -777,13 +777,13 @@ impl<S: Read+Write> IndirectStream<S> {
         })
     }
 
-    fn new_client<T: IntoSsl>(ssl: T, stream: S) -> Result<IndirectStream<S>, SslError> {
+    fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<IndirectStream<S>, SslError> {
         let mut ssl = try!(IndirectStream::new_base(ssl, stream));
         try!(ssl.in_retry_wrapper(|ssl| ssl.connect()));
         Ok(ssl)
     }
 
-    fn new_server<T: IntoSsl>(ssl: T, stream: S) -> Result<IndirectStream<S>, SslError> {
+    fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<IndirectStream<S>, SslError> {
         let mut ssl = try!(IndirectStream::new_base(ssl, stream));
         try!(ssl.in_retry_wrapper(|ssl| ssl.accept()));
         Ok(ssl)
@@ -884,7 +884,7 @@ impl<S> DirectStream<S> {
         })
     }
 
-    fn new_client(ssl: Ssl, stream: S, sock: c_int) -> Result<DirectStream<S>, SslError> {
+    fn connect(ssl: Ssl, stream: S, sock: c_int) -> Result<DirectStream<S>, SslError> {
         let ssl = try!(DirectStream::new_base(ssl, stream, sock));
         let ret = ssl.ssl.connect();
         if ret > 0 {
@@ -894,7 +894,7 @@ impl<S> DirectStream<S> {
         }
     }
 
-    fn new_server(ssl: Ssl, stream: S, sock: c_int) -> Result<DirectStream<S>, SslError> {
+    fn accept(ssl: Ssl, stream: S, sock: c_int) -> Result<DirectStream<S>, SslError> {
         let ssl = try!(DirectStream::new_base(ssl, stream, sock));
         let ret = ssl.ssl.accept();
         if ret > 0 {
@@ -1017,19 +1017,19 @@ impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug {
 
 #[cfg(unix)]
 impl<S: ::std::os::unix::io::AsRawFd> SslStream<S> {
-    pub fn new_client_direct<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+    pub fn connect_direct<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let ssl = try!(ssl.into_ssl());
         let fd = stream.as_raw_fd() as c_int;
-        let stream = try!(DirectStream::new_client(ssl, stream, fd));
+        let stream = try!(DirectStream::connect(ssl, stream, fd));
         Ok(SslStream {
             kind: StreamKind::Direct(stream)
         })
     }
 
-    pub fn new_server_direct<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+    pub fn accept_direct<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let ssl = try!(ssl.into_ssl());
         let fd = stream.as_raw_fd() as c_int;
-        let stream = try!(DirectStream::new_server(ssl, stream, fd));
+        let stream = try!(DirectStream::accept(ssl, stream, fd));
         Ok(SslStream {
             kind: StreamKind::Direct(stream)
         })
@@ -1040,7 +1040,7 @@ impl<S: ::std::os::unix::io::AsRawFd> SslStream<S> {
 impl<S: ::std::os::windows::io::AsRawSocket> SslStream<S> {
     pub fn new_client_direct<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let fd = stream.as_raw_socket() as c_int;
-        let stream = try!(DirectStream::new_client(ssl, stream, fd));
+        let stream = try!(DirectStream::connect(ssl, stream, fd));
         Ok(SslStream {
             kind: StreamKind::Direct(stream)
         })
@@ -1048,7 +1048,7 @@ impl<S: ::std::os::windows::io::AsRawSocket> SslStream<S> {
 
     pub fn new_server_direct<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let fd = stream.as_raw_socket() as c_int;
-        let stream = try!(DirectStream::new_server(ssl, stream, fd));
+        let stream = try!(DirectStream::accept(ssl, stream, fd));
         Ok(SslStream {
             kind: StreamKind::Direct(stream)
         })
@@ -1056,33 +1056,38 @@ impl<S: ::std::os::windows::io::AsRawSocket> SslStream<S> {
 }
 
 impl<S: Read+Write> SslStream<S> {
-    pub fn new_client<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
-        let stream = try!(IndirectStream::new_client(ssl, stream));
+    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+        let stream = try!(IndirectStream::connect(ssl, stream));
         Ok(SslStream {
             kind: StreamKind::Indirect(stream)
         })
     }
 
-    pub fn new_server<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
-        let stream = try!(IndirectStream::new_server(ssl, stream));
+    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+        let stream = try!(IndirectStream::accept(ssl, stream));
         Ok(SslStream {
             kind: StreamKind::Indirect(stream)
         })
+    }
+
+    /// # Deprecated
+    pub fn new_server(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
+        SslStream::accept(ssl, stream)
     }
 
     /// # Deprecated
     pub fn new_server_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        SslStream::new_server(ssl, stream)
+        SslStream::accept(ssl, stream)
     }
 
     /// # Deprecated
     pub fn new_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        SslStream::new_client(ssl, stream)
+        SslStream::connect(ssl, stream)
     }
 
     /// # Deprecated
     pub fn new(ctx: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
-        SslStream::new_client(ctx, stream)
+        SslStream::connect(ctx, stream)
     }
 
     /// # Deprecated
