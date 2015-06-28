@@ -496,7 +496,7 @@ impl SslContext {
     pub fn set_cipher_list(&mut self, cipher_list: &str) -> Result<(),SslError> {
         wrap_ssl_result(
             unsafe {
-                let cipher_list = CString::new(cipher_list.as_bytes()).unwrap();
+                let cipher_list = CString::new(cipher_list).unwrap();
                 ffi::SSL_CTX_set_cipher_list(self.ctx, cipher_list.as_ptr())
             })
     }
@@ -766,36 +766,41 @@ impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug {
 }
 
 impl<S: Read+Write> SslStream<S> {
-    fn new_base(ssl:Ssl, stream: S) -> SslStream<S> {
-        SslStream {
+    fn new_base<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        Ok(SslStream {
             stream: stream,
             ssl: Arc::new(ssl),
             // Maximum TLS record size is 16k
             buf: iter::repeat(0).take(16 * 1024).collect(),
-        }
+        })
     }
 
+    pub fn new_client<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+        let mut ssl = try!(SslStream::new_base(ssl, stream));
+        try!(ssl.in_retry_wrapper(|ssl| ssl.connect()));
+        Ok(ssl)
+    }
+
+    pub fn new_server<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+        let mut ssl = try!(SslStream::new_base(ssl, stream));
+        try!(ssl.in_retry_wrapper(|ssl| ssl.accept()));
+        Ok(ssl)
+    }
+
+    /// # Deprecated
     pub fn new_server_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        let mut ssl = SslStream::new_base(ssl, stream);
-        ssl.in_retry_wrapper(|ssl| { ssl.accept() }).and(Ok(ssl))
+        SslStream::new_server(ssl, stream)
     }
 
-    /// Attempts to create a new SSL stream from a given `Ssl` instance.
+    /// # Deprecated
     pub fn new_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        let mut ssl = SslStream::new_base(ssl, stream);
-        ssl.in_retry_wrapper(|ssl| { ssl.connect() }).and(Ok(ssl))
+        SslStream::new_client(ssl, stream)
     }
 
-    /// Creates a new SSL stream
+    /// # Deprecated
     pub fn new(ctx: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
-        let ssl = try!(Ssl::new(ctx));
-        SslStream::new_from(ssl, stream)
-    }
-
-    /// Creates a new SSL server stream
-    pub fn new_server(ctx: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
-        let ssl = try!(Ssl::new(ctx));
-        SslStream::new_server_from(ssl, stream)
+        SslStream::new_client(ctx, stream)
     }
 
     #[doc(hidden)]
@@ -917,6 +922,22 @@ impl<S: Read+Write> Write for SslStream<S> {
     fn flush(&mut self) -> io::Result<()> {
         try!(self.write_through());
         self.stream.flush()
+    }
+}
+
+pub trait IntoSsl {
+    fn into_ssl(self) -> Result<Ssl, SslError>;
+}
+
+impl IntoSsl for Ssl {
+    fn into_ssl(self) -> Result<Ssl, SslError> {
+        Ok(self)
+    }
+}
+
+impl<'a> IntoSsl for &'a SslContext {
+    fn into_ssl(self) -> Result<Ssl, SslError> {
+        Ssl::new(self)
     }
 }
 

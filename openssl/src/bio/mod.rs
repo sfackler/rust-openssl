@@ -76,8 +76,7 @@ impl Read for MemBio {
             if is_eof != 0 {
                 Ok(0)
             } else {
-                Err(io::Error::new(io::ErrorKind::Other,
-                                   SslError::get()))
+                Err(io::Error::new(io::ErrorKind::Other, SslError::get()))
             }
         } else {
             Ok(ret as usize)
@@ -93,8 +92,7 @@ impl Write for MemBio {
         };
 
         if ret < 0 {
-                Err(io::Error::new(io::ErrorKind::Other,
-                                   SslError::get()))
+            Err(io::Error::new(io::ErrorKind::Other, SslError::get()))
         } else {
             Ok(ret as usize)
         }
