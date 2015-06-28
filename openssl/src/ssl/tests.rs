@@ -317,8 +317,17 @@ fn test_write() {
     stream.flush().unwrap();
 }
 
+#[test]
+fn test_write_direct() {
+    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
+    let mut stream = SslStream::new_client_direct(&SslContext::new(Sslv23).unwrap(), stream).unwrap();
+    stream.write_all("hello".as_bytes()).unwrap();
+    stream.flush().unwrap();
+    stream.write_all(" there".as_bytes()).unwrap();
+    stream.flush().unwrap();
+}
+
 run_test!(get_peer_certificate, |method, stream| {
-    //let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
     let stream = SslStream::new_client(&SslContext::new(method).unwrap(), stream).unwrap();
     let cert = stream.get_peer_certificate().unwrap();
     let fingerprint = cert.fingerprint(SHA256).unwrap();
@@ -349,6 +358,14 @@ fn test_read() {
     io::copy(&mut stream, &mut io::sink()).ok().expect("read error");
 }
 
+#[test]
+fn test_read_direct() {
+    let tcp = TcpStream::connect("127.0.0.1:15418").unwrap();
+    let mut stream = SslStream::new_client_direct(&SslContext::new(Sslv23).unwrap(), tcp).unwrap();
+    stream.write_all("GET /\r\n\r\n".as_bytes()).unwrap();
+    stream.flush().unwrap();
+    io::copy(&mut stream, &mut io::sink()).ok().expect("read error");
+}
 
 #[test]
 fn test_pending() {
