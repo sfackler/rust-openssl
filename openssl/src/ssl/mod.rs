@@ -1018,6 +1018,10 @@ impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug {
 #[cfg(unix)]
 impl<S: Read+Write+::std::os::unix::io::AsRawFd> SslStream<S> {
     /// Creates an SSL/TLS client operating over the provided stream.
+    ///
+    /// Streams passed to this method must implement `AsRawFd` on Unixy
+    /// platforms and `AsRawSocket` on Windows. Use `connect_generic` for
+    /// streams that do not.
     pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let ssl = try!(ssl.into_ssl());
         let fd = stream.as_raw_fd() as c_int;
@@ -1028,6 +1032,10 @@ impl<S: Read+Write+::std::os::unix::io::AsRawFd> SslStream<S> {
     }
 
     /// Creates an SSL/TLS server operating over the provided stream.
+    ///
+    /// Streams passed to this method must implement `AsRawFd` on Unixy
+    /// platforms and `AsRawSocket` on Windows. Use `accept_generic` for
+    /// streams that do not.
     pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let ssl = try!(ssl.into_ssl());
         let fd = stream.as_raw_fd() as c_int;
@@ -1041,6 +1049,10 @@ impl<S: Read+Write+::std::os::unix::io::AsRawFd> SslStream<S> {
 #[cfg(windows)]
 impl<S: Read+Write+::std::os::windows::io::AsRawSocket> SslStream<S> {
     /// Creates an SSL/TLS client operating over the provided stream.
+    ///
+    /// Streams passed to this method must implement `AsRawFd` on Unixy
+    /// platforms and `AsRawSocket` on Windows. Use `connect_generic` for
+    /// streams that do not.
     pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let ssl = try!(ssl.into_ssl());
         let fd = stream.as_raw_socket() as c_int;
@@ -1051,6 +1063,10 @@ impl<S: Read+Write+::std::os::windows::io::AsRawSocket> SslStream<S> {
     }
 
     /// Creates an SSL/TLS server operating over the provided stream.
+    ///
+    /// Streams passed to this method must implement `AsRawFd` on Unixy
+    /// platforms and `AsRawSocket` on Windows. Use `accept_generic` for
+    /// streams that do not.
     pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let ssl = try!(ssl.into_ssl());
         let fd = stream.as_raw_socket() as c_int;
