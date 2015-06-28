@@ -655,16 +655,8 @@ impl Ssl {
 
     /// Set the host name to be used with SNI (Server Name Indication).
     pub fn set_hostname(&self, hostname: &str) -> Result<(), SslError> {
-        let ret = unsafe {
-                // This is defined as a macro:
-                //      #define SSL_set_tlsext_host_name(s,name) \
-                //          SSL_ctrl(s,SSL_CTRL_SET_TLSEXT_HOSTNAME,TLSEXT_NAMETYPE_host_name,(char *)name)
-
-                let hostname = CString::new(hostname.as_bytes()).unwrap();
-                ffi::SSL_ctrl(self.ssl, ffi::SSL_CTRL_SET_TLSEXT_HOSTNAME,
-                              ffi::TLSEXT_NAMETYPE_host_name,
-                              hostname.as_ptr() as *mut c_void)
-        };
+        let cstr = CString::new(hostname).unwrap();
+        let ret = unsafe { ffi::SSL_set_tlsext_host_name(self.ssl, cstr.as_ptr()) };
 
         // For this case, 0 indicates failure.
         if ret == 0 {

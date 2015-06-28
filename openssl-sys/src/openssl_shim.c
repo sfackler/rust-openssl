@@ -78,3 +78,7 @@ long SSL_CTX_add_extra_chain_cert_shim(SSL_CTX *ctx, X509 *x509) {
 long SSL_CTX_set_read_ahead_shim(SSL_CTX *ctx, long m) {
     return SSL_CTX_set_read_ahead(ctx, m);
 }
+
+long SSL_set_tlsext_host_name_shim(SSL *s, char *name) {
+    return SSL_set_tlsext_host_name(s, name);
+}
