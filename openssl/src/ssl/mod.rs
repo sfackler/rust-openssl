@@ -1016,12 +1016,8 @@ impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug {
 }
 
 #[cfg(unix)]
-impl<S: ::std::os::unix::io::AsRawFd> SslStream<S> {
+impl<S: Read+Write+::std::os::unix::io::AsRawFd> SslStream<S> {
     /// Creates an SSL/TLS client operating over the provided stream.
-    ///
-    /// `connect_direct` creates a more efficient `SslStream` than `connect`
-    /// does, but requires that the stream implement `AsRawFd` on Unix and
-    /// `AsRawSocket` on Windows.
     pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let ssl = try!(ssl.into_ssl());
         let fd = stream.as_raw_fd() as c_int;
@@ -1032,10 +1028,6 @@ impl<S: ::std::os::unix::io::AsRawFd> SslStream<S> {
     }
 
     /// Creates an SSL/TLS server operating over the provided stream.
-    ///
-    /// `accept_direct` creates a more efficient `SslStream` than `accept`
-    /// does, but requires that the stream implement `AsRawFd` on Unix and
-    /// `AsRawSocket` on Windows.
     pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let ssl = try!(ssl.into_ssl());
         let fd = stream.as_raw_fd() as c_int;
@@ -1047,12 +1039,8 @@ impl<S: ::std::os::unix::io::AsRawFd> SslStream<S> {
 }
 
 #[cfg(windows)]
-impl<S: ::std::os::windows::io::AsRawSocket> SslStream<S> {
+impl<S: Read+Write+::std::os::windows::io::AsRawSocket> SslStream<S> {
     /// Creates an SSL/TLS client operating over the provided stream.
-    ///
-    /// `connect_direct` creates a more efficient `SslStream` than `connect`
-    /// does, but requires that the stream implement `AsRawFd` on Unix and
-    /// `AsRawSocket` on Windows.
     pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let fd = stream.as_raw_socket() as c_int;
         let stream = try!(DirectStream::connect(ssl, stream, fd));
@@ -1062,10 +1050,6 @@ impl<S: ::std::os::windows::io::AsRawSocket> SslStream<S> {
     }
 
     /// Creates an SSL/TLS server operating over the provided stream.
-    ///
-    /// `accept_direct` creates a more efficient `SslStream` than `accept`
-    /// does, but requires that the stream implement `AsRawFd` on Unix and
-    /// `AsRawSocket` on Windows.
     pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let fd = stream.as_raw_socket() as c_int;
         let stream = try!(DirectStream::accept(ssl, stream, fd));
@@ -1077,6 +1061,10 @@ impl<S: ::std::os::windows::io::AsRawSocket> SslStream<S> {
 
 impl<S: Read+Write> SslStream<S> {
     /// Creates an SSL/TLS client operating over the provided stream.
+    ///
+    /// `SslStream`s returned by this method will be less efficient than ones
+    /// returned by `connect`, so this method should only be used for streams
+    /// that do not implement `AsRawFd` and `AsRawSocket`.
     pub fn connect_generic<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let stream = try!(IndirectStream::connect(ssl, stream));
         Ok(SslStream {
@@ -1085,6 +1073,10 @@ impl<S: Read+Write> SslStream<S> {
     }
 
     /// Creates an SSL/TLS server operating over the provided stream.
+    ///
+    /// `SslStream`s returned by this method will be less efficient than ones
+    /// returned by `accept`, so this method should only be used for streams
+    /// that do not implement `AsRawFd` and `AsRawSocket`.
     pub fn accept_generic<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         let stream = try!(IndirectStream::accept(ssl, stream));
         Ok(SslStream {
