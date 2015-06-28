@@ -1042,6 +1042,7 @@ impl<S: Read+Write+::std::os::unix::io::AsRawFd> SslStream<S> {
 impl<S: Read+Write+::std::os::windows::io::AsRawSocket> SslStream<S> {
     /// Creates an SSL/TLS client operating over the provided stream.
     pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+        let ssl = try!(ssl.into_ssl());
         let fd = stream.as_raw_socket() as c_int;
         let stream = try!(DirectStream::connect(ssl, stream, fd));
         Ok(SslStream {
@@ -1051,6 +1052,7 @@ impl<S: Read+Write+::std::os::windows::io::AsRawSocket> SslStream<S> {
 
     /// Creates an SSL/TLS server operating over the provided stream.
     pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+        let ssl = try!(ssl.into_ssl());
         let fd = stream.as_raw_socket() as c_int;
         let stream = try!(DirectStream::accept(ssl, stream, fd));
         Ok(SslStream {
