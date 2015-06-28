@@ -5,6 +5,7 @@ use std::ffi::{CStr, CString};
 use std::fmt;
 use std::io;
 use std::io::prelude::*;
+use std::iter;
 use std::mem;
 use std::net;
 use std::path::Path;
@@ -770,14 +771,7 @@ impl<S: Read+Write> SslStream<S> {
             stream: stream,
             ssl: Arc::new(ssl),
             // Maximum TLS record size is 16k
-            // We're just using this as a buffer, so there's no reason to pay
-            // to memset it
-            buf: {
-                const CAP: usize = 16 * 1024;
-                let mut v = Vec::with_capacity(CAP);
-                unsafe { v.set_len(CAP); }
-                v
-            }
+            buf: iter::repeat(0).take(16 * 1024).collect(),
         }
     }
 
