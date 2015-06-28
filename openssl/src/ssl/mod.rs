@@ -803,6 +803,7 @@ impl<S: Read+Write> SslStream<S> {
         SslStream::new_client(ctx, stream)
     }
 
+    /// # Deprecated
     #[doc(hidden)]
     pub fn get_inner(&mut self) -> &mut S {
         self.get_mut()
@@ -823,7 +824,7 @@ impl<S: Read+Write> SslStream<S> {
     /// ## Warning
     ///
     /// It is inadvisable to read from or write to the underlying stream as it
-    /// will most likely desynchronize the SSL session.
+    /// will most likely corrupt the SSL session.
     pub fn get_mut(&mut self) -> &mut S {
         &mut self.stream
     }
