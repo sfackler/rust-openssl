@@ -14,9 +14,12 @@ fn main() {
     let include_dir = env::var("OPENSSL_INCLUDE_DIR").ok();
 
     if lib_dir.is_none() && include_dir.is_none() {
-        if let Ok(info) = pkg_config::find_library("openssl") {
-            build_openssl_shim(&info.include_paths);
-            return;
+        // rustc doesn't seem to work with pkg-config's output in mingw64
+        if !target.contains("windows") {
+            if let Ok(info) = pkg_config::find_library("openssl") {
+                build_openssl_shim(&info.include_paths);
+                return;
+            }
         }
         if let Some(mingw_paths) = get_mingw_in_path() {
             for path in mingw_paths {
