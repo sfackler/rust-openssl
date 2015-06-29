@@ -23,7 +23,7 @@ fn main() {
         }
         if let Some(mingw_paths) = get_mingw_in_path() {
             for path in mingw_paths {
-                println!("cargo:rustc-flags=-L native={}", path);
+                println!("cargo:rustc-link-search=native={}", path);
             }
         }
     }
@@ -49,11 +49,12 @@ fn main() {
     };
 
     if let Some(lib_dir) = lib_dir {
-    	println!("cargo:rustc-flags=-L native={}", lib_dir);
+    	println!("cargo:rustc-link-search=native={}", lib_dir);
     }
 
-    let libs_arg = libs.iter().fold(String::new(), |args, lib| args + &format!(" -l {0}={1}", mode, lib));
-    println!("cargo:rustc-flags={0}", libs_arg);
+    for lib in libs {
+        println!("cargo:rustc-link-lib={}={}", mode, lib);
+    }
 
     let mut include_dirs = vec![];
 
