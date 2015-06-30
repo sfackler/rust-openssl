@@ -209,6 +209,17 @@ impl X509Generator {
         self
     }
 
+    /// Add multiple attributes to the name of the certificate
+    ///
+    /// ```ignore
+    /// generator.add_names(vec![("CN".to_string(),"example.com".to_string())]);
+    /// ```
+    pub fn add_names<I>(mut self, attrs: I) -> X509Generator
+        where I: IntoIterator<Item=(String,String)> {
+        self.names.extend(attrs);
+        self
+    }
+
     /// (deprecated) Sets what for certificate could be used
     ///
     /// This function is deprecated, use `X509Generator.add_extension` instead.
