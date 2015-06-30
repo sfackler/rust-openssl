@@ -19,6 +19,7 @@ dtlsv1_2 = []
 sslv2 = []
 aes_xts = []
 npn = []
+alpn = []
 
 [dependencies]
 libc = "0.1"

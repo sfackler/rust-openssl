@@ -17,6 +17,7 @@ dtlsv1_2 = ["openssl-sys/dtlsv1_2"]
 sslv2 = ["openssl-sys/sslv2"]
 aes_xts = ["openssl-sys/aes_xts"]
 npn = ["openssl-sys/npn"]
+alpn = ["openssl-sys/alpn"]
 
 [dependencies.openssl-sys]
 path = "../openssl-sys"

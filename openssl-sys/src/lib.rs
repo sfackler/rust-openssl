@@ -547,12 +547,30 @@ extern "C" {
                                                               inlen: c_uint,
                                                               arg: *mut c_void) -> c_int,
                                             arg: *mut c_void);
-    #[cfg(feature = "npn")]
+    #[cfg(any(feature = "alpn", feature = "npn"))]
     pub fn SSL_select_next_proto(out: *mut *mut c_uchar, outlen: *mut c_uchar,
                                  inbuf: *const c_uchar, inlen: c_uint,
                                  client: *const c_uchar, client_len: c_uint) -> c_int;
     #[cfg(feature = "npn")]
     pub fn SSL_get0_next_proto_negotiated(s: *const SSL, data: *mut *const c_uchar, len: *mut c_uint);
+
+    #[cfg(feature = "alpn")]
+    pub fn SSL_CTX_set_alpn_protos(s: *mut SSL_CTX, data: *const c_uchar, len: c_uint) -> c_int;
+
+    #[cfg(feature = "alpn")]
+    pub fn SSL_set_alpn_protos(s: *mut SSL, data: *const c_uchar, len: c_uint) -> c_int;
+
+    #[cfg(feature = "alpn")]
+    pub fn SSL_CTX_set_alpn_select_cb(ssl: *mut SSL_CTX,
+                                            cb: extern "C" fn(ssl: *mut SSL,
+                                                              out: *mut *mut c_uchar,
+                                                              outlen: *mut c_uchar,
+                                                              inbuf: *const c_uchar,
+                                                              inlen: c_uint,
+                                                              arg: *mut c_void) -> c_int,
+                                            arg: *mut c_void);
+    #[cfg(feature = "alpn")]
+    pub fn SSL_get0_alpn_selected(s: *const SSL, data: *mut *const c_uchar, len: *mut c_uint);
 
     pub fn X509_add_ext(x: *mut X509, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
     pub fn X509_digest(x: *mut X509, digest: *const EVP_MD, buf: *mut c_char, len: *mut c_uint) -> c_int;
