@@ -9,8 +9,10 @@ os:
 env:
   global:
     - FEATURES="tlsv1_2 tlsv1_1 dtlsv1 dtlsv1_2 sslv2 aes_xts npn alpn"
+before_install:
+- (test $TRAVIS_OS_NAME == "osx" || ./openssl/test/build.sh)
 before_script:
 - ./openssl/test/test.sh
 script:
-- (cd openssl && cargo test)
-- (test $TRAVIS_OS_NAME == "osx" || (cd openssl && cargo test --features "$FEATURES"))
+- (cd openssl && LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH cargo test)
+- (test $TRAVIS_OS_NAME == "osx" || (cd openssl && LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH cargo test --features "$FEATURES"))
