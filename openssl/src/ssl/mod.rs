@@ -1253,7 +1253,7 @@ impl<S: Read+Write> SslStream<S> {
     /// This method needs the `alpn` feature.
     #[cfg(feature = "alpn")]
     pub fn get_selected_alpn_protocol(&self) -> Option<&[u8]> {
-        self.ssl.get_selected_alpn_protocol()
+        self.kind.ssl().get_selected_alpn_protocol()
     }
 
     /// pending() takes into account only bytes from the TLS/SSL record that is currently being processed (if any).

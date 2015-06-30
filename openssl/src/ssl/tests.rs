@@ -579,7 +579,7 @@ fn test_npn_server_advertise_multiple() {
 #[test]
 #[cfg(feature = "alpn")]
 fn test_alpn_server_advertise_multiple() {
-    let localhost = "127.0.0.1:15420";
+    let localhost = "127.0.0.1:15421";
     let listener = TcpListener::bind(localhost).unwrap();
     // We create a different context instance for the server...
     let listener_ctx = {
@@ -595,7 +595,7 @@ fn test_alpn_server_advertise_multiple() {
     // Have the listener wait on the connection in a different thread.
     thread::spawn(move || {
         let (stream, _) = listener.accept().unwrap();
-        let _ = SslStream::new_server(&listener_ctx, stream).unwrap();
+        let _ = SslStream::accept(&listener_ctx, stream).unwrap();
     });
 
     let mut ctx = SslContext::new(Sslv23).unwrap();
