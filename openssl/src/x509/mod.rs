@@ -201,8 +201,9 @@ impl X509Generator {
 
     /// Add attribute to the name of the certificate
     ///
-    /// ```ignore
-    /// generator.add_name("CN".to_string(),"example.com".to_string())
+    /// ```
+    /// # let generator = openssl::x509::X509Generator::new();
+    /// generator.add_name("CN".to_string(),"example.com".to_string());
     /// ```
     pub fn add_name(mut self, attr_type: String, attr_value: String) -> X509Generator {
         self.names.push((attr_type,attr_value));
@@ -211,7 +212,8 @@ impl X509Generator {
 
     /// Add multiple attributes to the name of the certificate
     ///
-    /// ```ignore
+    /// ```
+    /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_names(vec![("CN".to_string(),"example.com".to_string())]);
     /// ```
     pub fn add_names<I>(mut self, attrs: I) -> X509Generator

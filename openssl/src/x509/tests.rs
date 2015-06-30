@@ -16,7 +16,7 @@ fn test_cert_gen() {
     let gen = X509Generator::new()
         .set_bitlength(2048)
         .set_valid_period(365*2)
-        .set_CN("test_me")
+        .add_name("CN".to_string(),"test_me".to_string())
         .set_sign_hash(SHA256)
         .add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]))
         .add_extension(ExtKeyUsage(vec![ClientAuth, ServerAuth, ExtKeyUsageOption::Other("2.999.1".to_owned())]))
