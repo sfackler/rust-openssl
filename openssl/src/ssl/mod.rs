@@ -1172,7 +1172,7 @@ impl<S: Read+Write> SslStream<S> {
     }
 
     /// # Deprecated
-    pub fn new_server(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
+    pub fn new_server(ssl: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
         SslStream::accept_generic(ssl, stream)
     }
 
