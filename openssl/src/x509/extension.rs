@@ -1,6 +1,10 @@
 use std::fmt;
 use nid::Nid;
 
+/// Type-only version of the `Extension` enum.
+///
+/// See the `Extension` documentation for more information on the different
+/// variants.
 #[derive(Clone,Hash,PartialEq,Eq)]
 pub enum ExtensionType {
 	KeyUsage,
@@ -11,13 +15,42 @@ pub enum ExtensionType {
 	OtherStr(String),
 }
 
+/// A X.509 v3 certificate extension.
+///
+/// Only one extension of each type is allow in a certificate.
+/// See RFC 3280 for more information about extensions.
 #[derive(Clone)]
 pub enum Extension {
+	/// The purposes of the key contained in the certificate
 	KeyUsage(Vec<KeyUsageOption>),
+	/// The extended purposes of the key contained in the certificate
 	ExtKeyUsage(Vec<ExtKeyUsageOption>),
+	/// Subject Alternative Names
 	SubjectAltName(Vec<(AltNameOption,String)>),
+	/// Issuer Alternative Names
 	IssuerAltName(Vec<(AltNameOption,String)>),
+	/// Arbitrary extensions by NID. See `man x509v3_config` for value syntax.
+	///
+	/// You must not use this to add extensions which this enum can express directly.
+	///
+    /// ```
+    /// use openssl::x509::extension::Extension::*;
+	/// use openssl::nid::Nid;
+    ///
+    /// # let generator = openssl::x509::X509Generator::new();
+    /// generator.add_extension(OtherNid(Nid::BasicConstraints,"critical,CA:TRUE".to_owned()));
+    /// ```
 	OtherNid(Nid,String),
+	/// Arbitrary extensions by OID string. See `man ASN1_generate_nconf` for value syntax.
+	///
+	/// You must not use this to add extensions which this enum can express directly.
+	///
+    /// ```
+    /// use openssl::x509::extension::Extension::*;
+    ///
+    /// # let generator = openssl::x509::X509Generator::new();
+    /// generator.add_extension(OtherStr("2.999.2".to_owned(),"ASN1:UTF8:example value".to_owned()));
+    /// ```
 	OtherStr(String,String),
 }
 
@@ -144,6 +177,15 @@ impl fmt::Display for ExtKeyUsageOption {
 
 #[derive(Clone, Copy)]
 pub enum AltNameOption {
+    /// The value is specified as OID;content. See `man ASN1_generate_nconf` for more information on the content syntax.
+	///
+    /// ```
+    /// use openssl::x509::extension::Extension::*;
+    /// use openssl::x509::extension::AltNameOption::Other as OtherName;
+    ///
+    /// # let generator = openssl::x509::X509Generator::new();
+    /// generator.add_extension(SubjectAltName(vec![(OtherName,"2.999.3;ASN1:UTF8:some other name".to_owned())]));
+    /// ```
 	Other,
 	Email,
 	DNS,
