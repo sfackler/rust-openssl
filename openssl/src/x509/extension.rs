@@ -6,6 +6,7 @@ pub enum ExtensionType {
 	KeyUsage,
 	ExtKeyUsage,
 	SubjectAltName,
+	IssuerAltName,
 	OtherNid(Nid),
 	OtherStr(String),
 }
@@ -15,6 +16,7 @@ pub enum Extension {
 	KeyUsage(Vec<KeyUsageOption>),
 	ExtKeyUsage(Vec<ExtKeyUsageOption>),
 	SubjectAltName(Vec<(AltNameOption,String)>),
+	IssuerAltName(Vec<(AltNameOption,String)>),
 	OtherNid(Nid,String),
 	OtherStr(String,String),
 }
@@ -25,6 +27,7 @@ impl Extension {
 			&Extension::KeyUsage(_) => ExtensionType::KeyUsage,
 			&Extension::ExtKeyUsage(_) => ExtensionType::ExtKeyUsage,
 			&Extension::SubjectAltName(_) => ExtensionType::SubjectAltName,
+			&Extension::IssuerAltName(_) => ExtensionType::IssuerAltName,
 			&Extension::OtherNid(nid,_) => ExtensionType::OtherNid(nid),
 			&Extension::OtherStr(ref s,_) => ExtensionType::OtherStr(s.clone()),
 		}
@@ -37,6 +40,7 @@ impl ExtensionType {
 			&ExtensionType::KeyUsage => Some(Nid::KeyUsage),
 			&ExtensionType::ExtKeyUsage => Some(Nid::ExtendedKeyUsage),
 			&ExtensionType::SubjectAltName => Some(Nid::SubjectAltName),
+			&ExtensionType::IssuerAltName => Some(Nid::IssuerAltName),
 			&ExtensionType::OtherNid(nid) => Some(nid),
 			&ExtensionType::OtherStr(_) => None,
 		}
@@ -66,6 +70,7 @@ impl ToString for Extension {
 			&Extension::KeyUsage(ref purposes) => join(purposes.iter(),","),
 			&Extension::ExtKeyUsage(ref purposes) => join(purposes.iter(),","),
 			&Extension::SubjectAltName(ref names) => join(names.iter().map(|&(ref opt,ref val)|opt.to_string()+":"+&val),","),
+			&Extension::IssuerAltName(ref names) => join(names.iter().map(|&(ref opt,ref val)|opt.to_string()+":"+&val),","),
 			&Extension::OtherNid(_,ref value) => value.clone(),
 			&Extension::OtherStr(_,ref value) => value.clone(),
 		}
