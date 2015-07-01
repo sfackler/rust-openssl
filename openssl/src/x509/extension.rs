@@ -5,12 +5,14 @@ use nid::Nid;
 pub enum ExtensionType {
 	KeyUsage,
 	ExtKeyUsage,
+	OtherNid(Nid),
 }
 
 #[derive(Clone)]
 pub enum Extension {
 	KeyUsage(Vec<KeyUsageOption>),
 	ExtKeyUsage(Vec<ExtKeyUsageOption>),
+	OtherNid(Nid,String),
 }
 
 impl Extension {
@@ -18,6 +20,7 @@ impl Extension {
 		match self {
 			&Extension::KeyUsage(_) => ExtensionType::KeyUsage,
 			&Extension::ExtKeyUsage(_) => ExtensionType::ExtKeyUsage,
+			&Extension::OtherNid(nid,_) => ExtensionType::OtherNid(nid),
 		}
 	}
 
@@ -25,6 +28,7 @@ impl Extension {
 		match self {
 			&Extension::KeyUsage(_) => Nid::KeyUsage,
 			&Extension::ExtKeyUsage(_) => Nid::ExtendedKeyUsage,
+			&Extension::OtherNid(nid,_) => nid,
 		}
 	}
 }
@@ -44,6 +48,7 @@ impl ToString for Extension {
 		match self {
 			&Extension::KeyUsage(ref purposes) => join(purposes.iter(),","),
 			&Extension::ExtKeyUsage(ref purposes) => join(purposes.iter(),","),
+			&Extension::OtherNid(_,ref value) => value.clone(),
 		}
     }
 }
