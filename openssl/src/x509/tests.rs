@@ -69,3 +69,32 @@ fn test_subject_read_cn() {
 
     assert_eq!(&cn as &str, "test_cert")
 }
+
+#[test]
+fn test_nid_values() {
+    let cert_path = Path::new("test/nid_test_cert.pem");
+    let mut file = File::open(&cert_path)
+        .ok()
+        .expect("Failed to open `test/nid_test_cert.pem`");
+
+    let cert = X509::from_pem(&mut file).ok().expect("Failed to load PEM");
+    let subject = cert.subject_name();
+
+    let cn = match subject.text_by_nid(Nid::CN) {
+        Some(x) => x,
+        None => panic!("Failed to read CN from cert")
+    };
+    assert_eq!(&cn as &str, "example.com");
+
+    let email = match subject.text_by_nid(Nid::Email) {
+        Some(x) => x,
+        None => panic!("Failed to read subject email address from cert")
+    };
+    assert_eq!(&email as &str, "test@example.com");
+
+    let friendly = match subject.text_by_nid(Nid::FriendlyName) {
+        Some(x) => x,
+        None => panic!("Failed to read subject friendly name from cert")
+    };
+    assert_eq!(&friendly as &str, "Example");
+}
