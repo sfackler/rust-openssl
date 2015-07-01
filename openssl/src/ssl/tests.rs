@@ -403,7 +403,7 @@ fn test_state() {
     assert_eq!(stream.get_state_string_long(), "SSL negotiation finished successfully");
 }
 
-/// Tests that connecting with the client using NPN, but the server not does not
+/// Tests that connecting with the client using ALPN, but the server not does not
 /// break the existing connection behavior.
 #[test]
 #[cfg(feature = "alpn")]
@@ -420,7 +420,7 @@ fn test_connect_with_unilateral_alpn() {
         Ok(stream) => stream,
         Err(err) => panic!("Expected success, got {:?}", err)
     };
-    // Since the socket to which we connected is not configured to use NPN,
+    // Since the socket to which we connected is not configured to use ALPN,
     // there should be no selected protocol...
     assert!(stream.get_selected_alpn_protocol().is_none());
 }
@@ -453,7 +453,7 @@ fn test_connect_with_unilateral_npn() {
 #[cfg(feature = "alpn")]
 fn test_connect_with_alpn_successful_multiple_matching() {
     // A different port than the other tests: an `openssl` process that has
-    // NPN enabled.
+    // ALPN enabled.
     let stream = TcpStream::connect("127.0.0.1:15419").unwrap();
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, None);
