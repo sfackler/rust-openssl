@@ -19,13 +19,9 @@ fn test_cert_gen() {
         .set_usage(&[DigitalSignature, KeyEncipherment])
         .set_ext_usage(&[ClientAuth, ServerAuth]);
 
-    let res = gen.generate();
-    assert!(res.is_ok());
-
-    let (cert, pkey) = res.unwrap();
-
-    assert!(cert.write_pem(&mut io::sink()).is_ok());
-    assert!(pkey.write_pem(&mut io::sink()).is_ok());
+    let (cert, pkey) = gen.generate().unwrap();
+    cert.write_pem(&mut io::sink()).unwrap();
+    pkey.write_pem(&mut io::sink()).unwrap();
 
     // FIXME: check data in result to be correct, needs implementation
     // of X509 getters
