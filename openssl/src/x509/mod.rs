@@ -20,6 +20,7 @@ use ffi;
 use ssl::error::{SslError, StreamError};
 use nid;
 
+mod extension;
 
 #[cfg(test)]
 mod tests;
@@ -98,74 +99,9 @@ impl X509StoreContext {
     }
 }
 
-#[doc(hidden)]
-trait AsStr<'a> {
-    fn as_str(&self) -> &'a str;
-}
-
-#[derive(Clone, Copy)]
-pub enum KeyUsage {
-    DigitalSignature,
-    NonRepudiation,
-    KeyEncipherment,
-    DataEncipherment,
-    KeyAgreement,
-    KeyCertSign,
-    CRLSign,
-    EncipherOnly,
-    DecipherOnly
-}
-
-impl AsStr<'static> for KeyUsage {
-    fn as_str(&self) -> &'static str {
-        match self {
-            &KeyUsage::DigitalSignature => "digitalSignature",
-            &KeyUsage::NonRepudiation => "nonRepudiation",
-            &KeyUsage::KeyEncipherment => "keyEncipherment",
-            &KeyUsage::DataEncipherment => "dataEncipherment",
-            &KeyUsage::KeyAgreement => "keyAgreement",
-            &KeyUsage::KeyCertSign => "keyCertSign",
-            &KeyUsage::CRLSign => "cRLSign",
-            &KeyUsage::EncipherOnly => "encipherOnly",
-            &KeyUsage::DecipherOnly => "decipherOnly"
-        }
-    }
-}
-
-
-#[derive(Clone, Copy)]
-pub enum ExtKeyUsage {
-    ServerAuth,
-    ClientAuth,
-    CodeSigning,
-    EmailProtection,
-    TimeStamping,
-    MsCodeInd,
-    MsCodeCom,
-    MsCtlSign,
-    MsSgc,
-    MsEfs,
-    NsSgc
-}
-
-impl AsStr<'static> for ExtKeyUsage {
-    fn as_str(&self) -> &'static str {
-        match self {
-            &ExtKeyUsage::ServerAuth => "serverAuth",
-            &ExtKeyUsage::ClientAuth => "clientAuth",
-            &ExtKeyUsage::CodeSigning => "codeSigning",
-            &ExtKeyUsage::EmailProtection => "emailProtection",
-            &ExtKeyUsage::TimeStamping => "timeStamping",
-            &ExtKeyUsage::MsCodeInd => "msCodeInd",
-            &ExtKeyUsage::MsCodeCom => "msCodeCom",
-            &ExtKeyUsage::MsCtlSign => "msCTLSign",
-            &ExtKeyUsage::MsSgc => "msSGC",
-            &ExtKeyUsage::MsEfs => "msEFS",
-            &ExtKeyUsage::NsSgc =>"nsSGC"
-        }
-    }
-}
-
+// Backwards-compatibility
+pub use self::extension::KeyUsageOption as KeyUsage;
+pub use self::extension::ExtKeyUsageOption as ExtKeyUsage;
 
 // FIXME: a dirty hack as there is no way to
 // implement ToString for Vec as both are defined
@@ -175,11 +111,11 @@ trait ToStr {
     fn to_str(&self) -> String;
 }
 
-impl<'a, T: AsStr<'a>> ToStr for Vec<T> {
+impl<T: ToString> ToStr for Vec<T> {
     fn to_str(&self) -> String {
         self.iter().enumerate().fold(String::new(), |mut acc, (idx, v)| {
             if idx > 0 { acc.push(',') };
-            acc.push_str(v.as_str());
+            acc.push_str(&v.to_string());
             acc
         })
     }
