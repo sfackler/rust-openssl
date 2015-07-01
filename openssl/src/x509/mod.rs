@@ -103,22 +103,14 @@ impl X509StoreContext {
 pub use self::extension::KeyUsageOption as KeyUsage;
 pub use self::extension::ExtKeyUsageOption as ExtKeyUsage;
 
-// FIXME: a dirty hack as there is no way to
-// implement ToString for Vec as both are defined
-// in another crate
-#[doc(hidden)]
-trait ToStr {
-    fn to_str(&self) -> String;
-}
-
-impl<T: ToString> ToStr for Vec<T> {
-    fn to_str(&self) -> String {
-        self.iter().enumerate().fold(String::new(), |mut acc, (idx, v)| {
-            if idx > 0 { acc.push(',') };
-            acc.push_str(&v.to_string());
-            acc
-        })
-    }
+// FIXME: This would be nicer as a method on Iterator<Item=ToString>. This can
+// eventually be replaced by the successor to std::slice::SliceConcatExt.connect
+fn join<I: Iterator<Item=T>,T: ToString>(iter: I, sep: &str) -> String {
+    iter.enumerate().fold(String::new(), |mut acc, (idx, v)| {
+        if idx > 0 { acc.push_str(sep) };
+        acc.push_str(&v.to_string());
+        acc
+    })
 }
 
 #[allow(non_snake_case)]
@@ -314,12 +306,12 @@ impl X509Generator {
 
             if self.key_usage.len() > 0 {
                 try!(X509Generator::add_extension(x509.handle, ffi::NID_key_usage,
-                                                  &self.key_usage.to_str()));
+                                                  &join(self.key_usage.iter(),",")));
             }
 
             if self.ext_key_usage.len() > 0 {
                 try!(X509Generator::add_extension(x509.handle, ffi::NID_ext_key_usage,
-                                                  &self.ext_key_usage.to_str()));
+                                                  &join(self.ext_key_usage.iter(),",")));
             }
 
             let hash_fn = self.hash_type.evp_md();
