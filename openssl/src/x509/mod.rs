@@ -21,7 +21,7 @@ use ffi;
 use ssl::error::{SslError, StreamError};
 use nid;
 
-mod extension;
+pub mod extension;
 
 use self::extension::{ExtensionType,Extension};
 
@@ -190,15 +190,50 @@ impl X509Generator {
         self
     }
 
-    /// Sets what for certificate could be used
-    pub fn set_usage(mut self, purposes: &[KeyUsage]) -> X509Generator {
-        self.extensions.insert(ExtensionType::KeyUsage,Extension::KeyUsage(purposes.to_owned()));
+    /// (deprecated) Sets what for certificate could be used
+    ///
+    /// This function is deprecated, use `X509Generator.add_extension` instead.
+    pub fn set_usage(self, purposes: &[KeyUsage]) -> X509Generator {
+        self.add_extension(Extension::KeyUsage(purposes.to_owned()))
+    }
+
+    /// (deprecated) Sets allowed extended usage of certificate
+    ///
+    /// This function is deprecated, use `X509Generator.add_extension` instead.
+    pub fn set_ext_usage(self, purposes: &[ExtKeyUsage]) -> X509Generator {
+        self.add_extension(Extension::ExtKeyUsage(purposes.to_owned()))
+    }
+
+    /// Add an extension to a certificate
+    ///
+    /// If the extension already exists, it will be replaced.
+    ///
+    /// ```
+    /// use openssl::x509::extension::Extension::*;
+    /// use openssl::x509::extension::KeyUsageOption::*;
+    ///
+    /// # let generator = openssl::x509::X509Generator::new();
+    /// generator.add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]));
+    /// ```
+    pub fn add_extension(mut self, ext: extension::Extension) -> X509Generator {
+        self.extensions.insert(ext.get_type(),ext);
         self
     }
 
-    /// Sets allowed extended usage of certificate
-    pub fn set_ext_usage(mut self, purposes: &[ExtKeyUsage]) -> X509Generator {
-        self.extensions.insert(ExtensionType::ExtKeyUsage,Extension::ExtKeyUsage(purposes.to_owned()));
+    /// Add multiple extensions to a certificate
+    ///
+    /// If any of the extensions already exist, they will be replaced.
+    ///
+    /// ```
+    /// use openssl::x509::extension::Extension::*;
+    /// use openssl::x509::extension::KeyUsageOption::*;
+    ///
+    /// # let generator = openssl::x509::X509Generator::new();
+    /// generator.add_extensions(vec![KeyUsage(vec![DigitalSignature, KeyEncipherment])]);
+    /// ```
+    pub fn add_extensions<I>(mut self, exts: I) -> X509Generator
+        where I: IntoIterator<Item=extension::Extension> {
+        self.extensions.extend(exts.into_iter().map(|ext|(ext.get_type(),ext)));
         self
     }
 
@@ -207,7 +242,7 @@ impl X509Generator {
         self
     }
 
-    fn add_extension(x509: *mut ffi::X509, extension: c_int, value: &str) -> Result<(), SslError> {
+    fn add_extension_internal(x509: *mut ffi::X509, extension: c_int, value: &str) -> Result<(), SslError> {
         unsafe {
             let mut ctx: ffi::X509V3_CTX = mem::zeroed();
             ffi::X509V3_set_ctx(&mut ctx, x509, x509,
@@ -297,7 +332,7 @@ impl X509Generator {
             ffi::X509_set_issuer_name(x509.handle, name);
 
             for ext in self.extensions.values() {
-                try!(X509Generator::add_extension(x509.handle, ext.get_nid() as c_int, &ext.to_string()));
+                try!(X509Generator::add_extension_internal(x509.handle, ext.get_nid() as c_int, &ext.to_string()));
             }
 
             let hash_fn = self.hash_type.evp_md();
