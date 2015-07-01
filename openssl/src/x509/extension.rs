@@ -77,7 +77,7 @@ impl fmt::Display for KeyUsageOption {
     }
 }
 
-#[derive(Clone,Copy)]
+#[derive(Clone)]
 pub enum ExtKeyUsageOption {
     ServerAuth,
     ClientAuth,
@@ -90,6 +90,8 @@ pub enum ExtKeyUsageOption {
     MsSgc,
     MsEfs,
     NsSgc,
+    /// An arbitrary key usage by OID.
+    Other(String),
 }
 
 impl fmt::Display for ExtKeyUsageOption {
@@ -106,6 +108,7 @@ impl fmt::Display for ExtKeyUsageOption {
             &ExtKeyUsageOption::MsSgc => "msSGC",
             &ExtKeyUsageOption::MsEfs => "msEFS",
             &ExtKeyUsageOption::NsSgc =>"nsSGC",
+            &ExtKeyUsageOption::Other(ref s) => &s[..],
         })
     }
 }

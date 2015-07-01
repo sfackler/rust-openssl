@@ -6,7 +6,7 @@ use std::fs::File;
 use crypto::hash::Type::{SHA256};
 use x509::{X509, X509Generator};
 use x509::KeyUsage::{DigitalSignature, KeyEncipherment};
-use x509::ExtKeyUsage::{ClientAuth, ServerAuth};
+use x509::ExtKeyUsage::{self, ClientAuth, ServerAuth};
 use nid::Nid;
 
 #[test]
@@ -17,7 +17,7 @@ fn test_cert_gen() {
         .set_CN("test_me")
         .set_sign_hash(SHA256)
         .set_usage(&[DigitalSignature, KeyEncipherment])
-        .set_ext_usage(&[ClientAuth, ServerAuth]);
+        .set_ext_usage(&[ClientAuth, ServerAuth, ExtKeyUsage::Other("2.999".to_owned())]);
 
     let (cert, pkey) = gen.generate().unwrap();
     cert.write_pem(&mut io::sink()).unwrap();
