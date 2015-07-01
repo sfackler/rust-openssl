@@ -14,6 +14,6 @@ before_install:
 before_script:
 - ./openssl/test/test.sh
 script:
-- (test $TRAVIS_OS_NAME != "osx" || cd openssl && cargo test)
+- (test $TRAVIS_OS_NAME != "osx" || (cd openssl && cargo test))
 - (test $TRAVIS_OS_NAME == "osx" || (cd openssl && OPENSSL_LIB_DIR=/usr/lib OPENSSL_INCLUDE_DIR=/usr/include LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH cargo test))
 - (test $TRAVIS_OS_NAME == "osx" || (cd openssl && OPENSSL_LIB_DIR=/usr/lib OPENSSL_INCLUDE_DIR=/usr/include LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH cargo test --features "$FEATURES"))
