@@ -9,6 +9,7 @@ use std::ptr;
 use std::ops::Deref;
 use std::fmt;
 use std::str;
+use std::collections::HashMap;
 
 use asn1::{Asn1Time};
 use bio::{MemBio};
@@ -21,6 +22,8 @@ use ssl::error::{SslError, StreamError};
 use nid;
 
 mod extension;
+
+use self::extension::{ExtensionType,Extension};
 
 #[cfg(test)]
 mod tests;
@@ -103,16 +106,6 @@ impl X509StoreContext {
 pub use self::extension::KeyUsageOption as KeyUsage;
 pub use self::extension::ExtKeyUsageOption as ExtKeyUsage;
 
-// FIXME: This would be nicer as a method on Iterator<Item=ToString>. This can
-// eventually be replaced by the successor to std::slice::SliceConcatExt.connect
-fn join<I: Iterator<Item=T>,T: ToString>(iter: I, sep: &str) -> String {
-    iter.enumerate().fold(String::new(), |mut acc, (idx, v)| {
-        if idx > 0 { acc.push_str(sep) };
-        acc.push_str(&v.to_string());
-        acc
-    })
-}
-
 #[allow(non_snake_case)]
 /// Generator of private key/certificate pairs
 ///
@@ -153,8 +146,8 @@ pub struct X509Generator {
     bits: u32,
     days: u32,
     CN: String,
-    key_usage: Vec<KeyUsage>,
-    ext_key_usage: Vec<ExtKeyUsage>,
+    // RFC 3280 §4.2: A certificate MUST NOT include more than one instance of a particular extension.
+    extensions: HashMap<ExtensionType,Extension>,
     hash_type: HashType,
 }
 
@@ -173,8 +166,7 @@ impl X509Generator {
             bits: 1024,
             days: 365,
             CN: "rust-openssl".to_string(),
-            key_usage: Vec::new(),
-            ext_key_usage: Vec::new(),
+            extensions: HashMap::new(),
             hash_type: HashType::SHA1
         }
     }
@@ -200,13 +192,13 @@ impl X509Generator {
 
     /// Sets what for certificate could be used
     pub fn set_usage(mut self, purposes: &[KeyUsage]) -> X509Generator {
-        self.key_usage = purposes.to_vec();
+        self.extensions.insert(ExtensionType::KeyUsage,Extension::KeyUsage(purposes.to_owned()));
         self
     }
 
     /// Sets allowed extended usage of certificate
     pub fn set_ext_usage(mut self, purposes: &[ExtKeyUsage]) -> X509Generator {
-        self.ext_key_usage = purposes.to_vec();
+        self.extensions.insert(ExtensionType::ExtKeyUsage,Extension::ExtKeyUsage(purposes.to_owned()));
         self
     }
 
@@ -304,14 +296,8 @@ impl X509Generator {
             try!(X509Generator::add_name(name, "CN", &self.CN));
             ffi::X509_set_issuer_name(x509.handle, name);
 
-            if self.key_usage.len() > 0 {
-                try!(X509Generator::add_extension(x509.handle, ffi::NID_key_usage,
-                                                  &join(self.key_usage.iter(),",")));
-            }
-
-            if self.ext_key_usage.len() > 0 {
-                try!(X509Generator::add_extension(x509.handle, ffi::NID_ext_key_usage,
-                                                  &join(self.ext_key_usage.iter(),",")));
+            for ext in self.extensions.values() {
+                try!(X509Generator::add_extension(x509.handle, ext.get_nid() as c_int, &ext.to_string()));
             }
 
             let hash_fn = self.hash_type.evp_md();
