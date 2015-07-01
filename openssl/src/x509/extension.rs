@@ -7,12 +7,12 @@ use nid::Nid;
 /// variants.
 #[derive(Clone,Hash,PartialEq,Eq)]
 pub enum ExtensionType {
-	KeyUsage,
-	ExtKeyUsage,
-	SubjectAltName,
-	IssuerAltName,
-	OtherNid(Nid),
-	OtherStr(String),
+    KeyUsage,
+    ExtKeyUsage,
+    SubjectAltName,
+    IssuerAltName,
+    OtherNid(Nid),
+    OtherStr(String),
 }
 
 /// A X.509 v3 certificate extension.
@@ -21,70 +21,70 @@ pub enum ExtensionType {
 /// See RFC 3280 for more information about extensions.
 #[derive(Clone)]
 pub enum Extension {
-	/// The purposes of the key contained in the certificate
-	KeyUsage(Vec<KeyUsageOption>),
-	/// The extended purposes of the key contained in the certificate
-	ExtKeyUsage(Vec<ExtKeyUsageOption>),
-	/// Subject Alternative Names
-	SubjectAltName(Vec<(AltNameOption,String)>),
-	/// Issuer Alternative Names
-	IssuerAltName(Vec<(AltNameOption,String)>),
-	/// Arbitrary extensions by NID. See `man x509v3_config` for value syntax.
-	///
-	/// You must not use this to add extensions which this enum can express directly.
-	///
+    /// The purposes of the key contained in the certificate
+    KeyUsage(Vec<KeyUsageOption>),
+    /// The extended purposes of the key contained in the certificate
+    ExtKeyUsage(Vec<ExtKeyUsageOption>),
+    /// Subject Alternative Names
+    SubjectAltName(Vec<(AltNameOption,String)>),
+    /// Issuer Alternative Names
+    IssuerAltName(Vec<(AltNameOption,String)>),
+    /// Arbitrary extensions by NID. See `man x509v3_config` for value syntax.
+    ///
+    /// You must not use this to add extensions which this enum can express directly.
+    ///
     /// ```
     /// use openssl::x509::extension::Extension::*;
-	/// use openssl::nid::Nid;
+    /// use openssl::nid::Nid;
     ///
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_extension(OtherNid(Nid::BasicConstraints,"critical,CA:TRUE".to_owned()));
     /// ```
-	OtherNid(Nid,String),
-	/// Arbitrary extensions by OID string. See `man ASN1_generate_nconf` for value syntax.
-	///
-	/// You must not use this to add extensions which this enum can express directly.
-	///
+    OtherNid(Nid,String),
+    /// Arbitrary extensions by OID string. See `man ASN1_generate_nconf` for value syntax.
+    ///
+    /// You must not use this to add extensions which this enum can express directly.
+    ///
     /// ```
     /// use openssl::x509::extension::Extension::*;
     ///
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_extension(OtherStr("2.999.2".to_owned(),"ASN1:UTF8:example value".to_owned()));
     /// ```
-	OtherStr(String,String),
+    OtherStr(String,String),
 }
 
 impl Extension {
-	pub fn get_type(&self) -> ExtensionType {
-		match self {
-			&Extension::KeyUsage(_) => ExtensionType::KeyUsage,
-			&Extension::ExtKeyUsage(_) => ExtensionType::ExtKeyUsage,
-			&Extension::SubjectAltName(_) => ExtensionType::SubjectAltName,
-			&Extension::IssuerAltName(_) => ExtensionType::IssuerAltName,
-			&Extension::OtherNid(nid,_) => ExtensionType::OtherNid(nid),
-			&Extension::OtherStr(ref s,_) => ExtensionType::OtherStr(s.clone()),
-		}
-	}
+    pub fn get_type(&self) -> ExtensionType {
+        match self {
+            &Extension::KeyUsage(_) => ExtensionType::KeyUsage,
+            &Extension::ExtKeyUsage(_) => ExtensionType::ExtKeyUsage,
+            &Extension::SubjectAltName(_) => ExtensionType::SubjectAltName,
+            &Extension::IssuerAltName(_) => ExtensionType::IssuerAltName,
+            &Extension::OtherNid(nid,_) => ExtensionType::OtherNid(nid),
+            &Extension::OtherStr(ref s,_) => ExtensionType::OtherStr(s.clone()),
+        }
+    }
 }
 
 impl ExtensionType {
-	pub fn get_nid(&self) -> Option<Nid> {
-		match self {
-			&ExtensionType::KeyUsage => Some(Nid::KeyUsage),
-			&ExtensionType::ExtKeyUsage => Some(Nid::ExtendedKeyUsage),
-			&ExtensionType::SubjectAltName => Some(Nid::SubjectAltName),
-			&ExtensionType::IssuerAltName => Some(Nid::IssuerAltName),
-			&ExtensionType::OtherNid(nid) => Some(nid),
-			&ExtensionType::OtherStr(_) => None,
-		}
-	}
+    pub fn get_nid(&self) -> Option<Nid> {
+        match self {
+            &ExtensionType::KeyUsage => Some(Nid::KeyUsage),
+            &ExtensionType::ExtKeyUsage => Some(Nid::ExtendedKeyUsage),
+            &ExtensionType::SubjectAltName => Some(Nid::SubjectAltName),
+            &ExtensionType::IssuerAltName => Some(Nid::IssuerAltName),
+            &ExtensionType::OtherNid(nid) => Some(nid),
+            &ExtensionType::OtherStr(_) => None,
+        }
+    }
 
-	pub fn get_name<'a>(&'a self) -> Option<&'a str> {
-		match self {
-			&ExtensionType::OtherStr(ref s) => Some(s),
-			_ => None,
-		}
-	}
+    pub fn get_name<'a>(&'a self) -> Option<&'a str> {
+        match self {
+            &ExtensionType::OtherStr(ref s) => Some(s),
+            _ => None,
+        }
+    }
 }
 
 // FIXME: This would be nicer as a method on Iterator<Item=ToString>. This can
@@ -99,14 +99,14 @@ fn join<I: Iterator<Item=T>,T: ToString>(iter: I, sep: &str) -> String {
 
 impl ToString for Extension {
     fn to_string(&self) -> String {
-		match self {
-			&Extension::KeyUsage(ref purposes) => join(purposes.iter(),","),
-			&Extension::ExtKeyUsage(ref purposes) => join(purposes.iter(),","),
-			&Extension::SubjectAltName(ref names) => join(names.iter().map(|&(ref opt,ref val)|opt.to_string()+":"+&val),","),
-			&Extension::IssuerAltName(ref names) => join(names.iter().map(|&(ref opt,ref val)|opt.to_string()+":"+&val),","),
-			&Extension::OtherNid(_,ref value) => value.clone(),
-			&Extension::OtherStr(_,ref value) => value.clone(),
-		}
+        match self {
+            &Extension::KeyUsage(ref purposes) => join(purposes.iter(),","),
+            &Extension::ExtKeyUsage(ref purposes) => join(purposes.iter(),","),
+            &Extension::SubjectAltName(ref names) => join(names.iter().map(|&(ref opt,ref val)|opt.to_string()+":"+&val),","),
+            &Extension::IssuerAltName(ref names) => join(names.iter().map(|&(ref opt,ref val)|opt.to_string()+":"+&val),","),
+            &Extension::OtherNid(_,ref value) => value.clone(),
+            &Extension::OtherStr(_,ref value) => value.clone(),
+        }
     }
 }
 
@@ -178,7 +178,7 @@ impl fmt::Display for ExtKeyUsageOption {
 #[derive(Clone, Copy)]
 pub enum AltNameOption {
     /// The value is specified as OID;content. See `man ASN1_generate_nconf` for more information on the content syntax.
-	///
+    ///
     /// ```
     /// use openssl::x509::extension::Extension::*;
     /// use openssl::x509::extension::AltNameOption::Other as OtherName;
@@ -186,27 +186,27 @@ pub enum AltNameOption {
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_extension(SubjectAltName(vec![(OtherName,"2.999.3;ASN1:UTF8:some other name".to_owned())]));
     /// ```
-	Other,
-	Email,
-	DNS,
-	//X400, // Not supported by OpenSSL
-	Directory,
-	//EDIParty, // Not supported by OpenSSL
-	URI,
-	IPAddress,
-	RegisteredID,
+    Other,
+    Email,
+    DNS,
+    //X400, // Not supported by OpenSSL
+    Directory,
+    //EDIParty, // Not supported by OpenSSL
+    URI,
+    IPAddress,
+    RegisteredID,
 }
 
 impl fmt::Display for AltNameOption {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         f.pad(match self {
-			&AltNameOption::Other => "otherName",
-			&AltNameOption::Email => "email",
-			&AltNameOption::DNS => "DNS",
-			&AltNameOption::Directory => "dirName",
-			&AltNameOption::URI => "URI",
-			&AltNameOption::IPAddress => "IP",
-			&AltNameOption::RegisteredID => "RID",
+            &AltNameOption::Other => "otherName",
+            &AltNameOption::Email => "email",
+            &AltNameOption::DNS => "DNS",
+            &AltNameOption::Directory => "dirName",
+            &AltNameOption::URI => "URI",
+            &AltNameOption::IPAddress => "IP",
+            &AltNameOption::RegisteredID => "RID",
         })
     }
 }
