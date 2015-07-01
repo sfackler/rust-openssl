@@ -1,11 +1,12 @@
 use std::fmt;
 use nid::Nid;
 
-#[derive(Clone,Copy,Hash,PartialEq,Eq)]
+#[derive(Clone,Hash,PartialEq,Eq)]
 pub enum ExtensionType {
 	KeyUsage,
 	ExtKeyUsage,
 	OtherNid(Nid),
+	OtherStr(String),
 }
 
 #[derive(Clone)]
@@ -13,6 +14,7 @@ pub enum Extension {
 	KeyUsage(Vec<KeyUsageOption>),
 	ExtKeyUsage(Vec<ExtKeyUsageOption>),
 	OtherNid(Nid,String),
+	OtherStr(String,String),
 }
 
 impl Extension {
@@ -21,14 +23,25 @@ impl Extension {
 			&Extension::KeyUsage(_) => ExtensionType::KeyUsage,
 			&Extension::ExtKeyUsage(_) => ExtensionType::ExtKeyUsage,
 			&Extension::OtherNid(nid,_) => ExtensionType::OtherNid(nid),
+			&Extension::OtherStr(ref s,_) => ExtensionType::OtherStr(s.clone()),
+		}
+	}
+}
+
+impl ExtensionType {
+	pub fn get_nid(&self) -> Option<Nid> {
+		match self {
+			&ExtensionType::KeyUsage => Some(Nid::KeyUsage),
+			&ExtensionType::ExtKeyUsage => Some(Nid::ExtendedKeyUsage),
+			&ExtensionType::OtherNid(nid) => Some(nid),
+			&ExtensionType::OtherStr(_) => None,
 		}
 	}
 
-	pub fn get_nid(&self) -> Nid {
+	pub fn get_name<'a>(&'a self) -> Option<&'a str> {
 		match self {
-			&Extension::KeyUsage(_) => Nid::KeyUsage,
-			&Extension::ExtKeyUsage(_) => Nid::ExtendedKeyUsage,
-			&Extension::OtherNid(nid,_) => nid,
+			&ExtensionType::OtherStr(ref s) => Some(s),
+			_ => None,
 		}
 	}
 }
@@ -49,6 +62,7 @@ impl ToString for Extension {
 			&Extension::KeyUsage(ref purposes) => join(purposes.iter(),","),
 			&Extension::ExtKeyUsage(ref purposes) => join(purposes.iter(),","),
 			&Extension::OtherNid(_,ref value) => value.clone(),
+			&Extension::OtherStr(_,ref value) => value.clone(),
 		}
     }
 }

@@ -5,7 +5,7 @@ use std::fs::File;
 
 use crypto::hash::Type::{SHA256};
 use x509::{X509, X509Generator};
-use x509::extension::Extension::{KeyUsage,ExtKeyUsage,OtherNid};
+use x509::extension::Extension::{KeyUsage,ExtKeyUsage,OtherNid,OtherStr};
 use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment};
 use x509::extension::ExtKeyUsageOption::{self, ClientAuth, ServerAuth};
 use nid::Nid;
@@ -18,8 +18,9 @@ fn test_cert_gen() {
         .set_CN("test_me")
         .set_sign_hash(SHA256)
         .add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]))
-        .add_extension(ExtKeyUsage(vec![ClientAuth, ServerAuth, ExtKeyUsageOption::Other("2.999".to_owned())]))
-        .add_extension(OtherNid(Nid::BasicConstraints,"critical,CA:TRUE".to_owned()));
+        .add_extension(ExtKeyUsage(vec![ClientAuth, ServerAuth, ExtKeyUsageOption::Other("2.999.1".to_owned())]))
+        .add_extension(OtherNid(Nid::BasicConstraints,"critical,CA:TRUE".to_owned()))
+        .add_extension(OtherStr("2.999.2".to_owned(),"ASN1:UTF8:example value".to_owned()));
 
     let (cert, pkey) = gen.generate().unwrap();
     cert.write_pem(&mut io::sink()).unwrap();

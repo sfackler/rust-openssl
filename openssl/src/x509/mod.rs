@@ -242,17 +242,22 @@ impl X509Generator {
         self
     }
 
-    fn add_extension_internal(x509: *mut ffi::X509, extension: c_int, value: &str) -> Result<(), SslError> {
+    fn add_extension_internal(x509: *mut ffi::X509, exttype: &extension::ExtensionType, value: &str) -> Result<(), SslError> {
         unsafe {
             let mut ctx: ffi::X509V3_CTX = mem::zeroed();
             ffi::X509V3_set_ctx(&mut ctx, x509, x509,
                                 ptr::null_mut(), ptr::null_mut(), 0);
             let value = CString::new(value.as_bytes()).unwrap();
-            let ext = ffi::X509V3_EXT_conf_nid(ptr::null_mut(),
+            let ext=match exttype.get_nid() {
+                Some(nid) => ffi::X509V3_EXT_conf_nid(ptr::null_mut(),
                                                mem::transmute(&ctx),
-                                               extension,
-                                               value.as_ptr() as *mut c_char);
-
+                                               nid as c_int,
+                                               value.as_ptr() as *mut c_char),
+                None => ffi::X509V3_EXT_conf(ptr::null_mut(),
+                                               mem::transmute(&ctx),
+                                               exttype.get_name().unwrap().as_ptr() as *mut c_char,
+                                               value.as_ptr() as *mut c_char),
+            };
             let mut success = false;
             if ext != ptr::null_mut() {
                 success = ffi::X509_add_ext(x509, ext, -1) != 0;
@@ -331,8 +336,8 @@ impl X509Generator {
             try!(X509Generator::add_name(name, "CN", &self.CN));
             ffi::X509_set_issuer_name(x509.handle, name);
 
-            for ext in self.extensions.values() {
-                try!(X509Generator::add_extension_internal(x509.handle, ext.get_nid() as c_int, &ext.to_string()));
+            for (exttype,ext) in self.extensions.iter() {
+                try!(X509Generator::add_extension_internal(x509.handle, exttype, &ext.to_string()));
             }
 
             let hash_fn = self.hash_type.evp_md();
