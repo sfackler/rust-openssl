@@ -5,6 +5,7 @@ use nid::Nid;
 pub enum ExtensionType {
 	KeyUsage,
 	ExtKeyUsage,
+	SubjectAltName,
 	OtherNid(Nid),
 	OtherStr(String),
 }
@@ -13,6 +14,7 @@ pub enum ExtensionType {
 pub enum Extension {
 	KeyUsage(Vec<KeyUsageOption>),
 	ExtKeyUsage(Vec<ExtKeyUsageOption>),
+	SubjectAltName(Vec<(AltNameOption,String)>),
 	OtherNid(Nid,String),
 	OtherStr(String,String),
 }
@@ -22,6 +24,7 @@ impl Extension {
 		match self {
 			&Extension::KeyUsage(_) => ExtensionType::KeyUsage,
 			&Extension::ExtKeyUsage(_) => ExtensionType::ExtKeyUsage,
+			&Extension::SubjectAltName(_) => ExtensionType::SubjectAltName,
 			&Extension::OtherNid(nid,_) => ExtensionType::OtherNid(nid),
 			&Extension::OtherStr(ref s,_) => ExtensionType::OtherStr(s.clone()),
 		}
@@ -33,6 +36,7 @@ impl ExtensionType {
 		match self {
 			&ExtensionType::KeyUsage => Some(Nid::KeyUsage),
 			&ExtensionType::ExtKeyUsage => Some(Nid::ExtendedKeyUsage),
+			&ExtensionType::SubjectAltName => Some(Nid::SubjectAltName),
 			&ExtensionType::OtherNid(nid) => Some(nid),
 			&ExtensionType::OtherStr(_) => None,
 		}
@@ -61,6 +65,7 @@ impl ToString for Extension {
 		match self {
 			&Extension::KeyUsage(ref purposes) => join(purposes.iter(),","),
 			&Extension::ExtKeyUsage(ref purposes) => join(purposes.iter(),","),
+			&Extension::SubjectAltName(ref names) => join(names.iter().map(|&(ref opt,ref val)|opt.to_string()+":"+&val),","),
 			&Extension::OtherNid(_,ref value) => value.clone(),
 			&Extension::OtherStr(_,ref value) => value.clone(),
 		}
@@ -128,6 +133,33 @@ impl fmt::Display for ExtKeyUsageOption {
             &ExtKeyUsageOption::MsEfs => "msEFS",
             &ExtKeyUsageOption::NsSgc =>"nsSGC",
             &ExtKeyUsageOption::Other(ref s) => &s[..],
+        })
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum AltNameOption {
+	Other,
+	Email,
+	DNS,
+	//X400, // Not supported by OpenSSL
+	Directory,
+	//EDIParty, // Not supported by OpenSSL
+	URI,
+	IPAddress,
+	RegisteredID,
+}
+
+impl fmt::Display for AltNameOption {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        f.pad(match self {
+			&AltNameOption::Other => "otherName",
+			&AltNameOption::Email => "email",
+			&AltNameOption::DNS => "DNS",
+			&AltNameOption::Directory => "dirName",
+			&AltNameOption::URI => "URI",
+			&AltNameOption::IPAddress => "IP",
+			&AltNameOption::RegisteredID => "RID",
         })
     }
 }

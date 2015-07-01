@@ -5,7 +5,8 @@ use std::fs::File;
 
 use crypto::hash::Type::{SHA256};
 use x509::{X509, X509Generator};
-use x509::extension::Extension::{KeyUsage,ExtKeyUsage,OtherNid,OtherStr};
+use x509::extension::Extension::{KeyUsage,ExtKeyUsage,SubjectAltName,OtherNid,OtherStr};
+use x509::extension::AltNameOption as SAN;
 use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment};
 use x509::extension::ExtKeyUsageOption::{self, ClientAuth, ServerAuth};
 use nid::Nid;
@@ -19,6 +20,7 @@ fn test_cert_gen() {
         .set_sign_hash(SHA256)
         .add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]))
         .add_extension(ExtKeyUsage(vec![ClientAuth, ServerAuth, ExtKeyUsageOption::Other("2.999.1".to_owned())]))
+        .add_extension(SubjectAltName(vec![(SAN::DNS,"example.com".to_owned())]))
         .add_extension(OtherNid(Nid::BasicConstraints,"critical,CA:TRUE".to_owned()))
         .add_extension(OtherStr("2.999.2".to_owned(),"ASN1:UTF8:example value".to_owned()));
 
