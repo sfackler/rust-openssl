@@ -155,6 +155,14 @@ pub const SSL_TLSEXT_ERR_ALERT_WARNING: c_int = 1;
 pub const SSL_TLSEXT_ERR_ALERT_FATAL: c_int = 2;
 pub const SSL_TLSEXT_ERR_NOACK: c_int = 3;
 
+macro_rules! import_options {
+    ( $( $name:ident $val:expr  )* ) => {
+       $( pub const $name: u64 = $val; )*
+    };
+}
+
+include!("ssl_options.rs");
+
 #[cfg(feature = "npn")]
 pub const OPENSSL_NPN_UNSUPPORTED: c_int = 0;
 #[cfg(feature = "npn")]
@@ -262,8 +270,23 @@ pub fn init() {
     }
 }
 
+pub unsafe fn SSL_CTX_set_options(ssl: *mut SSL_CTX, op: u64) -> u64 {
+    rust_openssl_ssl_ctx_options_c_to_rust(SSL_CTX_set_options_shim(ssl, rust_openssl_ssl_ctx_options_rust_to_c(op)))
+}
+
+pub unsafe fn SSL_CTX_get_options(ssl: *mut SSL_CTX) -> u64 {
+    rust_openssl_ssl_ctx_options_c_to_rust(SSL_CTX_get_options_shim(ssl))
+}
+
+pub unsafe fn SSL_CTX_clear_options(ssl: *mut SSL_CTX, op: u64) -> u64 {
+    rust_openssl_ssl_ctx_options_c_to_rust(SSL_CTX_clear_options_shim(ssl, rust_openssl_ssl_ctx_options_rust_to_c(op)))
+}
+
 // True functions
 extern "C" {
+    fn rust_openssl_ssl_ctx_options_rust_to_c(rustval: u64) -> c_long;
+    fn rust_openssl_ssl_ctx_options_c_to_rust(cval: c_long) -> u64;
+
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
     pub fn ASN1_TIME_free(tm: *mut ASN1_TIME);
@@ -615,12 +638,9 @@ extern "C" {
     pub fn BIO_eof(b: *mut BIO) -> c_int;
     #[link_name = "BIO_set_mem_eof_return_shim"]
     pub fn BIO_set_mem_eof_return(b: *mut BIO, v: c_int);
-    #[link_name = "SSL_CTX_set_options_shim"]
-    pub fn SSL_CTX_set_options(ctx: *mut SSL_CTX, options: c_long) -> c_long;
-    #[link_name = "SSL_CTX_get_options_shim"]
-    pub fn SSL_CTX_get_options(ctx: *mut SSL_CTX) -> c_long;
-    #[link_name = "SSL_CTX_clear_options_shim"]
-    pub fn SSL_CTX_clear_options(ctx: *mut SSL_CTX, options: c_long) -> c_long;
+    pub fn SSL_CTX_set_options_shim(ctx: *mut SSL_CTX, options: c_long) -> c_long;
+    pub fn SSL_CTX_get_options_shim(ctx: *mut SSL_CTX) -> c_long;
+    pub fn SSL_CTX_clear_options_shim(ctx: *mut SSL_CTX, options: c_long) -> c_long;
     #[link_name = "SSL_CTX_add_extra_chain_cert_shim"]
     pub fn SSL_CTX_add_extra_chain_cert(ctx: *mut SSL_CTX, x509: *mut X509) -> c_long;
     #[link_name = "SSL_CTX_set_read_ahead_shim"]
