@@ -83,14 +83,14 @@ run_test!(new_ctx, |method, _| {
 });
 
 run_test!(new_sslstream, |method, stream| {
-    SslStream::new(&SslContext::new(method).unwrap(), stream).unwrap();
+    SslStream::connect_generic(&SslContext::new(method).unwrap(), stream).unwrap();
 });
 
 run_test!(verify_untrusted, |method, stream| {
     let mut ctx = SslContext::new(method).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, None);
 
-    match SslStream::new(&ctx, stream) {
+    match SslStream::connect_generic(&ctx, stream) {
         Ok(_) => panic!("expected failure"),
         Err(err) => println!("error {:?}", err)
     }
@@ -104,7 +104,7 @@ run_test!(verify_trusted, |method, stream| {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
     }
-    match SslStream::new(&ctx, stream) {
+    match SslStream::connect_generic(&ctx, stream) {
         Ok(_) => (),
         Err(err) => panic!("Expected success, got {:?}", err)
     }
@@ -118,7 +118,7 @@ run_test!(verify_untrusted_callback_override_ok, |method, stream| {
     let mut ctx = SslContext::new(method).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
 
-    match SslStream::new(&ctx, stream) {
+    match SslStream::connect_generic(&ctx, stream) {
         Ok(_) => (),
         Err(err) => panic!("Expected success, got {:?}", err)
     }
@@ -132,7 +132,7 @@ run_test!(verify_untrusted_callback_override_bad, |method, stream| {
     let mut ctx = SslContext::new(method).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
 
-    assert!(SslStream::new(&ctx, stream).is_err());
+    assert!(SslStream::connect_generic(&ctx, stream).is_err());
 });
 
 run_test!(verify_trusted_callback_override_ok, |method, stream| {
@@ -147,7 +147,7 @@ run_test!(verify_trusted_callback_override_ok, |method, stream| {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
     }
-    match SslStream::new(&ctx, stream) {
+    match SslStream::connect_generic(&ctx, stream) {
         Ok(_) => (),
         Err(err) => panic!("Expected success, got {:?}", err)
     }
@@ -165,7 +165,7 @@ run_test!(verify_trusted_callback_override_bad, |method, stream| {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
     }
-    assert!(SslStream::new(&ctx, stream).is_err());
+    assert!(SslStream::connect_generic(&ctx, stream).is_err());
 });
 
 run_test!(verify_callback_load_certs, |method, stream| {
@@ -177,7 +177,7 @@ run_test!(verify_callback_load_certs, |method, stream| {
     let mut ctx = SslContext::new(method).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
 
-    assert!(SslStream::new(&ctx, stream).is_ok());
+    assert!(SslStream::connect_generic(&ctx, stream).is_ok());
 });
 
 run_test!(verify_trusted_get_error_ok, |method, stream| {
@@ -193,7 +193,7 @@ run_test!(verify_trusted_get_error_ok, |method, stream| {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
     }
-    assert!(SslStream::new(&ctx, stream).is_ok());
+    assert!(SslStream::connect_generic(&ctx, stream).is_ok());
 });
 
 run_test!(verify_trusted_get_error_err, |method, stream| {
@@ -205,7 +205,7 @@ run_test!(verify_trusted_get_error_err, |method, stream| {
     let mut ctx = SslContext::new(method).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
 
-    assert!(SslStream::new(&ctx, stream).is_err());
+    assert!(SslStream::connect_generic(&ctx, stream).is_err());
 });
 
 run_test!(verify_callback_data, |method, stream| {
@@ -230,7 +230,7 @@ run_test!(verify_callback_data, |method, stream| {
     ctx.set_verify_with_data(SSL_VERIFY_PEER, callback, node_id);
     ctx.set_verify_depth(1);
 
-    match SslStream::new(&ctx, stream) {
+    match SslStream::connect_generic(&ctx, stream) {
         Ok(_) => (),
         Err(err) => panic!("Expected success, got {:?}", err)
     }
@@ -245,7 +245,7 @@ fn test_write_hits_stream() {
     let guard = thread::spawn(move || {
         let ctx = SslContext::new(Sslv23).unwrap();
         let stream = TcpStream::connect(addr).unwrap();
-        let mut stream = SslStream::new(&ctx, stream).unwrap();
+        let mut stream = SslStream::connect_generic(&ctx, stream).unwrap();
 
         stream.write_all(b"hello").unwrap();
         stream
@@ -256,7 +256,7 @@ fn test_write_hits_stream() {
     ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM).unwrap();
     ctx.set_private_key_file(&Path::new("test/key.pem"), X509FileType::PEM).unwrap();
     let stream = listener.accept().unwrap().0;
-    let mut stream = SslStream::new_server(&ctx, stream).unwrap();
+    let mut stream = SslStream::accept(&ctx, stream).unwrap();
 
     let mut buf = [0; 5];
     assert_eq!(5, stream.read(&mut buf).unwrap());
@@ -310,7 +310,17 @@ run_test!(clear_ctx_options, |method, _| {
 #[test]
 fn test_write() {
     let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
-    let mut stream = SslStream::new(&SslContext::new(Sslv23).unwrap(), stream).unwrap();
+    let mut stream = SslStream::connect_generic(&SslContext::new(Sslv23).unwrap(), stream).unwrap();
+    stream.write_all("hello".as_bytes()).unwrap();
+    stream.flush().unwrap();
+    stream.write_all(" there".as_bytes()).unwrap();
+    stream.flush().unwrap();
+}
+
+#[test]
+fn test_write_direct() {
+    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
+    let mut stream = SslStream::connect(&SslContext::new(Sslv23).unwrap(), stream).unwrap();
     stream.write_all("hello".as_bytes()).unwrap();
     stream.flush().unwrap();
     stream.write_all(" there".as_bytes()).unwrap();
@@ -318,8 +328,7 @@ fn test_write() {
 }
 
 run_test!(get_peer_certificate, |method, stream| {
-    //let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
-    let stream = SslStream::new(&SslContext::new(method).unwrap(), stream).unwrap();
+    let stream = SslStream::connect_generic(&SslContext::new(method).unwrap(), stream).unwrap();
     let cert = stream.get_peer_certificate().unwrap();
     let fingerprint = cert.fingerprint(SHA256).unwrap();
     let node_hash_str = "db400bb62f1b1f29c3b8f323b8f7d9dea724fdcd67104ef549c772ae3749655b";
@@ -333,7 +342,7 @@ fn test_write_dtlsv1() {
     let sock = UdpSocket::bind("127.0.0.1:0").unwrap();
     let stream = sock.connect("127.0.0.1:15410").unwrap();
 
-    let mut stream = SslStream::new(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
+    let mut stream = SslStream::connect_generic(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
     stream.write_all("hello".as_bytes()).unwrap();
     stream.flush().unwrap();
     stream.write_all(" there".as_bytes()).unwrap();
@@ -343,17 +352,25 @@ fn test_write_dtlsv1() {
 #[test]
 fn test_read() {
     let tcp = TcpStream::connect("127.0.0.1:15418").unwrap();
-    let mut stream = SslStream::new(&SslContext::new(Sslv23).unwrap(), tcp).unwrap();
+    let mut stream = SslStream::connect_generic(&SslContext::new(Sslv23).unwrap(), tcp).unwrap();
     stream.write_all("GET /\r\n\r\n".as_bytes()).unwrap();
     stream.flush().unwrap();
     io::copy(&mut stream, &mut io::sink()).ok().expect("read error");
 }
 
+#[test]
+fn test_read_direct() {
+    let tcp = TcpStream::connect("127.0.0.1:15418").unwrap();
+    let mut stream = SslStream::connect(&SslContext::new(Sslv23).unwrap(), tcp).unwrap();
+    stream.write_all("GET /\r\n\r\n".as_bytes()).unwrap();
+    stream.flush().unwrap();
+    io::copy(&mut stream, &mut io::sink()).ok().expect("read error");
+}
 
 #[test]
 fn test_pending() {
     let tcp = TcpStream::connect("127.0.0.1:15418").unwrap();
-    let mut stream = SslStream::new(&SslContext::new(Sslv23).unwrap(), tcp).unwrap();
+    let mut stream = SslStream::connect_generic(&SslContext::new(Sslv23).unwrap(), tcp).unwrap();
     stream.write_all("GET /\r\n\r\n".as_bytes()).unwrap();
     stream.flush().unwrap();
 
@@ -376,12 +393,12 @@ fn test_pending() {
 /// Tests that connecting with the client using NPN, but the server not does not
 /// break the existing connection behavior.
 #[test]
-#[cfg(feature = "npn")]
-fn test_connect_with_unilateral_npn() {
+#[cfg(feature = "alpn")]
+fn test_connect_with_unilateral_alpn() {
     let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER, None);
-    ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]);
+    ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
@@ -392,7 +409,53 @@ fn test_connect_with_unilateral_npn() {
     };
     // Since the socket to which we connected is not configured to use NPN,
     // there should be no selected protocol...
+    assert!(stream.get_selected_alpn_protocol().is_none());
+}
+
+/// Tests that connecting with the client using NPN, but the server not does not
+/// break the existing connection behavior.
+#[test]
+#[cfg(feature = "npn")]
+fn test_connect_with_unilateral_npn() {
+    let stream = TcpStream::connect("127.0.0.1:15418").unwrap();
+    let mut ctx = SslContext::new(Sslv23).unwrap();
+    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]);
+    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+        Ok(_) => {}
+        Err(err) => panic!("Unexpected error {:?}", err)
+    }
+    let stream = match SslStream::connect_generic(&ctx, stream) {
+        Ok(stream) => stream,
+        Err(err) => panic!("Expected success, got {:?}", err)
+    };
+    // Since the socket to which we connected is not configured to use NPN,
+    // there should be no selected protocol...
     assert!(stream.get_selected_npn_protocol().is_none());
+}
+
+/// Tests that when both the client as well as the server use ALPN and their
+/// lists of supported protocols have an overlap, the correct protocol is chosen.
+#[test]
+#[cfg(feature = "alpn")]
+fn test_connect_with_alpn_successful_multiple_matching() {
+    // A different port than the other tests: an `openssl` process that has
+    // NPN enabled.
+    let stream = TcpStream::connect("127.0.0.1:15419").unwrap();
+    let mut ctx = SslContext::new(Sslv23).unwrap();
+    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_alpn_protocols(&[b"spdy/3.1", b"http/1.1"]);
+    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+        Ok(_) => {}
+        Err(err) => panic!("Unexpected error {:?}", err)
+    }
+    let stream = match SslStream::new(&ctx, stream) {
+        Ok(stream) => stream,
+        Err(err) => panic!("Expected success, got {:?}", err)
+    };
+    // The server prefers "http/1.1", so that is chosen, even though the client
+    // would prefer "spdy/3.1"
+    assert_eq!(b"http/1.1", stream.get_selected_alpn_protocol().unwrap());
 }
 
 /// Tests that when both the client as well as the server use NPN and their
@@ -410,7 +473,7 @@ fn test_connect_with_npn_successful_multiple_matching() {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
     }
-    let stream = match SslStream::new(&ctx, stream) {
+    let stream = match SslStream::connect_generic(&ctx, stream) {
         Ok(stream) => stream,
         Err(err) => panic!("Expected success, got {:?}", err)
     };
@@ -418,6 +481,32 @@ fn test_connect_with_npn_successful_multiple_matching() {
     // would prefer "spdy/3.1"
     assert_eq!(b"http/1.1", stream.get_selected_npn_protocol().unwrap());
 }
+
+/// Tests that when both the client as well as the server use ALPN and their
+/// lists of supported protocols have an overlap -- with only ONE protocol
+/// being valid for both.
+#[test]
+#[cfg(feature = "alpn")]
+fn test_connect_with_alpn_successful_single_match() {
+    // A different port than the other tests: an `openssl` process that has
+    // ALPN enabled.
+    let stream = TcpStream::connect("127.0.0.1:15419").unwrap();
+    let mut ctx = SslContext::new(Sslv23).unwrap();
+    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_alpn_protocols(&[b"spdy/3.1"]);
+    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+        Ok(_) => {}
+        Err(err) => panic!("Unexpected error {:?}", err)
+    }
+    let stream = match SslStream::new(&ctx, stream) {
+        Ok(stream) => stream,
+        Err(err) => panic!("Expected success, got {:?}", err)
+    };
+    // The client now only supports one of the server's protocols, so that one
+    // is used.
+    assert_eq!(b"spdy/3.1", stream.get_selected_alpn_protocol().unwrap());
+}
+
 
 /// Tests that when both the client as well as the server use NPN and their
 /// lists of supported protocols have an overlap -- with only ONE protocol
@@ -435,7 +524,7 @@ fn test_connect_with_npn_successful_single_match() {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
     }
-    let stream = match SslStream::new(&ctx, stream) {
+    let stream = match SslStream::connect_generic(&ctx, stream) {
         Ok(stream) => stream,
         Err(err) => panic!("Expected success, got {:?}", err)
     };
@@ -465,7 +554,7 @@ fn test_npn_server_advertise_multiple() {
     // Have the listener wait on the connection in a different thread.
     thread::spawn(move || {
         let (stream, _) = listener.accept().unwrap();
-        let _ = SslStream::new_server(&listener_ctx, stream).unwrap();
+        let _ = SslStream::accept(&listener_ctx, stream).unwrap();
     });
 
     let mut ctx = SslContext::new(Sslv23).unwrap();
@@ -477,12 +566,53 @@ fn test_npn_server_advertise_multiple() {
     }
     // Now connect to the socket and make sure the protocol negotiation works...
     let stream = TcpStream::connect(localhost).unwrap();
-    let stream = match SslStream::new(&ctx, stream) {
+    let stream = match SslStream::connect_generic(&ctx, stream) {
         Ok(stream) => stream,
         Err(err) => panic!("Expected success, got {:?}", err)
     };
     // SPDY is selected since that's the only thing the client supports.
     assert_eq!(b"spdy/3.1", stream.get_selected_npn_protocol().unwrap());
+}
+
+/// Tests that when the `SslStream` is created as a server stream, the protocols
+/// are correctly advertised to the client.
+#[test]
+#[cfg(feature = "alpn")]
+fn test_alpn_server_advertise_multiple() {
+    let localhost = "127.0.0.1:15421";
+    let listener = TcpListener::bind(localhost).unwrap();
+    // We create a different context instance for the server...
+    let listener_ctx = {
+        let mut ctx = SslContext::new(Sslv23).unwrap();
+        ctx.set_verify(SSL_VERIFY_PEER, None);
+        ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]);
+        assert!(ctx.set_certificate_file(
+                &Path::new("test/cert.pem"), X509FileType::PEM).is_ok());
+        ctx.set_private_key_file(
+                &Path::new("test/key.pem"), X509FileType::PEM).unwrap();
+        ctx
+    };
+    // Have the listener wait on the connection in a different thread.
+    thread::spawn(move || {
+        let (stream, _) = listener.accept().unwrap();
+        let _ = SslStream::accept(&listener_ctx, stream).unwrap();
+    });
+
+    let mut ctx = SslContext::new(Sslv23).unwrap();
+    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_alpn_protocols(&[b"spdy/3.1"]);
+    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+        Ok(_) => {}
+        Err(err) => panic!("Unexpected error {:?}", err)
+    }
+    // Now connect to the socket and make sure the protocol negotiation works...
+    let stream = TcpStream::connect(localhost).unwrap();
+    let stream = match SslStream::new(&ctx, stream) {
+        Ok(stream) => stream,
+        Err(err) => panic!("Expected success, got {:?}", err)
+    };
+    // SPDY is selected since that's the only thing the client supports.
+    assert_eq!(b"spdy/3.1", stream.get_selected_alpn_protocol().unwrap());
 }
 
 #[cfg(feature="dtlsv1")]
@@ -514,7 +644,7 @@ fn test_read_dtlsv1() {
     let server = udp::next_server();
     let stream = sock.connect(&server[..]).unwrap();
 
-    let mut stream = SslStream::new(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
+    let mut stream = SslStream::connect_generic(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
     let mut buf = [0u8;100];
     assert!(stream.read(&mut buf).is_ok());
 }
@@ -523,5 +653,5 @@ fn test_read_dtlsv1() {
 #[cfg(feature = "sslv2")]
 fn test_sslv2_connect_failure() {
     let tcp = TcpStream::connect("127.0.0.1:15420").unwrap();
-    SslStream::new(&SslContext::new(Sslv2).unwrap(), tcp).err().unwrap();
+    SslStream::connect_generic(&SslContext::new(Sslv2).unwrap(), tcp).err().unwrap();
 }

@@ -14,13 +14,16 @@ fn main() {
     let include_dir = env::var("OPENSSL_INCLUDE_DIR").ok();
 
     if lib_dir.is_none() && include_dir.is_none() {
-        if let Ok(info) = pkg_config::find_library("openssl") {
-            build_old_openssl_shim(&info.include_paths);
-            return;
+        // rustc doesn't seem to work with pkg-config's output in mingw64
+        if !target.contains("windows") {
+            if let Ok(info) = pkg_config::find_library("openssl") {
+                build_openssl_shim(&info.include_paths);
+                return;
+            }
         }
         if let Some(mingw_paths) = get_mingw_in_path() {
             for path in mingw_paths {
-                println!("cargo:rustc-flags=-L native={}", path);
+                println!("cargo:rustc-link-search=native={}", path);
             }
         }
     }
@@ -46,11 +49,12 @@ fn main() {
     };
 
     if let Some(lib_dir) = lib_dir {
-    	println!("cargo:rustc-flags=-L native={}", lib_dir);
+    	println!("cargo:rustc-link-search=native={}", lib_dir);
     }
 
-    let libs_arg = libs.iter().fold(String::new(), |args, lib| args + &format!(" -l {0}={1}", mode, lib));
-    println!("cargo:rustc-flags={0}", libs_arg);
+    for lib in libs {
+        println!("cargo:rustc-link-lib={}={}", mode, lib);
+    }
 
     let mut include_dirs = vec![];
 
@@ -58,18 +62,18 @@ fn main() {
         include_dirs.push(PathBuf::from(&include_dir));
     }
 
-    build_old_openssl_shim(&include_dirs);
+    build_openssl_shim(&include_dirs);
 }
 
-fn build_old_openssl_shim(include_paths: &[PathBuf]) {
+fn build_openssl_shim(include_paths: &[PathBuf]) {
     let mut config = gcc::Config::new();
 
     for path in include_paths {
         config.include(path);
     }
 
-    config.file("src/old_openssl_shim.c")
-        .compile("libold_openssl_shim.a");
+    config.file("src/openssl_shim.c")
+        .compile("libopenssl_shim.a");
 }
 
 fn get_mingw_in_path() -> Option<Vec<String>> {

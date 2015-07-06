@@ -88,9 +88,9 @@ impl HMAC {
     #[inline]
     fn init_once(&mut self, md: *const ffi::EVP_MD, key: &[u8]) {
         unsafe {
-            let r = ffi::HMAC_Init_ex_shim(&mut self.ctx,
-                                           key.as_ptr(), key.len() as c_int,
-                                           md, 0 as *const _);
+            let r = ffi::HMAC_Init_ex(&mut self.ctx,
+                                      key.as_ptr(), key.len() as c_int,
+                                      md, 0 as *const _);
             assert_eq!(r, 1);
         }
         self.state = Reset;
@@ -106,9 +106,9 @@ impl HMAC {
         // If the key and/or md is not supplied it's reused from the last time
         // avoiding redundant initializations
         unsafe {
-            let r = ffi::HMAC_Init_ex_shim(&mut self.ctx,
-                                           0 as *const _, 0,
-                                           0 as *const _, 0 as *const _);
+            let r = ffi::HMAC_Init_ex(&mut self.ctx,
+                                      0 as *const _, 0,
+                                      0 as *const _, 0 as *const _);
             assert_eq!(r, 1);
         }
         self.state = Reset;
@@ -120,7 +120,7 @@ impl HMAC {
             self.init();
         }
         unsafe {
-            let r = ffi::HMAC_Update_shim(&mut self.ctx, data.as_ptr(), data.len() as c_uint);
+            let r = ffi::HMAC_Update(&mut self.ctx, data.as_ptr(), data.len() as c_uint);
             assert_eq!(r, 1);
         }
         self.state = Updated;
@@ -135,7 +135,7 @@ impl HMAC {
         let mut res: Vec<u8> = repeat(0).take(md_len).collect();
         unsafe {
             let mut len = 0;
-            let r = ffi::HMAC_Final_shim(&mut self.ctx, res.as_mut_ptr(), &mut len);
+            let r = ffi::HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut len);
             self.state = Finalized;
             assert_eq!(len as usize, md_len);
             assert_eq!(r, 1);
@@ -181,7 +181,7 @@ impl Drop for HMAC {
             if self.state != Finalized {
                 let mut buf: Vec<u8> = repeat(0).take(self.type_.md_len()).collect();
                 let mut len = 0;
-                ffi::HMAC_Final_shim(&mut self.ctx, buf.as_mut_ptr(), &mut len);
+                ffi::HMAC_Final(&mut self.ctx, buf.as_mut_ptr(), &mut len);
             }
             ffi::HMAC_CTX_cleanup(&mut self.ctx);
         }
