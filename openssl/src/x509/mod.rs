@@ -285,10 +285,13 @@ impl X509Generator {
                                                mem::transmute(&ctx),
                                                nid as c_int,
                                                value.as_ptr() as *mut c_char),
-                None => ffi::X509V3_EXT_conf(ptr::null_mut(),
+                None => {
+                    let name=CString::new(exttype.get_name().unwrap().as_bytes()).unwrap();
+                    ffi::X509V3_EXT_conf(ptr::null_mut(),
                                                mem::transmute(&ctx),
-                                               exttype.get_name().unwrap().as_ptr() as *mut c_char,
-                                               value.as_ptr() as *mut c_char),
+                                               name.as_ptr() as *mut c_char,
+                                               value.as_ptr() as *mut c_char)
+                }
             };
             let mut success = false;
             if ext != ptr::null_mut() {
