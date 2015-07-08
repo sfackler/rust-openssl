@@ -396,11 +396,20 @@ impl X509Generator {
             Err(x) => return Err(x)
         };
 
-        let hash_fn = self.hash_type.evp_md();
-        let req = unsafe { ffi::X509_to_X509_REQ(cert.handle, p_key.get_handle(), hash_fn) };
-        try_ssl_null!(req);
+        unsafe {
+            let req = ffi::X509_to_X509_REQ(cert.handle, ptr::null_mut(), ptr::null());
+            try_ssl_null!(req);
 
-        Ok(X509Req::new(req))
+            let exts = ffi::X509_get_extensions(cert.handle);
+            if exts != ptr::null_mut() {
+                try_ssl!(ffi::X509_REQ_add_extensions(req,exts));
+            }
+
+            let hash_fn = self.hash_type.evp_md();
+            try_ssl!(ffi::X509_REQ_sign(req, p_key.get_handle(), hash_fn));
+
+            Ok(X509Req::new(req))
+        }
     }
 }
 

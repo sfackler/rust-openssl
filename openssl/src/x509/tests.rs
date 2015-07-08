@@ -4,6 +4,7 @@ use std::path::Path;
 use std::fs::File;
 
 use crypto::hash::Type::{SHA256};
+use crypto::pkey::PKey;
 use x509::{X509, X509Generator};
 use x509::extension::Extension::{KeyUsage,ExtKeyUsage,SubjectAltName,OtherNid,OtherStr};
 use x509::extension::AltNameOption as SAN;
@@ -11,9 +12,8 @@ use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment};
 use x509::extension::ExtKeyUsageOption::{self, ClientAuth, ServerAuth};
 use nid::Nid;
 
-#[test]
-fn test_cert_gen() {
-    let gen = X509Generator::new()
+fn get_generator() -> X509Generator {
+    X509Generator::new()
         .set_bitlength(2048)
         .set_valid_period(365*2)
         .add_name("CN".to_string(),"test_me".to_string())
@@ -22,9 +22,12 @@ fn test_cert_gen() {
         .add_extension(ExtKeyUsage(vec![ClientAuth, ServerAuth, ExtKeyUsageOption::Other("2.999.1".to_owned())]))
         .add_extension(SubjectAltName(vec![(SAN::DNS,"example.com".to_owned())]))
         .add_extension(OtherNid(Nid::BasicConstraints,"critical,CA:TRUE".to_owned()))
-        .add_extension(OtherStr("2.999.2".to_owned(),"ASN1:UTF8:example value".to_owned()));
+        .add_extension(OtherStr("2.999.2".to_owned(),"ASN1:UTF8:example value".to_owned()))
+}
 
-    let (cert, pkey) = gen.generate().unwrap();
+#[test]
+fn test_cert_gen() {
+    let (cert, pkey) = get_generator().generate().unwrap();
     cert.write_pem(&mut io::sink()).unwrap();
     pkey.write_pem(&mut io::sink()).unwrap();
 
@@ -32,6 +35,18 @@ fn test_cert_gen() {
     // of X509 getters
 
     assert_eq!(pkey.save_pub(), cert.public_key().save_pub());
+}
+
+#[test]
+fn test_req_gen() {
+    let mut pkey = PKey::new();
+    pkey.gen(512);
+
+    let req = get_generator().request(&pkey).unwrap();
+    req.write_pem(&mut io::sink()).unwrap();
+
+    // FIXME: check data in result to be correct, needs implementation
+    // of X509_REQ getters
 }
 
 #[test]
