@@ -141,6 +141,25 @@ impl SslMethod {
         }
     }
 
+    unsafe fn from_raw(method: *const ffi::SSL_METHOD) -> Option<SslMethod> {
+        match method {
+            #[cfg(feature = "sslv2")]
+            x if x == ffi::SSLv2_method() => Some(SslMethod::Sslv2),
+            x if x == ffi::SSLv3_method() => Some(SslMethod::Sslv3),
+            x if x == ffi::TLSv1_method() => Some(SslMethod::Tlsv1),
+            x if x == ffi::SSLv23_method() => Some(SslMethod::Sslv23),
+            #[cfg(feature = "tlsv1_1")]
+            x if x == ffi::TLSv1_1_method() => Some(SslMethod::Tlsv1_1),
+            #[cfg(feature = "tlsv1_2")]
+            x if x == ffi::TLSv1_2_method() => Some(SslMethod::Tlsv1_2),
+            #[cfg(feature = "dtlsv1")]
+            x if x == ffi::DTLSv1_method() => Some(SslMethod::Dtlsv1),
+            #[cfg(feature = "dtlsv1_2")]
+            x if x == ffi::DTLSv1_2_method() => Some(SslMethod::Dtlsv1_2),
+            _ => None,
+        }
+    }
+
     #[cfg(feature = "dtlsv1")]
     pub fn is_dtlsv1(&self) -> bool {
         *self == SslMethod::Dtlsv1
@@ -787,6 +806,13 @@ impl Ssl {
             ffi::SSL_pending(self.ssl) as usize
         }
     }
+
+    pub fn get_ssl_method(&self) -> Option<SslMethod> {
+        unsafe {
+            let method = ffi::SSL_get_ssl_method(self.ssl);
+            SslMethod::from_raw(method)
+        }
+    }
 }
 
 macro_rules! make_LibSslError {
@@ -888,8 +914,16 @@ impl<S: Read+Write> IndirectStream<S> {
                 LibSslError::ErrorWantRead => {
                     try_ssl_stream!(self.flush());
                     let len = try_ssl_stream!(self.stream.read(&mut self.buf[..]));
+
+
                     if len == 0 {
-                        self.ssl.get_rbio().set_eof(true);
+                        let method = self.ssl.get_ssl_method();
+
+                        if method.map(|m| m.is_dtls()).unwrap_or(false) {
+                            return Ok(0);
+                        } else {
+                            self.ssl.get_rbio().set_eof(true);
+                        }
                     } else {
                         try_ssl_stream!(self.ssl.get_rbio().write_all(&self.buf[..len]));
                     }
