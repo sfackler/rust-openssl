@@ -182,6 +182,17 @@ impl PKey {
         writer.write_all(&buf).map_err(StreamError)
     }
 
+    /// Stores public key as a PEM
+    pub fn write_pub_pem<W: Write>(&self, writer: &mut W/*, password: Option<String>*/) -> Result<(), SslError> {
+        let mut mem_bio = try!(MemBio::new());
+        unsafe {
+            try_ssl!(ffi::PEM_write_bio_PUBKEY(mem_bio.get_handle(), self.evp))
+        }
+        let mut buf = vec![];
+        try!(mem_bio.read_to_end(&mut buf).map_err(StreamError));
+        writer.write_all(&buf).map_err(StreamError)
+    }
+
     /**
      * Returns the size of the public key modulus.
      */
@@ -499,5 +510,26 @@ mod tests {
         assert!(!p0.public_eq(&p1));
         assert!(!k0.public_eq(&p1));
         assert!(!p0.public_eq(&k1));
+    }
+
+    #[test]
+    fn test_pem() {
+        let key_path = Path::new("test/key.pem");
+        let mut file = File::open(&key_path)
+            .ok()
+            .expect("Failed to open `test/key.pem`");
+
+        let key = super::PKey::private_key_from_pem(&mut file).unwrap();
+
+        let mut priv_key = Vec::new();
+        let mut pub_key = Vec::new();
+
+        key.write_pem(&mut priv_key).unwrap();
+        key.write_pub_pem(&mut pub_key).unwrap();
+
+        // As a super-simple verification, just check that the buffers contain
+        // the `PRIVATE KEY` or `PUBLIC KEY` strings.
+        assert!(priv_key.windows(11).any(|s| s == b"PRIVATE KEY"));
+        assert!(pub_key.windows(10).any(|s| s == b"PUBLIC KEY"));
     }
 }
