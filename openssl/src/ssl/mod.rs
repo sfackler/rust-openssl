@@ -30,7 +30,9 @@ mod tests;
 
 static mut VERIFY_IDX: c_int = -1;
 
-fn init() {
+/// Manually initialize SSL.
+/// It is optional to call this function and safe to do so more than once.
+pub fn init() {
     static mut INIT: Once = ONCE_INIT;
 
     unsafe {
