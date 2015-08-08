@@ -1046,6 +1046,14 @@ impl<S> DirectStream<S> {
                     err
                 }
             }
+            LibSslError::ErrorWantWrite => {
+                SslError::StreamError(io::Error::new(io::ErrorKind::TimedOut,
+                                                     "socket write timed out"))
+            }
+            LibSslError::ErrorWantRead => {
+                SslError::StreamError(io::Error::new(io::ErrorKind::TimedOut,
+                                                     "socket read timed out"))
+            }
             err => panic!("unexpected error {:?} with ret {}", err, ret),
         }
     }
