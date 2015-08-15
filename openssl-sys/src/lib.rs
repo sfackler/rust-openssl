@@ -37,6 +37,7 @@ pub type X509_NAME = c_void;
 pub type X509_NAME_ENTRY = c_void;
 pub type X509_REQ = c_void;
 pub type X509_STORE_CTX = c_void;
+pub type stack_st_X509_EXTENSION = c_void;
 
 #[repr(C)]
 pub struct EVP_MD_CTX {
@@ -633,6 +634,9 @@ extern "C" {
     pub fn X509V3_EXT_conf(conf: *mut c_void, ctx: *mut X509V3_CTX, name: *mut c_char, value: *mut c_char) -> *mut X509_EXTENSION;
     pub fn X509V3_set_ctx(ctx: *mut X509V3_CTX, issuer: *mut X509, subject: *mut X509, req: *mut X509_REQ, crl: *mut X509_CRL, flags: c_int);
 
+    pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: *mut stack_st_X509_EXTENSION) -> c_int;
+    pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
+
     pub fn i2d_RSA_PUBKEY(k: *mut RSA, buf: *const *mut u8) -> c_int;
     pub fn d2i_RSA_PUBKEY(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
     pub fn i2d_RSAPrivateKey(k: *mut RSA, buf: *const *mut u8) -> c_int;
@@ -652,6 +656,8 @@ extern "C" {
     pub fn SSL_CTX_set_read_ahead(ctx: *mut SSL_CTX, m: c_long) -> c_long;
     #[link_name = "SSL_set_tlsext_host_name_shim"]
     pub fn SSL_set_tlsext_host_name(s: *mut SSL, name: *const c_char) -> c_long;
+    #[link_name = "X509_get_extensions_shim"]
+    pub fn X509_get_extensions(x: *mut X509) -> *mut stack_st_X509_EXTENSION;
 }
 
 pub mod probe;
