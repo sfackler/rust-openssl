@@ -6,6 +6,7 @@ use std::fmt;
 use std::io;
 use std::io::prelude::*;
 use std::mem;
+use std::str;
 use std::net;
 use std::path::Path;
 use std::ptr;
@@ -690,6 +691,24 @@ impl Ssl {
         Ok(ssl)
     }
 
+    pub fn get_state_string(&self) -> &'static str {
+        let state = unsafe {
+            let ptr = ffi::SSL_state_string(self.ssl);
+            CStr::from_ptr(ptr)
+        };
+
+        str::from_utf8(state.to_bytes()).unwrap()
+    }
+
+    pub fn get_state_string_long(&self) -> &'static str {
+        let state = unsafe {
+            let ptr = ffi::SSL_state_string_long(self.ssl);
+            CStr::from_ptr(ptr)
+        };
+
+        str::from_utf8(state.to_bytes()).unwrap()
+    }
+
     fn get_rbio<'a>(&'a self) -> MemBioRef<'a> {
         unsafe { self.wrap_bio(ffi::SSL_get_rbio(self.ssl)) }
     }
@@ -1315,6 +1334,14 @@ impl<S: Read+Write> SslStream<S> {
     /// pending() takes into account only bytes from the TLS/SSL record that is currently being processed (if any).
     pub fn pending(&self) -> usize {
         self.kind.ssl().pending()
+    }
+
+    pub fn get_state_string(&self) -> &'static str {
+        self.kind.ssl().get_state_string()
+    }
+
+    pub fn get_state_string_long(&self) -> &'static str {
+        self.kind.ssl().get_state_string_long()
     }
 }
 

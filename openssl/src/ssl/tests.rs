@@ -395,6 +395,14 @@ fn test_pending() {
     assert_eq!(pending, len);
 }
 
+#[test]
+fn test_state() {
+    let tcp = TcpStream::connect("127.0.0.1:15418").unwrap();
+    let stream = SslStream::connect_generic(&SslContext::new(Sslv23).unwrap(), tcp).unwrap();
+    assert_eq!(stream.get_state_string(), "SSLOK ");
+    assert_eq!(stream.get_state_string_long(), "SSL negotiation finished successfully");
+}
+
 /// Tests that connecting with the client using NPN, but the server not does not
 /// break the existing connection behavior.
 #[test]
