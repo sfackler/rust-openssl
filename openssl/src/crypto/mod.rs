@@ -22,3 +22,5 @@ pub mod pkey;
 pub mod rand;
 pub mod symm;
 pub mod memcmp;
+
+mod symm_internal;

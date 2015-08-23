@@ -129,6 +129,8 @@ pub const MBSTRING_UTF8: c_int = MBSTRING_FLAG;
 pub const NID_ext_key_usage: c_int = 126;
 pub const NID_key_usage:     c_int = 83;
 
+pub const PKCS5_SALT_LEN: c_int = 8;
+
 pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
 
@@ -409,6 +411,10 @@ extern "C" {
     pub fn EVP_aes_256_ctr() -> *const EVP_CIPHER;
     // fn EVP_aes_256_gcm() -> EVP_CIPHER;
     pub fn EVP_rc4() -> *const EVP_CIPHER;
+
+    pub fn EVP_BytesToKey(typ: *const EVP_CIPHER, md: *const EVP_MD,
+                          salt: *const u8, data: *const u8, datalen: c_int,
+                          count: c_int, key: *mut u8, iv: *mut u8) -> c_int;
 
     pub fn EVP_CIPHER_CTX_new() -> *mut EVP_CIPHER_CTX;
     pub fn EVP_CIPHER_CTX_set_padding(ctx: *mut EVP_CIPHER_CTX, padding: c_int) -> c_int;
