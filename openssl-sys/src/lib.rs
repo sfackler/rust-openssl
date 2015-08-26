@@ -386,17 +386,26 @@ extern "C" {
     pub fn EC_GROUP_free(group: *mut EC_GROUP);
     pub fn EC_GROUP_get_degree(group: *const EC_GROUP) -> c_int;
     pub fn EC_GROUP_new_by_curve_name(nid: c_int) -> *mut EC_GROUP;
+    pub fn EC_KEY_free(key: *mut EC_KEY);
     pub fn EC_KEY_generate_key(key: *mut EC_KEY) -> c_int;
     pub fn EC_KEY_get0_group(key: *const EC_KEY) -> *const EC_GROUP;
+    pub fn EC_KEY_get0_public_key(key: *const EC_KEY) -> *const EC_POINT;
     pub fn EC_KEY_new_by_curve_name(nid: c_int) -> *mut EC_KEY;
     pub fn EC_KEY_set_public_key(key: *mut EC_KEY, point: *const EC_POINT) -> c_int;
+    pub fn EC_POINT_copy(out_point: *mut EC_POINT, in_point: *const EC_POINT) -> c_int;
     pub fn EC_POINT_free(point: *mut EC_POINT);
+    pub fn EC_POINT_get_affine_coordinates_GFp(group: *const EC_GROUP, point: *const EC_POINT,
+                                               x: *mut BIGNUM, y: *mut BIGNUM,
+                                               ctx: *mut BN_CTX) -> c_int;
     pub fn EC_POINT_new(group: *const EC_GROUP) -> *mut EC_POINT;
+    pub fn EC_POINT_set_affine_coordinates_GFp(group: *const EC_GROUP, point: *mut EC_POINT,
+                                               x: *const BIGNUM, y: *const BIGNUM,
+                                               bn_ctx: *mut BN_CTX) -> c_int;
     pub fn ECDH_compute_key(out: *mut c_void, outlen: size_t, pub_key: *const EC_POINT, ecdh: *mut EC_KEY,
-                            KDF: extern "C" fn (in_: *const c_void,
-                                                inlen: size_t,
-                                                out: *mut c_void,
-                                                outlen: size_t) -> *mut c_void) -> c_int;
+                            KDF: Option<extern "C" fn (in_: *const c_void,
+                                                       inlen: size_t,
+                                                       out: *mut c_void,
+                                                       outlen: size_t) -> *mut c_void>) -> c_int;
 
     pub fn ERR_get_error() -> c_ulong;
 
