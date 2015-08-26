@@ -21,6 +21,9 @@ pub type BN_CTX = c_void;
 pub type COMP_METHOD = c_void;
 pub type CRYPTO_EX_DATA = c_void;
 pub type ENGINE = c_void;
+pub type EC_GROUP = c_void;
+pub type EC_KEY = c_void;
+pub type EC_POINT = c_void;
 pub type EVP_CIPHER = c_void;
 pub type EVP_CIPHER_CTX = c_void;
 pub type EVP_MD = c_void;
@@ -379,6 +382,21 @@ extern "C" {
     pub fn CRYPTO_free(buf: *mut c_void);
     pub fn CRYPTO_memcmp(a: *const c_void, b: *const c_void,
                          len: size_t) -> c_int;
+
+    pub fn EC_GROUP_free(group: *mut EC_GROUP);
+    pub fn EC_GROUP_get_degree(group: *const EC_GROUP) -> c_int;
+    pub fn EC_GROUP_new_by_curve_name(nid: c_int) -> *mut EC_GROUP;
+    pub fn EC_KEY_generate_key(key: *mut EC_KEY) -> c_int;
+    pub fn EC_KEY_get0_group(key: *const EC_KEY) -> *const EC_GROUP;
+    pub fn EC_KEY_new_by_curve_name(nid: c_int) -> *mut EC_KEY;
+    pub fn EC_KEY_set_public_key(key: *mut EC_KEY, point: *const EC_POINT) -> c_int;
+    pub fn EC_POINT_free(point: *mut EC_POINT);
+    pub fn EC_POINT_new(group: *const EC_GROUP) -> *mut EC_POINT;
+    pub fn ECDH_compute_key(out: *mut c_void, outlen: size_t, pub_key: *const EC_POINT, ecdh: *mut EC_KEY,
+                            KDF: extern "C" fn (in_: *const c_void,
+                                                inlen: size_t,
+                                                out: *mut c_void,
+                                                outlen: size_t) -> *mut c_void) -> c_int;
 
     pub fn ERR_get_error() -> c_ulong;
 
