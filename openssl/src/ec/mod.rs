@@ -34,6 +34,22 @@ pub enum Curve {
 pub struct EcKey(*mut ffi::EC_KEY);
 
 impl EcKey {
+    pub fn new(curve: &Curve) -> Result<Self, SslError> {
+        unsafe {
+            ffi::init();
+
+            let k = try_ssl_null!(ffi::EC_KEY_new_by_curve_name(*curve as c_int));
+            Ok(EcKey(k))
+        }
+    }
+
+    pub fn set_private_key(&mut self, p: &BigNum) -> Result<(), SslError> {
+        unsafe {
+            try_ssl!(ffi::EC_KEY_set_private_key(self.raw(), p.raw()));
+            Ok(())
+        }
+    }
+
     /// Generates a new public and private key pair.
     pub fn generate(curve: &Curve) -> Result<Self, SslError> {
         unsafe {
@@ -99,13 +115,15 @@ impl Drop for EcGroup {
 pub struct EcPoint(*mut ffi::EC_POINT);
 
 impl EcPoint {
-    pub fn from_coordinates(curve: &Curve, x: BigNum, y: BigNum) -> Result<Self, SslError> {
+    pub fn from_coordinates(curve: &Curve, x: &BigNum, y: &BigNum) -> Result<Self, SslError> {
         unsafe {
             ffi::init();
 
             let group = try!(EcGroup::new_from_curve(curve));
             let p = try_ssl_null!(ffi::EC_POINT_new(group.raw()));
             try!(with_ctx!(ctx, {
+                // TODO get the type of the curve, then set affine coordinates appropriately.
+                //      see line 145 of ecdhtest.c in the openssl source.
                 Ok(try_ssl!(ffi::EC_POINT_set_affine_coordinates_GFp(group.raw(), p, x.raw(), y.raw(), ctx)))
             }));
             Ok(EcPoint(p))
@@ -161,10 +179,12 @@ pub fn compute_key(key: &EcKey, pub_key: &EcPoint) -> Result<Vec<u8>, SslError> 
 
 #[cfg(test)]
 mod tests {
-    use ec::{EcKey, Curve, compute_key};
+    use ec::{EcKey, EcPoint, Curve, compute_key};
+    use bn::BigNum;
 
     #[test]
     fn test_ecdh_symmetric() {
+        // A few randomly selected curves
         for curve in vec![Curve::Secp112r1, Curve::Secp160k1, Curve::Prime192v1, Curve::Prime256v1] {
             let alice_key = EcKey::generate(&curve).unwrap();
             let bob_key = EcKey::generate(&curve).unwrap();
@@ -176,5 +196,29 @@ mod tests {
             let bob_secret = compute_key(&bob_key, &alice_pub_key).unwrap();
             assert_eq!(alice_secret, bob_secret);
         }
+    }
+
+    #[test]
+    fn test_known_value() {
+        let curve = Curve::Secp256k1;
+        let priv_key = vec![240, 253, 69, 72, 199, 11, 84, 104, 245, 60, 255, 16, 204, 104, 131,
+                            186, 215, 184, 197, 252, 79, 146, 101, 228, 204, 50, 56, 161,
+                            209, 236, 181, 242];
+        let pub_key_x = vec![103, 67, 193, 63, 40, 105, 221, 93, 139, 123, 92, 158, 176, 117, 181,
+                             162, 43, 44, 232, 142, 150, 152, 109, 26, 224, 109, 236, 98, 175, 128,
+                             5, 218];
+        let pub_key_y = vec![108, 59, 228, 63, 223, 72, 8, 136, 36, 235, 13, 143, 147, 23, 170, 139,
+                             75, 54, 163, 24, 64, 181, 180, 175, 7, 58, 9, 132, 85, 239, 34, 108];
+        let shared_secret = vec![255, 18, 142, 240, 227, 230, 37, 98, 193, 116, 19, 176, 239, 20, 2,
+                                 95, 188, 199, 31, 197, 117, 128, 166, 128, 99, 168, 35, 10, 104,
+                                 133, 39, 242];
+        let priv_key_bn = BigNum::new_from_slice(&priv_key).unwrap();
+        let pub_key_bn_x = BigNum::new_from_slice(&pub_key_x).unwrap();
+        let pub_key_bn_y = BigNum::new_from_slice(&pub_key_y).unwrap();
+        let mut priv_ec_key = EcKey::new(&curve).unwrap();
+        priv_ec_key.set_private_key(&priv_key_bn).unwrap();
+        let pub_key_point = EcPoint::from_coordinates(&curve, &pub_key_bn_x, &pub_key_bn_y).unwrap();
+        let computed_secret = compute_key(&priv_ec_key, &pub_key_point).unwrap();
+        assert_eq!(computed_secret, shared_secret);
     }
 }

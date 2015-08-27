@@ -391,6 +391,7 @@ extern "C" {
     pub fn EC_KEY_get0_group(key: *const EC_KEY) -> *const EC_GROUP;
     pub fn EC_KEY_get0_public_key(key: *const EC_KEY) -> *const EC_POINT;
     pub fn EC_KEY_new_by_curve_name(nid: c_int) -> *mut EC_KEY;
+    pub fn EC_KEY_set_private_key(key: *mut EC_KEY, val: *const BIGNUM) -> c_int;
     pub fn EC_KEY_set_public_key(key: *mut EC_KEY, point: *const EC_POINT) -> c_int;
     pub fn EC_POINT_copy(out_point: *mut EC_POINT, in_point: *const EC_POINT) -> c_int;
     pub fn EC_POINT_free(point: *mut EC_POINT);
