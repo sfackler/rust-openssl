@@ -21,6 +21,7 @@ aes_xts = []
 aes_ctr = []
 npn = []
 alpn = []
+rfc5114 = []
 
 [dependencies]
 libc = "0.1"

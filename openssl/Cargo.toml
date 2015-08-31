@@ -19,6 +19,7 @@ aes_xts = ["openssl-sys/aes_xts"]
 aes_ctr = ["openssl-sys/aes_ctr"]
 npn = ["openssl-sys/npn"]
 alpn = ["openssl-sys/alpn"]
+rfc5114 = ["openssl-sys/rfc5114"]
 
 [dependencies.openssl-sys]
 path = "../openssl-sys"
