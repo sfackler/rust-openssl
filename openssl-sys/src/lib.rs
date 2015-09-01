@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.6.4")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.6.5")]
 
 extern crate libc;
 
@@ -37,6 +37,7 @@ pub type X509_NAME = c_void;
 pub type X509_NAME_ENTRY = c_void;
 pub type X509_REQ = c_void;
 pub type X509_STORE_CTX = c_void;
+pub type stack_st_X509_EXTENSION = c_void;
 
 #[repr(C)]
 pub struct EVP_MD_CTX {
@@ -128,6 +129,8 @@ pub const MBSTRING_UTF8: c_int = MBSTRING_FLAG;
 pub const NID_ext_key_usage: c_int = 126;
 pub const NID_key_usage:     c_int = 83;
 
+pub const PKCS5_SALT_LEN: c_int = 8;
+
 pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
 
@@ -154,6 +157,14 @@ pub const SSL_TLSEXT_ERR_OK: c_int = 0;
 pub const SSL_TLSEXT_ERR_ALERT_WARNING: c_int = 1;
 pub const SSL_TLSEXT_ERR_ALERT_FATAL: c_int = 2;
 pub const SSL_TLSEXT_ERR_NOACK: c_int = 3;
+
+macro_rules! import_options {
+    ( $( $name:ident $val:expr  )* ) => {
+       $( pub const $name: u64 = $val; )*
+    };
+}
+
+include!("ssl_options.rs");
 
 #[cfg(feature = "npn")]
 pub const OPENSSL_NPN_UNSUPPORTED: c_int = 0;
@@ -262,8 +273,23 @@ pub fn init() {
     }
 }
 
+pub unsafe fn SSL_CTX_set_options(ssl: *mut SSL_CTX, op: u64) -> u64 {
+    rust_openssl_ssl_ctx_options_c_to_rust(SSL_CTX_set_options_shim(ssl, rust_openssl_ssl_ctx_options_rust_to_c(op)))
+}
+
+pub unsafe fn SSL_CTX_get_options(ssl: *mut SSL_CTX) -> u64 {
+    rust_openssl_ssl_ctx_options_c_to_rust(SSL_CTX_get_options_shim(ssl))
+}
+
+pub unsafe fn SSL_CTX_clear_options(ssl: *mut SSL_CTX, op: u64) -> u64 {
+    rust_openssl_ssl_ctx_options_c_to_rust(SSL_CTX_clear_options_shim(ssl, rust_openssl_ssl_ctx_options_rust_to_c(op)))
+}
+
 // True functions
 extern "C" {
+    fn rust_openssl_ssl_ctx_options_rust_to_c(rustval: u64) -> c_long;
+    fn rust_openssl_ssl_ctx_options_c_to_rust(cval: c_long) -> u64;
+
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
     pub fn ASN1_TIME_free(tm: *mut ASN1_TIME);
@@ -374,15 +400,21 @@ extern "C" {
     pub fn EVP_aes_128_ecb() -> *const EVP_CIPHER;
     #[cfg(feature = "aes_xts")]
     pub fn EVP_aes_128_xts() -> *const EVP_CIPHER;
-    // fn EVP_aes_128_ctr() -> EVP_CIPHER;
+    #[cfg(feature = "aes_ctr")]
+    pub fn EVP_aes_128_ctr() -> *const EVP_CIPHER;
     // fn EVP_aes_128_gcm() -> EVP_CIPHER;
     pub fn EVP_aes_256_cbc() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_ecb() -> *const EVP_CIPHER;
     #[cfg(feature = "aes_xts")]
     pub fn EVP_aes_256_xts() -> *const EVP_CIPHER;
-    // fn EVP_aes_256_ctr() -> EVP_CIPHER;
+    #[cfg(feature = "aes_ctr")]
+    pub fn EVP_aes_256_ctr() -> *const EVP_CIPHER;
     // fn EVP_aes_256_gcm() -> EVP_CIPHER;
     pub fn EVP_rc4() -> *const EVP_CIPHER;
+
+    pub fn EVP_BytesToKey(typ: *const EVP_CIPHER, md: *const EVP_MD,
+                          salt: *const u8, data: *const u8, datalen: c_int,
+                          count: c_int, key: *mut u8, iv: *mut u8) -> c_int;
 
     pub fn EVP_CIPHER_CTX_new() -> *mut EVP_CIPHER_CTX;
     pub fn EVP_CIPHER_CTX_set_padding(ctx: *mut EVP_CIPHER_CTX, padding: c_int) -> c_int;
@@ -445,6 +477,7 @@ extern "C" {
                                     kstr: *mut c_char, klen: c_int,
                                     callback: Option<PasswordCallback>,
                                     user_data: *mut c_void) -> c_int;
+    pub fn PEM_write_bio_PUBKEY(bp: *mut BIO, x: *mut EVP_PKEY) -> c_int;
     pub fn PEM_write_bio_X509(bio: *mut BIO, x509: *mut X509) -> c_int;
     pub fn PEM_write_bio_X509_REQ(bio: *mut BIO, x509: *mut X509_REQ) -> c_int;
 
@@ -502,6 +535,9 @@ extern "C" {
     pub fn SSL_get_SSL_CTX(ssl: *mut SSL) -> *mut SSL_CTX;
     pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const COMP_METHOD;
     pub fn SSL_get_peer_certificate(ssl: *mut SSL) -> *mut X509;
+    pub fn SSL_get_ssl_method(ssl: *mut SSL) -> *const SSL_METHOD;
+    pub fn SSL_state_string(ssl: *mut SSL) -> *const c_char;
+    pub fn SSL_state_string_long(ssl: *mut SSL) -> *const c_char;
 
     pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
 
@@ -603,7 +639,11 @@ extern "C" {
     pub fn X509_STORE_CTX_get_ex_data(ctx: *mut X509_STORE_CTX, idx: c_int) -> *mut c_void;
 
     pub fn X509V3_EXT_conf_nid(conf: *mut c_void, ctx: *mut X509V3_CTX, ext_nid: c_int, value: *mut c_char) -> *mut X509_EXTENSION;
+    pub fn X509V3_EXT_conf(conf: *mut c_void, ctx: *mut X509V3_CTX, name: *mut c_char, value: *mut c_char) -> *mut X509_EXTENSION;
     pub fn X509V3_set_ctx(ctx: *mut X509V3_CTX, issuer: *mut X509, subject: *mut X509, req: *mut X509_REQ, crl: *mut X509_CRL, flags: c_int);
+
+    pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: *mut stack_st_X509_EXTENSION) -> c_int;
+    pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
 
     pub fn i2d_RSA_PUBKEY(k: *mut RSA, buf: *const *mut u8) -> c_int;
     pub fn d2i_RSA_PUBKEY(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
@@ -615,18 +655,17 @@ extern "C" {
     pub fn BIO_eof(b: *mut BIO) -> c_int;
     #[link_name = "BIO_set_mem_eof_return_shim"]
     pub fn BIO_set_mem_eof_return(b: *mut BIO, v: c_int);
-    #[link_name = "SSL_CTX_set_options_shim"]
-    pub fn SSL_CTX_set_options(ctx: *mut SSL_CTX, options: c_long) -> c_long;
-    #[link_name = "SSL_CTX_get_options_shim"]
-    pub fn SSL_CTX_get_options(ctx: *mut SSL_CTX) -> c_long;
-    #[link_name = "SSL_CTX_clear_options_shim"]
-    pub fn SSL_CTX_clear_options(ctx: *mut SSL_CTX, options: c_long) -> c_long;
+    pub fn SSL_CTX_set_options_shim(ctx: *mut SSL_CTX, options: c_long) -> c_long;
+    pub fn SSL_CTX_get_options_shim(ctx: *mut SSL_CTX) -> c_long;
+    pub fn SSL_CTX_clear_options_shim(ctx: *mut SSL_CTX, options: c_long) -> c_long;
     #[link_name = "SSL_CTX_add_extra_chain_cert_shim"]
     pub fn SSL_CTX_add_extra_chain_cert(ctx: *mut SSL_CTX, x509: *mut X509) -> c_long;
     #[link_name = "SSL_CTX_set_read_ahead_shim"]
     pub fn SSL_CTX_set_read_ahead(ctx: *mut SSL_CTX, m: c_long) -> c_long;
     #[link_name = "SSL_set_tlsext_host_name_shim"]
     pub fn SSL_set_tlsext_host_name(s: *mut SSL, name: *const c_char) -> c_long;
+    #[link_name = "X509_get_extensions_shim"]
+    pub fn X509_get_extensions(x: *mut X509) -> *mut stack_st_X509_EXTENSION;
 }
 
 pub mod probe;

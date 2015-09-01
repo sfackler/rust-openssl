@@ -51,7 +51,7 @@ macro_rules! run_test(
             use std::net::TcpStream;
             use ssl;
             use ssl::SslMethod;
-            use ssl::{SslContext, SslStream, VerifyCallback};
+            use ssl::{SslContext, Ssl, SslStream, VerifyCallback};
             use ssl::SSL_VERIFY_PEER;
             use crypto::hash::Type::SHA256;
             use x509::X509StoreContext;
@@ -84,6 +84,11 @@ run_test!(new_ctx, |method, _| {
 
 run_test!(new_sslstream, |method, stream| {
     SslStream::connect_generic(&SslContext::new(method).unwrap(), stream).unwrap();
+});
+
+run_test!(get_ssl_method, |method, _| {
+    let ssl = Ssl::new(&SslContext::new(method).unwrap()).unwrap();
+    assert_eq!(ssl.get_ssl_method(), Some(method));
 });
 
 run_test!(verify_untrusted, |method, stream| {
@@ -388,6 +393,14 @@ fn test_pending() {
     let pending = stream.pending();
     let len = stream.read(&mut buf[1..]).unwrap();
     assert_eq!(pending, len);
+}
+
+#[test]
+fn test_state() {
+    let tcp = TcpStream::connect("127.0.0.1:15418").unwrap();
+    let stream = SslStream::connect_generic(&SslContext::new(Sslv23).unwrap(), tcp).unwrap();
+    assert_eq!(stream.get_state_string(), "SSLOK ");
+    assert_eq!(stream.get_state_string_long(), "SSL negotiation finished successfully");
 }
 
 /// Tests that connecting with the client using NPN, but the server not does not

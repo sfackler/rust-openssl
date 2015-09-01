@@ -9,6 +9,7 @@ use std::ptr;
 use std::ops::Deref;
 use std::fmt;
 use std::str;
+use std::collections::HashMap;
 
 use asn1::{Asn1Time};
 use bio::{MemBio};
@@ -20,6 +21,9 @@ use ffi;
 use ssl::error::{SslError, StreamError};
 use nid;
 
+pub mod extension;
+
+use self::extension::{ExtensionType,Extension};
 
 #[cfg(test)]
 mod tests;
@@ -98,92 +102,9 @@ impl X509StoreContext {
     }
 }
 
-#[doc(hidden)]
-trait AsStr<'a> {
-    fn as_str(&self) -> &'a str;
-}
-
-#[derive(Clone, Copy)]
-pub enum KeyUsage {
-    DigitalSignature,
-    NonRepudiation,
-    KeyEncipherment,
-    DataEncipherment,
-    KeyAgreement,
-    KeyCertSign,
-    CRLSign,
-    EncipherOnly,
-    DecipherOnly
-}
-
-impl AsStr<'static> for KeyUsage {
-    fn as_str(&self) -> &'static str {
-        match self {
-            &KeyUsage::DigitalSignature => "digitalSignature",
-            &KeyUsage::NonRepudiation => "nonRepudiation",
-            &KeyUsage::KeyEncipherment => "keyEncipherment",
-            &KeyUsage::DataEncipherment => "dataEncipherment",
-            &KeyUsage::KeyAgreement => "keyAgreement",
-            &KeyUsage::KeyCertSign => "keyCertSign",
-            &KeyUsage::CRLSign => "cRLSign",
-            &KeyUsage::EncipherOnly => "encipherOnly",
-            &KeyUsage::DecipherOnly => "decipherOnly"
-        }
-    }
-}
-
-
-#[derive(Clone, Copy)]
-pub enum ExtKeyUsage {
-    ServerAuth,
-    ClientAuth,
-    CodeSigning,
-    EmailProtection,
-    TimeStamping,
-    MsCodeInd,
-    MsCodeCom,
-    MsCtlSign,
-    MsSgc,
-    MsEfs,
-    NsSgc
-}
-
-impl AsStr<'static> for ExtKeyUsage {
-    fn as_str(&self) -> &'static str {
-        match self {
-            &ExtKeyUsage::ServerAuth => "serverAuth",
-            &ExtKeyUsage::ClientAuth => "clientAuth",
-            &ExtKeyUsage::CodeSigning => "codeSigning",
-            &ExtKeyUsage::EmailProtection => "emailProtection",
-            &ExtKeyUsage::TimeStamping => "timeStamping",
-            &ExtKeyUsage::MsCodeInd => "msCodeInd",
-            &ExtKeyUsage::MsCodeCom => "msCodeCom",
-            &ExtKeyUsage::MsCtlSign => "msCTLSign",
-            &ExtKeyUsage::MsSgc => "msSGC",
-            &ExtKeyUsage::MsEfs => "msEFS",
-            &ExtKeyUsage::NsSgc =>"nsSGC"
-        }
-    }
-}
-
-
-// FIXME: a dirty hack as there is no way to
-// implement ToString for Vec as both are defined
-// in another crate
-#[doc(hidden)]
-trait ToStr {
-    fn to_str(&self) -> String;
-}
-
-impl<'a, T: AsStr<'a>> ToStr for Vec<T> {
-    fn to_str(&self) -> String {
-        self.iter().enumerate().fold(String::new(), |mut acc, (idx, v)| {
-            if idx > 0 { acc.push(',') };
-            acc.push_str(v.as_str());
-            acc
-        })
-    }
-}
+// Backwards-compatibility
+pub use self::extension::KeyUsageOption as KeyUsage;
+pub use self::extension::ExtKeyUsageOption as ExtKeyUsage;
 
 #[allow(non_snake_case)]
 /// Generator of private key/certificate pairs
@@ -224,9 +145,9 @@ impl<'a, T: AsStr<'a>> ToStr for Vec<T> {
 pub struct X509Generator {
     bits: u32,
     days: u32,
-    CN: String,
-    key_usage: Vec<KeyUsage>,
-    ext_key_usage: Vec<ExtKeyUsage>,
+    names: Vec<(String,String)>,
+    // RFC 3280 §4.2: A certificate MUST NOT include more than one instance of a particular extension.
+    extensions: HashMap<ExtensionType,Extension>,
     hash_type: HashType,
 }
 
@@ -244,9 +165,8 @@ impl X509Generator {
         X509Generator {
             bits: 1024,
             days: 365,
-            CN: "rust-openssl".to_string(),
-            key_usage: Vec::new(),
-            ext_key_usage: Vec::new(),
+            names: vec![],
+            extensions: HashMap::new(),
             hash_type: HashType::SHA1
         }
     }
@@ -264,21 +184,88 @@ impl X509Generator {
     }
 
     #[allow(non_snake_case)]
-    /// Sets Common Name of certificate
+    /// (deprecated) Sets Common Name of certificate
+    ///
+    /// This function is deprecated, use `X509Generator.add_name` instead.
+    /// Don't use this function AND the `add_name` method
     pub fn set_CN(mut self, CN: &str) -> X509Generator {
-        self.CN = CN.to_string();
+        match self.names.get_mut(0) {
+            Some(&mut(_,ref mut val)) => *val=CN.to_string(),
+            _ => {} /* would move push here, but borrow checker won't let me */
+        }
+        if self.names.len()==0 {
+            self.names.push(("CN".to_string(),CN.to_string()));
+        }
         self
     }
 
-    /// Sets what for certificate could be used
-    pub fn set_usage(mut self, purposes: &[KeyUsage]) -> X509Generator {
-        self.key_usage = purposes.to_vec();
+    /// Add attribute to the name of the certificate
+    ///
+    /// ```
+    /// # let generator = openssl::x509::X509Generator::new();
+    /// generator.add_name("CN".to_string(),"example.com".to_string());
+    /// ```
+    pub fn add_name(mut self, attr_type: String, attr_value: String) -> X509Generator {
+        self.names.push((attr_type,attr_value));
         self
     }
 
-    /// Sets allowed extended usage of certificate
-    pub fn set_ext_usage(mut self, purposes: &[ExtKeyUsage]) -> X509Generator {
-        self.ext_key_usage = purposes.to_vec();
+    /// Add multiple attributes to the name of the certificate
+    ///
+    /// ```
+    /// # let generator = openssl::x509::X509Generator::new();
+    /// generator.add_names(vec![("CN".to_string(),"example.com".to_string())]);
+    /// ```
+    pub fn add_names<I>(mut self, attrs: I) -> X509Generator
+        where I: IntoIterator<Item=(String,String)> {
+        self.names.extend(attrs);
+        self
+    }
+
+    /// (deprecated) Sets what for certificate could be used
+    ///
+    /// This function is deprecated, use `X509Generator.add_extension` instead.
+    pub fn set_usage(self, purposes: &[KeyUsage]) -> X509Generator {
+        self.add_extension(Extension::KeyUsage(purposes.to_owned()))
+    }
+
+    /// (deprecated) Sets allowed extended usage of certificate
+    ///
+    /// This function is deprecated, use `X509Generator.add_extension` instead.
+    pub fn set_ext_usage(self, purposes: &[ExtKeyUsage]) -> X509Generator {
+        self.add_extension(Extension::ExtKeyUsage(purposes.to_owned()))
+    }
+
+    /// Add an extension to a certificate
+    ///
+    /// If the extension already exists, it will be replaced.
+    ///
+    /// ```
+    /// use openssl::x509::extension::Extension::*;
+    /// use openssl::x509::extension::KeyUsageOption::*;
+    ///
+    /// # let generator = openssl::x509::X509Generator::new();
+    /// generator.add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]));
+    /// ```
+    pub fn add_extension(mut self, ext: extension::Extension) -> X509Generator {
+        self.extensions.insert(ext.get_type(),ext);
+        self
+    }
+
+    /// Add multiple extensions to a certificate
+    ///
+    /// If any of the extensions already exist, they will be replaced.
+    ///
+    /// ```
+    /// use openssl::x509::extension::Extension::*;
+    /// use openssl::x509::extension::KeyUsageOption::*;
+    ///
+    /// # let generator = openssl::x509::X509Generator::new();
+    /// generator.add_extensions(vec![KeyUsage(vec![DigitalSignature, KeyEncipherment])]);
+    /// ```
+    pub fn add_extensions<I>(mut self, exts: I) -> X509Generator
+        where I: IntoIterator<Item=extension::Extension> {
+        self.extensions.extend(exts.into_iter().map(|ext|(ext.get_type(),ext)));
         self
     }
 
@@ -287,17 +274,25 @@ impl X509Generator {
         self
     }
 
-    fn add_extension(x509: *mut ffi::X509, extension: c_int, value: &str) -> Result<(), SslError> {
+    fn add_extension_internal(x509: *mut ffi::X509, exttype: &extension::ExtensionType, value: &str) -> Result<(), SslError> {
         unsafe {
             let mut ctx: ffi::X509V3_CTX = mem::zeroed();
             ffi::X509V3_set_ctx(&mut ctx, x509, x509,
                                 ptr::null_mut(), ptr::null_mut(), 0);
             let value = CString::new(value.as_bytes()).unwrap();
-            let ext = ffi::X509V3_EXT_conf_nid(ptr::null_mut(),
+            let ext=match exttype.get_nid() {
+                Some(nid) => ffi::X509V3_EXT_conf_nid(ptr::null_mut(),
                                                mem::transmute(&ctx),
-                                               extension,
-                                               value.as_ptr() as *mut c_char);
-
+                                               nid as c_int,
+                                               value.as_ptr() as *mut c_char),
+                None => {
+                    let name=CString::new(exttype.get_name().unwrap().as_bytes()).unwrap();
+                    ffi::X509V3_EXT_conf(ptr::null_mut(),
+                                               mem::transmute(&ctx),
+                                               name.as_ptr() as *mut c_char,
+                                               value.as_ptr() as *mut c_char)
+                }
+            };
             let mut success = false;
             if ext != ptr::null_mut() {
                 success = ffi::X509_add_ext(x509, ext, -1) != 0;
@@ -307,7 +302,7 @@ impl X509Generator {
         }
     }
 
-    fn add_name(name: *mut ffi::X509_NAME, key: &str, value: &str) -> Result<(), SslError> {
+    fn add_name_internal(name: *mut ffi::X509_NAME, key: &str, value: &str) -> Result<(), SslError> {
         let value_len = value.len() as c_int;
         lift_ssl!(unsafe {
             let key = CString::new(key.as_bytes()).unwrap();
@@ -373,17 +368,19 @@ impl X509Generator {
             let name = ffi::X509_get_subject_name(x509.handle);
             try_ssl_null!(name);
 
-            try!(X509Generator::add_name(name, "CN", &self.CN));
+            let default=[("CN","rust-openssl")];
+            let default_iter=&mut default.iter().map(|&(k,v)|(k,v));
+            let arg_iter=&mut self.names.iter().map(|&(ref k,ref v)|(&k[..],&v[..]));
+            let iter: &mut Iterator<Item=(&str,&str)> =
+                if self.names.len()==0 { default_iter } else { arg_iter };
+
+            for (key,val) in iter {
+                try!(X509Generator::add_name_internal(name, &key, &val));
+            }
             ffi::X509_set_issuer_name(x509.handle, name);
 
-            if self.key_usage.len() > 0 {
-                try!(X509Generator::add_extension(x509.handle, ffi::NID_key_usage,
-                                                  &self.key_usage.to_str()));
-            }
-
-            if self.ext_key_usage.len() > 0 {
-                try!(X509Generator::add_extension(x509.handle, ffi::NID_ext_key_usage,
-                                                  &self.ext_key_usage.to_str()));
+            for (exttype,ext) in self.extensions.iter() {
+                try!(X509Generator::add_extension_internal(x509.handle, exttype, &ext.to_string()));
             }
 
             let hash_fn = self.hash_type.evp_md();
@@ -399,11 +396,20 @@ impl X509Generator {
             Err(x) => return Err(x)
         };
 
-        let hash_fn = self.hash_type.evp_md();
-        let req = unsafe { ffi::X509_to_X509_REQ(cert.handle, p_key.get_handle(), hash_fn) };
-        try_ssl_null!(req);
+        unsafe {
+            let req = ffi::X509_to_X509_REQ(cert.handle, ptr::null_mut(), ptr::null());
+            try_ssl_null!(req);
 
-        Ok(X509Req::new(req))
+            let exts = ffi::X509_get_extensions(cert.handle);
+            if exts != ptr::null_mut() {
+                try_ssl!(ffi::X509_REQ_add_extensions(req,exts));
+            }
+
+            let hash_fn = self.hash_type.evp_md();
+            try_ssl!(ffi::X509_REQ_sign(req, p_key.get_handle(), hash_fn));
+
+            Ok(X509Req::new(req))
+        }
     }
 }
 

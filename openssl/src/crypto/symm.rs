@@ -2,6 +2,7 @@ use std::iter::repeat;
 use std::convert::AsRef;
 use libc::{c_int};
 
+use crypto::symm_internal::evpc;
 use ffi;
 
 #[derive(Copy, Clone)]
@@ -18,7 +19,8 @@ pub enum Type {
     /// Requires the `aes_xts` feature
     #[cfg(feature = "aes_xts")]
     AES_128_XTS,
-    // AES_128_CTR,
+    #[cfg(feature = "aes_ctr")]
+    AES_128_CTR,
     //AES_128_GCM,
 
     AES_256_ECB,
@@ -26,33 +28,13 @@ pub enum Type {
     /// Requires the `aes_xts` feature
     #[cfg(feature = "aes_xts")]
     AES_256_XTS,
-    // AES_256_CTR,
+    #[cfg(feature = "aes_ctr")]
+    AES_256_CTR,
     //AES_256_GCM,
 
     RC4_128,
 }
 
-fn evpc(t: Type) -> (*const ffi::EVP_CIPHER, u32, u32) {
-    unsafe {
-        match t {
-            Type::AES_128_ECB => (ffi::EVP_aes_128_ecb(), 16, 16),
-            Type::AES_128_CBC => (ffi::EVP_aes_128_cbc(), 16, 16),
-            #[cfg(feature = "aes_xts")]
-            Type::AES_128_XTS => (ffi::EVP_aes_128_xts(), 32, 16),
-            // AES_128_CTR => (EVP_aes_128_ctr(), 16, 0),
-            //AES_128_GCM => (EVP_aes_128_gcm(), 16, 16),
-
-            Type::AES_256_ECB => (ffi::EVP_aes_256_ecb(), 32, 16),
-            Type::AES_256_CBC => (ffi::EVP_aes_256_cbc(), 32, 16),
-            #[cfg(feature = "aes_xts")]
-            Type::AES_256_XTS => (ffi::EVP_aes_256_xts(), 64, 16),
-            // AES_256_CTR => (EVP_aes_256_ctr(), 32, 0),
-            //AES_256_GCM => (EVP_aes_256_gcm(), 32, 16),
-
-            Type::RC4_128 => (ffi::EVP_rc4(), 16, 0),
-        }
-    }
-}
 
 /// Represents a symmetric cipher context.
 pub struct Crypter {
@@ -288,16 +270,17 @@ mod tests {
         cipher_test(super::Type::AES_256_XTS, pt, ct, key, iv);
     }
 
-    /*#[test]
+    #[test]
+    #[cfg(feature = "aes_ctr")]
     fn test_aes128_ctr() {
 
-        let pt = ~"6BC1BEE22E409F96E93D7E117393172AAE2D8A571E03AC9C9EB76FAC45AF8E5130C81C46A35CE411E5FBC1191A0A52EFF69F2445DF4F9B17AD2B417BE66C3710";
-        let ct = ~"874D6191B620E3261BEF6864990DB6CE9806F66B7970FDFF8617187BB9FFFDFF5AE4DF3EDBD5D35E5B4F09020DB03EAB1E031DDA2FBE03D1792170A0F3009CEE";
-        let key = ~"2B7E151628AED2A6ABF7158809CF4F3C";
-        let iv = ~"F0F1F2F3F4F5F6F7F8F9FAFBFCFDFEFF";
+        let pt = "6BC1BEE22E409F96E93D7E117393172AAE2D8A571E03AC9C9EB76FAC45AF8E5130C81C46A35CE411E5FBC1191A0A52EFF69F2445DF4F9B17AD2B417BE66C3710";
+        let ct = "874D6191B620E3261BEF6864990DB6CE9806F66B7970FDFF8617187BB9FFFDFF5AE4DF3EDBD5D35E5B4F09020DB03EAB1E031DDA2FBE03D1792170A0F3009CEE";
+        let key = "2B7E151628AED2A6ABF7158809CF4F3C";
+        let iv = "F0F1F2F3F4F5F6F7F8F9FAFBFCFDFEFF";
 
-        cipher_test(super::AES_128_CTR, pt, ct, key, iv);
-    }*/
+        cipher_test(super::Type::AES_128_CTR, pt, ct, key, iv);
+    }
 
     /*#[test]
     fn test_aes128_gcm() {

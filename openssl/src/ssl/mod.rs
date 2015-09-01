@@ -6,6 +6,7 @@ use std::fmt;
 use std::io;
 use std::io::prelude::*;
 use std::mem;
+use std::str;
 use std::net;
 use std::path::Path;
 use std::ptr;
@@ -30,7 +31,9 @@ mod tests;
 
 static mut VERIFY_IDX: c_int = -1;
 
-fn init() {
+/// Manually initialize SSL.
+/// It is optional to call this function and safe to do so more than once.
+pub fn init() {
     static mut INIT: Once = ONCE_INIT;
 
     unsafe {
@@ -46,35 +49,52 @@ fn init() {
 }
 
 bitflags! {
-    flags SslContextOptions: c_long {
-        const SSL_OP_LEGACY_SERVER_CONNECT = 0x00000004,
-        const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG = 0x00000008,
-        const SSL_OP_TLSEXT_PADDING = 0x00000010,
-        const SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER = 0x00000020,
-        const SSL_OP_SAFARI_ECDHE_ECDSA_BUG = 0x00000040,
-        const SSL_OP_SSLEAY_080_CLIENT_DH_BUG = 0x00000080,
-        const SSL_OP_TLS_D5_BUG = 0x00000100,
-        const SSL_OP_TLS_BLOCK_PADDING_BUG = 0x00000200,
-        const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS = 0x00000800,
-        const SSL_OP_ALL = 0x80000BFF,
-        const SSL_OP_NO_QUERY_MTU = 0x00001000,
-        const SSL_OP_COOKIE_EXCHANGE = 0x00002000,
-        const SSL_OP_NO_TICKET = 0x00004000,
-        const SSL_OP_CISCO_ANYCONNECT = 0x00008000,
-        const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION = 0x00010000,
-        const SSL_OP_NO_COMPRESSION = 0x00020000,
-        const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION = 0x00040000,
-        const SSL_OP_SINGLE_ECDH_USE = 0x00080000,
-        const SSL_OP_SINGLE_DH_USE = 0x00100000,
-        const SSL_OP_CIPHER_SERVER_PREFERENCE = 0x00400000,
-        const SSL_OP_TLS_ROLLBACK_BUG = 0x00800000,
-        const SSL_OP_NO_SSLV2 = 0x00000000,
-        const SSL_OP_NO_SSLV3 = 0x02000000,
-        const SSL_OP_NO_TLSV1 = 0x04000000,
-        const SSL_OP_NO_TLSV1_2 = 0x08000000,
-        const SSL_OP_NO_TLSV1_1 = 0x10000000,
-        const SSL_OP_NO_DTLSV1 = 0x04000000,
-        const SSL_OP_NO_DTLSV1_2 = 0x08000000
+    flags SslContextOptions: u64 {
+        const SSL_OP_MICROSOFT_SESS_ID_BUG                    = ffi::SSL_OP_MICROSOFT_SESS_ID_BUG,
+        const SSL_OP_NETSCAPE_CHALLENGE_BUG                   = ffi::SSL_OP_NETSCAPE_CHALLENGE_BUG,
+        const SSL_OP_LEGACY_SERVER_CONNECT                    = ffi::SSL_OP_LEGACY_SERVER_CONNECT,
+        const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG         = ffi::SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG,
+        const SSL_OP_TLSEXT_PADDING                           = ffi::SSL_OP_TLSEXT_PADDING,
+        const SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER               = ffi::SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER,
+        const SSL_OP_SAFARI_ECDHE_ECDSA_BUG                   = ffi::SSL_OP_SAFARI_ECDHE_ECDSA_BUG,
+        const SSL_OP_SSLEAY_080_CLIENT_DH_BUG                 = ffi::SSL_OP_SSLEAY_080_CLIENT_DH_BUG,
+        const SSL_OP_TLS_D5_BUG                               = ffi::SSL_OP_TLS_D5_BUG,
+        const SSL_OP_TLS_BLOCK_PADDING_BUG                    = ffi::SSL_OP_TLS_BLOCK_PADDING_BUG,
+        const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS              = ffi::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS,
+        const SSL_OP_NO_QUERY_MTU                             = ffi::SSL_OP_NO_QUERY_MTU,
+        const SSL_OP_COOKIE_EXCHANGE                          = ffi::SSL_OP_COOKIE_EXCHANGE,
+        const SSL_OP_NO_TICKET                                = ffi::SSL_OP_NO_TICKET,
+        const SSL_OP_CISCO_ANYCONNECT                         = ffi::SSL_OP_CISCO_ANYCONNECT,
+        const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION   = ffi::SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION,
+        const SSL_OP_NO_COMPRESSION                           = ffi::SSL_OP_NO_COMPRESSION,
+        const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION        = ffi::SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION,
+        const SSL_OP_SINGLE_ECDH_USE                          = ffi::SSL_OP_SINGLE_ECDH_USE,
+        const SSL_OP_SINGLE_DH_USE                            = ffi::SSL_OP_SINGLE_DH_USE,
+        const SSL_OP_CIPHER_SERVER_PREFERENCE                 = ffi::SSL_OP_CIPHER_SERVER_PREFERENCE,
+        const SSL_OP_TLS_ROLLBACK_BUG                         = ffi::SSL_OP_TLS_ROLLBACK_BUG,
+        const SSL_OP_NO_SSLV2                                 = ffi::SSL_OP_NO_SSLv2,
+        const SSL_OP_NO_SSLV3                                 = ffi::SSL_OP_NO_SSLv3,
+        const SSL_OP_NO_DTLSV1                                = ffi::SSL_OP_NO_DTLSv1,
+        const SSL_OP_NO_TLSV1                                 = ffi::SSL_OP_NO_TLSv1,
+        const SSL_OP_NO_DTLSV1_2                              = ffi::SSL_OP_NO_DTLSv1_2,
+        const SSL_OP_NO_TLSV1_2                               = ffi::SSL_OP_NO_TLSv1_2,
+        const SSL_OP_NO_TLSV1_1                               = ffi::SSL_OP_NO_TLSv1_1,
+        const SSL_OP_NETSCAPE_CA_DN_BUG                       = ffi::SSL_OP_NETSCAPE_CA_DN_BUG,
+        const SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG          = ffi::SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG,
+        const SSL_OP_CRYPTOPRO_TLSEXT_BUG                     = ffi::SSL_OP_CRYPTOPRO_TLSEXT_BUG,
+        const SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG              = ffi::SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG,
+        const SSL_OP_MSIE_SSLV2_RSA_PADDING                   = ffi::SSL_OP_MSIE_SSLV2_RSA_PADDING,
+        const SSL_OP_PKCS1_CHECK_1                            = ffi::SSL_OP_PKCS1_CHECK_1,
+        const SSL_OP_PKCS1_CHECK_2                            = ffi::SSL_OP_PKCS1_CHECK_2,
+        const SSL_OP_EPHEMERAL_RSA                            = ffi::SSL_OP_EPHEMERAL_RSA,
+        const SSL_OP_ALL         = SSL_OP_MICROSOFT_SESS_ID_BUG.bits|SSL_OP_NETSCAPE_CHALLENGE_BUG.bits
+                                  |SSL_OP_LEGACY_SERVER_CONNECT.bits|SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG.bits
+                                  |SSL_OP_TLSEXT_PADDING.bits|SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER.bits
+                                  |SSL_OP_SAFARI_ECDHE_ECDSA_BUG.bits|SSL_OP_SSLEAY_080_CLIENT_DH_BUG.bits
+                                  |SSL_OP_TLS_D5_BUG.bits|SSL_OP_TLS_BLOCK_PADDING_BUG.bits
+                                  |SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS.bits|SSL_OP_CRYPTOPRO_TLSEXT_BUG.bits,
+        const SSL_OP_NO_SSL_MASK = SSL_OP_NO_SSLV2.bits|SSL_OP_NO_SSLV3.bits|SSL_OP_NO_TLSV1.bits
+                                  |SSL_OP_NO_TLSV1_1.bits|SSL_OP_NO_TLSV1_2.bits,
     }
 }
 
@@ -121,6 +141,25 @@ impl SslMethod {
             SslMethod::Dtlsv1 => ffi::DTLSv1_method(),
             #[cfg(feature = "dtlsv1_2")]
             SslMethod::Dtlsv1_2 => ffi::DTLSv1_2_method(),
+        }
+    }
+
+    unsafe fn from_raw(method: *const ffi::SSL_METHOD) -> Option<SslMethod> {
+        match method {
+            #[cfg(feature = "sslv2")]
+            x if x == ffi::SSLv2_method() => Some(SslMethod::Sslv2),
+            x if x == ffi::SSLv3_method() => Some(SslMethod::Sslv3),
+            x if x == ffi::TLSv1_method() => Some(SslMethod::Tlsv1),
+            x if x == ffi::SSLv23_method() => Some(SslMethod::Sslv23),
+            #[cfg(feature = "tlsv1_1")]
+            x if x == ffi::TLSv1_1_method() => Some(SslMethod::Tlsv1_1),
+            #[cfg(feature = "tlsv1_2")]
+            x if x == ffi::TLSv1_2_method() => Some(SslMethod::Tlsv1_2),
+            #[cfg(feature = "dtlsv1")]
+            x if x == ffi::DTLSv1_method() => Some(SslMethod::Dtlsv1),
+            #[cfg(feature = "dtlsv1_2")]
+            x if x == ffi::DTLSv1_2_method() => Some(SslMethod::Dtlsv1_2),
+            _ => None,
         }
     }
 
@@ -652,6 +691,24 @@ impl Ssl {
         Ok(ssl)
     }
 
+    pub fn get_state_string(&self) -> &'static str {
+        let state = unsafe {
+            let ptr = ffi::SSL_state_string(self.ssl);
+            CStr::from_ptr(ptr)
+        };
+
+        str::from_utf8(state.to_bytes()).unwrap()
+    }
+
+    pub fn get_state_string_long(&self) -> &'static str {
+        let state = unsafe {
+            let ptr = ffi::SSL_state_string_long(self.ssl);
+            CStr::from_ptr(ptr)
+        };
+
+        str::from_utf8(state.to_bytes()).unwrap()
+    }
+
     fn get_rbio<'a>(&'a self) -> MemBioRef<'a> {
         unsafe { self.wrap_bio(ffi::SSL_get_rbio(self.ssl)) }
     }
@@ -770,6 +827,13 @@ impl Ssl {
             ffi::SSL_pending(self.ssl) as usize
         }
     }
+
+    pub fn get_ssl_method(&self) -> Option<SslMethod> {
+        unsafe {
+            let method = ffi::SSL_get_ssl_method(self.ssl);
+            SslMethod::from_raw(method)
+        }
+    }
 }
 
 macro_rules! make_LibSslError {
@@ -871,8 +935,16 @@ impl<S: Read+Write> IndirectStream<S> {
                 LibSslError::ErrorWantRead => {
                     try_ssl_stream!(self.flush());
                     let len = try_ssl_stream!(self.stream.read(&mut self.buf[..]));
+
+
                     if len == 0 {
-                        self.ssl.get_rbio().set_eof(true);
+                        let method = self.ssl.get_ssl_method();
+
+                        if method.map(|m| m.is_dtls()).unwrap_or(false) {
+                            return Ok(0);
+                        } else {
+                            self.ssl.get_rbio().set_eof(true);
+                        }
                     } else {
                         try_ssl_stream!(self.ssl.get_rbio().write_all(&self.buf[..len]));
                     }
@@ -992,6 +1064,9 @@ impl<S> DirectStream<S> {
                 } else {
                     err
                 }
+            }
+            LibSslError::ErrorWantWrite | LibSslError::ErrorWantRead => {
+                SslError::StreamError(io::Error::last_os_error())
             }
             err => panic!("unexpected error {:?} with ret {}", err, ret),
         }
@@ -1259,6 +1334,14 @@ impl<S: Read+Write> SslStream<S> {
     /// pending() takes into account only bytes from the TLS/SSL record that is currently being processed (if any).
     pub fn pending(&self) -> usize {
         self.kind.ssl().pending()
+    }
+
+    pub fn get_state_string(&self) -> &'static str {
+        self.kind.ssl().get_state_string()
+    }
+
+    pub fn get_state_string_long(&self) -> &'static str {
+        self.kind.ssl().get_state_string_long()
     }
 }
 
