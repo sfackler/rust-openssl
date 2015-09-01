@@ -570,6 +570,14 @@ impl SslContext {
             })
     }
 
+    #[cfg(feature = "ecdh_auto")]
+    pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(),SslError> {
+        wrap_ssl_result(
+            unsafe {
+                ffi::SSL_CTX_set_ecdh_auto(self.ctx, onoff as c_int)
+            })
+    }
+
     pub fn set_options(&mut self, option: SslContextOptions) -> SslContextOptions {
         let raw_bits = option.bits();
         let ret = unsafe {

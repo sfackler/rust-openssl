@@ -85,6 +85,12 @@ long SSL_CTX_set_tmp_dh_shim(SSL_CTX *ctx, DH *dh) {
     return SSL_CTX_set_tmp_dh(ctx, dh);
 }
 
+#if OPENSSL_VERSION_NUMBER >= 0x1000200L
+int SSL_CTX_set_ecdh_auto_shim(SSL_CTX *ctx, int onoff) {
+    return SSL_CTX_set_ecdh_auto(ctx, onoff);
+}
+#endif
+
 DH *DH_new_from_params(BIGNUM *p, BIGNUM *g, BIGNUM *q) {
     DH *dh;
 

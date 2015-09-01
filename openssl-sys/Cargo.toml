@@ -22,6 +22,7 @@ aes_ctr = []
 npn = []
 alpn = []
 rfc5114 = []
+ecdh_auto = []
 
 [dependencies]
 libc = "0.1"
