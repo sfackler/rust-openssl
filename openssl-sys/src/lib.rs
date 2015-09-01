@@ -20,6 +20,7 @@ pub type BIO_METHOD = c_void;
 pub type BN_CTX = c_void;
 pub type COMP_METHOD = c_void;
 pub type CRYPTO_EX_DATA = c_void;
+pub type DH = c_void;
 pub type ENGINE = c_void;
 pub type EVP_CIPHER = c_void;
 pub type EVP_CIPHER_CTX = c_void;
@@ -380,6 +381,17 @@ extern "C" {
     pub fn CRYPTO_memcmp(a: *const c_void, b: *const c_void,
                          len: size_t) -> c_int;
 
+    pub fn DH_free(dh: *mut DH);
+
+    #[cfg(feature = "rfc5114")]
+    pub fn DH_get_1024_160() -> *mut DH;
+    #[cfg(feature = "rfc5114")]
+    pub fn DH_get_2048_224() -> *mut DH;
+    #[cfg(feature = "rfc5114")]
+    pub fn DH_get_2048_256() -> *mut DH;
+
+    pub fn DH_new_from_params(p: *mut BIGNUM, g: *mut BIGNUM, q: *mut BIGNUM) -> *mut DH;
+
     pub fn ERR_get_error() -> c_ulong;
 
     pub fn ERR_lib_error_string(err: c_ulong) -> *const c_char;
@@ -664,6 +676,8 @@ extern "C" {
     pub fn SSL_CTX_set_read_ahead(ctx: *mut SSL_CTX, m: c_long) -> c_long;
     #[link_name = "SSL_set_tlsext_host_name_shim"]
     pub fn SSL_set_tlsext_host_name(s: *mut SSL, name: *const c_char) -> c_long;
+    #[link_name = "SSL_CTX_set_tmp_dh_shim"]
+    pub fn SSL_CTX_set_tmp_dh(s: *mut SSL, dh: *const DH) -> c_long;
     #[link_name = "X509_get_extensions_shim"]
     pub fn X509_get_extensions(x: *mut X509) -> *mut stack_st_X509_EXTENSION;
 }

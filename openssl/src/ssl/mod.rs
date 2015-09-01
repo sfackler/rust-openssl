@@ -21,6 +21,7 @@ use std::slice;
 
 use bio::{MemBio};
 use ffi;
+use dh::DH;
 use ssl::error::{SslError, SslSessionClosed, StreamError, OpenSslErrors};
 use x509::{X509StoreContext, X509FileType, X509};
 use crypto::pkey::PKey;
@@ -490,6 +491,12 @@ impl SslContext {
         unsafe {
             ffi::SSL_CTX_set_read_ahead(self.ctx, m as c_long);
         }
+    }
+
+    pub fn set_tmp_dh(&self, dh: DH) -> Result<(),SslError> {
+        wrap_ssl_result(unsafe {
+            ffi::SSL_CTX_set_tmp_dh(self.ctx, dh.raw()) as i32
+        })
     }
 
     #[allow(non_snake_case)]
