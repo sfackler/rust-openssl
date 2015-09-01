@@ -477,7 +477,8 @@ extern "C" {
     #[cfg_attr(target_os = "nacl", link_name = "HMAC_Update")]
     pub fn HMAC_Update_shim(ctx: *mut HMAC_CTX, input: *const u8, len: c_uint) -> c_int;
 
-
+    pub fn PEM_read_bio_DHparams(bio: *mut BIO, out: *mut *mut DH, callback: Option<PasswordCallback>,
+                             user_data: *mut c_void) -> *mut DH;
     pub fn PEM_read_bio_X509(bio: *mut BIO, out: *mut *mut X509, callback: Option<PasswordCallback>,
                              user_data: *mut c_void) -> *mut X509;
     pub fn PEM_read_bio_X509_REQ(bio: *mut BIO, out: *mut *mut X509_REQ, callback: Option<PasswordCallback>,
