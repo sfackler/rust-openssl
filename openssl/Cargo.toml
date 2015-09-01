@@ -1,11 +1,11 @@
 [package]
 name = "openssl"
-version = "0.6.4"
+version = "0.6.5"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
 repository = "https://github.com/sfackler/rust-openssl"
-documentation = "https://sfackler.github.io/rust-openssl/doc/v0.6.4/openssl"
+documentation = "https://sfackler.github.io/rust-openssl/doc/v0.6.5/openssl"
 readme = "../README.md"
 keywords = ["crypto", "tls", "ssl", "dtls"]
 
