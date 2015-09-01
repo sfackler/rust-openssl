@@ -17,9 +17,11 @@ extern crate connected_socket;
 mod macros;
 
 pub mod asn1;
+#[macro_use]
 pub mod bn;
 pub mod bio;
 pub mod crypto;
+pub mod ec;
 pub mod ssl;
 pub mod x509;
 pub mod nid;
