@@ -8,10 +8,7 @@ pub struct DH(*mut ffi::DH);
 
 impl DH {
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<DH, SslError> {
-        let dh = unsafe { ffi::DH_new_from_params(p.raw(), g.raw(), q.raw()) };
-        if dh == ptr::null_mut() {
-            return Err(SslError::get());
-        }
+        let dh = try_ssl_null!(unsafe { ffi::DH_new_from_params(p.raw(), g.raw(), q.raw()) });
         mem::forget(p);
         mem::forget(g);
         mem::forget(q);
@@ -20,28 +17,19 @@ impl DH {
 
     #[cfg(feature = "rfc5114")]
     pub fn get_1024_160() -> Result<DH, SslError> {
-        let dh = unsafe { ffi::DH_get_1024_160() };
-        if dh == ptr::null_mut() {
-            return Err(SslError::get());
-        }
+        let dh = try_ssl_null!(unsafe { ffi::DH_get_1024_160() });
         Ok(DH(dh))
     }
 
     #[cfg(feature = "rfc5114")]
     pub fn get_2048_224() -> Result<DH, SslError> {
-        let dh = unsafe { ffi::DH_get_2048_224() };
-        if dh == ptr::null_mut() {
-            return Err(SslError::get());
-        }
+        let dh = try_ssl_null!(unsafe { ffi::DH_get_2048_224() });
         Ok(DH(dh))
     }
 
     #[cfg(feature = "rfc5114")]
     pub fn get_2048_256() -> Result<DH, SslError> {
-        let dh = unsafe { ffi::DH_get_2048_256() };
-        if dh == ptr::null_mut() {
-            return Err(SslError::get());
-        }
+        let dh = try_ssl_null!(unsafe { ffi::DH_get_2048_256() });
         Ok(DH(dh))
     }
 
