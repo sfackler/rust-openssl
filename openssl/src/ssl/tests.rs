@@ -8,6 +8,7 @@ use std::net::TcpListener;
 use std::thread;
 use std::fs::File;
 
+
 use crypto::hash::Type::{SHA256};
 use ssl;
 use ssl::SslMethod;
@@ -47,6 +48,9 @@ macro_rules! run_test(
             use std::io;
             use std::io::prelude::*;
             use std::path::Path;
+            use std::fs::File;
+            use std::env;
+            use std::error::Error;
             use std::net::UdpSocket;
             use std::net::TcpStream;
             use ssl;
@@ -310,6 +314,28 @@ run_test!(clear_ctx_options, |method, _| {
     ctx.set_options(ssl::SSL_OP_ALL);
     let opts = ctx.clear_options(ssl::SSL_OP_ALL);
     assert!(!opts.contains(ssl::SSL_OP_ALL));
+});
+
+run_test!(get_current_cipher, |method, stream| {
+    //let ssl = Ssl::new(&SslContext::new(method).unwrap()).unwrap();
+    let ssl_stream = SslStream::connect_generic(&SslContext::new(method).unwrap(), stream).unwrap();
+    match ssl_stream.get_current_cipher() {
+        Some(cipher) => {
+            let mut path = env::temp_dir();
+            path.push("ciphers.txt");
+
+            let pathinfo = path.display();
+            let mut file = match File::create(&path){
+                Err(why) => panic!("couldn't create{}: {}", pathinfo, Error::description(&why)),
+                Ok(file) => file,
+            };
+            write!(file, "description: {}\n", cipher.description()).unwrap();
+            write!(file, "secret bits: {}\n", cipher.secret_bits()).unwrap();
+            write!(file, "version: {}\n", cipher.version()).unwrap();
+            write!(file, "name: {}\n", cipher.name()).unwrap();
+        },
+        None => panic!("unable to get cipher for current session")
+    }
 });
 
 #[test]

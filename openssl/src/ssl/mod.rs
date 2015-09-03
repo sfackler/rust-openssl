@@ -668,6 +668,39 @@ impl<'ssl> DerefMut for MemBioRef<'ssl> {
     }
 }
 
+pub struct SslCipher {
+    cipher: *const ffi::SSL_CIPHER
+}
+
+impl SslCipher {
+    pub fn secret_bits(&self) -> u64 {
+        let bits = unsafe { ffi::SSL_CIPHER_get_bits(self.cipher, ptr::null_mut()) };
+        return bits as u64
+    }
+
+    pub fn version(&self) -> String {
+        unsafe {
+            let ver_ptr = ffi::SSL_CIPHER_get_version(self.cipher);
+            String::from_utf8(CStr::from_ptr(ver_ptr).to_bytes().to_vec()).unwrap()
+        }
+    }
+
+    pub fn name(&self) -> String {
+        unsafe {
+            let name_ptr = ffi::SSL_CIPHER_get_name(self.cipher);
+            String::from_utf8(CStr::from_ptr(name_ptr).to_bytes().to_vec()).unwrap()
+        }
+    }
+
+    pub fn description(&self) -> String {
+        unsafe {
+            let desc_ptr = ffi::SSL_CIPHER_description(self.cipher, ptr::null_mut(), 0);
+            String::from_utf8(CStr::from_ptr(desc_ptr).to_bytes().to_vec()).unwrap()
+        }
+    }
+}
+
+
 pub struct Ssl {
     ssl: *mut ffi::SSL
 }
@@ -839,6 +872,20 @@ impl Ssl {
         unsafe {
             let method = ffi::SSL_get_ssl_method(self.ssl);
             SslMethod::from_raw(method)
+        }
+    }
+
+    pub fn get_current_cipher(&self) -> Option<SslCipher> {
+
+        unsafe {
+            let cipher = ffi::SSL_get_current_cipher(self.ssl);
+            if cipher == ptr::null(){
+                return None
+            }
+            let ssl_cipher = SslCipher {
+                cipher: cipher
+            };
+            Some(ssl_cipher)
         }
     }
 }
@@ -1287,6 +1334,11 @@ impl<S: Read+Write> SslStream<S> {
     /// Return the certificate of the peer
     pub fn get_peer_certificate(&self) -> Option<X509> {
         self.kind.ssl().get_peer_certificate()
+    }
+
+    /// Return the current cipher suite used for the connection
+    pub fn get_current_cipher(&self) -> Option<SslCipher> {
+        self.kind.ssl().get_current_cipher()
     }
 
     /// Returns a mutable reference to the underlying stream.
