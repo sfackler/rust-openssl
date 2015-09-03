@@ -312,6 +312,24 @@ run_test!(clear_ctx_options, |method, _| {
     assert!(!opts.contains(ssl::SSL_OP_ALL));
 });
 
+run_test!(get_current_cipher, |method, stream| {
+    //let ssl = Ssl::new(&SslContext::new(method).unwrap()).unwrap();
+    let ssl_stream = SslStream::connect_generic(&SslContext::new(method).unwrap(), stream).unwrap();
+    match ssl_stream.get_current_cipher() {
+        Some(cipher) => {
+            let name = cipher.name().unwrap();
+            let bits = cipher.secret_bits().unwrap();
+            let version = cipher.version().unwrap();
+            let description = cipher.description().unwrap();
+            println!("name: {}", name);
+            println!("bits: {}", bits);
+            println!("version: {}", version);
+            println!("description {}", description);
+        },
+        None => panic!("Cipher not found!")
+    }
+});
+
 #[test]
 fn test_write() {
     let stream = TcpStream::connect("127.0.0.1:15418").unwrap();

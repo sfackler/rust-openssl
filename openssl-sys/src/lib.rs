@@ -31,6 +31,7 @@ pub type RSA = c_void;
 pub type SSL = c_void;
 pub type SSL_CTX = c_void;
 pub type SSL_METHOD = c_void;
+pub type SSL_CIPHER = c_void;
 pub type X509 = c_void;
 pub type X509_CRL = c_void;
 pub type X509_EXTENSION = c_void;
@@ -550,6 +551,12 @@ extern "C" {
     pub fn SSL_get_ssl_method(ssl: *mut SSL) -> *const SSL_METHOD;
     pub fn SSL_state_string(ssl: *mut SSL) -> *const c_char;
     pub fn SSL_state_string_long(ssl: *mut SSL) -> *const c_char;
+
+    pub fn SSL_get_current_cipher(ssl: *const SSL) -> *const SSL_CIPHER;
+    pub fn SSL_CIPHER_get_bits(c: *const SSL_CIPHER, bits: *mut c_int) -> c_int;
+    pub fn SSL_CIPHER_get_version(c: *const SSL_CIPHER) -> *mut c_char;
+    pub fn SSL_CIPHER_get_name(c: *const SSL_CIPHER) -> *const c_char;
+    pub fn SSL_CIPHER_description(c: *const SSL_CIPHER, buf: *mut c_char, sz: c_int) -> *mut c_char;
 
     pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
 

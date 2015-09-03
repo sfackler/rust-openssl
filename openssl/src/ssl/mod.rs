@@ -668,6 +668,54 @@ impl<'ssl> DerefMut for MemBioRef<'ssl> {
     }
 }
 
+pub struct SslCipher {
+    cipher: *const ffi::SSL_CIPHER
+}
+
+impl SslCipher {
+    pub fn secret_bits(&self) -> Option<u64> {
+        unsafe {
+            let bits = ffi::SSL_CIPHER_get_bits(self.cipher, ptr::null_mut());
+            Some(bits as u64)
+        }
+    }
+
+    pub fn version(&self) -> Option<String> {
+        unsafe {
+            let ver_ptr = ffi::SSL_CIPHER_get_version(self.cipher);
+            let ver = String::from_utf8(CStr::from_ptr(ver_ptr).to_bytes().to_vec()).unwrap();
+            Some(ver)
+        }
+    }
+
+    pub fn name(&self) -> Option<String> {
+        unsafe {
+            let name_ptr = ffi::SSL_CIPHER_get_name(self.cipher);
+            let name =  String::from_utf8(CStr::from_ptr(name_ptr).to_bytes().to_vec()).unwrap();
+            Some(name)
+        }
+    }
+
+    pub fn description(&self) -> Option<String> {
+        unsafe {
+            let desc_ptr = ffi::SSL_CIPHER_description(self.cipher, ptr::null_mut(), 0);
+            let desc = String::from_utf8(CStr::from_ptr(desc_ptr).to_bytes().to_vec()).unwrap();
+            Some(desc)
+        }
+    }
+
+    pub unsafe fn from_raw(raw_cipher: *const ffi::SSL_CIPHER) -> Option<SslCipher> {
+        if raw_cipher == ptr::null(){
+            return None
+        }
+        let ssl_cipher = SslCipher {
+            cipher: raw_cipher
+        };
+        Some(ssl_cipher)
+    }
+}
+
+
 pub struct Ssl {
     ssl: *mut ffi::SSL
 }
@@ -839,6 +887,14 @@ impl Ssl {
         unsafe {
             let method = ffi::SSL_get_ssl_method(self.ssl);
             SslMethod::from_raw(method)
+        }
+    }
+
+    pub fn get_current_cipher(&self) -> Option<SslCipher> {
+
+        unsafe {
+            let cipher = ffi::SSL_get_current_cipher(self.ssl);
+            SslCipher::from_raw(cipher)
         }
     }
 }
@@ -1287,6 +1343,11 @@ impl<S: Read+Write> SslStream<S> {
     /// Return the certificate of the peer
     pub fn get_peer_certificate(&self) -> Option<X509> {
         self.kind.ssl().get_peer_certificate()
+    }
+
+    /// Return the current cipher suite used for the connection
+    pub fn get_current_cipher(&self) -> Option<SslCipher> {
+        self.kind.ssl().get_current_cipher()
     }
 
     /// Returns a mutable reference to the underlying stream.
