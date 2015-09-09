@@ -138,14 +138,14 @@ impl PKey {
     }
 
     /**
-     * Returns a serialized form of the public key, suitable for load_pub().
+     * Returns a DER serialized form of the public key, suitable for load_pub().
      */
     pub fn save_pub(&self) -> Vec<u8> {
         self._tostr(ffi::i2d_RSA_PUBKEY)
     }
 
     /**
-     * Loads a serialized form of the public key, as produced by save_pub().
+     * Loads a DER serialized form of the public key, as produced by save_pub().
      */
     pub fn load_pub(&mut self, s: &[u8]) {
         self._fromstr(s, ffi::d2i_RSA_PUBKEY);
