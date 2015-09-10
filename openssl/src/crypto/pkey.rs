@@ -110,11 +110,16 @@ impl PKey {
         }
     }
 
-    fn _fromstr(&mut self, s: &[u8], f: unsafe extern "C" fn(*const *mut ffi::RSA, *const *const u8, c_uint) -> *mut ffi::RSA) {
+    fn _fromstr(&mut self, s: &[u8], f: unsafe extern "C" fn(*const *mut ffi::RSA, *const *const u8, c_uint) -> *mut ffi::RSA) -> bool {
         unsafe {
             let rsa = ptr::null_mut();
             f(&rsa, &s.as_ptr(), s.len() as c_uint);
-            ffi::EVP_PKEY_set1_RSA(self.evp, rsa);
+            if !rsa.is_null() {
+                ffi::EVP_PKEY_set1_RSA(self.evp, rsa) == 1
+            }
+            else {
+                false
+            }
         }
     }
 
@@ -148,8 +153,9 @@ impl PKey {
      * Loads a serialized form of the public key, as produced by save_pub().
      */
     pub fn load_pub(&mut self, s: &[u8]) {
-        self._fromstr(s, ffi::d2i_RSA_PUBKEY);
-        self.parts = Parts::Public;
+        if self._fromstr(s, ffi::d2i_RSA_PUBKEY) {
+            self.parts = Parts::Public;
+        }
     }
 
     /**
@@ -164,8 +170,9 @@ impl PKey {
      * save_priv().
      */
     pub fn load_priv(&mut self, s: &[u8]) {
-        self._fromstr(s, ffi::d2i_RSAPrivateKey);
-        self.parts = Parts::Both;
+        if self._fromstr(s, ffi::d2i_RSAPrivateKey) {
+            self.parts = Parts::Both;
+        }
     }
 
     /// Stores private key as a PEM
