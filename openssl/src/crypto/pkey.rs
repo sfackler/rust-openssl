@@ -205,7 +205,13 @@ impl PKey {
      */
     pub fn size(&self) -> usize {
         unsafe {
-            ffi::RSA_size(ffi::EVP_PKEY_get1_RSA(self.evp)) as usize
+            let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
+            if rsa.is_null() {
+                0
+            }
+            else {
+                ffi::RSA_size(rsa) as usize
+            }
         }
     }
 
@@ -244,6 +250,9 @@ impl PKey {
     pub fn max_data(&self) -> usize {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
+            if rsa.is_null() {
+                return 0;
+            }
             let len = ffi::RSA_size(rsa);
 
             // 41 comes from RSA_public_encrypt(3) for OAEP
@@ -254,6 +263,9 @@ impl PKey {
     pub fn encrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
+            if rsa.is_null() {
+                panic!("Could not get RSA key for encryption");
+            }
             let len = ffi::RSA_size(rsa);
 
             assert!(s.len() < self.max_data());
@@ -279,6 +291,9 @@ impl PKey {
     pub fn decrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
+            if rsa.is_null() {
+                panic!("Could not get RSA key for decryption");
+            }
             let len = ffi::RSA_size(rsa);
 
             assert_eq!(s.len() as c_int, ffi::RSA_size(rsa));
@@ -337,6 +352,9 @@ impl PKey {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
             let len = ffi::RSA_size(rsa);
+            if rsa.is_null() {
+                panic!("Could not get RSA key for signing");
+            }
             let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
 
             let mut len = 0;
@@ -360,6 +378,9 @@ impl PKey {
     pub fn verify_with_hash(&self, h: &[u8], s: &[u8], hash: hash::Type) -> bool {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
+            if rsa.is_null() {
+                panic!("Could not get RSA key for verification");
+            }
 
             let rv = ffi::RSA_verify(
                 openssl_hash_nid(hash),
