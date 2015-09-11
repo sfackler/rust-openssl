@@ -560,4 +560,36 @@ mod tests {
         assert!(priv_key.windows(11).any(|s| s == b"PRIVATE KEY"));
         assert!(pub_key.windows(10).any(|s| s == b"PUBLIC KEY"));
     }
+
+    #[test]
+    #[should_panic(expected = "Could not get RSA key for encryption")]
+    fn test_nokey_encrypt() {
+        let mut pkey = super::PKey::new();
+        pkey.load_pub(&[]);
+        pkey.encrypt(&[]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Could not get RSA key for decryption")]
+    fn test_nokey_decrypt() {
+        let mut pkey = super::PKey::new();
+        pkey.load_priv(&[]);
+        pkey.decrypt(&[]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Could not get RSA key for signing")]
+    fn test_nokey_sign() {
+        let mut pkey = super::PKey::new();
+        pkey.load_priv(&[]);
+        pkey.sign(&[]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Could not get RSA key for verification")]
+    fn test_nokey_verify() {
+        let mut pkey = super::PKey::new();
+        pkey.load_pub(&[]);
+        pkey.verify(&[], &[]);
+    }
 }
