@@ -351,10 +351,10 @@ impl PKey {
     pub fn sign_with_hash(&self, s: &[u8], hash: hash::Type) -> Vec<u8> {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
-            let len = ffi::RSA_size(rsa);
             if rsa.is_null() {
                 panic!("Could not get RSA key for signing");
             }
+            let len = ffi::RSA_size(rsa);
             let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
 
             let mut len = 0;
