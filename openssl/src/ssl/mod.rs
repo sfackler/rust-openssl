@@ -432,10 +432,7 @@ impl SslContext {
     pub fn new(method: SslMethod) -> Result<SslContext, SslError> {
         init();
 
-        let ctx = unsafe { ffi::SSL_CTX_new(method.to_raw()) };
-        if ctx == ptr::null_mut() {
-            return Err(SslError::get());
-        }
+        let ctx = try_ssl_null!(unsafe { ffi::SSL_CTX_new(method.to_raw()) });
 
         let ctx = SslContext { ctx: ctx };
 
@@ -690,10 +687,7 @@ impl Drop for Ssl {
 
 impl Ssl {
     pub fn new(ctx: &SslContext) -> Result<Ssl, SslError> {
-        let ssl = unsafe { ffi::SSL_new(ctx.ctx) };
-        if ssl == ptr::null_mut() {
-            return Err(SslError::get());
-        }
+        let ssl = try_ssl_null!(unsafe { ffi::SSL_new(ctx.ctx) });
         let ssl = Ssl { ssl: ssl };
         Ok(ssl)
     }
@@ -1019,10 +1013,7 @@ impl DirectStream<net::TcpStream> {
 impl<S> DirectStream<S> {
     fn new_base(ssl: Ssl, stream: S, sock: c_int) -> Result<DirectStream<S>, SslError> {
         unsafe {
-            let bio = ffi::BIO_new_socket(sock, 0);
-            if bio == ptr::null_mut() {
-                return Err(SslError::get());
-            }
+            let bio = try_ssl_null!(ffi::BIO_new_socket(sock, 0));
             ffi::SSL_set_bio(ssl.ssl, bio, bio);
         }
 
