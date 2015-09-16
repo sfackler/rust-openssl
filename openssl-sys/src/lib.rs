@@ -167,11 +167,11 @@ macro_rules! import_options {
 
 include!("ssl_options.rs");
 
-#[cfg(feature = "npn")]
+#[cfg(any(feature = "npn", feature = "alpn"))]
 pub const OPENSSL_NPN_UNSUPPORTED: c_int = 0;
-#[cfg(feature = "npn")]
+#[cfg(any(feature = "npn", feature = "alpn"))]
 pub const OPENSSL_NPN_NEGOTIATED: c_int = 1;
-#[cfg(feature = "npn")]
+#[cfg(any(feature = "npn", feature = "alpn"))]
 pub const OPENSSL_NPN_NO_OVERLAP: c_int = 2;
 
 pub const V_ASN1_GENERALIZEDTIME: c_int = 24;

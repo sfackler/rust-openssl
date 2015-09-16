@@ -308,8 +308,11 @@ unsafe fn select_proto_using(ssl: *mut ffi::SSL,
         let client_len = protocols.len() as c_uint;
         // Finally, let OpenSSL find a protocol to be used, by matching the given server and
         // client lists.
-        ffi::SSL_select_next_proto(out, outlen, inbuf, inlen, client, client_len);
-        ffi::SSL_TLSEXT_ERR_OK
+        if ffi::SSL_select_next_proto(out, outlen, inbuf, inlen, client, client_len) != ffi::OPENSSL_NPN_NEGOTIATED {
+            ffi::SSL_TLSEXT_ERR_NOACK
+        } else {
+            ffi::SSL_TLSEXT_ERR_OK
+        }
 }
 
 /// The function is given as the callback to `SSL_CTX_set_next_proto_select_cb`.
