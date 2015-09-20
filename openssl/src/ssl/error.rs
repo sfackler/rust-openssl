@@ -17,7 +17,20 @@ pub enum SslError {
     /// The SSL session has been closed by the other end
     SslSessionClosed,
     /// An error in the OpenSSL library
-    OpenSslErrors(Vec<OpensslError>)
+    OpenSslErrors(Vec<OpensslError>),
+}
+
+/// An error on a nonblocking stream.
+#[derive(Debug)]
+pub enum NonblockingSslError {
+    /// A standard SSL error occurred.
+    SslError(SslError),
+    /// The OpenSSL library wants data from the remote socket;
+    /// the caller should wait for read readiness.
+    WantRead,
+    /// The OpenSSL library wants to send data to the remote socket;
+    /// the caller should wait for write readiness.
+    WantWrite,
 }
 
 impl fmt::Display for SslError {
@@ -56,6 +69,35 @@ impl error::Error for SslError {
             StreamError(ref err) => Some(err as &error::Error),
             _ => None
         }
+    }
+}
+
+impl fmt::Display for NonblockingSslError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.write_str(error::Error::description(self))
+    }
+}
+
+impl error::Error for NonblockingSslError {
+    fn description(&self) -> &str {
+        match *self {
+            NonblockingSslError::SslError(ref e) => e.description(),
+            NonblockingSslError::WantRead => "The OpenSSL library wants data from the remote socket",
+            NonblockingSslError::WantWrite => "The OpenSSL library want to send data to the remote socket",
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            NonblockingSslError::SslError(ref e) => e.cause(),
+            _ => None
+        }
+    }
+}
+
+impl From<SslError> for NonblockingSslError {
+    fn from(e: SslError) -> NonblockingSslError {
+        NonblockingSslError::SslError(e)
     }
 }
 
