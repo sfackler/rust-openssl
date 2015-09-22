@@ -32,6 +32,4 @@ libc = "0.1"
 
 [dev-dependencies]
 rustc-serialize = "0.3"
-
-[dev-dependencies.connected_socket]
-connected_socket = "0.0.1"
+net2 = "0.2.13"
