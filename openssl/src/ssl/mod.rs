@@ -570,6 +570,10 @@ impl SslContext {
             })
     }
 
+    /// If `onoff` is set to `true`, enable ECDHE for key exchange with compatible
+    /// clients, and automatically select an appropriate elliptic curve.
+    ///
+    /// This method requires OpenSSL >= 1.2.0 or LibreSSL and the `ecdh_auto` feature.
     #[cfg(feature = "ecdh_auto")]
     pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(),SslError> {
         wrap_ssl_result(
