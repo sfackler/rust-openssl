@@ -675,6 +675,9 @@ extern "C" {
     pub fn SSL_CTX_add_extra_chain_cert(ctx: *mut SSL_CTX, x509: *mut X509) -> c_long;
     #[link_name = "SSL_CTX_set_read_ahead_shim"]
     pub fn SSL_CTX_set_read_ahead(ctx: *mut SSL_CTX, m: c_long) -> c_long;
+    #[cfg(feature = "ecdh_auto")]
+    #[link_name = "SSL_CTX_set_ecdh_auto_shim"]
+    pub fn SSL_CTX_set_ecdh_auto(ssl: *mut SSL_CTX, onoff: c_int) -> c_int;
     #[link_name = "SSL_set_tlsext_host_name_shim"]
     pub fn SSL_set_tlsext_host_name(s: *mut SSL, name: *const c_char) -> c_long;
     #[link_name = "SSL_CTX_set_tmp_dh_shim"]

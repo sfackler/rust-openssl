@@ -20,6 +20,7 @@ aes_ctr = ["openssl-sys/aes_ctr"]
 npn = ["openssl-sys/npn"]
 alpn = ["openssl-sys/alpn"]
 rfc5114 = ["openssl-sys/rfc5114"]
+ecdh_auto = ["openssl-sys/ecdh_auto"]
 
 [dependencies.openssl-sys]
 path = "../openssl-sys"
