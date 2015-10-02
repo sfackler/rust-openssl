@@ -106,7 +106,8 @@ pub enum SslMethod {
     #[cfg(feature = "sslv2")]
     /// Only support the SSLv2 protocol, requires the `sslv2` feature.
     Sslv2,
-    /// Support the SSLv2, SSLv3 and TLSv1 protocols.
+    /// Support the SSLv2, SSLv3, TLSv1, TLSv1.1, and TLSv1.2 protocols depending on what the
+    /// linked OpenSSL library supports.
     Sslv23,
     /// Only support the SSLv3 protocol.
     Sslv3,
