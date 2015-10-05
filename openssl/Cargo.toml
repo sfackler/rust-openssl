@@ -1,11 +1,11 @@
 [package]
 name = "openssl"
-version = "0.6.5"
+version = "0.6.6"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
 repository = "https://github.com/sfackler/rust-openssl"
-documentation = "https://sfackler.github.io/rust-openssl/doc/v0.6.5/openssl"
+documentation = "https://sfackler.github.io/rust-openssl/doc/v0.6.6/openssl"
 readme = "../README.md"
 keywords = ["crypto", "tls", "ssl", "dtls"]
 
@@ -24,7 +24,7 @@ ecdh_auto = ["openssl-sys/ecdh_auto"]
 
 [dependencies.openssl-sys]
 path = "../openssl-sys"
-version = "0.6.4"
+version = "0.6.6"
 
 [dependencies]
 bitflags = ">= 0.2, < 0.4"
