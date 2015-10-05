@@ -397,12 +397,12 @@ impl BigNum {
         (self.num_bits() + 7) / 8
     }
 
-    unsafe fn raw(&self) -> *mut ffi::BIGNUM {
+    pub unsafe fn raw(&self) -> *mut ffi::BIGNUM {
         let BigNum(n) = *self;
         n
     }
 
-    unsafe fn raw_ptr(&self) -> *const *mut ffi::BIGNUM {
+    pub unsafe fn raw_ptr(&self) -> *const *mut ffi::BIGNUM {
         let BigNum(ref n) = *self;
         n
     }

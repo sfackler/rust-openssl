@@ -110,11 +110,16 @@ impl PKey {
         }
     }
 
-    fn _fromstr(&mut self, s: &[u8], f: unsafe extern "C" fn(*const *mut ffi::RSA, *const *const u8, c_uint) -> *mut ffi::RSA) {
+    fn _fromstr(&mut self, s: &[u8], f: unsafe extern "C" fn(*const *mut ffi::RSA, *const *const u8, c_uint) -> *mut ffi::RSA) -> bool {
         unsafe {
             let rsa = ptr::null_mut();
             f(&rsa, &s.as_ptr(), s.len() as c_uint);
-            ffi::EVP_PKEY_set1_RSA(self.evp, rsa);
+            if !rsa.is_null() {
+                ffi::EVP_PKEY_set1_RSA(self.evp, rsa) == 1
+            }
+            else {
+                false
+            }
         }
     }
 
@@ -138,18 +143,19 @@ impl PKey {
     }
 
     /**
-     * Returns a serialized form of the public key, suitable for load_pub().
+     * Returns a DER serialized form of the public key, suitable for load_pub().
      */
     pub fn save_pub(&self) -> Vec<u8> {
         self._tostr(ffi::i2d_RSA_PUBKEY)
     }
 
     /**
-     * Loads a serialized form of the public key, as produced by save_pub().
+     * Loads a DER serialized form of the public key, as produced by save_pub().
      */
     pub fn load_pub(&mut self, s: &[u8]) {
-        self._fromstr(s, ffi::d2i_RSA_PUBKEY);
-        self.parts = Parts::Public;
+        if self._fromstr(s, ffi::d2i_RSA_PUBKEY) {
+            self.parts = Parts::Public;
+        }
     }
 
     /**
@@ -164,8 +170,9 @@ impl PKey {
      * save_priv().
      */
     pub fn load_priv(&mut self, s: &[u8]) {
-        self._fromstr(s, ffi::d2i_RSAPrivateKey);
-        self.parts = Parts::Both;
+        if self._fromstr(s, ffi::d2i_RSAPrivateKey) {
+            self.parts = Parts::Both;
+        }
     }
 
     /// Stores private key as a PEM
@@ -198,7 +205,13 @@ impl PKey {
      */
     pub fn size(&self) -> usize {
         unsafe {
-            ffi::RSA_size(ffi::EVP_PKEY_get1_RSA(self.evp)) as usize
+            let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
+            if rsa.is_null() {
+                0
+            }
+            else {
+                ffi::RSA_size(rsa) as usize
+            }
         }
     }
 
@@ -237,6 +250,9 @@ impl PKey {
     pub fn max_data(&self) -> usize {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
+            if rsa.is_null() {
+                return 0;
+            }
             let len = ffi::RSA_size(rsa);
 
             // 41 comes from RSA_public_encrypt(3) for OAEP
@@ -247,6 +263,9 @@ impl PKey {
     pub fn encrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
+            if rsa.is_null() {
+                panic!("Could not get RSA key for encryption");
+            }
             let len = ffi::RSA_size(rsa);
 
             assert!(s.len() < self.max_data());
@@ -272,6 +291,9 @@ impl PKey {
     pub fn decrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
+            if rsa.is_null() {
+                panic!("Could not get RSA key for decryption");
+            }
             let len = ffi::RSA_size(rsa);
 
             assert_eq!(s.len() as c_int, ffi::RSA_size(rsa));
@@ -329,6 +351,9 @@ impl PKey {
     pub fn sign_with_hash(&self, s: &[u8], hash: hash::Type) -> Vec<u8> {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
+            if rsa.is_null() {
+                panic!("Could not get RSA key for signing");
+            }
             let len = ffi::RSA_size(rsa);
             let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
 
@@ -353,6 +378,9 @@ impl PKey {
     pub fn verify_with_hash(&self, h: &[u8], s: &[u8], hash: hash::Type) -> bool {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
+            if rsa.is_null() {
+                panic!("Could not get RSA key for verification");
+            }
 
             let rv = ffi::RSA_verify(
                 openssl_hash_nid(hash),
@@ -531,5 +559,37 @@ mod tests {
         // the `PRIVATE KEY` or `PUBLIC KEY` strings.
         assert!(priv_key.windows(11).any(|s| s == b"PRIVATE KEY"));
         assert!(pub_key.windows(10).any(|s| s == b"PUBLIC KEY"));
+    }
+
+    #[test]
+    #[should_panic(expected = "Could not get RSA key for encryption")]
+    fn test_nokey_encrypt() {
+        let mut pkey = super::PKey::new();
+        pkey.load_pub(&[]);
+        pkey.encrypt(&[]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Could not get RSA key for decryption")]
+    fn test_nokey_decrypt() {
+        let mut pkey = super::PKey::new();
+        pkey.load_priv(&[]);
+        pkey.decrypt(&[]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Could not get RSA key for signing")]
+    fn test_nokey_sign() {
+        let mut pkey = super::PKey::new();
+        pkey.load_priv(&[]);
+        pkey.sign(&[]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Could not get RSA key for verification")]
+    fn test_nokey_verify() {
+        let mut pkey = super::PKey::new();
+        pkey.load_pub(&[]);
+        pkey.verify(&[], &[]);
     }
 }

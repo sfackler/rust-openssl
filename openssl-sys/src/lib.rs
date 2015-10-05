@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.6.5")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.6.6")]
 
 extern crate libc;
 
@@ -20,6 +20,7 @@ pub type BIO_METHOD = c_void;
 pub type BN_CTX = c_void;
 pub type COMP_METHOD = c_void;
 pub type CRYPTO_EX_DATA = c_void;
+pub type DH = c_void;
 pub type ENGINE = c_void;
 pub type EVP_CIPHER = c_void;
 pub type EVP_CIPHER_CTX = c_void;
@@ -166,11 +167,11 @@ macro_rules! import_options {
 
 include!("ssl_options.rs");
 
-#[cfg(feature = "npn")]
+#[cfg(any(feature = "npn", feature = "alpn"))]
 pub const OPENSSL_NPN_UNSUPPORTED: c_int = 0;
-#[cfg(feature = "npn")]
+#[cfg(any(feature = "npn", feature = "alpn"))]
 pub const OPENSSL_NPN_NEGOTIATED: c_int = 1;
-#[cfg(feature = "npn")]
+#[cfg(any(feature = "npn", feature = "alpn"))]
 pub const OPENSSL_NPN_NO_OVERLAP: c_int = 2;
 
 pub const V_ASN1_GENERALIZEDTIME: c_int = 24;
@@ -251,10 +252,10 @@ extern fn locking_function(mode: c_int, n: c_int, _file: *const c_char,
 }
 
 pub fn init() {
-    static mut INIT: Once = ONCE_INIT;
+    static INIT: Once = ONCE_INIT;
 
-    unsafe {
-        INIT.call_once(|| {
+    INIT.call_once(|| {
+        unsafe {
             SSL_library_init();
             SSL_load_error_strings();
 
@@ -269,8 +270,9 @@ pub fn init() {
             GUARDS = mem::transmute(guards);
 
             CRYPTO_set_locking_callback(locking_function);
-        })
-    }
+            rust_openssl_set_id_callback();
+        }
+    })
 }
 
 pub unsafe fn SSL_CTX_set_options(ssl: *mut SSL_CTX, op: u64) -> u64 {
@@ -289,6 +291,7 @@ pub unsafe fn SSL_CTX_clear_options(ssl: *mut SSL_CTX, op: u64) -> u64 {
 extern "C" {
     fn rust_openssl_ssl_ctx_options_rust_to_c(rustval: u64) -> c_long;
     fn rust_openssl_ssl_ctx_options_c_to_rust(cval: c_long) -> u64;
+    fn rust_openssl_set_id_callback();
 
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
@@ -380,6 +383,17 @@ extern "C" {
     pub fn CRYPTO_memcmp(a: *const c_void, b: *const c_void,
                          len: size_t) -> c_int;
 
+    pub fn DH_free(dh: *mut DH);
+
+    #[cfg(feature = "rfc5114")]
+    pub fn DH_get_1024_160() -> *mut DH;
+    #[cfg(feature = "rfc5114")]
+    pub fn DH_get_2048_224() -> *mut DH;
+    #[cfg(feature = "rfc5114")]
+    pub fn DH_get_2048_256() -> *mut DH;
+
+    pub fn DH_new_from_params(p: *mut BIGNUM, g: *mut BIGNUM, q: *mut BIGNUM) -> *mut DH;
+
     pub fn ERR_get_error() -> c_ulong;
 
     pub fn ERR_lib_error_string(err: c_ulong) -> *const c_char;
@@ -465,7 +479,8 @@ extern "C" {
     #[cfg_attr(target_os = "nacl", link_name = "HMAC_Update")]
     pub fn HMAC_Update_shim(ctx: *mut HMAC_CTX, input: *const u8, len: c_uint) -> c_int;
 
-
+    pub fn PEM_read_bio_DHparams(bio: *mut BIO, out: *mut *mut DH, callback: Option<PasswordCallback>,
+                             user_data: *mut c_void) -> *mut DH;
     pub fn PEM_read_bio_X509(bio: *mut BIO, out: *mut *mut X509, callback: Option<PasswordCallback>,
                              user_data: *mut c_void) -> *mut X509;
     pub fn PEM_read_bio_X509_REQ(bio: *mut BIO, out: *mut *mut X509_REQ, callback: Option<PasswordCallback>,
@@ -662,8 +677,13 @@ extern "C" {
     pub fn SSL_CTX_add_extra_chain_cert(ctx: *mut SSL_CTX, x509: *mut X509) -> c_long;
     #[link_name = "SSL_CTX_set_read_ahead_shim"]
     pub fn SSL_CTX_set_read_ahead(ctx: *mut SSL_CTX, m: c_long) -> c_long;
+    #[cfg(feature = "ecdh_auto")]
+    #[link_name = "SSL_CTX_set_ecdh_auto_shim"]
+    pub fn SSL_CTX_set_ecdh_auto(ssl: *mut SSL_CTX, onoff: c_int) -> c_int;
     #[link_name = "SSL_set_tlsext_host_name_shim"]
     pub fn SSL_set_tlsext_host_name(s: *mut SSL, name: *const c_char) -> c_long;
+    #[link_name = "SSL_CTX_set_tmp_dh_shim"]
+    pub fn SSL_CTX_set_tmp_dh(s: *mut SSL, dh: *const DH) -> c_long;
     #[link_name = "X509_get_extensions_shim"]
     pub fn X509_get_extensions(x: *mut X509) -> *mut stack_st_X509_EXTENSION;
 }

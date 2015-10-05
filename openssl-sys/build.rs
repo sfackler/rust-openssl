@@ -36,12 +36,12 @@ fn main() {
         Some(ref v) => v.split(":").collect(),
         None => if target.contains("windows") {
             if get_mingw_in_path().is_some() && lib_dir.is_none() && include_dir.is_none() {
-                vec!("eay32", "ssleay32")
+                vec!["ssleay32", "eay32"]
             } else {
-                vec!("eay32", "ssl32")
+                vec!["ssl32", "eay32"]
             }
         } else {
-            vec!("crypto", "ssl")
+            vec!["ssl", "crypto"]
         }
     };
 

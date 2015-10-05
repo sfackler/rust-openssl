@@ -1,11 +1,11 @@
 [package]
 name = "openssl"
-version = "0.6.5"
+version = "0.6.6"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
 repository = "https://github.com/sfackler/rust-openssl"
-documentation = "https://sfackler.github.io/rust-openssl/doc/v0.6.5/openssl"
+documentation = "https://sfackler.github.io/rust-openssl/doc/v0.6.6/openssl"
 readme = "../README.md"
 keywords = ["crypto", "tls", "ssl", "dtls"]
 
@@ -19,10 +19,12 @@ aes_xts = ["openssl-sys/aes_xts"]
 aes_ctr = ["openssl-sys/aes_ctr"]
 npn = ["openssl-sys/npn"]
 alpn = ["openssl-sys/alpn"]
+rfc5114 = ["openssl-sys/rfc5114"]
+ecdh_auto = ["openssl-sys/ecdh_auto"]
 
 [dependencies.openssl-sys]
 path = "../openssl-sys"
-version = "0.6.4"
+version = "0.6.6"
 
 [dependencies]
 bitflags = ">= 0.2, < 0.4"
@@ -31,6 +33,4 @@ libc = "0.1"
 
 [dev-dependencies]
 rustc-serialize = "0.3"
-
-[dev-dependencies.connected_socket]
-connected_socket = "0.0.1"
+net2 = "0.2.13"

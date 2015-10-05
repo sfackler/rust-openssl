@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/sfackler/rust-openssl.svg?branch=master)](https://travis-ci.org/sfackler/rust-openssl)
 
-[Documentation](https://sfackler.github.io/rust-openssl/doc/v0.6.5/openssl).
+[Documentation](https://sfackler.github.io/rust-openssl/doc/v0.6.6/openssl).
 
 ## Building
 
@@ -63,19 +63,5 @@ The build script can be configured via environment variables:
 
 If either `OPENSSL_LIB_DIR` or `OPENSSL_INCLUDE_DIR` are specified, then the
 build script will skip the pkg-config step.
-
-## Testing
-Several tests expect a local test server to be running to bounce requests off
-of. It's easy to do this. Open a separate terminal window and `cd` to the
-rust-openssl directory. Then run one of the following command:
-
-```bash
-./openssl/test/test.sh
-```
-
-This will boot a bunch of `openssl s_server` processes that the tests connect
-to. Then in the original terminal, run `cargo test`. If everything is set up
-correctly, all tests should pass. You can stop the servers with `killall
-openssl`.
 
 [1]: http://slproweb.com/products/Win32OpenSSL.html

@@ -1,5 +1,33 @@
 #include <openssl/hmac.h>
 #include <openssl/ssl.h>
+#include <openssl/dh.h>
+#include <openssl/bn.h>
+
+#if defined(__APPLE__) || defined(__linux)
+
+#include<pthread.h>
+#include<openssl/crypto.h>
+
+unsigned long thread_id()
+{
+    return (unsigned long) pthread_self();
+}
+
+void rust_openssl_set_id_callback() {
+  CRYPTO_set_id_callback(thread_id);
+}
+
+#else
+// Openssl already handles Windows directly, so we don't
+// need to explicitly set it
+
+void rust_openssl_set_id_callback() {
+  // We don't know how to set the callback for arbitrary OSes
+  // Let openssl use its defaults and hope they work.
+}
+
+#endif
+
 
 #if OPENSSL_VERSION_NUMBER < 0x1000000L
 // Copied from openssl crypto/hmac/hmac.c
@@ -77,6 +105,28 @@ long SSL_CTX_add_extra_chain_cert_shim(SSL_CTX *ctx, X509 *x509) {
 
 long SSL_CTX_set_read_ahead_shim(SSL_CTX *ctx, long m) {
     return SSL_CTX_set_read_ahead(ctx, m);
+}
+
+long SSL_CTX_set_tmp_dh_shim(SSL_CTX *ctx, DH *dh) {
+    return SSL_CTX_set_tmp_dh(ctx, dh);
+}
+
+#if OPENSSL_VERSION_NUMBER >= 0x1000200L
+int SSL_CTX_set_ecdh_auto_shim(SSL_CTX *ctx, int onoff) {
+    return SSL_CTX_set_ecdh_auto(ctx, onoff);
+}
+#endif
+
+DH *DH_new_from_params(BIGNUM *p, BIGNUM *g, BIGNUM *q) {
+    DH *dh;
+
+    if ((dh = DH_new()) == NULL) {
+        return NULL;
+    }
+    dh->p = p;
+    dh->g = g;
+    dh->q = q;
+    return dh;
 }
 
 long SSL_set_tlsext_host_name_shim(SSL *s, char *name) {

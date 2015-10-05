@@ -1,4 +1,4 @@
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.6.5")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.6.6")]
 
 #[macro_use]
 extern crate bitflags;
@@ -11,8 +11,7 @@ extern crate openssl_sys as ffi;
 extern crate rustc_serialize as serialize;
 
 #[cfg(test)]
-#[cfg(any(feature="dtlsv1", feature="dtlsv1_2"))]
-extern crate connected_socket;
+extern crate net2;
 
 mod macros;
 
@@ -20,6 +19,7 @@ pub mod asn1;
 pub mod bn;
 pub mod bio;
 pub mod crypto;
+pub mod dh;
 pub mod ssl;
 pub mod x509;
 pub mod nid;

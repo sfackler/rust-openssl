@@ -21,6 +21,7 @@ use std::slice;
 
 use bio::{MemBio};
 use ffi;
+use dh::DH;
 use ssl::error::{SslError, SslSessionClosed, StreamError, OpenSslErrors};
 use x509::{X509StoreContext, X509FileType, X509};
 use crypto::pkey::PKey;
@@ -105,7 +106,8 @@ pub enum SslMethod {
     #[cfg(feature = "sslv2")]
     /// Only support the SSLv2 protocol, requires the `sslv2` feature.
     Sslv2,
-    /// Support the SSLv2, SSLv3 and TLSv1 protocols.
+    /// Support the SSLv2, SSLv3, TLSv1, TLSv1.1, and TLSv1.2 protocols depending on what the
+    /// linked OpenSSL library supports.
     Sslv23,
     /// Only support the SSLv3 protocol.
     Sslv3,
@@ -307,8 +309,11 @@ unsafe fn select_proto_using(ssl: *mut ffi::SSL,
         let client_len = protocols.len() as c_uint;
         // Finally, let OpenSSL find a protocol to be used, by matching the given server and
         // client lists.
-        ffi::SSL_select_next_proto(out, outlen, inbuf, inlen, client, client_len);
-        ffi::SSL_TLSEXT_ERR_OK
+        if ffi::SSL_select_next_proto(out, outlen, inbuf, inlen, client, client_len) != ffi::OPENSSL_NPN_NEGOTIATED {
+            ffi::SSL_TLSEXT_ERR_NOACK
+        } else {
+            ffi::SSL_TLSEXT_ERR_OK
+        }
 }
 
 /// The function is given as the callback to `SSL_CTX_set_next_proto_select_cb`.
@@ -431,10 +436,7 @@ impl SslContext {
     pub fn new(method: SslMethod) -> Result<SslContext, SslError> {
         init();
 
-        let ctx = unsafe { ffi::SSL_CTX_new(method.to_raw()) };
-        if ctx == ptr::null_mut() {
-            return Err(SslError::get());
-        }
+        let ctx = try_ssl_null!(unsafe { ffi::SSL_CTX_new(method.to_raw()) });
 
         let ctx = SslContext { ctx: ctx };
 
@@ -490,6 +492,12 @@ impl SslContext {
         unsafe {
             ffi::SSL_CTX_set_read_ahead(self.ctx, m as c_long);
         }
+    }
+
+    pub fn set_tmp_dh(&self, dh: DH) -> Result<(),SslError> {
+        wrap_ssl_result(unsafe {
+            ffi::SSL_CTX_set_tmp_dh(self.ctx, dh.raw()) as i32
+        })
     }
 
     #[allow(non_snake_case)]
@@ -560,6 +568,18 @@ impl SslContext {
             unsafe {
                 let cipher_list = CString::new(cipher_list).unwrap();
                 ffi::SSL_CTX_set_cipher_list(self.ctx, cipher_list.as_ptr())
+            })
+    }
+
+    /// If `onoff` is set to `true`, enable ECDHE for key exchange with compatible
+    /// clients, and automatically select an appropriate elliptic curve.
+    ///
+    /// This method requires OpenSSL >= 1.2.0 or LibreSSL and the `ecdh_auto` feature.
+    #[cfg(feature = "ecdh_auto")]
+    pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(),SslError> {
+        wrap_ssl_result(
+            unsafe {
+                ffi::SSL_CTX_set_ecdh_auto(self.ctx, onoff as c_int)
             })
     }
 
@@ -683,10 +703,7 @@ impl Drop for Ssl {
 
 impl Ssl {
     pub fn new(ctx: &SslContext) -> Result<Ssl, SslError> {
-        let ssl = unsafe { ffi::SSL_new(ctx.ctx) };
-        if ssl == ptr::null_mut() {
-            return Err(SslError::get());
-        }
+        let ssl = try_ssl_null!(unsafe { ffi::SSL_new(ctx.ctx) });
         let ssl = Ssl { ssl: ssl };
         Ok(ssl)
     }
@@ -1012,10 +1029,7 @@ impl DirectStream<net::TcpStream> {
 impl<S> DirectStream<S> {
     fn new_base(ssl: Ssl, stream: S, sock: c_int) -> Result<DirectStream<S>, SslError> {
         unsafe {
-            let bio = ffi::BIO_new_socket(sock, 0);
-            if bio == ptr::null_mut() {
-                return Err(SslError::get());
-            }
+            let bio = try_ssl_null!(ffi::BIO_new_socket(sock, 0));
             ffi::SSL_set_bio(ssl.ssl, bio, bio);
         }
 
