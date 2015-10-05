@@ -3,6 +3,33 @@
 #include <openssl/dh.h>
 #include <openssl/bn.h>
 
+#if defined(__APPLE__) || defined(__linux)
+
+#include<pthread.h>
+#include<openssl/crypto.h>
+
+unsigned long thread_id()
+{
+    unsigned long ret = (unsigned long)pthread_self();
+    return ret;
+}
+
+void rust_openssl_set_id_callback() {
+  CRYPTO_set_id_callback((unsigned long (*)())thread_id);
+}
+
+#else
+// Openssl already handles Windows directly, so we don't
+// need to explicitly set it
+
+void rust_openssl_set_id_callback() {
+  // We don't know how to set the callback for arbitrary OSes
+  // Let openssl use its defaults and hope they work.
+}
+
+#endif
+
+
 #if OPENSSL_VERSION_NUMBER < 0x1000000L
 // Copied from openssl crypto/hmac/hmac.c
 int HMAC_CTX_copy(HMAC_CTX *dctx, HMAC_CTX *sctx)

@@ -270,6 +270,7 @@ pub fn init() {
             GUARDS = mem::transmute(guards);
 
             CRYPTO_set_locking_callback(locking_function);
+            unsafe{ rust_openssl_set_id_callback(); }
         })
     }
 }
@@ -290,6 +291,7 @@ pub unsafe fn SSL_CTX_clear_options(ssl: *mut SSL_CTX, op: u64) -> u64 {
 extern "C" {
     fn rust_openssl_ssl_ctx_options_rust_to_c(rustval: u64) -> c_long;
     fn rust_openssl_ssl_ctx_options_c_to_rust(cval: c_long) -> u64;
+    fn rust_openssl_set_id_callback();
 
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
