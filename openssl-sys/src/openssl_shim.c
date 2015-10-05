@@ -10,12 +10,11 @@
 
 unsigned long thread_id()
 {
-    unsigned long ret = (unsigned long)pthread_self();
-    return ret;
+    return (unsigned long) pthread_self();
 }
 
 void rust_openssl_set_id_callback() {
-  CRYPTO_set_id_callback((unsigned long (*)())thread_id);
+  CRYPTO_set_id_callback(thread_id);
 }
 
 #else

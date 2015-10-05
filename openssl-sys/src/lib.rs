@@ -252,10 +252,10 @@ extern fn locking_function(mode: c_int, n: c_int, _file: *const c_char,
 }
 
 pub fn init() {
-    static mut INIT: Once = ONCE_INIT;
+    static INIT: Once = ONCE_INIT;
 
-    unsafe {
-        INIT.call_once(|| {
+    INIT.call_once(|| {
+        unsafe {
             SSL_library_init();
             SSL_load_error_strings();
 
@@ -270,9 +270,9 @@ pub fn init() {
             GUARDS = mem::transmute(guards);
 
             CRYPTO_set_locking_callback(locking_function);
-            unsafe{ rust_openssl_set_id_callback(); }
-        })
-    }
+            rust_openssl_set_id_callback();
+        }
+    })
 }
 
 pub unsafe fn SSL_CTX_set_options(ssl: *mut SSL_CTX, op: u64) -> u64 {
