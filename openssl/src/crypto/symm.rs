@@ -22,6 +22,9 @@ pub enum Type {
     #[cfg(feature = "aes_ctr")]
     AES_128_CTR,
     //AES_128_GCM,
+    AES_128_CFB1,
+    AES_128_CFB128,
+    AES_128_CFB8,
 
     AES_256_ECB,
     AES_256_CBC,
@@ -31,6 +34,9 @@ pub enum Type {
     #[cfg(feature = "aes_ctr")]
     AES_256_CTR,
     //AES_256_GCM,
+    AES_256_CFB1,
+    AES_256_CFB128,
+    AES_256_CFB8,
 
     RC4_128,
 }
@@ -292,4 +298,71 @@ mod tests {
 
         cipher_test(super::AES_128_GCM, pt, ct, key, iv);
     }*/
+
+    #[test]
+    fn test_aes128_cfb1() {
+        // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+        let pt = "6bc1";
+        let ct = "68b3";
+        let key = "2b7e151628aed2a6abf7158809cf4f3c";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Type::AES_128_CFB1, pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes128_cfb128() {
+
+        let pt = "6bc1bee22e409f96e93d7e117393172a";
+        let ct = "3b3fd92eb72dad20333449f8e83cfb4a";
+        let key = "2b7e151628aed2a6abf7158809cf4f3c";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Type::AES_128_CFB128, pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes128_cfb8() {
+
+        let pt = "6bc1bee22e409f96e93d7e117393172aae2d";
+        let ct = "3b79424c9c0dd436bace9e0ed4586a4f32b9";
+        let key = "2b7e151628aed2a6abf7158809cf4f3c";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Type::AES_128_CFB8, pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes256_cfb1() {
+
+        let pt = "6bc1";
+        let ct = "9029";
+        let key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Type::AES_256_CFB1, pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes256_cfb128() {
+
+        let pt = "6bc1bee22e409f96e93d7e117393172a";
+        let ct = "dc7e84bfda79164b7ecd8486985d3860";
+        let key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Type::AES_256_CFB128, pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes256_cfb8() {
+
+        let pt = "6bc1bee22e409f96e93d7e117393172aae2d";
+        let ct = "dc1f1a8520a64db55fcc8ac554844e889700";
+        let key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Type::AES_256_CFB8, pt, ct, key, iv);
+    }
 }
