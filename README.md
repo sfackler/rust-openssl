@@ -29,10 +29,12 @@ rust-openssl to a separate installation. OSX releases starting at 10.11, "El
 Capitan", no longer include OpenSSL headers which will prevent the `openssl`
 crate from compiling.
 
-For OSX 10.11 you can use brew to install OpenSSL.
+For OSX 10.11 you can use brew to install OpenSSL and then set the environment variables
+as described below.
 ```bash
 brew install openssl
-brew link openssl --force
+export OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include
+export OPENSSL_LIB_DIR=/usr/local/opt/openssl/lib
 ```
 
 ### Windows
