@@ -33,8 +33,8 @@ For OSX 10.11 you can use brew to install OpenSSL and then set the environment v
 as described below.
 ```bash
 brew install openssl
-export OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include
-export OPENSSL_LIB_DIR=/usr/local/opt/openssl/lib
+export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
+export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib
 ```
 
 ### Windows
