@@ -109,6 +109,7 @@ pub enum SslMethod {
     /// Support the SSLv2, SSLv3, TLSv1, TLSv1.1, and TLSv1.2 protocols depending on what the
     /// linked OpenSSL library supports.
     Sslv23,
+    #[cfg(feature = "sslv3")]
     /// Only support the SSLv3 protocol.
     Sslv3,
     /// Only support the TLSv1 protocol.
@@ -132,6 +133,7 @@ impl SslMethod {
         match *self {
             #[cfg(feature = "sslv2")]
             SslMethod::Sslv2 => ffi::SSLv2_method(),
+            #[cfg(feature = "sslv3")]
             SslMethod::Sslv3 => ffi::SSLv3_method(),
             SslMethod::Tlsv1 => ffi::TLSv1_method(),
             SslMethod::Sslv23 => ffi::SSLv23_method(),
@@ -150,6 +152,7 @@ impl SslMethod {
         match method {
             #[cfg(feature = "sslv2")]
             x if x == ffi::SSLv2_method() => Some(SslMethod::Sslv2),
+            #[cfg(feature = "sslv3")]
             x if x == ffi::SSLv3_method() => Some(SslMethod::Sslv3),
             x if x == ffi::TLSv1_method() => Some(SslMethod::Tlsv1),
             x if x == ffi::SSLv23_method() => Some(SslMethod::Sslv23),
