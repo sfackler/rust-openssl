@@ -487,6 +487,8 @@ extern "C" {
                              user_data: *mut c_void) -> *mut X509_REQ;
     pub fn PEM_read_bio_PrivateKey(bio: *mut BIO, out: *mut *mut EVP_PKEY, callback: Option<PasswordCallback>,
                              user_data: *mut c_void) -> *mut X509;
+    pub fn PEM_read_bio_PUBKEY(bio: *mut BIO, out: *mut *mut EVP_PKEY, callback: Option<PasswordCallback>,
+                             user_data: *mut c_void) -> *mut X509;
 
     pub fn PEM_write_bio_PrivateKey(bio: *mut BIO, pkey: *mut EVP_PKEY, cipher: *const EVP_CIPHER,
                                     kstr: *mut c_char, klen: c_int,

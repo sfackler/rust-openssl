@@ -96,6 +96,22 @@ impl PKey {
         }
     }
 
+    /// Reads public key from PEM, takes ownership of handle
+    pub fn public_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError> where R: Read {
+        let mut mem_bio = try!(MemBio::new());
+        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+
+        unsafe {
+            let evp = try_ssl_null!(ffi::PEM_read_bio_PUBKEY(mem_bio.get_handle(),
+                                                                 ptr::null_mut(),
+                                                                 None, ptr::null_mut()));
+            Ok(PKey {
+                evp:   evp,
+                parts: Parts::Public,
+            })
+        }
+    }
+
     fn _tostr(&self, f: unsafe extern "C" fn(*mut ffi::RSA, *const *mut u8) -> c_int) -> Vec<u8> {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
@@ -464,6 +480,16 @@ mod tests {
             .expect("Failed to open `test/key.pem`");
 
         super::PKey::private_key_from_pem(&mut file).unwrap();
+    }
+
+    #[test]
+    fn test_public_key_from_pem() {
+        let key_path = Path::new("test/key.pem.pub");
+        let mut file = File::open(&key_path)
+            .ok()
+            .expect("Failed to open `test/key.pem.pub`");
+
+        super::PKey::public_key_from_pem(&mut file).unwrap();
     }
 
     #[test]
