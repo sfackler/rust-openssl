@@ -417,6 +417,9 @@ extern "C" {
     #[cfg(feature = "aes_ctr")]
     pub fn EVP_aes_128_ctr() -> *const EVP_CIPHER;
     // fn EVP_aes_128_gcm() -> EVP_CIPHER;
+    pub fn EVP_aes_128_cfb1() -> *const EVP_CIPHER;
+    pub fn EVP_aes_128_cfb128() -> *const EVP_CIPHER;
+    pub fn EVP_aes_128_cfb8() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_cbc() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_ecb() -> *const EVP_CIPHER;
     #[cfg(feature = "aes_xts")]
@@ -424,6 +427,9 @@ extern "C" {
     #[cfg(feature = "aes_ctr")]
     pub fn EVP_aes_256_ctr() -> *const EVP_CIPHER;
     // fn EVP_aes_256_gcm() -> EVP_CIPHER;
+    pub fn EVP_aes_256_cfb1() -> *const EVP_CIPHER;
+    pub fn EVP_aes_256_cfb128() -> *const EVP_CIPHER;
+    pub fn EVP_aes_256_cfb8() -> *const EVP_CIPHER;
     pub fn EVP_rc4() -> *const EVP_CIPHER;
 
     pub fn EVP_BytesToKey(typ: *const EVP_CIPHER, md: *const EVP_MD,
