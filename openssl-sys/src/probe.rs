@@ -57,10 +57,14 @@ pub fn probe() -> ProbeResult {
     for certs_dir in find_certs_dirs().iter() {
         // cert.pem looks to be an openssl 1.0.1 thing, while
         // certs/ca-certificates.crt appears to be a 0.9.8 thing
-        try(&mut result.cert_file, certs_dir.join("cert.pem"));
-        try(&mut result.cert_file, certs_dir.join("certs/ca-certificates.crt"));
-        try(&mut result.cert_file, certs_dir.join("certs/ca-root-nss.crt"));
-
+        for cert in [
+            "cert.pem",
+            "certs.pem",
+            "certs/ca-certificates.crt",
+            "certs/ca-root-nss.crt"
+        ].iter() {
+            try(&mut result.cert_file, certs_dir.join(cert));
+        }
         try(&mut result.cert_dir, certs_dir.join("certs"));
     }
     result
