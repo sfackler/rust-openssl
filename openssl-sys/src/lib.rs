@@ -581,6 +581,7 @@ extern "C" {
     pub fn SSL_CTX_get_ex_data(ctx: *mut SSL_CTX, idx: c_int) -> *mut c_void;
 
     pub fn SSL_CTX_use_certificate_file(ctx: *mut SSL_CTX, cert_file: *const c_char, file_type: c_int) -> c_int;
+    pub fn SSL_CTX_use_certificate_chain_file(ctx: *mut SSL_CTX, cert_chain_file: *const c_char, file_type: c_int) -> c_int;
     pub fn SSL_CTX_use_certificate(ctx: *mut SSL_CTX, cert: *mut X509) -> c_int;
 
     pub fn SSL_CTX_use_PrivateKey_file(ctx: *mut SSL_CTX, key_file: *const c_char, file_type: c_int) -> c_int;
