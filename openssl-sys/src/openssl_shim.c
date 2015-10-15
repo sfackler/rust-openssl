@@ -29,7 +29,7 @@ void rust_openssl_set_id_callback() {
 #endif
 
 
-#if OPENSSL_VERSION_NUMBER < 0x1000000L
+#if OPENSSL_VERSION_NUMBER < 0x10000000L
 // Copied from openssl crypto/hmac/hmac.c
 int HMAC_CTX_copy(HMAC_CTX *dctx, HMAC_CTX *sctx)
      {
@@ -111,7 +111,7 @@ long SSL_CTX_set_tmp_dh_shim(SSL_CTX *ctx, DH *dh) {
     return SSL_CTX_set_tmp_dh(ctx, dh);
 }
 
-#if OPENSSL_VERSION_NUMBER >= 0x1000200L
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
 int SSL_CTX_set_ecdh_auto_shim(SSL_CTX *ctx, int onoff) {
     return SSL_CTX_set_ecdh_auto(ctx, onoff);
 }
