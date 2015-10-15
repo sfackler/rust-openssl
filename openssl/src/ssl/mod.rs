@@ -520,6 +520,16 @@ impl SslContext {
             })
     }
 
+    /// Specifies the file that contains certificate chain
+    pub fn set_certificate_chain_file<P: AsRef<Path>>(&mut self, file: P, file_type: X509FileType)
+                                                -> Result<(),SslError> {
+        let file = CString::new(file.as_ref().as_os_str().to_str().expect("invalid utf8")).unwrap();
+        wrap_ssl_result(
+            unsafe {
+                ffi::SSL_CTX_use_certificate_chain_file(self.ctx, file.as_ptr(), file_type as c_int)
+            })
+    }
+
     /// Specifies the certificate
     pub fn set_certificate(&mut self, cert: &X509) -> Result<(),SslError> {
         wrap_ssl_result(

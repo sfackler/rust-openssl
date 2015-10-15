@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.6.6")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.6.7")]
 
 extern crate libc;
 
@@ -417,6 +417,9 @@ extern "C" {
     #[cfg(feature = "aes_ctr")]
     pub fn EVP_aes_128_ctr() -> *const EVP_CIPHER;
     // fn EVP_aes_128_gcm() -> EVP_CIPHER;
+    pub fn EVP_aes_128_cfb1() -> *const EVP_CIPHER;
+    pub fn EVP_aes_128_cfb128() -> *const EVP_CIPHER;
+    pub fn EVP_aes_128_cfb8() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_cbc() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_ecb() -> *const EVP_CIPHER;
     #[cfg(feature = "aes_xts")]
@@ -424,6 +427,9 @@ extern "C" {
     #[cfg(feature = "aes_ctr")]
     pub fn EVP_aes_256_ctr() -> *const EVP_CIPHER;
     // fn EVP_aes_256_gcm() -> EVP_CIPHER;
+    pub fn EVP_aes_256_cfb1() -> *const EVP_CIPHER;
+    pub fn EVP_aes_256_cfb128() -> *const EVP_CIPHER;
+    pub fn EVP_aes_256_cfb8() -> *const EVP_CIPHER;
     pub fn EVP_rc4() -> *const EVP_CIPHER;
 
     pub fn EVP_BytesToKey(typ: *const EVP_CIPHER, md: *const EVP_MD,
@@ -486,6 +492,8 @@ extern "C" {
     pub fn PEM_read_bio_X509_REQ(bio: *mut BIO, out: *mut *mut X509_REQ, callback: Option<PasswordCallback>,
                              user_data: *mut c_void) -> *mut X509_REQ;
     pub fn PEM_read_bio_PrivateKey(bio: *mut BIO, out: *mut *mut EVP_PKEY, callback: Option<PasswordCallback>,
+                             user_data: *mut c_void) -> *mut X509;
+    pub fn PEM_read_bio_PUBKEY(bio: *mut BIO, out: *mut *mut EVP_PKEY, callback: Option<PasswordCallback>,
                              user_data: *mut c_void) -> *mut X509;
 
     pub fn PEM_write_bio_PrivateKey(bio: *mut BIO, pkey: *mut EVP_PKEY, cipher: *const EVP_CIPHER,
@@ -573,6 +581,7 @@ extern "C" {
     pub fn SSL_CTX_get_ex_data(ctx: *mut SSL_CTX, idx: c_int) -> *mut c_void;
 
     pub fn SSL_CTX_use_certificate_file(ctx: *mut SSL_CTX, cert_file: *const c_char, file_type: c_int) -> c_int;
+    pub fn SSL_CTX_use_certificate_chain_file(ctx: *mut SSL_CTX, cert_chain_file: *const c_char, file_type: c_int) -> c_int;
     pub fn SSL_CTX_use_certificate(ctx: *mut SSL_CTX, cert: *mut X509) -> c_int;
 
     pub fn SSL_CTX_use_PrivateKey_file(ctx: *mut SSL_CTX, key_file: *const c_char, file_type: c_int) -> c_int;

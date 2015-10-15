@@ -62,6 +62,7 @@ fn main() {
     let mut include_dirs = vec![];
 
     if let Some(include_dir) = include_dir {
+        println!("cargo:include={}", include_dir);
         include_dirs.push(PathBuf::from(&include_dir));
     }
 
