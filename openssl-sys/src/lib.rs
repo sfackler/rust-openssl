@@ -529,6 +529,7 @@ extern "C" {
 
     #[cfg(feature = "sslv2")]
     pub fn SSLv2_method() -> *const SSL_METHOD;
+    #[cfg(feature = "sslv3")]
     pub fn SSLv3_method() -> *const SSL_METHOD;
     pub fn TLSv1_method() -> *const SSL_METHOD;
     #[cfg(feature = "tlsv1_1")]
