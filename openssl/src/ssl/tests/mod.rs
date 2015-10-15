@@ -423,10 +423,6 @@ run_test!(set_ctx_options, |method, _| {
     let mut ctx = SslContext::new(method).unwrap();
     let opts = ctx.set_options(ssl::SSL_OP_NO_TICKET);
     assert!(opts.contains(ssl::SSL_OP_NO_TICKET));
-    assert!(!opts.contains(ssl::SSL_OP_CISCO_ANYCONNECT));
-    let more_opts = ctx.set_options(ssl::SSL_OP_CISCO_ANYCONNECT);
-    assert!(more_opts.contains(ssl::SSL_OP_NO_TICKET));
-    assert!(more_opts.contains(ssl::SSL_OP_CISCO_ANYCONNECT));
 });
 
 run_test!(clear_ctx_options, |method, _| {
