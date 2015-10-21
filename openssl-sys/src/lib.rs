@@ -678,6 +678,8 @@ extern "C" {
     // These functions are defined in OpenSSL as macros, so we shim them
     #[link_name = "BIO_eof_shim"]
     pub fn BIO_eof(b: *mut BIO) -> c_int;
+    #[link_name = "BIO_set_nbio_shim"]
+    pub fn BIO_set_nbio(b: *mut BIO, enabled: c_long) -> c_long;
     #[link_name = "BIO_set_mem_eof_return_shim"]
     pub fn BIO_set_mem_eof_return(b: *mut BIO, v: c_int);
     pub fn SSL_CTX_set_options_shim(ctx: *mut SSL_CTX, options: c_long) -> c_long;
