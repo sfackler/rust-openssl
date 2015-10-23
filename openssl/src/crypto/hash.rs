@@ -1,5 +1,4 @@
 use libc::c_uint;
-use std::iter::repeat;
 use std::io::prelude::*;
 use std::io;
 
@@ -150,7 +149,7 @@ impl Hasher {
             self.init();
         }
         let md_len = self.type_.md_len();
-        let mut res: Vec<u8> = repeat(0).take(md_len).collect();
+        let mut res: Vec<u8> = vec![0;md_len as usize];
         unsafe {
             let mut len = 0;
             let r = ffi::EVP_DigestFinal_ex(self.ctx, res.as_mut_ptr(), &mut len);
@@ -198,7 +197,7 @@ impl Drop for Hasher {
     fn drop(&mut self) {
         unsafe {
             if self.state != Finalized {
-                let mut buf: Vec<u8> = repeat(0).take(self.type_.md_len()).collect();
+                let mut buf: Vec<u8> = vec![0;self.type_.md_len() as usize];
                 let mut len = 0;
                 ffi::EVP_DigestFinal_ex(self.ctx, buf.as_mut_ptr(), &mut len);
             }

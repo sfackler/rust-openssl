@@ -15,7 +15,6 @@
  */
 
 use libc::{c_int, c_uint};
-use std::iter::repeat;
 use std::io;
 use std::io::prelude::*;
 
@@ -132,7 +131,7 @@ impl HMAC {
             self.init();
         }
         let md_len = self.type_.md_len();
-        let mut res: Vec<u8> = repeat(0).take(md_len).collect();
+        let mut res = vec![0; md_len];
         unsafe {
             let mut len = 0;
             let r = ffi::HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut len);
@@ -179,7 +178,7 @@ impl Drop for HMAC {
     fn drop(&mut self) {
         unsafe {
             if self.state != Finalized {
-                let mut buf: Vec<u8> = repeat(0).take(self.type_.md_len()).collect();
+                let mut buf = vec![0;self.type_.md_len()];
                 let mut len = 0;
                 ffi::HMAC_Final(&mut self.ctx, buf.as_mut_ptr(), &mut len);
             }
@@ -197,7 +196,6 @@ pub fn hmac(t: Type, key: &[u8], data: &[u8]) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use std::iter::repeat;
     use serialize::hex::FromHex;
     use crypto::hash::Type;
     use crypto::hash::Type::*;
@@ -220,23 +218,23 @@ mod tests {
     fn test_hmac_md5() {
         // test vectors from RFC 2202
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [
-            (repeat(0x0b_u8).take(16).collect(), b"Hi There".to_vec(),
+            (vec![0x0b_u8;16], b"Hi There".to_vec(),
              "9294727a3638bb1c13f48ef8158bfc9d".from_hex().unwrap()),
             (b"Jefe".to_vec(),
              b"what do ya want for nothing?".to_vec(),
              "750c783e6ab0b503eaa86e310a5db738".from_hex().unwrap()),
-            (repeat(0xaa_u8).take(16).collect(), repeat(0xdd_u8).take(50).collect(),
+            (vec![0xaa_u8;16], vec![0xdd_u8;50],
              "56be34521d144c88dbb8c733f0e8b3f6".from_hex().unwrap()),
             ("0102030405060708090a0b0c0d0e0f10111213141516171819".from_hex().unwrap(),
-             repeat(0xcd_u8).take(50).collect(),
+             vec![0xcd_u8;50],
              "697eaf0aca3a3aea3a75164746ffaa79".from_hex().unwrap()),
-            (repeat(0x0c_u8).take(16).collect(),
+            (vec![0x0c_u8;16],
              b"Test With Truncation".to_vec(),
              "56461ef2342edc00f9bab995690efd4c".from_hex().unwrap()),
-            (repeat(0xaa_u8).take(80).collect(),
+            (vec![0xaa_u8;80],
              b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
              "6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd".from_hex().unwrap()),
-            (repeat(0xaa_u8).take(80).collect(),
+            (vec![0xaa_u8;80],
              b"Test Using Larger Than Block-Size Key \
                and Larger Than One Block-Size Data".to_vec(),
              "6f630fad67cda0ee1fb1f562db3aa53e".from_hex().unwrap())
@@ -248,10 +246,10 @@ mod tests {
     #[test]
     fn test_hmac_md5_recycle() {
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 2] = [
-            (repeat(0xaa_u8).take(80).collect(),
+            (vec![0xaa_u8;80],
              b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
              "6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd".from_hex().unwrap()),
-            (repeat(0xaa_u8).take(80).collect(),
+            (vec![0xaa_u8;80],
              b"Test Using Larger Than Block-Size Key \
                and Larger Than One Block-Size Data".to_vec(),
              "6f630fad67cda0ee1fb1f562db3aa53e".from_hex().unwrap())
@@ -267,7 +265,7 @@ mod tests {
     #[test]
     fn test_finish_twice() {
         let test: (Vec<u8>, Vec<u8>, Vec<u8>) =
-            (repeat(0xaa_u8).take(80).collect(),
+            (vec![0xaa_u8;80],
              b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
              "6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd".from_hex().unwrap());
 
@@ -282,10 +280,10 @@ mod tests {
     #[test]
     fn test_clone() {
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 2] = [
-            (repeat(0xaa_u8).take(80).collect(),
+            (vec![0xaa_u8;80],
              b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
              "6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd".from_hex().unwrap()),
-            (repeat(0xaa_u8).take(80).collect(),
+            (vec![0xaa_u8;80],
              b"Test Using Larger Than Block-Size Key \
                and Larger Than One Block-Size Data".to_vec(),
              "6f630fad67cda0ee1fb1f562db3aa53e".from_hex().unwrap()),
@@ -318,23 +316,23 @@ mod tests {
     fn test_hmac_sha1() {
         // test vectors from RFC 2202
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [
-            (repeat(0x0b_u8).take(20).collect(), b"Hi There".to_vec(),
+            (vec![0x0b_u8;20], b"Hi There".to_vec(),
              "b617318655057264e28bc0b6fb378c8ef146be00".from_hex().unwrap()),
             (b"Jefe".to_vec(),
              b"what do ya want for nothing?".to_vec(),
              "effcdf6ae5eb2fa2d27416d5f184df9c259a7c79".from_hex().unwrap()),
-            (repeat(0xaa_u8).take(20).collect(), repeat(0xdd_u8).take(50).collect(),
+            (vec![0xaa_u8;20], vec![0xdd_u8;50],
              "125d7342b9ac11cd91a39af48aa17b4f63f175d3".from_hex().unwrap()),
             ("0102030405060708090a0b0c0d0e0f10111213141516171819".from_hex().unwrap(),
-             repeat(0xcd_u8).take(50).collect(),
+             vec![0xcd_u8;50],
              "4c9007f4026250c6bc8414f9bf50c86c2d7235da".from_hex().unwrap()),
-            (repeat(0x0c_u8).take(20).collect(),
+            (vec![0x0c_u8;20],
              b"Test With Truncation".to_vec(),
              "4c1a03424b55e07fe7f27be1d58bb9324a9a5a04".from_hex().unwrap()),
-            (repeat(0xaa_u8).take(80).collect(),
+            (vec![0xaa_u8;80],
              b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
              "aa4ae5e15272d00e95705637ce8a3b55ed402112".from_hex().unwrap()),
-            (repeat(0xaa_u8).take(80).collect(),
+            (vec![0xaa_u8;80],
              b"Test Using Larger Than Block-Size Key \
                and Larger Than One Block-Size Data".to_vec(),
              "e8e99d0f45237d786d6bbaa7965c7808bbff1a91".from_hex().unwrap())
@@ -346,10 +344,10 @@ mod tests {
     #[test]
     fn test_hmac_sha1_recycle() {
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 2] = [
-            (repeat(0xaa_u8).take(80).collect(),
+            (vec![0xaa_u8;80],
              b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
              "aa4ae5e15272d00e95705637ce8a3b55ed402112".from_hex().unwrap()),
-            (repeat(0xaa_u8).take(80).collect(),
+            (vec![0xaa_u8;80],
              b"Test Using Larger Than Block-Size Key \
                and Larger Than One Block-Size Data".to_vec(),
              "e8e99d0f45237d786d6bbaa7965c7808bbff1a91".from_hex().unwrap())
@@ -367,15 +365,15 @@ mod tests {
     fn test_sha2(ty: Type, results: &[Vec<u8>]) {
         // test vectors from RFC 4231
         let tests: [(Vec<u8>, Vec<u8>); 6] = [
-            (repeat(0xb_u8).take(20).collect(), b"Hi There".to_vec()),
+            (vec![0xb_u8;20], b"Hi There".to_vec()),
             (b"Jefe".to_vec(),
              b"what do ya want for nothing?".to_vec()),
-            (repeat(0xaa_u8).take(20).collect(), repeat(0xdd_u8).take(50).collect()),
+            (vec![0xaa_u8;20], vec![0xdd_u8;50]),
             ("0102030405060708090a0b0c0d0e0f10111213141516171819".from_hex().unwrap(),
-             repeat(0xcd_u8).take(50).collect()),
-            (repeat(0xaa_u8).take(131).collect(),
+             vec![0xcd_u8;50]),
+            (vec![0xaa_u8;131],
              b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec()),
-            (repeat(0xaa_u8).take(131).collect(),
+            (vec![0xaa_u8;131],
              b"This is a test using a larger than block-size key and a \
                larger than block-size data. The key needs to be hashed \
                before being used by the HMAC algorithm.".to_vec())

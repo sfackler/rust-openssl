@@ -1,4 +1,3 @@
-use std::iter::repeat;
 use std::convert::AsRef;
 use libc::{c_int};
 
@@ -100,7 +99,7 @@ impl Crypter {
     pub fn update(&self, data: &[u8]) -> Vec<u8> {
         unsafe {
             let sum = data.len() + (self.blocksize as usize);
-            let mut res = repeat(0u8).take(sum).collect::<Vec<_>>();
+            let mut res = vec![0;sum];
             let mut reslen = sum as c_int;
 
             ffi::EVP_CipherUpdate(
@@ -121,7 +120,7 @@ impl Crypter {
      */
     pub fn finalize(&self) -> Vec<u8> {
         unsafe {
-            let mut res = repeat(0u8).take(self.blocksize as usize).collect::<Vec<_>>();
+            let mut res = vec![0u8;self.blocksize as usize];
             let mut reslen = self.blocksize as c_int;
 
             ffi::EVP_CipherFinal(self.ctx,
