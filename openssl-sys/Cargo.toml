@@ -39,3 +39,15 @@ libressl-pnacl-sys = "2.1.0"
 libressl-pnacl-sys = "2.1.0"
 [target.arm-unknown-nacl.dependencies]
 libressl-pnacl-sys = "2.1.0"
+[target.i686-pc-windows-gnu]
+user32-sys = "*"
+gdi32-sys = "*"
+[target.x86_64-pc-windows-gnu]
+user32-sys = "*"
+gdi32-sys = "*"
+[target.i686-pc-windows-msvc]
+user32-sys = "*"
+gdi32-sys = "*"
+[target.x86_64-pc-windows-msvc]
+user32-sys = "*"
+gdi32-sys = "*"
