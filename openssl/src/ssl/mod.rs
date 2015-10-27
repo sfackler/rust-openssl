@@ -698,10 +698,11 @@ pub struct Ssl {
 unsafe impl Send for Ssl {}
 unsafe impl Sync for Ssl {}
 
-// TODO: put useful information here
 impl fmt::Debug for Ssl {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Ssl")
+        fmt.debug_struct("Ssl")
+            .field("state", &self.get_state_string_long())
+            .finish()
     }
 }
 
@@ -1179,7 +1180,10 @@ impl SslStream<net::TcpStream> {
 
 impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "SslStream {{ stream: {:?}, ssl: {:?} }}", self.kind.stream(), self.kind.ssl())
+        fmt.debug_struct("SslStream")
+            .field("stream", &self.kind.stream())
+            .field("ssl", &self.kind.ssl())
+            .finish()
     }
 }
 
