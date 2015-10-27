@@ -704,7 +704,7 @@ unsafe impl Sync for Ssl {}
 impl fmt::Debug for Ssl {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("Ssl")
-            .field("state", &self.get_state_string_long())
+            .field("state", &self.state_string_long())
             .finish()
     }
 }
@@ -720,24 +720,6 @@ impl Ssl {
         let ssl = try_ssl_null!(unsafe { ffi::SSL_new(ctx.ctx) });
         let ssl = Ssl { ssl: ssl };
         Ok(ssl)
-    }
-
-    pub fn get_state_string(&self) -> &'static str {
-        let state = unsafe {
-            let ptr = ffi::SSL_state_string(self.ssl);
-            CStr::from_ptr(ptr)
-        };
-
-        str::from_utf8(state.to_bytes()).unwrap()
-    }
-
-    pub fn get_state_string_long(&self) -> &'static str {
-        let state = unsafe {
-            let ptr = ffi::SSL_state_string_long(self.ssl);
-            CStr::from_ptr(ptr)
-        };
-
-        str::from_utf8(state.to_bytes()).unwrap()
     }
 
     fn get_rbio<'a>(&'a self) -> MemBioRef<'a> {
@@ -782,7 +764,25 @@ impl Ssl {
         }
     }
 
-    /// Set the host name to be used with SNI (Server Name Indication).
+    pub fn state_string(&self) -> &'static str {
+        let state = unsafe {
+            let ptr = ffi::SSL_state_string(self.ssl);
+            CStr::from_ptr(ptr)
+        };
+
+        str::from_utf8(state.to_bytes()).unwrap()
+    }
+
+    pub fn state_string_long(&self) -> &'static str {
+        let state = unsafe {
+            let ptr = ffi::SSL_state_string_long(self.ssl);
+            CStr::from_ptr(ptr)
+        };
+
+        str::from_utf8(state.to_bytes()).unwrap()
+    }
+
+    /// Sets the host name to be used with SNI (Server Name Indication).
     pub fn set_hostname(&self, hostname: &str) -> Result<(), SslError> {
         let cstr = CString::new(hostname).unwrap();
         let ret = unsafe { ffi::SSL_set_tlsext_host_name(self.ssl, cstr.as_ptr()) };
@@ -795,7 +795,8 @@ impl Ssl {
         }
     }
 
-    pub fn get_peer_certificate(&self) -> Option<X509> {
+    /// Returns the certificate of the peer, if present.
+    pub fn peer_certificate(&self) -> Option<X509> {
         unsafe {
             let ptr = ffi::SSL_get_peer_certificate(self.ssl);
             if ptr.is_null() {
@@ -813,7 +814,7 @@ impl Ssl {
     ///
     /// This method needs the `npn` feature.
     #[cfg(feature = "npn")]
-    pub fn get_selected_npn_protocol(&self) -> Option<&[u8]> {
+    pub fn selected_npn_protocol(&self) -> Option<&[u8]> {
         unsafe {
             let mut data: *const c_uchar = ptr::null();
             let mut len: c_uint = 0;
@@ -836,7 +837,7 @@ impl Ssl {
     ///
     /// This method needs the `alpn` feature.
     #[cfg(feature = "alpn")]
-    pub fn get_selected_alpn_protocol(&self) -> Option<&[u8]> {
+    pub fn selected_alpn_protocol(&self) -> Option<&[u8]> {
         unsafe {
             let mut data: *const c_uchar = ptr::null();
             let mut len: c_uint = 0;
@@ -852,11 +853,30 @@ impl Ssl {
         }
     }
 
-    /// pending() takes into account only bytes from the TLS/SSL record that is currently being processed (if any).
+    /// Returns the number of bytes remaining in the currently processed TLS
+    /// record.
     pub fn pending(&self) -> usize {
         unsafe {
             ffi::SSL_pending(self.ssl) as usize
         }
+    }
+
+    /// Returns the compression currently in use.
+    ///
+    /// The result will be either None, indicating no compression is in use, or
+    /// a string with the compression name.
+    pub fn compression(&self) -> Option<String> {
+        let ptr = unsafe { ffi::SSL_get_current_compression(self.ssl) };
+        if ptr == ptr::null() {
+            return None;
+        }
+
+        let meth = unsafe { ffi::SSL_COMP_get_name(ptr) };
+        let s = unsafe {
+            String::from_utf8(CStr::from_ptr(meth).to_bytes().to_vec()).unwrap()
+        };
+
+        Some(s)
     }
 
     pub fn get_ssl_method(&self) -> Option<SslMethod> {
@@ -1277,40 +1297,9 @@ impl<S: Read+Write> SslStream<S> {
         })
     }
 
-    /// # Deprecated
-    pub fn new_server(ssl: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
-        SslStream::accept_generic(ssl, stream)
-    }
-
-    /// # Deprecated
-    pub fn new_server_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        SslStream::accept_generic(ssl, stream)
-    }
-
-    /// # Deprecated
-    pub fn new_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        SslStream::connect_generic(ssl, stream)
-    }
-
-    /// # Deprecated
-    pub fn new(ctx: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
-        SslStream::connect_generic(ctx, stream)
-    }
-
-    /// # Deprecated
-    #[doc(hidden)]
-    pub fn get_inner(&mut self) -> &mut S {
-        self.get_mut()
-    }
-
     /// Returns a reference to the underlying stream.
     pub fn get_ref(&self) -> &S {
         self.kind.stream()
-    }
-
-    /// Return the certificate of the peer
-    pub fn get_peer_certificate(&self) -> Option<X509> {
-        self.kind.ssl().get_peer_certificate()
     }
 
     /// Returns a mutable reference to the underlying stream.
@@ -1323,56 +1312,9 @@ impl<S: Read+Write> SslStream<S> {
         self.kind.mut_stream()
     }
 
-    /// Get the compression currently in use.  The result will be
-    /// either None, indicating no compression is in use, or a string
-    /// with the compression name.
-    pub fn get_compression(&self) -> Option<String> {
-        let ptr = unsafe { ffi::SSL_get_current_compression(self.kind.ssl().ssl) };
-        if ptr == ptr::null() {
-            return None;
-        }
-
-        let meth = unsafe { ffi::SSL_COMP_get_name(ptr) };
-        let s = unsafe {
-            String::from_utf8(CStr::from_ptr(meth).to_bytes().to_vec()).unwrap()
-        };
-
-        Some(s)
-    }
-
-    /// Returns the protocol selected by performing Next Protocol Negotiation, if any.
-    ///
-    /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
-    /// to interpret it.
-    ///
-    /// This method needs the `npn` feature.
-    #[cfg(feature = "npn")]
-    pub fn get_selected_npn_protocol(&self) -> Option<&[u8]> {
-        self.kind.ssl().get_selected_npn_protocol()
-    }
-
-    /// Returns the protocol selected by performing ALPN, if any.
-    ///
-    /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
-    /// to interpret it.
-    ///
-    /// This method needs the `alpn` feature.
-    #[cfg(feature = "alpn")]
-    pub fn get_selected_alpn_protocol(&self) -> Option<&[u8]> {
-        self.kind.ssl().get_selected_alpn_protocol()
-    }
-
-    /// pending() takes into account only bytes from the TLS/SSL record that is currently being processed (if any).
-    pub fn pending(&self) -> usize {
-        self.kind.ssl().pending()
-    }
-
-    pub fn get_state_string(&self) -> &'static str {
-        self.kind.ssl().get_state_string()
-    }
-
-    pub fn get_state_string_long(&self) -> &'static str {
-        self.kind.ssl().get_state_string_long()
+    /// Returns the OpenSSL `Ssl` object associated with this stream.
+    pub fn ssl(&self) -> &Ssl {
+        self.kind.ssl()
     }
 }
 

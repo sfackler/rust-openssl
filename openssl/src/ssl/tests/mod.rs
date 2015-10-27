@@ -455,7 +455,7 @@ fn test_write_direct() {
 run_test!(get_peer_certificate, |method, stream| {
     let stream = SslStream::connect_generic(&SslContext::new(method).unwrap(),
                                             stream).unwrap();
-    let cert = stream.get_peer_certificate().unwrap();
+    let cert = stream.ssl().peer_certificate().unwrap();
     let fingerprint = cert.fingerprint(SHA256).unwrap();
     let node_hash_str = "db400bb62f1b1f29c3b8f323b8f7d9dea724fdcd67104ef549c772ae3749655b";
     let node_id = node_hash_str.from_hex().unwrap();
@@ -504,14 +504,14 @@ fn test_pending() {
     let mut buf = [0u8; 16*1024];
     stream.read(&mut buf[..1]).unwrap();
 
-    let pending = stream.pending();
+    let pending = stream.ssl().pending();
     let len = stream.read(&mut buf[1..]).unwrap();
 
     assert_eq!(pending, len);
 
     stream.read(&mut buf[..1]).unwrap();
 
-    let pending = stream.pending();
+    let pending = stream.ssl().pending();
     let len = stream.read(&mut buf[1..]).unwrap();
     assert_eq!(pending, len);
 }
@@ -520,8 +520,8 @@ fn test_pending() {
 fn test_state() {
     let (_s, tcp) = Server::new();
     let stream = SslStream::connect_generic(&SslContext::new(Sslv23).unwrap(), tcp).unwrap();
-    assert_eq!(stream.get_state_string(), "SSLOK ");
-    assert_eq!(stream.get_state_string_long(), "SSL negotiation finished successfully");
+    assert_eq!(stream.ssl().state_string(), "SSLOK ");
+    assert_eq!(stream.ssl().state_string_long(), "SSL negotiation finished successfully");
 }
 
 /// Tests that connecting with the client using ALPN, but the server not does not
@@ -537,13 +537,13 @@ fn test_connect_with_unilateral_alpn() {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
     }
-    let stream = match SslStream::new(&ctx, stream) {
+    let stream = match SslStream::connect(&ctx, stream) {
         Ok(stream) => stream,
         Err(err) => panic!("Expected success, got {:?}", err)
     };
     // Since the socket to which we connected is not configured to use ALPN,
     // there should be no selected protocol...
-    assert!(stream.get_selected_alpn_protocol().is_none());
+    assert!(stream.ssl().selected_alpn_protocol().is_none());
 }
 
 /// Tests that connecting with the client using NPN, but the server not does not
@@ -565,7 +565,7 @@ fn test_connect_with_unilateral_npn() {
     };
     // Since the socket to which we connected is not configured to use NPN,
     // there should be no selected protocol...
-    assert!(stream.get_selected_npn_protocol().is_none());
+    assert!(stream.ssl().selected_npn_protocol().is_none());
 }
 
 /// Tests that when both the client as well as the server use ALPN and their
@@ -581,13 +581,13 @@ fn test_connect_with_alpn_successful_multiple_matching() {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
     }
-    let stream = match SslStream::new(&ctx, stream) {
+    let stream = match SslStream::connect(&ctx, stream) {
         Ok(stream) => stream,
         Err(err) => panic!("Expected success, got {:?}", err)
     };
     // The server prefers "http/1.1", so that is chosen, even though the client
     // would prefer "spdy/3.1"
-    assert_eq!(b"http/1.1", stream.get_selected_alpn_protocol().unwrap());
+    assert_eq!(b"http/1.1", stream.ssl().selected_alpn_protocol().unwrap());
 }
 
 /// Tests that when both the client as well as the server use NPN and their
@@ -609,7 +609,7 @@ fn test_connect_with_npn_successful_multiple_matching() {
     };
     // The server prefers "http/1.1", so that is chosen, even though the client
     // would prefer "spdy/3.1"
-    assert_eq!(b"http/1.1", stream.get_selected_npn_protocol().unwrap());
+    assert_eq!(b"http/1.1", stream.ssl().selected_npn_protocol().unwrap());
 }
 
 /// Tests that when both the client as well as the server use ALPN and their
@@ -626,13 +626,13 @@ fn test_connect_with_alpn_successful_single_match() {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err)
     }
-    let stream = match SslStream::new(&ctx, stream) {
+    let stream = match SslStream::connect(&ctx, stream) {
         Ok(stream) => stream,
         Err(err) => panic!("Expected success, got {:?}", err)
     };
     // The client now only supports one of the server's protocols, so that one
     // is used.
-    assert_eq!(b"spdy/3.1", stream.get_selected_alpn_protocol().unwrap());
+    assert_eq!(b"spdy/3.1", stream.ssl().selected_alpn_protocol().unwrap());
 }
 
 
@@ -656,7 +656,7 @@ fn test_connect_with_npn_successful_single_match() {
     };
     // The client now only supports one of the server's protocols, so that one
     // is used.
-    assert_eq!(b"spdy/3.1", stream.get_selected_npn_protocol().unwrap());
+    assert_eq!(b"spdy/3.1", stream.ssl().selected_npn_protocol().unwrap());
 }
 
 /// Tests that when the `SslStream` is created as a server stream, the protocols
@@ -697,7 +697,7 @@ fn test_npn_server_advertise_multiple() {
         Err(err) => panic!("Expected success, got {:?}", err)
     };
     // SPDY is selected since that's the only thing the client supports.
-    assert_eq!(b"spdy/3.1", stream.get_selected_npn_protocol().unwrap());
+    assert_eq!(b"spdy/3.1", stream.ssl().selected_npn_protocol().unwrap());
 }
 
 /// Tests that when the `SslStream` is created as a server stream, the protocols
@@ -733,12 +733,12 @@ fn test_alpn_server_advertise_multiple() {
     }
     // Now connect to the socket and make sure the protocol negotiation works...
     let stream = TcpStream::connect(localhost).unwrap();
-    let stream = match SslStream::new(&ctx, stream) {
+    let stream = match SslStream::connect(&ctx, stream) {
         Ok(stream) => stream,
         Err(err) => panic!("Expected success, got {:?}", err)
     };
     // SPDY is selected since that's the only thing the client supports.
-    assert_eq!(b"spdy/3.1", stream.get_selected_alpn_protocol().unwrap());
+    assert_eq!(b"spdy/3.1", stream.ssl().selected_alpn_protocol().unwrap());
 }
 
 /// Test that Servers supporting ALPN don't report a protocol when none of their protocols match
@@ -774,13 +774,13 @@ fn test_alpn_server_select_none() {
     }
     // Now connect to the socket and make sure the protocol negotiation works...
     let stream = TcpStream::connect(localhost).unwrap();
-    let stream = match SslStream::new(&ctx, stream) {
+    let stream = match SslStream::connect(&ctx, stream) {
         Ok(stream) => stream,
         Err(err) => panic!("Expected success, got {:?}", err)
     };
 
     // Since the protocols from the server and client don't overlap at all, no protocol is selected
-    assert_eq!(None, stream.get_selected_alpn_protocol());
+    assert_eq!(None, stream.ssl().selected_alpn_protocol());
 }
 
 
