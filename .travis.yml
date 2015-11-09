@@ -1,5 +1,9 @@
 language: rust
 sudo: false
+addons:
+  apt:
+    packages:
+    - strace
 rust:
 - nightly
 - beta
