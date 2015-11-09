@@ -19,4 +19,4 @@ before_install:
 script:
 - (test $TRAVIS_OS_NAME != "osx" || (cd openssl && cargo test))
 - (test $TRAVIS_OS_NAME == "osx" || (cd openssl && OPENSSL_LIB_DIR=$HOME/openssl/lib OPENSSL_INCLUDE_DIR=$HOME/openssl/include LD_LIBRARY_PATH=$HOME/openssl/lib:$LD_LIBRARY_PATH cargo test))
-- (test $TRAVIS_OS_NAME == "osx" || (cd openssl && OPENSSL_LIB_DIR=$HOME/openssl/lib OPENSSL_INCLUDE_DIR=$HOME/openssl/include LD_LIBRARY_PATH=$HOME/openssl/lib:$LD_LIBRARY_PATH RUST_TEST_THREADS=1 strace -f cargo test --features "$FEATURES"))
+- (test $TRAVIS_OS_NAME == "osx" || (cd openssl && OPENSSL_LIB_DIR=$HOME/openssl/lib OPENSSL_INCLUDE_DIR=$HOME/openssl/include LD_LIBRARY_PATH=$HOME/openssl/lib:$LD_LIBRARY_PATH cargo test --no-run --features "$FEATURES" && LD_LIBRARY_PATH=$HOME/openssl/lib:$LD_LIBRARY_PATH strace -f $(find target/debug -maxdepth 1 -name "openssl-*") multiple_matching))
