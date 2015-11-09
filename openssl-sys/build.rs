@@ -59,6 +59,12 @@ fn main() {
         println!("cargo:rustc-link-lib={}={}", mode, lib);
     }
 
+    if let Ok(s) = env::var("OPENSSL_EXTRA_DYLIBS") {
+        for lib in s.split(":") {
+            println!("cargo:rustc-link-lib={}", lib);
+        }
+    }
+
     let mut include_dirs = vec![];
 
     if let Some(include_dir) = include_dir {
