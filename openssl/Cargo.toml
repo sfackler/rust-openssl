@@ -30,8 +30,10 @@ version = "0.6.7"
 [dependencies]
 bitflags = ">= 0.2, < 0.4"
 lazy_static = "0.1"
-libc = "0.1"
+libc = "0.2"
 
 [dev-dependencies]
 rustc-serialize = "0.3"
 net2 = "0.2.16"
+winapi = "0.2"
+ws2_32-sys = "0.1"
