@@ -9,7 +9,7 @@ os:
 - linux
 env:
   global:
-    - FEATURES="tlsv1_2 tlsv1_1 dtlsv1 dtlsv1_2 sslv2 sslv3 aes_xts npn alpn aes_ctr"
+    - FEATURES="tlsv1_2 tlsv1_1 dtlsv1 dtlsv1_2 sslv2 sslv3 aes_xts aes_ctr npn alpn rfc5114 ecdh_auto"
 before_install:
 - (test $TRAVIS_OS_NAME == "osx" || ./openssl/test/build.sh)
 script:
