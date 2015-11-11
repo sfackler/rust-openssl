@@ -21,16 +21,14 @@ aes_ctr = ["openssl-sys/aes_ctr"]
 npn = ["openssl-sys/npn"]
 alpn = ["openssl-sys/alpn"]
 rfc5114 = ["openssl-sys/rfc5114"]
-ecdh_auto = ["openssl-sys/ecdh_auto"]
-
-[dependencies.openssl-sys]
-path = "../openssl-sys"
-version = "0.6.7"
+ecdh_auto = ["openssl-sys-extras/ecdh_auto"]
 
 [dependencies]
 bitflags = ">= 0.2, < 0.4"
 lazy_static = "0.1"
 libc = "0.2"
+openssl-sys = { version = "0.6.7", path = "../openssl-sys" }
+openssl-sys-extras = { version = "0.6.7", path = "../openssl-sys-extras" }
 
 [dev-dependencies]
 rustc-serialize = "0.3"

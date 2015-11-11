@@ -1,0 +1,16 @@
+[package]
+name = "openssl-sys-extras"
+version = "0.6.7"
+authors = ["Steven Fackler <sfackler@gmail.com>"]
+links = "openssl_shim"
+build = "build.rs"
+
+[features]
+ecdh_auto = []
+
+[dependencies]
+libc = "0.2"
+openssl-sys = { version = "0.6.7", path = "../openssl-sys" }
+
+[build-dependencies]
+gcc = "0.3"

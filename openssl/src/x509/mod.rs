@@ -18,6 +18,7 @@ use crypto::hash::Type as HashType;
 use crypto::pkey::{PKey,Parts};
 use crypto::rand::rand_bytes;
 use ffi;
+use ffi_extras;
 use ssl::error::{SslError, StreamError};
 use nid;
 
@@ -400,7 +401,7 @@ impl X509Generator {
             let req = ffi::X509_to_X509_REQ(cert.handle, ptr::null_mut(), ptr::null());
             try_ssl_null!(req);
 
-            let exts = ffi::X509_get_extensions(cert.handle);
+            let exts = ffi_extras::X509_get_extensions(cert.handle);
             if exts != ptr::null_mut() {
                 try_ssl!(ffi::X509_REQ_add_extensions(req,exts));
             }
