@@ -38,6 +38,9 @@ extern {
     #[cfg_attr(not(target_os = "nacl"), link_name = "HMAC_Update_shim")]
     pub fn HMAC_Update(ctx: *mut HMAC_CTX, input: *const u8, len: c_uint) -> c_int;
 
+    // This isn't defined in < 1.0 so we copy the implementation there
+    pub fn HMAC_CTX_copy(dst: *mut HMAC_CTX, src: *const HMAC_CTX) -> c_int;
+
     // These functions are defined in OpenSSL as macros, so we shim them
     #[link_name = "BIO_eof_shim"]
     pub fn BIO_eof(b: *mut BIO) -> c_int;

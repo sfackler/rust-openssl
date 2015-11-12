@@ -170,7 +170,7 @@ impl Clone for HMAC {
         let mut ctx: ffi::HMAC_CTX;
         unsafe {
             ctx = ::std::mem::uninitialized();
-            let r = ffi::HMAC_CTX_copy(&mut ctx, &self.ctx);
+            let r = ffi_extras::HMAC_CTX_copy(&mut ctx, &self.ctx);
             assert_eq!(r, 1);
         }
         HMAC { ctx: ctx, type_: self.type_, state: self.state }
