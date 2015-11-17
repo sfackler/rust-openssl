@@ -1,5 +1,4 @@
 extern crate pkg_config;
-extern crate gcc;
 
 use std::env;
 
