@@ -40,6 +40,7 @@ libressl-pnacl-sys = "2.1.0"
 [target.arm-unknown-nacl.dependencies]
 libressl-pnacl-sys = "2.1.0"
 
+# Only here to make sure we link to these in a static build on Windows
 [target.i686-pc-windows-gnu]
 user32-sys = "0.1"
 gdi32-sys = "0.1"
