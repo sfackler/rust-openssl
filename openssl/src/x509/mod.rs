@@ -18,6 +18,7 @@ use crypto::hash::Type as HashType;
 use crypto::pkey::{PKey,Parts};
 use crypto::rand::rand_bytes;
 use ffi;
+use ffi_extras;
 use ssl::error::{SslError, StreamError};
 use nid;
 
@@ -102,10 +103,6 @@ impl X509StoreContext {
     }
 }
 
-// Backwards-compatibility
-pub use self::extension::KeyUsageOption as KeyUsage;
-pub use self::extension::ExtKeyUsageOption as ExtKeyUsage;
-
 #[allow(non_snake_case)]
 /// Generator of private key/certificate pairs
 ///
@@ -120,14 +117,15 @@ pub use self::extension::ExtKeyUsageOption as ExtKeyUsage;
 /// use std::path::Path;
 ///
 /// use openssl::crypto::hash::Type;
-/// use openssl::x509::{KeyUsage, X509Generator};
+/// use openssl::x509::X509Generator;
+/// use openssl::x509::extension::{Extension, KeyUsageOption};
 ///
 /// let gen = X509Generator::new()
 ///        .set_bitlength(2048)
 ///        .set_valid_period(365*2)
-///        .set_CN("SuperMegaCorp Inc.")
+///        .add_name("CN".to_owned(), "SuperMegaCorp Inc.".to_owned())
 ///        .set_sign_hash(Type::SHA256)
-///        .set_usage(&[KeyUsage::DigitalSignature]);
+///        .add_extension(Extension::KeyUsage(vec![KeyUsageOption::DigitalSignature]));
 ///
 /// let (cert, pkey) = gen.generate().unwrap();
 ///
@@ -183,22 +181,6 @@ impl X509Generator {
         self
     }
 
-    #[allow(non_snake_case)]
-    /// (deprecated) Sets Common Name of certificate
-    ///
-    /// This function is deprecated, use `X509Generator.add_name` instead.
-    /// Don't use this function AND the `add_name` method
-    pub fn set_CN(mut self, CN: &str) -> X509Generator {
-        match self.names.get_mut(0) {
-            Some(&mut(_,ref mut val)) => *val=CN.to_string(),
-            _ => {} /* would move push here, but borrow checker won't let me */
-        }
-        if self.names.len()==0 {
-            self.names.push(("CN".to_string(),CN.to_string()));
-        }
-        self
-    }
-
     /// Add attribute to the name of the certificate
     ///
     /// ```
@@ -220,20 +202,6 @@ impl X509Generator {
         where I: IntoIterator<Item=(String,String)> {
         self.names.extend(attrs);
         self
-    }
-
-    /// (deprecated) Sets what for certificate could be used
-    ///
-    /// This function is deprecated, use `X509Generator.add_extension` instead.
-    pub fn set_usage(self, purposes: &[KeyUsage]) -> X509Generator {
-        self.add_extension(Extension::KeyUsage(purposes.to_owned()))
-    }
-
-    /// (deprecated) Sets allowed extended usage of certificate
-    ///
-    /// This function is deprecated, use `X509Generator.add_extension` instead.
-    pub fn set_ext_usage(self, purposes: &[ExtKeyUsage]) -> X509Generator {
-        self.add_extension(Extension::ExtKeyUsage(purposes.to_owned()))
     }
 
     /// Add an extension to a certificate
@@ -400,7 +368,7 @@ impl X509Generator {
             let req = ffi::X509_to_X509_REQ(cert.handle, ptr::null_mut(), ptr::null());
             try_ssl_null!(req);
 
-            let exts = ffi::X509_get_extensions(cert.handle);
+            let exts = ffi_extras::X509_get_extensions(cert.handle);
             if exts != ptr::null_mut() {
                 try_ssl!(ffi::X509_REQ_add_extensions(req,exts));
             }

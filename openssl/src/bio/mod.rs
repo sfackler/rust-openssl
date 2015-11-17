@@ -5,6 +5,7 @@ use std::ptr;
 use std::cmp;
 
 use ffi;
+use ffi_extras;
 use ssl::error::{SslError};
 
 pub struct MemBio {
@@ -60,7 +61,7 @@ impl MemBio {
     /// Sets the BIO's EOF state.
     pub fn set_eof(&self, eof: bool) {
         let v = if eof { 0 } else { -1 };
-        unsafe { ffi::BIO_set_mem_eof_return(self.bio, v); }
+        unsafe { ffi_extras::BIO_set_mem_eof_return(self.bio, v); }
     }
 }
 
@@ -72,7 +73,7 @@ impl Read for MemBio {
         };
 
         if ret <= 0 {
-            let is_eof = unsafe { ffi::BIO_eof(self.bio) };
+            let is_eof = unsafe { ffi_extras::BIO_eof(self.bio) };
             if is_eof != 0 {
                 Ok(0)
             } else {

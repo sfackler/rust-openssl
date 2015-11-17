@@ -1,4 +1,5 @@
 language: rust
+sudo: false
 rust:
 - nightly
 - beta
@@ -8,10 +9,10 @@ os:
 - linux
 env:
   global:
-    - FEATURES="tlsv1_2 tlsv1_1 dtlsv1 dtlsv1_2 sslv2 aes_xts npn alpn aes_ctr"
+    - FEATURES="tlsv1_2 tlsv1_1 dtlsv1 dtlsv1_2 sslv2 sslv3 aes_xts aes_ctr npn alpn rfc5114 ecdh_auto"
 before_install:
 - (test $TRAVIS_OS_NAME == "osx" || ./openssl/test/build.sh)
 script:
 - (test $TRAVIS_OS_NAME != "osx" || (cd openssl && cargo test))
-- (test $TRAVIS_OS_NAME == "osx" || (cd openssl && OPENSSL_LIB_DIR=/usr/lib OPENSSL_INCLUDE_DIR=/usr/include LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH cargo test))
-- (test $TRAVIS_OS_NAME == "osx" || (cd openssl && OPENSSL_LIB_DIR=/usr/lib OPENSSL_INCLUDE_DIR=/usr/include LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH cargo test --features "$FEATURES"))
+- (test $TRAVIS_OS_NAME == "osx" || (cd openssl && OPENSSL_LIB_DIR=$HOME/openssl/lib OPENSSL_INCLUDE_DIR=$HOME/openssl/include LD_LIBRARY_PATH=$HOME/openssl/lib:$LD_LIBRARY_PATH PATH=$HOME/openssl/bin:$PATH cargo test))
+- (test $TRAVIS_OS_NAME == "osx" || (cd openssl && OPENSSL_LIB_DIR=$HOME/openssl/lib OPENSSL_INCLUDE_DIR=$HOME/openssl/include LD_LIBRARY_PATH=$HOME/openssl/lib:$LD_LIBRARY_PATH PATH=$HOME/openssl/bin:$PATH cargo test --features "$FEATURES"))

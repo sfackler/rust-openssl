@@ -83,6 +83,10 @@ int BIO_eof_shim(BIO *b) {
     return BIO_eof(b);
 }
 
+long BIO_set_nbio_shim(BIO *b, long enabled) {
+    return BIO_set_nbio(b, enabled);
+}
+
 void BIO_set_mem_eof_return_shim(BIO *b, int v) {
     BIO_set_mem_eof_return(b, v);
 }

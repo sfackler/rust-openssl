@@ -21,8 +21,9 @@ use std::slice;
 
 use bio::{MemBio};
 use ffi;
+use ffi_extras;
 use dh::DH;
-use ssl::error::{SslError, SslSessionClosed, StreamError, OpenSslErrors};
+use ssl::error::{NonblockingSslError, SslError, SslSessionClosed, StreamError, OpenSslErrors};
 use x509::{X509StoreContext, X509FileType, X509};
 use crypto::pkey::PKey;
 
@@ -51,43 +52,43 @@ pub fn init() {
 
 bitflags! {
     flags SslContextOptions: u64 {
-        const SSL_OP_MICROSOFT_SESS_ID_BUG                    = ffi::SSL_OP_MICROSOFT_SESS_ID_BUG,
-        const SSL_OP_NETSCAPE_CHALLENGE_BUG                   = ffi::SSL_OP_NETSCAPE_CHALLENGE_BUG,
-        const SSL_OP_LEGACY_SERVER_CONNECT                    = ffi::SSL_OP_LEGACY_SERVER_CONNECT,
-        const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG         = ffi::SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG,
-        const SSL_OP_TLSEXT_PADDING                           = ffi::SSL_OP_TLSEXT_PADDING,
-        const SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER               = ffi::SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER,
-        const SSL_OP_SAFARI_ECDHE_ECDSA_BUG                   = ffi::SSL_OP_SAFARI_ECDHE_ECDSA_BUG,
-        const SSL_OP_SSLEAY_080_CLIENT_DH_BUG                 = ffi::SSL_OP_SSLEAY_080_CLIENT_DH_BUG,
-        const SSL_OP_TLS_D5_BUG                               = ffi::SSL_OP_TLS_D5_BUG,
-        const SSL_OP_TLS_BLOCK_PADDING_BUG                    = ffi::SSL_OP_TLS_BLOCK_PADDING_BUG,
-        const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS              = ffi::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS,
-        const SSL_OP_NO_QUERY_MTU                             = ffi::SSL_OP_NO_QUERY_MTU,
-        const SSL_OP_COOKIE_EXCHANGE                          = ffi::SSL_OP_COOKIE_EXCHANGE,
-        const SSL_OP_NO_TICKET                                = ffi::SSL_OP_NO_TICKET,
-        const SSL_OP_CISCO_ANYCONNECT                         = ffi::SSL_OP_CISCO_ANYCONNECT,
-        const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION   = ffi::SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION,
-        const SSL_OP_NO_COMPRESSION                           = ffi::SSL_OP_NO_COMPRESSION,
-        const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION        = ffi::SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION,
-        const SSL_OP_SINGLE_ECDH_USE                          = ffi::SSL_OP_SINGLE_ECDH_USE,
-        const SSL_OP_SINGLE_DH_USE                            = ffi::SSL_OP_SINGLE_DH_USE,
-        const SSL_OP_CIPHER_SERVER_PREFERENCE                 = ffi::SSL_OP_CIPHER_SERVER_PREFERENCE,
-        const SSL_OP_TLS_ROLLBACK_BUG                         = ffi::SSL_OP_TLS_ROLLBACK_BUG,
-        const SSL_OP_NO_SSLV2                                 = ffi::SSL_OP_NO_SSLv2,
-        const SSL_OP_NO_SSLV3                                 = ffi::SSL_OP_NO_SSLv3,
-        const SSL_OP_NO_DTLSV1                                = ffi::SSL_OP_NO_DTLSv1,
-        const SSL_OP_NO_TLSV1                                 = ffi::SSL_OP_NO_TLSv1,
-        const SSL_OP_NO_DTLSV1_2                              = ffi::SSL_OP_NO_DTLSv1_2,
-        const SSL_OP_NO_TLSV1_2                               = ffi::SSL_OP_NO_TLSv1_2,
-        const SSL_OP_NO_TLSV1_1                               = ffi::SSL_OP_NO_TLSv1_1,
-        const SSL_OP_NETSCAPE_CA_DN_BUG                       = ffi::SSL_OP_NETSCAPE_CA_DN_BUG,
-        const SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG          = ffi::SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG,
-        const SSL_OP_CRYPTOPRO_TLSEXT_BUG                     = ffi::SSL_OP_CRYPTOPRO_TLSEXT_BUG,
-        const SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG              = ffi::SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG,
-        const SSL_OP_MSIE_SSLV2_RSA_PADDING                   = ffi::SSL_OP_MSIE_SSLV2_RSA_PADDING,
-        const SSL_OP_PKCS1_CHECK_1                            = ffi::SSL_OP_PKCS1_CHECK_1,
-        const SSL_OP_PKCS1_CHECK_2                            = ffi::SSL_OP_PKCS1_CHECK_2,
-        const SSL_OP_EPHEMERAL_RSA                            = ffi::SSL_OP_EPHEMERAL_RSA,
+        const SSL_OP_MICROSOFT_SESS_ID_BUG                    = ffi_extras::SSL_OP_MICROSOFT_SESS_ID_BUG,
+        const SSL_OP_NETSCAPE_CHALLENGE_BUG                   = ffi_extras::SSL_OP_NETSCAPE_CHALLENGE_BUG,
+        const SSL_OP_LEGACY_SERVER_CONNECT                    = ffi_extras::SSL_OP_LEGACY_SERVER_CONNECT,
+        const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG         = ffi_extras::SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG,
+        const SSL_OP_TLSEXT_PADDING                           = ffi_extras::SSL_OP_TLSEXT_PADDING,
+        const SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER               = ffi_extras::SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER,
+        const SSL_OP_SAFARI_ECDHE_ECDSA_BUG                   = ffi_extras::SSL_OP_SAFARI_ECDHE_ECDSA_BUG,
+        const SSL_OP_SSLEAY_080_CLIENT_DH_BUG                 = ffi_extras::SSL_OP_SSLEAY_080_CLIENT_DH_BUG,
+        const SSL_OP_TLS_D5_BUG                               = ffi_extras::SSL_OP_TLS_D5_BUG,
+        const SSL_OP_TLS_BLOCK_PADDING_BUG                    = ffi_extras::SSL_OP_TLS_BLOCK_PADDING_BUG,
+        const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS              = ffi_extras::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS,
+        const SSL_OP_NO_QUERY_MTU                             = ffi_extras::SSL_OP_NO_QUERY_MTU,
+        const SSL_OP_COOKIE_EXCHANGE                          = ffi_extras::SSL_OP_COOKIE_EXCHANGE,
+        const SSL_OP_NO_TICKET                                = ffi_extras::SSL_OP_NO_TICKET,
+        const SSL_OP_CISCO_ANYCONNECT                         = ffi_extras::SSL_OP_CISCO_ANYCONNECT,
+        const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION   = ffi_extras::SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION,
+        const SSL_OP_NO_COMPRESSION                           = ffi_extras::SSL_OP_NO_COMPRESSION,
+        const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION        = ffi_extras::SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION,
+        const SSL_OP_SINGLE_ECDH_USE                          = ffi_extras::SSL_OP_SINGLE_ECDH_USE,
+        const SSL_OP_SINGLE_DH_USE                            = ffi_extras::SSL_OP_SINGLE_DH_USE,
+        const SSL_OP_CIPHER_SERVER_PREFERENCE                 = ffi_extras::SSL_OP_CIPHER_SERVER_PREFERENCE,
+        const SSL_OP_TLS_ROLLBACK_BUG                         = ffi_extras::SSL_OP_TLS_ROLLBACK_BUG,
+        const SSL_OP_NO_SSLV2                                 = ffi_extras::SSL_OP_NO_SSLv2,
+        const SSL_OP_NO_SSLV3                                 = ffi_extras::SSL_OP_NO_SSLv3,
+        const SSL_OP_NO_DTLSV1                                = ffi_extras::SSL_OP_NO_DTLSv1,
+        const SSL_OP_NO_TLSV1                                 = ffi_extras::SSL_OP_NO_TLSv1,
+        const SSL_OP_NO_DTLSV1_2                              = ffi_extras::SSL_OP_NO_DTLSv1_2,
+        const SSL_OP_NO_TLSV1_2                               = ffi_extras::SSL_OP_NO_TLSv1_2,
+        const SSL_OP_NO_TLSV1_1                               = ffi_extras::SSL_OP_NO_TLSv1_1,
+        const SSL_OP_NETSCAPE_CA_DN_BUG                       = ffi_extras::SSL_OP_NETSCAPE_CA_DN_BUG,
+        const SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG          = ffi_extras::SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG,
+        const SSL_OP_CRYPTOPRO_TLSEXT_BUG                     = ffi_extras::SSL_OP_CRYPTOPRO_TLSEXT_BUG,
+        const SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG              = ffi_extras::SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG,
+        const SSL_OP_MSIE_SSLV2_RSA_PADDING                   = ffi_extras::SSL_OP_MSIE_SSLV2_RSA_PADDING,
+        const SSL_OP_PKCS1_CHECK_1                            = ffi_extras::SSL_OP_PKCS1_CHECK_1,
+        const SSL_OP_PKCS1_CHECK_2                            = ffi_extras::SSL_OP_PKCS1_CHECK_2,
+        const SSL_OP_EPHEMERAL_RSA                            = ffi_extras::SSL_OP_EPHEMERAL_RSA,
         const SSL_OP_ALL         = SSL_OP_MICROSOFT_SESS_ID_BUG.bits|SSL_OP_NETSCAPE_CHALLENGE_BUG.bits
                                   |SSL_OP_LEGACY_SERVER_CONNECT.bits|SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG.bits
                                   |SSL_OP_TLSEXT_PADDING.bits|SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER.bits
@@ -109,6 +110,7 @@ pub enum SslMethod {
     /// Support the SSLv2, SSLv3, TLSv1, TLSv1.1, and TLSv1.2 protocols depending on what the
     /// linked OpenSSL library supports.
     Sslv23,
+    #[cfg(feature = "sslv3")]
     /// Only support the SSLv3 protocol.
     Sslv3,
     /// Only support the TLSv1 protocol.
@@ -132,6 +134,7 @@ impl SslMethod {
         match *self {
             #[cfg(feature = "sslv2")]
             SslMethod::Sslv2 => ffi::SSLv2_method(),
+            #[cfg(feature = "sslv3")]
             SslMethod::Sslv3 => ffi::SSLv3_method(),
             SslMethod::Tlsv1 => ffi::TLSv1_method(),
             SslMethod::Sslv23 => ffi::SSLv23_method(),
@@ -150,6 +153,7 @@ impl SslMethod {
         match method {
             #[cfg(feature = "sslv2")]
             x if x == ffi::SSLv2_method() => Some(SslMethod::Sslv2),
+            #[cfg(feature = "sslv3")]
             x if x == ffi::SSLv3_method() => Some(SslMethod::Sslv3),
             x if x == ffi::TLSv1_method() => Some(SslMethod::Tlsv1),
             x if x == ffi::SSLv23_method() => Some(SslMethod::Sslv23),
@@ -490,13 +494,13 @@ impl SslContext {
 
     pub fn set_read_ahead(&self, m: u32) {
         unsafe {
-            ffi::SSL_CTX_set_read_ahead(self.ctx, m as c_long);
+            ffi_extras::SSL_CTX_set_read_ahead(self.ctx, m as c_long);
         }
     }
 
     pub fn set_tmp_dh(&self, dh: DH) -> Result<(),SslError> {
         wrap_ssl_result(unsafe {
-            ffi::SSL_CTX_set_tmp_dh(self.ctx, dh.raw()) as i32
+            ffi_extras::SSL_CTX_set_tmp_dh(self.ctx, dh.raw()) as i32
         })
     }
 
@@ -543,7 +547,7 @@ impl SslContext {
     pub fn add_extra_chain_cert(&mut self, cert: &X509) -> Result<(),SslError> {
         wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_add_extra_chain_cert(self.ctx, cert.get_handle()) as c_int
+                ffi_extras::SSL_CTX_add_extra_chain_cert(self.ctx, cert.get_handle()) as c_int
             })
     }
 
@@ -589,21 +593,21 @@ impl SslContext {
     pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(),SslError> {
         wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_set_ecdh_auto(self.ctx, onoff as c_int)
+                ffi_extras::SSL_CTX_set_ecdh_auto(self.ctx, onoff as c_int)
             })
     }
 
     pub fn set_options(&mut self, option: SslContextOptions) -> SslContextOptions {
         let raw_bits = option.bits();
         let ret = unsafe {
-            ffi::SSL_CTX_set_options(self.ctx, raw_bits)
+            ffi_extras::SSL_CTX_set_options(self.ctx, raw_bits)
         };
         SslContextOptions::from_bits(ret).unwrap()
     }
 
     pub fn get_options(&mut self) -> SslContextOptions {
         let ret = unsafe {
-            ffi::SSL_CTX_get_options(self.ctx)
+            ffi_extras::SSL_CTX_get_options(self.ctx)
         };
         SslContextOptions::from_bits(ret).unwrap()
     }
@@ -611,7 +615,7 @@ impl SslContext {
     pub fn clear_options(&mut self, option: SslContextOptions) -> SslContextOptions {
         let raw_bits = option.bits();
         let ret = unsafe {
-            ffi::SSL_CTX_clear_options(self.ctx, raw_bits)
+            ffi_extras::SSL_CTX_clear_options(self.ctx, raw_bits)
         };
         SslContextOptions::from_bits(ret).unwrap()
     }
@@ -698,10 +702,11 @@ pub struct Ssl {
 unsafe impl Send for Ssl {}
 unsafe impl Sync for Ssl {}
 
-// TODO: put useful information here
 impl fmt::Debug for Ssl {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Ssl")
+        fmt.debug_struct("Ssl")
+            .field("state", &self.state_string_long())
+            .finish()
     }
 }
 
@@ -716,24 +721,6 @@ impl Ssl {
         let ssl = try_ssl_null!(unsafe { ffi::SSL_new(ctx.ctx) });
         let ssl = Ssl { ssl: ssl };
         Ok(ssl)
-    }
-
-    pub fn get_state_string(&self) -> &'static str {
-        let state = unsafe {
-            let ptr = ffi::SSL_state_string(self.ssl);
-            CStr::from_ptr(ptr)
-        };
-
-        str::from_utf8(state.to_bytes()).unwrap()
-    }
-
-    pub fn get_state_string_long(&self) -> &'static str {
-        let state = unsafe {
-            let ptr = ffi::SSL_state_string_long(self.ssl);
-            CStr::from_ptr(ptr)
-        };
-
-        str::from_utf8(state.to_bytes()).unwrap()
     }
 
     fn get_rbio<'a>(&'a self) -> MemBioRef<'a> {
@@ -778,10 +765,28 @@ impl Ssl {
         }
     }
 
-    /// Set the host name to be used with SNI (Server Name Indication).
+    pub fn state_string(&self) -> &'static str {
+        let state = unsafe {
+            let ptr = ffi::SSL_state_string(self.ssl);
+            CStr::from_ptr(ptr)
+        };
+
+        str::from_utf8(state.to_bytes()).unwrap()
+    }
+
+    pub fn state_string_long(&self) -> &'static str {
+        let state = unsafe {
+            let ptr = ffi::SSL_state_string_long(self.ssl);
+            CStr::from_ptr(ptr)
+        };
+
+        str::from_utf8(state.to_bytes()).unwrap()
+    }
+
+    /// Sets the host name to be used with SNI (Server Name Indication).
     pub fn set_hostname(&self, hostname: &str) -> Result<(), SslError> {
         let cstr = CString::new(hostname).unwrap();
-        let ret = unsafe { ffi::SSL_set_tlsext_host_name(self.ssl, cstr.as_ptr()) };
+        let ret = unsafe { ffi_extras::SSL_set_tlsext_host_name(self.ssl, cstr.as_ptr()) };
 
         // For this case, 0 indicates failure.
         if ret == 0 {
@@ -791,7 +796,8 @@ impl Ssl {
         }
     }
 
-    pub fn get_peer_certificate(&self) -> Option<X509> {
+    /// Returns the certificate of the peer, if present.
+    pub fn peer_certificate(&self) -> Option<X509> {
         unsafe {
             let ptr = ffi::SSL_get_peer_certificate(self.ssl);
             if ptr.is_null() {
@@ -809,7 +815,7 @@ impl Ssl {
     ///
     /// This method needs the `npn` feature.
     #[cfg(feature = "npn")]
-    pub fn get_selected_npn_protocol(&self) -> Option<&[u8]> {
+    pub fn selected_npn_protocol(&self) -> Option<&[u8]> {
         unsafe {
             let mut data: *const c_uchar = ptr::null();
             let mut len: c_uint = 0;
@@ -832,7 +838,7 @@ impl Ssl {
     ///
     /// This method needs the `alpn` feature.
     #[cfg(feature = "alpn")]
-    pub fn get_selected_alpn_protocol(&self) -> Option<&[u8]> {
+    pub fn selected_alpn_protocol(&self) -> Option<&[u8]> {
         unsafe {
             let mut data: *const c_uchar = ptr::null();
             let mut len: c_uint = 0;
@@ -848,11 +854,30 @@ impl Ssl {
         }
     }
 
-    /// pending() takes into account only bytes from the TLS/SSL record that is currently being processed (if any).
+    /// Returns the number of bytes remaining in the currently processed TLS
+    /// record.
     pub fn pending(&self) -> usize {
         unsafe {
             ffi::SSL_pending(self.ssl) as usize
         }
+    }
+
+    /// Returns the compression currently in use.
+    ///
+    /// The result will be either None, indicating no compression is in use, or
+    /// a string with the compression name.
+    pub fn compression(&self) -> Option<String> {
+        let ptr = unsafe { ffi::SSL_get_current_compression(self.ssl) };
+        if ptr == ptr::null() {
+            return None;
+        }
+
+        let meth = unsafe { ffi::SSL_COMP_get_name(ptr) };
+        let s = unsafe {
+            String::from_utf8(CStr::from_ptr(meth).to_bytes().to_vec()).unwrap()
+        };
+
+        Some(s)
     }
 
     pub fn get_ssl_method(&self) -> Option<SslMethod> {
@@ -1179,7 +1204,10 @@ impl SslStream<net::TcpStream> {
 
 impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "SslStream {{ stream: {:?}, ssl: {:?} }}", self.kind.stream(), self.kind.ssl())
+        fmt.debug_struct("SslStream")
+            .field("stream", &self.kind.stream())
+            .field("ssl", &self.kind.ssl())
+            .finish()
     }
 }
 
@@ -1270,40 +1298,9 @@ impl<S: Read+Write> SslStream<S> {
         })
     }
 
-    /// # Deprecated
-    pub fn new_server(ssl: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
-        SslStream::accept_generic(ssl, stream)
-    }
-
-    /// # Deprecated
-    pub fn new_server_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        SslStream::accept_generic(ssl, stream)
-    }
-
-    /// # Deprecated
-    pub fn new_from(ssl: Ssl, stream: S) -> Result<SslStream<S>, SslError> {
-        SslStream::connect_generic(ssl, stream)
-    }
-
-    /// # Deprecated
-    pub fn new(ctx: &SslContext, stream: S) -> Result<SslStream<S>, SslError> {
-        SslStream::connect_generic(ctx, stream)
-    }
-
-    /// # Deprecated
-    #[doc(hidden)]
-    pub fn get_inner(&mut self) -> &mut S {
-        self.get_mut()
-    }
-
     /// Returns a reference to the underlying stream.
     pub fn get_ref(&self) -> &S {
         self.kind.stream()
-    }
-
-    /// Return the certificate of the peer
-    pub fn get_peer_certificate(&self) -> Option<X509> {
-        self.kind.ssl().get_peer_certificate()
     }
 
     /// Returns a mutable reference to the underlying stream.
@@ -1316,56 +1313,9 @@ impl<S: Read+Write> SslStream<S> {
         self.kind.mut_stream()
     }
 
-    /// Get the compression currently in use.  The result will be
-    /// either None, indicating no compression is in use, or a string
-    /// with the compression name.
-    pub fn get_compression(&self) -> Option<String> {
-        let ptr = unsafe { ffi::SSL_get_current_compression(self.kind.ssl().ssl) };
-        if ptr == ptr::null() {
-            return None;
-        }
-
-        let meth = unsafe { ffi::SSL_COMP_get_name(ptr) };
-        let s = unsafe {
-            String::from_utf8(CStr::from_ptr(meth).to_bytes().to_vec()).unwrap()
-        };
-
-        Some(s)
-    }
-
-    /// Returns the protocol selected by performing Next Protocol Negotiation, if any.
-    ///
-    /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
-    /// to interpret it.
-    ///
-    /// This method needs the `npn` feature.
-    #[cfg(feature = "npn")]
-    pub fn get_selected_npn_protocol(&self) -> Option<&[u8]> {
-        self.kind.ssl().get_selected_npn_protocol()
-    }
-
-    /// Returns the protocol selected by performing ALPN, if any.
-    ///
-    /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
-    /// to interpret it.
-    ///
-    /// This method needs the `alpn` feature.
-    #[cfg(feature = "alpn")]
-    pub fn get_selected_alpn_protocol(&self) -> Option<&[u8]> {
-        self.kind.ssl().get_selected_alpn_protocol()
-    }
-
-    /// pending() takes into account only bytes from the TLS/SSL record that is currently being processed (if any).
-    pub fn pending(&self) -> usize {
-        self.kind.ssl().pending()
-    }
-
-    pub fn get_state_string(&self) -> &'static str {
-        self.kind.ssl().get_state_string()
-    }
-
-    pub fn get_state_string_long(&self) -> &'static str {
-        self.kind.ssl().get_state_string_long()
+    /// Returns the OpenSSL `Ssl` object associated with this stream.
+    pub fn ssl(&self) -> &Ssl {
+        self.kind.ssl()
     }
 }
 
@@ -1462,6 +1412,235 @@ impl<S> MaybeSslStream<S> where S: Read+Write {
         match *self {
             MaybeSslStream::Ssl(ref mut s) => s.get_mut(),
             MaybeSslStream::Normal(ref mut s) => s,
+        }
+    }
+}
+
+/// An SSL stream wrapping a nonblocking socket.
+#[derive(Clone)]
+pub struct NonblockingSslStream<S> {
+    stream: S,
+    ssl: Arc<Ssl>,
+}
+
+impl NonblockingSslStream<net::TcpStream> {
+    pub fn try_clone(&self) -> io::Result<NonblockingSslStream<net::TcpStream>> {
+        Ok(NonblockingSslStream {
+            stream: try!(self.stream.try_clone()),
+            ssl: self.ssl.clone(),
+        })
+    }
+}
+
+impl<S> NonblockingSslStream<S> {
+    fn new_base(ssl: Ssl, stream: S, sock: c_int) -> Result<NonblockingSslStream<S>, SslError> {
+        unsafe {
+            let bio = try_ssl_null!(ffi::BIO_new_socket(sock, 0));
+            ffi_extras::BIO_set_nbio(bio, 1);
+            ffi::SSL_set_bio(ssl.ssl, bio, bio);
+        }
+
+        Ok(NonblockingSslStream {
+            stream: stream,
+            ssl: Arc::new(ssl),
+        })
+    }
+
+    fn make_error(&self, ret: c_int) -> NonblockingSslError {
+        match self.ssl.get_error(ret) {
+            LibSslError::ErrorSsl => NonblockingSslError::SslError(SslError::get()),
+            LibSslError::ErrorSyscall => {
+                let err = SslError::get();
+                let count = match err {
+                    SslError::OpenSslErrors(ref v) => v.len(),
+                    _ => unreachable!(),
+                };
+                let ssl_error = if count == 0 {
+                    if ret == 0 {
+                        SslError::StreamError(io::Error::new(io::ErrorKind::ConnectionAborted,
+                                                             "unexpected EOF observed"))
+                    } else {
+                        SslError::StreamError(io::Error::last_os_error())
+                    }
+                } else {
+                    err
+                };
+                ssl_error.into()
+            },
+            LibSslError::ErrorWantWrite => NonblockingSslError::WantWrite,
+            LibSslError::ErrorWantRead => NonblockingSslError::WantRead,
+            err => panic!("unexpected error {:?} with ret {}", err, ret),
+        }
+    }
+
+    /// Returns a reference to the underlying stream.
+    pub fn get_ref(&self) -> &S {
+        &self.stream
+    }
+
+    /// Returns a mutable reference to the underlying stream.
+    ///
+    /// ## Warning
+    ///
+    /// It is inadvisable to read from or write to the underlying stream as it
+    /// will most likely corrupt the SSL session.
+    pub fn get_mut(&mut self) -> &mut S {
+        &mut self.stream
+    }
+
+    /// Returns a reference to the Ssl.
+    pub fn ssl(&self) -> &Ssl {
+        &self.ssl
+    }
+}
+
+#[cfg(unix)]
+impl<S: Read+Write+::std::os::unix::io::AsRawFd> NonblockingSslStream<S> {
+    /// Create a new nonblocking client ssl connection on wrapped `stream`.
+    ///
+    /// Note that this method will most likely not actually complete the SSL
+    /// handshake because doing so requires several round trips; the handshake will
+    /// be completed in subsequent read/write calls managed by your event loop.
+    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<NonblockingSslStream<S>, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        let fd = stream.as_raw_fd() as c_int;
+        let ssl = try!(NonblockingSslStream::new_base(ssl, stream, fd));
+        let ret = ssl.ssl.connect();
+        if ret > 0 {
+            Ok(ssl)
+        } else {
+            // WantRead/WantWrite is okay here; we'll finish the handshake in
+            // subsequent send/recv calls.
+            match ssl.make_error(ret) {
+                NonblockingSslError::WantRead | NonblockingSslError::WantWrite => Ok(ssl),
+                NonblockingSslError::SslError(other) => Err(other),
+            }
+        }
+    }
+
+    /// Create a new nonblocking server ssl connection on wrapped `stream`.
+    ///
+    /// Note that this method will most likely not actually complete the SSL
+    /// handshake because doing so requires several round trips; the handshake will
+    /// be completed in subsequent read/write calls managed by your event loop.
+    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<NonblockingSslStream<S>, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        let fd = stream.as_raw_fd() as c_int;
+        let ssl = try!(NonblockingSslStream::new_base(ssl, stream, fd));
+        let ret = ssl.ssl.accept();
+        if ret > 0 {
+            Ok(ssl)
+        } else {
+            // WantRead/WantWrite is okay here; we'll finish the handshake in
+            // subsequent send/recv calls.
+            match ssl.make_error(ret) {
+                NonblockingSslError::WantRead | NonblockingSslError::WantWrite => Ok(ssl),
+                NonblockingSslError::SslError(other) => Err(other),
+            }
+        }
+    }
+}
+
+#[cfg(unix)]
+impl<S: ::std::os::unix::io::AsRawFd> ::std::os::unix::io::AsRawFd for NonblockingSslStream<S> {
+    fn as_raw_fd(&self) -> ::std::os::unix::io::RawFd {
+        self.stream.as_raw_fd()
+    }
+}
+
+#[cfg(windows)]
+impl<S: Read+Write+::std::os::windows::io::AsRawSocket> NonblockingSslStream<S> {
+    /// Create a new nonblocking client ssl connection on wrapped `stream`.
+    ///
+    /// Note that this method will most likely not actually complete the SSL
+    /// handshake because doing so requires several round trips; the handshake will
+    /// be completed in subsequent read/write calls managed by your event loop.
+    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<NonblockingSslStream<S>, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        let fd = stream.as_raw_socket() as c_int;
+        let ssl = try!(NonblockingSslStream::new_base(ssl, stream, fd));
+        let ret = ssl.ssl.connect();
+        if ret > 0 {
+            Ok(ssl)
+        } else {
+            // WantRead/WantWrite is okay here; we'll finish the handshake in
+            // subsequent send/recv calls.
+            match ssl.make_error(ret) {
+                NonblockingSslError::WantRead | NonblockingSslError::WantWrite => Ok(ssl),
+                NonblockingSslError::SslError(other) => Err(other),
+            }
+        }
+    }
+
+    /// Create a new nonblocking server ssl connection on wrapped `stream`.
+    ///
+    /// Note that this method will most likely not actually complete the SSL
+    /// handshake because doing so requires several round trips; the handshake will
+    /// be completed in subsequent read/write calls managed by your event loop.
+    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<NonblockingSslStream<S>, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        let fd = stream.as_raw_socket() as c_int;
+        let ssl = try!(NonblockingSslStream::new_base(ssl, stream, fd));
+        let ret = ssl.ssl.accept();
+        if ret > 0 {
+            Ok(ssl)
+        } else {
+            // WantRead/WantWrite is okay here; we'll finish the handshake in
+            // subsequent send/recv calls.
+            match ssl.make_error(ret) {
+                NonblockingSslError::WantRead | NonblockingSslError::WantWrite => Ok(ssl),
+                NonblockingSslError::SslError(other) => Err(other),
+            }
+        }
+    }
+}
+
+impl<S: Read+Write> NonblockingSslStream<S> {
+    /// Read bytes from the SSL stream into `buf`.
+    ///
+    /// Given the SSL state machine, this method may return either `WantWrite`
+    /// or `WantRead` to indicate that your event loop should respectively wait
+    /// for write or read readiness on the underlying stream.  Upon readiness,
+    /// repeat your `read()` call with the same arguments each time until you
+    /// receive an `Ok(count)`.
+    ///
+    /// An `SslError` return value, is terminal; do not re-attempt your read.
+    ///
+    /// As expected of a nonblocking API, this method will never block your
+    /// thread on I/O.
+    ///
+    /// On a return value of `Ok(count)`, count is the number of decrypted
+    /// plaintext bytes copied into the `buf` slice.
+    pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, NonblockingSslError> {
+        let ret = self.ssl.read(buf);
+        if ret >= 0 {
+            Ok(ret as usize)
+        } else {
+            Err(self.make_error(ret))
+        }
+    }
+
+    /// Write bytes from `buf` to the SSL stream.
+    ///
+    /// Given the SSL state machine, this method may return either `WantWrite`
+    /// or `WantRead` to indicate that your event loop should respectively wait
+    /// for write or read readiness on the underlying stream.  Upon readiness,
+    /// repeat your `write()` call with the same arguments each time until you
+    /// receive an `Ok(count)`.
+    ///
+    /// An `SslError` return value, is terminal; do not re-attempt your write.
+    ///
+    /// As expected of a nonblocking API, this method will never block your
+    /// thread on I/O.
+    ///
+    /// Given a return value of `Ok(count)`, count is the number of plaintext bytes
+    /// from the `buf` slice that were encrypted and written onto the stream.
+    pub fn write(&mut self, buf: &[u8]) -> Result<usize, NonblockingSslError> {
+        let ret = self.ssl.write(buf);
+        if ret > 0 {
+            Ok(ret as usize)
+        } else {
+            Err(self.make_error(ret))
         }
     }
 }
