@@ -276,7 +276,36 @@ impl PKey {
         }
     }
 
-    pub fn encrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> {
+    pub fn private_encrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> {
+        unsafe {
+            let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
+            if rsa.is_null() {
+                panic!("Could not get RSA key for encryption");
+            }
+            let len = ffi::RSA_size(rsa);
+
+            assert!(s.len() < self.max_data());
+
+            let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
+
+            let rv = ffi::RSA_private_encrypt(
+                s.len() as c_int,
+                s.as_ptr(),
+                r.as_mut_ptr(),
+                rsa,
+                openssl_padding_code(padding));
+
+            if rv < 0 as c_int {
+                // println!("{:?}", SslError::get());
+                vec!()
+            } else {
+                r.truncate(rv as usize);
+                r
+            }
+        }
+    }
+
+    pub fn public_encrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
             if rsa.is_null() {
@@ -304,7 +333,7 @@ impl PKey {
         }
     }
 
-    pub fn decrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> {
+    pub fn private_decrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
             if rsa.is_null() {
@@ -332,16 +361,78 @@ impl PKey {
         }
     }
 
-    /**
-     * Encrypts data using OAEP padding, returning the encrypted data. The
-     * supplied data must not be larger than max_data().
-     */
-    pub fn encrypt(&self, s: &[u8]) -> Vec<u8> { self.encrypt_with_padding(s, EncryptionPadding::OAEP) }
+    pub fn public_decrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> {
+        unsafe {
+            let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
+            if rsa.is_null() {
+                panic!("Could not get RSA key for decryption");
+            }
+            let len = ffi::RSA_size(rsa);
+
+            assert_eq!(s.len() as c_int, ffi::RSA_size(rsa));
+
+            let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
+
+            let rv = ffi::RSA_public_decrypt(
+                s.len() as c_int,
+                s.as_ptr(),
+                r.as_mut_ptr(),
+                rsa,
+                openssl_padding_code(padding));
+
+            if rv < 0 as c_int {
+                vec!()
+            } else {
+                r.truncate(rv as usize);
+                r
+            }
+        }
+    }
 
     /**
-     * Decrypts data, expecting OAEP padding, returning the decrypted data.
+     * Encrypts data with the public key, using OAEP padding, returning the encrypted data. The
+     * supplied data must not be larger than max_data().
      */
-    pub fn decrypt(&self, s: &[u8]) -> Vec<u8> { self.decrypt_with_padding(s, EncryptionPadding::OAEP) }
+    pub fn encrypt(&self, s: &[u8]) -> Vec<u8> { self.public_encrypt_with_padding(s, EncryptionPadding::OAEP) }
+
+    /**
+     * Encrypts data with the public key, using provided padding, returning the encrypted data. The
+     * supplied data must not be larger than max_data().
+     */
+    pub fn encrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> { self.public_encrypt_with_padding(s, padding) }
+
+    /**
+     * Encrypts data with the public key, using OAEP padding, returning the encrypted data. The
+     * supplied data must not be larger than max_data().
+     */
+    pub fn public_encrypt(&self, s: &[u8]) -> Vec<u8> { self.public_encrypt_with_padding(s, EncryptionPadding::OAEP) }
+
+    /**
+     * Decrypts data with the public key, using PKCS1v15 padding, returning the decrypted data.
+     */
+    pub fn public_decrypt(&self, s: &[u8]) -> Vec<u8> { self.public_decrypt_with_padding(s, EncryptionPadding::PKCS1v15) }
+
+    /**
+     * Decrypts data with the private key, expecting OAEP padding, returning the decrypted data.
+     */
+    pub fn decrypt(&self, s: &[u8]) -> Vec<u8> { self.private_decrypt_with_padding(s, EncryptionPadding::OAEP) }
+
+    /**
+     * Decrypts data with the private key, using provided padding, returning the encrypted data. The
+     * supplied data must not be larger than max_data().
+     */
+    pub fn decrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> { self.private_decrypt_with_padding(s, padding) }
+
+    /**
+     * Decrypts data with the private key, expecting OAEP padding, returning the decrypted data.
+     */
+    pub fn private_decrypt(&self, s: &[u8]) -> Vec<u8> { self.private_decrypt_with_padding(s, EncryptionPadding::OAEP) }
+
+    /**
+     * Encrypts data with the private key, using PKCS1v15 padding, returning the encrypted data. The
+     * supplied data must not be larger than max_data().
+     */
+    pub fn private_encrypt(&self, s: &[u8]) -> Vec<u8> { self.private_encrypt_with_padding(s, EncryptionPadding::PKCS1v15) }
 
     /**
      * Signs data, using OpenSSL's default scheme and adding sha256 ASN.1 information to the
@@ -493,26 +584,38 @@ mod tests {
     }
 
     #[test]
-    fn test_encrypt() {
+    fn test_private_encrypt() {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
         let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
         k0.gen(512);
         k1.load_pub(&k0.save_pub());
-        let emsg = k1.encrypt(&msg);
-        let dmsg = k0.decrypt(&emsg);
+        let emsg = k0.private_encrypt(&msg);
+        let dmsg = k1.public_decrypt(&emsg);
         assert!(msg == dmsg);
     }
 
     #[test]
-    fn test_encrypt_pkcs() {
+    fn test_public_encrypt() {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
         let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
         k0.gen(512);
         k1.load_pub(&k0.save_pub());
-        let emsg = k1.encrypt_with_padding(&msg, super::EncryptionPadding::PKCS1v15);
-        let dmsg = k0.decrypt_with_padding(&emsg, super::EncryptionPadding::PKCS1v15);
+        let emsg = k1.public_encrypt(&msg);
+        let dmsg = k0.private_decrypt(&emsg);
+        assert!(msg == dmsg);
+    }
+
+    #[test]
+    fn test_public_encrypt_pkcs() {
+        let mut k0 = super::PKey::new();
+        let mut k1 = super::PKey::new();
+        let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
+        k0.gen(512);
+        k1.load_pub(&k0.save_pub());
+        let emsg = k1.public_encrypt_with_padding(&msg, super::EncryptionPadding::PKCS1v15);
+        let dmsg = k0.private_decrypt_with_padding(&emsg, super::EncryptionPadding::PKCS1v15);
         assert!(msg == dmsg);
     }
 
