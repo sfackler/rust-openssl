@@ -120,6 +120,7 @@ impl PKey {
             let mut s = repeat(0u8).take(len as usize).collect::<Vec<_>>();
 
             let r = f(rsa, &s.as_mut_ptr());
+            ffi::RSA_free(rsa);
 
             s.truncate(r as usize);
             s
