@@ -1416,6 +1416,16 @@ impl<S> MaybeSslStream<S> where S: Read+Write {
     }
 }
 
+impl MaybeSslStream<net::TcpStream> {
+    /// Like `TcpStream::try_clone`.
+    pub fn try_clone(&self) -> io::Result<MaybeSslStream<net::TcpStream>> {
+        match *self {
+            MaybeSslStream::Ssl(ref s) => s.try_clone().map(MaybeSslStream::Ssl),
+            MaybeSslStream::Normal(ref s) => s.try_clone().map(MaybeSslStream::Normal),
+        }
+    }
+}
+
 /// An SSL stream wrapping a nonblocking socket.
 #[derive(Clone)]
 pub struct NonblockingSslStream<S> {
