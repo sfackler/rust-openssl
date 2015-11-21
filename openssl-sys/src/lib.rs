@@ -135,6 +135,8 @@ pub const PKCS5_SALT_LEN: c_int = 8;
 pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
 
+pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB:  c_int = 53;
+pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG: c_int = 54;
 pub const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
 pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
 
@@ -538,6 +540,8 @@ extern "C" {
     pub fn SSL_state_string(ssl: *mut SSL) -> *const c_char;
     pub fn SSL_state_string_long(ssl: *mut SSL) -> *const c_char;
 
+    pub fn SSL_get_servername(ssl: *const SSL, name_type: c_long) -> *const c_char;
+
     pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
 
     pub fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
@@ -567,6 +571,8 @@ extern "C" {
     pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;
 
     pub fn SSL_CTX_ctrl(ssl: *mut SSL_CTX, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
+    pub fn SSL_CTX_callback_ctrl(ssl: *mut SSL_CTX, cmd: c_int, callback: Option<extern fn()>) -> c_long;
+
     #[cfg(feature = "npn")]
     pub fn SSL_CTX_set_next_protos_advertised_cb(ssl: *mut SSL_CTX,
                                                  cb: extern "C" fn(ssl: *mut SSL,

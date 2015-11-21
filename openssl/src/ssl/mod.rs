@@ -32,6 +32,7 @@ pub mod error;
 mod tests;
 
 static mut VERIFY_IDX: c_int = -1;
+static mut SNI_IDX:    c_int = -1;
 
 /// Manually initialize SSL.
 /// It is optional to call this function and safe to do so more than once.
@@ -46,6 +47,11 @@ pub fn init() {
                                                            None, None);
             assert!(verify_idx >= 0);
             VERIFY_IDX = verify_idx;
+
+            let sni_idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None,
+                                                           None, None);
+            assert!(sni_idx >= 0);
+            SNI_IDX = sni_idx;
         });
     }
 }
@@ -297,6 +303,51 @@ extern fn raw_verify_with_data<T>(preverify_ok: c_int,
     }
 }
 
+extern fn raw_sni(ssl: *mut ffi::SSL, ad: &mut c_int, arg: *mut c_void)
+        -> c_int {
+    println!("openssl called raw_sni. ad=={:?}", *ad);
+    unsafe {
+        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
+        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, SNI_IDX);
+        let callback: Option<ServerNameCallback> = mem::transmute(callback);
+        let mut ssl = Ssl { ssl: ssl };
+        println!("openssl got callback");
+
+        let res = match callback {
+            None => ffi::SSL_TLSEXT_ERR_ALERT_FATAL,
+            Some(callback) => callback(&mut ssl, ad)
+        };
+        println!("openssl got callback result: {}", res);
+        res
+    }
+}
+
+extern fn raw_sni_with_data<T>(ssl: *mut ffi::SSL, ad: &mut c_int, arg: *mut c_void) -> c_int
+                                  where T: Any + 'static {
+    unsafe {
+        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
+
+        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, SNI_IDX);
+        let callback: Option<ServerNameCallbackData<T>> = mem::transmute(callback);
+        let mut ssl = Ssl { ssl: ssl };
+
+        let data: Box<T> = mem::transmute(arg);
+
+        let res = match callback {
+            None => ffi::SSL_TLSEXT_ERR_ALERT_FATAL,
+            Some(callback) => callback(&mut ssl, ad, &*data)
+        };
+
+        // Since data might be required on the next verification
+        // it is time to forget about it and avoid dropping
+        // data will be freed once OpenSSL considers it is time
+        // to free all context data
+        mem::forget(data);
+        res
+    }
+}
+
+
 #[cfg(any(feature = "npn", feature = "alpn"))]
 unsafe fn select_proto_using(ssl: *mut ffi::SSL,
                       out: *mut *mut c_uchar, outlen: *mut c_uchar,
@@ -404,6 +455,11 @@ pub type VerifyCallbackData<T> = fn(preverify_ok: bool,
                                     x509_ctx: &X509StoreContext,
                                     data: &T) -> bool;
 
+/// The signature of functions that can be used to choose the context depending on the server name
+pub type ServerNameCallback = fn(ssl: &mut Ssl, ad: &mut i32) -> i32;
+
+pub type ServerNameCallbackData<T> = fn(ssl: &mut Ssl, ad: &mut i32, data: &T) -> i32;
+
 // FIXME: macro may be instead of inlining?
 #[inline]
 fn wrap_ssl_result(res: c_int) -> Result<(),SslError> {
@@ -482,6 +538,31 @@ impl SslContext {
                                 raw_verify_with_data::<T>;
 
             ffi::SSL_CTX_set_verify(self.ctx, mode.bits as c_int, Some(f));
+        }
+    }
+
+    /// Configures the certificate verification method for new connections.
+    pub fn set_servername_callback(&mut self, callback: Option<ServerNameCallback>) {
+        unsafe {
+            ffi::SSL_CTX_set_ex_data(self.ctx, SNI_IDX,
+                                     mem::transmute(callback));
+            //let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int = raw_sni;
+            let f: extern fn() = mem::transmute(raw_sni);
+            ffi::SSL_CTX_callback_ctrl(self.ctx, ffi::SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, Some(f));
+        }
+    }
+
+    pub fn set_servername_callback_with_data<T>(&mut self, callback: ServerNameCallbackData<T>,
+                                   data: T)
+                                   where T: Any + 'static {
+        let data = Box::new(data);
+        unsafe {
+            ffi::SSL_CTX_set_ex_data(self.ctx, SNI_IDX,
+                                     mem::transmute(Some(callback)));
+
+            ffi::SSL_CTX_ctrl(self.ctx, ffi::SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG, 0, mem::transmute(data));
+            let f: extern fn() = mem::transmute(raw_sni_with_data::<T>);
+            ffi::SSL_CTX_callback_ctrl(self.ctx, ffi::SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, Some(f));
         }
     }
 
@@ -673,6 +754,7 @@ impl SslContext {
             ffi::SSL_CTX_set_alpn_select_cb(self.ctx, raw_alpn_select_cb, ptr::null_mut());
         }
     }
+
 }
 
 #[allow(dead_code)]
@@ -886,6 +968,20 @@ impl Ssl {
             SslMethod::from_raw(method)
         }
     }
+
+    /// Returns the server name for the current connection
+    pub fn get_servername(&self) -> Option<String> {
+        let name = unsafe { ffi::SSL_get_servername(self.ssl, ffi::TLSEXT_NAMETYPE_host_name) };
+        if name == ptr::null() {
+            return None;
+        }
+
+        println!("openssl will return servername");
+        unsafe {
+            String::from_utf8(CStr::from_ptr(name).to_bytes().to_vec()).ok()
+        }
+    }
+
 }
 
 macro_rules! make_LibSslError {
