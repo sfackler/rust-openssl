@@ -305,19 +305,19 @@ extern fn raw_verify_with_data<T>(preverify_ok: c_int,
 
 extern fn raw_sni(ssl: *mut ffi::SSL, ad: &mut c_int, arg: *mut c_void)
         -> c_int {
-    println!("openssl called raw_sni. ad=={:?}", *ad);
     unsafe {
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
         let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, SNI_IDX);
         let callback: Option<ServerNameCallback> = mem::transmute(callback);
-        let mut ssl = Ssl { ssl: ssl };
-        println!("openssl got callback");
+        let mut s = Ssl { ssl: ssl };
 
         let res = match callback {
             None => ffi::SSL_TLSEXT_ERR_ALERT_FATAL,
-            Some(callback) => callback(&mut ssl, ad)
+            Some(callback) => callback(&mut s, ad)
         };
-        println!("openssl got callback result: {}", res);
+
+        // Allows dropping the Ssl instance without calling SSL_FREE on the SSL object
+        s.ssl = ptr::null_mut() as *mut ffi::SSL;
         res
     }
 }
@@ -329,14 +329,17 @@ extern fn raw_sni_with_data<T>(ssl: *mut ffi::SSL, ad: &mut c_int, arg: *mut c_v
 
         let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, SNI_IDX);
         let callback: Option<ServerNameCallbackData<T>> = mem::transmute(callback);
-        let mut ssl = Ssl { ssl: ssl };
+        let mut s = Ssl { ssl: ssl };
 
         let data: Box<T> = mem::transmute(arg);
 
         let res = match callback {
             None => ffi::SSL_TLSEXT_ERR_ALERT_FATAL,
-            Some(callback) => callback(&mut ssl, ad, &*data)
+            Some(callback) => callback(&mut s, ad, &*data)
         };
+
+        // Allows dropping the Ssl instance without calling SSL_FREE on the SSL object
+        s.ssl = ptr::null_mut() as *mut ffi::SSL;
 
         // Since data might be required on the next verification
         // it is time to forget about it and avoid dropping
@@ -541,7 +544,10 @@ impl SslContext {
         }
     }
 
-    /// Configures the certificate verification method for new connections.
+    /// Configures the server name indication (SNI) callback for new connections
+    ///
+    /// obtain the server name with `get_servername` then set the corresponding context
+    /// with `set_ssl_context`
     pub fn set_servername_callback(&mut self, callback: Option<ServerNameCallback>) {
         unsafe {
             ffi::SSL_CTX_set_ex_data(self.ctx, SNI_IDX,
@@ -552,6 +558,8 @@ impl SslContext {
         }
     }
 
+    /// Configures the server name indication (SNI) callback for new connections
+    /// carrying supplied data
     pub fn set_servername_callback_with_data<T>(&mut self, callback: ServerNameCallbackData<T>,
                                    data: T)
                                    where T: Any + 'static {
@@ -969,23 +977,24 @@ impl Ssl {
         }
     }
 
-    /// Returns the server name for the current connection
+    /// Returns the server's name for the current connection
     pub fn get_servername(&self) -> Option<String> {
         let name = unsafe { ffi::SSL_get_servername(self.ssl, ffi::TLSEXT_NAMETYPE_host_name) };
         if name == ptr::null() {
             return None;
         }
 
-        println!("openssl will return servername");
         unsafe {
             String::from_utf8(CStr::from_ptr(name).to_bytes().to_vec()).ok()
         }
     }
 
+    /// change the context corresponding to the current connection
     pub fn set_ssl_context(&self, ctx: &SslContext) -> SslContext {
         SslContext { ctx: unsafe { ffi::SSL_set_SSL_CTX(self.ssl, ctx.ctx) } }
     }
 
+    /// obtain the context corresponding to the current connection
     pub fn get_ssl_context(&self) -> SslContext {
         let ssl_ctx = unsafe { ffi::SSL_get_SSL_CTX(self.ssl) };
         SslContext { ctx: ssl_ctx }
