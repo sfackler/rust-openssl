@@ -534,6 +534,7 @@ extern "C" {
     pub fn SSL_write(ssl: *mut SSL, buf: *const c_void, num: c_int) -> c_int;
     pub fn SSL_get_ex_data_X509_STORE_CTX_idx() -> c_int;
     pub fn SSL_get_SSL_CTX(ssl: *mut SSL) -> *mut SSL_CTX;
+    pub fn SSL_set_SSL_CTX(ssl: *mut SSL, ctx: *mut SSL_CTX) -> *mut SSL_CTX;
     pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const COMP_METHOD;
     pub fn SSL_get_peer_certificate(ssl: *mut SSL) -> *mut X509;
     pub fn SSL_get_ssl_method(ssl: *mut SSL) -> *const SSL_METHOD;

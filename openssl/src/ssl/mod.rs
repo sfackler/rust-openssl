@@ -982,6 +982,14 @@ impl Ssl {
         }
     }
 
+    pub fn set_ssl_context(&self, ctx: &SslContext) -> SslContext {
+        SslContext { ctx: unsafe { ffi::SSL_set_SSL_CTX(self.ssl, ctx.ctx) } }
+    }
+
+    pub fn get_ssl_context(&self) -> SslContext {
+        let ssl_ctx = unsafe { ffi::SSL_get_SSL_CTX(self.ssl) };
+        SslContext { ctx: ssl_ctx }
+    }
 }
 
 macro_rules! make_LibSslError {
