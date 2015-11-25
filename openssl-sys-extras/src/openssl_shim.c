@@ -115,6 +115,14 @@ long SSL_CTX_set_tmp_dh_shim(SSL_CTX *ctx, DH *dh) {
     return SSL_CTX_set_tmp_dh(ctx, dh);
 }
 
+long SSL_CTX_set_tlsext_servername_callback_shim(SSL_CTX *ctx, int (*callback)(SSL_CTX *, int *, void*)) {
+    return SSL_CTX_set_tlsext_servername_callback(ctx, callback);
+}
+
+long SSL_CTX_set_tlsext_servername_arg_shim(SSL_CTX *ctx, void* arg) {
+    return SSL_CTX_set_tlsext_servername_arg(ctx, arg);
+}
+
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
 int SSL_CTX_set_ecdh_auto_shim(SSL_CTX *ctx, int onoff) {
     return SSL_CTX_set_ecdh_auto(ctx, onoff);

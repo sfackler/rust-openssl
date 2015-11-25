@@ -571,9 +571,6 @@ extern "C" {
 
     pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;
 
-    pub fn SSL_CTX_ctrl(ssl: *mut SSL_CTX, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
-    pub fn SSL_CTX_callback_ctrl(ssl: *mut SSL_CTX, cmd: c_int, callback: Option<extern fn()>) -> c_long;
-
     #[cfg(feature = "npn")]
     pub fn SSL_CTX_set_next_protos_advertised_cb(ssl: *mut SSL_CTX,
                                                  cb: extern "C" fn(ssl: *mut SSL,
