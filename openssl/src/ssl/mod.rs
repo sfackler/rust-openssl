@@ -317,7 +317,7 @@ extern fn raw_sni(ssl: *mut ffi::SSL, ad: &mut c_int, arg: *mut c_void)
         };
 
         // Allows dropping the Ssl instance without calling SSL_FREE on the SSL object
-        s.ssl = ptr::null_mut() as *mut ffi::SSL;
+        mem::forget(s);
         res
     }
 }
@@ -331,7 +331,7 @@ extern fn raw_sni_with_data<T>(ssl: *mut ffi::SSL, ad: &mut c_int, arg: *mut c_v
         let callback: Option<ServerNameCallbackData<T>> = mem::transmute(callback);
         let mut s = Ssl { ssl: ssl };
 
-        let data: Box<T> = mem::transmute(arg);
+        let data: &T = mem::transmute(arg);
 
         let res = match callback {
             None => ffi::SSL_TLSEXT_ERR_ALERT_FATAL,
@@ -339,13 +339,12 @@ extern fn raw_sni_with_data<T>(ssl: *mut ffi::SSL, ad: &mut c_int, arg: *mut c_v
         };
 
         // Allows dropping the Ssl instance without calling SSL_FREE on the SSL object
-        s.ssl = ptr::null_mut() as *mut ffi::SSL;
+        mem::forget(s);
 
         // Since data might be required on the next verification
         // it is time to forget about it and avoid dropping
         // data will be freed once OpenSSL considers it is time
         // to free all context data
-        mem::forget(data);
         res
     }
 }
@@ -552,7 +551,6 @@ impl SslContext {
         unsafe {
             ffi::SSL_CTX_set_ex_data(self.ctx, SNI_IDX,
                                      mem::transmute(callback));
-            //let f: extern fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int = raw_sni;
             let f: extern fn() = mem::transmute(raw_sni);
             ffi::SSL_CTX_callback_ctrl(self.ctx, ffi::SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, Some(f));
         }
