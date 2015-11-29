@@ -1,11 +1,11 @@
 [package]
 name = "openssl"
-version = "0.7.0"
+version = "0.7.1"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
 repository = "https://github.com/sfackler/rust-openssl"
-documentation = "https://sfackler.github.io/rust-openssl/doc/v0.7.0/openssl"
+documentation = "https://sfackler.github.io/rust-openssl/doc/v0.7.1/openssl"
 readme = "../README.md"
 keywords = ["crypto", "tls", "ssl", "dtls"]
 
@@ -27,8 +27,8 @@ ecdh_auto = ["openssl-sys-extras/ecdh_auto"]
 bitflags = ">= 0.2, < 0.4"
 lazy_static = "0.1"
 libc = "0.2"
-openssl-sys = { version = "0.7", path = "../openssl-sys" }
-openssl-sys-extras = { version = "0.7", path = "../openssl-sys-extras" }
+openssl-sys = { version = "0.7.1", path = "../openssl-sys" }
+openssl-sys-extras = { version = "0.7.1", path = "../openssl-sys-extras" }
 
 [dev-dependencies]
 rustc-serialize = "0.3"

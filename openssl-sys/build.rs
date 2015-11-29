@@ -1,5 +1,4 @@
 extern crate pkg_config;
-extern crate gcc;
 
 use std::env;
 
@@ -16,8 +15,11 @@ fn main() {
         // rustc doesn't seem to work with pkg-config's output in mingw64
         if !target.contains("windows") {
             if let Ok(info) = pkg_config::find_library("openssl") {
-                let paths = env::join_paths(info.include_paths).unwrap();
-                println!("cargo:include={}", paths.to_str().unwrap());
+                // avoid empty include paths as they are not supported by GCC
+                if info.include_paths.len() > 0 {
+                    let paths = env::join_paths(info.include_paths).unwrap();
+                    println!("cargo:include={}", paths.to_str().unwrap());
+                }
                 return;
             }
         }

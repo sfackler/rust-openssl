@@ -588,7 +588,7 @@ impl SslContext {
     /// If `onoff` is set to `true`, enable ECDHE for key exchange with compatible
     /// clients, and automatically select an appropriate elliptic curve.
     ///
-    /// This method requires OpenSSL >= 1.2.0 or LibreSSL and the `ecdh_auto` feature.
+    /// This method requires OpenSSL >= 1.0.2 or LibreSSL and the `ecdh_auto` feature.
     #[cfg(feature = "ecdh_auto")]
     pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(),SslError> {
         wrap_ssl_result(
@@ -1412,6 +1412,16 @@ impl<S> MaybeSslStream<S> where S: Read+Write {
         match *self {
             MaybeSslStream::Ssl(ref mut s) => s.get_mut(),
             MaybeSslStream::Normal(ref mut s) => s,
+        }
+    }
+}
+
+impl MaybeSslStream<net::TcpStream> {
+    /// Like `TcpStream::try_clone`.
+    pub fn try_clone(&self) -> io::Result<MaybeSslStream<net::TcpStream>> {
+        match *self {
+            MaybeSslStream::Ssl(ref s) => s.try_clone().map(MaybeSslStream::Ssl),
+            MaybeSslStream::Normal(ref s) => s.try_clone().map(MaybeSslStream::Normal),
         }
     }
 }
