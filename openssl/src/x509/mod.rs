@@ -50,7 +50,7 @@ impl Deref for SslString {
 impl SslString {
     unsafe fn new(buf: *const c_char) -> SslString {
         SslString {
-            s: str::from_utf8(CStr::from_ptr(buf).to_bytes()).unwrap()
+            s: str::from_utf8(CStr::from_ptr(buf as *const _).to_bytes()).unwrap()
         }
     }
 }
@@ -275,8 +275,8 @@ impl X509Generator {
         lift_ssl!(unsafe {
             let key = CString::new(key.as_bytes()).unwrap();
             let value = CString::new(value.as_bytes()).unwrap();
-            ffi::X509_NAME_add_entry_by_txt(name, key.as_ptr(), ffi::MBSTRING_UTF8,
-                                            value.as_ptr(), value_len, -1, 0)
+            ffi::X509_NAME_add_entry_by_txt(name, key.as_ptr() as *const _, ffi::MBSTRING_UTF8,
+                                            value.as_ptr() as *const _, value_len, -1, 0)
         })
     }
 

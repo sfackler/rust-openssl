@@ -510,7 +510,7 @@ impl SslContext {
         let file = CString::new(file.as_ref().as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_load_verify_locations(self.ctx, file.as_ptr(), ptr::null())
+                ffi::SSL_CTX_load_verify_locations(self.ctx, file.as_ptr() as *const _, ptr::null())
             })
     }
 
@@ -520,7 +520,7 @@ impl SslContext {
         let file = CString::new(file.as_ref().as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_use_certificate_file(self.ctx, file.as_ptr(), file_type as c_int)
+                ffi::SSL_CTX_use_certificate_file(self.ctx, file.as_ptr() as *const _, file_type as c_int)
             })
     }
 
@@ -530,7 +530,7 @@ impl SslContext {
         let file = CString::new(file.as_ref().as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_use_certificate_chain_file(self.ctx, file.as_ptr(), file_type as c_int)
+                ffi::SSL_CTX_use_certificate_chain_file(self.ctx, file.as_ptr() as *const _, file_type as c_int)
             })
     }
 
@@ -557,7 +557,7 @@ impl SslContext {
         let file = CString::new(file.as_ref().as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(
             unsafe {
-                ffi::SSL_CTX_use_PrivateKey_file(self.ctx, file.as_ptr(), file_type as c_int)
+                ffi::SSL_CTX_use_PrivateKey_file(self.ctx, file.as_ptr() as *const _, file_type as c_int)
             })
     }
 
@@ -581,7 +581,7 @@ impl SslContext {
         wrap_ssl_result(
             unsafe {
                 let cipher_list = CString::new(cipher_list).unwrap();
-                ffi::SSL_CTX_set_cipher_list(self.ctx, cipher_list.as_ptr())
+                ffi::SSL_CTX_set_cipher_list(self.ctx, cipher_list.as_ptr() as *const _)
             })
     }
 
@@ -768,7 +768,7 @@ impl Ssl {
     pub fn state_string(&self) -> &'static str {
         let state = unsafe {
             let ptr = ffi::SSL_state_string(self.ssl);
-            CStr::from_ptr(ptr)
+            CStr::from_ptr(ptr as *const _)
         };
 
         str::from_utf8(state.to_bytes()).unwrap()
@@ -777,7 +777,7 @@ impl Ssl {
     pub fn state_string_long(&self) -> &'static str {
         let state = unsafe {
             let ptr = ffi::SSL_state_string_long(self.ssl);
-            CStr::from_ptr(ptr)
+            CStr::from_ptr(ptr as *const _)
         };
 
         str::from_utf8(state.to_bytes()).unwrap()
@@ -786,7 +786,7 @@ impl Ssl {
     /// Sets the host name to be used with SNI (Server Name Indication).
     pub fn set_hostname(&self, hostname: &str) -> Result<(), SslError> {
         let cstr = CString::new(hostname).unwrap();
-        let ret = unsafe { ffi_extras::SSL_set_tlsext_host_name(self.ssl, cstr.as_ptr()) };
+        let ret = unsafe { ffi_extras::SSL_set_tlsext_host_name(self.ssl, cstr.as_ptr() as *const _) };
 
         // For this case, 0 indicates failure.
         if ret == 0 {
@@ -874,7 +874,7 @@ impl Ssl {
 
         let meth = unsafe { ffi::SSL_COMP_get_name(ptr) };
         let s = unsafe {
-            String::from_utf8(CStr::from_ptr(meth).to_bytes().to_vec()).unwrap()
+            String::from_utf8(CStr::from_ptr(meth as *const _).to_bytes().to_vec()).unwrap()
         };
 
         Some(s)

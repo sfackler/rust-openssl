@@ -117,21 +117,24 @@ pub enum OpensslError {
 
 fn get_lib(err: c_ulong) -> String {
     unsafe {
-        let bytes = CStr::from_ptr(ffi::ERR_lib_error_string(err)).to_bytes().to_vec();
+        let cstr = ffi::ERR_lib_error_string(err);
+        let bytes = CStr::from_ptr(cstr as *const _).to_bytes().to_vec();
         String::from_utf8(bytes).unwrap()
     }
 }
 
 fn get_func(err: c_ulong) -> String {
     unsafe {
-        let bytes = CStr::from_ptr(ffi::ERR_func_error_string(err)).to_bytes().to_vec();
+        let cstr = ffi::ERR_func_error_string(err);
+        let bytes = CStr::from_ptr(cstr as *const _).to_bytes().to_vec();
         String::from_utf8(bytes).unwrap()
     }
 }
 
 fn get_reason(err: c_ulong) -> String {
     unsafe {
-        let bytes = CStr::from_ptr(ffi::ERR_reason_error_string(err)).to_bytes().to_vec();
+        let cstr = ffi::ERR_reason_error_string(err);
+        let bytes = CStr::from_ptr(cstr as *const _).to_bytes().to_vec();
         String::from_utf8(bytes).unwrap()
     }
 }
