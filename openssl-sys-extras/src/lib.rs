@@ -69,4 +69,6 @@ extern {
     pub fn SSL_CTX_set_tlsext_servername_callback(ssl: *mut SSL_CTX, callback: Option<extern fn()>);
     #[link_name = "SSL_CTX_set_tlsext_servername_arg_shim"]
     pub fn SSL_CTX_set_tlsext_servername_arg(ssl: *mut SSL_CTX, arg: *const c_void);
+    #[link_name = "SSL_CTX_increment_refcount_shim"]
+    pub fn SSL_CTX_increment_refcount(ssl: *mut SSL_CTX) -> c_long;
 }

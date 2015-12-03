@@ -123,6 +123,11 @@ long SSL_CTX_set_tlsext_servername_arg_shim(SSL_CTX *ctx, void* arg) {
     return SSL_CTX_set_tlsext_servername_arg(ctx, arg);
 }
 
+long SSL_CTX_increment_refcount_shim(SSL_CTX *ctx) {
+    int i = CRYPTO_add(&ctx->references,1,CRYPTO_LOCK_SSL_CTX);
+    return i;
+}
+
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
 int SSL_CTX_set_ecdh_auto_shim(SSL_CTX *ctx, int onoff) {
     return SSL_CTX_set_ecdh_auto(ctx, onoff);

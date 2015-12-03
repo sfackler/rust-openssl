@@ -995,6 +995,7 @@ impl Ssl {
     /// obtain the context corresponding to the current connection
     pub fn get_ssl_context(&self) -> SslContext {
         let ssl_ctx = unsafe { ffi::SSL_get_SSL_CTX(self.ssl) };
+        let count = unsafe { ffi_extras::SSL_CTX_increment_refcount(ssl_ctx) };
         SslContext { ctx: ssl_ctx }
     }
 }
