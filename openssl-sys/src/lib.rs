@@ -15,11 +15,8 @@ use std::sync::{Once, ONCE_INIT};
 pub type ASN1_INTEGER = c_void;
 pub type ASN1_STRING = c_void;
 pub type ASN1_TIME = c_void;
-pub type BIO = c_void;
-pub type BIO_METHOD = c_void;
 pub type BN_CTX = c_void;
 pub type COMP_METHOD = c_void;
-pub type CRYPTO_EX_DATA = c_void;
 pub type DH = c_void;
 pub type ENGINE = c_void;
 pub type EVP_CIPHER = c_void;
@@ -39,6 +36,60 @@ pub type X509_NAME_ENTRY = c_void;
 pub type X509_REQ = c_void;
 pub type X509_STORE_CTX = c_void;
 pub type stack_st_X509_EXTENSION = c_void;
+pub type stack_st_void = c_void;
+pub type bio_st = c_void;
+
+pub type bio_info_cb = Option<unsafe extern "C" fn(*mut BIO,
+                                                   c_int,
+                                                   *const c_char,
+                                                   c_int,
+                                                   c_long,
+                                                   c_long)>;
+
+#[repr(C)]
+pub struct BIO_METHOD {
+    pub type_: c_int,
+    pub name: *const c_char,
+    pub bwrite: Option<unsafe extern "C" fn(*mut BIO, *const c_char, c_int) -> c_int>,
+    pub bread: Option<unsafe extern "C" fn(*mut BIO, *mut c_char, c_int) -> c_int>,
+    pub bputs: Option<unsafe extern "C" fn(*mut BIO, *const c_char) -> c_int>,
+    pub bgets: Option<unsafe extern "C" fn(*mut BIO, *mut c_char, c_int) -> c_int>,
+    pub ctrl: Option<unsafe extern "C" fn(*mut BIO, c_int, c_long, *mut c_void) -> c_long>,
+    pub create: Option<unsafe extern "C" fn(*mut BIO) -> c_int>,
+    pub destroy: Option<unsafe extern "C" fn(*mut BIO) -> c_int>,
+    pub callback_ctrl: Option<unsafe extern "C" fn(*mut BIO, c_int, bio_info_cb) -> c_long>,
+}
+
+#[repr(C)]
+pub struct BIO {
+    pub method: *mut BIO_METHOD,
+    pub callback: Option<unsafe extern "C" fn(*mut BIO,
+                                              c_int,
+                                              *const c_char,
+                                              c_int,
+                                              c_long,
+                                              c_long)
+                                              -> c_long>,
+    pub cb_arg: *mut c_char,
+    pub init: c_int,
+    pub shutdown: c_int,
+    pub flags: c_int,
+    pub retry_reason: c_int,
+    pub num: c_int,
+    pub ptr: *mut c_void,
+    pub next_bio: *mut BIO,
+    pub prev_bio: *mut BIO,
+    pub references: c_int,
+    pub num_read: c_ulong,
+    pub num_write: c_ulong,
+    pub ex_data: CRYPTO_EX_DATA,
+}
+
+#[repr(C)]
+pub struct CRYPTO_EX_DATA {
+    pub sk: *mut stack_st_void,
+    pub dummy: c_int,
+}
 
 #[repr(C)]
 pub struct EVP_MD_CTX {
