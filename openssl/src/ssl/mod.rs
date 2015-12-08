@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::io;
+use std::io::Cursor;
 use std::io::prelude::*;
 use std::mem;
 use std::str;
@@ -1426,31 +1427,250 @@ impl MaybeSslStream<net::TcpStream> {
     }
 }
 
+struct IndirectNonblockingSslStream<S> {
+    stream: S,
+    ssl: Arc<Ssl>,
+    // Max TLS record size is 16k
+    buf: Box<[u8; 16 * 1024]>,
+    write_offset: usize,
+    out_buf: Cursor<Vec<u8>>,
+}
+
+impl<S: Clone> Clone for IndirectNonblockingSslStream<S> {
+    fn clone(&self) -> IndirectNonblockingSslStream<S> {
+        IndirectNonblockingSslStream {
+            stream: self.stream.clone(),
+            ssl: self.ssl.clone(),
+            buf: Box::new(*self.buf),
+            write_offset: self.write_offset,
+            out_buf: self.out_buf.clone(),
+        }
+    }
+}
+
+impl IndirectNonblockingSslStream<net::TcpStream> {
+    fn try_clone(&self) -> io::Result<IndirectNonblockingSslStream<net::TcpStream>> {
+        Ok(IndirectNonblockingSslStream {
+            stream: try!(self.stream.try_clone()),
+            ssl: self.ssl.clone(),
+            buf: Box::new(*self.buf),
+            write_offset: self.write_offset,
+            out_buf: self.out_buf.clone(),
+        })
+    }
+}
+
+impl<S: Read+Write> IndirectNonblockingSslStream<S> {
+    fn new_base<T: IntoSsl>(ssl: T, stream: S) -> Result<IndirectNonblockingSslStream<S>, SslError> {
+        let ssl = try!(ssl.into_ssl());
+
+        let rbio = try!(MemBio::new());
+        let wbio = try!(MemBio::new());
+
+        unsafe { ffi::SSL_set_bio(ssl.ssl, rbio.unwrap(), wbio.unwrap()) }
+
+        Ok(IndirectNonblockingSslStream {
+            stream: stream,
+            ssl: Arc::new(ssl),
+            buf: Box::new([0; 16 * 1024]),
+            write_offset: 0,
+            out_buf: Cursor::new(Vec::with_capacity(16 * 1024)),
+        })
+    }
+
+    fn make_error(&self, ret: c_int) -> NonblockingSslError {
+        match self.ssl.get_error(ret) {
+            LibSslError::ErrorSsl => NonblockingSslError::SslError(SslError::get()),
+            LibSslError::ErrorSyscall => {
+                let err = SslError::get();
+                let count = match err {
+                    SslError::OpenSslErrors(ref v) => v.len(),
+                    _ => unreachable!(),
+                };
+                let ssl_error = if count == 0 {
+                    if ret == 0 {
+                        SslError::StreamError(io::Error::new(io::ErrorKind::ConnectionAborted,
+                                                             "unexpected EOF observed"))
+                    } else {
+                        SslError::StreamError(io::Error::last_os_error())
+                    }
+                } else {
+                    err
+                };
+                ssl_error.into()
+            },
+            LibSslError::ErrorWantWrite => NonblockingSslError::WantWrite,
+            LibSslError::ErrorWantRead => NonblockingSslError::WantRead,
+            err => panic!("unexpected error {:?} with ret {}", err, ret),
+        }
+    }
+
+    fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<IndirectNonblockingSslStream<S>, SslError> {
+        let ssl = try!(IndirectNonblockingSslStream::new_base(ssl, stream));
+        let ret = ssl.ssl.connect();
+        if ret > 0 {
+            Ok(ssl)
+        } else {
+            // WantRead/WantWrite is okay here; we'll finish the handshake in
+            // subsequent send/recv calls.
+            match ssl.make_error(ret) {
+                NonblockingSslError::WantRead | NonblockingSslError::WantWrite => Ok(ssl),
+                NonblockingSslError::SslError(other) => Err(other),
+            }
+        }
+    }
+
+    fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<IndirectNonblockingSslStream<S>, SslError> {
+        let ssl = try!(IndirectNonblockingSslStream::new_base(ssl, stream));
+        let ret = ssl.ssl.accept();
+        if ret > 0 {
+            Ok(ssl)
+        } else {
+            // WantRead/WantWrite is okay here; we'll finish the handshake in
+            // subsequent send/recv calls.
+            match ssl.make_error(ret) {
+                NonblockingSslError::WantRead | NonblockingSslError::WantWrite => Ok(ssl),
+                NonblockingSslError::SslError(other) => Err(other),
+            }
+        }
+    }
+
+    fn in_retry_wrapper<F>(&mut self, mut blk: F) -> Result<usize, NonblockingSslError>
+            where F: FnMut(&Ssl) -> c_int {
+        loop {
+            let ret = blk(&self.ssl);
+            if ret > 0 {
+                return Ok(ret as usize);
+            }
+
+            let e = self.ssl.get_error(ret);
+            match e {
+                LibSslError::ErrorWantRead => {
+                    // There may still be something left in our wbio, left over from connect/accept
+                    try!(self.write_through());
+                    match self.stream.read(&mut self.buf[..]) {
+                        Err(err) => {
+                            if err.kind() == io::ErrorKind::WouldBlock {
+                                return Err(NonblockingSslError::WantRead);
+                            }
+                            return Err(NonblockingSslError::SslError(StreamError(err)));
+                        }
+                        Ok(len) => {
+                            if len == 0 {
+                                let method = self.ssl.get_ssl_method();
+
+                                if method.map(|m| m.is_dtls()).unwrap_or(false) {
+                                    return Ok(0);
+                                } else {
+                                    self.ssl.get_rbio().set_eof(true);
+                                }
+                            } else {
+                                if let Err(err) = self.ssl.get_rbio().write_all(&self.buf[..len]) {
+                                    return Err(NonblockingSslError::SslError(StreamError(err)));
+                                }
+                            }
+                        }
+                    }
+                }
+                LibSslError::ErrorWantWrite => { try!(self.flush()) }
+                LibSslError::ErrorZeroReturn => return Err(NonblockingSslError::SslError(SslSessionClosed)),
+                LibSslError::ErrorSsl => return Err(NonblockingSslError::SslError(SslError::get())),
+                LibSslError::ErrorSyscall if ret == 0 => return Ok(0),
+                err => panic!("unexpected error {:?} with ret {}", err, ret),
+            }
+        }
+    }
+
+    fn write_through(&mut self) -> Result<(), NonblockingSslError> {
+        loop {
+            // Empty out_buf to the underlying stream
+            loop {
+                let bytes_written =
+                {
+                    let out_data = self.out_buf.fill_buf().unwrap();
+                    if out_data.len() == 0 { break; }
+                    match self.stream.write(&out_data) {
+                        Err(err) => {
+                            if err.kind() == io::ErrorKind::WouldBlock {
+                                return Err(NonblockingSslError::WantWrite);
+                            }
+                            return Err(NonblockingSslError::SslError(StreamError(err)));
+                        },
+                        Ok(n) => n
+                    }
+                };
+                self.out_buf.consume(bytes_written);
+            }
+            self.out_buf.get_mut().clear();
+            self.out_buf.set_position(0);
+
+            // Put anything in ssl's wbio into our out_buf
+            let bytes_read = self.ssl.get_wbio().read_to_end(self.out_buf.get_mut()).unwrap();
+            if bytes_read == 0 { break; }
+        }
+        Ok(())
+    }
+}
+
+impl<S: Read+Write> IndirectNonblockingSslStream<S> {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, NonblockingSslError> {
+        self.in_retry_wrapper(|ssl| ssl.read(buf))
+    }
+
+    fn write(&mut self, buf: &[u8]) -> Result<usize, NonblockingSslError> {
+        let ssl_write_buf = &buf[self.write_offset..];
+        if ssl_write_buf.len() > 0 {
+            let bytes = try!(self.in_retry_wrapper(|ssl| ssl.write(ssl_write_buf)));
+            self.write_offset += bytes;
+        }
+        if self.write_offset >= ssl_write_buf.len() {
+            try!(self.write_through());
+        }
+        let ret = self.write_offset;
+        self.write_offset = 0;
+        Ok(ret)
+    }
+
+    fn flush(&mut self) -> Result<(), NonblockingSslError> {
+        try!(self.write_through());
+        match self.stream.flush() {
+            Err(err) => {
+                if err.kind() == io::ErrorKind::WouldBlock {
+                    return Err(NonblockingSslError::WantWrite);
+                }
+                return Err(NonblockingSslError::SslError(StreamError(err)));
+            },
+            Ok(()) => Ok(())
+        }
+    }
+}
+
+
 /// An SSL stream wrapping a nonblocking socket.
 #[derive(Clone)]
-pub struct NonblockingSslStream<S> {
+struct DirectNonblockingSslStream<S> {
     stream: S,
     ssl: Arc<Ssl>,
 }
 
-impl NonblockingSslStream<net::TcpStream> {
-    pub fn try_clone(&self) -> io::Result<NonblockingSslStream<net::TcpStream>> {
-        Ok(NonblockingSslStream {
+impl DirectNonblockingSslStream<net::TcpStream> {
+    fn try_clone(&self) -> io::Result<DirectNonblockingSslStream<net::TcpStream>> {
+        Ok(DirectNonblockingSslStream {
             stream: try!(self.stream.try_clone()),
             ssl: self.ssl.clone(),
         })
     }
 }
 
-impl<S> NonblockingSslStream<S> {
-    fn new_base(ssl: Ssl, stream: S, sock: c_int) -> Result<NonblockingSslStream<S>, SslError> {
+impl<S> DirectNonblockingSslStream<S> {
+    fn new_base(ssl: Ssl, stream: S, sock: c_int) -> Result<DirectNonblockingSslStream<S>, SslError> {
         unsafe {
             let bio = try_ssl_null!(ffi::BIO_new_socket(sock, 0));
             ffi_extras::BIO_set_nbio(bio, 1);
             ffi::SSL_set_bio(ssl.ssl, bio, bio);
         }
 
-        Ok(NonblockingSslStream {
+        Ok(DirectNonblockingSslStream {
             stream: stream,
             ssl: Arc::new(ssl),
         })
@@ -1482,10 +1702,272 @@ impl<S> NonblockingSslStream<S> {
             err => panic!("unexpected error {:?} with ret {}", err, ret),
         }
     }
+}
+
+#[cfg(unix)]
+impl<S: Read+Write+::std::os::unix::io::AsRawFd> DirectNonblockingSslStream<S> {
+    /// Create a new nonblocking client ssl connection on wrapped `stream`.
+    ///
+    /// Note that this method will most likely not actually complete the SSL
+    /// handshake because doing so requires several round trips; the handshake will
+    /// be completed in subsequent read/write calls managed by your event loop.
+    fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<DirectNonblockingSslStream<S>, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        let fd = stream.as_raw_fd() as c_int;
+        let ssl = try!(DirectNonblockingSslStream::new_base(ssl, stream, fd));
+        let ret = ssl.ssl.connect();
+        if ret > 0 {
+            Ok(ssl)
+        } else {
+            // WantRead/WantWrite is okay here; we'll finish the handshake in
+            // subsequent send/recv calls.
+            match ssl.make_error(ret) {
+                NonblockingSslError::WantRead | NonblockingSslError::WantWrite => Ok(ssl),
+                NonblockingSslError::SslError(other) => Err(other),
+            }
+        }
+    }
+
+    /// Create a new nonblocking server ssl connection on wrapped `stream`.
+    ///
+    /// Note that this method will most likely not actually complete the SSL
+    /// handshake because doing so requires several round trips; the handshake will
+    /// be completed in subsequent read/write calls managed by your event loop.
+    fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<DirectNonblockingSslStream<S>, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        let fd = stream.as_raw_fd() as c_int;
+        let ssl = try!(DirectNonblockingSslStream::new_base(ssl, stream, fd));
+        let ret = ssl.ssl.accept();
+        if ret > 0 {
+            Ok(ssl)
+        } else {
+            // WantRead/WantWrite is okay here; we'll finish the handshake in
+            // subsequent send/recv calls.
+            match ssl.make_error(ret) {
+                NonblockingSslError::WantRead | NonblockingSslError::WantWrite => Ok(ssl),
+                NonblockingSslError::SslError(other) => Err(other),
+            }
+        }
+    }
+}
+
+#[cfg(unix)]
+impl<S: ::std::os::unix::io::AsRawFd> ::std::os::unix::io::AsRawFd for DirectNonblockingSslStream<S> {
+    fn as_raw_fd(&self) -> ::std::os::unix::io::RawFd {
+        self.stream.as_raw_fd()
+    }
+}
+
+#[cfg(windows)]
+impl<S: Read+Write+::std::os::windows::io::AsRawSocket> DirectNonblockingSslStream<S> {
+    /// Create a new nonblocking client ssl connection on wrapped `stream`.
+    ///
+    /// Note that this method will most likely not actually complete the SSL
+    /// handshake because doing so requires several round trips; the handshake will
+    /// be completed in subsequent read/write calls managed by your event loop.
+    fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<DirectNonblockingSslStream<S>, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        let fd = stream.as_raw_socket() as c_int;
+        let ssl = try!(DirectNonblockingSslStream::new_base(ssl, stream, fd));
+        let ret = ssl.ssl.connect();
+        if ret > 0 {
+            Ok(ssl)
+        } else {
+            // WantRead/WantWrite is okay here; we'll finish the handshake in
+            // subsequent send/recv calls.
+            match ssl.make_error(ret) {
+                NonblockingSslError::WantRead | NonblockingSslError::WantWrite => Ok(ssl),
+                NonblockingSslError::SslError(other) => Err(other),
+            }
+        }
+    }
+
+    /// Create a new nonblocking server ssl connection on wrapped `stream`.
+    ///
+    /// Note that this method will most likely not actually complete the SSL
+    /// handshake because doing so requires several round trips; the handshake will
+    /// be completed in subsequent read/write calls managed by your event loop.
+    fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<DirectNonblockingSslStream<S>, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        let fd = stream.as_raw_socket() as c_int;
+        let ssl = try!(DirectNonblockingSslStream::new_base(ssl, stream, fd));
+        let ret = ssl.ssl.accept();
+        if ret > 0 {
+            Ok(ssl)
+        } else {
+            // WantRead/WantWrite is okay here; we'll finish the handshake in
+            // subsequent send/recv calls.
+            match ssl.make_error(ret) {
+                NonblockingSslError::WantRead | NonblockingSslError::WantWrite => Ok(ssl),
+                NonblockingSslError::SslError(other) => Err(other),
+            }
+        }
+    }
+}
+
+impl<S: Read+Write> DirectNonblockingSslStream<S> {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, NonblockingSslError> {
+        let ret = self.ssl.read(buf);
+        if ret >= 0 {
+            Ok(ret as usize)
+        } else {
+            Err(self.make_error(ret))
+        }
+    }
+
+    fn write(&mut self, buf: &[u8]) -> Result<usize, NonblockingSslError> {
+        let ret = self.ssl.write(buf);
+        if ret > 0 {
+            Ok(ret as usize)
+        } else {
+            Err(self.make_error(ret))
+        }
+    }
+}
+
+#[derive(Clone)]
+enum NonblockingStreamKind<S> {
+    Indirect(IndirectNonblockingSslStream<S>),
+    Direct(DirectNonblockingSslStream<S>),
+}
+
+impl<S> NonblockingStreamKind<S> {
+    fn stream(&self) -> &S {
+        match *self {
+            NonblockingStreamKind::Indirect(ref s) => &s.stream,
+            NonblockingStreamKind::Direct(ref s) => &s.stream,
+        }
+    }
+
+    fn mut_stream(&mut self) -> &mut S {
+        match *self {
+            NonblockingStreamKind::Indirect(ref mut s) => &mut s.stream,
+            NonblockingStreamKind::Direct(ref mut s) => &mut s.stream,
+        }
+    }
+
+    fn ssl(&self) -> &Ssl {
+        match *self {
+            NonblockingStreamKind::Indirect(ref s) => &s.ssl,
+            NonblockingStreamKind::Direct(ref s) => &s.ssl,
+        }
+    }
+}
+
+/// A stream wrapper which handles SSL encryption for an underlying stream.
+#[derive(Clone)]
+pub struct NonblockingSslStream<S> {
+    kind: NonblockingStreamKind<S>,
+}
+
+impl NonblockingSslStream<net::TcpStream> {
+    /// Create a new independently owned handle to the underlying socket.
+    pub fn try_clone(&self) -> io::Result<NonblockingSslStream<net::TcpStream>> {
+        let kind = match self.kind {
+            NonblockingStreamKind::Indirect(ref s) => NonblockingStreamKind::Indirect(try!(s.try_clone())),
+            NonblockingStreamKind::Direct(ref s) => NonblockingStreamKind::Direct(try!(s.try_clone()))
+        };
+        Ok(NonblockingSslStream {
+            kind: kind
+        })
+    }
+}
+
+impl<S> fmt::Debug for NonblockingSslStream<S> where S: fmt::Debug {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("NonblockingSslStream")
+            .field("stream", &self.kind.stream())
+            .field("ssl", &self.kind.ssl())
+            .finish()
+    }
+}
+
+#[cfg(unix)]
+impl<S: Read+Write+::std::os::unix::io::AsRawFd> NonblockingSslStream<S> {
+    /// Creates an SSL/TLS client operating over the provided stream.
+    ///
+    /// Streams passed to this method must implement `AsRawFd` on Unixy
+    /// platforms and `AsRawSocket` on Windows. Use `connect_generic` for
+    /// streams that do not.
+    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<NonblockingSslStream<S>, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        let stream = try!(DirectNonblockingSslStream::connect(ssl, stream));
+        Ok(NonblockingSslStream {
+            kind: NonblockingStreamKind::Direct(stream)
+        })
+    }
+
+    /// Creates an SSL/TLS server operating over the provided stream.
+    ///
+    /// Streams passed to this method must implement `AsRawFd` on Unixy
+    /// platforms and `AsRawSocket` on Windows. Use `accept_generic` for
+    /// streams that do not.
+    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<NonblockingSslStream<S>, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        let stream = try!(DirectNonblockingSslStream::accept(ssl, stream));
+        Ok(NonblockingSslStream {
+            kind: NonblockingStreamKind::Direct(stream)
+        })
+    }
+}
+
+#[cfg(windows)]
+impl<S: Read+Write+::std::os::windows::io::AsRawSocket> NonblockingSslStream<S> {
+    /// Creates an SSL/TLS client operating over the provided stream.
+    ///
+    /// Streams passed to this method must implement `AsRawFd` on Unixy
+    /// platforms and `AsRawSocket` on Windows. Use `connect_generic` for
+    /// streams that do not.
+    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<NonblockingSslStream<S>, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        let stream = try!(DirectNonblockingSslStream::connect(ssl, stream));
+        Ok(NonblockingSslStream {
+            kind: NonblockingStreamKind::Direct(stream)
+        })
+    }
+
+    /// Creates an SSL/TLS server operating over the provided stream.
+    ///
+    /// Streams passed to this method must implement `AsRawFd` on Unixy
+    /// platforms and `AsRawSocket` on Windows. Use `accept_generic` for
+    /// streams that do not.
+    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<NonblockingSslStream<S>, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        let stream = try!(DirectNonblockingSslStream::accept(ssl, stream));
+        Ok(NonblockingSslStream {
+            kind: NonblockingStreamKind::Direct(stream)
+        })
+    }
+}
+
+impl<S: Read+Write> NonblockingSslStream<S> {
+    /// Creates an SSL/TLS client operating over the provided stream.
+    ///
+    /// `NonblockingSslStream`s returned by this method will be less efficient than ones
+    /// returned by `connect`, so this method should only be used for streams
+    /// that do not implement `AsRawFd` and `AsRawSocket`.
+    pub fn connect_generic<T: IntoSsl>(ssl: T, stream: S) -> Result<NonblockingSslStream<S>, SslError> {
+        let stream = try!(IndirectNonblockingSslStream::connect(ssl, stream));
+        Ok(NonblockingSslStream {
+            kind: NonblockingStreamKind::Indirect(stream)
+        })
+    }
+
+    /// Creates an SSL/TLS server operating over the provided stream.
+    ///
+    /// `NonblockingSslStream`s returned by this method will be less efficient than ones
+    /// returned by `accept`, so this method should only be used for streams
+    /// that do not implement `AsRawFd` and `AsRawSocket`.
+    pub fn accept_generic<T: IntoSsl>(ssl: T, stream: S) -> Result<NonblockingSslStream<S>, SslError> {
+        let stream = try!(IndirectNonblockingSslStream::accept(ssl, stream));
+        Ok(NonblockingSslStream {
+            kind: NonblockingStreamKind::Indirect(stream)
+        })
+    }
 
     /// Returns a reference to the underlying stream.
     pub fn get_ref(&self) -> &S {
-        &self.stream
+        self.kind.stream()
     }
 
     /// Returns a mutable reference to the underlying stream.
@@ -1495,113 +1977,12 @@ impl<S> NonblockingSslStream<S> {
     /// It is inadvisable to read from or write to the underlying stream as it
     /// will most likely corrupt the SSL session.
     pub fn get_mut(&mut self) -> &mut S {
-        &mut self.stream
+        self.kind.mut_stream()
     }
 
-    /// Returns a reference to the Ssl.
+    /// Returns the OpenSSL `Ssl` object associated with this stream.
     pub fn ssl(&self) -> &Ssl {
-        &self.ssl
-    }
-}
-
-#[cfg(unix)]
-impl<S: Read+Write+::std::os::unix::io::AsRawFd> NonblockingSslStream<S> {
-    /// Create a new nonblocking client ssl connection on wrapped `stream`.
-    ///
-    /// Note that this method will most likely not actually complete the SSL
-    /// handshake because doing so requires several round trips; the handshake will
-    /// be completed in subsequent read/write calls managed by your event loop.
-    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<NonblockingSslStream<S>, SslError> {
-        let ssl = try!(ssl.into_ssl());
-        let fd = stream.as_raw_fd() as c_int;
-        let ssl = try!(NonblockingSslStream::new_base(ssl, stream, fd));
-        let ret = ssl.ssl.connect();
-        if ret > 0 {
-            Ok(ssl)
-        } else {
-            // WantRead/WantWrite is okay here; we'll finish the handshake in
-            // subsequent send/recv calls.
-            match ssl.make_error(ret) {
-                NonblockingSslError::WantRead | NonblockingSslError::WantWrite => Ok(ssl),
-                NonblockingSslError::SslError(other) => Err(other),
-            }
-        }
-    }
-
-    /// Create a new nonblocking server ssl connection on wrapped `stream`.
-    ///
-    /// Note that this method will most likely not actually complete the SSL
-    /// handshake because doing so requires several round trips; the handshake will
-    /// be completed in subsequent read/write calls managed by your event loop.
-    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<NonblockingSslStream<S>, SslError> {
-        let ssl = try!(ssl.into_ssl());
-        let fd = stream.as_raw_fd() as c_int;
-        let ssl = try!(NonblockingSslStream::new_base(ssl, stream, fd));
-        let ret = ssl.ssl.accept();
-        if ret > 0 {
-            Ok(ssl)
-        } else {
-            // WantRead/WantWrite is okay here; we'll finish the handshake in
-            // subsequent send/recv calls.
-            match ssl.make_error(ret) {
-                NonblockingSslError::WantRead | NonblockingSslError::WantWrite => Ok(ssl),
-                NonblockingSslError::SslError(other) => Err(other),
-            }
-        }
-    }
-}
-
-#[cfg(unix)]
-impl<S: ::std::os::unix::io::AsRawFd> ::std::os::unix::io::AsRawFd for NonblockingSslStream<S> {
-    fn as_raw_fd(&self) -> ::std::os::unix::io::RawFd {
-        self.stream.as_raw_fd()
-    }
-}
-
-#[cfg(windows)]
-impl<S: Read+Write+::std::os::windows::io::AsRawSocket> NonblockingSslStream<S> {
-    /// Create a new nonblocking client ssl connection on wrapped `stream`.
-    ///
-    /// Note that this method will most likely not actually complete the SSL
-    /// handshake because doing so requires several round trips; the handshake will
-    /// be completed in subsequent read/write calls managed by your event loop.
-    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<NonblockingSslStream<S>, SslError> {
-        let ssl = try!(ssl.into_ssl());
-        let fd = stream.as_raw_socket() as c_int;
-        let ssl = try!(NonblockingSslStream::new_base(ssl, stream, fd));
-        let ret = ssl.ssl.connect();
-        if ret > 0 {
-            Ok(ssl)
-        } else {
-            // WantRead/WantWrite is okay here; we'll finish the handshake in
-            // subsequent send/recv calls.
-            match ssl.make_error(ret) {
-                NonblockingSslError::WantRead | NonblockingSslError::WantWrite => Ok(ssl),
-                NonblockingSslError::SslError(other) => Err(other),
-            }
-        }
-    }
-
-    /// Create a new nonblocking server ssl connection on wrapped `stream`.
-    ///
-    /// Note that this method will most likely not actually complete the SSL
-    /// handshake because doing so requires several round trips; the handshake will
-    /// be completed in subsequent read/write calls managed by your event loop.
-    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<NonblockingSslStream<S>, SslError> {
-        let ssl = try!(ssl.into_ssl());
-        let fd = stream.as_raw_socket() as c_int;
-        let ssl = try!(NonblockingSslStream::new_base(ssl, stream, fd));
-        let ret = ssl.ssl.accept();
-        if ret > 0 {
-            Ok(ssl)
-        } else {
-            // WantRead/WantWrite is okay here; we'll finish the handshake in
-            // subsequent send/recv calls.
-            match ssl.make_error(ret) {
-                NonblockingSslError::WantRead | NonblockingSslError::WantWrite => Ok(ssl),
-                NonblockingSslError::SslError(other) => Err(other),
-            }
-        }
+        self.kind.ssl()
     }
 }
 
@@ -1622,11 +2003,9 @@ impl<S: Read+Write> NonblockingSslStream<S> {
     /// On a return value of `Ok(count)`, count is the number of decrypted
     /// plaintext bytes copied into the `buf` slice.
     pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, NonblockingSslError> {
-        let ret = self.ssl.read(buf);
-        if ret >= 0 {
-            Ok(ret as usize)
-        } else {
-            Err(self.make_error(ret))
+        match self.kind {
+            NonblockingStreamKind::Indirect(ref mut s) => s.read(buf),
+            NonblockingStreamKind::Direct(ref mut s) => s.read(buf),
         }
     }
 
@@ -1646,11 +2025,16 @@ impl<S: Read+Write> NonblockingSslStream<S> {
     /// Given a return value of `Ok(count)`, count is the number of plaintext bytes
     /// from the `buf` slice that were encrypted and written onto the stream.
     pub fn write(&mut self, buf: &[u8]) -> Result<usize, NonblockingSslError> {
-        let ret = self.ssl.write(buf);
-        if ret > 0 {
-            Ok(ret as usize)
-        } else {
-            Err(self.make_error(ret))
+        match self.kind {
+            NonblockingStreamKind::Indirect(ref mut s) => s.write(buf),
+            NonblockingStreamKind::Direct(ref mut s) => s.write(buf),
+        }
+    }
+
+    pub fn flush(&mut self) -> Result<(), NonblockingSslError> {
+        match self.kind {
+            NonblockingStreamKind::Indirect(ref mut s) => s.flush(),
+            NonblockingStreamKind::Direct(_) => Ok(()),
         }
     }
 }

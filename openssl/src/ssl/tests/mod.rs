@@ -929,3 +929,94 @@ fn test_read_nonblocking() {
     assert!(bytes_read >= 5);
     assert_eq!(&input_buffer[..5], b"HTTP/");
 }
+
+#[test]
+fn test_indirect_write_nonblocking() {
+    let (_s, stream) = Server::new();
+    stream.set_nonblocking(true).unwrap();
+    let cx = SslContext::new(Sslv23).unwrap();
+    let mut stream = NonblockingSslStream::connect_generic(&cx, stream).unwrap();
+
+    let mut iterations = 0;
+    loop {
+        iterations += 1;
+        if iterations > 7 {
+            // Probably a safe assumption for the foreseeable future of
+            // openssl.
+            panic!("Too many read/write round trips in handshake!!");
+        }
+        let result = stream.write(b"hello");
+        match result {
+            Ok(_) => {
+                break;
+            },
+            Err(NonblockingSslError::WantRead) => {
+                assert!(wait_io(&stream, true, 1000));
+            },
+            Err(NonblockingSslError::WantWrite) => {
+                assert!(wait_io(&stream, false, 1000));
+            },
+            Err(other) => {
+                panic!("Unexpected SSL Error: {:?}", other);
+            },
+        }
+    }
+
+    // Second write should succeed immediately--plenty of space in kernel
+    // buffer, and handshake just completed.
+    stream.write(" there".as_bytes()).unwrap();
+}
+
+#[test]
+fn test_indirect_read_nonblocking() {
+    let (_s, stream) = Server::new();
+    stream.set_nonblocking(true).unwrap();
+    let cx = SslContext::new(Sslv23).unwrap();
+    let mut stream = NonblockingSslStream::connect_generic(&cx, stream).unwrap();
+
+    let mut iterations = 0;
+    loop {
+        iterations += 1;
+        if iterations > 7 {
+            // Probably a safe assumption for the foreseeable future of
+            // openssl.
+            panic!("Too many read/write round trips in handshake!!");
+        }
+        let result = stream.write(b"GET /\r\n\r\n");
+        match result {
+            Ok(n) => {
+                assert_eq!(n, 9);
+                break;
+            },
+            Err(NonblockingSslError::WantRead) => {
+                assert!(wait_io(&stream, true, 1000));
+            },
+            Err(NonblockingSslError::WantWrite) => {
+                assert!(wait_io(&stream, false, 1000));
+            },
+            Err(other) => {
+                panic!("Unexpected SSL Error: {:?}", other);
+            },
+        }
+    }
+    let mut input_buffer = [0u8; 1500];
+    let result = stream.read(&mut input_buffer);
+    let bytes_read = match result {
+        Ok(n) => {
+            // This branch is unlikely, but on an overloaded VM with
+            // unlucky context switching, the response could actually
+            // be in the receive buffer before we issue the read() syscall...
+            n
+        },
+        Err(NonblockingSslError::WantRead) => {
+            assert!(wait_io(&stream, true, 3000));
+            // Second read should return application data.
+            stream.read(&mut input_buffer).unwrap()
+        },
+        Err(other) => {
+            panic!("Unexpected SSL Error: {:?}", other);
+        },
+    };
+    assert!(bytes_read >= 5);
+    assert_eq!(&input_buffer[..5], b"HTTP/");
+}
