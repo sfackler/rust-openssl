@@ -49,6 +49,12 @@ extern {
     pub fn BIO_set_nbio(b: *mut BIO, enabled: c_long) -> c_long;
     #[link_name = "BIO_set_mem_eof_return_shim"]
     pub fn BIO_set_mem_eof_return(b: *mut BIO, v: c_int);
+    #[link_name = "BIO_clear_retry_flags_shim"]
+    pub fn BIO_clear_retry_flags(b: *mut BIO);
+    #[link_name = "BIO_set_retry_read_shim"]
+    pub fn BIO_set_retry_read(b: *mut BIO);
+    #[link_name = "BIO_set_retry_write_shim"]
+    pub fn BIO_set_retry_write(b: *mut BIO);
     pub fn SSL_CTX_set_options_shim(ctx: *mut SSL_CTX, options: c_long) -> c_long;
     pub fn SSL_CTX_get_options_shim(ctx: *mut SSL_CTX) -> c_long;
     pub fn SSL_CTX_clear_options_shim(ctx: *mut SSL_CTX, options: c_long) -> c_long;

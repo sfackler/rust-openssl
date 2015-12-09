@@ -167,7 +167,10 @@ pub type PasswordCallback = extern "C" fn(buf: *mut c_char, size: c_int,
                                           rwflag: c_int, user_data: *mut c_void)
                                           -> c_int;
 
+pub const BIO_TYPE_NONE: c_int = 0;
+
 pub const BIO_CTRL_EOF: c_int = 2;
+pub const BIO_CTRL_FLUSH: c_int = 11;
 pub const BIO_C_SET_BUF_MEM_EOF_RETURN: c_int = 130;
 
 pub const CRYPTO_LOCK: c_int = 1;

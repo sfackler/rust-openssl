@@ -91,6 +91,18 @@ void BIO_set_mem_eof_return_shim(BIO *b, int v) {
     BIO_set_mem_eof_return(b, v);
 }
 
+void BIO_clear_retry_flags_shim(BIO *b) {
+    BIO_clear_retry_flags(b);
+}
+
+void BIO_set_retry_read_shim(BIO *b) {
+    BIO_set_retry_read(b);
+}
+
+void BIO_set_retry_write_shim(BIO *b) {
+    BIO_set_retry_write(b);
+}
+
 long SSL_CTX_set_options_shim(SSL_CTX *ctx, long options) {
     return SSL_CTX_set_options(ctx, options);
 }

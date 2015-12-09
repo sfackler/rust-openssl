@@ -28,6 +28,7 @@ use x509::{X509StoreContext, X509FileType, X509};
 use crypto::pkey::PKey;
 
 pub mod error;
+mod bio;
 #[cfg(test)]
 mod tests;
 
