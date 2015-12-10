@@ -55,6 +55,8 @@ extern {
     pub fn BIO_set_retry_read(b: *mut BIO);
     #[link_name = "BIO_set_retry_write_shim"]
     pub fn BIO_set_retry_write(b: *mut BIO);
+    #[link_name = "BIO_flush"]
+    pub fn BIO_flush(b: *mut BIO) -> c_long;
     pub fn SSL_CTX_set_options_shim(ctx: *mut SSL_CTX, options: c_long) -> c_long;
     pub fn SSL_CTX_get_options_shim(ctx: *mut SSL_CTX) -> c_long;
     pub fn SSL_CTX_clear_options_shim(ctx: *mut SSL_CTX, options: c_long) -> c_long;

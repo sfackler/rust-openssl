@@ -936,3 +936,15 @@ fn ng_connect() {
     let ctx = SslContext::new(Sslv23).unwrap();
     SslStreamNg::connect(&ctx, stream).unwrap();
 }
+
+#[test]
+fn ng_get() {
+    let (_s, stream) = Server::new();
+    let ctx = SslContext::new(Sslv23).unwrap();
+    let mut stream = SslStreamNg::connect(&ctx, stream).unwrap();
+    stream.write_all(b"GET / HTTP/1.0\r\n\r\n").unwrap();
+    let mut resp = String::new();
+    stream.read_to_string(&mut resp).unwrap();
+    assert!(resp.starts_with("HTTP/1.0 200"));
+    assert!(resp.ends_with("</HTML>\r\n\r\n"));
+}

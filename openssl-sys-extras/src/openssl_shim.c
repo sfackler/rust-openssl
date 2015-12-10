@@ -103,6 +103,10 @@ void BIO_set_retry_write_shim(BIO *b) {
     BIO_set_retry_write(b);
 }
 
+long BIO_flush_shim(BIO *b) {
+    return BIO_flush(b);
+}
+
 long SSL_CTX_set_options_shim(SSL_CTX *ctx, long options) {
     return SSL_CTX_set_options(ctx, options);
 }
