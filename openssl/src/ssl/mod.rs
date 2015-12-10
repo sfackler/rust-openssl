@@ -11,7 +11,6 @@ use std::net;
 use std::path::Path;
 use std::ptr;
 use std::sync::{Once, ONCE_INIT, Arc, Mutex};
-use std::ops::{Deref, DerefMut};
 use std::cmp;
 use std::any::Any;
 #[cfg(any(feature = "npn", feature = "alpn"))]
@@ -20,11 +19,10 @@ use libc::{c_uchar, c_uint};
 use std::slice;
 use std::marker::PhantomData;
 
-use bio::{MemBio};
 use ffi;
 use ffi_extras;
 use dh::DH;
-use ssl::error::{NonblockingSslError, SslError, SslSessionClosed, StreamError, OpenSslErrors};
+use ssl::error::{NonblockingSslError, SslError, StreamError, OpenSslErrors};
 use x509::{X509StoreContext, X509FileType, X509};
 use crypto::pkey::PKey;
 
@@ -32,6 +30,10 @@ pub mod error;
 mod bio;
 #[cfg(test)]
 mod tests;
+
+extern "C" {
+    fn rust_SSL_clone(ssl: *mut ffi::SSL);
+}
 
 static mut VERIFY_IDX: c_int = -1;
 
@@ -677,26 +679,6 @@ impl SslContext {
     }
 }
 
-#[allow(dead_code)]
-struct MemBioRef<'ssl> {
-    ssl: &'ssl Ssl,
-    bio: MemBio,
-}
-
-impl<'ssl> Deref for MemBioRef<'ssl> {
-    type Target = MemBio;
-
-    fn deref(&self) -> &MemBio {
-        &self.bio
-    }
-}
-
-impl<'ssl> DerefMut for MemBioRef<'ssl> {
-    fn deref_mut(&mut self) -> &mut MemBio {
-        &mut self.bio
-    }
-}
-
 pub struct Ssl {
     ssl: *mut ffi::SSL
 }
@@ -718,6 +700,14 @@ impl Drop for Ssl {
     }
 }
 
+impl Clone for Ssl {
+    fn clone(&self) -> Ssl {
+        unsafe { rust_SSL_clone(self.ssl) };
+        Ssl { ssl: self.ssl }
+
+    }
+}
+
 impl Ssl {
     pub fn new(ctx: &SslContext) -> Result<Ssl, SslError> {
         let ssl = try_ssl_null!(unsafe { ffi::SSL_new(ctx.ctx) });
@@ -727,22 +717,6 @@ impl Ssl {
 
     fn get_raw_rbio(&self) -> *mut ffi::BIO {
         unsafe { ffi::SSL_get_rbio(self.ssl) }
-    }
-
-    fn get_rbio<'a>(&'a self) -> MemBioRef<'a> {
-        unsafe { self.wrap_bio(ffi::SSL_get_rbio(self.ssl)) }
-    }
-
-    fn get_wbio<'a>(&'a self) -> MemBioRef<'a> {
-        unsafe { self.wrap_bio(ffi::SSL_get_wbio(self.ssl)) }
-    }
-
-    fn wrap_bio<'a>(&'a self, bio: *mut ffi::BIO) -> MemBioRef<'a> {
-        assert!(bio != ptr::null_mut());
-        MemBioRef {
-            ssl: self,
-            bio: MemBio::borrowed(bio)
-        }
     }
 
     fn connect(&self) -> c_int {
@@ -925,182 +899,94 @@ make_LibSslError! {
     ErrorWantAccept = SSL_ERROR_WANT_ACCEPT
 }
 
-struct IndirectStream<S> {
-    stream: S,
-    ssl: Arc<Ssl>,
-    // Max TLS record size is 16k
-    buf: Box<[u8; 16 * 1024]>,
+/// A stream wrapper which handles SSL encryption for an underlying stream.
+pub struct SslStream<S> {
+    ssl: Ssl,
+    _method: Box<ffi::BIO_METHOD>, // :(
+    _p: PhantomData<S>,
 }
 
-impl<S: Clone> Clone for IndirectStream<S> {
-    fn clone(&self) -> IndirectStream<S> {
-        IndirectStream {
-            stream: self.stream.clone(),
-            ssl: self.ssl.clone(),
-            buf: Box::new(*self.buf)
-        }
-    }
-}
+unsafe impl<S: Send> Send for SslStream<S> {}
 
-impl IndirectStream<net::TcpStream> {
-    fn try_clone(&self) -> io::Result<IndirectStream<net::TcpStream>> {
-        Ok(IndirectStream {
-            stream: try!(self.stream.try_clone()),
-            ssl: self.ssl.clone(),
-            buf: Box::new(*self.buf)
-        })
+impl<S: Clone + Read + Write> Clone for SslStream<S> {
+    fn clone(&self) -> SslStream<S> {
+        let stream = self.get_ref().clone();
+        Self::new_base(self.ssl.clone(), stream)
     }
 }
 
-impl<S: Read+Write> IndirectStream<S> {
-    fn new_base<T: IntoSsl>(ssl: T, stream: S) -> Result<IndirectStream<S>, SslError> {
-        let ssl = try!(ssl.into_ssl());
-
-        let rbio = try!(MemBio::new());
-        let wbio = try!(MemBio::new());
-
-        unsafe { ffi::SSL_set_bio(ssl.ssl, rbio.unwrap(), wbio.unwrap()) }
-
-        Ok(IndirectStream {
-            stream: stream,
-            ssl: Arc::new(ssl),
-            buf: Box::new([0; 16 * 1024]),
-        })
-    }
-
-    fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<IndirectStream<S>, SslError> {
-        let mut ssl = try!(IndirectStream::new_base(ssl, stream));
-        try!(ssl.in_retry_wrapper(|ssl| ssl.connect()));
-        Ok(ssl)
-    }
-
-    fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<IndirectStream<S>, SslError> {
-        let mut ssl = try!(IndirectStream::new_base(ssl, stream));
-        try!(ssl.in_retry_wrapper(|ssl| ssl.accept()));
-        Ok(ssl)
-    }
-
-    fn in_retry_wrapper<F>(&mut self, mut blk: F) -> Result<c_int, SslError>
-            where F: FnMut(&Ssl) -> c_int {
-        loop {
-            let ret = blk(&self.ssl);
-            if ret > 0 {
-                return Ok(ret);
-            }
-
-            let e = self.ssl.get_error(ret);
-            match e {
-                LibSslError::ErrorWantRead => {
-                    try_ssl_stream!(self.flush());
-                    let len = try_ssl_stream!(self.stream.read(&mut self.buf[..]));
-
-
-                    if len == 0 {
-                        let method = self.ssl.get_ssl_method();
-
-                        if method.map(|m| m.is_dtls()).unwrap_or(false) {
-                            return Ok(0);
-                        } else {
-                            self.ssl.get_rbio().set_eof(true);
-                        }
-                    } else {
-                        try_ssl_stream!(self.ssl.get_rbio().write_all(&self.buf[..len]));
-                    }
-                }
-                LibSslError::ErrorWantWrite => { try_ssl_stream!(self.flush()) }
-                LibSslError::ErrorZeroReturn => return Err(SslSessionClosed),
-                LibSslError::ErrorSsl => return Err(SslError::get()),
-                LibSslError::ErrorSyscall if ret == 0 => return Ok(0),
-                err => panic!("unexpected error {:?} with ret {}", err, ret),
-            }
-        }
-    }
-
-    fn write_through(&mut self) -> io::Result<()> {
-        io::copy(&mut *self.ssl.get_wbio(), &mut self.stream).map(|_| ())
-    }
-}
-
-impl<S: Read+Write> Read for IndirectStream<S> {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        match self.in_retry_wrapper(|ssl| { ssl.read(buf) }) {
-            Ok(len) => Ok(len as usize),
-            Err(SslSessionClosed) => Ok(0),
-            Err(StreamError(e)) => Err(e),
-            Err(e @ OpenSslErrors(_)) => {
-                Err(io::Error::new(io::ErrorKind::Other, e))
-            }
-        }
-    }
-}
-
-impl<S: Read+Write> Write for IndirectStream<S> {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let count = match self.in_retry_wrapper(|ssl| ssl.write(buf)) {
-            Ok(len) => len as usize,
-            Err(SslSessionClosed) => 0,
-            Err(StreamError(e)) => return Err(e),
-            Err(e @ OpenSslErrors(_)) => return Err(io::Error::new(io::ErrorKind::Other, e)),
-        };
-        try!(self.write_through());
-        Ok(count)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        try!(self.write_through());
-        self.stream.flush()
-    }
-}
-
-#[derive(Clone)]
-struct DirectStream<S> {
-    stream: S,
-    ssl: Arc<Ssl>,
-}
-
-impl DirectStream<net::TcpStream> {
-    fn try_clone(&self) -> io::Result<DirectStream<net::TcpStream>> {
-        Ok(DirectStream {
-            stream: try!(self.stream.try_clone()),
-            ssl: self.ssl.clone(),
-        })
-    }
-}
-
-impl<S> DirectStream<S> {
-    fn new_base(ssl: Ssl, stream: S, sock: c_int) -> Result<DirectStream<S>, SslError> {
+impl<S> Drop for SslStream<S> {
+    fn drop(&mut self) {
         unsafe {
-            let bio = try_ssl_null!(ffi::BIO_new_socket(sock, 0));
+            let _ = bio::take_stream::<S>(self.ssl.get_raw_rbio());
+        }
+    }
+}
+
+impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("SslStream")
+            .field("stream", &self.get_ref())
+            .field("ssl", &self.ssl())
+            .finish()
+    }
+}
+
+impl<S: Read+Write> SslStream<S> {
+    fn new_base(ssl: Ssl, stream: S) -> Self {
+        unsafe {
+            let (bio, method) = bio::new(stream).unwrap();
             ffi::SSL_set_bio(ssl.ssl, bio, bio);
-        }
 
-        Ok(DirectStream {
-            stream: stream,
-            ssl: Arc::new(ssl),
-        })
+            SslStream {
+                ssl: ssl,
+                _method: method,
+                _p: PhantomData,
+            }
+        }
     }
 
-    fn connect(ssl: Ssl, stream: S, sock: c_int) -> Result<DirectStream<S>, SslError> {
-        let ssl = try!(DirectStream::new_base(ssl, stream, sock));
-        let ret = ssl.ssl.connect();
+    /// Creates an SSL/TLS client operating over the provided stream.
+    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<Self, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        let mut stream = Self::new_base(ssl, stream);
+        let ret = stream.ssl.connect();
         if ret > 0 {
-            Ok(ssl)
+            Ok(stream)
         } else {
-            Err(ssl.make_error(ret))
+            Err(stream.make_error(ret))
         }
     }
 
-    fn accept(ssl: Ssl, stream: S, sock: c_int) -> Result<DirectStream<S>, SslError> {
-        let ssl = try!(DirectStream::new_base(ssl, stream, sock));
-        let ret = ssl.ssl.accept();
+    /// Creates an SSL/TLS server operating over the provided stream.
+    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<Self, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        let mut stream = Self::new_base(ssl, stream);
+        let ret = stream.ssl.accept();
         if ret > 0 {
-            Ok(ssl)
+            Ok(stream)
         } else {
-            Err(ssl.make_error(ret))
+            Err(stream.make_error(ret))
         }
     }
 
-    fn make_error(&self, ret: c_int) -> SslError {
+    /// ### Deprecated
+    ///
+    /// Use `connect`.
+    pub fn connect_generic<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+        Self::connect(ssl, stream)
+    }
+
+    /// ### Deprecated
+    ///
+    /// Use `accept`.
+    pub fn accept_generic<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
+        Self::accept(ssl, stream)
+    }
+}
+
+impl<S> SslStream<S> {
+    fn make_error(&mut self, ret: c_int) -> SslError {
         match self.ssl.get_error(ret) {
             LibSslError::ErrorSsl => SslError::get(),
             LibSslError::ErrorSyscall => {
@@ -1114,21 +1000,56 @@ impl<S> DirectStream<S> {
                         SslError::StreamError(io::Error::new(io::ErrorKind::ConnectionAborted,
                                                              "unexpected EOF observed"))
                     } else {
-                        SslError::StreamError(io::Error::last_os_error())
+                        let error = unsafe { bio::take_error::<S>(self.ssl.get_raw_rbio()) };
+                        SslError::StreamError(error.unwrap())
                     }
                 } else {
                     err
                 }
             }
             LibSslError::ErrorWantWrite | LibSslError::ErrorWantRead => {
-                SslError::StreamError(io::Error::last_os_error())
+                let error = unsafe { bio::take_error::<S>(self.ssl.get_raw_rbio()) };
+                SslError::StreamError(error.unwrap())
             }
             err => panic!("unexpected error {:?} with ret {}", err, ret),
         }
     }
+    /// Returns a reference to the underlying stream.
+    pub fn get_ref(&self) -> &S {
+        unsafe {
+            let bio = self.ssl.get_raw_rbio();
+            bio::get_ref(bio)
+        }
+    }
+
+    /// Returns a mutable reference to the underlying stream.
+    ///
+    /// ## Warning
+    ///
+    /// It is inadvisable to read from or write to the underlying stream as it
+    /// will most likely corrupt the SSL session.
+    pub fn get_mut(&mut self) -> &mut S {
+        unsafe {
+            let bio = self.ssl.get_raw_rbio();
+            bio::get_mut(bio)
+        }
+    }
+
+    /// Returns the OpenSSL `Ssl` object associated with this stream.
+    pub fn ssl(&self) -> &Ssl {
+        &self.ssl
+    }
 }
 
-impl<S> Read for DirectStream<S> {
+impl SslStream<::std::net::TcpStream> {
+    /// Like `TcpStream::try_clone`.
+    pub fn try_clone(&self) -> io::Result<SslStream<::std::net::TcpStream>> {
+        let stream = try!(self.get_ref().try_clone());
+        Ok(Self::new_base(self.ssl.clone(), stream))
+    }
+}
+
+impl<S: Read> Read for SslStream<S> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let ret = self.ssl.read(buf);
         if ret >= 0 {
@@ -1142,7 +1063,7 @@ impl<S> Read for DirectStream<S> {
     }
 }
 
-impl<S: Write> Write for DirectStream<S> {
+impl<S: Write> Write for SslStream<S> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let ret = self.ssl.write(buf);
         if ret > 0 {
@@ -1156,197 +1077,7 @@ impl<S: Write> Write for DirectStream<S> {
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.stream.flush()
-    }
-}
-
-#[derive(Clone)]
-enum StreamKind<S> {
-    Indirect(IndirectStream<S>),
-    Direct(DirectStream<S>),
-}
-
-impl<S> StreamKind<S> {
-    fn stream(&self) -> &S {
-        match *self {
-            StreamKind::Indirect(ref s) => &s.stream,
-            StreamKind::Direct(ref s) => &s.stream,
-        }
-    }
-
-    fn mut_stream(&mut self) -> &mut S {
-        match *self {
-            StreamKind::Indirect(ref mut s) => &mut s.stream,
-            StreamKind::Direct(ref mut s) => &mut s.stream,
-        }
-    }
-
-    fn ssl(&self) -> &Ssl {
-        match *self {
-            StreamKind::Indirect(ref s) => &s.ssl,
-            StreamKind::Direct(ref s) => &s.ssl,
-        }
-    }
-}
-
-/// A stream wrapper which handles SSL encryption for an underlying stream.
-#[derive(Clone)]
-pub struct SslStream<S> {
-    kind: StreamKind<S>,
-}
-
-impl SslStream<net::TcpStream> {
-    /// Create a new independently owned handle to the underlying socket.
-    pub fn try_clone(&self) -> io::Result<SslStream<net::TcpStream>> {
-        let kind = match self.kind {
-            StreamKind::Indirect(ref s) => StreamKind::Indirect(try!(s.try_clone())),
-            StreamKind::Direct(ref s) => StreamKind::Direct(try!(s.try_clone()))
-        };
-        Ok(SslStream {
-            kind: kind
-        })
-    }
-}
-
-impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("SslStream")
-            .field("stream", &self.kind.stream())
-            .field("ssl", &self.kind.ssl())
-            .finish()
-    }
-}
-
-#[cfg(unix)]
-impl<S: Read+Write+::std::os::unix::io::AsRawFd> SslStream<S> {
-    /// Creates an SSL/TLS client operating over the provided stream.
-    ///
-    /// Streams passed to this method must implement `AsRawFd` on Unixy
-    /// platforms and `AsRawSocket` on Windows. Use `connect_generic` for
-    /// streams that do not.
-    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
-        let ssl = try!(ssl.into_ssl());
-        let fd = stream.as_raw_fd() as c_int;
-        let stream = try!(DirectStream::connect(ssl, stream, fd));
-        Ok(SslStream {
-            kind: StreamKind::Direct(stream)
-        })
-    }
-
-    /// Creates an SSL/TLS server operating over the provided stream.
-    ///
-    /// Streams passed to this method must implement `AsRawFd` on Unixy
-    /// platforms and `AsRawSocket` on Windows. Use `accept_generic` for
-    /// streams that do not.
-    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
-        let ssl = try!(ssl.into_ssl());
-        let fd = stream.as_raw_fd() as c_int;
-        let stream = try!(DirectStream::accept(ssl, stream, fd));
-        Ok(SslStream {
-            kind: StreamKind::Direct(stream)
-        })
-    }
-}
-
-#[cfg(windows)]
-impl<S: Read+Write+::std::os::windows::io::AsRawSocket> SslStream<S> {
-    /// Creates an SSL/TLS client operating over the provided stream.
-    ///
-    /// Streams passed to this method must implement `AsRawFd` on Unixy
-    /// platforms and `AsRawSocket` on Windows. Use `connect_generic` for
-    /// streams that do not.
-    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
-        let ssl = try!(ssl.into_ssl());
-        let fd = stream.as_raw_socket() as c_int;
-        let stream = try!(DirectStream::connect(ssl, stream, fd));
-        Ok(SslStream {
-            kind: StreamKind::Direct(stream)
-        })
-    }
-
-    /// Creates an SSL/TLS server operating over the provided stream.
-    ///
-    /// Streams passed to this method must implement `AsRawFd` on Unixy
-    /// platforms and `AsRawSocket` on Windows. Use `accept_generic` for
-    /// streams that do not.
-    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
-        let ssl = try!(ssl.into_ssl());
-        let fd = stream.as_raw_socket() as c_int;
-        let stream = try!(DirectStream::accept(ssl, stream, fd));
-        Ok(SslStream {
-            kind: StreamKind::Direct(stream)
-        })
-    }
-}
-
-impl<S: Read+Write> SslStream<S> {
-    /// Creates an SSL/TLS client operating over the provided stream.
-    ///
-    /// `SslStream`s returned by this method will be less efficient than ones
-    /// returned by `connect`, so this method should only be used for streams
-    /// that do not implement `AsRawFd` and `AsRawSocket`.
-    pub fn connect_generic<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
-        let stream = try!(IndirectStream::connect(ssl, stream));
-        Ok(SslStream {
-            kind: StreamKind::Indirect(stream)
-        })
-    }
-
-    /// Creates an SSL/TLS server operating over the provided stream.
-    ///
-    /// `SslStream`s returned by this method will be less efficient than ones
-    /// returned by `accept`, so this method should only be used for streams
-    /// that do not implement `AsRawFd` and `AsRawSocket`.
-    pub fn accept_generic<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
-        let stream = try!(IndirectStream::accept(ssl, stream));
-        Ok(SslStream {
-            kind: StreamKind::Indirect(stream)
-        })
-    }
-
-    /// Returns a reference to the underlying stream.
-    pub fn get_ref(&self) -> &S {
-        self.kind.stream()
-    }
-
-    /// Returns a mutable reference to the underlying stream.
-    ///
-    /// ## Warning
-    ///
-    /// It is inadvisable to read from or write to the underlying stream as it
-    /// will most likely corrupt the SSL session.
-    pub fn get_mut(&mut self) -> &mut S {
-        self.kind.mut_stream()
-    }
-
-    /// Returns the OpenSSL `Ssl` object associated with this stream.
-    pub fn ssl(&self) -> &Ssl {
-        self.kind.ssl()
-    }
-}
-
-impl<S: Read+Write> Read for SslStream<S> {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        match self.kind {
-            StreamKind::Indirect(ref mut s) => s.read(buf),
-            StreamKind::Direct(ref mut s) => s.read(buf),
-        }
-    }
-}
-
-impl<S: Read+Write> Write for SslStream<S> {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        match self.kind {
-            StreamKind::Indirect(ref mut s) => s.write(buf),
-            StreamKind::Direct(ref mut s) => s.write(buf),
-        }
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        match self.kind {
-            StreamKind::Indirect(ref mut s) => s.flush(),
-            StreamKind::Direct(ref mut s) => s.flush(),
-        }
+        self.get_mut().flush()
     }
 }
 
@@ -1658,135 +1389,5 @@ impl<S: Read+Write> NonblockingSslStream<S> {
         } else {
             Err(self.make_error(ret))
         }
-    }
-}
-
-pub struct SslStreamNg<S> {
-    ssl: Ssl,
-    _method: Box<ffi::BIO_METHOD>, // :(
-    _p: PhantomData<S>,
-}
-
-impl<S> Drop for SslStreamNg<S> {
-    fn drop(&mut self) {
-        unsafe {
-            let _ = bio::take_stream::<S>(self.ssl.get_raw_rbio());
-        }
-    }
-}
-
-impl<S: Read + Write> SslStreamNg<S> {
-    fn new_base(ssl: Ssl, stream: S) -> Result<Self, SslError> {
-        unsafe {
-            let (bio, method) = try!(bio::new(stream));
-            ffi::SSL_set_bio(ssl.ssl, bio, bio);
-
-            Ok(SslStreamNg {
-                ssl: ssl,
-                _method: method,
-                _p: PhantomData,
-            })
-        }
-    }
-
-    /// Creates an SSL/TLS client operating over the provided stream.
-    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<Self, SslError> {
-        let ssl = try!(ssl.into_ssl());
-        let mut stream = try!(Self::new_base(ssl, stream));
-        let ret = stream.ssl.connect();
-        if ret > 0 {
-            Ok(stream)
-        } else {
-            Err(stream.make_error(ret))
-        }
-    }
-
-    /// Creates an SSL/TLS server operating over the provided stream.
-    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<Self, SslError> {
-        let ssl = try!(ssl.into_ssl());
-        let mut stream = try!(Self::new_base(ssl, stream));
-        let ret = stream.ssl.accept();
-        if ret > 0 {
-            Ok(stream)
-        } else {
-            Err(stream.make_error(ret))
-        }
-    }
-}
-
-impl<S> SslStreamNg<S> {
-    pub fn get_ref(&self) -> &S {
-        unsafe {
-            let bio = self.ssl.get_raw_rbio();
-            bio::get_ref(bio)
-        }
-    }
-
-    pub fn get_mut(&mut self) -> &mut S {
-        unsafe {
-            let bio = self.ssl.get_raw_rbio();
-            bio::get_mut(bio)
-        }
-    }
-
-    fn make_error(&mut self, ret: c_int) -> SslError {
-        match self.ssl.get_error(ret) {
-            LibSslError::ErrorSsl => SslError::get(),
-            LibSslError::ErrorSyscall => {
-                let err = SslError::get();
-                let count = match err {
-                    SslError::OpenSslErrors(ref v) => v.len(),
-                    _ => unreachable!(),
-                };
-                if count == 0 {
-                    if ret == 0 {
-                        SslError::StreamError(io::Error::new(io::ErrorKind::ConnectionAborted,
-                                                             "unexpected EOF observed"))
-                    } else {
-                        let error = unsafe { bio::take_error::<S>(self.ssl.get_raw_rbio()) };
-                        SslError::StreamError(error.unwrap())
-                    }
-                } else {
-                    err
-                }
-            }
-            LibSslError::ErrorWantWrite | LibSslError::ErrorWantRead => {
-                let error = unsafe { bio::take_error::<S>(self.ssl.get_raw_rbio()) };
-                SslError::StreamError(error.unwrap())
-            }
-            err => panic!("unexpected error {:?} with ret {}", err, ret),
-        }
-    }
-}
-
-impl<S: Read> Read for SslStreamNg<S> {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let ret = self.ssl.read(buf);
-        if ret >= 0 {
-            return Ok(ret as usize);
-        }
-
-        match self.make_error(ret) {
-            SslError::StreamError(e) => Err(e),
-            e => Err(io::Error::new(io::ErrorKind::Other, e)),
-        }
-    }
-}
-
-impl<S: Write> Write for SslStreamNg<S> {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let ret = self.ssl.write(buf);
-        if ret > 0 {
-            return Ok(ret as usize);
-        }
-
-        match self.make_error(ret) {
-            SslError::StreamError(e) => Err(e),
-            e => Err(io::Error::new(io::ErrorKind::Other, e)),
-        }
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        self.get_mut().flush()
     }
 }
