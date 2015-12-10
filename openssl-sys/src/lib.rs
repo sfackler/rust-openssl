@@ -478,6 +478,7 @@ extern "C" {
                                   salt: *const u8, saltlen: c_int,
                                   iter: c_int, keylen: c_int,
                                   out: *mut u8) -> c_int;
+    #[cfg(feature = "pkcs5_pbkdf2_hmac")]
     pub fn PKCS5_PBKDF2_HMAC(pass: *const u8, passlen: c_int,
                              salt: *const u8, saltlen: c_int,
                              iter: c_int, digest: *const EVP_MD, keylen: c_int,

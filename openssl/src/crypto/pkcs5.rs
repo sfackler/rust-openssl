@@ -89,16 +89,19 @@ pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: usize, keylen: usize) -> 
 }
 
 /// Derives a key from a password and salt using the PBKDF2-HMAC-SHA256 algorithm.
+#[cfg(feature = "pkcs5_pbkdf2_hmac")]
 pub fn pbkdf2_hmac_sha256(pass: &str, salt: &[u8], iter: usize, keylen: usize) -> Vec<u8> {
     pbkdf2_hmac_sha(pass, salt, iter, unsafe { ffi::EVP_sha256() }, keylen)
 }
 
 /// Derives a key from a password and salt using the PBKDF2-HMAC-SHA512 algorithm.
+#[cfg(feature = "pkcs5_pbkdf2_hmac")]
 pub fn pbkdf2_hmac_sha512(pass: &str, salt: &[u8], iter: usize, keylen: usize) -> Vec<u8> {
     pbkdf2_hmac_sha(pass, salt, iter, unsafe { ffi::EVP_sha512() }, keylen)
 }
 
 /// Derives a key from a password and salt using the PBKDF2-HMAC algorithm with a digest function.
+#[cfg(feature = "pkcs5_pbkdf2_hmac")]
 fn pbkdf2_hmac_sha(pass: &str, salt: &[u8], iter: usize, digest: *const ffi::EVP_MD, keylen: usize) -> Vec<u8> {
     unsafe {
         assert!(iter >= 1);
@@ -220,6 +223,7 @@ mod tests {
     // Test vectors from
     // https://git.lysator.liu.se/nettle/nettle/blob/nettle_3.1.1_release_20150424/testsuite/pbkdf2-test.c
     #[test]
+    #[cfg(feature = "pkcs5_pbkdf2_hmac")]
     fn test_pbkdf2_hmac_sha256() {
         assert_eq!(
             super::pbkdf2_hmac_sha256(
@@ -253,6 +257,7 @@ mod tests {
     // Test vectors from
     // https://git.lysator.liu.se/nettle/nettle/blob/nettle_3.1.1_release_20150424/testsuite/pbkdf2-test.c
     #[test]
+    #[cfg(feature = "pkcs5_pbkdf2_hmac")]
     fn test_pbkdf2_hmac_sha512() {
         assert_eq!(
             super::pbkdf2_hmac_sha512(
