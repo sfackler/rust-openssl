@@ -18,6 +18,7 @@ use std::any::Any;
 use libc::{c_uchar, c_uint};
 #[cfg(any(feature = "npn", feature = "alpn"))]
 use std::slice;
+use std::marker::PhantomData;
 
 use bio::{MemBio};
 use ffi;
@@ -724,6 +725,10 @@ impl Ssl {
         Ok(ssl)
     }
 
+    fn get_raw_rbio(&self) -> *mut ffi::BIO {
+        unsafe { ffi::SSL_get_rbio(self.ssl) }
+    }
+
     fn get_rbio<'a>(&'a self) -> MemBioRef<'a> {
         unsafe { self.wrap_bio(ffi::SSL_get_rbio(self.ssl)) }
     }
@@ -1341,6 +1346,102 @@ impl<S: Read+Write> Write for SslStream<S> {
         match self.kind {
             StreamKind::Indirect(ref mut s) => s.flush(),
             StreamKind::Direct(ref mut s) => s.flush(),
+        }
+    }
+}
+
+pub struct SslStreamNg<S> {
+    ssl: Ssl,
+    _method: Box<ffi::BIO_METHOD>, // :(
+    _p: PhantomData<S>,
+}
+
+impl<S> Drop for SslStreamNg<S> {
+    fn drop(&mut self) {
+        unsafe {
+            let _ = bio::take_stream::<S>(self.ssl.get_raw_rbio());
+        }
+    }
+}
+
+impl<S: Read + Write> SslStreamNg<S> {
+    fn new_base(ssl: Ssl, stream: S) -> Result<Self, SslError> {
+        unsafe {
+            let (bio, method) = try!(bio::new(stream));
+            ffi::SSL_set_bio(ssl.ssl, bio, bio);
+
+            Ok(SslStreamNg {
+                ssl: ssl,
+                _method: method,
+                _p: PhantomData,
+            })
+        }
+    }
+
+    /// Creates an SSL/TLS client operating over the provided stream.
+    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<Self, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        let mut stream = try!(Self::new_base(ssl, stream));
+        let ret = stream.ssl.connect();
+        if ret > 0 {
+            Ok(stream)
+        } else {
+            Err(stream.make_error(ret))
+        }
+    }
+
+    /// Creates an SSL/TLS server operating over the provided stream.
+    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<Self, SslError> {
+        let ssl = try!(ssl.into_ssl());
+        let mut stream = try!(Self::new_base(ssl, stream));
+        let ret = stream.ssl.accept();
+        if ret > 0 {
+            Ok(stream)
+        } else {
+            Err(stream.make_error(ret))
+        }
+    }
+
+    pub fn get_ref(&self) -> &S {
+        unsafe {
+            let bio = self.ssl.get_raw_rbio();
+            bio::get_ref(bio)
+        }
+    }
+
+    pub fn mut_ref(&mut self) -> &mut S {
+        unsafe {
+            let bio = self.ssl.get_raw_rbio();
+            bio::get_mut(bio)
+        }
+    }
+
+    fn make_error(&mut self, ret: c_int) -> SslError {
+        match self.ssl.get_error(ret) {
+            LibSslError::ErrorSsl => SslError::get(),
+            LibSslError::ErrorSyscall => {
+                let err = SslError::get();
+                let count = match err {
+                    SslError::OpenSslErrors(ref v) => v.len(),
+                    _ => unreachable!(),
+                };
+                if count == 0 {
+                    if ret == 0 {
+                        SslError::StreamError(io::Error::new(io::ErrorKind::ConnectionAborted,
+                                                             "unexpected EOF observed"))
+                    } else {
+                        let error = unsafe { bio::take_error::<S>(self.ssl.get_raw_rbio()) };
+                        SslError::StreamError(error.unwrap())
+                    }
+                } else {
+                    err
+                }
+            }
+            LibSslError::ErrorWantWrite | LibSslError::ErrorWantRead => {
+                let error = unsafe { bio::take_error::<S>(self.ssl.get_raw_rbio()) };
+                SslError::StreamError(error.unwrap())
+            }
+            err => panic!("unexpected error {:?} with ret {}", err, ret),
         }
     }
 }

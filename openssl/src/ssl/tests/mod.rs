@@ -18,7 +18,7 @@ use ssl::SSL_VERIFY_PEER;
 use ssl::SslMethod::Sslv23;
 use ssl::SslMethod;
 use ssl::error::NonblockingSslError;
-use ssl::{SslContext, SslStream, VerifyCallback, NonblockingSslStream};
+use ssl::{SslContext, SslStream, VerifyCallback, NonblockingSslStream, SslStreamNg};
 use x509::X509StoreContext;
 use x509::X509FileType;
 use x509::X509;
@@ -928,4 +928,11 @@ fn test_read_nonblocking() {
     };
     assert!(bytes_read >= 5);
     assert_eq!(&input_buffer[..5], b"HTTP/");
+}
+
+#[test]
+fn ng_connect() {
+    let (_s, stream) = Server::new();
+    let ctx = SslContext::new(Sslv23).unwrap();
+    SslStreamNg::connect(&ctx, stream).unwrap();
 }

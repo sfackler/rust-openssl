@@ -60,6 +60,9 @@ pub struct BIO_METHOD {
     pub callback_ctrl: Option<unsafe extern "C" fn(*mut BIO, c_int, bio_info_cb) -> c_long>,
 }
 
+// so we can create static BIO_METHODs
+unsafe impl Sync for BIO_METHOD {}
+
 #[repr(C)]
 pub struct BIO {
     pub method: *mut BIO_METHOD,
