@@ -1000,20 +1000,30 @@ impl<S> SslStream<S> {
                         SslError::StreamError(io::Error::new(io::ErrorKind::ConnectionAborted,
                                                              "unexpected EOF observed"))
                     } else {
-                        let error = unsafe { bio::take_error::<S>(self.ssl.get_raw_rbio()) };
-                        SslError::StreamError(error.unwrap())
+                        SslError::StreamError(self.get_bio_error())
                     }
                 } else {
                     err
                 }
             }
+            LibSslError::ErrorZeroReturn => SslError::SslSessionClosed,
             LibSslError::ErrorWantWrite | LibSslError::ErrorWantRead => {
-                let error = unsafe { bio::take_error::<S>(self.ssl.get_raw_rbio()) };
-                SslError::StreamError(error.unwrap())
+                SslError::StreamError(self.get_bio_error())
             }
-            err => panic!("unexpected error {:?} with ret {}", err, ret),
+            err => SslError::StreamError(io::Error::new(io::ErrorKind::Other,
+                                                        format!("unexpected error {:?}", err))),
         }
     }
+
+    fn get_bio_error(&mut self) -> io::Error {
+        let error = unsafe { bio::take_error::<S>(self.ssl.get_raw_rbio()) };
+        match error {
+            Some(error) => error,
+            None => io::Error::new(io::ErrorKind::Other,
+                                   "BUG: got an ErrorSyscall without an error in the BIO?")
+        }
+    }
+
     /// Returns a reference to the underlying stream.
     pub fn get_ref(&self) -> &S {
         unsafe {
@@ -1057,6 +1067,7 @@ impl<S: Read> Read for SslStream<S> {
         }
 
         match self.make_error(ret) {
+            SslError::SslSessionClosed => Ok(0),
             SslError::StreamError(e) => Err(e),
             e => Err(io::Error::new(io::ErrorKind::Other, e)),
         }
