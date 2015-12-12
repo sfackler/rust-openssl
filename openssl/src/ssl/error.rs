@@ -95,6 +95,11 @@ impl OpenSslError {
         errs
     }
 
+    /// Returns the raw OpenSSL error code for this error.
+    pub fn error_code(&self) -> c_ulong {
+        self.0
+    }
+
     /// Returns the name of the library reporting the error.
     pub fn library(&self) -> &'static str {
         get_lib(self.0)
@@ -239,6 +244,17 @@ pub enum OpensslError {
     }
 }
 
+impl OpensslError {
+    pub fn from_error_code(err: c_ulong) -> OpensslError {
+        ffi::init();
+        UnknownError {
+            library: get_lib(err).to_owned(),
+            function: get_func(err).to_owned(),
+            reason: get_reason(err).to_owned()
+        }
+    }
+}
+
 fn get_lib(err: c_ulong) -> &'static str {
     unsafe {
         let cstr = ffi::ERR_lib_error_string(err);
@@ -271,7 +287,7 @@ impl SslError {
         loop {
             match unsafe { ffi::ERR_get_error() } {
                 0 => break,
-                err => errs.push(SslError::from_error_code(err))
+                err => errs.push(OpensslError::from_error_code(err))
             }
         }
         OpenSslErrors(errs)
@@ -279,16 +295,7 @@ impl SslError {
 
     /// Creates an `SslError` from the raw numeric error code.
     pub fn from_error(err: c_ulong) -> SslError {
-        OpenSslErrors(vec![SslError::from_error_code(err)])
-    }
-
-    fn from_error_code(err: c_ulong) -> OpensslError {
-        ffi::init();
-        UnknownError {
-            library: get_lib(err).to_owned(),
-            function: get_func(err).to_owned(),
-            reason: get_reason(err).to_owned()
-        }
+        OpenSslErrors(vec![OpensslError::from_error_code(err)])
     }
 }
 
