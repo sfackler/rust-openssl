@@ -22,7 +22,7 @@ use std::marker::PhantomData;
 use ffi;
 use ffi_extras;
 use dh::DH;
-use ssl::error::{NonblockingSslError, SslError, StreamError, OpenSslErrors};
+use ssl::error::{NonblockingSslError, SslError, StreamError, OpenSslErrors, OpenSslError};
 use x509::{X509StoreContext, X509FileType, X509};
 use crypto::pkey::PKey;
 
@@ -30,6 +30,9 @@ pub mod error;
 mod bio;
 #[cfg(test)]
 mod tests;
+
+#[doc(inline)]
+pub use ssl::error::Error;
 
 extern "C" {
     fn rust_SSL_clone(ssl: *mut ffi::SSL);
@@ -954,7 +957,17 @@ impl<S: Read+Write> SslStream<S> {
         if ret > 0 {
             Ok(stream)
         } else {
-            Err(stream.make_error(ret))
+            match stream.make_old_error(ret) {
+                SslError::StreamError(e) => {
+                    // This is fine - nonblocking sockets will finish the handshake in read/write
+                    if e.kind() == io::ErrorKind::WouldBlock {
+                        Ok(stream)
+                    } else {
+                        Err(SslError::StreamError(e))
+                    }
+                }
+                e => Err(e)
+            }
         }
     }
 
@@ -966,7 +979,17 @@ impl<S: Read+Write> SslStream<S> {
         if ret > 0 {
             Ok(stream)
         } else {
-            Err(stream.make_error(ret))
+            match stream.make_old_error(ret) {
+                SslError::StreamError(e) => {
+                    // This is fine - nonblocking sockets will finish the handshake in read/write
+                    if e.kind() == io::ErrorKind::WouldBlock {
+                        Ok(stream)
+                    } else {
+                        Err(SslError::StreamError(e))
+                    }
+                }
+                e => Err(e)
+            }
         }
     }
 
@@ -986,7 +1009,31 @@ impl<S: Read+Write> SslStream<S> {
 }
 
 impl<S> SslStream<S> {
-    fn make_error(&mut self, ret: c_int) -> SslError {
+    fn make_error(&mut self, ret: c_int) -> Error {
+        match self.ssl.get_error(ret) {
+            LibSslError::ErrorSsl => Error::Ssl(OpenSslError::get_stack()),
+            LibSslError::ErrorSyscall => {
+                let errs = OpenSslError::get_stack();
+                if errs.is_empty() {
+                    if ret == 0 {
+                        Error::Stream(io::Error::new(io::ErrorKind::ConnectionAborted,
+                                                     "unexpected EOF observed"))
+                    } else {
+                        Error::Stream(self.get_bio_error())
+                    }
+                } else {
+                    Error::Ssl(errs)
+                }
+            }
+            LibSslError::ErrorZeroReturn => Error::ZeroReturn,
+            LibSslError::ErrorWantWrite => Error::WantWrite(self.get_bio_error()),
+            LibSslError::ErrorWantRead => Error::WantRead(self.get_bio_error()),
+            err => Error::Stream(io::Error::new(io::ErrorKind::Other,
+                                                format!("unexpected error {:?}", err))),
+        }
+    }
+
+    fn make_old_error(&mut self, ret: c_int) -> SslError {
         match self.ssl.get_error(ret) {
             LibSslError::ErrorSsl => SslError::get(),
             LibSslError::ErrorSyscall => {
@@ -1045,6 +1092,32 @@ impl<S> SslStream<S> {
         }
     }
 
+    /// Like `read`, but returns an `ssl::Error` rather than an `io::Error`.
+    ///
+    /// This is particularly useful with a nonblocking socket, where the error
+    /// value will identify if OpenSSL is waiting on read or write readiness.
+    pub fn ssl_read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
+        let ret = self.ssl.read(buf);
+        if ret >= 0 {
+            Ok(ret as usize)
+        } else {
+            Err(self.make_error(ret))
+        }
+    }
+
+    /// Like `write`, but returns an `ssl::Error` rather than an `io::Error`.
+    ///
+    /// This is particularly useful with a nonblocking socket, where the error
+    /// value will identify if OpenSSL is waiting on read or write readiness.
+    pub fn ssl_write(&mut self, buf: &[u8]) -> Result<usize, Error> {
+        let ret = self.ssl.write(buf);
+        if ret >= 0 {
+            Ok(ret as usize)
+        } else {
+            Err(self.make_error(ret))
+        }
+    }
+
     /// Returns the OpenSSL `Ssl` object associated with this stream.
     pub fn ssl(&self) -> &Ssl {
         &self.ssl
@@ -1061,30 +1134,27 @@ impl SslStream<::std::net::TcpStream> {
 
 impl<S: Read> Read for SslStream<S> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let ret = self.ssl.read(buf);
-        if ret >= 0 {
-            return Ok(ret as usize);
-        }
-
-        match self.make_error(ret) {
-            SslError::SslSessionClosed => Ok(0),
-            SslError::StreamError(e) => Err(e),
-            e => Err(io::Error::new(io::ErrorKind::Other, e)),
+        match self.ssl_read(buf) {
+            Ok(n) => Ok(n),
+            Err(Error::ZeroReturn) => Ok(0),
+            Err(Error::Stream(e)) => Err(e),
+            Err(Error::WantRead(e)) => Err(e),
+            Err(Error::WantWrite(e)) => Err(e),
+            Err(e) => Err(io::Error::new(io::ErrorKind::Other, e)),
         }
     }
 }
 
 impl<S: Write> Write for SslStream<S> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let ret = self.ssl.write(buf);
-        if ret > 0 {
-            return Ok(ret as usize);
-        }
-
-        match self.make_error(ret) {
-            SslError::StreamError(e) => Err(e),
-            e => Err(io::Error::new(io::ErrorKind::Other, e)),
-        }
+        self.ssl_write(buf).map_err(|e| {
+            match e {
+                Error::Stream(e) => e,
+                Error::WantRead(e) => e,
+                Error::WantWrite(e) => e,
+                e => io::Error::new(io::ErrorKind::Other, e),
+            }
+        })
     }
 
     fn flush(&mut self) -> io::Result<()> {
@@ -1174,7 +1244,9 @@ impl MaybeSslStream<net::TcpStream> {
     }
 }
 
-/// An SSL stream wrapping a nonblocking socket.
+/// # Deprecated
+///
+/// Use `SslStream` with `ssl_read` and `ssl_write`.
 #[derive(Clone)]
 pub struct NonblockingSslStream<S> {
     stream: S,
