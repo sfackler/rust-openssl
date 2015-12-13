@@ -948,7 +948,7 @@ impl<S: AsRawFd> AsRawFd for SslStream<S> {
 }
 
 #[cfg(windows)]
-impl<S: AsRawSocket> AsRawSocket for NonblockingSslStream<S> {
+impl<S: AsRawSocket> AsRawSocket for SslStream<S> {
     fn as_raw_socket(&self) -> RawSocket {
         self.0.as_raw_socket()
     }
