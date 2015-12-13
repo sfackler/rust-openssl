@@ -949,7 +949,7 @@ impl<S: AsRawFd> AsRawFd for SslStream<S> {
 
 #[cfg(windows)]
 impl<S: AsRawSocket> AsRawSocket for NonblockingSslStream<S> {
-    fn as_raw_fd(&self) -> RawSocket {
+    fn as_raw_socket(&self) -> RawSocket {
         self.0.as_raw_socket()
     }
 }
@@ -1283,7 +1283,7 @@ impl<S: AsRawFd> AsRawFd for NonblockingSslStream<S> {
 
 #[cfg(windows)]
 impl<S: AsRawSocket> AsRawSocket for NonblockingSslStream<S> {
-    fn as_raw_fd(&self) -> RawSocket {
+    fn as_raw_socket(&self) -> RawSocket {
         self.0.as_raw_socket()
     }
 }
