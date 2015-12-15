@@ -22,7 +22,7 @@ pub enum Error {
     /// An attempt to write data from the underlying socket returned
     /// `WouldBlock`. Wait for write readiness and reattempt the operation.
     WantWrite(io::Error),
-    #[doc(hidden)] // unused for now
+    /// The client certificate callback requested to be called again.
     WantX509Lookup,
     /// An error reported by the underlying stream.
     Stream(io::Error),
