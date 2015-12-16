@@ -91,6 +91,22 @@ void BIO_set_mem_eof_return_shim(BIO *b, int v) {
     BIO_set_mem_eof_return(b, v);
 }
 
+void BIO_clear_retry_flags_shim(BIO *b) {
+    BIO_clear_retry_flags(b);
+}
+
+void BIO_set_retry_read_shim(BIO *b) {
+    BIO_set_retry_read(b);
+}
+
+void BIO_set_retry_write_shim(BIO *b) {
+    BIO_set_retry_write(b);
+}
+
+long BIO_flush_shim(BIO *b) {
+    return BIO_flush(b);
+}
+
 long SSL_CTX_set_options_shim(SSL_CTX *ctx, long options) {
     return SSL_CTX_set_options(ctx, options);
 }
@@ -113,6 +129,14 @@ long SSL_CTX_set_read_ahead_shim(SSL_CTX *ctx, long m) {
 
 long SSL_CTX_set_tmp_dh_shim(SSL_CTX *ctx, DH *dh) {
     return SSL_CTX_set_tmp_dh(ctx, dh);
+}
+
+long SSL_CTX_set_tlsext_servername_callback_shim(SSL_CTX *ctx, int (*callback)(SSL_CTX *, int *, void*)) {
+    return SSL_CTX_set_tlsext_servername_callback(ctx, callback);
+}
+
+long SSL_CTX_set_tlsext_servername_arg_shim(SSL_CTX *ctx, void* arg) {
+    return SSL_CTX_set_tlsext_servername_arg(ctx, arg);
 }
 
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L

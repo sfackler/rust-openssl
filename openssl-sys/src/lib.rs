@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.1")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.2")]
 
 extern crate libc;
 
@@ -15,11 +15,8 @@ use std::sync::{Once, ONCE_INIT};
 pub type ASN1_INTEGER = c_void;
 pub type ASN1_STRING = c_void;
 pub type ASN1_TIME = c_void;
-pub type BIO = c_void;
-pub type BIO_METHOD = c_void;
 pub type BN_CTX = c_void;
 pub type COMP_METHOD = c_void;
-pub type CRYPTO_EX_DATA = c_void;
 pub type DH = c_void;
 pub type ENGINE = c_void;
 pub type EVP_CIPHER = c_void;
@@ -39,6 +36,65 @@ pub type X509_NAME_ENTRY = c_void;
 pub type X509_REQ = c_void;
 pub type X509_STORE_CTX = c_void;
 pub type stack_st_X509_EXTENSION = c_void;
+pub type stack_st_void = c_void;
+pub type bio_st = c_void;
+
+pub type bio_info_cb = Option<unsafe extern "C" fn(*mut BIO,
+                                                   c_int,
+                                                   *const c_char,
+                                                   c_int,
+                                                   c_long,
+                                                   c_long)>;
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+#[allow(raw_pointer_derive)]
+pub struct BIO_METHOD {
+    pub type_: c_int,
+    pub name: *const c_char,
+    pub bwrite: Option<unsafe extern "C" fn(*mut BIO, *const c_char, c_int) -> c_int>,
+    pub bread: Option<unsafe extern "C" fn(*mut BIO, *mut c_char, c_int) -> c_int>,
+    pub bputs: Option<unsafe extern "C" fn(*mut BIO, *const c_char) -> c_int>,
+    pub bgets: Option<unsafe extern "C" fn(*mut BIO, *mut c_char, c_int) -> c_int>,
+    pub ctrl: Option<unsafe extern "C" fn(*mut BIO, c_int, c_long, *mut c_void) -> c_long>,
+    pub create: Option<unsafe extern "C" fn(*mut BIO) -> c_int>,
+    pub destroy: Option<unsafe extern "C" fn(*mut BIO) -> c_int>,
+    pub callback_ctrl: Option<unsafe extern "C" fn(*mut BIO, c_int, bio_info_cb) -> c_long>,
+}
+
+// so we can create static BIO_METHODs
+unsafe impl Sync for BIO_METHOD {}
+
+#[repr(C)]
+pub struct BIO {
+    pub method: *mut BIO_METHOD,
+    pub callback: Option<unsafe extern "C" fn(*mut BIO,
+                                              c_int,
+                                              *const c_char,
+                                              c_int,
+                                              c_long,
+                                              c_long)
+                                              -> c_long>,
+    pub cb_arg: *mut c_char,
+    pub init: c_int,
+    pub shutdown: c_int,
+    pub flags: c_int,
+    pub retry_reason: c_int,
+    pub num: c_int,
+    pub ptr: *mut c_void,
+    pub next_bio: *mut BIO,
+    pub prev_bio: *mut BIO,
+    pub references: c_int,
+    pub num_read: c_ulong,
+    pub num_write: c_ulong,
+    pub ex_data: CRYPTO_EX_DATA,
+}
+
+#[repr(C)]
+pub struct CRYPTO_EX_DATA {
+    pub sk: *mut stack_st_void,
+    pub dummy: c_int,
+}
 
 #[repr(C)]
 pub struct EVP_MD_CTX {
@@ -116,7 +172,10 @@ pub type PasswordCallback = extern "C" fn(buf: *mut c_char, size: c_int,
                                           rwflag: c_int, user_data: *mut c_void)
                                           -> c_int;
 
+pub const BIO_TYPE_NONE: c_int = 0;
+
 pub const BIO_CTRL_EOF: c_int = 2;
+pub const BIO_CTRL_FLUSH: c_int = 11;
 pub const BIO_C_SET_BUF_MEM_EOF_RETURN: c_int = 130;
 
 pub const CRYPTO_LOCK: c_int = 1;
@@ -135,6 +194,8 @@ pub const PKCS5_SALT_LEN: c_int = 8;
 pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
 
+pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB:  c_int = 53;
+pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG: c_int = 54;
 pub const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
 pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
 
@@ -478,7 +539,11 @@ extern "C" {
                                   salt: *const u8, saltlen: c_int,
                                   iter: c_int, keylen: c_int,
                                   out: *mut u8) -> c_int;
-
+    #[cfg(feature = "pkcs5_pbkdf2_hmac")]
+    pub fn PKCS5_PBKDF2_HMAC(pass: *const u8, passlen: c_int,
+                             salt: *const u8, saltlen: c_int,
+                             iter: c_int, digest: *const EVP_MD, keylen: c_int,
+                             out: *mut u8) -> c_int;
 
     pub fn RAND_bytes(buf: *mut u8, num: c_int) -> c_int;
 
@@ -532,11 +597,14 @@ extern "C" {
     pub fn SSL_write(ssl: *mut SSL, buf: *const c_void, num: c_int) -> c_int;
     pub fn SSL_get_ex_data_X509_STORE_CTX_idx() -> c_int;
     pub fn SSL_get_SSL_CTX(ssl: *mut SSL) -> *mut SSL_CTX;
+    pub fn SSL_set_SSL_CTX(ssl: *mut SSL, ctx: *mut SSL_CTX) -> *mut SSL_CTX;
     pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const COMP_METHOD;
     pub fn SSL_get_peer_certificate(ssl: *mut SSL) -> *mut X509;
     pub fn SSL_get_ssl_method(ssl: *mut SSL) -> *const SSL_METHOD;
     pub fn SSL_state_string(ssl: *mut SSL) -> *const c_char;
     pub fn SSL_state_string_long(ssl: *mut SSL) -> *const c_char;
+
+    pub fn SSL_get_servername(ssl: *const SSL, name_type: c_long) -> *const c_char;
 
     pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
 
@@ -566,7 +634,6 @@ extern "C" {
 
     pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;
 
-    pub fn SSL_CTX_ctrl(ssl: *mut SSL_CTX, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
     #[cfg(feature = "npn")]
     pub fn SSL_CTX_set_next_protos_advertised_cb(ssl: *mut SSL_CTX,
                                                  cb: extern "C" fn(ssl: *mut SSL,

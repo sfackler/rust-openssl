@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/sfackler/rust-openssl.svg?branch=master)](https://travis-ci.org/sfackler/rust-openssl)
 
-[Documentation](https://sfackler.github.io/rust-openssl/doc/v0.7.1/openssl).
+[Documentation](https://sfackler.github.io/rust-openssl/doc/v0.7.2/openssl).
 
 ## Building
 
@@ -25,7 +25,9 @@ sudo pacman -S openssl
 
 OpenSSL 0.9.8 is preinstalled on OSX. Some features are only available when
 linking against OpenSSL 1.0.0 or greater; see below on how to point
-rust-openssl to a separate installation.
+rust-openssl to a separate installation. OSX releases starting at 10.11, "El
+Capitan", no longer include OpenSSL headers which will prevent the `openssl`
+crate from compiling.
 
 ### Windows
 

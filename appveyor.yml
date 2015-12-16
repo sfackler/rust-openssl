@@ -8,10 +8,10 @@ environment:
   - TARGET: x86_64-pc-windows-msvc
     BITS: 64
 install:
-  - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-1_0_2d.exe"
-  - Win%BITS%OpenSSL-1_0_2d.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
-  - ps: Start-FileDownload "https://static.rust-lang.org/dist/rust-nightly-${env:TARGET}.exe"
-  - rust-nightly-%TARGET%.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
+  - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-1_0_2e.exe"
+  - Win%BITS%OpenSSL-1_0_2e.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
+  - ps: Start-FileDownload "https://static.rust-lang.org/dist/rust-1.5.0-${env:TARGET}.exe"
+  - rust-1.5.0-%TARGET%.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
   - SET PATH=%PATH%;C:\Program Files (x86)\Rust\bin
   - SET PATH=%PATH%;C:\MinGW\bin
   - rustc -V

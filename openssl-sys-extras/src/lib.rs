@@ -1,10 +1,10 @@
 #![allow(non_upper_case_globals, non_snake_case)]
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.0")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.2")]
 
 extern crate openssl_sys;
 extern crate libc;
 
-use libc::{c_int, c_uint, c_long, c_char};
+use libc::{c_int, c_uint, c_long, c_char, c_void};
 use openssl_sys::{HMAC_CTX, EVP_MD, ENGINE, SSL_CTX, BIO, X509, stack_st_X509_EXTENSION, SSL, DH};
 
 macro_rules! import_options {
@@ -49,6 +49,14 @@ extern {
     pub fn BIO_set_nbio(b: *mut BIO, enabled: c_long) -> c_long;
     #[link_name = "BIO_set_mem_eof_return_shim"]
     pub fn BIO_set_mem_eof_return(b: *mut BIO, v: c_int);
+    #[link_name = "BIO_clear_retry_flags_shim"]
+    pub fn BIO_clear_retry_flags(b: *mut BIO);
+    #[link_name = "BIO_set_retry_read_shim"]
+    pub fn BIO_set_retry_read(b: *mut BIO);
+    #[link_name = "BIO_set_retry_write_shim"]
+    pub fn BIO_set_retry_write(b: *mut BIO);
+    #[link_name = "BIO_flush"]
+    pub fn BIO_flush(b: *mut BIO) -> c_long;
     pub fn SSL_CTX_set_options_shim(ctx: *mut SSL_CTX, options: c_long) -> c_long;
     pub fn SSL_CTX_get_options_shim(ctx: *mut SSL_CTX) -> c_long;
     pub fn SSL_CTX_clear_options_shim(ctx: *mut SSL_CTX, options: c_long) -> c_long;
@@ -65,4 +73,8 @@ extern {
     pub fn SSL_CTX_set_tmp_dh(s: *mut SSL, dh: *const DH) -> c_long;
     #[link_name = "X509_get_extensions_shim"]
     pub fn X509_get_extensions(x: *mut X509) -> *mut stack_st_X509_EXTENSION;
+    #[link_name = "SSL_CTX_set_tlsext_servername_callback_shim"]
+    pub fn SSL_CTX_set_tlsext_servername_callback(ssl: *mut SSL_CTX, callback: Option<extern fn()>);
+    #[link_name = "SSL_CTX_set_tlsext_servername_arg_shim"]
+    pub fn SSL_CTX_set_tlsext_servername_arg(ssl: *mut SSL_CTX, arg: *const c_void);
 }

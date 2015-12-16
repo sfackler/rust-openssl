@@ -88,6 +88,43 @@ pub fn pbkdf2_hmac_sha1(pass: &str, salt: &[u8], iter: usize, keylen: usize) -> 
     }
 }
 
+/// Derives a key from a password and salt using the PBKDF2-HMAC-SHA256 algorithm.
+#[cfg(feature = "pkcs5_pbkdf2_hmac")]
+pub fn pbkdf2_hmac_sha256(pass: &str, salt: &[u8], iter: usize, keylen: usize) -> Vec<u8> {
+    pbkdf2_hmac_sha(pass, salt, iter, unsafe { ffi::EVP_sha256() }, keylen)
+}
+
+/// Derives a key from a password and salt using the PBKDF2-HMAC-SHA512 algorithm.
+#[cfg(feature = "pkcs5_pbkdf2_hmac")]
+pub fn pbkdf2_hmac_sha512(pass: &str, salt: &[u8], iter: usize, keylen: usize) -> Vec<u8> {
+    pbkdf2_hmac_sha(pass, salt, iter, unsafe { ffi::EVP_sha512() }, keylen)
+}
+
+/// Derives a key from a password and salt using the PBKDF2-HMAC algorithm with a digest function.
+#[cfg(feature = "pkcs5_pbkdf2_hmac")]
+fn pbkdf2_hmac_sha(pass: &str, salt: &[u8], iter: usize, digest: *const ffi::EVP_MD, keylen: usize) -> Vec<u8> {
+    unsafe {
+        assert!(iter >= 1);
+        assert!(keylen >= 1);
+
+        let mut out = Vec::with_capacity(keylen);
+
+        ffi::init();
+
+        let r = ffi::PKCS5_PBKDF2_HMAC(
+                pass.as_ptr(), pass.len() as c_int,
+                salt.as_ptr(), salt.len() as c_int,
+                iter as c_int, digest, keylen as c_int,
+                out.as_mut_ptr());
+
+        if r != 1 { panic!(); }
+
+        out.set_len(keylen);
+
+        out
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crypto::hash;
@@ -183,6 +220,108 @@ mod tests {
         );
     }
 
+    // Test vectors from
+    // https://git.lysator.liu.se/nettle/nettle/blob/nettle_3.1.1_release_20150424/testsuite/pbkdf2-test.c
+    #[test]
+    #[cfg(feature = "pkcs5_pbkdf2_hmac")]
+    fn test_pbkdf2_hmac_sha256() {
+        assert_eq!(
+            super::pbkdf2_hmac_sha256(
+                "passwd",
+                "salt".as_bytes(),
+                1,
+                16
+            ),
+            vec!(
+                0x55_u8, 0xac_u8, 0x04_u8, 0x6e_u8, 0x56_u8, 0xe3_u8, 0x08_u8,
+                0x9f_u8, 0xec_u8, 0x16_u8, 0x91_u8, 0xc2_u8, 0x25_u8, 0x44_u8,
+                0xb6_u8, 0x05_u8
+            )
+        );
+
+        assert_eq!(
+            super::pbkdf2_hmac_sha256(
+                "Password",
+                "NaCl".as_bytes(),
+                80000,
+                16
+            ),
+            vec!(
+                0x4d_u8, 0xdc_u8, 0xd8_u8, 0xf6_u8, 0x0b_u8, 0x98_u8, 0xbe_u8,
+                0x21_u8, 0x83_u8, 0x0c_u8, 0xee_u8, 0x5e_u8, 0xf2_u8, 0x27_u8,
+                0x01_u8, 0xf9_u8
+            )
+        );
+    }
+
+    // Test vectors from
+    // https://git.lysator.liu.se/nettle/nettle/blob/nettle_3.1.1_release_20150424/testsuite/pbkdf2-test.c
+    #[test]
+    #[cfg(feature = "pkcs5_pbkdf2_hmac")]
+    fn test_pbkdf2_hmac_sha512() {
+        assert_eq!(
+            super::pbkdf2_hmac_sha512(
+                "password",
+                "NaCL".as_bytes(),
+                1,
+                64
+            ),
+            vec!(
+                0x73_u8, 0xde_u8, 0xcf_u8, 0xa5_u8, 0x8a_u8, 0xa2_u8, 0xe8_u8,
+                0x4f_u8, 0x94_u8, 0x77_u8, 0x1a_u8, 0x75_u8, 0x73_u8, 0x6b_u8,
+                0xb8_u8, 0x8b_u8, 0xd3_u8, 0xc7_u8, 0xb3_u8, 0x82_u8, 0x70_u8,
+                0xcf_u8, 0xb5_u8, 0x0c_u8, 0xb3_u8, 0x90_u8, 0xed_u8, 0x78_u8,
+                0xb3_u8, 0x05_u8, 0x65_u8, 0x6a_u8, 0xf8_u8, 0x14_u8, 0x8e_u8,
+                0x52_u8, 0x45_u8, 0x2b_u8, 0x22_u8, 0x16_u8, 0xb2_u8, 0xb8_u8,
+                0x09_u8, 0x8b_u8, 0x76_u8, 0x1f_u8, 0xc6_u8, 0x33_u8, 0x60_u8,
+                0x60_u8, 0xa0_u8, 0x9f_u8, 0x76_u8, 0x41_u8, 0x5e_u8, 0x9f_u8,
+                0x71_u8, 0xea_u8, 0x47_u8, 0xf9_u8, 0xe9_u8, 0x06_u8, 0x43_u8,
+                0x06_u8
+            )
+        );
+
+        assert_eq!(
+            super::pbkdf2_hmac_sha512(
+                "pass\0word",
+                "sa\0lt".as_bytes(),
+                1,
+                64
+            ),
+            vec!(
+                0x71_u8, 0xa0_u8, 0xec_u8, 0x84_u8, 0x2a_u8, 0xbd_u8, 0x5c_u8,
+                0x67_u8, 0x8b_u8, 0xcf_u8, 0xd1_u8, 0x45_u8, 0xf0_u8, 0x9d_u8,
+                0x83_u8, 0x52_u8, 0x2f_u8, 0x93_u8, 0x36_u8, 0x15_u8, 0x60_u8,
+                0x56_u8, 0x3c_u8, 0x4d_u8, 0x0d_u8, 0x63_u8, 0xb8_u8, 0x83_u8,
+                0x29_u8, 0x87_u8, 0x10_u8, 0x90_u8, 0xe7_u8, 0x66_u8, 0x04_u8,
+                0xa4_u8, 0x9a_u8, 0xf0_u8, 0x8f_u8, 0xe7_u8, 0xc9_u8, 0xf5_u8,
+                0x71_u8, 0x56_u8, 0xc8_u8, 0x79_u8, 0x09_u8, 0x96_u8, 0xb2_u8,
+                0x0f_u8, 0x06_u8, 0xbc_u8, 0x53_u8, 0x5e_u8, 0x5a_u8, 0xb5_u8,
+                0x44_u8, 0x0d_u8, 0xf7_u8, 0xe8_u8, 0x78_u8, 0x29_u8, 0x6f_u8,
+                0xa7_u8
+            )
+        );
+
+        assert_eq!(
+            super::pbkdf2_hmac_sha512(
+                "passwordPASSWORDpassword",
+                "salt\0\0\0".as_bytes(),
+                50,
+                64
+            ),
+            vec!(
+                0x01_u8, 0x68_u8, 0x71_u8, 0xa4_u8, 0xc4_u8, 0xb7_u8, 0x5f_u8,
+                0x96_u8, 0x85_u8, 0x7f_u8, 0xd2_u8, 0xb9_u8, 0xf8_u8, 0xca_u8,
+                0x28_u8, 0x02_u8, 0x3b_u8, 0x30_u8, 0xee_u8, 0x2a_u8, 0x39_u8,
+                0xf5_u8, 0xad_u8, 0xca_u8, 0xc8_u8, 0xc9_u8, 0x37_u8, 0x5f_u8,
+                0x9b_u8, 0xda_u8, 0x1c_u8, 0xcd_u8, 0x1b_u8, 0x6f_u8, 0x0b_u8,
+                0x2f_u8, 0xc3_u8, 0xad_u8, 0xda_u8, 0x50_u8, 0x54_u8, 0x12_u8,
+                0xe7_u8, 0x9d_u8, 0x89_u8, 0x00_u8, 0x56_u8, 0xc6_u8, 0x2e_u8,
+                0x52_u8, 0x4c_u8, 0x7d_u8, 0x51_u8, 0x15_u8, 0x4b_u8, 0x1a_u8,
+                0x85_u8, 0x34_u8, 0x57_u8, 0x5b_u8, 0xd0_u8, 0x2d_u8, 0xee_u8,
+                0x39_u8
+            )
+        );
+    }
     #[test]
     fn test_evp_bytes_to_key_pbkdf1_compatible() {
         let salt = [

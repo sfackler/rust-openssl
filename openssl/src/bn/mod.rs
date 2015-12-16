@@ -89,7 +89,7 @@ impl BigNum {
     pub fn from_dec_str(s: &str) -> Result<BigNum, SslError> {
         BigNum::new().and_then(|v| unsafe {
             let c_str = CString::new(s.as_bytes()).unwrap();
-            try_ssl!(ffi::BN_dec2bn(v.raw_ptr(), c_str.as_ptr()));
+            try_ssl!(ffi::BN_dec2bn(v.raw_ptr(), c_str.as_ptr() as *const _));
             Ok(v)
         })
     }
@@ -97,7 +97,7 @@ impl BigNum {
     pub fn from_hex_str(s: &str) -> Result<BigNum, SslError> {
         BigNum::new().and_then(|v| unsafe {
             let c_str = CString::new(s.as_bytes()).unwrap();
-            try_ssl!(ffi::BN_hex2bn(v.raw_ptr(), c_str.as_ptr()));
+            try_ssl!(ffi::BN_hex2bn(v.raw_ptr(), c_str.as_ptr() as *const _));
             Ok(v)
         })
     }
@@ -421,7 +421,7 @@ impl BigNum {
         unsafe {
             let buf = ffi::BN_bn2dec(self.raw());
             assert!(!buf.is_null());
-            let str = String::from_utf8(CStr::from_ptr(buf).to_bytes().to_vec()).unwrap();
+            let str = String::from_utf8(CStr::from_ptr(buf as *const _).to_bytes().to_vec()).unwrap();
             ffi::CRYPTO_free(buf as *mut c_void);
             str
         }
@@ -431,7 +431,7 @@ impl BigNum {
         unsafe {
             let buf = ffi::BN_bn2hex(self.raw());
             assert!(!buf.is_null());
-            let str = String::from_utf8(CStr::from_ptr(buf).to_bytes().to_vec()).unwrap();
+            let str = String::from_utf8(CStr::from_ptr(buf as *const _).to_bytes().to_vec()).unwrap();
             ffi::CRYPTO_free(buf as *mut c_void);
             str
         }
