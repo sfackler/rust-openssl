@@ -951,7 +951,7 @@ impl Ssl {
             return None;
         }
 
-        unsafe { String::from_utf8(CStr::from_ptr(name).to_bytes().to_vec()).ok() }
+        unsafe { String::from_utf8(CStr::from_ptr(name as *const _).to_bytes().to_vec()).ok() }
     }
 
     /// change the context corresponding to the current connection
