@@ -315,7 +315,7 @@ extern fn raw_verify_with_data<T>(preverify_ok: c_int,
     }
 }
 
-extern fn raw_sni(ssl: *mut ffi::SSL, ad: &mut c_int, arg: *mut c_void)
+extern fn raw_sni(ssl: *mut ffi::SSL, ad: &mut c_int, _arg: *mut c_void)
         -> c_int {
     unsafe {
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
@@ -982,9 +982,11 @@ impl Ssl {
 
     /// obtain the context corresponding to the current connection
     pub fn get_ssl_context(&self) -> SslContext {
-        let ssl_ctx = unsafe { ffi::SSL_get_SSL_CTX(self.ssl) };
-        let count = unsafe { ffi_extras::SSL_CTX_increment_refcount(ssl_ctx) };
-        SslContext { ctx: ssl_ctx }
+        unsafe {
+            let ssl_ctx = ffi::SSL_get_SSL_CTX(self.ssl);
+            ffi_extras::SSL_CTX_increment_refcount(ssl_ctx);
+            SslContext { ctx: ssl_ctx }
+        }
     }
 }
 
