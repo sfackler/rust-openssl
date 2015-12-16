@@ -1132,6 +1132,32 @@ impl<S: Read+Write> SslStream<S> {
     pub fn accept_generic<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
         Self::accept(ssl, stream)
     }
+
+    /// Like `read`, but returns an `ssl::Error` rather than an `io::Error`.
+    ///
+    /// This is particularly useful with a nonblocking socket, where the error
+    /// value will identify if OpenSSL is waiting on read or write readiness.
+    pub fn ssl_read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
+        let ret = self.ssl.read(buf);
+        if ret >= 0 {
+            Ok(ret as usize)
+        } else {
+            Err(self.make_error(ret))
+        }
+    }
+
+    /// Like `write`, but returns an `ssl::Error` rather than an `io::Error`.
+    ///
+    /// This is particularly useful with a nonblocking socket, where the error
+    /// value will identify if OpenSSL is waiting on read or write readiness.
+    pub fn ssl_write(&mut self, buf: &[u8]) -> Result<usize, Error> {
+        let ret = self.ssl.write(buf);
+        if ret >= 0 {
+            Ok(ret as usize)
+        } else {
+            Err(self.make_error(ret))
+        }
+    }
 }
 
 impl<S> SslStream<S> {
@@ -1218,32 +1244,6 @@ impl<S> SslStream<S> {
         }
     }
 
-    /// Like `read`, but returns an `ssl::Error` rather than an `io::Error`.
-    ///
-    /// This is particularly useful with a nonblocking socket, where the error
-    /// value will identify if OpenSSL is waiting on read or write readiness.
-    pub fn ssl_read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
-        let ret = self.ssl.read(buf);
-        if ret >= 0 {
-            Ok(ret as usize)
-        } else {
-            Err(self.make_error(ret))
-        }
-    }
-
-    /// Like `write`, but returns an `ssl::Error` rather than an `io::Error`.
-    ///
-    /// This is particularly useful with a nonblocking socket, where the error
-    /// value will identify if OpenSSL is waiting on read or write readiness.
-    pub fn ssl_write(&mut self, buf: &[u8]) -> Result<usize, Error> {
-        let ret = self.ssl.write(buf);
-        if ret >= 0 {
-            Ok(ret as usize)
-        } else {
-            Err(self.make_error(ret))
-        }
-    }
-
     /// Returns the OpenSSL `Ssl` object associated with this stream.
     pub fn ssl(&self) -> &Ssl {
         &self.ssl
@@ -1258,7 +1258,7 @@ impl SslStream<::std::net::TcpStream> {
     }
 }
 
-impl<S: Read> Read for SslStream<S> {
+impl<S: Read + Write> Read for SslStream<S> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         match self.ssl_read(buf) {
             Ok(n) => Ok(n),
@@ -1271,7 +1271,7 @@ impl<S: Read> Read for SslStream<S> {
     }
 }
 
-impl<S: Write> Write for SslStream<S> {
+impl<S: Read + Write> Write for SslStream<S> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.ssl_write(buf).map_err(|e| {
             match e {
