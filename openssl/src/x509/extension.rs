@@ -26,9 +26,9 @@ pub enum Extension {
     /// The extended purposes of the key contained in the certificate
     ExtKeyUsage(Vec<ExtKeyUsageOption>),
     /// Subject Alternative Names
-    SubjectAltName(Vec<(AltNameOption,String)>),
+    SubjectAltName(Vec<(AltNameOption, String)>),
     /// Issuer Alternative Names
-    IssuerAltName(Vec<(AltNameOption,String)>),
+    IssuerAltName(Vec<(AltNameOption, String)>),
     /// Arbitrary extensions by NID. See `man x509v3_config` for value syntax.
     ///
     /// You must not use this to add extensions which this enum can express directly.
@@ -40,7 +40,7 @@ pub enum Extension {
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_extension(OtherNid(Nid::BasicConstraints,"critical,CA:TRUE".to_owned()));
     /// ```
-    OtherNid(Nid,String),
+    OtherNid(Nid, String),
     /// Arbitrary extensions by OID string. See `man ASN1_generate_nconf` for value syntax.
     ///
     /// You must not use this to add extensions which this enum can express directly.
@@ -51,7 +51,7 @@ pub enum Extension {
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_extension(OtherStr("2.999.2".to_owned(),"ASN1:UTF8:example value".to_owned()));
     /// ```
-    OtherStr(String,String),
+    OtherStr(String, String),
 }
 
 impl Extension {
@@ -61,8 +61,8 @@ impl Extension {
             &Extension::ExtKeyUsage(_) => ExtensionType::ExtKeyUsage,
             &Extension::SubjectAltName(_) => ExtensionType::SubjectAltName,
             &Extension::IssuerAltName(_) => ExtensionType::IssuerAltName,
-            &Extension::OtherNid(nid,_) => ExtensionType::OtherNid(nid),
-            &Extension::OtherStr(ref s,_) => ExtensionType::OtherStr(s.clone()),
+            &Extension::OtherNid(nid, _) => ExtensionType::OtherNid(nid),
+            &Extension::OtherStr(ref s, _) => ExtensionType::OtherStr(s.clone()),
         }
     }
 }
@@ -89,9 +89,11 @@ impl ExtensionType {
 
 // FIXME: This would be nicer as a method on Iterator<Item=ToString>. This can
 // eventually be replaced by the successor to std::slice::SliceConcatExt.connect
-fn join<I: Iterator<Item=T>,T: ToString>(iter: I, sep: &str) -> String {
+fn join<I: Iterator<Item = T>, T: ToString>(iter: I, sep: &str) -> String {
     iter.enumerate().fold(String::new(), |mut acc, (idx, v)| {
-        if idx > 0 { acc.push_str(sep) };
+        if idx > 0 {
+            acc.push_str(sep)
+        };
         acc.push_str(&v.to_string());
         acc
     })
@@ -100,12 +102,18 @@ fn join<I: Iterator<Item=T>,T: ToString>(iter: I, sep: &str) -> String {
 impl ToString for Extension {
     fn to_string(&self) -> String {
         match self {
-            &Extension::KeyUsage(ref purposes) => join(purposes.iter(),","),
-            &Extension::ExtKeyUsage(ref purposes) => join(purposes.iter(),","),
-            &Extension::SubjectAltName(ref names) => join(names.iter().map(|&(ref opt,ref val)|opt.to_string()+":"+&val),","),
-            &Extension::IssuerAltName(ref names) => join(names.iter().map(|&(ref opt,ref val)|opt.to_string()+":"+&val),","),
-            &Extension::OtherNid(_,ref value) => value.clone(),
-            &Extension::OtherStr(_,ref value) => value.clone(),
+            &Extension::KeyUsage(ref purposes) => join(purposes.iter(), ","),
+            &Extension::ExtKeyUsage(ref purposes) => join(purposes.iter(), ","),
+            &Extension::SubjectAltName(ref names) => {
+                join(names.iter().map(|&(ref opt, ref val)| opt.to_string() + ":" + &val),
+                     ",")
+            }
+            &Extension::IssuerAltName(ref names) => {
+                join(names.iter().map(|&(ref opt, ref val)| opt.to_string() + ":" + &val),
+                     ",")
+            }
+            &Extension::OtherNid(_, ref value) => value.clone(),
+            &Extension::OtherStr(_, ref value) => value.clone(),
         }
     }
 }
@@ -169,7 +177,7 @@ impl fmt::Display for ExtKeyUsageOption {
             &ExtKeyUsageOption::MsCtlSign => "msCTLSign",
             &ExtKeyUsageOption::MsSgc => "msSGC",
             &ExtKeyUsageOption::MsEfs => "msEFS",
-            &ExtKeyUsageOption::NsSgc =>"nsSGC",
+            &ExtKeyUsageOption::NsSgc => "nsSGC",
             &ExtKeyUsageOption::Other(ref s) => &s[..],
         })
     }
@@ -189,9 +197,9 @@ pub enum AltNameOption {
     Other,
     Email,
     DNS,
-    //X400, // Not supported by OpenSSL
+    // X400, // Not supported by OpenSSL
     Directory,
-    //EDIParty, // Not supported by OpenSSL
+    // EDIParty, // Not supported by OpenSSL
     URI,
     IPAddress,
     RegisteredID,

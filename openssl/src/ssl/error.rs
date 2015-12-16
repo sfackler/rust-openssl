@@ -50,7 +50,7 @@ impl fmt::Display for Error {
                 }
                 Ok(())
             }
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 }
@@ -72,7 +72,7 @@ impl error::Error for Error {
             Error::WantRead(ref err) => Some(err),
             Error::WantWrite(ref err) => Some(err),
             Error::Stream(ref err) => Some(err),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -85,11 +85,11 @@ impl OpenSslError {
     pub fn get_stack() -> Vec<OpenSslError> {
         ffi::init();
 
-        let mut errs = vec!();
+        let mut errs = vec![];
         loop {
             match unsafe { ffi::ERR_get_error() } {
                 0 => break,
-                err => errs.push(OpenSslError(err))
+                err => errs.push(OpenSslError(err)),
             }
         }
         errs
@@ -196,7 +196,7 @@ impl error::Error for SslError {
     fn cause(&self) -> Option<&error::Error> {
         match *self {
             StreamError(ref err) => Some(err as &error::Error),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -211,15 +211,19 @@ impl error::Error for NonblockingSslError {
     fn description(&self) -> &str {
         match *self {
             NonblockingSslError::SslError(ref e) => e.description(),
-            NonblockingSslError::WantRead => "The OpenSSL library wants data from the remote socket",
-            NonblockingSslError::WantWrite => "The OpenSSL library want to send data to the remote socket",
+            NonblockingSslError::WantRead => {
+                "The OpenSSL library wants data from the remote socket"
+            }
+            NonblockingSslError::WantWrite => {
+                "The OpenSSL library want to send data to the remote socket"
+            }
         }
     }
 
     fn cause(&self) -> Option<&error::Error> {
         match *self {
             NonblockingSslError::SslError(ref e) => e.cause(),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -240,8 +244,8 @@ pub enum OpensslError {
         /// The function reporting the error
         function: String,
         /// The reason for the error
-        reason: String
-    }
+        reason: String,
+    },
 }
 
 impl OpensslError {
@@ -250,7 +254,7 @@ impl OpensslError {
         UnknownError {
             library: get_lib(err).to_owned(),
             function: get_func(err).to_owned(),
-            reason: get_reason(err).to_owned()
+            reason: get_reason(err).to_owned(),
         }
     }
 }
@@ -283,11 +287,11 @@ impl SslError {
     /// Creates a new `OpenSslErrors` with the current contents of the error
     /// stack.
     pub fn get() -> SslError {
-        let mut errs = vec!();
+        let mut errs = vec![];
         loop {
             match unsafe { ffi::ERR_get_error() } {
                 0 => break,
-                err => errs.push(OpensslError::from_error_code(err))
+                err => errs.push(OpensslError::from_error_code(err)),
             }
         }
         OpenSslErrors(errs)
@@ -303,7 +307,7 @@ impl SslError {
 fn test_uknown_error_should_have_correct_messages() {
     let errs = match SslError::from_error(336032784) {
         OpenSslErrors(errs) => errs,
-        _ => panic!("This should always be an `OpenSslErrors` variant.")
+        _ => panic!("This should always be an `OpenSslErrors` variant."),
     };
 
     let UnknownError { ref library, ref function, ref reason } = errs[0];

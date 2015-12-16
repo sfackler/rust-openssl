@@ -6,11 +6,11 @@ use std::cmp;
 
 use ffi;
 use ffi_extras;
-use ssl::error::{SslError};
+use ssl::error::SslError;
 
 pub struct MemBio {
     bio: *mut ffi::BIO,
-    owned: bool
+    owned: bool,
 }
 
 impl Drop for MemBio {
@@ -33,7 +33,7 @@ impl MemBio {
 
         Ok(MemBio {
             bio: bio,
-            owned: true
+            owned: true,
         })
     }
 
@@ -41,7 +41,7 @@ impl MemBio {
     pub fn borrowed(bio: *mut ffi::BIO) -> MemBio {
         MemBio {
             bio: bio,
-            owned: false
+            owned: false,
         }
     }
 
@@ -60,17 +60,21 @@ impl MemBio {
 
     /// Sets the BIO's EOF state.
     pub fn set_eof(&self, eof: bool) {
-        let v = if eof { 0 } else { -1 };
-        unsafe { ffi_extras::BIO_set_mem_eof_return(self.bio, v); }
+        let v = if eof {
+            0
+        } else {
+            -1
+        };
+        unsafe {
+            ffi_extras::BIO_set_mem_eof_return(self.bio, v);
+        }
     }
 }
 
 impl Read for MemBio {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let len = cmp::min(c_int::max_value() as usize, buf.len()) as c_int;
-        let ret = unsafe {
-            ffi::BIO_read(self.bio, buf.as_ptr() as *mut c_void, len)
-        };
+        let ret = unsafe { ffi::BIO_read(self.bio, buf.as_ptr() as *mut c_void, len) };
 
         if ret <= 0 {
             let is_eof = unsafe { ffi_extras::BIO_eof(self.bio) };
@@ -88,9 +92,7 @@ impl Read for MemBio {
 impl Write for MemBio {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let len = cmp::min(c_int::max_value() as usize, buf.len()) as c_int;
-        let ret = unsafe {
-            ffi::BIO_write(self.bio, buf.as_ptr() as *const c_void, len)
-        };
+        let ret = unsafe { ffi::BIO_write(self.bio, buf.as_ptr() as *const c_void, len) };
 
         if ret < 0 {
             Err(io::Error::new(io::ErrorKind::Other, SslError::get()))
