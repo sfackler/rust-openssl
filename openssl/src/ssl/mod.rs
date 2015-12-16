@@ -41,6 +41,7 @@ pub use ssl::error::Error;
 
 extern "C" {
     fn rust_SSL_clone(ssl: *mut ffi::SSL);
+    fn rust_SSL_CTX_clone(cxt: *mut ffi::SSL_CTX);
 }
 
 static mut VERIFY_IDX: c_int = -1;
@@ -297,20 +298,15 @@ extern fn raw_verify_with_data<T>(preverify_ok: c_int,
         let verify: Option<VerifyCallbackData<T>> = mem::transmute(verify);
 
         let data = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_verify_data_idx::<T>());
-        let data: Box<T> = mem::transmute(data);
+        let data: &T = mem::transmute(data);
 
         let ctx = X509StoreContext::new(x509_ctx);
 
         let res = match verify {
             None => preverify_ok,
-            Some(verify) => verify(preverify_ok != 0, &ctx, &*data) as c_int
+            Some(verify) => verify(preverify_ok != 0, &ctx, data) as c_int
         };
 
-        // Since data might be required on the next verification
-        // it is time to forget about it and avoid dropping
-        // data will be freed once OpenSSL considers it is time
-        // to free all context data
-        mem::forget(data);
         res
     }
 }
@@ -321,6 +317,7 @@ extern fn raw_sni(ssl: *mut ffi::SSL, ad: &mut c_int, _arg: *mut c_void)
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
         let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, SNI_IDX);
         let callback: Option<ServerNameCallback> = mem::transmute(callback);
+        rust_SSL_clone(ssl);
         let mut s = Ssl { ssl: ssl };
 
         let res = match callback {
@@ -328,8 +325,6 @@ extern fn raw_sni(ssl: *mut ffi::SSL, ad: &mut c_int, _arg: *mut c_void)
             Some(callback) => callback(&mut s, ad)
         };
 
-        // Allows dropping the Ssl instance without calling SSL_FREE on the SSL object
-        mem::forget(s);
         res
     }
 }
@@ -341,6 +336,7 @@ extern fn raw_sni_with_data<T>(ssl: *mut ffi::SSL, ad: &mut c_int, arg: *mut c_v
 
         let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, SNI_IDX);
         let callback: Option<ServerNameCallbackData<T>> = mem::transmute(callback);
+        rust_SSL_clone(ssl);
         let mut s = Ssl { ssl: ssl };
 
         let data: &T = mem::transmute(arg);
@@ -349,9 +345,6 @@ extern fn raw_sni_with_data<T>(ssl: *mut ffi::SSL, ad: &mut c_int, arg: *mut c_v
             None => ffi::SSL_TLSEXT_ERR_ALERT_FATAL,
             Some(callback) => callback(&mut s, ad, &*data)
         };
-
-        // Allows dropping the Ssl instance without calling SSL_FREE on the SSL object
-        mem::forget(s);
 
         // Since data might be required on the next verification
         // it is time to forget about it and avoid dropping
@@ -984,7 +977,7 @@ impl Ssl {
     pub fn get_ssl_context(&self) -> SslContext {
         unsafe {
             let ssl_ctx = ffi::SSL_get_SSL_CTX(self.ssl);
-            ffi_extras::SSL_CTX_increment_refcount(ssl_ctx);
+            rust_SSL_CTX_clone(ssl_ctx);
             SslContext { ctx: ssl_ctx }
         }
     }
