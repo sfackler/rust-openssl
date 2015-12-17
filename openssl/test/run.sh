@@ -28,4 +28,4 @@ else
     COMMAND="test"
 fi
 
-cargo $COMMAND --manifest-path=openssl/Cargo.toml $FLAGS --features "$FEATURES"
+(cd openssl && cargo $COMMAND $FLAGS --features "$FEATURES")
