@@ -1,5 +1,9 @@
 language: rust
 sudo: false
+addons:
+  apt:
+    packages:
+    - gcc-4.6-arm-linux-gnueabihf
 rust:
 - nightly
 - beta
