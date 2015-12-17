@@ -3,16 +3,23 @@ sudo: false
 rust:
 - nightly
 - beta
-- stable
+- 1.4.0
 os:
 - osx
 - linux
 env:
-  global:
-    - FEATURES="tlsv1_2 tlsv1_1 dtlsv1 dtlsv1_2 sslv2 sslv3 aes_xts aes_ctr npn alpn rfc5114 ecdh_auto pkcs5_pbkdf2_hmac"
+  matrix:
+  - TEST_FEATURES=false
+  - TEST_FEATURES=true
+matrix:
+  include:
+  - os: linux
+    env: TARGET=arm-unknown-linux-gnueabihf TEST_FEATURES=true
+    rust: 1.4.0
+  exclude:
+  - os: osx
+    env: TEST_FEATURES=true
 before_install:
-- (test $TRAVIS_OS_NAME == "osx" || ./openssl/test/build.sh)
+- ./openssl/test/build.sh
 script:
-- (test $TRAVIS_OS_NAME != "osx" || (cd openssl && cargo test))
-- (test $TRAVIS_OS_NAME == "osx" || (cd openssl && OPENSSL_LIB_DIR=$HOME/openssl/lib OPENSSL_INCLUDE_DIR=$HOME/openssl/include LD_LIBRARY_PATH=$HOME/openssl/lib:$LD_LIBRARY_PATH PATH=$HOME/openssl/bin:$PATH cargo test))
-- (test $TRAVIS_OS_NAME == "osx" || (cd openssl && OPENSSL_LIB_DIR=$HOME/openssl/lib OPENSSL_INCLUDE_DIR=$HOME/openssl/include LD_LIBRARY_PATH=$HOME/openssl/lib:$LD_LIBRARY_PATH PATH=$HOME/openssl/bin:$PATH cargo test --features "$FEATURES"))
+- ./openssl/test/run.sh
