@@ -28,4 +28,5 @@ else
     COMMAND="test"
 fi
 
+export PATH=$HOME/openssl/bin:$PATH
 (cd openssl && cargo $COMMAND $FLAGS --features "$FEATURES")

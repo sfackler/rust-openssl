@@ -3,7 +3,7 @@ sudo: false
 addons:
   apt:
     packages:
-    - gcc-4.6-arm-linux-gnueabihf
+    - gcc-arm-linux-gnueabihf
 rust:
 - nightly
 - beta
@@ -16,10 +16,10 @@ env:
   - TEST_FEATURES=false
   - TEST_FEATURES=true
 matrix:
-  include:
-  - os: linux
-    env: TARGET=arm-unknown-linux-gnueabihf TEST_FEATURES=true
-    rust: 1.4.0
+    #  include:
+    #  - os: linux
+    #    env: TARGET=arm-unknown-linux-gnueabihf TEST_FEATURES=true
+    #    rust: 1.4.0
   exclude:
   - os: osx
     env: TEST_FEATURES=true

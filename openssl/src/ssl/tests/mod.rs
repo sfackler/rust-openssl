@@ -75,7 +75,7 @@ impl Server {
 
     fn new_tcp(args: &[&str]) -> (Server, TcpStream) {
         let (server, addr) = Server::spawn(args, None);
-        loop {
+        for _ in 0..20 {
             match TcpStream::connect(&addr) {
                 Ok(s) => return (server, s),
                 Err(ref e) if e.kind() == io::ErrorKind::ConnectionRefused => {
@@ -84,6 +84,7 @@ impl Server {
                 Err(e) => panic!("wut: {}", e),
             }
         }
+        panic!("server never came online");
     }
 
     fn new() -> (Server, TcpStream) {
