@@ -40,15 +40,15 @@ libressl-pnacl-sys = "2.1.0"
 libressl-pnacl-sys = "2.1.0"
 
 # Only here to make sure we link to these in a static build on Windows
-[target.i686-pc-windows-gnu]
+[target.i686-pc-windows-gnu.dependencies]
 user32-sys = "0.1"
 gdi32-sys = "0.1"
-[target.x86_64-pc-windows-gnu]
+[target.x86_64-pc-windows-gnu.dependencies]
 user32-sys = "0.1"
 gdi32-sys = "0.1"
-[target.i686-pc-windows-msvc]
+[target.i686-pc-windows-msvc.dependencies]
 user32-sys = "0.1"
 gdi32-sys = "0.1"
-[target.x86_64-pc-windows-msvc]
+[target.x86_64-pc-windows-msvc.dependencies]
 user32-sys = "0.1"
 gdi32-sys = "0.1"
