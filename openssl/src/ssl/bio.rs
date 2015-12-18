@@ -95,7 +95,7 @@ unsafe extern "C" fn bwrite<S: Write>(bio: *mut BIO, buf: *const c_char, len: c_
     match state.stream.write(buf) {
         Ok(len) => len as c_int,
         Err(err) => {
-            if err.kind() == io::ErrorKind::WouldBlock {
+            if retriable_error(&err) {
                 BIO_set_retry_write(bio);
             }
             state.error = Some(err);
@@ -112,12 +112,19 @@ unsafe extern "C" fn bread<S: Read>(bio: *mut BIO, buf: *mut c_char, len: c_int)
     match state.stream.read(buf) {
         Ok(len) => len as c_int,
         Err(err) => {
-            if err.kind() == io::ErrorKind::WouldBlock {
+            if retriable_error(&err) {
                 BIO_set_retry_read(bio);
             }
             state.error = Some(err);
             -1
         }
+    }
+}
+
+fn retriable_error(err: &io::Error) -> bool {
+    match err.kind() {
+        io::ErrorKind::WouldBlock | io::ErrorKind::NotConnected => true,
+        _ => false
     }
 }
 

@@ -1070,16 +1070,10 @@ impl<S: Read + Write> SslStream<S> {
         if ret > 0 {
             Ok(stream)
         } else {
-            match stream.make_old_error(ret) {
-                SslError::StreamError(e) => {
-                    // This is fine - nonblocking sockets will finish the handshake in read/write
-                    if e.kind() == io::ErrorKind::WouldBlock {
-                        Ok(stream)
-                    } else {
-                        Err(SslError::StreamError(e))
-                    }
-                }
-                e => Err(e),
+            match stream.make_error(ret) {
+                // This is fine - nonblocking sockets will finish the handshake in read/write
+                Error::WantRead(..) | Error::WantWrite(..) => Ok(stream),
+                _ => Err(stream.make_old_error(ret)),
             }
         }
     }
@@ -1092,16 +1086,10 @@ impl<S: Read + Write> SslStream<S> {
         if ret > 0 {
             Ok(stream)
         } else {
-            match stream.make_old_error(ret) {
-                SslError::StreamError(e) => {
-                    // This is fine - nonblocking sockets will finish the handshake in read/write
-                    if e.kind() == io::ErrorKind::WouldBlock {
-                        Ok(stream)
-                    } else {
-                        Err(SslError::StreamError(e))
-                    }
-                }
-                e => Err(e),
+            match stream.make_error(ret) {
+                // This is fine - nonblocking sockets will finish the handshake in read/write
+                Error::WantRead(..) | Error::WantWrite(..) => Ok(stream),
+                _ => Err(stream.make_old_error(ret)),
             }
         }
     }
