@@ -111,55 +111,73 @@ impl BigNum {
 
     pub fn checked_sqr(&self) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_sqr(r.raw(), self.raw(), ctx) == 1 })
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_sqr(r.raw(), self.raw(), ctx) == 1
+            })
         }
     }
 
     pub fn checked_nnmod(&self, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_nnmod(r.raw(), self.raw(), n.raw(), ctx) == 1 })
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_nnmod(r.raw(), self.raw(), n.raw(), ctx) == 1
+            })
         }
     }
 
     pub fn checked_mod_add(&self, a: &BigNum, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_mod_add(r.raw(), self.raw(), a.raw(), n.raw(), ctx) == 1 })
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_mod_add(r.raw(), self.raw(), a.raw(), n.raw(), ctx) == 1
+            })
         }
     }
 
     pub fn checked_mod_sub(&self, a: &BigNum, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_mod_sub(r.raw(), self.raw(), a.raw(), n.raw(), ctx) == 1 })
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_mod_sub(r.raw(), self.raw(), a.raw(), n.raw(), ctx) == 1
+            })
         }
     }
 
     pub fn checked_mod_mul(&self, a: &BigNum, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_mod_mul(r.raw(), self.raw(), a.raw(), n.raw(), ctx) == 1 })
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_mod_mul(r.raw(), self.raw(), a.raw(), n.raw(), ctx) == 1
+            })
         }
     }
 
     pub fn checked_mod_sqr(&self, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_mod_sqr(r.raw(), self.raw(), n.raw(), ctx) == 1 })
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_mod_sqr(r.raw(), self.raw(), n.raw(), ctx) == 1
+            })
         }
     }
 
     pub fn checked_exp(&self, p: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_exp(r.raw(), self.raw(), p.raw(), ctx) == 1 })
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_exp(r.raw(), self.raw(), p.raw(), ctx) == 1
+            })
         }
     }
 
     pub fn checked_mod_exp(&self, p: &BigNum, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_mod_exp(r.raw(), self.raw(), p.raw(), n.raw(), ctx) == 1 })
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_mod_exp(r.raw(), self.raw(), p.raw(), n.raw(), ctx) == 1
+            })
         }
     }
 
     pub fn checked_mod_inv(&self, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { !ffi::BN_mod_inverse(r.raw(), self.raw(), n.raw(), ctx).is_null() })
+            with_bn_in_ctx!(r, ctx, {
+                !ffi::BN_mod_inverse(r.raw(), self.raw(), n.raw(), ctx).is_null()
+            })
         }
     }
 
@@ -217,17 +235,28 @@ impl BigNum {
 
     pub fn checked_gcd(&self, a: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_gcd(r.raw(), self.raw(), a.raw(), ctx) == 1 })
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_gcd(r.raw(), self.raw(), a.raw(), ctx) == 1
+            })
         }
     }
 
-    pub fn checked_generate_prime(bits: i32, safe: bool, add: Option<&BigNum>, rem: Option<&BigNum>) -> Result<BigNum, SslError> {
+    pub fn checked_generate_prime(bits: i32,
+                                  safe: bool,
+                                  add: Option<&BigNum>,
+                                  rem: Option<&BigNum>)
+                                  -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 let add_arg = add.map(|a| a.raw()).unwrap_or(ptr::null_mut());
                 let rem_arg = rem.map(|r| r.raw()).unwrap_or(ptr::null_mut());
 
-                ffi::BN_generate_prime_ex(r.raw(), bits as c_int, safe as c_int, add_arg, rem_arg, ptr::null()) == 1
+                ffi::BN_generate_prime_ex(r.raw(),
+                                          bits as c_int,
+                                          safe as c_int,
+                                          add_arg,
+                                          rem_arg,
+                                          ptr::null()) == 1
             })
         }
     }
@@ -243,32 +272,47 @@ impl BigNum {
     pub fn is_prime_fast(&self, checks: i32, do_trial_division: bool) -> Result<bool, SslError> {
         unsafe {
             with_ctx!(ctx, {
-                Ok(ffi::BN_is_prime_fasttest_ex(self.raw(), checks as c_int, ctx, do_trial_division as c_int, ptr::null()) == 1)
+                Ok(ffi::BN_is_prime_fasttest_ex(self.raw(),
+                                                checks as c_int,
+                                                ctx,
+                                                do_trial_division as c_int,
+                                                ptr::null()) == 1)
             })
         }
     }
 
     pub fn checked_new_random(bits: i32, prop: RNGProperty, odd: bool) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_rand(r.raw(), bits as c_int, prop as c_int, odd as c_int) == 1 })
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_rand(r.raw(), bits as c_int, prop as c_int, odd as c_int) == 1
+            })
         }
     }
 
-    pub fn checked_new_pseudo_random(bits: i32, prop: RNGProperty, odd: bool) -> Result<BigNum, SslError> {
+    pub fn checked_new_pseudo_random(bits: i32,
+                                     prop: RNGProperty,
+                                     odd: bool)
+                                     -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_pseudo_rand(r.raw(), bits as c_int, prop as c_int, odd as c_int) == 1 })
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_pseudo_rand(r.raw(), bits as c_int, prop as c_int, odd as c_int) == 1
+            })
         }
     }
 
     pub fn checked_rand_in_range(&self) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_rand_range(r.raw(), self.raw()) == 1 })
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_rand_range(r.raw(), self.raw()) == 1
+            })
         }
     }
 
     pub fn checked_pseudo_rand_in_range(&self) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_pseudo_rand_range(r.raw(), self.raw()) == 1 })
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_pseudo_rand_range(r.raw(), self.raw()) == 1
+            })
         }
     }
 
@@ -293,9 +337,7 @@ impl BigNum {
     }
 
     pub fn is_bit_set(&self, n: i32) -> bool {
-        unsafe {
-            ffi::BN_is_bit_set(self.raw(), n as c_int) == 1
-        }
+        unsafe { ffi::BN_is_bit_set(self.raw(), n as c_int) == 1 }
     }
 
     pub fn mask_bits(&mut self, n: i32) -> Result<(), SslError> {
@@ -310,62 +352,78 @@ impl BigNum {
 
     pub fn checked_shl1(&self) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn!(r, { ffi::BN_lshift1(r.raw(), self.raw()) == 1 })
+            with_bn!(r, {
+                ffi::BN_lshift1(r.raw(), self.raw()) == 1
+            })
         }
     }
 
     pub fn checked_shr1(&self) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn!(r, { ffi::BN_rshift1(r.raw(), self.raw()) == 1 })
+            with_bn!(r, {
+                ffi::BN_rshift1(r.raw(), self.raw()) == 1
+            })
         }
     }
 
     pub fn checked_add(&self, a: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn!(r, { ffi::BN_add(r.raw(), self.raw(), a.raw()) == 1 })
+            with_bn!(r, {
+                ffi::BN_add(r.raw(), self.raw(), a.raw()) == 1
+            })
         }
     }
 
     pub fn checked_sub(&self, a: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn!(r, { ffi::BN_sub(r.raw(), self.raw(), a.raw()) == 1 })
+            with_bn!(r, {
+                ffi::BN_sub(r.raw(), self.raw(), a.raw()) == 1
+            })
         }
     }
 
     pub fn checked_mul(&self, a: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_mul(r.raw(), self.raw(), a.raw(), ctx) == 1 })
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_mul(r.raw(), self.raw(), a.raw(), ctx) == 1
+            })
         }
     }
 
     pub fn checked_div(&self, a: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_div(r.raw(), ptr::null_mut(), self.raw(), a.raw(), ctx) == 1 })
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_div(r.raw(), ptr::null_mut(), self.raw(), a.raw(), ctx) == 1
+            })
         }
     }
 
     pub fn checked_mod(&self, a: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn_in_ctx!(r, ctx, { ffi::BN_div(ptr::null_mut(), r.raw(), self.raw(), a.raw(), ctx) == 1 })
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_div(ptr::null_mut(), r.raw(), self.raw(), a.raw(), ctx) == 1
+            })
         }
     }
 
     pub fn checked_shl(&self, a: &i32) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn!(r, { ffi::BN_lshift(r.raw(), self.raw(), *a as c_int) == 1 })
+            with_bn!(r, {
+                ffi::BN_lshift(r.raw(), self.raw(), *a as c_int) == 1
+            })
         }
     }
 
     pub fn checked_shr(&self, a: &i32) -> Result<BigNum, SslError> {
         unsafe {
-            with_bn!(r, { ffi::BN_rshift(r.raw(), self.raw(), *a as c_int) == 1 })
+            with_bn!(r, {
+                ffi::BN_rshift(r.raw(), self.raw(), *a as c_int) == 1
+            })
         }
     }
 
     pub fn negate(&mut self) {
-        unsafe {
-            ffi::BN_set_negative(self.raw(), !self.is_negative() as c_int)
-        }
+        unsafe { ffi::BN_set_negative(self.raw(), !self.is_negative() as c_int) }
     }
 
     pub fn abs_cmp(&self, oth: BigNum) -> Ordering {
@@ -382,15 +440,11 @@ impl BigNum {
     }
 
     pub fn is_negative(&self) -> bool {
-        unsafe {
-            (*self.raw()).neg == 1
-        }
+        unsafe { (*self.raw()).neg == 1 }
     }
 
     pub fn num_bits(&self) -> i32 {
-        unsafe {
-            ffi::BN_num_bits(self.raw()) as i32
-        }
+        unsafe { ffi::BN_num_bits(self.raw()) as i32 }
     }
 
     pub fn num_bytes(&self) -> i32 {
@@ -421,7 +475,8 @@ impl BigNum {
         unsafe {
             let buf = ffi::BN_bn2dec(self.raw());
             assert!(!buf.is_null());
-            let str = String::from_utf8(CStr::from_ptr(buf as *const _).to_bytes().to_vec()).unwrap();
+            let str = String::from_utf8(CStr::from_ptr(buf as *const _).to_bytes().to_vec())
+                          .unwrap();
             ffi::CRYPTO_free(buf as *mut c_void);
             str
         }
@@ -431,7 +486,8 @@ impl BigNum {
         unsafe {
             let buf = ffi::BN_bn2hex(self.raw());
             assert!(!buf.is_null());
-            let str = String::from_utf8(CStr::from_ptr(buf as *const _).to_bytes().to_vec()).unwrap();
+            let str = String::from_utf8(CStr::from_ptr(buf as *const _).to_bytes().to_vec())
+                          .unwrap();
             ffi::CRYPTO_free(buf as *mut c_void);
             str
         }
@@ -444,12 +500,10 @@ impl fmt::Debug for BigNum {
     }
 }
 
-impl Eq for BigNum { }
+impl Eq for BigNum {}
 impl PartialEq for BigNum {
     fn eq(&self, oth: &BigNum) -> bool {
-        unsafe {
-            ffi::BN_cmp(self.raw(), oth.raw()) == 0
-        }
+        unsafe { ffi::BN_cmp(self.raw(), oth.raw()) == 0 }
     }
 }
 
@@ -463,14 +517,13 @@ impl PartialOrd for BigNum {
     fn partial_cmp(&self, oth: &BigNum) -> Option<Ordering> {
         unsafe {
             let v = ffi::BN_cmp(self.raw(), oth.raw());
-            let ret =
-                if v == 0 {
-                    Ordering::Equal
-                } else if v < 0 {
-                    Ordering::Less
-                } else {
-                    Ordering::Greater
-                };
+            let ret = if v == 0 {
+                Ordering::Equal
+            } else if v < 0 {
+                Ordering::Less
+            } else {
+                Ordering::Greater
+            };
             Some(ret)
         }
     }
@@ -489,7 +542,7 @@ impl Drop for BigNum {
 pub mod unchecked {
     use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub};
     use ffi;
-    use super::{BigNum};
+    use super::BigNum;
 
     impl<'a> Add<&'a BigNum> for &'a BigNum {
         type Output = BigNum;

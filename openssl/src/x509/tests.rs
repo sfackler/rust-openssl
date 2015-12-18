@@ -3,10 +3,10 @@ use std::io;
 use std::path::Path;
 use std::fs::File;
 
-use crypto::hash::Type::{SHA256};
+use crypto::hash::Type::SHA256;
 use crypto::pkey::PKey;
 use x509::{X509, X509Generator};
-use x509::extension::Extension::{KeyUsage,ExtKeyUsage,SubjectAltName,OtherNid,OtherStr};
+use x509::extension::Extension::{KeyUsage, ExtKeyUsage, SubjectAltName, OtherNid, OtherStr};
 use x509::extension::AltNameOption as SAN;
 use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment};
 use x509::extension::ExtKeyUsageOption::{self, ClientAuth, ServerAuth};
@@ -15,14 +15,16 @@ use nid::Nid;
 fn get_generator() -> X509Generator {
     X509Generator::new()
         .set_bitlength(2048)
-        .set_valid_period(365*2)
-        .add_name("CN".to_string(),"test_me".to_string())
+        .set_valid_period(365 * 2)
+        .add_name("CN".to_string(), "test_me".to_string())
         .set_sign_hash(SHA256)
         .add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]))
-        .add_extension(ExtKeyUsage(vec![ClientAuth, ServerAuth, ExtKeyUsageOption::Other("2.999.1".to_owned())]))
-        .add_extension(SubjectAltName(vec![(SAN::DNS,"example.com".to_owned())]))
-        .add_extension(OtherNid(Nid::BasicConstraints,"critical,CA:TRUE".to_owned()))
-        .add_extension(OtherStr("2.999.2".to_owned(),"ASN1:UTF8:example value".to_owned()))
+        .add_extension(ExtKeyUsage(vec![ClientAuth,
+                                        ServerAuth,
+                                        ExtKeyUsageOption::Other("2.999.1".to_owned())]))
+        .add_extension(SubjectAltName(vec![(SAN::DNS, "example.com".to_owned())]))
+        .add_extension(OtherNid(Nid::BasicConstraints, "critical,CA:TRUE".to_owned()))
+        .add_extension(OtherStr("2.999.2".to_owned(), "ASN1:UTF8:example value".to_owned()))
 }
 
 #[test]
@@ -53,8 +55,8 @@ fn test_req_gen() {
 fn test_cert_loading() {
     let cert_path = Path::new("test/cert.pem");
     let mut file = File::open(&cert_path)
-        .ok()
-        .expect("Failed to open `test/cert.pem`");
+                       .ok()
+                       .expect("Failed to open `test/cert.pem`");
 
     let cert = X509::from_pem(&mut file).ok().expect("Failed to load PEM");
     let fingerprint = cert.fingerprint(SHA256).unwrap();
@@ -73,14 +75,14 @@ fn test_cert_loading() {
 fn test_subject_read_cn() {
     let cert_path = Path::new("test/cert.pem");
     let mut file = File::open(&cert_path)
-        .ok()
-        .expect("Failed to open `test/cert.pem`");
+                       .ok()
+                       .expect("Failed to open `test/cert.pem`");
 
     let cert = X509::from_pem(&mut file).ok().expect("Failed to load PEM");
     let subject = cert.subject_name();
     let cn = match subject.text_by_nid(Nid::CN) {
         Some(x) => x,
-        None => panic!("Failed to read CN from cert")
+        None => panic!("Failed to read CN from cert"),
     };
 
     assert_eq!(&cn as &str, "test_cert")
@@ -90,27 +92,27 @@ fn test_subject_read_cn() {
 fn test_nid_values() {
     let cert_path = Path::new("test/nid_test_cert.pem");
     let mut file = File::open(&cert_path)
-        .ok()
-        .expect("Failed to open `test/nid_test_cert.pem`");
+                       .ok()
+                       .expect("Failed to open `test/nid_test_cert.pem`");
 
     let cert = X509::from_pem(&mut file).ok().expect("Failed to load PEM");
     let subject = cert.subject_name();
 
     let cn = match subject.text_by_nid(Nid::CN) {
         Some(x) => x,
-        None => panic!("Failed to read CN from cert")
+        None => panic!("Failed to read CN from cert"),
     };
     assert_eq!(&cn as &str, "example.com");
 
     let email = match subject.text_by_nid(Nid::Email) {
         Some(x) => x,
-        None => panic!("Failed to read subject email address from cert")
+        None => panic!("Failed to read subject email address from cert"),
     };
     assert_eq!(&email as &str, "test@example.com");
 
     let friendly = match subject.text_by_nid(Nid::FriendlyName) {
         Some(x) => x,
-        None => panic!("Failed to read subject friendly name from cert")
+        None => panic!("Failed to read subject friendly name from cert"),
     };
     assert_eq!(&friendly as &str, "Example");
 }

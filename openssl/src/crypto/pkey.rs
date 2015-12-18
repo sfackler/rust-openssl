@@ -4,7 +4,7 @@ use std::io::prelude::*;
 use std::iter::repeat;
 use std::mem;
 use std::ptr;
-use bio::{MemBio};
+use bio::MemBio;
 use crypto::hash;
 use crypto::hash::Type as HashType;
 use ffi;
@@ -14,7 +14,7 @@ use ssl::error::{SslError, StreamError};
 pub enum Parts {
     Neither,
     Public,
-    Both
+    Both,
 }
 
 /// Represents a role an asymmetric key might be appropriate for.
@@ -23,31 +23,31 @@ pub enum Role {
     Encrypt,
     Decrypt,
     Sign,
-    Verify
+    Verify,
 }
 
 /// Type of encryption padding to use.
 #[derive(Copy, Clone)]
 pub enum EncryptionPadding {
     OAEP,
-    PKCS1v15
+    PKCS1v15,
 }
 
 fn openssl_padding_code(padding: EncryptionPadding) -> c_int {
     match padding {
         EncryptionPadding::OAEP => 4,
-        EncryptionPadding::PKCS1v15 => 1
+        EncryptionPadding::PKCS1v15 => 1,
     }
 }
 
 fn openssl_hash_nid(hash: HashType) -> c_int {
     match hash {
-        HashType::MD5       => 4,   // NID_md5,
-        HashType::SHA1      => 64,  // NID_sha1
-        HashType::SHA224    => 675, // NID_sha224
-        HashType::SHA256    => 672, // NID_sha256
-        HashType::SHA384    => 673, // NID_sha384
-        HashType::SHA512    => 674, // NID_sha512
+        HashType::MD5 => 4,   // NID_md5,
+        HashType::SHA1 => 64,  // NID_sha1
+        HashType::SHA224 => 675, // NID_sha224
+        HashType::SHA256 => 672, // NID_sha256
+        HashType::SHA384 => 673, // NID_sha384
+        HashType::SHA512 => 674, // NID_sha512
         HashType::RIPEMD160 => 117, // NID_ripemd160
     }
 }
@@ -81,32 +81,38 @@ impl PKey {
     }
 
     /// Reads private key from PEM, takes ownership of handle
-    pub fn private_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError> where R: Read {
+    pub fn private_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError>
+        where R: Read
+    {
         let mut mem_bio = try!(MemBio::new());
         try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
 
         unsafe {
             let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.get_handle(),
                                                                  ptr::null_mut(),
-                                                                 None, ptr::null_mut()));
+                                                                 None,
+                                                                 ptr::null_mut()));
             Ok(PKey {
-                evp:   evp,
+                evp: evp,
                 parts: Parts::Both,
             })
         }
     }
 
     /// Reads public key from PEM, takes ownership of handle
-    pub fn public_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError> where R: Read {
+    pub fn public_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError>
+        where R: Read
+    {
         let mut mem_bio = try!(MemBio::new());
         try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
 
         unsafe {
             let evp = try_ssl_null!(ffi::PEM_read_bio_PUBKEY(mem_bio.get_handle(),
-                                                                 ptr::null_mut(),
-                                                                 None, ptr::null_mut()));
+                                                             ptr::null_mut(),
+                                                             None,
+                                                             ptr::null_mut()));
             Ok(PKey {
-                evp:   evp,
+                evp: evp,
                 parts: Parts::Public,
             })
         }
@@ -116,7 +122,9 @@ impl PKey {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
             let len = f(rsa, ptr::null());
-            if len < 0 as c_int { return vec!(); }
+            if len < 0 as c_int {
+                return vec![];
+            }
             let mut s = repeat(0u8).take(len as usize).collect::<Vec<_>>();
 
             let r = f(rsa, &s.as_mut_ptr());
@@ -127,14 +135,17 @@ impl PKey {
         }
     }
 
-    fn _fromstr(&mut self, s: &[u8], f: unsafe extern "C" fn(*const *mut ffi::RSA, *const *const u8, c_uint) -> *mut ffi::RSA) -> bool {
+    fn _fromstr(&mut self,
+                s: &[u8],
+                f: unsafe extern "C" fn(*const *mut ffi::RSA, *const *const u8, c_uint)
+                                        -> *mut ffi::RSA)
+                -> bool {
         unsafe {
             let rsa = ptr::null_mut();
             f(&rsa, &s.as_ptr(), s.len() as c_uint);
             if !rsa.is_null() {
                 ffi::EVP_PKEY_set1_RSA(self.evp, rsa) == 1
-            }
-            else {
+            } else {
                 false
             }
         }
@@ -142,18 +153,13 @@ impl PKey {
 
     pub fn gen(&mut self, keysz: usize) {
         unsafe {
-            let rsa = ffi::RSA_generate_key(
-                keysz as c_int,
-                65537 as c_ulong,
-                ptr::null(),
-                ptr::null()
-            );
+            let rsa = ffi::RSA_generate_key(keysz as c_int,
+                                            65537 as c_ulong,
+                                            ptr::null(),
+                                            ptr::null());
 
             // XXX: 6 == NID_rsaEncryption
-            ffi::EVP_PKEY_assign(
-                self.evp,
-                6 as c_int,
-                mem::transmute(rsa));
+            ffi::EVP_PKEY_assign(self.evp, 6 as c_int, mem::transmute(rsa));
 
             self.parts = Parts::Both;
         }
@@ -194,11 +200,18 @@ impl PKey {
 
     /// Stores private key as a PEM
     // FIXME: also add password and encryption
-    pub fn write_pem<W: Write>(&self, writer: &mut W/*, password: Option<String>*/) -> Result<(), SslError> {
+    pub fn write_pem<W: Write>(&self,
+                               writer: &mut W /* , password: Option<String> */)
+                               -> Result<(), SslError> {
         let mut mem_bio = try!(MemBio::new());
         unsafe {
-            try_ssl!(ffi::PEM_write_bio_PrivateKey(mem_bio.get_handle(), self.evp, ptr::null(),
-                                                   ptr::null_mut(), -1, None, ptr::null_mut()));
+            try_ssl!(ffi::PEM_write_bio_PrivateKey(mem_bio.get_handle(),
+                                                   self.evp,
+                                                   ptr::null(),
+                                                   ptr::null_mut(),
+                                                   -1,
+                                                   None,
+                                                   ptr::null_mut()));
 
         }
         let mut buf = vec![];
@@ -207,11 +220,11 @@ impl PKey {
     }
 
     /// Stores public key as a PEM
-    pub fn write_pub_pem<W: Write>(&self, writer: &mut W/*, password: Option<String>*/) -> Result<(), SslError> {
+    pub fn write_pub_pem<W: Write>(&self,
+                                   writer: &mut W /* , password: Option<String> */)
+                                   -> Result<(), SslError> {
         let mut mem_bio = try!(MemBio::new());
-        unsafe {
-            try_ssl!(ffi::PEM_write_bio_PUBKEY(mem_bio.get_handle(), self.evp))
-        }
+        unsafe { try_ssl!(ffi::PEM_write_bio_PUBKEY(mem_bio.get_handle(), self.evp)) }
         let mut buf = vec![];
         try!(mem_bio.read_to_end(&mut buf).map_err(StreamError));
         writer.write_all(&buf).map_err(StreamError)
@@ -225,8 +238,7 @@ impl PKey {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
             if rsa.is_null() {
                 0
-            }
-            else {
+            } else {
                 ffi::RSA_size(rsa) as usize
             }
         }
@@ -237,26 +249,30 @@ impl PKey {
      */
     pub fn can(&self, r: Role) -> bool {
         match r {
-            Role::Encrypt =>
+            Role::Encrypt => {
                 match self.parts {
                     Parts::Neither => false,
                     _ => true,
-                },
-            Role::Verify =>
+                }
+            }
+            Role::Verify => {
                 match self.parts {
                     Parts::Neither => false,
                     _ => true,
-                },
-            Role::Decrypt =>
+                }
+            }
+            Role::Decrypt => {
                 match self.parts {
                     Parts::Both => true,
                     _ => false,
-                },
-            Role::Sign =>
+                }
+            }
+            Role::Sign => {
                 match self.parts {
                     Parts::Both => true,
                     _ => false,
-                },
+                }
+            }
         }
     }
 
@@ -289,16 +305,15 @@ impl PKey {
 
             let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
 
-            let rv = ffi::RSA_private_encrypt(
-                s.len() as c_int,
-                s.as_ptr(),
-                r.as_mut_ptr(),
-                rsa,
-                openssl_padding_code(padding));
+            let rv = ffi::RSA_private_encrypt(s.len() as c_int,
+                                              s.as_ptr(),
+                                              r.as_mut_ptr(),
+                                              rsa,
+                                              openssl_padding_code(padding));
 
             if rv < 0 as c_int {
                 // println!("{:?}", SslError::get());
-                vec!()
+                vec![]
             } else {
                 r.truncate(rv as usize);
                 r
@@ -318,15 +333,14 @@ impl PKey {
 
             let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
 
-            let rv = ffi::RSA_public_encrypt(
-                s.len() as c_int,
-                s.as_ptr(),
-                r.as_mut_ptr(),
-                rsa,
-                openssl_padding_code(padding));
+            let rv = ffi::RSA_public_encrypt(s.len() as c_int,
+                                             s.as_ptr(),
+                                             r.as_mut_ptr(),
+                                             rsa,
+                                             openssl_padding_code(padding));
 
             if rv < 0 as c_int {
-                vec!()
+                vec![]
             } else {
                 r.truncate(rv as usize);
                 r
@@ -346,15 +360,14 @@ impl PKey {
 
             let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
 
-            let rv = ffi::RSA_private_decrypt(
-                s.len() as c_int,
-                s.as_ptr(),
-                r.as_mut_ptr(),
-                rsa,
-                openssl_padding_code(padding));
+            let rv = ffi::RSA_private_decrypt(s.len() as c_int,
+                                              s.as_ptr(),
+                                              r.as_mut_ptr(),
+                                              rsa,
+                                              openssl_padding_code(padding));
 
             if rv < 0 as c_int {
-                vec!()
+                vec![]
             } else {
                 r.truncate(rv as usize);
                 r
@@ -374,15 +387,14 @@ impl PKey {
 
             let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
 
-            let rv = ffi::RSA_public_decrypt(
-                s.len() as c_int,
-                s.as_ptr(),
-                r.as_mut_ptr(),
-                rsa,
-                openssl_padding_code(padding));
+            let rv = ffi::RSA_public_decrypt(s.len() as c_int,
+                                             s.as_ptr(),
+                                             r.as_mut_ptr(),
+                                             rsa,
+                                             openssl_padding_code(padding));
 
             if rv < 0 as c_int {
-                vec!()
+                vec![]
             } else {
                 r.truncate(rv as usize);
                 r
@@ -394,46 +406,62 @@ impl PKey {
      * Encrypts data with the public key, using OAEP padding, returning the encrypted data. The
      * supplied data must not be larger than max_data().
      */
-    pub fn encrypt(&self, s: &[u8]) -> Vec<u8> { self.public_encrypt_with_padding(s, EncryptionPadding::OAEP) }
+    pub fn encrypt(&self, s: &[u8]) -> Vec<u8> {
+        self.public_encrypt_with_padding(s, EncryptionPadding::OAEP)
+    }
 
     /**
      * Encrypts data with the public key, using provided padding, returning the encrypted data. The
      * supplied data must not be larger than max_data().
      */
-    pub fn encrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> { self.public_encrypt_with_padding(s, padding) }
+    pub fn encrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> {
+        self.public_encrypt_with_padding(s, padding)
+    }
 
     /**
      * Encrypts data with the public key, using OAEP padding, returning the encrypted data. The
      * supplied data must not be larger than max_data().
      */
-    pub fn public_encrypt(&self, s: &[u8]) -> Vec<u8> { self.public_encrypt_with_padding(s, EncryptionPadding::OAEP) }
+    pub fn public_encrypt(&self, s: &[u8]) -> Vec<u8> {
+        self.public_encrypt_with_padding(s, EncryptionPadding::OAEP)
+    }
 
     /**
      * Decrypts data with the public key, using PKCS1v15 padding, returning the decrypted data.
      */
-    pub fn public_decrypt(&self, s: &[u8]) -> Vec<u8> { self.public_decrypt_with_padding(s, EncryptionPadding::PKCS1v15) }
+    pub fn public_decrypt(&self, s: &[u8]) -> Vec<u8> {
+        self.public_decrypt_with_padding(s, EncryptionPadding::PKCS1v15)
+    }
 
     /**
      * Decrypts data with the private key, expecting OAEP padding, returning the decrypted data.
      */
-    pub fn decrypt(&self, s: &[u8]) -> Vec<u8> { self.private_decrypt_with_padding(s, EncryptionPadding::OAEP) }
+    pub fn decrypt(&self, s: &[u8]) -> Vec<u8> {
+        self.private_decrypt_with_padding(s, EncryptionPadding::OAEP)
+    }
 
     /**
      * Decrypts data with the private key, using provided padding, returning the encrypted data. The
      * supplied data must not be larger than max_data().
      */
-    pub fn decrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> { self.private_decrypt_with_padding(s, padding) }
+    pub fn decrypt_with_padding(&self, s: &[u8], padding: EncryptionPadding) -> Vec<u8> {
+        self.private_decrypt_with_padding(s, padding)
+    }
 
     /**
      * Decrypts data with the private key, expecting OAEP padding, returning the decrypted data.
      */
-    pub fn private_decrypt(&self, s: &[u8]) -> Vec<u8> { self.private_decrypt_with_padding(s, EncryptionPadding::OAEP) }
+    pub fn private_decrypt(&self, s: &[u8]) -> Vec<u8> {
+        self.private_decrypt_with_padding(s, EncryptionPadding::OAEP)
+    }
 
     /**
      * Encrypts data with the private key, using PKCS1v15 padding, returning the encrypted data. The
      * supplied data must not be larger than max_data().
      */
-    pub fn private_encrypt(&self, s: &[u8]) -> Vec<u8> { self.private_encrypt_with_padding(s, EncryptionPadding::PKCS1v15) }
+    pub fn private_encrypt(&self, s: &[u8]) -> Vec<u8> {
+        self.private_encrypt_with_padding(s, EncryptionPadding::PKCS1v15)
+    }
 
     /**
      * Signs data, using OpenSSL's default scheme and adding sha256 ASN.1 information to the
@@ -441,14 +469,18 @@ impl PKey {
      * The bytes to sign must be the result of a sha256 hashing;
      * returns the signature.
      */
-    pub fn sign(&self, s: &[u8]) -> Vec<u8> { self.sign_with_hash(s, HashType::SHA256) }
+    pub fn sign(&self, s: &[u8]) -> Vec<u8> {
+        self.sign_with_hash(s, HashType::SHA256)
+    }
 
     /**
      * Verifies a signature s (using OpenSSL's default scheme and sha256) on the SHA256 hash of a
      * message.
      * Returns true if the signature is valid, and false otherwise.
      */
-    pub fn verify(&self, h: &[u8], s: &[u8]) -> bool { self.verify_with_hash(h, s, HashType::SHA256) }
+    pub fn verify(&self, h: &[u8], s: &[u8]) -> bool {
+        self.verify_with_hash(h, s, HashType::SHA256)
+    }
 
     /**
      * Signs data, using OpenSSL's default scheme and add ASN.1 information for the given hash type to the
@@ -466,16 +498,15 @@ impl PKey {
             let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
 
             let mut len = 0;
-            let rv = ffi::RSA_sign(
-                openssl_hash_nid(hash),
-                s.as_ptr(),
-                s.len() as c_uint,
-                r.as_mut_ptr(),
-                &mut len,
-                rsa);
+            let rv = ffi::RSA_sign(openssl_hash_nid(hash),
+                                   s.as_ptr(),
+                                   s.len() as c_uint,
+                                   r.as_mut_ptr(),
+                                   &mut len,
+                                   rsa);
 
             if rv < 0 as c_int {
-                vec!()
+                vec![]
             } else {
                 r.truncate(len as usize);
                 r
@@ -490,21 +521,19 @@ impl PKey {
                 panic!("Could not get RSA key for verification");
             }
 
-            let rv = ffi::RSA_verify(
-                openssl_hash_nid(hash),
-                h.as_ptr(),
-                h.len() as c_uint,
-                s.as_ptr(),
-                s.len() as c_uint,
-                rsa
-            );
+            let rv = ffi::RSA_verify(openssl_hash_nid(hash),
+                                     h.as_ptr(),
+                                     h.len() as c_uint,
+                                     s.as_ptr(),
+                                     s.len() as c_uint,
+                                     rsa);
 
             rv == 1 as c_int
         }
     }
 
     pub unsafe fn get_handle(&self) -> *mut ffi::EVP_PKEY {
-        return self.evp
+        return self.evp;
     }
 
     pub fn public_eq(&self, other: &PKey) -> bool {
@@ -568,8 +597,8 @@ mod tests {
     fn test_private_key_from_pem() {
         let key_path = Path::new("test/key.pem");
         let mut file = File::open(&key_path)
-            .ok()
-            .expect("Failed to open `test/key.pem`");
+                           .ok()
+                           .expect("Failed to open `test/key.pem`");
 
         super::PKey::private_key_from_pem(&mut file).unwrap();
     }
@@ -578,8 +607,8 @@ mod tests {
     fn test_public_key_from_pem() {
         let key_path = Path::new("test/key.pem.pub");
         let mut file = File::open(&key_path)
-            .ok()
-            .expect("Failed to open `test/key.pem.pub`");
+                           .ok()
+                           .expect("Failed to open `test/key.pem.pub`");
 
         super::PKey::public_key_from_pem(&mut file).unwrap();
     }
@@ -588,7 +617,7 @@ mod tests {
     fn test_private_encrypt() {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
-        let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
+        let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
         k0.gen(512);
         k1.load_pub(&k0.save_pub());
         let emsg = k0.private_encrypt(&msg);
@@ -600,7 +629,7 @@ mod tests {
     fn test_public_encrypt() {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
-        let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
+        let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
         k0.gen(512);
         k1.load_pub(&k0.save_pub());
         let emsg = k1.public_encrypt(&msg);
@@ -612,7 +641,7 @@ mod tests {
     fn test_public_encrypt_pkcs() {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
-        let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
+        let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
         k0.gen(512);
         k1.load_pub(&k0.save_pub());
         let emsg = k1.public_encrypt_with_padding(&msg, super::EncryptionPadding::PKCS1v15);
@@ -624,7 +653,7 @@ mod tests {
     fn test_sign() {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
-        let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
+        let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
         k0.gen(512);
         k1.load_pub(&k0.save_pub());
         let sig = k0.sign(&msg);
@@ -636,7 +665,7 @@ mod tests {
     fn test_sign_hashes() {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
-        let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
+        let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
         k0.gen(512);
         k1.load_pub(&k0.save_pub());
 
@@ -674,8 +703,8 @@ mod tests {
     fn test_pem() {
         let key_path = Path::new("test/key.pem");
         let mut file = File::open(&key_path)
-            .ok()
-            .expect("Failed to open `test/key.pem`");
+                           .ok()
+                           .expect("Failed to open `test/key.pem`");
 
         let key = super::PKey::private_key_from_pem(&mut file).unwrap();
 
