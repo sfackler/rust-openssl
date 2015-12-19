@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/sfackler/rust-openssl.svg?branch=master)](https://travis-ci.org/sfackler/rust-openssl)
 
-[Documentation](https://sfackler.github.io/rust-openssl/doc/v0.7.3/openssl).
+[Documentation](https://sfackler.github.io/rust-openssl/doc/v0.7.4/openssl).
 
 ## Building
 
