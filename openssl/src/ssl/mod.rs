@@ -1240,7 +1240,7 @@ impl SslStream<::std::net::TcpStream> {
         Ok(SslStream {
             ssl: self.ssl.clone(),
             _method: self._method.clone(),
-            _p: PhantomData
+            _p: PhantomData,
         })
     }
 }

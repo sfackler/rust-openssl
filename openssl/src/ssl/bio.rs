@@ -101,7 +101,7 @@ unsafe extern "C" fn bread<S: Read>(bio: *mut BIO, buf: *mut c_char, len: c_int)
 fn retriable_error(err: &io::Error) -> bool {
     match err.kind() {
         io::ErrorKind::WouldBlock | io::ErrorKind::NotConnected => true,
-        _ => false
+        _ => false,
     }
 }
 
