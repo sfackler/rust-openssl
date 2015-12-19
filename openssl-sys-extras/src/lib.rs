@@ -1,5 +1,5 @@
 #![allow(non_upper_case_globals, non_snake_case)]
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.3")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.4")]
 
 extern crate openssl_sys;
 extern crate libc;
