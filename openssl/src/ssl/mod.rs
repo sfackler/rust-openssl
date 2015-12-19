@@ -1010,11 +1010,11 @@ pub struct SslStream<S> {
 
 unsafe impl<S: Send> Send for SslStream<S> {}
 
+/// # Deprecated
+///
+/// This method does not behave as expected and will be removed in a future
+/// release.
 impl<S: Clone + Read + Write> Clone for SslStream<S> {
-    /// # Deprecated
-    ///
-    /// This method does not behave as expected and will be removed in a future
-    /// release.
     fn clone(&self) -> SslStream<S> {
         SslStream {
             ssl: self.ssl.clone(),
