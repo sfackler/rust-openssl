@@ -10,7 +10,7 @@ use std::str;
 use std::net;
 use std::path::Path;
 use std::ptr;
-use std::sync::{Once, ONCE_INIT, Mutex};
+use std::sync::{Once, ONCE_INIT, Mutex, Arc};
 use std::cmp;
 use std::any::Any;
 #[cfg(any(feature = "npn", feature = "alpn"))]
@@ -778,6 +778,7 @@ impl Drop for Ssl {
 }
 
 impl Clone for Ssl {
+    /// # Deprecated
     fn clone(&self) -> Ssl {
         unsafe { rust_SSL_clone(self.ssl) };
         Ssl { ssl: self.ssl }
@@ -1003,23 +1004,22 @@ make_LibSslError! {
 /// A stream wrapper which handles SSL encryption for an underlying stream.
 pub struct SslStream<S> {
     ssl: Ssl,
-    _method: Box<ffi::BIO_METHOD>, // :(
+    _method: Arc<ffi::BIO_METHOD>, // NOTE: this *must* be after the Ssl field so things drop right
     _p: PhantomData<S>,
 }
 
 unsafe impl<S: Send> Send for SslStream<S> {}
 
 impl<S: Clone + Read + Write> Clone for SslStream<S> {
+    /// # Deprecated
+    ///
+    /// This method does not behave as expected and will be removed in a future
+    /// release.
     fn clone(&self) -> SslStream<S> {
-        let stream = self.get_ref().clone();
-        Self::new_base(self.ssl.clone(), stream)
-    }
-}
-
-impl<S> Drop for SslStream<S> {
-    fn drop(&mut self) {
-        unsafe {
-            let _ = bio::take_stream::<S>(self.ssl.get_raw_rbio());
+        SslStream {
+            ssl: self.ssl.clone(),
+            _method: self._method.clone(),
+            _p: PhantomData,
         }
     }
 }
@@ -1232,10 +1232,16 @@ impl<S> SslStream<S> {
 }
 
 impl SslStream<::std::net::TcpStream> {
-    /// Like `TcpStream::try_clone`.
+    /// # Deprecated
+    ///
+    /// This method does not behave as expected and will be removed in a future
+    /// release.
     pub fn try_clone(&self) -> io::Result<SslStream<::std::net::TcpStream>> {
-        let stream = try!(self.get_ref().try_clone());
-        Ok(Self::new_base(self.ssl.clone(), stream))
+        Ok(SslStream {
+            ssl: self.ssl.clone(),
+            _method: self._method.clone(),
+            _p: PhantomData
+        })
     }
 }
 

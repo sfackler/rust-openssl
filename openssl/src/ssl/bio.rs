@@ -6,35 +6,20 @@ use std::io::prelude::*;
 use std::mem;
 use std::slice;
 use std::ptr;
+use std::sync::Arc;
 
 use ssl::error::SslError;
 
 // "rust"
 const NAME: [c_char; 5] = [114, 117, 115, 116, 0];
 
-// we use this after removing the stream from the BIO so that we don't have to
-// worry about freeing the heap allocated BIO_METHOD after freeing the BIO.
-static DESTROY_METHOD: BIO_METHOD = BIO_METHOD {
-    type_: BIO_TYPE_NONE,
-    name: &NAME[0],
-    bwrite: None,
-    bread: None,
-    bputs: None,
-    bgets: None,
-    ctrl: None,
-    create: None,
-    destroy: Some(destroy),
-    callback_ctrl: None,
-};
-
 pub struct StreamState<S> {
     pub stream: S,
     pub error: Option<io::Error>,
 }
 
-pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Box<BIO_METHOD>), SslError> {
-
-    let method = Box::new(BIO_METHOD {
+pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Arc<BIO_METHOD>), SslError> {
+    let method = Arc::new(BIO_METHOD {
         type_: BIO_TYPE_NONE,
         name: &NAME[0],
         bwrite: Some(bwrite::<S>),
@@ -43,7 +28,7 @@ pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Box<BIO_METHOD>), Ss
         bgets: None,
         ctrl: Some(ctrl::<S>),
         create: Some(create),
-        destroy: None, // covered in the replacement BIO_METHOD
+        destroy: Some(destroy::<S>),
         callback_ctrl: None,
     });
 
@@ -64,14 +49,6 @@ pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Box<BIO_METHOD>), Ss
 pub unsafe fn take_error<S>(bio: *mut BIO) -> Option<io::Error> {
     let state = state::<S>(bio);
     state.error.take()
-}
-
-pub unsafe fn take_stream<S>(bio: *mut BIO) -> S {
-    let state: Box<StreamState<S>> = Box::from_raw((*bio).ptr as *mut _);
-    (*bio).ptr = ptr::null_mut();
-    (*bio).method = &DESTROY_METHOD as *const _ as *mut _;
-    (*bio).init = 0;
-    state.stream
 }
 
 pub unsafe fn get_ref<'a, S: 'a>(bio: *mut BIO) -> &'a S {
@@ -159,11 +136,14 @@ unsafe extern "C" fn create(bio: *mut BIO) -> c_int {
     1
 }
 
-unsafe extern "C" fn destroy(bio: *mut BIO) -> c_int {
+unsafe extern "C" fn destroy<S>(bio: *mut BIO) -> c_int {
     if bio.is_null() {
         return 0;
     }
 
-    assert!((*bio).ptr.is_null());
+    assert!(!(*bio).ptr.is_null());
+    Box::<StreamState<S>>::from_raw((*bio).ptr as *mut _);
+    (*bio).ptr = ptr::null_mut();
+    (*bio).init = 0;
     1
 }
