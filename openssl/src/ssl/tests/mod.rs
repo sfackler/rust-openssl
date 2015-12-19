@@ -949,3 +949,11 @@ fn test_read_nonblocking() {
     assert!(bytes_read >= 5);
     assert_eq!(&input_buffer[..5], b"HTTP/");
 }
+
+#[test]
+fn broken_try_clone_doesnt_crash() {
+    let context = SslContext::new(SslMethod::Sslv23).unwrap();
+    let inner = TcpStream::connect("example.com:443").unwrap();
+    let stream1 = SslStream::connect(&context, inner).unwrap();
+    let _stream2 = stream1.try_clone().unwrap();
+}
