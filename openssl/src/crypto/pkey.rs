@@ -57,6 +57,9 @@ pub struct PKey {
     parts: Parts,
 }
 
+unsafe impl Send for PKey {}
+unsafe impl Sync for PKey {}
+
 /// Represents a public key, optionally with a private key attached.
 impl PKey {
     pub fn new() -> PKey {
