@@ -662,6 +662,26 @@ mod tests {
     }
 
     #[test]
+    fn test_private_rsa_key_from_pem() {
+        let key_path = Path::new("test/key.pem");
+        let mut file = File::open(&key_path)
+                            .ok()
+                            .expect("Failed to open `test/key.pem`");
+
+        super::PKey::private_rsa_key_from_pem(&mut file).unwrap();
+    }
+
+    #[test]
+    fn test_public_rsa_key_from_pem() {
+        let key_path = Path::new("test/key.pem.pub");
+        let mut file = File::open(&key_path)
+                            .ok()
+                            .expect("Failed to open `test/key.pem.pub`");
+
+        super::PKey::public_rsa_key_from_pem(&mut file).unwrap();
+    }
+
+    #[test]
     fn test_private_encrypt() {
         let mut k0 = super::PKey::new();
         let mut k1 = super::PKey::new();
