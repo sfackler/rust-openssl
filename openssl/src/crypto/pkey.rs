@@ -121,6 +121,54 @@ impl PKey {
         }
     }
 
+    /// Reads an RSA private key from PEM, takes ownership of handle
+    pub fn private_rsa_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError>
+    where R: Read
+    {
+        let mut mem_bio = try!(MemBio::new());
+        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+
+        unsafe {
+            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.get_handle(),
+                                                                 ptr::null_mut(),
+                                                                 None,
+                                                                 ptr::null_mut()));
+            let evp = ffi::EVP_PKEY_new();
+            if ffi::EVP_PKEY_set1_RSA(evp, rsa) == 0 {
+                return Err(SslError::get());
+            }
+
+            Ok(PKey {
+                evp: evp,
+                parts: Parts::Public,
+            })
+        }
+    }
+
+    /// Reads an RSA public key from PEM, takes ownership of handle
+    pub fn public_rsa_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError>
+    where R: Read
+    {
+        let mut mem_bio = try!(MemBio::new());
+        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+
+        unsafe {
+            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.get_handle(),
+                                                                 ptr::null_mut(),
+                                                                 None,
+                                                                 ptr::null_mut()));
+            let evp = ffi::EVP_PKEY_new();
+            if ffi::EVP_PKEY_set1_RSA(evp, rsa) == 0 {
+                return Err(SslError::get());
+            }
+
+            Ok(PKey {
+                evp: evp,
+                parts: Parts::Public,
+            })
+        }
+    }
+
     fn _tostr(&self, f: unsafe extern "C" fn(*mut ffi::RSA, *const *mut u8) -> c_int) -> Vec<u8> {
         unsafe {
             let rsa = ffi::EVP_PKEY_get1_RSA(self.evp);
@@ -614,6 +662,26 @@ mod tests {
                            .expect("Failed to open `test/key.pem.pub`");
 
         super::PKey::public_key_from_pem(&mut file).unwrap();
+    }
+
+    #[test]
+    fn test_private_rsa_key_from_pem() {
+        let key_path = Path::new("test/key.pem");
+        let mut file = File::open(&key_path)
+                            .ok()
+                            .expect("Failed to open `test/key.pem`");
+
+        super::PKey::private_rsa_key_from_pem(&mut file).unwrap();
+    }
+
+    #[test]
+    fn test_public_rsa_key_from_pem() {
+        let key_path = Path::new("test/key.pem.pub");
+        let mut file = File::open(&key_path)
+                            .ok()
+                            .expect("Failed to open `test/key.pem.pub`");
+
+        super::PKey::public_rsa_key_from_pem(&mut file).unwrap();
     }
 
     #[test]
