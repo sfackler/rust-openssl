@@ -102,17 +102,15 @@ impl BigNum {
         })
     }
 
-    pub fn new_from_ffi(orig: *mut ffi::BIGNUM) -> Result<BigNum, SslError> {
+    pub unsafe fn new_from_ffi(orig: *mut ffi::BIGNUM) -> Result<BigNum, SslError> {
         if orig.is_null() {
             panic!("Null Pointer was supplied to BigNum::new_from_ffi");
         }
-        unsafe {
-            let r = ffi::BN_dup(orig);
-            if r.is_null() {
-                panic!("Unexpected null pointer from BN_dup(..)")
-            } else {
-                Ok(BigNum(r))
-            }
+        let r = ffi::BN_dup(orig);
+        if r.is_null() {
+            panic!("Unexpected null pointer from BN_dup(..)")
+        } else {
+            Ok(BigNum(r))
         }
     }
 
