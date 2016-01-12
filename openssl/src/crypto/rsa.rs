@@ -3,32 +3,28 @@ use bn::BigNum;
 use std::fmt;
 
 pub struct RSA {
-    pub rsa_obj : ffi::RSA
+    rsa_obj : ffi::RSA
 }
 
 impl RSA {
-    pub unsafe fn get_n(&self) -> BigNum {
+    pub unsafe fn n(&self) -> BigNum {
         BigNum::new_from_ffi(self.rsa_obj.n).unwrap()
     }
 
-    pub unsafe fn get_d(&self) -> BigNum {
+    pub unsafe fn d(&self) -> BigNum {
         BigNum::new_from_ffi(self.rsa_obj.d).unwrap()
     }
 
-    pub unsafe fn get_e(&self) -> BigNum {
+    pub unsafe fn e(&self) -> BigNum {
         BigNum::new_from_ffi(self.rsa_obj.e).unwrap()
     }
 
-    pub unsafe fn get_p(&self) -> BigNum {
+    pub unsafe fn p(&self) -> BigNum {
         BigNum::new_from_ffi(self.rsa_obj.p).unwrap()
     }
 
-    pub unsafe fn get_q(&self) -> BigNum {
+    pub unsafe fn q(&self) -> BigNum {
         BigNum::new_from_ffi(self.rsa_obj.q).unwrap()
-    }
-
-    pub fn get_type(&self) -> &str {
-        "rsa"
     }
 }
 
