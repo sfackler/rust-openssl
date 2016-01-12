@@ -26,8 +26,7 @@ use std::os::windows::io::{AsRawSocket, RawSocket};
 use ffi;
 use ffi_extras;
 use dh::DH;
-use ssl::error::{NonblockingSslError, SslError, StreamError, OpenSslErrors, OpenSslError,
-                 OpensslError};
+use ssl::error::{NonblockingSslError, SslError, OpenSslError, OpensslError};
 use x509::{X509StoreContext, X509FileType, X509};
 use crypto::pkey::PKey;
 
@@ -1137,6 +1136,8 @@ impl<S: Read + Write> SslStream<S> {
 
 impl<S> SslStream<S> {
     fn make_error(&mut self, ret: c_int) -> Error {
+        self.check_panic();
+
         match self.ssl.get_error(ret) {
             LibSslError::ErrorSsl => Error::Ssl(OpenSslError::get_stack()),
             LibSslError::ErrorSyscall => {
@@ -1163,6 +1164,8 @@ impl<S> SslStream<S> {
     }
 
     fn make_old_error(&mut self, ret: c_int) -> SslError {
+        self.check_panic();
+
         match self.ssl.get_error(ret) {
             LibSslError::ErrorSsl => SslError::get(),
             LibSslError::ErrorSyscall => {
@@ -1191,6 +1194,17 @@ impl<S> SslStream<S> {
                                                      format!("unexpected error {:?}", err)))
             }
         }
+    }
+
+    #[cfg(feature = "nightly")]
+    fn check_panic(&mut self) {
+        if let Some(err) = unsafe { bio::take_panic::<S>(self.ssl.get_raw_rbio()) } {
+            ::std::panic::propagate(err)
+        }
+    }
+
+    #[cfg(not(feature = "nightly"))]
+    fn check_panic(&mut self) {
     }
 
     fn get_bio_error(&mut self) -> io::Error {
