@@ -7,24 +7,35 @@ pub struct RSA {
 }
 
 impl RSA {
-    pub unsafe fn n(&self) -> BigNum {
-        BigNum::new_from_ffi(self.rsa_obj.n).unwrap()
+    // The following getters are unsafe, since BigNum::new_from_ffi fails upon null pointers
+    pub fn n(&self) -> BigNum {
+        unsafe {
+            BigNum::new_from_ffi(self.rsa_obj.n).unwrap()
+        }
     }
 
-    pub unsafe fn d(&self) -> BigNum {
-        BigNum::new_from_ffi(self.rsa_obj.d).unwrap()
+    pub fn d(&self) -> BigNum {
+        unsafe {
+            BigNum::new_from_ffi(self.rsa_obj.d).unwrap()
+        }
     }
 
-    pub unsafe fn e(&self) -> BigNum {
-        BigNum::new_from_ffi(self.rsa_obj.e).unwrap()
+    pub fn e(&self) -> BigNum {
+        unsafe {
+            BigNum::new_from_ffi(self.rsa_obj.e).unwrap()
+        }
     }
 
-    pub unsafe fn p(&self) -> BigNum {
-        BigNum::new_from_ffi(self.rsa_obj.p).unwrap()
+    pub fn p(&self) -> BigNum {
+        unsafe {
+            BigNum::new_from_ffi(self.rsa_obj.p).unwrap()
+        }
     }
 
-    pub unsafe fn q(&self) -> BigNum {
-        BigNum::new_from_ffi(self.rsa_obj.q).unwrap()
+    pub fn q(&self) -> BigNum {
+        unsafe {
+            BigNum::new_from_ffi(self.rsa_obj.q).unwrap()
+        }
     }
 }
 
