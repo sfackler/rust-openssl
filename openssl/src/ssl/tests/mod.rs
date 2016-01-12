@@ -959,7 +959,7 @@ fn broken_try_clone_doesnt_crash() {
 }
 
 #[test]
-#[should_panic(message = "blammo")]
+#[should_panic(expected = "blammo")]
 #[cfg(feature = "nightly")]
 fn write_panic() {
     struct ExplodingStream(TcpStream);
@@ -988,7 +988,7 @@ fn write_panic() {
 }
 
 #[test]
-#[should_panic(message = "blammo")]
+#[should_panic(expected = "blammo")]
 #[cfg(feature = "nightly")]
 fn read_panic() {
     struct ExplodingStream(TcpStream);
@@ -1017,7 +1017,7 @@ fn read_panic() {
 }
 
 #[test]
-#[should_panic(message = "blammo")]
+#[should_panic(expected = "blammo")]
 #[cfg(feature = "nightly")]
 fn flush_panic() {
     struct ExplodingStream(TcpStream);
