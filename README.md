@@ -48,6 +48,13 @@ or pass the location to Cargo via environment variables:
 env OPENSSL_LIB_DIR=C:/OpenSSL-Win64 OPENSSL_INCLUDE_DIR=C:/OpenSSL-Win64/include cargo build
 ```
 
+In addition You may need to run it with Visual Studio shell for access to headers alike `winsock.h`
+or add following call to batch script
+
+``` shell
+call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat"
+```
+
 ### Manual configuration
 
 rust-openssl's build script will by default attempt to locate OpenSSL via
