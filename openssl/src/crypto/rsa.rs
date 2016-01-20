@@ -41,6 +41,6 @@ impl RSA {
 
 impl fmt::Debug for RSA {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Currently no debug output. Sorry :(")
+        write!(f, "RSA")
     }
 }

@@ -108,7 +108,7 @@ impl BigNum {
         }
         let r = ffi::BN_dup(orig);
         if r.is_null() {
-            panic!("Unexpected null pointer from BN_dup(..)")
+            Err(SslError::get())
         } else {
             Ok(BigNum(r))
         }
