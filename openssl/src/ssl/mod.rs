@@ -481,12 +481,20 @@ fn wrap_ssl_result(res: c_int) -> Result<(), SslError> {
 }
 
 /// An SSL context object
+///
+/// Internally ref-counted, use `.clone()` in the same way as Rc and Arc.
 pub struct SslContext {
     ctx: *mut ffi::SSL_CTX,
 }
 
 unsafe impl Send for SslContext {}
 unsafe impl Sync for SslContext {}
+
+impl Clone for SslContext {
+    fn clone(&self) -> Self {
+        unsafe { SslContext::new_ref(self.ctx) }
+    }
+}
 
 // TODO: add useful info here
 impl fmt::Debug for SslContext {
@@ -502,6 +510,12 @@ impl Drop for SslContext {
 }
 
 impl SslContext {
+    // Create a new SslContext given an existing ref, and incriment ref-count appropriately.
+    unsafe fn new_ref(ctx: *mut ffi::SSL_CTX) -> SslContext {
+        rust_SSL_CTX_clone(ctx);
+        SslContext { ctx: ctx }
+    }
+
     /// Creates a new SSL context.
     pub fn new(method: SslMethod) -> Result<SslContext, SslError> {
         init();
@@ -955,16 +969,27 @@ impl Ssl {
     }
 
     /// change the context corresponding to the current connection
+    ///
+    /// Returns a clone of the SslContext @ctx (ie: the new context). The old context is freed.
     pub fn set_ssl_context(&self, ctx: &SslContext) -> SslContext {
-        SslContext { ctx: unsafe { ffi::SSL_set_SSL_CTX(self.ssl, ctx.ctx) } }
+        // If duplication of @ctx's cert fails, this returns NULL. This _appears_ to only occur on
+        // allocation failures (meaning panicing is probably appropriate), but it might be nice to
+        // propogate the error.
+        assert!(unsafe { ffi::SSL_set_SSL_CTX(self.ssl, ctx.ctx) } != ptr::null_mut());
+
+        // FIXME: we return this reference here for compatibility, but it isn't actually required.
+        // This should be removed when a api-incompatabile version is to be released.
+        //
+        // ffi:SSL_set_SSL_CTX() returns copy of the ctx pointer passed to it, so it's easier for
+        // us to do the clone directly.
+        ctx.clone()
     }
 
     /// obtain the context corresponding to the current connection
     pub fn get_ssl_context(&self) -> SslContext {
         unsafe {
             let ssl_ctx = ffi::SSL_get_SSL_CTX(self.ssl);
-            rust_SSL_CTX_clone(ssl_ctx);
-            SslContext { ctx: ssl_ctx }
+            SslContext::new_ref(ssl_ctx)
         }
     }
 }

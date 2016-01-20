@@ -1045,3 +1045,16 @@ fn flush_panic() {
     let mut stream = SslStream::connect(&ctx, stream).unwrap();
     let _ = stream.flush();
 }
+
+#[test]
+fn refcount_ssl_context() {
+    let ssl = {
+        let ctx = SslContext::new(SslMethod::Sslv23).unwrap();
+        ssl::Ssl::new(&ctx).unwrap()
+    };
+
+    {
+        let new_ctx_a = SslContext::new(SslMethod::Sslv23).unwrap();
+        let _new_ctx_b = ssl.set_ssl_context(&new_ctx_a);
+    }
+}
