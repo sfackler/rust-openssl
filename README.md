@@ -55,6 +55,8 @@ or add following call to batch script
 call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat"
 ```
 
+or `vcvarsall.bat amd64` for amd64 arch
+
 ### Manual configuration
 
 rust-openssl's build script will by default attempt to locate OpenSSL via
