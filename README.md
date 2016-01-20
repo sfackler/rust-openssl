@@ -57,6 +57,11 @@ call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat"
 
 or `vcvarsall.bat amd64` for amd64 arch
 
+Also if you will face linking problem due using incorrect names you may need to
+
+ - rename `ssleay32.lib` to `ssl32.lib`
+ - rename `libeay32.lib` to `eay32.lib `
+
 ### Manual configuration
 
 rust-openssl's build script will by default attempt to locate OpenSSL via
