@@ -29,6 +29,7 @@ use dh::DH;
 use ssl::error::{NonblockingSslError, SslError, OpenSslError, OpensslError};
 use x509::{X509StoreContext, X509FileType, X509};
 use crypto::pkey::PKey;
+use crypto::pkey::Parts;
 
 pub mod error;
 mod bio;
@@ -889,6 +890,18 @@ impl Ssl {
                 None
             } else {
                 Some(X509::from_ref(ptr))
+            }
+        }
+    }
+
+    /// Return our local private key, if present.
+    pub fn private_key(&self) -> Option<PKey> {
+        unsafe {
+            let ptr = ffi::SSL_get_privatekey(self.ssl);
+            if ptr.is_null() {
+                None
+            } else {
+                Some(PKey::from_ref(ptr, Parts::Both))
             }
         }
     }

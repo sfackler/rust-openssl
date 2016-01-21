@@ -66,6 +66,19 @@ unsafe impl Sync for PKey {}
 
 /// Represents a public key, optionally with a private key attached.
 impl PKey {
+
+    /// Create new from a potentially un-owned reference
+    ///
+    /// If @handle is already owned, but will not be freed, using this function could cause a
+    /// memory leak (by never freeing @handle)
+    pub fn from_ref(handle: *mut ffi::EVP_PKEY, parts: Parts) -> PKey {
+        // Note: safety of this function depends on checking done in from_handle & the garuntee
+        // that it doesn't panic after constructing the PKey.
+        let p = PKey::from_handle(handle, parts);
+        unsafe { rust_EVP_PKEY_clone(handle) };
+        p
+    }
+
     pub fn new() -> PKey {
         unsafe {
             ffi::init();
@@ -606,11 +619,7 @@ impl Drop for PKey {
 
 impl Clone for PKey {
     fn clone(&self) -> Self {
-        unsafe {
-            rust_EVP_PKEY_clone(self.evp);
-        }
-
-        PKey::from_handle(self.evp, self.parts)
+        PKey::from_ref(self.evp, self.parts)
     }
 }
 
