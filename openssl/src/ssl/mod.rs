@@ -881,6 +881,18 @@ impl Ssl {
         }
     }
 
+    /// Return our local certificate, if present.
+    pub fn certificate(&self) -> Option<X509<'static>> {
+        unsafe {
+            let ptr = ffi::SSL_get_certificate(self.ssl);
+            if ptr.is_null() {
+                None
+            } else {
+                Some(X509::from_ref(ptr))
+            }
+        }
+    }
+
     /// Returns the protocol selected by performing Next Protocol Negotiation, if any.
     ///
     /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
