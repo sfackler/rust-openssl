@@ -677,6 +677,9 @@ extern "C" {
 
     pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;
 
+    pub fn SSL_CTX_get0_certificate(ctx: *mut SSL_CTX) -> *mut X509;
+    pub fn SSL_CTX_get0_privatekey(ctx: *mut SSL_CTX) -> *mut EVP_PKEY;
+
     #[cfg(feature = "npn")]
     pub fn SSL_CTX_set_next_protos_advertised_cb(ssl: *mut SSL_CTX,
                                                  cb: extern "C" fn(ssl: *mut SSL,

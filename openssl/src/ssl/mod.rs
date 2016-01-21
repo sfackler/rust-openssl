@@ -687,6 +687,28 @@ impl SslContext {
         })
     }
 
+    pub fn private_key(&self) -> Option<PKey> {
+        unsafe {
+            let ptr = ffi::SSL_CTX_get0_privatekey(self.ctx);
+            if ptr.is_null() {
+                None
+            } else {
+                Some(PKey::from_ref(ptr, Parts::Both))
+            }
+        }
+    }
+
+    pub fn certificate(&self) -> Option<X509<'static>> {
+        unsafe {
+            let ptr = ffi::SSL_CTX_get0_certificate(self.ctx);
+            if ptr.is_null() {
+                None
+            } else {
+                Some(X509::from_ref(ptr))
+            }
+        }
+    }
+
     /// If `onoff` is set to `true`, enable ECDHE for key exchange with compatible
     /// clients, and automatically select an appropriate elliptic curve.
     ///
