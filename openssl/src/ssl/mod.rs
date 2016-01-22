@@ -1094,10 +1094,9 @@ impl<S: Read + Write> SslStream<S> {
         if ret > 0 {
             Ok(stream)
         } else {
-            match stream.make_error(ret) {
-                // This is fine - nonblocking sockets will finish the handshake in read/write
-                Error::WantRead(..) | Error::WantWrite(..) => Ok(stream),
-                _ => Err(stream.make_old_error(ret)),
+            match stream.make_old_error(ret) {
+                Some(err) => Err(err),
+                None => Ok(stream),
             }
         }
     }
@@ -1110,10 +1109,9 @@ impl<S: Read + Write> SslStream<S> {
         if ret > 0 {
             Ok(stream)
         } else {
-            match stream.make_error(ret) {
-                // This is fine - nonblocking sockets will finish the handshake in read/write
-                Error::WantRead(..) | Error::WantWrite(..) => Ok(stream),
-                _ => Err(stream.make_old_error(ret)),
+            match stream.make_old_error(ret) {
+                Some(err) => Err(err),
+                None => Ok(stream),
             }
         }
     }
@@ -1188,11 +1186,11 @@ impl<S> SslStream<S> {
         }
     }
 
-    fn make_old_error(&mut self, ret: c_int) -> SslError {
+    fn make_old_error(&mut self, ret: c_int) -> Option<SslError> {
         self.check_panic();
 
         match self.ssl.get_error(ret) {
-            LibSslError::ErrorSsl => SslError::get(),
+            LibSslError::ErrorSsl => Some(SslError::get()),
             LibSslError::ErrorSyscall => {
                 let err = SslError::get();
                 let count = match err {
@@ -1201,22 +1199,20 @@ impl<S> SslStream<S> {
                 };
                 if count == 0 {
                     if ret == 0 {
-                        SslError::StreamError(io::Error::new(io::ErrorKind::ConnectionAborted,
-                                                             "unexpected EOF observed"))
+                        Some(SslError::StreamError(io::Error::new(io::ErrorKind::ConnectionAborted,
+                                                                  "unexpected EOF observed")))
                     } else {
-                        SslError::StreamError(self.get_bio_error())
+                        Some(SslError::StreamError(self.get_bio_error()))
                     }
                 } else {
-                    err
+                    Some(err)
                 }
             }
-            LibSslError::ErrorZeroReturn => SslError::SslSessionClosed,
-            LibSslError::ErrorWantWrite | LibSslError::ErrorWantRead => {
-                SslError::StreamError(self.get_bio_error())
-            }
+            LibSslError::ErrorZeroReturn => Some(SslError::SslSessionClosed),
+            LibSslError::ErrorWantWrite | LibSslError::ErrorWantRead => None,
             err => {
-                SslError::StreamError(io::Error::new(io::ErrorKind::Other,
-                                                     format!("unexpected error {:?}", err)))
+                Some(SslError::StreamError(io::Error::new(io::ErrorKind::Other,
+                                                          format!("unexpected error {:?}", err))))
             }
         }
     }
