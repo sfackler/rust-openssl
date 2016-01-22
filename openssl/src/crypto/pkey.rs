@@ -52,10 +52,17 @@ fn openssl_hash_nid(hash: HashType) -> c_int {
     }
 }
 
+extern "C" {
+    fn rust_EVP_PKEY_clone(pkey: *mut ffi::EVP_PKEY);
+}
+
 pub struct PKey {
     evp: *mut ffi::EVP_PKEY,
     parts: Parts,
 }
+
+unsafe impl Send for PKey {}
+unsafe impl Sync for PKey {}
 
 /// Represents a public key, optionally with a private key attached.
 impl PKey {
@@ -111,6 +118,54 @@ impl PKey {
                                                              ptr::null_mut(),
                                                              None,
                                                              ptr::null_mut()));
+            Ok(PKey {
+                evp: evp,
+                parts: Parts::Public,
+            })
+        }
+    }
+
+    /// Reads an RSA private key from PEM, takes ownership of handle
+    pub fn private_rsa_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError>
+    where R: Read
+    {
+        let mut mem_bio = try!(MemBio::new());
+        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+
+        unsafe {
+            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.get_handle(),
+                                                                 ptr::null_mut(),
+                                                                 None,
+                                                                 ptr::null_mut()));
+            let evp = ffi::EVP_PKEY_new();
+            if ffi::EVP_PKEY_set1_RSA(evp, rsa) == 0 {
+                return Err(SslError::get());
+            }
+
+            Ok(PKey {
+                evp: evp,
+                parts: Parts::Public,
+            })
+        }
+    }
+
+    /// Reads an RSA public key from PEM, takes ownership of handle
+    pub fn public_rsa_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError>
+    where R: Read
+    {
+        let mut mem_bio = try!(MemBio::new());
+        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+
+        unsafe {
+            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.get_handle(),
+                                                                 ptr::null_mut(),
+                                                                 None,
+                                                                 ptr::null_mut()));
+            let evp = ffi::EVP_PKEY_new();
+            if ffi::EVP_PKEY_set1_RSA(evp, rsa) == 0 {
+                return Err(SslError::get());
+            }
+
             Ok(PKey {
                 evp: evp,
                 parts: Parts::Public,
@@ -549,6 +604,16 @@ impl Drop for PKey {
     }
 }
 
+impl Clone for PKey {
+    fn clone(&self) -> Self {
+        unsafe {
+            rust_EVP_PKEY_clone(self.evp);
+        }
+
+        PKey::from_handle(self.evp, self.parts)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::Path;
@@ -611,6 +676,26 @@ mod tests {
                            .expect("Failed to open `test/key.pem.pub`");
 
         super::PKey::public_key_from_pem(&mut file).unwrap();
+    }
+
+    #[test]
+    fn test_private_rsa_key_from_pem() {
+        let key_path = Path::new("test/key.pem");
+        let mut file = File::open(&key_path)
+                            .ok()
+                            .expect("Failed to open `test/key.pem`");
+
+        super::PKey::private_rsa_key_from_pem(&mut file).unwrap();
+    }
+
+    #[test]
+    fn test_public_rsa_key_from_pem() {
+        let key_path = Path::new("test/key.pem.pub");
+        let mut file = File::open(&key_path)
+                            .ok()
+                            .expect("Failed to open `test/key.pem.pub`");
+
+        super::PKey::public_rsa_key_from_pem(&mut file).unwrap();
     }
 
     #[test]

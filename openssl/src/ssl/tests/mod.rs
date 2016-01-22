@@ -957,3 +957,104 @@ fn broken_try_clone_doesnt_crash() {
     let stream1 = SslStream::connect(&context, inner).unwrap();
     let _stream2 = stream1.try_clone().unwrap();
 }
+
+#[test]
+#[should_panic(expected = "blammo")]
+#[cfg(feature = "nightly")]
+fn write_panic() {
+    struct ExplodingStream(TcpStream);
+
+    impl Read for ExplodingStream {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+            self.0.read(buf)
+        }
+    }
+
+    impl Write for ExplodingStream {
+        fn write(&mut self, _: &[u8]) -> io::Result<usize> {
+            panic!("blammo");
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            self.0.flush()
+        }
+    }
+
+    let (_s, stream) = Server::new();
+    let stream = ExplodingStream(stream);
+
+    let ctx = SslContext::new(SslMethod::Sslv23).unwrap();
+    let _ = SslStream::connect(&ctx, stream);
+}
+
+#[test]
+#[should_panic(expected = "blammo")]
+#[cfg(feature = "nightly")]
+fn read_panic() {
+    struct ExplodingStream(TcpStream);
+
+    impl Read for ExplodingStream {
+        fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+            panic!("blammo");
+        }
+    }
+
+    impl Write for ExplodingStream {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.0.write(buf)
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            self.0.flush()
+        }
+    }
+
+    let (_s, stream) = Server::new();
+    let stream = ExplodingStream(stream);
+
+    let ctx = SslContext::new(SslMethod::Sslv23).unwrap();
+    let _ = SslStream::connect(&ctx, stream);
+}
+
+#[test]
+#[should_panic(expected = "blammo")]
+#[cfg(feature = "nightly")]
+fn flush_panic() {
+    struct ExplodingStream(TcpStream);
+
+    impl Read for ExplodingStream {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+            self.0.read(buf)
+        }
+    }
+
+    impl Write for ExplodingStream {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.0.write(buf)
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            panic!("blammo");
+        }
+    }
+
+    let (_s, stream) = Server::new();
+    let stream = ExplodingStream(stream);
+
+    let ctx = SslContext::new(SslMethod::Sslv23).unwrap();
+    let mut stream = SslStream::connect(&ctx, stream).unwrap();
+    let _ = stream.flush();
+}
+
+#[test]
+fn refcount_ssl_context() {
+    let ssl = {
+        let ctx = SslContext::new(SslMethod::Sslv23).unwrap();
+        ssl::Ssl::new(&ctx).unwrap()
+    };
+
+    {
+        let new_ctx_a = SslContext::new(SslMethod::Sslv23).unwrap();
+        let _new_ctx_b = ssl.set_ssl_context(&new_ctx_a);
+    }
+}
