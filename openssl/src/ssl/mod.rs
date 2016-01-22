@@ -893,7 +893,7 @@ impl Ssl {
     }
 
     /// Returns the certificate of the peer, if present.
-    pub fn peer_certificate(&self) -> Option<X509> {
+    pub fn peer_certificate(&self) -> Option<X509<'static>> {
         unsafe {
             let ptr = ffi::SSL_get_peer_certificate(self.ssl);
             if ptr.is_null() {
