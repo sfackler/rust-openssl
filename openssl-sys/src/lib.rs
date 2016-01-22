@@ -48,7 +48,6 @@ pub type bio_info_cb = Option<unsafe extern "C" fn(*mut BIO,
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-#[allow(raw_pointer_derive)]
 pub struct BIO_METHOD {
     pub type_: c_int,
     pub name: *const c_char,
