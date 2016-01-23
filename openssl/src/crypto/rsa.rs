@@ -1,6 +1,7 @@
 use ffi;
 use bn::BigNum;
 use std::fmt;
+use ssl::error::SslError;
 
 pub struct RSA {
     rsa_obj : ffi::RSA
@@ -8,33 +9,33 @@ pub struct RSA {
 
 impl RSA {
     // The following getters are unsafe, since BigNum::new_from_ffi fails upon null pointers
-    pub fn n(&self) -> BigNum {
+    pub fn n(&self) -> Result<BigNum, SslError> {
         unsafe {
-            BigNum::new_from_ffi(self.rsa_obj.n).unwrap()
+            BigNum::new_from_ffi(self.rsa_obj.n)
         }
     }
 
-    pub fn d(&self) -> BigNum {
+    pub fn d(&self) -> Result<BigNum, SslError> {
         unsafe {
-            BigNum::new_from_ffi(self.rsa_obj.d).unwrap()
+            BigNum::new_from_ffi(self.rsa_obj.d)
         }
     }
 
-    pub fn e(&self) -> BigNum {
+    pub fn e(&self) -> Result<BigNum, SslError> {
         unsafe {
-            BigNum::new_from_ffi(self.rsa_obj.e).unwrap()
+            BigNum::new_from_ffi(self.rsa_obj.e)
         }
     }
 
-    pub fn p(&self) -> BigNum {
+    pub fn p(&self) -> Result<BigNum, SslError> {
         unsafe {
-            BigNum::new_from_ffi(self.rsa_obj.p).unwrap()
+            BigNum::new_from_ffi(self.rsa_obj.p)
         }
     }
 
-    pub fn q(&self) -> BigNum {
+    pub fn q(&self) -> Result<BigNum, SslError> {
         unsafe {
-            BigNum::new_from_ffi(self.rsa_obj.q).unwrap()
+            BigNum::new_from_ffi(self.rsa_obj.q)
         }
     }
 }
