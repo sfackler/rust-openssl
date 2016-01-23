@@ -22,9 +22,7 @@ pub type ENGINE = c_void;
 pub type EVP_CIPHER = c_void;
 pub type EVP_CIPHER_CTX = c_void;
 pub type EVP_MD = c_void;
-pub type EVP_PKEY = c_void;
 pub type EVP_PKEY_CTX = c_void;
-pub type RSA = c_void;
 pub type SSL = c_void;
 pub type SSL_CTX = c_void;
 pub type SSL_METHOD = c_void;
@@ -63,6 +61,47 @@ pub struct BIO_METHOD {
 
 // so we can create static BIO_METHODs
 unsafe impl Sync for BIO_METHOD {}
+
+#[repr(C)]
+pub struct RSA {
+    pub pad: c_int,
+    pub version: c_long,
+    pub meth: *const c_void,
+
+    pub engine: *mut c_void,
+    pub n: *mut BIGNUM,
+    pub e: *mut BIGNUM,
+    pub d: *mut BIGNUM,
+    pub p: *mut BIGNUM,
+    pub q: *mut BIGNUM,
+    pub dmp1: *mut BIGNUM,
+    pub dmq1: *mut BIGNUM,
+    pub iqmp: *mut BIGNUM,
+
+    pub ex_data: *mut c_void,
+    pub references: c_int,
+    pub flags: c_int,
+
+    pub _method_mod_n: *mut c_void,
+    pub _method_mod_p: *mut c_void,
+    pub _method_mod_q: *mut c_void,
+
+    pub bignum_data: *mut c_char,
+    pub blinding: *mut c_void,
+    pub mt_blinding: *mut c_void,
+}
+
+#[repr(C)]
+pub struct EVP_PKEY {
+    pub type_: c_int,
+    pub save_type: c_int,
+    pub references: c_int,
+    pub ameth: *const c_void,
+    pub engine: *mut ENGINE,
+    pub pkey: *mut c_void,
+    pub save_parameters: c_int,
+    pub attributes: *mut c_void,
+}
 
 #[repr(C)]
 pub struct BIO {

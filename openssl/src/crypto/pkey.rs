@@ -100,7 +100,7 @@ impl PKey {
                                                                  None,
                                                                  ptr::null_mut()));
             Ok(PKey {
-                evp: evp,
+                evp: evp as *mut ffi::EVP_PKEY,
                 parts: Parts::Both,
             })
         }
@@ -119,7 +119,7 @@ impl PKey {
                                                              None,
                                                              ptr::null_mut()));
             Ok(PKey {
-                evp: evp,
+                evp: evp as *mut ffi::EVP_PKEY,
                 parts: Parts::Public,
             })
         }
