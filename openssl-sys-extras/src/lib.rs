@@ -5,7 +5,7 @@ extern crate openssl_sys;
 extern crate libc;
 
 use libc::{c_int, c_uint, c_long, c_char, c_void};
-use openssl_sys::{HMAC_CTX, EVP_MD, ENGINE, SSL_CTX, BIO, X509, stack_st_X509_EXTENSION, SSL, DH};
+use openssl_sys::{HMAC_CTX, EVP_MD, ENGINE, SSL_CTX, BIO, X509, stack_st_X509_EXTENSION, SSL, DH, ASN1_TIME};
 
 macro_rules! import_options {
     ( $( $name:ident $val:expr  )* ) => {
@@ -77,4 +77,9 @@ extern {
     pub fn SSL_CTX_set_tlsext_servername_callback(ssl: *mut SSL_CTX, callback: Option<extern fn()>);
     #[link_name = "SSL_CTX_set_tlsext_servername_arg_shim"]
     pub fn SSL_CTX_set_tlsext_servername_arg(ssl: *mut SSL_CTX, arg: *const c_void);
+
+    #[link_name = "X509_get_notBefore_shim"]
+    pub fn X509_get_notBefore(x: *mut X509) -> *mut ASN1_TIME;
+    #[link_name = "X509_get_notAfter_shim"]
+    pub fn X509_get_notAfter(x: *mut X509) -> *mut ASN1_TIME;
 }

@@ -21,6 +21,7 @@ use ffi;
 use ffi_extras;
 use ssl::error::{SslError, StreamError};
 use nid;
+use time;
 
 pub mod extension;
 
@@ -504,6 +505,31 @@ impl<'ctx> X509<'ctx> {
             try_ssl!(ffi::PEM_write_bio_X509(mem_bio.get_handle(), self.handle));
         }
         io::copy(&mut mem_bio, writer).map_err(StreamError).map(|_| ())
+    }
+
+    /// Return the time before which the certificate is invalid.
+    /// Typically, this is the time when the certificate was generated.
+    pub fn not_before(&self) -> Result<time::Tm, String> {
+        let atime = Asn1Time::new(unsafe {
+            ffi_extras::X509_get_notBefore(self.handle)
+        });
+
+        let t = atime.as_tm();
+        /* atime is owned by X509 (ie: self.handle), avoid freeing */
+        mem::forget(atime);
+        t
+    }
+
+    /// Return the time at which the certificate expires
+    pub fn not_after(&self) -> Result<time::Tm, String> {
+        let atime = Asn1Time::new(unsafe {
+            ffi_extras::X509_get_notAfter(self.handle)
+        });
+
+        let t = atime.as_tm();
+        /* atime is owned by X509 (ie: self.handle), avoid freeing */
+        mem::forget(atime);
+        t
     }
 }
 
