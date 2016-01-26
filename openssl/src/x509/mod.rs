@@ -10,6 +10,7 @@ use std::ops::Deref;
 use std::fmt;
 use std::str;
 use std::collections::HashMap;
+use std::time::Duration;
 
 use asn1::Asn1Time;
 use bio::MemBio;
@@ -106,6 +107,18 @@ impl X509StoreContext {
     }
 }
 
+#[derive(Debug)]
+enum ValidityEnd {
+    FromStart(Duration),
+    At(time::Tm),
+}
+
+#[derive(Debug)]
+enum ValidityStart {
+    FromNow(Duration),
+    At(time::Tm),
+}
+
 #[allow(non_snake_case)]
 /// Generator of private key/certificate pairs
 ///
@@ -145,7 +158,8 @@ impl X509StoreContext {
 /// ```
 pub struct X509Generator {
     bits: u32,
-    days: u32,
+    not_before: ValidityStart,
+    not_after: ValidityEnd,
     names: Vec<(String, String)>,
     // RFC 3280 §4.2: A certificate MUST NOT include more than one instance of a particular extension.
     extensions: HashMap<ExtensionType, Extension>,
@@ -157,7 +171,7 @@ impl X509Generator {
     ///
     /// bit length: 1024
     ///
-    /// validity period: 365 days
+    /// validity period: 365 days from the instant the certificate is generated or signed
     ///
     /// CN: "rust-openssl"
     ///
@@ -165,7 +179,8 @@ impl X509Generator {
     pub fn new() -> X509Generator {
         X509Generator {
             bits: 1024,
-            days: 365,
+            not_before: ValidityStart::FromNow(Duration::new(0, 0)),
+            not_after: ValidityEnd::FromStart(Duration::new(365 * 24 * 60 * 60, 0)),
             names: vec![],
             extensions: HashMap::new(),
             hash_type: HashType::SHA1,
@@ -178,9 +193,26 @@ impl X509Generator {
         self
     }
 
-    /// Sets certificate validity period in days since today
-    pub fn set_valid_period(mut self, days: u32) -> X509Generator {
-        self.days = days;
+    /// Set certificate validity period in seconds since generation time
+    pub fn set_valid_duration(mut self, d: Duration) -> X509Generator {
+        self.not_after = ValidityEnd::FromStart(d);
+        self
+    }
+
+    /// Sets certificate validity period in days since generation time
+    pub fn set_valid_period(self, days: u32) -> X509Generator {
+        self.set_valid_duration(Duration::from_secs(days as u64 * 24 * 60 * 60))
+    }
+
+    /// Set the certificate expiration date
+    pub fn set_not_after_date(mut self, t: time::Tm) -> X509Generator {
+        self.not_after = ValidityEnd::At(t);
+        self
+    }
+
+    /// Set the certificate first-valid date
+    pub fn set_not_before_date(mut self, t: time::Tm) -> X509Generator {
+        self.not_before = ValidityStart::At(t);
         self
     }
 
@@ -312,6 +344,37 @@ impl X509Generator {
         ((res as c_ulong) >> 1) as c_long
     }
 
+    fn std_to_crate_duration(d: &Duration) -> time::Duration {
+        time::Duration::seconds(d.as_secs() as i64) + time::Duration::nanoseconds(d.subsec_nanos() as i64)
+    }
+
+    fn concrete_validity(&self) -> (time::Tm, time::Tm) {
+        let not_before = match self.not_before {
+            ValidityStart::At(tm) => tm,
+            ValidityStart::FromNow(d) => {
+                time::at_utc(time::get_time() + Self::std_to_crate_duration(&d))
+            }
+        };
+
+        let not_after = match self.not_after {
+            ValidityEnd::At(tm) => tm,
+            ValidityEnd::FromStart(d) => {
+                time::at_utc(not_before.to_utc().to_timespec() + Self::std_to_crate_duration(&d))
+            }
+        };
+
+        (not_before, not_after)
+    }
+
+    /// Transform a generator that using relative validity times, into one that uses fixed validity
+    /// times based on the time this function was called.
+    pub fn fix_validity_to_now(mut self) -> X509Generator {
+        let (before, after) = self.concrete_validity();
+        self.not_before = ValidityStart::At(before);
+        self.not_after = ValidityEnd::At(after);
+        self
+    }
+
     /// Generates a private key and a self-signed certificate and returns them
     pub fn generate<'a>(&self) -> Result<(X509<'a>, PKey), SslError> {
         ffi::init();
@@ -325,8 +388,14 @@ impl X509Generator {
 
     /// Sets the certificate public-key, then self-sign and return it
     /// Note: That the bit-length of the private key is used (set_bitlength is ignored)
+    ///
+    /// Also note: this solidifies the validity times used by the certificate into concrete values
+    /// _only_ for this call. Multiple calls for different certs will result in different times
+    /// (unless your valid time values are concrete)
     pub fn sign<'a>(&self, p_key: &PKey) -> Result<X509<'a>, SslError> {
         ffi::init();
+
+        let (not_before, not_after) = self.concrete_validity();
 
         unsafe {
             let x509 = ffi::X509_new();
@@ -342,8 +411,8 @@ impl X509Generator {
             try_ssl!(ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509.handle),
                                            X509Generator::random_serial()));
 
-            let not_before = try!(Asn1Time::days_from_now(0));
-            let not_after = try!(Asn1Time::days_from_now(self.days));
+            let not_before = try!(Asn1Time::from_tm(not_before));
+            let not_after = try!(Asn1Time::from_tm(not_after));
 
             try_ssl!(ffi::X509_set_notBefore(x509.handle, mem::transmute(not_before.get_handle())));
             // If prev line succeded - ownership should go to cert
