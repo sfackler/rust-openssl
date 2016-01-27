@@ -19,6 +19,8 @@ something like `openssl-devel` or `libssl-dev`.
 sudo apt-get install libssl-dev
 # On Arch Linux
 sudo pacman -S openssl
+# On Fedora
+sudo dnf install openssl-devel
 ```
 
 ### OSX
