@@ -146,8 +146,7 @@ pub struct X509Generator {
     bits: u32,
     days: u32,
     names: Vec<(String, String)>,
-    // RFC 3280 §4.2: A certificate MUST NOT include more than one instance of a particular extension.
-    extensions: HashMap<ExtensionType, Extension>,
+    extensions: Extensions,
     hash_type: HashType,
 }
 
@@ -166,7 +165,7 @@ impl X509Generator {
             bits: 1024,
             days: 365,
             names: vec![],
-            extensions: HashMap::new(),
+            extensions: Extensions::new(),
             hash_type: HashType::SHA1,
         }
     }
@@ -219,7 +218,7 @@ impl X509Generator {
     /// generator.add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]));
     /// ```
     pub fn add_extension(mut self, ext: extension::Extension) -> X509Generator {
-        self.extensions.insert(ext.get_type(), ext);
+        self.extensions.add(ext);
         self
     }
 
@@ -237,7 +236,10 @@ impl X509Generator {
     pub fn add_extensions<I>(mut self, exts: I) -> X509Generator
         where I: IntoIterator<Item = extension::Extension>
     {
-        self.extensions.extend(exts.into_iter().map(|ext| (ext.get_type(), ext)));
+        for ext in exts {
+            self.extensions.add(ext);
+        }
+
         self
     }
 
@@ -372,7 +374,7 @@ impl X509Generator {
             ffi::X509_set_issuer_name(x509.handle, name);
 
             for (exttype, ext) in self.extensions.iter() {
-                try!(X509Generator::add_extension_internal(x509.handle, exttype, &ext.to_string()));
+                try!(X509Generator::add_extension_internal(x509.handle, &exttype, &ext.to_string()));
             }
 
             let hash_fn = self.hash_type.evp_md();
@@ -615,6 +617,75 @@ impl X509Req {
 impl Drop for X509Req {
     fn drop(&mut self) {
         unsafe { ffi::X509_REQ_free(self.handle) };
+    }
+}
+
+/// A collection of X.509 extensions.
+///
+/// Upholds the invariant that a certificate MUST NOT include more than one
+/// instance of a particular extension, according to RFC 3280 §4.2. Also
+/// ensures that extensions are added to the certificate during signing
+/// in the order they were inserted, which is required for certain
+/// extensions like SubjectKeyIdentifier and AuthorityKeyIdentifier.
+struct Extensions {
+    /// The extensions contained in the collection.
+    extensions: Vec<Extension>,
+    /// A map of used to keep track of added extensions and their indexes in `self.extensions`.
+    indexes: HashMap<ExtensionType, usize>,
+}
+
+impl Extensions {
+    /// Creates a new `Extensions`.
+    pub fn new() -> Extensions {
+        Extensions {
+            extensions: vec![],
+            indexes: HashMap::new(),
+        }
+    }
+
+    /// Adds a new `Extension`, replacing any existing one of the same
+    /// `ExtensionType`.
+    pub fn add(&mut self, ext: Extension) {
+        let ext_type = ext.get_type();
+
+        if let Some(index) =  self.indexes.get(&ext_type) {
+            self.extensions[*index] = ext;
+            return;
+        }
+
+        self.extensions.push(ext);
+        self.indexes.insert(ext_type, self.extensions.len() - 1);
+    }
+
+    /// Returns an `ExtensionsIter` for the collection.
+    pub fn iter(&self) -> ExtensionsIter {
+        ExtensionsIter {
+            current: 0,
+            extensions: &self.extensions,
+        }
+    }
+}
+
+/// An iterator that iterates over `(ExtensionType, Extension)` for each
+/// extension in the collection.
+struct ExtensionsIter<'a> {
+    current: usize,
+    extensions: &'a Vec<Extension>
+}
+
+impl<'a> Iterator for ExtensionsIter<'a> {
+    type Item = (ExtensionType, &'a Extension);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current < self.extensions.len() {
+            let ext = &self.extensions[self.current];
+
+            self.current += 1;
+
+            Some((ext.get_type(), ext))
+        } else {
+            None
+        }
     }
 }
 
