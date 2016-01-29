@@ -509,20 +509,6 @@ impl<'ctx> X509<'ctx> {
     }
 }
 
-extern "C" {
-    fn rust_X509_clone(x509: *mut ffi::X509);
-}
-
-impl<'ctx> Clone for X509<'ctx> {
-    fn clone(&self) -> X509<'ctx> {
-        unsafe { rust_X509_clone(self.handle) }
-        /* FIXME: given that we now have refcounting control, 'owned' should be uneeded, the 'ctx
-         * is probably also uneeded. We can remove both to condense the x509 api quite a bit
-         */
-        X509::new(self.handle, true)
-    }
-}
-
 impl<'ctx> Drop for X509<'ctx> {
     fn drop(&mut self) {
         if self.owned {
