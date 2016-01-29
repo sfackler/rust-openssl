@@ -52,10 +52,6 @@ fn openssl_hash_nid(hash: HashType) -> c_int {
     }
 }
 
-extern "C" {
-    fn rust_EVP_PKEY_clone(pkey: *mut ffi::EVP_PKEY);
-}
-
 pub struct PKey {
     evp: *mut ffi::EVP_PKEY,
     parts: Parts,
@@ -601,16 +597,6 @@ impl Drop for PKey {
         unsafe {
             ffi::EVP_PKEY_free(self.evp);
         }
-    }
-}
-
-impl Clone for PKey {
-    fn clone(&self) -> Self {
-        unsafe {
-            rust_EVP_PKEY_clone(self.evp);
-        }
-
-        PKey::from_handle(self.evp, self.parts)
     }
 }
 
