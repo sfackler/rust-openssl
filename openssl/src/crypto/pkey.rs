@@ -9,6 +9,7 @@ use crypto::hash;
 use crypto::hash::Type as HashType;
 use ffi;
 use ssl::error::{SslError, StreamError};
+use crypto::rsa::RSA;
 
 #[derive(Copy, Clone)]
 pub enum Parts {
@@ -125,18 +126,10 @@ impl PKey {
     pub fn private_rsa_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError>
     where R: Read
     {
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
-
+        let rsa = try!(RSA::private_key_from_pem(reader));
         unsafe {
-            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.get_handle(),
-                                                                 ptr::null_mut(),
-                                                                 None,
-                                                                 ptr::null_mut()));
-            let evp = ffi::EVP_PKEY_new();
-            if ffi::EVP_PKEY_set1_RSA(evp, rsa) == 0 {
-                return Err(SslError::get());
-            }
+            let evp = try_ssl_null!(ffi::EVP_PKEY_new());
+            try_ssl!(ffi::EVP_PKEY_set1_RSA(evp, rsa.as_ptr()));
 
             Ok(PKey {
                 evp: evp,
@@ -149,18 +142,10 @@ impl PKey {
     pub fn public_rsa_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError>
     where R: Read
     {
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
-
+        let rsa = try!(RSA::public_key_from_pem(reader));
         unsafe {
-            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.get_handle(),
-                                                                 ptr::null_mut(),
-                                                                 None,
-                                                                 ptr::null_mut()));
-            let evp = ffi::EVP_PKEY_new();
-            if ffi::EVP_PKEY_set1_RSA(evp, rsa) == 0 {
-                return Err(SslError::get());
-            }
+            let evp = try_ssl_null!(ffi::EVP_PKEY_new());
+            try_ssl!(ffi::EVP_PKEY_set1_RSA(evp, rsa.as_ptr()));
 
             Ok(PKey {
                 evp: evp,
