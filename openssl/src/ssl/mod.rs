@@ -7,7 +7,6 @@ use std::io;
 use std::io::prelude::*;
 use std::mem;
 use std::str;
-use std::net;
 use std::path::Path;
 use std::ptr;
 use std::sync::{Once, ONCE_INIT, Mutex, Arc};
@@ -790,15 +789,6 @@ impl Drop for Ssl {
     }
 }
 
-impl Clone for Ssl {
-    /// # Deprecated
-    fn clone(&self) -> Ssl {
-        unsafe { rust_SSL_clone(self.ssl) };
-        Ssl { ssl: self.ssl }
-
-    }
-}
-
 impl Ssl {
     pub fn new(ctx: &SslContext) -> Result<Ssl, SslError> {
         let ssl = try_ssl_null!(unsafe { ffi::SSL_new(ctx.ctx) });
@@ -1034,20 +1024,6 @@ pub struct SslStream<S> {
 
 unsafe impl<S: Send> Send for SslStream<S> {}
 
-/// # Deprecated
-///
-/// This method does not behave as expected and will be removed in a future
-/// release.
-impl<S: Clone + Read + Write> Clone for SslStream<S> {
-    fn clone(&self) -> SslStream<S> {
-        SslStream {
-            ssl: self.ssl.clone(),
-            _method: self._method.clone(),
-            _p: PhantomData,
-        }
-    }
-}
-
 impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -1114,20 +1090,6 @@ impl<S: Read + Write> SslStream<S> {
                 None => Ok(stream),
             }
         }
-    }
-
-    /// ### Deprecated
-    ///
-    /// Use `connect`.
-    pub fn connect_generic<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
-        Self::connect(ssl, stream)
-    }
-
-    /// ### Deprecated
-    ///
-    /// Use `accept`.
-    pub fn accept_generic<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
-        Self::accept(ssl, stream)
     }
 
     /// Like `read`, but returns an `ssl::Error` rather than an `io::Error`.
@@ -1266,20 +1228,6 @@ impl<S> SslStream<S> {
     }
 }
 
-impl SslStream<::std::net::TcpStream> {
-    /// # Deprecated
-    ///
-    /// This method does not behave as expected and will be removed in a future
-    /// release.
-    pub fn try_clone(&self) -> io::Result<SslStream<::std::net::TcpStream>> {
-        Ok(SslStream {
-            ssl: self.ssl.clone(),
-            _method: self._method.clone(),
-            _p: PhantomData,
-        })
-    }
-}
-
 impl<S: Read + Write> Read for SslStream<S> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         match self.ssl_read(buf) {
@@ -1383,16 +1331,6 @@ impl<S> MaybeSslStream<S> where S: Read + Write
         match *self {
             MaybeSslStream::Ssl(ref mut s) => s.get_mut(),
             MaybeSslStream::Normal(ref mut s) => s,
-        }
-    }
-}
-
-impl MaybeSslStream<net::TcpStream> {
-    /// Like `TcpStream::try_clone`.
-    pub fn try_clone(&self) -> io::Result<MaybeSslStream<net::TcpStream>> {
-        match *self {
-            MaybeSslStream::Ssl(ref s) => s.try_clone().map(MaybeSslStream::Ssl),
-            MaybeSslStream::Normal(ref s) => s.try_clone().map(MaybeSslStream::Normal),
         }
     }
 }
