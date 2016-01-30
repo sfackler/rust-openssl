@@ -18,8 +18,8 @@ use ssl;
 use ssl::SSL_VERIFY_PEER;
 use ssl::SslMethod::Sslv23;
 use ssl::SslMethod;
-use ssl::error::NonblockingSslError;
-use ssl::{SslContext, SslStream, VerifyCallback, NonblockingSslStream};
+use ssl::error::Error;
+use ssl::{SslContext, SslStream, VerifyCallback};
 use x509::X509StoreContext;
 use x509::X509FileType;
 use x509::X509;
@@ -871,7 +871,7 @@ fn test_sslv2_connect_failure() {
         .unwrap();
 }
 
-fn wait_io(stream: &NonblockingSslStream<TcpStream>, read: bool, timeout_ms: u32) -> bool {
+fn wait_io(stream: &SslStream<TcpStream>, read: bool, timeout_ms: u32) -> bool {
     unsafe {
         let mut set: select::fd_set = mem::zeroed();
         select::fd_set(&mut set, stream.get_ref());
@@ -895,7 +895,7 @@ fn test_write_nonblocking() {
     let (_s, stream) = Server::new();
     stream.set_nonblocking(true).unwrap();
     let cx = SslContext::new(Sslv23).unwrap();
-    let mut stream = NonblockingSslStream::connect(&cx, stream).unwrap();
+    let mut stream = SslStream::connect(&cx, stream).unwrap();
 
     let mut iterations = 0;
     loop {
@@ -905,15 +905,15 @@ fn test_write_nonblocking() {
             // openssl.
             panic!("Too many read/write round trips in handshake!!");
         }
-        let result = stream.write(b"hello");
+        let result = stream.ssl_write(b"hello");
         match result {
             Ok(_) => {
                 break;
             }
-            Err(NonblockingSslError::WantRead) => {
+            Err(Error::WantRead(_)) => {
                 assert!(wait_io(&stream, true, 1000));
             }
-            Err(NonblockingSslError::WantWrite) => {
+            Err(Error::WantWrite(_)) => {
                 assert!(wait_io(&stream, false, 1000));
             }
             Err(other) => {
@@ -932,7 +932,7 @@ fn test_read_nonblocking() {
     let (_s, stream) = Server::new();
     stream.set_nonblocking(true).unwrap();
     let cx = SslContext::new(Sslv23).unwrap();
-    let mut stream = NonblockingSslStream::connect(&cx, stream).unwrap();
+    let mut stream = SslStream::connect(&cx, stream).unwrap();
 
     let mut iterations = 0;
     loop {
@@ -942,16 +942,16 @@ fn test_read_nonblocking() {
             // openssl.
             panic!("Too many read/write round trips in handshake!!");
         }
-        let result = stream.write(b"GET /\r\n\r\n");
+        let result = stream.ssl_write(b"GET /\r\n\r\n");
         match result {
             Ok(n) => {
                 assert_eq!(n, 9);
                 break;
             }
-            Err(NonblockingSslError::WantRead) => {
+            Err(Error::WantRead(..)) => {
                 assert!(wait_io(&stream, true, 1000));
             }
-            Err(NonblockingSslError::WantWrite) => {
+            Err(Error::WantWrite(..)) => {
                 assert!(wait_io(&stream, false, 1000));
             }
             Err(other) => {
@@ -960,7 +960,7 @@ fn test_read_nonblocking() {
         }
     }
     let mut input_buffer = [0u8; 1500];
-    let result = stream.read(&mut input_buffer);
+    let result = stream.ssl_read(&mut input_buffer);
     let bytes_read = match result {
         Ok(n) => {
             // This branch is unlikely, but on an overloaded VM with
@@ -968,7 +968,7 @@ fn test_read_nonblocking() {
             // be in the receive buffer before we issue the read() syscall...
             n
         }
-        Err(NonblockingSslError::WantRead) => {
+        Err(Error::WantRead(..)) => {
             assert!(wait_io(&stream, true, 3000));
             // Second read should return application data.
             stream.read(&mut input_buffer).unwrap()
