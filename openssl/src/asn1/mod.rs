@@ -2,8 +2,7 @@ use libc::c_long;
 use std::ptr;
 
 use ffi;
-use ssl::error::SslError;
-
+use error::ErrorStack;
 
 pub struct Asn1Time {
     handle: *mut ffi::ASN1_TIME,
@@ -19,7 +18,7 @@ impl Asn1Time {
         }
     }
 
-    fn new_with_period(period: u64) -> Result<Asn1Time, SslError> {
+    fn new_with_period(period: u64) -> Result<Asn1Time, ErrorStack> {
         ffi::init();
 
         let handle = unsafe {
@@ -29,7 +28,7 @@ impl Asn1Time {
     }
 
     /// Creates a new time on specified interval in days from now
-    pub fn days_from_now(days: u32) -> Result<Asn1Time, SslError> {
+    pub fn days_from_now(days: u32) -> Result<Asn1Time, ErrorStack> {
         Asn1Time::new_with_period(days as u64 * 60 * 60 * 24)
     }
 

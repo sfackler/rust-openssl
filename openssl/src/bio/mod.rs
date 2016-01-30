@@ -6,7 +6,7 @@ use std::cmp;
 
 use ffi;
 use ffi_extras;
-use ssl::error::SslError;
+use error::ErrorStack;
 
 pub struct MemBio {
     bio: *mut ffi::BIO,
@@ -25,7 +25,7 @@ impl Drop for MemBio {
 
 impl MemBio {
     /// Creates a new owned memory based BIO
-    pub fn new() -> Result<MemBio, SslError> {
+    pub fn new() -> Result<MemBio, ErrorStack> {
         ffi::init();
 
         let bio = unsafe { ffi::BIO_new(ffi::BIO_s_mem()) };
@@ -81,7 +81,7 @@ impl Read for MemBio {
             if is_eof != 0 {
                 Ok(0)
             } else {
-                Err(io::Error::new(io::ErrorKind::Other, SslError::get()))
+                Err(io::Error::new(io::ErrorKind::Other, ErrorStack::get()))
             }
         } else {
             Ok(ret as usize)
@@ -95,7 +95,7 @@ impl Write for MemBio {
         let ret = unsafe { ffi::BIO_write(self.bio, buf.as_ptr() as *const c_void, len) };
 
         if ret < 0 {
-            Err(io::Error::new(io::ErrorKind::Other, SslError::get()))
+            Err(io::Error::new(io::ErrorKind::Other, ErrorStack::get()))
         } else {
             Ok(ret as usize)
         }

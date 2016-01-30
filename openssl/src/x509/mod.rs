@@ -19,8 +19,8 @@ use crypto::pkey::{PKey, Parts};
 use crypto::rand::rand_bytes;
 use ffi;
 use ffi_extras;
-use ssl::error::{SslError, StreamError};
 use nid;
+use error::ErrorStack;
 
 pub mod extension;
 
@@ -251,7 +251,7 @@ impl X509Generator {
     fn add_extension_internal(x509: *mut ffi::X509,
                               exttype: &extension::ExtensionType,
                               value: &str)
-                              -> Result<(), SslError> {
+                              -> Result<(), ErrorStack> {
         unsafe {
             let mut ctx: ffi::X509V3_CTX = mem::zeroed();
             ffi::X509V3_set_ctx(&mut ctx, x509, x509, ptr::null_mut(), ptr::null_mut(), 0);
@@ -283,7 +283,7 @@ impl X509Generator {
     fn add_name_internal(name: *mut ffi::X509_NAME,
                          key: &str,
                          value: &str)
-                         -> Result<(), SslError> {
+                         -> Result<(), ErrorStack> {
         let value_len = value.len() as c_int;
         lift_ssl!(unsafe {
             let key = CString::new(key.as_bytes()).unwrap();
@@ -314,7 +314,7 @@ impl X509Generator {
     }
 
     /// Generates a private key and a self-signed certificate and returns them
-    pub fn generate<'a>(&self) -> Result<(X509<'a>, PKey), SslError> {
+    pub fn generate<'a>(&self) -> Result<(X509<'a>, PKey), ErrorStack> {
         ffi::init();
 
         let mut p_key = PKey::new();
@@ -326,7 +326,7 @@ impl X509Generator {
 
     /// Sets the certificate public-key, then self-sign and return it
     /// Note: That the bit-length of the private key is used (set_bitlength is ignored)
-    pub fn sign<'a>(&self, p_key: &PKey) -> Result<X509<'a>, SslError> {
+    pub fn sign<'a>(&self, p_key: &PKey) -> Result<X509<'a>, ErrorStack> {
         ffi::init();
 
         unsafe {
@@ -384,7 +384,7 @@ impl X509Generator {
     }
 
     /// Obtain a certificate signing request (CSR)
-    pub fn request(&self, p_key: &PKey) -> Result<X509Req, SslError> {
+    pub fn request(&self, p_key: &PKey) -> Result<X509Req, ErrorStack> {
         let cert = match self.sign(p_key) {
             Ok(c) => c,
             Err(x) => return Err(x),
@@ -437,11 +437,11 @@ impl<'ctx> X509<'ctx> {
     }
 
     /// Reads certificate from PEM, takes ownership of handle
-    pub fn from_pem<R>(reader: &mut R) -> Result<X509<'ctx>, SslError>
+    pub fn from_pem<R>(reader: &mut R) -> io::Result<X509<'ctx>>
         where R: Read
     {
         let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+        try!(io::copy(reader, &mut mem_bio));
 
         unsafe {
             let handle = try_ssl_null!(ffi::PEM_read_bio_X509(mem_bio.get_handle(),
@@ -498,14 +498,14 @@ impl<'ctx> X509<'ctx> {
     }
 
     /// Writes certificate as PEM
-    pub fn write_pem<W>(&self, writer: &mut W) -> Result<(), SslError>
+    pub fn write_pem<W>(&self, writer: &mut W) -> io::Result<()>
         where W: Write
     {
         let mut mem_bio = try!(MemBio::new());
         unsafe {
             try_ssl!(ffi::PEM_write_bio_X509(mem_bio.get_handle(), self.handle));
         }
-        io::copy(&mut mem_bio, writer).map_err(StreamError).map(|_| ())
+        io::copy(&mut mem_bio, writer).map(|_| ())
     }
 }
 
@@ -573,11 +573,11 @@ impl X509Req {
     }
 
     /// Reads CSR from PEM
-    pub fn from_pem<R>(reader: &mut R) -> Result<X509Req, SslError>
+    pub fn from_pem<R>(reader: &mut R) -> io::Result<X509Req>
         where R: Read
     {
         let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+        try!(io::copy(reader, &mut mem_bio));
 
         unsafe {
             let handle = try_ssl_null!(ffi::PEM_read_bio_X509_REQ(mem_bio.get_handle(),
@@ -589,14 +589,14 @@ impl X509Req {
     }
 
     /// Writes CSR as PEM
-    pub fn write_pem<W>(&self, writer: &mut W) -> Result<(), SslError>
+    pub fn write_pem<W>(&self, writer: &mut W) -> io::Result<()>
         where W: Write
     {
         let mut mem_bio = try!(MemBio::new());
-        unsafe {
-            try_ssl!(ffi::PEM_write_bio_X509_REQ(mem_bio.get_handle(), self.handle));
+        if unsafe { ffi::PEM_write_bio_X509_REQ(mem_bio.get_handle(), self.handle) } != 1 {
+            return Err(io::Error::new(io::ErrorKind::Other, ErrorStack::get()));
         }
-        io::copy(&mut mem_bio, writer).map_err(StreamError).map(|_| ())
+        io::copy(&mut mem_bio, writer).map(|_| ())
     }
 }
 

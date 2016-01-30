@@ -9,7 +9,7 @@ use std::ptr;
 use std::slice;
 use std::sync::Arc;
 
-use ssl::error::SslError;
+use error::ErrorStack;
 
 // "rust"
 const NAME: [c_char; 5] = [114, 117, 115, 116, 0];
@@ -20,7 +20,7 @@ pub struct StreamState<S> {
     pub panic: Option<Box<Any + Send>>,
 }
 
-pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Arc<BIO_METHOD>), SslError> {
+pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Arc<BIO_METHOD>), ErrorStack> {
     let method = Arc::new(BIO_METHOD {
         type_: BIO_TYPE_NONE,
         name: &NAME[0],
