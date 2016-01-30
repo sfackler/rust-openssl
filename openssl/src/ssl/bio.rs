@@ -9,7 +9,7 @@ use std::ptr;
 use std::slice;
 use std::sync::Arc;
 
-use ssl::error::SslError;
+use error::ErrorStack;
 
 pub struct StreamState<S> {
     pub stream: S,
@@ -39,7 +39,7 @@ impl BioMethod {
 
 unsafe impl Send for BioMethod {}
 
-pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Arc<BioMethod>), SslError> {
+pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Arc<BioMethod>), ErrorStack> {
     let method = Arc::new(BioMethod::new::<S>());
 
     let state = Box::new(StreamState {

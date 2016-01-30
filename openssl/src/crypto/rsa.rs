@@ -1,11 +1,11 @@
 use ffi;
 use std::fmt;
-use ssl::error::{SslError, StreamError};
 use std::ptr;
 use std::io::{self, Read};
 
 use bn::BigNum;
 use bio::MemBio;
+use error::ErrorStack;
 
 pub struct RSA(*mut ffi::RSA);
 
@@ -20,7 +20,7 @@ impl Drop for RSA {
 impl RSA {
     /// only useful for associating the key material directly with the key, it's safer to use
     /// the supplied load and save methods for DER formatted keys.
-    pub fn from_public_components(n: BigNum, e: BigNum) -> Result<RSA, SslError> {
+    pub fn from_public_components(n: BigNum, e: BigNum) -> Result<RSA, ErrorStack> {
         unsafe {
             let rsa = try_ssl_null!(ffi::RSA_new());
             (*rsa).n = n.into_raw();
@@ -35,11 +35,11 @@ impl RSA {
     }
 
     /// Reads an RSA private key from PEM formatted data.
-    pub fn private_key_from_pem<R>(reader: &mut R) -> Result<RSA, SslError>
+    pub fn private_key_from_pem<R>(reader: &mut R) -> io::Result<RSA>
     where R: Read
     {
         let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+        try!(io::copy(reader, &mut mem_bio));
 
         unsafe {
             let rsa = try_ssl_null!(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.get_handle(),
@@ -51,11 +51,11 @@ impl RSA {
     }
 
     /// Reads an RSA public key from PEM formatted data.
-    pub fn public_key_from_pem<R>(reader: &mut R) -> Result<RSA, SslError>
+    pub fn public_key_from_pem<R>(reader: &mut R) -> io::Result<RSA>
     where R: Read
     {
         let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+        try!(io::copy(reader, &mut mem_bio));
 
         unsafe {
             let rsa = try_ssl_null!(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.get_handle(),
@@ -71,7 +71,7 @@ impl RSA {
     }
 
     // The following getters are unsafe, since BigNum::new_from_ffi fails upon null pointers
-    pub fn n(&self) -> Result<BigNum, SslError> {
+    pub fn n(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
             BigNum::new_from_ffi((*self.0).n)
         }
@@ -83,13 +83,13 @@ impl RSA {
         }
     }
 
-    pub fn d(&self) -> Result<BigNum, SslError> {
+    pub fn d(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
             BigNum::new_from_ffi((*self.0).d)
         }
     }
 
-    pub fn e(&self) -> Result<BigNum, SslError> {
+    pub fn e(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
             BigNum::new_from_ffi((*self.0).e)
         }
@@ -101,13 +101,13 @@ impl RSA {
         }
     }
 
-    pub fn p(&self) -> Result<BigNum, SslError> {
+    pub fn p(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
             BigNum::new_from_ffi((*self.0).p)
         }
     }
 
-    pub fn q(&self) -> Result<BigNum, SslError> {
+    pub fn q(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
             BigNum::new_from_ffi((*self.0).q)
         }

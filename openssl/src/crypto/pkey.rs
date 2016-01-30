@@ -8,8 +8,8 @@ use bio::MemBio;
 use crypto::hash;
 use crypto::hash::Type as HashType;
 use ffi;
-use ssl::error::{SslError, StreamError};
 use crypto::rsa::RSA;
+use error::ErrorStack;
 
 #[derive(Copy, Clone)]
 pub enum Parts {
@@ -85,17 +85,18 @@ impl PKey {
     }
 
     /// Reads private key from PEM, takes ownership of handle
-    pub fn private_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError>
+    pub fn private_key_from_pem<R>(reader: &mut R) -> io::Result<PKey>
         where R: Read
     {
         let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+        try!(io::copy(reader, &mut mem_bio));
 
         unsafe {
             let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.get_handle(),
                                                                  ptr::null_mut(),
                                                                  None,
                                                                  ptr::null_mut()));
+
             Ok(PKey {
                 evp: evp as *mut ffi::EVP_PKEY,
                 parts: Parts::Both,
@@ -104,11 +105,11 @@ impl PKey {
     }
 
     /// Reads public key from PEM, takes ownership of handle
-    pub fn public_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError>
+    pub fn public_key_from_pem<R>(reader: &mut R) -> io::Result<PKey>
         where R: Read
     {
         let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+        try!(io::copy(reader, &mut mem_bio));
 
         unsafe {
             let evp = try_ssl_null!(ffi::PEM_read_bio_PUBKEY(mem_bio.get_handle(),
@@ -123,13 +124,15 @@ impl PKey {
     }
 
     /// Reads an RSA private key from PEM, takes ownership of handle
-    pub fn private_rsa_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError>
+    pub fn private_rsa_key_from_pem<R>(reader: &mut R) -> io::Result<PKey>
     where R: Read
     {
         let rsa = try!(RSA::private_key_from_pem(reader));
         unsafe {
             let evp = try_ssl_null!(ffi::EVP_PKEY_new());
-            try_ssl!(ffi::EVP_PKEY_set1_RSA(evp, rsa.as_ptr()));
+            if ffi::EVP_PKEY_set1_RSA(evp, rsa.as_ptr()) == 0 {
+                return Err(io::Error::new(io::ErrorKind::Other, ErrorStack::get()));
+            }
 
             Ok(PKey {
                 evp: evp,
@@ -139,13 +142,15 @@ impl PKey {
     }
 
     /// Reads an RSA public key from PEM, takes ownership of handle
-    pub fn public_rsa_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError>
+    pub fn public_rsa_key_from_pem<R>(reader: &mut R) -> io::Result<PKey>
     where R: Read
     {
         let rsa = try!(RSA::public_key_from_pem(reader));
         unsafe {
             let evp = try_ssl_null!(ffi::EVP_PKEY_new());
-            try_ssl!(ffi::EVP_PKEY_set1_RSA(evp, rsa.as_ptr()));
+            if ffi::EVP_PKEY_set1_RSA(evp, rsa.as_ptr()) == 0 {
+                return Err(io::Error::new(io::ErrorKind::Other, ErrorStack::get()));
+            }
 
             Ok(PKey {
                 evp: evp,
@@ -260,7 +265,7 @@ impl PKey {
     // FIXME: also add password and encryption
     pub fn write_pem<W: Write>(&self,
                                writer: &mut W /* , password: Option<String> */)
-                               -> Result<(), SslError> {
+                               -> io::Result<()> {
         let mut mem_bio = try!(MemBio::new());
         unsafe {
             try_ssl!(ffi::PEM_write_bio_PrivateKey(mem_bio.get_handle(),
@@ -273,19 +278,19 @@ impl PKey {
 
         }
         let mut buf = vec![];
-        try!(mem_bio.read_to_end(&mut buf).map_err(StreamError));
-        writer.write_all(&buf).map_err(StreamError)
+        try!(mem_bio.read_to_end(&mut buf));
+        writer.write_all(&buf)
     }
 
     /// Stores public key as a PEM
     pub fn write_pub_pem<W: Write>(&self,
                                    writer: &mut W /* , password: Option<String> */)
-                                   -> Result<(), SslError> {
+                                   -> io::Result<()> {
         let mut mem_bio = try!(MemBio::new());
         unsafe { try_ssl!(ffi::PEM_write_bio_PUBKEY(mem_bio.get_handle(), self.evp)) }
         let mut buf = vec![];
-        try!(mem_bio.read_to_end(&mut buf).map_err(StreamError));
-        writer.write_all(&buf).map_err(StreamError)
+        try!(mem_bio.read_to_end(&mut buf));
+        writer.write_all(&buf)
     }
 
     /**
@@ -370,7 +375,7 @@ impl PKey {
                                               openssl_padding_code(padding));
 
             if rv < 0 as c_int {
-                // println!("{:?}", SslError::get());
+                // println!("{:?}", ErrorStack::get());
                 vec![]
             } else {
                 r.truncate(rv as usize);

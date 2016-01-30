@@ -403,7 +403,7 @@ run_test!(ssl_verify_callback, |method, stream| {
         }
     });
 
-    match SslStream::connect_generic(ssl, stream) {
+    match SslStream::connect(ssl, stream) {
         Ok(_) => (),
         Err(err) => panic!("Expected success, got {:?}", err)
     }

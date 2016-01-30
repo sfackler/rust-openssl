@@ -25,9 +25,9 @@ use std::os::windows::io::{AsRawSocket, RawSocket};
 use ffi;
 use ffi_extras;
 use dh::DH;
-use ssl::error::{SslError, OpenSslError};
 use x509::{X509StoreContext, X509FileType, X509};
 use crypto::pkey::PKey;
+use error::ErrorStack;
 
 pub mod error;
 mod bio;
@@ -513,9 +513,9 @@ pub type ServerNameCallbackData<T> = fn(ssl: &mut Ssl, ad: &mut i32, data: &T) -
 
 // FIXME: macro may be instead of inlining?
 #[inline]
-fn wrap_ssl_result(res: c_int) -> Result<(), SslError> {
+fn wrap_ssl_result(res: c_int) -> Result<(), ErrorStack> {
     if res == 0 {
-        Err(SslError::get())
+        Err(ErrorStack::get())
     } else {
         Ok(())
     }
@@ -558,7 +558,7 @@ impl SslContext {
     }
 
     /// Creates a new SSL context.
-    pub fn new(method: SslMethod) -> Result<SslContext, SslError> {
+    pub fn new(method: SslMethod) -> Result<SslContext, ErrorStack> {
         init();
 
         let ctx = try_ssl_null!(unsafe { ffi::SSL_CTX_new(method.to_raw()) });
@@ -647,7 +647,7 @@ impl SslContext {
         }
     }
 
-    pub fn set_tmp_dh(&self, dh: DH) -> Result<(), SslError> {
+    pub fn set_tmp_dh(&self, dh: DH) -> Result<(), ErrorStack> {
         wrap_ssl_result(unsafe { ffi_extras::SSL_CTX_set_tmp_dh(self.ctx, dh.raw()) as i32 })
     }
 
@@ -656,13 +656,13 @@ impl SslContext {
     /// These locations are read from the `SSL_CERT_FILE` and `SSL_CERT_DIR`
     /// environment variables if present, or defaults specified at OpenSSL
     /// build time otherwise.
-    pub fn set_default_verify_paths(&mut self) -> Result<(), SslError> {
+    pub fn set_default_verify_paths(&mut self) -> Result<(), ErrorStack> {
         wrap_ssl_result(unsafe { ffi::SSL_CTX_set_default_verify_paths(self.ctx) })
     }
 
     #[allow(non_snake_case)]
     /// Specifies the file that contains trusted CA certificates.
-    pub fn set_CA_file<P: AsRef<Path>>(&mut self, file: P) -> Result<(), SslError> {
+    pub fn set_CA_file<P: AsRef<Path>>(&mut self, file: P) -> Result<(), ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(unsafe {
             ffi::SSL_CTX_load_verify_locations(self.ctx, file.as_ptr() as *const _, ptr::null())
@@ -677,7 +677,7 @@ impl SslContext {
     ///
     /// This value should be set when using client certificates, or each request will fail
     /// handshake and need to be restarted.
-    pub fn set_session_id_context(&mut self, sid_ctx: &[u8]) -> Result<(), SslError> {
+    pub fn set_session_id_context(&mut self, sid_ctx: &[u8]) -> Result<(), ErrorStack> {
         wrap_ssl_result(unsafe {
             ffi::SSL_CTX_set_session_id_context(self.ctx, sid_ctx.as_ptr(), sid_ctx.len() as u32)
         })
@@ -687,7 +687,7 @@ impl SslContext {
     pub fn set_certificate_file<P: AsRef<Path>>(&mut self,
                                                 file: P,
                                                 file_type: X509FileType)
-                                                -> Result<(), SslError> {
+                                                -> Result<(), ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(unsafe {
             ffi::SSL_CTX_use_certificate_file(self.ctx,
@@ -700,7 +700,7 @@ impl SslContext {
     pub fn set_certificate_chain_file<P: AsRef<Path>>(&mut self,
                                                       file: P,
                                                       file_type: X509FileType)
-                                                      -> Result<(), SslError> {
+                                                      -> Result<(), ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(unsafe {
             ffi::SSL_CTX_use_certificate_chain_file(self.ctx,
@@ -710,13 +710,13 @@ impl SslContext {
     }
 
     /// Specifies the certificate
-    pub fn set_certificate(&mut self, cert: &X509) -> Result<(), SslError> {
+    pub fn set_certificate(&mut self, cert: &X509) -> Result<(), ErrorStack> {
         wrap_ssl_result(unsafe { ffi::SSL_CTX_use_certificate(self.ctx, cert.get_handle()) })
     }
 
     /// Adds a certificate to the certificate chain presented together with the
     /// certificate specified using set_certificate()
-    pub fn add_extra_chain_cert(&mut self, cert: &X509) -> Result<(), SslError> {
+    pub fn add_extra_chain_cert(&mut self, cert: &X509) -> Result<(), ErrorStack> {
         wrap_ssl_result(unsafe {
             ffi_extras::SSL_CTX_add_extra_chain_cert(self.ctx, cert.get_handle()) as c_int
         })
@@ -726,7 +726,7 @@ impl SslContext {
     pub fn set_private_key_file<P: AsRef<Path>>(&mut self,
                                                 file: P,
                                                 file_type: X509FileType)
-                                                -> Result<(), SslError> {
+                                                -> Result<(), ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(unsafe {
             ffi::SSL_CTX_use_PrivateKey_file(self.ctx,
@@ -736,16 +736,16 @@ impl SslContext {
     }
 
     /// Specifies the private key
-    pub fn set_private_key(&mut self, key: &PKey) -> Result<(), SslError> {
+    pub fn set_private_key(&mut self, key: &PKey) -> Result<(), ErrorStack> {
         wrap_ssl_result(unsafe { ffi::SSL_CTX_use_PrivateKey(self.ctx, key.get_handle()) })
     }
 
     /// Check consistency of private key and certificate
-    pub fn check_private_key(&mut self) -> Result<(), SslError> {
+    pub fn check_private_key(&mut self) -> Result<(), ErrorStack> {
         wrap_ssl_result(unsafe { ffi::SSL_CTX_check_private_key(self.ctx) })
     }
 
-    pub fn set_cipher_list(&mut self, cipher_list: &str) -> Result<(), SslError> {
+    pub fn set_cipher_list(&mut self, cipher_list: &str) -> Result<(), ErrorStack> {
         wrap_ssl_result(unsafe {
             let cipher_list = CString::new(cipher_list).unwrap();
             ffi::SSL_CTX_set_cipher_list(self.ctx, cipher_list.as_ptr() as *const _)
@@ -757,7 +757,7 @@ impl SslContext {
     ///
     /// This method requires OpenSSL >= 1.0.2 or LibreSSL and the `ecdh_auto` feature.
     #[cfg(feature = "ecdh_auto")]
-    pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(), SslError> {
+    pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
         wrap_ssl_result(unsafe { ffi_extras::SSL_CTX_set_ecdh_auto(self.ctx, onoff as c_int) })
     }
 
@@ -922,7 +922,7 @@ impl Drop for Ssl {
 }
 
 impl Ssl {
-    pub fn new(ctx: &SslContext) -> Result<Ssl, SslError> {
+    pub fn new(ctx: &SslContext) -> Result<Ssl, ErrorStack> {
         let ssl = try_ssl_null!(unsafe { ffi::SSL_new(ctx.ctx) });
         let ssl = Ssl { ssl: ssl };
         Ok(ssl)
@@ -950,9 +950,9 @@ impl Ssl {
         unsafe { ffi::SSL_write(self.ssl, buf.as_ptr() as *const c_void, len) }
     }
 
-    fn get_error(&self, ret: c_int) -> LibSslError {
+    fn get_error(&self, ret: c_int) -> LibErrorStack {
         let err = unsafe { ffi::SSL_get_error(self.ssl, ret) };
-        match LibSslError::from_i32(err as i32) {
+        match LibErrorStack::from_i32(err as i32) {
             Some(err) => err,
             None => unreachable!(),
         }
@@ -1013,7 +1013,7 @@ impl Ssl {
     }
 
     /// Sets the host name to be used with SNI (Server Name Indication).
-    pub fn set_hostname(&self, hostname: &str) -> Result<(), SslError> {
+    pub fn set_hostname(&self, hostname: &str) -> Result<(), ErrorStack> {
         let cstr = CString::new(hostname).unwrap();
         let ret = unsafe {
             ffi_extras::SSL_set_tlsext_host_name(self.ssl, cstr.as_ptr() as *const _)
@@ -1021,7 +1021,7 @@ impl Ssl {
 
         // For this case, 0 indicates failure.
         if ret == 0 {
-            Err(SslError::get())
+            Err(ErrorStack::get())
         } else {
             Ok(())
         }
@@ -1162,18 +1162,18 @@ impl Ssl {
     }
 }
 
-macro_rules! make_LibSslError {
+macro_rules! make_LibErrorStack {
     ($($variant:ident = $value:ident),+) => {
         #[derive(Debug)]
         #[repr(i32)]
-        enum LibSslError {
+        enum LibErrorStack {
             $($variant = ffi::$value),+
         }
 
-        impl LibSslError {
-            fn from_i32(val: i32) -> Option<LibSslError> {
+        impl LibErrorStack {
+            fn from_i32(val: i32) -> Option<LibErrorStack> {
                 match val {
-                    $(ffi::$value => Some(LibSslError::$variant),)+
+                    $(ffi::$value => Some(LibErrorStack::$variant),)+
                     _ => None
                 }
             }
@@ -1181,7 +1181,7 @@ macro_rules! make_LibSslError {
     }
 }
 
-make_LibSslError! {
+make_LibErrorStack! {
     ErrorNone = SSL_ERROR_NONE,
     ErrorSsl = SSL_ERROR_SSL,
     ErrorWantRead = SSL_ERROR_WANT_READ,
@@ -1241,31 +1241,31 @@ impl<S: Read + Write> SslStream<S> {
     }
 
     /// Creates an SSL/TLS client operating over the provided stream.
-    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<Self, SslError> {
+    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<Self, Error> {
         let ssl = try!(ssl.into_ssl());
         let mut stream = Self::new_base(ssl, stream);
         let ret = stream.ssl.connect();
         if ret > 0 {
             Ok(stream)
         } else {
-            match stream.make_old_error(ret) {
-                Some(err) => Err(err),
-                None => Ok(stream),
+            match stream.make_error(ret) {
+                Error::WantRead(..) | Error::WantWrite(..) => Ok(stream),
+                err => Err(err)
             }
         }
     }
 
     /// Creates an SSL/TLS server operating over the provided stream.
-    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<Self, SslError> {
+    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<Self, Error> {
         let ssl = try!(ssl.into_ssl());
         let mut stream = Self::new_base(ssl, stream);
         let ret = stream.ssl.accept();
         if ret > 0 {
             Ok(stream)
         } else {
-            match stream.make_old_error(ret) {
-                Some(err) => Err(err),
-                None => Ok(stream),
+            match stream.make_error(ret) {
+                Error::WantRead(..) | Error::WantWrite(..) => Ok(stream),
+                err => Err(err)
             }
         }
     }
@@ -1302,10 +1302,10 @@ impl<S> SslStream<S> {
         self.check_panic();
 
         match self.ssl.get_error(ret) {
-            LibSslError::ErrorSsl => Error::Ssl(OpenSslError::get_stack()),
-            LibSslError::ErrorSyscall => {
-                let errs = OpenSslError::get_stack();
-                if errs.is_empty() {
+            LibErrorStack::ErrorSsl => Error::Ssl(ErrorStack::get()),
+            LibErrorStack::ErrorSyscall => {
+                let errs = ErrorStack::get();
+                if errs.errors().is_empty() {
                     if ret == 0 {
                         Error::Stream(io::Error::new(io::ErrorKind::ConnectionAborted,
                                                      "unexpected EOF observed"))
@@ -1316,43 +1316,12 @@ impl<S> SslStream<S> {
                     Error::Ssl(errs)
                 }
             }
-            LibSslError::ErrorZeroReturn => Error::ZeroReturn,
-            LibSslError::ErrorWantWrite => Error::WantWrite(self.get_bio_error()),
-            LibSslError::ErrorWantRead => Error::WantRead(self.get_bio_error()),
+            LibErrorStack::ErrorZeroReturn => Error::ZeroReturn,
+            LibErrorStack::ErrorWantWrite => Error::WantWrite(self.get_bio_error()),
+            LibErrorStack::ErrorWantRead => Error::WantRead(self.get_bio_error()),
             err => {
                 Error::Stream(io::Error::new(io::ErrorKind::Other,
                                              format!("unexpected error {:?}", err)))
-            }
-        }
-    }
-
-    fn make_old_error(&mut self, ret: c_int) -> Option<SslError> {
-        self.check_panic();
-
-        match self.ssl.get_error(ret) {
-            LibSslError::ErrorSsl => Some(SslError::get()),
-            LibSslError::ErrorSyscall => {
-                let err = SslError::get();
-                let count = match err {
-                    SslError::OpenSslErrors(ref v) => v.len(),
-                    _ => unreachable!(),
-                };
-                if count == 0 {
-                    if ret == 0 {
-                        Some(SslError::StreamError(io::Error::new(io::ErrorKind::ConnectionAborted,
-                                                                  "unexpected EOF observed")))
-                    } else {
-                        Some(SslError::StreamError(self.get_bio_error()))
-                    }
-                } else {
-                    Some(err)
-                }
-            }
-            LibSslError::ErrorZeroReturn => Some(SslError::SslSessionClosed),
-            LibSslError::ErrorWantWrite | LibSslError::ErrorWantRead => None,
-            err => {
-                Some(SslError::StreamError(io::Error::new(io::ErrorKind::Other,
-                                                          format!("unexpected error {:?}", err))))
             }
         }
     }
@@ -1437,17 +1406,17 @@ impl<S: Read + Write> Write for SslStream<S> {
 }
 
 pub trait IntoSsl {
-    fn into_ssl(self) -> Result<Ssl, SslError>;
+    fn into_ssl(self) -> Result<Ssl, ErrorStack>;
 }
 
 impl IntoSsl for Ssl {
-    fn into_ssl(self) -> Result<Ssl, SslError> {
+    fn into_ssl(self) -> Result<Ssl, ErrorStack> {
         Ok(self)
     }
 }
 
 impl<'a> IntoSsl for &'a SslContext {
-    fn into_ssl(self) -> Result<Ssl, SslError> {
+    fn into_ssl(self) -> Result<Ssl, ErrorStack> {
         Ssl::new(self)
     }
 }
