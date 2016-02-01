@@ -31,6 +31,12 @@ rust-openssl to a separate installation. OSX releases starting at 10.11, "El
 Capitan", no longer include OpenSSL headers which will prevent the `openssl`
 crate from compiling.
 
+Try the following commands to fix the issue (assumes Homebrew is used for package management):
+```
+brew install openssl
+brew link openssl --force
+```
+
 ### Windows
 
 On Windows, consider building with [mingw-w64](http://mingw-w64.org/).
