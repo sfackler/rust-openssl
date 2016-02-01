@@ -5,8 +5,8 @@
 
 #if defined(__APPLE__) || defined(__linux)
 
-#include<pthread.h>
-#include<openssl/crypto.h>
+#include <pthread.h>
+#include <openssl/crypto.h>
 
 unsigned long thread_id()
 {
