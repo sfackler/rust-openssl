@@ -140,3 +140,20 @@ fn test_nid_values() {
     };
     assert_eq!(&friendly as &str, "Example");
 }
+
+#[test]
+fn test_nid_uid_value() {
+    let cert_path = Path::new("test/nid_uid_test_cert.pem");
+    let mut file = File::open(&cert_path)
+                       .ok()
+                       .expect("Failed to open `test/nid_uid_test_cert.pem`");
+
+    let cert = X509::from_pem(&mut file).ok().expect("Failed to load PEM");
+    let subject = cert.subject_name();
+
+    let cn = match subject.text_by_nid(Nid::UserId) {
+        Some(x) => x,
+        None => panic!("Failed to read UID from cert"),
+    };
+    assert_eq!(&cn as &str, "this is the userId");
+}
