@@ -151,7 +151,7 @@ fn test_nid_uid_value() {
     let cert = X509::from_pem(&mut file).ok().expect("Failed to load PEM");
     let subject = cert.subject_name();
 
-    let cn = match subject.text_by_nid(Nid::UID) {
+    let cn = match subject.text_by_nid(Nid::UserId) {
         Some(x) => x,
         None => panic!("Failed to read UID from cert"),
     };
