@@ -104,7 +104,7 @@ pub enum Nid {
     G,
     S,
     I,
-    UID,
+    uid, // uniqueIdentifier
     CrlDistributionPoints,
     RSA_NP_MD5,
     SN,
@@ -170,4 +170,5 @@ pub enum Nid {
     ID_QT_UNOTICE,
     RC2_64_CBC,
     SMIMECaps,
+    UID = 458 // userId
 }
