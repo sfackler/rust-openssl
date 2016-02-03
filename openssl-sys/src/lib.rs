@@ -7,14 +7,12 @@ extern crate libc;
 #[cfg(target_os = "nacl")]
 extern crate libressl_pnacl_sys;
 
-use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
+use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t, time_t};
 use std::mem;
 use std::sync::{Mutex, MutexGuard};
 use std::sync::{Once, ONCE_INIT};
 
 pub type ASN1_INTEGER = c_void;
-pub type ASN1_STRING = c_void;
-pub type ASN1_TIME = c_void;
 pub type BN_CTX = c_void;
 pub type COMP_METHOD = c_void;
 pub type DH = c_void;
@@ -195,6 +193,16 @@ impl Copy for BIGNUM {}
 impl Clone for BIGNUM {
     fn clone(&self) -> BIGNUM { *self }
 }
+
+#[repr(C)]
+pub struct ASN1_STRING {
+    pub length: c_int,
+    pub typ: c_int,
+    pub data: *mut c_uchar,
+    pub flags: c_long
+}
+
+pub type ASN1_TIME = ASN1_STRING;
 
 pub type CRYPTO_EX_new = extern "C" fn(parent: *mut c_void, ptr: *mut c_void,
                                        ad: *const CRYPTO_EX_DATA, idx: c_int,
@@ -382,6 +390,8 @@ fn set_id_callback() {}
 extern "C" {
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
+    pub fn ASN1_TIME_set(tm: *mut ASN1_TIME, t: time_t) -> *mut ASN1_TIME;
+    pub fn ASN1_TIME_set_string(tm: *mut ASN1_TIME, t:  *const c_char) -> c_int;
     pub fn ASN1_TIME_free(tm: *mut ASN1_TIME);
 
     pub fn BIO_ctrl(b: *mut BIO, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;

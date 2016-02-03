@@ -2,6 +2,7 @@
 #include <openssl/ssl.h>
 #include <openssl/dh.h>
 #include <openssl/bn.h>
+#include <openssl/x509.h>
 
 #if defined(__APPLE__) || defined(__linux)
 
@@ -163,4 +164,12 @@ long SSL_set_tlsext_host_name_shim(SSL *s, char *name) {
 
 STACK_OF(X509_EXTENSION) *X509_get_extensions_shim(X509 *x) {
     return x->cert_info ? x->cert_info->extensions : NULL;
+}
+
+ASN1_TIME *X509_get_notBefore_shim(X509 *x) {
+    return X509_get_notBefore(x);
+}
+
+ASN1_TIME *X509_get_notAfter_shim(X509 *x) {
+    return X509_get_notAfter(x);
 }
