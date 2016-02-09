@@ -118,7 +118,7 @@ impl Server {
         // Need to wait for the UDP socket to get bound in our child process,
         // but don't currently have a great way to do that so just wait for a
         // bit.
-        thread::sleep_ms(100);
+        thread::sleep(Duration::from_millis(100));
         let socket = UdpSocket::bind(next_addr()).unwrap();
         socket.connect(&addr).unwrap();
         (s, UdpConnected(socket))
