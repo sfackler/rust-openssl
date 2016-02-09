@@ -1139,18 +1139,11 @@ impl Ssl {
     /// change the context corresponding to the current connection
     ///
     /// Returns a clone of the SslContext @ctx (ie: the new context). The old context is freed.
-    pub fn set_ssl_context(&self, ctx: &SslContext) -> SslContext {
-        // If duplication of @ctx's cert fails, this returns NULL. This _appears_ to only occur on
-        // allocation failures (meaning panicing is probably appropriate), but it might be nice to
-        // propogate the error.
-        assert!(unsafe { ffi::SSL_set_SSL_CTX(self.ssl, ctx.ctx) } != ptr::null_mut());
-
-        // FIXME: we return this reference here for compatibility, but it isn't actually required.
-        // This should be removed when a api-incompatabile version is to be released.
-        //
-        // ffi:SSL_set_SSL_CTX() returns copy of the ctx pointer passed to it, so it's easier for
-        // us to do the clone directly.
-        ctx.clone()
+    pub fn set_ssl_context(&self, ctx: &SslContext) -> Result<(), ErrorStack> {
+        unsafe {
+            try_ssl_null!(ffi::SSL_set_SSL_CTX(self.ssl, ctx.ctx));
+        }
+        Ok(())
     }
 
     /// obtain the context corresponding to the current connection
