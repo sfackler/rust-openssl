@@ -9,6 +9,7 @@ use std::net::{TcpStream, TcpListener, SocketAddr};
 use std::path::Path;
 use std::process::{Command, Child, Stdio, ChildStdin};
 use std::thread;
+use std::time::Duration;
 
 use net2::TcpStreamExt;
 
@@ -79,7 +80,7 @@ impl Server {
             match TcpStream::connect(&addr) {
                 Ok(s) => return (server, s),
                 Err(ref e) if e.kind() == io::ErrorKind::ConnectionRefused => {
-                    thread::sleep_ms(100);
+                    thread::sleep(Duration::from_millis(100));
                 }
                 Err(e) => panic!("wut: {}", e),
             }
