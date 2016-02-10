@@ -102,6 +102,18 @@ impl BigNum {
         })
     }
 
+    pub unsafe fn new_from_ffi(orig: *mut ffi::BIGNUM) -> Result<BigNum, SslError> {
+        if orig.is_null() {
+            panic!("Null Pointer was supplied to BigNum::new_from_ffi");
+        }
+        let r = ffi::BN_dup(orig);
+        if r.is_null() {
+            Err(SslError::get())
+        } else {
+            Ok(BigNum(r))
+        }
+    }
+
     pub fn new_from_slice(n: &[u8]) -> Result<BigNum, SslError> {
         BigNum::new().and_then(|v| unsafe {
             try_ssl_null!(ffi::BN_bin2bn(n.as_ptr(), n.len() as c_int, v.raw()));

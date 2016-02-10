@@ -39,6 +39,30 @@ fn test_cert_gen() {
     assert_eq!(pkey.save_pub(), cert.public_key().save_pub());
 }
 
+/// SubjectKeyIdentifier must be added before AuthorityKeyIdentifier or OpenSSL
+/// is "unable to get issuer keyid." This test ensures the order of insertion
+/// for extensions is preserved when the cert is signed.
+#[test]
+fn test_cert_gen_extension_ordering() {
+    get_generator()
+        .add_extension(OtherNid(Nid::SubjectKeyIdentifier, "hash".to_owned()))
+        .add_extension(OtherNid(Nid::AuthorityKeyIdentifier, "keyid:always".to_owned()))
+        .generate()
+        .expect("Failed to generate cert with order-dependent extensions");
+}
+
+/// Proves that a passing result from `test_cert_gen_extension_ordering` is
+/// deterministic by reversing the order of extensions and asserting failure.
+#[test]
+fn test_cert_gen_extension_bad_ordering() {
+    let result = get_generator()
+        .add_extension(OtherNid(Nid::AuthorityKeyIdentifier, "keyid:always".to_owned()))
+        .add_extension(OtherNid(Nid::SubjectKeyIdentifier, "hash".to_owned()))
+        .generate();
+
+    assert!(result.is_err());
+}
+
 #[test]
 fn test_req_gen() {
     let mut pkey = PKey::new();
@@ -115,4 +139,21 @@ fn test_nid_values() {
         None => panic!("Failed to read subject friendly name from cert"),
     };
     assert_eq!(&friendly as &str, "Example");
+}
+
+#[test]
+fn test_nid_uid_value() {
+    let cert_path = Path::new("test/nid_uid_test_cert.pem");
+    let mut file = File::open(&cert_path)
+                       .ok()
+                       .expect("Failed to open `test/nid_uid_test_cert.pem`");
+
+    let cert = X509::from_pem(&mut file).ok().expect("Failed to load PEM");
+    let subject = cert.subject_name();
+
+    let cn = match subject.text_by_nid(Nid::UserId) {
+        Some(x) => x,
+        None => panic!("Failed to read UID from cert"),
+    };
+    assert_eq!(&cn as &str, "this is the userId");
 }

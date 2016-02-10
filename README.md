@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/sfackler/rust-openssl.svg?branch=master)](https://travis-ci.org/sfackler/rust-openssl)
 
-[Documentation](https://sfackler.github.io/rust-openssl/doc/v0.7.5/openssl).
+[Documentation](https://sfackler.github.io/rust-openssl/doc/v0.7.6/openssl).
 
 ## Building
 
@@ -19,6 +19,8 @@ something like `openssl-devel` or `libssl-dev`.
 sudo apt-get install libssl-dev
 # On Arch Linux
 sudo pacman -S openssl
+# On Fedora
+sudo dnf install openssl-devel
 ```
 
 ### OSX

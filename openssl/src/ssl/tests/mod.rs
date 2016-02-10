@@ -9,6 +9,7 @@ use std::net::{TcpStream, TcpListener, SocketAddr};
 use std::path::Path;
 use std::process::{Command, Child, Stdio, ChildStdin};
 use std::thread;
+use std::time::Duration;
 
 use net2::TcpStreamExt;
 
@@ -79,7 +80,7 @@ impl Server {
             match TcpStream::connect(&addr) {
                 Ok(s) => return (server, s),
                 Err(ref e) if e.kind() == io::ErrorKind::ConnectionRefused => {
-                    thread::sleep_ms(100);
+                    thread::sleep(Duration::from_millis(100));
                 }
                 Err(e) => panic!("wut: {}", e),
             }
@@ -117,7 +118,7 @@ impl Server {
         // Need to wait for the UDP socket to get bound in our child process,
         // but don't currently have a great way to do that so just wait for a
         // bit.
-        thread::sleep_ms(100);
+        thread::sleep(Duration::from_millis(100));
         let socket = UdpSocket::bind(next_addr()).unwrap();
         socket.connect(&addr).unwrap();
         (s, UdpConnected(socket))

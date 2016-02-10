@@ -104,6 +104,7 @@ pub enum Nid {
     G,
     S,
     I,
+    /// uniqueIdentifier
     UID,
     CrlDistributionPoints,
     RSA_NP_MD5,
@@ -170,4 +171,6 @@ pub enum Nid {
     ID_QT_UNOTICE,
     RC2_64_CBC,
     SMIMECaps,
+    /// Shown as UID in cert subject
+    UserId = 458
 }
