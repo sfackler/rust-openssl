@@ -1,31 +1,18 @@
 use libc;
 pub use self::imp::*;
 
-extern "system" {
-    #[link_name = "select"]
-    fn raw_select(nfds: libc::c_int,
-                  readfds: *mut fd_set,
-                  writefds: *mut fd_set,
-                  errorfds: *mut fd_set,
-                  timeout: *mut libc::timeval) -> libc::c_int;
-}
-
 #[cfg(unix)]
 mod imp {
     use std::os::unix::prelude::*;
     use std::io;
     use libc;
 
-    const FD_SETSIZE: usize = 1024;
-
-    #[repr(C)]
-    pub struct fd_set {
-        fds_bits: [u64; FD_SETSIZE / 64]
-    }
+    pub use libc::fd_set;
 
     pub fn fd_set<F: AsRawFd>(set: &mut fd_set, f: &F) {
-        let fd = f.as_raw_fd() as usize;
-        set.fds_bits[fd / 64] |= 1 << (fd % 64);
+        unsafe {
+            libc::FD_SET(f.as_raw_fd(), set);
+        }
     }
 
     pub unsafe fn select<F: AsRawFd>(max: &F,
@@ -38,8 +25,7 @@ mod imp {
             tv_sec: (timeout_ms / 1000) as libc::time_t,
             tv_usec: (timeout_ms % 1000 * 1000) as libc::suseconds_t,
         };
-        let rc = super::raw_select(max.as_raw_fd() + 1, read, write, error,
-                                   &mut timeout);
+        let rc = libc::select(max.as_raw_fd() + 1, read, write, error, &mut timeout);
         if rc < 0 {
             Err(io::Error::last_os_error())
         } else {
@@ -50,17 +36,16 @@ mod imp {
 
 #[cfg(windows)]
 mod imp {
+    extern crate winapi;
+    extern crate ws2_32;
+
     use std::os::windows::prelude::*;
     use std::io;
-    use libc::{SOCKET, c_uint, c_long, timeval};
+    use libc::{c_uint, c_long};
+    use self::winapi::SOCKET;
+    use self::winapi::winsock2;
 
-    const FD_SETSIZE: usize = 64;
-
-    #[repr(C)]
-    pub struct fd_set {
-        fd_count: c_uint,
-        fd_array: [SOCKET; FD_SETSIZE],
-    }
+    pub use self::winapi::winsock2::fd_set;
 
     pub fn fd_set<F: AsRawSocket>(set: &mut fd_set, f: &F) {
         set.fd_array[set.fd_count as usize] = f.as_raw_socket();
@@ -73,11 +58,11 @@ mod imp {
                                          error: *mut fd_set,
                                          timeout_ms: u32)
                                          -> io::Result<bool> {
-        let mut timeout = timeval {
+        let mut timeout = winsock2::timeval {
             tv_sec: (timeout_ms / 1000) as c_long,
             tv_usec: (timeout_ms % 1000 * 1000) as c_long,
         };
-        let rc = super::raw_select(1, read, write, error, &mut timeout);
+        let rc = ws2_32::select(1, read, write, error, &mut timeout);
         if rc < 0 {
             Err(io::Error::last_os_error())
         } else {

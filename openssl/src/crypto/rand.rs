@@ -7,7 +7,9 @@ pub fn rand_bytes(len: usize) -> Vec<u8> {
 
         ffi::init();
         let r = ffi::RAND_bytes(out.as_mut_ptr(), len as c_int);
-        if r != 1 as c_int { panic!() }
+        if r != 1 as c_int {
+            panic!()
+        }
 
         out.set_len(len);
 

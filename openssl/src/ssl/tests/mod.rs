@@ -9,10 +9,11 @@ use std::net::{TcpStream, TcpListener, SocketAddr};
 use std::path::Path;
 use std::process::{Command, Child, Stdio, ChildStdin};
 use std::thread;
+use std::time::Duration;
 
 use net2::TcpStreamExt;
 
-use crypto::hash::Type::{SHA256};
+use crypto::hash::Type::SHA256;
 use ssl;
 use ssl::SSL_VERIFY_PEER;
 use ssl::SslMethod::Sslv23;
@@ -48,20 +49,24 @@ struct Server {
 }
 
 impl Server {
-    fn spawn(args: &[&str], input: Option<Box<FnMut(ChildStdin) + Send>>)
-             -> (Server, SocketAddr) {
+    fn spawn(args: &[&str], input: Option<Box<FnMut(ChildStdin) + Send>>) -> (Server, SocketAddr) {
         let addr = next_addr();
-        let mut child = Command::new("openssl").arg("s_server")
-                                .arg("-accept").arg(addr.port().to_string())
-                                .args(args)
-                                .arg("-cert").arg("cert.pem")
-                                .arg("-key").arg("key.pem")
-                                .arg("-no_dhe")
-                                .current_dir("test")
-                                .stdout(Stdio::null())
-                                .stderr(Stdio::null())
-                                .stdin(Stdio::piped())
-                                .spawn().unwrap();
+        let mut child = Command::new("openssl")
+                            .arg("s_server")
+                            .arg("-accept")
+                            .arg(addr.port().to_string())
+                            .args(args)
+                            .arg("-cert")
+                            .arg("cert.pem")
+                            .arg("-key")
+                            .arg("key.pem")
+                            .arg("-no_dhe")
+                            .current_dir("test")
+                            .stdout(Stdio::null())
+                            .stderr(Stdio::null())
+                            .stdin(Stdio::piped())
+                            .spawn()
+                            .unwrap();
         let stdin = child.stdin.take().unwrap();
         if let Some(mut input) = input {
             thread::spawn(move || input(stdin));
@@ -71,15 +76,16 @@ impl Server {
 
     fn new_tcp(args: &[&str]) -> (Server, TcpStream) {
         let (server, addr) = Server::spawn(args, None);
-        loop {
+        for _ in 0..20 {
             match TcpStream::connect(&addr) {
                 Ok(s) => return (server, s),
                 Err(ref e) if e.kind() == io::ErrorKind::ConnectionRefused => {
-                    thread::sleep_ms(100);
+                    thread::sleep(Duration::from_millis(100));
                 }
                 Err(e) => panic!("wut: {}", e),
             }
         }
+        panic!("server never came online");
     }
 
     fn new() -> (Server, TcpStream) {
@@ -88,27 +94,31 @@ impl Server {
 
     #[cfg(any(feature = "alpn", feature = "npn"))]
     fn new_alpn() -> (Server, TcpStream) {
-        Server::new_tcp(&["-www", "-nextprotoneg", "http/1.1,spdy/3.1",
-                          "-alpn", "http/1.1,spdy/3.1"])
+        Server::new_tcp(&["-www",
+                          "-nextprotoneg",
+                          "http/1.1,spdy/3.1",
+                          "-alpn",
+                          "http/1.1,spdy/3.1"])
     }
 
     #[cfg(feature = "dtlsv1")]
     fn new_dtlsv1<I>(input: I) -> (Server, UdpConnected)
-        where I: IntoIterator<Item=&'static str>,
+        where I: IntoIterator<Item = &'static str>,
               I::IntoIter: Send + 'static
     {
         let mut input = input.into_iter();
-        let (s, addr) = Server::spawn(&["-dtls1"], Some(Box::new(move |mut io| {
-            for s in input.by_ref() {
-                if io.write_all(s.as_bytes()).is_err() {
-                    break
-                }
-            }
-        })));
+        let (s, addr) = Server::spawn(&["-dtls1"],
+                                      Some(Box::new(move |mut io| {
+                                          for s in input.by_ref() {
+                                              if io.write_all(s.as_bytes()).is_err() {
+                                                  break;
+                                              }
+                                          }
+                                      })));
         // Need to wait for the UDP socket to get bound in our child process,
         // but don't currently have a great way to do that so just wait for a
         // bit.
-        thread::sleep_ms(100);
+        thread::sleep(Duration::from_millis(100));
         let socket = UdpSocket::bind(next_addr()).unwrap();
         socket.connect(&addr).unwrap();
         (s, UdpConnected(socket))
@@ -139,8 +149,10 @@ impl Write for UdpConnected {
         use std::os::unix::prelude::*;
         use libc;
         let n = unsafe {
-            libc::send(self.0.as_raw_fd(), buf.as_ptr() as *const _,
-                       buf.len() as libc::size_t, 0)
+            libc::send(self.0.as_raw_fd(),
+                       buf.as_ptr() as *const _,
+                       buf.len() as libc::size_t,
+                       0)
         };
         if n < 0 {
             Err(io::Error::last_os_error())
@@ -154,8 +166,10 @@ impl Write for UdpConnected {
         use std::os::windows::prelude::*;
         use libc;
         let n = unsafe {
-            libc::send(self.0.as_raw_socket(), buf.as_ptr() as *const _,
-                       buf.len() as libc::c_int, 0)
+            libc::send(self.0.as_raw_socket(),
+                       buf.as_ptr() as *const _,
+                       buf.len() as libc::c_int,
+                       0)
         };
         if n < 0 {
             Err(io::Error::last_os_error())
@@ -164,7 +178,9 @@ impl Write for UdpConnected {
         }
     }
 
-    fn flush(&mut self) -> io::Result<()> { Ok(()) }
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 macro_rules! run_test(
@@ -398,11 +414,11 @@ fn test_set_certificate_and_private_key() {
     let key_path = Path::new("test/key.pem");
     let cert_path = Path::new("test/cert.pem");
     let mut key_file = File::open(&key_path)
-        .ok()
-        .expect("Failed to open `test/key.pem`");
+                           .ok()
+                           .expect("Failed to open `test/key.pem`");
     let mut cert_file = File::open(&cert_path)
-        .ok()
-        .expect("Failed to open `test/cert.pem`");
+                            .ok()
+                            .expect("Failed to open `test/cert.pem`");
 
     let key = PKey::private_key_from_pem(&mut key_file).unwrap();
     let cert = X509::from_pem(&mut cert_file).unwrap();
@@ -423,10 +439,6 @@ run_test!(set_ctx_options, |method, _| {
     let mut ctx = SslContext::new(method).unwrap();
     let opts = ctx.set_options(ssl::SSL_OP_NO_TICKET);
     assert!(opts.contains(ssl::SSL_OP_NO_TICKET));
-    assert!(!opts.contains(ssl::SSL_OP_CISCO_ANYCONNECT));
-    let more_opts = ctx.set_options(ssl::SSL_OP_CISCO_ANYCONNECT);
-    assert!(more_opts.contains(ssl::SSL_OP_NO_TICKET));
-    assert!(more_opts.contains(ssl::SSL_OP_CISCO_ANYCONNECT));
 });
 
 run_test!(clear_ctx_options, |method, _| {
@@ -459,7 +471,7 @@ fn test_write_direct() {
 run_test!(get_peer_certificate, |method, stream| {
     let stream = SslStream::connect_generic(&SslContext::new(method).unwrap(),
                                             stream).unwrap();
-    let cert = stream.get_peer_certificate().unwrap();
+    let cert = stream.ssl().peer_certificate().unwrap();
     let fingerprint = cert.fingerprint(SHA256).unwrap();
     let node_hash_str = "db400bb62f1b1f29c3b8f323b8f7d9dea724fdcd67104ef549c772ae3749655b";
     let node_id = node_hash_str.from_hex().unwrap();
@@ -471,8 +483,7 @@ run_test!(get_peer_certificate, |method, stream| {
 fn test_write_dtlsv1() {
     let (_s, stream) = Server::new_dtlsv1(iter::repeat("y\n"));
 
-    let mut stream = SslStream::connect_generic(&SslContext::new(Dtlsv1).unwrap(),
-                                                stream).unwrap();
+    let mut stream = SslStream::connect_generic(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
     stream.write_all(b"hello").unwrap();
     stream.flush().unwrap();
     stream.write_all(b" there").unwrap();
@@ -505,17 +516,17 @@ fn test_pending() {
     stream.flush().unwrap();
 
     // wait for the response and read first byte...
-    let mut buf = [0u8; 16*1024];
+    let mut buf = [0u8; 16 * 1024];
     stream.read(&mut buf[..1]).unwrap();
 
-    let pending = stream.pending();
+    let pending = stream.ssl().pending();
     let len = stream.read(&mut buf[1..]).unwrap();
 
     assert_eq!(pending, len);
 
     stream.read(&mut buf[..1]).unwrap();
 
-    let pending = stream.pending();
+    let pending = stream.ssl().pending();
     let len = stream.read(&mut buf[1..]).unwrap();
     assert_eq!(pending, len);
 }
@@ -524,8 +535,9 @@ fn test_pending() {
 fn test_state() {
     let (_s, tcp) = Server::new();
     let stream = SslStream::connect_generic(&SslContext::new(Sslv23).unwrap(), tcp).unwrap();
-    assert_eq!(stream.get_state_string(), "SSLOK ");
-    assert_eq!(stream.get_state_string_long(), "SSL negotiation finished successfully");
+    assert_eq!(stream.ssl().state_string(), "SSLOK ");
+    assert_eq!(stream.ssl().state_string_long(),
+               "SSL negotiation finished successfully");
 }
 
 /// Tests that connecting with the client using ALPN, but the server not does not
@@ -539,15 +551,15 @@ fn test_connect_with_unilateral_alpn() {
     ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
-    let stream = match SslStream::new(&ctx, stream) {
+    let stream = match SslStream::connect(&ctx, stream) {
         Ok(stream) => stream,
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     };
     // Since the socket to which we connected is not configured to use ALPN,
     // there should be no selected protocol...
-    assert!(stream.get_selected_alpn_protocol().is_none());
+    assert!(stream.ssl().selected_alpn_protocol().is_none());
 }
 
 /// Tests that connecting with the client using NPN, but the server not does not
@@ -561,15 +573,15 @@ fn test_connect_with_unilateral_npn() {
     ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
     let stream = match SslStream::connect_generic(&ctx, stream) {
         Ok(stream) => stream,
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     };
     // Since the socket to which we connected is not configured to use NPN,
     // there should be no selected protocol...
-    assert!(stream.get_selected_npn_protocol().is_none());
+    assert!(stream.ssl().selected_npn_protocol().is_none());
 }
 
 /// Tests that when both the client as well as the server use ALPN and their
@@ -583,15 +595,15 @@ fn test_connect_with_alpn_successful_multiple_matching() {
     ctx.set_alpn_protocols(&[b"spdy/3.1", b"http/1.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
-    let stream = match SslStream::new(&ctx, stream) {
+    let stream = match SslStream::connect(&ctx, stream) {
         Ok(stream) => stream,
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     };
     // The server prefers "http/1.1", so that is chosen, even though the client
     // would prefer "spdy/3.1"
-    assert_eq!(b"http/1.1", stream.get_selected_alpn_protocol().unwrap());
+    assert_eq!(b"http/1.1", stream.ssl().selected_alpn_protocol().unwrap());
 }
 
 /// Tests that when both the client as well as the server use NPN and their
@@ -605,15 +617,15 @@ fn test_connect_with_npn_successful_multiple_matching() {
     ctx.set_npn_protocols(&[b"spdy/3.1", b"http/1.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
     let stream = match SslStream::connect_generic(&ctx, stream) {
         Ok(stream) => stream,
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     };
     // The server prefers "http/1.1", so that is chosen, even though the client
     // would prefer "spdy/3.1"
-    assert_eq!(b"http/1.1", stream.get_selected_npn_protocol().unwrap());
+    assert_eq!(b"http/1.1", stream.ssl().selected_npn_protocol().unwrap());
 }
 
 /// Tests that when both the client as well as the server use ALPN and their
@@ -628,15 +640,15 @@ fn test_connect_with_alpn_successful_single_match() {
     ctx.set_alpn_protocols(&[b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
-    let stream = match SslStream::new(&ctx, stream) {
+    let stream = match SslStream::connect(&ctx, stream) {
         Ok(stream) => stream,
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     };
     // The client now only supports one of the server's protocols, so that one
     // is used.
-    assert_eq!(b"spdy/3.1", stream.get_selected_alpn_protocol().unwrap());
+    assert_eq!(b"spdy/3.1", stream.ssl().selected_alpn_protocol().unwrap());
 }
 
 
@@ -652,15 +664,15 @@ fn test_connect_with_npn_successful_single_match() {
     ctx.set_npn_protocols(&[b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
     let stream = match SslStream::connect_generic(&ctx, stream) {
         Ok(stream) => stream,
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     };
     // The client now only supports one of the server's protocols, so that one
     // is used.
-    assert_eq!(b"spdy/3.1", stream.get_selected_npn_protocol().unwrap());
+    assert_eq!(b"spdy/3.1", stream.ssl().selected_npn_protocol().unwrap());
 }
 
 /// Tests that when the `SslStream` is created as a server stream, the protocols
@@ -675,10 +687,10 @@ fn test_npn_server_advertise_multiple() {
         let mut ctx = SslContext::new(Sslv23).unwrap();
         ctx.set_verify(SSL_VERIFY_PEER, None);
         ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]);
-        assert!(ctx.set_certificate_file(
-                &Path::new("test/cert.pem"), X509FileType::PEM).is_ok());
-        ctx.set_private_key_file(
-                &Path::new("test/key.pem"), X509FileType::PEM).unwrap();
+        assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM)
+                   .is_ok());
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509FileType::PEM)
+           .unwrap();
         ctx
     };
     // Have the listener wait on the connection in a different thread.
@@ -692,16 +704,16 @@ fn test_npn_server_advertise_multiple() {
     ctx.set_npn_protocols(&[b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
     // Now connect to the socket and make sure the protocol negotiation works...
     let stream = TcpStream::connect(localhost).unwrap();
     let stream = match SslStream::connect_generic(&ctx, stream) {
         Ok(stream) => stream,
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     };
     // SPDY is selected since that's the only thing the client supports.
-    assert_eq!(b"spdy/3.1", stream.get_selected_npn_protocol().unwrap());
+    assert_eq!(b"spdy/3.1", stream.ssl().selected_npn_protocol().unwrap());
 }
 
 /// Tests that when the `SslStream` is created as a server stream, the protocols
@@ -716,10 +728,10 @@ fn test_alpn_server_advertise_multiple() {
         let mut ctx = SslContext::new(Sslv23).unwrap();
         ctx.set_verify(SSL_VERIFY_PEER, None);
         ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]);
-        assert!(ctx.set_certificate_file(
-                &Path::new("test/cert.pem"), X509FileType::PEM).is_ok());
-        ctx.set_private_key_file(
-                &Path::new("test/key.pem"), X509FileType::PEM).unwrap();
+        assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM)
+                   .is_ok());
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509FileType::PEM)
+           .unwrap();
         ctx
     };
     // Have the listener wait on the connection in a different thread.
@@ -733,16 +745,16 @@ fn test_alpn_server_advertise_multiple() {
     ctx.set_alpn_protocols(&[b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
     // Now connect to the socket and make sure the protocol negotiation works...
     let stream = TcpStream::connect(localhost).unwrap();
-    let stream = match SslStream::new(&ctx, stream) {
+    let stream = match SslStream::connect(&ctx, stream) {
         Ok(stream) => stream,
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     };
     // SPDY is selected since that's the only thing the client supports.
-    assert_eq!(b"spdy/3.1", stream.get_selected_alpn_protocol().unwrap());
+    assert_eq!(b"spdy/3.1", stream.ssl().selected_alpn_protocol().unwrap());
 }
 
 /// Test that Servers supporting ALPN don't report a protocol when none of their protocols match
@@ -757,10 +769,10 @@ fn test_alpn_server_select_none() {
         let mut ctx = SslContext::new(Sslv23).unwrap();
         ctx.set_verify(SSL_VERIFY_PEER, None);
         ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]);
-        assert!(ctx.set_certificate_file(
-                &Path::new("test/cert.pem"), X509FileType::PEM).is_ok());
-        ctx.set_private_key_file(
-                &Path::new("test/key.pem"), X509FileType::PEM).unwrap();
+        assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM)
+                   .is_ok());
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509FileType::PEM)
+           .unwrap();
         ctx
     };
     // Have the listener wait on the connection in a different thread.
@@ -774,17 +786,17 @@ fn test_alpn_server_select_none() {
     ctx.set_alpn_protocols(&[b"http/2"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
     // Now connect to the socket and make sure the protocol negotiation works...
     let stream = TcpStream::connect(localhost).unwrap();
-    let stream = match SslStream::new(&ctx, stream) {
+    let stream = match SslStream::connect(&ctx, stream) {
         Ok(stream) => stream,
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     };
 
     // Since the protocols from the server and client don't overlap at all, no protocol is selected
-    assert_eq!(None, stream.get_selected_alpn_protocol());
+    assert_eq!(None, stream.ssl().selected_alpn_protocol());
 }
 
 
@@ -795,14 +807,14 @@ mod dtlsv1 {
     use std::net::TcpStream;
     use std::thread;
 
-    use crypto::hash::Type::{SHA256};
+    use crypto::hash::Type::SHA256;
     use ssl::SslMethod;
     use ssl::SslMethod::Dtlsv1;
     use ssl::{SslContext, SslStream, VerifyCallback};
     use ssl::SSL_VERIFY_PEER;
-    use x509::{X509StoreContext};
+    use x509::X509StoreContext;
 
-    const PROTOCOL:SslMethod = Dtlsv1;
+    const PROTOCOL: SslMethod = Dtlsv1;
 
     #[test]
     fn test_new_ctx() {
@@ -815,9 +827,8 @@ mod dtlsv1 {
 fn test_read_dtlsv1() {
     let (_s, stream) = Server::new_dtlsv1(Some("hello"));
 
-    let mut stream = SslStream::connect_generic(&SslContext::new(Dtlsv1).unwrap(),
-                                                stream).unwrap();
-    let mut buf = [0u8;100];
+    let mut stream = SslStream::connect_generic(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
+    let mut buf = [0u8; 100];
     assert!(stream.read(&mut buf).is_ok());
 }
 
@@ -825,21 +836,27 @@ fn test_read_dtlsv1() {
 #[cfg(feature = "sslv2")]
 fn test_sslv2_connect_failure() {
     let (_s, tcp) = Server::new_tcp(&["-no_ssl2", "-www"]);
-    SslStream::connect_generic(&SslContext::new(Sslv2).unwrap(),
-                               tcp).err().unwrap();
+    SslStream::connect_generic(&SslContext::new(Sslv2).unwrap(), tcp)
+        .err()
+        .unwrap();
 }
 
-fn wait_io(stream: &NonblockingSslStream<TcpStream>,
-           read: bool,
-           timeout_ms: u32) -> bool {
+fn wait_io(stream: &NonblockingSslStream<TcpStream>, read: bool, timeout_ms: u32) -> bool {
     unsafe {
         let mut set: select::fd_set = mem::zeroed();
         select::fd_set(&mut set, stream.get_ref());
 
-        let write = if read {0 as *mut _} else {&mut set as *mut _};
-        let read = if !read {0 as *mut _} else {&mut set as *mut _};
-        select::select(stream.get_ref(), read, write, 0 as *mut _, timeout_ms)
-               .unwrap()
+        let write = if read {
+            0 as *mut _
+        } else {
+            &mut set as *mut _
+        };
+        let read = if !read {
+            0 as *mut _
+        } else {
+            &mut set as *mut _
+        };
+        select::select(stream.get_ref(), read, write, 0 as *mut _, timeout_ms).unwrap()
     }
 }
 
@@ -862,16 +879,16 @@ fn test_write_nonblocking() {
         match result {
             Ok(_) => {
                 break;
-            },
+            }
             Err(NonblockingSslError::WantRead) => {
                 assert!(wait_io(&stream, true, 1000));
-            },
+            }
             Err(NonblockingSslError::WantWrite) => {
                 assert!(wait_io(&stream, false, 1000));
-            },
+            }
             Err(other) => {
                 panic!("Unexpected SSL Error: {:?}", other);
-            },
+            }
         }
     }
 
@@ -900,16 +917,16 @@ fn test_read_nonblocking() {
             Ok(n) => {
                 assert_eq!(n, 9);
                 break;
-            },
+            }
             Err(NonblockingSslError::WantRead) => {
                 assert!(wait_io(&stream, true, 1000));
-            },
+            }
             Err(NonblockingSslError::WantWrite) => {
                 assert!(wait_io(&stream, false, 1000));
-            },
+            }
             Err(other) => {
                 panic!("Unexpected SSL Error: {:?}", other);
-            },
+            }
         }
     }
     let mut input_buffer = [0u8; 1500];
@@ -920,16 +937,125 @@ fn test_read_nonblocking() {
             // unlucky context switching, the response could actually
             // be in the receive buffer before we issue the read() syscall...
             n
-        },
+        }
         Err(NonblockingSslError::WantRead) => {
             assert!(wait_io(&stream, true, 3000));
             // Second read should return application data.
             stream.read(&mut input_buffer).unwrap()
-        },
+        }
         Err(other) => {
             panic!("Unexpected SSL Error: {:?}", other);
-        },
+        }
     };
     assert!(bytes_read >= 5);
     assert_eq!(&input_buffer[..5], b"HTTP/");
+}
+
+#[test]
+fn broken_try_clone_doesnt_crash() {
+    let context = SslContext::new(SslMethod::Sslv23).unwrap();
+    let inner = TcpStream::connect("example.com:443").unwrap();
+    let stream1 = SslStream::connect(&context, inner).unwrap();
+    let _stream2 = stream1.try_clone().unwrap();
+}
+
+#[test]
+#[should_panic(expected = "blammo")]
+#[cfg(feature = "nightly")]
+fn write_panic() {
+    struct ExplodingStream(TcpStream);
+
+    impl Read for ExplodingStream {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+            self.0.read(buf)
+        }
+    }
+
+    impl Write for ExplodingStream {
+        fn write(&mut self, _: &[u8]) -> io::Result<usize> {
+            panic!("blammo");
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            self.0.flush()
+        }
+    }
+
+    let (_s, stream) = Server::new();
+    let stream = ExplodingStream(stream);
+
+    let ctx = SslContext::new(SslMethod::Sslv23).unwrap();
+    let _ = SslStream::connect(&ctx, stream);
+}
+
+#[test]
+#[should_panic(expected = "blammo")]
+#[cfg(feature = "nightly")]
+fn read_panic() {
+    struct ExplodingStream(TcpStream);
+
+    impl Read for ExplodingStream {
+        fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+            panic!("blammo");
+        }
+    }
+
+    impl Write for ExplodingStream {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.0.write(buf)
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            self.0.flush()
+        }
+    }
+
+    let (_s, stream) = Server::new();
+    let stream = ExplodingStream(stream);
+
+    let ctx = SslContext::new(SslMethod::Sslv23).unwrap();
+    let _ = SslStream::connect(&ctx, stream);
+}
+
+#[test]
+#[should_panic(expected = "blammo")]
+#[cfg(feature = "nightly")]
+fn flush_panic() {
+    struct ExplodingStream(TcpStream);
+
+    impl Read for ExplodingStream {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+            self.0.read(buf)
+        }
+    }
+
+    impl Write for ExplodingStream {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.0.write(buf)
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            panic!("blammo");
+        }
+    }
+
+    let (_s, stream) = Server::new();
+    let stream = ExplodingStream(stream);
+
+    let ctx = SslContext::new(SslMethod::Sslv23).unwrap();
+    let mut stream = SslStream::connect(&ctx, stream).unwrap();
+    let _ = stream.flush();
+}
+
+#[test]
+fn refcount_ssl_context() {
+    let ssl = {
+        let ctx = SslContext::new(SslMethod::Sslv23).unwrap();
+        ssl::Ssl::new(&ctx).unwrap()
+    };
+
+    {
+        let new_ctx_a = SslContext::new(SslMethod::Sslv23).unwrap();
+        let _new_ctx_b = ssl.set_ssl_context(&new_ctx_a);
+    }
 }
