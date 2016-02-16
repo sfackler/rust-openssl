@@ -100,7 +100,7 @@ impl Crypter {
      * encrypted or decrypted bytes.
      */
     pub fn update(&self, data: &[u8]) -> Vec<u8> {
-        let mut res = vec![0;data.len()];
+        let mut res = vec![0;data.len() + self.blocksize as usize];
         let reslen = self.update_buf(data, &mut res);
 
         res.truncate(reslen);
@@ -114,8 +114,9 @@ impl Crypter {
      * The size of the receiving buffer must be the same as the data.
      */
     pub fn update_buf(&self, data: &[u8], dest: &mut[u8]) -> usize {
+        assert!(dest.len() as u32 > self.blocksize); // at least block plus one
         unsafe {
-            let mut reslen = 0;
+            let mut reslen = self.blocksize as c_int;
 
             ffi::EVP_CipherUpdate(self.ctx,
                                   dest.as_mut_ptr(),
@@ -257,7 +258,7 @@ mod tests {
         c.pad(true);
         c.init(super::Mode::Encrypt, &k0, &[]);
         // block size
-        let mut r_buff = vec![0;16];
+        let mut r_buff = vec![0;17];
         let mut w_len;
         let mut r0 = Vec::new();
         for i in 0..2 {
@@ -282,9 +283,9 @@ mod tests {
         r1.extend(&r_buff[..w_len]);
  
         c.init(super::Mode::Decrypt, &k0, &[]);
-        r_buff = vec![0;16];
+        r_buff = vec![0;17]; // buff must be at least block size plus one
         let mut p1 : Vec<u8> = Vec::new();
-        p1.push(0);
+        //p1.push(0);
         for i in 0..2 {
             w_len = c.update_buf(&r0[16*i..16*(i+1)], &mut r_buff);
             //p1.extend(r_buff[..w_len].to_vec());
@@ -294,11 +295,11 @@ mod tests {
         p1.extend(&r_buff[..w_len]);
         w_len = c.finalize_buf(&mut r_buff);
         p1.extend(&r_buff[..w_len]);
-        assert!(p1[1..].to_vec() == p0.to_vec());
+        assert_eq!(p1, p0.to_vec());
         c.init(super::Mode::Decrypt, &k0, &[]);
         let mut p2 = c.update(&r1);
         p2.extend(c.finalize());
-        assert!(p2 == p0.to_vec());
+        assert_eq!(p2, p0.to_vec());
 
     }
 
