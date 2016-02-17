@@ -641,6 +641,8 @@ extern "C" {
     pub fn SSL_set_SSL_CTX(ssl: *mut SSL, ctx: *mut SSL_CTX) -> *mut SSL_CTX;
     pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const COMP_METHOD;
     pub fn SSL_get_peer_certificate(ssl: *mut SSL) -> *mut X509;
+    pub fn SSL_get_certificate(ssl: *mut SSL) -> *mut X509;
+    pub fn SSL_get_privatekey(ssl: *mut SSL) -> *mut EVP_PKEY;
     pub fn SSL_get_ssl_method(ssl: *mut SSL) -> *const SSL_METHOD;
     pub fn SSL_state_string(ssl: *mut SSL) -> *const c_char;
     pub fn SSL_state_string_long(ssl: *mut SSL) -> *const c_char;
@@ -674,6 +676,9 @@ extern "C" {
     pub fn SSL_CTX_check_private_key(ctx: *mut SSL_CTX) -> c_int;
 
     pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;
+
+    pub fn SSL_CTX_get0_certificate(ctx: *mut SSL_CTX) -> *mut X509;
+    pub fn SSL_CTX_get0_privatekey(ctx: *mut SSL_CTX) -> *mut EVP_PKEY;
 
     #[cfg(feature = "npn")]
     pub fn SSL_CTX_set_next_protos_advertised_cb(ssl: *mut SSL_CTX,

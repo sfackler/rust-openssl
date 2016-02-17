@@ -29,6 +29,7 @@ use dh::DH;
 use ssl::error::{NonblockingSslError, SslError, OpenSslError, OpensslError};
 use x509::{X509StoreContext, X509FileType, X509};
 use crypto::pkey::PKey;
+use crypto::pkey::Parts;
 
 pub mod error;
 mod bio;
@@ -686,6 +687,28 @@ impl SslContext {
         })
     }
 
+    pub fn private_key(&self) -> Option<PKey> {
+        unsafe {
+            let ptr = ffi::SSL_CTX_get0_privatekey(self.ctx);
+            if ptr.is_null() {
+                None
+            } else {
+                Some(PKey::from_ref(ptr, Parts::Both))
+            }
+        }
+    }
+
+    pub fn certificate(&self) -> Option<X509<'static>> {
+        unsafe {
+            let ptr = ffi::SSL_CTX_get0_certificate(self.ctx);
+            if ptr.is_null() {
+                None
+            } else {
+                Some(X509::from_ref(ptr))
+            }
+        }
+    }
+
     /// If `onoff` is set to `true`, enable ECDHE for key exchange with compatible
     /// clients, and automatically select an appropriate elliptic curve.
     ///
@@ -870,13 +893,37 @@ impl Ssl {
     }
 
     /// Returns the certificate of the peer, if present.
-    pub fn peer_certificate(&self) -> Option<X509> {
+    pub fn peer_certificate(&self) -> Option<X509<'static>> {
         unsafe {
             let ptr = ffi::SSL_get_peer_certificate(self.ssl);
             if ptr.is_null() {
                 None
             } else {
                 Some(X509::new(ptr, true))
+            }
+        }
+    }
+
+    /// Return our local certificate, if present.
+    pub fn certificate(&self) -> Option<X509<'static>> {
+        unsafe {
+            let ptr = ffi::SSL_get_certificate(self.ssl);
+            if ptr.is_null() {
+                None
+            } else {
+                Some(X509::from_ref(ptr))
+            }
+        }
+    }
+
+    /// Return our local private key, if present.
+    pub fn private_key(&self) -> Option<PKey> {
+        unsafe {
+            let ptr = ffi::SSL_get_privatekey(self.ssl);
+            if ptr.is_null() {
+                None
+            } else {
+                Some(PKey::from_ref(ptr, Parts::Both))
             }
         }
     }

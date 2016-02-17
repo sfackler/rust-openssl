@@ -417,6 +417,19 @@ pub struct X509<'ctx> {
 }
 
 impl<'ctx> X509<'ctx> {
+    /// Create new from a handle, and incriment the internal X509 refounting appropriately.
+    ///
+    /// Generally used to transform returned `*mut ffi::X509`'s from ffi functions that don't
+    /// incriment refcount into static X509 handles.
+    pub fn from_ref(handle: *mut ffi::X509) -> X509<'ctx> {
+        assert!(!handle.is_null());
+        unsafe { rust_X509_clone(handle) }
+        /* FIXME: given that we now have refcounting control, 'owned' should be uneeded, the 'ctx
+         * is probably also uneeded. We can remove both to condense the x509 api quite a bit
+         */
+        X509::new(handle, true)
+    }
+
     /// Creates new from handle with desired ownership.
     pub fn new(handle: *mut ffi::X509, owned: bool) -> X509<'ctx> {
         X509 {
@@ -515,11 +528,7 @@ extern "C" {
 
 impl<'ctx> Clone for X509<'ctx> {
     fn clone(&self) -> X509<'ctx> {
-        unsafe { rust_X509_clone(self.handle) }
-        /* FIXME: given that we now have refcounting control, 'owned' should be uneeded, the 'ctx
-         * is probably also uneeded. We can remove both to condense the x509 api quite a bit
-         */
-        X509::new(self.handle, true)
+        X509::from_ref(self.handle)
     }
 }
 
