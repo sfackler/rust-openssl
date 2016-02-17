@@ -769,6 +769,46 @@ impl SslContext {
     }
 }
 
+pub struct SslCipher {
+    cipher: *const ffi::SSL_CIPHER,
+}
+
+impl SslCipher {
+    pub fn name(&self) -> &'static str {
+        let name = unsafe {
+            let ptr = ffi::SSL_CIPHER_get_name(self.cipher);
+            CStr::from_ptr(ptr as *const _)
+        };
+
+        str::from_utf8(name.to_bytes()).unwrap()
+    }
+
+    pub fn version(&self) -> &'static str {
+        let version = unsafe {
+            let ptr = ffi::SSL_CIPHER_get_version(self.cipher);
+            CStr::from_ptr(ptr as *const _)
+        };
+
+        str::from_utf8(version.to_bytes()).unwrap()
+    }
+
+    pub fn bits(&self) -> (i32, i32) {
+        unsafe {
+            let mut algo_bits : c_int = 0;
+            let actual_bits = ffi::SSL_CIPHER_get_bits(self.cipher, &mut algo_bits);
+            (actual_bits, algo_bits)
+        }
+    }
+
+    pub fn description(&self) -> String {
+        unsafe {
+            let desc_ptr = ffi::SSL_CIPHER_description(self.cipher, ptr::null_mut(), 0);
+            String::from_utf8(CStr::from_ptr(desc_ptr).to_bytes().to_vec()).unwrap()
+        }
+    }
+}
+
+
 pub struct Ssl {
     ssl: *mut ffi::SSL,
 }
@@ -833,6 +873,18 @@ impl Ssl {
         match LibSslError::from_i32(err as i32) {
             Some(err) => err,
             None => unreachable!(),
+        }
+    }
+
+    pub fn get_current_cipher(&self) -> Option<SslCipher> {
+        unsafe {
+            let ptr = ffi::SSL_get_current_cipher(self.ssl);
+
+            if ptr.is_null() {
+                None
+            } else {
+                Some(SslCipher{ cipher: ptr })
+            }
         }
     }
 

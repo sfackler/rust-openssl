@@ -24,6 +24,7 @@ pub type EVP_CIPHER_CTX = c_void;
 pub type EVP_MD = c_void;
 pub type EVP_PKEY_CTX = c_void;
 pub type SSL = c_void;
+pub type SSL_CIPHER = c_void;
 pub type SSL_CTX = c_void;
 pub type SSL_METHOD = c_void;
 pub type X509 = c_void;
@@ -648,6 +649,15 @@ extern "C" {
     pub fn SSL_get_servername(ssl: *const SSL, name_type: c_long) -> *const c_char;
 
     pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
+
+    pub fn SSL_get_current_cipher(ssl: *const SSL) -> *const SSL_CIPHER;
+
+    pub fn SSL_CIPHER_get_name(cipher: *const SSL_CIPHER) -> *const c_char;
+    pub fn SSL_CIPHER_get_bits(cipher: *const SSL_CIPHER, alg_bits: *const c_int) -> c_int;
+    pub fn SSL_CIPHER_get_version(cipher: *const SSL_CIPHER) -> *const c_char;
+    pub fn SSL_CIPHER_description(cipher: *const SSL_CIPHER, buf: *mut c_char, size: c_int) -> *const c_char;
+    pub fn SSL_CIPHER_get_cipher_nid(cipher: *const SSL_CIPHER) -> c_int;
+    pub fn SSL_CIPHER_get_digest_nid(cipher: *const SSL_CIPHER) -> c_int;
 
     pub fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
     pub fn SSL_CTX_free(ctx: *mut SSL_CTX);
