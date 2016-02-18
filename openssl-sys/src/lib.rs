@@ -588,6 +588,7 @@ extern "C" {
 
     pub fn RAND_bytes(buf: *mut u8, num: c_int) -> c_int;
 
+    pub fn RSA_new() -> *mut RSA;
     pub fn RSA_free(rsa: *mut RSA);
     pub fn RSA_generate_key(modsz: c_int, e: c_ulong, cb: *const c_void, cbarg: *const c_void) -> *mut RSA;
     pub fn RSA_generate_key_ex(rsa: *mut RSA, bits: c_int, e: *mut BIGNUM, cb: *const c_void) -> c_int;

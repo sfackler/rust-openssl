@@ -473,6 +473,11 @@ impl BigNum {
         n
     }
 
+    pub unsafe fn into_raw(self) -> *mut ffi::BIGNUM {
+        let mut me = self;
+        ptr::replace(&mut me.0, ptr::null_mut())
+    }
+
     pub fn to_vec(&self) -> Vec<u8> {
         let size = self.num_bytes() as usize;
         let mut v = Vec::with_capacity(size);
