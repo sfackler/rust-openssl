@@ -643,6 +643,7 @@ extern "C" {
     pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const COMP_METHOD;
     pub fn SSL_get_peer_certificate(ssl: *mut SSL) -> *mut X509;
     pub fn SSL_get_ssl_method(ssl: *mut SSL) -> *const SSL_METHOD;
+    pub fn SSL_get_version(ssl: *mut SSL) -> *const c_char;
     pub fn SSL_state_string(ssl: *mut SSL) -> *const c_char;
     pub fn SSL_state_string_long(ssl: *mut SSL) -> *const c_char;
 
@@ -656,8 +657,6 @@ extern "C" {
     pub fn SSL_CIPHER_get_bits(cipher: *const SSL_CIPHER, alg_bits: *const c_int) -> c_int;
     pub fn SSL_CIPHER_get_version(cipher: *const SSL_CIPHER) -> *const c_char;
     pub fn SSL_CIPHER_description(cipher: *const SSL_CIPHER, buf: *mut c_char, size: c_int) -> *const c_char;
-    pub fn SSL_CIPHER_get_cipher_nid(cipher: *const SSL_CIPHER) -> c_int;
-    pub fn SSL_CIPHER_get_digest_nid(cipher: *const SSL_CIPHER) -> c_int;
 
     pub fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
     pub fn SSL_CTX_free(ctx: *mut SSL_CTX);
