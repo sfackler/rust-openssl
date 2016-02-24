@@ -208,13 +208,10 @@ impl PKey {
     /// pass ownership of the RSA key to this
     pub fn set_rsa(&mut self, rsa: RSA) {
         unsafe {
-            // TODO: should we do something like panic if null? this will fail silently right now
             let rsa_ptr = rsa.as_ptr();
-            if !rsa_ptr.is_null() {
-                if ffi::EVP_PKEY_set1_RSA(self.evp, rsa_ptr) == 1 {
-                    if rsa.has_e() && rsa.has_n() {
-                        self.parts = Parts::Public;
-                    }
+            if ffi::EVP_PKEY_set1_RSA(self.evp, rsa_ptr) == 1 {
+                if rsa.has_e() && rsa.has_n() {
+                    self.parts = Parts::Public;
                 }
             }
         }
@@ -225,7 +222,7 @@ impl PKey {
         unsafe {
             let evp_pkey: *mut ffi::EVP_PKEY = self.evp;
             // this is safe as the ffi increments a reference counter to the internal key
-            RSA(ffi::EVP_PKEY_get1_RSA(evp_pkey))
+            RSA::with_raw(ffi::EVP_PKEY_get1_RSA(evp_pkey))
         }
     }
 

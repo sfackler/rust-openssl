@@ -7,7 +7,7 @@ use std::io::{self, Read};
 use bn::BigNum;
 use bio::MemBio;
 
-pub struct RSA(pub *mut ffi::RSA);
+pub struct RSA(*mut ffi::RSA);
 
 impl Drop for RSA {
     fn drop(&mut self) {
@@ -25,6 +25,10 @@ impl RSA {
             let rsa = try_ssl_null!(ffi::RSA_new());
             Ok(RSA(rsa))
         }
+    }
+
+    pub fn with_raw(rsa: *mut ffi::RSA) -> RSA {
+        RSA(rsa)
     }
 
     /// Reads an RSA private key from PEM formatted data.
