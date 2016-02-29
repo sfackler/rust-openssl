@@ -769,6 +769,15 @@ impl SslContext {
     }
 }
 
+
+pub struct CipherBits {
+    /// The number of secret bits used for the cipher.
+    pub secret: i32,
+    /// The number of bits processed by the chosen algorithm, if not None.
+    pub algorithm: Option<i32>,
+}
+
+
 pub struct SslCipher<'a> {
     cipher: *const ffi::SSL_CIPHER,
     ph: PhantomData<&'a ()>,
@@ -795,20 +804,15 @@ impl <'a> SslCipher<'a> {
         str::from_utf8(version.to_bytes()).unwrap()
     }
 
-    /// Returns the number of secret bits used for the cipher.
-    ///
-    /// The first element is the number of secret bits used for the cipher.
-    ///
-    /// The second element, if not None, is the number of bits processed by
-    /// the chosen algorithm,
-    pub fn bits(&self) -> (i32, Option<i32>) {
+    /// Returns the number of bits used for the cipher.
+    pub fn bits(&self) -> CipherBits {
         unsafe {
             let algo_bits : *mut c_int = ptr::null_mut();
-            let actual_bits = ffi::SSL_CIPHER_get_bits(self.cipher, algo_bits);
+            let secret_bits = ffi::SSL_CIPHER_get_bits(self.cipher, algo_bits);
             if !algo_bits.is_null() {
-                (actual_bits, Some(*algo_bits))
+                CipherBits { secret: secret_bits, algorithm: Some(*algo_bits) }
             } else {
-                (actual_bits, None)
+                CipherBits { secret: secret_bits, algorithm: None }
             }
         }
     }
