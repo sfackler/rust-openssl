@@ -1,7 +1,7 @@
 use libc::{c_int, c_ulong, c_void};
 use std::ffi::{CStr, CString};
 use std::cmp::Ordering;
-use std::{fmt, ptr};
+use std::{fmt, ptr, mem};
 
 use ffi;
 use ssl::error::SslError;
@@ -473,9 +473,9 @@ impl BigNum {
         n
     }
 
-    pub unsafe fn into_raw(self) -> *mut ffi::BIGNUM {
+    pub fn into_raw(self) -> *mut ffi::BIGNUM {
         let mut me = self;
-        ptr::replace(&mut me.0, ptr::null_mut())
+        mem::replace(&mut me.0, ptr::null_mut())
     }
 
     pub fn to_vec(&self) -> Vec<u8> {

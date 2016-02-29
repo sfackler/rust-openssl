@@ -20,14 +20,16 @@ impl Drop for RSA {
 impl RSA {
     /// only useful for associating the key material directly with the key, it's safer to use
     /// the supplied load and save methods for DER formatted keys.
-    pub fn new() -> Result<RSA, SslError> {
+    pub fn from_public_components(n: BigNum, e: BigNum) -> Result<RSA, SslError> {
         unsafe {
             let rsa = try_ssl_null!(ffi::RSA_new());
+            (*rsa).n = n.into_raw();
+            (*rsa).e = e.into_raw();
             Ok(RSA(rsa))
         }
     }
 
-    pub fn with_raw(rsa: *mut ffi::RSA) -> RSA {
+    pub fn from_raw(rsa: *mut ffi::RSA) -> RSA {
         RSA(rsa)
     }
 
@@ -74,13 +76,6 @@ impl RSA {
         }
     }
 
-    /// set the key modulus
-    pub fn set_n(&mut self, n: BigNum) {
-        unsafe {
-            (*self.0).n = n.into_raw();
-        }
-    }
-
     pub fn has_n(&self) -> bool {
         unsafe {
             !(*self.0).n.is_null()
@@ -96,13 +91,6 @@ impl RSA {
     pub fn e(&self) -> Result<BigNum, SslError> {
         unsafe {
             BigNum::new_from_ffi((*self.0).e)
-        }
-    }
-
-    /// set the exponent
-    pub fn set_e(&mut self, e: BigNum) {
-        unsafe {
-            (*self.0).e = e.into_raw();
         }
     }
 
