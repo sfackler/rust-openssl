@@ -769,6 +769,71 @@ impl SslContext {
     }
 }
 
+
+pub struct CipherBits {
+    /// The number of secret bits used for the cipher.
+    pub secret: i32,
+    /// The number of bits processed by the chosen algorithm, if not None.
+    pub algorithm: Option<i32>,
+}
+
+
+pub struct SslCipher<'a> {
+    cipher: *const ffi::SSL_CIPHER,
+    ph: PhantomData<&'a ()>,
+}
+
+impl <'a> SslCipher<'a> {
+    /// Returns the name of cipher.
+    pub fn name(&self) -> &'static str {
+        let name = unsafe {
+            let ptr = ffi::SSL_CIPHER_get_name(self.cipher);
+            CStr::from_ptr(ptr as *const _)
+        };
+
+        str::from_utf8(name.to_bytes()).unwrap()
+    }
+
+    /// Returns the SSL/TLS protocol version that first defined the cipher.
+    pub fn version(&self) -> &'static str {
+        let version = unsafe {
+            let ptr = ffi::SSL_CIPHER_get_version(self.cipher);
+            CStr::from_ptr(ptr as *const _)
+        };
+
+        str::from_utf8(version.to_bytes()).unwrap()
+    }
+
+    /// Returns the number of bits used for the cipher.
+    pub fn bits(&self) -> CipherBits {
+        unsafe {
+            let algo_bits : *mut c_int = ptr::null_mut();
+            let secret_bits = ffi::SSL_CIPHER_get_bits(self.cipher, algo_bits);
+            if !algo_bits.is_null() {
+                CipherBits { secret: secret_bits, algorithm: Some(*algo_bits) }
+            } else {
+                CipherBits { secret: secret_bits, algorithm: None }
+            }
+        }
+    }
+
+    /// Returns a textual description of the cipher used
+    pub fn description(&self) -> Option<String> {
+        unsafe {
+            // SSL_CIPHER_description requires a buffer of at least 128 bytes.
+            let mut buf = [0i8; 128];
+            let desc_ptr = ffi::SSL_CIPHER_description(self.cipher, &mut buf[0], 128);
+
+            if !desc_ptr.is_null() {
+                String::from_utf8(CStr::from_ptr(desc_ptr).to_bytes().to_vec()).ok()
+            } else {
+                None
+            }
+        }
+    }
+}
+
+
 pub struct Ssl {
     ssl: *mut ffi::SSL,
 }
@@ -836,6 +901,18 @@ impl Ssl {
         }
     }
 
+    pub fn get_current_cipher<'a>(&'a self) -> Option<SslCipher<'a>> {
+        unsafe {
+            let ptr = ffi::SSL_get_current_cipher(self.ssl);
+
+            if ptr.is_null() {
+                None
+            } else {
+                Some(SslCipher{ cipher: ptr, ph: PhantomData })
+            }
+        }
+    }
+
     pub fn state_string(&self) -> &'static str {
         let state = unsafe {
             let ptr = ffi::SSL_state_string(self.ssl);
@@ -879,6 +956,16 @@ impl Ssl {
                 Some(X509::new(ptr, true))
             }
         }
+    }
+
+    /// Returns the name of the protocol used for the connection, e.g. "TLSv1.2", "SSLv3", etc.
+    pub fn version(&self) -> &'static str {
+        let version = unsafe {
+             let ptr = ffi::SSL_get_version(self.ssl);
+             CStr::from_ptr(ptr as *const _)
+        };
+
+        str::from_utf8(version.to_bytes()).unwrap()
     }
 
     /// Returns the protocol selected by performing Next Protocol Negotiation, if any.
