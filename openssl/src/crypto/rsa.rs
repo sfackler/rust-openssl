@@ -29,7 +29,8 @@ impl RSA {
         }
     }
 
-    pub fn from_raw(rsa: *mut ffi::RSA) -> RSA {
+    /// the caller should assert that the rsa pointer is valid.
+    pub unsafe fn from_raw(rsa: *mut ffi::RSA) -> RSA {
         RSA(rsa)
     }
 
