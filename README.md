@@ -44,10 +44,30 @@ export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib
 On Windows, consider building with [mingw-w64](http://mingw-w64.org/).
 Build script will try to find mingw in `PATH` environment variable to provide
 Cargo with location where openssl libs from mingw-w64 package may be found.
-If you followed guide [Building on Windows](https://github.com/rust-lang/rust#building-on-windows)
-from rust repo, then you should have [MSYS2](http://msys2.github.io/) with
-`mingw-w64-openssl` installed as part of `mingw-w64-x86_64-toolchain`
-(or `mingw-w64-i686-toolchain`) package.
+
+mingw-w64 can be easily installed by using [MSYS2](http://msys2.github.io/). Install MSYS2 according to the instructions, and then, from an MSYS2 Shell, install mingw-w64:
+
+32-bit:
+```bash
+pacman -S mingw-w64-i686-gcc
+``` 
+
+64-bit
+```bash
+pacman -S mingw-w64-x86_64-gcc
+```
+
+and then install the mingw-w64 toolchain.
+
+32-bit:
+```bash
+pacman -S mingw-w64-x86_64-toolchain
+```
+
+64-bit:
+```bash
+pacman -S mingw-w64-i686-toolchain
+```
 
 Alternatively, install OpenSSL from [here][1]. Cargo will not be able to find OpenSSL if it's
 installed to the default location. You can either copy the `include/openssl`
