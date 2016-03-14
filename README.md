@@ -61,12 +61,12 @@ and then install the mingw-w64 toolchain.
 
 32-bit:
 ```bash
-pacman -S mingw-w64-x86_64-toolchain
+pacman -S mingw-w64-i686-toolchain
 ```
 
 64-bit:
 ```bash
-pacman -S mingw-w64-i686-toolchain
+pacman -S mingw-w64-x86_64-toolchain
 ```
 
 Alternatively, install OpenSSL from [here][1]. Cargo will not be able to find OpenSSL if it's
