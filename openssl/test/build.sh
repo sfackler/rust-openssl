@@ -15,7 +15,7 @@ fi
 
 mkdir /tmp/openssl
 cd /tmp/openssl
-curl https://openssl.org/source/openssl-1.0.2f.tar.gz | tar --strip-components=1 -xzf -
+curl https://openssl.org/source/openssl-1.0.2g.tar.gz | tar --strip-components=1 -xzf -
 ./Configure --prefix=$HOME/openssl shared --cross-compile-prefix=$CROSS $OS_COMPILER
 make
 make install

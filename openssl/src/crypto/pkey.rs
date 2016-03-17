@@ -205,6 +205,28 @@ impl PKey {
         }
     }
 
+    /// assign RSA key to this pkey
+    pub fn set_rsa(&mut self, rsa: &RSA) {
+        unsafe {
+            // this needs to be a reference as the set1_RSA ups the reference count
+            let rsa_ptr = rsa.as_ptr();
+            if ffi::EVP_PKEY_set1_RSA(self.evp, rsa_ptr) == 1 {
+                if rsa.has_e() && rsa.has_n() {
+                    self.parts = Parts::Public;
+                }
+            }
+        }
+    }
+
+    /// get a reference to the interal RSA key for direct access to the key components
+    pub fn get_rsa(&self) -> RSA {
+        unsafe {
+            let evp_pkey: *mut ffi::EVP_PKEY = self.evp;
+            // this is safe as the ffi increments a reference counter to the internal key
+            RSA::from_raw(ffi::EVP_PKEY_get1_RSA(evp_pkey))
+        }
+    }
+
     /**
      * Returns a DER serialized form of the public key, suitable for load_pub().
      */
@@ -604,6 +626,7 @@ mod tests {
     use std::path::Path;
     use std::fs::File;
     use crypto::hash::Type::{MD5, SHA1};
+    use crypto::rsa::RSA;
 
     #[test]
     fn test_gen_pub() {
@@ -788,6 +811,28 @@ mod tests {
         // the `PRIVATE KEY` or `PUBLIC KEY` strings.
         assert!(priv_key.windows(11).any(|s| s == b"PRIVATE KEY"));
         assert!(pub_key.windows(10).any(|s| s == b"PUBLIC KEY"));
+    }
+
+    #[test]
+    fn test_public_key_from_raw() {
+        let mut k0 = super::PKey::new();
+        let mut k1 = super::PKey::new();
+        let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
+
+        k0.gen(512);
+        let sig = k0.sign(&msg);
+
+        let r0 = k0.get_rsa();
+        let r1 = RSA::from_public_components(r0.n().expect("n"), r0.e().expect("e")).expect("r1");
+        k1.set_rsa(&r1);
+
+        assert!(k1.can(super::Role::Encrypt));
+        assert!(!k1.can(super::Role::Decrypt));
+        assert!(k1.can(super::Role::Verify));
+        assert!(!k1.can(super::Role::Sign));
+
+        let rv = k1.verify(&msg, &sig);
+        assert!(rv == true);
     }
 
     #[test]

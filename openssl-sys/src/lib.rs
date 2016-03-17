@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.6")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.7")]
 
 extern crate libc;
 
@@ -24,6 +24,7 @@ pub type EVP_CIPHER_CTX = c_void;
 pub type EVP_MD = c_void;
 pub type EVP_PKEY_CTX = c_void;
 pub type SSL = c_void;
+pub type SSL_CIPHER = c_void;
 pub type SSL_CTX = c_void;
 pub type SSL_METHOD = c_void;
 pub type X509 = c_void;
@@ -588,6 +589,7 @@ extern "C" {
 
     pub fn RAND_bytes(buf: *mut u8, num: c_int) -> c_int;
 
+    pub fn RSA_new() -> *mut RSA;
     pub fn RSA_free(rsa: *mut RSA);
     pub fn RSA_generate_key(modsz: c_int, e: c_ulong, cb: *const c_void, cbarg: *const c_void) -> *mut RSA;
     pub fn RSA_generate_key_ex(rsa: *mut RSA, bits: c_int, e: *mut BIGNUM, cb: *const c_void) -> c_int;
@@ -642,12 +644,20 @@ extern "C" {
     pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const COMP_METHOD;
     pub fn SSL_get_peer_certificate(ssl: *mut SSL) -> *mut X509;
     pub fn SSL_get_ssl_method(ssl: *mut SSL) -> *const SSL_METHOD;
+    pub fn SSL_get_version(ssl: *mut SSL) -> *const c_char;
     pub fn SSL_state_string(ssl: *mut SSL) -> *const c_char;
     pub fn SSL_state_string_long(ssl: *mut SSL) -> *const c_char;
 
     pub fn SSL_get_servername(ssl: *const SSL, name_type: c_long) -> *const c_char;
 
     pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
+
+    pub fn SSL_get_current_cipher(ssl: *const SSL) -> *const SSL_CIPHER;
+
+    pub fn SSL_CIPHER_get_name(cipher: *const SSL_CIPHER) -> *const c_char;
+    pub fn SSL_CIPHER_get_bits(cipher: *const SSL_CIPHER, alg_bits: *const c_int) -> c_int;
+    pub fn SSL_CIPHER_get_version(cipher: *const SSL_CIPHER) -> *const c_char;
+    pub fn SSL_CIPHER_description(cipher: *const SSL_CIPHER, buf: *mut c_char, size: c_int) -> *const c_char;
 
     pub fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
     pub fn SSL_CTX_free(ctx: *mut SSL_CTX);

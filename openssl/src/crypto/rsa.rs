@@ -18,6 +18,22 @@ impl Drop for RSA {
 }
 
 impl RSA {
+    /// only useful for associating the key material directly with the key, it's safer to use
+    /// the supplied load and save methods for DER formatted keys.
+    pub fn from_public_components(n: BigNum, e: BigNum) -> Result<RSA, SslError> {
+        unsafe {
+            let rsa = try_ssl_null!(ffi::RSA_new());
+            (*rsa).n = n.into_raw();
+            (*rsa).e = e.into_raw();
+            Ok(RSA(rsa))
+        }
+    }
+
+    /// the caller should assert that the rsa pointer is valid.
+    pub unsafe fn from_raw(rsa: *mut ffi::RSA) -> RSA {
+        RSA(rsa)
+    }
+
     /// Reads an RSA private key from PEM formatted data.
     pub fn private_key_from_pem<R>(reader: &mut R) -> Result<RSA, SslError>
     where R: Read
@@ -61,6 +77,12 @@ impl RSA {
         }
     }
 
+    pub fn has_n(&self) -> bool {
+        unsafe {
+            !(*self.0).n.is_null()
+        }
+    }
+
     pub fn d(&self) -> Result<BigNum, SslError> {
         unsafe {
             BigNum::new_from_ffi((*self.0).d)
@@ -70,6 +92,12 @@ impl RSA {
     pub fn e(&self) -> Result<BigNum, SslError> {
         unsafe {
             BigNum::new_from_ffi((*self.0).e)
+        }
+    }
+
+    pub fn has_e(&self) -> bool {
+        unsafe {
+            !(*self.0).e.is_null()
         }
     }
 

@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/sfackler/rust-openssl.svg?branch=master)](https://travis-ci.org/sfackler/rust-openssl)
 
-[Documentation](https://sfackler.github.io/rust-openssl/doc/v0.7.6/openssl).
+[Documentation](https://sfackler.github.io/rust-openssl/doc/v0.7.7/openssl).
 
 ## Building
 
@@ -30,6 +30,14 @@ linking against OpenSSL 1.0.0 or greater; see below on how to point
 rust-openssl to a separate installation. OSX releases starting at 10.11, "El
 Capitan", no longer include OpenSSL headers which will prevent the `openssl`
 crate from compiling.
+
+For OSX 10.11 you can use brew to install OpenSSL and then set the environment variables
+as described below.
+```bash
+brew install openssl
+export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
+export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib
+```
 
 ### Windows
 
