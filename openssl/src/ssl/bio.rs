@@ -11,9 +11,6 @@ use std::sync::Arc;
 
 use ssl::error::SslError;
 
-// "rust"
-const NAME: [c_char; 5] = [114, 117, 115, 116, 0];
-
 pub struct StreamState<S> {
     pub stream: S,
     pub error: Option<io::Error>,
@@ -23,7 +20,7 @@ pub struct StreamState<S> {
 pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Arc<BIO_METHOD>), SslError> {
     let method = Arc::new(BIO_METHOD {
         type_: BIO_TYPE_NONE,
-        name: &NAME[0],
+        name: b"rust\0".as_ptr() as *const _,
         bwrite: Some(bwrite::<S>),
         bread: Some(bread::<S>),
         bputs: Some(bputs::<S>),
