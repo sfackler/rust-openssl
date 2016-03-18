@@ -823,8 +823,8 @@ impl <'a> SslCipher<'a> {
     pub fn description(&self) -> Option<String> {
         unsafe {
             // SSL_CIPHER_description requires a buffer of at least 128 bytes.
-            let mut buf = [0i8; 128];
-            let desc_ptr = ffi::SSL_CIPHER_description(self.cipher, &mut buf[0], 128);
+            let mut buf = [0; 128];
+            let desc_ptr = ffi::SSL_CIPHER_description(self.cipher, buf.as_mut_ptr(), 128);
 
             if !desc_ptr.is_null() {
                 String::from_utf8(CStr::from_ptr(desc_ptr).to_bytes().to_vec()).ok()
