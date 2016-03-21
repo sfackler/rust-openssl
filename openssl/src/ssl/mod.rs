@@ -827,7 +827,7 @@ impl <'a> SslCipher<'a> {
             let desc_ptr = ffi::SSL_CIPHER_description(self.cipher, buf.as_mut_ptr(), 128);
 
             if !desc_ptr.is_null() {
-                String::from_utf8(CStr::from_ptr(desc_ptr).to_bytes().to_vec()).ok()
+                String::from_utf8(CStr::from_ptr(desc_ptr as *const _).to_bytes().to_vec()).ok()
             } else {
                 None
             }
