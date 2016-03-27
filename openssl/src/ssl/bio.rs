@@ -72,7 +72,7 @@ unsafe fn state<'a, S: 'a>(bio: *mut BIO) -> &'a mut StreamState<S> {
 
 #[cfg(feature = "nightly")]
 fn recover<F, T>(f: F) -> Result<T, Box<Any + Send>> where F: FnOnce() -> T {
-    ::std::panic::recover(::std::panic::AssertRecoverSafe::new(f))
+    ::std::panic::recover(::std::panic::AssertRecoverSafe(f))
 }
 
 #[cfg(not(feature = "nightly"))]
