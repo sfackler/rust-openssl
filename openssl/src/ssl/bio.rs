@@ -86,9 +86,7 @@ unsafe extern "C" fn bwrite<S: Write>(bio: *mut BIO, buf: *const c_char, len: c_
     let state = state::<S>(bio);
     let buf = slice::from_raw_parts(buf as *const _, len as usize);
 
-    let result = recover(|| state.stream.write(buf));
-
-    match result {
+    match recover(|| state.stream.write(buf)) {
         Ok(Ok(len)) => len as c_int,
         Ok(Err(err)) => {
             if retriable_error(&err) {
@@ -110,9 +108,7 @@ unsafe extern "C" fn bread<S: Read>(bio: *mut BIO, buf: *mut c_char, len: c_int)
     let state = state::<S>(bio);
     let buf = slice::from_raw_parts_mut(buf as *mut _, len as usize);
 
-    let result = recover(|| state.stream.read(buf));
-
-    match result {
+    match recover(|| state.stream.read(buf)) {
         Ok(Ok(len)) => len as c_int,
         Ok(Err(err)) => {
             if retriable_error(&err) {
@@ -146,9 +142,8 @@ unsafe extern "C" fn ctrl<S: Write>(bio: *mut BIO,
                                     -> c_long {
     if cmd == BIO_CTRL_FLUSH {
         let state = state::<S>(bio);
-        let result = recover(|| state.stream.flush());
 
-        match result {
+        match recover(|| state.stream.flush()) {
             Ok(Ok(())) => 1,
             Ok(Err(err)) => {
                 state.error = Some(err);
