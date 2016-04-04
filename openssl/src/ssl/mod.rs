@@ -35,6 +35,8 @@ mod bio;
 #[cfg(test)]
 mod tests;
 
+use self::bio::BioMethod;
+
 #[doc(inline)]
 pub use ssl::error::Error;
 
@@ -1117,11 +1119,9 @@ make_LibSslError! {
 /// A stream wrapper which handles SSL encryption for an underlying stream.
 pub struct SslStream<S> {
     ssl: Ssl,
-    _method: Arc<ffi::BIO_METHOD>, // NOTE: this *must* be after the Ssl field so things drop right
+    _method: Arc<BioMethod>, // NOTE: this *must* be after the Ssl field so things drop right
     _p: PhantomData<S>,
 }
-
-unsafe impl<S: Send> Send for SslStream<S> {}
 
 /// # Deprecated
 ///

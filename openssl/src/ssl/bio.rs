@@ -1,5 +1,5 @@
 use libc::{c_char, c_int, c_long, c_void, strlen};
-use ffi::{BIO, BIO_METHOD, BIO_CTRL_FLUSH, BIO_TYPE_NONE, BIO_new};
+use ffi::{self, BIO, BIO_CTRL_FLUSH, BIO_TYPE_NONE, BIO_new};
 use ffi_extras::{BIO_clear_retry_flags, BIO_set_retry_read, BIO_set_retry_write};
 use std::any::Any;
 use std::io;
@@ -17,19 +17,30 @@ pub struct StreamState<S> {
     pub panic: Option<Box<Any + Send>>,
 }
 
-pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Arc<BIO_METHOD>), SslError> {
-    let method = Arc::new(BIO_METHOD {
-        type_: BIO_TYPE_NONE,
-        name: b"rust\0".as_ptr() as *const _,
-        bwrite: Some(bwrite::<S>),
-        bread: Some(bread::<S>),
-        bputs: Some(bputs::<S>),
-        bgets: None,
-        ctrl: Some(ctrl::<S>),
-        create: Some(create),
-        destroy: Some(destroy::<S>),
-        callback_ctrl: None,
-    });
+/// Safe wrapper for BIO_METHOD
+pub struct BioMethod(ffi::BIO_METHOD);
+
+impl BioMethod {
+    pub fn new<S: Read + Write>() -> BioMethod {
+        BioMethod(ffi::BIO_METHOD {
+                type_: BIO_TYPE_NONE,
+                name: b"rust\0".as_ptr() as *const _,
+                bwrite: Some(bwrite::<S>),
+                bread: Some(bread::<S>),
+                bputs: Some(bputs::<S>),
+                bgets: None,
+                ctrl: Some(ctrl::<S>),
+                create: Some(create),
+                destroy: Some(destroy::<S>),
+                callback_ctrl: None,
+        })
+    }
+}
+
+unsafe impl Send for BioMethod {}
+
+pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Arc<BioMethod>), SslError> {
+    let method = Arc::new(BioMethod::new::<S>());
 
     let state = Box::new(StreamState {
         stream: stream,
@@ -38,7 +49,7 @@ pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Arc<BIO_METHOD>), Ss
     });
 
     unsafe {
-        let bio = try_ssl_null!(BIO_new(&*method));
+        let bio = try_ssl_null!(BIO_new(&method.0));
         (*bio).ptr = Box::into_raw(state) as *mut _;
         (*bio).init = 1;
 
