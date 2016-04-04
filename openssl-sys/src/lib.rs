@@ -60,6 +60,8 @@ pub struct BIO_METHOD {
     pub callback_ctrl: Option<unsafe extern "C" fn(*mut BIO, c_int, bio_info_cb) -> c_long>,
 }
 
+unsafe impl Send for BIO_METHOD {}
+
 // so we can create static BIO_METHODs
 unsafe impl Sync for BIO_METHOD {}
 
@@ -92,6 +94,8 @@ pub struct RSA {
     pub mt_blinding: *mut c_void,
 }
 
+unsafe impl Send for RSA {}
+
 #[repr(C)]
 pub struct EVP_PKEY {
     pub type_: c_int,
@@ -103,6 +107,8 @@ pub struct EVP_PKEY {
     pub save_parameters: c_int,
     pub attributes: *mut c_void,
 }
+
+unsafe impl Send for EVP_PKEY {}
 
 #[repr(C)]
 pub struct BIO {
@@ -129,11 +135,14 @@ pub struct BIO {
     pub ex_data: CRYPTO_EX_DATA,
 }
 
+unsafe impl Send for BIO {}
+
 #[repr(C)]
 pub struct CRYPTO_EX_DATA {
     pub sk: *mut stack_st_void,
     pub dummy: c_int,
 }
+unsafe impl Send for CRYPTO_EX_DATA {}
 
 #[repr(C)]
 pub struct EVP_MD_CTX {
@@ -144,6 +153,8 @@ pub struct EVP_MD_CTX {
     pctx: *mut EVP_PKEY_CTX,
     update: *mut c_void
 }
+
+unsafe impl Send for EVP_MD_CTX {}
 
 impl Copy for EVP_MD_CTX {}
 impl Clone for EVP_MD_CTX {
@@ -159,6 +170,8 @@ pub struct HMAC_CTX {
     key_length: c_uint,
     key: [c_uchar; 128]
 }
+
+unsafe impl Send for HMAC_CTX {}
 
 impl Copy for HMAC_CTX {}
 impl Clone for HMAC_CTX {
@@ -178,6 +191,8 @@ pub struct X509V3_CTX {
     // Maybe more here
 }
 
+unsafe impl Send for X509V3_CTX {}
+
 impl Copy for X509V3_CTX {}
 impl Clone for X509V3_CTX {
     fn clone(&self) -> X509V3_CTX { *self }
@@ -191,6 +206,8 @@ pub struct BIGNUM {
     pub neg: c_int,
     pub flags: c_int,
 }
+
+unsafe impl Send for BIGNUM {}
 
 impl Copy for BIGNUM {}
 impl Clone for BIGNUM {
