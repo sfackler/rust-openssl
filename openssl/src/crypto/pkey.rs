@@ -53,10 +53,6 @@ fn openssl_hash_nid(hash: HashType) -> c_int {
     }
 }
 
-extern "C" {
-    fn rust_EVP_PKEY_clone(pkey: *mut ffi::EVP_PKEY);
-}
-
 pub struct PKey {
     evp: *mut ffi::EVP_PKEY,
     parts: Parts,
@@ -614,10 +610,10 @@ impl Drop for PKey {
 impl Clone for PKey {
     fn clone(&self) -> Self {
         unsafe {
-            rust_EVP_PKEY_clone(self.evp);
+            let new_evp = ffi::EVP_PKEY_new();
+            assert!(ffi::EVP_PKEY_copy_parameters(new_evp, self.evp) == 0);
+            PKey::from_handle(new_evp, self.parts)
         }
-
-        PKey::from_handle(self.evp, self.parts)
     }
 }
 
@@ -865,5 +861,17 @@ mod tests {
         let mut pkey = super::PKey::new();
         pkey.load_pub(&[]);
         pkey.verify(&[], &[]);
+    }
+
+    #[test]
+    fn test_pkey_clone_creates_copy() {
+        let mut pkey = super::PKey::new();
+        pkey.gen(512);
+        let old_pkey_n = pkey.get_rsa().n().unwrap();
+
+        let mut pkey2 = pkey.clone();
+        pkey2.gen(512);
+
+        assert!(old_pkey_n == pkey.get_rsa().n().unwrap());
     }
 }
