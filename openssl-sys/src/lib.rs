@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.8")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.9")]
 
 extern crate libc;
 
@@ -548,6 +548,7 @@ extern "C" {
     pub fn EVP_PKEY_new() -> *mut EVP_PKEY;
     pub fn EVP_PKEY_free(k: *mut EVP_PKEY);
     pub fn EVP_PKEY_assign(pkey: *mut EVP_PKEY, typ: c_int, key: *const c_void) -> c_int;
+    pub fn EVP_PKEY_copy_parameters(to: *mut EVP_PKEY, from: *const EVP_PKEY) -> c_int;
     pub fn EVP_PKEY_get1_RSA(k: *mut EVP_PKEY) -> *mut RSA;
     pub fn EVP_PKEY_set1_RSA(k: *mut EVP_PKEY, r: *mut RSA) -> c_int;
     pub fn EVP_PKEY_cmp(a: *const EVP_PKEY, b: *const EVP_PKEY) -> c_int;
