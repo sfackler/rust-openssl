@@ -36,6 +36,7 @@ pub type X509_REQ = c_void;
 pub type X509_STORE_CTX = c_void;
 pub type stack_st_X509_EXTENSION = c_void;
 pub type stack_st_void = c_void;
+pub type stack_of_X509_NAME = c_void;
 pub type bio_st = c_void;
 
 pub type bio_info_cb = Option<unsafe extern "C" fn(*mut BIO,
@@ -686,6 +687,8 @@ extern "C" {
 
     pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;
 
+    pub fn SSL_CTX_set_client_CA_list(ssl: *mut SSL_CTX, s: *const stack_of_X509_NAME) -> c_int;
+
     #[cfg(feature = "npn")]
     pub fn SSL_CTX_set_next_protos_advertised_cb(ssl: *mut SSL_CTX,
                                                  cb: extern "C" fn(ssl: *mut SSL,
@@ -726,6 +729,8 @@ extern "C" {
                                             arg: *mut c_void);
     #[cfg(feature = "alpn")]
     pub fn SSL_get0_alpn_selected(s: *const SSL, data: *mut *const c_uchar, len: *mut c_uint);
+
+    pub fn SSL_load_client_CA_file(file: *const c_char) -> *mut stack_of_X509_NAME;
 
     pub fn X509_add_ext(x: *mut X509, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
     pub fn X509_digest(x: *mut X509, digest: *const EVP_MD, buf: *mut c_char, len: *mut c_uint) -> c_int;
