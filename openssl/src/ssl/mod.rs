@@ -621,6 +621,20 @@ impl SslContext {
         })
     }
 
+    /// Set the context identifier for sessions
+    ///
+    /// This value identifies the server's session cache to a clients, telling them when they're
+    /// able to reuse sessions. Should be set to a unique value per server, unless multiple servers
+    /// share a session cache.
+    ///
+    /// This value should be set when using client certificates, or each request will fail
+    /// handshake and need to be restarted.
+    pub fn set_session_id_context(&mut self, sid_ctx: &[u8]) -> Result<(), SslError> {
+        wrap_ssl_result(unsafe {
+            ffi::SSL_CTX_set_session_id_context(self.ctx, sid_ctx.as_ptr(), sid_ctx.len() as u32)
+        })
+    }
+
     /// Specifies the file that contains certificate
     pub fn set_certificate_file<P: AsRef<Path>>(&mut self,
                                                 file: P,
