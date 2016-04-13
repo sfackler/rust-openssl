@@ -621,8 +621,7 @@ impl SslContext {
         let file = CString::new(file.as_ref().as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(unsafe {
             let names = ffi::SSL_load_client_CA_file(file.as_ptr() as *const _);
-            // For some reason a 0 return value here indicates failure instead of success
-            1 - ffi::SSL_CTX_set_client_CA_list(self.ctx, names)
+            ffi::SSL_CTX_set_client_CA_list(self.ctx, names)
         })
     }
 
