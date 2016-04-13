@@ -259,6 +259,12 @@ pub const SSL_TLSEXT_ERR_ALERT_WARNING: c_int = 1;
 pub const SSL_TLSEXT_ERR_ALERT_FATAL: c_int = 2;
 pub const SSL_TLSEXT_ERR_NOACK: c_int = 3;
 
+pub const SSLEAY_VERSION : c_int = 0;
+pub const SSLEAY_CFLAGS : c_int = 2;
+pub const SSLEAY_BUILT_ON : c_int = 3;
+pub const SSLEAY_PLATFORM : c_int = 4;
+pub const SSLEAY_DIR : c_int = 5;
+
 #[cfg(any(feature = "npn", feature = "alpn"))]
 pub const OPENSSL_NPN_UNSUPPORTED: c_int = 0;
 #[cfg(any(feature = "npn", feature = "alpn"))]
@@ -769,6 +775,9 @@ extern "C" {
     pub fn d2i_RSA_PUBKEY(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
     pub fn i2d_RSAPrivateKey(k: *mut RSA, buf: *const *mut u8) -> c_int;
     pub fn d2i_RSAPrivateKey(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
+
+    pub fn SSLeay() -> c_long;
+    pub fn SSLeay_version(key: c_int) -> *const c_char;
 }
 
 pub mod probe;

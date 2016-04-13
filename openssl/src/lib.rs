@@ -25,3 +25,4 @@ pub mod dh;
 pub mod ssl;
 pub mod x509;
 pub mod nid;
+pub mod version;
