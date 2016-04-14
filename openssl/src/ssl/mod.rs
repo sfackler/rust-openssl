@@ -1323,7 +1323,7 @@ impl<S> SslStream<S> {
     #[cfg(feature = "nightly")]
     fn check_panic(&mut self) {
         if let Some(err) = unsafe { bio::take_panic::<S>(self.ssl.get_raw_rbio()) } {
-            ::std::panic::propagate(err)
+            ::std::panic::resume_unwind(err)
         }
     }
 
