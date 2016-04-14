@@ -37,6 +37,11 @@ pub enum Type {
     AES_256_CFB128,
     AES_256_CFB8,
 
+    DES_CBC,
+    DES_ECB,
+    DES_CFB,
+    DES_OFB,
+
     RC4_128,
 }
 
@@ -361,5 +366,49 @@ mod tests {
         let iv = "000102030405060708090a0b0c0d0e0f";
 
         cipher_test(super::Type::AES_256_CFB8, pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_des_cbc() {
+
+        let pt = "54686973206973206120746573742e";
+        let ct = "6f2867cfefda048a4046ef7e556c7132";
+        let key = "7cb66337f3d3c0fe";
+        let iv = "0001020304050607";
+
+        cipher_test(super::Type::DES_CBC, pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_des_ecb() {
+
+        let pt = "54686973206973206120746573742e";
+        let ct = "0050ab8aecec758843fe157b4dde938c";
+        let key = "7cb66337f3d3c0fe";
+        let iv = "0001020304050607";
+
+        cipher_test(super::Type::DES_ECB, pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_des_cfb() {
+
+        let pt = "54686973206973206120746573742e";
+        let ct = "10577dc484ebfe7679121dff761797";
+        let key = "7cb66337f3d3c0fe";
+        let iv = "0001020304050607";
+
+        cipher_test(super::Type::DES_CFB, pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_des_ofb() {
+
+        let pt = "54686973206973206120746573742e";
+        let ct = "10577dc484ebfe76be391c7b8a6b9d";
+        let key = "7cb66337f3d3c0fe";
+        let iv = "0001020304050607";
+
+        cipher_test(super::Type::DES_OFB, pt, ct, key, iv);
     }
 }
