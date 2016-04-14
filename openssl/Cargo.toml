@@ -30,7 +30,7 @@ nightly = []
 
 [dependencies]
 bitflags = "0.4"
-lazy_static = "0.1"
+lazy_static = "0.2"
 libc = "0.2"
 openssl-sys = { version = "0.7.9", path = "../openssl-sys" }
 openssl-sys-extras = { version = "0.7.9", path = "../openssl-sys-extras" }
