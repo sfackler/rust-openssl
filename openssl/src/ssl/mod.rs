@@ -612,6 +612,11 @@ impl SslContext {
         wrap_ssl_result(unsafe { ffi_extras::SSL_CTX_set_tmp_dh(self.ctx, dh.raw()) as i32 })
     }
 
+    /// Use the default locations of trusted certificates for verification.
+    ///
+    /// These locations are read from the `SSL_CERT_FILE` and `SSL_CERT_DIR`
+    /// environment variables if present, or defaults specified at OpenSSL
+    /// build time otherwise.
     pub fn set_default_verify_paths(&mut self) -> Result<(), SslError> {
         wrap_ssl_result(unsafe { ffi::SSL_CTX_set_default_verify_paths(self.ctx) })
     }
