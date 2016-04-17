@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.9")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.10")]
 
 extern crate libc;
 
@@ -258,6 +258,12 @@ pub const SSL_TLSEXT_ERR_OK: c_int = 0;
 pub const SSL_TLSEXT_ERR_ALERT_WARNING: c_int = 1;
 pub const SSL_TLSEXT_ERR_ALERT_FATAL: c_int = 2;
 pub const SSL_TLSEXT_ERR_NOACK: c_int = 3;
+
+pub const SSLEAY_VERSION : c_int = 0;
+pub const SSLEAY_CFLAGS : c_int = 2;
+pub const SSLEAY_BUILT_ON : c_int = 3;
+pub const SSLEAY_PLATFORM : c_int = 4;
+pub const SSLEAY_DIR : c_int = 5;
 
 #[cfg(any(feature = "npn", feature = "alpn"))]
 pub const OPENSSL_NPN_UNSUPPORTED: c_int = 0;
@@ -667,6 +673,7 @@ extern "C" {
     pub fn SSL_CTX_set_verify_depth(ctx: *mut SSL_CTX, depth: c_int);
     pub fn SSL_CTX_load_verify_locations(ctx: *mut SSL_CTX, CAfile: *const c_char,
                                          CApath: *const c_char) -> c_int;
+    pub fn SSL_CTX_set_default_verify_paths(ctx: *mut SSL_CTX) -> c_int;
     pub fn SSL_CTX_get_ex_new_index(argl: c_long, argp: *const c_void,
                                     new_func: Option<CRYPTO_EX_new>,
                                     dup_func: Option<CRYPTO_EX_dup>,
@@ -675,6 +682,7 @@ extern "C" {
     pub fn SSL_CTX_set_ex_data(ctx: *mut SSL_CTX, idx: c_int, data: *mut c_void)
                                -> c_int;
     pub fn SSL_CTX_get_ex_data(ctx: *mut SSL_CTX, idx: c_int) -> *mut c_void;
+    pub fn SSL_CTX_set_session_id_context(ssl: *mut SSL_CTX, sid_ctx: *const c_uchar, sid_ctx_len: c_uint) -> c_int;
 
     pub fn SSL_CTX_use_certificate_file(ctx: *mut SSL_CTX, cert_file: *const c_char, file_type: c_int) -> c_int;
     pub fn SSL_CTX_use_certificate_chain_file(ctx: *mut SSL_CTX, cert_chain_file: *const c_char, file_type: c_int) -> c_int;
@@ -768,6 +776,9 @@ extern "C" {
     pub fn d2i_RSA_PUBKEY(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
     pub fn i2d_RSAPrivateKey(k: *mut RSA, buf: *const *mut u8) -> c_int;
     pub fn d2i_RSAPrivateKey(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
+
+    pub fn SSLeay() -> c_long;
+    pub fn SSLeay_version(key: c_int) -> *const c_char;
 }
 
 pub mod probe;

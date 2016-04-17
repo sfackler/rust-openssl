@@ -609,11 +609,19 @@ impl Drop for PKey {
 
 impl Clone for PKey {
     fn clone(&self) -> Self {
-        unsafe {
-            let new_evp = ffi::EVP_PKEY_new();
-            assert!(ffi::EVP_PKEY_copy_parameters(new_evp, self.evp) == 0);
-            PKey::from_handle(new_evp, self.parts)
+        let mut pkey = PKey::from_handle(unsafe { ffi::EVP_PKEY_new() }, self.parts);
+        //  copy by encoding to DER and back
+        match self.parts {
+            Parts::Public => {
+                pkey.load_pub(&self.save_pub()[..]);
+            },
+            Parts::Both => {
+                pkey.load_priv(&self.save_priv()[..]);
+            },
+            Parts::Neither => {
+            },
         }
+        pkey
     }
 }
 
@@ -873,5 +881,27 @@ mod tests {
         pkey2.gen(512);
 
         assert!(old_pkey_n == pkey.get_rsa().n().unwrap());
+    }
+
+    #[test]
+    fn test_pkey_clone_copies_private() {
+        let mut pkey = super::PKey::new();
+        pkey.gen(512);
+
+        let pkey2 = pkey.clone();
+
+        assert!(pkey.get_rsa().q().unwrap() == pkey2.get_rsa().q().unwrap());
+    }
+
+    #[test]
+    fn test_pkey_clone_copies_public() {
+        let mut pkey = super::PKey::new();
+        pkey.gen(512);
+        let mut pub_key = super::PKey::new();
+        pub_key.load_pub(&pkey.save_pub()[..]);
+
+        let pub_key2 = pub_key.clone();
+
+        assert!(pub_key.get_rsa().n().unwrap() == pub_key2.get_rsa().n().unwrap());
     }
 }

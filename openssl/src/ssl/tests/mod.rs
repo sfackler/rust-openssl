@@ -1059,3 +1059,20 @@ fn refcount_ssl_context() {
         let _new_ctx_b = ssl.set_ssl_context(&new_ctx_a);
     }
 }
+
+#[test]
+fn default_verify_paths() {
+    let mut ctx = SslContext::new(SslMethod::Sslv23).unwrap();
+    ctx.set_default_verify_paths().unwrap();
+    ctx.set_verify(SSL_VERIFY_PEER, None);
+    let s = TcpStream::connect("google.com:443").unwrap();
+    let mut socket = SslStream::connect(&ctx, s).unwrap();
+
+    socket.write_all(b"GET / HTTP/1.0\r\n\r\n").unwrap();
+    let mut result = vec![];
+    socket.read_to_end(&mut result).unwrap();
+
+    println!("{}", String::from_utf8_lossy(&result));
+    assert!(result.starts_with(b"HTTP/1.0"));
+    assert!(result.ends_with(b"</HTML>\r\n") || result.ends_with(b"</html>"));
+}

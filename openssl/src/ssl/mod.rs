@@ -612,12 +612,35 @@ impl SslContext {
         wrap_ssl_result(unsafe { ffi_extras::SSL_CTX_set_tmp_dh(self.ctx, dh.raw()) as i32 })
     }
 
+    /// Use the default locations of trusted certificates for verification.
+    ///
+    /// These locations are read from the `SSL_CERT_FILE` and `SSL_CERT_DIR`
+    /// environment variables if present, or defaults specified at OpenSSL
+    /// build time otherwise.
+    pub fn set_default_verify_paths(&mut self) -> Result<(), SslError> {
+        wrap_ssl_result(unsafe { ffi::SSL_CTX_set_default_verify_paths(self.ctx) })
+    }
+
     #[allow(non_snake_case)]
     /// Specifies the file that contains trusted CA certificates.
     pub fn set_CA_file<P: AsRef<Path>>(&mut self, file: P) -> Result<(), SslError> {
         let file = CString::new(file.as_ref().as_os_str().to_str().expect("invalid utf8")).unwrap();
         wrap_ssl_result(unsafe {
             ffi::SSL_CTX_load_verify_locations(self.ctx, file.as_ptr() as *const _, ptr::null())
+        })
+    }
+
+    /// Set the context identifier for sessions
+    ///
+    /// This value identifies the server's session cache to a clients, telling them when they're
+    /// able to reuse sessions. Should be set to a unique value per server, unless multiple servers
+    /// share a session cache.
+    ///
+    /// This value should be set when using client certificates, or each request will fail
+    /// handshake and need to be restarted.
+    pub fn set_session_id_context(&mut self, sid_ctx: &[u8]) -> Result<(), SslError> {
+        wrap_ssl_result(unsafe {
+            ffi::SSL_CTX_set_session_id_context(self.ctx, sid_ctx.as_ptr(), sid_ctx.len() as u32)
         })
     }
 
@@ -1309,7 +1332,7 @@ impl<S> SslStream<S> {
     #[cfg(feature = "nightly")]
     fn check_panic(&mut self) {
         if let Some(err) = unsafe { bio::take_panic::<S>(self.ssl.get_raw_rbio()) } {
-            ::std::panic::propagate(err)
+            ::std::panic::resume_unwind(err)
         }
     }
 

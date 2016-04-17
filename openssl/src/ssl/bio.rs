@@ -82,12 +82,12 @@ unsafe fn state<'a, S: 'a>(bio: *mut BIO) -> &'a mut StreamState<S> {
 }
 
 #[cfg(feature = "nightly")]
-fn recover<F, T>(f: F) -> Result<T, Box<Any + Send>> where F: FnOnce() -> T {
-    ::std::panic::recover(::std::panic::AssertRecoverSafe(f))
+fn catch_unwind<F, T>(f: F) -> Result<T, Box<Any + Send>> where F: FnOnce() -> T {
+    ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(f))
 }
 
 #[cfg(not(feature = "nightly"))]
-fn recover<F, T>(f: F) -> Result<T, Box<Any + Send>> where F: FnOnce() -> T {
+fn catch_unwind<F, T>(f: F) -> Result<T, Box<Any + Send>> where F: FnOnce() -> T {
     Ok(f())
 }
 
@@ -97,7 +97,7 @@ unsafe extern "C" fn bwrite<S: Write>(bio: *mut BIO, buf: *const c_char, len: c_
     let state = state::<S>(bio);
     let buf = slice::from_raw_parts(buf as *const _, len as usize);
 
-    match recover(|| state.stream.write(buf)) {
+    match catch_unwind(|| state.stream.write(buf)) {
         Ok(Ok(len)) => len as c_int,
         Ok(Err(err)) => {
             if retriable_error(&err) {
@@ -119,7 +119,7 @@ unsafe extern "C" fn bread<S: Read>(bio: *mut BIO, buf: *mut c_char, len: c_int)
     let state = state::<S>(bio);
     let buf = slice::from_raw_parts_mut(buf as *mut _, len as usize);
 
-    match recover(|| state.stream.read(buf)) {
+    match catch_unwind(|| state.stream.read(buf)) {
         Ok(Ok(len)) => len as c_int,
         Ok(Err(err)) => {
             if retriable_error(&err) {
@@ -154,7 +154,7 @@ unsafe extern "C" fn ctrl<S: Write>(bio: *mut BIO,
     if cmd == BIO_CTRL_FLUSH {
         let state = state::<S>(bio);
 
-        match recover(|| state.stream.flush()) {
+        match catch_unwind(|| state.stream.flush()) {
             Ok(Ok(())) => 1,
             Ok(Err(err)) => {
                 state.error = Some(err);
