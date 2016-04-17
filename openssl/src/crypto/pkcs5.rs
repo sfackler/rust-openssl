@@ -45,8 +45,8 @@ pub fn evp_bytes_to_key_pbkdf1_compatible(typ: symm::Type,
 
         let message_digest = message_digest_type.evp_md();
 
-        let mut key = vec![0; keylen as usize];
-        let mut iv = vec![0; keylen as usize];
+        let mut key = vec![0;keylen as usize];
+        let mut iv = vec![0;keylen as usize];
 
 
         let ret: c_int = ffi::EVP_BytesToKey(evp,

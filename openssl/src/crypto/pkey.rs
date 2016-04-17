@@ -1,7 +1,6 @@
 use libc::{c_int, c_uint, c_ulong};
 use std::io;
 use std::io::prelude::*;
-use std::iter::repeat;
 use std::mem;
 use std::ptr;
 use bio::MemBio;
@@ -161,7 +160,7 @@ impl PKey {
             if len < 0 as c_int {
                 return vec![];
             }
-            let mut s = repeat(0u8).take(len as usize).collect::<Vec<_>>();
+            let mut s = vec![0u8;len as usize];
 
             let r = f(rsa, &s.as_mut_ptr());
             ffi::RSA_free(rsa);
@@ -361,7 +360,7 @@ impl PKey {
 
             assert!(s.len() < self.max_data());
 
-            let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
+            let mut r = vec![0u8;len as usize + 1];
 
             let rv = ffi::RSA_private_encrypt(s.len() as c_int,
                                               s.as_ptr(),
@@ -389,7 +388,7 @@ impl PKey {
 
             assert!(s.len() < self.max_data());
 
-            let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
+            let mut r = vec![0u8;len as usize + 1];
 
             let rv = ffi::RSA_public_encrypt(s.len() as c_int,
                                              s.as_ptr(),
@@ -416,7 +415,7 @@ impl PKey {
 
             assert_eq!(s.len() as c_int, ffi::RSA_size(rsa));
 
-            let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
+            let mut r = vec![0u8;len as usize + 1];
 
             let rv = ffi::RSA_private_decrypt(s.len() as c_int,
                                               s.as_ptr(),
@@ -443,7 +442,7 @@ impl PKey {
 
             assert_eq!(s.len() as c_int, ffi::RSA_size(rsa));
 
-            let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
+            let mut r = vec![0u8;len as usize + 1];
 
             let rv = ffi::RSA_public_decrypt(s.len() as c_int,
                                              s.as_ptr(),
@@ -553,7 +552,7 @@ impl PKey {
                 panic!("Could not get RSA key for signing");
             }
             let len = ffi::RSA_size(rsa);
-            let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
+            let mut r = vec![0u8;len as usize + 1];
 
             let mut len = 0;
             let rv = ffi::RSA_sign(openssl_hash_nid(hash),

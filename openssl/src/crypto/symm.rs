@@ -1,4 +1,4 @@
-use std::iter::repeat;
+use std::convert::AsRef;
 use libc::c_int;
 
 use crypto::symm_internal::evpc;
@@ -83,7 +83,7 @@ impl Crypter {
     /**
      * Initializes this crypter.
      */
-    pub fn init(&self, mode: Mode, key: &[u8], iv: &[u8]) {
+    pub fn init<T: AsRef<[u8]>>(&self, mode: Mode, key: &[u8], iv: T) {
         unsafe {
             let mode = match mode {
                 Mode::Encrypt => 1 as c_int,
@@ -91,7 +91,7 @@ impl Crypter {
             };
             assert_eq!(key.len(), self.keylen as usize);
 
-            ffi::EVP_CipherInit(self.ctx, self.evp, key.as_ptr(), iv.as_ptr(), mode);
+            ffi::EVP_CipherInit(self.ctx, self.evp, key.as_ptr(), iv.as_ref().as_ptr(), mode);
         }
     }
 
@@ -100,19 +100,31 @@ impl Crypter {
      * encrypted or decrypted bytes.
      */
     pub fn update(&self, data: &[u8]) -> Vec<u8> {
+        let mut res = vec![0;data.len() + self.blocksize as usize];
+        let reslen = self.update_buf(data, &mut res);
+
+        res.truncate(reslen);
+        res
+    }
+
+    /**
+     * Update this crypter with more data to encrypt or decrypt.
+     * Returns size of written data.
+     * Usage of update is recomanded unless you are sure of your blocksize.
+     * The size of the receiving buffer must be the same as the data.
+     */
+    pub fn update_buf(&self, data: &[u8], dest: &mut[u8]) -> usize {
+        assert!(dest.len() as u32 > self.blocksize); // at least block plus one
         unsafe {
-            let sum = data.len() + (self.blocksize as usize);
-            let mut res = repeat(0u8).take(sum).collect::<Vec<_>>();
-            let mut reslen = sum as c_int;
+            let mut reslen = self.blocksize as c_int;
 
             ffi::EVP_CipherUpdate(self.ctx,
-                                  res.as_mut_ptr(),
+                                  dest.as_mut_ptr(),
                                   &mut reslen,
                                   data.as_ptr(),
                                   data.len() as c_int);
 
-            res.truncate(reslen as usize);
-            res
+            reslen as usize
         }
     }
 
@@ -120,14 +132,25 @@ impl Crypter {
      * Finish crypting. Returns the remaining partial block of output, if any.
      */
     pub fn finalize(&self) -> Vec<u8> {
+        let mut res = vec![0u8;self.blocksize as usize];
+        let reslen = self.finalize_buf(&mut res);
+        res.truncate(reslen);
+        res
+    }
+
+
+    /**
+     * Finish crypting. The size of the receiving buffer must be the blocksize for the cipher.
+     * Using finalize is more safe. (finalize_buf is only useful when working on a buffer of 
+     * the same size as the blocksize during updates).
+     */
+    pub fn finalize_buf(&self, dest: &mut[u8]) -> usize {
         unsafe {
-            let mut res = repeat(0u8).take(self.blocksize as usize).collect::<Vec<_>>();
             let mut reslen = self.blocksize as c_int;
 
-            ffi::EVP_CipherFinal(self.ctx, res.as_mut_ptr(), &mut reslen);
+            ffi::EVP_CipherFinal(self.ctx, dest.as_mut_ptr(), &mut reslen);
 
-            res.truncate(reslen as usize);
-            res
+            reslen as usize
         }
     }
 }
@@ -144,12 +167,12 @@ impl Drop for Crypter {
  * Encrypts data, using the specified crypter type in encrypt mode with the
  * specified key and iv; returns the resulting (encrypted) data.
  */
-pub fn encrypt(t: Type, key: &[u8], iv: &[u8], data: &[u8]) -> Vec<u8> {
+pub fn encrypt<T: AsRef<[u8]>>(t: Type, key: &[u8], iv: T, data: &[u8]) -> Vec<u8> {
     let c = Crypter::new(t);
     c.init(Mode::Encrypt, key, iv);
     let mut r = c.update(data);
     let rest = c.finalize();
-    r.extend(rest.into_iter());
+    r.extend(&rest);
     r
 }
 
@@ -157,18 +180,130 @@ pub fn encrypt(t: Type, key: &[u8], iv: &[u8], data: &[u8]) -> Vec<u8> {
  * Decrypts data, using the specified crypter type in decrypt mode with the
  * specified key and iv; returns the resulting (decrypted) data.
  */
-pub fn decrypt(t: Type, key: &[u8], iv: &[u8], data: &[u8]) -> Vec<u8> {
+pub fn decrypt<T: AsRef<[u8]>>(t: Type, key: &[u8], iv: T, data: &[u8]) -> Vec<u8> {
     let c = Crypter::new(t);
     c.init(Mode::Decrypt, key, iv);
     let mut r = c.update(data);
     let rest = c.finalize();
-    r.extend(rest.into_iter());
+    r.extend(&rest);
     r
 }
 
 #[cfg(test)]
 mod tests {
     use serialize::hex::FromHex;
+
+    #[test]
+    fn test_aes_256_ecb_padding1() {
+        let k0 =
+           [0x00u8, 0x01u8, 0x02u8, 0x03u8, 0x04u8, 0x05u8, 0x06u8, 0x07u8,
+            0x08u8, 0x09u8, 0x0au8, 0x0bu8, 0x0cu8, 0x0du8, 0x0eu8, 0x0fu8,
+            0x10u8, 0x11u8, 0x12u8, 0x13u8, 0x14u8, 0x15u8, 0x16u8, 0x17u8,
+            0x18u8, 0x19u8, 0x1au8, 0x1bu8, 0x1cu8, 0x1du8, 0x1eu8, 0x1fu8];
+        let p0 =
+           [0x00u8, 0x11u8, 0x22u8, 0x33u8];
+        let c = super::Crypter::new(super::Type::AES_256_ECB);
+        c.init(super::Mode::Encrypt, &k0, &[]);
+        c.pad(true);
+        let mut r0 = c.update(&p0);
+        assert!(0 == r0.len());
+        r0.extend(c.finalize());
+        assert!(16 == r0.len());
+        c.init(super::Mode::Decrypt, &k0, &[]);
+        c.pad(true);
+        let mut p1 = c.update(&r0);
+        p1.extend(c.finalize());
+        assert!(p1 == p0);
+    }
+    #[test]
+    fn test_aes_256_ecb_padding2() {
+        let k0 =
+           [0x00u8, 0x01u8, 0x02u8, 0x03u8, 0x04u8, 0x05u8, 0x06u8, 0x07u8,
+            0x08u8, 0x09u8, 0x0au8, 0x0bu8, 0x0cu8, 0x0du8, 0x0eu8, 0x0fu8,
+            0x10u8, 0x11u8, 0x12u8, 0x13u8, 0x14u8, 0x15u8, 0x16u8, 0x17u8,
+            0x18u8, 0x19u8, 0x1au8, 0x1bu8, 0x1cu8, 0x1du8, 0x1eu8, 0x1fu8];
+        let p0 =
+           [0x00u8, 0x11u8, 0x22u8, 0x33u8, 0x44u8, 0x55u8, 0x66u8, 0x77u8,
+            0x88u8, 0xbbu8, 0xccu8, 0xddu8, 0xeeu8, 0xffu8,
+            0x08u8, 0x09u8, 0x0au8, 0x0bu8, 0x0cu8, 0x0du8, 0x0eu8, 0x0fu8,
+            0x08u8, 0x09u8, 0x0au8, 0x0bu8, 0x0cu8, 0x0du8, 0x0eu8, 0x0fu8,
+            0x88u8, 0x99u8, 0xaau8, 0xbbu8, 0xccu8, 0xddu8, 0xeeu8, 0xffu8];
+        let c = super::Crypter::new(super::Type::AES_256_ECB);
+        c.init(super::Mode::Encrypt, &k0, &[]);
+        c.pad(true);
+        let mut r0 = c.update(&p0);
+        assert!(32 == r0.len());
+        r0.extend(c.finalize());
+        assert!(48 == r0.len());
+        c.init(super::Mode::Decrypt, &k0, &[]);
+        c.pad(true);
+        let mut p1 = c.update(&r0);
+        p1.extend(c.finalize());
+        assert!(p1 == p0.to_vec());
+    }
+    #[test]
+    fn test_aes_256_ecb_buff() {
+        let k0 =
+           [0x00u8, 0x01u8, 0x02u8, 0x03u8, 0x04u8, 0x05u8, 0x06u8, 0x07u8,
+            0x08u8, 0x09u8, 0x0au8, 0x0bu8, 0x0cu8, 0x0du8, 0x0eu8, 0x0fu8,
+            0x10u8, 0x11u8, 0x12u8, 0x13u8, 0x14u8, 0x15u8, 0x16u8, 0x17u8,
+            0x18u8, 0x19u8, 0x1au8, 0x1bu8, 0x1cu8, 0x1du8, 0x1eu8, 0x1fu8];
+        let p0 =
+           [0x00u8, 0x11u8, 0x22u8, 0x33u8, 0x44u8, 0x55u8, 0x66u8, 0x77u8,
+            0x88u8, 0xbbu8, 0xccu8, 0xddu8, 0xeeu8, 0xffu8,
+            0x08u8, 0x09u8, 0x0au8, 0x0bu8, 0x0cu8, 0x0du8, 0x0eu8, 0x0fu8,
+            0x08u8, 0x09u8, 0x0au8, 0x0bu8, 0x0cu8, 0x0du8, 0x0eu8, 0x0fu8,
+            0x88u8, 0x99u8, 0xaau8, 0xbbu8, 0xccu8, 0xddu8, 0xeeu8, 0xffu8];
+        let c = super::Crypter::new(super::Type::AES_256_ECB);
+        c.pad(true);
+        c.init(super::Mode::Encrypt, &k0, &[]);
+        // block size
+        let mut r_buff = vec![0;17];
+        let mut w_len;
+        let mut r0 = Vec::new();
+        for i in 0..2 {
+            w_len = c.update_buf(&p0[16*i..16*(i+1)], &mut r_buff);
+            r0.extend(&r_buff[0..w_len]);
+        }
+        w_len = c.update_buf(&p0[16*2..], &mut r_buff);
+        r0.extend(&r_buff[0..w_len]);
+        w_len = c.finalize_buf(&mut r_buff);
+        r0.extend(&r_buff[0..w_len]);
+        // nonblock size
+        c.init(super::Mode::Encrypt, &k0, &[]);
+        r_buff = vec![0;17];
+        let mut r1 = Vec::new();
+        for i in 0..2 {
+            w_len = c.update_buf(&p0[17*i..17*(i+1)], &mut r_buff);
+            r1.extend(&r_buff[..w_len]);
+        }
+        w_len = c.update_buf(&p0[17*2..], &mut r_buff);
+        r1.extend(&r_buff[..w_len]);
+        w_len = c.finalize_buf(&mut r_buff);
+        r1.extend(&r_buff[..w_len]);
+ 
+        c.init(super::Mode::Decrypt, &k0, &[]);
+        r_buff = vec![0;17]; // buff must be at least block size plus one
+        let mut p1 : Vec<u8> = Vec::new();
+        //p1.push(0);
+        for i in 0..2 {
+            w_len = c.update_buf(&r0[16*i..16*(i+1)], &mut r_buff);
+            //p1.extend(r_buff[..w_len].to_vec());
+            p1.extend_from_slice(&r_buff[..w_len]); //This fail on empty vec
+        }
+        w_len = c.update_buf(&r0[16*2..], &mut r_buff);
+        p1.extend(&r_buff[..w_len]);
+        w_len = c.finalize_buf(&mut r_buff);
+        p1.extend(&r_buff[..w_len]);
+        assert_eq!(p1, p0.to_vec());
+        c.init(super::Mode::Decrypt, &k0, &[]);
+        let mut p2 = c.update(&r1);
+        p2.extend(c.finalize());
+        assert_eq!(p2, p0.to_vec());
+
+    }
+
+
 
     // Test vectors from FIPS-197:
     // http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
@@ -186,12 +321,12 @@ mod tests {
         c.init(super::Mode::Encrypt, &k0, &[]);
         c.pad(false);
         let mut r0 = c.update(&p0);
-        r0.extend(c.finalize().into_iter());
+        r0.extend(c.finalize());
         assert!(r0 == c0);
         c.init(super::Mode::Decrypt, &k0, &[]);
         c.pad(false);
         let mut p1 = c.update(&r0);
-        p1.extend(c.finalize().into_iter());
+        p1.extend(c.finalize());
         assert!(p1 == p0);
     }
 
@@ -210,6 +345,7 @@ mod tests {
                              0x65_u8, 0x6f_u8];
         cr.init(super::Mode::Decrypt, &data, &iv);
         cr.pad(false);
+        // use copy_memory when stable api
         let unciphered_data_1 = cr.update(&ciphered_data);
         let unciphered_data_2 = cr.finalize();
 
@@ -230,7 +366,7 @@ mod tests {
 
         let expected = ct.from_hex().unwrap();
         let mut computed = cipher.update(&pt.from_hex().unwrap());
-        computed.extend(cipher.finalize().into_iter());
+        computed.extend(cipher.finalize());
 
         if computed != expected {
             println!("Computed: {}", computed.to_hex());

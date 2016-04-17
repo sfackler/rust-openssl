@@ -3,7 +3,6 @@ use std::io;
 use std::io::prelude::*;
 use std::cmp::Ordering;
 use std::ffi::{CString, CStr};
-use std::iter::repeat;
 use std::mem;
 use std::ptr;
 use std::ops::Deref;
@@ -475,7 +474,7 @@ impl<'ctx> X509<'ctx> {
     pub fn fingerprint(&self, hash_type: hash::Type) -> Option<Vec<u8>> {
         let evp = hash_type.evp_md();
         let len = hash_type.md_len();
-        let v: Vec<u8> = repeat(0).take(len as usize).collect();
+        let v: Vec<u8> = vec![0;len as usize];
         let act_len: c_uint = 0;
         let res = unsafe {
             ffi::X509_digest(self.handle,
