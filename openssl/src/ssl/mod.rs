@@ -612,6 +612,10 @@ impl SslContext {
         wrap_ssl_result(unsafe { ffi_extras::SSL_CTX_set_tmp_dh(self.ctx, dh.raw()) as i32 })
     }
 
+    pub fn set_default_verify_paths(&mut self) -> Result<(), SslError> {
+        wrap_ssl_result(unsafe { ffi::SSL_CTX_set_default_verify_paths(self.ctx) })
+    }
+
     #[allow(non_snake_case)]
     /// Specifies the file that contains trusted CA certificates.
     pub fn set_CA_file<P: AsRef<Path>>(&mut self, file: P) -> Result<(), SslError> {

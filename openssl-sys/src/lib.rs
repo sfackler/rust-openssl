@@ -673,6 +673,7 @@ extern "C" {
     pub fn SSL_CTX_set_verify_depth(ctx: *mut SSL_CTX, depth: c_int);
     pub fn SSL_CTX_load_verify_locations(ctx: *mut SSL_CTX, CAfile: *const c_char,
                                          CApath: *const c_char) -> c_int;
+    pub fn SSL_CTX_set_default_verify_paths(ctx: *mut SSL_CTX) -> c_int;
     pub fn SSL_CTX_get_ex_new_index(argl: c_long, argp: *const c_void,
                                     new_func: Option<CRYPTO_EX_new>,
                                     dup_func: Option<CRYPTO_EX_dup>,
