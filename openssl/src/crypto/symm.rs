@@ -39,8 +39,6 @@ pub enum Type {
 
     DES_CBC,
     DES_ECB,
-    DES_CFB,
-    DES_OFB,
 
     RC4_128,
 }
@@ -388,27 +386,5 @@ mod tests {
         let iv = "0001020304050607";
 
         cipher_test(super::Type::DES_ECB, pt, ct, key, iv);
-    }
-
-    #[test]
-    fn test_des_cfb() {
-
-        let pt = "54686973206973206120746573742e";
-        let ct = "10577dc484ebfe7679121dff761797";
-        let key = "7cb66337f3d3c0fe";
-        let iv = "0001020304050607";
-
-        cipher_test(super::Type::DES_CFB, pt, ct, key, iv);
-    }
-
-    #[test]
-    fn test_des_ofb() {
-
-        let pt = "54686973206973206120746573742e";
-        let ct = "10577dc484ebfe76be391c7b8a6b9d";
-        let key = "7cb66337f3d3c0fe";
-        let iv = "0001020304050607";
-
-        cipher_test(super::Type::DES_OFB, pt, ct, key, iv);
     }
 }

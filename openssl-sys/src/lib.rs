@@ -529,8 +529,6 @@ extern "C" {
 
     pub fn EVP_des_cbc() -> *const EVP_CIPHER;
     pub fn EVP_des_ecb() -> *const EVP_CIPHER;
-    pub fn EVP_des_cfb() -> *const EVP_CIPHER;
-    pub fn EVP_des_ofb() -> *const EVP_CIPHER;
 
     pub fn EVP_BytesToKey(typ: *const EVP_CIPHER, md: *const EVP_MD,
                           salt: *const u8, data: *const u8, datalen: c_int,
