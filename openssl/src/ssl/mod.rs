@@ -227,6 +227,7 @@ bitflags! {
 
 lazy_static! {
     static ref INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
+    static ref SSL_INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
 }
 
 // Creates a static index for user data of type T
@@ -234,6 +235,10 @@ lazy_static! {
 // when context is freed
 fn get_verify_data_idx<T: Any + 'static>() -> c_int {
     *INDEXES.lock().unwrap().entry(TypeId::of::<T>()).or_insert_with(|| get_new_idx::<T>())
+}
+
+fn get_ssl_verify_data_idx<T: Any + 'static>() -> c_int {
+    *SSL_INDEXES.lock().unwrap().entry(TypeId::of::<T>()).or_insert_with(|| get_new_ssl_idx::<T>())
 }
 
 #[cfg(feature = "npn")]
@@ -262,6 +267,26 @@ fn get_new_idx<T>() -> c_int {
     unsafe {
         let f: ffi::CRYPTO_EX_free = free_data_box::<T>;
         let idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None, None, Some(f));
+        assert!(idx >= 0);
+        idx
+    }
+}
+
+fn get_new_ssl_idx<T>() -> c_int {
+    extern "C" fn free_data_box<T>(_parent: *mut c_void,
+                                   ptr: *mut c_void,
+                                   _ad: *mut ffi::CRYPTO_EX_DATA,
+                                   _idx: c_int,
+                                   _argl: c_long,
+                                   _argp: *mut c_void) {
+        if !ptr.is_null() {
+            let _: Box<T> = unsafe { mem::transmute(ptr) };
+        }
+    }
+
+    unsafe {
+        let f: ffi::CRYPTO_EX_free = free_data_box::<T>;
+        let idx = ffi::SSL_get_ex_new_index(0, ptr::null(), None, None, Some(f));
         assert!(idx >= 0);
         idx
     }
@@ -308,6 +333,21 @@ extern "C" fn raw_verify_with_data<T>(preverify_ok: c_int,
         };
 
         res
+    }
+}
+
+extern "C" fn ssl_raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
+    where F: Fn(bool, &X509StoreContext) -> bool + Any + 'static + Sync + Send
+{
+    unsafe {
+        let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
+        let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
+        let verify = ffi::SSL_get_ex_data(ssl, get_ssl_verify_data_idx::<F>());
+        let verify: &F = mem::transmute(verify);
+
+        let ctx = X509StoreContext::new(x509_ctx);
+
+        verify(preverify_ok != 0, &ctx) as c_int
     }
 }
 
@@ -925,6 +965,23 @@ impl Ssl {
         match LibSslError::from_i32(err as i32) {
             Some(err) => err,
             None => unreachable!(),
+        }
+    }
+
+    /// Sets the certificate verification callback to be used during the
+    /// handshake process.
+    ///
+    /// The callback is provided with a boolean indicating if the
+    /// preveification process was successful, and an object providing access
+    /// to the certificate chain. It should return `true` if the certificate
+    /// chain is valid and `false` otherwise.
+    pub fn set_verify<F>(&mut self, mode: SslVerifyMode, verify: F)
+        where F: Fn(bool, &X509StoreContext) -> bool + Any + 'static + Sync + Send
+    {
+        unsafe {
+            let verify = Box::new(verify);
+            ffi::SSL_set_ex_data(self.ssl, get_ssl_verify_data_idx::<F>(), mem::transmute(verify));
+            ffi::SSL_set_verify(self.ssl, mode.bits as c_int, Some(ssl_raw_verify::<F>));
         }
     }
 

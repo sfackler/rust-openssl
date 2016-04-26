@@ -700,6 +700,16 @@ extern "C" {
     pub fn SSL_get_version(ssl: *mut SSL) -> *const c_char;
     pub fn SSL_state_string(ssl: *mut SSL) -> *const c_char;
     pub fn SSL_state_string_long(ssl: *mut SSL) -> *const c_char;
+    pub fn SSL_set_verify(ssl: *mut SSL,
+                          mode: c_int,
+                          verify_callback: Option<extern fn(c_int, *mut X509_STORE_CTX) -> c_int>);
+    pub fn SSL_get_ex_new_index(argl: c_long, argp: *const c_void,
+                                new_func: Option<CRYPTO_EX_new>,
+                                dup_func: Option<CRYPTO_EX_dup>,
+                                free_func: Option<CRYPTO_EX_free>)
+                                -> c_int;
+    pub fn SSL_set_ex_data(ssl: *mut SSL, idx: c_int, data: *mut c_void) -> c_int;
+    pub fn SSL_get_ex_data(ssl: *mut SSL, idx: c_int) -> *mut c_void;
 
     pub fn SSL_get_servername(ssl: *const SSL, name_type: c_long) -> *const c_char;
 
