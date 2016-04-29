@@ -2,13 +2,14 @@ use libc::{c_char, c_int, c_long, c_ulong, c_uint, c_void};
 use std::io;
 use std::io::prelude::*;
 use std::cmp::Ordering;
-use std::ffi::{CString, CStr};
+use std::ffi::CString;
 use std::iter::repeat;
 use std::mem;
 use std::ptr;
 use std::ops::Deref;
 use std::fmt;
 use std::str;
+use std::slice;
 use std::collections::HashMap;
 
 use asn1::Asn1Time;
@@ -29,14 +30,12 @@ use self::extension::{ExtensionType, Extension};
 #[cfg(test)]
 mod tests;
 
-pub struct SslString {
-    s: &'static str,
-}
+pub struct SslString(&'static str);
 
 impl<'s> Drop for SslString {
     fn drop(&mut self) {
         unsafe {
-            ffi::CRYPTO_free(self.s.as_ptr() as *mut c_void);
+            ffi::CRYPTO_free(self.0.as_ptr() as *mut c_void);
         }
     }
 }
@@ -45,25 +44,26 @@ impl Deref for SslString {
     type Target = str;
 
     fn deref(&self) -> &str {
-        self.s
+        self.0
     }
 }
 
 impl SslString {
-    unsafe fn new(buf: *const c_char) -> SslString {
-        SslString { s: str::from_utf8(CStr::from_ptr(buf as *const _).to_bytes()).unwrap() }
+    unsafe fn new(buf: *const c_char, len: c_int) -> SslString {
+        let slice = slice::from_raw_parts(buf as *const _, len as usize);
+        SslString(str::from_utf8_unchecked(slice))
     }
 }
 
 impl fmt::Display for SslString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(self.s, f)
+        fmt::Display::fmt(self.0, f)
     }
 }
 
 impl fmt::Debug for SslString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Debug::fmt(self.s, f)
+        fmt::Debug::fmt(self.0, f)
     }
 }
 
@@ -570,7 +570,7 @@ impl<'x> X509Name<'x> {
 
             assert!(!str_from_asn1.is_null());
 
-            Some(SslString::new(str_from_asn1))
+            Some(SslString::new(str_from_asn1, len))
         }
     }
 }
