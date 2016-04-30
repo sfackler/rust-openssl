@@ -69,44 +69,44 @@ pub fn init() {
 }
 
 bitflags! {
-    flags SslContextOptions: u64 {
-        const SSL_OP_MICROSOFT_SESS_ID_BUG                    = ffi_extras::SSL_OP_MICROSOFT_SESS_ID_BUG,
-        const SSL_OP_NETSCAPE_CHALLENGE_BUG                   = ffi_extras::SSL_OP_NETSCAPE_CHALLENGE_BUG,
-        const SSL_OP_LEGACY_SERVER_CONNECT                    = ffi_extras::SSL_OP_LEGACY_SERVER_CONNECT,
-        const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG         = ffi_extras::SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG,
-        const SSL_OP_TLSEXT_PADDING                           = ffi_extras::SSL_OP_TLSEXT_PADDING,
-        const SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER               = ffi_extras::SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER,
-        const SSL_OP_SAFARI_ECDHE_ECDSA_BUG                   = ffi_extras::SSL_OP_SAFARI_ECDHE_ECDSA_BUG,
-        const SSL_OP_SSLEAY_080_CLIENT_DH_BUG                 = ffi_extras::SSL_OP_SSLEAY_080_CLIENT_DH_BUG,
-        const SSL_OP_TLS_D5_BUG                               = ffi_extras::SSL_OP_TLS_D5_BUG,
-        const SSL_OP_TLS_BLOCK_PADDING_BUG                    = ffi_extras::SSL_OP_TLS_BLOCK_PADDING_BUG,
-        const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS              = ffi_extras::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS,
-        const SSL_OP_NO_QUERY_MTU                             = ffi_extras::SSL_OP_NO_QUERY_MTU,
-        const SSL_OP_COOKIE_EXCHANGE                          = ffi_extras::SSL_OP_COOKIE_EXCHANGE,
-        const SSL_OP_NO_TICKET                                = ffi_extras::SSL_OP_NO_TICKET,
-        const SSL_OP_CISCO_ANYCONNECT                         = ffi_extras::SSL_OP_CISCO_ANYCONNECT,
-        const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION   = ffi_extras::SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION,
-        const SSL_OP_NO_COMPRESSION                           = ffi_extras::SSL_OP_NO_COMPRESSION,
-        const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION        = ffi_extras::SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION,
-        const SSL_OP_SINGLE_ECDH_USE                          = ffi_extras::SSL_OP_SINGLE_ECDH_USE,
-        const SSL_OP_SINGLE_DH_USE                            = ffi_extras::SSL_OP_SINGLE_DH_USE,
-        const SSL_OP_CIPHER_SERVER_PREFERENCE                 = ffi_extras::SSL_OP_CIPHER_SERVER_PREFERENCE,
-        const SSL_OP_TLS_ROLLBACK_BUG                         = ffi_extras::SSL_OP_TLS_ROLLBACK_BUG,
-        const SSL_OP_NO_SSLV2                                 = ffi_extras::SSL_OP_NO_SSLv2,
-        const SSL_OP_NO_SSLV3                                 = ffi_extras::SSL_OP_NO_SSLv3,
-        const SSL_OP_NO_DTLSV1                                = ffi_extras::SSL_OP_NO_DTLSv1,
-        const SSL_OP_NO_TLSV1                                 = ffi_extras::SSL_OP_NO_TLSv1,
-        const SSL_OP_NO_DTLSV1_2                              = ffi_extras::SSL_OP_NO_DTLSv1_2,
-        const SSL_OP_NO_TLSV1_2                               = ffi_extras::SSL_OP_NO_TLSv1_2,
-        const SSL_OP_NO_TLSV1_1                               = ffi_extras::SSL_OP_NO_TLSv1_1,
-        const SSL_OP_NETSCAPE_CA_DN_BUG                       = ffi_extras::SSL_OP_NETSCAPE_CA_DN_BUG,
-        const SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG          = ffi_extras::SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG,
-        const SSL_OP_CRYPTOPRO_TLSEXT_BUG                     = ffi_extras::SSL_OP_CRYPTOPRO_TLSEXT_BUG,
-        const SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG              = ffi_extras::SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG,
-        const SSL_OP_MSIE_SSLV2_RSA_PADDING                   = ffi_extras::SSL_OP_MSIE_SSLV2_RSA_PADDING,
-        const SSL_OP_PKCS1_CHECK_1                            = ffi_extras::SSL_OP_PKCS1_CHECK_1,
-        const SSL_OP_PKCS1_CHECK_2                            = ffi_extras::SSL_OP_PKCS1_CHECK_2,
-        const SSL_OP_EPHEMERAL_RSA                            = ffi_extras::SSL_OP_EPHEMERAL_RSA,
+    pub flags SslContextOptions: u64 {
+        const SSL_OP_MICROSOFT_SESS_ID_BUG                    = ::ffi_extras::SSL_OP_MICROSOFT_SESS_ID_BUG,
+        const SSL_OP_NETSCAPE_CHALLENGE_BUG                   = ::ffi_extras::SSL_OP_NETSCAPE_CHALLENGE_BUG,
+        const SSL_OP_LEGACY_SERVER_CONNECT                    = ::ffi_extras::SSL_OP_LEGACY_SERVER_CONNECT,
+        const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG         = ::ffi_extras::SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG,
+        const SSL_OP_TLSEXT_PADDING                           = ::ffi_extras::SSL_OP_TLSEXT_PADDING,
+        const SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER               = ::ffi_extras::SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER,
+        const SSL_OP_SAFARI_ECDHE_ECDSA_BUG                   = ::ffi_extras::SSL_OP_SAFARI_ECDHE_ECDSA_BUG,
+        const SSL_OP_SSLEAY_080_CLIENT_DH_BUG                 = ::ffi_extras::SSL_OP_SSLEAY_080_CLIENT_DH_BUG,
+        const SSL_OP_TLS_D5_BUG                               = ::ffi_extras::SSL_OP_TLS_D5_BUG,
+        const SSL_OP_TLS_BLOCK_PADDING_BUG                    = ::ffi_extras::SSL_OP_TLS_BLOCK_PADDING_BUG,
+        const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS              = ::ffi_extras::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS,
+        const SSL_OP_NO_QUERY_MTU                             = ::ffi_extras::SSL_OP_NO_QUERY_MTU,
+        const SSL_OP_COOKIE_EXCHANGE                          = ::ffi_extras::SSL_OP_COOKIE_EXCHANGE,
+        const SSL_OP_NO_TICKET                                = ::ffi_extras::SSL_OP_NO_TICKET,
+        const SSL_OP_CISCO_ANYCONNECT                         = ::ffi_extras::SSL_OP_CISCO_ANYCONNECT,
+        const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION   = ::ffi_extras::SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION,
+        const SSL_OP_NO_COMPRESSION                           = ::ffi_extras::SSL_OP_NO_COMPRESSION,
+        const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION        = ::ffi_extras::SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION,
+        const SSL_OP_SINGLE_ECDH_USE                          = ::ffi_extras::SSL_OP_SINGLE_ECDH_USE,
+        const SSL_OP_SINGLE_DH_USE                            = ::ffi_extras::SSL_OP_SINGLE_DH_USE,
+        const SSL_OP_CIPHER_SERVER_PREFERENCE                 = ::ffi_extras::SSL_OP_CIPHER_SERVER_PREFERENCE,
+        const SSL_OP_TLS_ROLLBACK_BUG                         = ::ffi_extras::SSL_OP_TLS_ROLLBACK_BUG,
+        const SSL_OP_NO_SSLV2                                 = ::ffi_extras::SSL_OP_NO_SSLv2,
+        const SSL_OP_NO_SSLV3                                 = ::ffi_extras::SSL_OP_NO_SSLv3,
+        const SSL_OP_NO_DTLSV1                                = ::ffi_extras::SSL_OP_NO_DTLSv1,
+        const SSL_OP_NO_TLSV1                                 = ::ffi_extras::SSL_OP_NO_TLSv1,
+        const SSL_OP_NO_DTLSV1_2                              = ::ffi_extras::SSL_OP_NO_DTLSv1_2,
+        const SSL_OP_NO_TLSV1_2                               = ::ffi_extras::SSL_OP_NO_TLSv1_2,
+        const SSL_OP_NO_TLSV1_1                               = ::ffi_extras::SSL_OP_NO_TLSv1_1,
+        const SSL_OP_NETSCAPE_CA_DN_BUG                       = ::ffi_extras::SSL_OP_NETSCAPE_CA_DN_BUG,
+        const SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG          = ::ffi_extras::SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG,
+        const SSL_OP_CRYPTOPRO_TLSEXT_BUG                     = ::ffi_extras::SSL_OP_CRYPTOPRO_TLSEXT_BUG,
+        const SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG              = ::ffi_extras::SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG,
+        const SSL_OP_MSIE_SSLV2_RSA_PADDING                   = ::ffi_extras::SSL_OP_MSIE_SSLV2_RSA_PADDING,
+        const SSL_OP_PKCS1_CHECK_1                            = ::ffi_extras::SSL_OP_PKCS1_CHECK_1,
+        const SSL_OP_PKCS1_CHECK_2                            = ::ffi_extras::SSL_OP_PKCS1_CHECK_2,
+        const SSL_OP_EPHEMERAL_RSA                            = ::ffi_extras::SSL_OP_EPHEMERAL_RSA,
         const SSL_OP_ALL         = SSL_OP_MICROSOFT_SESS_ID_BUG.bits|SSL_OP_NETSCAPE_CHALLENGE_BUG.bits
                                   |SSL_OP_LEGACY_SERVER_CONNECT.bits|SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG.bits
                                   |SSL_OP_TLSEXT_PADDING.bits|SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER.bits
@@ -214,14 +214,14 @@ impl SslMethod {
 
 /// Determines the type of certificate verification used
 bitflags! {
-    flags SslVerifyMode: i32 {
+    pub flags SslVerifyMode: i32 {
         /// Verify that the server's certificate is trusted
-        const SSL_VERIFY_PEER = ffi::SSL_VERIFY_PEER,
+        const SSL_VERIFY_PEER = ::ffi::SSL_VERIFY_PEER,
         /// Do not verify the server's certificate
-        const SSL_VERIFY_NONE = ffi::SSL_VERIFY_NONE,
+        const SSL_VERIFY_NONE = ::ffi::SSL_VERIFY_NONE,
         /// Terminate handshake if client did not return a certificate.
         /// Use together with SSL_VERIFY_PEER.
-        const SSL_VERIFY_FAIL_IF_NO_PEER_CERT = ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+        const SSL_VERIFY_FAIL_IF_NO_PEER_CERT = ::ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
     }
 }
 
