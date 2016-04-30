@@ -104,6 +104,10 @@ impl X509StoreContext {
             })
         }
     }
+
+    pub fn error_depth(&self) -> u32 {
+        unsafe { ffi::X509_STORE_CTX_get_error_depth(self.ctx) as u32 }
+    }
 }
 
 #[allow(non_snake_case)]
