@@ -11,6 +11,7 @@ use std::fmt;
 use std::str;
 use std::slice;
 use std::collections::HashMap;
+use std::marker::PhantomData;
 
 use asn1::Asn1Time;
 use bio::MemBio;
@@ -21,7 +22,7 @@ use crypto::rand::rand_bytes;
 use ffi;
 use ffi_extras;
 use ssl::error::{SslError, StreamError};
-use nid;
+use nid::Nid;
 
 pub mod extension;
 
@@ -464,6 +465,23 @@ impl<'ctx> X509<'ctx> {
         }
     }
 
+    pub fn subject_alt_names<'a>(&'a self) -> Option<GeneralNames<'a>> {
+        unsafe {
+            let stack = ffi::X509_get_ext_d2i(self.handle,
+                                              Nid::SubjectAltName as c_int,
+                                              ptr::null_mut(),
+                                              ptr::null_mut());
+            if stack.is_null() {
+                return None;
+            }
+
+            Some(GeneralNames {
+                stack: stack as *const _,
+                m: PhantomData,
+            })
+        }
+    }
+
     pub fn public_key(&self) -> PKey {
         let pkey = unsafe { ffi::X509_get_pubkey(self.handle) };
         assert!(!pkey.is_null());
@@ -544,7 +562,7 @@ pub struct X509NameEntry<'x> {
 }
 
 impl<'x> X509Name<'x> {
-    pub fn text_by_nid(&self, nid: nid::Nid) -> Option<SslString> {
+    pub fn text_by_nid(&self, nid: Nid) -> Option<SslString> {
         unsafe {
             let loc = ffi::X509_NAME_get_index_by_NID(self.name, nid as c_int, -1);
             if loc == -1 {
@@ -766,6 +784,63 @@ make_validation_error!(X509_V_OK,
     X509ApplicationVerification = X509_V_ERR_APPLICATION_VERIFICATION,
 );
 
+pub struct GeneralNames<'a> {
+    stack: *const ffi::stack_st_GENERAL_NAME,
+    m: PhantomData<&'a ()>,
+}
+
+impl<'a> GeneralNames<'a> {
+    pub fn len(&self) -> usize {
+        unsafe {
+            (*self.stack).stack.num as usize
+        }
+    }
+
+    pub fn get(&self, idx: usize) -> GeneralName<'a> {
+        unsafe {
+            assert!(idx < self.len());
+
+            GeneralName {
+                name: *(*self.stack).stack.data.offset(idx as isize) as *const ffi::GENERAL_NAME,
+                m: PhantomData,
+            }
+        }
+    }
+}
+
+pub struct GeneralName<'a> {
+    name: *const ffi::GENERAL_NAME,
+    m: PhantomData<&'a ()>,
+}
+
+impl<'a> GeneralName<'a> {
+    pub fn dns(&self) -> Option<&str> {
+        unsafe {
+            if (*self.name).type_ != ffi::GEN_DNS {
+                return None;
+            }
+
+            let ptr = ffi::ASN1_STRING_data((*self.name).d as *mut _);
+            let len = ffi::ASN1_STRING_length((*self.name).d as *mut _);
+
+            let slice = slice::from_raw_parts(ptr as *const u8, len as usize);
+            Some(str::from_utf8_unchecked(slice))
+        }
+    }
+
+    pub fn ipadd(&self) -> Option<&[u8]> {
+        unsafe {
+            if (*self.name).type_ != ffi::GEN_IPADD {
+                return None;
+            }
+
+            let ptr = ffi::ASN1_STRING_data((*self.name).d as *mut _);
+            let len = ffi::ASN1_STRING_length((*self.name).d as *mut _);
+
+            Some(slice::from_raw_parts(ptr as *const u8, len as usize))
+        }
+    }
+}
 
 #[test]
 fn test_negative_serial() {

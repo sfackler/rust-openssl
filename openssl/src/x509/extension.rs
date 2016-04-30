@@ -1,8 +1,4 @@
 use std::fmt;
-use std::marker::PhantomData;
-use std::slice;
-use std::str;
-use ffi;
 
 use nid::Nid;
 
@@ -221,39 +217,5 @@ impl fmt::Display for AltNameOption {
             &AltNameOption::IPAddress => "IP",
             &AltNameOption::RegisteredID => "RID",
         })
-    }
-}
-
-pub struct GeneralName<'a> {
-    name: *const ffi::GENERAL_NAME,
-    m: PhantomData<&'a ()>,
-}
-
-impl<'a> GeneralName<'a> {
-    pub fn dns(&self) -> Option<&str> {
-        unsafe {
-            if (*self.name).type_ != ffi::GEN_DNS {
-                return None;
-            }
-
-            let ptr = ffi::ASN1_STRING_data((*self.name).d as *mut _);
-            let len = ffi::ASN1_STRING_length((*self.name).d as *mut _);
-
-            let slice = slice::from_raw_parts(ptr as *const u8, len as usize);
-            Some(str::from_utf8_unchecked(slice))
-        }
-    }
-
-    pub fn ipadd(&self) -> Option<&[u8]> {
-        unsafe {
-            if (*self.name).type_ != ffi::GEN_IPADD {
-                return None;
-            }
-
-            let ptr = ffi::ASN1_STRING_data((*self.name).d as *mut _);
-            let len = ffi::ASN1_STRING_length((*self.name).d as *mut _);
-
-            Some(slice::from_raw_parts(ptr as *const u8, len as usize))
-        }
     }
 }

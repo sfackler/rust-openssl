@@ -794,6 +794,7 @@ extern "C" {
     pub fn X509_sign(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
     pub fn X509_get_pubkey(x: *mut X509) -> *mut EVP_PKEY;
     pub fn X509_to_X509_REQ(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> *mut X509_REQ;
+    pub fn X509_get_ext_d2i(x: *mut X509, nid: c_int, crit: *mut c_int, idx: *mut c_int) -> *mut c_void;
 
     pub fn X509_EXTENSION_free(ext: *mut X509_EXTENSION);
 
