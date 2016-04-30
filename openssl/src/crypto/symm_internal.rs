@@ -26,6 +26,9 @@ pub fn evpc(t: symm::Type) -> (*const ffi::EVP_CIPHER, u32, u32) {
             symm::Type::AES_256_CFB128 => (ffi::EVP_aes_256_cfb128(), 32, 16),
             symm::Type::AES_256_CFB8 => (ffi::EVP_aes_256_cfb8(), 32, 16),
 
+            symm::Type::DES_CBC => (ffi::EVP_des_cbc(), 8, 8),
+            symm::Type::DES_ECB => (ffi::EVP_des_ecb(), 8, 8),
+
             symm::Type::RC4_128 => (ffi::EVP_rc4(), 16, 0),
         }
     }

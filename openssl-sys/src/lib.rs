@@ -570,6 +570,9 @@ extern "C" {
     pub fn EVP_aes_256_cfb8() -> *const EVP_CIPHER;
     pub fn EVP_rc4() -> *const EVP_CIPHER;
 
+    pub fn EVP_des_cbc() -> *const EVP_CIPHER;
+    pub fn EVP_des_ecb() -> *const EVP_CIPHER;
+
     pub fn EVP_BytesToKey(typ: *const EVP_CIPHER, md: *const EVP_MD,
                           salt: *const u8, data: *const u8, datalen: c_int,
                           count: c_int, key: *mut u8, iv: *mut u8) -> c_int;
