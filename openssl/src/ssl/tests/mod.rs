@@ -1061,6 +1061,7 @@ fn refcount_ssl_context() {
 }
 
 #[test]
+#[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
 fn default_verify_paths() {
     let mut ctx = SslContext::new(SslMethod::Sslv23).unwrap();
     ctx.set_default_verify_paths().unwrap();
