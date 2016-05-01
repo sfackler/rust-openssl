@@ -469,6 +469,7 @@ impl<'ctx> X509<'ctx> {
         }
     }
 
+    /// Returns this certificate's SAN entries, if they exist.
     pub fn subject_alt_names<'a>(&'a self) -> Option<GeneralNames<'a>> {
         unsafe {
             let stack = ffi::X509_get_ext_d2i(self.handle,
@@ -788,18 +789,25 @@ make_validation_error!(X509_V_OK,
     X509ApplicationVerification = X509_V_ERR_APPLICATION_VERIFICATION,
 );
 
+/// A collection of OpenSSL `GENERAL_NAME`s.
 pub struct GeneralNames<'a> {
     stack: *const ffi::stack_st_GENERAL_NAME,
     m: PhantomData<&'a ()>,
 }
 
 impl<'a> GeneralNames<'a> {
+    /// Returns the number of `GeneralName`s in this structure.
     pub fn len(&self) -> usize {
         unsafe {
             (*self.stack).stack.num as usize
         }
     }
 
+    /// Returns the specified `GeneralName`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `idx` is not less than `len()`.
     pub fn get(&self, idx: usize) -> GeneralName<'a> {
         unsafe {
             assert!(idx < self.len());
@@ -811,6 +819,7 @@ impl<'a> GeneralNames<'a> {
         }
     }
 
+    /// Returns an iterator over the `GeneralName`s in this structure.
     pub fn iter(&self) -> GeneralNamesIter {
         GeneralNamesIter {
             names: self,
@@ -828,6 +837,7 @@ impl<'a> IntoIterator for &'a GeneralNames<'a> {
     }
 }
 
+/// An iterator over OpenSSL `GENERAL_NAME`s.
 pub struct GeneralNamesIter<'a> {
     names: &'a GeneralNames<'a>,
     idx: usize,
@@ -845,15 +855,24 @@ impl<'a> Iterator for GeneralNamesIter<'a> {
             None
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = self.names.len() - self.idx;
+        (size, Some(size))
+    }
 }
 
+impl<'a> ExactSizeIterator for GeneralNamesIter<'a> {}
+
+/// An OpenSSL `GENERAL_NAME`.
 pub struct GeneralName<'a> {
     name: *const ffi::GENERAL_NAME,
     m: PhantomData<&'a ()>,
 }
 
 impl<'a> GeneralName<'a> {
-    pub fn dns(&self) -> Option<&str> {
+    /// Returns the contents of this `GeneralName` if it is a `dNSName`.
+    pub fn dnsname(&self) -> Option<&str> {
         unsafe {
             if (*self.name).type_ != ffi::GEN_DNS {
                 return None;
@@ -867,7 +886,8 @@ impl<'a> GeneralName<'a> {
         }
     }
 
-    pub fn ipadd(&self) -> Option<&[u8]> {
+    /// Returns the contents of this `GeneralName` if it is an `iPAddress`.
+    pub fn ipaddress(&self) -> Option<&[u8]> {
         unsafe {
             if (*self.name).type_ != ffi::GEN_IPADD {
                 return None;
