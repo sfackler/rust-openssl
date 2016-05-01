@@ -169,3 +169,16 @@ fn test_subject_alt_name() {
     assert_eq!(subject_alt_names.get(1).ipadd(), Some(&[127, 0, 0, 1][..]));
     assert_eq!(subject_alt_names.get(2).ipadd(), Some(&b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01"[..]));
 }
+
+#[test]
+fn test_subject_alt_name_iter() {
+    let mut file = File::open("test/alt_name_cert.pem").unwrap();
+    let cert = X509::from_pem(&mut file).unwrap();
+
+    let subject_alt_names = cert.subject_alt_names().unwrap();
+    let mut subject_alt_names_iter = subject_alt_names.iter();
+    assert_eq!(subject_alt_names_iter.next().unwrap().dns(), Some("foobar.com"));
+    assert_eq!(subject_alt_names_iter.next().unwrap().ipadd(), Some(&[127, 0, 0, 1][..]));
+    assert_eq!(subject_alt_names_iter.next().unwrap().ipadd(), Some(&b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01"[..]));
+    assert!(subject_alt_names_iter.next().is_none());
+}

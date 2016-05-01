@@ -810,6 +810,32 @@ impl<'a> GeneralNames<'a> {
             }
         }
     }
+
+    pub fn iter(&self) -> GeneralNamesIter {
+        GeneralNamesIter {
+            names: self,
+            idx: 0
+        }
+    }
+}
+
+pub struct GeneralNamesIter<'a> {
+    names: &'a GeneralNames<'a>,
+    idx: usize,
+}
+
+impl<'a> Iterator for GeneralNamesIter<'a> {
+    type Item = GeneralName<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.idx < self.names.len() {
+            let name = self.names.get(self.idx);
+            self.idx += 1;
+            Some(name)
+        } else {
+            None
+        }
+    }
 }
 
 pub struct GeneralName<'a> {
