@@ -819,6 +819,15 @@ impl<'a> GeneralNames<'a> {
     }
 }
 
+impl<'a> IntoIterator for &'a GeneralNames<'a> {
+    type Item = GeneralName<'a>;
+    type IntoIter = GeneralNamesIter<'a>;
+
+    fn into_iter(self) -> GeneralNamesIter<'a> {
+        self.iter()
+    }
+}
+
 pub struct GeneralNamesIter<'a> {
     names: &'a GeneralNames<'a>,
     idx: usize,
