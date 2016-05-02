@@ -968,6 +968,13 @@ impl Ssl {
         }
     }
 
+    /// Sets the verification mode to be used during the handshake process.
+    ///
+    /// Use `set_verify_callback` to additionally add a callback.
+    pub fn set_verify(&mut self, mode: SslVerifyMode) {
+        unsafe { ffi::SSL_set_verify(self.ssl, mode.bits as c_int, None) }
+    }
+
     /// Sets the certificate verification callback to be used during the
     /// handshake process.
     ///
@@ -975,7 +982,7 @@ impl Ssl {
     /// preveification process was successful, and an object providing access
     /// to the certificate chain. It should return `true` if the certificate
     /// chain is valid and `false` otherwise.
-    pub fn set_verify<F>(&mut self, mode: SslVerifyMode, verify: F)
+    pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
         where F: Fn(bool, &X509StoreContext) -> bool + Any + 'static + Sync + Send
     {
         unsafe {

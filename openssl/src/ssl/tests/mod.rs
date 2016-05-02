@@ -392,7 +392,7 @@ run_test!(ssl_verify_callback, |method, stream| {
 
     let node_hash_str = "db400bb62f1b1f29c3b8f323b8f7d9dea724fdcd67104ef549c772ae3749655b";
     let node_id = node_hash_str.from_hex().unwrap();
-    ssl.set_verify(SSL_VERIFY_PEER, move |_, x509| {
+    ssl.set_verify_callback(SSL_VERIFY_PEER, move |_, x509| {
         CHECKED.store(1, Ordering::SeqCst);
         match x509.get_current_cert() {
             None => false,
