@@ -227,7 +227,7 @@ run_test!(new_sslstream, |method, stream| {
 
 run_test!(get_ssl_method, |method, _| {
     let ssl = Ssl::new(&SslContext::new(method).unwrap()).unwrap();
-    assert_eq!(ssl.get_ssl_method(), Some(method));
+    assert_eq!(ssl.ssl_method(), Some(method));
 });
 
 run_test!(verify_untrusted, |method, stream| {
@@ -462,7 +462,7 @@ fn test_set_certificate_and_private_key() {
 
 run_test!(get_ctx_options, |method, _| {
     let mut ctx = SslContext::new(method).unwrap();
-    ctx.get_options();
+    ctx.options();
 });
 
 run_test!(set_ctx_options, |method, _| {

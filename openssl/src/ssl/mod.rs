@@ -767,7 +767,7 @@ impl SslContext {
         SslContextOptions::from_bits(ret).unwrap()
     }
 
-    pub fn get_options(&mut self) -> SslContextOptions {
+    pub fn options(&mut self) -> SslContextOptions {
         let ret = unsafe { ffi_extras::SSL_CTX_get_options(self.ctx) };
         SslContextOptions::from_bits(ret).unwrap()
     }
@@ -982,7 +982,7 @@ impl Ssl {
         }
     }
 
-    pub fn get_current_cipher<'a>(&'a self) -> Option<SslCipher<'a>> {
+    pub fn current_cipher<'a>(&'a self) -> Option<SslCipher<'a>> {
         unsafe {
             let ptr = ffi::SSL_get_current_cipher(self.ssl);
 
@@ -1119,7 +1119,7 @@ impl Ssl {
         Some(s)
     }
 
-    pub fn get_ssl_method(&self) -> Option<SslMethod> {
+    pub fn ssl_method(&self) -> Option<SslMethod> {
         unsafe {
             let method = ffi::SSL_get_ssl_method(self.ssl);
             SslMethod::from_raw(method)
@@ -1127,7 +1127,7 @@ impl Ssl {
     }
 
     /// Returns the server's name for the current connection
-    pub fn get_servername(&self) -> Option<String> {
+    pub fn servername(&self) -> Option<String> {
         let name = unsafe { ffi::SSL_get_servername(self.ssl, ffi::TLSEXT_NAMETYPE_host_name) };
         if name == ptr::null() {
             return None;
@@ -1136,9 +1136,7 @@ impl Ssl {
         unsafe { String::from_utf8(CStr::from_ptr(name as *const _).to_bytes().to_vec()).ok() }
     }
 
-    /// change the context corresponding to the current connection
-    ///
-    /// Returns a clone of the SslContext @ctx (ie: the new context). The old context is freed.
+    /// Changes the context corresponding to the current connection.
     pub fn set_ssl_context(&self, ctx: &SslContext) -> Result<(), ErrorStack> {
         unsafe {
             try_ssl_null!(ffi::SSL_set_SSL_CTX(self.ssl, ctx.ctx));
@@ -1146,8 +1144,8 @@ impl Ssl {
         Ok(())
     }
 
-    /// obtain the context corresponding to the current connection
-    pub fn get_ssl_context(&self) -> SslContext {
+    /// Returns the context corresponding to the current connection
+    pub fn ssl_context(&self) -> SslContext {
         unsafe {
             let ssl_ctx = ffi::SSL_get_SSL_CTX(self.ssl);
             SslContext::new_ref(ssl_ctx)
