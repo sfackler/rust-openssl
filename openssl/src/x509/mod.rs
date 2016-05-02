@@ -882,7 +882,10 @@ impl<'a> GeneralName<'a> {
             let len = ffi::ASN1_STRING_length((*self.name).d as *mut _);
 
             let slice = slice::from_raw_parts(ptr as *const u8, len as usize);
-            Some(str::from_utf8_unchecked(slice))
+            // dNSNames are stated to be ASCII (specifically IA5). Hopefully
+            // OpenSSL checks that when loading a certificate but if not we'll
+            // use this instead of from_utf8_unchecked just in case.
+            str::from_utf8(slice).ok()
         }
     }
 
