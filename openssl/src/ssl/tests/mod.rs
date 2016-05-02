@@ -19,7 +19,7 @@ use ssl::SSL_VERIFY_PEER;
 use ssl::SslMethod::Sslv23;
 use ssl::SslMethod;
 use ssl::error::Error;
-use ssl::{SslContext, SslStream, VerifyCallback};
+use ssl::{SslContext, SslStream};
 use x509::X509StoreContext;
 use x509::X509FileType;
 use x509::X509;
@@ -194,7 +194,7 @@ macro_rules! run_test(
             use std::net::TcpStream;
             use ssl;
             use ssl::SslMethod;
-            use ssl::{SslContext, Ssl, SslStream, VerifyCallback};
+            use ssl::{SslContext, Ssl, SslStream};
             use ssl::SSL_VERIFY_PEER;
             use crypto::hash::Type::SHA256;
             use x509::X509StoreContext;
@@ -232,7 +232,7 @@ run_test!(get_ssl_method, |method, _| {
 
 run_test!(verify_untrusted, |method, stream| {
     let mut ctx = SslContext::new(method).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_verify(SSL_VERIFY_PEER);
 
     match SslStream::connect(&ctx, stream) {
         Ok(_) => panic!("expected failure"),
@@ -242,7 +242,7 @@ run_test!(verify_untrusted, |method, stream| {
 
 run_test!(verify_trusted, |method, stream| {
     let mut ctx = SslContext::new(method).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_verify(SSL_VERIFY_PEER);
 
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
@@ -255,12 +255,8 @@ run_test!(verify_trusted, |method, stream| {
 });
 
 run_test!(verify_untrusted_callback_override_ok, |method, stream| {
-    fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
-        true
-    }
-
     let mut ctx = SslContext::new(method).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
+    ctx.set_verify_callback(SSL_VERIFY_PEER, |_, _| true);
 
     match SslStream::connect(&ctx, stream) {
         Ok(_) => (),
@@ -269,23 +265,15 @@ run_test!(verify_untrusted_callback_override_ok, |method, stream| {
 });
 
 run_test!(verify_untrusted_callback_override_bad, |method, stream| {
-    fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
-        false
-    }
-
     let mut ctx = SslContext::new(method).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
+    ctx.set_verify_callback(SSL_VERIFY_PEER, |_, _| false);
 
     assert!(SslStream::connect(&ctx, stream).is_err());
 });
 
 run_test!(verify_trusted_callback_override_ok, |method, stream| {
-    fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
-        true
-    }
-
     let mut ctx = SslContext::new(method).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
+    ctx.set_verify_callback(SSL_VERIFY_PEER, |_, _| true);
 
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
@@ -298,12 +286,8 @@ run_test!(verify_trusted_callback_override_ok, |method, stream| {
 });
 
 run_test!(verify_trusted_callback_override_bad, |method, stream| {
-    fn callback(_preverify_ok: bool, _x509_ctx: &X509StoreContext) -> bool {
-        false
-    }
-
     let mut ctx = SslContext::new(method).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
+    ctx.set_verify_callback(SSL_VERIFY_PEER, |_, _| false);
 
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
@@ -313,25 +297,21 @@ run_test!(verify_trusted_callback_override_bad, |method, stream| {
 });
 
 run_test!(verify_callback_load_certs, |method, stream| {
-    fn callback(_preverify_ok: bool, x509_ctx: &X509StoreContext) -> bool {
+    let mut ctx = SslContext::new(method).unwrap();
+    ctx.set_verify_callback(SSL_VERIFY_PEER, |_, x509_ctx| {
         assert!(x509_ctx.get_current_cert().is_some());
         true
-    }
-
-    let mut ctx = SslContext::new(method).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
+    });
 
     assert!(SslStream::connect(&ctx, stream).is_ok());
 });
 
 run_test!(verify_trusted_get_error_ok, |method, stream| {
-    fn callback(_preverify_ok: bool, x509_ctx: &X509StoreContext) -> bool {
+    let mut ctx = SslContext::new(method).unwrap();
+    ctx.set_verify_callback(SSL_VERIFY_PEER, |_, x509_ctx| {
         assert!(x509_ctx.get_error().is_none());
         true
-    }
-
-    let mut ctx = SslContext::new(method).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
+    });
 
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
@@ -341,29 +321,16 @@ run_test!(verify_trusted_get_error_ok, |method, stream| {
 });
 
 run_test!(verify_trusted_get_error_err, |method, stream| {
-    fn callback(_preverify_ok: bool, x509_ctx: &X509StoreContext) -> bool {
+    let mut ctx = SslContext::new(method).unwrap();
+    ctx.set_verify_callback(SSL_VERIFY_PEER, |_, x509_ctx| {
         assert!(x509_ctx.get_error().is_some());
         false
-    }
-
-    let mut ctx = SslContext::new(method).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, Some(callback as VerifyCallback));
+    });
 
     assert!(SslStream::connect(&ctx, stream).is_err());
 });
 
 run_test!(verify_callback_data, |method, stream| {
-    fn callback(_preverify_ok: bool, x509_ctx: &X509StoreContext,
-                node_id: &Vec<u8>) -> bool {
-        let cert = x509_ctx.get_current_cert();
-        match cert {
-            None => false,
-            Some(cert) => {
-                let fingerprint = cert.fingerprint(SHA256).unwrap();
-                &fingerprint == node_id
-            }
-        }
-    }
     let mut ctx = SslContext::new(method).unwrap();
 
     // Node id was generated as SHA256 hash of certificate "test/cert.pem"
@@ -372,7 +339,16 @@ run_test!(verify_callback_data, |method, stream| {
     // Please update if "test/cert.pem" will ever change
     let node_hash_str = "db400bb62f1b1f29c3b8f323b8f7d9dea724fdcd67104ef549c772ae3749655b";
     let node_id = node_hash_str.from_hex().unwrap();
-    ctx.set_verify_with_data(SSL_VERIFY_PEER, callback, node_id);
+    ctx.set_verify_callback(SSL_VERIFY_PEER, move |_preverify_ok, x509_ctx| {
+        let cert = x509_ctx.get_current_cert();
+        match cert {
+            None => false,
+            Some(cert) => {
+                let fingerprint = cert.fingerprint(SHA256).unwrap();
+                fingerprint == node_id
+            }
+        }
+    });
     ctx.set_verify_depth(1);
 
     match SslStream::connect(&ctx, stream) {
@@ -427,7 +403,7 @@ fn test_write_hits_stream() {
     });
 
     let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM).unwrap();
     ctx.set_private_key_file(&Path::new("test/key.pem"), X509FileType::PEM).unwrap();
     let stream = listener.accept().unwrap().0;
@@ -577,7 +553,7 @@ fn test_state() {
 fn test_connect_with_unilateral_alpn() {
     let (_s, stream) = Server::new();
     let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
@@ -599,7 +575,7 @@ fn test_connect_with_unilateral_alpn() {
 fn test_connect_with_unilateral_npn() {
     let (_s, stream) = Server::new();
     let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
@@ -621,7 +597,7 @@ fn test_connect_with_unilateral_npn() {
 fn test_connect_with_alpn_successful_multiple_matching() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"spdy/3.1", b"http/1.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
@@ -643,7 +619,7 @@ fn test_connect_with_alpn_successful_multiple_matching() {
 fn test_connect_with_npn_successful_multiple_matching() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_npn_protocols(&[b"spdy/3.1", b"http/1.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
@@ -666,7 +642,7 @@ fn test_connect_with_npn_successful_multiple_matching() {
 fn test_connect_with_alpn_successful_single_match() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
@@ -690,7 +666,7 @@ fn test_connect_with_alpn_successful_single_match() {
 fn test_connect_with_npn_successful_single_match() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_npn_protocols(&[b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
@@ -715,7 +691,7 @@ fn test_npn_server_advertise_multiple() {
     // We create a different context instance for the server...
     let listener_ctx = {
         let mut ctx = SslContext::new(Sslv23).unwrap();
-        ctx.set_verify(SSL_VERIFY_PEER, None);
+        ctx.set_verify(SSL_VERIFY_PEER);
         ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]);
         assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM)
                    .is_ok());
@@ -730,7 +706,7 @@ fn test_npn_server_advertise_multiple() {
     });
 
     let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_npn_protocols(&[b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
@@ -756,7 +732,7 @@ fn test_alpn_server_advertise_multiple() {
     // We create a different context instance for the server...
     let listener_ctx = {
         let mut ctx = SslContext::new(Sslv23).unwrap();
-        ctx.set_verify(SSL_VERIFY_PEER, None);
+        ctx.set_verify(SSL_VERIFY_PEER);
         ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]);
         assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM)
                    .is_ok());
@@ -771,7 +747,7 @@ fn test_alpn_server_advertise_multiple() {
     });
 
     let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"spdy/3.1"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
@@ -797,7 +773,7 @@ fn test_alpn_server_select_none() {
     // We create a different context instance for the server...
     let listener_ctx = {
         let mut ctx = SslContext::new(Sslv23).unwrap();
-        ctx.set_verify(SSL_VERIFY_PEER, None);
+        ctx.set_verify(SSL_VERIFY_PEER);
         ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]);
         assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM)
                    .is_ok());
@@ -812,7 +788,7 @@ fn test_alpn_server_select_none() {
     });
 
     let mut ctx = SslContext::new(Sslv23).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"http/2"]);
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
@@ -840,7 +816,7 @@ mod dtlsv1 {
     use crypto::hash::Type::SHA256;
     use ssl::SslMethod;
     use ssl::SslMethod::Dtlsv1;
-    use ssl::{SslContext, SslStream, VerifyCallback};
+    use ssl::{SslContext, SslStream};
     use ssl::SSL_VERIFY_PEER;
     use x509::X509StoreContext;
 
@@ -1087,7 +1063,7 @@ fn refcount_ssl_context() {
 fn default_verify_paths() {
     let mut ctx = SslContext::new(SslMethod::Sslv23).unwrap();
     ctx.set_default_verify_paths().unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER, None);
+    ctx.set_verify(SSL_VERIFY_PEER);
     let s = TcpStream::connect("google.com:443").unwrap();
     let mut socket = SslStream::connect(&ctx, s).unwrap();
 

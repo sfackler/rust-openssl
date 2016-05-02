@@ -44,7 +44,6 @@ extern "C" {
     fn rust_SSL_CTX_clone(cxt: *mut ffi::SSL_CTX);
 }
 
-static mut VERIFY_IDX: c_int = -1;
 static mut SNI_IDX: c_int = -1;
 
 /// Manually initialize SSL.
@@ -55,10 +54,6 @@ pub fn init() {
     unsafe {
         INIT.call_once(|| {
             ffi::init();
-
-            let verify_idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None, None, None);
-            assert!(verify_idx >= 0);
-            VERIFY_IDX = verify_idx;
 
             let sni_idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None, None, None);
             assert!(sni_idx >= 0);
@@ -291,47 +286,19 @@ fn get_new_ssl_idx<T>() -> c_int {
     }
 }
 
-extern "C" fn raw_verify(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int {
-    unsafe {
-        let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
-        let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
-        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
-        let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, VERIFY_IDX);
-        let verify: Option<VerifyCallback> = mem::transmute(verify);
-
-        let ctx = X509StoreContext::new(x509_ctx);
-
-        match verify {
-            None => preverify_ok,
-            Some(verify) => verify(preverify_ok != 0, &ctx) as c_int,
-        }
-    }
-}
-
-extern "C" fn raw_verify_with_data<T>(preverify_ok: c_int,
-                                      x509_ctx: *mut ffi::X509_STORE_CTX)
-                                      -> c_int
-    where T: Any + 'static
+extern "C" fn raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
+    where F: Fn(bool, &X509StoreContext) -> bool + Any + 'static + Sync + Send
 {
     unsafe {
         let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
         let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
-
-        let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, VERIFY_IDX);
-        let verify: Option<VerifyCallbackData<T>> = mem::transmute(verify);
-
-        let data = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_verify_data_idx::<T>());
-        let data: &T = mem::transmute(data);
+        let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_verify_data_idx::<F>());
+        let verify: &F = mem::transmute(verify);
 
         let ctx = X509StoreContext::new(x509_ctx);
 
-        let res = match verify {
-            None => preverify_ok,
-            Some(verify) => verify(preverify_ok != 0, &ctx, data) as c_int,
-        };
-
-        res
+        verify(preverify_ok != 0, &ctx) as c_int
     }
 }
 
@@ -498,14 +465,6 @@ fn ssl_encode_byte_strings(strings: &[&[u8]]) -> Vec<u8> {
     enc
 }
 
-/// The signature of functions that can be used to manually verify certificates
-pub type VerifyCallback = fn(preverify_ok: bool, x509_ctx: &X509StoreContext) -> bool;
-
-/// The signature of functions that can be used to manually verify certificates
-/// when user-data should be carried for all verification process
-pub type VerifyCallbackData<T> = fn(preverify_ok: bool, x509_ctx: &X509StoreContext, data: &T)
-                                    -> bool;
-
 /// The signature of functions that can be used to choose the context depending on the server name
 pub type ServerNameCallback = fn(ssl: &mut Ssl, ad: &mut i32) -> i32;
 
@@ -573,33 +532,21 @@ impl SslContext {
     }
 
     /// Configures the certificate verification method for new connections.
-    pub fn set_verify(&mut self, mode: SslVerifyMode, verify: Option<VerifyCallback>) {
+    pub fn set_verify(&mut self, mode: SslVerifyMode) {
         unsafe {
-            ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX, mem::transmute(verify));
-            let f: extern "C" fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int = raw_verify;
-
-            ffi::SSL_CTX_set_verify(self.ctx, mode.bits as c_int, Some(f));
+            ffi::SSL_CTX_set_verify(self.ctx, mode.bits as c_int, None);
         }
     }
 
-    /// Configures the certificate verification method for new connections also
-    /// carrying supplied data.
-    // Note: no option because there is no point to set data without providing
-    // a function handling it
-    pub fn set_verify_with_data<T>(&mut self,
-                                   mode: SslVerifyMode,
-                                   verify: VerifyCallbackData<T>,
-                                   data: T)
-        where T: Any + 'static
+    /// Configures the certificate verification method for new connections and
+    /// registers a verification callback.
+    pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
+        where F: Fn(bool, &X509StoreContext) -> bool + Any + 'static + Sync + Send
     {
-        let data = Box::new(data);
         unsafe {
-            ffi::SSL_CTX_set_ex_data(self.ctx, VERIFY_IDX, mem::transmute(Some(verify)));
-            ffi::SSL_CTX_set_ex_data(self.ctx, get_verify_data_idx::<T>(), mem::transmute(data));
-            let f: extern "C" fn(c_int, *mut ffi::X509_STORE_CTX) -> c_int =
-                raw_verify_with_data::<T>;
-
-            ffi::SSL_CTX_set_verify(self.ctx, mode.bits as c_int, Some(f));
+            let verify = Box::new(verify);
+            ffi::SSL_CTX_set_ex_data(self.ctx, get_verify_data_idx::<F>(), mem::transmute(verify));
+            ffi::SSL_CTX_set_verify(self.ctx, mode.bits as c_int, Some(raw_verify::<F>));
         }
     }
 
