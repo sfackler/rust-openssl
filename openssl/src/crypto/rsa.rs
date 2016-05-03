@@ -28,6 +28,21 @@ impl RSA {
             Ok(RSA(rsa))
         }
     }
+    
+    pub fn from_private_components(n: BigNum, e: BigNum, d: BigNum, p: BigNum, q: BigNum, dp: BigNum, dq: BigNum, qi: BigNum) -> Result<RSA, SslError> {
+        unsafe {
+            let rsa = try_ssl_null!(ffi::RSA_new());
+            (*rsa).n = n.into_raw();
+            (*rsa).e = e.into_raw();
+            (*rsa).d = d.into_raw();
+            (*rsa).p = p.into_raw();
+            (*rsa).q = q.into_raw();
+            (*rsa).dmp1 = dp.into_raw();
+            (*rsa).dmq1 = dq.into_raw();
+            (*rsa).iqmp = qi.into_raw();
+            Ok(RSA(rsa))
+        }
+    }
 
     /// the caller should assert that the rsa pointer is valid.
     pub unsafe fn from_raw(rsa: *mut ffi::RSA) -> RSA {
@@ -65,6 +80,43 @@ impl RSA {
             Ok(RSA(rsa))
         }
     }
+    
+    pub fn size(&self) -> Result<u32, SslError> {
+        if self.has_n() {
+            unsafe {
+                Ok(ffi::RSA_size(self.0) as u32)
+            }
+        } else {
+            Err(SslError::OpenSslErrors(vec![]))
+        }
+    }
+    
+    pub fn sign(&self, hash_id: i32, message: &[u8]) -> Result<Vec<u8>, SslError> {
+        // RSA_sign(t: c_int, m: *const u8, mlen: c_uint, sig: *mut u8, siglen: *mut c_uint, k: *mut RSA) -> c_int
+        
+        let k_len = try!(self.size());
+        let mut sig = vec![0;k_len as usize];
+        let mut sig_len = k_len;
+        
+        unsafe {
+            let result = ffi::RSA_sign(hash_id, message.as_ptr(), message.len() as u32, sig.as_mut_ptr(), &mut sig_len, self.0);
+            assert!(sig_len == k_len);
+            
+            if result == 1 {
+                Ok(sig)
+            } else {
+                Err(SslError::OpenSslErrors(vec![]))
+            }
+        }
+    }
+    
+    pub fn verify(&self, hash_id: i32, message: &[u8], sig: &[u8]) -> Result<bool, SslError> {
+        unsafe {
+            let result = ffi::RSA_verify(hash_id, message.as_ptr(), message.len() as u32, sig.as_ptr(), sig.len() as u32, self.0);
+            
+            Ok(result == 1)
+        }
+    }    
 
     pub fn as_ptr(&self) -> *mut ffi::RSA {
         self.0
