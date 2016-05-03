@@ -169,30 +169,6 @@ impl SslMethod {
             _ => None,
         }
     }
-
-    #[cfg(feature = "dtlsv1")]
-    pub fn is_dtlsv1(&self) -> bool {
-        *self == SslMethod::Dtlsv1
-    }
-
-    #[cfg(feature = "dtlsv1_2")]
-    pub fn is_dtlsv1_2(&self) -> bool {
-        *self == SslMethod::Dtlsv1_2
-    }
-
-    pub fn is_dtls(&self) -> bool {
-        self.is_dtlsv1() || self.is_dtlsv1_2()
-    }
-
-    #[cfg(not(feature = "dtlsv1"))]
-    pub fn is_dtlsv1(&self) -> bool {
-        false
-    }
-
-    #[cfg(not(feature = "dtlsv1_2"))]
-    pub fn is_dtlsv1_2(&self) -> bool {
-        false
-    }
 }
 
 /// Determines the type of certificate verification used
@@ -496,8 +472,12 @@ impl SslContext {
 
         let ctx = SslContext { ctx: ctx };
 
-        if method.is_dtls() {
-            ctx.set_read_ahead(1);
+        match method {
+            #[cfg(feature = "dtlsv1")]
+            SslMethod::Dtlsv1 => ctx.set_read_ahead(1),
+            #[cfg(feature = "dtlsv1_2")]
+            SslMethod::Dtlsv1_2 => ctx.set_read_ahead(1),
+            _ => {}
         }
 
         Ok(ctx)
