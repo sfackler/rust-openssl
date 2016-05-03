@@ -834,12 +834,8 @@ impl Ssl {
         unsafe { ffi::SSL_write(self.ssl, buf.as_ptr() as *const c_void, len) }
     }
 
-    fn get_error(&self, ret: c_int) -> LibErrorStack {
-        let err = unsafe { ffi::SSL_get_error(self.ssl, ret) };
-        match LibErrorStack::from_i32(err as i32) {
-            Some(err) => err,
-            None => unreachable!(),
-        }
+    fn get_error(&self, ret: c_int) -> c_int {
+        unsafe { ffi::SSL_get_error(self.ssl, ret) }
     }
 
     /// Sets the verification mode to be used during the handshake process.
@@ -1037,37 +1033,6 @@ impl Ssl {
     }
 }
 
-macro_rules! make_LibErrorStack {
-    ($($variant:ident = $value:ident),+) => {
-        #[derive(Debug)]
-        #[repr(i32)]
-        enum LibErrorStack {
-            $($variant = ffi::$value),+
-        }
-
-        impl LibErrorStack {
-            fn from_i32(val: i32) -> Option<LibErrorStack> {
-                match val {
-                    $(ffi::$value => Some(LibErrorStack::$variant),)+
-                    _ => None
-                }
-            }
-        }
-    }
-}
-
-make_LibErrorStack! {
-    ErrorNone = SSL_ERROR_NONE,
-    ErrorSsl = SSL_ERROR_SSL,
-    ErrorWantRead = SSL_ERROR_WANT_READ,
-    ErrorWantWrite = SSL_ERROR_WANT_WRITE,
-    ErrorWantX509Lookup = SSL_ERROR_WANT_X509_LOOKUP,
-    ErrorSyscall = SSL_ERROR_SYSCALL,
-    ErrorZeroReturn = SSL_ERROR_ZERO_RETURN,
-    ErrorWantConnect = SSL_ERROR_WANT_CONNECT,
-    ErrorWantAccept = SSL_ERROR_WANT_ACCEPT
-}
-
 /// A stream wrapper which handles SSL encryption for an underlying stream.
 pub struct SslStream<S> {
     ssl: Ssl,
@@ -1177,8 +1142,8 @@ impl<S> SslStream<S> {
         self.check_panic();
 
         match self.ssl.get_error(ret) {
-            LibErrorStack::ErrorSsl => Error::Ssl(ErrorStack::get()),
-            LibErrorStack::ErrorSyscall => {
+            ffi::SSL_ERROR_SSL => Error::Ssl(ErrorStack::get()),
+            ffi::SSL_ERROR_SYSCALL => {
                 let errs = ErrorStack::get();
                 if errs.errors().is_empty() {
                     if ret == 0 {
@@ -1191,12 +1156,12 @@ impl<S> SslStream<S> {
                     Error::Ssl(errs)
                 }
             }
-            LibErrorStack::ErrorZeroReturn => Error::ZeroReturn,
-            LibErrorStack::ErrorWantWrite => Error::WantWrite(self.get_bio_error()),
-            LibErrorStack::ErrorWantRead => Error::WantRead(self.get_bio_error()),
+            ffi::SSL_ERROR_ZERO_RETURN => Error::ZeroReturn,
+            ffi::SSL_ERROR_WANT_WRITE => Error::WantWrite(self.get_bio_error()),
+            ffi::SSL_ERROR_WANT_READ => Error::WantRead(self.get_bio_error()),
             err => {
-                Error::Stream(io::Error::new(io::ErrorKind::Other,
-                                             format!("unexpected error {:?}", err)))
+                Error::Stream(io::Error::new(io::ErrorKind::InvalidData,
+                                             format!("unexpected error {}", err)))
             }
         }
     }
