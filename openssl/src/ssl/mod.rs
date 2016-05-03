@@ -17,10 +17,6 @@ use libc::{c_uchar, c_uint};
 #[cfg(any(feature = "npn", feature = "alpn"))]
 use std::slice;
 use std::marker::PhantomData;
-#[cfg(unix)]
-use std::os::unix::io::{AsRawFd, RawFd};
-#[cfg(windows)]
-use std::os::windows::io::{AsRawSocket, RawSocket};
 
 use ffi;
 use ffi_extras;
@@ -1049,20 +1045,6 @@ impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug
            .field("stream", &self.get_ref())
            .field("ssl", &self.ssl())
            .finish()
-    }
-}
-
-#[cfg(unix)]
-impl<S: AsRawFd> AsRawFd for SslStream<S> {
-    fn as_raw_fd(&self) -> RawFd {
-        self.get_ref().as_raw_fd()
-    }
-}
-
-#[cfg(windows)]
-impl<S: AsRawSocket> AsRawSocket for SslStream<S> {
-    fn as_raw_socket(&self) -> RawSocket {
-        self.get_ref().as_raw_socket()
     }
 }
 
