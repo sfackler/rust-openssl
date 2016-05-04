@@ -24,6 +24,7 @@ pub mod crypto;
 pub mod dh;
 pub mod error;
 pub mod nid;
+pub mod nid2;
 pub mod ssl;
 pub mod version;
 pub mod x509;
