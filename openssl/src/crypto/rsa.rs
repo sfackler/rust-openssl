@@ -6,24 +6,7 @@ use std::io::{self, Read};
 
 use bn::BigNum;
 use bio::MemBio;
-
-#[derive(Copy, Clone, Debug)]
-pub enum PKCSHashType {
-    SHA256,
-    SHA384,
-    SHA512
-}
-
-/// https://github.com/openssl/openssl/blob/master/include/openssl/obj_mac.h#L2790
-impl Into<i32> for PKCSHashType {
-    fn into(self) -> i32 {
-        match self {
-            PKCSHashType::SHA256 => 672,
-            PKCSHashType::SHA384 => 673,
-            PKCSHashType::SHA512 => 674
-        }
-    }
-}
+use nid::Nid;
 
 pub struct RSA(*mut ffi::RSA);
 
@@ -109,13 +92,13 @@ impl RSA {
         }
     }
     
-    pub fn sign(&self, hash_id: PKCSHashType, message: &[u8]) -> Result<Vec<u8>, SslError> {
+    pub fn sign(&self, hash_id: Nid, message: &[u8]) -> Result<Vec<u8>, SslError> {
         let k_len = try!(self.size());
         let mut sig = vec![0;k_len as usize];
         let mut sig_len = k_len;
         
         unsafe {
-            let result = ffi::RSA_sign(hash_id.into(), message.as_ptr(), message.len() as u32, sig.as_mut_ptr(), &mut sig_len, self.0);
+            let result = ffi::RSA_sign(hash_id as i32, message.as_ptr(), message.len() as u32, sig.as_mut_ptr(), &mut sig_len, self.0);
             assert!(sig_len == k_len);
             
             if result == 1 {
@@ -126,9 +109,9 @@ impl RSA {
         }
     }
     
-    pub fn verify(&self, hash_id: PKCSHashType, message: &[u8], sig: &[u8]) -> Result<bool, SslError> {
+    pub fn verify(&self, hash_id: Nid, message: &[u8], sig: &[u8]) -> Result<bool, SslError> {
         unsafe {
-            let result = ffi::RSA_verify(hash_id.into(), message.as_ptr(), message.len() as u32, sig.as_ptr(), sig.len() as u32, self.0);
+            let result = ffi::RSA_verify(hash_id as i32, message.as_ptr(), message.len() as u32, sig.as_ptr(), sig.len() as u32, self.0);
             
             Ok(result == 1)
         }
