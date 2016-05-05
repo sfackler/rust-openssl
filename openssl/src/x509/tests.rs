@@ -157,3 +157,30 @@ fn test_nid_uid_value() {
     };
     assert_eq!(&cn as &str, "this is the userId");
 }
+
+#[test]
+fn test_subject_alt_name() {
+    let mut file = File::open("test/alt_name_cert.pem").unwrap();
+    let cert = X509::from_pem(&mut file).unwrap();
+
+    let subject_alt_names = cert.subject_alt_names().unwrap();
+    assert_eq!(3, subject_alt_names.len());
+    assert_eq!(Some("foobar.com"), subject_alt_names.get(0).dnsname());
+    assert_eq!(subject_alt_names.get(1).ipaddress(), Some(&[127, 0, 0, 1][..]));
+    assert_eq!(subject_alt_names.get(2).ipaddress(),
+               Some(&b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01"[..]));
+}
+
+#[test]
+fn test_subject_alt_name_iter() {
+    let mut file = File::open("test/alt_name_cert.pem").unwrap();
+    let cert = X509::from_pem(&mut file).unwrap();
+
+    let subject_alt_names = cert.subject_alt_names().unwrap();
+    let mut subject_alt_names_iter = subject_alt_names.iter();
+    assert_eq!(subject_alt_names_iter.next().unwrap().dnsname(), Some("foobar.com"));
+    assert_eq!(subject_alt_names_iter.next().unwrap().ipaddress(), Some(&[127, 0, 0, 1][..]));
+    assert_eq!(subject_alt_names_iter.next().unwrap().ipaddress(),
+               Some(&b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01"[..]));
+    assert!(subject_alt_names_iter.next().is_none());
+}

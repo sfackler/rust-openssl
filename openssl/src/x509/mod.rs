@@ -2,14 +2,16 @@ use libc::{c_char, c_int, c_long, c_ulong, c_uint, c_void};
 use std::io;
 use std::io::prelude::*;
 use std::cmp::Ordering;
-use std::ffi::{CString, CStr};
+use std::ffi::CString;
 use std::iter::repeat;
 use std::mem;
 use std::ptr;
 use std::ops::Deref;
 use std::fmt;
 use std::str;
+use std::slice;
 use std::collections::HashMap;
+use std::marker::PhantomData;
 
 use asn1::Asn1Time;
 use bio::MemBio;
@@ -20,7 +22,7 @@ use crypto::rand::rand_bytes;
 use ffi;
 use ffi_extras;
 use ssl::error::{SslError, StreamError};
-use nid;
+use nid::Nid;
 
 pub mod extension;
 
@@ -29,14 +31,12 @@ use self::extension::{ExtensionType, Extension};
 #[cfg(test)]
 mod tests;
 
-pub struct SslString {
-    s: &'static str,
-}
+pub struct SslString(&'static str);
 
 impl<'s> Drop for SslString {
     fn drop(&mut self) {
         unsafe {
-            ffi::CRYPTO_free(self.s.as_ptr() as *mut c_void);
+            ffi::CRYPTO_free(self.0.as_ptr() as *mut c_void);
         }
     }
 }
@@ -45,25 +45,26 @@ impl Deref for SslString {
     type Target = str;
 
     fn deref(&self) -> &str {
-        self.s
+        self.0
     }
 }
 
 impl SslString {
-    unsafe fn new(buf: *const c_char) -> SslString {
-        SslString { s: str::from_utf8(CStr::from_ptr(buf as *const _).to_bytes()).unwrap() }
+    unsafe fn new(buf: *const c_char, len: c_int) -> SslString {
+        let slice = slice::from_raw_parts(buf as *const _, len as usize);
+        SslString(str::from_utf8_unchecked(slice))
     }
 }
 
 impl fmt::Display for SslString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(self.s, f)
+        fmt::Display::fmt(self.0, f)
     }
 }
 
 impl fmt::Debug for SslString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Debug::fmt(self.s, f)
+        fmt::Debug::fmt(self.0, f)
     }
 }
 
@@ -102,6 +103,10 @@ impl X509StoreContext {
                 owned: false,
             })
         }
+    }
+
+    pub fn error_depth(&self) -> u32 {
+        unsafe { ffi::X509_STORE_CTX_get_error_depth(self.ctx) as u32 }
     }
 }
 
@@ -464,6 +469,24 @@ impl<'ctx> X509<'ctx> {
         }
     }
 
+    /// Returns this certificate's SAN entries, if they exist.
+    pub fn subject_alt_names<'a>(&'a self) -> Option<GeneralNames<'a>> {
+        unsafe {
+            let stack = ffi::X509_get_ext_d2i(self.handle,
+                                              Nid::SubjectAltName as c_int,
+                                              ptr::null_mut(),
+                                              ptr::null_mut());
+            if stack.is_null() {
+                return None;
+            }
+
+            Some(GeneralNames {
+                stack: stack as *const _,
+                m: PhantomData,
+            })
+        }
+    }
+
     pub fn public_key(&self) -> PKey {
         let pkey = unsafe { ffi::X509_get_pubkey(self.handle) };
         assert!(!pkey.is_null());
@@ -544,7 +567,7 @@ pub struct X509NameEntry<'x> {
 }
 
 impl<'x> X509Name<'x> {
-    pub fn text_by_nid(&self, nid: nid::Nid) -> Option<SslString> {
+    pub fn text_by_nid(&self, nid: Nid) -> Option<SslString> {
         unsafe {
             let loc = ffi::X509_NAME_get_index_by_NID(self.name, nid as c_int, -1);
             if loc == -1 {
@@ -570,7 +593,7 @@ impl<'x> X509Name<'x> {
 
             assert!(!str_from_asn1.is_null());
 
-            Some(SslString::new(str_from_asn1))
+            Some(SslString::new(str_from_asn1, len))
         }
     }
 }
@@ -766,6 +789,120 @@ make_validation_error!(X509_V_OK,
     X509ApplicationVerification = X509_V_ERR_APPLICATION_VERIFICATION,
 );
 
+/// A collection of OpenSSL `GENERAL_NAME`s.
+pub struct GeneralNames<'a> {
+    stack: *const ffi::stack_st_GENERAL_NAME,
+    m: PhantomData<&'a ()>,
+}
+
+impl<'a> GeneralNames<'a> {
+    /// Returns the number of `GeneralName`s in this structure.
+    pub fn len(&self) -> usize {
+        unsafe {
+            (*self.stack).stack.num as usize
+        }
+    }
+
+    /// Returns the specified `GeneralName`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `idx` is not less than `len()`.
+    pub fn get(&self, idx: usize) -> GeneralName<'a> {
+        unsafe {
+            assert!(idx < self.len());
+
+            GeneralName {
+                name: *(*self.stack).stack.data.offset(idx as isize) as *const ffi::GENERAL_NAME,
+                m: PhantomData,
+            }
+        }
+    }
+
+    /// Returns an iterator over the `GeneralName`s in this structure.
+    pub fn iter(&self) -> GeneralNamesIter {
+        GeneralNamesIter {
+            names: self,
+            idx: 0
+        }
+    }
+}
+
+impl<'a> IntoIterator for &'a GeneralNames<'a> {
+    type Item = GeneralName<'a>;
+    type IntoIter = GeneralNamesIter<'a>;
+
+    fn into_iter(self) -> GeneralNamesIter<'a> {
+        self.iter()
+    }
+}
+
+/// An iterator over OpenSSL `GENERAL_NAME`s.
+pub struct GeneralNamesIter<'a> {
+    names: &'a GeneralNames<'a>,
+    idx: usize,
+}
+
+impl<'a> Iterator for GeneralNamesIter<'a> {
+    type Item = GeneralName<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.idx < self.names.len() {
+            let name = self.names.get(self.idx);
+            self.idx += 1;
+            Some(name)
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = self.names.len() - self.idx;
+        (size, Some(size))
+    }
+}
+
+impl<'a> ExactSizeIterator for GeneralNamesIter<'a> {}
+
+/// An OpenSSL `GENERAL_NAME`.
+pub struct GeneralName<'a> {
+    name: *const ffi::GENERAL_NAME,
+    m: PhantomData<&'a ()>,
+}
+
+impl<'a> GeneralName<'a> {
+    /// Returns the contents of this `GeneralName` if it is a `dNSName`.
+    pub fn dnsname(&self) -> Option<&str> {
+        unsafe {
+            if (*self.name).type_ != ffi::GEN_DNS {
+                return None;
+            }
+
+            let ptr = ffi::ASN1_STRING_data((*self.name).d as *mut _);
+            let len = ffi::ASN1_STRING_length((*self.name).d as *mut _);
+
+            let slice = slice::from_raw_parts(ptr as *const u8, len as usize);
+            // dNSNames are stated to be ASCII (specifically IA5). Hopefully
+            // OpenSSL checks that when loading a certificate but if not we'll
+            // use this instead of from_utf8_unchecked just in case.
+            str::from_utf8(slice).ok()
+        }
+    }
+
+    /// Returns the contents of this `GeneralName` if it is an `iPAddress`.
+    pub fn ipaddress(&self) -> Option<&[u8]> {
+        unsafe {
+            if (*self.name).type_ != ffi::GEN_IPADD {
+                return None;
+            }
+
+            let ptr = ffi::ASN1_STRING_data((*self.name).d as *mut _);
+            let len = ffi::ASN1_STRING_length((*self.name).d as *mut _);
+
+            Some(slice::from_raw_parts(ptr as *const u8, len as usize))
+        }
+    }
+}
 
 #[test]
 fn test_negative_serial() {

@@ -69,44 +69,44 @@ pub fn init() {
 }
 
 bitflags! {
-    flags SslContextOptions: u64 {
-        const SSL_OP_MICROSOFT_SESS_ID_BUG                    = ffi_extras::SSL_OP_MICROSOFT_SESS_ID_BUG,
-        const SSL_OP_NETSCAPE_CHALLENGE_BUG                   = ffi_extras::SSL_OP_NETSCAPE_CHALLENGE_BUG,
-        const SSL_OP_LEGACY_SERVER_CONNECT                    = ffi_extras::SSL_OP_LEGACY_SERVER_CONNECT,
-        const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG         = ffi_extras::SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG,
-        const SSL_OP_TLSEXT_PADDING                           = ffi_extras::SSL_OP_TLSEXT_PADDING,
-        const SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER               = ffi_extras::SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER,
-        const SSL_OP_SAFARI_ECDHE_ECDSA_BUG                   = ffi_extras::SSL_OP_SAFARI_ECDHE_ECDSA_BUG,
-        const SSL_OP_SSLEAY_080_CLIENT_DH_BUG                 = ffi_extras::SSL_OP_SSLEAY_080_CLIENT_DH_BUG,
-        const SSL_OP_TLS_D5_BUG                               = ffi_extras::SSL_OP_TLS_D5_BUG,
-        const SSL_OP_TLS_BLOCK_PADDING_BUG                    = ffi_extras::SSL_OP_TLS_BLOCK_PADDING_BUG,
-        const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS              = ffi_extras::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS,
-        const SSL_OP_NO_QUERY_MTU                             = ffi_extras::SSL_OP_NO_QUERY_MTU,
-        const SSL_OP_COOKIE_EXCHANGE                          = ffi_extras::SSL_OP_COOKIE_EXCHANGE,
-        const SSL_OP_NO_TICKET                                = ffi_extras::SSL_OP_NO_TICKET,
-        const SSL_OP_CISCO_ANYCONNECT                         = ffi_extras::SSL_OP_CISCO_ANYCONNECT,
-        const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION   = ffi_extras::SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION,
-        const SSL_OP_NO_COMPRESSION                           = ffi_extras::SSL_OP_NO_COMPRESSION,
-        const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION        = ffi_extras::SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION,
-        const SSL_OP_SINGLE_ECDH_USE                          = ffi_extras::SSL_OP_SINGLE_ECDH_USE,
-        const SSL_OP_SINGLE_DH_USE                            = ffi_extras::SSL_OP_SINGLE_DH_USE,
-        const SSL_OP_CIPHER_SERVER_PREFERENCE                 = ffi_extras::SSL_OP_CIPHER_SERVER_PREFERENCE,
-        const SSL_OP_TLS_ROLLBACK_BUG                         = ffi_extras::SSL_OP_TLS_ROLLBACK_BUG,
-        const SSL_OP_NO_SSLV2                                 = ffi_extras::SSL_OP_NO_SSLv2,
-        const SSL_OP_NO_SSLV3                                 = ffi_extras::SSL_OP_NO_SSLv3,
-        const SSL_OP_NO_DTLSV1                                = ffi_extras::SSL_OP_NO_DTLSv1,
-        const SSL_OP_NO_TLSV1                                 = ffi_extras::SSL_OP_NO_TLSv1,
-        const SSL_OP_NO_DTLSV1_2                              = ffi_extras::SSL_OP_NO_DTLSv1_2,
-        const SSL_OP_NO_TLSV1_2                               = ffi_extras::SSL_OP_NO_TLSv1_2,
-        const SSL_OP_NO_TLSV1_1                               = ffi_extras::SSL_OP_NO_TLSv1_1,
-        const SSL_OP_NETSCAPE_CA_DN_BUG                       = ffi_extras::SSL_OP_NETSCAPE_CA_DN_BUG,
-        const SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG          = ffi_extras::SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG,
-        const SSL_OP_CRYPTOPRO_TLSEXT_BUG                     = ffi_extras::SSL_OP_CRYPTOPRO_TLSEXT_BUG,
-        const SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG              = ffi_extras::SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG,
-        const SSL_OP_MSIE_SSLV2_RSA_PADDING                   = ffi_extras::SSL_OP_MSIE_SSLV2_RSA_PADDING,
-        const SSL_OP_PKCS1_CHECK_1                            = ffi_extras::SSL_OP_PKCS1_CHECK_1,
-        const SSL_OP_PKCS1_CHECK_2                            = ffi_extras::SSL_OP_PKCS1_CHECK_2,
-        const SSL_OP_EPHEMERAL_RSA                            = ffi_extras::SSL_OP_EPHEMERAL_RSA,
+    pub flags SslContextOptions: u64 {
+        const SSL_OP_MICROSOFT_SESS_ID_BUG                    = ::ffi_extras::SSL_OP_MICROSOFT_SESS_ID_BUG,
+        const SSL_OP_NETSCAPE_CHALLENGE_BUG                   = ::ffi_extras::SSL_OP_NETSCAPE_CHALLENGE_BUG,
+        const SSL_OP_LEGACY_SERVER_CONNECT                    = ::ffi_extras::SSL_OP_LEGACY_SERVER_CONNECT,
+        const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG         = ::ffi_extras::SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG,
+        const SSL_OP_TLSEXT_PADDING                           = ::ffi_extras::SSL_OP_TLSEXT_PADDING,
+        const SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER               = ::ffi_extras::SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER,
+        const SSL_OP_SAFARI_ECDHE_ECDSA_BUG                   = ::ffi_extras::SSL_OP_SAFARI_ECDHE_ECDSA_BUG,
+        const SSL_OP_SSLEAY_080_CLIENT_DH_BUG                 = ::ffi_extras::SSL_OP_SSLEAY_080_CLIENT_DH_BUG,
+        const SSL_OP_TLS_D5_BUG                               = ::ffi_extras::SSL_OP_TLS_D5_BUG,
+        const SSL_OP_TLS_BLOCK_PADDING_BUG                    = ::ffi_extras::SSL_OP_TLS_BLOCK_PADDING_BUG,
+        const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS              = ::ffi_extras::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS,
+        const SSL_OP_NO_QUERY_MTU                             = ::ffi_extras::SSL_OP_NO_QUERY_MTU,
+        const SSL_OP_COOKIE_EXCHANGE                          = ::ffi_extras::SSL_OP_COOKIE_EXCHANGE,
+        const SSL_OP_NO_TICKET                                = ::ffi_extras::SSL_OP_NO_TICKET,
+        const SSL_OP_CISCO_ANYCONNECT                         = ::ffi_extras::SSL_OP_CISCO_ANYCONNECT,
+        const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION   = ::ffi_extras::SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION,
+        const SSL_OP_NO_COMPRESSION                           = ::ffi_extras::SSL_OP_NO_COMPRESSION,
+        const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION        = ::ffi_extras::SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION,
+        const SSL_OP_SINGLE_ECDH_USE                          = ::ffi_extras::SSL_OP_SINGLE_ECDH_USE,
+        const SSL_OP_SINGLE_DH_USE                            = ::ffi_extras::SSL_OP_SINGLE_DH_USE,
+        const SSL_OP_CIPHER_SERVER_PREFERENCE                 = ::ffi_extras::SSL_OP_CIPHER_SERVER_PREFERENCE,
+        const SSL_OP_TLS_ROLLBACK_BUG                         = ::ffi_extras::SSL_OP_TLS_ROLLBACK_BUG,
+        const SSL_OP_NO_SSLV2                                 = ::ffi_extras::SSL_OP_NO_SSLv2,
+        const SSL_OP_NO_SSLV3                                 = ::ffi_extras::SSL_OP_NO_SSLv3,
+        const SSL_OP_NO_DTLSV1                                = ::ffi_extras::SSL_OP_NO_DTLSv1,
+        const SSL_OP_NO_TLSV1                                 = ::ffi_extras::SSL_OP_NO_TLSv1,
+        const SSL_OP_NO_DTLSV1_2                              = ::ffi_extras::SSL_OP_NO_DTLSv1_2,
+        const SSL_OP_NO_TLSV1_2                               = ::ffi_extras::SSL_OP_NO_TLSv1_2,
+        const SSL_OP_NO_TLSV1_1                               = ::ffi_extras::SSL_OP_NO_TLSv1_1,
+        const SSL_OP_NETSCAPE_CA_DN_BUG                       = ::ffi_extras::SSL_OP_NETSCAPE_CA_DN_BUG,
+        const SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG          = ::ffi_extras::SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG,
+        const SSL_OP_CRYPTOPRO_TLSEXT_BUG                     = ::ffi_extras::SSL_OP_CRYPTOPRO_TLSEXT_BUG,
+        const SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG              = ::ffi_extras::SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG,
+        const SSL_OP_MSIE_SSLV2_RSA_PADDING                   = ::ffi_extras::SSL_OP_MSIE_SSLV2_RSA_PADDING,
+        const SSL_OP_PKCS1_CHECK_1                            = ::ffi_extras::SSL_OP_PKCS1_CHECK_1,
+        const SSL_OP_PKCS1_CHECK_2                            = ::ffi_extras::SSL_OP_PKCS1_CHECK_2,
+        const SSL_OP_EPHEMERAL_RSA                            = ::ffi_extras::SSL_OP_EPHEMERAL_RSA,
         const SSL_OP_ALL         = SSL_OP_MICROSOFT_SESS_ID_BUG.bits|SSL_OP_NETSCAPE_CHALLENGE_BUG.bits
                                   |SSL_OP_LEGACY_SERVER_CONNECT.bits|SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG.bits
                                   |SSL_OP_TLSEXT_PADDING.bits|SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER.bits
@@ -214,19 +214,20 @@ impl SslMethod {
 
 /// Determines the type of certificate verification used
 bitflags! {
-    flags SslVerifyMode: i32 {
+    pub flags SslVerifyMode: i32 {
         /// Verify that the server's certificate is trusted
-        const SSL_VERIFY_PEER = ffi::SSL_VERIFY_PEER,
+        const SSL_VERIFY_PEER = ::ffi::SSL_VERIFY_PEER,
         /// Do not verify the server's certificate
-        const SSL_VERIFY_NONE = ffi::SSL_VERIFY_NONE,
+        const SSL_VERIFY_NONE = ::ffi::SSL_VERIFY_NONE,
         /// Terminate handshake if client did not return a certificate.
         /// Use together with SSL_VERIFY_PEER.
-        const SSL_VERIFY_FAIL_IF_NO_PEER_CERT = ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+        const SSL_VERIFY_FAIL_IF_NO_PEER_CERT = ::ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
     }
 }
 
 lazy_static! {
     static ref INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
+    static ref SSL_INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
 }
 
 // Creates a static index for user data of type T
@@ -234,6 +235,10 @@ lazy_static! {
 // when context is freed
 fn get_verify_data_idx<T: Any + 'static>() -> c_int {
     *INDEXES.lock().unwrap().entry(TypeId::of::<T>()).or_insert_with(|| get_new_idx::<T>())
+}
+
+fn get_ssl_verify_data_idx<T: Any + 'static>() -> c_int {
+    *SSL_INDEXES.lock().unwrap().entry(TypeId::of::<T>()).or_insert_with(|| get_new_ssl_idx::<T>())
 }
 
 #[cfg(feature = "npn")]
@@ -262,6 +267,26 @@ fn get_new_idx<T>() -> c_int {
     unsafe {
         let f: ffi::CRYPTO_EX_free = free_data_box::<T>;
         let idx = ffi::SSL_CTX_get_ex_new_index(0, ptr::null(), None, None, Some(f));
+        assert!(idx >= 0);
+        idx
+    }
+}
+
+fn get_new_ssl_idx<T>() -> c_int {
+    extern "C" fn free_data_box<T>(_parent: *mut c_void,
+                                   ptr: *mut c_void,
+                                   _ad: *mut ffi::CRYPTO_EX_DATA,
+                                   _idx: c_int,
+                                   _argl: c_long,
+                                   _argp: *mut c_void) {
+        if !ptr.is_null() {
+            let _: Box<T> = unsafe { mem::transmute(ptr) };
+        }
+    }
+
+    unsafe {
+        let f: ffi::CRYPTO_EX_free = free_data_box::<T>;
+        let idx = ffi::SSL_get_ex_new_index(0, ptr::null(), None, None, Some(f));
         assert!(idx >= 0);
         idx
     }
@@ -308,6 +333,21 @@ extern "C" fn raw_verify_with_data<T>(preverify_ok: c_int,
         };
 
         res
+    }
+}
+
+extern "C" fn ssl_raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
+    where F: Fn(bool, &X509StoreContext) -> bool + Any + 'static + Sync + Send
+{
+    unsafe {
+        let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
+        let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
+        let verify = ffi::SSL_get_ex_data(ssl, get_ssl_verify_data_idx::<F>());
+        let verify: &F = mem::transmute(verify);
+
+        let ctx = X509StoreContext::new(x509_ctx);
+
+        verify(preverify_ok != 0, &ctx) as c_int
     }
 }
 
@@ -925,6 +965,30 @@ impl Ssl {
         match LibSslError::from_i32(err as i32) {
             Some(err) => err,
             None => unreachable!(),
+        }
+    }
+
+    /// Sets the verification mode to be used during the handshake process.
+    ///
+    /// Use `set_verify_callback` to additionally add a callback.
+    pub fn set_verify(&mut self, mode: SslVerifyMode) {
+        unsafe { ffi::SSL_set_verify(self.ssl, mode.bits as c_int, None) }
+    }
+
+    /// Sets the certificate verification callback to be used during the
+    /// handshake process.
+    ///
+    /// The callback is provided with a boolean indicating if the
+    /// preveification process was successful, and an object providing access
+    /// to the certificate chain. It should return `true` if the certificate
+    /// chain is valid and `false` otherwise.
+    pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
+        where F: Fn(bool, &X509StoreContext) -> bool + Any + 'static + Sync + Send
+    {
+        unsafe {
+            let verify = Box::new(verify);
+            ffi::SSL_set_ex_data(self.ssl, get_ssl_verify_data_idx::<F>(), mem::transmute(verify));
+            ffi::SSL_set_verify(self.ssl, mode.bits as c_int, Some(ssl_raw_verify::<F>));
         }
     }
 

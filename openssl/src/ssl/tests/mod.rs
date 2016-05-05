@@ -381,6 +381,36 @@ run_test!(verify_callback_data, |method, stream| {
     }
 });
 
+run_test!(ssl_verify_callback, |method, stream| {
+    use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
+    use ssl::IntoSsl;
+
+    static CHECKED: AtomicUsize = ATOMIC_USIZE_INIT;
+
+    let ctx = SslContext::new(method).unwrap();
+    let mut ssl = ctx.into_ssl().unwrap();
+
+    let node_hash_str = "db400bb62f1b1f29c3b8f323b8f7d9dea724fdcd67104ef549c772ae3749655b";
+    let node_id = node_hash_str.from_hex().unwrap();
+    ssl.set_verify_callback(SSL_VERIFY_PEER, move |_, x509| {
+        CHECKED.store(1, Ordering::SeqCst);
+        match x509.get_current_cert() {
+            None => false,
+            Some(cert) => {
+                let fingerprint = cert.fingerprint(SHA256).unwrap();
+                fingerprint == node_id
+            }
+        }
+    });
+
+    match SslStream::connect_generic(ssl, stream) {
+        Ok(_) => (),
+        Err(err) => panic!("Expected success, got {:?}", err)
+    }
+
+    assert_eq!(CHECKED.load(Ordering::SeqCst), 1);
+});
+
 // Make sure every write call translates to a write call to the underlying socket.
 #[test]
 fn test_write_hits_stream() {
@@ -1061,6 +1091,7 @@ fn refcount_ssl_context() {
 }
 
 #[test]
+#[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
 fn default_verify_paths() {
     let mut ctx = SslContext::new(SslMethod::Sslv23).unwrap();
     ctx.set_default_verify_paths().unwrap();

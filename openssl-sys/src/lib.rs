@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.10")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.11")]
 
 extern crate libc;
 
@@ -34,9 +34,22 @@ pub type X509_NAME = c_void;
 pub type X509_NAME_ENTRY = c_void;
 pub type X509_REQ = c_void;
 pub type X509_STORE_CTX = c_void;
-pub type stack_st_X509_EXTENSION = c_void;
-pub type stack_st_void = c_void;
 pub type bio_st = c_void;
+
+#[repr(C)]
+pub struct stack_st_X509_EXTENSION {
+    pub stack: _STACK,
+}
+
+#[repr(C)]
+pub struct stack_st_GENERAL_NAME {
+    pub stack: _STACK,
+}
+
+#[repr(C)]
+pub struct stack_st_void {
+    pub stack: _STACK,
+}
 
 pub type bio_info_cb = Option<unsafe extern "C" fn(*mut BIO,
                                                    c_int,
@@ -62,6 +75,15 @@ pub struct BIO_METHOD {
 
 // so we can create static BIO_METHODs
 unsafe impl Sync for BIO_METHOD {}
+
+#[repr(C)]
+pub struct _STACK {
+    pub num: c_int,
+    pub data: *mut *mut c_char,
+    pub sorted: c_int,
+    pub num_alloc: c_int,
+    pub comp: Option<unsafe extern "C" fn(*const c_void, *const c_void)>,
+}
 
 #[repr(C)]
 pub struct RSA {
@@ -176,6 +198,17 @@ pub struct X509V3_CTX {
     db: *mut c_void,
     // I like the last comment line, it is copied from OpenSSL sources:
     // Maybe more here
+}
+
+#[repr(C)]
+pub struct GENERAL_NAME {
+    pub type_: c_int,
+    pub d: *mut c_void,
+}
+
+impl Copy for GENERAL_NAME {}
+impl Clone for GENERAL_NAME {
+    fn clone(&self) -> GENERAL_NAME { *self }
 }
 
 impl Copy for X509V3_CTX {}
@@ -332,6 +365,16 @@ pub const X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE: c_int = 51;
 pub const X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE: c_int = 45;
 pub const X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
 pub const X509_V_OK: c_int = 0;
+
+pub const GEN_OTHERNAME: c_int = 0;
+pub const GEN_EMAIL: c_int = 1;
+pub const GEN_DNS: c_int = 2;
+pub const GEN_X400: c_int = 3;
+pub const GEN_DIRNAME: c_int = 4;
+pub const GEN_EDIPARTY: c_int = 5;
+pub const GEN_URI: c_int = 6;
+pub const GEN_IPADD: c_int = 7;
+pub const GEN_RID: c_int = 8;
 
 static mut MUTEXES: *mut Vec<Mutex<()>> = 0 as *mut Vec<Mutex<()>>;
 static mut GUARDS: *mut Vec<Option<MutexGuard<'static, ()>>> = 0 as *mut Vec<Option<MutexGuard<'static, ()>>>;
@@ -527,6 +570,9 @@ extern "C" {
     pub fn EVP_aes_256_cfb8() -> *const EVP_CIPHER;
     pub fn EVP_rc4() -> *const EVP_CIPHER;
 
+    pub fn EVP_des_cbc() -> *const EVP_CIPHER;
+    pub fn EVP_des_ecb() -> *const EVP_CIPHER;
+
     pub fn EVP_BytesToKey(typ: *const EVP_CIPHER, md: *const EVP_MD,
                           salt: *const u8, data: *const u8, datalen: c_int,
                           count: c_int, key: *mut u8, iv: *mut u8) -> c_int;
@@ -654,6 +700,16 @@ extern "C" {
     pub fn SSL_get_version(ssl: *mut SSL) -> *const c_char;
     pub fn SSL_state_string(ssl: *mut SSL) -> *const c_char;
     pub fn SSL_state_string_long(ssl: *mut SSL) -> *const c_char;
+    pub fn SSL_set_verify(ssl: *mut SSL,
+                          mode: c_int,
+                          verify_callback: Option<extern fn(c_int, *mut X509_STORE_CTX) -> c_int>);
+    pub fn SSL_get_ex_new_index(argl: c_long, argp: *const c_void,
+                                new_func: Option<CRYPTO_EX_new>,
+                                dup_func: Option<CRYPTO_EX_dup>,
+                                free_func: Option<CRYPTO_EX_free>)
+                                -> c_int;
+    pub fn SSL_set_ex_data(ssl: *mut SSL, idx: c_int, data: *mut c_void) -> c_int;
+    pub fn SSL_get_ex_data(ssl: *mut SSL, idx: c_int) -> *mut c_void;
 
     pub fn SSL_get_servername(ssl: *const SSL, name_type: c_long) -> *const c_char;
 
@@ -751,6 +807,7 @@ extern "C" {
     pub fn X509_sign(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
     pub fn X509_get_pubkey(x: *mut X509) -> *mut EVP_PKEY;
     pub fn X509_to_X509_REQ(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> *mut X509_REQ;
+    pub fn X509_get_ext_d2i(x: *mut X509, nid: c_int, crit: *mut c_int, idx: *mut c_int) -> *mut c_void;
 
     pub fn X509_EXTENSION_free(ext: *mut X509_EXTENSION);
 
@@ -760,10 +817,13 @@ extern "C" {
     pub fn X509_NAME_ENTRY_get_data(ne: *mut X509_NAME_ENTRY) -> *mut ASN1_STRING;
 
     pub fn ASN1_STRING_to_UTF8(out: *mut *mut c_char, s: *mut ASN1_STRING) -> c_int;
+    pub fn ASN1_STRING_length(x: *mut ASN1_STRING) -> c_int;
+    pub fn ASN1_STRING_data(x: *mut ASN1_STRING) -> *mut c_uchar;
 
     pub fn X509_STORE_CTX_get_current_cert(ct: *mut X509_STORE_CTX) -> *mut X509;
     pub fn X509_STORE_CTX_get_error(ctx: *mut X509_STORE_CTX) -> c_int;
     pub fn X509_STORE_CTX_get_ex_data(ctx: *mut X509_STORE_CTX, idx: c_int) -> *mut c_void;
+    pub fn X509_STORE_CTX_get_error_depth(ctx: *mut X509_STORE_CTX) -> c_int;
 
     pub fn X509V3_EXT_conf_nid(conf: *mut c_void, ctx: *mut X509V3_CTX, ext_nid: c_int, value: *mut c_char) -> *mut X509_EXTENSION;
     pub fn X509V3_EXT_conf(conf: *mut c_void, ctx: *mut X509V3_CTX, name: *mut c_char, value: *mut c_char) -> *mut X509_EXTENSION;

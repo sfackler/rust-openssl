@@ -1,4 +1,5 @@
 use std::fmt;
+
 use nid::Nid;
 
 /// Type-only version of the `Extension` enum.
@@ -79,7 +80,7 @@ impl ExtensionType {
         }
     }
 
-    pub fn get_name<'a>(&'a self) -> Option<&'a str> {
+    pub fn get_name(&self) -> Option<&str> {
         match self {
             &ExtensionType::OtherStr(ref s) => Some(s),
             _ => None,
