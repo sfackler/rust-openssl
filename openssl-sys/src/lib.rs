@@ -627,6 +627,12 @@ extern "C" {
                                     callback: Option<PasswordCallback>,
                                     user_data: *mut c_void) -> c_int;
     pub fn PEM_write_bio_PUBKEY(bp: *mut BIO, x: *mut EVP_PKEY) -> c_int;
+    pub fn PEM_write_bio_RSAPrivateKey(bp: *mut BIO, rsa: *mut RSA, cipher: *const EVP_CIPHER,
+                                        kstr: *mut c_char, klen: c_int,
+                                        callback: Option<PasswordCallback>,
+                                        user_data: *mut c_void) -> c_int;
+    pub fn PEM_write_bio_RSAPublicKey(bp: *mut BIO, rsa: *mut RSA) -> c_int;
+    pub fn PEM_write_bio_RSA_PUBKEY(bp: *mut BIO, rsa: *mut RSA) -> c_int;
     pub fn PEM_write_bio_X509(bio: *mut BIO, x509: *mut X509) -> c_int;
     pub fn PEM_write_bio_X509_REQ(bio: *mut BIO, x509: *mut X509_REQ) -> c_int;
 
