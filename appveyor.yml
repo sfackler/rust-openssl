@@ -5,13 +5,14 @@ environment:
   matrix:
   - TARGET: i686-pc-windows-gnu
     BITS: 32
-#  - TARGET: x86_64-pc-windows-msvc
-#    BITS: 64
+  - TARGET: x86_64-pc-windows-msvc
+    BITS: 64
 install:
   - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-1_0_2h.exe"
-  - Win%BITS%OpenSSL-1_0_2h.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
-  - ps: Start-FileDownload "https://static.rust-lang.org/dist/rust-1.8.0-${env:TARGET}.exe"
-  - rust-1.8.0-%TARGET%.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
+  - ps: wget "http://slproweb.com/download/Win${env:BITS}OpenSSL-1_0_2h.exe" -OutFile "$pwd\OpenSSL.exe"
+  - OpenSSL.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
+  - ps: wget "https://static.rust-lang.org/dist/rust-1.8.0-${env:TARGET}.exe" -OutFile "$pwd\Rust.exe"
+  - Rust.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
   - SET PATH=%PATH%;C:\Program Files (x86)\Rust\bin
   - SET PATH=%PATH%;C:\MinGW\bin
   - rustc -V
