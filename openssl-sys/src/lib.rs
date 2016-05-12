@@ -687,7 +687,7 @@ extern "C" {
 
     pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;
 
-    pub fn SSL_CTX_set_client_CA_list(ssl: *mut SSL_CTX, s: *const stack_of_X509_NAME) -> c_int;
+    pub fn SSL_CTX_set_client_CA_list(ssl: *mut SSL_CTX, s: *const stack_of_X509_NAME);
 
     #[cfg(feature = "npn")]
     pub fn SSL_CTX_set_next_protos_advertised_cb(ssl: *mut SSL_CTX,

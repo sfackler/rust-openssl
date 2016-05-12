@@ -619,10 +619,15 @@ impl SslContext {
     /// for that.
     pub fn advertise_client_CA_list<P: AsRef<Path>>(&mut self, file: P) -> Result<(), SslError> {
         let file = CString::new(file.as_ref().as_os_str().to_str().expect("invalid utf8")).unwrap();
-        wrap_ssl_result(unsafe {
+        unsafe {
             let names = ffi::SSL_load_client_CA_file(file.as_ptr() as *const _);
-            ffi::SSL_CTX_set_client_CA_list(self.ctx, names)
-        })
+            if names != ptr::null_mut() {
+                ffi::SSL_CTX_set_client_CA_list(self.ctx, names);
+                Ok(())
+            } else {
+                Err(SslError::get())
+            }
+        }
     }
 
     #[allow(non_snake_case)]
