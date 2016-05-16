@@ -3,7 +3,7 @@ use std::io;
 use std::path::Path;
 use std::fs::File;
 
-use crypto::hash::Type::SHA256;
+use crypto::hash::Type::SHA1;
 use crypto::pkey::PKey;
 use x509::{X509, X509Generator};
 use x509::extension::Extension::{KeyUsage, ExtKeyUsage, SubjectAltName, OtherNid, OtherStr};
@@ -17,7 +17,7 @@ fn get_generator() -> X509Generator {
         .set_bitlength(2048)
         .set_valid_period(365 * 2)
         .add_name("CN".to_string(), "test_me".to_string())
-        .set_sign_hash(SHA256)
+        .set_sign_hash(SHA1)
         .add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]))
         .add_extension(ExtKeyUsage(vec![ClientAuth,
                                         ServerAuth,
@@ -83,13 +83,9 @@ fn test_cert_loading() {
                        .expect("Failed to open `test/cert.pem`");
 
     let cert = X509::from_pem(&mut file).ok().expect("Failed to load PEM");
-    let fingerprint = cert.fingerprint(SHA256).unwrap();
+    let fingerprint = cert.fingerprint(SHA1).unwrap();
 
-    // Hash was generated as SHA256 hash of certificate "test/cert.pem"
-    // in DER format.
-    // Command: openssl x509 -in test/cert.pem  -outform DER | openssl dgst -sha256
-    // Please update if "test/cert.pem" will ever change
-    let hash_str = "db400bb62f1b1f29c3b8f323b8f7d9dea724fdcd67104ef549c772ae3749655b";
+    let hash_str = "E19427DAC79FBE758394945276A6E4F15F0BEBE6";
     let hash_vec = hash_str.from_hex().unwrap();
 
     assert_eq!(fingerprint, hash_vec);
@@ -109,7 +105,7 @@ fn test_subject_read_cn() {
         None => panic!("Failed to read CN from cert"),
     };
 
-    assert_eq!(&cn as &str, "test_cert")
+    assert_eq!(&cn as &str, "foobar.com")
 }
 
 #[test]
