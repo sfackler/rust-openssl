@@ -1,4 +1,4 @@
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.11")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.12")]
 #![cfg_attr(feature = "nightly", feature(const_fn))]
 
 #[macro_use]

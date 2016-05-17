@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use nid::Nid;
+
 pub mod hash;
 pub mod hmac;
 pub mod pkcs5;
@@ -24,3 +26,7 @@ pub mod memcmp;
 pub mod rsa;
 
 mod symm_internal;
+
+trait HashTypeInternals {
+    fn as_nid(&self) -> Nid;
+}

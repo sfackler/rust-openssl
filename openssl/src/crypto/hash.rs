@@ -2,8 +2,10 @@ use libc::c_uint;
 use std::iter::repeat;
 use std::io::prelude::*;
 use std::io;
-
 use ffi;
+
+use crypto::HashTypeInternals;
+use nid::Nid;
 
 /// Message digest (hash) type.
 #[derive(Copy, Clone)]
@@ -17,19 +19,32 @@ pub enum Type {
     RIPEMD160,
 }
 
+impl HashTypeInternals for Type {
+    fn as_nid(&self) -> Nid {
+        match *self {
+            Type::MD5 => Nid::MD5,
+            Type::SHA1 => Nid::SHA1,
+            Type::SHA224 => Nid::SHA224,
+            Type::SHA256 => Nid::SHA256,
+            Type::SHA384 => Nid::SHA384,
+            Type::SHA512 => Nid::SHA512,
+            Type::RIPEMD160 => Nid::RIPEMD160,
+        }
+    }
+}
+
 impl Type {
     /// Returns the length of the message digest.
     #[inline]
     pub fn md_len(&self) -> usize {
-        use self::Type::*;
         match *self {
-            MD5 => 16,
-            SHA1 => 20,
-            SHA224 => 28,
-            SHA256 => 32,
-            SHA384 => 48,
-            SHA512 => 64,
-            RIPEMD160 => 20,
+            Type::MD5 => 16,
+            Type::SHA1 => 20,
+            Type::SHA224 => 28,
+            Type::SHA256 => 32,
+            Type::SHA384 => 48,
+            Type::SHA512 => 64,
+            Type::RIPEMD160 => 20,
         }
     }
 
@@ -37,15 +52,14 @@ impl Type {
     #[inline]
     pub fn evp_md(&self) -> *const ffi::EVP_MD {
         unsafe {
-            use self::Type::*;
             match *self {
-                MD5 => ffi::EVP_md5(),
-                SHA1 => ffi::EVP_sha1(),
-                SHA224 => ffi::EVP_sha224(),
-                SHA256 => ffi::EVP_sha256(),
-                SHA384 => ffi::EVP_sha384(),
-                SHA512 => ffi::EVP_sha512(),
-                RIPEMD160 => ffi::EVP_ripemd160(),
+                Type::MD5 => ffi::EVP_md5(),
+                Type::SHA1 => ffi::EVP_sha1(),
+                Type::SHA224 => ffi::EVP_sha224(),
+                Type::SHA256 => ffi::EVP_sha256(),
+                Type::SHA384 => ffi::EVP_sha384(),
+                Type::SHA512 => ffi::EVP_sha512(),
+                Type::RIPEMD160 => ffi::EVP_ripemd160(),
             }
         }
     }

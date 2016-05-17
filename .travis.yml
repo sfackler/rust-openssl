@@ -6,7 +6,7 @@ addons:
     - gcc-arm-linux-gnueabihf
 rust:
 - nightly
-- 1.8.0
+- 1.7.0
 os:
 - osx
 - linux
@@ -18,11 +18,13 @@ matrix:
     #  include:
     #  - os: linux
     #    env: TARGET=arm-unknown-linux-gnueabihf TEST_FEATURES=true
-    #    rust: 1.8.0
+    #    rust: 1.7.0
   exclude:
   - os: osx
     env: TEST_FEATURES=true
 before_install:
 - ./openssl/test/build.sh
 script:
+- cargo fetch --manifest-path openssl/Cargo.toml # generate a cargo.lock
+- cargo update --manifest-path openssl/Cargo.toml -p bitflags --precise 0.5.0
 - ./openssl/test/run.sh

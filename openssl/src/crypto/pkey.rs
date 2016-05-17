@@ -5,6 +5,8 @@ use std::iter::repeat;
 use std::mem;
 use std::ptr;
 use bio::MemBio;
+
+use crypto::HashTypeInternals;
 use crypto::hash;
 use crypto::hash::Type as HashType;
 use ffi;
@@ -38,18 +40,6 @@ fn openssl_padding_code(padding: EncryptionPadding) -> c_int {
     match padding {
         EncryptionPadding::OAEP => 4,
         EncryptionPadding::PKCS1v15 => 1,
-    }
-}
-
-fn openssl_hash_nid(hash: HashType) -> c_int {
-    match hash {
-        HashType::MD5 => 4,   // NID_md5,
-        HashType::SHA1 => 64,  // NID_sha1
-        HashType::SHA224 => 675, // NID_sha224
-        HashType::SHA256 => 672, // NID_sha256
-        HashType::SHA384 => 673, // NID_sha384
-        HashType::SHA512 => 674, // NID_sha512
-        HashType::RIPEMD160 => 117, // NID_ripemd160
     }
 }
 
@@ -124,7 +114,7 @@ impl PKey {
 
     /// Reads an RSA private key from PEM, takes ownership of handle
     pub fn private_rsa_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError>
-    where R: Read
+        where R: Read
     {
         let rsa = try!(RSA::private_key_from_pem(reader));
         unsafe {
@@ -140,7 +130,7 @@ impl PKey {
 
     /// Reads an RSA public key from PEM, takes ownership of handle
     pub fn public_rsa_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError>
-    where R: Read
+        where R: Read
     {
         let rsa = try!(RSA::public_key_from_pem(reader));
         unsafe {
@@ -556,7 +546,7 @@ impl PKey {
             let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
 
             let mut len = 0;
-            let rv = ffi::RSA_sign(openssl_hash_nid(hash),
+            let rv = ffi::RSA_sign(hash.as_nid() as c_int,
                                    s.as_ptr(),
                                    s.len() as c_uint,
                                    r.as_mut_ptr(),
@@ -579,7 +569,7 @@ impl PKey {
                 panic!("Could not get RSA key for verification");
             }
 
-            let rv = ffi::RSA_verify(openssl_hash_nid(hash),
+            let rv = ffi::RSA_verify(hash.as_nid() as c_int,
                                      h.as_ptr(),
                                      h.len() as c_uint,
                                      s.as_ptr(),
@@ -610,16 +600,15 @@ impl Drop for PKey {
 impl Clone for PKey {
     fn clone(&self) -> Self {
         let mut pkey = PKey::from_handle(unsafe { ffi::EVP_PKEY_new() }, self.parts);
-        //  copy by encoding to DER and back
+        // copy by encoding to DER and back
         match self.parts {
             Parts::Public => {
                 pkey.load_pub(&self.save_pub()[..]);
-            },
+            }
             Parts::Both => {
                 pkey.load_priv(&self.save_priv()[..]);
-            },
-            Parts::Neither => {
-            },
+            }
+            Parts::Neither => {}
         }
         pkey
     }
@@ -694,8 +683,8 @@ mod tests {
     fn test_private_rsa_key_from_pem() {
         let key_path = Path::new("test/key.pem");
         let mut file = File::open(&key_path)
-                            .ok()
-                            .expect("Failed to open `test/key.pem`");
+                           .ok()
+                           .expect("Failed to open `test/key.pem`");
 
         super::PKey::private_rsa_key_from_pem(&mut file).unwrap();
     }
@@ -704,8 +693,8 @@ mod tests {
     fn test_public_rsa_key_from_pem() {
         let key_path = Path::new("test/key.pem.pub");
         let mut file = File::open(&key_path)
-                            .ok()
-                            .expect("Failed to open `test/key.pem.pub`");
+                           .ok()
+                           .expect("Failed to open `test/key.pem.pub`");
 
         super::PKey::public_rsa_key_from_pem(&mut file).unwrap();
     }

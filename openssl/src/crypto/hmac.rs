@@ -387,8 +387,7 @@ mod tests {
         let tests: [(Vec<u8>, Vec<u8>); 6] =
             [(repeat(0xb_u8).take(20).collect(), b"Hi There".to_vec()),
              (b"Jefe".to_vec(), b"what do ya want for nothing?".to_vec()),
-             (repeat(0xaa_u8).take(20).collect(),
-              repeat(0xdd_u8).take(50).collect()),
+             (repeat(0xaa_u8).take(20).collect(), repeat(0xdd_u8).take(50).collect()),
              ("0102030405060708090a0b0c0d0e0f10111213141516171819".from_hex().unwrap(),
               repeat(0xcd_u8).take(50).collect()),
              (repeat(0xaa_u8).take(131).collect(),
