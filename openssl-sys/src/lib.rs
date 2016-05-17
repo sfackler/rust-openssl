@@ -115,6 +115,28 @@ pub struct RSA {
 }
 
 #[repr(C)]
+pub struct DSA {
+    pub pad: c_int,
+    pub version: c_long,
+    pub write_params: c_int,
+
+    pub p: *mut BIGNUM,
+    pub q: *mut BIGNUM,
+    pub g: *mut BIGNUM,
+    pub pub_key: *mut BIGNUM,
+    pub priv_key: *mut BIGNUM,
+    pub kinv: *mut BIGNUM,
+    pub r: *mut BIGNUM,
+
+    pub flags: c_int,
+    pub _method_mont_p: *mut c_void,
+    pub references: c_int,
+    pub ex_data: *mut c_void,
+    pub meth: *const c_void,
+    pub engine: *const c_void,
+}
+
+#[repr(C)]
 pub struct EVP_PKEY {
     pub type_: c_int,
     pub save_type: c_int,
@@ -626,16 +648,28 @@ extern "C" {
     pub fn PEM_read_bio_RSA_PUBKEY(bio:    *mut BIO, rsa: *mut *mut RSA, callback: Option<PasswordCallback>, user_data: *mut c_void) -> *mut RSA;
 
     pub fn PEM_write_bio_PrivateKey(bio: *mut BIO, pkey: *mut EVP_PKEY, cipher: *const EVP_CIPHER,
-                                    kstr: *mut c_char, klen: c_int,
+                                    kstr: *mut c_uchar, klen: c_int,
                                     callback: Option<PasswordCallback>,
                                     user_data: *mut c_void) -> c_int;
     pub fn PEM_write_bio_PUBKEY(bp: *mut BIO, x: *mut EVP_PKEY) -> c_int;
     pub fn PEM_write_bio_RSAPrivateKey(bp: *mut BIO, rsa: *mut RSA, cipher: *const EVP_CIPHER,
-                                        kstr: *mut c_char, klen: c_int,
+                                        kstr: *mut c_uchar, klen: c_int,
                                         callback: Option<PasswordCallback>,
                                         user_data: *mut c_void) -> c_int;
     pub fn PEM_write_bio_RSAPublicKey(bp: *mut BIO, rsa: *mut RSA) -> c_int;
     pub fn PEM_write_bio_RSA_PUBKEY(bp: *mut BIO, rsa: *mut RSA) -> c_int;
+
+    pub fn PEM_read_bio_DSAPrivateKey(bp: *mut BIO, dsa: *mut *mut DSA, callback: Option<PasswordCallback>,
+                                      user_data: *mut c_void) -> *mut DSA;
+    pub fn PEM_read_bio_DSA_PUBKEY(bp: *mut BIO, dsa: *mut *mut DSA, callback: Option<PasswordCallback>,
+                                   user_data: *mut c_void) -> *mut DSA;
+    pub fn PEM_write_bio_DSAPrivateKey(bp: *mut BIO, dsa: *mut DSA, cipher: *const EVP_CIPHER,
+                                       kstr: *mut c_uchar, klen: c_int, callback: Option<PasswordCallback>,
+                                       user_data: *mut c_void) -> c_int;
+    pub fn PEM_write_bio_DSA_PUBKEY(bp: *mut BIO, dsa: *mut DSA) -> c_int;
+
+
+
     pub fn PEM_write_bio_X509(bio: *mut BIO, x509: *mut X509) -> c_int;
     pub fn PEM_write_bio_X509_REQ(bio: *mut BIO, x509: *mut X509_REQ) -> c_int;
 
@@ -668,6 +702,18 @@ extern "C" {
     pub fn RSA_size(k: *mut RSA) -> c_int;
     pub fn RSA_verify(t: c_int, m: *const u8, mlen: c_uint, sig: *const u8, siglen: c_uint,
                       k: *mut RSA) -> c_int;
+
+    pub fn DSA_new() -> *mut DSA;
+    pub fn DSA_free(dsa: *mut DSA);
+    pub fn DSA_size(dsa: *const DSA) -> c_int;
+    pub fn DSA_generate_parameters_ex(dsa: *mut DSA, bits: c_int, seed: *const c_uchar, seed_len: c_int,
+                                      counter_ref: *mut c_int, h_ret: *mut c_ulong,
+                                      cb: *const c_void) -> c_int;
+    pub fn DSA_generate_key(dsa: *mut DSA) -> c_int;
+    pub fn DSA_sign(dummy: c_int, dgst: *const c_uchar, len: c_int, sigret: *mut c_uchar,
+                    siglen: *mut c_uint, dsa: *mut DSA) -> c_int;
+    pub fn DSA_verify(dummy: c_int, dgst: *const c_uchar, len: c_int, sigbuf: *const c_uchar,
+                      siglen: c_int, dsa: *mut DSA) -> c_int;
 
     pub fn SSL_library_init() -> c_int;
 
