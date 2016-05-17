@@ -379,7 +379,9 @@ impl X509Generator {
             ffi::X509_set_issuer_name(x509.handle, name);
 
             for (exttype, ext) in self.extensions.iter() {
-                try!(X509Generator::add_extension_internal(x509.handle, &exttype, &ext.to_string()));
+                try!(X509Generator::add_extension_internal(x509.handle,
+                                                           &exttype,
+                                                           &ext.to_string()));
             }
 
             let hash_fn = self.hash_type.evp_md();
@@ -539,9 +541,9 @@ extern "C" {
 impl<'ctx> Clone for X509<'ctx> {
     fn clone(&self) -> X509<'ctx> {
         unsafe { rust_X509_clone(self.handle) }
-        /* FIXME: given that we now have refcounting control, 'owned' should be uneeded, the 'ctx
-         * is probably also uneeded. We can remove both to condense the x509 api quite a bit
-         */
+        // FIXME: given that we now have refcounting control, 'owned' should be uneeded, the 'ctx
+        // is probably also uneeded. We can remove both to condense the x509 api quite a bit
+        //
         X509::new(self.handle, true)
     }
 }
@@ -671,7 +673,7 @@ impl Extensions {
     pub fn add(&mut self, ext: Extension) {
         let ext_type = ext.get_type();
 
-        if let Some(index) =  self.indexes.get(&ext_type) {
+        if let Some(index) = self.indexes.get(&ext_type) {
             self.extensions[*index] = ext;
             return;
         }
@@ -693,7 +695,7 @@ impl Extensions {
 /// extension in the collection.
 struct ExtensionsIter<'a> {
     current: usize,
-    extensions: &'a Vec<Extension>
+    extensions: &'a Vec<Extension>,
 }
 
 impl<'a> Iterator for ExtensionsIter<'a> {
@@ -798,9 +800,7 @@ pub struct GeneralNames<'a> {
 impl<'a> GeneralNames<'a> {
     /// Returns the number of `GeneralName`s in this structure.
     pub fn len(&self) -> usize {
-        unsafe {
-            (*self.stack).stack.num as usize
-        }
+        unsafe { (*self.stack).stack.num as usize }
     }
 
     /// Returns the specified `GeneralName`.
@@ -823,7 +823,7 @@ impl<'a> GeneralNames<'a> {
     pub fn iter(&self) -> GeneralNamesIter {
         GeneralNamesIter {
             names: self,
-            idx: 0
+            idx: 0,
         }
     }
 }

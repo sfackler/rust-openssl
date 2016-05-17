@@ -114,7 +114,7 @@ impl PKey {
 
     /// Reads an RSA private key from PEM, takes ownership of handle
     pub fn private_rsa_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError>
-    where R: Read
+        where R: Read
     {
         let rsa = try!(RSA::private_key_from_pem(reader));
         unsafe {
@@ -130,7 +130,7 @@ impl PKey {
 
     /// Reads an RSA public key from PEM, takes ownership of handle
     pub fn public_rsa_key_from_pem<R>(reader: &mut R) -> Result<PKey, SslError>
-    where R: Read
+        where R: Read
     {
         let rsa = try!(RSA::public_key_from_pem(reader));
         unsafe {
@@ -600,16 +600,15 @@ impl Drop for PKey {
 impl Clone for PKey {
     fn clone(&self) -> Self {
         let mut pkey = PKey::from_handle(unsafe { ffi::EVP_PKEY_new() }, self.parts);
-        //  copy by encoding to DER and back
+        // copy by encoding to DER and back
         match self.parts {
             Parts::Public => {
                 pkey.load_pub(&self.save_pub()[..]);
-            },
+            }
             Parts::Both => {
                 pkey.load_priv(&self.save_priv()[..]);
-            },
-            Parts::Neither => {
-            },
+            }
+            Parts::Neither => {}
         }
         pkey
     }
@@ -684,8 +683,8 @@ mod tests {
     fn test_private_rsa_key_from_pem() {
         let key_path = Path::new("test/key.pem");
         let mut file = File::open(&key_path)
-                            .ok()
-                            .expect("Failed to open `test/key.pem`");
+                           .ok()
+                           .expect("Failed to open `test/key.pem`");
 
         super::PKey::private_rsa_key_from_pem(&mut file).unwrap();
     }
@@ -694,8 +693,8 @@ mod tests {
     fn test_public_rsa_key_from_pem() {
         let key_path = Path::new("test/key.pem.pub");
         let mut file = File::open(&key_path)
-                            .ok()
-                            .expect("Failed to open `test/key.pem.pub`");
+                           .ok()
+                           .expect("Failed to open `test/key.pem.pub`");
 
         super::PKey::public_rsa_key_from_pem(&mut file).unwrap();
     }

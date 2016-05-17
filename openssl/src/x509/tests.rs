@@ -56,9 +56,10 @@ fn test_cert_gen_extension_ordering() {
 #[test]
 fn test_cert_gen_extension_bad_ordering() {
     let result = get_generator()
-        .add_extension(OtherNid(Nid::AuthorityKeyIdentifier, "keyid:always".to_owned()))
-        .add_extension(OtherNid(Nid::SubjectKeyIdentifier, "hash".to_owned()))
-        .generate();
+                     .add_extension(OtherNid(Nid::AuthorityKeyIdentifier,
+                                             "keyid:always".to_owned()))
+                     .add_extension(OtherNid(Nid::SubjectKeyIdentifier, "hash".to_owned()))
+                     .generate();
 
     assert!(result.is_err());
 }
@@ -162,7 +163,8 @@ fn test_subject_alt_name() {
     let subject_alt_names = cert.subject_alt_names().unwrap();
     assert_eq!(3, subject_alt_names.len());
     assert_eq!(Some("foobar.com"), subject_alt_names.get(0).dnsname());
-    assert_eq!(subject_alt_names.get(1).ipaddress(), Some(&[127, 0, 0, 1][..]));
+    assert_eq!(subject_alt_names.get(1).ipaddress(),
+               Some(&[127, 0, 0, 1][..]));
     assert_eq!(subject_alt_names.get(2).ipaddress(),
                Some(&b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01"[..]));
 }
@@ -174,8 +176,10 @@ fn test_subject_alt_name_iter() {
 
     let subject_alt_names = cert.subject_alt_names().unwrap();
     let mut subject_alt_names_iter = subject_alt_names.iter();
-    assert_eq!(subject_alt_names_iter.next().unwrap().dnsname(), Some("foobar.com"));
-    assert_eq!(subject_alt_names_iter.next().unwrap().ipaddress(), Some(&[127, 0, 0, 1][..]));
+    assert_eq!(subject_alt_names_iter.next().unwrap().dnsname(),
+               Some("foobar.com"));
+    assert_eq!(subject_alt_names_iter.next().unwrap().ipaddress(),
+               Some(&[127, 0, 0, 1][..]));
     assert_eq!(subject_alt_names_iter.next().unwrap().ipaddress(),
                Some(&b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01"[..]));
     assert!(subject_alt_names_iter.next().is_none());

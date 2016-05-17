@@ -236,7 +236,7 @@ run_test!(verify_untrusted, |method, stream| {
 
     match SslStream::connect_generic(&ctx, stream) {
         Ok(_) => panic!("expected failure"),
-        Err(err) => println!("error {:?}", err)
+        Err(err) => println!("error {:?}", err),
     }
 });
 
@@ -246,11 +246,11 @@ run_test!(verify_trusted, |method, stream| {
 
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
     match SslStream::connect_generic(&ctx, stream) {
         Ok(_) => (),
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     }
 });
 
@@ -264,7 +264,7 @@ run_test!(verify_untrusted_callback_override_ok, |method, stream| {
 
     match SslStream::connect_generic(&ctx, stream) {
         Ok(_) => (),
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     }
 });
 
@@ -289,11 +289,11 @@ run_test!(verify_trusted_callback_override_ok, |method, stream| {
 
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
     match SslStream::connect_generic(&ctx, stream) {
         Ok(_) => (),
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     }
 });
 
@@ -307,7 +307,7 @@ run_test!(verify_trusted_callback_override_bad, |method, stream| {
 
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
     assert!(SslStream::connect_generic(&ctx, stream).is_err());
 });
@@ -335,7 +335,7 @@ run_test!(verify_trusted_get_error_ok, |method, stream| {
 
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
     assert!(SslStream::connect_generic(&ctx, stream).is_ok());
 });
@@ -353,8 +353,7 @@ run_test!(verify_trusted_get_error_err, |method, stream| {
 });
 
 run_test!(verify_callback_data, |method, stream| {
-    fn callback(_preverify_ok: bool, x509_ctx: &X509StoreContext,
-                node_id: &Vec<u8>) -> bool {
+    fn callback(_preverify_ok: bool, x509_ctx: &X509StoreContext, node_id: &Vec<u8>) -> bool {
         let cert = x509_ctx.get_current_cert();
         match cert {
             None => false,
@@ -377,7 +376,7 @@ run_test!(verify_callback_data, |method, stream| {
 
     match SslStream::connect_generic(&ctx, stream) {
         Ok(_) => (),
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     }
 });
 
@@ -405,7 +404,7 @@ run_test!(ssl_verify_callback, |method, stream| {
 
     match SslStream::connect_generic(ssl, stream) {
         Ok(_) => (),
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     }
 
     assert_eq!(CHECKED.load(Ordering::SeqCst), 1);
@@ -499,8 +498,7 @@ fn test_write_direct() {
 }
 
 run_test!(get_peer_certificate, |method, stream| {
-    let stream = SslStream::connect_generic(&SslContext::new(method).unwrap(),
-                                            stream).unwrap();
+    let stream = SslStream::connect_generic(&SslContext::new(method).unwrap(), stream).unwrap();
     let cert = stream.ssl().peer_certificate().unwrap();
     let fingerprint = cert.fingerprint(SHA1).unwrap();
     let node_hash_str = "E19427DAC79FBE758394945276A6E4F15F0BEBE6";

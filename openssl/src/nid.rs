@@ -184,14 +184,11 @@ pub enum Nid {
     OCSP,
     CaIssuers,
     OCSPSigning, // 180
-    
+
     // 181 and up are from openssl's obj_mac.h
-
-
     /// Shown as UID in cert subject
     UserId = 458,
 
-    
     SHA256 = 672,
     SHA384,
     SHA512,
