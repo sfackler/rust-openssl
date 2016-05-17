@@ -3,10 +3,12 @@ use std::fmt;
 use ssl::error::{SslError, StreamError};
 use std::ptr;
 use std::io::{self, Read, Write};
+use libc::c_int;
 
 use bn::BigNum;
 use bio::MemBio;
-use nid::Nid;
+use crypto::HashTypeInternals;
+use crypto::hash;
 
 pub struct RSA(*mut ffi::RSA);
 
@@ -130,13 +132,13 @@ impl RSA {
         }
     }
     
-    pub fn sign(&self, hash_id: Nid, message: &[u8]) -> Result<Vec<u8>, SslError> {
+    pub fn sign(&self, hash: hash::Type, message: &[u8]) -> Result<Vec<u8>, SslError> {
         let k_len = try!(self.size());
         let mut sig = vec![0;k_len as usize];
         let mut sig_len = k_len;
         
         unsafe {
-            let result = ffi::RSA_sign(hash_id as i32, message.as_ptr(), message.len() as u32, sig.as_mut_ptr(), &mut sig_len, self.0);
+            let result = ffi::RSA_sign(hash.as_nid() as c_int, message.as_ptr(), message.len() as u32, sig.as_mut_ptr(), &mut sig_len, self.0);
             assert!(sig_len == k_len);
             
             if result == 1 {
@@ -147,9 +149,9 @@ impl RSA {
         }
     }
     
-    pub fn verify(&self, hash_id: Nid, message: &[u8], sig: &[u8]) -> Result<bool, SslError> {
+    pub fn verify(&self, hash: hash::Type, message: &[u8], sig: &[u8]) -> Result<bool, SslError> {
         unsafe {
-            let result = ffi::RSA_verify(hash_id as i32, message.as_ptr(), message.len() as u32, sig.as_ptr(), sig.len() as u32, self.0);
+            let result = ffi::RSA_verify(hash.as_nid() as c_int, message.as_ptr(), message.len() as u32, sig.as_ptr(), sig.len() as u32, self.0);
             
             Ok(result == 1)
         }
@@ -211,7 +213,6 @@ impl fmt::Debug for RSA {
 
 #[cfg(test)]
 mod test {
-    use nid;
     use std::fs::File;
     use std::io::Write;
     use super::*;
@@ -258,7 +259,7 @@ mod test {
         sha.write_all(&signing_input_rs256()).unwrap();
         let digest = sha.finish();
         
-        let result = private_key.sign(nid::Nid::SHA256, &digest).unwrap();
+        let result = private_key.sign(Type::SHA256, &digest).unwrap();
         
         assert_eq!(result, signature_rs256());
     }
@@ -272,7 +273,7 @@ mod test {
         sha.write_all(&signing_input_rs256()).unwrap();
         let digest = sha.finish();
         
-        let result = public_key.verify(nid::Nid::SHA256, &digest, &signature_rs256()).unwrap();
+        let result = public_key.verify(Type::SHA256, &digest, &signature_rs256()).unwrap();
         
         assert!(result);
     }

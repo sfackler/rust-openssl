@@ -5,6 +5,8 @@ use std::iter::repeat;
 use std::mem;
 use std::ptr;
 use bio::MemBio;
+
+use crypto::HashTypeInternals;
 use crypto::hash;
 use crypto::hash::Type as HashType;
 use ffi;
@@ -38,18 +40,6 @@ fn openssl_padding_code(padding: EncryptionPadding) -> c_int {
     match padding {
         EncryptionPadding::OAEP => 4,
         EncryptionPadding::PKCS1v15 => 1,
-    }
-}
-
-fn openssl_hash_nid(hash: HashType) -> c_int {
-    match hash {
-        HashType::MD5 => 4,   // NID_md5,
-        HashType::SHA1 => 64,  // NID_sha1
-        HashType::SHA224 => 675, // NID_sha224
-        HashType::SHA256 => 672, // NID_sha256
-        HashType::SHA384 => 673, // NID_sha384
-        HashType::SHA512 => 674, // NID_sha512
-        HashType::RIPEMD160 => 117, // NID_ripemd160
     }
 }
 
@@ -556,7 +546,7 @@ impl PKey {
             let mut r = repeat(0u8).take(len as usize + 1).collect::<Vec<_>>();
 
             let mut len = 0;
-            let rv = ffi::RSA_sign(openssl_hash_nid(hash),
+            let rv = ffi::RSA_sign(hash.as_nid() as c_int,
                                    s.as_ptr(),
                                    s.len() as c_uint,
                                    r.as_mut_ptr(),
@@ -579,7 +569,7 @@ impl PKey {
                 panic!("Could not get RSA key for verification");
             }
 
-            let rv = ffi::RSA_verify(openssl_hash_nid(hash),
+            let rv = ffi::RSA_verify(hash.as_nid() as c_int,
                                      h.as_ptr(),
                                      h.len() as c_uint,
                                      s.as_ptr(),

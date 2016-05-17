@@ -195,4 +195,5 @@ pub enum Nid {
     SHA256 = 672,
     SHA384,
     SHA512,
+    SHA224,
 }
