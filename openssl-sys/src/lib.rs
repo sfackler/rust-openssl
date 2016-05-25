@@ -716,6 +716,9 @@ extern "C" {
     pub fn EVP_PKEY_copy_parameters(to: *mut EVP_PKEY, from: *const EVP_PKEY) -> c_int;
     pub fn EVP_PKEY_get1_RSA(k: *mut EVP_PKEY) -> *mut RSA;
     pub fn EVP_PKEY_set1_RSA(k: *mut EVP_PKEY, r: *mut RSA) -> c_int;
+    pub fn EVP_PKEY_get1_EC_KEY(pkey: *mut EVP_KEY) -> *mut EC_KEY;
+    pub fn EVP_PKEY_set1_EC_KEY(pkey: *mut EVP_PKEY, key: *mut EVP_KEY) -> c_int;
+    pub fn EVP_PKEY_get0_EC_KEY(pkey: *mut EVP_PKEY) -> *mut EC_KEY;
     pub fn EVP_PKEY_cmp(a: *const EVP_PKEY, b: *const EVP_PKEY) -> c_int;
 
     pub fn HMAC_CTX_init(ctx: *mut HMAC_CTX);
