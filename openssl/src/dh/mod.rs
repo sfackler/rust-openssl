@@ -81,7 +81,7 @@ mod tests {
     #[test]
     #[cfg(feature = "rfc5114")]
     fn test_dh_rfc5114() {
-        let ctx = SslContext::new(Sslv23).unwrap();
+        let mut ctx = SslContext::new(Sslv23).unwrap();
         let dh1 = DH::get_1024_160().unwrap();
         ctx.set_tmp_dh(dh1).unwrap();
         let dh2 = DH::get_2048_224().unwrap();
@@ -92,7 +92,7 @@ mod tests {
 
     #[test]
     fn test_dh() {
-        let ctx = SslContext::new(Sslv23).unwrap();
+        let mut ctx = SslContext::new(Sslv23).unwrap();
         let p = BigNum::from_hex_str("87A8E61DB4B6663CFFBBD19C651959998CEEF608660DD0F25D2CEED4435\
                                       E3B00E00DF8F1D61957D4FAF7DF4561B2AA3016C3D91134096FAA3BF429\
                                       6D830E9A7C209E0C6497517ABD5A8A9D306BCF67ED91F9E6725B4758C02\
@@ -122,7 +122,7 @@ mod tests {
 
     #[test]
     fn test_dh_from_pem() {
-        let ctx = SslContext::new(Sslv23).unwrap();
+        let mut ctx = SslContext::new(Sslv23).unwrap();
         let pem_path = Path::new("test/dhparams.pem");
         let mut file = File::open(&pem_path)
                            .ok()
