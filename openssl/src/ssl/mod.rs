@@ -564,7 +564,7 @@ impl SslContext {
 
         let ctx = try_ssl_null!(unsafe { ffi::SSL_CTX_new(method.to_raw()) });
 
-        let ctx = SslContext { ctx: ctx };
+        let mut ctx = SslContext { ctx: ctx };
 
         if method.is_dtls() {
             ctx.set_read_ahead(1);
@@ -642,13 +642,13 @@ impl SslContext {
         }
     }
 
-    pub fn set_read_ahead(&self, m: u32) {
+    pub fn set_read_ahead(&mut self, m: u32) {
         unsafe {
             ffi_extras::SSL_CTX_set_read_ahead(self.ctx, m as c_long);
         }
     }
 
-    pub fn set_tmp_dh(&self, dh: DH) -> Result<(), SslError> {
+    pub fn set_tmp_dh(&mut self, dh: DH) -> Result<(), SslError> {
         wrap_ssl_result(unsafe { ffi_extras::SSL_CTX_set_tmp_dh(self.ctx, dh.raw()) as i32 })
     }
 
@@ -768,7 +768,7 @@ impl SslContext {
         SslContextOptions::from_bits(ret).unwrap()
     }
 
-    pub fn get_options(&mut self) -> SslContextOptions {
+    pub fn get_options(&self) -> SslContextOptions {
         let ret = unsafe { ffi_extras::SSL_CTX_get_options(self.ctx) };
         SslContextOptions::from_bits(ret).unwrap()
     }
