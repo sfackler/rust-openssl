@@ -437,7 +437,7 @@ fn test_set_certificate_and_private_key() {
 }
 
 run_test!(get_ctx_options, |method, _| {
-    let mut ctx = SslContext::new(method).unwrap();
+    let ctx = SslContext::new(method).unwrap();
     ctx.options();
 });
 
