@@ -335,7 +335,7 @@ impl X509Generator {
         ffi::init();
 
         unsafe {
-            let x509 = ffi::X509_new();
+            let x509 = ffi::X509_new();            
             try_ssl_null!(x509);
 
             let x509 = X509 {
@@ -387,6 +387,69 @@ impl X509Generator {
             let hash_fn = self.hash_type.evp_md();
             try_ssl!(ffi::X509_sign(x509.handle, p_key.get_handle(), hash_fn));
             Ok(x509)
+        }
+    }
+
+    /// Sets the certificate public-key, then self-sign and return it
+    /// Note: That the bit-length of the private key is used (set_bitlength is ignored)
+    pub fn ca_generate<'a>(&self, ca_cert: &X509, ca_pkey: &PKey) -> Result<(X509<'a>, PKey), SslError> {
+        ffi::init();
+
+        unsafe {
+            let x509 = ffi::X509_new();
+            try_ssl_null!(x509);
+
+            let x509 = X509 {
+                handle: x509,
+                ctx: None,
+                owned: true,
+            };
+
+            try_ssl!(ffi::X509_set_version(x509.handle, 2));
+            try_ssl!(ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509.handle),
+                                           X509Generator::random_serial()));
+
+            let not_before = try!(Asn1Time::days_from_now(0));
+            let not_after = try!(Asn1Time::days_from_now(self.days));
+
+            try_ssl!(ffi::X509_set_notBefore(x509.handle, mem::transmute(not_before.get_handle())));
+            // If prev line succeded - ownership should go to cert
+            mem::forget(not_before);
+
+            try_ssl!(ffi::X509_set_notAfter(x509.handle, mem::transmute(not_after.get_handle())));
+            // If prev line succeded - ownership should go to cert
+            mem::forget(not_after);
+
+            let mut p_key = PKey::new();
+            p_key.gen(self.bits as usize);
+            try_ssl!(ffi::X509_set_pubkey(x509.handle, p_key.get_handle()));
+
+            let name = ffi::X509_get_subject_name(x509.handle);
+            try_ssl_null!(name);
+
+            let default = [("CN", "rust-openssl")];
+            let default_iter = &mut default.iter().map(|&(k, v)| (k, v));
+            let arg_iter = &mut self.names.iter().map(|&(ref k, ref v)| (&k[..], &v[..]));
+            let iter: &mut Iterator<Item = (&str, &str)> = if self.names.len() == 0 {
+                default_iter
+            } else {
+                arg_iter
+            };
+
+            for (key, val) in iter {
+                try!(X509Generator::add_name_internal(name, &key, &val));
+            }
+            ffi::X509_set_issuer_name(x509.handle, ffi::X509_get_issuer_name(ca_cert.handle));
+
+            for (exttype, ext) in self.extensions.iter() {
+                try!(X509Generator::add_extension_internal(x509.handle,
+                                                           &exttype,
+                                                           &ext.to_string()));
+            }
+
+            let hash_fn = self.hash_type.evp_md();
+            try_ssl!(ffi::X509_sign(x509.handle, ca_pkey.get_handle(), hash_fn));
+            Ok((x509, p_key))
         }
     }
 

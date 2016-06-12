@@ -3,12 +3,12 @@ use std::io;
 use std::path::Path;
 use std::fs::File;
 
-use crypto::hash::Type::SHA1;
+use crypto::hash::Type::{SHA1, SHA256};
 use crypto::pkey::PKey;
 use x509::{X509, X509Generator};
 use x509::extension::Extension::{KeyUsage, ExtKeyUsage, SubjectAltName, OtherNid, OtherStr};
 use x509::extension::AltNameOption as SAN;
-use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment};
+use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment, KeyCertSign, CRLSign};
 use x509::extension::ExtKeyUsageOption::{self, ClientAuth, ServerAuth};
 use nid::Nid;
 
@@ -183,4 +183,27 @@ fn test_subject_alt_name_iter() {
     assert_eq!(subject_alt_names_iter.next().unwrap().ipaddress(),
                Some(&b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01"[..]));
     assert!(subject_alt_names_iter.next().is_none());
+}
+
+#[test]
+fn test_ca_sign_certificate() {
+    let (ca_cert, ca_pkey) = X509Generator::new()
+        .set_bitlength(2048)
+        .set_valid_period(365 * 10)
+        .add_name("CN".to_string(), "my CA".to_string())
+        .set_sign_hash(SHA256)
+        .add_extension(KeyUsage(vec![KeyCertSign, CRLSign]))
+        .add_extension(OtherNid(Nid::BasicConstraints, "critical,CA:TRUE".to_owned()))
+        .generate()
+        .expect("Failed to generate CA certificate");
+
+    let (cert, pkey) = X509Generator::new()
+        .set_bitlength(2048)
+        .set_valid_period(365 * 2)
+        .add_name("CN".to_string(), "my certificate".to_string())
+        .set_sign_hash(SHA256)
+        .add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]))
+        .ca_generate(&ca_cert, &ca_pkey)
+        .expect("Failed to generate certificate");
+
 }
