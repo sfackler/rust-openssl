@@ -1,6 +1,6 @@
 [package]
 name = "openssl-sys-extras"
-version = "0.7.13"
+version = "0.7.14"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "MIT"
 description = "Extra FFI bindings to OpenSSL that require a C shim"
