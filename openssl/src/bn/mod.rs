@@ -6,13 +6,23 @@ use std::{fmt, ptr, mem};
 use ffi;
 use ssl::error::SslError;
 
+/// A signed arbitrary-precision integer.
+///
+/// `BigNum` provides wrappers around OpenSSL's checked arithmetic functions. Additionally, it
+/// implements the standard operators (`std::ops`), which perform unchecked arithmetic, unwrapping
+/// the returned `Result` of the checked operations.
 pub struct BigNum(*mut ffi::BIGNUM);
 
+/// Specifies the desired properties of a randomly generated `BigNum`.
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub enum RNGProperty {
+    /// The most significant bit of the number is allowed to be 0.
     MsbMaybeZero = -1,
+    /// The MSB should be set to 1.
     MsbOne = 0,
+    /// The two most significant bits of the number will be set to 1, so that the product of two
+    /// such random numbers will always have `2 * bits` length.
     TwoMsbOne = 1,
 }
 
@@ -70,6 +80,7 @@ macro_rules! with_bn_in_ctx(
 );
 
 impl BigNum {
+    /// Creates a new `BigNum` with the value 0.
     pub fn new() -> Result<BigNum, SslError> {
         unsafe {
             ffi::init();
@@ -79,6 +90,7 @@ impl BigNum {
         }
     }
 
+    /// Creates a new `BigNum` with the given value.
     pub fn new_from(n: u64) -> Result<BigNum, SslError> {
         BigNum::new().and_then(|v| unsafe {
             try_ssl!(ffi::BN_set_word(v.raw(), n as c_ulong));
@@ -86,6 +98,7 @@ impl BigNum {
         })
     }
 
+    /// Creates a `BigNum` from a decimal string.
     pub fn from_dec_str(s: &str) -> Result<BigNum, SslError> {
         BigNum::new().and_then(|v| unsafe {
             let c_str = CString::new(s.as_bytes()).unwrap();
@@ -94,6 +107,7 @@ impl BigNum {
         })
     }
 
+    /// Creates a `BigNum` from a hexadecimal string.
     pub fn from_hex_str(s: &str) -> Result<BigNum, SslError> {
         BigNum::new().and_then(|v| unsafe {
             let c_str = CString::new(s.as_bytes()).unwrap();
@@ -114,6 +128,14 @@ impl BigNum {
         }
     }
 
+    /// Creates a new `BigNum` from an unsigned, big-endian encoded number of arbitrary length.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let bignum = BigNum::new_from_slice(&[0x12, 0x00, 0x34]).unwrap();
+    ///
+    /// assert_eq!(bignum, BigNum::new_from(0x120034).unwrap());
+    /// ```
     pub fn new_from_slice(n: &[u8]) -> Result<BigNum, SslError> {
         BigNum::new().and_then(|v| unsafe {
             try_ssl_null!(ffi::BN_bin2bn(n.as_ptr(), n.len() as c_int, v.raw()));
@@ -121,6 +143,16 @@ impl BigNum {
         })
     }
 
+    /// Returns the square of `self`.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let ref n = BigNum::new_from(10).unwrap();
+    /// let squared = BigNum::new_from(100).unwrap();
+    ///
+    /// assert_eq!(n.checked_sqr().unwrap(), squared);
+    /// assert_eq!(n * n, squared);
+    /// ```
     pub fn checked_sqr(&self) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
@@ -129,6 +161,7 @@ impl BigNum {
         }
     }
 
+    /// Returns the unsigned remainder of the division `self / n`.
     pub fn checked_nnmod(&self, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
@@ -137,6 +170,17 @@ impl BigNum {
         }
     }
 
+    /// Equivalent to `(self + a) mod n`.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let ref s = BigNum::new_from(10).unwrap();
+    /// let ref a = BigNum::new_from(20).unwrap();
+    /// let ref n = BigNum::new_from(29).unwrap();
+    /// let result = BigNum::new_from(1).unwrap();
+    ///
+    /// assert_eq!(s.checked_mod_add(a, n).unwrap(), result);
+    /// ```
     pub fn checked_mod_add(&self, a: &BigNum, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
@@ -145,6 +189,7 @@ impl BigNum {
         }
     }
 
+    /// Equivalent to `(self - a) mod n`.
     pub fn checked_mod_sub(&self, a: &BigNum, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
@@ -153,6 +198,7 @@ impl BigNum {
         }
     }
 
+    /// Equivalent to `(self * a) mod n`.
     pub fn checked_mod_mul(&self, a: &BigNum, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
@@ -161,6 +207,7 @@ impl BigNum {
         }
     }
 
+    /// Equivalent to `self² mod n`.
     pub fn checked_mod_sqr(&self, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
@@ -169,6 +216,7 @@ impl BigNum {
         }
     }
 
+    /// Raises `self` to the `p`th power.
     pub fn checked_exp(&self, p: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
@@ -177,6 +225,7 @@ impl BigNum {
         }
     }
 
+    /// Equivalent to `self.checked_exp(p) mod n`.
     pub fn checked_mod_exp(&self, p: &BigNum, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
@@ -185,6 +234,8 @@ impl BigNum {
         }
     }
 
+    /// Calculates the modular multiplicative inverse of `self` modulo `n`, that is, an integer `r`
+    /// such that `(self * r) % n == 1`.
     pub fn checked_mod_inv(&self, n: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
@@ -193,6 +244,7 @@ impl BigNum {
         }
     }
 
+    /// Add an `unsigned long` to `self`. This is more efficient than adding a `BigNum`.
     pub fn add_word(&mut self, w: c_ulong) -> Result<(), SslError> {
         unsafe {
             if ffi::BN_add_word(self.raw(), w) == 1 {
@@ -245,6 +297,7 @@ impl BigNum {
         }
     }
 
+    /// Computes the greatest common denominator of `self` and `a`.
     pub fn checked_gcd(&self, a: &BigNum) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
@@ -253,6 +306,14 @@ impl BigNum {
         }
     }
 
+    /// Generates a prime number.
+    ///
+    /// # Parameters
+    ///
+    /// * `bits`: The length of the prime in bits (lower bound).
+    /// * `safe`: If true, returns a "safe" prime `p` so that `(p-1)/2` is also prime.
+    /// * `add`/`rem`: If `add` is set to `Some(add)`, `p % add == rem` will hold, where `p` is the
+    ///   generated prime and `rem` is `1` if not specified (`None`).
     pub fn checked_generate_prime(bits: i32,
                                   safe: bool,
                                   add: Option<&BigNum>,
@@ -273,6 +334,13 @@ impl BigNum {
         }
     }
 
+    /// Checks whether `self` is prime.
+    ///
+    /// Performs a Miller-Rabin probabilistic primality test with `checks` iterations.
+    ///
+    /// # Return Value
+    ///
+    /// Returns `true` if `self` is prime with an error probability of less than `0.25 ^ checks`.
     pub fn is_prime(&self, checks: i32) -> Result<bool, SslError> {
         unsafe {
             with_ctx!(ctx, {
@@ -281,6 +349,15 @@ impl BigNum {
         }
     }
 
+    /// Checks whether `self` is prime with optional trial division.
+    ///
+    /// If `do_trial_division` is `true`, first performs trial division by a number of small primes.
+    /// Then, like `is_prime`, performs a Miller-Rabin probabilistic primality test with `checks`
+    /// iterations.
+    ///
+    /// # Return Value
+    ///
+    /// Returns `true` if `self` is prime with an error probability of less than `0.25 ^ checks`.
     pub fn is_prime_fast(&self, checks: i32, do_trial_division: bool) -> Result<bool, SslError> {
         unsafe {
             with_ctx!(ctx, {
@@ -293,6 +370,13 @@ impl BigNum {
         }
     }
 
+    /// Generates a cryptographically strong pseudo-random `BigNum`.
+    ///
+    /// # Parameters
+    ///
+    /// * `bits`: Length of the number in bits.
+    /// * `prop`: The desired properties of the number.
+    /// * `odd`: If `true`, the generated number will be odd.
     pub fn checked_new_random(bits: i32, prop: RNGProperty, odd: bool) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
@@ -301,6 +385,7 @@ impl BigNum {
         }
     }
 
+    /// The cryptographically weak counterpart to `checked_new_random`.
     pub fn checked_new_pseudo_random(bits: i32,
                                      prop: RNGProperty,
                                      odd: bool)
@@ -312,6 +397,8 @@ impl BigNum {
         }
     }
 
+    /// Generates a cryptographically strong pseudo-random `BigNum` `r` in the range
+    /// `0 <= r < self`.
     pub fn checked_rand_in_range(&self) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
@@ -320,6 +407,7 @@ impl BigNum {
         }
     }
 
+    /// The cryptographically weak counterpart to `checked_rand_in_range`.
     pub fn checked_pseudo_rand_in_range(&self) -> Result<BigNum, SslError> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
@@ -328,6 +416,9 @@ impl BigNum {
         }
     }
 
+    /// Sets bit `n`. Equivalent to `self |= (1 << n)`.
+    ///
+    /// When setting a bit outside of `self`, it is expanded.
     pub fn set_bit(&mut self, n: i32) -> Result<(), SslError> {
         unsafe {
             if ffi::BN_set_bit(self.raw(), n as c_int) == 1 {
@@ -338,6 +429,9 @@ impl BigNum {
         }
     }
 
+    /// Clears bit `n`, setting it to 0. Equivalent to `self &= ~(1 << n)`.
+    ///
+    /// When clearing a bit outside of `self`, an error is returned.
     pub fn clear_bit(&mut self, n: i32) -> Result<(), SslError> {
         unsafe {
             if ffi::BN_clear_bit(self.raw(), n as c_int) == 1 {
@@ -348,10 +442,14 @@ impl BigNum {
         }
     }
 
+    /// Returns `true` if the `n`th bit of `self` is set to 1, `false` otherwise.
     pub fn is_bit_set(&self, n: i32) -> bool {
         unsafe { ffi::BN_is_bit_set(self.raw(), n as c_int) == 1 }
     }
 
+    /// Truncates `self` to the lowest `n` bits.
+    ///
+    /// An error occurs if `self` is already shorter than `n` bits.
     pub fn mask_bits(&mut self, n: i32) -> Result<(), SslError> {
         unsafe {
             if ffi::BN_mask_bits(self.raw(), n as c_int) == 1 {
@@ -362,6 +460,24 @@ impl BigNum {
         }
     }
 
+    /// Returns `self`, shifted left by 1 bit. `self` may be negative.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let ref s = BigNum::new_from(0b0100).unwrap();
+    /// let result = BigNum::new_from(0b1000).unwrap();
+    ///
+    /// assert_eq!(s.checked_shl1().unwrap(), result);
+    /// ```
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let ref s = -BigNum::new_from(8).unwrap();
+    /// let result = -BigNum::new_from(16).unwrap();
+    ///
+    /// // (-8) << 1 == -16
+    /// assert_eq!(s.checked_shl1().unwrap(), result);
+    /// ```
     pub fn checked_shl1(&self) -> Result<BigNum, SslError> {
         unsafe {
             with_bn!(r, {
@@ -370,6 +486,7 @@ impl BigNum {
         }
     }
 
+    /// Returns `self`, shifted right by 1 bit. `self` may be negative.
     pub fn checked_shr1(&self) -> Result<BigNum, SslError> {
         unsafe {
             with_bn!(r, {
@@ -434,10 +551,31 @@ impl BigNum {
         }
     }
 
+    /// Inverts the sign of `self`.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let mut s = BigNum::new_from(8).unwrap();
+    ///
+    /// s.negate();
+    /// assert_eq!(s, -BigNum::new_from(8).unwrap());
+    /// s.negate();
+    /// assert_eq!(s, BigNum::new_from(8).unwrap());
+    /// ```
     pub fn negate(&mut self) {
         unsafe { ffi::BN_set_negative(self.raw(), !self.is_negative() as c_int) }
     }
 
+    /// Compare the absolute values of `self` and `oth`.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// # use std::cmp::Ordering;
+    /// let s = -BigNum::new_from(8).unwrap();
+    /// let o = BigNum::new_from(8).unwrap();
+    ///
+    /// assert_eq!(s.abs_cmp(o), Ordering::Equal);
+    /// ```
     pub fn abs_cmp(&self, oth: BigNum) -> Ordering {
         unsafe {
             let res = ffi::BN_ucmp(self.raw(), oth.raw()) as i32;
@@ -455,10 +593,12 @@ impl BigNum {
         unsafe { (*self.raw()).neg == 1 }
     }
 
+    /// Returns the number of significant bits in `self`.
     pub fn num_bits(&self) -> i32 {
         unsafe { ffi::BN_num_bits(self.raw()) as i32 }
     }
 
+    /// Returns the size of `self` in bytes.
     pub fn num_bytes(&self) -> i32 {
         (self.num_bits() + 7) / 8
     }
@@ -478,6 +618,18 @@ impl BigNum {
         mem::replace(&mut me.0, ptr::null_mut())
     }
 
+    /// Returns a big-endian byte vector representation of the absolute value of `self`.
+    ///
+    /// `self` can be recreated by using `new_from_slice`.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let s = -BigNum::new_from(4543).unwrap();
+    /// let r = BigNum::new_from(4543).unwrap();
+    ///
+    /// let s_vec = s.to_vec();
+    /// assert_eq!(BigNum::new_from_slice(&s_vec).unwrap(), r);
+    /// ```
     pub fn to_vec(&self) -> Vec<u8> {
         let size = self.num_bytes() as usize;
         let mut v = Vec::with_capacity(size);
@@ -488,6 +640,14 @@ impl BigNum {
         v
     }
 
+    /// Returns a decimal string representation of `self`.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let s = -BigNum::new_from(12345).unwrap();
+    ///
+    /// assert_eq!(s.to_dec_str(), "-12345");
+    /// ```
     pub fn to_dec_str(&self) -> String {
         unsafe {
             let buf = ffi::BN_bn2dec(self.raw());
@@ -499,6 +659,14 @@ impl BigNum {
         }
     }
 
+    /// Returns a hexadecimal string representation of `self`.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let s = -BigNum::new_from(0x99ff).unwrap();
+    ///
+    /// assert_eq!(s.to_hex_str(), "-99FF");
+    /// ```
     pub fn to_hex_str(&self) -> String {
         unsafe {
             let buf = ffi::BN_bn2hex(self.raw());
@@ -556,6 +724,7 @@ impl Drop for BigNum {
     }
 }
 
+#[doc(hidden)]      // This module only contains impls, so it's empty when generating docs
 pub mod unchecked {
     use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub};
     use ffi;
