@@ -24,6 +24,7 @@ pub mod rand;
 pub mod symm;
 pub mod memcmp;
 pub mod rsa;
+mod util;
 
 mod symm_internal;
 

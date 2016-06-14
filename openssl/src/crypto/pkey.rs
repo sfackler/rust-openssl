@@ -1,12 +1,9 @@
-use libc::{c_int, c_uint, c_ulong, c_char, c_void};
-use std::any::Any;
+use libc::{c_int, c_uint, c_ulong, c_void};
 use std::io;
 use std::io::prelude::*;
 use std::iter::repeat;
 use std::mem;
-use std::panic;
 use std::ptr;
-use std::slice;
 use bio::MemBio;
 
 use crypto::HashTypeInternals;
@@ -15,6 +12,7 @@ use crypto::hash::Type as HashType;
 use ffi;
 use ssl::error::{SslError, StreamError};
 use crypto::rsa::RSA;
+use crypto::util::{CallbackState, invoke_passwd_cb};
 
 #[derive(Copy, Clone)]
 pub enum Parts {
@@ -104,36 +102,7 @@ impl PKey {
     pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> Result<PKey, SslError>
         where R: Read, F: FnMut(&mut [i8]) -> usize
     {
-        struct CallbackState<F: FnMut(&mut [i8]) -> usize> {
-            cb: F,
-            panic: Option<Box<Any + Send + 'static>>,
-        }
-
-        extern "C" fn user_cb_wrapper<F>(buf: *mut c_char,
-                                         size: c_int,
-                                         _rwflag: c_int,
-                                         user_cb: *mut c_void)
-                                         -> c_int
-                                         where F: FnMut(&mut [i8]) -> usize {
-            let result = panic::catch_unwind(|| {
-                // build a `i8` slice to pass to the user callback
-                let pass_slice = unsafe { slice::from_raw_parts_mut(buf, size as usize) };
-                let callback = unsafe { &mut *(user_cb as *mut CallbackState<F>) };
-
-                (callback.cb)(pass_slice)
-            });
-
-            if let Ok(len) = result {
-                return len as c_int;
-            } else {
-                return 0;
-            }
-        }
-
-        let mut cb = CallbackState {
-            cb: pass_cb,
-            panic: None,
-        };
+        let mut cb = CallbackState::new(pass_cb);
 
         let mut mem_bio = try!(MemBio::new());
         try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
@@ -141,12 +110,8 @@ impl PKey {
         unsafe {
             let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.get_handle(),
                                                                  ptr::null_mut(),
-                                                                 Some(user_cb_wrapper::<F>),
+                                                                 Some(invoke_passwd_cb::<F>),
                                                                  &mut cb as *mut _ as *mut c_void));
-
-            if let Some(panic) = cb.panic {
-                panic::resume_unwind(panic);
-            }
 
             Ok(PKey {
                 evp: evp as *mut ffi::EVP_PKEY,
