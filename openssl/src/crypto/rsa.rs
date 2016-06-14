@@ -3,12 +3,13 @@ use std::fmt;
 use ssl::error::{SslError, StreamError};
 use std::ptr;
 use std::io::{self, Read, Write};
-use libc::c_int;
+use libc::{c_int, c_void};
 
 use bn::BigNum;
 use bio::MemBio;
 use crypto::HashTypeInternals;
 use crypto::hash;
+use crypto::util::{CallbackState, invoke_passwd_cb};
 
 pub struct RSA(*mut ffi::RSA);
 
@@ -72,6 +73,26 @@ impl RSA {
                                                                     ptr::null_mut(),
                                                                     None,
                                                                     ptr::null_mut()));
+            Ok(RSA(rsa))
+        }
+    }
+
+    /// Reads an RSA private key from PEM formatted data and supplies a password callback.
+    pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> Result<RSA, SslError>
+        where R: Read, F: FnMut(&mut [i8]) -> usize
+    {
+        let mut cb = CallbackState::new(pass_cb);
+
+        let mut mem_bio = try!(MemBio::new());
+        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+
+        unsafe {
+            let cb_ptr = &mut cb as *mut _ as *mut c_void;
+            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.get_handle(),
+                                                                    ptr::null_mut(),
+                                                                    Some(invoke_passwd_cb::<F>),
+                                                                    cb_ptr));
+
             Ok(RSA(rsa))
         }
     }
