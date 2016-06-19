@@ -147,15 +147,16 @@ impl X509StoreContext {
 /// # let _ = fs::remove_file(pkey_path);
 /// # }
 /// ```
-pub struct X509Generator {
+pub struct X509Generator<'ctx> {
     bits: u32,
     days: u32,
     names: Vec<(String, String)>,
     extensions: Extensions,
     hash_type: HashType,
+    ca: Option<(&'ctx X509<'ctx>, &'ctx PKey)>
 }
 
-impl X509Generator {
+impl<'g, 'ctx> X509Generator<'ctx> {
     /// Creates a new generator with the following defaults:
     ///
     /// bit length: 1024
@@ -165,24 +166,25 @@ impl X509Generator {
     /// CN: "rust-openssl"
     ///
     /// hash: SHA1
-    pub fn new() -> X509Generator {
+    pub fn new() -> X509Generator<'ctx> {
         X509Generator {
             bits: 1024,
             days: 365,
             names: vec![],
             extensions: Extensions::new(),
             hash_type: HashType::SHA1,
+            ca: None,
         }
     }
 
     /// Sets desired bit length
-    pub fn set_bitlength(mut self, bits: u32) -> X509Generator {
+    pub fn set_bitlength(mut self, bits: u32) -> X509Generator<'ctx> {
         self.bits = bits;
         self
     }
 
     /// Sets certificate validity period in days since today
-    pub fn set_valid_period(mut self, days: u32) -> X509Generator {
+    pub fn set_valid_period(mut self, days: u32) -> X509Generator<'ctx> {
         self.days = days;
         self
     }
@@ -193,7 +195,7 @@ impl X509Generator {
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_name("CN".to_string(),"example.com".to_string());
     /// ```
-    pub fn add_name(mut self, attr_type: String, attr_value: String) -> X509Generator {
+    pub fn add_name(mut self, attr_type: String, attr_value: String) -> X509Generator<'ctx> {
         self.names.push((attr_type, attr_value));
         self
     }
@@ -204,7 +206,7 @@ impl X509Generator {
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_names(vec![("CN".to_string(),"example.com".to_string())]);
     /// ```
-    pub fn add_names<I>(mut self, attrs: I) -> X509Generator
+    pub fn add_names<I>(mut self, attrs: I) -> X509Generator<'ctx>
         where I: IntoIterator<Item = (String, String)>
     {
         self.names.extend(attrs);
@@ -222,7 +224,7 @@ impl X509Generator {
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]));
     /// ```
-    pub fn add_extension(mut self, ext: extension::Extension) -> X509Generator {
+    pub fn add_extension(mut self, ext: extension::Extension) -> X509Generator<'ctx> {
         self.extensions.add(ext);
         self
     }
@@ -238,7 +240,7 @@ impl X509Generator {
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_extensions(vec![KeyUsage(vec![DigitalSignature, KeyEncipherment])]);
     /// ```
-    pub fn add_extensions<I>(mut self, exts: I) -> X509Generator
+    pub fn add_extensions<I>(mut self, exts: I) -> X509Generator<'ctx>
         where I: IntoIterator<Item = extension::Extension>
     {
         for ext in exts {
@@ -248,8 +250,13 @@ impl X509Generator {
         self
     }
 
-    pub fn set_sign_hash(mut self, hash_type: hash::Type) -> X509Generator {
+    pub fn set_sign_hash(mut self, hash_type: hash::Type) -> X509Generator<'ctx> {
         self.hash_type = hash_type;
+        self
+    }
+
+    pub fn set_ca(mut self, ca_cert: &'ctx X509<'ctx>, ca_pkey: &'ctx PKey) -> X509Generator<'ctx> {
+        self.ca = Some((ca_cert, ca_pkey));
         self
     }
 
@@ -329,70 +336,9 @@ impl X509Generator {
         Ok((x509, p_key))
     }
 
-    /// Sets the certificate public-key, then self-sign and return it
+    /// Sets the certificate public-key, then signs it and return it
     /// Note: That the bit-length of the private key is used (set_bitlength is ignored)
     pub fn sign<'a>(&self, p_key: &PKey) -> Result<X509<'a>, SslError> {
-        ffi::init();
-
-        unsafe {
-            let x509 = ffi::X509_new();            
-            try_ssl_null!(x509);
-
-            let x509 = X509 {
-                handle: x509,
-                ctx: None,
-                owned: true,
-            };
-
-            try_ssl!(ffi::X509_set_version(x509.handle, 2));
-            try_ssl!(ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509.handle),
-                                           X509Generator::random_serial()));
-
-            let not_before = try!(Asn1Time::days_from_now(0));
-            let not_after = try!(Asn1Time::days_from_now(self.days));
-
-            try_ssl!(ffi::X509_set_notBefore(x509.handle, mem::transmute(not_before.get_handle())));
-            // If prev line succeded - ownership should go to cert
-            mem::forget(not_before);
-
-            try_ssl!(ffi::X509_set_notAfter(x509.handle, mem::transmute(not_after.get_handle())));
-            // If prev line succeded - ownership should go to cert
-            mem::forget(not_after);
-
-            try_ssl!(ffi::X509_set_pubkey(x509.handle, p_key.get_handle()));
-
-            let name = ffi::X509_get_subject_name(x509.handle);
-            try_ssl_null!(name);
-
-            let default = [("CN", "rust-openssl")];
-            let default_iter = &mut default.iter().map(|&(k, v)| (k, v));
-            let arg_iter = &mut self.names.iter().map(|&(ref k, ref v)| (&k[..], &v[..]));
-            let iter: &mut Iterator<Item = (&str, &str)> = if self.names.len() == 0 {
-                default_iter
-            } else {
-                arg_iter
-            };
-
-            for (key, val) in iter {
-                try!(X509Generator::add_name_internal(name, &key, &val));
-            }
-            ffi::X509_set_issuer_name(x509.handle, name);
-
-            for (exttype, ext) in self.extensions.iter() {
-                try!(X509Generator::add_extension_internal(x509.handle,
-                                                           &exttype,
-                                                           &ext.to_string()));
-            }
-
-            let hash_fn = self.hash_type.evp_md();
-            try_ssl!(ffi::X509_sign(x509.handle, p_key.get_handle(), hash_fn));
-            Ok(x509)
-        }
-    }
-
-    /// Sets the certificate public-key, then self-sign and return it
-    /// Note: That the bit-length of the private key is used (set_bitlength is ignored)
-    pub fn ca_generate<'a>(&self, ca_cert: &X509, ca_pkey: &PKey) -> Result<(X509<'a>, PKey), SslError> {
         ffi::init();
 
         unsafe {
@@ -420,26 +366,31 @@ impl X509Generator {
             // If prev line succeded - ownership should go to cert
             mem::forget(not_after);
 
-            let mut p_key = PKey::new();
-            p_key.gen(self.bits as usize);
             try_ssl!(ffi::X509_set_pubkey(x509.handle, p_key.get_handle()));
 
-            let name = ffi::X509_get_subject_name(x509.handle);
-            try_ssl_null!(name);
+            match self.ca {
+                Some(ca_cert) => {
+                    ffi::X509_set_issuer_name(x509.handle, ffi::X509_get_issuer_name(ca_cert.0.handle));
+                },
+                None => {
+                    let name = ffi::X509_get_subject_name(x509.handle);
+                    try_ssl_null!(name);
 
-            let default = [("CN", "rust-openssl")];
-            let default_iter = &mut default.iter().map(|&(k, v)| (k, v));
-            let arg_iter = &mut self.names.iter().map(|&(ref k, ref v)| (&k[..], &v[..]));
-            let iter: &mut Iterator<Item = (&str, &str)> = if self.names.len() == 0 {
-                default_iter
-            } else {
-                arg_iter
-            };
+                    let default = [("CN", "rust-openssl")];
+                    let default_iter = &mut default.iter().map(|&(k, v)| (k, v));
+                    let arg_iter = &mut self.names.iter().map(|&(ref k, ref v)| (&k[..], &v[..]));
+                    let iter: &mut Iterator<Item = (&str, &str)> = if self.names.len() == 0 {
+                        default_iter
+                    } else {
+                        arg_iter
+                    };
 
-            for (key, val) in iter {
-                try!(X509Generator::add_name_internal(name, &key, &val));
+                    for (key, val) in iter {
+                        try!(X509Generator::add_name_internal(name, &key, &val));
+                    }
+                    ffi::X509_set_issuer_name(x509.handle, name);
+                }
             }
-            ffi::X509_set_issuer_name(x509.handle, ffi::X509_get_issuer_name(ca_cert.handle));
 
             for (exttype, ext) in self.extensions.iter() {
                 try!(X509Generator::add_extension_internal(x509.handle,
@@ -448,8 +399,15 @@ impl X509Generator {
             }
 
             let hash_fn = self.hash_type.evp_md();
-            try_ssl!(ffi::X509_sign(x509.handle, ca_pkey.get_handle(), hash_fn));
-            Ok((x509, p_key))
+            match self.ca {
+                Some(ca_pkey) => {
+                    try_ssl!(ffi::X509_sign(x509.handle, ca_pkey.1.get_handle(), hash_fn));
+                },
+                None => {
+                    try_ssl!(ffi::X509_sign(x509.handle, p_key.get_handle(), hash_fn));
+                }
+            }
+            Ok(x509)
         }
     }
 
