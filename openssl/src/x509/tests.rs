@@ -207,4 +207,17 @@ fn test_ca_sign_certificate() {
         .generate()
         .expect("Failed to generate certificate");
 
+    let ca_subject = ca_cert.subject_name();
+    let ca_cn_subject = match ca_subject.text_by_nid(Nid::CN) {
+        Some(x) => x,
+        None => panic!("Failed to read CN from cert"),
+    };
+    assert_eq!(&ca_cn_subject as &str, "my CA");
+    let cert_subject = cert.subject_name();
+    let cert_cn_subject = match cert_subject.text_by_nid(Nid::CN) {
+        Some(x) => x,
+        None => panic!("Failed to read CN from cert"),
+    };
+    assert_eq!(&cert_cn_subject as &str, "my certificate");
+
 }

@@ -368,26 +368,27 @@ impl<'g, 'ctx> X509Generator<'ctx> {
 
             try_ssl!(ffi::X509_set_pubkey(x509.handle, p_key.get_handle()));
 
+            let name = ffi::X509_get_subject_name(x509.handle);
+            try_ssl_null!(name);
+
+            let default = [("CN", "rust-openssl")];
+            let default_iter = &mut default.iter().map(|&(k, v)| (k, v));
+            let arg_iter = &mut self.names.iter().map(|&(ref k, ref v)| (&k[..], &v[..]));
+            let iter: &mut Iterator<Item = (&str, &str)> = if self.names.len() == 0 {
+                default_iter
+            } else {
+                arg_iter
+            };
+
+            for (key, val) in iter {
+                try!(X509Generator::add_name_internal(name, &key, &val));
+            }
+            
             match self.ca {
                 Some(ca_cert) => {
                     ffi::X509_set_issuer_name(x509.handle, ffi::X509_get_issuer_name(ca_cert.0.handle));
                 },
                 None => {
-                    let name = ffi::X509_get_subject_name(x509.handle);
-                    try_ssl_null!(name);
-
-                    let default = [("CN", "rust-openssl")];
-                    let default_iter = &mut default.iter().map(|&(k, v)| (k, v));
-                    let arg_iter = &mut self.names.iter().map(|&(ref k, ref v)| (&k[..], &v[..]));
-                    let iter: &mut Iterator<Item = (&str, &str)> = if self.names.len() == 0 {
-                        default_iter
-                    } else {
-                        arg_iter
-                    };
-
-                    for (key, val) in iter {
-                        try!(X509Generator::add_name_internal(name, &key, &val));
-                    }
                     ffi::X509_set_issuer_name(x509.handle, name);
                 }
             }
