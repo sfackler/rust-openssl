@@ -24,6 +24,7 @@ pub mod rand;
 pub mod symm;
 pub mod memcmp;
 pub mod rsa;
+#[cfg(feature = "catch_unwind")]
 mod util;
 
 mod symm_internal;

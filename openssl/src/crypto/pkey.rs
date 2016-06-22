@@ -1,4 +1,4 @@
-use libc::{c_int, c_uint, c_ulong, c_void, c_char};
+use libc::{c_int, c_uint, c_ulong};
 use std::io;
 use std::io::prelude::*;
 use std::iter::repeat;
@@ -12,6 +12,10 @@ use crypto::hash::Type as HashType;
 use ffi;
 use ssl::error::{SslError, StreamError};
 use crypto::rsa::RSA;
+
+#[cfg(feature = "catch_unwind")]
+use libc::{c_void, c_char};
+#[cfg(feature = "catch_unwind")]
 use crypto::util::{CallbackState, invoke_passwd_cb};
 
 #[derive(Copy, Clone)]
@@ -99,6 +103,7 @@ impl PKey {
     ///
     /// The callback will be passed the password buffer and should return the number of characters
     /// placed into the buffer.
+    #[cfg(feature = "catch_unwind")]
     pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> Result<PKey, SslError>
         where R: Read, F: FnMut(&mut [c_char]) -> usize
     {

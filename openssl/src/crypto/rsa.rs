@@ -3,12 +3,16 @@ use std::fmt;
 use ssl::error::{SslError, StreamError};
 use std::ptr;
 use std::io::{self, Read, Write};
-use libc::{c_int, c_void, c_char};
+use libc::c_int;
 
 use bn::BigNum;
 use bio::MemBio;
 use crypto::HashTypeInternals;
 use crypto::hash;
+
+#[cfg(feature = "catch_unwind")]
+use libc::{c_void, c_char};
+#[cfg(feature = "catch_unwind")]
 use crypto::util::{CallbackState, invoke_passwd_cb};
 
 pub struct RSA(*mut ffi::RSA);
@@ -78,6 +82,7 @@ impl RSA {
     }
 
     /// Reads an RSA private key from PEM formatted data and supplies a password callback.
+    #[cfg(feature = "catch_unwind")]
     pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> Result<RSA, SslError>
         where R: Read, F: FnMut(&mut [c_char]) -> usize
     {
