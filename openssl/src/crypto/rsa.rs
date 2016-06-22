@@ -3,7 +3,7 @@ use std::fmt;
 use ssl::error::{SslError, StreamError};
 use std::ptr;
 use std::io::{self, Read, Write};
-use libc::{c_int, c_void};
+use libc::{c_int, c_void, c_char};
 
 use bn::BigNum;
 use bio::MemBio;
@@ -79,7 +79,7 @@ impl RSA {
 
     /// Reads an RSA private key from PEM formatted data and supplies a password callback.
     pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> Result<RSA, SslError>
-        where R: Read, F: FnMut(&mut [i8]) -> usize
+        where R: Read, F: FnMut(&mut [c_char]) -> usize
     {
         let mut cb = CallbackState::new(pass_cb);
 

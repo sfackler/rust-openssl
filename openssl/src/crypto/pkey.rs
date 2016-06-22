@@ -1,4 +1,4 @@
-use libc::{c_int, c_uint, c_ulong, c_void};
+use libc::{c_int, c_uint, c_ulong, c_void, c_char};
 use std::io;
 use std::io::prelude::*;
 use std::iter::repeat;
@@ -100,7 +100,7 @@ impl PKey {
     /// The callback will be passed the password buffer and should return the number of characters
     /// placed into the buffer.
     pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> Result<PKey, SslError>
-        where R: Read, F: FnMut(&mut [i8]) -> usize
+        where R: Read, F: FnMut(&mut [c_char]) -> usize
     {
         let mut cb = CallbackState::new(pass_cb);
 
