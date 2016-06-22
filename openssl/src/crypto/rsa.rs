@@ -303,4 +303,22 @@ mod test {
 
         assert!(result);
     }
+
+    #[test]
+    pub fn test_password() {
+        let mut password_queried = false;
+        let mut buffer = File::open("test/rsa-encrypted.pem").unwrap();
+        let rsa = RSA::private_key_from_pem_cb(&mut buffer, |password| {
+            password_queried = true;
+            password[0] = b'm' as _;
+            password[1] = b'y' as _;
+            password[2] = b'p' as _;
+            password[3] = b'a' as _;
+            password[4] = b's' as _;
+            password[5] = b's' as _;
+            6
+        }).unwrap();
+
+        assert!(password_queried);
+    }
 }
