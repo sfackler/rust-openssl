@@ -103,9 +103,11 @@ impl PKey {
     ///
     /// The callback will be passed the password buffer and should return the number of characters
     /// placed into the buffer.
+    ///
+    /// Requires the `catch_unwind` feature.
     #[cfg(feature = "catch_unwind")]
     pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> Result<PKey, SslError>
-        where R: Read, F: FnMut(&mut [c_char]) -> usize
+        where R: Read, F: FnOnce(&mut [c_char]) -> usize
     {
         let mut cb = CallbackState::new(pass_cb);
 

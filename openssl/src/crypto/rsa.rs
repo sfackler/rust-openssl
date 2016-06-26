@@ -82,9 +82,11 @@ impl RSA {
     }
 
     /// Reads an RSA private key from PEM formatted data and supplies a password callback.
+    ///
+    /// Requires the `catch_unwind` feature.
     #[cfg(feature = "catch_unwind")]
     pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> Result<RSA, SslError>
-        where R: Read, F: FnMut(&mut [c_char]) -> usize
+        where R: Read, F: FnOnce(&mut [c_char]) -> usize
     {
         let mut cb = CallbackState::new(pass_cb);
 

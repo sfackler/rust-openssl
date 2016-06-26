@@ -41,7 +41,7 @@ pub extern "C" fn invoke_passwd_cb<F>(buf: *mut c_char,
                                       _rwflag: c_int,
                                       cb_state: *mut c_void)
                                       -> c_int
-                                      where F: FnMut(&mut [i8]) -> usize {
+                                      where F: FnOnce(&mut [i8]) -> usize {
     let result = panic::catch_unwind(|| {
         // build a `i8` slice to pass to the user callback
         let pass_slice = unsafe { slice::from_raw_parts_mut(buf, size as usize) };
