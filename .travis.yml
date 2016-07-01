@@ -6,7 +6,7 @@ addons:
     - gcc-arm-linux-gnueabihf
 rust:
 - nightly
-- 1.7.0
+- 1.8.0
 os:
 - osx
 - linux
@@ -25,6 +25,4 @@ matrix:
 before_install:
 - ./openssl/test/build.sh
 script:
-- cargo fetch --manifest-path openssl/Cargo.toml # generate a cargo.lock
-- cargo update --manifest-path openssl/Cargo.toml -p bitflags --precise 0.5.0
 - ./openssl/test/run.sh

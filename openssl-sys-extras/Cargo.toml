@@ -1,11 +1,11 @@
 [package]
 name = "openssl-sys-extras"
-version = "0.7.13"
+version = "0.7.14"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "MIT"
 description = "Extra FFI bindings to OpenSSL that require a C shim"
 repository = "https://github.com/sfackler/rust-openssl"
-documentation = "https://sfackler.github.io/rust-openssl/doc/v0.7.13/openssl_sys_extras"
+documentation = "https://sfackler.github.io/rust-openssl/doc/v0.7.14/openssl_sys_extras"
 build = "build.rs"
 
 [features]
@@ -13,7 +13,7 @@ ecdh_auto = []
 
 [dependencies]
 libc = "0.2"
-openssl-sys = { version = "0.7.13", path = "../openssl-sys" }
+openssl-sys = { version = "0.7.14", path = "../openssl-sys" }
 
 [build-dependencies]
 gcc = "0.3"

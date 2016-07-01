@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.13")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.14")]
 
 extern crate libc;
 
@@ -270,8 +270,10 @@ pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB:  c_int = 53;
 pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG: c_int = 54;
 pub const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
 pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
-
 pub const SSL_CTRL_SET_READ_AHEAD: c_int = 41;
+
+pub const SSL_MODE_AUTO_RETRY: c_long = 4;
+
 pub const SSL_ERROR_NONE: c_int = 0;
 pub const SSL_ERROR_SSL: c_int = 1;
 pub const SSL_ERROR_SYSCALL: c_int = 5;
