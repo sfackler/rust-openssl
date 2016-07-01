@@ -93,6 +93,10 @@ long SSL_CTX_clear_options_shim(SSL_CTX *ctx, long options) {
     return SSL_CTX_clear_options(ctx, options);
 }
 
+long SSL_CTX_set_mode_shim(SSL_CTX *ctx, long options) {
+    return SSL_CTX_set_mode(ctx, options);
+}
+
 long SSL_CTX_add_extra_chain_cert_shim(SSL_CTX *ctx, X509 *x509) {
     return SSL_CTX_add_extra_chain_cert(ctx, x509);
 }

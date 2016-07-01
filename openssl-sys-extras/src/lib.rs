@@ -60,6 +60,8 @@ extern {
     pub fn SSL_CTX_set_options_shim(ctx: *mut SSL_CTX, options: c_long) -> c_long;
     pub fn SSL_CTX_get_options_shim(ctx: *mut SSL_CTX) -> c_long;
     pub fn SSL_CTX_clear_options_shim(ctx: *mut SSL_CTX, options: c_long) -> c_long;
+    #[link_name = "SSL_CTX_set_mode_shim"]
+    pub fn SSL_CTX_set_mode(ctx: *mut SSL_CTX, options: c_long) -> c_long;
     #[link_name = "SSL_CTX_add_extra_chain_cert_shim"]
     pub fn SSL_CTX_add_extra_chain_cert(ctx: *mut SSL_CTX, x509: *mut X509) -> c_long;
     #[link_name = "SSL_CTX_set_read_ahead_shim"]
