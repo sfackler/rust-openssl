@@ -8,7 +8,7 @@ if [ "$TEST_FEATURES" == "true" ]; then
 fi
 
 if [ "$TRAVIS_RUST_VERSION" == "nightly" ]; then
-    FEATURES="$FEATURES nightly"
+    FEATURES="$FEATURES nightly catch_unwind"
 fi
 
 if [ "$TRAVIS_OS_NAME" != "osx" ]; then

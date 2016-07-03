@@ -13,6 +13,11 @@ use ffi;
 use ssl::error::{SslError, StreamError};
 use crypto::rsa::RSA;
 
+#[cfg(feature = "catch_unwind")]
+use libc::{c_void, c_char};
+#[cfg(feature = "catch_unwind")]
+use crypto::util::{CallbackState, invoke_passwd_cb};
+
 #[derive(Copy, Clone)]
 pub enum Parts {
     Neither,
@@ -86,6 +91,35 @@ impl PKey {
                                                                  ptr::null_mut(),
                                                                  None,
                                                                  ptr::null_mut()));
+            Ok(PKey {
+                evp: evp as *mut ffi::EVP_PKEY,
+                parts: Parts::Both,
+            })
+        }
+    }
+
+    /// Read a private key from PEM, supplying a password callback to be invoked if the private key
+    /// is encrypted.
+    ///
+    /// The callback will be passed the password buffer and should return the number of characters
+    /// placed into the buffer.
+    ///
+    /// Requires the `catch_unwind` feature.
+    #[cfg(feature = "catch_unwind")]
+    pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> Result<PKey, SslError>
+        where R: Read, F: FnOnce(&mut [c_char]) -> usize
+    {
+        let mut cb = CallbackState::new(pass_cb);
+
+        let mut mem_bio = try!(MemBio::new());
+        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+
+        unsafe {
+            let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.get_handle(),
+                                                                 ptr::null_mut(),
+                                                                 Some(invoke_passwd_cb::<F>),
+                                                                 &mut cb as *mut _ as *mut c_void));
+
             Ok(PKey {
                 evp: evp as *mut ffi::EVP_PKEY,
                 parts: Parts::Both,

@@ -10,6 +10,11 @@ use bio::MemBio;
 use crypto::HashTypeInternals;
 use crypto::hash;
 
+#[cfg(feature = "catch_unwind")]
+use libc::{c_void, c_char};
+#[cfg(feature = "catch_unwind")]
+use crypto::util::{CallbackState, invoke_passwd_cb};
+
 pub struct RSA(*mut ffi::RSA);
 
 impl Drop for RSA {
@@ -72,6 +77,29 @@ impl RSA {
                                                                     ptr::null_mut(),
                                                                     None,
                                                                     ptr::null_mut()));
+            Ok(RSA(rsa))
+        }
+    }
+
+    /// Reads an RSA private key from PEM formatted data and supplies a password callback.
+    ///
+    /// Requires the `catch_unwind` feature.
+    #[cfg(feature = "catch_unwind")]
+    pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> Result<RSA, SslError>
+        where R: Read, F: FnOnce(&mut [c_char]) -> usize
+    {
+        let mut cb = CallbackState::new(pass_cb);
+
+        let mut mem_bio = try!(MemBio::new());
+        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+
+        unsafe {
+            let cb_ptr = &mut cb as *mut _ as *mut c_void;
+            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.get_handle(),
+                                                                    ptr::null_mut(),
+                                                                    Some(invoke_passwd_cb::<F>),
+                                                                    cb_ptr));
+
             Ok(RSA(rsa))
         }
     }
@@ -276,5 +304,24 @@ mod test {
         let result = public_key.verify(Type::SHA256, &digest, &signature_rs256()).unwrap();
 
         assert!(result);
+    }
+
+    #[test]
+    #[cfg(feature = "catch_unwind")]
+    pub fn test_password() {
+        let mut password_queried = false;
+        let mut buffer = File::open("test/rsa-encrypted.pem").unwrap();
+        RSA::private_key_from_pem_cb(&mut buffer, |password| {
+            password_queried = true;
+            password[0] = b'm' as _;
+            password[1] = b'y' as _;
+            password[2] = b'p' as _;
+            password[3] = b'a' as _;
+            password[4] = b's' as _;
+            password[5] = b's' as _;
+            6
+        }).unwrap();
+
+        assert!(password_queried);
     }
 }
