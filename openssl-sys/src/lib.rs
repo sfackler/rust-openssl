@@ -539,6 +539,7 @@ extern "C" {
     pub fn ERR_lib_error_string(err: c_ulong) -> *const c_char;
     pub fn ERR_func_error_string(err: c_ulong) -> *const c_char;
     pub fn ERR_reason_error_string(err: c_ulong) -> *const c_char;
+    pub fn ERR_error_string(err: c_ulong, buf: *mut c_char) -> *const c_char;
 
     pub fn ERR_load_crypto_strings();
 
