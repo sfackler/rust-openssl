@@ -21,6 +21,7 @@ pub mod hmac;
 pub mod pkcs5;
 pub mod pkey;
 pub mod rand;
+pub mod signature;
 pub mod symm;
 pub mod memcmp;
 pub mod rsa;
