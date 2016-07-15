@@ -10,6 +10,7 @@
 //! # Example
 //!
 //! ```rust
+//! use std::io::prelude::*;
 //! use openssl::crypto::signature::{Signer, Verifier};
 //! use openssl::crypto::pkey::PKey;
 //! use openssl::crypto::hash;
@@ -28,18 +29,23 @@
 //!
 //! // sign some content with private key
 //! let mut signer = Signer::new(hash::Type::SHA512, &privkey);
-//! signer.update(&data1[..]);
-//! signer.update(&data2[..]);
-//! let signature = signer.sign();
+//! signer.write_all(&data1[..]).unwrap();
+//! signer.write_all(&data2[..]).unwrap();
+//! let signature = signer.finish();
 //!
 //! // verify content using signature and public key
 //! let mut verifier = Verifier::new(hash::Type::SHA512, &pubkey);
-//! verifier.update(&data1[..]);
-//! verifier.update(&data2[..]);
-//! assert!(verifier.verify(&signature[..]));
+//! verifier.write_all(&data1[..]).unwrap();
+//! verifier.write_all(&data2[..]).unwrap();
+//! assert!(verifier.finish(&signature[..]));
 //! ```
 
+// pkey not used in structure but we need to ensure that the PKey
+// lives as long as the structure
+#![allow(dead_code)]
+
 use std::ptr;
+use std::io::{self, Write};
 use libc;
 
 use ffi;
@@ -104,7 +110,7 @@ impl<'a> Signer<'a> {
 
     /// Feed bytes to be added to the signature calculation
     #[inline]
-    pub fn update(&mut self, data: &[u8]) {
+    fn update(&mut self, data: &[u8]) {
         unsafe {
             let r = ffi::EVP_DigestUpdate(self.ctx, data.as_ptr(), data.len() as u32);
             openssl_assert!(r == 1, "EVP_DigestSignUpdate failed");
@@ -116,7 +122,7 @@ impl<'a> Signer<'a> {
     /// The signature form will be determined by the hashing type for this
     /// Signer (e.g. `SHA512` will return a Vector with 64 bytes).
     #[inline]
-    pub fn sign(&mut self) -> Vec<u8> {
+    pub fn finish(&mut self) -> Vec<u8> {
         let mut sigbuf = [0u8; 8 * 1024];
         let mut siglen = sigbuf.len() as libc::size_t;
         unsafe {
@@ -124,6 +130,17 @@ impl<'a> Signer<'a> {
             openssl_assert!(r == 1, "EVP_DigestSignFinal failed");
         }
         Vec::from(&sigbuf[..siglen])
+    }
+}
+
+impl<'a> Write for Signer<'a> {
+    fn write(&mut self, data: &[u8]) -> io::Result<usize> {
+        self.update(data);
+        Ok(data.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
     }
 }
 
@@ -167,7 +184,7 @@ impl<'a> Verifier<'a> {
 
     /// Feed bytes into the verification calculation
     #[inline]
-    pub fn update(&mut self, data: &[u8]) {
+    fn update(&mut self, data: &[u8]) {
         unsafe {
             let r = ffi::EVP_DigestUpdate(self.ctx, data.as_ptr(), data.len() as u32);
             openssl_assert!(r == 1, "EVP_DigestVerifyUpdate failed");
@@ -177,13 +194,24 @@ impl<'a> Verifier<'a> {
     /// Verify that the content feed into this Verifier is valid for the
     /// given signature
     #[inline]
-    pub fn verify(&self, signature: &[u8]) -> bool {
+    pub fn finish(&self, signature: &[u8]) -> bool {
         let r = unsafe {
             ffi::EVP_DigestVerifyFinal(self.ctx,
                                        signature.as_ptr(),
                                        signature.len() as libc::size_t)
         };
         r == 1
+    }
+}
+
+impl<'a> Write for Verifier<'a> {
+    fn write(&mut self, data: &[u8]) -> io::Result<usize> {
+        self.update(data);
+        Ok(data.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
     }
 }
 
@@ -198,6 +226,7 @@ impl<'a> Drop for Verifier<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::prelude::*;
     use crypto::hash;
     use crypto::pkey::PKey;
 
@@ -217,15 +246,15 @@ mod tests {
 
         // sign some content with private key
         let mut signer = Signer::new(hash::Type::SHA224, &privkey);
-        signer.update(&data1[..]);
-        signer.update(&data2[..]);
-        let signature = signer.sign();
+        signer.write_all(&data1[..]).unwrap();
+        signer.write_all(&data2[..]).unwrap();
+        let signature = signer.finish();
 
         // verify content using signature and public key
         let mut verifier = Verifier::new(hash::Type::SHA224, &pubkey);
-        verifier.update(&data1[..]);
-        verifier.update(&data2[..]);
-        assert!(verifier.verify(&signature[..]));
+        verifier.write_all(&data1[..]).unwrap();
+        verifier.write_all(&data2[..]).unwrap();
+        assert!(verifier.finish(&signature[..]));
     }
 
     #[test]
@@ -244,18 +273,19 @@ mod tests {
 
         // sign some content with private key
         let mut signer = Signer::new(hash::Type::SHA224, &privkey);
-        signer.update(&data1[..]);
-        signer.update(&data2[..]);
-        let signature = signer.sign();
+        signer.write_all(&data1[..]).unwrap();
+        signer.write_all(&data2[..]).unwrap();
+        let signature = signer.finish();
 
         // verify content using signature and public key
         let mut verifier = Verifier::new(hash::Type::SHA224, &pubkey);
-        verifier.update(&data1[..]);
-        verifier.update(&data2[..]);
+        verifier.write_all(&data1[..]).unwrap();
+        verifier.write_all(&data2[..]).unwrap();
 
         // NOTE: here we inject a few extra bytes.  This should make the signature
         // check fail (the contents have been tampered with)
         verifier.update(&[1, 2, 3]);
-        assert!(!verifier.verify(&signature[..]));
+        assert!(!verifier.finish(&signature[..]));
     }
+
 }
