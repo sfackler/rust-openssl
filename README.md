@@ -50,7 +50,7 @@ mingw-w64 can be easily installed by using [MSYS2](http://msys2.github.io/). Ins
 32-bit:
 ```bash
 pacman -S mingw-w64-i686-gcc
-``` 
+```
 
 64-bit
 ```bash
@@ -76,6 +76,15 @@ or pass the location to Cargo via environment variables:
 
 ```bash
 env OPENSSL_LIB_DIR=C:/OpenSSL-Win64 OPENSSL_INCLUDE_DIR=C:/OpenSSL-Win64/include cargo build
+```
+
+To build using MSVC toolchain, use `VS2015 x86 x64 Cross Tools Command Prompt`
+and set following environment variables:
+
+```bash
+SET OPENSSL_INCLUDE_DIR=C:/OpenSSL-Win64/include
+SET OPENSSL_LIB_DIR=C:/OpenSSL-Win64/lib/VC
+SET OPENSSL_LIBS=ssleay32MT:libeay32M
 ```
 
 ### Manual configuration
