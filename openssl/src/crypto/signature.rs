@@ -28,16 +28,16 @@
 //! let data2: Vec<u8> = (100..150).cycle().take(1024 * 5).collect();
 //!
 //! // sign some content with private key
-//! let mut signer = Signer::new(hash::Type::SHA512, &privkey);
+//! let mut signer = Signer::new(hash::Type::SHA512, &privkey).unwrap();
 //! signer.write_all(&data1[..]).unwrap();
 //! signer.write_all(&data2[..]).unwrap();
-//! let signature = signer.finish();
+//! let signature = signer.finish().unwrap();
 //!
 //! // verify content using signature and public key
-//! let mut verifier = Verifier::new(hash::Type::SHA512, &pubkey);
+//! let mut verifier = Verifier::new(hash::Type::SHA512, &pubkey).unwrap();
 //! verifier.write_all(&data1[..]).unwrap();
 //! verifier.write_all(&data2[..]).unwrap();
-//! assert!(verifier.finish(&signature[..]));
+//! assert!(verifier.finish(&signature[..]).unwrap());
 //! ```
 
 // pkey not used in structure but we need to ensure that the PKey
@@ -49,6 +49,7 @@ use std::io::{self, Write};
 use libc;
 
 use ffi;
+use ssl::error::SslError;
 use crypto::pkey::PKey;
 use crypto::hash;
 
@@ -64,31 +65,17 @@ pub struct Verifier<'a> {
     pkey: &'a PKey,
 }
 
-macro_rules! openssl_assert {
-    ($expression:expr, $msg:expr) => (
-        if ! $expression {
-            let error = ::ffi::ERR_get_error();
-            let bytes = ::std::ffi::CStr::from_ptr(::ffi::ERR_error_string(error, ::std::ptr::null_mut())).to_bytes();
-            panic!("{}: {}", $msg, ::std::str::from_utf8(bytes).unwrap());
-        }
-    )
-}
-
 impl<'a> Signer<'a> {
     /// Create and initialize a new Signer
     ///
     /// The digest type specified will determine the final form  of the
     /// signature returned by `finalize`.
-    ///
-    /// # Panics
-    ///
-    /// If the provided pkey does not contain a private key.
-    pub fn new(digest_type: hash::Type, pkey: &'a PKey) -> Signer {
+    pub fn new(digest_type: hash::Type, pkey: &'a PKey) -> Result<Signer, SslError> {
         ffi::init();
 
         let ctx = unsafe {
             let r = ffi::EVP_MD_CTX_create();
-            openssl_assert!(!r.is_null(), "EVP_MD_CTX_create failed");
+            assert!(!r.is_null(), "EVP_MD_CTX_create failed");
             r
         };
 
@@ -100,20 +87,22 @@ impl<'a> Signer<'a> {
         };
 
         unsafe {
-            let r =
-                ffi::EVP_DigestSignInit(ctx, ptr::null_mut(), md, ptr::null(), signer.pkey.get_handle());
-            openssl_assert!(r == 1, "EVP_DigestSignInitFailed");
+            try_ssl_if!(1 !=
+                        ffi::EVP_DigestSignInit(ctx,
+                                                ptr::null_mut(),
+                                                md,
+                                                ptr::null(),
+                                                signer.pkey.get_handle()));
         }
 
-        signer
+        Ok(signer)
     }
 
     /// Feed bytes to be added to the signature calculation
     #[inline]
-    fn update(&mut self, data: &[u8]) {
+    fn update(&mut self, data: &[u8]) -> Result<(), SslError> {
         unsafe {
-            let r = ffi::EVP_DigestUpdate(self.ctx, data.as_ptr(), data.len() as u32);
-            openssl_assert!(r == 1, "EVP_DigestSignUpdate failed");
+            lift_ssl_if!(1 != ffi::EVP_DigestUpdate(self.ctx, data.as_ptr(), data.len() as u32))
         }
     }
 
@@ -122,20 +111,22 @@ impl<'a> Signer<'a> {
     /// The signature form will be determined by the hashing type for this
     /// Signer (e.g. `SHA512` will return a Vector with 64 bytes).
     #[inline]
-    pub fn finish(&mut self) -> Vec<u8> {
+    pub fn finish(&mut self) -> Result<Vec<u8>, SslError> {
         let mut sigbuf = [0u8; 8 * 1024];
         let mut siglen = sigbuf.len() as libc::size_t;
         unsafe {
-            let r = ffi::EVP_DigestSignFinal(self.ctx, (&mut sigbuf[..]).as_mut_ptr(), &mut siglen);
-            openssl_assert!(r == 1, "EVP_DigestSignFinal failed");
+            try_ssl_if!(1 !=
+                        ffi::EVP_DigestSignFinal(self.ctx,
+                                                 (&mut sigbuf[..]).as_mut_ptr(),
+                                                 &mut siglen));
         }
-        Vec::from(&sigbuf[..siglen])
+        Ok(Vec::from(&sigbuf[..siglen]))
     }
 }
 
 impl<'a> Write for Signer<'a> {
     fn write(&mut self, data: &[u8]) -> io::Result<usize> {
-        self.update(data);
+        try!(self.update(data));
         Ok(data.len())
     }
 
@@ -157,12 +148,12 @@ impl<'a> Verifier<'a> {
     ///
     /// The digest type should match the form of the signature provided
     /// during the final step of signature verification.
-    pub fn new(digest_type: hash::Type, pkey: &'a PKey) -> Verifier {
+    pub fn new(digest_type: hash::Type, pkey: &'a PKey) -> Result<Verifier, SslError> {
         ffi::init();
 
         let ctx = unsafe {
             let r = ffi::EVP_MD_CTX_create();
-            openssl_assert!(!r.is_null(), "EVP_MD_CTX_create failed");
+            assert!(!r.is_null(), "EVP_MD_CTX_create failed");
             r
         };
 
@@ -174,39 +165,45 @@ impl<'a> Verifier<'a> {
         };
 
         unsafe {
-            let r =
-                ffi::EVP_DigestVerifyInit(ctx, ptr::null_mut(), md, ptr::null_mut(), verifier.pkey.get_handle());
-            openssl_assert!(r == 1, "EVP_DigestVerifyInit failed");
+            try_ssl_if!(1 !=
+                        ffi::EVP_DigestVerifyInit(ctx,
+                                                  ptr::null_mut(),
+                                                  md,
+                                                  ptr::null_mut(),
+                                                  verifier.pkey.get_handle()));
         }
 
-        verifier
+        Ok(verifier)
     }
 
     /// Feed bytes into the verification calculation
     #[inline]
-    fn update(&mut self, data: &[u8]) {
+    fn update(&mut self, data: &[u8]) -> Result<(), SslError> {
         unsafe {
-            let r = ffi::EVP_DigestUpdate(self.ctx, data.as_ptr(), data.len() as u32);
-            openssl_assert!(r == 1, "EVP_DigestVerifyUpdate failed");
+            lift_ssl_if!(1 != ffi::EVP_DigestUpdate(self.ctx, data.as_ptr(), data.len() as u32))
         }
     }
 
     /// Verify that the content feed into this Verifier is valid for the
     /// given signature
     #[inline]
-    pub fn finish(&self, signature: &[u8]) -> bool {
+    pub fn finish(&self, signature: &[u8]) -> Result<bool, SslError> {
         let r = unsafe {
             ffi::EVP_DigestVerifyFinal(self.ctx,
                                        signature.as_ptr(),
                                        signature.len() as libc::size_t)
         };
-        r == 1
+        match r {
+            1 => Ok(true),
+            0 => Ok(false),
+            _ => Err(SslError::get()),
+        }
     }
 }
 
 impl<'a> Write for Verifier<'a> {
     fn write(&mut self, data: &[u8]) -> io::Result<usize> {
-        self.update(data);
+        try!(self.update(data));
         Ok(data.len())
     }
 
@@ -245,16 +242,16 @@ mod tests {
         let data2: Vec<u8> = (100..150).cycle().take(1024 * 5).collect();
 
         // sign some content with private key
-        let mut signer = Signer::new(hash::Type::SHA224, &privkey);
+        let mut signer = Signer::new(hash::Type::SHA224, &privkey).unwrap();
         signer.write_all(&data1[..]).unwrap();
         signer.write_all(&data2[..]).unwrap();
-        let signature = signer.finish();
+        let signature = signer.finish().unwrap();
 
         // verify content using signature and public key
-        let mut verifier = Verifier::new(hash::Type::SHA224, &pubkey);
+        let mut verifier = Verifier::new(hash::Type::SHA224, &pubkey).unwrap();
         verifier.write_all(&data1[..]).unwrap();
         verifier.write_all(&data2[..]).unwrap();
-        assert!(verifier.finish(&signature[..]));
+        assert!(verifier.finish(&signature[..]).unwrap());
     }
 
     #[test]
@@ -272,20 +269,20 @@ mod tests {
         let data2: Vec<u8> = (100..150).cycle().take(1024 * 5).collect();
 
         // sign some content with private key
-        let mut signer = Signer::new(hash::Type::SHA224, &privkey);
+        let mut signer = Signer::new(hash::Type::SHA224, &privkey).unwrap();
         signer.write_all(&data1[..]).unwrap();
         signer.write_all(&data2[..]).unwrap();
-        let signature = signer.finish();
+        let signature = signer.finish().unwrap();
 
         // verify content using signature and public key
-        let mut verifier = Verifier::new(hash::Type::SHA224, &pubkey);
+        let mut verifier = Verifier::new(hash::Type::SHA224, &pubkey).unwrap();
         verifier.write_all(&data1[..]).unwrap();
         verifier.write_all(&data2[..]).unwrap();
 
         // NOTE: here we inject a few extra bytes.  This should make the signature
         // check fail (the contents have been tampered with)
-        verifier.update(&[1, 2, 3]);
-        assert!(!verifier.finish(&signature[..]));
+        verifier.write_all(&[1, 2, 3]).unwrap();
+        assert!(!verifier.finish(&signature[..]).unwrap());
     }
 
 }
