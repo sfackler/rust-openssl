@@ -4,7 +4,7 @@ macro_rules! try_ssl_stream {
     ($e:expr) => (
         match $e {
             Ok(ok) => ok,
-            Err(err) => return Err(StreamError(err))
+            Err(err) => return Err($crate::ssl::error::StreamError(err))
         }
     )
 }
@@ -13,7 +13,7 @@ macro_rules! try_ssl_stream {
 macro_rules! try_ssl_if {
     ($e:expr) => (
         if $e {
-            return Err(SslError::get())
+            return Err($crate::ssl::error::SslError::get())
         }
     )
 }
@@ -28,7 +28,7 @@ macro_rules! try_ssl{
 macro_rules! try_ssl_null{
     ($e:expr) => ({
         let t = $e;
-        try_ssl_if!(t == ptr::null_mut());
+        try_ssl_if!(t == ::std::ptr::null_mut());
         t
     })
 }
@@ -45,7 +45,7 @@ macro_rules! try_ssl_null{
 macro_rules! lift_ssl_if{
     ($e:expr) => ( {
         if $e {
-            Err(SslError::get())
+            Err($crate::ssl::error::SslError::get())
         } else {
             Ok(())
         }
