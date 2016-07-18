@@ -126,8 +126,9 @@ impl<'a> Signer<'a> {
 
 impl<'a> Write for Signer<'a> {
     fn write(&mut self, data: &[u8]) -> io::Result<usize> {
-        try!(self.update(data));
-        Ok(data.len())
+        let len = ::std::cmp::min(data.len(), u32::max_value() as usize);
+        try!(self.update(&data[..len]));
+        Ok(len)
     }
 
     fn flush(&mut self) -> io::Result<()> {
@@ -203,8 +204,9 @@ impl<'a> Verifier<'a> {
 
 impl<'a> Write for Verifier<'a> {
     fn write(&mut self, data: &[u8]) -> io::Result<usize> {
-        try!(self.update(data));
-        Ok(data.len())
+        let len = ::std::cmp::min(data.len(), u32::max_value() as usize);
+        try!(self.update(&data[..len]));
+        Ok(len)
     }
 
     fn flush(&mut self) -> io::Result<()> {
