@@ -15,10 +15,13 @@ fn main() {
         // rustc doesn't seem to work with pkg-config's output in mingw64
         if !target.contains("windows") {
             if let Ok(info) = pkg_config::find_library("openssl") {
-                // avoid empty include paths as they are not supported by GCC
+                // if we did not find any include paths try to find some other
+                // ones we might want to emit.
                 if info.include_paths.len() > 0 {
                     let paths = env::join_paths(info.include_paths).unwrap();
                     println!("cargo:include={}", paths.to_str().unwrap());
+                } else {
+                    find_fallback_headers();
                 }
                 return;
             }
@@ -60,6 +63,8 @@ fn main() {
 
     if let Some(include_dir) = include_dir {
         println!("cargo:include={}", include_dir);
+    } else {
+        find_fallback_headers();
     }
 }
 
@@ -82,5 +87,22 @@ fn get_mingw_in_path() -> Option<Vec<String>> {
             if paths.len() > 0 { Some(paths) } else { None }
         },
         None => None
+    }
+}
+
+fn find_fallback_headers() {
+    let target = env::var("TARGET").unwrap();
+
+    // if we are building on OS X we use our own shipped openssl headers.
+    // The reason for this is that OS X no longer ships headers for openssl
+    // 0.9.8 which it ships however.  System SSL is pretty terrible but there
+    // is a reason to use it: it funnels cert checks through the osx security
+    // library.
+    //
+    // This all here should only be found if no other library is provided
+    // for other reasons.
+    if target.contains("darwin") {
+        let src = env::current_dir().unwrap();
+        println!("cargo:include={}", src.join("vendor/osx-openssl").display());
     }
 }
