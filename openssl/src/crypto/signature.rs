@@ -40,12 +40,9 @@
 //! assert!(verifier.finish(&signature[..]).unwrap());
 //! ```
 
-// pkey not used in structure but we need to ensure that the PKey
-// lives as long as the structure
-#![allow(dead_code)]
-
 use std::ptr;
 use std::io::{self, Write};
+use std::marker::PhantomData;
 use libc;
 
 use ffi;
@@ -56,13 +53,13 @@ use crypto::hash;
 /// Signature Generation Context
 pub struct Signer<'a> {
     ctx: *mut ffi::EVP_MD_CTX,
-    pkey: &'a PKey,
+    pkey: PhantomData<&'a PKey>,
 }
 
 /// Signature Verification Context
 pub struct Verifier<'a> {
     ctx: *mut ffi::EVP_MD_CTX,
-    pkey: &'a PKey,
+    pkey: PhantomData<&'a PKey>,
 }
 
 impl<'a> Signer<'a> {
@@ -81,21 +78,19 @@ impl<'a> Signer<'a> {
 
         let md = digest_type.evp_md();
 
-        let signer = Signer {
-            ctx: ctx,
-            pkey: pkey,
-        };
-
         unsafe {
             try_ssl_if!(1 !=
                         ffi::EVP_DigestSignInit(ctx,
                                                 ptr::null_mut(),
                                                 md,
                                                 ptr::null(),
-                                                signer.pkey.get_handle()));
+                                                pkey.get_handle()));
         }
 
-        Ok(signer)
+        Ok(Signer {
+            ctx: ctx,
+            pkey: PhantomData,
+        })
     }
 
     /// Feed bytes to be added to the signature calculation
@@ -160,21 +155,19 @@ impl<'a> Verifier<'a> {
 
         let md = digest_type.evp_md();
 
-        let verifier = Verifier {
-            ctx: ctx,
-            pkey: pkey,
-        };
-
         unsafe {
             try_ssl_if!(1 !=
                         ffi::EVP_DigestVerifyInit(ctx,
                                                   ptr::null_mut(),
                                                   md,
                                                   ptr::null_mut(),
-                                                  verifier.pkey.get_handle()));
+                                                  pkey.get_handle()));
         }
 
-        Ok(verifier)
+        Ok(Verifier {
+            ctx: ctx,
+            pkey: PhantomData,
+        })
     }
 
     /// Feed bytes into the verification calculation
@@ -233,8 +226,8 @@ mod tests {
     fn test_sign_verify() {
         // Generate public/private keypairs
         let mut keypair = PKey::new();
-        let mut privkey = PKey::new();
         let mut pubkey = PKey::new();
+        let mut privkey = PKey::new();
         keypair.gen(1024);
         privkey.load_priv(&keypair.save_priv()[..]);
         pubkey.load_pub(&keypair.save_pub()[..]);
