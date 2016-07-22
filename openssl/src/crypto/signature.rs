@@ -107,15 +107,21 @@ impl<'a> Signer<'a> {
     /// Signer (e.g. `SHA512` will return a Vector with 64 bytes).
     #[inline]
     pub fn finish(&mut self) -> Result<Vec<u8>, SslError> {
-        let mut sigbuf = [0u8; 8 * 1024];
-        let mut siglen = sigbuf.len() as libc::size_t;
+        let mut siglen: libc::size_t = 0;
+        let mut sigbuf: Vec<u8>;
         unsafe {
+            // get siglen to determine buffer size we need
+            try_ssl_if!(1 != ffi::EVP_DigestSignFinal(self.ctx, ptr::null_mut(), &mut siglen));
+
+            // actually do the signature into the properly sized buffer
+            sigbuf = Vec::with_capacity(siglen);
+            sigbuf.set_len(siglen);
             try_ssl_if!(1 !=
                         ffi::EVP_DigestSignFinal(self.ctx,
-                                                 (&mut sigbuf[..]).as_mut_ptr(),
+                                                 sigbuf.as_mut_ptr(),
                                                  &mut siglen));
         }
-        Ok(Vec::from(&sigbuf[..siglen]))
+        Ok(sigbuf)
     }
 }
 
