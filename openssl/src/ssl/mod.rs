@@ -567,7 +567,7 @@ impl SslContext {
         let ctx = SslContext { ctx: ctx };
 
         // this is a bit dubious (?)
-        try!(ctx.set_mode(ffi::SSL_MODE_AUTO_RETRY));
+        try!(ctx.set_mode(ffi::SSL_MODE_AUTO_RETRY | ffi::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER));
 
         if method.is_dtls() {
             ctx.set_read_ahead(1);
