@@ -741,6 +741,7 @@ extern "C" {
     pub fn SSL_get_wbio(ssl: *mut SSL) -> *mut BIO;
     pub fn SSL_accept(ssl: *mut SSL) -> c_int;
     pub fn SSL_connect(ssl: *mut SSL) -> c_int;
+    pub fn SSL_do_handshake(ssl: *mut SSL) -> c_int;
     pub fn SSL_ctrl(ssl: *mut SSL, cmd: c_int, larg: c_long,
                     parg: *mut c_void) -> c_long;
     pub fn SSL_get_error(ssl: *mut SSL, ret: c_int) -> c_int;
