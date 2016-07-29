@@ -77,6 +77,114 @@ pub struct BIO_METHOD {
 unsafe impl Sync for BIO_METHOD {}
 
 #[repr(C)]
+pub struct EC_EXTRA_DATA {
+    pub next: *mut EC_EXTRA_DATA,
+    pub data: *mut c_void,
+    pub dup_func: Option<unsafe extern "C" fn(*mut c_void) -> *mut c_void>,
+    pub free_func: Option<unsafe extern "C" fn(*mut c_void)>,
+    pub clear_func: Option<unsafe extern "C" fn(*mut c_void)>,
+}
+
+#[repr(C)]
+pub struct EC_METHOD {
+    pub flags: c_int,
+    pub field_type: c_int,
+    pub group_init: Option<unsafe extern "C" fn(*mut EC_GROUP) -> c_int>,
+    pub group_finish: Option<unsafe extern "C" fn(*mut EC_GROUP)>,
+    pub group_clear_finish: Option<unsafe extern "C" fn(*mut EC_GROUP)>,
+    pub group_copy: Option<unsafe extern "C" fn(*mut EC_GROUP, *const EC_GROUP) -> c_int>,
+    pub group_set_curve: Option<unsafe extern "C" fn(*mut EC_GROUP, *const BIGNUM, *const BIGNUM, *const BIGNUM, *mut BN_CTX) -> c_int>,
+    pub group_get_curve: Option<unsafe extern "C" fn(*const BIGNUM, *mut BIGNUM, *mut BIGNUM, *mut BIGNUM, *mut BN_CTX) -> c_int>,
+    pub group_get_degree: Option<unsafe extern "C" fn(*const EC_GROUP) -> c_int>,
+    pub group_check_discriminant: Option<unsafe extern "C" fn(*const EC_GROUP, *mut BN_CTX) -> c_int>,
+    pub point_init: Option<unsafe extern "C" fn(*mut EC_POINT) -> c_int>,
+    pub point_finish: Option<unsafe extern "C" fn(*mut EC_POINT)>,
+    pub point_clear_finish: Option<unsafe extern "C" fn(*mut EC_POINT)>,
+    pub point_copy: Option<unsafe extern "C" fn(*mut EC_POINT, *const EC_POINT) -> c_int>,
+    pub point_set_to_infinity: Option<unsafe extern "C" fn(*const EC_GROUP, *mut EC_POINT) -> c_int>,
+    pub point_set_Jprojective_coordinates_GFp: Option<unsafe extern "C" fn(*const EC_GROUP, *mut EC_POINT, *const BIGNUM, *const BIGNUM, *const BIGNUM, *mut BN_CTX) -> c_int>,
+    pub point_get_Jprojective_coordinates_GFp: Option<unsafe extern "C" fn(*const EC_GROUP, *const EC_POINT, *mut BIGNUM, *mut BIGNUM, *mut BIGNUM, *mut BN_CTX) -> c_int>,
+    pub point_set_affine_coordinates: Option<unsafe extern "C" fn(*const EC_GROUP, *mut EC_POINT, *const BIGNUM, *const BIGNUM, *const BIGNUM, *mut BN_CTX) -> c_int>,
+    pub point_get_affine_coordinates: Option<unsafe extern "C" fn(*const EC_GROUP, *const EC_POINT, *mut BIGNUM, *mut BIGNUM, *const BIGNUM, *mut BN_CTX) -> c_int>,
+    pub point_set_compressed_coordinates: Option<unsafe extern "C" fn(*const EC_GROUP, *mut EC_POINT, *const BIGNUM, c_int, *mut BN_CTX) -> c_int>,
+    pub point2oct: Option<unsafe extern "C" fn(*const EC_GROUP, *const EC_POINT, c_int, *mut c_uchar, size_t, *mut BN_CTX) -> size_t>,
+    pub oct2point: Option<unsafe extern "C" fn(*const EC_GROUP, *mut EC_POINT, *const c_uchar, size_t, *mut BN_CTX) -> c_int>,
+    pub add: Option<unsafe extern "C" fn(*const EC_GROUP, *mut EC_POINT, *const EC_POINT, *const EC_POINT, *mut BN_CTX) -> c_int>,
+    pub dbl: Option<unsafe extern "C" fn(*const EC_GROUP, *mut EC_POINT, *const EC_POINT, *mut BN_CTX) -> c_int>,
+    pub invert: Option<unsafe extern "C" fn(*const EC_GROUP, *mut EC_POINT, *mut BN_CTX) -> c_int>,
+    pub is_at_infinity: Option<unsafe extern "C" fn(*const EC_GROUP, *const EC_POINT) -> c_int>,
+    pub is_on_curve: Option<unsafe extern "C" fn(*const EC_GROUP, *const EC_POINT, *mut BN_CTX) -> c_int>,
+    pub point_cmp: Option<unsafe extern "C" fn(*const EC_GROUP, *const EC_POINT, *const EC_POINT, *mut BN_CTX) -> c_int>,
+    pub make_affine: Option<unsafe extern "C" fn(*const EC_GROUP, *mut EC_POINT, *mut BN_CTX) -> c_int>,
+    pub points_make_affine: Option<unsafe extern "C" fn(*const EC_GROUP, size_t, *mut *mut EC_POINT, *mut BN_CTX) -> c_int>,
+    pub mul: Option<unsafe extern "C" fn(*const EC_GROUP, *mut EC_POINT, *const BIGNUM, size_t, *const *const EC_POINT, *const *const BIGNUM, *mut BN_CTX) -> c_int>,
+    pub precompute_mult: Option<unsafe extern "C" fn(*mut EC_GROUP, *mut BN_CTX) -> c_int>,
+    pub have_precompute_mult: Option<unsafe extern "C" fn(*const EC_GROUP) -> c_int>,
+    pub field_mul: Option<unsafe extern "C" fn(*const EC_GROUP, *mut BIGNUM, *const BIGNUM, *const BIGNUM, *mut BN_CTX) -> c_int>,
+    pub field_sqr: Option<unsafe extern "C" fn(*const EC_GROUP, *mut BIGNUM, *const BIGNUM, *mut BN_CTX) -> c_int>,
+    pub field_div: Option<unsafe extern "C" fn(*const EC_GROUP, *mut BIGNUM, *const BIGNUM, *const BIGNUM, *mut BN_CTX) -> c_int>,
+    pub field_encode: Option<unsafe extern "C" fn(*const EC_GROUP, *mut BIGNUM, *const BIGNUM, *mut BN_CTX) -> c_int>,
+    pub field_decode: Option<unsafe extern "C" fn(*const EC_GROUP, *mut BIGNUM, *const BIGNUM, *mut BN_CTX) -> c_int>,
+    pub field_set_to_one: Option<unsafe extern "C" fn(*const EC_GROUP, *mut BIGNUM, *mut BN_CTX) -> c_int>
+}
+
+#[repr(C)]
+pub struct EC_POINT {
+    pub method: *mut EC_METHOD,
+    pub X: *mut BIGNUM,
+    pub Y: *mut BIGNUM,
+    pub Z: *mut BIGNUM,
+    pub Z_is_one: c_int
+}
+
+#[repr(C)]
+pub struct EC_GROUP {
+    pub meth: *mut EC_METHOD,
+    pub generator: *mut EC_POINT,
+    pub order: *mut BIGNUM,
+    pub cofactor: *mut BIGNUM,
+    pub curve_name: c_int,
+    pub asn1_flag: c_int,
+    pub asn1_form: c_int,
+    pub seed: *mut c_uchar,
+    pub seed_len: size_t,
+    pub extra_data: *mut EC_EXTRA_DATA,
+    pub field: *mut BIGNUM,
+    pub poly: c_int,
+    pub field_data1: *mut c_void,
+    pub field_data2: *mut c_void,
+    pub field_mod_func: Option<unsafe extern "C" fn(*mut BIGNUM, *const BIGNUM, *const BIGNUM, *mut BN_CTX) -> c_int>
+}
+
+#[repr(C)]
+pub struct DSA {
+    pub p: *mut BIGNUM,        // Prime number (public)
+    pub q: *mut BIGNUM,        // 160-bit subprime, q | p-1 (public)
+    pub g: *mut BIGNUM,        // Generator of subgroup (public)
+    pub priv_key: *mut BIGNUM, // Private key x
+    pub pub_key: *mut BIGNUM   // Public key y = g^x
+}
+
+#[repr(C)]
+pub struct EC_KEY {
+    pub version: c_int,
+    pub group: *mut EC_GROUP,
+    pub pub_key: *mut EC_POINT,
+    pub priv_key: *mut BIGNUM,
+    pub enc_flag: c_uint,
+    pub conv_form: c_int,
+    pub references: c_int,
+    pub flags: c_int,
+    pub method_data: *mut EC_EXTRA_DATA
+}
+
+#[repr(C)]
+pub struct ECDSA_SIG {
+    pub r: *mut BIGNUM,
+    pub s: *mut BIGNUM
+}
+
+#[repr(C)]
 pub struct _STACK {
     pub num: c_int,
     pub data: *mut *mut c_char,
@@ -310,6 +418,11 @@ pub const OPENSSL_NPN_NO_OVERLAP: c_int = 2;
 
 pub const V_ASN1_GENERALIZEDTIME: c_int = 24;
 pub const V_ASN1_UTCTIME:         c_int = 23;
+
+// enum point_conversion_form_t from ec.h
+pub const POINT_CONVERSION_COMPRESSED: c_int = 2;
+pub const POINT_CONVERSION_UNCOMPRESSED: c_int = 2;
+pub const POINT_CONVERSION_HYBRID: c_int = 2;
 
 pub const X509_FILETYPE_ASN1: c_int = 2;
 pub const X509_FILETYPE_DEFAULT: c_int = 3;
@@ -606,6 +719,9 @@ extern "C" {
     pub fn EVP_PKEY_copy_parameters(to: *mut EVP_PKEY, from: *const EVP_PKEY) -> c_int;
     pub fn EVP_PKEY_get1_RSA(k: *mut EVP_PKEY) -> *mut RSA;
     pub fn EVP_PKEY_set1_RSA(k: *mut EVP_PKEY, r: *mut RSA) -> c_int;
+    pub fn EVP_PKEY_get1_EC_KEY(pkey: *mut EVP_PKEY) -> *mut EC_KEY;
+    pub fn EVP_PKEY_set1_EC_KEY(pkey: *mut EVP_PKEY, key: *mut EVP_PKEY) -> c_int;
+    pub fn EVP_PKEY_get0_EC_KEY(pkey: *mut EVP_PKEY) -> *mut EC_KEY;
     pub fn EVP_PKEY_cmp(a: *const EVP_PKEY, b: *const EVP_PKEY) -> c_int;
 
     pub fn HMAC_CTX_init(ctx: *mut HMAC_CTX);
@@ -668,6 +784,27 @@ extern "C" {
     pub fn RSA_size(k: *mut RSA) -> c_int;
     pub fn RSA_verify(t: c_int, m: *const u8, mlen: c_uint, sig: *const u8, siglen: c_uint,
                       k: *mut RSA) -> c_int;
+
+    pub fn ECDSA_SIG_new() -> *mut ECDSA_SIG;
+    pub fn ECDSA_SIG_free(sig: *mut ECDSA_SIG);
+    pub fn ECDSA_SIG_get0(pr: *mut *mut BIGNUM, ps: *mut *mut BIGNUM, sig: *const ECDSA_SIG);
+    pub fn i2d_ECDSA_SIG(sig: *const ECDSA_SIG, pp: *mut *mut c_uchar) -> c_int;
+    pub fn d2i_ECDSA_SIG(sig: *mut *mut ECDSA_SIG, pp: *mut *const c_uchar, len: c_long) -> *mut ECDSA_SIG;
+    pub fn ECDSA_size(eckey: *const EC_KEY) -> c_int;
+    pub fn ECDSA_sign(_type: c_int, dgst: *const c_uchar, dgstlen: c_int,
+                      sig: *mut c_uchar, siglen: *mut c_uint, eckey: *mut EC_KEY) -> c_int;
+    pub fn ECDSA_do_sign(dgst: *const c_uchar, dgst_len: c_int, eckey: *mut EC_KEY) -> *mut ECDSA_SIG;
+    pub fn ECDSA_verify(_type: c_int, dgst: *const c_uchar, dgstlen: c_int,
+                        sig: *const c_uchar, siglen: c_int, eckey: *mut EC_KEY) -> c_int;
+    pub fn ECDSA_do_verify(dgst: *const c_uchar, dgst_len: c_int,
+                           sig: *const ECDSA_SIG, eckey: *mut EC_KEY) -> c_int;
+    pub fn ECDSA_do_sign_ex(dgst: *const c_uchar, dgstlen: c_int,
+                            kinv: *const BIGNUM, rp: *const BIGNUM,
+                            eckey: *mut EC_KEY) -> *mut ECDSA_SIG;
+    pub fn ECDSA_sign_setup(eckey: *mut EC_KEY, ctx: *mut BN_CTX, kinv: *mut *mut BIGNUM, rp: *mut *mut BIGNUM) -> c_int;
+    pub fn ECDSA_sign_ex(_type: c_int, dgst: *const c_uchar, dgstlen: c_int,
+                         sig: *mut c_uchar, siglen: *mut c_uint,
+                         kinv: *const BIGNUM, rp: *const BIGNUM, eckey: *mut EC_KEY) -> c_int;
 
     pub fn SSL_library_init() -> c_int;
 
