@@ -532,6 +532,17 @@ impl<'ctx> X509<'ctx> {
         }
         io::copy(&mut mem_bio, writer).map_err(StreamError).map(|_| ())
     }
+
+    /// Returns a DER serialized form of the certificate
+    pub fn save_der(&self) -> Result<Vec<u8>, SslError> {
+        let mut mem_bio = try!(MemBio::new());
+        unsafe {
+            ffi::i2d_X509_bio(mem_bio.get_handle(), self.handle);
+        }
+        let mut v = Vec::new();
+        try!(io::copy(&mut mem_bio, &mut v).map_err(StreamError));
+        Ok(v)
+    }
 }
 
 extern "C" {
@@ -640,6 +651,17 @@ impl X509Req {
             try_ssl!(ffi::PEM_write_bio_X509_REQ(mem_bio.get_handle(), self.handle));
         }
         io::copy(&mut mem_bio, writer).map_err(StreamError).map(|_| ())
+    }
+
+    /// Returns a DER serialized form of the CSR
+    pub fn save_der(&self) -> Result<Vec<u8>, SslError> {
+        let mut mem_bio = try!(MemBio::new());
+        unsafe {
+            ffi::i2d_X509_REQ_bio(mem_bio.get_handle(), self.handle);
+        }
+        let mut v = Vec::new();
+        try!(io::copy(&mut mem_bio, &mut v).map_err(StreamError));
+        Ok(v)
     }
 }
 

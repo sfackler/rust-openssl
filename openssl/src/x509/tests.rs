@@ -93,6 +93,19 @@ fn test_cert_loading() {
 }
 
 #[test]
+fn test_save_der() {
+    let cert_path = Path::new("test/cert.pem");
+    let mut file = File::open(&cert_path)
+                       .ok()
+                       .expect("Failed to open `test/cert.pem`");
+
+    let cert = X509::from_pem(&mut file).ok().expect("Failed to load PEM");
+
+    let der = cert.save_der().unwrap();
+    assert!(!der.is_empty());
+}
+
+#[test]
 fn test_subject_read_cn() {
     let cert_path = Path::new("test/cert.pem");
     let mut file = File::open(&cert_path)
