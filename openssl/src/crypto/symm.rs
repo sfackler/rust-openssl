@@ -1,4 +1,3 @@
-use std::iter::repeat;
 use libc::c_int;
 
 use crypto::symm_internal::evpc;
@@ -103,19 +102,45 @@ impl Crypter {
      * encrypted or decrypted bytes.
      */
     pub fn update(&self, data: &[u8]) -> Vec<u8> {
+        let mut vec = Vec::new();
+        self.update_into_vec(data, &mut vec);
+        vec
+    }
+
+    /**
+     * Update this crypter with more data to encrypt or decrypt. Replaces
+     * the contents of the output vector with encrypted or decrypted bytes.
+     */
+    pub fn update_into_vec(&self, data: &[u8], output: &mut Vec<u8>) {
         unsafe {
-            let sum = data.len() + (self.blocksize as usize);
-            let mut res = repeat(0u8).take(sum).collect::<Vec<_>>();
-            let mut reslen = sum as c_int;
+            let maximum_length = data.len() + self.blocksize as usize;
+
+            output.clear();
+            output.reserve(maximum_length);
+            output.set_len(maximum_length);
+            let length = self.update_into_slice(data, &mut output[..]);
+            output.truncate(length);
+        }
+    }
+
+    /**
+     * Update this crypter with more data to encrypt or decrypt. Replaces
+     * the contents of the output slice with encrypted or decrypted bytes.
+     * The slice has to be at least as big as the data, plus the cipher's
+     * block size minus one. Returns the number of bytes outputted.
+     */
+    pub fn update_into_slice(&self, data: &[u8], output: &mut [u8]) -> usize {
+        unsafe {
+            assert!(output.len() >= data.len() + self.blocksize as usize - 1);
+            let mut reslen = output.len() as c_int;
 
             ffi::EVP_CipherUpdate(self.ctx,
-                                  res.as_mut_ptr(),
+                                  output.as_mut_ptr(),
                                   &mut reslen,
                                   data.as_ptr(),
                                   data.len() as c_int);
 
-            res.truncate(reslen as usize);
-            res
+            reslen as usize
         }
     }
 
@@ -123,16 +148,49 @@ impl Crypter {
      * Finish crypting. Returns the remaining partial block of output, if any.
      */
     pub fn finalize(&self) -> Vec<u8> {
+        let mut vec = Vec::new();
+        self.finalize_into_vec(&mut vec);
+        vec
+    }
+
+    /**
+     * Finish crypting. Replaces the contents of the output vector with
+     * the remaining partial block of output, if any.
+     */
+    pub fn finalize_into_vec(&self, output: &mut Vec<u8>) {
         unsafe {
-            let mut res = repeat(0u8).take(self.blocksize as usize).collect::<Vec<_>>();
-            let mut reslen = self.blocksize as c_int;
-
-            ffi::EVP_CipherFinal(self.ctx, res.as_mut_ptr(), &mut reslen);
-
-            res.truncate(reslen as usize);
-            res
+            output.clear();
+            output.reserve(self.blocksize as usize);
+            output.set_len(self.blocksize as usize);
+            let length = self.finalize_into_slice(&mut output[..]);
+            output.truncate(length);
         }
     }
+
+    /**
+     * Finish crypting. Replaces the contents of the output slice with
+     * the remaining partial block of output, if any. The slice has to
+     * be at least as big as the cipher's block size. Returns the number
+     * of bytes outputted.
+     */
+    pub fn finalize_into_slice(&self, output: &mut [u8]) -> usize {
+        unsafe {
+            assert!(output.len() >= self.blocksize as usize);
+            let mut reslen = self.blocksize as c_int;
+
+            ffi::EVP_CipherFinal(self.ctx, output.as_mut_ptr(), &mut reslen);
+            reslen as usize
+        }
+    }
+
+    /**
+     * Returns the block size of the cipher.
+     */
+    #[inline]
+    pub fn block_size(&self) -> usize {
+        self.blocksize as usize
+    }
+
 }
 
 impl Drop for Crypter {
