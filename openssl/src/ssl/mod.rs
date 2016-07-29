@@ -17,7 +17,10 @@ use std::any::Any;
 use libc::{c_uchar, c_uint};
 #[cfg(any(feature = "npn", feature = "alpn"))]
 use std::slice;
-use std::marker::PhantomData;
+#[cfg(any(feature = "dtlsv1", feature = "dtlsv1_2"))]
+use std::time;
+#[cfg(any(feature = "dtlsv1", feature = "dtlsv1_2"))]
+use libc::timeval;
 
 use ffi;
 use ffi_extras;
@@ -1221,6 +1224,44 @@ impl<S> MidHandshakeSslStream<S> {
     /// Returns the underlying error which interrupted this handshake.
     pub fn error(&self) -> &Error {
         &self.error
+    }
+
+    /// Gets the next DTLS handshake timeout.
+    ///
+    /// This is intended to be used with a nonblocking socket, where the value
+    /// can be used to set timeouts on reading and performing handshakes.
+    ///
+    /// `handle_dtlsv1_timeout` should be called when the timeout expires to
+    /// ask OpenSSL to retransmit.
+    ///
+    /// This method requires either the `dtlsv1` or `dtlsv1_2` feature.
+    #[cfg(any(feature = "dtlsv1", feature = "dtlsv1_2"))]
+    pub fn get_dtlsv1_timeout(&mut self) -> Option<time::Duration> {
+        let mut timeout: timeval = unsafe { mem::zeroed() };
+        let ret = unsafe { ffi::SSL_ctrl(self.stream.ssl.ssl, ffi::DTLS_CTRL_GET_TIMEOUT, 0,
+                                         &mut timeout as *mut _ as *mut _) };
+        if ret > 0 {
+            Some(time::Duration::new(timeout.tv_sec as u64, (timeout.tv_usec * 1000) as u32))
+        } else {
+            None
+        }
+    }
+
+    /// Handles DTLS handshake timeout expiry.
+    ///
+    /// This should be called when the timeout from `get_dtlsv1_timeout`
+    /// expires, to retransmit the handshake.
+    ///
+    /// This method requires either the `dtlsv1` or `dtlsv1_2` feature.
+    #[cfg(any(feature = "dtlsv1", feature = "dtlsv1_2"))]
+    pub fn handle_dtlsv1_timeout(&mut self) -> Result<(), Error> {
+        let ret = unsafe { ffi::SSL_ctrl(self.stream.ssl.ssl, ffi::DTLS_CTRL_HANDLE_TIMEOUT, 0,
+                                         ptr::null_mut()) };
+        if ret > 0 {
+            Ok(())
+        } else {
+            Err(self.stream.make_error(ret as i32))
+        }
     }
 
     /// Restarts the handshake process.
