@@ -611,6 +611,10 @@ impl X509Req {
         X509Req { handle: handle }
     }
 
+    pub fn get_handle(&self) -> *mut ffi::X509_REQ {
+        self.handle
+    }
+
     /// Reads CSR from PEM
     pub fn from_pem<R>(reader: &mut R) -> Result<X509Req, SslError>
         where R: Read
