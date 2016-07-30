@@ -33,4 +33,4 @@ else
 fi
 
 export PATH=$HOME/openssl/bin:$PATH
-(cd openssl && cargo $COMMAND $FLAGS --features "$FEATURES")
+(cd openssl && RUST_BACKTRACE=1 cargo $COMMAND $FLAGS --features "$FEATURES")
