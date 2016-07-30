@@ -3,7 +3,7 @@ use std::fmt;
 use ssl::error::{SslError, StreamError};
 use std::ptr;
 use std::io::{self, Read, Write};
-use libc::c_int;
+use libc::{c_int, c_uint};
 
 use bn::BigNum;
 use bio::MemBio;
@@ -162,23 +162,23 @@ impl RSA {
         }
     }
 
-    pub fn size(&self) -> Result<u32, SslError> {
+    pub fn size(&self) -> Result<isize, SslError> {
         if self.has_n() {
-            unsafe { Ok(ffi::RSA_size(self.0) as u32) }
+            unsafe { Ok(ffi::RSA_size(self.0) as isize) }
         } else {
             Err(SslError::OpenSslErrors(vec![]))
         }
     }
 
     pub fn sign(&self, hash: hash::Type, message: &[u8]) -> Result<Vec<u8>, SslError> {
-        let k_len = try!(self.size());
+        let k_len = try!(self.size()) as c_uint;
         let mut sig = vec![0;k_len as usize];
         let mut sig_len = k_len;
 
         unsafe {
             let result = ffi::RSA_sign(hash.as_nid() as c_int,
                                        message.as_ptr(),
-                                       message.len() as u32,
+                                       message.len() as c_uint,
                                        sig.as_mut_ptr(),
                                        &mut sig_len,
                                        self.0);
@@ -196,9 +196,9 @@ impl RSA {
         unsafe {
             let result = ffi::RSA_verify(hash.as_nid() as c_int,
                                          message.as_ptr(),
-                                         message.len() as u32,
+                                         message.len() as c_uint,
                                          sig.as_ptr(),
-                                         sig.len() as u32,
+                                         sig.len() as c_uint,
                                          self.0);
 
             Ok(result == 1)

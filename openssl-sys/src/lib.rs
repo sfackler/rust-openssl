@@ -655,18 +655,18 @@ extern "C" {
     pub fn RSA_free(rsa: *mut RSA);
     pub fn RSA_generate_key(modsz: c_int, e: c_ulong, cb: *const c_void, cbarg: *const c_void) -> *mut RSA;
     pub fn RSA_generate_key_ex(rsa: *mut RSA, bits: c_int, e: *mut BIGNUM, cb: *const c_void) -> c_int;
-    pub fn RSA_private_decrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA,
+    pub fn RSA_private_decrypt(flen: c_int, from: *const c_uchar, to: *mut c_uchar, k: *mut RSA,
                                pad: c_int) -> c_int;
-    pub fn RSA_public_decrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA,
+    pub fn RSA_public_decrypt(flen: c_int, from: *const c_uchar, to: *mut c_uchar, k: *mut RSA,
                                pad: c_int) -> c_int;
-    pub fn RSA_private_encrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA,
+    pub fn RSA_private_encrypt(flen: c_int, from: *const c_uchar, to: *mut c_uchar, k: *mut RSA,
                               pad: c_int) -> c_int;
-    pub fn RSA_public_encrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA,
+    pub fn RSA_public_encrypt(flen: c_int, from: *const c_uchar, to: *mut c_uchar, k: *mut RSA,
                               pad: c_int) -> c_int;
-    pub fn RSA_sign(t: c_int, m: *const u8, mlen: c_uint, sig: *mut u8, siglen: *mut c_uint,
+    pub fn RSA_sign(t: c_int, m: *const c_uchar, mlen: c_uint, sig: *mut c_uchar, siglen: *mut c_uint,
                     k: *mut RSA) -> c_int;
     pub fn RSA_size(k: *mut RSA) -> c_int;
-    pub fn RSA_verify(t: c_int, m: *const u8, mlen: c_uint, sig: *const u8, siglen: c_uint,
+    pub fn RSA_verify(t: c_int, m: *const c_uchar, mlen: c_uint, sig: *const c_uchar, siglen: c_uint,
                       k: *mut RSA) -> c_int;
 
     pub fn SSL_library_init() -> c_int;
