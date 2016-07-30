@@ -110,23 +110,17 @@ impl RSA {
     {
         let mut mem_bio = try!(MemBio::new());
 
-        let result = unsafe {
-            ffi::PEM_write_bio_RSAPrivateKey(mem_bio.get_handle(),
+        unsafe {
+            try_ssl!(ffi::PEM_write_bio_RSAPrivateKey(mem_bio.get_handle(),
                                              self.0,
                                              ptr::null(),
                                              ptr::null_mut(),
                                              0,
                                              None,
-                                             ptr::null_mut())
-        };
-
-        if result == 1 {
-            try!(io::copy(&mut mem_bio, writer).map_err(StreamError));
-
-            Ok(())
-        } else {
-            Err(SslError::OpenSslErrors(vec![]))
+                                             ptr::null_mut()));
         }
+        try!(io::copy(&mut mem_bio, writer).map_err(StreamError));
+        Ok(())
     }
 
     /// Reads an RSA public key from PEM formatted data.
@@ -151,15 +145,12 @@ impl RSA {
     {
         let mut mem_bio = try!(MemBio::new());
 
-        let result = unsafe { ffi::PEM_write_bio_RSA_PUBKEY(mem_bio.get_handle(), self.0) };
+        unsafe {
+            try_ssl!(ffi::PEM_write_bio_RSA_PUBKEY(mem_bio.get_handle(), self.0))
+        };
 
-        if result == 1 {
-            try!(io::copy(&mut mem_bio, writer).map_err(StreamError));
-
-            Ok(())
-        } else {
-            Err(SslError::OpenSslErrors(vec![]))
-        }
+        try!(io::copy(&mut mem_bio, writer).map_err(StreamError));
+        Ok(())
     }
 
     pub fn size(&self) -> Result<u32, SslError> {
@@ -176,19 +167,14 @@ impl RSA {
         let mut sig_len = k_len;
 
         unsafe {
-            let result = ffi::RSA_sign(hash.as_nid() as c_int,
+            try_ssl!(ffi::RSA_sign(hash.as_nid() as c_int,
                                        message.as_ptr(),
                                        message.len() as u32,
                                        sig.as_mut_ptr(),
                                        &mut sig_len,
-                                       self.0);
+                                       self.0));
             assert!(sig_len == k_len);
-
-            if result == 1 {
-                Ok(sig)
-            } else {
-                Err(SslError::OpenSslErrors(vec![]))
-            }
+            Ok(sig)
         }
     }
 
@@ -200,7 +186,7 @@ impl RSA {
                                          sig.as_ptr(),
                                          sig.len() as u32,
                                          self.0);
-
+            try_ssl_if!(result == -1);
             Ok(result == 1)
         }
     }
