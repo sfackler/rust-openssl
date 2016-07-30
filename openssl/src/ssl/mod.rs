@@ -1228,6 +1228,25 @@ pub struct SslStream<S> {
     _p: PhantomData<S>,
 }
 
+/// An error or intermediate state after a TLS handshake attempt.
+#[derive(Debug)]
+pub enum HandshakeError<S> {
+    /// Failed to create an SSL context.
+    SslFailure(SslError),
+    /// The handshake failed.
+    Failure(Error),
+    /// The handshake was interrupted midway through.
+    Interrupted(MidHandshakeSslStream<S>),
+}
+
+/// An SSL stream midway through the handshake process.
+#[derive(Debug)]
+pub struct MidHandshakeSslStream<S> {
+    stream: SslStream<S>,
+    is_accept: bool,
+    error: Error,
+}
+
 /// # Deprecated
 ///
 /// This method does not behave as expected and will be removed in a future
@@ -1282,47 +1301,25 @@ impl<S: Read + Write> SslStream<S> {
     }
 
     /// Creates an SSL/TLS client operating over the provided stream.
-    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<Self, SslError> {
-        let ssl = try!(ssl.into_ssl());
-        let mut stream = Self::new_base(ssl, stream);
-        let ret = stream.ssl.connect();
-        if ret > 0 {
-            Ok(stream)
-        } else {
-            match stream.make_old_error(ret) {
-                Some(err) => Err(err),
-                None => Ok(stream),
-            }
-        }
+    pub fn connect<T: IntoSsl>(ssl: T, stream: S)
+                               -> Result<Self, HandshakeError<S>> {
+        let ssl = try!(ssl.into_ssl().map_err(HandshakeError::SslFailure));
+        MidHandshakeSslStream {
+            is_accept: false,
+            stream: Self::new_base(ssl, stream),
+            error: Error::ZeroReturn,
+        }.handshake()
     }
 
     /// Creates an SSL/TLS server operating over the provided stream.
-    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<Self, SslError> {
-        let ssl = try!(ssl.into_ssl());
-        let mut stream = Self::new_base(ssl, stream);
-        let ret = stream.ssl.accept();
-        if ret > 0 {
-            Ok(stream)
-        } else {
-            match stream.make_old_error(ret) {
-                Some(err) => Err(err),
-                None => Ok(stream),
-            }
-        }
-    }
-
-    /// ### Deprecated
-    ///
-    /// Use `connect`.
-    pub fn connect_generic<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
-        Self::connect(ssl, stream)
-    }
-
-    /// ### Deprecated
-    ///
-    /// Use `accept`.
-    pub fn accept_generic<T: IntoSsl>(ssl: T, stream: S) -> Result<SslStream<S>, SslError> {
-        Self::accept(ssl, stream)
+    pub fn accept<T: IntoSsl>(ssl: T, stream: S)
+                              -> Result<Self, HandshakeError<S>> {
+        let ssl = try!(ssl.into_ssl().map_err(HandshakeError::SslFailure));
+        MidHandshakeSslStream {
+            is_accept: true,
+            stream: Self::new_base(ssl, stream),
+            error: Error::ZeroReturn,
+        }.handshake()
     }
 
     /// Like `read`, but returns an `ssl::Error` rather than an `io::Error`.
@@ -1352,6 +1349,49 @@ impl<S: Read + Write> SslStream<S> {
     }
 }
 
+impl<S> MidHandshakeSslStream<S> {
+    /// Returns a shared reference to the inner stream.
+    pub fn get_ref(&self) -> &S {
+        self.stream.get_ref()
+    }
+
+    /// Returns a mutable reference to the inner stream.
+    pub fn get_mut(&mut self) -> &mut S {
+        self.stream.get_mut()
+    }
+
+    /// Returns a shared reference to the `SslContext` of the stream.
+    pub fn ssl(&self) -> &Ssl {
+        self.stream.ssl()
+    }
+
+    /// Returns the underlying error which interrupted this handshake.
+    pub fn error(&self) -> &Error {
+        &self.error
+    }
+
+    /// Restarts the handshake process.
+    pub fn handshake(mut self) -> Result<SslStream<S>, HandshakeError<S>> {
+        let ret = if self.is_accept {
+            self.stream.ssl.accept()
+        } else {
+            self.stream.ssl.connect()
+        };
+        if ret > 0 {
+            Ok(self.stream)
+        } else {
+            match self.stream.make_error(ret) {
+                e @ Error::WantWrite(_) |
+                e @ Error::WantRead(_) => {
+                    self.error = e;
+                    Err(HandshakeError::Interrupted(self))
+                }
+                err => Err(HandshakeError::Failure(err)),
+            }
+        }
+    }
+}
+
 impl<S> SslStream<S> {
     fn make_error(&mut self, ret: c_int) -> Error {
         self.check_panic();
@@ -1377,38 +1417,6 @@ impl<S> SslStream<S> {
             err => {
                 Error::Stream(io::Error::new(io::ErrorKind::Other,
                                              format!("unexpected error {:?}", err)))
-            }
-        }
-    }
-
-    fn make_old_error(&mut self, ret: c_int) -> Option<SslError> {
-        self.check_panic();
-
-        match self.ssl.get_error(ret) {
-            LibSslError::ErrorSsl => Some(SslError::get()),
-            LibSslError::ErrorSyscall => {
-                let err = SslError::get();
-                let count = match err {
-                    SslError::OpenSslErrors(ref v) => v.len(),
-                    _ => unreachable!(),
-                };
-                if count == 0 {
-                    if ret == 0 {
-                        Some(SslError::StreamError(io::Error::new(io::ErrorKind::ConnectionAborted,
-                                                                  "unexpected EOF observed")))
-                    } else {
-                        Some(SslError::StreamError(self.get_bio_error()))
-                    }
-                } else {
-                    Some(err)
-                }
-            }
-            LibSslError::ErrorZeroReturn => Some(SslError::SslSessionClosed),
-            LibSslError::ErrorWantWrite |
-            LibSslError::ErrorWantRead => None,
-            err => {
-                Some(SslError::StreamError(io::Error::new(io::ErrorKind::Other,
-                                                          format!("unexpected error {:?}", err))))
             }
         }
     }
@@ -1649,24 +1657,6 @@ impl<S> NonblockingSslStream<S> {
 }
 
 impl<S: Read + Write> NonblockingSslStream<S> {
-    /// Create a new nonblocking client ssl connection on wrapped `stream`.
-    ///
-    /// Note that this method will most likely not actually complete the SSL
-    /// handshake because doing so requires several round trips; the handshake will
-    /// be completed in subsequent read/write calls managed by your event loop.
-    pub fn connect<T: IntoSsl>(ssl: T, stream: S) -> Result<NonblockingSslStream<S>, SslError> {
-        SslStream::connect(ssl, stream).map(NonblockingSslStream)
-    }
-
-    /// Create a new nonblocking server ssl connection on wrapped `stream`.
-    ///
-    /// Note that this method will most likely not actually complete the SSL
-    /// handshake because doing so requires several round trips; the handshake will
-    /// be completed in subsequent read/write calls managed by your event loop.
-    pub fn accept<T: IntoSsl>(ssl: T, stream: S) -> Result<NonblockingSslStream<S>, SslError> {
-        SslStream::accept(ssl, stream).map(NonblockingSslStream)
-    }
-
     fn convert_err(&self, err: Error) -> NonblockingSslError {
         match err {
             Error::ZeroReturn => SslError::SslSessionClosed.into(),
