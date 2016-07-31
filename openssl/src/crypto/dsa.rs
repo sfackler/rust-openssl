@@ -3,17 +3,14 @@ use std::fmt;
 use error::ErrorStack;
 use std::ptr;
 use std::io::{self, Read, Write};
-use libc::{c_uint, c_int};
+use libc::{c_uint, c_int, c_char, c_void};
 
 use bn::BigNum;
 use bio::MemBio;
 use crypto::hash;
 use crypto::HashTypeInternals;
-
-#[cfg(feature = "catch_unwind")]
-use libc::{c_char, c_void};
-#[cfg(feature = "catch_unwind")]
 use crypto::util::{CallbackState, invoke_passwd_cb};
+
 
 /// Builder for upfront DSA parameter generateration
 pub struct DSAParams(*mut ffi::DSA);
@@ -94,15 +91,12 @@ impl DSA {
     ///
     /// The callback will be passed the password buffer and should return the number of characters
     /// placed into the buffer.
-    ///
-    /// Requires the `catch_unwind` feature.
-    #[cfg(feature = "catch_unwind")]
-    pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> Result<DSA, ErrorStack>
+    pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> io::Result<DSA>
         where R: Read, F: FnOnce(&mut [c_char]) -> usize
     {
         let mut cb = CallbackState::new(pass_cb);
         let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+        try!(io::copy(reader, &mut mem_bio));
 
         unsafe {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
@@ -331,7 +325,6 @@ mod test {
     }
 
     #[test]
-    #[cfg(feature = "catch_unwind")]
     pub fn test_password() {
         let mut password_queried = false;
         let mut buffer = File::open("test/dsa-encrypted.pem").unwrap();

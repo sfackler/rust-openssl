@@ -2,17 +2,13 @@ use ffi;
 use std::fmt;
 use std::ptr;
 use std::io::{self, Read, Write};
-use libc::c_int;
+use libc::{c_int, c_void, c_char};
 
 use bn::BigNum;
 use bio::MemBio;
 use error::ErrorStack;
 use crypto::HashTypeInternals;
 use crypto::hash;
-
-#[cfg(feature = "catch_unwind")]
-use libc::{c_void, c_char};
-#[cfg(feature = "catch_unwind")]
 use crypto::util::{CallbackState, invoke_passwd_cb};
 
 pub struct RSA(*mut ffi::RSA);
@@ -82,16 +78,13 @@ impl RSA {
     }
 
     /// Reads an RSA private key from PEM formatted data and supplies a password callback.
-    ///
-    /// Requires the `catch_unwind` feature.
-    #[cfg(feature = "catch_unwind")]
-    pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> Result<RSA, ErrorStack>
+    pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> io::Result<RSA>
         where R: Read, F: FnOnce(&mut [c_char]) -> usize
     {
         let mut cb = CallbackState::new(pass_cb);
 
         let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+        try!(io::copy(reader, &mut mem_bio));
 
         unsafe {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
@@ -303,7 +296,6 @@ mod test {
     }
 
     #[test]
-    #[cfg(feature = "catch_unwind")]
     pub fn test_password() {
         let mut password_queried = false;
         let mut buffer = File::open("test/rsa-encrypted.pem").unwrap();

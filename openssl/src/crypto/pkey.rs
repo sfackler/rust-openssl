@@ -1,4 +1,4 @@
-use libc::{c_int, c_uint, c_ulong};
+use libc::{c_int, c_uint, c_ulong, c_void, c_char};
 use std::io;
 use std::io::prelude::*;
 use std::iter::repeat;
@@ -12,10 +12,6 @@ use crypto::hash::Type as HashType;
 use ffi;
 use crypto::rsa::RSA;
 use error::ErrorStack;
-
-#[cfg(feature = "catch_unwind")]
-use libc::{c_void, c_char};
-#[cfg(feature = "catch_unwind")]
 use crypto::util::{CallbackState, invoke_passwd_cb};
 
 #[derive(Copy, Clone)]
@@ -104,16 +100,13 @@ impl PKey {
     ///
     /// The callback will be passed the password buffer and should return the number of characters
     /// placed into the buffer.
-    ///
-    /// Requires the `catch_unwind` feature.
-    #[cfg(feature = "catch_unwind")]
-    pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> Result<PKey, SslError>
+    pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> io::Result<PKey>
         where R: Read, F: FnOnce(&mut [c_char]) -> usize
     {
         let mut cb = CallbackState::new(pass_cb);
 
         let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+        try!(io::copy(reader, &mut mem_bio));
 
         unsafe {
             let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.get_handle(),
