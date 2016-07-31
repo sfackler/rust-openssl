@@ -562,6 +562,7 @@ extern "C" {
     pub fn ERR_lib_error_string(err: c_ulong) -> *const c_char;
     pub fn ERR_func_error_string(err: c_ulong) -> *const c_char;
     pub fn ERR_reason_error_string(err: c_ulong) -> *const c_char;
+    pub fn ERR_error_string(err: c_ulong, buf: *mut c_char) -> *const c_char;
 
     pub fn ERR_load_crypto_strings();
 
@@ -629,6 +630,19 @@ extern "C" {
     pub fn EVP_PKEY_get1_RSA(k: *mut EVP_PKEY) -> *mut RSA;
     pub fn EVP_PKEY_set1_RSA(k: *mut EVP_PKEY, r: *mut RSA) -> c_int;
     pub fn EVP_PKEY_cmp(a: *const EVP_PKEY, b: *const EVP_PKEY) -> c_int;
+
+    #[cfg(feature = "signing")]
+    pub fn EVP_DigestSignInit(ctx: *mut EVP_MD_CTX, pctx: *mut *mut EVP_PKEY_CTX,
+                              typ: *const EVP_MD, e: *const ENGINE, pkey: *mut EVP_PKEY) -> c_int;
+    #[cfg(feature = "signing")]
+    pub fn EVP_DigestSignFinal(ctx: *mut EVP_MD_CTX, sig: *mut u8,
+                               siglen: *mut size_t) -> c_int;
+    #[cfg(feature = "signing")]
+    pub fn EVP_DigestVerifyInit(ctx: *mut EVP_MD_CTX, pctx: *mut *mut EVP_PKEY_CTX,
+                                typ: *const EVP_MD, e: *mut ENGINE, pkey: *mut EVP_PKEY) -> c_int;
+    #[cfg(feature = "signing")]
+    pub fn EVP_DigestVerifyFinal(ctx: *mut EVP_MD_CTX, sigret: *const c_uchar,
+                                 signlen: size_t) -> c_int;
 
     pub fn HMAC_CTX_init(ctx: *mut HMAC_CTX);
     pub fn HMAC_CTX_cleanup(ctx: *mut HMAC_CTX);

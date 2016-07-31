@@ -234,6 +234,13 @@ impl From<SslError> for NonblockingSslError {
     }
 }
 
+// useful when implementing Io traits
+impl From<SslError> for io::Error {
+    fn from(e: SslError) -> io::Error {
+        io::Error::new(io::ErrorKind::Other, e)
+    }
+}
+
 /// An error from the OpenSSL library
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OpensslError {

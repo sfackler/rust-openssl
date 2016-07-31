@@ -25,6 +25,7 @@ alpn = ["openssl-sys/alpn"]
 rfc5114 = ["openssl-sys/rfc5114"]
 ecdh_auto = ["openssl-sys-extras/ecdh_auto"]
 pkcs5_pbkdf2_hmac = ["openssl-sys/pkcs5_pbkdf2_hmac"]
+signing = ["openssl-sys/signing"]
 
 nightly = []
 catch_unwind = []

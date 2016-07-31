@@ -1,7 +1,6 @@
 use libc::{c_void, c_int};
 use std::io;
 use std::io::prelude::*;
-use std::ptr;
 use std::cmp;
 
 use ffi;
