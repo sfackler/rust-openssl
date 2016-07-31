@@ -6,7 +6,7 @@ addons:
     - gcc-arm-linux-gnueabihf
 rust:
 - nightly
-- 1.8.0
+- 1.9.0
 os:
 - osx
 - linux
