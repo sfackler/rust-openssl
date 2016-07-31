@@ -17,7 +17,7 @@ use crypto::hash::Type::SHA256;
 use ssl;
 use ssl::SSL_VERIFY_PEER;
 use ssl::SslMethod::Sslv23;
-use ssl::SslMethod;
+use ssl::{SslMethod, HandshakeError};
 use ssl::error::Error;
 use ssl::{SslContext, SslStream};
 use x509::X509StoreContext;
@@ -133,6 +133,7 @@ impl Drop for Server {
 }
 
 #[cfg(feature = "dtlsv1")]
+#[derive(Debug)]
 struct UdpConnected(UdpSocket);
 
 #[cfg(feature = "dtlsv1")]
@@ -846,10 +847,10 @@ fn test_sslv2_connect_failure() {
         .unwrap();
 }
 
-fn wait_io(stream: &SslStream<TcpStream>, read: bool, timeout_ms: u32) -> bool {
+fn wait_io(stream: &TcpStream, read: bool, timeout_ms: u32) -> bool {
     unsafe {
         let mut set: select::fd_set = mem::zeroed();
-        select::fd_set(&mut set, stream.get_ref());
+        select::fd_set(&mut set, stream);
 
         let write = if read {
             0 as *mut _
@@ -861,7 +862,19 @@ fn wait_io(stream: &SslStream<TcpStream>, read: bool, timeout_ms: u32) -> bool {
         } else {
             &mut set as *mut _
         };
-        select::select(stream.get_ref(), read, write, 0 as *mut _, timeout_ms).unwrap()
+        select::select(stream, read, write, 0 as *mut _, timeout_ms).unwrap()
+    }
+}
+
+fn handshake(res: Result<SslStream<TcpStream>, HandshakeError<TcpStream>>)
+             -> SslStream<TcpStream> {
+    match res {
+        Ok(s) => s,
+        Err(HandshakeError::Interrupted(s)) => {
+            wait_io(s.get_ref(), true, 1_000);
+            handshake(s.handshake())
+        }
+        Err(err) => panic!("error on handshake {:?}", err),
     }
 }
 
@@ -870,7 +883,7 @@ fn test_write_nonblocking() {
     let (_s, stream) = Server::new();
     stream.set_nonblocking(true).unwrap();
     let cx = SslContext::new(Sslv23).unwrap();
-    let mut stream = SslStream::connect(&cx, stream).unwrap();
+    let mut stream = handshake(SslStream::connect(&cx, stream));
 
     let mut iterations = 0;
     loop {
@@ -886,10 +899,10 @@ fn test_write_nonblocking() {
                 break;
             }
             Err(Error::WantRead(_)) => {
-                assert!(wait_io(&stream, true, 1000));
+                assert!(wait_io(stream.get_ref(), true, 1000));
             }
             Err(Error::WantWrite(_)) => {
-                assert!(wait_io(&stream, false, 1000));
+                assert!(wait_io(stream.get_ref(), false, 1000));
             }
             Err(other) => {
                 panic!("Unexpected SSL Error: {:?}", other);
@@ -907,7 +920,7 @@ fn test_read_nonblocking() {
     let (_s, stream) = Server::new();
     stream.set_nonblocking(true).unwrap();
     let cx = SslContext::new(Sslv23).unwrap();
-    let mut stream = SslStream::connect(&cx, stream).unwrap();
+    let mut stream = handshake(SslStream::connect(&cx, stream));
 
     let mut iterations = 0;
     loop {
@@ -924,10 +937,10 @@ fn test_read_nonblocking() {
                 break;
             }
             Err(Error::WantRead(..)) => {
-                assert!(wait_io(&stream, true, 1000));
+                assert!(wait_io(stream.get_ref(), true, 1000));
             }
             Err(Error::WantWrite(..)) => {
-                assert!(wait_io(&stream, false, 1000));
+                assert!(wait_io(stream.get_ref(), false, 1000));
             }
             Err(other) => {
                 panic!("Unexpected SSL Error: {:?}", other);
@@ -944,7 +957,7 @@ fn test_read_nonblocking() {
             n
         }
         Err(Error::WantRead(..)) => {
-            assert!(wait_io(&stream, true, 3000));
+            assert!(wait_io(stream.get_ref(), true, 3000));
             // Second read should return application data.
             stream.read(&mut input_buffer).unwrap()
         }
