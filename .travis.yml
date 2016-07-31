@@ -18,7 +18,7 @@ matrix:
     #  include:
     #  - os: linux
     #    env: TARGET=arm-unknown-linux-gnueabihf TEST_FEATURES=true
-    #    rust: 1.8.0
+    #    rust: 1.7.0
   exclude:
   - os: osx
     env: TEST_FEATURES=true

@@ -196,7 +196,7 @@ macro_rules! run_test(
             use ssl::SslMethod;
             use ssl::{SslContext, Ssl, SslStream};
             use ssl::SSL_VERIFY_PEER;
-            use crypto::hash::Type::SHA256;
+            use crypto::hash::Type::{SHA1, SHA256};
             use x509::X509StoreContext;
             use serialize::hex::FromHex;
             use super::Server;
@@ -236,7 +236,7 @@ run_test!(verify_untrusted, |method, stream| {
 
     match SslStream::connect(&ctx, stream) {
         Ok(_) => panic!("expected failure"),
-        Err(err) => println!("error {:?}", err)
+        Err(err) => println!("error {:?}", err),
     }
 });
 
@@ -246,11 +246,11 @@ run_test!(verify_trusted, |method, stream| {
 
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
     match SslStream::connect(&ctx, stream) {
         Ok(_) => (),
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     }
 });
 
@@ -260,7 +260,7 @@ run_test!(verify_untrusted_callback_override_ok, |method, stream| {
 
     match SslStream::connect(&ctx, stream) {
         Ok(_) => (),
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     }
 });
 
@@ -277,11 +277,11 @@ run_test!(verify_trusted_callback_override_ok, |method, stream| {
 
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
     match SslStream::connect(&ctx, stream) {
         Ok(_) => (),
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     }
 });
 
@@ -291,7 +291,7 @@ run_test!(verify_trusted_callback_override_bad, |method, stream| {
 
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
     assert!(SslStream::connect(&ctx, stream).is_err());
 });
@@ -315,7 +315,7 @@ run_test!(verify_trusted_get_error_ok, |method, stream| {
 
     match ctx.set_CA_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err)
+        Err(err) => panic!("Unexpected error {:?}", err),
     }
     assert!(SslStream::connect(&ctx, stream).is_ok());
 });
@@ -337,14 +337,14 @@ run_test!(verify_callback_data, |method, stream| {
     // in DER format.
     // Command: openssl x509 -in test/cert.pem  -outform DER | openssl dgst -sha256
     // Please update if "test/cert.pem" will ever change
-    let node_hash_str = "db400bb62f1b1f29c3b8f323b8f7d9dea724fdcd67104ef549c772ae3749655b";
+    let node_hash_str = "E19427DAC79FBE758394945276A6E4F15F0BEBE6";
     let node_id = node_hash_str.from_hex().unwrap();
     ctx.set_verify_callback(SSL_VERIFY_PEER, move |_preverify_ok, x509_ctx| {
         let cert = x509_ctx.get_current_cert();
         match cert {
             None => false,
             Some(cert) => {
-                let fingerprint = cert.fingerprint(SHA256).unwrap();
+                let fingerprint = cert.fingerprint(SHA1).unwrap();
                 fingerprint == node_id
             }
         }
@@ -353,7 +353,7 @@ run_test!(verify_callback_data, |method, stream| {
 
     match SslStream::connect(&ctx, stream) {
         Ok(_) => (),
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     }
 });
 
@@ -366,14 +366,14 @@ run_test!(ssl_verify_callback, |method, stream| {
     let ctx = SslContext::new(method).unwrap();
     let mut ssl = ctx.into_ssl().unwrap();
 
-    let node_hash_str = "db400bb62f1b1f29c3b8f323b8f7d9dea724fdcd67104ef549c772ae3749655b";
+    let node_hash_str = "E19427DAC79FBE758394945276A6E4F15F0BEBE6";
     let node_id = node_hash_str.from_hex().unwrap();
     ssl.set_verify_callback(SSL_VERIFY_PEER, move |_, x509| {
         CHECKED.store(1, Ordering::SeqCst);
         match x509.get_current_cert() {
             None => false,
             Some(cert) => {
-                let fingerprint = cert.fingerprint(SHA256).unwrap();
+                let fingerprint = cert.fingerprint(SHA1).unwrap();
                 fingerprint == node_id
             }
         }
@@ -381,7 +381,7 @@ run_test!(ssl_verify_callback, |method, stream| {
 
     match SslStream::connect(ssl, stream) {
         Ok(_) => (),
-        Err(err) => panic!("Expected success, got {:?}", err)
+        Err(err) => panic!("Expected success, got {:?}", err),
     }
 
     assert_eq!(CHECKED.load(Ordering::SeqCst), 1);
@@ -475,11 +475,10 @@ fn test_write_direct() {
 }
 
 run_test!(get_peer_certificate, |method, stream| {
-    let stream = SslStream::connect(&SslContext::new(method).unwrap(),
-                                            stream).unwrap();
+    let stream = SslStream::connect(&SslContext::new(method).unwrap(), stream).unwrap();
     let cert = stream.ssl().peer_certificate().unwrap();
-    let fingerprint = cert.fingerprint(SHA256).unwrap();
-    let node_hash_str = "db400bb62f1b1f29c3b8f323b8f7d9dea724fdcd67104ef549c772ae3749655b";
+    let fingerprint = cert.fingerprint(SHA1).unwrap();
+    let node_hash_str = "E19427DAC79FBE758394945276A6E4F15F0BEBE6";
     let node_id = node_hash_str.from_hex().unwrap();
     assert_eq!(node_id, fingerprint)
 });

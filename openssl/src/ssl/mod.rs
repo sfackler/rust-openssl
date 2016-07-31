@@ -475,6 +475,8 @@ impl SslContext {
             SslMethod::Dtlsv1_2 => ctx.set_read_ahead(1),
             _ => {}
         }
+        // this is a bit dubious (?)
+        try!(ctx.set_mode(ffi::SSL_MODE_AUTO_RETRY | ffi::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER));
 
         Ok(ctx)
     }
@@ -525,6 +527,10 @@ impl SslContext {
         unsafe {
             ffi_extras::SSL_CTX_set_read_ahead(self.ctx, m as c_long);
         }
+    }
+
+    fn set_mode(&self, mode: c_long) -> Result<(), ErrorStack> {
+        wrap_ssl_result(unsafe { ffi_extras::SSL_CTX_set_mode(self.ctx, mode) as c_int })
     }
 
     pub fn set_tmp_dh(&mut self, dh: DH) -> Result<(), ErrorStack> {
@@ -729,7 +735,7 @@ pub struct SslCipher<'a> {
     ph: PhantomData<&'a ()>,
 }
 
-impl <'a> SslCipher<'a> {
+impl<'a> SslCipher<'a> {
     /// Returns the name of cipher.
     pub fn name(&self) -> &'static str {
         let name = unsafe {
@@ -753,12 +759,18 @@ impl <'a> SslCipher<'a> {
     /// Returns the number of bits used for the cipher.
     pub fn bits(&self) -> CipherBits {
         unsafe {
-            let algo_bits : *mut c_int = ptr::null_mut();
+            let algo_bits: *mut c_int = ptr::null_mut();
             let secret_bits = ffi::SSL_CIPHER_get_bits(self.cipher, algo_bits);
             if !algo_bits.is_null() {
-                CipherBits { secret: secret_bits, algorithm: Some(*algo_bits) }
+                CipherBits {
+                    secret: secret_bits,
+                    algorithm: Some(*algo_bits),
+                }
             } else {
-                CipherBits { secret: secret_bits, algorithm: None }
+                CipherBits {
+                    secret: secret_bits,
+                    algorithm: None,
+                }
             }
         }
     }
@@ -853,7 +865,9 @@ impl Ssl {
     {
         unsafe {
             let verify = Box::new(verify);
-            ffi::SSL_set_ex_data(self.ssl, get_ssl_verify_data_idx::<F>(), mem::transmute(verify));
+            ffi::SSL_set_ex_data(self.ssl,
+                                 get_ssl_verify_data_idx::<F>(),
+                                 mem::transmute(verify));
             ffi::SSL_set_verify(self.ssl, mode.bits as c_int, Some(ssl_raw_verify::<F>));
         }
     }
@@ -865,7 +879,10 @@ impl Ssl {
             if ptr.is_null() {
                 None
             } else {
-                Some(SslCipher{ cipher: ptr, ph: PhantomData })
+                Some(SslCipher {
+                    cipher: ptr,
+                    ph: PhantomData,
+                })
             }
         }
     }
@@ -918,8 +935,8 @@ impl Ssl {
     /// Returns the name of the protocol used for the connection, e.g. "TLSv1.2", "SSLv3", etc.
     pub fn version(&self) -> &'static str {
         let version = unsafe {
-             let ptr = ffi::SSL_get_version(self.ssl);
-             CStr::from_ptr(ptr as *const _)
+            let ptr = ffi::SSL_get_version(self.ssl);
+            CStr::from_ptr(ptr as *const _)
         };
 
         str::from_utf8(version.to_bytes()).unwrap()
@@ -1038,7 +1055,8 @@ pub struct SslStream<S> {
 
 unsafe impl<S: Send> Send for SslStream<S> {}
 
-impl<S> fmt::Debug for SslStream<S> where S: fmt::Debug
+impl<S> fmt::Debug for SslStream<S>
+    where S: fmt::Debug
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("SslStream")
@@ -1156,8 +1174,7 @@ impl<S> SslStream<S> {
     }
 
     #[cfg(not(feature = "nightly"))]
-    fn check_panic(&mut self) {
-    }
+    fn check_panic(&mut self) {}
 
     fn get_bio_error(&mut self) -> io::Error {
         let error = unsafe { bio::take_error::<S>(self.ssl.get_raw_rbio()) };

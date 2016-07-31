@@ -379,7 +379,9 @@ impl X509Generator {
             ffi::X509_set_issuer_name(x509.handle, name);
 
             for (exttype, ext) in self.extensions.iter() {
-                try!(X509Generator::add_extension_internal(x509.handle, &exttype, &ext.to_string()));
+                try!(X509Generator::add_extension_internal(x509.handle,
+                                                           &exttype,
+                                                           &ext.to_string()));
             }
 
             let hash_fn = self.hash_type.evp_md();
@@ -530,6 +532,17 @@ impl<'ctx> X509<'ctx> {
         }
         io::copy(&mut mem_bio, writer).map(|_| ())
     }
+
+    /// Returns a DER serialized form of the certificate
+    pub fn save_der(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mut mem_bio = try!(MemBio::new());
+        unsafe {
+            ffi::i2d_X509_bio(mem_bio.get_handle(), self.handle);
+        }
+        let mut v = Vec::new();
+        drop(io::copy(&mut mem_bio, &mut v));
+        Ok(v)
+    }
 }
 
 extern "C" {
@@ -539,9 +552,9 @@ extern "C" {
 impl<'ctx> Clone for X509<'ctx> {
     fn clone(&self) -> X509<'ctx> {
         unsafe { rust_X509_clone(self.handle) }
-        /* FIXME: given that we now have refcounting control, 'owned' should be uneeded, the 'ctx
-         * is probably also uneeded. We can remove both to condense the x509 api quite a bit
-         */
+        // FIXME: given that we now have refcounting control, 'owned' should be uneeded, the 'ctx
+        // is probably also uneeded. We can remove both to condense the x509 api quite a bit
+        //
         X509::new(self.handle, true)
     }
 }
@@ -609,6 +622,10 @@ impl X509Req {
         X509Req { handle: handle }
     }
 
+    pub fn get_handle(&self) -> *mut ffi::X509_REQ {
+        self.handle
+    }
+
     /// Reads CSR from PEM
     pub fn from_pem<R>(reader: &mut R) -> io::Result<X509Req>
         where R: Read
@@ -634,6 +651,17 @@ impl X509Req {
             return Err(io::Error::new(io::ErrorKind::Other, ErrorStack::get()));
         }
         io::copy(&mut mem_bio, writer).map(|_| ())
+    }
+
+    /// Returns a DER serialized form of the CSR
+    pub fn save_der(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mut mem_bio = try!(MemBio::new());
+        unsafe {
+            ffi::i2d_X509_REQ_bio(mem_bio.get_handle(), self.handle);
+        }
+        let mut v = Vec::new();
+        drop(io::copy(&mut mem_bio, &mut v));
+        Ok(v)
     }
 }
 
@@ -671,7 +699,7 @@ impl Extensions {
     pub fn add(&mut self, ext: Extension) {
         let ext_type = ext.get_type();
 
-        if let Some(index) =  self.indexes.get(&ext_type) {
+        if let Some(index) = self.indexes.get(&ext_type) {
             self.extensions[*index] = ext;
             return;
         }
@@ -693,7 +721,7 @@ impl Extensions {
 /// extension in the collection.
 struct ExtensionsIter<'a> {
     current: usize,
-    extensions: &'a Vec<Extension>
+    extensions: &'a Vec<Extension>,
 }
 
 impl<'a> Iterator for ExtensionsIter<'a> {
@@ -798,9 +826,7 @@ pub struct GeneralNames<'a> {
 impl<'a> GeneralNames<'a> {
     /// Returns the number of `GeneralName`s in this structure.
     pub fn len(&self) -> usize {
-        unsafe {
-            (*self.stack).stack.num as usize
-        }
+        unsafe { (*self.stack).stack.num as usize }
     }
 
     /// Returns the specified `GeneralName`.
@@ -823,7 +849,7 @@ impl<'a> GeneralNames<'a> {
     pub fn iter(&self) -> GeneralNamesIter {
         GeneralNamesIter {
             names: self,
-            idx: 0
+            idx: 0,
         }
     }
 }

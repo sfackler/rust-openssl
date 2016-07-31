@@ -1,12 +1,12 @@
 [package]
 name = "openssl-sys"
-version = "0.7.10"
+version = "0.7.14"
 authors = ["Alex Crichton <alex@alexcrichton.com>",
            "Steven Fackler <sfackler@gmail.com>"]
 license = "MIT"
 description = "FFI bindings to OpenSSL"
 repository = "https://github.com/sfackler/rust-openssl"
-documentation = "https://sfackler.github.io/rust-openssl/doc/v0.7.10/openssl_sys"
+documentation = "https://sfackler.github.io/rust-openssl/doc/v0.7.14/openssl_sys"
 links = "openssl"
 build = "build.rs"
 
@@ -41,14 +41,14 @@ libressl-pnacl-sys = "2.1.0"
 
 # Only here to make sure we link to these in a static build on Windows
 [target.i686-pc-windows-gnu.dependencies]
-user32-sys = "0.1"
-gdi32-sys = "0.1"
+user32-sys = "0.2"
+gdi32-sys = "0.2"
 [target.x86_64-pc-windows-gnu.dependencies]
-user32-sys = "0.1"
-gdi32-sys = "0.1"
+user32-sys = "0.2"
+gdi32-sys = "0.2"
 [target.i686-pc-windows-msvc.dependencies]
-user32-sys = "0.1"
-gdi32-sys = "0.1"
+user32-sys = "0.2"
+gdi32-sys = "0.2"
 [target.x86_64-pc-windows-msvc.dependencies]
-user32-sys = "0.1"
-gdi32-sys = "0.1"
+user32-sys = "0.2"
+gdi32-sys = "0.2"

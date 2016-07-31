@@ -2,7 +2,7 @@
 #[derive(Copy, Clone, Hash, PartialEq, Eq)]
 #[repr(usize)]
 pub enum Nid {
-    Undefined,
+    Undefined, // 0
     Rsadsi,
     Pkcs,
     MD2,
@@ -12,7 +12,7 @@ pub enum Nid {
     RsaEncryption,
     RSA_MD2,
     RSA_MD5,
-    PBE_MD2_DES,
+    PBE_MD2_DES, // 10
     X500,
     x509,
     CN,
@@ -22,7 +22,7 @@ pub enum Nid {
     O,
     OU,
     RSA,
-    Pkcs7,
+    Pkcs7, // 20
     Pkcs7_data,
     Pkcs7_signedData,
     Pkcs7_envelopedData,
@@ -32,7 +32,7 @@ pub enum Nid {
     Pkcs3,
     DhKeyAgreement,
     DES_ECB,
-    DES_CFB,
+    DES_CFB, // 30
     DES_CBC,
     DES_EDE,
     DES_EDE3,
@@ -42,7 +42,7 @@ pub enum Nid {
     RC2_CBC,
     RC2_ECB,
     RC2_CFB,
-    RC2_OFB,
+    RC2_OFB, // 40
     SHA,
     RSA_SHA,
     DES_EDE_CBC,
@@ -52,7 +52,7 @@ pub enum Nid {
     Pkcs9,
     Email,
     UnstructuredName,
-    ContentType,
+    ContentType, // 50
     MessageDigest,
     SigningTime,
     CounterSignature,
@@ -62,7 +62,7 @@ pub enum Nid {
     Netscape,
     NetscapeCertExtention,
     NetscapeDatatype,
-    DES_EDE_CFB64,
+    DES_EDE_CFB64, // 60
     DES_EDE3_CFB64,
     DES_EDE_OFB64,
     DES_EDE3_OFB64,
@@ -72,7 +72,7 @@ pub enum Nid {
     DSA_OLD,
     PBE_SHA1_RC2_64,
     PBKDF2,
-    DSA_SHA1_OLD,
+    DSA_SHA1_OLD, // 70
     NetscapeCertType,
     NetscapeBaseUrl,
     NetscapeRevocationUrl,
@@ -82,7 +82,7 @@ pub enum Nid {
     NetscapeSSLServerName,
     NetscapeComment,
     NetscapeCertSequence,
-    DESX_CBC,
+    DESX_CBC, // 80
     ID_CE,
     SubjectKeyIdentifier,
     KeyUsage,
@@ -92,7 +92,7 @@ pub enum Nid {
     BasicConstraints,
     CrlNumber,
     CertificatePolicies,
-    AuthorityKeyIdentifier,
+    AuthorityKeyIdentifier, // 90
     BF_CBC,
     BF_ECB,
     BF_CFB,
@@ -102,7 +102,7 @@ pub enum Nid {
     RC4_40,
     RC2_40_CBC,
     G,
-    S,
+    S, // 100
     I,
     /// uniqueIdentifier
     UID,
@@ -113,7 +113,7 @@ pub enum Nid {
     D,
     CAST5_CBC,
     CAST5_ECB,
-    CAST5_CFB,
+    CAST5_CFB, // 110
     CAST5_OFB,
     PbeWithMD5AndCast5CBC,
     DSA_SHA1,
@@ -123,7 +123,7 @@ pub enum Nid {
     RIPEMD160,
     // 118 missing
     RSA_RIPEMD160 = 119,
-    RC5_CBC,
+    RC5_CBC, // 120
     RC5_ECB,
     RC5_CFB,
     RC5_OFB,
@@ -133,7 +133,7 @@ pub enum Nid {
     PKIX,
     ID_KP,
     ServerAuth,
-    ClientAuth,
+    ClientAuth, // 130
     CodeSigning,
     EmailProtection,
     TimeStamping,
@@ -143,7 +143,7 @@ pub enum Nid {
     MsSGC,
     MsEFS,
     NsSGC,
-    DeltaCRL,
+    DeltaCRL, // 140
     CRLReason,
     InvalidityDate,
     SXNetID,
@@ -153,7 +153,7 @@ pub enum Nid {
     PBE_SHA1_2DES,
     PBE_SHA1_RC2_128,
     PBE_SHA1_RC2_40,
-    KeyBag,
+    KeyBag, // 150
     Pkcs8ShroudedKeyBag,
     CertBag,
     CrlBag,
@@ -163,7 +163,7 @@ pub enum Nid {
     LocalKeyID,
     X509Certificate,
     SdsiCertificate,
-    X509Crl,
+    X509Crl, // 160
     PBES2,
     PBMAC1,
     HmacWithSha1,
@@ -171,6 +171,26 @@ pub enum Nid {
     ID_QT_UNOTICE,
     RC2_64_CBC,
     SMIMECaps,
+    PBE_MD2_RC2_64,
+    PBE_MD5_RC2_64,
+    PBE_SHA1_DES,
+    MicrosoftExtensionRequest,
+    ExtensionRequest,
+    Name,
+    DnQualifier,
+    IdPe,
+    IdAd,
+    AuthorityInfoAccess,
+    OCSP,
+    CaIssuers,
+    OCSPSigning, // 180
+
+    // 181 and up are from openssl's obj_mac.h
     /// Shown as UID in cert subject
-    UserId = 458
+    UserId = 458,
+
+    SHA256 = 672,
+    SHA384,
+    SHA512,
+    SHA224,
 }

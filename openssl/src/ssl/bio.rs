@@ -23,16 +23,16 @@ pub struct BioMethod(ffi::BIO_METHOD);
 impl BioMethod {
     pub fn new<S: Read + Write>() -> BioMethod {
         BioMethod(ffi::BIO_METHOD {
-                type_: BIO_TYPE_NONE,
-                name: b"rust\0".as_ptr() as *const _,
-                bwrite: Some(bwrite::<S>),
-                bread: Some(bread::<S>),
-                bputs: Some(bputs::<S>),
-                bgets: None,
-                ctrl: Some(ctrl::<S>),
-                create: Some(create),
-                destroy: Some(destroy::<S>),
-                callback_ctrl: None,
+            type_: BIO_TYPE_NONE,
+            name: b"rust\0".as_ptr() as *const _,
+            bwrite: Some(bwrite::<S>),
+            bread: Some(bread::<S>),
+            bputs: Some(bputs::<S>),
+            bgets: None,
+            ctrl: Some(ctrl::<S>),
+            create: Some(create),
+            destroy: Some(destroy::<S>),
+            callback_ctrl: None,
         })
     }
 }
@@ -82,12 +82,16 @@ unsafe fn state<'a, S: 'a>(bio: *mut BIO) -> &'a mut StreamState<S> {
 }
 
 #[cfg(feature = "nightly")]
-fn catch_unwind<F, T>(f: F) -> Result<T, Box<Any + Send>> where F: FnOnce() -> T {
+fn catch_unwind<F, T>(f: F) -> Result<T, Box<Any + Send>>
+    where F: FnOnce() -> T
+{
     ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(f))
 }
 
 #[cfg(not(feature = "nightly"))]
-fn catch_unwind<F, T>(f: F) -> Result<T, Box<Any + Send>> where F: FnOnce() -> T {
+fn catch_unwind<F, T>(f: F) -> Result<T, Box<Any + Send>>
+    where F: FnOnce() -> T
+{
     Ok(f())
 }
 
@@ -137,7 +141,8 @@ unsafe extern "C" fn bread<S: Read>(bio: *mut BIO, buf: *mut c_char, len: c_int)
 
 fn retriable_error(err: &io::Error) -> bool {
     match err.kind() {
-        io::ErrorKind::WouldBlock | io::ErrorKind::NotConnected => true,
+        io::ErrorKind::WouldBlock |
+        io::ErrorKind::NotConnected => true,
         _ => false,
     }
 }
