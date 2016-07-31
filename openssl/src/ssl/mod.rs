@@ -466,7 +466,7 @@ impl SslContext {
 
         let ctx = try_ssl_null!(unsafe { ffi::SSL_CTX_new(method.to_raw()) });
 
-        let ctx = SslContext { ctx: ctx };
+        let mut ctx = SslContext { ctx: ctx };
 
         match method {
             #[cfg(feature = "dtlsv1")]
@@ -529,7 +529,7 @@ impl SslContext {
         }
     }
 
-    fn set_mode(&self, mode: c_long) -> Result<(), ErrorStack> {
+    fn set_mode(&mut self, mode: c_long) -> Result<(), ErrorStack> {
         wrap_ssl_result(unsafe { ffi_extras::SSL_CTX_set_mode(self.ctx, mode) as c_int })
     }
 
