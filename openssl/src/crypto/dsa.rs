@@ -245,6 +245,8 @@ impl fmt::Debug for DSA {
 mod test {
     use std::fs::File;
     use std::io::{Write, Cursor};
+    use libc::c_char;
+
     use super::*;
     use crypto::hash::*;
 
@@ -330,12 +332,12 @@ mod test {
         let mut buffer = File::open("test/dsa-encrypted.pem").unwrap();
         DSA::private_key_from_pem_cb(&mut buffer, |password| {
             password_queried = true;
-            password[0] = b'm' as _;
-            password[1] = b'y' as _;
-            password[2] = b'p' as _;
-            password[3] = b'a' as _;
-            password[4] = b's' as _;
-            password[5] = b's' as _;
+            password[0] = b'm' as c_char;
+            password[1] = b'y' as c_char;
+            password[2] = b'p' as c_char;
+            password[3] = b'a' as c_char;
+            password[4] = b's' as c_char;
+            password[5] = b's' as c_char;
             6
         }).unwrap();
 
