@@ -730,42 +730,42 @@ pub mod unchecked {
     use ffi;
     use super::BigNum;
 
-    impl<'a> Add<&'a BigNum> for &'a BigNum {
+    impl<'a, 'b> Add<&'b BigNum> for &'a BigNum {
         type Output = BigNum;
 
-        fn add(self, oth: &'a BigNum) -> BigNum {
+        fn add(self, oth: &'b BigNum) -> BigNum {
             self.checked_add(oth).unwrap()
         }
     }
 
-    impl<'a> Sub<&'a BigNum> for &'a BigNum {
+    impl<'a, 'b> Sub<&'b BigNum> for &'a BigNum {
         type Output = BigNum;
 
-        fn sub(self, oth: &'a BigNum) -> BigNum {
+        fn sub(self, oth: &'b BigNum) -> BigNum {
             self.checked_sub(oth).unwrap()
         }
     }
 
-    impl<'a> Mul<&'a BigNum> for &'a BigNum {
+    impl<'a, 'b> Mul<&'b BigNum> for &'a BigNum {
         type Output = BigNum;
 
-        fn mul(self, oth: &'a BigNum) -> BigNum {
+        fn mul(self, oth: &'b BigNum) -> BigNum {
             self.checked_mul(oth).unwrap()
         }
     }
 
-    impl<'a> Div<&'a BigNum> for &'a BigNum {
+    impl<'a, 'b> Div<&'b BigNum> for &'a BigNum {
         type Output = BigNum;
 
-        fn div(self, oth: &'a BigNum) -> BigNum {
+        fn div(self, oth: &'b BigNum) -> BigNum {
             self.checked_div(oth).unwrap()
         }
     }
 
-    impl<'a> Rem<&'a BigNum> for &'a BigNum {
+    impl<'a, 'b> Rem<&'b BigNum> for &'a BigNum {
         type Output = BigNum;
 
-        fn rem(self, oth: &'a BigNum) -> BigNum {
+        fn rem(self, oth: &'b BigNum) -> BigNum {
             self.checked_mod(oth).unwrap()
         }
     }
