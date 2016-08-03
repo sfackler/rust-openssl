@@ -269,6 +269,7 @@ pub type PasswordCallback = extern "C" fn(buf: *mut c_char, size: c_int,
 pub const BIO_TYPE_NONE: c_int = 0;
 
 pub const BIO_CTRL_EOF: c_int = 2;
+pub const BIO_CTRL_INFO: c_int = 3;
 pub const BIO_CTRL_FLUSH: c_int = 11;
 pub const BIO_C_SET_BUF_MEM_EOF_RETURN: c_int = 130;
 
@@ -453,6 +454,11 @@ fn set_id_callback() {
 #[cfg(not(unix))]
 fn set_id_callback() {}
 
+// macros
+pub unsafe fn BIO_get_mem_data(b: *mut BIO, pp: *mut *mut c_char) -> c_long {
+    BIO_ctrl(b, BIO_CTRL_INFO, 0, pp as *mut c_void)
+}
+
 // True functions
 extern "C" {
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
@@ -466,6 +472,7 @@ extern "C" {
     pub fn BIO_read(b: *mut BIO, buf: *mut c_void, len: c_int) -> c_int;
     pub fn BIO_write(b: *mut BIO, buf: *const c_void, len: c_int) -> c_int;
     pub fn BIO_s_mem() -> *const BIO_METHOD;
+    pub fn BIO_new_mem_buf(buf: *const c_void, len: c_int) -> *mut BIO;
 
     pub fn BN_new() -> *mut BIGNUM;
     pub fn BN_dup(n: *mut BIGNUM) -> *mut BIGNUM;
@@ -741,6 +748,7 @@ extern "C" {
     pub fn SSL_get_wbio(ssl: *mut SSL) -> *mut BIO;
     pub fn SSL_accept(ssl: *mut SSL) -> c_int;
     pub fn SSL_connect(ssl: *mut SSL) -> c_int;
+    pub fn SSL_do_handshake(ssl: *mut SSL) -> c_int;
     pub fn SSL_ctrl(ssl: *mut SSL, cmd: c_int, larg: c_long,
                     parg: *mut c_void) -> c_long;
     pub fn SSL_get_error(ssl: *mut SSL, ret: c_int) -> c_int;

@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 use std::{fmt, ptr, mem};
 
 use ffi;
-use ssl::error::SslError;
+use error::ErrorStack;
 
 /// A signed arbitrary-precision integer.
 ///
@@ -30,7 +30,7 @@ macro_rules! with_ctx(
     ($name:ident, $action:block) => ({
         let $name = ffi::BN_CTX_new();
         if ($name).is_null() {
-            Err(SslError::get())
+            Err(ErrorStack::get())
         } else {
             let r = $action;
             ffi::BN_CTX_free($name);
@@ -47,7 +47,7 @@ macro_rules! with_bn(
                 if $action {
                     Ok($name)
                 } else {
-                    Err(SslError::get())
+                    Err(ErrorStack::get())
                 }
             },
             Err(err) => Err(err),
@@ -62,13 +62,13 @@ macro_rules! with_bn_in_ctx(
             Ok($name) => {
                 let $ctx_name = ffi::BN_CTX_new();
                 if ($ctx_name).is_null() {
-                    Err(SslError::get())
+                    Err(ErrorStack::get())
                 } else {
                     let r =
                         if $action {
                             Ok($name)
                         } else {
-                            Err(SslError::get())
+                            Err(ErrorStack::get())
                         };
                     ffi::BN_CTX_free($ctx_name);
                     r
@@ -81,7 +81,7 @@ macro_rules! with_bn_in_ctx(
 
 impl BigNum {
     /// Creates a new `BigNum` with the value 0.
-    pub fn new() -> Result<BigNum, SslError> {
+    pub fn new() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
 
@@ -91,7 +91,7 @@ impl BigNum {
     }
 
     /// Creates a new `BigNum` with the given value.
-    pub fn new_from(n: u64) -> Result<BigNum, SslError> {
+    pub fn new_from(n: u64) -> Result<BigNum, ErrorStack> {
         BigNum::new().and_then(|v| unsafe {
             try_ssl!(ffi::BN_set_word(v.raw(), n as c_ulong));
             Ok(v)
@@ -99,7 +99,7 @@ impl BigNum {
     }
 
     /// Creates a `BigNum` from a decimal string.
-    pub fn from_dec_str(s: &str) -> Result<BigNum, SslError> {
+    pub fn from_dec_str(s: &str) -> Result<BigNum, ErrorStack> {
         BigNum::new().and_then(|v| unsafe {
             let c_str = CString::new(s.as_bytes()).unwrap();
             try_ssl!(ffi::BN_dec2bn(v.raw_ptr(), c_str.as_ptr() as *const _));
@@ -108,7 +108,7 @@ impl BigNum {
     }
 
     /// Creates a `BigNum` from a hexadecimal string.
-    pub fn from_hex_str(s: &str) -> Result<BigNum, SslError> {
+    pub fn from_hex_str(s: &str) -> Result<BigNum, ErrorStack> {
         BigNum::new().and_then(|v| unsafe {
             let c_str = CString::new(s.as_bytes()).unwrap();
             try_ssl!(ffi::BN_hex2bn(v.raw_ptr(), c_str.as_ptr() as *const _));
@@ -116,13 +116,13 @@ impl BigNum {
         })
     }
 
-    pub unsafe fn new_from_ffi(orig: *mut ffi::BIGNUM) -> Result<BigNum, SslError> {
+    pub unsafe fn new_from_ffi(orig: *mut ffi::BIGNUM) -> Result<BigNum, ErrorStack> {
         if orig.is_null() {
             panic!("Null Pointer was supplied to BigNum::new_from_ffi");
         }
         let r = ffi::BN_dup(orig);
         if r.is_null() {
-            Err(SslError::get())
+            Err(ErrorStack::get())
         } else {
             Ok(BigNum(r))
         }
@@ -136,7 +136,7 @@ impl BigNum {
     ///
     /// assert_eq!(bignum, BigNum::new_from(0x120034).unwrap());
     /// ```
-    pub fn new_from_slice(n: &[u8]) -> Result<BigNum, SslError> {
+    pub fn new_from_slice(n: &[u8]) -> Result<BigNum, ErrorStack> {
         BigNum::new().and_then(|v| unsafe {
             try_ssl_null!(ffi::BN_bin2bn(n.as_ptr(), n.len() as c_int, v.raw()));
             Ok(v)
@@ -153,7 +153,7 @@ impl BigNum {
     /// assert_eq!(n.checked_sqr().unwrap(), squared);
     /// assert_eq!(n * n, squared);
     /// ```
-    pub fn checked_sqr(&self) -> Result<BigNum, SslError> {
+    pub fn checked_sqr(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_sqr(r.raw(), self.raw(), ctx) == 1
@@ -162,7 +162,7 @@ impl BigNum {
     }
 
     /// Returns the unsigned remainder of the division `self / n`.
-    pub fn checked_nnmod(&self, n: &BigNum) -> Result<BigNum, SslError> {
+    pub fn checked_nnmod(&self, n: &BigNum) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_nnmod(r.raw(), self.raw(), n.raw(), ctx) == 1
@@ -181,7 +181,7 @@ impl BigNum {
     ///
     /// assert_eq!(s.checked_mod_add(a, n).unwrap(), result);
     /// ```
-    pub fn checked_mod_add(&self, a: &BigNum, n: &BigNum) -> Result<BigNum, SslError> {
+    pub fn checked_mod_add(&self, a: &BigNum, n: &BigNum) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_mod_add(r.raw(), self.raw(), a.raw(), n.raw(), ctx) == 1
@@ -190,7 +190,7 @@ impl BigNum {
     }
 
     /// Equivalent to `(self - a) mod n`.
-    pub fn checked_mod_sub(&self, a: &BigNum, n: &BigNum) -> Result<BigNum, SslError> {
+    pub fn checked_mod_sub(&self, a: &BigNum, n: &BigNum) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_mod_sub(r.raw(), self.raw(), a.raw(), n.raw(), ctx) == 1
@@ -199,7 +199,7 @@ impl BigNum {
     }
 
     /// Equivalent to `(self * a) mod n`.
-    pub fn checked_mod_mul(&self, a: &BigNum, n: &BigNum) -> Result<BigNum, SslError> {
+    pub fn checked_mod_mul(&self, a: &BigNum, n: &BigNum) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_mod_mul(r.raw(), self.raw(), a.raw(), n.raw(), ctx) == 1
@@ -208,7 +208,7 @@ impl BigNum {
     }
 
     /// Equivalent to `self² mod n`.
-    pub fn checked_mod_sqr(&self, n: &BigNum) -> Result<BigNum, SslError> {
+    pub fn checked_mod_sqr(&self, n: &BigNum) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_mod_sqr(r.raw(), self.raw(), n.raw(), ctx) == 1
@@ -217,7 +217,7 @@ impl BigNum {
     }
 
     /// Raises `self` to the `p`th power.
-    pub fn checked_exp(&self, p: &BigNum) -> Result<BigNum, SslError> {
+    pub fn checked_exp(&self, p: &BigNum) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_exp(r.raw(), self.raw(), p.raw(), ctx) == 1
@@ -226,7 +226,7 @@ impl BigNum {
     }
 
     /// Equivalent to `self.checked_exp(p) mod n`.
-    pub fn checked_mod_exp(&self, p: &BigNum, n: &BigNum) -> Result<BigNum, SslError> {
+    pub fn checked_mod_exp(&self, p: &BigNum, n: &BigNum) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_mod_exp(r.raw(), self.raw(), p.raw(), n.raw(), ctx) == 1
@@ -236,7 +236,7 @@ impl BigNum {
 
     /// Calculates the modular multiplicative inverse of `self` modulo `n`, that is, an integer `r`
     /// such that `(self * r) % n == 1`.
-    pub fn checked_mod_inv(&self, n: &BigNum) -> Result<BigNum, SslError> {
+    pub fn checked_mod_inv(&self, n: &BigNum) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 !ffi::BN_mod_inverse(r.raw(), self.raw(), n.raw(), ctx).is_null()
@@ -245,60 +245,60 @@ impl BigNum {
     }
 
     /// Add an `unsigned long` to `self`. This is more efficient than adding a `BigNum`.
-    pub fn add_word(&mut self, w: c_ulong) -> Result<(), SslError> {
+    pub fn add_word(&mut self, w: c_ulong) -> Result<(), ErrorStack> {
         unsafe {
             if ffi::BN_add_word(self.raw(), w) == 1 {
                 Ok(())
             } else {
-                Err(SslError::get())
+                Err(ErrorStack::get())
             }
         }
     }
 
-    pub fn sub_word(&mut self, w: c_ulong) -> Result<(), SslError> {
+    pub fn sub_word(&mut self, w: c_ulong) -> Result<(), ErrorStack> {
         unsafe {
             if ffi::BN_sub_word(self.raw(), w) == 1 {
                 Ok(())
             } else {
-                Err(SslError::get())
+                Err(ErrorStack::get())
             }
         }
     }
 
-    pub fn mul_word(&mut self, w: c_ulong) -> Result<(), SslError> {
+    pub fn mul_word(&mut self, w: c_ulong) -> Result<(), ErrorStack> {
         unsafe {
             if ffi::BN_mul_word(self.raw(), w) == 1 {
                 Ok(())
             } else {
-                Err(SslError::get())
+                Err(ErrorStack::get())
             }
         }
     }
 
-    pub fn div_word(&mut self, w: c_ulong) -> Result<c_ulong, SslError> {
+    pub fn div_word(&mut self, w: c_ulong) -> Result<c_ulong, ErrorStack> {
         unsafe {
             let result = ffi::BN_div_word(self.raw(), w);
             if result != !0 as c_ulong {
                 Ok(result)
             } else {
-                Err(SslError::get())
+                Err(ErrorStack::get())
             }
         }
     }
 
-    pub fn mod_word(&self, w: c_ulong) -> Result<c_ulong, SslError> {
+    pub fn mod_word(&self, w: c_ulong) -> Result<c_ulong, ErrorStack> {
         unsafe {
             let result = ffi::BN_mod_word(self.raw(), w);
             if result != !0 as c_ulong {
                 Ok(result)
             } else {
-                Err(SslError::get())
+                Err(ErrorStack::get())
             }
         }
     }
 
     /// Computes the greatest common denominator of `self` and `a`.
-    pub fn checked_gcd(&self, a: &BigNum) -> Result<BigNum, SslError> {
+    pub fn checked_gcd(&self, a: &BigNum) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_gcd(r.raw(), self.raw(), a.raw(), ctx) == 1
@@ -318,7 +318,7 @@ impl BigNum {
                                   safe: bool,
                                   add: Option<&BigNum>,
                                   rem: Option<&BigNum>)
-                                  -> Result<BigNum, SslError> {
+                                  -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 let add_arg = add.map(|a| a.raw()).unwrap_or(ptr::null_mut());
@@ -341,7 +341,7 @@ impl BigNum {
     /// # Return Value
     ///
     /// Returns `true` if `self` is prime with an error probability of less than `0.25 ^ checks`.
-    pub fn is_prime(&self, checks: i32) -> Result<bool, SslError> {
+    pub fn is_prime(&self, checks: i32) -> Result<bool, ErrorStack> {
         unsafe {
             with_ctx!(ctx, {
                 Ok(ffi::BN_is_prime_ex(self.raw(), checks as c_int, ctx, ptr::null()) == 1)
@@ -358,7 +358,7 @@ impl BigNum {
     /// # Return Value
     ///
     /// Returns `true` if `self` is prime with an error probability of less than `0.25 ^ checks`.
-    pub fn is_prime_fast(&self, checks: i32, do_trial_division: bool) -> Result<bool, SslError> {
+    pub fn is_prime_fast(&self, checks: i32, do_trial_division: bool) -> Result<bool, ErrorStack> {
         unsafe {
             with_ctx!(ctx, {
                 Ok(ffi::BN_is_prime_fasttest_ex(self.raw(),
@@ -377,7 +377,7 @@ impl BigNum {
     /// * `bits`: Length of the number in bits.
     /// * `prop`: The desired properties of the number.
     /// * `odd`: If `true`, the generated number will be odd.
-    pub fn checked_new_random(bits: i32, prop: RNGProperty, odd: bool) -> Result<BigNum, SslError> {
+    pub fn checked_new_random(bits: i32, prop: RNGProperty, odd: bool) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_rand(r.raw(), bits as c_int, prop as c_int, odd as c_int) == 1
@@ -389,7 +389,7 @@ impl BigNum {
     pub fn checked_new_pseudo_random(bits: i32,
                                      prop: RNGProperty,
                                      odd: bool)
-                                     -> Result<BigNum, SslError> {
+                                     -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_pseudo_rand(r.raw(), bits as c_int, prop as c_int, odd as c_int) == 1
@@ -399,7 +399,7 @@ impl BigNum {
 
     /// Generates a cryptographically strong pseudo-random `BigNum` `r` in the range
     /// `0 <= r < self`.
-    pub fn checked_rand_in_range(&self) -> Result<BigNum, SslError> {
+    pub fn checked_rand_in_range(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_rand_range(r.raw(), self.raw()) == 1
@@ -408,7 +408,7 @@ impl BigNum {
     }
 
     /// The cryptographically weak counterpart to `checked_rand_in_range`.
-    pub fn checked_pseudo_rand_in_range(&self) -> Result<BigNum, SslError> {
+    pub fn checked_pseudo_rand_in_range(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_pseudo_rand_range(r.raw(), self.raw()) == 1
@@ -419,12 +419,12 @@ impl BigNum {
     /// Sets bit `n`. Equivalent to `self |= (1 << n)`.
     ///
     /// When setting a bit outside of `self`, it is expanded.
-    pub fn set_bit(&mut self, n: i32) -> Result<(), SslError> {
+    pub fn set_bit(&mut self, n: i32) -> Result<(), ErrorStack> {
         unsafe {
             if ffi::BN_set_bit(self.raw(), n as c_int) == 1 {
                 Ok(())
             } else {
-                Err(SslError::get())
+                Err(ErrorStack::get())
             }
         }
     }
@@ -432,12 +432,12 @@ impl BigNum {
     /// Clears bit `n`, setting it to 0. Equivalent to `self &= ~(1 << n)`.
     ///
     /// When clearing a bit outside of `self`, an error is returned.
-    pub fn clear_bit(&mut self, n: i32) -> Result<(), SslError> {
+    pub fn clear_bit(&mut self, n: i32) -> Result<(), ErrorStack> {
         unsafe {
             if ffi::BN_clear_bit(self.raw(), n as c_int) == 1 {
                 Ok(())
             } else {
-                Err(SslError::get())
+                Err(ErrorStack::get())
             }
         }
     }
@@ -450,12 +450,12 @@ impl BigNum {
     /// Truncates `self` to the lowest `n` bits.
     ///
     /// An error occurs if `self` is already shorter than `n` bits.
-    pub fn mask_bits(&mut self, n: i32) -> Result<(), SslError> {
+    pub fn mask_bits(&mut self, n: i32) -> Result<(), ErrorStack> {
         unsafe {
             if ffi::BN_mask_bits(self.raw(), n as c_int) == 1 {
                 Ok(())
             } else {
-                Err(SslError::get())
+                Err(ErrorStack::get())
             }
         }
     }
@@ -478,7 +478,7 @@ impl BigNum {
     /// // (-8) << 1 == -16
     /// assert_eq!(s.checked_shl1().unwrap(), result);
     /// ```
-    pub fn checked_shl1(&self) -> Result<BigNum, SslError> {
+    pub fn checked_shl1(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn!(r, {
                 ffi::BN_lshift1(r.raw(), self.raw()) == 1
@@ -487,7 +487,7 @@ impl BigNum {
     }
 
     /// Returns `self`, shifted right by 1 bit. `self` may be negative.
-    pub fn checked_shr1(&self) -> Result<BigNum, SslError> {
+    pub fn checked_shr1(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn!(r, {
                 ffi::BN_rshift1(r.raw(), self.raw()) == 1
@@ -495,7 +495,7 @@ impl BigNum {
         }
     }
 
-    pub fn checked_add(&self, a: &BigNum) -> Result<BigNum, SslError> {
+    pub fn checked_add(&self, a: &BigNum) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn!(r, {
                 ffi::BN_add(r.raw(), self.raw(), a.raw()) == 1
@@ -503,7 +503,7 @@ impl BigNum {
         }
     }
 
-    pub fn checked_sub(&self, a: &BigNum) -> Result<BigNum, SslError> {
+    pub fn checked_sub(&self, a: &BigNum) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn!(r, {
                 ffi::BN_sub(r.raw(), self.raw(), a.raw()) == 1
@@ -511,7 +511,7 @@ impl BigNum {
         }
     }
 
-    pub fn checked_mul(&self, a: &BigNum) -> Result<BigNum, SslError> {
+    pub fn checked_mul(&self, a: &BigNum) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_mul(r.raw(), self.raw(), a.raw(), ctx) == 1
@@ -519,7 +519,7 @@ impl BigNum {
         }
     }
 
-    pub fn checked_div(&self, a: &BigNum) -> Result<BigNum, SslError> {
+    pub fn checked_div(&self, a: &BigNum) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_div(r.raw(), ptr::null_mut(), self.raw(), a.raw(), ctx) == 1
@@ -527,7 +527,7 @@ impl BigNum {
         }
     }
 
-    pub fn checked_mod(&self, a: &BigNum) -> Result<BigNum, SslError> {
+    pub fn checked_mod(&self, a: &BigNum) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_div(ptr::null_mut(), r.raw(), self.raw(), a.raw(), ctx) == 1
@@ -535,7 +535,7 @@ impl BigNum {
         }
     }
 
-    pub fn checked_shl(&self, a: &i32) -> Result<BigNum, SslError> {
+    pub fn checked_shl(&self, a: &i32) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn!(r, {
                 ffi::BN_lshift(r.raw(), self.raw(), *a as c_int) == 1
@@ -543,7 +543,7 @@ impl BigNum {
         }
     }
 
-    pub fn checked_shr(&self, a: &i32) -> Result<BigNum, SslError> {
+    pub fn checked_shr(&self, a: &i32) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn!(r, {
                 ffi::BN_rshift(r.raw(), self.raw(), *a as c_int) == 1

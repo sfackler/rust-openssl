@@ -13,7 +13,7 @@ macro_rules! try_ssl_stream {
 macro_rules! try_ssl_if {
     ($e:expr) => (
         if $e {
-            return Err(SslError::get())
+            return Err(::error::ErrorStack::get().into())
         }
     )
 }
@@ -45,7 +45,7 @@ macro_rules! try_ssl_null{
 macro_rules! lift_ssl_if{
     ($e:expr) => ( {
         if $e {
-            Err(SslError::get())
+            Err(::error::ErrorStack::get().into())
         } else {
             Ok(())
         }

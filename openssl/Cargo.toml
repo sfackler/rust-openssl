@@ -26,9 +26,6 @@ rfc5114 = ["openssl-sys/rfc5114"]
 ecdh_auto = ["openssl-sys-extras/ecdh_auto"]
 pkcs5_pbkdf2_hmac = ["openssl-sys/pkcs5_pbkdf2_hmac"]
 
-nightly = []
-catch_unwind = []
-
 [dependencies]
 bitflags = ">= 0.5.0, < 0.8.0"
 lazy_static = "0.2"

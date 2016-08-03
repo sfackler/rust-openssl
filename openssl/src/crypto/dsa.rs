@@ -1,25 +1,21 @@
 use ffi;
 use std::fmt;
-use ssl::error::{SslError, StreamError};
+use error::ErrorStack;
 use std::ptr;
-use std::io::{self, Read, Write};
-use libc::{c_uint, c_int};
+use libc::{c_uint, c_int, c_char, c_void};
 
 use bn::BigNum;
-use bio::MemBio;
+use bio::{MemBio, MemBioSlice};
 use crypto::hash;
 use crypto::HashTypeInternals;
-
-#[cfg(feature = "catch_unwind")]
-use libc::{c_char, c_void};
-#[cfg(feature = "catch_unwind")]
 use crypto::util::{CallbackState, invoke_passwd_cb};
+
 
 /// Builder for upfront DSA parameter generateration
 pub struct DSAParams(*mut ffi::DSA);
 
 impl DSAParams {
-    pub fn with_size(size: usize) -> Result<DSAParams, SslError> {
+    pub fn with_size(size: usize) -> Result<DSAParams, ErrorStack> {
         unsafe {
             // Wrap it so that if we panic we'll call the dtor
             let dsa = DSAParams(try_ssl_null!(ffi::DSA_new()));
@@ -30,7 +26,7 @@ impl DSAParams {
     }
 
     /// Generate a key pair from the initialized parameters
-    pub fn generate(self) -> Result<DSA, SslError> {
+    pub fn generate(self) -> Result<DSA, ErrorStack> {
         unsafe {
             try_ssl!(ffi::DSA_generate_key(self.0));
             let dsa = DSA(self.0);
@@ -66,17 +62,15 @@ impl DSA {
 
     /// Generate a DSA key pair
     /// For more complicated key generation scenarios see the `DSAParams` type
-    pub fn generate(size: usize) -> Result<DSA, SslError> {
+    pub fn generate(size: usize) -> Result<DSA, ErrorStack> {
         let params = try!(DSAParams::with_size(size));
         params.generate()
     }
 
     /// Reads a DSA private key from PEM formatted data.
-    pub fn private_key_from_pem<R>(reader: &mut R) -> Result<DSA, SslError>
-        where R: Read
-    {
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+    pub fn private_key_from_pem(buf: &[u8]) -> Result<DSA, ErrorStack> {
+        ffi::init();
+        let mem_bio = try!(MemBioSlice::new(buf));
 
         unsafe {
             let dsa = try_ssl_null!(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.get_handle(),
@@ -94,15 +88,12 @@ impl DSA {
     ///
     /// The callback will be passed the password buffer and should return the number of characters
     /// placed into the buffer.
-    ///
-    /// Requires the `catch_unwind` feature.
-    #[cfg(feature = "catch_unwind")]
-    pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> Result<DSA, SslError>
-        where R: Read, F: FnOnce(&mut [c_char]) -> usize
+    pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<DSA, ErrorStack>
+        where F: FnOnce(&mut [c_char]) -> usize
     {
+        ffi::init();
         let mut cb = CallbackState::new(pass_cb);
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+        let mem_bio = try!(MemBioSlice::new(buf));
 
         unsafe {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
@@ -117,11 +108,10 @@ impl DSA {
     }
 
     /// Writes an DSA private key as unencrypted PEM formatted data
-    pub fn private_key_to_pem<W>(&self, writer: &mut W) -> Result<(), SslError>
-        where W: Write
+    pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack>
     {
         assert!(self.has_private_key());
-        let mut mem_bio = try!(MemBio::new());
+        let mem_bio = try!(MemBio::new());
 
         unsafe {
             try_ssl!(ffi::PEM_write_bio_DSAPrivateKey(mem_bio.get_handle(), self.0,
@@ -129,18 +119,15 @@ impl DSA {
                                               None, ptr::null_mut()))
         };
 
-
-        try!(io::copy(&mut mem_bio, writer).map_err(StreamError));
-        Ok(())
+        Ok(mem_bio.get_buf().to_owned())
     }
 
     /// Reads an DSA public key from PEM formatted data.
-    pub fn public_key_from_pem<R>(reader: &mut R) -> Result<DSA, SslError>
-        where R: Read
+    pub fn public_key_from_pem(buf: &[u8]) -> Result<DSA, ErrorStack>
     {
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
+        ffi::init();
 
+        let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
             let dsa = try_ssl_null!(ffi::PEM_read_bio_DSA_PUBKEY(mem_bio.get_handle(),
                                                                  ptr::null_mut(),
@@ -151,28 +138,23 @@ impl DSA {
     }
 
     /// Writes an DSA public key as PEM formatted data
-    pub fn public_key_to_pem<W>(&self, writer: &mut W) -> Result<(), SslError>
-        where W: Write
-    {
-        let mut mem_bio = try!(MemBio::new());
-
+    pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
         unsafe { try_ssl!(ffi::PEM_write_bio_DSA_PUBKEY(mem_bio.get_handle(), self.0)) };
-
-        try!(io::copy(&mut mem_bio, writer).map_err(StreamError));
-        Ok(())
+        Ok(mem_bio.get_buf().to_owned())
     }
 
-    pub fn size(&self) -> Result<isize, SslError> {
+    pub fn size(&self) -> Option<u32> {
         if self.has_q() {
-            unsafe { Ok(ffi::DSA_size(self.0) as isize) }
+            unsafe { Some(ffi::DSA_size(self.0) as u32) }
         } else {
-            Err(SslError::OpenSslErrors(vec![]))
+            None
         }
     }
 
-    pub fn sign(&self, hash: hash::Type, message: &[u8]) -> Result<Vec<u8>, SslError> {
-        let k_len = try!(self.size()) as c_uint;
-        let mut sig = vec![0;k_len as usize];
+    pub fn sign(&self, hash: hash::Type, message: &[u8]) -> Result<Vec<u8>, ErrorStack> {
+        let k_len = self.size().expect("DSA missing a q") as c_uint;
+        let mut sig = vec![0; k_len as usize];
         let mut sig_len = k_len;
         assert!(self.has_private_key());
 
@@ -189,7 +171,7 @@ impl DSA {
         }
     }
 
-    pub fn verify(&self, hash: hash::Type, message: &[u8], sig: &[u8]) -> Result<bool, SslError> {
+    pub fn verify(&self, hash: hash::Type, message: &[u8], sig: &[u8]) -> Result<bool, ErrorStack> {
         unsafe {
             let result = ffi::DSA_verify(hash.as_nid() as c_int,
                                          message.as_ptr(),
@@ -208,7 +190,7 @@ impl DSA {
     }
 
     // The following getters are unsafe, since BigNum::new_from_ffi fails upon null pointers
-    pub fn p(&self) -> Result<BigNum, SslError> {
+    pub fn p(&self) -> Result<BigNum, ErrorStack> {
         unsafe { BigNum::new_from_ffi((*self.0).p) }
     }
 
@@ -216,7 +198,7 @@ impl DSA {
         unsafe { !(*self.0).p.is_null() }
     }
 
-    pub fn q(&self) -> Result<BigNum, SslError> {
+    pub fn q(&self) -> Result<BigNum, ErrorStack> {
         unsafe { BigNum::new_from_ffi((*self.0).q) }
     }
 
@@ -224,7 +206,7 @@ impl DSA {
         unsafe { !(*self.0).q.is_null() }
     }
 
-    pub fn g(&self) -> Result<BigNum, SslError> {
+    pub fn g(&self) -> Result<BigNum, ErrorStack> {
         unsafe { BigNum::new_from_ffi((*self.0).g) }
     }
 
@@ -249,19 +231,18 @@ impl fmt::Debug for DSA {
 
 #[cfg(test)]
 mod test {
-    use std::fs::File;
-    use std::io::{Write, Cursor};
+    use std::io::Write;
+    use libc::c_char;
+
     use super::*;
     use crypto::hash::*;
 
     #[test]
     pub fn test_generate() {
         let key = DSA::generate(1024).unwrap();
-        let mut priv_buf = Cursor::new(vec![]);
-        let mut pub_buf = Cursor::new(vec![]);
 
-        key.public_key_to_pem(&mut pub_buf).unwrap();
-        key.private_key_to_pem(&mut priv_buf).unwrap();
+        key.public_key_to_pem().unwrap();
+        key.private_key_to_pem().unwrap();
 
         let input: Vec<u8> = (0..25).cycle().take(1024).collect();
 
@@ -281,13 +262,13 @@ mod test {
         let input: Vec<u8> = (0..25).cycle().take(1024).collect();
 
         let private_key = {
-            let mut buffer = File::open("test/dsa.pem").unwrap();
-            DSA::private_key_from_pem(&mut buffer).unwrap()
+            let key = include_bytes!("../../test/dsa.pem");
+            DSA::private_key_from_pem(key).unwrap()
         };
 
         let public_key = {
-            let mut buffer = File::open("test/dsa.pem.pub").unwrap();
-            DSA::public_key_from_pem(&mut buffer).unwrap()
+            let key = include_bytes!("../../test/dsa.pem.pub");
+            DSA::public_key_from_pem(key).unwrap()
         };
 
         let digest = {
@@ -305,13 +286,13 @@ mod test {
     pub fn test_sign_verify_fail() {
         let input: Vec<u8> = (0..25).cycle().take(128).collect();
         let private_key = {
-            let mut buffer = File::open("test/dsa.pem").unwrap();
-            DSA::private_key_from_pem(&mut buffer).unwrap()
+            let key = include_bytes!("../../test/dsa.pem");
+            DSA::private_key_from_pem(key).unwrap()
         };
 
         let public_key = {
-            let mut buffer = File::open("test/dsa.pem.pub").unwrap();
-            DSA::public_key_from_pem(&mut buffer).unwrap()
+            let key = include_bytes!("../../test/dsa.pem.pub");
+            DSA::public_key_from_pem(key).unwrap()
         };
 
         let digest = {
@@ -331,18 +312,17 @@ mod test {
     }
 
     #[test]
-    #[cfg(feature = "catch_unwind")]
     pub fn test_password() {
         let mut password_queried = false;
-        let mut buffer = File::open("test/dsa-encrypted.pem").unwrap();
-        DSA::private_key_from_pem_cb(&mut buffer, |password| {
+        let key = include_bytes!("../../test/dsa-encrypted.pem");
+        DSA::private_key_from_pem_cb(key, |password| {
             password_queried = true;
-            password[0] = b'm' as _;
-            password[1] = b'y' as _;
-            password[2] = b'p' as _;
-            password[3] = b'a' as _;
-            password[4] = b's' as _;
-            password[5] = b's' as _;
+            password[0] = b'm' as c_char;
+            password[1] = b'y' as c_char;
+            password[2] = b'p' as c_char;
+            password[3] = b'a' as c_char;
+            password[4] = b's' as c_char;
+            password[5] = b's' as c_char;
             6
         }).unwrap();
 

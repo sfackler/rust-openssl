@@ -1,5 +1,4 @@
 #![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.14")]
-#![cfg_attr(feature = "nightly", feature(const_fn))]
 
 #[macro_use]
 extern crate bitflags;
@@ -18,11 +17,12 @@ extern crate net2;
 mod macros;
 
 pub mod asn1;
+mod bio;
 pub mod bn;
-pub mod bio;
 pub mod crypto;
 pub mod dh;
-pub mod ssl;
-pub mod x509;
+pub mod error;
 pub mod nid;
+pub mod ssl;
 pub mod version;
+pub mod x509;

@@ -7,10 +7,6 @@ if [ "$TEST_FEATURES" == "true" ]; then
     FEATURES="tlsv1_2 tlsv1_1 dtlsv1 dtlsv1_2 sslv3 aes_xts aes_ctr npn alpn rfc5114 ecdh_auto pkcs5_pbkdf2_hmac"
 fi
 
-if [ "$TRAVIS_RUST_VERSION" == "nightly" ]; then
-    FEATURES="$FEATURES nightly catch_unwind"
-fi
-
 if [ "$TRAVIS_OS_NAME" != "osx" ]; then
     export OPENSSL_LIB_DIR=$HOME/openssl/lib
     export OPENSSL_INCLUDE_DIR=$HOME/openssl/include
