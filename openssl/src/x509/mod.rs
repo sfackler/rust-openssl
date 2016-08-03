@@ -433,6 +433,22 @@ impl<'a> X509Ref<'a> {
         }
     }
 
+    /// Returns Issuer validity notAfter
+    pub fn not_after(&self) -> Asn1Time {
+        unsafe {
+            let date = ffi_extras::X509_get_notAfter(self.handle());
+            Asn1Time::from_raw(date)
+        }
+    }
+
+    /// Returns Issuer validity notBefore
+    pub fn not_before(&self) -> Asn1Time {
+        unsafe {
+            let date = ffi_extras::X509_get_notBefore(self.handle());
+            Asn1Time::from_raw(date)
+        }
+    }
+
     /// Writes certificate as PEM
     pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());

@@ -54,6 +54,12 @@ impl From<ErrorStack> for io::Error {
     }
 }
 
+impl From<ErrorStack> for fmt::Error {
+    fn from(_: ErrorStack) -> fmt::Error {
+        fmt::Error
+    }
+}
+
 /// An error reported from OpenSSL.
 pub struct Error(c_ulong);
 

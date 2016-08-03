@@ -1,10 +1,12 @@
 use libc::c_long;
 use std::ptr;
+use std::fmt;
 
 use ffi;
 use error::ErrorStack;
 
 pub struct Asn1Time(*mut ffi::ASN1_TIME);
+use bio::MemBio;
 
 impl Asn1Time {
     /// Wraps existing ASN1_TIME and takes ownership
@@ -29,6 +31,17 @@ impl Asn1Time {
     /// Returns the raw handle
     pub fn as_ptr(&self) -> *mut ffi::ASN1_TIME {
         self.0
+    }
+}
+
+impl fmt::Display for Asn1Time {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mem_bio = try!(MemBio::new());
+        let as_str = unsafe {
+            ffi::ASN1_TIME_print(mem_bio.handle(), self.handle);
+            String::from_utf8_unchecked(mem_bio.get_buf().to_owned())
+        };
+        write!(f, "{}", as_str)
     }
 }
 
