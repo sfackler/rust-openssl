@@ -2,11 +2,10 @@ use ffi;
 use std::fmt;
 use error::ErrorStack;
 use std::ptr;
-use std::io::{self, Read, Write};
 use libc::{c_uint, c_int, c_char, c_void};
 
 use bn::BigNum;
-use bio::MemBio;
+use bio::{MemBio, MemBioSlice};
 use crypto::hash;
 use crypto::HashTypeInternals;
 use crypto::util::{CallbackState, invoke_passwd_cb};
@@ -69,11 +68,9 @@ impl DSA {
     }
 
     /// Reads a DSA private key from PEM formatted data.
-    pub fn private_key_from_pem<R>(reader: &mut R) -> io::Result<DSA>
-        where R: Read
-    {
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio));
+    pub fn private_key_from_pem(buf: &[u8]) -> Result<DSA, ErrorStack> {
+        ffi::init();
+        let mem_bio = try!(MemBioSlice::new(buf));
 
         unsafe {
             let dsa = try_ssl_null!(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.get_handle(),
@@ -91,12 +88,12 @@ impl DSA {
     ///
     /// The callback will be passed the password buffer and should return the number of characters
     /// placed into the buffer.
-    pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> io::Result<DSA>
-        where R: Read, F: FnOnce(&mut [c_char]) -> usize
+    pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<DSA, ErrorStack>
+        where F: FnOnce(&mut [c_char]) -> usize
     {
+        ffi::init();
         let mut cb = CallbackState::new(pass_cb);
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio));
+        let mem_bio = try!(MemBioSlice::new(buf));
 
         unsafe {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
@@ -111,11 +108,10 @@ impl DSA {
     }
 
     /// Writes an DSA private key as unencrypted PEM formatted data
-    pub fn private_key_to_pem<W>(&self, writer: &mut W) -> io::Result<()>
-        where W: Write
+    pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack>
     {
         assert!(self.has_private_key());
-        let mut mem_bio = try!(MemBio::new());
+        let mem_bio = try!(MemBio::new());
 
         unsafe {
             try_ssl!(ffi::PEM_write_bio_DSAPrivateKey(mem_bio.get_handle(), self.0,
@@ -123,18 +119,15 @@ impl DSA {
                                               None, ptr::null_mut()))
         };
 
-
-        try!(io::copy(&mut mem_bio, writer));
-        Ok(())
+        Ok(mem_bio.get_buf().to_owned())
     }
 
     /// Reads an DSA public key from PEM formatted data.
-    pub fn public_key_from_pem<R>(reader: &mut R) -> io::Result<DSA>
-        where R: Read
+    pub fn public_key_from_pem(buf: &[u8]) -> Result<DSA, ErrorStack>
     {
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio));
+        ffi::init();
 
+        let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
             let dsa = try_ssl_null!(ffi::PEM_read_bio_DSA_PUBKEY(mem_bio.get_handle(),
                                                                  ptr::null_mut(),
@@ -145,15 +138,10 @@ impl DSA {
     }
 
     /// Writes an DSA public key as PEM formatted data
-    pub fn public_key_to_pem<W>(&self, writer: &mut W) -> io::Result<()>
-        where W: Write
-    {
-        let mut mem_bio = try!(MemBio::new());
-
+    pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
         unsafe { try_ssl!(ffi::PEM_write_bio_DSA_PUBKEY(mem_bio.get_handle(), self.0)) };
-
-        try!(io::copy(&mut mem_bio, writer));
-        Ok(())
+        Ok(mem_bio.get_buf().to_owned())
     }
 
     pub fn size(&self) -> Option<u32> {
@@ -243,8 +231,7 @@ impl fmt::Debug for DSA {
 
 #[cfg(test)]
 mod test {
-    use std::fs::File;
-    use std::io::{Write, Cursor};
+    use std::io::Write;
     use libc::c_char;
 
     use super::*;
@@ -253,11 +240,9 @@ mod test {
     #[test]
     pub fn test_generate() {
         let key = DSA::generate(1024).unwrap();
-        let mut priv_buf = Cursor::new(vec![]);
-        let mut pub_buf = Cursor::new(vec![]);
 
-        key.public_key_to_pem(&mut pub_buf).unwrap();
-        key.private_key_to_pem(&mut priv_buf).unwrap();
+        key.public_key_to_pem().unwrap();
+        key.private_key_to_pem().unwrap();
 
         let input: Vec<u8> = (0..25).cycle().take(1024).collect();
 
@@ -277,13 +262,13 @@ mod test {
         let input: Vec<u8> = (0..25).cycle().take(1024).collect();
 
         let private_key = {
-            let mut buffer = File::open("test/dsa.pem").unwrap();
-            DSA::private_key_from_pem(&mut buffer).unwrap()
+            let key = include_bytes!("../../test/dsa.pem");
+            DSA::private_key_from_pem(key).unwrap()
         };
 
         let public_key = {
-            let mut buffer = File::open("test/dsa.pem.pub").unwrap();
-            DSA::public_key_from_pem(&mut buffer).unwrap()
+            let key = include_bytes!("../../test/dsa.pem.pub");
+            DSA::public_key_from_pem(key).unwrap()
         };
 
         let digest = {
@@ -301,13 +286,13 @@ mod test {
     pub fn test_sign_verify_fail() {
         let input: Vec<u8> = (0..25).cycle().take(128).collect();
         let private_key = {
-            let mut buffer = File::open("test/dsa.pem").unwrap();
-            DSA::private_key_from_pem(&mut buffer).unwrap()
+            let key = include_bytes!("../../test/dsa.pem");
+            DSA::private_key_from_pem(key).unwrap()
         };
 
         let public_key = {
-            let mut buffer = File::open("test/dsa.pem.pub").unwrap();
-            DSA::public_key_from_pem(&mut buffer).unwrap()
+            let key = include_bytes!("../../test/dsa.pem.pub");
+            DSA::public_key_from_pem(key).unwrap()
         };
 
         let digest = {
@@ -329,8 +314,8 @@ mod test {
     #[test]
     pub fn test_password() {
         let mut password_queried = false;
-        let mut buffer = File::open("test/dsa-encrypted.pem").unwrap();
-        DSA::private_key_from_pem_cb(&mut buffer, |password| {
+        let key = include_bytes!("../../test/dsa-encrypted.pem");
+        DSA::private_key_from_pem_cb(key, |password| {
             password_queried = true;
             password[0] = b'm' as c_char;
             password[1] = b'y' as c_char;

@@ -1,8 +1,6 @@
 use ffi;
-use std::io;
-use std::io::prelude::*;
 use error::ErrorStack;
-use bio::MemBio;
+use bio::MemBioSlice;
 use bn::BigNum;
 use std::mem;
 use std::ptr;
@@ -18,11 +16,8 @@ impl DH {
         Ok(DH(dh))
     }
 
-    pub fn from_pem<R>(reader: &mut R) -> io::Result<DH>
-        where R: Read
-    {
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio));
+    pub fn from_pem(buf: &[u8]) -> Result<DH, ErrorStack> {
+        let mem_bio = try!(MemBioSlice::new(buf));
         let dh = unsafe {
             ffi::PEM_read_bio_DHparams(mem_bio.get_handle(), ptr::null_mut(), None, ptr::null_mut())
         };
@@ -71,8 +66,6 @@ impl Drop for DH {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::File;
-    use std::path::Path;
     use super::DH;
     use bn::BigNum;
     use ssl::SslContext;
@@ -123,11 +116,8 @@ mod tests {
     #[test]
     fn test_dh_from_pem() {
         let mut ctx = SslContext::new(Sslv23).unwrap();
-        let pem_path = Path::new("test/dhparams.pem");
-        let mut file = File::open(&pem_path)
-                           .ok()
-                           .expect("Failed to open `test/dhparams.pem`");
-        let dh = DH::from_pem(&mut file).ok().expect("Failed to load PEM");
+        let params = include_bytes!("../../test/dhparams.pem");
+        let dh = DH::from_pem(params).ok().expect("Failed to load PEM");
         ctx.set_tmp_dh(dh).unwrap();
     }
 }

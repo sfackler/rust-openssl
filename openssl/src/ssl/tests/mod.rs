@@ -418,17 +418,10 @@ fn test_write_hits_stream() {
 
 #[test]
 fn test_set_certificate_and_private_key() {
-    let key_path = Path::new("test/key.pem");
-    let cert_path = Path::new("test/cert.pem");
-    let mut key_file = File::open(&key_path)
-                           .ok()
-                           .expect("Failed to open `test/key.pem`");
-    let mut cert_file = File::open(&cert_path)
-                            .ok()
-                            .expect("Failed to open `test/cert.pem`");
-
-    let key = PKey::private_key_from_pem(&mut key_file).unwrap();
-    let cert = X509::from_pem(&mut cert_file).unwrap();
+    let key = include_bytes!("../../../test/key.pem");
+    let key = PKey::private_key_from_pem(key).unwrap();
+    let cert = include_bytes!("../../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
 
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_private_key(&key).unwrap();

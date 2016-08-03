@@ -17,7 +17,7 @@ extern crate net2;
 mod macros;
 
 pub mod asn1;
-pub mod bio;
+mod bio;
 pub mod bn;
 pub mod crypto;
 pub mod dh;

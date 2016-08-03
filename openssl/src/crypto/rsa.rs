@@ -1,11 +1,10 @@
 use ffi;
 use std::fmt;
 use std::ptr;
-use std::io::{self, Read, Write};
 use libc::{c_int, c_void, c_char};
 
 use bn::BigNum;
-use bio::MemBio;
+use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
 use crypto::HashTypeInternals;
 use crypto::hash;
@@ -62,12 +61,8 @@ impl RSA {
     }
 
     /// Reads an RSA private key from PEM formatted data.
-    pub fn private_key_from_pem<R>(reader: &mut R) -> io::Result<RSA>
-        where R: Read
-    {
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio));
-
+    pub fn private_key_from_pem(buf: &[u8]) -> Result<RSA, ErrorStack> {
+        let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
             let rsa = try_ssl_null!(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.get_handle(),
                                                                     ptr::null_mut(),
@@ -78,13 +73,11 @@ impl RSA {
     }
 
     /// Reads an RSA private key from PEM formatted data and supplies a password callback.
-    pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> io::Result<RSA>
-        where R: Read, F: FnOnce(&mut [c_char]) -> usize
+    pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<RSA, ErrorStack>
+        where F: FnOnce(&mut [c_char]) -> usize
     {
         let mut cb = CallbackState::new(pass_cb);
-
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio));
+        let mem_bio = try!(MemBioSlice::new(buf));
 
         unsafe {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
@@ -98,10 +91,8 @@ impl RSA {
     }
 
     /// Writes an RSA private key as unencrypted PEM formatted data
-    pub fn private_key_to_pem<W>(&self, writer: &mut W) -> io::Result<()>
-        where W: Write
-    {
-        let mut mem_bio = try!(MemBio::new());
+    pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
 
         unsafe {
             try_ssl!(ffi::PEM_write_bio_RSAPrivateKey(mem_bio.get_handle(),
@@ -112,17 +103,12 @@ impl RSA {
                                              None,
                                              ptr::null_mut()));
         }
-        try!(io::copy(&mut mem_bio, writer));
-        Ok(())
+        Ok(mem_bio.get_buf().to_owned())
     }
 
     /// Reads an RSA public key from PEM formatted data.
-    pub fn public_key_from_pem<R>(reader: &mut R) -> io::Result<RSA>
-        where R: Read
-    {
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio));
-
+    pub fn public_key_from_pem(buf: &[u8]) -> Result<RSA, ErrorStack> {
+        let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
             let rsa = try_ssl_null!(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.get_handle(),
                                                                  ptr::null_mut(),
@@ -133,17 +119,14 @@ impl RSA {
     }
 
     /// Writes an RSA public key as PEM formatted data
-    pub fn public_key_to_pem<W>(&self, writer: &mut W) -> io::Result<()>
-        where W: Write
-    {
-        let mut mem_bio = try!(MemBio::new());
+    pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
 
         unsafe {
             try_ssl!(ffi::PEM_write_bio_RSA_PUBKEY(mem_bio.get_handle(), self.0))
         };
 
-        try!(io::copy(&mut mem_bio, writer));
-        Ok(())
+        Ok(mem_bio.get_buf().to_owned())
     }
 
     pub fn size(&self) -> Option<u32> {
@@ -236,7 +219,6 @@ impl fmt::Debug for RSA {
 
 #[cfg(test)]
 mod test {
-    use std::fs::File;
     use std::io::Write;
     use libc::c_char;
 
@@ -271,8 +253,8 @@ mod test {
 
     #[test]
     pub fn test_sign() {
-        let mut buffer = File::open("test/rsa.pem").unwrap();
-        let private_key = RSA::private_key_from_pem(&mut buffer).unwrap();
+        let key = include_bytes!("../../test/rsa.pem");
+        let private_key = RSA::private_key_from_pem(key).unwrap();
 
         let mut sha = Hasher::new(Type::SHA256);
         sha.write_all(&signing_input_rs256()).unwrap();
@@ -285,8 +267,8 @@ mod test {
 
     #[test]
     pub fn test_verify() {
-        let mut buffer = File::open("test/rsa.pem.pub").unwrap();
-        let public_key = RSA::public_key_from_pem(&mut buffer).unwrap();
+        let key = include_bytes!("../../test/rsa.pem.pub");
+        let public_key = RSA::public_key_from_pem(key).unwrap();
 
         let mut sha = Hasher::new(Type::SHA256);
         sha.write_all(&signing_input_rs256()).unwrap();
@@ -300,8 +282,8 @@ mod test {
     #[test]
     pub fn test_password() {
         let mut password_queried = false;
-        let mut buffer = File::open("test/rsa-encrypted.pem").unwrap();
-        RSA::private_key_from_pem_cb(&mut buffer, |password| {
+        let key = include_bytes!("../../test/rsa-encrypted.pem");
+        RSA::private_key_from_pem_cb(key, |password| {
             password_queried = true;
             password[0] = b'm' as c_char;
             password[1] = b'y' as c_char;

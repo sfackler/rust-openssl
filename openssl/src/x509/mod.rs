@@ -1,6 +1,4 @@
 use libc::{c_char, c_int, c_long, c_ulong, c_uint, c_void};
-use std::io;
-use std::io::prelude::*;
 use std::cmp::Ordering;
 use std::ffi::CString;
 use std::iter::repeat;
@@ -14,7 +12,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 
 use asn1::Asn1Time;
-use bio::MemBio;
+use bio::{MemBio, MemBioSlice};
 use crypto::hash;
 use crypto::hash::Type as HashType;
 use crypto::pkey::{PKey, Parts};
@@ -116,13 +114,6 @@ impl X509StoreContext {
 /// # Example
 ///
 /// ```
-/// # #[allow(unstable)]
-/// # fn main() {
-/// use std::fs;
-/// use std::fs::File;
-/// use std::io::prelude::*;
-/// use std::path::Path;
-///
 /// use openssl::crypto::hash::Type;
 /// use openssl::x509::X509Generator;
 /// use openssl::x509::extension::{Extension, KeyUsageOption};
@@ -135,17 +126,8 @@ impl X509StoreContext {
 ///        .add_extension(Extension::KeyUsage(vec![KeyUsageOption::DigitalSignature]));
 ///
 /// let (cert, pkey) = gen.generate().unwrap();
-///
-/// let cert_path = "doc_cert.pem";
-/// let mut file = File::create(cert_path).unwrap();
-/// assert!(cert.write_pem(&mut file).is_ok());
-/// # let _ = fs::remove_file(cert_path);
-///
-/// let pkey_path = "doc_key.pem";
-/// let mut file = File::create(pkey_path).unwrap();
-/// assert!(pkey.write_pem(&mut file).is_ok());
-/// # let _ = fs::remove_file(pkey_path);
-/// # }
+/// let cert_pem = cert.write_pem().unwrap();
+/// let pkey_pem = pkey.write_pem().unwrap();
 /// ```
 pub struct X509Generator {
     bits: u32,
@@ -444,12 +426,8 @@ impl<'ctx> X509<'ctx> {
     }
 
     /// Reads certificate from PEM, takes ownership of handle
-    pub fn from_pem<R>(reader: &mut R) -> io::Result<X509<'ctx>>
-        where R: Read
-    {
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio));
-
+    pub fn from_pem(buf: &[u8]) -> Result<X509<'ctx>, ErrorStack> {
+        let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
             let handle = try_ssl_null!(ffi::PEM_read_bio_X509(mem_bio.get_handle(),
                                                               ptr::null_mut(),
@@ -523,25 +501,21 @@ impl<'ctx> X509<'ctx> {
     }
 
     /// Writes certificate as PEM
-    pub fn write_pem<W>(&self, writer: &mut W) -> io::Result<()>
-        where W: Write
-    {
-        let mut mem_bio = try!(MemBio::new());
+    pub fn write_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
         unsafe {
             try_ssl!(ffi::PEM_write_bio_X509(mem_bio.get_handle(), self.handle));
         }
-        io::copy(&mut mem_bio, writer).map(|_| ())
+        Ok(mem_bio.get_buf().to_owned())
     }
 
     /// Returns a DER serialized form of the certificate
     pub fn save_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mut mem_bio = try!(MemBio::new());
+        let mem_bio = try!(MemBio::new());
         unsafe {
             ffi::i2d_X509_bio(mem_bio.get_handle(), self.handle);
         }
-        let mut v = Vec::new();
-        drop(io::copy(&mut mem_bio, &mut v));
-        Ok(v)
+        Ok(mem_bio.get_buf().to_owned())
     }
 }
 
@@ -627,12 +601,8 @@ impl X509Req {
     }
 
     /// Reads CSR from PEM
-    pub fn from_pem<R>(reader: &mut R) -> io::Result<X509Req>
-        where R: Read
-    {
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio));
-
+    pub fn from_pem(buf: &[u8]) -> Result<X509Req, ErrorStack> {
+        let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
             let handle = try_ssl_null!(ffi::PEM_read_bio_X509_REQ(mem_bio.get_handle(),
                                                                   ptr::null_mut(),
@@ -643,25 +613,21 @@ impl X509Req {
     }
 
     /// Writes CSR as PEM
-    pub fn write_pem<W>(&self, writer: &mut W) -> io::Result<()>
-        where W: Write
-    {
-        let mut mem_bio = try!(MemBio::new());
+    pub fn write_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
         if unsafe { ffi::PEM_write_bio_X509_REQ(mem_bio.get_handle(), self.handle) } != 1 {
-            return Err(io::Error::new(io::ErrorKind::Other, ErrorStack::get()));
+            return Err(ErrorStack::get());
         }
-        io::copy(&mut mem_bio, writer).map(|_| ())
+        Ok(mem_bio.get_buf().to_owned())
     }
 
     /// Returns a DER serialized form of the CSR
     pub fn save_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mut mem_bio = try!(MemBio::new());
+        let mem_bio = try!(MemBio::new());
         unsafe {
             ffi::i2d_X509_REQ_bio(mem_bio.get_handle(), self.handle);
         }
-        let mut v = Vec::new();
-        drop(io::copy(&mut mem_bio, &mut v));
-        Ok(v)
+        Ok(mem_bio.get_buf().to_owned())
     }
 }
 

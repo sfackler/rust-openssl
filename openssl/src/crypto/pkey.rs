@@ -1,10 +1,8 @@
 use libc::{c_int, c_uint, c_ulong, c_void, c_char};
-use std::io;
-use std::io::prelude::*;
 use std::iter::repeat;
 use std::mem;
 use std::ptr;
-use bio::MemBio;
+use bio::{MemBio, MemBioSlice};
 
 use crypto::HashTypeInternals;
 use crypto::hash;
@@ -76,12 +74,8 @@ impl PKey {
     }
 
     /// Reads private key from PEM, takes ownership of handle
-    pub fn private_key_from_pem<R>(reader: &mut R) -> io::Result<PKey>
-        where R: Read
-    {
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio));
-
+    pub fn private_key_from_pem(buf: &[u8]) -> Result<PKey, ErrorStack> {
+        let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
             let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.get_handle(),
                                                                  ptr::null_mut(),
@@ -100,14 +94,11 @@ impl PKey {
     ///
     /// The callback will be passed the password buffer and should return the number of characters
     /// placed into the buffer.
-    pub fn private_key_from_pem_cb<R, F>(reader: &mut R, pass_cb: F) -> io::Result<PKey>
-        where R: Read, F: FnOnce(&mut [c_char]) -> usize
+    pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<PKey, ErrorStack>
+        where F: FnOnce(&mut [c_char]) -> usize
     {
         let mut cb = CallbackState::new(pass_cb);
-
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio));
-
+        let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
             let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.get_handle(),
                                                                  ptr::null_mut(),
@@ -122,12 +113,8 @@ impl PKey {
     }
 
     /// Reads public key from PEM, takes ownership of handle
-    pub fn public_key_from_pem<R>(reader: &mut R) -> io::Result<PKey>
-        where R: Read
-    {
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio));
-
+    pub fn public_key_from_pem(buf: &[u8]) -> Result<PKey, ErrorStack> {
+        let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
             let evp = try_ssl_null!(ffi::PEM_read_bio_PUBKEY(mem_bio.get_handle(),
                                                              ptr::null_mut(),
@@ -141,14 +128,12 @@ impl PKey {
     }
 
     /// Reads an RSA private key from PEM, takes ownership of handle
-    pub fn private_rsa_key_from_pem<R>(reader: &mut R) -> io::Result<PKey>
-        where R: Read
-    {
-        let rsa = try!(RSA::private_key_from_pem(reader));
+    pub fn private_rsa_key_from_pem(buf: &[u8]) -> Result<PKey, ErrorStack> {
+        let rsa = try!(RSA::private_key_from_pem(buf));
         unsafe {
             let evp = try_ssl_null!(ffi::EVP_PKEY_new());
             if ffi::EVP_PKEY_set1_RSA(evp, rsa.as_ptr()) == 0 {
-                return Err(io::Error::new(io::ErrorKind::Other, ErrorStack::get()));
+                return Err(ErrorStack::get());
             }
 
             Ok(PKey {
@@ -159,14 +144,12 @@ impl PKey {
     }
 
     /// Reads an RSA public key from PEM, takes ownership of handle
-    pub fn public_rsa_key_from_pem<R>(reader: &mut R) -> io::Result<PKey>
-        where R: Read
-    {
-        let rsa = try!(RSA::public_key_from_pem(reader));
+    pub fn public_rsa_key_from_pem(buf: &[u8]) -> Result<PKey, ErrorStack> {
+        let rsa = try!(RSA::public_key_from_pem(buf));
         unsafe {
             let evp = try_ssl_null!(ffi::EVP_PKEY_new());
             if ffi::EVP_PKEY_set1_RSA(evp, rsa.as_ptr()) == 0 {
-                return Err(io::Error::new(io::ErrorKind::Other, ErrorStack::get()));
+                return Err(ErrorStack::get());
             }
 
             Ok(PKey {
@@ -280,10 +263,8 @@ impl PKey {
 
     /// Stores private key as a PEM
     // FIXME: also add password and encryption
-    pub fn write_pem<W: Write>(&self,
-                               writer: &mut W /* , password: Option<String> */)
-                               -> io::Result<()> {
-        let mut mem_bio = try!(MemBio::new());
+    pub fn write_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
         unsafe {
             try_ssl!(ffi::PEM_write_bio_PrivateKey(mem_bio.get_handle(),
                                                    self.evp,
@@ -294,20 +275,14 @@ impl PKey {
                                                    ptr::null_mut()));
 
         }
-        let mut buf = vec![];
-        try!(mem_bio.read_to_end(&mut buf));
-        writer.write_all(&buf)
+        Ok(mem_bio.get_buf().to_owned())
     }
 
     /// Stores public key as a PEM
-    pub fn write_pub_pem<W: Write>(&self,
-                                   writer: &mut W /* , password: Option<String> */)
-                                   -> io::Result<()> {
-        let mut mem_bio = try!(MemBio::new());
+    pub fn write_pub_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
         unsafe { try_ssl!(ffi::PEM_write_bio_PUBKEY(mem_bio.get_handle(), self.evp)) }
-        let mut buf = vec![];
-        try!(mem_bio.read_to_end(&mut buf));
-        writer.write_all(&buf)
+        Ok(mem_bio.get_buf().to_owned())
     }
 
     /**
@@ -648,8 +623,6 @@ impl Clone for PKey {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-    use std::fs::File;
     use crypto::hash::Type::{MD5, SHA1};
     use crypto::rsa::RSA;
 
@@ -693,42 +666,26 @@ mod tests {
 
     #[test]
     fn test_private_key_from_pem() {
-        let key_path = Path::new("test/key.pem");
-        let mut file = File::open(&key_path)
-                           .ok()
-                           .expect("Failed to open `test/key.pem`");
-
-        super::PKey::private_key_from_pem(&mut file).unwrap();
+        let key = include_bytes!("../../test/key.pem");
+        super::PKey::private_key_from_pem(key).unwrap();
     }
 
     #[test]
     fn test_public_key_from_pem() {
-        let key_path = Path::new("test/key.pem.pub");
-        let mut file = File::open(&key_path)
-                           .ok()
-                           .expect("Failed to open `test/key.pem.pub`");
-
-        super::PKey::public_key_from_pem(&mut file).unwrap();
+        let key = include_bytes!("../../test/key.pem.pub");
+        super::PKey::public_key_from_pem(key).unwrap();
     }
 
     #[test]
     fn test_private_rsa_key_from_pem() {
-        let key_path = Path::new("test/key.pem");
-        let mut file = File::open(&key_path)
-                           .ok()
-                           .expect("Failed to open `test/key.pem`");
-
-        super::PKey::private_rsa_key_from_pem(&mut file).unwrap();
+        let key = include_bytes!("../../test/key.pem");
+        super::PKey::private_rsa_key_from_pem(key).unwrap();
     }
 
     #[test]
     fn test_public_rsa_key_from_pem() {
-        let key_path = Path::new("test/key.pem.pub");
-        let mut file = File::open(&key_path)
-                           .ok()
-                           .expect("Failed to open `test/key.pem.pub`");
-
-        super::PKey::public_rsa_key_from_pem(&mut file).unwrap();
+        let key = include_bytes!("../../test/key.pem.pub");
+        super::PKey::public_rsa_key_from_pem(key).unwrap();
     }
 
     #[test]
@@ -819,18 +776,11 @@ mod tests {
 
     #[test]
     fn test_pem() {
-        let key_path = Path::new("test/key.pem");
-        let mut file = File::open(&key_path)
-                           .ok()
-                           .expect("Failed to open `test/key.pem`");
+        let key = include_bytes!("../../test/key.pem");
+        let key = super::PKey::private_key_from_pem(key).unwrap();
 
-        let key = super::PKey::private_key_from_pem(&mut file).unwrap();
-
-        let mut priv_key = Vec::new();
-        let mut pub_key = Vec::new();
-
-        key.write_pem(&mut priv_key).unwrap();
-        key.write_pub_pem(&mut pub_key).unwrap();
+        let priv_key = key.write_pem().unwrap();
+        let pub_key = key.write_pub_pem().unwrap();
 
         // As a super-simple verification, just check that the buffers contain
         // the `PRIVATE KEY` or `PUBLIC KEY` strings.
