@@ -9,6 +9,7 @@ extern crate libressl_pnacl_sys;
 
 use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
 use std::mem;
+use std::ptr;
 use std::sync::{Mutex, MutexGuard};
 use std::sync::{Once, ONCE_INIT};
 
@@ -287,6 +288,7 @@ pub const NID_key_usage:     c_int = 83;
 pub const PKCS5_SALT_LEN: c_int = 8;
 
 pub const SSL_CTRL_OPTIONS: c_int = 32;
+pub const SSL_CTRL_MODE: c_int = 33;
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
 
 pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB:  c_int = 53;
@@ -457,6 +459,10 @@ fn set_id_callback() {}
 // macros
 pub unsafe fn BIO_get_mem_data(b: *mut BIO, pp: *mut *mut c_char) -> c_long {
     BIO_ctrl(b, BIO_CTRL_INFO, 0, pp as *mut c_void)
+}
+
+pub unsafe fn SSL_CTX_set_mode(ctx: *mut SSL_CTX, op: c_long) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_MODE, op, ptr::null_mut())
 }
 
 // True functions
@@ -787,6 +793,7 @@ extern "C" {
 
     pub fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
     pub fn SSL_CTX_free(ctx: *mut SSL_CTX);
+    pub fn SSL_CTX_ctrl(ctx: *mut SSL_CTX, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
     pub fn SSL_CTX_set_verify(ctx: *mut SSL_CTX, mode: c_int,
                               verify_callback: Option<extern fn(c_int, *mut X509_STORE_CTX) -> c_int>);
     pub fn SSL_CTX_set_verify_depth(ctx: *mut SSL_CTX, depth: c_int);

@@ -531,7 +531,7 @@ impl SslContext {
     }
 
     fn set_mode(&mut self, mode: c_long) -> Result<(), ErrorStack> {
-        wrap_ssl_result(unsafe { ffi_extras::SSL_CTX_set_mode(self.ctx, mode) as c_int })
+        wrap_ssl_result(unsafe { ffi::SSL_CTX_set_mode(self.ctx, mode) as c_int })
     }
 
     pub fn set_tmp_dh(&mut self, dh: DH) -> Result<(), ErrorStack> {
