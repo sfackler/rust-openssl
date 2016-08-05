@@ -1,6 +1,6 @@
 use libc::{c_char, c_int, c_long, c_void, strlen};
-use ffi::{self, BIO, BIO_CTRL_FLUSH, BIO_TYPE_NONE, BIO_new};
-use ffi_extras::{BIO_clear_retry_flags, BIO_set_retry_read, BIO_set_retry_write};
+use ffi::{self, BIO, BIO_CTRL_FLUSH, BIO_TYPE_NONE, BIO_new, BIO_clear_retry_flags,
+          BIO_set_retry_read, BIO_set_retry_write};
 use std::any::Any;
 use std::io;
 use std::io::prelude::*;
