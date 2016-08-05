@@ -297,6 +297,9 @@ pub const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
 pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
 pub const SSL_CTRL_SET_READ_AHEAD: c_int = 41;
 
+pub const DTLS_CTRL_GET_TIMEOUT: c_int = 73;
+pub const DTLS_CTRL_HANDLE_TIMEOUT: c_int = 74;
+
 pub const SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER: c_long = 2;
 pub const SSL_MODE_AUTO_RETRY: c_long = 4;
 
