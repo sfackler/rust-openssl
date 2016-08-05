@@ -313,6 +313,42 @@ pub const SSL_VERIFY_NONE: c_int = 0;
 pub const SSL_VERIFY_PEER: c_int = 1;
 pub const SSL_VERIFY_FAIL_IF_NO_PEER_CERT: c_int = 2;
 
+pub const SSL_OP_MICROSOFT_SESS_ID_BUG: c_long =                    0x00000001;
+pub const SSL_OP_NETSCAPE_CHALLENGE_BUG: c_long =                   0x00000002;
+pub const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG: c_long =         0x00000008;
+pub const SSL_OP_TLSEXT_PADDING: c_long =                           0x00000010;
+pub const SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER: c_long =               0x00000020;
+pub const SSL_OP_SSLEAY_080_CLIENT_DH_BUG: c_long =                 0x00000080;
+pub const SSL_OP_TLS_D5_BUG: c_long =                               0x00000100;
+pub const SSL_OP_TLS_BLOCK_PADDING_BUG: c_long =                    0x00000200;
+pub const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS: c_long =              0x00000800;
+pub const SSL_OP_ALL: c_long =                                      0x80000BFF;
+pub const SSL_OP_NO_QUERY_MTU: c_long =                             0x00001000;
+pub const SSL_OP_COOKIE_EXCHANGE: c_long =                          0x00002000;
+pub const SSL_OP_NO_TICKET: c_long =                                0x00004000;
+pub const SSL_OP_CISCO_ANYCONNECT: c_long =                         0x00008000;
+pub const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION: c_long =   0x00010000;
+pub const SSL_OP_NO_COMPRESSION: c_long =                           0x00020000;
+pub const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION: c_long =        0x00040000;
+pub const SSL_OP_SINGLE_ECDH_USE: c_long =                          0x00080000;
+pub const SSL_OP_SINGLE_DH_USE: c_long =                            0x00100000;
+pub const SSL_OP_CIPHER_SERVER_PREFERENCE: c_long =                 0x00400000;
+pub const SSL_OP_TLS_ROLLBACK_BUG: c_long =                         0x00800000;
+pub const SSL_OP_NO_SSLv2: c_long =                                 0x01000000;
+pub const SSL_OP_NO_SSLv3: c_long =                                 0x02000000;
+pub const SSL_OP_NO_TLSv1: c_long =                                 0x04000000;
+
+// Intentionally not bound since they conflict with SSL_OP_PKCS1_CHECK_1 and
+// SSL_OP_PKCS1_CHECK_2 on 0.9.8 :(
+/*
+pub const SSL_OP_NO_TLSv1_2: c_long =                               0x08000000;
+pub const SSL_OP_NO_TLSv1_1: c_long =                               0x10000000;
+pub const SSL_OP_NO_DTLSv1: c_long =                                0x04000000;
+pub const SSL_OP_NO_DTLSv1_2: c_long =                              0x08000000;
+pub const SSL_OP_NO_SSL_MASK: c_long = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 |
+    SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
+*/
+
 pub const TLSEXT_NAMETYPE_host_name: c_long = 0;
 
 pub const SSL_TLSEXT_ERR_OK: c_int = 0;
@@ -463,6 +499,18 @@ pub unsafe fn BIO_get_mem_data(b: *mut BIO, pp: *mut *mut c_char) -> c_long {
 
 pub unsafe fn SSL_CTX_set_mode(ctx: *mut SSL_CTX, op: c_long) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_MODE, op, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_set_options(ctx: *mut SSL_CTX, op: c_long) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_OPTIONS, op, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_clear_options(ctx: *mut SSL_CTX, op: c_long) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_CLEAR_OPTIONS, op, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_get_options(ctx: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_OPTIONS, 0, ptr::null_mut())
 }
 
 // True functions
