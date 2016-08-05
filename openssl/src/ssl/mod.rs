@@ -494,7 +494,7 @@ impl SslContext {
             ffi::SSL_CTX_set_ex_data(self.ctx, get_verify_data_idx::<F>(), mem::transmute(callback));
             let f: extern "C" fn(_, _, _) -> _ = raw_sni::<F>;
             let f: extern "C" fn() = mem::transmute(f);
-            ffi_extras::SSL_CTX_set_tlsext_servername_callback(self.ctx, Some(f));
+            ffi::SSL_CTX_set_tlsext_servername_callback(self.ctx, Some(f));
         }
     }
 

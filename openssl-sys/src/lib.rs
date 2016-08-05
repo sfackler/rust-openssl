@@ -531,6 +531,12 @@ pub unsafe fn SSL_CTX_get_options(ctx: *mut SSL_CTX) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_OPTIONS, 0, ptr::null_mut())
 }
 
+pub unsafe fn SSL_CTX_set_tlsext_servername_callback(ctx: *mut SSL_CTX,
+                                                     cb: Option<extern "C" fn()>)
+                                                     -> c_long {
+    SSL_CTX_callback_ctrl(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, cb)
+}
+
 pub unsafe fn SSL_set_tlsext_host_name(s: *mut SSL, name: *mut c_char) -> c_long {
     SSL_ctrl(s, SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, name as *mut c_void)
 }
@@ -866,6 +872,7 @@ extern "C" {
     pub fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
     pub fn SSL_CTX_free(ctx: *mut SSL_CTX);
     pub fn SSL_CTX_ctrl(ctx: *mut SSL_CTX, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
+    pub fn SSL_CTX_callback_ctrl(ctx: *mut SSL_CTX, cmd: c_int, fp: Option<extern "C" fn()>) -> c_long;
     pub fn SSL_CTX_set_verify(ctx: *mut SSL_CTX, mode: c_int,
                               verify_callback: Option<extern fn(c_int, *mut X509_STORE_CTX) -> c_int>);
     pub fn SSL_CTX_set_verify_depth(ctx: *mut SSL_CTX, depth: c_int);
