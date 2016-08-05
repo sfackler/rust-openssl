@@ -531,6 +531,10 @@ pub unsafe fn SSL_CTX_get_options(ctx: *mut SSL_CTX) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_OPTIONS, 0, ptr::null_mut())
 }
 
+pub unsafe fn SSL_CTX_set_read_ahead(ctx: *mut SSL_CTX, m: c_long) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_READ_AHEAD, m, ptr::null_mut())
+}
+
 pub unsafe fn SSL_CTX_set_tlsext_servername_callback(ctx: *mut SSL_CTX,
                                                      cb: Option<extern "C" fn()>)
                                                      -> c_long {

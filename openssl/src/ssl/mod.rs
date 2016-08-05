@@ -507,7 +507,7 @@ impl SslContext {
 
     pub fn set_read_ahead(&mut self, m: u32) {
         unsafe {
-            ffi_extras::SSL_CTX_set_read_ahead(self.ctx, m as c_long);
+            ffi::SSL_CTX_set_read_ahead(self.ctx, m as c_long);
         }
     }
 
