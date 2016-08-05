@@ -293,6 +293,7 @@ pub const NID_key_usage:     c_int = 83;
 
 pub const PKCS5_SALT_LEN: c_int = 8;
 
+pub const SSL_CTRL_SET_TMP_DH: c_int = 3;
 pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_MODE: c_int = 33;
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
@@ -533,6 +534,10 @@ pub unsafe fn SSL_CTX_get_options(ctx: *mut SSL_CTX) -> c_long {
 
 pub unsafe fn SSL_CTX_set_read_ahead(ctx: *mut SSL_CTX, m: c_long) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_READ_AHEAD, m, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_set_tmp_dh(ctx: *mut SSL_CTX, dh: *mut DH) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TMP_DH, 0, dh as *mut c_void)
 }
 
 pub unsafe fn SSL_CTX_set_tlsext_servername_callback(ctx: *mut SSL_CTX,
