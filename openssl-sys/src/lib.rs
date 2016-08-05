@@ -294,15 +294,16 @@ pub const NID_key_usage:     c_int = 83;
 pub const PKCS5_SALT_LEN: c_int = 8;
 
 pub const SSL_CTRL_SET_TMP_DH: c_int = 3;
+pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
 pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_MODE: c_int = 33;
-pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
-
+pub const SSL_CTRL_SET_READ_AHEAD: c_int = 41;
 pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB:  c_int = 53;
 pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG: c_int = 54;
 pub const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
-pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
-pub const SSL_CTRL_SET_READ_AHEAD: c_int = 41;
+pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
+#[cfg(feature = "ecdh_auto")]
+pub const SSL_CTRL_SET_ECDH_AUTO: c_int = 94;
 
 pub const SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER: c_long = 2;
 pub const SSL_MODE_AUTO_RETRY: c_long = 4;
@@ -542,6 +543,11 @@ pub unsafe fn SSL_CTX_set_tmp_dh(ctx: *mut SSL_CTX, dh: *mut DH) -> c_long {
 
 pub unsafe fn SSL_CTX_add_extra_chain_cert(ctx: *mut SSL_CTX, x509: *mut X509) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_EXTRA_CHAIN_CERT, 0, x509 as *mut c_void)
+}
+
+#[cfg(feature = "ecdh_auto")]
+pub unsafe fn SSL_CTX_set_ecdh_auto(ctx: *mut SSL_CTX, onoff: c_long) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff, ptr::null_mut())
 }
 
 pub unsafe fn SSL_CTX_set_tlsext_servername_callback(ctx: *mut SSL_CTX,

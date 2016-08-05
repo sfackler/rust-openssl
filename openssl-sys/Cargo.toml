@@ -23,6 +23,7 @@ npn = []
 alpn = []
 rfc5114 = []
 pkcs5_pbkdf2_hmac = []
+ecdh_auto = []
 
 [dependencies]
 libc = "0.2"

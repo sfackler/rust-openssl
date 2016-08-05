@@ -625,7 +625,7 @@ impl SslContext {
     /// This method requires OpenSSL >= 1.0.2 or LibreSSL and the `ecdh_auto` feature.
     #[cfg(feature = "ecdh_auto")]
     pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
-        wrap_ssl_result(unsafe { ::ffi_extras::SSL_CTX_set_ecdh_auto(self.ctx, onoff as c_int) })
+        wrap_ssl_result(unsafe { ffi::SSL_CTX_set_ecdh_auto(self.ctx, onoff as c_long) as c_int })
     }
 
     pub fn set_options(&mut self, option: SslContextOptions) -> SslContextOptions {
