@@ -10,7 +10,7 @@ use std::mem;
 use std::str;
 use std::path::Path;
 use std::ptr;
-use std::sync::{Once, ONCE_INIT, Mutex, Arc};
+use std::sync::{Mutex, Arc};
 use std::cmp;
 use std::any::Any;
 #[cfg(any(feature = "npn", feature = "alpn"))]
@@ -44,8 +44,7 @@ extern "C" {
 /// Manually initialize SSL.
 /// It is optional to call this function and safe to do so more than once.
 pub fn init() {
-    static mut INIT: Once = ONCE_INIT;
-    unsafe { INIT.call_once(|| ffi::init()); }
+    ffi::init();
 }
 
 bitflags! {
