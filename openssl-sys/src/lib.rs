@@ -531,6 +531,10 @@ pub unsafe fn SSL_CTX_get_options(ctx: *mut SSL_CTX) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_OPTIONS, 0, ptr::null_mut())
 }
 
+pub unsafe fn SSL_set_tlsext_host_name(s: *mut SSL, name: *mut c_char) -> c_long {
+    SSL_ctrl(s, SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, name as *mut c_void)
+}
+
 // True functions
 extern "C" {
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;

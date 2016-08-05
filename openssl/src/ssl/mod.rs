@@ -893,7 +893,7 @@ impl Ssl {
     pub fn set_hostname(&self, hostname: &str) -> Result<(), ErrorStack> {
         let cstr = CString::new(hostname).unwrap();
         let ret = unsafe {
-            ffi_extras::SSL_set_tlsext_host_name(self.ssl, cstr.as_ptr() as *const _)
+            ffi::SSL_set_tlsext_host_name(self.ssl, cstr.as_ptr() as *mut _)
         };
 
         // For this case, 0 indicates failure.
