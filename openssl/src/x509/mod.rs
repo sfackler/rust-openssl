@@ -89,17 +89,15 @@ impl X509StoreContext {
         X509ValidationError::from_raw(err)
     }
 
-    pub fn get_current_cert<'a>(&'a self) -> Option<X509<'a>> {
-        let ptr = unsafe { ffi::X509_STORE_CTX_get_current_cert(self.ctx) };
+    pub fn current_cert<'a>(&'a self) -> Option<X509Ref<'a>> {
+        unsafe {
+            let ptr = ffi::X509_STORE_CTX_get_current_cert(self.ctx);
 
-        if ptr.is_null() {
-            None
-        } else {
-            Some(X509 {
-                ctx: Some(self),
-                handle: ptr,
-                owned: false,
-            })
+            if ptr.is_null() {
+                None
+            } else {
+                Some(X509Ref::new(ptr))
+            }
         }
     }
 
@@ -301,7 +299,7 @@ impl X509Generator {
     }
 
     /// Generates a private key and a self-signed certificate and returns them
-    pub fn generate<'a>(&self) -> Result<(X509<'a>, PKey), ErrorStack> {
+    pub fn generate(&self) -> Result<(X509, PKey), ErrorStack> {
         ffi::init();
 
         let mut p_key = PKey::new();
@@ -313,37 +311,31 @@ impl X509Generator {
 
     /// Sets the certificate public-key, then self-sign and return it
     /// Note: That the bit-length of the private key is used (set_bitlength is ignored)
-    pub fn sign<'a>(&self, p_key: &PKey) -> Result<X509<'a>, ErrorStack> {
+    pub fn sign(&self, p_key: &PKey) -> Result<X509, ErrorStack> {
         ffi::init();
 
         unsafe {
-            let x509 = ffi::X509_new();
-            try_ssl_null!(x509);
+            let x509 = try_ssl_null!(ffi::X509_new());
+            let x509 = X509::new(x509);
 
-            let x509 = X509 {
-                handle: x509,
-                ctx: None,
-                owned: true,
-            };
-
-            try_ssl!(ffi::X509_set_version(x509.handle, 2));
-            try_ssl!(ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509.handle),
+            try_ssl!(ffi::X509_set_version(x509.handle(), 2));
+            try_ssl!(ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509.handle()),
                                            X509Generator::random_serial()));
 
             let not_before = try!(Asn1Time::days_from_now(0));
             let not_after = try!(Asn1Time::days_from_now(self.days));
 
-            try_ssl!(ffi::X509_set_notBefore(x509.handle, mem::transmute(not_before.get_handle())));
+            try_ssl!(ffi::X509_set_notBefore(x509.handle(), mem::transmute(not_before.get_handle())));
             // If prev line succeded - ownership should go to cert
             mem::forget(not_before);
 
-            try_ssl!(ffi::X509_set_notAfter(x509.handle, mem::transmute(not_after.get_handle())));
+            try_ssl!(ffi::X509_set_notAfter(x509.handle(), mem::transmute(not_after.get_handle())));
             // If prev line succeded - ownership should go to cert
             mem::forget(not_after);
 
-            try_ssl!(ffi::X509_set_pubkey(x509.handle, p_key.get_handle()));
+            try_ssl!(ffi::X509_set_pubkey(x509.handle(), p_key.get_handle()));
 
-            let name = ffi::X509_get_subject_name(x509.handle);
+            let name = ffi::X509_get_subject_name(x509.handle());
             try_ssl_null!(name);
 
             let default = [("CN", "rust-openssl")];
@@ -358,16 +350,16 @@ impl X509Generator {
             for (key, val) in iter {
                 try!(X509Generator::add_name_internal(name, &key, &val));
             }
-            ffi::X509_set_issuer_name(x509.handle, name);
+            ffi::X509_set_issuer_name(x509.handle(), name);
 
             for (exttype, ext) in self.extensions.iter() {
-                try!(X509Generator::add_extension_internal(x509.handle,
+                try!(X509Generator::add_extension_internal(x509.handle(),
                                                            &exttype,
                                                            &ext.to_string()));
             }
 
             let hash_fn = self.hash_type.evp_md();
-            try_ssl!(ffi::X509_sign(x509.handle, p_key.get_handle(), hash_fn));
+            try_ssl!(ffi::X509_sign(x509.handle(), p_key.get_handle(), hash_fn));
             Ok(x509)
         }
     }
@@ -380,10 +372,10 @@ impl X509Generator {
         };
 
         unsafe {
-            let req = ffi::X509_to_X509_REQ(cert.handle, ptr::null_mut(), ptr::null());
+            let req = ffi::X509_to_X509_REQ(cert.handle(), ptr::null_mut(), ptr::null());
             try_ssl_null!(req);
 
-            let exts = ffi_extras::X509_get_extensions(cert.handle);
+            let exts = ffi_extras::X509_get_extensions(cert.handle());
             if exts != ptr::null_mut() {
                 try_ssl!(ffi::X509_REQ_add_extensions(req, exts));
             }
@@ -396,63 +388,28 @@ impl X509Generator {
     }
 }
 
+/// A borrowed public key certificate.
+pub struct X509Ref<'a>(*mut ffi::X509, PhantomData<&'a ()>);
 
-#[allow(dead_code)]
-/// A public key certificate
-pub struct X509<'ctx> {
-    ctx: Option<&'ctx X509StoreContext>,
-    handle: *mut ffi::X509,
-    owned: bool,
-}
-
-impl<'ctx> X509<'ctx> {
-    /// Creates new from handle with desired ownership.
-    pub unsafe fn new(handle: *mut ffi::X509, owned: bool) -> X509<'ctx> {
-        X509 {
-            ctx: None,
-            handle: handle,
-            owned: owned,
-        }
+impl<'a> X509Ref<'a> {
+    /// Creates a new `X509` wrapping the provided handle.
+    pub unsafe fn new(handle: *mut ffi::X509) -> X509Ref<'a> {
+        X509Ref(handle, PhantomData)
     }
 
-    /// Creates a new certificate from context. Doesn't take ownership
-    /// of handle.
-    pub unsafe fn new_in_ctx(handle: *mut ffi::X509, ctx: &'ctx X509StoreContext) -> X509<'ctx> {
-        X509 {
-            ctx: Some(ctx),
-            handle: handle,
-            owned: false,
-        }
+    pub fn handle(&self) -> *mut ffi::X509 {
+        self.0
     }
 
-    /// Reads certificate from PEM, takes ownership of handle
-    pub fn from_pem(buf: &[u8]) -> Result<X509<'ctx>, ErrorStack> {
-        let mem_bio = try!(MemBioSlice::new(buf));
-        unsafe {
-            let handle = try_ssl_null!(ffi::PEM_read_bio_X509(mem_bio.get_handle(),
-                                                              ptr::null_mut(),
-                                                              None,
-                                                              ptr::null_mut()));
-            Ok(X509::new(handle, true))
-        }
-    }
-
-    pub fn get_handle(&self) -> *mut ffi::X509 {
-        self.handle
-    }
-
-    pub fn subject_name<'a>(&'a self) -> X509Name<'a> {
-        let name = unsafe { ffi::X509_get_subject_name(self.handle) };
-        X509Name {
-            x509: self,
-            name: name,
-        }
+    pub fn subject_name<'b>(&'b self) -> X509Name<'b> {
+        let name = unsafe { ffi::X509_get_subject_name(self.0) };
+        X509Name(name, PhantomData)
     }
 
     /// Returns this certificate's SAN entries, if they exist.
-    pub fn subject_alt_names<'a>(&'a self) -> Option<GeneralNames<'a>> {
+    pub fn subject_alt_names<'b>(&'b self) -> Option<GeneralNames<'b>> {
         unsafe {
-            let stack = ffi::X509_get_ext_d2i(self.handle,
+            let stack = ffi::X509_get_ext_d2i(self.0,
                                               Nid::SubjectAltName as c_int,
                                               ptr::null_mut(),
                                               ptr::null_mut());
@@ -468,7 +425,7 @@ impl<'ctx> X509<'ctx> {
     }
 
     pub fn public_key(&self) -> PKey {
-        let pkey = unsafe { ffi::X509_get_pubkey(self.handle) };
+        let pkey = unsafe { ffi::X509_get_pubkey(self.0) };
         assert!(!pkey.is_null());
 
         PKey::from_handle(pkey, Parts::Public)
@@ -481,7 +438,7 @@ impl<'ctx> X509<'ctx> {
         let v: Vec<u8> = repeat(0).take(len as usize).collect();
         let act_len: c_uint = 0;
         let res = unsafe {
-            ffi::X509_digest(self.handle,
+            ffi::X509_digest(self.0,
                              evp,
                              mem::transmute(v.as_ptr()),
                              mem::transmute(&act_len))
@@ -504,7 +461,7 @@ impl<'ctx> X509<'ctx> {
     pub fn write_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
-            try_ssl!(ffi::PEM_write_bio_X509(mem_bio.get_handle(), self.handle));
+            try_ssl!(ffi::PEM_write_bio_X509(mem_bio.get_handle(), self.0));
         }
         Ok(mem_bio.get_buf().to_owned())
     }
@@ -513,9 +470,39 @@ impl<'ctx> X509<'ctx> {
     pub fn save_der(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
-            ffi::i2d_X509_bio(mem_bio.get_handle(), self.handle);
+            ffi::i2d_X509_bio(mem_bio.get_handle(), self.0);
         }
         Ok(mem_bio.get_buf().to_owned())
+    }
+}
+
+/// An owned public key certificate.
+pub struct X509(X509Ref<'static>);
+
+impl X509 {
+    /// Returns a new `X509`, taking ownership of the handle.
+    pub unsafe fn new(x509: *mut ffi::X509) -> X509 {
+        X509(X509Ref::new(x509))
+    }
+
+    /// Reads a certificate from PEM.
+    pub fn from_pem(buf: &[u8]) -> Result<X509, ErrorStack> {
+        let mem_bio = try!(MemBioSlice::new(buf));
+        unsafe {
+            let handle = try_ssl_null!(ffi::PEM_read_bio_X509(mem_bio.get_handle(),
+                                                              ptr::null_mut(),
+                                                              None,
+                                                              ptr::null_mut()));
+            Ok(X509::new(handle))
+        }
+    }
+}
+
+impl Deref for X509 {
+    type Target = X509Ref<'static>;
+
+    fn deref(&self) -> &X509Ref<'static> {
+        &self.0
     }
 }
 
@@ -523,47 +510,32 @@ extern "C" {
     fn rust_X509_clone(x509: *mut ffi::X509);
 }
 
-impl<'ctx> Clone for X509<'ctx> {
-    fn clone(&self) -> X509<'ctx> {
+impl Clone for X509 {
+    fn clone(&self) -> X509 {
         unsafe {
-            rust_X509_clone(self.handle);
-            // FIXME: given that we now have refcounting control, 'owned' should be uneeded, the 'ctx
-            // is probably also uneeded. We can remove both to condense the x509 api quite a bit
-            //
-            X509::new(self.handle, true)
+            rust_X509_clone(self.handle());
+            X509::new(self.handle())
         }
     }
 }
 
-impl<'ctx> Drop for X509<'ctx> {
+impl Drop for X509 {
     fn drop(&mut self) {
-        if self.owned {
-            unsafe { ffi::X509_free(self.handle) };
-        }
+        unsafe { ffi::X509_free(self.handle()) };
     }
 }
 
-#[allow(dead_code)]
-pub struct X509Name<'x> {
-    x509: &'x X509<'x>,
-    name: *mut ffi::X509_NAME,
-}
-
-#[allow(dead_code)]
-pub struct X509NameEntry<'x> {
-    x509_name: &'x X509Name<'x>,
-    ne: *mut ffi::X509_NAME_ENTRY,
-}
+pub struct X509Name<'x>(*mut ffi::X509_NAME, PhantomData<&'x ()>);
 
 impl<'x> X509Name<'x> {
     pub fn text_by_nid(&self, nid: Nid) -> Option<SslString> {
         unsafe {
-            let loc = ffi::X509_NAME_get_index_by_NID(self.name, nid as c_int, -1);
+            let loc = ffi::X509_NAME_get_index_by_NID(self.0, nid as c_int, -1);
             if loc == -1 {
                 return None;
             }
 
-            let ne = ffi::X509_NAME_get_entry(self.name, loc);
+            let ne = ffi::X509_NAME_get_entry(self.0, loc);
             if ne.is_null() {
                 return None;
             }

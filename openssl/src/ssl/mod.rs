@@ -21,7 +21,7 @@ use std::marker::PhantomData;
 
 use ffi;
 use dh::DH;
-use x509::{X509StoreContext, X509FileType, X509};
+use x509::{X509StoreContext, X509FileType, X509, X509Ref};
 use crypto::pkey::PKey;
 use error::ErrorStack;
 
@@ -577,15 +577,15 @@ impl SslContext {
     }
 
     /// Specifies the certificate
-    pub fn set_certificate(&mut self, cert: &X509) -> Result<(), ErrorStack> {
-        wrap_ssl_result(unsafe { ffi::SSL_CTX_use_certificate(self.ctx, cert.get_handle()) })
+    pub fn set_certificate(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
+        wrap_ssl_result(unsafe { ffi::SSL_CTX_use_certificate(self.ctx, cert.handle()) })
     }
 
     /// Adds a certificate to the certificate chain presented together with the
     /// certificate specified using set_certificate()
-    pub fn add_extra_chain_cert(&mut self, cert: &X509) -> Result<(), ErrorStack> {
+    pub fn add_extra_chain_cert(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
         wrap_ssl_result(unsafe {
-            ffi::SSL_CTX_add_extra_chain_cert(self.ctx, cert.get_handle()) as c_int
+            ffi::SSL_CTX_add_extra_chain_cert(self.ctx, cert.handle()) as c_int
         })
     }
 
@@ -910,7 +910,7 @@ impl Ssl {
             if ptr.is_null() {
                 None
             } else {
-                Some(X509::new(ptr, true))
+                Some(X509::new(ptr))
             }
         }
     }

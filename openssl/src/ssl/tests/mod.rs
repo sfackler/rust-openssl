@@ -300,7 +300,7 @@ run_test!(verify_trusted_callback_override_bad, |method, stream| {
 run_test!(verify_callback_load_certs, |method, stream| {
     let mut ctx = SslContext::new(method).unwrap();
     ctx.set_verify_callback(SSL_VERIFY_PEER, |_, x509_ctx| {
-        assert!(x509_ctx.get_current_cert().is_some());
+        assert!(x509_ctx.current_cert().is_some());
         true
     });
 
@@ -341,7 +341,7 @@ run_test!(verify_callback_data, |method, stream| {
     let node_hash_str = "E19427DAC79FBE758394945276A6E4F15F0BEBE6";
     let node_id = node_hash_str.from_hex().unwrap();
     ctx.set_verify_callback(SSL_VERIFY_PEER, move |_preverify_ok, x509_ctx| {
-        let cert = x509_ctx.get_current_cert();
+        let cert = x509_ctx.current_cert();
         match cert {
             None => false,
             Some(cert) => {
@@ -371,7 +371,7 @@ run_test!(ssl_verify_callback, |method, stream| {
     let node_id = node_hash_str.from_hex().unwrap();
     ssl.set_verify_callback(SSL_VERIFY_PEER, move |_, x509| {
         CHECKED.store(1, Ordering::SeqCst);
-        match x509.get_current_cert() {
+        match x509.current_cert() {
             None => false,
             Some(cert) => {
                 let fingerprint = cert.fingerprint(SHA1).unwrap();
