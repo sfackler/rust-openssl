@@ -33,7 +33,7 @@ impl Asn1Time {
     }
 
     /// Returns raw handle
-    pub unsafe fn get_handle(&self) -> *mut ffi::ASN1_TIME {
+    pub unsafe fn handle(&self) -> *mut ffi::ASN1_TIME {
         return self.handle;
     }
 }

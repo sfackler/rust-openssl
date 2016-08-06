@@ -19,7 +19,7 @@ impl DH {
     pub fn from_pem(buf: &[u8]) -> Result<DH, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
         let dh = unsafe {
-            ffi::PEM_read_bio_DHparams(mem_bio.get_handle(), ptr::null_mut(), None, ptr::null_mut())
+            ffi::PEM_read_bio_DHparams(mem_bio.handle(), ptr::null_mut(), None, ptr::null_mut())
         };
         try_ssl_null!(dh);
         Ok(DH(dh))

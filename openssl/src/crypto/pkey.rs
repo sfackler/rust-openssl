@@ -77,7 +77,7 @@ impl PKey {
     pub fn private_key_from_pem(buf: &[u8]) -> Result<PKey, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.get_handle(),
+            let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.handle(),
                                                                  ptr::null_mut(),
                                                                  None,
                                                                  ptr::null_mut()));
@@ -100,7 +100,7 @@ impl PKey {
         let mut cb = CallbackState::new(pass_cb);
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.get_handle(),
+            let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.handle(),
                                                                  ptr::null_mut(),
                                                                  Some(invoke_passwd_cb::<F>),
                                                                  &mut cb as *mut _ as *mut c_void));
@@ -116,7 +116,7 @@ impl PKey {
     pub fn public_key_from_pem(buf: &[u8]) -> Result<PKey, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let evp = try_ssl_null!(ffi::PEM_read_bio_PUBKEY(mem_bio.get_handle(),
+            let evp = try_ssl_null!(ffi::PEM_read_bio_PUBKEY(mem_bio.handle(),
                                                              ptr::null_mut(),
                                                              None,
                                                              ptr::null_mut()));
@@ -266,7 +266,7 @@ impl PKey {
     pub fn write_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
-            try_ssl!(ffi::PEM_write_bio_PrivateKey(mem_bio.get_handle(),
+            try_ssl!(ffi::PEM_write_bio_PrivateKey(mem_bio.handle(),
                                                    self.evp,
                                                    ptr::null(),
                                                    ptr::null_mut(),
@@ -281,7 +281,7 @@ impl PKey {
     /// Stores public key as a PEM
     pub fn write_pub_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
-        unsafe { try_ssl!(ffi::PEM_write_bio_PUBKEY(mem_bio.get_handle(), self.evp)) }
+        unsafe { try_ssl!(ffi::PEM_write_bio_PUBKEY(mem_bio.handle(), self.evp)) }
         Ok(mem_bio.get_buf().to_owned())
     }
 

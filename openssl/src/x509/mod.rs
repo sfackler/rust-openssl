@@ -325,11 +325,11 @@ impl X509Generator {
             let not_before = try!(Asn1Time::days_from_now(0));
             let not_after = try!(Asn1Time::days_from_now(self.days));
 
-            try_ssl!(ffi::X509_set_notBefore(x509.handle(), mem::transmute(not_before.get_handle())));
+            try_ssl!(ffi::X509_set_notBefore(x509.handle(), mem::transmute(not_before.handle())));
             // If prev line succeded - ownership should go to cert
             mem::forget(not_before);
 
-            try_ssl!(ffi::X509_set_notAfter(x509.handle(), mem::transmute(not_after.get_handle())));
+            try_ssl!(ffi::X509_set_notAfter(x509.handle(), mem::transmute(not_after.handle())));
             // If prev line succeded - ownership should go to cert
             mem::forget(not_after);
 
@@ -463,7 +463,7 @@ impl<'a> X509Ref<'a> {
     pub fn write_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
-            try_ssl!(ffi::PEM_write_bio_X509(mem_bio.get_handle(), self.0));
+            try_ssl!(ffi::PEM_write_bio_X509(mem_bio.handle(), self.0));
         }
         Ok(mem_bio.get_buf().to_owned())
     }
@@ -472,7 +472,7 @@ impl<'a> X509Ref<'a> {
     pub fn save_der(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
-            ffi::i2d_X509_bio(mem_bio.get_handle(), self.0);
+            ffi::i2d_X509_bio(mem_bio.handle(), self.0);
         }
         Ok(mem_bio.get_buf().to_owned())
     }
@@ -491,7 +491,7 @@ impl X509 {
     pub fn from_pem(buf: &[u8]) -> Result<X509, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let handle = try_ssl_null!(ffi::PEM_read_bio_X509(mem_bio.get_handle(),
+            let handle = try_ssl_null!(ffi::PEM_read_bio_X509(mem_bio.handle(),
                                                               ptr::null_mut(),
                                                               None,
                                                               ptr::null_mut()));
@@ -572,7 +572,7 @@ impl X509Req {
         X509Req { handle: handle }
     }
 
-    pub fn get_handle(&self) -> *mut ffi::X509_REQ {
+    pub fn handle(&self) -> *mut ffi::X509_REQ {
         self.handle
     }
 
@@ -580,7 +580,7 @@ impl X509Req {
     pub fn from_pem(buf: &[u8]) -> Result<X509Req, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let handle = try_ssl_null!(ffi::PEM_read_bio_X509_REQ(mem_bio.get_handle(),
+            let handle = try_ssl_null!(ffi::PEM_read_bio_X509_REQ(mem_bio.handle(),
                                                                   ptr::null_mut(),
                                                                   None,
                                                                   ptr::null_mut()));
@@ -591,7 +591,7 @@ impl X509Req {
     /// Writes CSR as PEM
     pub fn write_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
-        if unsafe { ffi::PEM_write_bio_X509_REQ(mem_bio.get_handle(), self.handle) } != 1 {
+        if unsafe { ffi::PEM_write_bio_X509_REQ(mem_bio.handle(), self.handle) } != 1 {
             return Err(ErrorStack::get());
         }
         Ok(mem_bio.get_buf().to_owned())
@@ -601,7 +601,7 @@ impl X509Req {
     pub fn save_der(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
-            ffi::i2d_X509_REQ_bio(mem_bio.get_handle(), self.handle);
+            ffi::i2d_X509_REQ_bio(mem_bio.handle(), self.handle);
         }
         Ok(mem_bio.get_buf().to_owned())
     }
