@@ -604,7 +604,7 @@ impl SslContext {
 
     /// Specifies the private key
     pub fn set_private_key(&mut self, key: &PKey) -> Result<(), ErrorStack> {
-        wrap_ssl_result(unsafe { ffi::SSL_CTX_use_PrivateKey(self.ctx, key.get_handle()) })
+        wrap_ssl_result(unsafe { ffi::SSL_CTX_use_PrivateKey(self.ctx, key.handle()) })
     }
 
     /// Check consistency of private key and certificate

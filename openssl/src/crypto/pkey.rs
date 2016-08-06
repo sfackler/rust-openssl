@@ -63,7 +63,7 @@ impl PKey {
         }
     }
 
-    pub fn from_handle(handle: *mut ffi::EVP_PKEY, parts: Parts) -> PKey {
+    pub unsafe fn from_handle(handle: *mut ffi::EVP_PKEY, parts: Parts) -> PKey {
         ffi::init();
         assert!(!handle.is_null());
 
@@ -587,7 +587,7 @@ impl PKey {
         }
     }
 
-    pub unsafe fn get_handle(&self) -> *mut ffi::EVP_PKEY {
+    pub fn handle(&self) -> *mut ffi::EVP_PKEY {
         return self.evp;
     }
 
@@ -606,7 +606,8 @@ impl Drop for PKey {
 
 impl Clone for PKey {
     fn clone(&self) -> Self {
-        let mut pkey = PKey::from_handle(unsafe { ffi::EVP_PKEY_new() }, self.parts);
+        let mut pkey = unsafe { PKey::from_handle(ffi::EVP_PKEY_new(), self.parts) };
+
         // copy by encoding to DER and back
         match self.parts {
             Parts::Public => {

@@ -333,7 +333,7 @@ impl X509Generator {
             // If prev line succeded - ownership should go to cert
             mem::forget(not_after);
 
-            try_ssl!(ffi::X509_set_pubkey(x509.handle(), p_key.get_handle()));
+            try_ssl!(ffi::X509_set_pubkey(x509.handle(), p_key.handle()));
 
             let name = ffi::X509_get_subject_name(x509.handle());
             try_ssl_null!(name);
@@ -359,7 +359,7 @@ impl X509Generator {
             }
 
             let hash_fn = self.hash_type.evp_md();
-            try_ssl!(ffi::X509_sign(x509.handle(), p_key.get_handle(), hash_fn));
+            try_ssl!(ffi::X509_sign(x509.handle(), p_key.handle(), hash_fn));
             Ok(x509)
         }
     }
@@ -381,7 +381,7 @@ impl X509Generator {
             }
 
             let hash_fn = self.hash_type.evp_md();
-            try_ssl!(ffi::X509_REQ_sign(req, p_key.get_handle(), hash_fn));
+            try_ssl!(ffi::X509_REQ_sign(req, p_key.handle(), hash_fn));
 
             Ok(X509Req::new(req))
         }
@@ -425,10 +425,12 @@ impl<'a> X509Ref<'a> {
     }
 
     pub fn public_key(&self) -> PKey {
-        let pkey = unsafe { ffi::X509_get_pubkey(self.0) };
-        assert!(!pkey.is_null());
+        unsafe {
+            let pkey = ffi::X509_get_pubkey(self.0);
+            assert!(!pkey.is_null());
 
-        PKey::from_handle(pkey, Parts::Public)
+            PKey::from_handle(pkey, Parts::Public)
+        }
     }
 
     /// Returns certificate fingerprint calculated using provided hash
