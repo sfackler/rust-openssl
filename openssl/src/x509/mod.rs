@@ -407,7 +407,7 @@ pub struct X509<'ctx> {
 
 impl<'ctx> X509<'ctx> {
     /// Creates new from handle with desired ownership.
-    pub fn new(handle: *mut ffi::X509, owned: bool) -> X509<'ctx> {
+    pub unsafe fn new(handle: *mut ffi::X509, owned: bool) -> X509<'ctx> {
         X509 {
             ctx: None,
             handle: handle,
@@ -417,7 +417,7 @@ impl<'ctx> X509<'ctx> {
 
     /// Creates a new certificate from context. Doesn't take ownership
     /// of handle.
-    pub fn new_in_ctx(handle: *mut ffi::X509, ctx: &'ctx X509StoreContext) -> X509<'ctx> {
+    pub unsafe fn new_in_ctx(handle: *mut ffi::X509, ctx: &'ctx X509StoreContext) -> X509<'ctx> {
         X509 {
             ctx: Some(ctx),
             handle: handle,
@@ -525,11 +525,13 @@ extern "C" {
 
 impl<'ctx> Clone for X509<'ctx> {
     fn clone(&self) -> X509<'ctx> {
-        unsafe { rust_X509_clone(self.handle) }
-        // FIXME: given that we now have refcounting control, 'owned' should be uneeded, the 'ctx
-        // is probably also uneeded. We can remove both to condense the x509 api quite a bit
-        //
-        X509::new(self.handle, true)
+        unsafe {
+            rust_X509_clone(self.handle);
+            // FIXME: given that we now have refcounting control, 'owned' should be uneeded, the 'ctx
+            // is probably also uneeded. We can remove both to condense the x509 api quite a bit
+            //
+            X509::new(self.handle, true)
+        }
     }
 }
 
