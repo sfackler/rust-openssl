@@ -108,42 +108,46 @@ pub enum SslMethod {
 }
 
 impl SslMethod {
-    unsafe fn to_raw(&self) -> *const ffi::SSL_METHOD {
-        match *self {
-            #[cfg(feature = "sslv2")]
-            SslMethod::Sslv2 => ffi::SSLv2_method(),
-            #[cfg(feature = "sslv3")]
-            SslMethod::Sslv3 => ffi::SSLv3_method(),
-            SslMethod::Tlsv1 => ffi::TLSv1_method(),
-            SslMethod::Sslv23 => ffi::SSLv23_method(),
-            #[cfg(feature = "tlsv1_1")]
-            SslMethod::Tlsv1_1 => ffi::TLSv1_1_method(),
-            #[cfg(feature = "tlsv1_2")]
-            SslMethod::Tlsv1_2 => ffi::TLSv1_2_method(),
-            #[cfg(feature = "dtlsv1")]
-            SslMethod::Dtlsv1 => ffi::DTLSv1_method(),
-            #[cfg(feature = "dtlsv1_2")]
-            SslMethod::Dtlsv1_2 => ffi::DTLSv1_2_method(),
+    fn to_raw(&self) -> *const ffi::SSL_METHOD {
+        unsafe {
+            match *self {
+                #[cfg(feature = "sslv2")]
+                SslMethod::Sslv2 => ffi::SSLv2_method(),
+                #[cfg(feature = "sslv3")]
+                SslMethod::Sslv3 => ffi::SSLv3_method(),
+                SslMethod::Tlsv1 => ffi::TLSv1_method(),
+                SslMethod::Sslv23 => ffi::SSLv23_method(),
+                #[cfg(feature = "tlsv1_1")]
+                SslMethod::Tlsv1_1 => ffi::TLSv1_1_method(),
+                #[cfg(feature = "tlsv1_2")]
+                SslMethod::Tlsv1_2 => ffi::TLSv1_2_method(),
+                #[cfg(feature = "dtlsv1")]
+                SslMethod::Dtlsv1 => ffi::DTLSv1_method(),
+                #[cfg(feature = "dtlsv1_2")]
+                SslMethod::Dtlsv1_2 => ffi::DTLSv1_2_method(),
+            }
         }
     }
 
-    unsafe fn from_raw(method: *const ffi::SSL_METHOD) -> Option<SslMethod> {
-        match method {
-            #[cfg(feature = "sslv2")]
-            x if x == ffi::SSLv2_method() => Some(SslMethod::Sslv2),
-            #[cfg(feature = "sslv3")]
-            x if x == ffi::SSLv3_method() => Some(SslMethod::Sslv3),
-            x if x == ffi::TLSv1_method() => Some(SslMethod::Tlsv1),
-            x if x == ffi::SSLv23_method() => Some(SslMethod::Sslv23),
-            #[cfg(feature = "tlsv1_1")]
-            x if x == ffi::TLSv1_1_method() => Some(SslMethod::Tlsv1_1),
-            #[cfg(feature = "tlsv1_2")]
-            x if x == ffi::TLSv1_2_method() => Some(SslMethod::Tlsv1_2),
-            #[cfg(feature = "dtlsv1")]
-            x if x == ffi::DTLSv1_method() => Some(SslMethod::Dtlsv1),
-            #[cfg(feature = "dtlsv1_2")]
-            x if x == ffi::DTLSv1_2_method() => Some(SslMethod::Dtlsv1_2),
-            _ => None,
+    fn from_raw(method: *const ffi::SSL_METHOD) -> Option<SslMethod> {
+        unsafe {
+            match method {
+                #[cfg(feature = "sslv2")]
+                x if x == ffi::SSLv2_method() => Some(SslMethod::Sslv2),
+                #[cfg(feature = "sslv3")]
+                x if x == ffi::SSLv3_method() => Some(SslMethod::Sslv3),
+                x if x == ffi::TLSv1_method() => Some(SslMethod::Tlsv1),
+                x if x == ffi::SSLv23_method() => Some(SslMethod::Sslv23),
+                #[cfg(feature = "tlsv1_1")]
+                x if x == ffi::TLSv1_1_method() => Some(SslMethod::Tlsv1_1),
+                #[cfg(feature = "tlsv1_2")]
+                x if x == ffi::TLSv1_2_method() => Some(SslMethod::Tlsv1_2),
+                #[cfg(feature = "dtlsv1")]
+                x if x == ffi::DTLSv1_method() => Some(SslMethod::Dtlsv1),
+                #[cfg(feature = "dtlsv1_2")]
+                x if x == ffi::DTLSv1_2_method() => Some(SslMethod::Dtlsv1_2),
+                _ => None,
+            }
         }
     }
 }
