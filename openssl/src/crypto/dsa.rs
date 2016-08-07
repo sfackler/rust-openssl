@@ -4,7 +4,7 @@ use error::ErrorStack;
 use std::ptr;
 use libc::{c_uint, c_int, c_char, c_void};
 
-use bn::BigNum;
+use bn::BigNumRef;
 use bio::{MemBio, MemBioSlice};
 use crypto::hash;
 use crypto::HashTypeInternals;
@@ -189,25 +189,27 @@ impl DSA {
         self.0
     }
 
-    // The following getters are unsafe, since BigNum::new_from_ffi fails upon null pointers
-    pub fn p(&self) -> Result<BigNum, ErrorStack> {
-        unsafe { BigNum::new_from_ffi((*self.0).p) }
+    pub fn p<'a>(&'a self) -> BigNumRef<'a> {
+        assert!(self.has_p());
+        unsafe { BigNumRef::from_handle((*self.0).p) }
     }
 
     pub fn has_p(&self) -> bool {
         unsafe { !(*self.0).p.is_null() }
     }
 
-    pub fn q(&self) -> Result<BigNum, ErrorStack> {
-        unsafe { BigNum::new_from_ffi((*self.0).q) }
+    pub fn q<'a>(&'a self) -> BigNumRef<'a> {
+        assert!(self.has_q());
+        unsafe { BigNumRef::from_handle((*self.0).q) }
     }
 
     pub fn has_q(&self) -> bool {
         unsafe { !(*self.0).q.is_null() }
     }
 
-    pub fn g(&self) -> Result<BigNum, ErrorStack> {
-        unsafe { BigNum::new_from_ffi((*self.0).g) }
+    pub fn g<'a>(&'a self) -> BigNumRef<'a> {
+        assert!(self.has_g());
+        unsafe { BigNumRef::from_handle((*self.0).g) }
     }
 
     pub fn has_g(&self) -> bool {

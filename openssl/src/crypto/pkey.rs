@@ -799,7 +799,7 @@ mod tests {
         let sig = k0.sign(&msg);
 
         let r0 = k0.get_rsa();
-        let r1 = RSA::from_public_components(r0.n().expect("n"), r0.e().expect("e")).expect("r1");
+        let r1 = RSA::from_public_components(r0.n().to_owned().unwrap(), r0.e().to_owned().unwrap()).expect("r1");
         k1.set_rsa(&r1);
 
         assert!(k1.can(super::Role::Encrypt));
@@ -847,12 +847,13 @@ mod tests {
     fn test_pkey_clone_creates_copy() {
         let mut pkey = super::PKey::new();
         pkey.gen(512);
-        let old_pkey_n = pkey.get_rsa().n().unwrap();
+        let rsa = pkey.get_rsa();
+        let old_pkey_n = rsa.n();
 
         let mut pkey2 = pkey.clone();
         pkey2.gen(512);
 
-        assert!(old_pkey_n == pkey.get_rsa().n().unwrap());
+        assert!(old_pkey_n == rsa.n());
     }
 
     #[test]
@@ -862,7 +863,7 @@ mod tests {
 
         let pkey2 = pkey.clone();
 
-        assert!(pkey.get_rsa().q().unwrap() == pkey2.get_rsa().q().unwrap());
+        assert!(pkey.get_rsa().q() == pkey2.get_rsa().q());
     }
 
     #[test]
@@ -874,6 +875,6 @@ mod tests {
 
         let pub_key2 = pub_key.clone();
 
-        assert!(pub_key.get_rsa().n().unwrap() == pub_key2.get_rsa().n().unwrap());
+        assert!(pub_key.get_rsa().n() == pub_key2.get_rsa().n());
     }
 }

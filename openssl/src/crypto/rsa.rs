@@ -3,7 +3,7 @@ use std::fmt;
 use std::ptr;
 use libc::{c_int, c_void, c_char};
 
-use bn::BigNum;
+use bn::{BigNum, BigNumRef};
 use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
 use crypto::HashTypeInternals;
@@ -171,43 +171,49 @@ impl RSA {
         self.0
     }
 
-    // The following getters are unsafe, since BigNum::new_from_ffi fails upon null pointers
-    pub fn n(&self) -> Result<BigNum, ErrorStack> {
-        unsafe {
-            BigNum::new_from_ffi((*self.0).n)
-        }
+    pub fn n<'a>(&'a self) -> BigNumRef<'a> {
+        assert!(self.has_n());
+        unsafe { BigNumRef::from_handle((*self.0).n) }
     }
 
     pub fn has_n(&self) -> bool {
         unsafe { !(*self.0).n.is_null() }
     }
 
-    pub fn d(&self) -> Result<BigNum, ErrorStack> {
-        unsafe {
-            BigNum::new_from_ffi((*self.0).d)
-        }
+    pub fn d<'a>(&self) -> BigNumRef<'a> {
+        assert!(self.has_d());
+        unsafe { BigNumRef::from_handle((*self.0).d) }
     }
 
-    pub fn e(&self) -> Result<BigNum, ErrorStack> {
-        unsafe {
-            BigNum::new_from_ffi((*self.0).e)
-        }
+    pub fn has_d(&self) -> bool {
+        unsafe { !(*self.0).d.is_null() }
+    }
+
+    pub fn e<'a>(&'a self) -> BigNumRef<'a> {
+        assert!(self.has_e());
+        unsafe { BigNumRef::from_handle((*self.0).e) }
     }
 
     pub fn has_e(&self) -> bool {
         unsafe { !(*self.0).e.is_null() }
     }
 
-    pub fn p(&self) -> Result<BigNum, ErrorStack> {
-        unsafe {
-            BigNum::new_from_ffi((*self.0).p)
-        }
+    pub fn p<'a>(&'a self) -> BigNumRef<'a> {
+        assert!(self.has_p());
+        unsafe { BigNumRef::from_handle((*self.0).p) }
     }
 
-    pub fn q(&self) -> Result<BigNum, ErrorStack> {
-        unsafe {
-            BigNum::new_from_ffi((*self.0).q)
-        }
+    pub fn has_p(&self) -> bool {
+        unsafe { !(*self.0).p.is_null() }
+    }
+
+    pub fn q<'a>(&'a self) -> BigNumRef<'a> {
+        assert!(self.has_q());
+        unsafe { BigNumRef::from_handle((*self.0).q) }
+    }
+
+    pub fn has_q(&self) -> bool {
+        unsafe { !(*self.0).q.is_null() }
     }
 }
 

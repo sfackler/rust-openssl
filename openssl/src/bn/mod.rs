@@ -2,16 +2,11 @@ use libc::{c_int, c_ulong, c_void};
 use std::ffi::{CStr, CString};
 use std::cmp::Ordering;
 use std::{fmt, ptr, mem};
+use std::marker::PhantomData;
+use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub, Deref, DerefMut};
 
 use ffi;
 use error::ErrorStack;
-
-/// A signed arbitrary-precision integer.
-///
-/// `BigNum` provides wrappers around OpenSSL's checked arithmetic functions. Additionally, it
-/// implements the standard operators (`std::ops`), which perform unchecked arithmetic, unwrapping
-/// the returned `Result` of the checked operations.
-pub struct BigNum(*mut ffi::BIGNUM);
 
 /// Specifies the desired properties of a randomly generated `BigNum`.
 #[derive(Copy, Clone)]
@@ -79,68 +74,14 @@ macro_rules! with_bn_in_ctx(
     });
 );
 
-impl BigNum {
-    /// Creates a new `BigNum` with the value 0.
-    pub fn new() -> Result<BigNum, ErrorStack> {
-        unsafe {
-            ffi::init();
+/// A borrowed, signed, arbitrary-precision integer.
+#[derive(Copy, Clone)]
+pub struct BigNumRef<'a>(*mut ffi::BIGNUM, PhantomData<&'a ()>);
 
-            let v = try_ssl_null!(ffi::BN_new());
-            Ok(BigNum(v))
-        }
-    }
 
-    /// Creates a new `BigNum` with the given value.
-    pub fn new_from(n: u64) -> Result<BigNum, ErrorStack> {
-        BigNum::new().and_then(|v| unsafe {
-            try_ssl!(ffi::BN_set_word(v.raw(), n as c_ulong));
-            Ok(v)
-        })
-    }
-
-    /// Creates a `BigNum` from a decimal string.
-    pub fn from_dec_str(s: &str) -> Result<BigNum, ErrorStack> {
-        BigNum::new().and_then(|v| unsafe {
-            let c_str = CString::new(s.as_bytes()).unwrap();
-            try_ssl!(ffi::BN_dec2bn(v.raw_ptr(), c_str.as_ptr() as *const _));
-            Ok(v)
-        })
-    }
-
-    /// Creates a `BigNum` from a hexadecimal string.
-    pub fn from_hex_str(s: &str) -> Result<BigNum, ErrorStack> {
-        BigNum::new().and_then(|v| unsafe {
-            let c_str = CString::new(s.as_bytes()).unwrap();
-            try_ssl!(ffi::BN_hex2bn(v.raw_ptr(), c_str.as_ptr() as *const _));
-            Ok(v)
-        })
-    }
-
-    pub unsafe fn new_from_ffi(orig: *mut ffi::BIGNUM) -> Result<BigNum, ErrorStack> {
-        if orig.is_null() {
-            panic!("Null Pointer was supplied to BigNum::new_from_ffi");
-        }
-        let r = ffi::BN_dup(orig);
-        if r.is_null() {
-            Err(ErrorStack::get())
-        } else {
-            Ok(BigNum(r))
-        }
-    }
-
-    /// Creates a new `BigNum` from an unsigned, big-endian encoded number of arbitrary length.
-    ///
-    /// ```
-    /// # use openssl::bn::BigNum;
-    /// let bignum = BigNum::new_from_slice(&[0x12, 0x00, 0x34]).unwrap();
-    ///
-    /// assert_eq!(bignum, BigNum::new_from(0x120034).unwrap());
-    /// ```
-    pub fn new_from_slice(n: &[u8]) -> Result<BigNum, ErrorStack> {
-        BigNum::new().and_then(|v| unsafe {
-            try_ssl_null!(ffi::BN_bin2bn(n.as_ptr(), n.len() as c_int, v.raw()));
-            Ok(v)
-        })
+impl<'a> BigNumRef<'a> {
+    pub unsafe fn from_handle(handle: *mut ffi::BIGNUM) -> BigNumRef<'a> {
+        BigNumRef(handle, PhantomData)
     }
 
     /// Returns the square of `self`.
@@ -162,7 +103,7 @@ impl BigNum {
     }
 
     /// Returns the unsigned remainder of the division `self / n`.
-    pub fn checked_nnmod(&self, n: &BigNum) -> Result<BigNum, ErrorStack> {
+    pub fn checked_nnmod(&self, n: &BigNumRef) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_nnmod(r.raw(), self.raw(), n.raw(), ctx) == 1
@@ -181,7 +122,7 @@ impl BigNum {
     ///
     /// assert_eq!(s.checked_mod_add(a, n).unwrap(), result);
     /// ```
-    pub fn checked_mod_add(&self, a: &BigNum, n: &BigNum) -> Result<BigNum, ErrorStack> {
+    pub fn checked_mod_add(&self, a: &BigNumRef, n: &BigNumRef) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_mod_add(r.raw(), self.raw(), a.raw(), n.raw(), ctx) == 1
@@ -190,7 +131,7 @@ impl BigNum {
     }
 
     /// Equivalent to `(self - a) mod n`.
-    pub fn checked_mod_sub(&self, a: &BigNum, n: &BigNum) -> Result<BigNum, ErrorStack> {
+    pub fn checked_mod_sub(&self, a: &BigNumRef, n: &BigNumRef) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_mod_sub(r.raw(), self.raw(), a.raw(), n.raw(), ctx) == 1
@@ -199,7 +140,7 @@ impl BigNum {
     }
 
     /// Equivalent to `(self * a) mod n`.
-    pub fn checked_mod_mul(&self, a: &BigNum, n: &BigNum) -> Result<BigNum, ErrorStack> {
+    pub fn checked_mod_mul(&self, a: &BigNumRef, n: &BigNumRef) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_mod_mul(r.raw(), self.raw(), a.raw(), n.raw(), ctx) == 1
@@ -208,7 +149,7 @@ impl BigNum {
     }
 
     /// Equivalent to `self² mod n`.
-    pub fn checked_mod_sqr(&self, n: &BigNum) -> Result<BigNum, ErrorStack> {
+    pub fn checked_mod_sqr(&self, n: &BigNumRef) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_mod_sqr(r.raw(), self.raw(), n.raw(), ctx) == 1
@@ -217,7 +158,7 @@ impl BigNum {
     }
 
     /// Raises `self` to the `p`th power.
-    pub fn checked_exp(&self, p: &BigNum) -> Result<BigNum, ErrorStack> {
+    pub fn checked_exp(&self, p: &BigNumRef) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_exp(r.raw(), self.raw(), p.raw(), ctx) == 1
@@ -226,7 +167,7 @@ impl BigNum {
     }
 
     /// Equivalent to `self.checked_exp(p) mod n`.
-    pub fn checked_mod_exp(&self, p: &BigNum, n: &BigNum) -> Result<BigNum, ErrorStack> {
+    pub fn checked_mod_exp(&self, p: &BigNumRef, n: &BigNumRef) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_mod_exp(r.raw(), self.raw(), p.raw(), n.raw(), ctx) == 1
@@ -236,7 +177,7 @@ impl BigNum {
 
     /// Calculates the modular multiplicative inverse of `self` modulo `n`, that is, an integer `r`
     /// such that `(self * r) % n == 1`.
-    pub fn checked_mod_inv(&self, n: &BigNum) -> Result<BigNum, ErrorStack> {
+    pub fn checked_mod_inv(&self, n: &BigNumRef) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 !ffi::BN_mod_inverse(r.raw(), self.raw(), n.raw(), ctx).is_null()
@@ -298,38 +239,10 @@ impl BigNum {
     }
 
     /// Computes the greatest common denominator of `self` and `a`.
-    pub fn checked_gcd(&self, a: &BigNum) -> Result<BigNum, ErrorStack> {
+    pub fn checked_gcd(&self, a: &BigNumRef) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_gcd(r.raw(), self.raw(), a.raw(), ctx) == 1
-            })
-        }
-    }
-
-    /// Generates a prime number.
-    ///
-    /// # Parameters
-    ///
-    /// * `bits`: The length of the prime in bits (lower bound).
-    /// * `safe`: If true, returns a "safe" prime `p` so that `(p-1)/2` is also prime.
-    /// * `add`/`rem`: If `add` is set to `Some(add)`, `p % add == rem` will hold, where `p` is the
-    ///   generated prime and `rem` is `1` if not specified (`None`).
-    pub fn checked_generate_prime(bits: i32,
-                                  safe: bool,
-                                  add: Option<&BigNum>,
-                                  rem: Option<&BigNum>)
-                                  -> Result<BigNum, ErrorStack> {
-        unsafe {
-            with_bn_in_ctx!(r, ctx, {
-                let add_arg = add.map(|a| a.raw()).unwrap_or(ptr::null_mut());
-                let rem_arg = rem.map(|r| r.raw()).unwrap_or(ptr::null_mut());
-
-                ffi::BN_generate_prime_ex(r.raw(),
-                                          bits as c_int,
-                                          safe as c_int,
-                                          add_arg,
-                                          rem_arg,
-                                          ptr::null()) == 1
             })
         }
     }
@@ -366,33 +279,6 @@ impl BigNum {
                                                 ctx,
                                                 do_trial_division as c_int,
                                                 ptr::null()) == 1)
-            })
-        }
-    }
-
-    /// Generates a cryptographically strong pseudo-random `BigNum`.
-    ///
-    /// # Parameters
-    ///
-    /// * `bits`: Length of the number in bits.
-    /// * `prop`: The desired properties of the number.
-    /// * `odd`: If `true`, the generated number will be odd.
-    pub fn checked_new_random(bits: i32, prop: RNGProperty, odd: bool) -> Result<BigNum, ErrorStack> {
-        unsafe {
-            with_bn_in_ctx!(r, ctx, {
-                ffi::BN_rand(r.raw(), bits as c_int, prop as c_int, odd as c_int) == 1
-            })
-        }
-    }
-
-    /// The cryptographically weak counterpart to `checked_new_random`.
-    pub fn checked_new_pseudo_random(bits: i32,
-                                     prop: RNGProperty,
-                                     odd: bool)
-                                     -> Result<BigNum, ErrorStack> {
-        unsafe {
-            with_bn_in_ctx!(r, ctx, {
-                ffi::BN_pseudo_rand(r.raw(), bits as c_int, prop as c_int, odd as c_int) == 1
             })
         }
     }
@@ -495,7 +381,7 @@ impl BigNum {
         }
     }
 
-    pub fn checked_add(&self, a: &BigNum) -> Result<BigNum, ErrorStack> {
+    pub fn checked_add(&self, a: &BigNumRef) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn!(r, {
                 ffi::BN_add(r.raw(), self.raw(), a.raw()) == 1
@@ -503,7 +389,7 @@ impl BigNum {
         }
     }
 
-    pub fn checked_sub(&self, a: &BigNum) -> Result<BigNum, ErrorStack> {
+    pub fn checked_sub(&self, a: &BigNumRef) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn!(r, {
                 ffi::BN_sub(r.raw(), self.raw(), a.raw()) == 1
@@ -511,7 +397,7 @@ impl BigNum {
         }
     }
 
-    pub fn checked_mul(&self, a: &BigNum) -> Result<BigNum, ErrorStack> {
+    pub fn checked_mul(&self, a: &BigNumRef) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_mul(r.raw(), self.raw(), a.raw(), ctx) == 1
@@ -519,7 +405,7 @@ impl BigNum {
         }
     }
 
-    pub fn checked_div(&self, a: &BigNum) -> Result<BigNum, ErrorStack> {
+    pub fn checked_div(&self, a: &BigNumRef) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_div(r.raw(), ptr::null_mut(), self.raw(), a.raw(), ctx) == 1
@@ -527,7 +413,7 @@ impl BigNum {
         }
     }
 
-    pub fn checked_mod(&self, a: &BigNum) -> Result<BigNum, ErrorStack> {
+    pub fn checked_mod(&self, a: &BigNumRef) -> Result<BigNum, ErrorStack> {
         unsafe {
             with_bn_in_ctx!(r, ctx, {
                 ffi::BN_div(ptr::null_mut(), r.raw(), self.raw(), a.raw(), ctx) == 1
@@ -548,6 +434,13 @@ impl BigNum {
             with_bn!(r, {
                 ffi::BN_rshift(r.raw(), self.raw(), *a as c_int) == 1
             })
+        }
+    }
+
+    pub fn to_owned(&self) -> Result<BigNum, ErrorStack> {
+        unsafe {
+            let r = try_ssl_null!(ffi::BN_dup(self.raw()));
+            Ok(BigNum::from_handle(r))
         }
     }
 
@@ -574,9 +467,9 @@ impl BigNum {
     /// let s = -BigNum::new_from(8).unwrap();
     /// let o = BigNum::new_from(8).unwrap();
     ///
-    /// assert_eq!(s.abs_cmp(o), Ordering::Equal);
+    /// assert_eq!(s.abs_cmp(&o), Ordering::Equal);
     /// ```
-    pub fn abs_cmp(&self, oth: BigNum) -> Ordering {
+    pub fn abs_cmp(&self, oth: &BigNumRef) -> Ordering {
         unsafe {
             let res = ffi::BN_ucmp(self.raw(), oth.raw()) as i32;
             if res < 0 {
@@ -603,19 +496,12 @@ impl BigNum {
         (self.num_bits() + 7) / 8
     }
 
-    pub unsafe fn raw(&self) -> *mut ffi::BIGNUM {
-        let BigNum(n) = *self;
-        n
+    pub fn raw(&self) -> *mut ffi::BIGNUM {
+        self.0
     }
 
-    pub unsafe fn raw_ptr(&self) -> *const *mut ffi::BIGNUM {
-        let BigNum(ref n) = *self;
-        n
-    }
-
-    pub fn into_raw(self) -> *mut ffi::BIGNUM {
-        let mut me = self;
-        mem::replace(&mut me.0, ptr::null_mut())
+    pub fn raw_ptr(&self) -> *const *mut ffi::BIGNUM {
+        &self.0
     }
 
     /// Returns a big-endian byte vector representation of the absolute value of `self`.
@@ -679,134 +565,438 @@ impl BigNum {
     }
 }
 
+/// An owned, signed, arbitrary-precision integer.
+///
+/// `BigNum` provides wrappers around OpenSSL's checked arithmetic functions.
+/// Additionally, it implements the standard operators (`std::ops`), which
+/// perform unchecked arithmetic, unwrapping the returned `Result` of the
+/// checked operations.
+pub struct BigNum(BigNumRef<'static>);
+
+impl BigNum {
+    /// Creates a new `BigNum` with the value 0.
+    pub fn new() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            let v = try_ssl_null!(ffi::BN_new());
+            Ok(BigNum::from_handle(v))
+        }
+    }
+
+    /// Creates a new `BigNum` with the given value.
+    pub fn new_from(n: u64) -> Result<BigNum, ErrorStack> {
+        BigNum::new().and_then(|v| unsafe {
+            try_ssl!(ffi::BN_set_word(v.raw(), n as c_ulong));
+            Ok(v)
+        })
+    }
+
+    /// Creates a `BigNum` from a decimal string.
+    pub fn from_dec_str(s: &str) -> Result<BigNum, ErrorStack> {
+        BigNum::new().and_then(|v| unsafe {
+            let c_str = CString::new(s.as_bytes()).unwrap();
+            try_ssl!(ffi::BN_dec2bn(v.raw_ptr(), c_str.as_ptr() as *const _));
+            Ok(v)
+        })
+    }
+
+    /// Creates a `BigNum` from a hexadecimal string.
+    pub fn from_hex_str(s: &str) -> Result<BigNum, ErrorStack> {
+        BigNum::new().and_then(|v| unsafe {
+            let c_str = CString::new(s.as_bytes()).unwrap();
+            try_ssl!(ffi::BN_hex2bn(v.raw_ptr(), c_str.as_ptr() as *const _));
+            Ok(v)
+        })
+    }
+
+    pub unsafe fn from_handle(handle: *mut ffi::BIGNUM) -> BigNum {
+        BigNum(BigNumRef::from_handle(handle))
+    }
+
+    /// Creates a new `BigNum` from an unsigned, big-endian encoded number of arbitrary length.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let bignum = BigNum::new_from_slice(&[0x12, 0x00, 0x34]).unwrap();
+    ///
+    /// assert_eq!(bignum, BigNum::new_from(0x120034).unwrap());
+    /// ```
+    pub fn new_from_slice(n: &[u8]) -> Result<BigNum, ErrorStack> {
+        BigNum::new().and_then(|v| unsafe {
+            try_ssl_null!(ffi::BN_bin2bn(n.as_ptr(), n.len() as c_int, v.raw()));
+            Ok(v)
+        })
+    }
+    /// Generates a prime number.
+    ///
+    /// # Parameters
+    ///
+    /// * `bits`: The length of the prime in bits (lower bound).
+    /// * `safe`: If true, returns a "safe" prime `p` so that `(p-1)/2` is also prime.
+    /// * `add`/`rem`: If `add` is set to `Some(add)`, `p % add == rem` will hold, where `p` is the
+    ///   generated prime and `rem` is `1` if not specified (`None`).
+    pub fn checked_generate_prime(bits: i32,
+                                  safe: bool,
+                                  add: Option<&BigNum>,
+                                  rem: Option<&BigNum>)
+                                  -> Result<BigNum, ErrorStack> {
+        unsafe {
+            with_bn_in_ctx!(r, ctx, {
+                let add_arg = add.map(|a| a.raw()).unwrap_or(ptr::null_mut());
+                let rem_arg = rem.map(|r| r.raw()).unwrap_or(ptr::null_mut());
+
+                ffi::BN_generate_prime_ex(r.raw(),
+                                          bits as c_int,
+                                          safe as c_int,
+                                          add_arg,
+                                          rem_arg,
+                                          ptr::null()) == 1
+            })
+        }
+    }
+
+    /// Generates a cryptographically strong pseudo-random `BigNum`.
+    ///
+    /// # Parameters
+    ///
+    /// * `bits`: Length of the number in bits.
+    /// * `prop`: The desired properties of the number.
+    /// * `odd`: If `true`, the generated number will be odd.
+    pub fn checked_new_random(bits: i32, prop: RNGProperty, odd: bool) -> Result<BigNum, ErrorStack> {
+        unsafe {
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_rand(r.raw(), bits as c_int, prop as c_int, odd as c_int) == 1
+            })
+        }
+    }
+
+    /// The cryptographically weak counterpart to `checked_new_random`.
+    pub fn checked_new_pseudo_random(bits: i32,
+                                     prop: RNGProperty,
+                                     odd: bool)
+                                     -> Result<BigNum, ErrorStack> {
+        unsafe {
+            with_bn_in_ctx!(r, ctx, {
+                ffi::BN_pseudo_rand(r.raw(), bits as c_int, prop as c_int, odd as c_int) == 1
+            })
+        }
+    }
+
+    pub fn into_raw(self) -> *mut ffi::BIGNUM {
+        let ptr = self.raw();
+        mem::forget(self);
+        ptr
+    }
+}
+
+impl Drop for BigNum {
+    fn drop(&mut self) {
+        unsafe { ffi::BN_clear_free(self.raw()); }
+    }
+}
+
+impl Deref for BigNum {
+    type Target = BigNumRef<'static>;
+
+    fn deref(&self) -> &BigNumRef<'static> {
+        &self.0
+    }
+}
+
+impl DerefMut for BigNum {
+    fn deref_mut(&mut self) -> &mut BigNumRef<'static> {
+        &mut self.0
+    }
+}
+
+impl AsRef<BigNumRef<'static>> for BigNum {
+    fn as_ref(&self) -> &BigNumRef<'static> {
+        self.deref()
+    }
+}
+
+impl<'a> fmt::Debug for BigNumRef<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_dec_str())
+    }
+}
+
 impl fmt::Debug for BigNum {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.to_dec_str())
     }
 }
 
-impl Eq for BigNum {}
-impl PartialEq for BigNum {
-    fn eq(&self, oth: &BigNum) -> bool {
+impl<'a> fmt::Display for BigNumRef<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_dec_str())
+    }
+}
+
+impl fmt::Display for BigNum {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_dec_str())
+    }
+}
+
+impl<'a, 'b> PartialEq<BigNumRef<'b>> for BigNumRef<'a> {
+    fn eq(&self, oth: &BigNumRef) -> bool {
         unsafe { ffi::BN_cmp(self.raw(), oth.raw()) == 0 }
     }
 }
 
-impl Ord for BigNum {
-    fn cmp(&self, oth: &BigNum) -> Ordering {
-        self.partial_cmp(oth).unwrap()
+impl<'a> PartialEq<BigNum> for BigNumRef<'a> {
+    fn eq(&self, oth: &BigNum) -> bool {
+        self.eq(oth.deref())
+    }
+}
+
+impl<'a> Eq for BigNumRef<'a> {}
+
+impl PartialEq for BigNum {
+    fn eq(&self, oth: &BigNum) -> bool {
+        self.deref().eq(oth)
+    }
+}
+
+impl<'a> PartialEq<BigNumRef<'a>> for BigNum {
+    fn eq(&self, oth: &BigNumRef) -> bool {
+        self.deref().eq(oth)
+    }
+}
+
+impl Eq for BigNum {}
+
+impl<'a, 'b> PartialOrd<BigNumRef<'b>> for BigNumRef<'a> {
+    fn partial_cmp(&self, oth: &BigNumRef) -> Option<Ordering> {
+        Some(self.cmp(oth))
+    }
+}
+
+impl<'a> PartialOrd<BigNum> for BigNumRef<'a> {
+    fn partial_cmp(&self, oth: &BigNum) -> Option<Ordering> {
+        Some(self.cmp(oth.deref()))
+    }
+}
+
+impl<'a> Ord for BigNumRef<'a> {
+    fn cmp(&self, oth: &BigNumRef) -> Ordering {
+        unsafe { ffi::BN_cmp(self.raw(), oth.raw()).cmp(&0) }
     }
 }
 
 impl PartialOrd for BigNum {
     fn partial_cmp(&self, oth: &BigNum) -> Option<Ordering> {
-        unsafe {
-            let v = ffi::BN_cmp(self.raw(), oth.raw());
-            let ret = if v == 0 {
-                Ordering::Equal
-            } else if v < 0 {
-                Ordering::Less
-            } else {
-                Ordering::Greater
-            };
-            Some(ret)
-        }
+        self.deref().partial_cmp(oth.deref())
     }
 }
 
-impl Drop for BigNum {
-    fn drop(&mut self) {
-        unsafe {
-            if !self.raw().is_null() {
-                ffi::BN_clear_free(self.raw());
-            }
-        }
+impl<'a> PartialOrd<BigNumRef<'a>> for BigNum {
+    fn partial_cmp(&self, oth: &BigNumRef) -> Option<Ordering> {
+        self.deref().partial_cmp(oth)
     }
 }
 
-#[doc(hidden)]      // This module only contains impls, so it's empty when generating docs
-pub mod unchecked {
-    use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub};
-    use ffi;
-    use super::BigNum;
-
-    impl<'a, 'b> Add<&'b BigNum> for &'a BigNum {
-        type Output = BigNum;
-
-        fn add(self, oth: &'b BigNum) -> BigNum {
-            self.checked_add(oth).unwrap()
-        }
+impl Ord for BigNum {
+    fn cmp(&self, oth: &BigNum) -> Ordering {
+        self.deref().cmp(oth.deref())
     }
+}
 
-    impl<'a, 'b> Sub<&'b BigNum> for &'a BigNum {
-        type Output = BigNum;
+impl<'a, 'b> Add<&'b BigNumRef<'b>> for &'a BigNumRef<'a> {
+    type Output = BigNum;
 
-        fn sub(self, oth: &'b BigNum) -> BigNum {
-            self.checked_sub(oth).unwrap()
-        }
+    fn add(self, oth: &BigNumRef) -> BigNum {
+        self.checked_add(oth).unwrap()
     }
+}
 
-    impl<'a, 'b> Mul<&'b BigNum> for &'a BigNum {
-        type Output = BigNum;
+impl<'a, 'b> Sub<&'b BigNumRef<'b>> for &'a BigNumRef<'a> {
+    type Output = BigNum;
 
-        fn mul(self, oth: &'b BigNum) -> BigNum {
-            self.checked_mul(oth).unwrap()
-        }
+    fn sub(self, oth: &BigNumRef) -> BigNum {
+        self.checked_sub(oth).unwrap()
     }
+}
 
-    impl<'a, 'b> Div<&'b BigNum> for &'a BigNum {
-        type Output = BigNum;
+impl<'a, 'b> Sub<&'b BigNum> for &'a BigNumRef<'a> {
+    type Output = BigNum;
 
-        fn div(self, oth: &'b BigNum) -> BigNum {
-            self.checked_div(oth).unwrap()
-        }
+    fn sub(self, oth: &BigNum) -> BigNum {
+        self.checked_sub(oth).unwrap()
     }
+}
 
-    impl<'a, 'b> Rem<&'b BigNum> for &'a BigNum {
-        type Output = BigNum;
+impl<'a, 'b> Sub<&'b BigNum> for &'a BigNum {
+    type Output = BigNum;
 
-        fn rem(self, oth: &'b BigNum) -> BigNum {
-            self.checked_mod(oth).unwrap()
-        }
+    fn sub(self, oth: &BigNum) -> BigNum {
+        self.checked_sub(oth).unwrap()
     }
+}
 
-    impl<'a> Shl<i32> for &'a BigNum {
-        type Output = BigNum;
+impl<'a, 'b> Sub<&'b BigNumRef<'b>> for &'a BigNum {
+    type Output = BigNum;
 
-        fn shl(self, n: i32) -> BigNum {
-            self.checked_shl(&n).unwrap()
-        }
+    fn sub(self, oth: &BigNumRef) -> BigNum {
+        self.checked_sub(oth).unwrap()
     }
+}
 
-    impl<'a> Shr<i32> for &'a BigNum {
-        type Output = BigNum;
+impl<'a, 'b> Mul<&'b BigNumRef<'b>> for &'a BigNumRef<'a> {
+    type Output = BigNum;
 
-        fn shr(self, n: i32) -> BigNum {
-            self.checked_shr(&n).unwrap()
-        }
+    fn mul(self, oth: &BigNumRef) -> BigNum {
+        self.checked_mul(oth).unwrap()
     }
+}
 
-    impl Clone for BigNum {
-        fn clone(&self) -> BigNum {
-            unsafe {
-                let r = ffi::BN_dup(self.raw());
-                if r.is_null() {
-                    panic!("Unexpected null pointer from BN_dup(..)")
-                } else {
-                    BigNum(r)
-                }
-            }
-        }
+impl<'a, 'b> Mul<&'b BigNum> for &'a BigNumRef<'a> {
+    type Output = BigNum;
+
+    fn mul(self, oth: &BigNum) -> BigNum {
+        self.checked_mul(oth).unwrap()
     }
+}
 
-    impl Neg for BigNum {
-        type Output = BigNum;
+impl<'a, 'b> Mul<&'b BigNum> for &'a BigNum {
+    type Output = BigNum;
 
-        fn neg(self) -> BigNum {
-            let mut n = self.clone();
-            n.negate();
-            n
-        }
+    fn mul(self, oth: &BigNum) -> BigNum {
+        self.checked_mul(oth).unwrap()
+    }
+}
+
+impl<'a, 'b> Mul<&'b BigNumRef<'b>> for &'a BigNum {
+    type Output = BigNum;
+
+    fn mul(self, oth: &BigNumRef) -> BigNum {
+        self.checked_mul(oth).unwrap()
+    }
+}
+
+impl<'a, 'b> Div<&'b BigNumRef<'b>> for &'a BigNumRef<'a> {
+    type Output = BigNum;
+
+    fn div(self, oth: &'b BigNumRef<'b>) -> BigNum {
+        self.checked_div(oth).unwrap()
+    }
+}
+
+impl<'a, 'b> Div<&'b BigNum> for &'a BigNumRef<'a> {
+    type Output = BigNum;
+
+    fn div(self, oth: &'b BigNum) -> BigNum {
+        self.checked_div(oth).unwrap()
+    }
+}
+
+impl<'a, 'b> Div<&'b BigNum> for &'a BigNum {
+    type Output = BigNum;
+
+    fn div(self, oth: &'b BigNum) -> BigNum {
+        self.checked_div(oth).unwrap()
+    }
+}
+
+impl<'a, 'b> Div<&'b BigNumRef<'b>> for &'a BigNum {
+    type Output = BigNum;
+
+    fn div(self, oth: &'b BigNumRef<'b>) -> BigNum {
+        self.checked_div(oth).unwrap()
+    }
+}
+
+impl<'a, 'b> Rem<&'b BigNumRef<'b>> for &'a BigNumRef<'a> {
+    type Output = BigNum;
+
+    fn rem(self, oth: &'b BigNumRef<'b>) -> BigNum {
+        self.checked_mod(oth).unwrap()
+    }
+}
+
+impl<'a, 'b> Rem<&'b BigNum> for &'a BigNumRef<'a> {
+    type Output = BigNum;
+
+    fn rem(self, oth: &'b BigNum) -> BigNum {
+        self.checked_mod(oth).unwrap()
+    }
+}
+
+impl<'a, 'b> Rem<&'b BigNumRef<'b>> for &'a BigNum {
+    type Output = BigNum;
+
+    fn rem(self, oth: &'b BigNumRef<'b>) -> BigNum {
+        self.checked_mod(oth).unwrap()
+    }
+}
+
+impl<'a, 'b> Rem<&'b BigNum> for &'a BigNum {
+    type Output = BigNum;
+
+    fn rem(self, oth: &'b BigNum) -> BigNum {
+        self.checked_mod(oth).unwrap()
+    }
+}
+
+impl<'a> Shl<i32> for &'a BigNumRef<'a> {
+    type Output = BigNum;
+
+    fn shl(self, n: i32) -> BigNum {
+        self.checked_shl(&n).unwrap()
+    }
+}
+
+impl<'a> Shl<i32> for &'a BigNum {
+    type Output = BigNum;
+
+    fn shl(self, n: i32) -> BigNum {
+        self.checked_shl(&n).unwrap()
+    }
+}
+
+impl<'a> Shr<i32> for &'a BigNumRef<'a> {
+    type Output = BigNum;
+
+    fn shr(self, n: i32) -> BigNum {
+        self.checked_shr(&n).unwrap()
+    }
+}
+
+impl<'a> Shr<i32> for &'a BigNum {
+    type Output = BigNum;
+
+    fn shr(self, n: i32) -> BigNum {
+        self.checked_shr(&n).unwrap()
+    }
+}
+
+impl<'a> Neg for &'a BigNumRef<'a> {
+    type Output = BigNum;
+
+    fn neg(self) -> BigNum {
+        let mut n = self.to_owned().unwrap();
+        n.negate();
+        n
+    }
+}
+
+impl<'a> Neg for &'a BigNum {
+    type Output = BigNum;
+
+    fn neg(self) -> BigNum {
+        let mut n = self.deref().to_owned().unwrap();
+        n.negate();
+        n
+    }
+}
+
+impl Neg for BigNum {
+    type Output = BigNum;
+
+    fn neg(mut self) -> BigNum {
+        self.negate();
+        self
     }
 }
 
