@@ -1,7 +1,5 @@
-use libc::{c_char, c_int, c_long, c_ulong, c_uint, c_void};
-use std::cmp::Ordering;
+use libc::{c_char, c_int, c_long, c_ulong, c_void};
 use std::ffi::CString;
-use std::iter::repeat;
 use std::mem;
 use std::ptr;
 use std::ops::Deref;
@@ -11,6 +9,7 @@ use std::slice;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
+use HashTypeInternals;
 use asn1::Asn1Time;
 use bio::{MemBio, MemBioSlice};
 use crypto::hash;
@@ -434,28 +433,14 @@ impl<'a> X509Ref<'a> {
     }
 
     /// Returns certificate fingerprint calculated using provided hash
-    pub fn fingerprint(&self, hash_type: hash::Type) -> Option<Vec<u8>> {
-        let evp = hash_type.evp_md();
-        let len = hash_type.md_len();
-        let v: Vec<u8> = repeat(0).take(len as usize).collect();
-        let act_len: c_uint = 0;
-        let res = unsafe {
-            ffi::X509_digest(self.0,
-                             evp,
-                             mem::transmute(v.as_ptr()),
-                             mem::transmute(&act_len))
-        };
-
-        match res {
-            0 => None,
-            _ => {
-                let act_len = act_len as usize;
-                match len.cmp(&act_len) {
-                    Ordering::Greater => None,
-                    Ordering::Equal => Some(v),
-                    Ordering::Less => panic!("Fingerprint buffer was corrupted!"),
-                }
-            }
+    pub fn fingerprint(&self, hash_type: hash::Type) -> Result<Vec<u8>, ErrorStack> {
+        unsafe {
+            let evp = hash_type.evp_md();
+            let mut len = ffi::EVP_MAX_MD_SIZE;
+            let mut buf = vec![0u8; len as usize];
+            try_ssl!(ffi::X509_digest(self.0, evp, buf.as_mut_ptr() as *mut _, &mut len));
+            buf.truncate(len as usize);
+            Ok(buf)
         }
     }
 

@@ -282,6 +282,8 @@ pub const BIO_FLAGS_SHOULD_RETRY: c_int = 0x08;
 
 pub const CRYPTO_LOCK: c_int = 1;
 
+pub const EVP_MAX_MD_SIZE: c_uint = 64;
+
 pub const MBSTRING_ASC:  c_int = MBSTRING_FLAG | 1;
 pub const MBSTRING_BMP:  c_int = MBSTRING_FLAG | 2;
 pub const MBSTRING_FLAG: c_int = 0x1000;

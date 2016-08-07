@@ -1,10 +1,12 @@
 use libc::c_uint;
-use std::iter::repeat;
 use std::io::prelude::*;
 use std::io;
+use std::ptr;
+use std::cmp;
 use ffi;
 
-use crypto::HashTypeInternals;
+use HashTypeInternals;
+use error::ErrorStack;
 use nid::Nid;
 
 /// Message digest (hash) type.
@@ -31,26 +33,8 @@ impl HashTypeInternals for Type {
             Type::RIPEMD160 => Nid::RIPEMD160,
         }
     }
-}
 
-impl Type {
-    /// Returns the length of the message digest.
-    #[inline]
-    pub fn md_len(&self) -> usize {
-        match *self {
-            Type::MD5 => 16,
-            Type::SHA1 => 20,
-            Type::SHA224 => 28,
-            Type::SHA256 => 32,
-            Type::SHA384 => 48,
-            Type::SHA512 => 64,
-            Type::RIPEMD160 => 20,
-        }
-    }
-
-    /// Internal interface subject to removal.
-    #[inline]
-    pub fn evp_md(&self) -> *const ffi::EVP_MD {
+    fn evp_md(&self) -> *const ffi::EVP_MD {
         unsafe {
             match *self {
                 Type::MD5 => ffi::EVP_md5(),
@@ -84,21 +68,20 @@ use self::State::*;
 /// use openssl::crypto::hash::{hash, Type};
 /// let data = b"\x42\xF4\x97\xE0";
 /// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
-/// let res = hash(Type::MD5, data);
+/// let res = hash(Type::MD5, data).unwrap();
 /// assert_eq!(res, spec);
 /// ```
 ///
 /// Use the `Write` trait to supply the input in chunks.
 ///
 /// ```
-/// use std::io::prelude::*;
 /// use openssl::crypto::hash::{Hasher, Type};
 /// let data = [b"\x42\xF4", b"\x97\xE0"];
 /// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
-/// let mut h = Hasher::new(Type::MD5);
-/// h.write_all(data[0]);
-/// h.write_all(data[1]);
-/// let res = h.finish();
+/// let mut h = Hasher::new(Type::MD5).unwrap();
+/// h.update(data[0]).unwrap();
+/// h.update(data[1]).unwrap();
+/// let res = h.finish().unwrap();
 /// assert_eq!(res, spec);
 /// ```
 ///
@@ -116,14 +99,10 @@ pub struct Hasher {
 
 impl Hasher {
     /// Creates a new `Hasher` with the specified hash type.
-    pub fn new(ty: Type) -> Hasher {
+    pub fn new(ty: Type) -> Result<Hasher, ErrorStack> {
         ffi::init();
 
-        let ctx = unsafe {
-            let r = ffi::EVP_MD_CTX_create();
-            assert!(!r.is_null());
-            r
-        };
+        let ctx = unsafe { try_ssl_null!(ffi::EVP_MD_CTX_create()) };
         let md = ty.evp_md();
 
         let mut h = Hasher {
@@ -132,67 +111,60 @@ impl Hasher {
             type_: ty,
             state: Finalized,
         };
-        h.init();
-        h
+        try!(h.init());
+        Ok(h)
     }
 
-    #[inline]
-    fn init(&mut self) {
+    fn init(&mut self) -> Result<(), ErrorStack> {
         match self.state {
-            Reset => return,
+            Reset => return Ok(()),
             Updated => {
-                self.finalize();
+                try!(self.finish());
             }
             Finalized => (),
         }
-        unsafe {
-            let r = ffi::EVP_DigestInit_ex(self.ctx, self.md, 0 as *const _);
-            assert_eq!(r, 1);
-        }
+        unsafe { try_ssl!(ffi::EVP_DigestInit_ex(self.ctx, self.md, 0 as *const _)); }
         self.state = Reset;
+        Ok(())
     }
 
-    #[inline]
-    fn update(&mut self, data: &[u8]) {
+    /// Feeds data into the hasher.
+    pub fn update(&mut self, mut data: &[u8]) -> Result<(), ErrorStack> {
         if self.state == Finalized {
-            self.init();
+            try!(self.init());
         }
-        unsafe {
-            let r = ffi::EVP_DigestUpdate(self.ctx, data.as_ptr(), data.len() as c_uint);
-            assert_eq!(r, 1);
+        while !data.is_empty() {
+            let len = cmp::min(data.len(), c_uint::max_value() as usize);
+            unsafe {
+                try_ssl!(ffi::EVP_DigestUpdate(self.ctx, data.as_ptr(), len as c_uint));
+            }
+            data = &data[len..];
         }
         self.state = Updated;
-    }
-
-    #[inline]
-    fn finalize(&mut self) -> Vec<u8> {
-        if self.state == Finalized {
-            self.init();
-        }
-        let md_len = self.type_.md_len();
-        let mut res: Vec<u8> = repeat(0).take(md_len).collect();
-        unsafe {
-            let mut len = 0;
-            let r = ffi::EVP_DigestFinal_ex(self.ctx, res.as_mut_ptr(), &mut len);
-            self.state = Finalized;
-            assert_eq!(len as usize, md_len);
-            assert_eq!(r, 1);
-        }
-        res
+        Ok(())
     }
 
     /// Returns the hash of the data written since creation or
     /// the last `finish` and resets the hasher.
-    #[inline]
-    pub fn finish(&mut self) -> Vec<u8> {
-        self.finalize()
+    pub fn finish(&mut self) -> Result<Vec<u8>, ErrorStack> {
+        if self.state == Finalized {
+            try!(self.init());
+        }
+        unsafe {
+            let mut len = ffi::EVP_MAX_MD_SIZE;
+            let mut res = vec![0; len as usize];
+            try_ssl!(ffi::EVP_DigestFinal_ex(self.ctx, res.as_mut_ptr(), &mut len));
+            res.truncate(len as usize);
+            self.state = Finalized;
+            Ok(res)
+        }
     }
 }
 
 impl Write for Hasher {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.update(buf);
+        try!(self.update(buf));
         Ok(buf.len())
     }
 
@@ -223,9 +195,7 @@ impl Drop for Hasher {
     fn drop(&mut self) {
         unsafe {
             if self.state != Finalized {
-                let mut buf: Vec<u8> = repeat(0).take(self.type_.md_len()).collect();
-                let mut len = 0;
-                ffi::EVP_DigestFinal_ex(self.ctx, buf.as_mut_ptr(), &mut len);
+                drop(self.finish());
             }
             ffi::EVP_MD_CTX_destroy(self.ctx);
         }
@@ -233,9 +203,9 @@ impl Drop for Hasher {
 }
 
 /// Computes the hash of the `data` with the hash `t`.
-pub fn hash(t: Type, data: &[u8]) -> Vec<u8> {
-    let mut h = Hasher::new(t);
-    let _ = h.write_all(data);
+pub fn hash(t: Type, data: &[u8]) -> Result<Vec<u8>, ErrorStack> {
+    let mut h = try!(Hasher::new(t));
+    try!(h.update(data));
     h.finish()
 }
 
@@ -246,13 +216,13 @@ mod tests {
     use std::io::prelude::*;
 
     fn hash_test(hashtype: Type, hashtest: &(&str, &str)) {
-        let res = hash(hashtype, &*hashtest.0.from_hex().unwrap());
+        let res = hash(hashtype, &*hashtest.0.from_hex().unwrap()).unwrap();
         assert_eq!(res.to_hex(), hashtest.1);
     }
 
     fn hash_recycle_test(h: &mut Hasher, hashtest: &(&str, &str)) {
-        let _ = h.write_all(&*hashtest.0.from_hex().unwrap());
-        let res = h.finish();
+        let _ = h.write_all(&*hashtest.0.from_hex().unwrap()).unwrap();
+        let res = h.finish().unwrap();
         assert_eq!(res.to_hex(), hashtest.1);
     }
 
@@ -294,7 +264,7 @@ mod tests {
 
     #[test]
     fn test_md5_recycle() {
-        let mut h = Hasher::new(Type::MD5);
+        let mut h = Hasher::new(Type::MD5).unwrap();
         for test in md5_tests.iter() {
             hash_recycle_test(&mut h, test);
         }
@@ -302,11 +272,11 @@ mod tests {
 
     #[test]
     fn test_finish_twice() {
-        let mut h = Hasher::new(Type::MD5);
-        let _ = h.write_all(&*md5_tests[6].0.from_hex().unwrap());
-        let _ = h.finish();
-        let res = h.finish();
-        let null = hash(Type::MD5, &[]);
+        let mut h = Hasher::new(Type::MD5).unwrap();
+        h.write_all(&*md5_tests[6].0.from_hex().unwrap()).unwrap();
+        h.finish().unwrap();
+        let res = h.finish().unwrap();
+        let null = hash(Type::MD5, &[]).unwrap();
         assert_eq!(res, null);
     }
 
@@ -316,26 +286,26 @@ mod tests {
         let inp = md5_tests[i].0.from_hex().unwrap();
         assert!(inp.len() > 2);
         let p = inp.len() / 2;
-        let h0 = Hasher::new(Type::MD5);
+        let h0 = Hasher::new(Type::MD5).unwrap();
 
         println!("Clone a new hasher");
         let mut h1 = h0.clone();
-        let _ = h1.write_all(&inp[..p]);
+        h1.write_all(&inp[..p]).unwrap();
         {
             println!("Clone an updated hasher");
             let mut h2 = h1.clone();
-            let _ = h2.write_all(&inp[p..]);
-            let res = h2.finish();
+            h2.write_all(&inp[p..]).unwrap();
+            let res = h2.finish().unwrap();
             assert_eq!(res.to_hex(), md5_tests[i].1);
         }
-        let _ = h1.write_all(&inp[p..]);
-        let res = h1.finish();
+        h1.write_all(&inp[p..]).unwrap();
+        let res = h1.finish().unwrap();
         assert_eq!(res.to_hex(), md5_tests[i].1);
 
         println!("Clone a finished hasher");
         let mut h3 = h1.clone();
-        let _ = h3.write_all(&*md5_tests[i + 1].0.from_hex().unwrap());
-        let res = h3.finish();
+        h3.write_all(&*md5_tests[i + 1].0.from_hex().unwrap()).unwrap();
+        let res = h3.finish().unwrap();
         assert_eq!(res.to_hex(), md5_tests[i + 1].1);
     }
 

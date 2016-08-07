@@ -4,7 +4,7 @@ use std::mem;
 use std::ptr;
 use bio::{MemBio, MemBioSlice};
 
-use crypto::HashTypeInternals;
+use HashTypeInternals;
 use crypto::hash;
 use crypto::hash::Type as HashType;
 use ffi;

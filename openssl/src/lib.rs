@@ -14,6 +14,8 @@ extern crate rustc_serialize as serialize;
 #[cfg(test)]
 extern crate net2;
 
+use nid::Nid;
+
 mod macros;
 
 pub mod asn1;
@@ -26,3 +28,8 @@ pub mod nid;
 pub mod ssl;
 pub mod version;
 pub mod x509;
+
+trait HashTypeInternals {
+    fn as_nid(&self) -> Nid;
+    fn evp_md(&self) -> *const ffi::EVP_MD;
+}

@@ -1,10 +1,12 @@
 use libc::c_int;
-use std::ptr::null;
+use std::ptr;
+use ffi;
 
+use HashTypeInternals;
 use crypto::symm_internal::evpc;
 use crypto::hash;
 use crypto::symm;
-use ffi;
+use error::ErrorStack;
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct KeyIvPair {
@@ -27,7 +29,7 @@ pub fn evp_bytes_to_key_pbkdf1_compatible(typ: symm::Type,
                                           data: &[u8],
                                           salt: Option<&[u8]>,
                                           count: u32)
-                                          -> KeyIvPair {
+                                          -> Result<KeyIvPair, ErrorStack> {
 
     unsafe {
 
@@ -36,30 +38,40 @@ pub fn evp_bytes_to_key_pbkdf1_compatible(typ: symm::Type,
                 assert_eq!(salt.len(), ffi::PKCS5_SALT_LEN as usize);
                 salt.as_ptr()
             }
-            None => null(),
+            None => ptr::null(),
         };
 
         ffi::init();
 
-        let (evp, keylen, _) = evpc(typ);
+        let (evp, _, _) = evpc(typ);
 
         let message_digest = message_digest_type.evp_md();
 
-        let mut key = vec![0; keylen as usize];
-        let mut iv = vec![0; keylen as usize];
+        let len = ffi::EVP_BytesToKey(evp,
+                                      message_digest,
+                                      salt_ptr,
+                                      data.as_ptr(),
+                                      data.len() as c_int,
+                                      count as c_int,
+                                      ptr::null_mut(),
+                                      ptr::null_mut());
+        if len == 0 {
+            return Err(ErrorStack::get());
+        }
 
+        let mut key = vec![0; len as usize];
+        let mut iv = vec![0; len as usize];
 
-        let ret: c_int = ffi::EVP_BytesToKey(evp,
-                                             message_digest,
-                                             salt_ptr,
-                                             data.as_ptr(),
-                                             data.len() as c_int,
-                                             count as c_int,
-                                             key.as_mut_ptr(),
-                                             iv.as_mut_ptr());
-        assert!(ret == keylen as c_int);
+        try_ssl!(ffi::EVP_BytesToKey(evp,
+                                     message_digest,
+                                     salt_ptr,
+                                     data.as_ptr(),
+                                     data.len() as c_int,
+                                     count as c_int,
+                                     key.as_mut_ptr(),
+                                     iv.as_mut_ptr()));
 
-        KeyIvPair { key: key, iv: iv }
+        Ok(KeyIvPair { key: key, iv: iv })
     }
 }
 
@@ -257,7 +269,7 @@ mod tests {
                                                              hash::Type::SHA1,
                                                              &data,
                                                              Some(&salt),
-                                                             1),
+                                                             1).unwrap(),
                    super::KeyIvPair {
                        key: expected_key,
                        iv: expected_iv,

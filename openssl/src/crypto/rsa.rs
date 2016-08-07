@@ -6,7 +6,7 @@ use libc::{c_int, c_void, c_char};
 use bn::{BigNum, BigNumRef};
 use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
-use crypto::HashTypeInternals;
+use HashTypeInternals;
 use crypto::hash;
 use crypto::util::{CallbackState, invoke_passwd_cb};
 
@@ -262,9 +262,9 @@ mod test {
         let key = include_bytes!("../../test/rsa.pem");
         let private_key = RSA::private_key_from_pem(key).unwrap();
 
-        let mut sha = Hasher::new(Type::SHA256);
+        let mut sha = Hasher::new(Type::SHA256).unwrap();
         sha.write_all(&signing_input_rs256()).unwrap();
-        let digest = sha.finish();
+        let digest = sha.finish().unwrap();
 
         let result = private_key.sign(Type::SHA256, &digest).unwrap();
 
@@ -276,9 +276,9 @@ mod test {
         let key = include_bytes!("../../test/rsa.pem.pub");
         let public_key = RSA::public_key_from_pem(key).unwrap();
 
-        let mut sha = Hasher::new(Type::SHA256);
+        let mut sha = Hasher::new(Type::SHA256).unwrap();
         sha.write_all(&signing_input_rs256()).unwrap();
-        let digest = sha.finish();
+        let digest = sha.finish().unwrap();
 
         let result = public_key.verify(Type::SHA256, &digest, &signature_rs256()).unwrap();
 

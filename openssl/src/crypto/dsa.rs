@@ -7,7 +7,7 @@ use libc::{c_uint, c_int, c_char, c_void};
 use bn::BigNumRef;
 use bio::{MemBio, MemBioSlice};
 use crypto::hash;
-use crypto::HashTypeInternals;
+use HashTypeInternals;
 use crypto::util::{CallbackState, invoke_passwd_cb};
 
 
@@ -249,9 +249,9 @@ mod test {
         let input: Vec<u8> = (0..25).cycle().take(1024).collect();
 
         let digest = {
-            let mut sha = Hasher::new(Type::SHA1);
+            let mut sha = Hasher::new(Type::SHA1).unwrap();
             sha.write_all(&input).unwrap();
-            sha.finish()
+            sha.finish().unwrap()
         };
 
         let sig = key.sign(Type::SHA1, &digest).unwrap();
@@ -274,9 +274,9 @@ mod test {
         };
 
         let digest = {
-            let mut sha = Hasher::new(Type::SHA1);
+            let mut sha = Hasher::new(Type::SHA1).unwrap();
             sha.write_all(&input).unwrap();
-            sha.finish()
+            sha.finish().unwrap()
         };
 
         let sig = private_key.sign(Type::SHA1, &digest).unwrap();
@@ -298,9 +298,9 @@ mod test {
         };
 
         let digest = {
-            let mut sha = Hasher::new(Type::SHA1);
+            let mut sha = Hasher::new(Type::SHA1).unwrap();
             sha.write_all(&input).unwrap();
-            sha.finish()
+            sha.finish().unwrap()
         };
 
         let mut sig = private_key.sign(Type::SHA1, &digest).unwrap();

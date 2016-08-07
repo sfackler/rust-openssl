@@ -14,13 +14,15 @@
 //
 
 use libc::{c_int, c_uint};
-use std::iter::repeat;
 use std::io;
 use std::io::prelude::*;
-
-use crypto::hash::Type;
+use std::cmp;
 use ffi;
 use ffi_extras;
+
+use HashTypeInternals;
+use crypto::hash::Type;
+use error::ErrorStack;
 
 #[derive(PartialEq, Copy, Clone)]
 enum State {
@@ -43,23 +45,22 @@ use self::State::*;
 /// let key = b"Jefe";
 /// let data = b"what do ya want for nothing?";
 /// let spec = b"\x75\x0c\x78\x3e\x6a\xb0\xb5\x03\xea\xa8\x6e\x31\x0a\x5d\xb7\x38";
-/// let res = hmac(Type::MD5, key, data);
+/// let res = hmac(Type::MD5, key, data).unwrap();
 /// assert_eq!(res, spec);
 /// ```
 ///
 /// Use the `Write` trait to supply the input in chunks.
 ///
 /// ```
-/// use std::io::prelude::*;
 /// use openssl::crypto::hash::Type;
 /// use openssl::crypto::hmac::HMAC;
 /// let key = b"Jefe";
 /// let data: &[&[u8]] = &[b"what do ya ", b"want for nothing?"];
 /// let spec = b"\x75\x0c\x78\x3e\x6a\xb0\xb5\x03\xea\xa8\x6e\x31\x0a\x5d\xb7\x38";
-/// let mut h = HMAC::new(Type::MD5, &*key);
-/// h.write_all(data[0]);
-/// h.write_all(data[1]);
-/// let res = h.finish();
+/// let mut h = HMAC::new(Type::MD5, &*key).unwrap();
+/// h.update(data[0]).unwrap();
+/// h.update(data[1]).unwrap();
+/// let res = h.finish().unwrap();
 /// assert_eq!(res, spec);
 /// ```
 pub struct HMAC {
@@ -70,7 +71,7 @@ pub struct HMAC {
 
 impl HMAC {
     /// Creates a new `HMAC` with the specified hash type using the `key`.
-    pub fn new(ty: Type, key: &[u8]) -> HMAC {
+    pub fn new(ty: Type, key: &[u8]) -> Result<HMAC, ErrorStack> {
         ffi::init();
 
         let ctx = unsafe {
@@ -85,86 +86,79 @@ impl HMAC {
             type_: ty,
             state: Finalized,
         };
-        h.init_once(md, key);
-        h
+        try!(h.init_once(md, key));
+        Ok(h)
     }
 
-    #[inline]
-    fn init_once(&mut self, md: *const ffi::EVP_MD, key: &[u8]) {
+    fn init_once(&mut self, md: *const ffi::EVP_MD, key: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            let r = ffi_extras::HMAC_Init_ex(&mut self.ctx,
-                                             key.as_ptr(),
-                                             key.len() as c_int,
-                                             md,
-                                             0 as *const _);
-            assert_eq!(r, 1);
+            try_ssl!(ffi_extras::HMAC_Init_ex(&mut self.ctx,
+                                              key.as_ptr(),
+                                              key.len() as c_int,
+                                              md,
+                                              0 as *const _));
         }
         self.state = Reset;
+        Ok(())
     }
 
-    #[inline]
-    fn init(&mut self) {
+    fn init(&mut self) -> Result<(), ErrorStack> {
         match self.state {
-            Reset => return,
+            Reset => return Ok(()),
             Updated => {
-                self.finalize();
+                try!(self.finish());
             }
             Finalized => (),
         }
         // If the key and/or md is not supplied it's reused from the last time
         // avoiding redundant initializations
         unsafe {
-            let r = ffi_extras::HMAC_Init_ex(&mut self.ctx,
-                                             0 as *const _,
-                                             0,
-                                             0 as *const _,
-                                             0 as *const _);
-            assert_eq!(r, 1);
+            try_ssl!(ffi_extras::HMAC_Init_ex(&mut self.ctx,
+                                              0 as *const _,
+                                              0,
+                                              0 as *const _,
+                                              0 as *const _));
         }
         self.state = Reset;
+        Ok(())
     }
 
-    #[inline]
-    fn update(&mut self, data: &[u8]) {
+    pub fn update(&mut self, mut data: &[u8]) -> Result<(), ErrorStack> {
         if self.state == Finalized {
-            self.init();
+            try!(self.init());
         }
-        unsafe {
-            let r = ffi_extras::HMAC_Update(&mut self.ctx, data.as_ptr(), data.len() as c_uint);
-            assert_eq!(r, 1);
+        while !data.is_empty() {
+            let len = cmp::min(data.len(), c_uint::max_value() as usize);
+            unsafe {
+                try_ssl!(ffi_extras::HMAC_Update(&mut self.ctx, data.as_ptr(), len as c_uint));
+            }
+            data = &data[len..];
         }
         self.state = Updated;
-    }
-
-    #[inline]
-    fn finalize(&mut self) -> Vec<u8> {
-        if self.state == Finalized {
-            self.init();
-        }
-        let md_len = self.type_.md_len();
-        let mut res: Vec<u8> = repeat(0).take(md_len).collect();
-        unsafe {
-            let mut len = 0;
-            let r = ffi_extras::HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut len);
-            self.state = Finalized;
-            assert_eq!(len as usize, md_len);
-            assert_eq!(r, 1);
-        }
-        res
+        Ok(())
     }
 
     /// Returns the hash of the data written since creation or
     /// the last `finish` and resets the hasher.
-    #[inline]
-    pub fn finish(&mut self) -> Vec<u8> {
-        self.finalize()
+    pub fn finish(&mut self) -> Result<Vec<u8>, ErrorStack> {
+        if self.state == Finalized {
+            try!(self.init());
+        }
+        unsafe {
+            let mut len = ffi::EVP_MAX_MD_SIZE;
+            let mut res = vec![0; len as usize];
+            try_ssl!(ffi_extras::HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut len));
+            res.truncate(len as usize);
+            self.state = Finalized;
+            Ok(res)
+        }
     }
 }
 
 impl Write for HMAC {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.update(buf);
+        try!(self.update(buf));
         Ok(buf.len())
     }
 
@@ -193,9 +187,7 @@ impl Drop for HMAC {
     fn drop(&mut self) {
         unsafe {
             if self.state != Finalized {
-                let mut buf: Vec<u8> = repeat(0).take(self.type_.md_len()).collect();
-                let mut len = 0;
-                ffi_extras::HMAC_Final(&mut self.ctx, buf.as_mut_ptr(), &mut len);
+                drop(self.finish());
             }
             ffi::HMAC_CTX_cleanup(&mut self.ctx);
         }
@@ -203,9 +195,9 @@ impl Drop for HMAC {
 }
 
 /// Computes the HMAC of the `data` with the hash `t` and `key`.
-pub fn hmac(t: Type, key: &[u8], data: &[u8]) -> Vec<u8> {
-    let mut h = HMAC::new(t, key);
-    let _ = h.write_all(data);
+pub fn hmac(t: Type, key: &[u8], data: &[u8]) -> Result<Vec<u8>, ErrorStack> {
+    let mut h = try!(HMAC::new(t, key));
+    try!(h.update(data));
     h.finish()
 }
 
@@ -220,14 +212,14 @@ mod tests {
 
     fn test_hmac(ty: Type, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
         for &(ref key, ref data, ref res) in tests.iter() {
-            assert_eq!(hmac(ty, &**key, &**data), *res);
+            assert_eq!(hmac(ty, &**key, &**data).unwrap(), *res);
         }
     }
 
     fn test_hmac_recycle(h: &mut HMAC, test: &(Vec<u8>, Vec<u8>, Vec<u8>)) {
         let &(_, ref data, ref res) = test;
-        let _ = h.write_all(&**data);
-        assert_eq!(h.finish(), *res);
+        h.write_all(&**data).unwrap();
+        assert_eq!(h.finish().unwrap(), *res);
     }
 
     #[test]
@@ -273,7 +265,7 @@ mod tests {
                   .to_vec(),
               "6f630fad67cda0ee1fb1f562db3aa53e".from_hex().unwrap())];
 
-        let mut h = HMAC::new(MD5, &*tests[0].0);
+        let mut h = HMAC::new(MD5, &*tests[0].0).unwrap();
         for i in 0..100usize {
             let test = &tests[i % 2];
             test_hmac_recycle(&mut h, test);
@@ -287,11 +279,11 @@ mod tests {
              b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
              "6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd".from_hex().unwrap());
 
-        let mut h = HMAC::new(Type::MD5, &*test.0);
-        let _ = h.write_all(&*test.1);
-        let _ = h.finish();
-        let res = h.finish();
-        let null = hmac(Type::MD5, &*test.0, &[]);
+        let mut h = HMAC::new(Type::MD5, &*test.0).unwrap();
+        h.write_all(&*test.1).unwrap();
+        h.finish().unwrap();
+        let res = h.finish().unwrap();
+        let null = hmac(Type::MD5, &*test.0, &[]).unwrap();
         assert_eq!(res, null);
     }
 
@@ -307,26 +299,26 @@ mod tests {
                   .to_vec(),
               "6f630fad67cda0ee1fb1f562db3aa53e".from_hex().unwrap())];
         let p = tests[0].0.len() / 2;
-        let h0 = HMAC::new(Type::MD5, &*tests[0].0);
+        let h0 = HMAC::new(Type::MD5, &*tests[0].0).unwrap();
 
         println!("Clone a new hmac");
         let mut h1 = h0.clone();
-        let _ = h1.write_all(&tests[0].1[..p]);
+        h1.write_all(&tests[0].1[..p]).unwrap();
         {
             println!("Clone an updated hmac");
             let mut h2 = h1.clone();
-            let _ = h2.write_all(&tests[0].1[p..]);
-            let res = h2.finish();
+            h2.write_all(&tests[0].1[p..]).unwrap();
+            let res = h2.finish().unwrap();
             assert_eq!(res, tests[0].2);
         }
-        let _ = h1.write_all(&tests[0].1[p..]);
-        let res = h1.finish();
+        h1.write_all(&tests[0].1[p..]).unwrap();
+        let res = h1.finish().unwrap();
         assert_eq!(res, tests[0].2);
 
         println!("Clone a finished hmac");
         let mut h3 = h1.clone();
-        let _ = h3.write_all(&*tests[1].1);
-        let res = h3.finish();
+        h3.write_all(&*tests[1].1).unwrap();
+        let res = h3.finish().unwrap();
         assert_eq!(res, tests[1].2);
     }
 
@@ -373,7 +365,7 @@ mod tests {
                   .to_vec(),
               "e8e99d0f45237d786d6bbaa7965c7808bbff1a91".from_hex().unwrap())];
 
-        let mut h = HMAC::new(SHA1, &*tests[0].0);
+        let mut h = HMAC::new(SHA1, &*tests[0].0).unwrap();
         for i in 0..100usize {
             let test = &tests[i % 2];
             test_hmac_recycle(&mut h, test);
@@ -399,11 +391,11 @@ mod tests {
                   .to_vec())];
 
         for (&(ref key, ref data), res) in tests.iter().zip(results.iter()) {
-            assert_eq!(hmac(ty, &**key, &**data), *res);
+            assert_eq!(hmac(ty, &**key, &**data).unwrap(), *res);
         }
 
         // recycle test
-        let mut h = HMAC::new(ty, &*tests[5].0);
+        let mut h = HMAC::new(ty, &*tests[5].0).unwrap();
         for i in 0..100usize {
             let test = &tests[4 + i % 2];
             let tup = (test.0.clone(), test.1.clone(), results[4 + i % 2].clone());
