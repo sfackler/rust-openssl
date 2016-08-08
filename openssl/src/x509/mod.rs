@@ -122,7 +122,6 @@ impl X509StoreContext {
 /// pkey.set_rsa(&rsa).unwrap();
 ///
 /// let gen = X509Generator::new()
-///        .set_bitlength(2048)
 ///        .set_valid_period(365*2)
 ///        .add_name("CN".to_owned(), "SuperMegaCorp Inc.".to_owned())
 ///        .set_sign_hash(Type::SHA256)
@@ -133,7 +132,6 @@ impl X509StoreContext {
 /// let pkey_pem = pkey.private_key_to_pem().unwrap();
 /// ```
 pub struct X509Generator {
-    bits: u32,
     days: u32,
     names: Vec<(String, String)>,
     extensions: Extensions,
@@ -143,8 +141,6 @@ pub struct X509Generator {
 impl X509Generator {
     /// Creates a new generator with the following defaults:
     ///
-    /// bit length: 1024
-    ///
     /// validity period: 365 days
     ///
     /// CN: "rust-openssl"
@@ -152,18 +148,11 @@ impl X509Generator {
     /// hash: SHA1
     pub fn new() -> X509Generator {
         X509Generator {
-            bits: 1024,
             days: 365,
             names: vec![],
             extensions: Extensions::new(),
             hash_type: HashType::SHA1,
         }
-    }
-
-    /// Sets desired bit length
-    pub fn set_bitlength(mut self, bits: u32) -> X509Generator {
-        self.bits = bits;
-        self
     }
 
     /// Sets certificate validity period in days since today

@@ -12,7 +12,6 @@ use nid::Nid;
 
 fn get_generator() -> X509Generator {
     X509Generator::new()
-        .set_bitlength(2048)
         .set_valid_period(365 * 2)
         .add_name("CN".to_string(), "test_me".to_string())
         .set_sign_hash(SHA1)
@@ -26,7 +25,7 @@ fn get_generator() -> X509Generator {
 }
 
 fn pkey() -> PKey {
-    let rsa = RSA::generate(512).unwrap();
+    let rsa = RSA::generate(2048).unwrap();
     let mut pkey = PKey::new().unwrap();
     pkey.set_rsa(&rsa).unwrap();
     pkey
