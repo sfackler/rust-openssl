@@ -584,9 +584,9 @@ impl BigNum {
     }
 
     /// Creates a new `BigNum` with the given value.
-    pub fn new_from(n: u64) -> Result<BigNum, ErrorStack> {
+    pub fn new_from(n: c_ulong) -> Result<BigNum, ErrorStack> {
         BigNum::new().and_then(|v| unsafe {
-            try_ssl!(ffi::BN_set_word(v.raw(), n as c_ulong));
+            try_ssl!(ffi::BN_set_word(v.raw(), n));
             Ok(v)
         })
     }
