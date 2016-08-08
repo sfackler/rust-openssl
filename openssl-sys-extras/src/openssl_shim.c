@@ -1,3 +1,4 @@
+#include <string.h>
 #include <openssl/hmac.h>
 #include <openssl/ssl.h>
 #include <openssl/dh.h>
