@@ -83,7 +83,7 @@ impl X509StoreContext {
         X509StoreContext { ctx: ctx }
     }
 
-    pub fn get_error(&self) -> Option<X509ValidationError> {
+    pub fn error(&self) -> Option<X509ValidationError> {
         let err = unsafe { ffi::X509_STORE_CTX_get_error(self.ctx) };
         X509ValidationError::from_raw(err)
     }

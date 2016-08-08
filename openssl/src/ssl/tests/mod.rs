@@ -310,7 +310,7 @@ run_test!(verify_callback_load_certs, |method, stream| {
 run_test!(verify_trusted_get_error_ok, |method, stream| {
     let mut ctx = SslContext::new(method).unwrap();
     ctx.set_verify_callback(SSL_VERIFY_PEER, |_, x509_ctx| {
-        assert!(x509_ctx.get_error().is_none());
+        assert!(x509_ctx.error().is_none());
         true
     });
 
@@ -324,7 +324,7 @@ run_test!(verify_trusted_get_error_ok, |method, stream| {
 run_test!(verify_trusted_get_error_err, |method, stream| {
     let mut ctx = SslContext::new(method).unwrap();
     ctx.set_verify_callback(SSL_VERIFY_PEER, |_, x509_ctx| {
-        assert!(x509_ctx.get_error().is_some());
+        assert!(x509_ctx.error().is_some());
         false
     });
 
