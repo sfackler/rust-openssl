@@ -25,17 +25,23 @@ fn get_generator() -> X509Generator {
         .add_extension(OtherStr("2.999.2".to_owned(), "ASN1:UTF8:example value".to_owned()))
 }
 
-/*
+fn pkey() -> PKey {
+    let rsa = RSA::generate(512).unwrap();
+    let mut pkey = PKey::new().unwrap();
+    pkey.set_rsa(&rsa).unwrap();
+    pkey
+}
+
 #[test]
 fn test_cert_gen() {
-    let (cert, pkey) = get_generator().generate().unwrap();
-    cert.write_pem().unwrap();
-    pkey.write_pem().unwrap();
+    let pkey = pkey();
+    let cert = get_generator().sign(&pkey).unwrap();
 
     // FIXME: check data in result to be correct, needs implementation
     // of X509 getters
 
-    assert_eq!(pkey.save_pub(), cert.public_key().save_pub());
+    assert_eq!(pkey.public_key_to_pem().unwrap(),
+               cert.public_key().unwrap().public_key_to_pem().unwrap());
 }
 
 /// SubjectKeyIdentifier must be added before AuthorityKeyIdentifier or OpenSSL
@@ -43,10 +49,11 @@ fn test_cert_gen() {
 /// for extensions is preserved when the cert is signed.
 #[test]
 fn test_cert_gen_extension_ordering() {
+    let pkey = pkey();
     get_generator()
         .add_extension(OtherNid(Nid::SubjectKeyIdentifier, "hash".to_owned()))
         .add_extension(OtherNid(Nid::AuthorityKeyIdentifier, "keyid:always".to_owned()))
-        .generate()
+        .sign(&pkey)
         .expect("Failed to generate cert with order-dependent extensions");
 }
 
@@ -54,21 +61,19 @@ fn test_cert_gen_extension_ordering() {
 /// deterministic by reversing the order of extensions and asserting failure.
 #[test]
 fn test_cert_gen_extension_bad_ordering() {
+    let pkey = pkey();
     let result = get_generator()
                      .add_extension(OtherNid(Nid::AuthorityKeyIdentifier,
                                              "keyid:always".to_owned()))
                      .add_extension(OtherNid(Nid::SubjectKeyIdentifier, "hash".to_owned()))
-                     .generate();
+                     .sign(&pkey);
 
     assert!(result.is_err());
 }
-*/
 
 #[test]
 fn test_req_gen() {
-    let rsa = RSA::generate(512).unwrap();
-    let mut pkey = PKey::new().unwrap();
-    pkey.set_rsa(&rsa).unwrap();
+    let pkey = pkey();
 
     let req = get_generator().request(&pkey).unwrap();
     req.to_pem().unwrap();
