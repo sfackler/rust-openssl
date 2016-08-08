@@ -92,7 +92,7 @@ fn test_save_der() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
 
-    let der = cert.save_der().unwrap();
+    let der = cert.to_der().unwrap();
     assert!(!der.is_empty());
 }
 

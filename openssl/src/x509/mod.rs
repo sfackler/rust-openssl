@@ -314,18 +314,17 @@ impl X509Generator {
             let not_before = try!(Asn1Time::days_from_now(0));
             let not_after = try!(Asn1Time::days_from_now(self.days));
 
-            try_ssl!(ffi::X509_set_notBefore(x509.handle(), mem::transmute(not_before.handle())));
+            try_ssl!(ffi::X509_set_notBefore(x509.handle(), not_before.handle() as *const _));
             // If prev line succeded - ownership should go to cert
             mem::forget(not_before);
 
-            try_ssl!(ffi::X509_set_notAfter(x509.handle(), mem::transmute(not_after.handle())));
+            try_ssl!(ffi::X509_set_notAfter(x509.handle(), not_after.handle() as *const _));
             // If prev line succeded - ownership should go to cert
             mem::forget(not_after);
 
             try_ssl!(ffi::X509_set_pubkey(x509.handle(), p_key.handle()));
 
-            let name = ffi::X509_get_subject_name(x509.handle());
-            try_ssl_null!(name);
+            let name = try_ssl_null!(ffi::X509_get_subject_name(x509.handle()));
 
             let default = [("CN", "rust-openssl")];
             let default_iter = &mut default.iter().map(|&(k, v)| (k, v));
@@ -339,7 +338,7 @@ impl X509Generator {
             for (key, val) in iter {
                 try!(X509Generator::add_name_internal(name, &key, &val));
             }
-            ffi::X509_set_issuer_name(x509.handle(), name);
+            try_ssl!(ffi::X509_set_issuer_name(x509.handle(), name));
 
             for (exttype, ext) in self.extensions.iter() {
                 try!(X509Generator::add_extension_internal(x509.handle(),
@@ -381,7 +380,7 @@ impl X509Generator {
 pub struct X509Ref<'a>(*mut ffi::X509, PhantomData<&'a ()>);
 
 impl<'a> X509Ref<'a> {
-    /// Creates a new `X509` wrapping the provided handle.
+    /// Creates a new `X509Ref` wrapping the provided handle.
     pub unsafe fn new(handle: *mut ffi::X509) -> X509Ref<'a> {
         X509Ref(handle, PhantomData)
     }
@@ -433,7 +432,7 @@ impl<'a> X509Ref<'a> {
     }
 
     /// Writes certificate as PEM
-    pub fn write_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+    pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
             try_ssl!(ffi::PEM_write_bio_X509(mem_bio.handle(), self.0));
@@ -442,7 +441,7 @@ impl<'a> X509Ref<'a> {
     }
 
     /// Returns a DER serialized form of the certificate
-    pub fn save_der(&self) -> Result<Vec<u8>, ErrorStack> {
+    pub fn to_der(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
             ffi::i2d_X509_bio(mem_bio.handle(), self.0);
@@ -535,18 +534,16 @@ impl<'x> X509Name<'x> {
 }
 
 /// A certificate signing request
-pub struct X509Req {
-    handle: *mut ffi::X509_REQ,
-}
+pub struct X509Req(*mut ffi::X509_REQ);
 
 impl X509Req {
     /// Creates new from handle
-    pub fn new(handle: *mut ffi::X509_REQ) -> X509Req {
-        X509Req { handle: handle }
+    pub unsafe fn new(handle: *mut ffi::X509_REQ) -> X509Req {
+        X509Req(handle)
     }
 
     pub fn handle(&self) -> *mut ffi::X509_REQ {
-        self.handle
+        self.0
     }
 
     /// Reads CSR from PEM
@@ -562,19 +559,19 @@ impl X509Req {
     }
 
     /// Writes CSR as PEM
-    pub fn write_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+    pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
-        if unsafe { ffi::PEM_write_bio_X509_REQ(mem_bio.handle(), self.handle) } != 1 {
+        if unsafe { ffi::PEM_write_bio_X509_REQ(mem_bio.handle(), self.0) } != 1 {
             return Err(ErrorStack::get());
         }
         Ok(mem_bio.get_buf().to_owned())
     }
 
     /// Returns a DER serialized form of the CSR
-    pub fn save_der(&self) -> Result<Vec<u8>, ErrorStack> {
+    pub fn to_der(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
-            ffi::i2d_X509_REQ_bio(mem_bio.handle(), self.handle);
+            ffi::i2d_X509_REQ_bio(mem_bio.handle(), self.0);
         }
         Ok(mem_bio.get_buf().to_owned())
     }
@@ -582,7 +579,7 @@ impl X509Req {
 
 impl Drop for X509Req {
     fn drop(&mut self) {
-        unsafe { ffi::X509_REQ_free(self.handle) };
+        unsafe { ffi::X509_REQ_free(self.0) };
     }
 }
 
