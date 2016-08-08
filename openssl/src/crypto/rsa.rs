@@ -144,27 +144,26 @@ impl RSA {
 
         unsafe {
             try_ssl!(ffi::RSA_sign(hash.as_nid() as c_int,
-                                       message.as_ptr(),
-                                       message.len() as u32,
-                                       sig.as_mut_ptr(),
-                                       &mut sig_len,
-                                       self.0));
+                                   message.as_ptr(),
+                                   message.len() as u32,
+                                   sig.as_mut_ptr(),
+                                   &mut sig_len,
+                                   self.0));
             assert!(sig_len == k_len);
             Ok(sig)
         }
     }
 
-    pub fn verify(&self, hash: hash::Type, message: &[u8], sig: &[u8]) -> Result<bool, ErrorStack> {
+    pub fn verify(&self, hash: hash::Type, message: &[u8], sig: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            let result = ffi::RSA_verify(hash.as_nid() as c_int,
-                                         message.as_ptr(),
-                                         message.len() as u32,
-                                         sig.as_ptr(),
-                                         sig.len() as u32,
-                                         self.0);
-            try_ssl_if!(result == -1);
-            Ok(result == 1)
+            try_ssl!(ffi::RSA_verify(hash.as_nid() as c_int,
+                                     message.as_ptr(),
+                                     message.len() as u32,
+                                     sig.as_ptr(),
+                                     sig.len() as u32,
+                                     self.0));
         }
+        Ok(())
     }
 
     pub fn as_ptr(&self) -> *mut ffi::RSA {
@@ -280,9 +279,7 @@ mod test {
         sha.write_all(&signing_input_rs256()).unwrap();
         let digest = sha.finish().unwrap();
 
-        let result = public_key.verify(Type::SHA256, &digest, &signature_rs256()).unwrap();
-
-        assert!(result);
+        assert!(public_key.verify(Type::SHA256, &digest, &signature_rs256()).is_ok());
     }
 
     #[test]
