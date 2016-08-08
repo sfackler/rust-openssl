@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 
 use HashTypeInternals;
-use asn1::Asn1Time;
+use asn1::{Asn1Time, Asn1TimeRef};
 use bio::{MemBio, MemBioSlice};
 use crypto::hash;
 use crypto::hash::Type as HashType;
@@ -434,18 +434,18 @@ impl<'a> X509Ref<'a> {
     }
 
     /// Returns Issuer validity notAfter
-    pub fn not_after(&self) -> Asn1Time {
+    pub fn not_after(&self) -> Asn1TimeRef {
         unsafe {
-            let date = ffi_extras::X509_get_notAfter(self.handle());
-            Asn1Time::from_raw(date)
+            let date = ::c_helpers::rust_0_8_X509_get_notAfter(self.0);
+            Asn1TimeRef::from_ptr(date)
         }
     }
 
     /// Returns Issuer validity notBefore
-    pub fn not_before(&self) -> Asn1Time {
+    pub fn not_before(&self) -> Asn1TimeRef {
         unsafe {
-            let date = ffi_extras::X509_get_notBefore(self.handle());
-            Asn1Time::from_raw(date)
+            let date = ::c_helpers::rust_0_8_X509_get_notBefore(self.0);
+            Asn1TimeRef::from_ptr(date)
         }
     }
 
