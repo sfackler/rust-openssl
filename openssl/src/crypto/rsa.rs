@@ -1,7 +1,7 @@
 use ffi;
 use std::fmt;
 use std::ptr;
-use libc::{c_int, c_void, c_char};
+use libc::{c_int, c_void, c_char, c_ulong};
 
 use bn::{BigNum, BigNumRef};
 use bio::{MemBio, MemBioSlice};
@@ -66,7 +66,7 @@ impl RSA {
         unsafe {
             let rsa = try_ssl_null!(ffi::RSA_new());
             let rsa = RSA(rsa);
-            let e = try!(BigNum::new_from(ffi::RSA_F4 as _));
+            let e = try!(BigNum::new_from(ffi::RSA_F4 as c_ulong));
 
             try_ssl!(ffi::RSA_generate_key_ex(rsa.0, bits as c_int, e.raw(), ptr::null_mut()));
 
