@@ -1,8 +1,9 @@
 use libc::{c_void, c_char};
 use std::ptr;
-use bio::{MemBio, MemBioSlice};
-
+use std::mem;
 use ffi;
+
+use bio::{MemBio, MemBioSlice};
 use crypto::rsa::RSA;
 use error::ErrorStack;
 use crypto::util::{CallbackState, invoke_passwd_cb};
@@ -14,11 +15,14 @@ unsafe impl Sync for PKey {}
 
 /// Represents a public key, optionally with a private key attached.
 impl PKey {
-    pub fn new() -> Result<PKey, ErrorStack> {
-        ffi::init();
+    /// Create a new `PKey` containing an RSA key.
+    pub fn from_rsa(rsa: RSA) -> Result<PKey, ErrorStack> {
         unsafe {
             let evp = try_ssl_null!(ffi::EVP_PKEY_new());
-            Ok(PKey::from_handle(evp))
+            let pkey = PKey(evp);
+            try_ssl!(ffi::EVP_PKEY_assign(pkey.0, ffi::EVP_PKEY_RSA, rsa.as_ptr() as *mut _));
+            mem::forget(rsa);
+            Ok(pkey)
         }
     }
 

@@ -118,8 +118,7 @@ impl X509StoreContext {
 /// use openssl::x509::extension::{Extension, KeyUsageOption};
 ///
 /// let rsa = RSA::generate(2048).unwrap();
-/// let mut pkey = PKey::new().unwrap();
-/// pkey.set_rsa(&rsa).unwrap();
+/// let pkey = PKey::from_rsa(rsa).unwrap();
 ///
 /// let gen = X509Generator::new()
 ///        .set_valid_period(365*2)
