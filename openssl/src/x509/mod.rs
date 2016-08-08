@@ -106,15 +106,20 @@ impl X509StoreContext {
 }
 
 #[allow(non_snake_case)]
-// FIXME
 /// Generator of private key/certificate pairs
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```
 /// use openssl::crypto::hash::Type;
+/// use openssl::crypto::pkey::PKey;
+/// use openssl::crypto::rsa::RSA;
 /// use openssl::x509::X509Generator;
 /// use openssl::x509::extension::{Extension, KeyUsageOption};
+///
+/// let rsa = RSA::generate(2048).unwrap();
+/// let mut pkey = PKey::new().unwrap();
+/// pkey.set_rsa(&rsa).unwrap();
 ///
 /// let gen = X509Generator::new()
 ///        .set_bitlength(2048)
@@ -123,8 +128,8 @@ impl X509StoreContext {
 ///        .set_sign_hash(Type::SHA256)
 ///        .add_extension(Extension::KeyUsage(vec![KeyUsageOption::DigitalSignature]));
 ///
-/// let (cert, pkey) = gen.generate().unwrap();
-/// let cert_pem = cert.write_pem().unwrap();
+/// let cert = gen.sign(&pkey).unwrap();
+/// let cert_pem = cert.to_pem().unwrap();
 /// let pkey_pem = pkey.private_key_to_pem().unwrap();
 /// ```
 pub struct X509Generator {
