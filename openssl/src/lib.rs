@@ -14,6 +14,9 @@ extern crate rustc_serialize as serialize;
 #[cfg(test)]
 extern crate net2;
 
+#[doc(inline)]
+pub use ffi::init;
+
 use nid::Nid;
 
 mod macros;

@@ -18,8 +18,9 @@ use libc::{c_uchar, c_uint};
 #[cfg(any(feature = "npn", feature = "alpn"))]
 use std::slice;
 use std::marker::PhantomData;
-
 use ffi;
+
+use init;
 use dh::DH;
 use x509::{X509StoreContext, X509FileType, X509, X509Ref};
 use crypto::pkey::PKey;
@@ -38,12 +39,6 @@ pub use ssl::error::Error;
 extern "C" {
     fn rust_SSL_clone(ssl: *mut ffi::SSL);
     fn rust_SSL_CTX_clone(cxt: *mut ffi::SSL_CTX);
-}
-
-/// Manually initialize SSL.
-/// It is optional to call this function and safe to do so more than once.
-pub fn init() {
-    ffi::init();
 }
 
 bitflags! {
