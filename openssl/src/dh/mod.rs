@@ -2,17 +2,15 @@ use ffi;
 use error::ErrorStack;
 use bio::MemBioSlice;
 use bn::BigNum;
-use std::mem;
 use std::ptr;
 
 pub struct DH(*mut ffi::DH);
 
 impl DH {
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<DH, ErrorStack> {
-        let dh = try_ssl_null!(unsafe { ffi::DH_new_from_params(p.raw(), g.raw(), q.raw()) });
-        mem::forget(p);
-        mem::forget(g);
-        mem::forget(q);
+        let dh = unsafe {
+            try_ssl_null!(ffi::DH_new_from_params(p.into_raw(), g.into_raw(), q.into_raw()))
+        };
         Ok(DH(dh))
     }
 
@@ -47,19 +45,12 @@ impl DH {
         let DH(n) = *self;
         n
     }
-
-    pub unsafe fn raw_ptr(&self) -> *const *mut ffi::DH {
-        let DH(ref n) = *self;
-        n
-    }
 }
 
 impl Drop for DH {
     fn drop(&mut self) {
         unsafe {
-            if !self.raw().is_null() {
-                ffi::DH_free(self.raw())
-            }
+            ffi::DH_free(self.raw())
         }
     }
 }
