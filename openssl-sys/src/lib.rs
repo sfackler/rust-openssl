@@ -752,9 +752,9 @@ extern "C" {
     pub fn PEM_read_bio_X509_REQ(bio: *mut BIO, out: *mut *mut X509_REQ, callback: Option<PasswordCallback>,
                              user_data: *mut c_void) -> *mut X509_REQ;
     pub fn PEM_read_bio_PrivateKey(bio: *mut BIO, out: *mut *mut EVP_PKEY, callback: Option<PasswordCallback>,
-                             user_data: *mut c_void) -> *mut X509;
+                             user_data: *mut c_void) -> *mut EVP_PKEY;
     pub fn PEM_read_bio_PUBKEY(bio: *mut BIO, out: *mut *mut EVP_PKEY, callback: Option<PasswordCallback>,
-                             user_data: *mut c_void) -> *mut X509;
+                             user_data: *mut c_void) -> *mut EVP_PKEY;
 
     pub fn PEM_read_bio_RSAPrivateKey(bio: *mut BIO, rsa: *mut *mut RSA, callback: Option<PasswordCallback>, user_data: *mut c_void) -> *mut RSA;
     pub fn PEM_read_bio_RSA_PUBKEY(bio:    *mut BIO, rsa: *mut *mut RSA, callback: Option<PasswordCallback>, user_data: *mut c_void) -> *mut RSA;

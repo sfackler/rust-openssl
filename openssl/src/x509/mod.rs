@@ -14,7 +14,7 @@ use asn1::Asn1Time;
 use bio::{MemBio, MemBioSlice};
 use crypto::hash;
 use crypto::hash::Type as HashType;
-use crypto::pkey::{PKey, Parts};
+use crypto::pkey::PKey;
 use crypto::rand::rand_bytes;
 use ffi;
 use ffi_extras;
@@ -106,11 +106,12 @@ impl X509StoreContext {
 }
 
 #[allow(non_snake_case)]
+// FIXME
 /// Generator of private key/certificate pairs
 ///
 /// # Example
 ///
-/// ```
+/// ```ignore
 /// use openssl::crypto::hash::Type;
 /// use openssl::x509::X509Generator;
 /// use openssl::x509::extension::{Extension, KeyUsageOption};
@@ -124,7 +125,7 @@ impl X509StoreContext {
 ///
 /// let (cert, pkey) = gen.generate().unwrap();
 /// let cert_pem = cert.write_pem().unwrap();
-/// let pkey_pem = pkey.write_pem().unwrap();
+/// let pkey_pem = pkey.private_key_to_pem().unwrap();
 /// ```
 pub struct X509Generator {
     bits: u32,
@@ -297,17 +298,6 @@ impl X509Generator {
         ((res as c_ulong) >> 1) as c_long
     }
 
-    /// Generates a private key and a self-signed certificate and returns them
-    pub fn generate(&self) -> Result<(X509, PKey), ErrorStack> {
-        ffi::init();
-
-        let mut p_key = PKey::new();
-        p_key.gen(self.bits as usize);
-
-        let x509 = try!(self.sign(&p_key));
-        Ok((x509, p_key))
-    }
-
     /// Sets the certificate public-key, then self-sign and return it
     /// Note: That the bit-length of the private key is used (set_bitlength is ignored)
     pub fn sign(&self, p_key: &PKey) -> Result<X509, ErrorStack> {
@@ -423,12 +413,10 @@ impl<'a> X509Ref<'a> {
         }
     }
 
-    pub fn public_key(&self) -> PKey {
+    pub fn public_key(&self) -> Result<PKey, ErrorStack> {
         unsafe {
-            let pkey = ffi::X509_get_pubkey(self.0);
-            assert!(!pkey.is_null());
-
-            PKey::from_handle(pkey, Parts::Public)
+            let pkey = try_ssl_null!(ffi::X509_get_pubkey(self.0));
+            Ok(PKey::from_handle(pkey))
         }
     }
 

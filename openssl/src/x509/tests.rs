@@ -24,6 +24,7 @@ fn get_generator() -> X509Generator {
         .add_extension(OtherStr("2.999.2".to_owned(), "ASN1:UTF8:example value".to_owned()))
 }
 
+/*
 #[test]
 fn test_cert_gen() {
     let (cert, pkey) = get_generator().generate().unwrap();
@@ -72,6 +73,7 @@ fn test_req_gen() {
     // FIXME: check data in result to be correct, needs implementation
     // of X509_REQ getters
 }
+*/
 
 #[test]
 fn test_cert_loading() {
