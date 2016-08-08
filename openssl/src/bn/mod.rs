@@ -1006,7 +1006,7 @@ mod tests {
 
     #[test]
     fn test_to_from_slice() {
-        let v0 = BigNum::new_from(10203004_u64).unwrap();
+        let v0 = BigNum::new_from(10203004).unwrap();
         let vec = v0.to_vec();
         let v1 = BigNum::new_from_slice(&vec).unwrap();
 
@@ -1015,7 +1015,7 @@ mod tests {
 
     #[test]
     fn test_negation() {
-        let a = BigNum::new_from(909829283_u64).unwrap();
+        let a = BigNum::new_from(909829283).unwrap();
 
         assert!(!a.is_negative());
         assert!((-a).is_negative());
@@ -1024,7 +1024,7 @@ mod tests {
 
     #[test]
     fn test_prime_numbers() {
-        let a = BigNum::new_from(19029017_u64).unwrap();
+        let a = BigNum::new_from(19029017).unwrap();
         let p = BigNum::checked_generate_prime(128, true, None, Some(&a)).unwrap();
 
         assert!(p.is_prime(100).unwrap());
