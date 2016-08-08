@@ -55,9 +55,23 @@ impl RSA {
         }
     }
 
-    /// the caller should assert that the rsa pointer is valid.
     pub unsafe fn from_raw(rsa: *mut ffi::RSA) -> RSA {
         RSA(rsa)
+    }
+
+    /// Generates a public/private key pair with the specified size.
+    ///
+    /// The public exponent will be 65537.
+    pub fn generate(bits: u32) -> Result<RSA, ErrorStack> {
+        unsafe {
+            let rsa = try_ssl_null!(ffi::RSA_new());
+            let rsa = RSA(rsa);
+            let e = try!(BigNum::new_from(ffi::RSA_F4 as _));
+
+            try_ssl!(ffi::RSA_generate_key_ex(rsa.0, bits as c_int, e.raw(), ptr::null_mut()));
+
+            Ok(rsa)
+        }
     }
 
     /// Reads an RSA private key from PEM formatted data.
@@ -90,6 +104,18 @@ impl RSA {
         }
     }
 
+    /// Reads an RSA public key from PEM formatted data.
+    pub fn public_key_from_pem(buf: &[u8]) -> Result<RSA, ErrorStack> {
+        let mem_bio = try!(MemBioSlice::new(buf));
+        unsafe {
+            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.handle(),
+                                                                 ptr::null_mut(),
+                                                                 None,
+                                                                 ptr::null_mut()));
+            Ok(RSA(rsa))
+        }
+    }
+
     /// Writes an RSA private key as unencrypted PEM formatted data
     pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
@@ -104,18 +130,6 @@ impl RSA {
                                              ptr::null_mut()));
         }
         Ok(mem_bio.get_buf().to_owned())
-    }
-
-    /// Reads an RSA public key from PEM formatted data.
-    pub fn public_key_from_pem(buf: &[u8]) -> Result<RSA, ErrorStack> {
-        let mem_bio = try!(MemBioSlice::new(buf));
-        unsafe {
-            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.handle(),
-                                                                 ptr::null_mut(),
-                                                                 None,
-                                                                 ptr::null_mut()));
-            Ok(RSA(rsa))
-        }
     }
 
     /// Writes an RSA public key as PEM formatted data

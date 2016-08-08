@@ -2,6 +2,7 @@ use serialize::hex::FromHex;
 
 use crypto::hash::Type::SHA1;
 use crypto::pkey::PKey;
+use crypto::rsa::RSA;
 use x509::{X509, X509Generator};
 use x509::extension::Extension::{KeyUsage, ExtKeyUsage, SubjectAltName, OtherNid, OtherStr};
 use x509::extension::AltNameOption as SAN;
@@ -61,19 +62,20 @@ fn test_cert_gen_extension_bad_ordering() {
 
     assert!(result.is_err());
 }
+*/
 
 #[test]
 fn test_req_gen() {
-    let mut pkey = PKey::new();
-    pkey.gen(512);
+    let rsa = RSA::generate(512).unwrap();
+    let mut pkey = PKey::new().unwrap();
+    pkey.set_rsa(&rsa).unwrap();
 
     let req = get_generator().request(&pkey).unwrap();
-    req.write_pem().unwrap();
+    req.to_pem().unwrap();
 
     // FIXME: check data in result to be correct, needs implementation
     // of X509_REQ getters
 }
-*/
 
 #[test]
 fn test_cert_loading() {

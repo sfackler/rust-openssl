@@ -17,6 +17,7 @@ pub type ASN1_INTEGER = c_void;
 pub type ASN1_STRING = c_void;
 pub type ASN1_TIME = c_void;
 pub type BN_CTX = c_void;
+pub type BN_GENCB = c_void;
 pub type COMP_METHOD = c_void;
 pub type DH = c_void;
 pub type ENGINE = c_void;
@@ -294,6 +295,8 @@ pub const NID_ext_key_usage: c_int = 126;
 pub const NID_key_usage:     c_int = 83;
 
 pub const PKCS5_SALT_LEN: c_int = 8;
+
+pub const RSA_F4: c_long = 0x10001;
 
 pub const SSL_CTRL_SET_TMP_DH: c_int = 3;
 pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
@@ -800,7 +803,7 @@ extern "C" {
     pub fn RSA_new() -> *mut RSA;
     pub fn RSA_free(rsa: *mut RSA);
     pub fn RSA_generate_key(modsz: c_int, e: c_ulong, cb: *const c_void, cbarg: *const c_void) -> *mut RSA;
-    pub fn RSA_generate_key_ex(rsa: *mut RSA, bits: c_int, e: *mut BIGNUM, cb: *const c_void) -> c_int;
+    pub fn RSA_generate_key_ex(rsa: *mut RSA, bits: c_int, e: *mut BIGNUM, cb: *mut BN_GENCB) -> c_int;
     pub fn RSA_private_decrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA,
                                pad: c_int) -> c_int;
     pub fn RSA_public_decrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA,
