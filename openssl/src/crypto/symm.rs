@@ -178,12 +178,12 @@ impl Crypter {
     ///
     /// # Panics
     ///
-    /// Panics if `output.len() < input.len() + block_size - 1` where
+    /// Panics if `output.len() < input.len() + block_size` where
     /// `block_size` is the block size of the cipher (see `Type::block_size`),
     /// or if `output.len() > c_int::max_value()`.
     pub fn update(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
-            assert!(output.len() >= input.len() + self.block_size - 1);
+            assert!(output.len() >= input.len() + self.block_size);
             assert!(output.len() <= c_int::max_value() as usize);
             let mut outl = output.len() as c_int;
             let inl = input.len() as c_int;
@@ -232,7 +232,11 @@ impl Drop for Crypter {
  * Encrypts data, using the specified crypter type in encrypt mode with the
  * specified key and iv; returns the resulting (encrypted) data.
  */
-pub fn encrypt(t: Type, key: &[u8], iv: Option<&[u8]>, data: &[u8]) -> Result<Vec<u8>, ErrorStack> {
+pub fn encrypt(t: Type,
+               key: &[u8],
+               iv: Option<&[u8]>,
+               data: &[u8])
+               -> Result<Vec<u8>, ErrorStack> {
     cipher(t, Mode::Encrypt, key, iv, data)
 }
 
@@ -240,7 +244,11 @@ pub fn encrypt(t: Type, key: &[u8], iv: Option<&[u8]>, data: &[u8]) -> Result<Ve
  * Decrypts data, using the specified crypter type in decrypt mode with the
  * specified key and iv; returns the resulting (decrypted) data.
  */
-pub fn decrypt(t: Type, key: &[u8], iv: Option<&[u8]>, data: &[u8]) -> Result<Vec<u8>, ErrorStack> {
+pub fn decrypt(t: Type,
+               key: &[u8],
+               iv: Option<&[u8]>,
+               data: &[u8])
+               -> Result<Vec<u8>, ErrorStack> {
     cipher(t, Mode::Decrypt, key, iv, data)
 }
 
