@@ -24,5 +24,3 @@ pub mod memcmp;
 pub mod rsa;
 pub mod dsa;
 mod util;
-
-mod symm_internal;

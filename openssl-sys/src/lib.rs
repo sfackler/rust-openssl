@@ -16,12 +16,12 @@ use std::sync::{Once, ONCE_INIT};
 pub type ASN1_INTEGER = c_void;
 pub type ASN1_STRING = c_void;
 pub type ASN1_TIME = c_void;
+pub type ASN1_TYPE = c_void;
 pub type BN_CTX = c_void;
 pub type BN_GENCB = c_void;
 pub type COMP_METHOD = c_void;
 pub type DH = c_void;
 pub type ENGINE = c_void;
-pub type EVP_CIPHER = c_void;
 pub type EVP_CIPHER_CTX = c_void;
 pub type EVP_MD = c_void;
 pub type EVP_PKEY_CTX = c_void;
@@ -194,6 +194,39 @@ pub struct EVP_MD_CTX {
 impl Copy for EVP_MD_CTX {}
 impl Clone for EVP_MD_CTX {
     fn clone(&self) -> EVP_MD_CTX { *self }
+}
+
+#[repr(C)]
+pub struct EVP_CIPHER {
+    pub nid: c_int,
+    pub block_size: c_int,
+    pub key_len: c_int,
+    pub iv_len: c_int,
+    pub flags: c_ulong,
+    pub init: Option<unsafe extern "C" fn(*mut EVP_CIPHER_CTX,
+                                          *mut c_uchar,
+                                          *const c_uchar,
+                                          size_t) -> c_int>,
+    pub do_cipher: Option<unsafe extern "C" fn(*mut EVP_CIPHER_CTX,
+                                               *mut c_uchar,
+                                               *const c_uchar,
+                                               size_t) -> c_int>,
+    pub cleanup: Option<unsafe extern "C" fn(*mut EVP_CIPHER_CTX) -> c_int>,
+    pub ctx_size: c_int,
+    pub set_asn1_parameters: Option<unsafe extern "C" fn(*mut EVP_CIPHER_CTX,
+                                                         *mut ASN1_TYPE) -> c_int>,
+    pub get_asn1_parameters: Option<unsafe extern "C" fn(*mut EVP_CIPHER_CTX,
+                                                         *mut ASN1_TYPE) -> c_int>,
+    pub ctrl: Option<unsafe extern "C" fn(*mut EVP_CIPHER_CTX,
+                                          c_int,
+                                          c_int,
+                                          *mut c_void) -> c_int>,
+    pub app_data: *mut c_void,
+}
+
+impl Copy for EVP_CIPHER {}
+impl Clone for EVP_CIPHER {
+    fn clone(&self) -> EVP_CIPHER { *self }
 }
 
 #[repr(C)]

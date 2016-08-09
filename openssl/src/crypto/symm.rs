@@ -1,7 +1,6 @@
 use std::iter::repeat;
 use libc::c_int;
 
-use crypto::symm_internal::evpc;
 use ffi;
 
 #[derive(Copy, Clone)]
@@ -43,13 +42,78 @@ pub enum Type {
     RC4_128,
 }
 
+impl Type {
+    pub fn as_ptr(&self) -> *const ffi::EVP_CIPHER {
+        unsafe {
+            match *self {
+                Type::AES_128_ECB => ffi::EVP_aes_128_ecb(),
+                Type::AES_128_CBC => ffi::EVP_aes_128_cbc(),
+                #[cfg(feature = "aes_xts")]
+                Type::AES_128_XTS => ffi::EVP_aes_128_xts(),
+                #[cfg(feature = "aes_ctr")]
+                Type::AES_128_CTR => ffi::EVP_aes_128_ctr(),
+                // AES_128_GCM => (EVP_aes_128_gcm(), 16, 16),
+                Type::AES_128_CFB1 => ffi::EVP_aes_128_cfb1(),
+                Type::AES_128_CFB128 => ffi::EVP_aes_128_cfb128(),
+                Type::AES_128_CFB8 => ffi::EVP_aes_128_cfb8(),
+
+                Type::AES_256_ECB => ffi::EVP_aes_256_ecb(),
+                Type::AES_256_CBC => ffi::EVP_aes_256_cbc(),
+                #[cfg(feature = "aes_xts")]
+                Type::AES_256_XTS => ffi::EVP_aes_256_xts(),
+                #[cfg(feature = "aes_ctr")]
+                Type::AES_256_CTR => ffi::EVP_aes_256_ctr(),
+                // AES_256_GCM => (EVP_aes_256_gcm(), 32, 16),
+                Type::AES_256_CFB1 => ffi::EVP_aes_256_cfb1(),
+                Type::AES_256_CFB128 => ffi::EVP_aes_256_cfb128(),
+                Type::AES_256_CFB8 => ffi::EVP_aes_256_cfb8(),
+
+                Type::DES_CBC => ffi::EVP_des_cbc(),
+                Type::DES_ECB => ffi::EVP_des_ecb(),
+
+                Type::RC4_128 => ffi::EVP_rc4(),
+            }
+        }
+    }
+
+    /// Returns the length of keys used with this cipher.
+    pub fn key_len(&self) -> usize {
+        unsafe {
+            (*self.as_ptr()).key_len as usize
+        }
+    }
+
+    /// Returns the length of the IV used with this cipher, or `None` if the
+    /// cipher does not use an IV.
+    pub fn iv_len(&self) -> Option<usize> {
+        unsafe {
+            let len = (*self.as_ptr()).iv_len as usize;
+            if len == 0 {
+                None
+            } else {
+                Some(len)
+            }
+        }
+    }
+
+    /// Returns the block size of the cipher.
+    ///
+    /// # Note
+    ///
+    /// Stream ciphers such as RC4 have a block size of 1.
+    pub fn block_size(&self) -> usize {
+        unsafe {
+            (*self.as_ptr()).block_size as usize
+        }
+    }
+}
 
 /// Represents a symmetric cipher context.
 pub struct Crypter {
     evp: *const ffi::EVP_CIPHER,
     ctx: *mut ffi::EVP_CIPHER_CTX,
-    keylen: u32,
-    blocksize: u32,
+    keylen: usize,
+    blocksize: usize,
 }
 
 impl Crypter {
@@ -57,12 +121,11 @@ impl Crypter {
         ffi::init();
 
         let ctx = unsafe { ffi::EVP_CIPHER_CTX_new() };
-        let (evp, keylen, blocksz) = evpc(t);
         Crypter {
-            evp: evp,
+            evp: t.as_ptr(),
             ctx: ctx,
-            keylen: keylen,
-            blocksize: blocksz,
+            keylen: t.key_len(),
+            blocksize: t.block_size(),
         }
     }
 

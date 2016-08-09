@@ -3,7 +3,6 @@ use std::ptr;
 use ffi;
 
 use HashTypeInternals;
-use crypto::symm_internal::evpc;
 use crypto::hash;
 use crypto::symm;
 use error::ErrorStack;
@@ -41,12 +40,11 @@ pub fn evp_bytes_to_key_pbkdf1_compatible(typ: symm::Type,
 
         ffi::init();
 
-        let (evp, _, _) = evpc(typ);
+        let typ = typ.as_ptr();
+        let message_digest_type = message_digest_type.evp_md();
 
-        let message_digest = message_digest_type.evp_md();
-
-        let len = ffi::EVP_BytesToKey(evp,
-                                      message_digest,
+        let len = ffi::EVP_BytesToKey(typ,
+                                      message_digest_type,
                                       salt_ptr,
                                       data.as_ptr(),
                                       data.len() as c_int,
@@ -60,8 +58,8 @@ pub fn evp_bytes_to_key_pbkdf1_compatible(typ: symm::Type,
         let mut key = vec![0; len as usize];
         let mut iv = vec![0; len as usize];
 
-        try_ssl!(ffi::EVP_BytesToKey(evp,
-                                     message_digest,
+        try_ssl!(ffi::EVP_BytesToKey(typ,
+                                     message_digest_type,
                                      salt_ptr,
                                      data.as_ptr(),
                                      data.len() as c_int,
