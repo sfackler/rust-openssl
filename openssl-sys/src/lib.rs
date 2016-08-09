@@ -600,6 +600,18 @@ pub unsafe fn SSL_set_tlsext_host_name(s: *mut SSL, name: *mut c_char) -> c_long
     SSL_ctrl(s, SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, name as *mut c_void)
 }
 
+pub unsafe fn EVP_CIPHER_block_size(e: *const EVP_CIPHER) -> c_int {
+    (*e).block_size
+}
+
+pub unsafe fn EVP_CIPHER_key_length(e: *const EVP_CIPHER) -> c_int {
+    (*e).key_len
+}
+
+pub unsafe fn EVP_CIPHER_iv_length(e: *const EVP_CIPHER) -> c_int {
+    (*e).iv_len
+}
+
 // True functions
 extern "C" {
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;

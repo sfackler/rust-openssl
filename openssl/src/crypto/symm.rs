@@ -79,7 +79,7 @@ impl Type {
     /// Returns the length of keys used with this cipher.
     pub fn key_len(&self) -> usize {
         unsafe {
-            (*self.as_ptr()).key_len as usize
+            ffi::EVP_CIPHER_key_length(self.as_ptr()) as usize
         }
     }
 
@@ -87,7 +87,7 @@ impl Type {
     /// cipher does not use an IV.
     pub fn iv_len(&self) -> Option<usize> {
         unsafe {
-            let len = (*self.as_ptr()).iv_len as usize;
+            let len = ffi::EVP_CIPHER_iv_length(self.as_ptr()) as usize;
             if len == 0 {
                 None
             } else {
@@ -103,7 +103,7 @@ impl Type {
     /// Stream ciphers such as RC4 have a block size of 1.
     pub fn block_size(&self) -> usize {
         unsafe {
-            (*self.as_ptr()).block_size as usize
+            ffi::EVP_CIPHER_block_size(self.as_ptr()) as usize
         }
     }
 }

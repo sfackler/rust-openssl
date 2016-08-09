@@ -17,11 +17,11 @@ pub struct KeyIvPair {
 ///
 /// If specified `salt` must be 8 bytes in length.
 ///
-/// If the total key and IV length is less than 16 bytes and MD5 is used then 
-/// the algorithm is compatible with the key derivation algorithm from PKCS#5 
+/// If the total key and IV length is less than 16 bytes and MD5 is used then
+/// the algorithm is compatible with the key derivation algorithm from PKCS#5
 /// v1.5 or PBKDF1 from PKCS#5 v2.0.
 ///
-/// New applications should not use this and instead use `pbkdf2_hmac_sha1` or 
+/// New applications should not use this and instead use `pbkdf2_hmac_sha1` or
 /// another more modern key derivation algorithm.
 pub fn evp_bytes_to_key_pbkdf1_compatible(typ: symm::Type,
                                           message_digest_type: hash::Type,
