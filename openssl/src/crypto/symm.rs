@@ -117,6 +117,12 @@ pub struct Crypter {
 }
 
 impl Crypter {
+    /// Creates a new `Crypter`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if an IV is required by the cipher but not provided, or if the
+    /// IV's length does not match the expected length (see `Type::iv_len`).
     pub fn new(t: Type, mode: Mode, key: &[u8], iv: Option<&[u8]>) -> Result<Crypter, ErrorStack> {
         ffi::init();
 
