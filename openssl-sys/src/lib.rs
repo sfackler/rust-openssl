@@ -766,10 +766,17 @@ extern "C" {
 
     pub fn EVP_CIPHER_CTX_new() -> *mut EVP_CIPHER_CTX;
     pub fn EVP_CIPHER_CTX_set_padding(ctx: *mut EVP_CIPHER_CTX, padding: c_int) -> c_int;
+    pub fn EVP_CIPHER_CTX_set_key_length(ctx: *mut EVP_CIPHER_CTX, keylen: c_int) -> c_int;
     pub fn EVP_CIPHER_CTX_free(ctx: *mut EVP_CIPHER_CTX);
 
     pub fn EVP_CipherInit(ctx: *mut EVP_CIPHER_CTX, evp: *const EVP_CIPHER,
                           key: *const u8, iv: *const u8, mode: c_int) -> c_int;
+    pub fn EVP_CipherInit_ex(ctx: *mut EVP_CIPHER_CTX,
+                             type_: *const EVP_CIPHER,
+                             impl_: *mut ENGINE,
+                             key: *mut c_uchar,
+                             iv: *mut c_uchar,
+                             enc: c_int) -> c_int;
     pub fn EVP_CipherUpdate(ctx: *mut EVP_CIPHER_CTX, outbuf: *mut u8,
                             outlen: &mut c_int, inbuf: *const u8, inlen: c_int) -> c_int;
     pub fn EVP_CipherFinal(ctx: *mut EVP_CIPHER_CTX, res: *mut u8, len: &mut c_int) -> c_int;
