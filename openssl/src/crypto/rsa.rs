@@ -144,7 +144,7 @@ impl RSA {
     }
 
     pub fn size(&self) -> Option<u32> {
-        if self.has_n() {
+        if self.n().is_some() {
             unsafe { Some(ffi::RSA_size(self.0) as u32) }
         } else {
             None
@@ -184,49 +184,59 @@ impl RSA {
         self.0
     }
 
-    pub fn n<'a>(&'a self) -> BigNumRef<'a> {
-        assert!(self.has_n());
-        unsafe { BigNumRef::from_handle((*self.0).n) }
+    pub fn n<'a>(&'a self) -> Option<BigNumRef<'a>> {
+        unsafe {
+            let n = (*self.0).n;
+            if n.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_handle(n))
+            }
+        }
     }
 
-    pub fn has_n(&self) -> bool {
-        unsafe { !(*self.0).n.is_null() }
+    pub fn d<'a>(&self) -> Option<BigNumRef<'a>> {
+        unsafe {
+            let d = (*self.0).d;
+            if d.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_handle(d))
+            }
+        }
     }
 
-    pub fn d<'a>(&self) -> BigNumRef<'a> {
-        assert!(self.has_d());
-        unsafe { BigNumRef::from_handle((*self.0).d) }
+    pub fn e<'a>(&'a self) -> Option<BigNumRef<'a>> {
+        unsafe {
+            let e = (*self.0).e;
+            if e.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_handle(e))
+            }
+        }
     }
 
-    pub fn has_d(&self) -> bool {
-        unsafe { !(*self.0).d.is_null() }
+    pub fn p<'a>(&'a self) -> Option<BigNumRef<'a>> {
+        unsafe {
+            let p = (*self.0).p;
+            if p.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_handle(p))
+            }
+        }
     }
 
-    pub fn e<'a>(&'a self) -> BigNumRef<'a> {
-        assert!(self.has_e());
-        unsafe { BigNumRef::from_handle((*self.0).e) }
-    }
-
-    pub fn has_e(&self) -> bool {
-        unsafe { !(*self.0).e.is_null() }
-    }
-
-    pub fn p<'a>(&'a self) -> BigNumRef<'a> {
-        assert!(self.has_p());
-        unsafe { BigNumRef::from_handle((*self.0).p) }
-    }
-
-    pub fn has_p(&self) -> bool {
-        unsafe { !(*self.0).p.is_null() }
-    }
-
-    pub fn q<'a>(&'a self) -> BigNumRef<'a> {
-        assert!(self.has_q());
-        unsafe { BigNumRef::from_handle((*self.0).q) }
-    }
-
-    pub fn has_q(&self) -> bool {
-        unsafe { !(*self.0).q.is_null() }
+    pub fn q<'a>(&'a self) -> Option<BigNumRef<'a>> {
+        unsafe {
+            let q = (*self.0).q;
+            if q.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_handle(q))
+            }
+        }
     }
 }
 

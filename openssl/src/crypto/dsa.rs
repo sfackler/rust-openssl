@@ -145,7 +145,7 @@ impl DSA {
     }
 
     pub fn size(&self) -> Option<u32> {
-        if self.has_q() {
+        if self.q().is_some() {
             unsafe { Some(ffi::DSA_size(self.0) as u32) }
         } else {
             None
@@ -189,31 +189,37 @@ impl DSA {
         self.0
     }
 
-    pub fn p<'a>(&'a self) -> BigNumRef<'a> {
-        assert!(self.has_p());
-        unsafe { BigNumRef::from_handle((*self.0).p) }
+    pub fn p<'a>(&'a self) -> Option<BigNumRef<'a>> {
+        unsafe {
+            let p = (*self.0).p;
+            if p.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_handle((*self.0).p))
+            }
+        }
     }
 
-    pub fn has_p(&self) -> bool {
-        unsafe { !(*self.0).p.is_null() }
+    pub fn q<'a>(&'a self) -> Option<BigNumRef<'a>> {
+        unsafe {
+            let q = (*self.0).q;
+            if q.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_handle((*self.0).q))
+            }
+        }
     }
 
-    pub fn q<'a>(&'a self) -> BigNumRef<'a> {
-        assert!(self.has_q());
-        unsafe { BigNumRef::from_handle((*self.0).q) }
-    }
-
-    pub fn has_q(&self) -> bool {
-        unsafe { !(*self.0).q.is_null() }
-    }
-
-    pub fn g<'a>(&'a self) -> BigNumRef<'a> {
-        assert!(self.has_g());
-        unsafe { BigNumRef::from_handle((*self.0).g) }
-    }
-
-    pub fn has_g(&self) -> bool {
-        unsafe { !(*self.0).q.is_null() }
+    pub fn g<'a>(&'a self) -> Option<BigNumRef<'a>> {
+        unsafe {
+            let g = (*self.0).g;
+            if g.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_handle((*self.0).g))
+            }
+        }
     }
 
     pub fn has_public_key(&self) -> bool {
