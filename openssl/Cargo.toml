@@ -32,6 +32,7 @@ x509_clone = ["c_helpers"]
 x509_generator_request = ["c_helpers"]
 ssl_context_clone = ["c_helpers"]
 hmac = ["c_helpers"]
+dh_from_params = ["c_helpers"]
 
 [dependencies]
 bitflags = ">= 0.5.0, < 0.8.0"

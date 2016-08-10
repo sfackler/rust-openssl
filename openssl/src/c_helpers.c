@@ -15,6 +15,18 @@ STACK_OF(X509_EXTENSION) *rust_X509_get_extensions(X509 *x) {
     return x->cert_info ? x->cert_info->extensions : NULL;
 }
 
+DH *rust_DH_new_from_params(BIGNUM *p, BIGNUM *g, BIGNUM *q) {
+    DH *dh;
+
+    if ((dh = DH_new()) == NULL) {
+        return NULL;
+    }
+    dh->p = p;
+    dh->g = g;
+    dh->q = q;
+    return dh;
+}
+
 #if OPENSSL_VERSION_NUMBER < 0x10000000L
 int rust_HMAC_Init_ex(HMAC_CTX *ctx, const void *key, int key_len, const EVP_MD *md, ENGINE *impl) {
     HMAC_Init_ex(ctx, key, key_len, md, impl);

@@ -10,4 +10,5 @@ extern "C" {
     pub fn rust_HMAC_Init_ex(ctx: *mut ffi::HMAC_CTX, key: *const c_void, keylen: c_int, md: *const ffi::EVP_MD, impl_: *mut ffi::ENGINE) -> c_int;
     pub fn rust_HMAC_Final(ctx: *mut ffi::HMAC_CTX, output: *mut c_uchar, len: *mut c_uint) -> c_int;
     pub fn rust_HMAC_Update(ctx: *mut ffi::HMAC_CTX, input: *const c_uchar, len: c_uint) -> c_int;
+    pub fn rust_DH_new_from_params(p: *mut ffi::BIGNUM, g: *mut ffi::BIGNUM, q: *mut ffi::BIGNUM) -> *mut ffi::DH;
 }

@@ -7,9 +7,11 @@ use std::ptr;
 pub struct DH(*mut ffi::DH);
 
 impl DH {
+    /// Requires the `dh_from_params` feature.
+    #[cfg(feature = "dh_from_params")]
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<DH, ErrorStack> {
         let dh = unsafe {
-            try_ssl_null!(ffi::DH_new_from_params(p.into_raw(), g.into_raw(), q.into_raw()))
+            try_ssl_null!(::c_helpers::rust_DH_new_from_params(p.into_raw(), g.into_raw(), q.into_raw()))
         };
         Ok(DH(dh))
     }
@@ -75,6 +77,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "dh_from_params")]
     fn test_dh() {
         let mut ctx = SslContext::new(Sslv23).unwrap();
         let p = BigNum::from_hex_str("87A8E61DB4B6663CFFBBD19C651959998CEEF608660DD0F25D2CEED4435\
