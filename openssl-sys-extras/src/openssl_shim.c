@@ -138,7 +138,3 @@ DH *DH_new_from_params(BIGNUM *p, BIGNUM *g, BIGNUM *q) {
 long SSL_set_tlsext_host_name_shim(SSL *s, char *name) {
     return SSL_set_tlsext_host_name(s, name);
 }
-
-STACK_OF(X509_EXTENSION) *X509_get_extensions_shim(X509 *x) {
-    return x->cert_info ? x->cert_info->extensions : NULL;
-}

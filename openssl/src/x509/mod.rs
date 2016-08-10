@@ -17,7 +17,6 @@ use crypto::hash::Type as HashType;
 use crypto::pkey::PKey;
 use crypto::rand::rand_bytes;
 use ffi;
-use ffi_extras;
 use nid::Nid;
 use error::ErrorStack;
 
@@ -346,6 +345,9 @@ impl X509Generator {
     }
 
     /// Obtain a certificate signing request (CSR)
+    ///
+    /// Requries the `x509_generator_request` feature.
+    #[cfg(feature = "x509_generator_request")]
     pub fn request(&self, p_key: &PKey) -> Result<X509Req, ErrorStack> {
         let cert = match self.sign(p_key) {
             Ok(c) => c,
@@ -356,7 +358,7 @@ impl X509Generator {
             let req = ffi::X509_to_X509_REQ(cert.handle(), ptr::null_mut(), ptr::null());
             try_ssl_null!(req);
 
-            let exts = ffi_extras::X509_get_extensions(cert.handle());
+            let exts = ::c_helpers::rust_X509_get_extensions(cert.handle());
             if exts != ptr::null_mut() {
                 try_ssl!(ffi::X509_REQ_add_extensions(req, exts));
             }

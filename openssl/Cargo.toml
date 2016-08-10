@@ -28,6 +28,7 @@ pkcs5_pbkdf2_hmac = ["openssl-sys/pkcs5_pbkdf2_hmac"]
 
 c_helpers = ["gcc"]
 x509_clone = ["c_helpers"]
+x509_generator_request = ["c_helpers"]
 ssl_context_clone = ["c_helpers"]
 
 [dependencies]

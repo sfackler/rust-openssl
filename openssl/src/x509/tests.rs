@@ -69,6 +69,7 @@ fn test_cert_gen_extension_bad_ordering() {
 }
 
 #[test]
+#[cfg(feature = "x509_generator_request")]
 fn test_req_gen() {
     let pkey = pkey();
 
