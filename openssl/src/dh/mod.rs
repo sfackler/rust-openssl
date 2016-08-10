@@ -67,11 +67,11 @@ mod tests {
     fn test_dh_rfc5114() {
         let mut ctx = SslContext::new(Sslv23).unwrap();
         let dh1 = DH::get_1024_160().unwrap();
-        ctx.set_tmp_dh(dh1).unwrap();
+        ctx.set_tmp_dh(&dh1).unwrap();
         let dh2 = DH::get_2048_224().unwrap();
-        ctx.set_tmp_dh(dh2).unwrap();
+        ctx.set_tmp_dh(&dh2).unwrap();
         let dh3 = DH::get_2048_256().unwrap();
-        ctx.set_tmp_dh(dh3).unwrap();
+        ctx.set_tmp_dh(&dh3).unwrap();
     }
 
     #[test]
