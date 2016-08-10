@@ -24,6 +24,7 @@ alpn = []
 rfc5114 = []
 pkcs5_pbkdf2_hmac = []
 ecdh_auto = []
+hmac_clone = []
 
 [dependencies]
 libc = "0.2"

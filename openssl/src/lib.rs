@@ -6,7 +6,6 @@ extern crate libc;
 #[macro_use]
 extern crate lazy_static;
 extern crate openssl_sys as ffi;
-extern crate openssl_sys_extras as ffi_extras;
 
 #[cfg(test)]
 extern crate rustc_serialize as serialize;

@@ -25,18 +25,19 @@ alpn = ["openssl-sys/alpn"]
 rfc5114 = ["openssl-sys/rfc5114"]
 ecdh_auto = ["openssl-sys/ecdh_auto"]
 pkcs5_pbkdf2_hmac = ["openssl-sys/pkcs5_pbkdf2_hmac"]
+hmac_clone = ["openssl-sys/hmac_clone"]
 
 c_helpers = ["gcc"]
 x509_clone = ["c_helpers"]
 x509_generator_request = ["c_helpers"]
 ssl_context_clone = ["c_helpers"]
+hmac = ["c_helpers"]
 
 [dependencies]
 bitflags = ">= 0.5.0, < 0.8.0"
 lazy_static = "0.2"
 libc = "0.2"
 openssl-sys = { version = "0.7.14", path = "../openssl-sys" }
-openssl-sys-extras = { version = "0.7.14", path = "../openssl-sys-extras" }
 
 [build-dependencies]
 gcc = { version = "0.3", optional = true }

@@ -18,11 +18,11 @@ use std::io;
 use std::io::prelude::*;
 use std::cmp;
 use ffi;
-use ffi_extras;
 
 use HashTypeInternals;
 use crypto::hash::Type;
 use error::ErrorStack;
+use c_helpers;
 
 #[derive(PartialEq, Copy, Clone)]
 enum State {
@@ -34,6 +34,8 @@ enum State {
 use self::State::*;
 
 /// Provides HMAC computation.
+///
+/// Requires the `hmac` feature.
 ///
 /// # Examples
 ///
@@ -65,7 +67,6 @@ use self::State::*;
 /// ```
 pub struct HMAC {
     ctx: ffi::HMAC_CTX,
-    type_: Type,
     state: State,
 }
 
@@ -83,7 +84,6 @@ impl HMAC {
 
         let mut h = HMAC {
             ctx: ctx,
-            type_: ty,
             state: Finalized,
         };
         try!(h.init_once(md, key));
@@ -92,11 +92,11 @@ impl HMAC {
 
     fn init_once(&mut self, md: *const ffi::EVP_MD, key: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            try_ssl!(ffi_extras::HMAC_Init_ex(&mut self.ctx,
-                                              key.as_ptr(),
-                                              key.len() as c_int,
-                                              md,
-                                              0 as *const _));
+            try_ssl!(c_helpers::rust_HMAC_Init_ex(&mut self.ctx,
+                                                  key.as_ptr() as *const _,
+                                                  key.len() as c_int,
+                                                  md,
+                                                  0 as *mut _));
         }
         self.state = Reset;
         Ok(())
@@ -113,11 +113,11 @@ impl HMAC {
         // If the key and/or md is not supplied it's reused from the last time
         // avoiding redundant initializations
         unsafe {
-            try_ssl!(ffi_extras::HMAC_Init_ex(&mut self.ctx,
-                                              0 as *const _,
-                                              0,
-                                              0 as *const _,
-                                              0 as *const _));
+            try_ssl!(c_helpers::rust_HMAC_Init_ex(&mut self.ctx,
+                                                  0 as *const _,
+                                                  0,
+                                                  0 as *const _,
+                                                  0 as *mut _));
         }
         self.state = Reset;
         Ok(())
@@ -130,7 +130,7 @@ impl HMAC {
         while !data.is_empty() {
             let len = cmp::min(data.len(), c_uint::max_value() as usize);
             unsafe {
-                try_ssl!(ffi_extras::HMAC_Update(&mut self.ctx, data.as_ptr(), len as c_uint));
+                try_ssl!(c_helpers::rust_HMAC_Update(&mut self.ctx, data.as_ptr(), len as c_uint));
             }
             data = &data[len..];
         }
@@ -147,7 +147,7 @@ impl HMAC {
         unsafe {
             let mut len = ffi::EVP_MAX_MD_SIZE;
             let mut res = vec![0; len as usize];
-            try_ssl!(ffi_extras::HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut len));
+            try_ssl!(c_helpers::rust_HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut len));
             res.truncate(len as usize);
             self.state = Finalized;
             Ok(res)
@@ -167,17 +167,18 @@ impl Write for HMAC {
     }
 }
 
+#[cfg(feature = "hmac_clone")]
 impl Clone for HMAC {
+    /// Requires the `hmac_clone` feature.
     fn clone(&self) -> HMAC {
         let mut ctx: ffi::HMAC_CTX;
         unsafe {
             ctx = ::std::mem::uninitialized();
-            let r = ffi_extras::HMAC_CTX_copy(&mut ctx, &self.ctx);
+            let r = ffi::HMAC_CTX_copy(&mut ctx, &self.ctx);
             assert_eq!(r, 1);
         }
         HMAC {
             ctx: ctx,
-            type_: self.type_,
             state: self.state,
         }
     }
@@ -288,6 +289,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "hmac_clone")]
     fn test_clone() {
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 2] =
             [(repeat(0xaa_u8).take(80).collect(),
