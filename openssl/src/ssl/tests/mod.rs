@@ -1052,7 +1052,7 @@ fn flush_panic() {
 
 #[test]
 fn refcount_ssl_context() {
-    let ssl = {
+    let mut ssl = {
         let ctx = SslContext::new(SslMethod::Sslv23).unwrap();
         ssl::Ssl::new(&ctx).unwrap()
     };

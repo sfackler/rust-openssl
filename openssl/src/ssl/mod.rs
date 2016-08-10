@@ -1,18 +1,19 @@
 use libc::{c_int, c_void, c_long};
+use std::any::Any;
 use std::any::TypeId;
+use std::cmp;
 use std::collections::HashMap;
+use std::error as stderror;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::io;
 use std::io::prelude::*;
-use std::error as stderror;
 use std::mem;
-use std::str;
+use std::ops::{Deref, DerefMut};
 use std::path::Path;
 use std::ptr;
+use std::str;
 use std::sync::{Mutex, Arc};
-use std::cmp;
-use std::any::Any;
 #[cfg(any(feature = "npn", feature = "alpn"))]
 use libc::{c_uchar, c_uint};
 #[cfg(any(feature = "npn", feature = "alpn"))]
@@ -37,7 +38,6 @@ use self::bio::BioMethod;
 pub use ssl::error::Error;
 
 extern "C" {
-    fn rust_SSL_clone(ssl: *mut ffi::SSL);
     fn rust_SSL_CTX_clone(cxt: *mut ffi::SSL_CTX);
 }
 
@@ -259,14 +259,13 @@ extern "C" fn ssl_raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_ST
 }
 
 extern "C" fn raw_sni<F>(ssl: *mut ffi::SSL, al: *mut c_int, _arg: *mut c_void) -> c_int
-    where F: Fn(&mut Ssl) -> Result<(), SniError> + Any + 'static + Sync + Send
+    where F: Fn(&mut SslSlice) -> Result<(), SniError> + Any + 'static + Sync + Send
 {
     unsafe {
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
         let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_verify_data_idx::<F>());
         let callback: &F = mem::transmute(callback);
-        rust_SSL_clone(ssl);
-        let mut ssl = Ssl { ssl: ssl };
+        let mut ssl = SslSlice::from_ptr(ssl);
 
         match callback(&mut ssl) {
             Ok(()) => ffi::SSL_TLSEXT_ERR_OK,
@@ -485,7 +484,7 @@ impl SslContext {
     /// Obtain the server name with `servername` then set the corresponding context
     /// with `set_ssl_context`
     pub fn set_servername_callback<F>(&mut self, callback: F)
-        where F: Fn(&mut Ssl) -> Result<(), SniError> + Any + 'static + Sync + Send
+        where F: Fn(&mut SslSlice) -> Result<(), SniError> + Any + 'static + Sync + Send
     {
         unsafe {
             let callback = Box::new(callback);
@@ -769,70 +768,63 @@ impl<'a> SslCipher<'a> {
     }
 }
 
+pub struct SslSlice<'a>(*mut ffi::SSL, PhantomData<&'a ()>);
 
-pub struct Ssl {
-    ssl: *mut ffi::SSL,
-}
+unsafe impl<'a> Send for SslSlice<'a> {}
+unsafe impl<'a> Sync for SslSlice<'a> {}
 
-unsafe impl Send for Ssl {}
-unsafe impl Sync for Ssl {}
-
-impl fmt::Debug for Ssl {
+impl<'a> fmt::Debug for SslSlice<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("Ssl")
+        fmt.debug_struct("SslSlice")
            .field("state", &self.state_string_long())
            .finish()
     }
 }
 
-impl Drop for Ssl {
-    fn drop(&mut self) {
-        unsafe { ffi::SSL_free(self.ssl) }
+impl<'a> SslSlice<'a> {
+    pub unsafe fn from_ptr(ssl: *mut ffi::SSL) -> SslSlice<'a> {
+        SslSlice(ssl, PhantomData)
     }
-}
 
-impl Ssl {
-    pub fn new(ctx: &SslContext) -> Result<Ssl, ErrorStack> {
-        let ssl = try_ssl_null!(unsafe { ffi::SSL_new(ctx.ctx) });
-        let ssl = Ssl { ssl: ssl };
-        Ok(ssl)
+    pub fn as_ptr(&self) -> *mut ffi::SSL {
+        self.0
     }
 
     fn get_raw_rbio(&self) -> *mut ffi::BIO {
-        unsafe { ffi::SSL_get_rbio(self.ssl) }
+        unsafe { ffi::SSL_get_rbio(self.as_ptr()) }
     }
 
-    fn connect(&self) -> c_int {
-        unsafe { ffi::SSL_connect(self.ssl) }
+    fn connect(&mut self) -> c_int {
+        unsafe { ffi::SSL_connect(self.as_ptr()) }
     }
 
-    fn accept(&self) -> c_int {
-        unsafe { ffi::SSL_accept(self.ssl) }
+    fn accept(&mut self) -> c_int {
+        unsafe { ffi::SSL_accept(self.as_ptr()) }
     }
 
-    fn handshake(&self) -> c_int {
-        unsafe { ffi::SSL_do_handshake(self.ssl) }
+    fn handshake(&mut self) -> c_int {
+        unsafe { ffi::SSL_do_handshake(self.as_ptr()) }
     }
 
-    fn read(&self, buf: &mut [u8]) -> c_int {
+    fn read(&mut self, buf: &mut [u8]) -> c_int {
         let len = cmp::min(c_int::max_value() as usize, buf.len()) as c_int;
-        unsafe { ffi::SSL_read(self.ssl, buf.as_ptr() as *mut c_void, len) }
+        unsafe { ffi::SSL_read(self.as_ptr(), buf.as_ptr() as *mut c_void, len) }
     }
 
-    fn write(&self, buf: &[u8]) -> c_int {
+    fn write(&mut self, buf: &[u8]) -> c_int {
         let len = cmp::min(c_int::max_value() as usize, buf.len()) as c_int;
-        unsafe { ffi::SSL_write(self.ssl, buf.as_ptr() as *const c_void, len) }
+        unsafe { ffi::SSL_write(self.as_ptr(), buf.as_ptr() as *const c_void, len) }
     }
 
     fn get_error(&self, ret: c_int) -> c_int {
-        unsafe { ffi::SSL_get_error(self.ssl, ret) }
+        unsafe { ffi::SSL_get_error(self.as_ptr(), ret) }
     }
 
     /// Sets the verification mode to be used during the handshake process.
     ///
     /// Use `set_verify_callback` to additionally add a callback.
     pub fn set_verify(&mut self, mode: SslVerifyMode) {
-        unsafe { ffi::SSL_set_verify(self.ssl, mode.bits as c_int, None) }
+        unsafe { ffi::SSL_set_verify(self.as_ptr(), mode.bits as c_int, None) }
     }
 
     /// Sets the certificate verification callback to be used during the
@@ -847,16 +839,16 @@ impl Ssl {
     {
         unsafe {
             let verify = Box::new(verify);
-            ffi::SSL_set_ex_data(self.ssl,
+            ffi::SSL_set_ex_data(self.as_ptr(),
                                  get_ssl_verify_data_idx::<F>(),
                                  mem::transmute(verify));
-            ffi::SSL_set_verify(self.ssl, mode.bits as c_int, Some(ssl_raw_verify::<F>));
+            ffi::SSL_set_verify(self.as_ptr(), mode.bits as c_int, Some(ssl_raw_verify::<F>));
         }
     }
 
-    pub fn current_cipher<'a>(&'a self) -> Option<SslCipher<'a>> {
+    pub fn current_cipher(&self) -> Option<SslCipher<'a>> {
         unsafe {
-            let ptr = ffi::SSL_get_current_cipher(self.ssl);
+            let ptr = ffi::SSL_get_current_cipher(self.as_ptr());
 
             if ptr.is_null() {
                 None
@@ -871,7 +863,7 @@ impl Ssl {
 
     pub fn state_string(&self) -> &'static str {
         let state = unsafe {
-            let ptr = ffi::SSL_state_string(self.ssl);
+            let ptr = ffi::SSL_state_string(self.as_ptr());
             CStr::from_ptr(ptr as *const _)
         };
 
@@ -880,7 +872,7 @@ impl Ssl {
 
     pub fn state_string_long(&self) -> &'static str {
         let state = unsafe {
-            let ptr = ffi::SSL_state_string_long(self.ssl);
+            let ptr = ffi::SSL_state_string_long(self.as_ptr());
             CStr::from_ptr(ptr as *const _)
         };
 
@@ -888,10 +880,10 @@ impl Ssl {
     }
 
     /// Sets the host name to be used with SNI (Server Name Indication).
-    pub fn set_hostname(&self, hostname: &str) -> Result<(), ErrorStack> {
+    pub fn set_hostname(&mut self, hostname: &str) -> Result<(), ErrorStack> {
         let cstr = CString::new(hostname).unwrap();
         let ret = unsafe {
-            ffi::SSL_set_tlsext_host_name(self.ssl, cstr.as_ptr() as *mut _)
+            ffi::SSL_set_tlsext_host_name(self.as_ptr(), cstr.as_ptr() as *mut _)
         };
 
         // For this case, 0 indicates failure.
@@ -905,7 +897,7 @@ impl Ssl {
     /// Returns the certificate of the peer, if present.
     pub fn peer_certificate(&self) -> Option<X509> {
         unsafe {
-            let ptr = ffi::SSL_get_peer_certificate(self.ssl);
+            let ptr = ffi::SSL_get_peer_certificate(self.as_ptr());
             if ptr.is_null() {
                 None
             } else {
@@ -917,7 +909,7 @@ impl Ssl {
     /// Returns the name of the protocol used for the connection, e.g. "TLSv1.2", "SSLv3", etc.
     pub fn version(&self) -> &'static str {
         let version = unsafe {
-            let ptr = ffi::SSL_get_version(self.ssl);
+            let ptr = ffi::SSL_get_version(self.as_ptr());
             CStr::from_ptr(ptr as *const _)
         };
 
@@ -937,7 +929,7 @@ impl Ssl {
             let mut len: c_uint = 0;
             // Get the negotiated protocol from the SSL instance.
             // `data` will point at a `c_uchar` array; `len` will contain the length of this array.
-            ffi::SSL_get0_next_proto_negotiated(self.ssl, &mut data, &mut len);
+            ffi::SSL_get0_next_proto_negotiated(self.as_ptr(), &mut data, &mut len);
 
             if data.is_null() {
                 None
@@ -960,7 +952,7 @@ impl Ssl {
             let mut len: c_uint = 0;
             // Get the negotiated protocol from the SSL instance.
             // `data` will point at a `c_uchar` array; `len` will contain the length of this array.
-            ffi::SSL_get0_alpn_selected(self.ssl, &mut data, &mut len);
+            ffi::SSL_get0_alpn_selected(self.as_ptr(), &mut data, &mut len);
 
             if data.is_null() {
                 None
@@ -973,7 +965,7 @@ impl Ssl {
     /// Returns the number of bytes remaining in the currently processed TLS
     /// record.
     pub fn pending(&self) -> usize {
-        unsafe { ffi::SSL_pending(self.ssl) as usize }
+        unsafe { ffi::SSL_pending(self.as_ptr()) as usize }
     }
 
     /// Returns the compression currently in use.
@@ -981,7 +973,7 @@ impl Ssl {
     /// The result will be either None, indicating no compression is in use, or
     /// a string with the compression name.
     pub fn compression(&self) -> Option<String> {
-        let ptr = unsafe { ffi::SSL_get_current_compression(self.ssl) };
+        let ptr = unsafe { ffi::SSL_get_current_compression(self.as_ptr()) };
         if ptr == ptr::null() {
             return None;
         }
@@ -996,14 +988,14 @@ impl Ssl {
 
     pub fn ssl_method(&self) -> Option<SslMethod> {
         unsafe {
-            let method = ffi::SSL_get_ssl_method(self.ssl);
+            let method = ffi::SSL_get_ssl_method(self.as_ptr());
             SslMethod::from_raw(method)
         }
     }
 
     /// Returns the server's name for the current connection
     pub fn servername(&self) -> Option<String> {
-        let name = unsafe { ffi::SSL_get_servername(self.ssl, ffi::TLSEXT_NAMETYPE_host_name) };
+        let name = unsafe { ffi::SSL_get_servername(self.as_ptr(), ffi::TLSEXT_NAMETYPE_host_name) };
         if name == ptr::null() {
             return None;
         }
@@ -1012,9 +1004,9 @@ impl Ssl {
     }
 
     /// Changes the context corresponding to the current connection.
-    pub fn set_ssl_context(&self, ctx: &SslContext) -> Result<(), ErrorStack> {
+    pub fn set_ssl_context(&mut self, ctx: &SslContext) -> Result<(), ErrorStack> {
         unsafe {
-            try_ssl_null!(ffi::SSL_set_SSL_CTX(self.ssl, ctx.ctx));
+            try_ssl_null!(ffi::SSL_set_SSL_CTX(self.as_ptr(), ctx.ctx));
         }
         Ok(())
     }
@@ -1022,9 +1014,52 @@ impl Ssl {
     /// Returns the context corresponding to the current connection
     pub fn ssl_context(&self) -> SslContext {
         unsafe {
-            let ssl_ctx = ffi::SSL_get_SSL_CTX(self.ssl);
+            let ssl_ctx = ffi::SSL_get_SSL_CTX(self.as_ptr());
             SslContext::new_ref(ssl_ctx)
         }
+    }
+}
+
+pub struct Ssl(SslSlice<'static>);
+
+impl fmt::Debug for Ssl {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("Ssl")
+           .field("state", &self.state_string_long())
+           .finish()
+    }
+}
+
+impl Drop for Ssl {
+    fn drop(&mut self) {
+        unsafe { ffi::SSL_free(self.as_ptr()) }
+    }
+}
+
+impl Deref for Ssl {
+    type Target = SslSlice<'static>;
+
+    fn deref(&self) -> &SslSlice<'static> {
+        &self.0
+    }
+}
+
+impl DerefMut for Ssl {
+    fn deref_mut(&mut self) -> &mut SslSlice<'static> {
+        &mut self.0
+    }
+}
+
+impl Ssl {
+    pub fn new(ctx: &SslContext) -> Result<Ssl, ErrorStack> {
+        unsafe {
+            let ssl = try_ssl_null!(ffi::SSL_new(ctx.ctx));
+            Ok(Ssl::from_ptr(ssl))
+        }
+    }
+
+    pub unsafe fn from_ptr(ssl: *mut ffi::SSL) -> Ssl {
+        Ssl(SslSlice::from_ptr(ssl))
     }
 }
 
@@ -1052,7 +1087,7 @@ impl<S: Read + Write> SslStream<S> {
     fn new_base(ssl: Ssl, stream: S) -> Self {
         unsafe {
             let (bio, method) = bio::new(stream).unwrap();
-            ffi::SSL_set_bio(ssl.ssl, bio, bio);
+            ffi::SSL_set_bio(ssl.as_ptr(), bio, bio);
 
             SslStream {
                 ssl: ssl,
