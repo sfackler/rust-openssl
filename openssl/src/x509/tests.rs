@@ -26,8 +26,7 @@ fn get_generator() -> X509Generator {
 
 fn pkey() -> PKey {
     let rsa = RSA::generate(2048).unwrap();
-    let mut pkey = PKey::from_rsa(rsa).unwrap();
-    pkey
+    PKey::from_rsa(rsa).unwrap()
 }
 
 #[test]

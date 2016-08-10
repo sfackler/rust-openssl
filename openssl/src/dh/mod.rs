@@ -101,7 +101,7 @@ mod tests {
                                       5FBD3")
                     .unwrap();
         let dh = DH::from_params(p, g, q).unwrap();
-        ctx.set_tmp_dh(dh).unwrap();
+        ctx.set_tmp_dh(&dh).unwrap();
     }
 
     #[test]
@@ -109,6 +109,6 @@ mod tests {
         let mut ctx = SslContext::new(Sslv23).unwrap();
         let params = include_bytes!("../../test/dhparams.pem");
         let dh = DH::from_pem(params).ok().expect("Failed to load PEM");
-        ctx.set_tmp_dh(dh).unwrap();
+        ctx.set_tmp_dh(&dh).unwrap();
     }
 }

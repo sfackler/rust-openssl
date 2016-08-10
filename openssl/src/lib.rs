@@ -24,6 +24,8 @@ mod macros;
 pub mod asn1;
 mod bio;
 pub mod bn;
+#[cfg(feature = "c_helpers")]
+mod c_helpers;
 pub mod crypto;
 pub mod dh;
 pub mod error;

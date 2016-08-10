@@ -473,14 +473,12 @@ impl Deref for X509 {
     }
 }
 
-extern "C" {
-    fn rust_X509_clone(x509: *mut ffi::X509);
-}
-
+#[cfg(feature = "x509_clone")]
 impl Clone for X509 {
+    /// Requires the `x509_clone` feature.
     fn clone(&self) -> X509 {
         unsafe {
-            rust_X509_clone(self.handle());
+            ::c_helpers::rust_X509_clone(self.handle());
             X509::new(self.handle())
         }
     }
