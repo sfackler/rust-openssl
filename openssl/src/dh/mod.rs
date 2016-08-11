@@ -3,6 +3,11 @@ use error::ErrorStack;
 use bio::MemBioSlice;
 use std::ptr;
 
+#[cfg(feature = "dh_from_params")]
+use bn::BigNum;
+#[cfg(feature = "dh_from_params")]
+use std::mem;
+
 pub struct DH(*mut ffi::DH);
 
 impl DH {
