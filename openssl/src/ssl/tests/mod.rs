@@ -228,7 +228,7 @@ run_test!(new_sslstream, |method, stream| {
 
 run_test!(get_ssl_method, |method, _| {
     let ssl = Ssl::new(&SslContext::new(method).unwrap()).unwrap();
-    assert_eq!(ssl.ssl_method(), Some(method));
+    assert_eq!(ssl.ssl_method(), method);
 });
 
 run_test!(verify_untrusted, |method, stream| {
