@@ -733,6 +733,7 @@ pub struct CipherBits {
     pub secret: i32,
     /// The number of bits processed by the chosen algorithm, if not None.
     pub algorithm: Option<i32>,
+    _p: (),
 }
 
 
@@ -771,11 +772,13 @@ impl<'a> SslCipher<'a> {
                 CipherBits {
                     secret: secret_bits,
                     algorithm: Some(*algo_bits),
+                    _p: (),
                 }
             } else {
                 CipherBits {
                     secret: secret_bits,
                     algorithm: None,
+                    _p: (),
                 }
             }
         }
@@ -1015,10 +1018,10 @@ impl<'a> SslRef<'a> {
         Some(s)
     }
 
-    pub fn ssl_method(&self) -> Option<SslMethod> {
+    pub fn ssl_method(&self) -> SslMethod {
         unsafe {
             let method = ffi::SSL_get_ssl_method(self.as_ptr());
-            SslMethod::from_raw(method)
+            SslMethod::from_raw(method).unwrap()
         }
     }
 
@@ -1254,7 +1257,7 @@ impl<S> MidHandshakeSslStream<S> {
         self.stream.get_mut()
     }
 
-    /// Returns a shared reference to the `SslContext` of the stream.
+    /// Returns a shared reference to the `Ssl` of the stream.
     pub fn ssl(&self) -> &Ssl {
         self.stream.ssl()
     }
