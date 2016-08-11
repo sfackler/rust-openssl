@@ -275,9 +275,10 @@ impl X509Generator {
         })
     }
 
-    fn random_serial() -> c_long {
+    fn random_serial() -> Result<c_long, ErrorStack> {
         let len = mem::size_of::<c_long>();
-        let bytes = rand_bytes(len);
+        let mut bytes = vec![0; len];
+        try!(rand_bytes(&mut bytes));
         let mut res = 0;
         for b in bytes.iter() {
             res = res << 8;
@@ -287,7 +288,7 @@ impl X509Generator {
         // While OpenSSL is actually OK to have negative serials
         // other libraries (for example, Go crypto) can drop
         // such certificates as invalid, so we clear the high bit
-        ((res as c_ulong) >> 1) as c_long
+        Ok(((res as c_ulong) >> 1) as c_long)
     }
 
     /// Sets the certificate public-key, then self-sign and return it
@@ -301,7 +302,7 @@ impl X509Generator {
 
             try_ssl!(ffi::X509_set_version(x509.handle(), 2));
             try_ssl!(ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509.handle()),
-                                           X509Generator::random_serial()));
+                                           try!(X509Generator::random_serial())));
 
             let not_before = try!(Asn1Time::days_from_now(0));
             let not_after = try!(Asn1Time::days_from_now(self.days));
@@ -839,7 +840,7 @@ impl<'a> GeneralName<'a> {
 fn test_negative_serial() {
     // I guess that's enough to get a random negative number
     for _ in 0..1000 {
-        assert!(X509Generator::random_serial() > 0,
+        assert!(X509Generator::random_serial().unwrap() > 0,
                 "All serials should be positive");
     }
 }

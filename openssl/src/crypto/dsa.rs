@@ -15,7 +15,7 @@ use crypto::util::{CallbackState, invoke_passwd_cb};
 pub struct DSAParams(*mut ffi::DSA);
 
 impl DSAParams {
-    pub fn with_size(size: usize) -> Result<DSAParams, ErrorStack> {
+    pub fn with_size(size: u32) -> Result<DSAParams, ErrorStack> {
         unsafe {
             // Wrap it so that if we panic we'll call the dtor
             let dsa = DSAParams(try_ssl_null!(ffi::DSA_new()));
@@ -55,14 +55,13 @@ impl Drop for DSA {
 }
 
 impl DSA {
-    /// the caller should assert that the dsa pointer is valid.
-    pub unsafe fn from_raw(dsa: *mut ffi::DSA) -> DSA {
+    pub unsafe fn from_ptr(dsa: *mut ffi::DSA) -> DSA {
         DSA(dsa)
     }
 
     /// Generate a DSA key pair
     /// For more complicated key generation scenarios see the `DSAParams` type
-    pub fn generate(size: usize) -> Result<DSA, ErrorStack> {
+    pub fn generate(size: u32) -> Result<DSA, ErrorStack> {
         let params = try!(DSAParams::with_size(size));
         params.generate()
     }
