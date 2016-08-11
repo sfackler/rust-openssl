@@ -10,8 +10,11 @@ impl DH {
     #[cfg(feature = "dh_from_params")]
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<DH, ErrorStack> {
         let dh = unsafe {
-            try_ssl_null!(::c_helpers::rust_DH_new_from_params(p.into_raw(), g.into_raw(), q.into_raw()))
+            try_ssl_null!(::c_helpers::rust_DH_new_from_params(p.as_ptr(), g.as_ptr(), q.as_ptr()))
         };
+        mem::forget(p);
+        mem::forget(g);
+        mem::forget(q);
         Ok(DH(dh))
     }
 
@@ -42,7 +45,7 @@ impl DH {
         Ok(DH(dh))
     }
 
-    pub unsafe fn raw(&self) -> *mut ffi::DH {
+    pub unsafe fn as_ptr(&self) -> *mut ffi::DH {
         let DH(n) = *self;
         n
     }
@@ -51,7 +54,7 @@ impl DH {
 impl Drop for DH {
     fn drop(&mut self) {
         unsafe {
-            ffi::DH_free(self.raw())
+            ffi::DH_free(self.as_ptr())
         }
     }
 }

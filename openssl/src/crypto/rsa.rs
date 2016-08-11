@@ -1,6 +1,7 @@
 use ffi;
 use std::fmt;
 use std::ptr;
+use std::mem;
 use libc::{c_int, c_void, c_char, c_ulong};
 
 use bn::{BigNum, BigNumRef};
@@ -26,8 +27,10 @@ impl RSA {
     pub fn from_public_components(n: BigNum, e: BigNum) -> Result<RSA, ErrorStack> {
         unsafe {
             let rsa = try_ssl_null!(ffi::RSA_new());
-            (*rsa).n = n.into_raw();
-            (*rsa).e = e.into_raw();
+            (*rsa).n = n.as_ptr();
+            (*rsa).e = e.as_ptr();
+            mem::forget(n);
+            mem::forget(e);
             Ok(RSA(rsa))
         }
     }
@@ -43,14 +46,22 @@ impl RSA {
                                    -> Result<RSA, ErrorStack> {
         unsafe {
             let rsa = try_ssl_null!(ffi::RSA_new());
-            (*rsa).n = n.into_raw();
-            (*rsa).e = e.into_raw();
-            (*rsa).d = d.into_raw();
-            (*rsa).p = p.into_raw();
-            (*rsa).q = q.into_raw();
-            (*rsa).dmp1 = dp.into_raw();
-            (*rsa).dmq1 = dq.into_raw();
-            (*rsa).iqmp = qi.into_raw();
+            (*rsa).n = n.as_ptr();
+            (*rsa).e = e.as_ptr();
+            (*rsa).d = d.as_ptr();
+            (*rsa).p = p.as_ptr();
+            (*rsa).q = q.as_ptr();
+            (*rsa).dmp1 = dp.as_ptr();
+            (*rsa).dmq1 = dq.as_ptr();
+            (*rsa).iqmp = qi.as_ptr();
+            mem::forget(n);
+            mem::forget(e);
+            mem::forget(d);
+            mem::forget(p);
+            mem::forget(q);
+            mem::forget(dp);
+            mem::forget(dq);
+            mem::forget(qi);
             Ok(RSA(rsa))
         }
     }

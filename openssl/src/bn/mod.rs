@@ -1,7 +1,7 @@
 use libc::{c_int, c_ulong, c_void};
 use std::ffi::{CStr, CString};
 use std::cmp::Ordering;
-use std::{fmt, ptr, mem};
+use std::{fmt, ptr};
 use std::marker::PhantomData;
 use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub, Deref, DerefMut};
 
@@ -676,12 +676,6 @@ impl BigNum {
                 ffi::BN_pseudo_rand(r.as_ptr(), bits as c_int, prop as c_int, odd as c_int) == 1
             })
         }
-    }
-
-    pub fn into_raw(self) -> *mut ffi::BIGNUM {
-        let ptr = self.as_ptr();
-        mem::forget(self);
-        ptr
     }
 }
 

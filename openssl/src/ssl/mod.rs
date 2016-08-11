@@ -466,7 +466,7 @@ impl<'a> SslContextRef<'a> {
     }
 
     pub fn set_tmp_dh(&mut self, dh: &DH) -> Result<(), ErrorStack> {
-        wrap_ssl_result(unsafe { ffi::SSL_CTX_set_tmp_dh(self.as_ptr(), dh.raw()) as i32 })
+        wrap_ssl_result(unsafe { ffi::SSL_CTX_set_tmp_dh(self.as_ptr(), dh.as_ptr()) as i32 })
     }
 
     /// Use the default locations of trusted certificates for verification.
