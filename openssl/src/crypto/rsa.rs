@@ -68,7 +68,7 @@ impl RSA {
             let rsa = RSA(rsa);
             let e = try!(BigNum::new_from(ffi::RSA_F4 as c_ulong));
 
-            try_ssl!(ffi::RSA_generate_key_ex(rsa.0, bits as c_int, e.raw(), ptr::null_mut()));
+            try_ssl!(ffi::RSA_generate_key_ex(rsa.0, bits as c_int, e.as_ptr(), ptr::null_mut()));
 
             Ok(rsa)
         }
@@ -190,7 +190,7 @@ impl RSA {
             if n.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_handle(n))
+                Some(BigNumRef::from_ptr(n))
             }
         }
     }
@@ -201,7 +201,7 @@ impl RSA {
             if d.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_handle(d))
+                Some(BigNumRef::from_ptr(d))
             }
         }
     }
@@ -212,7 +212,7 @@ impl RSA {
             if e.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_handle(e))
+                Some(BigNumRef::from_ptr(e))
             }
         }
     }
@@ -223,7 +223,7 @@ impl RSA {
             if p.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_handle(p))
+                Some(BigNumRef::from_ptr(p))
             }
         }
     }
@@ -234,7 +234,7 @@ impl RSA {
             if q.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_handle(q))
+                Some(BigNumRef::from_ptr(q))
             }
         }
     }

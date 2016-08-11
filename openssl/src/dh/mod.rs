@@ -1,7 +1,6 @@
 use ffi;
 use error::ErrorStack;
 use bio::MemBioSlice;
-use bn::BigNum;
 use std::ptr;
 
 pub struct DH(*mut ffi::DH);

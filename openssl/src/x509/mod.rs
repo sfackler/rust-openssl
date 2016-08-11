@@ -306,11 +306,11 @@ impl X509Generator {
             let not_before = try!(Asn1Time::days_from_now(0));
             let not_after = try!(Asn1Time::days_from_now(self.days));
 
-            try_ssl!(ffi::X509_set_notBefore(x509.handle(), not_before.handle() as *const _));
+            try_ssl!(ffi::X509_set_notBefore(x509.handle(), not_before.as_ptr() as *const _));
             // If prev line succeded - ownership should go to cert
             mem::forget(not_before);
 
-            try_ssl!(ffi::X509_set_notAfter(x509.handle(), not_after.handle() as *const _));
+            try_ssl!(ffi::X509_set_notAfter(x509.handle(), not_after.as_ptr() as *const _));
             // If prev line succeded - ownership should go to cert
             mem::forget(not_after);
 

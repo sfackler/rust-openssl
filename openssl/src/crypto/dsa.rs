@@ -195,7 +195,7 @@ impl DSA {
             if p.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_handle((*self.0).p))
+                Some(BigNumRef::from_ptr((*self.0).p))
             }
         }
     }
@@ -206,7 +206,7 @@ impl DSA {
             if q.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_handle((*self.0).q))
+                Some(BigNumRef::from_ptr((*self.0).q))
             }
         }
     }
@@ -217,7 +217,7 @@ impl DSA {
             if g.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_handle((*self.0).g))
+                Some(BigNumRef::from_ptr((*self.0).g))
             }
         }
     }
