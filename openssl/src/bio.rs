@@ -28,7 +28,7 @@ impl<'a> MemBioSlice<'a> {
         Ok(MemBioSlice(bio, PhantomData))
     }
 
-    pub fn handle(&self) -> *mut ffi::BIO {
+    pub fn as_ptr(&self) -> *mut ffi::BIO {
         self.0
     }
 }
@@ -53,7 +53,7 @@ impl MemBio {
         Ok(MemBio(bio))
     }
 
-    pub fn handle(&self) -> *mut ffi::BIO {
+    pub fn as_ptr(&self) -> *mut ffi::BIO {
         self.0
     }
 

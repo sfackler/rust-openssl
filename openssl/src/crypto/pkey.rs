@@ -26,7 +26,7 @@ impl PKey {
         }
     }
 
-    pub unsafe fn from_handle(handle: *mut ffi::EVP_PKEY) -> PKey {
+    pub unsafe fn from_ptr(handle: *mut ffi::EVP_PKEY) -> PKey {
         PKey(handle)
     }
 
@@ -35,11 +35,11 @@ impl PKey {
         ffi::init();
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.handle(),
+            let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.as_ptr(),
                                                                  ptr::null_mut(),
                                                                  None,
                                                                  ptr::null_mut()));
-            Ok(PKey::from_handle(evp))
+            Ok(PKey::from_ptr(evp))
         }
     }
 
@@ -55,11 +55,11 @@ impl PKey {
         let mut cb = CallbackState::new(pass_cb);
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.handle(),
+            let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.as_ptr(),
                                                                  ptr::null_mut(),
                                                                  Some(invoke_passwd_cb::<F>),
                                                                  &mut cb as *mut _ as *mut c_void));
-            Ok(PKey::from_handle(evp))
+            Ok(PKey::from_ptr(evp))
         }
     }
 
@@ -68,11 +68,11 @@ impl PKey {
         ffi::init();
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let evp = try_ssl_null!(ffi::PEM_read_bio_PUBKEY(mem_bio.handle(),
+            let evp = try_ssl_null!(ffi::PEM_read_bio_PUBKEY(mem_bio.as_ptr(),
                                                              ptr::null_mut(),
                                                              None,
                                                              ptr::null_mut()));
-            Ok(PKey::from_handle(evp))
+            Ok(PKey::from_ptr(evp))
         }
     }
 
@@ -91,7 +91,7 @@ impl PKey {
         unsafe {
             let rsa = try_ssl_null!(ffi::EVP_PKEY_get1_RSA(self.0));
             // this is safe as the ffi increments a reference counter to the internal key
-            Ok(RSA::from_raw(rsa))
+            Ok(RSA::from_ptr(rsa))
         }
     }
 
@@ -100,7 +100,7 @@ impl PKey {
     pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
-            try_ssl!(ffi::PEM_write_bio_PrivateKey(mem_bio.handle(),
+            try_ssl!(ffi::PEM_write_bio_PrivateKey(mem_bio.as_ptr(),
                                                    self.0,
                                                    ptr::null(),
                                                    ptr::null_mut(),
@@ -115,11 +115,11 @@ impl PKey {
     /// Stores public key as a PEM
     pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
-        unsafe { try_ssl!(ffi::PEM_write_bio_PUBKEY(mem_bio.handle(), self.0)) }
+        unsafe { try_ssl!(ffi::PEM_write_bio_PUBKEY(mem_bio.as_ptr(), self.0)) }
         Ok(mem_bio.get_buf().to_owned())
     }
 
-    pub fn handle(&self) -> *mut ffi::EVP_PKEY {
+    pub fn as_ptr(&self) -> *mut ffi::EVP_PKEY {
         return self.0;
     }
 

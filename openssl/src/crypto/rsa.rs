@@ -66,7 +66,7 @@ impl RSA {
         }
     }
 
-    pub unsafe fn from_raw(rsa: *mut ffi::RSA) -> RSA {
+    pub unsafe fn from_ptr(rsa: *mut ffi::RSA) -> RSA {
         RSA(rsa)
     }
 
@@ -89,7 +89,7 @@ impl RSA {
     pub fn private_key_from_pem(buf: &[u8]) -> Result<RSA, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.handle(),
+            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.as_ptr(),
                                                                     ptr::null_mut(),
                                                                     None,
                                                                     ptr::null_mut()));
@@ -106,7 +106,7 @@ impl RSA {
 
         unsafe {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
-            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.handle(),
+            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.as_ptr(),
                                                                     ptr::null_mut(),
                                                                     Some(invoke_passwd_cb::<F>),
                                                                     cb_ptr));
@@ -119,7 +119,7 @@ impl RSA {
     pub fn public_key_from_pem(buf: &[u8]) -> Result<RSA, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.handle(),
+            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.as_ptr(),
                                                                  ptr::null_mut(),
                                                                  None,
                                                                  ptr::null_mut()));
@@ -132,7 +132,7 @@ impl RSA {
         let mem_bio = try!(MemBio::new());
 
         unsafe {
-            try_ssl!(ffi::PEM_write_bio_RSAPrivateKey(mem_bio.handle(),
+            try_ssl!(ffi::PEM_write_bio_RSAPrivateKey(mem_bio.as_ptr(),
                                              self.0,
                                              ptr::null(),
                                              ptr::null_mut(),
@@ -148,7 +148,7 @@ impl RSA {
         let mem_bio = try!(MemBio::new());
 
         unsafe {
-            try_ssl!(ffi::PEM_write_bio_RSA_PUBKEY(mem_bio.handle(), self.0))
+            try_ssl!(ffi::PEM_write_bio_RSA_PUBKEY(mem_bio.as_ptr(), self.0))
         };
 
         Ok(mem_bio.get_buf().to_owned())

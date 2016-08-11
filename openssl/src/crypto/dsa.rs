@@ -72,7 +72,7 @@ impl DSA {
         let mem_bio = try!(MemBioSlice::new(buf));
 
         unsafe {
-            let dsa = try_ssl_null!(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.handle(),
+            let dsa = try_ssl_null!(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.as_ptr(),
                                                                     ptr::null_mut(),
                                                                     None,
                                                                     ptr::null_mut()));
@@ -96,7 +96,7 @@ impl DSA {
 
         unsafe {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
-            let dsa = try_ssl_null!(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.handle(),
+            let dsa = try_ssl_null!(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.as_ptr(),
                                                                     ptr::null_mut(),
                                                                     Some(invoke_passwd_cb::<F>),
                                                                     cb_ptr));
@@ -113,7 +113,7 @@ impl DSA {
         let mem_bio = try!(MemBio::new());
 
         unsafe {
-            try_ssl!(ffi::PEM_write_bio_DSAPrivateKey(mem_bio.handle(), self.0,
+            try_ssl!(ffi::PEM_write_bio_DSAPrivateKey(mem_bio.as_ptr(), self.0,
                                               ptr::null(), ptr::null_mut(), 0,
                                               None, ptr::null_mut()))
         };
@@ -128,7 +128,7 @@ impl DSA {
 
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let dsa = try_ssl_null!(ffi::PEM_read_bio_DSA_PUBKEY(mem_bio.handle(),
+            let dsa = try_ssl_null!(ffi::PEM_read_bio_DSA_PUBKEY(mem_bio.as_ptr(),
                                                                  ptr::null_mut(),
                                                                  None,
                                                                  ptr::null_mut()));
@@ -139,7 +139,7 @@ impl DSA {
     /// Writes an DSA public key as PEM formatted data
     pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
-        unsafe { try_ssl!(ffi::PEM_write_bio_DSA_PUBKEY(mem_bio.handle(), self.0)) };
+        unsafe { try_ssl!(ffi::PEM_write_bio_DSA_PUBKEY(mem_bio.as_ptr(), self.0)) };
         Ok(mem_bio.get_buf().to_owned())
     }
 

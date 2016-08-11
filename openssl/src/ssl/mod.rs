@@ -529,14 +529,14 @@ impl<'a> SslContextRef<'a> {
 
     /// Specifies the certificate
     pub fn set_certificate(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
-        wrap_ssl_result(unsafe { ffi::SSL_CTX_use_certificate(self.as_ptr(), cert.handle()) })
+        wrap_ssl_result(unsafe { ffi::SSL_CTX_use_certificate(self.as_ptr(), cert.as_ptr()) })
     }
 
     /// Adds a certificate to the certificate chain presented together with the
     /// certificate specified using set_certificate()
     pub fn add_extra_chain_cert(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
         wrap_ssl_result(unsafe {
-            ffi::SSL_CTX_add_extra_chain_cert(self.as_ptr(), cert.handle()) as c_int
+            ffi::SSL_CTX_add_extra_chain_cert(self.as_ptr(), cert.as_ptr()) as c_int
         })
     }
 
@@ -555,7 +555,7 @@ impl<'a> SslContextRef<'a> {
 
     /// Specifies the private key
     pub fn set_private_key(&mut self, key: &PKey) -> Result<(), ErrorStack> {
-        wrap_ssl_result(unsafe { ffi::SSL_CTX_use_PrivateKey(self.as_ptr(), key.handle()) })
+        wrap_ssl_result(unsafe { ffi::SSL_CTX_use_PrivateKey(self.as_ptr(), key.as_ptr()) })
     }
 
     /// Check consistency of private key and certificate
