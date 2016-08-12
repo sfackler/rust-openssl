@@ -1,6 +1,6 @@
 use libc::{c_char, c_int, c_long, c_void, strlen};
-use ffi::{self, BIO, BIO_CTRL_FLUSH, BIO_TYPE_NONE, BIO_new};
-use ffi_extras::{BIO_clear_retry_flags, BIO_set_retry_read, BIO_set_retry_write};
+use ffi::{self, BIO, BIO_CTRL_FLUSH, BIO_TYPE_NONE, BIO_new, BIO_clear_retry_flags,
+          BIO_set_retry_read, BIO_set_retry_write};
 use std::any::Any;
 use std::io;
 use std::io::prelude::*;
@@ -9,7 +9,7 @@ use std::ptr;
 use std::slice;
 use std::sync::Arc;
 
-use ssl::error::SslError;
+use error::ErrorStack;
 
 pub struct StreamState<S> {
     pub stream: S,
@@ -39,7 +39,7 @@ impl BioMethod {
 
 unsafe impl Send for BioMethod {}
 
-pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Arc<BioMethod>), SslError> {
+pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Arc<BioMethod>), ErrorStack> {
     let method = Arc::new(BioMethod::new::<S>());
 
     let state = Box::new(StreamState {

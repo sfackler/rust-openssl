@@ -1,11 +1,11 @@
 [package]
 name = "openssl"
-version = "0.7.14"
+version = "0.8.0"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
 repository = "https://github.com/sfackler/rust-openssl"
-documentation = "https://sfackler.github.io/rust-openssl/doc/v0.7.14/openssl"
+documentation = "https://sfackler.github.io/rust-openssl/doc/v0.8.0/openssl"
 readme = "../README.md"
 keywords = ["crypto", "tls", "ssl", "dtls"]
 build = "build.rs"
@@ -23,20 +23,25 @@ aes_ctr = ["openssl-sys/aes_ctr"]
 npn = ["openssl-sys/npn"]
 alpn = ["openssl-sys/alpn"]
 rfc5114 = ["openssl-sys/rfc5114"]
-ecdh_auto = ["openssl-sys-extras/ecdh_auto"]
+ecdh_auto = ["openssl-sys/ecdh_auto"]
 pkcs5_pbkdf2_hmac = ["openssl-sys/pkcs5_pbkdf2_hmac"]
+hmac_clone = ["openssl-sys/hmac_clone"]
 
-nightly = []
+c_helpers = ["gcc"]
+x509_clone = ["c_helpers"]
+x509_generator_request = ["c_helpers"]
+ssl_context_clone = ["c_helpers"]
+hmac = ["c_helpers"]
+dh_from_params = ["c_helpers"]
 
 [dependencies]
-bitflags = ">= 0.5.0, < 0.8.0"
+bitflags = "0.7"
 lazy_static = "0.2"
 libc = "0.2"
-openssl-sys = { version = "0.7.14", path = "../openssl-sys" }
-openssl-sys-extras = { version = "0.7.14", path = "../openssl-sys-extras" }
+openssl-sys = { version = "0.7.15", path = "../openssl-sys" }
 
 [build-dependencies]
-gcc = "0.3"
+gcc = { version = "0.3", optional = true }
 
 [dev-dependencies]
 rustc-serialize = "0.3"

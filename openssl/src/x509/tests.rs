@@ -1,10 +1,8 @@
 use serialize::hex::FromHex;
-use std::io;
-use std::path::Path;
-use std::fs::File;
 
 use crypto::hash::Type::SHA1;
 use crypto::pkey::PKey;
+use crypto::rsa::RSA;
 use x509::{X509, X509Generator};
 use x509::extension::Extension::{KeyUsage, ExtKeyUsage, SubjectAltName, OtherNid, OtherStr};
 use x509::extension::AltNameOption as SAN;
@@ -14,7 +12,6 @@ use nid::Nid;
 
 fn get_generator() -> X509Generator {
     X509Generator::new()
-        .set_bitlength(2048)
         .set_valid_period(365 * 2)
         .add_name("CN".to_string(), "test_me".to_string())
         .set_sign_hash(SHA1)
@@ -27,16 +24,21 @@ fn get_generator() -> X509Generator {
         .add_extension(OtherStr("2.999.2".to_owned(), "ASN1:UTF8:example value".to_owned()))
 }
 
+fn pkey() -> PKey {
+    let rsa = RSA::generate(2048).unwrap();
+    PKey::from_rsa(rsa).unwrap()
+}
+
 #[test]
 fn test_cert_gen() {
-    let (cert, pkey) = get_generator().generate().unwrap();
-    cert.write_pem(&mut io::sink()).unwrap();
-    pkey.write_pem(&mut io::sink()).unwrap();
+    let pkey = pkey();
+    let cert = get_generator().sign(&pkey).unwrap();
 
     // FIXME: check data in result to be correct, needs implementation
     // of X509 getters
 
-    assert_eq!(pkey.save_pub(), cert.public_key().save_pub());
+    assert_eq!(pkey.public_key_to_pem().unwrap(),
+               cert.public_key().unwrap().public_key_to_pem().unwrap());
 }
 
 /// SubjectKeyIdentifier must be added before AuthorityKeyIdentifier or OpenSSL
@@ -44,10 +46,11 @@ fn test_cert_gen() {
 /// for extensions is preserved when the cert is signed.
 #[test]
 fn test_cert_gen_extension_ordering() {
+    let pkey = pkey();
     get_generator()
         .add_extension(OtherNid(Nid::SubjectKeyIdentifier, "hash".to_owned()))
         .add_extension(OtherNid(Nid::AuthorityKeyIdentifier, "keyid:always".to_owned()))
-        .generate()
+        .sign(&pkey)
         .expect("Failed to generate cert with order-dependent extensions");
 }
 
@@ -55,22 +58,23 @@ fn test_cert_gen_extension_ordering() {
 /// deterministic by reversing the order of extensions and asserting failure.
 #[test]
 fn test_cert_gen_extension_bad_ordering() {
+    let pkey = pkey();
     let result = get_generator()
                      .add_extension(OtherNid(Nid::AuthorityKeyIdentifier,
                                              "keyid:always".to_owned()))
                      .add_extension(OtherNid(Nid::SubjectKeyIdentifier, "hash".to_owned()))
-                     .generate();
+                     .sign(&pkey);
 
     assert!(result.is_err());
 }
 
 #[test]
+#[cfg(feature = "x509_generator_request")]
 fn test_req_gen() {
-    let mut pkey = PKey::new();
-    pkey.gen(512);
+    let pkey = pkey();
 
     let req = get_generator().request(&pkey).unwrap();
-    req.write_pem(&mut io::sink()).unwrap();
+    req.to_pem().unwrap();
 
     // FIXME: check data in result to be correct, needs implementation
     // of X509_REQ getters
@@ -78,12 +82,8 @@ fn test_req_gen() {
 
 #[test]
 fn test_cert_loading() {
-    let cert_path = Path::new("test/cert.pem");
-    let mut file = File::open(&cert_path)
-                       .ok()
-                       .expect("Failed to open `test/cert.pem`");
-
-    let cert = X509::from_pem(&mut file).ok().expect("Failed to load PEM");
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
     let fingerprint = cert.fingerprint(SHA1).unwrap();
 
     let hash_str = "E19427DAC79FBE758394945276A6E4F15F0BEBE6";
@@ -93,13 +93,18 @@ fn test_cert_loading() {
 }
 
 #[test]
-fn test_subject_read_cn() {
-    let cert_path = Path::new("test/cert.pem");
-    let mut file = File::open(&cert_path)
-                       .ok()
-                       .expect("Failed to open `test/cert.pem`");
+fn test_save_der() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
 
-    let cert = X509::from_pem(&mut file).ok().expect("Failed to load PEM");
+    let der = cert.to_der().unwrap();
+    assert!(!der.is_empty());
+}
+
+#[test]
+fn test_subject_read_cn() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
     let subject = cert.subject_name();
     let cn = match subject.text_by_nid(Nid::CN) {
         Some(x) => x,
@@ -111,12 +116,8 @@ fn test_subject_read_cn() {
 
 #[test]
 fn test_nid_values() {
-    let cert_path = Path::new("test/nid_test_cert.pem");
-    let mut file = File::open(&cert_path)
-                       .ok()
-                       .expect("Failed to open `test/nid_test_cert.pem`");
-
-    let cert = X509::from_pem(&mut file).ok().expect("Failed to load PEM");
+    let cert = include_bytes!("../../test/nid_test_cert.pem");
+    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
     let subject = cert.subject_name();
 
     let cn = match subject.text_by_nid(Nid::CN) {
@@ -140,12 +141,8 @@ fn test_nid_values() {
 
 #[test]
 fn test_nid_uid_value() {
-    let cert_path = Path::new("test/nid_uid_test_cert.pem");
-    let mut file = File::open(&cert_path)
-                       .ok()
-                       .expect("Failed to open `test/nid_uid_test_cert.pem`");
-
-    let cert = X509::from_pem(&mut file).ok().expect("Failed to load PEM");
+    let cert = include_bytes!("../../test/nid_uid_test_cert.pem");
+    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
     let subject = cert.subject_name();
 
     let cn = match subject.text_by_nid(Nid::UserId) {
@@ -157,8 +154,8 @@ fn test_nid_uid_value() {
 
 #[test]
 fn test_subject_alt_name() {
-    let mut file = File::open("test/alt_name_cert.pem").unwrap();
-    let cert = X509::from_pem(&mut file).unwrap();
+    let cert = include_bytes!("../../test/alt_name_cert.pem");
+    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
 
     let subject_alt_names = cert.subject_alt_names().unwrap();
     assert_eq!(3, subject_alt_names.len());
@@ -171,8 +168,8 @@ fn test_subject_alt_name() {
 
 #[test]
 fn test_subject_alt_name_iter() {
-    let mut file = File::open("test/alt_name_cert.pem").unwrap();
-    let cert = X509::from_pem(&mut file).unwrap();
+    let cert = include_bytes!("../../test/alt_name_cert.pem");
+    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
 
     let subject_alt_names = cert.subject_alt_names().unwrap();
     let mut subject_alt_names_iter = subject_alt_names.iter();

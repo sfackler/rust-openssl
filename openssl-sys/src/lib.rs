@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.14")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.15")]
 
 extern crate libc;
 
@@ -9,17 +9,19 @@ extern crate libressl_pnacl_sys;
 
 use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
 use std::mem;
+use std::ptr;
 use std::sync::{Mutex, MutexGuard};
 use std::sync::{Once, ONCE_INIT};
 
 pub type ASN1_INTEGER = c_void;
 pub type ASN1_STRING = c_void;
 pub type ASN1_TIME = c_void;
+pub type ASN1_TYPE = c_void;
 pub type BN_CTX = c_void;
+pub type BN_GENCB = c_void;
 pub type COMP_METHOD = c_void;
 pub type DH = c_void;
 pub type ENGINE = c_void;
-pub type EVP_CIPHER = c_void;
 pub type EVP_CIPHER_CTX = c_void;
 pub type EVP_MD = c_void;
 pub type EVP_PKEY_CTX = c_void;
@@ -115,6 +117,28 @@ pub struct RSA {
 }
 
 #[repr(C)]
+pub struct DSA {
+    pub pad: c_int,
+    pub version: c_long,
+    pub write_params: c_int,
+
+    pub p: *mut BIGNUM,
+    pub q: *mut BIGNUM,
+    pub g: *mut BIGNUM,
+    pub pub_key: *mut BIGNUM,
+    pub priv_key: *mut BIGNUM,
+    pub kinv: *mut BIGNUM,
+    pub r: *mut BIGNUM,
+
+    pub flags: c_int,
+    pub _method_mont_p: *mut c_void,
+    pub references: c_int,
+    pub ex_data: *mut c_void,
+    pub meth: *const c_void,
+    pub engine: *const c_void,
+}
+
+#[repr(C)]
 pub struct EVP_PKEY {
     pub type_: c_int,
     pub save_type: c_int,
@@ -170,6 +194,39 @@ pub struct EVP_MD_CTX {
 impl Copy for EVP_MD_CTX {}
 impl Clone for EVP_MD_CTX {
     fn clone(&self) -> EVP_MD_CTX { *self }
+}
+
+#[repr(C)]
+pub struct EVP_CIPHER {
+    pub nid: c_int,
+    pub block_size: c_int,
+    pub key_len: c_int,
+    pub iv_len: c_int,
+    pub flags: c_ulong,
+    pub init: Option<unsafe extern "C" fn(*mut EVP_CIPHER_CTX,
+                                          *mut c_uchar,
+                                          *const c_uchar,
+                                          size_t) -> c_int>,
+    pub do_cipher: Option<unsafe extern "C" fn(*mut EVP_CIPHER_CTX,
+                                               *mut c_uchar,
+                                               *const c_uchar,
+                                               size_t) -> c_int>,
+    pub cleanup: Option<unsafe extern "C" fn(*mut EVP_CIPHER_CTX) -> c_int>,
+    pub ctx_size: c_int,
+    pub set_asn1_parameters: Option<unsafe extern "C" fn(*mut EVP_CIPHER_CTX,
+                                                         *mut ASN1_TYPE) -> c_int>,
+    pub get_asn1_parameters: Option<unsafe extern "C" fn(*mut EVP_CIPHER_CTX,
+                                                         *mut ASN1_TYPE) -> c_int>,
+    pub ctrl: Option<unsafe extern "C" fn(*mut EVP_CIPHER_CTX,
+                                          c_int,
+                                          c_int,
+                                          *mut c_void) -> c_int>,
+    pub app_data: *mut c_void,
+}
+
+impl Copy for EVP_CIPHER {}
+impl Clone for EVP_CIPHER {
+    fn clone(&self) -> EVP_CIPHER { *self }
 }
 
 #[repr(C)]
@@ -247,10 +304,20 @@ pub type PasswordCallback = extern "C" fn(buf: *mut c_char, size: c_int,
 pub const BIO_TYPE_NONE: c_int = 0;
 
 pub const BIO_CTRL_EOF: c_int = 2;
+pub const BIO_CTRL_INFO: c_int = 3;
 pub const BIO_CTRL_FLUSH: c_int = 11;
 pub const BIO_C_SET_BUF_MEM_EOF_RETURN: c_int = 130;
 
+pub const BIO_FLAGS_READ: c_int = 0x01;
+pub const BIO_FLAGS_WRITE: c_int = 0x02;
+pub const BIO_FLAGS_IO_SPECIAL: c_int = 0x04;
+pub const BIO_FLAGS_RWS: c_int = BIO_FLAGS_READ | BIO_FLAGS_WRITE | BIO_FLAGS_IO_SPECIAL;
+pub const BIO_FLAGS_SHOULD_RETRY: c_int = 0x08;
+
 pub const CRYPTO_LOCK: c_int = 1;
+
+pub const EVP_MAX_MD_SIZE: c_uint = 64;
+pub const EVP_PKEY_RSA: c_int = NID_rsaEncryption;
 
 pub const MBSTRING_ASC:  c_int = MBSTRING_FLAG | 1;
 pub const MBSTRING_BMP:  c_int = MBSTRING_FLAG | 2;
@@ -258,20 +325,27 @@ pub const MBSTRING_FLAG: c_int = 0x1000;
 pub const MBSTRING_UNIV: c_int = MBSTRING_FLAG | 4;
 pub const MBSTRING_UTF8: c_int = MBSTRING_FLAG;
 
+pub const NID_rsaEncryption: c_int = 6;
 pub const NID_ext_key_usage: c_int = 126;
 pub const NID_key_usage:     c_int = 83;
 
 pub const PKCS5_SALT_LEN: c_int = 8;
 
-pub const SSL_CTRL_OPTIONS: c_int = 32;
-pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
+pub const RSA_F4: c_long = 0x10001;
 
+pub const SSL_CTRL_SET_TMP_DH: c_int = 3;
+pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
+pub const SSL_CTRL_OPTIONS: c_int = 32;
+pub const SSL_CTRL_MODE: c_int = 33;
+pub const SSL_CTRL_SET_READ_AHEAD: c_int = 41;
 pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB:  c_int = 53;
 pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG: c_int = 54;
 pub const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
-pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
-pub const SSL_CTRL_SET_READ_AHEAD: c_int = 41;
+pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
+#[cfg(feature = "ecdh_auto")]
+pub const SSL_CTRL_SET_ECDH_AUTO: c_int = 94;
 
+pub const SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER: c_long = 2;
 pub const SSL_MODE_AUTO_RETRY: c_long = 4;
 
 pub const SSL_ERROR_NONE: c_int = 0;
@@ -286,6 +360,42 @@ pub const SSL_ERROR_ZERO_RETURN: c_int = 6;
 pub const SSL_VERIFY_NONE: c_int = 0;
 pub const SSL_VERIFY_PEER: c_int = 1;
 pub const SSL_VERIFY_FAIL_IF_NO_PEER_CERT: c_int = 2;
+
+pub const SSL_OP_MICROSOFT_SESS_ID_BUG: c_long =                    0x00000001;
+pub const SSL_OP_NETSCAPE_CHALLENGE_BUG: c_long =                   0x00000002;
+pub const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG: c_long =         0x00000008;
+pub const SSL_OP_TLSEXT_PADDING: c_long =                           0x00000010;
+pub const SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER: c_long =               0x00000020;
+pub const SSL_OP_SSLEAY_080_CLIENT_DH_BUG: c_long =                 0x00000080;
+pub const SSL_OP_TLS_D5_BUG: c_long =                               0x00000100;
+pub const SSL_OP_TLS_BLOCK_PADDING_BUG: c_long =                    0x00000200;
+pub const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS: c_long =              0x00000800;
+pub const SSL_OP_ALL: c_long =                                      0x80000BFF;
+pub const SSL_OP_NO_QUERY_MTU: c_long =                             0x00001000;
+pub const SSL_OP_COOKIE_EXCHANGE: c_long =                          0x00002000;
+pub const SSL_OP_NO_TICKET: c_long =                                0x00004000;
+pub const SSL_OP_CISCO_ANYCONNECT: c_long =                         0x00008000;
+pub const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION: c_long =   0x00010000;
+pub const SSL_OP_NO_COMPRESSION: c_long =                           0x00020000;
+pub const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION: c_long =        0x00040000;
+pub const SSL_OP_SINGLE_ECDH_USE: c_long =                          0x00080000;
+pub const SSL_OP_SINGLE_DH_USE: c_long =                            0x00100000;
+pub const SSL_OP_CIPHER_SERVER_PREFERENCE: c_long =                 0x00400000;
+pub const SSL_OP_TLS_ROLLBACK_BUG: c_long =                         0x00800000;
+pub const SSL_OP_NO_SSLv2: c_long =                                 0x01000000;
+pub const SSL_OP_NO_SSLv3: c_long =                                 0x02000000;
+pub const SSL_OP_NO_TLSv1: c_long =                                 0x04000000;
+
+// Intentionally not bound since they conflict with SSL_OP_PKCS1_CHECK_1 and
+// SSL_OP_PKCS1_CHECK_2 on 0.9.8 :(
+/*
+pub const SSL_OP_NO_TLSv1_2: c_long =                               0x08000000;
+pub const SSL_OP_NO_TLSv1_1: c_long =                               0x10000000;
+pub const SSL_OP_NO_DTLSv1: c_long =                                0x04000000;
+pub const SSL_OP_NO_DTLSv1_2: c_long =                              0x08000000;
+pub const SSL_OP_NO_SSL_MASK: c_long = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 |
+    SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
+*/
 
 pub const TLSEXT_NAMETYPE_host_name: c_long = 0;
 
@@ -430,6 +540,78 @@ fn set_id_callback() {
 #[cfg(not(unix))]
 fn set_id_callback() {}
 
+// macros
+pub unsafe fn BIO_get_mem_data(b: *mut BIO, pp: *mut *mut c_char) -> c_long {
+    BIO_ctrl(b, BIO_CTRL_INFO, 0, pp as *mut c_void)
+}
+
+pub unsafe fn BIO_clear_retry_flags(b: *mut BIO) {
+    BIO_clear_flags(b, BIO_FLAGS_RWS | BIO_FLAGS_SHOULD_RETRY)
+}
+
+pub unsafe fn BIO_set_retry_read(b: *mut BIO) {
+    BIO_set_flags(b, BIO_FLAGS_READ | BIO_FLAGS_SHOULD_RETRY)
+}
+
+pub unsafe fn BIO_set_retry_write(b: *mut BIO) {
+    BIO_set_flags(b, BIO_FLAGS_WRITE | BIO_FLAGS_SHOULD_RETRY)
+}
+
+pub unsafe fn SSL_CTX_set_mode(ctx: *mut SSL_CTX, op: c_long) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_MODE, op, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_set_options(ctx: *mut SSL_CTX, op: c_long) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_OPTIONS, op, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_clear_options(ctx: *mut SSL_CTX, op: c_long) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_CLEAR_OPTIONS, op, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_get_options(ctx: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_OPTIONS, 0, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_set_read_ahead(ctx: *mut SSL_CTX, m: c_long) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_READ_AHEAD, m, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_set_tmp_dh(ctx: *mut SSL_CTX, dh: *mut DH) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TMP_DH, 0, dh as *mut c_void)
+}
+
+pub unsafe fn SSL_CTX_add_extra_chain_cert(ctx: *mut SSL_CTX, x509: *mut X509) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_EXTRA_CHAIN_CERT, 0, x509 as *mut c_void)
+}
+
+#[cfg(feature = "ecdh_auto")]
+pub unsafe fn SSL_CTX_set_ecdh_auto(ctx: *mut SSL_CTX, onoff: c_long) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_set_tlsext_servername_callback(ctx: *mut SSL_CTX,
+                                                     cb: Option<extern "C" fn()>)
+                                                     -> c_long {
+    SSL_CTX_callback_ctrl(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, cb)
+}
+
+pub unsafe fn SSL_set_tlsext_host_name(s: *mut SSL, name: *mut c_char) -> c_long {
+    SSL_ctrl(s, SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, name as *mut c_void)
+}
+
+pub unsafe fn EVP_CIPHER_block_size(e: *const EVP_CIPHER) -> c_int {
+    (*e).block_size
+}
+
+pub unsafe fn EVP_CIPHER_key_length(e: *const EVP_CIPHER) -> c_int {
+    (*e).key_len
+}
+
+pub unsafe fn EVP_CIPHER_iv_length(e: *const EVP_CIPHER) -> c_int {
+    (*e).iv_len
+}
+
 // True functions
 extern "C" {
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
@@ -443,6 +625,9 @@ extern "C" {
     pub fn BIO_read(b: *mut BIO, buf: *mut c_void, len: c_int) -> c_int;
     pub fn BIO_write(b: *mut BIO, buf: *const c_void, len: c_int) -> c_int;
     pub fn BIO_s_mem() -> *const BIO_METHOD;
+    pub fn BIO_new_mem_buf(buf: *const c_void, len: c_int) -> *mut BIO;
+    pub fn BIO_set_flags(b: *mut BIO, flags: c_int);
+    pub fn BIO_clear_flags(b: *mut BIO, flags: c_int);
 
     pub fn BN_new() -> *mut BIGNUM;
     pub fn BN_dup(n: *mut BIGNUM) -> *mut BIGNUM;
@@ -532,6 +717,7 @@ extern "C" {
     #[cfg(feature = "rfc5114")]
     pub fn DH_get_2048_256() -> *mut DH;
 
+    // FIXME delete on next version bump
     pub fn DH_new_from_params(p: *mut BIGNUM, g: *mut BIGNUM, q: *mut BIGNUM) -> *mut DH;
 
     pub fn ERR_get_error() -> c_ulong;
@@ -581,10 +767,17 @@ extern "C" {
 
     pub fn EVP_CIPHER_CTX_new() -> *mut EVP_CIPHER_CTX;
     pub fn EVP_CIPHER_CTX_set_padding(ctx: *mut EVP_CIPHER_CTX, padding: c_int) -> c_int;
+    pub fn EVP_CIPHER_CTX_set_key_length(ctx: *mut EVP_CIPHER_CTX, keylen: c_int) -> c_int;
     pub fn EVP_CIPHER_CTX_free(ctx: *mut EVP_CIPHER_CTX);
 
     pub fn EVP_CipherInit(ctx: *mut EVP_CIPHER_CTX, evp: *const EVP_CIPHER,
                           key: *const u8, iv: *const u8, mode: c_int) -> c_int;
+    pub fn EVP_CipherInit_ex(ctx: *mut EVP_CIPHER_CTX,
+                             type_: *const EVP_CIPHER,
+                             impl_: *mut ENGINE,
+                             key: *mut c_uchar,
+                             iv: *mut c_uchar,
+                             enc: c_int) -> c_int;
     pub fn EVP_CipherUpdate(ctx: *mut EVP_CIPHER_CTX, outbuf: *mut u8,
                             outlen: &mut c_int, inbuf: *const u8, inlen: c_int) -> c_int;
     pub fn EVP_CipherFinal(ctx: *mut EVP_CIPHER_CTX, res: *mut u8, len: &mut c_int) -> c_int;
@@ -609,6 +802,8 @@ extern "C" {
 
     pub fn HMAC_CTX_init(ctx: *mut HMAC_CTX);
     pub fn HMAC_CTX_cleanup(ctx: *mut HMAC_CTX);
+    #[cfg(feature = "hmac_clone")]
+    pub fn HMAC_CTX_copy(dst: *mut HMAC_CTX, src: *const HMAC_CTX) -> c_int;
 
     pub fn PEM_read_bio_DHparams(bio: *mut BIO, out: *mut *mut DH, callback: Option<PasswordCallback>,
                              user_data: *mut c_void) -> *mut DH;
@@ -617,24 +812,36 @@ extern "C" {
     pub fn PEM_read_bio_X509_REQ(bio: *mut BIO, out: *mut *mut X509_REQ, callback: Option<PasswordCallback>,
                              user_data: *mut c_void) -> *mut X509_REQ;
     pub fn PEM_read_bio_PrivateKey(bio: *mut BIO, out: *mut *mut EVP_PKEY, callback: Option<PasswordCallback>,
-                             user_data: *mut c_void) -> *mut X509;
+                             user_data: *mut c_void) -> *mut EVP_PKEY;
     pub fn PEM_read_bio_PUBKEY(bio: *mut BIO, out: *mut *mut EVP_PKEY, callback: Option<PasswordCallback>,
-                             user_data: *mut c_void) -> *mut X509;
+                             user_data: *mut c_void) -> *mut EVP_PKEY;
 
     pub fn PEM_read_bio_RSAPrivateKey(bio: *mut BIO, rsa: *mut *mut RSA, callback: Option<PasswordCallback>, user_data: *mut c_void) -> *mut RSA;
     pub fn PEM_read_bio_RSA_PUBKEY(bio:    *mut BIO, rsa: *mut *mut RSA, callback: Option<PasswordCallback>, user_data: *mut c_void) -> *mut RSA;
 
     pub fn PEM_write_bio_PrivateKey(bio: *mut BIO, pkey: *mut EVP_PKEY, cipher: *const EVP_CIPHER,
-                                    kstr: *mut c_char, klen: c_int,
+                                    kstr: *mut c_uchar, klen: c_int,
                                     callback: Option<PasswordCallback>,
                                     user_data: *mut c_void) -> c_int;
     pub fn PEM_write_bio_PUBKEY(bp: *mut BIO, x: *mut EVP_PKEY) -> c_int;
     pub fn PEM_write_bio_RSAPrivateKey(bp: *mut BIO, rsa: *mut RSA, cipher: *const EVP_CIPHER,
-                                        kstr: *mut c_char, klen: c_int,
+                                        kstr: *mut c_uchar, klen: c_int,
                                         callback: Option<PasswordCallback>,
                                         user_data: *mut c_void) -> c_int;
     pub fn PEM_write_bio_RSAPublicKey(bp: *mut BIO, rsa: *mut RSA) -> c_int;
     pub fn PEM_write_bio_RSA_PUBKEY(bp: *mut BIO, rsa: *mut RSA) -> c_int;
+
+    pub fn PEM_read_bio_DSAPrivateKey(bp: *mut BIO, dsa: *mut *mut DSA, callback: Option<PasswordCallback>,
+                                      user_data: *mut c_void) -> *mut DSA;
+    pub fn PEM_read_bio_DSA_PUBKEY(bp: *mut BIO, dsa: *mut *mut DSA, callback: Option<PasswordCallback>,
+                                   user_data: *mut c_void) -> *mut DSA;
+    pub fn PEM_write_bio_DSAPrivateKey(bp: *mut BIO, dsa: *mut DSA, cipher: *const EVP_CIPHER,
+                                       kstr: *mut c_uchar, klen: c_int, callback: Option<PasswordCallback>,
+                                       user_data: *mut c_void) -> c_int;
+    pub fn PEM_write_bio_DSA_PUBKEY(bp: *mut BIO, dsa: *mut DSA) -> c_int;
+
+
+
     pub fn PEM_write_bio_X509(bio: *mut BIO, x509: *mut X509) -> c_int;
     pub fn PEM_write_bio_X509_REQ(bio: *mut BIO, x509: *mut X509_REQ) -> c_int;
 
@@ -653,7 +860,7 @@ extern "C" {
     pub fn RSA_new() -> *mut RSA;
     pub fn RSA_free(rsa: *mut RSA);
     pub fn RSA_generate_key(modsz: c_int, e: c_ulong, cb: *const c_void, cbarg: *const c_void) -> *mut RSA;
-    pub fn RSA_generate_key_ex(rsa: *mut RSA, bits: c_int, e: *mut BIGNUM, cb: *const c_void) -> c_int;
+    pub fn RSA_generate_key_ex(rsa: *mut RSA, bits: c_int, e: *mut BIGNUM, cb: *mut BN_GENCB) -> c_int;
     pub fn RSA_private_decrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA,
                                pad: c_int) -> c_int;
     pub fn RSA_public_decrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA,
@@ -667,6 +874,18 @@ extern "C" {
     pub fn RSA_size(k: *mut RSA) -> c_int;
     pub fn RSA_verify(t: c_int, m: *const u8, mlen: c_uint, sig: *const u8, siglen: c_uint,
                       k: *mut RSA) -> c_int;
+
+    pub fn DSA_new() -> *mut DSA;
+    pub fn DSA_free(dsa: *mut DSA);
+    pub fn DSA_size(dsa: *const DSA) -> c_int;
+    pub fn DSA_generate_parameters_ex(dsa: *mut DSA, bits: c_int, seed: *const c_uchar, seed_len: c_int,
+                                      counter_ref: *mut c_int, h_ret: *mut c_ulong,
+                                      cb: *const c_void) -> c_int;
+    pub fn DSA_generate_key(dsa: *mut DSA) -> c_int;
+    pub fn DSA_sign(dummy: c_int, dgst: *const c_uchar, len: c_int, sigret: *mut c_uchar,
+                    siglen: *mut c_uint, dsa: *mut DSA) -> c_int;
+    pub fn DSA_verify(dummy: c_int, dgst: *const c_uchar, len: c_int, sigbuf: *const c_uchar,
+                      siglen: c_int, dsa: *mut DSA) -> c_int;
 
     pub fn SSL_library_init() -> c_int;
 
@@ -694,6 +913,7 @@ extern "C" {
     pub fn SSL_get_wbio(ssl: *mut SSL) -> *mut BIO;
     pub fn SSL_accept(ssl: *mut SSL) -> c_int;
     pub fn SSL_connect(ssl: *mut SSL) -> c_int;
+    pub fn SSL_do_handshake(ssl: *mut SSL) -> c_int;
     pub fn SSL_ctrl(ssl: *mut SSL, cmd: c_int, larg: c_long,
                     parg: *mut c_void) -> c_long;
     pub fn SSL_get_error(ssl: *mut SSL, ret: c_int) -> c_int;
@@ -732,6 +952,8 @@ extern "C" {
 
     pub fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
     pub fn SSL_CTX_free(ctx: *mut SSL_CTX);
+    pub fn SSL_CTX_ctrl(ctx: *mut SSL_CTX, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
+    pub fn SSL_CTX_callback_ctrl(ctx: *mut SSL_CTX, cmd: c_int, fp: Option<extern "C" fn()>) -> c_long;
     pub fn SSL_CTX_set_verify(ctx: *mut SSL_CTX, mode: c_int,
                               verify_callback: Option<extern fn(c_int, *mut X509_STORE_CTX) -> c_int>);
     pub fn SSL_CTX_set_verify_depth(ctx: *mut SSL_CTX, depth: c_int);
@@ -839,6 +1061,9 @@ extern "C" {
 
     pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: *mut stack_st_X509_EXTENSION) -> c_int;
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
+
+    pub fn i2d_X509_bio(b: *mut BIO, x: *mut X509) -> c_int;
+    pub fn i2d_X509_REQ_bio(b: *mut BIO, x: *mut X509_REQ) -> c_int;
 
     pub fn i2d_RSA_PUBKEY(k: *mut RSA, buf: *const *mut u8) -> c_int;
     pub fn d2i_RSA_PUBKEY(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
