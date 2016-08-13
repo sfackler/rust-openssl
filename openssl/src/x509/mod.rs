@@ -359,7 +359,7 @@ impl X509Generator {
             let req = ffi::X509_to_X509_REQ(cert.as_ptr(), ptr::null_mut(), ptr::null());
             try_ssl_null!(req);
 
-            let exts = ::c_helpers::rust_X509_get_extensions(cert.as_ptr());
+            let exts = ::c_helpers::rust_0_8_X509_get_extensions(cert.as_ptr());
             if exts != ptr::null_mut() {
                 try_ssl!(ffi::X509_REQ_add_extensions(req, exts));
             }
@@ -481,7 +481,7 @@ impl Clone for X509 {
     /// Requires the `x509_clone` feature.
     fn clone(&self) -> X509 {
         unsafe {
-            ::c_helpers::rust_X509_clone(self.as_ptr());
+            ::c_helpers::rust_0_8_X509_clone(self.as_ptr());
             X509::new(self.as_ptr())
         }
     }
