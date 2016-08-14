@@ -1090,6 +1090,8 @@ extern "C" {
     pub fn sk_pop_free(st: *mut _STACK, free: Option<unsafe extern "C" fn (*mut c_void)>);
     pub fn sk_pop(st: *mut _STACK) -> *mut c_char;
 
+    pub fn GENERAL_NAME_free(name: *mut GENERAL_NAME);
+
     pub fn SSLeay() -> c_long;
     pub fn SSLeay_version(key: c_int) -> *const c_char;
 }

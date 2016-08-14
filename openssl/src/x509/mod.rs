@@ -408,7 +408,7 @@ impl<'a> X509Ref<'a> {
             }
 
             Some(GeneralNames {
-                stack: stack as *const _,
+                stack: stack as *mut _,
                 m: PhantomData,
             })
         }
@@ -735,10 +735,21 @@ make_validation_error!(X509_V_OK,
     X509ApplicationVerification = X509_V_ERR_APPLICATION_VERIFICATION,
 );
 
+// FIXME remove lifetime param for 0.9
 /// A collection of OpenSSL `GENERAL_NAME`s.
 pub struct GeneralNames<'a> {
-    stack: *const ffi::stack_st_GENERAL_NAME,
+    stack: *mut ffi::stack_st_GENERAL_NAME,
     m: PhantomData<&'a ()>,
+}
+
+impl<'a> Drop for GeneralNames<'a> {
+    fn drop(&mut self) {
+        unsafe {
+            let free: unsafe extern "C" fn(*mut ffi::GENERAL_NAME) = ffi::GENERAL_NAME_free;
+            let free: unsafe extern "C" fn(*mut c_void) = mem::transmute(free);
+            ffi::sk_pop_free(&mut (*self.stack).stack, Some(free));
+        }
+    }
 }
 
 impl<'a> GeneralNames<'a> {
