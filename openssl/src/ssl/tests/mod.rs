@@ -472,7 +472,7 @@ run_test!(get_peer_certificate, |method, stream| {
     let stream = SslStream::connect(&SslContext::new(method).unwrap(), stream).unwrap();
     let cert = stream.ssl().peer_certificate().unwrap();
     let fingerprint = cert.fingerprint(SHA1).unwrap();
-    let node_hash_str = "E19427DAC79FBE758394945276A6E4F15F0BEBE6";
+    let node_hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
     let node_id = node_hash_str.from_hex().unwrap();
     assert_eq!(node_id, fingerprint)
 });
