@@ -1,8 +1,9 @@
-use std::iter::repeat;
+use std::cmp;
+use std::ptr;
 use libc::c_int;
-
-use crypto::symm_internal::evpc;
 use ffi;
+
+use error::ErrorStack;
 
 #[derive(Copy, Clone)]
 pub enum Mode {
@@ -43,94 +44,184 @@ pub enum Type {
     RC4_128,
 }
 
+impl Type {
+    pub fn as_ptr(&self) -> *const ffi::EVP_CIPHER {
+        unsafe {
+            match *self {
+                Type::AES_128_ECB => ffi::EVP_aes_128_ecb(),
+                Type::AES_128_CBC => ffi::EVP_aes_128_cbc(),
+                #[cfg(feature = "aes_xts")]
+                Type::AES_128_XTS => ffi::EVP_aes_128_xts(),
+                #[cfg(feature = "aes_ctr")]
+                Type::AES_128_CTR => ffi::EVP_aes_128_ctr(),
+                // AES_128_GCM => (EVP_aes_128_gcm(), 16, 16),
+                Type::AES_128_CFB1 => ffi::EVP_aes_128_cfb1(),
+                Type::AES_128_CFB128 => ffi::EVP_aes_128_cfb128(),
+                Type::AES_128_CFB8 => ffi::EVP_aes_128_cfb8(),
 
-/// Represents a symmetric cipher context.
-pub struct Crypter {
-    evp: *const ffi::EVP_CIPHER,
-    ctx: *mut ffi::EVP_CIPHER_CTX,
-    keylen: u32,
-    blocksize: u32,
-}
+                Type::AES_256_ECB => ffi::EVP_aes_256_ecb(),
+                Type::AES_256_CBC => ffi::EVP_aes_256_cbc(),
+                #[cfg(feature = "aes_xts")]
+                Type::AES_256_XTS => ffi::EVP_aes_256_xts(),
+                #[cfg(feature = "aes_ctr")]
+                Type::AES_256_CTR => ffi::EVP_aes_256_ctr(),
+                // AES_256_GCM => (EVP_aes_256_gcm(), 32, 16),
+                Type::AES_256_CFB1 => ffi::EVP_aes_256_cfb1(),
+                Type::AES_256_CFB128 => ffi::EVP_aes_256_cfb128(),
+                Type::AES_256_CFB8 => ffi::EVP_aes_256_cfb8(),
 
-impl Crypter {
-    pub fn new(t: Type) -> Crypter {
-        ffi::init();
+                Type::DES_CBC => ffi::EVP_des_cbc(),
+                Type::DES_ECB => ffi::EVP_des_ecb(),
 
-        let ctx = unsafe { ffi::EVP_CIPHER_CTX_new() };
-        let (evp, keylen, blocksz) = evpc(t);
-        Crypter {
-            evp: evp,
-            ctx: ctx,
-            keylen: keylen,
-            blocksize: blocksz,
-        }
-    }
-
-    /**
-     * Enables or disables padding. If padding is disabled, total amount of
-     * data encrypted must be a multiple of block size.
-     */
-    pub fn pad(&self, padding: bool) {
-        if self.blocksize > 0 {
-            unsafe {
-                let v = if padding {
-                    1 as c_int
-                } else {
-                    0
-                };
-                ffi::EVP_CIPHER_CTX_set_padding(self.ctx, v);
+                Type::RC4_128 => ffi::EVP_rc4(),
             }
         }
     }
 
-    /**
-     * Initializes this crypter.
-     */
-    pub fn init(&self, mode: Mode, key: &[u8], iv: &[u8]) {
+    /// Returns the length of keys used with this cipher.
+    pub fn key_len(&self) -> usize {
         unsafe {
-            let mode = match mode {
-                Mode::Encrypt => 1 as c_int,
-                Mode::Decrypt => 0 as c_int,
+            ffi::EVP_CIPHER_key_length(self.as_ptr()) as usize
+        }
+    }
+
+    /// Returns the length of the IV used with this cipher, or `None` if the
+    /// cipher does not use an IV.
+    pub fn iv_len(&self) -> Option<usize> {
+        unsafe {
+            let len = ffi::EVP_CIPHER_iv_length(self.as_ptr()) as usize;
+            if len == 0 {
+                None
+            } else {
+                Some(len)
+            }
+        }
+    }
+
+    /// Returns the block size of the cipher.
+    ///
+    /// # Note
+    ///
+    /// Stream ciphers such as RC4 have a block size of 1.
+    pub fn block_size(&self) -> usize {
+        unsafe {
+            ffi::EVP_CIPHER_block_size(self.as_ptr()) as usize
+        }
+    }
+}
+
+/// Represents a symmetric cipher context.
+pub struct Crypter {
+    ctx: *mut ffi::EVP_CIPHER_CTX,
+    block_size: usize,
+}
+
+impl Crypter {
+    /// Creates a new `Crypter`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if an IV is required by the cipher but not provided, or if the
+    /// IV's length does not match the expected length (see `Type::iv_len`).
+    pub fn new(t: Type, mode: Mode, key: &[u8], iv: Option<&[u8]>) -> Result<Crypter, ErrorStack> {
+        ffi::init();
+
+        unsafe {
+            let ctx = try_ssl_null!(ffi::EVP_CIPHER_CTX_new());
+            let crypter = Crypter {
+                ctx: ctx,
+                block_size: t.block_size(),
             };
-            assert_eq!(key.len(), self.keylen as usize);
 
-            ffi::EVP_CipherInit(self.ctx, self.evp, key.as_ptr(), iv.as_ptr(), mode);
+            let mode = match mode {
+                Mode::Encrypt => 1,
+                Mode::Decrypt => 0,
+            };
+
+            try_ssl!(ffi::EVP_CipherInit_ex(crypter.ctx,
+                                            t.as_ptr(),
+                                            ptr::null_mut(),
+                                            ptr::null_mut(),
+                                            ptr::null_mut(),
+                                            mode));
+
+            assert!(key.len() <= c_int::max_value() as usize);
+            try_ssl!(ffi::EVP_CIPHER_CTX_set_key_length(crypter.ctx, key.len() as c_int));
+
+            let key = key.as_ptr() as *mut _;
+            let iv = match (iv, t.iv_len()) {
+                (Some(iv), Some(len)) => {
+                    assert!(iv.len() == len);
+                    iv.as_ptr() as *mut _
+                }
+                (Some(_), None) | (None, None) => ptr::null_mut(),
+                (None, Some(_)) => panic!("an IV is required for this cipher"),
+            };
+            try_ssl!(ffi::EVP_CipherInit_ex(crypter.ctx,
+                                            ptr::null(),
+                                            ptr::null_mut(),
+                                            key,
+                                            iv,
+                                            mode));
+
+            Ok(crypter)
         }
     }
 
-    /**
-     * Update this crypter with more data to encrypt or decrypt. Returns
-     * encrypted or decrypted bytes.
-     */
-    pub fn update(&self, data: &[u8]) -> Vec<u8> {
+    /// Enables or disables padding.
+    ///
+    /// If padding is disabled, total amount of data encrypted/decrypted must
+    /// be a multiple of the cipher's block size.
+    pub fn pad(&mut self, padding: bool) {
+        unsafe { ffi::EVP_CIPHER_CTX_set_padding(self.ctx, padding as c_int); }
+    }
+
+    /// Feeds data from `input` through the cipher, writing encrypted/decrypted
+    /// bytes into `output`.
+    ///
+    /// The number of bytes written to `output` is returned. Note that this may
+    /// not be equal to the length of `input`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `output.len() < input.len() + block_size` where
+    /// `block_size` is the block size of the cipher (see `Type::block_size`),
+    /// or if `output.len() > c_int::max_value()`.
+    pub fn update(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
-            let sum = data.len() + (self.blocksize as usize);
-            let mut res = repeat(0u8).take(sum).collect::<Vec<_>>();
-            let mut reslen = sum as c_int;
+            assert!(output.len() >= input.len() + self.block_size);
+            assert!(output.len() <= c_int::max_value() as usize);
+            let mut outl = output.len() as c_int;
+            let inl = input.len() as c_int;
 
-            ffi::EVP_CipherUpdate(self.ctx,
-                                  res.as_mut_ptr(),
-                                  &mut reslen,
-                                  data.as_ptr(),
-                                  data.len() as c_int);
+            try_ssl!(ffi::EVP_CipherUpdate(self.ctx,
+                                           output.as_mut_ptr(),
+                                           &mut outl,
+                                           input.as_ptr(),
+                                           inl));
 
-            res.truncate(reslen as usize);
-            res
+            Ok(outl as usize)
         }
     }
 
-    /**
-     * Finish crypting. Returns the remaining partial block of output, if any.
-     */
-    pub fn finalize(&self) -> Vec<u8> {
+    /// Finishes the encryption/decryption process, writing any remaining data
+    /// to `output`.
+    ///
+    /// The number of bytes written to `output` is returned.
+    ///
+    /// `update` should not be called after this method.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `output` is less than the cipher's block size.
+    pub fn finalize(&mut self, output: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
-            let mut res = repeat(0u8).take(self.blocksize as usize).collect::<Vec<_>>();
-            let mut reslen = self.blocksize as c_int;
+            assert!(output.len() >= self.block_size);
+            let mut outl = cmp::min(output.len(), c_int::max_value() as usize) as c_int;
 
-            ffi::EVP_CipherFinal(self.ctx, res.as_mut_ptr(), &mut reslen);
+            try_ssl!(ffi::EVP_CipherFinal(self.ctx, output.as_mut_ptr(), &mut outl));
 
-            res.truncate(reslen as usize);
-            res
+            Ok(outl as usize)
         }
     }
 }
@@ -147,31 +238,43 @@ impl Drop for Crypter {
  * Encrypts data, using the specified crypter type in encrypt mode with the
  * specified key and iv; returns the resulting (encrypted) data.
  */
-pub fn encrypt(t: Type, key: &[u8], iv: &[u8], data: &[u8]) -> Vec<u8> {
-    let c = Crypter::new(t);
-    c.init(Mode::Encrypt, key, iv);
-    let mut r = c.update(data);
-    let rest = c.finalize();
-    r.extend(rest.into_iter());
-    r
+pub fn encrypt(t: Type,
+               key: &[u8],
+               iv: Option<&[u8]>,
+               data: &[u8])
+               -> Result<Vec<u8>, ErrorStack> {
+    cipher(t, Mode::Encrypt, key, iv, data)
 }
 
 /**
  * Decrypts data, using the specified crypter type in decrypt mode with the
  * specified key and iv; returns the resulting (decrypted) data.
  */
-pub fn decrypt(t: Type, key: &[u8], iv: &[u8], data: &[u8]) -> Vec<u8> {
-    let c = Crypter::new(t);
-    c.init(Mode::Decrypt, key, iv);
-    let mut r = c.update(data);
-    let rest = c.finalize();
-    r.extend(rest.into_iter());
-    r
+pub fn decrypt(t: Type,
+               key: &[u8],
+               iv: Option<&[u8]>,
+               data: &[u8])
+               -> Result<Vec<u8>, ErrorStack> {
+    cipher(t, Mode::Decrypt, key, iv, data)
+}
+
+fn cipher(t: Type,
+          mode: Mode,
+          key: &[u8],
+          iv: Option<&[u8]>,
+          data: &[u8])
+          -> Result<Vec<u8>, ErrorStack> {
+    let mut c = try!(Crypter::new(t, mode, key, iv));
+    let mut out = vec![0; data.len() + t.block_size()];
+    let count = try!(c.update(data, &mut out));
+    let rest = try!(c.finalize(&mut out[count..]));
+    out.truncate(count + rest);
+    Ok(out)
 }
 
 #[cfg(test)]
 mod tests {
-    use serialize::hex::FromHex;
+    use serialize::hex::{FromHex, ToHex};
 
     // Test vectors from FIPS-197:
     // http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
@@ -185,25 +288,33 @@ mod tests {
                   0xaau8, 0xbbu8, 0xccu8, 0xddu8, 0xeeu8, 0xffu8];
         let c0 = [0x8eu8, 0xa2u8, 0xb7u8, 0xcau8, 0x51u8, 0x67u8, 0x45u8, 0xbfu8, 0xeau8, 0xfcu8,
                   0x49u8, 0x90u8, 0x4bu8, 0x49u8, 0x60u8, 0x89u8];
-        let c = super::Crypter::new(super::Type::AES_256_ECB);
-        c.init(super::Mode::Encrypt, &k0, &[]);
+        let mut c = super::Crypter::new(super::Type::AES_256_ECB,
+                                        super::Mode::Encrypt,
+                                        &k0,
+                                        None).unwrap();
         c.pad(false);
-        let mut r0 = c.update(&p0);
-        r0.extend(c.finalize().into_iter());
-        assert!(r0 == c0);
-        c.init(super::Mode::Decrypt, &k0, &[]);
+        let mut r0 = vec![0; c0.len() + super::Type::AES_256_ECB.block_size()];
+        let count = c.update(&p0, &mut r0).unwrap();
+        let rest = c.finalize(&mut r0[count..]).unwrap();
+        r0.truncate(count + rest);
+        assert_eq!(r0.to_hex(), c0.to_hex());
+
+        let mut c = super::Crypter::new(super::Type::AES_256_ECB,
+                                        super::Mode::Decrypt,
+                                        &k0,
+                                        None).unwrap();
         c.pad(false);
-        let mut p1 = c.update(&r0);
-        p1.extend(c.finalize().into_iter());
-        assert!(p1 == p0);
+        let mut p1 = vec![0; r0.len() + super::Type::AES_256_ECB.block_size()];
+        let count = c.update(&r0, &mut p1).unwrap();
+        let rest = c.finalize(&mut p1[count..]).unwrap();
+        p1.truncate(count + rest);
+        assert_eq!(p1.to_hex(), p0.to_hex());
     }
 
     #[test]
     fn test_aes_256_cbc_decrypt() {
-        let cr = super::Crypter::new(super::Type::AES_256_CBC);
         let iv = [4_u8, 223_u8, 153_u8, 219_u8, 28_u8, 142_u8, 234_u8, 68_u8, 227_u8, 69_u8,
-                  98_u8, 107_u8, 208_u8, 14_u8, 236_u8, 60_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
-                  0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8];
+                  98_u8, 107_u8, 208_u8, 14_u8, 236_u8, 60_u8];
         let data = [143_u8, 210_u8, 75_u8, 63_u8, 214_u8, 179_u8, 155_u8, 241_u8, 242_u8, 31_u8,
                     154_u8, 56_u8, 198_u8, 145_u8, 192_u8, 64_u8, 2_u8, 245_u8, 167_u8, 220_u8,
                     55_u8, 119_u8, 233_u8, 136_u8, 139_u8, 27_u8, 71_u8, 242_u8, 119_u8, 175_u8,
@@ -211,29 +322,31 @@ mod tests {
         let ciphered_data = [0x4a_u8, 0x2e_u8, 0xe5_u8, 0x6_u8, 0xbf_u8, 0xcf_u8, 0xf2_u8,
                              0xd7_u8, 0xea_u8, 0x2d_u8, 0xb1_u8, 0x85_u8, 0x6c_u8, 0x93_u8,
                              0x65_u8, 0x6f_u8];
-        cr.init(super::Mode::Decrypt, &data, &iv);
+        let mut cr = super::Crypter::new(super::Type::AES_256_CBC,
+                                         super::Mode::Decrypt,
+                                         &data,
+                                         Some(&iv)).unwrap();
         cr.pad(false);
-        let unciphered_data_1 = cr.update(&ciphered_data);
-        let unciphered_data_2 = cr.finalize();
+        let mut unciphered_data = vec![0; data.len() + super::Type::AES_256_CBC.block_size()];
+        let count = cr.update(&ciphered_data, &mut unciphered_data).unwrap();
+        let rest = cr.finalize(&mut unciphered_data[count..]).unwrap();
+        unciphered_data.truncate(count + rest);
 
         let expected_unciphered_data = b"I love turtles.\x01";
 
-        assert!(unciphered_data_2.len() == 0);
-
-        assert_eq!(&unciphered_data_1, expected_unciphered_data);
+        assert_eq!(&unciphered_data, expected_unciphered_data);
     }
 
     fn cipher_test(ciphertype: super::Type, pt: &str, ct: &str, key: &str, iv: &str) {
         use serialize::hex::ToHex;
 
-        let cipher = super::Crypter::new(ciphertype);
-        cipher.init(super::Mode::Encrypt,
-                    &key.from_hex().unwrap(),
-                    &iv.from_hex().unwrap());
+        let pt = pt.from_hex().unwrap();
+        let ct = ct.from_hex().unwrap();
+        let key = key.from_hex().unwrap();
+        let iv = iv.from_hex().unwrap();
 
-        let expected = ct.from_hex().unwrap();
-        let mut computed = cipher.update(&pt.from_hex().unwrap());
-        computed.extend(cipher.finalize().into_iter());
+        let computed = super::decrypt(ciphertype, &key, Some(&iv), &ct).unwrap();
+        let expected = pt;
 
         if computed != expected {
             println!("Computed: {}", computed.to_hex());

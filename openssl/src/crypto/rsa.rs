@@ -1,14 +1,15 @@
 use ffi;
 use std::fmt;
-use ssl::error::{SslError, StreamError};
 use std::ptr;
-use std::io::{self, Read, Write};
-use libc::c_int;
+use std::mem;
+use libc::{c_int, c_void, c_char, c_ulong};
 
-use bn::BigNum;
-use bio::MemBio;
-use crypto::HashTypeInternals;
+use bn::{BigNum, BigNumRef};
+use bio::{MemBio, MemBioSlice};
+use error::ErrorStack;
+use HashTypeInternals;
 use crypto::hash;
+use crypto::util::{CallbackState, invoke_passwd_cb};
 
 pub struct RSA(*mut ffi::RSA);
 
@@ -23,11 +24,13 @@ impl Drop for RSA {
 impl RSA {
     /// only useful for associating the key material directly with the key, it's safer to use
     /// the supplied load and save methods for DER formatted keys.
-    pub fn from_public_components(n: BigNum, e: BigNum) -> Result<RSA, SslError> {
+    pub fn from_public_components(n: BigNum, e: BigNum) -> Result<RSA, ErrorStack> {
         unsafe {
             let rsa = try_ssl_null!(ffi::RSA_new());
-            (*rsa).n = n.into_raw();
-            (*rsa).e = e.into_raw();
+            (*rsa).n = n.as_ptr();
+            (*rsa).e = e.as_ptr();
+            mem::forget(n);
+            mem::forget(e);
             Ok(RSA(rsa))
         }
     }
@@ -40,35 +43,53 @@ impl RSA {
                                    dp: BigNum,
                                    dq: BigNum,
                                    qi: BigNum)
-                                   -> Result<RSA, SslError> {
+                                   -> Result<RSA, ErrorStack> {
         unsafe {
             let rsa = try_ssl_null!(ffi::RSA_new());
-            (*rsa).n = n.into_raw();
-            (*rsa).e = e.into_raw();
-            (*rsa).d = d.into_raw();
-            (*rsa).p = p.into_raw();
-            (*rsa).q = q.into_raw();
-            (*rsa).dmp1 = dp.into_raw();
-            (*rsa).dmq1 = dq.into_raw();
-            (*rsa).iqmp = qi.into_raw();
+            (*rsa).n = n.as_ptr();
+            (*rsa).e = e.as_ptr();
+            (*rsa).d = d.as_ptr();
+            (*rsa).p = p.as_ptr();
+            (*rsa).q = q.as_ptr();
+            (*rsa).dmp1 = dp.as_ptr();
+            (*rsa).dmq1 = dq.as_ptr();
+            (*rsa).iqmp = qi.as_ptr();
+            mem::forget(n);
+            mem::forget(e);
+            mem::forget(d);
+            mem::forget(p);
+            mem::forget(q);
+            mem::forget(dp);
+            mem::forget(dq);
+            mem::forget(qi);
             Ok(RSA(rsa))
         }
     }
 
-    /// the caller should assert that the rsa pointer is valid.
-    pub unsafe fn from_raw(rsa: *mut ffi::RSA) -> RSA {
+    pub unsafe fn from_ptr(rsa: *mut ffi::RSA) -> RSA {
         RSA(rsa)
     }
 
-    /// Reads an RSA private key from PEM formatted data.
-    pub fn private_key_from_pem<R>(reader: &mut R) -> Result<RSA, SslError>
-        where R: Read
-    {
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
-
+    /// Generates a public/private key pair with the specified size.
+    ///
+    /// The public exponent will be 65537.
+    pub fn generate(bits: u32) -> Result<RSA, ErrorStack> {
         unsafe {
-            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.get_handle(),
+            let rsa = try_ssl_null!(ffi::RSA_new());
+            let rsa = RSA(rsa);
+            let e = try!(BigNum::new_from(ffi::RSA_F4 as c_ulong));
+
+            try_ssl!(ffi::RSA_generate_key_ex(rsa.0, bits as c_int, e.as_ptr(), ptr::null_mut()));
+
+            Ok(rsa)
+        }
+    }
+
+    /// Reads an RSA private key from PEM formatted data.
+    pub fn private_key_from_pem(buf: &[u8]) -> Result<RSA, ErrorStack> {
+        let mem_bio = try!(MemBioSlice::new(buf));
+        unsafe {
+            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.as_ptr(),
                                                                     ptr::null_mut(),
                                                                     None,
                                                                     ptr::null_mut()));
@@ -76,40 +97,29 @@ impl RSA {
         }
     }
 
-    /// Writes an RSA private key as unencrypted PEM formatted data
-    pub fn private_key_to_pem<W>(&self, writer: &mut W) -> Result<(), SslError>
-        where W: Write
+    /// Reads an RSA private key from PEM formatted data and supplies a password callback.
+    pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<RSA, ErrorStack>
+        where F: FnOnce(&mut [c_char]) -> usize
     {
-        let mut mem_bio = try!(MemBio::new());
+        let mut cb = CallbackState::new(pass_cb);
+        let mem_bio = try!(MemBioSlice::new(buf));
 
-        let result = unsafe {
-            ffi::PEM_write_bio_RSAPrivateKey(mem_bio.get_handle(),
-                                             self.0,
-                                             ptr::null(),
-                                             ptr::null_mut(),
-                                             0,
-                                             None,
-                                             ptr::null_mut())
-        };
+        unsafe {
+            let cb_ptr = &mut cb as *mut _ as *mut c_void;
+            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.as_ptr(),
+                                                                    ptr::null_mut(),
+                                                                    Some(invoke_passwd_cb::<F>),
+                                                                    cb_ptr));
 
-        if result == 1 {
-            try!(io::copy(&mut mem_bio, writer).map_err(StreamError));
-
-            Ok(())
-        } else {
-            Err(SslError::OpenSslErrors(vec![]))
+            Ok(RSA(rsa))
         }
     }
 
     /// Reads an RSA public key from PEM formatted data.
-    pub fn public_key_from_pem<R>(reader: &mut R) -> Result<RSA, SslError>
-        where R: Read
-    {
-        let mut mem_bio = try!(MemBio::new());
-        try!(io::copy(reader, &mut mem_bio).map_err(StreamError));
-
+    pub fn public_key_from_pem(buf: &[u8]) -> Result<RSA, ErrorStack> {
+        let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.get_handle(),
+            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.as_ptr(),
                                                                  ptr::null_mut(),
                                                                  None,
                                                                  ptr::null_mut()));
@@ -117,97 +127,127 @@ impl RSA {
         }
     }
 
+    /// Writes an RSA private key as unencrypted PEM formatted data
+    pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
+
+        unsafe {
+            try_ssl!(ffi::PEM_write_bio_RSAPrivateKey(mem_bio.as_ptr(),
+                                             self.0,
+                                             ptr::null(),
+                                             ptr::null_mut(),
+                                             0,
+                                             None,
+                                             ptr::null_mut()));
+        }
+        Ok(mem_bio.get_buf().to_owned())
+    }
+
     /// Writes an RSA public key as PEM formatted data
-    pub fn public_key_to_pem<W>(&self, writer: &mut W) -> Result<(), SslError>
-        where W: Write
-    {
-        let mut mem_bio = try!(MemBio::new());
+    pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
 
-        let result = unsafe { ffi::PEM_write_bio_RSA_PUBKEY(mem_bio.get_handle(), self.0) };
+        unsafe {
+            try_ssl!(ffi::PEM_write_bio_RSA_PUBKEY(mem_bio.as_ptr(), self.0))
+        };
 
-        if result == 1 {
-            try!(io::copy(&mut mem_bio, writer).map_err(StreamError));
+        Ok(mem_bio.get_buf().to_owned())
+    }
 
-            Ok(())
+    pub fn size(&self) -> Option<u32> {
+        if self.n().is_some() {
+            unsafe { Some(ffi::RSA_size(self.0) as u32) }
         } else {
-            Err(SslError::OpenSslErrors(vec![]))
+            None
         }
     }
 
-    pub fn size(&self) -> Result<u32, SslError> {
-        if self.has_n() {
-            unsafe { Ok(ffi::RSA_size(self.0) as u32) }
-        } else {
-            Err(SslError::OpenSslErrors(vec![]))
-        }
-    }
-
-    pub fn sign(&self, hash: hash::Type, message: &[u8]) -> Result<Vec<u8>, SslError> {
-        let k_len = try!(self.size());
-        let mut sig = vec![0;k_len as usize];
+    pub fn sign(&self, hash: hash::Type, message: &[u8]) -> Result<Vec<u8>, ErrorStack> {
+        let k_len = self.size().expect("RSA missing an n");
+        let mut sig = vec![0; k_len as usize];
         let mut sig_len = k_len;
 
         unsafe {
-            let result = ffi::RSA_sign(hash.as_nid() as c_int,
-                                       message.as_ptr(),
-                                       message.len() as u32,
-                                       sig.as_mut_ptr(),
-                                       &mut sig_len,
-                                       self.0);
+            try_ssl!(ffi::RSA_sign(hash.as_nid() as c_int,
+                                   message.as_ptr(),
+                                   message.len() as u32,
+                                   sig.as_mut_ptr(),
+                                   &mut sig_len,
+                                   self.0));
             assert!(sig_len == k_len);
-
-            if result == 1 {
-                Ok(sig)
-            } else {
-                Err(SslError::OpenSslErrors(vec![]))
-            }
+            Ok(sig)
         }
     }
 
-    pub fn verify(&self, hash: hash::Type, message: &[u8], sig: &[u8]) -> Result<bool, SslError> {
+    pub fn verify(&self, hash: hash::Type, message: &[u8], sig: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            let result = ffi::RSA_verify(hash.as_nid() as c_int,
-                                         message.as_ptr(),
-                                         message.len() as u32,
-                                         sig.as_ptr(),
-                                         sig.len() as u32,
-                                         self.0);
-
-            Ok(result == 1)
+            try_ssl!(ffi::RSA_verify(hash.as_nid() as c_int,
+                                     message.as_ptr(),
+                                     message.len() as u32,
+                                     sig.as_ptr(),
+                                     sig.len() as u32,
+                                     self.0));
         }
+        Ok(())
     }
 
     pub fn as_ptr(&self) -> *mut ffi::RSA {
         self.0
     }
 
-    // The following getters are unsafe, since BigNum::new_from_ffi fails upon null pointers
-    pub fn n(&self) -> Result<BigNum, SslError> {
-        unsafe { BigNum::new_from_ffi((*self.0).n) }
+    pub fn n<'a>(&'a self) -> Option<BigNumRef<'a>> {
+        unsafe {
+            let n = (*self.0).n;
+            if n.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_ptr(n))
+            }
+        }
     }
 
-    pub fn has_n(&self) -> bool {
-        unsafe { !(*self.0).n.is_null() }
+    pub fn d<'a>(&self) -> Option<BigNumRef<'a>> {
+        unsafe {
+            let d = (*self.0).d;
+            if d.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_ptr(d))
+            }
+        }
     }
 
-    pub fn d(&self) -> Result<BigNum, SslError> {
-        unsafe { BigNum::new_from_ffi((*self.0).d) }
+    pub fn e<'a>(&'a self) -> Option<BigNumRef<'a>> {
+        unsafe {
+            let e = (*self.0).e;
+            if e.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_ptr(e))
+            }
+        }
     }
 
-    pub fn e(&self) -> Result<BigNum, SslError> {
-        unsafe { BigNum::new_from_ffi((*self.0).e) }
+    pub fn p<'a>(&'a self) -> Option<BigNumRef<'a>> {
+        unsafe {
+            let p = (*self.0).p;
+            if p.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_ptr(p))
+            }
+        }
     }
 
-    pub fn has_e(&self) -> bool {
-        unsafe { !(*self.0).e.is_null() }
-    }
-
-    pub fn p(&self) -> Result<BigNum, SslError> {
-        unsafe { BigNum::new_from_ffi((*self.0).p) }
-    }
-
-    pub fn q(&self) -> Result<BigNum, SslError> {
-        unsafe { BigNum::new_from_ffi((*self.0).q) }
+    pub fn q<'a>(&'a self) -> Option<BigNumRef<'a>> {
+        unsafe {
+            let q = (*self.0).q;
+            if q.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_ptr(q))
+            }
+        }
     }
 }
 
@@ -219,8 +259,9 @@ impl fmt::Debug for RSA {
 
 #[cfg(test)]
 mod test {
-    use std::fs::File;
     use std::io::Write;
+    use libc::c_char;
+
     use super::*;
     use crypto::hash::*;
 
@@ -252,12 +293,12 @@ mod test {
 
     #[test]
     pub fn test_sign() {
-        let mut buffer = File::open("test/rsa.pem").unwrap();
-        let private_key = RSA::private_key_from_pem(&mut buffer).unwrap();
+        let key = include_bytes!("../../test/rsa.pem");
+        let private_key = RSA::private_key_from_pem(key).unwrap();
 
-        let mut sha = Hasher::new(Type::SHA256);
+        let mut sha = Hasher::new(Type::SHA256).unwrap();
         sha.write_all(&signing_input_rs256()).unwrap();
-        let digest = sha.finish();
+        let digest = sha.finish().unwrap();
 
         let result = private_key.sign(Type::SHA256, &digest).unwrap();
 
@@ -266,15 +307,31 @@ mod test {
 
     #[test]
     pub fn test_verify() {
-        let mut buffer = File::open("test/rsa.pem.pub").unwrap();
-        let public_key = RSA::public_key_from_pem(&mut buffer).unwrap();
+        let key = include_bytes!("../../test/rsa.pem.pub");
+        let public_key = RSA::public_key_from_pem(key).unwrap();
 
-        let mut sha = Hasher::new(Type::SHA256);
+        let mut sha = Hasher::new(Type::SHA256).unwrap();
         sha.write_all(&signing_input_rs256()).unwrap();
-        let digest = sha.finish();
+        let digest = sha.finish().unwrap();
 
-        let result = public_key.verify(Type::SHA256, &digest, &signature_rs256()).unwrap();
+        assert!(public_key.verify(Type::SHA256, &digest, &signature_rs256()).is_ok());
+    }
 
-        assert!(result);
+    #[test]
+    pub fn test_password() {
+        let mut password_queried = false;
+        let key = include_bytes!("../../test/rsa-encrypted.pem");
+        RSA::private_key_from_pem_cb(key, |password| {
+            password_queried = true;
+            password[0] = b'm' as c_char;
+            password[1] = b'y' as c_char;
+            password[2] = b'p' as c_char;
+            password[3] = b'a' as c_char;
+            password[4] = b's' as c_char;
+            password[5] = b's' as c_char;
+            6
+        }).unwrap();
+
+        assert!(password_queried);
     }
 }
