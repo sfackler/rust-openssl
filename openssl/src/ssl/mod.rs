@@ -933,7 +933,7 @@ impl<'a> SslRef<'a> {
             if ptr.is_null() {
                 None
             } else {
-                Some(X509::new(ptr))
+                Some(X509::from_ptr(ptr))
             }
         }
     }

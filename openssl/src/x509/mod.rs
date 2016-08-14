@@ -94,7 +94,7 @@ impl X509StoreContext {
             if ptr.is_null() {
                 None
             } else {
-                Some(X509Ref::new(ptr))
+                Some(X509Ref::from_ptr(ptr))
             }
         }
     }
@@ -298,7 +298,7 @@ impl X509Generator {
 
         unsafe {
             let x509 = try_ssl_null!(ffi::X509_new());
-            let x509 = X509::new(x509);
+            let x509 = X509::from_ptr(x509);
 
             try_ssl!(ffi::X509_set_version(x509.as_ptr(), 2));
             try_ssl!(ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509.as_ptr()),
@@ -377,8 +377,14 @@ pub struct X509Ref<'a>(*mut ffi::X509, PhantomData<&'a ()>);
 
 impl<'a> X509Ref<'a> {
     /// Creates a new `X509Ref` wrapping the provided handle.
-    pub unsafe fn new(handle: *mut ffi::X509) -> X509Ref<'a> {
-        X509Ref(handle, PhantomData)
+    pub unsafe fn from_ptr(x509: *mut ffi::X509) -> X509Ref<'a> {
+        X509Ref(x509, PhantomData)
+    }
+
+    ///
+    #[deprecated(note = "renamed to `X509::from_ptr`", since = "0.8.1")]
+    pub unsafe fn new(x509: *mut ffi::X509) -> X509Ref<'a> {
+        X509Ref::from_ptr(x509)
     }
 
     pub fn as_ptr(&self) -> *mut ffi::X509 {
@@ -451,8 +457,14 @@ pub struct X509(X509Ref<'static>);
 
 impl X509 {
     /// Returns a new `X509`, taking ownership of the handle.
+    pub unsafe fn from_ptr(x509: *mut ffi::X509) -> X509 {
+        X509(X509Ref::from_ptr(x509))
+    }
+
+    ///
+    #[deprecated(note = "renamed to `X509::from_ptr`", since = "0.8.1")]
     pub unsafe fn new(x509: *mut ffi::X509) -> X509 {
-        X509(X509Ref::new(x509))
+        X509::from_ptr(x509)
     }
 
     /// Reads a certificate from PEM.
@@ -463,7 +475,7 @@ impl X509 {
                                                               ptr::null_mut(),
                                                               None,
                                                               ptr::null_mut()));
-            Ok(X509::new(handle))
+            Ok(X509::from_ptr(handle))
         }
     }
 }
