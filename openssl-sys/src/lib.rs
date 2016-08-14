@@ -37,6 +37,13 @@ pub type X509_NAME_ENTRY = c_void;
 pub type X509_REQ = c_void;
 pub type X509_STORE_CTX = c_void;
 pub type bio_st = c_void;
+#[repr(C)]
+pub struct PKCS12(c_void);
+
+#[repr(C)]
+pub struct stack_st_X509 {
+    pub stack: _STACK,
+}
 
 #[repr(C)]
 pub struct stack_st_X509_EXTENSION {
@@ -1069,6 +1076,15 @@ extern "C" {
     pub fn d2i_RSA_PUBKEY(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
     pub fn i2d_RSAPrivateKey(k: *mut RSA, buf: *const *mut u8) -> c_int;
     pub fn d2i_RSAPrivateKey(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
+
+    pub fn d2i_PKCS12(a: *mut *mut PKCS12, pp: *mut *const u8, length: c_long) -> *mut PKCS12;
+    pub fn PKCS12_parse(p12: *mut PKCS12,
+                        pass: *const c_char,
+                        pkey: *mut *mut EVP_PKEY,
+                        cert: *mut *mut X509,
+                        ca: *mut *mut stack_st_X509)
+                        -> c_int;
+    pub fn PKCS12_free(p12: *mut PKCS12);
 
     pub fn SSLeay() -> c_long;
     pub fn SSLeay_version(key: c_int) -> *const c_char;
