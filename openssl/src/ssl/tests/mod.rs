@@ -548,7 +548,7 @@ fn test_connect_with_unilateral_alpn() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -570,7 +570,7 @@ fn test_connect_with_unilateral_npn() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -592,7 +592,7 @@ fn test_connect_with_alpn_successful_multiple_matching() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"spdy/3.1", b"http/1.1"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -614,7 +614,7 @@ fn test_connect_with_npn_successful_multiple_matching() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_npn_protocols(&[b"spdy/3.1", b"http/1.1"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -637,7 +637,7 @@ fn test_connect_with_alpn_successful_single_match() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"spdy/3.1"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -661,7 +661,7 @@ fn test_connect_with_npn_successful_single_match() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_npn_protocols(&[b"spdy/3.1"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -701,7 +701,7 @@ fn test_npn_server_advertise_multiple() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_npn_protocols(&[b"spdy/3.1"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -742,7 +742,7 @@ fn test_alpn_server_advertise_multiple() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"spdy/3.1"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -783,7 +783,7 @@ fn test_alpn_server_select_none() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"http/2"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
