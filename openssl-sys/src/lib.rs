@@ -516,6 +516,7 @@ pub fn init() {
         unsafe {
             SSL_library_init();
             SSL_load_error_strings();
+            OPENSSL_add_all_algorithms_noconf();
 
             let num_locks = CRYPTO_num_locks();
             let mut mutexes = Box::new(Vec::new());
@@ -895,8 +896,8 @@ extern "C" {
                       siglen: c_int, dsa: *mut DSA) -> c_int;
 
     pub fn SSL_library_init() -> c_int;
-
     pub fn SSL_load_error_strings();
+    pub fn OPENSSL_add_all_algorithms_noconf();
 
     #[cfg(feature = "sslv2")]
     pub fn SSLv2_method() -> *const SSL_METHOD;
