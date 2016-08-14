@@ -20,6 +20,7 @@ impl Drop for Pkcs12 {
 }
 
 impl Pkcs12 {
+    /// Deserializes a `Pkcs12` structure from DER-encoded data.
     pub fn from_der(der: &[u8]) -> Result<Pkcs12, ErrorStack> {
         unsafe {
             ffi::init();
@@ -30,6 +31,7 @@ impl Pkcs12 {
         }
     }
 
+    /// Extracts the contents of the `Pkcs12`.
     pub fn parse(&self, pass: &str) -> Result<ParsedPkcs12, ErrorStack> {
         unsafe {
             let pass = CString::new(pass).unwrap();
