@@ -745,6 +745,7 @@ pub struct GeneralNames<'a> {
 impl<'a> Drop for GeneralNames<'a> {
     fn drop(&mut self) {
         unsafe {
+            // This transmute is dubious but it's what openssl itself does...
             let free: unsafe extern "C" fn(*mut ffi::GENERAL_NAME) = ffi::GENERAL_NAME_free;
             let free: unsafe extern "C" fn(*mut c_void) = mem::transmute(free);
             ffi::sk_pop_free(&mut (*self.stack).stack, Some(free));
