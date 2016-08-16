@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.15")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.16")]
 
 extern crate libc;
 
@@ -37,6 +37,13 @@ pub type X509_NAME_ENTRY = c_void;
 pub type X509_REQ = c_void;
 pub type X509_STORE_CTX = c_void;
 pub type bio_st = c_void;
+#[repr(C)]
+pub struct PKCS12(c_void);
+
+#[repr(C)]
+pub struct stack_st_X509 {
+    pub stack: _STACK,
+}
 
 #[repr(C)]
 pub struct stack_st_X509_EXTENSION {
@@ -509,6 +516,7 @@ pub fn init() {
         unsafe {
             SSL_library_init();
             SSL_load_error_strings();
+            OPENSSL_add_all_algorithms_noconf();
 
             let num_locks = CRYPTO_num_locks();
             let mut mutexes = Box::new(Vec::new());
@@ -888,8 +896,8 @@ extern "C" {
                       siglen: c_int, dsa: *mut DSA) -> c_int;
 
     pub fn SSL_library_init() -> c_int;
-
     pub fn SSL_load_error_strings();
+    pub fn OPENSSL_add_all_algorithms_noconf();
 
     #[cfg(feature = "sslv2")]
     pub fn SSLv2_method() -> *const SSL_METHOD;
@@ -1069,6 +1077,21 @@ extern "C" {
     pub fn d2i_RSA_PUBKEY(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
     pub fn i2d_RSAPrivateKey(k: *mut RSA, buf: *const *mut u8) -> c_int;
     pub fn d2i_RSAPrivateKey(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
+
+    pub fn d2i_PKCS12(a: *mut *mut PKCS12, pp: *mut *const u8, length: c_long) -> *mut PKCS12;
+    pub fn PKCS12_parse(p12: *mut PKCS12,
+                        pass: *const c_char,
+                        pkey: *mut *mut EVP_PKEY,
+                        cert: *mut *mut X509,
+                        ca: *mut *mut stack_st_X509)
+                        -> c_int;
+    pub fn PKCS12_free(p12: *mut PKCS12);
+
+    pub fn sk_free(st: *mut _STACK);
+    pub fn sk_pop_free(st: *mut _STACK, free: Option<unsafe extern "C" fn (*mut c_void)>);
+    pub fn sk_pop(st: *mut _STACK) -> *mut c_char;
+
+    pub fn GENERAL_NAME_free(name: *mut GENERAL_NAME);
 
     pub fn SSLeay() -> c_long;
     pub fn SSLeay_version(key: c_int) -> *const c_char;

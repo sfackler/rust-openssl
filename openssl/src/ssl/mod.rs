@@ -662,7 +662,7 @@ impl Clone for SslContext {
     /// Requires the `ssl_context_clone` feature.
     fn clone(&self) -> Self {
         unsafe {
-            ::c_helpers::rust_SSL_CTX_clone(self.as_ptr());
+            ::c_helpers::rust_0_8_SSL_CTX_clone(self.as_ptr());
             SslContext::from_ptr(self.as_ptr())
         }
     }
@@ -933,7 +933,7 @@ impl<'a> SslRef<'a> {
             if ptr.is_null() {
                 None
             } else {
-                Some(X509::new(ptr))
+                Some(X509::from_ptr(ptr))
             }
         }
     }

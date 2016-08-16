@@ -15,7 +15,7 @@ impl DH {
     #[cfg(feature = "dh_from_params")]
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<DH, ErrorStack> {
         let dh = unsafe {
-            try_ssl_null!(::c_helpers::rust_DH_new_from_params(p.as_ptr(), g.as_ptr(), q.as_ptr()))
+            try_ssl_null!(::c_helpers::rust_0_8_DH_new_from_params(p.as_ptr(), g.as_ptr(), q.as_ptr()))
         };
         mem::forget(p);
         mem::forget(g);
