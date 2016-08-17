@@ -10,7 +10,10 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 
 use HashTypeInternals;
-use asn1::{Asn1Time, Asn1TimeRef};
+use asn1::Asn1Time;
+#[cfg(feature = "x509_expiry")]
+use asn1::Asn1TimeRef;
+
 use bio::{MemBio, MemBioSlice};
 use crypto::hash;
 use crypto::hash::Type as HashType;
