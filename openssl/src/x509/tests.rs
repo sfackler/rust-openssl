@@ -93,6 +93,18 @@ fn test_cert_loading() {
 }
 
 #[test]
+#[cfg(feature = "x509_expiry")]
+fn test_cert_issue_validity() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+    let not_before = cert.not_before().to_string();
+    let not_after = cert.not_after().to_string();
+
+    assert_eq!(not_before, "Aug 14 17:00:03 2016 GMT");
+    assert_eq!(not_after, "Aug 12 17:00:03 2026 GMT");
+}
+
+#[test]
 fn test_save_der() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
