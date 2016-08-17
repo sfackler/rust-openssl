@@ -24,9 +24,10 @@ cd /tmp/openssl
 curl -o $OUT -L --max-redirs $MAX_REDIRECTS https://openssl.org/source/$OPENSSL \
   || curl -o $OUT -L --max-redirs ${MAX_REDIRECTS} http://mirrors.ibiblio.org/openssl/source/$OPENSSL
 
-echo "$SHA1 $OUT" | sha1sum -c - || exit 1
+echo "$SHA1  $OUT" | sha1sum -c -
 
 tar --strip-components=1 -xzf $OUT
+
 ./Configure --prefix=$HOME/openssl shared --cross-compile-prefix=$CROSS $OS_COMPILER
 make
 make install
