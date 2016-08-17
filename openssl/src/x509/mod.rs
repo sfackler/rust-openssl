@@ -11,6 +11,9 @@ use std::marker::PhantomData;
 
 use HashTypeInternals;
 use asn1::Asn1Time;
+#[cfg(feature = "x509_expiry")]
+use asn1::Asn1TimeRef;
+
 use bio::{MemBio, MemBioSlice};
 use crypto::hash;
 use crypto::hash::Type as HashType;
@@ -430,6 +433,28 @@ impl<'a> X509Ref<'a> {
             try_ssl!(ffi::X509_digest(self.0, evp, buf.as_mut_ptr() as *mut _, &mut len));
             buf.truncate(len as usize);
             Ok(buf)
+        }
+    }
+
+    /// Returns certificate Not After validity period.
+    /// Requires the `x509_expiry` feature.
+    #[cfg(feature = "x509_expiry")]
+    pub fn not_after<'b>(&'b self) -> Asn1TimeRef<'b> {
+        unsafe {
+            let date = ::c_helpers::rust_0_8_X509_get_notAfter(self.0);
+            assert!(!date.is_null());
+            Asn1TimeRef::from_ptr(date)
+        }
+    }
+
+    /// Returns certificate Not Before validity period.
+    /// Requires the `x509_expiry` feature.
+    #[cfg(feature = "x509_expiry")]
+    pub fn not_before<'b>(&'b self) -> Asn1TimeRef<'b> {
+        unsafe {
+            let date = ::c_helpers::rust_0_8_X509_get_notBefore(self.0);
+            assert!(!date.is_null());
+            Asn1TimeRef::from_ptr(date)
         }
     }
 

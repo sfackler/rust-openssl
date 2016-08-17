@@ -7,7 +7,7 @@ extern crate libc;
 #[cfg(target_os = "nacl")]
 extern crate libressl_pnacl_sys;
 
-use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
+use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t, FILE};
 use std::mem;
 use std::ptr;
 use std::sync::{Mutex, MutexGuard};
@@ -625,13 +625,16 @@ extern "C" {
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
     pub fn ASN1_TIME_free(tm: *mut ASN1_TIME);
+    pub fn ASN1_TIME_print(b: *mut BIO, tm: *const ASN1_TIME) -> c_int;
 
     pub fn BIO_ctrl(b: *mut BIO, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
     pub fn BIO_free_all(b: *mut BIO);
     pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
+    pub fn BIO_new_fp(stream: *mut FILE, close_flag: c_int) -> *mut BIO;
     pub fn BIO_new_socket(sock: c_int, close_flag: c_int) -> *mut BIO;
     pub fn BIO_read(b: *mut BIO, buf: *mut c_void, len: c_int) -> c_int;
     pub fn BIO_write(b: *mut BIO, buf: *const c_void, len: c_int) -> c_int;
+    pub fn BIO_s_file() -> *const BIO_METHOD;
     pub fn BIO_s_mem() -> *const BIO_METHOD;
     pub fn BIO_new_mem_buf(buf: *const c_void, len: c_int) -> *mut BIO;
     pub fn BIO_set_flags(b: *mut BIO, flags: c_int);
