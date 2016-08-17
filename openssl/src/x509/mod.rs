@@ -436,7 +436,7 @@ impl<'a> X509Ref<'a> {
     /// Returns certificate Not After validity period.
     /// Requires the `x509_expiry` feature.
     #[cfg(feature = "x509_expiry")]
-    pub fn not_after(&self) -> Asn1TimeRef {
+    pub fn not_after<'b>(&'b self) -> Asn1TimeRef<'b> {
         unsafe {
             let date = ::c_helpers::rust_0_8_X509_get_notAfter(self.0);
             assert!(!date.is_null());
@@ -447,7 +447,7 @@ impl<'a> X509Ref<'a> {
     /// Returns certificate Not Before validity period.
     /// Requires the `x509_expiry` feature.
     #[cfg(feature = "x509_expiry")]
-    pub fn not_before(&self) -> Asn1TimeRef {
+    pub fn not_before<'b>(&'b self) -> Asn1TimeRef<'b> {
         unsafe {
             let date = ::c_helpers::rust_0_8_X509_get_notBefore(self.0);
             assert!(!date.is_null());
