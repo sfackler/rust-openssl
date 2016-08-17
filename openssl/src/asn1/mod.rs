@@ -58,7 +58,7 @@ impl<'a> fmt::Display for Asn1TimeRef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mem_bio = try!(MemBio::new());
         let as_str = unsafe {
-            ffi::ASN1_TIME_print(mem_bio.as_ptr(), self.0);
+            try_ssl!(ffi::ASN1_TIME_print(mem_bio.as_ptr(), self.0));
             String::from_utf8_unchecked(mem_bio.get_buf().to_owned())
         };
         write!(f, "{}", as_str)

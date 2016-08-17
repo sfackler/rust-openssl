@@ -625,7 +625,7 @@ extern "C" {
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
     pub fn ASN1_TIME_free(tm: *mut ASN1_TIME);
-    pub fn ASN1_TIME_print(b: *mut BIO, tm: *const ASN1_TIME);
+    pub fn ASN1_TIME_print(b: *mut BIO, tm: *const ASN1_TIME) -> c_int;
 
     pub fn BIO_ctrl(b: *mut BIO, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
     pub fn BIO_free_all(b: *mut BIO);

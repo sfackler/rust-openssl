@@ -15,11 +15,11 @@ STACK_OF(X509_EXTENSION) *rust_0_8_X509_get_extensions(X509 *x) {
     return x->cert_info ? x->cert_info->extensions : NULL;
 }
 
-ASN1_TIME* rust_0_8_X509_get_notAfter_shim(X509 *x) {
+ASN1_TIME* rust_0_8_X509_get_notAfter(X509 *x) {
   return X509_get_notAfter(x);
 }
 
-ASN1_TIME* rust_0_8_X509_get_notBefore_shim(X509 *x) {
+ASN1_TIME* rust_0_8_X509_get_notBefore(X509 *x) {
   return X509_get_notBefore(x);
 }
 
