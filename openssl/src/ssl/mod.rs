@@ -535,9 +535,14 @@ impl<'a> SslContextRef<'a> {
     /// Adds a certificate to the certificate chain presented together with the
     /// certificate specified using set_certificate()
     pub fn add_extra_chain_cert(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
-        wrap_ssl_result(unsafe {
-            ffi::SSL_CTX_add_extra_chain_cert(self.as_ptr(), cert.as_ptr()) as c_int
-        })
+        // FIXME this should really just take an X509 by value
+        let der = try!(cert.to_der());
+        let cert = try!(X509::from_der(&der));
+        unsafe {
+            try_ssl!(ffi::SSL_CTX_add_extra_chain_cert(self.as_ptr(), cert.as_ptr()));
+        }
+        mem::forget(cert);
+        Ok(())
     }
 
     /// Specifies the file that contains private key

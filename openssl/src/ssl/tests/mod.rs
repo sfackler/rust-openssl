@@ -909,6 +909,7 @@ fn test_write_nonblocking() {
 }
 
 #[test]
+#[cfg_attr(windows, ignore)] // FIXME flickers on appveyor
 fn test_read_nonblocking() {
     let (_s, stream) = Server::new();
     stream.set_nonblocking(true).unwrap();
@@ -1079,4 +1080,12 @@ fn default_verify_paths() {
     println!("{}", String::from_utf8_lossy(&result));
     assert!(result.starts_with(b"HTTP/1.0"));
     assert!(result.ends_with(b"</HTML>\r\n") || result.ends_with(b"</html>"));
+}
+
+#[test]
+fn add_extra_chain_cert() {
+    let cert = include_bytes!("../../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let mut ctx = SslContext::new(SslMethod::Sslv23).unwrap();
+    ctx.add_extra_chain_cert(&cert).unwrap();
 }

@@ -1,4 +1,5 @@
 use libc::{c_char, c_int, c_long, c_ulong, c_void};
+use std::cmp;
 use std::ffi::CString;
 use std::mem;
 use std::ptr;
@@ -11,6 +12,9 @@ use std::marker::PhantomData;
 
 use HashTypeInternals;
 use asn1::Asn1Time;
+#[cfg(feature = "x509_expiry")]
+use asn1::Asn1TimeRef;
+
 use bio::{MemBio, MemBioSlice};
 use crypto::hash;
 use crypto::hash::Type as HashType;
@@ -433,6 +437,28 @@ impl<'a> X509Ref<'a> {
         }
     }
 
+    /// Returns certificate Not After validity period.
+    /// Requires the `x509_expiry` feature.
+    #[cfg(feature = "x509_expiry")]
+    pub fn not_after<'b>(&'b self) -> Asn1TimeRef<'b> {
+        unsafe {
+            let date = ::c_helpers::rust_0_8_X509_get_notAfter(self.0);
+            assert!(!date.is_null());
+            Asn1TimeRef::from_ptr(date)
+        }
+    }
+
+    /// Returns certificate Not Before validity period.
+    /// Requires the `x509_expiry` feature.
+    #[cfg(feature = "x509_expiry")]
+    pub fn not_before<'b>(&'b self) -> Asn1TimeRef<'b> {
+        unsafe {
+            let date = ::c_helpers::rust_0_8_X509_get_notBefore(self.0);
+            assert!(!date.is_null());
+            Asn1TimeRef::from_ptr(date)
+        }
+    }
+
     /// Writes certificate as PEM
     pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
@@ -465,6 +491,16 @@ impl X509 {
     #[deprecated(note = "renamed to `X509::from_ptr`", since = "0.8.1")]
     pub unsafe fn new(x509: *mut ffi::X509) -> X509 {
         X509::from_ptr(x509)
+    }
+
+    /// Reads a certificate from DER.
+    pub fn from_der(buf: &[u8]) -> Result<X509, ErrorStack> {
+        unsafe {
+            let mut ptr = buf.as_ptr() as *mut _;
+            let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
+            let x509 = try_ssl_null!(ffi::d2i_X509(ptr::null_mut(), &mut ptr, len));
+            Ok(X509::from_ptr(x509))
+        }
     }
 
     /// Reads a certificate from PEM.

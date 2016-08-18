@@ -1,13 +1,13 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.16")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.17")]
 
 extern crate libc;
 
 #[cfg(target_os = "nacl")]
 extern crate libressl_pnacl_sys;
 
-use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
+use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t, FILE};
 use std::mem;
 use std::ptr;
 use std::sync::{Mutex, MutexGuard};
@@ -625,13 +625,16 @@ extern "C" {
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
     pub fn ASN1_TIME_free(tm: *mut ASN1_TIME);
+    pub fn ASN1_TIME_print(b: *mut BIO, tm: *const ASN1_TIME) -> c_int;
 
     pub fn BIO_ctrl(b: *mut BIO, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
     pub fn BIO_free_all(b: *mut BIO);
     pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
+    pub fn BIO_new_fp(stream: *mut FILE, close_flag: c_int) -> *mut BIO;
     pub fn BIO_new_socket(sock: c_int, close_flag: c_int) -> *mut BIO;
     pub fn BIO_read(b: *mut BIO, buf: *mut c_void, len: c_int) -> c_int;
     pub fn BIO_write(b: *mut BIO, buf: *const c_void, len: c_int) -> c_int;
+    pub fn BIO_s_file() -> *const BIO_METHOD;
     pub fn BIO_s_mem() -> *const BIO_METHOD;
     pub fn BIO_new_mem_buf(buf: *const c_void, len: c_int) -> *mut BIO;
     pub fn BIO_set_flags(b: *mut BIO, flags: c_int);
@@ -1070,6 +1073,7 @@ extern "C" {
     pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: *mut stack_st_X509_EXTENSION) -> c_int;
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
 
+    pub fn d2i_X509(a: *mut *mut X509, pp: *mut *mut c_uchar, length: c_long) -> *mut X509;
     pub fn i2d_X509_bio(b: *mut BIO, x: *mut X509) -> c_int;
     pub fn i2d_X509_REQ_bio(b: *mut BIO, x: *mut X509_REQ) -> c_int;
 
