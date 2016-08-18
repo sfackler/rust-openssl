@@ -1073,6 +1073,7 @@ extern "C" {
     pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: *mut stack_st_X509_EXTENSION) -> c_int;
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
 
+    pub fn d2i_X509(a: *mut *mut X509, pp: *mut *mut c_uchar, length: c_long) -> *mut X509;
     pub fn i2d_X509_bio(b: *mut BIO, x: *mut X509) -> c_int;
     pub fn i2d_X509_REQ_bio(b: *mut BIO, x: *mut X509_REQ) -> c_int;
 

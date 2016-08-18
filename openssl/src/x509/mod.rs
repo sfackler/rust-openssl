@@ -1,4 +1,5 @@
 use libc::{c_char, c_int, c_long, c_ulong, c_void};
+use std::cmp;
 use std::ffi::CString;
 use std::mem;
 use std::ptr;
@@ -490,6 +491,16 @@ impl X509 {
     #[deprecated(note = "renamed to `X509::from_ptr`", since = "0.8.1")]
     pub unsafe fn new(x509: *mut ffi::X509) -> X509 {
         X509::from_ptr(x509)
+    }
+
+    /// Reads a certificate from DER.
+    pub fn from_der(buf: &[u8]) -> Result<X509, ErrorStack> {
+        unsafe {
+            let mut ptr = buf.as_ptr() as *mut _;
+            let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
+            let x509 = try_ssl_null!(ffi::d2i_X509(ptr::null_mut(), &mut ptr, len));
+            Ok(X509::from_ptr(x509))
+        }
     }
 
     /// Reads a certificate from PEM.
