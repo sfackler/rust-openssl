@@ -245,7 +245,7 @@ run_test!(verify_trusted, |method, stream| {
     let mut ctx = SslContext::new(method).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
 
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -314,7 +314,7 @@ run_test!(verify_trusted_get_error_ok, |method, stream| {
         true
     });
 
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -338,7 +338,7 @@ run_test!(verify_callback_data, |method, stream| {
     // in DER format.
     // Command: openssl x509 -in test/cert.pem  -outform DER | openssl dgst -sha256
     // Please update if "test/cert.pem" will ever change
-    let node_hash_str = "E19427DAC79FBE758394945276A6E4F15F0BEBE6";
+    let node_hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
     let node_id = node_hash_str.from_hex().unwrap();
     ctx.set_verify_callback(SSL_VERIFY_PEER, move |_preverify_ok, x509_ctx| {
         let cert = x509_ctx.current_cert();
@@ -367,7 +367,7 @@ run_test!(ssl_verify_callback, |method, stream| {
     let ctx = SslContext::new(method).unwrap();
     let mut ssl = ctx.into_ssl().unwrap();
 
-    let node_hash_str = "E19427DAC79FBE758394945276A6E4F15F0BEBE6";
+    let node_hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
     let node_id = node_hash_str.from_hex().unwrap();
     ssl.set_verify_callback(SSL_VERIFY_PEER, move |_, x509| {
         CHECKED.store(1, Ordering::SeqCst);
@@ -472,7 +472,7 @@ run_test!(get_peer_certificate, |method, stream| {
     let stream = SslStream::connect(&SslContext::new(method).unwrap(), stream).unwrap();
     let cert = stream.ssl().peer_certificate().unwrap();
     let fingerprint = cert.fingerprint(SHA1).unwrap();
-    let node_hash_str = "E19427DAC79FBE758394945276A6E4F15F0BEBE6";
+    let node_hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
     let node_id = node_hash_str.from_hex().unwrap();
     assert_eq!(node_id, fingerprint)
 });
@@ -548,7 +548,7 @@ fn test_connect_with_unilateral_alpn() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -570,7 +570,7 @@ fn test_connect_with_unilateral_npn() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -592,7 +592,7 @@ fn test_connect_with_alpn_successful_multiple_matching() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"spdy/3.1", b"http/1.1"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -614,7 +614,7 @@ fn test_connect_with_npn_successful_multiple_matching() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_npn_protocols(&[b"spdy/3.1", b"http/1.1"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -637,7 +637,7 @@ fn test_connect_with_alpn_successful_single_match() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"spdy/3.1"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -661,7 +661,7 @@ fn test_connect_with_npn_successful_single_match() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_npn_protocols(&[b"spdy/3.1"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -701,7 +701,7 @@ fn test_npn_server_advertise_multiple() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_npn_protocols(&[b"spdy/3.1"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -742,7 +742,7 @@ fn test_alpn_server_advertise_multiple() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"spdy/3.1"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -783,7 +783,7 @@ fn test_alpn_server_select_none() {
     let mut ctx = SslContext::new(Sslv23).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"http/2"]);
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -909,6 +909,7 @@ fn test_write_nonblocking() {
 }
 
 #[test]
+#[cfg_attr(windows, ignore)] // FIXME flickers on appveyor
 fn test_read_nonblocking() {
     let (_s, stream) = Server::new();
     stream.set_nonblocking(true).unwrap();
@@ -1079,4 +1080,12 @@ fn default_verify_paths() {
     println!("{}", String::from_utf8_lossy(&result));
     assert!(result.starts_with(b"HTTP/1.0"));
     assert!(result.ends_with(b"</HTML>\r\n") || result.ends_with(b"</html>"));
+}
+
+#[test]
+fn add_extra_chain_cert() {
+    let cert = include_bytes!("../../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let mut ctx = SslContext::new(SslMethod::Sslv23).unwrap();
+    ctx.add_extra_chain_cert(&cert).unwrap();
 }

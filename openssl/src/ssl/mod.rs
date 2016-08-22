@@ -535,9 +535,14 @@ impl<'a> SslContextRef<'a> {
     /// Adds a certificate to the certificate chain presented together with the
     /// certificate specified using set_certificate()
     pub fn add_extra_chain_cert(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
-        wrap_ssl_result(unsafe {
-            ffi::SSL_CTX_add_extra_chain_cert(self.as_ptr(), cert.as_ptr()) as c_int
-        })
+        // FIXME this should really just take an X509 by value
+        let der = try!(cert.to_der());
+        let cert = try!(X509::from_der(&der));
+        unsafe {
+            try_ssl!(ffi::SSL_CTX_add_extra_chain_cert(self.as_ptr(), cert.as_ptr()));
+        }
+        mem::forget(cert);
+        Ok(())
     }
 
     /// Specifies the file that contains private key
@@ -662,7 +667,7 @@ impl Clone for SslContext {
     /// Requires the `ssl_context_clone` feature.
     fn clone(&self) -> Self {
         unsafe {
-            ::c_helpers::rust_SSL_CTX_clone(self.as_ptr());
+            ::c_helpers::rust_0_8_SSL_CTX_clone(self.as_ptr());
             SslContext::from_ptr(self.as_ptr())
         }
     }
@@ -933,7 +938,7 @@ impl<'a> SslRef<'a> {
             if ptr.is_null() {
                 None
             } else {
-                Some(X509::new(ptr))
+                Some(X509::from_ptr(ptr))
             }
         }
     }

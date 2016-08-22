@@ -1,4 +1,5 @@
 use libc::{c_char, c_int, c_long, c_ulong, c_void};
+use std::cmp;
 use std::ffi::CString;
 use std::mem;
 use std::ptr;
@@ -11,6 +12,9 @@ use std::marker::PhantomData;
 
 use HashTypeInternals;
 use asn1::Asn1Time;
+#[cfg(feature = "x509_expiry")]
+use asn1::Asn1TimeRef;
+
 use bio::{MemBio, MemBioSlice};
 use crypto::hash;
 use crypto::hash::Type as HashType;
@@ -94,7 +98,7 @@ impl X509StoreContext {
             if ptr.is_null() {
                 None
             } else {
-                Some(X509Ref::new(ptr))
+                Some(X509Ref::from_ptr(ptr))
             }
         }
     }
@@ -305,7 +309,7 @@ impl<'g, 'ctx> X509Generator<'ctx> {
 
         unsafe {
             let x509 = try_ssl_null!(ffi::X509_new());
-            let x509 = X509::new(x509);
+            let x509 = X509::from_ptr(x509);
 
             try_ssl!(ffi::X509_set_version(x509.as_ptr(), 2));
             try_ssl!(ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509.as_ptr()),
@@ -382,7 +386,7 @@ impl<'g, 'ctx> X509Generator<'ctx> {
             let req = ffi::X509_to_X509_REQ(cert.as_ptr(), ptr::null_mut(), ptr::null());
             try_ssl_null!(req);
 
-            let exts = ::c_helpers::rust_X509_get_extensions(cert.as_ptr());
+            let exts = ::c_helpers::rust_0_8_X509_get_extensions(cert.as_ptr());
             if exts != ptr::null_mut() {
                 try_ssl!(ffi::X509_REQ_add_extensions(req, exts));
             }
@@ -400,8 +404,14 @@ pub struct X509Ref<'a>(*mut ffi::X509, PhantomData<&'a ()>);
 
 impl<'a> X509Ref<'a> {
     /// Creates a new `X509Ref` wrapping the provided handle.
-    pub unsafe fn new(handle: *mut ffi::X509) -> X509Ref<'a> {
-        X509Ref(handle, PhantomData)
+    pub unsafe fn from_ptr(x509: *mut ffi::X509) -> X509Ref<'a> {
+        X509Ref(x509, PhantomData)
+    }
+
+    ///
+    #[deprecated(note = "renamed to `X509::from_ptr`", since = "0.8.1")]
+    pub unsafe fn new(x509: *mut ffi::X509) -> X509Ref<'a> {
+        X509Ref::from_ptr(x509)
     }
 
     pub fn as_ptr(&self) -> *mut ffi::X509 {
@@ -425,7 +435,7 @@ impl<'a> X509Ref<'a> {
             }
 
             Some(GeneralNames {
-                stack: stack as *const _,
+                stack: stack as *mut _,
                 m: PhantomData,
             })
         }
@@ -447,6 +457,28 @@ impl<'a> X509Ref<'a> {
             try_ssl!(ffi::X509_digest(self.0, evp, buf.as_mut_ptr() as *mut _, &mut len));
             buf.truncate(len as usize);
             Ok(buf)
+        }
+    }
+
+    /// Returns certificate Not After validity period.
+    /// Requires the `x509_expiry` feature.
+    #[cfg(feature = "x509_expiry")]
+    pub fn not_after<'b>(&'b self) -> Asn1TimeRef<'b> {
+        unsafe {
+            let date = ::c_helpers::rust_0_8_X509_get_notAfter(self.0);
+            assert!(!date.is_null());
+            Asn1TimeRef::from_ptr(date)
+        }
+    }
+
+    /// Returns certificate Not Before validity period.
+    /// Requires the `x509_expiry` feature.
+    #[cfg(feature = "x509_expiry")]
+    pub fn not_before<'b>(&'b self) -> Asn1TimeRef<'b> {
+        unsafe {
+            let date = ::c_helpers::rust_0_8_X509_get_notBefore(self.0);
+            assert!(!date.is_null());
+            Asn1TimeRef::from_ptr(date)
         }
     }
 
@@ -474,8 +506,24 @@ pub struct X509(X509Ref<'static>);
 
 impl X509 {
     /// Returns a new `X509`, taking ownership of the handle.
+    pub unsafe fn from_ptr(x509: *mut ffi::X509) -> X509 {
+        X509(X509Ref::from_ptr(x509))
+    }
+
+    ///
+    #[deprecated(note = "renamed to `X509::from_ptr`", since = "0.8.1")]
     pub unsafe fn new(x509: *mut ffi::X509) -> X509 {
-        X509(X509Ref::new(x509))
+        X509::from_ptr(x509)
+    }
+
+    /// Reads a certificate from DER.
+    pub fn from_der(buf: &[u8]) -> Result<X509, ErrorStack> {
+        unsafe {
+            let mut ptr = buf.as_ptr() as *mut _;
+            let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
+            let x509 = try_ssl_null!(ffi::d2i_X509(ptr::null_mut(), &mut ptr, len));
+            Ok(X509::from_ptr(x509))
+        }
     }
 
     /// Reads a certificate from PEM.
@@ -486,7 +534,7 @@ impl X509 {
                                                               ptr::null_mut(),
                                                               None,
                                                               ptr::null_mut()));
-            Ok(X509::new(handle))
+            Ok(X509::from_ptr(handle))
         }
     }
 }
@@ -504,7 +552,7 @@ impl Clone for X509 {
     /// Requires the `x509_clone` feature.
     fn clone(&self) -> X509 {
         unsafe {
-            ::c_helpers::rust_X509_clone(self.as_ptr());
+            ::c_helpers::rust_0_8_X509_clone(self.as_ptr());
             X509::new(self.as_ptr())
         }
     }
@@ -746,10 +794,22 @@ make_validation_error!(X509_V_OK,
     X509ApplicationVerification = X509_V_ERR_APPLICATION_VERIFICATION,
 );
 
+// FIXME remove lifetime param for 0.9
 /// A collection of OpenSSL `GENERAL_NAME`s.
 pub struct GeneralNames<'a> {
-    stack: *const ffi::stack_st_GENERAL_NAME,
+    stack: *mut ffi::stack_st_GENERAL_NAME,
     m: PhantomData<&'a ()>,
+}
+
+impl<'a> Drop for GeneralNames<'a> {
+    fn drop(&mut self) {
+        unsafe {
+            // This transmute is dubious but it's what openssl itself does...
+            let free: unsafe extern "C" fn(*mut ffi::GENERAL_NAME) = ffi::GENERAL_NAME_free;
+            let free: unsafe extern "C" fn(*mut c_void) = mem::transmute(free);
+            ffi::sk_pop_free(&mut (*self.stack).stack, Some(free));
+        }
+    }
 }
 
 impl<'a> GeneralNames<'a> {

@@ -92,11 +92,11 @@ impl HMAC {
 
     fn init_once(&mut self, md: *const ffi::EVP_MD, key: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            try_ssl!(c_helpers::rust_HMAC_Init_ex(&mut self.ctx,
-                                                  key.as_ptr() as *const _,
-                                                  key.len() as c_int,
-                                                  md,
-                                                  0 as *mut _));
+            try_ssl!(c_helpers::rust_0_8_HMAC_Init_ex(&mut self.ctx,
+                                                      key.as_ptr() as *const _,
+                                                      key.len() as c_int,
+                                                      md,
+                                                      0 as *mut _));
         }
         self.state = Reset;
         Ok(())
@@ -113,11 +113,11 @@ impl HMAC {
         // If the key and/or md is not supplied it's reused from the last time
         // avoiding redundant initializations
         unsafe {
-            try_ssl!(c_helpers::rust_HMAC_Init_ex(&mut self.ctx,
-                                                  0 as *const _,
-                                                  0,
-                                                  0 as *const _,
-                                                  0 as *mut _));
+            try_ssl!(c_helpers::rust_0_8_HMAC_Init_ex(&mut self.ctx,
+                                                      0 as *const _,
+                                                      0,
+                                                      0 as *const _,
+                                                      0 as *mut _));
         }
         self.state = Reset;
         Ok(())
@@ -130,7 +130,7 @@ impl HMAC {
         while !data.is_empty() {
             let len = cmp::min(data.len(), c_uint::max_value() as usize);
             unsafe {
-                try_ssl!(c_helpers::rust_HMAC_Update(&mut self.ctx, data.as_ptr(), len as c_uint));
+                try_ssl!(c_helpers::rust_0_8_HMAC_Update(&mut self.ctx, data.as_ptr(), len as c_uint));
             }
             data = &data[len..];
         }
@@ -147,7 +147,7 @@ impl HMAC {
         unsafe {
             let mut len = ffi::EVP_MAX_MD_SIZE;
             let mut res = vec![0; len as usize];
-            try_ssl!(c_helpers::rust_HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut len));
+            try_ssl!(c_helpers::rust_0_8_HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut len));
             res.truncate(len as usize);
             self.state = Finalized;
             Ok(res)

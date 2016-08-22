@@ -86,10 +86,22 @@ fn test_cert_loading() {
     let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
     let fingerprint = cert.fingerprint(SHA1).unwrap();
 
-    let hash_str = "E19427DAC79FBE758394945276A6E4F15F0BEBE6";
+    let hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
     let hash_vec = hash_str.from_hex().unwrap();
 
     assert_eq!(fingerprint, hash_vec);
+}
+
+#[test]
+#[cfg(feature = "x509_expiry")]
+fn test_cert_issue_validity() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+    let not_before = cert.not_before().to_string();
+    let not_after = cert.not_after().to_string();
+
+    assert_eq!(not_before, "Aug 14 17:00:03 2016 GMT");
+    assert_eq!(not_after, "Aug 12 17:00:03 2026 GMT");
 }
 
 #[test]

@@ -1,13 +1,13 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code)]
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.15")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.7.17")]
 
 extern crate libc;
 
 #[cfg(target_os = "nacl")]
 extern crate libressl_pnacl_sys;
 
-use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t};
+use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t, FILE};
 use std::mem;
 use std::ptr;
 use std::sync::{Mutex, MutexGuard};
@@ -37,6 +37,13 @@ pub type X509_NAME_ENTRY = c_void;
 pub type X509_REQ = c_void;
 pub type X509_STORE_CTX = c_void;
 pub type bio_st = c_void;
+#[repr(C)]
+pub struct PKCS12(c_void);
+
+#[repr(C)]
+pub struct stack_st_X509 {
+    pub stack: _STACK,
+}
 
 #[repr(C)]
 pub struct stack_st_X509_EXTENSION {
@@ -509,6 +516,7 @@ pub fn init() {
         unsafe {
             SSL_library_init();
             SSL_load_error_strings();
+            OPENSSL_add_all_algorithms_noconf();
 
             let num_locks = CRYPTO_num_locks();
             let mut mutexes = Box::new(Vec::new());
@@ -617,13 +625,16 @@ extern "C" {
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
     pub fn ASN1_TIME_free(tm: *mut ASN1_TIME);
+    pub fn ASN1_TIME_print(b: *mut BIO, tm: *const ASN1_TIME) -> c_int;
 
     pub fn BIO_ctrl(b: *mut BIO, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
     pub fn BIO_free_all(b: *mut BIO);
     pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
+    pub fn BIO_new_fp(stream: *mut FILE, close_flag: c_int) -> *mut BIO;
     pub fn BIO_new_socket(sock: c_int, close_flag: c_int) -> *mut BIO;
     pub fn BIO_read(b: *mut BIO, buf: *mut c_void, len: c_int) -> c_int;
     pub fn BIO_write(b: *mut BIO, buf: *const c_void, len: c_int) -> c_int;
+    pub fn BIO_s_file() -> *const BIO_METHOD;
     pub fn BIO_s_mem() -> *const BIO_METHOD;
     pub fn BIO_new_mem_buf(buf: *const c_void, len: c_int) -> *mut BIO;
     pub fn BIO_set_flags(b: *mut BIO, flags: c_int);
@@ -888,8 +899,8 @@ extern "C" {
                       siglen: c_int, dsa: *mut DSA) -> c_int;
 
     pub fn SSL_library_init() -> c_int;
-
     pub fn SSL_load_error_strings();
+    pub fn OPENSSL_add_all_algorithms_noconf();
 
     #[cfg(feature = "sslv2")]
     pub fn SSLv2_method() -> *const SSL_METHOD;
@@ -1063,6 +1074,7 @@ extern "C" {
     pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: *mut stack_st_X509_EXTENSION) -> c_int;
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
 
+    pub fn d2i_X509(a: *mut *mut X509, pp: *mut *mut c_uchar, length: c_long) -> *mut X509;
     pub fn i2d_X509_bio(b: *mut BIO, x: *mut X509) -> c_int;
     pub fn i2d_X509_REQ_bio(b: *mut BIO, x: *mut X509_REQ) -> c_int;
 
@@ -1070,6 +1082,21 @@ extern "C" {
     pub fn d2i_RSA_PUBKEY(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
     pub fn i2d_RSAPrivateKey(k: *mut RSA, buf: *const *mut u8) -> c_int;
     pub fn d2i_RSAPrivateKey(k: *const *mut RSA, buf: *const *const u8, len: c_uint) -> *mut RSA;
+
+    pub fn d2i_PKCS12(a: *mut *mut PKCS12, pp: *mut *const u8, length: c_long) -> *mut PKCS12;
+    pub fn PKCS12_parse(p12: *mut PKCS12,
+                        pass: *const c_char,
+                        pkey: *mut *mut EVP_PKEY,
+                        cert: *mut *mut X509,
+                        ca: *mut *mut stack_st_X509)
+                        -> c_int;
+    pub fn PKCS12_free(p12: *mut PKCS12);
+
+    pub fn sk_free(st: *mut _STACK);
+    pub fn sk_pop_free(st: *mut _STACK, free: Option<unsafe extern "C" fn (*mut c_void)>);
+    pub fn sk_pop(st: *mut _STACK) -> *mut c_char;
+
+    pub fn GENERAL_NAME_free(name: *mut GENERAL_NAME);
 
     pub fn SSLeay() -> c_long;
     pub fn SSLeay_version(key: c_int) -> *const c_char;
