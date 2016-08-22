@@ -10,7 +10,7 @@ use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment, KeyCert
 use x509::extension::ExtKeyUsageOption::{self, ClientAuth, ServerAuth};
 use nid::Nid;
 
-fn get_generator<'ctx>() -> X509Generator<'ctx> {
+fn get_generator() -> X509Generator {
     X509Generator::new()
         .set_valid_period(365 * 2)
         .add_name("CN".to_string(), "test_me".to_string())
@@ -212,8 +212,7 @@ fn test_ca_sign_certificate() {
         .add_name("CN".to_string(), "my certificate".to_string())
         .set_sign_hash(SHA256)
         .add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]))
-        .set_ca(&ca_cert, &ca_pkey)
-        .sign(&cert_pkey)
+        .sign_by_ca(&cert_pkey, &ca_cert, &ca_pkey)
         .expect("Failed to generate certificate");
 
     let ca_subject = ca_cert.subject_name();
