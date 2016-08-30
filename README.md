@@ -39,6 +39,8 @@ export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
 export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib
 ```
 
+May be necessary clean the repository with `cargo clean` before build again.
+
 ### Windows
 
 On Windows, consider building with [mingw-w64](http://mingw-w64.org/).
