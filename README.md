@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/sfackler/rust-openssl.svg?branch=master)](https://travis-ci.org/sfackler/rust-openssl)
 
-[Documentation](https://sfackler.github.io/rust-openssl/doc/v0.8.2/openssl).
+[Documentation](https://sfackler.github.io/rust-openssl/doc/v0.8.3/openssl).
 
 ## Building
 
@@ -38,6 +38,8 @@ brew install openssl
 export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include
 export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib
 ```
+
+May be necessary clean the repository with `cargo clean` before build again.
 
 ### Windows
 

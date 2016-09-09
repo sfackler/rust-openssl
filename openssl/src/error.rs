@@ -7,7 +7,7 @@ use std::str;
 
 use ffi;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ErrorStack(Vec<Error>);
 
 impl ErrorStack {
@@ -61,6 +61,7 @@ impl From<ErrorStack> for fmt::Error {
 }
 
 /// An error reported from OpenSSL.
+#[derive(Clone)]
 pub struct Error(c_ulong);
 
 impl Error {
