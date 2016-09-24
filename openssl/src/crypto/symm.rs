@@ -265,7 +265,8 @@ fn cipher(t: Type,
           data: &[u8])
           -> Result<Vec<u8>, ErrorStack> {
     let mut c = try!(Crypter::new(t, mode, key, iv));
-    let mut out = vec![0; data.len() + t.block_size()];
+    let mut out: Vec<u8> = Vec::with_capacity(data.len() + t.block_size());
+    unsafe { out.set_len(data.len() + t.block_size()); }
     let count = try!(c.update(data, &mut out));
     let rest = try!(c.finalize(&mut out[count..]));
     out.truncate(count + rest);
@@ -293,7 +294,8 @@ mod tests {
                                         &k0,
                                         None).unwrap();
         c.pad(false);
-        let mut r0 = vec![0; c0.len() + super::Type::AES_256_ECB.block_size()];
+        let mut r0: Vec<u8> = Vec::with_capacity(c0.len() + super::Type::AES_256_ECB.block_size());
+        unsafe { r0.set_len(c0.len() + super::Type::AES_256_ECB.block_size()); }
         let count = c.update(&p0, &mut r0).unwrap();
         let rest = c.finalize(&mut r0[count..]).unwrap();
         r0.truncate(count + rest);
@@ -304,7 +306,8 @@ mod tests {
                                         &k0,
                                         None).unwrap();
         c.pad(false);
-        let mut p1 = vec![0; r0.len() + super::Type::AES_256_ECB.block_size()];
+        let mut p1: Vec<u8> = Vec::with_capacity(r0.len() + super::Type::AES_256_ECB.block_size());
+        unsafe { p1.set_len(r0.len() + super::Type::AES_256_ECB.block_size()); }
         let count = c.update(&r0, &mut p1).unwrap();
         let rest = c.finalize(&mut p1[count..]).unwrap();
         p1.truncate(count + rest);
@@ -327,7 +330,8 @@ mod tests {
                                          &data,
                                          Some(&iv)).unwrap();
         cr.pad(false);
-        let mut unciphered_data = vec![0; data.len() + super::Type::AES_256_CBC.block_size()];
+        let mut unciphered_data: Vec<u8> = Vec::with_capacity(data.len() + super::Type::AES_256_CBC.block_size());
+        unsafe { unciphered_data.set_len(data.len() + super::Type::AES_256_CBC.block_size()); }
         let count = cr.update(&ciphered_data, &mut unciphered_data).unwrap();
         let rest = cr.finalize(&mut unciphered_data[count..]).unwrap();
         unciphered_data.truncate(count + rest);
