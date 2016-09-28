@@ -163,6 +163,7 @@ impl RSA {
     }
 
     pub fn sign(&self, hash: hash::Type, message: &[u8]) -> Result<Vec<u8>, ErrorStack> {
+        assert!(self.d().is_some(), "private components missing");
         let k_len = self.size().expect("RSA missing an n");
         let mut sig = vec![0; k_len as usize];
         let mut sig_len = k_len;
