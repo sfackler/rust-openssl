@@ -12,28 +12,23 @@ build = "build.rs"
 exclude = ["test/*"]
 
 [features]
-tlsv1_2 = ["openssl-sys/tlsv1_2"]
-tlsv1_1 = ["openssl-sys/tlsv1_1"]
-dtlsv1 = ["openssl-sys/dtlsv1"]
-dtlsv1_2 = ["openssl-sys/dtlsv1_2"]
-sslv2 = ["openssl-sys/sslv2"]
-sslv3 = ["openssl-sys/sslv3"]
-aes_xts = ["openssl-sys/aes_xts"]
-aes_ctr = ["openssl-sys/aes_ctr"]
-npn = ["openssl-sys/npn"]
-alpn = ["openssl-sys/alpn"]
-rfc5114 = ["openssl-sys/rfc5114"]
-ecdh_auto = ["openssl-sys/ecdh_auto"]
-pkcs5_pbkdf2_hmac = ["openssl-sys/pkcs5_pbkdf2_hmac"]
-hmac_clone = ["openssl-sys/hmac_clone"]
+aes_xts = []
+aes_ctr = []
 
-c_helpers = ["gcc"]
-x509_clone = ["c_helpers"]
-x509_generator_request = ["c_helpers"]
-x509_expiry = ["c_helpers"]
-ssl_context_clone = ["c_helpers"]
-hmac = ["c_helpers"]
-dh_from_params = ["c_helpers"]
+# Added in OpenSSL 1.0.2
+rfc5114 = []
+
+# TODO: what to do about these features?
+# tlsv1_2 = []
+# tlsv1_1 = []
+# dtlsv1 = []
+# dtlsv1_2 = []
+# sslv2 = []
+# sslv3 = []
+
+npn = []
+alpn = []
+ecdh_auto = []
 
 [dependencies]
 bitflags = "0.7"
@@ -41,11 +36,9 @@ lazy_static = "0.2"
 libc = "0.2"
 openssl-sys = { version = "0.7.17", path = "../openssl-sys" }
 
-[build-dependencies]
-gcc = { version = "0.3", optional = true }
-
 [dev-dependencies]
-rustc-serialize = "0.3"
 net2 = "0.2.16"
+rustc-serialize = "0.3"
+tempdir = "0.3"
 winapi = "0.2"
 ws2_32-sys = "0.2"

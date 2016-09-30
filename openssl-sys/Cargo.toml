@@ -10,38 +10,12 @@ documentation = "https://sfackler.github.io/rust-openssl/doc/v0.7.17/openssl_sys
 links = "openssl"
 build = "build.rs"
 
-[features]
-tlsv1_2 = []
-tlsv1_1 = []
-dtlsv1 = []
-dtlsv1_2 = []
-sslv2 = []
-sslv3 = []
-aes_xts = []
-aes_ctr = []
-npn = []
-alpn = []
-rfc5114 = []
-pkcs5_pbkdf2_hmac = []
-ecdh_auto = []
-hmac_clone = []
-
 [dependencies]
 libc = "0.2"
 
 [build-dependencies]
 pkg-config = "0.3"
 
-[target.le32-unknown-nacl.dependencies]
-libressl-pnacl-sys = "2.1.0"
-[target.x86_64-unknown-nacl.dependencies]
-libressl-pnacl-sys = "2.1.0"
-[target.i686-unknown-nacl.dependencies]
-libressl-pnacl-sys = "2.1.0"
-[target.arm-unknown-nacl.dependencies]
-libressl-pnacl-sys = "2.1.0"
-
-# Only here to make sure we link to these in a static build on Windows
 [target.'cfg(windows)'.dependencies]
 user32-sys = "0.2"
 gdi32-sys = "0.2"

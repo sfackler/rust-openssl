@@ -69,7 +69,6 @@ fn test_cert_gen_extension_bad_ordering() {
 }
 
 #[test]
-#[cfg(feature = "x509_generator_request")]
 fn test_req_gen() {
     let pkey = pkey();
 
@@ -93,7 +92,6 @@ fn test_cert_loading() {
 }
 
 #[test]
-#[cfg(feature = "x509_expiry")]
 fn test_cert_issue_validity() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");

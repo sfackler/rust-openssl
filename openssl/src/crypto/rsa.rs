@@ -2,7 +2,7 @@ use ffi;
 use std::fmt;
 use std::ptr;
 use std::mem;
-use libc::{c_int, c_void, c_char, c_ulong};
+use libc::{c_int, c_void, c_char};
 
 use bn::{BigNum, BigNumRef};
 use bio::{MemBio, MemBioSlice};
@@ -44,12 +44,13 @@ impl RSA {
     /// the supplied load and save methods for DER formatted keys.
     pub fn from_public_components(n: BigNum, e: BigNum) -> Result<RSA, ErrorStack> {
         unsafe {
-            let rsa = try_ssl_null!(ffi::RSA_new());
-            (*rsa).n = n.as_ptr();
-            (*rsa).e = e.as_ptr();
-            mem::forget(n);
-            mem::forget(e);
-            Ok(RSA(rsa))
+            let rsa = RSA(try_ssl_null!(ffi::RSA_new()));
+            try_ssl!(compat::set_key(rsa.0,
+                                     n.as_ptr(),
+                                     e.as_ptr(),
+                                     ptr::null_mut()));
+            mem::forget((n, e));
+            Ok(rsa)
         }
     }
 
@@ -63,24 +64,15 @@ impl RSA {
                                    qi: BigNum)
                                    -> Result<RSA, ErrorStack> {
         unsafe {
-            let rsa = try_ssl_null!(ffi::RSA_new());
-            (*rsa).n = n.as_ptr();
-            (*rsa).e = e.as_ptr();
-            (*rsa).d = d.as_ptr();
-            (*rsa).p = p.as_ptr();
-            (*rsa).q = q.as_ptr();
-            (*rsa).dmp1 = dp.as_ptr();
-            (*rsa).dmq1 = dq.as_ptr();
-            (*rsa).iqmp = qi.as_ptr();
-            mem::forget(n);
-            mem::forget(e);
-            mem::forget(d);
-            mem::forget(p);
-            mem::forget(q);
-            mem::forget(dp);
-            mem::forget(dq);
-            mem::forget(qi);
-            Ok(RSA(rsa))
+            let rsa = RSA(try_ssl_null!(ffi::RSA_new()));
+            try_ssl!(compat::set_key(rsa.0, n.as_ptr(), e.as_ptr(), d.as_ptr()));
+            mem::forget((n, e, d));
+            try_ssl!(compat::set_factors(rsa.0, p.as_ptr(), q.as_ptr()));
+            mem::forget((p, q));
+            try_ssl!(compat::set_crt_params(rsa.0, dp.as_ptr(), dq.as_ptr(),
+                                            qi.as_ptr()));
+            mem::forget((dp, dq, qi));
+            Ok(rsa)
         }
     }
 
@@ -95,7 +87,7 @@ impl RSA {
         unsafe {
             let rsa = try_ssl_null!(ffi::RSA_new());
             let rsa = RSA(rsa);
-            let e = try!(BigNum::new_from(ffi::RSA_F4 as c_ulong));
+            let e = try!(BigNum::new_from(ffi::RSA_F4 as u32));
 
             try_ssl!(ffi::RSA_generate_key_ex(rsa.0, bits as c_int, e.as_ptr(), ptr::null_mut()));
 
@@ -292,55 +284,55 @@ impl RSA {
 
     pub fn n<'a>(&'a self) -> Option<BigNumRef<'a>> {
         unsafe {
-            let n = (*self.0).n;
+            let n = compat::key(self.0)[0];
             if n.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(n))
+                Some(BigNumRef::from_ptr(n as *mut _))
             }
         }
     }
 
     pub fn d<'a>(&self) -> Option<BigNumRef<'a>> {
         unsafe {
-            let d = (*self.0).d;
+            let d = compat::key(self.0)[2];
             if d.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(d))
+                Some(BigNumRef::from_ptr(d as *mut _))
             }
         }
     }
 
     pub fn e<'a>(&'a self) -> Option<BigNumRef<'a>> {
         unsafe {
-            let e = (*self.0).e;
+            let e = compat::key(self.0)[1];
             if e.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(e))
+                Some(BigNumRef::from_ptr(e as *mut _))
             }
         }
     }
 
     pub fn p<'a>(&'a self) -> Option<BigNumRef<'a>> {
         unsafe {
-            let p = (*self.0).p;
+            let p = compat::factors(self.0)[0];
             if p.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(p))
+                Some(BigNumRef::from_ptr(p as *mut _))
             }
         }
     }
 
     pub fn q<'a>(&'a self) -> Option<BigNumRef<'a>> {
         unsafe {
-            let q = (*self.0).q;
+            let q = compat::factors(self.0)[1];
             if q.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(q))
+                Some(BigNumRef::from_ptr(q as *mut _))
             }
         }
     }
@@ -351,6 +343,89 @@ impl fmt::Debug for RSA {
         write!(f, "RSA")
     }
 }
+
+#[cfg(ossl110)]
+mod compat {
+    use std::ptr;
+
+    use ffi::{self, BIGNUM, RSA};
+    use libc::c_int;
+
+    pub unsafe fn key(r: *const RSA) -> [*const BIGNUM; 3] {
+        let (mut n, mut e, mut d) = (ptr::null(), ptr::null(), ptr::null());
+        ffi::RSA_get0_key(r, &mut n, &mut e, &mut d);
+        [n, e, d]
+    }
+
+    pub unsafe fn factors(r: *const RSA) -> [*const BIGNUM; 2] {
+        let (mut p, mut q) = (ptr::null(), ptr::null());
+        ffi::RSA_get0_factors(r, &mut p, &mut q);
+        [p, q]
+    }
+
+    pub unsafe fn set_key(r: *mut RSA,
+                          n: *mut BIGNUM,
+                          e: *mut BIGNUM,
+                          d: *mut BIGNUM) -> c_int {
+        ffi::RSA_set0_key(r, n, e, d)
+    }
+
+    pub unsafe fn set_factors(r: *mut RSA,
+                              p: *mut BIGNUM,
+                              q: *mut BIGNUM) -> c_int {
+        ffi::RSA_set0_factors(r, p, q)
+    }
+
+    pub unsafe fn set_crt_params(r: *mut RSA,
+                                 dmp1: *mut BIGNUM,
+                                 dmq1: *mut BIGNUM,
+                                 iqmp: *mut BIGNUM) -> c_int {
+        ffi::RSA_set0_crt_params(r, dmp1, dmq1, iqmp)
+    }
+}
+
+#[cfg(ossl10x)]
+mod compat {
+    use libc::c_int;
+    use ffi::{BIGNUM, RSA};
+
+    pub unsafe fn key(r: *const RSA) -> [*const BIGNUM; 3] {
+        [(*r).n, (*r).e, (*r).d]
+    }
+
+    pub unsafe fn factors(r: *const RSA) -> [*const BIGNUM; 2] {
+        [(*r).p, (*r).q]
+    }
+
+    pub unsafe fn set_key(r: *mut RSA,
+                          n: *mut BIGNUM,
+                          e: *mut BIGNUM,
+                          d: *mut BIGNUM) -> c_int {
+        (*r).n = n;
+        (*r).e = e;
+        (*r).d = d;
+        1 // TODO: is this right? should it be 0? what's success?
+    }
+
+    pub unsafe fn set_factors(r: *mut RSA,
+                              p: *mut BIGNUM,
+                              q: *mut BIGNUM) -> c_int {
+        (*r).p = p;
+        (*r).q = q;
+        1 // TODO: is this right? should it be 0? what's success?
+    }
+
+    pub unsafe fn set_crt_params(r: *mut RSA,
+                                 dmp1: *mut BIGNUM,
+                                 dmq1: *mut BIGNUM,
+                                 iqmp: *mut BIGNUM) -> c_int {
+        (*r).dmp1 = dmp1;
+        (*r).dmq1 = dmq1;
+        (*r).iqmp = iqmp;
+        1 // TODO: is this right? should it be 0? what's success?
+    }
+}
+
 
 #[cfg(test)]
 mod test {
@@ -449,9 +524,9 @@ mod test {
 
     #[test]
    fn test_private_encrypt() {
-       let mut k0 = super::RSA::generate(512).unwrap();
+       let k0 = super::RSA::generate(512).unwrap();
        let k0pkey = k0.public_key_to_pem().unwrap();
-       let mut k1 = super::RSA::public_key_from_pem(&k0pkey).unwrap();
+       let k1 = super::RSA::public_key_from_pem(&k0pkey).unwrap();
 
        let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
 
@@ -462,9 +537,9 @@ mod test {
 
    #[test]
    fn test_public_encrypt() {
-       let mut k0 = super::RSA::generate(512).unwrap();
+       let k0 = super::RSA::generate(512).unwrap();
        let k0pkey = k0.public_key_to_pem().unwrap();
-       let mut k1 = super::RSA::public_key_from_pem(&k0pkey).unwrap();
+       let k1 = super::RSA::public_key_from_pem(&k0pkey).unwrap();
 
        let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
 
@@ -475,9 +550,9 @@ mod test {
 
    #[test]
    fn test_public_encrypt_pkcs() {
-       let mut k0 = super::RSA::generate(512).unwrap();
+       let k0 = super::RSA::generate(512).unwrap();
        let k0pkey = k0.public_key_to_pem().unwrap();
-       let mut k1 = super::RSA::public_key_from_pem(&k0pkey).unwrap();
+       let k1 = super::RSA::public_key_from_pem(&k0pkey).unwrap();
 
        let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
 

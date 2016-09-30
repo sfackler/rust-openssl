@@ -15,7 +15,6 @@
 //
 
 pub mod hash;
-#[cfg(feature = "hmac")]
 pub mod hmac;
 pub mod pkcs5;
 pub mod pkcs12;

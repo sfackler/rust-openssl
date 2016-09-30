@@ -71,7 +71,7 @@ impl Error {
 
         match unsafe { ffi::ERR_get_error() } {
             0 => None,
-            err => Some((Error(err))),
+            err => Some(Error(err)),
         }
     }
 
@@ -121,6 +121,7 @@ impl error::Error for Error {
 fn get_lib(err: c_ulong) -> &'static str {
     unsafe {
         let cstr = ffi::ERR_lib_error_string(err);
+        assert!(!cstr.is_null(), "bad lib: {}", err);
         let bytes = CStr::from_ptr(cstr as *const _).to_bytes();
         str::from_utf8(bytes).unwrap()
     }
@@ -129,6 +130,7 @@ fn get_lib(err: c_ulong) -> &'static str {
 fn get_func(err: c_ulong) -> &'static str {
     unsafe {
         let cstr = ffi::ERR_func_error_string(err);
+        assert!(!cstr.is_null(), "bad func: {}", err);
         let bytes = CStr::from_ptr(cstr as *const _).to_bytes();
         str::from_utf8(bytes).unwrap()
     }
@@ -137,6 +139,7 @@ fn get_func(err: c_ulong) -> &'static str {
 fn get_reason(err: c_ulong) -> &'static str {
     unsafe {
         let cstr = ffi::ERR_reason_error_string(err);
+        assert!(!cstr.is_null(), "bad reason: {}", err);
         let bytes = CStr::from_ptr(cstr as *const _).to_bytes();
         str::from_utf8(bytes).unwrap()
     }

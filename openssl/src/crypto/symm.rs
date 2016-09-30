@@ -81,7 +81,7 @@ impl Type {
     /// Returns the length of keys used with this cipher.
     pub fn key_len(&self) -> usize {
         unsafe {
-            ffi::EVP_CIPHER_key_length(self.as_ptr()) as usize
+            EVP_CIPHER_key_length(self.as_ptr()) as usize
         }
     }
 
@@ -89,7 +89,7 @@ impl Type {
     /// cipher does not use an IV.
     pub fn iv_len(&self) -> Option<usize> {
         unsafe {
-            let len = ffi::EVP_CIPHER_iv_length(self.as_ptr()) as usize;
+            let len = EVP_CIPHER_iv_length(self.as_ptr()) as usize;
             if len == 0 {
                 None
             } else {
@@ -105,7 +105,7 @@ impl Type {
     /// Stream ciphers such as RC4 have a block size of 1.
     pub fn block_size(&self) -> usize {
         unsafe {
-            ffi::EVP_CIPHER_block_size(self.as_ptr()) as usize
+            EVP_CIPHER_block_size(self.as_ptr()) as usize
         }
     }
 }
@@ -271,6 +271,30 @@ fn cipher(t: Type,
     out.truncate(count + rest);
     Ok(out)
 }
+
+#[cfg(ossl110)]
+use ffi::{EVP_CIPHER_iv_length, EVP_CIPHER_block_size, EVP_CIPHER_key_length};
+
+#[cfg(ossl10x)]
+#[allow(bad_style)]
+mod compat {
+    use libc::c_int;
+    use ffi::EVP_CIPHER;
+
+    pub unsafe fn EVP_CIPHER_iv_length(ptr: *const EVP_CIPHER) -> c_int {
+        (*ptr).iv_len
+    }
+
+    pub unsafe fn EVP_CIPHER_block_size(ptr: *const EVP_CIPHER) -> c_int {
+        (*ptr).block_size
+    }
+
+    pub unsafe fn EVP_CIPHER_key_length(ptr: *const EVP_CIPHER) -> c_int {
+        (*ptr).key_len
+    }
+}
+#[cfg(ossl10x)]
+use self::compat::*;
 
 #[cfg(test)]
 mod tests {

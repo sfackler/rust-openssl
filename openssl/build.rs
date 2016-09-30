@@ -1,28 +1,15 @@
-#[cfg(feature = "c_helpers")]
-mod imp {
-    extern crate gcc;
-
-    use std::env;
-    use std::path::PathBuf;
-
-    pub fn main() {
-        let mut config = gcc::Config::new();
-
-        if let Some(paths) = env::var_os("DEP_OPENSSL_INCLUDE") {
-            for path in env::split_paths(&paths) {
-                config.include(PathBuf::from(path));
-            }
-        }
-
-        config.file("src/c_helpers.c").compile("libc_helpers.a");
-    }
-}
-
-#[cfg(not(feature = "c_helpers"))]
-mod imp {
-    pub fn main() {}
-}
+use std::env;
 
 fn main() {
-    imp::main()
+    if env::var("DEP_OPENSSL_IS_101").is_ok() {
+        println!("cargo:rustc-cfg=ossl101");
+        println!("cargo:rustc-cfg=ossl10x");
+    }
+    if env::var("DEP_OPENSSL_IS_102").is_ok() {
+        println!("cargo:rustc-cfg=ossl102");
+        println!("cargo:rustc-cfg=ossl10x");
+    }
+    if env::var("DEP_OPENSSL_IS_110").is_ok() {
+        println!("cargo:rustc-cfg=ossl110");
+    }
 }

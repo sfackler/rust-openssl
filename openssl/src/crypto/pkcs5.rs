@@ -82,7 +82,7 @@ pub fn pbkdf2_hmac_sha1(pass: &[u8],
 
         ffi::init();
 
-        try_ssl!(ffi::PKCS5_PBKDF2_HMAC_SHA1(pass.as_ptr(),
+        try_ssl!(ffi::PKCS5_PBKDF2_HMAC_SHA1(pass.as_ptr() as *const _,
                                              pass.len() as c_int,
                                              salt.as_ptr(),
                                              salt.len() as c_int,
@@ -94,7 +94,6 @@ pub fn pbkdf2_hmac_sha1(pass: &[u8],
 }
 
 /// Derives a key from a password and salt using the PBKDF2-HMAC algorithm with a digest function.
-#[cfg(feature = "pkcs5_pbkdf2_hmac")]
 pub fn pbkdf2_hmac(pass: &[u8],
                    salt: &[u8],
                    iter: usize,
@@ -104,7 +103,7 @@ pub fn pbkdf2_hmac(pass: &[u8],
     unsafe {
         let mut out = vec![0; keylen];
         ffi::init();
-        try_ssl!(ffi::PKCS5_PBKDF2_HMAC(pass.as_ptr(),
+        try_ssl!(ffi::PKCS5_PBKDF2_HMAC(pass.as_ptr() as *const _,
                                         pass.len() as c_int,
                                         salt.as_ptr(),
                                         salt.len() as c_int,
@@ -162,7 +161,6 @@ mod tests {
     // Test vectors from
     // https://git.lysator.liu.se/nettle/nettle/blob/nettle_3.1.1_release_20150424/testsuite/pbkdf2-test.c
     #[test]
-    #[cfg(feature = "pkcs5_pbkdf2_hmac")]
     fn test_pbkdf2_hmac_sha256() {
         assert_eq!(super::pbkdf2_hmac(b"passwd", b"salt", 1, hash::Type::SHA256, 16).unwrap(),
                    vec![0x55_u8, 0xac_u8, 0x04_u8, 0x6e_u8, 0x56_u8, 0xe3_u8, 0x08_u8, 0x9f_u8,
@@ -176,7 +174,6 @@ mod tests {
     // Test vectors from
     // https://git.lysator.liu.se/nettle/nettle/blob/nettle_3.1.1_release_20150424/testsuite/pbkdf2-test.c
     #[test]
-    #[cfg(feature = "pkcs5_pbkdf2_hmac")]
     fn test_pbkdf2_hmac_sha512() {
         assert_eq!(super::pbkdf2_hmac(b"password", b"NaCL", 1, hash::Type::SHA512, 64).unwrap(),
                    vec![0x73_u8, 0xde_u8, 0xcf_u8, 0xa5_u8, 0x8a_u8, 0xa2_u8, 0xe8_u8, 0x4f_u8,

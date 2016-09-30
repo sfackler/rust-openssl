@@ -1,25 +1,43 @@
 environment:
-  OPENSSL_INCLUDE_DIR: C:\OpenSSL\include
-  OPENSSL_LIB_DIR: C:\OpenSSL\lib
-  OPENSSL_LIBS: ssleay32:libeay32
   matrix:
-  - TARGET: i686-pc-windows-gnu
-    BITS: 32
-  - TARGET: x86_64-pc-windows-msvc
-    BITS: 64
+    # 1.1.0, 64/32 bit
+    - TARGET: i686-pc-windows-gnu
+      BITS: 32
+      MSYS2: 1
+      OPENSSL_VERSION: 1_1_0b
+    - TARGET: x86_64-pc-windows-msvc
+      BITS: 64
+      OPENSSL_VERSION: 1_1_0b
+      OPENSSL_DIR: C:\OpenSSL
+
+    # 1.0.2, 64/32 bit
+    - TARGET: x86_64-pc-windows-gnu
+      BITS: 64
+      MSYS2: 1
+      OPENSSL_VERSION: 1_0_2j
+    - TARGET: i686-pc-windows-msvc
+      BITS: 32
+      OPENSSL_VERSION: 1_0_2j
+      OPENSSL_DIR: C:\OpenSSL
 install:
-  - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-1_0_2h.exe"
-  - Win%BITS%OpenSSL-1_0_2h.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
-  - ps: Start-FileDownload "https://static.rust-lang.org/dist/rust-1.9.0-${env:TARGET}.exe"
-  - rust-1.9.0-%TARGET%.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
-  - SET PATH=%PATH%;C:\Program Files (x86)\Rust\bin
-  - SET PATH=%PATH%;C:\MinGW\bin
+  # install OpenSSL
+  - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe"
+  - Win%BITS%OpenSSL-%OPENSSL_VERSION%.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
+
+  # Install Rust
+  - curl -sSf -o rustup-init.exe https://win.rustup.rs/
+  - rustup-init.exe -y --default-host %TARGET%
+  - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
+  - if defined MSYS2 set PATH=C:\msys64\mingw%BITS%\bin;%PATH%
   - rustc -V
   - cargo -V
 
 build: false
 
-# Don't run doctests due to rust-lang/cargo#1592
 test_script:
-  - cargo test --lib --manifest-path openssl/Cargo.toml
+  - cargo run --manifest-path systest/Cargo.toml --target %TARGET%
+  - cargo test --manifest-path openssl/Cargo.toml --target %TARGET%
 
+cache:
+  - target
+  - C:\Users\appveyor\.cargo\registry
