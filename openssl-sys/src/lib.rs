@@ -340,6 +340,12 @@ pub const PKCS5_SALT_LEN: c_int = 8;
 
 pub const RSA_F4: c_long = 0x10001;
 
+pub const RSA_PKCS1_PADDING: c_int = 1;
+pub const RSA_SSLV23_PADDING: c_int = 2;
+pub const RSA_NO_PADDING: c_int = 3;
+pub const RSA_PKCS1_OAEP_PADDING: c_int = 4;
+pub const RSA_X931_PADDING: c_int = 5;
+
 pub const SSL_CTRL_SET_TMP_DH: c_int = 3;
 pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
 pub const SSL_CTRL_OPTIONS: c_int = 32;
@@ -867,6 +873,7 @@ extern "C" {
                              out: *mut u8) -> c_int;
 
     pub fn RAND_bytes(buf: *mut u8, num: c_int) -> c_int;
+    pub fn RAND_status() -> c_int;
 
     pub fn RSA_new() -> *mut RSA;
     pub fn RSA_free(rsa: *mut RSA);
