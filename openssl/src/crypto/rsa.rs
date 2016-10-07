@@ -14,17 +14,17 @@ use crypto::util::{CallbackState, invoke_passwd_cb};
 /// Type of encryption padding to use.
 #[derive(Copy, Clone)]
 pub enum Padding {
-    NoPadding,
+    None,
     OAEP,
     PKCS1v15
 }
 
 impl Padding {
     fn openssl_padding_code(&self) -> c_int {
-        match self {
-            &Padding::NoPadding => ffi::RSA_NO_PADDING,
-            &Padding::OAEP => ffi::RSA_PKCS1_OAEP_PADDING,
-            &Padding::PKCS1v15 => ffi::RSA_PKCS1_PADDING
+        match *self {
+            Padding::None => ffi::RSA_NO_PADDING,
+            Padding::OAEP => ffi::RSA_PKCS1_OAEP_PADDING,
+            Padding::PKCS1v15 => ffi::RSA_PKCS1_PADDING
         }
     }
 }
