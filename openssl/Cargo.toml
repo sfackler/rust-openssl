@@ -12,19 +12,10 @@ build = "build.rs"
 exclude = ["test/*"]
 
 [features]
-aes_xts = []
-aes_ctr = []
-
 # Added in OpenSSL 1.0.2
 rfc5114 = []
-
-# TODO: what to do about these features?
-# tlsv1_2 = []
-# tlsv1_1 = []
-# dtlsv1 = []
-# dtlsv1_2 = []
-# sslv2 = []
-# sslv3 = []
+aes_xts = []
+aes_ctr = []
 
 npn = []
 alpn = []
