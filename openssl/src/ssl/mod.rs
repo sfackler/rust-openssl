@@ -65,6 +65,11 @@ bitflags! {
         const SSL_OP_NO_SSLV2 = ffi::SSL_OP_NO_SSLv2,
         const SSL_OP_NO_SSLV3 = ffi::SSL_OP_NO_SSLv3,
         const SSL_OP_NO_TLSV1 = ffi::SSL_OP_NO_TLSv1,
+        const SSL_OP_NO_TLSV1_2 = ffi::SSL_OP_NO_TLSv1_2,
+        const SSL_OP_NO_TLSV1_1 = ffi::SSL_OP_NO_TLSv1_1,
+        const SSL_OP_NO_DTLSV1 = ffi::SSL_OP_NO_DTLSv1,
+        const SSL_OP_NO_DTLSV1_2 = ffi::SSL_OP_NO_DTLSv1_2,
+        const SSL_OP_NO_SSL_MASK = ffi::SSL_OP_NO_SSL_MASK,
     }
 }
 

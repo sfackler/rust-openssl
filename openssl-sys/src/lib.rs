@@ -169,17 +169,12 @@ pub const SSL_OP_CIPHER_SERVER_PREFERENCE: c_ulong =                0x00400000;
 pub const SSL_OP_TLS_ROLLBACK_BUG: c_ulong =                        0x00800000;
 pub const SSL_OP_NO_SSLv3: c_ulong =                                0x02000000;
 pub const SSL_OP_NO_TLSv1: c_ulong =                                0x04000000;
-
-// Intentionally not bound since they conflict with SSL_OP_PKCS1_CHECK_1 and
-// SSL_OP_PKCS1_CHECK_2 on 0.9.8 :(
-/*
-pub const SSL_OP_NO_TLSv1_2: c_long =                               0x08000000;
-pub const SSL_OP_NO_TLSv1_1: c_long =                               0x10000000;
-pub const SSL_OP_NO_DTLSv1: c_long =                                0x04000000;
-pub const SSL_OP_NO_DTLSv1_2: c_long =                              0x08000000;
-pub const SSL_OP_NO_SSL_MASK: c_long = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 |
+pub const SSL_OP_NO_TLSv1_2: c_ulong =                              0x08000000;
+pub const SSL_OP_NO_TLSv1_1: c_ulong =                              0x10000000;
+pub const SSL_OP_NO_DTLSv1: c_ulong =                               0x04000000;
+pub const SSL_OP_NO_DTLSv1_2: c_ulong =                             0x08000000;
+pub const SSL_OP_NO_SSL_MASK: c_ulong = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 |
     SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
-*/
 
 pub const TLSEXT_NAMETYPE_host_name: c_int = 0;
 
