@@ -466,11 +466,7 @@ extern {
     pub fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
     pub fn EVP_DigestFinal_ex(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
 
-    #[cfg_attr(any(ossl101, ossl102), link_name = "EVP_MD_CTX_create")]
-    pub fn EVP_MD_CTX_new() -> *mut EVP_MD_CTX;
     pub fn EVP_MD_CTX_copy_ex(dst: *mut EVP_MD_CTX, src: *const EVP_MD_CTX) -> c_int;
-    #[cfg_attr(any(ossl101, ossl102), link_name = "EVP_MD_CTX_destroy")]
-    pub fn EVP_MD_CTX_free(ctx: *mut EVP_MD_CTX);
 
     pub fn EVP_PKEY_new() -> *mut EVP_PKEY;
     pub fn EVP_PKEY_free(k: *mut EVP_PKEY);

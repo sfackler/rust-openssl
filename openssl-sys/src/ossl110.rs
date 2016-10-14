@@ -137,6 +137,8 @@ extern {
     pub fn X509_up_ref(x: *mut X509) -> c_int;
     pub fn SSL_CTX_up_ref(x: *mut SSL_CTX) -> c_int;
     pub fn X509_get0_extensions(req: *const ::X509) -> *const stack_st_X509_EXTENSION;
+    pub fn EVP_MD_CTX_new() -> *mut EVP_MD_CTX;
+    pub fn EVP_MD_CTX_free(ctx: *mut EVP_MD_CTX);
 
     pub fn OpenSSL_version_num() -> c_ulong;
     pub fn OpenSSL_version(key: c_int) -> *const c_char;

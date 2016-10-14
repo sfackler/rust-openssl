@@ -559,6 +559,8 @@ extern {
                            type_: c_int,
                            file: *const c_char,
                            line: c_int) -> c_int;
+    pub fn EVP_MD_CTX_create() -> *mut EVP_MD_CTX;
+    pub fn EVP_MD_CTX_destroy(ctx: *mut EVP_MD_CTX);
 
     pub fn sk_free(st: *mut _STACK);
     pub fn sk_pop_free(st: *mut _STACK, free: Option<unsafe extern "C" fn (*mut c_void)>);
