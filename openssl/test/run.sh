@@ -1,9 +1,16 @@
 #!/bin/bash
 set -e
 
-if [ "$BUILD_OPENSSL_VERSION" != "" ]; then
-    FEATURES="aes_xts aes_ctr alpn rfc5114 ecdh_auto openssl-102"
-fi
+case "$BUILD_OPENSSL_VERSION" in
+    1.0.2*)
+        FEATURES="openssl-102"
+        ;;
+    1.1.0*)
+        FEATURES="openssl-110"
+        ;;
+esac
+
+echo Using features: $FEATURES
 
 if [ -d "$HOME/openssl/lib" ]; then
     export OPENSSL_DIR=$HOME/openssl
