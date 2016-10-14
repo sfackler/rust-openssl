@@ -179,6 +179,7 @@ macro_rules! run_test(
             }
 
             #[test]
+            #[cfg_attr(any(windows, target_arch = "arm"), ignore)] // FIXME(#467)
             fn dtlsv1() {
                 let (_s, stream) = Server::new_dtlsv1(Some("hello"));
                 $blk(SslMethod::Dtls, stream);
@@ -442,6 +443,7 @@ run_test!(get_peer_certificate, |method, stream| {
 });
 
 #[test]
+#[cfg_attr(any(windows, target_arch = "arm"), ignore)] // FIXME(#467)
 fn test_write_dtlsv1() {
     let (_s, stream) = Server::new_dtlsv1(iter::repeat("y\n"));
 
@@ -785,6 +787,7 @@ mod dtlsv1 {
 }
 
 #[test]
+#[cfg_attr(any(windows, target_arch = "arm"), ignore)] // FIXME(#467)
 fn test_read_dtlsv1() {
     let (_s, stream) = Server::new_dtlsv1(Some("hello"));
 
@@ -862,7 +865,7 @@ fn test_write_nonblocking() {
 }
 
 #[test]
-#[cfg_attr(windows, ignore)] // FIXME flickers on appveyor
+#[cfg_attr(any(windows, target_arch = "arm"), ignore)] // FIXME(#467)
 fn test_read_nonblocking() {
     let (_s, stream) = Server::new();
     stream.set_nonblocking(true).unwrap();
