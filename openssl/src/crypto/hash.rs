@@ -3,6 +3,11 @@ use std::io;
 use std::ptr;
 use ffi;
 
+#[cfg(ossl110)]
+use ffi::{EVP_MD_CTX_new, EVP_MD_CTX_free};
+#[cfg(any(ossl101, ossl102))]
+use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
+
 use HashTypeInternals;
 use error::ErrorStack;
 use nid::Nid;
@@ -100,7 +105,7 @@ impl Hasher {
     pub fn new(ty: Type) -> Result<Hasher, ErrorStack> {
         ffi::init();
 
-        let ctx = unsafe { try_ssl_null!(ffi::EVP_MD_CTX_new()) };
+        let ctx = unsafe { try_ssl_null!(EVP_MD_CTX_new()) };
         let md = ty.evp_md();
 
         let mut h = Hasher {
@@ -172,7 +177,7 @@ impl Write for Hasher {
 impl Clone for Hasher {
     fn clone(&self) -> Hasher {
         let ctx = unsafe {
-            let ctx = ffi::EVP_MD_CTX_new();
+            let ctx = EVP_MD_CTX_new();
             assert!(!ctx.is_null());
             let r = ffi::EVP_MD_CTX_copy_ex(ctx, self.ctx);
             assert_eq!(r, 1);
@@ -193,7 +198,7 @@ impl Drop for Hasher {
             if self.state != Finalized {
                 drop(self.finish());
             }
-            ffi::EVP_MD_CTX_free(self.ctx);
+            EVP_MD_CTX_free(self.ctx);
         }
     }
 }
