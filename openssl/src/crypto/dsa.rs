@@ -19,8 +19,13 @@ impl DSAParams {
         unsafe {
             // Wrap it so that if we panic we'll call the dtor
             let dsa = DSAParams(try_ssl_null!(ffi::DSA_new()));
-            try_ssl!(ffi::DSA_generate_parameters_ex(dsa.0, size as c_int, ptr::null(), 0,
-                                                 ptr::null_mut(), ptr::null_mut(), ptr::null()));
+            try_ssl!(ffi::DSA_generate_parameters_ex(dsa.0,
+                                                     size as c_int,
+                                                     ptr::null(),
+                                                     0,
+                                                     ptr::null_mut(),
+                                                     ptr::null_mut(),
+                                                     ptr::null_mut()));
             Ok(dsa)
         }
     }
@@ -190,43 +195,74 @@ impl DSA {
 
     pub fn p<'a>(&'a self) -> Option<BigNumRef<'a>> {
         unsafe {
-            let p = (*self.0).p;
+            let p = compat::pqg(self.0)[0];
             if p.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr((*self.0).p))
+                Some(BigNumRef::from_ptr(p as *mut _))
             }
         }
     }
 
     pub fn q<'a>(&'a self) -> Option<BigNumRef<'a>> {
         unsafe {
-            let q = (*self.0).q;
+            let q = compat::pqg(self.0)[1];
             if q.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr((*self.0).q))
+                Some(BigNumRef::from_ptr(q as *mut _))
             }
         }
     }
 
     pub fn g<'a>(&'a self) -> Option<BigNumRef<'a>> {
         unsafe {
-            let g = (*self.0).g;
+            let g = compat::pqg(self.0)[2];
             if g.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr((*self.0).g))
+                Some(BigNumRef::from_ptr(g as *mut _))
             }
         }
     }
 
     pub fn has_public_key(&self) -> bool {
-        unsafe { !(*self.0).pub_key.is_null() }
+        unsafe { !compat::keys(self.0)[0].is_null() }
     }
 
     pub fn has_private_key(&self) -> bool {
-        unsafe { !(*self.0).priv_key.is_null() }
+        unsafe { !compat::keys(self.0)[1].is_null() }
+    }
+}
+
+#[cfg(ossl110)]
+mod compat {
+    use std::ptr;
+    use ffi::{self, BIGNUM, DSA};
+
+    pub unsafe fn pqg(d: *const DSA) -> [*const BIGNUM; 3] {
+        let (mut p, mut q, mut g) = (ptr::null(), ptr::null(), ptr::null());
+        ffi::DSA_get0_pqg(d, &mut p, &mut q, &mut g);
+        [p, q, g]
+    }
+
+    pub unsafe fn keys(d: *const DSA) -> [*const BIGNUM; 2] {
+        let (mut pub_key, mut priv_key) = (ptr::null(), ptr::null());
+        ffi::DSA_get0_key(d, &mut pub_key, &mut priv_key);
+        [pub_key, priv_key]
+    }
+}
+
+#[cfg(ossl10x)]
+mod compat {
+    use ffi::{BIGNUM, DSA};
+
+    pub unsafe fn pqg(d: *const DSA) -> [*const BIGNUM; 3] {
+        [(*d).p, (*d).q, (*d).g]
+    }
+
+    pub unsafe fn keys(d: *const DSA) -> [*const BIGNUM; 2] {
+        [(*d).pub_key, (*d).priv_key]
     }
 }
 

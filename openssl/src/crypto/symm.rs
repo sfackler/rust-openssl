@@ -16,31 +16,20 @@ pub enum Mode {
 pub enum Type {
     AES_128_ECB,
     AES_128_CBC,
-    /// Requires the `aes_xts` feature
-    #[cfg(feature = "aes_xts")]
     AES_128_XTS,
-    #[cfg(feature = "aes_ctr")]
     AES_128_CTR,
-    // AES_128_GCM,
     AES_128_CFB1,
     AES_128_CFB128,
     AES_128_CFB8,
-
     AES_256_ECB,
     AES_256_CBC,
-    /// Requires the `aes_xts` feature
-    #[cfg(feature = "aes_xts")]
     AES_256_XTS,
-    #[cfg(feature = "aes_ctr")]
     AES_256_CTR,
-    // AES_256_GCM,
     AES_256_CFB1,
     AES_256_CFB128,
     AES_256_CFB8,
-
     DES_CBC,
     DES_ECB,
-
     RC4_128,
 }
 
@@ -50,29 +39,20 @@ impl Type {
             match *self {
                 Type::AES_128_ECB => ffi::EVP_aes_128_ecb(),
                 Type::AES_128_CBC => ffi::EVP_aes_128_cbc(),
-                #[cfg(feature = "aes_xts")]
                 Type::AES_128_XTS => ffi::EVP_aes_128_xts(),
-                #[cfg(feature = "aes_ctr")]
                 Type::AES_128_CTR => ffi::EVP_aes_128_ctr(),
-                // AES_128_GCM => (EVP_aes_128_gcm(), 16, 16),
                 Type::AES_128_CFB1 => ffi::EVP_aes_128_cfb1(),
                 Type::AES_128_CFB128 => ffi::EVP_aes_128_cfb128(),
                 Type::AES_128_CFB8 => ffi::EVP_aes_128_cfb8(),
-
                 Type::AES_256_ECB => ffi::EVP_aes_256_ecb(),
                 Type::AES_256_CBC => ffi::EVP_aes_256_cbc(),
-                #[cfg(feature = "aes_xts")]
                 Type::AES_256_XTS => ffi::EVP_aes_256_xts(),
-                #[cfg(feature = "aes_ctr")]
                 Type::AES_256_CTR => ffi::EVP_aes_256_ctr(),
-                // AES_256_GCM => (EVP_aes_256_gcm(), 32, 16),
                 Type::AES_256_CFB1 => ffi::EVP_aes_256_cfb1(),
                 Type::AES_256_CFB128 => ffi::EVP_aes_256_cfb128(),
                 Type::AES_256_CFB8 => ffi::EVP_aes_256_cfb8(),
-
                 Type::DES_CBC => ffi::EVP_des_cbc(),
                 Type::DES_ECB => ffi::EVP_des_ecb(),
-
                 Type::RC4_128 => ffi::EVP_rc4(),
             }
         }
@@ -81,7 +61,7 @@ impl Type {
     /// Returns the length of keys used with this cipher.
     pub fn key_len(&self) -> usize {
         unsafe {
-            ffi::EVP_CIPHER_key_length(self.as_ptr()) as usize
+            EVP_CIPHER_key_length(self.as_ptr()) as usize
         }
     }
 
@@ -89,7 +69,7 @@ impl Type {
     /// cipher does not use an IV.
     pub fn iv_len(&self) -> Option<usize> {
         unsafe {
-            let len = ffi::EVP_CIPHER_iv_length(self.as_ptr()) as usize;
+            let len = EVP_CIPHER_iv_length(self.as_ptr()) as usize;
             if len == 0 {
                 None
             } else {
@@ -105,7 +85,7 @@ impl Type {
     /// Stream ciphers such as RC4 have a block size of 1.
     pub fn block_size(&self) -> usize {
         unsafe {
-            ffi::EVP_CIPHER_block_size(self.as_ptr()) as usize
+            EVP_CIPHER_block_size(self.as_ptr()) as usize
         }
     }
 }
@@ -272,6 +252,30 @@ fn cipher(t: Type,
     Ok(out)
 }
 
+#[cfg(ossl110)]
+use ffi::{EVP_CIPHER_iv_length, EVP_CIPHER_block_size, EVP_CIPHER_key_length};
+
+#[cfg(ossl10x)]
+#[allow(bad_style)]
+mod compat {
+    use libc::c_int;
+    use ffi::EVP_CIPHER;
+
+    pub unsafe fn EVP_CIPHER_iv_length(ptr: *const EVP_CIPHER) -> c_int {
+        (*ptr).iv_len
+    }
+
+    pub unsafe fn EVP_CIPHER_block_size(ptr: *const EVP_CIPHER) -> c_int {
+        (*ptr).block_size
+    }
+
+    pub unsafe fn EVP_CIPHER_key_length(ptr: *const EVP_CIPHER) -> c_int {
+        (*ptr).key_len
+    }
+}
+#[cfg(ossl10x)]
+use self::compat::*;
+
 #[cfg(test)]
 mod tests {
     use serialize::hex::{FromHex, ToHex};
@@ -372,7 +376,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "aes_xts")]
     fn test_aes256_xts() {
         // Test case 174 from
         // http://csrc.nist.gov/groups/STM/cavp/documents/aes/XTSTestVectors.zip
@@ -388,7 +391,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "aes_ctr")]
     fn test_aes128_ctr() {
 
         let pt = "6BC1BEE22E409F96E93D7E117393172AAE2D8A571E03AC9C9EB76FAC45AF8E5130C81C46A35CE411\
@@ -400,17 +402,6 @@ mod tests {
 
         cipher_test(super::Type::AES_128_CTR, pt, ct, key, iv);
     }
-
-    // #[test]
-    // fn test_aes128_gcm() {
-    // Test case 3 in GCM spec
-    // let pt = ~"d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b391aafd255";
-    // let ct = ~"42831ec2217774244b7221b784d0d49ce3aa212f2c02a4e035c17e2329aca12e21d514b25466931c7d8f6a5aac84aa051ba30b396a0aac973d58e091473f59854d5c2af327cd64a62cf35abd2ba6fab4";
-    // let key = ~"feffe9928665731c6d6a8f9467308308";
-    // let iv = ~"cafebabefacedbaddecaf888";
-    //
-    // cipher_test(super::AES_128_GCM, pt, ct, key, iv);
-    // }
 
     #[test]
     fn test_aes128_cfb1() {

@@ -13,16 +13,14 @@
 // limitations under the License.
 //
 
-use libc::{c_int, c_uint};
+use libc::{c_int};
 use std::io;
 use std::io::prelude::*;
-use std::cmp;
 use ffi;
 
 use HashTypeInternals;
 use crypto::hash::Type;
 use error::ErrorStack;
-use c_helpers;
 
 #[derive(PartialEq, Copy, Clone)]
 enum State {
@@ -66,7 +64,7 @@ use self::State::*;
 /// assert_eq!(res, spec);
 /// ```
 pub struct HMAC {
-    ctx: ffi::HMAC_CTX,
+    ctx: compat::HMAC_CTX,
     state: State,
 }
 
@@ -75,11 +73,7 @@ impl HMAC {
     pub fn new(ty: Type, key: &[u8]) -> Result<HMAC, ErrorStack> {
         ffi::init();
 
-        let ctx = unsafe {
-            let mut ctx = ::std::mem::uninitialized();
-            ffi::HMAC_CTX_init(&mut ctx);
-            ctx
-        };
+        let ctx = compat::HMAC_CTX::new();
         let md = ty.evp_md();
 
         let mut h = HMAC {
@@ -92,11 +86,11 @@ impl HMAC {
 
     fn init_once(&mut self, md: *const ffi::EVP_MD, key: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            try_ssl!(c_helpers::rust_0_8_HMAC_Init_ex(&mut self.ctx,
-                                                      key.as_ptr() as *const _,
-                                                      key.len() as c_int,
-                                                      md,
-                                                      0 as *mut _));
+            try_ssl!(ffi::HMAC_Init_ex(self.ctx.get(),
+                                       key.as_ptr() as *const _,
+                                       key.len() as c_int,
+                                       md,
+                                       0 as *mut _));
         }
         self.state = Reset;
         Ok(())
@@ -113,26 +107,24 @@ impl HMAC {
         // If the key and/or md is not supplied it's reused from the last time
         // avoiding redundant initializations
         unsafe {
-            try_ssl!(c_helpers::rust_0_8_HMAC_Init_ex(&mut self.ctx,
-                                                      0 as *const _,
-                                                      0,
-                                                      0 as *const _,
-                                                      0 as *mut _));
+            try_ssl!(ffi::HMAC_Init_ex(self.ctx.get(),
+                                       0 as *const _,
+                                       0,
+                                       0 as *const _,
+                                       0 as *mut _));
         }
         self.state = Reset;
         Ok(())
     }
 
-    pub fn update(&mut self, mut data: &[u8]) -> Result<(), ErrorStack> {
+    pub fn update(&mut self, data: &[u8]) -> Result<(), ErrorStack> {
         if self.state == Finalized {
             try!(self.init());
         }
-        while !data.is_empty() {
-            let len = cmp::min(data.len(), c_uint::max_value() as usize);
-            unsafe {
-                try_ssl!(c_helpers::rust_0_8_HMAC_Update(&mut self.ctx, data.as_ptr(), len as c_uint));
-            }
-            data = &data[len..];
+        unsafe {
+            try_ssl!(ffi::HMAC_Update(self.ctx.get(),
+                                      data.as_ptr(),
+                                      data.len()));
         }
         self.state = Updated;
         Ok(())
@@ -147,7 +139,9 @@ impl HMAC {
         unsafe {
             let mut len = ffi::EVP_MAX_MD_SIZE;
             let mut res = vec![0; len as usize];
-            try_ssl!(c_helpers::rust_0_8_HMAC_Final(&mut self.ctx, res.as_mut_ptr(), &mut len));
+            try_ssl!(ffi::HMAC_Final(self.ctx.get(),
+                                     res.as_mut_ptr(),
+                                     &mut len));
             res.truncate(len as usize);
             self.state = Finalized;
             Ok(res)
@@ -167,14 +161,11 @@ impl Write for HMAC {
     }
 }
 
-#[cfg(feature = "hmac_clone")]
 impl Clone for HMAC {
-    /// Requires the `hmac_clone` feature.
     fn clone(&self) -> HMAC {
-        let mut ctx: ffi::HMAC_CTX;
+        let ctx = compat::HMAC_CTX::new();
         unsafe {
-            ctx = ::std::mem::uninitialized();
-            let r = ffi::HMAC_CTX_copy(&mut ctx, &self.ctx);
+            let r = ffi::HMAC_CTX_copy(ctx.get(), self.ctx.get());
             assert_eq!(r, 1);
         }
         HMAC {
@@ -186,11 +177,8 @@ impl Clone for HMAC {
 
 impl Drop for HMAC {
     fn drop(&mut self) {
-        unsafe {
-            if self.state != Finalized {
-                drop(self.finish());
-            }
-            ffi::HMAC_CTX_cleanup(&mut self.ctx);
+        if self.state != Finalized {
+            drop(self.finish());
         }
     }
 }
@@ -200,6 +188,73 @@ pub fn hmac(t: Type, key: &[u8], data: &[u8]) -> Result<Vec<u8>, ErrorStack> {
     let mut h = try!(HMAC::new(t, key));
     try!(h.update(data));
     h.finish()
+}
+
+#[cfg(ossl110)]
+#[allow(bad_style)]
+mod compat {
+    use ffi;
+
+    pub struct HMAC_CTX {
+        ctx: *mut ffi::HMAC_CTX,
+    }
+
+    impl HMAC_CTX {
+        pub fn new() -> HMAC_CTX {
+            unsafe {
+                let ctx = ffi::HMAC_CTX_new();
+                assert!(!ctx.is_null());
+                HMAC_CTX { ctx: ctx }
+            }
+        }
+
+        pub fn get(&self) -> *mut ffi::HMAC_CTX {
+            self.ctx
+        }
+    }
+
+    impl Drop for HMAC_CTX {
+        fn drop(&mut self) {
+            unsafe {
+                ffi::HMAC_CTX_free(self.ctx);
+            }
+        }
+    }
+}
+
+#[cfg(ossl10x)]
+#[allow(bad_style)]
+mod compat {
+    use std::mem;
+    use std::cell::UnsafeCell;
+
+    use ffi;
+
+    pub struct HMAC_CTX {
+        ctx: UnsafeCell<ffi::HMAC_CTX>,
+    }
+
+    impl HMAC_CTX {
+        pub fn new() -> HMAC_CTX {
+            unsafe {
+                let mut ctx = mem::zeroed();
+                ffi::HMAC_CTX_init(&mut ctx);
+                HMAC_CTX { ctx: UnsafeCell::new(ctx) }
+            }
+        }
+
+        pub fn get(&self) -> *mut ffi::HMAC_CTX {
+            self.ctx.get()
+        }
+    }
+
+    impl Drop for HMAC_CTX {
+        fn drop(&mut self) {
+            unsafe {
+                ffi::HMAC_CTX_cleanup(self.get());
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -289,7 +344,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "hmac_clone")]
     fn test_clone() {
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 2] =
             [(repeat(0xaa_u8).take(80).collect(),

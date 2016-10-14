@@ -1,28 +1,86 @@
 language: rust
-sudo: false
-addons:
-  apt:
-    packages:
-    - gcc-arm-linux-gnueabihf
-rust:
-- nightly
-- 1.9.0
-os:
-- osx
-- linux
+sudo: required
+rust: stable
+dist: trusty
+
 env:
-  matrix:
-  - TEST_FEATURES=false
-  - TEST_FEATURES=true
+  global:
+    - TARGET=x86_64-unknown-linux-gnu
 matrix:
-    #  include:
-    #  - os: linux
-    #    env: TARGET=arm-unknown-linux-gnueabihf TEST_FEATURES=true
-    #    rust: 1.7.0
-  exclude:
-  - os: osx
-    env: TEST_FEATURES=true
+  include:
+    # ARM-bit version compat
+    - env: >
+        TARGET=arm-unknown-linux-gnueabihf
+        BUILD_OPENSSL_VERSION=1.0.2h
+        CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc
+        QEMU_LD_PREFIX=/usr/arm-linux-gnueabihf
+        RUST_TEST_THREADS=1
+      addons:
+        apt:
+          packages:
+            - gcc-arm-linux-gnueabihf
+            - qemu-user-static
+            - libc6-dev-armhf-cross
+            - binfmt-support
+    - env: >
+        TARGET=arm-unknown-linux-gnueabihf
+        BUILD_OPENSSL_VERSION=1.1.0b
+        CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc
+        QEMU_LD_PREFIX=/usr/arm-linux-gnueabihf
+        RUST_TEST_THREADS=1
+      addons:
+        apt:
+          packages:
+            - gcc-arm-linux-gnueabihf
+            - qemu-user-static
+            - libc6-dev-armhf-cross
+            - binfmt-support
+
+    # Minimum version supported
+    - rust: 1.9.0
+
+    # beta/nightly channels
+    - rust: beta
+    - rust: nightly
+
+    # 64-bit version compat
+    - env: BUILD_OPENSSL_VERSION=1.0.1u
+    - env: BUILD_OPENSSL_VERSION=1.0.2h
+    - env: BUILD_OPENSSL_VERSION=1.1.0b
+
+    # 32-bit version compat
+    - env: TARGET=i686-unknown-linux-gnu BUILD_OPENSSL_VERSION=1.0.1u
+      addons:
+        apt:
+          packages:
+            - gcc-multilib
+    - env: TARGET=i686-unknown-linux-gnu BUILD_OPENSSL_VERSION=1.0.2h
+      addons:
+        apt:
+          packages:
+            - gcc-multilib
+    - env: TARGET=i686-unknown-linux-gnu BUILD_OPENSSL_VERSION=1.1.0b
+      addons:
+        apt:
+          packages:
+            - gcc-multilib
+
+    # osx 32/64
+    - os: osx
+      env: TARGET=x86_64-apple-darwin
+    - os: osx
+      env: TARGET=i686-apple-darwin
+      install: brew uninstall openssl && brew install openssl --universal
+
+
 before_install:
-- ./openssl/test/build.sh
+  - ./openssl/test/build.sh
+  - curl https://static.rust-lang.org/rustup.sh |
+    sh -s -- --add-target=$TARGET --disable-sudo -y --prefix=`rustc --print sysroot`
 script:
-- ./openssl/test/run.sh
+  - ./openssl/test/run.sh
+
+cache:
+  cargo: true
+  directories:
+    - $HOME/openssl

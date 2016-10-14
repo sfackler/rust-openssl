@@ -1,8 +1,6 @@
-use libc::c_uint;
 use std::io::prelude::*;
 use std::io;
 use std::ptr;
-use std::cmp;
 use ffi;
 
 use HashTypeInternals;
@@ -102,7 +100,7 @@ impl Hasher {
     pub fn new(ty: Type) -> Result<Hasher, ErrorStack> {
         ffi::init();
 
-        let ctx = unsafe { try_ssl_null!(ffi::EVP_MD_CTX_create()) };
+        let ctx = unsafe { try_ssl_null!(ffi::EVP_MD_CTX_new()) };
         let md = ty.evp_md();
 
         let mut h = Hasher {
@@ -123,22 +121,20 @@ impl Hasher {
             }
             Finalized => (),
         }
-        unsafe { try_ssl!(ffi::EVP_DigestInit_ex(self.ctx, self.md, 0 as *const _)); }
+        unsafe { try_ssl!(ffi::EVP_DigestInit_ex(self.ctx, self.md, 0 as *mut _)); }
         self.state = Reset;
         Ok(())
     }
 
     /// Feeds data into the hasher.
-    pub fn update(&mut self, mut data: &[u8]) -> Result<(), ErrorStack> {
+    pub fn update(&mut self, data: &[u8]) -> Result<(), ErrorStack> {
         if self.state == Finalized {
             try!(self.init());
         }
-        while !data.is_empty() {
-            let len = cmp::min(data.len(), c_uint::max_value() as usize);
-            unsafe {
-                try_ssl!(ffi::EVP_DigestUpdate(self.ctx, data.as_ptr(), len as c_uint));
-            }
-            data = &data[len..];
+        unsafe {
+            try_ssl!(ffi::EVP_DigestUpdate(self.ctx,
+                                           data.as_ptr() as *mut _,
+                                           data.len()));
         }
         self.state = Updated;
         Ok(())
@@ -176,7 +172,7 @@ impl Write for Hasher {
 impl Clone for Hasher {
     fn clone(&self) -> Hasher {
         let ctx = unsafe {
-            let ctx = ffi::EVP_MD_CTX_create();
+            let ctx = ffi::EVP_MD_CTX_new();
             assert!(!ctx.is_null());
             let r = ffi::EVP_MD_CTX_copy_ex(ctx, self.ctx);
             assert_eq!(r, 1);
@@ -197,7 +193,7 @@ impl Drop for Hasher {
             if self.state != Finalized {
                 drop(self.finish());
             }
-            ffi::EVP_MD_CTX_destroy(self.ctx);
+            ffi::EVP_MD_CTX_free(self.ctx);
         }
     }
 }

@@ -1,2 +1,2 @@
 [workspace]
-members = ["openssl", "openssl-sys"]
+members = ["openssl", "openssl-sys", "systest"]

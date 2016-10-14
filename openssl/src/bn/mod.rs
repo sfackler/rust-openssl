@@ -1,4 +1,4 @@
-use libc::{c_int, c_ulong, c_void};
+use libc::{c_int, c_void};
 use std::ffi::{CStr, CString};
 use std::cmp::Ordering;
 use std::{fmt, ptr};
@@ -185,10 +185,11 @@ impl<'a> BigNumRef<'a> {
         }
     }
 
-    /// Add an `unsigned long` to `self`. This is more efficient than adding a `BigNum`.
-    pub fn add_word(&mut self, w: c_ulong) -> Result<(), ErrorStack> {
+    /// Add a `u32` to `self`. This is more efficient than adding a
+    /// `BigNum`.
+    pub fn add_word(&mut self, w: u32) -> Result<(), ErrorStack> {
         unsafe {
-            if ffi::BN_add_word(self.as_ptr(), w) == 1 {
+            if ffi::BN_add_word(self.as_ptr(), w as ffi::BN_ULONG) == 1 {
                 Ok(())
             } else {
                 Err(ErrorStack::get())
@@ -196,9 +197,9 @@ impl<'a> BigNumRef<'a> {
         }
     }
 
-    pub fn sub_word(&mut self, w: c_ulong) -> Result<(), ErrorStack> {
+    pub fn sub_word(&mut self, w: u32) -> Result<(), ErrorStack> {
         unsafe {
-            if ffi::BN_sub_word(self.as_ptr(), w) == 1 {
+            if ffi::BN_sub_word(self.as_ptr(), w as ffi::BN_ULONG) == 1 {
                 Ok(())
             } else {
                 Err(ErrorStack::get())
@@ -206,9 +207,9 @@ impl<'a> BigNumRef<'a> {
         }
     }
 
-    pub fn mul_word(&mut self, w: c_ulong) -> Result<(), ErrorStack> {
+    pub fn mul_word(&mut self, w: u32) -> Result<(), ErrorStack> {
         unsafe {
-            if ffi::BN_mul_word(self.as_ptr(), w) == 1 {
+            if ffi::BN_mul_word(self.as_ptr(), w as ffi::BN_ULONG) == 1 {
                 Ok(())
             } else {
                 Err(ErrorStack::get())
@@ -216,22 +217,22 @@ impl<'a> BigNumRef<'a> {
         }
     }
 
-    pub fn div_word(&mut self, w: c_ulong) -> Result<c_ulong, ErrorStack> {
+    pub fn div_word(&mut self, w: u32) -> Result<u64, ErrorStack> {
         unsafe {
-            let result = ffi::BN_div_word(self.as_ptr(), w);
-            if result != !0 as c_ulong {
-                Ok(result)
+            let result = ffi::BN_div_word(self.as_ptr(), w as ffi::BN_ULONG);
+            if result != !0 {
+                Ok(result.into())
             } else {
                 Err(ErrorStack::get())
             }
         }
     }
 
-    pub fn mod_word(&self, w: c_ulong) -> Result<c_ulong, ErrorStack> {
+    pub fn mod_word(&self, w: u32) -> Result<u64, ErrorStack> {
         unsafe {
-            let result = ffi::BN_mod_word(self.as_ptr(), w);
-            if result != !0 as c_ulong {
-                Ok(result)
+            let result = ffi::BN_mod_word(self.as_ptr(), w as ffi::BN_ULONG);
+            if result != !0 {
+                Ok(result as u64)
             } else {
                 Err(ErrorStack::get())
             }
@@ -257,7 +258,10 @@ impl<'a> BigNumRef<'a> {
     pub fn is_prime(&self, checks: i32) -> Result<bool, ErrorStack> {
         unsafe {
             with_ctx!(ctx, {
-                Ok(ffi::BN_is_prime_ex(self.as_ptr(), checks as c_int, ctx, ptr::null()) == 1)
+                Ok(ffi::BN_is_prime_ex(self.as_ptr(),
+                                       checks as c_int,
+                                       ctx,
+                                       ptr::null_mut()) == 1)
             })
         }
     }
@@ -278,7 +282,7 @@ impl<'a> BigNumRef<'a> {
                                                 checks as c_int,
                                                 ctx,
                                                 do_trial_division as c_int,
-                                                ptr::null()) == 1)
+                                                ptr::null_mut()) == 1)
             })
         }
     }
@@ -483,7 +487,17 @@ impl<'a> BigNumRef<'a> {
     }
 
     pub fn is_negative(&self) -> bool {
+        self._is_negative()
+    }
+
+    #[cfg(ossl10x)]
+    fn _is_negative(&self) -> bool {
         unsafe { (*self.as_ptr()).neg == 1 }
+    }
+
+    #[cfg(ossl110)]
+    fn _is_negative(&self) -> bool {
+        unsafe { ffi::BN_is_negative(self.as_ptr()) == 1 }
     }
 
     /// Returns the number of significant bits in `self`.
@@ -536,7 +550,7 @@ impl<'a> BigNumRef<'a> {
             assert!(!buf.is_null());
             let str = String::from_utf8(CStr::from_ptr(buf as *const _).to_bytes().to_vec())
                           .unwrap();
-            ffi::CRYPTO_free(buf as *mut c_void);
+            CRYPTO_free!(buf as *mut c_void);
             str
         }
     }
@@ -555,7 +569,7 @@ impl<'a> BigNumRef<'a> {
             assert!(!buf.is_null());
             let str = String::from_utf8(CStr::from_ptr(buf as *const _).to_bytes().to_vec())
                           .unwrap();
-            ffi::CRYPTO_free(buf as *mut c_void);
+            CRYPTO_free!(buf as *mut c_void);
             str
         }
     }
@@ -580,27 +594,27 @@ impl BigNum {
     }
 
     /// Creates a new `BigNum` with the given value.
-    pub fn new_from(n: c_ulong) -> Result<BigNum, ErrorStack> {
+    pub fn new_from(n: u32) -> Result<BigNum, ErrorStack> {
         BigNum::new().and_then(|v| unsafe {
-            try_ssl!(ffi::BN_set_word(v.as_ptr(), n));
+            try_ssl!(ffi::BN_set_word(v.as_ptr(), n as ffi::BN_ULONG));
             Ok(v)
         })
     }
 
     /// Creates a `BigNum` from a decimal string.
     pub fn from_dec_str(s: &str) -> Result<BigNum, ErrorStack> {
-        BigNum::new().and_then(|v| unsafe {
+        BigNum::new().and_then(|mut v| unsafe {
             let c_str = CString::new(s.as_bytes()).unwrap();
-            try_ssl!(ffi::BN_dec2bn(&(v.0).0, c_str.as_ptr() as *const _));
+            try_ssl!(ffi::BN_dec2bn(&mut (v.0).0, c_str.as_ptr() as *const _));
             Ok(v)
         })
     }
 
     /// Creates a `BigNum` from a hexadecimal string.
     pub fn from_hex_str(s: &str) -> Result<BigNum, ErrorStack> {
-        BigNum::new().and_then(|v| unsafe {
+        BigNum::new().and_then(|mut v| unsafe {
             let c_str = CString::new(s.as_bytes()).unwrap();
-            try_ssl!(ffi::BN_hex2bn(&(v.0).0, c_str.as_ptr() as *const _));
+            try_ssl!(ffi::BN_hex2bn(&mut (v.0).0, c_str.as_ptr() as *const _));
             Ok(v)
         })
     }
@@ -646,7 +660,7 @@ impl BigNum {
                                           safe as c_int,
                                           add_arg,
                                           rem_arg,
-                                          ptr::null()) == 1
+                                          ptr::null_mut()) == 1
             })
         }
     }

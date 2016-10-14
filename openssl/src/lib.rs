@@ -11,7 +11,7 @@ extern crate openssl_sys as ffi;
 extern crate rustc_serialize as serialize;
 
 #[cfg(test)]
-extern crate net2;
+extern crate tempdir;
 
 #[doc(inline)]
 pub use ffi::init;
@@ -23,8 +23,6 @@ mod macros;
 pub mod asn1;
 mod bio;
 pub mod bn;
-#[cfg(feature = "c_helpers")]
-mod c_helpers;
 pub mod crypto;
 pub mod dh;
 pub mod error;
