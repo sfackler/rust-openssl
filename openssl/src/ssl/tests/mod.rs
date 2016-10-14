@@ -104,7 +104,6 @@ impl Server {
         Server::new_tcp(&["-www"])
     }
 
-    #[cfg(all(any(feature = "alpn", feature = "npn"), not(ossl101)))]
     fn new_alpn() -> (Server, TcpStream) {
         Server::new_tcp(&["-www",
                           "-nextprotoneg",
@@ -549,7 +548,7 @@ fn test_state() {
 /// Tests that connecting with the client using ALPN, but the server not does not
 /// break the existing connection behavior.
 #[test]
-#[cfg(all(feature = "alpn", not(ossl101)))]
+#[cfg(feature = "openssl-102")]
 fn test_connect_with_unilateral_alpn() {
     let (_s, stream) = Server::new();
     let mut ctx = SslContext::new(Tls).unwrap();
@@ -571,7 +570,6 @@ fn test_connect_with_unilateral_alpn() {
 /// Tests that connecting with the client using NPN, but the server not does not
 /// break the existing connection behavior.
 #[test]
-#[cfg(all(feature = "npn", not(ossl101)))]
 fn test_connect_with_unilateral_npn() {
     let (_s, stream) = Server::new();
     let mut ctx = SslContext::new(Tls).unwrap();
@@ -593,7 +591,7 @@ fn test_connect_with_unilateral_npn() {
 /// Tests that when both the client as well as the server use ALPN and their
 /// lists of supported protocols have an overlap, the correct protocol is chosen.
 #[test]
-#[cfg(all(feature = "alpn", not(ossl101)))]
+#[cfg(feature = "openssl-102")]
 fn test_connect_with_alpn_successful_multiple_matching() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::new(Tls).unwrap();
@@ -615,7 +613,6 @@ fn test_connect_with_alpn_successful_multiple_matching() {
 /// Tests that when both the client as well as the server use NPN and their
 /// lists of supported protocols have an overlap, the correct protocol is chosen.
 #[test]
-#[cfg(all(feature = "npn", not(ossl101)))]
 fn test_connect_with_npn_successful_multiple_matching() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::new(Tls).unwrap();
@@ -638,7 +635,7 @@ fn test_connect_with_npn_successful_multiple_matching() {
 /// lists of supported protocols have an overlap -- with only ONE protocol
 /// being valid for both.
 #[test]
-#[cfg(all(feature = "alpn", not(ossl101)))]
+#[cfg(feature = "openssl-102")]
 fn test_connect_with_alpn_successful_single_match() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::new(Tls).unwrap();
@@ -662,7 +659,6 @@ fn test_connect_with_alpn_successful_single_match() {
 /// lists of supported protocols have an overlap -- with only ONE protocol
 /// being valid for both.
 #[test]
-#[cfg(all(feature = "npn", not(ossl101)))]
 fn test_connect_with_npn_successful_single_match() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::new(Tls).unwrap();
@@ -684,7 +680,6 @@ fn test_connect_with_npn_successful_single_match() {
 /// Tests that when the `SslStream` is created as a server stream, the protocols
 /// are correctly advertised to the client.
 #[test]
-#[cfg(all(feature = "npn", not(ossl101)))]
 fn test_npn_server_advertise_multiple() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
@@ -725,7 +720,7 @@ fn test_npn_server_advertise_multiple() {
 /// Tests that when the `SslStream` is created as a server stream, the protocols
 /// are correctly advertised to the client.
 #[test]
-#[cfg(all(feature = "alpn", not(ossl101)))]
+#[cfg(feature = "openssl-102")]
 fn test_alpn_server_advertise_multiple() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
@@ -766,7 +761,7 @@ fn test_alpn_server_advertise_multiple() {
 /// Test that Servers supporting ALPN don't report a protocol when none of their protocols match
 /// the client's reported protocol.
 #[test]
-#[cfg(all(feature = "alpn", not(ossl101)))]
+#[cfg(feature = "openssl-102")]
 // TODO: not sure why this test is failing on OpenSSL 1.1.0, may be related to
 //       something about SSLv3 though?
 #[cfg_attr(ossl110, ignore)]

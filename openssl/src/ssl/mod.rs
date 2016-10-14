@@ -117,7 +117,7 @@ fn get_ssl_verify_data_idx<T: Any + 'static>() -> c_int {
 lazy_static! {
     static ref NPN_PROTOS_IDX: c_int = get_new_idx::<Vec<u8>>();
 }
-#[cfg(all(feature = "alpn", not(ossl101)))]
+#[cfg(feature = "openssl-102")]
 lazy_static! {
     static ref ALPN_PROTOS_IDX: c_int = get_new_idx::<Vec<u8>>();
 }
@@ -260,7 +260,7 @@ extern fn raw_next_proto_select_cb(ssl: *mut ffi::SSL,
     unsafe { select_proto_using(ssl, out, outlen, inbuf, inlen, *NPN_PROTOS_IDX) }
 }
 
-#[cfg(all(feature = "alpn", not(ossl101)))]
+#[cfg(feature = "openssl-102")]
 extern fn raw_alpn_select_cb(ssl: *mut ffi::SSL,
                              out: *mut *const c_uchar,
                              outlen: *mut c_uchar,
@@ -512,14 +512,16 @@ impl<'a> SslContextRef<'a> {
     /// compatible clients, and automatically select an appropriate elliptic
     /// curve.
     ///
-    /// This method requires OpenSSL >= 1.0.2 or LibreSSL and the `ecdh_auto`
-    /// feature.
-    #[cfg(all(feature = "ecdh_auto", not(ossl101)))]
+    /// This feature is always enabled on OpenSSL 1.1.0, and calling this
+    /// method does nothing.
+    ///
+    /// This method requires the `openssl-102` feature.
+    #[cfg(feature = "openssl-102")]
     pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
         self._set_ecdh_auto(onoff)
     }
 
-    #[cfg(all(feature = "ecdh_auto", ossl102))]
+    #[cfg(all(feature = "openssl-102", ossl102))]
     fn _set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
         wrap_ssl_result(unsafe {
             ffi::SSL_CTX_ctrl(self.as_ptr(),
@@ -529,7 +531,7 @@ impl<'a> SslContextRef<'a> {
         })
     }
 
-    #[cfg(all(feature = "ecdh_auto", ossl110))]
+    #[cfg(all(feature = "openssl-102", ossl110))]
     fn _set_ecdh_auto(&mut self, _onoff: bool) -> Result<(), ErrorStack> {
         Ok(())
     }
@@ -581,8 +583,8 @@ impl<'a> SslContextRef<'a> {
     ///
     /// Note that ordering of the protocols controls the priority with which they are chosen.
     ///
-    /// This method needs the `alpn` feature.
-    #[cfg(all(feature = "alpn", not(ossl101)))]
+    /// This method needs the `openssl-102` feature.
+    #[cfg(feature = "openssl-102")]
     pub fn set_alpn_protocols(&mut self, protocols: &[&[u8]]) {
         let protocols: Box<Vec<u8>> = Box::new(ssl_encode_byte_strings(protocols));
         unsafe {
@@ -922,7 +924,7 @@ impl<'a> SslRef<'a> {
     /// to interpret it.
     ///
     /// This method needs the `alpn` feature.
-    #[cfg(all(feature = "alpn", not(ossl101)))]
+    #[cfg(feature = "openssl-102")]
     pub fn selected_alpn_protocol(&self) -> Option<&[u8]> {
         unsafe {
             let mut data: *const c_uchar = ptr::null();

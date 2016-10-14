@@ -30,19 +30,19 @@ impl DH {
         Ok(DH(dh))
     }
 
-    #[cfg(all(feature = "rfc5114", not(ossl101)))]
+    #[cfg(feature = "openssl-102")]
     pub fn get_1024_160() -> Result<DH, ErrorStack> {
         let dh = try_ssl_null!(unsafe { ffi::DH_get_1024_160() });
         Ok(DH(dh))
     }
 
-    #[cfg(all(feature = "rfc5114", not(ossl101)))]
+    #[cfg(feature = "openssl-102")]
     pub fn get_2048_224() -> Result<DH, ErrorStack> {
         let dh = try_ssl_null!(unsafe { ffi::DH_get_2048_224() });
         Ok(DH(dh))
     }
 
-    #[cfg(all(feature = "rfc5114", not(ossl101)))]
+    #[cfg(feature = "openssl-102")]
     pub fn get_2048_256() -> Result<DH, ErrorStack> {
         let dh = try_ssl_null!(unsafe { ffi::DH_get_2048_256() });
         Ok(DH(dh))
@@ -92,7 +92,7 @@ mod tests {
     use ssl::SslMethod::Tls;
 
     #[test]
-    #[cfg(all(feature = "rfc5114", not(ossl101)))]
+    #[cfg(feature = "openssl-102")]
     fn test_dh_rfc5114() {
         let mut ctx = SslContext::new(Tls).unwrap();
         let dh1 = DH::get_1024_160().unwrap();

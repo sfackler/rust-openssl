@@ -12,14 +12,7 @@ build = "build.rs"
 exclude = ["test/*"]
 
 [features]
-# Added in OpenSSL 1.0.2
-rfc5114 = []
-aes_xts = []
-aes_ctr = []
-alpn = []
-ecdh_auto = []
 openssl-102 = []
-
 openssl-110 = ["openssl-102"]
 
 [dependencies]
