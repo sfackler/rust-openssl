@@ -2,7 +2,7 @@
 set -e
 
 if [ "$BUILD_OPENSSL_VERSION" != "" ]; then
-    FEATURES="aes_xts aes_ctr npn alpn rfc5114 ecdh_auto"
+    FEATURES="aes_xts aes_ctr alpn rfc5114 ecdh_auto openssl-102"
 fi
 
 if [ -d "$HOME/openssl/lib" ]; then

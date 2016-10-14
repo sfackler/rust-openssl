@@ -171,8 +171,12 @@ pub const SSL_OP_NO_SSLv3: c_ulong =                                0x02000000;
 pub const SSL_OP_NO_TLSv1: c_ulong =                                0x04000000;
 pub const SSL_OP_NO_TLSv1_2: c_ulong =                              0x08000000;
 pub const SSL_OP_NO_TLSv1_1: c_ulong =                              0x10000000;
+
+#[cfg(not(ossl101))]
 pub const SSL_OP_NO_DTLSv1: c_ulong =                               0x04000000;
+#[cfg(not(ossl101))]
 pub const SSL_OP_NO_DTLSv1_2: c_ulong =                             0x08000000;
+#[cfg(not(ossl101))]
 pub const SSL_OP_NO_SSL_MASK: c_ulong = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 |
     SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
 

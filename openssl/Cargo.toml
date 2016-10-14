@@ -16,9 +16,9 @@ exclude = ["test/*"]
 rfc5114 = []
 aes_xts = []
 aes_ctr = []
-
-npn = []
 alpn = []
+openssl-102 = []
+
 ecdh_auto = []
 
 [dependencies]

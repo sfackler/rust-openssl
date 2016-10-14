@@ -14,9 +14,7 @@ use std::path::Path;
 use std::ptr;
 use std::str;
 use std::sync::{Mutex, Arc};
-#[cfg(any(feature = "npn", feature = "alpn"))]
 use libc::{c_uchar, c_uint};
-#[cfg(any(feature = "npn", feature = "alpn"))]
 use std::slice;
 use std::marker::PhantomData;
 use ffi;
@@ -67,8 +65,11 @@ bitflags! {
         const SSL_OP_NO_TLSV1 = ffi::SSL_OP_NO_TLSv1,
         const SSL_OP_NO_TLSV1_2 = ffi::SSL_OP_NO_TLSv1_2,
         const SSL_OP_NO_TLSV1_1 = ffi::SSL_OP_NO_TLSv1_1,
+        #[cfg(feature = "openssl-102")]
         const SSL_OP_NO_DTLSV1 = ffi::SSL_OP_NO_DTLSv1,
+        #[cfg(feature = "openssl-102")]
         const SSL_OP_NO_DTLSV1_2 = ffi::SSL_OP_NO_DTLSv1_2,
+        #[cfg(feature = "openssl-102")]
         const SSL_OP_NO_SSL_MASK = ffi::SSL_OP_NO_SSL_MASK,
     }
 }
@@ -113,7 +114,6 @@ fn get_ssl_verify_data_idx<T: Any + 'static>() -> c_int {
     *SSL_INDEXES.lock().unwrap().entry(TypeId::of::<T>()).or_insert_with(|| get_new_ssl_idx::<T>())
 }
 
-#[cfg(all(feature = "npn", not(ossl101)))]
 lazy_static! {
     static ref NPN_PROTOS_IDX: c_int = get_new_idx::<Vec<u8>>();
 }
@@ -218,7 +218,6 @@ extern fn raw_sni<F>(ssl: *mut ffi::SSL, al: *mut c_int, _arg: *mut c_void) -> c
     }
 }
 
-#[cfg(all(any(feature = "npn", feature = "alpn"), not(ossl101)))]
 unsafe fn select_proto_using(ssl: *mut ffi::SSL,
                              out: *mut *mut c_uchar,
                              outlen: *mut c_uchar,
@@ -251,7 +250,6 @@ unsafe fn select_proto_using(ssl: *mut ffi::SSL,
 /// supported by the server. It achieves this by delegating to the `SSL_select_next_proto`
 /// function. The list of protocols supported by the client is found in the extra data of the
 /// OpenSSL context.
-#[cfg(all(feature = "npn", not(ossl101)))]
 extern fn raw_next_proto_select_cb(ssl: *mut ffi::SSL,
                                    out: *mut *mut c_uchar,
                                    outlen: *mut c_uchar,
@@ -280,7 +278,6 @@ extern fn raw_alpn_select_cb(ssl: *mut ffi::SSL,
 /// that it supports.
 /// The list of supported protocols is found in the extra data of the OpenSSL
 /// context.
-#[cfg(all(feature = "npn", not(ossl101)))]
 extern fn raw_next_protos_advertise_cb(ssl: *mut ffi::SSL,
                                        out: *mut *const c_uchar,
                                        outlen: *mut c_uint,
@@ -307,7 +304,6 @@ extern fn raw_next_protos_advertise_cb(ssl: *mut ffi::SSL,
 
 /// Convert a set of byte slices into a series of byte strings encoded for SSL. Encoding is a byte
 /// containing the length followed by the string.
-#[cfg(all(any(feature = "alpn", feature = "npn"), not(ossl101)))]
 fn ssl_encode_byte_strings(strings: &[&[u8]]) -> Vec<u8> {
     let mut enc = Vec::new();
     for string in strings {
@@ -555,9 +551,6 @@ impl<'a> SslContextRef<'a> {
 
     /// Set the protocols to be used during Next Protocol Negotiation (the protocols
     /// supported by the application).
-    ///
-    /// This method needs the `npn` feature.
-    #[cfg(all(feature = "npn", not(ossl101)))]
     pub fn set_npn_protocols(&mut self, protocols: &[&[u8]]) {
         // Firstly, convert the list of protocols to a byte-array that can be passed to OpenSSL
         // APIs -- a list of length-prefixed strings.
@@ -907,9 +900,6 @@ impl<'a> SslRef<'a> {
     ///
     /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
     /// to interpret it.
-    ///
-    /// This method needs the `npn` feature.
-    #[cfg(feature = "npn")]
     pub fn selected_npn_protocol(&self) -> Option<&[u8]> {
         unsafe {
             let mut data: *const c_uchar = ptr::null();
