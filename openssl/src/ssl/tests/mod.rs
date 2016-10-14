@@ -605,6 +605,7 @@ fn test_connect_with_alpn_successful_multiple_matching() {
 /// Tests that when both the client as well as the server use NPN and their
 /// lists of supported protocols have an overlap, the correct protocol is chosen.
 #[test]
+#[cfg(feature = "openssl-102")]
 fn test_connect_with_npn_successful_multiple_matching() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::new(Tls).unwrap();
@@ -651,6 +652,7 @@ fn test_connect_with_alpn_successful_single_match() {
 /// lists of supported protocols have an overlap -- with only ONE protocol
 /// being valid for both.
 #[test]
+#[cfg(feature = "openssl-102")]
 fn test_connect_with_npn_successful_single_match() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::new(Tls).unwrap();
