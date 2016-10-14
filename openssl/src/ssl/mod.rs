@@ -75,10 +75,8 @@ bitflags! {
 }
 
 /// Determines the SSL method supported
-#[allow(non_camel_case_types)]
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum SslMethod {
-    // TODO: support more methods
     /// Support the TLS protocol
     Tls,
     /// Support DTLS protocol
