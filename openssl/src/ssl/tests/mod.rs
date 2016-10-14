@@ -169,12 +169,13 @@ impl Write for UdpConnected {
     #[cfg(windows)]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         use std::os::windows::prelude::*;
-        use libc;
+        use ws2_32;
+
         let n = unsafe {
-            libc::send(self.0.as_raw_socket(),
-                       buf.as_ptr() as *const _,
-                       buf.len() as libc::c_int,
-                       0)
+            ws2_32::send(self.0.as_raw_socket(),
+                         buf.as_ptr() as *const _,
+                         buf.len() as libc::c_int,
+                         0)
         };
         if n < 0 {
             Err(io::Error::last_os_error())
