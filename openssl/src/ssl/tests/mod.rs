@@ -12,7 +12,6 @@ use std::process::{Command, Child, Stdio, ChildStdin};
 use std::thread;
 use std::time::Duration;
 
-use net2::TcpStreamExt;
 use tempdir::TempDir;
 
 use crypto::hash::Type::SHA256;
@@ -29,9 +28,6 @@ use crypto::pkey::PKey;
 
 use std::net::UdpSocket;
 use ssl::SslMethod::Dtls;
-#[cfg(feature="sslv2")]
-use ssl::SslMethod::Sslv2;
-use net2::UdpSocketExt;
 
 mod select;
 
@@ -144,45 +140,13 @@ struct UdpConnected(UdpSocket);
 
 impl Read for UdpConnected {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.0.recv_from(buf).map(|(s, _)| s)
+        self.0.recv(buf)
     }
 }
 
 impl Write for UdpConnected {
-    #[cfg(unix)]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        use std::os::unix::prelude::*;
-        use libc;
-        let n = unsafe {
-            libc::send(self.0.as_raw_fd(),
-                       buf.as_ptr() as *const _,
-                       buf.len() as libc::size_t,
-                       0)
-        };
-        if n < 0 {
-            Err(io::Error::last_os_error())
-        } else {
-            Ok(n as usize)
-        }
-    }
-
-    #[cfg(windows)]
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        extern crate ws2_32;
-        use std::os::windows::prelude::*;
-        use libc;
-
-        let n = unsafe {
-            ws2_32::send(self.0.as_raw_socket(),
-                         buf.as_ptr() as *const _,
-                         buf.len() as libc::c_int,
-                         0)
-        };
-        if n < 0 {
-            Err(io::Error::last_os_error())
-        } else {
-            Ok(n as usize)
-        }
+        self.0.send(buf)
     }
 
     fn flush(&mut self) -> io::Result<()> {
