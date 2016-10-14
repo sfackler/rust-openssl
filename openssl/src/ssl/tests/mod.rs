@@ -27,13 +27,10 @@ use x509::X509FileType;
 use x509::X509;
 use crypto::pkey::PKey;
 
-#[cfg(feature="dtlsv1")]
 use std::net::UdpSocket;
-#[cfg(feature="dtlsv1")]
-use ssl::SslMethod::Dtlsv1;
+use ssl::SslMethod::Dtls;
 #[cfg(feature="sslv2")]
 use ssl::SslMethod::Sslv2;
-#[cfg(feature="dtlsv1")]
 use net2::UdpSocketExt;
 
 mod select;
@@ -112,7 +109,6 @@ impl Server {
                           "http/1.1,spdy/3.1"])
     }
 
-    #[cfg(feature = "dtlsv1")]
     fn new_dtlsv1<I>(input: I) -> (Server, UdpConnected)
         where I: IntoIterator<Item = &'static str>,
               I::IntoIter: Send + 'static
@@ -143,18 +139,15 @@ impl Drop for Server {
     }
 }
 
-#[cfg(feature = "dtlsv1")]
 #[derive(Debug)]
 struct UdpConnected(UdpSocket);
 
-#[cfg(feature = "dtlsv1")]
 impl Read for UdpConnected {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.0.recv_from(buf).map(|(s, _)| s)
     }
 }
 
-#[cfg(feature = "dtlsv1")]
 impl Write for UdpConnected {
     #[cfg(unix)]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
@@ -220,10 +213,9 @@ macro_rules! run_test(
             }
 
             #[test]
-            #[cfg(feature="dtlsv1")]
             fn dtlsv1() {
                 let (_s, stream) = Server::new_dtlsv1(Some("hello"));
-                $blk(SslMethod::Dtlsv1, stream);
+                $blk(SslMethod::Dtls, stream);
             }
         }
     );
@@ -484,11 +476,10 @@ run_test!(get_peer_certificate, |method, stream| {
 });
 
 #[test]
-#[cfg(feature = "dtlsv1")]
 fn test_write_dtlsv1() {
     let (_s, stream) = Server::new_dtlsv1(iter::repeat("y\n"));
 
-    let mut stream = SslStream::connect(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
+    let mut stream = SslStream::connect(&SslContext::new(Dtls).unwrap(), stream).unwrap();
     stream.write_all(b"hello").unwrap();
     stream.flush().unwrap();
     stream.write_all(b" there").unwrap();
@@ -804,7 +795,6 @@ fn test_alpn_server_select_none() {
 }
 
 
-#[cfg(feature="dtlsv1")]
 #[cfg(test)]
 mod dtlsv1 {
     use serialize::hex::FromHex;
@@ -813,12 +803,12 @@ mod dtlsv1 {
 
     use crypto::hash::Type::SHA256;
     use ssl::SslMethod;
-    use ssl::SslMethod::Dtlsv1;
+    use ssl::SslMethod::Dtls;
     use ssl::{SslContext, SslStream};
     use ssl::SSL_VERIFY_PEER;
     use x509::X509StoreContext;
 
-    const PROTOCOL: SslMethod = Dtlsv1;
+    const PROTOCOL: SslMethod = Dtls;
 
     #[test]
     fn test_new_ctx() {
@@ -827,22 +817,12 @@ mod dtlsv1 {
 }
 
 #[test]
-#[cfg(feature = "dtlsv1")]
 fn test_read_dtlsv1() {
     let (_s, stream) = Server::new_dtlsv1(Some("hello"));
 
-    let mut stream = SslStream::connect(&SslContext::new(Dtlsv1).unwrap(), stream).unwrap();
+    let mut stream = SslStream::connect(&SslContext::new(Dtls).unwrap(), stream).unwrap();
     let mut buf = [0u8; 100];
     assert!(stream.read(&mut buf).is_ok());
-}
-
-#[test]
-#[cfg(feature = "sslv2")]
-fn test_sslv2_connect_failure() {
-    let (_s, tcp) = Server::new_tcp(&["-no_ssl2", "-www"]);
-    SslStream::connect(&SslContext::new(Sslv2).unwrap(), tcp)
-        .err()
-        .unwrap();
 }
 
 fn wait_io(stream: &TcpStream, read: bool, timeout_ms: u32) -> bool {
