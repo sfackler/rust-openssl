@@ -22,7 +22,7 @@ impl<'a> MemBioSlice<'a> {
 
         assert!(buf.len() <= c_int::max_value() as usize);
         let bio = unsafe {
-            try_ssl_null!(ffi::BIO_new_mem_buf(buf.as_ptr() as *const _, buf.len() as c_int))
+            try_ssl_null!(BIO_new_mem_buf(buf.as_ptr() as *const _, buf.len() as c_int))
         };
 
         Ok(MemBioSlice(bio, PhantomData))
@@ -64,4 +64,13 @@ impl MemBio {
             slice::from_raw_parts(ptr as *const _ as *const _, len as usize)
         }
     }
+}
+
+#[cfg(not(ossl101))]
+use ffi::BIO_new_mem_buf;
+
+#[cfg(ossl101)]
+#[allow(bad_style)]
+unsafe fn BIO_new_mem_buf(buf: *const ::libc::c_void, len: ::libc::c_int) -> *mut ffi::BIO {
+    ffi::BIO_new_mem_buf(buf as *mut _, len)
 }

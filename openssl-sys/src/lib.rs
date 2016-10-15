@@ -344,6 +344,9 @@ extern {
     pub fn BIO_new_socket(sock: c_int, close_flag: c_int) -> *mut BIO;
     pub fn BIO_read(b: *mut BIO, buf: *mut c_void, len: c_int) -> c_int;
     pub fn BIO_write(b: *mut BIO, buf: *const c_void, len: c_int) -> c_int;
+    #[cfg(ossl101)]
+    pub fn BIO_new_mem_buf(buf: *mut c_void, len: c_int) -> *mut BIO;
+    #[cfg(not(ossl101))]
     pub fn BIO_new_mem_buf(buf: *const c_void, len: c_int) -> *mut BIO;
     pub fn BIO_set_flags(b: *mut BIO, flags: c_int);
     pub fn BIO_clear_flags(b: *mut BIO, flags: c_int);

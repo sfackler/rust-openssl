@@ -81,10 +81,6 @@ fn main() {
             s == "X509V3_EXT_conf_nid" ||       // weird lhash first param
             s == "X509V3_EXT_conf" ||           // weird lhash first param
 
-            // one parameter is `const` in OpenSSL 1.0.1, no need for a new
-            // definition or a new file here.
-            (s == "BIO_new_mem_buf" && env::var("DEP_OPENSSL_IS_101").is_ok()) ||
-
         // Skip some functions with function pointers on windows, not entirely
         // sure how to get them to work out...
         (target.contains("windows") && {
