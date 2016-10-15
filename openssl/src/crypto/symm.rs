@@ -11,57 +11,120 @@ pub enum Mode {
     Decrypt,
 }
 
-#[allow(non_camel_case_types)]
 #[derive(Copy, Clone)]
-pub enum Type {
-    AES_128_ECB,
-    AES_128_CBC,
-    AES_128_XTS,
-    AES_128_CTR,
-    AES_128_CFB1,
-    AES_128_CFB128,
-    AES_128_CFB8,
-    AES_256_ECB,
-    AES_256_CBC,
-    AES_256_XTS,
-    AES_256_CTR,
-    AES_256_CFB1,
-    AES_256_CFB128,
-    AES_256_CFB8,
-    DES_CBC,
-    DES_ECB,
-    RC4_128,
-}
+pub struct Cipher(*const ffi::EVP_CIPHER);
 
-impl Type {
-    pub fn as_ptr(&self) -> *const ffi::EVP_CIPHER {
+impl Cipher {
+    pub fn aes_128_ecb() -> Cipher {
         unsafe {
-            match *self {
-                Type::AES_128_ECB => ffi::EVP_aes_128_ecb(),
-                Type::AES_128_CBC => ffi::EVP_aes_128_cbc(),
-                Type::AES_128_XTS => ffi::EVP_aes_128_xts(),
-                Type::AES_128_CTR => ffi::EVP_aes_128_ctr(),
-                Type::AES_128_CFB1 => ffi::EVP_aes_128_cfb1(),
-                Type::AES_128_CFB128 => ffi::EVP_aes_128_cfb128(),
-                Type::AES_128_CFB8 => ffi::EVP_aes_128_cfb8(),
-                Type::AES_256_ECB => ffi::EVP_aes_256_ecb(),
-                Type::AES_256_CBC => ffi::EVP_aes_256_cbc(),
-                Type::AES_256_XTS => ffi::EVP_aes_256_xts(),
-                Type::AES_256_CTR => ffi::EVP_aes_256_ctr(),
-                Type::AES_256_CFB1 => ffi::EVP_aes_256_cfb1(),
-                Type::AES_256_CFB128 => ffi::EVP_aes_256_cfb128(),
-                Type::AES_256_CFB8 => ffi::EVP_aes_256_cfb8(),
-                Type::DES_CBC => ffi::EVP_des_cbc(),
-                Type::DES_ECB => ffi::EVP_des_ecb(),
-                Type::RC4_128 => ffi::EVP_rc4(),
-            }
+            Cipher(ffi::EVP_aes_128_ecb())
         }
+    }
+
+    pub fn aes_128_cbc() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_aes_128_cbc())
+        }
+    }
+
+    pub fn aes_128_xts() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_aes_128_xts())
+        }
+    }
+
+    pub fn aes_128_ctr() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_aes_128_ctr())
+        }
+    }
+
+    pub fn aes_128_cfb1() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_aes_128_cfb1())
+        }
+    }
+
+    pub fn aes_128_cfb128() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_aes_128_cfb128())
+        }
+    }
+
+    pub fn aes_128_cfb8() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_aes_128_cfb8())
+        }
+    }
+
+    pub fn aes_256_ecb() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_aes_256_ecb())
+        }
+    }
+
+    pub fn aes_256_cbc() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_aes_256_cbc())
+        }
+    }
+
+    pub fn aes_256_xts() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_aes_256_xts())
+        }
+    }
+
+    pub fn aes_256_ctr() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_aes_256_ctr())
+        }
+    }
+
+    pub fn aes_256_cfb1() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_aes_256_cfb1())
+        }
+    }
+
+    pub fn aes_256_cfb128() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_aes_256_cfb128())
+        }
+    }
+
+    pub fn aes_256_cfb8() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_aes_256_cfb8())
+        }
+    }
+
+    pub fn des_cbc() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_des_cbc())
+        }
+    }
+
+    pub fn des_ecb() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_des_ecb())
+        }
+    }
+
+    pub fn rc4() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_rc4())
+        }
+    }
+
+    pub fn as_ptr(&self) -> *const ffi::EVP_CIPHER {
+        self.0
     }
 
     /// Returns the length of keys used with this cipher.
     pub fn key_len(&self) -> usize {
         unsafe {
-            EVP_CIPHER_key_length(self.as_ptr()) as usize
+            EVP_CIPHER_key_length(self.0) as usize
         }
     }
 
@@ -69,7 +132,7 @@ impl Type {
     /// cipher does not use an IV.
     pub fn iv_len(&self) -> Option<usize> {
         unsafe {
-            let len = EVP_CIPHER_iv_length(self.as_ptr()) as usize;
+            let len = EVP_CIPHER_iv_length(self.0) as usize;
             if len == 0 {
                 None
             } else {
@@ -85,7 +148,7 @@ impl Type {
     /// Stream ciphers such as RC4 have a block size of 1.
     pub fn block_size(&self) -> usize {
         unsafe {
-            EVP_CIPHER_block_size(self.as_ptr()) as usize
+            EVP_CIPHER_block_size(self.0) as usize
         }
     }
 }
@@ -102,8 +165,8 @@ impl Crypter {
     /// # Panics
     ///
     /// Panics if an IV is required by the cipher but not provided, or if the
-    /// IV's length does not match the expected length (see `Type::iv_len`).
-    pub fn new(t: Type, mode: Mode, key: &[u8], iv: Option<&[u8]>) -> Result<Crypter, ErrorStack> {
+    /// IV's length does not match the expected length (see `Cipher::iv_len`).
+    pub fn new(t: Cipher, mode: Mode, key: &[u8], iv: Option<&[u8]>) -> Result<Crypter, ErrorStack> {
         ffi::init();
 
         unsafe {
@@ -165,7 +228,7 @@ impl Crypter {
     /// # Panics
     ///
     /// Panics if `output.len() < input.len() + block_size` where
-    /// `block_size` is the block size of the cipher (see `Type::block_size`),
+    /// `block_size` is the block size of the cipher (see `Cipher::block_size`),
     /// or if `output.len() > c_int::max_value()`.
     pub fn update(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
@@ -218,7 +281,7 @@ impl Drop for Crypter {
  * Encrypts data, using the specified crypter type in encrypt mode with the
  * specified key and iv; returns the resulting (encrypted) data.
  */
-pub fn encrypt(t: Type,
+pub fn encrypt(t: Cipher,
                key: &[u8],
                iv: Option<&[u8]>,
                data: &[u8])
@@ -230,7 +293,7 @@ pub fn encrypt(t: Type,
  * Decrypts data, using the specified crypter type in decrypt mode with the
  * specified key and iv; returns the resulting (decrypted) data.
  */
-pub fn decrypt(t: Type,
+pub fn decrypt(t: Cipher,
                key: &[u8],
                iv: Option<&[u8]>,
                data: &[u8])
@@ -238,7 +301,7 @@ pub fn decrypt(t: Type,
     cipher(t, Mode::Decrypt, key, iv, data)
 }
 
-fn cipher(t: Type,
+fn cipher(t: Cipher,
           mode: Mode,
           key: &[u8],
           iv: Option<&[u8]>,
@@ -292,23 +355,23 @@ mod tests {
                   0xaau8, 0xbbu8, 0xccu8, 0xddu8, 0xeeu8, 0xffu8];
         let c0 = [0x8eu8, 0xa2u8, 0xb7u8, 0xcau8, 0x51u8, 0x67u8, 0x45u8, 0xbfu8, 0xeau8, 0xfcu8,
                   0x49u8, 0x90u8, 0x4bu8, 0x49u8, 0x60u8, 0x89u8];
-        let mut c = super::Crypter::new(super::Type::AES_256_ECB,
+        let mut c = super::Crypter::new(super::Cipher::aes_256_ecb(),
                                         super::Mode::Encrypt,
                                         &k0,
                                         None).unwrap();
         c.pad(false);
-        let mut r0 = vec![0; c0.len() + super::Type::AES_256_ECB.block_size()];
+        let mut r0 = vec![0; c0.len() + super::Cipher::aes_256_ecb().block_size()];
         let count = c.update(&p0, &mut r0).unwrap();
         let rest = c.finalize(&mut r0[count..]).unwrap();
         r0.truncate(count + rest);
         assert_eq!(r0.to_hex(), c0.to_hex());
 
-        let mut c = super::Crypter::new(super::Type::AES_256_ECB,
+        let mut c = super::Crypter::new(super::Cipher::aes_256_ecb(),
                                         super::Mode::Decrypt,
                                         &k0,
                                         None).unwrap();
         c.pad(false);
-        let mut p1 = vec![0; r0.len() + super::Type::AES_256_ECB.block_size()];
+        let mut p1 = vec![0; r0.len() + super::Cipher::aes_256_ecb().block_size()];
         let count = c.update(&r0, &mut p1).unwrap();
         let rest = c.finalize(&mut p1[count..]).unwrap();
         p1.truncate(count + rest);
@@ -326,12 +389,12 @@ mod tests {
         let ciphered_data = [0x4a_u8, 0x2e_u8, 0xe5_u8, 0x6_u8, 0xbf_u8, 0xcf_u8, 0xf2_u8,
                              0xd7_u8, 0xea_u8, 0x2d_u8, 0xb1_u8, 0x85_u8, 0x6c_u8, 0x93_u8,
                              0x65_u8, 0x6f_u8];
-        let mut cr = super::Crypter::new(super::Type::AES_256_CBC,
+        let mut cr = super::Crypter::new(super::Cipher::aes_256_cbc(),
                                          super::Mode::Decrypt,
                                          &data,
                                          Some(&iv)).unwrap();
         cr.pad(false);
-        let mut unciphered_data = vec![0; data.len() + super::Type::AES_256_CBC.block_size()];
+        let mut unciphered_data = vec![0; data.len() + super::Cipher::aes_256_cbc().block_size()];
         let count = cr.update(&ciphered_data, &mut unciphered_data).unwrap();
         let rest = cr.finalize(&mut unciphered_data[count..]).unwrap();
         unciphered_data.truncate(count + rest);
@@ -341,7 +404,7 @@ mod tests {
         assert_eq!(&unciphered_data, expected_unciphered_data);
     }
 
-    fn cipher_test(ciphertype: super::Type, pt: &str, ct: &str, key: &str, iv: &str) {
+    fn cipher_test(ciphertype: super::Cipher, pt: &str, ct: &str, key: &str, iv: &str) {
         use serialize::hex::ToHex;
 
         let pt = pt.from_hex().unwrap();
@@ -372,7 +435,7 @@ mod tests {
         let key = "97CD440324DA5FD1F7955C1C13B6B466";
         let iv = "";
 
-        cipher_test(super::Type::RC4_128, pt, ct, key, iv);
+        cipher_test(super::Cipher::rc4(), pt, ct, key, iv);
     }
 
     #[test]
@@ -387,7 +450,7 @@ mod tests {
                    4180026ad640b74243b3133e7b9fae629403f6733423dae28";
         let iv = "db200efb7eaaa737dbdf40babb68953f";
 
-        cipher_test(super::Type::AES_256_XTS, pt, ct, key, iv);
+        cipher_test(super::Cipher::aes_256_xts(), pt, ct, key, iv);
     }
 
     #[test]
@@ -400,7 +463,7 @@ mod tests {
         let key = "2B7E151628AED2A6ABF7158809CF4F3C";
         let iv = "F0F1F2F3F4F5F6F7F8F9FAFBFCFDFEFF";
 
-        cipher_test(super::Type::AES_128_CTR, pt, ct, key, iv);
+        cipher_test(super::Cipher::aes_128_ctr(), pt, ct, key, iv);
     }
 
     #[test]
@@ -412,7 +475,7 @@ mod tests {
         let key = "2b7e151628aed2a6abf7158809cf4f3c";
         let iv = "000102030405060708090a0b0c0d0e0f";
 
-        cipher_test(super::Type::AES_128_CFB1, pt, ct, key, iv);
+        cipher_test(super::Cipher::aes_128_cfb1(), pt, ct, key, iv);
     }
 
     #[test]
@@ -423,7 +486,7 @@ mod tests {
         let key = "2b7e151628aed2a6abf7158809cf4f3c";
         let iv = "000102030405060708090a0b0c0d0e0f";
 
-        cipher_test(super::Type::AES_128_CFB128, pt, ct, key, iv);
+        cipher_test(super::Cipher::aes_128_cfb128(), pt, ct, key, iv);
     }
 
     #[test]
@@ -434,7 +497,7 @@ mod tests {
         let key = "2b7e151628aed2a6abf7158809cf4f3c";
         let iv = "000102030405060708090a0b0c0d0e0f";
 
-        cipher_test(super::Type::AES_128_CFB8, pt, ct, key, iv);
+        cipher_test(super::Cipher::aes_128_cfb8(), pt, ct, key, iv);
     }
 
     #[test]
@@ -445,7 +508,7 @@ mod tests {
         let key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
         let iv = "000102030405060708090a0b0c0d0e0f";
 
-        cipher_test(super::Type::AES_256_CFB1, pt, ct, key, iv);
+        cipher_test(super::Cipher::aes_256_cfb1(), pt, ct, key, iv);
     }
 
     #[test]
@@ -456,7 +519,7 @@ mod tests {
         let key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
         let iv = "000102030405060708090a0b0c0d0e0f";
 
-        cipher_test(super::Type::AES_256_CFB128, pt, ct, key, iv);
+        cipher_test(super::Cipher::aes_256_cfb128(), pt, ct, key, iv);
     }
 
     #[test]
@@ -467,7 +530,7 @@ mod tests {
         let key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
         let iv = "000102030405060708090a0b0c0d0e0f";
 
-        cipher_test(super::Type::AES_256_CFB8, pt, ct, key, iv);
+        cipher_test(super::Cipher::aes_256_cfb8(), pt, ct, key, iv);
     }
 
     #[test]
@@ -478,7 +541,7 @@ mod tests {
         let key = "7cb66337f3d3c0fe";
         let iv = "0001020304050607";
 
-        cipher_test(super::Type::DES_CBC, pt, ct, key, iv);
+        cipher_test(super::Cipher::des_cbc(), pt, ct, key, iv);
     }
 
     #[test]
@@ -489,6 +552,6 @@ mod tests {
         let key = "7cb66337f3d3c0fe";
         let iv = "0001020304050607";
 
-        cipher_test(super::Type::DES_ECB, pt, ct, key, iv);
+        cipher_test(super::Cipher::des_ecb(), pt, ct, key, iv);
     }
 }

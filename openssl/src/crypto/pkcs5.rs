@@ -3,7 +3,7 @@ use std::ptr;
 use ffi;
 
 use crypto::hash::MessageDigest;
-use crypto::symm;
+use crypto::symm::Cipher;
 use error::ErrorStack;
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
@@ -22,8 +22,8 @@ pub struct KeyIvPair {
 ///
 /// New applications should not use this and instead use `pbkdf2_hmac_sha1` or
 /// another more modern key derivation algorithm.
-pub fn evp_bytes_to_key_pbkdf1_compatible(typ: symm::Type,
-                                          message_digest_type: MessageDigest,
+pub fn evp_bytes_to_key_pbkdf1_compatible(cipher: Cipher,
+                                          digest: MessageDigest,
                                           data: &[u8],
                                           salt: Option<&[u8]>,
                                           count: u32)
@@ -39,11 +39,11 @@ pub fn evp_bytes_to_key_pbkdf1_compatible(typ: symm::Type,
 
         ffi::init();
 
-        let typ = typ.as_ptr();
-        let message_digest_type = message_digest_type.as_ptr();
+        let cipher = cipher.as_ptr();
+        let digest = digest.as_ptr();
 
-        let len = ffi::EVP_BytesToKey(typ,
-                                      message_digest_type,
+        let len = ffi::EVP_BytesToKey(cipher,
+                                      digest,
                                       salt_ptr,
                                       data.as_ptr(),
                                       data.len() as c_int,
@@ -57,8 +57,8 @@ pub fn evp_bytes_to_key_pbkdf1_compatible(typ: symm::Type,
         let mut key = vec![0; len as usize];
         let mut iv = vec![0; len as usize];
 
-        try_ssl!(ffi::EVP_BytesToKey(typ,
-                                     message_digest_type,
+        try_ssl!(ffi::EVP_BytesToKey(cipher,
+                                     digest,
                                      salt_ptr,
                                      data.as_ptr(),
                                      data.len() as c_int,
@@ -117,7 +117,7 @@ pub fn pbkdf2_hmac(pass: &[u8],
 #[cfg(test)]
 mod tests {
     use crypto::hash::MessageDigest;
-    use crypto::symm;
+    use crypto::symm::Cipher;
 
     // Test vectors from
     // http://tools.ietf.org/html/draft-josefsson-pbkdf2-test-vectors-06
@@ -228,7 +228,7 @@ mod tests {
                                0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
                                0_u8, 0_u8, 0_u8];
 
-        assert_eq!(super::evp_bytes_to_key_pbkdf1_compatible(symm::Type::AES_256_CBC,
+        assert_eq!(super::evp_bytes_to_key_pbkdf1_compatible(Cipher::aes_256_cbc(),
                                                              MessageDigest::sha1(),
                                                              &data,
                                                              Some(&salt),
