@@ -599,6 +599,7 @@ extern {
     pub fn SSL_get_ex_data_X509_STORE_CTX_idx() -> c_int;
     pub fn SSL_get_SSL_CTX(ssl: *const SSL) -> *mut SSL_CTX;
     pub fn SSL_set_SSL_CTX(ssl: *mut SSL, ctx: *mut SSL_CTX) -> *mut SSL_CTX;
+    #[cfg(not(osslconf = "OPENSSL_NO_COMP"))]
     pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const COMP_METHOD;
     pub fn SSL_get_peer_certificate(ssl: *const SSL) -> *mut X509;
     pub fn SSL_get_ssl_method(ssl: *mut SSL) -> *const SSL_METHOD;
@@ -615,6 +616,7 @@ extern {
     #[cfg(not(ossl101))]
     pub fn SSL_get0_param(ssl: *mut ::SSL) -> *mut X509_VERIFY_PARAM;
 
+    #[cfg(not(osslconf = "OPENSSL_NO_COMP"))]
     pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
 
     pub fn SSL_CIPHER_get_name(cipher: *const SSL_CIPHER) -> *const c_char;

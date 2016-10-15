@@ -18,4 +18,9 @@ fn main() {
         println!("cargo:rustc-cfg=ossl101");
         println!("cargo:rustc-cfg=ossl10x");
     }
+    if let Ok(vars) = env::var("DEP_OPENSSL_OSSLCONF") {
+        for var in vars.split(",") {
+            println!("cargo:rustc-cfg=osslconf=\"{}\"", var);
+        }
+    }
 }

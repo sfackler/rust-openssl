@@ -952,6 +952,11 @@ impl<'a> SslRef<'a> {
     /// The result will be either None, indicating no compression is in use, or
     /// a string with the compression name.
     pub fn compression(&self) -> Option<String> {
+        self._compression()
+    }
+
+    #[cfg(not(osslconf = "OPENSSL_NO_COMP"))]
+    fn _compression(&self) -> Option<String> {
         let ptr = unsafe { ffi::SSL_get_current_compression(self.as_ptr()) };
         if ptr == ptr::null() {
             return None;
@@ -963,6 +968,11 @@ impl<'a> SslRef<'a> {
         };
 
         Some(s)
+    }
+
+    #[cfg(osslconf = "OPENSSL_NO_COMP")]
+    fn _compression(&self) -> Option<String> {
+        None
     }
 
     /// Returns the server's name for the current connection
