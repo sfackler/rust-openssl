@@ -26,7 +26,7 @@ impl PKey {
         }
     }
 
-    /// Create a new `PKey` containing an HAMC key.
+    /// Create a new `PKey` containing an HMAC key.
     pub fn hmac(key: &[u8]) -> Result<PKey, ErrorStack> {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize);
