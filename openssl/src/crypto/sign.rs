@@ -194,7 +194,7 @@ mod test {
 
         let mut verifier = Verifier::new(Type::SHA256, &pkey).unwrap();
         verifier.update(INPUT).unwrap();
-        verifier.update(b"foobar");
+        verifier.update(b"foobar").unwrap();
         assert!(verifier.finish(SIGNATURE).is_err());
     }
 }
