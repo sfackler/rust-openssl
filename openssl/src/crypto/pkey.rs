@@ -1,4 +1,4 @@
-use libc::{c_void, c_char};
+use libc::{c_void, c_char, c_int};
 use std::ptr;
 use std::mem;
 use ffi;
@@ -23,6 +23,18 @@ impl PKey {
             try_ssl!(ffi::EVP_PKEY_assign(pkey.0, ffi::EVP_PKEY_RSA, rsa.as_ptr() as *mut _));
             mem::forget(rsa);
             Ok(pkey)
+        }
+    }
+
+    /// Create a new `PKey` containing an HAMC key.
+    pub fn hmac(key: &[u8]) -> Result<PKey, ErrorStack> {
+        unsafe {
+            assert!(key.len() <= c_int::max_value() as usize);
+            let key = try_ssl_null!(ffi::EVP_PKEY_new_mac_key(ffi::EVP_PKEY_HMAC,
+                                                              ptr::null_mut(),
+                                                              key.as_ptr() as *const _,
+                                                              key.len() as c_int));
+            Ok(PKey(key))
         }
     }
 

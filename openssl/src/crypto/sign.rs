@@ -133,6 +133,9 @@ impl<'a> Write for Verifier<'a> {
 
 #[cfg(test)]
 mod test {
+    use serialize::hex::FromHex;
+    use std::iter;
+
     use crypto::hash::Type;
     use crypto::sign::{Signer, Verifier};
     use crypto::rsa::RSA;
@@ -196,5 +199,76 @@ mod test {
         verifier.update(INPUT).unwrap();
         verifier.update(b"foobar").unwrap();
         assert!(verifier.finish(SIGNATURE).is_err());
+    }
+
+    fn test_hmac(ty: Type, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
+        for &(ref key, ref data, ref res) in tests.iter() {
+            let pkey = PKey::hmac(key).unwrap();
+            let mut signer = Signer::new(ty, &pkey).unwrap();
+            signer.update(data).unwrap();
+            assert_eq!(signer.finish().unwrap(), *res);
+        }
+    }
+
+    #[test]
+    fn hmac_md5() {
+        // test vectors from RFC 2202
+        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] =
+        [(iter::repeat(0x0b_u8).take(16).collect(),
+          b"Hi There".to_vec(),
+          "9294727a3638bb1c13f48ef8158bfc9d".from_hex().unwrap()),
+            (b"Jefe".to_vec(),
+             b"what do ya want for nothing?".to_vec(),
+             "750c783e6ab0b503eaa86e310a5db738".from_hex().unwrap()),
+            (iter::repeat(0xaa_u8).take(16).collect(),
+             iter::repeat(0xdd_u8).take(50).collect(),
+             "56be34521d144c88dbb8c733f0e8b3f6".from_hex().unwrap()),
+            ("0102030405060708090a0b0c0d0e0f10111213141516171819".from_hex().unwrap(),
+             iter::repeat(0xcd_u8).take(50).collect(),
+             "697eaf0aca3a3aea3a75164746ffaa79".from_hex().unwrap()),
+            (iter::repeat(0x0c_u8).take(16).collect(),
+             b"Test With Truncation".to_vec(),
+             "56461ef2342edc00f9bab995690efd4c".from_hex().unwrap()),
+            (iter::repeat(0xaa_u8).take(80).collect(),
+             b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
+             "6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd".from_hex().unwrap()),
+            (iter::repeat(0xaa_u8).take(80).collect(),
+             b"Test Using Larger Than Block-Size Key \
+              and Larger Than One Block-Size Data"
+                 .to_vec(),
+             "6f630fad67cda0ee1fb1f562db3aa53e".from_hex().unwrap())];
+
+        test_hmac(Type::MD5, &tests);
+    }
+
+    #[test]
+    fn hmac_sha1() {
+        // test vectors from RFC 2202
+        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] =
+        [(iter::repeat(0x0b_u8).take(20).collect(),
+          b"Hi There".to_vec(),
+          "b617318655057264e28bc0b6fb378c8ef146be00".from_hex().unwrap()),
+            (b"Jefe".to_vec(),
+             b"what do ya want for nothing?".to_vec(),
+             "effcdf6ae5eb2fa2d27416d5f184df9c259a7c79".from_hex().unwrap()),
+            (iter::repeat(0xaa_u8).take(20).collect(),
+             iter::repeat(0xdd_u8).take(50).collect(),
+             "125d7342b9ac11cd91a39af48aa17b4f63f175d3".from_hex().unwrap()),
+            ("0102030405060708090a0b0c0d0e0f10111213141516171819".from_hex().unwrap(),
+             iter::repeat(0xcd_u8).take(50).collect(),
+             "4c9007f4026250c6bc8414f9bf50c86c2d7235da".from_hex().unwrap()),
+            (iter::repeat(0x0c_u8).take(20).collect(),
+             b"Test With Truncation".to_vec(),
+             "4c1a03424b55e07fe7f27be1d58bb9324a9a5a04".from_hex().unwrap()),
+            (iter::repeat(0xaa_u8).take(80).collect(),
+             b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
+             "aa4ae5e15272d00e95705637ce8a3b55ed402112".from_hex().unwrap()),
+            (iter::repeat(0xaa_u8).take(80).collect(),
+             b"Test Using Larger Than Block-Size Key \
+              and Larger Than One Block-Size Data"
+                 .to_vec(),
+             "e8e99d0f45237d786d6bbaa7965c7808bbff1a91".from_hex().unwrap())];
+
+        test_hmac(Type::SHA1, &tests);
     }
 }

@@ -17,7 +17,6 @@
 mod util;
 pub mod dsa;
 pub mod hash;
-pub mod hmac;
 pub mod memcmp;
 pub mod pkcs12;
 pub mod pkcs5;
