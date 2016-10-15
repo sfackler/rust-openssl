@@ -113,7 +113,7 @@ impl<'a> Verifier<'a> {
     pub fn finish(&self, signature: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             try_ssl_if!(ffi::EVP_DigestVerifyFinal(self.0,
-                                                   signature.as_ptr() as *const _,
+                                                   signature.as_ptr() as *const _ as _,
                                                    signature.len()) != 1);
             Ok(())
         }

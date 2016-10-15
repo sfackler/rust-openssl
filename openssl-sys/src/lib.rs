@@ -504,6 +504,11 @@ extern {
                                 type_: *const EVP_MD,
                                 e: *mut ENGINE,
                                 pkey: *mut EVP_PKEY) -> c_int;
+    #[cfg(ossl101)]
+    pub fn EVP_DigestVerifyFinal(ctx: *mut EVP_MD_CTX,
+                                 sigret: *mut c_uchar,
+                                 siglen: size_t) -> c_int;
+    #[cfg(not(ossl101))]
     pub fn EVP_DigestVerifyFinal(ctx: *mut EVP_MD_CTX,
                                  sigret: *const c_uchar,
                                  siglen: size_t) -> c_int;
