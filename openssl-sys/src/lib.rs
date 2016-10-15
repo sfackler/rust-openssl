@@ -489,6 +489,23 @@ extern {
     pub fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
     pub fn EVP_DigestFinal_ex(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
 
+    pub fn EVP_DigestSignInit(ctx: *mut EVP_MD_CTX,
+                              pctx: *mut *mut EVP_PKEY_CTX,
+                              type_: *const EVP_MD,
+                              e: *mut ENGINE,
+                              pkey: *mut EVP_PKEY) -> c_int;
+    pub fn EVP_DigestSignFinal(ctx: *mut EVP_MD_CTX,
+                               sig: *mut c_uchar,
+                               siglen: *mut size_t) -> c_int;
+    pub fn EVP_DigestVerifyInit(ctx: *mut EVP_MD_CTX,
+                                pctx: *mut *mut EVP_PKEY_CTX,
+                                type_: *const EVP_MD,
+                                e: *mut ENGINE,
+                                pkey: *mut EVP_PKEY) -> c_int;
+    pub fn EVP_DigestVerifyFinal(ctx: *mut EVP_MD_CTX,
+                                 sigret: *const c_uchar,
+                                 siglen: size_t) -> c_int;
+
     pub fn EVP_MD_CTX_copy_ex(dst: *mut EVP_MD_CTX, src: *const EVP_MD_CTX) -> c_int;
 
     pub fn EVP_PKEY_new() -> *mut EVP_PKEY;
