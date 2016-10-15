@@ -109,6 +109,7 @@ pub const CRYPTO_LOCK: c_int = 1;
 
 pub const EVP_MAX_MD_SIZE: c_uint = 64;
 pub const EVP_PKEY_RSA: c_int = NID_rsaEncryption;
+pub const EVP_PKEY_HMAC: c_int = NID_hmac;
 
 pub const MBSTRING_ASC:  c_int = MBSTRING_FLAG | 1;
 pub const MBSTRING_BMP:  c_int = MBSTRING_FLAG | 2;
@@ -119,6 +120,7 @@ pub const MBSTRING_UTF8: c_int = MBSTRING_FLAG;
 pub const NID_rsaEncryption: c_int = 6;
 pub const NID_ext_key_usage: c_int = 126;
 pub const NID_key_usage:     c_int = 83;
+pub const NID_hmac:          c_int = 855;
 
 pub const PKCS5_SALT_LEN: c_int = 8;
 
@@ -489,6 +491,28 @@ extern {
     pub fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
     pub fn EVP_DigestFinal_ex(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
 
+    pub fn EVP_DigestSignInit(ctx: *mut EVP_MD_CTX,
+                              pctx: *mut *mut EVP_PKEY_CTX,
+                              type_: *const EVP_MD,
+                              e: *mut ENGINE,
+                              pkey: *mut EVP_PKEY) -> c_int;
+    pub fn EVP_DigestSignFinal(ctx: *mut EVP_MD_CTX,
+                               sig: *mut c_uchar,
+                               siglen: *mut size_t) -> c_int;
+    pub fn EVP_DigestVerifyInit(ctx: *mut EVP_MD_CTX,
+                                pctx: *mut *mut EVP_PKEY_CTX,
+                                type_: *const EVP_MD,
+                                e: *mut ENGINE,
+                                pkey: *mut EVP_PKEY) -> c_int;
+    #[cfg(ossl101)]
+    pub fn EVP_DigestVerifyFinal(ctx: *mut EVP_MD_CTX,
+                                 sigret: *mut c_uchar,
+                                 siglen: size_t) -> c_int;
+    #[cfg(not(ossl101))]
+    pub fn EVP_DigestVerifyFinal(ctx: *mut EVP_MD_CTX,
+                                 sigret: *const c_uchar,
+                                 siglen: size_t) -> c_int;
+
     pub fn EVP_MD_CTX_copy_ex(dst: *mut EVP_MD_CTX, src: *const EVP_MD_CTX) -> c_int;
 
     pub fn EVP_PKEY_new() -> *mut EVP_PKEY;
@@ -498,6 +522,10 @@ extern {
     pub fn EVP_PKEY_get1_RSA(k: *mut EVP_PKEY) -> *mut RSA;
     pub fn EVP_PKEY_set1_RSA(k: *mut EVP_PKEY, r: *mut RSA) -> c_int;
     pub fn EVP_PKEY_cmp(a: *const EVP_PKEY, b: *const EVP_PKEY) -> c_int;
+    pub fn EVP_PKEY_new_mac_key(type_: c_int,
+                                e: *mut ENGINE,
+                                key: *const c_uchar,
+                                keylen: c_int) -> *mut EVP_PKEY;
 
     pub fn HMAC_CTX_copy(dst: *mut HMAC_CTX, src: *mut HMAC_CTX) -> c_int;
 
