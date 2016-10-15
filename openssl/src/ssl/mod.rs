@@ -407,9 +407,9 @@ impl<'a> SslContextRef<'a> {
         }
     }
 
-    pub fn set_read_ahead(&mut self, m: u32) {
+    pub fn set_read_ahead(&mut self, read_ahead: bool) {
         unsafe {
-            ffi::SSL_CTX_set_read_ahead(self.as_ptr(), m as c_long);
+            ffi::SSL_CTX_set_read_ahead(self.as_ptr(), read_ahead as c_long);
         }
     }
 
