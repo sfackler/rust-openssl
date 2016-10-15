@@ -1,25 +1,28 @@
-use libc::{c_int, c_void, c_char, c_uchar, c_ulong, c_long};
+use libc::{c_int, c_void, c_char, c_uchar, c_ulong, c_long, c_uint};
 
+pub enum BIGNUM {}
+pub enum BIO {}
+pub enum BIO_METHOD {}
+pub enum CRYPTO_EX_DATA {}
+pub enum DH {}
+pub enum DSA {}
+pub enum EVP_CIPHER {}
+pub enum EVP_MD_CTX {}
+pub enum EVP_PKEY {}
+pub enum HMAC_CTX {}
+pub enum OPENSSL_STACK {}
+pub enum RSA {}
+pub enum SSL_CTX {}
+pub enum _STACK {}
+pub enum stack_st_ASN1_OBJECT {}
+pub enum stack_st_GENERAL_NAME {}
+pub enum stack_st_OPENSSL_STRING {}
+pub enum stack_st_void {}
 pub enum stack_st_X509 {}
 pub enum stack_st_X509_ATTRIBUTE {}
 pub enum stack_st_X509_EXTENSION {}
-pub enum stack_st_GENERAL_NAME {}
-pub enum stack_st_void {}
-pub enum _STACK {}
-pub enum BIO_METHOD {}
-pub enum RSA {}
-pub enum DSA {}
-pub enum EVP_PKEY {}
-pub enum BIO {}
-pub enum CRYPTO_EX_DATA {}
-pub enum EVP_MD_CTX {}
-pub enum EVP_CIPHER {}
-pub enum HMAC_CTX {}
-pub enum BIGNUM {}
-pub enum OPENSSL_STACK {}
-pub enum DH {}
 pub enum X509 {}
-pub enum SSL_CTX {}
+pub enum X509_VERIFY_PARAM {}
 
 pub const SSL_OP_MICROSOFT_SESS_ID_BUG: c_ulong =                   0x00000000;
 pub const SSL_OP_NETSCAPE_CHALLENGE_BUG: c_ulong =                  0x00000000;
@@ -40,6 +43,8 @@ pub const OPENSSL_DIR: c_int = 4;
 
 pub const CRYPTO_EX_INDEX_SSL: c_int = 0;
 pub const CRYPTO_EX_INDEX_SSL_CTX: c_int = 1;
+
+pub const X509_CHECK_FLAG_NEVER_CHECK_SUBJECT: c_uint = 0x20;
 
 pub fn init() {}
 

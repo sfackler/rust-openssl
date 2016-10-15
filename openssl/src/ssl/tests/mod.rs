@@ -21,9 +21,13 @@ use ssl::SslMethod::Tls;
 use ssl::{SslMethod, HandshakeError};
 use ssl::error::Error;
 use ssl::{SslContext, SslStream};
+#[cfg(feature = "openssl-102")]
+use ssl::IntoSsl;
 use x509::X509StoreContext;
 use x509::X509FileType;
 use x509::X509;
+#[cfg(feature = "openssl-102")]
+use x509::verify::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS;
 use crypto::pkey::PKey;
 
 use std::net::UdpSocket;
@@ -1041,4 +1045,44 @@ fn add_extra_chain_cert() {
     let cert = X509::from_pem(cert).unwrap();
     let mut ctx = SslContext::new(SslMethod::Tls).unwrap();
     ctx.add_extra_chain_cert(&cert).unwrap();
+}
+
+#[test]
+#[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
+#[cfg(feature = "openssl-102")]
+fn valid_hostname() {
+    let mut ctx = SslContext::new(SslMethod::Tls).unwrap();
+    ctx.set_default_verify_paths().unwrap();
+    ctx.set_verify(SSL_VERIFY_PEER);
+
+    let mut ssl = ctx.into_ssl().unwrap();
+    ssl.param().set_hostflags(X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+    ssl.param().set_host("google.com").unwrap();
+
+    let s = TcpStream::connect("google.com:443").unwrap();
+    let mut socket = SslStream::connect(ssl, s).unwrap();
+
+    socket.write_all(b"GET / HTTP/1.0\r\n\r\n").unwrap();
+    let mut result = vec![];
+    socket.read_to_end(&mut result).unwrap();
+
+    println!("{}", String::from_utf8_lossy(&result));
+    assert!(result.starts_with(b"HTTP/1.0"));
+    assert!(result.ends_with(b"</HTML>\r\n") || result.ends_with(b"</html>"));
+}
+
+#[test]
+#[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
+#[cfg(feature = "openssl-102")]
+fn invalid_hostname() {
+    let mut ctx = SslContext::new(SslMethod::Tls).unwrap();
+    ctx.set_default_verify_paths().unwrap();
+    ctx.set_verify(SSL_VERIFY_PEER);
+
+    let mut ssl = ctx.into_ssl().unwrap();
+    ssl.param().set_hostflags(X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+    ssl.param().set_host("foobar.com").unwrap();
+
+    let s = TcpStream::connect("google.com:443").unwrap();
+    assert!(SslStream::connect(ssl, s).is_err());
 }
