@@ -21,12 +21,12 @@ use ssl::SslMethod::Tls;
 use ssl::{SslMethod, HandshakeError};
 use ssl::error::Error;
 use ssl::{SslContext, SslStream};
-#[cfg(feature = "openssl-110")]
+#[cfg(feature = "openssl-102")]
 use ssl::IntoSsl;
 use x509::X509StoreContext;
 use x509::X509FileType;
 use x509::X509;
-#[cfg(feature = "openssl-110")]
+#[cfg(feature = "openssl-102")]
 use x509::verify::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS;
 use crypto::pkey::PKey;
 
@@ -1049,7 +1049,7 @@ fn add_extra_chain_cert() {
 
 #[test]
 #[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
-#[cfg(feature = "openssl-110")]
+#[cfg(feature = "openssl-102")]
 fn valid_hostname() {
     let mut ctx = SslContext::new(SslMethod::Tls).unwrap();
     ctx.set_default_verify_paths().unwrap();
@@ -1073,7 +1073,7 @@ fn valid_hostname() {
 
 #[test]
 #[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
-#[cfg(feature = "openssl-110")]
+#[cfg(feature = "openssl-102")]
 fn invalid_hostname() {
     let mut ctx = SslContext::new(SslMethod::Tls).unwrap();
     ctx.set_default_verify_paths().unwrap();

@@ -1,4 +1,4 @@
-use libc::{c_int, c_void, c_char, c_uchar, c_ulong, c_long, c_uint, size_t};
+use libc::{c_int, c_void, c_char, c_uchar, c_ulong, c_long, c_uint};
 
 pub enum BIGNUM {}
 pub enum BIO {}
@@ -44,11 +44,6 @@ pub const OPENSSL_DIR: c_int = 4;
 pub const CRYPTO_EX_INDEX_SSL: c_int = 0;
 pub const CRYPTO_EX_INDEX_SSL_CTX: c_int = 1;
 
-pub const X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT: c_uint = 0x1;
-pub const X509_CHECK_FLAG_NO_WILDCARDS: c_uint = 0x2;
-pub const X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS: c_uint = 0x4;
-pub const X509_CHECK_FLAG_MULTI_LABEL_WILDCARDS: c_uint = 0x8;
-pub const X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS: c_uint = 0x10;
 pub const X509_CHECK_FLAG_NEVER_CHECK_SUBJECT: c_uint = 0x20;
 
 pub fn init() {}
@@ -106,13 +101,8 @@ extern {
     pub fn SSL_CTX_get_options(ctx: *const ::SSL_CTX) -> c_ulong;
     pub fn SSL_CTX_set_options(ctx: *mut ::SSL_CTX, op: c_ulong) -> c_ulong;
     pub fn SSL_CTX_clear_options(ctx: *mut ::SSL_CTX, op: c_ulong) -> c_ulong;
-    pub fn SSL_get0_param(ssl: *mut ::SSL) -> *mut X509_VERIFY_PARAM;
     pub fn X509_getm_notAfter(x: *const ::X509) -> *mut ::ASN1_TIME;
     pub fn X509_getm_notBefore(x: *const ::X509) -> *mut ::ASN1_TIME;
-    pub fn X509_VERIFY_PARAM_set_hostflags(param: *mut X509_VERIFY_PARAM, flags: c_uint);
-    pub fn X509_VERIFY_PARAM_set1_host(param: *mut X509_VERIFY_PARAM,
-                                       name: *const c_char,
-                                       namelen: size_t) -> c_int;
     pub fn DH_set0_pqg(dh: *mut ::DH,
                        p: *mut ::BIGNUM,
                        q: *mut ::BIGNUM,

@@ -22,7 +22,7 @@ use ffi;
 use init;
 use dh::DH;
 use x509::{X509StoreContext, X509FileType, X509, X509Ref};
-#[cfg(feature = "openssl-110")]
+#[cfg(feature = "openssl-102")]
 use x509::verify::X509VerifyParamRef;
 use crypto::pkey::PKey;
 use error::ErrorStack;
@@ -993,8 +993,8 @@ impl<'a> SslRef<'a> {
 
     /// Returns the X509 verification configuration.
     ///
-    /// Requires the `openssl-110` feature.
-    #[cfg(feature = "openssl-110")]
+    /// Requires the `openssl-102` feature.
+    #[cfg(feature = "openssl-102")]
     pub fn param(&mut self) -> X509VerifyParamRef<'a> {
         unsafe {
             X509VerifyParamRef::from_ptr(ffi::SSL_get0_param(self.as_ptr()))

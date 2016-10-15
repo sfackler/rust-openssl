@@ -38,7 +38,7 @@ use ffi::{
 
 pub mod extension;
 
-#[cfg(feature = "openssl-110")]
+#[cfg(feature = "openssl-102")]
 pub mod verify;
 
 use self::extension::{ExtensionType, Extension};

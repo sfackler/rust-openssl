@@ -2,7 +2,12 @@ use std::sync::{Mutex, MutexGuard};
 use std::sync::{Once, ONCE_INIT};
 use std::mem;
 
-use libc::{c_int, c_char, c_void, c_long, c_uchar, size_t, c_uint, c_ulong};
+use libc::{c_int, c_char, c_void, c_long, c_uchar, size_t, c_uint, c_ulong, time_t};
+
+#[repr(C)]
+pub struct stack_st_ASN1_OBJECT {
+    pub stack: _STACK,
+}
 
 #[repr(C)]
 pub struct stack_st_X509 {
@@ -424,6 +429,23 @@ pub struct SRP_CTX {
     stringth: c_int,
     srp_Mask: c_ulong,
 }
+
+#[repr(C)]
+#[cfg(not(ossl101))]
+pub struct X509_VERIFY_PARAM {
+    pub name: *mut c_char,
+    pub check_time: time_t,
+    pub inh_flags: c_ulong,
+    pub flags: c_ulong,
+    pub purpose: c_int,
+    pub trust: c_int,
+    pub depth: c_int,
+    pub policies: *mut stack_st_ASN1_OBJECT,
+    pub id: *mut X509_VERIFY_PARAM_ID,
+}
+
+#[cfg(not(ossl101))]
+pub enum X509_VERIFY_PARAM_ID {}
 
 pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;

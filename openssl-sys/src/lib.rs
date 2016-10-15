@@ -252,6 +252,17 @@ pub const X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE: c_int = 45;
 pub const X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
 pub const X509_V_OK: c_int = 0;
 
+#[cfg(not(ossl101))]
+pub const X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT: c_uint = 0x1;
+#[cfg(not(ossl101))]
+pub const X509_CHECK_FLAG_NO_WILDCARDS: c_uint = 0x2;
+#[cfg(not(ossl101))]
+pub const X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS: c_uint = 0x4;
+#[cfg(not(ossl101))]
+pub const X509_CHECK_FLAG_MULTI_LABEL_WILDCARDS: c_uint = 0x8;
+#[cfg(not(ossl101))]
+pub const X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS: c_uint = 0x10;
+
 pub const GEN_OTHERNAME: c_int = 0;
 pub const GEN_EMAIL: c_int = 1;
 pub const GEN_DNS: c_int = 2;
@@ -587,12 +598,12 @@ extern {
                           verify_callback: Option<extern fn(c_int, *mut X509_STORE_CTX) -> c_int>);
     pub fn SSL_set_ex_data(ssl: *mut SSL, idx: c_int, data: *mut c_void) -> c_int;
     pub fn SSL_get_ex_data(ssl: *const SSL, idx: c_int) -> *mut c_void;
-
     pub fn SSL_get_servername(ssl: *const SSL, name_type: c_int) -> *const c_char;
+    pub fn SSL_get_current_cipher(ssl: *const SSL) -> *const SSL_CIPHER;
+    #[cfg(not(ossl101))]
+    pub fn SSL_get0_param(ssl: *mut ::SSL) -> *mut X509_VERIFY_PARAM;
 
     pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
-
-    pub fn SSL_get_current_cipher(ssl: *const SSL) -> *const SSL_CIPHER;
 
     pub fn SSL_CIPHER_get_name(cipher: *const SSL_CIPHER) -> *const c_char;
     pub fn SSL_CIPHER_get_bits(cipher: *const SSL_CIPHER, alg_bits: *mut c_int) -> c_int;
@@ -692,6 +703,13 @@ extern {
 
     pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: *mut stack_st_X509_EXTENSION) -> c_int;
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
+
+    #[cfg(not(ossl101))]
+    pub fn X509_VERIFY_PARAM_set_hostflags(param: *mut X509_VERIFY_PARAM, flags: c_uint);
+    #[cfg(not(ossl101))]
+    pub fn X509_VERIFY_PARAM_set1_host(param: *mut X509_VERIFY_PARAM,
+                                       name: *const c_char,
+                                       namelen: size_t) -> c_int;
 
     pub fn d2i_X509(a: *mut *mut X509, pp: *mut *const c_uchar, length: c_long) -> *mut X509;
     pub fn i2d_X509_bio(b: *mut BIO, x: *mut X509) -> c_int;
