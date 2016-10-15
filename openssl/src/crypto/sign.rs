@@ -1,3 +1,59 @@
+//! Message signatures.
+//!
+//! The `Signer` allows for the computation of cryptographic signatures of
+//! data given a private key. The `Verifier` can then be used with the
+//! corresponding public key to verify the integrity and authenticity of that
+//! data given the signature.
+//!
+//! # Examples
+//!
+//! Sign and verify data given an RSA keypair:
+//!
+//! ```rust
+//! use openssl::crypto::sign::{Signer, Verifier};
+//! use openssl::crypto::rsa::RSA;
+//! use openssl::crypto::pkey::PKey;
+//! use openssl::crypto::hash::Type;
+//!
+//! // Generate a keypair
+//! let keypair = RSA::generate(2048).unwrap();
+//! let keypair = PKey::from_rsa(keypair).unwrap();
+//!
+//! let data = b"hello, world!";
+//! let data2 = b"hola, mundo!";
+//!
+//! // Sign the data
+//! let mut signer = Signer::new(Type::SHA256, &keypair).unwrap();
+//! signer.update(data).unwrap();
+//! signer.update(data2).unwrap();
+//! let signature = signer.finish().unwrap();
+//!
+//! // Verify the data
+//! let mut verifier = Verifier::new(Type::SHA256, &keypair).unwrap();
+//! verifier.update(data).unwrap();
+//! verifier.update(data2).unwrap();
+//! assert!(verifier.finish(&signature).unwrap());
+//! ```
+//!
+//! Compute an HMAC (note that `Verifier` cannot be used with HMACs):
+//!
+//! ```rust
+//! use openssl::crypto::sign::Signer;
+//! use openssl::crypto::pkey::PKey;
+//! use openssl::crypto::hash::Type;
+//!
+//! // Create a PKey
+//! let key = PKey::hmac(b"my secret").unwrap();
+//!
+//! let data = b"hello, world!";
+//! let data2 = b"hola, mundo!";
+//!
+//! // Compute the HMAC
+//! let mut signer = Signer::new(Type::SHA256, &key).unwrap();
+//! signer.update(data).unwrap();
+//! signer.update(data2).unwrap();
+//! let hmac = signer.finish().unwrap();
+//! ```
 use ffi;
 use std::io::{self, Write};
 use std::marker::PhantomData;
