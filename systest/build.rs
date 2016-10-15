@@ -31,6 +31,11 @@ fn main() {
     if env::var("DEP_OPENSSL_IS_110").is_ok() {
         cfg.cfg("ossl110", None);
     }
+    if let Ok(vars) = env::var("DEP_OPENSSL_OSSLCONF") {
+        for var in vars.split(",") {
+            cfg.cfg("osslconf", Some(var));
+        }
+    }
 
     cfg.header("openssl/comp.h")
        .header("openssl/dh.h")

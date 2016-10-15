@@ -283,6 +283,7 @@ The build is now aborting due to this version mismatch.
 
         // Look for `#define OPENSSL_FOO`, print out everything as our own
         // #[cfg] flag.
+        let mut vars = vec![];
         for line in conf_header.lines() {
             let i = match line.find("define ") {
                 Some(i) => i,
@@ -291,8 +292,10 @@ The build is now aborting due to this version mismatch.
             let var = line[i + "define ".len()..].trim();
             if var.starts_with("OPENSSL") && !var.contains(" ") {
                 println!("cargo:rustc-cfg=osslconf=\"{}\"", var);
+                vars.push(var);
             }
         }
+        println!("cargo:osslconf={}", vars.join(","));
     }
 
     return version_text.to_string()
