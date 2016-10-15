@@ -14,14 +14,16 @@
 // limitations under the License.
 //
 
+mod util;
+pub mod dsa;
 pub mod hash;
 pub mod hmac;
-pub mod pkcs5;
+pub mod memcmp;
 pub mod pkcs12;
+pub mod pkcs5;
 pub mod pkey;
 pub mod rand;
-pub mod symm;
-pub mod memcmp;
 pub mod rsa;
-pub mod dsa;
-mod util;
+pub mod sign;
+pub mod symm;
+
