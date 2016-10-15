@@ -6,6 +6,7 @@ dist: trusty
 env:
   global:
     - TARGET=x86_64-unknown-linux-gnu
+    - BUILD_OPENSSL_VERSION=1.0.1u
 matrix:
   include:
     # ARM-bit version compat
@@ -44,7 +45,6 @@ matrix:
     - rust: nightly
 
     # 64-bit version compat
-    - env: BUILD_OPENSSL_VERSION=1.0.1u
     - env: BUILD_OPENSSL_VERSION=1.0.2h
     - env: BUILD_OPENSSL_VERSION=1.1.0b
 
