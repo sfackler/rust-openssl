@@ -17,6 +17,10 @@ if [ -d "$HOME/openssl/lib" ]; then
     export PATH=$HOME/openssl/bin:$PATH
 fi
 
+if [ "$TARGET" == "arm-unknown-linux-gnueabihf" ]; then
+    FLAGS="--no-run"
+fi
+
 cargo run --manifest-path systest/Cargo.toml --target $TARGET
 exec cargo test --manifest-path openssl/Cargo.toml --target $TARGET \
-    --features "$FEATURES"
+    --features "$FEATURES" $FLAGS
