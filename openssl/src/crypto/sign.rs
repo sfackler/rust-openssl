@@ -110,12 +110,19 @@ impl<'a> Verifier<'a> {
         }
     }
 
-    pub fn finish(&self, signature: &[u8]) -> Result<(), ErrorStack> {
+    pub fn finish(&self, signature: &[u8]) -> Result<bool, ErrorStack> {
         unsafe {
-            try_ssl_if!(ffi::EVP_DigestVerifyFinal(self.0,
-                                                   signature.as_ptr() as *const _ as _,
-                                                   signature.len()) != 1);
-            Ok(())
+            let r = ffi::EVP_DigestVerifyFinal(self.0,
+                                               signature.as_ptr() as *const _ as _,
+                                               signature.len());
+            match r {
+                1 => Ok(true),
+                0 => {
+                    ErrorStack::get(); // discard error stack
+                    Ok(false)
+                }
+                _ => Err(ErrorStack::get()),
+            }
         }
     }
 }
@@ -186,11 +193,11 @@ mod test {
 
         let mut verifier = Verifier::new(Type::SHA256, &pkey).unwrap();
         verifier.update(INPUT).unwrap();
-        verifier.finish(SIGNATURE).unwrap();
+        assert!(verifier.finish(SIGNATURE).unwrap());
     }
 
     #[test]
-    fn test_verify_err() {
+    fn test_verify_invalid() {
         let key = include_bytes!("../../test/rsa.pem");
         let private_key = RSA::private_key_from_pem(key).unwrap();
         let pkey = PKey::from_rsa(private_key).unwrap();
@@ -198,7 +205,7 @@ mod test {
         let mut verifier = Verifier::new(Type::SHA256, &pkey).unwrap();
         verifier.update(INPUT).unwrap();
         verifier.update(b"foobar").unwrap();
-        assert!(verifier.finish(SIGNATURE).is_err());
+        assert!(!verifier.finish(SIGNATURE).unwrap());
     }
 
     fn test_hmac(ty: Type, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
