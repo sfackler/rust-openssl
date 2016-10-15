@@ -11,19 +11,19 @@ use crypto::util::{CallbackState, invoke_passwd_cb};
 
 /// Type of encryption padding to use.
 #[derive(Copy, Clone)]
-pub enum Padding {
-    None,
-    OAEP,
-    PKCS1v15
-}
+pub struct Padding(c_int);
 
 impl Padding {
-    fn openssl_padding_code(&self) -> c_int {
-        match *self {
-            Padding::None => ffi::RSA_NO_PADDING,
-            Padding::OAEP => ffi::RSA_PKCS1_OAEP_PADDING,
-            Padding::PKCS1v15 => ffi::RSA_PKCS1_PADDING
-        }
+    pub fn none() -> Padding {
+        Padding(ffi::RSA_NO_PADDING)
+    }
+
+    pub fn pkcs1() -> Padding {
+        Padding(ffi::RSA_PKCS1_PADDING)
+    }
+
+    pub fn pkcs1_oaep() -> Padding {
+        Padding(ffi::RSA_PKCS1_OAEP_PADDING)
     }
 }
 
@@ -183,7 +183,7 @@ impl RSA {
                                    from.as_ptr(),
                                    to.as_mut_ptr(),
                                    self.0,
-                                   padding.openssl_padding_code()));
+                                   padding.0));
            to.truncate(enc_len as usize);
            Ok(to)
         }
@@ -202,7 +202,7 @@ impl RSA {
                                    from.as_ptr(),
                                    to.as_mut_ptr(),
                                    self.0,
-                                   padding.openssl_padding_code()));
+                                   padding.0));
            assert!(enc_len as u32 == k_len);
 
            Ok(to)
@@ -221,7 +221,7 @@ impl RSA {
                                    from.as_ptr(),
                                    to.as_mut_ptr(),
                                    self.0,
-                                   padding.openssl_padding_code()));
+                                   padding.0));
            to.truncate(enc_len as usize);
            Ok(to)
         }
@@ -239,7 +239,7 @@ impl RSA {
                                    from.as_ptr(),
                                    to.as_mut_ptr(),
                                    self.0,
-                                   padding.openssl_padding_code()));
+                                   padding.0));
            assert!(enc_len as u32 == k_len);
 
            Ok(to)
@@ -425,13 +425,13 @@ mod test {
         let public_key = RSA::public_key_from_pem(key).unwrap();
 
         let original_data: Vec<u8> = "This is test".to_string().into_bytes();
-        let result = public_key.public_encrypt(&original_data, Padding::PKCS1v15).unwrap();
+        let result = public_key.public_encrypt(&original_data, Padding::pkcs1()).unwrap();
 
         assert_eq!(result.len(), 256);
 
         let pkey = include_bytes!("../../test/rsa.pem");
         let private_key = RSA::private_key_from_pem(pkey).unwrap();
-        let dec_result = private_key.private_decrypt(&result, Padding::PKCS1v15).unwrap();
+        let dec_result = private_key.private_decrypt(&result, Padding::pkcs1()).unwrap();
 
        assert_eq!(dec_result, original_data);
     }
@@ -444,8 +444,8 @@ mod test {
 
        let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
 
-       let emsg = k0.private_encrypt(&msg, Padding::PKCS1v15).unwrap();
-       let dmsg = k1.public_decrypt(&emsg, Padding::PKCS1v15).unwrap();
+       let emsg = k0.private_encrypt(&msg, Padding::pkcs1()).unwrap();
+       let dmsg = k1.public_decrypt(&emsg, Padding::pkcs1()).unwrap();
        assert!(msg == dmsg);
    }
 
@@ -457,8 +457,8 @@ mod test {
 
        let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
 
-       let emsg = k1.public_encrypt(&msg, Padding::OAEP).unwrap();
-       let dmsg = k0.private_decrypt(&emsg, Padding::OAEP).unwrap();
+       let emsg = k1.public_encrypt(&msg, Padding::pkcs1_oaep()).unwrap();
+       let dmsg = k0.private_decrypt(&emsg, Padding::pkcs1_oaep()).unwrap();
        assert!(msg == dmsg);
    }
 
@@ -470,8 +470,8 @@ mod test {
 
        let msg = vec!(0xdeu8, 0xadu8, 0xd0u8, 0x0du8);
 
-       let emsg = k1.public_encrypt(&msg, super::Padding::PKCS1v15).unwrap();
-       let dmsg = k0.private_decrypt(&emsg, super::Padding::PKCS1v15).unwrap();
+       let emsg = k1.public_encrypt(&msg, super::Padding::pkcs1()).unwrap();
+       let dmsg = k0.private_decrypt(&emsg, super::Padding::pkcs1()).unwrap();
        assert!(msg == dmsg);
    }
 
