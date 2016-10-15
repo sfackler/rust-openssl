@@ -110,6 +110,7 @@ pub const CRYPTO_LOCK: c_int = 1;
 pub const EVP_MAX_MD_SIZE: c_uint = 64;
 pub const EVP_PKEY_RSA: c_int = NID_rsaEncryption;
 pub const EVP_PKEY_HMAC: c_int = NID_hmac;
+pub const EVP_PKEY_DSA: c_int = NID_dsa;
 
 pub const MBSTRING_ASC:  c_int = MBSTRING_FLAG | 1;
 pub const MBSTRING_BMP:  c_int = MBSTRING_FLAG | 2;
@@ -120,6 +121,7 @@ pub const MBSTRING_UTF8: c_int = MBSTRING_FLAG;
 pub const NID_rsaEncryption: c_int = 6;
 pub const NID_ext_key_usage: c_int = 126;
 pub const NID_key_usage:     c_int = 83;
+pub const NID_dsa:           c_int = 116;
 pub const NID_hmac:          c_int = 855;
 
 pub const PKCS5_SALT_LEN: c_int = 8;

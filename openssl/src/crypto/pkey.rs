@@ -4,6 +4,7 @@ use std::mem;
 use ffi;
 
 use bio::{MemBio, MemBioSlice};
+use crypto::dsa::DSA;
 use crypto::rsa::RSA;
 use error::ErrorStack;
 use crypto::util::{CallbackState, invoke_passwd_cb};
@@ -22,6 +23,17 @@ impl PKey {
             let pkey = PKey(evp);
             try_ssl!(ffi::EVP_PKEY_assign(pkey.0, ffi::EVP_PKEY_RSA, rsa.as_ptr() as *mut _));
             mem::forget(rsa);
+            Ok(pkey)
+        }
+    }
+
+    /// Create a new `PKey` containing a DSA key.
+    pub fn from_dsa(dsa: DSA) -> Result<PKey, ErrorStack> {
+        unsafe {
+            let evp = try_ssl_null!(ffi::EVP_PKEY_new());
+            let pkey = PKey(evp);
+            try_ssl!(ffi::EVP_PKEY_assign(pkey.0, ffi::EVP_PKEY_DSA, dsa.as_ptr() as *mut _));
+            mem::forget(dsa);
             Ok(pkey)
         }
     }

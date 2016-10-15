@@ -113,6 +113,8 @@ impl<'a> Signer<'a> {
             let mut buf = vec![0; len];
             try_ssl_if!(ffi::EVP_DigestSignFinal(self.0, buf.as_mut_ptr() as *mut _, &mut len)
                     != 1);
+            // The advertised length is not always equal to the real length for things like DSA
+            buf.truncate(len);
             Ok(buf)
         }
     }
@@ -213,6 +215,7 @@ mod test {
     use crypto::hash::Type;
     use crypto::sign::{Signer, Verifier};
     use crypto::rsa::RSA;
+    use crypto::dsa::DSA;
     use crypto::pkey::PKey;
 
     static INPUT: &'static [u8] =
@@ -240,7 +243,7 @@ mod test {
              112, 223, 200, 163, 42, 70, 149, 67, 208, 25, 238, 251, 71];
 
     #[test]
-    fn test_sign() {
+    fn rsa_sign() {
         let key = include_bytes!("../../test/rsa.pem");
         let private_key = RSA::private_key_from_pem(key).unwrap();
         let pkey = PKey::from_rsa(private_key).unwrap();
@@ -253,7 +256,7 @@ mod test {
     }
 
     #[test]
-    fn test_verify_ok() {
+    fn rsa_verify_ok() {
         let key = include_bytes!("../../test/rsa.pem");
         let private_key = RSA::private_key_from_pem(key).unwrap();
         let pkey = PKey::from_rsa(private_key).unwrap();
@@ -264,7 +267,7 @@ mod test {
     }
 
     #[test]
-    fn test_verify_invalid() {
+    fn rsa_verify_invalid() {
         let key = include_bytes!("../../test/rsa.pem");
         let private_key = RSA::private_key_from_pem(key).unwrap();
         let pkey = PKey::from_rsa(private_key).unwrap();
@@ -273,6 +276,56 @@ mod test {
         verifier.update(INPUT).unwrap();
         verifier.update(b"foobar").unwrap();
         assert!(!verifier.finish(SIGNATURE).unwrap());
+    }
+
+    #[test]
+    pub fn dsa_sign_verify() {
+        let input: Vec<u8> = (0..25).cycle().take(1024).collect();
+
+        let private_key = {
+            let key = include_bytes!("../../test/dsa.pem");
+            PKey::from_dsa(DSA::private_key_from_pem(key).unwrap()).unwrap()
+        };
+
+        let public_key = {
+            let key = include_bytes!("../../test/dsa.pem.pub");
+            PKey::from_dsa(DSA::public_key_from_pem(key).unwrap()).unwrap()
+        };
+
+        let mut signer = Signer::new(Type::SHA1, &private_key).unwrap();
+        signer.update(&input).unwrap();
+        let sig = signer.finish().unwrap();
+
+        let mut verifier = Verifier::new(Type::SHA1, &public_key).unwrap();
+        verifier.update(&input).unwrap();
+        assert!(verifier.finish(&sig).unwrap());
+    }
+
+    #[test]
+    pub fn dsa_sign_verify_fail() {
+        let input: Vec<u8> = (0..25).cycle().take(1024).collect();
+
+        let private_key = {
+            let key = include_bytes!("../../test/dsa.pem");
+            PKey::from_dsa(DSA::private_key_from_pem(key).unwrap()).unwrap()
+        };
+
+        let public_key = {
+            let key = include_bytes!("../../test/dsa.pem.pub");
+            PKey::from_dsa(DSA::public_key_from_pem(key).unwrap()).unwrap()
+        };
+
+        let mut signer = Signer::new(Type::SHA1, &private_key).unwrap();
+        signer.update(&input).unwrap();
+        let mut sig = signer.finish().unwrap();
+        sig[0] -= 1;
+
+        let mut verifier = Verifier::new(Type::SHA1, &public_key).unwrap();
+        verifier.update(&input).unwrap();
+        match verifier.finish(&sig) {
+            Ok(true) => panic!("unexpected success"),
+            Ok(false) | Err(_) => {},
+        }
     }
 
     fn test_hmac(ty: Type, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
