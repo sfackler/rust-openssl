@@ -97,7 +97,7 @@ mod compat {
 
 #[cfg(test)]
 mod test {
-    use crypto::hash::Type::SHA1;
+    use crypto::hash::MessageDigest;
     use serialize::hex::ToHex;
 
     use super::*;
@@ -108,11 +108,11 @@ mod test {
         let pkcs12 = Pkcs12::from_der(der).unwrap();
         let parsed = pkcs12.parse("mypass").unwrap();
 
-        assert_eq!(parsed.cert.fingerprint(SHA1).unwrap().to_hex(),
+        assert_eq!(parsed.cert.fingerprint(MessageDigest::sha1()).unwrap().to_hex(),
                    "59172d9313e84459bcff27f967e79e6e9217e584");
 
         assert_eq!(parsed.chain.len(), 1);
-        assert_eq!(parsed.chain[0].fingerprint(SHA1).unwrap().to_hex(),
+        assert_eq!(parsed.chain[0].fingerprint(MessageDigest::sha1()).unwrap().to_hex(),
                    "c0cbdf7cdd03c9773e5468e1f6d2da7d5cbb1875");
     }
 }

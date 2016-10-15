@@ -1,6 +1,6 @@
 use serialize::hex::FromHex;
 
-use crypto::hash::Type::SHA1;
+use crypto::hash::MessageDigest;
 use crypto::pkey::PKey;
 use crypto::rsa::RSA;
 use x509::{X509, X509Generator};
@@ -14,7 +14,7 @@ fn get_generator() -> X509Generator {
     X509Generator::new()
         .set_valid_period(365 * 2)
         .add_name("CN".to_string(), "test_me".to_string())
-        .set_sign_hash(SHA1)
+        .set_sign_hash(MessageDigest::sha1())
         .add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]))
         .add_extension(ExtKeyUsage(vec![ClientAuth,
                                         ServerAuth,
@@ -83,7 +83,7 @@ fn test_req_gen() {
 fn test_cert_loading() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
-    let fingerprint = cert.fingerprint(SHA1).unwrap();
+    let fingerprint = cert.fingerprint(MessageDigest::sha1()).unwrap();
 
     let hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
     let hash_vec = hash_str.from_hex().unwrap();

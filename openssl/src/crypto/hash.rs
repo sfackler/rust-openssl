@@ -8,47 +8,56 @@ use ffi::{EVP_MD_CTX_new, EVP_MD_CTX_free};
 #[cfg(any(ossl101, ossl102))]
 use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
 
-use HashTypeInternals;
 use error::ErrorStack;
-use nid::Nid;
 
-/// Message digest (hash) type.
 #[derive(Copy, Clone)]
-pub enum Type {
-    MD5,
-    SHA1,
-    SHA224,
-    SHA256,
-    SHA384,
-    SHA512,
-    RIPEMD160,
-}
+pub struct MessageDigest(*const ffi::EVP_MD);
 
-impl HashTypeInternals for Type {
-    fn as_nid(&self) -> Nid {
-        match *self {
-            Type::MD5 => Nid::MD5,
-            Type::SHA1 => Nid::SHA1,
-            Type::SHA224 => Nid::SHA224,
-            Type::SHA256 => Nid::SHA256,
-            Type::SHA384 => Nid::SHA384,
-            Type::SHA512 => Nid::SHA512,
-            Type::RIPEMD160 => Nid::RIPEMD160,
+impl MessageDigest {
+    pub fn md5() -> MessageDigest {
+        unsafe {
+            MessageDigest(ffi::EVP_md5())
         }
     }
 
-    fn evp_md(&self) -> *const ffi::EVP_MD {
+    pub fn sha1() -> MessageDigest {
         unsafe {
-            match *self {
-                Type::MD5 => ffi::EVP_md5(),
-                Type::SHA1 => ffi::EVP_sha1(),
-                Type::SHA224 => ffi::EVP_sha224(),
-                Type::SHA256 => ffi::EVP_sha256(),
-                Type::SHA384 => ffi::EVP_sha384(),
-                Type::SHA512 => ffi::EVP_sha512(),
-                Type::RIPEMD160 => ffi::EVP_ripemd160(),
-            }
+            MessageDigest(ffi::EVP_sha1())
         }
+    }
+
+    pub fn sha224() -> MessageDigest {
+        unsafe {
+            MessageDigest(ffi::EVP_sha224())
+        }
+    }
+
+    pub fn sha256() -> MessageDigest {
+        unsafe {
+            MessageDigest(ffi::EVP_sha256())
+        }
+    }
+
+    pub fn sha384() -> MessageDigest {
+        unsafe {
+            MessageDigest(ffi::EVP_sha384())
+        }
+    }
+
+    pub fn sha512() -> MessageDigest {
+        unsafe {
+            MessageDigest(ffi::EVP_sha512())
+        }
+    }
+
+    pub fn ripemd160() -> MessageDigest {
+        unsafe {
+            MessageDigest(ffi::EVP_ripemd160())
+        }
+    }
+
+    pub fn as_ptr(&self) -> *const ffi::EVP_MD {
+        self.0
     }
 }
 
@@ -68,20 +77,22 @@ use self::State::*;
 /// Calculate a hash in one go.
 ///
 /// ```
-/// use openssl::crypto::hash::{hash, Type};
+/// use openssl::crypto::hash::{hash, MessageDigest};
+///
 /// let data = b"\x42\xF4\x97\xE0";
 /// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
-/// let res = hash(Type::MD5, data).unwrap();
+/// let res = hash(MessageDigest::md5(), data).unwrap();
 /// assert_eq!(res, spec);
 /// ```
 ///
 /// Use the `Write` trait to supply the input in chunks.
 ///
 /// ```
-/// use openssl::crypto::hash::{Hasher, Type};
+/// use openssl::crypto::hash::{Hasher, MessageDigest};
+///
 /// let data = [b"\x42\xF4", b"\x97\xE0"];
 /// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
-/// let mut h = Hasher::new(Type::MD5).unwrap();
+/// let mut h = Hasher::new(MessageDigest::md5()).unwrap();
 /// h.update(data[0]).unwrap();
 /// h.update(data[1]).unwrap();
 /// let res = h.finish().unwrap();
@@ -96,21 +107,20 @@ use self::State::*;
 pub struct Hasher {
     ctx: *mut ffi::EVP_MD_CTX,
     md: *const ffi::EVP_MD,
-    type_: Type,
+    type_: MessageDigest,
     state: State,
 }
 
 impl Hasher {
     /// Creates a new `Hasher` with the specified hash type.
-    pub fn new(ty: Type) -> Result<Hasher, ErrorStack> {
+    pub fn new(ty: MessageDigest) -> Result<Hasher, ErrorStack> {
         ffi::init();
 
         let ctx = unsafe { try_ssl_null!(EVP_MD_CTX_new()) };
-        let md = ty.evp_md();
 
         let mut h = Hasher {
             ctx: ctx,
-            md: md,
+            md: ty.as_ptr(),
             type_: ty,
             state: Finalized,
         };
@@ -204,7 +214,7 @@ impl Drop for Hasher {
 }
 
 /// Computes the hash of the `data` with the hash `t`.
-pub fn hash(t: Type, data: &[u8]) -> Result<Vec<u8>, ErrorStack> {
+pub fn hash(t: MessageDigest, data: &[u8]) -> Result<Vec<u8>, ErrorStack> {
     let mut h = try!(Hasher::new(t));
     try!(h.update(data));
     h.finish()
@@ -213,10 +223,10 @@ pub fn hash(t: Type, data: &[u8]) -> Result<Vec<u8>, ErrorStack> {
 #[cfg(test)]
 mod tests {
     use serialize::hex::{FromHex, ToHex};
-    use super::{hash, Hasher, Type};
+    use super::{hash, Hasher, MessageDigest};
     use std::io::prelude::*;
 
-    fn hash_test(hashtype: Type, hashtest: &(&str, &str)) {
+    fn hash_test(hashtype: MessageDigest, hashtest: &(&str, &str)) {
         let res = hash(hashtype, &*hashtest.0.from_hex().unwrap()).unwrap();
         assert_eq!(res.to_hex(), hashtest.1);
     }
@@ -259,13 +269,13 @@ mod tests {
     #[test]
     fn test_md5() {
         for test in md5_tests.iter() {
-            hash_test(Type::MD5, test);
+            hash_test(MessageDigest::md5(), test);
         }
     }
 
     #[test]
     fn test_md5_recycle() {
-        let mut h = Hasher::new(Type::MD5).unwrap();
+        let mut h = Hasher::new(MessageDigest::md5()).unwrap();
         for test in md5_tests.iter() {
             hash_recycle_test(&mut h, test);
         }
@@ -273,11 +283,11 @@ mod tests {
 
     #[test]
     fn test_finish_twice() {
-        let mut h = Hasher::new(Type::MD5).unwrap();
+        let mut h = Hasher::new(MessageDigest::md5()).unwrap();
         h.write_all(&*md5_tests[6].0.from_hex().unwrap()).unwrap();
         h.finish().unwrap();
         let res = h.finish().unwrap();
-        let null = hash(Type::MD5, &[]).unwrap();
+        let null = hash(MessageDigest::md5(), &[]).unwrap();
         assert_eq!(res, null);
     }
 
@@ -287,7 +297,7 @@ mod tests {
         let inp = md5_tests[i].0.from_hex().unwrap();
         assert!(inp.len() > 2);
         let p = inp.len() / 2;
-        let h0 = Hasher::new(Type::MD5).unwrap();
+        let h0 = Hasher::new(MessageDigest::md5()).unwrap();
 
         println!("Clone a new hasher");
         let mut h1 = h0.clone();
@@ -315,7 +325,7 @@ mod tests {
         let tests = [("616263", "a9993e364706816aba3e25717850c26c9cd0d89d")];
 
         for test in tests.iter() {
-            hash_test(Type::SHA1, test);
+            hash_test(MessageDigest::sha1(), test);
         }
     }
 
@@ -325,7 +335,7 @@ mod tests {
                       "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")];
 
         for test in tests.iter() {
-            hash_test(Type::SHA256, test);
+            hash_test(MessageDigest::sha256(), test);
         }
     }
 
@@ -334,7 +344,7 @@ mod tests {
         let tests = [("616263", "8eb208f7e05d987a9b044a8e98c6b087f15a0bfc")];
 
         for test in tests.iter() {
-            hash_test(Type::RIPEMD160, test);
+            hash_test(MessageDigest::ripemd160(), test);
         }
     }
 }

@@ -10,13 +10,10 @@ use std::slice;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-use HashTypeInternals;
 use asn1::Asn1Time;
 use asn1::Asn1TimeRef;
-
 use bio::{MemBio, MemBioSlice};
-use crypto::hash;
-use crypto::hash::Type as HashType;
+use crypto::hash::MessageDigest;
 use crypto::pkey::PKey;
 use crypto::rand::rand_bytes;
 use ffi;
@@ -129,7 +126,7 @@ impl X509StoreContext {
 /// # Example
 ///
 /// ```
-/// use openssl::crypto::hash::Type;
+/// use openssl::crypto::hash::MessageDigest;
 /// use openssl::crypto::pkey::PKey;
 /// use openssl::crypto::rsa::RSA;
 /// use openssl::x509::X509Generator;
@@ -141,7 +138,7 @@ impl X509StoreContext {
 /// let gen = X509Generator::new()
 ///        .set_valid_period(365*2)
 ///        .add_name("CN".to_owned(), "SuperMegaCorp Inc.".to_owned())
-///        .set_sign_hash(Type::SHA256)
+///        .set_sign_hash(MessageDigest::sha256())
 ///        .add_extension(Extension::KeyUsage(vec![KeyUsageOption::DigitalSignature]));
 ///
 /// let cert = gen.sign(&pkey).unwrap();
@@ -152,7 +149,7 @@ pub struct X509Generator {
     days: u32,
     names: Vec<(String, String)>,
     extensions: Extensions,
-    hash_type: HashType,
+    hash_type: MessageDigest,
 }
 
 impl X509Generator {
@@ -168,7 +165,7 @@ impl X509Generator {
             days: 365,
             names: vec![],
             extensions: Extensions::new(),
-            hash_type: HashType::SHA1,
+            hash_type: MessageDigest::sha1(),
         }
     }
 
@@ -239,7 +236,7 @@ impl X509Generator {
         self
     }
 
-    pub fn set_sign_hash(mut self, hash_type: hash::Type) -> X509Generator {
+    pub fn set_sign_hash(mut self, hash_type: MessageDigest) -> X509Generator {
         self.hash_type = hash_type;
         self
     }
@@ -358,7 +355,7 @@ impl X509Generator {
                                                            &ext.to_string()));
             }
 
-            let hash_fn = self.hash_type.evp_md();
+            let hash_fn = self.hash_type.as_ptr();
             try_ssl!(ffi::X509_sign(x509.as_ptr(), p_key.as_ptr(), hash_fn));
             Ok(x509)
         }
@@ -380,7 +377,7 @@ impl X509Generator {
                 try_ssl!(ffi::X509_REQ_add_extensions(req, exts as *mut _));
             }
 
-            let hash_fn = self.hash_type.evp_md();
+            let hash_fn = self.hash_type.as_ptr();
             try_ssl!(ffi::X509_REQ_sign(req, p_key.as_ptr(), hash_fn));
 
             Ok(X509Req::new(req))
@@ -438,9 +435,9 @@ impl<'a> X509Ref<'a> {
     }
 
     /// Returns certificate fingerprint calculated using provided hash
-    pub fn fingerprint(&self, hash_type: hash::Type) -> Result<Vec<u8>, ErrorStack> {
+    pub fn fingerprint(&self, hash_type: MessageDigest) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
-            let evp = hash_type.evp_md();
+            let evp = hash_type.as_ptr();
             let mut len = ffi::EVP_MAX_MD_SIZE;
             let mut buf = vec![0u8; len as usize];
             try_ssl!(ffi::X509_digest(self.0, evp, buf.as_mut_ptr() as *mut _, &mut len));

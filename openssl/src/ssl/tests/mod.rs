@@ -14,7 +14,7 @@ use std::time::Duration;
 
 use tempdir::TempDir;
 
-use crypto::hash::Type::SHA256;
+use crypto::hash::MessageDigest;
 use ssl;
 use ssl::SSL_VERIFY_PEER;
 use ssl::SslMethod::Tls;
@@ -171,7 +171,7 @@ macro_rules! run_test(
             use ssl::SslMethod;
             use ssl::{SslContext, Ssl, SslStream};
             use ssl::SSL_VERIFY_PEER;
-            use crypto::hash::Type::{SHA1, SHA256};
+            use crypto::hash::MessageDigest;
             use x509::X509StoreContext;
             use serialize::hex::FromHex;
             use super::Server;
@@ -314,7 +314,7 @@ run_test!(verify_callback_data, |method, stream| {
         match cert {
             None => false,
             Some(cert) => {
-                let fingerprint = cert.fingerprint(SHA1).unwrap();
+                let fingerprint = cert.fingerprint(MessageDigest::sha1()).unwrap();
                 fingerprint == node_id
             }
         }
@@ -343,7 +343,7 @@ run_test!(ssl_verify_callback, |method, stream| {
         match x509.current_cert() {
             None => false,
             Some(cert) => {
-                let fingerprint = cert.fingerprint(SHA1).unwrap();
+                let fingerprint = cert.fingerprint(MessageDigest::sha1()).unwrap();
                 fingerprint == node_id
             }
         }
@@ -440,7 +440,7 @@ fn test_write_direct() {
 run_test!(get_peer_certificate, |method, stream| {
     let stream = SslStream::connect(&SslContext::new(method).unwrap(), stream).unwrap();
     let cert = stream.ssl().peer_certificate().unwrap();
-    let fingerprint = cert.fingerprint(SHA1).unwrap();
+    let fingerprint = cert.fingerprint(MessageDigest::sha1()).unwrap();
     let node_hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
     let node_id = node_hash_str.from_hex().unwrap();
     assert_eq!(node_id, fingerprint)
@@ -797,7 +797,7 @@ mod dtlsv1 {
     use std::net::TcpStream;
     use std::thread;
 
-    use crypto::hash::Type::SHA256;
+    use crypto::hash::MessageDigest;
     use ssl::SslMethod;
     use ssl::SslMethod::Dtls;
     use ssl::{SslContext, SslStream};
