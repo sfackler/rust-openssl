@@ -76,39 +76,79 @@ impl Error {
     }
 
     /// Returns the raw OpenSSL error code for this error.
-    pub fn error_code(&self) -> c_ulong {
+    pub fn code(&self) -> c_ulong {
         self.0
     }
 
-    /// Returns the name of the library reporting the error.
-    pub fn library(&self) -> &'static str {
-        get_lib(self.0)
+    /// Returns the name of the library reporting the error, if available.
+    pub fn library(&self) -> Option<&'static str> {
+        unsafe {
+            let cstr = ffi::ERR_lib_error_string(self.0);
+            if cstr.is_null() {
+                return None;
+            }
+            let bytes = CStr::from_ptr(cstr as *const _).to_bytes();
+            Some(str::from_utf8(bytes).unwrap())
+        }
     }
 
     /// Returns the name of the function reporting the error.
-    pub fn function(&self) -> &'static str {
-        get_func(self.0)
+    pub fn function(&self) -> Option<&'static str> {
+        unsafe {
+            let cstr = ffi::ERR_func_error_string(self.0);
+            if cstr.is_null() {
+                return None;
+            }
+            let bytes = CStr::from_ptr(cstr as *const _).to_bytes();
+            Some(str::from_utf8(bytes).unwrap())
+        }
     }
 
     /// Returns the reason for the error.
-    pub fn reason(&self) -> &'static str {
-        get_reason(self.0)
+    pub fn reason(&self) -> Option<&'static str> {
+        unsafe {
+            let cstr = ffi::ERR_reason_error_string(self.0);
+            if cstr.is_null() {
+                return None;
+            }
+            let bytes = CStr::from_ptr(cstr as *const _).to_bytes();
+            Some(str::from_utf8(bytes).unwrap())
+        }
     }
 }
 
 impl fmt::Debug for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("Error")
-           .field("library", &self.library())
-           .field("function", &self.function())
-           .field("reason", &self.reason())
-           .finish()
+        let mut builder = fmt.debug_struct("Error");
+        builder.field("code", &self.code());
+        if let Some(library) = self.library() {
+            builder.field("library", &library);
+        }
+        if let Some(function) = self.function() {
+            builder.field("function", &function);
+        }
+        if let Some(reason) = self.reason() {
+            builder.field("reason", &reason);
+        }
+        builder.finish()
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.write_str(&self.reason())
+        try!(write!(fmt, "error:{:08X}", self.0));
+        match self.library() {
+            Some(l) => try!(write!(fmt, ":{}", l)),
+            None => try!(write!(fmt, ":lib({})", ffi::ERR_GET_LIB(self.0))),
+        }
+        match self.function() {
+            Some(f) => try!(write!(fmt, ":{}", f)),
+            None => try!(write!(fmt, ":func({})", ffi::ERR_GET_FUNC(self.0))),
+        }
+        match self.reason() {
+            Some(r) => write!(fmt, ":{}", r),
+            None => write!(fmt, ":reason({})", ffi::ERR_GET_FUNC(self.0)),
+        }
     }
 }
 
@@ -117,31 +157,3 @@ impl error::Error for Error {
         "An OpenSSL error"
     }
 }
-
-fn get_lib(err: c_ulong) -> &'static str {
-    unsafe {
-        let cstr = ffi::ERR_lib_error_string(err);
-        assert!(!cstr.is_null(), "bad lib: {}", err);
-        let bytes = CStr::from_ptr(cstr as *const _).to_bytes();
-        str::from_utf8(bytes).unwrap()
-    }
-}
-
-fn get_func(err: c_ulong) -> &'static str {
-    unsafe {
-        let cstr = ffi::ERR_func_error_string(err);
-        assert!(!cstr.is_null(), "bad func: {}", err);
-        let bytes = CStr::from_ptr(cstr as *const _).to_bytes();
-        str::from_utf8(bytes).unwrap()
-    }
-}
-
-fn get_reason(err: c_ulong) -> &'static str {
-    unsafe {
-        let cstr = ffi::ERR_reason_error_string(err);
-        assert!(!cstr.is_null(), "bad reason: {}", err);
-        let bytes = CStr::from_ptr(cstr as *const _).to_bytes();
-        str::from_utf8(bytes).unwrap()
-    }
-}
-
