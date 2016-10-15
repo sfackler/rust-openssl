@@ -549,6 +549,7 @@ extern {
     pub fn OPENSSL_add_all_algorithms_noconf();
     pub fn HMAC_CTX_init(ctx: *mut ::HMAC_CTX);
     pub fn HMAC_CTX_cleanup(ctx: *mut ::HMAC_CTX);
+    #[cfg(not(osslconf = "OPENSSL_NO_SSL3_METHOD"))]
     pub fn SSLv3_method() -> *const ::SSL_METHOD;
     pub fn TLSv1_method() -> *const ::SSL_METHOD;
     pub fn SSLv23_method() -> *const ::SSL_METHOD;
