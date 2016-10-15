@@ -318,6 +318,18 @@ pub unsafe fn SSL_set_tlsext_host_name(s: *mut SSL, name: *mut c_char) -> c_long
              name as *mut c_void)
 }
 
+pub fn ERR_GET_LIB(l: c_ulong) -> c_int {
+    ((l >> 24) & 0x0FF) as c_int
+}
+
+pub fn ERR_GET_FUNC(l: c_ulong) -> c_int {
+    ((l >> 12) & 0xFFF) as c_int
+}
+
+pub fn ERR_GET_REASON(l: c_ulong) -> c_int {
+    (l & 0xFFF) as c_int
+}
+
 extern {
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
