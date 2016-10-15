@@ -168,9 +168,9 @@ impl<'a> Verifier<'a> {
 
     pub fn finish(&self, signature: &[u8]) -> Result<bool, ErrorStack> {
         unsafe {
-            let r = ffi::EVP_DigestVerifyFinal(self.0,
-                                               signature.as_ptr() as *const _ as _,
-                                               signature.len());
+            let r = EVP_DigestVerifyFinal(self.0,
+                                          signature.as_ptr() as *const _,
+                                          signature.len());
             match r {
                 1 => Ok(true),
                 0 => {
@@ -192,6 +192,17 @@ impl<'a> Write for Verifier<'a> {
     fn flush(&mut self) -> io::Result<()> {
         Ok(())
     }
+}
+
+#[cfg(not(ossl101))]
+use ffi::EVP_DigestVerifyFinal;
+
+#[cfg(ossl101)]
+#[allow(bad_style)]
+unsafe fn EVP_DigestVerifyFinal(ctx: *mut ffi::EVP_MD_CTX,
+                                sigret: *const ::libc::c_uchar,
+                                siglen: ::libc::size_t) -> ::libc::c_int {
+    ffi::EVP_DigestVerifyFinal(ctx, sigret as *mut _, siglen)
 }
 
 #[cfg(test)]
