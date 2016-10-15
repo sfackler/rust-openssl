@@ -52,11 +52,11 @@ fn find_openssl_dir(target: &str) -> OsString {
     let host = env::var("HOST").unwrap();
 
     if host.contains("apple-darwin") && target.contains("apple-darwin") {
-        let homebrew = Path::new("/usr/local/opt/openssl");
+        let homebrew = Path::new("/usr/local/opt/openssl@1.1");
         if homebrew.exists() {
             return homebrew.to_path_buf().into()
         }
-        let homebrew = Path::new("/usr/local/opt/openssl@1.1");
+        let homebrew = Path::new("/usr/local/opt/openssl");
         if homebrew.exists() {
             return homebrew.to_path_buf().into()
         }
