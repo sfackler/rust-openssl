@@ -1,6 +1,5 @@
 use std::io::prelude::*;
 use std::io;
-use std::ptr;
 use ffi;
 
 #[cfg(ossl110)]
@@ -8,6 +7,7 @@ use ffi::{EVP_MD_CTX_new, EVP_MD_CTX_free};
 #[cfg(any(ossl101, ossl102))]
 use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
 
+use {cvt, cvt_p};
 use error::ErrorStack;
 
 #[derive(Copy, Clone)]
@@ -116,7 +116,7 @@ impl Hasher {
     pub fn new(ty: MessageDigest) -> Result<Hasher, ErrorStack> {
         ffi::init();
 
-        let ctx = unsafe { try_ssl_null!(EVP_MD_CTX_new()) };
+        let ctx = unsafe { try!(cvt_p(EVP_MD_CTX_new())) };
 
         let mut h = Hasher {
             ctx: ctx,
@@ -136,7 +136,7 @@ impl Hasher {
             }
             Finalized => (),
         }
-        unsafe { try_ssl!(ffi::EVP_DigestInit_ex(self.ctx, self.md, 0 as *mut _)); }
+        unsafe { try!(cvt(ffi::EVP_DigestInit_ex(self.ctx, self.md, 0 as *mut _))); }
         self.state = Reset;
         Ok(())
     }
@@ -147,9 +147,9 @@ impl Hasher {
             try!(self.init());
         }
         unsafe {
-            try_ssl!(ffi::EVP_DigestUpdate(self.ctx,
+            try!(cvt(ffi::EVP_DigestUpdate(self.ctx,
                                            data.as_ptr() as *mut _,
-                                           data.len()));
+                                           data.len())));
         }
         self.state = Updated;
         Ok(())
@@ -164,7 +164,7 @@ impl Hasher {
         unsafe {
             let mut len = ffi::EVP_MAX_MD_SIZE;
             let mut res = vec![0; len as usize];
-            try_ssl!(ffi::EVP_DigestFinal_ex(self.ctx, res.as_mut_ptr(), &mut len));
+            try!(cvt(ffi::EVP_DigestFinal_ex(self.ctx, res.as_mut_ptr(), &mut len)));
             res.truncate(len as usize);
             self.state = Finalized;
             Ok(res)
