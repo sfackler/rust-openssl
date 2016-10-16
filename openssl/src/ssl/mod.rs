@@ -76,13 +76,29 @@ bitflags! {
     }
 }
 
-/// Determines the SSL method supported
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-pub enum SslMethod {
-    /// Support the TLS protocol
-    Tls,
-    /// Support DTLS protocol
-    Dtls,
+#[derive(Copy, Clone)]
+pub struct SslMethod(*const ffi::SSL_METHOD);
+
+impl SslMethod {
+    /// Support all versions of the TLS protocol.
+    ///
+    /// This corresponds to `TLS_method` on OpenSSL 1.1.0 and `SSLv23_method`
+    /// on OpenSSL 1.0.x.
+    pub fn tls() -> SslMethod {
+        SslMethod(compat::tls_method())
+    }
+
+    /// Support all versions of the DTLS protocol.
+    ///
+    /// This corresponds to `DTLS_method` on OpenSSL 1.1.0 and `DTLSv1_method`
+    /// on OpenSSL 1.0.x.
+    pub fn dtls() -> SslMethod {
+        SslMethod(compat::dtls_method())
+    }
+
+    pub fn as_ptr(&self) -> *const ffi::SSL_METHOD {
+        self.0
+    }
 }
 
 /// Determines the type of certificate verification used
@@ -391,9 +407,9 @@ impl<'a> SslContextRef<'a> {
         }
     }
 
-    pub fn set_read_ahead(&mut self, m: u32) {
+    pub fn set_read_ahead(&mut self, read_ahead: bool) {
         unsafe {
-            ffi::SSL_CTX_set_read_ahead(self.as_ptr(), m as c_long);
+            ffi::SSL_CTX_set_read_ahead(self.as_ptr(), read_ahead as c_long);
         }
     }
 
@@ -653,15 +669,10 @@ impl SslContext {
         init();
 
         let mut ctx = unsafe {
-            let method = compat::get_method(method);
-            let ctx = try_ssl_null!(ffi::SSL_CTX_new(method));
+            let ctx = try_ssl_null!(ffi::SSL_CTX_new(method.as_ptr()));
             SslContext::from_ptr(ctx)
         };
 
-        match method {
-            SslMethod::Dtls => ctx.set_read_ahead(1),
-            _ => {}
-        }
         // this is a bit dubious (?)
         try!(ctx.set_mode(ffi::SSL_MODE_AUTO_RETRY | ffi::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER));
 
@@ -1374,8 +1385,6 @@ mod compat {
     pub use ffi::{SSL_CTX_get_options, SSL_CTX_set_options};
     pub use ffi::{SSL_CTX_clear_options, SSL_CTX_up_ref};
 
-    use super::SslMethod;
-
     pub unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
         ffi::CRYPTO_get_ex_new_index(ffi::CRYPTO_EX_INDEX_SSL_CTX,
                                      0,
@@ -1394,10 +1403,15 @@ mod compat {
                                      Some(f))
     }
 
-    pub unsafe fn get_method(method: SslMethod) -> *const ffi::SSL_METHOD {
-        match method {
-            SslMethod::Tls => ffi::TLS_method(),
-            SslMethod::Dtls => ffi::DTLS_method(),
+    pub fn tls_method() -> *const ffi::SSL_METHOD {
+        unsafe {
+            ffi::TLS_method()
+        }
+    }
+
+    pub fn dtls_method() -> *const ffi::SSL_METHOD {
+        unsafe {
+            ffi::DTLS_method()
         }
     }
 }
@@ -1409,8 +1423,6 @@ mod compat {
 
     use ffi;
     use libc::{self, c_long, c_ulong, c_int};
-
-    use super::SslMethod;
 
     pub unsafe fn SSL_CTX_get_options(ctx: *const ffi::SSL_CTX) -> c_ulong {
         ffi::SSL_CTX_ctrl(ctx as *mut _,
@@ -1451,13 +1463,6 @@ mod compat {
                                   Some(f))
     }
 
-    pub unsafe fn get_method(method: SslMethod) -> *const ffi::SSL_METHOD {
-        match method {
-            SslMethod::Tls => ffi::SSLv23_method(),
-            SslMethod::Dtls => ffi::DTLSv1_method(),
-        }
-    }
-
     pub unsafe fn SSL_CTX_up_ref(ssl: *mut ffi::SSL_CTX) -> libc::c_int {
         ffi::CRYPTO_add_lock(&mut (*ssl).references,
                              1,
@@ -1465,5 +1470,17 @@ mod compat {
                              "mod.rs\0".as_ptr() as *const _,
                              line!() as libc::c_int);
         0
+    }
+
+    pub fn tls_method() -> *const ffi::SSL_METHOD {
+        unsafe {
+            ffi::SSLv23_method()
+        }
+    }
+
+    pub fn dtls_method() -> *const ffi::SSL_METHOD {
+        unsafe {
+            ffi::DTLSv1_method()
+        }
     }
 }

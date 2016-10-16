@@ -13,7 +13,7 @@
 //! use openssl::crypto::sign::{Signer, Verifier};
 //! use openssl::crypto::rsa::RSA;
 //! use openssl::crypto::pkey::PKey;
-//! use openssl::crypto::hash::Type;
+//! use openssl::crypto::hash::MessageDigest;
 //!
 //! // Generate a keypair
 //! let keypair = RSA::generate(2048).unwrap();
@@ -23,13 +23,13 @@
 //! let data2 = b"hola, mundo!";
 //!
 //! // Sign the data
-//! let mut signer = Signer::new(Type::SHA256, &keypair).unwrap();
+//! let mut signer = Signer::new(MessageDigest::sha256(), &keypair).unwrap();
 //! signer.update(data).unwrap();
 //! signer.update(data2).unwrap();
 //! let signature = signer.finish().unwrap();
 //!
 //! // Verify the data
-//! let mut verifier = Verifier::new(Type::SHA256, &keypair).unwrap();
+//! let mut verifier = Verifier::new(MessageDigest::sha256(), &keypair).unwrap();
 //! verifier.update(data).unwrap();
 //! verifier.update(data2).unwrap();
 //! assert!(verifier.finish(&signature).unwrap());
@@ -40,7 +40,7 @@
 //! ```rust
 //! use openssl::crypto::sign::Signer;
 //! use openssl::crypto::pkey::PKey;
-//! use openssl::crypto::hash::Type;
+//! use openssl::crypto::hash::MessageDigest;
 //!
 //! // Create a PKey
 //! let key = PKey::hmac(b"my secret").unwrap();
@@ -49,7 +49,7 @@
 //! let data2 = b"hola, mundo!";
 //!
 //! // Compute the HMAC
-//! let mut signer = Signer::new(Type::SHA256, &key).unwrap();
+//! let mut signer = Signer::new(MessageDigest::sha256(), &key).unwrap();
 //! signer.update(data).unwrap();
 //! signer.update(data2).unwrap();
 //! let hmac = signer.finish().unwrap();
@@ -59,8 +59,7 @@ use std::io::{self, Write};
 use std::marker::PhantomData;
 use std::ptr;
 
-use HashTypeInternals;
-use crypto::hash::Type;
+use crypto::hash::MessageDigest;
 use crypto::pkey::PKey;
 use error::ErrorStack;
 
@@ -80,14 +79,14 @@ impl<'a> Drop for Signer<'a> {
 }
 
 impl<'a> Signer<'a> {
-    pub fn new(type_: Type, pkey: &'a PKey) -> Result<Signer<'a>, ErrorStack> {
+    pub fn new(type_: MessageDigest, pkey: &'a PKey) -> Result<Signer<'a>, ErrorStack> {
         unsafe {
             ffi::init();
 
             let ctx = try_ssl_null!(EVP_MD_CTX_new());
             let r = ffi::EVP_DigestSignInit(ctx,
                                             ptr::null_mut(),
-                                            type_.evp_md(),
+                                            type_.as_ptr(),
                                             ptr::null_mut(),
                                             pkey.as_ptr());
             if r != 1 {
@@ -113,6 +112,8 @@ impl<'a> Signer<'a> {
             let mut buf = vec![0; len];
             try_ssl_if!(ffi::EVP_DigestSignFinal(self.0, buf.as_mut_ptr() as *mut _, &mut len)
                     != 1);
+            // The advertised length is not always equal to the real length for things like DSA
+            buf.truncate(len);
             Ok(buf)
         }
     }
@@ -140,14 +141,14 @@ impl<'a> Drop for Verifier<'a> {
 }
 
 impl<'a> Verifier<'a> {
-    pub fn new(type_: Type, pkey: &'a PKey) -> Result<Verifier<'a>, ErrorStack> {
+    pub fn new(type_: MessageDigest, pkey: &'a PKey) -> Result<Verifier<'a>, ErrorStack> {
         unsafe {
             ffi::init();
 
             let ctx = try_ssl_null!(EVP_MD_CTX_new());
             let r = ffi::EVP_DigestVerifyInit(ctx,
                                               ptr::null_mut(),
-                                              type_.evp_md(),
+                                              type_.as_ptr(),
                                               ptr::null_mut(),
                                               pkey.as_ptr());
             if r != 1 {
@@ -210,9 +211,10 @@ mod test {
     use serialize::hex::FromHex;
     use std::iter;
 
-    use crypto::hash::Type;
+    use crypto::hash::MessageDigest;
     use crypto::sign::{Signer, Verifier};
     use crypto::rsa::RSA;
+    use crypto::dsa::DSA;
     use crypto::pkey::PKey;
 
     static INPUT: &'static [u8] =
@@ -240,12 +242,12 @@ mod test {
              112, 223, 200, 163, 42, 70, 149, 67, 208, 25, 238, 251, 71];
 
     #[test]
-    fn test_sign() {
+    fn rsa_sign() {
         let key = include_bytes!("../../test/rsa.pem");
         let private_key = RSA::private_key_from_pem(key).unwrap();
         let pkey = PKey::from_rsa(private_key).unwrap();
 
-        let mut signer = Signer::new(Type::SHA256, &pkey).unwrap();
+        let mut signer = Signer::new(MessageDigest::sha256(), &pkey).unwrap();
         signer.update(INPUT).unwrap();
         let result = signer.finish().unwrap();
 
@@ -253,29 +255,79 @@ mod test {
     }
 
     #[test]
-    fn test_verify_ok() {
+    fn rsa_verify_ok() {
         let key = include_bytes!("../../test/rsa.pem");
         let private_key = RSA::private_key_from_pem(key).unwrap();
         let pkey = PKey::from_rsa(private_key).unwrap();
 
-        let mut verifier = Verifier::new(Type::SHA256, &pkey).unwrap();
+        let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
         verifier.update(INPUT).unwrap();
         assert!(verifier.finish(SIGNATURE).unwrap());
     }
 
     #[test]
-    fn test_verify_invalid() {
+    fn rsa_verify_invalid() {
         let key = include_bytes!("../../test/rsa.pem");
         let private_key = RSA::private_key_from_pem(key).unwrap();
         let pkey = PKey::from_rsa(private_key).unwrap();
 
-        let mut verifier = Verifier::new(Type::SHA256, &pkey).unwrap();
+        let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
         verifier.update(INPUT).unwrap();
         verifier.update(b"foobar").unwrap();
         assert!(!verifier.finish(SIGNATURE).unwrap());
     }
 
-    fn test_hmac(ty: Type, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
+    #[test]
+    pub fn dsa_sign_verify() {
+        let input: Vec<u8> = (0..25).cycle().take(1024).collect();
+
+        let private_key = {
+            let key = include_bytes!("../../test/dsa.pem");
+            PKey::from_dsa(DSA::private_key_from_pem(key).unwrap()).unwrap()
+        };
+
+        let public_key = {
+            let key = include_bytes!("../../test/dsa.pem.pub");
+            PKey::from_dsa(DSA::public_key_from_pem(key).unwrap()).unwrap()
+        };
+
+        let mut signer = Signer::new(MessageDigest::sha1(), &private_key).unwrap();
+        signer.update(&input).unwrap();
+        let sig = signer.finish().unwrap();
+
+        let mut verifier = Verifier::new(MessageDigest::sha1(), &public_key).unwrap();
+        verifier.update(&input).unwrap();
+        assert!(verifier.finish(&sig).unwrap());
+    }
+
+    #[test]
+    pub fn dsa_sign_verify_fail() {
+        let input: Vec<u8> = (0..25).cycle().take(1024).collect();
+
+        let private_key = {
+            let key = include_bytes!("../../test/dsa.pem");
+            PKey::from_dsa(DSA::private_key_from_pem(key).unwrap()).unwrap()
+        };
+
+        let public_key = {
+            let key = include_bytes!("../../test/dsa.pem.pub");
+            PKey::from_dsa(DSA::public_key_from_pem(key).unwrap()).unwrap()
+        };
+
+        let mut signer = Signer::new(MessageDigest::sha1(), &private_key).unwrap();
+        signer.update(&input).unwrap();
+        let mut sig = signer.finish().unwrap();
+        sig[0] -= 1;
+
+        let mut verifier = Verifier::new(MessageDigest::sha1(), &public_key).unwrap();
+        verifier.update(&input).unwrap();
+        match verifier.finish(&sig) {
+            Ok(true) => panic!("unexpected success"),
+            Ok(false) | Err(_) => {},
+        }
+    }
+
+    fn test_hmac(ty: MessageDigest, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
         for &(ref key, ref data, ref res) in tests.iter() {
             let pkey = PKey::hmac(key).unwrap();
             let mut signer = Signer::new(ty, &pkey).unwrap();
@@ -312,7 +364,7 @@ mod test {
                  .to_vec(),
              "6f630fad67cda0ee1fb1f562db3aa53e".from_hex().unwrap())];
 
-        test_hmac(Type::MD5, &tests);
+        test_hmac(MessageDigest::md5(), &tests);
     }
 
     #[test]
@@ -343,6 +395,6 @@ mod test {
                  .to_vec(),
              "e8e99d0f45237d786d6bbaa7965c7808bbff1a91".from_hex().unwrap())];
 
-        test_hmac(Type::SHA1, &tests);
+        test_hmac(MessageDigest::sha1(), &tests);
     }
 }

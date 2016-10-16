@@ -16,8 +16,6 @@ extern crate tempdir;
 #[doc(inline)]
 pub use ffi::init;
 
-use nid::Nid;
-
 mod macros;
 
 pub mod asn1;
@@ -30,8 +28,3 @@ pub mod nid;
 pub mod ssl;
 pub mod version;
 pub mod x509;
-
-trait HashTypeInternals {
-    fn as_nid(&self) -> Nid;
-    fn evp_md(&self) -> *const ffi::EVP_MD;
-}

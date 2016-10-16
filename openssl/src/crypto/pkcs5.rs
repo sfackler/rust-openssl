@@ -2,9 +2,8 @@ use libc::c_int;
 use std::ptr;
 use ffi;
 
-use HashTypeInternals;
-use crypto::hash;
-use crypto::symm;
+use crypto::hash::MessageDigest;
+use crypto::symm::Cipher;
 use error::ErrorStack;
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
@@ -23,8 +22,8 @@ pub struct KeyIvPair {
 ///
 /// New applications should not use this and instead use `pbkdf2_hmac_sha1` or
 /// another more modern key derivation algorithm.
-pub fn evp_bytes_to_key_pbkdf1_compatible(typ: symm::Type,
-                                          message_digest_type: hash::Type,
+pub fn evp_bytes_to_key_pbkdf1_compatible(cipher: Cipher,
+                                          digest: MessageDigest,
                                           data: &[u8],
                                           salt: Option<&[u8]>,
                                           count: u32)
@@ -40,11 +39,11 @@ pub fn evp_bytes_to_key_pbkdf1_compatible(typ: symm::Type,
 
         ffi::init();
 
-        let typ = typ.as_ptr();
-        let message_digest_type = message_digest_type.evp_md();
+        let cipher = cipher.as_ptr();
+        let digest = digest.as_ptr();
 
-        let len = ffi::EVP_BytesToKey(typ,
-                                      message_digest_type,
+        let len = ffi::EVP_BytesToKey(cipher,
+                                      digest,
                                       salt_ptr,
                                       data.as_ptr(),
                                       data.len() as c_int,
@@ -58,8 +57,8 @@ pub fn evp_bytes_to_key_pbkdf1_compatible(typ: symm::Type,
         let mut key = vec![0; len as usize];
         let mut iv = vec![0; len as usize];
 
-        try_ssl!(ffi::EVP_BytesToKey(typ,
-                                     message_digest_type,
+        try_ssl!(ffi::EVP_BytesToKey(cipher,
+                                     digest,
                                      salt_ptr,
                                      data.as_ptr(),
                                      data.len() as c_int,
@@ -97,7 +96,7 @@ pub fn pbkdf2_hmac_sha1(pass: &[u8],
 pub fn pbkdf2_hmac(pass: &[u8],
                    salt: &[u8],
                    iter: usize,
-                   hash: hash::Type,
+                   hash: MessageDigest,
                    keylen: usize)
                    -> Result<Vec<u8>, ErrorStack> {
     unsafe {
@@ -108,7 +107,7 @@ pub fn pbkdf2_hmac(pass: &[u8],
                                         salt.as_ptr(),
                                         salt.len() as c_int,
                                         iter as c_int,
-                                        hash.evp_md(),
+                                        hash.as_ptr(),
                                         keylen as c_int,
                                         out.as_mut_ptr()));
         Ok(out)
@@ -117,8 +116,8 @@ pub fn pbkdf2_hmac(pass: &[u8],
 
 #[cfg(test)]
 mod tests {
-    use crypto::hash;
-    use crypto::symm;
+    use crypto::hash::MessageDigest;
+    use crypto::symm::Cipher;
 
     // Test vectors from
     // http://tools.ietf.org/html/draft-josefsson-pbkdf2-test-vectors-06
@@ -162,11 +161,11 @@ mod tests {
     // https://git.lysator.liu.se/nettle/nettle/blob/nettle_3.1.1_release_20150424/testsuite/pbkdf2-test.c
     #[test]
     fn test_pbkdf2_hmac_sha256() {
-        assert_eq!(super::pbkdf2_hmac(b"passwd", b"salt", 1, hash::Type::SHA256, 16).unwrap(),
+        assert_eq!(super::pbkdf2_hmac(b"passwd", b"salt", 1, MessageDigest::sha256(), 16).unwrap(),
                    vec![0x55_u8, 0xac_u8, 0x04_u8, 0x6e_u8, 0x56_u8, 0xe3_u8, 0x08_u8, 0x9f_u8,
                         0xec_u8, 0x16_u8, 0x91_u8, 0xc2_u8, 0x25_u8, 0x44_u8, 0xb6_u8, 0x05_u8]);
 
-        assert_eq!(super::pbkdf2_hmac(b"Password", b"NaCl", 80000, hash::Type::SHA256, 16).unwrap(),
+        assert_eq!(super::pbkdf2_hmac(b"Password", b"NaCl", 80000, MessageDigest::sha256(), 16).unwrap(),
                    vec![0x4d_u8, 0xdc_u8, 0xd8_u8, 0xf6_u8, 0x0b_u8, 0x98_u8, 0xbe_u8, 0x21_u8,
                         0x83_u8, 0x0c_u8, 0xee_u8, 0x5e_u8, 0xf2_u8, 0x27_u8, 0x01_u8, 0xf9_u8]);
     }
@@ -175,7 +174,7 @@ mod tests {
     // https://git.lysator.liu.se/nettle/nettle/blob/nettle_3.1.1_release_20150424/testsuite/pbkdf2-test.c
     #[test]
     fn test_pbkdf2_hmac_sha512() {
-        assert_eq!(super::pbkdf2_hmac(b"password", b"NaCL", 1, hash::Type::SHA512, 64).unwrap(),
+        assert_eq!(super::pbkdf2_hmac(b"password", b"NaCL", 1, MessageDigest::sha512(), 64).unwrap(),
                    vec![0x73_u8, 0xde_u8, 0xcf_u8, 0xa5_u8, 0x8a_u8, 0xa2_u8, 0xe8_u8, 0x4f_u8,
                         0x94_u8, 0x77_u8, 0x1a_u8, 0x75_u8, 0x73_u8, 0x6b_u8, 0xb8_u8, 0x8b_u8,
                         0xd3_u8, 0xc7_u8, 0xb3_u8, 0x82_u8, 0x70_u8, 0xcf_u8, 0xb5_u8, 0x0c_u8,
@@ -185,7 +184,7 @@ mod tests {
                         0x60_u8, 0x60_u8, 0xa0_u8, 0x9f_u8, 0x76_u8, 0x41_u8, 0x5e_u8, 0x9f_u8,
                         0x71_u8, 0xea_u8, 0x47_u8, 0xf9_u8, 0xe9_u8, 0x06_u8, 0x43_u8, 0x06_u8]);
 
-        assert_eq!(super::pbkdf2_hmac(b"pass\0word", b"sa\0lt", 1, hash::Type::SHA512, 64).unwrap(),
+        assert_eq!(super::pbkdf2_hmac(b"pass\0word", b"sa\0lt", 1, MessageDigest::sha512(), 64).unwrap(),
                    vec![0x71_u8, 0xa0_u8, 0xec_u8, 0x84_u8, 0x2a_u8, 0xbd_u8, 0x5c_u8, 0x67_u8,
                         0x8b_u8, 0xcf_u8, 0xd1_u8, 0x45_u8, 0xf0_u8, 0x9d_u8, 0x83_u8, 0x52_u8,
                         0x2f_u8, 0x93_u8, 0x36_u8, 0x15_u8, 0x60_u8, 0x56_u8, 0x3c_u8, 0x4d_u8,
@@ -198,7 +197,7 @@ mod tests {
         assert_eq!(super::pbkdf2_hmac(b"passwordPASSWORDpassword",
                                       b"salt\0\0\0",
                                       50,
-                                      hash::Type::SHA512,
+                                      MessageDigest::sha512(),
                                       64).unwrap(),
                    vec![0x01_u8, 0x68_u8, 0x71_u8, 0xa4_u8, 0xc4_u8, 0xb7_u8, 0x5f_u8, 0x96_u8,
                         0x85_u8, 0x7f_u8, 0xd2_u8, 0xb9_u8, 0xf8_u8, 0xca_u8, 0x28_u8, 0x02_u8,
@@ -229,8 +228,8 @@ mod tests {
                                0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
                                0_u8, 0_u8, 0_u8];
 
-        assert_eq!(super::evp_bytes_to_key_pbkdf1_compatible(symm::Type::AES_256_CBC,
-                                                             hash::Type::SHA1,
+        assert_eq!(super::evp_bytes_to_key_pbkdf1_compatible(Cipher::aes_256_cbc(),
+                                                             MessageDigest::sha1(),
                                                              &data,
                                                              Some(&salt),
                                                              1).unwrap(),
