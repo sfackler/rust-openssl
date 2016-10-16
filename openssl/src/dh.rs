@@ -135,7 +135,7 @@ mod tests {
     #[test]
     fn test_dh_from_pem() {
         let mut ctx = SslContext::new(SslMethod::tls()).unwrap();
-        let params = include_bytes!("../../test/dhparams.pem");
+        let params = include_bytes!("../test/dhparams.pem");
         let dh = DH::from_pem(params).ok().expect("Failed to load PEM");
         ctx.set_tmp_dh(&dh).unwrap();
     }

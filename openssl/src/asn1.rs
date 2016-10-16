@@ -2,9 +2,10 @@ use libc::c_long;
 use std::{ptr, fmt};
 use std::marker::PhantomData;
 use std::ops::Deref;
-
-use bio::MemBio;
 use ffi;
+
+use {cvt, cvt_p};
+use bio::MemBio;
 use error::ErrorStack;
 
 /// Corresponds to the ASN.1 structure Time defined in RFC5280
@@ -20,7 +21,7 @@ impl Asn1Time {
         ffi::init();
 
         unsafe {
-            let handle = try_ssl_null!(ffi::X509_gmtime_adj(ptr::null_mut(), period));
+            let handle = try!(cvt_p(ffi::X509_gmtime_adj(ptr::null_mut(), period)));
             Ok(Asn1Time::from_ptr(handle))
         }
     }
@@ -58,7 +59,7 @@ impl<'a> fmt::Display for Asn1TimeRef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mem_bio = try!(MemBio::new());
         let as_str = unsafe {
-            try_ssl!(ffi::ASN1_TIME_print(mem_bio.as_ptr(), self.0));
+            try!(cvt(ffi::ASN1_TIME_print(mem_bio.as_ptr(), self.0)));
             String::from_utf8_unchecked(mem_bio.get_buf().to_owned())
         };
         write!(f, "{}", as_str)
