@@ -704,9 +704,8 @@ pub struct CipherBits {
     pub secret: i32,
 
     /// The number of bits processed by the chosen algorithm.
-    pub algorithm: Option<i32>,
+    pub algorithm: i32,
 }
-
 
 pub struct SslCipher<'a> {
     cipher: *const ffi::SSL_CIPHER,
