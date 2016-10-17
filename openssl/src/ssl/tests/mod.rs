@@ -1061,7 +1061,7 @@ fn add_extra_chain_cert() {
     let cert = include_bytes!("../../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
     let mut ctx = SslContext::new(SslMethod::tls()).unwrap();
-    ctx.add_extra_chain_cert(&cert).unwrap();
+    ctx.add_extra_chain_cert(cert).unwrap();
 }
 
 #[test]

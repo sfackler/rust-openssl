@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 use libc::c_uint;
 use ffi;
 
+use cvt;
 use error::ErrorStack;
 
 bitflags! {
@@ -32,11 +33,10 @@ impl<'a> X509VerifyParamRef<'a> {
 
     pub fn set_host(&mut self, host: &str) -> Result<(), ErrorStack> {
         unsafe {
-            try_ssl!(ffi::X509_VERIFY_PARAM_set1_host(self.0,
-                                                      host.as_ptr() as *const _,
-                                                      host.len()))
+            cvt(ffi::X509_VERIFY_PARAM_set1_host(self.0,
+                                                 host.as_ptr() as *const _,
+                                                 host.len()))
+                .map(|_| ())
         }
-
-        Ok(())
     }
 }

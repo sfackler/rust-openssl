@@ -59,6 +59,7 @@ use std::io::{self, Write};
 use std::marker::PhantomData;
 use std::ptr;
 
+use {cvt, cvt_p};
 use crypto::hash::MessageDigest;
 use crypto::pkey::PKey;
 use error::ErrorStack;
@@ -83,7 +84,7 @@ impl<'a> Signer<'a> {
         unsafe {
             ffi::init();
 
-            let ctx = try_ssl_null!(EVP_MD_CTX_new());
+            let ctx = try!(cvt_p(EVP_MD_CTX_new()));
             let r = ffi::EVP_DigestSignInit(ctx,
                                             ptr::null_mut(),
                                             type_.as_ptr(),
@@ -93,25 +94,22 @@ impl<'a> Signer<'a> {
                 EVP_MD_CTX_free(ctx);
                 return Err(ErrorStack::get());
             }
-
             Ok(Signer(ctx, PhantomData))
         }
     }
 
     pub fn update(&mut self, buf: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            try_ssl_if!(ffi::EVP_DigestUpdate(self.0, buf.as_ptr() as *const _, buf.len()) != 1);
-            Ok(())
+            cvt(ffi::EVP_DigestUpdate(self.0, buf.as_ptr() as *const _, buf.len())).map(|_| ())
         }
     }
 
     pub fn finish(&self) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
             let mut len = 0;
-            try_ssl_if!(ffi::EVP_DigestSignFinal(self.0, ptr::null_mut(), &mut len) != 1);
+            try!(cvt(ffi::EVP_DigestSignFinal(self.0, ptr::null_mut(), &mut len)));
             let mut buf = vec![0; len];
-            try_ssl_if!(ffi::EVP_DigestSignFinal(self.0, buf.as_mut_ptr() as *mut _, &mut len)
-                    != 1);
+            try!(cvt(ffi::EVP_DigestSignFinal(self.0, buf.as_mut_ptr() as *mut _, &mut len)));
             // The advertised length is not always equal to the real length for things like DSA
             buf.truncate(len);
             Ok(buf)
@@ -145,7 +143,7 @@ impl<'a> Verifier<'a> {
         unsafe {
             ffi::init();
 
-            let ctx = try_ssl_null!(EVP_MD_CTX_new());
+            let ctx = try!(cvt_p(EVP_MD_CTX_new()));
             let r = ffi::EVP_DigestVerifyInit(ctx,
                                               ptr::null_mut(),
                                               type_.as_ptr(),
@@ -162,8 +160,7 @@ impl<'a> Verifier<'a> {
 
     pub fn update(&mut self, buf: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            try_ssl_if!(ffi::EVP_DigestUpdate(self.0, buf.as_ptr() as *const _, buf.len()) != 1);
-            Ok(())
+            cvt(ffi::EVP_DigestUpdate(self.0, buf.as_ptr() as *const _, buf.len())).map(|_| ())
         }
     }
 

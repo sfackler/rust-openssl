@@ -6,6 +6,7 @@ use std::cmp;
 use std::ptr;
 use std::ffi::CString;
 
+use {cvt, cvt_p};
 use crypto::pkey::PKey;
 use error::ErrorStack;
 use x509::X509;
@@ -26,7 +27,7 @@ impl Pkcs12 {
             ffi::init();
             let mut ptr = der.as_ptr() as *const c_uchar;
             let length = cmp::min(der.len(), c_long::max_value() as usize) as c_long;
-            let p12 = try_ssl_null!(ffi::d2i_PKCS12(ptr::null_mut(), &mut ptr, length));
+            let p12 = try!(cvt_p(ffi::d2i_PKCS12(ptr::null_mut(), &mut ptr, length)));
             Ok(Pkcs12(p12))
         }
     }
@@ -40,7 +41,7 @@ impl Pkcs12 {
             let mut cert = ptr::null_mut();
             let mut chain = ptr::null_mut();
 
-            try_ssl!(ffi::PKCS12_parse(self.0, pass.as_ptr(), &mut pkey, &mut cert, &mut chain));
+            try!(cvt(ffi::PKCS12_parse(self.0, pass.as_ptr(), &mut pkey, &mut cert, &mut chain)));
 
             let pkey = PKey::from_ptr(pkey);
             let cert = X509::from_ptr(cert);

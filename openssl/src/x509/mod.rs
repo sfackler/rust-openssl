@@ -10,6 +10,7 @@ use std::slice;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
+use {cvt, cvt_p};
 use asn1::Asn1Time;
 use asn1::Asn1TimeRef;
 use bio::{MemBio, MemBioSlice};
@@ -251,25 +252,25 @@ impl X509Generator {
             let value = CString::new(value.as_bytes()).unwrap();
             let ext = match exttype.get_nid() {
                 Some(nid) => {
-                    ffi::X509V3_EXT_conf_nid(ptr::null_mut(),
-                                             mem::transmute(&ctx),
-                                             nid as c_int,
-                                             value.as_ptr() as *mut c_char)
+                    try!(cvt_p(ffi::X509V3_EXT_conf_nid(ptr::null_mut(),
+                                                      mem::transmute(&ctx),
+                                                      nid as c_int,
+                                                      value.as_ptr() as *mut c_char)))
                 }
                 None => {
                     let name = CString::new(exttype.get_name().unwrap().as_bytes()).unwrap();
-                    ffi::X509V3_EXT_conf(ptr::null_mut(),
-                                         mem::transmute(&ctx),
-                                         name.as_ptr() as *mut c_char,
-                                         value.as_ptr() as *mut c_char)
+                    try!(cvt_p(ffi::X509V3_EXT_conf(ptr::null_mut(),
+                                                    mem::transmute(&ctx),
+                                                    name.as_ptr() as *mut c_char,
+                                                    value.as_ptr() as *mut c_char)))
                 }
             };
-            let mut success = false;
-            if ext != ptr::null_mut() {
-                success = ffi::X509_add_ext(x509, ext, -1) != 0;
+            if ffi::X509_add_ext(x509, ext, -1) != 1 {
                 ffi::X509_EXTENSION_free(ext);
+                Err(ErrorStack::get())
+            } else {
+                Ok(())
             }
-            lift_ssl_if!(!success)
         }
     }
 
@@ -278,17 +279,18 @@ impl X509Generator {
                          value: &str)
                          -> Result<(), ErrorStack> {
         let value_len = value.len() as c_int;
-        lift_ssl!(unsafe {
+        unsafe {
             let key = CString::new(key.as_bytes()).unwrap();
             let value = CString::new(value.as_bytes()).unwrap();
-            ffi::X509_NAME_add_entry_by_txt(name,
-                                            key.as_ptr() as *const _,
-                                            ffi::MBSTRING_UTF8,
-                                            value.as_ptr() as *const _,
-                                            value_len,
-                                            -1,
-                                            0)
-        })
+            cvt(ffi::X509_NAME_add_entry_by_txt(name,
+                                                key.as_ptr() as *const _,
+                                                ffi::MBSTRING_UTF8,
+                                                value.as_ptr() as *const _,
+                                                value_len,
+                                                -1,
+                                                0))
+                .map(|_| ())
+        }
     }
 
     fn random_serial() -> Result<c_long, ErrorStack> {
@@ -308,32 +310,30 @@ impl X509Generator {
     }
 
     /// Sets the certificate public-key, then self-sign and return it
-    /// Note: That the bit-length of the private key is used (set_bitlength is ignored)
     pub fn sign(&self, p_key: &PKey) -> Result<X509, ErrorStack> {
         ffi::init();
 
         unsafe {
-            let x509 = try_ssl_null!(ffi::X509_new());
-            let x509 = X509::from_ptr(x509);
+            let x509 = X509::from_ptr(try!(cvt_p(ffi::X509_new())));
 
-            try_ssl!(ffi::X509_set_version(x509.as_ptr(), 2));
-            try_ssl!(ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509.as_ptr()),
-                                           try!(X509Generator::random_serial())));
+            try!(cvt(ffi::X509_set_version(x509.as_ptr(), 2)));
+            try!(cvt(ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509.as_ptr()),
+                                           try!(X509Generator::random_serial()))));
 
             let not_before = try!(Asn1Time::days_from_now(0));
             let not_after = try!(Asn1Time::days_from_now(self.days));
 
-            try_ssl!(X509_set_notBefore(x509.as_ptr(), not_before.as_ptr() as *const _));
+            try!(cvt(X509_set_notBefore(x509.as_ptr(), not_before.as_ptr() as *const _)));
             // If prev line succeded - ownership should go to cert
             mem::forget(not_before);
 
-            try_ssl!(X509_set_notAfter(x509.as_ptr(), not_after.as_ptr() as *const _));
+            try!(cvt(X509_set_notAfter(x509.as_ptr(), not_after.as_ptr() as *const _)));
             // If prev line succeded - ownership should go to cert
             mem::forget(not_after);
 
-            try_ssl!(ffi::X509_set_pubkey(x509.as_ptr(), p_key.as_ptr()));
+            try!(cvt(ffi::X509_set_pubkey(x509.as_ptr(), p_key.as_ptr())));
 
-            let name = try_ssl_null!(ffi::X509_get_subject_name(x509.as_ptr()));
+            let name = try!(cvt_p(ffi::X509_get_subject_name(x509.as_ptr())));
 
             let default = [("CN", "rust-openssl")];
             let default_iter = &mut default.iter().map(|&(k, v)| (k, v));
@@ -347,7 +347,7 @@ impl X509Generator {
             for (key, val) in iter {
                 try!(X509Generator::add_name_internal(name, &key, &val));
             }
-            try_ssl!(ffi::X509_set_issuer_name(x509.as_ptr(), name));
+            try!(cvt(ffi::X509_set_issuer_name(x509.as_ptr(), name)));
 
             for (exttype, ext) in self.extensions.iter() {
                 try!(X509Generator::add_extension_internal(x509.as_ptr(),
@@ -356,7 +356,7 @@ impl X509Generator {
             }
 
             let hash_fn = self.hash_type.as_ptr();
-            try_ssl!(ffi::X509_sign(x509.as_ptr(), p_key.as_ptr(), hash_fn));
+            try!(cvt(ffi::X509_sign(x509.as_ptr(), p_key.as_ptr(), hash_fn)));
             Ok(x509)
         }
     }
@@ -369,18 +369,20 @@ impl X509Generator {
         };
 
         unsafe {
-            let req = ffi::X509_to_X509_REQ(cert.as_ptr(), ptr::null_mut(), ptr::null());
-            try_ssl_null!(req);
+            let req = try!(cvt_p(ffi::X509_to_X509_REQ(cert.as_ptr(),
+                                                       ptr::null_mut(),
+                                                       ptr::null())));
+            let req = X509Req::from_ptr(req);
 
             let exts = compat::X509_get0_extensions(cert.as_ptr());
             if exts != ptr::null_mut() {
-                try_ssl!(ffi::X509_REQ_add_extensions(req, exts as *mut _));
+                try!(cvt(ffi::X509_REQ_add_extensions(req.as_ptr(), exts as *mut _)));
             }
 
             let hash_fn = self.hash_type.as_ptr();
-            try_ssl!(ffi::X509_REQ_sign(req, p_key.as_ptr(), hash_fn));
+            try!(cvt(ffi::X509_REQ_sign(req.as_ptr(), p_key.as_ptr(), hash_fn)));
 
-            Ok(X509Req::new(req))
+            Ok(req)
         }
     }
 }
@@ -392,12 +394,6 @@ impl<'a> X509Ref<'a> {
     /// Creates a new `X509Ref` wrapping the provided handle.
     pub unsafe fn from_ptr(x509: *mut ffi::X509) -> X509Ref<'a> {
         X509Ref(x509, PhantomData)
-    }
-
-    ///
-    #[deprecated(note = "renamed to `X509::from_ptr`", since = "0.8.1")]
-    pub unsafe fn new(x509: *mut ffi::X509) -> X509Ref<'a> {
-        X509Ref::from_ptr(x509)
     }
 
     pub fn as_ptr(&self) -> *mut ffi::X509 {
@@ -429,7 +425,7 @@ impl<'a> X509Ref<'a> {
 
     pub fn public_key(&self) -> Result<PKey, ErrorStack> {
         unsafe {
-            let pkey = try_ssl_null!(ffi::X509_get_pubkey(self.0));
+            let pkey = try!(cvt_p(ffi::X509_get_pubkey(self.0)));
             Ok(PKey::from_ptr(pkey))
         }
     }
@@ -440,7 +436,7 @@ impl<'a> X509Ref<'a> {
             let evp = hash_type.as_ptr();
             let mut len = ffi::EVP_MAX_MD_SIZE;
             let mut buf = vec![0u8; len as usize];
-            try_ssl!(ffi::X509_digest(self.0, evp, buf.as_mut_ptr() as *mut _, &mut len));
+            try!(cvt(ffi::X509_digest(self.0, evp, buf.as_mut_ptr() as *mut _, &mut len)));
             buf.truncate(len as usize);
             Ok(buf)
         }
@@ -468,7 +464,7 @@ impl<'a> X509Ref<'a> {
     pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
-            try_ssl!(ffi::PEM_write_bio_X509(mem_bio.as_ptr(), self.0));
+            try!(cvt(ffi::PEM_write_bio_X509(mem_bio.as_ptr(), self.0)));
         }
         Ok(mem_bio.get_buf().to_owned())
     }
@@ -492,18 +488,12 @@ impl X509 {
         X509(X509Ref::from_ptr(x509))
     }
 
-    ///
-    #[deprecated(note = "renamed to `X509::from_ptr`", since = "0.8.1")]
-    pub unsafe fn new(x509: *mut ffi::X509) -> X509 {
-        X509::from_ptr(x509)
-    }
-
     /// Reads a certificate from DER.
     pub fn from_der(buf: &[u8]) -> Result<X509, ErrorStack> {
         unsafe {
             let mut ptr = buf.as_ptr();
             let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
-            let x509 = try_ssl_null!(ffi::d2i_X509(ptr::null_mut(), &mut ptr, len));
+            let x509 = try!(cvt_p(ffi::d2i_X509(ptr::null_mut(), &mut ptr, len)));
             Ok(X509::from_ptr(x509))
         }
     }
@@ -512,10 +502,10 @@ impl X509 {
     pub fn from_pem(buf: &[u8]) -> Result<X509, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let handle = try_ssl_null!(ffi::PEM_read_bio_X509(mem_bio.as_ptr(),
-                                                              ptr::null_mut(),
-                                                              None,
-                                                              ptr::null_mut()));
+            let handle = try!(cvt_p(ffi::PEM_read_bio_X509(mem_bio.as_ptr(),
+                                                           ptr::null_mut(),
+                                                           None,
+                                                           ptr::null_mut())));
             Ok(X509::from_ptr(handle))
         }
     }
@@ -582,8 +572,7 @@ impl<'x> X509Name<'x> {
 pub struct X509Req(*mut ffi::X509_REQ);
 
 impl X509Req {
-    /// Creates new from handle
-    pub unsafe fn new(handle: *mut ffi::X509_REQ) -> X509Req {
+    pub unsafe fn from_ptr(handle: *mut ffi::X509_REQ) -> X509Req {
         X509Req(handle)
     }
 
@@ -595,11 +584,11 @@ impl X509Req {
     pub fn from_pem(buf: &[u8]) -> Result<X509Req, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let handle = try_ssl_null!(ffi::PEM_read_bio_X509_REQ(mem_bio.as_ptr(),
-                                                                  ptr::null_mut(),
-                                                                  None,
-                                                                  ptr::null_mut()));
-            Ok(X509Req::new(handle))
+            let handle = try!(cvt_p(ffi::PEM_read_bio_X509_REQ(mem_bio.as_ptr(),
+                                                               ptr::null_mut(),
+                                                               None,
+                                                               ptr::null_mut())));
+            Ok(X509Req::from_ptr(handle))
         }
     }
 

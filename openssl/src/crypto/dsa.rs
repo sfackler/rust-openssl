@@ -4,10 +4,10 @@ use error::ErrorStack;
 use std::ptr;
 use libc::{c_int, c_char, c_void};
 
+use {cvt, cvt_p};
 use bn::BigNumRef;
 use bio::{MemBio, MemBioSlice};
 use crypto::util::{CallbackState, invoke_passwd_cb};
-
 
 /// Builder for upfront DSA parameter generation
 pub struct DSAParams(*mut ffi::DSA);
@@ -15,15 +15,14 @@ pub struct DSAParams(*mut ffi::DSA);
 impl DSAParams {
     pub fn with_size(size: u32) -> Result<DSAParams, ErrorStack> {
         unsafe {
-            // Wrap it so that if we panic we'll call the dtor
-            let dsa = DSAParams(try_ssl_null!(ffi::DSA_new()));
-            try_ssl!(ffi::DSA_generate_parameters_ex(dsa.0,
+            let dsa = DSAParams(try!(cvt_p(ffi::DSA_new())));
+            try!(cvt(ffi::DSA_generate_parameters_ex(dsa.0,
                                                      size as c_int,
                                                      ptr::null(),
                                                      0,
                                                      ptr::null_mut(),
                                                      ptr::null_mut(),
-                                                     ptr::null_mut()));
+                                                     ptr::null_mut())));
             Ok(dsa)
         }
     }
@@ -31,7 +30,7 @@ impl DSAParams {
     /// Generate a key pair from the initialized parameters
     pub fn generate(self) -> Result<DSA, ErrorStack> {
         unsafe {
-            try_ssl!(ffi::DSA_generate_key(self.0));
+            try!(cvt(ffi::DSA_generate_key(self.0)));
             let dsa = DSA(self.0);
             ::std::mem::forget(self);
             Ok(dsa)
@@ -75,13 +74,11 @@ impl DSA {
         let mem_bio = try!(MemBioSlice::new(buf));
 
         unsafe {
-            let dsa = try_ssl_null!(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.as_ptr(),
-                                                                    ptr::null_mut(),
-                                                                    None,
-                                                                    ptr::null_mut()));
-            let dsa = DSA(dsa);
-            assert!(dsa.has_private_key());
-            Ok(dsa)
+            let dsa = try!(cvt_p(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.as_ptr(),
+                                                                 ptr::null_mut(),
+                                                                 None,
+                                                                 ptr::null_mut())));
+            Ok(DSA(dsa))
         }
     }
 
@@ -99,13 +96,11 @@ impl DSA {
 
         unsafe {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
-            let dsa = try_ssl_null!(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.as_ptr(),
-                                                                    ptr::null_mut(),
-                                                                    Some(invoke_passwd_cb::<F>),
-                                                                    cb_ptr));
-            let dsa = DSA(dsa);
-            assert!(dsa.has_private_key());
-            Ok(dsa)
+            let dsa = try!(cvt_p(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.as_ptr(),
+                                                                 ptr::null_mut(),
+                                                                 Some(invoke_passwd_cb::<F>),
+                                                                 cb_ptr)));
+            Ok(DSA(dsa))
         }
     }
 
@@ -116,9 +111,9 @@ impl DSA {
         let mem_bio = try!(MemBio::new());
 
         unsafe {
-            try_ssl!(ffi::PEM_write_bio_DSAPrivateKey(mem_bio.as_ptr(), self.0,
-                                              ptr::null(), ptr::null_mut(), 0,
-                                              None, ptr::null_mut()))
+            try!(cvt(ffi::PEM_write_bio_DSAPrivateKey(mem_bio.as_ptr(), self.0,
+                                                      ptr::null(), ptr::null_mut(), 0,
+                                                      None, ptr::null_mut())))
         };
 
         Ok(mem_bio.get_buf().to_owned())
@@ -131,10 +126,10 @@ impl DSA {
 
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let dsa = try_ssl_null!(ffi::PEM_read_bio_DSA_PUBKEY(mem_bio.as_ptr(),
-                                                                 ptr::null_mut(),
-                                                                 None,
-                                                                 ptr::null_mut()));
+            let dsa = try!(cvt_p(ffi::PEM_read_bio_DSA_PUBKEY(mem_bio.as_ptr(),
+                                                              ptr::null_mut(),
+                                                              None,
+                                                              ptr::null_mut())));
             Ok(DSA(dsa))
         }
     }
@@ -142,7 +137,9 @@ impl DSA {
     /// Writes an DSA public key as PEM formatted data
     pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
-        unsafe { try_ssl!(ffi::PEM_write_bio_DSA_PUBKEY(mem_bio.as_ptr(), self.0)) };
+        unsafe {
+            try!(cvt(ffi::PEM_write_bio_DSA_PUBKEY(mem_bio.as_ptr(), self.0)));
+        }
         Ok(mem_bio.get_buf().to_owned())
     }
 
@@ -239,11 +236,9 @@ impl fmt::Debug for DSA {
 
 #[cfg(test)]
 mod test {
-    use std::io::Write;
     use libc::c_char;
 
     use super::*;
-    use crypto::hash::*;
 
     #[test]
     pub fn test_generate() {
