@@ -3,6 +3,7 @@ use std::ptr;
 use libc::c_int;
 use ffi;
 
+use {cvt, cvt_p};
 use error::ErrorStack;
 
 #[derive(Copy, Clone)]
@@ -170,7 +171,7 @@ impl Crypter {
         ffi::init();
 
         unsafe {
-            let ctx = try_ssl_null!(ffi::EVP_CIPHER_CTX_new());
+            let ctx = try!(cvt_p(ffi::EVP_CIPHER_CTX_new()));
             let crypter = Crypter {
                 ctx: ctx,
                 block_size: t.block_size(),
@@ -181,15 +182,15 @@ impl Crypter {
                 Mode::Decrypt => 0,
             };
 
-            try_ssl!(ffi::EVP_CipherInit_ex(crypter.ctx,
-                                            t.as_ptr(),
-                                            ptr::null_mut(),
-                                            ptr::null_mut(),
-                                            ptr::null_mut(),
-                                            mode));
+            try!(cvt(ffi::EVP_CipherInit_ex(crypter.ctx,
+                                             t.as_ptr(),
+                                             ptr::null_mut(),
+                                             ptr::null_mut(),
+                                             ptr::null_mut(),
+                                             mode)));
 
             assert!(key.len() <= c_int::max_value() as usize);
-            try_ssl!(ffi::EVP_CIPHER_CTX_set_key_length(crypter.ctx, key.len() as c_int));
+            try!(cvt(ffi::EVP_CIPHER_CTX_set_key_length(crypter.ctx, key.len() as c_int)));
 
             let key = key.as_ptr() as *mut _;
             let iv = match (iv, t.iv_len()) {
@@ -200,12 +201,12 @@ impl Crypter {
                 (Some(_), None) | (None, None) => ptr::null_mut(),
                 (None, Some(_)) => panic!("an IV is required for this cipher"),
             };
-            try_ssl!(ffi::EVP_CipherInit_ex(crypter.ctx,
+            try!(cvt(ffi::EVP_CipherInit_ex(crypter.ctx,
                                             ptr::null(),
                                             ptr::null_mut(),
                                             key,
                                             iv,
-                                            mode));
+                                            mode)));
 
             Ok(crypter)
         }
@@ -237,11 +238,11 @@ impl Crypter {
             let mut outl = output.len() as c_int;
             let inl = input.len() as c_int;
 
-            try_ssl!(ffi::EVP_CipherUpdate(self.ctx,
+            try!(cvt(ffi::EVP_CipherUpdate(self.ctx,
                                            output.as_mut_ptr(),
                                            &mut outl,
                                            input.as_ptr(),
-                                           inl));
+                                           inl)));
 
             Ok(outl as usize)
         }
@@ -262,7 +263,7 @@ impl Crypter {
             assert!(output.len() >= self.block_size);
             let mut outl = cmp::min(output.len(), c_int::max_value() as usize) as c_int;
 
-            try_ssl!(ffi::EVP_CipherFinal(self.ctx, output.as_mut_ptr(), &mut outl));
+            try!(cvt(ffi::EVP_CipherFinal(self.ctx, output.as_mut_ptr(), &mut outl)));
 
             Ok(outl as usize)
         }
