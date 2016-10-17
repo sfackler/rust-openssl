@@ -4,6 +4,7 @@ use std::slice;
 use libc::c_int;
 use ffi;
 
+use cvt_p;
 use error::ErrorStack;
 
 pub struct MemBioSlice<'a>(*mut ffi::BIO, PhantomData<&'a [u8]>);
@@ -22,7 +23,7 @@ impl<'a> MemBioSlice<'a> {
 
         assert!(buf.len() <= c_int::max_value() as usize);
         let bio = unsafe {
-            try_ssl_null!(BIO_new_mem_buf(buf.as_ptr() as *const _, buf.len() as c_int))
+            try!(cvt_p(BIO_new_mem_buf(buf.as_ptr() as *const _, buf.len() as c_int)))
         };
 
         Ok(MemBioSlice(bio, PhantomData))
@@ -48,7 +49,7 @@ impl MemBio {
         ffi::init();
 
         let bio = unsafe {
-            try_ssl_null!(ffi::BIO_new(ffi::BIO_s_mem()))
+            try!(cvt_p(ffi::BIO_new(ffi::BIO_s_mem())))
         };
         Ok(MemBio(bio))
     }

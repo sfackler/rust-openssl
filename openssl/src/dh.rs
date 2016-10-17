@@ -3,6 +3,7 @@ use error::ErrorStack;
 use bio::MemBioSlice;
 use std::ptr;
 
+use {cvt, cvt_p};
 use bn::BigNum;
 use std::mem;
 
@@ -11,11 +12,11 @@ pub struct DH(*mut ffi::DH);
 impl DH {
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<DH, ErrorStack> {
         unsafe {
-            let dh = DH(try_ssl_null!(ffi::DH_new()));
-            try_ssl!(compat::DH_set0_pqg(dh.0,
+            let dh = DH(try!(cvt_p(ffi::DH_new())));
+            try!(cvt(compat::DH_set0_pqg(dh.0,
                                          p.as_ptr(),
                                          q.as_ptr(),
-                                         g.as_ptr()));
+                                         g.as_ptr())));
             mem::forget((p, g, q));
             Ok(dh)
         }
@@ -23,34 +24,38 @@ impl DH {
 
     pub fn from_pem(buf: &[u8]) -> Result<DH, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
-        let dh = unsafe {
-            ffi::PEM_read_bio_DHparams(mem_bio.as_ptr(), ptr::null_mut(), None, ptr::null_mut())
-        };
-        try_ssl_null!(dh);
-        Ok(DH(dh))
+        unsafe {
+            cvt_p(ffi::PEM_read_bio_DHparams(mem_bio.as_ptr(),
+                                             ptr::null_mut(),
+                                             None,
+                                             ptr::null_mut()))
+                .map(DH)
+        }
     }
 
     #[cfg(feature = "openssl-102")]
     pub fn get_1024_160() -> Result<DH, ErrorStack> {
-        let dh = try_ssl_null!(unsafe { ffi::DH_get_1024_160() });
-        Ok(DH(dh))
+        unsafe {
+            cvt_p(ffi::DH_get_1024_160()).map(DH)
+        }
     }
 
     #[cfg(feature = "openssl-102")]
     pub fn get_2048_224() -> Result<DH, ErrorStack> {
-        let dh = try_ssl_null!(unsafe { ffi::DH_get_2048_224() });
-        Ok(DH(dh))
+        unsafe {
+            cvt_p(ffi::DH_get_2048_224()).map(DH)
+        }
     }
 
     #[cfg(feature = "openssl-102")]
     pub fn get_2048_256() -> Result<DH, ErrorStack> {
-        let dh = try_ssl_null!(unsafe { ffi::DH_get_2048_256() });
-        Ok(DH(dh))
+        unsafe {
+            cvt_p(ffi::DH_get_2048_256()).map(DH)
+        }
     }
 
     pub unsafe fn as_ptr(&self) -> *mut ffi::DH {
-        let DH(n) = *self;
-        n
+        self.0
     }
 }
 

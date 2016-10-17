@@ -408,7 +408,7 @@ impl<'a> BigNumRef<'a> {
 
     pub fn to_owned(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
-            let r = try_ssl_null!(ffi::BN_dup(self.as_ptr()));
+            let r = try!(cvt_p(ffi::BN_dup(self.as_ptr())));
             Ok(BigNum::from_ptr(r))
         }
     }
@@ -553,7 +553,7 @@ impl BigNum {
     pub fn new() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
-            let v = try_ssl_null!(ffi::BN_new());
+            let v = try!(cvt_p(ffi::BN_new()));
             Ok(BigNum::from_ptr(v))
         }
     }
@@ -561,27 +561,28 @@ impl BigNum {
     /// Creates a new `BigNum` with the given value.
     pub fn new_from(n: u32) -> Result<BigNum, ErrorStack> {
         BigNum::new().and_then(|v| unsafe {
-            try_ssl!(ffi::BN_set_word(v.as_ptr(), n as ffi::BN_ULONG));
-            Ok(v)
+            cvt(ffi::BN_set_word(v.as_ptr(), n as ffi::BN_ULONG)).map(|_| v)
         })
     }
 
     /// Creates a `BigNum` from a decimal string.
     pub fn from_dec_str(s: &str) -> Result<BigNum, ErrorStack> {
-        BigNum::new().and_then(|mut v| unsafe {
+        unsafe {
             let c_str = CString::new(s.as_bytes()).unwrap();
-            try_ssl!(ffi::BN_dec2bn(&mut (v.0).0, c_str.as_ptr() as *const _));
-            Ok(v)
-        })
+            let mut bn = ptr::null_mut();
+            try!(cvt(ffi::BN_dec2bn(&mut bn, c_str.as_ptr() as *const _)));
+            Ok(BigNum::from_ptr(bn))
+        }
     }
 
     /// Creates a `BigNum` from a hexadecimal string.
     pub fn from_hex_str(s: &str) -> Result<BigNum, ErrorStack> {
-        BigNum::new().and_then(|mut v| unsafe {
+        unsafe {
             let c_str = CString::new(s.as_bytes()).unwrap();
-            try_ssl!(ffi::BN_hex2bn(&mut (v.0).0, c_str.as_ptr() as *const _));
-            Ok(v)
-        })
+            let mut bn = ptr::null_mut();
+            try!(cvt(ffi::BN_hex2bn(&mut bn, c_str.as_ptr() as *const _)));
+            Ok(BigNum::from_ptr(bn))
+        }
     }
 
     pub unsafe fn from_ptr(handle: *mut ffi::BIGNUM) -> BigNum {
@@ -597,11 +598,13 @@ impl BigNum {
     /// assert_eq!(bignum, BigNum::new_from(0x120034).unwrap());
     /// ```
     pub fn new_from_slice(n: &[u8]) -> Result<BigNum, ErrorStack> {
-        BigNum::new().and_then(|v| unsafe {
-            try_ssl_null!(ffi::BN_bin2bn(n.as_ptr(), n.len() as c_int, v.as_ptr()));
-            Ok(v)
-        })
+        unsafe {
+            assert!(n.len() <= c_int::max_value() as usize);
+            cvt_p(ffi::BN_bin2bn(n.as_ptr(), n.len() as c_int, ptr::null_mut()))
+                .map(|p| BigNum::from_ptr(p))
+        }
     }
+
     /// Generates a prime number.
     ///
     /// # Parameters
