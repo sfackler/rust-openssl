@@ -85,7 +85,7 @@ impl RSA {
     pub fn generate(bits: u32) -> Result<RSA, ErrorStack> {
         unsafe {
             let rsa = RSA(try!(cvt_p(ffi::RSA_new())));
-            let e = try!(BigNum::new_from(ffi::RSA_F4 as u32));
+            let e = try!(BigNum::from_u32(ffi::RSA_F4 as u32));
             try!(cvt(ffi::RSA_generate_key_ex(rsa.0, bits as c_int, e.as_ptr(), ptr::null_mut())));
             Ok(rsa)
         }
