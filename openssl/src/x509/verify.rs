@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 use libc::c_uint;
 use ffi;
 
+use cvt;
 use error::ErrorStack;
 
 bitflags! {
