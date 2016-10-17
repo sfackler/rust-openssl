@@ -236,11 +236,9 @@ impl fmt::Debug for DSA {
 
 #[cfg(test)]
 mod test {
-    use std::io::Write;
     use libc::c_char;
 
     use super::*;
-    use crypto::hash::*;
 
     #[test]
     pub fn test_generate() {

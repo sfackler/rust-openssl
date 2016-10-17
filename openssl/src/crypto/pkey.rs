@@ -3,6 +3,7 @@ use std::ptr;
 use std::mem;
 use ffi;
 
+use {cvt, cvt_p};
 use bio::{MemBio, MemBioSlice};
 use crypto::dsa::DSA;
 use crypto::rsa::RSA;
@@ -19,9 +20,9 @@ impl PKey {
     /// Create a new `PKey` containing an RSA key.
     pub fn from_rsa(rsa: RSA) -> Result<PKey, ErrorStack> {
         unsafe {
-            let evp = try_ssl_null!(ffi::EVP_PKEY_new());
+            let evp = try!(cvt_p(ffi::EVP_PKEY_new()));
             let pkey = PKey(evp);
-            try_ssl!(ffi::EVP_PKEY_assign(pkey.0, ffi::EVP_PKEY_RSA, rsa.as_ptr() as *mut _));
+            try!(cvt(ffi::EVP_PKEY_assign(pkey.0, ffi::EVP_PKEY_RSA, rsa.as_ptr() as *mut _)));
             mem::forget(rsa);
             Ok(pkey)
         }
@@ -30,9 +31,9 @@ impl PKey {
     /// Create a new `PKey` containing a DSA key.
     pub fn from_dsa(dsa: DSA) -> Result<PKey, ErrorStack> {
         unsafe {
-            let evp = try_ssl_null!(ffi::EVP_PKEY_new());
+            let evp = try!(cvt_p(ffi::EVP_PKEY_new()));
             let pkey = PKey(evp);
-            try_ssl!(ffi::EVP_PKEY_assign(pkey.0, ffi::EVP_PKEY_DSA, dsa.as_ptr() as *mut _));
+            try!(cvt(ffi::EVP_PKEY_assign(pkey.0, ffi::EVP_PKEY_DSA, dsa.as_ptr() as *mut _)));
             mem::forget(dsa);
             Ok(pkey)
         }
@@ -42,10 +43,10 @@ impl PKey {
     pub fn hmac(key: &[u8]) -> Result<PKey, ErrorStack> {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize);
-            let key = try_ssl_null!(ffi::EVP_PKEY_new_mac_key(ffi::EVP_PKEY_HMAC,
-                                                              ptr::null_mut(),
-                                                              key.as_ptr() as *const _,
-                                                              key.len() as c_int));
+            let key = try!(cvt_p(ffi::EVP_PKEY_new_mac_key(ffi::EVP_PKEY_HMAC,
+                                                           ptr::null_mut(),
+                                                           key.as_ptr() as *const _,
+                                                           key.len() as c_int)));
             Ok(PKey(key))
         }
     }
@@ -59,10 +60,10 @@ impl PKey {
         ffi::init();
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.as_ptr(),
-                                                                 ptr::null_mut(),
-                                                                 None,
-                                                                 ptr::null_mut()));
+            let evp = try!(cvt_p(ffi::PEM_read_bio_PrivateKey(mem_bio.as_ptr(),
+                                                              ptr::null_mut(),
+                                                              None,
+                                                              ptr::null_mut())));
             Ok(PKey::from_ptr(evp))
         }
     }
@@ -79,10 +80,10 @@ impl PKey {
         let mut cb = CallbackState::new(pass_cb);
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let evp = try_ssl_null!(ffi::PEM_read_bio_PrivateKey(mem_bio.as_ptr(),
-                                                                 ptr::null_mut(),
-                                                                 Some(invoke_passwd_cb::<F>),
-                                                                 &mut cb as *mut _ as *mut c_void));
+            let evp = try!(cvt_p(ffi::PEM_read_bio_PrivateKey(mem_bio.as_ptr(),
+                                                              ptr::null_mut(),
+                                                              Some(invoke_passwd_cb::<F>),
+                                                              &mut cb as *mut _ as *mut c_void)));
             Ok(PKey::from_ptr(evp))
         }
     }
@@ -92,10 +93,10 @@ impl PKey {
         ffi::init();
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let evp = try_ssl_null!(ffi::PEM_read_bio_PUBKEY(mem_bio.as_ptr(),
-                                                             ptr::null_mut(),
-                                                             None,
-                                                             ptr::null_mut()));
+            let evp = try!(cvt_p(ffi::PEM_read_bio_PUBKEY(mem_bio.as_ptr(),
+                                                          ptr::null_mut(),
+                                                          None,
+                                                          ptr::null_mut())));
             Ok(PKey::from_ptr(evp))
         }
     }
@@ -105,15 +106,15 @@ impl PKey {
         unsafe {
             // this needs to be a reference as the set1_RSA ups the reference count
             let rsa_ptr = rsa.as_ptr();
-            try_ssl!(ffi::EVP_PKEY_set1_RSA(self.0, rsa_ptr));
+            try!(cvt(ffi::EVP_PKEY_set1_RSA(self.0, rsa_ptr)));
             Ok(())
         }
     }
 
     /// Get a reference to the interal RSA key for direct access to the key components
-    pub fn get_rsa(&self) -> Result<RSA, ErrorStack> {
+    pub fn rsa(&self) -> Result<RSA, ErrorStack> {
         unsafe {
-            let rsa = try_ssl_null!(ffi::EVP_PKEY_get1_RSA(self.0));
+            let rsa = try!(cvt_p(ffi::EVP_PKEY_get1_RSA(self.0)));
             // this is safe as the ffi increments a reference counter to the internal key
             Ok(RSA::from_ptr(rsa))
         }
@@ -124,13 +125,13 @@ impl PKey {
     pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
-            try_ssl!(ffi::PEM_write_bio_PrivateKey(mem_bio.as_ptr(),
+            try!(cvt(ffi::PEM_write_bio_PrivateKey(mem_bio.as_ptr(),
                                                    self.0,
                                                    ptr::null(),
                                                    ptr::null_mut(),
                                                    -1,
                                                    None,
-                                                   ptr::null_mut()));
+                                                   ptr::null_mut())));
 
         }
         Ok(mem_bio.get_buf().to_owned())
@@ -139,7 +140,9 @@ impl PKey {
     /// Stores public key as a PEM
     pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
-        unsafe { try_ssl!(ffi::PEM_write_bio_PUBKEY(mem_bio.as_ptr(), self.0)) }
+        unsafe {
+            try!(cvt(ffi::PEM_write_bio_PUBKEY(mem_bio.as_ptr(), self.0)));
+        }
         Ok(mem_bio.get_buf().to_owned())
     }
 
