@@ -20,12 +20,12 @@ use ssl::SSL_VERIFY_PEER;
 use ssl::{SslMethod, HandshakeError};
 use ssl::error::Error;
 use ssl::{SslContext, SslStream};
-#[cfg(feature = "openssl-102")]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use ssl::IntoSsl;
 use x509::X509StoreContext;
 use x509::X509FileType;
 use x509::X509;
-#[cfg(feature = "openssl-102")]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::verify::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS;
 use crypto::pkey::PKey;
 
@@ -509,7 +509,7 @@ fn test_state() {
 /// Tests that connecting with the client using ALPN, but the server not does not
 /// break the existing connection behavior.
 #[test]
-#[cfg(feature = "openssl-102")]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 fn test_connect_with_unilateral_alpn() {
     let (_s, stream) = Server::new();
     let mut ctx = SslContext::new(SslMethod::tls()).unwrap();
@@ -552,7 +552,7 @@ fn test_connect_with_unilateral_npn() {
 /// Tests that when both the client as well as the server use ALPN and their
 /// lists of supported protocols have an overlap, the correct protocol is chosen.
 #[test]
-#[cfg(feature = "openssl-102")]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 fn test_connect_with_alpn_successful_multiple_matching() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::new(SslMethod::tls()).unwrap();
@@ -574,7 +574,7 @@ fn test_connect_with_alpn_successful_multiple_matching() {
 /// Tests that when both the client as well as the server use NPN and their
 /// lists of supported protocols have an overlap, the correct protocol is chosen.
 #[test]
-#[cfg(feature = "openssl-102")]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 fn test_connect_with_npn_successful_multiple_matching() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::new(SslMethod::tls()).unwrap();
@@ -597,7 +597,7 @@ fn test_connect_with_npn_successful_multiple_matching() {
 /// lists of supported protocols have an overlap -- with only ONE protocol
 /// being valid for both.
 #[test]
-#[cfg(feature = "openssl-102")]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 fn test_connect_with_alpn_successful_single_match() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::new(SslMethod::tls()).unwrap();
@@ -621,7 +621,7 @@ fn test_connect_with_alpn_successful_single_match() {
 /// lists of supported protocols have an overlap -- with only ONE protocol
 /// being valid for both.
 #[test]
-#[cfg(feature = "openssl-102")]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 fn test_connect_with_npn_successful_single_match() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::new(SslMethod::tls()).unwrap();
@@ -683,7 +683,7 @@ fn test_npn_server_advertise_multiple() {
 /// Tests that when the `SslStream` is created as a server stream, the protocols
 /// are correctly advertised to the client.
 #[test]
-#[cfg(feature = "openssl-102")]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 fn test_alpn_server_advertise_multiple() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
@@ -724,7 +724,7 @@ fn test_alpn_server_advertise_multiple() {
 /// Test that Servers supporting ALPN don't report a protocol when none of their protocols match
 /// the client's reported protocol.
 #[test]
-#[cfg(all(feature = "openssl-102", ossl102))]
+#[cfg(all(feature = "v102", ossl102))]
 fn test_alpn_server_select_none() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
@@ -759,7 +759,7 @@ fn test_alpn_server_select_none() {
 
 // In 1.1.0, ALPN negotiation failure is a fatal error
 #[test]
-#[cfg(all(feature = "openssl-102", ossl110))]
+#[cfg(all(feature = "v110", ossl110))]
 fn test_alpn_server_select_none() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
@@ -1066,7 +1066,7 @@ fn add_extra_chain_cert() {
 
 #[test]
 #[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
-#[cfg(feature = "openssl-102")]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 fn valid_hostname() {
     let mut ctx = SslContext::new(SslMethod::tls()).unwrap();
     ctx.set_default_verify_paths().unwrap();
@@ -1090,7 +1090,7 @@ fn valid_hostname() {
 
 #[test]
 #[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
-#[cfg(feature = "openssl-102")]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 fn invalid_hostname() {
     let mut ctx = SslContext::new(SslMethod::tls()).unwrap();
     ctx.set_default_verify_paths().unwrap();

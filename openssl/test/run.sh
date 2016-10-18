@@ -3,10 +3,10 @@ set -e
 
 case "$BUILD_OPENSSL_VERSION" in
     1.0.2*)
-        FEATURES="openssl-102"
+        FEATURES="v102"
         ;;
     1.1.0*)
-        FEATURES="openssl-110"
+        FEATURES="v110"
         ;;
 esac
 

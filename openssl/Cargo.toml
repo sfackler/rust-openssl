@@ -12,8 +12,9 @@ build = "build.rs"
 exclude = ["test/*"]
 
 [features]
-openssl-102 = []
-openssl-110 = ["openssl-102"]
+v101 = []
+v102 = []
+v110 = []
 
 [dependencies]
 bitflags = "0.7"
