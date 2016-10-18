@@ -22,7 +22,7 @@ use ffi;
 use {init, cvt, cvt_p};
 use dh::DH;
 use x509::{X509StoreContext, X509FileType, X509, X509Ref};
-#[cfg(feature = "openssl-102")]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::verify::X509VerifyParamRef;
 use crypto::pkey::PKey;
 use error::ErrorStack;
@@ -67,11 +67,14 @@ bitflags! {
         const SSL_OP_NO_TLSV1 = ffi::SSL_OP_NO_TLSv1,
         const SSL_OP_NO_TLSV1_2 = ffi::SSL_OP_NO_TLSv1_2,
         const SSL_OP_NO_TLSV1_1 = ffi::SSL_OP_NO_TLSv1_1,
-        #[cfg(feature = "openssl-102")]
+        /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
         const SSL_OP_NO_DTLSV1 = ffi::SSL_OP_NO_DTLSv1,
-        #[cfg(feature = "openssl-102")]
+        /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
         const SSL_OP_NO_DTLSV1_2 = ffi::SSL_OP_NO_DTLSv1_2,
-        #[cfg(feature = "openssl-102")]
+        /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
         const SSL_OP_NO_SSL_MASK = ffi::SSL_OP_NO_SSL_MASK,
     }
 }
@@ -133,7 +136,8 @@ fn get_ssl_verify_data_idx<T: Any + 'static>() -> c_int {
 lazy_static! {
     static ref NPN_PROTOS_IDX: c_int = get_new_idx::<Vec<u8>>();
 }
-#[cfg(feature = "openssl-102")]
+
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 lazy_static! {
     static ref ALPN_PROTOS_IDX: c_int = get_new_idx::<Vec<u8>>();
 }
@@ -276,7 +280,7 @@ extern fn raw_next_proto_select_cb(ssl: *mut ffi::SSL,
     unsafe { select_proto_using(ssl, out, outlen, inbuf, inlen, *NPN_PROTOS_IDX) }
 }
 
-#[cfg(feature = "openssl-102")]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 extern fn raw_alpn_select_cb(ssl: *mut ffi::SSL,
                              out: *mut *const c_uchar,
                              outlen: *mut c_uchar,
@@ -538,17 +542,9 @@ impl<'a> SslContextRef<'a> {
     /// compatible clients, and automatically select an appropriate elliptic
     /// curve.
     ///
-    /// This feature is always enabled on OpenSSL 1.1.0, and calling this
-    /// method does nothing.
-    ///
-    /// This method requires the `openssl-102` feature.
-    #[cfg(feature = "openssl-102")]
+    /// Requires the `v102` feature and OpenSSL 1.0.2.
+    #[cfg(all(feature = "v102", ossl102))]
     pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
-        self._set_ecdh_auto(onoff)
-    }
-
-    #[cfg(all(feature = "openssl-102", ossl102))]
-    fn _set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_CTX_ctrl(self.as_ptr(),
                                   ffi::SSL_CTRL_SET_ECDH_AUTO,
@@ -556,11 +552,6 @@ impl<'a> SslContextRef<'a> {
                                   ptr::null_mut()) as c_int)
                 .map(|_| ())
         }
-    }
-
-    #[cfg(all(feature = "openssl-102", ossl110))]
-    fn _set_ecdh_auto(&mut self, _onoff: bool) -> Result<(), ErrorStack> {
-        Ok(())
     }
 
     pub fn set_options(&mut self, option: SslContextOptions) -> SslContextOptions {
@@ -610,8 +601,8 @@ impl<'a> SslContextRef<'a> {
     ///
     /// Note that ordering of the protocols controls the priority with which they are chosen.
     ///
-    /// This method needs the `openssl-102` feature.
-    #[cfg(feature = "openssl-102")]
+    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn set_alpn_protocols(&mut self, protocols: &[&[u8]]) {
         let protocols: Box<Vec<u8>> = Box::new(ssl_encode_byte_strings(protocols));
         unsafe {
@@ -928,8 +919,8 @@ impl<'a> SslRef<'a> {
     /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
     /// to interpret it.
     ///
-    /// This method needs the `alpn` feature.
-    #[cfg(feature = "openssl-102")]
+    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn selected_alpn_protocol(&self) -> Option<&[u8]> {
         unsafe {
             let mut data: *const c_uchar = ptr::null();
@@ -1007,8 +998,8 @@ impl<'a> SslRef<'a> {
 
     /// Returns the X509 verification configuration.
     ///
-    /// Requires the `openssl-102` feature.
-    #[cfg(feature = "openssl-102")]
+    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or 1.1.0.
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn param(&mut self) -> X509VerifyParamRef<'a> {
         unsafe {
             X509VerifyParamRef::from_ptr(ffi::SSL_get0_param(self.as_ptr()))

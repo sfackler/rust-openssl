@@ -33,21 +33,24 @@ impl DH {
         }
     }
 
-    #[cfg(feature = "openssl-102")]
+    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn get_1024_160() -> Result<DH, ErrorStack> {
         unsafe {
             cvt_p(ffi::DH_get_1024_160()).map(DH)
         }
     }
 
-    #[cfg(feature = "openssl-102")]
+    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn get_2048_224() -> Result<DH, ErrorStack> {
         unsafe {
             cvt_p(ffi::DH_get_2048_224()).map(DH)
         }
     }
 
-    #[cfg(feature = "openssl-102")]
+    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn get_2048_256() -> Result<DH, ErrorStack> {
         unsafe {
             cvt_p(ffi::DH_get_2048_256()).map(DH)
@@ -96,7 +99,7 @@ mod tests {
     use ssl::{SslMethod, SslContext};
 
     #[test]
-    #[cfg(feature = "openssl-102")]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     fn test_dh_rfc5114() {
         let mut ctx = SslContext::new(SslMethod::tls()).unwrap();
         let dh1 = DH::get_1024_160().unwrap();

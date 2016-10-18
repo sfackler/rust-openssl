@@ -1,3 +1,7 @@
+//! X509 certificate verification
+//!
+//! Requires the `v102` or `v110` features and OpenSSL 1.0.2 or 1.1.0.
+
 use std::marker::PhantomData;
 use libc::c_uint;
 use ffi;
@@ -13,7 +17,8 @@ bitflags! {
         const X509_CHECK_FLAG_MULTI_LABEL_WILDCARDS = ffi::X509_CHECK_FLAG_MULTI_LABEL_WILDCARDS,
         const X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS
             = ffi::X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS,
-        #[cfg(feature = "openssl-110")]
+        /// Requires the `v110` feature and OpenSSL 1.1.0.
+        #[cfg(all(feature = "v110", ossl110))]
         const X509_CHECK_FLAG_NEVER_CHECK_SUBJECT = ffi::X509_CHECK_FLAG_NEVER_CHECK_SUBJECT,
     }
 }
