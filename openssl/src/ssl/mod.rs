@@ -142,20 +142,20 @@ lazy_static! {
     static ref ALPN_PROTOS_IDX: c_int = get_new_idx::<Vec<u8>>();
 }
 
+unsafe extern fn free_data_box<T>(_parent: *mut c_void,
+                                  ptr: *mut c_void,
+                                  _ad: *mut ffi::CRYPTO_EX_DATA,
+                                  _idx: c_int,
+                                  _argl: c_long,
+                                  _argp: *mut c_void) {
+    if !ptr.is_null() {
+        Box::<T>::from_raw(ptr as *mut T);
+    }
+}
+
 /// Determine a new index to use for SSL CTX ex data.
 /// Registers a destruct for the data which will be called by openssl when the context is freed.
 fn get_new_idx<T>() -> c_int {
-    extern fn free_data_box<T>(_parent: *mut c_void,
-                               ptr: *mut c_void,
-                               _ad: *mut ffi::CRYPTO_EX_DATA,
-                               _idx: c_int,
-                               _argl: c_long,
-                               _argp: *mut c_void) {
-        if !ptr.is_null() {
-            let _: Box<T> = unsafe { mem::transmute(ptr) };
-        }
-    }
-
     unsafe {
         let idx = compat::get_new_idx(free_data_box::<T>);
         assert!(idx >= 0);
@@ -164,17 +164,6 @@ fn get_new_idx<T>() -> c_int {
 }
 
 fn get_new_ssl_idx<T>() -> c_int {
-    extern fn free_data_box<T>(_parent: *mut c_void,
-                               ptr: *mut c_void,
-                               _ad: *mut ffi::CRYPTO_EX_DATA,
-                               _idx: c_int,
-                               _argl: c_long,
-                               _argp: *mut c_void) {
-        if !ptr.is_null() {
-            let _: Box<T> = unsafe { mem::transmute(ptr) };
-        }
-    }
-
     unsafe {
         let idx = compat::get_new_ssl_idx(free_data_box::<T>);
         assert!(idx >= 0);
@@ -190,7 +179,7 @@ extern fn raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX)
         let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
         let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_verify_data_idx::<F>());
-        let verify: &F = mem::transmute(verify);
+        let verify: &F = &*(verify as *mut F);
 
         let ctx = X509StoreContext::new(x509_ctx);
 
@@ -206,7 +195,7 @@ extern fn ssl_raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_
         let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
         let verify = ffi::SSL_get_ex_data(ssl as *const _,
                                           get_ssl_verify_data_idx::<F>());
-        let verify: &F = mem::transmute(verify);
+        let verify: &F = &*(verify as *mut F);
 
         let ctx = X509StoreContext::new(x509_ctx);
 
@@ -220,7 +209,7 @@ extern fn raw_sni<F>(ssl: *mut ffi::SSL, al: *mut c_int, _arg: *mut c_void) -> c
     unsafe {
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
         let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_verify_data_idx::<F>());
-        let callback: &F = mem::transmute(callback);
+        let callback: &F = &*(callback as *mut F);
         let mut ssl = SslRef::from_ptr(ssl);
 
         match callback(&mut ssl) {
@@ -250,7 +239,7 @@ unsafe fn select_proto_using(ssl: *mut ffi::SSL,
     // extra data.
     let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
     let protocols = ffi::SSL_CTX_get_ex_data(ssl_ctx, ex_data);
-    let protocols: &Vec<u8> = mem::transmute(protocols);
+    let protocols: &Vec<u8> = &*(protocols as *mut Vec<u8>);
     // Prepare the client list parameters to be passed to the OpenSSL function...
     let client = protocols.as_ptr();
     let client_len = protocols.len() as c_uint;
@@ -313,7 +302,7 @@ extern fn raw_next_protos_advertise_cb(ssl: *mut ffi::SSL,
         } else {
             // If the pointer is valid, put the pointer to the actual byte array into the
             // output parameter `out`, as well as its length into `outlen`.
-            let protocols: &Vec<u8> = mem::transmute(protocols);
+            let protocols: &Vec<u8> = &*(protocols as *mut Vec<u8>);
             *out = protocols.as_ptr();
             *outlen = protocols.len() as c_uint;
         }
@@ -571,7 +560,7 @@ impl<'a> SslContextRef<'a> {
 
     /// Set the protocols to be used during Next Protocol Negotiation (the protocols
     /// supported by the application).
-    pub fn set_npn_protocols(&mut self, protocols: &[&[u8]]) {
+    pub fn set_npn_protocols(&mut self, protocols: &[&[u8]]) -> Result<(), ErrorStack> {
         // Firstly, convert the list of protocols to a byte-array that can be passed to OpenSSL
         // APIs -- a list of length-prefixed strings.
         let protocols: Box<Vec<u8>> = Box::new(ssl_encode_byte_strings(protocols));
@@ -579,7 +568,9 @@ impl<'a> SslContextRef<'a> {
         unsafe {
             // Attach the protocol list to the OpenSSL context structure,
             // so that we can refer to it within the callback.
-            ffi::SSL_CTX_set_ex_data(self.as_ptr(), *NPN_PROTOS_IDX, mem::transmute(protocols));
+            try!(cvt(ffi::SSL_CTX_set_ex_data(self.as_ptr(),
+                                              *NPN_PROTOS_IDX,
+                                              Box::into_raw(protocols) as *mut c_void)));
             // Now register the callback that performs the default protocol
             // matching based on the client-supported list of protocols that
             // has been saved.
@@ -591,6 +582,7 @@ impl<'a> SslContextRef<'a> {
             ffi::SSL_CTX_set_next_protos_advertised_cb(self.as_ptr(),
                                                        raw_next_protos_advertise_cb,
                                                        ptr::null_mut());
+            Ok(())
         }
     }
 
@@ -603,22 +595,32 @@ impl<'a> SslContextRef<'a> {
     ///
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn set_alpn_protocols(&mut self, protocols: &[&[u8]]) {
+    pub fn set_alpn_protocols(&mut self, protocols: &[&[u8]]) -> Result<(), ErrorStack> {
         let protocols: Box<Vec<u8>> = Box::new(ssl_encode_byte_strings(protocols));
         unsafe {
             // Set the context's internal protocol list for use if we are a server
-            ffi::SSL_CTX_set_alpn_protos(self.as_ptr(), protocols.as_ptr(), protocols.len() as c_uint);
+            let r = ffi::SSL_CTX_set_alpn_protos(self.as_ptr(),
+                                                 protocols.as_ptr(),
+                                                 protocols.len() as c_uint);
+            // fun fact, SSL_CTX_set_alpn_protos has a reversed return code D:
+            if r != 0 {
+                return Err(ErrorStack::get());
+            }
 
             // Rather than use the argument to the callback to contain our data, store it in the
             // ssl ctx's ex_data so that we can configure a function to free it later. In the
             // future, it might make sense to pull this into our internal struct Ssl instead of
             // leaning on openssl and using function pointers.
-            ffi::SSL_CTX_set_ex_data(self.as_ptr(), *ALPN_PROTOS_IDX, mem::transmute(protocols));
+            try!(cvt(ffi::SSL_CTX_set_ex_data(self.as_ptr(),
+                                              *ALPN_PROTOS_IDX,
+                                              Box::into_raw(protocols) as *mut c_void)));
 
             // Now register the callback that performs the default protocol
             // matching based on the client-supported list of protocols that
             // has been saved.
             ffi::SSL_CTX_set_alpn_select_cb(self.as_ptr(), raw_alpn_select_cb, ptr::null_mut());
+
+            Ok(())
         }
     }
 }

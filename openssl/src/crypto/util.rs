@@ -36,16 +36,16 @@ impl<F> Drop for CallbackState<F> {
 /// Password callback function, passed to private key loading functions.
 ///
 /// `cb_state` is expected to be a pointer to a `CallbackState`.
-pub extern "C" fn invoke_passwd_cb<F>(buf: *mut c_char,
-                                      size: c_int,
-                                      _rwflag: c_int,
-                                      cb_state: *mut c_void)
-                                      -> c_int
-                                      where F: FnOnce(&mut [c_char]) -> usize {
+pub unsafe extern fn invoke_passwd_cb<F>(buf: *mut c_char,
+                                         size: c_int,
+                                         _rwflag: c_int,
+                                         cb_state: *mut c_void)
+                                         -> c_int
+                                         where F: FnOnce(&mut [c_char]) -> usize {
     let result = panic::catch_unwind(|| {
         // build a `i8` slice to pass to the user callback
-        let pass_slice = unsafe { slice::from_raw_parts_mut(buf, size as usize) };
-        let callback = unsafe { &mut *(cb_state as *mut CallbackState<F>) };
+        let pass_slice = slice::from_raw_parts_mut(buf, size as usize);
+        let callback = &mut *(cb_state as *mut CallbackState<F>);
 
         callback.cb.take().unwrap()(pass_slice)
     });

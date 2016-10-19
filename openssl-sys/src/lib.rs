@@ -78,19 +78,19 @@ pub type BN_ULONG = libc::c_ulonglong;
 #[cfg(target_pointer_width = "32")]
 pub type BN_ULONG = c_uint;
 
-pub type CRYPTO_EX_new = extern "C" fn(parent: *mut c_void, ptr: *mut c_void,
-                                       ad: *const CRYPTO_EX_DATA, idx: c_int,
-                                       argl: c_long, argp: *const c_void) -> c_int;
-pub type CRYPTO_EX_dup = extern "C" fn(to: *mut CRYPTO_EX_DATA,
-                                       from: *mut CRYPTO_EX_DATA, from_d: *mut c_void,
-                                       idx: c_int, argl: c_long, argp: *mut c_void)
-                                       -> c_int;
-pub type CRYPTO_EX_free = extern "C" fn(parent: *mut c_void, ptr: *mut c_void,
-                                        ad: *mut CRYPTO_EX_DATA, idx: c_int,
-                                        argl: c_long, argp: *mut c_void);
-pub type PasswordCallback = extern "C" fn(buf: *mut c_char, size: c_int,
-                                          rwflag: c_int, user_data: *mut c_void)
+pub type CRYPTO_EX_new = unsafe extern fn(parent: *mut c_void, ptr: *mut c_void,
+                                          ad: *const CRYPTO_EX_DATA, idx: c_int,
+                                          argl: c_long, argp: *const c_void) -> c_int;
+pub type CRYPTO_EX_dup = unsafe extern fn(to: *mut CRYPTO_EX_DATA,
+                                          from: *mut CRYPTO_EX_DATA, from_d: *mut c_void,
+                                          idx: c_int, argl: c_long, argp: *mut c_void)
                                           -> c_int;
+pub type CRYPTO_EX_free = unsafe extern fn(parent: *mut c_void, ptr: *mut c_void,
+                                           ad: *mut CRYPTO_EX_DATA, idx: c_int,
+                                           argl: c_long, argp: *mut c_void);
+pub type PasswordCallback = unsafe extern fn(buf: *mut c_char, size: c_int,
+                                             rwflag: c_int, user_data: *mut c_void)
+                                             -> c_int;
 
 pub const BIO_TYPE_NONE: c_int = 0;
 
