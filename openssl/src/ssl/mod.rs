@@ -571,7 +571,7 @@ impl<'a> SslContextRef<'a> {
 
     /// Set the protocols to be used during Next Protocol Negotiation (the protocols
     /// supported by the application).
-    pub fn set_npn_protocols(&mut self, protocols: &[&[u8]]) {
+    pub fn set_npn_protocols(&mut self, protocols: &[&[u8]]) -> Result<(), ErrorStack> {
         // Firstly, convert the list of protocols to a byte-array that can be passed to OpenSSL
         // APIs -- a list of length-prefixed strings.
         let protocols: Box<Vec<u8>> = Box::new(ssl_encode_byte_strings(protocols));
@@ -579,7 +579,9 @@ impl<'a> SslContextRef<'a> {
         unsafe {
             // Attach the protocol list to the OpenSSL context structure,
             // so that we can refer to it within the callback.
-            ffi::SSL_CTX_set_ex_data(self.as_ptr(), *NPN_PROTOS_IDX, mem::transmute(protocols));
+            try!(cvt(ffi::SSL_CTX_set_ex_data(self.as_ptr(),
+                                              *NPN_PROTOS_IDX,
+                                              Box::into_raw(protocols) as *mut c_void)));
             // Now register the callback that performs the default protocol
             // matching based on the client-supported list of protocols that
             // has been saved.
@@ -591,6 +593,7 @@ impl<'a> SslContextRef<'a> {
             ffi::SSL_CTX_set_next_protos_advertised_cb(self.as_ptr(),
                                                        raw_next_protos_advertise_cb,
                                                        ptr::null_mut());
+            Ok(())
         }
     }
 
@@ -603,22 +606,32 @@ impl<'a> SslContextRef<'a> {
     ///
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn set_alpn_protocols(&mut self, protocols: &[&[u8]]) {
+    pub fn set_alpn_protocols(&mut self, protocols: &[&[u8]]) -> Result<(), ErrorStack> {
         let protocols: Box<Vec<u8>> = Box::new(ssl_encode_byte_strings(protocols));
         unsafe {
             // Set the context's internal protocol list for use if we are a server
-            ffi::SSL_CTX_set_alpn_protos(self.as_ptr(), protocols.as_ptr(), protocols.len() as c_uint);
+            let r = ffi::SSL_CTX_set_alpn_protos(self.as_ptr(),
+                                                 protocols.as_ptr(),
+                                                 protocols.len() as c_uint);
+            // fun fact, SSL_CTX_set_alpn_protos has a reversed return code D:
+            if r != 0 {
+                return Err(ErrorStack::get());
+            }
 
             // Rather than use the argument to the callback to contain our data, store it in the
             // ssl ctx's ex_data so that we can configure a function to free it later. In the
             // future, it might make sense to pull this into our internal struct Ssl instead of
             // leaning on openssl and using function pointers.
-            ffi::SSL_CTX_set_ex_data(self.as_ptr(), *ALPN_PROTOS_IDX, mem::transmute(protocols));
+            try!(cvt(ffi::SSL_CTX_set_ex_data(self.as_ptr(),
+                                              *ALPN_PROTOS_IDX,
+                                              Box::into_raw(protocols) as *mut c_void)));
 
             // Now register the callback that performs the default protocol
             // matching based on the client-supported list of protocols that
             // has been saved.
             ffi::SSL_CTX_set_alpn_select_cb(self.as_ptr(), raw_alpn_select_cb, ptr::null_mut());
+
+            Ok(())
         }
     }
 }
