@@ -100,14 +100,9 @@ impl X509StoreContext {
         X509StoreContext { ctx: ctx }
     }
 
-    pub fn error(&self) -> Option<X509ValidationError> {
+    pub fn error(&self) -> Option<X509VerifyError> {
         unsafe {
-            let err = ffi::X509_STORE_CTX_get_error(self.ctx) as c_long;
-            if err == ffi::X509_V_OK as c_long {
-                None
-            } else {
-                Some(X509ValidationError::from_raw(err))
-            }
+            X509VerifyError::from_raw(ffi::X509_STORE_CTX_get_error(self.ctx) as c_long)
         }
     }
 
@@ -691,38 +686,44 @@ impl<'a> Iterator for ExtensionsIter<'a> {
     }
 }
 
-pub struct X509ValidationError(c_long);
+pub struct X509VerifyError(c_long);
 
-impl fmt::Debug for X509ValidationError {
+impl fmt::Debug for X509VerifyError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("X509ValidationError")
+        fmt.debug_struct("X509VerifyError")
             .field("code", &self.0)
             .field("error", &self.error_string())
             .finish()
     }
 }
 
-impl fmt::Display for X509ValidationError {
+impl fmt::Display for X509VerifyError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.write_str(self.error_string())
     }
 }
 
-impl Error for X509ValidationError {
+impl Error for X509VerifyError {
     fn description(&self) -> &str {
         "an X509 validation error"
     }
 }
 
-impl X509ValidationError {
-    /// Creates an `X509ValidationError` from a raw error number.
+impl X509VerifyError {
+    /// Creates an `X509VerifyError` from a raw error number.
+    ///
+    /// `None` will be returned if `err` is `X509_V_OK`.
     ///
     /// # Safety
     ///
-    /// Some methods on `X509ValidationError` are not thread safe if the error
+    /// Some methods on `X509VerifyError` are not thread safe if the error
     /// number is invalid.
-    pub unsafe fn from_raw(err: c_long) -> X509ValidationError {
-        X509ValidationError(err)
+    pub unsafe fn from_raw(err: c_long) -> Option<X509VerifyError> {
+        if err == ffi::X509_V_OK as c_long {
+            None
+        } else {
+            Some(X509VerifyError(err))
+        }
     }
 
     pub fn as_raw(&self) -> c_long {

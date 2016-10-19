@@ -647,7 +647,8 @@ extern {
     pub fn SSL_get_servername(ssl: *const SSL, name_type: c_int) -> *const c_char;
     pub fn SSL_get_current_cipher(ssl: *const SSL) -> *const SSL_CIPHER;
     #[cfg(not(ossl101))]
-    pub fn SSL_get0_param(ssl: *mut ::SSL) -> *mut X509_VERIFY_PARAM;
+    pub fn SSL_get0_param(ssl: *mut SSL) -> *mut X509_VERIFY_PARAM;
+    pub fn SSL_get_verify_result(ssl: *const SSL) -> c_long;
 
     #[cfg(not(osslconf = "OPENSSL_NO_COMP"))]
     pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;

@@ -21,7 +21,7 @@ use ffi;
 
 use {init, cvt, cvt_p};
 use dh::DH;
-use x509::{X509StoreContext, X509FileType, X509, X509Ref};
+use x509::{X509StoreContext, X509FileType, X509, X509Ref, X509VerifyError};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::verify::X509VerifyParamRef;
 use crypto::pkey::PKey;
@@ -1005,6 +1005,13 @@ impl<'a> SslRef<'a> {
     pub fn param(&mut self) -> X509VerifyParamRef<'a> {
         unsafe {
             X509VerifyParamRef::from_ptr(ffi::SSL_get0_param(self.as_ptr()))
+        }
+    }
+
+    /// Returns the result of X509 certificate verification.
+    pub fn verify_result(&self) -> Option<X509VerifyError> {
+        unsafe {
+            X509VerifyError::from_raw(ffi::SSL_get_verify_result(self.0))
         }
     }
 }
