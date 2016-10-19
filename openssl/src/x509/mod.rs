@@ -406,7 +406,7 @@ impl<'a> X509Ref<'a> {
     }
 
     /// Returns this certificate's SAN entries, if they exist.
-    pub fn subject_alt_names<'b>(&'b self) -> Option<GeneralNames<'b>> {
+    pub fn subject_alt_names(&self) -> Option<GeneralNames> {
         unsafe {
             let stack = ffi::X509_get_ext_d2i(self.0,
                                               Nid::SubjectAltName as c_int,
@@ -418,7 +418,6 @@ impl<'a> X509Ref<'a> {
 
             Some(GeneralNames {
                 stack: stack as *mut _,
-                m: PhantomData,
             })
         }
     }
@@ -763,14 +762,12 @@ make_validation_error!(X509_V_OK,
     X509ApplicationVerification = X509_V_ERR_APPLICATION_VERIFICATION,
 );
 
-// FIXME remove lifetime param for 0.9
 /// A collection of OpenSSL `GENERAL_NAME`s.
-pub struct GeneralNames<'a> {
+pub struct GeneralNames {
     stack: *mut ffi::stack_st_GENERAL_NAME,
-    m: PhantomData<&'a ()>,
 }
 
-impl<'a> Drop for GeneralNames<'a> {
+impl Drop for GeneralNames {
     #[cfg(ossl10x)]
     fn drop(&mut self) {
         unsafe {
@@ -792,7 +789,7 @@ impl<'a> Drop for GeneralNames<'a> {
     }
 }
 
-impl<'a> GeneralNames<'a> {
+impl GeneralNames {
     /// Returns the number of `GeneralName`s in this structure.
     pub fn len(&self) -> usize {
         self._len()
@@ -813,7 +810,7 @@ impl<'a> GeneralNames<'a> {
     /// # Panics
     ///
     /// Panics if `idx` is not less than `len()`.
-    pub fn get(&self, idx: usize) -> GeneralName<'a> {
+    pub fn get<'a>(&'a self, idx: usize) -> GeneralName<'a> {
         unsafe {
             assert!(idx < self.len());
             GeneralName {
@@ -842,7 +839,7 @@ impl<'a> GeneralNames<'a> {
     }
 }
 
-impl<'a> IntoIterator for &'a GeneralNames<'a> {
+impl<'a> IntoIterator for &'a GeneralNames {
     type Item = GeneralName<'a>;
     type IntoIter = GeneralNamesIter<'a>;
 
@@ -853,7 +850,7 @@ impl<'a> IntoIterator for &'a GeneralNames<'a> {
 
 /// An iterator over OpenSSL `GENERAL_NAME`s.
 pub struct GeneralNamesIter<'a> {
-    names: &'a GeneralNames<'a>,
+    names: &'a GeneralNames,
     idx: usize,
 }
 
