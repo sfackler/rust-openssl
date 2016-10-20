@@ -1,14 +1,15 @@
 use libc::{c_char, c_int, c_long, c_ulong, c_void};
 use std::cmp;
-use std::ffi::CString;
-use std::mem;
-use std::ptr;
-use std::ops::Deref;
-use std::fmt;
-use std::str;
-use std::slice;
 use std::collections::HashMap;
+use std::error::Error;
+use std::ffi::{CStr, CString};
+use std::fmt;
 use std::marker::PhantomData;
+use std::mem;
+use std::ops::Deref;
+use std::ptr;
+use std::slice;
+use std::str;
 
 use {cvt, cvt_p};
 use asn1::Asn1Time;
@@ -99,15 +100,15 @@ impl X509StoreContext {
         X509StoreContext { ctx: ctx }
     }
 
-    pub fn error(&self) -> Option<X509ValidationError> {
-        let err = unsafe { ffi::X509_STORE_CTX_get_error(self.ctx) };
-        X509ValidationError::from_raw(err)
+    pub fn error(&self) -> Option<X509VerifyError> {
+        unsafe {
+            X509VerifyError::from_raw(ffi::X509_STORE_CTX_get_error(self.ctx) as c_long)
+        }
     }
 
     pub fn current_cert<'a>(&'a self) -> Option<X509Ref<'a>> {
         unsafe {
             let ptr = ffi::X509_STORE_CTX_get_current_cert(self.ctx);
-
             if ptr.is_null() {
                 None
             } else {
@@ -406,7 +407,7 @@ impl<'a> X509Ref<'a> {
     }
 
     /// Returns this certificate's SAN entries, if they exist.
-    pub fn subject_alt_names<'b>(&'b self) -> Option<GeneralNames<'b>> {
+    pub fn subject_alt_names(&self) -> Option<GeneralNames> {
         unsafe {
             let stack = ffi::X509_get_ext_d2i(self.0,
                                               Nid::SubjectAltName as c_int,
@@ -418,7 +419,6 @@ impl<'a> X509Ref<'a> {
 
             Some(GeneralNames {
                 stack: stack as *mut _,
-                m: PhantomData,
             })
         }
     }
@@ -686,91 +686,66 @@ impl<'a> Iterator for ExtensionsIter<'a> {
     }
 }
 
-macro_rules! make_validation_error(
-    ($ok_val:ident, $($name:ident = $val:ident,)+) => (
-        #[derive(Copy, Clone)]
-        pub enum X509ValidationError {
-            $($name,)+
-            X509UnknownError(c_int)
-        }
+pub struct X509VerifyError(c_long);
 
-        impl X509ValidationError {
-            #[doc(hidden)]
-            pub fn from_raw(err: c_int) -> Option<X509ValidationError> {
-                match err {
-                    ffi::$ok_val => None,
-                    $(ffi::$val => Some(X509ValidationError::$name),)+
-                    err => Some(X509ValidationError::X509UnknownError(err))
-                }
-            }
-        }
-    )
-);
-
-make_validation_error!(X509_V_OK,
-    X509UnableToGetIssuerCert = X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT,
-    X509UnableToGetCrl = X509_V_ERR_UNABLE_TO_GET_CRL,
-    X509UnableToDecryptCertSignature = X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE,
-    X509UnableToDecryptCrlSignature = X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE,
-    X509UnableToDecodeIssuerPublicKey = X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY,
-    X509CertSignatureFailure = X509_V_ERR_CERT_SIGNATURE_FAILURE,
-    X509CrlSignatureFailure = X509_V_ERR_CRL_SIGNATURE_FAILURE,
-    X509CertNotYetValid = X509_V_ERR_CERT_NOT_YET_VALID,
-    X509CertHasExpired = X509_V_ERR_CERT_HAS_EXPIRED,
-    X509CrlNotYetValid = X509_V_ERR_CRL_NOT_YET_VALID,
-    X509CrlHasExpired = X509_V_ERR_CRL_HAS_EXPIRED,
-    X509ErrorInCertNotBeforeField = X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD,
-    X509ErrorInCertNotAfterField = X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD,
-    X509ErrorInCrlLastUpdateField = X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD,
-    X509ErrorInCrlNextUpdateField = X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD,
-    X509OutOfMem = X509_V_ERR_OUT_OF_MEM,
-    X509DepthZeroSelfSignedCert = X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT,
-    X509SelfSignedCertInChain = X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN,
-    X509UnableToGetIssuerCertLocally = X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY,
-    X509UnableToVerifyLeafSignature = X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE,
-    X509CertChainTooLong = X509_V_ERR_CERT_CHAIN_TOO_LONG,
-    X509CertRevoked = X509_V_ERR_CERT_REVOKED,
-    X509InvalidCA = X509_V_ERR_INVALID_CA,
-    X509PathLengthExceeded = X509_V_ERR_PATH_LENGTH_EXCEEDED,
-    X509InvalidPurpose = X509_V_ERR_INVALID_PURPOSE,
-    X509CertUntrusted = X509_V_ERR_CERT_UNTRUSTED,
-    X509CertRejected = X509_V_ERR_CERT_REJECTED,
-    X509SubjectIssuerMismatch = X509_V_ERR_SUBJECT_ISSUER_MISMATCH,
-    X509AkidSkidMismatch = X509_V_ERR_AKID_SKID_MISMATCH,
-    X509AkidIssuerSerialMismatch = X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH,
-    X509KeyusageNoCertsign = X509_V_ERR_KEYUSAGE_NO_CERTSIGN,
-    X509UnableToGetCrlIssuer = X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER,
-    X509UnhandledCriticalExtension = X509_V_ERR_UNHANDLED_CRITICAL_EXTENSION,
-    X509KeyusageNoCrlSign = X509_V_ERR_KEYUSAGE_NO_CRL_SIGN,
-    X509UnhandledCriticalCrlExtension = X509_V_ERR_UNHANDLED_CRITICAL_CRL_EXTENSION,
-    X509InvalidNonCA = X509_V_ERR_INVALID_NON_CA,
-    X509ProxyPathLengthExceeded = X509_V_ERR_PROXY_PATH_LENGTH_EXCEEDED,
-    X509KeyusageNoDigitalSignature = X509_V_ERR_KEYUSAGE_NO_DIGITAL_SIGNATURE,
-    X509ProxyCertificatesNotAllowed = X509_V_ERR_PROXY_CERTIFICATES_NOT_ALLOWED,
-    X509InvalidExtension = X509_V_ERR_INVALID_EXTENSION,
-    X509InavlidPolicyExtension = X509_V_ERR_INVALID_POLICY_EXTENSION,
-    X509NoExplicitPolicy = X509_V_ERR_NO_EXPLICIT_POLICY,
-    X509DifferentCrlScope = X509_V_ERR_DIFFERENT_CRL_SCOPE,
-    X509UnsupportedExtensionFeature = X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE,
-    X509UnnestedResource = X509_V_ERR_UNNESTED_RESOURCE,
-    X509PermittedVolation = X509_V_ERR_PERMITTED_VIOLATION,
-    X509ExcludedViolation = X509_V_ERR_EXCLUDED_VIOLATION,
-    X509SubtreeMinmax = X509_V_ERR_SUBTREE_MINMAX,
-    X509UnsupportedConstraintType = X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
-    X509UnsupportedConstraintSyntax = X509_V_ERR_UNSUPPORTED_CONSTRAINT_SYNTAX,
-    X509UnsupportedNameSyntax = X509_V_ERR_UNSUPPORTED_NAME_SYNTAX,
-    X509CrlPathValidationError= X509_V_ERR_CRL_PATH_VALIDATION_ERROR,
-    X509ApplicationVerification = X509_V_ERR_APPLICATION_VERIFICATION,
-);
-
-// FIXME remove lifetime param for 0.9
-/// A collection of OpenSSL `GENERAL_NAME`s.
-pub struct GeneralNames<'a> {
-    stack: *mut ffi::stack_st_GENERAL_NAME,
-    m: PhantomData<&'a ()>,
+impl fmt::Debug for X509VerifyError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("X509VerifyError")
+            .field("code", &self.0)
+            .field("error", &self.error_string())
+            .finish()
+    }
 }
 
-impl<'a> Drop for GeneralNames<'a> {
+impl fmt::Display for X509VerifyError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.write_str(self.error_string())
+    }
+}
+
+impl Error for X509VerifyError {
+    fn description(&self) -> &str {
+        "an X509 validation error"
+    }
+}
+
+impl X509VerifyError {
+    /// Creates an `X509VerifyError` from a raw error number.
+    ///
+    /// `None` will be returned if `err` is `X509_V_OK`.
+    ///
+    /// # Safety
+    ///
+    /// Some methods on `X509VerifyError` are not thread safe if the error
+    /// number is invalid.
+    pub unsafe fn from_raw(err: c_long) -> Option<X509VerifyError> {
+        if err == ffi::X509_V_OK as c_long {
+            None
+        } else {
+            Some(X509VerifyError(err))
+        }
+    }
+
+    pub fn as_raw(&self) -> c_long {
+        self.0
+    }
+
+    pub fn error_string(&self) -> &'static str {
+        ffi::init();
+
+        unsafe {
+            let s = ffi::X509_verify_cert_error_string(self.0);
+            str::from_utf8(CStr::from_ptr(s).to_bytes()).unwrap()
+        }
+    }
+}
+
+/// A collection of OpenSSL `GENERAL_NAME`s.
+pub struct GeneralNames {
+    stack: *mut ffi::stack_st_GENERAL_NAME,
+}
+
+impl Drop for GeneralNames {
     #[cfg(ossl10x)]
     fn drop(&mut self) {
         unsafe {
@@ -792,7 +767,7 @@ impl<'a> Drop for GeneralNames<'a> {
     }
 }
 
-impl<'a> GeneralNames<'a> {
+impl GeneralNames {
     /// Returns the number of `GeneralName`s in this structure.
     pub fn len(&self) -> usize {
         self._len()
@@ -813,7 +788,7 @@ impl<'a> GeneralNames<'a> {
     /// # Panics
     ///
     /// Panics if `idx` is not less than `len()`.
-    pub fn get(&self, idx: usize) -> GeneralName<'a> {
+    pub fn get<'a>(&'a self, idx: usize) -> GeneralName<'a> {
         unsafe {
             assert!(idx < self.len());
             GeneralName {
@@ -842,7 +817,7 @@ impl<'a> GeneralNames<'a> {
     }
 }
 
-impl<'a> IntoIterator for &'a GeneralNames<'a> {
+impl<'a> IntoIterator for &'a GeneralNames {
     type Item = GeneralName<'a>;
     type IntoIter = GeneralNamesIter<'a>;
 
@@ -853,7 +828,7 @@ impl<'a> IntoIterator for &'a GeneralNames<'a> {
 
 /// An iterator over OpenSSL `GENERAL_NAME`s.
 pub struct GeneralNamesIter<'a> {
-    names: &'a GeneralNames<'a>,
+    names: &'a GeneralNames,
     idx: usize,
 }
 
