@@ -18,9 +18,10 @@ use bio::{MemBio, MemBioSlice};
 use crypto::hash::MessageDigest;
 use crypto::pkey::PKey;
 use crypto::rand::rand_bytes;
+use error::ErrorStack;
 use ffi;
 use nid::Nid;
-use error::ErrorStack;
+use opaque::Opaque;
 
 #[cfg(ossl10x)]
 use ffi::{
@@ -401,9 +402,11 @@ impl<'a> X509Ref<'a> {
         self.0
     }
 
-    pub fn subject_name<'b>(&'b self) -> X509Name<'b> {
-        let name = unsafe { ffi::X509_get_subject_name(self.0) };
-        X509Name(name, PhantomData)
+    pub fn subject_name(&self) -> &X509NameRef {
+        unsafe {
+            let name = ffi::X509_get_subject_name(self.0);
+            X509NameRef::from_ptr(name)
+        }
     }
 
     /// Returns this certificate's SAN entries, if they exist.
@@ -534,17 +537,25 @@ impl Drop for X509 {
     }
 }
 
-pub struct X509Name<'x>(*mut ffi::X509_NAME, PhantomData<&'x ()>);
+pub struct X509NameRef(Opaque);
 
-impl<'x> X509Name<'x> {
+impl X509NameRef {
+    pub unsafe fn from_ptr<'a>(ptr: *mut ffi::X509_NAME) -> &'a X509NameRef {
+        &*(ptr as *mut _)
+    }
+
+    pub fn as_ptr(&self) -> *mut ffi::X509_NAME {
+        self as *const _ as *mut _
+    }
+
     pub fn text_by_nid(&self, nid: Nid) -> Option<SslString> {
         unsafe {
-            let loc = ffi::X509_NAME_get_index_by_NID(self.0, nid as c_int, -1);
+            let loc = ffi::X509_NAME_get_index_by_NID(self.as_ptr(), nid as c_int, -1);
             if loc == -1 {
                 return None;
             }
 
-            let ne = ffi::X509_NAME_get_entry(self.0, loc);
+            let ne = ffi::X509_NAME_get_entry(self.as_ptr(), loc);
             if ne.is_null() {
                 return None;
             }
