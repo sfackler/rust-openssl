@@ -780,18 +780,6 @@ impl<'a> SslRef<'a> {
         unsafe { ffi::SSL_get_rbio(self.as_ptr()) }
     }
 
-    fn connect(&mut self) -> c_int {
-        unsafe { ffi::SSL_connect(self.as_ptr()) }
-    }
-
-    fn accept(&mut self) -> c_int {
-        unsafe { ffi::SSL_accept(self.as_ptr()) }
-    }
-
-    fn handshake(&mut self) -> c_int {
-        unsafe { ffi::SSL_do_handshake(self.as_ptr()) }
-    }
-
     fn read(&mut self, buf: &mut [u8]) -> c_int {
         let len = cmp::min(c_int::max_value() as usize, buf.len()) as c_int;
         unsafe { ffi::SSL_read(self.as_ptr(), buf.as_ptr() as *mut c_void, len) }
@@ -1057,6 +1045,50 @@ impl Ssl {
     pub unsafe fn from_ptr(ssl: *mut ffi::SSL) -> Ssl {
         Ssl(SslRef::from_ptr(ssl))
     }
+
+    /// Creates an SSL/TLS client operating over the provided stream.
+    pub fn connect<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
+        where S: Read + Write
+    {
+        let mut stream = SslStream::new_base(self, stream);
+        let ret = unsafe { ffi::SSL_connect(stream.ssl.as_ptr()) };
+        if ret > 0 {
+            Ok(stream)
+        } else {
+            match stream.make_error(ret) {
+                e @ Error::WantWrite(_) |
+                e @ Error::WantRead(_) => {
+                    Err(HandshakeError::Interrupted(MidHandshakeSslStream {
+                        stream: stream,
+                        error: e,
+                    }))
+                }
+                err => Err(HandshakeError::Failure(err)),
+            }
+        }
+    }
+
+    /// Creates an SSL/TLS server operating over the provided stream.
+    pub fn accept<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
+        where S: Read + Write
+    {
+        let mut stream = SslStream::new_base(self, stream);
+        let ret = unsafe { ffi::SSL_accept(stream.ssl.as_ptr()) };
+        if ret > 0 {
+            Ok(stream)
+        } else {
+            match stream.make_error(ret) {
+                e @ Error::WantWrite(_) |
+                e @ Error::WantRead(_) => {
+                    Err(HandshakeError::Interrupted(MidHandshakeSslStream {
+                        stream: stream,
+                        error: e,
+                    }))
+                }
+                err => Err(HandshakeError::Failure(err)),
+            }
+        }
+    }
 }
 
 /// A stream wrapper which handles SSL encryption for an underlying stream.
@@ -1089,54 +1121,6 @@ impl<S: Read + Write> SslStream<S> {
                 ssl: ssl,
                 _method: method,
                 _p: PhantomData,
-            }
-        }
-    }
-
-    /// Creates an SSL/TLS client operating over the provided stream.
-    pub fn connect<T: IntoSsl>(ssl: T, stream: S)
-                               -> Result<Self, HandshakeError<S>>{
-        let ssl = try!(ssl.into_ssl().map_err(|e| {
-            HandshakeError::Failure(Error::Ssl(e))
-        }));
-        let mut stream = Self::new_base(ssl, stream);
-        let ret = stream.ssl.connect();
-        if ret > 0 {
-            Ok(stream)
-        } else {
-            match stream.make_error(ret) {
-                e @ Error::WantWrite(_) |
-                e @ Error::WantRead(_) => {
-                    Err(HandshakeError::Interrupted(MidHandshakeSslStream {
-                        stream: stream,
-                        error: e,
-                    }))
-                }
-                err => Err(HandshakeError::Failure(err)),
-            }
-        }
-    }
-
-    /// Creates an SSL/TLS server operating over the provided stream.
-    pub fn accept<T: IntoSsl>(ssl: T, stream: S)
-                              -> Result<Self, HandshakeError<S>> {
-        let ssl = try!(ssl.into_ssl().map_err(|e| {
-            HandshakeError::Failure(Error::Ssl(e))
-        }));
-        let mut stream = Self::new_base(ssl, stream);
-        let ret = stream.ssl.accept();
-        if ret > 0 {
-            Ok(stream)
-        } else {
-            match stream.make_error(ret) {
-                e @ Error::WantWrite(_) |
-                e @ Error::WantRead(_) => {
-                    Err(HandshakeError::Interrupted(MidHandshakeSslStream {
-                        stream: stream,
-                        error: e,
-                    }))
-                }
-                err => Err(HandshakeError::Failure(err)),
             }
         }
     }
@@ -1233,7 +1217,7 @@ impl<S> MidHandshakeSslStream<S> {
 
     /// Restarts the handshake process.
     pub fn handshake(mut self) -> Result<SslStream<S>, HandshakeError<S>> {
-        let ret = self.stream.ssl.handshake();
+        let ret = unsafe { ffi::SSL_do_handshake(self.stream.ssl.as_ptr()) };
         if ret > 0 {
             Ok(self.stream)
         } else {
@@ -1349,22 +1333,6 @@ impl<S: Read + Write> Write for SslStream<S> {
 
     fn flush(&mut self) -> io::Result<()> {
         self.get_mut().flush()
-    }
-}
-
-pub trait IntoSsl {
-    fn into_ssl(self) -> Result<Ssl, ErrorStack>;
-}
-
-impl IntoSsl for Ssl {
-    fn into_ssl(self) -> Result<Ssl, ErrorStack> {
-        Ok(self)
-    }
-}
-
-impl<'a> IntoSsl for &'a SslContext {
-    fn into_ssl(self) -> Result<Ssl, ErrorStack> {
-        Ssl::new(self)
     }
 }
 
