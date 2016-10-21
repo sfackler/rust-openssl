@@ -761,9 +761,12 @@ unsafe impl<'a> Sync for SslRef<'a> {}
 
 impl<'a> fmt::Debug for SslRef<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("SslRef")
-           .field("state", &self.state_string_long())
-           .finish()
+        let mut builder = fmt.debug_struct("SslRef");
+        builder.field("state", &self.state_string_long());
+        if let Some(err) = self.verify_result() {
+            builder.field("verify_result", &err);
+        }
+        builder.finish()
     }
 }
 
@@ -1008,9 +1011,12 @@ pub struct Ssl(SslRef<'static>);
 
 impl fmt::Debug for Ssl {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("Ssl")
-           .field("state", &self.state_string_long())
-           .finish()
+        let mut builder = fmt.debug_struct("Ssl");
+        builder.field("state", &self.state_string_long());
+        if let Some(err) = self.verify_result() {
+            builder.field("verify_result", &err);
+        }
+        builder.finish()
     }
 }
 
@@ -1063,7 +1069,12 @@ impl Ssl {
                         error: e,
                     }))
                 }
-                err => Err(HandshakeError::Failure(err)),
+                err => {
+                    Err(HandshakeError::Failure(MidHandshakeSslStream {
+                        stream: stream,
+                        error: err,
+                    }))
+                }
             }
         }
     }
@@ -1085,7 +1096,12 @@ impl Ssl {
                         error: e,
                     }))
                 }
-                err => Err(HandshakeError::Failure(err)),
+                err => {
+                    Err(HandshakeError::Failure(MidHandshakeSslStream {
+                        stream: stream,
+                        error: err,
+                    }))
+                }
             }
         }
     }
@@ -1156,7 +1172,7 @@ impl<S: Read + Write> SslStream<S> {
 #[derive(Debug)]
 pub enum HandshakeError<S> {
     /// The handshake failed.
-    Failure(Error),
+    Failure(MidHandshakeSslStream<S>),
     /// The handshake was interrupted midway through.
     Interrupted(MidHandshakeSslStream<S>),
 }
@@ -1164,15 +1180,14 @@ pub enum HandshakeError<S> {
 impl<S: Any + fmt::Debug> stderror::Error for HandshakeError<S> {
     fn description(&self) -> &str {
         match *self {
-            HandshakeError::Failure(ref e) => e.description(),
-            HandshakeError::Interrupted(ref e) => e.error.description(),
+            HandshakeError::Failure(_) => "the handshake failed",
+            HandshakeError::Interrupted(_) => "the handshake was interrupted",
         }
     }
 
     fn cause(&self) -> Option<&stderror::Error> {
         match *self {
-            HandshakeError::Failure(ref e) => Some(e),
-            HandshakeError::Interrupted(ref e) => Some(&e.error),
+            HandshakeError::Failure(ref s) | HandshakeError::Interrupted(ref s) => Some(s.error()),
         }
     }
 }
@@ -1180,8 +1195,13 @@ impl<S: Any + fmt::Debug> stderror::Error for HandshakeError<S> {
 impl<S: Any + fmt::Debug> fmt::Display for HandshakeError<S> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(f.write_str(stderror::Error::description(self)));
-        if let Some(e) = stderror::Error::cause(self) {
-           try!(write!(f, ": {}", e));
+        match *self {
+            HandshakeError::Failure(ref s) | HandshakeError::Interrupted(ref s) => {
+                try!(write!(f, ": {}", s.error()));
+                if let Some(err) = s.ssl().verify_result() {
+                    try!(write!(f, ": {}", err));
+                }
+            }
         }
         Ok(())
     }
@@ -1227,7 +1247,10 @@ impl<S> MidHandshakeSslStream<S> {
                     self.error = e;
                     Err(HandshakeError::Interrupted(self))
                 }
-                err => Err(HandshakeError::Failure(err)),
+                err => {
+                    self.error = err;
+                    Err(HandshakeError::Failure(self))
+                }
             }
         }
     }
