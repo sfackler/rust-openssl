@@ -5,10 +5,10 @@ use ffi;
 
 use {cvt, cvt_p};
 use bio::{MemBio, MemBioSlice};
-use crypto::dsa::DSA;
-use crypto::rsa::RSA;
+use dsa::DSA;
+use rsa::RSA;
 use error::ErrorStack;
-use crypto::util::{CallbackState, invoke_passwd_cb};
+use util::{CallbackState, invoke_passwd_cb};
 
 pub struct PKey(*mut ffi::EVP_PKEY);
 
@@ -167,19 +167,19 @@ impl Drop for PKey {
 mod tests {
     #[test]
     fn test_private_key_from_pem() {
-        let key = include_bytes!("../../test/key.pem");
+        let key = include_bytes!("../test/key.pem");
         super::PKey::private_key_from_pem(key).unwrap();
     }
 
     #[test]
     fn test_public_key_from_pem() {
-        let key = include_bytes!("../../test/key.pem.pub");
+        let key = include_bytes!("../test/key.pem.pub");
         super::PKey::public_key_from_pem(key).unwrap();
     }
 
     #[test]
     fn test_pem() {
-        let key = include_bytes!("../../test/key.pem");
+        let key = include_bytes!("../test/key.pem");
         let key = super::PKey::private_key_from_pem(key).unwrap();
 
         let priv_key = key.private_key_to_pem().unwrap();

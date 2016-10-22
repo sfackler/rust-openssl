@@ -24,7 +24,7 @@ use dh::DH;
 use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::verify::X509VerifyParamRef;
-use crypto::pkey::PKey;
+use pkey::PKey;
 use error::ErrorStack;
 use opaque::Opaque;
 

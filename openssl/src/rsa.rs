@@ -8,7 +8,7 @@ use {cvt, cvt_p, cvt_n};
 use bn::{BigNum, BigNumRef};
 use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
-use crypto::util::{CallbackState, invoke_passwd_cb};
+use util::{CallbackState, invoke_passwd_cb};
 
 /// Type of encryption padding to use.
 #[derive(Copy, Clone)]
@@ -421,7 +421,7 @@ mod test {
     #[test]
     pub fn test_password() {
         let mut password_queried = false;
-        let key = include_bytes!("../../test/rsa-encrypted.pem");
+        let key = include_bytes!("../test/rsa-encrypted.pem");
         RSA::private_key_from_pem_cb(key, |password| {
             password_queried = true;
             password[0] = b'm' as c_char;
@@ -438,7 +438,7 @@ mod test {
 
     #[test]
     pub fn test_public_encrypt_private_decrypt_with_padding() {
-        let key = include_bytes!("../../test/rsa.pem.pub");
+        let key = include_bytes!("../test/rsa.pem.pub");
         let public_key = RSA::public_key_from_pem(key).unwrap();
 
         let mut result = vec![0; public_key.size()];
@@ -446,7 +446,7 @@ mod test {
         let len = public_key.public_encrypt(original_data, &mut result, Padding::pkcs1()).unwrap();
         assert_eq!(len, 256);
 
-        let pkey = include_bytes!("../../test/rsa.pem");
+        let pkey = include_bytes!("../test/rsa.pem");
         let private_key = RSA::private_key_from_pem(pkey).unwrap();
         let mut dec_result = vec![0; private_key.size()];
         let len = private_key.private_decrypt(&result, &mut dec_result, Padding::pkcs1()).unwrap();

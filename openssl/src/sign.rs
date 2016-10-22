@@ -60,8 +60,8 @@ use std::marker::PhantomData;
 use std::ptr;
 
 use {cvt, cvt_p};
-use crypto::hash::MessageDigest;
-use crypto::pkey::PKey;
+use hash::MessageDigest;
+use pkey::PKey;
 use error::ErrorStack;
 
 #[cfg(ossl110)]
@@ -208,11 +208,11 @@ mod test {
     use serialize::hex::FromHex;
     use std::iter;
 
-    use crypto::hash::MessageDigest;
-    use crypto::sign::{Signer, Verifier};
-    use crypto::rsa::RSA;
-    use crypto::dsa::DSA;
-    use crypto::pkey::PKey;
+    use hash::MessageDigest;
+    use sign::{Signer, Verifier};
+    use rsa::RSA;
+    use dsa::DSA;
+    use pkey::PKey;
 
     static INPUT: &'static [u8] =
         &[101, 121, 74, 104, 98, 71, 99, 105, 79, 105, 74, 83, 85, 122, 73, 49, 78, 105, 74, 57,
@@ -240,7 +240,7 @@ mod test {
 
     #[test]
     fn rsa_sign() {
-        let key = include_bytes!("../../test/rsa.pem");
+        let key = include_bytes!("../test/rsa.pem");
         let private_key = RSA::private_key_from_pem(key).unwrap();
         let pkey = PKey::from_rsa(private_key).unwrap();
 
@@ -253,7 +253,7 @@ mod test {
 
     #[test]
     fn rsa_verify_ok() {
-        let key = include_bytes!("../../test/rsa.pem");
+        let key = include_bytes!("../test/rsa.pem");
         let private_key = RSA::private_key_from_pem(key).unwrap();
         let pkey = PKey::from_rsa(private_key).unwrap();
 
@@ -264,7 +264,7 @@ mod test {
 
     #[test]
     fn rsa_verify_invalid() {
-        let key = include_bytes!("../../test/rsa.pem");
+        let key = include_bytes!("../test/rsa.pem");
         let private_key = RSA::private_key_from_pem(key).unwrap();
         let pkey = PKey::from_rsa(private_key).unwrap();
 
@@ -279,12 +279,12 @@ mod test {
         let input: Vec<u8> = (0..25).cycle().take(1024).collect();
 
         let private_key = {
-            let key = include_bytes!("../../test/dsa.pem");
+            let key = include_bytes!("../test/dsa.pem");
             PKey::from_dsa(DSA::private_key_from_pem(key).unwrap()).unwrap()
         };
 
         let public_key = {
-            let key = include_bytes!("../../test/dsa.pem.pub");
+            let key = include_bytes!("../test/dsa.pem.pub");
             PKey::from_dsa(DSA::public_key_from_pem(key).unwrap()).unwrap()
         };
 
@@ -302,12 +302,12 @@ mod test {
         let input: Vec<u8> = (0..25).cycle().take(1024).collect();
 
         let private_key = {
-            let key = include_bytes!("../../test/dsa.pem");
+            let key = include_bytes!("../test/dsa.pem");
             PKey::from_dsa(DSA::private_key_from_pem(key).unwrap()).unwrap()
         };
 
         let public_key = {
-            let key = include_bytes!("../../test/dsa.pem.pub");
+            let key = include_bytes!("../test/dsa.pem.pub");
             PKey::from_dsa(DSA::public_key_from_pem(key).unwrap()).unwrap()
         };
 

@@ -1,8 +1,8 @@
 use serialize::hex::FromHex;
 
-use crypto::hash::MessageDigest;
-use crypto::pkey::PKey;
-use crypto::rsa::RSA;
+use hash::MessageDigest;
+use pkey::PKey;
+use rsa::RSA;
 use x509::{X509, X509Generator};
 use x509::extension::Extension::{KeyUsage, ExtKeyUsage, SubjectAltName, OtherNid, OtherStr};
 use x509::extension::AltNameOption as SAN;

@@ -7,7 +7,7 @@ use libc::{c_int, c_char, c_void};
 use {cvt, cvt_p};
 use bn::BigNumRef;
 use bio::{MemBio, MemBioSlice};
-use crypto::util::{CallbackState, invoke_passwd_cb};
+use util::{CallbackState, invoke_passwd_cb};
 
 /// Builder for upfront DSA parameter generation
 pub struct DSAParams(*mut ffi::DSA);
@@ -248,7 +248,7 @@ mod test {
     #[test]
     pub fn test_password() {
         let mut password_queried = false;
-        let key = include_bytes!("../../test/dsa-encrypted.pem");
+        let key = include_bytes!("../test/dsa-encrypted.pem");
         DSA::private_key_from_pem_cb(key, |password| {
             password_queried = true;
             password[0] = b'm' as c_char;
