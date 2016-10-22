@@ -1010,9 +1010,9 @@ impl SslRef {
     ///
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn param<'a>(&'a mut self) -> X509VerifyParamRef<'a> {
+    pub fn param_mut(&mut self) -> &mut X509VerifyParamRef {
         unsafe {
-            X509VerifyParamRef::from_ptr(ffi::SSL_get0_param(self.as_ptr()))
+            X509VerifyParamRef::from_ptr_mut(ffi::SSL_get0_param(self.as_ptr()))
         }
     }
 

@@ -8,6 +8,7 @@ use ffi;
 
 use cvt;
 use error::ErrorStack;
+use opaque::Opaque;
 
 bitflags! {
     pub flags X509CheckFlags: c_uint {
@@ -23,22 +24,26 @@ bitflags! {
     }
 }
 
-pub struct X509VerifyParamRef<'a>(*mut ffi::X509_VERIFY_PARAM, PhantomData<&'a mut ()>);
+pub struct X509VerifyParamRef(Opaque);
 
-impl<'a> X509VerifyParamRef<'a> {
-    pub unsafe fn from_ptr(ptr: *mut ffi::X509_VERIFY_PARAM) -> X509VerifyParamRef<'a> {
-        X509VerifyParamRef(ptr, PhantomData)
+impl X509VerifyParamRef {
+    pub unsafe fn from_ptr_mut<'a>(ptr: *mut ffi::X509_VERIFY_PARAM) -> &'a mut X509VerifyParamRef {
+        &mut *(ptr as *mut _)
+    }
+
+    pub fn as_ptr(&self) -> *mut ffi::X509_VERIFY_PARAM {
+        self as *const _ as *mut _
     }
 
     pub fn set_hostflags(&mut self, hostflags: X509CheckFlags) {
         unsafe {
-            ffi::X509_VERIFY_PARAM_set_hostflags(self.0, hostflags.bits);
+            ffi::X509_VERIFY_PARAM_set_hostflags(self.as_ptr(), hostflags.bits);
         }
     }
 
     pub fn set_host(&mut self, host: &str) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::X509_VERIFY_PARAM_set1_host(self.0,
+            cvt(ffi::X509_VERIFY_PARAM_set1_host(self.as_ptr(),
                                                  host.as_ptr() as *const _,
                                                  host.len()))
                 .map(|_| ())
