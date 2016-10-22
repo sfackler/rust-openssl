@@ -39,7 +39,7 @@ use self::bio::BioMethod;
 pub use ssl::error::Error;
 
 bitflags! {
-    pub flags SslContextOptions: c_ulong {
+    pub flags SslOptions: c_ulong {
         const SSL_OP_MICROSOFT_SESS_ID_BUG = ffi::SSL_OP_MICROSOFT_SESS_ID_BUG,
         const SSL_OP_NETSCAPE_CHALLENGE_BUG = ffi::SSL_OP_NETSCAPE_CHALLENGE_BUG,
         const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG =
@@ -548,19 +548,19 @@ impl SslContextRef {
         }
     }
 
-    pub fn set_options(&mut self, option: SslContextOptions) -> SslContextOptions {
+    pub fn set_options(&mut self, option: SslOptions) -> SslOptions {
         let ret = unsafe { compat::SSL_CTX_set_options(self.as_ptr(), option.bits()) };
-        SslContextOptions::from_bits(ret).unwrap()
+        SslOptions::from_bits(ret).unwrap()
     }
 
-    pub fn options(&self) -> SslContextOptions {
+    pub fn options(&self) -> SslOptions {
         let ret = unsafe { compat::SSL_CTX_get_options(self.as_ptr()) };
-        SslContextOptions::from_bits(ret).unwrap()
+        SslOptions::from_bits(ret).unwrap()
     }
 
-    pub fn clear_options(&mut self, option: SslContextOptions) -> SslContextOptions {
+    pub fn clear_options(&mut self, option: SslOptions) -> SslOptions {
         let ret = unsafe { compat::SSL_CTX_clear_options(self.as_ptr(), option.bits()) };
-        SslContextOptions::from_bits(ret).unwrap()
+        SslOptions::from_bits(ret).unwrap()
     }
 
     /// Set the protocols to be used during Next Protocol Negotiation (the protocols
