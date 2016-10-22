@@ -20,7 +20,7 @@ use ssl::SSL_VERIFY_PEER;
 use ssl::{SslMethod, HandshakeError};
 use ssl::error::Error;
 use ssl::{SslContext, SslStream, Ssl};
-use x509::X509StoreContext;
+use x509::X509StoreContextRef;
 use x509::X509FileType;
 use x509::X509;
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
@@ -168,7 +168,7 @@ macro_rules! run_test(
             use ssl::{SslContext, Ssl, SslStream};
             use ssl::SSL_VERIFY_PEER;
             use crypto::hash::MessageDigest;
-            use x509::X509StoreContext;
+            use x509::X509StoreContextRef;
             use serialize::hex::FromHex;
             use super::Server;
 
@@ -778,7 +778,7 @@ mod dtlsv1 {
     use ssl::SslMethod;
     use ssl::{SslContext, SslStream};
     use ssl::SSL_VERIFY_PEER;
-    use x509::X509StoreContext;
+    use x509::X509StoreContextRef;
 
     #[test]
     fn test_new_ctx() {

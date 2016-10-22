@@ -21,7 +21,7 @@ use ffi;
 
 use {init, cvt, cvt_p};
 use dh::DH;
-use x509::{X509StoreContext, X509FileType, X509, X509Ref, X509VerifyError};
+use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::verify::X509VerifyParamRef;
 use crypto::pkey::PKey;
@@ -173,7 +173,7 @@ fn get_new_ssl_idx<T>() -> c_int {
 }
 
 extern fn raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
-    where F: Fn(bool, &X509StoreContext) -> bool + Any + 'static + Sync + Send
+    where F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send
 {
     unsafe {
         let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
@@ -182,14 +182,14 @@ extern fn raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX)
         let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_verify_data_idx::<F>());
         let verify: &F = &*(verify as *mut F);
 
-        let ctx = X509StoreContext::new(x509_ctx);
+        let ctx = X509StoreContextRef::from_ptr(x509_ctx);
 
-        verify(preverify_ok != 0, &ctx) as c_int
+        verify(preverify_ok != 0, ctx) as c_int
     }
 }
 
 extern fn ssl_raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
-    where F: Fn(bool, &X509StoreContext) -> bool + Any + 'static + Sync + Send
+    where F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send
 {
     unsafe {
         let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
@@ -198,9 +198,9 @@ extern fn ssl_raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_
                                           get_ssl_verify_data_idx::<F>());
         let verify: &F = &*(verify as *mut F);
 
-        let ctx = X509StoreContext::new(x509_ctx);
+        let ctx = X509StoreContextRef::from_ptr(x509_ctx);
 
-        verify(preverify_ok != 0, &ctx) as c_int
+        verify(preverify_ok != 0, ctx) as c_int
     }
 }
 
@@ -361,7 +361,7 @@ impl SslContextRef {
     /// Configures the certificate verification method for new connections and
     /// registers a verification callback.
     pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
-        where F: Fn(bool, &X509StoreContext) -> bool + Any + 'static + Sync + Send
+        where F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send
     {
         unsafe {
             let verify = Box::new(verify);
@@ -830,7 +830,7 @@ impl SslRef {
     /// to the certificate chain. It should return `true` if the certificate
     /// chain is valid and `false` otherwise.
     pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
-        where F: Fn(bool, &X509StoreContext) -> bool + Any + 'static + Sync + Send
+        where F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send
     {
         unsafe {
             let verify = Box::new(verify);

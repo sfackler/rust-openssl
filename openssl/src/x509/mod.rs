@@ -91,25 +91,26 @@ pub enum X509FileType {
     Default = ffi::X509_FILETYPE_DEFAULT,
 }
 
-#[allow(missing_copy_implementations)]
-pub struct X509StoreContext {
-    ctx: *mut ffi::X509_STORE_CTX,
-}
+pub struct X509StoreContextRef(Opaque);
 
-impl X509StoreContext {
-    pub fn new(ctx: *mut ffi::X509_STORE_CTX) -> X509StoreContext {
-        X509StoreContext { ctx: ctx }
+impl X509StoreContextRef {
+    pub unsafe fn from_ptr<'a>(ctx: *mut ffi::X509_STORE_CTX) -> &'a X509StoreContextRef {
+        &*(ctx as *mut _)
+    }
+
+    pub fn as_ptr(&self) -> *mut ffi::X509_STORE_CTX {
+        self as *const _ as *mut _
     }
 
     pub fn error(&self) -> Option<X509VerifyError> {
         unsafe {
-            X509VerifyError::from_raw(ffi::X509_STORE_CTX_get_error(self.ctx) as c_long)
+            X509VerifyError::from_raw(ffi::X509_STORE_CTX_get_error(self.as_ptr()) as c_long)
         }
     }
 
-    pub fn current_cert<'a>(&'a self) -> Option<&'a X509Ref> {
+    pub fn current_cert(&self) -> Option<&X509Ref> {
         unsafe {
-            let ptr = ffi::X509_STORE_CTX_get_current_cert(self.ctx);
+            let ptr = ffi::X509_STORE_CTX_get_current_cert(self.as_ptr());
             if ptr.is_null() {
                 None
             } else {
@@ -119,7 +120,7 @@ impl X509StoreContext {
     }
 
     pub fn error_depth(&self) -> u32 {
-        unsafe { ffi::X509_STORE_CTX_get_error_depth(self.ctx) as u32 }
+        unsafe { ffi::X509_STORE_CTX_get_error_depth(self.as_ptr()) as u32 }
     }
 }
 
