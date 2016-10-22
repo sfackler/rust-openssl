@@ -980,13 +980,15 @@ impl SslRef {
     }
 
     /// Returns the server's name for the current connection
-    pub fn servername(&self) -> Option<String> {
-        let name = unsafe { ffi::SSL_get_servername(self.as_ptr(), ffi::TLSEXT_NAMETYPE_host_name) };
-        if name == ptr::null() {
-            return None;
-        }
+    pub fn servername(&self) -> Option<&str> {
+        unsafe {
+            let name = ffi::SSL_get_servername(self.as_ptr(), ffi::TLSEXT_NAMETYPE_host_name);
+            if name == ptr::null() {
+                return None;
+            }
 
-        unsafe { String::from_utf8(CStr::from_ptr(name as *const _).to_bytes().to_vec()).ok() }
+            Some(str::from_utf8(CStr::from_ptr(name as *const _).to_bytes()).unwrap())
+        }
     }
 
     /// Changes the context corresponding to the current connection.
