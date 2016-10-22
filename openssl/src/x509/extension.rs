@@ -71,10 +71,10 @@ impl Extension {
 impl ExtensionType {
     pub fn get_nid(&self) -> Option<Nid> {
         match self {
-            &ExtensionType::KeyUsage => Some(Nid::KeyUsage),
-            &ExtensionType::ExtKeyUsage => Some(Nid::ExtendedKeyUsage),
-            &ExtensionType::SubjectAltName => Some(Nid::SubjectAltName),
-            &ExtensionType::IssuerAltName => Some(Nid::IssuerAltName),
+            &ExtensionType::KeyUsage => Some(Nid::key_usage()),
+            &ExtensionType::ExtKeyUsage => Some(Nid::ext_key_usage()),
+            &ExtensionType::SubjectAltName => Some(Nid::subject_alt_name()),
+            &ExtensionType::IssuerAltName => Some(Nid::issuer_alt_name()),
             &ExtensionType::OtherNid(nid) => Some(nid),
             &ExtensionType::OtherStr(_) => None,
         }
