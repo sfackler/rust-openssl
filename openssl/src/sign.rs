@@ -211,7 +211,7 @@ mod test {
     use hash::MessageDigest;
     use sign::{Signer, Verifier};
     use rsa::RSA;
-    use dsa::DSA;
+    use dsa::Dsa;
     use pkey::PKey;
 
     static INPUT: &'static [u8] =
@@ -280,12 +280,12 @@ mod test {
 
         let private_key = {
             let key = include_bytes!("../test/dsa.pem");
-            PKey::from_dsa(DSA::private_key_from_pem(key).unwrap()).unwrap()
+            PKey::from_dsa(Dsa::private_key_from_pem(key).unwrap()).unwrap()
         };
 
         let public_key = {
             let key = include_bytes!("../test/dsa.pem.pub");
-            PKey::from_dsa(DSA::public_key_from_pem(key).unwrap()).unwrap()
+            PKey::from_dsa(Dsa::public_key_from_pem(key).unwrap()).unwrap()
         };
 
         let mut signer = Signer::new(MessageDigest::sha1(), &private_key).unwrap();
@@ -303,12 +303,12 @@ mod test {
 
         let private_key = {
             let key = include_bytes!("../test/dsa.pem");
-            PKey::from_dsa(DSA::private_key_from_pem(key).unwrap()).unwrap()
+            PKey::from_dsa(Dsa::private_key_from_pem(key).unwrap()).unwrap()
         };
 
         let public_key = {
             let key = include_bytes!("../test/dsa.pem.pub");
-            PKey::from_dsa(DSA::public_key_from_pem(key).unwrap()).unwrap()
+            PKey::from_dsa(Dsa::public_key_from_pem(key).unwrap()).unwrap()
         };
 
         let mut signer = Signer::new(MessageDigest::sha1(), &private_key).unwrap();

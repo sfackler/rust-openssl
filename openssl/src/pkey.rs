@@ -5,7 +5,7 @@ use ffi;
 
 use {cvt, cvt_p};
 use bio::{MemBio, MemBioSlice};
-use dsa::DSA;
+use dsa::Dsa;
 use rsa::RSA;
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb};
@@ -29,7 +29,7 @@ impl PKey {
     }
 
     /// Create a new `PKey` containing a DSA key.
-    pub fn from_dsa(dsa: DSA) -> Result<PKey, ErrorStack> {
+    pub fn from_dsa(dsa: Dsa) -> Result<PKey, ErrorStack> {
         unsafe {
             let evp = try!(cvt_p(ffi::EVP_PKEY_new()));
             let pkey = PKey(evp);
