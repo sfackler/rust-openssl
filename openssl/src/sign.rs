@@ -210,7 +210,7 @@ mod test {
 
     use hash::MessageDigest;
     use sign::{Signer, Verifier};
-    use rsa::RSA;
+    use rsa::Rsa;
     use dsa::Dsa;
     use pkey::PKey;
 
@@ -241,7 +241,7 @@ mod test {
     #[test]
     fn rsa_sign() {
         let key = include_bytes!("../test/rsa.pem");
-        let private_key = RSA::private_key_from_pem(key).unwrap();
+        let private_key = Rsa::private_key_from_pem(key).unwrap();
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut signer = Signer::new(MessageDigest::sha256(), &pkey).unwrap();
@@ -254,7 +254,7 @@ mod test {
     #[test]
     fn rsa_verify_ok() {
         let key = include_bytes!("../test/rsa.pem");
-        let private_key = RSA::private_key_from_pem(key).unwrap();
+        let private_key = Rsa::private_key_from_pem(key).unwrap();
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
@@ -265,7 +265,7 @@ mod test {
     #[test]
     fn rsa_verify_invalid() {
         let key = include_bytes!("../test/rsa.pem");
-        let private_key = RSA::private_key_from_pem(key).unwrap();
+        let private_key = Rsa::private_key_from_pem(key).unwrap();
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();

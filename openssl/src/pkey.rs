@@ -6,7 +6,7 @@ use ffi;
 use {cvt, cvt_p};
 use bio::{MemBio, MemBioSlice};
 use dsa::Dsa;
-use rsa::RSA;
+use rsa::Rsa;
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb};
 
@@ -18,7 +18,7 @@ unsafe impl Sync for PKey {}
 /// Represents a public key, optionally with a private key attached.
 impl PKey {
     /// Create a new `PKey` containing an RSA key.
-    pub fn from_rsa(rsa: RSA) -> Result<PKey, ErrorStack> {
+    pub fn from_rsa(rsa: Rsa) -> Result<PKey, ErrorStack> {
         unsafe {
             let evp = try!(cvt_p(ffi::EVP_PKEY_new()));
             let pkey = PKey(evp);
@@ -102,7 +102,7 @@ impl PKey {
     }
 
     /// assign RSA key to this pkey
-    pub fn set_rsa(&mut self, rsa: &RSA) -> Result<(), ErrorStack> {
+    pub fn set_rsa(&mut self, rsa: &Rsa) -> Result<(), ErrorStack> {
         unsafe {
             // this needs to be a reference as the set1_RSA ups the reference count
             let rsa_ptr = rsa.as_ptr();
@@ -112,11 +112,11 @@ impl PKey {
     }
 
     /// Get a reference to the interal RSA key for direct access to the key components
-    pub fn rsa(&self) -> Result<RSA, ErrorStack> {
+    pub fn rsa(&self) -> Result<Rsa, ErrorStack> {
         unsafe {
             let rsa = try!(cvt_p(ffi::EVP_PKEY_get1_RSA(self.0)));
             // this is safe as the ffi increments a reference counter to the internal key
-            Ok(RSA::from_ptr(rsa))
+            Ok(Rsa::from_ptr(rsa))
         }
     }
 

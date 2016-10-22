@@ -2,7 +2,7 @@ use serialize::hex::FromHex;
 
 use hash::MessageDigest;
 use pkey::PKey;
-use rsa::RSA;
+use rsa::Rsa;
 use x509::{X509, X509Generator};
 use x509::extension::Extension::{KeyUsage, ExtKeyUsage, SubjectAltName, OtherNid, OtherStr};
 use x509::extension::AltNameOption as SAN;
@@ -25,7 +25,7 @@ fn get_generator() -> X509Generator {
 }
 
 fn pkey() -> PKey {
-    let rsa = RSA::generate(2048).unwrap();
+    let rsa = Rsa::generate(2048).unwrap();
     PKey::from_rsa(rsa).unwrap()
 }
 

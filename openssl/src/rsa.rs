@@ -28,9 +28,9 @@ impl Padding {
     }
 }
 
-pub struct RSA(*mut ffi::RSA);
+pub struct Rsa(*mut ffi::RSA);
 
-impl Drop for RSA {
+impl Drop for Rsa {
     fn drop(&mut self) {
         unsafe {
             ffi::RSA_free(self.0);
@@ -38,12 +38,12 @@ impl Drop for RSA {
     }
 }
 
-impl RSA {
+impl Rsa {
     /// only useful for associating the key material directly with the key, it's safer to use
     /// the supplied load and save methods for DER formatted keys.
-    pub fn from_public_components(n: BigNum, e: BigNum) -> Result<RSA, ErrorStack> {
+    pub fn from_public_components(n: BigNum, e: BigNum) -> Result<Rsa, ErrorStack> {
         unsafe {
-            let rsa = RSA(try!(cvt_p(ffi::RSA_new())));
+            let rsa = Rsa(try!(cvt_p(ffi::RSA_new())));
             try!(cvt(compat::set_key(rsa.0,
                                      n.as_ptr(),
                                      e.as_ptr(),
@@ -61,9 +61,9 @@ impl RSA {
                                    dp: BigNum,
                                    dq: BigNum,
                                    qi: BigNum)
-                                   -> Result<RSA, ErrorStack> {
+                                   -> Result<Rsa, ErrorStack> {
         unsafe {
-            let rsa = RSA(try!(cvt_p(ffi::RSA_new())));
+            let rsa = Rsa(try!(cvt_p(ffi::RSA_new())));
             try!(cvt(compat::set_key(rsa.0, n.as_ptr(), e.as_ptr(), d.as_ptr())));
             mem::forget((n, e, d));
             try!(cvt(compat::set_factors(rsa.0, p.as_ptr(), q.as_ptr())));
@@ -75,16 +75,16 @@ impl RSA {
         }
     }
 
-    pub unsafe fn from_ptr(rsa: *mut ffi::RSA) -> RSA {
-        RSA(rsa)
+    pub unsafe fn from_ptr(rsa: *mut ffi::RSA) -> Rsa {
+        Rsa(rsa)
     }
 
     /// Generates a public/private key pair with the specified size.
     ///
     /// The public exponent will be 65537.
-    pub fn generate(bits: u32) -> Result<RSA, ErrorStack> {
+    pub fn generate(bits: u32) -> Result<Rsa, ErrorStack> {
         unsafe {
-            let rsa = RSA(try!(cvt_p(ffi::RSA_new())));
+            let rsa = Rsa(try!(cvt_p(ffi::RSA_new())));
             let e = try!(BigNum::from_u32(ffi::RSA_F4 as u32));
             try!(cvt(ffi::RSA_generate_key_ex(rsa.0, bits as c_int, e.as_ptr(), ptr::null_mut())));
             Ok(rsa)
@@ -92,19 +92,19 @@ impl RSA {
     }
 
     /// Reads an RSA private key from PEM formatted data.
-    pub fn private_key_from_pem(buf: &[u8]) -> Result<RSA, ErrorStack> {
+    pub fn private_key_from_pem(buf: &[u8]) -> Result<Rsa, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
             let rsa = try!(cvt_p(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.as_ptr(),
                                                                  ptr::null_mut(),
                                                                  None,
                                                                  ptr::null_mut())));
-            Ok(RSA(rsa))
+            Ok(Rsa(rsa))
         }
     }
 
     /// Reads an RSA private key from PEM formatted data and supplies a password callback.
-    pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<RSA, ErrorStack>
+    pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<Rsa, ErrorStack>
         where F: FnOnce(&mut [c_char]) -> usize
     {
         let mut cb = CallbackState::new(pass_cb);
@@ -116,19 +116,19 @@ impl RSA {
                                                                  ptr::null_mut(),
                                                                  Some(invoke_passwd_cb::<F>),
                                                                  cb_ptr)));
-            Ok(RSA(rsa))
+            Ok(Rsa(rsa))
         }
     }
 
     /// Reads an RSA public key from PEM formatted data.
-    pub fn public_key_from_pem(buf: &[u8]) -> Result<RSA, ErrorStack> {
+    pub fn public_key_from_pem(buf: &[u8]) -> Result<Rsa, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
             let rsa = try!(cvt_p(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.as_ptr(),
                                                               ptr::null_mut(),
                                                               None,
                                                               ptr::null_mut())));
-            Ok(RSA(rsa))
+            Ok(Rsa(rsa))
         }
     }
 
@@ -323,7 +323,7 @@ impl RSA {
     }
 }
 
-impl fmt::Debug for RSA {
+impl fmt::Debug for Rsa {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "RSA")
     }
@@ -422,7 +422,7 @@ mod test {
     pub fn test_password() {
         let mut password_queried = false;
         let key = include_bytes!("../test/rsa-encrypted.pem");
-        RSA::private_key_from_pem_cb(key, |password| {
+        Rsa::private_key_from_pem_cb(key, |password| {
             password_queried = true;
             password[0] = b'm' as c_char;
             password[1] = b'y' as c_char;
@@ -439,7 +439,7 @@ mod test {
     #[test]
     pub fn test_public_encrypt_private_decrypt_with_padding() {
         let key = include_bytes!("../test/rsa.pem.pub");
-        let public_key = RSA::public_key_from_pem(key).unwrap();
+        let public_key = Rsa::public_key_from_pem(key).unwrap();
 
         let mut result = vec![0; public_key.size()];
         let original_data = b"This is test";
@@ -447,7 +447,7 @@ mod test {
         assert_eq!(len, 256);
 
         let pkey = include_bytes!("../test/rsa.pem");
-        let private_key = RSA::private_key_from_pem(pkey).unwrap();
+        let private_key = Rsa::private_key_from_pem(pkey).unwrap();
         let mut dec_result = vec![0; private_key.size()];
         let len = private_key.private_decrypt(&result, &mut dec_result, Padding::pkcs1()).unwrap();
 
@@ -456,9 +456,9 @@ mod test {
 
     #[test]
    fn test_private_encrypt() {
-        let k0 = super::RSA::generate(512).unwrap();
+        let k0 = super::Rsa::generate(512).unwrap();
         let k0pkey = k0.public_key_to_pem().unwrap();
-        let k1 = super::RSA::public_key_from_pem(&k0pkey).unwrap();
+        let k1 = super::Rsa::public_key_from_pem(&k0pkey).unwrap();
 
         let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
 
@@ -471,9 +471,9 @@ mod test {
 
    #[test]
    fn test_public_encrypt() {
-       let k0 = super::RSA::generate(512).unwrap();
+       let k0 = super::Rsa::generate(512).unwrap();
        let k0pkey = k0.private_key_to_pem().unwrap();
-       let k1 = super::RSA::private_key_from_pem(&k0pkey).unwrap();
+       let k1 = super::Rsa::private_key_from_pem(&k0pkey).unwrap();
 
        let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
 
