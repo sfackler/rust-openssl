@@ -955,27 +955,24 @@ impl SslRef {
     ///
     /// The result will be either None, indicating no compression is in use, or
     /// a string with the compression name.
-    pub fn compression(&self) -> Option<String> {
+    pub fn compression(&self) -> Option<&str> {
         self._compression()
     }
 
     #[cfg(not(osslconf = "OPENSSL_NO_COMP"))]
-    fn _compression(&self) -> Option<String> {
-        let ptr = unsafe { ffi::SSL_get_current_compression(self.as_ptr()) };
-        if ptr == ptr::null() {
-            return None;
+    fn _compression(&self) -> Option<&str> {
+        unsafe {
+            let ptr = ffi::SSL_get_current_compression(self.as_ptr());
+            if ptr == ptr::null() {
+                return None;
+            }
+            let meth = ffi::SSL_COMP_get_name(ptr);
+            Some(str::from_utf8(CStr::from_ptr(meth as *const _).to_bytes()).unwrap())
         }
-
-        let meth = unsafe { ffi::SSL_COMP_get_name(ptr) };
-        let s = unsafe {
-            String::from_utf8(CStr::from_ptr(meth as *const _).to_bytes().to_vec()).unwrap()
-        };
-
-        Some(s)
     }
 
     #[cfg(osslconf = "OPENSSL_NO_COMP")]
-    fn _compression(&self) -> Option<String> {
+    fn _compression(&self) -> Option<&str> {
         None
     }
 
