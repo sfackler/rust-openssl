@@ -103,7 +103,7 @@ use self::State::*;
 ///
 /// Don't actually use MD5 and SHA-1 hashes, they're not secure anymore.
 ///
-/// Don't ever hash passwords, use `crypto::pkcs5` or bcrypt/scrypt instead.
+/// Don't ever hash passwords, use the functions in the `pkcs5` module or bcrypt/scrypt instead.
 pub struct Hasher {
     ctx: *mut ffi::EVP_MD_CTX,
     md: *const ffi::EVP_MD,
