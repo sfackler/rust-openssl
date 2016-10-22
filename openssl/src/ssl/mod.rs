@@ -709,16 +709,21 @@ pub struct CipherBits {
     pub algorithm: i32,
 }
 
-pub struct SslCipher<'a> {
-    cipher: *const ffi::SSL_CIPHER,
-    ph: PhantomData<&'a ()>,
-}
+pub struct SslCipherRef(Opaque);
 
-impl<'a> SslCipher<'a> {
+impl SslCipherRef {
+    pub unsafe fn from_ptr<'a>(ptr: *const ffi::SSL_CIPHER) -> &'a SslCipherRef {
+        &*(ptr as *const _)
+    }
+
+    pub fn as_ptr(&self) -> *const ffi::SSL_CIPHER {
+        self as *const _ as *const _
+    }
+
     /// Returns the name of cipher.
     pub fn name(&self) -> &'static str {
         let name = unsafe {
-            let ptr = ffi::SSL_CIPHER_get_name(self.cipher);
+            let ptr = ffi::SSL_CIPHER_get_name(self.as_ptr());
             CStr::from_ptr(ptr as *const _)
         };
 
@@ -728,7 +733,7 @@ impl<'a> SslCipher<'a> {
     /// Returns the SSL/TLS protocol version that first defined the cipher.
     pub fn version(&self) -> &'static str {
         let version = unsafe {
-            let ptr = ffi::SSL_CIPHER_get_version(self.cipher);
+            let ptr = ffi::SSL_CIPHER_get_version(self.as_ptr());
             CStr::from_ptr(ptr as *const _)
         };
 
@@ -739,7 +744,7 @@ impl<'a> SslCipher<'a> {
     pub fn bits(&self) -> CipherBits {
         unsafe {
             let mut algo_bits = 0;
-            let secret_bits = ffi::SSL_CIPHER_get_bits(self.cipher, &mut algo_bits);
+            let secret_bits = ffi::SSL_CIPHER_get_bits(self.as_ptr(), &mut algo_bits);
             CipherBits {
                 secret: secret_bits.into(),
                 algorithm: algo_bits.into(),
@@ -752,7 +757,7 @@ impl<'a> SslCipher<'a> {
         unsafe {
             // SSL_CIPHER_description requires a buffer of at least 128 bytes.
             let mut buf = [0; 128];
-            let desc_ptr = ffi::SSL_CIPHER_description(self.cipher, buf.as_mut_ptr(), 128);
+            let desc_ptr = ffi::SSL_CIPHER_description(self.as_ptr(), buf.as_mut_ptr(), 128);
 
             if !desc_ptr.is_null() {
                 String::from_utf8(CStr::from_ptr(desc_ptr as *const _).to_bytes().to_vec()).ok()
@@ -836,17 +841,14 @@ impl SslRef {
         }
     }
 
-    pub fn current_cipher<'a>(&'a self) -> Option<SslCipher<'a>> {
+    pub fn current_cipher(&self) -> Option<&SslCipherRef> {
         unsafe {
             let ptr = ffi::SSL_get_current_cipher(self.as_ptr());
 
             if ptr.is_null() {
                 None
             } else {
-                Some(SslCipher {
-                    cipher: ptr,
-                    ph: PhantomData,
-                })
+                Some(SslCipherRef::from_ptr(ptr))
             }
         }
     }
