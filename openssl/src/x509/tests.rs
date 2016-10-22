@@ -8,7 +8,7 @@ use x509::extension::Extension::{KeyUsage, ExtKeyUsage, SubjectAltName, OtherNid
 use x509::extension::AltNameOption as SAN;
 use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment};
 use x509::extension::ExtKeyUsageOption::{self, ClientAuth, ServerAuth};
-use nid::Nid;
+use nid;
 
 fn get_generator() -> X509Generator {
     X509Generator::new()
@@ -20,7 +20,7 @@ fn get_generator() -> X509Generator {
                                         ServerAuth,
                                         ExtKeyUsageOption::Other("2.999.1".to_owned())]))
         .add_extension(SubjectAltName(vec![(SAN::DNS, "example.com".to_owned())]))
-        .add_extension(OtherNid(Nid::basic_constraints(), "critical,CA:TRUE".to_owned()))
+        .add_extension(OtherNid(nid::BASIC_CONSTRAINTS, "critical,CA:TRUE".to_owned()))
         .add_extension(OtherStr("2.999.2".to_owned(), "ASN1:UTF8:example value".to_owned()))
 }
 
@@ -48,8 +48,8 @@ fn test_cert_gen() {
 fn test_cert_gen_extension_ordering() {
     let pkey = pkey();
     get_generator()
-        .add_extension(OtherNid(Nid::subject_key_identifier(), "hash".to_owned()))
-        .add_extension(OtherNid(Nid::authority_key_identifier(), "keyid:always".to_owned()))
+        .add_extension(OtherNid(nid::SUBJECT_KEY_IDENTIFIER, "hash".to_owned()))
+        .add_extension(OtherNid(nid::AUTHORITY_KEY_IDENTIFIER, "keyid:always".to_owned()))
         .sign(&pkey)
         .expect("Failed to generate cert with order-dependent extensions");
 }
@@ -60,9 +60,9 @@ fn test_cert_gen_extension_ordering() {
 fn test_cert_gen_extension_bad_ordering() {
     let pkey = pkey();
     let result = get_generator()
-                     .add_extension(OtherNid(Nid::authority_key_identifier(),
+                     .add_extension(OtherNid(nid::AUTHORITY_KEY_IDENTIFIER,
                                              "keyid:always".to_owned()))
-                     .add_extension(OtherNid(Nid::subject_key_identifier(), "hash".to_owned()))
+                     .add_extension(OtherNid(nid::SUBJECT_KEY_IDENTIFIER, "hash".to_owned()))
                      .sign(&pkey);
 
     assert!(result.is_err());
@@ -116,7 +116,7 @@ fn test_subject_read_cn() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
     let subject = cert.subject_name();
-    let cn = match subject.text_by_nid(Nid::commonName()) {
+    let cn = match subject.text_by_nid(nid::COMMONNAME) {
         Some(x) => x,
         None => panic!("Failed to read CN from cert"),
     };
@@ -130,19 +130,19 @@ fn test_nid_values() {
     let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
     let subject = cert.subject_name();
 
-    let cn = match subject.text_by_nid(Nid::commonName()) {
+    let cn = match subject.text_by_nid(nid::COMMONNAME) {
         Some(x) => x,
         None => panic!("Failed to read CN from cert"),
     };
     assert_eq!(&cn as &str, "example.com");
 
-    let email = match subject.text_by_nid(Nid::pkcs9_emailAddress()) {
+    let email = match subject.text_by_nid(nid::PKCS9_EMAILADDRESS) {
         Some(x) => x,
         None => panic!("Failed to read subject email address from cert"),
     };
     assert_eq!(&email as &str, "test@example.com");
 
-    let friendly = match subject.text_by_nid(Nid::friendlyName()) {
+    let friendly = match subject.text_by_nid(nid::FRIENDLYNAME) {
         Some(x) => x,
         None => panic!("Failed to read subject friendly name from cert"),
     };
@@ -155,7 +155,7 @@ fn test_nid_uid_value() {
     let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
     let subject = cert.subject_name();
 
-    let cn = match subject.text_by_nid(Nid::userId()) {
+    let cn = match subject.text_by_nid(nid::USERID) {
         Some(x) => x,
         None => panic!("Failed to read UID from cert"),
     };

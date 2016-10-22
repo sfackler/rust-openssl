@@ -1,6 +1,6 @@
 use std::fmt;
 
-use nid::Nid;
+use nid::{self, Nid};
 
 /// Type-only version of the `Extension` enum.
 ///
@@ -71,10 +71,10 @@ impl Extension {
 impl ExtensionType {
     pub fn get_nid(&self) -> Option<Nid> {
         match self {
-            &ExtensionType::KeyUsage => Some(Nid::key_usage()),
-            &ExtensionType::ExtKeyUsage => Some(Nid::ext_key_usage()),
-            &ExtensionType::SubjectAltName => Some(Nid::subject_alt_name()),
-            &ExtensionType::IssuerAltName => Some(Nid::issuer_alt_name()),
+            &ExtensionType::KeyUsage => Some(nid::KEY_USAGE),
+            &ExtensionType::ExtKeyUsage => Some(nid::EXT_KEY_USAGE),
+            &ExtensionType::SubjectAltName => Some(nid::SUBJECT_ALT_NAME),
+            &ExtensionType::IssuerAltName => Some(nid::ISSUER_ALT_NAME),
             &ExtensionType::OtherNid(nid) => Some(nid),
             &ExtensionType::OtherStr(_) => None,
         }
