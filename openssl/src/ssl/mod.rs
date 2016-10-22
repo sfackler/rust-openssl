@@ -26,6 +26,7 @@ use x509::{X509StoreContext, X509FileType, X509, X509Ref, X509VerifyError};
 use x509::verify::X509VerifyParamRef;
 use crypto::pkey::PKey;
 use error::ErrorStack;
+use opaque::Opaque;
 
 pub mod error;
 mod bio;
@@ -335,15 +336,19 @@ pub enum SniError {
 }
 
 /// A borrowed SSL context object.
-pub struct SslContextRef<'a>(*mut ffi::SSL_CTX, PhantomData<&'a ()>);
+pub struct SslContextRef(Opaque);
 
-impl<'a> SslContextRef<'a> {
-    pub unsafe fn from_ptr(ctx: *mut ffi::SSL_CTX) -> SslContextRef<'a> {
-        SslContextRef(ctx, PhantomData)
+impl SslContextRef {
+    pub unsafe fn from_ptr<'a>(ctx: *mut ffi::SSL_CTX) -> &'a SslContextRef {
+        &*(ctx as *mut _)
+    }
+
+    pub unsafe fn from_ptr_mut<'a>(ctx: *mut ffi::SSL_CTX) -> &'a mut SslContextRef {
+        &mut *(ctx as *mut _)
     }
 
     pub fn as_ptr(&self) -> *mut ffi::SSL_CTX {
-        self.0
+        self as *const _ as *mut _
     }
 
     /// Configures the certificate verification method for new connections.
@@ -626,7 +631,7 @@ impl<'a> SslContextRef<'a> {
 }
 
 /// An owned SSL context object.
-pub struct SslContext(SslContextRef<'static>);
+pub struct SslContext(*mut ffi::SSL_CTX);
 
 unsafe impl Send for SslContext {}
 unsafe impl Sync for SslContext {}
@@ -654,16 +659,20 @@ impl Drop for SslContext {
 }
 
 impl Deref for SslContext {
-    type Target = SslContextRef<'static>;
+    type Target = SslContextRef;
 
-    fn deref(&self) -> &SslContextRef<'static> {
-        &self.0
+    fn deref(&self) -> &SslContextRef {
+        unsafe {
+            SslContextRef::from_ptr(self.0)
+        }
     }
 }
 
 impl DerefMut for SslContext {
-    fn deref_mut(&mut self) -> &mut SslContextRef<'static> {
-        &mut self.0
+    fn deref_mut(&mut self) -> &mut SslContextRef {
+        unsafe {
+            SslContextRef::from_ptr_mut(self.0)
+        }
     }
 }
 
@@ -683,11 +692,11 @@ impl SslContext {
     }
 
     pub unsafe fn from_ptr(ctx: *mut ffi::SSL_CTX) -> SslContext {
-        SslContext(SslContextRef::from_ptr(ctx))
+        SslContext(ctx)
     }
 
     pub fn as_ptr(&self) -> *mut ffi::SSL_CTX {
-        (**self).as_ptr()
+        self.0
     }
 }
 
@@ -982,7 +991,7 @@ impl<'a> SslRef<'a> {
     }
 
     /// Returns the context corresponding to the current connection
-    pub fn ssl_context(&self) -> SslContextRef<'a> {
+    pub fn ssl_context(&self) -> &SslContextRef {
         unsafe {
             let ssl_ctx = ffi::SSL_get_SSL_CTX(self.as_ptr());
             SslContextRef::from_ptr(ssl_ctx)

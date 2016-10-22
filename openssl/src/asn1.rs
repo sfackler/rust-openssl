@@ -1,6 +1,5 @@
 use libc::c_long;
 use std::{ptr, fmt};
-use std::marker::PhantomData;
 use std::ops::Deref;
 
 use ffi;
