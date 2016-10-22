@@ -130,13 +130,13 @@ impl X509StoreContextRef {
 /// # Example
 ///
 /// ```
-/// use openssl::crypto::hash::MessageDigest;
-/// use openssl::crypto::pkey::PKey;
-/// use openssl::crypto::rsa::RSA;
+/// use openssl::hash::MessageDigest;
+/// use openssl::pkey::PKey;
+/// use openssl::rsa::Rsa;
 /// use openssl::x509::X509Generator;
 /// use openssl::x509::extension::{Extension, KeyUsageOption};
 ///
-/// let rsa = RSA::generate(2048).unwrap();
+/// let rsa = Rsa::generate(2048).unwrap();
 /// let pkey = PKey::from_rsa(rsa).unwrap();
 ///
 /// let gen = X509Generator::new()

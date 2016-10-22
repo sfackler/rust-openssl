@@ -77,7 +77,7 @@ use self::State::*;
 /// Calculate a hash in one go.
 ///
 /// ```
-/// use openssl::crypto::hash::{hash, MessageDigest};
+/// use openssl::hash::{hash, MessageDigest};
 ///
 /// let data = b"\x42\xF4\x97\xE0";
 /// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
@@ -88,7 +88,7 @@ use self::State::*;
 /// Use the `Write` trait to supply the input in chunks.
 ///
 /// ```
-/// use openssl::crypto::hash::{Hasher, MessageDigest};
+/// use openssl::hash::{Hasher, MessageDigest};
 ///
 /// let data = [b"\x42\xF4", b"\x97\xE0"];
 /// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";

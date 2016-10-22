@@ -10,13 +10,13 @@
 //! Sign and verify data given an RSA keypair:
 //!
 //! ```rust
-//! use openssl::crypto::sign::{Signer, Verifier};
-//! use openssl::crypto::rsa::RSA;
-//! use openssl::crypto::pkey::PKey;
-//! use openssl::crypto::hash::MessageDigest;
+//! use openssl::sign::{Signer, Verifier};
+//! use openssl::rsa::Rsa;
+//! use openssl::pkey::PKey;
+//! use openssl::hash::MessageDigest;
 //!
 //! // Generate a keypair
-//! let keypair = RSA::generate(2048).unwrap();
+//! let keypair = Rsa::generate(2048).unwrap();
 //! let keypair = PKey::from_rsa(keypair).unwrap();
 //!
 //! let data = b"hello, world!";
@@ -38,9 +38,9 @@
 //! Compute an HMAC (note that `Verifier` cannot be used with HMACs):
 //!
 //! ```rust
-//! use openssl::crypto::sign::Signer;
-//! use openssl::crypto::pkey::PKey;
-//! use openssl::crypto::hash::MessageDigest;
+//! use openssl::sign::Signer;
+//! use openssl::pkey::PKey;
+//! use openssl::hash::MessageDigest;
 //!
 //! // Create a PKey
 //! let key = PKey::hmac(b"my secret").unwrap();
