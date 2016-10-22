@@ -479,7 +479,7 @@ fn test_pending() {
 fn test_state() {
     let (_s, tcp) = Server::new();
     let ctx = SslContext::new(SslMethod::tls()).unwrap();
-    let mut stream = Ssl::new(&ctx).unwrap().connect(tcp).unwrap();
+    let stream = Ssl::new(&ctx).unwrap().connect(tcp).unwrap();
     assert_eq!(stream.ssl().state_string(), "SSLOK ");
     assert_eq!(stream.ssl().state_string_long(),
                "SSL negotiation finished successfully");

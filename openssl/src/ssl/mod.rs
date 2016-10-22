@@ -211,9 +211,9 @@ extern fn raw_sni<F>(ssl: *mut ffi::SSL, al: *mut c_int, _arg: *mut c_void) -> c
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
         let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_verify_data_idx::<F>());
         let callback: &F = &*(callback as *mut F);
-        let mut ssl = SslRef::from_ptr(ssl);
+        let ssl = SslRef::from_ptr_mut(ssl);
 
-        match callback(&mut ssl) {
+        match callback(ssl) {
             Ok(()) => ffi::SSL_TLSEXT_ERR_OK,
             Err(SniError::Fatal(e)) => {
                 *al = e;
@@ -763,12 +763,12 @@ impl<'a> SslCipher<'a> {
     }
 }
 
-pub struct SslRef<'a>(*mut ffi::SSL, PhantomData<&'a ()>);
+pub struct SslRef(Opaque);
 
-unsafe impl<'a> Send for SslRef<'a> {}
-unsafe impl<'a> Sync for SslRef<'a> {}
+unsafe impl Send for SslRef {}
+unsafe impl Sync for SslRef {}
 
-impl<'a> fmt::Debug for SslRef<'a> {
+impl fmt::Debug for SslRef {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let mut builder = fmt.debug_struct("SslRef");
         builder.field("state", &self.state_string_long());
@@ -779,13 +779,17 @@ impl<'a> fmt::Debug for SslRef<'a> {
     }
 }
 
-impl<'a> SslRef<'a> {
-    pub unsafe fn from_ptr(ssl: *mut ffi::SSL) -> SslRef<'a> {
-        SslRef(ssl, PhantomData)
+impl SslRef {
+    pub unsafe fn from_ptr<'a>(ssl: *mut ffi::SSL) -> &'a SslRef {
+        &*(ssl as *mut _)
+    }
+
+    pub unsafe fn from_ptr_mut<'a>(ssl: *mut ffi::SSL) -> &'a mut SslRef {
+        &mut *(ssl as *mut _)
     }
 
     pub fn as_ptr(&self) -> *mut ffi::SSL {
-        self.0
+        self as *const _ as *mut _
     }
 
     fn get_raw_rbio(&self) -> *mut ffi::BIO {
@@ -832,7 +836,7 @@ impl<'a> SslRef<'a> {
         }
     }
 
-    pub fn current_cipher(&self) -> Option<SslCipher<'a>> {
+    pub fn current_cipher<'a>(&'a self) -> Option<SslCipher<'a>> {
         unsafe {
             let ptr = ffi::SSL_get_current_cipher(self.as_ptr());
 
@@ -1002,7 +1006,7 @@ impl<'a> SslRef<'a> {
     ///
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn param(&mut self) -> X509VerifyParamRef<'a> {
+    pub fn param<'a>(&'a mut self) -> X509VerifyParamRef<'a> {
         unsafe {
             X509VerifyParamRef::from_ptr(ffi::SSL_get0_param(self.as_ptr()))
         }
@@ -1011,12 +1015,12 @@ impl<'a> SslRef<'a> {
     /// Returns the result of X509 certificate verification.
     pub fn verify_result(&self) -> Option<X509VerifyError> {
         unsafe {
-            X509VerifyError::from_raw(ffi::SSL_get_verify_result(self.0))
+            X509VerifyError::from_raw(ffi::SSL_get_verify_result(self.as_ptr()))
         }
     }
 }
 
-pub struct Ssl(SslRef<'static>);
+pub struct Ssl(*mut ffi::SSL);
 
 impl fmt::Debug for Ssl {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -1036,16 +1040,20 @@ impl Drop for Ssl {
 }
 
 impl Deref for Ssl {
-    type Target = SslRef<'static>;
+    type Target = SslRef;
 
-    fn deref(&self) -> &SslRef<'static> {
-        &self.0
+    fn deref(&self) -> &SslRef {
+        unsafe {
+            SslRef::from_ptr(self.0)
+        }
     }
 }
 
 impl DerefMut for Ssl {
-    fn deref_mut(&mut self) -> &mut SslRef<'static> {
-        &mut self.0
+    fn deref_mut(&mut self) -> &mut SslRef {
+        unsafe {
+            SslRef::from_ptr_mut(self.0)
+        }
     }
 }
 
@@ -1058,7 +1066,7 @@ impl Ssl {
     }
 
     pub unsafe fn from_ptr(ssl: *mut ffi::SSL) -> Ssl {
-        Ssl(SslRef::from_ptr(ssl))
+        Ssl(ssl)
     }
 
     /// Creates an SSL/TLS client operating over the provided stream.
