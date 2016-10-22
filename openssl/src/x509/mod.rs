@@ -107,7 +107,7 @@ impl X509StoreContext {
         }
     }
 
-    pub fn current_cert<'a>(&'a self) -> Option<X509Ref<'a>> {
+    pub fn current_cert<'a>(&'a self) -> Option<&'a X509Ref> {
         unsafe {
             let ptr = ffi::X509_STORE_CTX_get_current_cert(self.ctx);
             if ptr.is_null() {
@@ -390,21 +390,21 @@ impl X509Generator {
 }
 
 /// A borrowed public key certificate.
-pub struct X509Ref<'a>(*mut ffi::X509, PhantomData<&'a ()>);
+pub struct X509Ref(Opaque);
 
-impl<'a> X509Ref<'a> {
+impl X509Ref {
     /// Creates a new `X509Ref` wrapping the provided handle.
-    pub unsafe fn from_ptr(x509: *mut ffi::X509) -> X509Ref<'a> {
-        X509Ref(x509, PhantomData)
+    pub unsafe fn from_ptr<'a>(x509: *mut ffi::X509) -> &'a X509Ref {
+        &*(x509 as *mut _)
     }
 
     pub fn as_ptr(&self) -> *mut ffi::X509 {
-        self.0
+        self as *const _ as *mut _
     }
 
     pub fn subject_name(&self) -> &X509NameRef {
         unsafe {
-            let name = ffi::X509_get_subject_name(self.0);
+            let name = ffi::X509_get_subject_name(self.as_ptr());
             X509NameRef::from_ptr(name)
         }
     }
@@ -412,7 +412,7 @@ impl<'a> X509Ref<'a> {
     /// Returns this certificate's SAN entries, if they exist.
     pub fn subject_alt_names(&self) -> Option<GeneralNames> {
         unsafe {
-            let stack = ffi::X509_get_ext_d2i(self.0,
+            let stack = ffi::X509_get_ext_d2i(self.as_ptr(),
                                               Nid::SubjectAltName as c_int,
                                               ptr::null_mut(),
                                               ptr::null_mut());
@@ -428,7 +428,7 @@ impl<'a> X509Ref<'a> {
 
     pub fn public_key(&self) -> Result<PKey, ErrorStack> {
         unsafe {
-            let pkey = try!(cvt_p(ffi::X509_get_pubkey(self.0)));
+            let pkey = try!(cvt_p(ffi::X509_get_pubkey(self.as_ptr())));
             Ok(PKey::from_ptr(pkey))
         }
     }
@@ -439,25 +439,25 @@ impl<'a> X509Ref<'a> {
             let evp = hash_type.as_ptr();
             let mut len = ffi::EVP_MAX_MD_SIZE;
             let mut buf = vec![0u8; len as usize];
-            try!(cvt(ffi::X509_digest(self.0, evp, buf.as_mut_ptr() as *mut _, &mut len)));
+            try!(cvt(ffi::X509_digest(self.as_ptr(), evp, buf.as_mut_ptr() as *mut _, &mut len)));
             buf.truncate(len as usize);
             Ok(buf)
         }
     }
 
     /// Returns certificate Not After validity period.
-    pub fn not_after<'b>(&'b self) -> Asn1TimeRef<'b> {
+    pub fn not_after<'a>(&'a self) -> Asn1TimeRef<'a> {
         unsafe {
-            let date = compat::X509_get_notAfter(self.0);
+            let date = compat::X509_get_notAfter(self.as_ptr());
             assert!(!date.is_null());
             Asn1TimeRef::from_ptr(date)
         }
     }
 
     /// Returns certificate Not Before validity period.
-    pub fn not_before<'b>(&'b self) -> Asn1TimeRef<'b> {
+    pub fn not_before<'a>(&'a self) -> Asn1TimeRef<'a> {
         unsafe {
-            let date = compat::X509_get_notBefore(self.0);
+            let date = compat::X509_get_notBefore(self.as_ptr());
             assert!(!date.is_null());
             Asn1TimeRef::from_ptr(date)
         }
@@ -467,7 +467,7 @@ impl<'a> X509Ref<'a> {
     pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
-            try!(cvt(ffi::PEM_write_bio_X509(mem_bio.as_ptr(), self.0)));
+            try!(cvt(ffi::PEM_write_bio_X509(mem_bio.as_ptr(), self.as_ptr())));
         }
         Ok(mem_bio.get_buf().to_owned())
     }
@@ -476,19 +476,19 @@ impl<'a> X509Ref<'a> {
     pub fn to_der(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
-            ffi::i2d_X509_bio(mem_bio.as_ptr(), self.0);
+            ffi::i2d_X509_bio(mem_bio.as_ptr(), self.as_ptr());
         }
         Ok(mem_bio.get_buf().to_owned())
     }
 }
 
 /// An owned public key certificate.
-pub struct X509(X509Ref<'static>);
+pub struct X509(*mut ffi::X509);
 
 impl X509 {
     /// Returns a new `X509`, taking ownership of the handle.
     pub unsafe fn from_ptr(x509: *mut ffi::X509) -> X509 {
-        X509(X509Ref::from_ptr(x509))
+        X509(x509)
     }
 
     /// Reads a certificate from DER.
@@ -515,10 +515,12 @@ impl X509 {
 }
 
 impl Deref for X509 {
-    type Target = X509Ref<'static>;
+    type Target = X509Ref;
 
-    fn deref(&self) -> &X509Ref<'static> {
-        &self.0
+    fn deref(&self) -> &X509Ref {
+        unsafe {
+            X509Ref::from_ptr(self.0)
+        }
     }
 }
 
