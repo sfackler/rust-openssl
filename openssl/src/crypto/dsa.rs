@@ -155,7 +155,7 @@ impl DSA {
         self.0
     }
 
-    pub fn p<'a>(&'a self) -> Option<BigNumRef<'a>> {
+    pub fn p(&self) -> Option<&BigNumRef> {
         unsafe {
             let p = compat::pqg(self.0)[0];
             if p.is_null() {
@@ -166,7 +166,7 @@ impl DSA {
         }
     }
 
-    pub fn q<'a>(&'a self) -> Option<BigNumRef<'a>> {
+    pub fn q(&self) -> Option<&BigNumRef> {
         unsafe {
             let q = compat::pqg(self.0)[1];
             if q.is_null() {
@@ -177,7 +177,7 @@ impl DSA {
         }
     }
 
-    pub fn g<'a>(&'a self) -> Option<BigNumRef<'a>> {
+    pub fn g(&self) -> Option<&BigNumRef> {
         unsafe {
             let g = compat::pqg(self.0)[2];
             if g.is_null() {
