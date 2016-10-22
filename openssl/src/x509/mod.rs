@@ -446,7 +446,7 @@ impl X509Ref {
     }
 
     /// Returns certificate Not After validity period.
-    pub fn not_after<'a>(&'a self) -> Asn1TimeRef<'a> {
+    pub fn not_after<'a>(&'a self) -> &'a Asn1TimeRef {
         unsafe {
             let date = compat::X509_get_notAfter(self.as_ptr());
             assert!(!date.is_null());
@@ -455,7 +455,7 @@ impl X509Ref {
     }
 
     /// Returns certificate Not Before validity period.
-    pub fn not_before<'a>(&'a self) -> Asn1TimeRef<'a> {
+    pub fn not_before<'a>(&'a self) -> &'a Asn1TimeRef {
         unsafe {
             let date = compat::X509_get_notBefore(self.as_ptr());
             assert!(!date.is_null());
