@@ -2,14 +2,31 @@ use ffi;
 use std::fmt;
 use std::ptr;
 use std::mem;
-use libc::{c_int, c_void, c_char, c_ulong};
+use libc::{c_int, c_void, c_char};
 
+use {cvt, cvt_p, cvt_n};
 use bn::{BigNum, BigNumRef};
 use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
-use HashTypeInternals;
-use crypto::hash;
 use crypto::util::{CallbackState, invoke_passwd_cb};
+
+/// Type of encryption padding to use.
+#[derive(Copy, Clone)]
+pub struct Padding(c_int);
+
+impl Padding {
+    pub fn none() -> Padding {
+        Padding(ffi::RSA_NO_PADDING)
+    }
+
+    pub fn pkcs1() -> Padding {
+        Padding(ffi::RSA_PKCS1_PADDING)
+    }
+
+    pub fn pkcs1_oaep() -> Padding {
+        Padding(ffi::RSA_PKCS1_OAEP_PADDING)
+    }
+}
 
 pub struct RSA(*mut ffi::RSA);
 
@@ -26,12 +43,13 @@ impl RSA {
     /// the supplied load and save methods for DER formatted keys.
     pub fn from_public_components(n: BigNum, e: BigNum) -> Result<RSA, ErrorStack> {
         unsafe {
-            let rsa = try_ssl_null!(ffi::RSA_new());
-            (*rsa).n = n.as_ptr();
-            (*rsa).e = e.as_ptr();
-            mem::forget(n);
-            mem::forget(e);
-            Ok(RSA(rsa))
+            let rsa = RSA(try!(cvt_p(ffi::RSA_new())));
+            try!(cvt(compat::set_key(rsa.0,
+                                     n.as_ptr(),
+                                     e.as_ptr(),
+                                     ptr::null_mut())));
+            mem::forget((n, e));
+            Ok(rsa)
         }
     }
 
@@ -45,24 +63,15 @@ impl RSA {
                                    qi: BigNum)
                                    -> Result<RSA, ErrorStack> {
         unsafe {
-            let rsa = try_ssl_null!(ffi::RSA_new());
-            (*rsa).n = n.as_ptr();
-            (*rsa).e = e.as_ptr();
-            (*rsa).d = d.as_ptr();
-            (*rsa).p = p.as_ptr();
-            (*rsa).q = q.as_ptr();
-            (*rsa).dmp1 = dp.as_ptr();
-            (*rsa).dmq1 = dq.as_ptr();
-            (*rsa).iqmp = qi.as_ptr();
-            mem::forget(n);
-            mem::forget(e);
-            mem::forget(d);
-            mem::forget(p);
-            mem::forget(q);
-            mem::forget(dp);
-            mem::forget(dq);
-            mem::forget(qi);
-            Ok(RSA(rsa))
+            let rsa = RSA(try!(cvt_p(ffi::RSA_new())));
+            try!(cvt(compat::set_key(rsa.0, n.as_ptr(), e.as_ptr(), d.as_ptr())));
+            mem::forget((n, e, d));
+            try!(cvt(compat::set_factors(rsa.0, p.as_ptr(), q.as_ptr())));
+            mem::forget((p, q));
+            try!(cvt(compat::set_crt_params(rsa.0, dp.as_ptr(), dq.as_ptr(),
+                                            qi.as_ptr())));
+            mem::forget((dp, dq, qi));
+            Ok(rsa)
         }
     }
 
@@ -75,12 +84,9 @@ impl RSA {
     /// The public exponent will be 65537.
     pub fn generate(bits: u32) -> Result<RSA, ErrorStack> {
         unsafe {
-            let rsa = try_ssl_null!(ffi::RSA_new());
-            let rsa = RSA(rsa);
-            let e = try!(BigNum::new_from(ffi::RSA_F4 as c_ulong));
-
-            try_ssl!(ffi::RSA_generate_key_ex(rsa.0, bits as c_int, e.as_ptr(), ptr::null_mut()));
-
+            let rsa = RSA(try!(cvt_p(ffi::RSA_new())));
+            let e = try!(BigNum::from_u32(ffi::RSA_F4 as u32));
+            try!(cvt(ffi::RSA_generate_key_ex(rsa.0, bits as c_int, e.as_ptr(), ptr::null_mut())));
             Ok(rsa)
         }
     }
@@ -89,10 +95,10 @@ impl RSA {
     pub fn private_key_from_pem(buf: &[u8]) -> Result<RSA, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.as_ptr(),
-                                                                    ptr::null_mut(),
-                                                                    None,
-                                                                    ptr::null_mut()));
+            let rsa = try!(cvt_p(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.as_ptr(),
+                                                                 ptr::null_mut(),
+                                                                 None,
+                                                                 ptr::null_mut())));
             Ok(RSA(rsa))
         }
     }
@@ -106,11 +112,10 @@ impl RSA {
 
         unsafe {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
-            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.as_ptr(),
-                                                                    ptr::null_mut(),
-                                                                    Some(invoke_passwd_cb::<F>),
-                                                                    cb_ptr));
-
+            let rsa = try!(cvt_p(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.as_ptr(),
+                                                                 ptr::null_mut(),
+                                                                 Some(invoke_passwd_cb::<F>),
+                                                                 cb_ptr)));
             Ok(RSA(rsa))
         }
     }
@@ -119,10 +124,10 @@ impl RSA {
     pub fn public_key_from_pem(buf: &[u8]) -> Result<RSA, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let rsa = try_ssl_null!(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.as_ptr(),
-                                                                 ptr::null_mut(),
-                                                                 None,
-                                                                 ptr::null_mut()));
+            let rsa = try!(cvt_p(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.as_ptr(),
+                                                              ptr::null_mut(),
+                                                              None,
+                                                              ptr::null_mut())));
             Ok(RSA(rsa))
         }
     }
@@ -132,13 +137,13 @@ impl RSA {
         let mem_bio = try!(MemBio::new());
 
         unsafe {
-            try_ssl!(ffi::PEM_write_bio_RSAPrivateKey(mem_bio.as_ptr(),
-                                             self.0,
-                                             ptr::null(),
-                                             ptr::null_mut(),
-                                             0,
-                                             None,
-                                             ptr::null_mut()));
+            try!(cvt(ffi::PEM_write_bio_RSAPrivateKey(mem_bio.as_ptr(),
+                                                      self.0,
+                                                      ptr::null(),
+                                                      ptr::null_mut(),
+                                                      0,
+                                                      None,
+                                                      ptr::null_mut())));
         }
         Ok(mem_bio.get_buf().to_owned())
     }
@@ -148,104 +153,171 @@ impl RSA {
         let mem_bio = try!(MemBio::new());
 
         unsafe {
-            try_ssl!(ffi::PEM_write_bio_RSA_PUBKEY(mem_bio.as_ptr(), self.0))
-        };
+            try!(cvt(ffi::PEM_write_bio_RSA_PUBKEY(mem_bio.as_ptr(), self.0)));
+        }
 
         Ok(mem_bio.get_buf().to_owned())
     }
 
-    pub fn size(&self) -> Option<u32> {
-        if self.n().is_some() {
-            unsafe { Some(ffi::RSA_size(self.0) as u32) }
-        } else {
-            None
+    pub fn size(&self) -> usize {
+        unsafe {
+            assert!(self.n().is_some());
+
+            ffi::RSA_size(self.0) as usize
         }
     }
 
-    pub fn sign(&self, hash: hash::Type, message: &[u8]) -> Result<Vec<u8>, ErrorStack> {
-        let k_len = self.size().expect("RSA missing an n");
-        let mut sig = vec![0; k_len as usize];
-        let mut sig_len = k_len;
+    /// Decrypts data using the private key, returning the number of decrypted bytes.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self` has no private components, or if `to` is smaller
+    /// than `self.size()`.
+    pub fn private_decrypt(&self,
+                           from: &[u8],
+                           to: &mut [u8],
+                           padding: Padding)
+                           -> Result<usize, ErrorStack> {
+        assert!(self.d().is_some(), "private components missing");
+        assert!(from.len() <= i32::max_value() as usize);
+        assert!(to.len() >= self.size());
 
         unsafe {
-            try_ssl!(ffi::RSA_sign(hash.as_nid() as c_int,
-                                   message.as_ptr(),
-                                   message.len() as u32,
-                                   sig.as_mut_ptr(),
-                                   &mut sig_len,
-                                   self.0));
-            assert!(sig_len == k_len);
-            Ok(sig)
+            let len = try!(cvt_n(ffi::RSA_private_decrypt(from.len() as c_int,
+                                                          from.as_ptr(),
+                                                          to.as_mut_ptr(),
+                                                          self.0,
+                                                          padding.0)));
+           Ok(len as usize)
         }
     }
 
-    pub fn verify(&self, hash: hash::Type, message: &[u8], sig: &[u8]) -> Result<(), ErrorStack> {
+    /// Encrypts data using the private key, returning the number of encrypted bytes.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self` has no private components, or if `to` is smaller
+    /// than `self.size()`.
+    pub fn private_encrypt(&self,
+                           from: &[u8],
+                           to: &mut [u8],
+                           padding: Padding)
+                           -> Result<usize, ErrorStack> {
+        assert!(self.d().is_some(), "private components missing");
+        assert!(from.len() <= i32::max_value() as usize);
+        assert!(to.len() >= self.size());
+
         unsafe {
-            try_ssl!(ffi::RSA_verify(hash.as_nid() as c_int,
-                                     message.as_ptr(),
-                                     message.len() as u32,
-                                     sig.as_ptr(),
-                                     sig.len() as u32,
-                                     self.0));
+            let len = try!(cvt_n(ffi::RSA_private_encrypt(from.len() as c_int,
+                                                          from.as_ptr(),
+                                                          to.as_mut_ptr(),
+                                                          self.0,
+                                                          padding.0)));
+           Ok(len as usize)
         }
-        Ok(())
+    }
+
+    /// Decrypts data using the public key, returning the number of decrypted bytes.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `to` is smaller than `self.size()`.
+    pub fn public_decrypt(&self,
+                          from: &[u8],
+                          to: &mut [u8],
+                          padding: Padding)
+                          -> Result<usize, ErrorStack> {
+        assert!(from.len() <= i32::max_value() as usize);
+        assert!(to.len() >= self.size());
+
+        unsafe {
+            let len = try!(cvt_n(ffi::RSA_public_decrypt(from.len() as c_int,
+                                                         from.as_ptr(),
+                                                         to.as_mut_ptr(),
+                                                         self.0,
+                                                         padding.0)));
+            Ok(len as usize)
+        }
+    }
+
+    /// Encrypts data using the private key, returning the number of encrypted bytes.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `to` is smaller than `self.size()`.
+    pub fn public_encrypt(&self,
+                          from: &[u8],
+                          to: &mut [u8],
+                          padding: Padding)
+                          -> Result<usize, ErrorStack> {
+        assert!(from.len() <= i32::max_value() as usize);
+        assert!(to.len() >= self.size());
+
+        unsafe {
+            let len = try!(cvt_n(ffi::RSA_public_encrypt(from.len() as c_int,
+                                                         from.as_ptr(),
+                                                         to.as_mut_ptr(),
+                                                         self.0,
+                                                         padding.0)));
+            Ok(len as usize)
+        }
     }
 
     pub fn as_ptr(&self) -> *mut ffi::RSA {
         self.0
     }
 
-    pub fn n<'a>(&'a self) -> Option<BigNumRef<'a>> {
+    pub fn n(&self) -> Option<&BigNumRef> {
         unsafe {
-            let n = (*self.0).n;
+            let n = compat::key(self.0)[0];
             if n.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(n))
+                Some(BigNumRef::from_ptr(n as *mut _))
             }
         }
     }
 
-    pub fn d<'a>(&self) -> Option<BigNumRef<'a>> {
+    pub fn d(&self) -> Option<&BigNumRef> {
         unsafe {
-            let d = (*self.0).d;
+            let d = compat::key(self.0)[2];
             if d.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(d))
+                Some(BigNumRef::from_ptr(d as *mut _))
             }
         }
     }
 
-    pub fn e<'a>(&'a self) -> Option<BigNumRef<'a>> {
+    pub fn e(&self) -> Option<&BigNumRef> {
         unsafe {
-            let e = (*self.0).e;
+            let e = compat::key(self.0)[1];
             if e.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(e))
+                Some(BigNumRef::from_ptr(e as *mut _))
             }
         }
     }
 
-    pub fn p<'a>(&'a self) -> Option<BigNumRef<'a>> {
+    pub fn p(&self) -> Option<&BigNumRef> {
         unsafe {
-            let p = (*self.0).p;
+            let p = compat::factors(self.0)[0];
             if p.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(p))
+                Some(BigNumRef::from_ptr(p as *mut _))
             }
         }
     }
 
-    pub fn q<'a>(&'a self) -> Option<BigNumRef<'a>> {
+    pub fn q(&self) -> Option<&BigNumRef> {
         unsafe {
-            let q = (*self.0).q;
+            let q = compat::factors(self.0)[1];
             if q.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(q))
+                Some(BigNumRef::from_ptr(q as *mut _))
             }
         }
     }
@@ -257,65 +329,94 @@ impl fmt::Debug for RSA {
     }
 }
 
+#[cfg(ossl110)]
+mod compat {
+    use std::ptr;
+
+    use ffi::{self, BIGNUM, RSA};
+    use libc::c_int;
+
+    pub unsafe fn key(r: *const RSA) -> [*const BIGNUM; 3] {
+        let (mut n, mut e, mut d) = (ptr::null(), ptr::null(), ptr::null());
+        ffi::RSA_get0_key(r, &mut n, &mut e, &mut d);
+        [n, e, d]
+    }
+
+    pub unsafe fn factors(r: *const RSA) -> [*const BIGNUM; 2] {
+        let (mut p, mut q) = (ptr::null(), ptr::null());
+        ffi::RSA_get0_factors(r, &mut p, &mut q);
+        [p, q]
+    }
+
+    pub unsafe fn set_key(r: *mut RSA,
+                          n: *mut BIGNUM,
+                          e: *mut BIGNUM,
+                          d: *mut BIGNUM) -> c_int {
+        ffi::RSA_set0_key(r, n, e, d)
+    }
+
+    pub unsafe fn set_factors(r: *mut RSA,
+                              p: *mut BIGNUM,
+                              q: *mut BIGNUM) -> c_int {
+        ffi::RSA_set0_factors(r, p, q)
+    }
+
+    pub unsafe fn set_crt_params(r: *mut RSA,
+                                 dmp1: *mut BIGNUM,
+                                 dmq1: *mut BIGNUM,
+                                 iqmp: *mut BIGNUM) -> c_int {
+        ffi::RSA_set0_crt_params(r, dmp1, dmq1, iqmp)
+    }
+}
+
+#[cfg(ossl10x)]
+mod compat {
+    use libc::c_int;
+    use ffi::{BIGNUM, RSA};
+
+    pub unsafe fn key(r: *const RSA) -> [*const BIGNUM; 3] {
+        [(*r).n, (*r).e, (*r).d]
+    }
+
+    pub unsafe fn factors(r: *const RSA) -> [*const BIGNUM; 2] {
+        [(*r).p, (*r).q]
+    }
+
+    pub unsafe fn set_key(r: *mut RSA,
+                          n: *mut BIGNUM,
+                          e: *mut BIGNUM,
+                          d: *mut BIGNUM) -> c_int {
+        (*r).n = n;
+        (*r).e = e;
+        (*r).d = d;
+        1 // TODO: is this right? should it be 0? what's success?
+    }
+
+    pub unsafe fn set_factors(r: *mut RSA,
+                              p: *mut BIGNUM,
+                              q: *mut BIGNUM) -> c_int {
+        (*r).p = p;
+        (*r).q = q;
+        1 // TODO: is this right? should it be 0? what's success?
+    }
+
+    pub unsafe fn set_crt_params(r: *mut RSA,
+                                 dmp1: *mut BIGNUM,
+                                 dmq1: *mut BIGNUM,
+                                 iqmp: *mut BIGNUM) -> c_int {
+        (*r).dmp1 = dmp1;
+        (*r).dmq1 = dmq1;
+        (*r).iqmp = iqmp;
+        1 // TODO: is this right? should it be 0? what's success?
+    }
+}
+
+
 #[cfg(test)]
 mod test {
-    use std::io::Write;
     use libc::c_char;
 
     use super::*;
-    use crypto::hash::*;
-
-    fn signing_input_rs256() -> Vec<u8> {
-        vec![101, 121, 74, 104, 98, 71, 99, 105, 79, 105, 74, 83, 85, 122, 73, 49, 78, 105, 74, 57,
-             46, 101, 121, 74, 112, 99, 51, 77, 105, 79, 105, 74, 113, 98, 50, 85, 105, 76, 65, 48,
-             75, 73, 67, 74, 108, 101, 72, 65, 105, 79, 106, 69, 122, 77, 68, 65, 52, 77, 84, 107,
-             122, 79, 68, 65, 115, 68, 81, 111, 103, 73, 109, 104, 48, 100, 72, 65, 54, 76, 121,
-             57, 108, 101, 71, 70, 116, 99, 71, 120, 108, 76, 109, 78, 118, 98, 83, 57, 112, 99,
-             49, 57, 121, 98, 50, 57, 48, 73, 106, 112, 48, 99, 110, 86, 108, 102, 81]
-    }
-
-    fn signature_rs256() -> Vec<u8> {
-        vec![112, 46, 33, 137, 67, 232, 143, 209, 30, 181, 216, 45, 191, 120, 69, 243, 65, 6, 174,
-             27, 129, 255, 247, 115, 17, 22, 173, 209, 113, 125, 131, 101, 109, 66, 10, 253, 60,
-             150, 238, 221, 115, 162, 102, 62, 81, 102, 104, 123, 0, 11, 135, 34, 110, 1, 135, 237,
-             16, 115, 249, 69, 229, 130, 173, 252, 239, 22, 216, 90, 121, 142, 232, 198, 109, 219,
-             61, 184, 151, 91, 23, 208, 148, 2, 190, 237, 213, 217, 217, 112, 7, 16, 141, 178, 129,
-             96, 213, 248, 4, 12, 167, 68, 87, 98, 184, 31, 190, 127, 249, 217, 46, 10, 231, 111,
-             36, 242, 91, 51, 187, 230, 244, 74, 230, 30, 177, 4, 10, 203, 32, 4, 77, 62, 249, 18,
-             142, 212, 1, 48, 121, 91, 212, 189, 59, 65, 238, 202, 208, 102, 171, 101, 25, 129,
-             253, 228, 141, 247, 127, 55, 45, 195, 139, 159, 175, 221, 59, 239, 177, 139, 93, 163,
-             204, 60, 46, 176, 47, 158, 58, 65, 214, 18, 202, 173, 21, 145, 18, 115, 160, 95, 35,
-             185, 232, 56, 250, 175, 132, 157, 105, 132, 41, 239, 90, 30, 136, 121, 130, 54, 195,
-             212, 14, 96, 69, 34, 165, 68, 200, 242, 122, 122, 45, 184, 6, 99, 209, 108, 247, 202,
-             234, 86, 222, 64, 92, 178, 33, 90, 69, 178, 194, 85, 102, 181, 90, 193, 167, 72, 160,
-             112, 223, 200, 163, 42, 70, 149, 67, 208, 25, 238, 251, 71]
-    }
-
-    #[test]
-    pub fn test_sign() {
-        let key = include_bytes!("../../test/rsa.pem");
-        let private_key = RSA::private_key_from_pem(key).unwrap();
-
-        let mut sha = Hasher::new(Type::SHA256).unwrap();
-        sha.write_all(&signing_input_rs256()).unwrap();
-        let digest = sha.finish().unwrap();
-
-        let result = private_key.sign(Type::SHA256, &digest).unwrap();
-
-        assert_eq!(result, signature_rs256());
-    }
-
-    #[test]
-    pub fn test_verify() {
-        let key = include_bytes!("../../test/rsa.pem.pub");
-        let public_key = RSA::public_key_from_pem(key).unwrap();
-
-        let mut sha = Hasher::new(Type::SHA256).unwrap();
-        sha.write_all(&signing_input_rs256()).unwrap();
-        let digest = sha.finish().unwrap();
-
-        assert!(public_key.verify(Type::SHA256, &digest, &signature_rs256()).is_ok());
-    }
 
     #[test]
     pub fn test_password() {
@@ -334,4 +435,53 @@ mod test {
 
         assert!(password_queried);
     }
+
+    #[test]
+    pub fn test_public_encrypt_private_decrypt_with_padding() {
+        let key = include_bytes!("../../test/rsa.pem.pub");
+        let public_key = RSA::public_key_from_pem(key).unwrap();
+
+        let mut result = vec![0; public_key.size()];
+        let original_data = b"This is test";
+        let len = public_key.public_encrypt(original_data, &mut result, Padding::pkcs1()).unwrap();
+        assert_eq!(len, 256);
+
+        let pkey = include_bytes!("../../test/rsa.pem");
+        let private_key = RSA::private_key_from_pem(pkey).unwrap();
+        let mut dec_result = vec![0; private_key.size()];
+        let len = private_key.private_decrypt(&result, &mut dec_result, Padding::pkcs1()).unwrap();
+
+       assert_eq!(&dec_result[..len], original_data);
+    }
+
+    #[test]
+   fn test_private_encrypt() {
+        let k0 = super::RSA::generate(512).unwrap();
+        let k0pkey = k0.public_key_to_pem().unwrap();
+        let k1 = super::RSA::public_key_from_pem(&k0pkey).unwrap();
+
+        let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
+
+        let mut emesg = vec![0; k0.size()];
+        k0.private_encrypt(&msg, &mut emesg, Padding::pkcs1()).unwrap();
+        let mut dmesg = vec![0; k1.size()];
+        let len = k1.public_decrypt(&emesg, &mut dmesg, Padding::pkcs1()).unwrap();
+        assert_eq!(msg, &dmesg[..len]);
+   }
+
+   #[test]
+   fn test_public_encrypt() {
+       let k0 = super::RSA::generate(512).unwrap();
+       let k0pkey = k0.private_key_to_pem().unwrap();
+       let k1 = super::RSA::private_key_from_pem(&k0pkey).unwrap();
+
+       let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
+
+       let mut emesg = vec![0; k0.size()];
+       k0.public_encrypt(&msg, &mut emesg, Padding::pkcs1()).unwrap();
+       let mut dmesg = vec![0; k1.size()];
+       let len = k1.private_decrypt(&emesg, &mut dmesg, Padding::pkcs1()).unwrap();
+       assert_eq!(msg, &dmesg[..len]);
+   }
+
 }

@@ -1,6 +1,6 @@
 use serialize::hex::FromHex;
 
-use crypto::hash::Type::{SHA1, SHA256};
+use crypto::hash::MessageDigest;
 use crypto::pkey::PKey;
 use crypto::rsa::RSA;
 use x509::{X509, X509Generator};
@@ -14,7 +14,7 @@ fn get_generator() -> X509Generator {
     X509Generator::new()
         .set_valid_period(365 * 2)
         .add_name("CN".to_string(), "test_me".to_string())
-        .set_sign_hash(SHA1)
+        .set_sign_hash(MessageDigest::sha1())
         .add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]))
         .add_extension(ExtKeyUsage(vec![ClientAuth,
                                         ServerAuth,
@@ -69,7 +69,6 @@ fn test_cert_gen_extension_bad_ordering() {
 }
 
 #[test]
-#[cfg(feature = "x509_generator_request")]
 fn test_req_gen() {
     let pkey = pkey();
 
@@ -84,7 +83,7 @@ fn test_req_gen() {
 fn test_cert_loading() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
-    let fingerprint = cert.fingerprint(SHA1).unwrap();
+    let fingerprint = cert.fingerprint(MessageDigest::sha1()).unwrap();
 
     let hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
     let hash_vec = hash_str.from_hex().unwrap();
@@ -93,7 +92,6 @@ fn test_cert_loading() {
 }
 
 #[test]
-#[cfg(feature = "x509_expiry")]
 fn test_cert_issue_validity() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
@@ -200,7 +198,7 @@ fn test_ca_sign_certificate() {
     let ca_cert = X509Generator::new()
         .set_valid_period(365 * 10)
         .add_name("CN".to_string(), "my CA".to_string())
-        .set_sign_hash(SHA256)
+        .set_sign_hash(MessageDigest::sha256())
         .add_extension(KeyUsage(vec![KeyCertSign, CRLSign]))
         .add_extension(OtherNid(Nid::BasicConstraints, "critical,CA:TRUE".to_owned()))
         .sign(&ca_pkey)
@@ -210,7 +208,7 @@ fn test_ca_sign_certificate() {
     let cert = X509Generator::new()
         .set_valid_period(365 * 2)
         .add_name("CN".to_string(), "my certificate".to_string())
-        .set_sign_hash(SHA256)
+        .set_sign_hash(MessageDigest::sha256())
         .add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]))
         .sign_by_ca(&cert_pkey, &ca_cert, &ca_pkey)
         .expect("Failed to generate certificate");

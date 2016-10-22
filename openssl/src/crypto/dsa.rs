@@ -2,25 +2,27 @@ use ffi;
 use std::fmt;
 use error::ErrorStack;
 use std::ptr;
-use libc::{c_uint, c_int, c_char, c_void};
+use libc::{c_int, c_char, c_void};
 
+use {cvt, cvt_p};
 use bn::BigNumRef;
 use bio::{MemBio, MemBioSlice};
-use crypto::hash;
-use HashTypeInternals;
 use crypto::util::{CallbackState, invoke_passwd_cb};
 
-
-/// Builder for upfront DSA parameter generateration
+/// Builder for upfront DSA parameter generation
 pub struct DSAParams(*mut ffi::DSA);
 
 impl DSAParams {
     pub fn with_size(size: u32) -> Result<DSAParams, ErrorStack> {
         unsafe {
-            // Wrap it so that if we panic we'll call the dtor
-            let dsa = DSAParams(try_ssl_null!(ffi::DSA_new()));
-            try_ssl!(ffi::DSA_generate_parameters_ex(dsa.0, size as c_int, ptr::null(), 0,
-                                                 ptr::null_mut(), ptr::null_mut(), ptr::null()));
+            let dsa = DSAParams(try!(cvt_p(ffi::DSA_new())));
+            try!(cvt(ffi::DSA_generate_parameters_ex(dsa.0,
+                                                     size as c_int,
+                                                     ptr::null(),
+                                                     0,
+                                                     ptr::null_mut(),
+                                                     ptr::null_mut(),
+                                                     ptr::null_mut())));
             Ok(dsa)
         }
     }
@@ -28,7 +30,7 @@ impl DSAParams {
     /// Generate a key pair from the initialized parameters
     pub fn generate(self) -> Result<DSA, ErrorStack> {
         unsafe {
-            try_ssl!(ffi::DSA_generate_key(self.0));
+            try!(cvt(ffi::DSA_generate_key(self.0)));
             let dsa = DSA(self.0);
             ::std::mem::forget(self);
             Ok(dsa)
@@ -72,13 +74,11 @@ impl DSA {
         let mem_bio = try!(MemBioSlice::new(buf));
 
         unsafe {
-            let dsa = try_ssl_null!(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.as_ptr(),
-                                                                    ptr::null_mut(),
-                                                                    None,
-                                                                    ptr::null_mut()));
-            let dsa = DSA(dsa);
-            assert!(dsa.has_private_key());
-            Ok(dsa)
+            let dsa = try!(cvt_p(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.as_ptr(),
+                                                                 ptr::null_mut(),
+                                                                 None,
+                                                                 ptr::null_mut())));
+            Ok(DSA(dsa))
         }
     }
 
@@ -96,13 +96,11 @@ impl DSA {
 
         unsafe {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
-            let dsa = try_ssl_null!(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.as_ptr(),
-                                                                    ptr::null_mut(),
-                                                                    Some(invoke_passwd_cb::<F>),
-                                                                    cb_ptr));
-            let dsa = DSA(dsa);
-            assert!(dsa.has_private_key());
-            Ok(dsa)
+            let dsa = try!(cvt_p(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.as_ptr(),
+                                                                 ptr::null_mut(),
+                                                                 Some(invoke_passwd_cb::<F>),
+                                                                 cb_ptr)));
+            Ok(DSA(dsa))
         }
     }
 
@@ -113,9 +111,9 @@ impl DSA {
         let mem_bio = try!(MemBio::new());
 
         unsafe {
-            try_ssl!(ffi::PEM_write_bio_DSAPrivateKey(mem_bio.as_ptr(), self.0,
-                                              ptr::null(), ptr::null_mut(), 0,
-                                              None, ptr::null_mut()))
+            try!(cvt(ffi::PEM_write_bio_DSAPrivateKey(mem_bio.as_ptr(), self.0,
+                                                      ptr::null(), ptr::null_mut(), 0,
+                                                      None, ptr::null_mut())))
         };
 
         Ok(mem_bio.get_buf().to_owned())
@@ -128,10 +126,10 @@ impl DSA {
 
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
-            let dsa = try_ssl_null!(ffi::PEM_read_bio_DSA_PUBKEY(mem_bio.as_ptr(),
-                                                                 ptr::null_mut(),
-                                                                 None,
-                                                                 ptr::null_mut()));
+            let dsa = try!(cvt_p(ffi::PEM_read_bio_DSA_PUBKEY(mem_bio.as_ptr(),
+                                                              ptr::null_mut(),
+                                                              None,
+                                                              ptr::null_mut())));
             Ok(DSA(dsa))
         }
     }
@@ -139,7 +137,9 @@ impl DSA {
     /// Writes an DSA public key as PEM formatted data
     pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
-        unsafe { try_ssl!(ffi::PEM_write_bio_DSA_PUBKEY(mem_bio.as_ptr(), self.0)) };
+        unsafe {
+            try!(cvt(ffi::PEM_write_bio_DSA_PUBKEY(mem_bio.as_ptr(), self.0)));
+        }
         Ok(mem_bio.get_buf().to_owned())
     }
 
@@ -151,82 +151,80 @@ impl DSA {
         }
     }
 
-    pub fn sign(&self, hash: hash::Type, message: &[u8]) -> Result<Vec<u8>, ErrorStack> {
-        let k_len = self.size().expect("DSA missing a q") as c_uint;
-        let mut sig = vec![0; k_len as usize];
-        let mut sig_len = k_len;
-        assert!(self.has_private_key());
-
-        unsafe {
-            try_ssl!(ffi::DSA_sign(hash.as_nid() as c_int,
-                                   message.as_ptr(),
-                                   message.len() as c_int,
-                                   sig.as_mut_ptr(),
-                                   &mut sig_len,
-                                   self.0));
-            sig.set_len(sig_len as usize);
-            sig.shrink_to_fit();
-            Ok(sig)
-        }
-    }
-
-    pub fn verify(&self, hash: hash::Type, message: &[u8], sig: &[u8]) -> Result<bool, ErrorStack> {
-        unsafe {
-            let result = ffi::DSA_verify(hash.as_nid() as c_int,
-                                         message.as_ptr(),
-                                         message.len() as c_int,
-                                         sig.as_ptr(),
-                                         sig.len() as c_int,
-                                         self.0);
-
-            try_ssl_if!(result == -1);
-            Ok(result == 1)
-        }
-    }
-
     pub fn as_ptr(&self) -> *mut ffi::DSA {
         self.0
     }
 
-    pub fn p<'a>(&'a self) -> Option<BigNumRef<'a>> {
+    pub fn p(&self) -> Option<&BigNumRef> {
         unsafe {
-            let p = (*self.0).p;
+            let p = compat::pqg(self.0)[0];
             if p.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr((*self.0).p))
+                Some(BigNumRef::from_ptr(p as *mut _))
             }
         }
     }
 
-    pub fn q<'a>(&'a self) -> Option<BigNumRef<'a>> {
+    pub fn q(&self) -> Option<&BigNumRef> {
         unsafe {
-            let q = (*self.0).q;
+            let q = compat::pqg(self.0)[1];
             if q.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr((*self.0).q))
+                Some(BigNumRef::from_ptr(q as *mut _))
             }
         }
     }
 
-    pub fn g<'a>(&'a self) -> Option<BigNumRef<'a>> {
+    pub fn g(&self) -> Option<&BigNumRef> {
         unsafe {
-            let g = (*self.0).g;
+            let g = compat::pqg(self.0)[2];
             if g.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr((*self.0).g))
+                Some(BigNumRef::from_ptr(g as *mut _))
             }
         }
     }
 
     pub fn has_public_key(&self) -> bool {
-        unsafe { !(*self.0).pub_key.is_null() }
+        unsafe { !compat::keys(self.0)[0].is_null() }
     }
 
     pub fn has_private_key(&self) -> bool {
-        unsafe { !(*self.0).priv_key.is_null() }
+        unsafe { !compat::keys(self.0)[1].is_null() }
+    }
+}
+
+#[cfg(ossl110)]
+mod compat {
+    use std::ptr;
+    use ffi::{self, BIGNUM, DSA};
+
+    pub unsafe fn pqg(d: *const DSA) -> [*const BIGNUM; 3] {
+        let (mut p, mut q, mut g) = (ptr::null(), ptr::null(), ptr::null());
+        ffi::DSA_get0_pqg(d, &mut p, &mut q, &mut g);
+        [p, q, g]
+    }
+
+    pub unsafe fn keys(d: *const DSA) -> [*const BIGNUM; 2] {
+        let (mut pub_key, mut priv_key) = (ptr::null(), ptr::null());
+        ffi::DSA_get0_key(d, &mut pub_key, &mut priv_key);
+        [pub_key, priv_key]
+    }
+}
+
+#[cfg(ossl10x)]
+mod compat {
+    use ffi::{BIGNUM, DSA};
+
+    pub unsafe fn pqg(d: *const DSA) -> [*const BIGNUM; 3] {
+        [(*d).p, (*d).q, (*d).g]
+    }
+
+    pub unsafe fn keys(d: *const DSA) -> [*const BIGNUM; 2] {
+        [(*d).pub_key, (*d).priv_key]
     }
 }
 
@@ -238,84 +236,13 @@ impl fmt::Debug for DSA {
 
 #[cfg(test)]
 mod test {
-    use std::io::Write;
     use libc::c_char;
 
     use super::*;
-    use crypto::hash::*;
 
     #[test]
     pub fn test_generate() {
-        let key = DSA::generate(1024).unwrap();
-
-        key.public_key_to_pem().unwrap();
-        key.private_key_to_pem().unwrap();
-
-        let input: Vec<u8> = (0..25).cycle().take(1024).collect();
-
-        let digest = {
-            let mut sha = Hasher::new(Type::SHA1).unwrap();
-            sha.write_all(&input).unwrap();
-            sha.finish().unwrap()
-        };
-
-        let sig = key.sign(Type::SHA1, &digest).unwrap();
-        let verified = key.verify(Type::SHA1, &digest, &sig).unwrap();
-        assert!(verified);
-    }
-
-    #[test]
-    pub fn test_sign_verify() {
-        let input: Vec<u8> = (0..25).cycle().take(1024).collect();
-
-        let private_key = {
-            let key = include_bytes!("../../test/dsa.pem");
-            DSA::private_key_from_pem(key).unwrap()
-        };
-
-        let public_key = {
-            let key = include_bytes!("../../test/dsa.pem.pub");
-            DSA::public_key_from_pem(key).unwrap()
-        };
-
-        let digest = {
-            let mut sha = Hasher::new(Type::SHA1).unwrap();
-            sha.write_all(&input).unwrap();
-            sha.finish().unwrap()
-        };
-
-        let sig = private_key.sign(Type::SHA1, &digest).unwrap();
-        let verified = public_key.verify(Type::SHA1, &digest, &sig).unwrap();
-        assert!(verified);
-    }
-
-    #[test]
-    pub fn test_sign_verify_fail() {
-        let input: Vec<u8> = (0..25).cycle().take(128).collect();
-        let private_key = {
-            let key = include_bytes!("../../test/dsa.pem");
-            DSA::private_key_from_pem(key).unwrap()
-        };
-
-        let public_key = {
-            let key = include_bytes!("../../test/dsa.pem.pub");
-            DSA::public_key_from_pem(key).unwrap()
-        };
-
-        let digest = {
-            let mut sha = Hasher::new(Type::SHA1).unwrap();
-            sha.write_all(&input).unwrap();
-            sha.finish().unwrap()
-        };
-
-        let mut sig = private_key.sign(Type::SHA1, &digest).unwrap();
-        // tamper with the sig this should cause a failure
-        let len = sig.len();
-        sig[len / 2] = 0;
-        sig[len - 1] = 0;
-        if let Ok(true) = public_key.verify(Type::SHA1, &digest, &sig) {
-            panic!("Tampered with signatures should not verify!");
-        }
+        DSA::generate(1024).unwrap();
     }
 
     #[test]
