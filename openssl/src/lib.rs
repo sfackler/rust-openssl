@@ -32,6 +32,7 @@ pub mod nid;
 pub mod ssl;
 pub mod version;
 pub mod x509;
+mod opaque;
 
 pub fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {
     if r.is_null() {

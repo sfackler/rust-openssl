@@ -267,7 +267,7 @@ impl RSA {
         self.0
     }
 
-    pub fn n<'a>(&'a self) -> Option<BigNumRef<'a>> {
+    pub fn n(&self) -> Option<&BigNumRef> {
         unsafe {
             let n = compat::key(self.0)[0];
             if n.is_null() {
@@ -278,7 +278,7 @@ impl RSA {
         }
     }
 
-    pub fn d<'a>(&self) -> Option<BigNumRef<'a>> {
+    pub fn d(&self) -> Option<&BigNumRef> {
         unsafe {
             let d = compat::key(self.0)[2];
             if d.is_null() {
@@ -289,7 +289,7 @@ impl RSA {
         }
     }
 
-    pub fn e<'a>(&'a self) -> Option<BigNumRef<'a>> {
+    pub fn e(&self) -> Option<&BigNumRef> {
         unsafe {
             let e = compat::key(self.0)[1];
             if e.is_null() {
@@ -300,7 +300,7 @@ impl RSA {
         }
     }
 
-    pub fn p<'a>(&'a self) -> Option<BigNumRef<'a>> {
+    pub fn p(&self) -> Option<&BigNumRef> {
         unsafe {
             let p = compat::factors(self.0)[0];
             if p.is_null() {
@@ -311,7 +311,7 @@ impl RSA {
         }
     }
 
-    pub fn q<'a>(&'a self) -> Option<BigNumRef<'a>> {
+    pub fn q(&self) -> Option<&BigNumRef> {
         unsafe {
             let q = compat::factors(self.0)[1];
             if q.is_null() {

@@ -479,7 +479,7 @@ fn test_pending() {
 fn test_state() {
     let (_s, tcp) = Server::new();
     let ctx = SslContext::new(SslMethod::tls()).unwrap();
-    let mut stream = Ssl::new(&ctx).unwrap().connect(tcp).unwrap();
+    let stream = Ssl::new(&ctx).unwrap().connect(tcp).unwrap();
     assert_eq!(stream.ssl().state_string(), "SSLOK ");
     assert_eq!(stream.ssl().state_string_long(),
                "SSL negotiation finished successfully");
@@ -1053,8 +1053,8 @@ fn valid_hostname() {
     ctx.set_verify(SSL_VERIFY_PEER);
 
     let mut ssl = Ssl::new(&ctx).unwrap();
-    ssl.param().set_hostflags(X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
-    ssl.param().set_host("google.com").unwrap();
+    ssl.param_mut().set_hostflags(X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+    ssl.param_mut().set_host("google.com").unwrap();
 
     let s = TcpStream::connect("google.com:443").unwrap();
     let mut socket = ssl.connect(s).unwrap();
@@ -1077,8 +1077,8 @@ fn invalid_hostname() {
     ctx.set_verify(SSL_VERIFY_PEER);
 
     let mut ssl = Ssl::new(&ctx).unwrap();
-    ssl.param().set_hostflags(X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
-    ssl.param().set_host("foobar.com").unwrap();
+    ssl.param_mut().set_hostflags(X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+    ssl.param_mut().set_host("foobar.com").unwrap();
 
     let s = TcpStream::connect("google.com:443").unwrap();
     assert!(ssl.connect(s).is_err());
