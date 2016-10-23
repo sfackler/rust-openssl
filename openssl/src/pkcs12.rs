@@ -7,7 +7,7 @@ use std::ptr;
 use std::ffi::CString;
 
 use {cvt, cvt_p};
-use crypto::pkey::PKey;
+use pkey::PKey;
 use error::ErrorStack;
 use x509::X509;
 
@@ -98,14 +98,14 @@ mod compat {
 
 #[cfg(test)]
 mod test {
-    use crypto::hash::MessageDigest;
+    use hash::MessageDigest;
     use serialize::hex::ToHex;
 
     use super::*;
 
     #[test]
     fn parse() {
-        let der = include_bytes!("../../test/identity.p12");
+        let der = include_bytes!("../test/identity.p12");
         let pkcs12 = Pkcs12::from_der(der).unwrap();
         let parsed = pkcs12.parse("mypass").unwrap();
 

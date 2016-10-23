@@ -3,8 +3,8 @@ use std::ptr;
 use ffi;
 
 use cvt;
-use crypto::hash::MessageDigest;
-use crypto::symm::Cipher;
+use hash::MessageDigest;
+use symm::Cipher;
 use error::ErrorStack;
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
@@ -98,8 +98,8 @@ pub fn pbkdf2_hmac(pass: &[u8],
 
 #[cfg(test)]
 mod tests {
-    use crypto::hash::MessageDigest;
-    use crypto::symm::Cipher;
+    use hash::MessageDigest;
+    use symm::Cipher;
 
     // Test vectors from
     // https://git.lysator.liu.se/nettle/nettle/blob/nettle_3.1.1_release_20150424/testsuite/pbkdf2-test.c

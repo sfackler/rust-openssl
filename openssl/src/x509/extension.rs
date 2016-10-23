@@ -1,6 +1,6 @@
 use std::fmt;
 
-use nid::Nid;
+use nid::{self, Nid};
 
 /// Type-only version of the `Extension` enum.
 ///
@@ -36,10 +36,10 @@ pub enum Extension {
     ///
     /// ```
     /// use openssl::x509::extension::Extension::*;
-    /// use openssl::nid::Nid;
+    /// use openssl::nid;
     ///
     /// # let generator = openssl::x509::X509Generator::new();
-    /// generator.add_extension(OtherNid(Nid::BasicConstraints,"critical,CA:TRUE".to_owned()));
+    /// generator.add_extension(OtherNid(nid::BASIC_CONSTRAINTS,"critical,CA:TRUE".to_owned()));
     /// ```
     OtherNid(Nid, String),
     /// Arbitrary extensions by OID string. See `man ASN1_generate_nconf` for value syntax.
@@ -71,10 +71,10 @@ impl Extension {
 impl ExtensionType {
     pub fn get_nid(&self) -> Option<Nid> {
         match self {
-            &ExtensionType::KeyUsage => Some(Nid::KeyUsage),
-            &ExtensionType::ExtKeyUsage => Some(Nid::ExtendedKeyUsage),
-            &ExtensionType::SubjectAltName => Some(Nid::SubjectAltName),
-            &ExtensionType::IssuerAltName => Some(Nid::IssuerAltName),
+            &ExtensionType::KeyUsage => Some(nid::KEY_USAGE),
+            &ExtensionType::ExtKeyUsage => Some(nid::EXT_KEY_USAGE),
+            &ExtensionType::SubjectAltName => Some(nid::SUBJECT_ALT_NAME),
+            &ExtensionType::IssuerAltName => Some(nid::ISSUER_ALT_NAME),
             &ExtensionType::OtherNid(nid) => Some(nid),
             &ExtensionType::OtherStr(_) => None,
         }

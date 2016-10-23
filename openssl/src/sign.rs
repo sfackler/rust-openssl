@@ -10,13 +10,13 @@
 //! Sign and verify data given an RSA keypair:
 //!
 //! ```rust
-//! use openssl::crypto::sign::{Signer, Verifier};
-//! use openssl::crypto::rsa::RSA;
-//! use openssl::crypto::pkey::PKey;
-//! use openssl::crypto::hash::MessageDigest;
+//! use openssl::sign::{Signer, Verifier};
+//! use openssl::rsa::Rsa;
+//! use openssl::pkey::PKey;
+//! use openssl::hash::MessageDigest;
 //!
 //! // Generate a keypair
-//! let keypair = RSA::generate(2048).unwrap();
+//! let keypair = Rsa::generate(2048).unwrap();
 //! let keypair = PKey::from_rsa(keypair).unwrap();
 //!
 //! let data = b"hello, world!";
@@ -38,9 +38,9 @@
 //! Compute an HMAC (note that `Verifier` cannot be used with HMACs):
 //!
 //! ```rust
-//! use openssl::crypto::sign::Signer;
-//! use openssl::crypto::pkey::PKey;
-//! use openssl::crypto::hash::MessageDigest;
+//! use openssl::sign::Signer;
+//! use openssl::pkey::PKey;
+//! use openssl::hash::MessageDigest;
 //!
 //! // Create a PKey
 //! let key = PKey::hmac(b"my secret").unwrap();
@@ -60,8 +60,8 @@ use std::marker::PhantomData;
 use std::ptr;
 
 use {cvt, cvt_p};
-use crypto::hash::MessageDigest;
-use crypto::pkey::PKey;
+use hash::MessageDigest;
+use pkey::PKey;
 use error::ErrorStack;
 
 #[cfg(ossl110)]
@@ -208,11 +208,11 @@ mod test {
     use serialize::hex::FromHex;
     use std::iter;
 
-    use crypto::hash::MessageDigest;
-    use crypto::sign::{Signer, Verifier};
-    use crypto::rsa::RSA;
-    use crypto::dsa::DSA;
-    use crypto::pkey::PKey;
+    use hash::MessageDigest;
+    use sign::{Signer, Verifier};
+    use rsa::Rsa;
+    use dsa::Dsa;
+    use pkey::PKey;
 
     static INPUT: &'static [u8] =
         &[101, 121, 74, 104, 98, 71, 99, 105, 79, 105, 74, 83, 85, 122, 73, 49, 78, 105, 74, 57,
@@ -240,8 +240,8 @@ mod test {
 
     #[test]
     fn rsa_sign() {
-        let key = include_bytes!("../../test/rsa.pem");
-        let private_key = RSA::private_key_from_pem(key).unwrap();
+        let key = include_bytes!("../test/rsa.pem");
+        let private_key = Rsa::private_key_from_pem(key).unwrap();
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut signer = Signer::new(MessageDigest::sha256(), &pkey).unwrap();
@@ -253,8 +253,8 @@ mod test {
 
     #[test]
     fn rsa_verify_ok() {
-        let key = include_bytes!("../../test/rsa.pem");
-        let private_key = RSA::private_key_from_pem(key).unwrap();
+        let key = include_bytes!("../test/rsa.pem");
+        let private_key = Rsa::private_key_from_pem(key).unwrap();
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
@@ -264,8 +264,8 @@ mod test {
 
     #[test]
     fn rsa_verify_invalid() {
-        let key = include_bytes!("../../test/rsa.pem");
-        let private_key = RSA::private_key_from_pem(key).unwrap();
+        let key = include_bytes!("../test/rsa.pem");
+        let private_key = Rsa::private_key_from_pem(key).unwrap();
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
@@ -279,13 +279,13 @@ mod test {
         let input: Vec<u8> = (0..25).cycle().take(1024).collect();
 
         let private_key = {
-            let key = include_bytes!("../../test/dsa.pem");
-            PKey::from_dsa(DSA::private_key_from_pem(key).unwrap()).unwrap()
+            let key = include_bytes!("../test/dsa.pem");
+            PKey::from_dsa(Dsa::private_key_from_pem(key).unwrap()).unwrap()
         };
 
         let public_key = {
-            let key = include_bytes!("../../test/dsa.pem.pub");
-            PKey::from_dsa(DSA::public_key_from_pem(key).unwrap()).unwrap()
+            let key = include_bytes!("../test/dsa.pem.pub");
+            PKey::from_dsa(Dsa::public_key_from_pem(key).unwrap()).unwrap()
         };
 
         let mut signer = Signer::new(MessageDigest::sha1(), &private_key).unwrap();
@@ -302,13 +302,13 @@ mod test {
         let input: Vec<u8> = (0..25).cycle().take(1024).collect();
 
         let private_key = {
-            let key = include_bytes!("../../test/dsa.pem");
-            PKey::from_dsa(DSA::private_key_from_pem(key).unwrap()).unwrap()
+            let key = include_bytes!("../test/dsa.pem");
+            PKey::from_dsa(Dsa::private_key_from_pem(key).unwrap()).unwrap()
         };
 
         let public_key = {
-            let key = include_bytes!("../../test/dsa.pem.pub");
-            PKey::from_dsa(DSA::public_key_from_pem(key).unwrap()).unwrap()
+            let key = include_bytes!("../test/dsa.pem.pub");
+            PKey::from_dsa(Dsa::public_key_from_pem(key).unwrap()).unwrap()
         };
 
         let mut signer = Signer::new(MessageDigest::sha1(), &private_key).unwrap();

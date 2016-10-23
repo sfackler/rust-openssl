@@ -5,10 +5,10 @@ use ffi;
 
 use {cvt, cvt_p};
 use bio::{MemBio, MemBioSlice};
-use crypto::dsa::DSA;
-use crypto::rsa::RSA;
+use dsa::Dsa;
+use rsa::Rsa;
 use error::ErrorStack;
-use crypto::util::{CallbackState, invoke_passwd_cb};
+use util::{CallbackState, invoke_passwd_cb};
 
 pub struct PKey(*mut ffi::EVP_PKEY);
 
@@ -18,7 +18,7 @@ unsafe impl Sync for PKey {}
 /// Represents a public key, optionally with a private key attached.
 impl PKey {
     /// Create a new `PKey` containing an RSA key.
-    pub fn from_rsa(rsa: RSA) -> Result<PKey, ErrorStack> {
+    pub fn from_rsa(rsa: Rsa) -> Result<PKey, ErrorStack> {
         unsafe {
             let evp = try!(cvt_p(ffi::EVP_PKEY_new()));
             let pkey = PKey(evp);
@@ -29,7 +29,7 @@ impl PKey {
     }
 
     /// Create a new `PKey` containing a DSA key.
-    pub fn from_dsa(dsa: DSA) -> Result<PKey, ErrorStack> {
+    pub fn from_dsa(dsa: Dsa) -> Result<PKey, ErrorStack> {
         unsafe {
             let evp = try!(cvt_p(ffi::EVP_PKEY_new()));
             let pkey = PKey(evp);
@@ -102,7 +102,7 @@ impl PKey {
     }
 
     /// assign RSA key to this pkey
-    pub fn set_rsa(&mut self, rsa: &RSA) -> Result<(), ErrorStack> {
+    pub fn set_rsa(&mut self, rsa: &Rsa) -> Result<(), ErrorStack> {
         unsafe {
             // this needs to be a reference as the set1_RSA ups the reference count
             let rsa_ptr = rsa.as_ptr();
@@ -112,11 +112,11 @@ impl PKey {
     }
 
     /// Get a reference to the interal RSA key for direct access to the key components
-    pub fn rsa(&self) -> Result<RSA, ErrorStack> {
+    pub fn rsa(&self) -> Result<Rsa, ErrorStack> {
         unsafe {
             let rsa = try!(cvt_p(ffi::EVP_PKEY_get1_RSA(self.0)));
             // this is safe as the ffi increments a reference counter to the internal key
-            Ok(RSA::from_ptr(rsa))
+            Ok(Rsa::from_ptr(rsa))
         }
     }
 
@@ -167,19 +167,19 @@ impl Drop for PKey {
 mod tests {
     #[test]
     fn test_private_key_from_pem() {
-        let key = include_bytes!("../../test/key.pem");
+        let key = include_bytes!("../test/key.pem");
         super::PKey::private_key_from_pem(key).unwrap();
     }
 
     #[test]
     fn test_public_key_from_pem() {
-        let key = include_bytes!("../../test/key.pem.pub");
+        let key = include_bytes!("../test/key.pem.pub");
         super::PKey::public_key_from_pem(key).unwrap();
     }
 
     #[test]
     fn test_pem() {
-        let key = include_bytes!("../../test/key.pem");
+        let key = include_bytes!("../test/key.pem");
         let key = super::PKey::private_key_from_pem(key).unwrap();
 
         let priv_key = key.private_key_to_pem().unwrap();

@@ -7,15 +7,15 @@ use libc::{c_int, c_char, c_void};
 use {cvt, cvt_p};
 use bn::BigNumRef;
 use bio::{MemBio, MemBioSlice};
-use crypto::util::{CallbackState, invoke_passwd_cb};
+use util::{CallbackState, invoke_passwd_cb};
 
 /// Builder for upfront DSA parameter generation
-pub struct DSAParams(*mut ffi::DSA);
+pub struct DsaParams(*mut ffi::DSA);
 
-impl DSAParams {
-    pub fn with_size(size: u32) -> Result<DSAParams, ErrorStack> {
+impl DsaParams {
+    pub fn with_size(size: u32) -> Result<DsaParams, ErrorStack> {
         unsafe {
-            let dsa = DSAParams(try!(cvt_p(ffi::DSA_new())));
+            let dsa = DsaParams(try!(cvt_p(ffi::DSA_new())));
             try!(cvt(ffi::DSA_generate_parameters_ex(dsa.0,
                                                      size as c_int,
                                                      ptr::null(),
@@ -28,17 +28,17 @@ impl DSAParams {
     }
 
     /// Generate a key pair from the initialized parameters
-    pub fn generate(self) -> Result<DSA, ErrorStack> {
+    pub fn generate(self) -> Result<Dsa, ErrorStack> {
         unsafe {
             try!(cvt(ffi::DSA_generate_key(self.0)));
-            let dsa = DSA(self.0);
+            let dsa = Dsa(self.0);
             ::std::mem::forget(self);
             Ok(dsa)
         }
     }
 }
 
-impl Drop for DSAParams {
+impl Drop for DsaParams {
     fn drop(&mut self) {
         unsafe {
             ffi::DSA_free(self.0);
@@ -46,9 +46,9 @@ impl Drop for DSAParams {
     }
 }
 
-pub struct DSA(*mut ffi::DSA);
+pub struct Dsa(*mut ffi::DSA);
 
-impl Drop for DSA {
+impl Drop for Dsa {
     fn drop(&mut self) {
         unsafe {
             ffi::DSA_free(self.0);
@@ -56,20 +56,20 @@ impl Drop for DSA {
     }
 }
 
-impl DSA {
-    pub unsafe fn from_ptr(dsa: *mut ffi::DSA) -> DSA {
-        DSA(dsa)
+impl Dsa {
+    pub unsafe fn from_ptr(dsa: *mut ffi::DSA) -> Dsa {
+        Dsa(dsa)
     }
 
     /// Generate a DSA key pair
     /// For more complicated key generation scenarios see the `DSAParams` type
-    pub fn generate(size: u32) -> Result<DSA, ErrorStack> {
-        let params = try!(DSAParams::with_size(size));
+    pub fn generate(size: u32) -> Result<Dsa, ErrorStack> {
+        let params = try!(DsaParams::with_size(size));
         params.generate()
     }
 
     /// Reads a DSA private key from PEM formatted data.
-    pub fn private_key_from_pem(buf: &[u8]) -> Result<DSA, ErrorStack> {
+    pub fn private_key_from_pem(buf: &[u8]) -> Result<Dsa, ErrorStack> {
         ffi::init();
         let mem_bio = try!(MemBioSlice::new(buf));
 
@@ -78,7 +78,7 @@ impl DSA {
                                                                  ptr::null_mut(),
                                                                  None,
                                                                  ptr::null_mut())));
-            Ok(DSA(dsa))
+            Ok(Dsa(dsa))
         }
     }
 
@@ -87,7 +87,7 @@ impl DSA {
     ///
     /// The callback will be passed the password buffer and should return the number of characters
     /// placed into the buffer.
-    pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<DSA, ErrorStack>
+    pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<Dsa, ErrorStack>
         where F: FnOnce(&mut [c_char]) -> usize
     {
         ffi::init();
@@ -100,7 +100,7 @@ impl DSA {
                                                                  ptr::null_mut(),
                                                                  Some(invoke_passwd_cb::<F>),
                                                                  cb_ptr)));
-            Ok(DSA(dsa))
+            Ok(Dsa(dsa))
         }
     }
 
@@ -120,7 +120,7 @@ impl DSA {
     }
 
     /// Reads an DSA public key from PEM formatted data.
-    pub fn public_key_from_pem(buf: &[u8]) -> Result<DSA, ErrorStack>
+    pub fn public_key_from_pem(buf: &[u8]) -> Result<Dsa, ErrorStack>
     {
         ffi::init();
 
@@ -130,7 +130,7 @@ impl DSA {
                                                               ptr::null_mut(),
                                                               None,
                                                               ptr::null_mut())));
-            Ok(DSA(dsa))
+            Ok(Dsa(dsa))
         }
     }
 
@@ -228,7 +228,7 @@ mod compat {
     }
 }
 
-impl fmt::Debug for DSA {
+impl fmt::Debug for Dsa {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "DSA")
     }
@@ -242,14 +242,14 @@ mod test {
 
     #[test]
     pub fn test_generate() {
-        DSA::generate(1024).unwrap();
+        Dsa::generate(1024).unwrap();
     }
 
     #[test]
     pub fn test_password() {
         let mut password_queried = false;
-        let key = include_bytes!("../../test/dsa-encrypted.pem");
-        DSA::private_key_from_pem_cb(key, |password| {
+        let key = include_bytes!("../test/dsa-encrypted.pem");
+        Dsa::private_key_from_pem_cb(key, |password| {
             password_queried = true;
             password[0] = b'm' as c_char;
             password[1] = b'y' as c_char;

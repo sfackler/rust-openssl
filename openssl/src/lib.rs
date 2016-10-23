@@ -22,17 +22,27 @@ use error::ErrorStack;
 
 mod macros;
 
-pub mod asn1;
 mod bio;
+mod opaque;
+mod util;
+pub mod asn1;
 pub mod bn;
-pub mod crypto;
 pub mod dh;
+pub mod dsa;
 pub mod error;
+pub mod hash;
+pub mod memcmp;
 pub mod nid;
+pub mod pkcs12;
+pub mod pkcs5;
+pub mod pkey;
+pub mod rand;
+pub mod rsa;
+pub mod sign;
 pub mod ssl;
+pub mod symm;
 pub mod version;
 pub mod x509;
-mod opaque;
 
 pub fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {
     if r.is_null() {

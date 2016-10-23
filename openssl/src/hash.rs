@@ -77,7 +77,7 @@ use self::State::*;
 /// Calculate a hash in one go.
 ///
 /// ```
-/// use openssl::crypto::hash::{hash, MessageDigest};
+/// use openssl::hash::{hash, MessageDigest};
 ///
 /// let data = b"\x42\xF4\x97\xE0";
 /// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
@@ -88,7 +88,7 @@ use self::State::*;
 /// Use the `Write` trait to supply the input in chunks.
 ///
 /// ```
-/// use openssl::crypto::hash::{Hasher, MessageDigest};
+/// use openssl::hash::{Hasher, MessageDigest};
 ///
 /// let data = [b"\x42\xF4", b"\x97\xE0"];
 /// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
@@ -103,7 +103,7 @@ use self::State::*;
 ///
 /// Don't actually use MD5 and SHA-1 hashes, they're not secure anymore.
 ///
-/// Don't ever hash passwords, use `crypto::pkcs5` or bcrypt/scrypt instead.
+/// Don't ever hash passwords, use the functions in the `pkcs5` module or bcrypt/scrypt instead.
 pub struct Hasher {
     ctx: *mut ffi::EVP_MD_CTX,
     md: *const ffi::EVP_MD,

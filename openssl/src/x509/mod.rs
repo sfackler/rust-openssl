@@ -15,9 +15,9 @@ use {cvt, cvt_p};
 use asn1::Asn1Time;
 use asn1::Asn1TimeRef;
 use bio::{MemBio, MemBioSlice};
-use crypto::hash::MessageDigest;
-use crypto::pkey::PKey;
-use crypto::rand::rand_bytes;
+use hash::MessageDigest;
+use pkey::PKey;
+use rand::rand_bytes;
 use error::ErrorStack;
 use ffi;
 use nid::Nid;
@@ -130,13 +130,13 @@ impl X509StoreContextRef {
 /// # Example
 ///
 /// ```
-/// use openssl::crypto::hash::MessageDigest;
-/// use openssl::crypto::pkey::PKey;
-/// use openssl::crypto::rsa::RSA;
+/// use openssl::hash::MessageDigest;
+/// use openssl::pkey::PKey;
+/// use openssl::rsa::Rsa;
 /// use openssl::x509::X509Generator;
 /// use openssl::x509::extension::{Extension, KeyUsageOption};
 ///
-/// let rsa = RSA::generate(2048).unwrap();
+/// let rsa = Rsa::generate(2048).unwrap();
 /// let pkey = PKey::from_rsa(rsa).unwrap();
 ///
 /// let gen = X509Generator::new()
@@ -257,7 +257,7 @@ impl X509Generator {
                 Some(nid) => {
                     try!(cvt_p(ffi::X509V3_EXT_conf_nid(ptr::null_mut(),
                                                       mem::transmute(&ctx),
-                                                      nid as c_int,
+                                                      nid.as_raw(),
                                                       value.as_ptr() as *mut c_char)))
                 }
                 None => {
@@ -414,7 +414,7 @@ impl X509Ref {
     pub fn subject_alt_names(&self) -> Option<GeneralNames> {
         unsafe {
             let stack = ffi::X509_get_ext_d2i(self.as_ptr(),
-                                              Nid::SubjectAltName as c_int,
+                                              ffi::NID_subject_alt_name,
                                               ptr::null_mut(),
                                               ptr::null_mut());
             if stack.is_null() {
@@ -553,7 +553,7 @@ impl X509NameRef {
 
     pub fn text_by_nid(&self, nid: Nid) -> Option<SslString> {
         unsafe {
-            let loc = ffi::X509_NAME_get_index_by_NID(self.as_ptr(), nid as c_int, -1);
+            let loc = ffi::X509_NAME_get_index_by_NID(self.as_ptr(), nid.as_raw(), -1);
             if loc == -1 {
                 return None;
             }
