@@ -1254,6 +1254,11 @@ impl<S> MidHandshakeSslStream<S> {
         &self.error
     }
 
+    /// Consumes `self`, returning its error.
+    pub fn into_error(self) -> Error {
+        self.error
+    }
+
     /// Restarts the handshake process.
     pub fn handshake(mut self) -> Result<SslStream<S>, HandshakeError<S>> {
         let ret = unsafe { ffi::SSL_do_handshake(self.stream.ssl.as_ptr()) };
