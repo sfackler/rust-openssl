@@ -1083,3 +1083,11 @@ fn invalid_hostname() {
     let s = TcpStream::connect("google.com:443").unwrap();
     assert!(ssl.connect(s).is_err());
 }
+
+fn _check_kinds() {
+    fn is_send<T: Send>() {}
+    fn is_sync<T: Sync>() {}
+
+    is_send::<SslStream<TcpStream>>();
+    is_sync::<SslStream<TcpStream>>();
+}

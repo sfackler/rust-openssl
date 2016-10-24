@@ -7,7 +7,6 @@ use std::io::prelude::*;
 use std::mem;
 use std::ptr;
 use std::slice;
-use std::sync::Arc;
 
 use cvt_p;
 use error::ErrorStack;
@@ -22,15 +21,16 @@ pub struct StreamState<S> {
 pub struct BioMethod(compat::BIO_METHOD);
 
 impl BioMethod {
-    pub fn new<S: Read + Write>() -> BioMethod {
+    fn new<S: Read + Write>() -> BioMethod {
         BioMethod(compat::BIO_METHOD::new::<S>())
     }
 }
 
+unsafe impl Sync for BioMethod {}
 unsafe impl Send for BioMethod {}
 
-pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Arc<BioMethod>), ErrorStack> {
-    let method = Arc::new(BioMethod::new::<S>());
+pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, BioMethod), ErrorStack> {
+    let method = BioMethod::new::<S>();
 
     let state = Box::new(StreamState {
         stream: stream,
@@ -188,9 +188,7 @@ mod compat {
 
     pub unsafe fn BIO_set_num(_bio: *mut ffi::BIO, _num: c_int) {}
 
-    pub struct BIO_METHOD {
-        inner: *mut ffi::BIO_METHOD,
-    }
+    pub struct BIO_METHOD(*mut ffi::BIO_METHOD);
 
     impl BIO_METHOD {
         pub fn new<S: Read + Write>() -> BIO_METHOD {
@@ -198,7 +196,7 @@ mod compat {
                 let ptr = ffi::BIO_meth_new(ffi::BIO_TYPE_NONE,
                                             b"rust\0".as_ptr() as *const _);
                 assert!(!ptr.is_null());
-                let ret = BIO_METHOD { inner: ptr };
+                let ret = BIO_METHOD(ptr);
                 assert!(ffi::BIO_meth_set_write(ptr, super::bwrite::<S>) != 0);
                 assert!(ffi::BIO_meth_set_read(ptr, super::bread::<S>) != 0);
                 assert!(ffi::BIO_meth_set_puts(ptr, super::bputs::<S>) != 0);
@@ -210,14 +208,14 @@ mod compat {
         }
 
         pub fn get(&self) -> *mut ffi::BIO_METHOD {
-            self.inner
+            self.0
         }
     }
 
     impl Drop for BIO_METHOD {
         fn drop(&mut self) {
             unsafe {
-                ffi::BIO_meth_free(self.inner);
+                ffi::BIO_meth_free(self.0);
             }
         }
     }
@@ -227,35 +225,40 @@ mod compat {
 #[allow(bad_style)]
 mod compat {
     use std::io::{Read, Write};
-    use std::cell::UnsafeCell;
 
     use ffi;
     use libc::{c_int, c_void};
 
-    pub struct BIO_METHOD {
-        inner: UnsafeCell<ffi::BIO_METHOD>,
-    }
+    pub struct BIO_METHOD(*mut ffi::BIO_METHOD);
 
     impl BIO_METHOD {
         pub fn new<S: Read + Write>() -> BIO_METHOD {
-            BIO_METHOD {
-                inner: UnsafeCell::new(ffi::BIO_METHOD {
-                    type_: ffi::BIO_TYPE_NONE,
-                    name: b"rust\0".as_ptr() as *const _,
-                    bwrite: Some(super::bwrite::<S>),
-                    bread: Some(super::bread::<S>),
-                    bputs: Some(super::bputs::<S>),
-                    bgets: None,
-                    ctrl: Some(super::ctrl::<S>),
-                    create: Some(super::create),
-                    destroy: Some(super::destroy::<S>),
-                    callback_ctrl: None,
-                }),
-            }
+            let ptr = Box::new(ffi::BIO_METHOD {
+                type_: ffi::BIO_TYPE_NONE,
+                name: b"rust\0".as_ptr() as *const _,
+                bwrite: Some(super::bwrite::<S>),
+                bread: Some(super::bread::<S>),
+                bputs: Some(super::bputs::<S>),
+                bgets: None,
+                ctrl: Some(super::ctrl::<S>),
+                create: Some(super::create),
+                destroy: Some(super::destroy::<S>),
+                callback_ctrl: None,
+            });
+
+            BIO_METHOD(Box::into_raw(ptr))
         }
 
         pub fn get(&self) -> *mut ffi::BIO_METHOD {
-            self.inner.get()
+            self.0
+        }
+    }
+
+    impl Drop for BIO_METHOD {
+        fn drop(&mut self) {
+            unsafe {
+                Box::<ffi::BIO_METHOD>::from_raw(self.0);
+            }
         }
     }
 

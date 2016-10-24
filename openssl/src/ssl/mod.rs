@@ -13,7 +13,7 @@ use std::ops::{Deref, DerefMut};
 use std::path::Path;
 use std::ptr;
 use std::str;
-use std::sync::{Mutex, Arc};
+use std::sync::Mutex;
 use libc::{c_uchar, c_uint};
 use std::slice;
 use std::marker::PhantomData;
@@ -1023,6 +1023,9 @@ impl SslRef {
 
 pub struct Ssl(*mut ffi::SSL);
 
+unsafe impl Sync for Ssl {}
+unsafe impl Send for Ssl {}
+
 impl fmt::Debug for Ssl {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let mut builder = fmt.debug_struct("Ssl");
@@ -1128,11 +1131,9 @@ impl Ssl {
 /// A stream wrapper which handles SSL encryption for an underlying stream.
 pub struct SslStream<S> {
     ssl: Ssl,
-    _method: Arc<BioMethod>, // NOTE: this *must* be after the Ssl field so things drop right
+    _method: BioMethod, // NOTE: this *must* be after the Ssl field so things drop right
     _p: PhantomData<S>,
 }
-
-unsafe impl<S: Send> Send for SslStream<S> {}
 
 impl<S> fmt::Debug for SslStream<S>
     where S: fmt::Debug
