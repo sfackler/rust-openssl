@@ -335,20 +335,34 @@ pub enum SniError {
     NoAck,
 }
 
-/// A borrowed SSL context object.
-pub struct SslContextRef(Opaque);
+pub struct SslContextBuilder(*mut ffi::SSL_CTX);
 
-impl SslContextRef {
-    pub unsafe fn from_ptr<'a>(ctx: *mut ffi::SSL_CTX) -> &'a SslContextRef {
-        &*(ctx as *mut _)
+impl Drop for SslContextBuilder {
+    fn drop(&mut self) {
+        unsafe { ffi::SSL_CTX_free(self.as_ptr()) }
+    }
+}
+
+impl SslContextBuilder {
+    pub fn new(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
+        init();
+
+        let mut ctx = unsafe {
+            let ctx = try!(cvt_p(ffi::SSL_CTX_new(method.as_ptr())));
+            SslContextBuilder::from_ptr(ctx)
+        };
+
+        try!(ctx.set_mode(ffi::SSL_MODE_AUTO_RETRY | ffi::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER));
+
+        Ok(ctx)
     }
 
-    pub unsafe fn from_ptr_mut<'a>(ctx: *mut ffi::SSL_CTX) -> &'a mut SslContextRef {
-        &mut *(ctx as *mut _)
+    pub unsafe fn from_ptr(ctx: *mut ffi::SSL_CTX) -> SslContextBuilder {
+        SslContextBuilder(ctx)
     }
 
     pub fn as_ptr(&self) -> *mut ffi::SSL_CTX {
-        self as *const _ as *mut _
+        self.0
     }
 
     /// Configures the certificate verification method for new connections.
@@ -409,7 +423,7 @@ impl SslContextRef {
 
     pub fn set_tmp_dh(&mut self, dh: &DH) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::SSL_CTX_set_tmp_dh(self.as_ptr(), dh.as_ptr()) as i32).map(|_| ())
+            cvt(ffi::SSL_CTX_set_tmp_dh(self.as_ptr(), dh.as_ptr()) as c_int).map(|_| ())
         }
     }
 
@@ -470,7 +484,7 @@ impl SslContextRef {
 
     /// Specifies the file that contains certificate chain
     pub fn set_certificate_chain_file<P: AsRef<Path>>(&mut self, file: P)
-                                                      -> Result<(), ErrorStack> {
+        -> Result<(), ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
         unsafe {
             cvt(ffi::SSL_CTX_use_certificate_chain_file(self.as_ptr(),
@@ -514,13 +528,6 @@ impl SslContextRef {
     pub fn set_private_key(&mut self, key: &PKey) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_CTX_use_PrivateKey(self.as_ptr(), key.as_ptr())).map(|_| ())
-        }
-    }
-
-    /// Check consistency of private key and certificate
-    pub fn check_private_key(&mut self) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::SSL_CTX_check_private_key(self.as_ptr())).map(|_| ())
         }
     }
 
@@ -628,6 +635,36 @@ impl SslContextRef {
             Ok(())
         }
     }
+
+    /// Checks consistency between the private key and certificate.
+    pub fn check_private_key(&self) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_CTX_check_private_key(self.as_ptr())).map(|_| ())
+        }
+    }
+
+    pub fn build(self) -> SslContext {
+        let ctx = SslContext(self.0);
+        mem::forget(self);
+        ctx
+    }
+}
+
+/// A borrowed SSL context object.
+pub struct SslContextRef(Opaque);
+
+impl SslContextRef {
+    pub unsafe fn from_ptr<'a>(ctx: *mut ffi::SSL_CTX) -> &'a SslContextRef {
+        &*(ctx as *mut _)
+    }
+
+    pub unsafe fn from_ptr_mut<'a>(ctx: *mut ffi::SSL_CTX) -> &'a mut SslContextRef {
+        &mut *(ctx as *mut _)
+    }
+
+    pub fn as_ptr(&self) -> *mut ffi::SSL_CTX {
+        self as *const _ as *mut _
+    }
 }
 
 /// An owned SSL context object.
@@ -677,18 +714,8 @@ impl DerefMut for SslContext {
 }
 
 impl SslContext {
-    /// Creates a new SSL context.
-    pub fn new(method: SslMethod) -> Result<SslContext, ErrorStack> {
-        init();
-
-        let mut ctx = unsafe {
-            let ctx = try!(cvt_p(ffi::SSL_CTX_new(method.as_ptr())));
-            SslContext::from_ptr(ctx)
-        };
-
-        try!(ctx.set_mode(ffi::SSL_MODE_AUTO_RETRY | ffi::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER));
-
-        Ok(ctx)
+    pub fn builder(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
+        SslContextBuilder::new(method)
     }
 
     pub unsafe fn from_ptr(ctx: *mut ffi::SSL_CTX) -> SslContext {
