@@ -1556,6 +1556,7 @@ extern {
     #[cfg(not(ossl101))]
     pub fn SSL_get0_param(ssl: *mut SSL) -> *mut X509_VERIFY_PARAM;
     pub fn SSL_get_verify_result(ssl: *const SSL) -> c_long;
+    pub fn SSL_shutdown(ssl: *mut SSL) -> c_int;
 
     #[cfg(not(osslconf = "OPENSSL_NO_COMP"))]
     pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
