@@ -1278,6 +1278,26 @@ impl<S: Read + Write> SslStream<S> {
             Err(self.make_error(ret))
         }
     }
+
+    /// Shuts down the session.
+    ///
+    /// The shutdown process consists of two steps. The first step sends a
+    /// close notify message to the peer, after which `ShutdownResult::Sent`
+    /// is returned. The second step awaits the receipt of a close notify
+    /// message from the peer, after which `ShutdownResult::Received` is
+    /// returned.
+    ///
+    /// While the connection may be closed after the first step, it is
+    /// recommended to fully shut the session down. In particular, it must
+    /// be fully shut down if the connection is to be used for further
+    /// communication in the future.
+    pub fn shutdown(&mut self) -> Result<ShutdownResult, Error> {
+        match unsafe { ffi::SSL_shutdown(self.ssl.as_ptr()) } {
+            0 => Ok(ShutdownResult::Sent),
+            1 => Ok(ShutdownResult::Received),
+            n => Err(self.make_error(n)),
+        }
+    }
 }
 
 impl<S> SslStream<S> {
@@ -1381,6 +1401,16 @@ impl<S: Read + Write> Write for SslStream<S> {
     fn flush(&mut self) -> io::Result<()> {
         self.get_mut().flush()
     }
+}
+
+/// The result of a shutdown request.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum ShutdownResult {
+    /// A close notify message has been sent to the peer.
+    Sent,
+
+    /// A close notify response message has been received from the peer.
+    Received,
 }
 
 #[cfg(ossl110)]

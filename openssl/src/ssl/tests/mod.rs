@@ -19,7 +19,7 @@ use ssl;
 use ssl::SSL_VERIFY_PEER;
 use ssl::{SslMethod, HandshakeError};
 use ssl::error::Error;
-use ssl::{SslContext, SslStream, Ssl};
+use ssl::{SslContext, SslStream, Ssl, ShutdownResult};
 use x509::X509StoreContextRef;
 use x509::X509FileType;
 use x509::X509;
@@ -1082,6 +1082,38 @@ fn invalid_hostname() {
 
     let s = TcpStream::connect("google.com:443").unwrap();
     assert!(ssl.connect(s).is_err());
+}
+
+#[test]
+fn shutdown() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    thread::spawn(move || {
+        let stream = listener.accept().unwrap().0;
+        let mut ctx = SslContext::new(SslMethod::tls()).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM).unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509FileType::PEM).unwrap();
+        let ssl = Ssl::new(&ctx).unwrap();
+        let mut stream = ssl.accept(stream).unwrap();
+
+        stream.write_all(b"hello").unwrap();
+        let mut buf = [0; 1];
+        assert_eq!(stream.read(&mut buf).unwrap(), 0);
+        assert_eq!(stream.shutdown().unwrap(), ShutdownResult::Received);
+    });
+
+    let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    let ctx = SslContext::new(SslMethod::tls()).unwrap();
+    let ssl = Ssl::new(&ctx).unwrap();
+    let mut stream = ssl.connect(stream).unwrap();
+
+    let mut buf = [0; 5];
+    stream.read_exact(&mut buf).unwrap();
+    assert_eq!(b"hello", &buf);
+
+    assert_eq!(stream.shutdown().unwrap(), ShutdownResult::Sent);
+    assert_eq!(stream.shutdown().unwrap(), ShutdownResult::Received);
 }
 
 fn _check_kinds() {
