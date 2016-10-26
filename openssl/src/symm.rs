@@ -58,6 +58,12 @@ impl Cipher {
         }
     }
 
+    pub fn aes_128_gcm() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_aes_128_gcm())
+        }
+    }
+
     pub fn aes_256_ecb() -> Cipher {
         unsafe {
             Cipher(ffi::EVP_aes_256_ecb())
@@ -100,6 +106,12 @@ impl Cipher {
         }
     }
 
+    pub fn aes_256_gcm() -> Cipher {
+        unsafe {
+            Cipher(ffi::EVP_aes_256_gcm())
+        }
+    }
+
     pub fn des_cbc() -> Cipher {
         unsafe {
             Cipher(ffi::EVP_des_cbc())
@@ -116,6 +128,10 @@ impl Cipher {
         unsafe {
             Cipher(ffi::EVP_rc4())
         }
+    }
+
+    pub unsafe fn from_ptr(ptr: *const ffi::EVP_CIPHER) -> Cipher {
+        Cipher(ptr)
     }
 
     pub fn as_ptr(&self) -> *const ffi::EVP_CIPHER {
