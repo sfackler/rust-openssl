@@ -1128,65 +1128,6 @@ impl Ssl {
     }
 }
 
-/// A stream wrapper which handles SSL encryption for an underlying stream.
-pub struct SslStream<S> {
-    ssl: Ssl,
-    _method: BioMethod, // NOTE: this *must* be after the Ssl field so things drop right
-    _p: PhantomData<S>,
-}
-
-impl<S> fmt::Debug for SslStream<S>
-    where S: fmt::Debug
-{
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("SslStream")
-           .field("stream", &self.get_ref())
-           .field("ssl", &self.ssl())
-           .finish()
-    }
-}
-
-impl<S: Read + Write> SslStream<S> {
-    fn new_base(ssl: Ssl, stream: S) -> Self {
-        unsafe {
-            let (bio, method) = bio::new(stream).unwrap();
-            ffi::SSL_set_bio(ssl.as_ptr(), bio, bio);
-
-            SslStream {
-                ssl: ssl,
-                _method: method,
-                _p: PhantomData,
-            }
-        }
-    }
-
-    /// Like `read`, but returns an `ssl::Error` rather than an `io::Error`.
-    ///
-    /// This is particularly useful with a nonblocking socket, where the error
-    /// value will identify if OpenSSL is waiting on read or write readiness.
-    pub fn ssl_read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
-        let ret = self.ssl.read(buf);
-        if ret >= 0 {
-            Ok(ret as usize)
-        } else {
-            Err(self.make_error(ret))
-        }
-    }
-
-    /// Like `write`, but returns an `ssl::Error` rather than an `io::Error`.
-    ///
-    /// This is particularly useful with a nonblocking socket, where the error
-    /// value will identify if OpenSSL is waiting on read or write readiness.
-    pub fn ssl_write(&mut self, buf: &[u8]) -> Result<usize, Error> {
-        let ret = self.ssl.write(buf);
-        if ret >= 0 {
-            Ok(ret as usize)
-        } else {
-            Err(self.make_error(ret))
-        }
-    }
-}
-
 /// An error or intermediate state after a TLS handshake attempt.
 #[derive(Debug)]
 pub enum HandshakeError<S> {
@@ -1276,6 +1217,65 @@ impl<S> MidHandshakeSslStream<S> {
                     Err(HandshakeError::Failure(self))
                 }
             }
+        }
+    }
+}
+
+/// A stream wrapper which handles SSL encryption for an underlying stream.
+pub struct SslStream<S> {
+    ssl: Ssl,
+    _method: BioMethod, // NOTE: this *must* be after the Ssl field so things drop right
+    _p: PhantomData<S>,
+}
+
+impl<S> fmt::Debug for SslStream<S>
+    where S: fmt::Debug
+{
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("SslStream")
+           .field("stream", &self.get_ref())
+           .field("ssl", &self.ssl())
+           .finish()
+    }
+}
+
+impl<S: Read + Write> SslStream<S> {
+    fn new_base(ssl: Ssl, stream: S) -> Self {
+        unsafe {
+            let (bio, method) = bio::new(stream).unwrap();
+            ffi::SSL_set_bio(ssl.as_ptr(), bio, bio);
+
+            SslStream {
+                ssl: ssl,
+                _method: method,
+                _p: PhantomData,
+            }
+        }
+    }
+
+    /// Like `read`, but returns an `ssl::Error` rather than an `io::Error`.
+    ///
+    /// This is particularly useful with a nonblocking socket, where the error
+    /// value will identify if OpenSSL is waiting on read or write readiness.
+    pub fn ssl_read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
+        let ret = self.ssl.read(buf);
+        if ret >= 0 {
+            Ok(ret as usize)
+        } else {
+            Err(self.make_error(ret))
+        }
+    }
+
+    /// Like `write`, but returns an `ssl::Error` rather than an `io::Error`.
+    ///
+    /// This is particularly useful with a nonblocking socket, where the error
+    /// value will identify if OpenSSL is waiting on read or write readiness.
+    pub fn ssl_write(&mut self, buf: &[u8]) -> Result<usize, Error> {
+        let ret = self.ssl.write(buf);
+        if ret >= 0 {
+            Ok(ret as usize)
+        } else {
+            Err(self.make_error(ret))
         }
     }
 }
