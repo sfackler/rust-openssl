@@ -1,4 +1,4 @@
-use libc::{c_char, c_void};
+use libc::{c_char, c_int, c_void};
 use std::fmt;
 use std::ffi::CStr;
 use std::slice;
@@ -10,7 +10,9 @@ pub struct CryptoString(&'static str);
 impl<'s> Drop for CryptoString {
     fn drop(&mut self) {
         unsafe {
-            CRYPTO_free!(self.0.as_ptr() as *mut c_void);
+            CRYPTO_free(self.0.as_ptr() as *mut c_void,
+                        concat!(file!(), "\0").as_ptr() as *const c_char,
+                        line!() as c_int);
         }
     }
 }
@@ -46,3 +48,12 @@ impl fmt::Debug for CryptoString {
         fmt::Debug::fmt(self.0, f)
     }
 }
+
+#[cfg(not(ossl110))]
+#[allow(non_snake_case)]
+unsafe fn CRYPTO_free(buf: *mut c_void, _: *const c_char, _: c_int) {
+    ::ffi::CRYPTO_free(buf);
+}
+
+#[cfg(ossl110)]
+use ffi::CRYPTO_free;
