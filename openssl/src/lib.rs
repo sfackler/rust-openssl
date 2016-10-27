@@ -20,13 +20,12 @@ use libc::c_int;
 
 use error::ErrorStack;
 
-mod macros;
-
 mod bio;
 mod opaque;
 mod util;
 pub mod asn1;
 pub mod bn;
+pub mod crypto;
 pub mod dh;
 pub mod dsa;
 pub mod error;

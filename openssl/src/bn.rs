@@ -1,11 +1,12 @@
 use ffi;
-use libc::{c_int, c_void};
+use libc::c_int;
 use std::cmp::Ordering;
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::{fmt, ptr};
 use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub, Deref, DerefMut};
 
 use {cvt, cvt_p, cvt_n};
+use crypto::CryptoString;
 use error::ErrorStack;
 use opaque::Opaque;
 
@@ -473,15 +474,12 @@ impl BigNumRef {
     /// # use openssl::bn::BigNum;
     /// let s = -BigNum::from_u32(12345).unwrap();
     ///
-    /// assert_eq!(s.to_dec_str().unwrap(), "-12345");
+    /// assert_eq!(&*s.to_dec_str().unwrap(), "-12345");
     /// ```
-    pub fn to_dec_str(&self) -> Result<String, ErrorStack> {
+    pub fn to_dec_str(&self) -> Result<CryptoString, ErrorStack> {
         unsafe {
             let buf = try!(cvt_p(ffi::BN_bn2dec(self.as_ptr())));
-            let str = String::from_utf8(CStr::from_ptr(buf as *const _).to_bytes().to_vec())
-                          .unwrap();
-            CRYPTO_free!(buf as *mut c_void);
-            Ok(str)
+            Ok(CryptoString::from_null_terminated(buf))
         }
     }
 
@@ -491,15 +489,12 @@ impl BigNumRef {
     /// # use openssl::bn::BigNum;
     /// let s = -BigNum::from_u32(0x99ff).unwrap();
     ///
-    /// assert_eq!(s.to_hex_str().unwrap(), "-99FF");
+    /// assert_eq!(&*s.to_hex_str().unwrap(), "-99FF");
     /// ```
-    pub fn to_hex_str(&self) -> Result<String, ErrorStack> {
+    pub fn to_hex_str(&self) -> Result<CryptoString, ErrorStack> {
         unsafe {
             let buf = try!(cvt_p(ffi::BN_bn2hex(self.as_ptr())));
-            let str = String::from_utf8(CStr::from_ptr(buf as *const _).to_bytes().to_vec())
-                          .unwrap();
-            CRYPTO_free!(buf as *mut c_void);
-            Ok(str)
+            Ok(CryptoString::from_null_terminated(buf))
         }
     }
 }

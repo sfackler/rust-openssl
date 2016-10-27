@@ -15,6 +15,7 @@ use {cvt, cvt_p};
 use asn1::Asn1Time;
 use asn1::Asn1TimeRef;
 use bio::{MemBio, MemBioSlice};
+use crypto::CryptoString;
 use hash::MessageDigest;
 use pkey::PKey;
 use rand::rand_bytes;
@@ -45,43 +46,6 @@ use self::extension::{ExtensionType, Extension};
 
 #[cfg(test)]
 mod tests;
-
-pub struct SslString(&'static str);
-
-impl<'s> Drop for SslString {
-    fn drop(&mut self) {
-        unsafe {
-            CRYPTO_free!(self.0.as_ptr() as *mut c_void);
-        }
-    }
-}
-
-impl Deref for SslString {
-    type Target = str;
-
-    fn deref(&self) -> &str {
-        self.0
-    }
-}
-
-impl SslString {
-    unsafe fn new(buf: *const u8, len: c_int) -> SslString {
-        let slice = slice::from_raw_parts(buf, len as usize);
-        SslString(str::from_utf8_unchecked(slice))
-    }
-}
-
-impl fmt::Display for SslString {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(self.0, f)
-    }
-}
-
-impl fmt::Debug for SslString {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Debug::fmt(self.0, f)
-    }
-}
 
 #[derive(Copy, Clone)]
 #[repr(i32)]
@@ -551,7 +515,7 @@ impl X509NameRef {
         self as *const _ as *mut _
     }
 
-    pub fn text_by_nid(&self, nid: Nid) -> Option<SslString> {
+    pub fn text_by_nid(&self, nid: Nid) -> Option<CryptoString> {
         unsafe {
             let loc = ffi::X509_NAME_get_index_by_NID(self.as_ptr(), nid.as_raw(), -1);
             if loc == -1 {
@@ -577,7 +541,7 @@ impl X509NameRef {
 
             assert!(!str_from_asn1.is_null());
 
-            Some(SslString::new(str_from_asn1, len))
+            Some(CryptoString::from_raw_parts(str_from_asn1, len as usize))
         }
     }
 }
