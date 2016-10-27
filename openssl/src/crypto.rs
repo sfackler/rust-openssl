@@ -1,6 +1,6 @@
-use ffi;
-use libc::{c_int, c_void};
+use libc::{c_char, c_void};
 use std::fmt;
+use std::ffi::CStr;
 use std::slice;
 use std::ops::Deref;
 use std::str;
@@ -24,8 +24,13 @@ impl Deref for CryptoString {
 }
 
 impl CryptoString {
-    pub unsafe fn from_raw_parts(buf: *const u8, len: usize) -> CryptoString {
+    pub unsafe fn from_raw_parts(buf: *mut u8, len: usize) -> CryptoString {
         let slice = slice::from_raw_parts(buf, len);
+        CryptoString(str::from_utf8_unchecked(slice))
+    }
+
+    pub unsafe fn from_null_terminated(buf: *mut c_char) -> CryptoString {
+        let slice = CStr::from_ptr(buf).to_bytes();
         CryptoString(str::from_utf8_unchecked(slice))
     }
 }
