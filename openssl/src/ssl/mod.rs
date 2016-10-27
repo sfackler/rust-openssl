@@ -784,17 +784,12 @@ impl SslCipherRef {
     }
 
     /// Returns a textual description of the cipher used
-    pub fn description(&self) -> Option<String> {
+    pub fn description(&self) -> String {
         unsafe {
             // SSL_CIPHER_description requires a buffer of at least 128 bytes.
             let mut buf = [0; 128];
-            let desc_ptr = ffi::SSL_CIPHER_description(self.as_ptr(), buf.as_mut_ptr(), 128);
-
-            if !desc_ptr.is_null() {
-                String::from_utf8(CStr::from_ptr(desc_ptr as *const _).to_bytes().to_vec()).ok()
-            } else {
-                None
-            }
+            ffi::SSL_CIPHER_description(self.as_ptr(), buf.as_mut_ptr(), 128);
+            String::from_utf8(CStr::from_ptr(buf.as_ptr() as *const _).to_bytes().to_vec()).unwrap()
         }
     }
 }
