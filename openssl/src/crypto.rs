@@ -7,7 +7,7 @@ use std::str;
 
 pub struct CryptoString(&'static str);
 
-impl<'s> Drop for CryptoString {
+impl Drop for CryptoString {
     fn drop(&mut self) {
         unsafe {
             CRYPTO_free(self.0.as_ptr() as *mut c_void,
