@@ -788,8 +788,8 @@ impl SslCipherRef {
         unsafe {
             // SSL_CIPHER_description requires a buffer of at least 128 bytes.
             let mut buf = [0; 128];
-            ffi::SSL_CIPHER_description(self.as_ptr(), buf.as_mut_ptr(), 128);
-            String::from_utf8(CStr::from_ptr(buf.as_ptr() as *const _).to_bytes().to_vec()).unwrap()
+            let ptr = ffi::SSL_CIPHER_description(self.as_ptr(), buf.as_mut_ptr(), 128);
+            String::from_utf8(CStr::from_ptr(ptr as *const _).to_bytes().to_vec()).unwrap()
         }
     }
 }
