@@ -100,6 +100,10 @@ impl SslMethod {
         SslMethod(compat::dtls_method())
     }
 
+    pub unsafe fn from_ptr(ptr: *const ffi::SSL_METHOD) -> SslMethod {
+        SslMethod(ptr)
+    }
+
     pub fn as_ptr(&self) -> *const ffi::SSL_METHOD {
         self.0
     }
