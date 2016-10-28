@@ -20,7 +20,7 @@ use std::marker::PhantomData;
 use ffi;
 
 use {init, cvt, cvt_p};
-use dh::DH;
+use dh::Dh;
 use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::verify::X509VerifyParamRef;
@@ -425,7 +425,7 @@ impl SslContextBuilder {
         }
     }
 
-    pub fn set_tmp_dh(&mut self, dh: &DH) -> Result<(), ErrorStack> {
+    pub fn set_tmp_dh(&mut self, dh: &Dh) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_CTX_set_tmp_dh(self.as_ptr(), dh.as_ptr()) as c_int).map(|_| ())
         }

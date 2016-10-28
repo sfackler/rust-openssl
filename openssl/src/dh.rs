@@ -7,12 +7,12 @@ use {cvt, cvt_p};
 use bn::BigNum;
 use std::mem;
 
-pub struct DH(*mut ffi::DH);
+pub struct Dh(*mut ffi::DH);
 
-impl DH {
-    pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<DH, ErrorStack> {
+impl Dh {
+    pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<Dh, ErrorStack> {
         unsafe {
-            let dh = DH(try!(cvt_p(ffi::DH_new())));
+            let dh = Dh(try!(cvt_p(ffi::DH_new())));
             try!(cvt(compat::DH_set0_pqg(dh.0,
                                          p.as_ptr(),
                                          q.as_ptr(),
@@ -22,47 +22,47 @@ impl DH {
         }
     }
 
-    pub fn from_pem(buf: &[u8]) -> Result<DH, ErrorStack> {
+    pub fn from_pem(buf: &[u8]) -> Result<Dh, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
             cvt_p(ffi::PEM_read_bio_DHparams(mem_bio.as_ptr(),
                                              ptr::null_mut(),
                                              None,
                                              ptr::null_mut()))
-                .map(DH)
+                .map(Dh)
         }
     }
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn get_1024_160() -> Result<DH, ErrorStack> {
+    pub fn get_1024_160() -> Result<Dh, ErrorStack> {
         unsafe {
-            cvt_p(ffi::DH_get_1024_160()).map(DH)
+            cvt_p(ffi::DH_get_1024_160()).map(Dh)
         }
     }
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn get_2048_224() -> Result<DH, ErrorStack> {
+    pub fn get_2048_224() -> Result<Dh, ErrorStack> {
         unsafe {
-            cvt_p(ffi::DH_get_2048_224()).map(DH)
+            cvt_p(ffi::DH_get_2048_224()).map(Dh)
         }
     }
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn get_2048_256() -> Result<DH, ErrorStack> {
+    pub fn get_2048_256() -> Result<Dh, ErrorStack> {
         unsafe {
-            cvt_p(ffi::DH_get_2048_256()).map(DH)
+            cvt_p(ffi::DH_get_2048_256()).map(Dh)
         }
     }
 
-    pub unsafe fn as_ptr(&self) -> *mut ffi::DH {
+    pub fn as_ptr(&self) -> *mut ffi::DH {
         self.0
     }
 }
 
-impl Drop for DH {
+impl Drop for Dh {
     fn drop(&mut self) {
         unsafe {
             ffi::DH_free(self.as_ptr())
@@ -94,7 +94,7 @@ mod compat {
 
 #[cfg(test)]
 mod tests {
-    use super::DH;
+    use dh::Dh;
     use bn::BigNum;
     use ssl::{SslMethod, SslContext};
 
@@ -102,11 +102,11 @@ mod tests {
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     fn test_dh_rfc5114() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        let dh1 = DH::get_1024_160().unwrap();
+        let dh1 = Dh::get_1024_160().unwrap();
         ctx.set_tmp_dh(&dh1).unwrap();
-        let dh2 = DH::get_2048_224().unwrap();
+        let dh2 = Dh::get_2048_224().unwrap();
         ctx.set_tmp_dh(&dh2).unwrap();
-        let dh3 = DH::get_2048_256().unwrap();
+        let dh3 = Dh::get_2048_256().unwrap();
         ctx.set_tmp_dh(&dh3).unwrap();
     }
 
@@ -136,7 +136,7 @@ mod tests {
         let q = BigNum::from_hex_str("8CF83642A709A097B447997640129DA299B1A47D1EB3750BA308B0FE64F\
                                       5FBD3")
                     .unwrap();
-        let dh = DH::from_params(p, g, q).unwrap();
+        let dh = Dh::from_params(p, g, q).unwrap();
         ctx.set_tmp_dh(&dh).unwrap();
     }
 
@@ -144,7 +144,7 @@ mod tests {
     fn test_dh_from_pem() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         let params = include_bytes!("../test/dhparams.pem");
-        let dh = DH::from_pem(params).ok().expect("Failed to load PEM");
+        let dh = Dh::from_pem(params).ok().expect("Failed to load PEM");
         ctx.set_tmp_dh(&dh).unwrap();
     }
 }
