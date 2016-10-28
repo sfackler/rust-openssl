@@ -527,6 +527,12 @@ fn set_id_callback() {
 #[cfg(not(unix))]
 fn set_id_callback() {}
 
+// macros
+#[cfg(ossl102)]
+pub unsafe fn SSL_CTX_set_ecdh_auto(ctx: *mut SSL_CTX, onoff: c_int) -> c_int {
+    ::SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff as c_long, ::std::ptr::null_mut()) as c_int
+}
+
 extern {
     pub fn BIO_new(type_: *mut BIO_METHOD) -> *mut BIO;
     pub fn BIO_s_file() -> *mut BIO_METHOD;

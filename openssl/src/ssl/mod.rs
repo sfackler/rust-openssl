@@ -551,11 +551,7 @@ impl SslContextBuilder {
     #[cfg(all(feature = "v102", ossl102))]
     pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::SSL_CTX_ctrl(self.as_ptr(),
-                                  ffi::SSL_CTRL_SET_ECDH_AUTO,
-                                  onoff as c_long,
-                                  ptr::null_mut()) as c_int)
-                .map(|_| ())
+            cvt(ffi::SSL_CTX_set_ecdh_auto(self.as_ptr(), onoff as c_int)).map(|_| ())
         }
     }
 
