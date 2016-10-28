@@ -14,19 +14,9 @@ use util::{CallbackState, invoke_passwd_cb};
 #[derive(Copy, Clone)]
 pub struct Padding(c_int);
 
-impl Padding {
-    pub fn none() -> Padding {
-        Padding(ffi::RSA_NO_PADDING)
-    }
-
-    pub fn pkcs1() -> Padding {
-        Padding(ffi::RSA_PKCS1_PADDING)
-    }
-
-    pub fn pkcs1_oaep() -> Padding {
-        Padding(ffi::RSA_PKCS1_OAEP_PADDING)
-    }
-}
+pub const NO_PADDING: Padding = Padding(ffi::RSA_NO_PADDING);
+pub const PKCS1_PADDING: Padding = Padding(ffi::RSA_PKCS1_PADDING);
+pub const PKCS1_OAEP_PADDING: Padding = Padding(ffi::RSA_PKCS1_OAEP_PADDING);
 
 pub struct Rsa(*mut ffi::RSA);
 
@@ -443,13 +433,13 @@ mod test {
 
         let mut result = vec![0; public_key.size()];
         let original_data = b"This is test";
-        let len = public_key.public_encrypt(original_data, &mut result, Padding::pkcs1()).unwrap();
+        let len = public_key.public_encrypt(original_data, &mut result, PKCS1_PADDING).unwrap();
         assert_eq!(len, 256);
 
         let pkey = include_bytes!("../test/rsa.pem");
         let private_key = Rsa::private_key_from_pem(pkey).unwrap();
         let mut dec_result = vec![0; private_key.size()];
-        let len = private_key.private_decrypt(&result, &mut dec_result, Padding::pkcs1()).unwrap();
+        let len = private_key.private_decrypt(&result, &mut dec_result, PKCS1_PADDING).unwrap();
 
        assert_eq!(&dec_result[..len], original_data);
     }
@@ -463,9 +453,9 @@ mod test {
         let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
 
         let mut emesg = vec![0; k0.size()];
-        k0.private_encrypt(&msg, &mut emesg, Padding::pkcs1()).unwrap();
+        k0.private_encrypt(&msg, &mut emesg, PKCS1_PADDING).unwrap();
         let mut dmesg = vec![0; k1.size()];
-        let len = k1.public_decrypt(&emesg, &mut dmesg, Padding::pkcs1()).unwrap();
+        let len = k1.public_decrypt(&emesg, &mut dmesg, PKCS1_PADDING).unwrap();
         assert_eq!(msg, &dmesg[..len]);
    }
 
@@ -478,9 +468,9 @@ mod test {
        let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
 
        let mut emesg = vec![0; k0.size()];
-       k0.public_encrypt(&msg, &mut emesg, Padding::pkcs1()).unwrap();
+       k0.public_encrypt(&msg, &mut emesg, PKCS1_PADDING).unwrap();
        let mut dmesg = vec![0; k1.size()];
-       let len = k1.private_decrypt(&emesg, &mut dmesg, Padding::pkcs1()).unwrap();
+       let len = k1.private_decrypt(&emesg, &mut dmesg, PKCS1_PADDING).unwrap();
        assert_eq!(msg, &dmesg[..len]);
    }
 
