@@ -58,7 +58,6 @@ impl Pkcs12 {
                 pkey: pkey,
                 cert: cert,
                 chain: chain_out,
-                _p: (),
             })
         }
     }
@@ -68,7 +67,6 @@ pub struct ParsedPkcs12 {
     pub pkey: PKey,
     pub cert: X509,
     pub chain: Vec<X509>,
-    _p: (),
 }
 
 #[cfg(ossl110)]
