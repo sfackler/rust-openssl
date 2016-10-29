@@ -18,7 +18,7 @@ use asn1::Asn1TimeRef;
 use bio::{MemBio, MemBioSlice};
 use crypto::CryptoString;
 use hash::MessageDigest;
-use pkey::PKey;
+use pkey::{PKey, PKeyRef};
 use rand::rand_bytes;
 use error::ErrorStack;
 use ffi;
@@ -278,7 +278,7 @@ impl X509Generator {
     }
 
     /// Sets the certificate public-key, then self-sign and return it
-    pub fn sign(&self, p_key: &PKey) -> Result<X509, ErrorStack> {
+    pub fn sign(&self, p_key: &PKeyRef) -> Result<X509, ErrorStack> {
         ffi::init();
 
         unsafe {
@@ -330,7 +330,7 @@ impl X509Generator {
     }
 
     /// Obtain a certificate signing request (CSR)
-    pub fn request(&self, p_key: &PKey) -> Result<X509Req, ErrorStack> {
+    pub fn request(&self, p_key: &PKeyRef) -> Result<X509Req, ErrorStack> {
         let cert = match self.sign(p_key) {
             Ok(c) => c,
             Err(x) => return Err(x),
