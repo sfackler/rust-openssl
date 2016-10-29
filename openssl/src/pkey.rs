@@ -1,6 +1,7 @@
 use libc::{c_void, c_char, c_int};
 use std::ptr;
 use std::mem;
+use std::ops::Deref;
 use ffi;
 
 use {cvt, cvt_p};
@@ -9,13 +10,66 @@ use dsa::Dsa;
 use rsa::Rsa;
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb};
+use opaque::Opaque;
 
+/// A borrowed `PKey`.
+pub struct PKeyRef(Opaque);
+
+impl PKeyRef {
+    pub unsafe fn from_ptr<'a>(ptr: *mut ffi::EVP_PKEY) -> &'a PKeyRef {
+        &*(ptr as *mut _)
+    }
+
+    pub fn as_ptr(&self) -> *mut ffi::EVP_PKEY {
+        self as *const _ as *mut _
+    }
+
+    /// Get a reference to the interal RSA key for direct access to the key components
+    pub fn rsa(&self) -> Result<Rsa, ErrorStack> {
+        unsafe {
+            let rsa = try!(cvt_p(ffi::EVP_PKEY_get1_RSA(self.as_ptr())));
+            // this is safe as the ffi increments a reference counter to the internal key
+            Ok(Rsa::from_ptr(rsa))
+        }
+    }
+
+    /// Stores private key as a PEM
+    // FIXME: also add password and encryption
+    pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
+        unsafe {
+            try!(cvt(ffi::PEM_write_bio_PrivateKey(mem_bio.as_ptr(),
+                                                   self.as_ptr(),
+                                                   ptr::null(),
+                                                   ptr::null_mut(),
+                                                   -1,
+                                                   None,
+                                                   ptr::null_mut())));
+
+        }
+        Ok(mem_bio.get_buf().to_owned())
+    }
+
+    /// Stores public key as a PEM
+    pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
+        unsafe {
+            try!(cvt(ffi::PEM_write_bio_PUBKEY(mem_bio.as_ptr(), self.as_ptr())));
+        }
+        Ok(mem_bio.get_buf().to_owned())
+    }
+
+    pub fn public_eq(&self, other: &PKeyRef) -> bool {
+        unsafe { ffi::EVP_PKEY_cmp(self.as_ptr(), other.as_ptr()) == 1 }
+    }
+}
+
+/// Represents a public key, optionally with a private key attached.
 pub struct PKey(*mut ffi::EVP_PKEY);
 
 unsafe impl Send for PKey {}
 unsafe impl Sync for PKey {}
 
-/// Represents a public key, optionally with a private key attached.
 impl PKey {
     /// Create a new `PKey` containing an RSA key.
     pub fn from_rsa(rsa: Rsa) -> Result<PKey, ErrorStack> {
@@ -101,7 +155,7 @@ impl PKey {
         }
     }
 
-    /// assign RSA key to this pkey
+    /// Assign an RSA key to this pkey.
     pub fn set_rsa(&mut self, rsa: &Rsa) -> Result<(), ErrorStack> {
         unsafe {
             // this needs to be a reference as the set1_RSA ups the reference count
@@ -110,55 +164,22 @@ impl PKey {
             Ok(())
         }
     }
-
-    /// Get a reference to the interal RSA key for direct access to the key components
-    pub fn rsa(&self) -> Result<Rsa, ErrorStack> {
-        unsafe {
-            let rsa = try!(cvt_p(ffi::EVP_PKEY_get1_RSA(self.0)));
-            // this is safe as the ffi increments a reference counter to the internal key
-            Ok(Rsa::from_ptr(rsa))
-        }
-    }
-
-    /// Stores private key as a PEM
-    // FIXME: also add password and encryption
-    pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        unsafe {
-            try!(cvt(ffi::PEM_write_bio_PrivateKey(mem_bio.as_ptr(),
-                                                   self.0,
-                                                   ptr::null(),
-                                                   ptr::null_mut(),
-                                                   -1,
-                                                   None,
-                                                   ptr::null_mut())));
-
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
-
-    /// Stores public key as a PEM
-    pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        unsafe {
-            try!(cvt(ffi::PEM_write_bio_PUBKEY(mem_bio.as_ptr(), self.0)));
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::EVP_PKEY {
-        return self.0;
-    }
-
-    pub fn public_eq(&self, other: &PKey) -> bool {
-        unsafe { ffi::EVP_PKEY_cmp(self.0, other.0) == 1 }
-    }
 }
 
 impl Drop for PKey {
     fn drop(&mut self) {
         unsafe {
             ffi::EVP_PKEY_free(self.0);
+        }
+    }
+}
+
+impl Deref for PKey {
+    type Target = PKeyRef;
+
+    fn deref(&self) -> &PKeyRef {
+        unsafe {
+            PKeyRef::from_ptr(self.0)
         }
     }
 }

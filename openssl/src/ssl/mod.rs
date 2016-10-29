@@ -24,7 +24,7 @@ use dh::Dh;
 use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError};
 #[cfg(any(ossl102, ossl110))]
 use verify::X509VerifyParamRef;
-use pkey::PKey;
+use pkey::PKeyRef;
 use error::ErrorStack;
 use opaque::Opaque;
 
@@ -532,7 +532,7 @@ impl SslContextBuilder {
     }
 
     /// Specifies the private key
-    pub fn set_private_key(&mut self, key: &PKey) -> Result<(), ErrorStack> {
+    pub fn set_private_key(&mut self, key: &PKeyRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_CTX_use_PrivateKey(self.as_ptr(), key.as_ptr())).map(|_| ())
         }

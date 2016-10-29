@@ -4,7 +4,7 @@ use dh::Dh;
 use error::ErrorStack;
 use ssl::{self, SslMethod, SslContextBuilder, SslContext, Ssl, SSL_VERIFY_PEER, SslStream,
           HandshakeError};
-use pkey::PKey;
+use pkey::PKeyRef;
 use x509::X509Ref;
 
 // apps/dh2048.pem
@@ -85,7 +85,7 @@ impl ClientConnector {
 pub struct ServerConnectorBuilder(SslContextBuilder);
 
 impl ServerConnectorBuilder {
-    pub fn tls<I, T>(private_key: &PKey,
+    pub fn tls<I, T>(private_key: &PKeyRef,
                      certificate: &X509Ref,
                      chain: I)
                      -> Result<ServerConnectorBuilder, ErrorStack>
@@ -96,7 +96,7 @@ impl ServerConnectorBuilder {
     }
 
     fn new<I, T>(method: SslMethod,
-                 private_key: &PKey,
+                 private_key: &PKeyRef,
                  certificate: &X509Ref,
                  chain: I)
                  -> Result<ServerConnectorBuilder, ErrorStack>
