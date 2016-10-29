@@ -40,9 +40,13 @@ fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     Ok(ctx)
 }
 
+/// A builder for `ClientConnector`s.
 pub struct ClientConnectorBuilder(SslContextBuilder);
 
 impl ClientConnectorBuilder {
+    /// Creates a new builder for TLS connections.
+    ///
+    /// The default configuration is based off of libcurl's and is subject to change.
     pub fn tls() -> Result<ClientConnectorBuilder, ErrorStack> {
         ClientConnectorBuilder::new(SslMethod::tls())
     }
@@ -55,22 +59,35 @@ impl ClientConnectorBuilder {
         Ok(ClientConnectorBuilder(ctx))
     }
 
+    /// Returns a shared reference to the inner `SslContextBuilder`.
     pub fn context(&self) -> &SslContextBuilder {
         &self.0
     }
 
+    /// Returns a mutable reference to the inner `SslContextBuilder`.
     pub fn context_mut(&mut self) -> &mut SslContextBuilder {
         &mut self.0
     }
 
+    /// Consumes the builder, returning a `ClientConnector`.
     pub fn build(self) -> ClientConnector {
         ClientConnector(self.0.build())
     }
 }
 
+/// A type which wraps client-side streams in a TLS session.
+///
+/// OpenSSL's default configuration is highly insecure. This connector manages the OpenSSL
+/// structures, configuring cipher suites, session options, hostname verification, and more.
+///
+/// OpenSSL's built in hostname verification is used when linking against OpenSSL 1.0.2 or 1.1.0,
+/// and a custom implementation is used when linking against OpenSSL 1.0.1.
 pub struct ClientConnector(SslContext);
 
 impl ClientConnector {
+    /// Initiates a client-side TLS session on a stream.
+    ///
+    /// The domain is used for SNI and hostname verification.
     pub fn connect<S>(&self, domain: &str, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
         where S: Read + Write
     {
@@ -82,9 +99,14 @@ impl ClientConnector {
     }
 }
 
+/// A builder for `ServerConnector`s.
 pub struct ServerConnectorBuilder(SslContextBuilder);
 
 impl ServerConnectorBuilder {
+    /// Creates a new builder for server-side TLS connections.
+    ///
+    /// The default configuration is based off of the intermediate profile of Mozilla's SSL
+    /// Configuration Generator, and is subject to change.
     pub fn tls<I, T>(private_key: &PKeyRef,
                      certificate: &X509Ref,
                      chain: I)
@@ -127,22 +149,30 @@ impl ServerConnectorBuilder {
         Ok(ServerConnectorBuilder(ctx))
     }
 
+    /// Returns a shared reference to the inner `SslContextBuilder`.
     pub fn context(&self) -> &SslContextBuilder {
         &self.0
     }
 
+    /// Returns a mutable reference to the inner `SslContextBuilder`.
     pub fn context_mut(&mut self) -> &mut SslContextBuilder {
         &mut self.0
     }
 
+    /// Consumes the builder, returning a `ServerConnector`.
     pub fn build(self) -> ServerConnector {
         ServerConnector(self.0.build())
     }
 }
 
+/// A type which wraps server-side streams in a TLS session.
+///
+/// OpenSSL's default configuration is highly insecure. This connector manages the OpenSSL
+/// structures, configuring cipher suites, session options, and more.
 pub struct ServerConnector(SslContext);
 
 impl ServerConnector {
+    /// Initiates a server-side TLS session on a stream.
     pub fn connect<S>(&self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
         where S: Read + Write
     {

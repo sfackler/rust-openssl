@@ -342,6 +342,7 @@ pub enum SniError {
     NoAck,
 }
 
+/// A builder for `SslContext`s.
 pub struct SslContextBuilder(*mut ffi::SSL_CTX);
 
 impl Drop for SslContextBuilder {
@@ -793,6 +794,7 @@ impl SslCipherRef {
     }
 }
 
+/// A reference to an `Ssl`.
 pub struct SslRef(Opaque);
 
 unsafe impl Send for SslRef {}
@@ -1104,6 +1106,11 @@ impl Ssl {
     }
 
     /// Creates an SSL/TLS client operating over the provided stream.
+    ///
+    /// # Warning
+    ///
+    /// OpenSSL's default configuration is insecure. It is highly recommended to use
+    /// `ClientConnector` rather than `Ssl` directly, as it manages that configuration.
     pub fn connect<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
         where S: Read + Write
     {
@@ -1131,6 +1138,11 @@ impl Ssl {
     }
 
     /// Creates an SSL/TLS server operating over the provided stream.
+    ///
+    /// # Warning
+    ///
+    /// OpenSSL's default configuration is insecure. It is highly recommended to use
+    /// `ServerConnector` rather than `Ssl` directly, as it manages that configuration.
     pub fn accept<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
         where S: Read + Write
     {
