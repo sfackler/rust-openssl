@@ -37,12 +37,12 @@ use ffi::{
     ASN1_STRING_get0_data as ASN1_STRING_data,
 };
 
-pub mod extension;
-
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-pub mod verify;
+pub use verify;
 
-use self::extension::{ExtensionType, Extension};
+use x509::extension::{ExtensionType, Extension};
+
+pub mod extension;
 
 #[cfg(test)]
 mod tests;
