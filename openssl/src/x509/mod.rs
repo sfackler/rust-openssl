@@ -39,7 +39,7 @@ use ffi::{
 };
 
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-pub use verify;
+pub mod verify;
 
 use x509::extension::{ExtensionType, Extension};
 
