@@ -18,8 +18,8 @@ use hash::MessageDigest;
 use ssl;
 use ssl::SSL_VERIFY_PEER;
 use ssl::{SslMethod, HandshakeError};
-use ssl::error::Error;
-use ssl::{SslContext, SslStream, Ssl, ShutdownResult};
+use ssl::{SslContext, SslStream, Ssl, ShutdownResult, ClientConnectorBuilder,
+          ServerConnectorBuilder, Error};
 use x509::X509StoreContextRef;
 use x509::X509FileType;
 use x509::X509;
@@ -30,6 +30,9 @@ use pkey::PKey;
 use std::net::UdpSocket;
 
 mod select;
+
+static CERT: &'static [u8] = include_bytes!("../../../test/cert.pem");
+static KEY: &'static [u8] = include_bytes!("../../../test/key.pem");
 
 fn next_addr() -> SocketAddr {
     use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
@@ -46,10 +49,6 @@ struct Server {
 
 impl Server {
     fn spawn(args: &[&str], input: Option<Box<FnMut(ChildStdin) + Send>>) -> (Server, SocketAddr) {
-        static CERT: &'static [u8] = include_bytes!("../../../test/cert.pem");
-        static KEY: &'static [u8] = include_bytes!("../../../test/key.pem");
-
-
         let td = TempDir::new("openssl").unwrap();
         let cert = td.path().join("cert.pem");
         let key = td.path().join("key.pem");
@@ -1047,7 +1046,7 @@ fn add_extra_chain_cert() {
 #[test]
 #[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-fn valid_hostname() {
+fn verify_valid_hostname() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_default_verify_paths().unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
@@ -1071,7 +1070,7 @@ fn valid_hostname() {
 #[test]
 #[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-fn invalid_hostname() {
+fn verify_invalid_hostname() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_default_verify_paths().unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
@@ -1082,6 +1081,61 @@ fn invalid_hostname() {
 
     let s = TcpStream::connect("google.com:443").unwrap();
     assert!(ssl.connect(s).is_err());
+}
+
+#[test]
+#[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
+fn connector_valid_hostname() {
+    let connector = ClientConnectorBuilder::tls().unwrap().build();
+
+    let s = TcpStream::connect("google.com:443").unwrap();
+    let mut socket = connector.connect("google.com", s).unwrap();
+
+    socket.write_all(b"GET / HTTP/1.0\r\n\r\n").unwrap();
+    let mut result = vec![];
+    socket.read_to_end(&mut result).unwrap();
+
+    println!("{}", String::from_utf8_lossy(&result));
+    assert!(result.starts_with(b"HTTP/1.0"));
+    assert!(result.ends_with(b"</HTML>\r\n") || result.ends_with(b"</html>"));
+}
+
+#[test]
+#[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
+fn connector_invalid_hostname() {
+    let connector = ClientConnectorBuilder::tls().unwrap().build();
+
+    let s = TcpStream::connect("google.com:443").unwrap();
+    assert!(connector.connect("foobar.com", s).is_err());
+}
+
+#[test]
+fn connector_client_server() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    let t = thread::spawn(move || {
+        let key = PKey::private_key_from_pem(KEY).unwrap();
+        let cert = X509::from_pem(CERT).unwrap();
+        let connector = ServerConnectorBuilder::tls(&key, &cert, None::<X509>).unwrap().build();
+        let stream = listener.accept().unwrap().0;
+        let mut stream = connector.connect(stream).unwrap();
+
+        stream.write_all(b"hello").unwrap();
+    });
+
+    let mut connector = ClientConnectorBuilder::tls().unwrap();
+    connector.context_mut().set_CA_file("test/root-ca.pem").unwrap();
+    let connector = connector.build();
+
+    let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    let mut stream = connector.connect("foobar.com", stream).unwrap();
+
+    let mut buf = [0; 5];
+    stream.read_exact(&mut buf).unwrap();
+    assert_eq!(b"hello", &buf);
+
+    t.join().unwrap();
 }
 
 #[test]

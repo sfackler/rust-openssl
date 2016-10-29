@@ -1,4 +1,5 @@
 use libc::{c_char, c_int, c_long, c_ulong, c_void};
+use std::borrow::Borrow;
 use std::cmp;
 use std::collections::HashMap;
 use std::error::Error;
@@ -447,6 +448,17 @@ impl X509Ref {
     }
 }
 
+impl ToOwned for X509Ref {
+    type Owned = X509;
+
+    fn to_owned(&self) -> X509 {
+        unsafe {
+            compat::X509_up_ref(self.as_ptr());
+            X509::from_ptr(self.as_ptr())
+        }
+    }
+}
+
 /// An owned public key certificate.
 pub struct X509(*mut ffi::X509);
 
@@ -491,16 +503,25 @@ impl Deref for X509 {
 
 impl Clone for X509 {
     fn clone(&self) -> X509 {
-        unsafe {
-            compat::X509_up_ref(self.as_ptr());
-            X509::from_ptr(self.as_ptr())
-        }
+        self.to_owned()
     }
 }
 
 impl Drop for X509 {
     fn drop(&mut self) {
         unsafe { ffi::X509_free(self.as_ptr()) };
+    }
+}
+
+impl AsRef<X509Ref> for X509 {
+    fn as_ref(&self) -> &X509Ref {
+        &*self
+    }
+}
+
+impl Borrow<X509Ref> for X509 {
+    fn borrow(&self) -> &X509Ref {
+        &*self
     }
 }
 

@@ -22,19 +22,22 @@ use ffi;
 use {init, cvt, cvt_p};
 use dh::Dh;
 use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError};
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-use x509::verify::X509VerifyParamRef;
+#[cfg(any(ossl102, ossl110))]
+use verify::X509VerifyParamRef;
 use pkey::PKey;
 use error::ErrorStack;
 use opaque::Opaque;
 
 pub mod error;
+mod connector;
 mod bio;
 #[cfg(test)]
 mod tests;
 
 use self::bio::BioMethod;
 
+pub use ssl::connector::{ClientConnectorBuilder, ClientConnector, ServerConnectorBuilder,
+                         ServerConnector};
 #[doc(inline)]
 pub use ssl::error::Error;
 
@@ -1030,6 +1033,11 @@ impl SslRef {
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn param_mut(&mut self) -> &mut X509VerifyParamRef {
+        self._param_mut()
+    }
+
+    #[cfg(any(ossl102, ossl110))]
+    fn _param_mut(&mut self) -> &mut X509VerifyParamRef {
         unsafe {
             X509VerifyParamRef::from_ptr_mut(ffi::SSL_get0_param(self.as_ptr()))
         }
@@ -1153,6 +1161,8 @@ impl Ssl {
 /// An error or intermediate state after a TLS handshake attempt.
 #[derive(Debug)]
 pub enum HandshakeError<S> {
+    /// Setup failed.
+    SetupFailure(ErrorStack),
     /// The handshake failed.
     Failure(MidHandshakeSslStream<S>),
     /// The handshake was interrupted midway through.
@@ -1162,6 +1172,7 @@ pub enum HandshakeError<S> {
 impl<S: Any + fmt::Debug> stderror::Error for HandshakeError<S> {
     fn description(&self) -> &str {
         match *self {
+            HandshakeError::SetupFailure(_) => "stream setup failed",
             HandshakeError::Failure(_) => "the handshake failed",
             HandshakeError::Interrupted(_) => "the handshake was interrupted",
         }
@@ -1169,6 +1180,7 @@ impl<S: Any + fmt::Debug> stderror::Error for HandshakeError<S> {
 
     fn cause(&self) -> Option<&stderror::Error> {
         match *self {
+            HandshakeError::SetupFailure(ref e) => Some(e),
             HandshakeError::Failure(ref s) | HandshakeError::Interrupted(ref s) => Some(s.error()),
         }
     }
@@ -1178,6 +1190,7 @@ impl<S: Any + fmt::Debug> fmt::Display for HandshakeError<S> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(f.write_str(stderror::Error::description(self)));
         match *self {
+            HandshakeError::SetupFailure(ref e) => try!(write!(f, ": {}", e)),
             HandshakeError::Failure(ref s) | HandshakeError::Interrupted(ref s) => {
                 try!(write!(f, ": {}", s.error()));
                 if let Some(err) = s.ssl().verify_result() {
@@ -1186,6 +1199,12 @@ impl<S: Any + fmt::Debug> fmt::Display for HandshakeError<S> {
             }
         }
         Ok(())
+    }
+}
+
+impl<S> From<ErrorStack> for HandshakeError<S> {
+    fn from(e: ErrorStack) -> HandshakeError<S> {
+        HandshakeError::SetupFailure(e)
     }
 }
 
