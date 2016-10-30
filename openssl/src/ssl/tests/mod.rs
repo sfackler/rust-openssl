@@ -1018,7 +1018,6 @@ fn refcount_ssl_context() {
 }
 
 #[test]
-#[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
 fn default_verify_paths() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_default_verify_paths().unwrap();
@@ -1044,7 +1043,6 @@ fn add_extra_chain_cert() {
 }
 
 #[test]
-#[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 fn verify_valid_hostname() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
@@ -1068,7 +1066,6 @@ fn verify_valid_hostname() {
 }
 
 #[test]
-#[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 fn verify_invalid_hostname() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
@@ -1084,7 +1081,6 @@ fn verify_invalid_hostname() {
 }
 
 #[test]
-#[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
 fn connector_valid_hostname() {
     let connector = ClientConnectorBuilder::tls().unwrap().build();
 
@@ -1101,7 +1097,6 @@ fn connector_valid_hostname() {
 }
 
 #[test]
-#[cfg_attr(windows, ignore)] // don't have a trusted CA list easily available :(
 fn connector_invalid_hostname() {
     let connector = ClientConnectorBuilder::tls().unwrap().build();
 
