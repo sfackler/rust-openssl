@@ -27,7 +27,6 @@ See https://tools.ietf.org/html/rfc2412 for how they were generated."#;
 fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     let mut ctx = try!(SslContextBuilder::new(method));
 
-    // options to enable and cipher list lifted from libcurl
     let mut opts = ssl::SSL_OP_ALL;
     opts |= ssl::SSL_OP_NO_TICKET;
     opts |= ssl::SSL_OP_NO_COMPRESSION;
