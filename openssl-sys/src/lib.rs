@@ -24,6 +24,7 @@ pub enum ASN1_TYPE {}
 pub enum BN_CTX {}
 pub enum BN_GENCB {}
 pub enum COMP_METHOD {}
+pub enum EC_KEY {}
 pub enum ENGINE {}
 pub enum EVP_CIPHER_CTX {}
 pub enum EVP_MD {}
@@ -1341,8 +1342,10 @@ extern {
     #[cfg(not(ossl101))]
     pub fn DH_get_2048_256() -> *mut DH;
 
-    pub fn ERR_get_error() -> c_ulong;
+    pub fn EC_KEY_new_by_curve_name(nid: c_int) -> *mut EC_KEY;
+    pub fn EC_KEY_free(key: *mut EC_KEY);
 
+    pub fn ERR_get_error() -> c_ulong;
     pub fn ERR_lib_error_string(err: c_ulong) -> *const c_char;
     pub fn ERR_func_error_string(err: c_ulong) -> *const c_char;
     pub fn ERR_reason_error_string(err: c_ulong) -> *const c_char;
