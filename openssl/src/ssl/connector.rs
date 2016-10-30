@@ -47,11 +47,7 @@ impl ClientConnectorBuilder {
     /// Creates a new builder for TLS connections.
     ///
     /// The default configuration is based off of libcurl's and is subject to change.
-    pub fn tls() -> Result<ClientConnectorBuilder, ErrorStack> {
-        ClientConnectorBuilder::new(SslMethod::tls())
-    }
-
-    fn new(method: SslMethod) -> Result<ClientConnectorBuilder, ErrorStack> {
+    pub fn new(method: SslMethod) -> Result<ClientConnectorBuilder, ErrorStack> {
         let mut ctx = try!(ctx(method));
         try!(ctx.set_default_verify_paths());
         try!(ctx.set_cipher_list("ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH"));
@@ -103,25 +99,18 @@ impl ClientConnector {
 pub struct ServerConnectorBuilder(SslContextBuilder);
 
 impl ServerConnectorBuilder {
-    /// Creates a new builder for server-side TLS connections.
+    /// Creates a new builder configured to connect to non-legacy clients. This should generally be
+    /// considered a reasonable default choice.
     ///
-    /// The default configuration is based off of the intermediate profile of Mozilla's server side
-    /// TLS configuration recommendations, and is subject to change.
-    pub fn tls<I>(private_key: &PKeyRef,
-                  certificate: &X509Ref,
-                  chain: I)
-                  -> Result<ServerConnectorBuilder, ErrorStack>
-        where I: IntoIterator,
-              I::Item: AsRef<X509Ref>
-    {
-        ServerConnectorBuilder::new(SslMethod::tls(), private_key, certificate, chain)
-    }
-
-    fn new<I>(method: SslMethod,
-              private_key: &PKeyRef,
-              certificate: &X509Ref,
-              chain: I)
-              -> Result<ServerConnectorBuilder, ErrorStack>
+    /// This corresponds to the intermediate configuration of Mozilla's server side TLS
+    /// recommendations. See its [documentation][docs] for more details on specifics.
+    ///
+    /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
+    pub fn mozilla_intermediate<I>(method: SslMethod,
+                                   private_key: &PKeyRef,
+                                   certificate: &X509Ref,
+                                   chain: I)
+                                   -> Result<ServerConnectorBuilder, ErrorStack>
         where I: IntoIterator,
               I::Item: AsRef<X509Ref>
     {
@@ -142,6 +131,43 @@ impl ServerConnectorBuilder {
              DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:\
              EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:\
              AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS"));
+        ServerConnectorBuilder::finish_setup(ctx, private_key, certificate, chain)
+    }
+
+    /// Creates a new builder configured to connect to modern clients.
+    ///
+    /// This corresponds to the modern configuration of Mozilla's server side TLS recommendations.
+    /// See its [documentation][docs] for more details on specifics.
+    ///
+    /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
+    pub fn mozilla_modern<I>(method: SslMethod,
+                             private_key: &PKeyRef,
+                             certificate: &X509Ref,
+                             chain: I)
+                             -> Result<ServerConnectorBuilder, ErrorStack>
+        where I: IntoIterator,
+              I::Item: AsRef<X509Ref>
+    {
+        let mut ctx = try!(ctx(method));
+        ctx.set_options(ssl::SSL_OP_SINGLE_ECDH_USE | ssl::SSL_OP_CIPHER_SERVER_PREFERENCE);
+        try!(setup_curves(&mut ctx));
+        try!(ctx.set_cipher_list(
+            "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:\
+             ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:\
+             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:\
+             ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:\
+             ECDHE-RSA-AES128-SHA256"));
+        ServerConnectorBuilder::finish_setup(ctx, private_key, certificate, chain)
+    }
+
+    fn finish_setup<I>(mut ctx: SslContextBuilder,
+                       private_key: &PKeyRef,
+                       certificate: &X509Ref,
+                       chain: I)
+                       -> Result<ServerConnectorBuilder, ErrorStack>
+        where I: IntoIterator,
+             I::Item: AsRef<X509Ref>
+    {
         try!(ctx.set_private_key(private_key));
         try!(ctx.set_certificate(certificate));
         try!(ctx.check_private_key());
