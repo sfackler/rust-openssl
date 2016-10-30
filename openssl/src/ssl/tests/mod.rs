@@ -1105,7 +1105,7 @@ fn connector_invalid_hostname() {
 }
 
 #[test]
-fn connector_client_server() {
+fn connector_client_server_mozilla_intermediate() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
 
@@ -1113,6 +1113,38 @@ fn connector_client_server() {
         let key = PKey::private_key_from_pem(KEY).unwrap();
         let cert = X509::from_pem(CERT).unwrap();
         let connector = ServerConnectorBuilder::mozilla_intermediate(
+            SslMethod::tls(), &key, &cert, None::<X509>)
+            .unwrap()
+            .build();
+        let stream = listener.accept().unwrap().0;
+        let mut stream = connector.connect(stream).unwrap();
+
+        stream.write_all(b"hello").unwrap();
+    });
+
+    let mut connector = ClientConnectorBuilder::new(SslMethod::tls()).unwrap();
+    connector.context_mut().set_CA_file("test/root-ca.pem").unwrap();
+    let connector = connector.build();
+
+    let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    let mut stream = connector.connect("foobar.com", stream).unwrap();
+
+    let mut buf = [0; 5];
+    stream.read_exact(&mut buf).unwrap();
+    assert_eq!(b"hello", &buf);
+
+    t.join().unwrap();
+}
+
+#[test]
+fn connector_client_server_mozilla_modern() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    let t = thread::spawn(move || {
+        let key = PKey::private_key_from_pem(KEY).unwrap();
+        let cert = X509::from_pem(CERT).unwrap();
+        let connector = ServerConnectorBuilder::mozilla_modern(
             SslMethod::tls(), &key, &cert, None::<X509>)
             .unwrap()
             .build();
