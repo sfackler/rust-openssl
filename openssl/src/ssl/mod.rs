@@ -8,11 +8,11 @@
 //! To connect as a client to a remote server:
 //!
 //! ```
-//! use openssl::ssl::ClientConnectorBuilder;
+//! use openssl::ssl::{SslMethod, ClientConnectorBuilder};
 //! use std::io::{Read, Write};
 //! use std::net::TcpStream;
 //!
-//! let connector = ClientConnectorBuilder::tls().unwrap().build();
+//! let connector = ClientConnectorBuilder::new(SslMethod::tls()).unwrap().build();
 //!
 //! let stream = TcpStream::connect("google.com:443").unwrap();
 //! let mut stream = connector.connect("google.com", stream).unwrap();
@@ -27,7 +27,7 @@
 //!
 //! ```no_run
 //! use openssl::pkcs12::Pkcs12;
-//! use openssl::ssl::{ServerConnectorBuilder, SslStream};
+//! use openssl::ssl::{SslMethod, ServerConnectorBuilder, SslStream};
 //! use std::fs::File;
 //! use std::io::{Read, Write};
 //! use std::net::{TcpListener, TcpStream};
@@ -43,7 +43,10 @@
 //! let pkcs12 = Pkcs12::from_der(&pkcs12).unwrap();
 //! let identity = pkcs12.parse("password123").unwrap();
 //!
-//! let connector = ServerConnectorBuilder::tls(&identity.pkey, &identity.cert, &identity.chain)
+//! let connector = ServerConnectorBuilder::new(SslMethod::tls(),
+//!                                             &identity.pkey,
+//!                                             &identity.cert,
+//!                                             &identity.chain)
 //!     .unwrap()
 //!     .build();
 //! let connector = Arc::new(connector);

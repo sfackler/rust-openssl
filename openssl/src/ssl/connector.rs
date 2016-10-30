@@ -47,11 +47,7 @@ impl ClientConnectorBuilder {
     /// Creates a new builder for TLS connections.
     ///
     /// The default configuration is based off of libcurl's and is subject to change.
-    pub fn tls() -> Result<ClientConnectorBuilder, ErrorStack> {
-        ClientConnectorBuilder::new(SslMethod::tls())
-    }
-
-    fn new(method: SslMethod) -> Result<ClientConnectorBuilder, ErrorStack> {
+    pub fn new(method: SslMethod) -> Result<ClientConnectorBuilder, ErrorStack> {
         let mut ctx = try!(ctx(method));
         try!(ctx.set_default_verify_paths());
         try!(ctx.set_cipher_list("ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH"));
@@ -107,21 +103,11 @@ impl ServerConnectorBuilder {
     ///
     /// The default configuration is based off of the intermediate profile of Mozilla's server side
     /// TLS configuration recommendations, and is subject to change.
-    pub fn tls<I>(private_key: &PKeyRef,
+    pub fn new<I>(method: SslMethod,
+                  private_key: &PKeyRef,
                   certificate: &X509Ref,
                   chain: I)
                   -> Result<ServerConnectorBuilder, ErrorStack>
-        where I: IntoIterator,
-              I::Item: AsRef<X509Ref>
-    {
-        ServerConnectorBuilder::new(SslMethod::tls(), private_key, certificate, chain)
-    }
-
-    fn new<I>(method: SslMethod,
-              private_key: &PKeyRef,
-              certificate: &X509Ref,
-              chain: I)
-              -> Result<ServerConnectorBuilder, ErrorStack>
         where I: IntoIterator,
               I::Item: AsRef<X509Ref>
     {

@@ -1082,7 +1082,7 @@ fn verify_invalid_hostname() {
 
 #[test]
 fn connector_valid_hostname() {
-    let connector = ClientConnectorBuilder::tls().unwrap().build();
+    let connector = ClientConnectorBuilder::new(SslMethod::tls()).unwrap().build();
 
     let s = TcpStream::connect("google.com:443").unwrap();
     let mut socket = connector.connect("google.com", s).unwrap();
@@ -1098,7 +1098,7 @@ fn connector_valid_hostname() {
 
 #[test]
 fn connector_invalid_hostname() {
-    let connector = ClientConnectorBuilder::tls().unwrap().build();
+    let connector = ClientConnectorBuilder::new(SslMethod::tls()).unwrap().build();
 
     let s = TcpStream::connect("google.com:443").unwrap();
     assert!(connector.connect("foobar.com", s).is_err());
@@ -1112,14 +1112,16 @@ fn connector_client_server() {
     let t = thread::spawn(move || {
         let key = PKey::private_key_from_pem(KEY).unwrap();
         let cert = X509::from_pem(CERT).unwrap();
-        let connector = ServerConnectorBuilder::tls(&key, &cert, None::<X509>).unwrap().build();
+        let connector = ServerConnectorBuilder::new(SslMethod::tls(), &key, &cert, None::<X509>)
+            .unwrap()
+            .build();
         let stream = listener.accept().unwrap().0;
         let mut stream = connector.connect(stream).unwrap();
 
         stream.write_all(b"hello").unwrap();
     });
 
-    let mut connector = ClientConnectorBuilder::tls().unwrap();
+    let mut connector = ClientConnectorBuilder::new(SslMethod::tls()).unwrap();
     connector.context_mut().set_CA_file("test/root-ca.pem").unwrap();
     let connector = connector.build();
 
