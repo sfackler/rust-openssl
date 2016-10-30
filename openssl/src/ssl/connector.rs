@@ -99,10 +99,13 @@ impl ClientConnector {
 pub struct ServerConnectorBuilder(SslContextBuilder);
 
 impl ServerConnectorBuilder {
-    /// Creates a new builder for server-side TLS connections.
+    /// Creates a new builder configured to connect to non-legacy clients. This should generally be
+    /// considered a reasonable default choice.
     ///
-    /// The configuration is based off of the intermediate profile of Mozilla's server side
-    /// TLS configuration recommendations.
+    /// This corresponds to the intermediate configuration of Mozilla's server side TLS
+    /// recommendations. See its [documentation][docs] for more details on specifics.
+    ///
+    /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
     pub fn mozilla_intermediate<I>(method: SslMethod,
                                    private_key: &PKeyRef,
                                    certificate: &X509Ref,
@@ -131,6 +134,12 @@ impl ServerConnectorBuilder {
         ServerConnectorBuilder::finish_setup(ctx, private_key, certificate, chain)
     }
 
+    /// Creates a new builder configured to connect to modern clients.
+    ///
+    /// This corresponds to the modern configuration of Mozilla's server side TLS recommendations.
+    /// See its [documentation][docs] for more details on specifics.
+    ///
+    /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
     pub fn mozilla_modern<I>(method: SslMethod,
                              private_key: &PKeyRef,
                              certificate: &X509Ref,
