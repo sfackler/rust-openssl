@@ -1,3 +1,72 @@
+//! SSL/TLS support.
+//!
+//! The `ClientConnector` and `ServerConnector` should be used in most cases - they handle
+//! configuration of the OpenSSL primitives for you.
+//!
+//! # Examples
+//!
+//! To connect as a client to a remote server:
+//!
+//! ```
+//! use openssl::ssl::ClientConnectorBuilder;
+//! use std::io::{Read, Write};
+//! use std::net::TcpStream;
+//!
+//! let connector = ClientConnectorBuilder::tls().unwrap().build();
+//!
+//! let stream = TcpStream::connect("google.com:443").unwrap();
+//! let mut stream = connector.connect("google.com", stream).unwrap();
+//!
+//! stream.write_all(b"GET / HTTP/1.0\r\n\r\n").unwrap();
+//! let mut res = vec![];
+//! stream.read_to_end(&mut res).unwrap();
+//! println!("{}", String::from_utf8_lossy(&res));
+//! ```
+//!
+//! To accept connections as a server from remote clients:
+//!
+//! ```no_run
+//! use openssl::pkcs12::Pkcs12;
+//! use openssl::ssl::{ServerConnectorBuilder, SslStream};
+//! use std::fs::File;
+//! use std::io::{Read, Write};
+//! use std::net::{TcpListener, TcpStream};
+//! use std::sync::Arc;
+//! use std::thread;
+//!
+//! // In this example we retrieve our keypair and certificate chain from a PKCS #12 archive,
+//! // but but they can also be retrieved from, for example, individual PEM- or DER-formatted
+//! // files. See the documentation for the `PKey` and `X509` types for more details.
+//! let mut file = File::open("identity.pfx").unwrap();
+//! let mut pkcs12 = vec![];
+//! file.read_to_end(&mut pkcs12).unwrap();
+//! let pkcs12 = Pkcs12::from_der(&pkcs12).unwrap();
+//! let identity = pkcs12.parse("password123").unwrap();
+//!
+//! let connector = ServerConnectorBuilder::tls(&identity.pkey, &identity.cert, &identity.chain)
+//!     .unwrap()
+//!     .build();
+//! let connector = Arc::new(connector);
+//!
+//! let listener = TcpListener::bind("0.0.0.0:8443").unwrap();
+//!
+//! fn handle_client(stream: SslStream<TcpStream>) {
+//!     // ...
+//! }
+//!
+//! for stream in listener.incoming() {
+//!     match stream {
+//!         Ok(stream) => {
+//!             let connector = connector.clone();
+//!             thread::spawn(move || {
+//!                 let stream = connector.connect(stream).unwrap();
+//!                 handle_client(stream);
+//!             });
+//!         }
+//!         Err(e) => { /* connection failed */ }
+//!     }
+//! }
+//! ```
 use libc::{c_int, c_void, c_long, c_ulong};
 use std::any::Any;
 use std::any::TypeId;
@@ -22,19 +91,22 @@ use ffi;
 use {init, cvt, cvt_p};
 use dh::Dh;
 use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError};
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-use x509::verify::X509VerifyParamRef;
-use pkey::PKey;
+#[cfg(any(ossl102, ossl110))]
+use verify::X509VerifyParamRef;
+use pkey::PKeyRef;
 use error::ErrorStack;
 use opaque::Opaque;
 
 pub mod error;
+mod connector;
 mod bio;
 #[cfg(test)]
 mod tests;
 
 use self::bio::BioMethod;
 
+pub use ssl::connector::{ClientConnectorBuilder, ClientConnector, ServerConnectorBuilder,
+                         ServerConnector};
 #[doc(inline)]
 pub use ssl::error::Error;
 
@@ -339,6 +411,7 @@ pub enum SniError {
     NoAck,
 }
 
+/// A builder for `SslContext`s.
 pub struct SslContextBuilder(*mut ffi::SSL_CTX);
 
 impl Drop for SslContextBuilder {
@@ -529,7 +602,7 @@ impl SslContextBuilder {
     }
 
     /// Specifies the private key
-    pub fn set_private_key(&mut self, key: &PKey) -> Result<(), ErrorStack> {
+    pub fn set_private_key(&mut self, key: &PKeyRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_CTX_use_PrivateKey(self.as_ptr(), key.as_ptr())).map(|_| ())
         }
@@ -790,6 +863,7 @@ impl SslCipherRef {
     }
 }
 
+/// A reference to an `Ssl`.
 pub struct SslRef(Opaque);
 
 unsafe impl Send for SslRef {}
@@ -1030,6 +1104,11 @@ impl SslRef {
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn param_mut(&mut self) -> &mut X509VerifyParamRef {
+        self._param_mut()
+    }
+
+    #[cfg(any(ossl102, ossl110))]
+    fn _param_mut(&mut self) -> &mut X509VerifyParamRef {
         unsafe {
             X509VerifyParamRef::from_ptr_mut(ffi::SSL_get0_param(self.as_ptr()))
         }
@@ -1096,6 +1175,11 @@ impl Ssl {
     }
 
     /// Creates an SSL/TLS client operating over the provided stream.
+    ///
+    /// # Warning
+    ///
+    /// OpenSSL's default configuration is insecure. It is highly recommended to use
+    /// `ClientConnector` rather than `Ssl` directly, as it manages that configuration.
     pub fn connect<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
         where S: Read + Write
     {
@@ -1123,6 +1207,11 @@ impl Ssl {
     }
 
     /// Creates an SSL/TLS server operating over the provided stream.
+    ///
+    /// # Warning
+    ///
+    /// OpenSSL's default configuration is insecure. It is highly recommended to use
+    /// `ServerConnector` rather than `Ssl` directly, as it manages that configuration.
     pub fn accept<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
         where S: Read + Write
     {
@@ -1153,6 +1242,8 @@ impl Ssl {
 /// An error or intermediate state after a TLS handshake attempt.
 #[derive(Debug)]
 pub enum HandshakeError<S> {
+    /// Setup failed.
+    SetupFailure(ErrorStack),
     /// The handshake failed.
     Failure(MidHandshakeSslStream<S>),
     /// The handshake was interrupted midway through.
@@ -1162,6 +1253,7 @@ pub enum HandshakeError<S> {
 impl<S: Any + fmt::Debug> stderror::Error for HandshakeError<S> {
     fn description(&self) -> &str {
         match *self {
+            HandshakeError::SetupFailure(_) => "stream setup failed",
             HandshakeError::Failure(_) => "the handshake failed",
             HandshakeError::Interrupted(_) => "the handshake was interrupted",
         }
@@ -1169,6 +1261,7 @@ impl<S: Any + fmt::Debug> stderror::Error for HandshakeError<S> {
 
     fn cause(&self) -> Option<&stderror::Error> {
         match *self {
+            HandshakeError::SetupFailure(ref e) => Some(e),
             HandshakeError::Failure(ref s) | HandshakeError::Interrupted(ref s) => Some(s.error()),
         }
     }
@@ -1178,6 +1271,7 @@ impl<S: Any + fmt::Debug> fmt::Display for HandshakeError<S> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(f.write_str(stderror::Error::description(self)));
         match *self {
+            HandshakeError::SetupFailure(ref e) => try!(write!(f, ": {}", e)),
             HandshakeError::Failure(ref s) | HandshakeError::Interrupted(ref s) => {
                 try!(write!(f, ": {}", s.error()));
                 if let Some(err) = s.ssl().verify_result() {
@@ -1186,6 +1280,12 @@ impl<S: Any + fmt::Debug> fmt::Display for HandshakeError<S> {
             }
         }
         Ok(())
+    }
+}
+
+impl<S> From<ErrorStack> for HandshakeError<S> {
+    fn from(e: ErrorStack) -> HandshakeError<S> {
+        HandshakeError::SetupFailure(e)
     }
 }
 

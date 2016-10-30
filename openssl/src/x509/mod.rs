@@ -1,4 +1,5 @@
 use libc::{c_char, c_int, c_long, c_ulong, c_void};
+use std::borrow::Borrow;
 use std::cmp;
 use std::collections::HashMap;
 use std::error::Error;
@@ -17,7 +18,7 @@ use asn1::Asn1TimeRef;
 use bio::{MemBio, MemBioSlice};
 use crypto::CryptoString;
 use hash::MessageDigest;
-use pkey::PKey;
+use pkey::{PKey, PKeyRef};
 use rand::rand_bytes;
 use error::ErrorStack;
 use ffi;
@@ -37,12 +38,12 @@ use ffi::{
     ASN1_STRING_get0_data as ASN1_STRING_data,
 };
 
-pub mod extension;
-
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 pub mod verify;
 
-use self::extension::{ExtensionType, Extension};
+use x509::extension::{ExtensionType, Extension};
+
+pub mod extension;
 
 #[cfg(test)]
 mod tests;
@@ -277,7 +278,7 @@ impl X509Generator {
     }
 
     /// Sets the certificate public-key, then self-sign and return it
-    pub fn sign(&self, p_key: &PKey) -> Result<X509, ErrorStack> {
+    pub fn sign(&self, p_key: &PKeyRef) -> Result<X509, ErrorStack> {
         ffi::init();
 
         unsafe {
@@ -329,7 +330,7 @@ impl X509Generator {
     }
 
     /// Obtain a certificate signing request (CSR)
-    pub fn request(&self, p_key: &PKey) -> Result<X509Req, ErrorStack> {
+    pub fn request(&self, p_key: &PKeyRef) -> Result<X509Req, ErrorStack> {
         let cert = match self.sign(p_key) {
             Ok(c) => c,
             Err(x) => return Err(x),
@@ -447,6 +448,17 @@ impl X509Ref {
     }
 }
 
+impl ToOwned for X509Ref {
+    type Owned = X509;
+
+    fn to_owned(&self) -> X509 {
+        unsafe {
+            compat::X509_up_ref(self.as_ptr());
+            X509::from_ptr(self.as_ptr())
+        }
+    }
+}
+
 /// An owned public key certificate.
 pub struct X509(*mut ffi::X509);
 
@@ -491,16 +503,25 @@ impl Deref for X509 {
 
 impl Clone for X509 {
     fn clone(&self) -> X509 {
-        unsafe {
-            compat::X509_up_ref(self.as_ptr());
-            X509::from_ptr(self.as_ptr())
-        }
+        self.to_owned()
     }
 }
 
 impl Drop for X509 {
     fn drop(&mut self) {
         unsafe { ffi::X509_free(self.as_ptr()) };
+    }
+}
+
+impl AsRef<X509Ref> for X509 {
+    fn as_ref(&self) -> &X509Ref {
+        &*self
+    }
+}
+
+impl Borrow<X509Ref> for X509 {
+    fn borrow(&self) -> &X509Ref {
+        &*self
     }
 }
 

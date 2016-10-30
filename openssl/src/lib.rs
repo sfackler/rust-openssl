@@ -42,6 +42,8 @@ pub mod ssl;
 pub mod symm;
 pub mod version;
 pub mod x509;
+#[cfg(any(ossl102, ossl110))]
+mod verify;
 
 pub fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {
     if r.is_null() {
