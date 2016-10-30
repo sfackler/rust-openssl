@@ -178,9 +178,7 @@ impl Deref for PKey {
     type Target = PKeyRef;
 
     fn deref(&self) -> &PKeyRef {
-        unsafe {
-            PKeyRef::from_ptr(self.0)
-        }
+        unsafe { PKeyRef::from_ptr(self.0) }
     }
 }
 

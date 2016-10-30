@@ -60,10 +60,9 @@ fn test_cert_gen_extension_ordering() {
 fn test_cert_gen_extension_bad_ordering() {
     let pkey = pkey();
     let result = get_generator()
-                     .add_extension(OtherNid(nid::AUTHORITY_KEY_IDENTIFIER,
-                                             "keyid:always".to_owned()))
-                     .add_extension(OtherNid(nid::SUBJECT_KEY_IDENTIFIER, "hash".to_owned()))
-                     .sign(&pkey);
+        .add_extension(OtherNid(nid::AUTHORITY_KEY_IDENTIFIER, "keyid:always".to_owned()))
+        .add_extension(OtherNid(nid::SUBJECT_KEY_IDENTIFIER, "hash".to_owned()))
+        .sign(&pkey);
 
     assert!(result.is_err());
 }

@@ -254,8 +254,10 @@ pub const SDSICERTIFICATE: Nid = Nid(ffi::NID_sdsiCertificate);
 pub const X509CRL: Nid = Nid(ffi::NID_x509Crl);
 pub const PBE_WITHSHA1AND128BITRC4: Nid = Nid(ffi::NID_pbe_WithSHA1And128BitRC4);
 pub const PBE_WITHSHA1AND40BITRC4: Nid = Nid(ffi::NID_pbe_WithSHA1And40BitRC4);
-pub const PBE_WITHSHA1AND3_KEY_TRIPLEDES_CBC: Nid = Nid(ffi::NID_pbe_WithSHA1And3_Key_TripleDES_CBC);
-pub const PBE_WITHSHA1AND2_KEY_TRIPLEDES_CBC: Nid = Nid(ffi::NID_pbe_WithSHA1And2_Key_TripleDES_CBC);
+pub const PBE_WITHSHA1AND3_KEY_TRIPLEDES_CBC: Nid =
+    Nid(ffi::NID_pbe_WithSHA1And3_Key_TripleDES_CBC);
+pub const PBE_WITHSHA1AND2_KEY_TRIPLEDES_CBC: Nid =
+    Nid(ffi::NID_pbe_WithSHA1And2_Key_TripleDES_CBC);
 pub const PBE_WITHSHA1AND128BITRC2_CBC: Nid = Nid(ffi::NID_pbe_WithSHA1And128BitRC2_CBC);
 pub const PBE_WITHSHA1AND40BITRC2_CBC: Nid = Nid(ffi::NID_pbe_WithSHA1And40BitRC2_CBC);
 pub const KEYBAG: Nid = Nid(ffi::NID_keyBag);
@@ -847,7 +849,8 @@ pub const IPSEC4: Nid = Nid(ffi::NID_ipsec4);
 pub const WHIRLPOOL: Nid = Nid(ffi::NID_whirlpool);
 pub const CRYPTOPRO: Nid = Nid(ffi::NID_cryptopro);
 pub const CRYPTOCOM: Nid = Nid(ffi::NID_cryptocom);
-pub const ID_GOSTR3411_94_WITH_GOSTR3410_2001: Nid = Nid(ffi::NID_id_GostR3411_94_with_GostR3410_2001);
+pub const ID_GOSTR3411_94_WITH_GOSTR3410_2001: Nid =
+    Nid(ffi::NID_id_GostR3411_94_with_GostR3410_2001);
 pub const ID_GOSTR3411_94_WITH_GOSTR3410_94: Nid = Nid(ffi::NID_id_GostR3411_94_with_GostR3410_94);
 pub const ID_GOSTR3411_94: Nid = Nid(ffi::NID_id_GostR3411_94);
 pub const ID_HMACGOSTR3411_94: Nid = Nid(ffi::NID_id_HMACGostR3411_94);
@@ -859,32 +862,52 @@ pub const ID_GOST28147_89_MAC: Nid = Nid(ffi::NID_id_Gost28147_89_MAC);
 pub const ID_GOSTR3411_94_PRF: Nid = Nid(ffi::NID_id_GostR3411_94_prf);
 pub const ID_GOSTR3410_2001DH: Nid = Nid(ffi::NID_id_GostR3410_2001DH);
 pub const ID_GOSTR3410_94DH: Nid = Nid(ffi::NID_id_GostR3410_94DH);
-pub const ID_GOST28147_89_CRYPTOPRO_KEYMESHING: Nid = Nid(ffi::NID_id_Gost28147_89_CryptoPro_KeyMeshing);
+pub const ID_GOST28147_89_CRYPTOPRO_KEYMESHING: Nid =
+    Nid(ffi::NID_id_Gost28147_89_CryptoPro_KeyMeshing);
 pub const ID_GOST28147_89_NONE_KEYMESHING: Nid = Nid(ffi::NID_id_Gost28147_89_None_KeyMeshing);
 pub const ID_GOSTR3411_94_TESTPARAMSET: Nid = Nid(ffi::NID_id_GostR3411_94_TestParamSet);
 pub const ID_GOSTR3411_94_CRYPTOPROPARAMSET: Nid = Nid(ffi::NID_id_GostR3411_94_CryptoProParamSet);
 pub const ID_GOST28147_89_TESTPARAMSET: Nid = Nid(ffi::NID_id_Gost28147_89_TestParamSet);
-pub const ID_GOST28147_89_CRYPTOPRO_A_PARAMSET: Nid = Nid(ffi::NID_id_Gost28147_89_CryptoPro_A_ParamSet);
-pub const ID_GOST28147_89_CRYPTOPRO_B_PARAMSET: Nid = Nid(ffi::NID_id_Gost28147_89_CryptoPro_B_ParamSet);
-pub const ID_GOST28147_89_CRYPTOPRO_C_PARAMSET: Nid = Nid(ffi::NID_id_Gost28147_89_CryptoPro_C_ParamSet);
-pub const ID_GOST28147_89_CRYPTOPRO_D_PARAMSET: Nid = Nid(ffi::NID_id_Gost28147_89_CryptoPro_D_ParamSet);
-pub const ID_GOST28147_89_CRYPTOPRO_OSCAR_1_1_PARAMSET: Nid = Nid(ffi::NID_id_Gost28147_89_CryptoPro_Oscar_1_1_ParamSet);
-pub const ID_GOST28147_89_CRYPTOPRO_OSCAR_1_0_PARAMSET: Nid = Nid(ffi::NID_id_Gost28147_89_CryptoPro_Oscar_1_0_ParamSet);
-pub const ID_GOST28147_89_CRYPTOPRO_RIC_1_PARAMSET: Nid = Nid(ffi::NID_id_Gost28147_89_CryptoPro_RIC_1_ParamSet);
+pub const ID_GOST28147_89_CRYPTOPRO_A_PARAMSET: Nid =
+    Nid(ffi::NID_id_Gost28147_89_CryptoPro_A_ParamSet);
+pub const ID_GOST28147_89_CRYPTOPRO_B_PARAMSET: Nid =
+    Nid(ffi::NID_id_Gost28147_89_CryptoPro_B_ParamSet);
+pub const ID_GOST28147_89_CRYPTOPRO_C_PARAMSET: Nid =
+    Nid(ffi::NID_id_Gost28147_89_CryptoPro_C_ParamSet);
+pub const ID_GOST28147_89_CRYPTOPRO_D_PARAMSET: Nid =
+    Nid(ffi::NID_id_Gost28147_89_CryptoPro_D_ParamSet);
+pub const ID_GOST28147_89_CRYPTOPRO_OSCAR_1_1_PARAMSET: Nid =
+    Nid(ffi::NID_id_Gost28147_89_CryptoPro_Oscar_1_1_ParamSet);
+pub const ID_GOST28147_89_CRYPTOPRO_OSCAR_1_0_PARAMSET: Nid =
+    Nid(ffi::NID_id_Gost28147_89_CryptoPro_Oscar_1_0_ParamSet);
+pub const ID_GOST28147_89_CRYPTOPRO_RIC_1_PARAMSET: Nid =
+    Nid(ffi::NID_id_Gost28147_89_CryptoPro_RIC_1_ParamSet);
 pub const ID_GOSTR3410_94_TESTPARAMSET: Nid = Nid(ffi::NID_id_GostR3410_94_TestParamSet);
-pub const ID_GOSTR3410_94_CRYPTOPRO_A_PARAMSET: Nid = Nid(ffi::NID_id_GostR3410_94_CryptoPro_A_ParamSet);
-pub const ID_GOSTR3410_94_CRYPTOPRO_B_PARAMSET: Nid = Nid(ffi::NID_id_GostR3410_94_CryptoPro_B_ParamSet);
-pub const ID_GOSTR3410_94_CRYPTOPRO_C_PARAMSET: Nid = Nid(ffi::NID_id_GostR3410_94_CryptoPro_C_ParamSet);
-pub const ID_GOSTR3410_94_CRYPTOPRO_D_PARAMSET: Nid = Nid(ffi::NID_id_GostR3410_94_CryptoPro_D_ParamSet);
-pub const ID_GOSTR3410_94_CRYPTOPRO_XCHA_PARAMSET: Nid = Nid(ffi::NID_id_GostR3410_94_CryptoPro_XchA_ParamSet);
-pub const ID_GOSTR3410_94_CRYPTOPRO_XCHB_PARAMSET: Nid = Nid(ffi::NID_id_GostR3410_94_CryptoPro_XchB_ParamSet);
-pub const ID_GOSTR3410_94_CRYPTOPRO_XCHC_PARAMSET: Nid = Nid(ffi::NID_id_GostR3410_94_CryptoPro_XchC_ParamSet);
+pub const ID_GOSTR3410_94_CRYPTOPRO_A_PARAMSET: Nid =
+    Nid(ffi::NID_id_GostR3410_94_CryptoPro_A_ParamSet);
+pub const ID_GOSTR3410_94_CRYPTOPRO_B_PARAMSET: Nid =
+    Nid(ffi::NID_id_GostR3410_94_CryptoPro_B_ParamSet);
+pub const ID_GOSTR3410_94_CRYPTOPRO_C_PARAMSET: Nid =
+    Nid(ffi::NID_id_GostR3410_94_CryptoPro_C_ParamSet);
+pub const ID_GOSTR3410_94_CRYPTOPRO_D_PARAMSET: Nid =
+    Nid(ffi::NID_id_GostR3410_94_CryptoPro_D_ParamSet);
+pub const ID_GOSTR3410_94_CRYPTOPRO_XCHA_PARAMSET: Nid =
+    Nid(ffi::NID_id_GostR3410_94_CryptoPro_XchA_ParamSet);
+pub const ID_GOSTR3410_94_CRYPTOPRO_XCHB_PARAMSET: Nid =
+    Nid(ffi::NID_id_GostR3410_94_CryptoPro_XchB_ParamSet);
+pub const ID_GOSTR3410_94_CRYPTOPRO_XCHC_PARAMSET: Nid =
+    Nid(ffi::NID_id_GostR3410_94_CryptoPro_XchC_ParamSet);
 pub const ID_GOSTR3410_2001_TESTPARAMSET: Nid = Nid(ffi::NID_id_GostR3410_2001_TestParamSet);
-pub const ID_GOSTR3410_2001_CRYPTOPRO_A_PARAMSET: Nid = Nid(ffi::NID_id_GostR3410_2001_CryptoPro_A_ParamSet);
-pub const ID_GOSTR3410_2001_CRYPTOPRO_B_PARAMSET: Nid = Nid(ffi::NID_id_GostR3410_2001_CryptoPro_B_ParamSet);
-pub const ID_GOSTR3410_2001_CRYPTOPRO_C_PARAMSET: Nid = Nid(ffi::NID_id_GostR3410_2001_CryptoPro_C_ParamSet);
-pub const ID_GOSTR3410_2001_CRYPTOPRO_XCHA_PARAMSET: Nid = Nid(ffi::NID_id_GostR3410_2001_CryptoPro_XchA_ParamSet);
-pub const ID_GOSTR3410_2001_CRYPTOPRO_XCHB_PARAMSET: Nid = Nid(ffi::NID_id_GostR3410_2001_CryptoPro_XchB_ParamSet);
+pub const ID_GOSTR3410_2001_CRYPTOPRO_A_PARAMSET: Nid =
+    Nid(ffi::NID_id_GostR3410_2001_CryptoPro_A_ParamSet);
+pub const ID_GOSTR3410_2001_CRYPTOPRO_B_PARAMSET: Nid =
+    Nid(ffi::NID_id_GostR3410_2001_CryptoPro_B_ParamSet);
+pub const ID_GOSTR3410_2001_CRYPTOPRO_C_PARAMSET: Nid =
+    Nid(ffi::NID_id_GostR3410_2001_CryptoPro_C_ParamSet);
+pub const ID_GOSTR3410_2001_CRYPTOPRO_XCHA_PARAMSET: Nid =
+    Nid(ffi::NID_id_GostR3410_2001_CryptoPro_XchA_ParamSet);
+pub const ID_GOSTR3410_2001_CRYPTOPRO_XCHB_PARAMSET: Nid =
+    Nid(ffi::NID_id_GostR3410_2001_CryptoPro_XchB_ParamSet);
 pub const ID_GOSTR3410_94_A: Nid = Nid(ffi::NID_id_GostR3410_94_a);
 pub const ID_GOSTR3410_94_ABIS: Nid = Nid(ffi::NID_id_GostR3410_94_aBis);
 pub const ID_GOSTR3410_94_B: Nid = Nid(ffi::NID_id_GostR3410_94_b);
@@ -892,8 +915,10 @@ pub const ID_GOSTR3410_94_BBIS: Nid = Nid(ffi::NID_id_GostR3410_94_bBis);
 pub const ID_GOST28147_89_CC: Nid = Nid(ffi::NID_id_Gost28147_89_cc);
 pub const ID_GOSTR3410_94_CC: Nid = Nid(ffi::NID_id_GostR3410_94_cc);
 pub const ID_GOSTR3410_2001_CC: Nid = Nid(ffi::NID_id_GostR3410_2001_cc);
-pub const ID_GOSTR3411_94_WITH_GOSTR3410_94_CC: Nid = Nid(ffi::NID_id_GostR3411_94_with_GostR3410_94_cc);
-pub const ID_GOSTR3411_94_WITH_GOSTR3410_2001_CC: Nid = Nid(ffi::NID_id_GostR3411_94_with_GostR3410_2001_cc);
+pub const ID_GOSTR3411_94_WITH_GOSTR3410_94_CC: Nid =
+    Nid(ffi::NID_id_GostR3411_94_with_GostR3410_94_cc);
+pub const ID_GOSTR3411_94_WITH_GOSTR3410_2001_CC: Nid =
+    Nid(ffi::NID_id_GostR3411_94_with_GostR3410_2001_cc);
 pub const ID_GOSTR3410_2001_PARAMSET_CC: Nid = Nid(ffi::NID_id_GostR3410_2001_ParamSet_cc);
 pub const CAMELLIA_128_CBC: Nid = Nid(ffi::NID_camellia_128_cbc);
 pub const CAMELLIA_192_CBC: Nid = Nid(ffi::NID_camellia_192_cbc);
@@ -927,4 +952,3 @@ pub const RC4_HMAC_MD5: Nid = Nid(ffi::NID_rc4_hmac_md5);
 pub const AES_128_CBC_HMAC_SHA1: Nid = Nid(ffi::NID_aes_128_cbc_hmac_sha1);
 pub const AES_192_CBC_HMAC_SHA1: Nid = Nid(ffi::NID_aes_192_cbc_hmac_sha1);
 pub const AES_256_CBC_HMAC_SHA1: Nid = Nid(ffi::NID_aes_256_cbc_hmac_sha1);
-

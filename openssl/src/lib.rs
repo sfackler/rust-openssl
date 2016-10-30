@@ -63,9 +63,5 @@ pub fn cvt(r: c_int) -> Result<c_int, ErrorStack> {
 }
 
 pub fn cvt_n(r: c_int) -> Result<c_int, ErrorStack> {
-    if r < 0 {
-        Err(ErrorStack::get())
-    } else {
-        Ok(r)
-    }
+    if r < 0 { Err(ErrorStack::get()) } else { Ok(r) }
 }

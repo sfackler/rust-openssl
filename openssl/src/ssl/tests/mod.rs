@@ -57,25 +57,29 @@ impl Server {
 
         let addr = next_addr();
         let mut child = Command::new("openssl")
-                            .arg("s_server")
-                            .arg("-accept")
-                            .arg(addr.port().to_string())
-                            .args(args)
-                            .arg("-cert")
-                            .arg(&cert)
-                            .arg("-key")
-                            .arg(&key)
-                            .arg("-no_dhe")
-                            .stdout(Stdio::null())
-                            .stderr(Stdio::null())
-                            .stdin(Stdio::piped())
-                            .spawn()
-                            .unwrap();
+            .arg("s_server")
+            .arg("-accept")
+            .arg(addr.port().to_string())
+            .args(args)
+            .arg("-cert")
+            .arg(&cert)
+            .arg("-key")
+            .arg(&key)
+            .arg("-no_dhe")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .stdin(Stdio::piped())
+            .spawn()
+            .unwrap();
         let stdin = child.stdin.take().unwrap();
         if let Some(mut input) = input {
             thread::spawn(move || input(stdin));
         }
-        (Server { p: child, _temp: td }, addr)
+        (Server {
+            p: child,
+            _temp: td,
+        },
+         addr)
     }
 
     fn new_tcp(args: &[&str]) -> (Server, TcpStream) {
@@ -111,12 +115,12 @@ impl Server {
         let mut input = input.into_iter();
         let (s, addr) = Server::spawn(&["-dtls1"],
                                       Some(Box::new(move |mut io| {
-                                          for s in input.by_ref() {
-                                              if io.write_all(s.as_bytes()).is_err() {
-                                                  break;
-                                              }
-                                          }
-                                      })));
+            for s in input.by_ref() {
+                if io.write_all(s.as_bytes()).is_err() {
+                    break;
+                }
+            }
+        })));
         // Need to wait for the UDP socket to get bound in our child process,
         // but don't currently have a great way to do that so just wait for a
         // bit.
@@ -294,10 +298,10 @@ run_test!(verify_trusted_get_error_err, |method, stream| {
 run_test!(verify_callback_data, |method, stream| {
     let mut ctx = SslContext::builder(method).unwrap();
 
-    // Node id was generated as SHA256 hash of certificate "test/cert.pem"
-    // in DER format.
-    // Command: openssl x509 -in test/cert.pem  -outform DER | openssl dgst -sha256
-    // Please update if "test/cert.pem" will ever change
+// Node id was generated as SHA256 hash of certificate "test/cert.pem"
+// in DER format.
+// Command: openssl x509 -in test/cert.pem  -outform DER | openssl dgst -sha256
+// Please update if "test/cert.pem" will ever change
     let node_hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
     let node_id = node_hash_str.from_hex().unwrap();
     ctx.set_verify_callback(SSL_VERIFY_PEER, move |_preverify_ok, x509_ctx| {
@@ -632,7 +636,7 @@ fn test_npn_server_advertise_multiple() {
         assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM)
                    .is_ok());
         ctx.set_private_key_file(&Path::new("test/key.pem"), X509FileType::PEM)
-           .unwrap();
+            .unwrap();
         ctx.build()
     };
     // Have the listener wait on the connection in a different thread.
@@ -673,7 +677,7 @@ fn test_alpn_server_advertise_multiple() {
         assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM)
                    .is_ok());
         ctx.set_private_key_file(&Path::new("test/key.pem"), X509FileType::PEM)
-           .unwrap();
+            .unwrap();
         ctx.build()
     };
     // Have the listener wait on the connection in a different thread.
@@ -714,7 +718,7 @@ fn test_alpn_server_select_none() {
         assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM)
                    .is_ok());
         ctx.set_private_key_file(&Path::new("test/key.pem"), X509FileType::PEM)
-           .unwrap();
+            .unwrap();
         ctx.build()
     };
     // Have the listener wait on the connection in a different thread.
@@ -815,8 +819,7 @@ fn wait_io(stream: &TcpStream, read: bool, timeout_ms: u32) -> bool {
     }
 }
 
-fn handshake(res: Result<SslStream<TcpStream>, HandshakeError<TcpStream>>)
-             -> SslStream<TcpStream> {
+fn handshake(res: Result<SslStream<TcpStream>, HandshakeError<TcpStream>>) -> SslStream<TcpStream> {
     match res {
         Ok(s) => s,
         Err(HandshakeError::Interrupted(s)) => {
@@ -1112,8 +1115,10 @@ fn connector_client_server_mozilla_intermediate() {
     let t = thread::spawn(move || {
         let key = PKey::private_key_from_pem(KEY).unwrap();
         let cert = X509::from_pem(CERT).unwrap();
-        let connector = ServerConnectorBuilder::mozilla_intermediate(
-            SslMethod::tls(), &key, &cert, None::<X509>)
+        let connector = ServerConnectorBuilder::mozilla_intermediate(SslMethod::tls(),
+                                                                     &key,
+                                                                     &cert,
+                                                                     None::<X509>)
             .unwrap()
             .build();
         let stream = listener.accept().unwrap().0;
@@ -1144,10 +1149,10 @@ fn connector_client_server_mozilla_modern() {
     let t = thread::spawn(move || {
         let key = PKey::private_key_from_pem(KEY).unwrap();
         let cert = X509::from_pem(CERT).unwrap();
-        let connector = ServerConnectorBuilder::mozilla_modern(
-            SslMethod::tls(), &key, &cert, None::<X509>)
-            .unwrap()
-            .build();
+        let connector =
+            ServerConnectorBuilder::mozilla_modern(SslMethod::tls(), &key, &cert, None::<X509>)
+                .unwrap()
+                .build();
         let stream = listener.accept().unwrap().0;
         let mut stream = connector.connect(stream).unwrap();
 

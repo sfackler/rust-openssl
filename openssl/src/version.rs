@@ -14,15 +14,10 @@
 use std::ffi::CStr;
 
 #[cfg(ossl10x)]
-use ffi::{
-    SSLEAY_VERSION as OPENSSL_VERSION,
-    SSLEAY_CFLAGS as OPENSSL_CFLAGS,
-    SSLEAY_BUILT_ON as OPENSSL_BUILT_ON,
-    SSLEAY_PLATFORM as OPENSSL_PLATFORM,
-    SSLEAY_DIR as OPENSSL_DIR,
-    SSLeay as OpenSSL_version_num,
-    SSLeay_version as OpenSSL_version,
-};
+use ffi::{SSLEAY_VERSION as OPENSSL_VERSION, SSLEAY_CFLAGS as OPENSSL_CFLAGS,
+          SSLEAY_BUILT_ON as OPENSSL_BUILT_ON, SSLEAY_PLATFORM as OPENSSL_PLATFORM,
+          SSLEAY_DIR as OPENSSL_DIR, SSLeay as OpenSSL_version_num,
+          SSLeay_version as OpenSSL_version};
 
 #[cfg(ossl110)]
 use ffi::{OPENSSL_VERSION, OPENSSL_CFLAGS};

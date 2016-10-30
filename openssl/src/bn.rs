@@ -37,9 +37,7 @@ impl Drop for BnCtx {
 impl BnCtx {
     /// Returns a new `BnCtx`.
     pub fn new() -> Result<BnCtx, ErrorStack> {
-        unsafe {
-            cvt_p(ffi::BN_CTX_new()).map(BnCtx)
-        }
+        unsafe { cvt_p(ffi::BN_CTX_new()).map(BnCtx) }
     }
 
     pub fn as_ptr(&self) -> *mut ffi::BN_CTX {
@@ -52,9 +50,7 @@ impl BnCtx {
                a: &BigNumRef,
                b: &BigNumRef)
                -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_mul(r.as_ptr(), a.as_ptr(), b.as_ptr(), self.as_ptr())).map(|_| ())
-        }
+        unsafe { cvt(ffi::BN_mul(r.as_ptr(), a.as_ptr(), b.as_ptr(), self.as_ptr())).map(|_| ()) }
     }
 
     /// Places the result of `a / b` in `dv` and `a mod b` in `rem`.
@@ -76,19 +72,16 @@ impl BnCtx {
 
     /// Places the result of `a²` in `r`.
     pub fn sqr(&mut self, r: &mut BigNumRef, a: &BigNumRef) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_sqr(r.as_ptr(), a.as_ptr(), self.as_ptr())).map(|_| ())
-        }
+        unsafe { cvt(ffi::BN_sqr(r.as_ptr(), a.as_ptr(), self.as_ptr())).map(|_| ()) }
     }
 
     /// Places the result of `a mod m` in `r`.
     pub fn nnmod(&mut self,
                  r: &mut BigNumRef,
                  a: &BigNumRef,
-                 m: &BigNumRef) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_nnmod(r.as_ptr(), a.as_ptr(), m.as_ptr(), self.0)).map(|_| ())
-        }
+                 m: &BigNumRef)
+                 -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::BN_nnmod(r.as_ptr(), a.as_ptr(), m.as_ptr(), self.0)).map(|_| ()) }
     }
 
     /// Places the result of `(a + b) mod m` in `r`.
@@ -131,20 +124,18 @@ impl BnCtx {
     pub fn mod_sqr(&mut self,
                    r: &mut BigNumRef,
                    a: &BigNumRef,
-                   m: &BigNumRef) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_mod_sqr(r.as_ptr(), a.as_ptr(), m.as_ptr(), self.0)).map(|_| ())
-        }
+                   m: &BigNumRef)
+                   -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::BN_mod_sqr(r.as_ptr(), a.as_ptr(), m.as_ptr(), self.0)).map(|_| ()) }
     }
 
     /// Places the result of `a^p` in `r`.
     pub fn exp(&mut self,
                r: &mut BigNumRef,
                a: &BigNumRef,
-               p: &BigNumRef) -> Result<(), ErrorStack> {
-        unsafe{
-            cvt(ffi::BN_exp(r.as_ptr(), a.as_ptr(), p.as_ptr(), self.0)).map(|_| ())
-        }
+               p: &BigNumRef)
+               -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::BN_exp(r.as_ptr(), a.as_ptr(), p.as_ptr(), self.0)).map(|_| ()) }
     }
 
     /// Places the result of `a^p mod m` in `r`.
@@ -152,7 +143,8 @@ impl BnCtx {
                    r: &mut BigNumRef,
                    a: &BigNumRef,
                    p: &BigNumRef,
-                   m: &BigNumRef) -> Result<(), ErrorStack> {
+                   m: &BigNumRef)
+                   -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::BN_mod_exp(r.as_ptr(), a.as_ptr(), p.as_ptr(), m.as_ptr(), self.0)).map(|_| ())
         }
@@ -162,9 +154,11 @@ impl BnCtx {
     pub fn mod_inverse(&mut self,
                        r: &mut BigNumRef,
                        a: &BigNumRef,
-                       n: &BigNumRef) -> Result<(), ErrorStack> {
+                       n: &BigNumRef)
+                       -> Result<(), ErrorStack> {
         unsafe {
-            cvt_p(ffi::BN_mod_inverse(r.as_ptr(), a.as_ptr(), n.as_ptr(), self.as_ptr())).map(|_| ())
+            cvt_p(ffi::BN_mod_inverse(r.as_ptr(), a.as_ptr(), n.as_ptr(), self.as_ptr()))
+                .map(|_| ())
         }
     }
 
@@ -172,10 +166,9 @@ impl BnCtx {
     pub fn gcd(&mut self,
                r: &mut BigNumRef,
                a: &BigNumRef,
-               b: &BigNumRef) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_gcd(r.as_ptr(), a.as_ptr(), b.as_ptr(), self.as_ptr())).map(|_| ())
-        }
+               b: &BigNumRef)
+               -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::BN_gcd(r.as_ptr(), a.as_ptr(), b.as_ptr(), self.as_ptr())).map(|_| ()) }
     }
 
     /// Checks whether `p` is prime.
@@ -185,7 +178,8 @@ impl BnCtx {
     /// Returns `true` if `p` is prime with an error probability of less than `0.25 ^ checks`.
     pub fn is_prime(&mut self, p: &BigNumRef, checks: i32) -> Result<bool, ErrorStack> {
         unsafe {
-            cvt_n(ffi::BN_is_prime_ex(p.as_ptr(), checks.into(), self.as_ptr(), ptr::null_mut())).map(|r| r != 0)
+            cvt_n(ffi::BN_is_prime_ex(p.as_ptr(), checks.into(), self.as_ptr(), ptr::null_mut()))
+                .map(|r| r != 0)
         }
     }
 
@@ -201,7 +195,8 @@ impl BnCtx {
     pub fn is_prime_fasttest(&mut self,
                              p: &BigNumRef,
                              checks: i32,
-                             do_trial_division: bool) -> Result<bool, ErrorStack> {
+                             do_trial_division: bool)
+                             -> Result<bool, ErrorStack> {
         unsafe {
             cvt_n(ffi::BN_is_prime_fasttest_ex(p.as_ptr(),
                                                checks.into(),
@@ -236,7 +231,8 @@ impl BnCtx {
                        odd: bool)
                        -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::BN_pseudo_rand(r.as_ptr(), bits.into(), prop as c_int, odd as c_int)).map(|_| ())
+            cvt(ffi::BN_pseudo_rand(r.as_ptr(), bits.into(), prop as c_int, odd as c_int))
+                .map(|_| ())
         }
     }
 }
@@ -259,23 +255,17 @@ impl BigNumRef {
 
     /// Adds a `u32` to `self`.
     pub fn add_word(&mut self, w: u32) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_add_word(self.as_ptr(), w as ffi::BN_ULONG)).map(|_| ())
-        }
+        unsafe { cvt(ffi::BN_add_word(self.as_ptr(), w as ffi::BN_ULONG)).map(|_| ()) }
     }
 
     /// Subtracts a `u32` from `self`.
     pub fn sub_word(&mut self, w: u32) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_sub_word(self.as_ptr(), w as ffi::BN_ULONG)).map(|_| ())
-        }
+        unsafe { cvt(ffi::BN_sub_word(self.as_ptr(), w as ffi::BN_ULONG)).map(|_| ()) }
     }
 
     /// Multiplies a `u32` by `self`.
     pub fn mul_word(&mut self, w: u32) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_mul_word(self.as_ptr(), w as ffi::BN_ULONG)).map(|_| ())
-        }
+        unsafe { cvt(ffi::BN_mul_word(self.as_ptr(), w as ffi::BN_ULONG)).map(|_| ()) }
     }
 
     /// Divides `self` by a `u32`, returning the remainder.
@@ -305,105 +295,77 @@ impl BigNumRef {
     /// Places a cryptographically-secure pseudo-random number nonnegative
     /// number less than `self` in `rnd`.
     pub fn rand_in_range(&self, rnd: &mut BigNumRef) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_rand_range(self.as_ptr(), rnd.as_ptr())).map(|_| ())
-        }
+        unsafe { cvt(ffi::BN_rand_range(self.as_ptr(), rnd.as_ptr())).map(|_| ()) }
     }
 
     /// The cryptographically weak counterpart to `rand_in_range`.
     pub fn pseudo_rand_in_range(&self, rnd: &mut BigNumRef) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_pseudo_rand_range(self.as_ptr(), rnd.as_ptr())).map(|_| ())
-        }
+        unsafe { cvt(ffi::BN_pseudo_rand_range(self.as_ptr(), rnd.as_ptr())).map(|_| ()) }
     }
 
     /// Sets bit `n`. Equivalent to `self |= (1 << n)`.
     ///
     /// When setting a bit outside of `self`, it is expanded.
     pub fn set_bit(&mut self, n: i32) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_set_bit(self.as_ptr(), n.into())).map(|_| ())
-        }
+        unsafe { cvt(ffi::BN_set_bit(self.as_ptr(), n.into())).map(|_| ()) }
     }
 
     /// Clears bit `n`, setting it to 0. Equivalent to `self &= ~(1 << n)`.
     ///
     /// When clearing a bit outside of `self`, an error is returned.
     pub fn clear_bit(&mut self, n: i32) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_clear_bit(self.as_ptr(), n.into())).map(|_| ())
-        }
+        unsafe { cvt(ffi::BN_clear_bit(self.as_ptr(), n.into())).map(|_| ()) }
     }
 
     /// Returns `true` if the `n`th bit of `self` is set to 1, `false` otherwise.
     pub fn is_bit_set(&self, n: i32) -> bool {
-        unsafe {
-            ffi::BN_is_bit_set(self.as_ptr(), n.into()) == 1
-        }
+        unsafe { ffi::BN_is_bit_set(self.as_ptr(), n.into()) == 1 }
     }
 
     /// Truncates `self` to the lowest `n` bits.
     ///
     /// An error occurs if `self` is already shorter than `n` bits.
     pub fn mask_bits(&mut self, n: i32) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_mask_bits(self.as_ptr(), n.into())).map(|_| ())
-        }
+        unsafe { cvt(ffi::BN_mask_bits(self.as_ptr(), n.into())).map(|_| ()) }
     }
 
     /// Places `self << 1` in `r`.
     pub fn lshift1(&self, r: &mut BigNumRef) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_lshift1(r.as_ptr(), self.as_ptr())).map(|_| ())
-        }
+        unsafe { cvt(ffi::BN_lshift1(r.as_ptr(), self.as_ptr())).map(|_| ()) }
     }
 
     /// Places `self >> 1` in `r`.
     pub fn rshift1(&self, r: &mut BigNumRef) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_rshift1(r.as_ptr(), self.as_ptr())).map(|_| ())
-        }
+        unsafe { cvt(ffi::BN_rshift1(r.as_ptr(), self.as_ptr())).map(|_| ()) }
     }
 
     /// Places `self + b` in `r`.
     pub fn add(&self, r: &mut BigNumRef, b: &BigNumRef) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_add(r.as_ptr(), self.as_ptr(), b.as_ptr())).map(|_| ())
-        }
+        unsafe { cvt(ffi::BN_add(r.as_ptr(), self.as_ptr(), b.as_ptr())).map(|_| ()) }
     }
 
     /// Places `self - b` in `r`.
     pub fn sub(&self, r: &mut BigNumRef, b: &BigNumRef) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_sub(r.as_ptr(), self.as_ptr(), b.as_ptr())).map(|_| ())
-        }
+        unsafe { cvt(ffi::BN_sub(r.as_ptr(), self.as_ptr(), b.as_ptr())).map(|_| ()) }
     }
 
     /// Places `self << n` in `r`.
     pub fn lshift(&self, r: &mut BigNumRef, b: i32) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_lshift(r.as_ptr(), self.as_ptr(), b.into())).map(|_| ())
-        }
+        unsafe { cvt(ffi::BN_lshift(r.as_ptr(), self.as_ptr(), b.into())).map(|_| ()) }
     }
 
     /// Places `self >> n` in `r`.
     pub fn rshift(&self, r: &mut BigNumRef, n: i32) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_rshift(r.as_ptr(), self.as_ptr(), n.into())).map(|_| ())
-        }
+        unsafe { cvt(ffi::BN_rshift(r.as_ptr(), self.as_ptr(), n.into())).map(|_| ()) }
     }
 
     pub fn to_owned(&self) -> Result<BigNum, ErrorStack> {
-        unsafe {
-            cvt_p(ffi::BN_dup(self.as_ptr())).map(|b| BigNum::from_ptr(b))
-        }
+        unsafe { cvt_p(ffi::BN_dup(self.as_ptr())).map(|b| BigNum::from_ptr(b)) }
     }
 
     /// Sets the sign of `self`.
     pub fn set_negative(&mut self, negative: bool) {
-        unsafe {
-            ffi::BN_set_negative(self.as_ptr(), negative as c_int)
-        }
+        unsafe { ffi::BN_set_negative(self.as_ptr(), negative as c_int) }
     }
 
     /// Compare the absolute values of `self` and `oth`.
@@ -417,9 +379,7 @@ impl BigNumRef {
     /// assert_eq!(s.ucmp(&o), Ordering::Equal);
     /// ```
     pub fn ucmp(&self, oth: &BigNumRef) -> Ordering {
-        unsafe {
-            ffi::BN_ucmp(self.as_ptr(), oth.as_ptr()).cmp(&0)
-        }
+        unsafe { ffi::BN_ucmp(self.as_ptr(), oth.as_ptr()).cmp(&0) }
     }
 
     pub fn is_negative(&self) -> bool {
@@ -592,7 +552,9 @@ impl BigNum {
 
 impl Drop for BigNum {
     fn drop(&mut self) {
-        unsafe { ffi::BN_clear_free(self.as_ptr()); }
+        unsafe {
+            ffi::BN_clear_free(self.as_ptr());
+        }
     }
 }
 
@@ -600,17 +562,13 @@ impl Deref for BigNum {
     type Target = BigNumRef;
 
     fn deref(&self) -> &BigNumRef {
-        unsafe {
-            BigNumRef::from_ptr(self.0)
-        }
+        unsafe { BigNumRef::from_ptr(self.0) }
     }
 }
 
 impl DerefMut for BigNum {
     fn deref_mut(&mut self) -> &mut BigNumRef {
-        unsafe {
-            BigNumRef::from_ptr_mut(self.0)
-        }
+        unsafe { BigNumRef::from_ptr_mut(self.0) }
     }
 }
 

@@ -112,7 +112,12 @@ mod tests {
                    &[0x55_u8, 0xac_u8, 0x04_u8, 0x6e_u8, 0x56_u8, 0xe3_u8, 0x08_u8, 0x9f_u8,
                      0xec_u8, 0x16_u8, 0x91_u8, 0xc2_u8, 0x25_u8, 0x44_u8, 0xb6_u8, 0x05_u8][..]);
 
-        super::pbkdf2_hmac(b"Password", b"NaCl", 80000, MessageDigest::sha256(), &mut buf).unwrap();
+        super::pbkdf2_hmac(b"Password",
+                           b"NaCl",
+                           80000,
+                           MessageDigest::sha256(),
+                           &mut buf)
+            .unwrap();
         assert_eq!(buf,
                    &[0x4d_u8, 0xdc_u8, 0xd8_u8, 0xf6_u8, 0x0b_u8, 0x98_u8, 0xbe_u8, 0x21_u8,
                      0x83_u8, 0x0c_u8, 0xee_u8, 0x5e_u8, 0xf2_u8, 0x27_u8, 0x01_u8, 0xf9_u8][..]);
@@ -135,7 +140,12 @@ mod tests {
                      0x60_u8, 0x60_u8, 0xa0_u8, 0x9f_u8, 0x76_u8, 0x41_u8, 0x5e_u8, 0x9f_u8,
                      0x71_u8, 0xea_u8, 0x47_u8, 0xf9_u8, 0xe9_u8, 0x06_u8, 0x43_u8, 0x06_u8][..]);
 
-        super::pbkdf2_hmac(b"pass\0word", b"sa\0lt", 1, MessageDigest::sha512(), &mut buf).unwrap();
+        super::pbkdf2_hmac(b"pass\0word",
+                           b"sa\0lt",
+                           1,
+                           MessageDigest::sha512(),
+                           &mut buf)
+            .unwrap();
         assert_eq!(&buf[..],
                    &[0x71_u8, 0xa0_u8, 0xec_u8, 0x84_u8, 0x2a_u8, 0xbd_u8, 0x5c_u8, 0x67_u8,
                      0x8b_u8, 0xcf_u8, 0xd1_u8, 0x45_u8, 0xf0_u8, 0x9d_u8, 0x83_u8, 0x52_u8,
@@ -150,7 +160,8 @@ mod tests {
                            b"salt\0\0\0",
                            50,
                            MessageDigest::sha512(),
-                           &mut buf).unwrap();
+                           &mut buf)
+            .unwrap();
         assert_eq!(&buf[..],
                    &[0x01_u8, 0x68_u8, 0x71_u8, 0xa4_u8, 0xc4_u8, 0xb7_u8, 0x5f_u8, 0x96_u8,
                      0x85_u8, 0x7f_u8, 0xd2_u8, 0xb9_u8, 0xf8_u8, 0xca_u8, 0x28_u8, 0x02_u8,

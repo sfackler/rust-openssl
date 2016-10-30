@@ -17,117 +17,79 @@ pub struct Cipher(*const ffi::EVP_CIPHER);
 
 impl Cipher {
     pub fn aes_128_ecb() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_aes_128_ecb())
-        }
+        unsafe { Cipher(ffi::EVP_aes_128_ecb()) }
     }
 
     pub fn aes_128_cbc() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_aes_128_cbc())
-        }
+        unsafe { Cipher(ffi::EVP_aes_128_cbc()) }
     }
 
     pub fn aes_128_xts() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_aes_128_xts())
-        }
+        unsafe { Cipher(ffi::EVP_aes_128_xts()) }
     }
 
     pub fn aes_128_ctr() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_aes_128_ctr())
-        }
+        unsafe { Cipher(ffi::EVP_aes_128_ctr()) }
     }
 
     pub fn aes_128_cfb1() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_aes_128_cfb1())
-        }
+        unsafe { Cipher(ffi::EVP_aes_128_cfb1()) }
     }
 
     pub fn aes_128_cfb128() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_aes_128_cfb128())
-        }
+        unsafe { Cipher(ffi::EVP_aes_128_cfb128()) }
     }
 
     pub fn aes_128_cfb8() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_aes_128_cfb8())
-        }
+        unsafe { Cipher(ffi::EVP_aes_128_cfb8()) }
     }
 
     pub fn aes_128_gcm() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_aes_128_gcm())
-        }
+        unsafe { Cipher(ffi::EVP_aes_128_gcm()) }
     }
 
     pub fn aes_256_ecb() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_aes_256_ecb())
-        }
+        unsafe { Cipher(ffi::EVP_aes_256_ecb()) }
     }
 
     pub fn aes_256_cbc() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_aes_256_cbc())
-        }
+        unsafe { Cipher(ffi::EVP_aes_256_cbc()) }
     }
 
     pub fn aes_256_xts() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_aes_256_xts())
-        }
+        unsafe { Cipher(ffi::EVP_aes_256_xts()) }
     }
 
     pub fn aes_256_ctr() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_aes_256_ctr())
-        }
+        unsafe { Cipher(ffi::EVP_aes_256_ctr()) }
     }
 
     pub fn aes_256_cfb1() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_aes_256_cfb1())
-        }
+        unsafe { Cipher(ffi::EVP_aes_256_cfb1()) }
     }
 
     pub fn aes_256_cfb128() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_aes_256_cfb128())
-        }
+        unsafe { Cipher(ffi::EVP_aes_256_cfb128()) }
     }
 
     pub fn aes_256_cfb8() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_aes_256_cfb8())
-        }
+        unsafe { Cipher(ffi::EVP_aes_256_cfb8()) }
     }
 
     pub fn aes_256_gcm() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_aes_256_gcm())
-        }
+        unsafe { Cipher(ffi::EVP_aes_256_gcm()) }
     }
 
     pub fn des_cbc() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_des_cbc())
-        }
+        unsafe { Cipher(ffi::EVP_des_cbc()) }
     }
 
     pub fn des_ecb() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_des_ecb())
-        }
+        unsafe { Cipher(ffi::EVP_des_ecb()) }
     }
 
     pub fn rc4() -> Cipher {
-        unsafe {
-            Cipher(ffi::EVP_rc4())
-        }
+        unsafe { Cipher(ffi::EVP_rc4()) }
     }
 
     pub unsafe fn from_ptr(ptr: *const ffi::EVP_CIPHER) -> Cipher {
@@ -140,9 +102,7 @@ impl Cipher {
 
     /// Returns the length of keys used with this cipher.
     pub fn key_len(&self) -> usize {
-        unsafe {
-            EVP_CIPHER_key_length(self.0) as usize
-        }
+        unsafe { EVP_CIPHER_key_length(self.0) as usize }
     }
 
     /// Returns the length of the IV used with this cipher, or `None` if the
@@ -150,11 +110,7 @@ impl Cipher {
     pub fn iv_len(&self) -> Option<usize> {
         unsafe {
             let len = EVP_CIPHER_iv_length(self.0) as usize;
-            if len == 0 {
-                None
-            } else {
-                Some(len)
-            }
+            if len == 0 { None } else { Some(len) }
         }
     }
 
@@ -164,9 +120,7 @@ impl Cipher {
     ///
     /// Stream ciphers such as RC4 have a block size of 1.
     pub fn block_size(&self) -> usize {
-        unsafe {
-            EVP_CIPHER_block_size(self.0) as usize
-        }
+        unsafe { EVP_CIPHER_block_size(self.0) as usize }
     }
 }
 
@@ -183,7 +137,11 @@ impl Crypter {
     ///
     /// Panics if an IV is required by the cipher but not provided, or if the
     /// IV's length does not match the expected length (see `Cipher::iv_len`).
-    pub fn new(t: Cipher, mode: Mode, key: &[u8], iv: Option<&[u8]>) -> Result<Crypter, ErrorStack> {
+    pub fn new(t: Cipher,
+               mode: Mode,
+               key: &[u8],
+               iv: Option<&[u8]>)
+               -> Result<Crypter, ErrorStack> {
         ffi::init();
 
         unsafe {
@@ -233,7 +191,9 @@ impl Crypter {
     /// If padding is disabled, total amount of data encrypted/decrypted must
     /// be a multiple of the cipher's block size.
     pub fn pad(&mut self, padding: bool) {
-        unsafe { ffi::EVP_CIPHER_CTX_set_padding(self.ctx, padding as c_int); }
+        unsafe {
+            ffi::EVP_CIPHER_CTX_set_padding(self.ctx, padding as c_int);
+        }
     }
 
     /// Feeds data from `input` through the cipher, writing encrypted/decrypted
@@ -375,7 +335,8 @@ mod tests {
         let mut c = super::Crypter::new(super::Cipher::aes_256_ecb(),
                                         super::Mode::Encrypt,
                                         &k0,
-                                        None).unwrap();
+                                        None)
+            .unwrap();
         c.pad(false);
         let mut r0 = vec![0; c0.len() + super::Cipher::aes_256_ecb().block_size()];
         let count = c.update(&p0, &mut r0).unwrap();
@@ -386,7 +347,8 @@ mod tests {
         let mut c = super::Crypter::new(super::Cipher::aes_256_ecb(),
                                         super::Mode::Decrypt,
                                         &k0,
-                                        None).unwrap();
+                                        None)
+            .unwrap();
         c.pad(false);
         let mut p1 = vec![0; r0.len() + super::Cipher::aes_256_ecb().block_size()];
         let count = c.update(&r0, &mut p1).unwrap();
@@ -409,7 +371,8 @@ mod tests {
         let mut cr = super::Crypter::new(super::Cipher::aes_256_cbc(),
                                          super::Mode::Decrypt,
                                          &data,
-                                         Some(&iv)).unwrap();
+                                         Some(&iv))
+            .unwrap();
         cr.pad(false);
         let mut unciphered_data = vec![0; data.len() + super::Cipher::aes_256_cbc().block_size()];
         let count = cr.update(&ciphered_data, &mut unciphered_data).unwrap();

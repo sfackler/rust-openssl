@@ -30,9 +30,7 @@ impl Drop for EcKey {
 
 impl EcKey {
     pub fn new_by_curve_name(nid: Nid) -> Result<EcKey, ErrorStack> {
-        unsafe {
-            cvt_p(ffi::EC_KEY_new_by_curve_name(nid.as_raw())).map(EcKey)
-        }
+        unsafe { cvt_p(ffi::EC_KEY_new_by_curve_name(nid.as_raw())).map(EcKey) }
     }
 
     pub unsafe fn from_ptr(ptr: *mut ffi::EC_KEY) -> EcKey {
@@ -44,9 +42,7 @@ impl Deref for EcKey {
     type Target = EcKeyRef;
 
     fn deref(&self) -> &EcKeyRef {
-        unsafe {
-            EcKeyRef::from_ptr(self.0)
-        }
+        unsafe { EcKeyRef::from_ptr(self.0) }
     }
 }
 

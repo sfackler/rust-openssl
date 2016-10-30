@@ -1,6 +1,6 @@
 use libc::{c_char, c_int, c_long, c_void, strlen};
-use ffi::{BIO, BIO_CTRL_FLUSH, BIO_new, BIO_clear_retry_flags,
-          BIO_set_retry_read, BIO_set_retry_write};
+use ffi::{BIO, BIO_CTRL_FLUSH, BIO_new, BIO_clear_retry_flags, BIO_set_retry_read,
+          BIO_set_retry_write};
 use std::any::Any;
 use std::io;
 use std::io::prelude::*;
@@ -76,7 +76,7 @@ fn catch_unwind<F, T>(f: F) -> Result<T, Box<Any + Send>>
     ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(f))
 }
 
-unsafe extern fn bwrite<S: Write>(bio: *mut BIO, buf: *const c_char, len: c_int) -> c_int {
+unsafe extern "C" fn bwrite<S: Write>(bio: *mut BIO, buf: *const c_char, len: c_int) -> c_int {
     BIO_clear_retry_flags(bio);
 
     let state = state::<S>(bio);
@@ -98,7 +98,7 @@ unsafe extern fn bwrite<S: Write>(bio: *mut BIO, buf: *const c_char, len: c_int)
     }
 }
 
-unsafe extern fn bread<S: Read>(bio: *mut BIO, buf: *mut c_char, len: c_int) -> c_int {
+unsafe extern "C" fn bread<S: Read>(bio: *mut BIO, buf: *mut c_char, len: c_int) -> c_int {
     BIO_clear_retry_flags(bio);
 
     let state = state::<S>(bio);
@@ -128,15 +128,15 @@ fn retriable_error(err: &io::Error) -> bool {
     }
 }
 
-unsafe extern fn bputs<S: Write>(bio: *mut BIO, s: *const c_char) -> c_int {
+unsafe extern "C" fn bputs<S: Write>(bio: *mut BIO, s: *const c_char) -> c_int {
     bwrite::<S>(bio, s, strlen(s) as c_int)
 }
 
-unsafe extern fn ctrl<S: Write>(bio: *mut BIO,
-                                cmd: c_int,
-                                _num: c_long,
-                                _ptr: *mut c_void)
-                                -> c_long {
+unsafe extern "C" fn ctrl<S: Write>(bio: *mut BIO,
+                                    cmd: c_int,
+                                    _num: c_long,
+                                    _ptr: *mut c_void)
+                                    -> c_long {
     if cmd == BIO_CTRL_FLUSH {
         let state = state::<S>(bio);
 
@@ -156,7 +156,7 @@ unsafe extern fn ctrl<S: Write>(bio: *mut BIO,
     }
 }
 
-unsafe extern fn create(bio: *mut BIO) -> c_int {
+unsafe extern "C" fn create(bio: *mut BIO) -> c_int {
     compat::BIO_set_init(bio, 0);
     compat::BIO_set_num(bio, 0);
     compat::BIO_set_data(bio, ptr::null_mut());
@@ -164,7 +164,7 @@ unsafe extern fn create(bio: *mut BIO) -> c_int {
     1
 }
 
-unsafe extern fn destroy<S>(bio: *mut BIO) -> c_int {
+unsafe extern "C" fn destroy<S>(bio: *mut BIO) -> c_int {
     if bio.is_null() {
         return 0;
     }
@@ -193,8 +193,7 @@ mod compat {
     impl BIO_METHOD {
         pub fn new<S: Read + Write>() -> BIO_METHOD {
             unsafe {
-                let ptr = ffi::BIO_meth_new(ffi::BIO_TYPE_NONE,
-                                            b"rust\0".as_ptr() as *const _);
+                let ptr = ffi::BIO_meth_new(ffi::BIO_TYPE_NONE, b"rust\0".as_ptr() as *const _);
                 assert!(!ptr.is_null());
                 let ret = BIO_METHOD(ptr);
                 assert!(ffi::BIO_meth_set_write(ptr, super::bwrite::<S>) != 0);
@@ -203,7 +202,7 @@ mod compat {
                 assert!(ffi::BIO_meth_set_ctrl(ptr, super::ctrl::<S>) != 0);
                 assert!(ffi::BIO_meth_set_create(ptr, super::create) != 0);
                 assert!(ffi::BIO_meth_set_destroy(ptr, super::destroy::<S>) != 0);
-                return ret
+                return ret;
             }
         }
 

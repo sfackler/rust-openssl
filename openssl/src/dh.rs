@@ -50,33 +50,25 @@ impl Dh {
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn get_1024_160() -> Result<Dh, ErrorStack> {
-        unsafe {
-            cvt_p(ffi::DH_get_1024_160()).map(Dh)
-        }
+        unsafe { cvt_p(ffi::DH_get_1024_160()).map(Dh) }
     }
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn get_2048_224() -> Result<Dh, ErrorStack> {
-        unsafe {
-            cvt_p(ffi::DH_get_2048_224()).map(Dh)
-        }
+        unsafe { cvt_p(ffi::DH_get_2048_224()).map(Dh) }
     }
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn get_2048_256() -> Result<Dh, ErrorStack> {
-        unsafe {
-            cvt_p(ffi::DH_get_2048_256()).map(Dh)
-        }
+        unsafe { cvt_p(ffi::DH_get_2048_256()).map(Dh) }
     }
 }
 
 impl Drop for Dh {
     fn drop(&mut self) {
-        unsafe {
-            ffi::DH_free(self.0)
-        }
+        unsafe { ffi::DH_free(self.0) }
     }
 }
 
@@ -84,9 +76,7 @@ impl Deref for Dh {
     type Target = DhRef;
 
     fn deref(&self) -> &DhRef {
-        unsafe {
-            DhRef::from_ptr(self.0)
-        }
+        unsafe { DhRef::from_ptr(self.0) }
     }
 }
 
@@ -104,7 +94,8 @@ mod compat {
     pub unsafe fn DH_set0_pqg(dh: *mut ffi::DH,
                               p: *mut ffi::BIGNUM,
                               q: *mut ffi::BIGNUM,
-                              g: *mut ffi::BIGNUM) -> c_int {
+                              g: *mut ffi::BIGNUM)
+                              -> c_int {
         (*dh).p = p;
         (*dh).q = q;
         (*dh).g = g;
@@ -142,7 +133,7 @@ mod tests {
                                       CACB83E6B486F6B3CA3F7971506026C0B857F689962856DED4010ABD0BE\
                                       621C3A3960A54E710C375F26375D7014103A4B54330C198AF126116D227\
                                       6E11715F693877FAD7EF09CADB094AE91E1A1597")
-                    .unwrap();
+            .unwrap();
         let g = BigNum::from_hex_str("3FB32C9B73134D0B2E77506660EDBD484CA7B18F21EF205407F4793A1A0\
                                       BA12510DBC15077BE463FFF4FED4AAC0BB555BE3A6C1B0C6B47B1BC3773\
                                       BF7E8C6F62901228F8C28CBB18A55AE31341000A650196F931C77A57F2D\
@@ -152,10 +143,10 @@ mod tests {
                                       D2BBD2DF016199ECD06E1557CD0915B3353BBB64E0EC377FD028370DF92\
                                       B52C7891428CDC67EB6184B523D1DB246C32F63078490F00EF8D647D148\
                                       D47954515E2327CFEF98C582664B4C0F6CC41659")
-                    .unwrap();
+            .unwrap();
         let q = BigNum::from_hex_str("8CF83642A709A097B447997640129DA299B1A47D1EB3750BA308B0FE64F\
                                       5FBD3")
-                    .unwrap();
+            .unwrap();
         let dh = Dh::from_params(p, g, q).unwrap();
         ctx.set_tmp_dh(&dh).unwrap();
     }

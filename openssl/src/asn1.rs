@@ -64,9 +64,7 @@ impl Deref for Asn1Time {
     type Target = Asn1TimeRef;
 
     fn deref(&self) -> &Asn1TimeRef {
-        unsafe {
-            Asn1TimeRef::from_ptr(self.0)
-        }
+        unsafe { Asn1TimeRef::from_ptr(self.0) }
     }
 }
 

@@ -26,17 +26,10 @@ use nid::Nid;
 use opaque::Opaque;
 
 #[cfg(ossl10x)]
-use ffi::{
-    X509_set_notBefore,
-    X509_set_notAfter,
-    ASN1_STRING_data,
-};
+use ffi::{X509_set_notBefore, X509_set_notAfter, ASN1_STRING_data};
 #[cfg(ossl110)]
-use ffi::{
-    X509_set1_notBefore as X509_set_notBefore,
-    X509_set1_notAfter as X509_set_notAfter,
-    ASN1_STRING_get0_data as ASN1_STRING_data,
-};
+use ffi::{X509_set1_notBefore as X509_set_notBefore, X509_set1_notAfter as X509_set_notAfter,
+          ASN1_STRING_get0_data as ASN1_STRING_data};
 
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 pub mod verify;
@@ -68,9 +61,7 @@ impl X509StoreContextRef {
     }
 
     pub fn error(&self) -> Option<X509VerifyError> {
-        unsafe {
-            X509VerifyError::from_raw(ffi::X509_STORE_CTX_get_error(self.as_ptr()) as c_long)
-        }
+        unsafe { X509VerifyError::from_raw(ffi::X509_STORE_CTX_get_error(self.as_ptr()) as c_long) }
     }
 
     pub fn current_cert(&self) -> Option<&X509Ref> {
@@ -386,9 +377,7 @@ impl X509Ref {
                 return None;
             }
 
-            Some(GeneralNames {
-                stack: stack as *mut _,
-            })
+            Some(GeneralNames { stack: stack as *mut _ })
         }
     }
 
@@ -495,9 +484,7 @@ impl Deref for X509 {
     type Target = X509Ref;
 
     fn deref(&self) -> &X509Ref {
-        unsafe {
-            X509Ref::from_ptr(self.0)
-        }
+        unsafe { X509Ref::from_ptr(self.0) }
     }
 }
 
@@ -749,8 +736,8 @@ impl Drop for GeneralNames {
     fn drop(&mut self) {
         unsafe {
             // This transmute is dubious but it's what openssl itself does...
-            let free: unsafe extern fn(*mut ffi::GENERAL_NAME) = ffi::GENERAL_NAME_free;
-            let free: unsafe extern fn(*mut c_void) = mem::transmute(free);
+            let free: unsafe extern "C" fn(*mut ffi::GENERAL_NAME) = ffi::GENERAL_NAME_free;
+            let free: unsafe extern "C" fn(*mut c_void) = mem::transmute(free);
             ffi::sk_pop_free(&mut (*self.stack).stack, Some(free));
         }
     }
@@ -759,8 +746,8 @@ impl Drop for GeneralNames {
     fn drop(&mut self) {
         unsafe {
             // This transmute is dubious but it's what openssl itself does...
-            let free: unsafe extern fn(*mut ffi::GENERAL_NAME) = ffi::GENERAL_NAME_free;
-            let free: unsafe extern fn(*mut c_void) = mem::transmute(free);
+            let free: unsafe extern "C" fn(*mut ffi::GENERAL_NAME) = ffi::GENERAL_NAME_free;
+            let free: unsafe extern "C" fn(*mut c_void) = mem::transmute(free);
             ffi::OPENSSL_sk_pop_free(self.stack as *mut _, Some(free));
         }
     }

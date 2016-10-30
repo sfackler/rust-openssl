@@ -178,7 +178,7 @@ impl Rsa {
                                                           to.as_mut_ptr(),
                                                           self.0,
                                                           padding.0)));
-           Ok(len as usize)
+            Ok(len as usize)
         }
     }
 
@@ -203,7 +203,7 @@ impl Rsa {
                                                           to.as_mut_ptr(),
                                                           self.0,
                                                           padding.0)));
-           Ok(len as usize)
+            Ok(len as usize)
         }
     }
 
@@ -338,23 +338,19 @@ mod compat {
         [p, q]
     }
 
-    pub unsafe fn set_key(r: *mut RSA,
-                          n: *mut BIGNUM,
-                          e: *mut BIGNUM,
-                          d: *mut BIGNUM) -> c_int {
+    pub unsafe fn set_key(r: *mut RSA, n: *mut BIGNUM, e: *mut BIGNUM, d: *mut BIGNUM) -> c_int {
         ffi::RSA_set0_key(r, n, e, d)
     }
 
-    pub unsafe fn set_factors(r: *mut RSA,
-                              p: *mut BIGNUM,
-                              q: *mut BIGNUM) -> c_int {
+    pub unsafe fn set_factors(r: *mut RSA, p: *mut BIGNUM, q: *mut BIGNUM) -> c_int {
         ffi::RSA_set0_factors(r, p, q)
     }
 
     pub unsafe fn set_crt_params(r: *mut RSA,
                                  dmp1: *mut BIGNUM,
                                  dmq1: *mut BIGNUM,
-                                 iqmp: *mut BIGNUM) -> c_int {
+                                 iqmp: *mut BIGNUM)
+                                 -> c_int {
         ffi::RSA_set0_crt_params(r, dmp1, dmq1, iqmp)
     }
 }
@@ -372,19 +368,14 @@ mod compat {
         [(*r).p, (*r).q]
     }
 
-    pub unsafe fn set_key(r: *mut RSA,
-                          n: *mut BIGNUM,
-                          e: *mut BIGNUM,
-                          d: *mut BIGNUM) -> c_int {
+    pub unsafe fn set_key(r: *mut RSA, n: *mut BIGNUM, e: *mut BIGNUM, d: *mut BIGNUM) -> c_int {
         (*r).n = n;
         (*r).e = e;
         (*r).d = d;
         1 // TODO: is this right? should it be 0? what's success?
     }
 
-    pub unsafe fn set_factors(r: *mut RSA,
-                              p: *mut BIGNUM,
-                              q: *mut BIGNUM) -> c_int {
+    pub unsafe fn set_factors(r: *mut RSA, p: *mut BIGNUM, q: *mut BIGNUM) -> c_int {
         (*r).p = p;
         (*r).q = q;
         1 // TODO: is this right? should it be 0? what's success?
@@ -393,7 +384,8 @@ mod compat {
     pub unsafe fn set_crt_params(r: *mut RSA,
                                  dmp1: *mut BIGNUM,
                                  dmq1: *mut BIGNUM,
-                                 iqmp: *mut BIGNUM) -> c_int {
+                                 iqmp: *mut BIGNUM)
+                                 -> c_int {
         (*r).dmp1 = dmp1;
         (*r).dmq1 = dmq1;
         (*r).iqmp = iqmp;
@@ -413,15 +405,16 @@ mod test {
         let mut password_queried = false;
         let key = include_bytes!("../test/rsa-encrypted.pem");
         Rsa::private_key_from_pem_cb(key, |password| {
-            password_queried = true;
-            password[0] = b'm' as c_char;
-            password[1] = b'y' as c_char;
-            password[2] = b'p' as c_char;
-            password[3] = b'a' as c_char;
-            password[4] = b's' as c_char;
-            password[5] = b's' as c_char;
-            6
-        }).unwrap();
+                password_queried = true;
+                password[0] = b'm' as c_char;
+                password[1] = b'y' as c_char;
+                password[2] = b'p' as c_char;
+                password[3] = b'a' as c_char;
+                password[4] = b's' as c_char;
+                password[5] = b's' as c_char;
+                6
+            })
+            .unwrap();
 
         assert!(password_queried);
     }
@@ -441,11 +434,11 @@ mod test {
         let mut dec_result = vec![0; private_key.size()];
         let len = private_key.private_decrypt(&result, &mut dec_result, PKCS1_PADDING).unwrap();
 
-       assert_eq!(&dec_result[..len], original_data);
+        assert_eq!(&dec_result[..len], original_data);
     }
 
     #[test]
-   fn test_private_encrypt() {
+    fn test_private_encrypt() {
         let k0 = super::Rsa::generate(512).unwrap();
         let k0pkey = k0.public_key_to_pem().unwrap();
         let k1 = super::Rsa::public_key_from_pem(&k0pkey).unwrap();
@@ -457,21 +450,21 @@ mod test {
         let mut dmesg = vec![0; k1.size()];
         let len = k1.public_decrypt(&emesg, &mut dmesg, PKCS1_PADDING).unwrap();
         assert_eq!(msg, &dmesg[..len]);
-   }
+    }
 
-   #[test]
-   fn test_public_encrypt() {
-       let k0 = super::Rsa::generate(512).unwrap();
-       let k0pkey = k0.private_key_to_pem().unwrap();
-       let k1 = super::Rsa::private_key_from_pem(&k0pkey).unwrap();
+    #[test]
+    fn test_public_encrypt() {
+        let k0 = super::Rsa::generate(512).unwrap();
+        let k0pkey = k0.private_key_to_pem().unwrap();
+        let k1 = super::Rsa::private_key_from_pem(&k0pkey).unwrap();
 
-       let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
+        let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
 
-       let mut emesg = vec![0; k0.size()];
-       k0.public_encrypt(&msg, &mut emesg, PKCS1_PADDING).unwrap();
-       let mut dmesg = vec![0; k1.size()];
-       let len = k1.private_decrypt(&emesg, &mut dmesg, PKCS1_PADDING).unwrap();
-       assert_eq!(msg, &dmesg[..len]);
-   }
+        let mut emesg = vec![0; k0.size()];
+        k0.public_encrypt(&msg, &mut emesg, PKCS1_PADDING).unwrap();
+        let mut dmesg = vec![0; k1.size()];
+        let len = k1.private_decrypt(&emesg, &mut dmesg, PKCS1_PADDING).unwrap();
+        assert_eq!(msg, &dmesg[..len]);
+    }
 
 }

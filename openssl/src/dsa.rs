@@ -105,8 +105,7 @@ impl Dsa {
     }
 
     /// Writes an DSA private key as unencrypted PEM formatted data
-    pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack>
-    {
+    pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         assert!(self.has_private_key());
         let mem_bio = try!(MemBio::new());
 
@@ -120,8 +119,7 @@ impl Dsa {
     }
 
     /// Reads an DSA public key from PEM formatted data.
-    pub fn public_key_from_pem(buf: &[u8]) -> Result<Dsa, ErrorStack>
-    {
+    pub fn public_key_from_pem(buf: &[u8]) -> Result<Dsa, ErrorStack> {
         ffi::init();
 
         let mem_bio = try!(MemBioSlice::new(buf));
@@ -250,15 +248,16 @@ mod test {
         let mut password_queried = false;
         let key = include_bytes!("../test/dsa-encrypted.pem");
         Dsa::private_key_from_pem_cb(key, |password| {
-            password_queried = true;
-            password[0] = b'm' as c_char;
-            password[1] = b'y' as c_char;
-            password[2] = b'p' as c_char;
-            password[3] = b'a' as c_char;
-            password[4] = b's' as c_char;
-            password[5] = b's' as c_char;
-            6
-        }).unwrap();
+                password_queried = true;
+                password[0] = b'm' as c_char;
+                password[1] = b'y' as c_char;
+                password[2] = b'p' as c_char;
+                password[3] = b'a' as c_char;
+                password[4] = b's' as c_char;
+                password[5] = b's' as c_char;
+                6
+            })
+            .unwrap();
 
         assert!(password_queried);
     }

@@ -16,7 +16,9 @@ pub struct Pkcs12(*mut ffi::PKCS12);
 
 impl Drop for Pkcs12 {
     fn drop(&mut self) {
-        unsafe { ffi::PKCS12_free(self.0); }
+        unsafe {
+            ffi::PKCS12_free(self.0);
+        }
     }
 }
 
@@ -88,8 +90,7 @@ mod compat {
         (*stack).num
     }
 
-    pub unsafe fn OPENSSL_sk_value(stack: *const ffi::_STACK, idx: c_int)
-                                   -> *mut c_void {
+    pub unsafe fn OPENSSL_sk_value(stack: *const ffi::_STACK, idx: c_int) -> *mut c_void {
         *(*stack).data.offset(idx as isize) as *mut c_void
     }
 }
