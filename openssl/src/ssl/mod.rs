@@ -1,3 +1,72 @@
+//! SSL/TLS support.
+//!
+//! The `ClientConnector` and `ServerConnector` should be used in most cases - they handle
+//! configuration of the OpenSSL primitives for you.
+//!
+//! # Examples
+//!
+//! To connect as a client to a remote server:
+//!
+//! ```no_run
+//! use openssl::ssl::ClientConnectorBuilder;
+//! use std::io::{Read, Write};
+//! use std::net::TcpStream;
+//!
+//! let connector = ClientConnectorBuilder::tls().unwrap().build();
+//!
+//! let stream = TcpStream::connect("google.com:443").unwrap();
+//! let mut stream = connector.connect("google.com", stream).unwrap();
+//!
+//! stream.write_all(b"GET / HTTP/1.0\r\n\r\n").unwrap();
+//! let mut res = vec![];
+//! stream.read_to_end(&mut res).unwrap();
+//! println!("{}", String::from_utf8_lossy(&res));
+//! ```
+//!
+//! To accept connections as a server from remote clients:
+//!
+//! ```no_run
+//! use openssl::pkcs12::Pkcs12;
+//! use openssl::ssl::{ServerConnectorBuilder, SslStream};
+//! use std::fs::File;
+//! use std::io::{Read, Write};
+//! use std::net::{TcpListener, TcpStream};
+//! use std::sync::Arc;
+//! use std::thread;
+//!
+//! // In this example we retrieve our keypair and certificate chain from a PKCS #12 archive,
+//! // but but they can also be retrieved from, for example, individual PEM- or DER-formatted
+//! // files. See the documentation for the `PKey` and `X509` types for more details.
+//! let mut file = File::open("identity.pfx").unwrap();
+//! let mut pkcs12 = vec![];
+//! file.read_to_end(&mut pkcs12).unwrap();
+//! let pkcs12 = Pkcs12::from_der(&pkcs12).unwrap();
+//! let identity = pkcs12.parse("password123").unwrap();
+//!
+//! let connector = ServerConnectorBuilder::tls(&identity.pkey, &identity.cert, &identity.chain)
+//!     .unwrap()
+//!     .build();
+//! let connector = Arc::new(connector);
+//!
+//! let listener = TcpListener::bind("0.0.0.0:8443").unwrap();
+//!
+//! fn handle_client(stream: SslStream<TcpStream>) {
+//!     // ...
+//! }
+//!
+//! for stream in listener.incoming() {
+//!     match stream {
+//!         Ok(stream) => {
+//!             let connector = connector.clone();
+//!             thread::spawn(move || {
+//!                 let stream = connector.connect(stream).unwrap();
+//!                 handle_client(stream);
+//!             });
+//!         }
+//!         Err(e) => { /* connection failed */ }
+//!     }
+//! }
+//! ```
 use libc::{c_int, c_void, c_long, c_ulong};
 use std::any::Any;
 use std::any::TypeId;
