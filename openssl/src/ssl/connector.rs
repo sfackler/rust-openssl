@@ -129,6 +129,7 @@ impl ServerConnectorBuilder {
         ctx.set_options(ssl::SSL_OP_SINGLE_DH_USE | ssl::SSL_OP_CIPHER_SERVER_PREFERENCE);
         let dh = try!(Dh::from_pem(DHPARAM_PEM.as_bytes()));
         try!(ctx.set_tmp_dh(&dh));
+        try!(setup_curves(&mut ctx));
         try!(ctx.set_cipher_list(
             "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:\
              ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:\
@@ -163,6 +164,22 @@ impl ServerConnectorBuilder {
     pub fn build(self) -> ServerConnector {
         ServerConnector(self.0.build())
     }
+}
+
+#[cfg(ossl101)]
+fn setup_curves(ctx: &mut SslContextBuilder) -> Result<(), ErrorStack> {
+    let curve = try!(::ec_key::EcKey::new_by_curve_name(::nid::X9_62_PRIME256V1));
+    ctx.set_tmp_ecdh(&curve)
+}
+
+#[cfg(ossl102)]
+fn setup_curves(ctx: &mut SslContextBuilder) -> Result<(), ErrorStack> {
+    ctx._set_ecdh_auto(true)
+}
+
+#[cfg(ossl110)]
+fn setup_curves(_: &mut SslContextBuilder) -> Result<(), ErrorStack> {
+    Ok(())
 }
 
 /// A type which wraps server-side streams in a TLS session.

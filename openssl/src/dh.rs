@@ -2,10 +2,24 @@ use ffi;
 use error::ErrorStack;
 use bio::MemBioSlice;
 use std::ptr;
+use std::mem;
+use std::ops::Deref;
 
 use {cvt, cvt_p};
 use bn::BigNum;
-use std::mem;
+use opaque::Opaque;
+
+pub struct DhRef(Opaque);
+
+impl DhRef {
+    pub unsafe fn from_ptr<'a>(ptr: *mut ffi::DH) -> &'a DhRef {
+        &*(ptr as *mut _)
+    }
+
+    pub fn as_ptr(&self) -> *mut ffi::DH {
+        self as *const _ as *mut _
+    }
+}
 
 pub struct Dh(*mut ffi::DH);
 
@@ -56,16 +70,22 @@ impl Dh {
             cvt_p(ffi::DH_get_2048_256()).map(Dh)
         }
     }
-
-    pub fn as_ptr(&self) -> *mut ffi::DH {
-        self.0
-    }
 }
 
 impl Drop for Dh {
     fn drop(&mut self) {
         unsafe {
-            ffi::DH_free(self.as_ptr())
+            ffi::DH_free(self.0)
+        }
+    }
+}
+
+impl Deref for Dh {
+    type Target = DhRef;
+
+    fn deref(&self) -> &DhRef {
+        unsafe {
+            DhRef::from_ptr(self.0)
         }
     }
 }

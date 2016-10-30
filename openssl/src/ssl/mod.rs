@@ -89,7 +89,8 @@ use std::marker::PhantomData;
 use ffi;
 
 use {init, cvt, cvt_p};
-use dh::Dh;
+use dh::DhRef;
+use ec_key::EcKeyRef;
 use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError};
 #[cfg(any(ossl102, ossl110))]
 use verify::X509VerifyParamRef;
@@ -498,9 +499,15 @@ impl SslContextBuilder {
         }
     }
 
-    pub fn set_tmp_dh(&mut self, dh: &Dh) -> Result<(), ErrorStack> {
+    pub fn set_tmp_dh(&mut self, dh: &DhRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_CTX_set_tmp_dh(self.as_ptr(), dh.as_ptr()) as c_int).map(|_| ())
+        }
+    }
+
+    pub fn set_tmp_ecdh(&mut self, key: &EcKeyRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_CTX_set_tmp_ecdh(self.as_ptr(), key.as_ptr()) as c_int).map(|_| ())
         }
     }
 
@@ -623,6 +630,11 @@ impl SslContextBuilder {
     /// Requires the `v102` feature and OpenSSL 1.0.2.
     #[cfg(all(feature = "v102", ossl102))]
     pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
+        self._set_ecdh_auto(onoff)
+    }
+
+    #[cfg(ossl102)]
+    fn _set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_CTX_set_ecdh_auto(self.as_ptr(), onoff as c_int)).map(|_| ())
         }
