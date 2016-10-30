@@ -46,11 +46,14 @@ pub struct ClientConnectorBuilder(SslContextBuilder);
 impl ClientConnectorBuilder {
     /// Creates a new builder for TLS connections.
     ///
-    /// The default configuration is based off of libcurl's and is subject to change.
+    /// The default configuration is subject to change, and is currently derived from Python.
     pub fn new(method: SslMethod) -> Result<ClientConnectorBuilder, ErrorStack> {
         let mut ctx = try!(ctx(method));
         try!(ctx.set_default_verify_paths());
-        try!(ctx.set_cipher_list("ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH"));
+        // From https://github.com/python/cpython/blob/c30098c8c6014f3340a369a31df9c74bdbacc269/Lib/ssl.py#L191
+        try!(ctx.set_cipher_list(
+            "ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:DH+CHACHA20:ECDH+AES256:DH+AES256:ECDH+AES128:\
+             DH+AES:ECDH+HIGH:DH+HIGH:RSA+AESGCM:RSA+AES:RSA+HIGH:!aNULL:!eNULL:!MD5:!3DES"));
 
         Ok(ClientConnectorBuilder(ctx))
     }
