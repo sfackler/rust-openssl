@@ -105,25 +105,25 @@ pub struct ServerConnectorBuilder(SslContextBuilder);
 impl ServerConnectorBuilder {
     /// Creates a new builder for server-side TLS connections.
     ///
-    /// The default configuration is based off of the intermediate profile of Mozilla's SSL
-    /// Configuration Generator, and is subject to change.
-    pub fn tls<I, T>(private_key: &PKeyRef,
-                     certificate: &X509Ref,
-                     chain: I)
-                     -> Result<ServerConnectorBuilder, ErrorStack>
-        where I: IntoIterator<Item = T>,
-              T: AsRef<X509Ref>
+    /// The default configuration is based off of the intermediate profile of Mozilla's server side
+    /// TLS configuration recommendations, and is subject to change.
+    pub fn tls<I>(private_key: &PKeyRef,
+                  certificate: &X509Ref,
+                  chain: I)
+                  -> Result<ServerConnectorBuilder, ErrorStack>
+        where I: IntoIterator,
+              I::Item: AsRef<X509Ref>
     {
         ServerConnectorBuilder::new(SslMethod::tls(), private_key, certificate, chain)
     }
 
-    fn new<I, T>(method: SslMethod,
-                 private_key: &PKeyRef,
-                 certificate: &X509Ref,
-                 chain: I)
-                 -> Result<ServerConnectorBuilder, ErrorStack>
-        where I: IntoIterator<Item = T>,
-              T: AsRef<X509Ref>
+    fn new<I>(method: SslMethod,
+              private_key: &PKeyRef,
+              certificate: &X509Ref,
+              chain: I)
+              -> Result<ServerConnectorBuilder, ErrorStack>
+        where I: IntoIterator,
+              I::Item: AsRef<X509Ref>
     {
         let mut ctx = try!(ctx(method));
         ctx.set_options(ssl::SSL_OP_SINGLE_DH_USE | ssl::SSL_OP_CIPHER_SERVER_PREFERENCE);
