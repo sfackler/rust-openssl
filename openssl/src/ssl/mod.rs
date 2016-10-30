@@ -43,10 +43,8 @@
 //! let pkcs12 = Pkcs12::from_der(&pkcs12).unwrap();
 //! let identity = pkcs12.parse("password123").unwrap();
 //!
-//! let connector = ServerConnectorBuilder::new(SslMethod::tls(),
-//!                                             &identity.pkey,
-//!                                             &identity.cert,
-//!                                             &identity.chain)
+//! let connector = ServerConnectorBuilder::mozilla_intermediate(
+//!     SslMethod::tls(), &identity.pkey, &identity.cert, &identity.chain)
 //!     .unwrap()
 //!     .build();
 //! let connector = Arc::new(connector);

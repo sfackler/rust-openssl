@@ -1112,7 +1112,8 @@ fn connector_client_server() {
     let t = thread::spawn(move || {
         let key = PKey::private_key_from_pem(KEY).unwrap();
         let cert = X509::from_pem(CERT).unwrap();
-        let connector = ServerConnectorBuilder::new(SslMethod::tls(), &key, &cert, None::<X509>)
+        let connector = ServerConnectorBuilder::mozilla_intermediate(
+            SslMethod::tls(), &key, &cert, None::<X509>)
             .unwrap()
             .build();
         let stream = listener.accept().unwrap().0;

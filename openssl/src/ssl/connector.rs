@@ -103,11 +103,11 @@ impl ServerConnectorBuilder {
     ///
     /// The default configuration is based off of the intermediate profile of Mozilla's server side
     /// TLS configuration recommendations, and is subject to change.
-    pub fn new<I>(method: SslMethod,
-                  private_key: &PKeyRef,
-                  certificate: &X509Ref,
-                  chain: I)
-                  -> Result<ServerConnectorBuilder, ErrorStack>
+    pub fn mozilla_intermediate<I>(method: SslMethod,
+                                   private_key: &PKeyRef,
+                                   certificate: &X509Ref,
+                                   chain: I)
+                                   -> Result<ServerConnectorBuilder, ErrorStack>
         where I: IntoIterator,
               I::Item: AsRef<X509Ref>
     {
