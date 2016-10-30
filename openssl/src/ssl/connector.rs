@@ -126,7 +126,8 @@ impl ServerConnectorBuilder {
               I::Item: AsRef<X509Ref>
     {
         let mut ctx = try!(ctx(method));
-        ctx.set_options(ssl::SSL_OP_SINGLE_DH_USE | ssl::SSL_OP_CIPHER_SERVER_PREFERENCE);
+        ctx.set_options(ssl::SSL_OP_SINGLE_DH_USE | ssl::SSL_OP_SINGLE_ECDH_USE |
+            ssl::SSL_OP_CIPHER_SERVER_PREFERENCE);
         let dh = try!(Dh::from_pem(DHPARAM_PEM.as_bytes()));
         try!(ctx.set_tmp_dh(&dh));
         try!(setup_curves(&mut ctx));
