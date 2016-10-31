@@ -135,9 +135,7 @@ impl Hasher {
             try!(self.init());
         }
         unsafe {
-            try!(cvt(ffi::EVP_DigestUpdate(self.ctx,
-                                           data.as_ptr() as *mut _,
-                                           data.len())));
+            try!(cvt(ffi::EVP_DigestUpdate(self.ctx, data.as_ptr() as *mut _, data.len())));
         }
         self.state = Updated;
         Ok(())

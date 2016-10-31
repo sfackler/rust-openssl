@@ -39,6 +39,10 @@ fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     opts |= ssl::SSL_OP_CIPHER_SERVER_PREFERENCE;
     ctx.set_options(opts);
 
+    let mode = ssl::SSL_MODE_AUTO_RETRY | ssl::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
+               ssl::SSL_MODE_ENABLE_PARTIAL_WRITE;
+    ctx.set_mode(mode);
+
     Ok(ctx)
 }
 
@@ -53,9 +57,9 @@ impl SslConnectorBuilder {
         let mut ctx = try!(ctx(method));
         try!(ctx.set_default_verify_paths());
         // From https://github.com/python/cpython/blob/c30098c8c6014f3340a369a31df9c74bdbacc269/Lib/ssl.py#L191
-        try!(ctx.set_cipher_list(
-            "ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:DH+CHACHA20:ECDH+AES256:DH+AES256:ECDH+AES128:\
-             DH+AES:ECDH+HIGH:DH+HIGH:RSA+AESGCM:RSA+AES:RSA+HIGH:!aNULL:!eNULL:!MD5:!3DES"));
+        try!(ctx.set_cipher_list("ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:DH+CHACHA20:ECDH+AES256:\
+                                  DH+AES256:ECDH+AES128:DH+AES:ECDH+HIGH:DH+HIGH:RSA+AESGCM:\
+                                  RSA+AES:RSA+HIGH:!aNULL:!eNULL:!MD5:!3DES"));
 
         Ok(SslConnectorBuilder(ctx))
     }
@@ -123,17 +127,20 @@ impl SslAcceptorBuilder {
         let dh = try!(Dh::from_pem(DHPARAM_PEM.as_bytes()));
         try!(ctx.set_tmp_dh(&dh));
         try!(setup_curves(&mut ctx));
-        try!(ctx.set_cipher_list(
-            "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:\
-             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:\
-             ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:\
-             DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:\
-             ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:\
-             ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:\
-             ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:\
-             DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:\
-             EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:\
-             AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS"));
+        try!(ctx.set_cipher_list("ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:\
+                                  ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:\
+                                  ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:\
+                                  DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:\
+                                  ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:\
+                                  ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:\
+                                  ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:\
+                                  ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:\
+                                  DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:\
+                                  DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:\
+                                  ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:\
+                                  EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:\
+                                  AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:\
+                                  DES-CBC3-SHA:!DSS"));
         SslAcceptorBuilder::finish_setup(ctx, private_key, certificate, chain)
     }
 
@@ -153,12 +160,11 @@ impl SslAcceptorBuilder {
     {
         let mut ctx = try!(ctx(method));
         try!(setup_curves(&mut ctx));
-        try!(ctx.set_cipher_list(
-            "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:\
-             ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:\
-             ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:\
-             ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:\
-             ECDHE-RSA-AES128-SHA256"));
+        try!(ctx.set_cipher_list("ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:\
+                                  ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:\
+                                  ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:\
+                                  ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:\
+                                  ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256"));
         SslAcceptorBuilder::finish_setup(ctx, private_key, certificate, chain)
     }
 

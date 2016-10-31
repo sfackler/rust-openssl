@@ -108,12 +108,11 @@ mod tests;
 
 use self::bio::BioMethod;
 
-pub use ssl::connector::{SslConnectorBuilder, SslConnector, SslAcceptorBuilder,
-                         SslAcceptor};
+pub use ssl::connector::{SslConnectorBuilder, SslConnector, SslAcceptorBuilder, SslAcceptor};
 pub use ssl::error::{Error, HandshakeError};
 
 bitflags! {
-    pub flags SslOptions: c_ulong {
+    pub flags SslOption: c_ulong {
         const SSL_OP_MICROSOFT_SESS_ID_BUG = ffi::SSL_OP_MICROSOFT_SESS_ID_BUG,
         const SSL_OP_NETSCAPE_CHALLENGE_BUG = ffi::SSL_OP_NETSCAPE_CHALLENGE_BUG,
         const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG =
@@ -151,6 +150,19 @@ bitflags! {
         /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
         #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
         const SSL_OP_NO_SSL_MASK = ffi::SSL_OP_NO_SSL_MASK,
+    }
+}
+
+bitflags! {
+    pub flags SslMode: c_long {
+        const SSL_MODE_ENABLE_PARTIAL_WRITE = ffi::SSL_MODE_ENABLE_PARTIAL_WRITE,
+        const SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER = ffi::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER,
+        const SSL_MODE_AUTO_RETRY = ffi::SSL_MODE_AUTO_RETRY,
+        const SSL_MODE_NO_AUTO_CHAIN = ffi::SSL_MODE_NO_AUTO_CHAIN,
+        const SSL_MODE_RELEASE_BUFFERS = ffi::SSL_MODE_RELEASE_BUFFERS,
+        const SSL_MODE_SEND_CLIENTHELLO_TIME = ffi::SSL_MODE_SEND_CLIENTHELLO_TIME,
+        const SSL_MODE_SEND_SERVERHELLO_TIME = ffi::SSL_MODE_SEND_SERVERHELLO_TIME,
+        const SSL_MODE_SEND_FALLBACK_SCSV = ffi::SSL_MODE_SEND_FALLBACK_SCSV,
     }
 }
 
@@ -426,16 +438,12 @@ impl Drop for SslContextBuilder {
 
 impl SslContextBuilder {
     pub fn new(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
-        init();
-
-        let mut ctx = unsafe {
+        unsafe {
+            init();
             let ctx = try!(cvt_p(ffi::SSL_CTX_new(method.as_ptr())));
-            SslContextBuilder::from_ptr(ctx)
-        };
 
-        try!(ctx.set_mode(ffi::SSL_MODE_AUTO_RETRY | ffi::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER));
-
-        Ok(ctx)
+            Ok(SslContextBuilder::from_ptr(ctx))
+        }
     }
 
     pub unsafe fn from_ptr(ctx: *mut ffi::SSL_CTX) -> SslContextBuilder {
@@ -498,8 +506,11 @@ impl SslContextBuilder {
         }
     }
 
-    fn set_mode(&mut self, mode: c_long) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::SSL_CTX_set_mode(self.as_ptr(), mode) as c_int).map(|_| ()) }
+    pub fn set_mode(&mut self, mode: SslMode) -> SslMode {
+        unsafe {
+            let mode = ffi::SSL_CTX_set_mode(self.as_ptr(), mode.bits());
+            SslMode::from_bits(mode).unwrap()
+        }
     }
 
     pub fn set_tmp_dh(&mut self, dh: &DhRef) -> Result<(), ErrorStack> {
@@ -630,19 +641,19 @@ impl SslContextBuilder {
         unsafe { cvt(ffi::SSL_CTX_set_ecdh_auto(self.as_ptr(), onoff as c_int)).map(|_| ()) }
     }
 
-    pub fn set_options(&mut self, option: SslOptions) -> SslOptions {
+    pub fn set_options(&mut self, option: SslOption) -> SslOption {
         let ret = unsafe { compat::SSL_CTX_set_options(self.as_ptr(), option.bits()) };
-        SslOptions::from_bits(ret).unwrap()
+        SslOption::from_bits(ret).unwrap()
     }
 
-    pub fn options(&self) -> SslOptions {
+    pub fn options(&self) -> SslOption {
         let ret = unsafe { compat::SSL_CTX_get_options(self.as_ptr()) };
-        SslOptions::from_bits(ret).unwrap()
+        SslOption::from_bits(ret).unwrap()
     }
 
-    pub fn clear_options(&mut self, option: SslOptions) -> SslOptions {
+    pub fn clear_options(&mut self, option: SslOption) -> SslOption {
         let ret = unsafe { compat::SSL_CTX_clear_options(self.as_ptr(), option.bits()) };
-        SslOptions::from_bits(ret).unwrap()
+        SslOption::from_bits(ret).unwrap()
     }
 
     /// Set the protocols to be used during Next Protocol Negotiation (the protocols

@@ -1051,8 +1051,14 @@ pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB:  c_int = 53;
 pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG: c_int = 54;
 pub const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
 
-pub const SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER: c_long = 2;
-pub const SSL_MODE_AUTO_RETRY: c_long = 4;
+pub const SSL_MODE_ENABLE_PARTIAL_WRITE: c_long = 0x1;
+pub const SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER: c_long = 0x2;
+pub const SSL_MODE_AUTO_RETRY: c_long = 0x4;
+pub const SSL_MODE_NO_AUTO_CHAIN: c_long = 0x8;
+pub const SSL_MODE_RELEASE_BUFFERS: c_long = 0x10;
+pub const SSL_MODE_SEND_CLIENTHELLO_TIME: c_long = 0x20;
+pub const SSL_MODE_SEND_SERVERHELLO_TIME: c_long = 0x40;
+pub const SSL_MODE_SEND_FALLBACK_SCSV: c_long = 0x80;
 
 pub const SSL_ERROR_NONE: c_int = 0;
 pub const SSL_ERROR_SSL: c_int = 1;

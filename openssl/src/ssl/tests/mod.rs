@@ -18,8 +18,8 @@ use hash::MessageDigest;
 use ssl;
 use ssl::SSL_VERIFY_PEER;
 use ssl::{SslMethod, HandshakeError};
-use ssl::{SslContext, SslStream, Ssl, ShutdownResult, SslConnectorBuilder,
-          SslAcceptorBuilder, Error};
+use ssl::{SslContext, SslStream, Ssl, ShutdownResult, SslConnectorBuilder, SslAcceptorBuilder,
+          Error};
 use x509::X509StoreContextRef;
 use x509::X509FileType;
 use x509::X509;
@@ -1115,12 +1115,10 @@ fn connector_client_server_mozilla_intermediate() {
     let t = thread::spawn(move || {
         let key = PKey::private_key_from_pem(KEY).unwrap();
         let cert = X509::from_pem(CERT).unwrap();
-        let connector = SslAcceptorBuilder::mozilla_intermediate(SslMethod::tls(),
-                                                                     &key,
-                                                                     &cert,
-                                                                     None::<X509>)
-            .unwrap()
-            .build();
+        let connector =
+            SslAcceptorBuilder::mozilla_intermediate(SslMethod::tls(), &key, &cert, None::<X509>)
+                .unwrap()
+                .build();
         let stream = listener.accept().unwrap().0;
         let mut stream = connector.accept(stream).unwrap();
 
