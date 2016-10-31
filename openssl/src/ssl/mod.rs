@@ -1,6 +1,6 @@
 //! SSL/TLS support.
 //!
-//! The `ClientConnector` and `ServerConnector` should be used in most cases - they handle
+//! The `SslConnector` and `SslAcceptor` should be used in most cases - they handle
 //! configuration of the OpenSSL primitives for you.
 //!
 //! # Examples
@@ -8,11 +8,11 @@
 //! To connect as a client to a remote server:
 //!
 //! ```
-//! use openssl::ssl::{SslMethod, ClientConnectorBuilder};
+//! use openssl::ssl::{SslMethod, SslConnectorBuilder};
 //! use std::io::{Read, Write};
 //! use std::net::TcpStream;
 //!
-//! let connector = ClientConnectorBuilder::new(SslMethod::tls()).unwrap().build();
+//! let connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap().build();
 //!
 //! let stream = TcpStream::connect("google.com:443").unwrap();
 //! let mut stream = connector.connect("google.com", stream).unwrap();
@@ -27,7 +27,7 @@
 //!
 //! ```no_run
 //! use openssl::pkcs12::Pkcs12;
-//! use openssl::ssl::{SslMethod, ServerConnectorBuilder, SslStream};
+//! use openssl::ssl::{SslMethod, SslAcceptorBuilder, SslStream};
 //! use std::fs::File;
 //! use std::io::{Read, Write};
 //! use std::net::{TcpListener, TcpStream};
@@ -43,11 +43,13 @@
 //! let pkcs12 = Pkcs12::from_der(&pkcs12).unwrap();
 //! let identity = pkcs12.parse("password123").unwrap();
 //!
-//! let connector = ServerConnectorBuilder::mozilla_intermediate(
-//!     SslMethod::tls(), &identity.pkey, &identity.cert, &identity.chain)
+//! let acceptor = SslAcceptorBuilder::mozilla_intermediate(SslMethod::tls(),
+//!                                                         &identity.pkey,
+//!                                                         &identity.cert,
+//!                                                         &identity.chain)
 //!     .unwrap()
 //!     .build();
-//! let connector = Arc::new(connector);
+//! let acceptor = Arc::new(acceptor);
 //!
 //! let listener = TcpListener::bind("0.0.0.0:8443").unwrap();
 //!
@@ -58,9 +60,9 @@
 //! for stream in listener.incoming() {
 //!     match stream {
 //!         Ok(stream) => {
-//!             let connector = connector.clone();
+//!             let acceptor = acceptor.clone();
 //!             thread::spawn(move || {
-//!                 let stream = connector.connect(stream).unwrap();
+//!                 let stream = acceptor.accept(stream).unwrap();
 //!                 handle_client(stream);
 //!             });
 //!         }
@@ -106,8 +108,8 @@ mod tests;
 
 use self::bio::BioMethod;
 
-pub use ssl::connector::{ClientConnectorBuilder, ClientConnector, ServerConnectorBuilder,
-                         ServerConnector};
+pub use ssl::connector::{SslConnectorBuilder, SslConnector, SslAcceptorBuilder,
+                         SslAcceptor};
 pub use ssl::error::{Error, HandshakeError};
 
 bitflags! {
@@ -1161,7 +1163,7 @@ impl Ssl {
     /// # Warning
     ///
     /// OpenSSL's default configuration is insecure. It is highly recommended to use
-    /// `ClientConnector` rather than `Ssl` directly, as it manages that configuration.
+    /// `SslConnector` rather than `Ssl` directly, as it manages that configuration.
     pub fn connect<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
         where S: Read + Write
     {
@@ -1193,7 +1195,7 @@ impl Ssl {
     /// # Warning
     ///
     /// OpenSSL's default configuration is insecure. It is highly recommended to use
-    /// `ServerConnector` rather than `Ssl` directly, as it manages that configuration.
+    /// `SslAcceptor` rather than `Ssl` directly, as it manages that configuration.
     pub fn accept<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
         where S: Read + Write
     {

@@ -42,14 +42,14 @@ fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     Ok(ctx)
 }
 
-/// A builder for `ClientConnector`s.
-pub struct ClientConnectorBuilder(SslContextBuilder);
+/// A builder for `SslConnector`s.
+pub struct SslConnectorBuilder(SslContextBuilder);
 
-impl ClientConnectorBuilder {
+impl SslConnectorBuilder {
     /// Creates a new builder for TLS connections.
     ///
     /// The default configuration is subject to change, and is currently derived from Python.
-    pub fn new(method: SslMethod) -> Result<ClientConnectorBuilder, ErrorStack> {
+    pub fn new(method: SslMethod) -> Result<SslConnectorBuilder, ErrorStack> {
         let mut ctx = try!(ctx(method));
         try!(ctx.set_default_verify_paths());
         // From https://github.com/python/cpython/blob/c30098c8c6014f3340a369a31df9c74bdbacc269/Lib/ssl.py#L191
@@ -57,7 +57,7 @@ impl ClientConnectorBuilder {
             "ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:DH+CHACHA20:ECDH+AES256:DH+AES256:ECDH+AES128:\
              DH+AES:ECDH+HIGH:DH+HIGH:RSA+AESGCM:RSA+AES:RSA+HIGH:!aNULL:!eNULL:!MD5:!3DES"));
 
-        Ok(ClientConnectorBuilder(ctx))
+        Ok(SslConnectorBuilder(ctx))
     }
 
     /// Returns a shared reference to the inner `SslContextBuilder`.
@@ -70,9 +70,9 @@ impl ClientConnectorBuilder {
         &mut self.0
     }
 
-    /// Consumes the builder, returning a `ClientConnector`.
-    pub fn build(self) -> ClientConnector {
-        ClientConnector(self.0.build())
+    /// Consumes the builder, returning a `SslConnector`.
+    pub fn build(self) -> SslConnector {
+        SslConnector(self.0.build())
     }
 }
 
@@ -83,9 +83,9 @@ impl ClientConnectorBuilder {
 ///
 /// OpenSSL's built in hostname verification is used when linking against OpenSSL 1.0.2 or 1.1.0,
 /// and a custom implementation is used when linking against OpenSSL 1.0.1.
-pub struct ClientConnector(SslContext);
+pub struct SslConnector(SslContext);
 
-impl ClientConnector {
+impl SslConnector {
     /// Initiates a client-side TLS session on a stream.
     ///
     /// The domain is used for SNI and hostname verification.
@@ -100,10 +100,10 @@ impl ClientConnector {
     }
 }
 
-/// A builder for `ServerConnector`s.
-pub struct ServerConnectorBuilder(SslContextBuilder);
+/// A builder for `SslAcceptor`s.
+pub struct SslAcceptorBuilder(SslContextBuilder);
 
-impl ServerConnectorBuilder {
+impl SslAcceptorBuilder {
     /// Creates a new builder configured to connect to non-legacy clients. This should generally be
     /// considered a reasonable default choice.
     ///
@@ -115,7 +115,7 @@ impl ServerConnectorBuilder {
                                    private_key: &PKeyRef,
                                    certificate: &X509Ref,
                                    chain: I)
-                                   -> Result<ServerConnectorBuilder, ErrorStack>
+                                   -> Result<SslAcceptorBuilder, ErrorStack>
         where I: IntoIterator,
               I::Item: AsRef<X509Ref>
     {
@@ -134,7 +134,7 @@ impl ServerConnectorBuilder {
              DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:\
              EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:\
              AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS"));
-        ServerConnectorBuilder::finish_setup(ctx, private_key, certificate, chain)
+        SslAcceptorBuilder::finish_setup(ctx, private_key, certificate, chain)
     }
 
     /// Creates a new builder configured to connect to modern clients.
@@ -147,7 +147,7 @@ impl ServerConnectorBuilder {
                              private_key: &PKeyRef,
                              certificate: &X509Ref,
                              chain: I)
-                             -> Result<ServerConnectorBuilder, ErrorStack>
+                             -> Result<SslAcceptorBuilder, ErrorStack>
         where I: IntoIterator,
               I::Item: AsRef<X509Ref>
     {
@@ -159,14 +159,14 @@ impl ServerConnectorBuilder {
              ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:\
              ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:\
              ECDHE-RSA-AES128-SHA256"));
-        ServerConnectorBuilder::finish_setup(ctx, private_key, certificate, chain)
+        SslAcceptorBuilder::finish_setup(ctx, private_key, certificate, chain)
     }
 
     fn finish_setup<I>(mut ctx: SslContextBuilder,
                        private_key: &PKeyRef,
                        certificate: &X509Ref,
                        chain: I)
-                       -> Result<ServerConnectorBuilder, ErrorStack>
+                       -> Result<SslAcceptorBuilder, ErrorStack>
         where I: IntoIterator,
               I::Item: AsRef<X509Ref>
     {
@@ -176,7 +176,7 @@ impl ServerConnectorBuilder {
         for cert in chain {
             try!(ctx.add_extra_chain_cert(cert.as_ref().to_owned()));
         }
-        Ok(ServerConnectorBuilder(ctx))
+        Ok(SslAcceptorBuilder(ctx))
     }
 
     /// Returns a shared reference to the inner `SslContextBuilder`.
@@ -189,9 +189,9 @@ impl ServerConnectorBuilder {
         &mut self.0
     }
 
-    /// Consumes the builder, returning a `ServerConnector`.
-    pub fn build(self) -> ServerConnector {
-        ServerConnector(self.0.build())
+    /// Consumes the builder, returning a `SslAcceptor`.
+    pub fn build(self) -> SslAcceptor {
+        SslAcceptor(self.0.build())
     }
 }
 
@@ -215,11 +215,11 @@ fn setup_curves(_: &mut SslContextBuilder) -> Result<(), ErrorStack> {
 ///
 /// OpenSSL's default configuration is highly insecure. This connector manages the OpenSSL
 /// structures, configuring cipher suites, session options, and more.
-pub struct ServerConnector(SslContext);
+pub struct SslAcceptor(SslContext);
 
-impl ServerConnector {
+impl SslAcceptor {
     /// Initiates a server-side TLS session on a stream.
-    pub fn connect<S>(&self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
+    pub fn accept<S>(&self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
         where S: Read + Write
     {
         let ssl = try!(Ssl::new(&self.0));
