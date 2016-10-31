@@ -209,7 +209,7 @@ run_test!(verify_trusted, |method, stream| {
     let mut ctx = SslContext::builder(method).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
 
-    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
+    match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -240,7 +240,7 @@ run_test!(verify_trusted_callback_override_ok, |method, stream| {
     let mut ctx = SslContext::builder(method).unwrap();
     ctx.set_verify_callback(SSL_VERIFY_PEER, |_, _| true);
 
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_ca_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -254,7 +254,7 @@ run_test!(verify_trusted_callback_override_bad, |method, stream| {
     let mut ctx = SslContext::builder(method).unwrap();
     ctx.set_verify_callback(SSL_VERIFY_PEER, |_, _| false);
 
-    match ctx.set_CA_file(&Path::new("test/cert.pem")) {
+    match ctx.set_ca_file(&Path::new("test/cert.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -278,7 +278,7 @@ run_test!(verify_trusted_get_error_ok, |method, stream| {
         true
     });
 
-    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
+    match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -497,7 +497,7 @@ fn test_connect_with_unilateral_alpn() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]).unwrap();
-    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
+    match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -518,7 +518,7 @@ fn test_connect_with_unilateral_npn() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]).unwrap();
-    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
+    match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -540,7 +540,7 @@ fn test_connect_with_alpn_successful_multiple_matching() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"spdy/3.1", b"http/1.1"]).unwrap();
-    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
+    match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -562,7 +562,7 @@ fn test_connect_with_npn_successful_multiple_matching() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_npn_protocols(&[b"spdy/3.1", b"http/1.1"]).unwrap();
-    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
+    match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -585,7 +585,7 @@ fn test_connect_with_alpn_successful_single_match() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"spdy/3.1"]).unwrap();
-    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
+    match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -609,7 +609,7 @@ fn test_connect_with_npn_successful_single_match() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_npn_protocols(&[b"spdy/3.1"]).unwrap();
-    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
+    match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -648,7 +648,7 @@ fn test_npn_server_advertise_multiple() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_npn_protocols(&[b"spdy/3.1"]).unwrap();
-    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
+    match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -689,7 +689,7 @@ fn test_alpn_server_advertise_multiple() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"spdy/3.1"]).unwrap();
-    match ctx.set_CA_file(&Path::new("test/root-ca.pem")) {
+    match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
@@ -730,7 +730,7 @@ fn test_alpn_server_select_none() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"http/2"]).unwrap();
-    ctx.set_CA_file(&Path::new("test/root-ca.pem")).unwrap();
+    ctx.set_ca_file(&Path::new("test/root-ca.pem")).unwrap();
     // Now connect to the socket and make sure the protocol negotiation works...
     let stream = TcpStream::connect(localhost).unwrap();
     let stream = Ssl::new(&ctx.build()).unwrap().connect(stream).unwrap();
@@ -765,7 +765,7 @@ fn test_alpn_server_select_none() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
     ctx.set_alpn_protocols(&[b"http/2"]).unwrap();
-    ctx.set_CA_file(&Path::new("test/root-ca.pem")).unwrap();
+    ctx.set_ca_file(&Path::new("test/root-ca.pem")).unwrap();
     // Now connect to the socket and make sure the protocol negotiation works...
     let stream = TcpStream::connect(localhost).unwrap();
     assert!(Ssl::new(&ctx.build()).unwrap().connect(stream).is_err());
@@ -1128,7 +1128,7 @@ fn connector_client_server_mozilla_intermediate() {
     });
 
     let mut connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
-    connector.context_mut().set_CA_file("test/root-ca.pem").unwrap();
+    connector.context_mut().set_ca_file("test/root-ca.pem").unwrap();
     let connector = connector.build();
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
@@ -1160,7 +1160,7 @@ fn connector_client_server_mozilla_modern() {
     });
 
     let mut connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
-    connector.context_mut().set_CA_file("test/root-ca.pem").unwrap();
+    connector.context_mut().set_ca_file("test/root-ca.pem").unwrap();
     let connector = connector.build();
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
