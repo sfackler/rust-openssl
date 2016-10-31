@@ -11,43 +11,6 @@ use bio::{MemBio, MemBioSlice};
 use util::{CallbackState, invoke_passwd_cb};
 use opaque::Opaque;
 
-/// Builder for upfront DSA parameter generation
-pub struct DsaParams(*mut ffi::DSA);
-
-impl DsaParams {
-    pub fn with_size(size: u32) -> Result<DsaParams, ErrorStack> {
-        unsafe {
-            let dsa = DsaParams(try!(cvt_p(ffi::DSA_new())));
-            try!(cvt(ffi::DSA_generate_parameters_ex(dsa.0,
-                                                     size as c_int,
-                                                     ptr::null(),
-                                                     0,
-                                                     ptr::null_mut(),
-                                                     ptr::null_mut(),
-                                                     ptr::null_mut())));
-            Ok(dsa)
-        }
-    }
-
-    /// Generate a key pair from the initialized parameters
-    pub fn generate(self) -> Result<Dsa, ErrorStack> {
-        unsafe {
-            try!(cvt(ffi::DSA_generate_key(self.0)));
-            let dsa = Dsa(self.0);
-            ::std::mem::forget(self);
-            Ok(dsa)
-        }
-    }
-}
-
-impl Drop for DsaParams {
-    fn drop(&mut self) {
-        unsafe {
-            ffi::DSA_free(self.0);
-        }
-    }
-}
-
 pub struct DsaRef(Opaque);
 
 impl DsaRef {
@@ -147,11 +110,20 @@ impl Dsa {
         Dsa(dsa)
     }
 
-    /// Generate a DSA key pair
-    /// For more complicated key generation scenarios see the `DSAParams` type
-    pub fn generate(size: u32) -> Result<Dsa, ErrorStack> {
-        let params = try!(DsaParams::with_size(size));
-        params.generate()
+    /// Generate a DSA key pair.
+    pub fn generate(bits: u32) -> Result<Dsa, ErrorStack> {
+        unsafe {
+            let dsa = Dsa(try!(cvt_p(ffi::DSA_new())));
+            try!(cvt(ffi::DSA_generate_parameters_ex(dsa.0,
+                                                     bits as c_int,
+                                                     ptr::null(),
+                                                     0,
+                                                     ptr::null_mut(),
+                                                     ptr::null_mut(),
+                                                     ptr::null_mut())));
+            try!(cvt(ffi::DSA_generate_key(dsa .0)));
+            Ok(dsa)
+        }
     }
 
     /// Reads a DSA private key from PEM formatted data.
