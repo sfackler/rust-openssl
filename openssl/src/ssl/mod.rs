@@ -415,6 +415,9 @@ pub enum SniError {
 /// A builder for `SslContext`s.
 pub struct SslContextBuilder(*mut ffi::SSL_CTX);
 
+unsafe impl Sync for SslContextBuilder {}
+unsafe impl Send for SslContextBuilder {}
+
 impl Drop for SslContextBuilder {
     fn drop(&mut self) {
         unsafe { ffi::SSL_CTX_free(self.as_ptr()) }
