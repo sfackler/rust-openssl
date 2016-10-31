@@ -1255,7 +1255,7 @@ impl<S> MidHandshakeSslStream<S> {
     }
 
     /// Returns a shared reference to the `Ssl` of the stream.
-    pub fn ssl(&self) -> &Ssl {
+    pub fn ssl(&self) -> &SslRef {
         self.stream.ssl()
     }
 
@@ -1437,7 +1437,7 @@ impl<S> SslStream<S> {
     }
 
     /// Returns the OpenSSL `Ssl` object associated with this stream.
-    pub fn ssl(&self) -> &Ssl {
+    pub fn ssl(&self) -> &SslRef {
         &self.ssl
     }
 }
