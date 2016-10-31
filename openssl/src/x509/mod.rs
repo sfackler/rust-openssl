@@ -67,6 +67,28 @@ impl Ref<X509StoreContext> {
     pub fn error_depth(&self) -> u32 {
         unsafe { ffi::X509_STORE_CTX_get_error_depth(self.as_ptr()) as u32 }
     }
+
+    pub fn get_chain(&self) -> Option<&Ref<Stack<X509>>> {
+        unsafe {
+            let chain = self._get_chain();
+
+            if chain.is_null() {
+                return None;
+            }
+
+            Some(Ref::from_ptr(chain))
+        }
+    }
+
+    #[cfg(ossl110)]
+    unsafe fn _get_chain(&self) -> *mut ffi::stack_st_X509 {
+        ffi::X509_STORE_CTX_get0_chain(self.as_ptr())
+    }
+
+    #[cfg(ossl10x)]
+    unsafe fn _get_chain(&self) -> *mut ffi::stack_st_X509 {
+        ffi::X509_STORE_CTX_get_chain(self.as_ptr())
+    }
 }
 
 #[allow(non_snake_case)]
@@ -467,6 +489,10 @@ impl Borrow<Ref<X509>> for X509 {
     fn borrow(&self) -> &Ref<X509> {
         &*self
     }
+}
+ 
+impl Stackable for X509 {
+    type StackType = ffi::stack_st_X509;
 }
 
 type_!(X509Name, ffi::X509_NAME, ffi::X509_NAME_free);

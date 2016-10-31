@@ -141,6 +141,7 @@ extern {
     pub fn X509_up_ref(x: *mut X509) -> c_int;
     pub fn SSL_CTX_up_ref(x: *mut SSL_CTX) -> c_int;
     pub fn X509_get0_extensions(req: *const ::X509) -> *const stack_st_X509_EXTENSION;
+    pub fn X509_STORE_CTX_get0_chain(ctx: *mut ::X509_STORE_CTX) -> *mut stack_st_X509;
     pub fn EVP_MD_CTX_new() -> *mut EVP_MD_CTX;
     pub fn EVP_MD_CTX_free(ctx: *mut EVP_MD_CTX);
 
