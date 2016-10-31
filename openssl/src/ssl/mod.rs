@@ -73,7 +73,6 @@ use std::any::Any;
 use std::any::TypeId;
 use std::cmp;
 use std::collections::HashMap;
-use std::error as stderror;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::io;
@@ -99,7 +98,7 @@ use pkey::PKeyRef;
 use error::ErrorStack;
 use opaque::Opaque;
 
-pub mod error;
+mod error;
 mod connector;
 mod bio;
 #[cfg(test)]
@@ -109,8 +108,7 @@ use self::bio::BioMethod;
 
 pub use ssl::connector::{ClientConnectorBuilder, ClientConnector, ServerConnectorBuilder,
                          ServerConnector};
-#[doc(inline)]
-pub use ssl::error::Error;
+pub use ssl::error::{Error, HandshakeError};
 
 bitflags! {
     pub flags SslOptions: c_ulong {
@@ -1220,58 +1218,6 @@ impl Ssl {
                 }
             }
         }
-    }
-}
-
-/// An error or intermediate state after a TLS handshake attempt.
-#[derive(Debug)]
-pub enum HandshakeError<S> {
-    /// Setup failed.
-    SetupFailure(ErrorStack),
-    /// The handshake failed.
-    Failure(MidHandshakeSslStream<S>),
-    /// The handshake was interrupted midway through.
-    Interrupted(MidHandshakeSslStream<S>),
-}
-
-impl<S: Any + fmt::Debug> stderror::Error for HandshakeError<S> {
-    fn description(&self) -> &str {
-        match *self {
-            HandshakeError::SetupFailure(_) => "stream setup failed",
-            HandshakeError::Failure(_) => "the handshake failed",
-            HandshakeError::Interrupted(_) => "the handshake was interrupted",
-        }
-    }
-
-    fn cause(&self) -> Option<&stderror::Error> {
-        match *self {
-            HandshakeError::SetupFailure(ref e) => Some(e),
-            HandshakeError::Failure(ref s) |
-            HandshakeError::Interrupted(ref s) => Some(s.error()),
-        }
-    }
-}
-
-impl<S: Any + fmt::Debug> fmt::Display for HandshakeError<S> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(f.write_str(stderror::Error::description(self)));
-        match *self {
-            HandshakeError::SetupFailure(ref e) => try!(write!(f, ": {}", e)),
-            HandshakeError::Failure(ref s) |
-            HandshakeError::Interrupted(ref s) => {
-                try!(write!(f, ": {}", s.error()));
-                if let Some(err) = s.ssl().verify_result() {
-                    try!(write!(f, ": {}", err));
-                }
-            }
-        }
-        Ok(())
-    }
-}
-
-impl<S> From<ErrorStack> for HandshakeError<S> {
-    fn from(e: ErrorStack) -> HandshakeError<S> {
-        HandshakeError::SetupFailure(e)
     }
 }
 
