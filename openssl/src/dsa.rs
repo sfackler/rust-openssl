@@ -1,48 +1,97 @@
-use ffi;
-use std::fmt;
 use error::ErrorStack;
-use std::ptr;
+use ffi;
 use libc::{c_int, c_char, c_void};
+use std::fmt;
+use std::ops::Deref;
+use std::ptr;
 
 use {cvt, cvt_p};
 use bn::BigNumRef;
 use bio::{MemBio, MemBioSlice};
 use util::{CallbackState, invoke_passwd_cb};
+use opaque::Opaque;
 
-/// Builder for upfront DSA parameter generation
-pub struct DsaParams(*mut ffi::DSA);
+pub struct DsaRef(Opaque);
 
-impl DsaParams {
-    pub fn with_size(size: u32) -> Result<DsaParams, ErrorStack> {
+impl DsaRef {
+    pub unsafe fn from_ptr<'a>(ptr: *mut ffi::DSA) -> &'a DsaRef {
+        &*(ptr as *mut _)
+    }
+
+    pub fn as_ptr(&self) -> *mut ffi::DSA {
+        self as *const _ as *mut _
+    }
+
+    /// Writes an DSA private key as unencrypted PEM formatted data
+    pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+        assert!(self.has_private_key());
+        let mem_bio = try!(MemBio::new());
+
         unsafe {
-            let dsa = DsaParams(try!(cvt_p(ffi::DSA_new())));
-            try!(cvt(ffi::DSA_generate_parameters_ex(dsa.0,
-                                                     size as c_int,
-                                                     ptr::null(),
-                                                     0,
-                                                     ptr::null_mut(),
-                                                     ptr::null_mut(),
-                                                     ptr::null_mut())));
-            Ok(dsa)
+            try!(cvt(ffi::PEM_write_bio_DSAPrivateKey(mem_bio.as_ptr(), self.as_ptr(),
+                                                      ptr::null(), ptr::null_mut(), 0,
+                                                      None, ptr::null_mut())))
+        };
+
+        Ok(mem_bio.get_buf().to_owned())
+    }
+
+    /// Writes an DSA public key as PEM formatted data
+    pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
+        unsafe {
+            try!(cvt(ffi::PEM_write_bio_DSA_PUBKEY(mem_bio.as_ptr(), self.as_ptr())));
+        }
+        Ok(mem_bio.get_buf().to_owned())
+    }
+
+    pub fn size(&self) -> Option<u32> {
+        if self.q().is_some() {
+            unsafe { Some(ffi::DSA_size(self.as_ptr()) as u32) }
+        } else {
+            None
         }
     }
 
-    /// Generate a key pair from the initialized parameters
-    pub fn generate(self) -> Result<Dsa, ErrorStack> {
+    pub fn p(&self) -> Option<&BigNumRef> {
         unsafe {
-            try!(cvt(ffi::DSA_generate_key(self.0)));
-            let dsa = Dsa(self.0);
-            ::std::mem::forget(self);
-            Ok(dsa)
+            let p = compat::pqg(self.as_ptr())[0];
+            if p.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_ptr(p as *mut _))
+            }
         }
     }
-}
 
-impl Drop for DsaParams {
-    fn drop(&mut self) {
+    pub fn q(&self) -> Option<&BigNumRef> {
         unsafe {
-            ffi::DSA_free(self.0);
+            let q = compat::pqg(self.as_ptr())[1];
+            if q.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_ptr(q as *mut _))
+            }
         }
+    }
+
+    pub fn g(&self) -> Option<&BigNumRef> {
+        unsafe {
+            let g = compat::pqg(self.as_ptr())[2];
+            if g.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_ptr(g as *mut _))
+            }
+        }
+    }
+
+    pub fn has_public_key(&self) -> bool {
+        unsafe { !compat::keys(self.as_ptr())[0].is_null() }
+    }
+
+    pub fn has_private_key(&self) -> bool {
+        unsafe { !compat::keys(self.as_ptr())[1].is_null() }
     }
 }
 
@@ -61,11 +110,20 @@ impl Dsa {
         Dsa(dsa)
     }
 
-    /// Generate a DSA key pair
-    /// For more complicated key generation scenarios see the `DSAParams` type
-    pub fn generate(size: u32) -> Result<Dsa, ErrorStack> {
-        let params = try!(DsaParams::with_size(size));
-        params.generate()
+    /// Generate a DSA key pair.
+    pub fn generate(bits: u32) -> Result<Dsa, ErrorStack> {
+        unsafe {
+            let dsa = Dsa(try!(cvt_p(ffi::DSA_new())));
+            try!(cvt(ffi::DSA_generate_parameters_ex(dsa.0,
+                                                     bits as c_int,
+                                                     ptr::null(),
+                                                     0,
+                                                     ptr::null_mut(),
+                                                     ptr::null_mut(),
+                                                     ptr::null_mut())));
+            try!(cvt(ffi::DSA_generate_key(dsa .0)));
+            Ok(dsa)
+        }
     }
 
     /// Reads a DSA private key from PEM formatted data.
@@ -104,20 +162,6 @@ impl Dsa {
         }
     }
 
-    /// Writes an DSA private key as unencrypted PEM formatted data
-    pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        assert!(self.has_private_key());
-        let mem_bio = try!(MemBio::new());
-
-        unsafe {
-            try!(cvt(ffi::PEM_write_bio_DSAPrivateKey(mem_bio.as_ptr(), self.0,
-                                                      ptr::null(), ptr::null_mut(), 0,
-                                                      None, ptr::null_mut())))
-        };
-
-        Ok(mem_bio.get_buf().to_owned())
-    }
-
     /// Reads an DSA public key from PEM formatted data.
     pub fn public_key_from_pem(buf: &[u8]) -> Result<Dsa, ErrorStack> {
         ffi::init();
@@ -131,67 +175,13 @@ impl Dsa {
             Ok(Dsa(dsa))
         }
     }
+}
 
-    /// Writes an DSA public key as PEM formatted data
-    pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        unsafe {
-            try!(cvt(ffi::PEM_write_bio_DSA_PUBKEY(mem_bio.as_ptr(), self.0)));
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
+impl Deref for Dsa {
+    type Target = DsaRef;
 
-    pub fn size(&self) -> Option<u32> {
-        if self.q().is_some() {
-            unsafe { Some(ffi::DSA_size(self.0) as u32) }
-        } else {
-            None
-        }
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::DSA {
-        self.0
-    }
-
-    pub fn p(&self) -> Option<&BigNumRef> {
-        unsafe {
-            let p = compat::pqg(self.0)[0];
-            if p.is_null() {
-                None
-            } else {
-                Some(BigNumRef::from_ptr(p as *mut _))
-            }
-        }
-    }
-
-    pub fn q(&self) -> Option<&BigNumRef> {
-        unsafe {
-            let q = compat::pqg(self.0)[1];
-            if q.is_null() {
-                None
-            } else {
-                Some(BigNumRef::from_ptr(q as *mut _))
-            }
-        }
-    }
-
-    pub fn g(&self) -> Option<&BigNumRef> {
-        unsafe {
-            let g = compat::pqg(self.0)[2];
-            if g.is_null() {
-                None
-            } else {
-                Some(BigNumRef::from_ptr(g as *mut _))
-            }
-        }
-    }
-
-    pub fn has_public_key(&self) -> bool {
-        unsafe { !compat::keys(self.0)[0].is_null() }
-    }
-
-    pub fn has_private_key(&self) -> bool {
-        unsafe { !compat::keys(self.0)[1].is_null() }
+    fn deref(&self) -> &DsaRef {
+        unsafe { DsaRef::from_ptr(self.0) }
     }
 }
 

@@ -7,7 +7,7 @@ use ffi;
 use {cvt, cvt_p};
 use bio::{MemBio, MemBioSlice};
 use dsa::Dsa;
-use rsa::Rsa;
+use rsa::{Rsa, RsaRef};
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb};
 use opaque::Opaque;
@@ -156,7 +156,7 @@ impl PKey {
     }
 
     /// Assign an RSA key to this pkey.
-    pub fn set_rsa(&mut self, rsa: &Rsa) -> Result<(), ErrorStack> {
+    pub fn set_rsa(&mut self, rsa: &RsaRef) -> Result<(), ErrorStack> {
         unsafe {
             // this needs to be a reference as the set1_RSA ups the reference count
             let rsa_ptr = rsa.as_ptr();
