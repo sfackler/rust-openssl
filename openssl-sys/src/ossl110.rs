@@ -13,7 +13,6 @@ pub enum HMAC_CTX {}
 pub enum OPENSSL_STACK {}
 pub enum RSA {}
 pub enum SSL_CTX {}
-pub enum _STACK {}
 pub enum stack_st_ASN1_OBJECT {}
 pub enum stack_st_GENERAL_NAME {}
 pub enum stack_st_OPENSSL_STRING {}
@@ -147,7 +146,7 @@ extern {
 
     pub fn OpenSSL_version_num() -> c_ulong;
     pub fn OpenSSL_version(key: c_int) -> *const c_char;
-    pub fn OPENSSL_sk_free(st: *mut _STACK);
-    pub fn OPENSSL_sk_pop_free(st: *mut _STACK, free: Option<unsafe extern "C" fn (*mut c_void)>);
-    pub fn OPENSSL_sk_pop(st: *mut _STACK) -> *mut c_void;
+    pub fn OPENSSL_sk_free(st: *mut ::OPENSSL_STACK);
+    pub fn OPENSSL_sk_pop_free(st: *mut ::OPENSSL_STACK, free: Option<unsafe extern "C" fn (*mut c_void)>);
+    pub fn OPENSSL_sk_pop(st: *mut ::OPENSSL_STACK) -> *mut c_void;
 }

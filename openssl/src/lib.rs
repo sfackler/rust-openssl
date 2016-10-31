@@ -81,6 +81,7 @@ pub mod ssl;
 pub mod symm;
 pub mod version;
 pub mod x509;
+pub mod stack;
 #[cfg(any(ossl102, ossl110))]
 mod verify;
 
