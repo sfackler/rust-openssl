@@ -256,7 +256,8 @@ mod verify {
     use std::str;
 
     use nid;
-    use x509::{X509StoreContext, X509, GeneralNames, X509Name};
+    use x509::{X509StoreContext, X509, X509Name, GeneralName};
+    use stack::Stack;
     use types::Ref;
 
     pub fn verify_callback(domain: &str,
@@ -275,15 +276,16 @@ mod verify {
 
     fn verify_hostname(domain: &str, cert: &Ref<X509>) -> bool {
         match cert.subject_alt_names() {
-            Some(names) => verify_subject_alt_names(domain, &names),
+            Some(names) => verify_subject_alt_names(domain, names),
             None => verify_subject_name(domain, &cert.subject_name()),
         }
     }
 
-    fn verify_subject_alt_names(domain: &str, names: &GeneralNames) -> bool {
+    fn verify_subject_alt_names(domain: &str,
+                                names: Stack<GeneralName>) -> bool {
         let ip = domain.parse();
 
-        for name in names {
+        for name in &names {
             match ip {
                 Ok(ip) => {
                     if let Some(actual) = name.ipaddress() {
