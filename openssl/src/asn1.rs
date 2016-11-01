@@ -1,7 +1,9 @@
-use libc::c_long;
-use std::{ptr, fmt};
-use std::slice;
 use ffi;
+use libc::c_long;
+use std::fmt;
+use std::ptr;
+use std::slice;
+use std::str;
 
 use {cvt, cvt_p};
 use bio::MemBio;
@@ -13,12 +15,11 @@ type_!(Asn1Time, ffi::ASN1_TIME, ffi::ASN1_TIME_free);
 
 impl fmt::Display for Ref<Asn1Time> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mem_bio = try!(MemBio::new());
-        let as_str = unsafe {
+        unsafe {
+            let mem_bio = try!(MemBio::new());
             try!(cvt(ffi::ASN1_TIME_print(mem_bio.as_ptr(), self.as_ptr())));
-            String::from_utf8_unchecked(mem_bio.get_buf().to_owned())
-        };
-        write!(f, "{}", as_str)
+            write!(f, "{}", str::from_utf8_unchecked(mem_bio.get_buf()))
+        }
     }
 }
 
