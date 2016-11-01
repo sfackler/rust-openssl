@@ -4,6 +4,12 @@
 
 [Documentation](https://sfackler.github.io/rust-openssl/doc/v0.8.3/openssl).
 
+## Warning
+
+This README does not correspond to rust-openssl 0.7.x. See
+[here](https://github.com/sfackler/rust-openssl/blob/b8fb29db5c246175a096260eacca38180cd77dd0/README.md)
+for that README.
+
 ## Building
 
 rust-openssl depends on the OpenSSL runtime libraries version 1.0.1 or above.
