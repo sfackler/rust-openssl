@@ -54,7 +54,7 @@ impl Ref<Asn1String> {
     }
 
     pub fn as_slice(&self) -> &[u8] {
-        unsafe { slice::from_raw_parts(ffi::ASN1_STRING_data(self.as_ptr()), self.len()) }
+        unsafe { slice::from_raw_parts(ASN1_STRING_data(self.as_ptr()), self.len()) }
     }
 
     pub fn len(&self) -> usize {
@@ -62,4 +62,13 @@ impl Ref<Asn1String> {
             ffi::ASN1_STRING_length(self.as_ptr()) as usize
         }
     }
+}
+
+#[cfg(any(ossl101, ossl102))]
+use ffi::ASN1_STRING_data;
+
+#[cfg(ossl110)]
+#[allow(bad_style)]
+unsafe fn ASN1_STRING_data(s: *mut ffi::ASN1_STRING) -> *mut ::libc::c_uchar {
+    ffi::ASN1_STRING_get0_data(s) as *mut _
 }
