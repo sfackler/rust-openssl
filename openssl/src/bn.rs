@@ -23,25 +23,12 @@ pub enum RNGProperty {
     TwoMsbOne = 1,
 }
 
-/// A context object for `BigNum` operations.
-pub struct BnCtx(*mut ffi::BN_CTX);
-
-impl Drop for BnCtx {
-    fn drop(&mut self) {
-        unsafe {
-            ffi::BN_CTX_free(self.0);
-        }
-    }
-}
+type_!(BnCtx, ffi::BN_CTX, ffi::BN_CTX_free);
 
 impl BnCtx {
     /// Returns a new `BnCtx`.
     pub fn new() -> Result<BnCtx, ErrorStack> {
         unsafe { cvt_p(ffi::BN_CTX_new()).map(BnCtx) }
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::BN_CTX {
-        self.0
     }
 
     /// Places the result of `a * b` in `r`.
