@@ -3,12 +3,12 @@ use libc::c_int;
 use std::cmp::Ordering;
 use std::ffi::CString;
 use std::{fmt, ptr};
-use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub, Deref, DerefMut};
+use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub, Deref};
 
 use {cvt, cvt_p, cvt_n};
 use crypto::CryptoString;
 use error::ErrorStack;
-use opaque::Opaque;
+use types::{Ref, OpenSslType};
 
 /// Specifies the desired properties of a randomly generated `BigNum`.
 #[derive(Copy, Clone)]
@@ -33,19 +33,19 @@ impl BnCtx {
 
     /// Places the result of `a * b` in `r`.
     pub fn mul(&mut self,
-               r: &mut BigNumRef,
-               a: &BigNumRef,
-               b: &BigNumRef)
+               r: &mut Ref<BigNum>,
+               a: &Ref<BigNum>,
+               b: &Ref<BigNum>)
                -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_mul(r.as_ptr(), a.as_ptr(), b.as_ptr(), self.as_ptr())).map(|_| ()) }
     }
 
     /// Places the result of `a / b` in `dv` and `a mod b` in `rem`.
     pub fn div(&mut self,
-               dv: Option<&mut BigNumRef>,
-               rem: Option<&mut BigNumRef>,
-               a: &BigNumRef,
-               b: &BigNumRef)
+               dv: Option<&mut Ref<BigNum>>,
+               rem: Option<&mut Ref<BigNum>>,
+               a: &Ref<BigNum>,
+               b: &Ref<BigNum>)
                -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::BN_div(dv.map(|b| b.as_ptr()).unwrap_or(ptr::null_mut()),
@@ -58,25 +58,25 @@ impl BnCtx {
     }
 
     /// Places the result of `a²` in `r`.
-    pub fn sqr(&mut self, r: &mut BigNumRef, a: &BigNumRef) -> Result<(), ErrorStack> {
+    pub fn sqr(&mut self, r: &mut Ref<BigNum>, a: &Ref<BigNum>) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_sqr(r.as_ptr(), a.as_ptr(), self.as_ptr())).map(|_| ()) }
     }
 
     /// Places the result of `a mod m` in `r`.
     pub fn nnmod(&mut self,
-                 r: &mut BigNumRef,
-                 a: &BigNumRef,
-                 m: &BigNumRef)
+                 r: &mut Ref<BigNum>,
+                 a: &Ref<BigNum>,
+                 m: &Ref<BigNum>)
                  -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_nnmod(r.as_ptr(), a.as_ptr(), m.as_ptr(), self.0)).map(|_| ()) }
     }
 
     /// Places the result of `(a + b) mod m` in `r`.
     pub fn mod_add(&mut self,
-                   r: &mut BigNumRef,
-                   a: &BigNumRef,
-                   b: &BigNumRef,
-                   m: &BigNumRef)
+                   r: &mut Ref<BigNum>,
+                   a: &Ref<BigNum>,
+                   b: &Ref<BigNum>,
+                   m: &Ref<BigNum>)
                    -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::BN_mod_add(r.as_ptr(), a.as_ptr(), b.as_ptr(), m.as_ptr(), self.0)).map(|_| ())
@@ -85,10 +85,10 @@ impl BnCtx {
 
     /// Places the result of `(a - b) mod m` in `r`.
     pub fn mod_sub(&mut self,
-                   r: &mut BigNumRef,
-                   a: &BigNumRef,
-                   b: &BigNumRef,
-                   m: &BigNumRef)
+                   r: &mut Ref<BigNum>,
+                   a: &Ref<BigNum>,
+                   b: &Ref<BigNum>,
+                   m: &Ref<BigNum>)
                    -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::BN_mod_sub(r.as_ptr(), a.as_ptr(), b.as_ptr(), m.as_ptr(), self.0)).map(|_| ())
@@ -97,10 +97,10 @@ impl BnCtx {
 
     /// Places the result of `(a * b) mod m` in `r`.
     pub fn mod_mul(&mut self,
-                   r: &mut BigNumRef,
-                   a: &BigNumRef,
-                   b: &BigNumRef,
-                   m: &BigNumRef)
+                   r: &mut Ref<BigNum>,
+                   a: &Ref<BigNum>,
+                   b: &Ref<BigNum>,
+                   m: &Ref<BigNum>)
                    -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::BN_mod_mul(r.as_ptr(), a.as_ptr(), b.as_ptr(), m.as_ptr(), self.0)).map(|_| ())
@@ -109,28 +109,28 @@ impl BnCtx {
 
     /// Places the result of `a² mod m` in `r`.
     pub fn mod_sqr(&mut self,
-                   r: &mut BigNumRef,
-                   a: &BigNumRef,
-                   m: &BigNumRef)
+                   r: &mut Ref<BigNum>,
+                   a: &Ref<BigNum>,
+                   m: &Ref<BigNum>)
                    -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_mod_sqr(r.as_ptr(), a.as_ptr(), m.as_ptr(), self.0)).map(|_| ()) }
     }
 
     /// Places the result of `a^p` in `r`.
     pub fn exp(&mut self,
-               r: &mut BigNumRef,
-               a: &BigNumRef,
-               p: &BigNumRef)
+               r: &mut Ref<BigNum>,
+               a: &Ref<BigNum>,
+               p: &Ref<BigNum>)
                -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_exp(r.as_ptr(), a.as_ptr(), p.as_ptr(), self.0)).map(|_| ()) }
     }
 
     /// Places the result of `a^p mod m` in `r`.
     pub fn mod_exp(&mut self,
-                   r: &mut BigNumRef,
-                   a: &BigNumRef,
-                   p: &BigNumRef,
-                   m: &BigNumRef)
+                   r: &mut Ref<BigNum>,
+                   a: &Ref<BigNum>,
+                   p: &Ref<BigNum>,
+                   m: &Ref<BigNum>)
                    -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::BN_mod_exp(r.as_ptr(), a.as_ptr(), p.as_ptr(), m.as_ptr(), self.0)).map(|_| ())
@@ -139,9 +139,9 @@ impl BnCtx {
 
     /// Places the inverse of `a` modulo `n` in `r`.
     pub fn mod_inverse(&mut self,
-                       r: &mut BigNumRef,
-                       a: &BigNumRef,
-                       n: &BigNumRef)
+                       r: &mut Ref<BigNum>,
+                       a: &Ref<BigNum>,
+                       n: &Ref<BigNum>)
                        -> Result<(), ErrorStack> {
         unsafe {
             cvt_p(ffi::BN_mod_inverse(r.as_ptr(), a.as_ptr(), n.as_ptr(), self.as_ptr()))
@@ -151,9 +151,9 @@ impl BnCtx {
 
     /// Places the greatest common denominator of `a` and `b` in `r`.
     pub fn gcd(&mut self,
-               r: &mut BigNumRef,
-               a: &BigNumRef,
-               b: &BigNumRef)
+               r: &mut Ref<BigNum>,
+               a: &Ref<BigNum>,
+               b: &Ref<BigNum>)
                -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_gcd(r.as_ptr(), a.as_ptr(), b.as_ptr(), self.as_ptr())).map(|_| ()) }
     }
@@ -163,7 +163,7 @@ impl BnCtx {
     /// Performs a Miller-Rabin probabilistic primality test with `checks` iterations.
     ///
     /// Returns `true` if `p` is prime with an error probability of less than `0.25 ^ checks`.
-    pub fn is_prime(&mut self, p: &BigNumRef, checks: i32) -> Result<bool, ErrorStack> {
+    pub fn is_prime(&mut self, p: &Ref<BigNum>, checks: i32) -> Result<bool, ErrorStack> {
         unsafe {
             cvt_n(ffi::BN_is_prime_ex(p.as_ptr(), checks.into(), self.as_ptr(), ptr::null_mut()))
                 .map(|r| r != 0)
@@ -180,7 +180,7 @@ impl BnCtx {
     ///
     /// Returns `true` if `p` is prime with an error probability of less than `0.25 ^ checks`.
     pub fn is_prime_fasttest(&mut self,
-                             p: &BigNumRef,
+                             p: &Ref<BigNum>,
                              checks: i32,
                              do_trial_division: bool)
                              -> Result<bool, ErrorStack> {
@@ -201,7 +201,7 @@ impl BnCtx {
     /// * `bits`: Length of the number in bits.
     /// * `prop`: The desired properties of the number.
     /// * `odd`: If `true`, the generated number will be odd.
-    pub fn rand(r: &mut BigNumRef,
+    pub fn rand(r: &mut Ref<BigNum>,
                 bits: i32,
                 prop: RNGProperty,
                 odd: bool)
@@ -212,7 +212,7 @@ impl BnCtx {
     }
 
     /// The cryptographically weak counterpart to `checked_new_random`.
-    pub fn pseudo_rand(r: &mut BigNumRef,
+    pub fn pseudo_rand(r: &mut Ref<BigNum>,
                        bits: i32,
                        prop: RNGProperty,
                        odd: bool)
@@ -224,22 +224,7 @@ impl BnCtx {
     }
 }
 
-/// A borrowed, signed, arbitrary-precision integer.
-pub struct BigNumRef(Opaque);
-
-impl BigNumRef {
-    pub unsafe fn from_ptr<'a>(handle: *mut ffi::BIGNUM) -> &'a BigNumRef {
-        &*(handle as *mut _)
-    }
-
-    pub unsafe fn from_ptr_mut<'a>(handle: *mut ffi::BIGNUM) -> &'a mut BigNumRef {
-        &mut *(handle as *mut _)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::BIGNUM {
-        self as *const _ as *mut _
-    }
-
+impl Ref<BigNum> {
     /// Adds a `u32` to `self`.
     pub fn add_word(&mut self, w: u32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_add_word(self.as_ptr(), w as ffi::BN_ULONG)).map(|_| ()) }
@@ -281,12 +266,12 @@ impl BigNumRef {
 
     /// Places a cryptographically-secure pseudo-random number nonnegative
     /// number less than `self` in `rnd`.
-    pub fn rand_in_range(&self, rnd: &mut BigNumRef) -> Result<(), ErrorStack> {
+    pub fn rand_in_range(&self, rnd: &mut Ref<BigNum>) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_rand_range(self.as_ptr(), rnd.as_ptr())).map(|_| ()) }
     }
 
     /// The cryptographically weak counterpart to `rand_in_range`.
-    pub fn pseudo_rand_in_range(&self, rnd: &mut BigNumRef) -> Result<(), ErrorStack> {
+    pub fn pseudo_rand_in_range(&self, rnd: &mut Ref<BigNum>) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_pseudo_rand_range(self.as_ptr(), rnd.as_ptr())).map(|_| ()) }
     }
 
@@ -317,32 +302,32 @@ impl BigNumRef {
     }
 
     /// Places `self << 1` in `r`.
-    pub fn lshift1(&self, r: &mut BigNumRef) -> Result<(), ErrorStack> {
+    pub fn lshift1(&self, r: &mut Ref<BigNum>) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_lshift1(r.as_ptr(), self.as_ptr())).map(|_| ()) }
     }
 
     /// Places `self >> 1` in `r`.
-    pub fn rshift1(&self, r: &mut BigNumRef) -> Result<(), ErrorStack> {
+    pub fn rshift1(&self, r: &mut Ref<BigNum>) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_rshift1(r.as_ptr(), self.as_ptr())).map(|_| ()) }
     }
 
     /// Places `self + b` in `r`.
-    pub fn add(&self, r: &mut BigNumRef, b: &BigNumRef) -> Result<(), ErrorStack> {
+    pub fn add(&self, r: &mut Ref<BigNum>, b: &Ref<BigNum>) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_add(r.as_ptr(), self.as_ptr(), b.as_ptr())).map(|_| ()) }
     }
 
     /// Places `self - b` in `r`.
-    pub fn sub(&self, r: &mut BigNumRef, b: &BigNumRef) -> Result<(), ErrorStack> {
+    pub fn sub(&self, r: &mut Ref<BigNum>, b: &Ref<BigNum>) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_sub(r.as_ptr(), self.as_ptr(), b.as_ptr())).map(|_| ()) }
     }
 
     /// Places `self << n` in `r`.
-    pub fn lshift(&self, r: &mut BigNumRef, b: i32) -> Result<(), ErrorStack> {
+    pub fn lshift(&self, r: &mut Ref<BigNum>, b: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_lshift(r.as_ptr(), self.as_ptr(), b.into())).map(|_| ()) }
     }
 
     /// Places `self >> n` in `r`.
-    pub fn rshift(&self, r: &mut BigNumRef, n: i32) -> Result<(), ErrorStack> {
+    pub fn rshift(&self, r: &mut Ref<BigNum>, n: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_rshift(r.as_ptr(), self.as_ptr(), n.into())).map(|_| ()) }
     }
 
@@ -365,7 +350,7 @@ impl BigNumRef {
     ///
     /// assert_eq!(s.ucmp(&o), Ordering::Equal);
     /// ```
-    pub fn ucmp(&self, oth: &BigNumRef) -> Ordering {
+    pub fn ucmp(&self, oth: &Ref<BigNum>) -> Ordering {
         unsafe { ffi::BN_ucmp(self.as_ptr(), oth.as_ptr()).cmp(&0) }
     }
 
@@ -446,13 +431,7 @@ impl BigNumRef {
     }
 }
 
-/// An owned, signed, arbitrary-precision integer.
-///
-/// `BigNum` provides wrappers around OpenSSL's checked arithmetic functions.
-/// Additionally, it implements the standard operators (`std::ops`), which
-/// perform unchecked arithmetic, unwrapping the returned `Result` of the
-/// checked operations.
-pub struct BigNum(*mut ffi::BIGNUM);
+type_!(BigNum, ffi::BIGNUM, ffi::BN_clear_free);
 
 impl BigNum {
     /// Creates a new `BigNum` with the value 0.
@@ -491,10 +470,6 @@ impl BigNum {
         }
     }
 
-    pub unsafe fn from_ptr(handle: *mut ffi::BIGNUM) -> BigNum {
-        BigNum(handle)
-    }
-
     /// Creates a new `BigNum` from an unsigned, big-endian encoded number of arbitrary length.
     ///
     /// ```
@@ -519,11 +494,11 @@ impl BigNum {
     /// * `safe`: If true, returns a "safe" prime `p` so that `(p-1)/2` is also prime.
     /// * `add`/`rem`: If `add` is set to `Some(add)`, `p % add == rem` will hold, where `p` is the
     ///   generated prime and `rem` is `1` if not specified (`None`).
-    pub fn generate_prime(r: &mut BigNumRef,
+    pub fn generate_prime(r: &mut Ref<BigNum>,
                           bits: i32,
                           safe: bool,
-                          add: Option<&BigNumRef>,
-                          rem: Option<&BigNumRef>)
+                          add: Option<&Ref<BigNum>>,
+                          rem: Option<&Ref<BigNum>>)
                           -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::BN_generate_prime_ex(r.as_ptr(),
@@ -537,35 +512,13 @@ impl BigNum {
     }
 }
 
-impl Drop for BigNum {
-    fn drop(&mut self) {
-        unsafe {
-            ffi::BN_clear_free(self.as_ptr());
-        }
-    }
-}
-
-impl Deref for BigNum {
-    type Target = BigNumRef;
-
-    fn deref(&self) -> &BigNumRef {
-        unsafe { BigNumRef::from_ptr(self.0) }
-    }
-}
-
-impl DerefMut for BigNum {
-    fn deref_mut(&mut self) -> &mut BigNumRef {
-        unsafe { BigNumRef::from_ptr_mut(self.0) }
-    }
-}
-
-impl AsRef<BigNumRef> for BigNum {
-    fn as_ref(&self) -> &BigNumRef {
+impl AsRef<Ref<BigNum>> for BigNum {
+    fn as_ref(&self) -> &Ref<BigNum> {
         self.deref()
     }
 }
 
-impl fmt::Debug for BigNumRef {
+impl fmt::Debug for Ref<BigNum> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.to_dec_str() {
             Ok(s) => f.write_str(&s),
@@ -583,7 +536,7 @@ impl fmt::Debug for BigNum {
     }
 }
 
-impl fmt::Display for BigNumRef {
+impl fmt::Display for Ref<BigNum> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.to_dec_str() {
             Ok(s) => f.write_str(&s),
@@ -601,19 +554,19 @@ impl fmt::Display for BigNum {
     }
 }
 
-impl PartialEq<BigNumRef> for BigNumRef {
-    fn eq(&self, oth: &BigNumRef) -> bool {
+impl PartialEq<Ref<BigNum>> for Ref<BigNum> {
+    fn eq(&self, oth: &Ref<BigNum>) -> bool {
         self.cmp(oth) == Ordering::Equal
     }
 }
 
-impl PartialEq<BigNum> for BigNumRef {
+impl PartialEq<BigNum> for Ref<BigNum> {
     fn eq(&self, oth: &BigNum) -> bool {
         self.eq(oth.deref())
     }
 }
 
-impl Eq for BigNumRef {}
+impl Eq for Ref<BigNum> {}
 
 impl PartialEq for BigNum {
     fn eq(&self, oth: &BigNum) -> bool {
@@ -621,28 +574,28 @@ impl PartialEq for BigNum {
     }
 }
 
-impl PartialEq<BigNumRef> for BigNum {
-    fn eq(&self, oth: &BigNumRef) -> bool {
+impl PartialEq<Ref<BigNum>> for BigNum {
+    fn eq(&self, oth: &Ref<BigNum>) -> bool {
         self.deref().eq(oth)
     }
 }
 
 impl Eq for BigNum {}
 
-impl PartialOrd<BigNumRef> for BigNumRef {
-    fn partial_cmp(&self, oth: &BigNumRef) -> Option<Ordering> {
+impl PartialOrd<Ref<BigNum>> for Ref<BigNum> {
+    fn partial_cmp(&self, oth: &Ref<BigNum>) -> Option<Ordering> {
         Some(self.cmp(oth))
     }
 }
 
-impl PartialOrd<BigNum> for BigNumRef {
+impl PartialOrd<BigNum> for Ref<BigNum> {
     fn partial_cmp(&self, oth: &BigNum) -> Option<Ordering> {
         Some(self.cmp(oth.deref()))
     }
 }
 
-impl Ord for BigNumRef {
-    fn cmp(&self, oth: &BigNumRef) -> Ordering {
+impl Ord for Ref<BigNum> {
+    fn cmp(&self, oth: &Ref<BigNum>) -> Ordering {
         unsafe { ffi::BN_cmp(self.as_ptr(), oth.as_ptr()).cmp(&0) }
     }
 }
@@ -653,8 +606,8 @@ impl PartialOrd for BigNum {
     }
 }
 
-impl PartialOrd<BigNumRef> for BigNum {
-    fn partial_cmp(&self, oth: &BigNumRef) -> Option<Ordering> {
+impl PartialOrd<Ref<BigNum>> for BigNum {
+    fn partial_cmp(&self, oth: &Ref<BigNum>) -> Option<Ordering> {
         self.deref().partial_cmp(oth)
     }
 }
@@ -667,7 +620,7 @@ impl Ord for BigNum {
 
 macro_rules! delegate {
     ($t:ident, $m:ident) => {
-        impl<'a, 'b> $t<&'b BigNum> for &'a BigNumRef {
+        impl<'a, 'b> $t<&'b BigNum> for &'a Ref<BigNum> {
             type Output = BigNum;
 
             fn $m(self, oth: &BigNum) -> BigNum {
@@ -675,10 +628,10 @@ macro_rules! delegate {
             }
         }
 
-        impl<'a, 'b> $t<&'b BigNumRef> for &'a BigNum {
+        impl<'a, 'b> $t<&'b Ref<BigNum>> for &'a BigNum {
             type Output = BigNum;
 
-            fn $m(self, oth: &BigNumRef) -> BigNum {
+            fn $m(self, oth: &Ref<BigNum>) -> BigNum {
                 $t::$m(self.deref(), oth)
             }
         }
@@ -693,10 +646,10 @@ macro_rules! delegate {
     }
 }
 
-impl<'a, 'b> Add<&'b BigNumRef> for &'a BigNumRef {
+impl<'a, 'b> Add<&'b Ref<BigNum>> for &'a Ref<BigNum> {
     type Output = BigNum;
 
-    fn add(self, oth: &BigNumRef) -> BigNum {
+    fn add(self, oth: &Ref<BigNum>) -> BigNum {
         let mut r = BigNum::new().unwrap();
         self.add(&mut r, oth).unwrap();
         r
@@ -705,10 +658,10 @@ impl<'a, 'b> Add<&'b BigNumRef> for &'a BigNumRef {
 
 delegate!(Add, add);
 
-impl<'a, 'b> Sub<&'b BigNumRef> for &'a BigNumRef {
+impl<'a, 'b> Sub<&'b Ref<BigNum>> for &'a Ref<BigNum> {
     type Output = BigNum;
 
-    fn sub(self, oth: &BigNumRef) -> BigNum {
+    fn sub(self, oth: &Ref<BigNum>) -> BigNum {
         let mut r = BigNum::new().unwrap();
         self.sub(&mut r, oth).unwrap();
         r
@@ -717,10 +670,10 @@ impl<'a, 'b> Sub<&'b BigNumRef> for &'a BigNumRef {
 
 delegate!(Sub, sub);
 
-impl<'a, 'b> Mul<&'b BigNumRef> for &'a BigNumRef {
+impl<'a, 'b> Mul<&'b Ref<BigNum>> for &'a Ref<BigNum> {
     type Output = BigNum;
 
-    fn mul(self, oth: &BigNumRef) -> BigNum {
+    fn mul(self, oth: &Ref<BigNum>) -> BigNum {
         let mut ctx = BnCtx::new().unwrap();
         let mut r = BigNum::new().unwrap();
         ctx.mul(&mut r, self, oth).unwrap();
@@ -730,10 +683,10 @@ impl<'a, 'b> Mul<&'b BigNumRef> for &'a BigNumRef {
 
 delegate!(Mul, mul);
 
-impl<'a, 'b> Div<&'b BigNumRef> for &'a BigNumRef {
+impl<'a, 'b> Div<&'b Ref<BigNum>> for &'a Ref<BigNum> {
     type Output = BigNum;
 
-    fn div(self, oth: &'b BigNumRef) -> BigNum {
+    fn div(self, oth: &'b Ref<BigNum>) -> BigNum {
         let mut ctx = BnCtx::new().unwrap();
         let mut dv = BigNum::new().unwrap();
         ctx.div(Some(&mut dv), None, self, oth).unwrap();
@@ -743,10 +696,10 @@ impl<'a, 'b> Div<&'b BigNumRef> for &'a BigNumRef {
 
 delegate!(Div, div);
 
-impl<'a, 'b> Rem<&'b BigNumRef> for &'a BigNumRef {
+impl<'a, 'b> Rem<&'b Ref<BigNum>> for &'a Ref<BigNum> {
     type Output = BigNum;
 
-    fn rem(self, oth: &'b BigNumRef) -> BigNum {
+    fn rem(self, oth: &'b Ref<BigNum>) -> BigNum {
         let mut ctx = BnCtx::new().unwrap();
         let mut rem = BigNum::new().unwrap();
         ctx.div(None, Some(&mut rem), self, oth).unwrap();
@@ -756,7 +709,7 @@ impl<'a, 'b> Rem<&'b BigNumRef> for &'a BigNumRef {
 
 delegate!(Rem, rem);
 
-impl<'a> Shl<i32> for &'a BigNumRef {
+impl<'a> Shl<i32> for &'a Ref<BigNum> {
     type Output = BigNum;
 
     fn shl(self, n: i32) -> BigNum {
@@ -774,7 +727,7 @@ impl<'a> Shl<i32> for &'a BigNum {
     }
 }
 
-impl<'a> Shr<i32> for &'a BigNumRef {
+impl<'a> Shr<i32> for &'a Ref<BigNum> {
     type Output = BigNum;
 
     fn shr(self, n: i32) -> BigNum {
@@ -792,7 +745,7 @@ impl<'a> Shr<i32> for &'a BigNum {
     }
 }
 
-impl<'a> Neg for &'a BigNumRef {
+impl<'a> Neg for &'a Ref<BigNum> {
     type Output = BigNum;
 
     fn neg(self) -> BigNum {

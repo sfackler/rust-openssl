@@ -5,11 +5,12 @@ use std::fmt;
 use std::ops::Deref;
 use std::ptr;
 
-use {cvt, cvt_p};
-use bn::BigNumRef;
 use bio::{MemBio, MemBioSlice};
-use util::{CallbackState, invoke_passwd_cb};
+use bn::BigNum;
+use {cvt, cvt_p};
 use opaque::Opaque;
+use types::Ref;
+use util::{CallbackState, invoke_passwd_cb};
 
 pub struct DsaRef(Opaque);
 
@@ -53,35 +54,35 @@ impl DsaRef {
         }
     }
 
-    pub fn p(&self) -> Option<&BigNumRef> {
+    pub fn p(&self) -> Option<&Ref<BigNum>> {
         unsafe {
             let p = compat::pqg(self.as_ptr())[0];
             if p.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(p as *mut _))
+                Some(Ref::<BigNum>::from_ptr(p as *mut _))
             }
         }
     }
 
-    pub fn q(&self) -> Option<&BigNumRef> {
+    pub fn q(&self) -> Option<&Ref<BigNum>> {
         unsafe {
             let q = compat::pqg(self.as_ptr())[1];
             if q.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(q as *mut _))
+                Some(Ref::<BigNum>::from_ptr(q as *mut _))
             }
         }
     }
 
-    pub fn g(&self) -> Option<&BigNumRef> {
+    pub fn g(&self) -> Option<&Ref<BigNum>> {
         unsafe {
             let g = compat::pqg(self.as_ptr())[2];
             if g.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(g as *mut _))
+                Some(Ref::<BigNum>::from_ptr(g as *mut _))
             }
         }
     }

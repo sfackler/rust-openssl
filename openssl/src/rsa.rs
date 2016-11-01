@@ -6,10 +6,11 @@ use std::ops::Deref;
 use libc::{c_int, c_void, c_char};
 
 use {cvt, cvt_p, cvt_n};
-use bn::{BigNum, BigNumRef};
+use bn::BigNum;
 use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb};
+use types::{OpenSslType, Ref};
 use opaque::Opaque;
 
 /// Type of encryption padding to use.
@@ -162,57 +163,57 @@ impl RsaRef {
         }
     }
 
-    pub fn n(&self) -> Option<&BigNumRef> {
+    pub fn n(&self) -> Option<&Ref<BigNum>> {
         unsafe {
             let n = compat::key(self.as_ptr())[0];
             if n.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(n as *mut _))
+                Some(Ref::<BigNum>::from_ptr(n as *mut _))
             }
         }
     }
 
-    pub fn d(&self) -> Option<&BigNumRef> {
+    pub fn d(&self) -> Option<&Ref<BigNum>> {
         unsafe {
             let d = compat::key(self.as_ptr())[2];
             if d.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(d as *mut _))
+                Some(Ref::<BigNum>::from_ptr(d as *mut _))
             }
         }
     }
 
-    pub fn e(&self) -> Option<&BigNumRef> {
+    pub fn e(&self) -> Option<&Ref<BigNum>> {
         unsafe {
             let e = compat::key(self.as_ptr())[1];
             if e.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(e as *mut _))
+                Some(Ref::<BigNum>::from_ptr(e as *mut _))
             }
         }
     }
 
-    pub fn p(&self) -> Option<&BigNumRef> {
+    pub fn p(&self) -> Option<&Ref<BigNum>> {
         unsafe {
             let p = compat::factors(self.as_ptr())[0];
             if p.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(p as *mut _))
+                Some(Ref::<BigNum>::from_ptr(p as *mut _))
             }
         }
     }
 
-    pub fn q(&self) -> Option<&BigNumRef> {
+    pub fn q(&self) -> Option<&Ref<BigNum>> {
         unsafe {
             let q = compat::factors(self.as_ptr())[1];
             if q.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(q as *mut _))
+                Some(Ref::<BigNum>::from_ptr(q as *mut _))
             }
         }
     }
