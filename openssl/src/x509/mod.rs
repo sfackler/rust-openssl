@@ -14,7 +14,6 @@ use std::str;
 
 use {cvt, cvt_p};
 use asn1::Asn1Time;
-use asn1::Asn1TimeRef;
 use bio::{MemBio, MemBioSlice};
 use crypto::CryptoString;
 use hash::MessageDigest;
@@ -24,6 +23,7 @@ use error::ErrorStack;
 use ffi;
 use nid::Nid;
 use opaque::Opaque;
+use types::Ref;
 
 #[cfg(ossl10x)]
 use ffi::{X509_set_notBefore, X509_set_notAfter, ASN1_STRING_data};
@@ -401,20 +401,20 @@ impl X509Ref {
     }
 
     /// Returns certificate Not After validity period.
-    pub fn not_after<'a>(&'a self) -> &'a Asn1TimeRef {
+    pub fn not_after<'a>(&'a self) -> &'a Ref<Asn1Time> {
         unsafe {
             let date = compat::X509_get_notAfter(self.as_ptr());
             assert!(!date.is_null());
-            Asn1TimeRef::from_ptr(date)
+            Ref::from_ptr(date)
         }
     }
 
     /// Returns certificate Not Before validity period.
-    pub fn not_before<'a>(&'a self) -> &'a Asn1TimeRef {
+    pub fn not_before<'a>(&'a self) -> &'a Ref<Asn1Time> {
         unsafe {
             let date = compat::X509_get_notBefore(self.as_ptr());
             assert!(!date.is_null());
-            Asn1TimeRef::from_ptr(date)
+            Ref::from_ptr(date)
         }
     }
 
