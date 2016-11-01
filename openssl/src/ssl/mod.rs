@@ -92,7 +92,7 @@ use ffi;
 
 use {init, cvt, cvt_p};
 use dh::Dh;
-use ec_key::EcKeyRef;
+use ec_key::EcKey;
 use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError};
 #[cfg(any(ossl102, ossl110))]
 use verify::X509VerifyParamRef;
@@ -518,7 +518,7 @@ impl SslContextBuilder {
         unsafe { cvt(ffi::SSL_CTX_set_tmp_dh(self.as_ptr(), dh.as_ptr()) as c_int).map(|_| ()) }
     }
 
-    pub fn set_tmp_ecdh(&mut self, key: &EcKeyRef) -> Result<(), ErrorStack> {
+    pub fn set_tmp_ecdh(&mut self, key: &Ref<EcKey>) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_CTX_set_tmp_ecdh(self.as_ptr(), key.as_ptr()) as c_int).map(|_| ()) }
     }
 
