@@ -2,27 +2,17 @@ use error::ErrorStack;
 use ffi;
 use libc::{c_int, c_char, c_void};
 use std::fmt;
-use std::ops::Deref;
 use std::ptr;
 
 use bio::{MemBio, MemBioSlice};
 use bn::BigNum;
 use {cvt, cvt_p};
-use opaque::Opaque;
 use types::Ref;
 use util::{CallbackState, invoke_passwd_cb};
 
-pub struct DsaRef(Opaque);
+type_!(Dsa, ffi::DSA, ffi::DSA_free);
 
-impl DsaRef {
-    pub unsafe fn from_ptr<'a>(ptr: *mut ffi::DSA) -> &'a DsaRef {
-        &*(ptr as *mut _)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::DSA {
-        self as *const _ as *mut _
-    }
-
+impl Ref<Dsa> {
     /// Writes an DSA private key as unencrypted PEM formatted data
     pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         assert!(self.has_private_key());
@@ -96,21 +86,7 @@ impl DsaRef {
     }
 }
 
-pub struct Dsa(*mut ffi::DSA);
-
-impl Drop for Dsa {
-    fn drop(&mut self) {
-        unsafe {
-            ffi::DSA_free(self.0);
-        }
-    }
-}
-
 impl Dsa {
-    pub unsafe fn from_ptr(dsa: *mut ffi::DSA) -> Dsa {
-        Dsa(dsa)
-    }
-
     /// Generate a DSA key pair.
     pub fn generate(bits: u32) -> Result<Dsa, ErrorStack> {
         unsafe {
@@ -122,7 +98,7 @@ impl Dsa {
                                                      ptr::null_mut(),
                                                      ptr::null_mut(),
                                                      ptr::null_mut())));
-            try!(cvt(ffi::DSA_generate_key(dsa .0)));
+            try!(cvt(ffi::DSA_generate_key(dsa.0)));
             Ok(dsa)
         }
     }
@@ -178,11 +154,9 @@ impl Dsa {
     }
 }
 
-impl Deref for Dsa {
-    type Target = DsaRef;
-
-    fn deref(&self) -> &DsaRef {
-        unsafe { DsaRef::from_ptr(self.0) }
+impl fmt::Debug for Dsa {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "DSA")
     }
 }
 
@@ -214,12 +188,6 @@ mod compat {
 
     pub unsafe fn keys(d: *const DSA) -> [*const BIGNUM; 2] {
         [(*d).pub_key, (*d).priv_key]
-    }
-}
-
-impl fmt::Debug for Dsa {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "DSA")
     }
 }
 
