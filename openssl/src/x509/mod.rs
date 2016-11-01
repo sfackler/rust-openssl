@@ -17,13 +17,13 @@ use asn1::Asn1Time;
 use bio::{MemBio, MemBioSlice};
 use crypto::CryptoString;
 use hash::MessageDigest;
-use pkey::{PKey, PKeyRef};
+use pkey::PKey;
 use rand::rand_bytes;
 use error::ErrorStack;
 use ffi;
 use nid::Nid;
 use opaque::Opaque;
-use types::Ref;
+use types::{OpenSslType, Ref};
 
 #[cfg(ossl10x)]
 use ffi::{X509_set_notBefore, X509_set_notAfter, ASN1_STRING_data};
@@ -269,7 +269,7 @@ impl X509Generator {
     }
 
     /// Sets the certificate public-key, then self-sign and return it
-    pub fn sign(&self, p_key: &PKeyRef) -> Result<X509, ErrorStack> {
+    pub fn sign(&self, p_key: &Ref<PKey>) -> Result<X509, ErrorStack> {
         ffi::init();
 
         unsafe {
@@ -321,7 +321,7 @@ impl X509Generator {
     }
 
     /// Obtain a certificate signing request (CSR)
-    pub fn request(&self, p_key: &PKeyRef) -> Result<X509Req, ErrorStack> {
+    pub fn request(&self, p_key: &Ref<PKey>) -> Result<X509Req, ErrorStack> {
         let cert = match self.sign(p_key) {
             Ok(c) => c,
             Err(x) => return Err(x),

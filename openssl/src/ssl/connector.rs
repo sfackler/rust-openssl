@@ -4,8 +4,9 @@ use dh::Dh;
 use error::ErrorStack;
 use ssl::{self, SslMethod, SslContextBuilder, SslContext, Ssl, SSL_VERIFY_PEER, SslStream,
           HandshakeError};
-use pkey::PKeyRef;
+use pkey::PKey;
 use x509::X509Ref;
+use types::Ref;
 
 // apps/dh2048.pem
 const DHPARAM_PEM: &'static str = r#"
@@ -116,7 +117,7 @@ impl SslAcceptorBuilder {
     ///
     /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
     pub fn mozilla_intermediate<I>(method: SslMethod,
-                                   private_key: &PKeyRef,
+                                   private_key: &Ref<PKey>,
                                    certificate: &X509Ref,
                                    chain: I)
                                    -> Result<SslAcceptorBuilder, ErrorStack>
@@ -151,7 +152,7 @@ impl SslAcceptorBuilder {
     ///
     /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
     pub fn mozilla_modern<I>(method: SslMethod,
-                             private_key: &PKeyRef,
+                             private_key: &Ref<PKey>,
                              certificate: &X509Ref,
                              chain: I)
                              -> Result<SslAcceptorBuilder, ErrorStack>
@@ -169,7 +170,7 @@ impl SslAcceptorBuilder {
     }
 
     fn finish_setup<I>(mut ctx: SslContextBuilder,
-                       private_key: &PKeyRef,
+                       private_key: &Ref<PKey>,
                        certificate: &X509Ref,
                        chain: I)
                        -> Result<SslAcceptorBuilder, ErrorStack>
