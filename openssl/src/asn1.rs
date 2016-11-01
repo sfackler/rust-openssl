@@ -1,9 +1,11 @@
 use libc::c_long;
 use std::{ptr, fmt};
+use std::slice;
 use ffi;
 
 use {cvt, cvt_p};
 use bio::MemBio;
+use crypto::CryptoString;
 use error::ErrorStack;
 use types::{OpenSslType, Ref};
 
@@ -33,5 +35,31 @@ impl Asn1Time {
     /// Creates a new time on specified interval in days from now
     pub fn days_from_now(days: u32) -> Result<Asn1Time, ErrorStack> {
         Asn1Time::from_period(days as c_long * 60 * 60 * 24)
+    }
+}
+
+type_!(Asn1String, ffi::ASN1_STRING, ffi::ASN1_STRING_free);
+
+impl Ref<Asn1String> {
+    pub fn as_utf8(&self) -> Result<CryptoString, ErrorStack> {
+        unsafe {
+            let mut ptr = ptr::null_mut();
+            let len = ffi::ASN1_STRING_to_UTF8(&mut ptr, self.as_ptr());
+            if len < 0 {
+                return Err(ErrorStack::get());
+            }
+
+            Ok(CryptoString::from_raw_parts(ptr, len as usize))
+        }
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe { slice::from_raw_parts(ffi::ASN1_STRING_data(self.as_ptr()), self.len()) }
+    }
+
+    pub fn len(&self) -> usize {
+        unsafe {
+            ffi::ASN1_STRING_length(self.as_ptr()) as usize
+        }
     }
 }

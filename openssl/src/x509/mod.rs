@@ -12,9 +12,8 @@ use std::slice;
 use std::str;
 
 use {cvt, cvt_p};
-use asn1::Asn1Time;
+use asn1::{Asn1String, Asn1Time};
 use bio::{MemBio, MemBioSlice};
-use crypto::CryptoString;
 use hash::MessageDigest;
 use pkey::PKey;
 use rand::rand_bytes;
@@ -473,33 +472,49 @@ impl Borrow<Ref<X509>> for X509 {
 type_!(X509Name, ffi::X509_NAME, ffi::X509_NAME_free);
 
 impl Ref<X509Name> {
-    pub fn text_by_nid(&self, nid: Nid) -> Option<CryptoString> {
+    pub fn entries_by_nid<'a>(&'a self, nid: Nid) -> X509NameEntries<'a> {
+        X509NameEntries {
+            name: self,
+            nid: nid,
+            loc: -1,
+        }
+    }
+}
+
+pub struct X509NameEntries<'a> {
+    name: &'a Ref<X509Name>,
+    nid: Nid,
+    loc: c_int,
+}
+
+impl<'a> Iterator for X509NameEntries<'a> {
+    type Item = &'a Ref<X509NameEntry>;
+
+    fn next(&mut self) -> Option<&'a Ref<X509NameEntry>> {
         unsafe {
-            let loc = ffi::X509_NAME_get_index_by_NID(self.as_ptr(), nid.as_raw(), -1);
-            if loc == -1 {
+            self.loc = ffi::X509_NAME_get_index_by_NID(self.name.as_ptr(),
+                                                       self.nid.as_raw(),
+                                                       self.loc);
+
+            if self.loc == -1 {
                 return None;
             }
 
-            let ne = ffi::X509_NAME_get_entry(self.as_ptr(), loc);
-            if ne.is_null() {
-                return None;
-            }
+            let entry = ffi::X509_NAME_get_entry(self.name.as_ptr(), self.loc);
+            assert!(!entry.is_null());
 
-            let asn1_str = ffi::X509_NAME_ENTRY_get_data(ne);
-            if asn1_str.is_null() {
-                return None;
-            }
+            Some(Ref::from_ptr(entry))
+        }
+    }
+}
 
-            let mut str_from_asn1: *mut u8 = ptr::null_mut();
-            let len = ffi::ASN1_STRING_to_UTF8(&mut str_from_asn1, asn1_str);
+type_!(X509NameEntry, ffi::X509_NAME_ENTRY, ffi::X509_NAME_ENTRY_free);
 
-            if len < 0 {
-                return None;
-            }
-
-            assert!(!str_from_asn1.is_null());
-
-            Some(CryptoString::from_raw_parts(str_from_asn1, len as usize))
+impl Ref<X509NameEntry> {
+    pub fn data(&self) -> &Ref<Asn1String> {
+        unsafe {
+            let data = ffi::X509_NAME_ENTRY_get_data(self.as_ptr());
+            Ref::from_ptr(data)
         }
     }
 }

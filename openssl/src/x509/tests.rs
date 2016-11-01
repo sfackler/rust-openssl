@@ -113,58 +113,42 @@ fn test_save_der() {
 #[test]
 fn test_subject_read_cn() {
     let cert = include_bytes!("../../test/cert.pem");
-    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+    let cert = X509::from_pem(cert).unwrap();
     let subject = cert.subject_name();
-    let cn = match subject.text_by_nid(nid::COMMONNAME) {
-        Some(x) => x,
-        None => panic!("Failed to read CN from cert"),
-    };
-
-    assert_eq!(&cn as &str, "foobar.com")
+    let cn = subject.entries_by_nid(nid::COMMONNAME).next().unwrap();
+    assert_eq!(cn.data().as_slice(), b"foobar.com")
 }
 
 #[test]
 fn test_nid_values() {
     let cert = include_bytes!("../../test/nid_test_cert.pem");
-    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+    let cert = X509::from_pem(cert).unwrap();
     let subject = cert.subject_name();
 
-    let cn = match subject.text_by_nid(nid::COMMONNAME) {
-        Some(x) => x,
-        None => panic!("Failed to read CN from cert"),
-    };
-    assert_eq!(&cn as &str, "example.com");
+    let cn = subject.entries_by_nid(nid::COMMONNAME).next().unwrap();
+    assert_eq!(cn.data().as_slice(), b"example.com");
 
-    let email = match subject.text_by_nid(nid::PKCS9_EMAILADDRESS) {
-        Some(x) => x,
-        None => panic!("Failed to read subject email address from cert"),
-    };
-    assert_eq!(&email as &str, "test@example.com");
+    let email = subject.entries_by_nid(nid::PKCS9_EMAILADDRESS).next().unwrap();
+    assert_eq!(email.data().as_slice(), b"test@example.com");
 
-    let friendly = match subject.text_by_nid(nid::FRIENDLYNAME) {
-        Some(x) => x,
-        None => panic!("Failed to read subject friendly name from cert"),
-    };
-    assert_eq!(&friendly as &str, "Example");
+    let friendly = subject.entries_by_nid(nid::FRIENDLYNAME).next().unwrap();
+    assert_eq!(&*friendly.data().as_utf8().unwrap(), "Example");
 }
 
 #[test]
 fn test_nid_uid_value() {
     let cert = include_bytes!("../../test/nid_uid_test_cert.pem");
-    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+    let cert = X509::from_pem(cert).unwrap();
     let subject = cert.subject_name();
 
-    let cn = match subject.text_by_nid(nid::USERID) {
-        Some(x) => x,
-        None => panic!("Failed to read UID from cert"),
-    };
-    assert_eq!(&cn as &str, "this is the userId");
+    let cn = subject.entries_by_nid(nid::USERID).next().unwrap();
+    assert_eq!(cn.data().as_slice(), b"this is the userId");
 }
 
 #[test]
 fn test_subject_alt_name() {
     let cert = include_bytes!("../../test/alt_name_cert.pem");
-    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+    let cert = X509::from_pem(cert).unwrap();
 
     let subject_alt_names = cert.subject_alt_names().unwrap();
     assert_eq!(3, subject_alt_names.len());

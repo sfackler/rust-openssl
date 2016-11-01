@@ -1660,8 +1660,11 @@ extern {
 
     pub fn X509_NAME_free(x: *mut X509_NAME);
     pub fn X509_NAME_add_entry_by_txt(x: *mut X509_NAME, field: *const c_char, ty: c_int, bytes: *const c_uchar, len: c_int, loc: c_int, set: c_int) -> c_int;
-    pub fn X509_NAME_get_index_by_NID(n: *mut X509_NAME, nid: c_int, last_pos: c_int) ->c_int;
+    pub fn X509_NAME_get_index_by_NID(n: *mut X509_NAME, nid: c_int, last_pos: c_int) -> c_int;
 
+    pub fn X509_NAME_ENTRY_free(x: *mut X509_NAME_ENTRY);
+
+    pub fn ASN1_STRING_free(x: *mut ASN1_STRING);
     pub fn ASN1_STRING_length(x: *const ASN1_STRING) -> c_int;
 
     pub fn X509_STORE_CTX_free(ctx: *mut X509_STORE_CTX);

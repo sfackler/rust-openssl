@@ -253,6 +253,7 @@ fn setup_verify(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
 #[cfg(not(any(ossl102, ossl110)))]
 mod verify {
     use std::net::IpAddr;
+    use std::str;
 
     use nid;
     use x509::{X509StoreContext, X509, GeneralNames, X509Name};
@@ -305,7 +306,12 @@ mod verify {
     }
 
     fn verify_subject_name(domain: &str, subject_name: &Ref<X509Name>) -> bool {
-        if let Some(pattern) = subject_name.text_by_nid(nid::COMMONNAME) {
+        if let Some(pattern) = subject_name.entries_by_nid(nid::COMMONNAME).next() {
+            let pattern = match str::from_utf8(pattern.data().as_slice()) {
+                Ok(pattern) => pattern,
+                Err(_) => return false,
+            };
+
             // Unlike with SANs, IP addresses in the subject name don't have a
             // different encoding. We need to pass this down to matches_dns to
             // disallow wildcard matches with bogus patterns like *.0.0.1
