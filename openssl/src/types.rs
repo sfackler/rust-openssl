@@ -1,6 +1,5 @@
+use std::cell::UnsafeCell;
 use std::marker::PhantomData;
-
-use opaque::Opaque;
 
 pub unsafe trait OpenSslType {
     type CType;
@@ -10,7 +9,7 @@ pub unsafe trait OpenSslType {
     fn as_ptr(&self) -> *mut Self::CType;
 }
 
-pub struct Ref<T>(Opaque, PhantomData<T>);
+pub struct Ref<T>(UnsafeCell<()>, PhantomData<T>);
 
 impl<T: OpenSslType> Ref<T> {
     pub unsafe fn from_ptr<'a>(ptr: *mut T::CType) -> &'a Ref<T> {

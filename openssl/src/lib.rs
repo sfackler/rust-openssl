@@ -59,7 +59,6 @@ macro_rules! type_ {
 }
 
 mod bio;
-mod opaque;
 mod util;
 pub mod asn1;
 pub mod bn;
