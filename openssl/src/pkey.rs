@@ -1,29 +1,19 @@
 use libc::{c_void, c_char, c_int};
 use std::ptr;
 use std::mem;
-use std::ops::Deref;
 use ffi;
 
 use {cvt, cvt_p};
 use bio::{MemBio, MemBioSlice};
 use dsa::Dsa;
-use rsa::{Rsa, RsaRef};
+use rsa::Rsa;
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb};
-use opaque::Opaque;
+use types::{OpenSslType, Ref};
 
-/// A borrowed `PKey`.
-pub struct PKeyRef(Opaque);
+type_!(PKey, ffi::EVP_PKEY, ffi::EVP_PKEY_free);
 
-impl PKeyRef {
-    pub unsafe fn from_ptr<'a>(ptr: *mut ffi::EVP_PKEY) -> &'a PKeyRef {
-        &*(ptr as *mut _)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::EVP_PKEY {
-        self as *const _ as *mut _
-    }
-
+impl Ref<PKey> {
     /// Get a reference to the interal RSA key for direct access to the key components
     pub fn rsa(&self) -> Result<Rsa, ErrorStack> {
         unsafe {
@@ -59,13 +49,10 @@ impl PKeyRef {
         Ok(mem_bio.get_buf().to_owned())
     }
 
-    pub fn public_eq(&self, other: &PKeyRef) -> bool {
+    pub fn public_eq(&self, other: &Ref<PKey>) -> bool {
         unsafe { ffi::EVP_PKEY_cmp(self.as_ptr(), other.as_ptr()) == 1 }
     }
 }
-
-/// Represents a public key, optionally with a private key attached.
-pub struct PKey(*mut ffi::EVP_PKEY);
 
 unsafe impl Send for PKey {}
 unsafe impl Sync for PKey {}
@@ -103,10 +90,6 @@ impl PKey {
                                                            key.len() as c_int)));
             Ok(PKey(key))
         }
-    }
-
-    pub unsafe fn from_ptr(handle: *mut ffi::EVP_PKEY) -> PKey {
-        PKey(handle)
     }
 
     /// Reads private key from PEM, takes ownership of handle
@@ -156,29 +139,13 @@ impl PKey {
     }
 
     /// Assign an RSA key to this pkey.
-    pub fn set_rsa(&mut self, rsa: &RsaRef) -> Result<(), ErrorStack> {
+    pub fn set_rsa(&mut self, rsa: &Ref<Rsa>) -> Result<(), ErrorStack> {
         unsafe {
             // this needs to be a reference as the set1_RSA ups the reference count
             let rsa_ptr = rsa.as_ptr();
             try!(cvt(ffi::EVP_PKEY_set1_RSA(self.0, rsa_ptr)));
             Ok(())
         }
-    }
-}
-
-impl Drop for PKey {
-    fn drop(&mut self) {
-        unsafe {
-            ffi::EVP_PKEY_free(self.0);
-        }
-    }
-}
-
-impl Deref for PKey {
-    type Target = PKeyRef;
-
-    fn deref(&self) -> &PKeyRef {
-        unsafe { PKeyRef::from_ptr(self.0) }
     }
 }
 

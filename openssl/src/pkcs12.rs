@@ -10,6 +10,7 @@ use {cvt, cvt_p};
 use pkey::PKey;
 use error::ErrorStack;
 use x509::X509;
+use types::OpenSslType;
 
 /// A PKCS #12 archive.
 pub struct Pkcs12(*mut ffi::PKCS12);

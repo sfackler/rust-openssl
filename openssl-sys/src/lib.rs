@@ -1658,12 +1658,14 @@ extern {
 
     pub fn X509_EXTENSION_free(ext: *mut X509_EXTENSION);
 
+    pub fn X509_NAME_free(x: *mut X509_NAME);
     pub fn X509_NAME_add_entry_by_txt(x: *mut X509_NAME, field: *const c_char, ty: c_int, bytes: *const c_uchar, len: c_int, loc: c_int, set: c_int) -> c_int;
     pub fn X509_NAME_get_index_by_NID(n: *mut X509_NAME, nid: c_int, last_pos: c_int) ->c_int;
 
     pub fn ASN1_STRING_length(x: *const ASN1_STRING) -> c_int;
 
-    pub fn X509_STORE_CTX_get_current_cert(ct: *mut X509_STORE_CTX) -> *mut X509;
+    pub fn X509_STORE_CTX_free(ctx: *mut X509_STORE_CTX);
+    pub fn X509_STORE_CTX_get_current_cert(ctx: *mut X509_STORE_CTX) -> *mut X509;
     pub fn X509_STORE_CTX_get_error(ctx: *mut X509_STORE_CTX) -> c_int;
     pub fn X509_STORE_CTX_get_ex_data(ctx: *mut X509_STORE_CTX, idx: c_int) -> *mut c_void;
     pub fn X509_STORE_CTX_get_error_depth(ctx: *mut X509_STORE_CTX) -> c_int;
@@ -1675,6 +1677,8 @@ extern {
     pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: *mut stack_st_X509_EXTENSION) -> c_int;
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
 
+    #[cfg(not(ossl101))]
+    pub fn X509_VERIFY_PARAM_free(param: *mut X509_VERIFY_PARAM);
     #[cfg(not(ossl101))]
     pub fn X509_VERIFY_PARAM_set_hostflags(param: *mut X509_VERIFY_PARAM, flags: c_uint);
     #[cfg(not(ossl101))]

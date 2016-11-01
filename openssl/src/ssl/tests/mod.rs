@@ -20,7 +20,7 @@ use ssl::SSL_VERIFY_PEER;
 use ssl::{SslMethod, HandshakeError};
 use ssl::{SslContext, SslStream, Ssl, ShutdownResult, SslConnectorBuilder, SslAcceptorBuilder,
           Error};
-use x509::X509StoreContextRef;
+use x509::X509StoreContext;
 use x509::X509FileType;
 use x509::X509;
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
@@ -171,8 +171,9 @@ macro_rules! run_test(
             use ssl::{SslContext, Ssl, SslStream};
             use ssl::SSL_VERIFY_PEER;
             use hash::MessageDigest;
-            use x509::X509StoreContextRef;
+            use x509::X509StoreContext;
             use serialize::hex::FromHex;
+            use types::Ref;
             use super::Server;
 
             #[test]
@@ -769,24 +770,6 @@ fn test_alpn_server_select_none() {
     // Now connect to the socket and make sure the protocol negotiation works...
     let stream = TcpStream::connect(localhost).unwrap();
     assert!(Ssl::new(&ctx.build()).unwrap().connect(stream).is_err());
-}
-
-#[cfg(test)]
-mod dtlsv1 {
-    use serialize::hex::FromHex;
-    use std::net::TcpStream;
-    use std::thread;
-
-    use hash::MessageDigest;
-    use ssl::SslMethod;
-    use ssl::{SslContext, SslStream};
-    use ssl::SSL_VERIFY_PEER;
-    use x509::X509StoreContextRef;
-
-    #[test]
-    fn test_new_ctx() {
-        SslContext::builder(SslMethod::dtls()).unwrap();
-    }
 }
 
 #[test]

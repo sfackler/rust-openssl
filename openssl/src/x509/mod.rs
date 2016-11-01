@@ -7,23 +7,21 @@ use std::ffi::{CStr, CString};
 use std::fmt;
 use std::marker::PhantomData;
 use std::mem;
-use std::ops::Deref;
 use std::ptr;
 use std::slice;
 use std::str;
 
 use {cvt, cvt_p};
 use asn1::Asn1Time;
-use asn1::Asn1TimeRef;
 use bio::{MemBio, MemBioSlice};
 use crypto::CryptoString;
 use hash::MessageDigest;
-use pkey::{PKey, PKeyRef};
+use pkey::PKey;
 use rand::rand_bytes;
 use error::ErrorStack;
 use ffi;
 use nid::Nid;
-use opaque::Opaque;
+use types::{OpenSslType, Ref};
 
 #[cfg(ossl10x)]
 use ffi::{X509_set_notBefore, X509_set_notAfter, ASN1_STRING_data};
@@ -49,28 +47,20 @@ pub enum X509FileType {
     Default = ffi::X509_FILETYPE_DEFAULT,
 }
 
-pub struct X509StoreContextRef(Opaque);
+type_!(X509StoreContext, ffi::X509_STORE_CTX, ffi::X509_STORE_CTX_free);
 
-impl X509StoreContextRef {
-    pub unsafe fn from_ptr<'a>(ctx: *mut ffi::X509_STORE_CTX) -> &'a X509StoreContextRef {
-        &*(ctx as *mut _)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::X509_STORE_CTX {
-        self as *const _ as *mut _
-    }
-
+impl Ref<X509StoreContext> {
     pub fn error(&self) -> Option<X509VerifyError> {
         unsafe { X509VerifyError::from_raw(ffi::X509_STORE_CTX_get_error(self.as_ptr()) as c_long) }
     }
 
-    pub fn current_cert(&self) -> Option<&X509Ref> {
+    pub fn current_cert(&self) -> Option<&Ref<X509>> {
         unsafe {
             let ptr = ffi::X509_STORE_CTX_get_current_cert(self.as_ptr());
             if ptr.is_null() {
                 None
             } else {
-                Some(X509Ref::from_ptr(ptr))
+                Some(Ref::from_ptr(ptr))
             }
         }
     }
@@ -269,7 +259,7 @@ impl X509Generator {
     }
 
     /// Sets the certificate public-key, then self-sign and return it
-    pub fn sign(&self, p_key: &PKeyRef) -> Result<X509, ErrorStack> {
+    pub fn sign(&self, p_key: &Ref<PKey>) -> Result<X509, ErrorStack> {
         ffi::init();
 
         unsafe {
@@ -321,7 +311,7 @@ impl X509Generator {
     }
 
     /// Obtain a certificate signing request (CSR)
-    pub fn request(&self, p_key: &PKeyRef) -> Result<X509Req, ErrorStack> {
+    pub fn request(&self, p_key: &Ref<PKey>) -> Result<X509Req, ErrorStack> {
         let cert = match self.sign(p_key) {
             Ok(c) => c,
             Err(x) => return Err(x),
@@ -346,23 +336,13 @@ impl X509Generator {
     }
 }
 
-/// A borrowed public key certificate.
-pub struct X509Ref(Opaque);
+type_!(X509, ffi::X509, ffi::X509_free);
 
-impl X509Ref {
-    /// Creates a new `X509Ref` wrapping the provided handle.
-    pub unsafe fn from_ptr<'a>(x509: *mut ffi::X509) -> &'a X509Ref {
-        &*(x509 as *mut _)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::X509 {
-        self as *const _ as *mut _
-    }
-
-    pub fn subject_name(&self) -> &X509NameRef {
+impl Ref<X509> {
+    pub fn subject_name(&self) -> &Ref<X509Name> {
         unsafe {
             let name = ffi::X509_get_subject_name(self.as_ptr());
-            X509NameRef::from_ptr(name)
+            Ref::from_ptr(name)
         }
     }
 
@@ -401,20 +381,20 @@ impl X509Ref {
     }
 
     /// Returns certificate Not After validity period.
-    pub fn not_after<'a>(&'a self) -> &'a Asn1TimeRef {
+    pub fn not_after<'a>(&'a self) -> &'a Ref<Asn1Time> {
         unsafe {
             let date = compat::X509_get_notAfter(self.as_ptr());
             assert!(!date.is_null());
-            Asn1TimeRef::from_ptr(date)
+            Ref::from_ptr(date)
         }
     }
 
     /// Returns certificate Not Before validity period.
-    pub fn not_before<'a>(&'a self) -> &'a Asn1TimeRef {
+    pub fn not_before<'a>(&'a self) -> &'a Ref<Asn1Time> {
         unsafe {
             let date = compat::X509_get_notBefore(self.as_ptr());
             assert!(!date.is_null());
-            Asn1TimeRef::from_ptr(date)
+            Ref::from_ptr(date)
         }
     }
 
@@ -437,7 +417,7 @@ impl X509Ref {
     }
 }
 
-impl ToOwned for X509Ref {
+impl ToOwned for Ref<X509> {
     type Owned = X509;
 
     fn to_owned(&self) -> X509 {
@@ -448,15 +428,7 @@ impl ToOwned for X509Ref {
     }
 }
 
-/// An owned public key certificate.
-pub struct X509(*mut ffi::X509);
-
 impl X509 {
-    /// Returns a new `X509`, taking ownership of the handle.
-    pub unsafe fn from_ptr(x509: *mut ffi::X509) -> X509 {
-        X509(x509)
-    }
-
     /// Reads a certificate from DER.
     pub fn from_der(buf: &[u8]) -> Result<X509, ErrorStack> {
         unsafe {
@@ -480,49 +452,27 @@ impl X509 {
     }
 }
 
-impl Deref for X509 {
-    type Target = X509Ref;
-
-    fn deref(&self) -> &X509Ref {
-        unsafe { X509Ref::from_ptr(self.0) }
-    }
-}
-
 impl Clone for X509 {
     fn clone(&self) -> X509 {
         self.to_owned()
     }
 }
 
-impl Drop for X509 {
-    fn drop(&mut self) {
-        unsafe { ffi::X509_free(self.as_ptr()) };
-    }
-}
-
-impl AsRef<X509Ref> for X509 {
-    fn as_ref(&self) -> &X509Ref {
+impl AsRef<Ref<X509>> for X509 {
+    fn as_ref(&self) -> &Ref<X509> {
         &*self
     }
 }
 
-impl Borrow<X509Ref> for X509 {
-    fn borrow(&self) -> &X509Ref {
+impl Borrow<Ref<X509>> for X509 {
+    fn borrow(&self) -> &Ref<X509> {
         &*self
     }
 }
 
-pub struct X509NameRef(Opaque);
+type_!(X509Name, ffi::X509_NAME, ffi::X509_NAME_free);
 
-impl X509NameRef {
-    pub unsafe fn from_ptr<'a>(ptr: *mut ffi::X509_NAME) -> &'a X509NameRef {
-        &*(ptr as *mut _)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::X509_NAME {
-        self as *const _ as *mut _
-    }
-
+impl Ref<X509Name> {
     pub fn text_by_nid(&self, nid: Nid) -> Option<CryptoString> {
         unsafe {
             let loc = ffi::X509_NAME_get_index_by_NID(self.as_ptr(), nid.as_raw(), -1);
@@ -554,18 +504,29 @@ impl X509NameRef {
     }
 }
 
-/// A certificate signing request
-pub struct X509Req(*mut ffi::X509_REQ);
+type_!(X509Req, ffi::X509_REQ, ffi::X509_REQ_free);
+
+impl Ref<X509Req> {
+    /// Writes CSR as PEM
+    pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
+        if unsafe { ffi::PEM_write_bio_X509_REQ(mem_bio.as_ptr(), self.as_ptr()) } != 1 {
+            return Err(ErrorStack::get());
+        }
+        Ok(mem_bio.get_buf().to_owned())
+    }
+
+    /// Returns a DER serialized form of the CSR
+    pub fn to_der(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
+        unsafe {
+            ffi::i2d_X509_REQ_bio(mem_bio.as_ptr(), self.as_ptr());
+        }
+        Ok(mem_bio.get_buf().to_owned())
+    }
+}
 
 impl X509Req {
-    pub unsafe fn from_ptr(handle: *mut ffi::X509_REQ) -> X509Req {
-        X509Req(handle)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::X509_REQ {
-        self.0
-    }
-
     /// Reads CSR from PEM
     pub fn from_pem(buf: &[u8]) -> Result<X509Req, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
@@ -576,30 +537,6 @@ impl X509Req {
                                                                ptr::null_mut())));
             Ok(X509Req::from_ptr(handle))
         }
-    }
-
-    /// Writes CSR as PEM
-    pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        if unsafe { ffi::PEM_write_bio_X509_REQ(mem_bio.as_ptr(), self.0) } != 1 {
-            return Err(ErrorStack::get());
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
-
-    /// Returns a DER serialized form of the CSR
-    pub fn to_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        unsafe {
-            ffi::i2d_X509_REQ_bio(mem_bio.as_ptr(), self.0);
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
-}
-
-impl Drop for X509Req {
-    fn drop(&mut self) {
-        unsafe { ffi::X509_REQ_free(self.0) };
     }
 }
 

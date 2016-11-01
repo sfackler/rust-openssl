@@ -3,7 +3,7 @@ use ffi;
 
 use cvt;
 use error::ErrorStack;
-use opaque::Opaque;
+use types::Ref;
 
 bitflags! {
     pub flags X509CheckFlags: c_uint {
@@ -19,17 +19,9 @@ bitflags! {
     }
 }
 
-pub struct X509VerifyParamRef(Opaque);
+type_!(X509VerifyParam, ffi::X509_VERIFY_PARAM, ffi::X509_VERIFY_PARAM_free);
 
-impl X509VerifyParamRef {
-    pub unsafe fn from_ptr_mut<'a>(ptr: *mut ffi::X509_VERIFY_PARAM) -> &'a mut X509VerifyParamRef {
-        &mut *(ptr as *mut _)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::X509_VERIFY_PARAM {
-        self as *const _ as *mut _
-    }
-
+impl Ref<X509VerifyParam> {
     pub fn set_hostflags(&mut self, hostflags: X509CheckFlags) {
         unsafe {
             ffi::X509_VERIFY_PARAM_set_hostflags(self.as_ptr(), hostflags.bits);

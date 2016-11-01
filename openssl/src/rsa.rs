@@ -2,15 +2,14 @@ use ffi;
 use std::fmt;
 use std::ptr;
 use std::mem;
-use std::ops::Deref;
 use libc::{c_int, c_void, c_char};
 
 use {cvt, cvt_p, cvt_n};
-use bn::{BigNum, BigNumRef};
+use bn::BigNum;
 use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb};
-use opaque::Opaque;
+use types::{OpenSslType, Ref};
 
 /// Type of encryption padding to use.
 #[derive(Copy, Clone)]
@@ -20,17 +19,9 @@ pub const NO_PADDING: Padding = Padding(ffi::RSA_NO_PADDING);
 pub const PKCS1_PADDING: Padding = Padding(ffi::RSA_PKCS1_PADDING);
 pub const PKCS1_OAEP_PADDING: Padding = Padding(ffi::RSA_PKCS1_OAEP_PADDING);
 
-pub struct RsaRef(Opaque);
+type_!(Rsa, ffi::RSA, ffi::RSA_free);
 
-impl RsaRef {
-    pub unsafe fn from_ptr<'a>(ptr: *mut ffi::RSA) -> &'a RsaRef {
-        &*(ptr as *mut _)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::RSA {
-        self as *const _ as *mut _
-    }
-
+impl Ref<Rsa> {
     /// Writes an RSA private key as unencrypted PEM formatted data
     pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
@@ -162,68 +153,58 @@ impl RsaRef {
         }
     }
 
-    pub fn n(&self) -> Option<&BigNumRef> {
+    pub fn n(&self) -> Option<&Ref<BigNum>> {
         unsafe {
             let n = compat::key(self.as_ptr())[0];
             if n.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(n as *mut _))
+                Some(Ref::<BigNum>::from_ptr(n as *mut _))
             }
         }
     }
 
-    pub fn d(&self) -> Option<&BigNumRef> {
+    pub fn d(&self) -> Option<&Ref<BigNum>> {
         unsafe {
             let d = compat::key(self.as_ptr())[2];
             if d.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(d as *mut _))
+                Some(Ref::<BigNum>::from_ptr(d as *mut _))
             }
         }
     }
 
-    pub fn e(&self) -> Option<&BigNumRef> {
+    pub fn e(&self) -> Option<&Ref<BigNum>> {
         unsafe {
             let e = compat::key(self.as_ptr())[1];
             if e.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(e as *mut _))
+                Some(Ref::<BigNum>::from_ptr(e as *mut _))
             }
         }
     }
 
-    pub fn p(&self) -> Option<&BigNumRef> {
+    pub fn p(&self) -> Option<&Ref<BigNum>> {
         unsafe {
             let p = compat::factors(self.as_ptr())[0];
             if p.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(p as *mut _))
+                Some(Ref::<BigNum>::from_ptr(p as *mut _))
             }
         }
     }
 
-    pub fn q(&self) -> Option<&BigNumRef> {
+    pub fn q(&self) -> Option<&Ref<BigNum>> {
         unsafe {
             let q = compat::factors(self.as_ptr())[1];
             if q.is_null() {
                 None
             } else {
-                Some(BigNumRef::from_ptr(q as *mut _))
+                Some(Ref::<BigNum>::from_ptr(q as *mut _))
             }
-        }
-    }
-}
-
-pub struct Rsa(*mut ffi::RSA);
-
-impl Drop for Rsa {
-    fn drop(&mut self) {
-        unsafe {
-            ffi::RSA_free(self.0);
         }
     }
 }
@@ -263,10 +244,6 @@ impl Rsa {
             mem::forget((dp, dq, qi));
             Ok(rsa)
         }
-    }
-
-    pub unsafe fn from_ptr(rsa: *mut ffi::RSA) -> Rsa {
-        Rsa(rsa)
     }
 
     /// Generates a public/private key pair with the specified size.
@@ -326,14 +303,6 @@ impl Rsa {
 impl fmt::Debug for Rsa {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Rsa")
-    }
-}
-
-impl Deref for Rsa {
-    type Target = RsaRef;
-
-    fn deref(&self) -> &RsaRef {
-        unsafe { RsaRef::from_ptr(self.0) }
     }
 }
 

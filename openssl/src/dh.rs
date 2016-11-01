@@ -3,25 +3,12 @@ use error::ErrorStack;
 use bio::MemBioSlice;
 use std::ptr;
 use std::mem;
-use std::ops::Deref;
 
 use {cvt, cvt_p};
 use bn::BigNum;
-use opaque::Opaque;
+use types::OpenSslType;
 
-pub struct DhRef(Opaque);
-
-impl DhRef {
-    pub unsafe fn from_ptr<'a>(ptr: *mut ffi::DH) -> &'a DhRef {
-        &*(ptr as *mut _)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::DH {
-        self as *const _ as *mut _
-    }
-}
-
-pub struct Dh(*mut ffi::DH);
+type_!(Dh, ffi::DH, ffi::DH_free);
 
 impl Dh {
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<Dh, ErrorStack> {
@@ -60,20 +47,6 @@ impl Dh {
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn get_2048_256() -> Result<Dh, ErrorStack> {
         unsafe { cvt_p(ffi::DH_get_2048_256()).map(Dh) }
-    }
-}
-
-impl Drop for Dh {
-    fn drop(&mut self) {
-        unsafe { ffi::DH_free(self.0) }
-    }
-}
-
-impl Deref for Dh {
-    type Target = DhRef;
-
-    fn deref(&self) -> &DhRef {
-        unsafe { DhRef::from_ptr(self.0) }
     }
 }
 
