@@ -80,7 +80,6 @@ use std::fmt;
 use std::io;
 use std::io::prelude::*;
 use std::mem;
-use std::ops::{Deref, DerefMut};
 use std::path::Path;
 use std::ptr;
 use std::str;
@@ -98,8 +97,7 @@ use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError};
 use verify::X509VerifyParam;
 use pkey::PKey;
 use error::ErrorStack;
-use opaque::Opaque;
-use types::Ref;
+use types::{OpenSslType, Ref};
 
 mod error;
 mod connector;
@@ -295,13 +293,13 @@ extern "C" fn ssl_raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_ST
 }
 
 extern "C" fn raw_sni<F>(ssl: *mut ffi::SSL, al: *mut c_int, _arg: *mut c_void) -> c_int
-    where F: Fn(&mut SslRef) -> Result<(), SniError> + Any + 'static + Sync + Send
+    where F: Fn(&mut Ref<Ssl>) -> Result<(), SniError> + Any + 'static + Sync + Send
 {
     unsafe {
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
         let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_verify_data_idx::<F>());
         let callback: &F = &*(callback as *mut F);
-        let ssl = SslRef::from_ptr_mut(ssl);
+        let ssl = Ref::from_ptr_mut(ssl);
 
         match callback(ssl) {
             Ok(()) => ffi::SSL_TLSEXT_ERR_OK,
@@ -481,7 +479,7 @@ impl SslContextBuilder {
     /// Obtain the server name with `servername` then set the corresponding context
     /// with `set_ssl_context`
     pub fn set_servername_callback<F>(&mut self, callback: F)
-        where F: Fn(&mut SslRef) -> Result<(), SniError> + Any + 'static + Sync + Send
+        where F: Fn(&mut Ref<Ssl>) -> Result<(), SniError> + Any + 'static + Sync + Send
     {
         unsafe {
             let callback = Box::new(callback);
@@ -735,25 +733,7 @@ impl SslContextBuilder {
     }
 }
 
-/// A borrowed SSL context object.
-pub struct SslContextRef(Opaque);
-
-impl SslContextRef {
-    pub unsafe fn from_ptr<'a>(ctx: *mut ffi::SSL_CTX) -> &'a SslContextRef {
-        &*(ctx as *mut _)
-    }
-
-    pub unsafe fn from_ptr_mut<'a>(ctx: *mut ffi::SSL_CTX) -> &'a mut SslContextRef {
-        &mut *(ctx as *mut _)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::SSL_CTX {
-        self as *const _ as *mut _
-    }
-}
-
-/// An owned SSL context object.
-pub struct SslContext(*mut ffi::SSL_CTX);
+type_!(SslContext, ffi::SSL_CTX, ffi::SSL_CTX_free);
 
 unsafe impl Send for SslContext {}
 unsafe impl Sync for SslContext {}
@@ -774,37 +754,9 @@ impl fmt::Debug for SslContext {
     }
 }
 
-impl Drop for SslContext {
-    fn drop(&mut self) {
-        unsafe { ffi::SSL_CTX_free(self.as_ptr()) }
-    }
-}
-
-impl Deref for SslContext {
-    type Target = SslContextRef;
-
-    fn deref(&self) -> &SslContextRef {
-        unsafe { SslContextRef::from_ptr(self.0) }
-    }
-}
-
-impl DerefMut for SslContext {
-    fn deref_mut(&mut self) -> &mut SslContextRef {
-        unsafe { SslContextRef::from_ptr_mut(self.0) }
-    }
-}
-
 impl SslContext {
     pub fn builder(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
         SslContextBuilder::new(method)
-    }
-
-    pub unsafe fn from_ptr(ctx: *mut ffi::SSL_CTX) -> SslContext {
-        SslContext(ctx)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::SSL_CTX {
-        self.0
     }
 }
 
@@ -817,17 +769,21 @@ pub struct CipherBits {
     pub algorithm: i32,
 }
 
-pub struct SslCipherRef(Opaque);
+pub struct SslCipher(*mut ffi::SSL_CIPHER);
 
-impl SslCipherRef {
-    pub unsafe fn from_ptr<'a>(ptr: *const ffi::SSL_CIPHER) -> &'a SslCipherRef {
-        &*(ptr as *const _)
+unsafe impl OpenSslType for SslCipher {
+    type CType = ffi::SSL_CIPHER;
+
+    unsafe fn from_ptr(ptr: *mut ffi::SSL_CIPHER) -> SslCipher {
+        SslCipher(ptr)
     }
 
-    pub fn as_ptr(&self) -> *const ffi::SSL_CIPHER {
-        self as *const _ as *const _
+    fn as_ptr(&self) -> *mut ffi::SSL_CIPHER {
+        self.0
     }
+}
 
+impl Ref<SslCipher> {
     /// Returns the name of cipher.
     pub fn name(&self) -> &'static str {
         let name = unsafe {
@@ -871,15 +827,11 @@ impl SslCipherRef {
     }
 }
 
-/// A reference to an `Ssl`.
-pub struct SslRef(Opaque);
+type_!(Ssl, ffi::SSL, ffi::SSL_free);
 
-unsafe impl Send for SslRef {}
-unsafe impl Sync for SslRef {}
-
-impl fmt::Debug for SslRef {
+impl fmt::Debug for Ref<Ssl> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let mut builder = fmt.debug_struct("SslRef");
+        let mut builder = fmt.debug_struct("Ssl");
         builder.field("state", &self.state_string_long());
         if let Some(err) = self.verify_result() {
             builder.field("verify_result", &err);
@@ -888,19 +840,7 @@ impl fmt::Debug for SslRef {
     }
 }
 
-impl SslRef {
-    pub unsafe fn from_ptr<'a>(ssl: *mut ffi::SSL) -> &'a SslRef {
-        &*(ssl as *mut _)
-    }
-
-    pub unsafe fn from_ptr_mut<'a>(ssl: *mut ffi::SSL) -> &'a mut SslRef {
-        &mut *(ssl as *mut _)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::SSL {
-        self as *const _ as *mut _
-    }
-
+impl Ref<Ssl> {
     fn get_raw_rbio(&self) -> *mut ffi::BIO {
         unsafe { ffi::SSL_get_rbio(self.as_ptr()) }
     }
@@ -945,14 +885,14 @@ impl SslRef {
         }
     }
 
-    pub fn current_cipher(&self) -> Option<&SslCipherRef> {
+    pub fn current_cipher(&self) -> Option<&Ref<SslCipher>> {
         unsafe {
             let ptr = ffi::SSL_get_current_cipher(self.as_ptr());
 
             if ptr.is_null() {
                 None
             } else {
-                Some(SslCipherRef::from_ptr(ptr))
+                Some(Ref::from_ptr(ptr as *mut _))
             }
         }
     }
@@ -1093,15 +1033,15 @@ impl SslRef {
     }
 
     /// Changes the context corresponding to the current connection.
-    pub fn set_ssl_context(&mut self, ctx: &SslContextRef) -> Result<(), ErrorStack> {
+    pub fn set_ssl_context(&mut self, ctx: &Ref<SslContext>) -> Result<(), ErrorStack> {
         unsafe { cvt_p(ffi::SSL_set_SSL_CTX(self.as_ptr(), ctx.as_ptr())).map(|_| ()) }
     }
 
     /// Returns the context corresponding to the current connection
-    pub fn ssl_context(&self) -> &SslContextRef {
+    pub fn ssl_context(&self) -> &Ref<SslContext> {
         unsafe {
             let ssl_ctx = ffi::SSL_get_SSL_CTX(self.as_ptr());
-            SslContextRef::from_ptr(ssl_ctx)
+            Ref::from_ptr(ssl_ctx)
         }
     }
 
@@ -1124,39 +1064,12 @@ impl SslRef {
     }
 }
 
-pub struct Ssl(*mut ffi::SSL);
-
 unsafe impl Sync for Ssl {}
 unsafe impl Send for Ssl {}
 
 impl fmt::Debug for Ssl {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let mut builder = fmt.debug_struct("Ssl");
-        builder.field("state", &self.state_string_long());
-        if let Some(err) = self.verify_result() {
-            builder.field("verify_result", &err);
-        }
-        builder.finish()
-    }
-}
-
-impl Drop for Ssl {
-    fn drop(&mut self) {
-        unsafe { ffi::SSL_free(self.as_ptr()) }
-    }
-}
-
-impl Deref for Ssl {
-    type Target = SslRef;
-
-    fn deref(&self) -> &SslRef {
-        unsafe { SslRef::from_ptr(self.0) }
-    }
-}
-
-impl DerefMut for Ssl {
-    fn deref_mut(&mut self) -> &mut SslRef {
-        unsafe { SslRef::from_ptr_mut(self.0) }
+        fmt::Debug::fmt(&**self, fmt)
     }
 }
 
@@ -1166,10 +1079,6 @@ impl Ssl {
             let ssl = try!(cvt_p(ffi::SSL_new(ctx.as_ptr())));
             Ok(Ssl::from_ptr(ssl))
         }
-    }
-
-    pub unsafe fn from_ptr(ssl: *mut ffi::SSL) -> Ssl {
-        Ssl(ssl)
     }
 
     /// Creates an SSL/TLS client operating over the provided stream.
@@ -1256,7 +1165,7 @@ impl<S> MidHandshakeSslStream<S> {
     }
 
     /// Returns a shared reference to the `Ssl` of the stream.
-    pub fn ssl(&self) -> &SslRef {
+    pub fn ssl(&self) -> &Ref<Ssl> {
         self.stream.ssl()
     }
 
@@ -1438,7 +1347,7 @@ impl<S> SslStream<S> {
     }
 
     /// Returns the OpenSSL `Ssl` object associated with this stream.
-    pub fn ssl(&self) -> &SslRef {
+    pub fn ssl(&self) -> &Ref<Ssl> {
         &self.ssl
     }
 }
