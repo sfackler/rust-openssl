@@ -40,11 +40,20 @@ impl Ref<PKey> {
         Ok(mem_bio.get_buf().to_owned())
     }
 
-    /// Stores public key as a PEM
+    /// Encode public key in PEM format
     pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
             try!(cvt(ffi::PEM_write_bio_PUBKEY(mem_bio.as_ptr(), self.as_ptr())));
+        }
+        Ok(mem_bio.get_buf().to_owned())
+    }
+
+    /// Encode public key in DER format
+    pub fn public_key_to_der(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
+        unsafe {
+            try!(cvt(ffi::i2d_PUBKEY_bio(mem_bio.as_ptr(), self.as_ptr())));
         }
         Ok(mem_bio.get_buf().to_owned())
     }
