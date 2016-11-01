@@ -1676,6 +1676,8 @@ extern {
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
 
     #[cfg(not(ossl101))]
+    pub fn X509_VERIFY_PARAM_free(param: *mut X509_VERIFY_PARAM);
+    #[cfg(not(ossl101))]
     pub fn X509_VERIFY_PARAM_set_hostflags(param: *mut X509_VERIFY_PARAM, flags: c_uint);
     #[cfg(not(ossl101))]
     pub fn X509_VERIFY_PARAM_set1_host(param: *mut X509_VERIFY_PARAM,

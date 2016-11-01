@@ -95,7 +95,7 @@ use dh::Dh;
 use ec_key::EcKey;
 use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError};
 #[cfg(any(ossl102, ossl110))]
-use verify::X509VerifyParamRef;
+use verify::X509VerifyParam;
 use pkey::PKey;
 use error::ErrorStack;
 use opaque::Opaque;
@@ -1109,13 +1109,13 @@ impl SslRef {
     ///
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn param_mut(&mut self) -> &mut X509VerifyParamRef {
+    pub fn param_mut(&mut self) -> &mut Ref<X509VerifyParam> {
         self._param_mut()
     }
 
     #[cfg(any(ossl102, ossl110))]
-    fn _param_mut(&mut self) -> &mut X509VerifyParamRef {
-        unsafe { X509VerifyParamRef::from_ptr_mut(ffi::SSL_get0_param(self.as_ptr())) }
+    fn _param_mut(&mut self) -> &mut Ref<X509VerifyParam> {
+        unsafe { Ref::from_ptr_mut(ffi::SSL_get0_param(self.as_ptr())) }
     }
 
     /// Returns the result of X509 certificate verification.
