@@ -52,6 +52,7 @@ extern {
     pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
     pub fn BIO_s_file() -> *const BIO_METHOD;
     pub fn BIO_s_mem() -> *const BIO_METHOD;
+    pub fn BIO_f_base64() -> *const BIO_METHOD;
     pub fn CRYPTO_free(buf: *mut c_void, file: *const c_char, line: c_int);
     pub fn HMAC_CTX_new() -> *mut HMAC_CTX;
     pub fn HMAC_CTX_free(ctx: *mut HMAC_CTX);

@@ -105,6 +105,7 @@ pub const BIO_FLAGS_WRITE: c_int = 0x02;
 pub const BIO_FLAGS_IO_SPECIAL: c_int = 0x04;
 pub const BIO_FLAGS_RWS: c_int = BIO_FLAGS_READ | BIO_FLAGS_WRITE | BIO_FLAGS_IO_SPECIAL;
 pub const BIO_FLAGS_SHOULD_RETRY: c_int = 0x08;
+pub const BIO_FLAGS_BASE64_NO_NL: c_int = 0x100;
 
 pub const CRYPTO_LOCK: c_int = 1;
 
@@ -1197,6 +1198,10 @@ pub unsafe fn BIO_get_mem_data(b: *mut BIO, pp: *mut *mut c_char) -> c_long {
     BIO_ctrl(b, BIO_CTRL_INFO, 0, pp as *mut c_void)
 }
 
+pub unsafe fn BIO_flush(b: *mut BIO) -> c_int {
+    BIO_ctrl(b, BIO_CTRL_FLUSH, 0, ptr::null_mut()) as c_int
+}
+
 pub unsafe fn BIO_clear_retry_flags(b: *mut BIO) {
     BIO_clear_flags(b, BIO_FLAGS_RWS | BIO_FLAGS_SHOULD_RETRY)
 }
@@ -1265,6 +1270,7 @@ extern {
     pub fn BIO_new_socket(sock: c_int, close_flag: c_int) -> *mut BIO;
     pub fn BIO_read(b: *mut BIO, buf: *mut c_void, len: c_int) -> c_int;
     pub fn BIO_write(b: *mut BIO, buf: *const c_void, len: c_int) -> c_int;
+    pub fn BIO_push(b: *mut BIO, append: *mut BIO) -> *mut BIO;
     #[cfg(ossl101)]
     pub fn BIO_new_mem_buf(buf: *mut c_void, len: c_int) -> *mut BIO;
     #[cfg(not(ossl101))]
