@@ -242,7 +242,7 @@ fn setup_verify(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
     param.set_host(domain)
 }
 
-#[cfg(not(any(ossl102, ossl110)))]
+#[cfg(ossl101)]
 fn setup_verify(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
     let domain = domain.to_owned();
     ssl.set_verify_callback(SSL_VERIFY_PEER,
@@ -250,7 +250,7 @@ fn setup_verify(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
     Ok(())
 }
 
-#[cfg(not(any(ossl102, ossl110)))]
+#[cfg(ossl101)]
 mod verify {
     use std::net::IpAddr;
     use std::str;
