@@ -211,7 +211,7 @@ impl BnCtx {
         }
     }
 
-    /// The cryptographically weak counterpart to `checked_new_random`.
+    /// The cryptographically weak counterpart to `rand`.
     pub fn pseudo_rand(r: &mut Ref<BigNum>,
                        bits: i32,
                        prop: RNGProperty,
