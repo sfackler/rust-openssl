@@ -8,22 +8,23 @@ use pkey::PKey;
 use x509::X509;
 use types::Ref;
 
-// apps/dh2048.pem
+// Serialized form of DH_get_2048_256
+#[cfg(any(ossl101, all(test, any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))))]
 const DHPARAM_PEM: &'static str = r#"
 -----BEGIN DH PARAMETERS-----
-MIIBCAKCAQEA///////////JD9qiIWjCNMTGYouA3BzRKQJOCIpnzHQCC76mOxOb
-IlFKCHmONATd75UZs806QxswKwpt8l8UN0/hNW1tUcJF5IW1dmJefsb0TELppjft
-awv/XLb0Brft7jhr+1qJn6WunyQRfEsf5kkoZlHs5Fs9wgB8uKFjvwWY2kg2HFXT
-mmkWP6j9JM9fg2VdI9yjrZYcYvNWIIVSu57VKQdwlpZtZww1Tkq8mATxdGwIyhgh
-fDKQXkYuNs474553LBgOhgObJ4Oi7Aeij7XFXfBvTFLJ3ivL9pVYFxg5lUl86pVq
-5RXSJhiY+gUQFXKOWoqsqmj//////////wIBAg==
+MIICCQKCAQEAh6jmHbS2Zjz/u9GcZRlZmYzu9ghmDdDyXSzu1ENeOwDgDfjx1hlX
+1Pr330VhsqowFsPZETQJb6o79Cltgw6afCCeDGSXUXq9WoqdMGvPZ+2R+eZyW0dY
+wCLgse9Cdb97bFv8EdRfkIi5QfVOseWbuLw5oL8SMH9cT9twxYGyP3a2Osrhyqa3
+kC1SUmc1SIoO8TxtmlG/pKs62DR3llJNjvahZ7WkGCXZZ+FE5RQFZCUcysuD5rSG
+9rPKP3lxUGAmwLhX9omWKFbe1AEKvQvmIcOjlgpU5xDDdfJjddcBQQOktUMwwZiv
+EmEW0iduEXFfaTh3+tfvCcrbCUrpHhoVlwKCAQA/syybcxNNCy53UGZg7b1ITKex
+jyHvIFQH9Hk6GguhJRDbwVB3vkY//0/tSqwLtVW+OmwbDGtHsbw3c79+jG9ikBIo
++MKMuxilWuMTQQAKZQGW+THHelfy3fRj5ensFEt3feYqqrioYorDdtKC1u04ZOZ5
+gkKOvIMdFDSPby+Rk7UEWvJ2cWTh38lnwfs/LlWkvRv/6DucgNBSuYXRguoK2yo7
+cxPT/hTISEseBSWIubfSu9LfAWGZ7NBuFVfNCRWzNTu7ZODsN3/QKDcN+StSx4kU
+KM3GfrYYS1I9HbJGwy9jB4SQ8A741kfRSNR5VFFeIyfP75jFgmZLTA9sxBZZ
 -----END DH PARAMETERS-----
-
-These are the 2048-bit DH parameters from "More Modular Exponential
-(MODP) Diffie-Hellman groups for Internet Key Exchange (IKE)":
-https://tools.ietf.org/html/rfc3526
-
-See https://tools.ietf.org/html/rfc2412 for how they were generated."#;
+"#;
 
 fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     let mut ctx = try!(SslContextBuilder::new(method));
@@ -125,7 +126,7 @@ impl SslAcceptorBuilder {
               I::Item: AsRef<Ref<X509>>
     {
         let mut ctx = try!(ctx(method));
-        let dh = try!(Dh::from_pem(DHPARAM_PEM.as_bytes()));
+        let dh = try!(get_dh());
         try!(ctx.set_tmp_dh(&dh));
         try!(setup_curves(&mut ctx));
         try!(ctx.set_cipher_list("ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:\
@@ -203,8 +204,29 @@ impl SslAcceptorBuilder {
 }
 
 #[cfg(ossl101)]
+fn get_dh() -> Result<Dh, ErrorStack> {
+    Dh::from_pem(DHPARAM_PEM.as_bytes())
+}
+
+#[cfg(not(ossl101))]
+fn get_dh() -> Result<Dh, ErrorStack> {
+    use ffi;
+
+    use cvt_p;
+    use types::OpenSslType;
+
+    // manually call into ffi to avoid forcing the features
+    unsafe {
+        cvt_p(ffi::DH_get_2048_256()).map(|p| Dh::from_ptr(p))
+    }
+}
+
+#[cfg(ossl101)]
 fn setup_curves(ctx: &mut SslContextBuilder) -> Result<(), ErrorStack> {
-    let curve = try!(::ec_key::EcKey::new_by_curve_name(::nid::X9_62_PRIME256V1));
+    use ec_key::EcKey;
+    use nid;
+
+    let curve = try!(EcKey::new_by_curve_name(nid::X9_62_PRIME256V1));
     ctx.set_tmp_ecdh(&curve)
 }
 
@@ -418,5 +440,17 @@ mod verify {
             }
             _ => false,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[test]
+    fn check_dhparam() {
+        use dh::Dh;
+
+        let expected = String::from_utf8(Dh::get_2048_256().unwrap().to_pem().unwrap()).unwrap();
+        assert_eq!(expected.trim(), super::DHPARAM_PEM.trim());
     }
 }

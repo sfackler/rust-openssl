@@ -5,10 +5,24 @@ use std::ptr;
 use std::mem;
 
 use {cvt, cvt_p};
+use bio::MemBio;
 use bn::BigNum;
-use types::OpenSslType;
+use types::{OpenSslType, Ref};
 
 type_!(Dh, ffi::DH, ffi::DH_free);
+
+impl Ref<Dh> {
+    /// Encodes the parameters to PEM.
+    pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
+
+        unsafe {
+            try!(cvt(ffi::PEM_write_bio_DHparams(mem_bio.as_ptr(), self.as_ptr())));
+        }
+
+        Ok(mem_bio.get_buf().to_owned())
+    }
+}
 
 impl Dh {
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<Dh, ErrorStack> {

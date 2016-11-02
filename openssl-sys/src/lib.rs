@@ -1346,8 +1346,8 @@ extern {
     pub fn CRYPTO_memcmp(a: *const c_void, b: *const c_void,
                          len: size_t) -> c_int;
 
+    pub fn DH_new() -> *mut DH;
     pub fn DH_free(dh: *mut DH);
-
     #[cfg(not(ossl101))]
     pub fn DH_get_1024_160() -> *mut DH;
     #[cfg(not(ossl101))]
@@ -1471,6 +1471,7 @@ extern {
     pub fn PEM_read_bio_RSAPrivateKey(bio: *mut BIO, rsa: *mut *mut RSA, callback: Option<PasswordCallback>, user_data: *mut c_void) -> *mut RSA;
     pub fn PEM_read_bio_RSA_PUBKEY(bio:    *mut BIO, rsa: *mut *mut RSA, callback: Option<PasswordCallback>, user_data: *mut c_void) -> *mut RSA;
 
+    pub fn PEM_write_bio_DHparams(bio: *mut BIO, x: *mut DH) -> c_int;
     pub fn PEM_write_bio_PrivateKey(bio: *mut BIO, pkey: *mut EVP_PKEY, cipher: *const EVP_CIPHER,
                                     kstr: *mut c_uchar, klen: c_int,
                                     callback: Option<PasswordCallback>,
@@ -1724,5 +1725,4 @@ extern {
     pub fn HMAC_Final(ctx: *mut HMAC_CTX,
                       md: *mut c_uchar,
                       len: *mut c_uint) -> c_int;
-    pub fn DH_new() -> *mut DH;
 }
