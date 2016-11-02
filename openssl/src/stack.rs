@@ -9,12 +9,19 @@ use libc::c_int;
 use ffi;
 use types::{OpenSslType, Ref};
 
-/// Trait implemented by stackable types. This must *only* be
-/// implemented on opaque types that can be directly casted into their
-/// `CType`.
+#[cfg(ossl10x)]
+use ffi::{sk_pop as OPENSSL_sk_pop, sk_free as OPENSSL_sk_free};
+#[cfg(ossl110)]
+use ffi::{OPENSSL_sk_pop, OPENSSL_sk_free};
+
+/// Trait implemented by types which can be placed in a stack.
+///
+/// Like `OpenSslType`, it should not be implemented for any type outside
+/// of this crate.
 pub trait Stackable: OpenSslType {
-    /// C stack type for this element. Generally called
-    /// `stack_st_{ELEMENT_TYPE}`, normally hidden by the
+    /// The C stack type for this element.
+    ///
+    /// Generally called `stack_st_{ELEMENT_TYPE}`, normally hidden by the
     /// `STACK_OF(ELEMENT_TYPE)` macro in the OpenSSL API.
     type StackType;
 }
@@ -30,11 +37,10 @@ impl<T: Stackable> Stack<T> {
 }
 
 impl<T: Stackable> Drop for Stack<T> {
-    #[cfg(ossl10x)]
     fn drop(&mut self) {
         unsafe {
             loop {
-                let ptr = ffi::sk_pop(self.as_stack());
+                let ptr = OPENSSL_sk_pop(self.as_stack());
 
                 if ptr.is_null() {
                     break;
@@ -45,26 +51,7 @@ impl<T: Stackable> Drop for Stack<T> {
                 T::from_ptr(ptr as *mut _);
             }
 
-            ffi::sk_free(self.0 as *mut _);
-        }
-    }
-
-    #[cfg(ossl110)]
-    fn drop(&mut self) {
-        unsafe {
-            loop {
-                let ptr = ffi::OPENSSL_sk_pop(self.as_stack());
-
-                if ptr.is_null() {
-                    break;
-                }
-
-                // Build the owned version of the object just to run
-                // its `drop` implementation and delete the item.
-                T::from_ptr(ptr as *mut _);
-            }
-
-            ffi::OPENSSL_sk_free(self.0 as *mut _);
+            OPENSSL_sk_free(self.0 as *mut _);
         }
     }
 }
