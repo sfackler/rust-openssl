@@ -225,6 +225,13 @@ impl BnCtx {
 }
 
 impl Ref<BigNum> {
+    /// Erases the memory used by this `BigNum`, resetting its value to 0.
+    ///
+    /// This can be used to destroy sensitive data such as keys when they are no longer needed.
+    pub fn clear(&mut self) {
+        unsafe { ffi::BN_clear(self.as_ptr()) }
+    }
+
     /// Adds a `u32` to `self`.
     pub fn add_word(&mut self, w: u32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_add_word(self.as_ptr(), w as ffi::BN_ULONG)).map(|_| ()) }
@@ -431,7 +438,7 @@ impl Ref<BigNum> {
     }
 }
 
-type_!(BigNum, ffi::BIGNUM, ffi::BN_clear_free);
+type_!(BigNum, ffi::BIGNUM, ffi::BN_free);
 
 impl BigNum {
     /// Creates a new `BigNum` with the value 0.

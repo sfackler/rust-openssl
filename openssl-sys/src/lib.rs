@@ -1274,6 +1274,8 @@ extern {
 
     pub fn BN_new() -> *mut BIGNUM;
     pub fn BN_dup(n: *const BIGNUM) -> *mut BIGNUM;
+    pub fn BN_clear(bn: *mut BIGNUM);
+    pub fn BN_free(bn: *mut BIGNUM);
     pub fn BN_clear_free(bn: *mut BIGNUM);
 
     pub fn BN_CTX_new() -> *mut BN_CTX;
