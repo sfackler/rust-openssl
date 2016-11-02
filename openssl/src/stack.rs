@@ -142,31 +142,28 @@ impl<T: Stackable> Ref<Stack<T>> {
     /// Returns a reference to the element at the given index in the
     /// stack or `None` if the index is out of bounds
     pub fn get(&self, idx: usize) -> Option<&Ref<T>> {
-        if idx >= self.len() {
-            return None;
-        }
-
         unsafe {
-            let r = Ref::from_ptr(self._get(idx));
+            if idx >= self.len() {
+                return None;
+            }
 
-            Some(r)
+            Some(Ref::from_ptr(self._get(idx)))
         }
     }
 
     /// Returns a mutable reference to the element at the given index in the
     /// stack or `None` if the index is out of bounds
     pub fn get_mut(&mut self, idx: usize) -> Option<&mut Ref<T>> {
-        if idx >= self.len() {
-            return None;
-        }
-
         unsafe {
+            if idx >= self.len() {
+                return None;
+            }
+
             Some(Ref::from_ptr_mut(self._get(idx)))
         }
     }
 
     unsafe fn _get(&self, idx: usize) -> *mut T::CType {
-        assert!(idx <= c_int::max_value() as usize);
         OPENSSL_sk_value(self.as_stack(), idx as c_int) as *mut _
     }
 }
