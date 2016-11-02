@@ -1,11 +1,10 @@
-use libc::{c_char, c_int, c_long, c_ulong, c_void};
+use libc::{c_char, c_int, c_long, c_ulong};
 use std::borrow::Borrow;
 use std::cmp;
 use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;
-use std::marker::PhantomData;
 use std::mem;
 use std::ptr;
 use std::slice;
@@ -21,6 +20,7 @@ use error::ErrorStack;
 use ffi;
 use nid::Nid;
 use types::{OpenSslType, Ref};
+use stack::{Stack, Stackable};
 
 #[cfg(ossl10x)]
 use ffi::{X509_set_notBefore, X509_set_notAfter, ASN1_STRING_data};
@@ -66,6 +66,28 @@ impl Ref<X509StoreContext> {
 
     pub fn error_depth(&self) -> u32 {
         unsafe { ffi::X509_STORE_CTX_get_error_depth(self.as_ptr()) as u32 }
+    }
+
+    pub fn get_chain(&self) -> Option<&Ref<Stack<X509>>> {
+        unsafe {
+            let chain = self._get_chain();
+
+            if chain.is_null() {
+                return None;
+            }
+
+            Some(Ref::from_ptr(chain))
+        }
+    }
+
+    #[cfg(ossl110)]
+    unsafe fn _get_chain(&self) -> *mut ffi::stack_st_X509 {
+        ffi::X509_STORE_CTX_get0_chain(self.as_ptr())
+    }
+
+    #[cfg(ossl10x)]
+    unsafe fn _get_chain(&self) -> *mut ffi::stack_st_X509 {
+        ffi::X509_STORE_CTX_get_chain(self.as_ptr())
     }
 }
 
@@ -346,7 +368,7 @@ impl Ref<X509> {
     }
 
     /// Returns this certificate's SAN entries, if they exist.
-    pub fn subject_alt_names(&self) -> Option<GeneralNames> {
+    pub fn subject_alt_names(&self) -> Option<Stack<GeneralName>> {
         unsafe {
             let stack = ffi::X509_get_ext_d2i(self.as_ptr(),
                                               ffi::NID_subject_alt_name,
@@ -356,7 +378,7 @@ impl Ref<X509> {
                 return None;
             }
 
-            Some(GeneralNames { stack: stack as *mut _ })
+            Some(Stack::from_ptr(stack as *mut _))
         }
     }
 
@@ -467,6 +489,10 @@ impl Borrow<Ref<X509>> for X509 {
     fn borrow(&self) -> &Ref<X509> {
         &*self
     }
+}
+ 
+impl Stackable for X509 {
+    type StackType = ffi::stack_st_X509;
 }
 
 type_!(X509Name, ffi::X509_NAME, ffi::X509_NAME_free);
@@ -678,135 +704,18 @@ impl X509VerifyError {
     }
 }
 
-/// A collection of OpenSSL `GENERAL_NAME`s.
-pub struct GeneralNames {
-    stack: *mut ffi::stack_st_GENERAL_NAME,
-}
+type_!(GeneralName, ffi::GENERAL_NAME, ffi::GENERAL_NAME_free);
 
-impl Drop for GeneralNames {
-    #[cfg(ossl10x)]
-    fn drop(&mut self) {
-        unsafe {
-            // This transmute is dubious but it's what openssl itself does...
-            let free: unsafe extern "C" fn(*mut ffi::GENERAL_NAME) = ffi::GENERAL_NAME_free;
-            let free: unsafe extern "C" fn(*mut c_void) = mem::transmute(free);
-            ffi::sk_pop_free(&mut (*self.stack).stack, Some(free));
-        }
-    }
-
-    #[cfg(ossl110)]
-    fn drop(&mut self) {
-        unsafe {
-            // This transmute is dubious but it's what openssl itself does...
-            let free: unsafe extern "C" fn(*mut ffi::GENERAL_NAME) = ffi::GENERAL_NAME_free;
-            let free: unsafe extern "C" fn(*mut c_void) = mem::transmute(free);
-            ffi::OPENSSL_sk_pop_free(self.stack as *mut _, Some(free));
-        }
-    }
-}
-
-impl GeneralNames {
-    /// Returns the number of `GeneralName`s in this structure.
-    pub fn len(&self) -> usize {
-        self._len()
-    }
-
-    #[cfg(ossl10x)]
-    fn _len(&self) -> usize {
-        unsafe { (*self.stack).stack.num as usize }
-    }
-
-    #[cfg(ossl110)]
-    fn _len(&self) -> usize {
-        unsafe { ffi::OPENSSL_sk_num(self.stack as *const _) as usize }
-    }
-
-    /// Returns the specified `GeneralName`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `idx` is not less than `len()`.
-    pub fn get<'a>(&'a self, idx: usize) -> GeneralName<'a> {
-        unsafe {
-            assert!(idx < self.len());
-            GeneralName {
-                name: self._get(idx),
-                m: PhantomData,
-            }
-        }
-    }
-
-    #[cfg(ossl10x)]
-    unsafe fn _get(&self, idx: usize) -> *const ffi::GENERAL_NAME {
-        *(*self.stack).stack.data.offset(idx as isize) as *const ffi::GENERAL_NAME
-    }
-
-    #[cfg(ossl110)]
-    unsafe fn _get(&self, idx: usize) -> *const ffi::GENERAL_NAME {
-        ffi::OPENSSL_sk_value(self.stack as *const _, idx as c_int) as *mut _
-    }
-
-    /// Returns an iterator over the `GeneralName`s in this structure.
-    pub fn iter(&self) -> GeneralNamesIter {
-        GeneralNamesIter {
-            names: self,
-            idx: 0,
-        }
-    }
-}
-
-impl<'a> IntoIterator for &'a GeneralNames {
-    type Item = GeneralName<'a>;
-    type IntoIter = GeneralNamesIter<'a>;
-
-    fn into_iter(self) -> GeneralNamesIter<'a> {
-        self.iter()
-    }
-}
-
-/// An iterator over OpenSSL `GENERAL_NAME`s.
-pub struct GeneralNamesIter<'a> {
-    names: &'a GeneralNames,
-    idx: usize,
-}
-
-impl<'a> Iterator for GeneralNamesIter<'a> {
-    type Item = GeneralName<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.idx < self.names.len() {
-            let name = self.names.get(self.idx);
-            self.idx += 1;
-            Some(name)
-        } else {
-            None
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = self.names.len() - self.idx;
-        (size, Some(size))
-    }
-}
-
-impl<'a> ExactSizeIterator for GeneralNamesIter<'a> {}
-
-/// An OpenSSL `GENERAL_NAME`.
-pub struct GeneralName<'a> {
-    name: *const ffi::GENERAL_NAME,
-    m: PhantomData<&'a ()>,
-}
-
-impl<'a> GeneralName<'a> {
+impl Ref<GeneralName> {
     /// Returns the contents of this `GeneralName` if it is a `dNSName`.
     pub fn dnsname(&self) -> Option<&str> {
         unsafe {
-            if (*self.name).type_ != ffi::GEN_DNS {
+            if (*self.as_ptr()).type_ != ffi::GEN_DNS {
                 return None;
             }
 
-            let ptr = ASN1_STRING_data((*self.name).d as *mut _);
-            let len = ffi::ASN1_STRING_length((*self.name).d as *mut _);
+            let ptr = ASN1_STRING_data((*self.as_ptr()).d as *mut _);
+            let len = ffi::ASN1_STRING_length((*self.as_ptr()).d as *mut _);
 
             let slice = slice::from_raw_parts(ptr as *const u8, len as usize);
             // dNSNames are stated to be ASCII (specifically IA5). Hopefully
@@ -819,16 +728,20 @@ impl<'a> GeneralName<'a> {
     /// Returns the contents of this `GeneralName` if it is an `iPAddress`.
     pub fn ipaddress(&self) -> Option<&[u8]> {
         unsafe {
-            if (*self.name).type_ != ffi::GEN_IPADD {
+            if (*self.as_ptr()).type_ != ffi::GEN_IPADD {
                 return None;
             }
 
-            let ptr = ASN1_STRING_data((*self.name).d as *mut _);
-            let len = ffi::ASN1_STRING_length((*self.name).d as *mut _);
+            let ptr = ASN1_STRING_data((*self.as_ptr()).d as *mut _);
+            let len = ffi::ASN1_STRING_length((*self.as_ptr()).d as *mut _);
 
             Some(slice::from_raw_parts(ptr as *const u8, len as usize))
         }
     }
+}
+
+impl Stackable for GeneralName {
+    type StackType = ffi::stack_st_GENERAL_NAME;
 }
 
 #[test]

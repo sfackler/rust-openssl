@@ -13,7 +13,6 @@ pub enum HMAC_CTX {}
 pub enum OPENSSL_STACK {}
 pub enum RSA {}
 pub enum SSL_CTX {}
-pub enum _STACK {}
 pub enum stack_st_ASN1_OBJECT {}
 pub enum stack_st_GENERAL_NAME {}
 pub enum stack_st_OPENSSL_STRING {}
@@ -142,12 +141,13 @@ extern {
     pub fn X509_up_ref(x: *mut X509) -> c_int;
     pub fn SSL_CTX_up_ref(x: *mut SSL_CTX) -> c_int;
     pub fn X509_get0_extensions(req: *const ::X509) -> *const stack_st_X509_EXTENSION;
+    pub fn X509_STORE_CTX_get0_chain(ctx: *mut ::X509_STORE_CTX) -> *mut stack_st_X509;
     pub fn EVP_MD_CTX_new() -> *mut EVP_MD_CTX;
     pub fn EVP_MD_CTX_free(ctx: *mut EVP_MD_CTX);
 
     pub fn OpenSSL_version_num() -> c_ulong;
     pub fn OpenSSL_version(key: c_int) -> *const c_char;
-    pub fn OPENSSL_sk_free(st: *mut _STACK);
-    pub fn OPENSSL_sk_pop_free(st: *mut _STACK, free: Option<unsafe extern "C" fn (*mut c_void)>);
-    pub fn OPENSSL_sk_pop(st: *mut _STACK) -> *mut c_void;
+    pub fn OPENSSL_sk_free(st: *mut ::OPENSSL_STACK);
+    pub fn OPENSSL_sk_pop_free(st: *mut ::OPENSSL_STACK, free: Option<unsafe extern "C" fn (*mut c_void)>);
+    pub fn OPENSSL_sk_pop(st: *mut ::OPENSSL_STACK) -> *mut c_void;
 }
