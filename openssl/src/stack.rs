@@ -2,17 +2,16 @@ use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::iter;
 use std::borrow::Borrow;
 use std::convert::AsRef;
-
-#[cfg(ossl110)]
 use libc::c_int;
 
 use ffi;
 use types::{OpenSslType, Ref};
 
 #[cfg(ossl10x)]
-use ffi::{sk_pop as OPENSSL_sk_pop, sk_free as OPENSSL_sk_free};
+use ffi::{sk_pop as OPENSSL_sk_pop,sk_free as OPENSSL_sk_free, sk_num as OPENSSL_sk_num,
+    sk_value as OPENSSL_sk_value};
 #[cfg(ossl110)]
-use ffi::{OPENSSL_sk_pop, OPENSSL_sk_free};
+use ffi::{OPENSSL_sk_pop, OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_value};
 
 /// Trait implemented by types which can be placed in a stack.
 ///
@@ -117,17 +116,7 @@ impl<T: Stackable> Ref<Stack<T>> {
 
     /// Returns the number of items in the stack
     pub fn len(&self) -> usize {
-        self._len()
-    }
-
-    #[cfg(ossl10x)]
-    fn _len(&self) -> usize {
-        unsafe { (*self.as_stack()).num as usize }
-    }
-
-    #[cfg(ossl110)]
-    fn _len(&self) -> usize {
-        unsafe { ffi::OPENSSL_sk_num(self.as_stack()) as usize }
+        unsafe { OPENSSL_sk_num(self.as_stack()) as usize }
     }
 
     pub fn iter(&self) -> Iter<T> {
@@ -176,14 +165,9 @@ impl<T: Stackable> Ref<Stack<T>> {
         }
     }
 
-    #[cfg(ossl10x)]
     unsafe fn _get(&self, idx: usize) -> *mut T::CType {
-        *(*self.as_stack()).data.offset(idx as isize) as *mut _
-    }
-
-    #[cfg(ossl110)]
-    unsafe fn _get(&self, idx: usize) -> *mut T::CType {
-        ffi::OPENSSL_sk_value(self.as_stack(), idx as c_int) as *mut _
+        assert!(idx <= c_int::max_value() as usize);
+        OPENSSL_sk_value(self.as_stack(), idx as c_int) as *mut _
     }
 }
 
