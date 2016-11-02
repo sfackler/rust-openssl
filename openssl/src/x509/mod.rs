@@ -23,10 +23,11 @@ use types::{OpenSslType, Ref};
 use stack::{Stack, Stackable};
 
 #[cfg(ossl10x)]
-use ffi::{X509_set_notBefore, X509_set_notAfter, ASN1_STRING_data};
+use ffi::{X509_set_notBefore, X509_set_notAfter, ASN1_STRING_data, X509_STORE_CTX_get_chain};
 #[cfg(ossl110)]
 use ffi::{X509_set1_notBefore as X509_set_notBefore, X509_set1_notAfter as X509_set_notAfter,
-          ASN1_STRING_get0_data as ASN1_STRING_data};
+          ASN1_STRING_get0_data as ASN1_STRING_data,
+          X509_STORE_CTX_get0_chain as X509_STORE_CTX_get_chain};
 
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 pub mod verify;
@@ -68,9 +69,9 @@ impl Ref<X509StoreContext> {
         unsafe { ffi::X509_STORE_CTX_get_error_depth(self.as_ptr()) as u32 }
     }
 
-    pub fn get_chain(&self) -> Option<&Ref<Stack<X509>>> {
+    pub fn chain(&self) -> Option<&Ref<Stack<X509>>> {
         unsafe {
-            let chain = self._get_chain();
+            let chain = X509_STORE_CTX_get_chain(self.as_ptr());
 
             if chain.is_null() {
                 return None;
@@ -78,16 +79,6 @@ impl Ref<X509StoreContext> {
 
             Some(Ref::from_ptr(chain))
         }
-    }
-
-    #[cfg(ossl110)]
-    unsafe fn _get_chain(&self) -> *mut ffi::stack_st_X509 {
-        ffi::X509_STORE_CTX_get0_chain(self.as_ptr())
-    }
-
-    #[cfg(ossl10x)]
-    unsafe fn _get_chain(&self) -> *mut ffi::stack_st_X509 {
-        ffi::X509_STORE_CTX_get_chain(self.as_ptr())
     }
 }
 
@@ -490,7 +481,7 @@ impl Borrow<Ref<X509>> for X509 {
         &*self
     }
 }
- 
+
 impl Stackable for X509 {
     type StackType = ffi::stack_st_X509;
 }
