@@ -4,9 +4,8 @@ use dh::Dh;
 use error::ErrorStack;
 use ssl::{self, SslMethod, SslContextBuilder, SslContext, Ssl, SSL_VERIFY_PEER, SslStream,
           HandshakeError};
-use pkey::PKey;
-use x509::X509;
-use types::Ref;
+use pkey::PKeyRef;
+use x509::X509Ref;
 
 // Serialized form of DH_get_2048_256
 #[cfg(any(ossl101, all(test, any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))))]
@@ -118,12 +117,12 @@ impl SslAcceptorBuilder {
     ///
     /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
     pub fn mozilla_intermediate<I>(method: SslMethod,
-                                   private_key: &Ref<PKey>,
-                                   certificate: &Ref<X509>,
+                                   private_key: &PKeyRef,
+                                   certificate: &X509Ref,
                                    chain: I)
                                    -> Result<SslAcceptorBuilder, ErrorStack>
         where I: IntoIterator,
-              I::Item: AsRef<Ref<X509>>
+              I::Item: AsRef<X509Ref>
     {
         let mut ctx = try!(ctx(method));
         let dh = try!(get_dh());
@@ -153,12 +152,12 @@ impl SslAcceptorBuilder {
     ///
     /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
     pub fn mozilla_modern<I>(method: SslMethod,
-                             private_key: &Ref<PKey>,
-                             certificate: &Ref<X509>,
+                             private_key: &PKeyRef,
+                             certificate: &X509Ref,
                              chain: I)
                              -> Result<SslAcceptorBuilder, ErrorStack>
         where I: IntoIterator,
-              I::Item: AsRef<Ref<X509>>
+              I::Item: AsRef<X509Ref>
     {
         let mut ctx = try!(ctx(method));
         try!(setup_curves(&mut ctx));
@@ -171,12 +170,12 @@ impl SslAcceptorBuilder {
     }
 
     fn finish_setup<I>(mut ctx: SslContextBuilder,
-                       private_key: &Ref<PKey>,
-                       certificate: &Ref<X509>,
+                       private_key: &PKeyRef,
+                       certificate: &X509Ref,
                        chain: I)
                        -> Result<SslAcceptorBuilder, ErrorStack>
         where I: IntoIterator,
-              I::Item: AsRef<Ref<X509>>
+              I::Item: AsRef<X509Ref>
     {
         try!(ctx.set_private_key(private_key));
         try!(ctx.set_certificate(certificate));
@@ -278,13 +277,13 @@ mod verify {
     use std::str;
 
     use nid;
-    use x509::{X509StoreContext, X509, X509Name, GeneralName};
+    use x509::{X509StoreContextRef, X509Ref, X509NameRef, GeneralName};
     use stack::Stack;
-    use types::Ref;
+    use types::OpenSslTypeRef;
 
     pub fn verify_callback(domain: &str,
                            preverify_ok: bool,
-                           x509_ctx: &Ref<X509StoreContext>)
+                           x509_ctx: &X509StoreContextRef)
                            -> bool {
         if !preverify_ok || x509_ctx.error_depth() != 0 {
             return preverify_ok;
@@ -296,7 +295,7 @@ mod verify {
         }
     }
 
-    fn verify_hostname(domain: &str, cert: &Ref<X509>) -> bool {
+    fn verify_hostname(domain: &str, cert: &X509Ref) -> bool {
         match cert.subject_alt_names() {
             Some(names) => verify_subject_alt_names(domain, names),
             None => verify_subject_name(domain, &cert.subject_name()),
@@ -329,7 +328,7 @@ mod verify {
         false
     }
 
-    fn verify_subject_name(domain: &str, subject_name: &Ref<X509Name>) -> bool {
+    fn verify_subject_name(domain: &str, subject_name: &X509NameRef) -> bool {
         if let Some(pattern) = subject_name.entries_by_nid(nid::COMMONNAME).next() {
             let pattern = match str::from_utf8(pattern.data().as_slice()) {
                 Ok(pattern) => pattern,

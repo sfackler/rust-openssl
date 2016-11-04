@@ -7,11 +7,11 @@ use std::mem;
 use {cvt, cvt_p};
 use bio::MemBio;
 use bn::BigNum;
-use types::{OpenSslType, Ref};
+use types::OpenSslTypeRef;
 
-type_!(Dh, ffi::DH, ffi::DH_free);
+type_!(Dh, DhRef, ffi::DH, ffi::DH_free);
 
-impl Ref<Dh> {
+impl DhRef {
     /// Encodes the parameters to PEM.
     pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());

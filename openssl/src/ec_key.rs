@@ -4,7 +4,7 @@ use cvt_p;
 use error::ErrorStack;
 use nid::Nid;
 
-type_!(EcKey, ffi::EC_KEY, ffi::EC_KEY_free);
+type_!(EcKey, EcKeyRef, ffi::EC_KEY, ffi::EC_KEY_free);
 
 impl EcKey {
     pub fn new_by_curve_name(nid: Nid) -> Result<EcKey, ErrorStack> {

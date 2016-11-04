@@ -11,16 +11,16 @@ use std::slice;
 use std::str;
 
 use {cvt, cvt_p};
-use asn1::{Asn1String, Asn1Time};
+use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef};
 use bio::{MemBio, MemBioSlice};
 use hash::MessageDigest;
-use pkey::PKey;
+use pkey::{PKey, PKeyRef};
 use rand::rand_bytes;
 use error::ErrorStack;
 use ffi;
 use nid::Nid;
-use types::{OpenSslType, Ref};
-use stack::{Stack, Stackable};
+use types::{OpenSslType, OpenSslTypeRef};
+use stack::{Stack, StackRef, Stackable};
 
 #[cfg(ossl10x)]
 use ffi::{X509_set_notBefore, X509_set_notAfter, ASN1_STRING_data, X509_STORE_CTX_get_chain};
@@ -51,20 +51,20 @@ pub const X509_FILETYPE_PEM: X509FileType = X509FileType(ffi::X509_FILETYPE_PEM)
 pub const X509_FILETYPE_ASN1: X509FileType = X509FileType(ffi::X509_FILETYPE_ASN1);
 pub const X509_FILETYPE_DEFAULT: X509FileType = X509FileType(ffi::X509_FILETYPE_DEFAULT);
 
-type_!(X509StoreContext, ffi::X509_STORE_CTX, ffi::X509_STORE_CTX_free);
+type_!(X509StoreContext, X509StoreContextRef, ffi::X509_STORE_CTX, ffi::X509_STORE_CTX_free);
 
-impl Ref<X509StoreContext> {
+impl X509StoreContextRef {
     pub fn error(&self) -> Option<X509VerifyError> {
         unsafe { X509VerifyError::from_raw(ffi::X509_STORE_CTX_get_error(self.as_ptr()) as c_long) }
     }
 
-    pub fn current_cert(&self) -> Option<&Ref<X509>> {
+    pub fn current_cert(&self) -> Option<&X509Ref> {
         unsafe {
             let ptr = ffi::X509_STORE_CTX_get_current_cert(self.as_ptr());
             if ptr.is_null() {
                 None
             } else {
-                Some(Ref::from_ptr(ptr))
+                Some(X509Ref::from_ptr(ptr))
             }
         }
     }
@@ -73,7 +73,7 @@ impl Ref<X509StoreContext> {
         unsafe { ffi::X509_STORE_CTX_get_error_depth(self.as_ptr()) as u32 }
     }
 
-    pub fn chain(&self) -> Option<&Ref<Stack<X509>>> {
+    pub fn chain(&self) -> Option<&StackRef<X509>> {
         unsafe {
             let chain = X509_STORE_CTX_get_chain(self.as_ptr());
 
@@ -81,7 +81,7 @@ impl Ref<X509StoreContext> {
                 return None;
             }
 
-            Some(Ref::from_ptr(chain))
+            Some(StackRef::from_ptr(chain))
         }
     }
 }
@@ -275,7 +275,7 @@ impl X509Generator {
     }
 
     /// Sets the certificate public-key, then self-sign and return it
-    pub fn sign(&self, p_key: &Ref<PKey>) -> Result<X509, ErrorStack> {
+    pub fn sign(&self, p_key: &PKeyRef) -> Result<X509, ErrorStack> {
         ffi::init();
 
         unsafe {
@@ -327,7 +327,7 @@ impl X509Generator {
     }
 
     /// Obtain a certificate signing request (CSR)
-    pub fn request(&self, p_key: &Ref<PKey>) -> Result<X509Req, ErrorStack> {
+    pub fn request(&self, p_key: &PKeyRef) -> Result<X509Req, ErrorStack> {
         let cert = match self.sign(p_key) {
             Ok(c) => c,
             Err(x) => return Err(x),
@@ -352,13 +352,13 @@ impl X509Generator {
     }
 }
 
-type_!(X509, ffi::X509, ffi::X509_free);
+type_!(X509, X509Ref, ffi::X509, ffi::X509_free);
 
-impl Ref<X509> {
-    pub fn subject_name(&self) -> &Ref<X509Name> {
+impl X509Ref {
+    pub fn subject_name(&self) -> &X509NameRef {
         unsafe {
             let name = ffi::X509_get_subject_name(self.as_ptr());
-            Ref::from_ptr(name)
+            X509NameRef::from_ptr(name)
         }
     }
 
@@ -397,20 +397,20 @@ impl Ref<X509> {
     }
 
     /// Returns certificate Not After validity period.
-    pub fn not_after<'a>(&'a self) -> &'a Ref<Asn1Time> {
+    pub fn not_after<'a>(&'a self) -> &'a Asn1TimeRef {
         unsafe {
             let date = compat::X509_get_notAfter(self.as_ptr());
             assert!(!date.is_null());
-            Ref::from_ptr(date)
+            Asn1TimeRef::from_ptr(date)
         }
     }
 
     /// Returns certificate Not Before validity period.
-    pub fn not_before<'a>(&'a self) -> &'a Ref<Asn1Time> {
+    pub fn not_before<'a>(&'a self) -> &'a Asn1TimeRef {
         unsafe {
             let date = compat::X509_get_notBefore(self.as_ptr());
             assert!(!date.is_null());
-            Ref::from_ptr(date)
+            Asn1TimeRef::from_ptr(date)
         }
     }
 
@@ -433,7 +433,7 @@ impl Ref<X509> {
     }
 }
 
-impl ToOwned for Ref<X509> {
+impl ToOwned for X509Ref {
     type Owned = X509;
 
     fn to_owned(&self) -> X509 {
@@ -474,14 +474,14 @@ impl Clone for X509 {
     }
 }
 
-impl AsRef<Ref<X509>> for X509 {
-    fn as_ref(&self) -> &Ref<X509> {
+impl AsRef<X509Ref> for X509 {
+    fn as_ref(&self) -> &X509Ref {
         &*self
     }
 }
 
-impl Borrow<Ref<X509>> for X509 {
-    fn borrow(&self) -> &Ref<X509> {
+impl Borrow<X509Ref> for X509 {
+    fn borrow(&self) -> &X509Ref {
         &*self
     }
 }
@@ -490,9 +490,9 @@ impl Stackable for X509 {
     type StackType = ffi::stack_st_X509;
 }
 
-type_!(X509Name, ffi::X509_NAME, ffi::X509_NAME_free);
+type_!(X509Name, X509NameRef, ffi::X509_NAME, ffi::X509_NAME_free);
 
-impl Ref<X509Name> {
+impl X509NameRef {
     pub fn entries_by_nid<'a>(&'a self, nid: Nid) -> X509NameEntries<'a> {
         X509NameEntries {
             name: self,
@@ -503,15 +503,15 @@ impl Ref<X509Name> {
 }
 
 pub struct X509NameEntries<'a> {
-    name: &'a Ref<X509Name>,
+    name: &'a X509NameRef,
     nid: Nid,
     loc: c_int,
 }
 
 impl<'a> Iterator for X509NameEntries<'a> {
-    type Item = &'a Ref<X509NameEntry>;
+    type Item = &'a X509NameEntryRef;
 
-    fn next(&mut self) -> Option<&'a Ref<X509NameEntry>> {
+    fn next(&mut self) -> Option<&'a X509NameEntryRef> {
         unsafe {
             self.loc = ffi::X509_NAME_get_index_by_NID(self.name.as_ptr(),
                                                        self.nid.as_raw(),
@@ -524,25 +524,25 @@ impl<'a> Iterator for X509NameEntries<'a> {
             let entry = ffi::X509_NAME_get_entry(self.name.as_ptr(), self.loc);
             assert!(!entry.is_null());
 
-            Some(Ref::from_ptr(entry))
+            Some(X509NameEntryRef::from_ptr(entry))
         }
     }
 }
 
-type_!(X509NameEntry, ffi::X509_NAME_ENTRY, ffi::X509_NAME_ENTRY_free);
+type_!(X509NameEntry, X509NameEntryRef, ffi::X509_NAME_ENTRY, ffi::X509_NAME_ENTRY_free);
 
-impl Ref<X509NameEntry> {
-    pub fn data(&self) -> &Ref<Asn1String> {
+impl X509NameEntryRef {
+    pub fn data(&self) -> &Asn1StringRef {
         unsafe {
             let data = ffi::X509_NAME_ENTRY_get_data(self.as_ptr());
-            Ref::from_ptr(data)
+            Asn1StringRef::from_ptr(data)
         }
     }
 }
 
-type_!(X509Req, ffi::X509_REQ, ffi::X509_REQ_free);
+type_!(X509Req, X509ReqRef, ffi::X509_REQ, ffi::X509_REQ_free);
 
-impl Ref<X509Req> {
+impl X509ReqRef {
     /// Writes CSR as PEM
     pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
@@ -699,9 +699,9 @@ impl X509VerifyError {
     }
 }
 
-type_!(GeneralName, ffi::GENERAL_NAME, ffi::GENERAL_NAME_free);
+type_!(GeneralName, GeneralNameRef, ffi::GENERAL_NAME, ffi::GENERAL_NAME_free);
 
-impl Ref<GeneralName> {
+impl GeneralNameRef {
     /// Returns the contents of this `GeneralName` if it is a `dNSName`.
     pub fn dnsname(&self) -> Option<&str> {
         unsafe {

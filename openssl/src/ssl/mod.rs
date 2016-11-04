@@ -90,14 +90,15 @@ use std::marker::PhantomData;
 use ffi;
 
 use {init, cvt, cvt_p};
-use dh::Dh;
-use ec_key::EcKey;
-use x509::{X509StoreContext, X509FileType, X509, X509VerifyError};
+use dh::DhRef;
+use ec_key::EcKeyRef;
+use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError};
 #[cfg(any(ossl102, ossl110))]
-use verify::X509VerifyParam;
-use pkey::PKey;
+use verify::X509VerifyParamRef;
+use pkey::PKeyRef;
 use error::ErrorStack;
-use types::{OpenSslType, Ref};
+use types::{OpenSslType, OpenSslTypeRef};
+use util::Opaque;
 
 mod error;
 mod connector;
@@ -262,7 +263,7 @@ fn get_new_ssl_idx<T>() -> c_int {
 }
 
 extern "C" fn raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
-    where F: Fn(bool, &Ref<X509StoreContext>) -> bool + Any + 'static + Sync + Send
+    where F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send
 {
     unsafe {
         let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
@@ -271,14 +272,14 @@ extern "C" fn raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_
         let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_verify_data_idx::<F>());
         let verify: &F = &*(verify as *mut F);
 
-        let ctx = Ref::from_ptr(x509_ctx);
+        let ctx = X509StoreContextRef::from_ptr(x509_ctx);
 
         verify(preverify_ok != 0, ctx) as c_int
     }
 }
 
 extern "C" fn ssl_raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
-    where F: Fn(bool, &Ref<X509StoreContext>) -> bool + Any + 'static + Sync + Send
+    where F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send
 {
     unsafe {
         let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
@@ -286,20 +287,20 @@ extern "C" fn ssl_raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_ST
         let verify = ffi::SSL_get_ex_data(ssl as *const _, get_ssl_verify_data_idx::<F>());
         let verify: &F = &*(verify as *mut F);
 
-        let ctx = Ref::from_ptr(x509_ctx);
+        let ctx = X509StoreContextRef::from_ptr(x509_ctx);
 
         verify(preverify_ok != 0, ctx) as c_int
     }
 }
 
 extern "C" fn raw_sni<F>(ssl: *mut ffi::SSL, al: *mut c_int, _arg: *mut c_void) -> c_int
-    where F: Fn(&mut Ref<Ssl>) -> Result<(), SniError> + Any + 'static + Sync + Send
+    where F: Fn(&mut SslRef) -> Result<(), SniError> + Any + 'static + Sync + Send
 {
     unsafe {
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
         let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_verify_data_idx::<F>());
         let callback: &F = &*(callback as *mut F);
-        let ssl = Ref::from_ptr_mut(ssl);
+        let ssl = SslRef::from_ptr_mut(ssl);
 
         match callback(ssl) {
             Ok(()) => ffi::SSL_TLSEXT_ERR_OK,
@@ -463,7 +464,7 @@ impl SslContextBuilder {
     /// Configures the certificate verification method for new connections and
     /// registers a verification callback.
     pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
-        where F: Fn(bool, &Ref<X509StoreContext>) -> bool + Any + 'static + Sync + Send
+        where F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send
     {
         unsafe {
             let verify = Box::new(verify);
@@ -479,7 +480,7 @@ impl SslContextBuilder {
     /// Obtain the server name with `servername` then set the corresponding context
     /// with `set_ssl_context`
     pub fn set_servername_callback<F>(&mut self, callback: F)
-        where F: Fn(&mut Ref<Ssl>) -> Result<(), SniError> + Any + 'static + Sync + Send
+        where F: Fn(&mut SslRef) -> Result<(), SniError> + Any + 'static + Sync + Send
     {
         unsafe {
             let callback = Box::new(callback);
@@ -512,11 +513,11 @@ impl SslContextBuilder {
         }
     }
 
-    pub fn set_tmp_dh(&mut self, dh: &Ref<Dh>) -> Result<(), ErrorStack> {
+    pub fn set_tmp_dh(&mut self, dh: &DhRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_CTX_set_tmp_dh(self.as_ptr(), dh.as_ptr()) as c_int).map(|_| ()) }
     }
 
-    pub fn set_tmp_ecdh(&mut self, key: &Ref<EcKey>) -> Result<(), ErrorStack> {
+    pub fn set_tmp_ecdh(&mut self, key: &EcKeyRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_CTX_set_tmp_ecdh(self.as_ptr(), key.as_ptr()) as c_int).map(|_| ()) }
     }
 
@@ -584,7 +585,7 @@ impl SslContextBuilder {
     }
 
     /// Specifies the certificate
-    pub fn set_certificate(&mut self, cert: &Ref<X509>) -> Result<(), ErrorStack> {
+    pub fn set_certificate(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_CTX_use_certificate(self.as_ptr(), cert.as_ptr())).map(|_| ()) }
     }
 
@@ -613,7 +614,7 @@ impl SslContextBuilder {
     }
 
     /// Specifies the private key
-    pub fn set_private_key(&mut self, key: &Ref<PKey>) -> Result<(), ErrorStack> {
+    pub fn set_private_key(&mut self, key: &PKeyRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_CTX_use_PrivateKey(self.as_ptr(), key.as_ptr())).map(|_| ()) }
     }
 
@@ -733,7 +734,7 @@ impl SslContextBuilder {
     }
 }
 
-type_!(SslContext, ffi::SSL_CTX, ffi::SSL_CTX_free);
+type_!(SslContext, SslContextRef, ffi::SSL_CTX, ffi::SSL_CTX_free);
 
 unsafe impl Send for SslContext {}
 unsafe impl Sync for SslContext {}
@@ -771,19 +772,22 @@ pub struct CipherBits {
 
 pub struct SslCipher(*mut ffi::SSL_CIPHER);
 
-unsafe impl OpenSslType for SslCipher {
+impl OpenSslType for SslCipher {
     type CType = ffi::SSL_CIPHER;
+    type Ref = SslCipherRef;
 
     unsafe fn from_ptr(ptr: *mut ffi::SSL_CIPHER) -> SslCipher {
         SslCipher(ptr)
     }
-
-    fn as_ptr(&self) -> *mut ffi::SSL_CIPHER {
-        self.0
-    }
 }
 
-impl Ref<SslCipher> {
+pub struct SslCipherRef(Opaque);
+
+impl OpenSslTypeRef for SslCipherRef {
+    type CType = ffi::SSL_CIPHER;
+}
+
+impl SslCipherRef {
     /// Returns the name of cipher.
     pub fn name(&self) -> &'static str {
         let name = unsafe {
@@ -827,9 +831,9 @@ impl Ref<SslCipher> {
     }
 }
 
-type_!(Ssl, ffi::SSL, ffi::SSL_free);
+type_!(Ssl, SslRef, ffi::SSL, ffi::SSL_free);
 
-impl fmt::Debug for Ref<Ssl> {
+impl fmt::Debug for SslRef {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let mut builder = fmt.debug_struct("Ssl");
         builder.field("state", &self.state_string_long());
@@ -840,7 +844,7 @@ impl fmt::Debug for Ref<Ssl> {
     }
 }
 
-impl Ref<Ssl> {
+impl SslRef {
     fn get_raw_rbio(&self) -> *mut ffi::BIO {
         unsafe { ffi::SSL_get_rbio(self.as_ptr()) }
     }
@@ -874,7 +878,7 @@ impl Ref<Ssl> {
     /// to the certificate chain. It should return `true` if the certificate
     /// chain is valid and `false` otherwise.
     pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
-        where F: Fn(bool, &Ref<X509StoreContext>) -> bool + Any + 'static + Sync + Send
+        where F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send
     {
         unsafe {
             let verify = Box::new(verify);
@@ -885,14 +889,14 @@ impl Ref<Ssl> {
         }
     }
 
-    pub fn current_cipher(&self) -> Option<&Ref<SslCipher>> {
+    pub fn current_cipher(&self) -> Option<&SslCipherRef> {
         unsafe {
             let ptr = ffi::SSL_get_current_cipher(self.as_ptr());
 
             if ptr.is_null() {
                 None
             } else {
-                Some(Ref::from_ptr(ptr as *mut _))
+                Some(SslCipherRef::from_ptr(ptr as *mut _))
             }
         }
     }
@@ -1033,15 +1037,15 @@ impl Ref<Ssl> {
     }
 
     /// Changes the context corresponding to the current connection.
-    pub fn set_ssl_context(&mut self, ctx: &Ref<SslContext>) -> Result<(), ErrorStack> {
+    pub fn set_ssl_context(&mut self, ctx: &SslContextRef) -> Result<(), ErrorStack> {
         unsafe { cvt_p(ffi::SSL_set_SSL_CTX(self.as_ptr(), ctx.as_ptr())).map(|_| ()) }
     }
 
     /// Returns the context corresponding to the current connection
-    pub fn ssl_context(&self) -> &Ref<SslContext> {
+    pub fn ssl_context(&self) -> &SslContextRef {
         unsafe {
             let ssl_ctx = ffi::SSL_get_SSL_CTX(self.as_ptr());
-            Ref::from_ptr(ssl_ctx)
+            SslContextRef::from_ptr(ssl_ctx)
         }
     }
 
@@ -1049,13 +1053,13 @@ impl Ref<Ssl> {
     ///
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn param_mut(&mut self) -> &mut Ref<X509VerifyParam> {
+    pub fn param_mut(&mut self) -> &mut X509VerifyParamRef {
         self._param_mut()
     }
 
     #[cfg(any(ossl102, ossl110))]
-    fn _param_mut(&mut self) -> &mut Ref<X509VerifyParam> {
-        unsafe { Ref::from_ptr_mut(ffi::SSL_get0_param(self.as_ptr())) }
+    fn _param_mut(&mut self) -> &mut X509VerifyParamRef {
+        unsafe { X509VerifyParamRef::from_ptr_mut(ffi::SSL_get0_param(self.as_ptr())) }
     }
 
     /// Returns the result of X509 certificate verification.
@@ -1165,7 +1169,7 @@ impl<S> MidHandshakeSslStream<S> {
     }
 
     /// Returns a shared reference to the `Ssl` of the stream.
-    pub fn ssl(&self) -> &Ref<Ssl> {
+    pub fn ssl(&self) -> &SslRef {
         self.stream.ssl()
     }
 
@@ -1347,7 +1351,7 @@ impl<S> SslStream<S> {
     }
 
     /// Returns the OpenSSL `Ssl` object associated with this stream.
-    pub fn ssl(&self) -> &Ref<Ssl> {
+    pub fn ssl(&self) -> &SslRef {
         &self.ssl
     }
 }

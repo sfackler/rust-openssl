@@ -6,14 +6,14 @@ use ffi;
 use {cvt, cvt_p};
 use bio::{MemBio, MemBioSlice};
 use dsa::Dsa;
-use rsa::Rsa;
+use rsa::{Rsa, RsaRef};
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb};
-use types::{OpenSslType, Ref};
+use types::{OpenSslType, OpenSslTypeRef};
 
-type_!(PKey, ffi::EVP_PKEY, ffi::EVP_PKEY_free);
+type_!(PKey, PKeyRef, ffi::EVP_PKEY, ffi::EVP_PKEY_free);
 
-impl Ref<PKey> {
+impl PKeyRef {
     /// Get a reference to the interal RSA key for direct access to the key components
     pub fn rsa(&self) -> Result<Rsa, ErrorStack> {
         unsafe {
@@ -58,7 +58,7 @@ impl Ref<PKey> {
         Ok(mem_bio.get_buf().to_owned())
     }
 
-    pub fn public_eq(&self, other: &Ref<PKey>) -> bool {
+    pub fn public_eq(&self, other: &PKeyRef) -> bool {
         unsafe { ffi::EVP_PKEY_cmp(self.as_ptr(), other.as_ptr()) == 1 }
     }
 }
@@ -148,7 +148,7 @@ impl PKey {
     }
 
     /// Assign an RSA key to this pkey.
-    pub fn set_rsa(&mut self, rsa: &Ref<Rsa>) -> Result<(), ErrorStack> {
+    pub fn set_rsa(&mut self, rsa: &RsaRef) -> Result<(), ErrorStack> {
         unsafe {
             // this needs to be a reference as the set1_RSA ups the reference count
             let rsa_ptr = rsa.as_ptr();
