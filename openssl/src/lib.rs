@@ -85,7 +85,7 @@ pub mod stack;
 #[cfg(any(ossl102, ossl110))]
 mod verify;
 
-pub fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {
+fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {
     if r.is_null() {
         Err(ErrorStack::get())
     } else {
@@ -93,7 +93,7 @@ pub fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {
     }
 }
 
-pub fn cvt(r: c_int) -> Result<c_int, ErrorStack> {
+fn cvt(r: c_int) -> Result<c_int, ErrorStack> {
     if r <= 0 {
         Err(ErrorStack::get())
     } else {
@@ -101,6 +101,6 @@ pub fn cvt(r: c_int) -> Result<c_int, ErrorStack> {
     }
 }
 
-pub fn cvt_n(r: c_int) -> Result<c_int, ErrorStack> {
+fn cvt_n(r: c_int) -> Result<c_int, ErrorStack> {
     if r < 0 { Err(ErrorStack::get()) } else { Ok(r) }
 }
