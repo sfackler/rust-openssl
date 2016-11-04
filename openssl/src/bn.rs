@@ -23,12 +23,12 @@ pub enum RNGProperty {
     TwoMsbOne = 1,
 }
 
-type_!(BnCtx, ffi::BN_CTX, ffi::BN_CTX_free);
+type_!(BigNumContext, ffi::BN_CTX, ffi::BN_CTX_free);
 
-impl BnCtx {
-    /// Returns a new `BnCtx`.
-    pub fn new() -> Result<BnCtx, ErrorStack> {
-        unsafe { cvt_p(ffi::BN_CTX_new()).map(BnCtx) }
+impl BigNumContext {
+    /// Returns a new `BigNumContext`.
+    pub fn new() -> Result<BigNumContext, ErrorStack> {
+        unsafe { cvt_p(ffi::BN_CTX_new()).map(BigNumContext) }
     }
 
     /// Places the result of `a * b` in `r`.
@@ -681,7 +681,7 @@ impl<'a, 'b> Mul<&'b Ref<BigNum>> for &'a Ref<BigNum> {
     type Output = BigNum;
 
     fn mul(self, oth: &Ref<BigNum>) -> BigNum {
-        let mut ctx = BnCtx::new().unwrap();
+        let mut ctx = BigNumContext::new().unwrap();
         let mut r = BigNum::new().unwrap();
         ctx.mul(&mut r, self, oth).unwrap();
         r
@@ -694,7 +694,7 @@ impl<'a, 'b> Div<&'b Ref<BigNum>> for &'a Ref<BigNum> {
     type Output = BigNum;
 
     fn div(self, oth: &'b Ref<BigNum>) -> BigNum {
-        let mut ctx = BnCtx::new().unwrap();
+        let mut ctx = BigNumContext::new().unwrap();
         let mut dv = BigNum::new().unwrap();
         ctx.div(Some(&mut dv), None, self, oth).unwrap();
         dv
@@ -707,7 +707,7 @@ impl<'a, 'b> Rem<&'b Ref<BigNum>> for &'a Ref<BigNum> {
     type Output = BigNum;
 
     fn rem(self, oth: &'b Ref<BigNum>) -> BigNum {
-        let mut ctx = BnCtx::new().unwrap();
+        let mut ctx = BigNumContext::new().unwrap();
         let mut rem = BigNum::new().unwrap();
         ctx.div(None, Some(&mut rem), self, oth).unwrap();
         rem
@@ -780,7 +780,7 @@ impl Neg for BigNum {
 
 #[cfg(test)]
 mod tests {
-    use bn::{BnCtx, BigNum};
+    use bn::{BigNumContext, BigNum};
 
     #[test]
     fn test_to_from_slice() {
@@ -805,7 +805,7 @@ mod tests {
         let mut p = BigNum::new().unwrap();
         BigNum::generate_prime(&mut p, 128, true, None, Some(&a)).unwrap();
 
-        let mut ctx = BnCtx::new().unwrap();
+        let mut ctx = BigNumContext::new().unwrap();
         assert!(ctx.is_prime(&p, 100).unwrap());
         assert!(ctx.is_prime_fasttest(&p, 100, true).unwrap());
     }
