@@ -23,6 +23,7 @@ pub enum ASN1_TIME {}
 pub enum ASN1_TYPE {}
 pub enum BN_CTX {}
 pub enum BN_GENCB {}
+pub enum CONF {}
 pub enum COMP_METHOD {}
 pub enum EC_KEY {}
 pub enum ENGINE {}
@@ -1676,8 +1677,6 @@ extern {
     pub fn X509_STORE_CTX_get_ex_data(ctx: *mut X509_STORE_CTX, idx: c_int) -> *mut c_void;
     pub fn X509_STORE_CTX_get_error_depth(ctx: *mut X509_STORE_CTX) -> c_int;
 
-    pub fn X509V3_EXT_conf_nid(conf: *mut c_void, ctx: *mut X509V3_CTX, ext_nid: c_int, value: *mut c_char) -> *mut X509_EXTENSION;
-    pub fn X509V3_EXT_conf(conf: *mut c_void, ctx: *mut X509V3_CTX, name: *mut c_char, value: *mut c_char) -> *mut X509_EXTENSION;
     pub fn X509V3_set_ctx(ctx: *mut X509V3_CTX, issuer: *mut X509, subject: *mut X509, req: *mut X509_REQ, crl: *mut X509_CRL, flags: c_int);
 
     pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: *mut stack_st_X509_EXTENSION) -> c_int;

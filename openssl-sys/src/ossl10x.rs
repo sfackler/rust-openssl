@@ -584,6 +584,8 @@ extern {
     pub fn X509_NAME_get_entry(n: *mut ::X509_NAME, loc: c_int) -> *mut ::X509_NAME_ENTRY;
     pub fn X509_NAME_ENTRY_get_data(ne: *mut ::X509_NAME_ENTRY) -> *mut ::ASN1_STRING;
     pub fn X509_STORE_CTX_get_chain(ctx: *mut ::X509_STORE_CTX) -> *mut stack_st_X509;
+    pub fn X509V3_EXT_nconf_nid(conf: *mut ::CONF, ctx: *mut ::X509V3_CTX, ext_nid: c_int, value: *mut c_char) -> *mut ::X509_EXTENSION;
+    pub fn X509V3_EXT_nconf(conf: *mut ::CONF, ctx: *mut ::X509V3_CTX, name: *mut c_char, value: *mut c_char) -> *mut ::X509_EXTENSION;
     pub fn ASN1_STRING_to_UTF8(out: *mut *mut c_uchar, s: *mut ::ASN1_STRING) -> c_int;
     pub fn ASN1_STRING_data(x: *mut ::ASN1_STRING) -> *mut c_uchar;
     pub fn CRYPTO_add_lock(pointer: *mut c_int,

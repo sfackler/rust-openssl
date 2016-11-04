@@ -213,17 +213,17 @@ impl X509Generator {
             let value = CString::new(value.as_bytes()).unwrap();
             let ext = match exttype.get_nid() {
                 Some(nid) => {
-                    try!(cvt_p(ffi::X509V3_EXT_conf_nid(ptr::null_mut(),
-                                                      mem::transmute(&ctx),
-                                                      nid.as_raw(),
-                                                      value.as_ptr() as *mut c_char)))
+                    try!(cvt_p(ffi::X509V3_EXT_nconf_nid(ptr::null_mut(),
+                                                         &mut ctx,
+                                                         nid.as_raw(),
+                                                         value.as_ptr() as *mut c_char)))
                 }
                 None => {
                     let name = CString::new(exttype.get_name().unwrap().as_bytes()).unwrap();
-                    try!(cvt_p(ffi::X509V3_EXT_conf(ptr::null_mut(),
-                                                    mem::transmute(&ctx),
-                                                    name.as_ptr() as *mut c_char,
-                                                    value.as_ptr() as *mut c_char)))
+                    try!(cvt_p(ffi::X509V3_EXT_nconf(ptr::null_mut(),
+                                                     &mut ctx,
+                                                     name.as_ptr() as *mut c_char,
+                                                     value.as_ptr() as *mut c_char)))
                 }
             };
             if ffi::X509_add_ext(x509, ext, -1) != 1 {

@@ -63,6 +63,8 @@ extern {
     pub fn X509_get_ext_d2i(x: *const ::X509, nid: c_int, crit: *mut c_int, idx: *mut c_int) -> *mut c_void;
     pub fn X509_NAME_get_entry(n: *const ::X509_NAME, loc: c_int) -> *mut ::X509_NAME_ENTRY;
     pub fn X509_NAME_ENTRY_get_data(ne: *const ::X509_NAME_ENTRY) -> *mut ::ASN1_STRING;
+    pub fn X509V3_EXT_nconf_nid(conf: *mut ::CONF, ctx: *mut ::X509V3_CTX, ext_nid: c_int, value: *const c_char) -> *mut ::X509_EXTENSION;
+    pub fn X509V3_EXT_nconf(conf: *mut ::CONF, ctx: *mut ::X509V3_CTX, name: *const c_char, value: *const c_char) -> *mut ::X509_EXTENSION;
     pub fn ASN1_STRING_to_UTF8(out: *mut *mut c_uchar, s: *const ::ASN1_STRING) -> c_int;
     pub fn BN_is_negative(b: *const ::BIGNUM) -> c_int;
     pub fn EVP_CIPHER_key_length(cipher: *const EVP_CIPHER) -> c_int;
