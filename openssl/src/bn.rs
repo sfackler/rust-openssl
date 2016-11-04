@@ -10,18 +10,20 @@ use crypto::CryptoString;
 use error::ErrorStack;
 use types::{Ref, OpenSslType};
 
-/// Specifies the desired properties of a randomly generated `BigNum`.
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub enum RNGProperty {
-    /// The most significant bit of the number is allowed to be 0.
-    MsbMaybeZero = -1,
-    /// The MSB should be set to 1.
-    MsbOne = 0,
-    /// The two most significant bits of the number will be set to 1, so that the product of two
-    /// such random numbers will always have `2 * bits` length.
-    TwoMsbOne = 1,
-}
+/// Options for the most significant bits of a randomly generated `BigNum`.
+pub struct MsbOption(c_int);
+
+/// The most significant bit of the number may be 0.
+pub const MSB_MAYBE_ZERO: MsbOption = MsbOption(-1);
+
+/// The most significant bit of the number must be 1.
+pub const MSB_ONE: MsbOption = MsbOption(0);
+
+/// The most significant two bits of the number must be 1.
+///
+/// The number of bits in the product of two such numbers will always be exactly twice the number
+/// of bits in the original numbers.
+pub const TWO_MSB_ONE: MsbOption = MsbOption(1);
 
 type_!(BigNumContext, ffi::BN_CTX, ffi::BN_CTX_free);
 
@@ -193,35 +195,6 @@ impl BigNumContext {
                 .map(|r| r != 0)
         }
     }
-
-    /// Generates a cryptographically strong pseudo-random `BigNum`, placing it in `r`.
-    ///
-    /// # Parameters
-    ///
-    /// * `bits`: Length of the number in bits.
-    /// * `prop`: The desired properties of the number.
-    /// * `odd`: If `true`, the generated number will be odd.
-    pub fn rand(r: &mut Ref<BigNum>,
-                bits: i32,
-                prop: RNGProperty,
-                odd: bool)
-                -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_rand(r.as_ptr(), bits.into(), prop as c_int, odd as c_int)).map(|_| ())
-        }
-    }
-
-    /// The cryptographically weak counterpart to `rand`.
-    pub fn pseudo_rand(r: &mut Ref<BigNum>,
-                       bits: i32,
-                       prop: RNGProperty,
-                       odd: bool)
-                       -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_pseudo_rand(r.as_ptr(), bits.into(), prop as c_int, odd as c_int))
-                .map(|_| ())
-        }
-    }
 }
 
 impl Ref<BigNum> {
@@ -385,6 +358,59 @@ impl Ref<BigNum> {
         (self.num_bits() + 7) / 8
     }
 
+    /// Generates a cryptographically strong pseudo-random `BigNum`, placing it in `self`.
+    ///
+    /// # Parameters
+    ///
+    /// * `bits`: Length of the number in bits.
+    /// * `msb`: The desired properties of the number.
+    /// * `odd`: If `true`, the generated number will be odd.
+    pub fn rand(&mut self,
+                bits: i32,
+                msb: MsbOption,
+                odd: bool)
+                -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::BN_rand(self.as_ptr(), bits.into(), msb.0, odd as c_int)).map(|_| ())
+        }
+    }
+
+    /// The cryptographically weak counterpart to `rand`.
+    pub fn pseudo_rand(&mut self,
+                       bits: i32,
+                       msb: MsbOption,
+                       odd: bool)
+                       -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::BN_pseudo_rand(self.as_ptr(), bits.into(), msb.0, odd as c_int)).map(|_| ())
+        }
+    }
+
+    /// Generates a prime number, placing it in `self`.
+    ///
+    /// # Parameters
+    ///
+    /// * `bits`: The length of the prime in bits (lower bound).
+    /// * `safe`: If true, returns a "safe" prime `p` so that `(p-1)/2` is also prime.
+    /// * `add`/`rem`: If `add` is set to `Some(add)`, `p % add == rem` will hold, where `p` is the
+    ///   generated prime and `rem` is `1` if not specified (`None`).
+    pub fn generate_prime(&mut self,
+                          bits: i32,
+                          safe: bool,
+                          add: Option<&Ref<BigNum>>,
+                          rem: Option<&Ref<BigNum>>)
+                          -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::BN_generate_prime_ex(self.as_ptr(),
+                                          bits as c_int,
+                                          safe as c_int,
+                                          add.map(|n| n.as_ptr()).unwrap_or(ptr::null_mut()),
+                                          rem.map(|n| n.as_ptr()).unwrap_or(ptr::null_mut()),
+                                          ptr::null_mut()))
+                .map(|_| ())
+        }
+    }
+
     /// Returns a big-endian byte vector representation of the absolute value of `self`.
     ///
     /// `self` can be recreated by using `new_from_slice`.
@@ -490,31 +516,6 @@ impl BigNum {
             assert!(n.len() <= c_int::max_value() as usize);
             cvt_p(ffi::BN_bin2bn(n.as_ptr(), n.len() as c_int, ptr::null_mut()))
                 .map(|p| BigNum::from_ptr(p))
-        }
-    }
-
-    /// Generates a prime number, placing it in `r`.
-    ///
-    /// # Parameters
-    ///
-    /// * `bits`: The length of the prime in bits (lower bound).
-    /// * `safe`: If true, returns a "safe" prime `p` so that `(p-1)/2` is also prime.
-    /// * `add`/`rem`: If `add` is set to `Some(add)`, `p % add == rem` will hold, where `p` is the
-    ///   generated prime and `rem` is `1` if not specified (`None`).
-    pub fn generate_prime(r: &mut Ref<BigNum>,
-                          bits: i32,
-                          safe: bool,
-                          add: Option<&Ref<BigNum>>,
-                          rem: Option<&Ref<BigNum>>)
-                          -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_generate_prime_ex(r.as_ptr(),
-                                          bits as c_int,
-                                          safe as c_int,
-                                          add.map(|n| n.as_ptr()).unwrap_or(ptr::null_mut()),
-                                          rem.map(|n| n.as_ptr()).unwrap_or(ptr::null_mut()),
-                                          ptr::null_mut()))
-                .map(|_| ())
         }
     }
 }
@@ -803,7 +804,7 @@ mod tests {
     fn test_prime_numbers() {
         let a = BigNum::from_u32(19029017).unwrap();
         let mut p = BigNum::new().unwrap();
-        BigNum::generate_prime(&mut p, 128, true, None, Some(&a)).unwrap();
+        p.generate_prime(128, true, None, Some(&a)).unwrap();
 
         let mut ctx = BigNumContext::new().unwrap();
         assert!(ctx.is_prime(&p, 100).unwrap());
