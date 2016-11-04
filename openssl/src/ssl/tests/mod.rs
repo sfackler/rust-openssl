@@ -20,9 +20,7 @@ use ssl::SSL_VERIFY_PEER;
 use ssl::{SslMethod, HandshakeError};
 use ssl::{SslContext, SslStream, Ssl, ShutdownResult, SslConnectorBuilder, SslAcceptorBuilder,
           Error};
-use x509::X509StoreContext;
-use x509::X509FileType;
-use x509::X509;
+use x509::{X509StoreContext, X509, X509_FILETYPE_PEM};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::verify::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS;
 use pkey::PKey;
@@ -369,8 +367,8 @@ fn test_write_hits_stream() {
 
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
-    ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM).unwrap();
-    ctx.set_private_key_file(&Path::new("test/key.pem"), X509FileType::PEM).unwrap();
+    ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM).unwrap();
+    ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM).unwrap();
     let stream = listener.accept().unwrap().0;
     let mut stream = Ssl::new(&ctx.build()).unwrap().accept(stream).unwrap();
 
@@ -634,9 +632,9 @@ fn test_npn_server_advertise_multiple() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         ctx.set_verify(SSL_VERIFY_PEER);
         ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]).unwrap();
-        assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM)
+        assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
                    .is_ok());
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509FileType::PEM)
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM)
             .unwrap();
         ctx.build()
     };
@@ -675,9 +673,9 @@ fn test_alpn_server_advertise_multiple() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         ctx.set_verify(SSL_VERIFY_PEER);
         ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]).unwrap();
-        assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM)
+        assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
                    .is_ok());
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509FileType::PEM)
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM)
             .unwrap();
         ctx.build()
     };
@@ -716,9 +714,9 @@ fn test_alpn_server_select_none() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         ctx.set_verify(SSL_VERIFY_PEER);
         ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]).unwrap();
-        assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM)
+        assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
                    .is_ok());
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509FileType::PEM)
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM)
             .unwrap();
         ctx.build()
     };
@@ -751,9 +749,9 @@ fn test_alpn_server_select_none() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         ctx.set_verify(SSL_VERIFY_PEER);
         ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]).unwrap();
-        assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM)
+        assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
                    .is_ok());
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509FileType::PEM)
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM)
             .unwrap();
         ctx.build()
     };
@@ -1162,8 +1160,8 @@ fn shutdown() {
     thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509FileType::PEM).unwrap();
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509FileType::PEM).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM).unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM).unwrap();
         let ssl = Ssl::new(&ctx.build()).unwrap();
         let mut stream = ssl.accept(stream).unwrap();
 

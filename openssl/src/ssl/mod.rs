@@ -567,7 +567,7 @@ impl SslContextBuilder {
         unsafe {
             cvt(ffi::SSL_CTX_use_certificate_file(self.as_ptr(),
                                                   file.as_ptr() as *const _,
-                                                  file_type as c_int))
+                                                  file_type.as_raw()))
                 .map(|_| ())
         }
     }
@@ -607,7 +607,7 @@ impl SslContextBuilder {
         unsafe {
             cvt(ffi::SSL_CTX_use_PrivateKey_file(self.as_ptr(),
                                                  file.as_ptr() as *const _,
-                                                 file_type as c_int))
+                                                 file_type.as_raw()))
                 .map(|_| ())
         }
     }

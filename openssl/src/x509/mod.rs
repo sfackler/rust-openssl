@@ -39,13 +39,17 @@ pub mod extension;
 #[cfg(test)]
 mod tests;
 
-#[derive(Copy, Clone)]
-#[repr(i32)]
-pub enum X509FileType {
-    PEM = ffi::X509_FILETYPE_PEM,
-    ASN1 = ffi::X509_FILETYPE_ASN1,
-    Default = ffi::X509_FILETYPE_DEFAULT,
+pub struct X509FileType(c_int);
+
+impl X509FileType {
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
 }
+
+pub const X509_FILETYPE_PEM: X509FileType = X509FileType(ffi::X509_FILETYPE_PEM);
+pub const X509_FILETYPE_ASN1: X509FileType = X509FileType(ffi::X509_FILETYPE_ASN1);
+pub const X509_FILETYPE_DEFAULT: X509FileType = X509FileType(ffi::X509_FILETYPE_DEFAULT);
 
 type_!(X509StoreContext, ffi::X509_STORE_CTX, ffi::X509_STORE_CTX_free);
 
