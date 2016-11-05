@@ -295,7 +295,7 @@ The build is now aborting due to this version mismatch.
                 vars.push(var);
             }
         }
-        println!("cargo:osslconf={}", vars.join(","));
+        println!("cargo:conf={}", vars.join(","));
     }
 
     return version_text.to_string()
