@@ -23,7 +23,6 @@ libc = "0.2"
 openssl-sys = { version = "0.7.17", path = "../openssl-sys" }
 
 [dev-dependencies]
-net2 = "0.2.16"
 rustc-serialize = "0.3"
 tempdir = "0.3"
 winapi = "0.2"
