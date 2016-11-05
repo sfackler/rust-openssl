@@ -4,16 +4,16 @@ use std::borrow::Borrow;
 use std::convert::AsRef;
 use std::marker::PhantomData;
 use libc::c_int;
+use std::mem;
 
-use ffi;
 use types::{OpenSslType, OpenSslTypeRef};
 use util::Opaque;
 
 #[cfg(ossl10x)]
 use ffi::{sk_pop as OPENSSL_sk_pop, sk_free as OPENSSL_sk_free, sk_num as OPENSSL_sk_num,
-          sk_value as OPENSSL_sk_value};
+          sk_value as OPENSSL_sk_value, _STACK as OPENSSL_STACK};
 #[cfg(ossl110)]
-use ffi::{OPENSSL_sk_pop, OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_value};
+use ffi::{OPENSSL_sk_pop, OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_value, OPENSSL_STACK};
 
 /// Trait implemented by types which can be placed in a stack.
 ///
@@ -57,6 +57,20 @@ impl<T: Stackable> Drop for Stack<T> {
     }
 }
 
+impl<T: Stackable> iter::IntoIterator for Stack<T> {
+    type IntoIter = IntoIter<T>;
+    type Item = T;
+
+    fn into_iter(self) -> IntoIter<T> {
+        let it = IntoIter {
+            stack: self.0,
+            idx: 0,
+        };
+        mem::forget(self);
+        it
+    }
+}
+
 impl<T: Stackable> AsRef<StackRef<T>> for Stack<T> {
     fn as_ref(&self) -> &StackRef<T> {
         &*self
@@ -92,31 +106,66 @@ impl<T: Stackable> DerefMut for Stack<T> {
     }
 }
 
+pub struct IntoIter<T: Stackable> {
+    stack: *mut T::StackType,
+    idx: c_int,
+}
+
+impl<T: Stackable> IntoIter<T> {
+    fn stack_len(&self) -> c_int {
+        unsafe { OPENSSL_sk_num(self.stack as *mut _) }
+    }
+
+    unsafe fn get(&mut self, i: c_int) -> T {
+        let ptr = OPENSSL_sk_value(self.stack as *mut _, i);
+        T::from_ptr(ptr as *mut _)
+    }
+}
+
+impl<T: Stackable> Drop for IntoIter<T> {
+    fn drop(&mut self) {
+        unsafe {
+            for i in self.idx..self.stack_len() {
+                self.get(i);
+            }
+
+            OPENSSL_sk_free(self.stack as *mut _);
+        }
+    }
+}
+
+impl<T: Stackable> Iterator for IntoIter<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<T> {
+        unsafe {
+            if self.idx == self.stack_len() {
+                None
+            } else {
+                let idx = self.idx;
+                self.idx += 1;
+                let v = self.get(idx);
+                Some(v)
+            }
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = (self.stack_len() - self.idx) as usize;
+        (size, Some(size))
+    }
+}
+
+impl<T: Stackable> ExactSizeIterator for IntoIter<T> {}
+
 pub struct StackRef<T: Stackable>(Opaque, PhantomData<T>);
 
 impl<T: Stackable> OpenSslTypeRef for StackRef<T> {
     type CType = T::StackType;
 }
 
-
 impl<T: Stackable> StackRef<T> {
-    /// OpenSSL stack types are just a (kinda) typesafe wrapper around
-    /// a `_STACK` object. We can therefore safely cast it and access
-    /// the `_STACK` members without having to worry about the real
-    /// layout of `T::StackType`.
-    ///
-    /// If that sounds unsafe then keep in mind that's exactly how the
-    /// OpenSSL 1.1.0 new C stack code works.
-    #[cfg(ossl10x)]
-    fn as_stack(&self) -> *mut ffi::_STACK {
-        self.as_ptr() as *mut _
-    }
-
-    /// OpenSSL 1.1.0 replaced the stack macros with a functions and
-    /// only exposes an opaque OPENSSL_STACK struct
-    /// publicly.
-    #[cfg(ossl110)]
-    fn as_stack(&self) -> *mut ffi::OPENSSL_STACK {
+    fn as_stack(&self) -> *mut OPENSSL_STACK {
         self.as_ptr() as *mut _
     }
 

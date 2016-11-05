@@ -11,6 +11,7 @@ use pkey::PKey;
 use error::ErrorStack;
 use x509::X509;
 use types::OpenSslType;
+use stack::Stack;
 
 /// A PKCS #12 archive.
 pub struct Pkcs12(*mut ffi::PKCS12);
@@ -48,19 +49,12 @@ impl Pkcs12 {
 
             let pkey = PKey::from_ptr(pkey);
             let cert = X509::from_ptr(cert);
-            let chain = chain as *mut _;
-
-            let mut chain_out = vec![];
-            for i in 0..compat::OPENSSL_sk_num(chain) {
-                let x509 = compat::OPENSSL_sk_value(chain, i);
-                chain_out.push(X509::from_ptr(x509 as *mut _));
-            }
-            compat::OPENSSL_sk_free(chain as *mut _);
+            let chain = Stack::from_ptr(chain).into_iter().collect();
 
             Ok(ParsedPkcs12 {
                 pkey: pkey,
                 cert: cert,
-                chain: chain_out,
+                chain: chain,
             })
         }
     }
@@ -70,30 +64,6 @@ pub struct ParsedPkcs12 {
     pub pkey: PKey,
     pub cert: X509,
     pub chain: Vec<X509>,
-}
-
-#[cfg(ossl110)]
-mod compat {
-    pub use ffi::OPENSSL_sk_free;
-    pub use ffi::OPENSSL_sk_num;
-    pub use ffi::OPENSSL_sk_value;
-}
-
-#[cfg(ossl10x)]
-#[allow(bad_style)]
-mod compat {
-    use libc::{c_int, c_void};
-    use ffi;
-
-    pub use ffi::sk_free as OPENSSL_sk_free;
-
-    pub unsafe fn OPENSSL_sk_num(stack: *mut ffi::_STACK) -> c_int {
-        (*stack).num
-    }
-
-    pub unsafe fn OPENSSL_sk_value(stack: *const ffi::_STACK, idx: c_int) -> *mut c_void {
-        *(*stack).data.offset(idx as isize) as *mut c_void
-    }
 }
 
 #[cfg(test)]
