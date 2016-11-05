@@ -219,13 +219,13 @@ fn validate_headers(include_dirs: &[PathBuf],
     };
     if version_text.contains("0x10001") {
         println!("cargo:rustc-cfg=ossl101");
-        println!("cargo:is_101=1");
+        println!("cargo:version=101");
     } else if version_text.contains("0x10002") {
         println!("cargo:rustc-cfg=ossl102");
-        println!("cargo:is_102=1");
+        println!("cargo:version=102");
     } else if version_text.contains("0x10100") {
         println!("cargo:rustc-cfg=ossl110");
-        println!("cargo:is_110=1");
+        println!("cargo:version=110");
     } else {
         panic!("
 
