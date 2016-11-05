@@ -1107,7 +1107,7 @@ fn connector_client_server_mozilla_intermediate() {
     });
 
     let mut connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
-    connector.context_mut().set_ca_file("test/root-ca.pem").unwrap();
+    connector.builder_mut().set_ca_file("test/root-ca.pem").unwrap();
     let connector = connector.build();
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
@@ -1139,7 +1139,7 @@ fn connector_client_server_mozilla_modern() {
     });
 
     let mut connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
-    connector.context_mut().set_ca_file("test/root-ca.pem").unwrap();
+    connector.builder_mut().set_ca_file("test/root-ca.pem").unwrap();
     let connector = connector.build();
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();

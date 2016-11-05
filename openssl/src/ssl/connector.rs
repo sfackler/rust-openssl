@@ -66,12 +66,12 @@ impl SslConnectorBuilder {
     }
 
     /// Returns a shared reference to the inner `SslContextBuilder`.
-    pub fn context(&self) -> &SslContextBuilder {
+    pub fn builder(&self) -> &SslContextBuilder {
         &self.0
     }
 
     /// Returns a mutable reference to the inner `SslContextBuilder`.
-    pub fn context_mut(&mut self) -> &mut SslContextBuilder {
+    pub fn builder_mut(&mut self) -> &mut SslContextBuilder {
         &mut self.0
     }
 
@@ -187,12 +187,12 @@ impl SslAcceptorBuilder {
     }
 
     /// Returns a shared reference to the inner `SslContextBuilder`.
-    pub fn context(&self) -> &SslContextBuilder {
+    pub fn builder(&self) -> &SslContextBuilder {
         &self.0
     }
 
     /// Returns a mutable reference to the inner `SslContextBuilder`.
-    pub fn context_mut(&mut self) -> &mut SslContextBuilder {
+    pub fn builder_mut(&mut self) -> &mut SslContextBuilder {
         &mut self.0
     }
 
