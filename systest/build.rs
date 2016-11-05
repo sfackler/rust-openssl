@@ -22,16 +22,8 @@ fn main() {
         }
     }
 
-    if env::var("DEP_OPENSSL_IS_101").is_ok() {
-        cfg.cfg("ossl101", None);
-    }
-    if env::var("DEP_OPENSSL_IS_102").is_ok() {
-        cfg.cfg("ossl102", None);
-    }
-    if env::var("DEP_OPENSSL_IS_110").is_ok() {
-        cfg.cfg("ossl110", None);
-    }
-    if let Ok(vars) = env::var("DEP_OPENSSL_OSSLCONF") {
+    cfg.cfg(&format!("ossl{}", env::var("DEP_OPENSSL_VERSION").unwrap()), None);
+    if let Ok(vars) = env::var("DEP_OPENSSL_CONF") {
         for var in vars.split(",") {
             cfg.cfg("osslconf", Some(var));
         }
