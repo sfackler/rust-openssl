@@ -480,6 +480,12 @@ impl AsRef<X509Ref> for X509 {
     }
 }
 
+impl AsRef<X509Ref> for X509Ref {
+    fn as_ref(&self) -> &X509Ref {
+        self
+    }
+}
+
 impl Borrow<X509Ref> for X509 {
     fn borrow(&self) -> &X509Ref {
         &*self

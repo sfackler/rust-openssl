@@ -49,7 +49,7 @@ impl Pkcs12 {
 
             let pkey = PKey::from_ptr(pkey);
             let cert = X509::from_ptr(cert);
-            let chain = Stack::from_ptr(chain).into_iter().collect();
+            let chain = Stack::from_ptr(chain);
 
             Ok(ParsedPkcs12 {
                 pkey: pkey,
@@ -63,7 +63,7 @@ impl Pkcs12 {
 pub struct ParsedPkcs12 {
     pub pkey: PKey,
     pub cert: X509,
-    pub chain: Vec<X509>,
+    pub chain: Stack<X509>,
 }
 
 #[cfg(test)]
