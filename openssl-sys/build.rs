@@ -247,56 +247,54 @@ The build is now aborting due to this version mismatch.
     // file of OpenSSL, `opensslconf.h`, and then dump out everything it defines
     // as our own #[cfg] directives. That way the `ossl10x.rs` bindings can
     // account for compile differences and such.
-    if version_text.contains("0x1000") {
-        let mut conf_header = String::new();
-        let mut include = include_dirs.iter()
-                                      .map(|p| p.join("openssl/opensslconf.h"))
-                                      .filter(|p| p.exists());
-        let mut f = match include.next() {
-            Some(f) => File::open(f).unwrap(),
-            None => {
-                // It's been seen that on linux the include dir printed out by
-                // `pkg-config` doesn't actually have opensslconf.h. Instead
-                // it's in an architecture-specific include directory.
-                //
-                // Try to detect that case to see if it exists.
-                let mut libdirs = libdirs.iter().map(|p| {
-                    p.iter()
-                     .map(|p| if p == "lib" {"include".as_ref()} else {p})
-                     .collect::<PathBuf>()
-                }).map(|p| {
-                    p.join("openssl/opensslconf.h")
-                }).filter(|p| p.exists());
-                match libdirs.next() {
-                    Some(f) => File::open(f).unwrap(),
-                    None => {
-                        panic!("failed to open header file at
-                                `openssl/opensslconf.h` to learn about \
-                                OpenSSL's version number, looked \
-                                inside:\n\n{:#?}\n\n",
-                               include_dirs);
-                    }
+    let mut conf_header = String::new();
+    let mut include = include_dirs.iter()
+                                  .map(|p| p.join("openssl/opensslconf.h"))
+                                  .filter(|p| p.exists());
+    let mut f = match include.next() {
+        Some(f) => File::open(f).unwrap(),
+        None => {
+            // It's been seen that on linux the include dir printed out by
+            // `pkg-config` doesn't actually have opensslconf.h. Instead
+            // it's in an architecture-specific include directory.
+            //
+            // Try to detect that case to see if it exists.
+            let mut libdirs = libdirs.iter().map(|p| {
+                p.iter()
+                 .map(|p| if p == "lib" {"include".as_ref()} else {p})
+                 .collect::<PathBuf>()
+            }).map(|p| {
+                p.join("openssl/opensslconf.h")
+            }).filter(|p| p.exists());
+            match libdirs.next() {
+                Some(f) => File::open(f).unwrap(),
+                None => {
+                    panic!("failed to open header file at
+                            `openssl/opensslconf.h` to learn about \
+                            OpenSSL's version number, looked \
+                            inside:\n\n{:#?}\n\n",
+                           include_dirs);
                 }
             }
-        };
-        f.read_to_string(&mut conf_header).unwrap();
-
-        // Look for `#define OPENSSL_FOO`, print out everything as our own
-        // #[cfg] flag.
-        let mut vars = vec![];
-        for line in conf_header.lines() {
-            let i = match line.find("define ") {
-                Some(i) => i,
-                None => continue,
-            };
-            let var = line[i + "define ".len()..].trim();
-            if var.starts_with("OPENSSL") && !var.contains(" ") {
-                println!("cargo:rustc-cfg=osslconf=\"{}\"", var);
-                vars.push(var);
-            }
         }
-        println!("cargo:conf={}", vars.join(","));
+    };
+    f.read_to_string(&mut conf_header).unwrap();
+
+    // Look for `#define OPENSSL_FOO`, print out everything as our own
+    // #[cfg] flag.
+    let mut vars = vec![];
+    for line in conf_header.lines() {
+        let i = match line.find("define ") {
+            Some(i) => i,
+            None => continue,
+        };
+        let var = line[i + "define ".len()..].trim();
+        if var.starts_with("OPENSSL") && !var.contains(" ") {
+            println!("cargo:rustc-cfg=osslconf=\"{}\"", var);
+            vars.push(var);
+        }
     }
+    println!("cargo:conf={}", vars.join(","));
 
     return version_text.to_string()
 }
