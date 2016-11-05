@@ -3,7 +3,7 @@ use ffi;
 
 use cvt;
 use error::ErrorStack;
-use types::Ref;
+use types::OpenSslTypeRef;
 
 bitflags! {
     pub flags X509CheckFlags: c_uint {
@@ -19,9 +19,9 @@ bitflags! {
     }
 }
 
-type_!(X509VerifyParam, ffi::X509_VERIFY_PARAM, ffi::X509_VERIFY_PARAM_free);
+type_!(X509VerifyParam, X509VerifyParamRef, ffi::X509_VERIFY_PARAM, ffi::X509_VERIFY_PARAM_free);
 
-impl Ref<X509VerifyParam> {
+impl X509VerifyParamRef {
     pub fn set_hostflags(&mut self, hostflags: X509CheckFlags) {
         unsafe {
             ffi::X509_VERIFY_PARAM_set_hostflags(self.as_ptr(), hostflags.bits);

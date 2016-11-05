@@ -9,11 +9,11 @@ use {cvt, cvt_p};
 use bio::MemBio;
 use crypto::CryptoString;
 use error::ErrorStack;
-use types::{OpenSslType, Ref};
+use types::{OpenSslType, OpenSslTypeRef};
 
-type_!(Asn1Time, ffi::ASN1_TIME, ffi::ASN1_TIME_free);
+type_!(Asn1Time, Asn1TimeRef, ffi::ASN1_TIME, ffi::ASN1_TIME_free);
 
-impl fmt::Display for Ref<Asn1Time> {
+impl fmt::Display for Asn1TimeRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         unsafe {
             let mem_bio = try!(MemBio::new());
@@ -39,9 +39,9 @@ impl Asn1Time {
     }
 }
 
-type_!(Asn1String, ffi::ASN1_STRING, ffi::ASN1_STRING_free);
+type_!(Asn1String, Asn1StringRef, ffi::ASN1_STRING, ffi::ASN1_STRING_free);
 
-impl Ref<Asn1String> {
+impl Asn1StringRef {
     pub fn as_utf8(&self) -> Result<CryptoString, ErrorStack> {
         unsafe {
             let mut ptr = ptr::null_mut();

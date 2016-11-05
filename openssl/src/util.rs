@@ -1,6 +1,6 @@
 use libc::{c_int, c_char, c_void};
-
 use std::any::Any;
+use std::cell::UnsafeCell;
 use std::panic::{self, AssertUnwindSafe};
 use std::slice;
 
@@ -60,3 +60,8 @@ pub unsafe extern "C" fn invoke_passwd_cb<F>(buf: *mut c_char,
         }
     }
 }
+
+/// This is intended to be used as the inner type for `FooRef` types converted from raw C pointers.
+/// It has an `UnsafeCell` internally to inform the compiler about aliasability and doesn't
+/// implement `Copy`, so it can't be dereferenced.
+pub struct Opaque(UnsafeCell<()>);

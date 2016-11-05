@@ -171,7 +171,7 @@ macro_rules! run_test(
             use hash::MessageDigest;
             use x509::X509StoreContext;
             use serialize::hex::FromHex;
-            use types::Ref;
+            use types::OpenSslTypeRef;
             use super::Server;
 
             #[test]

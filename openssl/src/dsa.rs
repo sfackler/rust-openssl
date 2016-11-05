@@ -5,14 +5,14 @@ use std::fmt;
 use std::ptr;
 
 use bio::{MemBio, MemBioSlice};
-use bn::BigNum;
+use bn::BigNumRef;
 use {cvt, cvt_p};
-use types::Ref;
+use types::OpenSslTypeRef;
 use util::{CallbackState, invoke_passwd_cb};
 
-type_!(Dsa, ffi::DSA, ffi::DSA_free);
+type_!(Dsa, DsaRef, ffi::DSA, ffi::DSA_free);
 
-impl Ref<Dsa> {
+impl DsaRef {
     /// Writes an DSA private key as unencrypted PEM formatted data
     pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         assert!(self.has_private_key());
@@ -44,35 +44,35 @@ impl Ref<Dsa> {
         }
     }
 
-    pub fn p(&self) -> Option<&Ref<BigNum>> {
+    pub fn p(&self) -> Option<&BigNumRef> {
         unsafe {
             let p = compat::pqg(self.as_ptr())[0];
             if p.is_null() {
                 None
             } else {
-                Some(Ref::<BigNum>::from_ptr(p as *mut _))
+                Some(BigNumRef::from_ptr(p as *mut _))
             }
         }
     }
 
-    pub fn q(&self) -> Option<&Ref<BigNum>> {
+    pub fn q(&self) -> Option<&BigNumRef> {
         unsafe {
             let q = compat::pqg(self.as_ptr())[1];
             if q.is_null() {
                 None
             } else {
-                Some(Ref::<BigNum>::from_ptr(q as *mut _))
+                Some(BigNumRef::from_ptr(q as *mut _))
             }
         }
     }
 
-    pub fn g(&self) -> Option<&Ref<BigNum>> {
+    pub fn g(&self) -> Option<&BigNumRef> {
         unsafe {
             let g = compat::pqg(self.as_ptr())[2];
             if g.is_null() {
                 None
             } else {
-                Some(Ref::<BigNum>::from_ptr(g as *mut _))
+                Some(BigNumRef::from_ptr(g as *mut _))
             }
         }
     }

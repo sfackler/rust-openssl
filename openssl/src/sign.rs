@@ -61,16 +61,16 @@ use std::ptr;
 
 use {cvt, cvt_p};
 use hash::MessageDigest;
-use pkey::PKey;
+use pkey::PKeyRef;
 use error::ErrorStack;
-use types::Ref;
+use types::OpenSslTypeRef;
 
 #[cfg(ossl110)]
 use ffi::{EVP_MD_CTX_new, EVP_MD_CTX_free};
 #[cfg(any(ossl101, ossl102))]
 use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
 
-pub struct Signer<'a>(*mut ffi::EVP_MD_CTX, PhantomData<&'a Ref<PKey>>);
+pub struct Signer<'a>(*mut ffi::EVP_MD_CTX, PhantomData<&'a PKeyRef>);
 
 impl<'a> Drop for Signer<'a> {
     fn drop(&mut self) {
@@ -81,7 +81,7 @@ impl<'a> Drop for Signer<'a> {
 }
 
 impl<'a> Signer<'a> {
-    pub fn new(type_: MessageDigest, pkey: &'a Ref<PKey>) -> Result<Signer<'a>, ErrorStack> {
+    pub fn new(type_: MessageDigest, pkey: &'a PKeyRef) -> Result<Signer<'a>, ErrorStack> {
         unsafe {
             ffi::init();
 
@@ -129,7 +129,7 @@ impl<'a> Write for Signer<'a> {
     }
 }
 
-pub struct Verifier<'a>(*mut ffi::EVP_MD_CTX, PhantomData<&'a Ref<PKey>>);
+pub struct Verifier<'a>(*mut ffi::EVP_MD_CTX, PhantomData<&'a PKeyRef>);
 
 impl<'a> Drop for Verifier<'a> {
     fn drop(&mut self) {
@@ -140,7 +140,7 @@ impl<'a> Drop for Verifier<'a> {
 }
 
 impl<'a> Verifier<'a> {
-    pub fn new(type_: MessageDigest, pkey: &'a Ref<PKey>) -> Result<Verifier<'a>, ErrorStack> {
+    pub fn new(type_: MessageDigest, pkey: &'a PKeyRef) -> Result<Verifier<'a>, ErrorStack> {
         unsafe {
             ffi::init();
 

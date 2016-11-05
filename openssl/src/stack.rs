@@ -2,10 +2,12 @@ use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::iter;
 use std::borrow::Borrow;
 use std::convert::AsRef;
+use std::marker::PhantomData;
 use libc::c_int;
 
 use ffi;
-use types::{OpenSslType, Ref};
+use types::{OpenSslType, OpenSslTypeRef};
+use util::Opaque;
 
 #[cfg(ossl10x)]
 use ffi::{sk_pop as OPENSSL_sk_pop,sk_free as OPENSSL_sk_free, sk_num as OPENSSL_sk_num,
@@ -55,45 +57,49 @@ impl<T: Stackable> Drop for Stack<T> {
     }
 }
 
-impl<T: Stackable> AsRef<Ref<Stack<T>>> for Stack<T> {
-    fn as_ref(&self) -> &Ref<Stack<T>> {
+impl<T: Stackable> AsRef<StackRef<T>> for Stack<T> {
+    fn as_ref(&self) -> &StackRef<T> {
         &*self
     }
 }
 
-impl<T: Stackable> Borrow<Ref<Stack<T>>> for Stack<T> {
-    fn borrow(&self) -> &Ref<Stack<T>> {
+impl<T: Stackable> Borrow<StackRef<T>> for Stack<T> {
+    fn borrow(&self) -> &StackRef<T> {
         &*self
     }
 }
 
-unsafe impl<T: Stackable> OpenSslType for Stack<T> {
+impl<T: Stackable> OpenSslType for Stack<T> {
     type CType = T::StackType;
+    type Ref = StackRef<T>;
 
     unsafe fn from_ptr(ptr: *mut T::StackType) -> Stack<T> {
         Stack(ptr)
     }
-
-    fn as_ptr(&self) -> *mut T::StackType {
-        self.0
-    }
 }
 
 impl<T: Stackable> Deref for Stack<T> {
-    type Target = Ref<Stack<T>>;
+    type Target = StackRef<T>;
 
-    fn deref(&self) -> &Ref<Stack<T>> {
-        unsafe { Ref::from_ptr(self.0) }
+    fn deref(&self) -> &StackRef<T> {
+        unsafe { StackRef::from_ptr(self.0) }
     }
 }
 
 impl<T: Stackable> DerefMut for Stack<T> {
-    fn deref_mut(&mut self) -> &mut ::types::Ref<Stack<T>> {
-        unsafe { Ref::from_ptr_mut(self.0) }
+    fn deref_mut(&mut self) -> &mut StackRef<T> {
+        unsafe { StackRef::from_ptr_mut(self.0) }
     }
 }
 
-impl<T: Stackable> Ref<Stack<T>> {
+pub struct StackRef<T: Stackable>(Opaque, PhantomData<T>);
+
+impl<T: Stackable> OpenSslTypeRef for StackRef<T> {
+    type CType = T::StackType;
+}
+
+
+impl<T: Stackable> StackRef<T> {
     /// OpenSSL stack types are just a (kinda) typesafe wrapper around
     /// a `_STACK` object. We can therefore safely cast it and access
     /// the `_STACK` members without having to worry about the real
@@ -141,25 +147,25 @@ impl<T: Stackable> Ref<Stack<T>> {
 
     /// Returns a reference to the element at the given index in the
     /// stack or `None` if the index is out of bounds
-    pub fn get(&self, idx: usize) -> Option<&Ref<T>> {
+    pub fn get(&self, idx: usize) -> Option<&T::Ref> {
         unsafe {
             if idx >= self.len() {
                 return None;
             }
 
-            Some(Ref::from_ptr(self._get(idx)))
+            Some(T::Ref::from_ptr(self._get(idx)))
         }
     }
 
     /// Returns a mutable reference to the element at the given index in the
     /// stack or `None` if the index is out of bounds
-    pub fn get_mut(&mut self, idx: usize) -> Option<&mut Ref<T>> {
+    pub fn get_mut(&mut self, idx: usize) -> Option<&mut T::Ref> {
         unsafe {
             if idx >= self.len() {
                 return None;
             }
 
-            Some(Ref::from_ptr_mut(self._get(idx)))
+            Some(T::Ref::from_ptr_mut(self._get(idx)))
         }
     }
 
@@ -168,22 +174,22 @@ impl<T: Stackable> Ref<Stack<T>> {
     }
 }
 
-impl<T: Stackable> Index<usize> for Ref<Stack<T>> {
-    type Output = Ref<T>;
+impl<T: Stackable> Index<usize> for StackRef<T> {
+    type Output = T::Ref;
 
-    fn index(&self, index: usize) -> &Ref<T> {
+    fn index(&self, index: usize) -> &T::Ref {
         self.get(index).unwrap()
     }
 }
 
-impl<T: Stackable> IndexMut<usize> for Ref<Stack<T>> {
-    fn index_mut(&mut self, index: usize) -> &mut Ref<T> {
+impl<T: Stackable> IndexMut<usize> for StackRef<T> {
+    fn index_mut(&mut self, index: usize) -> &mut T::Ref {
         self.get_mut(index).unwrap()
     }
 }
 
-impl<'a, T: Stackable> iter::IntoIterator for &'a Ref<Stack<T>> {
-    type Item = &'a Ref<T>;
+impl<'a, T: Stackable> iter::IntoIterator for &'a StackRef<T> {
+    type Item = &'a T::Ref;
     type IntoIter = Iter<'a, T>;
 
     fn into_iter(self) -> Iter<'a, T> {
@@ -191,8 +197,8 @@ impl<'a, T: Stackable> iter::IntoIterator for &'a Ref<Stack<T>> {
     }
 }
 
-impl<'a, T: Stackable> iter::IntoIterator for &'a mut Ref<Stack<T>> {
-    type Item = &'a mut Ref<T>;
+impl<'a, T: Stackable> iter::IntoIterator for &'a mut StackRef<T> {
+    type Item = &'a mut T::Ref;
     type IntoIter = IterMut<'a, T>;
 
     fn into_iter(self) -> IterMut<'a, T> {
@@ -201,7 +207,7 @@ impl<'a, T: Stackable> iter::IntoIterator for &'a mut Ref<Stack<T>> {
 }
 
 impl<'a, T: Stackable> iter::IntoIterator for &'a Stack<T> {
-    type Item = &'a Ref<T>;
+    type Item = &'a T::Ref;
     type IntoIter = Iter<'a, T>;
 
     fn into_iter(self) -> Iter<'a, T> {
@@ -210,7 +216,7 @@ impl<'a, T: Stackable> iter::IntoIterator for &'a Stack<T> {
 }
 
 impl<'a, T: Stackable> iter::IntoIterator for &'a mut Stack<T> {
-    type Item = &'a mut Ref<T>;
+    type Item = &'a mut T::Ref;
     type IntoIter = IterMut<'a, T>;
 
     fn into_iter(self) -> IterMut<'a, T> {
@@ -221,14 +227,14 @@ impl<'a, T: Stackable> iter::IntoIterator for &'a mut Stack<T> {
 /// An iterator over the stack's contents.
 pub struct Iter<'a, T: Stackable>
     where T: 'a {
-    stack: &'a Ref<Stack<T>>,
+    stack: &'a StackRef<T>,
     pos: usize,
 }
 
 impl<'a, T: Stackable> iter::Iterator for Iter<'a, T> {
-    type Item = &'a Ref<T>;
+    type Item = &'a T::Ref;
 
-    fn next(&mut self) -> Option<&'a Ref<T>> {
+    fn next(&mut self) -> Option<&'a T::Ref> {
         let n = self.stack.get(self.pos);
 
         if n.is_some() {
@@ -250,14 +256,14 @@ impl<'a, T: Stackable> iter::ExactSizeIterator for Iter<'a, T> {
 
 /// A mutable iterator over the stack's contents.
 pub struct IterMut<'a, T: Stackable + 'a> {
-    stack: &'a mut Ref<Stack<T>>,
+    stack: &'a mut StackRef<T>,
     pos: usize,
 }
 
 impl<'a, T: Stackable> iter::Iterator for IterMut<'a, T> {
-    type Item = &'a mut Ref<T>;
+    type Item = &'a mut T::Ref;
 
-    fn next(&mut self) -> Option<&'a mut Ref<T>> {
+    fn next(&mut self) -> Option<&'a mut T::Ref> {
         if self.pos >= self.stack.len() {
             None
         } else {
@@ -267,7 +273,7 @@ impl<'a, T: Stackable> iter::Iterator for IterMut<'a, T> {
             // the same object, so we have to use unsafe code for
             // mutable iterators.
             let n = unsafe {
-                Some(Ref::from_ptr_mut(self.stack._get(self.pos)))
+                Some(T::Ref::from_ptr_mut(self.stack._get(self.pos)))
             };
 
             self.pos += 1;
