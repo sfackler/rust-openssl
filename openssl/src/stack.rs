@@ -40,18 +40,7 @@ impl<T: Stackable> Stack<T> {
 impl<T: Stackable> Drop for Stack<T> {
     fn drop(&mut self) {
         unsafe {
-            loop {
-                let ptr = OPENSSL_sk_pop(self.as_stack());
-
-                if ptr.is_null() {
-                    break;
-                }
-
-                // Build the owned version of the object just to run
-                // its `drop` implementation and delete the item.
-                T::from_ptr(ptr as *mut _);
-            }
-
+            while let Some(_) = self.pop() {}
             OPENSSL_sk_free(self.0 as *mut _);
         }
     }
@@ -206,6 +195,18 @@ impl<T: Stackable> StackRef<T> {
             }
 
             Some(T::Ref::from_ptr_mut(self._get(idx)))
+        }
+    }
+
+    /// Removes the last element from the stack and returns it.
+    pub fn pop(&mut self) -> Option<T> {
+        unsafe {
+            let ptr = OPENSSL_sk_pop(self.as_stack());
+            if ptr.is_null() {
+                None
+            } else {
+                Some(T::from_ptr(ptr as *mut _))
+            }
         }
     }
 
