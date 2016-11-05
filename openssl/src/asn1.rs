@@ -59,9 +59,7 @@ impl Asn1StringRef {
     }
 
     pub fn len(&self) -> usize {
-        unsafe {
-            ffi::ASN1_STRING_length(self.as_ptr()) as usize
-        }
+        unsafe { ffi::ASN1_STRING_length(self.as_ptr()) as usize }
     }
 }
 

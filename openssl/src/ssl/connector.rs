@@ -215,9 +215,7 @@ fn get_dh() -> Result<Dh, ErrorStack> {
     use types::OpenSslType;
 
     // manually call into ffi to avoid forcing the features
-    unsafe {
-        cvt_p(ffi::DH_get_2048_256()).map(|p| Dh::from_ptr(p))
-    }
+    unsafe { cvt_p(ffi::DH_get_2048_256()).map(|p| Dh::from_ptr(p)) }
 }
 
 #[cfg(ossl101)]
@@ -302,8 +300,7 @@ mod verify {
         }
     }
 
-    fn verify_subject_alt_names(domain: &str,
-                                names: Stack<GeneralName>) -> bool {
+    fn verify_subject_alt_names(domain: &str, names: Stack<GeneralName>) -> bool {
         let ip = domain.parse();
 
         for name in &names {

@@ -365,22 +365,12 @@ impl BigNumRef {
     /// * `bits`: Length of the number in bits.
     /// * `msb`: The desired properties of the number.
     /// * `odd`: If `true`, the generated number will be odd.
-    pub fn rand(&mut self,
-                bits: i32,
-                msb: MsbOption,
-                odd: bool)
-                -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_rand(self.as_ptr(), bits.into(), msb.0, odd as c_int)).map(|_| ())
-        }
+    pub fn rand(&mut self, bits: i32, msb: MsbOption, odd: bool) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::BN_rand(self.as_ptr(), bits.into(), msb.0, odd as c_int)).map(|_| ()) }
     }
 
     /// The cryptographically weak counterpart to `rand`.
-    pub fn pseudo_rand(&mut self,
-                       bits: i32,
-                       msb: MsbOption,
-                       odd: bool)
-                       -> Result<(), ErrorStack> {
+    pub fn pseudo_rand(&mut self, bits: i32, msb: MsbOption, odd: bool) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::BN_pseudo_rand(self.as_ptr(), bits.into(), msb.0, odd as c_int)).map(|_| ())
         }

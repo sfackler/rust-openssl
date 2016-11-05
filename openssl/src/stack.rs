@@ -10,8 +10,8 @@ use types::{OpenSslType, OpenSslTypeRef};
 use util::Opaque;
 
 #[cfg(ossl10x)]
-use ffi::{sk_pop as OPENSSL_sk_pop,sk_free as OPENSSL_sk_free, sk_num as OPENSSL_sk_num,
-    sk_value as OPENSSL_sk_value};
+use ffi::{sk_pop as OPENSSL_sk_pop, sk_free as OPENSSL_sk_free, sk_num as OPENSSL_sk_num,
+          sk_value as OPENSSL_sk_value};
 #[cfg(ossl110)]
 use ffi::{OPENSSL_sk_pop, OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_value};
 
@@ -226,7 +226,8 @@ impl<'a, T: Stackable> iter::IntoIterator for &'a mut Stack<T> {
 
 /// An iterator over the stack's contents.
 pub struct Iter<'a, T: Stackable>
-    where T: 'a {
+    where T: 'a
+{
     stack: &'a StackRef<T>,
     pos: usize,
 }
@@ -251,8 +252,7 @@ impl<'a, T: Stackable> iter::Iterator for Iter<'a, T> {
     }
 }
 
-impl<'a, T: Stackable> iter::ExactSizeIterator for Iter<'a, T> {
-}
+impl<'a, T: Stackable> iter::ExactSizeIterator for Iter<'a, T> {}
 
 /// A mutable iterator over the stack's contents.
 pub struct IterMut<'a, T: Stackable + 'a> {
@@ -272,9 +272,7 @@ impl<'a, T: Stackable> iter::Iterator for IterMut<'a, T> {
             // guarantee that we won't return several references to
             // the same object, so we have to use unsafe code for
             // mutable iterators.
-            let n = unsafe {
-                Some(T::Ref::from_ptr_mut(self.stack._get(self.pos)))
-            };
+            let n = unsafe { Some(T::Ref::from_ptr_mut(self.stack._get(self.pos))) };
 
             self.pos += 1;
 
@@ -289,5 +287,4 @@ impl<'a, T: Stackable> iter::Iterator for IterMut<'a, T> {
     }
 }
 
-impl<'a, T: Stackable> iter::ExactSizeIterator for IterMut<'a, T> {
-}
+impl<'a, T: Stackable> iter::ExactSizeIterator for IterMut<'a, T> {}

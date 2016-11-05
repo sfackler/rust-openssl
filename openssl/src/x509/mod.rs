@@ -513,9 +513,8 @@ impl<'a> Iterator for X509NameEntries<'a> {
 
     fn next(&mut self) -> Option<&'a X509NameEntryRef> {
         unsafe {
-            self.loc = ffi::X509_NAME_get_index_by_NID(self.name.as_ptr(),
-                                                       self.nid.as_raw(),
-                                                       self.loc);
+            self.loc =
+                ffi::X509_NAME_get_index_by_NID(self.name.as_ptr(), self.nid.as_raw(), self.loc);
 
             if self.loc == -1 {
                 return None;
