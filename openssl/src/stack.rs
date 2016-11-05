@@ -115,11 +115,6 @@ impl<T: Stackable> IntoIter<T> {
     fn stack_len(&self) -> c_int {
         unsafe { OPENSSL_sk_num(self.stack as *mut _) }
     }
-
-    unsafe fn get(&mut self, i: c_int) -> T {
-        let ptr = OPENSSL_sk_value(self.stack as *mut _, i);
-        T::from_ptr(ptr as *mut _)
-    }
 }
 
 impl<T: Stackable> Drop for IntoIter<T> {
@@ -139,10 +134,9 @@ impl<T: Stackable> Iterator for IntoIter<T> {
             if self.idx == self.stack_len() {
                 None
             } else {
-                let idx = self.idx;
+                let ptr = OPENSSL_sk_value(self.stack as *mut _, self.idx);
                 self.idx += 1;
-                let v = self.get(idx);
-                Some(v)
+                Some(T::from_ptr(ptr as *mut _))
             }
         }
     }
