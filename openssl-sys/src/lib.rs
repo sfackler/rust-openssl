@@ -1576,6 +1576,9 @@ extern {
     pub fn SSL_get_verify_result(ssl: *const SSL) -> c_long;
     pub fn SSL_shutdown(ssl: *mut SSL) -> c_int;
     pub fn SSL_get_certificate(ssl: *const SSL) -> *mut X509;
+    #[cfg(ossl101)]
+    pub fn SSL_get_privatekey(ssl: *mut SSL) -> *mut EVP_PKEY;
+    #[cfg(not(ossl101))]
     pub fn SSL_get_privatekey(ssl: *const SSL) -> *mut EVP_PKEY;
 
     #[cfg(not(osslconf = "OPENSSL_NO_COMP"))]
@@ -1608,7 +1611,9 @@ extern {
     pub fn SSL_CTX_use_PrivateKey(ctx: *mut SSL_CTX, key: *mut EVP_PKEY) -> c_int;
     pub fn SSL_CTX_check_private_key(ctx: *const SSL_CTX) -> c_int;
 
+    #[cfg(not(ossl101))]
     pub fn SSL_CTX_get0_certificate(ctx: *const SSL_CTX) -> *mut X509;
+    #[cfg(not(ossl101))]
     pub fn SSL_CTX_get0_privatekey(ctx: *const SSL_CTX) -> *mut EVP_PKEY;
 
     pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;

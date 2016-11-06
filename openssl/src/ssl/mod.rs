@@ -764,6 +764,9 @@ impl SslContext {
 
 impl SslContextRef {
     /// Returns the certificate associated with this `SslContext`, if present.
+    ///
+    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn certificate(&self) -> Option<&X509Ref> {
         unsafe {
             let ptr = ffi::SSL_CTX_get0_certificate(self.as_ptr());
@@ -776,6 +779,9 @@ impl SslContextRef {
     }
 
     /// Returns the private key associated with this `SslContext`, if present.
+    ///
+    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn private_key(&self) -> Option<&PKeyRef> {
         unsafe {
             let ptr = ffi::SSL_CTX_get0_privatekey(self.as_ptr());
