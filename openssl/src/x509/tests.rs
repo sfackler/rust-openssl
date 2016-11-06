@@ -1,9 +1,11 @@
 use serialize::hex::FromHex;
 
+use asn1::Asn1Time;
+use bn::{BigNum, MSB_MAYBE_ZERO};
 use hash::MessageDigest;
 use pkey::PKey;
 use rsa::Rsa;
-use x509::{X509, X509Generator};
+use x509::{X509, X509Generator, X509Name};
 use x509::extension::Extension::{KeyUsage, ExtKeyUsage, SubjectAltName, OtherNid, OtherStr};
 use x509::extension::AltNameOption as SAN;
 use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment};
@@ -173,4 +175,33 @@ fn test_subject_alt_name_iter() {
     assert_eq!(subject_alt_names_iter.next().unwrap().ipaddress(),
                Some(&b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01"[..]));
     assert!(subject_alt_names_iter.next().is_none());
+}
+
+#[test]
+fn test_x509_builder() {
+    let pkey = pkey();
+
+    let mut name = X509Name::builder().unwrap();
+    name.append_entry_by_nid(nid::COMMONNAME, "foobar.com").unwrap();
+    let name = name.build();
+
+    let mut builder = X509::builder().unwrap();
+    builder.set_subject_name(&name).unwrap();
+    builder.set_issuer_name(&name).unwrap();
+    builder.set_not_before(&Asn1Time::days_from_now(0).unwrap()).unwrap();
+    builder.set_not_after(&Asn1Time::days_from_now(365).unwrap()).unwrap();
+    builder.set_pubkey(&pkey).unwrap();
+
+    let mut serial = BigNum::new().unwrap();;
+    serial.rand(128, MSB_MAYBE_ZERO, false).unwrap();
+    builder.set_serial_number(&serial.to_asn1_integer().unwrap()).unwrap();
+
+    builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+
+    let x509 = builder.build();
+
+    assert!(pkey.public_eq(&x509.public_key().unwrap()));
+
+    let cn = x509.subject_name().entries_by_nid(nid::COMMONNAME).next().unwrap();
+    assert_eq!("foobar.com".as_bytes(), cn.data().as_slice());
 }

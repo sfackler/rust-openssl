@@ -12,7 +12,7 @@ use std::slice;
 use std::str;
 
 use {cvt, cvt_p};
-use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef};
+use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef, Asn1IntegerRef};
 use bio::{MemBio, MemBioSlice};
 use hash::MessageDigest;
 use pkey::{PKey, PKeyRef};
@@ -353,6 +353,58 @@ impl X509Generator {
     }
 }
 
+pub struct X509Builder(X509);
+
+impl X509Builder {
+    pub fn new() -> Result<X509Builder, ErrorStack> {
+        unsafe {
+            cvt_p(ffi::X509_new()).map(|p| X509Builder(X509(p)))
+        }
+    }
+
+    pub fn set_not_after(&mut self, not_after: &Asn1TimeRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(X509_set_notAfter(self.0.as_ptr(), not_after.as_ptr())).map(|_| ()) }
+    }
+
+    pub fn set_not_before(&mut self, not_before: &Asn1TimeRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(X509_set_notBefore(self.0.as_ptr(), not_before.as_ptr())).map(|_| ()) }
+    }
+
+    pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_set_version(self.0.as_ptr(), version.into())).map(|_| ()) }
+    }
+
+    pub fn set_serial_number(&mut self,
+                             serial_number: &Asn1IntegerRef)
+                             -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_set_serialNumber(self.0.as_ptr(), serial_number.as_ptr())).map(|_| ())
+        }
+    }
+
+    pub fn set_issuer_name(&mut self, issuer_name: &X509NameRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_set_issuer_name(self.0.as_ptr(), issuer_name.as_ptr())).map(|_| ()) }
+    }
+
+    pub fn set_subject_name(&mut self, subject_name: &X509NameRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_set_subject_name(self.0.as_ptr(), subject_name.as_ptr())).map(|_| ())
+        }
+    }
+
+    pub fn set_pubkey(&mut self, key: &PKeyRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_set_pubkey(self.0.as_ptr(), key.as_ptr())).map(|_| ()) }
+    }
+
+    pub fn sign(&mut self, key: &PKeyRef, hash: MessageDigest) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_sign(self.0.as_ptr(), key.as_ptr(), hash.as_ptr())).map(|_| ()) }
+    }
+
+    pub fn build(self) -> X509 {
+        self.0
+    }
+}
+
 type_!(X509, X509Ref, ffi::X509, ffi::X509_free);
 
 impl X509Ref {
@@ -446,6 +498,11 @@ impl ToOwned for X509Ref {
 }
 
 impl X509 {
+    /// Returns a new builder.
+    pub fn builder() -> Result<X509Builder, ErrorStack> {
+        X509Builder::new()
+    }
+
     /// Reads a certificate from DER.
     pub fn from_der(buf: &[u8]) -> Result<X509, ErrorStack> {
         unsafe {
@@ -497,9 +554,55 @@ impl Stackable for X509 {
     type StackType = ffi::stack_st_X509;
 }
 
+pub struct X509NameBuilder(X509Name);
+
+impl X509NameBuilder {
+    pub fn new() -> Result<X509NameBuilder, ErrorStack> {
+        unsafe { cvt_p(ffi::X509_NAME_new()).map(|p| X509NameBuilder(X509Name(p))) }
+    }
+
+    pub fn append_entry_by_text(&mut self, field: &str, value: &str) -> Result<(), ErrorStack> {
+        unsafe {
+            let field = CString::new(field).unwrap();
+            assert!(value.len() <= c_int::max_value() as usize);
+            cvt(ffi::X509_NAME_add_entry_by_txt(self.0.as_ptr(),
+                                                field.as_ptr() as *mut _,
+                                                ffi::MBSTRING_UTF8,
+                                                value.as_ptr(),
+                                                value.len() as c_int,
+                                                -1,
+                                                0))
+                .map(|_| ())
+        }
+    }
+
+    pub fn append_entry_by_nid(&mut self, field: Nid, value: &str) -> Result<(), ErrorStack> {
+        unsafe {
+            assert!(value.len() <= c_int::max_value() as usize);
+            cvt(ffi::X509_NAME_add_entry_by_NID(self.0.as_ptr(),
+                                                field.as_raw(),
+                                                ffi::MBSTRING_UTF8,
+                                                value.as_ptr() as *mut _,
+                                                value.len() as c_int,
+                                                -1,
+                                                0))
+                .map(|_| ())
+        }
+    }
+
+    pub fn build(self) -> X509Name {
+        self.0
+    }
+}
+
 type_!(X509Name, X509NameRef, ffi::X509_NAME, ffi::X509_NAME_free);
 
 impl X509Name {
+    /// Returns a new builder.
+    pub fn builder() -> Result<X509NameBuilder, ErrorStack> {
+        X509NameBuilder::new()
+    }
+
     /// Loads subject names from a file containing PEM-formatted certificates.
     ///
     /// This is commonly used in conjunction with `SslContextBuilder::set_client_ca_list`.

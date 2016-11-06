@@ -6,6 +6,7 @@ use std::{fmt, ptr};
 use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub, Deref};
 
 use {cvt, cvt_p, cvt_n};
+use asn1::Asn1Integer;
 use crypto::CryptoString;
 use error::ErrorStack;
 use types::{OpenSslType, OpenSslTypeRef};
@@ -490,6 +491,14 @@ impl BigNumRef {
         unsafe {
             let buf = try!(cvt_p(ffi::BN_bn2hex(self.as_ptr())));
             Ok(CryptoString::from_null_terminated(buf))
+        }
+    }
+
+    /// Returns an `Asn1Integer` containing the value of `self`.
+    pub fn to_asn1_integer(&self) -> Result<Asn1Integer, ErrorStack> {
+        unsafe {
+            cvt_p(ffi::BN_to_ASN1_INTEGER(self.as_ptr(), ptr::null_mut()))
+                .map(|p| Asn1Integer::from_ptr(p))
         }
     }
 }

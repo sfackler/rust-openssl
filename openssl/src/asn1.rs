@@ -63,6 +63,8 @@ impl Asn1StringRef {
     }
 }
 
+type_!(Asn1Integer, Asn1IntegerRef, ffi::ASN1_INTEGER, ffi::ASN1_INTEGER_free);
+
 #[cfg(any(ossl101, ossl102))]
 use ffi::ASN1_STRING_data;
 
