@@ -24,6 +24,7 @@ pub enum ASN1_TYPE {}
 pub enum BN_CTX {}
 pub enum BN_GENCB {}
 pub enum CONF {}
+pub enum CONF_METHOD {}
 pub enum COMP_METHOD {}
 pub enum EC_KEY {}
 pub enum ENGINE {}
@@ -1328,6 +1329,10 @@ extern {
     pub fn BN_hex2bn(a: *mut *mut BIGNUM, s: *const c_char) -> c_int;
     pub fn BN_bn2hex(a: *const BIGNUM) -> *mut c_char;
     pub fn BN_to_ASN1_INTEGER(bn: *const BIGNUM, ai: *mut ASN1_INTEGER) -> *mut ASN1_INTEGER;
+
+    pub fn NCONF_default() -> *mut CONF_METHOD;
+    pub fn NCONF_new(meth: *mut CONF_METHOD) -> *mut CONF;
+    pub fn NCONF_free(conf: *mut CONF);
 
     pub fn CRYPTO_memcmp(a: *const c_void, b: *const c_void,
                          len: size_t) -> c_int;
