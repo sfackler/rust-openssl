@@ -32,169 +32,6 @@ impl BigNumContext {
     pub fn new() -> Result<BigNumContext, ErrorStack> {
         unsafe { cvt_p(ffi::BN_CTX_new()).map(BigNumContext) }
     }
-
-    /// Places the result of `a * b` in `r`.
-    pub fn mul(&mut self,
-               r: &mut BigNumRef,
-               a: &BigNumRef,
-               b: &BigNumRef)
-               -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::BN_mul(r.as_ptr(), a.as_ptr(), b.as_ptr(), self.as_ptr())).map(|_| ()) }
-    }
-
-    /// Places the result of `a / b` in `dv` and `a mod b` in `rem`.
-    pub fn div(&mut self,
-               dv: Option<&mut BigNumRef>,
-               rem: Option<&mut BigNumRef>,
-               a: &BigNumRef,
-               b: &BigNumRef)
-               -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_div(dv.map(|b| b.as_ptr()).unwrap_or(ptr::null_mut()),
-                            rem.map(|b| b.as_ptr()).unwrap_or(ptr::null_mut()),
-                            a.as_ptr(),
-                            b.as_ptr(),
-                            self.as_ptr()))
-                .map(|_| ())
-        }
-    }
-
-    /// Places the result of `a²` in `r`.
-    pub fn sqr(&mut self, r: &mut BigNumRef, a: &BigNumRef) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::BN_sqr(r.as_ptr(), a.as_ptr(), self.as_ptr())).map(|_| ()) }
-    }
-
-    /// Places the result of `a mod m` in `r`.
-    pub fn nnmod(&mut self,
-                 r: &mut BigNumRef,
-                 a: &BigNumRef,
-                 m: &BigNumRef)
-                 -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::BN_nnmod(r.as_ptr(), a.as_ptr(), m.as_ptr(), self.0)).map(|_| ()) }
-    }
-
-    /// Places the result of `(a + b) mod m` in `r`.
-    pub fn mod_add(&mut self,
-                   r: &mut BigNumRef,
-                   a: &BigNumRef,
-                   b: &BigNumRef,
-                   m: &BigNumRef)
-                   -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_mod_add(r.as_ptr(), a.as_ptr(), b.as_ptr(), m.as_ptr(), self.0)).map(|_| ())
-        }
-    }
-
-    /// Places the result of `(a - b) mod m` in `r`.
-    pub fn mod_sub(&mut self,
-                   r: &mut BigNumRef,
-                   a: &BigNumRef,
-                   b: &BigNumRef,
-                   m: &BigNumRef)
-                   -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_mod_sub(r.as_ptr(), a.as_ptr(), b.as_ptr(), m.as_ptr(), self.0)).map(|_| ())
-        }
-    }
-
-    /// Places the result of `(a * b) mod m` in `r`.
-    pub fn mod_mul(&mut self,
-                   r: &mut BigNumRef,
-                   a: &BigNumRef,
-                   b: &BigNumRef,
-                   m: &BigNumRef)
-                   -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_mod_mul(r.as_ptr(), a.as_ptr(), b.as_ptr(), m.as_ptr(), self.0)).map(|_| ())
-        }
-    }
-
-    /// Places the result of `a² mod m` in `r`.
-    pub fn mod_sqr(&mut self,
-                   r: &mut BigNumRef,
-                   a: &BigNumRef,
-                   m: &BigNumRef)
-                   -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::BN_mod_sqr(r.as_ptr(), a.as_ptr(), m.as_ptr(), self.0)).map(|_| ()) }
-    }
-
-    /// Places the result of `a^p` in `r`.
-    pub fn exp(&mut self,
-               r: &mut BigNumRef,
-               a: &BigNumRef,
-               p: &BigNumRef)
-               -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::BN_exp(r.as_ptr(), a.as_ptr(), p.as_ptr(), self.0)).map(|_| ()) }
-    }
-
-    /// Places the result of `a^p mod m` in `r`.
-    pub fn mod_exp(&mut self,
-                   r: &mut BigNumRef,
-                   a: &BigNumRef,
-                   p: &BigNumRef,
-                   m: &BigNumRef)
-                   -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::BN_mod_exp(r.as_ptr(), a.as_ptr(), p.as_ptr(), m.as_ptr(), self.0)).map(|_| ())
-        }
-    }
-
-    /// Places the inverse of `a` modulo `n` in `r`.
-    pub fn mod_inverse(&mut self,
-                       r: &mut BigNumRef,
-                       a: &BigNumRef,
-                       n: &BigNumRef)
-                       -> Result<(), ErrorStack> {
-        unsafe {
-            cvt_p(ffi::BN_mod_inverse(r.as_ptr(), a.as_ptr(), n.as_ptr(), self.as_ptr()))
-                .map(|_| ())
-        }
-    }
-
-    /// Places the greatest common denominator of `a` and `b` in `r`.
-    pub fn gcd(&mut self,
-               r: &mut BigNumRef,
-               a: &BigNumRef,
-               b: &BigNumRef)
-               -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::BN_gcd(r.as_ptr(), a.as_ptr(), b.as_ptr(), self.as_ptr())).map(|_| ()) }
-    }
-
-    /// Checks whether `p` is prime.
-    ///
-    /// Performs a Miller-Rabin probabilistic primality test with `checks` iterations.
-    ///
-    /// Returns `true` if `p` is prime with an error probability of less than `0.25 ^ checks`.
-    pub fn is_prime(&mut self, p: &BigNumRef, checks: i32) -> Result<bool, ErrorStack> {
-        unsafe {
-            cvt_n(ffi::BN_is_prime_ex(p.as_ptr(), checks.into(), self.as_ptr(), ptr::null_mut()))
-                .map(|r| r != 0)
-        }
-    }
-
-    /// Checks whether `p` is prime with optional trial division.
-    ///
-    /// If `do_trial_division` is `true`, first performs trial division by a number of small primes.
-    /// Then, like `is_prime`, performs a Miller-Rabin probabilistic primality test with `checks`
-    /// iterations.
-    ///
-    /// # Return Value
-    ///
-    /// Returns `true` if `p` is prime with an error probability of less than `0.25 ^ checks`.
-    pub fn is_prime_fasttest(&mut self,
-                             p: &BigNumRef,
-                             checks: i32,
-                             do_trial_division: bool)
-                             -> Result<bool, ErrorStack> {
-        unsafe {
-            cvt_n(ffi::BN_is_prime_fasttest_ex(p.as_ptr(),
-                                               checks.into(),
-                                               self.as_ptr(),
-                                               do_trial_division as c_int,
-                                               ptr::null_mut()))
-                .map(|r| r != 0)
-        }
-    }
 }
 
 impl BigNumRef {
@@ -246,12 +83,12 @@ impl BigNumRef {
 
     /// Places a cryptographically-secure pseudo-random number nonnegative
     /// number less than `self` in `rnd`.
-    pub fn rand_in_range(&self, rnd: &mut BigNumRef) -> Result<(), ErrorStack> {
+    pub fn rand_range(&self, rnd: &mut BigNumRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_rand_range(self.as_ptr(), rnd.as_ptr())).map(|_| ()) }
     }
 
     /// The cryptographically weak counterpart to `rand_in_range`.
-    pub fn pseudo_rand_in_range(&self, rnd: &mut BigNumRef) -> Result<(), ErrorStack> {
+    pub fn pseudo_rand_range(&self, rnd: &mut BigNumRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_pseudo_rand_range(self.as_ptr(), rnd.as_ptr())).map(|_| ()) }
     }
 
@@ -281,34 +118,34 @@ impl BigNumRef {
         unsafe { cvt(ffi::BN_mask_bits(self.as_ptr(), n.into())).map(|_| ()) }
     }
 
-    /// Places `self << 1` in `r`.
-    pub fn lshift1(&self, r: &mut BigNumRef) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::BN_lshift1(r.as_ptr(), self.as_ptr())).map(|_| ()) }
+    /// Places `a << 1` in `self`.
+    pub fn lshift1(&mut self, a: &BigNumRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::BN_lshift1(self.as_ptr(), a.as_ptr())).map(|_| ()) }
     }
 
-    /// Places `self >> 1` in `r`.
-    pub fn rshift1(&self, r: &mut BigNumRef) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::BN_rshift1(r.as_ptr(), self.as_ptr())).map(|_| ()) }
+    /// Places `a >> 1` in `self`.
+    pub fn rshift1(&mut self, a: &BigNumRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::BN_rshift1(self.as_ptr(), a.as_ptr())).map(|_| ()) }
     }
 
-    /// Places `self + b` in `r`.
-    pub fn add(&self, r: &mut BigNumRef, b: &BigNumRef) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::BN_add(r.as_ptr(), self.as_ptr(), b.as_ptr())).map(|_| ()) }
+    /// Places `a + b` in `self`.
+    pub fn checked_add(&mut self, a: &BigNumRef, b: &BigNumRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::BN_add(self.as_ptr(), a.as_ptr(), b.as_ptr())).map(|_| ()) }
     }
 
-    /// Places `self - b` in `r`.
-    pub fn sub(&self, r: &mut BigNumRef, b: &BigNumRef) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::BN_sub(r.as_ptr(), self.as_ptr(), b.as_ptr())).map(|_| ()) }
+    /// Places `a - b` in `self`.
+    pub fn checked_sub(&mut self, a: &BigNumRef, b: &BigNumRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::BN_sub(self.as_ptr(), a.as_ptr(), b.as_ptr())).map(|_| ()) }
     }
 
-    /// Places `self << n` in `r`.
-    pub fn lshift(&self, r: &mut BigNumRef, b: i32) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::BN_lshift(r.as_ptr(), self.as_ptr(), b.into())).map(|_| ()) }
+    /// Places `a << n` in `self`.
+    pub fn lshift(&mut self, a: &BigNumRef, n: i32) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::BN_lshift(self.as_ptr(), a.as_ptr(), n.into())).map(|_| ()) }
     }
 
-    /// Places `self >> n` in `r`.
-    pub fn rshift(&self, r: &mut BigNumRef, n: i32) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::BN_rshift(r.as_ptr(), self.as_ptr(), n.into())).map(|_| ()) }
+    /// Places `a >> n` in `self`.
+    pub fn rshift(&mut self, a: &BigNumRef, n: i32) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::BN_rshift(self.as_ptr(), a.as_ptr(), n.into())).map(|_| ()) }
     }
 
     pub fn to_owned(&self) -> Result<BigNum, ErrorStack> {
@@ -398,6 +235,209 @@ impl BigNumRef {
                                           rem.map(|n| n.as_ptr()).unwrap_or(ptr::null_mut()),
                                           ptr::null_mut()))
                 .map(|_| ())
+        }
+    }
+
+    /// Places the result of `a * b` in `self`.
+    pub fn checked_mul(&mut self,
+               a: &BigNumRef,
+               b: &BigNumRef,
+               ctx: &mut BigNumContextRef)
+               -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::BN_mul(self.as_ptr(), a.as_ptr(), b.as_ptr(), ctx.as_ptr())).map(|_| ()) }
+    }
+
+    /// Places the result of `a / b` in `self`.
+    pub fn checked_div(&mut self,
+                       a: &BigNumRef,
+                       b: &BigNumRef,
+                       ctx: &mut BigNumContextRef)
+                       -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::BN_div(self.as_ptr(),
+                            ptr::null_mut(),
+                            a.as_ptr(),
+                            b.as_ptr(),
+                            ctx.as_ptr()))
+                .map(|_| ())
+        }
+    }
+
+    /// Places the result of `a % b` in `self`.
+    pub fn checked_rem(&mut self,
+                       a: &BigNumRef,
+                       b: &BigNumRef,
+                       ctx: &mut BigNumContextRef)
+                       -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::BN_div(ptr::null_mut(),
+                            self.as_ptr(),
+                            a.as_ptr(),
+                            b.as_ptr(),
+                            ctx.as_ptr()))
+                .map(|_| ())
+        }
+    }
+
+    /// Places the result of `a / b` in `self` and `a % b` in `rem`.
+    pub fn div_rem(&mut self,
+                   rem: &mut BigNumRef,
+                   a: &BigNumRef,
+                   b: &BigNumRef,
+                   ctx: &mut BigNumContextRef)
+                   -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::BN_div(self.as_ptr(),
+                            rem.as_ptr(),
+                            a.as_ptr(),
+                            b.as_ptr(),
+                            ctx.as_ptr()))
+                .map(|_| ())
+        }
+    }
+
+    /// Places the result of `a²` in `self`.
+    pub fn sqr(&mut self, a: &BigNumRef, ctx: &mut BigNumContextRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::BN_sqr(self.as_ptr(), a.as_ptr(), ctx.as_ptr())).map(|_| ()) }
+    }
+
+    /// Places the result of `a mod m` in `self`.
+    pub fn nnmod(&mut self,
+                 a: &BigNumRef,
+                 m: &BigNumRef,
+                 ctx: &mut BigNumContextRef)
+                 -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::BN_nnmod(self.as_ptr(), a.as_ptr(), m.as_ptr(), ctx.as_ptr())).map(|_| ())
+        }
+    }
+
+    /// Places the result of `(a + b) mod m` in `self`.
+    pub fn mod_add(&mut self,
+                   a: &BigNumRef,
+                   b: &BigNumRef,
+                   m: &BigNumRef,
+                   ctx: &mut BigNumContextRef)
+                   -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::BN_mod_add(self.as_ptr(), a.as_ptr(), b.as_ptr(), m.as_ptr(), ctx.as_ptr()))
+                .map(|_| ())
+        }
+    }
+
+    /// Places the result of `(a - b) mod m` in `self`.
+    pub fn mod_sub(&mut self,
+                   a: &BigNumRef,
+                   b: &BigNumRef,
+                   m: &BigNumRef,
+                   ctx: &mut BigNumContextRef)
+                   -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::BN_mod_sub(self.as_ptr(), a.as_ptr(), b.as_ptr(), m.as_ptr(), ctx.as_ptr()))
+                .map(|_| ())
+        }
+    }
+
+    /// Places the result of `(a * b) mod m` in `self`.
+    pub fn mod_mul(&mut self,
+                   a: &BigNumRef,
+                   b: &BigNumRef,
+                   m: &BigNumRef,
+                   ctx: &mut BigNumContextRef)
+                   -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::BN_mod_mul(self.as_ptr(), a.as_ptr(), b.as_ptr(), m.as_ptr(), ctx.as_ptr()))
+                .map(|_| ())
+        }
+    }
+
+    /// Places the result of `a² mod m` in `self`.
+    pub fn mod_sqr(&mut self,
+                   a: &BigNumRef,
+                   m: &BigNumRef,
+                   ctx: &mut BigNumContextRef)
+                   -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::BN_mod_sqr(self.as_ptr(), a.as_ptr(), m.as_ptr(), ctx.as_ptr())).map(|_| ())
+        }
+    }
+
+    /// Places the result of `a^p` in `self`.
+    pub fn exp(&mut self,
+               a: &BigNumRef,
+               p: &BigNumRef,
+               ctx: &mut BigNumContextRef)
+               -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::BN_exp(self.as_ptr(), a.as_ptr(), p.as_ptr(), ctx.as_ptr())).map(|_| ()) }
+    }
+
+    /// Places the result of `a^p mod m` in `self`.
+    pub fn mod_exp(&mut self,
+                   a: &BigNumRef,
+                   p: &BigNumRef,
+                   m: &BigNumRef,
+                   ctx: &mut BigNumContextRef)
+                   -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::BN_mod_exp(self.as_ptr(), a.as_ptr(), p.as_ptr(), m.as_ptr(), ctx.as_ptr()))
+                .map(|_| ())
+        }
+    }
+
+    /// Places the inverse of `a` modulo `n` in `self`.
+    pub fn mod_inverse(&mut self,
+                       a: &BigNumRef,
+                       n: &BigNumRef,
+                       ctx: &mut BigNumContextRef)
+                       -> Result<(), ErrorStack> {
+        unsafe {
+            cvt_p(ffi::BN_mod_inverse(self.as_ptr(), a.as_ptr(), n.as_ptr(), ctx.as_ptr()))
+                .map(|_| ())
+        }
+    }
+
+    /// Places the greatest common denominator of `a` and `b` in `self`.
+    pub fn gcd(&mut self,
+               a: &BigNumRef,
+               b: &BigNumRef,
+               ctx: &mut BigNumContextRef)
+               -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::BN_gcd(self.as_ptr(), a.as_ptr(), b.as_ptr(), ctx.as_ptr())).map(|_| ()) }
+    }
+
+    /// Checks whether `self` is prime.
+    ///
+    /// Performs a Miller-Rabin probabilistic primality test with `checks` iterations.
+    ///
+    /// Returns `true` if `self` is prime with an error probability of less than `0.25 ^ checks`.
+    pub fn is_prime(&self, checks: i32, ctx: &mut BigNumContextRef) -> Result<bool, ErrorStack> {
+        unsafe {
+            cvt_n(ffi::BN_is_prime_ex(self.as_ptr(), checks.into(), ctx.as_ptr(), ptr::null_mut()))
+                .map(|r| r != 0)
+        }
+    }
+
+    /// Checks whether `self` is prime with optional trial division.
+    ///
+    /// If `do_trial_division` is `true`, first performs trial division by a number of small primes.
+    /// Then, like `is_prime`, performs a Miller-Rabin probabilistic primality test with `checks`
+    /// iterations.
+    ///
+    /// # Return Value
+    ///
+    /// Returns `true` if `self` is prime with an error probability of less than `0.25 ^ checks`.
+    pub fn is_prime_fasttest(&self,
+                             checks: i32,
+                             ctx: &mut BigNumContextRef,
+                             do_trial_division: bool)
+                             -> Result<bool, ErrorStack> {
+        unsafe {
+            cvt_n(ffi::BN_is_prime_fasttest_ex(self.as_ptr(),
+                                               checks.into(),
+                                               ctx.as_ptr(),
+                                               do_trial_division as c_int,
+                                               ptr::null_mut()))
+                .map(|r| r != 0)
         }
     }
 
@@ -649,7 +689,7 @@ impl<'a, 'b> Add<&'b BigNumRef> for &'a BigNumRef {
 
     fn add(self, oth: &BigNumRef) -> BigNum {
         let mut r = BigNum::new().unwrap();
-        self.add(&mut r, oth).unwrap();
+        r.checked_add(self, oth).unwrap();
         r
     }
 }
@@ -661,7 +701,7 @@ impl<'a, 'b> Sub<&'b BigNumRef> for &'a BigNumRef {
 
     fn sub(self, oth: &BigNumRef) -> BigNum {
         let mut r = BigNum::new().unwrap();
-        self.sub(&mut r, oth).unwrap();
+        r.checked_sub(self, oth).unwrap();
         r
     }
 }
@@ -674,7 +714,7 @@ impl<'a, 'b> Mul<&'b BigNumRef> for &'a BigNumRef {
     fn mul(self, oth: &BigNumRef) -> BigNum {
         let mut ctx = BigNumContext::new().unwrap();
         let mut r = BigNum::new().unwrap();
-        ctx.mul(&mut r, self, oth).unwrap();
+        r.checked_mul(self, oth, &mut ctx).unwrap();
         r
     }
 }
@@ -686,9 +726,9 @@ impl<'a, 'b> Div<&'b BigNumRef> for &'a BigNumRef {
 
     fn div(self, oth: &'b BigNumRef) -> BigNum {
         let mut ctx = BigNumContext::new().unwrap();
-        let mut dv = BigNum::new().unwrap();
-        ctx.div(Some(&mut dv), None, self, oth).unwrap();
-        dv
+        let mut r = BigNum::new().unwrap();
+        r.checked_div(self, oth, &mut ctx).unwrap();
+        r
     }
 }
 
@@ -699,9 +739,9 @@ impl<'a, 'b> Rem<&'b BigNumRef> for &'a BigNumRef {
 
     fn rem(self, oth: &'b BigNumRef) -> BigNum {
         let mut ctx = BigNumContext::new().unwrap();
-        let mut rem = BigNum::new().unwrap();
-        ctx.div(None, Some(&mut rem), self, oth).unwrap();
-        rem
+        let mut r = BigNum::new().unwrap();
+        r.checked_rem(self, oth, &mut ctx).unwrap();
+        r
     }
 }
 
@@ -712,7 +752,7 @@ impl<'a> Shl<i32> for &'a BigNumRef {
 
     fn shl(self, n: i32) -> BigNum {
         let mut r = BigNum::new().unwrap();
-        self.lshift(&mut r, n).unwrap();
+        r.lshift(self, n).unwrap();
         r
     }
 }
@@ -730,7 +770,7 @@ impl<'a> Shr<i32> for &'a BigNumRef {
 
     fn shr(self, n: i32) -> BigNum {
         let mut r = BigNum::new().unwrap();
-        self.rshift(&mut r, n).unwrap();
+        r.rshift(self, n).unwrap();
         r
     }
 }
@@ -797,7 +837,7 @@ mod tests {
         p.generate_prime(128, true, None, Some(&a)).unwrap();
 
         let mut ctx = BigNumContext::new().unwrap();
-        assert!(ctx.is_prime(&p, 100).unwrap());
-        assert!(ctx.is_prime_fasttest(&p, 100, true).unwrap());
+        assert!(p.is_prime(100, &mut ctx).unwrap());
+        assert!(p.is_prime_fasttest(100, &mut ctx, true).unwrap());
     }
 }
