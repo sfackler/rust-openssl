@@ -1,6 +1,6 @@
 //! SSL/TLS support.
 //!
-//! The `SslConnector` and `SslAcceptor` should be used in most cases - they handle
+//! `SslConnector` and `SslAcceptor` should be used in most cases - they handle
 //! configuration of the OpenSSL primitives for you.
 //!
 //! # Examples
@@ -70,7 +70,9 @@
 //!     }
 //! }
 //! ```
+use ffi;
 use libc::{c_int, c_void, c_long, c_ulong};
+use libc::{c_uchar, c_uint};
 use std::any::Any;
 use std::any::TypeId;
 use std::cmp;
@@ -79,15 +81,14 @@ use std::ffi::{CStr, CString};
 use std::fmt;
 use std::io;
 use std::io::prelude::*;
+use std::marker::PhantomData;
 use std::mem;
+use std::ops::{Deref, DerefMut};
 use std::path::Path;
 use std::ptr;
+use std::slice;
 use std::str;
 use std::sync::Mutex;
-use libc::{c_uchar, c_uint};
-use std::slice;
-use std::marker::PhantomData;
-use ffi;
 
 use {init, cvt, cvt_p};
 use dh::DhRef;
@@ -781,6 +782,20 @@ impl OpenSslType for SslCipher {
     }
 }
 
+impl Deref for SslCipher {
+    type Target = SslCipherRef;
+
+    fn deref(&self) -> &SslCipherRef {
+        unsafe { SslCipherRef::from_ptr(self.0) }
+    }
+}
+
+impl DerefMut for SslCipher {
+    fn deref_mut(&mut self) -> &mut SslCipherRef {
+        unsafe { SslCipherRef::from_ptr_mut(self.0) }
+    }
+}
+
 pub struct SslCipherRef(Opaque);
 
 impl OpenSslTypeRef for SslCipherRef {
@@ -789,7 +804,7 @@ impl OpenSslTypeRef for SslCipherRef {
 
 impl SslCipherRef {
     /// Returns the name of cipher.
-    pub fn name(&self) -> &'static str {
+    pub fn name(&self) -> &str {
         let name = unsafe {
             let ptr = ffi::SSL_CIPHER_get_name(self.as_ptr());
             CStr::from_ptr(ptr as *const _)
@@ -799,7 +814,7 @@ impl SslCipherRef {
     }
 
     /// Returns the SSL/TLS protocol version that first defined the cipher.
-    pub fn version(&self) -> &'static str {
+    pub fn version(&self) -> &str {
         let version = unsafe {
             let ptr = ffi::SSL_CIPHER_get_version(self.as_ptr());
             CStr::from_ptr(ptr as *const _)
