@@ -762,6 +762,31 @@ impl SslContext {
     }
 }
 
+impl SslContextRef {
+    /// Returns the certificate associated with this `SslContext`, if present.
+    pub fn certificate(&self) -> Option<&X509Ref> {
+        unsafe {
+            let ptr = ffi::SSL_CTX_get0_certificate(self.as_ptr());
+            if ptr.is_null() {
+                None
+            } else {
+                Some(X509Ref::from_ptr(ptr))
+            }
+        }
+    }
+
+    /// Returns the private key associated with this `SslContext`, if present.
+    pub fn private_key(&self) -> Option<&PKeyRef> {
+        unsafe {
+            let ptr = ffi::SSL_CTX_get0_privatekey(self.as_ptr());
+            if ptr.is_null() {
+                None
+            } else {
+                Some(PKeyRef::from_ptr(ptr))
+            }
+        }
+    }
+}
 
 pub struct CipherBits {
     /// The number of secret bits used for the cipher.
@@ -951,6 +976,30 @@ impl SslRef {
                 None
             } else {
                 Some(X509::from_ptr(ptr))
+            }
+        }
+    }
+
+    /// Returns the certificate associated with this `Ssl`, if present.
+    pub fn certificate(&self) -> Option<&X509Ref> {
+        unsafe {
+            let ptr = ffi::SSL_get_certificate(self.as_ptr());
+            if ptr.is_null() {
+                None
+            } else {
+                Some(X509Ref::from_ptr(ptr))
+            }
+        }
+    }
+
+    /// Returns the private key associated with this `Ssl`, if present.
+    pub fn private_key(&self) -> Option<&PKeyRef> {
+        unsafe {
+            let ptr = ffi::SSL_get_privatekey(self.as_ptr());
+            if ptr.is_null() {
+                None
+            } else {
+                Some(PKeyRef::from_ptr(ptr))
             }
         }
     }
