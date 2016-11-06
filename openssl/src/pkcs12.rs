@@ -10,19 +10,10 @@ use {cvt, cvt_p};
 use pkey::PKey;
 use error::ErrorStack;
 use x509::X509;
-use types::OpenSslType;
+use types::{OpenSslType, OpenSslTypeRef};
 use stack::Stack;
 
-/// A PKCS #12 archive.
-pub struct Pkcs12(*mut ffi::PKCS12);
-
-impl Drop for Pkcs12 {
-    fn drop(&mut self) {
-        unsafe {
-            ffi::PKCS12_free(self.0);
-        }
-    }
-}
+type_!(Pkcs12, Pkcs12Ref, ffi::PKCS12, ffi::PKCS12_free);
 
 impl Pkcs12 {
     /// Deserializes a `Pkcs12` structure from DER-encoded data.
@@ -35,7 +26,9 @@ impl Pkcs12 {
             Ok(Pkcs12(p12))
         }
     }
+}
 
+impl Pkcs12Ref {
     /// Extracts the contents of the `Pkcs12`.
     pub fn parse(&self, pass: &str) -> Result<ParsedPkcs12, ErrorStack> {
         unsafe {
@@ -45,7 +38,11 @@ impl Pkcs12 {
             let mut cert = ptr::null_mut();
             let mut chain = ptr::null_mut();
 
-            try!(cvt(ffi::PKCS12_parse(self.0, pass.as_ptr(), &mut pkey, &mut cert, &mut chain)));
+            try!(cvt(ffi::PKCS12_parse(self.as_ptr(),
+                                       pass.as_ptr(),
+                                       &mut pkey,
+                                       &mut cert,
+                                       &mut chain)));
 
             let pkey = PKey::from_ptr(pkey);
             let cert = X509::from_ptr(cert);
