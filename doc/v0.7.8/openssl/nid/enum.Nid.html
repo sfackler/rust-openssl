@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Nid` enum in crate `openssl`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Nid">
+
+    <title>openssl::nid::Nid - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>openssl</a>::<wbr><a href='index.html'>nid</a></p><script>window.sidebarCurrent = {name: 'Nid', ty: 'enum', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content enum">
+<h1 class='fqn'><span class='in-band'>Enum <a href='../index.html'>openssl</a>::<wbr><a href='index.html'>nid</a>::<wbr><a class='enum' href=''>Nid</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-3588' class='srclink' href='../../src/openssl/openssl/src/nid.rs.html#4-176' title='goto source code'>[src]</a></span></h1>
+<pre class='rust enum'>pub enum Nid {
+    Undefined,
+    Rsadsi,
+    Pkcs,
+    MD2,
+    MD4,
+    MD5,
+    RC4,
+    RsaEncryption,
+    RSA_MD2,
+    RSA_MD5,
+    PBE_MD2_DES,
+    X500,
+    x509,
+    CN,
+    C,
+    L,
+    ST,
+    O,
+    OU,
+    RSA,
+    Pkcs7,
+    Pkcs7_data,
+    Pkcs7_signedData,
+    Pkcs7_envelopedData,
+    Pkcs7_signedAndEnvelopedData,
+    Pkcs7_digestData,
+    Pkcs7_encryptedData,
+    Pkcs3,
+    DhKeyAgreement,
+    DES_ECB,
+    DES_CFB,
+    DES_CBC,
+    DES_EDE,
+    DES_EDE3,
+    IDEA_CBC,
+    IDEA_CFB,
+    IDEA_ECB,
+    RC2_CBC,
+    RC2_ECB,
+    RC2_CFB,
+    RC2_OFB,
+    SHA,
+    RSA_SHA,
+    DES_EDE_CBC,
+    DES_EDE3_CBC,
+    DES_OFB,
+    IDEA_OFB,
+    Pkcs9,
+    Email,
+    UnstructuredName,
+    ContentType,
+    MessageDigest,
+    SigningTime,
+    CounterSignature,
+    ChallengePassword,
+    UnstructuredAddress,
+    ExtendedCertificateAttributes,
+    Netscape,
+    NetscapeCertExtention,
+    NetscapeDatatype,
+    DES_EDE_CFB64,
+    DES_EDE3_CFB64,
+    DES_EDE_OFB64,
+    DES_EDE3_OFB64,
+    SHA1,
+    RSA_SHA1,
+    DSA_SHA,
+    DSA_OLD,
+    PBE_SHA1_RC2_64,
+    PBKDF2,
+    DSA_SHA1_OLD,
+    NetscapeCertType,
+    NetscapeBaseUrl,
+    NetscapeRevocationUrl,
+    NetscapeCARevocationUrl,
+    NetscapeRenewalUrl,
+    NetscapeCAPolicyUrl,
+    NetscapeSSLServerName,
+    NetscapeComment,
+    NetscapeCertSequence,
+    DESX_CBC,
+    ID_CE,
+    SubjectKeyIdentifier,
+    KeyUsage,
+    PrivateKeyUsagePeriod,
+    SubjectAltName,
+    IssuerAltName,
+    BasicConstraints,
+    CrlNumber,
+    CertificatePolicies,
+    AuthorityKeyIdentifier,
+    BF_CBC,
+    BF_ECB,
+    BF_CFB,
+    BF_OFB,
+    MDC2,
+    RSA_MDC2,
+    RC4_40,
+    RC2_40_CBC,
+    G,
+    S,
+    I,
+    UID,
+    CrlDistributionPoints,
+    RSA_NP_MD5,
+    SN,
+    T,
+    D,
+    CAST5_CBC,
+    CAST5_ECB,
+    CAST5_CFB,
+    CAST5_OFB,
+    PbeWithMD5AndCast5CBC,
+    DSA_SHA1,
+    MD5_SHA1,
+    RSA_SHA1_2,
+    DSA,
+    RIPEMD160,
+    RSA_RIPEMD160,
+    RC5_CBC,
+    RC5_ECB,
+    RC5_CFB,
+    RC5_OFB,
+    RLE,
+    ZLIB,
+    ExtendedKeyUsage,
+    PKIX,
+    ID_KP,
+    ServerAuth,
+    ClientAuth,
+    CodeSigning,
+    EmailProtection,
+    TimeStamping,
+    MsCodeInd,
+    MsCodeCom,
+    MsCtlSigh,
+    MsSGC,
+    MsEFS,
+    NsSGC,
+    DeltaCRL,
+    CRLReason,
+    InvalidityDate,
+    SXNetID,
+    PBE_SHA1_RC4_128,
+    PBE_SHA1_RC4_40,
+    PBE_SHA1_3DES,
+    PBE_SHA1_2DES,
+    PBE_SHA1_RC2_128,
+    PBE_SHA1_RC2_40,
+    KeyBag,
+    Pkcs8ShroudedKeyBag,
+    CertBag,
+    CrlBag,
+    SecretBag,
+    SafeContentsBag,
+    FriendlyName,
+    LocalKeyID,
+    X509Certificate,
+    SdsiCertificate,
+    X509Crl,
+    PBES2,
+    PBMAC1,
+    HmacWithSha1,
+    ID_QT_CPS,
+    ID_QT_UNOTICE,
+    RC2_64_CBC,
+    SMIMECaps,
+    UserId,
+}</pre><h2 class='variants'>Variants</h2>
+<table class='variants_table'><tr><td id='variant.Undefined'><code>Undefined</code></td><td></td><td></td></tr><tr><td id='variant.Rsadsi'><code>Rsadsi</code></td><td></td><td></td></tr><tr><td id='variant.Pkcs'><code>Pkcs</code></td><td></td><td></td></tr><tr><td id='variant.MD2'><code>MD2</code></td><td></td><td></td></tr><tr><td id='variant.MD4'><code>MD4</code></td><td></td><td></td></tr><tr><td id='variant.MD5'><code>MD5</code></td><td></td><td></td></tr><tr><td id='variant.RC4'><code>RC4</code></td><td></td><td></td></tr><tr><td id='variant.RsaEncryption'><code>RsaEncryption</code></td><td></td><td></td></tr><tr><td id='variant.RSA_MD2'><code>RSA_MD2</code></td><td></td><td></td></tr><tr><td id='variant.RSA_MD5'><code>RSA_MD5</code></td><td></td><td></td></tr><tr><td id='variant.PBE_MD2_DES'><code>PBE_MD2_DES</code></td><td></td><td></td></tr><tr><td id='variant.X500'><code>X500</code></td><td></td><td></td></tr><tr><td id='variant.x509'><code>x509</code></td><td></td><td></td></tr><tr><td id='variant.CN'><code>CN</code></td><td></td><td></td></tr><tr><td id='variant.C'><code>C</code></td><td></td><td></td></tr><tr><td id='variant.L'><code>L</code></td><td></td><td></td></tr><tr><td id='variant.ST'><code>ST</code></td><td></td><td></td></tr><tr><td id='variant.O'><code>O</code></td><td></td><td></td></tr><tr><td id='variant.OU'><code>OU</code></td><td></td><td></td></tr><tr><td id='variant.RSA'><code>RSA</code></td><td></td><td></td></tr><tr><td id='variant.Pkcs7'><code>Pkcs7</code></td><td></td><td></td></tr><tr><td id='variant.Pkcs7_data'><code>Pkcs7_data</code></td><td></td><td></td></tr><tr><td id='variant.Pkcs7_signedData'><code>Pkcs7_signedData</code></td><td></td><td></td></tr><tr><td id='variant.Pkcs7_envelopedData'><code>Pkcs7_envelopedData</code></td><td></td><td></td></tr><tr><td id='variant.Pkcs7_signedAndEnvelopedData'><code>Pkcs7_signedAndEnvelopedData</code></td><td></td><td></td></tr><tr><td id='variant.Pkcs7_digestData'><code>Pkcs7_digestData</code></td><td></td><td></td></tr><tr><td id='variant.Pkcs7_encryptedData'><code>Pkcs7_encryptedData</code></td><td></td><td></td></tr><tr><td id='variant.Pkcs3'><code>Pkcs3</code></td><td></td><td></td></tr><tr><td id='variant.DhKeyAgreement'><code>DhKeyAgreement</code></td><td></td><td></td></tr><tr><td id='variant.DES_ECB'><code>DES_ECB</code></td><td></td><td></td></tr><tr><td id='variant.DES_CFB'><code>DES_CFB</code></td><td></td><td></td></tr><tr><td id='variant.DES_CBC'><code>DES_CBC</code></td><td></td><td></td></tr><tr><td id='variant.DES_EDE'><code>DES_EDE</code></td><td></td><td></td></tr><tr><td id='variant.DES_EDE3'><code>DES_EDE3</code></td><td></td><td></td></tr><tr><td id='variant.IDEA_CBC'><code>IDEA_CBC</code></td><td></td><td></td></tr><tr><td id='variant.IDEA_CFB'><code>IDEA_CFB</code></td><td></td><td></td></tr><tr><td id='variant.IDEA_ECB'><code>IDEA_ECB</code></td><td></td><td></td></tr><tr><td id='variant.RC2_CBC'><code>RC2_CBC</code></td><td></td><td></td></tr><tr><td id='variant.RC2_ECB'><code>RC2_ECB</code></td><td></td><td></td></tr><tr><td id='variant.RC2_CFB'><code>RC2_CFB</code></td><td></td><td></td></tr><tr><td id='variant.RC2_OFB'><code>RC2_OFB</code></td><td></td><td></td></tr><tr><td id='variant.SHA'><code>SHA</code></td><td></td><td></td></tr><tr><td id='variant.RSA_SHA'><code>RSA_SHA</code></td><td></td><td></td></tr><tr><td id='variant.DES_EDE_CBC'><code>DES_EDE_CBC</code></td><td></td><td></td></tr><tr><td id='variant.DES_EDE3_CBC'><code>DES_EDE3_CBC</code></td><td></td><td></td></tr><tr><td id='variant.DES_OFB'><code>DES_OFB</code></td><td></td><td></td></tr><tr><td id='variant.IDEA_OFB'><code>IDEA_OFB</code></td><td></td><td></td></tr><tr><td id='variant.Pkcs9'><code>Pkcs9</code></td><td></td><td></td></tr><tr><td id='variant.Email'><code>Email</code></td><td></td><td></td></tr><tr><td id='variant.UnstructuredName'><code>UnstructuredName</code></td><td></td><td></td></tr><tr><td id='variant.ContentType'><code>ContentType</code></td><td></td><td></td></tr><tr><td id='variant.MessageDigest'><code>MessageDigest</code></td><td></td><td></td></tr><tr><td id='variant.SigningTime'><code>SigningTime</code></td><td></td><td></td></tr><tr><td id='variant.CounterSignature'><code>CounterSignature</code></td><td></td><td></td></tr><tr><td id='variant.ChallengePassword'><code>ChallengePassword</code></td><td></td><td></td></tr><tr><td id='variant.UnstructuredAddress'><code>UnstructuredAddress</code></td><td></td><td></td></tr><tr><td id='variant.ExtendedCertificateAttributes'><code>ExtendedCertificateAttributes</code></td><td></td><td></td></tr><tr><td id='variant.Netscape'><code>Netscape</code></td><td></td><td></td></tr><tr><td id='variant.NetscapeCertExtention'><code>NetscapeCertExtention</code></td><td></td><td></td></tr><tr><td id='variant.NetscapeDatatype'><code>NetscapeDatatype</code></td><td></td><td></td></tr><tr><td id='variant.DES_EDE_CFB64'><code>DES_EDE_CFB64</code></td><td></td><td></td></tr><tr><td id='variant.DES_EDE3_CFB64'><code>DES_EDE3_CFB64</code></td><td></td><td></td></tr><tr><td id='variant.DES_EDE_OFB64'><code>DES_EDE_OFB64</code></td><td></td><td></td></tr><tr><td id='variant.DES_EDE3_OFB64'><code>DES_EDE3_OFB64</code></td><td></td><td></td></tr><tr><td id='variant.SHA1'><code>SHA1</code></td><td></td><td></td></tr><tr><td id='variant.RSA_SHA1'><code>RSA_SHA1</code></td><td></td><td></td></tr><tr><td id='variant.DSA_SHA'><code>DSA_SHA</code></td><td></td><td></td></tr><tr><td id='variant.DSA_OLD'><code>DSA_OLD</code></td><td></td><td></td></tr><tr><td id='variant.PBE_SHA1_RC2_64'><code>PBE_SHA1_RC2_64</code></td><td></td><td></td></tr><tr><td id='variant.PBKDF2'><code>PBKDF2</code></td><td></td><td></td></tr><tr><td id='variant.DSA_SHA1_OLD'><code>DSA_SHA1_OLD</code></td><td></td><td></td></tr><tr><td id='variant.NetscapeCertType'><code>NetscapeCertType</code></td><td></td><td></td></tr><tr><td id='variant.NetscapeBaseUrl'><code>NetscapeBaseUrl</code></td><td></td><td></td></tr><tr><td id='variant.NetscapeRevocationUrl'><code>NetscapeRevocationUrl</code></td><td></td><td></td></tr><tr><td id='variant.NetscapeCARevocationUrl'><code>NetscapeCARevocationUrl</code></td><td></td><td></td></tr><tr><td id='variant.NetscapeRenewalUrl'><code>NetscapeRenewalUrl</code></td><td></td><td></td></tr><tr><td id='variant.NetscapeCAPolicyUrl'><code>NetscapeCAPolicyUrl</code></td><td></td><td></td></tr><tr><td id='variant.NetscapeSSLServerName'><code>NetscapeSSLServerName</code></td><td></td><td></td></tr><tr><td id='variant.NetscapeComment'><code>NetscapeComment</code></td><td></td><td></td></tr><tr><td id='variant.NetscapeCertSequence'><code>NetscapeCertSequence</code></td><td></td><td></td></tr><tr><td id='variant.DESX_CBC'><code>DESX_CBC</code></td><td></td><td></td></tr><tr><td id='variant.ID_CE'><code>ID_CE</code></td><td></td><td></td></tr><tr><td id='variant.SubjectKeyIdentifier'><code>SubjectKeyIdentifier</code></td><td></td><td></td></tr><tr><td id='variant.KeyUsage'><code>KeyUsage</code></td><td></td><td></td></tr><tr><td id='variant.PrivateKeyUsagePeriod'><code>PrivateKeyUsagePeriod</code></td><td></td><td></td></tr><tr><td id='variant.SubjectAltName'><code>SubjectAltName</code></td><td></td><td></td></tr><tr><td id='variant.IssuerAltName'><code>IssuerAltName</code></td><td></td><td></td></tr><tr><td id='variant.BasicConstraints'><code>BasicConstraints</code></td><td></td><td></td></tr><tr><td id='variant.CrlNumber'><code>CrlNumber</code></td><td></td><td></td></tr><tr><td id='variant.CertificatePolicies'><code>CertificatePolicies</code></td><td></td><td></td></tr><tr><td id='variant.AuthorityKeyIdentifier'><code>AuthorityKeyIdentifier</code></td><td></td><td></td></tr><tr><td id='variant.BF_CBC'><code>BF_CBC</code></td><td></td><td></td></tr><tr><td id='variant.BF_ECB'><code>BF_ECB</code></td><td></td><td></td></tr><tr><td id='variant.BF_CFB'><code>BF_CFB</code></td><td></td><td></td></tr><tr><td id='variant.BF_OFB'><code>BF_OFB</code></td><td></td><td></td></tr><tr><td id='variant.MDC2'><code>MDC2</code></td><td></td><td></td></tr><tr><td id='variant.RSA_MDC2'><code>RSA_MDC2</code></td><td></td><td></td></tr><tr><td id='variant.RC4_40'><code>RC4_40</code></td><td></td><td></td></tr><tr><td id='variant.RC2_40_CBC'><code>RC2_40_CBC</code></td><td></td><td></td></tr><tr><td id='variant.G'><code>G</code></td><td></td><td></td></tr><tr><td id='variant.S'><code>S</code></td><td></td><td></td></tr><tr><td id='variant.I'><code>I</code></td><td></td><td></td></tr><tr><td id='variant.UID'><code>UID</code></td><td><div class='docblock'><p>uniqueIdentifier</p>
+</div></td><td></td></tr><tr><td id='variant.CrlDistributionPoints'><code>CrlDistributionPoints</code></td><td></td><td></td></tr><tr><td id='variant.RSA_NP_MD5'><code>RSA_NP_MD5</code></td><td></td><td></td></tr><tr><td id='variant.SN'><code>SN</code></td><td></td><td></td></tr><tr><td id='variant.T'><code>T</code></td><td></td><td></td></tr><tr><td id='variant.D'><code>D</code></td><td></td><td></td></tr><tr><td id='variant.CAST5_CBC'><code>CAST5_CBC</code></td><td></td><td></td></tr><tr><td id='variant.CAST5_ECB'><code>CAST5_ECB</code></td><td></td><td></td></tr><tr><td id='variant.CAST5_CFB'><code>CAST5_CFB</code></td><td></td><td></td></tr><tr><td id='variant.CAST5_OFB'><code>CAST5_OFB</code></td><td></td><td></td></tr><tr><td id='variant.PbeWithMD5AndCast5CBC'><code>PbeWithMD5AndCast5CBC</code></td><td></td><td></td></tr><tr><td id='variant.DSA_SHA1'><code>DSA_SHA1</code></td><td></td><td></td></tr><tr><td id='variant.MD5_SHA1'><code>MD5_SHA1</code></td><td></td><td></td></tr><tr><td id='variant.RSA_SHA1_2'><code>RSA_SHA1_2</code></td><td></td><td></td></tr><tr><td id='variant.DSA'><code>DSA</code></td><td></td><td></td></tr><tr><td id='variant.RIPEMD160'><code>RIPEMD160</code></td><td></td><td></td></tr><tr><td id='variant.RSA_RIPEMD160'><code>RSA_RIPEMD160</code></td><td></td><td></td></tr><tr><td id='variant.RC5_CBC'><code>RC5_CBC</code></td><td></td><td></td></tr><tr><td id='variant.RC5_ECB'><code>RC5_ECB</code></td><td></td><td></td></tr><tr><td id='variant.RC5_CFB'><code>RC5_CFB</code></td><td></td><td></td></tr><tr><td id='variant.RC5_OFB'><code>RC5_OFB</code></td><td></td><td></td></tr><tr><td id='variant.RLE'><code>RLE</code></td><td></td><td></td></tr><tr><td id='variant.ZLIB'><code>ZLIB</code></td><td></td><td></td></tr><tr><td id='variant.ExtendedKeyUsage'><code>ExtendedKeyUsage</code></td><td></td><td></td></tr><tr><td id='variant.PKIX'><code>PKIX</code></td><td></td><td></td></tr><tr><td id='variant.ID_KP'><code>ID_KP</code></td><td></td><td></td></tr><tr><td id='variant.ServerAuth'><code>ServerAuth</code></td><td></td><td></td></tr><tr><td id='variant.ClientAuth'><code>ClientAuth</code></td><td></td><td></td></tr><tr><td id='variant.CodeSigning'><code>CodeSigning</code></td><td></td><td></td></tr><tr><td id='variant.EmailProtection'><code>EmailProtection</code></td><td></td><td></td></tr><tr><td id='variant.TimeStamping'><code>TimeStamping</code></td><td></td><td></td></tr><tr><td id='variant.MsCodeInd'><code>MsCodeInd</code></td><td></td><td></td></tr><tr><td id='variant.MsCodeCom'><code>MsCodeCom</code></td><td></td><td></td></tr><tr><td id='variant.MsCtlSigh'><code>MsCtlSigh</code></td><td></td><td></td></tr><tr><td id='variant.MsSGC'><code>MsSGC</code></td><td></td><td></td></tr><tr><td id='variant.MsEFS'><code>MsEFS</code></td><td></td><td></td></tr><tr><td id='variant.NsSGC'><code>NsSGC</code></td><td></td><td></td></tr><tr><td id='variant.DeltaCRL'><code>DeltaCRL</code></td><td></td><td></td></tr><tr><td id='variant.CRLReason'><code>CRLReason</code></td><td></td><td></td></tr><tr><td id='variant.InvalidityDate'><code>InvalidityDate</code></td><td></td><td></td></tr><tr><td id='variant.SXNetID'><code>SXNetID</code></td><td></td><td></td></tr><tr><td id='variant.PBE_SHA1_RC4_128'><code>PBE_SHA1_RC4_128</code></td><td></td><td></td></tr><tr><td id='variant.PBE_SHA1_RC4_40'><code>PBE_SHA1_RC4_40</code></td><td></td><td></td></tr><tr><td id='variant.PBE_SHA1_3DES'><code>PBE_SHA1_3DES</code></td><td></td><td></td></tr><tr><td id='variant.PBE_SHA1_2DES'><code>PBE_SHA1_2DES</code></td><td></td><td></td></tr><tr><td id='variant.PBE_SHA1_RC2_128'><code>PBE_SHA1_RC2_128</code></td><td></td><td></td></tr><tr><td id='variant.PBE_SHA1_RC2_40'><code>PBE_SHA1_RC2_40</code></td><td></td><td></td></tr><tr><td id='variant.KeyBag'><code>KeyBag</code></td><td></td><td></td></tr><tr><td id='variant.Pkcs8ShroudedKeyBag'><code>Pkcs8ShroudedKeyBag</code></td><td></td><td></td></tr><tr><td id='variant.CertBag'><code>CertBag</code></td><td></td><td></td></tr><tr><td id='variant.CrlBag'><code>CrlBag</code></td><td></td><td></td></tr><tr><td id='variant.SecretBag'><code>SecretBag</code></td><td></td><td></td></tr><tr><td id='variant.SafeContentsBag'><code>SafeContentsBag</code></td><td></td><td></td></tr><tr><td id='variant.FriendlyName'><code>FriendlyName</code></td><td></td><td></td></tr><tr><td id='variant.LocalKeyID'><code>LocalKeyID</code></td><td></td><td></td></tr><tr><td id='variant.X509Certificate'><code>X509Certificate</code></td><td></td><td></td></tr><tr><td id='variant.SdsiCertificate'><code>SdsiCertificate</code></td><td></td><td></td></tr><tr><td id='variant.X509Crl'><code>X509Crl</code></td><td></td><td></td></tr><tr><td id='variant.PBES2'><code>PBES2</code></td><td></td><td></td></tr><tr><td id='variant.PBMAC1'><code>PBMAC1</code></td><td></td><td></td></tr><tr><td id='variant.HmacWithSha1'><code>HmacWithSha1</code></td><td></td><td></td></tr><tr><td id='variant.ID_QT_CPS'><code>ID_QT_CPS</code></td><td></td><td></td></tr><tr><td id='variant.ID_QT_UNOTICE'><code>ID_QT_UNOTICE</code></td><td></td><td></td></tr><tr><td id='variant.RC2_64_CBC'><code>RC2_64_CBC</code></td><td></td><td></td></tr><tr><td id='variant.SMIMECaps'><code>SMIMECaps</code></td><td></td><td></td></tr><tr><td id='variant.UserId'><code>UserId</code></td><td><div class='docblock'><p>Shown as UID in cert subject</p>
+</div></td><td></td></tr></table><h2 id='implementations'>Trait Implementations</h2><h3 id='derived_implementations'>Derived Implementations </h3><h3 class='impl'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> for <a class='enum' href='../../openssl/nid/enum.Nid.html' title='openssl::nid::Nid'>Nid</a></code></h3><div class='impl-items'></div><h3 class='impl'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='core::cmp::PartialEq'>PartialEq</a> for <a class='enum' href='../../openssl/nid/enum.Nid.html' title='openssl::nid::Nid'>Nid</a></code></h3><div class='impl-items'><h4 id='method.eq' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.eq' class='fnname'>eq</a>(&amp;self, __arg_0: &amp;<a class='enum' href='../../openssl/nid/enum.Nid.html' title='openssl::nid::Nid'>Nid</a>) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.ne' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.ne' class='fnname'>ne</a>(&amp;self, __arg_0: &amp;<a class='enum' href='../../openssl/nid/enum.Nid.html' title='openssl::nid::Nid'>Nid</a>) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+</div><h3 class='impl'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html' title='core::hash::Hash'>Hash</a> for <a class='enum' href='../../openssl/nid/enum.Nid.html' title='openssl::nid::Nid'>Nid</a></code></h3><div class='impl-items'><h4 id='method.hash' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#method.hash' class='fnname'>hash</a>&lt;__H: <a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hasher.html' title='core::hash::Hasher'>Hasher</a>&gt;(&amp;self, __arg_0: &amp;mut __H)</code></h4>
+<h4 id='method.hash_slice' class='method'><span class="since">1.3.0</span><code>fn <a href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#method.hash_slice' class='fnname'>hash_slice</a>&lt;H&gt;(data: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[Self]</a>, state: &amp;mut H) <span class='where'>where H: <a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hasher.html' title='core::hash::Hasher'>Hasher</a></span></code></h4>
+</div><h3 class='impl'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> for <a class='enum' href='../../openssl/nid/enum.Nid.html' title='openssl::nid::Nid'>Nid</a></code></h3><div class='impl-items'><h4 id='method.clone' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class='enum' href='../../openssl/nid/enum.Nid.html' title='openssl::nid::Nid'>Nid</a></code></h4>
+<h4 id='method.clone_from' class='method'><span class="since">1.0.0</span><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: &amp;Self)</code></h4>
+</div><h3 class='impl'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html' title='core::marker::Copy'>Copy</a> for <a class='enum' href='../../openssl/nid/enum.Nid.html' title='openssl::nid::Nid'>Nid</a></code></h3><div class='impl-items'></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "openssl";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

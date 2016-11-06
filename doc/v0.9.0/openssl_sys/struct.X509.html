@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `X509` struct in crate `openssl_sys`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, X509">
+
+    <title>openssl_sys::X509 - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='index.html'>openssl_sys</a></p><script>window.sidebarCurrent = {name: 'X509', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='index.html'>openssl_sys</a>::<wbr><a class='struct' href=''>X509</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-208' class='srclink' href='../src/openssl_sys/ossl10x.rs.html#236-263' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct X509 {
+    pub cert_info: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.pointer.html'>*mut </a><a class='struct' href='../openssl_sys/struct.X509_CINF.html' title='openssl_sys::X509_CINF'>X509_CINF</a>,
+    pub valid: c_int,
+    pub references: c_int,
+    pub name: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.pointer.html'>*mut </a>c_char,
+    pub ex_data: <a class='struct' href='../openssl_sys/struct.CRYPTO_EX_DATA.html' title='openssl_sys::CRYPTO_EX_DATA'>CRYPTO_EX_DATA</a>,
+    pub ex_pathlen: c_long,
+    pub ex_pcpathlen: c_long,
+    pub ex_flags: c_ulong,
+    pub ex_kusage: c_ulong,
+    pub ex_xkusage: c_ulong,
+    pub ex_nscert: c_ulong,
+    // some fields omitted
+}</pre><h2 class='fields'>Fields</h2><span id='structfield.cert_info' class='structfield'><code>cert_info: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.pointer.html'>*mut </a><a class='struct' href='../openssl_sys/struct.X509_CINF.html' title='openssl_sys::X509_CINF'>X509_CINF</a></code>
+                           </span><span class='stab '></span><span id='structfield.valid' class='structfield'><code>valid: c_int</code>
+                           </span><span class='stab '></span><span id='structfield.references' class='structfield'><code>references: c_int</code>
+                           </span><span class='stab '></span><span id='structfield.name' class='structfield'><code>name: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.pointer.html'>*mut </a>c_char</code>
+                           </span><span class='stab '></span><span id='structfield.ex_data' class='structfield'><code>ex_data: <a class='struct' href='../openssl_sys/struct.CRYPTO_EX_DATA.html' title='openssl_sys::CRYPTO_EX_DATA'>CRYPTO_EX_DATA</a></code>
+                           </span><span class='stab '></span><span id='structfield.ex_pathlen' class='structfield'><code>ex_pathlen: c_long</code>
+                           </span><span class='stab '></span><span id='structfield.ex_pcpathlen' class='structfield'><code>ex_pcpathlen: c_long</code>
+                           </span><span class='stab '></span><span id='structfield.ex_flags' class='structfield'><code>ex_flags: c_ulong</code>
+                           </span><span class='stab '></span><span id='structfield.ex_kusage' class='structfield'><code>ex_kusage: c_ulong</code>
+                           </span><span class='stab '></span><span id='structfield.ex_xkusage' class='structfield'><code>ex_xkusage: c_ulong</code>
+                           </span><span class='stab '></span><span id='structfield.ex_nscert' class='structfield'><code>ex_nscert: c_ulong</code>
+                           </span><span class='stab '></span></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "openssl_sys";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script defer src="../search-index.js"></script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `DSA` struct in crate `openssl`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, DSA">
+
+    <title>openssl::crypto::dsa::DSA - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../../index.html'>openssl</a>::<wbr><a href='../index.html'>crypto</a>::<wbr><a href='index.html'>dsa</a></p><script>window.sidebarCurrent = {name: 'DSA', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>openssl</a>::<wbr><a href='../index.html'>crypto</a>::<wbr><a href='index.html'>dsa</a>::<wbr><a class='struct' href=''>DSA</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-1379' class='srclink' href='../../../src/openssl/src/crypto/dsa.rs.html#47' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct DSA(_);</pre><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class='struct' href='../../../openssl/crypto/dsa/struct.DSA.html' title='openssl::crypto::dsa::DSA'>DSA</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-1385' class='srclink' href='../../../src/openssl/src/crypto/dsa.rs.html#57-231' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.from_ptr' class='method'><code>unsafe fn <a href='#method.from_ptr' class='fnname'>from_ptr</a>(dsa: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.pointer.html'>*mut </a><a class='struct' href='https://sfackler.github.io/rust-openssl/doc/v0.7.17/openssl_sys/struct.DSA.html' title='openssl_sys::DSA'>DSA</a>) -&gt; <a class='struct' href='../../../openssl/crypto/dsa/struct.DSA.html' title='openssl::crypto::dsa::DSA'>DSA</a></code></h4>
+<h4 id='method.generate' class='method'><code>fn <a href='#method.generate' class='fnname'>generate</a>(size: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../../../openssl/crypto/dsa/struct.DSA.html' title='openssl::crypto::dsa::DSA'>DSA</a>,&nbsp;<a class='struct' href='../../../openssl/error/struct.ErrorStack.html' title='openssl::error::ErrorStack'>ErrorStack</a>&gt;</code></h4>
+<div class='docblock'><p>Generate a DSA key pair
+For more complicated key generation scenarios see the <code>DSAParams</code> type</p>
+</div><h4 id='method.private_key_from_pem' class='method'><code>fn <a href='#method.private_key_from_pem' class='fnname'>private_key_from_pem</a>(buf: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../../../openssl/crypto/dsa/struct.DSA.html' title='openssl::crypto::dsa::DSA'>DSA</a>,&nbsp;<a class='struct' href='../../../openssl/error/struct.ErrorStack.html' title='openssl::error::ErrorStack'>ErrorStack</a>&gt;</code></h4>
+<div class='docblock'><p>Reads a DSA private key from PEM formatted data.</p>
+</div><h4 id='method.private_key_from_pem_cb' class='method'><code>fn <a href='#method.private_key_from_pem_cb' class='fnname'>private_key_from_pem_cb</a>&lt;F&gt;(buf: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>, pass_cb: F) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../../../openssl/crypto/dsa/struct.DSA.html' title='openssl::crypto::dsa::DSA'>DSA</a>,&nbsp;<a class='struct' href='../../../openssl/error/struct.ErrorStack.html' title='openssl::error::ErrorStack'>ErrorStack</a>&gt; <span class='where'>where F: <a class='trait' href='https://doc.rust-lang.org/nightly/core/ops/trait.FnOnce.html' title='core::ops::FnOnce'>FnOnce</a>(<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;mut [</a>c_char<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a></span></code></h4>
+<div class='docblock'><p>Read a private key from PEM supplying a password callback to be invoked if the private key
+is encrypted.</p>
+
+<p>The callback will be passed the password buffer and should return the number of characters
+placed into the buffer.</p>
+</div><h4 id='method.private_key_to_pem' class='method'><code>fn <a href='#method.private_key_to_pem' class='fnname'>private_key_to_pem</a>(&amp;self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a>&gt;,&nbsp;<a class='struct' href='../../../openssl/error/struct.ErrorStack.html' title='openssl::error::ErrorStack'>ErrorStack</a>&gt;</code></h4>
+<div class='docblock'><p>Writes an DSA private key as unencrypted PEM formatted data</p>
+</div><h4 id='method.public_key_from_pem' class='method'><code>fn <a href='#method.public_key_from_pem' class='fnname'>public_key_from_pem</a>(buf: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='../../../openssl/crypto/dsa/struct.DSA.html' title='openssl::crypto::dsa::DSA'>DSA</a>,&nbsp;<a class='struct' href='../../../openssl/error/struct.ErrorStack.html' title='openssl::error::ErrorStack'>ErrorStack</a>&gt;</code></h4>
+<div class='docblock'><p>Reads an DSA public key from PEM formatted data.</p>
+</div><h4 id='method.public_key_to_pem' class='method'><code>fn <a href='#method.public_key_to_pem' class='fnname'>public_key_to_pem</a>(&amp;self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a>&gt;,&nbsp;<a class='struct' href='../../../openssl/error/struct.ErrorStack.html' title='openssl::error::ErrorStack'>ErrorStack</a>&gt;</code></h4>
+<div class='docblock'><p>Writes an DSA public key as PEM formatted data</p>
+</div><h4 id='method.size' class='method'><code>fn <a href='#method.size' class='fnname'>size</a>(&amp;self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>&gt;</code></h4>
+<h4 id='method.sign' class='method'><code>fn <a href='#method.sign' class='fnname'>sign</a>(&amp;self, hash: <a class='enum' href='../../../openssl/crypto/hash/enum.Type.html' title='openssl::crypto::hash::Type'>Type</a>, message: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='struct' href='https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a>&gt;,&nbsp;<a class='struct' href='../../../openssl/error/struct.ErrorStack.html' title='openssl::error::ErrorStack'>ErrorStack</a>&gt;</code></h4>
+<h4 id='method.verify' class='method'><code>fn <a href='#method.verify' class='fnname'>verify</a>(&amp;self, hash: <a class='enum' href='../../../openssl/crypto/hash/enum.Type.html' title='openssl::crypto::hash::Type'>Type</a>, message: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>, sig: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/result/enum.Result.html' title='core::result::Result'>Result</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>,&nbsp;<a class='struct' href='../../../openssl/error/struct.ErrorStack.html' title='openssl::error::ErrorStack'>ErrorStack</a>&gt;</code></h4>
+<h4 id='method.as_ptr' class='method'><code>fn <a href='#method.as_ptr' class='fnname'>as_ptr</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.pointer.html'>*mut </a><a class='struct' href='https://sfackler.github.io/rust-openssl/doc/v0.7.17/openssl_sys/struct.DSA.html' title='openssl_sys::DSA'>DSA</a></code></h4>
+<h4 id='method.p' class='method'><code>fn <a href='#method.p' class='fnname'>p</a>&lt;'a&gt;(&amp;'a self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='struct' href='../../../openssl/bn/struct.BigNumRef.html' title='openssl::bn::BigNumRef'>BigNumRef</a>&lt;'a&gt;&gt;</code></h4>
+<h4 id='method.q' class='method'><code>fn <a href='#method.q' class='fnname'>q</a>&lt;'a&gt;(&amp;'a self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='struct' href='../../../openssl/bn/struct.BigNumRef.html' title='openssl::bn::BigNumRef'>BigNumRef</a>&lt;'a&gt;&gt;</code></h4>
+<h4 id='method.g' class='method'><code>fn <a href='#method.g' class='fnname'>g</a>&lt;'a&gt;(&amp;'a self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='struct' href='../../../openssl/bn/struct.BigNumRef.html' title='openssl::bn::BigNumRef'>BigNumRef</a>&lt;'a&gt;&gt;</code></h4>
+<h4 id='method.has_public_key' class='method'><code>fn <a href='#method.has_public_key' class='fnname'>has_public_key</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.has_private_key' class='method'><code>fn <a href='#method.has_private_key' class='fnname'>has_private_key</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/ops/trait.Drop.html' title='core::ops::Drop'>Drop</a> for <a class='struct' href='../../../openssl/crypto/dsa/struct.DSA.html' title='openssl::crypto::dsa::DSA'>DSA</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-1382' class='srclink' href='../../../src/openssl/src/crypto/dsa.rs.html#49-55' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.drop' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/ops/trait.Drop.html#tymethod.drop' class='fnname'>drop</a>(&amp;mut self)</code></h4>
+<div class='docblock'><p>A method called when the value goes out of scope. <a href="https://doc.rust-lang.org/nightly/core/ops/trait.Drop.html#tymethod.drop">Read more</a></p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html' title='core::fmt::Debug'>Debug</a> for <a class='struct' href='../../../openssl/crypto/dsa/struct.DSA.html' title='openssl::crypto::dsa::DSA'>DSA</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-1467' class='srclink' href='../../../src/openssl/src/crypto/dsa.rs.html#233-237' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, f: &amp;mut <a class='struct' href='https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html' title='core::fmt::Formatter'>Formatter</a>) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/core/fmt/type.Result.html' title='core::fmt::Result'>Result</a></code></h4>
+<div class='docblock'><p>Formats the value using the given formatter.</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "openssl";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../../jquery.js"></script>
+    <script src="../../../main.js"></script>
+    
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>
