@@ -6,6 +6,7 @@ use std::ffi::OsString;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 fn main() {
     let target = env::var("TARGET").unwrap();
@@ -95,6 +96,18 @@ install the `openssl` package, or as a maintainer you can use the openssl-sys
 0.7 crate for support with OpenSSL 0.9.8.
 
 Unfortunately though the compile cannot continue, so aborting.
+
+"));
+        }
+    }
+
+    if host.contains("unknown-linux") && target.contains("unknown-linux-gnu") {
+        if Command::new("pkg-config").output().is_err() {
+            msg.push_str(&format!("
+It looks like you're compiling on Linux and also targeting Linux. Currently this
+requires the `pkg-config` utility to find OpenSSL but unfortunately `pkg-config`
+could not be found. If you have OpenSSL installed you can likely fix this by
+installing `pkg-config`.
 
 "));
         }
