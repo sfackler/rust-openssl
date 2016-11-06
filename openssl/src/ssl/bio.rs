@@ -1,14 +1,14 @@
 use libc::{c_char, c_int, c_long, c_void, strlen};
-use ffi::{self, BIO, BIO_CTRL_FLUSH, BIO_TYPE_NONE, BIO_new, BIO_clear_retry_flags,
-          BIO_set_retry_read, BIO_set_retry_write};
+use ffi::{BIO, BIO_CTRL_FLUSH, BIO_new, BIO_clear_retry_flags, BIO_set_retry_read,
+          BIO_set_retry_write};
 use std::any::Any;
 use std::io;
 use std::io::prelude::*;
 use std::mem;
 use std::ptr;
 use std::slice;
-use std::sync::Arc;
 
+use cvt_p;
 use error::ErrorStack;
 
 pub struct StreamState<S> {
@@ -18,29 +18,19 @@ pub struct StreamState<S> {
 }
 
 /// Safe wrapper for BIO_METHOD
-pub struct BioMethod(ffi::BIO_METHOD);
+pub struct BioMethod(compat::BIO_METHOD);
 
 impl BioMethod {
-    pub fn new<S: Read + Write>() -> BioMethod {
-        BioMethod(ffi::BIO_METHOD {
-            type_: BIO_TYPE_NONE,
-            name: b"rust\0".as_ptr() as *const _,
-            bwrite: Some(bwrite::<S>),
-            bread: Some(bread::<S>),
-            bputs: Some(bputs::<S>),
-            bgets: None,
-            ctrl: Some(ctrl::<S>),
-            create: Some(create),
-            destroy: Some(destroy::<S>),
-            callback_ctrl: None,
-        })
+    fn new<S: Read + Write>() -> BioMethod {
+        BioMethod(compat::BIO_METHOD::new::<S>())
     }
 }
 
+unsafe impl Sync for BioMethod {}
 unsafe impl Send for BioMethod {}
 
-pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Arc<BioMethod>), ErrorStack> {
-    let method = Arc::new(BioMethod::new::<S>());
+pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, BioMethod), ErrorStack> {
+    let method = BioMethod::new::<S>();
 
     let state = Box::new(StreamState {
         stream: stream,
@@ -49,9 +39,9 @@ pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, Arc<BioMethod>), Err
     });
 
     unsafe {
-        let bio = try_ssl_null!(BIO_new(&method.0));
-        (*bio).ptr = Box::into_raw(state) as *mut _;
-        (*bio).init = 1;
+        let bio = try!(cvt_p(BIO_new(method.0.get())));
+        compat::BIO_set_data(bio, Box::into_raw(state) as *mut _);
+        compat::BIO_set_init(bio, 1);
 
         return Ok((bio, method));
     }
@@ -62,14 +52,13 @@ pub unsafe fn take_error<S>(bio: *mut BIO) -> Option<io::Error> {
     state.error.take()
 }
 
-#[cfg_attr(not(feature = "nightly"), allow(dead_code))]
 pub unsafe fn take_panic<S>(bio: *mut BIO) -> Option<Box<Any + Send>> {
     let state = state::<S>(bio);
     state.panic.take()
 }
 
 pub unsafe fn get_ref<'a, S: 'a>(bio: *mut BIO) -> &'a S {
-    let state: &'a StreamState<S> = mem::transmute((*bio).ptr);
+    let state: &'a StreamState<S> = mem::transmute(compat::BIO_get_data(bio));
     &state.stream
 }
 
@@ -78,21 +67,13 @@ pub unsafe fn get_mut<'a, S: 'a>(bio: *mut BIO) -> &'a mut S {
 }
 
 unsafe fn state<'a, S: 'a>(bio: *mut BIO) -> &'a mut StreamState<S> {
-    mem::transmute((*bio).ptr)
+    mem::transmute(compat::BIO_get_data(bio))
 }
 
-#[cfg(feature = "nightly")]
 fn catch_unwind<F, T>(f: F) -> Result<T, Box<Any + Send>>
     where F: FnOnce() -> T
 {
     ::std::panic::catch_unwind(::std::panic::AssertUnwindSafe(f))
-}
-
-#[cfg(not(feature = "nightly"))]
-fn catch_unwind<F, T>(f: F) -> Result<T, Box<Any + Send>>
-    where F: FnOnce() -> T
-{
-    Ok(f())
 }
 
 unsafe extern "C" fn bwrite<S: Write>(bio: *mut BIO, buf: *const c_char, len: c_int) -> c_int {
@@ -176,10 +157,10 @@ unsafe extern "C" fn ctrl<S: Write>(bio: *mut BIO,
 }
 
 unsafe extern "C" fn create(bio: *mut BIO) -> c_int {
-    (*bio).init = 0;
-    (*bio).num = 0;
-    (*bio).ptr = ptr::null_mut();
-    (*bio).flags = 0;
+    compat::BIO_set_init(bio, 0);
+    compat::BIO_set_num(bio, 0);
+    compat::BIO_set_data(bio, ptr::null_mut());
+    compat::BIO_set_flags(bio, 0);
     1
 }
 
@@ -188,9 +169,115 @@ unsafe extern "C" fn destroy<S>(bio: *mut BIO) -> c_int {
         return 0;
     }
 
-    assert!(!(*bio).ptr.is_null());
-    Box::<StreamState<S>>::from_raw((*bio).ptr as *mut _);
-    (*bio).ptr = ptr::null_mut();
-    (*bio).init = 0;
+    let data = compat::BIO_get_data(bio);
+    assert!(!data.is_null());
+    Box::<StreamState<S>>::from_raw(data as *mut _);
+    compat::BIO_set_data(bio, ptr::null_mut());
+    compat::BIO_set_init(bio, 0);
     1
+}
+
+#[cfg(ossl110)]
+#[allow(bad_style)]
+mod compat {
+    use std::io::{Read, Write};
+
+    use libc::c_int;
+    use ffi;
+    pub use ffi::{BIO_set_init, BIO_set_flags, BIO_set_data, BIO_get_data};
+
+    pub unsafe fn BIO_set_num(_bio: *mut ffi::BIO, _num: c_int) {}
+
+    pub struct BIO_METHOD(*mut ffi::BIO_METHOD);
+
+    impl BIO_METHOD {
+        pub fn new<S: Read + Write>() -> BIO_METHOD {
+            unsafe {
+                let ptr = ffi::BIO_meth_new(ffi::BIO_TYPE_NONE, b"rust\0".as_ptr() as *const _);
+                assert!(!ptr.is_null());
+                let ret = BIO_METHOD(ptr);
+                assert!(ffi::BIO_meth_set_write(ptr, super::bwrite::<S>) != 0);
+                assert!(ffi::BIO_meth_set_read(ptr, super::bread::<S>) != 0);
+                assert!(ffi::BIO_meth_set_puts(ptr, super::bputs::<S>) != 0);
+                assert!(ffi::BIO_meth_set_ctrl(ptr, super::ctrl::<S>) != 0);
+                assert!(ffi::BIO_meth_set_create(ptr, super::create) != 0);
+                assert!(ffi::BIO_meth_set_destroy(ptr, super::destroy::<S>) != 0);
+                return ret;
+            }
+        }
+
+        pub fn get(&self) -> *mut ffi::BIO_METHOD {
+            self.0
+        }
+    }
+
+    impl Drop for BIO_METHOD {
+        fn drop(&mut self) {
+            unsafe {
+                ffi::BIO_meth_free(self.0);
+            }
+        }
+    }
+}
+
+#[cfg(ossl10x)]
+#[allow(bad_style)]
+mod compat {
+    use std::io::{Read, Write};
+
+    use ffi;
+    use libc::{c_int, c_void};
+
+    pub struct BIO_METHOD(*mut ffi::BIO_METHOD);
+
+    impl BIO_METHOD {
+        pub fn new<S: Read + Write>() -> BIO_METHOD {
+            let ptr = Box::new(ffi::BIO_METHOD {
+                type_: ffi::BIO_TYPE_NONE,
+                name: b"rust\0".as_ptr() as *const _,
+                bwrite: Some(super::bwrite::<S>),
+                bread: Some(super::bread::<S>),
+                bputs: Some(super::bputs::<S>),
+                bgets: None,
+                ctrl: Some(super::ctrl::<S>),
+                create: Some(super::create),
+                destroy: Some(super::destroy::<S>),
+                callback_ctrl: None,
+            });
+
+            BIO_METHOD(Box::into_raw(ptr))
+        }
+
+        pub fn get(&self) -> *mut ffi::BIO_METHOD {
+            self.0
+        }
+    }
+
+    impl Drop for BIO_METHOD {
+        fn drop(&mut self) {
+            unsafe {
+                Box::<ffi::BIO_METHOD>::from_raw(self.0);
+            }
+        }
+    }
+
+    pub unsafe fn BIO_set_init(bio: *mut ffi::BIO, init: c_int) {
+        (*bio).init = init;
+    }
+
+    pub unsafe fn BIO_set_flags(bio: *mut ffi::BIO, flags: c_int) {
+        (*bio).flags = flags;
+    }
+
+    pub unsafe fn BIO_get_data(bio: *mut ffi::BIO) -> *mut c_void {
+        (*bio).ptr
+    }
+
+    pub unsafe fn BIO_set_data(bio: *mut ffi::BIO, data: *mut c_void) {
+        (*bio).ptr = data;
+    }
+
+    pub unsafe fn BIO_set_num(bio: *mut ffi::BIO, num: c_int) {
+        (*bio).num = num;
+    }
 }

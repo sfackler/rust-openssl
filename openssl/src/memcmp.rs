@@ -6,7 +6,7 @@ use ffi;
 /// This operation takes an amount of time dependent on the length of the two
 /// arrays given, but is independent of the contents of a and b.
 ///
-/// # Failure
+/// # Panics
 ///
 /// This function will panic the current task if `a` and `b` do not have the same
 /// length.

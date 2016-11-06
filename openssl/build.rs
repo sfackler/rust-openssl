@@ -1,28 +1,24 @@
-#[cfg(feature = "c_helpers")]
-mod imp {
-    extern crate gcc;
-
-    use std::env;
-    use std::path::PathBuf;
-
-    pub fn main() {
-        let mut config = gcc::Config::new();
-
-        if let Some(paths) = env::var_os("DEP_OPENSSL_INCLUDE") {
-            for path in env::split_paths(&paths) {
-                config.include(PathBuf::from(path));
-            }
-        }
-
-        config.file("src/c_helpers.c").compile("libc_helpers.a");
-    }
-}
-
-#[cfg(not(feature = "c_helpers"))]
-mod imp {
-    pub fn main() {}
-}
+use std::env;
 
 fn main() {
-    imp::main()
+    match env::var("DEP_OPENSSL_VERSION") {
+        Ok(ref v) if v == "101" => {
+            println!("cargo:rustc-cfg=ossl101");
+            println!("cargo:rustc-cfg=ossl10x");
+        }
+        Ok(ref v) if v == "102" => {
+            println!("cargo:rustc-cfg=ossl102");
+            println!("cargo:rustc-cfg=ossl10x");
+        }
+        Ok(ref v) if v == "110" => {
+            println!("cargo:rustc-cfg=ossl110");
+        }
+        _ => panic!("Unable to detect OpenSSL version"),
+    }
+
+    if let Ok(vars) = env::var("DEP_OPENSSL_CONF") {
+        for var in vars.split(",") {
+            println!("cargo:rustc-cfg=osslconf=\"{}\"", var);
+        }
+    }
 }
