@@ -1580,6 +1580,7 @@ extern {
     pub fn SSL_get_privatekey(ssl: *mut SSL) -> *mut EVP_PKEY;
     #[cfg(not(ossl101))]
     pub fn SSL_get_privatekey(ssl: *const SSL) -> *mut EVP_PKEY;
+    pub fn SSL_load_client_CA_file(file: *const c_char) -> *mut stack_st_X509_NAME;
 
     #[cfg(not(osslconf = "OPENSSL_NO_COMP"))]
     pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
@@ -1610,6 +1611,7 @@ extern {
     pub fn SSL_CTX_use_PrivateKey_file(ctx: *mut SSL_CTX, key_file: *const c_char, file_type: c_int) -> c_int;
     pub fn SSL_CTX_use_PrivateKey(ctx: *mut SSL_CTX, key: *mut EVP_PKEY) -> c_int;
     pub fn SSL_CTX_check_private_key(ctx: *const SSL_CTX) -> c_int;
+    pub fn SSL_CTX_set_client_CA_list(ctx: *mut SSL_CTX, list: *mut stack_st_X509_NAME);
 
     #[cfg(not(ossl101))]
     pub fn SSL_CTX_get0_certificate(ctx: *const SSL_CTX) -> *mut X509;

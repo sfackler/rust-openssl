@@ -20,7 +20,7 @@ use ssl::SSL_VERIFY_PEER;
 use ssl::{SslMethod, HandshakeError};
 use ssl::{SslContext, SslStream, Ssl, ShutdownResult, SslConnectorBuilder, SslAcceptorBuilder,
           Error};
-use x509::{X509StoreContext, X509, X509_FILETYPE_PEM};
+use x509::{X509StoreContext, X509, X509Name, X509_FILETYPE_PEM};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::verify::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS;
 use pkey::PKey;
@@ -1182,6 +1182,15 @@ fn shutdown() {
 
     assert_eq!(stream.shutdown().unwrap(), ShutdownResult::Sent);
     assert_eq!(stream.shutdown().unwrap(), ShutdownResult::Received);
+}
+
+#[test]
+fn client_ca_list() {
+    let names = X509Name::load_client_ca_file("test/root-ca.pem").unwrap();
+    assert_eq!(names.len(), 1);
+
+    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    ctx.set_client_ca_list(names);
 }
 
 fn _check_kinds() {

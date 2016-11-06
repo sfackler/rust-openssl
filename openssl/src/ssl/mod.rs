@@ -93,13 +93,14 @@ use std::sync::Mutex;
 use {init, cvt, cvt_p};
 use dh::DhRef;
 use ec_key::EcKeyRef;
-use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError};
+use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError, X509Name};
 #[cfg(any(ossl102, ossl110))]
 use verify::X509VerifyParamRef;
 use pkey::PKeyRef;
 use error::ErrorStack;
 use types::{OpenSslType, OpenSslTypeRef};
 use util::Opaque;
+use stack::Stack;
 
 mod error;
 mod connector;
@@ -539,6 +540,16 @@ impl SslContextBuilder {
                                                    file.as_ptr() as *const _,
                                                    ptr::null()))
                 .map(|_| ())
+        }
+    }
+
+    /// Sets the list of CAs sent to the client.
+    ///
+    /// The CA certificates must still be added to the trust root.
+    pub fn set_client_ca_list(&mut self, list: Stack<X509Name>) {
+        unsafe {
+            ffi::SSL_CTX_set_client_CA_list(self.as_ptr(), list.as_ptr());
+            mem::forget(list);
         }
     }
 

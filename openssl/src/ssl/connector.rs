@@ -277,7 +277,6 @@ mod verify {
     use nid;
     use x509::{X509StoreContextRef, X509Ref, X509NameRef, GeneralName};
     use stack::Stack;
-    use types::OpenSslTypeRef;
 
     pub fn verify_callback(domain: &str,
                            preverify_ok: bool,

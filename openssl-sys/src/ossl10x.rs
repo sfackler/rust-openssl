@@ -17,6 +17,11 @@ pub struct stack_st_X509 {
 }
 
 #[repr(C)]
+pub struct stack_st_X509_NAME {
+    pub stack: _STACK,
+}
+
+#[repr(C)]
 pub struct stack_st_X509_ATTRIBUTE {
     pub stack: _STACK,
 }

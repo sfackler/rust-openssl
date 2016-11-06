@@ -6,6 +6,7 @@ use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::mem;
+use std::path::Path;
 use std::ptr;
 use std::slice;
 use std::str;
@@ -497,6 +498,22 @@ impl Stackable for X509 {
 }
 
 type_!(X509Name, X509NameRef, ffi::X509_NAME, ffi::X509_NAME_free);
+
+impl X509Name {
+    /// Loads subject names from a file containing PEM-formatted certificates.
+    ///
+    /// This is commonly used in conjunction with `SslContextBuilder::set_client_ca_list`.
+    pub fn load_client_ca_file<P: AsRef<Path>>(file: P) -> Result<Stack<X509Name>, ErrorStack> {
+        let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
+        unsafe {
+            cvt_p(ffi::SSL_load_client_CA_file(file.as_ptr())).map(|p| Stack::from_ptr(p))
+        }
+    }
+}
+
+impl Stackable for X509Name {
+    type StackType = ffi::stack_st_X509_NAME;
+}
 
 impl X509NameRef {
     pub fn entries_by_nid<'a>(&'a self, nid: Nid) -> X509NameEntries<'a> {

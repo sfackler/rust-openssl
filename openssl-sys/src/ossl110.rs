@@ -18,6 +18,7 @@ pub enum stack_st_GENERAL_NAME {}
 pub enum stack_st_OPENSSL_STRING {}
 pub enum stack_st_void {}
 pub enum stack_st_X509 {}
+pub enum stack_st_X509_NAME {}
 pub enum stack_st_X509_ATTRIBUTE {}
 pub enum stack_st_X509_EXTENSION {}
 pub enum X509 {}
