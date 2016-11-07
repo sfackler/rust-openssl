@@ -1,4 +1,4 @@
-use libc::{c_char, c_int, c_long, c_ulong};
+use libc::{c_int, c_long};
 use std::borrow::Borrow;
 use std::cmp;
 use std::collections::HashMap;
@@ -14,14 +14,14 @@ use std::str;
 
 use {cvt, cvt_p};
 use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef, Asn1IntegerRef};
+use bn::{BigNum, MSB_MAYBE_ZERO};
 use bio::{MemBio, MemBioSlice};
 use conf::ConfRef;
 use hash::MessageDigest;
 use pkey::{PKey, PKeyRef};
-use rand::rand_bytes;
 use error::ErrorStack;
 use ffi;
-use nid::Nid;
+use nid::{self, Nid};
 use types::{OpenSslType, OpenSslTypeRef};
 use stack::{Stack, StackRef, Stackable};
 
@@ -210,123 +210,55 @@ impl X509Generator {
         self
     }
 
-    fn add_extension_internal(x509: *mut ffi::X509,
-                              exttype: &extension::ExtensionType,
-                              value: &str)
-                              -> Result<(), ErrorStack> {
-        unsafe {
-            let mut ctx: ffi::X509V3_CTX = mem::zeroed();
-            ffi::X509V3_set_ctx(&mut ctx, x509, x509, ptr::null_mut(), ptr::null_mut(), 0);
-            let value = CString::new(value.as_bytes()).unwrap();
-            let ext = match exttype.get_nid() {
-                Some(nid) => {
-                    try!(cvt_p(ffi::X509V3_EXT_nconf_nid(ptr::null_mut(),
-                                                         &mut ctx,
-                                                         nid.as_raw(),
-                                                         value.as_ptr() as *mut c_char)))
-                }
-                None => {
-                    let name = CString::new(exttype.get_name().unwrap().as_bytes()).unwrap();
-                    try!(cvt_p(ffi::X509V3_EXT_nconf(ptr::null_mut(),
-                                                     &mut ctx,
-                                                     name.as_ptr() as *mut c_char,
-                                                     value.as_ptr() as *mut c_char)))
-                }
-            };
-            if ffi::X509_add_ext(x509, ext, -1) != 1 {
-                ffi::X509_EXTENSION_free(ext);
-                Err(ErrorStack::get())
-            } else {
-                Ok(())
-            }
-        }
-    }
-
-    fn add_name_internal(name: *mut ffi::X509_NAME,
-                         key: &str,
-                         value: &str)
-                         -> Result<(), ErrorStack> {
-        let value_len = value.len() as c_int;
-        unsafe {
-            let key = CString::new(key.as_bytes()).unwrap();
-            let value = CString::new(value.as_bytes()).unwrap();
-            cvt(ffi::X509_NAME_add_entry_by_txt(name,
-                                                key.as_ptr() as *const _,
-                                                ffi::MBSTRING_UTF8,
-                                                value.as_ptr() as *const _,
-                                                value_len,
-                                                -1,
-                                                0))
-                .map(|_| ())
-        }
-    }
-
-    fn random_serial() -> Result<c_long, ErrorStack> {
-        let len = mem::size_of::<c_long>();
-        let mut bytes = vec![0; len];
-        try!(rand_bytes(&mut bytes));
-        let mut res = 0;
-        for b in bytes.iter() {
-            res = res << 8;
-            res |= (*b as c_long) & 0xff;
-        }
-
-        // While OpenSSL is actually OK to have negative serials
-        // other libraries (for example, Go crypto) can drop
-        // such certificates as invalid, so we clear the high bit
-        Ok(((res as c_ulong) >> 1) as c_long)
-    }
-
     /// Sets the certificate public-key, then self-sign and return it
     pub fn sign(&self, p_key: &PKeyRef) -> Result<X509, ErrorStack> {
-        ffi::init();
+        let mut builder = try!(X509::builder());
+        try!(builder.set_version(2));
 
-        unsafe {
-            let x509 = X509::from_ptr(try!(cvt_p(ffi::X509_new())));
+        let mut serial = try!(BigNum::new());
+        try!(serial.rand(128, MSB_MAYBE_ZERO, false));
+        let serial = try!(serial.to_asn1_integer());
+        try!(builder.set_serial_number(&serial));
 
-            try!(cvt(ffi::X509_set_version(x509.as_ptr(), 2)));
-            try!(cvt(ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509.as_ptr()),
-                                           try!(X509Generator::random_serial()))));
+        let not_before = try!(Asn1Time::days_from_now(0));
+        try!(builder.set_not_before(&not_before));
+        let not_after = try!(Asn1Time::days_from_now(self.days));
+        try!(builder.set_not_after(&not_after));
 
-            let not_before = try!(Asn1Time::days_from_now(0));
-            let not_after = try!(Asn1Time::days_from_now(self.days));
+        try!(builder.set_pubkey(p_key));
 
-            try!(cvt(X509_set_notBefore(x509.as_ptr(), not_before.as_ptr() as *const _)));
-            // If prev line succeded - ownership should go to cert
-            mem::forget(not_before);
-
-            try!(cvt(X509_set_notAfter(x509.as_ptr(), not_after.as_ptr() as *const _)));
-            // If prev line succeded - ownership should go to cert
-            mem::forget(not_after);
-
-            try!(cvt(ffi::X509_set_pubkey(x509.as_ptr(), p_key.as_ptr())));
-
-            let name = try!(cvt_p(ffi::X509_get_subject_name(x509.as_ptr())));
-
-            let default = [("CN", "rust-openssl")];
-            let default_iter = &mut default.iter().map(|&(k, v)| (k, v));
-            let arg_iter = &mut self.names.iter().map(|&(ref k, ref v)| (&k[..], &v[..]));
-            let iter: &mut Iterator<Item = (&str, &str)> = if self.names.len() == 0 {
-                default_iter
-            } else {
-                arg_iter
-            };
-
-            for (key, val) in iter {
-                try!(X509Generator::add_name_internal(name, &key, &val));
+        let mut name = try!(X509Name::builder());
+        if self.names.is_empty() {
+            try!(name.append_entry_by_nid(nid::COMMONNAME, "rust-openssl"));
+        } else {
+            for &(ref key, ref value) in &self.names {
+                try!(name.append_entry_by_text(key, value));
             }
-            try!(cvt(ffi::X509_set_issuer_name(x509.as_ptr(), name)));
-
-            for (exttype, ext) in self.extensions.iter() {
-                try!(X509Generator::add_extension_internal(x509.as_ptr(),
-                                                           &exttype,
-                                                           &ext.to_string()));
-            }
-
-            let hash_fn = self.hash_type.as_ptr();
-            try!(cvt(ffi::X509_sign(x509.as_ptr(), p_key.as_ptr(), hash_fn)));
-            Ok(x509)
         }
+        let name = name.build();
+
+        try!(builder.set_subject_name(&name));
+        try!(builder.set_issuer_name(&name));
+
+        for (exttype, ext) in self.extensions.iter() {
+            let extension = match exttype.get_nid() {
+                Some(nid) => {
+                    let ctx = builder.x509v3_context(None, None);
+                    try!(X509Extension::new_nid(None, Some(&ctx), nid, &ext.to_string()))
+                }
+                None => {
+                    let ctx = builder.x509v3_context(None, None);
+                    try!(X509Extension::new(None,
+                                            Some(&ctx),
+                                            &exttype.get_name().unwrap(),
+                                            &ext.to_string()))
+                }
+            };
+            try!(builder.append_extension(extension));
+        }
+
+        try!(builder.sign(p_key, self.hash_type));
+        Ok(builder.build())
     }
 
     /// Obtain a certificate signing request (CSR)
@@ -1018,15 +950,6 @@ impl GeneralNameRef {
 
 impl Stackable for GeneralName {
     type StackType = ffi::stack_st_GENERAL_NAME;
-}
-
-#[test]
-fn test_negative_serial() {
-    // I guess that's enough to get a random negative number
-    for _ in 0..1000 {
-        assert!(X509Generator::random_serial().unwrap() > 0,
-                "All serials should be positive");
-    }
 }
 
 #[cfg(ossl110)]
