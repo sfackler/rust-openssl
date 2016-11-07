@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 use libc::{c_int, c_long};
 use std::borrow::Borrow;
 use std::cmp;
@@ -89,31 +90,7 @@ impl X509StoreContextRef {
     }
 }
 
-#[allow(non_snake_case)]
-/// Generator of private key/certificate pairs
-///
-/// # Example
-///
-/// ```
-/// use openssl::hash::MessageDigest;
-/// use openssl::pkey::PKey;
-/// use openssl::rsa::Rsa;
-/// use openssl::x509::X509Generator;
-/// use openssl::x509::extension::{Extension, KeyUsageOption};
-///
-/// let rsa = Rsa::generate(2048).unwrap();
-/// let pkey = PKey::from_rsa(rsa).unwrap();
-///
-/// let gen = X509Generator::new()
-///        .set_valid_period(365*2)
-///        .add_name("CN".to_owned(), "SuperMegaCorp Inc.".to_owned())
-///        .set_sign_hash(MessageDigest::sha256())
-///        .add_extension(Extension::KeyUsage(vec![KeyUsageOption::DigitalSignature]));
-///
-/// let cert = gen.sign(&pkey).unwrap();
-/// let cert_pem = cert.to_pem().unwrap();
-/// let pkey_pem = pkey.private_key_to_pem().unwrap();
-/// ```
+#[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
 pub struct X509Generator {
     days: u32,
     names: Vec<(String, String)>,
@@ -121,6 +98,7 @@ pub struct X509Generator {
     hash_type: MessageDigest,
 }
 
+#[allow(deprecated)]
 impl X509Generator {
     /// Creates a new generator with the following defaults:
     ///
@@ -129,6 +107,7 @@ impl X509Generator {
     /// CN: "rust-openssl"
     ///
     /// hash: SHA1
+    #[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn new() -> X509Generator {
         X509Generator {
             days: 365,
@@ -139,6 +118,7 @@ impl X509Generator {
     }
 
     /// Sets certificate validity period in days since today
+    #[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn set_valid_period(mut self, days: u32) -> X509Generator {
         self.days = days;
         self
@@ -150,6 +130,7 @@ impl X509Generator {
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_name("CN".to_string(),"example.com".to_string());
     /// ```
+    #[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn add_name(mut self, attr_type: String, attr_value: String) -> X509Generator {
         self.names.push((attr_type, attr_value));
         self
@@ -161,6 +142,7 @@ impl X509Generator {
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_names(vec![("CN".to_string(),"example.com".to_string())]);
     /// ```
+    #[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn add_names<I>(mut self, attrs: I) -> X509Generator
         where I: IntoIterator<Item = (String, String)>
     {
@@ -179,6 +161,7 @@ impl X509Generator {
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]));
     /// ```
+    #[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn add_extension(mut self, ext: extension::Extension) -> X509Generator {
         self.extensions.add(ext);
         self
@@ -195,6 +178,7 @@ impl X509Generator {
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_extensions(vec![KeyUsage(vec![DigitalSignature, KeyEncipherment])]);
     /// ```
+    #[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn add_extensions<I>(mut self, exts: I) -> X509Generator
         where I: IntoIterator<Item = extension::Extension>
     {
@@ -205,12 +189,14 @@ impl X509Generator {
         self
     }
 
+    #[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn set_sign_hash(mut self, hash_type: MessageDigest) -> X509Generator {
         self.hash_type = hash_type;
         self
     }
 
     /// Sets the certificate public-key, then self-sign and return it
+    #[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn sign(&self, p_key: &PKeyRef) -> Result<X509, ErrorStack> {
         let mut builder = try!(X509::builder());
         try!(builder.set_version(2));
@@ -262,6 +248,7 @@ impl X509Generator {
     }
 
     /// Obtain a certificate signing request (CSR)
+    #[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn request(&self, p_key: &PKeyRef) -> Result<X509Req, ErrorStack> {
         let cert = match self.sign(p_key) {
             Ok(c) => c,
