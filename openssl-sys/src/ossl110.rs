@@ -151,7 +151,9 @@ extern {
 
     pub fn OpenSSL_version_num() -> c_ulong;
     pub fn OpenSSL_version(key: c_int) -> *const c_char;
+    pub fn OPENSSL_sk_new_null() -> *mut ::OPENSSL_STACK;
     pub fn OPENSSL_sk_free(st: *mut ::OPENSSL_STACK);
     pub fn OPENSSL_sk_pop_free(st: *mut ::OPENSSL_STACK, free: Option<unsafe extern "C" fn (*mut c_void)>);
+    pub fn OPENSSL_sk_push(st: *mut ::OPENSSL_STACK, data: *const c_void) -> c_int;
     pub fn OPENSSL_sk_pop(st: *mut ::OPENSSL_STACK) -> *mut c_void;
 }

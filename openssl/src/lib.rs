@@ -31,6 +31,10 @@ macro_rules! type_ {
             unsafe fn from_ptr(ptr: *mut $c) -> $n {
                 $n(ptr)
             }
+
+            fn as_ptr(&self) -> *mut $c {
+                self.0
+            }
         }
 
         impl Drop for $n {

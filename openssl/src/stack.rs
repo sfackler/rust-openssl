@@ -6,14 +6,18 @@ use std::marker::PhantomData;
 use libc::c_int;
 use std::mem;
 
+use {cvt, cvt_p};
+use error::ErrorStack;
 use types::{OpenSslType, OpenSslTypeRef};
 use util::Opaque;
 
 #[cfg(ossl10x)]
 use ffi::{sk_pop as OPENSSL_sk_pop, sk_free as OPENSSL_sk_free, sk_num as OPENSSL_sk_num,
-          sk_value as OPENSSL_sk_value, _STACK as OPENSSL_STACK};
+          sk_value as OPENSSL_sk_value, _STACK as OPENSSL_STACK,
+          sk_new_null as OPENSSL_sk_new_null, sk_push as OPENSSL_sk_push};
 #[cfg(ossl110)]
-use ffi::{OPENSSL_sk_pop, OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_value, OPENSSL_STACK};
+use ffi::{OPENSSL_sk_pop, OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_value, OPENSSL_STACK,
+          OPENSSL_sk_new_null, OPENSSL_sk_push};
 
 /// Trait implemented by types which can be placed in a stack.
 ///
@@ -31,9 +35,11 @@ pub trait Stackable: OpenSslType {
 pub struct Stack<T: Stackable>(*mut T::StackType);
 
 impl<T: Stackable> Stack<T> {
-    /// Return a new Stack<T>, taking ownership of the handle
-    pub unsafe fn from_ptr(stack: *mut T::StackType) -> Stack<T> {
-        Stack(stack)
+    pub fn new() -> Result<Stack<T>, ErrorStack> {
+        unsafe {
+            let ptr = try!(cvt_p(OPENSSL_sk_new_null()));
+            Ok(Stack(ptr as *mut _))
+        }
     }
 }
 
@@ -78,6 +84,10 @@ impl<T: Stackable> OpenSslType for Stack<T> {
 
     unsafe fn from_ptr(ptr: *mut T::StackType) -> Stack<T> {
         Stack(ptr)
+    }
+
+    fn as_ptr(&self) -> *mut T::StackType {
+        self.0
     }
 }
 
@@ -195,6 +205,15 @@ impl<T: Stackable> StackRef<T> {
             }
 
             Some(T::Ref::from_ptr_mut(self._get(idx)))
+        }
+    }
+
+    /// Pushes a value onto the top of the stack.
+    pub fn push(&mut self, data: T) -> Result<(), ErrorStack> {
+        unsafe {
+            try!(cvt(OPENSSL_sk_push(self.as_stack(), data.as_ptr() as *mut _)));
+            mem::forget(data);
+            Ok(())
         }
     }
 

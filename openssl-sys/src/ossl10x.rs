@@ -602,10 +602,12 @@ extern {
     pub fn EVP_MD_CTX_create() -> *mut EVP_MD_CTX;
     pub fn EVP_MD_CTX_destroy(ctx: *mut EVP_MD_CTX);
 
+    pub fn sk_new_null() -> *mut _STACK;
     pub fn sk_num(st: *const _STACK) -> c_int;
     pub fn sk_value(st: *const _STACK, n: c_int) -> *mut c_void;
     pub fn sk_free(st: *mut _STACK);
     pub fn sk_pop_free(st: *mut _STACK, free: Option<unsafe extern "C" fn (*mut c_void)>);
+    pub fn sk_push(st: *mut _STACK, data: *mut c_void) -> c_int;
     pub fn sk_pop(st: *mut _STACK) -> *mut c_void;
 
     pub fn SSLeay() -> c_ulong;

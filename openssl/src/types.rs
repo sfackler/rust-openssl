@@ -13,6 +13,9 @@ pub trait OpenSslType: Sized {
 
     /// Constructs an instance of this type from its raw type.
     unsafe fn from_ptr(ptr: *mut Self::CType) -> Self;
+
+    /// Returns a raw pointer to the wrapped value.
+    fn as_ptr(&self) -> *mut Self::CType;
 }
 
 /// A trait implemented by types which reference borrowed OpenSSL types.

@@ -822,6 +822,10 @@ impl OpenSslType for SslCipher {
     unsafe fn from_ptr(ptr: *mut ffi::SSL_CIPHER) -> SslCipher {
         SslCipher(ptr)
     }
+
+    fn as_ptr(&self) -> *mut ffi::SSL_CIPHER {
+        self.0
+    }
 }
 
 impl Deref for SslCipher {
