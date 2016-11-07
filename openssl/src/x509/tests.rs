@@ -7,7 +7,7 @@ use pkey::PKey;
 use rsa::Rsa;
 use x509::{X509, X509Generator, X509Name};
 use x509::extension::{Extension, BasicConstraints, KeyUsage, ExtendedKeyUsage,
-                      SubjectKeyIdentifier, AuthorityKeyIdentifier};
+                      SubjectKeyIdentifier, AuthorityKeyIdentifier, SubjectAlternativeName};
 use x509::extension::AltNameOption as SAN;
 use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment};
 use x509::extension::ExtKeyUsageOption::{self, ClientAuth, ServerAuth};
@@ -217,6 +217,11 @@ fn x509_builder() {
         .build(&builder.x509v3_context(None, None))
         .unwrap();
     builder.append_extension(authority_key_identifier).unwrap();
+    let subject_alternative_name = SubjectAlternativeName::new()
+        .dns("example.com")
+        .build(&builder.x509v3_context(None, None))
+        .unwrap();
+    builder.append_extension(subject_alternative_name).unwrap();
 
     builder.sign(&pkey, MessageDigest::sha256()).unwrap();
 

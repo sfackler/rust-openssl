@@ -556,6 +556,70 @@ impl AuthorityKeyIdentifier {
     }
 }
 
+pub struct SubjectAlternativeName {
+    critical: bool,
+    names: Vec<String>,
+}
+
+impl SubjectAlternativeName {
+    pub fn new() -> SubjectAlternativeName {
+        SubjectAlternativeName {
+            critical: false,
+            names: vec![],
+        }
+    }
+
+    pub fn critical(&mut self) -> &mut SubjectAlternativeName {
+        self.critical = true;
+        self
+    }
+
+    pub fn email(&mut self, email: &str) -> &mut SubjectAlternativeName {
+        self.names.push(format!("email:{}", email));
+        self
+    }
+
+    pub fn uri(&mut self, uri: &str) -> &mut SubjectAlternativeName {
+        self.names.push(format!("URI:{}", uri));
+        self
+    }
+
+    pub fn dns(&mut self, dns: &str) -> &mut SubjectAlternativeName {
+        self.names.push(format!("DNS:{}", dns));
+        self
+    }
+
+    pub fn rid(&mut self, rid: &str) -> &mut SubjectAlternativeName {
+        self.names.push(format!("RID:{}", rid));
+        self
+    }
+
+    pub fn ip(&mut self, ip: &str) -> &mut SubjectAlternativeName {
+        self.names.push(format!("IP:{}", ip));
+        self
+    }
+
+    pub fn dir_name(&mut self, dir_name: &str) -> &mut SubjectAlternativeName {
+        self.names.push(format!("dirName:{}", dir_name));
+        self
+    }
+
+    pub fn other_name(&mut self, other_name: &str) -> &mut SubjectAlternativeName {
+        self.names.push(format!("otherName:{}", other_name));
+        self
+    }
+
+    pub fn build(&self, ctx: &X509v3Context) -> Result<X509Extension, ErrorStack> {
+        let mut value = String::new();
+        let mut first = true;
+        append(&mut value, &mut first, self.critical, "critical");
+        for name in &self.names {
+            append(&mut value, &mut first, true, name);
+        }
+        X509Extension::new_nid(None, Some(ctx), nid::SUBJECT_ALT_NAME, &value)
+    }
+}
+
 fn append(value: &mut String, first: &mut bool, should: bool, element: &str) {
     if !should {
         return;
