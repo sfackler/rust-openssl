@@ -2,7 +2,7 @@ use std::fmt::{self, Write};
 
 use error::ErrorStack;
 use nid::{self, Nid};
-use x509::X509Extension;
+use x509::{X509v3Context, X509Extension};
 
 /// Type-only version of the `Extension` enum.
 ///
@@ -237,13 +237,13 @@ impl BasicConstraints {
         }
     }
 
-    pub fn critical(&mut self, critical: bool) -> &mut BasicConstraints {
-        self.critical = critical;
+    pub fn critical(&mut self) -> &mut BasicConstraints {
+        self.critical = true;
         self
     }
 
-    pub fn ca(&mut self, ca: bool) -> &mut BasicConstraints {
-        self.ca = ca;
+    pub fn ca(&mut self) -> &mut BasicConstraints {
+        self.ca = true;
         self
     }
 
@@ -299,53 +299,53 @@ impl KeyUsage {
         }
     }
 
-    pub fn critical(&mut self, critical: bool) -> &mut KeyUsage {
-        self.critical = critical;
+    pub fn critical(&mut self) -> &mut KeyUsage {
+        self.critical = true;
         self
     }
 
-    pub fn digital_signature(&mut self, digital_signature: bool) -> &mut KeyUsage {
-        self.digital_signature = digital_signature;
+    pub fn digital_signature(&mut self) -> &mut KeyUsage {
+        self.digital_signature = true;
         self
     }
 
-    pub fn non_repudiation(&mut self, non_repudiation: bool) -> &mut KeyUsage {
-        self.non_repudiation = non_repudiation;
+    pub fn non_repudiation(&mut self) -> &mut KeyUsage {
+        self.non_repudiation = true;
         self
     }
 
-    pub fn key_encipherment(&mut self, key_encipherment: bool) -> &mut KeyUsage {
-        self.key_encipherment = key_encipherment;
+    pub fn key_encipherment(&mut self) -> &mut KeyUsage {
+        self.key_encipherment = true;
         self
     }
 
-    pub fn data_encipherment(&mut self, data_encipherment: bool) -> &mut KeyUsage {
-        self.data_encipherment = data_encipherment;
+    pub fn data_encipherment(&mut self) -> &mut KeyUsage {
+        self.data_encipherment = true;
         self
     }
 
-    pub fn key_agreement(&mut self, key_agreement: bool) -> &mut KeyUsage {
-        self.key_agreement = key_agreement;
+    pub fn key_agreement(&mut self) -> &mut KeyUsage {
+        self.key_agreement = true;
         self
     }
 
-    pub fn key_cert_sign(&mut self, key_cert_sign: bool) -> &mut KeyUsage {
-        self.key_cert_sign = key_cert_sign;
+    pub fn key_cert_sign(&mut self) -> &mut KeyUsage {
+        self.key_cert_sign = true;
         self
     }
 
-    pub fn crl_sign(&mut self, crl_sign: bool) -> &mut KeyUsage {
-        self.crl_sign = crl_sign;
+    pub fn crl_sign(&mut self) -> &mut KeyUsage {
+        self.crl_sign = true;
         self
     }
 
-    pub fn encipher_only(&mut self, encipher_only: bool) -> &mut KeyUsage {
-        self.encipher_only = encipher_only;
+    pub fn encipher_only(&mut self) -> &mut KeyUsage {
+        self.encipher_only = true;
         self
     }
 
-    pub fn decipher_only(&mut self, decipher_only: bool) -> &mut KeyUsage {
-        self.decipher_only = decipher_only;
+    pub fn decipher_only(&mut self) -> &mut KeyUsage {
+        self.decipher_only = true;
         self
     }
 
@@ -363,6 +363,196 @@ impl KeyUsage {
         append(&mut value, &mut first, self.encipher_only, "encipherOnly");
         append(&mut value, &mut first, self.decipher_only, "decipherOnly");
         X509Extension::new_nid(None, None, nid::KEY_USAGE, &value)
+    }
+}
+
+pub struct ExtendedKeyUsage {
+    critical: bool,
+    server_auth: bool,
+    client_auth: bool,
+    code_signing: bool,
+    email_protection: bool,
+    time_stamping: bool,
+    ms_code_ind: bool,
+    ms_code_com: bool,
+    ms_ctl_sign: bool,
+    ms_sgc: bool,
+    ms_efs: bool,
+    ns_sgc: bool,
+    other: Vec<String>,
+}
+
+impl ExtendedKeyUsage {
+    pub fn new() -> ExtendedKeyUsage {
+        ExtendedKeyUsage {
+            critical: false,
+            server_auth: false,
+            client_auth: false,
+            code_signing: false,
+            email_protection: false,
+            time_stamping: false,
+            ms_code_ind: false,
+            ms_code_com: false,
+            ms_ctl_sign: false,
+            ms_sgc: false,
+            ms_efs: false,
+            ns_sgc: false,
+            other: vec![],
+        }
+    }
+
+    pub fn critical(&mut self) -> &mut ExtendedKeyUsage {
+        self.critical = true;
+        self
+    }
+
+    pub fn server_auth(&mut self) -> &mut ExtendedKeyUsage {
+        self.server_auth = true;
+        self
+    }
+
+    pub fn client_auth(&mut self) -> &mut ExtendedKeyUsage {
+        self.client_auth = true;
+        self
+    }
+
+    pub fn code_signing(&mut self) -> &mut ExtendedKeyUsage {
+        self.code_signing = true;
+        self
+    }
+
+    pub fn time_stamping(&mut self) -> &mut ExtendedKeyUsage {
+        self.time_stamping = true;
+        self
+    }
+
+    pub fn ms_code_ind(&mut self) -> &mut ExtendedKeyUsage {
+        self.ms_code_ind = true;
+        self
+    }
+
+    pub fn ms_code_com(&mut self) -> &mut ExtendedKeyUsage {
+        self.ms_code_com = true;
+        self
+    }
+
+    pub fn ms_ctl_sign(&mut self) -> &mut ExtendedKeyUsage {
+        self.ms_ctl_sign = true;
+        self
+    }
+
+    pub fn ms_sgc(&mut self) -> &mut ExtendedKeyUsage {
+        self.ms_sgc = true;
+        self
+    }
+
+    pub fn ms_efs(&mut self) -> &mut ExtendedKeyUsage {
+        self.ms_efs = true;
+        self
+    }
+
+    pub fn ns_sgc(&mut self) -> &mut ExtendedKeyUsage {
+        self.ns_sgc = true;
+        self
+    }
+
+    pub fn other(&mut self, other: &str) -> &mut ExtendedKeyUsage {
+        self.other.push(other.to_owned());
+        self
+    }
+
+    pub fn build(&self) -> Result<X509Extension, ErrorStack> {
+        let mut value = String::new();
+        let mut first = true;
+        append(&mut value, &mut first, self.critical, "critical");
+        append(&mut value, &mut first, self.server_auth, "serverAuth");
+        append(&mut value, &mut first, self.client_auth, "clientAuth");
+        append(&mut value, &mut first, self.code_signing, "codeSigning");
+        append(&mut value, &mut first, self.email_protection, "emailProtection");
+        append(&mut value, &mut first, self.time_stamping, "timeStamping");
+        append(&mut value, &mut first, self.ms_code_ind, "msCodeInd");
+        append(&mut value, &mut first, self.ms_code_com, "msCodeCom");
+        append(&mut value, &mut first, self.ms_ctl_sign, "msCTLSign");
+        append(&mut value, &mut first, self.ms_sgc, "msSGC");
+        append(&mut value, &mut first, self.ms_efs, "msEFS");
+        append(&mut value, &mut first, self.ns_sgc, "nsSGC");
+        for other in &self.other {
+            append(&mut value, &mut first, true, other);
+        }
+        X509Extension::new_nid(None, None, nid::EXT_KEY_USAGE, &value)
+    }
+}
+
+pub struct SubjectKeyIdentifier {
+    critical: bool,
+}
+
+impl SubjectKeyIdentifier {
+    pub fn new() -> SubjectKeyIdentifier {
+        SubjectKeyIdentifier {
+            critical: false,
+        }
+    }
+
+    pub fn critical(&mut self) -> &mut SubjectKeyIdentifier {
+        self.critical = true;
+        self
+    }
+
+    pub fn build(&self, ctx: &X509v3Context) -> Result<X509Extension, ErrorStack> {
+        let mut value = String::new();
+        let mut first = true;
+        append(&mut value, &mut first, self.critical, "critical");
+        append(&mut value, &mut first, true, "hash");
+        X509Extension::new_nid(None, Some(ctx), nid::SUBJECT_KEY_IDENTIFIER, &value)
+    }
+}
+
+pub struct AuthorityKeyIdentifier {
+    critical: bool,
+    keyid: Option<bool>,
+    issuer: Option<bool>,
+}
+
+impl AuthorityKeyIdentifier {
+    pub fn new() -> AuthorityKeyIdentifier {
+        AuthorityKeyIdentifier {
+            critical: false,
+            keyid: None,
+            issuer: None,
+        }
+    }
+
+    pub fn critical(&mut self) -> &mut AuthorityKeyIdentifier {
+        self.critical = true;
+        self
+    }
+
+    pub fn keyid(&mut self, always: bool) -> &mut AuthorityKeyIdentifier {
+        self.keyid = Some(always);
+        self
+    }
+
+    pub fn issuer(&mut self, always: bool) -> &mut AuthorityKeyIdentifier {
+        self.issuer = Some(always);
+        self
+    }
+
+    pub fn build(&self, ctx: &X509v3Context) -> Result<X509Extension, ErrorStack> {
+        let mut value = String::new();
+        let mut first = true;
+        append(&mut value, &mut first, self.critical, "critical");
+        match self.keyid {
+            Some(true) => append(&mut value, &mut first, true, "keyid:always"),
+            Some(false) => append(&mut value, &mut first, true, "keyid"),
+            None => {}
+        }
+        match self.issuer {
+            Some(true) => append(&mut value, &mut first, true, "issuer:always"),
+            Some(false) => append(&mut value, &mut first, true, "issuer"),
+            None => {}
+        }
+        X509Extension::new_nid(None, Some(ctx), nid::AUTHORITY_KEY_IDENTIFIER, &value)
     }
 }
 

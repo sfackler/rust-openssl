@@ -6,7 +6,8 @@ use hash::MessageDigest;
 use pkey::PKey;
 use rsa::Rsa;
 use x509::{X509, X509Generator, X509Name};
-use x509::extension::{Extension, BasicConstraints, KeyUsage};
+use x509::extension::{Extension, BasicConstraints, KeyUsage, ExtendedKeyUsage,
+                      SubjectKeyIdentifier, AuthorityKeyIdentifier};
 use x509::extension::AltNameOption as SAN;
 use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment};
 use x509::extension::ExtKeyUsageOption::{self, ClientAuth, ServerAuth};
@@ -196,10 +197,26 @@ fn x509_builder() {
     serial.rand(128, MSB_MAYBE_ZERO, false).unwrap();
     builder.set_serial_number(&serial.to_asn1_integer().unwrap()).unwrap();
 
-    let basic_constraints = BasicConstraints::new().critical(true).ca(true).build().unwrap();
+    let basic_constraints = BasicConstraints::new().critical().ca().build().unwrap();
     builder.append_extension(basic_constraints).unwrap();
-    let key_usage = KeyUsage::new().digital_signature(true).key_encipherment(true).build().unwrap();
+    let key_usage = KeyUsage::new().digital_signature().key_encipherment().build().unwrap();
     builder.append_extension(key_usage).unwrap();
+    let ext_key_usage = ExtendedKeyUsage::new()
+        .client_auth()
+        .server_auth()
+        .other("2.999.1")
+        .build()
+        .unwrap();
+    builder.append_extension(ext_key_usage).unwrap();
+    let subject_key_identifier = SubjectKeyIdentifier::new()
+        .build(&builder.x509v3_context(None, None))
+        .unwrap();
+    builder.append_extension(subject_key_identifier).unwrap();
+    let authority_key_identifier = AuthorityKeyIdentifier::new()
+        .keyid(true)
+        .build(&builder.x509v3_context(None, None))
+        .unwrap();
+    builder.append_extension(authority_key_identifier).unwrap();
 
     builder.sign(&pkey, MessageDigest::sha256()).unwrap();
 
