@@ -7,7 +7,10 @@ pub struct ConfMethod(*mut ffi::CONF_METHOD);
 
 impl ConfMethod {
     pub fn default() -> ConfMethod {
-        unsafe { ConfMethod(ffi::NCONF_default()) }
+        unsafe {
+            ffi::init();
+            ConfMethod(ffi::NCONF_default())
+        }
     }
 
     pub unsafe fn from_ptr(ptr: *mut ffi::CONF_METHOD) -> ConfMethod {

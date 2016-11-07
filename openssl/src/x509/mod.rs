@@ -360,6 +360,7 @@ pub struct X509Builder(X509);
 impl X509Builder {
     pub fn new() -> Result<X509Builder, ErrorStack> {
         unsafe {
+            ffi::init();
             cvt_p(ffi::X509_new()).map(|p| X509Builder(X509(p)))
         }
     }
@@ -610,6 +611,7 @@ impl X509Extension {
         let name = CString::new(name).unwrap();
         let value = CString::new(value).unwrap();
         unsafe {
+            ffi::init();
             let conf = conf.map_or(ptr::null_mut(), ConfRef::as_ptr);
             let context = context.map_or(ptr::null_mut(), X509v3Context::as_ptr);
             let name = name.as_ptr() as *mut _;
@@ -626,6 +628,7 @@ impl X509Extension {
                    -> Result<X509Extension, ErrorStack> {
         let value = CString::new(value).unwrap();
         unsafe {
+            ffi::init();
             let conf = conf.map_or(ptr::null_mut(), ConfRef::as_ptr);
             let context = context.map_or(ptr::null_mut(), X509v3Context::as_ptr);
             let name = name.as_raw();
@@ -640,7 +643,10 @@ pub struct X509NameBuilder(X509Name);
 
 impl X509NameBuilder {
     pub fn new() -> Result<X509NameBuilder, ErrorStack> {
-        unsafe { cvt_p(ffi::X509_NAME_new()).map(|p| X509NameBuilder(X509Name(p))) }
+        unsafe {
+            ffi::init();
+            cvt_p(ffi::X509_NAME_new()).map(|p| X509NameBuilder(X509Name(p)))
+        }
     }
 
     pub fn append_entry_by_text(&mut self, field: &str, value: &str) -> Result<(), ErrorStack> {
@@ -751,7 +757,11 @@ pub struct X509ReqBuilder(X509Req);
 
 impl X509ReqBuilder {
     pub fn new() -> Result<X509ReqBuilder, ErrorStack> {
-        unsafe { cvt_p(ffi::X509_REQ_new()).map(|p| X509ReqBuilder(X509Req(p))) }
+        unsafe {
+            ffi::init();
+            cvt_p(ffi::X509_REQ_new()).map(|p| X509ReqBuilder(X509Req(p)))
+        }
+
     }
 
     pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {

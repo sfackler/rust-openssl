@@ -5,6 +5,7 @@ use std::convert::AsRef;
 use std::marker::PhantomData;
 use libc::c_int;
 use std::mem;
+use ffi;
 
 use {cvt, cvt_p};
 use error::ErrorStack;
@@ -37,6 +38,7 @@ pub struct Stack<T: Stackable>(*mut T::StackType);
 impl<T: Stackable> Stack<T> {
     pub fn new() -> Result<Stack<T>, ErrorStack> {
         unsafe {
+            ffi::init();
             let ptr = try!(cvt_p(OPENSSL_sk_new_null()));
             Ok(Stack(ptr as *mut _))
         }
