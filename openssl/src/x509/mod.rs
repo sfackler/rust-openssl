@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;
+use std::marker::PhantomData;
 use std::mem;
 use std::path::Path;
 use std::ptr;
@@ -14,6 +15,7 @@ use std::str;
 use {cvt, cvt_p};
 use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef, Asn1IntegerRef};
 use bio::{MemBio, MemBioSlice};
+use conf::ConfRef;
 use hash::MessageDigest;
 use pkey::{PKey, PKeyRef};
 use rand::rand_bytes;
@@ -396,6 +398,37 @@ impl X509Builder {
         unsafe { cvt(ffi::X509_set_pubkey(self.0.as_ptr(), key.as_ptr())).map(|_| ()) }
     }
 
+    pub fn x509v3_context<'a>(&'a self,
+                              issuer: Option<&'a X509Ref>,
+                              conf: Option<&'a ConfRef>)
+                              -> X509v3Context<'a> {
+        unsafe {
+            let mut ctx = mem::zeroed();
+
+            let issuer = match issuer {
+                Some(issuer) => issuer.as_ptr(),
+                None => self.0.as_ptr(),
+            };
+            let subject = self.0.as_ptr();
+            ffi::X509V3_set_ctx(&mut ctx, issuer, subject, ptr::null_mut(), ptr::null_mut(), 0);
+
+            // nodb case taken care of since we zeroed ctx above
+            if let Some(conf) = conf {
+                ffi::X509V3_set_nconf(&mut ctx, conf.as_ptr());
+            }
+
+            X509v3Context(ctx, PhantomData)
+        }
+    }
+
+    pub fn append_extension(&mut self, extension: X509Extension) -> Result<(), ErrorStack> {
+        unsafe {
+            try!(cvt(ffi::X509_add_ext(self.0.as_ptr(), extension.as_ptr(), -1)));
+            mem::forget(extension);
+            Ok(())
+        }
+    }
+
     pub fn sign(&mut self, key: &PKeyRef, hash: MessageDigest) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_sign(self.0.as_ptr(), key.as_ptr(), hash.as_ptr())).map(|_| ()) }
     }
@@ -552,6 +585,51 @@ impl Borrow<X509Ref> for X509 {
 
 impl Stackable for X509 {
     type StackType = ffi::stack_st_X509;
+}
+
+pub struct X509v3Context<'a>(ffi::X509V3_CTX, PhantomData<(&'a X509Ref, &'a ConfRef)>);
+
+impl<'a> X509v3Context<'a> {
+    pub fn as_ptr(&self) -> *mut ffi::X509V3_CTX {
+        &self.0 as *const _ as *mut _
+    }
+}
+
+type_!(X509Extension, X509ExtensionRef, ffi::X509_EXTENSION, ffi::X509_EXTENSION_free);
+
+impl X509Extension {
+    pub fn new(conf: Option<&ConfRef>,
+               context: Option<&X509v3Context>,
+               name: &str,
+               value: &str)
+               -> Result<X509Extension, ErrorStack> {
+        let name = CString::new(name).unwrap();
+        let value = CString::new(value).unwrap();
+        unsafe {
+            let conf = conf.map_or(ptr::null_mut(), ConfRef::as_ptr);
+            let context = context.map_or(ptr::null_mut(), X509v3Context::as_ptr);
+            let name = name.as_ptr() as *mut _;
+            let value = value.as_ptr() as *mut _;
+
+            cvt_p(ffi::X509V3_EXT_nconf(conf, context, name, value)).map(X509Extension)
+        }
+    }
+
+    pub fn new_nid(conf: Option<&ConfRef>,
+                   context: Option<&X509v3Context>,
+                   name: Nid,
+                   value: &str)
+                   -> Result<X509Extension, ErrorStack> {
+        let value = CString::new(value).unwrap();
+        unsafe {
+            let conf = conf.map_or(ptr::null_mut(), ConfRef::as_ptr);
+            let context = context.map_or(ptr::null_mut(), X509v3Context::as_ptr);
+            let name = name.as_raw();
+            let value = value.as_ptr() as *mut _;
+
+            cvt_p(ffi::X509V3_EXT_nconf_nid(conf, context, name, value)).map(X509Extension)
+        }
+    }
 }
 
 pub struct X509NameBuilder(X509Name);

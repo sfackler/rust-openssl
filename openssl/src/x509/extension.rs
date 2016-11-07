@@ -1,6 +1,8 @@
-use std::fmt;
+use std::fmt::{self, Write};
 
+use error::ErrorStack;
 use nid::{self, Nid};
+use x509::X509Extension;
 
 /// Type-only version of the `Extension` enum.
 ///
@@ -218,4 +220,160 @@ impl fmt::Display for AltNameOption {
             &AltNameOption::RegisteredID => "RID",
         })
     }
+}
+
+pub struct BasicConstraints {
+    critical: bool,
+    ca: bool,
+    pathlen: Option<u32>,
+}
+
+impl BasicConstraints {
+    pub fn new() -> BasicConstraints {
+        BasicConstraints {
+            critical: false,
+            ca: false,
+            pathlen: None,
+        }
+    }
+
+    pub fn critical(&mut self, critical: bool) -> &mut BasicConstraints {
+        self.critical = critical;
+        self
+    }
+
+    pub fn ca(&mut self, ca: bool) -> &mut BasicConstraints {
+        self.ca = ca;
+        self
+    }
+
+    pub fn pathlen(&mut self, pathlen: u32) -> &mut BasicConstraints {
+        self.pathlen = Some(pathlen);
+        self
+    }
+
+    pub fn build(&self) -> Result<X509Extension, ErrorStack> {
+        let mut value = String::new();
+        if self.critical {
+            value.push_str("critical,");
+        }
+        value.push_str("CA:");
+        if self.ca {
+            value.push_str("TRUE");
+        } else {
+            value.push_str("FALSE");
+        }
+        if let Some(pathlen) = self.pathlen {
+            write!(value, ",pathlen:{}", pathlen).unwrap();
+        }
+        X509Extension::new_nid(None, None, nid::BASIC_CONSTRAINTS, &value)
+    }
+}
+
+pub struct KeyUsage {
+    critical: bool,
+    digital_signature: bool,
+    non_repudiation: bool,
+    key_encipherment: bool,
+    data_encipherment: bool,
+    key_agreement: bool,
+    key_cert_sign: bool,
+    crl_sign: bool,
+    encipher_only: bool,
+    decipher_only: bool,
+}
+
+impl KeyUsage {
+    pub fn new() -> KeyUsage {
+        KeyUsage {
+            critical: false,
+            digital_signature: false,
+            non_repudiation: false,
+            key_encipherment: false,
+            data_encipherment: false,
+            key_agreement: false,
+            key_cert_sign: false,
+            crl_sign: false,
+            encipher_only: false,
+            decipher_only: false,
+        }
+    }
+
+    pub fn critical(&mut self, critical: bool) -> &mut KeyUsage {
+        self.critical = critical;
+        self
+    }
+
+    pub fn digital_signature(&mut self, digital_signature: bool) -> &mut KeyUsage {
+        self.digital_signature = digital_signature;
+        self
+    }
+
+    pub fn non_repudiation(&mut self, non_repudiation: bool) -> &mut KeyUsage {
+        self.non_repudiation = non_repudiation;
+        self
+    }
+
+    pub fn key_encipherment(&mut self, key_encipherment: bool) -> &mut KeyUsage {
+        self.key_encipherment = key_encipherment;
+        self
+    }
+
+    pub fn data_encipherment(&mut self, data_encipherment: bool) -> &mut KeyUsage {
+        self.data_encipherment = data_encipherment;
+        self
+    }
+
+    pub fn key_agreement(&mut self, key_agreement: bool) -> &mut KeyUsage {
+        self.key_agreement = key_agreement;
+        self
+    }
+
+    pub fn key_cert_sign(&mut self, key_cert_sign: bool) -> &mut KeyUsage {
+        self.key_cert_sign = key_cert_sign;
+        self
+    }
+
+    pub fn crl_sign(&mut self, crl_sign: bool) -> &mut KeyUsage {
+        self.crl_sign = crl_sign;
+        self
+    }
+
+    pub fn encipher_only(&mut self, encipher_only: bool) -> &mut KeyUsage {
+        self.encipher_only = encipher_only;
+        self
+    }
+
+    pub fn decipher_only(&mut self, decipher_only: bool) -> &mut KeyUsage {
+        self.decipher_only = decipher_only;
+        self
+    }
+
+    pub fn build(&self) -> Result<X509Extension, ErrorStack> {
+        let mut value = String::new();
+        let mut first = true;
+        append(&mut value, &mut first, self.critical, "critical");
+        append(&mut value, &mut first, self.digital_signature, "digitalSignature");
+        append(&mut value, &mut first, self.non_repudiation, "nonRepudiation");
+        append(&mut value, &mut first, self.key_encipherment, "keyEncipherment");
+        append(&mut value, &mut first, self.data_encipherment, "dataEncipherment");
+        append(&mut value, &mut first, self.key_agreement, "keyAgreement");
+        append(&mut value, &mut first, self.key_cert_sign, "keyCertSign");
+        append(&mut value, &mut first, self.crl_sign, "cRLSign");
+        append(&mut value, &mut first, self.encipher_only, "encipherOnly");
+        append(&mut value, &mut first, self.decipher_only, "decipherOnly");
+        X509Extension::new_nid(None, None, nid::KEY_USAGE, &value)
+    }
+}
+
+fn append(value: &mut String, first: &mut bool, should: bool, element: &str) {
+    if !should {
+        return;
+    }
+
+    if !*first {
+        value.push(',');
+    }
+    *first = false;
+    value.push_str(element);
 }

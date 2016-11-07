@@ -6,7 +6,7 @@ use hash::MessageDigest;
 use pkey::PKey;
 use rsa::Rsa;
 use x509::{X509, X509Generator, X509Name};
-use x509::extension::Extension::{KeyUsage, ExtKeyUsage, SubjectAltName, OtherNid, OtherStr};
+use x509::extension::{Extension, BasicConstraints, KeyUsage};
 use x509::extension::AltNameOption as SAN;
 use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment};
 use x509::extension::ExtKeyUsageOption::{self, ClientAuth, ServerAuth};
@@ -17,13 +17,13 @@ fn get_generator() -> X509Generator {
         .set_valid_period(365 * 2)
         .add_name("CN".to_string(), "test_me".to_string())
         .set_sign_hash(MessageDigest::sha1())
-        .add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]))
-        .add_extension(ExtKeyUsage(vec![ClientAuth,
+        .add_extension(Extension::KeyUsage(vec![DigitalSignature, KeyEncipherment]))
+        .add_extension(Extension::ExtKeyUsage(vec![ClientAuth,
                                         ServerAuth,
                                         ExtKeyUsageOption::Other("2.999.1".to_owned())]))
-        .add_extension(SubjectAltName(vec![(SAN::DNS, "example.com".to_owned())]))
-        .add_extension(OtherNid(nid::BASIC_CONSTRAINTS, "critical,CA:TRUE".to_owned()))
-        .add_extension(OtherStr("2.999.2".to_owned(), "ASN1:UTF8:example value".to_owned()))
+        .add_extension(Extension::SubjectAltName(vec![(SAN::DNS, "example.com".to_owned())]))
+        .add_extension(Extension::OtherNid(nid::BASIC_CONSTRAINTS, "critical,CA:TRUE".to_owned()))
+        .add_extension(Extension::OtherStr("2.999.2".to_owned(), "ASN1:UTF8:example value".to_owned()))
 }
 
 fn pkey() -> PKey {
@@ -50,8 +50,8 @@ fn test_cert_gen() {
 fn test_cert_gen_extension_ordering() {
     let pkey = pkey();
     get_generator()
-        .add_extension(OtherNid(nid::SUBJECT_KEY_IDENTIFIER, "hash".to_owned()))
-        .add_extension(OtherNid(nid::AUTHORITY_KEY_IDENTIFIER, "keyid:always".to_owned()))
+        .add_extension(Extension::OtherNid(nid::SUBJECT_KEY_IDENTIFIER, "hash".to_owned()))
+        .add_extension(Extension::OtherNid(nid::AUTHORITY_KEY_IDENTIFIER, "keyid:always".to_owned()))
         .sign(&pkey)
         .expect("Failed to generate cert with order-dependent extensions");
 }
@@ -62,8 +62,8 @@ fn test_cert_gen_extension_ordering() {
 fn test_cert_gen_extension_bad_ordering() {
     let pkey = pkey();
     let result = get_generator()
-        .add_extension(OtherNid(nid::AUTHORITY_KEY_IDENTIFIER, "keyid:always".to_owned()))
-        .add_extension(OtherNid(nid::SUBJECT_KEY_IDENTIFIER, "hash".to_owned()))
+        .add_extension(Extension::OtherNid(nid::AUTHORITY_KEY_IDENTIFIER, "keyid:always".to_owned()))
+        .add_extension(Extension::OtherNid(nid::SUBJECT_KEY_IDENTIFIER, "hash".to_owned()))
         .sign(&pkey);
 
     assert!(result.is_err());
@@ -178,7 +178,7 @@ fn test_subject_alt_name_iter() {
 }
 
 #[test]
-fn test_x509_builder() {
+fn x509_builder() {
     let pkey = pkey();
 
     let mut name = X509Name::builder().unwrap();
@@ -195,6 +195,11 @@ fn test_x509_builder() {
     let mut serial = BigNum::new().unwrap();;
     serial.rand(128, MSB_MAYBE_ZERO, false).unwrap();
     builder.set_serial_number(&serial.to_asn1_integer().unwrap()).unwrap();
+
+    let basic_constraints = BasicConstraints::new().critical(true).ca(true).build().unwrap();
+    builder.append_extension(basic_constraints).unwrap();
+    let key_usage = KeyUsage::new().digital_signature(true).key_encipherment(true).build().unwrap();
+    builder.append_extension(key_usage).unwrap();
 
     builder.sign(&pkey, MessageDigest::sha256()).unwrap();
 
