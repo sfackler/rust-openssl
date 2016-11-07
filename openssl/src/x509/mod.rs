@@ -597,6 +597,10 @@ impl<'a> X509v3Context<'a> {
 
 type_!(X509Extension, X509ExtensionRef, ffi::X509_EXTENSION, ffi::X509_EXTENSION_free);
 
+impl Stackable for X509Extension {
+    type StackType = ffi::stack_st_X509_EXTENSION;
+}
+
 impl X509Extension {
     pub fn new(conf: Option<&ConfRef>,
                context: Option<&X509v3Context>,
@@ -743,7 +747,85 @@ impl X509NameEntryRef {
     }
 }
 
+pub struct X509ReqBuilder(X509Req);
+
+impl X509ReqBuilder {
+    pub fn new() -> Result<X509ReqBuilder, ErrorStack> {
+        unsafe { cvt_p(ffi::X509_REQ_new()).map(|p| X509ReqBuilder(X509Req(p))) }
+    }
+
+    pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_REQ_set_version(self.0.as_ptr(), version.into())).map(|_| ()) }
+    }
+
+    pub fn set_subject_name(&mut self, subject_name: &X509NameRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_REQ_set_subject_name(self.0.as_ptr(), subject_name.as_ptr())).map(|_| ())
+        }
+    }
+
+    pub fn set_pubkey(&mut self, key: &PKeyRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_REQ_set_pubkey(self.0.as_ptr(), key.as_ptr())).map(|_| ()) }
+    }
+
+    pub fn x509v3_context<'a>(&'a self,
+                              conf: Option<&'a ConfRef>)
+                              -> X509v3Context<'a> {
+        unsafe {
+            let mut ctx = mem::zeroed();
+
+            ffi::X509V3_set_ctx(&mut ctx,
+                                ptr::null_mut(),
+                                ptr::null_mut(),
+                                self.0.as_ptr(),
+                                ptr::null_mut(),
+                                0);
+
+            // nodb case taken care of since we zeroed ctx above
+            if let Some(conf) = conf {
+                ffi::X509V3_set_nconf(&mut ctx, conf.as_ptr());
+            }
+
+            X509v3Context(ctx, PhantomData)
+        }
+    }
+
+    pub fn add_extensions(&mut self,
+                          extensions: &StackRef<X509Extension>)
+                          -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_REQ_add_extensions(self.0.as_ptr(), extensions.as_ptr())).map(|_| ())
+        }
+    }
+
+    pub fn sign(&mut self, key: &PKeyRef, hash: MessageDigest) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_REQ_sign(self.0.as_ptr(), key.as_ptr(), hash.as_ptr())).map(|_| ()) }
+    }
+
+    pub fn build(self) -> X509Req {
+        self.0
+    }
+}
+
 type_!(X509Req, X509ReqRef, ffi::X509_REQ, ffi::X509_REQ_free);
+
+impl X509Req {
+    pub fn builder() -> Result<X509ReqBuilder, ErrorStack> {
+        X509ReqBuilder::new()
+    }
+
+    /// Reads CSR from PEM
+    pub fn from_pem(buf: &[u8]) -> Result<X509Req, ErrorStack> {
+        let mem_bio = try!(MemBioSlice::new(buf));
+        unsafe {
+            let handle = try!(cvt_p(ffi::PEM_read_bio_X509_REQ(mem_bio.as_ptr(),
+                                                               ptr::null_mut(),
+                                                               None,
+                                                               ptr::null_mut())));
+            Ok(X509Req::from_ptr(handle))
+        }
+    }
+}
 
 impl X509ReqRef {
     /// Writes CSR as PEM
@@ -762,20 +844,6 @@ impl X509ReqRef {
             ffi::i2d_X509_REQ_bio(mem_bio.as_ptr(), self.as_ptr());
         }
         Ok(mem_bio.get_buf().to_owned())
-    }
-}
-
-impl X509Req {
-    /// Reads CSR from PEM
-    pub fn from_pem(buf: &[u8]) -> Result<X509Req, ErrorStack> {
-        let mem_bio = try!(MemBioSlice::new(buf));
-        unsafe {
-            let handle = try!(cvt_p(ffi::PEM_read_bio_X509_REQ(mem_bio.as_ptr(),
-                                                               ptr::null_mut(),
-                                                               None,
-                                                               ptr::null_mut())));
-            Ok(X509Req::from_ptr(handle))
-        }
     }
 }
 

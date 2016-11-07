@@ -5,7 +5,8 @@ use bn::{BigNum, MSB_MAYBE_ZERO};
 use hash::MessageDigest;
 use pkey::PKey;
 use rsa::Rsa;
-use x509::{X509, X509Generator, X509Name};
+use stack::Stack;
+use x509::{X509, X509Generator, X509Name, X509Req};
 use x509::extension::{Extension, BasicConstraints, KeyUsage, ExtendedKeyUsage,
                       SubjectKeyIdentifier, AuthorityKeyIdentifier, SubjectAlternativeName};
 use x509::extension::AltNameOption as SAN;
@@ -187,6 +188,7 @@ fn x509_builder() {
     let name = name.build();
 
     let mut builder = X509::builder().unwrap();
+    builder.set_version(2).unwrap();
     builder.set_subject_name(&name).unwrap();
     builder.set_issuer_name(&name).unwrap();
     builder.set_not_before(&Asn1Time::days_from_now(0).unwrap()).unwrap();
@@ -231,4 +233,30 @@ fn x509_builder() {
 
     let cn = x509.subject_name().entries_by_nid(nid::COMMONNAME).next().unwrap();
     assert_eq!("foobar.com".as_bytes(), cn.data().as_slice());
+}
+
+#[test]
+fn x509_req_builder() {
+    let pkey = pkey();
+
+    let mut name = X509Name::builder().unwrap();
+    name.append_entry_by_nid(nid::COMMONNAME, "foobar.com").unwrap();
+    let name = name.build();
+
+    let mut builder = X509Req::builder().unwrap();
+    builder.set_version(2).unwrap();
+    builder.set_subject_name(&name).unwrap();
+    builder.set_pubkey(&pkey).unwrap();
+
+    let mut extensions = Stack::new().unwrap();
+    let key_usage = KeyUsage::new().digital_signature().key_encipherment().build().unwrap();
+    extensions.push(key_usage).unwrap();
+    let subject_alternative_name = SubjectAlternativeName::new()
+        .dns("example.com")
+        .build(&builder.x509v3_context(None))
+        .unwrap();
+    extensions.push(subject_alternative_name).unwrap();
+    builder.add_extensions(&extensions).unwrap();
+
+    builder.sign(&pkey, MessageDigest::sha256()).unwrap();
 }

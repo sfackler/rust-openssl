@@ -1685,6 +1685,10 @@ extern {
     pub fn X509V3_set_ctx(ctx: *mut X509V3_CTX, issuer: *mut X509, subject: *mut X509, req: *mut X509_REQ, crl: *mut X509_CRL, flags: c_int);
     pub fn X509V3_set_nconf(ctx: *mut X509V3_CTX, conf: *mut CONF);
 
+    pub fn X509_REQ_new() -> *mut X509_REQ;
+    pub fn X509_REQ_set_version(req: *mut X509_REQ, version: c_long) -> c_int;
+    pub fn X509_REQ_set_subject_name(req: *mut X509_REQ, name: *mut X509_NAME) -> c_int;
+    pub fn X509_REQ_set_pubkey(req: *mut X509_REQ, pkey: *mut EVP_PKEY) -> c_int;
     pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: *mut stack_st_X509_EXTENSION) -> c_int;
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
 
