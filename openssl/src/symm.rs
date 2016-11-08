@@ -135,8 +135,7 @@ impl Crypter {
     ///
     /// # Panics
     ///
-    /// Panics if an IV is required by the cipher but not provided, or if the
-    /// IV's length does not match the expected length (see `Cipher::iv_len`).
+    /// Panics if an IV is required by the cipher but not provided.
     pub fn new(t: Cipher,
                mode: Mode,
                key: &[u8],
@@ -169,7 +168,13 @@ impl Crypter {
             let key = key.as_ptr() as *mut _;
             let iv = match (iv, t.iv_len()) {
                 (Some(iv), Some(len)) => {
-                    assert!(iv.len() == len);
+                    if iv.len() != len {
+                        assert!(iv.len() <= c_int::max_value() as usize);
+                        try!(cvt(ffi::EVP_CIPHER_CTX_ctrl(crypter.ctx,
+                                                          ffi::EVP_CTRL_GCM_SET_IVLEN,
+                                                          iv.len() as c_int,
+                                                          ptr::null_mut())));
+                    }
                     iv.as_ptr() as *mut _
                 }
                 (Some(_), None) | (None, None) => ptr::null_mut(),
@@ -193,6 +198,39 @@ impl Crypter {
     pub fn pad(&mut self, padding: bool) {
         unsafe {
             ffi::EVP_CIPHER_CTX_set_padding(self.ctx, padding as c_int);
+        }
+    }
+
+    /// Sets the tag used to authenticate ciphertext in AEAD ciphers such as AES GCM.
+    ///
+    /// When decrypting cipher text using an AEAD cipher, this must be called before `finalize`.
+    pub fn set_tag(&mut self, tag: &[u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            assert!(tag.len() <= c_int::max_value() as usize);
+            // NB: this constant is actually more general than just GCM.
+            cvt(ffi::EVP_CIPHER_CTX_ctrl(self.ctx,
+                                         ffi::EVP_CTRL_GCM_SET_TAG,
+                                         tag.len() as c_int,
+                                         tag.as_ptr() as *mut _))
+                .map(|_| ())
+        }
+    }
+
+    /// Feeds Additional Authenticated Data (AAD) through the cipher.
+    ///
+    /// This can only be used with AEAD ciphers such as AES GCM. Data fed in is not encrypted, but
+    /// is factored into the authentication tag. It must be called before the first call to
+    /// `update`.
+    pub fn aad_update(&mut self, input: &[u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            assert!(input.len() <= c_int::max_value() as usize);
+            let mut len = 0;
+            cvt(ffi::EVP_CipherUpdate(self.ctx,
+                                      ptr::null_mut(),
+                                      &mut len,
+                                      input.as_ptr(),
+                                      input.len() as c_int))
+                .map(|_| ())
         }
     }
 
@@ -242,6 +280,21 @@ impl Crypter {
             try!(cvt(ffi::EVP_CipherFinal(self.ctx, output.as_mut_ptr(), &mut outl)));
 
             Ok(outl as usize)
+        }
+    }
+
+    /// Retrieves the authentication tag used to authenticate ciphertext in AEAD ciphers such
+    /// as AES GCM.
+    ///
+    /// When encrypting data with an AEAD cipher, this must be called after `finalize`.
+    pub fn get_tag(&self, tag: &mut [u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            assert!(tag.len() <= c_int::max_value() as usize);
+            cvt(ffi::EVP_CIPHER_CTX_ctrl(self.ctx,
+                                         ffi::EVP_CTRL_GCM_GET_TAG,
+                                         tag.len() as c_int,
+                                         tag.as_mut_ptr() as *mut _))
+                .map(|_| ())
         }
     }
 }
@@ -319,6 +372,7 @@ use self::compat::*;
 #[cfg(test)]
 mod tests {
     use serialize::hex::{FromHex, ToHex};
+    use super::*;
 
     // Test vectors from FIPS-197:
     // http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
@@ -533,5 +587,43 @@ mod tests {
         let iv = "0001020304050607";
 
         cipher_test(super::Cipher::des_ecb(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes128_gcm() {
+        let key = "0e00c76561d2bd9b40c3c15427e2b08f";
+        let iv =
+            "492cadaccd3ca3fbc9cf9f06eb3325c4e159850b0dbe98199b89b7af528806610b6f63998e1eae80c348e7\
+             4cbb921d8326631631fc6a5d304f39166daf7ea15fa1977f101819adb510b50fe9932e12c5a85aa3fd1e73\
+             d8d760af218be829903a77c63359d75edd91b4f6ed5465a72662f5055999e059e7654a8edc921aa0d496";
+        let pt =
+            "fef03c2d7fb15bf0d2df18007d99f967c878ad59359034f7bb2c19af120685d78e32f6b8b83b032019956c\
+             a9c0195721476b85";
+        let aad =
+            "d8f1163d8c840292a2b2dacf4ac7c36aff8733f18fabb4fa5594544125e03d1e6e5d6d0fd61656c8d8f327\
+             c92839ae5539bb469c9257f109ebff85aad7bd220fdaa95c022dbd0c7bb2d878ad504122c943045d3c5eba\
+             8f1f56c0";
+        let ct =
+            "4f6cf471be7cbd2575cd5a1747aea8fe9dea83e51936beac3e68f66206922060c697ffa7af80ad6bb68f2c\
+             f4fc97416ee52abe";
+        let tag = "e20b6655";
+
+        let mut crypter = Crypter::new(Cipher::aes_128_gcm(), Mode::Encrypt, &key.from_hex().unwrap(), Some(&iv.from_hex().unwrap())).unwrap();
+        let mut out = [0; 1024];
+        crypter.aad_update(&aad.from_hex().unwrap()).unwrap();
+        let mut nwritten = crypter.update(&pt.from_hex().unwrap(), &mut out).unwrap();
+        nwritten += crypter.finalize(&mut out[nwritten..]).unwrap();
+        assert_eq!(ct, out[..nwritten].to_hex());
+        let mut actual_tag = [0; 4];
+        crypter.get_tag(&mut actual_tag).unwrap();
+        assert_eq!(tag, actual_tag.to_hex());
+
+        let mut crypter = Crypter::new(Cipher::aes_128_gcm(), Mode::Decrypt, &key.from_hex().unwrap(), Some(&iv.from_hex().unwrap())).unwrap();
+        let mut out = [0; 1024];
+        crypter.aad_update(&aad.from_hex().unwrap()).unwrap();
+        let mut nwritten = crypter.update(&ct.from_hex().unwrap(), &mut out).unwrap();
+        crypter.set_tag(&tag.from_hex().unwrap()).unwrap();
+        nwritten += crypter.finalize(&mut out[nwritten..]).unwrap();
+        assert_eq!(pt, out[..nwritten].to_hex());
     }
 }
