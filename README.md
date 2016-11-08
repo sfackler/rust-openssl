@@ -62,7 +62,7 @@ brew install openssl
 On MSVC it's unfortunately not always a trivial process acquiring OpenSSL.
 Perhaps the easiest way to do this right now is to download [precompiled
 binaries] and install them on your system. Currently it's recommended to
-install the 1.1.0b light installation if you're choosing this route.
+install the 1.1.0 (non-light) installation if you're choosing this route.
 
 [precompiled binaries]: http://slproweb.com/products/Win32OpenSSL.html
 
