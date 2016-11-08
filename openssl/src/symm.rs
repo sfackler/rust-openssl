@@ -345,6 +345,48 @@ fn cipher(t: Cipher,
     Ok(out)
 }
 
+/// Like `encrypt`, but for AEAD ciphers such as AES GCM.
+///
+/// Additional Authenticated Data can be provided in the `aad` field, and the authentication tag
+/// will be copied into the `tag` field.
+pub fn encrypt_aead(t: Cipher,
+                    key: &[u8],
+                    iv: Option<&[u8]>,
+                    aad: &[u8],
+                    data: &[u8],
+                    tag: &mut [u8])
+                    -> Result<Vec<u8>, ErrorStack> {
+    let mut c = try!(Crypter::new(t, Mode::Encrypt, key, iv));
+    let mut out = vec![0; data.len() + t.block_size()];
+    try!(c.aad_update(aad));
+    let count = try!(c.update(data, &mut out));
+    let rest = try!(c.finalize(&mut out[count..]));
+    try!(c.get_tag(tag));
+    out.truncate(count + rest);
+    Ok(out)
+}
+
+/// Like `decrypt`, but for AEAD ciphers such as AES GCM.
+///
+/// Additional Authenticated Data can be provided in the `aad` field, and the authentication tag
+/// should be provided in the `tag` field.
+pub fn decrypt_aead(t: Cipher,
+                    key: &[u8],
+                    iv: Option<&[u8]>,
+                    aad: &[u8],
+                    data: &[u8],
+                    tag: &[u8])
+                    -> Result<Vec<u8>, ErrorStack> {
+    let mut c = try!(Crypter::new(t, Mode::Decrypt, key, iv));
+    let mut out = vec![0; data.len() + t.block_size()];
+    try!(c.aad_update(aad));
+    let count = try!(c.update(data, &mut out));
+    try!(c.set_tag(tag));
+    let rest = try!(c.finalize(&mut out[count..]));
+    out.truncate(count + rest);
+    Ok(out)
+}
+
 #[cfg(ossl110)]
 use ffi::{EVP_CIPHER_iv_length, EVP_CIPHER_block_size, EVP_CIPHER_key_length};
 
@@ -608,22 +650,23 @@ mod tests {
              f4fc97416ee52abe";
         let tag = "e20b6655";
 
-        let mut crypter = Crypter::new(Cipher::aes_128_gcm(), Mode::Encrypt, &key.from_hex().unwrap(), Some(&iv.from_hex().unwrap())).unwrap();
-        let mut out = [0; 1024];
-        crypter.aad_update(&aad.from_hex().unwrap()).unwrap();
-        let mut nwritten = crypter.update(&pt.from_hex().unwrap(), &mut out).unwrap();
-        nwritten += crypter.finalize(&mut out[nwritten..]).unwrap();
-        assert_eq!(ct, out[..nwritten].to_hex());
         let mut actual_tag = [0; 4];
-        crypter.get_tag(&mut actual_tag).unwrap();
+        let out = encrypt_aead(Cipher::aes_128_gcm(),
+                               &key.from_hex().unwrap(),
+                               Some(&iv.from_hex().unwrap()),
+                               &aad.from_hex().unwrap(),
+                               &pt.from_hex().unwrap(),
+                               &mut actual_tag)
+            .unwrap();
+        assert_eq!(ct, out.to_hex());
         assert_eq!(tag, actual_tag.to_hex());
 
-        let mut crypter = Crypter::new(Cipher::aes_128_gcm(), Mode::Decrypt, &key.from_hex().unwrap(), Some(&iv.from_hex().unwrap())).unwrap();
-        let mut out = [0; 1024];
-        crypter.aad_update(&aad.from_hex().unwrap()).unwrap();
-        let mut nwritten = crypter.update(&ct.from_hex().unwrap(), &mut out).unwrap();
-        crypter.set_tag(&tag.from_hex().unwrap()).unwrap();
-        nwritten += crypter.finalize(&mut out[nwritten..]).unwrap();
-        assert_eq!(pt, out[..nwritten].to_hex());
+        let out = decrypt_aead(Cipher::aes_128_gcm(),
+                               &key.from_hex().unwrap(),
+                               Some(&iv.from_hex().unwrap()),
+                               &aad.from_hex().unwrap(),
+                               &ct.from_hex().unwrap(),
+                               &tag.from_hex().unwrap()).unwrap();
+        assert_eq!(pt, out.to_hex());
     }
 }
