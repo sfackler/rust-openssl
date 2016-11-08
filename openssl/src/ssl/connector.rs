@@ -255,7 +255,9 @@ impl SslAcceptor {
 
 #[cfg(any(ossl102, ossl110))]
 fn setup_verify(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
-    ssl.set_verify(SSL_VERIFY_PEER);
+    // pass a noop closure in here to ensure that we consistently override any callback on the
+    // context
+    ssl.set_verify_callback(SSL_VERIFY_PEER, |p, _| p);
     let param = ssl._param_mut();
     param.set_hostflags(::verify::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
     param.set_host(domain)
