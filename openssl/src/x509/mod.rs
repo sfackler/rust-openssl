@@ -274,9 +274,11 @@ impl X509Generator {
     }
 }
 
+/// A builder type which can create `X509` objects.
 pub struct X509Builder(X509);
 
 impl X509Builder {
+    /// Creates a new builder.
     pub fn new() -> Result<X509Builder, ErrorStack> {
         unsafe {
             ffi::init();
@@ -284,18 +286,25 @@ impl X509Builder {
         }
     }
 
+    /// Sets the notAfter constraint on the certificate.
     pub fn set_not_after(&mut self, not_after: &Asn1TimeRef) -> Result<(), ErrorStack> {
         unsafe { cvt(X509_set_notAfter(self.0.as_ptr(), not_after.as_ptr())).map(|_| ()) }
     }
 
+    /// Sets the notBefore constraint on the certificate.
     pub fn set_not_before(&mut self, not_before: &Asn1TimeRef) -> Result<(), ErrorStack> {
         unsafe { cvt(X509_set_notBefore(self.0.as_ptr(), not_before.as_ptr())).map(|_| ()) }
     }
 
+    /// Sets the version of the certificate.
+    ///
+    /// Note that the version is zero-indexed; that is, a certificate corresponding to version 3 of
+    /// the X.509 standard should pass `2` to this method.
     pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_set_version(self.0.as_ptr(), version.into())).map(|_| ()) }
     }
 
+    /// Sets the serial number of the certificate.
     pub fn set_serial_number(&mut self,
                              serial_number: &Asn1IntegerRef)
                              -> Result<(), ErrorStack> {
@@ -304,20 +313,26 @@ impl X509Builder {
         }
     }
 
+    /// Sets the issuer name of the certificate.
     pub fn set_issuer_name(&mut self, issuer_name: &X509NameRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_set_issuer_name(self.0.as_ptr(), issuer_name.as_ptr())).map(|_| ()) }
     }
 
+    /// Sets the subject name of the certificate.
     pub fn set_subject_name(&mut self, subject_name: &X509NameRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::X509_set_subject_name(self.0.as_ptr(), subject_name.as_ptr())).map(|_| ())
         }
     }
 
+    /// Sets the public key associated with the certificate.
     pub fn set_pubkey(&mut self, key: &PKeyRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_set_pubkey(self.0.as_ptr(), key.as_ptr())).map(|_| ()) }
     }
 
+    /// Returns a context object which is needed to create certain X509 extension values.
+    ///
+    /// Set `issuer` to `None` if the certificate will be self-signed.
     pub fn x509v3_context<'a>(&'a self,
                               issuer: Option<&'a X509Ref>,
                               conf: Option<&'a ConfRef>)
@@ -341,6 +356,7 @@ impl X509Builder {
         }
     }
 
+    /// Adds an X509 extension value to the certificate.
     pub fn append_extension(&mut self, extension: X509Extension) -> Result<(), ErrorStack> {
         unsafe {
             try!(cvt(ffi::X509_add_ext(self.0.as_ptr(), extension.as_ptr(), -1)));
@@ -349,10 +365,12 @@ impl X509Builder {
         }
     }
 
+    /// Signs the certificate with a private key.
     pub fn sign(&mut self, key: &PKeyRef, hash: MessageDigest) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_sign(self.0.as_ptr(), key.as_ptr(), hash.as_ptr())).map(|_| ()) }
     }
 
+    /// Consumes the builder, returning the certificate.
     pub fn build(self) -> X509 {
         self.0
     }
@@ -507,6 +525,7 @@ impl Stackable for X509 {
     type StackType = ffi::stack_st_X509;
 }
 
+/// A context object required to construct certain X509 extension values.
 pub struct X509v3Context<'a>(ffi::X509V3_CTX, PhantomData<(&'a X509Ref, &'a ConfRef)>);
 
 impl<'a> X509v3Context<'a> {
@@ -522,6 +541,13 @@ impl Stackable for X509Extension {
 }
 
 impl X509Extension {
+    /// Constructs an X509 extension value. See `man x509v3_config` for information on supported
+    /// names and their value formats.
+    ///
+    /// Some extension types, such as `subjectAlternativeName`, require an `X509v3Context` to be
+    /// provided.
+    ///
+    /// See the extension module for builder types which will construct certain common extensions.
     pub fn new(conf: Option<&ConfRef>,
                context: Option<&X509v3Context>,
                name: &str,
@@ -540,6 +566,13 @@ impl X509Extension {
         }
     }
 
+    /// Constructs an X509 extension value. See `man x509v3_config` for information on supported
+    /// extensions and their value formats.
+    ///
+    /// Some extension types, such as `nid::SUBJECT_ALTERNATIVE_NAME`, require an `X509v3Context` to
+    /// be provided.
+    ///
+    /// See the extension module for builder types which will construct certain common extensions.
     pub fn new_nid(conf: Option<&ConfRef>,
                    context: Option<&X509v3Context>,
                    name: Nid,
