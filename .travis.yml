@@ -38,7 +38,7 @@ matrix:
             - binfmt-support
 
     # Minimum version supported
-    - rust: 1.9.0
+    - rust: 1.10.0
 
     # beta/nightly channels
     - rust: beta
