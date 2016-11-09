@@ -287,6 +287,10 @@ impl Crypter {
     /// as AES GCM.
     ///
     /// When encrypting data with an AEAD cipher, this must be called after `finalize`.
+    ///
+    /// The size of the buffer indicates the required size of the tag. While some ciphers support a
+    /// range of tag sizes, it is recommended to pick the maximum size. For AES GCM, this is 16
+    /// bytes, for example.
     pub fn get_tag(&self, tag: &mut [u8]) -> Result<(), ErrorStack> {
         unsafe {
             assert!(tag.len() <= c_int::max_value() as usize);
@@ -370,6 +374,10 @@ pub fn encrypt_aead(t: Cipher,
 ///
 /// Additional Authenticated Data can be provided in the `aad` field, and the authentication tag
 /// should be provided in the `tag` field.
+///
+/// The size of the `tag` buffer indicates the required size of the tag. While some ciphers support
+/// a range of tag sizes, it is recommended to pick the maximum size. For AES GCM, this is 16 bytes,
+/// for example.
 pub fn decrypt_aead(t: Cipher,
                     key: &[u8],
                     iv: Option<&[u8]>,
@@ -650,6 +658,8 @@ mod tests {
              f4fc97416ee52abe";
         let tag = "e20b6655";
 
+        // this tag is smaller than you'd normally want, but I pulled this test from the part of
+        // the NIST test vectors that cover 4 byte tags.
         let mut actual_tag = [0; 4];
         let out = encrypt_aead(Cipher::aes_128_gcm(),
                                &key.from_hex().unwrap(),
