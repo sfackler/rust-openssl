@@ -66,7 +66,7 @@ pub struct ParsedPkcs12 {
 #[cfg(test)]
 mod test {
     use hash::MessageDigest;
-    use serialize::hex::ToHex;
+    use hex::ToHex;
 
     use super::*;
 

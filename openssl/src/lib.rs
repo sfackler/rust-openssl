@@ -8,8 +8,7 @@ extern crate lazy_static;
 extern crate openssl_sys as ffi;
 
 #[cfg(test)]
-extern crate rustc_serialize as serialize;
-
+extern crate hex;
 #[cfg(test)]
 extern crate tempdir;
 

@@ -421,7 +421,7 @@ use self::compat::*;
 
 #[cfg(test)]
 mod tests {
-    use serialize::hex::{FromHex, ToHex};
+    use hex::{FromHex, ToHex};
     use super::*;
 
     // Test vectors from FIPS-197:
@@ -489,12 +489,10 @@ mod tests {
     }
 
     fn cipher_test(ciphertype: super::Cipher, pt: &str, ct: &str, key: &str, iv: &str) {
-        use serialize::hex::ToHex;
-
-        let pt = pt.from_hex().unwrap();
-        let ct = ct.from_hex().unwrap();
-        let key = key.from_hex().unwrap();
-        let iv = iv.from_hex().unwrap();
+        let pt = Vec::from_hex(pt).unwrap();
+        let ct = Vec::from_hex(ct).unwrap();
+        let key = Vec::from_hex(key).unwrap();
+        let iv = Vec::from_hex(iv).unwrap();
 
         let computed = super::decrypt(ciphertype, &key, Some(&iv), &ct).unwrap();
         let expected = pt;
@@ -662,21 +660,21 @@ mod tests {
         // the NIST test vectors that cover 4 byte tags.
         let mut actual_tag = [0; 4];
         let out = encrypt_aead(Cipher::aes_128_gcm(),
-                               &key.from_hex().unwrap(),
-                               Some(&iv.from_hex().unwrap()),
-                               &aad.from_hex().unwrap(),
-                               &pt.from_hex().unwrap(),
+                               &Vec::from_hex(key).unwrap(),
+                               Some(&Vec::from_hex(iv).unwrap()),
+                               &Vec::from_hex(aad).unwrap(),
+                               &Vec::from_hex(pt).unwrap(),
                                &mut actual_tag)
             .unwrap();
         assert_eq!(ct, out.to_hex());
         assert_eq!(tag, actual_tag.to_hex());
 
         let out = decrypt_aead(Cipher::aes_128_gcm(),
-                               &key.from_hex().unwrap(),
-                               Some(&iv.from_hex().unwrap()),
-                               &aad.from_hex().unwrap(),
-                               &ct.from_hex().unwrap(),
-                               &tag.from_hex().unwrap()).unwrap();
+                               &Vec::from_hex(key).unwrap(),
+                               Some(&Vec::from_hex(iv).unwrap()),
+                               &Vec::from_hex(aad).unwrap(),
+                               &Vec::from_hex(ct).unwrap(),
+                               &Vec::from_hex(tag).unwrap()).unwrap();
         assert_eq!(pt, out.to_hex());
     }
 }

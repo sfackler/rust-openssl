@@ -11,7 +11,6 @@ use std::path::Path;
 use std::process::{Command, Child, Stdio, ChildStdin};
 use std::thread;
 use std::time::Duration;
-
 use tempdir::TempDir;
 
 use hash::MessageDigest;
@@ -170,7 +169,7 @@ macro_rules! run_test(
             use ssl::SSL_VERIFY_PEER;
             use hash::MessageDigest;
             use x509::X509StoreContext;
-            use serialize::hex::FromHex;
+            use hex::FromHex;
             use types::OpenSslTypeRef;
             use super::Server;
 
@@ -302,7 +301,7 @@ run_test!(verify_callback_data, |method, stream| {
 // Command: openssl x509 -in test/cert.pem  -outform DER | openssl dgst -sha256
 // Please update if "test/cert.pem" will ever change
     let node_hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
-    let node_id = node_hash_str.from_hex().unwrap();
+    let node_id = Vec::from_hex(node_hash_str).unwrap();
     ctx.set_verify_callback(SSL_VERIFY_PEER, move |_preverify_ok, x509_ctx| {
         let cert = x509_ctx.current_cert();
         match cert {
@@ -330,7 +329,7 @@ run_test!(ssl_verify_callback, |method, stream| {
     let mut ssl = Ssl::new(&ctx.build()).unwrap();
 
     let node_hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
-    let node_id = node_hash_str.from_hex().unwrap();
+    let node_id = Vec::from_hex(node_hash_str).unwrap();
     ssl.set_verify_callback(SSL_VERIFY_PEER, move |_, x509| {
         CHECKED.store(1, Ordering::SeqCst);
         match x509.current_cert() {
@@ -427,7 +426,7 @@ run_test!(get_peer_certificate, |method, stream| {
     let cert = stream.ssl().peer_certificate().unwrap();
     let fingerprint = cert.fingerprint(MessageDigest::sha1()).unwrap();
     let node_hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
-    let node_id = node_hash_str.from_hex().unwrap();
+    let node_id = Vec::from_hex(node_hash_str).unwrap();
     assert_eq!(node_id, fingerprint)
 });
 

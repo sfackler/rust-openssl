@@ -1,4 +1,4 @@
-use serialize::hex::FromHex;
+use hex::FromHex;
 
 use hash::MessageDigest;
 use pkey::PKey;
@@ -85,7 +85,7 @@ fn test_cert_loading() {
     let fingerprint = cert.fingerprint(MessageDigest::sha1()).unwrap();
 
     let hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
-    let hash_vec = hash_str.from_hex().unwrap();
+    let hash_vec = Vec::from_hex(hash_str).unwrap();
 
     assert_eq!(fingerprint, hash_vec);
 }

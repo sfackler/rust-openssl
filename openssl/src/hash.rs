@@ -208,17 +208,17 @@ pub fn hash(t: MessageDigest, data: &[u8]) -> Result<Vec<u8>, ErrorStack> {
 
 #[cfg(test)]
 mod tests {
-    use serialize::hex::{FromHex, ToHex};
+    use hex::{FromHex, ToHex};
     use super::{hash, Hasher, MessageDigest};
     use std::io::prelude::*;
 
     fn hash_test(hashtype: MessageDigest, hashtest: &(&str, &str)) {
-        let res = hash(hashtype, &*hashtest.0.from_hex().unwrap()).unwrap();
+        let res = hash(hashtype, &Vec::from_hex(hashtest.0).unwrap()).unwrap();
         assert_eq!(res.to_hex(), hashtest.1);
     }
 
     fn hash_recycle_test(h: &mut Hasher, hashtest: &(&str, &str)) {
-        let _ = h.write_all(&*hashtest.0.from_hex().unwrap()).unwrap();
+        let _ = h.write_all(&Vec::from_hex(hashtest.0).unwrap()).unwrap();
         let res = h.finish().unwrap();
         assert_eq!(res.to_hex(), hashtest.1);
     }
@@ -258,7 +258,7 @@ mod tests {
     #[test]
     fn test_finish_twice() {
         let mut h = Hasher::new(MessageDigest::md5()).unwrap();
-        h.write_all(&*md5_tests[6].0.from_hex().unwrap()).unwrap();
+        h.write_all(&Vec::from_hex(md5_tests[6].0).unwrap()).unwrap();
         h.finish().unwrap();
         let res = h.finish().unwrap();
         let null = hash(MessageDigest::md5(), &[]).unwrap();
@@ -268,7 +268,7 @@ mod tests {
     #[test]
     fn test_clone() {
         let i = 7;
-        let inp = md5_tests[i].0.from_hex().unwrap();
+        let inp = Vec::from_hex(md5_tests[i].0).unwrap();
         assert!(inp.len() > 2);
         let p = inp.len() / 2;
         let h0 = Hasher::new(MessageDigest::md5()).unwrap();
@@ -289,7 +289,7 @@ mod tests {
 
         println!("Clone a finished hasher");
         let mut h3 = h1.clone();
-        h3.write_all(&*md5_tests[i + 1].0.from_hex().unwrap()).unwrap();
+        h3.write_all(&Vec::from_hex(md5_tests[i + 1].0).unwrap()).unwrap();
         let res = h3.finish().unwrap();
         assert_eq!(res.to_hex(), md5_tests[i + 1].1);
     }
