@@ -1,6 +1,6 @@
 use ffi;
 
-use cvt_p;
+use {cvt_p, init};
 use error::ErrorStack;
 use nid::Nid;
 
@@ -8,7 +8,10 @@ type_!(EcKey, EcKeyRef, ffi::EC_KEY, ffi::EC_KEY_free);
 
 impl EcKey {
     pub fn new_by_curve_name(nid: Nid) -> Result<EcKey, ErrorStack> {
-        unsafe { cvt_p(ffi::EC_KEY_new_by_curve_name(nid.as_raw())).map(EcKey) }
+        unsafe {
+            init();
+            cvt_p(ffi::EC_KEY_new_by_curve_name(nid.as_raw())).map(EcKey)
+        }
     }
 }
 

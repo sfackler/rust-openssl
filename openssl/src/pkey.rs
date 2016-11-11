@@ -7,6 +7,7 @@ use {cvt, cvt_p};
 use bio::{MemBio, MemBioSlice};
 use dh::Dh;
 use dsa::Dsa;
+use ec_key::EcKey;
 use rsa::Rsa;
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb};
@@ -36,6 +37,14 @@ impl PKeyRef {
         unsafe {
             let dh = try!(cvt_p(ffi::EVP_PKEY_get1_DH(self.as_ptr())));
             Ok(Dh::from_ptr(dh))
+        }
+    }
+
+    /// Returns a copy of the internal elliptic curve key.
+    pub fn ec_key(&self) -> Result<EcKey, ErrorStack> {
+        unsafe {
+            let ec_key = try!(cvt_p(ffi::EVP_PKEY_get1_EC_KEY(self.as_ptr())));
+            Ok(EcKey::from_ptr(ec_key))
         }
     }
 
@@ -105,13 +114,24 @@ impl PKey {
         }
     }
 
-    /// Creates a new `PKey` containing a DH key.
+    /// Creates a new `PKey` containing a Diffie-Hellman key.
     pub fn from_dh(dh: Dh) -> Result<PKey, ErrorStack> {
         unsafe {
             let evp = try!(cvt_p(ffi::EVP_PKEY_new()));
             let pkey = PKey(evp);
             try!(cvt(ffi::EVP_PKEY_assign(pkey.0, ffi::EVP_PKEY_DH, dh.as_ptr() as *mut _)));
             mem::forget(dh);
+            Ok(pkey)
+        }
+    }
+
+    /// Creates a new `PKey` containing an elliptic curve key.
+    pub fn from_ec_key(ec_key: EcKey) -> Result<PKey, ErrorStack> {
+        unsafe {
+            let evp = try!(cvt_p(ffi::EVP_PKEY_new()));
+            let pkey = PKey(evp);
+            try!(cvt(ffi::EVP_PKEY_assign(pkey.0, ffi::EVP_PKEY_EC, ec_key.as_ptr() as *mut _)));
+            mem::forget(ec_key);
             Ok(pkey)
         }
     }
@@ -179,7 +199,9 @@ impl PKey {
 mod tests {
     use dh::Dh;
     use dsa::Dsa;
+    use ec_key::EcKey;
     use rsa::Rsa;
+    use nid;
 
     use super::*;
 
@@ -231,6 +253,14 @@ mod tests {
         let dh = Dh::from_pem(dh).unwrap();
         let pkey = PKey::from_dh(dh).unwrap();
         pkey.dh().unwrap();
+        assert!(pkey.rsa().is_err());
+    }
+
+    #[test]
+    fn test_ec_key_accessor() {
+        let ec_key = EcKey::new_by_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let pkey = PKey::from_ec_key(ec_key).unwrap();
+        pkey.ec_key().unwrap();
         assert!(pkey.rsa().is_err());
     }
 }

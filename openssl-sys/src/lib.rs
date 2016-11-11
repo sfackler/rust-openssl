@@ -114,6 +114,7 @@ pub const EVP_PKEY_RSA: c_int = NID_rsaEncryption;
 pub const EVP_PKEY_HMAC: c_int = NID_hmac;
 pub const EVP_PKEY_DSA: c_int = NID_dsa;
 pub const EVP_PKEY_DH: c_int = NID_dhKeyAgreement;
+pub const EVP_PKEY_EC: c_int = NID_X9_62_id_ecPublicKey;
 
 pub const EVP_CTRL_GCM_SET_IVLEN: c_int = 0x9;
 pub const EVP_CTRL_GCM_GET_TAG: c_int = 0x10;
@@ -1458,6 +1459,7 @@ extern {
     pub fn EVP_PKEY_set1_RSA(k: *mut EVP_PKEY, r: *mut RSA) -> c_int;
     pub fn EVP_PKEY_get1_DSA(k: *mut EVP_PKEY) -> *mut DSA;
     pub fn EVP_PKEY_get1_DH(k: *mut EVP_PKEY) -> *mut DH;
+    pub fn EVP_PKEY_get1_EC_KEY(k: *mut EVP_PKEY) -> *mut EC_KEY;
     pub fn EVP_PKEY_cmp(a: *const EVP_PKEY, b: *const EVP_PKEY) -> c_int;
     pub fn EVP_PKEY_new_mac_key(type_: c_int,
                                 e: *mut ENGINE,
