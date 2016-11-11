@@ -1,8 +1,9 @@
 use error::ErrorStack;
 use ffi;
-use libc::{c_int, c_char, c_void};
+use libc::{c_int, c_char, c_void, c_long};
 use std::fmt;
 use std::ptr;
+use std::cmp;
 
 use bio::{MemBio, MemBioSlice};
 use bn::BigNumRef;
@@ -13,7 +14,7 @@ use util::{CallbackState, invoke_passwd_cb};
 type_!(Dsa, DsaRef, ffi::DSA, ffi::DSA_free);
 
 impl DsaRef {
-    /// Writes an DSA private key as unencrypted PEM formatted data
+    /// Encodes a DSA private key as unencrypted PEM formatted data.
     pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         assert!(self.has_private_key());
         let mem_bio = try!(MemBio::new());
@@ -27,13 +28,33 @@ impl DsaRef {
         Ok(mem_bio.get_buf().to_owned())
     }
 
-    /// Writes an DSA public key as PEM formatted data
+    /// Encodes a DSA public key as PEM formatted data.
     pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
             try!(cvt(ffi::PEM_write_bio_DSA_PUBKEY(mem_bio.as_ptr(), self.as_ptr())));
         }
         Ok(mem_bio.get_buf().to_owned())
+    }
+
+    /// Encodes a DSA private key as unencrypted DER formatted data.
+    pub fn private_key_to_der(&self) -> Result<Vec<u8>, ErrorStack> {
+        unsafe {
+            let len = try!(cvt(ffi::i2d_DSAPrivateKey(self.as_ptr(), ptr::null_mut())));
+            let mut buf = vec![0; len as usize];
+            try!(cvt(ffi::i2d_DSAPrivateKey(self.as_ptr(), &mut buf.as_mut_ptr())));
+            Ok(buf)
+        }
+    }
+
+    /// Encodes a DSA public key as DER formatted data.
+    pub fn public_key_to_der(&self) -> Result<Vec<u8>, ErrorStack> {
+        unsafe {
+            let len = try!(cvt(ffi::i2d_DSAPublicKey(self.as_ptr(), ptr::null_mut())));
+            let mut buf = vec![0; len as usize];
+            try!(cvt(ffi::i2d_DSAPublicKey(self.as_ptr(), &mut buf.as_mut_ptr())));
+            Ok(buf)
+        }
     }
 
     pub fn size(&self) -> Option<u32> {
@@ -139,7 +160,7 @@ impl Dsa {
         }
     }
 
-    /// Reads an DSA public key from PEM formatted data.
+    /// Reads a DSA public key from PEM formatted data.
     pub fn public_key_from_pem(buf: &[u8]) -> Result<Dsa, ErrorStack> {
         ffi::init();
 
@@ -149,6 +170,26 @@ impl Dsa {
                                                               ptr::null_mut(),
                                                               None,
                                                               ptr::null_mut())));
+            Ok(Dsa(dsa))
+        }
+    }
+
+    /// Reads a DSA private key from DER formatted data.
+    pub fn private_key_from_der(buf: &[u8]) -> Result<Dsa, ErrorStack> {
+        unsafe {
+            ffi::init();
+            let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
+            let dsa = try!(cvt_p(ffi::d2i_DSAPrivateKey(ptr::null_mut(), &mut buf.as_ptr(), len)));
+            Ok(Dsa(dsa))
+        }
+    }
+
+    /// Reads a DSA public key from DER formatted data.
+    pub fn public_key_from_der(buf: &[u8]) -> Result<Dsa, ErrorStack> {
+        unsafe {
+            ffi::init();
+            let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
+            let dsa = try!(cvt_p(ffi::d2i_DSAPublicKey(ptr::null_mut(), &mut buf.as_ptr(), len)));
             Ok(Dsa(dsa))
         }
     }

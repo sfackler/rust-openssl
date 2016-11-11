@@ -1,11 +1,12 @@
-use ffi;
 use error::ErrorStack;
-use bio::MemBioSlice;
-use std::ptr;
+use ffi;
+use libc::c_long;
+use std::cmp;
 use std::mem;
+use std::ptr;
 
-use {cvt, cvt_p};
-use bio::MemBio;
+use {cvt, cvt_p, init};
+use bio::{MemBio, MemBioSlice};
 use bn::BigNum;
 use types::OpenSslTypeRef;
 
@@ -15,18 +16,27 @@ impl DhRef {
     /// Encodes the parameters to PEM.
     pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
-
         unsafe {
             try!(cvt(ffi::PEM_write_bio_DHparams(mem_bio.as_ptr(), self.as_ptr())));
         }
-
         Ok(mem_bio.get_buf().to_owned())
+    }
+
+    /// Encodes the parameters to DER.
+    pub fn to_der(&self) -> Result<Vec<u8>, ErrorStack> {
+        unsafe {
+            let len = try!(cvt(ffi::i2d_DHparams(self.as_ptr(), ptr::null_mut())));
+            let mut buf = vec![0; len as usize];
+            try!(cvt(ffi::i2d_DHparams(self.as_ptr(), &mut buf.as_mut_ptr())));
+            Ok(buf)
+        }
     }
 }
 
 impl Dh {
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<Dh, ErrorStack> {
         unsafe {
+            init();
             let dh = Dh(try!(cvt_p(ffi::DH_new())));
             try!(cvt(compat::DH_set0_pqg(dh.0, p.as_ptr(), q.as_ptr(), g.as_ptr())));
             mem::forget((p, g, q));
@@ -34,14 +44,26 @@ impl Dh {
         }
     }
 
+    /// Reads Diffie-Hellman parameters from PEM.
     pub fn from_pem(buf: &[u8]) -> Result<Dh, ErrorStack> {
-        let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
+            init();
+            let mem_bio = try!(MemBioSlice::new(buf));
             cvt_p(ffi::PEM_read_bio_DHparams(mem_bio.as_ptr(),
                                              ptr::null_mut(),
                                              None,
                                              ptr::null_mut()))
                 .map(Dh)
+        }
+    }
+
+    /// Reads Diffie-Hellman parameters from DER.
+    pub fn from_der(buf: &[u8]) -> Result<Dh, ErrorStack> {
+        unsafe {
+            init();
+            let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
+            let dh = try!(cvt_p(ffi::d2i_DHparams(ptr::null_mut(), &mut buf.as_ptr(), len)));
+            Ok(Dh(dh))
         }
     }
 
@@ -139,7 +161,15 @@ mod tests {
     fn test_dh_from_pem() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         let params = include_bytes!("../test/dhparams.pem");
-        let dh = Dh::from_pem(params).ok().expect("Failed to load PEM");
+        let dh = Dh::from_pem(params).unwrap();
         ctx.set_tmp_dh(&dh).unwrap();
+    }
+
+    #[test]
+    fn test_dh_from_der() {
+        let params = include_bytes!("../test/dhparams.pem");
+        let dh = Dh::from_pem(params).unwrap();
+        let der = dh.to_der().unwrap();
+        Dh::from_der(&der).unwrap();
     }
 }

@@ -1713,11 +1713,20 @@ extern {
                                        name: *const c_char,
                                        namelen: size_t) -> c_int;
 
+    pub fn d2i_DHparams(k: *mut *mut DH, pp: *mut *const c_uchar, length: c_long) -> *mut DH;
+    pub fn i2d_DHparams(dh: *const DH, pp: *mut *mut c_uchar) -> c_int;
+
+    pub fn d2i_DSAPublicKey(a: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long) -> *mut DSA;
+    pub fn i2d_DSAPublicKey(a: *const DSA, pp: *mut *mut c_uchar) -> c_int;
+    pub fn d2i_DSAPrivateKey(a: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long) -> *mut DSA;
+    pub fn i2d_DSAPrivateKey(a: *const DSA, pp: *mut *mut c_uchar) -> c_int;
+
     pub fn d2i_X509(a: *mut *mut X509, pp: *mut *const c_uchar, length: c_long) -> *mut X509;
     pub fn i2d_X509_bio(b: *mut BIO, x: *mut X509) -> c_int;
     pub fn i2d_X509_REQ_bio(b: *mut BIO, x: *mut X509_REQ) -> c_int;
 
     pub fn i2d_PUBKEY_bio(b: *mut BIO, x: *mut EVP_PKEY) -> c_int;
+    pub fn i2d_PrivateKey_bio(b: *mut BIO, x: *mut EVP_PKEY) -> c_int;
 
     pub fn i2d_RSA_PUBKEY(k: *mut RSA, buf: *mut *mut u8) -> c_int;
     pub fn d2i_RSA_PUBKEY(k: *mut *mut RSA, buf: *mut *const u8, len: c_long) -> *mut RSA;

@@ -1,8 +1,9 @@
 use ffi;
+use std::cmp;
 use std::fmt;
 use std::ptr;
 use std::mem;
-use libc::{c_int, c_void, c_char};
+use libc::{c_int, c_void, c_char, c_long};
 
 use {cvt, cvt_p, cvt_n};
 use bn::{BigNum, BigNumRef};
@@ -47,6 +48,26 @@ impl RsaRef {
         }
 
         Ok(mem_bio.get_buf().to_owned())
+    }
+
+    /// Encodes an RSA private key as unencrypted DER formatted data.
+    pub fn private_key_to_der(&self) -> Result<Vec<u8>, ErrorStack> {
+        unsafe {
+            let len = try!(cvt(ffi::i2d_RSAPrivateKey(self.as_ptr(), ptr::null_mut())));
+            let mut buf = vec![0; len as usize];
+            try!(cvt(ffi::i2d_RSAPrivateKey(self.as_ptr(), &mut buf.as_mut_ptr())));
+            Ok(buf)
+        }
+    }
+
+    /// Encodes an RSA public key as DER formatted data.
+    pub fn public_key_to_der(&self) -> Result<Vec<u8>, ErrorStack> {
+        unsafe {
+            let len = try!(cvt(ffi::i2d_RSA_PUBKEY(self.as_ptr(), ptr::null_mut())));
+            let mut buf = vec![0; len as usize];
+            try!(cvt(ffi::i2d_RSA_PUBKEY(self.as_ptr(), &mut buf.as_mut_ptr())));
+            Ok(buf)
+        }
     }
 
     pub fn size(&self) -> usize {
@@ -250,6 +271,7 @@ impl Rsa {
     ///
     /// The public exponent will be 65537.
     pub fn generate(bits: u32) -> Result<Rsa, ErrorStack> {
+        ffi::init();
         unsafe {
             let rsa = Rsa(try!(cvt_p(ffi::RSA_new())));
             let e = try!(BigNum::from_u32(ffi::RSA_F4 as u32));
@@ -260,6 +282,7 @@ impl Rsa {
 
     /// Reads an RSA private key from PEM formatted data.
     pub fn private_key_from_pem(buf: &[u8]) -> Result<Rsa, ErrorStack> {
+        ffi::init();
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
             let rsa = try!(cvt_p(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.as_ptr(),
@@ -274,6 +297,7 @@ impl Rsa {
     pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<Rsa, ErrorStack>
         where F: FnOnce(&mut [c_char]) -> usize
     {
+        ffi::init();
         let mut cb = CallbackState::new(pass_cb);
         let mem_bio = try!(MemBioSlice::new(buf));
 
@@ -289,6 +313,7 @@ impl Rsa {
 
     /// Reads an RSA public key from PEM formatted data.
     pub fn public_key_from_pem(buf: &[u8]) -> Result<Rsa, ErrorStack> {
+        ffi::init();
         let mem_bio = try!(MemBioSlice::new(buf));
         unsafe {
             let rsa = try!(cvt_p(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.as_ptr(),
@@ -296,6 +321,26 @@ impl Rsa {
                                                               None,
                                                               ptr::null_mut())));
             Ok(Rsa(rsa))
+        }
+    }
+
+    /// Reads an RSA private key from DER formatted data.
+    pub fn private_key_from_der(buf: &[u8]) -> Result<Rsa, ErrorStack> {
+        unsafe {
+            ffi::init();
+            let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
+            let dsa = try!(cvt_p(ffi::d2i_RSAPrivateKey(ptr::null_mut(), &mut buf.as_ptr(), len)));
+            Ok(Rsa(dsa))
+        }
+    }
+
+    /// Reads an RSA public key from DER formatted data.
+    pub fn public_key_from_der(buf: &[u8]) -> Result<Rsa, ErrorStack> {
+        unsafe {
+            ffi::init();
+            let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
+            let dsa = try!(cvt_p(ffi::d2i_RSA_PUBKEY(ptr::null_mut(), &mut buf.as_ptr(), len)));
+            Ok(Rsa(dsa))
         }
     }
 }

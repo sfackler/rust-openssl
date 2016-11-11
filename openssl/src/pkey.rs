@@ -48,7 +48,7 @@ impl PKeyRef {
         }
     }
 
-    /// Stores private key as a PEM
+    /// Encodes the private key in the PEM format.
     // FIXME: also add password and encryption
     pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
@@ -65,7 +65,7 @@ impl PKeyRef {
         Ok(mem_bio.get_buf().to_owned())
     }
 
-    /// Encode public key in PEM format
+    /// Encodes the public key in the PEM format.
     pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
@@ -74,11 +74,20 @@ impl PKeyRef {
         Ok(mem_bio.get_buf().to_owned())
     }
 
-    /// Encode public key in DER format
+    /// Encodes the public key in the DER format.
     pub fn public_key_to_der(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
             try!(cvt(ffi::i2d_PUBKEY_bio(mem_bio.as_ptr(), self.as_ptr())));
+        }
+        Ok(mem_bio.get_buf().to_owned())
+    }
+
+    /// Encodes the private key in the DER format
+    pub fn private_key_to_der(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mem_bio = try!(MemBio::new());
+        unsafe {
+            try!(cvt(ffi::i2d_PrivateKey_bio(mem_bio.as_ptr(), self.as_ptr())));
         }
         Ok(mem_bio.get_buf().to_owned())
     }
@@ -148,7 +157,7 @@ impl PKey {
         }
     }
 
-    /// Reads private key from PEM, takes ownership of handle
+    /// Reads a private key from PEM.
     pub fn private_key_from_pem(buf: &[u8]) -> Result<PKey, ErrorStack> {
         ffi::init();
         let mem_bio = try!(MemBioSlice::new(buf));
@@ -181,7 +190,7 @@ impl PKey {
         }
     }
 
-    /// Reads public key from PEM, takes ownership of handle
+    /// Reads a public key from PEM.
     pub fn public_key_from_pem(buf: &[u8]) -> Result<PKey, ErrorStack> {
         ffi::init();
         let mem_bio = try!(MemBioSlice::new(buf));
