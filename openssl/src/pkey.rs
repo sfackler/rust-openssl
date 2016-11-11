@@ -14,12 +14,19 @@ use types::{OpenSslType, OpenSslTypeRef};
 type_!(PKey, PKeyRef, ffi::EVP_PKEY, ffi::EVP_PKEY_free);
 
 impl PKeyRef {
-    /// Get a reference to the interal RSA key for direct access to the key components
+    /// Returns a copy of the internal RSA key.
     pub fn rsa(&self) -> Result<Rsa, ErrorStack> {
         unsafe {
             let rsa = try!(cvt_p(ffi::EVP_PKEY_get1_RSA(self.as_ptr())));
-            // this is safe as the ffi increments a reference counter to the internal key
             Ok(Rsa::from_ptr(rsa))
+        }
+    }
+
+    /// Returns a copy of the internal DSA key.
+    pub fn dsa(&self) -> Result<Dsa, ErrorStack> {
+        unsafe {
+            let dsa = try!(cvt_p(ffi::EVP_PKEY_get1_DSA(self.as_ptr())));
+            Ok(Dsa::from_ptr(dsa))
         }
     }
 
@@ -150,22 +157,27 @@ impl PKey {
 
 #[cfg(test)]
 mod tests {
+    use rsa::Rsa;
+    use dsa::Dsa;
+
+    use super::*;
+
     #[test]
     fn test_private_key_from_pem() {
         let key = include_bytes!("../test/key.pem");
-        super::PKey::private_key_from_pem(key).unwrap();
+        PKey::private_key_from_pem(key).unwrap();
     }
 
     #[test]
     fn test_public_key_from_pem() {
         let key = include_bytes!("../test/key.pem.pub");
-        super::PKey::public_key_from_pem(key).unwrap();
+        PKey::public_key_from_pem(key).unwrap();
     }
 
     #[test]
     fn test_pem() {
         let key = include_bytes!("../test/key.pem");
-        let key = super::PKey::private_key_from_pem(key).unwrap();
+        let key = PKey::private_key_from_pem(key).unwrap();
 
         let priv_key = key.private_key_to_pem().unwrap();
         let pub_key = key.public_key_to_pem().unwrap();
@@ -174,5 +186,21 @@ mod tests {
         // the `PRIVATE KEY` or `PUBLIC KEY` strings.
         assert!(priv_key.windows(11).any(|s| s == b"PRIVATE KEY"));
         assert!(pub_key.windows(10).any(|s| s == b"PUBLIC KEY"));
+    }
+
+    #[test]
+    fn test_rsa_accessor() {
+        let rsa = Rsa::generate(2048).unwrap();
+        let pkey = PKey::from_rsa(rsa).unwrap();
+        pkey.rsa().unwrap();
+        assert!(pkey.dsa().is_err());
+    }
+
+    #[test]
+    fn test_dsa_accessor() {
+        let dsa = Dsa::generate(2048).unwrap();
+        let pkey = PKey::from_dsa(dsa).unwrap();
+        pkey.dsa().unwrap();
+        assert!(pkey.rsa().is_err());
     }
 }
