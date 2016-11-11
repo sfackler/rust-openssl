@@ -1323,10 +1323,14 @@ impl<S: Read + Write> SslStream<S> {
     /// value will identify if OpenSSL is waiting on read or write readiness.
     pub fn ssl_read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
         let ret = self.ssl.read(buf);
-        if ret >= 0 {
+        if ret > 0 {
             Ok(ret as usize)
         } else {
-            Err(self.make_error(ret))
+            match self.make_error(ret) {
+                // Don't treat unexpected EOFs as errors when reading
+                Error::Stream(ref e) if e.kind() == io::ErrorKind::ConnectionAborted => Ok(0),
+                e => Err(e),
+            }
         }
     }
 
@@ -1336,7 +1340,7 @@ impl<S: Read + Write> SslStream<S> {
     /// value will identify if OpenSSL is waiting on read or write readiness.
     pub fn ssl_write(&mut self, buf: &[u8]) -> Result<usize, Error> {
         let ret = self.ssl.write(buf);
-        if ret >= 0 {
+        if ret > 0 {
             Ok(ret as usize)
         } else {
             Err(self.make_error(ret))
@@ -1373,19 +1377,38 @@ impl<S> SslStream<S> {
             ffi::SSL_ERROR_SYSCALL => {
                 let errs = ErrorStack::get();
                 if errs.errors().is_empty() {
-                    if ret == 0 {
-                        Error::Stream(io::Error::new(io::ErrorKind::ConnectionAborted,
-                                                     "unexpected EOF observed"))
-                    } else {
-                        Error::Stream(self.get_bio_error())
+                    match self.get_bio_error() {
+                        Some(err) => Error::Stream(err),
+                        None => {
+                            Error::Stream(io::Error::new(io::ErrorKind::ConnectionAborted,
+                                                         "unexpected EOF observed"))
+                        }
                     }
                 } else {
                     Error::Ssl(errs)
                 }
             }
             ffi::SSL_ERROR_ZERO_RETURN => Error::ZeroReturn,
-            ffi::SSL_ERROR_WANT_WRITE => Error::WantWrite(self.get_bio_error()),
-            ffi::SSL_ERROR_WANT_READ => Error::WantRead(self.get_bio_error()),
+            ffi::SSL_ERROR_WANT_WRITE => {
+                let err = match self.get_bio_error() {
+                    Some(err) => err,
+                    None => {
+                        io::Error::new(io::ErrorKind::Other,
+                                       "BUG: got an SSL_ERROR_WANT_WRITE with no error in the BIO")
+                    }
+                };
+                Error::WantWrite(err)
+            },
+            ffi::SSL_ERROR_WANT_READ => {
+                let err = match self.get_bio_error() {
+                    Some(err) => err,
+                    None => {
+                        io::Error::new(io::ErrorKind::Other,
+                                       "BUG: got an SSL_ERROR_WANT_WRITE with no error in the BIO")
+                    }
+                };
+                Error::WantRead(err)
+            },
             err => {
                 Error::Stream(io::Error::new(io::ErrorKind::InvalidData,
                                              format!("unexpected error {}", err)))
@@ -1399,15 +1422,8 @@ impl<S> SslStream<S> {
         }
     }
 
-    fn get_bio_error(&mut self) -> io::Error {
-        let error = unsafe { bio::take_error::<S>(self.ssl.get_raw_rbio()) };
-        match error {
-            Some(error) => error,
-            None => {
-                io::Error::new(io::ErrorKind::Other,
-                               "BUG: got an ErrorSyscall without an error in the BIO?")
-            }
-        }
+    fn get_bio_error(&mut self) -> Option<io::Error> {
+        unsafe { bio::take_error::<S>(self.ssl.get_raw_rbio()) }
     }
 
     /// Returns a reference to the underlying stream.
