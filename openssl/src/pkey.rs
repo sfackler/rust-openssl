@@ -5,6 +5,7 @@ use ffi;
 
 use {cvt, cvt_p};
 use bio::{MemBio, MemBioSlice};
+use dh::Dh;
 use dsa::Dsa;
 use rsa::Rsa;
 use error::ErrorStack;
@@ -27,6 +28,14 @@ impl PKeyRef {
         unsafe {
             let dsa = try!(cvt_p(ffi::EVP_PKEY_get1_DSA(self.as_ptr())));
             Ok(Dsa::from_ptr(dsa))
+        }
+    }
+
+    /// Returns a copy of the internal DH key.
+    pub fn dh(&self) -> Result<Dh, ErrorStack> {
+        unsafe {
+            let dh = try!(cvt_p(ffi::EVP_PKEY_get1_DH(self.as_ptr())));
+            Ok(Dh::from_ptr(dh))
         }
     }
 
@@ -74,7 +83,7 @@ unsafe impl Send for PKey {}
 unsafe impl Sync for PKey {}
 
 impl PKey {
-    /// Create a new `PKey` containing an RSA key.
+    /// Creates a new `PKey` containing an RSA key.
     pub fn from_rsa(rsa: Rsa) -> Result<PKey, ErrorStack> {
         unsafe {
             let evp = try!(cvt_p(ffi::EVP_PKEY_new()));
@@ -85,7 +94,7 @@ impl PKey {
         }
     }
 
-    /// Create a new `PKey` containing a DSA key.
+    /// Creates a new `PKey` containing a DSA key.
     pub fn from_dsa(dsa: Dsa) -> Result<PKey, ErrorStack> {
         unsafe {
             let evp = try!(cvt_p(ffi::EVP_PKEY_new()));
@@ -96,7 +105,18 @@ impl PKey {
         }
     }
 
-    /// Create a new `PKey` containing an HMAC key.
+    /// Creates a new `PKey` containing a DH key.
+    pub fn from_dh(dh: Dh) -> Result<PKey, ErrorStack> {
+        unsafe {
+            let evp = try!(cvt_p(ffi::EVP_PKEY_new()));
+            let pkey = PKey(evp);
+            try!(cvt(ffi::EVP_PKEY_assign(pkey.0, ffi::EVP_PKEY_DH, dh.as_ptr() as *mut _)));
+            mem::forget(dh);
+            Ok(pkey)
+        }
+    }
+
+    /// Creates a new `PKey` containing an HMAC key.
     pub fn hmac(key: &[u8]) -> Result<PKey, ErrorStack> {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize);
@@ -157,8 +177,9 @@ impl PKey {
 
 #[cfg(test)]
 mod tests {
-    use rsa::Rsa;
+    use dh::Dh;
     use dsa::Dsa;
+    use rsa::Rsa;
 
     use super::*;
 
@@ -201,6 +222,15 @@ mod tests {
         let dsa = Dsa::generate(2048).unwrap();
         let pkey = PKey::from_dsa(dsa).unwrap();
         pkey.dsa().unwrap();
+        assert!(pkey.rsa().is_err());
+    }
+
+    #[test]
+    fn test_dh_accessor() {
+        let dh = include_bytes!("../test/dhparams.pem");
+        let dh = Dh::from_pem(dh).unwrap();
+        let pkey = PKey::from_dh(dh).unwrap();
+        pkey.dh().unwrap();
         assert!(pkey.rsa().is_err());
     }
 }
