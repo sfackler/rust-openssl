@@ -14,7 +14,7 @@ matrix:
       env: TARGET=x86_64-apple-darwin
     - os: osx
       env: TARGET=i686-apple-darwin
-      install: brew uninstall openssl && brew install openssl --universal
+      install: brew uninstall openssl && brew install openssl --universal --without-test
 
     # ARM-bit version compat
     - env: >
