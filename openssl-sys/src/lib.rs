@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code, overflowing_literals)]
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.9.0")]
+#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.9.1")]
 
 extern crate libc;
 

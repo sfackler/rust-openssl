@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/sfackler/rust-openssl.svg?branch=master)](https://travis-ci.org/sfackler/rust-openssl)
 
-[Documentation](https://sfackler.github.io/rust-openssl/doc/v0.9.0/openssl).
+[Documentation](https://sfackler.github.io/rust-openssl/doc/v0.9.1/openssl).
 
 ## Warning
 
@@ -37,9 +37,9 @@ compiling to a separate target, you'll typically need to compile OpenSSL from
 source. That can normally be done with:
 
 ```
-curl -O https://www.openssl.org/source/openssl-1.1.0b.tar.gz
-tar xf openssl-1.1.0b.tar.gz
-cd openssl-1.1.0b
+curl -O https://www.openssl.org/source/openssl-1.1.0c.tar.gz
+tar xf openssl-1.1.0c.tar.gz
+cd openssl-1.1.0c
 export CC=...
 ./Configure --prefix=... linux-x86_64 -fPIC
 make -j$(nproc)
