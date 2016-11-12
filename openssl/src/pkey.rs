@@ -96,8 +96,8 @@ impl PKeyRef {
     ///
     /// This corresponds to the bit length of the modulus of an RSA key, and the bit length of the
     /// group order for an elliptic curve key, for example.
-    pub fn bits(&self) -> usize {
-        unsafe { ffi::EVP_PKEY_bits(self.as_ptr()) as usize }
+    pub fn bits(&self) -> u32 {
+        unsafe { ffi::EVP_PKEY_bits(self.as_ptr()) as u32 }
     }
 
     /// Compares the public component of this key with another.
