@@ -533,9 +533,15 @@ fn set_id_callback() {
 fn set_id_callback() {}
 
 // macros
+
 #[cfg(ossl102)]
 pub unsafe fn SSL_CTX_set_ecdh_auto(ctx: *mut SSL_CTX, onoff: c_int) -> c_int {
     ::SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff as c_long, ::std::ptr::null_mut()) as c_int
+}
+
+#[cfg(ossl102)]
+pub unsafe fn SSL_set_ecdh_auto(ssl: *mut ::SSL, onoff: c_int) -> c_int {
+    ::SSL_ctrl(ssl, SSL_CTRL_SET_ECDH_AUTO, onoff as c_long, ::std::ptr::null_mut()) as c_int
 }
 
 extern {

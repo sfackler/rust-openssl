@@ -1083,6 +1083,10 @@ impl SslRef {
         }
     }
 
+    pub fn set_tmp_dh(&mut self, dh: &DhRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::SSL_set_tmp_dh(self.as_ptr(), dh.as_ptr()) as c_int).map(|_| ()) }
+    }
+
     pub fn set_tmp_dh_callback<F>(&mut self, callback: F)
         where F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + Any + 'static + Sync + Send
     {
@@ -1094,6 +1098,10 @@ impl SslRef {
             let f: unsafe extern fn (_, _, _) -> _ = raw_tmp_dh_ssl::<F>;
             ffi::SSL_set_tmp_dh_callback(self.as_ptr(), f);
         }
+    }
+
+    pub fn set_tmp_ecdh(&mut self, key: &EcKeyRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::SSL_set_tmp_ecdh(self.as_ptr(), key.as_ptr()) as c_int).map(|_| ()) }
     }
 
     /// Requires the `v101` feature and OpenSSL 1.0.1, or the `v102` feature and OpenSSL 1.0.2.
@@ -1109,6 +1117,16 @@ impl SslRef {
             let f: unsafe extern fn(_, _, _) -> _ = raw_tmp_ecdh_ssl::<F>;
             ffi::SSL_set_tmp_ecdh_callback(self.as_ptr(), f);
         }
+    }
+
+    /// If `onoff` is set to `true`, enable ECDHE for key exchange with
+    /// compatible clients, and automatically select an appropriate elliptic
+    /// curve.
+    ///
+    /// Requires the `v102` feature and OpenSSL 1.0.2.
+    #[cfg(all(feature = "v102", ossl102))]
+    pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::SSL_set_ecdh_auto(self.as_ptr(), onoff as c_int)).map(|_| ()) }
     }
 
     pub fn current_cipher(&self) -> Option<&SslCipherRef> {

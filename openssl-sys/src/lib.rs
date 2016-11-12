@@ -1233,6 +1233,14 @@ pub unsafe fn SSL_CTX_set_tmp_ecdh(ctx: *mut SSL_CTX, key: *mut EC_KEY) -> c_lon
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TMP_ECDH, 0, key as *mut c_void)
 }
 
+pub unsafe fn SSL_set_tmp_dh(ssl: *mut SSL, dh: *mut DH) -> c_long {
+    SSL_ctrl(ssl, SSL_CTRL_SET_TMP_DH, 0, dh as *mut c_void)
+}
+
+pub unsafe fn SSL_set_tmp_ecdh(ssl: *mut SSL, key: *mut EC_KEY) -> c_long {
+    SSL_ctrl(ssl, SSL_CTRL_SET_TMP_ECDH, 0, key as *mut c_void)
+}
+
 pub unsafe fn SSL_CTX_add_extra_chain_cert(ctx: *mut SSL_CTX, x509: *mut X509) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_EXTRA_CHAIN_CERT, 0, x509 as *mut c_void)
 }
