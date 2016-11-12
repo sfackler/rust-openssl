@@ -28,6 +28,7 @@ use std::net::UdpSocket;
 
 mod select;
 
+static ROOT_CERT: &'static [u8] = include_bytes!("../../../test/root-ca.pem");
 static CERT: &'static [u8] = include_bytes!("../../../test/cert.pem");
 static KEY: &'static [u8] = include_bytes!("../../../test/key.pem");
 
@@ -1190,6 +1191,19 @@ fn client_ca_list() {
 
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_client_ca_list(names);
+}
+
+#[test]
+fn cert_store() {
+    let (_s, tcp) = Server::new();
+
+    let cert = X509::from_pem(ROOT_CERT).unwrap();
+
+    let mut ctx = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
+    ctx.builder_mut().cert_store_mut().add_cert(cert).unwrap();
+    let ctx = ctx.build();
+
+    ctx.connect("foobar.com", tcp).unwrap();
 }
 
 fn _check_kinds() {

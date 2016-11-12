@@ -38,6 +38,7 @@ pub enum X509_EXTENSION {}
 pub enum X509_NAME {}
 pub enum X509_NAME_ENTRY {}
 pub enum X509_REQ {}
+pub enum X509_STORE {}
 pub enum X509_STORE_CTX {}
 pub enum bio_st {}
 pub enum PKCS12 {}
@@ -1622,6 +1623,7 @@ extern {
     pub fn SSL_CTX_use_PrivateKey(ctx: *mut SSL_CTX, key: *mut EVP_PKEY) -> c_int;
     pub fn SSL_CTX_check_private_key(ctx: *const SSL_CTX) -> c_int;
     pub fn SSL_CTX_set_client_CA_list(ctx: *mut SSL_CTX, list: *mut stack_st_X509_NAME);
+    pub fn SSL_CTX_get_cert_store(ctx: *mut SSL_CTX) -> *mut X509_STORE;
 
     #[cfg(not(ossl101))]
     pub fn SSL_CTX_get0_certificate(ctx: *const SSL_CTX) -> *mut X509;
@@ -1692,6 +1694,9 @@ extern {
 
     pub fn ASN1_STRING_free(x: *mut ASN1_STRING);
     pub fn ASN1_STRING_length(x: *const ASN1_STRING) -> c_int;
+
+    pub fn X509_STORE_free(store: *mut X509_STORE);
+    pub fn X509_STORE_add_cert(store: *mut X509_STORE, x: *mut X509) -> c_int;
 
     pub fn X509_STORE_CTX_free(ctx: *mut X509_STORE_CTX);
     pub fn X509_STORE_CTX_get_current_cert(ctx: *mut X509_STORE_CTX) -> *mut X509;

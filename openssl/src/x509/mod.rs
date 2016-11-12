@@ -36,6 +36,7 @@ pub mod verify;
 use x509::extension::{ExtensionType, Extension};
 
 pub mod extension;
+pub mod store;
 
 #[cfg(test)]
 mod tests;

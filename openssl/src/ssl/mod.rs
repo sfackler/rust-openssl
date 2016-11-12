@@ -94,6 +94,7 @@ use {init, cvt, cvt_p};
 use dh::DhRef;
 use ec_key::EcKeyRef;
 use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError, X509Name};
+use x509::store::X509StoreBuilderRef;
 #[cfg(any(ossl102, ossl110))]
 use verify::X509VerifyParamRef;
 use pkey::PKeyRef;
@@ -737,6 +738,16 @@ impl SslContextBuilder {
     /// Checks consistency between the private key and certificate.
     pub fn check_private_key(&self) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_CTX_check_private_key(self.as_ptr())).map(|_| ()) }
+    }
+
+    /// Returns a shared reference to the context's certificate store.
+    pub fn cert_store(&self) -> &X509StoreBuilderRef {
+        unsafe { X509StoreBuilderRef::from_ptr(ffi::SSL_CTX_get_cert_store(self.as_ptr())) }
+    }
+
+    /// Returns a mutable reference to the context's certificate store.
+    pub fn cert_store_mut(&mut self) -> &mut X509StoreBuilderRef {
+        unsafe { X509StoreBuilderRef::from_ptr_mut(ffi::SSL_CTX_get_cert_store(self.as_ptr())) }
     }
 
     pub fn build(self) -> SslContext {
