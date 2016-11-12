@@ -17,10 +17,8 @@ use tempdir::TempDir;
 use dh::Dh;
 use hash::MessageDigest;
 use ssl;
-use ssl::SSL_VERIFY_PEER;
-use ssl::{SslMethod, HandshakeError};
-use ssl::{SslContext, SslStream, Ssl, ShutdownResult, SslConnectorBuilder, SslAcceptorBuilder,
-          Error};
+use ssl::{SslMethod, HandshakeError, SslContext, SslStream, Ssl, ShutdownResult,
+    SslConnectorBuilder, SslAcceptorBuilder, Error, SSL_VERIFY_PEER, SSL_VERIFY_NONE};
 use x509::{X509StoreContext, X509, X509Name, X509_FILETYPE_PEM};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::verify::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS;
@@ -1088,6 +1086,36 @@ fn connector_invalid_hostname() {
 
     let s = TcpStream::connect("google.com:443").unwrap();
     assert!(connector.connect("foobar.com", s).is_err());
+}
+
+#[test]
+fn connector_invalid_no_hostname_verification() {
+    let connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap().build();
+
+    let s = TcpStream::connect("google.com:443").unwrap();
+    connector.connect_without_providing_domain_for_certificate_verification_and_server_name_indication(s)
+        .unwrap();
+}
+
+#[test]
+fn connector_no_hostname_still_verifies() {
+    let (_s, tcp) = Server::new();
+
+    let connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap().build();
+
+    assert!(connector.connect_without_providing_domain_for_certificate_verification_and_server_name_indication(tcp)
+        .is_err());
+}
+
+#[test]
+fn connector_no_hostname_can_disable_verify() {
+    let (_s, tcp) = Server::new();
+
+    let mut connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
+    connector.builder_mut().set_verify(SSL_VERIFY_NONE);
+    let connector = connector.build();
+
+    connector.connect_without_providing_domain_for_certificate_verification_and_server_name_indication(tcp).unwrap();
 }
 
 #[test]

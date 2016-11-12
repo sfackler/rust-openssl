@@ -61,6 +61,7 @@ impl SslConnectorBuilder {
         try!(ctx.set_cipher_list("ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:DH+CHACHA20:ECDH+AES256:\
                                   DH+AES256:ECDH+AES128:DH+AES:ECDH+HIGH:DH+HIGH:RSA+AESGCM:\
                                   RSA+AES:RSA+HIGH:!aNULL:!eNULL:!MD5:!3DES"));
+        ctx.set_verify(SSL_VERIFY_PEER);
 
         Ok(SslConnectorBuilder(ctx))
     }
@@ -102,6 +103,22 @@ impl SslConnector {
         try!(setup_verify(&mut ssl, domain));
 
         ssl.connect(stream)
+    }
+
+    /// Initiates a client-side TLS session on a stream without performing hostname verification.
+    ///
+    /// The verification configuration of the connector's `SslContext` is not overridden.
+    ///
+    /// # Warning
+    ///
+    /// You should think very carefully before you use this method. If hostname verification is not
+    /// used, *any* valid certificate for *any* site will be trusted for use from any other. This
+    /// introduces a significant vulnerability to man-in-the-middle attacks.
+    pub fn connect_without_providing_domain_for_certificate_verification_and_server_name_indication<S>(
+            &self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
+        where S: Read + Write
+    {
+        try!(Ssl::new(&self.0)).connect(stream)
     }
 }
 
