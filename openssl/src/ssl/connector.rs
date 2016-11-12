@@ -7,21 +7,15 @@ use ssl::{self, SslMethod, SslContextBuilder, SslContext, Ssl, SSL_VERIFY_PEER, 
 use pkey::PKeyRef;
 use x509::X509Ref;
 
-// Serialized form of DH_get_2048_256
-#[cfg(any(ossl101, all(test, any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))))]
+// ffdhe2048 from https://wiki.mozilla.org/Security/Server_Side_TLS#ffdhe2048
 const DHPARAM_PEM: &'static str = r#"
 -----BEGIN DH PARAMETERS-----
-MIICCQKCAQEAh6jmHbS2Zjz/u9GcZRlZmYzu9ghmDdDyXSzu1ENeOwDgDfjx1hlX
-1Pr330VhsqowFsPZETQJb6o79Cltgw6afCCeDGSXUXq9WoqdMGvPZ+2R+eZyW0dY
-wCLgse9Cdb97bFv8EdRfkIi5QfVOseWbuLw5oL8SMH9cT9twxYGyP3a2Osrhyqa3
-kC1SUmc1SIoO8TxtmlG/pKs62DR3llJNjvahZ7WkGCXZZ+FE5RQFZCUcysuD5rSG
-9rPKP3lxUGAmwLhX9omWKFbe1AEKvQvmIcOjlgpU5xDDdfJjddcBQQOktUMwwZiv
-EmEW0iduEXFfaTh3+tfvCcrbCUrpHhoVlwKCAQA/syybcxNNCy53UGZg7b1ITKex
-jyHvIFQH9Hk6GguhJRDbwVB3vkY//0/tSqwLtVW+OmwbDGtHsbw3c79+jG9ikBIo
-+MKMuxilWuMTQQAKZQGW+THHelfy3fRj5ensFEt3feYqqrioYorDdtKC1u04ZOZ5
-gkKOvIMdFDSPby+Rk7UEWvJ2cWTh38lnwfs/LlWkvRv/6DucgNBSuYXRguoK2yo7
-cxPT/hTISEseBSWIubfSu9LfAWGZ7NBuFVfNCRWzNTu7ZODsN3/QKDcN+StSx4kU
-KM3GfrYYS1I9HbJGwy9jB4SQ8A741kfRSNR5VFFeIyfP75jFgmZLTA9sxBZZ
+MIIBCAKCAQEA//////////+t+FRYortKmq/cViAnPTzx2LnFg84tNpWp4TZBFGQz
++8yTnc4kmz75fS/jY2MMddj2gbICrsRhetPfHtXV/WVhJDP1H18GbtCFY2VVPe0a
+87VXE15/V8k1mE8McODmi3fipona8+/och3xWKE2rec1MKzKT0g6eXq8CrGCsyT7
+YdEIqUuyyOP7uWrat2DX9GgdT0Kj3jlN9K5W7edjcrsZCwenyO4KbXCeAvzhzffi
+7MA0BM0oNC9hkXL+nOmFg/+OTxIy7vKBg8P+OxtMb61zO7X8vC7CIAXFjvGDfRaD
+ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
 -----END DH PARAMETERS-----
 "#;
 
@@ -142,7 +136,7 @@ impl SslAcceptorBuilder {
               I::Item: AsRef<X509Ref>
     {
         let mut ctx = try!(ctx(method));
-        let dh = try!(get_dh());
+        let dh = try!(Dh::from_pem(DHPARAM_PEM.as_bytes()));
         try!(ctx.set_tmp_dh(&dh));
         try!(setup_curves(&mut ctx));
         try!(ctx.set_cipher_list("ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:\
@@ -217,22 +211,6 @@ impl SslAcceptorBuilder {
     pub fn build(self) -> SslAcceptor {
         SslAcceptor(self.0.build())
     }
-}
-
-#[cfg(ossl101)]
-fn get_dh() -> Result<Dh, ErrorStack> {
-    Dh::from_pem(DHPARAM_PEM.as_bytes())
-}
-
-#[cfg(not(ossl101))]
-fn get_dh() -> Result<Dh, ErrorStack> {
-    use ffi;
-
-    use cvt_p;
-    use types::OpenSslType;
-
-    // manually call into ffi to avoid forcing the features
-    unsafe { cvt_p(ffi::DH_get_2048_256()).map(|p| Dh::from_ptr(p)) }
 }
 
 #[cfg(ossl101)]
@@ -454,17 +432,5 @@ mod verify {
             }
             _ => false,
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    #[test]
-    fn check_dhparam() {
-        use dh::Dh;
-
-        let expected = String::from_utf8(Dh::get_2048_256().unwrap().to_pem().unwrap()).unwrap();
-        assert_eq!(expected.trim(), super::DHPARAM_PEM.trim());
     }
 }
