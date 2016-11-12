@@ -10,6 +10,21 @@ use crypto::CryptoString;
 use error::ErrorStack;
 use types::{OpenSslType, OpenSslTypeRef};
 
+#[cfg(ossl10x)]
+use ffi::{get_rfc2409_prime_768 as BN_get_rfc2409_prime_768,
+          get_rfc2409_prime_1024 as BN_get_rfc2409_prime_1024,
+          get_rfc3526_prime_1536 as BN_get_rfc3526_prime_1536,
+          get_rfc3526_prime_2048 as BN_get_rfc3526_prime_2048,
+          get_rfc3526_prime_3072 as BN_get_rfc3526_prime_3072,
+          get_rfc3526_prime_4096 as BN_get_rfc3526_prime_4096,
+          get_rfc3526_prime_6144 as BN_get_rfc3526_prime_6144,
+          get_rfc3526_prime_8192 as BN_get_rfc3526_prime_8192};
+
+#[cfg(ossl110)]
+use ffi::{BN_get_rfc2409_prime_768, BN_get_rfc2409_prime_1024, BN_get_rfc3526_prime_1536,
+    BN_get_rfc3526_prime_2048, BN_get_rfc3526_prime_3072, BN_get_rfc3526_prime_4096,
+    BN_get_rfc3526_prime_6144, BN_get_rfc3526_prime_8192};
+
 /// Options for the most significant bits of a randomly generated `BigNum`.
 pub struct MsbOption(c_int);
 
@@ -516,6 +531,7 @@ impl BigNum {
     /// Creates a `BigNum` from a decimal string.
     pub fn from_dec_str(s: &str) -> Result<BigNum, ErrorStack> {
         unsafe {
+            ffi::init();
             let c_str = CString::new(s.as_bytes()).unwrap();
             let mut bn = ptr::null_mut();
             try!(cvt(ffi::BN_dec2bn(&mut bn, c_str.as_ptr() as *const _)));
@@ -526,10 +542,67 @@ impl BigNum {
     /// Creates a `BigNum` from a hexadecimal string.
     pub fn from_hex_str(s: &str) -> Result<BigNum, ErrorStack> {
         unsafe {
+            ffi::init();
             let c_str = CString::new(s.as_bytes()).unwrap();
             let mut bn = ptr::null_mut();
             try!(cvt(ffi::BN_hex2bn(&mut bn, c_str.as_ptr() as *const _)));
             Ok(BigNum::from_ptr(bn))
+        }
+    }
+
+    pub fn get_rfc2409_prime_768() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(BN_get_rfc2409_prime_768(ptr::null_mut())).map(BigNum)
+        }
+    }
+
+    pub fn get_rfc2409_prime_1024() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(BN_get_rfc2409_prime_1024(ptr::null_mut())).map(BigNum)
+        }
+    }
+
+    pub fn get_rfc3526_prime_1536() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(BN_get_rfc3526_prime_1536(ptr::null_mut())).map(BigNum)
+        }
+    }
+
+    pub fn get_rfc3526_prime_2048() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(BN_get_rfc3526_prime_2048(ptr::null_mut())).map(BigNum)
+        }
+    }
+
+    pub fn get_rfc3526_prime_3072() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(BN_get_rfc3526_prime_3072(ptr::null_mut())).map(BigNum)
+        }
+    }
+
+    pub fn get_rfc3526_prime_4096() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(BN_get_rfc3526_prime_4096(ptr::null_mut())).map(BigNum)
+        }
+    }
+
+    pub fn get_rfc3526_prime_6144() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(BN_get_rfc3526_prime_6144(ptr::null_mut())).map(BigNum)
+        }
+    }
+
+    pub fn get_rfc3526_prime_8192() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(BN_get_rfc3526_prime_8192(ptr::null_mut())).map(BigNum)
         }
     }
 

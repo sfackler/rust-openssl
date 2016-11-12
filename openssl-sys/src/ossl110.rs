@@ -52,9 +52,21 @@ extern {
     pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
     pub fn BIO_s_file() -> *const BIO_METHOD;
     pub fn BIO_s_mem() -> *const BIO_METHOD;
+
+    pub fn BN_get_rfc2409_prime_768(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn BN_get_rfc2409_prime_1024(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn BN_get_rfc3526_prime_1536(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn BN_get_rfc3526_prime_2048(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn BN_get_rfc3526_prime_3072(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn BN_get_rfc3526_prime_4096(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn BN_get_rfc3526_prime_6144(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn BN_get_rfc3526_prime_8192(bn: *mut BIGNUM) -> *mut BIGNUM;
+
     pub fn CRYPTO_free(buf: *mut c_void, file: *const c_char, line: c_int);
+
     pub fn HMAC_CTX_new() -> *mut HMAC_CTX;
     pub fn HMAC_CTX_free(ctx: *mut HMAC_CTX);
+
     pub fn TLS_method() -> *const ::SSL_METHOD;
     pub fn DTLS_method() -> *const ::SSL_METHOD;
     pub fn SSL_CIPHER_get_version(cipher: *const ::SSL_CIPHER) -> *const c_char;

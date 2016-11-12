@@ -548,6 +548,16 @@ extern {
     pub fn BIO_new(type_: *mut BIO_METHOD) -> *mut BIO;
     pub fn BIO_s_file() -> *mut BIO_METHOD;
     pub fn BIO_s_mem() -> *mut BIO_METHOD;
+
+    pub fn get_rfc2409_prime_768(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn get_rfc2409_prime_1024(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn get_rfc3526_prime_1536(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn get_rfc3526_prime_2048(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn get_rfc3526_prime_3072(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn get_rfc3526_prime_4096(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn get_rfc3526_prime_6144(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn get_rfc3526_prime_8192(bn: *mut BIGNUM) -> *mut BIGNUM;
+
     pub fn CRYPTO_free(buf: *mut c_void);
     pub fn CRYPTO_num_locks() -> c_int;
     pub fn CRYPTO_set_locking_callback(func: unsafe extern "C" fn(mode: c_int,
