@@ -616,6 +616,7 @@ impl BigNum {
     /// ```
     pub fn from_slice(n: &[u8]) -> Result<BigNum, ErrorStack> {
         unsafe {
+            ffi::init();
             assert!(n.len() <= c_int::max_value() as usize);
             cvt_p(ffi::BN_bin2bn(n.as_ptr(), n.len() as c_int, ptr::null_mut()))
                 .map(|p| BigNum::from_ptr(p))
