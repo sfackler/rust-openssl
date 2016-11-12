@@ -1271,6 +1271,69 @@ fn tmp_ecdh_callback() {
     assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
+#[test]
+fn tmp_dh_callback_ssl() {
+    static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    thread::spawn(move ||{
+        let stream = listener.accept().unwrap().0;
+        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM).unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM).unwrap();
+        let mut ssl = Ssl::new(&ctx.build()).unwrap();
+        ssl.set_tmp_dh_callback(|_, _, _| {
+            CALLED_BACK.store(true, Ordering::SeqCst);
+            let dh = include_bytes!("../../../test/dhparams.pem");
+            Dh::from_pem(dh)
+        });
+        ssl.accept(stream).unwrap();
+    });
+
+    let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    ctx.set_cipher_list("DHE").unwrap();
+    let ssl = Ssl::new(&ctx.build()).unwrap();
+    ssl.connect(stream).unwrap();
+
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
+}
+
+#[test]
+#[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
+fn tmp_ecdh_callback_ssl() {
+    use ec_key::EcKey;
+    use nid;
+
+    static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    thread::spawn(move ||{
+        let stream = listener.accept().unwrap().0;
+        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM).unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM).unwrap();
+        let mut ssl = Ssl::new(&ctx.build()).unwrap();
+        ssl.set_tmp_ecdh_callback(|_, _, _| {
+            CALLED_BACK.store(true, Ordering::SeqCst);
+            EcKey::new_by_curve_name(nid::X9_62_PRIME256V1)
+        });
+        ssl.accept(stream).unwrap();
+    });
+
+    let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    ctx.set_cipher_list("ECDHE").unwrap();
+    let ssl = Ssl::new(&ctx.build()).unwrap();
+    ssl.connect(stream).unwrap();
+
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
+}
+
 fn _check_kinds() {
     fn is_send<T: Send>() {}
     fn is_sync<T: Sync>() {}

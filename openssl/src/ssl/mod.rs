@@ -225,7 +225,7 @@ fn get_callback_idx<T: Any + 'static>() -> c_int {
     *INDEXES.lock().unwrap().entry(TypeId::of::<T>()).or_insert_with(|| get_new_idx::<T>())
 }
 
-fn get_ssl_verify_data_idx<T: Any + 'static>() -> c_int {
+fn get_ssl_callback_idx<T: Any + 'static>() -> c_int {
     *SSL_INDEXES.lock().unwrap().entry(TypeId::of::<T>()).or_insert_with(|| get_new_ssl_idx::<T>())
 }
 
@@ -289,7 +289,7 @@ extern "C" fn ssl_raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_ST
     unsafe {
         let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
         let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
-        let verify = ffi::SSL_get_ex_data(ssl as *const _, get_ssl_verify_data_idx::<F>());
+        let verify = ffi::SSL_get_ex_data(ssl as *const _, get_ssl_callback_idx::<F>());
         let verify: &F = &*(verify as *mut F);
 
         let ctx = X509StoreContextRef::from_ptr(x509_ctx);
@@ -408,6 +408,53 @@ unsafe extern fn raw_tmp_ecdh<F>(ssl: *mut ffi::SSL,
 {
     let ctx = ffi::SSL_get_SSL_CTX(ssl);
     let callback = ffi::SSL_CTX_get_ex_data(ctx, get_callback_idx::<F>());
+    let callback = &*(callback as *mut F);
+
+    let ssl = SslRef::from_ptr_mut(ssl);
+    match callback(ssl, is_export != 0, keylength as u32) {
+        Ok(ec_key) => {
+            let ptr = ec_key.as_ptr();
+            mem::forget(ec_key);
+            ptr
+        }
+        Err(_) => {
+            // FIXME reset error stack
+            ptr::null_mut()
+        }
+    }
+}
+
+unsafe extern fn raw_tmp_dh_ssl<F>(ssl: *mut ffi::SSL,
+                                   is_export: c_int,
+                                   keylength: c_int)
+                                   -> *mut ffi::DH
+    where F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + Any + 'static + Sync + Send
+{
+    let callback = ffi::SSL_get_ex_data(ssl, get_ssl_callback_idx::<F>());
+    let callback = &*(callback as *mut F);
+
+    let ssl = SslRef::from_ptr_mut(ssl);
+    match callback(ssl, is_export != 0, keylength as u32) {
+        Ok(dh) => {
+            let ptr = dh.as_ptr();
+            mem::forget(dh);
+            ptr
+        }
+        Err(_) => {
+            // FIXME reset error stack
+            ptr::null_mut()
+        }
+    }
+}
+
+#[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
+unsafe extern fn raw_tmp_ecdh_ssl<F>(ssl: *mut ffi::SSL,
+                                     is_export: c_int,
+                                     keylength: c_int)
+                                     -> *mut ffi::EC_KEY
+    where F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + Any + 'static + Sync + Send
+{
+    let callback = ffi::SSL_get_ex_data(ssl, get_ssl_callback_idx::<F>());
     let callback = &*(callback as *mut F);
 
     let ssl = SslRef::from_ptr_mut(ssl);
@@ -1030,9 +1077,37 @@ impl SslRef {
         unsafe {
             let verify = Box::new(verify);
             ffi::SSL_set_ex_data(self.as_ptr(),
-                                 get_ssl_verify_data_idx::<F>(),
+                                 get_ssl_callback_idx::<F>(),
                                  mem::transmute(verify));
             ffi::SSL_set_verify(self.as_ptr(), mode.bits as c_int, Some(ssl_raw_verify::<F>));
+        }
+    }
+
+    pub fn set_tmp_dh_callback<F>(&mut self, callback: F)
+        where F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + Any + 'static + Sync + Send
+    {
+        unsafe {
+            let callback = Box::new(callback);
+            ffi::SSL_set_ex_data(self.as_ptr(),
+                                 get_ssl_callback_idx::<F>(),
+                                 Box::into_raw(callback) as *mut c_void);
+            let f: unsafe extern fn (_, _, _) -> _ = raw_tmp_dh_ssl::<F>;
+            ffi::SSL_set_tmp_dh_callback(self.as_ptr(), f);
+        }
+    }
+
+    /// Requires the `v101` feature and OpenSSL 1.0.1, or the `v102` feature and OpenSSL 1.0.2.
+    #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
+    pub fn set_tmp_ecdh_callback<F>(&mut self, callback: F)
+        where F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + Any + 'static + Sync + Send
+    {
+        unsafe {
+            let callback = Box::new(callback);
+            ffi::SSL_set_ex_data(self.as_ptr(),
+                                 get_ssl_callback_idx::<F>(),
+                                 Box::into_raw(callback) as *mut c_void);
+            let f: unsafe extern fn(_, _, _) -> _ = raw_tmp_ecdh_ssl::<F>;
+            ffi::SSL_set_tmp_ecdh_callback(self.as_ptr(), f);
         }
     }
 
