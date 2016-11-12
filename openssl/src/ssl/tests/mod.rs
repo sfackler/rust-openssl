@@ -1264,7 +1264,11 @@ fn tmp_ecdh_callback() {
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-    ctx.set_cipher_list("kECDHe").unwrap();
+    if cfg!(ossl101) {
+        ctx.set_cipher_list("kECDHe").unwrap();
+    } else {
+        ctx.set_cipher_list("ECDHE").unwrap();
+    }
     let ssl = Ssl::new(&ctx.build()).unwrap();
     ssl.connect(stream).unwrap();
 
@@ -1327,7 +1331,11 @@ fn tmp_ecdh_callback_ssl() {
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-    ctx.set_cipher_list("kECDHe").unwrap();
+    if cfg!(ossl101) {
+        ctx.set_cipher_list("kECDHe").unwrap();
+    } else {
+        ctx.set_cipher_list("ECDHE").unwrap();
+    }
     let ssl = Ssl::new(&ctx.build()).unwrap();
     ssl.connect(stream).unwrap();
 
