@@ -114,7 +114,7 @@ impl SslConnector {
     /// You should think very carefully before you use this method. If hostname verification is not
     /// used, *any* valid certificate for *any* site will be trusted for use from any other. This
     /// introduces a significant vulnerability to man-in-the-middle attacks.
-    pub fn connect_without_providing_domain_for_certificate_verification_and_server_name_indication<S>(
+    pub fn danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication<S>(
             &self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
         where S: Read + Write
     {

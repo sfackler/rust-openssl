@@ -1093,7 +1093,7 @@ fn connector_invalid_no_hostname_verification() {
     let connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap().build();
 
     let s = TcpStream::connect("google.com:443").unwrap();
-    connector.connect_without_providing_domain_for_certificate_verification_and_server_name_indication(s)
+    connector.danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication(s)
         .unwrap();
 }
 
@@ -1103,7 +1103,7 @@ fn connector_no_hostname_still_verifies() {
 
     let connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap().build();
 
-    assert!(connector.connect_without_providing_domain_for_certificate_verification_and_server_name_indication(tcp)
+    assert!(connector.danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication(tcp)
         .is_err());
 }
 
@@ -1115,7 +1115,7 @@ fn connector_no_hostname_can_disable_verify() {
     connector.builder_mut().set_verify(SSL_VERIFY_NONE);
     let connector = connector.build();
 
-    connector.connect_without_providing_domain_for_certificate_verification_and_server_name_indication(tcp).unwrap();
+    connector.danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication(tcp).unwrap();
 }
 
 #[test]
