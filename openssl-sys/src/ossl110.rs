@@ -147,6 +147,7 @@ extern {
     pub fn X509_STORE_CTX_get0_chain(ctx: *mut ::X509_STORE_CTX) -> *mut stack_st_X509;
     pub fn EVP_MD_CTX_new() -> *mut EVP_MD_CTX;
     pub fn EVP_MD_CTX_free(ctx: *mut EVP_MD_CTX);
+    pub fn EVP_PKEY_bits(key: *const EVP_PKEY) -> c_int;
 
     pub fn OpenSSL_version_num() -> c_ulong;
     pub fn OpenSSL_version(key: c_int) -> *const c_char;

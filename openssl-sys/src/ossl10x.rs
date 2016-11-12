@@ -600,6 +600,7 @@ extern {
                            line: c_int) -> c_int;
     pub fn EVP_MD_CTX_create() -> *mut EVP_MD_CTX;
     pub fn EVP_MD_CTX_destroy(ctx: *mut EVP_MD_CTX);
+    pub fn EVP_PKEY_bits(key: *mut EVP_PKEY) -> c_int;
 
     pub fn sk_num(st: *const _STACK) -> c_int;
     pub fn sk_value(st: *const _STACK, n: c_int) -> *mut c_void;
