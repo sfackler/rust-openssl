@@ -57,6 +57,7 @@ impl DsaRef {
         }
     }
 
+    // FIXME should return u32
     pub fn size(&self) -> Option<u32> {
         if self.q().is_some() {
             unsafe { Some(ffi::DSA_size(self.as_ptr()) as u32) }

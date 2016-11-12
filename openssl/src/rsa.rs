@@ -70,6 +70,7 @@ impl RsaRef {
         }
     }
 
+    // FIXME should return u32
     pub fn size(&self) -> usize {
         unsafe {
             assert!(self.n().is_some());

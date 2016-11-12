@@ -576,12 +576,22 @@ extern {
                                 dup_func: Option<::CRYPTO_EX_dup>,
                                 free_func: Option<::CRYPTO_EX_free>)
                                 -> c_int;
+    pub fn SSL_set_tmp_ecdh_callback(ssl: *mut ::SSL,
+                                     ecdh: unsafe extern fn(ssl: *mut ::SSL,
+                                                            is_export: c_int,
+                                                            keylength: c_int)
+                                                            -> *mut ::EC_KEY);
     pub fn SSL_CIPHER_get_version(cipher: *const ::SSL_CIPHER) -> *mut c_char;
     pub fn SSL_CTX_get_ex_new_index(argl: c_long, argp: *mut c_void,
                                     new_func: Option<::CRYPTO_EX_new>,
                                     dup_func: Option<::CRYPTO_EX_dup>,
                                     free_func: Option<::CRYPTO_EX_free>)
                                     -> c_int;
+    pub fn SSL_CTX_set_tmp_ecdh_callback(ctx: *mut ::SSL_CTX,
+                                         ecdh: unsafe extern fn(ssl: *mut ::SSL,
+                                                                is_export: c_int,
+                                                                keylength: c_int)
+                                                                -> *mut ::EC_KEY);
     pub fn X509_get_subject_name(x: *mut ::X509) -> *mut ::X509_NAME;
     pub fn X509_set_notAfter(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
     pub fn X509_set_notBefore(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
