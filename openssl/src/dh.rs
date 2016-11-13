@@ -1,7 +1,5 @@
 use error::ErrorStack;
 use ffi;
-use libc::c_long;
-use std::cmp;
 use std::mem;
 use std::ptr;
 
@@ -49,15 +47,7 @@ impl Dh {
         }
     }
 
-    /// Reads Diffie-Hellman parameters from DER.
-    pub fn from_der(buf: &[u8]) -> Result<Dh, ErrorStack> {
-        unsafe {
-            init();
-            let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
-            let dh = try!(cvt_p(ffi::d2i_DHparams(ptr::null_mut(), &mut buf.as_ptr(), len)));
-            Ok(Dh(dh))
-        }
-    }
+    from_der!(Dh, ffi::d2i_DHparams);
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]

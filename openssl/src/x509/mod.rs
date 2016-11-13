@@ -1,6 +1,5 @@
 use libc::{c_char, c_int, c_long, c_ulong};
 use std::borrow::Borrow;
-use std::cmp;
 use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::{CStr, CString};
@@ -440,15 +439,7 @@ impl ToOwned for X509Ref {
 }
 
 impl X509 {
-    /// Reads a certificate from DER.
-    pub fn from_der(buf: &[u8]) -> Result<X509, ErrorStack> {
-        unsafe {
-            let mut ptr = buf.as_ptr();
-            let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
-            let x509 = try!(cvt_p(ffi::d2i_X509(ptr::null_mut(), &mut ptr, len)));
-            Ok(X509::from_ptr(x509))
-        }
-    }
+    from_der!(X509, ffi::d2i_X509);
 
     /// Reads a certificate from PEM.
     pub fn from_pem(buf: &[u8]) -> Result<X509, ErrorStack> {
@@ -583,6 +574,8 @@ impl X509Req {
             Ok(X509Req::from_ptr(handle))
         }
     }
+
+    from_der!(X509Req, ffi::d2i_X509_REQ);
 }
 
 /// A collection of X.509 extensions.

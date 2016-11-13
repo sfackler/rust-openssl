@@ -1760,6 +1760,7 @@ extern {
     pub fn i2d_ECPrivateKey(ec_key: *mut EC_KEY, pp: *mut *mut c_uchar) -> c_int;
 
     pub fn d2i_X509(a: *mut *mut X509, pp: *mut *const c_uchar, length: c_long) -> *mut X509;
+    pub fn d2i_X509_REQ(a: *mut *mut X509_REQ, pp: *mut *const c_uchar, length: c_long) -> *mut X509_REQ;
     pub fn i2d_X509_bio(b: *mut BIO, x: *mut X509) -> c_int;
     pub fn i2d_X509(x: *mut X509, buf: *mut *mut u8) -> c_int;
     pub fn i2d_X509_REQ_bio(b: *mut BIO, x: *mut X509_REQ) -> c_int;

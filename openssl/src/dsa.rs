@@ -1,9 +1,8 @@
 use error::ErrorStack;
 use ffi;
-use libc::{c_int, c_char, c_void, c_long};
+use libc::{c_int, c_char, c_void};
 use std::fmt;
 use std::ptr;
-use std::cmp;
 
 use bio::{MemBio, MemBioSlice};
 use bn::BigNumRef;
@@ -97,6 +96,8 @@ impl Dsa {
     }
 
     private_key_from_pem!(Dsa, ffi::PEM_read_bio_DSAPrivateKey);
+    private_key_from_der!(Dsa, ffi::d2i_DSAPrivateKey);
+    public_key_from_der!(Dsa, ffi::d2i_DSAPublicKey);
 
     #[deprecated(since = "0.9.2", note = "use private_key_from_pem_callback")]
     pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<Dsa, ErrorStack>
@@ -126,26 +127,6 @@ impl Dsa {
                                                               ptr::null_mut(),
                                                               None,
                                                               ptr::null_mut())));
-            Ok(Dsa(dsa))
-        }
-    }
-
-    /// Reads a DSA private key from DER formatted data.
-    pub fn private_key_from_der(buf: &[u8]) -> Result<Dsa, ErrorStack> {
-        unsafe {
-            ffi::init();
-            let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
-            let dsa = try!(cvt_p(ffi::d2i_DSAPrivateKey(ptr::null_mut(), &mut buf.as_ptr(), len)));
-            Ok(Dsa(dsa))
-        }
-    }
-
-    /// Reads a DSA public key from DER formatted data.
-    pub fn public_key_from_der(buf: &[u8]) -> Result<Dsa, ErrorStack> {
-        unsafe {
-            ffi::init();
-            let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
-            let dsa = try!(cvt_p(ffi::d2i_DSAPublicKey(ptr::null_mut(), &mut buf.as_ptr(), len)));
             Ok(Dsa(dsa))
         }
     }

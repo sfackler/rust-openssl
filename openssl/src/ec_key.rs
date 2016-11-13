@@ -1,6 +1,4 @@
 use ffi;
-use std::cmp;
-use libc::c_long;
 use std::ptr;
 
 use {cvt, cvt_p, init};
@@ -23,16 +21,8 @@ impl EcKey {
         }
     }
 
-    /// Deserializes a DER-encoded private key.
-    pub fn private_key_from_der(der: &[u8]) -> Result<EcKey, ErrorStack> {
-        unsafe {
-            init();
-            let len = cmp::min(der.len(), c_long::max_value() as usize) as c_long;
-            cvt_p(ffi::d2i_ECPrivateKey(ptr::null_mut(), &mut der.as_ptr(), len)).map(EcKey)
-        }
-    }
-
     private_key_from_pem!(EcKey, ffi::PEM_read_bio_ECPrivateKey);
+    private_key_from_der!(EcKey, ffi::d2i_ECPrivateKey);
 }
 
 #[cfg(test)]

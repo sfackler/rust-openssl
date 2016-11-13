@@ -1,9 +1,8 @@
 use ffi;
-use std::cmp;
 use std::fmt;
 use std::ptr;
 use std::mem;
-use libc::{c_int, c_void, c_char, c_long};
+use libc::{c_int, c_void, c_char};
 
 use {cvt, cvt_p, cvt_n};
 use bn::{BigNum, BigNumRef};
@@ -251,6 +250,8 @@ impl Rsa {
     }
 
     private_key_from_pem!(Rsa, ffi::PEM_read_bio_RSAPrivateKey);
+    private_key_from_der!(Rsa, ffi::d2i_RSAPrivateKey);
+    public_key_from_der!(Rsa, ffi::d2i_RSA_PUBKEY);
 
     #[deprecated(since = "0.9.2", note = "use private_key_from_pem_callback")]
     pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<Rsa, ErrorStack>
@@ -280,26 +281,6 @@ impl Rsa {
                                                               None,
                                                               ptr::null_mut())));
             Ok(Rsa(rsa))
-        }
-    }
-
-    /// Reads an RSA private key from DER formatted data.
-    pub fn private_key_from_der(buf: &[u8]) -> Result<Rsa, ErrorStack> {
-        unsafe {
-            ffi::init();
-            let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
-            let dsa = try!(cvt_p(ffi::d2i_RSAPrivateKey(ptr::null_mut(), &mut buf.as_ptr(), len)));
-            Ok(Rsa(dsa))
-        }
-    }
-
-    /// Reads an RSA public key from DER formatted data.
-    pub fn public_key_from_der(buf: &[u8]) -> Result<Rsa, ErrorStack> {
-        unsafe {
-            ffi::init();
-            let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
-            let dsa = try!(cvt_p(ffi::d2i_RSA_PUBKEY(ptr::null_mut(), &mut buf.as_ptr(), len)));
-            Ok(Rsa(dsa))
         }
     }
 }

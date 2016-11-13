@@ -1,12 +1,10 @@
 //! PKCS #12 archives.
 
 use ffi;
-use libc::{c_long, c_uchar};
-use std::cmp;
 use std::ptr;
 use std::ffi::CString;
 
-use {cvt, cvt_p};
+use cvt;
 use pkey::PKey;
 use error::ErrorStack;
 use x509::X509;
@@ -15,21 +13,9 @@ use stack::Stack;
 
 type_!(Pkcs12, Pkcs12Ref, ffi::PKCS12, ffi::PKCS12_free);
 
-impl Pkcs12 {
-    /// Deserializes a `Pkcs12` structure from DER-encoded data.
-    pub fn from_der(der: &[u8]) -> Result<Pkcs12, ErrorStack> {
-        unsafe {
-            ffi::init();
-            let mut ptr = der.as_ptr() as *const c_uchar;
-            let length = cmp::min(der.len(), c_long::max_value() as usize) as c_long;
-            let p12 = try!(cvt_p(ffi::d2i_PKCS12(ptr::null_mut(), &mut ptr, length)));
-            Ok(Pkcs12(p12))
-        }
-    }
-}
-
 impl Pkcs12Ref {
     /// Extracts the contents of the `Pkcs12`.
+    // FIXME should take an &[u8]
     pub fn parse(&self, pass: &str) -> Result<ParsedPkcs12, ErrorStack> {
         unsafe {
             let pass = CString::new(pass).unwrap();
@@ -55,6 +41,10 @@ impl Pkcs12Ref {
             })
         }
     }
+}
+
+impl Pkcs12 {
+    from_der!(Pkcs12, ffi::d2i_PKCS12);
 }
 
 pub struct ParsedPkcs12 {

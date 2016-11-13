@@ -170,3 +170,38 @@ macro_rules! public_key_to_der {
             public_key_to_der, $f);
     }
 }
+
+macro_rules! from_der_inner {
+    (#[$m:meta] $n:ident, $t:ident, $f:path) => {
+        #[$m]
+        pub fn $n(der: &[u8]) -> Result<$t, ::error::ErrorStack> {
+            unsafe {
+                ::ffi::init();
+                let len = ::std::cmp::min(der.len(), ::libc::c_long::max_value() as usize) as ::libc::c_long;
+                ::cvt_p($f(::std::ptr::null_mut(), &mut der.as_ptr(), len))
+                    .map($t)
+            }
+        }
+    }
+}
+
+macro_rules! from_der {
+    ($t:ident, $f:path) => {
+        from_der_inner!(/// Deserializes a value from DER-formatted data.
+            from_der, $t, $f);
+    }
+}
+
+macro_rules! private_key_from_der {
+    ($t:ident, $f:path) => {
+        from_der_inner!(/// Deserializes a private key from DER-formatted data.
+            private_key_from_der, $t, $f);
+    }
+}
+
+macro_rules! public_key_from_der {
+    ($t:ident, $f:path) => {
+        from_der_inner!(/// Deserializes a public key from DER-formatted data.
+            public_key_from_der, $t, $f);
+    }
+}
