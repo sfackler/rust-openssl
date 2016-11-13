@@ -431,19 +431,8 @@ impl ToOwned for X509Ref {
 }
 
 impl X509 {
+    from_pem!(X509, ffi::PEM_read_bio_X509);
     from_der!(X509, ffi::d2i_X509);
-
-    /// Reads a certificate from PEM.
-    pub fn from_pem(buf: &[u8]) -> Result<X509, ErrorStack> {
-        let mem_bio = try!(MemBioSlice::new(buf));
-        unsafe {
-            let handle = try!(cvt_p(ffi::PEM_read_bio_X509(mem_bio.as_ptr(),
-                                                           ptr::null_mut(),
-                                                           None,
-                                                           ptr::null_mut())));
-            Ok(X509::from_ptr(handle))
-        }
-    }
 }
 
 impl Clone for X509 {

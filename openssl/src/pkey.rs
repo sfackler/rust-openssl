@@ -137,6 +137,7 @@ impl PKey {
     }
 
     private_key_from_pem!(PKey, ffi::PEM_read_bio_PrivateKey);
+    public_key_from_pem!(PKey, ffi::PEM_read_bio_PUBKEY);
 
     #[deprecated(since = "0.9.2", note = "use private_key_from_pem_callback")]
     pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<PKey, ErrorStack>
@@ -150,19 +151,6 @@ impl PKey {
                                                               ptr::null_mut(),
                                                               Some(invoke_passwd_cb_old::<F>),
                                                               &mut cb as *mut _ as *mut c_void)));
-            Ok(PKey::from_ptr(evp))
-        }
-    }
-
-    /// Reads a public key from PEM.
-    pub fn public_key_from_pem(buf: &[u8]) -> Result<PKey, ErrorStack> {
-        ffi::init();
-        let mem_bio = try!(MemBioSlice::new(buf));
-        unsafe {
-            let evp = try!(cvt_p(ffi::PEM_read_bio_PUBKEY(mem_bio.as_ptr(),
-                                                          ptr::null_mut(),
-                                                          None,
-                                                          ptr::null_mut())));
             Ok(PKey::from_ptr(evp))
         }
     }

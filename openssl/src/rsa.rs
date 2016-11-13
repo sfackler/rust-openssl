@@ -251,6 +251,7 @@ impl Rsa {
 
     private_key_from_pem!(Rsa, ffi::PEM_read_bio_RSAPrivateKey);
     private_key_from_der!(Rsa, ffi::d2i_RSAPrivateKey);
+    public_key_from_pem!(Rsa, ffi::PEM_read_bio_RSA_PUBKEY);
     public_key_from_der!(Rsa, ffi::d2i_RSA_PUBKEY);
 
     #[deprecated(since = "0.9.2", note = "use private_key_from_pem_callback")]
@@ -267,19 +268,6 @@ impl Rsa {
                                                                  ptr::null_mut(),
                                                                  Some(invoke_passwd_cb_old::<F>),
                                                                  cb_ptr)));
-            Ok(Rsa(rsa))
-        }
-    }
-
-    /// Reads an RSA public key from PEM formatted data.
-    pub fn public_key_from_pem(buf: &[u8]) -> Result<Rsa, ErrorStack> {
-        ffi::init();
-        let mem_bio = try!(MemBioSlice::new(buf));
-        unsafe {
-            let rsa = try!(cvt_p(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.as_ptr(),
-                                                              ptr::null_mut(),
-                                                              None,
-                                                              ptr::null_mut())));
             Ok(Rsa(rsa))
         }
     }

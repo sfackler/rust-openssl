@@ -4,7 +4,6 @@ use std::mem;
 use std::ptr;
 
 use {cvt, cvt_p, init};
-use bio::MemBioSlice;
 use bn::BigNum;
 use types::OpenSslTypeRef;
 
@@ -26,19 +25,7 @@ impl Dh {
         }
     }
 
-    /// Reads Diffie-Hellman parameters from PEM.
-    pub fn from_pem(buf: &[u8]) -> Result<Dh, ErrorStack> {
-        unsafe {
-            init();
-            let mem_bio = try!(MemBioSlice::new(buf));
-            cvt_p(ffi::PEM_read_bio_DHparams(mem_bio.as_ptr(),
-                                             ptr::null_mut(),
-                                             None,
-                                             ptr::null_mut()))
-                .map(Dh)
-        }
-    }
-
+    from_pem!(Dh, ffi::PEM_read_bio_DHparams);
     from_der!(Dh, ffi::d2i_DHparams);
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.

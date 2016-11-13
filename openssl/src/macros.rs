@@ -42,15 +42,8 @@ macro_rules! type_ {
 
 macro_rules! private_key_from_pem {
     ($t:ident, $f:path) => {
-        /// Deserializes a PEM-formatted private key.
-        pub fn private_key_from_pem(pem: &[u8]) -> Result<$t, ::error::ErrorStack> {
-            unsafe {
-                ::init();
-                let bio = try!(::bio::MemBioSlice::new(pem));
-                cvt_p($f(bio.as_ptr(), ::std::ptr::null_mut(), None, ::std::ptr::null_mut()))
-                    .map($t)
-            }
-        }
+        from_pem_inner!(/// Deserializes a PEM-formatted private key.
+            private_key_from_pem, $t, $f);
 
         /// Deserializes a PEM-formatted private key, using the supplied password if the key is
         /// encrypted.
@@ -230,5 +223,33 @@ macro_rules! public_key_from_der {
     ($t:ident, $f:path) => {
         from_der_inner!(/// Deserializes a public key from DER-formatted data.
             public_key_from_der, $t, $f);
+    }
+}
+
+macro_rules! from_pem_inner {
+    (#[$m:meta] $n:ident, $t:ident, $f:path) => {
+        #[$m]
+        pub fn $n(pem: &[u8]) -> Result<$t, ::error::ErrorStack> {
+            unsafe {
+                ::init();
+                let bio = try!(::bio::MemBioSlice::new(pem));
+                cvt_p($f(bio.as_ptr(), ::std::ptr::null_mut(), None, ::std::ptr::null_mut()))
+                    .map($t)
+            }
+        }
+    }
+}
+
+macro_rules! public_key_from_pem {
+    ($t:ident, $f:path) => {
+        from_pem_inner!(/// Deserializes a public key from PEM-formatted data.
+            public_key_from_pem, $t, $f);
+    }
+}
+
+macro_rules! from_pem {
+    ($t:ident, $f:path) => {
+        from_pem_inner!(/// Deserializes a value from PEM-formatted data.
+            from_pem, $t, $f);
     }
 }

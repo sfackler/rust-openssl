@@ -97,6 +97,7 @@ impl Dsa {
 
     private_key_from_pem!(Dsa, ffi::PEM_read_bio_DSAPrivateKey);
     private_key_from_der!(Dsa, ffi::d2i_DSAPrivateKey);
+    public_key_from_pem!(Dsa, ffi::PEM_read_bio_DSA_PUBKEY);
     public_key_from_der!(Dsa, ffi::d2i_DSAPublicKey);
 
     #[deprecated(since = "0.9.2", note = "use private_key_from_pem_callback")]
@@ -113,20 +114,6 @@ impl Dsa {
                                                                  ptr::null_mut(),
                                                                  Some(invoke_passwd_cb_old::<F>),
                                                                  cb_ptr)));
-            Ok(Dsa(dsa))
-        }
-    }
-
-    /// Reads a DSA public key from PEM formatted data.
-    pub fn public_key_from_pem(buf: &[u8]) -> Result<Dsa, ErrorStack> {
-        ffi::init();
-
-        let mem_bio = try!(MemBioSlice::new(buf));
-        unsafe {
-            let dsa = try!(cvt_p(ffi::PEM_read_bio_DSA_PUBKEY(mem_bio.as_ptr(),
-                                                              ptr::null_mut(),
-                                                              None,
-                                                              ptr::null_mut())));
             Ok(Dsa(dsa))
         }
     }
