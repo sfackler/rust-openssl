@@ -96,8 +96,11 @@ impl EcKeyRef {
     pub fn public_key(&self) -> Option<&EcPointRef> {
         unsafe {
             let ptr = ffi::EC_KEY_get0_public_key(self.as_ptr());
-            assert!(!ptr.is_null());
-            EcPointRef::from_ptr(ptr as *mut _)
+            if ptr.is_null() {
+                None
+            } else {
+                Some(EcPointRef::from_ptr(ptr as *mut _))
+            }
         }
     }
 
@@ -114,10 +117,23 @@ impl EcKeyRef {
 }
 
 impl EcKey {
+    /// Constructs an `EcKey` corresponding to a known curve.
+    ///
+    /// It will not have an associated public or private key.
     pub fn from_curve_name(nid: Nid) -> Result<EcKey, ErrorStack> {
         unsafe {
             init();
             cvt_p(ffi::EC_KEY_new_by_curve_name(nid.as_raw())).map(EcKey)
+        }
+    }
+
+    /// Generates a new public/private key pair on the specified curve.
+    pub fn generate(group: &EcGroupRef) -> Result<EcKey, ErrorStack> {
+        unsafe {
+            let key = EcKey(try!(cvt_p(ffi::EC_KEY_new())));
+            try!(cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())));
+            try!(cvt(ffi::EC_KEY_generate_key(key.as_ptr())));
+            Ok(key)
         }
     }
 
@@ -150,5 +166,13 @@ mod test {
         let mut ctx = BigNumContext::new().unwrap();
         group.components_gfp(&mut p, &mut a, &mut b, &mut ctx).unwrap();
         EcGroup::from_components_gfp(&p, &a, &b, &mut ctx).unwrap();
+    }
+
+    #[test]
+    fn generate() {
+        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let key = EcKey::generate(&group).unwrap();
+        key.public_key().unwrap();
+        key.private_key().unwrap();
     }
 }
