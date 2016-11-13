@@ -1391,6 +1391,7 @@ extern {
     pub fn EC_KEY_set_private_key(key: *mut EC_KEY, key: *const BIGNUM) -> c_int;
     pub fn EC_KEY_get0_private_key(key: *const EC_KEY) -> *const BIGNUM;
     pub fn EC_KEY_generate_key(key: *mut EC_KEY) -> c_int;
+    pub fn EC_KEY_check_key(key: *const EC_KEY) -> c_int;
     pub fn EC_KEY_free(key: *mut EC_KEY);
 
     pub fn EC_GFp_simple_method() -> *const EC_METHOD;

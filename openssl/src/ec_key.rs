@@ -249,6 +249,11 @@ impl EcKeyRef {
             }
         }
     }
+
+    /// Checks the key for validity.
+    pub fn check_key(&self) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::EC_KEY_check_key(self.as_ptr())).map(|_| ()) }
+    }
 }
 
 impl EcKey {
