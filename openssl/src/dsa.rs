@@ -9,7 +9,7 @@ use bio::{MemBio, MemBioSlice};
 use bn::BigNumRef;
 use {cvt, cvt_p};
 use types::OpenSslTypeRef;
-use util::{CallbackState, invoke_passwd_cb};
+use util::{CallbackState, invoke_passwd_cb_old};
 
 type_!(Dsa, DsaRef, ffi::DSA, ffi::DSA_free);
 
@@ -125,25 +125,9 @@ impl Dsa {
         }
     }
 
-    /// Reads a DSA private key from PEM formatted data.
-    pub fn private_key_from_pem(buf: &[u8]) -> Result<Dsa, ErrorStack> {
-        ffi::init();
-        let mem_bio = try!(MemBioSlice::new(buf));
+    private_key_from_pem!(Dsa, ffi::PEM_read_bio_DSAPrivateKey);
 
-        unsafe {
-            let dsa = try!(cvt_p(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.as_ptr(),
-                                                                 ptr::null_mut(),
-                                                                 None,
-                                                                 ptr::null_mut())));
-            Ok(Dsa(dsa))
-        }
-    }
-
-    /// Read a private key from PEM supplying a password callback to be invoked if the private key
-    /// is encrypted.
-    ///
-    /// The callback will be passed the password buffer and should return the number of characters
-    /// placed into the buffer.
+    #[deprecated(since = "0.9.2", note = "use private_key_from_pem_callback")]
     pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<Dsa, ErrorStack>
         where F: FnOnce(&mut [c_char]) -> usize
     {
@@ -155,7 +139,7 @@ impl Dsa {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
             let dsa = try!(cvt_p(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.as_ptr(),
                                                                  ptr::null_mut(),
-                                                                 Some(invoke_passwd_cb::<F>),
+                                                                 Some(invoke_passwd_cb_old::<F>),
                                                                  cb_ptr)));
             Ok(Dsa(dsa))
         }
@@ -235,8 +219,6 @@ mod compat {
 
 #[cfg(test)]
 mod test {
-    use libc::c_char;
-
     use super::*;
 
     #[test]
@@ -248,14 +230,9 @@ mod test {
     pub fn test_password() {
         let mut password_queried = false;
         let key = include_bytes!("../test/dsa-encrypted.pem");
-        Dsa::private_key_from_pem_cb(key, |password| {
+        Dsa::private_key_from_pem_callback(key, |password| {
                 password_queried = true;
-                password[0] = b'm' as c_char;
-                password[1] = b'y' as c_char;
-                password[2] = b'p' as c_char;
-                password[3] = b'a' as c_char;
-                password[4] = b's' as c_char;
-                password[5] = b's' as c_char;
+                password[..6].copy_from_slice(b"mypass");
                 6
             })
             .unwrap();

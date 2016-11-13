@@ -1513,10 +1513,18 @@ extern {
                                        user_data: *mut c_void) -> c_int;
     pub fn PEM_write_bio_DSA_PUBKEY(bp: *mut BIO, dsa: *mut DSA) -> c_int;
 
-
-
     pub fn PEM_write_bio_X509(bio: *mut BIO, x509: *mut X509) -> c_int;
     pub fn PEM_write_bio_X509_REQ(bio: *mut BIO, x509: *mut X509_REQ) -> c_int;
+
+    pub fn PEM_write_bio_ECPrivateKey(bio: *mut BIO,
+                                      key: *mut EC_KEY,
+                                      cipher: *const EVP_CIPHER,
+                                      kstr: *mut c_uchar,
+                                      klen: c_int,
+                                      callback: Option<PasswordCallback>,
+                                      user_data: *mut c_void)
+                                      -> c_int;
+    pub fn PEM_read_bio_ECPrivateKey(bio: *mut BIO, key: *mut *mut EC_KEY, callback: Option<PasswordCallback>, user_data: *mut c_void) -> *mut EC_KEY;
 
     pub fn PKCS5_PBKDF2_HMAC_SHA1(pass: *const c_char, passlen: c_int,
                                   salt: *const u8, saltlen: c_int,
@@ -1743,6 +1751,9 @@ extern {
     pub fn i2d_DSAPublicKey(a: *const DSA, pp: *mut *mut c_uchar) -> c_int;
     pub fn d2i_DSAPrivateKey(a: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long) -> *mut DSA;
     pub fn i2d_DSAPrivateKey(a: *const DSA, pp: *mut *mut c_uchar) -> c_int;
+
+    pub fn d2i_ECPrivateKey(k: *mut *mut EC_KEY, pp: *mut *const c_uchar, length: c_long) -> *mut EC_KEY;
+    pub fn i2d_ECPrivateKey(ec_key: *mut EC_KEY, pp: *mut *mut c_uchar) -> c_int;
 
     pub fn d2i_X509(a: *mut *mut X509, pp: *mut *const c_uchar, length: c_long) -> *mut X509;
     pub fn i2d_X509_bio(b: *mut BIO, x: *mut X509) -> c_int;

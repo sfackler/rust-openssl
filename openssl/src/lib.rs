@@ -19,46 +19,8 @@ use libc::c_int;
 
 use error::ErrorStack;
 
-macro_rules! type_ {
-    ($n:ident, $r:ident, $c:path, $d:path) => {
-        pub struct $n(*mut $c);
-
-        impl ::types::OpenSslType for $n {
-            type CType = $c;
-            type Ref = $r;
-
-            unsafe fn from_ptr(ptr: *mut $c) -> $n {
-                $n(ptr)
-            }
-        }
-
-        impl Drop for $n {
-            fn drop(&mut self) {
-                unsafe { $d(self.0) }
-            }
-        }
-
-        impl ::std::ops::Deref for $n {
-            type Target = $r;
-
-            fn deref(&self) -> &$r {
-                unsafe { ::types::OpenSslTypeRef::from_ptr(self.0) }
-            }
-        }
-
-        impl ::std::ops::DerefMut for $n {
-            fn deref_mut(&mut self) -> &mut $r {
-                unsafe { ::types::OpenSslTypeRef::from_ptr_mut(self.0) }
-            }
-        }
-
-        pub struct $r(::util::Opaque);
-
-        impl ::types::OpenSslTypeRef for $r {
-            type CType = $c;
-        }
-    }
-}
+#[macro_use]
+mod macros;
 
 mod bio;
 mod util;

@@ -10,7 +10,7 @@ use dsa::Dsa;
 use ec_key::EcKey;
 use rsa::Rsa;
 use error::ErrorStack;
-use util::{CallbackState, invoke_passwd_cb};
+use util::{CallbackState, invoke_passwd_cb_old};
 use types::{OpenSslType, OpenSslTypeRef};
 
 type_!(PKey, PKeyRef, ffi::EVP_PKEY, ffi::EVP_PKEY_free);
@@ -166,24 +166,9 @@ impl PKey {
         }
     }
 
-    /// Reads a private key from PEM.
-    pub fn private_key_from_pem(buf: &[u8]) -> Result<PKey, ErrorStack> {
-        ffi::init();
-        let mem_bio = try!(MemBioSlice::new(buf));
-        unsafe {
-            let evp = try!(cvt_p(ffi::PEM_read_bio_PrivateKey(mem_bio.as_ptr(),
-                                                              ptr::null_mut(),
-                                                              None,
-                                                              ptr::null_mut())));
-            Ok(PKey::from_ptr(evp))
-        }
-    }
+    private_key_from_pem!(PKey, ffi::PEM_read_bio_PrivateKey);
 
-    /// Read a private key from PEM, supplying a password callback to be invoked if the private key
-    /// is encrypted.
-    ///
-    /// The callback will be passed the password buffer and should return the number of characters
-    /// placed into the buffer.
+    #[deprecated(since = "0.9.2", note = "use private_key_from_pem_callback")]
     pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<PKey, ErrorStack>
         where F: FnOnce(&mut [c_char]) -> usize
     {
@@ -193,7 +178,7 @@ impl PKey {
         unsafe {
             let evp = try!(cvt_p(ffi::PEM_read_bio_PrivateKey(mem_bio.as_ptr(),
                                                               ptr::null_mut(),
-                                                              Some(invoke_passwd_cb::<F>),
+                                                              Some(invoke_passwd_cb_old::<F>),
                                                               &mut cb as *mut _ as *mut c_void)));
             Ok(PKey::from_ptr(evp))
         }

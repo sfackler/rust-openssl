@@ -9,7 +9,7 @@ use {cvt, cvt_p, cvt_n};
 use bn::{BigNum, BigNumRef};
 use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
-use util::{CallbackState, invoke_passwd_cb};
+use util::{CallbackState, invoke_passwd_cb_old};
 use types::OpenSslTypeRef;
 
 /// Type of encryption padding to use.
@@ -281,20 +281,9 @@ impl Rsa {
         }
     }
 
-    /// Reads an RSA private key from PEM formatted data.
-    pub fn private_key_from_pem(buf: &[u8]) -> Result<Rsa, ErrorStack> {
-        ffi::init();
-        let mem_bio = try!(MemBioSlice::new(buf));
-        unsafe {
-            let rsa = try!(cvt_p(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.as_ptr(),
-                                                                 ptr::null_mut(),
-                                                                 None,
-                                                                 ptr::null_mut())));
-            Ok(Rsa(rsa))
-        }
-    }
+    private_key_from_pem!(Rsa, ffi::PEM_read_bio_RSAPrivateKey);
 
-    /// Reads an RSA private key from PEM formatted data and supplies a password callback.
+    #[deprecated(since = "0.9.2", note = "use private_key_from_pem_callback")]
     pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<Rsa, ErrorStack>
         where F: FnOnce(&mut [c_char]) -> usize
     {
@@ -306,7 +295,7 @@ impl Rsa {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
             let rsa = try!(cvt_p(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.as_ptr(),
                                                                  ptr::null_mut(),
-                                                                 Some(invoke_passwd_cb::<F>),
+                                                                 Some(invoke_passwd_cb_old::<F>),
                                                                  cb_ptr)));
             Ok(Rsa(rsa))
         }
@@ -429,22 +418,15 @@ mod compat {
 
 #[cfg(test)]
 mod test {
-    use libc::c_char;
-
     use super::*;
 
     #[test]
     pub fn test_password() {
         let mut password_queried = false;
         let key = include_bytes!("../test/rsa-encrypted.pem");
-        Rsa::private_key_from_pem_cb(key, |password| {
+        Rsa::private_key_from_pem_callback(key, |password| {
                 password_queried = true;
-                password[0] = b'm' as c_char;
-                password[1] = b'y' as c_char;
-                password[2] = b'p' as c_char;
-                password[3] = b'a' as c_char;
-                password[4] = b's' as c_char;
-                password[5] = b's' as c_char;
+                password[..6].copy_from_slice(b"mypass");
                 6
             })
             .unwrap();
