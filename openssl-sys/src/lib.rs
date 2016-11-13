@@ -1394,13 +1394,6 @@ extern {
     pub fn EC_KEY_check_key(key: *const EC_KEY) -> c_int;
     pub fn EC_KEY_free(key: *mut EC_KEY);
 
-    pub fn EC_GFp_simple_method() -> *const EC_METHOD;
-    pub fn EC_GFp_mont_method() -> *const EC_METHOD;
-    pub fn EC_GFp_nist_method() -> *const EC_METHOD;
-    pub fn EC_GFp_nistp224_method() -> *const EC_METHOD;
-    pub fn EC_GFp_nistp256_method() -> *const EC_METHOD;
-    pub fn EC_GFp_nistp521_method() -> *const EC_METHOD;
-
     pub fn EC_GF2m_simple_method() -> *const EC_METHOD;
 
     pub fn EC_GROUP_new(meth: *const EC_METHOD) -> *mut EC_GROUP;
