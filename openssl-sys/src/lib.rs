@@ -61,6 +61,14 @@ pub enum DSA_METHOD {}
 pub enum EVP_PKEY_ASN1_METHOD {}
 
 #[repr(C)]
+#[derive(Copy, Clone)]
+pub enum point_conversion_form_t {
+    POINT_CONVERSION_COMPRESSED = 2,
+    POINT_CONVERSION_UNCOMPRESSED = 4,
+    POINT_CONVERSION_HYBRID = 6,
+}
+
+#[repr(C)]
 pub struct GENERAL_NAME {
     pub type_: c_int,
     pub d: *mut c_void,
@@ -1400,8 +1408,17 @@ extern {
     pub fn EC_GROUP_new_by_curve_name(nid: c_int) -> *mut EC_GROUP;
     pub fn EC_GROUP_get_curve_GFp(group: *const EC_GROUP, p: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn EC_GROUP_get_curve_GF2m(group: *const EC_GROUP, p: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_GROUP_get_degree(group: *const EC_GROUP) -> c_int;
+    pub fn EC_GROUP_get_order(group: *const EC_GROUP, order: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
+
     pub fn EC_GROUP_free(group: *mut EC_GROUP);
 
+    pub fn EC_POINT_new(group: *const EC_GROUP) -> *mut EC_POINT;
+    pub fn EC_POINT_add(group: *const EC_GROUP, r: *mut EC_POINT, a: *const EC_POINT, b: *const EC_POINT, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_POINT_mul(group: *const EC_GROUP, r: *mut EC_POINT, n: *const BIGNUM, q: *const EC_POINT, m: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_POINT_point2oct(group: *const EC_GROUP, p: *const EC_POINT, form: point_conversion_form_t, buf: *mut c_uchar, len: size_t, ctx: *mut BN_CTX) -> size_t;
+    pub fn EC_POINT_oct2point(group: *const EC_GROUP, p: *mut EC_POINT, buf: *const c_uchar, len: size_t, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_POINT_cmp(group: *const EC_GROUP, a: *const EC_POINT, b: *const EC_POINT, ctx: *mut BN_CTX) -> c_int;
     pub fn EC_POINT_free(point: *mut EC_POINT);
 
     pub fn ERR_get_error() -> c_ulong;
