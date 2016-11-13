@@ -81,7 +81,7 @@ macro_rules! private_key_from_pem {
         pub fn private_key_from_pem_callback<F>(pem: &[u8],
                                                 callback: F)
                                                 -> Result<$t, ::error::ErrorStack>
-            where F: FnOnce(&mut [u8]) -> usize
+            where F: FnOnce(&mut [u8]) -> Result<usize, ::error::ErrorStack>
         {
             unsafe {
                 ffi::init();

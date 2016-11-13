@@ -237,7 +237,7 @@ mod test {
         Dsa::private_key_from_pem_callback(key, |password| {
                 password_queried = true;
                 password[..6].copy_from_slice(b"mypass");
-                6
+                Ok(6)
             })
             .unwrap();
 
