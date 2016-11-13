@@ -207,6 +207,8 @@ mod compat {
 
 #[cfg(test)]
 mod test {
+    use symm::Cipher;
+
     use super::*;
 
     #[test]
@@ -218,6 +220,14 @@ mod test {
     pub fn test_password() {
         let key = include_bytes!("../test/dsa-encrypted.pem");
         Dsa::private_key_from_pem_passphrase(key, b"mypass").unwrap();
+    }
+
+    #[test]
+    fn test_to_password() {
+        let key = Dsa::generate(2048).unwrap();
+        let pem = key.private_key_to_pem_passphrase(Cipher::aes_128_cbc(), b"foobar").unwrap();
+        Dsa::private_key_from_pem_passphrase(&pem, b"foobar").unwrap();
+        assert!(Dsa::private_key_from_pem_passphrase(&pem, b"fizzbuzz").is_err());
     }
 
     #[test]

@@ -404,16 +404,18 @@ mod compat {
 
 #[cfg(test)]
 mod test {
+    use symm::Cipher;
+
     use super::*;
 
     #[test]
-    pub fn test_password() {
+    fn test_from_password() {
         let key = include_bytes!("../test/rsa-encrypted.pem");
         Rsa::private_key_from_pem_passphrase(key, b"mypass").unwrap();
     }
 
     #[test]
-    pub fn test_password_callback() {
+    fn test_from_password_callback() {
         let mut password_queried = false;
         let key = include_bytes!("../test/rsa-encrypted.pem");
         Rsa::private_key_from_pem_callback(key, |password| {
@@ -427,7 +429,15 @@ mod test {
     }
 
     #[test]
-    pub fn test_public_encrypt_private_decrypt_with_padding() {
+    fn test_to_password() {
+        let key = Rsa::generate(2048).unwrap();
+        let pem = key.private_key_to_pem_passphrase(Cipher::aes_128_cbc(), b"foobar").unwrap();
+        Rsa::private_key_from_pem_passphrase(&pem, b"foobar").unwrap();
+        assert!(Rsa::private_key_from_pem_passphrase(&pem, b"fizzbuzz").is_err());
+    }
+
+    #[test]
+    fn test_public_encrypt_private_decrypt_with_padding() {
         let key = include_bytes!("../test/rsa.pem.pub");
         let public_key = Rsa::public_key_from_pem(key).unwrap();
 

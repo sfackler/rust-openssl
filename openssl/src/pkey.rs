@@ -48,7 +48,7 @@ impl PKeyRef {
         }
     }
 
-    private_key_to_pem!(ffi::PEM_write_bio_PrivateKey);
+    private_key_to_pem!(ffi::PEM_write_bio_PKCS8PrivateKey);
 
     /// Encodes the public key in the PEM format.
     pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
@@ -185,6 +185,7 @@ impl PKey {
 
 #[cfg(test)]
 mod tests {
+    use symm::Cipher;
     use dh::Dh;
     use dsa::Dsa;
     use ec_key::EcKey;
@@ -192,6 +193,15 @@ mod tests {
     use nid;
 
     use super::*;
+
+    #[test]
+    fn test_to_password() {
+        let rsa = Rsa::generate(2048).unwrap();
+        let pkey = PKey::from_rsa(rsa).unwrap();
+        let pem = pkey.private_key_to_pem_passphrase(Cipher::aes_128_cbc(), b"foobar").unwrap();
+        PKey::private_key_from_pem_passphrase(&pem, b"foobar").unwrap();
+        assert!(PKey::private_key_from_pem_passphrase(&pem, b"fizzbuzz").is_err());
+    }
 
     #[test]
     fn test_private_key_from_pem() {

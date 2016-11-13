@@ -113,5 +113,25 @@ macro_rules! private_key_to_pem {
                 Ok(bio.get_buf().to_owned())
             }
         }
+
+        /// Serializes the private key to PEM, encrypting it with the specified symmetric cipher and
+        /// passphrase.
+        pub fn private_key_to_pem_passphrase(&self,
+                                             cipher: ::symm::Cipher,
+                                             passphrase: &[u8])
+                                             -> Result<Vec<u8>, ::error::ErrorStack> {
+            unsafe {
+                let bio = try!(::bio::MemBio::new());
+                assert!(passphrase.len() <= ::libc::c_int::max_value() as usize);
+                try!(cvt($f(bio.as_ptr(),
+                            self.as_ptr(),
+                            cipher.as_ptr(),
+                            passphrase.as_ptr() as *const _ as *mut _,
+                            passphrase.len() as ::libc::c_int,
+                            None,
+                            ptr::null_mut())));
+                Ok(bio.get_buf().to_owned())
+            }
+        }
     }
 }
