@@ -4,22 +4,14 @@ use std::mem;
 use std::ptr;
 
 use {cvt, cvt_p, init};
-use bio::{MemBio, MemBioSlice};
+use bio::MemBioSlice;
 use bn::BigNum;
 use types::OpenSslTypeRef;
 
 type_!(Dh, DhRef, ffi::DH, ffi::DH_free);
 
 impl DhRef {
-    /// Encodes the parameters to PEM.
-    pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        unsafe {
-            try!(cvt(ffi::PEM_write_bio_DHparams(mem_bio.as_ptr(), self.as_ptr())));
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
-
+    to_pem!(ffi::PEM_write_bio_DHparams);
     to_der!(ffi::i2d_DHparams);
 }
 

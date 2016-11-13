@@ -12,7 +12,7 @@ use std::str;
 
 use {cvt, cvt_p};
 use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef};
-use bio::{MemBio, MemBioSlice};
+use bio::MemBioSlice;
 use hash::MessageDigest;
 use pkey::{PKey, PKeyRef};
 use rand::rand_bytes;
@@ -415,15 +415,7 @@ impl X509Ref {
         }
     }
 
-    /// Writes certificate as PEM
-    pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        unsafe {
-            try!(cvt(ffi::PEM_write_bio_X509(mem_bio.as_ptr(), self.as_ptr())));
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
-
+    to_pem!(ffi::PEM_write_bio_X509);
     to_der!(ffi::i2d_X509);
 }
 
@@ -549,19 +541,6 @@ impl X509NameEntryRef {
 
 type_!(X509Req, X509ReqRef, ffi::X509_REQ, ffi::X509_REQ_free);
 
-impl X509ReqRef {
-    /// Writes CSR as PEM
-    pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        if unsafe { ffi::PEM_write_bio_X509_REQ(mem_bio.as_ptr(), self.as_ptr()) } != 1 {
-            return Err(ErrorStack::get());
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
-
-    to_der!(ffi::i2d_X509_REQ);
-}
-
 impl X509Req {
     /// Reads CSR from PEM
     pub fn from_pem(buf: &[u8]) -> Result<X509Req, ErrorStack> {
@@ -576,6 +555,11 @@ impl X509Req {
     }
 
     from_der!(X509Req, ffi::d2i_X509_REQ);
+}
+
+impl X509ReqRef {
+    to_pem!(ffi::PEM_write_bio_X509_REQ);
+    to_der!(ffi::i2d_X509_REQ);
 }
 
 /// A collection of X.509 extensions.

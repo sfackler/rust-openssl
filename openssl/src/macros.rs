@@ -136,6 +136,33 @@ macro_rules! private_key_to_pem {
     }
 }
 
+macro_rules! to_pem_inner {
+    (#[$m:meta] $n:ident, $f:path) => {
+        #[$m]
+        pub fn $n(&self) -> Result<Vec<u8>, ::error::ErrorStack> {
+            unsafe {
+                let bio = try!(::bio::MemBio::new());
+                try!(cvt($f(bio.as_ptr(), self.as_ptr())));
+                Ok(bio.get_buf().to_owned())
+            }
+        }
+    }
+}
+
+macro_rules! public_key_to_pem {
+    ($f:path) => {
+        to_pem_inner!(/// Serializes a public key to PEM.
+            public_key_to_pem, $f);
+    }
+}
+
+macro_rules! to_pem {
+    ($f:path) => {
+        to_pem_inner!(/// Serializes this value to PEM.
+            to_pem, $f);
+    }
+}
+
 macro_rules! to_der_inner {
     (#[$m:meta] $n:ident, $f:path) => {
         #[$m]
