@@ -93,7 +93,7 @@ impl EcKeyRef {
         }
     }
 
-    pub fn public_key(&self) -> &EcPointRef {
+    pub fn public_key(&self) -> Option<&EcPointRef> {
         unsafe {
             let ptr = ffi::EC_KEY_get0_public_key(self.as_ptr());
             assert!(!ptr.is_null());
