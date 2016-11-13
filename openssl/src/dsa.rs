@@ -4,7 +4,7 @@ use libc::{c_int, c_char, c_void};
 use std::fmt;
 use std::ptr;
 
-use bio::{MemBio, MemBioSlice};
+use bio::MemBioSlice;
 use bn::BigNumRef;
 use {cvt, cvt_p};
 use types::OpenSslTypeRef;
@@ -14,15 +14,7 @@ type_!(Dsa, DsaRef, ffi::DSA, ffi::DSA_free);
 
 impl DsaRef {
     private_key_to_pem!(ffi::PEM_write_bio_DSAPrivateKey);
-
-    /// Encodes a DSA public key as PEM formatted data.
-    pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        unsafe {
-            try!(cvt(ffi::PEM_write_bio_DSA_PUBKEY(mem_bio.as_ptr(), self.as_ptr())));
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
+    public_key_to_pem!(ffi::PEM_write_bio_DSA_PUBKEY);
 
     private_key_to_der!(ffi::i2d_DSAPrivateKey);
     public_key_to_der!(ffi::i2d_DSAPublicKey);

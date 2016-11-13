@@ -6,7 +6,7 @@ use libc::{c_int, c_void, c_char};
 
 use {cvt, cvt_p, cvt_n};
 use bn::{BigNum, BigNumRef};
-use bio::{MemBio, MemBioSlice};
+use bio::MemBioSlice;
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb_old};
 use types::OpenSslTypeRef;
@@ -23,17 +23,7 @@ type_!(Rsa, RsaRef, ffi::RSA, ffi::RSA_free);
 
 impl RsaRef {
     private_key_to_pem!(ffi::PEM_write_bio_RSAPrivateKey);
-
-    /// Writes an RSA public key as PEM formatted data
-    pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-
-        unsafe {
-            try!(cvt(ffi::PEM_write_bio_RSA_PUBKEY(mem_bio.as_ptr(), self.as_ptr())));
-        }
-
-        Ok(mem_bio.get_buf().to_owned())
-    }
+    public_key_to_pem!(ffi::PEM_write_bio_RSA_PUBKEY);
 
     private_key_to_der!(ffi::i2d_RSAPrivateKey);
     public_key_to_der!(ffi::i2d_RSA_PUBKEY);
