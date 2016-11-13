@@ -8,7 +8,7 @@ use pkey::PKeyRef;
 use x509::X509Ref;
 
 // ffdhe2048 from https://wiki.mozilla.org/Security/Server_Side_TLS#ffdhe2048
-const DHPARAM_PEM: &'static str = r#"
+const DHPARAM_PEM: &'static str = "
 -----BEGIN DH PARAMETERS-----
 MIIBCAKCAQEA//////////+t+FRYortKmq/cViAnPTzx2LnFg84tNpWp4TZBFGQz
 +8yTnc4kmz75fS/jY2MMddj2gbICrsRhetPfHtXV/WVhJDP1H18GbtCFY2VVPe0a
@@ -17,7 +17,7 @@ YdEIqUuyyOP7uWrat2DX9GgdT0Kj3jlN9K5W7edjcrsZCwenyO4KbXCeAvzhzffi
 7MA0BM0oNC9hkXL+nOmFg/+OTxIy7vKBg8P+OxtMb61zO7X8vC7CIAXFjvGDfRaD
 ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
 -----END DH PARAMETERS-----
-"#;
+";
 
 fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     let mut ctx = try!(SslContextBuilder::new(method));
