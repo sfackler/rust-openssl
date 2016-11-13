@@ -26,6 +26,9 @@ pub enum BN_GENCB {}
 pub enum CONF {}
 pub enum COMP_METHOD {}
 pub enum EC_KEY {}
+pub enum EC_GROUP {}
+pub enum EC_METHOD {}
+pub enum EC_POINT {}
 pub enum ENGINE {}
 pub enum EVP_CIPHER_CTX {}
 pub enum EVP_MD {}
@@ -1372,7 +1375,29 @@ extern {
     pub fn DH_get_2048_256() -> *mut DH;
 
     pub fn EC_KEY_new_by_curve_name(nid: c_int) -> *mut EC_KEY;
+    pub fn EC_KEY_get0_group(key: *const EC_KEY) -> *const EC_GROUP;
+    pub fn EC_KEY_get0_public_key(key: *const EC_KEY) -> *const EC_POINT;
+    pub fn EC_KEY_get0_private_key(key: *const EC_KEY) -> *const BIGNUM;
     pub fn EC_KEY_free(key: *mut EC_KEY);
+
+    pub fn EC_GFp_simple_method() -> *const EC_METHOD;
+    pub fn EC_GFp_mont_method() -> *const EC_METHOD;
+    pub fn EC_GFp_nist_method() -> *const EC_METHOD;
+    pub fn EC_GFp_nistp224_method() -> *const EC_METHOD;
+    pub fn EC_GFp_nistp256_method() -> *const EC_METHOD;
+    pub fn EC_GFp_nistp521_method() -> *const EC_METHOD;
+
+    pub fn EC_GF2m_simple_method() -> *const EC_METHOD;
+
+    pub fn EC_GROUP_new(meth: *const EC_METHOD) -> *mut EC_GROUP;
+    pub fn EC_GROUP_new_curve_GFp(p: *const BIGNUM, a: *const BIGNUM, b: *const BIGNUM, ctx: *mut BN_CTX) -> *mut EC_GROUP;
+    pub fn EC_GROUP_new_curve_GF2m(p: *const BIGNUM, a: *const BIGNUM, b: *const BIGNUM, ctx: *mut BN_CTX) -> *mut EC_GROUP;
+    pub fn EC_GROUP_new_by_curve_name(nid: c_int) -> *mut EC_GROUP;
+    pub fn EC_GROUP_get_curve_GFp(group: *const EC_GROUP, p: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_GROUP_get_curve_GF2m(group: *const EC_GROUP, p: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_GROUP_free(group: *mut EC_GROUP);
+
+    pub fn EC_POINT_free(point: *mut EC_POINT);
 
     pub fn ERR_get_error() -> c_ulong;
     pub fn ERR_lib_error_string(err: c_ulong) -> *const c_char;
