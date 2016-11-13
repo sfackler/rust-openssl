@@ -1761,10 +1761,14 @@ extern {
 
     pub fn d2i_X509(a: *mut *mut X509, pp: *mut *const c_uchar, length: c_long) -> *mut X509;
     pub fn i2d_X509_bio(b: *mut BIO, x: *mut X509) -> c_int;
+    pub fn i2d_X509(x: *mut X509, buf: *mut *mut u8) -> c_int;
     pub fn i2d_X509_REQ_bio(b: *mut BIO, x: *mut X509_REQ) -> c_int;
+    pub fn i2d_X509_REQ(x: *mut X509_REQ, buf: *mut *mut u8) -> c_int;
 
     pub fn i2d_PUBKEY_bio(b: *mut BIO, x: *mut EVP_PKEY) -> c_int;
     pub fn i2d_PrivateKey_bio(b: *mut BIO, x: *mut EVP_PKEY) -> c_int;
+    pub fn i2d_PUBKEY(k: *mut EVP_PKEY, buf: *mut *mut u8) -> c_int;
+    pub fn i2d_PrivateKey(k: *mut EVP_PKEY, buf: *mut *mut u8) -> c_int;
 
     pub fn i2d_RSA_PUBKEY(k: *mut RSA, buf: *mut *mut u8) -> c_int;
     pub fn d2i_RSA_PUBKEY(k: *mut *mut RSA, buf: *mut *const u8, len: c_long) -> *mut RSA;

@@ -25,25 +25,8 @@ impl DsaRef {
         Ok(mem_bio.get_buf().to_owned())
     }
 
-    /// Encodes a DSA private key as unencrypted DER formatted data.
-    pub fn private_key_to_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        unsafe {
-            let len = try!(cvt(ffi::i2d_DSAPrivateKey(self.as_ptr(), ptr::null_mut())));
-            let mut buf = vec![0; len as usize];
-            try!(cvt(ffi::i2d_DSAPrivateKey(self.as_ptr(), &mut buf.as_mut_ptr())));
-            Ok(buf)
-        }
-    }
-
-    /// Encodes a DSA public key as DER formatted data.
-    pub fn public_key_to_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        unsafe {
-            let len = try!(cvt(ffi::i2d_DSAPublicKey(self.as_ptr(), ptr::null_mut())));
-            let mut buf = vec![0; len as usize];
-            try!(cvt(ffi::i2d_DSAPublicKey(self.as_ptr(), &mut buf.as_mut_ptr())));
-            Ok(buf)
-        }
-    }
+    private_key_to_der!(ffi::i2d_DSAPrivateKey);
+    public_key_to_der!(ffi::i2d_DSAPublicKey);
 
     // FIXME should return u32
     pub fn size(&self) -> Option<u32> {

@@ -22,15 +22,7 @@ impl DhRef {
         Ok(mem_bio.get_buf().to_owned())
     }
 
-    /// Encodes the parameters to DER.
-    pub fn to_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        unsafe {
-            let len = try!(cvt(ffi::i2d_DHparams(self.as_ptr(), ptr::null_mut())));
-            let mut buf = vec![0; len as usize];
-            try!(cvt(ffi::i2d_DHparams(self.as_ptr(), &mut buf.as_mut_ptr())));
-            Ok(buf)
-        }
-    }
+    to_der!(ffi::i2d_DHparams);
 }
 
 impl Dh {

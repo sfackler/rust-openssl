@@ -36,25 +36,8 @@ impl RsaRef {
         Ok(mem_bio.get_buf().to_owned())
     }
 
-    /// Encodes an RSA private key as unencrypted DER formatted data.
-    pub fn private_key_to_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        unsafe {
-            let len = try!(cvt(ffi::i2d_RSAPrivateKey(self.as_ptr(), ptr::null_mut())));
-            let mut buf = vec![0; len as usize];
-            try!(cvt(ffi::i2d_RSAPrivateKey(self.as_ptr(), &mut buf.as_mut_ptr())));
-            Ok(buf)
-        }
-    }
-
-    /// Encodes an RSA public key as DER formatted data.
-    pub fn public_key_to_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        unsafe {
-            let len = try!(cvt(ffi::i2d_RSA_PUBKEY(self.as_ptr(), ptr::null_mut())));
-            let mut buf = vec![0; len as usize];
-            try!(cvt(ffi::i2d_RSA_PUBKEY(self.as_ptr(), &mut buf.as_mut_ptr())));
-            Ok(buf)
-        }
-    }
+    private_key_to_der!(ffi::i2d_RSAPrivateKey);
+    public_key_to_der!(ffi::i2d_RSA_PUBKEY);
 
     // FIXME should return u32
     pub fn size(&self) -> usize {

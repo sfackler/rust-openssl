@@ -12,16 +12,7 @@ type_!(EcKey, EcKeyRef, ffi::EC_KEY, ffi::EC_KEY_free);
 
 impl EcKeyRef {
     private_key_to_pem!(ffi::PEM_write_bio_ECPrivateKey);
-
-    /// Serializes the private key components to DER.
-    pub fn private_key_to_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        unsafe {
-            let len = try!(cvt(ffi::i2d_ECPrivateKey(self.as_ptr(), ptr::null_mut())));
-            let mut buf = vec![0; len as usize];
-            try!(cvt(ffi::i2d_ECPrivateKey(self.as_ptr(), &mut buf.as_mut_ptr())));
-            Ok(buf)
-        }
-    }
+    private_key_to_der!(ffi::i2d_ECPrivateKey);
 }
 
 impl EcKey {
@@ -31,6 +22,7 @@ impl EcKey {
             cvt_p(ffi::EC_KEY_new_by_curve_name(nid.as_raw())).map(EcKey)
         }
     }
+
     /// Deserializes a DER-encoded private key.
     pub fn private_key_from_der(der: &[u8]) -> Result<EcKey, ErrorStack> {
         unsafe {

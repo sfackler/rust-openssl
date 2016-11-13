@@ -135,3 +135,38 @@ macro_rules! private_key_to_pem {
         }
     }
 }
+
+macro_rules! to_der_inner {
+    (#[$m:meta] $n:ident, $f:path) => {
+        #[$m]
+        pub fn $n(&self) -> Result<Vec<u8>, ::error::ErrorStack> {
+            unsafe {
+                let len = try!(::cvt($f(::types::OpenSslTypeRef::as_ptr(self), ptr::null_mut())));
+                let mut buf = vec![0; len as usize];
+                try!(::cvt($f(::types::OpenSslTypeRef::as_ptr(self), &mut buf.as_mut_ptr())));
+                Ok(buf)
+            }
+        }
+    };
+}
+
+macro_rules! to_der {
+    ($f:path) => {
+        to_der_inner!(/// Serializes this value to DER.
+            to_der, $f);
+    }
+}
+
+macro_rules! private_key_to_der {
+    ($f:path) => {
+        to_der_inner!(/// Serializes the private key to DER.
+            private_key_to_der, $f);
+    }
+}
+
+macro_rules! public_key_to_der {
+    ($f:path) => {
+        to_der_inner!(/// Serializes the public key to DER.
+            public_key_to_der, $f);
+    }
+}

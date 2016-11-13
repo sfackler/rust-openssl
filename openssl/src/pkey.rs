@@ -50,29 +50,14 @@ impl PKeyRef {
 
     private_key_to_pem!(ffi::PEM_write_bio_PKCS8PrivateKey);
 
+    private_key_to_der!(ffi::i2d_PrivateKey);
+    public_key_to_der!(ffi::i2d_PUBKEY);
+
     /// Encodes the public key in the PEM format.
     pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
         let mem_bio = try!(MemBio::new());
         unsafe {
             try!(cvt(ffi::PEM_write_bio_PUBKEY(mem_bio.as_ptr(), self.as_ptr())));
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
-
-    /// Encodes the public key in the DER format.
-    pub fn public_key_to_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        unsafe {
-            try!(cvt(ffi::i2d_PUBKEY_bio(mem_bio.as_ptr(), self.as_ptr())));
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
-
-    /// Encodes the private key in the DER format
-    pub fn private_key_to_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        unsafe {
-            try!(cvt(ffi::i2d_PrivateKey_bio(mem_bio.as_ptr(), self.as_ptr())));
         }
         Ok(mem_bio.get_buf().to_owned())
     }

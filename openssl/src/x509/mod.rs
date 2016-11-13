@@ -425,14 +425,7 @@ impl X509Ref {
         Ok(mem_bio.get_buf().to_owned())
     }
 
-    /// Returns a DER serialized form of the certificate
-    pub fn to_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        unsafe {
-            ffi::i2d_X509_bio(mem_bio.as_ptr(), self.as_ptr());
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
+    to_der!(ffi::i2d_X509);
 }
 
 impl ToOwned for X509Ref {
@@ -575,14 +568,7 @@ impl X509ReqRef {
         Ok(mem_bio.get_buf().to_owned())
     }
 
-    /// Returns a DER serialized form of the CSR
-    pub fn to_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        unsafe {
-            ffi::i2d_X509_REQ_bio(mem_bio.as_ptr(), self.as_ptr());
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
+    to_der!(ffi::i2d_X509_REQ);
 }
 
 impl X509Req {
