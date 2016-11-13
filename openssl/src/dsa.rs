@@ -14,19 +14,7 @@ use util::{CallbackState, invoke_passwd_cb_old};
 type_!(Dsa, DsaRef, ffi::DSA, ffi::DSA_free);
 
 impl DsaRef {
-    /// Encodes a DSA private key as unencrypted PEM formatted data.
-    pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        assert!(self.has_private_key());
-        let mem_bio = try!(MemBio::new());
-
-        unsafe {
-            try!(cvt(ffi::PEM_write_bio_DSAPrivateKey(mem_bio.as_ptr(), self.as_ptr(),
-                                                      ptr::null(), ptr::null_mut(), 0,
-                                                      None, ptr::null_mut())))
-        };
-
-        Ok(mem_bio.get_buf().to_owned())
-    }
+    private_key_to_pem!(ffi::PEM_write_bio_DSAPrivateKey);
 
     /// Encodes a DSA public key as PEM formatted data.
     pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {

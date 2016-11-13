@@ -75,3 +75,22 @@ macro_rules! private_key_from_pem {
         }
     }
 }
+
+macro_rules! private_key_to_pem {
+    ($f:path) => {
+        /// Serializes the private key to PEM.
+        pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ::error::ErrorStack> {
+            unsafe {
+                let bio = try!(MemBio::new());
+                try!(cvt($f(bio.as_ptr(),
+                            self.as_ptr(),
+                            ptr::null(),
+                            ptr::null_mut(),
+                            -1,
+                            None,
+                            ptr::null_mut())));
+                Ok(bio.get_buf().to_owned())
+            }
+        }
+    }
+}

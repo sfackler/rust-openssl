@@ -23,21 +23,7 @@ pub const PKCS1_OAEP_PADDING: Padding = Padding(ffi::RSA_PKCS1_OAEP_PADDING);
 type_!(Rsa, RsaRef, ffi::RSA, ffi::RSA_free);
 
 impl RsaRef {
-    /// Writes an RSA private key as unencrypted PEM formatted data
-    pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-
-        unsafe {
-            try!(cvt(ffi::PEM_write_bio_RSAPrivateKey(mem_bio.as_ptr(),
-                                                      self.as_ptr(),
-                                                      ptr::null(),
-                                                      ptr::null_mut(),
-                                                      0,
-                                                      None,
-                                                      ptr::null_mut())));
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
+    private_key_to_pem!(ffi::PEM_write_bio_RSAPrivateKey);
 
     /// Writes an RSA public key as PEM formatted data
     pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {

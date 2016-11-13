@@ -48,22 +48,7 @@ impl PKeyRef {
         }
     }
 
-    /// Encodes the private key in the PEM format.
-    // FIXME: also add password and encryption
-    pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        unsafe {
-            try!(cvt(ffi::PEM_write_bio_PrivateKey(mem_bio.as_ptr(),
-                                                   self.as_ptr(),
-                                                   ptr::null(),
-                                                   ptr::null_mut(),
-                                                   -1,
-                                                   None,
-                                                   ptr::null_mut())));
-
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
+    private_key_to_pem!(ffi::PEM_write_bio_PrivateKey);
 
     /// Encodes the public key in the PEM format.
     pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
