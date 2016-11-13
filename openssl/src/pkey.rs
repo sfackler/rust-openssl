@@ -221,7 +221,7 @@ mod tests {
 
     #[test]
     fn test_ec_key_accessor() {
-        let ec_key = EcKey::new_by_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let ec_key = EcKey::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
         let pkey = PKey::from_ec_key(ec_key).unwrap();
         pkey.ec_key().unwrap();
         assert!(pkey.rsa().is_err());

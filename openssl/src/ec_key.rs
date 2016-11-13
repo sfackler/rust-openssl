@@ -114,11 +114,16 @@ impl EcKeyRef {
 }
 
 impl EcKey {
-    pub fn new_by_curve_name(nid: Nid) -> Result<EcKey, ErrorStack> {
+    pub fn from_curve_name(nid: Nid) -> Result<EcKey, ErrorStack> {
         unsafe {
             init();
             cvt_p(ffi::EC_KEY_new_by_curve_name(nid.as_raw())).map(EcKey)
         }
+    }
+
+    #[deprecated(since = "0.9.2", note = "use from_curve_name")]
+    pub fn new_by_curve_name(nid: Nid) -> Result<EcKey, ErrorStack> {
+        EcKey::from_curve_name(nid)
     }
 
     private_key_from_pem!(EcKey, ffi::PEM_read_bio_ECPrivateKey);
@@ -133,7 +138,7 @@ mod test {
 
     #[test]
     fn key_new_by_curve_name() {
-        EcKey::new_by_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        EcKey::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
     }
 
     #[test]
