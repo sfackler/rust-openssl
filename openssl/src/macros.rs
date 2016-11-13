@@ -52,6 +52,27 @@ macro_rules! private_key_from_pem {
             }
         }
 
+        /// Deserializes a PEM-formatted private key, using the supplied password if the key is
+        /// encrypted.
+        ///
+        /// # Panics
+        ///
+        /// Panics if `passphrase` contains an embedded null.
+        pub fn private_key_from_pem_passphrase(pem: &[u8],
+                                               passphrase: &[u8])
+                                               -> Result<$t, ::error::ErrorStack> {
+            unsafe {
+                ffi::init();
+                let bio = try!(::bio::MemBioSlice::new(pem));
+                let passphrase = ::std::ffi::CString::new(passphrase).unwrap();
+                cvt_p($f(bio.as_ptr(),
+                         ptr::null_mut(),
+                         None,
+                         passphrase.as_ptr() as *const _ as *mut _))
+                    .map($t)
+            }
+        }
+
         /// Deserializes a PEM-formatted private key, using a callback to retrieve a password if the
         /// key is encrypted.
         ///
@@ -69,7 +90,7 @@ macro_rules! private_key_from_pem {
                 cvt_p($f(bio.as_ptr(),
                          ptr::null_mut(),
                          Some(::util::invoke_passwd_cb::<F>),
-                         &mut cb as *mut _ as *mut ::libc::c_void))
+                         &mut cb as *mut _ as *mut _))
                     .map($t)
             }
         }
@@ -81,7 +102,7 @@ macro_rules! private_key_to_pem {
         /// Serializes the private key to PEM.
         pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ::error::ErrorStack> {
             unsafe {
-                let bio = try!(MemBio::new());
+                let bio = try!(::bio::MemBio::new());
                 try!(cvt($f(bio.as_ptr(),
                             self.as_ptr(),
                             ptr::null(),

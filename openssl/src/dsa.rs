@@ -216,6 +216,12 @@ mod test {
 
     #[test]
     pub fn test_password() {
+        let key = include_bytes!("../test/dsa-encrypted.pem");
+        Dsa::private_key_from_pem_passphrase(key, b"mypass").unwrap();
+    }
+
+    #[test]
+    pub fn test_password_callback() {
         let mut password_queried = false;
         let key = include_bytes!("../test/dsa-encrypted.pem");
         Dsa::private_key_from_pem_callback(key, |password| {

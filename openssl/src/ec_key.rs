@@ -11,6 +11,8 @@ use types::OpenSslTypeRef;
 type_!(EcKey, EcKeyRef, ffi::EC_KEY, ffi::EC_KEY_free);
 
 impl EcKeyRef {
+    private_key_to_pem!(ffi::PEM_write_bio_ECPrivateKey);
+
     /// Serializes the private key components to DER.
     pub fn private_key_to_der(&self) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
