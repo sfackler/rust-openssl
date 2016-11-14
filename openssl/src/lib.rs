@@ -29,6 +29,7 @@ pub mod bn;
 pub mod crypto;
 pub mod dh;
 pub mod dsa;
+pub mod ec;
 pub mod ec_key;
 pub mod error;
 pub mod hash;

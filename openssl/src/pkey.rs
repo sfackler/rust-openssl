@@ -7,7 +7,7 @@ use {cvt, cvt_p};
 use bio::MemBioSlice;
 use dh::Dh;
 use dsa::Dsa;
-use ec_key::EcKey;
+use ec::EcKey;
 use rsa::Rsa;
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb_old};
@@ -153,7 +153,7 @@ mod tests {
     use symm::Cipher;
     use dh::Dh;
     use dsa::Dsa;
-    use ec_key::EcKey;
+    use ec::EcKey;
     use rsa::Rsa;
     use nid;
 

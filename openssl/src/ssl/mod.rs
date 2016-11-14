@@ -92,9 +92,9 @@ use std::sync::Mutex;
 
 use {init, cvt, cvt_p};
 use dh::{Dh, DhRef};
-use ec_key::EcKeyRef;
+use ec::EcKeyRef;
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
-use ec_key::EcKey;
+use ec::EcKey;
 use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError, X509Name};
 use x509::store::X509StoreBuilderRef;
 #[cfg(any(ossl102, ossl110))]
