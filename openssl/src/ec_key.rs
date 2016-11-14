@@ -53,7 +53,9 @@ impl EcGroup {
                 .map(EcGroup)
         }
     }
+}
 
+impl EcGroupRef {
     /// Places the components of a curve over a prime field in the provided `BigNum`s.
     pub fn components_gfp(&self,
                           p: &mut BigNumRef,
