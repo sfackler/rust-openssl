@@ -1410,6 +1410,7 @@ extern {
     pub fn EC_POINT_new(group: *const EC_GROUP) -> *mut EC_POINT;
     pub fn EC_POINT_add(group: *const EC_GROUP, r: *mut EC_POINT, a: *const EC_POINT, b: *const EC_POINT, ctx: *mut BN_CTX) -> c_int;
     pub fn EC_POINT_mul(group: *const EC_GROUP, r: *mut EC_POINT, n: *const BIGNUM, q: *const EC_POINT, m: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_POINT_invert(group: *const EC_GROUP, r: *mut EC_POINT, ctx: *mut BN_CTX) -> c_int;
     pub fn EC_POINT_point2oct(group: *const EC_GROUP, p: *const EC_POINT, form: point_conversion_form_t, buf: *mut c_uchar, len: size_t, ctx: *mut BN_CTX) -> size_t;
     pub fn EC_POINT_oct2point(group: *const EC_GROUP, p: *mut EC_POINT, buf: *const c_uchar, len: size_t, ctx: *mut BN_CTX) -> c_int;
     pub fn EC_POINT_cmp(group: *const EC_GROUP, a: *const EC_POINT, b: *const EC_POINT, ctx: *mut BN_CTX) -> c_int;

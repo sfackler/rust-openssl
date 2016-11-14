@@ -147,6 +147,13 @@ impl EcPointRef {
         }
     }
 
+    /// Inverts `self`.
+    pub fn invert(&mut self, group: &EcGroupRef, ctx: &BigNumContextRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_POINT_invert(group.as_ptr(), self.as_ptr(), ctx.as_ptr())).map(|_| ())
+        }
+    }
+
     /// Serializes the point to a binary representation.
     pub fn to_bytes(&self,
                     group: &EcGroupRef,
