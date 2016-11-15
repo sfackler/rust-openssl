@@ -52,6 +52,7 @@ fn main() {
             format!("bio_info_cb*")
         } else if s == "_STACK" {
             format!("struct stack_st")
+        // This logic should really be cleaned up
         } else if is_struct && s != "point_conversion_form_t" && s.chars().next().unwrap().is_lowercase() {
             format!("struct {}", s)
         } else {
