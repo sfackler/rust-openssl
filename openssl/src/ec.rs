@@ -144,14 +144,31 @@ impl EcPointRef {
         }
     }
 
-    /// Computes `generator * n + q * m`, storing the result in `self`.
+    /// Computes `generator * n`, storing the result ing `self`.
     pub fn mul_generator(&mut self,
                          group: &EcGroupRef,
                          n: &BigNumRef,
-                         q: &EcPointRef,
-                         m: &BigNumRef,
-                         ctx: &mut BigNumContextRef)
+                         ctx: &BigNumContextRef)
                          -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_POINT_mul(group.as_ptr(),
+                                  self.as_ptr(),
+                                  n.as_ptr(),
+                                  ptr::null(),
+                                  ptr::null(),
+                                  ctx.as_ptr()))
+                .map(|_| ())
+        }
+    }
+
+    /// Computes `generator * n + q * m`, storing the result in `self`.
+    pub fn mul_full(&mut self,
+                    group: &EcGroupRef,
+                    n: &BigNumRef,
+                    q: &EcPointRef,
+                    m: &BigNumRef,
+                    ctx: &mut BigNumContextRef)
+                    -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EC_POINT_mul(group.as_ptr(),
                                   self.as_ptr(),
