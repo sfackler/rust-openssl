@@ -375,4 +375,14 @@ mod test {
         let point2 = EcPoint::from_bytes(&group, &bytes, &mut ctx).unwrap();
         assert!(point.eq(&group, &point2, &mut ctx).unwrap());
     }
+
+    #[test]
+    fn mul_generator() {
+        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let key = EcKey::generate(&group).unwrap();
+        let mut ctx = BigNumContext::new().unwrap();
+        let mut public_key = EcPoint::new(&group).unwrap();
+        public_key.mul_generator(&group, key.private_key().unwrap(), &mut ctx).unwrap();
+        assert!(public_key.eq(&group, key.public_key().unwrap(), &mut ctx).unwrap());
+    }
 }
