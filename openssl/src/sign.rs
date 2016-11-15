@@ -210,6 +210,8 @@ mod test {
 
     use hash::MessageDigest;
     use sign::{Signer, Verifier};
+    use ec::{EcGroup, EcKey};
+    use nid;
     use rsa::Rsa;
     use dsa::Dsa;
     use pkey::PKey;
@@ -393,5 +395,20 @@ mod test {
               Vec::from_hex("e8e99d0f45237d786d6bbaa7965c7808bbff1a91").unwrap())];
 
         test_hmac(MessageDigest::sha1(), &tests);
+    }
+
+    #[test]
+    fn ec() {
+        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let key = EcKey::generate(&group).unwrap();
+        let key = PKey::from_ec_key(key).unwrap();
+
+        let mut signer = Signer::new(MessageDigest::sha256(), &key).unwrap();
+        signer.update(b"hello world").unwrap();
+        let signature = signer.finish().unwrap();
+
+        let mut verifier = Verifier::new(MessageDigest::sha256(), &key).unwrap();
+        verifier.update(b"hello world").unwrap();
+        assert!(verifier.finish(&signature).unwrap());
     }
 }
