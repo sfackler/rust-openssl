@@ -26,6 +26,9 @@ pub enum BN_GENCB {}
 pub enum CONF {}
 pub enum COMP_METHOD {}
 pub enum EC_KEY {}
+pub enum EC_GROUP {}
+pub enum EC_METHOD {}
+pub enum EC_POINT {}
 pub enum ENGINE {}
 pub enum EVP_CIPHER_CTX {}
 pub enum EVP_MD {}
@@ -56,6 +59,14 @@ pub enum BN_MONT_CTX {}
 pub enum BN_BLINDING {}
 pub enum DSA_METHOD {}
 pub enum EVP_PKEY_ASN1_METHOD {}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub enum point_conversion_form_t {
+    POINT_CONVERSION_COMPRESSED = 2,
+    POINT_CONVERSION_UNCOMPRESSED = 4,
+    POINT_CONVERSION_HYBRID = 6,
+}
 
 #[repr(C)]
 pub struct GENERAL_NAME {
@@ -1371,8 +1382,39 @@ extern {
     #[cfg(not(ossl101))]
     pub fn DH_get_2048_256() -> *mut DH;
 
+    pub fn EC_KEY_new() -> *mut EC_KEY;
     pub fn EC_KEY_new_by_curve_name(nid: c_int) -> *mut EC_KEY;
+    pub fn EC_KEY_set_group(key: *mut EC_KEY, group: *const EC_GROUP) -> c_int;
+    pub fn EC_KEY_get0_group(key: *const EC_KEY) -> *const EC_GROUP;
+    pub fn EC_KEY_set_public_key(key: *mut EC_KEY, key: *const EC_POINT) -> c_int;
+    pub fn EC_KEY_get0_public_key(key: *const EC_KEY) -> *const EC_POINT;
+    pub fn EC_KEY_set_private_key(key: *mut EC_KEY, key: *const BIGNUM) -> c_int;
+    pub fn EC_KEY_get0_private_key(key: *const EC_KEY) -> *const BIGNUM;
+    pub fn EC_KEY_generate_key(key: *mut EC_KEY) -> c_int;
+    pub fn EC_KEY_check_key(key: *const EC_KEY) -> c_int;
     pub fn EC_KEY_free(key: *mut EC_KEY);
+
+    pub fn EC_GF2m_simple_method() -> *const EC_METHOD;
+
+    pub fn EC_GROUP_new(meth: *const EC_METHOD) -> *mut EC_GROUP;
+    pub fn EC_GROUP_new_curve_GFp(p: *const BIGNUM, a: *const BIGNUM, b: *const BIGNUM, ctx: *mut BN_CTX) -> *mut EC_GROUP;
+    pub fn EC_GROUP_new_curve_GF2m(p: *const BIGNUM, a: *const BIGNUM, b: *const BIGNUM, ctx: *mut BN_CTX) -> *mut EC_GROUP;
+    pub fn EC_GROUP_new_by_curve_name(nid: c_int) -> *mut EC_GROUP;
+    pub fn EC_GROUP_get_curve_GFp(group: *const EC_GROUP, p: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_GROUP_get_curve_GF2m(group: *const EC_GROUP, p: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_GROUP_get_degree(group: *const EC_GROUP) -> c_int;
+    pub fn EC_GROUP_get_order(group: *const EC_GROUP, order: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
+
+    pub fn EC_GROUP_free(group: *mut EC_GROUP);
+
+    pub fn EC_POINT_new(group: *const EC_GROUP) -> *mut EC_POINT;
+    pub fn EC_POINT_add(group: *const EC_GROUP, r: *mut EC_POINT, a: *const EC_POINT, b: *const EC_POINT, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_POINT_mul(group: *const EC_GROUP, r: *mut EC_POINT, n: *const BIGNUM, q: *const EC_POINT, m: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_POINT_invert(group: *const EC_GROUP, r: *mut EC_POINT, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_POINT_point2oct(group: *const EC_GROUP, p: *const EC_POINT, form: point_conversion_form_t, buf: *mut c_uchar, len: size_t, ctx: *mut BN_CTX) -> size_t;
+    pub fn EC_POINT_oct2point(group: *const EC_GROUP, p: *mut EC_POINT, buf: *const c_uchar, len: size_t, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_POINT_cmp(group: *const EC_GROUP, a: *const EC_POINT, b: *const EC_POINT, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_POINT_free(point: *mut EC_POINT);
 
     pub fn ERR_get_error() -> c_ulong;
     pub fn ERR_lib_error_string(err: c_ulong) -> *const c_char;

@@ -1269,7 +1269,7 @@ fn tmp_dh_callback() {
 #[test]
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
 fn tmp_ecdh_callback() {
-    use ec_key::EcKey;
+    use ec::EcKey;
     use nid;
 
     static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
@@ -1332,7 +1332,7 @@ fn tmp_dh_callback_ssl() {
 #[test]
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
 fn tmp_ecdh_callback_ssl() {
-    use ec_key::EcKey;
+    use ec::EcKey;
     use nid;
 
     static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;

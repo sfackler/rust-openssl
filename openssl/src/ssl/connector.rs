@@ -215,10 +215,10 @@ impl SslAcceptorBuilder {
 
 #[cfg(ossl101)]
 fn setup_curves(ctx: &mut SslContextBuilder) -> Result<(), ErrorStack> {
-    use ec_key::EcKey;
+    use ec::EcKey;
     use nid;
 
-    let curve = try!(EcKey::new_by_curve_name(nid::X9_62_PRIME256V1));
+    let curve = try!(EcKey::from_curve_name(nid::X9_62_PRIME256V1));
     ctx.set_tmp_ecdh(&curve)
 }
 

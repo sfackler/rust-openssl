@@ -7,7 +7,7 @@ use {cvt, cvt_p};
 use bio::MemBioSlice;
 use dh::Dh;
 use dsa::Dsa;
-use ec_key::EcKey;
+use ec::EcKey;
 use rsa::Rsa;
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb_old};
@@ -153,7 +153,7 @@ mod tests {
     use symm::Cipher;
     use dh::Dh;
     use dsa::Dsa;
-    use ec_key::EcKey;
+    use ec::EcKey;
     use rsa::Rsa;
     use nid;
 
@@ -221,7 +221,7 @@ mod tests {
 
     #[test]
     fn test_ec_key_accessor() {
-        let ec_key = EcKey::new_by_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let ec_key = EcKey::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
         let pkey = PKey::from_ec_key(ec_key).unwrap();
         pkey.ec_key().unwrap();
         assert!(pkey.rsa().is_err());
