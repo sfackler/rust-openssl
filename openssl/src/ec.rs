@@ -29,30 +29,6 @@ impl EcGroup {
             cvt_p(ffi::EC_GROUP_new_by_curve_name(nid.as_raw())).map(EcGroup)
         }
     }
-
-    /// Constructs a curve over a prime field from its components.
-    pub fn from_components_gfp(p: &BigNumRef,
-                               a: &BigNumRef,
-                               b: &BigNumRef,
-                               ctx: &mut BigNumContextRef)
-                               -> Result<EcGroup, ErrorStack> {
-        unsafe {
-            cvt_p(ffi::EC_GROUP_new_curve_GFp(p.as_ptr(), a.as_ptr(), b.as_ptr(), ctx.as_ptr()))
-                .map(EcGroup)
-        }
-    }
-
-    /// Constructs a curve over a binary field from its components.
-    pub fn from_components_gf2m(p: &BigNumRef,
-                                a: &BigNumRef,
-                                b: &BigNumRef,
-                                ctx: &mut BigNumContextRef)
-                                -> Result<EcGroup, ErrorStack> {
-        unsafe {
-            cvt_p(ffi::EC_GROUP_new_curve_GF2m(p.as_ptr(), a.as_ptr(), b.as_ptr(), ctx.as_ptr()))
-                .map(EcGroup)
-        }
-    }
 }
 
 impl EcGroupRef {
@@ -331,24 +307,13 @@ impl EcKey {
 
 #[cfg(test)]
 mod test {
-    use bn::{BigNum, BigNumContext};
+    use bn::BigNumContext;
     use nid;
     use super::*;
 
     #[test]
     fn key_new_by_curve_name() {
         EcKey::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
-    }
-
-    #[test]
-    fn round_trip_prime256v1() {
-        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
-        let mut p = BigNum::new().unwrap();
-        let mut a = BigNum::new().unwrap();
-        let mut b = BigNum::new().unwrap();
-        let mut ctx = BigNumContext::new().unwrap();
-        group.components_gfp(&mut p, &mut a, &mut b, &mut ctx).unwrap();
-        EcGroup::from_components_gfp(&p, &a, &b, &mut ctx).unwrap();
     }
 
     #[test]
