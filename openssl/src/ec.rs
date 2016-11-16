@@ -238,11 +238,14 @@ impl EcKeyRef {
     private_key_to_pem!(ffi::PEM_write_bio_ECPrivateKey);
     private_key_to_der!(ffi::i2d_ECPrivateKey);
 
-    pub fn group(&self) -> &EcGroupRef {
+    pub fn group(&self) -> Option<&EcGroupRef> {
         unsafe {
             let ptr = ffi::EC_KEY_get0_group(self.as_ptr());
-            assert!(!ptr.is_null());
-            EcGroupRef::from_ptr(ptr as *mut _)
+            if ptr.is_null() {
+                None
+            } else {
+                Some(EcGroupRef::from_ptr(ptr as *mut _))
+            }
         }
     }
 
