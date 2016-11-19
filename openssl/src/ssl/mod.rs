@@ -84,6 +84,7 @@ use std::io::prelude::*;
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::{Deref, DerefMut};
+use std::panic::resume_unwind;
 use std::path::Path;
 use std::ptr;
 use std::slice;
@@ -1601,7 +1602,7 @@ impl<S> SslStream<S> {
 
     fn check_panic(&mut self) {
         if let Some(err) = unsafe { bio::take_panic::<S>(self.ssl.get_raw_rbio()) } {
-            ::std::panic::resume_unwind(err)
+            resume_unwind(err)
         }
     }
 

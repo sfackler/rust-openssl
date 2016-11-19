@@ -23,10 +23,10 @@ fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     let mut ctx = try!(SslContextBuilder::new(method));
 
     let mut opts = ssl::SSL_OP_ALL;
-    opts |= ssl::SSL_OP_NO_TICKET;
-    opts |= ssl::SSL_OP_NO_COMPRESSION;
     opts &= !ssl::SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG;
     opts &= !ssl::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
+    opts |= ssl::SSL_OP_NO_TICKET;
+    opts |= ssl::SSL_OP_NO_COMPRESSION;
     opts |= ssl::SSL_OP_NO_SSLV2;
     opts |= ssl::SSL_OP_NO_SSLV3;
     opts |= ssl::SSL_OP_SINGLE_DH_USE;
