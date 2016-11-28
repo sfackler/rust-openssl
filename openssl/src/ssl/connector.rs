@@ -83,6 +83,7 @@ impl SslConnectorBuilder {
 ///
 /// OpenSSL's built in hostname verification is used when linking against OpenSSL 1.0.2 or 1.1.0,
 /// and a custom implementation is used when linking against OpenSSL 1.0.1.
+#[derive(Clone)]
 pub struct SslConnector(SslContext);
 
 impl SslConnector {
@@ -236,6 +237,7 @@ fn setup_curves(_: &mut SslContextBuilder) -> Result<(), ErrorStack> {
 ///
 /// OpenSSL's default configuration is highly insecure. This connector manages the OpenSSL
 /// structures, configuring cipher suites, session options, and more.
+#[derive(Clone)]
 pub struct SslAcceptor(SslContext);
 
 impl SslAcceptor {
