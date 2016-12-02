@@ -6,7 +6,7 @@
 
 ## Warning
 
-This README does not correspond to rust-openssl 0.7.x. See
+This README does not correspond to rust-openssl 0.7.x or 0.8.x. See
 [here](https://github.com/sfackler/rust-openssl/blob/b8fb29db5c246175a096260eacca38180cd77dd0/README.md)
 for that README.
 
