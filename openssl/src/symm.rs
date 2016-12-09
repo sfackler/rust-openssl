@@ -88,8 +88,8 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_bf_ecb()) }
     }
 
-    pub fn bf_cfb() -> Cipher {
-        unsafe { Cipher(ffi::EVP_bf_cfb()) }
+    pub fn bf_cfb64() -> Cipher {
+        unsafe { Cipher(ffi::EVP_bf_cfb64()) }
     }
 
     pub fn bf_ofb() -> Cipher {
