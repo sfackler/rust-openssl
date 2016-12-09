@@ -80,6 +80,22 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_gcm()) }
     }
 
+    pub fn bf_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_bf_cbc()) }
+    }
+
+    pub fn bf_ecb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_bf_ecb()) }
+    }
+
+    pub fn bf_cfb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_bf_cfb()) }
+    }
+
+    pub fn bf_ofb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_bf_ofb()) }
+    }
+
     pub fn des_cbc() -> Cipher {
         unsafe { Cipher(ffi::EVP_des_cbc()) }
     }
