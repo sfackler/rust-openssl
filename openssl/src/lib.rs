@@ -1,4 +1,4 @@
-#![doc(html_root_url="https://docs.rs/openssl/0.9.2")]
+#![doc(html_root_url="https://docs.rs/openssl/0.9.3")]
 
 #[macro_use]
 extern crate bitflags;
