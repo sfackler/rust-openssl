@@ -32,11 +32,11 @@ impl fmt::Display for ErrorStack {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let mut first = true;
         for err in &self.0 {
-            if first {
+            if !first {
                 try!(fmt.write_str(", "));
-                first = false;
             }
             try!(write!(fmt, "{}", err));
+            first = false;
         }
         Ok(())
     }
