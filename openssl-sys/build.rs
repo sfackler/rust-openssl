@@ -11,17 +11,25 @@ use std::process::Command;
 fn main() {
     let target = env::var("TARGET").unwrap();
 
-    let openssl_dir = env::var_os("OPENSSL_DIR").unwrap_or_else(|| {
-        find_openssl_dir(&target)
-    });
+    let lib_dir = env::var_os("OPENSSL_LIB_DIR").map(PathBuf::from);
+    let include_dir = env::var_os("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
 
-    let lib_dir = Path::new(&openssl_dir).join("lib");
-    let include_dir = Path::new(&openssl_dir).join("include");
+    let (lib_dir, include_dir) = if lib_dir.is_none() || include_dir.is_none() {
+        let openssl_dir = env::var_os("OPENSSL_DIR").unwrap_or_else(|| {
+            find_openssl_dir(&target)
+        });
+        let openssl_dir = Path::new(&openssl_dir);
+        let lib_dir = lib_dir.unwrap_or_else(|| openssl_dir.join("lib"));
+        let include_dir = include_dir.unwrap_or_else(|| openssl_dir.join("include"));
+        (lib_dir, include_dir)
+    } else {
+        (lib_dir.unwrap(), include_dir.unwrap())
+    };
+
     if !Path::new(&lib_dir).exists() {
         panic!("OpenSSL library directory does not exist: {}",
                lib_dir.to_string_lossy());
     }
-
     if !Path::new(&include_dir).exists() {
         panic!("OpenSSL include directory does not exist: {}",
                include_dir.to_string_lossy());

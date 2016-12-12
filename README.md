@@ -102,6 +102,12 @@ The build script can be configured via environment variables:
 * `OPENSSL_DIR` - If specified, a directory that will be used to find
   OpenSSL installation. It's expected that under this directory the `include`
   folder has header files and a `lib` folder has the runtime libraries.
+* `OPENSSL_LIB_DIR` - If specified, a directory that will be used to find
+  OpenSSL libraries. Overrides the `lib` folder implied by `OPENSSL_DIR`
+  (if specified).
+* `OPENSSL_INCLUDE_DIR` - If specified, a directory that will be used to find
+  OpenSSL header files. Overrides the `include` folder implied by `OPENSSL_DIR`
+  (if specified).
 * `OPENSSL_STATIC` - If specified, OpenSSL libraries will be statically rather
   than dynamically linked.
 
