@@ -56,13 +56,10 @@ homebrew:
 ```bash
 brew install openssl
 ```
-This will install opensll as a keg-only version, which means that cargo won't be
-able to discover it. Furthermore running
-```bash
-brew link --force openssl
-```
-won't solve your problem as brew will rightfully tell you that this move is very
-insecure.
+
+#### Note for users of the hyper crate
+```brew install``` won't directly work and neither will ```brew link --force openssl```.
+It will  fail because hyper still depends on an older version of this crate.
 The solution is to export two environment variables which allow cargo to locate
 the correct openssl libraries installed by brew.
 ```
