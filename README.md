@@ -73,6 +73,18 @@ installation via an environment variable:
 set OPENSSL_DIR=C:\OpenSSL-Win64
 ```
 
+Note that this OpenSSL distribution does not ship with any root certificates.
+So to make requests to servers on the internet, you have to install them
+manually. Download the [cacert.pem file from here], copy it somewhere safe
+(`C:\OpenSSL-Win64\certs` is a good place) and point the `SSL_CERT_FILE`
+environment variable there:
+
+```
+set SSL_CERT_FILE=C:\OpenSSL-Win64\certs\cacert.pem
+```
+
+[cacert.pem file from here]: https://curl.haxx.se/docs/caextract.html
+
 After that, you're just a `cargo build` away!
 
 ### Windows GNU (MinGW)
