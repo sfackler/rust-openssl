@@ -1506,6 +1506,15 @@ impl<S: Read + Write> SslStream<S> {
     /// This is particularly useful with a nonblocking socket, where the error
     /// value will identify if OpenSSL is waiting on read or write readiness.
     pub fn ssl_read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
+        // The intepretation of the return code here is a little odd with a
+        // zero-length write. OpenSSL will likely correctly report back to us
+        // that it read zero bytes, but zero is also the sentinel for "error".
+        // To avoid that confusion short-circuit that logic and return quickly
+        // if `buf` has a length of zero.
+        if buf.len() == 0 {
+            return Ok(0)
+        }
+
         let ret = self.ssl.read(buf);
         if ret > 0 {
             Ok(ret as usize)
@@ -1523,6 +1532,11 @@ impl<S: Read + Write> SslStream<S> {
     /// This is particularly useful with a nonblocking socket, where the error
     /// value will identify if OpenSSL is waiting on read or write readiness.
     pub fn ssl_write(&mut self, buf: &[u8]) -> Result<usize, Error> {
+        // See above for why we short-circuit on zero-length buffers
+        if buf.len() == 0 {
+            return Ok(0)
+        }
+
         let ret = self.ssl.write(buf);
         if ret > 0 {
             Ok(ret as usize)

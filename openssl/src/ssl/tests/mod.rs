@@ -421,6 +421,16 @@ fn test_write() {
     stream.flush().unwrap();
 }
 
+#[test]
+fn zero_length_buffers() {
+    let (_s, stream) = Server::new();
+    let ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    let mut stream = Ssl::new(&ctx.build()).unwrap().connect(stream).unwrap();
+
+    assert_eq!(stream.write(b"").unwrap(), 0);
+    assert_eq!(stream.read(&mut []).unwrap(), 0);
+}
+
 run_test!(get_peer_certificate, |method, stream| {
     let ctx = SslContext::builder(method).unwrap();
     let stream = Ssl::new(&ctx.build()).unwrap().connect(stream).unwrap();
