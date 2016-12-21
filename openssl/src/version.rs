@@ -92,8 +92,13 @@ fn test_versions() {
     println!("Platform: '{}'", platform());
     println!("Dir: '{}'", dir());
 
+    #[cfg(not(libressl))]
+    fn expected_name() -> &'static str { "OpenSSL" }
+    #[cfg(libressl)]
+    fn expected_name() -> &'static str { "LibreSSL" }
+
     assert!(number() > 0);
-    assert!(version().starts_with("OpenSSL"));
+    assert!(version().starts_with(expected_name()));
     assert!(c_flags().starts_with("compiler:"));
     assert!(built_on().starts_with("built on:"));
     assert!(dir().starts_with("OPENSSLDIR:"));

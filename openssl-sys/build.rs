@@ -247,6 +247,15 @@ fn validate_headers(include_dirs: &[PathBuf],
     } else if version_text.contains("0x10100") {
         println!("cargo:rustc-cfg=ossl110");
         println!("cargo:version=110");
+    } else if version_text.contains("0x20000000L") {
+        // Check if it is really LibreSSL
+        if version_header.lines().any(|l| {
+            l.contains("define ") && l.contains("LIBRESSL_VERSION_NUMBER")
+        }) {
+            println!("cargo:rustc-cfg=libressl");
+            println!("cargo:libressl=true");
+            println!("cargo:version=101");
+        }
     } else {
         panic!("
 
