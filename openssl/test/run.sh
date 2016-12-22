@@ -12,15 +12,21 @@ esac
 
 echo Using features: $FEATURES
 
-if [ -d "$HOME/openssl/lib" ]; then
-    export OPENSSL_DIR=$HOME/openssl
-    export PATH=$HOME/openssl/bin:$PATH
+if [ -n "${BUILD_LIBRESSL_VERSION}" -a -d "$HOME/libressl/lib" ]; then
+    echo "Testing build libressl-${BUILD_LIBRESSL_VERSION}"
+    export OPENSSL_DIR=${HOME}/libressl
+    export PATH="${HOME}/libressl/bin:${PATH}"
+
+elif [ -n "${BUILD_OPENSSL_VERSION}" -a -d "$HOME/openssl/lib" ]; then
+    echo "Testing build openssl-${BUILD_LIBRESSL_VERSION}"
+    export OPENSSL_DIR="${HOME}/openssl"
+    export PATH="${HOME}/openssl/bin:${PATH}"
 fi
 
 if [ "$TARGET" == "arm-unknown-linux-gnueabihf" ]; then
     FLAGS="--no-run"
 fi
 
-cargo run --manifest-path systest/Cargo.toml --target $TARGET
+cargo run --manifest-path systest/Cargo.toml --target $TARGET -v
 exec cargo test --manifest-path openssl/Cargo.toml --target $TARGET \
-    --features "$FEATURES" $FLAGS
+    --features "$FEATURES" -v $FLAGS

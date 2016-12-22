@@ -181,7 +181,7 @@ macro_rules! run_test(
             }
 
             #[test]
-            #[cfg_attr(any(windows, target_arch = "arm"), ignore)] // FIXME(#467)
+            #[cfg_attr(any(libressl, windows, target_arch = "arm"), ignore)] // FIXME(#467)
             fn dtlsv1() {
                 let (_s, stream) = Server::new_dtlsv1(Some("hello"));
                 $blk(SslMethod::dtls(), stream);
@@ -442,7 +442,7 @@ run_test!(get_peer_certificate, |method, stream| {
 });
 
 #[test]
-#[cfg_attr(any(windows, target_arch = "arm"), ignore)] // FIXME(#467)
+#[cfg_attr(any(libressl, windows, target_arch = "arm"), ignore)] // FIXME(#467)
 fn test_write_dtlsv1() {
     let (_s, stream) = Server::new_dtlsv1(iter::repeat("y\n"));
     let ctx = SslContext::builder(SslMethod::dtls()).unwrap();
@@ -781,7 +781,7 @@ fn test_alpn_server_select_none() {
 }
 
 #[test]
-#[cfg_attr(any(windows, target_arch = "arm"), ignore)] // FIXME(#467)
+#[cfg_attr(any(libressl, windows, target_arch = "arm"), ignore)] // FIXME(#467)
 fn test_read_dtlsv1() {
     let (_s, stream) = Server::new_dtlsv1(Some("hello"));
 
@@ -859,7 +859,7 @@ fn test_write_nonblocking() {
 }
 
 #[test]
-#[cfg_attr(any(windows, target_arch = "arm"), ignore)] // FIXME(#467)
+#[cfg_attr(any(libressl, windows, target_arch = "arm"), ignore)] // FIXME(#467)
 fn test_read_nonblocking() {
     let (_s, stream) = Server::new();
     stream.set_nonblocking(true).unwrap();

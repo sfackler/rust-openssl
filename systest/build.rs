@@ -22,7 +22,11 @@ fn main() {
         }
     }
 
-    cfg.cfg(&format!("ossl{}", env::var("DEP_OPENSSL_VERSION").unwrap()), None);
+    if let Ok(_) = env::var("DEP_OPENSSL_LIBRESSL") {
+        cfg.cfg("libressl", None);
+    } else if let Ok(version) = env::var("DEP_OPENSSL_VERSION") {
+        cfg.cfg(&format!("ossl{}", version), None);
+    }
     if let Ok(vars) = env::var("DEP_OPENSSL_CONF") {
         for var in vars.split(",") {
             cfg.cfg("osslconf", Some(var));

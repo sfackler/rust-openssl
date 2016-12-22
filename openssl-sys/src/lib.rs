@@ -17,6 +17,11 @@ mod ossl110;
 #[cfg(ossl110)]
 pub use ossl110::*;
 
+#[cfg(libressl)]
+mod libressl;
+#[cfg(libressl)]
+pub use libressl::*;
+
 pub enum ASN1_INTEGER {}
 pub enum ASN1_STRING {}
 pub enum ASN1_TIME {}
@@ -1075,8 +1080,11 @@ pub const SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER: c_long = 0x2;
 pub const SSL_MODE_AUTO_RETRY: c_long = 0x4;
 pub const SSL_MODE_NO_AUTO_CHAIN: c_long = 0x8;
 pub const SSL_MODE_RELEASE_BUFFERS: c_long = 0x10;
+#[cfg(not(libressl))]
 pub const SSL_MODE_SEND_CLIENTHELLO_TIME: c_long = 0x20;
+#[cfg(not(libressl))]
 pub const SSL_MODE_SEND_SERVERHELLO_TIME: c_long = 0x40;
+#[cfg(not(libressl))]
 pub const SSL_MODE_SEND_FALLBACK_SCSV: c_long = 0x80;
 
 pub const SSL_ERROR_NONE: c_int = 0;
@@ -1095,26 +1103,31 @@ pub const SSL_VERIFY_FAIL_IF_NO_PEER_CERT: c_int = 2;
 #[cfg(not(ossl101))]
 pub const SSL_OP_TLSEXT_PADDING: c_ulong =                          0x00000010;
 pub const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS: c_ulong =             0x00000800;
+#[cfg(not(libressl))]
 pub const SSL_OP_ALL: c_ulong =                                     0x80000BFF;
 pub const SSL_OP_NO_QUERY_MTU: c_ulong =                            0x00001000;
 pub const SSL_OP_COOKIE_EXCHANGE: c_ulong =                         0x00002000;
 pub const SSL_OP_NO_TICKET: c_ulong =                               0x00004000;
+#[cfg(not(libressl))]
 pub const SSL_OP_CISCO_ANYCONNECT: c_ulong =                        0x00008000;
 pub const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION: c_ulong =  0x00010000;
+#[cfg(not(libressl))]
 pub const SSL_OP_NO_COMPRESSION: c_ulong =                          0x00020000;
+#[cfg(not(libressl))]
 pub const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION: c_ulong =       0x00040000;
 pub const SSL_OP_CIPHER_SERVER_PREFERENCE: c_ulong =                0x00400000;
 pub const SSL_OP_TLS_ROLLBACK_BUG: c_ulong =                        0x00800000;
+#[cfg(not(libressl))]
 pub const SSL_OP_NO_SSLv3: c_ulong =                                0x02000000;
 pub const SSL_OP_NO_TLSv1: c_ulong =                                0x04000000;
 pub const SSL_OP_NO_TLSv1_2: c_ulong =                              0x08000000;
 pub const SSL_OP_NO_TLSv1_1: c_ulong =                              0x10000000;
 
-#[cfg(not(ossl101))]
+#[cfg(not(any(ossl101, libressl)))]
 pub const SSL_OP_NO_DTLSv1: c_ulong =                               0x04000000;
-#[cfg(not(ossl101))]
+#[cfg(not(any(ossl101, libressl)))]
 pub const SSL_OP_NO_DTLSv1_2: c_ulong =                             0x08000000;
-#[cfg(not(ossl101))]
+#[cfg(not(any(ossl101, libressl)))]
 pub const SSL_OP_NO_SSL_MASK: c_ulong = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 |
     SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
 
@@ -1292,9 +1305,9 @@ extern {
     pub fn BIO_new_socket(sock: c_int, close_flag: c_int) -> *mut BIO;
     pub fn BIO_read(b: *mut BIO, buf: *mut c_void, len: c_int) -> c_int;
     pub fn BIO_write(b: *mut BIO, buf: *const c_void, len: c_int) -> c_int;
-    #[cfg(ossl101)]
+    #[cfg(any(ossl101, libressl))]
     pub fn BIO_new_mem_buf(buf: *mut c_void, len: c_int) -> *mut BIO;
-    #[cfg(not(ossl101))]
+    #[cfg(not(any(ossl101, libressl)))]
     pub fn BIO_new_mem_buf(buf: *const c_void, len: c_int) -> *mut BIO;
     pub fn BIO_set_flags(b: *mut BIO, flags: c_int);
     pub fn BIO_clear_flags(b: *mut BIO, flags: c_int);
@@ -1375,11 +1388,11 @@ extern {
 
     pub fn DH_new() -> *mut DH;
     pub fn DH_free(dh: *mut DH);
-    #[cfg(not(ossl101))]
+    #[cfg(not(any(ossl101, libressl)))]
     pub fn DH_get_1024_160() -> *mut DH;
-    #[cfg(not(ossl101))]
+    #[cfg(not(any(ossl101, libressl)))]
     pub fn DH_get_2048_224() -> *mut DH;
-    #[cfg(not(ossl101))]
+    #[cfg(not(any(ossl101, libressl)))]
     pub fn DH_get_2048_256() -> *mut DH;
 
     pub fn EC_KEY_new() -> *mut EC_KEY;
@@ -1495,11 +1508,11 @@ extern {
                                 type_: *const EVP_MD,
                                 e: *mut ENGINE,
                                 pkey: *mut EVP_PKEY) -> c_int;
-    #[cfg(ossl101)]
+    #[cfg(any(ossl101, libressl))]
     pub fn EVP_DigestVerifyFinal(ctx: *mut EVP_MD_CTX,
                                  sigret: *mut c_uchar,
                                  siglen: size_t) -> c_int;
-    #[cfg(not(ossl101))]
+    #[cfg(not(any(ossl101, libressl)))]
     pub fn EVP_DigestVerifyFinal(ctx: *mut EVP_MD_CTX,
                                  sigret: *const c_uchar,
                                  siglen: size_t) -> c_int;
@@ -1634,8 +1647,10 @@ extern {
     pub fn SSL_get_ex_data_X509_STORE_CTX_idx() -> c_int;
     pub fn SSL_get_SSL_CTX(ssl: *const SSL) -> *mut SSL_CTX;
     pub fn SSL_set_SSL_CTX(ssl: *mut SSL, ctx: *mut SSL_CTX) -> *mut SSL_CTX;
-    #[cfg(not(osslconf = "OPENSSL_NO_COMP"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_COMP", libressl)))]
     pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const COMP_METHOD;
+    #[cfg(libressl)]
+    pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const libc::c_void;
     pub fn SSL_get_peer_certificate(ssl: *const SSL) -> *mut X509;
     pub fn SSL_get_ssl_method(ssl: *mut SSL) -> *const SSL_METHOD;
     pub fn SSL_get_version(ssl: *const SSL) -> *const c_char;
@@ -1648,14 +1663,14 @@ extern {
     pub fn SSL_get_ex_data(ssl: *const SSL, idx: c_int) -> *mut c_void;
     pub fn SSL_get_servername(ssl: *const SSL, name_type: c_int) -> *const c_char;
     pub fn SSL_get_current_cipher(ssl: *const SSL) -> *const SSL_CIPHER;
-    #[cfg(not(ossl101))]
+    #[cfg(not(any(ossl101, libressl)))]
     pub fn SSL_get0_param(ssl: *mut SSL) -> *mut X509_VERIFY_PARAM;
     pub fn SSL_get_verify_result(ssl: *const SSL) -> c_long;
     pub fn SSL_shutdown(ssl: *mut SSL) -> c_int;
     pub fn SSL_get_certificate(ssl: *const SSL) -> *mut X509;
-    #[cfg(ossl101)]
+    #[cfg(any(ossl101, libressl))]
     pub fn SSL_get_privatekey(ssl: *mut SSL) -> *mut EVP_PKEY;
-    #[cfg(not(ossl101))]
+    #[cfg(not(any(ossl101, libressl)))]
     pub fn SSL_get_privatekey(ssl: *const SSL) -> *mut EVP_PKEY;
     pub fn SSL_load_client_CA_file(file: *const c_char) -> *mut stack_st_X509_NAME;
     pub fn SSL_set_tmp_dh_callback(ctx: *mut SSL,
@@ -1664,8 +1679,10 @@ extern {
                                                         keylength: c_int)
                                                         -> *mut DH);
 
-    #[cfg(not(osslconf = "OPENSSL_NO_COMP"))]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_COMP", libressl)))]
     pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
+    #[cfg(libressl)]
+    pub fn SSL_COMP_get_name(comp: *const libc::c_void) -> *const c_char;
 
     pub fn SSL_CIPHER_get_name(cipher: *const SSL_CIPHER) -> *const c_char;
     pub fn SSL_CIPHER_get_bits(cipher: *const SSL_CIPHER, alg_bits: *mut c_int) -> c_int;
@@ -1701,9 +1718,9 @@ extern {
                                                             keylength: c_int)
                                                             -> *mut DH);
 
-    #[cfg(not(ossl101))]
+    #[cfg(not(any(ossl101, libressl)))]
     pub fn SSL_CTX_get0_certificate(ctx: *const SSL_CTX) -> *mut X509;
-    #[cfg(not(ossl101))]
+    #[cfg(not(any(ossl101, libressl)))]
     pub fn SSL_CTX_get0_privatekey(ctx: *const SSL_CTX) -> *mut EVP_PKEY;
 
     pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;
@@ -1787,9 +1804,9 @@ extern {
 
     #[cfg(not(ossl101))]
     pub fn X509_VERIFY_PARAM_free(param: *mut X509_VERIFY_PARAM);
-    #[cfg(not(ossl101))]
+    #[cfg(not(any(ossl101, libressl)))]
     pub fn X509_VERIFY_PARAM_set_hostflags(param: *mut X509_VERIFY_PARAM, flags: c_uint);
-    #[cfg(not(ossl101))]
+    #[cfg(not(any(ossl101, libressl)))]
     pub fn X509_VERIFY_PARAM_set1_host(param: *mut X509_VERIFY_PARAM,
                                        name: *const c_char,
                                        namelen: size_t) -> c_int;

@@ -166,8 +166,11 @@ bitflags! {
         const SSL_MODE_AUTO_RETRY = ffi::SSL_MODE_AUTO_RETRY,
         const SSL_MODE_NO_AUTO_CHAIN = ffi::SSL_MODE_NO_AUTO_CHAIN,
         const SSL_MODE_RELEASE_BUFFERS = ffi::SSL_MODE_RELEASE_BUFFERS,
+        #[cfg(not(libressl))]
         const SSL_MODE_SEND_CLIENTHELLO_TIME = ffi::SSL_MODE_SEND_CLIENTHELLO_TIME,
+        #[cfg(not(libressl))]
         const SSL_MODE_SEND_SERVERHELLO_TIME = ffi::SSL_MODE_SEND_SERVERHELLO_TIME,
+        #[cfg(not(libressl))]
         const SSL_MODE_SEND_FALLBACK_SCSV = ffi::SSL_MODE_SEND_FALLBACK_SCSV,
     }
 }

@@ -72,6 +72,8 @@ matrix:
           packages:
             - gcc-multilib
 
+    # LibreSSL
+    - env: BUILD_LIBRESSL_VERSION=2.5.0
 
 before_install:
   - ./openssl/test/build.sh
@@ -83,4 +85,5 @@ script:
 cache:
   cargo: true
   directories:
+    - $HOME/libressl
     - $HOME/openssl
