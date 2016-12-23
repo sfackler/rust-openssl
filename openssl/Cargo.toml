@@ -1,11 +1,11 @@
 [package]
 name = "openssl"
-version = "0.9.3"
+version = "0.9.4"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
 repository = "https://github.com/sfackler/rust-openssl"
-documentation = "https://docs.rs/openssl/0.9.3/openssl"
+documentation = "https://docs.rs/openssl/0.9.4/openssl"
 readme = "../README.md"
 keywords = ["crypto", "tls", "ssl", "dtls"]
 build = "build.rs"
@@ -20,7 +20,7 @@ v110 = []
 bitflags = "0.7"
 lazy_static = "0.2"
 libc = "0.2"
-openssl-sys = { version = "0.9.3", path = "../openssl-sys" }
+openssl-sys = { version = "0.9.4", path = "../openssl-sys" }
 
 [dev-dependencies]
 tempdir = "0.3"
