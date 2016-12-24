@@ -14,8 +14,11 @@ build = "build.rs"
 libc = "0.2"
 
 [build-dependencies]
-pkg-config = "0.3"
+metadeps = "1"
 
 [target.'cfg(windows)'.dependencies]
 user32-sys = "0.2"
 gdi32-sys = "0.2"
+
+[package.metadata.pkg-config]
+openssl = "1.0.1"
