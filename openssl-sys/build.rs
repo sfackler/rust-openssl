@@ -1,4 +1,4 @@
-extern crate pkg_config;
+extern crate metadeps;
 
 use std::collections::HashSet;
 use std::env;
@@ -172,8 +172,8 @@ fn try_pkg_config() {
     // cflags dirs for showing us lots of `-I`.
     env::set_var("PKG_CONFIG_ALLOW_SYSTEM_CFLAGS", "1");
 
-    let lib = match pkg_config::find_library("openssl") {
-        Ok(lib) => lib,
+    let lib = match metadeps::probe() {
+        Ok(mut libs) => libs.remove("openssl").unwrap(),
         Err(_) => return,
     };
 
