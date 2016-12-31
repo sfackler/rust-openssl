@@ -35,12 +35,13 @@
 //! assert!(verifier.finish(&signature).unwrap());
 //! ```
 //!
-//! Compute an HMAC (note that `Verifier` cannot be used with HMACs):
+//! Compute an HMAC:
 //!
 //! ```rust
-//! use openssl::sign::Signer;
-//! use openssl::pkey::PKey;
 //! use openssl::hash::MessageDigest;
+//! use openssl::memcmp;
+//! use openssl::pkey::PKey;
+//! use openssl::sign::Signer;
 //!
 //! // Create a PKey
 //! let key = PKey::hmac(b"my secret").unwrap();
@@ -53,6 +54,12 @@
 //! signer.update(data).unwrap();
 //! signer.update(data2).unwrap();
 //! let hmac = signer.finish().unwrap();
+//!
+//! // `Verifier` cannot be used with HMACs; use the `memcmp::eq` function instead
+//! //
+//! // Do not simply check for equality with `==`!
+//! # let target = hmac.clone();
+//! assert!(memcmp::eq(&hmac, &target));
 //! ```
 use ffi;
 use std::io::{self, Write};
