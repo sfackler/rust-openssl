@@ -20,11 +20,8 @@ use ffi::{SSLEAY_VERSION as OPENSSL_VERSION, SSLEAY_CFLAGS as OPENSSL_CFLAGS,
           SSLeay_version as OpenSSL_version};
 
 #[cfg(ossl110)]
-use ffi::{OPENSSL_VERSION, OPENSSL_CFLAGS};
-#[cfg(ossl110)]
-use ffi::{OPENSSL_BUILT_ON, OPENSSL_PLATFORM, OPENSSL_DIR};
-#[cfg(ossl110)]
-use ffi::{OpenSSL_version_num, OpenSSL_version};
+use ffi::{OPENSSL_VERSION, OPENSSL_CFLAGS, OPENSSL_BUILT_ON, OPENSSL_PLATFORM, OPENSSL_DIR,
+          OpenSSL_version_num, OpenSSL_version};
 
 /// OPENSSL_VERSION_NUMBER is a numeric release version identifier:
 ///
