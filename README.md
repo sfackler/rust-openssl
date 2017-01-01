@@ -12,8 +12,8 @@ for that README.
 
 ## Building
 
-rust-openssl depends on the OpenSSL runtime libraries version 1.0.1 or above.
-Currently the libraries need to be present in the build environment before this
+rust-openssl depends on OpenSSL version 1.0.1 or above, or LibreSSL. Both the
+libraries and headers need to be present in the build environment before this
 crate is compiled, and some instructions of how to do this are in the sections
 below.
 
@@ -49,13 +49,16 @@ make install
 ### OSX
 
 Although OpenSSL 0.9.8 is preinstalled on OSX this library is being phased out
-of OSX and this crate also does not support this version of OpenSSL. To use this
+of OSX and this crate also does not support that version of OpenSSL. To use this
 crate on OSX you'll need to install OpenSSL via some alternate means, typically
-homebrew:
+Homebrew:
 
 ```bash
 brew install openssl
 ```
+
+If Homebrew is installed to the default location of `/usr/local`, OpenSSL will be
+automatically detected.
 
 ### Windows MSVC
 
