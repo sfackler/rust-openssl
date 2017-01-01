@@ -60,7 +60,7 @@ use self::State::*;
 ///
 /// # Examples
 ///
-/// Calculate a hash in one go.
+/// Calculate a hash in one go:
 ///
 /// ```
 /// use openssl::hash::{hash, MessageDigest};
@@ -71,7 +71,7 @@ use self::State::*;
 /// assert_eq!(res, spec);
 /// ```
 ///
-/// Use the `Write` trait to supply the input in chunks.
+/// Supply the input in chunks:
 ///
 /// ```
 /// use openssl::hash::{Hasher, MessageDigest};
