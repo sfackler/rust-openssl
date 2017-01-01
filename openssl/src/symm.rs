@@ -369,6 +369,10 @@ fn cipher(t: Cipher,
 ///
 /// Additional Authenticated Data can be provided in the `aad` field, and the authentication tag
 /// will be copied into the `tag` field.
+///
+/// The size of the `tag` buffer indicates the required size of the tag. While some ciphers support
+/// a range of tag sizes, it is recommended to pick the maximum size. For AES GCM, this is 16 bytes,
+/// for example.
 pub fn encrypt_aead(t: Cipher,
                     key: &[u8],
                     iv: Option<&[u8]>,
@@ -390,10 +394,6 @@ pub fn encrypt_aead(t: Cipher,
 ///
 /// Additional Authenticated Data can be provided in the `aad` field, and the authentication tag
 /// should be provided in the `tag` field.
-///
-/// The size of the `tag` buffer indicates the required size of the tag. While some ciphers support
-/// a range of tag sizes, it is recommended to pick the maximum size. For AES GCM, this is 16 bytes,
-/// for example.
 pub fn decrypt_aead(t: Cipher,
                     key: &[u8],
                     iv: Option<&[u8]>,
