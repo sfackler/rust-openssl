@@ -57,6 +57,18 @@ homebrew:
 brew install openssl
 ```
 
+#### Note for users of the hyper crate
+```brew install``` won't directly work and neither will ```brew link --force openssl```.
+It will  fail because hyper still depends on an older version of this crate.
+The solution is to export two environment variables which allow cargo to locate
+the correct openssl libraries installed by brew.
+```
+export OPENSSL_LIB_DIR=/usr/local/opt/openssl/lib
+export OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include
+```
+Make sure that these values are the ones that brew gives you after you install
+openssl.
+
 ### Windows MSVC
 
 On MSVC it's unfortunately not always a trivial process acquiring OpenSSL.
