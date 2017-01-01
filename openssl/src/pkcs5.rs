@@ -22,7 +22,7 @@ pub struct KeyIvPair {
 /// v1.5 or PBKDF1 from PKCS#5 v2.0.
 ///
 /// New applications should not use this and instead use
-/// `pkcs5_pbkdf2_hmac_sha1` or another more modern key derivation algorithm.
+/// `pbkdf2_hmac` or another more modern key derivation algorithm.
 pub fn bytes_to_key(cipher: Cipher,
                     digest: MessageDigest,
                     data: &[u8],
