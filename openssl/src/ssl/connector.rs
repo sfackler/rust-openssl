@@ -379,7 +379,7 @@ mod verify {
         // the same thing we do here.
         //
         // The Public Suffix (https://www.publicsuffix.org/) list could
-        // potentically be used here, but it's both huge and updated frequently
+        // potentially be used here, but it's both huge and updated frequently
         // enough that management would be a PITA.
         if dot_idxs.next().is_none() {
             return None;
