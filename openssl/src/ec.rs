@@ -289,6 +289,38 @@ impl EcKey {
         }
     }
 
+    /// Constructs an `EcKey` from the specified group with the associated `EcPoint`, public_key.
+    ///
+    /// This will only have the associated public_key.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use openssl::bn::BigNumContext;
+    /// use openssl::ec::*;
+    /// use openssl::nid;
+    /// use openssl::pkey::PKey;
+    ///
+    /// // get bytes from somewhere, i.e. this will not produce a valid key
+    /// let public_key: Vec<u8> = vec![];
+    ///
+    /// // create a PKey from the binary form of a EcPoint
+    /// EcGroup::from_curve_name(nid::SECP256K1)
+    ///         .and_then(|group| BigNumContext::new().map(|ctx| (group, ctx)))
+    ///         .and_then(|(group, mut ctx)| EcPoint::from_bytes(&group, &public_key, &mut ctx)
+    ///                                              .map(|point| (group, point) ))
+    ///         .and_then(|(group, point)| EcKey::from_public_key(&group, &point))
+    ///         .and_then(|ec_key| PKey::from_ec_key(ec_key));
+    /// ```
+    pub fn from_public_key(group: &EcGroupRef, public_key: &EcPointRef) -> Result<EcKey, ErrorStack> {
+        unsafe {
+            let key = EcKey(try!(cvt_p(ffi::EC_KEY_new())));
+            try!(cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())));
+            try!(cvt(ffi::EC_KEY_set_public_key(key.as_ptr(), public_key.as_ptr())));
+            Ok(key)
+        }
+    }
+
     /// Generates a new public/private key pair on the specified curve.
     pub fn generate(group: &EcGroupRef) -> Result<EcKey, ErrorStack> {
         unsafe {
@@ -352,5 +384,20 @@ mod test {
         let mut public_key = EcPoint::new(&group).unwrap();
         public_key.mul_generator(&group, key.private_key().unwrap(), &mut ctx).unwrap();
         assert!(public_key.eq(&group, key.public_key().unwrap(), &mut ctx).unwrap());
+    }
+
+    #[test]
+    fn key_from_public_key() {
+        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let key = EcKey::generate(&group).unwrap();
+        let mut ctx = BigNumContext::new().unwrap();
+        let bytes = key.public_key().unwrap().to_bytes(&group, POINT_CONVERSION_COMPRESSED, &mut ctx).unwrap();
+
+        drop(key);
+        let public_key = EcPoint::from_bytes(&group, &bytes, &mut ctx).unwrap();
+        let ec_key = EcKey::from_public_key(&group, &public_key).unwrap();
+        assert!(ec_key.check_key().is_ok());
+        assert!(ec_key.public_key().is_some());
+        assert!(ec_key.private_key().is_none());
     }
 }
