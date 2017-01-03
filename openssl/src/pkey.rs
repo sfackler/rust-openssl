@@ -117,6 +117,9 @@ impl PKey {
     }
 
     /// Creates a new `PKey` containing an HMAC key.
+    ///
+    /// # Note
+    /// To compute HMAC values, use the `sign` module.
     pub fn hmac(key: &[u8]) -> Result<PKey, ErrorStack> {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize);
