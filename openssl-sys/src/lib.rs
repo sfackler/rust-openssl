@@ -126,6 +126,9 @@ pub const BIO_FLAGS_SHOULD_RETRY: c_int = 0x08;
 
 pub const CRYPTO_LOCK: c_int = 1;
 
+pub const ERR_LIB_PEM: c_int = 9;
+pub const PEM_R_NO_START_LINE: c_int = 108;
+
 pub const EVP_MAX_MD_SIZE: c_uint = 64;
 pub const EVP_PKEY_RSA: c_int = NID_rsaEncryption;
 pub const EVP_PKEY_HMAC: c_int = NID_hmac;
@@ -1429,10 +1432,12 @@ extern {
     pub fn EC_POINT_cmp(group: *const EC_GROUP, a: *const EC_POINT, b: *const EC_POINT, ctx: *mut BN_CTX) -> c_int;
     pub fn EC_POINT_free(point: *mut EC_POINT);
 
+    pub fn ERR_peek_last_error() -> c_ulong;
     pub fn ERR_get_error() -> c_ulong;
     pub fn ERR_lib_error_string(err: c_ulong) -> *const c_char;
     pub fn ERR_func_error_string(err: c_ulong) -> *const c_char;
     pub fn ERR_reason_error_string(err: c_ulong) -> *const c_char;
+    pub fn ERR_clear_error();
 
     pub fn EVP_md5() -> *const EVP_MD;
     pub fn EVP_ripemd160() -> *const EVP_MD;

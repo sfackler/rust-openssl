@@ -1,4 +1,4 @@
-use hex::FromHex;
+use hex::{FromHex, ToHex};
 
 use hash::MessageDigest;
 use pkey::PKey;
@@ -173,4 +173,16 @@ fn test_subject_alt_name_iter() {
     assert_eq!(subject_alt_names_iter.next().unwrap().ipaddress(),
                Some(&b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01"[..]));
     assert!(subject_alt_names_iter.next().is_none());
+}
+
+#[test]
+fn test_stack_from_pem() {
+    let certs = include_bytes!("../../test/certs.pem");
+    let certs = X509::stack_from_pem(certs).unwrap();
+
+    assert_eq!(certs.len(), 2);
+    assert_eq!(certs[0].fingerprint(MessageDigest::sha1()).unwrap().to_hex(),
+        "59172d9313e84459bcff27f967e79e6e9217e584");
+    assert_eq!(certs[1].fingerprint(MessageDigest::sha1()).unwrap().to_hex(),
+        "c0cbdf7cdd03c9773e5468e1f6d2da7d5cbb1875");
 }

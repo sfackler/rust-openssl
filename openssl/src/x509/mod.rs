@@ -433,6 +433,36 @@ impl ToOwned for X509Ref {
 impl X509 {
     from_pem!(X509, ffi::PEM_read_bio_X509);
     from_der!(X509, ffi::d2i_X509);
+
+    /// Deserializes a list of PEM-formatted certificates.
+    pub fn stack_from_pem(pem: &[u8]) -> Result<Vec<X509>, ErrorStack> {
+        unsafe {
+            ffi::init();
+            let bio = try!(MemBioSlice::new(pem));
+
+            let mut certs = vec![];
+            loop {
+                let r = ffi::PEM_read_bio_X509(bio.as_ptr(),
+                                               ptr::null_mut(),
+                                               None,
+                                               ptr::null_mut());
+                if r.is_null() {
+                    let err = ffi::ERR_peek_last_error();
+                    if ffi::ERR_GET_LIB(err) == ffi::ERR_LIB_PEM
+                            && ffi::ERR_GET_REASON(err) == ffi::PEM_R_NO_START_LINE {
+                        ffi::ERR_clear_error();
+                        break;
+                    }
+
+                    return Err(ErrorStack::get());
+                } else {
+                    certs.push(X509(r));
+                }
+            }
+
+            Ok(certs)
+        }
+    }
 }
 
 impl Clone for X509 {
