@@ -184,9 +184,20 @@ Used pkg-config to discover the OpenSSL installation, but pkg-config did not
 return any include paths for the installation. This crate needs to take a peek
 at the header files so it cannot proceed unless they're found.
 
-You can try fixing this by setting the `OPENSSL_DIR` environment variable
-pointing to your OpenSSL installation.
+You can try fixing this setting the `OPENSSL_DIR` environment variable
+pointing to your OpenSSL installation or installing OpenSSL headers package
+specific to your distribution:
 
+    # On Ubuntu
+    sudo apt-get install libssl-dev
+    # On Arch Linux
+    sudo pacman -S openssl
+    # On Fedora
+    sudo dnf install openssl-devel
+
+See rust-openssl README for more information:
+    
+    https://github.com/sfackler/rust-openssl#linux
 ");
     }
 
