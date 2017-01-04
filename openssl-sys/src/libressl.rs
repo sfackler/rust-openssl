@@ -6,6 +6,11 @@ use libc::{c_int, c_char, c_void, c_long, c_uchar, size_t, c_uint, c_ulong};
 use libc::time_t;
 
 #[repr(C)]
+pub struct stack_st_SSL_CIPHER {
+    pub stack: _STACK,
+}
+
+#[repr(C)]
 pub struct stack_st_ASN1_OBJECT {
     pub stack: _STACK,
 }
@@ -358,6 +363,7 @@ pub struct SSL_CTX {
     srtp_profiles: *mut c_void,
 }
 
+
 #[repr(C)]
 pub struct X509_VERIFY_PARAM {
     pub name: *mut c_char,
@@ -372,6 +378,7 @@ pub struct X509_VERIFY_PARAM {
 }
 
 pub enum X509_VERIFY_PARAM_ID {}
+
 
 pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
@@ -525,6 +532,7 @@ extern {
                                                                 is_export: c_int,
                                                                 keylength: c_int)
                                                                 -> *mut ::EC_KEY);
+
     pub fn X509_get_subject_name(x: *mut ::X509) -> *mut ::X509_NAME;
     pub fn X509_set_notAfter(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
     pub fn X509_set_notBefore(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
