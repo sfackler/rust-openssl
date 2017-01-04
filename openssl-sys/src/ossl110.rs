@@ -13,6 +13,8 @@ pub enum HMAC_CTX {}
 pub enum OPENSSL_STACK {}
 pub enum RSA {}
 pub enum SSL_CTX {}
+pub enum SSL_SESSION {}
+pub enum stack_st_SSL_CIPHER {}
 pub enum stack_st_ASN1_OBJECT {}
 pub enum stack_st_GENERAL_NAME {}
 pub enum stack_st_OPENSSL_STRING {}
@@ -21,8 +23,14 @@ pub enum stack_st_X509 {}
 pub enum stack_st_X509_NAME {}
 pub enum stack_st_X509_ATTRIBUTE {}
 pub enum stack_st_X509_EXTENSION {}
+pub enum crypto_ex_data_st {}
 pub enum X509 {}
 pub enum X509_VERIFY_PARAM {}
+
+
+const SSL_MAX_MASTER_KEY_LENGTH: usize = 48;
+const SSL_MAX_SSL_SESSION_ID_LENGTH: usize = 32;
+const SSL_MAX_SID_CTX_LENGTH: usize = 32;
 
 pub const SSL_OP_MICROSOFT_SESS_ID_BUG: c_ulong =                   0x00000000;
 pub const SSL_OP_NETSCAPE_CHALLENGE_BUG: c_ulong =                  0x00000000;
