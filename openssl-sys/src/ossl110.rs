@@ -1,4 +1,4 @@
-use libc::{c_int, c_void, c_char, c_uchar, c_ulong, c_long, c_uint, size_t, uint32_t}; 
+use libc::{c_int, c_void, c_char, c_uchar, c_ulong, c_long, c_uint, size_t, uint32_t};
 
 pub enum BIGNUM {}
 pub enum BIO {}
@@ -22,6 +22,7 @@ pub enum stack_st_X509 {}
 pub enum stack_st_X509_NAME {}
 pub enum stack_st_X509_ATTRIBUTE {}
 pub enum stack_st_X509_EXTENSION {}
+pub enum ssl_session_st {} 
 pub enum X509 {}
 pub enum X509_VERIFY_PARAM {}
 
@@ -177,7 +178,7 @@ extern {
     pub fn SSL_CTX_get_options(ctx: *const ::SSL_CTX) -> c_ulong;
     pub fn SSL_CTX_set_options(ctx: *mut ::SSL_CTX, op: c_ulong) -> c_ulong;
     pub fn SSL_CTX_clear_options(ctx: *mut ::SSL_CTX, op: c_ulong) -> c_ulong;
-
+    pub fn SSL_get_session(ssl: *const ::SSL) -> *mut ::SSL_SESSION;
     pub fn X509_getm_notAfter(x: *const ::X509) -> *mut ::ASN1_TIME;
     pub fn X509_getm_notBefore(x: *const ::X509) -> *mut ::ASN1_TIME;
     pub fn DH_set0_pqg(dh: *mut ::DH,
