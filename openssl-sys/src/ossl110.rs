@@ -1,4 +1,4 @@
-use libc::{c_int, c_void, c_char, c_uchar, c_ulong, c_long, c_uint}; 
+use libc::{c_int, c_void, c_char, c_uchar, c_ulong, c_long, c_uint, size_t, uint32_t}; 
 
 pub enum BIGNUM {}
 pub enum BIO {}
