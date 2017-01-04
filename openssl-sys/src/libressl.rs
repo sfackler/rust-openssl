@@ -400,7 +400,6 @@ pub struct SSL_SESSION {
     srp_username: *mut c_char,
     flags: uint32_t,
     lock: *mut c_void,
-    pub dummy: c_int,
 }
 
 #[repr(C)]
