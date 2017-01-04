@@ -27,10 +27,6 @@ pub enum X509 {}
 pub enum X509_VERIFY_PARAM {}
 
 
-const SSL_MAX_MASTER_KEY_LENGTH: usize = 48;
-const SSL_MAX_SSL_SESSION_ID_LENGTH: usize = 32;
-const SSL_MAX_SID_CTX_LENGTH: usize = 32;
-
 pub const SSL_OP_MICROSOFT_SESS_ID_BUG: c_ulong =                   0x00000000;
 pub const SSL_OP_NETSCAPE_CHALLENGE_BUG: c_ulong =                  0x00000000;
 pub const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG: c_ulong =        0x00000000;
@@ -122,7 +118,7 @@ extern {
     pub fn SSL_CTX_get_options(ctx: *const ::SSL_CTX) -> c_ulong;
     pub fn SSL_CTX_set_options(ctx: *mut ::SSL_CTX, op: c_ulong) -> c_ulong;
     pub fn SSL_CTX_clear_options(ctx: *mut ::SSL_CTX, op: c_ulong) -> c_ulong;
-    pub fn SSL_get_session(ssl: *mut ::SSL, ssl_session: *mut ::SSL_SESSION) -> c_int;
+
     pub fn X509_getm_notAfter(x: *const ::X509) -> *mut ::ASN1_TIME;
     pub fn X509_getm_notBefore(x: *const ::X509) -> *mut ::ASN1_TIME;
     pub fn DH_set0_pqg(dh: *mut ::DH,
