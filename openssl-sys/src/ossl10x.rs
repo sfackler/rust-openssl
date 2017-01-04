@@ -436,10 +436,10 @@ pub struct SSL_SESSION {
     sid_ctx: [c_uchar; SSL_MAX_SID_CTX_LENGTH],
 
     #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
-    psk_identity_hint: *mut c_char,
-    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
-    psk_identity: *mut c_char,
+    psk_identity_hint: *mut c_void,
 
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+    psk_identity: *mut c_void,
 
     not_resumable: c_int,
     peer: *mut X509,
@@ -456,7 +456,7 @@ pub struct SSL_SESSION {
     ex_data: ::CRYPTO_EX_DATA,
     prev: *mut SSL_SESSION,
     next: *mut SSL_SESSION,
-    tlsext_hostname: *mut c_char,
+    tlsext_hostname: *mut c_void,
 
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
     tlsext_ecpointformatlist_length: size_t,
@@ -465,14 +465,14 @@ pub struct SSL_SESSION {
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
     tlsext_supportedgroupslist_length: size_t,
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
-    tlsext_supportedgroupslist: *mut c_uchar,
+    tlsext_supportedgroupslist: *mut c_void,
 
-    tlsext_tick: *mut c_uchar,
+    tlsext_tick: *mut c_void,
     tlsext_ticklen: size_t,
     tlsext_tick_lifetime_hint: c_ulong,
 
     #[cfg(not(osslconf = "OPENSSL_NO_SRP"))]
-    srp_username: *mut c_char,
+    srp_username: *mut c_void,
 
     flags: uint32_t,
     lock: *mut c_void,
@@ -703,4 +703,16 @@ extern {
 
     pub fn SSLeay() -> c_ulong;
     pub fn SSLeay_version(key: c_int) -> *const c_char;
+}
+
+
+#[cfg(test)]
+mod test {
+    use std::mem;
+    use super::SSL_SESSION;
+
+    #[test]
+    fn testsize() {
+        println!("THE SIZE IS: {}",  mem::size_of::<SSL_SESSION>());
+    }
 }
