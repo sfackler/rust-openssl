@@ -434,8 +434,13 @@ pub struct SSL_SESSION {
     session_id: [c_uchar; SSL_MAX_SSL_SESSION_ID_LENGTH],
     sid_ctx_length: size_t,
     sid_ctx: [c_uchar; SSL_MAX_SID_CTX_LENGTH],
+
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
     psk_identity_hint: *mut c_char,
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
     psk_identity: *mut c_char,
+
+
     not_resumable: c_int,
     peer: *mut X509,
     peer_type: c_int,
@@ -452,14 +457,23 @@ pub struct SSL_SESSION {
     prev: *mut SSL_SESSION,
     next: *mut SSL_SESSION,
     tlsext_hostname: *mut c_char,
+
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
     tlsext_ecpointformatlist_length: size_t,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
     tlsext_ecpointformatlist: *mut c_uchar,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
     tlsext_supportedgroupslist_length: size_t,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
     tlsext_supportedgroupslist: *mut c_uchar,
+
     tlsext_tick: *mut c_uchar,
     tlsext_ticklen: size_t,
-    tlsext_tick_lifetime_hint: c_long,
+    tlsext_tick_lifetime_hint: c_ulong,
+
+    #[cfg(not(osslconf = "OPENSSL_NO_SRP"))]
     srp_username: *mut c_char,
+
     flags: uint32_t,
     lock: *mut c_void,
 }
