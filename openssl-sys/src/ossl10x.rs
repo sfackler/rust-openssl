@@ -664,7 +664,7 @@ extern {
                                                                 is_export: c_int,
                                                                 keylength: c_int)
                                                                 -> *mut ::EC_KEY);
-    pub fn SSL_get_session(ssl: *mut ::SSL) -> *mut ::SSL_SESSION;
+    pub fn SSL_get_session(ssl: *mut ::SSL,ssl_session: *mut ::SSL_SESSION) -> c_int;
     pub fn X509_get_subject_name(x: *mut ::X509) -> *mut ::X509_NAME;
     pub fn X509_set_notAfter(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
     pub fn X509_set_notBefore(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
