@@ -2,7 +2,7 @@ use std::sync::{Mutex, MutexGuard};
 use std::sync::{Once, ONCE_INIT};
 use std::mem;
 
-use libc::{c_int, c_char, c_void, c_long, c_uchar, size_t, c_uint, c_ulong};
+use libc::{c_int, c_char, c_void, c_long, c_uchar, size_t, c_uint, c_ulong, uint32_t};
 use libc::time_t;
 
 #[repr(C)]
@@ -43,11 +43,6 @@ pub struct stack_st_GENERAL_NAME {
 #[repr(C)]
 pub struct stack_st_void {
     pub stack: _STACK,
-}
-
-#[repr(C)]
-pub struct crypto_ex_data_st {
-    pub sk: stack_st_void,
 }
 
 #[repr(C)]
@@ -391,7 +386,7 @@ pub struct SSL_SESSION {
     cipher: *const ::SSL_CIPHER,
     cipher_id: c_ulong,
     ciphers: *mut stack_st_SSL_CIPHER,
-    ex_data: crypto_ex_data_st,
+    ex_data: ::CRYPTO_EX_DATA,
     prev: *mut SSL_SESSION,
     next: *mut SSL_SESSION,
     tlsext_hostname: *mut c_char,
@@ -403,8 +398,9 @@ pub struct SSL_SESSION {
     tlsext_ticklen: size_t,
     tlsext_tick_lifetime_hint: c_long,
     srp_username: *mut c_char,
-    flags: u32,
+    flags: uint32_t,
     lock: *mut c_void,
+    pub dummy: c_int,
 }
 
 #[repr(C)]
@@ -579,7 +575,7 @@ extern {
                                                                 is_export: c_int,
                                                                 keylength: c_int)
                                                                 -> *mut ::EC_KEY);
-    pub fn SSL_get_session(ssl: *mut ::SSL) -> *mut ::SSL_SESSION;
+    pub fn SSL_get_session(ssl: *const ::SSL) -> *mut ::SSL_SESSION;
     pub fn X509_get_subject_name(x: *mut ::X509) -> *mut ::X509_NAME;
     pub fn X509_set_notAfter(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
     pub fn X509_set_notBefore(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
