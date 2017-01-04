@@ -1,4 +1,4 @@
-use libc::{c_int, c_void, c_char, c_uchar, c_ulong, c_long, c_uint};
+use libc::{c_int, c_void, c_char, c_uchar, c_ulong, c_long, c_uint}; 
 
 pub enum BIGNUM {}
 pub enum BIO {}
@@ -13,7 +13,6 @@ pub enum HMAC_CTX {}
 pub enum OPENSSL_STACK {}
 pub enum RSA {}
 pub enum SSL_CTX {}
-pub enum SSL_SESSION {}
 pub enum stack_st_SSL_CIPHER {}
 pub enum stack_st_ASN1_OBJECT {}
 pub enum stack_st_GENERAL_NAME {}
@@ -25,6 +24,66 @@ pub enum stack_st_X509_ATTRIBUTE {}
 pub enum stack_st_X509_EXTENSION {}
 pub enum X509 {}
 pub enum X509_VERIFY_PARAM {}
+
+
+
+
+pub const SSL_MAX_MASTER_KEY_LENGTH: usize = 48;
+pub const SSL_MAX_SSL_SESSION_ID_LENGTH: usize = 32;
+pub const SSL_MAX_SID_CTX_LENGTH: usize = 32;
+
+#[repr(C)]
+pub struct SSL_SESSION {
+    ssl_version: c_int,
+    master_key_length: size_t,
+    master_key: [c_uchar; SSL_MAX_MASTER_KEY_LENGTH],
+    session_id_length: size_t,
+    session_id: [c_uchar; SSL_MAX_SSL_SESSION_ID_LENGTH],
+    sid_ctx_length: size_t,
+    sid_ctx: [c_uchar; SSL_MAX_SID_CTX_LENGTH],
+
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+    psk_identity_hint: *mut c_void,
+
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+    psk_identity: *mut c_void,
+
+    not_resumable: c_int,
+    peer: *mut X509,
+    peer_type: c_int,
+    peer_chain: *mut stack_st_X509,
+    verify_result: c_long,
+    references: c_int, //This must be atomic
+    timeout: c_long,
+    time: c_long,
+    compress_meth: c_uint,
+    cipher: *const ::SSL_CIPHER,
+    cipher_id: c_ulong,
+    ciphers: *mut stack_st_SSL_CIPHER,
+    ex_data: ::CRYPTO_EX_DATA,
+    prev: *mut SSL_SESSION,
+    next: *mut SSL_SESSION,
+    tlsext_hostname: *mut c_void,
+
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
+    tlsext_ecpointformatlist_length: size_t,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
+    tlsext_ecpointformatlist: *mut c_uchar,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
+    tlsext_supportedgroupslist_length: size_t,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
+    tlsext_supportedgroupslist: *mut c_void,
+
+    tlsext_tick: *mut c_void,
+    tlsext_ticklen: size_t,
+    tlsext_tick_lifetime_hint: c_ulong,
+
+    #[cfg(not(osslconf = "OPENSSL_NO_SRP"))]
+    srp_username: *mut c_void,
+
+    flags: uint32_t,
+    lock: *mut c_void,
+}
 
 
 pub const SSL_OP_MICROSOFT_SESS_ID_BUG: c_ulong =                   0x00000000;

@@ -2,7 +2,7 @@ use std::sync::{Mutex, MutexGuard};
 use std::sync::{Once, ONCE_INIT};
 use std::mem;
 
-use libc::{c_int, c_char, c_void, c_long, c_uchar, size_t, c_uint, c_ulong, uint32_t};
+use libc::{c_int, c_char, c_void, c_long, c_uchar, size_t, c_uint, c_ulong};
 #[cfg(not(ossl101))]
 use libc::time_t;
 
@@ -425,58 +425,7 @@ pub struct SSL_CTX {
 }
 
 
-#[repr(C)]
-pub struct SSL_SESSION {
-    ssl_version: c_int,
-    master_key_length: size_t,
-    master_key: [c_uchar; SSL_MAX_MASTER_KEY_LENGTH],
-    session_id_length: size_t,
-    session_id: [c_uchar; SSL_MAX_SSL_SESSION_ID_LENGTH],
-    sid_ctx_length: size_t,
-    sid_ctx: [c_uchar; SSL_MAX_SID_CTX_LENGTH],
 
-    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
-    psk_identity_hint: *mut c_void,
-
-    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
-    psk_identity: *mut c_void,
-
-    not_resumable: c_int,
-    peer: *mut X509,
-    peer_type: c_int,
-    peer_chain: *mut stack_st_X509,
-    verify_result: c_long,
-    references: c_int, //This must be atomic
-    timeout: c_long,
-    time: c_long,
-    compress_meth: c_uint,
-    cipher: *const ::SSL_CIPHER,
-    cipher_id: c_ulong,
-    ciphers: *mut stack_st_SSL_CIPHER,
-    ex_data: ::CRYPTO_EX_DATA,
-    prev: *mut SSL_SESSION,
-    next: *mut SSL_SESSION,
-    tlsext_hostname: *mut c_void,
-
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
-    tlsext_ecpointformatlist_length: size_t,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
-    tlsext_ecpointformatlist: *mut c_uchar,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
-    tlsext_supportedgroupslist_length: size_t,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
-    tlsext_supportedgroupslist: *mut c_void,
-
-    tlsext_tick: *mut c_void,
-    tlsext_ticklen: size_t,
-    tlsext_tick_lifetime_hint: c_ulong,
-
-    #[cfg(not(osslconf = "OPENSSL_NO_SRP"))]
-    srp_username: *mut c_void,
-
-    flags: uint32_t,
-    lock: *mut c_void,
-}
 
 #[repr(C)]
 pub struct SRP_CTX {
@@ -516,9 +465,6 @@ pub struct X509_VERIFY_PARAM {
 pub enum X509_VERIFY_PARAM_ID {}
 
 
-pub const SSL_MAX_MASTER_KEY_LENGTH: usize = 48;
-pub const SSL_MAX_SSL_SESSION_ID_LENGTH: usize = 32;
-pub const SSL_MAX_SID_CTX_LENGTH: usize = 32;
 
 pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
@@ -674,7 +620,7 @@ extern {
                                                                 is_export: c_int,
                                                                 keylength: c_int)
                                                                 -> *mut ::EC_KEY);
-    pub fn SSL_get_session(ssl: *const ::SSL) -> *mut ::SSL_SESSION;
+
     pub fn X509_get_subject_name(x: *mut ::X509) -> *mut ::X509_NAME;
     pub fn X509_set_notAfter(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
     pub fn X509_set_notBefore(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
@@ -703,16 +649,4 @@ extern {
 
     pub fn SSLeay() -> c_ulong;
     pub fn SSLeay_version(key: c_int) -> *const c_char;
-}
-
-
-#[cfg(test)]
-mod test {
-    use std::mem;
-    use super::SSL_SESSION;
-
-    #[test]
-    fn testsize() {
-        println!("THE SIZE IS: {}",  mem::size_of::<SSL_SESSION>());
-    }
 }
