@@ -2,7 +2,9 @@ use std::sync::{Mutex, MutexGuard};
 use std::sync::{Once, ONCE_INIT};
 use std::mem;
 
-use libc::{c_int, c_char, c_void, c_long, c_uchar, size_t, c_uint, c_ulong, time_t};
+use libc::{c_int, c_char, c_void, c_long, c_uchar, size_t, c_uint, c_ulong};
+#[cfg(not(ossl101))]
+use libc::time_t;
 
 #[repr(C)]
 pub struct stack_st_ASN1_OBJECT {
@@ -440,7 +442,7 @@ pub struct SSL_SESSION {
     verify_result: c_long,
     references: c_int,
     timeout: c_long,
-    time: time_t,
+    time: c_long,
     compress_meth: c_uint,
     cipher: *const c_void,
     cipher_id: c_ulong,
