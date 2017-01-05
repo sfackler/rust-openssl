@@ -1206,15 +1206,15 @@ pub const X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE: c_int = 45;
 pub const X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
 pub const X509_V_OK: c_int = 0;
 
-#[cfg(not(ossl101))]
+#[cfg(not(any(ossl101, libressl)))]
 pub const X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT: c_uint = 0x1;
-#[cfg(not(ossl101))]
+#[cfg(not(any(ossl101, libressl)))]
 pub const X509_CHECK_FLAG_NO_WILDCARDS: c_uint = 0x2;
-#[cfg(not(ossl101))]
+#[cfg(not(any(ossl101, libressl)))]
 pub const X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS: c_uint = 0x4;
-#[cfg(not(ossl101))]
+#[cfg(not(any(ossl101, libressl)))]
 pub const X509_CHECK_FLAG_MULTI_LABEL_WILDCARDS: c_uint = 0x8;
-#[cfg(not(ossl101))]
+#[cfg(not(any(ossl101, libressl)))]
 pub const X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS: c_uint = 0x10;
 
 pub const GEN_OTHERNAME: c_int = 0;
