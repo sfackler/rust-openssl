@@ -1334,6 +1334,11 @@ impl SslRef {
     pub fn verify_result(&self) -> Option<X509VerifyError> {
         unsafe { X509VerifyError::from_raw(ffi::SSL_get_verify_result(self.as_ptr())) }
     }
+
+    /// Returns the SSL session.
+    pub fn session(&self) -> &SslSessionRef {
+        unsafe { SslSessionRef::from_ptr(ffi::SSL_get_session(self.as_ptr())) }
+    }
 }
 
 unsafe impl Sync for Ssl {}
@@ -1344,6 +1349,8 @@ impl fmt::Debug for Ssl {
         fmt::Debug::fmt(&**self, fmt)
     }
 }
+
+type_!(SslSession, SslSessionRef, ffi::SSL_SESSION, ffi::SSL_SESSION_free);
 
 impl Ssl {
     pub fn new(ctx: &SslContext) -> Result<Ssl, ErrorStack> {
