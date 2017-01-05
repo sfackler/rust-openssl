@@ -13,6 +13,7 @@ pub enum HMAC_CTX {}
 pub enum OPENSSL_STACK {}
 pub enum RSA {}
 pub enum SSL_CTX {}
+pub enum SSL_SESSION {}
 pub enum stack_st_ASN1_OBJECT {}
 pub enum stack_st_GENERAL_NAME {}
 pub enum stack_st_OPENSSL_STRING {}
