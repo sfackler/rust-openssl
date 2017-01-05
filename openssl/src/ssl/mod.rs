@@ -1029,6 +1029,19 @@ impl SslCipherRef {
     }
 }
 
+type_!(SslSession, SslSessionRef, ffi::SSL_SESSION, ffi::SSL_SESSION_free);
+
+impl SslSessionRef {
+    /// Returns the SSL session ID.
+    pub fn id(&self) -> &[u8] {
+        unsafe {
+            let mut len = 0;
+            let p = ffi::SSL_SESSION_get_id(self.as_ptr(), &mut len);
+            slice::from_raw_parts(p as *const u8, len as usize)
+        }
+    }
+}
+
 type_!(Ssl, SslRef, ffi::SSL, ffi::SSL_free);
 
 impl fmt::Debug for SslRef {
@@ -1349,8 +1362,6 @@ impl fmt::Debug for Ssl {
         fmt::Debug::fmt(&**self, fmt)
     }
 }
-
-type_!(SslSession, SslSessionRef, ffi::SSL_SESSION, ffi::SSL_SESSION_free);
 
 impl Ssl {
     pub fn new(ctx: &SslContext) -> Result<Ssl, ErrorStack> {

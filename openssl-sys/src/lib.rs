@@ -1751,6 +1751,7 @@ extern {
     pub fn SSL_get_session(s: *const SSL) -> *mut SSL_SESSION;
 
     pub fn SSL_SESSION_free(s: *mut SSL_SESSION);
+    pub fn SSL_SESSION_get_id(s: *const SSL_SESSION, len: *mut c_uint) -> *const c_uchar;
 
     #[cfg(not(ossl101))]
     pub fn SSL_CTX_set_alpn_protos(s: *mut SSL_CTX, data: *const c_uchar, len: c_uint) -> c_int;
