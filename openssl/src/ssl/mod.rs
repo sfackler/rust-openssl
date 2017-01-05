@@ -1040,6 +1040,18 @@ impl SslSessionRef {
             slice::from_raw_parts(p as *const u8, len as usize)
         }
     }
+
+    /// Returns the length of the master key.
+    pub fn master_key_len(&self) -> usize {
+        unsafe { compat::SSL_SESSION_get_master_key(self.as_ptr(), ptr::null_mut(), 0) }
+    }
+
+    /// Copies the master key into the provided buffer.
+    ///
+    /// Returns the number of bytes written.
+    pub fn master_key(&self, buf: &mut [u8]) -> usize {
+        unsafe { compat::SSL_SESSION_get_master_key(self.as_ptr(), buf.as_mut_ptr(), buf.len()) }
+    }
 }
 
 type_!(Ssl, SslRef, ffi::SSL, ffi::SSL_free);
@@ -1728,6 +1740,7 @@ mod compat {
 
     pub use ffi::{SSL_CTX_get_options, SSL_CTX_set_options};
     pub use ffi::{SSL_CTX_clear_options, SSL_CTX_up_ref};
+    pub use ffi::SSL_SESSION_get_master_key;
 
     pub unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
         ffi::CRYPTO_get_ex_new_index(ffi::CRYPTO_EX_INDEX_SSL_CTX,
@@ -1762,7 +1775,7 @@ mod compat {
     use std::ptr;
 
     use ffi;
-    use libc::{self, c_long, c_ulong, c_int};
+    use libc::{self, c_long, c_ulong, c_int, size_t, c_uchar};
 
     pub unsafe fn SSL_CTX_get_options(ctx: *const ffi::SSL_CTX) -> c_ulong {
         ffi::SSL_CTX_ctrl(ctx as *mut _, ffi::SSL_CTRL_OPTIONS, 0, ptr::null_mut()) as c_ulong
@@ -1797,6 +1810,19 @@ mod compat {
                              "mod.rs\0".as_ptr() as *const _,
                              line!() as libc::c_int);
         0
+    }
+
+    pub unsafe fn SSL_SESSION_get_master_key(session: *const ffi::SSL_SESSION,
+                                             out: *mut c_uchar,
+                                             mut outlen: size_t) -> size_t {
+        if outlen == 0 {
+            return (*session).master_key_length as size_t;
+        }
+        if outlen > (*session).master_key_length as size_t {
+            outlen = (*session).master_key_length as size_t;
+        }
+        ptr::copy_nonoverlapping((*session).master_key.as_ptr(), out, outlen);
+        outlen
     }
 
     pub fn tls_method() -> *const ffi::SSL_METHOD {

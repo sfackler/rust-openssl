@@ -1385,7 +1385,15 @@ fn active_session() {
 
     let s = TcpStream::connect("google.com:443").unwrap();
     let socket = connector.connect("google.com", s).unwrap();
-    assert!(socket.ssl().session().is_some());
+    let session = socket.ssl().session().unwrap();
+    let len = session.master_key_len();
+    let mut buf = vec![0; len - 1];
+    let copied = session.master_key(&mut buf);
+    assert_eq!(copied, buf.len());
+    let mut buf = vec![0; len + 1];
+    let copied = session.master_key(&mut buf);
+    assert_eq!(copied, len);
+
 }
 
 fn _check_kinds() {

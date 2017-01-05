@@ -361,8 +361,8 @@ pub struct SSL_CTX {
 #[repr(C)]
 pub struct SSL_SESSION {
     ssl_version: c_int,
-    master_key_length: c_int,
-    master_key: [c_uchar; SSL_MAX_MASTER_KEY_LENGTH as usize],
+    pub master_key_length: c_int,
+    pub master_key: [c_uchar; 48],
     session_id_length: c_uint,
     session_id: [c_uchar; SSL_MAX_SSL_SESSION_ID_LENGTH as usize],
     sid_ctx_length: c_uint,

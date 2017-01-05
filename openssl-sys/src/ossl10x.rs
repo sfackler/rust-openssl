@@ -420,8 +420,8 @@ pub struct SSL_SESSION {
     ssl_version: c_int,
     key_arg_length: c_uint,
     key_arg: [c_uchar; SSL_MAX_KEY_ARG_LENGTH as usize],
-    master_key_length: c_uint,
-    master_key: [c_uchar; SSL_MAX_MASTER_KEY_LENGTH as usize],
+    pub master_key_length: c_int,
+    pub master_key: [c_uchar; 48],
     session_id_length: c_uint,
     session_id: [c_uchar; SSL_MAX_SSL_SESSION_ID_LENGTH as usize],
     sid_ctx_length: c_uint,
@@ -429,7 +429,7 @@ pub struct SSL_SESSION {
     #[cfg(not(osslconf = "OPENSSL_NO_KRB5"))]
     krb5_client_princ_len: c_uint,
     #[cfg(not(osslconf = "OPENSSL_NO_KRB5"))]
-    krb5_client_princ: [c_uchar; SSL_MAX_KRB5_PRINCIPAL_LENGTH],
+    krb5_client_princ: [c_uchar; SSL_MAX_KRB5_PRINCIPAL_LENGTH as usize],
     #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
     psk_identity_hint: *mut c_char,
     #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
