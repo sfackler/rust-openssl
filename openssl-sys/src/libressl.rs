@@ -359,6 +359,38 @@ pub struct SSL_CTX {
 }
 
 #[repr(C)]
+pub struct SSL_SESSION {
+    ssl_version: c_int,
+    pub master_key_length: c_int,
+    pub master_key: [c_uchar; 48],
+    session_id_length: c_uint,
+    session_id: [c_uchar; SSL_MAX_SSL_SESSION_ID_LENGTH as usize],
+    sid_ctx_length: c_uint,
+    sid_ctx: [c_uchar; SSL_MAX_SID_CTX_LENGTH as usize],
+    not_resumable: c_int,
+    sess_cert: *mut c_void,
+    peer: *mut X509,
+    verify_result: c_long,
+    timeout: c_long,
+    time: time_t,
+    references: c_int,
+    cipher: *const c_void,
+    cipher_id: c_ulong,
+    ciphers: *mut c_void,
+    ex_data: ::CRYPTO_EX_DATA,
+    prev: *mut c_void,
+    next: *mut c_void,
+    tlsext_hostname: *mut c_char,
+    tlsext_ecpointformatlist_length: size_t,
+    tlsext_ecpointformatlist: *mut u8,
+    tlsext_ellipticcurvelist_length: size_t,
+    tlsext_ellipticcurvelist: *mut u16,
+    tlsext_tick: *mut c_uchar,
+    tlsext_ticklen: size_t,
+    tlsext_tick_lifetime_hint: c_long,
+}
+
+#[repr(C)]
 pub struct X509_VERIFY_PARAM {
     pub name: *mut c_char,
     pub check_time: time_t,
@@ -392,6 +424,10 @@ pub const SSL_OP_TLS_BLOCK_PADDING_BUG: c_ulong =                   0x0;
 pub const SSL_OP_SINGLE_ECDH_USE: c_ulong =                         0x00080000;
 pub const SSL_OP_SINGLE_DH_USE: c_ulong =                           0x00100000;
 pub const SSL_OP_NO_SSLv2: c_ulong =                                0x0;
+
+pub const SSL_MAX_SSL_SESSION_ID_LENGTH: c_int = 32;
+pub const SSL_MAX_SID_CTX_LENGTH: c_int = 32;
+pub const SSL_MAX_MASTER_KEY_LENGTH: c_int = 48;
 
 pub const SSLEAY_VERSION : c_int = 0;
 pub const SSLEAY_CFLAGS : c_int = 2;

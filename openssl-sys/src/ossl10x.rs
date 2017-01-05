@@ -418,6 +418,59 @@ pub struct SSL_CTX {
 }
 
 #[repr(C)]
+pub struct SSL_SESSION {
+    ssl_version: c_int,
+    key_arg_length: c_uint,
+    key_arg: [c_uchar; SSL_MAX_KEY_ARG_LENGTH as usize],
+    pub master_key_length: c_int,
+    pub master_key: [c_uchar; 48],
+    session_id_length: c_uint,
+    session_id: [c_uchar; SSL_MAX_SSL_SESSION_ID_LENGTH as usize],
+    sid_ctx_length: c_uint,
+    sid_ctx: [c_uchar; SSL_MAX_SID_CTX_LENGTH as usize],
+    #[cfg(not(osslconf = "OPENSSL_NO_KRB5"))]
+    krb5_client_princ_len: c_uint,
+    #[cfg(not(osslconf = "OPENSSL_NO_KRB5"))]
+    krb5_client_princ: [c_uchar; SSL_MAX_KRB5_PRINCIPAL_LENGTH as usize],
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+    psk_identity_hint: *mut c_char,
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+    psk_identity: *mut c_char,
+    not_resumable: c_int,
+    sess_cert: *mut c_void,
+    peer: *mut X509,
+    verify_result: c_long,
+    references: c_int,
+    timeout: c_long,
+    time: c_long,
+    compress_meth: c_uint,
+    cipher: *const c_void,
+    cipher_id: c_ulong,
+    ciphers: *mut c_void,
+    ex_data: ::CRYPTO_EX_DATA,
+    prev: *mut c_void,
+    next: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_hostname: *mut c_char,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
+    tlsext_ecpointformatlist_length: size_t,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
+    tlsext_ecpointformatlist: *mut c_uchar,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
+    tlsext_ellipticcurvelist_length: size_t,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
+    tlsext_ellipticcurvelist: *mut c_uchar,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_tick: *mut c_uchar,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_ticklen: size_t,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_tick_lifetime_hint: c_long,
+    #[cfg(not(osslconf = "OPENSSL_NO_SRP"))]
+    srp_username: *mut c_char,
+}
+
+#[repr(C)]
 pub struct SRP_CTX {
     SRP_cb_arg: *mut c_void,
     TLS_ext_srp_username_callback: *mut c_void,
@@ -469,6 +522,12 @@ pub const SSL_OP_TLS_BLOCK_PADDING_BUG: c_ulong =                   0x00000200;
 pub const SSL_OP_SINGLE_ECDH_USE: c_ulong =                         0x00080000;
 pub const SSL_OP_SINGLE_DH_USE: c_ulong =                           0x00100000;
 pub const SSL_OP_NO_SSLv2: c_ulong =                                0x01000000;
+
+pub const SSL_MAX_SSL_SESSION_ID_LENGTH: c_int = 32;
+pub const SSL_MAX_SID_CTX_LENGTH: c_int = 32;
+pub const SSL_MAX_KEY_ARG_LENGTH: c_int = 8;
+pub const SSL_MAX_MASTER_KEY_LENGTH: c_int = 48;
+pub const SSL_MAX_KRB5_PRINCIPAL_LENGTH: c_int = 256;
 
 pub const SSLEAY_VERSION : c_int = 0;
 pub const SSLEAY_CFLAGS : c_int = 2;

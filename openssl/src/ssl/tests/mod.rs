@@ -1372,6 +1372,30 @@ fn tmp_ecdh_callback_ssl() {
     assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
+#[test]
+fn idle_session() {
+    let ctx = SslContext::builder(SslMethod::tls()).unwrap().build();
+    let ssl = Ssl::new(&ctx).unwrap();
+    assert!(ssl.session().is_none());
+}
+
+#[test]
+fn active_session() {
+    let connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap().build();
+
+    let s = TcpStream::connect("google.com:443").unwrap();
+    let socket = connector.connect("google.com", s).unwrap();
+    let session = socket.ssl().session().unwrap();
+    let len = session.master_key_len();
+    let mut buf = vec![0; len - 1];
+    let copied = session.master_key(&mut buf);
+    assert_eq!(copied, buf.len());
+    let mut buf = vec![0; len + 1];
+    let copied = session.master_key(&mut buf);
+    assert_eq!(copied, len);
+
+}
+
 fn _check_kinds() {
     fn is_send<T: Send>() {}
     fn is_sync<T: Sync>() {}
