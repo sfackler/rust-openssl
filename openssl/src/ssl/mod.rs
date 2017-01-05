@@ -1349,8 +1349,15 @@ impl SslRef {
     }
 
     /// Returns the SSL session.
-    pub fn session(&self) -> &SslSessionRef {
-        unsafe { SslSessionRef::from_ptr(ffi::SSL_get_session(self.as_ptr())) }
+    pub fn session(&self) -> Option<&SslSessionRef> {
+        unsafe {
+            let p = ffi::SSL_get_session(self.as_ptr());
+            if p.is_null() {
+                None
+            } else {
+                Some(SslSessionRef::from_ptr(p))
+            }
+        }
     }
 }
 
