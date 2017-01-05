@@ -1748,6 +1748,9 @@ extern {
                                  inbuf: *const c_uchar, inlen: c_uint,
                                  client: *const c_uchar, client_len: c_uint) -> c_int;
     pub fn SSL_get0_next_proto_negotiated(s: *const SSL, data: *mut *const c_uchar, len: *mut c_uint);
+    pub fn SSL_get_session(s: *const SSL) -> *mut SSL_SESSION;
+
+    pub fn SSL_SESSION_free(s: *mut SSL_SESSION);
 
     #[cfg(not(ossl101))]
     pub fn SSL_CTX_set_alpn_protos(s: *mut SSL_CTX, data: *const c_uchar, len: c_uint) -> c_int;
