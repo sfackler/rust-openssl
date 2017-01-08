@@ -136,6 +136,30 @@ impl SslAcceptorBuilder {
         where I: IntoIterator,
               I::Item: AsRef<X509Ref>
     {
+        let builder = try!(SslAcceptorBuilder::mozilla_intermedia_raw(method));
+        builder.finish_setup(private_key, certificate, chain)
+    }
+
+    /// Creates a new builder configured to connect to modern clients.
+    ///
+    /// This corresponds to the modern configuration of Mozilla's server side TLS recommendations.
+    /// See its [documentation][docs] for more details on specifics.
+    ///
+    /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
+    pub fn mozilla_modern<I>(method: SslMethod,
+                             private_key: &PKeyRef,
+                             certificate: &X509Ref,
+                             chain: I)
+                             -> Result<SslAcceptorBuilder, ErrorStack>
+        where I: IntoIterator,
+              I::Item: AsRef<X509Ref>
+    {
+        let builder = try!(SslAcceptorBuilder::mozilla_modern_raw(method));
+        builder.finish_setup(private_key, certificate, chain)
+    }
+
+    /// Like `mozilla_intermediate`, but does not load the certificate chain and private key.
+    pub fn mozilla_intermedia_raw(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
         let mut ctx = try!(ctx(method));
         let dh = try!(Dh::from_pem(DHPARAM_PEM.as_bytes()));
         try!(ctx.set_tmp_dh(&dh));
@@ -154,23 +178,11 @@ impl SslAcceptorBuilder {
                                   EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:\
                                   AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:\
                                   DES-CBC3-SHA:!DSS"));
-        SslAcceptorBuilder::finish_setup(ctx, private_key, certificate, chain)
+        Ok(SslAcceptorBuilder(ctx))
     }
 
-    /// Creates a new builder configured to connect to modern clients.
-    ///
-    /// This corresponds to the modern configuration of Mozilla's server side TLS recommendations.
-    /// See its [documentation][docs] for more details on specifics.
-    ///
-    /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
-    pub fn mozilla_modern<I>(method: SslMethod,
-                             private_key: &PKeyRef,
-                             certificate: &X509Ref,
-                             chain: I)
-                             -> Result<SslAcceptorBuilder, ErrorStack>
-        where I: IntoIterator,
-              I::Item: AsRef<X509Ref>
-    {
+    /// Like `mozilla_modern`, but does not load the certificate chain and private key.
+    pub fn mozilla_modern_raw(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
         let mut ctx = try!(ctx(method));
         try!(setup_curves(&mut ctx));
         try!(ctx.set_cipher_list("ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:\
@@ -178,10 +190,10 @@ impl SslAcceptorBuilder {
                                   ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:\
                                   ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:\
                                   ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256"));
-        SslAcceptorBuilder::finish_setup(ctx, private_key, certificate, chain)
+        Ok(SslAcceptorBuilder(ctx))
     }
 
-    fn finish_setup<I>(mut ctx: SslContextBuilder,
+    fn finish_setup<I>(mut self,
                        private_key: &PKeyRef,
                        certificate: &X509Ref,
                        chain: I)
@@ -189,13 +201,13 @@ impl SslAcceptorBuilder {
         where I: IntoIterator,
               I::Item: AsRef<X509Ref>
     {
-        try!(ctx.set_private_key(private_key));
-        try!(ctx.set_certificate(certificate));
-        try!(ctx.check_private_key());
+        try!(self.0.set_private_key(private_key));
+        try!(self.0.set_certificate(certificate));
+        try!(self.0.check_private_key());
         for cert in chain {
-            try!(ctx.add_extra_chain_cert(cert.as_ref().to_owned()));
+            try!(self.0.add_extra_chain_cert(cert.as_ref().to_owned()));
         }
-        Ok(SslAcceptorBuilder(ctx))
+        Ok(self)
     }
 
     /// Returns a shared reference to the inner `SslContextBuilder`.

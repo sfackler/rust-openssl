@@ -702,7 +702,7 @@ impl SslContextBuilder {
         }
     }
 
-    /// Specifies the file that contains certificate
+    /// Loads a certificate from a file.
     pub fn set_certificate_file<P: AsRef<Path>>(&mut self,
                                                 file: P,
                                                 file_type: X509FileType)
@@ -716,7 +716,11 @@ impl SslContextBuilder {
         }
     }
 
-    /// Specifies the file that contains certificate chain
+    /// Loads a certificate chain from a file.
+    ///
+    /// The file should contain a sequence of PEM-formatted certificates, the first being the leaf
+    /// certificate, and the remainder forming the chain of certificates up to and including the
+    /// trusted root certificate.
     pub fn set_certificate_chain_file<P: AsRef<Path>>(&mut self,
                                                       file: P)
                                                       -> Result<(), ErrorStack> {
@@ -727,13 +731,15 @@ impl SslContextBuilder {
         }
     }
 
-    /// Specifies the certificate
+    /// Sets the certificate.
     pub fn set_certificate(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_CTX_use_certificate(self.as_ptr(), cert.as_ptr())).map(|_| ()) }
     }
 
-    /// Adds a certificate to the certificate chain presented together with the
-    /// certificate specified using set_certificate()
+    /// Appends a certificate to the certificate chain.
+    ///
+    /// This chain should contain all certificates necessary to go from the certificate specified by
+    /// `set_certificate` to a trusted root.
     pub fn add_extra_chain_cert(&mut self, cert: X509) -> Result<(), ErrorStack> {
         unsafe {
             try!(cvt(ffi::SSL_CTX_add_extra_chain_cert(self.as_ptr(), cert.as_ptr()) as c_int));
@@ -742,7 +748,7 @@ impl SslContextBuilder {
         }
     }
 
-    /// Specifies the file that contains private key
+    /// Loads the private key from a file.
     pub fn set_private_key_file<P: AsRef<Path>>(&mut self,
                                                 file: P,
                                                 file_type: X509FileType)
@@ -756,11 +762,14 @@ impl SslContextBuilder {
         }
     }
 
-    /// Specifies the private key
+    /// Sets the private key.
     pub fn set_private_key(&mut self, key: &PKeyRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_CTX_use_PrivateKey(self.as_ptr(), key.as_ptr())).map(|_| ()) }
     }
 
+    /// Sets the cipher configuration.
+    ///
+    /// See `man 1 ciphers` for details on the format.
     pub fn set_cipher_list(&mut self, cipher_list: &str) -> Result<(), ErrorStack> {
         let cipher_list = CString::new(cipher_list).unwrap();
         unsafe {
@@ -769,9 +778,7 @@ impl SslContextBuilder {
         }
     }
 
-    /// If `onoff` is set to `true`, enable ECDHE for key exchange with
-    /// compatible clients, and automatically select an appropriate elliptic
-    /// curve.
+    /// Enables ECDHE key exchange with an automatically chosen curve list.
     ///
     /// Requires the `v102` feature and OpenSSL 1.0.2.
     #[cfg(all(feature = "v102", ossl102))]
