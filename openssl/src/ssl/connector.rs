@@ -136,7 +136,7 @@ impl SslAcceptorBuilder {
         where I: IntoIterator,
               I::Item: AsRef<X509Ref>
     {
-        let builder = try!(SslAcceptorBuilder::mozilla_intermedia_raw(method));
+        let builder = try!(SslAcceptorBuilder::mozilla_intermediate_raw(method));
         builder.finish_setup(private_key, certificate, chain)
     }
 
@@ -159,7 +159,7 @@ impl SslAcceptorBuilder {
     }
 
     /// Like `mozilla_intermediate`, but does not load the certificate chain and private key.
-    pub fn mozilla_intermedia_raw(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
+    pub fn mozilla_intermediate_raw(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
         let mut ctx = try!(ctx(method));
         let dh = try!(Dh::from_pem(DHPARAM_PEM.as_bytes()));
         try!(ctx.set_tmp_dh(&dh));
