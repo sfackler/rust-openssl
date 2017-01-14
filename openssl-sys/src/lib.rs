@@ -6,6 +6,7 @@ extern crate libc;
 
 use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t, FILE};
 use std::ptr;
+use std::mem;
 
 #[cfg(any(ossl101, ossl102))]
 mod ossl10x;
@@ -23,6 +24,7 @@ mod libressl;
 pub use libressl::*;
 
 pub enum ASN1_INTEGER {}
+pub enum ASN1_GENERALIZEDTIME {}
 pub enum ASN1_STRING {}
 pub enum ASN1_TIME {}
 pub enum ASN1_TYPE {}
@@ -38,7 +40,11 @@ pub enum ENGINE {}
 pub enum EVP_CIPHER_CTX {}
 pub enum EVP_MD {}
 pub enum EVP_PKEY_CTX {}
-pub enum SSL {}
+pub enum OCSP_BASICRESP {}
+pub enum OCSP_CERTID {}
+pub enum OCSP_RESPONSE {}
+pub enum OCSP_REQUEST {}
+pub enum OCSP_ONEREQ {}
 pub enum SSL_CIPHER {}
 pub enum SSL_METHOD {}
 pub enum X509_CRL {}
@@ -51,19 +57,16 @@ pub enum X509_STORE_CTX {}
 pub enum bio_st {}
 pub enum PKCS12 {}
 pub enum DH_METHOD {}
-
-pub type bio_info_cb = Option<unsafe extern "C" fn(*mut BIO,
-                                                   c_int,
-                                                   *const c_char,
-                                                   c_int,
-                                                   c_long,
-                                                   c_long)>;
-
 pub enum RSA_METHOD {}
 pub enum BN_MONT_CTX {}
 pub enum BN_BLINDING {}
 pub enum DSA_METHOD {}
 pub enum EVP_PKEY_ASN1_METHOD {}
+
+pub type bio_info_cb = Option<unsafe extern fn(*mut BIO, c_int, *const c_char, c_int, c_long, c_long)>;
+pub type GEN_SESSION_CB = Option<unsafe extern fn(*const SSL, *mut c_uchar, *mut c_uint) -> c_int>;
+pub type tls_session_ticket_ext_cb_fn = Option<unsafe extern fn(*mut SSL, *const c_uchar, c_int, *mut c_void) -> c_int>;
+pub type tls_session_secret_cb_fn = Option<unsafe extern fn(*mut SSL, *mut c_void, *mut c_int, *mut stack_st_SSL_CIPHER, *mut *mut SSL_CIPHER, *mut c_void) -> c_int>;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -1059,6 +1062,40 @@ pub const NID_aes_128_cbc_hmac_sha1: c_int = 916;
 pub const NID_aes_192_cbc_hmac_sha1: c_int = 917;
 pub const NID_aes_256_cbc_hmac_sha1: c_int = 918;
 
+pub const OCSP_NOCERTS: c_ulong = 0x1;
+pub const OCSP_NOINTERN: c_ulong = 0x2;
+pub const OCSP_NOSIGS: c_ulong = 0x4;
+pub const OCSP_NOCHAIN: c_ulong = 0x8;
+pub const OCSP_NOVERIFY: c_ulong = 0x10;
+pub const OCSP_NOEXPLICIT: c_ulong = 0x20;
+pub const OCSP_NOCASIGN: c_ulong = 0x40;
+pub const OCSP_NODELEGATED: c_ulong = 0x80;
+pub const OCSP_NOCHECKS: c_ulong = 0x100;
+pub const OCSP_TRUSTOTHER: c_ulong = 0x200;
+pub const OCSP_RESPID_KEY: c_ulong = 0x400;
+pub const OCSP_NOTIME: c_ulong = 0x800;
+
+pub const V_OCSP_CERTSTATUS_GOOD: c_int = 0;
+pub const V_OCSP_CERTSTATUS_REVOKED: c_int = 1;
+pub const V_OCSP_CERTSTATUS_UNKNOWN: c_int = 2;
+
+pub const OCSP_REVOKED_STATUS_NOSTATUS: c_int = -1;
+pub const OCSP_REVOKED_STATUS_UNSPECIFIED: c_int = 0;
+pub const OCSP_REVOKED_STATUS_KEYCOMPROMISE: c_int = 1;
+pub const OCSP_REVOKED_STATUS_CACOMPROMISE: c_int = 2;
+pub const OCSP_REVOKED_STATUS_AFFILIATIONCHANGED: c_int = 3;
+pub const OCSP_REVOKED_STATUS_SUPERSEDED: c_int = 4;
+pub const OCSP_REVOKED_STATUS_CESSATIONOFOPERATION: c_int = 5;
+pub const OCSP_REVOKED_STATUS_CERTIFICATEHOLD: c_int = 6;
+pub const OCSP_REVOKED_STATUS_REMOVEFROMCRL: c_int = 8;
+
+pub const OCSP_RESPONSE_STATUS_SUCCESSFUL: c_int = 0;
+pub const OCSP_RESPONSE_STATUS_MALFORMEDREQUEST: c_int = 1;
+pub const OCSP_RESPONSE_STATUS_INTERNALERROR: c_int = 2;
+pub const OCSP_RESPONSE_STATUS_TRYLATER: c_int = 3;
+pub const OCSP_RESPONSE_STATUS_SIGREQUIRED: c_int = 5;
+pub const OCSP_RESPONSE_STATUS_UNAUTHORIZED: c_int = 6;
+
 pub const PKCS5_SALT_LEN: c_int = 8;
 
 pub const RSA_F4: c_long = 0x10001;
@@ -1077,6 +1114,12 @@ pub const SSL_CTRL_SET_READ_AHEAD: c_int = 41;
 pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB:  c_int = 53;
 pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG: c_int = 54;
 pub const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
+pub const SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB: c_int = 63;
+pub const SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG: c_int = 64;
+pub const SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE: c_int = 65;
+pub const SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP: c_int = 70;
+pub const SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP: c_int = 71;
+pub const SSL_CTRL_GET_EXTRA_CHAIN_CERTS: c_int = 82;
 
 pub const SSL_MODE_ENABLE_PARTIAL_WRITE: c_long = 0x1;
 pub const SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER: c_long = 0x2;
@@ -1135,6 +1178,8 @@ pub const SSL_OP_NO_SSL_MASK: c_ulong = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 |
     SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
 
 pub const TLSEXT_NAMETYPE_host_name: c_int = 0;
+
+pub const TLSEXT_STATUSTYPE_ocsp: c_int = 1;
 
 pub const SSL_TLSEXT_ERR_OK: c_int = 0;
 pub const SSL_TLSEXT_ERR_ALERT_WARNING: c_int = 1;
@@ -1273,7 +1318,7 @@ pub unsafe fn SSL_CTX_add_extra_chain_cert(ctx: *mut SSL_CTX, x509: *mut X509) -
 }
 
 pub unsafe fn SSL_CTX_set_tlsext_servername_callback(ctx: *mut SSL_CTX,
-                                                     cb: Option<extern "C" fn()>)
+                                                     cb: Option<extern fn()>)
                                                      -> c_long {
     SSL_CTX_callback_ctrl(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, cb)
 }
@@ -1282,6 +1327,32 @@ pub unsafe fn SSL_set_tlsext_host_name(s: *mut SSL, name: *mut c_char) -> c_long
     SSL_ctrl(s, SSL_CTRL_SET_TLSEXT_HOSTNAME,
              TLSEXT_NAMETYPE_host_name as c_long,
              name as *mut c_void)
+}
+
+pub unsafe fn SSL_set_tlsext_status_type(s: *mut SSL, type_: c_int) -> c_long {
+    SSL_ctrl(s, SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE, type_ as c_long, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_set_tlsext_status_cb(ctx: *mut SSL_CTX,
+                                           cb: Option<unsafe extern fn(*mut SSL, *mut c_void) -> c_int>)
+                                           -> c_long {
+    SSL_CTX_callback_ctrl(ctx, SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB, mem::transmute(cb))
+}
+
+pub unsafe fn SSL_CTX_set_tlsext_status_arg(ctx: *mut SSL_CTX, arg: *mut c_void) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG, 0, arg)
+}
+
+pub unsafe fn SSL_CTX_get_extra_chain_certs(ctx: *mut SSL_CTX, chain: *mut *mut stack_st_X509) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_GET_EXTRA_CHAIN_CERTS, 0, chain as *mut c_void)
+}
+
+pub unsafe fn SSL_get_tlsext_status_ocsp_resp(ssl: *mut SSL, resp: *mut *mut c_uchar) -> c_long {
+    SSL_ctrl(ssl, SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP, 0, resp as *mut c_void)
+}
+
+pub unsafe fn SSL_set_tlsext_status_ocsp_resp(ssl: *mut SSL, resp: *mut c_uchar, len: c_long) -> c_long {
+    SSL_ctrl(ssl, SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP, len, resp as *mut c_void)
 }
 
 pub fn ERR_GET_LIB(l: c_ulong) -> c_int {
@@ -1298,6 +1369,8 @@ pub fn ERR_GET_REASON(l: c_ulong) -> c_int {
 
 extern {
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
+    pub fn ASN1_GENERALIZEDTIME_free(tm: *mut ASN1_GENERALIZEDTIME);
+    pub fn ASN1_GENERALIZEDTIME_print(b: *mut BIO, tm: *const ASN1_GENERALIZEDTIME) -> c_int;
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
     pub fn ASN1_TIME_free(tm: *mut ASN1_TIME);
     pub fn ASN1_TIME_print(b: *mut BIO, tm: *const ASN1_TIME) -> c_int;
@@ -1541,6 +1614,30 @@ extern {
 
     pub fn HMAC_CTX_copy(dst: *mut HMAC_CTX, src: *mut HMAC_CTX) -> c_int;
 
+    pub fn OCSP_BASICRESP_new() -> *mut OCSP_BASICRESP;
+    pub fn OCSP_BASICRESP_free(r: *mut OCSP_BASICRESP);
+    pub fn OCSP_basic_verify(bs: *mut OCSP_BASICRESP, certs: *mut stack_st_X509, st: *mut X509_STORE, flags: c_ulong) -> c_int;
+    pub fn OCSP_resp_find_status(bs: *mut OCSP_BASICRESP, id: *mut OCSP_CERTID, status: *mut c_int, reason: *mut c_int, revtime: *mut *mut ASN1_GENERALIZEDTIME, thisupd: *mut *mut ASN1_GENERALIZEDTIME, nextupd: *mut *mut ASN1_GENERALIZEDTIME) -> c_int;
+    pub fn OCSP_check_validity(thisupd: *mut ASN1_GENERALIZEDTIME, nextupd: *mut ASN1_GENERALIZEDTIME, sec: c_long, maxsec: c_long) -> c_int;
+
+    pub fn OCSP_CERTID_free(id: *mut OCSP_CERTID);
+
+    pub fn OCSP_RESPONSE_new() -> *mut OCSP_RESPONSE;
+    pub fn OCSP_RESPONSE_free(r: *mut OCSP_RESPONSE);
+    pub fn i2d_OCSP_RESPONSE(a: *mut OCSP_RESPONSE, pp: *mut *mut c_uchar) -> c_int;
+    pub fn d2i_OCSP_RESPONSE(a: *mut *mut OCSP_RESPONSE, pp: *mut *const c_uchar, length: c_long) -> *mut OCSP_RESPONSE;
+    pub fn OCSP_response_create(status: c_int, bs: *mut OCSP_BASICRESP) -> *mut OCSP_RESPONSE;
+    pub fn OCSP_response_status(resp: *mut OCSP_RESPONSE) -> c_int;
+    pub fn OCSP_response_get1_basic(resp: *mut OCSP_RESPONSE) -> *mut OCSP_BASICRESP;
+
+    pub fn OCSP_REQUEST_new() -> *mut OCSP_REQUEST;
+    pub fn OCSP_REQUEST_free(r: *mut OCSP_REQUEST);
+    pub fn i2d_OCSP_REQUEST(a: *mut OCSP_REQUEST, pp: *mut *mut c_uchar) -> c_int;
+    pub fn d2i_OCSP_REQUEST(a: *mut *mut OCSP_REQUEST, pp: *mut *const c_uchar, length: c_long) -> *mut OCSP_REQUEST;
+    pub fn OCSP_request_add0_id(r: *mut OCSP_REQUEST, id: *mut OCSP_CERTID) -> *mut OCSP_ONEREQ;
+
+    pub fn OCSP_ONEREQ_free(r: *mut OCSP_ONEREQ);
+
     pub fn PEM_read_bio_DHparams(bio: *mut BIO, out: *mut *mut DH, callback: Option<PasswordCallback>,
                              user_data: *mut c_void) -> *mut DH;
     pub fn PEM_read_bio_X509(bio: *mut BIO, out: *mut *mut X509, callback: Option<PasswordCallback>,
@@ -1696,7 +1793,7 @@ extern {
     pub fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
     pub fn SSL_CTX_free(ctx: *mut SSL_CTX);
     pub fn SSL_CTX_ctrl(ctx: *mut SSL_CTX, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
-    pub fn SSL_CTX_callback_ctrl(ctx: *mut SSL_CTX, cmd: c_int, fp: Option<extern "C" fn()>) -> c_long;
+    pub fn SSL_CTX_callback_ctrl(ctx: *mut SSL_CTX, cmd: c_int, fp: Option<extern fn()>) -> c_long;
     pub fn SSL_CTX_set_verify(ctx: *mut SSL_CTX, mode: c_int,
                               verify_callback: Option<extern fn(c_int, *mut X509_STORE_CTX) -> c_int>);
     pub fn SSL_CTX_set_verify_depth(ctx: *mut SSL_CTX, depth: c_int);
@@ -1749,6 +1846,8 @@ extern {
                                  client: *const c_uchar, client_len: c_uint) -> c_int;
     pub fn SSL_get0_next_proto_negotiated(s: *const SSL, data: *mut *const c_uchar, len: *mut c_uint);
     pub fn SSL_get_session(s: *const SSL) -> *mut SSL_SESSION;
+    #[cfg(not(any(ossl101, libressl)))]
+    pub fn SSL_is_server(s: *mut SSL) -> c_int;
 
     pub fn SSL_SESSION_free(s: *mut SSL_SESSION);
     pub fn SSL_SESSION_get_id(s: *const SSL_SESSION, len: *mut c_uint) -> *const c_uchar;
@@ -1785,6 +1884,8 @@ extern {
     pub fn X509_get_pubkey(x: *mut X509) -> *mut EVP_PKEY;
     pub fn X509_to_X509_REQ(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> *mut X509_REQ;
     pub fn X509_verify_cert_error_string(n: c_long) -> *const c_char;
+    pub fn X509_get1_ocsp(x: *mut X509) -> *mut stack_st_OPENSSL_STRING;
+    pub fn X509_check_issued(issuer: *mut X509, subject: *mut X509) -> c_int;
 
     pub fn X509_EXTENSION_free(ext: *mut X509_EXTENSION);
 
@@ -1797,8 +1898,10 @@ extern {
     pub fn ASN1_STRING_free(x: *mut ASN1_STRING);
     pub fn ASN1_STRING_length(x: *const ASN1_STRING) -> c_int;
 
+    pub fn X509_STORE_new() -> *mut X509_STORE;
     pub fn X509_STORE_free(store: *mut X509_STORE);
     pub fn X509_STORE_add_cert(store: *mut X509_STORE, x: *mut X509) -> c_int;
+    pub fn X509_STORE_set_default_paths(store: *mut X509_STORE) -> c_int;
 
     pub fn X509_STORE_CTX_free(ctx: *mut X509_STORE_CTX);
     pub fn X509_STORE_CTX_get_current_cert(ctx: *mut X509_STORE_CTX) -> *mut X509;

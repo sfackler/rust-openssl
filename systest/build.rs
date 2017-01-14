@@ -46,7 +46,8 @@ fn main() {
        .header("openssl/err.h")
        .header("openssl/rand.h")
        .header("openssl/pkcs12.h")
-       .header("openssl/bn.h");
+       .header("openssl/bn.h")
+       .header("openssl/ocsp.h");
     cfg.type_name(|s, is_struct| {
         // Add some `*` on some callback parameters to get function pointer to
         // typecheck in C, especially on MSVC.
@@ -90,6 +91,8 @@ fn main() {
     });
     cfg.skip_signededness(|s| {
         s.ends_with("_cb") ||
+            s.ends_with("_CB") ||
+            s.ends_with("_cb_fn") ||
             s.starts_with("CRYPTO_") ||
             s == "PasswordCallback"
     });

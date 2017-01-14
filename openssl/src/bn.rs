@@ -6,8 +6,8 @@ use std::{fmt, ptr};
 use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub, Deref};
 
 use {cvt, cvt_p, cvt_n};
-use crypto::CryptoString;
 use error::ErrorStack;
+use string::OpensslString;
 use types::{OpenSslType, OpenSslTypeRef};
 
 #[cfg(ossl10x)]
@@ -484,12 +484,12 @@ impl BigNumRef {
     /// # use openssl::bn::BigNum;
     /// let s = -BigNum::from_u32(12345).unwrap();
     ///
-    /// assert_eq!(&*s.to_dec_str().unwrap(), "-12345");
+    /// assert_eq!(&**s.to_dec_str().unwrap(), "-12345");
     /// ```
-    pub fn to_dec_str(&self) -> Result<CryptoString, ErrorStack> {
+    pub fn to_dec_str(&self) -> Result<OpensslString, ErrorStack> {
         unsafe {
             let buf = try!(cvt_p(ffi::BN_bn2dec(self.as_ptr())));
-            Ok(CryptoString::from_null_terminated(buf))
+            Ok(OpensslString::from_ptr(buf))
         }
     }
 
@@ -499,12 +499,12 @@ impl BigNumRef {
     /// # use openssl::bn::BigNum;
     /// let s = -BigNum::from_u32(0x99ff).unwrap();
     ///
-    /// assert_eq!(&*s.to_hex_str().unwrap(), "-99FF");
+    /// assert_eq!(&**s.to_hex_str().unwrap(), "-99FF");
     /// ```
-    pub fn to_hex_str(&self) -> Result<CryptoString, ErrorStack> {
+    pub fn to_hex_str(&self) -> Result<OpensslString, ErrorStack> {
         unsafe {
             let buf = try!(cvt_p(ffi::BN_bn2hex(self.as_ptr())));
-            Ok(CryptoString::from_null_terminated(buf))
+            Ok(OpensslString::from_ptr(buf))
         }
     }
 }

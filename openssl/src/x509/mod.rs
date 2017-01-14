@@ -20,6 +20,7 @@ use error::ErrorStack;
 use ffi;
 use nid::Nid;
 use types::{OpenSslType, OpenSslTypeRef};
+use string::OpensslString;
 use stack::{Stack, StackRef, Stackable};
 
 #[cfg(ossl10x)]
@@ -412,6 +413,25 @@ impl X509Ref {
             let date = compat::X509_get_notBefore(self.as_ptr());
             assert!(!date.is_null());
             Asn1TimeRef::from_ptr(date)
+        }
+    }
+
+    /// Returns the list of OCSP responder URLs specified in the certificate's Authority Information
+    /// Access field.
+    pub fn ocsp_responders(&self) -> Result<Stack<OpensslString>, ErrorStack> {
+        unsafe {
+            cvt_p(ffi::X509_get1_ocsp(self.as_ptr())).map(|p| Stack::from_ptr(p))
+        }
+    }
+
+    /// Checks that this certificate issued `subject`.
+    pub fn issued(&self, subject: &X509Ref) -> Result<(), X509VerifyError> {
+        unsafe {
+            let r = ffi::X509_check_issued(self.as_ptr(), subject.as_ptr());
+            match X509VerifyError::from_raw(r as c_long) {
+                Some(e) => Err(e),
+                None => Ok(()),
+            }
         }
     }
 

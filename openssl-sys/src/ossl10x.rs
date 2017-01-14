@@ -42,6 +42,16 @@ pub struct stack_st_void {
 }
 
 #[repr(C)]
+pub struct stack_st_SSL_CIPHER {
+    pub stack: _STACK,
+}
+
+#[repr(C)]
+pub struct stack_st_OPENSSL_STRING {
+    pub stack: _STACK,
+}
+
+#[repr(C)]
 pub struct _STACK {
     pub num: c_int,
     pub data: *mut *mut c_char,
@@ -293,6 +303,143 @@ pub struct ASN1_ENCODING {
 pub struct X509_VAL {
     pub notBefore: *mut ::ASN1_TIME,
     pub notAfter: *mut ::ASN1_TIME,
+}
+
+#[repr(C)]
+pub struct SSL {
+    version: c_int,
+    type_: c_int,
+    method: *const ::SSL_METHOD,
+    rbio: *mut c_void,
+    wbio: *mut c_void,
+    bbio: *mut c_void,
+    rwstate: c_int,
+    in_handshake: c_int,
+    handshake_func: Option<unsafe extern fn(*mut SSL) -> c_int>,
+    pub server: c_int,
+    new_session: c_int,
+    quiet_session: c_int,
+    shutdown: c_int,
+    state: c_int,
+    rstate: c_int,
+    init_buf: *mut c_void,
+    init_msg: *mut c_void,
+    init_num: c_int,
+    init_off: c_int,
+    packet: *mut c_uchar,
+    packet_length: c_uint,
+    s2: *mut c_void,
+    s3: *mut c_void,
+    d1: *mut c_void,
+    read_ahead: c_int,
+    msg_callback: Option<unsafe extern fn(c_int, c_int, c_int, *const c_void, size_t, *mut SSL, *mut c_void)>,
+    msg_callback_arg: *mut c_void,
+    hit: c_int,
+    param: *mut c_void,
+    cipher_list: *mut stack_st_SSL_CIPHER,
+    cipher_list_by_id: *mut stack_st_SSL_CIPHER,
+    mac_flags: c_int,
+    enc_read_ctx: *mut ::EVP_CIPHER_CTX,
+    read_hash: *mut ::EVP_MD_CTX,
+    expand: *mut c_void,
+    enc_write_ctx: *mut ::EVP_CIPHER_CTX,
+    write_hash: *mut ::EVP_MD_CTX,
+    compress: *mut c_void,
+    cert: *mut c_void,
+    sid_ctx_length: c_uint,
+    sid_ctx: [c_uchar; ::SSL_MAX_SID_CTX_LENGTH as usize],
+    session: *mut ::SSL_SESSION,
+    generate_session_id: ::GEN_SESSION_CB,
+    verify_mode: c_int,
+    verify_callback: Option<unsafe extern fn(c_int, *mut ::X509_STORE_CTX) -> c_int>,
+    info_callback: Option<unsafe extern fn(*mut SSL, c_int, c_int)>,
+    error: c_int,
+    error_code: c_int,
+    #[cfg(not(osslconf = "OPENSSL_NO_KRB5"))]
+    kssl_ctx: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+    psk_client_callback: Option<unsafe extern fn(*mut SSL, *const c_char, *mut c_char, c_uint, *mut c_uchar, c_uint) -> c_uint>,
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+    psk_server_callback: Option<unsafe extern fn(*mut SSL, *const c_char, *mut c_uchar, c_uint) -> c_uint>,
+    ctx: *mut ::SSL_CTX,
+    debug: c_int,
+    verify_result: c_long,
+    ex_data: ::CRYPTO_EX_DATA,
+    client_CA: *mut stack_st_X509_NAME,
+    references: c_int,
+    options: c_ulong,
+    mode: c_ulong,
+    max_cert_list: c_long,
+    first_packet: c_int,
+    client_version: c_int,
+    max_send_fragment: c_uint,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_debug_cb: Option<unsafe extern fn(*mut SSL, c_int, c_int, *mut c_uchar, c_int, *mut c_void)>,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_debug_arg: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_hostname: *mut c_char,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    servername_done: c_int,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_status_type: c_int,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_status_expected: c_int,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_ocsp_ids: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_ocsp_exts: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_ocsp_resp: *mut c_uchar,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_ocsp_resplen: c_int,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_ticket_expected: c_int,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
+    tlsext_ecpointformatlist_length: size_t,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
+    tlsext_ecpointformatlist: *mut c_uchar,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
+    tlsext_ellipticcurvelist_length: size_t,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
+    tlsext_ellipticcurvelist: *mut c_uchar,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_opaque_prf_input: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_opaque_prf_input_len: size_t,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_session_ticket: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_session_ticket_ext_cb: ::tls_session_ticket_ext_cb_fn,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tls_session_ticket_ext_cb_arg: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tls_session_secret_cb: ::tls_session_secret_cb_fn,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tls_session_secret_cb_arg: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    initial_ctx: *mut ::SSL_CTX,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_NEXTPROTONEG")))]
+    next_proto_negotiated: *mut c_uchar,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_NEXTPROTONEG")))]
+    next_proto_negotiated_len: c_uchar,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    srtp_profiles: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    srtp_profile: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_heartbeat: c_uint,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_hb_pending: c_uint,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
+    tlsext_hb_seq: c_uint,
+    renegotiate: c_int,
+    #[cfg(not(osslconf = "OPENSSL_NO_SRP"))]
+    srp_ctx: ::SRP_CTX,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))]
+    alpn_client_proto_list: *mut c_uchar,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))]
+    alpn_client_proto_list_len: c_uint,
 }
 
 #[repr(C)]
@@ -617,6 +764,7 @@ extern {
     pub fn get_rfc3526_prime_6144(bn: *mut BIGNUM) -> *mut BIGNUM;
     pub fn get_rfc3526_prime_8192(bn: *mut BIGNUM) -> *mut BIGNUM;
 
+    pub fn CRYPTO_malloc(num: c_int, file: *const c_char, line: c_int) -> *mut c_void;
     pub fn CRYPTO_free(buf: *mut c_void);
     pub fn CRYPTO_num_locks() -> c_int;
     pub fn CRYPTO_set_locking_callback(func: unsafe extern "C" fn(mode: c_int,
@@ -631,6 +779,8 @@ extern {
                             e: c_ulong,
                             cb: Option<extern fn(c_int, c_int, *mut c_void)>,
                             cbarg: *mut c_void) -> *mut RSA;
+
+    pub fn OCSP_cert_to_id(dgst: *const ::EVP_MD, subject: *mut ::X509, issuer: *mut ::X509) -> *mut ::OCSP_CERTID;
 
     pub fn SSL_library_init() -> c_int;
     pub fn SSL_load_error_strings();

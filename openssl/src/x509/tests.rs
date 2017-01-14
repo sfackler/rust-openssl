@@ -132,7 +132,7 @@ fn test_nid_values() {
     assert_eq!(email.data().as_slice(), b"test@example.com");
 
     let friendly = subject.entries_by_nid(nid::FRIENDLYNAME).next().unwrap();
-    assert_eq!(&*friendly.data().as_utf8().unwrap(), "Example");
+    assert_eq!(&**friendly.data().as_utf8().unwrap(), "Example");
 }
 
 #[test]
@@ -185,4 +185,15 @@ fn test_stack_from_pem() {
         "59172d9313e84459bcff27f967e79e6e9217e584");
     assert_eq!(certs[1].fingerprint(MessageDigest::sha1()).unwrap().to_hex(),
         "c0cbdf7cdd03c9773e5468e1f6d2da7d5cbb1875");
+}
+
+#[test]
+fn issued() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+
+    ca.issued(&cert).unwrap();
+    cert.issued(&cert).err().unwrap();
 }

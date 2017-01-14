@@ -97,14 +97,14 @@ use ec::EcKeyRef;
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
 use ec::EcKey;
 use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError, X509Name};
-use x509::store::X509StoreBuilderRef;
+use x509::store::{X509StoreBuilderRef, X509StoreRef};
 #[cfg(any(ossl102, ossl110))]
 use verify::X509VerifyParamRef;
 use pkey::PKeyRef;
 use error::ErrorStack;
 use types::{OpenSslType, OpenSslTypeRef};
 use util::Opaque;
-use stack::Stack;
+use stack::{Stack, StackRef};
 
 mod error;
 mod connector;
@@ -216,6 +216,22 @@ bitflags! {
         const SSL_VERIFY_FAIL_IF_NO_PEER_CERT = ::ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
     }
 }
+
+#[derive(Copy, Clone)]
+pub struct StatusType(c_int);
+
+impl StatusType {
+    pub fn from_raw(raw: c_int) -> StatusType {
+        StatusType(raw)
+    }
+
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
+}
+
+/// An OSCP status.
+pub const STATUS_TYPE_OCSP: StatusType = StatusType(ffi::TLSEXT_STATUSTYPE_ocsp);
 
 lazy_static! {
     static ref INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
@@ -471,6 +487,37 @@ unsafe extern fn raw_tmp_ecdh_ssl<F>(ssl: *mut ffi::SSL,
         Err(_) => {
             // FIXME reset error stack
             ptr::null_mut()
+        }
+    }
+}
+
+unsafe extern fn raw_tlsext_status<F>(ssl: *mut ffi::SSL, _: *mut c_void) -> c_int
+    where F: Fn(&mut SslRef) -> Result<bool, ErrorStack> + Any + 'static + Sync + Send
+{
+    let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
+    let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
+    let callback = &*(callback as *mut F);
+
+    let ssl = SslRef::from_ptr_mut(ssl);
+    let ret = callback(ssl);
+
+    if ssl.is_server() {
+        match ret {
+            Ok(true) => ffi::SSL_TLSEXT_ERR_OK,
+            Ok(false) => ffi::SSL_TLSEXT_ERR_NOACK,
+            Err(_) => {
+                // FIXME reset error stack
+                ffi::SSL_TLSEXT_ERR_ALERT_FATAL
+            }
+        }
+    } else {
+        match ret {
+            Ok(true) => 1,
+            Ok(false) => 0,
+            Err(_) => {
+                // FIXME reset error stack
+                -1
+            }
         }
     }
 }
@@ -887,6 +934,31 @@ impl SslContextBuilder {
         unsafe { X509StoreBuilderRef::from_ptr_mut(ffi::SSL_CTX_get_cert_store(self.as_ptr())) }
     }
 
+    /// Sets the callback dealing with OCSP stapling.
+    ///
+    /// On the client side, this callback is responsible for validating the OCSP status response
+    /// returned by the server. The status may be retrieved with the `SslRef::ocsp_status` method.
+    /// A response of `Ok(true)` indicates that the OCSP status is valid, and a response of
+    /// `Ok(false)` indicates that the OCSP status is invalid and the handshake should be
+    /// terminated.
+    ///
+    /// On the server side, this callback is resopnsible for setting the OCSP status response to be
+    /// returned to clients. The status may be set with the `SslRef::set_ocsp_status` method. A
+    /// response of `Ok(true)` indicates that the OCSP status should be returned to the client, and
+    /// `Ok(false)` indicates that the status should not be returned to the client.
+    pub fn set_status_callback<F>(&mut self, callback: F) -> Result<(), ErrorStack>
+        where F: Fn(&mut SslRef) -> Result<bool, ErrorStack> + Any + 'static + Sync + Send
+    {
+        unsafe {
+            let callback = Box::new(callback);
+            ffi::SSL_CTX_set_ex_data(self.as_ptr(),
+                                     get_callback_idx::<F>(),
+                                     Box::into_raw(callback) as *mut c_void);
+            let f: unsafe extern fn (_, _) -> _ = raw_tlsext_status::<F>;
+            cvt(ffi::SSL_CTX_set_tlsext_status_cb(self.as_ptr(), Some(f)) as c_int).map(|_| ())
+        }
+    }
+
     pub fn build(self) -> SslContext {
         let ctx = SslContext(self.0);
         mem::forget(self);
@@ -949,6 +1021,22 @@ impl SslContextRef {
             } else {
                 Some(PKeyRef::from_ptr(ptr))
             }
+        }
+    }
+
+    /// Returns the certificate store used for verification.
+    pub fn cert_store(&self) -> &X509StoreRef {
+        unsafe {
+            X509StoreRef::from_ptr(ffi::SSL_CTX_get_cert_store(self.as_ptr()))
+        }
+    }
+
+    pub fn extra_chain_certs(&self) -> &StackRef<X509> {
+        unsafe {
+            let mut chain = ptr::null_mut();
+            ffi::SSL_CTX_get_extra_chain_certs(self.as_ptr(), &mut chain);
+            assert!(!chain.is_null());
+            StackRef::from_ptr(chain)
         }
     }
 }
@@ -1378,6 +1466,49 @@ impl SslRef {
             }
         }
     }
+
+    /// Sets the status response a client wishes the server to reply with.
+    pub fn set_status_type(&mut self, type_: StatusType) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_set_tlsext_status_type(self.as_ptr(), type_.as_raw()) as c_int).map(|_| ())
+        }
+    }
+
+    /// Returns the server's OCSP response, if present.
+    pub fn ocsp_status(&self) -> Option<&[u8]> {
+        unsafe {
+            let mut p = ptr::null_mut();
+            let len = ffi::SSL_get_tlsext_status_ocsp_resp(self.as_ptr(), &mut p);
+
+            if len < 0 {
+                None
+            } else {
+                Some(slice::from_raw_parts(p as *const u8, len as usize))
+            }
+        }
+    }
+
+    /// Sets the OCSP response to be returned to the client.
+    pub fn set_ocsp_status(&mut self, response: &[u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            assert!(response.len() <= c_int::max_value() as usize);
+            let p = try!(cvt_p(ffi::CRYPTO_malloc(response.len() as _,
+                                                  concat!(file!(), "\0").as_ptr() as *const _,
+                                                  line!() as c_int)));
+            ptr::copy_nonoverlapping(response.as_ptr(), p as *mut u8, response.len());
+            cvt(ffi::SSL_set_tlsext_status_ocsp_resp(self.as_ptr(),
+                                                     p as *mut c_uchar,
+                                                     response.len() as c_long) as c_int)
+                .map(|_| ())
+        }
+    }
+
+    /// Determines if this `Ssl` is configured for server-side or client-side use.
+    pub fn is_server(&self) -> bool {
+        unsafe {
+            compat::SSL_is_server(self.as_ptr()) != 0
+        }
+    }
 }
 
 unsafe impl Sync for Ssl {}
@@ -1745,9 +1876,8 @@ mod compat {
     use ffi;
     use libc::c_int;
 
-    pub use ffi::{SSL_CTX_get_options, SSL_CTX_set_options};
-    pub use ffi::{SSL_CTX_clear_options, SSL_CTX_up_ref};
-    pub use ffi::SSL_SESSION_get_master_key;
+    pub use ffi::{SSL_CTX_get_options, SSL_CTX_set_options, SSL_CTX_clear_options, SSL_CTX_up_ref,
+                  SSL_SESSION_get_master_key, SSL_is_server};
 
     pub unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
         ffi::CRYPTO_get_ex_new_index(ffi::CRYPTO_EX_INDEX_SSL_CTX,
@@ -1838,5 +1968,9 @@ mod compat {
 
     pub fn dtls_method() -> *const ffi::SSL_METHOD {
         unsafe { ffi::DTLSv1_method() }
+    }
+
+    pub unsafe fn SSL_is_server(s: *mut ffi::SSL) -> c_int {
+        (*s).server
     }
 }
