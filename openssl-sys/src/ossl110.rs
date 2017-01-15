@@ -12,6 +12,7 @@ pub enum EVP_PKEY {}
 pub enum HMAC_CTX {}
 pub enum OPENSSL_STACK {}
 pub enum RSA {}
+pub enum SSL {}
 pub enum SSL_CTX {}
 pub enum SSL_SESSION {}
 pub enum stack_st_ASN1_OBJECT {}
@@ -22,6 +23,7 @@ pub enum stack_st_X509 {}
 pub enum stack_st_X509_NAME {}
 pub enum stack_st_X509_ATTRIBUTE {}
 pub enum stack_st_X509_EXTENSION {}
+pub enum stack_st_SSL_CIPHER {}
 pub enum X509 {}
 pub enum X509_VERIFY_PARAM {}
 
@@ -63,10 +65,13 @@ extern {
     pub fn BN_get_rfc3526_prime_6144(bn: *mut BIGNUM) -> *mut BIGNUM;
     pub fn BN_get_rfc3526_prime_8192(bn: *mut BIGNUM) -> *mut BIGNUM;
 
+    pub fn CRYPTO_malloc(num: size_t, file: *const c_char, line: c_int) -> *mut c_void;
     pub fn CRYPTO_free(buf: *mut c_void, file: *const c_char, line: c_int);
 
     pub fn HMAC_CTX_new() -> *mut HMAC_CTX;
     pub fn HMAC_CTX_free(ctx: *mut HMAC_CTX);
+
+    pub fn OCSP_cert_to_id(dgst: *const ::EVP_MD, subject: *const ::X509, issuer: *const ::X509) -> *mut ::OCSP_CERTID;
 
     pub fn TLS_method() -> *const ::SSL_METHOD;
     pub fn DTLS_method() -> *const ::SSL_METHOD;

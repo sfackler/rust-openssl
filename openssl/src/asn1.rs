@@ -1,5 +1,5 @@
 use ffi;
-use libc::c_long;
+use libc::{c_long, c_char};
 use std::fmt;
 use std::ptr;
 use std::slice;
@@ -7,9 +7,21 @@ use std::str;
 
 use {cvt, cvt_p};
 use bio::MemBio;
-use crypto::CryptoString;
 use error::ErrorStack;
 use types::{OpenSslType, OpenSslTypeRef};
+use string::OpensslString;
+
+type_!(Asn1GeneralizedTime, Asn1GeneralizedTimeRef, ffi::ASN1_GENERALIZEDTIME, ffi::ASN1_GENERALIZEDTIME_free);
+
+impl fmt::Display for Asn1GeneralizedTimeRef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        unsafe {
+            let mem_bio = try!(MemBio::new());
+            try!(cvt(ffi::ASN1_GENERALIZEDTIME_print(mem_bio.as_ptr(), self.as_ptr())));
+            write!(f, "{}", str::from_utf8_unchecked(mem_bio.get_buf()))
+        }
+    }
+}
 
 type_!(Asn1Time, Asn1TimeRef, ffi::ASN1_TIME, ffi::ASN1_TIME_free);
 
@@ -42,7 +54,7 @@ impl Asn1Time {
 type_!(Asn1String, Asn1StringRef, ffi::ASN1_STRING, ffi::ASN1_STRING_free);
 
 impl Asn1StringRef {
-    pub fn as_utf8(&self) -> Result<CryptoString, ErrorStack> {
+    pub fn as_utf8(&self) -> Result<OpensslString, ErrorStack> {
         unsafe {
             let mut ptr = ptr::null_mut();
             let len = ffi::ASN1_STRING_to_UTF8(&mut ptr, self.as_ptr());
@@ -50,7 +62,7 @@ impl Asn1StringRef {
                 return Err(ErrorStack::get());
             }
 
-            Ok(CryptoString::from_raw_parts(ptr, len as usize))
+            Ok(OpensslString::from_ptr(ptr as *mut c_char))
         }
     }
 

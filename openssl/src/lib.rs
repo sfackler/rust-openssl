@@ -35,18 +35,20 @@ pub mod error;
 pub mod hash;
 pub mod memcmp;
 pub mod nid;
+pub mod ocsp;
 pub mod pkcs12;
 pub mod pkcs5;
 pub mod pkey;
 pub mod rand;
-pub mod types;
 pub mod rsa;
 pub mod sign;
 pub mod ssl;
+pub mod stack;
+pub mod string;
 pub mod symm;
+pub mod types;
 pub mod version;
 pub mod x509;
-pub mod stack;
 #[cfg(any(ossl102, ossl110))]
 mod verify;
 

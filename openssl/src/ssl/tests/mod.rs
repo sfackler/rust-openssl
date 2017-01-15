@@ -16,9 +16,11 @@ use tempdir::TempDir;
 
 use dh::Dh;
 use hash::MessageDigest;
+use ocsp::{OcspResponse, RESPONSE_STATUS_UNAUTHORIZED};
 use ssl;
 use ssl::{SslMethod, HandshakeError, SslContext, SslStream, Ssl, ShutdownResult,
-    SslConnectorBuilder, SslAcceptorBuilder, Error, SSL_VERIFY_PEER, SSL_VERIFY_NONE};
+    SslConnectorBuilder, SslAcceptorBuilder, Error, SSL_VERIFY_PEER, SSL_VERIFY_NONE,
+    STATUS_TYPE_OCSP};
 use x509::{X509StoreContext, X509, X509Name, X509_FILETYPE_PEM};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::verify::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS;
@@ -1393,7 +1395,48 @@ fn active_session() {
     let mut buf = vec![0; len + 1];
     let copied = session.master_key(&mut buf);
     assert_eq!(copied, len);
+}
 
+#[test]
+fn status_callbacks() {
+    static CALLED_BACK_SERVER: AtomicBool = ATOMIC_BOOL_INIT;
+    static CALLED_BACK_CLIENT: AtomicBool = ATOMIC_BOOL_INIT;
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    let guard = thread::spawn(move || {
+        let stream = listener.accept().unwrap().0;
+        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM).unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM).unwrap();
+        ctx.set_status_callback(|ssl| {
+            CALLED_BACK_SERVER.store(true, Ordering::SeqCst);
+            let response = OcspResponse::create(RESPONSE_STATUS_UNAUTHORIZED, None).unwrap();
+            let response = response.to_der().unwrap();
+            ssl.set_ocsp_status(&response).unwrap();
+            Ok(true)
+        }).unwrap();
+        let ssl = Ssl::new(&ctx.build()).unwrap();
+        ssl.accept(stream).unwrap();
+    });
+
+    let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    ctx.set_status_callback(|ssl| {
+        CALLED_BACK_CLIENT.store(true, Ordering::SeqCst);
+        let response = OcspResponse::from_der(ssl.ocsp_status().unwrap()).unwrap();
+        assert_eq!(response.status(), RESPONSE_STATUS_UNAUTHORIZED);
+        Ok(true)
+    });
+    let mut ssl = Ssl::new(&ctx.build()).unwrap();
+    ssl.set_status_type(STATUS_TYPE_OCSP).unwrap();
+    ssl.connect(stream).unwrap();
+
+    assert!(CALLED_BACK_SERVER.load(Ordering::SeqCst));
+    assert!(CALLED_BACK_CLIENT.load(Ordering::SeqCst));
+
+    guard.join().unwrap();
 }
 
 fn _check_kinds() {

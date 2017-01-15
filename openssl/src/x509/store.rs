@@ -1,12 +1,32 @@
 use ffi;
 use std::mem;
 
-use cvt;
+use {cvt, cvt_p};
 use error::ErrorStack;
 use types::OpenSslTypeRef;
 use x509::X509;
 
 type_!(X509StoreBuilder, X509StoreBuilderRef, ffi::X509_STORE, ffi::X509_STORE_free);
+
+impl X509StoreBuilder {
+    /// Returns a builder for a certificate store.
+    ///
+    /// The store is initially empty.
+    pub fn new() -> Result<X509StoreBuilder, ErrorStack> {
+        unsafe {
+            ffi::init();
+
+            cvt_p(ffi::X509_STORE_new()).map(X509StoreBuilder)
+        }
+    }
+
+    /// Constructs the `X509Store`.
+    pub fn build(self) -> X509Store {
+        let store = X509Store(self.0);
+        mem::forget(self);
+        store
+    }
+}
 
 impl X509StoreBuilderRef {
     /// Adds a certificate to the certificate store.
@@ -17,4 +37,17 @@ impl X509StoreBuilderRef {
             cvt(ffi::X509_STORE_add_cert(self.as_ptr(), ptr)).map(|_| ())
         }
     }
+
+    /// Load certificates from their default locations.
+    ///
+    /// These locations are read from the `SSL_CERT_FILE` and `SSL_CERT_DIR`
+    /// environment variables if present, or defaults specified at OpenSSL
+    /// build time otherwise.
+    pub fn set_default_paths(&mut self) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_STORE_set_default_paths(self.as_ptr())).map(|_| ())
+        }
+    }
 }
+
+type_!(X509Store, X509StoreRef, ffi::X509_STORE, ffi::X509_STORE_free);

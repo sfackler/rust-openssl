@@ -41,6 +41,16 @@ pub struct stack_st_void {
 }
 
 #[repr(C)]
+pub struct stack_st_SSL_CIPHER {
+    pub stack: _STACK,
+}
+
+#[repr(C)]
+pub struct stack_st_OPENSSL_STRING {
+    pub stack: _STACK,
+}
+
+#[repr(C)]
 pub struct _STACK {
     pub num: c_int,
     pub data: *mut *mut c_char,
@@ -289,6 +299,100 @@ pub struct X509_VAL {
 }
 
 #[repr(C)]
+pub struct SSL {
+    version: c_int,
+    type_: c_int,
+    method: *const ::SSL_METHOD,
+    rbio: *mut c_void,
+    wbio: *mut c_void,
+    bbio: *mut c_void,
+    rwstate: c_int,
+    in_handshake: c_int,
+    handshake_func: Option<unsafe extern fn(*mut SSL) -> c_int>,
+    pub server: c_int,
+    new_session: c_int,
+    quiet_shutdown: c_int,
+    shutdown: c_int,
+    state: c_int,
+    rstate: c_int,
+    init_buf: *mut c_void,
+    init_msg: *mut c_void,
+    init_num: c_int,
+    init_off: c_int,
+    packet: *mut c_uchar,
+    packet_length: c_uint,
+    s3: *mut c_void,
+    d1: *mut c_void,
+    read_ahead: c_int,
+    msg_callback: Option<unsafe extern fn(c_int, c_int, c_int, *const c_void, size_t, *mut SSL, *mut c_void)>,
+    msg_callback_arg: *mut c_void,
+    hit: c_int,
+    param: *mut c_void,
+    cipher_list: *mut stack_st_SSL_CIPHER,
+    cipher_list_by_id: *mut stack_st_SSL_CIPHER,
+    mac_flags: c_int,
+    aead_read_ctx: *mut c_void,
+    enc_read_ctx: *mut ::EVP_CIPHER_CTX,
+    read_hash: *mut ::EVP_MD_CTX,
+    aead_write_ctx: *mut c_void,
+    enc_write_ctx: *mut ::EVP_CIPHER_CTX,
+    write_hash: *mut ::EVP_MD_CTX,
+    cert: *mut c_void,
+    sid_ctx_length: c_uint,
+    sid_ctx: [c_uchar; ::SSL_MAX_SID_CTX_LENGTH as usize],
+    session: *mut ::SSL_SESSION,
+    generate_session_id: ::GEN_SESSION_CB,
+    verify_mode: c_int,
+    verify_callback: Option<unsafe extern fn(c_int, *mut ::X509_STORE_CTX) -> c_int>,
+    info_callback: Option<unsafe extern fn(*mut SSL, c_int, c_int)>,
+    error: c_int,
+    error_code: c_int,
+    ctx: *mut ::SSL_CTX,
+    debug: c_int,
+    verify_result: c_long,
+    ex_data: ::CRYPTO_EX_DATA,
+    client_CA: *mut stack_st_X509_NAME,
+    references: c_int,
+    options: c_ulong,
+    mode: c_ulong,
+    max_cert_list: c_long,
+    first_packet: c_int,
+    client_version: c_int,
+    max_send_fragment: c_uint,
+    tlsext_debug_cb: Option<unsafe extern fn(*mut SSL, c_int, c_int, *mut c_uchar, c_int, *mut c_void)>,
+    tlsext_debug_arg: *mut c_void,
+    tlsext_hostname: *mut c_char,
+    servername_done: c_int,
+    tlsext_status_type: c_int,
+    tlsext_status_expected: c_int,
+    tlsext_ocsp_ids: *mut c_void,
+    tlsext_ocsp_exts: *mut c_void,
+    tlsext_ocsp_resp: *mut c_uchar,
+    tlsext_ocsp_resplen: c_int,
+    tlsext_ticket_expected: c_int,
+    tlsext_ecpointformatlist_length: size_t,
+    tlsext_ecpointformatlist: *mut c_uchar,
+    tlsext_ellipticcurvelist_length: size_t,
+    tlsext_ellipticcurvelist: *mut c_uchar,
+    tlsext_session_ticket: *mut c_void,
+    tlsext_session_ticket_ext_cb: ::tls_session_ticket_ext_cb_fn,
+    tls_session_ticket_ext_cb_arg: *mut c_void,
+    tls_session_secret_cb: ::tls_session_secret_cb_fn,
+    tls_session_secret_cb_arg: *mut c_void,
+    initial_ctx: *mut ::SSL_CTX,
+    next_proto_negotiated: *mut c_uchar,
+    next_proto_negotiated_len: c_uchar,
+    srtp_profiles: *mut c_void,
+    srtp_profile: *mut c_void,
+    tlsext_heartbeat: c_uint,
+    tlsext_hb_pending: c_uint,
+    tlsext_hb_seq: c_uint,
+    alpn_client_proto_list: *mut c_uchar,
+    alpn_client_proto_list_len: c_uint,
+    renegotiate: c_int,
+}
+
+#[repr(C)]
 pub struct SSL_CTX {
     method: *mut c_void,
     cipher_list: *mut c_void,
@@ -515,6 +619,7 @@ extern {
     pub fn get_rfc3526_prime_6144(bn: *mut BIGNUM) -> *mut BIGNUM;
     pub fn get_rfc3526_prime_8192(bn: *mut BIGNUM) -> *mut BIGNUM;
 
+    pub fn CRYPTO_malloc(num: c_int, file: *const c_char, line: c_int) -> *mut c_void;
     pub fn CRYPTO_free(buf: *mut c_void);
     pub fn CRYPTO_num_locks() -> c_int;
     pub fn CRYPTO_set_locking_callback(func: unsafe extern "C" fn(mode: c_int,
@@ -529,6 +634,8 @@ extern {
                             e: c_ulong,
                             cb: Option<extern fn(c_int, c_int, *mut c_void)>,
                             cbarg: *mut c_void) -> *mut RSA;
+
+    pub fn OCSP_cert_to_id(dgst: *const ::EVP_MD, subject: *mut ::X509, issuer: *mut ::X509) -> *mut ::OCSP_CERTID;
 
     pub fn SSL_library_init() -> c_int;
     pub fn SSL_load_error_strings();
