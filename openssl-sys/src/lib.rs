@@ -77,6 +77,13 @@ pub enum point_conversion_form_t {
 }
 
 #[repr(C)]
+pub struct AES_KEY {
+    // There is some business with AES_LONG which is there to ensure the values here are 32 bits
+    rd_key: [u32; 4 * (AES_MAXNR as usize + 1)],
+    rounds: c_int,
+}
+
+#[repr(C)]
 pub struct GENERAL_NAME {
     pub type_: c_int,
     pub d: *mut c_void,
@@ -113,6 +120,12 @@ pub type CRYPTO_EX_free = unsafe extern fn(parent: *mut c_void, ptr: *mut c_void
 pub type PasswordCallback = unsafe extern fn(buf: *mut c_char, size: c_int,
                                              rwflag: c_int, user_data: *mut c_void)
                                              -> c_int;
+
+pub const AES_ENCRYPT: c_int = 1;
+pub const AES_DECRYPT: c_int = 0;
+
+pub const AES_MAXNR: c_int = 14;
+pub const AES_BLOCK_SIZE: c_int = 16;
 
 pub const BIO_TYPE_NONE: c_int = 0;
 
@@ -1368,6 +1381,10 @@ pub fn ERR_GET_REASON(l: c_ulong) -> c_int {
 }
 
 extern {
+    pub fn AES_set_encrypt_key(userKey: *const c_uchar, bits: c_int, key: *mut AES_KEY) -> c_int;
+    pub fn AES_set_decrypt_key(userKey: *const c_uchar, bits: c_int, key: *mut AES_KEY) -> c_int;
+    pub fn AES_ige_encrypt(in_: *const c_uchar, out: *mut c_uchar, length: size_t, key: *const AES_KEY, ivec: *mut c_uchar, enc: c_int);
+
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn ASN1_GENERALIZEDTIME_free(tm: *mut ASN1_GENERALIZEDTIME);
     pub fn ASN1_GENERALIZEDTIME_print(b: *mut BIO, tm: *const ASN1_GENERALIZEDTIME) -> c_int;
