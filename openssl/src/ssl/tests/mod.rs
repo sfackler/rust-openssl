@@ -100,6 +100,7 @@ impl Server {
         Server::new_tcp(&["-www"])
     }
 
+    #[allow(dead_code)]
     fn new_alpn() -> (Server, TcpStream) {
         Server::new_tcp(&["-www",
                           "-nextprotoneg",
@@ -1428,7 +1429,7 @@ fn status_callbacks() {
         let response = OcspResponse::from_der(ssl.ocsp_status().unwrap()).unwrap();
         assert_eq!(response.status(), RESPONSE_STATUS_UNAUTHORIZED);
         Ok(true)
-    });
+    }).unwrap();
     let mut ssl = Ssl::new(&ctx.build()).unwrap();
     ssl.set_status_type(STATUS_TYPE_OCSP).unwrap();
     ssl.connect(stream).unwrap();
