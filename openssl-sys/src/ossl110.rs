@@ -68,6 +68,9 @@ extern {
     pub fn CRYPTO_malloc(num: size_t, file: *const c_char, line: c_int) -> *mut c_void;
     pub fn CRYPTO_free(buf: *mut c_void, file: *const c_char, line: c_int);
 
+    pub fn EVP_chacha20() -> *const ::EVP_CIPHER;
+    pub fn EVP_chacha20_poly1305() -> *const ::EVP_CIPHER;
+
     pub fn HMAC_CTX_new() -> *mut HMAC_CTX;
     pub fn HMAC_CTX_free(ctx: *mut HMAC_CTX);
 
