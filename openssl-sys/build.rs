@@ -44,7 +44,11 @@ fn main() {
     let libs = if (version.contains("0x10001") ||
                    version.contains("0x10002")) &&
                   target.contains("windows") {
-        ["ssleay32", "libeay32"]
+        if target.contains("windows-gnu") {
+            ["ssl", "crypto"]
+        } else {
+            ["ssleay32", "libeay32"]
+        }
     } else if target.contains("windows") {
         ["libssl", "libcrypto"]
     } else {
