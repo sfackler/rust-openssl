@@ -168,6 +168,13 @@ fn try_pkg_config() {
     // Otherwise if we're going to windows we probably can't use pkg-config.
     if target.contains("windows-gnu") && host.contains("windows") {
         env::set_var("PKG_CONFIG_ALLOW_CROSS", "1");
+    } else if target.contains("windows-gnu") && host.contains("linux") {
+        env::set_var("PKG_CONFIG_ALLOW_CROSS", "1");
+        if target.contains("x86_64") {
+            env::set_var("PKG_CONFIG_PATH", "/usr/x86_64-w64-mingw32/lib/pkgconfig");
+        } else if target.contains("i686") {
+            env::set_var("PKG_CONFIG_PATH", "/usr/i686-w64-mingw32/lib/pkgconfig");
+        }
     } else if target.contains("windows") {
         return
     }
