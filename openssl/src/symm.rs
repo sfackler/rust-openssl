@@ -108,6 +108,18 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_rc4()) }
     }
 
+    /// Requires the `v110` feature and OpenSSL 1.1.0.
+    #[cfg(all(ossl110, feature = "v110"))]
+    pub fn chacha20() -> Cipher {
+        unsafe { Cipher(ffi::EVP_chacha20()) }
+    }
+
+    /// Requires the `v110` feature and OpenSSL 1.1.0.
+    #[cfg(all(ossl110, feature = "v110"))]
+    pub fn chacha20_poly1305() -> Cipher {
+        unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
+    }
+
     pub unsafe fn from_ptr(ptr: *const ffi::EVP_CIPHER) -> Cipher {
         Cipher(ptr)
     }
@@ -765,6 +777,54 @@ mod tests {
                                &Vec::from_hex(aad).unwrap(),
                                &Vec::from_hex(ct).unwrap(),
                                &Vec::from_hex(tag).unwrap()).unwrap();
+        assert_eq!(pt, out.to_hex());
+    }
+
+    #[test]
+    #[cfg(all(ossl110, feature = "v110"))]
+    fn test_chacha20() {
+        let key = "0000000000000000000000000000000000000000000000000000000000000000";
+        let iv = "00000000000000000000000000000000";
+        let pt = "000000000000000000000000000000000000000000000000000000000000000000000000000000000\
+                  00000000000000000000000000000000000000000000000";
+        let ct = "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7da41597c5157488d7\
+                  724e03fb8d84a376a43b8f41518a11cc387b669b2ee6586";
+
+        cipher_test(Cipher::chacha20(), pt, ct, key, iv);
+    }
+
+    #[test]
+    #[cfg(all(ossl110, feature = "v110"))]
+    fn test_chacha20_poly1305() {
+        let key = "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f";
+        let iv = "070000004041424344454647";
+        let aad = "50515253c0c1c2c3c4c5c6c7";
+        let pt = "4c616469657320616e642047656e746c656d656e206f662074686520636c617373206f66202739393\
+                  a204966204920636f756c64206f6666657220796f75206f6e6c79206f6e652074697020666f722074\
+                  6865206675747572652c2073756e73637265656e20776f756c642062652069742e";
+        let ct = "d31a8d34648e60db7b86afbc53ef7ec2a4aded51296e08fea9e2b5a736ee62d63dbea45e8ca967128\
+                  2fafb69da92728b1a71de0a9e060b2905d6a5b67ecd3b3692ddbd7f2d778b8c9803aee328091b58fa\
+                  b324e4fad675945585808b4831d7bc3ff4def08e4b7a9de576d26586cec64b6116";
+        let tag = "1ae10b594f09e26a7e902ecbd0600691";
+
+        let mut actual_tag = [0; 16];
+        let out = encrypt_aead(Cipher::chacha20_poly1305(),
+                               &Vec::from_hex(key).unwrap(),
+                               Some(&Vec::from_hex(iv).unwrap()),
+                               &Vec::from_hex(aad).unwrap(),
+                               &Vec::from_hex(pt).unwrap(),
+                               &mut actual_tag)
+            .unwrap();
+        assert_eq!(ct, out.to_hex());
+        assert_eq!(tag, actual_tag.to_hex());
+
+        let out = decrypt_aead(Cipher::chacha20_poly1305(),
+                               &Vec::from_hex(key).unwrap(),
+                               Some(&Vec::from_hex(iv).unwrap()),
+                               &Vec::from_hex(aad).unwrap(),
+                               &Vec::from_hex(ct).unwrap(),
+                               &Vec::from_hex(tag).unwrap())
+            .unwrap();
         assert_eq!(pt, out.to_hex());
     }
 }

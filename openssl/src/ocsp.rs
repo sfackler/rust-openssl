@@ -141,7 +141,7 @@ impl OcspBasicResponseRef {
     /// Verifies the validity of the response.
     ///
     /// The `certs` parameter contains a set of certificates that will be searched when locating the
-    /// OCSP response signing certificate. Some responders to not include this in the response.
+    /// OCSP response signing certificate. Some responders do not include this in the response.
     pub fn verify(&self,
                   certs: &StackRef<X509>,
                   store: &X509StoreRef,
