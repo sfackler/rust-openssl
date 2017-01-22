@@ -1,8 +1,11 @@
 use hex::{FromHex, ToHex};
 
+use ec::{NAMED_CURVE, EcGroup, EcKey};
 use hash::MessageDigest;
+use nid::X9_62_PRIME256V1;
 use pkey::PKey;
 use rsa::Rsa;
+use ssl::{SslMethod, SslContextBuilder};
 use x509::{X509, X509Generator};
 use x509::extension::Extension::{KeyUsage, ExtKeyUsage, SubjectAltName, OtherNid, OtherStr};
 use x509::extension::AltNameOption as SAN;
@@ -196,4 +199,24 @@ fn issued() {
 
     ca.issued(&cert).unwrap();
     cert.issued(&cert).err().unwrap();
+}
+
+#[test]
+fn ecdsa_cert() {
+    let mut group = EcGroup::from_curve_name(X9_62_PRIME256V1).unwrap();
+    group.set_asn1_flag(NAMED_CURVE);
+    let key = EcKey::generate(&group).unwrap();
+    let key = PKey::from_ec_key(key).unwrap();
+
+    let cert = X509Generator::new()
+        .set_valid_period(365)
+        .add_name("CN".to_owned(), "TestServer".to_owned())
+        .set_sign_hash(MessageDigest::sha256())
+        .sign(&key)
+        .unwrap();
+
+    let mut ctx = SslContextBuilder::new(SslMethod::tls()).unwrap();
+    ctx.set_certificate(&cert).unwrap();
+    ctx.set_private_key(&key).unwrap();
+    ctx.check_private_key().unwrap();
 }

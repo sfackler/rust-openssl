@@ -1109,6 +1109,8 @@ pub const OCSP_RESPONSE_STATUS_TRYLATER: c_int = 3;
 pub const OCSP_RESPONSE_STATUS_SIGREQUIRED: c_int = 5;
 pub const OCSP_RESPONSE_STATUS_UNAUTHORIZED: c_int = 6;
 
+pub const OPENSSL_EC_NAMED_CURVE: c_int = 1;
+
 pub const PKCS5_SALT_LEN: c_int = 8;
 
 pub const RSA_F4: c_long = 0x10001;
@@ -1510,6 +1512,7 @@ extern {
     pub fn EC_GROUP_get_curve_GF2m(group: *const EC_GROUP, p: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn EC_GROUP_get_degree(group: *const EC_GROUP) -> c_int;
     pub fn EC_GROUP_get_order(group: *const EC_GROUP, order: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_GROUP_set_asn1_flag(key: *mut EC_GROUP, flag: c_int);
 
     pub fn EC_GROUP_free(group: *mut EC_GROUP);
 

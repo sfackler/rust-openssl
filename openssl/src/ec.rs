@@ -1,11 +1,13 @@
 use ffi;
 use std::ptr;
+use std::mem;
+use libc::c_int;
 
 use {cvt, cvt_n, cvt_p, init};
 use bn::{BigNumRef, BigNumContextRef};
 use error::ErrorStack;
 use nid::Nid;
-use types::OpenSslTypeRef;
+use types::{OpenSslType, OpenSslTypeRef};
 
 pub const POINT_CONVERSION_COMPRESSED: PointConversionForm =
     PointConversionForm(ffi::point_conversion_form_t::POINT_CONVERSION_COMPRESSED);
@@ -16,8 +18,16 @@ pub const POINT_CONVERSION_UNCOMPRESSED: PointConversionForm =
 pub const POINT_CONVERSION_HYBRID: PointConversionForm =
     PointConversionForm(ffi::point_conversion_form_t::POINT_CONVERSION_HYBRID);
 
+// OPENSSL_EC_EXPLICIT_CURVE, but that was only added in 1.1.
+// Man page documents that 0 can be used in older versions.
+pub const EXPLICIT_CURVE: Asn1Flag = Asn1Flag(0);
+pub const NAMED_CURVE: Asn1Flag = Asn1Flag(ffi::OPENSSL_EC_NAMED_CURVE);
+
 #[derive(Copy, Clone)]
 pub struct PointConversionForm(ffi::point_conversion_form_t);
+
+#[derive(Copy, Clone)]
+pub struct Asn1Flag(c_int);
 
 type_!(EcGroup, EcGroupRef, ffi::EC_GROUP, ffi::EC_GROUP_free);
 
@@ -78,6 +88,17 @@ impl EcGroupRef {
                  -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EC_GROUP_get_order(self.as_ptr(), order.as_ptr(), ctx.as_ptr())).map(|_| ())
+        }
+    }
+
+    /// Sets the flag determining if the group corresponds to a named curve or must be explicitly
+    /// parameterized.
+    ///
+    /// This defaults to `EXPLICIT_CURVE` in OpenSSL 1.0.1 and 1.0.2, but `NAMED_CURVE` in OpenSSL
+    /// 1.1.0.
+    pub fn set_asn1_flag(&mut self, flag: Asn1Flag) {
+        unsafe {
+            ffi::EC_GROUP_set_asn1_flag(self.as_ptr(), flag.0);
         }
     }
 }
@@ -311,22 +332,18 @@ impl EcKey {
     /// let key = EcKey::from_public_key(&group, &point);
     /// ```
     pub fn from_public_key(group: &EcGroupRef, public_key: &EcPointRef) -> Result<EcKey, ErrorStack> {
-        unsafe {
-            let key = EcKey(try!(cvt_p(ffi::EC_KEY_new())));
-            try!(cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())));
-            try!(cvt(ffi::EC_KEY_set_public_key(key.as_ptr(), public_key.as_ptr())));
-            Ok(key)
-        }
+        let mut builder = try!(EcKeyBuilder::new());
+        try!(builder.set_group(group));
+        try!(builder.set_public_key(public_key));
+        Ok(builder.build())
     }
 
     /// Generates a new public/private key pair on the specified curve.
     pub fn generate(group: &EcGroupRef) -> Result<EcKey, ErrorStack> {
-        unsafe {
-            let key = EcKey(try!(cvt_p(ffi::EC_KEY_new())));
-            try!(cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())));
-            try!(cvt(ffi::EC_KEY_generate_key(key.as_ptr())));
-            Ok(key)
-        }
+        let mut builder = try!(EcKeyBuilder::new());
+        try!(builder.set_group(group));
+        try!(builder.generate_key());
+        Ok(builder.build())
     }
 
     #[deprecated(since = "0.9.2", note = "use from_curve_name")]
@@ -336,6 +353,47 @@ impl EcKey {
 
     private_key_from_pem!(EcKey, ffi::PEM_read_bio_ECPrivateKey);
     private_key_from_der!(EcKey, ffi::d2i_ECPrivateKey);
+}
+
+type_!(EcKeyBuilder, EcKeyBuilderRef, ffi::EC_KEY, ffi::EC_KEY_free);
+
+impl EcKeyBuilder {
+    pub fn new() -> Result<EcKeyBuilder, ErrorStack> {
+        unsafe {
+            init();
+            cvt_p(ffi::EC_KEY_new()).map(EcKeyBuilder)
+        }
+    }
+
+    pub fn build(self) -> EcKey {
+        unsafe {
+            let key = EcKey::from_ptr(self.as_ptr());
+            mem::forget(self);
+            key
+        }
+    }
+}
+
+impl EcKeyBuilderRef {
+    pub fn set_group(&mut self, group: &EcGroupRef) -> Result<&mut EcKeyBuilderRef, ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_KEY_set_group(self.as_ptr(), group.as_ptr())).map(|_| self)
+        }
+    }
+
+    pub fn set_public_key(&mut self,
+                          public_key: &EcPointRef)
+                          -> Result<&mut EcKeyBuilderRef, ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_KEY_set_public_key(self.as_ptr(), public_key.as_ptr())).map(|_| self)
+        }
+    }
+
+    pub fn generate_key(&mut self) -> Result<&mut EcKeyBuilderRef, ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_KEY_generate_key(self.as_ptr())).map(|_| self)
+        }
+    }
 }
 
 #[cfg(test)]
