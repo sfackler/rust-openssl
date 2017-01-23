@@ -10,6 +10,7 @@ use std::process::Command;
 
 fn main() {
     let target = env::var("TARGET").unwrap();
+    let host = env::var("HOST").unwrap();
 
     let lib_dir = env::var_os("OPENSSL_LIB_DIR").map(PathBuf::from);
     let include_dir = env::var_os("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
@@ -41,14 +42,18 @@ fn main() {
     let version = validate_headers(&[include_dir.clone().into()],
                                    &[lib_dir.clone().into()]);
 
-    let libs = if (version.contains("0x10001") ||
+    let libs = if target.contains("windows-gnu") && host.contains("linux") {
+        ["ssl", "crypto"]
+    } else if version.contains("0x10100") && target.contains("windows") {
+        if target.contains("x86_64") {
+            ["libssl-1_1-x64" ,"libcrypto-1_1-x64"]
+        } else {
+            ["libssl-1_1" ,"libcrypto-1_1"]
+        }
+    } else if (version.contains("0x10001") ||
                    version.contains("0x10002")) &&
                   target.contains("windows") {
-        if target.contains("windows-gnu") {
-            ["ssl", "crypto"]
-        } else {
-            ["ssleay32", "libeay32"]
-        }
+        ["ssleay32", "libeay32"]
     } else if target.contains("windows") {
         ["libssl", "libcrypto"]
     } else {
