@@ -44,7 +44,7 @@ fn main() {
 
     let libs = if target.contains("windows-gnu") && host.contains("linux") {
         ["ssl", "crypto"]
-    } else if version.contains("0x10100") && target.contains("windows") {
+    } else if version.contains("0x10100") && target.contains("windows-gnu") {
         if target.contains("x86_64") {
             ["libssl-1_1-x64" ,"libcrypto-1_1-x64"]
         } else {
