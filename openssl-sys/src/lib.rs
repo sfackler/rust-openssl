@@ -1097,6 +1097,7 @@ pub const OCSP_RESPONSE_STATUS_SIGREQUIRED: c_int = 5;
 pub const OCSP_RESPONSE_STATUS_UNAUTHORIZED: c_int = 6;
 
 pub const PKCS5_SALT_LEN: c_int = 8;
+pub const PKCS12_DEFAULT_ITER: c_int = 2048;
 
 pub const RSA_F4: c_long = 0x10001;
 

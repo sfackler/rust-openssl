@@ -49,6 +49,40 @@ impl Pkcs12Ref {
 
 impl Pkcs12 {
     from_der!(Pkcs12, ffi::d2i_PKCS12);
+
+    /// Creates a new builder for a protected pkcs12 certificate.
+    ///
+    /// This uses the defaults from the OpenSSL library:
+    ///
+    /// * `nid_key` - `nid::PBE_WITHSHA1AND3_KEY_TRIPLEDES_CBC`
+    /// * `nid_cert` - `nid::PBE_WITHSHA1AND40BITRC2_CBC`
+    /// * `iter` - `2048`
+    /// * `mac_iter` - `2048`
+    ///
+    /// # Arguments
+    ///
+    /// * `password` - the password used to encrypt the key and certificate
+    /// * `friendly_name` - user defined name for the certificate
+    /// * `pkey` - key to store
+    /// * `cert` - certificate to store
+    pub fn builder<'a, 'b, 'c, 'd>(password: &'a str,
+                                   friendly_name: &'b str,
+                                   pkey: &'c PKeyRef,
+                                   cert: &'d X509) -> Pkcs12Builder<'a, 'b, 'c, 'd> {
+        ffi::init();
+
+        Pkcs12Builder {
+            password: password,
+            friendly_name: friendly_name,
+            pkey: pkey,
+            cert: cert,
+            chain: None,
+            nid_key: nid::UNDEF, //nid::PBE_WITHSHA1AND3_KEY_TRIPLEDES_CBC,
+            nid_cert: nid::UNDEF, //nid::PBE_WITHSHA1AND40BITRC2_CBC,
+            iter: ffi::PKCS12_DEFAULT_ITER as usize, // 2048
+            mac_iter: ffi::PKCS12_DEFAULT_ITER as usize, // 2048
+        }
+    }
 }
 
 pub struct ParsedPkcs12 {
@@ -69,32 +103,8 @@ pub struct Pkcs12Builder<'a, 'b, 'c, 'd> {
     mac_iter: usize,
 }
 
+// TODO: add chain option
 impl<'a, 'b, 'c, 'd> Pkcs12Builder<'a, 'b, 'c, 'd> {
-    /// Creates a new builder for a protected pkcs12 certificate.
-    ///
-    /// This uses the defaults from the OpenSSL library:
-    ///
-    /// * `nid_key` - `nid::PBE_WITHSHA1AND3_KEY_TRIPLEDES_CBC`
-    /// * `nid_cert` - `nid::PBE_WITHSHA1AND40BITRC2_CBC`
-    /// * `iter` - `2048`
-    /// * `mac_iter` - `2048`
-    pub fn new(password: &'a str,
-               friendly_name: &'b str,
-               pkey: &'c PKeyRef,
-               cert: &'d X509) -> Self {
-        Pkcs12Builder {
-            password: password,
-            friendly_name: friendly_name,
-            pkey: pkey,
-            cert: cert,
-            chain: None,
-            nid_key: nid::UNDEF, //nid::PBE_WITHSHA1AND3_KEY_TRIPLEDES_CBC,
-            nid_cert: nid::UNDEF, //nid::PBE_WITHSHA1AND40BITRC2_CBC,
-            iter: 0, // 2048
-            mac_iter: 0, // 2048
-        }
-    }
-
     /// The encryption algorithm that should be used for the key
     pub fn nid_key(&mut self, nid: nid::Nid) {
         self.nid_key = nid;
@@ -105,10 +115,15 @@ impl<'a, 'b, 'c, 'd> Pkcs12Builder<'a, 'b, 'c, 'd> {
         self.nid_cert = nid;
     }
 
+    /// Key iteration count, default is 2048 as of this writing
     pub fn iter(&mut self, iter: usize) {
         self.iter = iter;
     }
 
+    /// Mac iteration count, default is the same as key_iter default.
+    ///
+    /// Old implementation don't understand mac iterations greater than 1, (pre 1.0.1?), if such
+    /// compatibility is required this should be set to 1
     pub fn mac_iter(&mut self, mac_iter: usize) {
         self.mac_iter = mac_iter;
     }
@@ -188,7 +203,7 @@ mod test {
 
         let cert = gen.sign(&pkey).unwrap();
 
-        let pkcs12_builder = Pkcs12Builder::new("mypass", subject_name, &pkey, &cert);
+        let pkcs12_builder = Pkcs12::builder("mypass", subject_name, &pkey, &cert);
         let pkcs12 = pkcs12_builder.build().unwrap();
         let der = pkcs12.to_der().unwrap();
 
