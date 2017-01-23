@@ -24,6 +24,7 @@ mod macros;
 
 mod bio;
 mod util;
+pub mod aes;
 pub mod asn1;
 pub mod bn;
 pub mod crypto;
