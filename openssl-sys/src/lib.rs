@@ -1951,7 +1951,19 @@ extern {
     pub fn i2d_RSAPrivateKey(k: *const RSA, buf: *mut *mut u8) -> c_int;
     pub fn d2i_RSAPrivateKey(k: *mut *mut RSA, buf: *mut *const u8, len: c_long) -> *mut RSA;
 
+    pub fn i2d_PKCS12_bio(b: *mut BIO, a: *mut PKCS12) -> c_int;
+    pub fn i2d_PKCS12(a: *mut PKCS12, buf: *mut *mut u8) -> c_int;
     pub fn d2i_PKCS12(a: *mut *mut PKCS12, pp: *mut *const u8, length: c_long) -> *mut PKCS12;
+    pub fn PKCS12_create(pass: *const c_char,
+                         friendly_name: *const c_char,
+                         pkey: *const EVP_PKEY,
+                         cert: *const X509,
+                         ca: *const stack_st_X509,
+                         nid_key: c_int,
+                         nid_cert: c_int,
+                         iter: c_int,
+                         mac_iter: c_int,
+                         keytype: c_int) -> *mut PKCS12;
     pub fn PKCS12_parse(p12: *mut PKCS12,
                         pass: *const c_char,
                         pkey: *mut *mut EVP_PKEY,
