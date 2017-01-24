@@ -11,6 +11,7 @@ pub enum EVP_MD_CTX {}
 pub enum EVP_PKEY {}
 pub enum HMAC_CTX {}
 pub enum OPENSSL_STACK {}
+pub enum PKCS12 {}
 pub enum RSA {}
 pub enum SSL {}
 pub enum SSL_CTX {}
@@ -179,4 +180,15 @@ extern {
     pub fn OPENSSL_sk_free(st: *mut ::OPENSSL_STACK);
     pub fn OPENSSL_sk_pop_free(st: *mut ::OPENSSL_STACK, free: Option<unsafe extern "C" fn (*mut c_void)>);
     pub fn OPENSSL_sk_pop(st: *mut ::OPENSSL_STACK) -> *mut c_void;
+
+    pub fn PKCS12_create(pass: *const c_char,
+                         friendly_name: *const c_char,
+                         pkey: *mut EVP_PKEY,
+                         cert: *mut X509,
+                         ca: *mut stack_st_X509,
+                         nid_key: c_int,
+                         nid_cert: c_int,
+                         iter: c_int,
+                         mac_iter: c_int,
+                         keytype: c_int) -> *mut PKCS12;
 }

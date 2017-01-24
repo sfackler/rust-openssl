@@ -10,7 +10,7 @@ use pkey::{PKey, PKeyRef};
 use error::ErrorStack;
 use x509::X509;
 use types::{OpenSslType, OpenSslTypeRef};
-use stack::{Stack, StackRef};
+use stack::Stack;
 use nid;
 
 type_!(Pkcs12, Pkcs12Ref, ffi::PKCS12, ffi::PKCS12_free);
@@ -58,25 +58,10 @@ impl Pkcs12 {
     /// * `nid_cert` - `nid::PBE_WITHSHA1AND40BITRC2_CBC`
     /// * `iter` - `2048`
     /// * `mac_iter` - `2048`
-    ///
-    /// # Arguments
-    ///
-    /// * `password` - the password used to encrypt the key and certificate
-    /// * `friendly_name` - user defined name for the certificate
-    /// * `pkey` - key to store
-    /// * `cert` - certificate to store
-    pub fn builder<'a, 'b, 'c, 'd>(password: &'a str,
-                                   friendly_name: &'b str,
-                                   pkey: &'c PKeyRef,
-                                   cert: &'d X509) -> Pkcs12Builder<'a, 'b, 'c, 'd> {
+    pub fn builder() -> Pkcs12Builder {
         ffi::init();
 
         Pkcs12Builder {
-            password: password,
-            friendly_name: friendly_name,
-            pkey: pkey,
-            cert: cert,
-            chain: None,
             nid_key: nid::UNDEF, //nid::PBE_WITHSHA1AND3_KEY_TRIPLEDES_CBC,
             nid_cert: nid::UNDEF, //nid::PBE_WITHSHA1AND40BITRC2_CBC,
             iter: ffi::PKCS12_DEFAULT_ITER as usize, // 2048
@@ -91,20 +76,15 @@ pub struct ParsedPkcs12 {
     pub chain: Stack<X509>,
 }
 
-pub struct Pkcs12Builder<'a, 'b, 'c, 'd> {
-    password: &'a str,
-    friendly_name: &'b str,
-    pkey: &'c PKeyRef,
-    cert: &'d X509,
-    chain: Option<StackRef<X509>>,
+// TODO: add ca chain
+pub struct Pkcs12Builder {
     nid_key: nid::Nid,
     nid_cert: nid::Nid,
     iter: usize,
     mac_iter: usize,
 }
 
-// TODO: add chain option
-impl<'a, 'b, 'c, 'd> Pkcs12Builder<'a, 'b, 'c, 'd> {
+impl Pkcs12Builder {
     /// The encryption algorithm that should be used for the key
     pub fn nid_key(&mut self, nid: nid::Nid) {
         self.nid_key = nid;
@@ -128,13 +108,25 @@ impl<'a, 'b, 'c, 'd> Pkcs12Builder<'a, 'b, 'c, 'd> {
         self.mac_iter = mac_iter;
     }
 
-    pub fn build(self) -> Result<Pkcs12, ErrorStack> {
+    /// Builds the pkcs12 object
+    ///
+    /// # Arguments
+    ///
+    /// * `password` - the password used to encrypt the key and certificate
+    /// * `friendly_name` - user defined name for the certificate
+    /// * `pkey` - key to store
+    /// * `cert` - certificate to store
+    pub fn build(self,
+                 password: &str,
+                 friendly_name: &str,
+                 pkey: &PKeyRef,
+                 cert: &X509) -> Result<Pkcs12, ErrorStack> {
         unsafe {
-            let pass = CString::new(self.password).unwrap();
-            let friendly_name = CString::new(self.friendly_name).unwrap();
-            let pkey = self.pkey.as_ptr();
-            let cert = self.cert.as_ptr();
-            let ca = self.chain.map(|ca| ca.as_ptr()).unwrap_or(ptr::null_mut());
+            let pass = CString::new(password).unwrap();
+            let friendly_name = CString::new(friendly_name).unwrap();
+            let pkey = pkey.as_ptr();
+            let cert = cert.as_ptr();
+            let ca = ptr::null_mut(); // TODO: should allow for a chain to be set in the builder
             let nid_key = self.nid_key.as_raw();
             let nid_cert = self.nid_cert.as_raw();
 
@@ -143,8 +135,8 @@ impl<'a, 'b, 'c, 'd> Pkcs12Builder<'a, 'b, 'c, 'd> {
             // https://www.openssl.org/docs/man1.0.2/crypto/PKCS12_create.html
             let keytype = 0;
 
-            let pkcs12_ptr = ffi::PKCS12_create(pass.as_ptr(),
-                                                friendly_name.as_ptr(),
+            let pkcs12_ptr = ffi::PKCS12_create(pass.as_ptr() as *const _ as *mut _,
+                                                friendly_name.as_ptr() as *const _ as *mut _,
                                                 pkey,
                                                 cert,
                                                 ca,
@@ -203,8 +195,8 @@ mod test {
 
         let cert = gen.sign(&pkey).unwrap();
 
-        let pkcs12_builder = Pkcs12::builder("mypass", subject_name, &pkey, &cert);
-        let pkcs12 = pkcs12_builder.build().unwrap();
+        let pkcs12_builder = Pkcs12::builder();
+        let pkcs12 = pkcs12_builder.build("mypass", subject_name, &pkey, &cert).unwrap();
         let der = pkcs12.to_der().unwrap();
 
         let pkcs12 = Pkcs12::from_der(&der).unwrap();
