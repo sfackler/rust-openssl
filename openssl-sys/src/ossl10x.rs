@@ -653,6 +653,7 @@ pub struct X509_VERIFY_PARAM {
 
 #[cfg(not(ossl101))]
 pub enum X509_VERIFY_PARAM_ID {}
+pub enum PKCS12 {}
 
 pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
@@ -781,6 +782,17 @@ extern {
                             cbarg: *mut c_void) -> *mut RSA;
 
     pub fn OCSP_cert_to_id(dgst: *const ::EVP_MD, subject: *mut ::X509, issuer: *mut ::X509) -> *mut ::OCSP_CERTID;
+
+    pub fn PKCS12_create(pass: *mut c_char,
+                         friendly_name: *mut c_char,
+                         pkey: *mut EVP_PKEY,
+                         cert: *mut X509,
+                         ca: *mut stack_st_X509,
+                         nid_key: c_int,
+                         nid_cert: c_int,
+                         iter: c_int,
+                         mac_iter: c_int,
+                         keytype: c_int) -> *mut PKCS12;
 
     pub fn SSL_library_init() -> c_int;
     pub fn SSL_load_error_strings();

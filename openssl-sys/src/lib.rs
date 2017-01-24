@@ -55,7 +55,6 @@ pub enum X509_REQ {}
 pub enum X509_STORE {}
 pub enum X509_STORE_CTX {}
 pub enum bio_st {}
-pub enum PKCS12 {}
 pub enum DH_METHOD {}
 pub enum RSA_METHOD {}
 pub enum BN_MONT_CTX {}
@@ -1112,6 +1111,7 @@ pub const OCSP_RESPONSE_STATUS_UNAUTHORIZED: c_int = 6;
 pub const OPENSSL_EC_NAMED_CURVE: c_int = 1;
 
 pub const PKCS5_SALT_LEN: c_int = 8;
+pub const PKCS12_DEFAULT_ITER: c_int = 2048;
 
 pub const RSA_F4: c_long = 0x10001;
 
@@ -1971,6 +1971,8 @@ extern {
     pub fn i2d_RSAPrivateKey(k: *const RSA, buf: *mut *mut u8) -> c_int;
     pub fn d2i_RSAPrivateKey(k: *mut *mut RSA, buf: *mut *const u8, len: c_long) -> *mut RSA;
 
+    pub fn i2d_PKCS12_bio(b: *mut BIO, a: *mut PKCS12) -> c_int;
+    pub fn i2d_PKCS12(a: *mut PKCS12, buf: *mut *mut u8) -> c_int;
     pub fn d2i_PKCS12(a: *mut *mut PKCS12, pp: *mut *const u8, length: c_long) -> *mut PKCS12;
     pub fn PKCS12_parse(p12: *mut PKCS12,
                         pass: *const c_char,
