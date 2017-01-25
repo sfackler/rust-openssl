@@ -44,16 +44,16 @@ fn main() {
 
     let libs = if target.contains("windows-gnu") && host.contains("linux") {
         ["ssl", "crypto"]
-    } else if version.contains("0x10100") && target.contains("windows-gnu") {
-        if target.contains("x86_64") {
-            ["libssl-1_1-x64" ,"libcrypto-1_1-x64"]
-        } else {
-            ["libssl-1_1" ,"libcrypto-1_1"]
-        }
     } else if (version.contains("0x10001") ||
                    version.contains("0x10002")) &&
                   target.contains("windows") {
         ["ssleay32", "libeay32"]
+    } else if version.contains("0x00908") && target.contains("windows") {
+        if target.contains("x86_64") {
+            ["ssleay32", "libeay32"]
+        } else {
+            ["ssl", "crypto"]
+        }
     } else if target.contains("windows") {
         ["libssl", "libcrypto"]
     } else {
