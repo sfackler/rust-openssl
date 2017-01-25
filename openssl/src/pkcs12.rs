@@ -5,7 +5,7 @@ use libc::c_int;
 use std::ptr;
 use std::ffi::CString;
 
-use cvt;
+use {cvt, cvt_p};
 use pkey::{PKey, PKeyRef};
 use error::ErrorStack;
 use x509::X509;
@@ -64,8 +64,9 @@ impl Pkcs12 {
         Pkcs12Builder {
             nid_key: nid::UNDEF, //nid::PBE_WITHSHA1AND3_KEY_TRIPLEDES_CBC,
             nid_cert: nid::UNDEF, //nid::PBE_WITHSHA1AND40BITRC2_CBC,
-            iter: ffi::PKCS12_DEFAULT_ITER as usize, // 2048
-            mac_iter: ffi::PKCS12_DEFAULT_ITER as usize, // 2048
+            iter: ffi::PKCS12_DEFAULT_ITER,
+            mac_iter: ffi::PKCS12_DEFAULT_ITER,
+            ca: None,
         }
     }
 }
@@ -76,39 +77,50 @@ pub struct ParsedPkcs12 {
     pub chain: Stack<X509>,
 }
 
-// TODO: add ca chain
 pub struct Pkcs12Builder {
     nid_key: nid::Nid,
     nid_cert: nid::Nid,
-    iter: usize,
-    mac_iter: usize,
+    iter: c_int,
+    mac_iter: c_int,
+    ca: Option<Stack<X509>>,
 }
 
 impl Pkcs12Builder {
     /// The encryption algorithm that should be used for the key
-    pub fn nid_key(&mut self, nid: nid::Nid) {
+    pub fn key_algorithm(&mut self, nid: nid::Nid) -> &mut Self {
         self.nid_key = nid;
+        self
     }
 
     /// The encryption algorithm that should be used for the cert
-    pub fn nid_cert(&mut self, nid: nid::Nid) {
+    pub fn cert_algorithm(&mut self, nid: nid::Nid) -> &mut Self {
         self.nid_cert = nid;
+        self
     }
 
     /// Key iteration count, default is 2048 as of this writing
-    pub fn iter(&mut self, iter: usize) {
-        self.iter = iter;
+    pub fn key_iter(&mut self, iter: u32) -> &mut Self {
+        self.iter = iter as c_int;
+        self
     }
 
-    /// Mac iteration count, default is the same as key_iter default.
+    /// MAC iteration count, default is the same as key_iter.
     ///
-    /// Old implementation don't understand mac iterations greater than 1, (pre 1.0.1?), if such
-    /// compatibility is required this should be set to 1
-    pub fn mac_iter(&mut self, mac_iter: usize) {
-        self.mac_iter = mac_iter;
+    /// Old implementations don't understand MAC iterations greater than 1, (pre 1.0.1?), if such
+    /// compatibility is required this should be set to 1.
+    pub fn mac_iter(&mut self, mac_iter: u32) -> &mut Self {
+        self.mac_iter = mac_iter as c_int;
+        self
     }
 
-    /// Builds the pkcs12 object
+    /// An additional set of certificates to include in the archive beyond the one provided to
+    /// `build`.
+    pub fn ca(&mut self, ca: Stack<X509>) -> &mut Self {
+        self.ca = Some(ca);
+        self
+    }
+
+    /// Builds the PKCS #12 object
     ///
     /// # Arguments
     ///
@@ -126,7 +138,7 @@ impl Pkcs12Builder {
             let friendly_name = CString::new(friendly_name).unwrap();
             let pkey = pkey.as_ptr();
             let cert = cert.as_ptr();
-            let ca = ptr::null_mut(); // TODO: should allow for a chain to be set in the builder
+            let ca = self.ca.as_ref().map(|ca| ca.as_ptr()).unwrap_or(ptr::null_mut());
             let nid_key = self.nid_key.as_raw();
             let nid_cert = self.nid_cert.as_raw();
 
@@ -135,22 +147,17 @@ impl Pkcs12Builder {
             // https://www.openssl.org/docs/man1.0.2/crypto/PKCS12_create.html
             let keytype = 0;
 
-            let pkcs12_ptr = ffi::PKCS12_create(pass.as_ptr() as *const _ as *mut _,
+            cvt_p(ffi::PKCS12_create(pass.as_ptr() as *const _ as *mut _,
                                                 friendly_name.as_ptr() as *const _ as *mut _,
                                                 pkey,
                                                 cert,
                                                 ca,
                                                 nid_key,
                                                 nid_cert,
-                                                self.iter as c_int,
-                                                self.mac_iter as c_int,
-                                                keytype);
-
-            if pkcs12_ptr.is_null() {
-                Err(ErrorStack::get())
-            } else {
-                Ok(Pkcs12::from_ptr(pkcs12_ptr))
-            }
+                                                self.iter,
+                                                self.mac_iter,
+                                                keytype))
+                .map(Pkcs12)
         }
     }
 }
