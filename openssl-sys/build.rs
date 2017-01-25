@@ -1,4 +1,4 @@
-extern crate metadeps;
+extern crate pkg_config;
 
 use std::collections::HashSet;
 use std::env;
@@ -172,8 +172,16 @@ fn try_pkg_config() {
     // cflags dirs for showing us lots of `-I`.
     env::set_var("PKG_CONFIG_ALLOW_SYSTEM_CFLAGS", "1");
 
-    let lib = match metadeps::probe() {
-        Ok(mut libs) => libs.remove("openssl").unwrap(),
+    // This is more complex than normal because we need to track down opensslconf.h.
+    // To do that, we need the inlude paths even if they're on the default search path, but the
+    // linkage directories emitted from that cause all kinds of issues if other libraries happen to
+    // live in them. So, we run pkg-config twice, once asking for system dirs but not emitting
+    // metadata, and a second time emitting metadata but not asking for system dirs. Yay.
+    let lib = match pkg_config::Config::new()
+        .cargo_metadata(false)
+        .print_system_libs(true)
+        .find("openssl") {
+        Ok(lib) => lib,
         Err(_) => return,
     };
 
@@ -196,7 +204,7 @@ specific to your distribution:
     sudo dnf install openssl-devel
 
 See rust-openssl README for more information:
-    
+
     https://github.com/sfackler/rust-openssl#linux
 ");
     }
@@ -206,6 +214,11 @@ See rust-openssl README for more information:
     for include in lib.include_paths.iter() {
         println!("cargo:include={}", include.display());
     }
+
+    pkg_config::Config::new()
+        .print_system_libs(false)
+        .find("openssl")
+        .unwrap();
 
     std::process::exit(0);
 }
