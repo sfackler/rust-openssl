@@ -51,7 +51,6 @@ pub enum X509_CRL {}
 pub enum X509_EXTENSION {}
 pub enum X509_NAME {}
 pub enum X509_NAME_ENTRY {}
-pub enum X509_REQ {}
 pub enum X509_STORE {}
 pub enum X509_STORE_CTX {}
 pub enum bio_st {}
@@ -1387,6 +1386,7 @@ extern {
     pub fn AES_set_decrypt_key(userKey: *const c_uchar, bits: c_int, key: *mut AES_KEY) -> c_int;
     pub fn AES_ige_encrypt(in_: *const c_uchar, out: *mut c_uchar, length: size_t, key: *const AES_KEY, ivec: *mut c_uchar, enc: c_int);
 
+    pub fn ASN1_INTEGER_get(dest: *mut ASN1_INTEGER) -> c_long;
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn ASN1_GENERALIZEDTIME_free(tm: *mut ASN1_GENERALIZEDTIME);
     pub fn ASN1_GENERALIZEDTIME_print(b: *mut BIO, tm: *const ASN1_GENERALIZEDTIME) -> c_int;
@@ -1917,6 +1917,8 @@ extern {
 
     pub fn ASN1_STRING_free(x: *mut ASN1_STRING);
     pub fn ASN1_STRING_length(x: *const ASN1_STRING) -> c_int;
+
+    pub fn ASN1_INTEGER_free(x: *mut ASN1_INTEGER);
 
     pub fn X509_STORE_new() -> *mut X509_STORE;
     pub fn X509_STORE_free(store: *mut X509_STORE);

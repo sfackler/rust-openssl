@@ -6,7 +6,7 @@ use nid::X9_62_PRIME256V1;
 use pkey::PKey;
 use rsa::Rsa;
 use ssl::{SslMethod, SslContextBuilder};
-use x509::{X509, X509Generator};
+use x509::{X509, X509Generator, X509Req};
 use x509::extension::Extension::{KeyUsage, ExtKeyUsage, SubjectAltName, OtherNid, OtherStr};
 use x509::extension::AltNameOption as SAN;
 use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment};
@@ -75,7 +75,12 @@ fn test_req_gen() {
     let pkey = pkey();
 
     let req = get_generator().request(&pkey).unwrap();
-    req.to_pem().unwrap();
+    let reqpem = req.to_pem().unwrap();
+
+    let req = X509Req::from_pem(&reqpem).ok().expect("Failed to load PEM");
+    let cn = (*req).subject_name().entries_by_nid(nid::COMMONNAME).next().unwrap();
+    assert_eq!(0, (*req).version());
+    assert_eq!(cn.data().as_slice(), b"test_me");
 
     // FIXME: check data in result to be correct, needs implementation
     // of X509_REQ getters

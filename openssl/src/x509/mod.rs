@@ -599,6 +599,21 @@ impl X509Req {
 impl X509ReqRef {
     to_pem!(ffi::PEM_write_bio_X509_REQ);
     to_der!(ffi::i2d_X509_REQ);
+
+    pub fn version(&self) -> i64
+    {
+        unsafe {
+            let version = compat::X509_REQ_get_version(self.as_ptr());
+            version
+        }
+    }
+
+    pub fn subject_name(&self) -> &X509NameRef {
+        unsafe {
+            let name = compat::X509_REQ_get_subject_name(self.as_ptr());
+            X509NameRef::from_ptr(name)
+        }
+    }
 }
 
 /// A collection of X.509 extensions.
@@ -779,6 +794,8 @@ mod compat {
     pub use ffi::X509_getm_notBefore as X509_get_notBefore;
     pub use ffi::X509_up_ref;
     pub use ffi::X509_get0_extensions;
+    pub use ffi::X509_REQ_get_version;
+    pub use ffi::X509_REQ_get_subject_name;
 }
 
 #[cfg(ossl10x)]
@@ -811,5 +828,15 @@ mod compat {
         } else {
             (*info).extensions
         }
+    }
+
+    pub unsafe fn X509_REQ_get_version(x: *mut ffi::X509_REQ) -> ::libc::c_long
+    {
+        ::ffi::ASN1_INTEGER_get((*(*x).req_info).version)
+    }
+
+    pub unsafe fn X509_REQ_get_subject_name(x: *mut ffi::X509_REQ) -> *mut ::ffi::X509_NAME
+    {
+        (*(*x).req_info).subject
     }
 }

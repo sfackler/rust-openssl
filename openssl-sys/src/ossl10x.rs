@@ -306,6 +306,23 @@ pub struct X509_VAL {
 }
 
 #[repr(C)]
+pub struct X509_REQ_INFO {
+    pub enc: ASN1_ENCODING,
+    pub version: *mut ::ASN1_INTEGER,
+    pub subject: *mut ::X509_NAME,
+    pub pubkey: *mut c_void,
+    pub attributes: *mut stack_st_X509_ATTRIBUTE
+}
+
+#[repr(C)]
+pub struct X509_REQ {
+    pub req_info: *mut X509_REQ_INFO,
+    pub sig_alg: *mut c_void,
+    pub signature: *mut c_void,
+    references: c_int
+}
+
+#[repr(C)]
 pub struct SSL {
     version: c_int,
     type_: c_int,

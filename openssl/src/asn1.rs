@@ -75,6 +75,28 @@ impl Asn1StringRef {
     }
 }
 
+type_!(Asn1Integer, Asn1IntegerRef, ffi::ASN1_INTEGER, ffi::ASN1_INTEGER_free);
+
+impl Asn1IntegerRef {
+    pub fn get(&self) -> i64 {
+        unsafe {
+            return ::ffi::ASN1_INTEGER_get(self.as_ptr());
+        }
+    }
+
+    pub fn set(&self, value: i64) -> Result<(), ErrorStack>
+    {
+        unsafe {
+            let res = ::ffi::ASN1_INTEGER_set(self.as_ptr(), value);
+            if res < 0 {
+                return Err(ErrorStack::get());
+            }
+
+            Ok(())
+        }
+    }
+}
+
 #[cfg(any(ossl101, ossl102))]
 use ffi::ASN1_STRING_data;
 
