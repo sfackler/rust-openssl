@@ -600,11 +600,10 @@ impl X509ReqRef {
     to_pem!(ffi::PEM_write_bio_X509_REQ);
     to_der!(ffi::i2d_X509_REQ);
 
-    pub fn version(&self) -> i64
+    pub fn version(&self) -> i32
     {
         unsafe {
-            let version = compat::X509_REQ_get_version(self.as_ptr());
-            version
+            compat::X509_REQ_get_version(self.as_ptr()) as i32
         }
     }
 

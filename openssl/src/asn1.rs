@@ -80,19 +80,14 @@ type_!(Asn1Integer, Asn1IntegerRef, ffi::ASN1_INTEGER, ffi::ASN1_INTEGER_free);
 impl Asn1IntegerRef {
     pub fn get(&self) -> i64 {
         unsafe {
-            return ::ffi::ASN1_INTEGER_get(self.as_ptr());
+            ::ffi::ASN1_INTEGER_get(self.as_ptr()) as i64
         }
     }
 
-    pub fn set(&self, value: i64) -> Result<(), ErrorStack>
+    pub fn set(&mut self, value: i32) -> Result<(), ErrorStack>
     {
         unsafe {
-            let res = ::ffi::ASN1_INTEGER_set(self.as_ptr(), value);
-            if res < 0 {
-                return Err(ErrorStack::get());
-            }
-
-            Ok(())
+            cvt(::ffi::ASN1_INTEGER_set(self.as_ptr(), value as c_long)).map(|_| ())
         }
     }
 }

@@ -1386,7 +1386,7 @@ extern {
     pub fn AES_set_decrypt_key(userKey: *const c_uchar, bits: c_int, key: *mut AES_KEY) -> c_int;
     pub fn AES_ige_encrypt(in_: *const c_uchar, out: *mut c_uchar, length: size_t, key: *const AES_KEY, ivec: *mut c_uchar, enc: c_int);
 
-    pub fn ASN1_INTEGER_get(dest: *mut ASN1_INTEGER) -> c_long;
+    pub fn ASN1_INTEGER_get(dest: *const ASN1_INTEGER) -> c_long;
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn ASN1_GENERALIZEDTIME_free(tm: *mut ASN1_GENERALIZEDTIME);
     pub fn ASN1_GENERALIZEDTIME_print(b: *mut BIO, tm: *const ASN1_GENERALIZEDTIME) -> c_int;
