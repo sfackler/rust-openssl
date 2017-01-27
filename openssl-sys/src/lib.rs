@@ -1935,6 +1935,9 @@ extern {
 
     pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: *mut stack_st_X509_EXTENSION) -> c_int;
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
+    pub fn X509_REQ_set_version(x: *mut X509_REQ, version: c_long) -> c_int;
+    pub fn X509_REQ_set_subject_name(req: *mut X509_REQ, name: *mut ::X509_NAME) -> c_int;
+
 
     #[cfg(not(ossl101))]
     pub fn X509_VERIFY_PARAM_free(param: *mut X509_VERIFY_PARAM);

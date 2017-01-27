@@ -193,8 +193,5 @@ extern {
                          mac_iter: c_int,
                          keytype: c_int) -> *mut PKCS12;
     pub fn X509_REQ_get_version(req: *const X509_REQ) -> c_long;
-    pub fn X509_REQ_set_version(x: *mut X509_REQ, version: c_long) -> c_int;
     pub fn X509_REQ_get_subject_name(req: *const X509_REQ) -> *mut ::X509_NAME;
-    pub fn X509_REQ_set_subject_name(req: *mut X509_REQ, name: *mut ::X509_NAME) -> c_int;
-
 }
