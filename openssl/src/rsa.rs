@@ -10,9 +10,10 @@ use bio::MemBioSlice;
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb_old};
 use types::OpenSslTypeRef;
+use pkey::PKeyCtxRef;
 
 /// Type of encryption padding to use.
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Padding(c_int);
 
 pub const NO_PADDING: Padding = Padding(ffi::RSA_NO_PADDING);
@@ -343,6 +344,22 @@ mod compat {
     }
 }
 
+impl PKeyCtxRef {
+    pub fn set_rsa_padding(&mut self, pad: Padding) -> Result<(), ErrorStack> {
+        unsafe {
+            try!(cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(self.as_ptr(), pad.0)));
+        }
+        Ok(())
+    }
+
+    pub fn get_rsa_padding(&mut self) -> Result<Padding, ErrorStack> {
+        let mut pad: c_int = 0;
+        unsafe {
+            try!(cvt(ffi::EVP_PKEY_CTX_get_rsa_padding(self.as_ptr(), &mut pad)));
+        };
+        Ok(Padding(pad))
+    }
+}
 
 #[cfg(test)]
 mod test {

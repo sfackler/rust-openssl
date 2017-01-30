@@ -151,6 +151,12 @@ impl PKey {
     }
 }
 
+pub struct PKeyCtxRef(::util::Opaque);
+
+impl ::types::OpenSslTypeRef for PKeyCtxRef {
+    type CType = ffi::EVP_PKEY_CTX;
+}
+
 #[cfg(test)]
 mod tests {
     use symm::Cipher;

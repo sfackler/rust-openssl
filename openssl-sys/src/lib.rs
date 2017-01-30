@@ -1638,6 +1638,9 @@ extern {
                                 key: *const c_uchar,
                                 keylen: c_int) -> *mut EVP_PKEY;
 
+
+    pub fn EVP_PKEY_CTX_ctrl(ctx: *mut EVP_PKEY_CTX, keytype: c_int, optype: c_int, cmd: c_int, p1: c_int, p2: *mut c_void) -> c_int;
+
     pub fn HMAC_CTX_copy(dst: *mut HMAC_CTX, src: *mut HMAC_CTX) -> c_int;
 
     pub fn OCSP_BASICRESP_new() -> *mut OCSP_BASICRESP;
@@ -1732,7 +1735,6 @@ extern {
     pub fn RSA_new() -> *mut RSA;
     pub fn RSA_free(rsa: *mut RSA);
     pub fn RSA_generate_key_ex(rsa: *mut RSA, bits: c_int, e: *mut BIGNUM, cb: *mut BN_GENCB) -> c_int;
-    pub fn RSA_pkey_ctx_ctrl(ctx: *mut EVP_PKEY_CTX, optype: c_int, cmd: c_int, p1: c_int, p2: *mut c_void) -> c_int;
     pub fn RSA_private_decrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA,
                                pad: c_int) -> c_int;
     pub fn RSA_public_decrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA,
@@ -2005,10 +2007,10 @@ extern {
 }
 
 // EVP_PKEY_CTX_ctrl macros
-unsafe fn EVP_PKEY_CTX_set_rsa_padding(ctx: *mut EVP_PKEY_CTX, pad: c_int) -> c_int {
-    RSA_pkey_ctx_ctrl(ctx, -1, RSA_PKEY_CTRL_RSA_PADDING, pad, ptr::null_mut())
+pub unsafe fn EVP_PKEY_CTX_set_rsa_padding(ctx: *mut EVP_PKEY_CTX, pad: c_int) -> c_int {
+    EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, -1, RSA_PKEY_CTRL_RSA_PADDING, pad, ptr::null_mut())
 }
 
-unsafe fn EVP_PKEY_CTX_get_rsa_padding(ctx: *mut EVP_PKEY_CTX, ppad: *mut c_int) -> c_int {
-    RSA_pkey_ctx_ctrl(ctx, -1, RSA_PKEY_CTRL_GET_RSA_PADDING, 0, ppad as *mut c_void)
+pub unsafe fn EVP_PKEY_CTX_get_rsa_padding(ctx: *mut EVP_PKEY_CTX, ppad: *mut c_int) -> c_int {
+    EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, -1, RSA_PKEY_CTRL_GET_RSA_PADDING, 0, ppad as *mut c_void)
 }

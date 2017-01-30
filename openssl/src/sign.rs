@@ -68,7 +68,7 @@ use std::ptr;
 
 use {cvt, cvt_p};
 use hash::MessageDigest;
-use pkey::PKeyRef;
+use pkey::{PKeyRef, PKeyCtxRef};
 use error::ErrorStack;
 use types::OpenSslTypeRef;
 
@@ -77,7 +77,7 @@ use ffi::{EVP_MD_CTX_new, EVP_MD_CTX_free};
 #[cfg(any(ossl101, ossl102))]
 use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
 
-pub struct Signer<'a>(*mut ffi::EVP_MD_CTX, PhantomData<&'a PKeyRef>);
+pub struct Signer<'a>(*mut ffi::EVP_MD_CTX, *mut ffi::EVP_PKEY_CTX, PhantomData<&'a PKeyRef>, PhantomData<&'a PKeyCtxRef>);
 
 impl<'a> Drop for Signer<'a> {
     fn drop(&mut self) {
@@ -93,8 +93,9 @@ impl<'a> Signer<'a> {
             ffi::init();
 
             let ctx = try!(cvt_p(EVP_MD_CTX_new()));
+            let mut pctx: *mut ffi::EVP_PKEY_CTX = ptr::null_mut();
             let r = ffi::EVP_DigestSignInit(ctx,
-                                            ptr::null_mut(),
+                                            &mut pctx,
                                             type_.as_ptr(),
                                             ptr::null_mut(),
                                             pkey.as_ptr());
@@ -102,8 +103,12 @@ impl<'a> Signer<'a> {
                 EVP_MD_CTX_free(ctx);
                 return Err(ErrorStack::get());
             }
-            Ok(Signer(ctx, PhantomData))
+            Ok(Signer(ctx, pctx, PhantomData, PhantomData))
         }
+    }
+
+    pub fn pkey_ctx(&mut self) -> Option<&mut PKeyCtxRef> {
+        unsafe { self.1.as_mut().map(|ctx| ::types::OpenSslTypeRef::from_ptr_mut(ctx)) }
     }
 
     pub fn update(&mut self, buf: &[u8]) -> Result<(), ErrorStack> {
@@ -219,7 +224,7 @@ mod test {
     use sign::{Signer, Verifier};
     use ec::{EcGroup, EcKey};
     use nid;
-    use rsa::Rsa;
+    use rsa::{Rsa, PKCS1_PADDING};
     use dsa::Dsa;
     use pkey::PKey;
 
@@ -254,6 +259,8 @@ mod test {
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut signer = Signer::new(MessageDigest::sha256(), &pkey).unwrap();
+        assert_eq!(signer.pkey_ctx().unwrap().get_rsa_padding().unwrap(), PKCS1_PADDING);
+        signer.pkey_ctx().unwrap().set_rsa_padding(PKCS1_PADDING).unwrap();
         signer.update(INPUT).unwrap();
         let result = signer.finish().unwrap();
 
