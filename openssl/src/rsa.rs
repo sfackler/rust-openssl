@@ -353,6 +353,7 @@ unsafe fn pkey_ctx_get_rsa_padding(ctx: *mut ffi::EVP_PKEY_CTX, ppad: *mut c_int
     ffi::EVP_PKEY_CTX_ctrl(ctx, ffi::EVP_PKEY_RSA, -1, ffi::RSA_PKEY_CTRL_GET_RSA_PADDING, 0, ppad as *mut c_void)
 }
 
+// This is needed here, as it needs access to the privade data of Padding.
 impl PKeyCtxRef {
     pub fn set_rsa_padding(&mut self, pad: Padding) -> Result<(), ErrorStack> {
         unsafe {
