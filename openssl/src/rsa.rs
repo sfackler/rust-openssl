@@ -344,10 +344,19 @@ mod compat {
     }
 }
 
+// EVP_PKEY_CTX_ctrl macros
+unsafe fn pkey_ctx_set_rsa_padding(ctx: *mut ffi::EVP_PKEY_CTX, pad: c_int) -> c_int {
+    ffi::EVP_PKEY_CTX_ctrl(ctx, ffi::EVP_PKEY_RSA, -1, ffi::RSA_PKEY_CTRL_RSA_PADDING, pad, ptr::null_mut())
+}
+
+unsafe fn pkey_ctx_get_rsa_padding(ctx: *mut ffi::EVP_PKEY_CTX, ppad: *mut c_int) -> c_int {
+    ffi::EVP_PKEY_CTX_ctrl(ctx, ffi::EVP_PKEY_RSA, -1, ffi::RSA_PKEY_CTRL_GET_RSA_PADDING, 0, ppad as *mut c_void)
+}
+
 impl PKeyCtxRef {
     pub fn set_rsa_padding(&mut self, pad: Padding) -> Result<(), ErrorStack> {
         unsafe {
-            try!(cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(self.as_ptr(), pad.0)));
+            try!(cvt(pkey_ctx_set_rsa_padding(self.as_ptr(), pad.0)));
         }
         Ok(())
     }
@@ -355,7 +364,7 @@ impl PKeyCtxRef {
     pub fn get_rsa_padding(&mut self) -> Result<Padding, ErrorStack> {
         let mut pad: c_int = 0;
         unsafe {
-            try!(cvt(ffi::EVP_PKEY_CTX_get_rsa_padding(self.as_ptr(), &mut pad)));
+            try!(cvt(pkey_ctx_get_rsa_padding(self.as_ptr(), &mut pad)));
         };
         Ok(Padding(pad))
     }

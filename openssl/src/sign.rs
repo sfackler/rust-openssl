@@ -77,12 +77,18 @@ use ffi::{EVP_MD_CTX_new, EVP_MD_CTX_free};
 #[cfg(any(ossl101, ossl102))]
 use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
 
-pub struct Signer<'a>(*mut ffi::EVP_MD_CTX, *mut ffi::EVP_PKEY_CTX, PhantomData<&'a PKeyRef>, PhantomData<&'a PKeyCtxRef>);
+pub struct Signer<'a> {
+    md_ctx: *mut ffi::EVP_MD_CTX,
+    pkey_ctx: *mut ffi::EVP_PKEY_CTX,
+    pkey_pd: PhantomData<&'a PKeyRef>,
+    pkey_ctx_pd: PhantomData<&'a PKeyCtxRef>
+}
 
 impl<'a> Drop for Signer<'a> {
     fn drop(&mut self) {
+        // pkey_ctx is owned by the md_ctx, so no need to explicitly free it.
         unsafe {
-            EVP_MD_CTX_free(self.0);
+            EVP_MD_CTX_free(self.md_ctx);
         }
     }
 }
@@ -103,26 +109,31 @@ impl<'a> Signer<'a> {
                 EVP_MD_CTX_free(ctx);
                 return Err(ErrorStack::get());
             }
-            Ok(Signer(ctx, pctx, PhantomData, PhantomData))
+            Ok(Signer {
+                md_ctx: ctx,
+                pkey_ctx: pctx,
+                pkey_pd: PhantomData,
+                pkey_ctx_pd: PhantomData
+            })
         }
     }
 
     pub fn pkey_ctx(&mut self) -> Option<&mut PKeyCtxRef> {
-        unsafe { self.1.as_mut().map(|ctx| ::types::OpenSslTypeRef::from_ptr_mut(ctx)) }
+        unsafe { self.pkey_ctx.as_mut().map(|ctx| ::types::OpenSslTypeRef::from_ptr_mut(ctx)) }
     }
 
     pub fn update(&mut self, buf: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::EVP_DigestUpdate(self.0, buf.as_ptr() as *const _, buf.len())).map(|_| ())
+            cvt(ffi::EVP_DigestUpdate(self.md_ctx, buf.as_ptr() as *const _, buf.len())).map(|_| ())
         }
     }
 
     pub fn finish(&self) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
             let mut len = 0;
-            try!(cvt(ffi::EVP_DigestSignFinal(self.0, ptr::null_mut(), &mut len)));
+            try!(cvt(ffi::EVP_DigestSignFinal(self.md_ctx, ptr::null_mut(), &mut len)));
             let mut buf = vec![0; len];
-            try!(cvt(ffi::EVP_DigestSignFinal(self.0, buf.as_mut_ptr() as *mut _, &mut len)));
+            try!(cvt(ffi::EVP_DigestSignFinal(self.md_ctx, buf.as_mut_ptr() as *mut _, &mut len)));
             // The advertised length is not always equal to the real length for things like DSA
             buf.truncate(len);
             Ok(buf)
@@ -141,12 +152,18 @@ impl<'a> Write for Signer<'a> {
     }
 }
 
-pub struct Verifier<'a>(*mut ffi::EVP_MD_CTX, PhantomData<&'a PKeyRef>);
+pub struct Verifier<'a> {
+    md_ctx: *mut ffi::EVP_MD_CTX,
+    pkey_ctx: *mut ffi::EVP_PKEY_CTX,
+    pkey_pd: PhantomData<&'a PKeyRef>,
+    pkey_ctx_pd: PhantomData<&'a PKeyCtxRef>,
+}
 
 impl<'a> Drop for Verifier<'a> {
     fn drop(&mut self) {
+        // pkey_ctx is owned by the md_ctx, so no need to explicitly free it.
         unsafe {
-            EVP_MD_CTX_free(self.0);
+            EVP_MD_CTX_free(self.md_ctx);
         }
     }
 }
@@ -157,8 +174,9 @@ impl<'a> Verifier<'a> {
             ffi::init();
 
             let ctx = try!(cvt_p(EVP_MD_CTX_new()));
+            let mut pctx: *mut ffi::EVP_PKEY_CTX = ptr::null_mut();
             let r = ffi::EVP_DigestVerifyInit(ctx,
-                                              ptr::null_mut(),
+                                              &mut pctx,
                                               type_.as_ptr(),
                                               ptr::null_mut(),
                                               pkey.as_ptr());
@@ -167,19 +185,28 @@ impl<'a> Verifier<'a> {
                 return Err(ErrorStack::get());
             }
 
-            Ok(Verifier(ctx, PhantomData))
+            Ok(Verifier {
+                md_ctx: ctx,
+                pkey_ctx: pctx,
+                pkey_pd: PhantomData,
+                pkey_ctx_pd: PhantomData,
+            })
         }
+    }
+
+    pub fn pkey_ctx(&mut self) -> Option<&mut PKeyCtxRef> {
+        unsafe { self.pkey_ctx.as_mut().map(|ctx| ::types::OpenSslTypeRef::from_ptr_mut(ctx)) }
     }
 
     pub fn update(&mut self, buf: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::EVP_DigestUpdate(self.0, buf.as_ptr() as *const _, buf.len())).map(|_| ())
+            cvt(ffi::EVP_DigestUpdate(self.md_ctx, buf.as_ptr() as *const _, buf.len())).map(|_| ())
         }
     }
 
     pub fn finish(&self, signature: &[u8]) -> Result<bool, ErrorStack> {
         unsafe {
-            let r = EVP_DigestVerifyFinal(self.0, signature.as_ptr() as *const _, signature.len());
+            let r = EVP_DigestVerifyFinal(self.md_ctx, signature.as_ptr() as *const _, signature.len());
             match r {
                 1 => Ok(true),
                 0 => {
@@ -274,6 +301,7 @@ mod test {
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
+        assert_eq!(verifier.pkey_ctx().unwrap().get_rsa_padding().unwrap(), PKCS1_PADDING);
         verifier.update(INPUT).unwrap();
         assert!(verifier.finish(SIGNATURE).unwrap());
     }

@@ -2005,12 +2005,3 @@ extern {
                       md: *mut c_uchar,
                       len: *mut c_uint) -> c_int;
 }
-
-// EVP_PKEY_CTX_ctrl macros
-pub unsafe fn EVP_PKEY_CTX_set_rsa_padding(ctx: *mut EVP_PKEY_CTX, pad: c_int) -> c_int {
-    EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, -1, RSA_PKEY_CTRL_RSA_PADDING, pad, ptr::null_mut())
-}
-
-pub unsafe fn EVP_PKEY_CTX_get_rsa_padding(ctx: *mut EVP_PKEY_CTX, ppad: *mut c_int) -> c_int {
-    EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, -1, RSA_PKEY_CTRL_GET_RSA_PADDING, 0, ppad as *mut c_void)
-}
