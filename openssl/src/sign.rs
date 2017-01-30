@@ -109,6 +109,9 @@ impl<'a> Signer<'a> {
                 EVP_MD_CTX_free(ctx);
                 return Err(ErrorStack::get());
             }
+
+            assert!(!pctx.is_null());
+
             Ok(Signer {
                 md_ctx: ctx,
                 pkey_ctx: pctx,
@@ -118,8 +121,8 @@ impl<'a> Signer<'a> {
         }
     }
 
-    pub fn pkey_ctx(&mut self) -> Option<&mut PKeyCtxRef> {
-        unsafe { self.pkey_ctx.as_mut().map(|ctx| ::types::OpenSslTypeRef::from_ptr_mut(ctx)) }
+    pub fn pkey_ctx(&mut self) -> &mut PKeyCtxRef {
+        unsafe { ::types::OpenSslTypeRef::from_ptr_mut(self.pkey_ctx) }
     }
 
     pub fn update(&mut self, buf: &[u8]) -> Result<(), ErrorStack> {
@@ -185,6 +188,8 @@ impl<'a> Verifier<'a> {
                 return Err(ErrorStack::get());
             }
 
+            assert!(!pctx.is_null());
+
             Ok(Verifier {
                 md_ctx: ctx,
                 pkey_ctx: pctx,
@@ -194,8 +199,8 @@ impl<'a> Verifier<'a> {
         }
     }
 
-    pub fn pkey_ctx(&mut self) -> Option<&mut PKeyCtxRef> {
-        unsafe { self.pkey_ctx.as_mut().map(|ctx| ::types::OpenSslTypeRef::from_ptr_mut(ctx)) }
+    pub fn pkey_ctx(&mut self) -> &mut PKeyCtxRef {
+        unsafe { ::types::OpenSslTypeRef::from_ptr_mut(self.pkey_ctx) }
     }
 
     pub fn update(&mut self, buf: &[u8]) -> Result<(), ErrorStack> {
@@ -286,8 +291,8 @@ mod test {
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut signer = Signer::new(MessageDigest::sha256(), &pkey).unwrap();
-        assert_eq!(signer.pkey_ctx().unwrap().get_rsa_padding().unwrap(), PKCS1_PADDING);
-        signer.pkey_ctx().unwrap().set_rsa_padding(PKCS1_PADDING).unwrap();
+        assert_eq!(signer.pkey_ctx().get_rsa_padding().unwrap(), PKCS1_PADDING);
+        signer.pkey_ctx().set_rsa_padding(PKCS1_PADDING).unwrap();
         signer.update(INPUT).unwrap();
         let result = signer.finish().unwrap();
 
@@ -301,7 +306,7 @@ mod test {
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
-        assert_eq!(verifier.pkey_ctx().unwrap().get_rsa_padding().unwrap(), PKCS1_PADDING);
+        assert_eq!(verifier.pkey_ctx().get_rsa_padding().unwrap(), PKCS1_PADDING);
         verifier.update(INPUT).unwrap();
         assert!(verifier.finish(SIGNATURE).unwrap());
     }
