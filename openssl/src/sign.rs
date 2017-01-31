@@ -119,6 +119,10 @@ impl<'a> Signer<'a> {
         }
     }
 
+    pub fn pkey_ctx(&self) -> &PKeyCtxRef {
+        unsafe { ::types::OpenSslTypeRef::from_ptr(self.pkey_ctx) }
+    }
+
     pub fn pkey_ctx_mut(&mut self) -> &mut PKeyCtxRef {
         unsafe { ::types::OpenSslTypeRef::from_ptr_mut(self.pkey_ctx) }
     }
@@ -193,6 +197,10 @@ impl<'a> Verifier<'a> {
                 pkey_pd: PhantomData,
             })
         }
+    }
+
+    pub fn pkey_ctx(&self) -> &PKeyCtxRef {
+        unsafe { ::types::OpenSslTypeRef::from_ptr(self.pkey_ctx) }
     }
 
     pub fn pkey_ctx_mut(&mut self) -> &mut PKeyCtxRef {

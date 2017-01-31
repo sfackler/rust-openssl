@@ -161,7 +161,7 @@ impl PKeyCtxRef {
         Ok(())
     }
 
-    pub fn rsa_padding(&mut self) -> Result<Padding, ErrorStack> {
+    pub fn rsa_padding(&self) -> Result<Padding, ErrorStack> {
         let mut pad: c_int = 0;
         unsafe {
             try!(cvt(ffi::EVP_PKEY_CTX_get_rsa_padding(self.as_ptr(), &mut pad)));
