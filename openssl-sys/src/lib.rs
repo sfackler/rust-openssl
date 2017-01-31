@@ -1310,6 +1310,15 @@ pub unsafe fn BIO_set_retry_write(b: *mut BIO) {
     BIO_set_flags(b, BIO_FLAGS_WRITE | BIO_FLAGS_SHOULD_RETRY)
 }
 
+// EVP_PKEY_CTX_ctrl macros
+pub unsafe fn EVP_PKEY_CTX_set_rsa_padding(ctx: *mut EVP_PKEY_CTX, pad: c_int) -> c_int {
+    EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, -1, RSA_PKEY_CTRL_RSA_PADDING, pad, ptr::null_mut())
+}
+
+pub unsafe fn EVP_PKEY_CTX_get_rsa_padding(ctx: *mut EVP_PKEY_CTX, ppad: *mut c_int) -> c_int {
+    EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, -1, RSA_PKEY_CTRL_GET_RSA_PADDING, 0, ppad as *mut c_void)
+}
+
 pub unsafe fn SSL_CTX_set_mode(ctx: *mut SSL_CTX, op: c_long) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_MODE, op, ptr::null_mut())
 }

@@ -10,11 +10,20 @@ use bio::MemBioSlice;
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb_old};
 use types::OpenSslTypeRef;
-use pkey::PKeyCtxRef;
 
 /// Type of encryption padding to use.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Padding(c_int);
+
+impl Padding {
+    pub fn from_raw(value: c_int) -> Padding {
+        Padding(value)
+    }
+
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
+}
 
 pub const NO_PADDING: Padding = Padding(ffi::RSA_NO_PADDING);
 pub const PKCS1_PADDING: Padding = Padding(ffi::RSA_PKCS1_PADDING);
@@ -341,33 +350,6 @@ mod compat {
         (*r).dmq1 = dmq1;
         (*r).iqmp = iqmp;
         1 // TODO: is this right? should it be 0? what's success?
-    }
-}
-
-// EVP_PKEY_CTX_ctrl macros
-unsafe fn pkey_ctx_set_rsa_padding(ctx: *mut ffi::EVP_PKEY_CTX, pad: c_int) -> c_int {
-    ffi::EVP_PKEY_CTX_ctrl(ctx, ffi::EVP_PKEY_RSA, -1, ffi::RSA_PKEY_CTRL_RSA_PADDING, pad, ptr::null_mut())
-}
-
-unsafe fn pkey_ctx_get_rsa_padding(ctx: *mut ffi::EVP_PKEY_CTX, ppad: *mut c_int) -> c_int {
-    ffi::EVP_PKEY_CTX_ctrl(ctx, ffi::EVP_PKEY_RSA, -1, ffi::RSA_PKEY_CTRL_GET_RSA_PADDING, 0, ppad as *mut c_void)
-}
-
-// This is needed here, as it needs access to the private data of Padding.
-impl PKeyCtxRef {
-    pub fn set_rsa_padding(&mut self, pad: Padding) -> Result<(), ErrorStack> {
-        unsafe {
-            try!(cvt(pkey_ctx_set_rsa_padding(self.as_ptr(), pad.0)));
-        }
-        Ok(())
-    }
-
-    pub fn get_rsa_padding(&mut self) -> Result<Padding, ErrorStack> {
-        let mut pad: c_int = 0;
-        unsafe {
-            try!(cvt(pkey_ctx_get_rsa_padding(self.as_ptr(), &mut pad)));
-        };
-        Ok(Padding(pad))
     }
 }
 

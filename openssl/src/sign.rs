@@ -81,7 +81,6 @@ pub struct Signer<'a> {
     md_ctx: *mut ffi::EVP_MD_CTX,
     pkey_ctx: *mut ffi::EVP_PKEY_CTX,
     pkey_pd: PhantomData<&'a PKeyRef>,
-    pkey_ctx_pd: PhantomData<&'a PKeyCtxRef>
 }
 
 impl<'a> Drop for Signer<'a> {
@@ -116,12 +115,11 @@ impl<'a> Signer<'a> {
                 md_ctx: ctx,
                 pkey_ctx: pctx,
                 pkey_pd: PhantomData,
-                pkey_ctx_pd: PhantomData
             })
         }
     }
 
-    pub fn pkey_ctx(&mut self) -> &mut PKeyCtxRef {
+    pub fn pkey_ctx_mut(&mut self) -> &mut PKeyCtxRef {
         unsafe { ::types::OpenSslTypeRef::from_ptr_mut(self.pkey_ctx) }
     }
 
@@ -159,7 +157,6 @@ pub struct Verifier<'a> {
     md_ctx: *mut ffi::EVP_MD_CTX,
     pkey_ctx: *mut ffi::EVP_PKEY_CTX,
     pkey_pd: PhantomData<&'a PKeyRef>,
-    pkey_ctx_pd: PhantomData<&'a PKeyCtxRef>,
 }
 
 impl<'a> Drop for Verifier<'a> {
@@ -194,12 +191,11 @@ impl<'a> Verifier<'a> {
                 md_ctx: ctx,
                 pkey_ctx: pctx,
                 pkey_pd: PhantomData,
-                pkey_ctx_pd: PhantomData,
             })
         }
     }
 
-    pub fn pkey_ctx(&mut self) -> &mut PKeyCtxRef {
+    pub fn pkey_ctx_mut(&mut self) -> &mut PKeyCtxRef {
         unsafe { ::types::OpenSslTypeRef::from_ptr_mut(self.pkey_ctx) }
     }
 
@@ -291,8 +287,8 @@ mod test {
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut signer = Signer::new(MessageDigest::sha256(), &pkey).unwrap();
-        assert_eq!(signer.pkey_ctx().get_rsa_padding().unwrap(), PKCS1_PADDING);
-        signer.pkey_ctx().set_rsa_padding(PKCS1_PADDING).unwrap();
+        assert_eq!(signer.pkey_ctx_mut().rsa_padding().unwrap(), PKCS1_PADDING);
+        signer.pkey_ctx_mut().set_rsa_padding(PKCS1_PADDING).unwrap();
         signer.update(INPUT).unwrap();
         let result = signer.finish().unwrap();
 
@@ -306,7 +302,7 @@ mod test {
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
-        assert_eq!(verifier.pkey_ctx().get_rsa_padding().unwrap(), PKCS1_PADDING);
+        assert_eq!(verifier.pkey_ctx_mut().rsa_padding().unwrap(), PKCS1_PADDING);
         verifier.update(INPUT).unwrap();
         assert!(verifier.finish(SIGNATURE).unwrap());
     }
