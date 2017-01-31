@@ -12,8 +12,18 @@ use util::{CallbackState, invoke_passwd_cb_old};
 use types::OpenSslTypeRef;
 
 /// Type of encryption padding to use.
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Padding(c_int);
+
+impl Padding {
+    pub fn from_raw(value: c_int) -> Padding {
+        Padding(value)
+    }
+
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
+}
 
 pub const NO_PADDING: Padding = Padding(ffi::RSA_NO_PADDING);
 pub const PKCS1_PADDING: Padding = Padding(ffi::RSA_PKCS1_PADDING);
@@ -342,7 +352,6 @@ mod compat {
         1 // TODO: is this right? should it be 0? what's success?
     }
 }
-
 
 #[cfg(test)]
 mod test {
