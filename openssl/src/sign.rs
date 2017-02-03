@@ -62,6 +62,7 @@
 //! assert!(memcmp::eq(&hmac, &target));
 //! ```
 use ffi;
+use foreign_types::ForeignTypeRef;
 use std::io::{self, Write};
 use std::marker::PhantomData;
 use std::ptr;
@@ -70,7 +71,6 @@ use {cvt, cvt_p};
 use hash::MessageDigest;
 use pkey::{PKeyRef, PKeyCtxRef};
 use error::ErrorStack;
-use types::OpenSslTypeRef;
 
 #[cfg(ossl110)]
 use ffi::{EVP_MD_CTX_new, EVP_MD_CTX_free};
@@ -120,11 +120,11 @@ impl<'a> Signer<'a> {
     }
 
     pub fn pkey_ctx(&self) -> &PKeyCtxRef {
-        unsafe { ::types::OpenSslTypeRef::from_ptr(self.pkey_ctx) }
+        unsafe { PKeyCtxRef::from_ptr(self.pkey_ctx) }
     }
 
     pub fn pkey_ctx_mut(&mut self) -> &mut PKeyCtxRef {
-        unsafe { ::types::OpenSslTypeRef::from_ptr_mut(self.pkey_ctx) }
+        unsafe { PKeyCtxRef::from_ptr_mut(self.pkey_ctx) }
     }
 
     pub fn update(&mut self, buf: &[u8]) -> Result<(), ErrorStack> {
@@ -200,11 +200,11 @@ impl<'a> Verifier<'a> {
     }
 
     pub fn pkey_ctx(&self) -> &PKeyCtxRef {
-        unsafe { ::types::OpenSslTypeRef::from_ptr(self.pkey_ctx) }
+        unsafe { PKeyCtxRef::from_ptr(self.pkey_ctx) }
     }
 
     pub fn pkey_ctx_mut(&mut self) -> &mut PKeyCtxRef {
-        unsafe { ::types::OpenSslTypeRef::from_ptr_mut(self.pkey_ctx) }
+        unsafe { PKeyCtxRef::from_ptr_mut(self.pkey_ctx) }
     }
 
     pub fn update(&mut self, buf: &[u8]) -> Result<(), ErrorStack> {

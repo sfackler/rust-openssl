@@ -1,12 +1,18 @@
 use ffi;
+use foreign_types::ForeignTypeRef;
 use std::mem;
 
 use {cvt, cvt_p};
 use error::ErrorStack;
-use types::OpenSslTypeRef;
 use x509::X509;
 
-type_!(X509StoreBuilder, X509StoreBuilderRef, ffi::X509_STORE, ffi::X509_STORE_free);
+foreign_type! {
+    type CType = ffi::X509_STORE;
+    fn drop = ffi::X509_STORE_free;
+
+    pub struct X509StoreBuilder;
+    pub struct X509StoreBuilderRef;
+}
 
 impl X509StoreBuilder {
     /// Returns a builder for a certificate store.
@@ -50,4 +56,10 @@ impl X509StoreBuilderRef {
     }
 }
 
-type_!(X509Store, X509StoreRef, ffi::X509_STORE, ffi::X509_STORE_free);
+foreign_type! {
+    type CType = ffi::X509_STORE;
+    fn drop = ffi::X509_STORE_free;
+
+    pub struct X509Store;
+    pub struct X509StoreRef;
+}

@@ -1,13 +1,20 @@
 use error::ErrorStack;
 use ffi;
+use foreign_types::ForeignTypeRef;
 use std::mem;
 use std::ptr;
 
 use {cvt, cvt_p, init};
 use bn::BigNum;
-use types::OpenSslTypeRef;
 
-type_!(Dh, DhRef, ffi::DH, ffi::DH_free);
+foreign_type! {
+    type CType = ffi::DH;
+    fn drop = ffi::DH_free;
+
+    pub struct Dh;
+
+    pub struct DhRef;
+}
 
 impl DhRef {
     to_pem!(ffi::PEM_write_bio_DHparams);
