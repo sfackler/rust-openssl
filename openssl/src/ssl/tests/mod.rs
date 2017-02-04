@@ -174,7 +174,7 @@ macro_rules! run_test(
             use hash::MessageDigest;
             use x509::X509StoreContext;
             use hex::FromHex;
-            use types::OpenSslTypeRef;
+            use foreign_types::ForeignTypeRef;
             use super::Server;
 
             #[test]

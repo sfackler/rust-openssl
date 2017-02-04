@@ -2,6 +2,7 @@ use libc::{c_void, c_char, c_int};
 use std::ptr;
 use std::mem;
 use ffi;
+use foreign_types::{Opaque, ForeignType, ForeignTypeRef};
 
 use {cvt, cvt_p};
 use bio::MemBioSlice;
@@ -11,9 +12,14 @@ use ec::EcKey;
 use rsa::{Rsa, Padding};
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb_old};
-use types::{OpenSslType, OpenSslTypeRef};
 
-type_!(PKey, PKeyRef, ffi::EVP_PKEY, ffi::EVP_PKEY_free);
+foreign_type! {
+    type CType = ffi::EVP_PKEY;
+    fn drop = ffi::EVP_PKEY_free;
+
+    pub struct PKey;
+    pub struct PKeyRef;
+}
 
 impl PKeyRef {
     /// Returns a copy of the internal RSA key.
@@ -151,7 +157,7 @@ impl PKey {
     }
 }
 
-pub struct PKeyCtxRef(::util::Opaque);
+pub struct PKeyCtxRef(Opaque);
 
 impl PKeyCtxRef {
     pub fn set_rsa_padding(&mut self, pad: Padding) -> Result<(), ErrorStack> {
@@ -170,7 +176,7 @@ impl PKeyCtxRef {
     }
 }
 
-impl ::types::OpenSslTypeRef for PKeyCtxRef {
+impl ForeignTypeRef for PKeyCtxRef {
     type CType = ffi::EVP_PKEY_CTX;
 }
 

@@ -1,4 +1,5 @@
 use ffi;
+use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::cmp::Ordering;
 use std::ffi::CString;
@@ -8,7 +9,6 @@ use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub, Deref};
 use {cvt, cvt_p, cvt_n};
 use error::ErrorStack;
 use string::OpensslString;
-use types::{OpenSslType, OpenSslTypeRef};
 
 #[cfg(ossl10x)]
 use ffi::{get_rfc2409_prime_768 as BN_get_rfc2409_prime_768,
@@ -40,7 +40,13 @@ pub const MSB_ONE: MsbOption = MsbOption(0);
 /// of bits in the original numbers.
 pub const TWO_MSB_ONE: MsbOption = MsbOption(1);
 
-type_!(BigNumContext, BigNumContextRef, ffi::BN_CTX, ffi::BN_CTX_free);
+foreign_type! {
+    type CType = ffi::BN_CTX;
+    fn drop = ffi::BN_CTX_free;
+
+    pub struct BigNumContext;
+    pub struct BigNumContextRef;
+}
 
 impl BigNumContext {
     /// Returns a new `BigNumContext`.
@@ -509,7 +515,13 @@ impl BigNumRef {
     }
 }
 
-type_!(BigNum, BigNumRef, ffi::BIGNUM, ffi::BN_free);
+foreign_type! {
+    type CType = ffi::BIGNUM;
+    fn drop = ffi::BN_free;
+
+    pub struct BigNum;
+    pub struct BigNumRef;
+}
 
 impl BigNum {
     /// Creates a new `BigNum` with the value 0.

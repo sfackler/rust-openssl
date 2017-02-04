@@ -1,4 +1,5 @@
 use ffi;
+use foreign_types::ForeignTypeRef;
 use libc::{c_int, c_long, c_ulong};
 use std::ptr;
 use std::mem;
@@ -8,7 +9,6 @@ use asn1::Asn1GeneralizedTimeRef;
 use error::ErrorStack;
 use hash::MessageDigest;
 use stack::StackRef;
-use types::OpenSslTypeRef;
 use x509::store::X509StoreRef;
 use x509::{X509, X509Ref};
 
@@ -135,7 +135,13 @@ impl<'a> Status<'a> {
     }
 }
 
-type_!(OcspBasicResponse, OcspBasicResponseRef, ffi::OCSP_BASICRESP, ffi::OCSP_BASICRESP_free);
+foreign_type! {
+    type CType = ffi::OCSP_BASICRESP;
+    fn drop = ffi::OCSP_BASICRESP_free;
+
+    pub struct OcspBasicResponse;
+    pub struct OcspBasicResponseRef;
+}
 
 impl OcspBasicResponseRef {
     /// Verifies the validity of the response.
@@ -189,7 +195,13 @@ impl OcspBasicResponseRef {
     }
 }
 
-type_!(OcspCertId, OcspCertIdRef, ffi::OCSP_CERTID, ffi::OCSP_CERTID_free);
+foreign_type! {
+    type CType = ffi::OCSP_CERTID;
+    fn drop = ffi::OCSP_CERTID_free;
+
+    pub struct OcspCertId;
+    pub struct OcspCertIdRef;
+}
 
 impl OcspCertId {
     /// Constructs a certificate ID for certificate `subject`.
@@ -204,7 +216,13 @@ impl OcspCertId {
     }
 }
 
-type_!(OcspResponse, OcspResponseRef, ffi::OCSP_RESPONSE, ffi::OCSP_RESPONSE_free);
+foreign_type! {
+    type CType = ffi::OCSP_RESPONSE;
+    fn drop = ffi::OCSP_RESPONSE_free;
+
+    pub struct OcspResponse;
+    pub struct OcspResponseRef;
+}
 
 impl OcspResponse {
     /// Creates an OCSP response from the status and optional body.
@@ -245,7 +263,13 @@ impl OcspResponseRef {
     }
 }
 
-type_!(OcspRequest, OcspRequestRef, ffi::OCSP_REQUEST, ffi::OCSP_REQUEST_free);
+foreign_type! {
+    type CType = ffi::OCSP_REQUEST;
+    fn drop = ffi::OCSP_REQUEST_free;
+
+    pub struct OcspRequest;
+    pub struct OcspRequestRef;
+}
 
 impl OcspRequest {
     pub fn new() -> Result<OcspRequest, ErrorStack> {
@@ -271,4 +295,10 @@ impl OcspRequestRef {
     }
 }
 
-type_!(OcspOneReq, OcspOneReqRef, ffi::OCSP_ONEREQ, ffi::OCSP_ONEREQ_free);
+foreign_type! {
+    type CType = ffi::OCSP_ONEREQ;
+    fn drop = ffi::OCSP_ONEREQ_free;
+
+    pub struct OcspOneReq;
+    pub struct OcspOneReqRef;
+}

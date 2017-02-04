@@ -1,4 +1,5 @@
 use ffi;
+use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_long, c_char};
 use std::fmt;
 use std::ptr;
@@ -8,10 +9,15 @@ use std::str;
 use {cvt, cvt_p};
 use bio::MemBio;
 use error::ErrorStack;
-use types::{OpenSslType, OpenSslTypeRef};
 use string::OpensslString;
 
-type_!(Asn1GeneralizedTime, Asn1GeneralizedTimeRef, ffi::ASN1_GENERALIZEDTIME, ffi::ASN1_GENERALIZEDTIME_free);
+foreign_type! {
+    type CType = ffi::ASN1_GENERALIZEDTIME;
+    fn drop = ffi::ASN1_GENERALIZEDTIME_free;
+
+    pub struct Asn1GeneralizedTime;
+    pub struct Asn1GeneralizedTimeRef;
+}
 
 impl fmt::Display for Asn1GeneralizedTimeRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -23,7 +29,13 @@ impl fmt::Display for Asn1GeneralizedTimeRef {
     }
 }
 
-type_!(Asn1Time, Asn1TimeRef, ffi::ASN1_TIME, ffi::ASN1_TIME_free);
+foreign_type! {
+    type CType = ffi::ASN1_TIME;
+    fn drop = ffi::ASN1_TIME_free;
+
+    pub struct Asn1Time;
+    pub struct Asn1TimeRef;
+}
 
 impl fmt::Display for Asn1TimeRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -51,7 +63,13 @@ impl Asn1Time {
     }
 }
 
-type_!(Asn1String, Asn1StringRef, ffi::ASN1_STRING, ffi::ASN1_STRING_free);
+foreign_type! {
+    type CType = ffi::ASN1_STRING;
+    fn drop = ffi::ASN1_STRING_free;
+
+    pub struct Asn1String;
+    pub struct Asn1StringRef;
+}
 
 impl Asn1StringRef {
     pub fn as_utf8(&self) -> Result<OpensslString, ErrorStack> {

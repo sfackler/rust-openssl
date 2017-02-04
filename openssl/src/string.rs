@@ -1,14 +1,20 @@
 use ffi;
+use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_char, c_void};
 use std::fmt;
 use std::ffi::CStr;
 use std::ops::Deref;
 use std::str;
 
-use types::{OpenSslType, OpenSslTypeRef};
 use stack::Stackable;
 
-type_!(OpensslString, OpensslStringRef, c_char, free);
+foreign_type! {
+    type CType = c_char;
+    fn drop = free;
+
+    pub struct OpensslString;
+    pub struct OpensslStringRef;
+}
 
 impl OpensslString {
     #[deprecated(note = "use from_ptr", since = "0.9.7")]

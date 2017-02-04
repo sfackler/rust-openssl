@@ -1,45 +1,4 @@
 
-macro_rules! type_ {
-    ($n:ident, $r:ident, $c:path, $d:path) => {
-        pub struct $n(*mut $c);
-
-        impl ::types::OpenSslType for $n {
-            type CType = $c;
-            type Ref = $r;
-
-            unsafe fn from_ptr(ptr: *mut $c) -> $n {
-                $n(ptr)
-            }
-        }
-
-        impl Drop for $n {
-            fn drop(&mut self) {
-                unsafe { $d(self.0) }
-            }
-        }
-
-        impl ::std::ops::Deref for $n {
-            type Target = $r;
-
-            fn deref(&self) -> &$r {
-                unsafe { ::types::OpenSslTypeRef::from_ptr(self.0) }
-            }
-        }
-
-        impl ::std::ops::DerefMut for $n {
-            fn deref_mut(&mut self) -> &mut $r {
-                unsafe { ::types::OpenSslTypeRef::from_ptr_mut(self.0) }
-            }
-        }
-
-        pub struct $r(::util::Opaque);
-
-        impl ::types::OpenSslTypeRef for $r {
-            type CType = $c;
-        }
-    }
-}
-
 macro_rules! private_key_from_pem {
     ($t:ident, $f:path) => {
         from_pem_inner!(/// Deserializes a PEM-formatted private key.
@@ -161,9 +120,11 @@ macro_rules! to_der_inner {
         #[$m]
         pub fn $n(&self) -> Result<Vec<u8>, ::error::ErrorStack> {
             unsafe {
-                let len = try!(::cvt($f(::types::OpenSslTypeRef::as_ptr(self), ptr::null_mut())));
+                let len = try!(::cvt($f(::foreign_types::ForeignTypeRef::as_ptr(self),
+                                        ptr::null_mut())));
                 let mut buf = vec![0; len as usize];
-                try!(::cvt($f(::types::OpenSslTypeRef::as_ptr(self), &mut buf.as_mut_ptr())));
+                try!(::cvt($f(::foreign_types::ForeignTypeRef::as_ptr(self),
+                              &mut buf.as_mut_ptr())));
                 Ok(buf)
             }
         }
