@@ -7,6 +7,7 @@ use std::ffi::OsString;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
+use std::panic::{self, AssertUnwindSafe};
 use std::process::Command;
 
 // The set of `OPENSSL_NO_<FOO>`s that we care about.
@@ -189,57 +190,16 @@ fn try_pkg_config() {
         return
     }
 
-    // We're going to be looking at header files, so show us all the system
-    // cflags dirs for showing us lots of `-I`.
-    env::set_var("PKG_CONFIG_ALLOW_SYSTEM_CFLAGS", "1");
-
-    // This is more complex than normal because we need to track down opensslconf.h.
-    // To do that, we need the inlude paths even if they're on the default search path, but the
-    // linkage directories emitted from that cause all kinds of issues if other libraries happen to
-    // live in them. So, we run pkg-config twice, once asking for system dirs but not emitting
-    // metadata, and a second time emitting metadata but not asking for system dirs. Yay.
-    let lib = match pkg_config::Config::new()
-        .cargo_metadata(false)
-        .print_system_libs(true)
-        .find("openssl") {
-        Ok(lib) => lib,
-        Err(_) => return,
-    };
-
-    if lib.include_paths.len() == 0 {
-        panic!("
-
-Used pkg-config to discover the OpenSSL installation, but pkg-config did not
-return any include paths for the installation. This crate needs to take a peek
-at the header files so it cannot proceed unless they're found.
-
-You can try fixing this setting the `OPENSSL_DIR` environment variable
-pointing to your OpenSSL installation or installing OpenSSL headers package
-specific to your distribution:
-
-    # On Ubuntu
-    sudo apt-get install libssl-dev
-    # On Arch Linux
-    sudo pacman -S openssl
-    # On Fedora
-    sudo dnf install openssl-devel
-
-See rust-openssl README for more information:
-
-    https://github.com/sfackler/rust-openssl#linux
-");
-    }
+    let lib = pkg_config::Config::new()
+        .print_system_libs(false)
+        .find("openssl")
+        .unwrap();
 
     validate_headers(&lib.include_paths);
 
     for include in lib.include_paths.iter() {
         println!("cargo:include={}", include.display());
     }
-
-    pkg_config::Config::new()
-        .print_system_libs(false)
-        .find("openssl")
-        .unwrap();
 
     std::process::exit(0);
 }
@@ -297,7 +257,30 @@ RUST_{define}
     for include_dir in include_dirs {
         gcc.include(include_dir);
     }
-    let expanded = gcc.file(&path).expand();
+    // https://github.com/alexcrichton/gcc-rs/issues/133
+    let expanded = match panic::catch_unwind(AssertUnwindSafe(|| gcc.file(&path).expand())) {
+        Ok(expanded) => expanded,
+        Err(_) => {
+            panic!("
+Failed to find OpenSSL development headers.
+
+You can try fixing this setting the `OPENSSL_DIR` environment variable
+pointing to your OpenSSL installation or installing OpenSSL headers package
+specific to your distribution:
+
+    # On Ubuntu
+    sudo apt-get install libssl-dev
+    # On Arch Linux
+    sudo pacman -S openssl
+    # On Fedora
+    sudo dnf install openssl-devel
+
+See rust-openssl README for more information:
+
+    https://github.com/sfackler/rust-openssl#linux
+");
+        }
+    };
     let expanded = String::from_utf8(expanded).unwrap();
 
     let mut enabled = vec![];
