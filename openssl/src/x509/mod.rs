@@ -1,113 +1,69 @@
-use libc::{c_char, c_int, c_long, c_ulong, c_void};
-use std::cmp;
+use ffi;
+use foreign_types::{ForeignType, ForeignTypeRef};
+use libc::{c_char, c_int, c_long, c_ulong};
+use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;
-use std::marker::PhantomData;
 use std::mem;
-use std::ops::Deref;
+use std::path::Path;
 use std::ptr;
 use std::slice;
 use std::str;
 
 use {cvt, cvt_p};
-use asn1::Asn1Time;
-use asn1::Asn1TimeRef;
-use bio::{MemBio, MemBioSlice};
-use crypto::hash::MessageDigest;
-use crypto::pkey::PKey;
-use crypto::rand::rand_bytes;
+use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef};
+use bio::MemBioSlice;
+use hash::MessageDigest;
+use pkey::{PKey, PKeyRef};
+use rand::rand_bytes;
 use error::ErrorStack;
-use ffi;
 use nid::Nid;
-use opaque::Opaque;
+use string::OpensslString;
+use stack::{Stack, StackRef, Stackable};
 
 #[cfg(ossl10x)]
-use ffi::{
-    X509_set_notBefore,
-    X509_set_notAfter,
-    ASN1_STRING_data,
-    X509_NAME, 
-};
+use ffi::{X509_set_notBefore, X509_set_notAfter, ASN1_STRING_data, X509_STORE_CTX_get_chain};
 #[cfg(ossl110)]
-use ffi::{
-    X509_set1_notBefore as X509_set_notBefore,
-    X509_set1_notAfter as X509_set_notAfter,
-    ASN1_STRING_get0_data as ASN1_STRING_data,
-    X509NAME,
-};
-
-pub mod extension;
+use ffi::{X509_set1_notBefore as X509_set_notBefore, X509_set1_notAfter as X509_set_notAfter,
+          ASN1_STRING_get0_data as ASN1_STRING_data,
+          X509_STORE_CTX_get0_chain as X509_STORE_CTX_get_chain};
 
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 pub mod verify;
 
-use self::extension::{ExtensionType, Extension};
+use x509::extension::{ExtensionType, Extension};
+
+pub mod extension;
+pub mod store;
 
 #[cfg(test)]
 mod tests;
 
-pub struct SslString(&'static str);
+pub struct X509FileType(c_int);
 
-impl<'s> Drop for SslString {
-    fn drop(&mut self) {
-        unsafe {
-            CRYPTO_free!(self.0.as_ptr() as *mut c_void);
-        }
-    }
-}
-
-impl Deref for SslString {
-    type Target = str;
-
-    fn deref(&self) -> &str {
+impl X509FileType {
+    pub fn as_raw(&self) -> c_int {
         self.0
     }
 }
 
-impl SslString {
-    unsafe fn new(buf: *const u8, len: c_int) -> SslString {
-        let slice = slice::from_raw_parts(buf, len as usize);
-        SslString(str::from_utf8_unchecked(slice))
-    }
-}
+pub const X509_FILETYPE_PEM: X509FileType = X509FileType(ffi::X509_FILETYPE_PEM);
+pub const X509_FILETYPE_ASN1: X509FileType = X509FileType(ffi::X509_FILETYPE_ASN1);
+pub const X509_FILETYPE_DEFAULT: X509FileType = X509FileType(ffi::X509_FILETYPE_DEFAULT);
 
-impl fmt::Display for SslString {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(self.0, f)
-    }
-}
+foreign_type! {
+    type CType = ffi::X509_STORE_CTX;
+    fn drop = ffi::X509_STORE_CTX_free;
 
-impl fmt::Debug for SslString {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Debug::fmt(self.0, f)
-    }
+    pub struct X509StoreContext;
+    pub struct X509StoreContextRef;
 }
-
-#[derive(Copy, Clone)]
-#[repr(i32)]
-pub enum X509FileType {
-    PEM = ffi::X509_FILETYPE_PEM,
-    ASN1 = ffi::X509_FILETYPE_ASN1,
-    Default = ffi::X509_FILETYPE_DEFAULT,
-}
-
-pub struct X509StoreContextRef(Opaque);
 
 impl X509StoreContextRef {
-    pub unsafe fn from_ptr<'a>(ctx: *mut ffi::X509_STORE_CTX) -> &'a X509StoreContextRef {
-        &*(ctx as *mut _)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::X509_STORE_CTX {
-        self as *const _ as *mut _
-    }
-
     pub fn error(&self) -> Option<X509VerifyError> {
-        unsafe {
-            X509VerifyError::from_raw(ffi::X509_STORE_CTX_get_error(self.as_ptr()) as c_long)
-        }
+        unsafe { X509VerifyError::from_raw(ffi::X509_STORE_CTX_get_error(self.as_ptr()) as c_long) }
     }
 
     pub fn current_cert(&self) -> Option<&X509Ref> {
@@ -124,6 +80,18 @@ impl X509StoreContextRef {
     pub fn error_depth(&self) -> u32 {
         unsafe { ffi::X509_STORE_CTX_get_error_depth(self.as_ptr()) as u32 }
     }
+
+    pub fn chain(&self) -> Option<&StackRef<X509>> {
+        unsafe {
+            let chain = X509_STORE_CTX_get_chain(self.as_ptr());
+
+            if chain.is_null() {
+                return None;
+            }
+
+            Some(StackRef::from_ptr(chain))
+        }
+    }
 }
 
 #[allow(non_snake_case)]
@@ -132,13 +100,13 @@ impl X509StoreContextRef {
 /// # Example
 ///
 /// ```
-/// use openssl::crypto::hash::MessageDigest;
-/// use openssl::crypto::pkey::PKey;
-/// use openssl::crypto::rsa::RSA;
+/// use openssl::hash::MessageDigest;
+/// use openssl::pkey::PKey;
+/// use openssl::rsa::Rsa;
 /// use openssl::x509::X509Generator;
 /// use openssl::x509::extension::{Extension, KeyUsageOption};
 ///
-/// let rsa = RSA::generate(2048).unwrap();
+/// let rsa = Rsa::generate(2048).unwrap();
 /// let pkey = PKey::from_rsa(rsa).unwrap();
 ///
 /// let gen = X509Generator::new()
@@ -158,7 +126,7 @@ pub struct X509Generator {
     hash_type: MessageDigest,
 }
 
-impl<'g> X509Generator {
+impl X509Generator {
     /// Creates a new generator with the following defaults:
     ///
     /// validity period: 365 days
@@ -257,17 +225,17 @@ impl<'g> X509Generator {
             let value = CString::new(value.as_bytes()).unwrap();
             let ext = match exttype.get_nid() {
                 Some(nid) => {
-                    try!(cvt_p(ffi::X509V3_EXT_conf_nid(ptr::null_mut(),
-                                                      mem::transmute(&ctx),
-                                                      nid as c_int,
-                                                      value.as_ptr() as *mut c_char)))
+                    try!(cvt_p(ffi::X509V3_EXT_nconf_nid(ptr::null_mut(),
+                                                         &mut ctx,
+                                                         nid.as_raw(),
+                                                         value.as_ptr() as *mut c_char)))
                 }
                 None => {
                     let name = CString::new(exttype.get_name().unwrap().as_bytes()).unwrap();
-                    try!(cvt_p(ffi::X509V3_EXT_conf(ptr::null_mut(),
-                                                    mem::transmute(&ctx),
-                                                    name.as_ptr() as *mut c_char,
-                                                    value.as_ptr() as *mut c_char)))
+                    try!(cvt_p(ffi::X509V3_EXT_nconf(ptr::null_mut(),
+                                                     &mut ctx,
+                                                     name.as_ptr() as *mut c_char,
+                                                     value.as_ptr() as *mut c_char)))
                 }
             };
             if ffi::X509_add_ext(x509, ext, -1) != 1 {
@@ -314,7 +282,8 @@ impl<'g> X509Generator {
         Ok(((res as c_ulong) >> 1) as c_long)
     }
 
-    fn sign_certificate(&self, x509: &X509, issuer: &X509, issuer_pkey: &PKey) -> Result<X509, ErrorStack> {
+    fn sign_certificate(&self, x509: &X509, issuer: &X509, issuer_pkey: &PKeyRef) -> Result<(), ErrorStack> {
+
         ffi::init();
 
         unsafe {
@@ -333,7 +302,7 @@ impl<'g> X509Generator {
             try!(cvt(ffi::X509_set_notAfter(x509.as_ptr(), not_after.as_ptr() as *const _)));
             // If prev line succeded - ownership should go to cert
             mem::forget(not_after);
-            
+
             try!(cvt(ffi::X509_set_issuer_name(x509.as_ptr(), ffi::X509_get_subject_name(issuer.as_ptr()))));
 
             for (exttype, ext) in self.extensions.iter() {
@@ -344,14 +313,15 @@ impl<'g> X509Generator {
 
 
             let hash_fn = self.hash_type.as_ptr();
+
             try!(cvt(ffi::X509_sign(x509.as_ptr(), issuer_pkey.as_ptr(), hash_fn)));
-            Ok(x509.clone())
+
+            Ok(())
         }
     }
 
     /// Sets the certificate public-key, then self-sign and return it
-    pub fn sign(&self, subject_pkey: &PKey) -> Result<X509, ErrorStack> {
-
+    pub fn sign(&self, subject_pkey: &PKeyRef) -> Result<X509, ErrorStack> {
 
         ffi::init();
 
@@ -375,14 +345,16 @@ impl<'g> X509Generator {
                 try!(X509Generator::add_name_internal(name, &key, &val));
 
             }
+            
+            try!(self.sign_certificate(&x509, &x509, subject_pkey));
 
-            self.sign_certificate(&x509, &x509, subject_pkey)
+            Ok(x509)
         }
     }
 
     /// Sets the certificate public-key, then signs it by the CA key and certificate and return it
     /// Note: That the bit-length of the private key is used (set_bitlength is ignored)
-    pub fn sign_by_ca(&self, subject_pkey: &PKey, ca_cert: &X509, ca_pkey: &PKey) -> Result<X509, ErrorStack> {
+    pub fn sign_by_ca(&self, subject_pkey: &PKeyRef, ca_cert: &X509, ca_pkey: &PKeyRef) -> Result<X509, ErrorStack> {
         ffi::init();
 
         unsafe {
@@ -402,15 +374,17 @@ impl<'g> X509Generator {
             for (key, val) in iter {
                 try!(X509Generator::add_name_internal(name, &key, &val));
             }
-            
+
             try!(cvt(ffi::X509_set_pubkey(x509.as_ptr(), subject_pkey.as_ptr())));
 
-            self.sign_certificate(&x509, ca_cert, ca_pkey)
+            try!(self.sign_certificate(&x509, ca_cert, ca_pkey));
+
+            Ok(x509)
         }
     }
 
     /// Obtain a certificate signing request (CSR)
-    pub fn request(&self, p_key: &PKey) -> Result<X509Req, ErrorStack> {
+    pub fn request(&self, p_key: &PKeyRef) -> Result<X509Req, ErrorStack> {
         let cert = match self.sign(p_key) {
             Ok(c) => c,
             Err(x) => return Err(x),
@@ -435,19 +409,15 @@ impl<'g> X509Generator {
     }
 }
 
-/// A borrowed public key certificate.
-pub struct X509Ref(Opaque);
+foreign_type! {
+    type CType = ffi::X509;
+    fn drop = ffi::X509_free;
+
+    pub struct X509;
+    pub struct X509Ref;
+}
 
 impl X509Ref {
-    /// Creates a new `X509Ref` wrapping the provided handle.
-    pub unsafe fn from_ptr<'a>(x509: *mut ffi::X509) -> &'a X509Ref {
-        &*(x509 as *mut _)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::X509 {
-        self as *const _ as *mut _
-    }
-
     pub fn subject_name(&self) -> &X509NameRef {
         unsafe {
             let name = ffi::X509_get_subject_name(self.as_ptr());
@@ -456,19 +426,17 @@ impl X509Ref {
     }
 
     /// Returns this certificate's SAN entries, if they exist.
-    pub fn subject_alt_names(&self) -> Option<GeneralNames> {
+    pub fn subject_alt_names(&self) -> Option<Stack<GeneralName>> {
         unsafe {
             let stack = ffi::X509_get_ext_d2i(self.as_ptr(),
-                                              Nid::SubjectAltName as c_int,
+                                              ffi::NID_subject_alt_name,
                                               ptr::null_mut(),
                                               ptr::null_mut());
             if stack.is_null() {
                 return None;
             }
 
-            Some(GeneralNames {
-                stack: stack as *mut _,
-            })
+            Some(Stack::from_ptr(stack as *mut _))
         }
     }
 
@@ -509,69 +477,33 @@ impl X509Ref {
         }
     }
 
-    /// Writes certificate as PEM
-    pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
+    /// Returns the list of OCSP responder URLs specified in the certificate's Authority Information
+    /// Access field.
+    pub fn ocsp_responders(&self) -> Result<Stack<OpensslString>, ErrorStack> {
         unsafe {
-            try!(cvt(ffi::PEM_write_bio_X509(mem_bio.as_ptr(), self.as_ptr())));
+            cvt_p(ffi::X509_get1_ocsp(self.as_ptr())).map(|p| Stack::from_ptr(p))
         }
-        Ok(mem_bio.get_buf().to_owned())
     }
 
-    /// Returns a DER serialized form of the certificate
-    pub fn to_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
+    /// Checks that this certificate issued `subject`.
+    pub fn issued(&self, subject: &X509Ref) -> Result<(), X509VerifyError> {
         unsafe {
-            ffi::i2d_X509_bio(mem_bio.as_ptr(), self.as_ptr());
+            let r = ffi::X509_check_issued(self.as_ptr(), subject.as_ptr());
+            match X509VerifyError::from_raw(r as c_long) {
+                Some(e) => Err(e),
+                None => Ok(()),
+            }
         }
-        Ok(mem_bio.get_buf().to_owned())
     }
+
+    to_pem!(ffi::PEM_write_bio_X509);
+    to_der!(ffi::i2d_X509);
 }
 
-/// An owned public key certificate.
-pub struct X509(*mut ffi::X509);
+impl ToOwned for X509Ref {
+    type Owned = X509;
 
-impl X509 {
-    /// Returns a new `X509`, taking ownership of the handle.
-    pub unsafe fn from_ptr(x509: *mut ffi::X509) -> X509 {
-        X509(x509)
-    }
-
-    /// Reads a certificate from DER.
-    pub fn from_der(buf: &[u8]) -> Result<X509, ErrorStack> {
-        unsafe {
-            let mut ptr = buf.as_ptr();
-            let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
-            let x509 = try!(cvt_p(ffi::d2i_X509(ptr::null_mut(), &mut ptr, len)));
-            Ok(X509::from_ptr(x509))
-        }
-    }
-
-    /// Reads a certificate from PEM.
-    pub fn from_pem(buf: &[u8]) -> Result<X509, ErrorStack> {
-        let mem_bio = try!(MemBioSlice::new(buf));
-        unsafe {
-            let handle = try!(cvt_p(ffi::PEM_read_bio_X509(mem_bio.as_ptr(),
-                                                           ptr::null_mut(),
-                                                           None,
-                                                           ptr::null_mut())));
-            Ok(X509::from_ptr(handle))
-        }
-    }
-}
-
-impl Deref for X509 {
-    type Target = X509Ref;
-
-    fn deref(&self) -> &X509Ref {
-        unsafe {
-            X509Ref::from_ptr(self.0)
-        }
-    }
-}
-
-impl Clone for X509 {
-    fn clone(&self) -> X509 {
+    fn to_owned(&self) -> X509 {
         unsafe {
             compat::X509_up_ref(self.as_ptr());
             X509::from_ptr(self.as_ptr())
@@ -579,66 +511,155 @@ impl Clone for X509 {
     }
 }
 
-impl Drop for X509 {
-    fn drop(&mut self) {
-        unsafe { ffi::X509_free(self.as_ptr()) };
-    }
-}
+impl X509 {
+    from_pem!(X509, ffi::PEM_read_bio_X509);
+    from_der!(X509, ffi::d2i_X509);
 
-pub struct X509NameRef(Opaque);
-
-impl X509NameRef {
-    pub unsafe fn from_ptr<'a>(ptr: *mut ffi::X509_NAME) -> &'a X509NameRef {
-        &*(ptr as *mut _)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::X509_NAME {
-        self as *const _ as *mut _
-    }
-
-    pub fn text_by_nid(&self, nid: Nid) -> Option<SslString> {
+    /// Deserializes a list of PEM-formatted certificates.
+    pub fn stack_from_pem(pem: &[u8]) -> Result<Vec<X509>, ErrorStack> {
         unsafe {
-            let loc = ffi::X509_NAME_get_index_by_NID(self.as_ptr(), nid as c_int, -1);
-            if loc == -1 {
-                return None;
+            ffi::init();
+            let bio = try!(MemBioSlice::new(pem));
+
+            let mut certs = vec![];
+            loop {
+                let r = ffi::PEM_read_bio_X509(bio.as_ptr(),
+                                               ptr::null_mut(),
+                                               None,
+                                               ptr::null_mut());
+                if r.is_null() {
+                    let err = ffi::ERR_peek_last_error();
+                    if ffi::ERR_GET_LIB(err) == ffi::ERR_LIB_PEM
+                            && ffi::ERR_GET_REASON(err) == ffi::PEM_R_NO_START_LINE {
+                        ffi::ERR_clear_error();
+                        break;
+                    }
+
+                    return Err(ErrorStack::get());
+                } else {
+                    certs.push(X509(r));
+                }
             }
 
-            let ne = ffi::X509_NAME_get_entry(self.as_ptr(), loc);
-            if ne.is_null() {
-                return None;
-            }
-
-            let asn1_str = ffi::X509_NAME_ENTRY_get_data(ne);
-            if asn1_str.is_null() {
-                return None;
-            }
-
-            let mut str_from_asn1: *mut u8 = ptr::null_mut();
-            let len = ffi::ASN1_STRING_to_UTF8(&mut str_from_asn1, asn1_str);
-
-            if len < 0 {
-                return None;
-            }
-
-            assert!(!str_from_asn1.is_null());
-
-            Some(SslString::new(str_from_asn1, len))
+            Ok(certs)
         }
     }
 }
 
-/// A certificate signing request
-pub struct X509Req(*mut ffi::X509_REQ);
+impl Clone for X509 {
+    fn clone(&self) -> X509 {
+        self.to_owned()
+    }
+}
+
+impl AsRef<X509Ref> for X509 {
+    fn as_ref(&self) -> &X509Ref {
+        &*self
+    }
+}
+
+impl AsRef<X509Ref> for X509Ref {
+    fn as_ref(&self) -> &X509Ref {
+        self
+    }
+}
+
+impl Borrow<X509Ref> for X509 {
+    fn borrow(&self) -> &X509Ref {
+        &*self
+    }
+}
+
+impl Stackable for X509 {
+    type StackType = ffi::stack_st_X509;
+}
+
+foreign_type! {
+    type CType = ffi::X509_NAME;
+    fn drop = ffi::X509_NAME_free;
+
+    pub struct X509Name;
+    pub struct X509NameRef;
+}
+
+impl X509Name {
+    /// Loads subject names from a file containing PEM-formatted certificates.
+    ///
+    /// This is commonly used in conjunction with `SslContextBuilder::set_client_ca_list`.
+    pub fn load_client_ca_file<P: AsRef<Path>>(file: P) -> Result<Stack<X509Name>, ErrorStack> {
+        let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
+        unsafe {
+            cvt_p(ffi::SSL_load_client_CA_file(file.as_ptr())).map(|p| Stack::from_ptr(p))
+        }
+    }
+}
+
+impl Stackable for X509Name {
+    type StackType = ffi::stack_st_X509_NAME;
+}
+
+impl X509NameRef {
+    pub fn entries_by_nid<'a>(&'a self, nid: Nid) -> X509NameEntries<'a> {
+        X509NameEntries {
+            name: self,
+            nid: nid,
+            loc: -1,
+        }
+    }
+}
+
+pub struct X509NameEntries<'a> {
+    name: &'a X509NameRef,
+    nid: Nid,
+    loc: c_int,
+}
+
+impl<'a> Iterator for X509NameEntries<'a> {
+    type Item = &'a X509NameEntryRef;
+
+    fn next(&mut self) -> Option<&'a X509NameEntryRef> {
+        unsafe {
+            self.loc =
+                ffi::X509_NAME_get_index_by_NID(self.name.as_ptr(), self.nid.as_raw(), self.loc);
+
+            if self.loc == -1 {
+                return None;
+            }
+
+            let entry = ffi::X509_NAME_get_entry(self.name.as_ptr(), self.loc);
+            assert!(!entry.is_null());
+
+            Some(X509NameEntryRef::from_ptr(entry))
+        }
+    }
+}
+
+foreign_type! {
+    type CType = ffi::X509_NAME_ENTRY;
+    fn drop = ffi::X509_NAME_ENTRY_free;
+
+    pub struct X509NameEntry;
+    pub struct X509NameEntryRef;
+}
+
+impl X509NameEntryRef {
+    pub fn data(&self) -> &Asn1StringRef {
+        unsafe {
+            let data = ffi::X509_NAME_ENTRY_get_data(self.as_ptr());
+            Asn1StringRef::from_ptr(data)
+        }
+    }
+}
+
+foreign_type! {
+    type CType = ffi::X509_REQ;
+    fn drop = ffi::X509_REQ_free;
+
+    pub struct X509Req;
+    pub struct X509ReqRef;
+}
 
 impl X509Req {
-    pub unsafe fn from_ptr(handle: *mut ffi::X509_REQ) -> X509Req {
-        X509Req(handle)
-    }
-
-    pub fn as_ptr(&self) -> *mut ffi::X509_REQ {
-        self.0
-    }
-
     /// Reads CSR from PEM
     pub fn from_pem(buf: &[u8]) -> Result<X509Req, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
@@ -651,29 +672,12 @@ impl X509Req {
         }
     }
 
-    /// Writes CSR as PEM
-    pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        if unsafe { ffi::PEM_write_bio_X509_REQ(mem_bio.as_ptr(), self.0) } != 1 {
-            return Err(ErrorStack::get());
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
-
-    /// Returns a DER serialized form of the CSR
-    pub fn to_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        unsafe {
-            ffi::i2d_X509_REQ_bio(mem_bio.as_ptr(), self.0);
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
+    from_der!(X509Req, ffi::d2i_X509_REQ);
 }
 
-impl Drop for X509Req {
-    fn drop(&mut self) {
-        unsafe { ffi::X509_REQ_free(self.0) };
-    }
+impl X509ReqRef {
+    to_pem!(ffi::PEM_write_bio_X509_REQ);
+    to_der!(ffi::i2d_X509_REQ);
 }
 
 /// A collection of X.509 extensions.
@@ -799,135 +803,24 @@ impl X509VerifyError {
     }
 }
 
-/// A collection of OpenSSL `GENERAL_NAME`s.
-pub struct GeneralNames {
-    stack: *mut ffi::stack_st_GENERAL_NAME,
+foreign_type! {
+    type CType = ffi::GENERAL_NAME;
+    fn drop = ffi::GENERAL_NAME_free;
+
+    pub struct GeneralName;
+    pub struct GeneralNameRef;
 }
 
-impl Drop for GeneralNames {
-    #[cfg(ossl10x)]
-    fn drop(&mut self) {
-        unsafe {
-            // This transmute is dubious but it's what openssl itself does...
-            let free: unsafe extern fn(*mut ffi::GENERAL_NAME) = ffi::GENERAL_NAME_free;
-            let free: unsafe extern fn(*mut c_void) = mem::transmute(free);
-            ffi::sk_pop_free(&mut (*self.stack).stack, Some(free));
-        }
-    }
-
-    #[cfg(ossl110)]
-    fn drop(&mut self) {
-        unsafe {
-            // This transmute is dubious but it's what openssl itself does...
-            let free: unsafe extern fn(*mut ffi::GENERAL_NAME) = ffi::GENERAL_NAME_free;
-            let free: unsafe extern fn(*mut c_void) = mem::transmute(free);
-            ffi::OPENSSL_sk_pop_free(self.stack as *mut _, Some(free));
-        }
-    }
-}
-
-impl GeneralNames {
-    /// Returns the number of `GeneralName`s in this structure.
-    pub fn len(&self) -> usize {
-        self._len()
-    }
-
-    #[cfg(ossl10x)]
-    fn _len(&self) -> usize {
-        unsafe { (*self.stack).stack.num as usize }
-    }
-
-    #[cfg(ossl110)]
-    fn _len(&self) -> usize {
-        unsafe { ffi::OPENSSL_sk_num(self.stack as *const _) as usize }
-    }
-
-    /// Returns the specified `GeneralName`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `idx` is not less than `len()`.
-    pub fn get<'a>(&'a self, idx: usize) -> GeneralName<'a> {
-        unsafe {
-            assert!(idx < self.len());
-            GeneralName {
-                name: self._get(idx),
-                m: PhantomData,
-            }
-        }
-    }
-
-    #[cfg(ossl10x)]
-    unsafe fn _get(&self, idx: usize) -> *const ffi::GENERAL_NAME {
-        *(*self.stack).stack.data.offset(idx as isize) as *const ffi::GENERAL_NAME
-    }
-
-    #[cfg(ossl110)]
-    unsafe fn _get(&self, idx: usize) -> *const ffi::GENERAL_NAME {
-        ffi::OPENSSL_sk_value(self.stack as *const _, idx as c_int) as *mut _
-    }
-
-    /// Returns an iterator over the `GeneralName`s in this structure.
-    pub fn iter(&self) -> GeneralNamesIter {
-        GeneralNamesIter {
-            names: self,
-            idx: 0,
-        }
-    }
-}
-
-impl<'a> IntoIterator for &'a GeneralNames {
-    type Item = GeneralName<'a>;
-    type IntoIter = GeneralNamesIter<'a>;
-
-    fn into_iter(self) -> GeneralNamesIter<'a> {
-        self.iter()
-    }
-}
-
-/// An iterator over OpenSSL `GENERAL_NAME`s.
-pub struct GeneralNamesIter<'a> {
-    names: &'a GeneralNames,
-    idx: usize,
-}
-
-impl<'a> Iterator for GeneralNamesIter<'a> {
-    type Item = GeneralName<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.idx < self.names.len() {
-            let name = self.names.get(self.idx);
-            self.idx += 1;
-            Some(name)
-        } else {
-            None
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = self.names.len() - self.idx;
-        (size, Some(size))
-    }
-}
-
-impl<'a> ExactSizeIterator for GeneralNamesIter<'a> {}
-
-/// An OpenSSL `GENERAL_NAME`.
-pub struct GeneralName<'a> {
-    name: *const ffi::GENERAL_NAME,
-    m: PhantomData<&'a ()>,
-}
-
-impl<'a> GeneralName<'a> {
+impl GeneralNameRef {
     /// Returns the contents of this `GeneralName` if it is a `dNSName`.
     pub fn dnsname(&self) -> Option<&str> {
         unsafe {
-            if (*self.name).type_ != ffi::GEN_DNS {
+            if (*self.as_ptr()).type_ != ffi::GEN_DNS {
                 return None;
             }
 
-            let ptr = ASN1_STRING_data((*self.name).d as *mut _);
-            let len = ffi::ASN1_STRING_length((*self.name).d as *mut _);
+            let ptr = ASN1_STRING_data((*self.as_ptr()).d as *mut _);
+            let len = ffi::ASN1_STRING_length((*self.as_ptr()).d as *mut _);
 
             let slice = slice::from_raw_parts(ptr as *const u8, len as usize);
             // dNSNames are stated to be ASCII (specifically IA5). Hopefully
@@ -940,16 +833,20 @@ impl<'a> GeneralName<'a> {
     /// Returns the contents of this `GeneralName` if it is an `iPAddress`.
     pub fn ipaddress(&self) -> Option<&[u8]> {
         unsafe {
-            if (*self.name).type_ != ffi::GEN_IPADD {
+            if (*self.as_ptr()).type_ != ffi::GEN_IPADD {
                 return None;
             }
 
-            let ptr = ASN1_STRING_data((*self.name).d as *mut _);
-            let len = ffi::ASN1_STRING_length((*self.name).d as *mut _);
+            let ptr = ASN1_STRING_data((*self.as_ptr()).d as *mut _);
+            let len = ffi::ASN1_STRING_length((*self.as_ptr()).d as *mut _);
 
             Some(slice::from_raw_parts(ptr as *const u8, len as usize))
         }
     }
+}
+
+impl Stackable for GeneralName {
+    type StackType = ffi::stack_st_GENERAL_NAME;
 }
 
 #[test]

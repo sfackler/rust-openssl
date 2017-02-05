@@ -1,14 +1,17 @@
-use serialize::hex::FromHex;
+use hex::{FromHex, ToHex};
 
-use crypto::hash::MessageDigest;
-use crypto::pkey::PKey;
-use crypto::rsa::RSA;
+use ec::{NAMED_CURVE, EcGroup, EcKey};
+use hash::MessageDigest;
+use nid::X9_62_PRIME256V1;
+use pkey::PKey;
+use rsa::Rsa;
+use ssl::{SslMethod, SslContextBuilder};
 use x509::{X509, X509Generator};
 use x509::extension::Extension::{KeyUsage, ExtKeyUsage, SubjectAltName, OtherNid, OtherStr};
 use x509::extension::AltNameOption as SAN;
 use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment, KeyCertSign, CRLSign};
 use x509::extension::ExtKeyUsageOption::{self, ClientAuth, ServerAuth};
-use nid::Nid;
+use nid;
 
 fn get_generator() -> X509Generator {
     X509Generator::new()
@@ -20,12 +23,12 @@ fn get_generator() -> X509Generator {
                                         ServerAuth,
                                         ExtKeyUsageOption::Other("2.999.1".to_owned())]))
         .add_extension(SubjectAltName(vec![(SAN::DNS, "example.com".to_owned())]))
-        .add_extension(OtherNid(Nid::BasicConstraints, "critical,CA:TRUE".to_owned()))
+        .add_extension(OtherNid(nid::BASIC_CONSTRAINTS, "critical,CA:TRUE".to_owned()))
         .add_extension(OtherStr("2.999.2".to_owned(), "ASN1:UTF8:example value".to_owned()))
 }
 
 fn pkey() -> PKey {
-    let rsa = RSA::generate(2048).unwrap();
+    let rsa = Rsa::generate(2048).unwrap();
     PKey::from_rsa(rsa).unwrap()
 }
 
@@ -48,8 +51,8 @@ fn test_cert_gen() {
 fn test_cert_gen_extension_ordering() {
     let pkey = pkey();
     get_generator()
-        .add_extension(OtherNid(Nid::SubjectKeyIdentifier, "hash".to_owned()))
-        .add_extension(OtherNid(Nid::AuthorityKeyIdentifier, "keyid:always".to_owned()))
+        .add_extension(OtherNid(nid::SUBJECT_KEY_IDENTIFIER, "hash".to_owned()))
+        .add_extension(OtherNid(nid::AUTHORITY_KEY_IDENTIFIER, "keyid:always".to_owned()))
         .sign(&pkey)
         .expect("Failed to generate cert with order-dependent extensions");
 }
@@ -60,10 +63,9 @@ fn test_cert_gen_extension_ordering() {
 fn test_cert_gen_extension_bad_ordering() {
     let pkey = pkey();
     let result = get_generator()
-                     .add_extension(OtherNid(Nid::AuthorityKeyIdentifier,
-                                             "keyid:always".to_owned()))
-                     .add_extension(OtherNid(Nid::SubjectKeyIdentifier, "hash".to_owned()))
-                     .sign(&pkey);
+        .add_extension(OtherNid(nid::AUTHORITY_KEY_IDENTIFIER, "keyid:always".to_owned()))
+        .add_extension(OtherNid(nid::SUBJECT_KEY_IDENTIFIER, "hash".to_owned()))
+        .sign(&pkey);
 
     assert!(result.is_err());
 }
@@ -86,7 +88,7 @@ fn test_cert_loading() {
     let fingerprint = cert.fingerprint(MessageDigest::sha1()).unwrap();
 
     let hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
-    let hash_vec = hash_str.from_hex().unwrap();
+    let hash_vec = Vec::from_hex(hash_str).unwrap();
 
     assert_eq!(fingerprint, hash_vec);
 }
@@ -114,65 +116,49 @@ fn test_save_der() {
 #[test]
 fn test_subject_read_cn() {
     let cert = include_bytes!("../../test/cert.pem");
-    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+    let cert = X509::from_pem(cert).unwrap();
     let subject = cert.subject_name();
-    let cn = match subject.text_by_nid(Nid::CN) {
-        Some(x) => x,
-        None => panic!("Failed to read CN from cert"),
-    };
-
-    assert_eq!(&cn as &str, "foobar.com")
+    let cn = subject.entries_by_nid(nid::COMMONNAME).next().unwrap();
+    assert_eq!(cn.data().as_slice(), b"foobar.com")
 }
 
 #[test]
 fn test_nid_values() {
     let cert = include_bytes!("../../test/nid_test_cert.pem");
-    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+    let cert = X509::from_pem(cert).unwrap();
     let subject = cert.subject_name();
 
-    let cn = match subject.text_by_nid(Nid::CN) {
-        Some(x) => x,
-        None => panic!("Failed to read CN from cert"),
-    };
-    assert_eq!(&cn as &str, "example.com");
+    let cn = subject.entries_by_nid(nid::COMMONNAME).next().unwrap();
+    assert_eq!(cn.data().as_slice(), b"example.com");
 
-    let email = match subject.text_by_nid(Nid::Email) {
-        Some(x) => x,
-        None => panic!("Failed to read subject email address from cert"),
-    };
-    assert_eq!(&email as &str, "test@example.com");
+    let email = subject.entries_by_nid(nid::PKCS9_EMAILADDRESS).next().unwrap();
+    assert_eq!(email.data().as_slice(), b"test@example.com");
 
-    let friendly = match subject.text_by_nid(Nid::FriendlyName) {
-        Some(x) => x,
-        None => panic!("Failed to read subject friendly name from cert"),
-    };
-    assert_eq!(&friendly as &str, "Example");
+    let friendly = subject.entries_by_nid(nid::FRIENDLYNAME).next().unwrap();
+    assert_eq!(&**friendly.data().as_utf8().unwrap(), "Example");
 }
 
 #[test]
 fn test_nid_uid_value() {
     let cert = include_bytes!("../../test/nid_uid_test_cert.pem");
-    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+    let cert = X509::from_pem(cert).unwrap();
     let subject = cert.subject_name();
 
-    let cn = match subject.text_by_nid(Nid::UserId) {
-        Some(x) => x,
-        None => panic!("Failed to read UID from cert"),
-    };
-    assert_eq!(&cn as &str, "this is the userId");
+    let cn = subject.entries_by_nid(nid::USERID).next().unwrap();
+    assert_eq!(cn.data().as_slice(), b"this is the userId");
 }
 
 #[test]
 fn test_subject_alt_name() {
     let cert = include_bytes!("../../test/alt_name_cert.pem");
-    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+    let cert = X509::from_pem(cert).unwrap();
 
     let subject_alt_names = cert.subject_alt_names().unwrap();
     assert_eq!(3, subject_alt_names.len());
-    assert_eq!(Some("foobar.com"), subject_alt_names.get(0).dnsname());
-    assert_eq!(subject_alt_names.get(1).ipaddress(),
+    assert_eq!(Some("foobar.com"), subject_alt_names[0].dnsname());
+    assert_eq!(subject_alt_names[1].ipaddress(),
                Some(&[127, 0, 0, 1][..]));
-    assert_eq!(subject_alt_names.get(2).ipaddress(),
+    assert_eq!(subject_alt_names[2].ipaddress(),
                Some(&b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01"[..]));
 }
 
@@ -193,6 +179,49 @@ fn test_subject_alt_name_iter() {
 }
 
 #[test]
+fn test_stack_from_pem() {
+    let certs = include_bytes!("../../test/certs.pem");
+    let certs = X509::stack_from_pem(certs).unwrap();
+
+    assert_eq!(certs.len(), 2);
+    assert_eq!(certs[0].fingerprint(MessageDigest::sha1()).unwrap().to_hex(),
+        "59172d9313e84459bcff27f967e79e6e9217e584");
+    assert_eq!(certs[1].fingerprint(MessageDigest::sha1()).unwrap().to_hex(),
+        "c0cbdf7cdd03c9773e5468e1f6d2da7d5cbb1875");
+}
+
+#[test]
+fn issued() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+
+    ca.issued(&cert).unwrap();
+    cert.issued(&cert).err().unwrap();
+}
+
+#[test]
+fn ecdsa_cert() {
+    let mut group = EcGroup::from_curve_name(X9_62_PRIME256V1).unwrap();
+    group.set_asn1_flag(NAMED_CURVE);
+    let key = EcKey::generate(&group).unwrap();
+    let key = PKey::from_ec_key(key).unwrap();
+
+    let cert = X509Generator::new()
+        .set_valid_period(365)
+        .add_name("CN".to_owned(), "TestServer".to_owned())
+        .set_sign_hash(MessageDigest::sha256())
+        .sign(&key)
+        .unwrap();
+
+    let mut ctx = SslContextBuilder::new(SslMethod::tls()).unwrap();
+    ctx.set_certificate(&cert).unwrap();
+    ctx.set_private_key(&key).unwrap();
+    ctx.check_private_key().unwrap();
+}
+
+#[test]
 fn test_ca_sign_certificate() {
     let ca_pkey = pkey();
     let ca_cert = X509Generator::new()
@@ -200,7 +229,7 @@ fn test_ca_sign_certificate() {
         .add_name("CN".to_string(), "my CA".to_string())
         .set_sign_hash(MessageDigest::sha256())
         .add_extension(KeyUsage(vec![KeyCertSign, CRLSign]))
-        .add_extension(OtherNid(Nid::BasicConstraints, "critical,CA:TRUE".to_owned()))
+        .add_extension(OtherNid(nid::BASIC_CONSTRAINTS, "critical,CA:TRUE".to_owned()))
         .sign(&ca_pkey)
         .expect("Failed to generate CA certificate");
 
@@ -214,16 +243,16 @@ fn test_ca_sign_certificate() {
         .expect("Failed to generate certificate");
 
     let ca_subject = ca_cert.subject_name();
-    let ca_cn_subject = match ca_subject.text_by_nid(Nid::CN) {
+    let ca_cn_subject = match ca_subject.entries_by_nid(nid::COMMONNAME).next() {
         Some(x) => x,
         None => panic!("Failed to read CN from cert"),
     };
-    assert_eq!(&ca_cn_subject as &str, "my CA");
+    assert_eq!(ca_cn_subject.data().as_slice(), b"my CA");
     let cert_subject = cert.subject_name();
-    let cert_cn_subject = match cert_subject.text_by_nid(Nid::CN) {
+    let cert_cn_subject = match cert_subject.entries_by_nid(nid::COMMONNAME).next() {
         Some(x) => x,
         None => panic!("Failed to read CN from cert"),
     };
-    assert_eq!(&cert_cn_subject as &str, "my certificate");
+    assert_eq!(cert_cn_subject.data().as_slice(), b"my certificate");
 
 }

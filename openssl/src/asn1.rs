@@ -1,50 +1,53 @@
-use libc::c_long;
-use std::{ptr, fmt};
-use std::ops::Deref;
-
 use ffi;
-use opaque::Opaque;
+use foreign_types::{ForeignType, ForeignTypeRef};
+use libc::{c_long, c_char};
+use std::fmt;
+use std::ptr;
+use std::slice;
+use std::str;
 
 use {cvt, cvt_p};
 use bio::MemBio;
 use error::ErrorStack;
+use string::OpensslString;
 
-/// A borrowed Asn1Time
-pub struct Asn1TimeRef(Opaque);
+foreign_type! {
+    type CType = ffi::ASN1_GENERALIZEDTIME;
+    fn drop = ffi::ASN1_GENERALIZEDTIME_free;
 
-impl Asn1TimeRef {
-    /// Creates a new `Asn1TimeRef` wrapping the provided handle.
-    pub unsafe fn from_ptr<'a>(handle: *mut ffi::ASN1_TIME) -> &'a Asn1TimeRef {
-        &*(handle as *mut _)
+    pub struct Asn1GeneralizedTime;
+    pub struct Asn1GeneralizedTimeRef;
+}
+
+impl fmt::Display for Asn1GeneralizedTimeRef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        unsafe {
+            let mem_bio = try!(MemBio::new());
+            try!(cvt(ffi::ASN1_GENERALIZEDTIME_print(mem_bio.as_ptr(), self.as_ptr())));
+            write!(f, "{}", str::from_utf8_unchecked(mem_bio.get_buf()))
+        }
     }
+}
 
-    /// Returns the raw handle
-    pub fn as_ptr(&self) -> *mut ffi::ASN1_TIME {
-        self as *const _ as *mut _
-    }
+foreign_type! {
+    type CType = ffi::ASN1_TIME;
+    fn drop = ffi::ASN1_TIME_free;
+
+    pub struct Asn1Time;
+    pub struct Asn1TimeRef;
 }
 
 impl fmt::Display for Asn1TimeRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mem_bio = try!(MemBio::new());
-        let as_str = unsafe {
+        unsafe {
+            let mem_bio = try!(MemBio::new());
             try!(cvt(ffi::ASN1_TIME_print(mem_bio.as_ptr(), self.as_ptr())));
-            String::from_utf8_unchecked(mem_bio.get_buf().to_owned())
-        };
-        write!(f, "{}", as_str)
+            write!(f, "{}", str::from_utf8_unchecked(mem_bio.get_buf()))
+        }
     }
 }
 
-
-/// Corresponds to the ASN.1 structure Time defined in RFC5280
-pub struct Asn1Time(*mut ffi::ASN1_TIME);
-
 impl Asn1Time {
-    /// Wraps existing ASN1_TIME and takes ownership
-    pub unsafe fn from_ptr(handle: *mut ffi::ASN1_TIME) -> Asn1Time {
-        Asn1Time(handle)
-    }
-
     fn from_period(period: c_long) -> Result<Asn1Time, ErrorStack> {
         ffi::init();
 
@@ -60,18 +63,41 @@ impl Asn1Time {
     }
 }
 
-impl Deref for Asn1Time {
-    type Target = Asn1TimeRef;
+foreign_type! {
+    type CType = ffi::ASN1_STRING;
+    fn drop = ffi::ASN1_STRING_free;
 
-    fn deref(&self) -> &Asn1TimeRef {
+    pub struct Asn1String;
+    pub struct Asn1StringRef;
+}
+
+impl Asn1StringRef {
+    pub fn as_utf8(&self) -> Result<OpensslString, ErrorStack> {
         unsafe {
-            Asn1TimeRef::from_ptr(self.0)
+            let mut ptr = ptr::null_mut();
+            let len = ffi::ASN1_STRING_to_UTF8(&mut ptr, self.as_ptr());
+            if len < 0 {
+                return Err(ErrorStack::get());
+            }
+
+            Ok(OpensslString::from_ptr(ptr as *mut c_char))
         }
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe { slice::from_raw_parts(ASN1_STRING_data(self.as_ptr()), self.len()) }
+    }
+
+    pub fn len(&self) -> usize {
+        unsafe { ffi::ASN1_STRING_length(self.as_ptr()) as usize }
     }
 }
 
-impl Drop for Asn1Time {
-    fn drop(&mut self) {
-        unsafe { ffi::ASN1_TIME_free(self.as_ptr()) };
-    }
+#[cfg(any(ossl101, ossl102))]
+use ffi::ASN1_STRING_data;
+
+#[cfg(ossl110)]
+#[allow(bad_style)]
+unsafe fn ASN1_STRING_data(s: *mut ffi::ASN1_STRING) -> *mut ::libc::c_uchar {
+    ffi::ASN1_STRING_get0_data(s) as *mut _
 }

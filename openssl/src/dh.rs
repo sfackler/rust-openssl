@@ -1,72 +1,56 @@
-use ffi;
 use error::ErrorStack;
-use bio::MemBioSlice;
+use ffi;
+use foreign_types::ForeignTypeRef;
+use std::mem;
 use std::ptr;
 
-use {cvt, cvt_p};
+use {cvt, cvt_p, init};
 use bn::BigNum;
-use std::mem;
 
-pub struct DH(*mut ffi::DH);
+foreign_type! {
+    type CType = ffi::DH;
+    fn drop = ffi::DH_free;
 
-impl DH {
-    pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<DH, ErrorStack> {
+    pub struct Dh;
+
+    pub struct DhRef;
+}
+
+impl DhRef {
+    to_pem!(ffi::PEM_write_bio_DHparams);
+    to_der!(ffi::i2d_DHparams);
+}
+
+impl Dh {
+    pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<Dh, ErrorStack> {
         unsafe {
-            let dh = DH(try!(cvt_p(ffi::DH_new())));
-            try!(cvt(compat::DH_set0_pqg(dh.0,
-                                         p.as_ptr(),
-                                         q.as_ptr(),
-                                         g.as_ptr())));
+            init();
+            let dh = Dh(try!(cvt_p(ffi::DH_new())));
+            try!(cvt(compat::DH_set0_pqg(dh.0, p.as_ptr(), q.as_ptr(), g.as_ptr())));
             mem::forget((p, g, q));
             Ok(dh)
         }
     }
 
-    pub fn from_pem(buf: &[u8]) -> Result<DH, ErrorStack> {
-        let mem_bio = try!(MemBioSlice::new(buf));
-        unsafe {
-            cvt_p(ffi::PEM_read_bio_DHparams(mem_bio.as_ptr(),
-                                             ptr::null_mut(),
-                                             None,
-                                             ptr::null_mut()))
-                .map(DH)
-        }
+    from_pem!(Dh, ffi::PEM_read_bio_DHparams);
+    from_der!(Dh, ffi::d2i_DHparams);
+
+    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    pub fn get_1024_160() -> Result<Dh, ErrorStack> {
+        unsafe { cvt_p(ffi::DH_get_1024_160()).map(Dh) }
     }
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn get_1024_160() -> Result<DH, ErrorStack> {
-        unsafe {
-            cvt_p(ffi::DH_get_1024_160()).map(DH)
-        }
+    pub fn get_2048_224() -> Result<Dh, ErrorStack> {
+        unsafe { cvt_p(ffi::DH_get_2048_224()).map(Dh) }
     }
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn get_2048_224() -> Result<DH, ErrorStack> {
-        unsafe {
-            cvt_p(ffi::DH_get_2048_224()).map(DH)
-        }
-    }
-
-    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn get_2048_256() -> Result<DH, ErrorStack> {
-        unsafe {
-            cvt_p(ffi::DH_get_2048_256()).map(DH)
-        }
-    }
-
-    pub unsafe fn as_ptr(&self) -> *mut ffi::DH {
-        self.0
-    }
-}
-
-impl Drop for DH {
-    fn drop(&mut self) {
-        unsafe {
-            ffi::DH_free(self.as_ptr())
-        }
+    pub fn get_2048_256() -> Result<Dh, ErrorStack> {
+        unsafe { cvt_p(ffi::DH_get_2048_256()).map(Dh) }
     }
 }
 
@@ -84,7 +68,8 @@ mod compat {
     pub unsafe fn DH_set0_pqg(dh: *mut ffi::DH,
                               p: *mut ffi::BIGNUM,
                               q: *mut ffi::BIGNUM,
-                              g: *mut ffi::BIGNUM) -> c_int {
+                              g: *mut ffi::BIGNUM)
+                              -> c_int {
         (*dh).p = p;
         (*dh).q = q;
         (*dh).g = g;
@@ -94,25 +79,25 @@ mod compat {
 
 #[cfg(test)]
 mod tests {
-    use super::DH;
+    use dh::Dh;
     use bn::BigNum;
     use ssl::{SslMethod, SslContext};
 
     #[test]
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     fn test_dh_rfc5114() {
-        let mut ctx = SslContext::new(SslMethod::tls()).unwrap();
-        let dh1 = DH::get_1024_160().unwrap();
+        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+        let dh1 = Dh::get_1024_160().unwrap();
         ctx.set_tmp_dh(&dh1).unwrap();
-        let dh2 = DH::get_2048_224().unwrap();
+        let dh2 = Dh::get_2048_224().unwrap();
         ctx.set_tmp_dh(&dh2).unwrap();
-        let dh3 = DH::get_2048_256().unwrap();
+        let dh3 = Dh::get_2048_256().unwrap();
         ctx.set_tmp_dh(&dh3).unwrap();
     }
 
     #[test]
     fn test_dh() {
-        let mut ctx = SslContext::new(SslMethod::tls()).unwrap();
+        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         let p = BigNum::from_hex_str("87A8E61DB4B6663CFFBBD19C651959998CEEF608660DD0F25D2CEED4435\
                                       E3B00E00DF8F1D61957D4FAF7DF4561B2AA3016C3D91134096FAA3BF429\
                                       6D830E9A7C209E0C6497517ABD5A8A9D306BCF67ED91F9E6725B4758C02\
@@ -122,7 +107,7 @@ mod tests {
                                       CACB83E6B486F6B3CA3F7971506026C0B857F689962856DED4010ABD0BE\
                                       621C3A3960A54E710C375F26375D7014103A4B54330C198AF126116D227\
                                       6E11715F693877FAD7EF09CADB094AE91E1A1597")
-                    .unwrap();
+            .unwrap();
         let g = BigNum::from_hex_str("3FB32C9B73134D0B2E77506660EDBD484CA7B18F21EF205407F4793A1A0\
                                       BA12510DBC15077BE463FFF4FED4AAC0BB555BE3A6C1B0C6B47B1BC3773\
                                       BF7E8C6F62901228F8C28CBB18A55AE31341000A650196F931C77A57F2D\
@@ -132,19 +117,27 @@ mod tests {
                                       D2BBD2DF016199ECD06E1557CD0915B3353BBB64E0EC377FD028370DF92\
                                       B52C7891428CDC67EB6184B523D1DB246C32F63078490F00EF8D647D148\
                                       D47954515E2327CFEF98C582664B4C0F6CC41659")
-                    .unwrap();
+            .unwrap();
         let q = BigNum::from_hex_str("8CF83642A709A097B447997640129DA299B1A47D1EB3750BA308B0FE64F\
                                       5FBD3")
-                    .unwrap();
-        let dh = DH::from_params(p, g, q).unwrap();
+            .unwrap();
+        let dh = Dh::from_params(p, g, q).unwrap();
         ctx.set_tmp_dh(&dh).unwrap();
     }
 
     #[test]
     fn test_dh_from_pem() {
-        let mut ctx = SslContext::new(SslMethod::tls()).unwrap();
+        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         let params = include_bytes!("../test/dhparams.pem");
-        let dh = DH::from_pem(params).ok().expect("Failed to load PEM");
+        let dh = Dh::from_pem(params).unwrap();
         ctx.set_tmp_dh(&dh).unwrap();
+    }
+
+    #[test]
+    fn test_dh_from_der() {
+        let params = include_bytes!("../test/dhparams.pem");
+        let dh = Dh::from_pem(params).unwrap();
+        let der = dh.to_der().unwrap();
+        Dh::from_der(&der).unwrap();
     }
 }
