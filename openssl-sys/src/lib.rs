@@ -150,6 +150,12 @@ pub const EVP_PKEY_DSA: c_int = NID_dsa;
 pub const EVP_PKEY_DH: c_int = NID_dhKeyAgreement;
 pub const EVP_PKEY_EC: c_int = NID_X9_62_id_ecPublicKey;
 
+pub const EVP_PKEY_ALG_CTRL: c_int = 0x1000;
+
+pub const EVP_PKEY_CTRL_RSA_PADDING: c_int = EVP_PKEY_ALG_CTRL + 1;
+
+pub const EVP_PKEY_CTRL_GET_RSA_PADDING: c_int = EVP_PKEY_ALG_CTRL + 6;
+
 pub const EVP_CTRL_GCM_SET_IVLEN: c_int = 0x9;
 pub const EVP_CTRL_GCM_GET_TAG: c_int = 0x10;
 pub const EVP_CTRL_GCM_SET_TAG: c_int = 0x11;
@@ -1303,6 +1309,15 @@ pub unsafe fn BIO_set_retry_write(b: *mut BIO) {
     BIO_set_flags(b, BIO_FLAGS_WRITE | BIO_FLAGS_SHOULD_RETRY)
 }
 
+// EVP_PKEY_CTX_ctrl macros
+pub unsafe fn EVP_PKEY_CTX_set_rsa_padding(ctx: *mut EVP_PKEY_CTX, pad: c_int) -> c_int {
+    EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, -1, EVP_PKEY_CTRL_RSA_PADDING, pad, ptr::null_mut())
+}
+
+pub unsafe fn EVP_PKEY_CTX_get_rsa_padding(ctx: *mut EVP_PKEY_CTX, ppad: *mut c_int) -> c_int {
+    EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, -1, EVP_PKEY_CTRL_GET_RSA_PADDING, 0, ppad as *mut c_void)
+}
+
 pub unsafe fn SSL_CTX_set_mode(ctx: *mut SSL_CTX, op: c_long) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_MODE, op, ptr::null_mut())
 }
@@ -1631,6 +1646,9 @@ extern {
                                 e: *mut ENGINE,
                                 key: *const c_uchar,
                                 keylen: c_int) -> *mut EVP_PKEY;
+
+
+    pub fn EVP_PKEY_CTX_ctrl(ctx: *mut EVP_PKEY_CTX, keytype: c_int, optype: c_int, cmd: c_int, p1: c_int, p2: *mut c_void) -> c_int;
 
     pub fn HMAC_CTX_copy(dst: *mut HMAC_CTX, src: *mut HMAC_CTX) -> c_int;
 

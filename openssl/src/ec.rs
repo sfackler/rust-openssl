@@ -1,4 +1,5 @@
 use ffi;
+use foreign_types::{ForeignType, ForeignTypeRef};
 use std::ptr;
 use std::mem;
 use libc::c_int;
@@ -7,7 +8,6 @@ use {cvt, cvt_n, cvt_p, init};
 use bn::{BigNumRef, BigNumContextRef};
 use error::ErrorStack;
 use nid::Nid;
-use types::{OpenSslType, OpenSslTypeRef};
 
 pub const POINT_CONVERSION_COMPRESSED: PointConversionForm =
     PointConversionForm(ffi::point_conversion_form_t::POINT_CONVERSION_COMPRESSED);
@@ -29,7 +29,13 @@ pub struct PointConversionForm(ffi::point_conversion_form_t);
 #[derive(Copy, Clone)]
 pub struct Asn1Flag(c_int);
 
-type_!(EcGroup, EcGroupRef, ffi::EC_GROUP, ffi::EC_GROUP_free);
+foreign_type! {
+    type CType = ffi::EC_GROUP;
+    fn drop = ffi::EC_GROUP_free;
+
+    pub struct EcGroup;
+    pub struct EcGroupRef;
+}
 
 impl EcGroup {
     /// Returns the group of a standard named curve.
@@ -103,7 +109,13 @@ impl EcGroupRef {
     }
 }
 
-type_!(EcPoint, EcPointRef, ffi::EC_POINT, ffi::EC_POINT_free);
+foreign_type! {
+    type CType = ffi::EC_POINT;
+    fn drop = ffi::EC_POINT_free;
+
+    pub struct EcPoint;
+    pub struct EcPointRef;
+}
 
 impl EcPointRef {
     /// Computes `a + b`, storing the result in `self`.
@@ -253,7 +265,13 @@ impl EcPoint {
     }
 }
 
-type_!(EcKey, EcKeyRef, ffi::EC_KEY, ffi::EC_KEY_free);
+foreign_type! {
+    type CType = ffi::EC_KEY;
+    fn drop = ffi::EC_KEY_free;
+
+    pub struct EcKey;
+    pub struct EcKeyRef;
+}
 
 impl EcKeyRef {
     private_key_to_pem!(ffi::PEM_write_bio_ECPrivateKey);
@@ -355,7 +373,14 @@ impl EcKey {
     private_key_from_der!(EcKey, ffi::d2i_ECPrivateKey);
 }
 
-type_!(EcKeyBuilder, EcKeyBuilderRef, ffi::EC_KEY, ffi::EC_KEY_free);
+
+foreign_type! {
+    type CType = ffi::EC_KEY;
+    fn drop = ffi::EC_KEY_free;
+
+    pub struct EcKeyBuilder;
+    pub struct EcKeyBuilderRef;
+}
 
 impl EcKeyBuilder {
     pub fn new() -> Result<EcKeyBuilder, ErrorStack> {

@@ -1,16 +1,22 @@
-use error::ErrorStack;
 use ffi;
+use foreign_types::ForeignTypeRef;
 use libc::{c_int, c_char, c_void};
 use std::fmt;
 use std::ptr;
 
+use {cvt, cvt_p};
 use bio::MemBioSlice;
 use bn::BigNumRef;
-use {cvt, cvt_p};
-use types::OpenSslTypeRef;
+use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb_old};
 
-type_!(Dsa, DsaRef, ffi::DSA, ffi::DSA_free);
+foreign_type! {
+    type CType = ffi::DSA;
+    fn drop = ffi::DSA_free;
+
+    pub struct Dsa;
+    pub struct DsaRef;
+}
 
 impl DsaRef {
     private_key_to_pem!(ffi::PEM_write_bio_DSAPrivateKey);

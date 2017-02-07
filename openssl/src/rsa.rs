@@ -3,23 +3,39 @@ use std::fmt;
 use std::ptr;
 use std::mem;
 use libc::{c_int, c_void, c_char};
+use foreign_types::ForeignTypeRef;
 
 use {cvt, cvt_p, cvt_n};
 use bn::{BigNum, BigNumRef};
 use bio::MemBioSlice;
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb_old};
-use types::OpenSslTypeRef;
 
 /// Type of encryption padding to use.
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Padding(c_int);
+
+impl Padding {
+    pub fn from_raw(value: c_int) -> Padding {
+        Padding(value)
+    }
+
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
+}
 
 pub const NO_PADDING: Padding = Padding(ffi::RSA_NO_PADDING);
 pub const PKCS1_PADDING: Padding = Padding(ffi::RSA_PKCS1_PADDING);
 pub const PKCS1_OAEP_PADDING: Padding = Padding(ffi::RSA_PKCS1_OAEP_PADDING);
 
-type_!(Rsa, RsaRef, ffi::RSA, ffi::RSA_free);
+foreign_type! {
+    type CType = ffi::RSA;
+    fn drop = ffi::RSA_free;
+
+    pub struct Rsa;
+    pub struct RsaRef;
+}
 
 impl RsaRef {
     private_key_to_pem!(ffi::PEM_write_bio_RSAPrivateKey);
@@ -342,7 +358,6 @@ mod compat {
         1 // TODO: is this right? should it be 0? what's success?
     }
 }
-
 
 #[cfg(test)]
 mod test {

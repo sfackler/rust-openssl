@@ -71,6 +71,7 @@
 //! }
 //! ```
 use ffi;
+use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_void, c_long, c_ulong};
 use libc::{c_uchar, c_uint};
 use std::any::Any;
@@ -102,7 +103,6 @@ use x509::store::{X509StoreBuilderRef, X509StoreRef};
 use verify::X509VerifyParamRef;
 use pkey::PKeyRef;
 use error::ErrorStack;
-use types::{OpenSslType, OpenSslTypeRef};
 use util::Opaque;
 use stack::{Stack, StackRef};
 
@@ -966,7 +966,13 @@ impl SslContextBuilder {
     }
 }
 
-type_!(SslContext, SslContextRef, ffi::SSL_CTX, ffi::SSL_CTX_free);
+foreign_type! {
+    type CType = ffi::SSL_CTX;
+    fn drop = ffi::SSL_CTX_free;
+
+    pub struct SslContext;
+    pub struct SslContextRef;
+}
 
 unsafe impl Send for SslContext {}
 unsafe impl Sync for SslContext {}
@@ -1051,7 +1057,7 @@ pub struct CipherBits {
 
 pub struct SslCipher(*mut ffi::SSL_CIPHER);
 
-impl OpenSslType for SslCipher {
+impl ForeignType for SslCipher {
     type CType = ffi::SSL_CIPHER;
     type Ref = SslCipherRef;
 
@@ -1076,7 +1082,7 @@ impl DerefMut for SslCipher {
 
 pub struct SslCipherRef(Opaque);
 
-impl OpenSslTypeRef for SslCipherRef {
+impl ForeignTypeRef for SslCipherRef {
     type CType = ffi::SSL_CIPHER;
 }
 
@@ -1124,7 +1130,13 @@ impl SslCipherRef {
     }
 }
 
-type_!(SslSession, SslSessionRef, ffi::SSL_SESSION, ffi::SSL_SESSION_free);
+foreign_type! {
+    type CType = ffi::SSL_SESSION;
+    fn drop = ffi::SSL_SESSION_free;
+
+    pub struct SslSession;
+    pub struct SslSessionRef;
+}
 
 impl SslSessionRef {
     /// Returns the SSL session ID.
@@ -1149,7 +1161,13 @@ impl SslSessionRef {
     }
 }
 
-type_!(Ssl, SslRef, ffi::SSL, ffi::SSL_free);
+foreign_type! {
+    type CType = ffi::SSL;
+    fn drop = ffi::SSL_free;
+
+    pub struct Ssl;
+    pub struct SslRef;
+}
 
 impl fmt::Debug for SslRef {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {

@@ -2,18 +2,24 @@ use libc::{c_void, c_char, c_int};
 use std::ptr;
 use std::mem;
 use ffi;
+use foreign_types::{Opaque, ForeignType, ForeignTypeRef};
 
 use {cvt, cvt_p};
 use bio::MemBioSlice;
 use dh::Dh;
 use dsa::Dsa;
 use ec::EcKey;
-use rsa::Rsa;
+use rsa::{Rsa, Padding};
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb_old};
-use types::{OpenSslType, OpenSslTypeRef};
 
-type_!(PKey, PKeyRef, ffi::EVP_PKEY, ffi::EVP_PKEY_free);
+foreign_type! {
+    type CType = ffi::EVP_PKEY;
+    fn drop = ffi::EVP_PKEY_free;
+
+    pub struct PKey;
+    pub struct PKeyRef;
+}
 
 impl PKeyRef {
     /// Returns a copy of the internal RSA key.
@@ -149,6 +155,29 @@ impl PKey {
             Ok(PKey::from_ptr(evp))
         }
     }
+}
+
+pub struct PKeyCtxRef(Opaque);
+
+impl PKeyCtxRef {
+    pub fn set_rsa_padding(&mut self, pad: Padding) -> Result<(), ErrorStack> {
+        unsafe {
+            try!(cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(self.as_ptr(), pad.as_raw())));
+        }
+        Ok(())
+    }
+
+    pub fn rsa_padding(&self) -> Result<Padding, ErrorStack> {
+        let mut pad: c_int = 0;
+        unsafe {
+            try!(cvt(ffi::EVP_PKEY_CTX_get_rsa_padding(self.as_ptr(), &mut pad)));
+        };
+        Ok(Padding::from_raw(pad))
+    }
+}
+
+impl ForeignTypeRef for PKeyCtxRef {
+    type CType = ffi::EVP_PKEY_CTX;
 }
 
 #[cfg(test)]

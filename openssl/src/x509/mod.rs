@@ -1,3 +1,5 @@
+use ffi;
+use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_char, c_int, c_long, c_ulong};
 use std::borrow::Borrow;
 use std::collections::HashMap;
@@ -17,9 +19,7 @@ use hash::MessageDigest;
 use pkey::{PKey, PKeyRef};
 use rand::rand_bytes;
 use error::ErrorStack;
-use ffi;
 use nid::Nid;
-use types::{OpenSslType, OpenSslTypeRef};
 use string::OpensslString;
 use stack::{Stack, StackRef, Stackable};
 
@@ -53,7 +53,13 @@ pub const X509_FILETYPE_PEM: X509FileType = X509FileType(ffi::X509_FILETYPE_PEM)
 pub const X509_FILETYPE_ASN1: X509FileType = X509FileType(ffi::X509_FILETYPE_ASN1);
 pub const X509_FILETYPE_DEFAULT: X509FileType = X509FileType(ffi::X509_FILETYPE_DEFAULT);
 
-type_!(X509StoreContext, X509StoreContextRef, ffi::X509_STORE_CTX, ffi::X509_STORE_CTX_free);
+foreign_type! {
+    type CType = ffi::X509_STORE_CTX;
+    fn drop = ffi::X509_STORE_CTX_free;
+
+    pub struct X509StoreContext;
+    pub struct X509StoreContextRef;
+}
 
 impl X509StoreContextRef {
     pub fn error(&self) -> Option<X509VerifyError> {
@@ -354,7 +360,13 @@ impl X509Generator {
     }
 }
 
-type_!(X509, X509Ref, ffi::X509, ffi::X509_free);
+foreign_type! {
+    type CType = ffi::X509;
+    fn drop = ffi::X509_free;
+
+    pub struct X509;
+    pub struct X509Ref;
+}
 
 impl X509Ref {
     pub fn subject_name(&self) -> &X509NameRef {
@@ -513,7 +525,13 @@ impl Stackable for X509 {
     type StackType = ffi::stack_st_X509;
 }
 
-type_!(X509Name, X509NameRef, ffi::X509_NAME, ffi::X509_NAME_free);
+foreign_type! {
+    type CType = ffi::X509_NAME;
+    fn drop = ffi::X509_NAME_free;
+
+    pub struct X509Name;
+    pub struct X509NameRef;
+}
 
 impl X509Name {
     /// Loads subject names from a file containing PEM-formatted certificates.
@@ -567,7 +585,13 @@ impl<'a> Iterator for X509NameEntries<'a> {
     }
 }
 
-type_!(X509NameEntry, X509NameEntryRef, ffi::X509_NAME_ENTRY, ffi::X509_NAME_ENTRY_free);
+foreign_type! {
+    type CType = ffi::X509_NAME_ENTRY;
+    fn drop = ffi::X509_NAME_ENTRY_free;
+
+    pub struct X509NameEntry;
+    pub struct X509NameEntryRef;
+}
 
 impl X509NameEntryRef {
     pub fn data(&self) -> &Asn1StringRef {
@@ -578,7 +602,13 @@ impl X509NameEntryRef {
     }
 }
 
-type_!(X509Req, X509ReqRef, ffi::X509_REQ, ffi::X509_REQ_free);
+foreign_type! {
+    type CType = ffi::X509_REQ;
+    fn drop = ffi::X509_REQ_free;
+
+    pub struct X509Req;
+    pub struct X509ReqRef;
+}
 
 impl X509Req {
     /// Reads CSR from PEM
@@ -751,7 +781,13 @@ impl X509VerifyError {
     }
 }
 
-type_!(GeneralName, GeneralNameRef, ffi::GENERAL_NAME, ffi::GENERAL_NAME_free);
+foreign_type! {
+    type CType = ffi::GENERAL_NAME;
+    fn drop = ffi::GENERAL_NAME_free;
+
+    pub struct GeneralName;
+    pub struct GeneralNameRef;
+}
 
 impl GeneralNameRef {
     /// Returns the contents of this `GeneralName` if it is a `dNSName`.

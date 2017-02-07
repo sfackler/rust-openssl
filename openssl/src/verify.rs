@@ -1,9 +1,9 @@
 use libc::c_uint;
 use ffi;
+use foreign_types::ForeignTypeRef;
 
 use cvt;
 use error::ErrorStack;
-use types::OpenSslTypeRef;
 
 bitflags! {
     pub flags X509CheckFlags: c_uint {
@@ -19,7 +19,13 @@ bitflags! {
     }
 }
 
-type_!(X509VerifyParam, X509VerifyParamRef, ffi::X509_VERIFY_PARAM, ffi::X509_VERIFY_PARAM_free);
+foreign_type! {
+    type CType = ffi::X509_VERIFY_PARAM;
+    fn drop = ffi::X509_VERIFY_PARAM_free;
+
+    pub struct X509VerifyParam;
+    pub struct X509VerifyParamRef;
+}
 
 impl X509VerifyParamRef {
     pub fn set_hostflags(&mut self, hostflags: X509CheckFlags) {

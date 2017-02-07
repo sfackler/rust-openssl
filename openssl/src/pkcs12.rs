@@ -1,6 +1,7 @@
 //! PKCS #12 archives.
 
 use ffi;
+use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::ptr;
 use std::ffi::CString;
@@ -9,11 +10,16 @@ use {cvt, cvt_p};
 use pkey::{PKey, PKeyRef};
 use error::ErrorStack;
 use x509::X509;
-use types::{OpenSslType, OpenSslTypeRef};
 use stack::Stack;
 use nid;
 
-type_!(Pkcs12, Pkcs12Ref, ffi::PKCS12, ffi::PKCS12_free);
+foreign_type! {
+    type CType = ffi::PKCS12;
+    fn drop = ffi::PKCS12_free;
+
+    pub struct Pkcs12;
+    pub struct Pkcs12Ref;
+}
 
 impl Pkcs12Ref {
     to_der!(ffi::i2d_PKCS12);
