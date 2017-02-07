@@ -93,7 +93,13 @@ impl Asn1StringRef {
     }
 }
 
-type_!(Asn1Integer, Asn1IntegerRef, ffi::ASN1_INTEGER, ffi::ASN1_INTEGER_free);
+foreign_type! {
+    type CType = ffi::ASN1_INTEGER;
+    fn drop = ffi::ASN1_INTEGER_free;
+
+    pub struct Asn1Integer;
+    pub struct Asn1IntegerRef;
+}
 
 impl Asn1IntegerRef {
     pub fn get(&self) -> i64 {
