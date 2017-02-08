@@ -9,7 +9,7 @@ use ssl::{SslMethod, SslContextBuilder};
 use x509::{X509, X509Generator};
 use x509::extension::Extension::{KeyUsage, ExtKeyUsage, SubjectAltName, OtherNid, OtherStr};
 use x509::extension::AltNameOption as SAN;
-use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment};
+use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment, KeyCertSign, CRLSign};
 use x509::extension::ExtKeyUsageOption::{self, ClientAuth, ServerAuth};
 use nid;
 
@@ -219,4 +219,40 @@ fn ecdsa_cert() {
     ctx.set_certificate(&cert).unwrap();
     ctx.set_private_key(&key).unwrap();
     ctx.check_private_key().unwrap();
+}
+
+#[test]
+fn test_ca_sign_certificate() {
+    let ca_pkey = pkey();
+    let ca_cert = X509Generator::new()
+        .set_valid_period(365 * 10)
+        .add_name("CN".to_string(), "my CA".to_string())
+        .set_sign_hash(MessageDigest::sha256())
+        .add_extension(KeyUsage(vec![KeyCertSign, CRLSign]))
+        .add_extension(OtherNid(nid::BASIC_CONSTRAINTS, "critical,CA:TRUE".to_owned()))
+        .sign(&ca_pkey)
+        .expect("Failed to generate CA certificate");
+
+    let cert_pkey = pkey();
+    let cert = X509Generator::new()
+        .set_valid_period(365 * 2)
+        .add_name("CN".to_string(), "my certificate".to_string())
+        .set_sign_hash(MessageDigest::sha256())
+        .add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]))
+        .sign_by_ca(&cert_pkey, &ca_cert, &ca_pkey)
+        .expect("Failed to generate certificate");
+
+    let ca_subject = ca_cert.subject_name();
+    let ca_cn_subject = match ca_subject.entries_by_nid(nid::COMMONNAME).next() {
+        Some(x) => x,
+        None => panic!("Failed to read CN from cert"),
+    };
+    assert_eq!(ca_cn_subject.data().as_slice(), b"my CA");
+    let cert_subject = cert.subject_name();
+    let cert_cn_subject = match cert_subject.entries_by_nid(nid::COMMONNAME).next() {
+        Some(x) => x,
+        None => panic!("Failed to read CN from cert"),
+    };
+    assert_eq!(cert_cn_subject.data().as_slice(), b"my certificate");
+
 }

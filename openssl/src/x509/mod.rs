@@ -282,12 +282,11 @@ impl X509Generator {
         Ok(((res as c_ulong) >> 1) as c_long)
     }
 
-    /// Sets the certificate public-key, then self-sign and return it
-    pub fn sign(&self, p_key: &PKeyRef) -> Result<X509, ErrorStack> {
+    fn sign_certificate(&self, x509: &X509, issuer: &X509, issuer_pkey: &PKeyRef) -> Result<(), ErrorStack> {
+
         ffi::init();
 
         unsafe {
-            let x509 = X509::from_ptr(try!(cvt_p(ffi::X509_new())));
 
             try!(cvt(ffi::X509_set_version(x509.as_ptr(), 2)));
             try!(cvt(ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509.as_ptr()),
@@ -296,15 +295,70 @@ impl X509Generator {
             let not_before = try!(Asn1Time::days_from_now(0));
             let not_after = try!(Asn1Time::days_from_now(self.days));
 
-            try!(cvt(X509_set_notBefore(x509.as_ptr(), not_before.as_ptr() as *const _)));
+            try!(cvt(ffi::X509_set_notBefore(x509.as_ptr(), not_before.as_ptr() as *const _)));
             // If prev line succeded - ownership should go to cert
             mem::forget(not_before);
 
-            try!(cvt(X509_set_notAfter(x509.as_ptr(), not_after.as_ptr() as *const _)));
+            try!(cvt(ffi::X509_set_notAfter(x509.as_ptr(), not_after.as_ptr() as *const _)));
             // If prev line succeded - ownership should go to cert
             mem::forget(not_after);
 
-            try!(cvt(ffi::X509_set_pubkey(x509.as_ptr(), p_key.as_ptr())));
+            try!(cvt(ffi::X509_set_issuer_name(x509.as_ptr(), ffi::X509_get_subject_name(issuer.as_ptr()))));
+
+            for (exttype, ext) in self.extensions.iter() {
+                try!(X509Generator::add_extension_internal(x509.as_ptr(),
+                                                           &exttype,
+                                                           &ext.to_string()));
+            }
+
+
+            let hash_fn = self.hash_type.as_ptr();
+
+            try!(cvt(ffi::X509_sign(x509.as_ptr(), issuer_pkey.as_ptr(), hash_fn)));
+
+            Ok(())
+        }
+    }
+
+    /// Sets the certificate public-key, then self-sign and return it
+    pub fn sign(&self, subject_pkey: &PKeyRef) -> Result<X509, ErrorStack> {
+
+        ffi::init();
+
+        unsafe {
+            let x509 = X509::from_ptr(try!(cvt_p(ffi::X509_new())));
+
+            try!(cvt(ffi::X509_set_pubkey(x509.as_ptr(), subject_pkey.as_ptr())));
+
+            let name = try!(cvt_p(ffi::X509_get_subject_name(x509.as_ptr())));
+
+            let default = [("CN", "rust-openssl")];
+            let default_iter = &mut default.iter().map(|&(k, v)| (k, v));
+            let arg_iter = &mut self.names.iter().map(|&(ref k, ref v)| (&k[..], &v[..]));
+            let iter: &mut Iterator<Item = (&str, &str)> = if self.names.len() == 0 {
+                default_iter
+            } else {
+                arg_iter
+            };
+
+            for (key, val) in iter {
+                try!(X509Generator::add_name_internal(name, &key, &val));
+
+            }
+            
+            try!(self.sign_certificate(&x509, &x509, subject_pkey));
+
+            Ok(x509)
+        }
+    }
+
+    /// Sets the certificate public-key, then signs it by the CA key and certificate and return it
+    /// Note: That the bit-length of the private key is used (set_bitlength is ignored)
+    pub fn sign_by_ca(&self, subject_pkey: &PKeyRef, ca_cert: &X509, ca_pkey: &PKeyRef) -> Result<X509, ErrorStack> {
+        ffi::init();
+
+        unsafe {
+            let x509 = X509::from_ptr(try!(cvt_p(ffi::X509_new())));
 
             let name = try!(cvt_p(ffi::X509_get_subject_name(x509.as_ptr())));
 
@@ -320,16 +374,11 @@ impl X509Generator {
             for (key, val) in iter {
                 try!(X509Generator::add_name_internal(name, &key, &val));
             }
-            try!(cvt(ffi::X509_set_issuer_name(x509.as_ptr(), name)));
 
-            for (exttype, ext) in self.extensions.iter() {
-                try!(X509Generator::add_extension_internal(x509.as_ptr(),
-                                                           &exttype,
-                                                           &ext.to_string()));
-            }
+            try!(cvt(ffi::X509_set_pubkey(x509.as_ptr(), subject_pkey.as_ptr())));
 
-            let hash_fn = self.hash_type.as_ptr();
-            try!(cvt(ffi::X509_sign(x509.as_ptr(), p_key.as_ptr(), hash_fn)));
+            try!(self.sign_certificate(&x509, ca_cert, ca_pkey));
+
             Ok(x509)
         }
     }

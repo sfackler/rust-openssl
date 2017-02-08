@@ -1913,6 +1913,7 @@ extern {
     pub fn X509_free(x: *mut X509);
     pub fn X509_REQ_free(x: *mut X509_REQ);
     pub fn X509_get_serialNumber(x: *mut X509) -> *mut ASN1_INTEGER;
+    pub fn X509_get_issuer_name(x: *mut X509) -> *mut X509_NAME;
     pub fn X509_gmtime_adj(time: *mut ASN1_TIME, adj: c_long) -> *mut ASN1_TIME;
     pub fn X509_new() -> *mut X509;
     pub fn X509_set_issuer_name(x: *mut X509, name: *mut X509_NAME) -> c_int;
