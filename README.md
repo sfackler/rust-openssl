@@ -57,6 +57,12 @@ Homebrew:
 brew install openssl
 ```
 
+> Occasionally an update of XCode or MacOS will cause the linker to fail after complication, to rectify this you may want to try and run:
+
+```bash
+xcode-select --install
+```
+
 If Homebrew is installed to the default location of `/usr/local`, OpenSSL will be
 automatically detected.
 
