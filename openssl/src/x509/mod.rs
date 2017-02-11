@@ -13,7 +13,7 @@ use std::slice;
 use std::str;
 
 use {cvt, cvt_p};
-use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef};
+use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef, Asn1BitStringRef};
 use bio::MemBioSlice;
 use hash::MessageDigest;
 use pkey::{PKey, PKeyRef};
@@ -410,8 +410,8 @@ impl X509Ref {
         }
     }
 
-    /// Returns certificate Not After validity period.
-    pub fn not_after<'a>(&'a self) -> &'a Asn1TimeRef {
+    /// Returns the certificate's Not After validity period.
+    pub fn not_after(&self) -> &Asn1TimeRef {
         unsafe {
             let date = compat::X509_get_notAfter(self.as_ptr());
             assert!(!date.is_null());
@@ -419,12 +419,22 @@ impl X509Ref {
         }
     }
 
-    /// Returns certificate Not Before validity period.
-    pub fn not_before<'a>(&'a self) -> &'a Asn1TimeRef {
+    /// Returns the certificate's Not Before validity period.
+    pub fn not_before(&self) -> &Asn1TimeRef {
         unsafe {
             let date = compat::X509_get_notBefore(self.as_ptr());
             assert!(!date.is_null());
             Asn1TimeRef::from_ptr(date)
+        }
+    }
+
+    /// Returns the certificate's signature
+    pub fn signature(&self) -> &Asn1BitStringRef {
+        unsafe {
+            let mut signature = ptr::null();
+            compat::X509_get0_signature(&mut signature, ptr::null_mut(), self.as_ptr());
+            assert!(!signature.is_null());
+            Asn1BitStringRef::from_ptr(signature as *mut _)
         }
     }
 
@@ -815,6 +825,7 @@ mod compat {
     pub use ffi::X509_getm_notBefore as X509_get_notBefore;
     pub use ffi::X509_up_ref;
     pub use ffi::X509_get0_extensions;
+    pub use ffi::X509_get0_signature;
 }
 
 #[cfg(ossl10x)]
@@ -846,6 +857,17 @@ mod compat {
             0 as *mut _
         } else {
             (*info).extensions
+        }
+    }
+
+    pub unsafe fn X509_get0_signature(psig: *mut *const ffi::ASN1_BIT_STRING,
+                                      palg: *mut *const ffi::X509_ALGOR, 
+                                      x: *const ffi::X509) {
+        if !psig.is_null() {
+            *psig = (*x).signature;
+        }
+        if !palg.is_null() {
+            *palg = (*x).sig_alg;
         }
     }
 }

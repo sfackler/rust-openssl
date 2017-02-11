@@ -127,6 +127,7 @@ extern {
     pub fn SSL_CTX_clear_options(ctx: *mut ::SSL_CTX, op: c_ulong) -> c_ulong;
     pub fn X509_getm_notAfter(x: *const ::X509) -> *mut ::ASN1_TIME;
     pub fn X509_getm_notBefore(x: *const ::X509) -> *mut ::ASN1_TIME;
+    pub fn X509_get0_signature(psig: *mut *const ::ASN1_BIT_STRING, palg: *mut *const ::X509_ALGOR, x: *const ::X509);
     pub fn DH_set0_pqg(dh: *mut ::DH,
                        p: *mut ::BIGNUM,
                        q: *mut ::BIGNUM,

@@ -247,8 +247,8 @@ pub struct DH {
 #[repr(C)]
 pub struct X509 {
     pub cert_info: *mut X509_CINF,
-    sig_alg: *mut c_void,
-    signature: *mut c_void,
+    pub sig_alg: *mut ::X509_ALGOR,
+    pub signature: *mut ::ASN1_BIT_STRING,
     pub valid: c_int,
     pub references: c_int,
     pub name: *mut c_char,

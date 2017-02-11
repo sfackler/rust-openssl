@@ -48,6 +48,7 @@ pub enum OCSP_REQUEST {}
 pub enum OCSP_ONEREQ {}
 pub enum SSL_CIPHER {}
 pub enum SSL_METHOD {}
+pub enum X509_ALGOR {}
 pub enum X509_CRL {}
 pub enum X509_EXTENSION {}
 pub enum X509_NAME {}
