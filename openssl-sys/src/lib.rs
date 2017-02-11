@@ -26,8 +26,10 @@ pub use libressl::*;
 pub enum ASN1_INTEGER {}
 pub enum ASN1_GENERALIZEDTIME {}
 pub enum ASN1_STRING {}
+pub enum ASN1_BIT_STRING {}
 pub enum ASN1_TIME {}
 pub enum ASN1_TYPE {}
+pub enum ASN1_OBJECT {}
 pub enum BN_CTX {}
 pub enum BN_GENCB {}
 pub enum CONF {}
@@ -1408,6 +1410,8 @@ extern {
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
     pub fn ASN1_TIME_free(tm: *mut ASN1_TIME);
     pub fn ASN1_TIME_print(b: *mut BIO, tm: *const ASN1_TIME) -> c_int;
+    pub fn ASN1_BIT_STRING_free(x: *mut ASN1_BIT_STRING);
+    pub fn ASN1_OBJECT_free(x: *mut ASN1_OBJECT);
 
     pub fn BIO_ctrl(b: *mut BIO, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
     pub fn BIO_free_all(b: *mut BIO);
@@ -1651,6 +1655,9 @@ extern {
     pub fn EVP_PKEY_CTX_ctrl(ctx: *mut EVP_PKEY_CTX, keytype: c_int, optype: c_int, cmd: c_int, p1: c_int, p2: *mut c_void) -> c_int;
 
     pub fn HMAC_CTX_copy(dst: *mut HMAC_CTX, src: *mut HMAC_CTX) -> c_int;
+
+    pub fn OBJ_obj2nid(o: *const ASN1_OBJECT) -> c_int;
+    pub fn OBJ_obj2txt(buf: *mut c_char, buf_len: c_int, a: *const ASN1_OBJECT, no_name: c_int) -> c_int;
 
     pub fn OCSP_BASICRESP_new() -> *mut OCSP_BASICRESP;
     pub fn OCSP_BASICRESP_free(r: *mut OCSP_BASICRESP);
@@ -1924,6 +1931,8 @@ extern {
     pub fn X509_verify_cert_error_string(n: c_long) -> *const c_char;
     pub fn X509_get1_ocsp(x: *mut X509) -> *mut stack_st_OPENSSL_STRING;
     pub fn X509_check_issued(issuer: *mut X509, subject: *mut X509) -> c_int;
+
+    pub fn X509_ALGOR_free(x: *mut X509_ALGOR);
 
     pub fn X509_EXTENSION_free(ext: *mut X509_EXTENSION);
 
