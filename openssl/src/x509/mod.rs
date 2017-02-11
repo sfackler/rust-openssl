@@ -873,6 +873,7 @@ mod compat {
     pub use ffi::X509_getm_notAfter as X509_get_notAfter;
     pub use ffi::X509_getm_notBefore as X509_get_notBefore;
     pub use ffi::X509_up_ref;
+    pub use ffi::X509_get0_extensions;
     pub use ffi::X509_REQ_get_version;
     pub use ffi::X509_REQ_get_subject_name;
     pub use ffi::X509_get0_signature;
