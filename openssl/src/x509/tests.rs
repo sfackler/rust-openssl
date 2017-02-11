@@ -1,14 +1,17 @@
-use serialize::hex::FromHex;
+use hex::{FromHex, ToHex};
 
 use asn1::Asn1Time;
 use bn::{BigNum, MSB_MAYBE_ZERO};
+use ec::{NAMED_CURVE, EcGroup, EcKey};
 use hash::MessageDigest;
+use nid::X9_62_PRIME256V1;
 use pkey::PKey;
 use rsa::Rsa;
 use stack::Stack;
 use x509::{X509, X509Generator, X509Name, X509Req};
 use x509::extension::{Extension, BasicConstraints, KeyUsage, ExtendedKeyUsage,
                       SubjectKeyIdentifier, AuthorityKeyIdentifier, SubjectAlternativeName};
+use ssl::{SslMethod, SslContextBuilder};
 use x509::extension::AltNameOption as SAN;
 use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment};
 use x509::extension::ExtKeyUsageOption::{self, ClientAuth, ServerAuth};
@@ -76,7 +79,12 @@ fn test_req_gen() {
     let pkey = pkey();
 
     let req = get_generator().request(&pkey).unwrap();
-    req.to_pem().unwrap();
+    let reqpem = req.to_pem().unwrap();
+
+    let req = X509Req::from_pem(&reqpem).ok().expect("Failed to load PEM");
+    let cn = (*req).subject_name().entries_by_nid(nid::COMMONNAME).next().unwrap();
+    assert_eq!(0, (*req).version());
+    assert_eq!(cn.data().as_slice(), b"test_me");
 
     // FIXME: check data in result to be correct, needs implementation
     // of X509_REQ getters
@@ -89,7 +97,7 @@ fn test_cert_loading() {
     let fingerprint = cert.fingerprint(MessageDigest::sha1()).unwrap();
 
     let hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
-    let hash_vec = hash_str.from_hex().unwrap();
+    let hash_vec = Vec::from_hex(hash_str).unwrap();
 
     assert_eq!(fingerprint, hash_vec);
 }
@@ -136,7 +144,7 @@ fn test_nid_values() {
     assert_eq!(email.data().as_slice(), b"test@example.com");
 
     let friendly = subject.entries_by_nid(nid::FRIENDLYNAME).next().unwrap();
-    assert_eq!(&*friendly.data().as_utf8().unwrap(), "Example");
+    assert_eq!(&**friendly.data().as_utf8().unwrap(), "Example");
 }
 
 #[test]
@@ -259,4 +267,65 @@ fn x509_req_builder() {
     builder.add_extensions(&extensions).unwrap();
 
     builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+}
+
+#[test]
+fn test_stack_from_pem() {
+    let certs = include_bytes!("../../test/certs.pem");
+    let certs = X509::stack_from_pem(certs).unwrap();
+
+    assert_eq!(certs.len(), 2);
+    assert_eq!(certs[0].fingerprint(MessageDigest::sha1()).unwrap().to_hex(),
+        "59172d9313e84459bcff27f967e79e6e9217e584");
+    assert_eq!(certs[1].fingerprint(MessageDigest::sha1()).unwrap().to_hex(),
+        "c0cbdf7cdd03c9773e5468e1f6d2da7d5cbb1875");
+}
+
+#[test]
+fn issued() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+
+    ca.issued(&cert).unwrap();
+    cert.issued(&cert).err().unwrap();
+}
+
+#[test]
+fn ecdsa_cert() {
+    let mut group = EcGroup::from_curve_name(X9_62_PRIME256V1).unwrap();
+    group.set_asn1_flag(NAMED_CURVE);
+    let key = EcKey::generate(&group).unwrap();
+    let key = PKey::from_ec_key(key).unwrap();
+
+    let cert = X509Generator::new()
+        .set_valid_period(365)
+        .add_name("CN".to_owned(), "TestServer".to_owned())
+        .set_sign_hash(MessageDigest::sha256())
+        .sign(&key)
+        .unwrap();
+
+    let mut ctx = SslContextBuilder::new(SslMethod::tls()).unwrap();
+    ctx.set_certificate(&cert).unwrap();
+    ctx.set_private_key(&key).unwrap();
+    ctx.check_private_key().unwrap();
+}
+
+#[test]
+fn signature() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let signature = cert.signature();
+    assert_eq!(signature.as_slice().to_hex(),
+               "4af607b889790b43470442cfa551cdb8b6d0b0340d2958f76b9e3ef6ad4992230cead6842587f0ecad5\
+                78e6e11a221521e940187e3d6652de14e84e82f6671f097cc47932e022add3c0cb54a26bf27fa84c107\
+                4971caa6bee2e42d34a5b066c427f2d452038082b8073993399548088429de034fdd589dcfb0dd33be7\
+                ebdfdf698a28d628a89568881d658151276bde333600969502c4e62e1d3470a683364dfb241f78d310a\
+                89c119297df093eb36b7fd7540224f488806780305d1e79ffc938fe2275441726522ab36d88348e6c51\
+                f13dcc46b5e1cdac23c974fd5ef86aa41e91c9311655090a52333bc79687c748d833595d4c5f987508f\
+                e121997410d37c");
+    let algorithm = cert.signature_algorithm();
+    assert_eq!(algorithm.object().nid(), nid::SHA256WITHRSAENCRYPTION);
+    assert_eq!(algorithm.object().to_string(), "sha256WithRSAEncryption");
 }

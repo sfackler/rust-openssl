@@ -1,32 +1,30 @@
-use ffi;
 use error::ErrorStack;
-use bio::MemBioSlice;
-use std::ptr;
+use ffi;
+use foreign_types::ForeignTypeRef;
 use std::mem;
+use std::ptr;
 
-use {cvt, cvt_p};
-use bio::MemBio;
+use {cvt, cvt_p, init};
 use bn::BigNum;
-use types::OpenSslTypeRef;
 
-type_!(Dh, DhRef, ffi::DH, ffi::DH_free);
+foreign_type! {
+    type CType = ffi::DH;
+    fn drop = ffi::DH_free;
+
+    pub struct Dh;
+
+    pub struct DhRef;
+}
 
 impl DhRef {
-    /// Encodes the parameters to PEM.
-    pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-
-        unsafe {
-            try!(cvt(ffi::PEM_write_bio_DHparams(mem_bio.as_ptr(), self.as_ptr())));
-        }
-
-        Ok(mem_bio.get_buf().to_owned())
-    }
+    to_pem!(ffi::PEM_write_bio_DHparams);
+    to_der!(ffi::i2d_DHparams);
 }
 
 impl Dh {
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<Dh, ErrorStack> {
         unsafe {
+            init();
             let dh = Dh(try!(cvt_p(ffi::DH_new())));
             try!(cvt(compat::DH_set0_pqg(dh.0, p.as_ptr(), q.as_ptr(), g.as_ptr())));
             mem::forget((p, g, q));
@@ -34,16 +32,8 @@ impl Dh {
         }
     }
 
-    pub fn from_pem(buf: &[u8]) -> Result<Dh, ErrorStack> {
-        let mem_bio = try!(MemBioSlice::new(buf));
-        unsafe {
-            cvt_p(ffi::PEM_read_bio_DHparams(mem_bio.as_ptr(),
-                                             ptr::null_mut(),
-                                             None,
-                                             ptr::null_mut()))
-                .map(Dh)
-        }
-    }
+    from_pem!(Dh, ffi::PEM_read_bio_DHparams);
+    from_der!(Dh, ffi::d2i_DHparams);
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
@@ -139,7 +129,15 @@ mod tests {
     fn test_dh_from_pem() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         let params = include_bytes!("../test/dhparams.pem");
-        let dh = Dh::from_pem(params).ok().expect("Failed to load PEM");
+        let dh = Dh::from_pem(params).unwrap();
         ctx.set_tmp_dh(&dh).unwrap();
+    }
+
+    #[test]
+    fn test_dh_from_der() {
+        let params = include_bytes!("../test/dhparams.pem");
+        let dh = Dh::from_pem(params).unwrap();
+        let der = dh.to_der().unwrap();
+        Dh::from_der(&der).unwrap();
     }
 }

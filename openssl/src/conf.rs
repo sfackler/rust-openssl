@@ -22,7 +22,13 @@ impl ConfMethod {
     }
 }
 
-type_!(Conf, ConfRef, ffi::CONF, ffi::NCONF_free);
+foreign_type! {
+    type CType = ffi::CONF;
+    fn drop = ffi::NCONF_free;
+
+    pub struct Conf;
+    pub struct ConfRef;
+}
 
 impl Conf {
     pub fn new(method: ConfMethod) -> Result<Conf, ErrorStack> {

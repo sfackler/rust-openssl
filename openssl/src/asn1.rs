@@ -1,5 +1,6 @@
 use ffi;
-use libc::c_long;
+use foreign_types::{ForeignType, ForeignTypeRef};
+use libc::{c_long, c_char, c_int};
 use std::fmt;
 use std::ptr;
 use std::slice;
@@ -7,11 +8,35 @@ use std::str;
 
 use {cvt, cvt_p};
 use bio::MemBio;
-use crypto::CryptoString;
 use error::ErrorStack;
-use types::{OpenSslType, OpenSslTypeRef};
+use nid::Nid;
+use string::OpensslString;
 
-type_!(Asn1Time, Asn1TimeRef, ffi::ASN1_TIME, ffi::ASN1_TIME_free);
+foreign_type! {
+    type CType = ffi::ASN1_GENERALIZEDTIME;
+    fn drop = ffi::ASN1_GENERALIZEDTIME_free;
+
+    pub struct Asn1GeneralizedTime;
+    pub struct Asn1GeneralizedTimeRef;
+}
+
+impl fmt::Display for Asn1GeneralizedTimeRef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        unsafe {
+            let mem_bio = try!(MemBio::new());
+            try!(cvt(ffi::ASN1_GENERALIZEDTIME_print(mem_bio.as_ptr(), self.as_ptr())));
+            write!(f, "{}", str::from_utf8_unchecked(mem_bio.get_buf()))
+        }
+    }
+}
+
+foreign_type! {
+    type CType = ffi::ASN1_TIME;
+    fn drop = ffi::ASN1_TIME_free;
+
+    pub struct Asn1Time;
+    pub struct Asn1TimeRef;
+}
 
 impl fmt::Display for Asn1TimeRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -39,10 +64,16 @@ impl Asn1Time {
     }
 }
 
-type_!(Asn1String, Asn1StringRef, ffi::ASN1_STRING, ffi::ASN1_STRING_free);
+foreign_type! {
+    type CType = ffi::ASN1_STRING;
+    fn drop = ffi::ASN1_STRING_free;
+
+    pub struct Asn1String;
+    pub struct Asn1StringRef;
+}
 
 impl Asn1StringRef {
-    pub fn as_utf8(&self) -> Result<CryptoString, ErrorStack> {
+    pub fn as_utf8(&self) -> Result<OpensslString, ErrorStack> {
         unsafe {
             let mut ptr = ptr::null_mut();
             let len = ffi::ASN1_STRING_to_UTF8(&mut ptr, self.as_ptr());
@@ -50,7 +81,7 @@ impl Asn1StringRef {
                 return Err(ErrorStack::get());
             }
 
-            Ok(CryptoString::from_raw_parts(ptr, len as usize))
+            Ok(OpensslString::from_ptr(ptr as *mut c_char))
         }
     }
 
@@ -63,7 +94,77 @@ impl Asn1StringRef {
     }
 }
 
-type_!(Asn1Integer, Asn1IntegerRef, ffi::ASN1_INTEGER, ffi::ASN1_INTEGER_free);
+foreign_type! {
+    type CType = ffi::ASN1_INTEGER;
+    fn drop = ffi::ASN1_INTEGER_free;
+
+    pub struct Asn1Integer;
+    pub struct Asn1IntegerRef;
+}
+
+impl Asn1IntegerRef {
+    pub fn get(&self) -> i64 {
+        unsafe {
+            ::ffi::ASN1_INTEGER_get(self.as_ptr()) as i64
+        }
+    }
+
+    pub fn set(&mut self, value: i32) -> Result<(), ErrorStack>
+    {
+        unsafe {
+            cvt(::ffi::ASN1_INTEGER_set(self.as_ptr(), value as c_long)).map(|_| ())
+        }
+    }
+}
+
+foreign_type! {
+    type CType = ffi::ASN1_BIT_STRING;
+    fn drop = ffi::ASN1_BIT_STRING_free;
+
+    pub struct Asn1BitString;
+    pub struct Asn1BitStringRef;
+}
+
+impl Asn1BitStringRef {
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe { slice::from_raw_parts(ASN1_STRING_data(self.as_ptr() as *mut _), self.len()) }
+    }
+
+    pub fn len(&self) -> usize {
+        unsafe { ffi::ASN1_STRING_length(self.as_ptr() as *mut _) as usize }
+    }
+}
+
+foreign_type! {
+    type CType = ffi::ASN1_OBJECT;
+    fn drop = ffi::ASN1_OBJECT_free;
+
+    pub struct Asn1Object;
+    pub struct Asn1ObjectRef;
+}
+
+impl Asn1ObjectRef {
+    /// Returns the NID associated with this OID.
+    pub fn nid(&self) -> Nid {
+        unsafe {
+            Nid::from_raw(ffi::OBJ_obj2nid(self.as_ptr()))
+        }
+    }
+}
+
+impl fmt::Display for Asn1ObjectRef {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        unsafe {
+            let mut buf = [0; 80];
+            let len = ffi::OBJ_obj2txt(buf.as_mut_ptr() as *mut _,
+                                       buf.len() as c_int,
+                                       self.as_ptr(),
+                                       0);
+            let s = try!(str::from_utf8(&buf[..len as usize]).map_err(|_| fmt::Error));
+            fmt.write_str(s)
+        }
+    }
+}
 
 #[cfg(any(ossl101, ossl102))]
 use ffi::ASN1_STRING_data;

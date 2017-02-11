@@ -1,13 +1,14 @@
 [package]
 name = "openssl"
-version = "0.9.0"
+version = "0.9.6"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
 repository = "https://github.com/sfackler/rust-openssl"
-documentation = "https://sfackler.github.io/rust-openssl/doc/v0.9.0/openssl"
+documentation = "https://docs.rs/openssl/0.9.6/openssl"
 readme = "../README.md"
 keywords = ["crypto", "tls", "ssl", "dtls"]
+categories = ["cryptography", "api-bindings"]
 build = "build.rs"
 exclude = ["test/*"]
 
@@ -18,12 +19,13 @@ v110 = []
 
 [dependencies]
 bitflags = "0.7"
+foreign-types = { git = "https://github.com/sfackler/foreign-types" }
 lazy_static = "0.2"
 libc = "0.2"
-openssl-sys = { version = "0.9", path = "../openssl-sys" }
+openssl-sys = { version = "0.9.6", path = "../openssl-sys" }
 
 [dev-dependencies]
-rustc-serialize = "0.3"
 tempdir = "0.3"
 winapi = "0.2"
 ws2_32-sys = "0.2"
+hex = "0.2"

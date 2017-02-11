@@ -1,41 +1,31 @@
-use error::ErrorStack;
 use ffi;
+use foreign_types::ForeignTypeRef;
 use libc::{c_int, c_char, c_void};
 use std::fmt;
 use std::ptr;
 
-use bio::{MemBio, MemBioSlice};
-use bn::BigNumRef;
 use {cvt, cvt_p};
-use types::OpenSslTypeRef;
-use util::{CallbackState, invoke_passwd_cb};
+use bio::MemBioSlice;
+use bn::BigNumRef;
+use error::ErrorStack;
+use util::{CallbackState, invoke_passwd_cb_old};
 
-type_!(Dsa, DsaRef, ffi::DSA, ffi::DSA_free);
+foreign_type! {
+    type CType = ffi::DSA;
+    fn drop = ffi::DSA_free;
+
+    pub struct Dsa;
+    pub struct DsaRef;
+}
 
 impl DsaRef {
-    /// Writes an DSA private key as unencrypted PEM formatted data
-    pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        assert!(self.has_private_key());
-        let mem_bio = try!(MemBio::new());
+    private_key_to_pem!(ffi::PEM_write_bio_DSAPrivateKey);
+    public_key_to_pem!(ffi::PEM_write_bio_DSA_PUBKEY);
 
-        unsafe {
-            try!(cvt(ffi::PEM_write_bio_DSAPrivateKey(mem_bio.as_ptr(), self.as_ptr(),
-                                                      ptr::null(), ptr::null_mut(), 0,
-                                                      None, ptr::null_mut())))
-        };
+    private_key_to_der!(ffi::i2d_DSAPrivateKey);
+    public_key_to_der!(ffi::i2d_DSAPublicKey);
 
-        Ok(mem_bio.get_buf().to_owned())
-    }
-
-    /// Writes an DSA public key as PEM formatted data
-    pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        unsafe {
-            try!(cvt(ffi::PEM_write_bio_DSA_PUBKEY(mem_bio.as_ptr(), self.as_ptr())));
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
-
+    // FIXME should return u32
     pub fn size(&self) -> Option<u32> {
         if self.q().is_some() {
             unsafe { Some(ffi::DSA_size(self.as_ptr()) as u32) }
@@ -103,25 +93,12 @@ impl Dsa {
         }
     }
 
-    /// Reads a DSA private key from PEM formatted data.
-    pub fn private_key_from_pem(buf: &[u8]) -> Result<Dsa, ErrorStack> {
-        ffi::init();
-        let mem_bio = try!(MemBioSlice::new(buf));
+    private_key_from_pem!(Dsa, ffi::PEM_read_bio_DSAPrivateKey);
+    private_key_from_der!(Dsa, ffi::d2i_DSAPrivateKey);
+    public_key_from_pem!(Dsa, ffi::PEM_read_bio_DSA_PUBKEY);
+    public_key_from_der!(Dsa, ffi::d2i_DSAPublicKey);
 
-        unsafe {
-            let dsa = try!(cvt_p(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.as_ptr(),
-                                                                 ptr::null_mut(),
-                                                                 None,
-                                                                 ptr::null_mut())));
-            Ok(Dsa(dsa))
-        }
-    }
-
-    /// Read a private key from PEM supplying a password callback to be invoked if the private key
-    /// is encrypted.
-    ///
-    /// The callback will be passed the password buffer and should return the number of characters
-    /// placed into the buffer.
+    #[deprecated(since = "0.9.2", note = "use private_key_from_pem_callback")]
     pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<Dsa, ErrorStack>
         where F: FnOnce(&mut [c_char]) -> usize
     {
@@ -133,22 +110,8 @@ impl Dsa {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
             let dsa = try!(cvt_p(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.as_ptr(),
                                                                  ptr::null_mut(),
-                                                                 Some(invoke_passwd_cb::<F>),
+                                                                 Some(invoke_passwd_cb_old::<F>),
                                                                  cb_ptr)));
-            Ok(Dsa(dsa))
-        }
-    }
-
-    /// Reads an DSA public key from PEM formatted data.
-    pub fn public_key_from_pem(buf: &[u8]) -> Result<Dsa, ErrorStack> {
-        ffi::init();
-
-        let mem_bio = try!(MemBioSlice::new(buf));
-        unsafe {
-            let dsa = try!(cvt_p(ffi::PEM_read_bio_DSA_PUBKEY(mem_bio.as_ptr(),
-                                                              ptr::null_mut(),
-                                                              None,
-                                                              ptr::null_mut())));
             Ok(Dsa(dsa))
         }
     }
@@ -193,7 +156,7 @@ mod compat {
 
 #[cfg(test)]
 mod test {
-    use libc::c_char;
+    use symm::Cipher;
 
     use super::*;
 
@@ -204,17 +167,26 @@ mod test {
 
     #[test]
     pub fn test_password() {
+        let key = include_bytes!("../test/dsa-encrypted.pem");
+        Dsa::private_key_from_pem_passphrase(key, b"mypass").unwrap();
+    }
+
+    #[test]
+    fn test_to_password() {
+        let key = Dsa::generate(2048).unwrap();
+        let pem = key.private_key_to_pem_passphrase(Cipher::aes_128_cbc(), b"foobar").unwrap();
+        Dsa::private_key_from_pem_passphrase(&pem, b"foobar").unwrap();
+        assert!(Dsa::private_key_from_pem_passphrase(&pem, b"fizzbuzz").is_err());
+    }
+
+    #[test]
+    pub fn test_password_callback() {
         let mut password_queried = false;
         let key = include_bytes!("../test/dsa-encrypted.pem");
-        Dsa::private_key_from_pem_cb(key, |password| {
+        Dsa::private_key_from_pem_callback(key, |password| {
                 password_queried = true;
-                password[0] = b'm' as c_char;
-                password[1] = b'y' as c_char;
-                password[2] = b'p' as c_char;
-                password[3] = b'a' as c_char;
-                password[4] = b's' as c_char;
-                password[5] = b's' as c_char;
-                6
+                password[..6].copy_from_slice(b"mypass");
+                Ok(6)
             })
             .unwrap();
 

@@ -1,27 +1,60 @@
 extern crate pkg_config;
+extern crate gcc;
 
 use std::collections::HashSet;
 use std::env;
 use std::ffi::OsString;
 use std::fs::File;
-use std::io::Read;
+use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
+use std::panic::{self, AssertUnwindSafe};
 use std::process::Command;
+
+// The set of `OPENSSL_NO_<FOO>`s that we care about.
+const DEFINES: &'static [&'static str] = &[
+    "OPENSSL_NO_BUF_FREELISTS",
+    "OPENSSL_NO_COMP",
+    "OPENSSL_NO_EC",
+    "OPENSSL_NO_ENGINE",
+    "OPENSSL_NO_KRB5",
+    "OPENSSL_NO_NEXTPROTONEG",
+    "OPENSSL_NO_PSK",
+    "OPENSSL_NO_RFC3779",
+    "OPENSSL_NO_SHA",
+    "OPENSSL_NO_SRP",
+    "OPENSSL_NO_SSL3_METHOD",
+    "OPENSSL_NO_TLSEXT",
+];
+
+enum Version {
+    Openssl110,
+    Openssl102,
+    Openssl101,
+    Libressl,
+}
 
 fn main() {
     let target = env::var("TARGET").unwrap();
 
-    let openssl_dir = env::var_os("OPENSSL_DIR").unwrap_or_else(|| {
-        find_openssl_dir(&target)
-    });
+    let lib_dir = env::var_os("OPENSSL_LIB_DIR").map(PathBuf::from);
+    let include_dir = env::var_os("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
 
-    let lib_dir = Path::new(&openssl_dir).join("lib");
-    let include_dir = Path::new(&openssl_dir).join("include");
+    let (lib_dir, include_dir) = if lib_dir.is_none() || include_dir.is_none() {
+        let openssl_dir = env::var_os("OPENSSL_DIR").unwrap_or_else(|| {
+            find_openssl_dir(&target)
+        });
+        let openssl_dir = Path::new(&openssl_dir);
+        let lib_dir = lib_dir.unwrap_or_else(|| openssl_dir.join("lib"));
+        let include_dir = include_dir.unwrap_or_else(|| openssl_dir.join("include"));
+        (lib_dir, include_dir)
+    } else {
+        (lib_dir.unwrap(), include_dir.unwrap())
+    };
+
     if !Path::new(&lib_dir).exists() {
         panic!("OpenSSL library directory does not exist: {}",
                lib_dir.to_string_lossy());
     }
-
     if !Path::new(&include_dir).exists() {
         panic!("OpenSSL include directory does not exist: {}",
                include_dir.to_string_lossy());
@@ -30,17 +63,14 @@ fn main() {
     println!("cargo:rustc-link-search=native={}", lib_dir.to_string_lossy());
     println!("cargo:include={}", include_dir.to_string_lossy());
 
-    let version = validate_headers(&[include_dir.clone().into()],
-                                   &[lib_dir.clone().into()]);
+    let version = validate_headers(&[include_dir.clone().into()]);
 
-    let libs = if (version.contains("0x10001") ||
-                   version.contains("0x10002")) &&
-                  target.contains("windows") {
-        ["ssleay32", "libeay32"]
-    } else if target.contains("windows") {
-        ["libssl", "libcrypto"]
-    } else {
-        ["ssl", "crypto"]
+    let libs = match version {
+        Version::Openssl101 | Version::Openssl102 if target.contains("windows") => {
+            ["ssleay32", "libeay32"]
+        }
+        Version::Openssl110 if target.contains("windows") => ["libssl", "libcrypto"],
+        _ => ["ssl", "crypto"],
     };
 
     let kind = determine_mode(Path::new(&lib_dir), &libs);
@@ -160,29 +190,12 @@ fn try_pkg_config() {
         return
     }
 
-    // We're going to be looking at header files, so show us all the system
-    // cflags dirs for showing us lots of `-I`.
-    env::set_var("PKG_CONFIG_ALLOW_SYSTEM_CFLAGS", "1");
+    let lib = pkg_config::Config::new()
+        .print_system_libs(false)
+        .find("openssl")
+        .unwrap();
 
-    let lib = match pkg_config::find_library("openssl") {
-        Ok(lib) => lib,
-        Err(_) => return,
-    };
-
-    if lib.include_paths.len() == 0 {
-        panic!("
-
-Used pkg-config to discover the OpenSSL installation, but pkg-config did not
-return any include paths for the installation. This crate needs to take a peek
-at the header files so it cannot proceed unless they're found.
-
-You can try fixing this by setting the `OPENSSL_DIR` environment variable
-pointing to your OpenSSL installation.
-
-");
-    }
-
-    validate_headers(&lib.include_paths, &lib.link_paths);
+    validate_headers(&lib.include_paths);
 
     for include in lib.include_paths.iter() {
         println!("cargo:include={}", include.display());
@@ -193,65 +206,11 @@ pointing to your OpenSSL installation.
 
 /// Validates the header files found in `include_dir` and then returns the
 /// version string of OpenSSL.
-fn validate_headers(include_dirs: &[PathBuf],
-                    libdirs: &[PathBuf]) -> String {
+fn validate_headers(include_dirs: &[PathBuf]) -> Version {
     // This `*-sys` crate only works with OpenSSL 1.0.1, 1.0.2, and 1.1.0. To
     // correctly expose the right API from this crate, take a look at
     // `opensslv.h` to see what version OpenSSL claims to be.
-    let mut version_header = String::new();
-    let mut include = include_dirs.iter()
-                                  .map(|p| p.join("openssl/opensslv.h"))
-                                  .filter(|p| p.exists());
-    let mut f = match include.next() {
-        Some(f) => File::open(f).unwrap(),
-        None => {
-            panic!("failed to open header file at `openssl/opensslv.h` to learn
-                    about OpenSSL's version number, looked inside:\n\n{:#?}\n\n",
-                   include_dirs);
-        }
-    };
-    f.read_to_string(&mut version_header).unwrap();
-
-    // Do a bit of string parsing to find `#define OPENSSL_VERSION_NUMBER ...`
-    let version_line = version_header.lines().find(|l| {
-        l.contains("define ") && l.contains("OPENSSL_VERSION_NUMBER")
-    }).and_then(|line| {
-        let start = match line.find("0x") {
-            Some(start) => start,
-            None => return None,
-        };
-        Some(line[start..].trim())
-    });
-    let version_text = match version_line {
-        Some(text) => text,
-        None => {
-            panic!("header file at `{}` did not include `OPENSSL_VERSION_NUMBER` \
-                    that this crate recognized, failed to learn about the \
-                    OpenSSL version number");
-        }
-    };
-    if version_text.contains("0x10001") {
-        println!("cargo:rustc-cfg=ossl101");
-        println!("cargo:version=101");
-    } else if version_text.contains("0x10002") {
-        println!("cargo:rustc-cfg=ossl102");
-        println!("cargo:version=102");
-    } else if version_text.contains("0x10100") {
-        println!("cargo:rustc-cfg=ossl110");
-        println!("cargo:version=110");
-    } else {
-        panic!("
-
-This crate is only compatible with OpenSSL 1.0.1, 1.0.2, and 1.1.0, but a
-different version of OpenSSL was found:
-
-    {}
-
-The build is now aborting due to this version mismatch.
-
-", version_text);
-    }
-
+    //
     // OpenSSL has a number of build-time configuration options which affect
     // various structs and such. Since OpenSSL 1.1.0 this isn't really a problem
     // as the library is much more FFI-friendly, but 1.0.{1,2} suffer this problem.
@@ -260,56 +219,105 @@ The build is now aborting due to this version mismatch.
     // file of OpenSSL, `opensslconf.h`, and then dump out everything it defines
     // as our own #[cfg] directives. That way the `ossl10x.rs` bindings can
     // account for compile differences and such.
-    let mut conf_header = String::new();
-    let mut include = include_dirs.iter()
-                                  .map(|p| p.join("openssl/opensslconf.h"))
-                                  .filter(|p| p.exists());
-    let mut f = match include.next() {
-        Some(f) => File::open(f).unwrap(),
-        None => {
-            // It's been seen that on linux the include dir printed out by
-            // `pkg-config` doesn't actually have opensslconf.h. Instead
-            // it's in an architecture-specific include directory.
-            //
-            // Try to detect that case to see if it exists.
-            let mut libdirs = libdirs.iter().map(|p| {
-                p.iter()
-                 .map(|p| if p == "lib" {"include".as_ref()} else {p})
-                 .collect::<PathBuf>()
-            }).map(|p| {
-                p.join("openssl/opensslconf.h")
-            }).filter(|p| p.exists());
-            match libdirs.next() {
-                Some(f) => File::open(f).unwrap(),
-                None => {
-                    panic!("failed to open header file at
-                            `openssl/opensslconf.h` to learn about \
-                            OpenSSL's version number, looked \
-                            inside:\n\n{:#?}\n\n",
-                           include_dirs);
-                }
-            }
+    let mut path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+    path.push("expando.c");
+    let mut file = BufWriter::new(File::create(&path).unwrap());
+
+    write!(file, "\
+#include <openssl/opensslv.h>
+#include <openssl/opensslconf.h>
+
+#ifdef LIBRESSL_VERSION_NUMBER
+RUST_LIBRESSL
+#elif OPENSSL_VERSION_NUMBER >= 0x10200000
+RUST_OPENSSL_NEW
+#elif OPENSSL_VERSION_NUMBER >= 0x10100000
+RUST_OPENSSL_110
+#elif OPENSSL_VERSION_NUMBER >= 0x10002000
+RUST_OPENSSL_102
+#elif OPENSSL_VERSION_NUMBER >= 0x10001000
+RUST_OPENSSL_101
+#else
+RUST_OPENSSL_OLD
+#endif
+").unwrap();
+
+    for define in DEFINES {
+        write!(file, "\
+#ifdef {define}
+RUST_{define}
+#endif
+", define = define).unwrap();
+    }
+
+    file.flush().unwrap();
+    drop(file);
+
+    let mut gcc = gcc::Config::new();
+    for include_dir in include_dirs {
+        gcc.include(include_dir);
+    }
+    // https://github.com/alexcrichton/gcc-rs/issues/133
+    let expanded = match panic::catch_unwind(AssertUnwindSafe(|| gcc.file(&path).expand())) {
+        Ok(expanded) => expanded,
+        Err(_) => {
+            panic!("
+Failed to find OpenSSL development headers.
+
+You can try fixing this setting the `OPENSSL_DIR` environment variable
+pointing to your OpenSSL installation or installing OpenSSL headers package
+specific to your distribution:
+
+    # On Ubuntu
+    sudo apt-get install libssl-dev
+    # On Arch Linux
+    sudo pacman -S openssl
+    # On Fedora
+    sudo dnf install openssl-devel
+
+See rust-openssl README for more information:
+
+    https://github.com/sfackler/rust-openssl#linux
+");
         }
     };
-    f.read_to_string(&mut conf_header).unwrap();
+    let expanded = String::from_utf8(expanded).unwrap();
 
-    // Look for `#define OPENSSL_FOO`, print out everything as our own
-    // #[cfg] flag.
-    let mut vars = vec![];
-    for line in conf_header.lines() {
-        let i = match line.find("define ") {
-            Some(i) => i,
-            None => continue,
-        };
-        let var = line[i + "define ".len()..].trim();
-        if var.starts_with("OPENSSL") && !var.contains(" ") {
-            println!("cargo:rustc-cfg=osslconf=\"{}\"", var);
-            vars.push(var);
+    let mut enabled = vec![];
+    for &define in DEFINES {
+        if expanded.contains(&format!("RUST_{}", define)) {
+            println!("cargo:rustc-cfg=osslconf=\"{}\"", define);
+            enabled.push(define);
         }
     }
-    println!("cargo:conf={}", vars.join(","));
+    println!("cargo:conf={}", enabled.join(","));
 
-    return version_text.to_string()
+    if expanded.contains("RUST_LIBRESSL") {
+        println!("cargo:rustc-cfg=libressl");
+        println!("cargo:libressl=true");
+        println!("cargo:version=101");
+        Version::Libressl
+    } else if expanded.contains("RUST_OPENSSL_110") {
+        println!("cargo:rustc-cfg=ossl110");
+        println!("cargo:version=110");
+        Version::Openssl110
+    } else if expanded.contains("RUST_OPENSSL_102") {
+        println!("cargo:rustc-cfg=ossl102");
+        println!("cargo:version=102");
+        Version::Openssl102
+    } else if expanded.contains("RUST_OPENSSL_101") {
+        println!("cargo:rustc-cfg=ossl101");
+        println!("cargo:version=101");
+        Version::Openssl101
+    } else {
+        panic!("
+
+This crate is only compatible with OpenSSL 1.0.1, 1.0.2, and 1.1.0, or LibreSSL,
+but a different version of OpenSSL was found. The build is now aborting due to
+this version mismatch.
+
+");
+    }
 }
 
 /// Given a libdir for OpenSSL (where artifacts are located) as well as the name

@@ -35,12 +35,13 @@
 //! assert!(verifier.finish(&signature).unwrap());
 //! ```
 //!
-//! Compute an HMAC (note that `Verifier` cannot be used with HMACs):
+//! Compute an HMAC:
 //!
 //! ```rust
-//! use openssl::sign::Signer;
-//! use openssl::pkey::PKey;
 //! use openssl::hash::MessageDigest;
+//! use openssl::memcmp;
+//! use openssl::pkey::PKey;
+//! use openssl::sign::Signer;
 //!
 //! // Create a PKey
 //! let key = PKey::hmac(b"my secret").unwrap();
@@ -53,29 +54,40 @@
 //! signer.update(data).unwrap();
 //! signer.update(data2).unwrap();
 //! let hmac = signer.finish().unwrap();
+//!
+//! // `Verifier` cannot be used with HMACs; use the `memcmp::eq` function instead
+//! //
+//! // Do not simply check for equality with `==`!
+//! # let target = hmac.clone();
+//! assert!(memcmp::eq(&hmac, &target));
 //! ```
 use ffi;
+use foreign_types::ForeignTypeRef;
 use std::io::{self, Write};
 use std::marker::PhantomData;
 use std::ptr;
 
 use {cvt, cvt_p};
 use hash::MessageDigest;
-use pkey::PKeyRef;
+use pkey::{PKeyRef, PKeyCtxRef};
 use error::ErrorStack;
-use types::OpenSslTypeRef;
 
 #[cfg(ossl110)]
 use ffi::{EVP_MD_CTX_new, EVP_MD_CTX_free};
 #[cfg(any(ossl101, ossl102))]
 use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
 
-pub struct Signer<'a>(*mut ffi::EVP_MD_CTX, PhantomData<&'a PKeyRef>);
+pub struct Signer<'a> {
+    md_ctx: *mut ffi::EVP_MD_CTX,
+    pkey_ctx: *mut ffi::EVP_PKEY_CTX,
+    pkey_pd: PhantomData<&'a PKeyRef>,
+}
 
 impl<'a> Drop for Signer<'a> {
     fn drop(&mut self) {
+        // pkey_ctx is owned by the md_ctx, so no need to explicitly free it.
         unsafe {
-            EVP_MD_CTX_free(self.0);
+            EVP_MD_CTX_free(self.md_ctx);
         }
     }
 }
@@ -86,8 +98,9 @@ impl<'a> Signer<'a> {
             ffi::init();
 
             let ctx = try!(cvt_p(EVP_MD_CTX_new()));
+            let mut pctx: *mut ffi::EVP_PKEY_CTX = ptr::null_mut();
             let r = ffi::EVP_DigestSignInit(ctx,
-                                            ptr::null_mut(),
+                                            &mut pctx,
                                             type_.as_ptr(),
                                             ptr::null_mut(),
                                             pkey.as_ptr());
@@ -95,22 +108,37 @@ impl<'a> Signer<'a> {
                 EVP_MD_CTX_free(ctx);
                 return Err(ErrorStack::get());
             }
-            Ok(Signer(ctx, PhantomData))
+
+            assert!(!pctx.is_null());
+
+            Ok(Signer {
+                md_ctx: ctx,
+                pkey_ctx: pctx,
+                pkey_pd: PhantomData,
+            })
         }
+    }
+
+    pub fn pkey_ctx(&self) -> &PKeyCtxRef {
+        unsafe { PKeyCtxRef::from_ptr(self.pkey_ctx) }
+    }
+
+    pub fn pkey_ctx_mut(&mut self) -> &mut PKeyCtxRef {
+        unsafe { PKeyCtxRef::from_ptr_mut(self.pkey_ctx) }
     }
 
     pub fn update(&mut self, buf: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::EVP_DigestUpdate(self.0, buf.as_ptr() as *const _, buf.len())).map(|_| ())
+            cvt(ffi::EVP_DigestUpdate(self.md_ctx, buf.as_ptr() as *const _, buf.len())).map(|_| ())
         }
     }
 
     pub fn finish(&self) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
             let mut len = 0;
-            try!(cvt(ffi::EVP_DigestSignFinal(self.0, ptr::null_mut(), &mut len)));
+            try!(cvt(ffi::EVP_DigestSignFinal(self.md_ctx, ptr::null_mut(), &mut len)));
             let mut buf = vec![0; len];
-            try!(cvt(ffi::EVP_DigestSignFinal(self.0, buf.as_mut_ptr() as *mut _, &mut len)));
+            try!(cvt(ffi::EVP_DigestSignFinal(self.md_ctx, buf.as_mut_ptr() as *mut _, &mut len)));
             // The advertised length is not always equal to the real length for things like DSA
             buf.truncate(len);
             Ok(buf)
@@ -129,12 +157,17 @@ impl<'a> Write for Signer<'a> {
     }
 }
 
-pub struct Verifier<'a>(*mut ffi::EVP_MD_CTX, PhantomData<&'a PKeyRef>);
+pub struct Verifier<'a> {
+    md_ctx: *mut ffi::EVP_MD_CTX,
+    pkey_ctx: *mut ffi::EVP_PKEY_CTX,
+    pkey_pd: PhantomData<&'a PKeyRef>,
+}
 
 impl<'a> Drop for Verifier<'a> {
     fn drop(&mut self) {
+        // pkey_ctx is owned by the md_ctx, so no need to explicitly free it.
         unsafe {
-            EVP_MD_CTX_free(self.0);
+            EVP_MD_CTX_free(self.md_ctx);
         }
     }
 }
@@ -145,8 +178,9 @@ impl<'a> Verifier<'a> {
             ffi::init();
 
             let ctx = try!(cvt_p(EVP_MD_CTX_new()));
+            let mut pctx: *mut ffi::EVP_PKEY_CTX = ptr::null_mut();
             let r = ffi::EVP_DigestVerifyInit(ctx,
-                                              ptr::null_mut(),
+                                              &mut pctx,
                                               type_.as_ptr(),
                                               ptr::null_mut(),
                                               pkey.as_ptr());
@@ -155,19 +189,33 @@ impl<'a> Verifier<'a> {
                 return Err(ErrorStack::get());
             }
 
-            Ok(Verifier(ctx, PhantomData))
+            assert!(!pctx.is_null());
+
+            Ok(Verifier {
+                md_ctx: ctx,
+                pkey_ctx: pctx,
+                pkey_pd: PhantomData,
+            })
         }
+    }
+
+    pub fn pkey_ctx(&self) -> &PKeyCtxRef {
+        unsafe { PKeyCtxRef::from_ptr(self.pkey_ctx) }
+    }
+
+    pub fn pkey_ctx_mut(&mut self) -> &mut PKeyCtxRef {
+        unsafe { PKeyCtxRef::from_ptr_mut(self.pkey_ctx) }
     }
 
     pub fn update(&mut self, buf: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::EVP_DigestUpdate(self.0, buf.as_ptr() as *const _, buf.len())).map(|_| ())
+            cvt(ffi::EVP_DigestUpdate(self.md_ctx, buf.as_ptr() as *const _, buf.len())).map(|_| ())
         }
     }
 
     pub fn finish(&self, signature: &[u8]) -> Result<bool, ErrorStack> {
         unsafe {
-            let r = EVP_DigestVerifyFinal(self.0, signature.as_ptr() as *const _, signature.len());
+            let r = EVP_DigestVerifyFinal(self.md_ctx, signature.as_ptr() as *const _, signature.len());
             match r {
                 1 => Ok(true),
                 0 => {
@@ -205,12 +253,14 @@ unsafe fn EVP_DigestVerifyFinal(ctx: *mut ffi::EVP_MD_CTX,
 
 #[cfg(test)]
 mod test {
-    use serialize::hex::FromHex;
+    use hex::FromHex;
     use std::iter;
 
     use hash::MessageDigest;
     use sign::{Signer, Verifier};
-    use rsa::Rsa;
+    use ec::{EcGroup, EcKey};
+    use nid;
+    use rsa::{Rsa, PKCS1_PADDING};
     use dsa::Dsa;
     use pkey::PKey;
 
@@ -245,6 +295,8 @@ mod test {
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut signer = Signer::new(MessageDigest::sha256(), &pkey).unwrap();
+        assert_eq!(signer.pkey_ctx_mut().rsa_padding().unwrap(), PKCS1_PADDING);
+        signer.pkey_ctx_mut().set_rsa_padding(PKCS1_PADDING).unwrap();
         signer.update(INPUT).unwrap();
         let result = signer.finish().unwrap();
 
@@ -258,6 +310,7 @@ mod test {
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
+        assert_eq!(verifier.pkey_ctx_mut().rsa_padding().unwrap(), PKCS1_PADDING);
         verifier.update(INPUT).unwrap();
         assert!(verifier.finish(SIGNATURE).unwrap());
     }
@@ -339,27 +392,27 @@ mod test {
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] =
             [(iter::repeat(0x0b_u8).take(16).collect(),
               b"Hi There".to_vec(),
-              "9294727a3638bb1c13f48ef8158bfc9d".from_hex().unwrap()),
+              Vec::from_hex("9294727a3638bb1c13f48ef8158bfc9d").unwrap()),
              (b"Jefe".to_vec(),
               b"what do ya want for nothing?".to_vec(),
-              "750c783e6ab0b503eaa86e310a5db738".from_hex().unwrap()),
+              Vec::from_hex("750c783e6ab0b503eaa86e310a5db738").unwrap()),
              (iter::repeat(0xaa_u8).take(16).collect(),
               iter::repeat(0xdd_u8).take(50).collect(),
-              "56be34521d144c88dbb8c733f0e8b3f6".from_hex().unwrap()),
-             ("0102030405060708090a0b0c0d0e0f10111213141516171819".from_hex().unwrap(),
+              Vec::from_hex("56be34521d144c88dbb8c733f0e8b3f6").unwrap()),
+             (Vec::from_hex("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
               iter::repeat(0xcd_u8).take(50).collect(),
-              "697eaf0aca3a3aea3a75164746ffaa79".from_hex().unwrap()),
+              Vec::from_hex("697eaf0aca3a3aea3a75164746ffaa79").unwrap()),
              (iter::repeat(0x0c_u8).take(16).collect(),
               b"Test With Truncation".to_vec(),
-              "56461ef2342edc00f9bab995690efd4c".from_hex().unwrap()),
+              Vec::from_hex("56461ef2342edc00f9bab995690efd4c").unwrap()),
              (iter::repeat(0xaa_u8).take(80).collect(),
               b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
-              "6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd".from_hex().unwrap()),
+              Vec::from_hex("6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd").unwrap()),
              (iter::repeat(0xaa_u8).take(80).collect(),
               b"Test Using Larger Than Block-Size Key \
               and Larger Than One Block-Size Data"
                  .to_vec(),
-              "6f630fad67cda0ee1fb1f562db3aa53e".from_hex().unwrap())];
+              Vec::from_hex("6f630fad67cda0ee1fb1f562db3aa53e").unwrap())];
 
         test_hmac(MessageDigest::md5(), &tests);
     }
@@ -370,28 +423,43 @@ mod test {
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] =
             [(iter::repeat(0x0b_u8).take(20).collect(),
               b"Hi There".to_vec(),
-              "b617318655057264e28bc0b6fb378c8ef146be00".from_hex().unwrap()),
+              Vec::from_hex("b617318655057264e28bc0b6fb378c8ef146be00").unwrap()),
              (b"Jefe".to_vec(),
               b"what do ya want for nothing?".to_vec(),
-              "effcdf6ae5eb2fa2d27416d5f184df9c259a7c79".from_hex().unwrap()),
+              Vec::from_hex("effcdf6ae5eb2fa2d27416d5f184df9c259a7c79").unwrap()),
              (iter::repeat(0xaa_u8).take(20).collect(),
               iter::repeat(0xdd_u8).take(50).collect(),
-              "125d7342b9ac11cd91a39af48aa17b4f63f175d3".from_hex().unwrap()),
-             ("0102030405060708090a0b0c0d0e0f10111213141516171819".from_hex().unwrap(),
+              Vec::from_hex("125d7342b9ac11cd91a39af48aa17b4f63f175d3").unwrap()),
+             (Vec::from_hex("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
               iter::repeat(0xcd_u8).take(50).collect(),
-              "4c9007f4026250c6bc8414f9bf50c86c2d7235da".from_hex().unwrap()),
+              Vec::from_hex("4c9007f4026250c6bc8414f9bf50c86c2d7235da").unwrap()),
              (iter::repeat(0x0c_u8).take(20).collect(),
               b"Test With Truncation".to_vec(),
-              "4c1a03424b55e07fe7f27be1d58bb9324a9a5a04".from_hex().unwrap()),
+              Vec::from_hex("4c1a03424b55e07fe7f27be1d58bb9324a9a5a04").unwrap()),
              (iter::repeat(0xaa_u8).take(80).collect(),
               b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
-              "aa4ae5e15272d00e95705637ce8a3b55ed402112".from_hex().unwrap()),
+              Vec::from_hex("aa4ae5e15272d00e95705637ce8a3b55ed402112").unwrap()),
              (iter::repeat(0xaa_u8).take(80).collect(),
               b"Test Using Larger Than Block-Size Key \
               and Larger Than One Block-Size Data"
                  .to_vec(),
-              "e8e99d0f45237d786d6bbaa7965c7808bbff1a91".from_hex().unwrap())];
+              Vec::from_hex("e8e99d0f45237d786d6bbaa7965c7808bbff1a91").unwrap())];
 
         test_hmac(MessageDigest::sha1(), &tests);
+    }
+
+    #[test]
+    fn ec() {
+        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let key = EcKey::generate(&group).unwrap();
+        let key = PKey::from_ec_key(key).unwrap();
+
+        let mut signer = Signer::new(MessageDigest::sha256(), &key).unwrap();
+        signer.update(b"hello world").unwrap();
+        let signature = signer.finish().unwrap();
+
+        let mut verifier = Verifier::new(MessageDigest::sha256(), &key).unwrap();
+        verifier.update(b"hello world").unwrap();
+        assert!(verifier.finish(&signature).unwrap());
     }
 }

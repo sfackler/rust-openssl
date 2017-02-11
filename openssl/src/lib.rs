@@ -1,15 +1,16 @@
-#![doc(html_root_url="https://sfackler.github.io/rust-openssl/doc/v0.9.0")]
+#![doc(html_root_url="https://docs.rs/openssl/0.9.6")]
 
 #[macro_use]
 extern crate bitflags;
+#[macro_use]
+extern crate foreign_types;
 extern crate libc;
 #[macro_use]
 extern crate lazy_static;
 extern crate openssl_sys as ffi;
 
 #[cfg(test)]
-extern crate rustc_serialize as serialize;
-
+extern crate hex;
 #[cfg(test)]
 extern crate tempdir;
 
@@ -20,76 +21,38 @@ use libc::c_int;
 
 use error::ErrorStack;
 
-macro_rules! type_ {
-    ($n:ident, $r:ident, $c:path, $d:path) => {
-        pub struct $n(*mut $c);
-
-        impl ::types::OpenSslType for $n {
-            type CType = $c;
-            type Ref = $r;
-
-            unsafe fn from_ptr(ptr: *mut $c) -> $n {
-                $n(ptr)
-            }
-
-            fn as_ptr(&self) -> *mut $c {
-                self.0
-            }
-        }
-
-        impl Drop for $n {
-            fn drop(&mut self) {
-                unsafe { $d(self.0) }
-            }
-        }
-
-        impl ::std::ops::Deref for $n {
-            type Target = $r;
-
-            fn deref(&self) -> &$r {
-                unsafe { ::types::OpenSslTypeRef::from_ptr(self.0) }
-            }
-        }
-
-        impl ::std::ops::DerefMut for $n {
-            fn deref_mut(&mut self) -> &mut $r {
-                unsafe { ::types::OpenSslTypeRef::from_ptr_mut(self.0) }
-            }
-        }
-
-        pub struct $r(::util::Opaque);
-
-        impl ::types::OpenSslTypeRef for $r {
-            type CType = $c;
-        }
-    }
-}
+#[macro_use]
+mod macros;
 
 mod bio;
 mod util;
+pub mod aes;
 pub mod asn1;
 pub mod bn;
 pub mod conf;
 pub mod crypto;
 pub mod dh;
 pub mod dsa;
+pub mod ec;
 pub mod ec_key;
 pub mod error;
 pub mod hash;
 pub mod memcmp;
 pub mod nid;
+pub mod ocsp;
 pub mod pkcs12;
 pub mod pkcs5;
 pub mod pkey;
 pub mod rand;
-pub mod types;
 pub mod rsa;
 pub mod sign;
 pub mod ssl;
+pub mod stack;
+pub mod string;
 pub mod symm;
+pub mod types;
 pub mod version;
 pub mod x509;
-pub mod stack;
 #[cfg(any(ossl102, ossl110))]
 mod verify;
 

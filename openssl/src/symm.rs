@@ -80,6 +80,22 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_gcm()) }
     }
 
+    pub fn bf_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_bf_cbc()) }
+    }
+
+    pub fn bf_ecb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_bf_ecb()) }
+    }
+
+    pub fn bf_cfb64() -> Cipher {
+        unsafe { Cipher(ffi::EVP_bf_cfb64()) }
+    }
+
+    pub fn bf_ofb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_bf_ofb()) }
+    }
+
     pub fn des_cbc() -> Cipher {
         unsafe { Cipher(ffi::EVP_des_cbc()) }
     }
@@ -90,6 +106,18 @@ impl Cipher {
 
     pub fn rc4() -> Cipher {
         unsafe { Cipher(ffi::EVP_rc4()) }
+    }
+
+    /// Requires the `v110` feature and OpenSSL 1.1.0.
+    #[cfg(all(ossl110, feature = "v110"))]
+    pub fn chacha20() -> Cipher {
+        unsafe { Cipher(ffi::EVP_chacha20()) }
+    }
+
+    /// Requires the `v110` feature and OpenSSL 1.1.0.
+    #[cfg(all(ossl110, feature = "v110"))]
+    pub fn chacha20_poly1305() -> Cipher {
+        unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
     }
 
     pub unsafe fn from_ptr(ptr: *const ffi::EVP_CIPHER) -> Cipher {
@@ -135,8 +163,7 @@ impl Crypter {
     ///
     /// # Panics
     ///
-    /// Panics if an IV is required by the cipher but not provided, or if the
-    /// IV's length does not match the expected length (see `Cipher::iv_len`).
+    /// Panics if an IV is required by the cipher but not provided.
     pub fn new(t: Cipher,
                mode: Mode,
                key: &[u8],
@@ -169,7 +196,13 @@ impl Crypter {
             let key = key.as_ptr() as *mut _;
             let iv = match (iv, t.iv_len()) {
                 (Some(iv), Some(len)) => {
-                    assert!(iv.len() == len);
+                    if iv.len() != len {
+                        assert!(iv.len() <= c_int::max_value() as usize);
+                        try!(cvt(ffi::EVP_CIPHER_CTX_ctrl(crypter.ctx,
+                                                          ffi::EVP_CTRL_GCM_SET_IVLEN,
+                                                          iv.len() as c_int,
+                                                          ptr::null_mut())));
+                    }
                     iv.as_ptr() as *mut _
                 }
                 (Some(_), None) | (None, None) => ptr::null_mut(),
@@ -193,6 +226,39 @@ impl Crypter {
     pub fn pad(&mut self, padding: bool) {
         unsafe {
             ffi::EVP_CIPHER_CTX_set_padding(self.ctx, padding as c_int);
+        }
+    }
+
+    /// Sets the tag used to authenticate ciphertext in AEAD ciphers such as AES GCM.
+    ///
+    /// When decrypting cipher text using an AEAD cipher, this must be called before `finalize`.
+    pub fn set_tag(&mut self, tag: &[u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            assert!(tag.len() <= c_int::max_value() as usize);
+            // NB: this constant is actually more general than just GCM.
+            cvt(ffi::EVP_CIPHER_CTX_ctrl(self.ctx,
+                                         ffi::EVP_CTRL_GCM_SET_TAG,
+                                         tag.len() as c_int,
+                                         tag.as_ptr() as *mut _))
+                .map(|_| ())
+        }
+    }
+
+    /// Feeds Additional Authenticated Data (AAD) through the cipher.
+    ///
+    /// This can only be used with AEAD ciphers such as AES GCM. Data fed in is not encrypted, but
+    /// is factored into the authentication tag. It must be called before the first call to
+    /// `update`.
+    pub fn aad_update(&mut self, input: &[u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            assert!(input.len() <= c_int::max_value() as usize);
+            let mut len = 0;
+            cvt(ffi::EVP_CipherUpdate(self.ctx,
+                                      ptr::null_mut(),
+                                      &mut len,
+                                      input.as_ptr(),
+                                      input.len() as c_int))
+                .map(|_| ())
         }
     }
 
@@ -244,6 +310,25 @@ impl Crypter {
             Ok(outl as usize)
         }
     }
+
+    /// Retrieves the authentication tag used to authenticate ciphertext in AEAD ciphers such
+    /// as AES GCM.
+    ///
+    /// When encrypting data with an AEAD cipher, this must be called after `finalize`.
+    ///
+    /// The size of the buffer indicates the required size of the tag. While some ciphers support a
+    /// range of tag sizes, it is recommended to pick the maximum size. For AES GCM, this is 16
+    /// bytes, for example.
+    pub fn get_tag(&self, tag: &mut [u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            assert!(tag.len() <= c_int::max_value() as usize);
+            cvt(ffi::EVP_CIPHER_CTX_ctrl(self.ctx,
+                                         ffi::EVP_CTRL_GCM_GET_TAG,
+                                         tag.len() as c_int,
+                                         tag.as_mut_ptr() as *mut _))
+                .map(|_| ())
+        }
+    }
 }
 
 impl Drop for Crypter {
@@ -292,6 +377,52 @@ fn cipher(t: Cipher,
     Ok(out)
 }
 
+/// Like `encrypt`, but for AEAD ciphers such as AES GCM.
+///
+/// Additional Authenticated Data can be provided in the `aad` field, and the authentication tag
+/// will be copied into the `tag` field.
+///
+/// The size of the `tag` buffer indicates the required size of the tag. While some ciphers support
+/// a range of tag sizes, it is recommended to pick the maximum size. For AES GCM, this is 16 bytes,
+/// for example.
+pub fn encrypt_aead(t: Cipher,
+                    key: &[u8],
+                    iv: Option<&[u8]>,
+                    aad: &[u8],
+                    data: &[u8],
+                    tag: &mut [u8])
+                    -> Result<Vec<u8>, ErrorStack> {
+    let mut c = try!(Crypter::new(t, Mode::Encrypt, key, iv));
+    let mut out = vec![0; data.len() + t.block_size()];
+    try!(c.aad_update(aad));
+    let count = try!(c.update(data, &mut out));
+    let rest = try!(c.finalize(&mut out[count..]));
+    try!(c.get_tag(tag));
+    out.truncate(count + rest);
+    Ok(out)
+}
+
+/// Like `decrypt`, but for AEAD ciphers such as AES GCM.
+///
+/// Additional Authenticated Data can be provided in the `aad` field, and the authentication tag
+/// should be provided in the `tag` field.
+pub fn decrypt_aead(t: Cipher,
+                    key: &[u8],
+                    iv: Option<&[u8]>,
+                    aad: &[u8],
+                    data: &[u8],
+                    tag: &[u8])
+                    -> Result<Vec<u8>, ErrorStack> {
+    let mut c = try!(Crypter::new(t, Mode::Decrypt, key, iv));
+    let mut out = vec![0; data.len() + t.block_size()];
+    try!(c.aad_update(aad));
+    let count = try!(c.update(data, &mut out));
+    try!(c.set_tag(tag));
+    let rest = try!(c.finalize(&mut out[count..]));
+    out.truncate(count + rest);
+    Ok(out)
+}
+
 #[cfg(ossl110)]
 use ffi::{EVP_CIPHER_iv_length, EVP_CIPHER_block_size, EVP_CIPHER_key_length};
 
@@ -318,7 +449,8 @@ use self::compat::*;
 
 #[cfg(test)]
 mod tests {
-    use serialize::hex::{FromHex, ToHex};
+    use hex::{FromHex, ToHex};
+    use super::*;
 
     // Test vectors from FIPS-197:
     // http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
@@ -385,14 +517,41 @@ mod tests {
     }
 
     fn cipher_test(ciphertype: super::Cipher, pt: &str, ct: &str, key: &str, iv: &str) {
-        use serialize::hex::ToHex;
-
-        let pt = pt.from_hex().unwrap();
-        let ct = ct.from_hex().unwrap();
-        let key = key.from_hex().unwrap();
-        let iv = iv.from_hex().unwrap();
+        let pt = Vec::from_hex(pt).unwrap();
+        let ct = Vec::from_hex(ct).unwrap();
+        let key = Vec::from_hex(key).unwrap();
+        let iv = Vec::from_hex(iv).unwrap();
 
         let computed = super::decrypt(ciphertype, &key, Some(&iv), &ct).unwrap();
+        let expected = pt;
+
+        if computed != expected {
+            println!("Computed: {}", computed.to_hex());
+            println!("Expected: {}", expected.to_hex());
+            if computed.len() != expected.len() {
+                println!("Lengths differ: {} in computed vs {} expected",
+                         computed.len(),
+                         expected.len());
+            }
+            panic!("test failure");
+        }
+    }
+
+    fn cipher_test_nopad(ciphertype: super::Cipher, pt: &str, ct: &str, key: &str, iv: &str) {
+        let pt = Vec::from_hex(pt).unwrap();
+        let ct = Vec::from_hex(ct).unwrap();
+        let key = Vec::from_hex(key).unwrap();
+        let iv = Vec::from_hex(iv).unwrap();
+
+        let computed = {
+            let mut c = Crypter::new(ciphertype, Mode::Decrypt, &key, Some(&iv)).unwrap();
+            c.pad(false);
+            let mut out = vec![0; ct.len() + ciphertype.block_size()];
+            let count = c.update(&ct, &mut out).unwrap();
+            let rest = c.finalize(&mut out[count..]).unwrap();
+            out.truncate(count + rest);
+            out
+        };
         let expected = pt;
 
         if computed != expected {
@@ -514,6 +673,51 @@ mod tests {
     }
 
     #[test]
+    fn test_bf_cbc() {
+        // https://www.schneier.com/code/vectors.txt
+
+        let pt = "37363534333231204E6F77206973207468652074696D6520666F722000000000";
+        let ct = "6B77B4D63006DEE605B156E27403979358DEB9E7154616D959F1652BD5FF92CC";
+        let key = "0123456789ABCDEFF0E1D2C3B4A59687";
+        let iv = "FEDCBA9876543210";
+
+        cipher_test_nopad(super::Cipher::bf_cbc(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_bf_ecb() {
+
+        let pt = "5CD54CA83DEF57DA";
+        let ct = "B1B8CC0B250F09A0";
+        let key = "0131D9619DC1376E";
+        let iv = "0000000000000000";
+
+        cipher_test_nopad(super::Cipher::bf_ecb(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_bf_cfb64() {
+
+        let pt = "37363534333231204E6F77206973207468652074696D6520666F722000";
+        let ct = "E73214A2822139CAF26ECF6D2EB9E76E3DA3DE04D1517200519D57A6C3";
+        let key = "0123456789ABCDEFF0E1D2C3B4A59687";
+        let iv = "FEDCBA9876543210";
+
+        cipher_test_nopad(super::Cipher::bf_cfb64(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_bf_ofb() {
+
+        let pt = "37363534333231204E6F77206973207468652074696D6520666F722000";
+        let ct = "E73214A2822139CA62B343CC5B65587310DD908D0C241B2263C2CF80DA";
+        let key = "0123456789ABCDEFF0E1D2C3B4A59687";
+        let iv = "FEDCBA9876543210";
+
+        cipher_test_nopad(super::Cipher::bf_ofb(), pt, ct, key, iv);
+    }
+
+    #[test]
     fn test_des_cbc() {
 
         let pt = "54686973206973206120746573742e";
@@ -533,5 +737,94 @@ mod tests {
         let iv = "0001020304050607";
 
         cipher_test(super::Cipher::des_ecb(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes128_gcm() {
+        let key = "0e00c76561d2bd9b40c3c15427e2b08f";
+        let iv =
+            "492cadaccd3ca3fbc9cf9f06eb3325c4e159850b0dbe98199b89b7af528806610b6f63998e1eae80c348e7\
+             4cbb921d8326631631fc6a5d304f39166daf7ea15fa1977f101819adb510b50fe9932e12c5a85aa3fd1e73\
+             d8d760af218be829903a77c63359d75edd91b4f6ed5465a72662f5055999e059e7654a8edc921aa0d496";
+        let pt =
+            "fef03c2d7fb15bf0d2df18007d99f967c878ad59359034f7bb2c19af120685d78e32f6b8b83b032019956c\
+             a9c0195721476b85";
+        let aad =
+            "d8f1163d8c840292a2b2dacf4ac7c36aff8733f18fabb4fa5594544125e03d1e6e5d6d0fd61656c8d8f327\
+             c92839ae5539bb469c9257f109ebff85aad7bd220fdaa95c022dbd0c7bb2d878ad504122c943045d3c5eba\
+             8f1f56c0";
+        let ct =
+            "4f6cf471be7cbd2575cd5a1747aea8fe9dea83e51936beac3e68f66206922060c697ffa7af80ad6bb68f2c\
+             f4fc97416ee52abe";
+        let tag = "e20b6655";
+
+        // this tag is smaller than you'd normally want, but I pulled this test from the part of
+        // the NIST test vectors that cover 4 byte tags.
+        let mut actual_tag = [0; 4];
+        let out = encrypt_aead(Cipher::aes_128_gcm(),
+                               &Vec::from_hex(key).unwrap(),
+                               Some(&Vec::from_hex(iv).unwrap()),
+                               &Vec::from_hex(aad).unwrap(),
+                               &Vec::from_hex(pt).unwrap(),
+                               &mut actual_tag)
+            .unwrap();
+        assert_eq!(ct, out.to_hex());
+        assert_eq!(tag, actual_tag.to_hex());
+
+        let out = decrypt_aead(Cipher::aes_128_gcm(),
+                               &Vec::from_hex(key).unwrap(),
+                               Some(&Vec::from_hex(iv).unwrap()),
+                               &Vec::from_hex(aad).unwrap(),
+                               &Vec::from_hex(ct).unwrap(),
+                               &Vec::from_hex(tag).unwrap()).unwrap();
+        assert_eq!(pt, out.to_hex());
+    }
+
+    #[test]
+    #[cfg(all(ossl110, feature = "v110"))]
+    fn test_chacha20() {
+        let key = "0000000000000000000000000000000000000000000000000000000000000000";
+        let iv = "00000000000000000000000000000000";
+        let pt = "000000000000000000000000000000000000000000000000000000000000000000000000000000000\
+                  00000000000000000000000000000000000000000000000";
+        let ct = "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7da41597c5157488d7\
+                  724e03fb8d84a376a43b8f41518a11cc387b669b2ee6586";
+
+        cipher_test(Cipher::chacha20(), pt, ct, key, iv);
+    }
+
+    #[test]
+    #[cfg(all(ossl110, feature = "v110"))]
+    fn test_chacha20_poly1305() {
+        let key = "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f";
+        let iv = "070000004041424344454647";
+        let aad = "50515253c0c1c2c3c4c5c6c7";
+        let pt = "4c616469657320616e642047656e746c656d656e206f662074686520636c617373206f66202739393\
+                  a204966204920636f756c64206f6666657220796f75206f6e6c79206f6e652074697020666f722074\
+                  6865206675747572652c2073756e73637265656e20776f756c642062652069742e";
+        let ct = "d31a8d34648e60db7b86afbc53ef7ec2a4aded51296e08fea9e2b5a736ee62d63dbea45e8ca967128\
+                  2fafb69da92728b1a71de0a9e060b2905d6a5b67ecd3b3692ddbd7f2d778b8c9803aee328091b58fa\
+                  b324e4fad675945585808b4831d7bc3ff4def08e4b7a9de576d26586cec64b6116";
+        let tag = "1ae10b594f09e26a7e902ecbd0600691";
+
+        let mut actual_tag = [0; 16];
+        let out = encrypt_aead(Cipher::chacha20_poly1305(),
+                               &Vec::from_hex(key).unwrap(),
+                               Some(&Vec::from_hex(iv).unwrap()),
+                               &Vec::from_hex(aad).unwrap(),
+                               &Vec::from_hex(pt).unwrap(),
+                               &mut actual_tag)
+            .unwrap();
+        assert_eq!(ct, out.to_hex());
+        assert_eq!(tag, actual_tag.to_hex());
+
+        let out = decrypt_aead(Cipher::chacha20_poly1305(),
+                               &Vec::from_hex(key).unwrap(),
+                               Some(&Vec::from_hex(iv).unwrap()),
+                               &Vec::from_hex(aad).unwrap(),
+                               &Vec::from_hex(ct).unwrap(),
+                               &Vec::from_hex(tag).unwrap())
+            .unwrap();
+        assert_eq!(pt, out.to_hex());
     }
 }

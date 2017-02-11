@@ -1,4 +1,5 @@
 use ffi;
+use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::cmp::Ordering;
 use std::ffi::CString;
@@ -7,9 +8,23 @@ use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub, Deref};
 
 use {cvt, cvt_p, cvt_n};
 use asn1::Asn1Integer;
-use crypto::CryptoString;
 use error::ErrorStack;
-use types::{OpenSslType, OpenSslTypeRef};
+use string::OpensslString;
+
+#[cfg(ossl10x)]
+use ffi::{get_rfc2409_prime_768 as BN_get_rfc2409_prime_768,
+          get_rfc2409_prime_1024 as BN_get_rfc2409_prime_1024,
+          get_rfc3526_prime_1536 as BN_get_rfc3526_prime_1536,
+          get_rfc3526_prime_2048 as BN_get_rfc3526_prime_2048,
+          get_rfc3526_prime_3072 as BN_get_rfc3526_prime_3072,
+          get_rfc3526_prime_4096 as BN_get_rfc3526_prime_4096,
+          get_rfc3526_prime_6144 as BN_get_rfc3526_prime_6144,
+          get_rfc3526_prime_8192 as BN_get_rfc3526_prime_8192};
+
+#[cfg(ossl110)]
+use ffi::{BN_get_rfc2409_prime_768, BN_get_rfc2409_prime_1024, BN_get_rfc3526_prime_1536,
+    BN_get_rfc3526_prime_2048, BN_get_rfc3526_prime_3072, BN_get_rfc3526_prime_4096,
+    BN_get_rfc3526_prime_6144, BN_get_rfc3526_prime_8192};
 
 /// Options for the most significant bits of a randomly generated `BigNum`.
 pub struct MsbOption(c_int);
@@ -26,7 +41,13 @@ pub const MSB_ONE: MsbOption = MsbOption(0);
 /// of bits in the original numbers.
 pub const TWO_MSB_ONE: MsbOption = MsbOption(1);
 
-type_!(BigNumContext, BigNumContextRef, ffi::BN_CTX, ffi::BN_CTX_free);
+foreign_type! {
+    type CType = ffi::BN_CTX;
+    fn drop = ffi::BN_CTX_free;
+
+    pub struct BigNumContext;
+    pub struct BigNumContextRef;
+}
 
 impl BigNumContext {
     /// Returns a new `BigNumContext`.
@@ -470,12 +491,12 @@ impl BigNumRef {
     /// # use openssl::bn::BigNum;
     /// let s = -BigNum::from_u32(12345).unwrap();
     ///
-    /// assert_eq!(&*s.to_dec_str().unwrap(), "-12345");
+    /// assert_eq!(&**s.to_dec_str().unwrap(), "-12345");
     /// ```
-    pub fn to_dec_str(&self) -> Result<CryptoString, ErrorStack> {
+    pub fn to_dec_str(&self) -> Result<OpensslString, ErrorStack> {
         unsafe {
             let buf = try!(cvt_p(ffi::BN_bn2dec(self.as_ptr())));
-            Ok(CryptoString::from_null_terminated(buf))
+            Ok(OpensslString::from_ptr(buf))
         }
     }
 
@@ -485,12 +506,12 @@ impl BigNumRef {
     /// # use openssl::bn::BigNum;
     /// let s = -BigNum::from_u32(0x99ff).unwrap();
     ///
-    /// assert_eq!(&*s.to_hex_str().unwrap(), "-99FF");
+    /// assert_eq!(&**s.to_hex_str().unwrap(), "-99FF");
     /// ```
-    pub fn to_hex_str(&self) -> Result<CryptoString, ErrorStack> {
+    pub fn to_hex_str(&self) -> Result<OpensslString, ErrorStack> {
         unsafe {
             let buf = try!(cvt_p(ffi::BN_bn2hex(self.as_ptr())));
-            Ok(CryptoString::from_null_terminated(buf))
+            Ok(OpensslString::from_ptr(buf))
         }
     }
 
@@ -503,7 +524,13 @@ impl BigNumRef {
     }
 }
 
-type_!(BigNum, BigNumRef, ffi::BIGNUM, ffi::BN_free);
+foreign_type! {
+    type CType = ffi::BIGNUM;
+    fn drop = ffi::BN_free;
+
+    pub struct BigNum;
+    pub struct BigNumRef;
+}
 
 impl BigNum {
     /// Creates a new `BigNum` with the value 0.
@@ -525,6 +552,7 @@ impl BigNum {
     /// Creates a `BigNum` from a decimal string.
     pub fn from_dec_str(s: &str) -> Result<BigNum, ErrorStack> {
         unsafe {
+            ffi::init();
             let c_str = CString::new(s.as_bytes()).unwrap();
             let mut bn = ptr::null_mut();
             try!(cvt(ffi::BN_dec2bn(&mut bn, c_str.as_ptr() as *const _)));
@@ -535,10 +563,67 @@ impl BigNum {
     /// Creates a `BigNum` from a hexadecimal string.
     pub fn from_hex_str(s: &str) -> Result<BigNum, ErrorStack> {
         unsafe {
+            ffi::init();
             let c_str = CString::new(s.as_bytes()).unwrap();
             let mut bn = ptr::null_mut();
             try!(cvt(ffi::BN_hex2bn(&mut bn, c_str.as_ptr() as *const _)));
             Ok(BigNum::from_ptr(bn))
+        }
+    }
+
+    pub fn get_rfc2409_prime_768() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(BN_get_rfc2409_prime_768(ptr::null_mut())).map(BigNum)
+        }
+    }
+
+    pub fn get_rfc2409_prime_1024() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(BN_get_rfc2409_prime_1024(ptr::null_mut())).map(BigNum)
+        }
+    }
+
+    pub fn get_rfc3526_prime_1536() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(BN_get_rfc3526_prime_1536(ptr::null_mut())).map(BigNum)
+        }
+    }
+
+    pub fn get_rfc3526_prime_2048() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(BN_get_rfc3526_prime_2048(ptr::null_mut())).map(BigNum)
+        }
+    }
+
+    pub fn get_rfc3526_prime_3072() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(BN_get_rfc3526_prime_3072(ptr::null_mut())).map(BigNum)
+        }
+    }
+
+    pub fn get_rfc3526_prime_4096() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(BN_get_rfc3526_prime_4096(ptr::null_mut())).map(BigNum)
+        }
+    }
+
+    pub fn get_rfc3526_prime_6144() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(BN_get_rfc3526_prime_6144(ptr::null_mut())).map(BigNum)
+        }
+    }
+
+    pub fn get_rfc3526_prime_8192() -> Result<BigNum, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(BN_get_rfc3526_prime_8192(ptr::null_mut())).map(BigNum)
         }
     }
 
@@ -552,6 +637,7 @@ impl BigNum {
     /// ```
     pub fn from_slice(n: &[u8]) -> Result<BigNum, ErrorStack> {
         unsafe {
+            ffi::init();
             assert!(n.len() <= c_int::max_value() as usize);
             cvt_p(ffi::BN_bin2bn(n.as_ptr(), n.len() as c_int, ptr::null_mut()))
                 .map(|p| BigNum::from_ptr(p))

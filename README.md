@@ -2,18 +2,18 @@
 
 [![Build Status](https://travis-ci.org/sfackler/rust-openssl.svg?branch=master)](https://travis-ci.org/sfackler/rust-openssl)
 
-[Documentation](https://sfackler.github.io/rust-openssl/doc/v0.9.0/openssl).
+[Documentation](https://docs.rs/openssl).
 
 ## Warning
 
-This README does not correspond to rust-openssl 0.7.x. See
+This README does not correspond to rust-openssl 0.7.x or 0.8.x. See
 [here](https://github.com/sfackler/rust-openssl/blob/b8fb29db5c246175a096260eacca38180cd77dd0/README.md)
 for that README.
 
 ## Building
 
-rust-openssl depends on the OpenSSL runtime libraries version 1.0.1 or above.
-Currently the libraries need to be present in the build environment before this
+rust-openssl depends on OpenSSL version 1.0.1 or above, or LibreSSL. Both the
+libraries and headers need to be present in the build environment before this
 crate is compiled, and some instructions of how to do this are in the sections
 below.
 
@@ -37,9 +37,9 @@ compiling to a separate target, you'll typically need to compile OpenSSL from
 source. That can normally be done with:
 
 ```
-curl -O https://www.openssl.org/source/openssl-1.1.0b.tar.gz
-tar xf openssl-1.1.0b.tar.gz
-cd openssl-1.1.0b
+curl -O https://www.openssl.org/source/openssl-1.1.0c.tar.gz
+tar xf openssl-1.1.0c.tar.gz
+cd openssl-1.1.0c
 export CC=...
 ./Configure --prefix=... linux-x86_64 -fPIC
 make -j$(nproc)
@@ -49,20 +49,29 @@ make install
 ### OSX
 
 Although OpenSSL 0.9.8 is preinstalled on OSX this library is being phased out
-of OSX and this crate also does not support this version of OpenSSL. To use this
+of OSX and this crate also does not support that version of OpenSSL. To use this
 crate on OSX you'll need to install OpenSSL via some alternate means, typically
-homebrew:
+Homebrew:
 
 ```bash
 brew install openssl
 ```
+
+> Occasionally an update of XCode or MacOS will cause the linker to fail after compilation, to rectify this you may want to try and run:
+
+```bash
+xcode-select --install
+```
+
+If Homebrew is installed to the default location of `/usr/local`, OpenSSL will be
+automatically detected.
 
 ### Windows MSVC
 
 On MSVC it's unfortunately not always a trivial process acquiring OpenSSL.
 Perhaps the easiest way to do this right now is to download [precompiled
 binaries] and install them on your system. Currently it's recommended to
-install the 1.1.0b light installation if you're choosing this route.
+install the 1.1.0 (non-light) installation if you're choosing this route.
 
 [precompiled binaries]: http://slproweb.com/products/Win32OpenSSL.html
 
@@ -72,6 +81,18 @@ installation via an environment variable:
 ```
 set OPENSSL_DIR=C:\OpenSSL-Win64
 ```
+
+Note that this OpenSSL distribution does not ship with any root certificates.
+So to make requests to servers on the internet, you have to install them
+manually. Download the [cacert.pem file from here], copy it somewhere safe
+(`C:\OpenSSL-Win64\certs` is a good place) and point the `SSL_CERT_FILE`
+environment variable there:
+
+```
+set SSL_CERT_FILE=C:\OpenSSL-Win64\certs\cacert.pem
+```
+
+[cacert.pem file from here]: https://curl.haxx.se/docs/caextract.html
 
 After that, you're just a `cargo build` away!
 
@@ -102,6 +123,12 @@ The build script can be configured via environment variables:
 * `OPENSSL_DIR` - If specified, a directory that will be used to find
   OpenSSL installation. It's expected that under this directory the `include`
   folder has header files and a `lib` folder has the runtime libraries.
+* `OPENSSL_LIB_DIR` - If specified, a directory that will be used to find
+  OpenSSL libraries. Overrides the `lib` folder implied by `OPENSSL_DIR`
+  (if specified).
+* `OPENSSL_INCLUDE_DIR` - If specified, a directory that will be used to find
+  OpenSSL header files. Overrides the `include` folder implied by `OPENSSL_DIR`
+  (if specified).
 * `OPENSSL_STATIC` - If specified, OpenSSL libraries will be statically rather
   than dynamically linked.
 

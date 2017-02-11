@@ -1,15 +1,16 @@
-use std::ops::{Deref, DerefMut, Index, IndexMut};
-use std::iter;
+use foreign_types::{ForeignTypeRef, ForeignType};
+use libc::c_int;
 use std::borrow::Borrow;
 use std::convert::AsRef;
+use std::iter;
 use std::marker::PhantomData;
-use libc::c_int;
 use std::mem;
 use ffi;
 
 use {cvt, cvt_p};
 use error::ErrorStack;
-use types::{OpenSslType, OpenSslTypeRef};
+use std::ops::{Deref, DerefMut, Index, IndexMut};
+
 use util::Opaque;
 
 #[cfg(ossl10x)]
@@ -22,9 +23,8 @@ use ffi::{OPENSSL_sk_pop, OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_value, OPE
 
 /// Trait implemented by types which can be placed in a stack.
 ///
-/// Like `OpenSslType`, it should not be implemented for any type outside
-/// of this crate.
-pub trait Stackable: OpenSslType {
+/// It should not be implemented for any type outside of this crate.
+pub trait Stackable: ForeignType {
     /// The C stack type for this element.
     ///
     /// Generally called `stack_st_{ELEMENT_TYPE}`, normally hidden by the
@@ -80,14 +80,16 @@ impl<T: Stackable> Borrow<StackRef<T>> for Stack<T> {
     }
 }
 
-impl<T: Stackable> OpenSslType for Stack<T> {
+impl<T: Stackable> ForeignType for Stack<T> {
     type CType = T::StackType;
     type Ref = StackRef<T>;
 
+    #[inline]
     unsafe fn from_ptr(ptr: *mut T::StackType) -> Stack<T> {
         Stack(ptr)
     }
 
+    #[inline]
     fn as_ptr(&self) -> *mut T::StackType {
         self.0
     }
@@ -152,7 +154,7 @@ impl<T: Stackable> ExactSizeIterator for IntoIter<T> {}
 
 pub struct StackRef<T: Stackable>(Opaque, PhantomData<T>);
 
-impl<T: Stackable> OpenSslTypeRef for StackRef<T> {
+impl<T: Stackable> ForeignTypeRef for StackRef<T> {
     type CType = T::StackType;
 }
 

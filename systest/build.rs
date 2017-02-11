@@ -22,7 +22,11 @@ fn main() {
         }
     }
 
-    cfg.cfg(&format!("ossl{}", env::var("DEP_OPENSSL_VERSION").unwrap()), None);
+    if let Ok(_) = env::var("DEP_OPENSSL_LIBRESSL") {
+        cfg.cfg("libressl", None);
+    } else if let Ok(version) = env::var("DEP_OPENSSL_VERSION") {
+        cfg.cfg(&format!("ossl{}", version), None);
+    }
     if let Ok(vars) = env::var("DEP_OPENSSL_CONF") {
         for var in vars.split(",") {
             cfg.cfg("osslconf", Some(var));
@@ -42,7 +46,9 @@ fn main() {
        .header("openssl/err.h")
        .header("openssl/rand.h")
        .header("openssl/pkcs12.h")
-       .header("openssl/bn.h");
+       .header("openssl/bn.h")
+       .header("openssl/aes.h")
+       .header("openssl/ocsp.h");
     cfg.type_name(|s, is_struct| {
         // Add some `*` on some callback parameters to get function pointer to
         // typecheck in C, especially on MSVC.
@@ -52,7 +58,8 @@ fn main() {
             format!("bio_info_cb*")
         } else if s == "_STACK" {
             format!("struct stack_st")
-        } else if is_struct && s.chars().next().unwrap().is_lowercase() {
+        // This logic should really be cleaned up
+        } else if is_struct && s != "point_conversion_form_t" && s.chars().next().unwrap().is_lowercase() {
             format!("struct {}", s)
         } else {
             format!("{}", s)
@@ -85,6 +92,8 @@ fn main() {
     });
     cfg.skip_signededness(|s| {
         s.ends_with("_cb") ||
+            s.ends_with("_CB") ||
+            s.ends_with("_cb_fn") ||
             s.starts_with("CRYPTO_") ||
             s == "PasswordCallback"
     });

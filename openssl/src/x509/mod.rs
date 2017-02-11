@@ -1,7 +1,8 @@
 #![allow(deprecated)]
 use libc::{c_int, c_long};
+use ffi;
+use foreign_types::{ForeignType, ForeignTypeRef};
 use std::borrow::Borrow;
-use std::cmp;
 use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::{CStr, CString};
@@ -14,17 +15,16 @@ use std::slice;
 use std::str;
 
 use {cvt, cvt_p};
-use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef, Asn1IntegerRef};
+use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef, Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef};
+use bio::MemBioSlice;
 use bn::{BigNum, MSB_MAYBE_ZERO};
-use bio::{MemBio, MemBioSlice};
 use conf::ConfRef;
-use hash::MessageDigest;
-use pkey::{PKey, PKeyRef};
 use error::ErrorStack;
-use ffi;
+use hash::MessageDigest;
 use nid::{self, Nid};
-use types::{OpenSslType, OpenSslTypeRef};
+use pkey::{PKey, PKeyRef};
 use stack::{Stack, StackRef, Stackable};
+use string::OpensslString;
 
 #[cfg(ossl10x)]
 use ffi::{X509_set_notBefore, X509_set_notAfter, ASN1_STRING_data, X509_STORE_CTX_get_chain};
@@ -39,6 +39,7 @@ pub mod verify;
 use x509::extension::{ExtensionType, Extension};
 
 pub mod extension;
+pub mod store;
 
 #[cfg(test)]
 mod tests;
@@ -55,7 +56,13 @@ pub const X509_FILETYPE_PEM: X509FileType = X509FileType(ffi::X509_FILETYPE_PEM)
 pub const X509_FILETYPE_ASN1: X509FileType = X509FileType(ffi::X509_FILETYPE_ASN1);
 pub const X509_FILETYPE_DEFAULT: X509FileType = X509FileType(ffi::X509_FILETYPE_DEFAULT);
 
-type_!(X509StoreContext, X509StoreContextRef, ffi::X509_STORE_CTX, ffi::X509_STORE_CTX_free);
+foreign_type! {
+    type CType = ffi::X509_STORE_CTX;
+    fn drop = ffi::X509_STORE_CTX_free;
+
+    pub struct X509StoreContext;
+    pub struct X509StoreContextRef;
+}
 
 impl X509StoreContextRef {
     pub fn error(&self) -> Option<X509VerifyError> {
@@ -376,7 +383,13 @@ impl X509Builder {
     }
 }
 
-type_!(X509, X509Ref, ffi::X509, ffi::X509_free);
+foreign_type! {
+    type CType = ffi::X509;
+    fn drop = ffi::X509_free;
+
+    pub struct X509;
+    pub struct X509Ref;
+}
 
 impl X509Ref {
     pub fn subject_name(&self) -> &X509NameRef {
@@ -420,8 +433,8 @@ impl X509Ref {
         }
     }
 
-    /// Returns certificate Not After validity period.
-    pub fn not_after<'a>(&'a self) -> &'a Asn1TimeRef {
+    /// Returns the certificate's Not After validity period.
+    pub fn not_after(&self) -> &Asn1TimeRef {
         unsafe {
             let date = compat::X509_get_notAfter(self.as_ptr());
             assert!(!date.is_null());
@@ -429,8 +442,8 @@ impl X509Ref {
         }
     }
 
-    /// Returns certificate Not Before validity period.
-    pub fn not_before<'a>(&'a self) -> &'a Asn1TimeRef {
+    /// Returns the certificate's Not Before validity period.
+    pub fn not_before(&self) -> &Asn1TimeRef {
         unsafe {
             let date = compat::X509_get_notBefore(self.as_ptr());
             assert!(!date.is_null());
@@ -438,23 +451,47 @@ impl X509Ref {
         }
     }
 
-    /// Writes certificate as PEM
-    pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
+    /// Returns the certificate's signature
+    pub fn signature(&self) -> &Asn1BitStringRef {
         unsafe {
-            try!(cvt(ffi::PEM_write_bio_X509(mem_bio.as_ptr(), self.as_ptr())));
+            let mut signature = ptr::null();
+            compat::X509_get0_signature(&mut signature, ptr::null_mut(), self.as_ptr());
+            assert!(!signature.is_null());
+            Asn1BitStringRef::from_ptr(signature as *mut _)
         }
-        Ok(mem_bio.get_buf().to_owned())
     }
 
-    /// Returns a DER serialized form of the certificate
-    pub fn to_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
+    /// Returns the certificate's signature algorithm.
+    pub fn signature_algorithm(&self) -> &X509AlgorithmRef {
         unsafe {
-            ffi::i2d_X509_bio(mem_bio.as_ptr(), self.as_ptr());
+            let mut algor = ptr::null();
+            compat::X509_get0_signature(ptr::null_mut(), &mut algor, self.as_ptr());
+            assert!(!algor.is_null());
+            X509AlgorithmRef::from_ptr(algor as *mut _)
         }
-        Ok(mem_bio.get_buf().to_owned())
     }
+
+    /// Returns the list of OCSP responder URLs specified in the certificate's Authority Information
+    /// Access field.
+    pub fn ocsp_responders(&self) -> Result<Stack<OpensslString>, ErrorStack> {
+        unsafe {
+            cvt_p(ffi::X509_get1_ocsp(self.as_ptr())).map(|p| Stack::from_ptr(p))
+        }
+    }
+
+    /// Checks that this certificate issued `subject`.
+    pub fn issued(&self, subject: &X509Ref) -> Result<(), X509VerifyError> {
+        unsafe {
+            let r = ffi::X509_check_issued(self.as_ptr(), subject.as_ptr());
+            match X509VerifyError::from_raw(r as c_long) {
+                Some(e) => Err(e),
+                None => Ok(()),
+            }
+        }
+    }
+
+    to_pem!(ffi::PEM_write_bio_X509);
+    to_der!(ffi::i2d_X509);
 }
 
 impl ToOwned for X509Ref {
@@ -474,25 +511,36 @@ impl X509 {
         X509Builder::new()
     }
 
-    /// Reads a certificate from DER.
-    pub fn from_der(buf: &[u8]) -> Result<X509, ErrorStack> {
-        unsafe {
-            let mut ptr = buf.as_ptr();
-            let len = cmp::min(buf.len(), c_long::max_value() as usize) as c_long;
-            let x509 = try!(cvt_p(ffi::d2i_X509(ptr::null_mut(), &mut ptr, len)));
-            Ok(X509::from_ptr(x509))
-        }
-    }
+    from_pem!(X509, ffi::PEM_read_bio_X509);
+    from_der!(X509, ffi::d2i_X509);
 
-    /// Reads a certificate from PEM.
-    pub fn from_pem(buf: &[u8]) -> Result<X509, ErrorStack> {
-        let mem_bio = try!(MemBioSlice::new(buf));
+    /// Deserializes a list of PEM-formatted certificates.
+    pub fn stack_from_pem(pem: &[u8]) -> Result<Vec<X509>, ErrorStack> {
         unsafe {
-            let handle = try!(cvt_p(ffi::PEM_read_bio_X509(mem_bio.as_ptr(),
-                                                           ptr::null_mut(),
-                                                           None,
-                                                           ptr::null_mut())));
-            Ok(X509::from_ptr(handle))
+            ffi::init();
+            let bio = try!(MemBioSlice::new(pem));
+
+            let mut certs = vec![];
+            loop {
+                let r = ffi::PEM_read_bio_X509(bio.as_ptr(),
+                                               ptr::null_mut(),
+                                               None,
+                                               ptr::null_mut());
+                if r.is_null() {
+                    let err = ffi::ERR_peek_last_error();
+                    if ffi::ERR_GET_LIB(err) == ffi::ERR_LIB_PEM
+                            && ffi::ERR_GET_REASON(err) == ffi::PEM_R_NO_START_LINE {
+                        ffi::ERR_clear_error();
+                        break;
+                    }
+
+                    return Err(ErrorStack::get());
+                } else {
+                    certs.push(X509(r));
+                }
+            }
+
+            Ok(certs)
         }
     }
 }
@@ -534,7 +582,13 @@ impl<'a> X509v3Context<'a> {
     }
 }
 
-type_!(X509Extension, X509ExtensionRef, ffi::X509_EXTENSION, ffi::X509_EXTENSION_free);
+foreign_type! {
+    type CType = ffi::X509_EXTENSION;
+    fn drop = ffi::X509_EXTENSION_free;
+
+    pub struct X509Extension;
+    pub struct X509ExtensionRef;
+}
 
 impl Stackable for X509Extension {
     type StackType = ffi::stack_st_X509_EXTENSION;
@@ -635,7 +689,13 @@ impl X509NameBuilder {
     }
 }
 
-type_!(X509Name, X509NameRef, ffi::X509_NAME, ffi::X509_NAME_free);
+foreign_type! {
+    type CType = ffi::X509_NAME;
+    fn drop = ffi::X509_NAME_free;
+
+    pub struct X509Name;
+    pub struct X509NameRef;
+}
 
 impl X509Name {
     /// Returns a new builder.
@@ -694,7 +754,13 @@ impl<'a> Iterator for X509NameEntries<'a> {
     }
 }
 
-type_!(X509NameEntry, X509NameEntryRef, ffi::X509_NAME_ENTRY, ffi::X509_NAME_ENTRY_free);
+foreign_type! {
+    type CType = ffi::X509_NAME_ENTRY;
+    fn drop = ffi::X509_NAME_ENTRY_free;
+
+    pub struct X509NameEntry;
+    pub struct X509NameEntryRef;
+}
 
 impl X509NameEntryRef {
     pub fn data(&self) -> &Asn1StringRef {
@@ -769,7 +835,13 @@ impl X509ReqBuilder {
     }
 }
 
-type_!(X509Req, X509ReqRef, ffi::X509_REQ, ffi::X509_REQ_free);
+foreign_type! {
+    type CType = ffi::X509_REQ;
+    fn drop = ffi::X509_REQ_free;
+
+    pub struct X509Req;
+    pub struct X509ReqRef;
+}
 
 impl X509Req {
     pub fn builder() -> Result<X509ReqBuilder, ErrorStack> {
@@ -787,25 +859,40 @@ impl X509Req {
             Ok(X509Req::from_ptr(handle))
         }
     }
+
+    from_der!(X509Req, ffi::d2i_X509_REQ);
 }
 
 impl X509ReqRef {
-    /// Writes CSR as PEM
-    pub fn to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-        if unsafe { ffi::PEM_write_bio_X509_REQ(mem_bio.as_ptr(), self.as_ptr()) } != 1 {
-            return Err(ErrorStack::get());
+    to_pem!(ffi::PEM_write_bio_X509_REQ);
+    to_der!(ffi::i2d_X509_REQ);
+
+    pub fn version(&self) -> i32
+    {
+        unsafe {
+            compat::X509_REQ_get_version(self.as_ptr()) as i32
         }
-        Ok(mem_bio.get_buf().to_owned())
     }
 
-    /// Returns a DER serialized form of the CSR
-    pub fn to_der(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
+    pub fn set_version(&mut self, value: i32) -> Result<(), ErrorStack>
+    {
         unsafe {
-            ffi::i2d_X509_REQ_bio(mem_bio.as_ptr(), self.as_ptr());
+            cvt(ffi::X509_REQ_set_version(self.as_ptr(), value as c_long)).map(|_| ())
         }
-        Ok(mem_bio.get_buf().to_owned())
+    }
+
+    pub fn subject_name(&self) -> &X509NameRef {
+        unsafe {
+            let name = compat::X509_REQ_get_subject_name(self.as_ptr());
+            assert!(!name.is_null());
+            X509NameRef::from_ptr(name)
+        }
+    }
+
+    pub fn set_subject_name(&mut self, value: &X509NameRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_REQ_set_subject_name(self.as_ptr(), value.as_ptr())).map(|_| ())
+        }
     }
 }
 
@@ -932,7 +1019,13 @@ impl X509VerifyError {
     }
 }
 
-type_!(GeneralName, GeneralNameRef, ffi::GENERAL_NAME, ffi::GENERAL_NAME_free);
+foreign_type! {
+    type CType = ffi::GENERAL_NAME;
+    fn drop = ffi::GENERAL_NAME_free;
+
+    pub struct GeneralName;
+    pub struct GeneralNameRef;
+}
 
 impl GeneralNameRef {
     /// Returns the contents of this `GeneralName` if it is a `dNSName`.
@@ -972,18 +1065,42 @@ impl Stackable for GeneralName {
     type StackType = ffi::stack_st_GENERAL_NAME;
 }
 
+foreign_type! {
+    type CType = ffi::X509_ALGOR;
+    fn drop = ffi::X509_ALGOR_free;
+
+    pub struct X509Algorithm;
+    pub struct X509AlgorithmRef;
+}
+
+impl X509AlgorithmRef {
+    /// Returns the ASN.1 OID of this algorithm.
+    pub fn object(&self) -> &Asn1ObjectRef {
+        unsafe {
+            let mut oid = ptr::null();
+            compat::X509_ALGOR_get0(&mut oid, ptr::null_mut(), ptr::null_mut(), self.as_ptr());
+            assert!(!oid.is_null());
+            Asn1ObjectRef::from_ptr(oid as *mut _)
+        }
+    }
+}
+
 #[cfg(ossl110)]
 mod compat {
     pub use ffi::X509_getm_notAfter as X509_get_notAfter;
     pub use ffi::X509_getm_notBefore as X509_get_notBefore;
     pub use ffi::X509_up_ref;
     pub use ffi::X509_get0_extensions;
+    pub use ffi::X509_REQ_get_version;
+    pub use ffi::X509_REQ_get_subject_name;
+    pub use ffi::X509_get0_signature;
+    pub use ffi::X509_ALGOR_get0;
 }
 
 #[cfg(ossl10x)]
 #[allow(bad_style)]
 mod compat {
-    use libc::c_int;
+    use libc::{c_int, c_void};
     use ffi;
 
     pub unsafe fn X509_get_notAfter(x: *mut ffi::X509) -> *mut ffi::ASN1_TIME {
@@ -1010,5 +1127,37 @@ mod compat {
         } else {
             (*info).extensions
         }
+    }
+
+    pub unsafe fn X509_REQ_get_version(x: *mut ffi::X509_REQ) -> ::libc::c_long
+    {
+        ::ffi::ASN1_INTEGER_get((*(*x).req_info).version)
+    }
+
+    pub unsafe fn X509_REQ_get_subject_name(x: *mut ffi::X509_REQ) -> *mut ::ffi::X509_NAME
+    {
+        (*(*x).req_info).subject
+    }
+  
+    pub unsafe fn X509_get0_signature(psig: *mut *const ffi::ASN1_BIT_STRING,
+                                      palg: *mut *const ffi::X509_ALGOR, 
+                                      x: *const ffi::X509) {
+        if !psig.is_null() {
+            *psig = (*x).signature;
+        }
+        if !palg.is_null() {
+            *palg = (*x).sig_alg;
+        }
+    }
+
+    pub unsafe fn X509_ALGOR_get0(paobj: *mut *const ffi::ASN1_OBJECT,
+                                  pptype: *mut c_int,
+                                  pval: *mut *mut c_void,
+                                  alg: *const ffi::X509_ALGOR) {
+        if !paobj.is_null() {
+            *paobj = (*alg).algorithm;
+        }
+        assert!(pptype.is_null());
+        assert!(pval.is_null());
     }
 }

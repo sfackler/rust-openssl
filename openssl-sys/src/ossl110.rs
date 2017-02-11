@@ -1,4 +1,4 @@
-use libc::{c_int, c_void, c_char, c_uchar, c_ulong, c_long, c_uint};
+use libc::{c_int, c_void, c_char, c_uchar, c_ulong, c_long, c_uint, size_t};
 
 pub enum BIGNUM {}
 pub enum BIO {}
@@ -11,8 +11,11 @@ pub enum EVP_MD_CTX {}
 pub enum EVP_PKEY {}
 pub enum HMAC_CTX {}
 pub enum OPENSSL_STACK {}
+pub enum PKCS12 {}
 pub enum RSA {}
+pub enum SSL {}
 pub enum SSL_CTX {}
+pub enum SSL_SESSION {}
 pub enum stack_st_ASN1_OBJECT {}
 pub enum stack_st_GENERAL_NAME {}
 pub enum stack_st_OPENSSL_STRING {}
@@ -21,8 +24,11 @@ pub enum stack_st_X509 {}
 pub enum stack_st_X509_NAME {}
 pub enum stack_st_X509_ATTRIBUTE {}
 pub enum stack_st_X509_EXTENSION {}
+pub enum stack_st_SSL_CIPHER {}
 pub enum X509 {}
+pub enum X509_ALGOR {}
 pub enum X509_VERIFY_PARAM {}
+pub enum X509_REQ {}
 
 pub const SSL_OP_MICROSOFT_SESS_ID_BUG: c_ulong =                   0x00000000;
 pub const SSL_OP_NETSCAPE_CHALLENGE_BUG: c_ulong =                  0x00000000;
@@ -52,9 +58,27 @@ extern {
     pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
     pub fn BIO_s_file() -> *const BIO_METHOD;
     pub fn BIO_s_mem() -> *const BIO_METHOD;
+
+    pub fn BN_get_rfc2409_prime_768(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn BN_get_rfc2409_prime_1024(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn BN_get_rfc3526_prime_1536(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn BN_get_rfc3526_prime_2048(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn BN_get_rfc3526_prime_3072(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn BN_get_rfc3526_prime_4096(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn BN_get_rfc3526_prime_6144(bn: *mut BIGNUM) -> *mut BIGNUM;
+    pub fn BN_get_rfc3526_prime_8192(bn: *mut BIGNUM) -> *mut BIGNUM;
+
+    pub fn CRYPTO_malloc(num: size_t, file: *const c_char, line: c_int) -> *mut c_void;
     pub fn CRYPTO_free(buf: *mut c_void, file: *const c_char, line: c_int);
+
+    pub fn EVP_chacha20() -> *const ::EVP_CIPHER;
+    pub fn EVP_chacha20_poly1305() -> *const ::EVP_CIPHER;
+
     pub fn HMAC_CTX_new() -> *mut HMAC_CTX;
     pub fn HMAC_CTX_free(ctx: *mut HMAC_CTX);
+
+    pub fn OCSP_cert_to_id(dgst: *const ::EVP_MD, subject: *const ::X509, issuer: *const ::X509) -> *mut ::OCSP_CERTID;
+
     pub fn TLS_method() -> *const ::SSL_METHOD;
     pub fn DTLS_method() -> *const ::SSL_METHOD;
     pub fn SSL_CIPHER_get_version(cipher: *const ::SSL_CIPHER) -> *const c_char;
@@ -63,6 +87,8 @@ extern {
     pub fn X509_set1_notBefore(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
     pub fn X509_get_ext_d2i(x: *const ::X509, nid: c_int, crit: *mut c_int, idx: *mut c_int) -> *mut c_void;
     pub fn X509_NAME_add_entry_by_NID(x: *mut ::X509_NAME, field: c_int, ty: c_int, bytes: *const c_uchar, len: c_int, loc: c_int, set: c_int) -> c_int;
+    pub fn X509_get_signature_nid(x: *const X509) -> c_int;
+    pub fn X509_ALGOR_get0(paobj: *mut *const ::ASN1_OBJECT, pptype: *mut c_int, ppval: *mut *const c_void, alg: *const ::X509_ALGOR);
     pub fn X509_NAME_get_entry(n: *const ::X509_NAME, loc: c_int) -> *mut ::X509_NAME_ENTRY;
     pub fn X509_NAME_ENTRY_get_data(ne: *const ::X509_NAME_ENTRY) -> *mut ::ASN1_STRING;
     pub fn X509V3_EXT_nconf_nid(conf: *mut ::CONF, ctx: *mut ::X509V3_CTX, ext_nid: c_int, value: *const c_char) -> *mut ::X509_EXTENSION;
@@ -106,6 +132,7 @@ extern {
     pub fn SSL_CTX_clear_options(ctx: *mut ::SSL_CTX, op: c_ulong) -> c_ulong;
     pub fn X509_getm_notAfter(x: *const ::X509) -> *mut ::ASN1_TIME;
     pub fn X509_getm_notBefore(x: *const ::X509) -> *mut ::ASN1_TIME;
+    pub fn X509_get0_signature(psig: *mut *const ::ASN1_BIT_STRING, palg: *mut *const ::X509_ALGOR, x: *const ::X509);
     pub fn DH_set0_pqg(dh: *mut ::DH,
                        p: *mut ::BIGNUM,
                        q: *mut ::BIGNUM,
@@ -144,10 +171,15 @@ extern {
                                    -> c_int;
     pub fn X509_up_ref(x: *mut X509) -> c_int;
     pub fn SSL_CTX_up_ref(x: *mut SSL_CTX) -> c_int;
+    pub fn SSL_SESSION_get_master_key(session: *const SSL_SESSION,
+                                      out: *mut c_uchar,
+                                      outlen: size_t)
+                                      -> size_t;
     pub fn X509_get0_extensions(req: *const ::X509) -> *const stack_st_X509_EXTENSION;
     pub fn X509_STORE_CTX_get0_chain(ctx: *mut ::X509_STORE_CTX) -> *mut stack_st_X509;
     pub fn EVP_MD_CTX_new() -> *mut EVP_MD_CTX;
     pub fn EVP_MD_CTX_free(ctx: *mut EVP_MD_CTX);
+    pub fn EVP_PKEY_bits(key: *const EVP_PKEY) -> c_int;
 
     pub fn OpenSSL_version_num() -> c_ulong;
     pub fn OpenSSL_version(key: c_int) -> *const c_char;
@@ -156,4 +188,17 @@ extern {
     pub fn OPENSSL_sk_pop_free(st: *mut ::OPENSSL_STACK, free: Option<unsafe extern "C" fn (*mut c_void)>);
     pub fn OPENSSL_sk_push(st: *mut ::OPENSSL_STACK, data: *const c_void) -> c_int;
     pub fn OPENSSL_sk_pop(st: *mut ::OPENSSL_STACK) -> *mut c_void;
+
+    pub fn PKCS12_create(pass: *const c_char,
+                         friendly_name: *const c_char,
+                         pkey: *mut EVP_PKEY,
+                         cert: *mut X509,
+                         ca: *mut stack_st_X509,
+                         nid_key: c_int,
+                         nid_cert: c_int,
+                         iter: c_int,
+                         mac_iter: c_int,
+                         keytype: c_int) -> *mut PKCS12;
+    pub fn X509_REQ_get_version(req: *const X509_REQ) -> c_long;
+    pub fn X509_REQ_get_subject_name(req: *const X509_REQ) -> *mut ::X509_NAME;
 }

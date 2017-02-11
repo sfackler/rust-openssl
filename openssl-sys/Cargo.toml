@@ -1,12 +1,13 @@
 [package]
 name = "openssl-sys"
-version = "0.9.0"
+version = "0.9.6"
 authors = ["Alex Crichton <alex@alexcrichton.com>",
            "Steven Fackler <sfackler@gmail.com>"]
 license = "MIT"
 description = "FFI bindings to OpenSSL"
 repository = "https://github.com/sfackler/rust-openssl"
-documentation = "https://sfackler.github.io/rust-openssl/doc/v0.9.0/openssl_sys"
+documentation = "https://docs.rs/openssl-sys/0.9.6/openssl_sys"
+categories = ["cryptography", "external-ffi-bindings"]
 links = "openssl"
 build = "build.rs"
 
@@ -14,8 +15,13 @@ build = "build.rs"
 libc = "0.2"
 
 [build-dependencies]
-pkg-config = "0.3"
+pkg-config = "0.3.9"
+gcc = "0.3.42"
 
 [target.'cfg(windows)'.dependencies]
 user32-sys = "0.2"
 gdi32-sys = "0.2"
+
+# We don't actually use metadeps for annoying reasons but this is still here for tooling
+[package.metadata.pkg-config]
+openssl = "1.0.1"

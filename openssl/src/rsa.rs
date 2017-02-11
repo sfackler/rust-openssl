@@ -3,52 +3,48 @@ use std::fmt;
 use std::ptr;
 use std::mem;
 use libc::{c_int, c_void, c_char};
+use foreign_types::ForeignTypeRef;
 
 use {cvt, cvt_p, cvt_n};
 use bn::{BigNum, BigNumRef};
-use bio::{MemBio, MemBioSlice};
+use bio::MemBioSlice;
 use error::ErrorStack;
-use util::{CallbackState, invoke_passwd_cb};
-use types::OpenSslTypeRef;
+use util::{CallbackState, invoke_passwd_cb_old};
 
 /// Type of encryption padding to use.
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Padding(c_int);
+
+impl Padding {
+    pub fn from_raw(value: c_int) -> Padding {
+        Padding(value)
+    }
+
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
+}
 
 pub const NO_PADDING: Padding = Padding(ffi::RSA_NO_PADDING);
 pub const PKCS1_PADDING: Padding = Padding(ffi::RSA_PKCS1_PADDING);
 pub const PKCS1_OAEP_PADDING: Padding = Padding(ffi::RSA_PKCS1_OAEP_PADDING);
 
-type_!(Rsa, RsaRef, ffi::RSA, ffi::RSA_free);
+foreign_type! {
+    type CType = ffi::RSA;
+    fn drop = ffi::RSA_free;
+
+    pub struct Rsa;
+    pub struct RsaRef;
+}
 
 impl RsaRef {
-    /// Writes an RSA private key as unencrypted PEM formatted data
-    pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
+    private_key_to_pem!(ffi::PEM_write_bio_RSAPrivateKey);
+    public_key_to_pem!(ffi::PEM_write_bio_RSA_PUBKEY);
 
-        unsafe {
-            try!(cvt(ffi::PEM_write_bio_RSAPrivateKey(mem_bio.as_ptr(),
-                                                      self.as_ptr(),
-                                                      ptr::null(),
-                                                      ptr::null_mut(),
-                                                      0,
-                                                      None,
-                                                      ptr::null_mut())));
-        }
-        Ok(mem_bio.get_buf().to_owned())
-    }
+    private_key_to_der!(ffi::i2d_RSAPrivateKey);
+    public_key_to_der!(ffi::i2d_RSA_PUBKEY);
 
-    /// Writes an RSA public key as PEM formatted data
-    pub fn public_key_to_pem(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mem_bio = try!(MemBio::new());
-
-        unsafe {
-            try!(cvt(ffi::PEM_write_bio_RSA_PUBKEY(mem_bio.as_ptr(), self.as_ptr())));
-        }
-
-        Ok(mem_bio.get_buf().to_owned())
-    }
-
+    // FIXME should return u32
     pub fn size(&self) -> usize {
         unsafe {
             assert!(self.n().is_some());
@@ -250,6 +246,7 @@ impl Rsa {
     ///
     /// The public exponent will be 65537.
     pub fn generate(bits: u32) -> Result<Rsa, ErrorStack> {
+        ffi::init();
         unsafe {
             let rsa = Rsa(try!(cvt_p(ffi::RSA_new())));
             let e = try!(BigNum::from_u32(ffi::RSA_F4 as u32));
@@ -258,22 +255,16 @@ impl Rsa {
         }
     }
 
-    /// Reads an RSA private key from PEM formatted data.
-    pub fn private_key_from_pem(buf: &[u8]) -> Result<Rsa, ErrorStack> {
-        let mem_bio = try!(MemBioSlice::new(buf));
-        unsafe {
-            let rsa = try!(cvt_p(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.as_ptr(),
-                                                                 ptr::null_mut(),
-                                                                 None,
-                                                                 ptr::null_mut())));
-            Ok(Rsa(rsa))
-        }
-    }
+    private_key_from_pem!(Rsa, ffi::PEM_read_bio_RSAPrivateKey);
+    private_key_from_der!(Rsa, ffi::d2i_RSAPrivateKey);
+    public_key_from_pem!(Rsa, ffi::PEM_read_bio_RSA_PUBKEY);
+    public_key_from_der!(Rsa, ffi::d2i_RSA_PUBKEY);
 
-    /// Reads an RSA private key from PEM formatted data and supplies a password callback.
+    #[deprecated(since = "0.9.2", note = "use private_key_from_pem_callback")]
     pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<Rsa, ErrorStack>
         where F: FnOnce(&mut [c_char]) -> usize
     {
+        ffi::init();
         let mut cb = CallbackState::new(pass_cb);
         let mem_bio = try!(MemBioSlice::new(buf));
 
@@ -281,20 +272,8 @@ impl Rsa {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
             let rsa = try!(cvt_p(ffi::PEM_read_bio_RSAPrivateKey(mem_bio.as_ptr(),
                                                                  ptr::null_mut(),
-                                                                 Some(invoke_passwd_cb::<F>),
+                                                                 Some(invoke_passwd_cb_old::<F>),
                                                                  cb_ptr)));
-            Ok(Rsa(rsa))
-        }
-    }
-
-    /// Reads an RSA public key from PEM formatted data.
-    pub fn public_key_from_pem(buf: &[u8]) -> Result<Rsa, ErrorStack> {
-        let mem_bio = try!(MemBioSlice::new(buf));
-        unsafe {
-            let rsa = try!(cvt_p(ffi::PEM_read_bio_RSA_PUBKEY(mem_bio.as_ptr(),
-                                                              ptr::null_mut(),
-                                                              None,
-                                                              ptr::null_mut())));
             Ok(Rsa(rsa))
         }
     }
@@ -380,26 +359,26 @@ mod compat {
     }
 }
 
-
 #[cfg(test)]
 mod test {
-    use libc::c_char;
+    use symm::Cipher;
 
     use super::*;
 
     #[test]
-    pub fn test_password() {
+    fn test_from_password() {
+        let key = include_bytes!("../test/rsa-encrypted.pem");
+        Rsa::private_key_from_pem_passphrase(key, b"mypass").unwrap();
+    }
+
+    #[test]
+    fn test_from_password_callback() {
         let mut password_queried = false;
         let key = include_bytes!("../test/rsa-encrypted.pem");
-        Rsa::private_key_from_pem_cb(key, |password| {
+        Rsa::private_key_from_pem_callback(key, |password| {
                 password_queried = true;
-                password[0] = b'm' as c_char;
-                password[1] = b'y' as c_char;
-                password[2] = b'p' as c_char;
-                password[3] = b'a' as c_char;
-                password[4] = b's' as c_char;
-                password[5] = b's' as c_char;
-                6
+                password[..6].copy_from_slice(b"mypass");
+                Ok(6)
             })
             .unwrap();
 
@@ -407,7 +386,15 @@ mod test {
     }
 
     #[test]
-    pub fn test_public_encrypt_private_decrypt_with_padding() {
+    fn test_to_password() {
+        let key = Rsa::generate(2048).unwrap();
+        let pem = key.private_key_to_pem_passphrase(Cipher::aes_128_cbc(), b"foobar").unwrap();
+        Rsa::private_key_from_pem_passphrase(&pem, b"foobar").unwrap();
+        assert!(Rsa::private_key_from_pem_passphrase(&pem, b"fizzbuzz").is_err());
+    }
+
+    #[test]
+    fn test_public_encrypt_private_decrypt_with_padding() {
         let key = include_bytes!("../test/rsa.pem.pub");
         let public_key = Rsa::public_key_from_pem(key).unwrap();
 
