@@ -26,6 +26,7 @@ pub enum stack_st_X509_ATTRIBUTE {}
 pub enum stack_st_X509_EXTENSION {}
 pub enum stack_st_SSL_CIPHER {}
 pub enum X509 {}
+pub enum X509_ALGOR {}
 pub enum X509_VERIFY_PARAM {}
 pub enum X509_REQ {}
 
@@ -85,6 +86,8 @@ extern {
     pub fn X509_set1_notAfter(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
     pub fn X509_set1_notBefore(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
     pub fn X509_get_ext_d2i(x: *const ::X509, nid: c_int, crit: *mut c_int, idx: *mut c_int) -> *mut c_void;
+    pub fn X509_get_signature_nid(x: *const X509) -> c_int;
+    pub fn X509_ALGOR_get0(paobj: *mut *const ::ASN1_OBJECT, pptype: *mut c_int, ppval: *mut *const c_void, alg: *const ::X509_ALGOR);
     pub fn X509_NAME_get_entry(n: *const ::X509_NAME, loc: c_int) -> *mut ::X509_NAME_ENTRY;
     pub fn X509_NAME_ENTRY_get_data(ne: *const ::X509_NAME_ENTRY) -> *mut ::ASN1_STRING;
     pub fn X509V3_EXT_nconf_nid(conf: *mut ::CONF, ctx: *mut ::X509V3_CTX, ext_nid: c_int, value: *const c_char) -> *mut ::X509_EXTENSION;
@@ -128,6 +131,7 @@ extern {
     pub fn SSL_CTX_clear_options(ctx: *mut ::SSL_CTX, op: c_ulong) -> c_ulong;
     pub fn X509_getm_notAfter(x: *const ::X509) -> *mut ::ASN1_TIME;
     pub fn X509_getm_notBefore(x: *const ::X509) -> *mut ::ASN1_TIME;
+    pub fn X509_get0_signature(psig: *mut *const ::ASN1_BIT_STRING, palg: *mut *const ::X509_ALGOR, x: *const ::X509);
     pub fn DH_set0_pqg(dh: *mut ::DH,
                        p: *mut ::BIGNUM,
                        q: *mut ::BIGNUM,

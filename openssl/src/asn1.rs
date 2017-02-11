@@ -1,6 +1,6 @@
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::{c_long, c_char};
+use libc::{c_long, c_char, c_int};
 use std::fmt;
 use std::ptr;
 use std::slice;
@@ -9,6 +9,7 @@ use std::str;
 use {cvt, cvt_p};
 use bio::MemBio;
 use error::ErrorStack;
+use nid::Nid;
 use string::OpensslString;
 
 foreign_type! {
@@ -112,6 +113,55 @@ impl Asn1IntegerRef {
     {
         unsafe {
             cvt(::ffi::ASN1_INTEGER_set(self.as_ptr(), value as c_long)).map(|_| ())
+        }
+    }
+}
+
+foreign_type! {
+    type CType = ffi::ASN1_BIT_STRING;
+    fn drop = ffi::ASN1_BIT_STRING_free;
+
+    pub struct Asn1BitString;
+    pub struct Asn1BitStringRef;
+}
+
+impl Asn1BitStringRef {
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe { slice::from_raw_parts(ASN1_STRING_data(self.as_ptr() as *mut _), self.len()) }
+    }
+
+    pub fn len(&self) -> usize {
+        unsafe { ffi::ASN1_STRING_length(self.as_ptr() as *mut _) as usize }
+    }
+}
+
+foreign_type! {
+    type CType = ffi::ASN1_OBJECT;
+    fn drop = ffi::ASN1_OBJECT_free;
+
+    pub struct Asn1Object;
+    pub struct Asn1ObjectRef;
+}
+
+impl Asn1ObjectRef {
+    /// Returns the NID associated with this OID.
+    pub fn nid(&self) -> Nid {
+        unsafe {
+            Nid::from_raw(ffi::OBJ_obj2nid(self.as_ptr()))
+        }
+    }
+}
+
+impl fmt::Display for Asn1ObjectRef {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        unsafe {
+            let mut buf = [0; 80];
+            let len = ffi::OBJ_obj2txt(buf.as_mut_ptr() as *mut _,
+                                       buf.len() as c_int,
+                                       self.as_ptr(),
+                                       0);
+            let s = try!(str::from_utf8(&buf[..len as usize]).map_err(|_| fmt::Error));
+            fmt.write_str(s)
         }
     }
 }
