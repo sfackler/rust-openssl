@@ -26,6 +26,7 @@ pub use libressl::*;
 pub enum ASN1_INTEGER {}
 pub enum ASN1_GENERALIZEDTIME {}
 pub enum ASN1_STRING {}
+pub enum ASN1_BIT_STRING {}
 pub enum ASN1_TIME {}
 pub enum ASN1_TYPE {}
 pub enum BN_CTX {}
@@ -1408,6 +1409,7 @@ extern {
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
     pub fn ASN1_TIME_free(tm: *mut ASN1_TIME);
     pub fn ASN1_TIME_print(b: *mut BIO, tm: *const ASN1_TIME) -> c_int;
+    pub fn ASN1_BIT_STRING_free(x: *mut ASN1_BIT_STRING);
 
     pub fn BIO_ctrl(b: *mut BIO, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
     pub fn BIO_free_all(b: *mut BIO);

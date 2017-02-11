@@ -93,6 +93,24 @@ impl Asn1StringRef {
     }
 }
 
+foreign_type! {
+    type CType = ffi::ASN1_BIT_STRING;
+    fn drop = ffi::ASN1_BIT_STRING_free;
+
+    pub struct Asn1BitString;
+    pub struct Asn1BitStringRef;
+}
+
+impl Asn1BitStringRef {
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe { slice::from_raw_parts(ASN1_STRING_data(self.as_ptr() as *mut _), self.len()) }
+    }
+
+    pub fn len(&self) -> usize {
+        unsafe { ffi::ASN1_STRING_length(self.as_ptr() as *mut _) as usize }
+    }
+}
+
 #[cfg(any(ossl101, ossl102))]
 use ffi::ASN1_STRING_data;
 
