@@ -874,24 +874,11 @@ impl X509ReqRef {
         }
     }
 
-    pub fn set_version(&mut self, value: i32) -> Result<(), ErrorStack>
-    {
-        unsafe {
-            cvt(ffi::X509_REQ_set_version(self.as_ptr(), value as c_long)).map(|_| ())
-        }
-    }
-
     pub fn subject_name(&self) -> &X509NameRef {
         unsafe {
             let name = compat::X509_REQ_get_subject_name(self.as_ptr());
             assert!(!name.is_null());
             X509NameRef::from_ptr(name)
-        }
-    }
-
-    pub fn set_subject_name(&mut self, value: &X509NameRef) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::X509_REQ_set_subject_name(self.as_ptr(), value.as_ptr())).map(|_| ())
         }
     }
 }
