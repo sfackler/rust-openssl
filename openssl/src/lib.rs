@@ -29,6 +29,7 @@ mod util;
 pub mod aes;
 pub mod asn1;
 pub mod bn;
+pub mod conf;
 pub mod crypto;
 pub mod dh;
 pub mod dsa;

@@ -1,13 +1,17 @@
 use hex::{FromHex, ToHex};
 
+use asn1::Asn1Time;
+use bn::{BigNum, MSB_MAYBE_ZERO};
 use ec::{NAMED_CURVE, EcGroup, EcKey};
 use hash::MessageDigest;
 use nid::X9_62_PRIME256V1;
 use pkey::PKey;
 use rsa::Rsa;
+use stack::Stack;
+use x509::{X509, X509Generator, X509Name, X509Req};
+use x509::extension::{Extension, BasicConstraints, KeyUsage, ExtendedKeyUsage,
+                      SubjectKeyIdentifier, AuthorityKeyIdentifier, SubjectAlternativeName};
 use ssl::{SslMethod, SslContextBuilder};
-use x509::{X509, X509Generator, X509Req};
-use x509::extension::Extension::{KeyUsage, ExtKeyUsage, SubjectAltName, OtherNid, OtherStr};
 use x509::extension::AltNameOption as SAN;
 use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment};
 use x509::extension::ExtKeyUsageOption::{self, ClientAuth, ServerAuth};
@@ -18,13 +22,13 @@ fn get_generator() -> X509Generator {
         .set_valid_period(365 * 2)
         .add_name("CN".to_string(), "test_me".to_string())
         .set_sign_hash(MessageDigest::sha1())
-        .add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]))
-        .add_extension(ExtKeyUsage(vec![ClientAuth,
+        .add_extension(Extension::KeyUsage(vec![DigitalSignature, KeyEncipherment]))
+        .add_extension(Extension::ExtKeyUsage(vec![ClientAuth,
                                         ServerAuth,
                                         ExtKeyUsageOption::Other("2.999.1".to_owned())]))
-        .add_extension(SubjectAltName(vec![(SAN::DNS, "example.com".to_owned())]))
-        .add_extension(OtherNid(nid::BASIC_CONSTRAINTS, "critical,CA:TRUE".to_owned()))
-        .add_extension(OtherStr("2.999.2".to_owned(), "ASN1:UTF8:example value".to_owned()))
+        .add_extension(Extension::SubjectAltName(vec![(SAN::DNS, "example.com".to_owned())]))
+        .add_extension(Extension::OtherNid(nid::BASIC_CONSTRAINTS, "critical,CA:TRUE".to_owned()))
+        .add_extension(Extension::OtherStr("2.999.2".to_owned(), "ASN1:UTF8:example value".to_owned()))
 }
 
 fn pkey() -> PKey {
@@ -51,8 +55,8 @@ fn test_cert_gen() {
 fn test_cert_gen_extension_ordering() {
     let pkey = pkey();
     get_generator()
-        .add_extension(OtherNid(nid::SUBJECT_KEY_IDENTIFIER, "hash".to_owned()))
-        .add_extension(OtherNid(nid::AUTHORITY_KEY_IDENTIFIER, "keyid:always".to_owned()))
+        .add_extension(Extension::OtherNid(nid::SUBJECT_KEY_IDENTIFIER, "hash".to_owned()))
+        .add_extension(Extension::OtherNid(nid::AUTHORITY_KEY_IDENTIFIER, "keyid:always".to_owned()))
         .sign(&pkey)
         .expect("Failed to generate cert with order-dependent extensions");
 }
@@ -63,8 +67,8 @@ fn test_cert_gen_extension_ordering() {
 fn test_cert_gen_extension_bad_ordering() {
     let pkey = pkey();
     let result = get_generator()
-        .add_extension(OtherNid(nid::AUTHORITY_KEY_IDENTIFIER, "keyid:always".to_owned()))
-        .add_extension(OtherNid(nid::SUBJECT_KEY_IDENTIFIER, "hash".to_owned()))
+        .add_extension(Extension::OtherNid(nid::AUTHORITY_KEY_IDENTIFIER, "keyid:always".to_owned()))
+        .add_extension(Extension::OtherNid(nid::SUBJECT_KEY_IDENTIFIER, "hash".to_owned()))
         .sign(&pkey);
 
     assert!(result.is_err());
@@ -181,6 +185,88 @@ fn test_subject_alt_name_iter() {
     assert_eq!(subject_alt_names_iter.next().unwrap().ipaddress(),
                Some(&b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01"[..]));
     assert!(subject_alt_names_iter.next().is_none());
+}
+
+#[test]
+fn x509_builder() {
+    let pkey = pkey();
+
+    let mut name = X509Name::builder().unwrap();
+    name.append_entry_by_nid(nid::COMMONNAME, "foobar.com").unwrap();
+    let name = name.build();
+
+    let mut builder = X509::builder().unwrap();
+    builder.set_version(2).unwrap();
+    builder.set_subject_name(&name).unwrap();
+    builder.set_issuer_name(&name).unwrap();
+    builder.set_not_before(&Asn1Time::days_from_now(0).unwrap()).unwrap();
+    builder.set_not_after(&Asn1Time::days_from_now(365).unwrap()).unwrap();
+    builder.set_pubkey(&pkey).unwrap();
+
+    let mut serial = BigNum::new().unwrap();;
+    serial.rand(128, MSB_MAYBE_ZERO, false).unwrap();
+    builder.set_serial_number(&serial.to_asn1_integer().unwrap()).unwrap();
+
+    let basic_constraints = BasicConstraints::new().critical().ca().build().unwrap();
+    builder.append_extension(basic_constraints).unwrap();
+    let key_usage = KeyUsage::new().digital_signature().key_encipherment().build().unwrap();
+    builder.append_extension(key_usage).unwrap();
+    let ext_key_usage = ExtendedKeyUsage::new()
+        .client_auth()
+        .server_auth()
+        .other("2.999.1")
+        .build()
+        .unwrap();
+    builder.append_extension(ext_key_usage).unwrap();
+    let subject_key_identifier = SubjectKeyIdentifier::new()
+        .build(&builder.x509v3_context(None, None))
+        .unwrap();
+    builder.append_extension(subject_key_identifier).unwrap();
+    let authority_key_identifier = AuthorityKeyIdentifier::new()
+        .keyid(true)
+        .build(&builder.x509v3_context(None, None))
+        .unwrap();
+    builder.append_extension(authority_key_identifier).unwrap();
+    let subject_alternative_name = SubjectAlternativeName::new()
+        .dns("example.com")
+        .build(&builder.x509v3_context(None, None))
+        .unwrap();
+    builder.append_extension(subject_alternative_name).unwrap();
+
+    builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+
+    let x509 = builder.build();
+
+    assert!(pkey.public_eq(&x509.public_key().unwrap()));
+
+    let cn = x509.subject_name().entries_by_nid(nid::COMMONNAME).next().unwrap();
+    assert_eq!("foobar.com".as_bytes(), cn.data().as_slice());
+}
+
+#[test]
+fn x509_req_builder() {
+    let pkey = pkey();
+
+    let mut name = X509Name::builder().unwrap();
+    name.append_entry_by_nid(nid::COMMONNAME, "foobar.com").unwrap();
+    let name = name.build();
+
+    let mut builder = X509Req::builder().unwrap();
+    builder.set_version(2).unwrap();
+    builder.set_subject_name(&name).unwrap();
+    builder.set_pubkey(&pkey).unwrap();
+
+    let mut extensions = Stack::new().unwrap();
+    let key_usage = KeyUsage::new().digital_signature().key_encipherment().build().unwrap();
+    extensions.push(key_usage).unwrap();
+    let subject_alternative_name = SubjectAlternativeName::new()
+        .dns("example.com")
+        .build(&builder.x509v3_context(None))
+        .unwrap();
+    extensions.push(subject_alternative_name).unwrap();
+    builder.add_extensions(&extensions).unwrap();
+
+    builder.sign(&pkey, MessageDigest::sha256()).unwrap();
 }
 
 #[test]

@@ -1,11 +1,13 @@
+#![allow(deprecated)]
+use libc::{c_int, c_long};
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::{c_char, c_int, c_long, c_ulong};
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;
+use std::marker::PhantomData;
 use std::mem;
 use std::path::Path;
 use std::ptr;
@@ -13,15 +15,16 @@ use std::slice;
 use std::str;
 
 use {cvt, cvt_p};
-use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef, Asn1BitStringRef, Asn1ObjectRef};
+use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef, Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef};
 use bio::MemBioSlice;
-use hash::MessageDigest;
-use pkey::{PKey, PKeyRef};
-use rand::rand_bytes;
+use bn::{BigNum, MSB_MAYBE_ZERO};
+use conf::ConfRef;
 use error::ErrorStack;
-use nid::Nid;
-use string::OpensslString;
+use hash::MessageDigest;
+use nid::{self, Nid};
+use pkey::{PKey, PKeyRef};
 use stack::{Stack, StackRef, Stackable};
+use string::OpensslString;
 
 #[cfg(ossl10x)]
 use ffi::{X509_set_notBefore, X509_set_notAfter, ASN1_STRING_data, X509_STORE_CTX_get_chain};
@@ -94,31 +97,7 @@ impl X509StoreContextRef {
     }
 }
 
-#[allow(non_snake_case)]
-/// Generator of private key/certificate pairs
-///
-/// # Example
-///
-/// ```
-/// use openssl::hash::MessageDigest;
-/// use openssl::pkey::PKey;
-/// use openssl::rsa::Rsa;
-/// use openssl::x509::X509Generator;
-/// use openssl::x509::extension::{Extension, KeyUsageOption};
-///
-/// let rsa = Rsa::generate(2048).unwrap();
-/// let pkey = PKey::from_rsa(rsa).unwrap();
-///
-/// let gen = X509Generator::new()
-///        .set_valid_period(365*2)
-///        .add_name("CN".to_owned(), "SuperMegaCorp Inc.".to_owned())
-///        .set_sign_hash(MessageDigest::sha256())
-///        .add_extension(Extension::KeyUsage(vec![KeyUsageOption::DigitalSignature]));
-///
-/// let cert = gen.sign(&pkey).unwrap();
-/// let cert_pem = cert.to_pem().unwrap();
-/// let pkey_pem = pkey.private_key_to_pem().unwrap();
-/// ```
+#[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
 pub struct X509Generator {
     days: u32,
     names: Vec<(String, String)>,
@@ -126,6 +105,7 @@ pub struct X509Generator {
     hash_type: MessageDigest,
 }
 
+#[allow(deprecated)]
 impl X509Generator {
     /// Creates a new generator with the following defaults:
     ///
@@ -134,6 +114,7 @@ impl X509Generator {
     /// CN: "rust-openssl"
     ///
     /// hash: SHA1
+    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn new() -> X509Generator {
         X509Generator {
             days: 365,
@@ -144,6 +125,7 @@ impl X509Generator {
     }
 
     /// Sets certificate validity period in days since today
+    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn set_valid_period(mut self, days: u32) -> X509Generator {
         self.days = days;
         self
@@ -155,6 +137,7 @@ impl X509Generator {
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_name("CN".to_string(),"example.com".to_string());
     /// ```
+    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn add_name(mut self, attr_type: String, attr_value: String) -> X509Generator {
         self.names.push((attr_type, attr_value));
         self
@@ -166,6 +149,7 @@ impl X509Generator {
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_names(vec![("CN".to_string(),"example.com".to_string())]);
     /// ```
+    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn add_names<I>(mut self, attrs: I) -> X509Generator
         where I: IntoIterator<Item = (String, String)>
     {
@@ -184,6 +168,7 @@ impl X509Generator {
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]));
     /// ```
+    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn add_extension(mut self, ext: extension::Extension) -> X509Generator {
         self.extensions.add(ext);
         self
@@ -200,6 +185,7 @@ impl X509Generator {
     /// # let generator = openssl::x509::X509Generator::new();
     /// generator.add_extensions(vec![KeyUsage(vec![DigitalSignature, KeyEncipherment])]);
     /// ```
+    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn add_extensions<I>(mut self, exts: I) -> X509Generator
         where I: IntoIterator<Item = extension::Extension>
     {
@@ -210,131 +196,66 @@ impl X509Generator {
         self
     }
 
+    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn set_sign_hash(mut self, hash_type: MessageDigest) -> X509Generator {
         self.hash_type = hash_type;
         self
     }
 
-    fn add_extension_internal(x509: *mut ffi::X509,
-                              exttype: &extension::ExtensionType,
-                              value: &str)
-                              -> Result<(), ErrorStack> {
-        unsafe {
-            let mut ctx: ffi::X509V3_CTX = mem::zeroed();
-            ffi::X509V3_set_ctx(&mut ctx, x509, x509, ptr::null_mut(), ptr::null_mut(), 0);
-            let value = CString::new(value.as_bytes()).unwrap();
-            let ext = match exttype.get_nid() {
+    /// Sets the certificate public-key, then self-sign and return it
+    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
+    pub fn sign(&self, p_key: &PKeyRef) -> Result<X509, ErrorStack> {
+        let mut builder = try!(X509::builder());
+        try!(builder.set_version(2));
+
+        let mut serial = try!(BigNum::new());
+        try!(serial.rand(128, MSB_MAYBE_ZERO, false));
+        let serial = try!(serial.to_asn1_integer());
+        try!(builder.set_serial_number(&serial));
+
+        let not_before = try!(Asn1Time::days_from_now(0));
+        try!(builder.set_not_before(&not_before));
+        let not_after = try!(Asn1Time::days_from_now(self.days));
+        try!(builder.set_not_after(&not_after));
+
+        try!(builder.set_pubkey(p_key));
+
+        let mut name = try!(X509Name::builder());
+        if self.names.is_empty() {
+            try!(name.append_entry_by_nid(nid::COMMONNAME, "rust-openssl"));
+        } else {
+            for &(ref key, ref value) in &self.names {
+                try!(name.append_entry_by_text(key, value));
+            }
+        }
+        let name = name.build();
+
+        try!(builder.set_subject_name(&name));
+        try!(builder.set_issuer_name(&name));
+
+        for (exttype, ext) in self.extensions.iter() {
+            let extension = match exttype.get_nid() {
                 Some(nid) => {
-                    try!(cvt_p(ffi::X509V3_EXT_nconf_nid(ptr::null_mut(),
-                                                         &mut ctx,
-                                                         nid.as_raw(),
-                                                         value.as_ptr() as *mut c_char)))
+                    let ctx = builder.x509v3_context(None, None);
+                    try!(X509Extension::new_nid(None, Some(&ctx), nid, &ext.to_string()))
                 }
                 None => {
-                    let name = CString::new(exttype.get_name().unwrap().as_bytes()).unwrap();
-                    try!(cvt_p(ffi::X509V3_EXT_nconf(ptr::null_mut(),
-                                                     &mut ctx,
-                                                     name.as_ptr() as *mut c_char,
-                                                     value.as_ptr() as *mut c_char)))
+                    let ctx = builder.x509v3_context(None, None);
+                    try!(X509Extension::new(None,
+                                            Some(&ctx),
+                                            &exttype.get_name().unwrap(),
+                                            &ext.to_string()))
                 }
             };
-            if ffi::X509_add_ext(x509, ext, -1) != 1 {
-                ffi::X509_EXTENSION_free(ext);
-                Err(ErrorStack::get())
-            } else {
-                Ok(())
-            }
-        }
-    }
-
-    fn add_name_internal(name: *mut ffi::X509_NAME,
-                         key: &str,
-                         value: &str)
-                         -> Result<(), ErrorStack> {
-        let value_len = value.len() as c_int;
-        unsafe {
-            let key = CString::new(key.as_bytes()).unwrap();
-            let value = CString::new(value.as_bytes()).unwrap();
-            cvt(ffi::X509_NAME_add_entry_by_txt(name,
-                                                key.as_ptr() as *const _,
-                                                ffi::MBSTRING_UTF8,
-                                                value.as_ptr() as *const _,
-                                                value_len,
-                                                -1,
-                                                0))
-                .map(|_| ())
-        }
-    }
-
-    fn random_serial() -> Result<c_long, ErrorStack> {
-        let len = mem::size_of::<c_long>();
-        let mut bytes = vec![0; len];
-        try!(rand_bytes(&mut bytes));
-        let mut res = 0;
-        for b in bytes.iter() {
-            res = res << 8;
-            res |= (*b as c_long) & 0xff;
+            try!(builder.append_extension(extension));
         }
 
-        // While OpenSSL is actually OK to have negative serials
-        // other libraries (for example, Go crypto) can drop
-        // such certificates as invalid, so we clear the high bit
-        Ok(((res as c_ulong) >> 1) as c_long)
-    }
-
-    /// Sets the certificate public-key, then self-sign and return it
-    pub fn sign(&self, p_key: &PKeyRef) -> Result<X509, ErrorStack> {
-        ffi::init();
-
-        unsafe {
-            let x509 = X509::from_ptr(try!(cvt_p(ffi::X509_new())));
-
-            try!(cvt(ffi::X509_set_version(x509.as_ptr(), 2)));
-            try!(cvt(ffi::ASN1_INTEGER_set(ffi::X509_get_serialNumber(x509.as_ptr()),
-                                           try!(X509Generator::random_serial()))));
-
-            let not_before = try!(Asn1Time::days_from_now(0));
-            let not_after = try!(Asn1Time::days_from_now(self.days));
-
-            try!(cvt(X509_set_notBefore(x509.as_ptr(), not_before.as_ptr() as *const _)));
-            // If prev line succeded - ownership should go to cert
-            mem::forget(not_before);
-
-            try!(cvt(X509_set_notAfter(x509.as_ptr(), not_after.as_ptr() as *const _)));
-            // If prev line succeded - ownership should go to cert
-            mem::forget(not_after);
-
-            try!(cvt(ffi::X509_set_pubkey(x509.as_ptr(), p_key.as_ptr())));
-
-            let name = try!(cvt_p(ffi::X509_get_subject_name(x509.as_ptr())));
-
-            let default = [("CN", "rust-openssl")];
-            let default_iter = &mut default.iter().map(|&(k, v)| (k, v));
-            let arg_iter = &mut self.names.iter().map(|&(ref k, ref v)| (&k[..], &v[..]));
-            let iter: &mut Iterator<Item = (&str, &str)> = if self.names.len() == 0 {
-                default_iter
-            } else {
-                arg_iter
-            };
-
-            for (key, val) in iter {
-                try!(X509Generator::add_name_internal(name, &key, &val));
-            }
-            try!(cvt(ffi::X509_set_issuer_name(x509.as_ptr(), name)));
-
-            for (exttype, ext) in self.extensions.iter() {
-                try!(X509Generator::add_extension_internal(x509.as_ptr(),
-                                                           &exttype,
-                                                           &ext.to_string()));
-            }
-
-            let hash_fn = self.hash_type.as_ptr();
-            try!(cvt(ffi::X509_sign(x509.as_ptr(), p_key.as_ptr(), hash_fn)));
-            Ok(x509)
-        }
+        try!(builder.sign(p_key, self.hash_type));
+        Ok(builder.build())
     }
 
     /// Obtain a certificate signing request (CSR)
+    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn request(&self, p_key: &PKeyRef) -> Result<X509Req, ErrorStack> {
         let cert = match self.sign(p_key) {
             Ok(c) => c,
@@ -357,6 +278,108 @@ impl X509Generator {
 
             Ok(req)
         }
+    }
+}
+
+/// A builder type which can create `X509` objects.
+pub struct X509Builder(X509);
+
+impl X509Builder {
+    /// Creates a new builder.
+    pub fn new() -> Result<X509Builder, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(ffi::X509_new()).map(|p| X509Builder(X509(p)))
+        }
+    }
+
+    /// Sets the notAfter constraint on the certificate.
+    pub fn set_not_after(&mut self, not_after: &Asn1TimeRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(X509_set_notAfter(self.0.as_ptr(), not_after.as_ptr())).map(|_| ()) }
+    }
+
+    /// Sets the notBefore constraint on the certificate.
+    pub fn set_not_before(&mut self, not_before: &Asn1TimeRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(X509_set_notBefore(self.0.as_ptr(), not_before.as_ptr())).map(|_| ()) }
+    }
+
+    /// Sets the version of the certificate.
+    ///
+    /// Note that the version is zero-indexed; that is, a certificate corresponding to version 3 of
+    /// the X.509 standard should pass `2` to this method.
+    pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_set_version(self.0.as_ptr(), version.into())).map(|_| ()) }
+    }
+
+    /// Sets the serial number of the certificate.
+    pub fn set_serial_number(&mut self,
+                             serial_number: &Asn1IntegerRef)
+                             -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_set_serialNumber(self.0.as_ptr(), serial_number.as_ptr())).map(|_| ())
+        }
+    }
+
+    /// Sets the issuer name of the certificate.
+    pub fn set_issuer_name(&mut self, issuer_name: &X509NameRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_set_issuer_name(self.0.as_ptr(), issuer_name.as_ptr())).map(|_| ()) }
+    }
+
+    /// Sets the subject name of the certificate.
+    pub fn set_subject_name(&mut self, subject_name: &X509NameRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_set_subject_name(self.0.as_ptr(), subject_name.as_ptr())).map(|_| ())
+        }
+    }
+
+    /// Sets the public key associated with the certificate.
+    pub fn set_pubkey(&mut self, key: &PKeyRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_set_pubkey(self.0.as_ptr(), key.as_ptr())).map(|_| ()) }
+    }
+
+    /// Returns a context object which is needed to create certain X509 extension values.
+    ///
+    /// Set `issuer` to `None` if the certificate will be self-signed.
+    pub fn x509v3_context<'a>(&'a self,
+                              issuer: Option<&'a X509Ref>,
+                              conf: Option<&'a ConfRef>)
+                              -> X509v3Context<'a> {
+        unsafe {
+            let mut ctx = mem::zeroed();
+
+            let issuer = match issuer {
+                Some(issuer) => issuer.as_ptr(),
+                None => self.0.as_ptr(),
+            };
+            let subject = self.0.as_ptr();
+            ffi::X509V3_set_ctx(&mut ctx, issuer, subject, ptr::null_mut(), ptr::null_mut(), 0);
+
+            // nodb case taken care of since we zeroed ctx above
+            if let Some(conf) = conf {
+                ffi::X509V3_set_nconf(&mut ctx, conf.as_ptr());
+            }
+
+            X509v3Context(ctx, PhantomData)
+        }
+    }
+
+    /// Adds an X509 extension value to the certificate.
+    pub fn append_extension(&mut self, extension: X509Extension) -> Result<(), ErrorStack> {
+        unsafe {
+            try!(cvt(ffi::X509_add_ext(self.0.as_ptr(), extension.as_ptr(), -1)));
+            mem::forget(extension);
+            Ok(())
+        }
+    }
+
+    /// Signs the certificate with a private key.
+    pub fn sign(&mut self, key: &PKeyRef, hash: MessageDigest) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_sign(self.0.as_ptr(), key.as_ptr(), hash.as_ptr())).map(|_| ()) }
+    }
+
+    /// Consumes the builder, returning the certificate.
+    pub fn build(self) -> X509 {
+        self.0
     }
 }
 
@@ -483,6 +506,11 @@ impl ToOwned for X509Ref {
 }
 
 impl X509 {
+    /// Returns a new builder.
+    pub fn builder() -> Result<X509Builder, ErrorStack> {
+        X509Builder::new()
+    }
+
     from_pem!(X509, ffi::PEM_read_bio_X509);
     from_der!(X509, ffi::d2i_X509);
 
@@ -545,6 +573,122 @@ impl Stackable for X509 {
     type StackType = ffi::stack_st_X509;
 }
 
+/// A context object required to construct certain X509 extension values.
+pub struct X509v3Context<'a>(ffi::X509V3_CTX, PhantomData<(&'a X509Ref, &'a ConfRef)>);
+
+impl<'a> X509v3Context<'a> {
+    pub fn as_ptr(&self) -> *mut ffi::X509V3_CTX {
+        &self.0 as *const _ as *mut _
+    }
+}
+
+foreign_type! {
+    type CType = ffi::X509_EXTENSION;
+    fn drop = ffi::X509_EXTENSION_free;
+
+    pub struct X509Extension;
+    pub struct X509ExtensionRef;
+}
+
+impl Stackable for X509Extension {
+    type StackType = ffi::stack_st_X509_EXTENSION;
+}
+
+impl X509Extension {
+    /// Constructs an X509 extension value. See `man x509v3_config` for information on supported
+    /// names and their value formats.
+    ///
+    /// Some extension types, such as `subjectAlternativeName`, require an `X509v3Context` to be
+    /// provided.
+    ///
+    /// See the extension module for builder types which will construct certain common extensions.
+    pub fn new(conf: Option<&ConfRef>,
+               context: Option<&X509v3Context>,
+               name: &str,
+               value: &str)
+               -> Result<X509Extension, ErrorStack> {
+        let name = CString::new(name).unwrap();
+        let value = CString::new(value).unwrap();
+        unsafe {
+            ffi::init();
+            let conf = conf.map_or(ptr::null_mut(), ConfRef::as_ptr);
+            let context = context.map_or(ptr::null_mut(), X509v3Context::as_ptr);
+            let name = name.as_ptr() as *mut _;
+            let value = value.as_ptr() as *mut _;
+
+            cvt_p(ffi::X509V3_EXT_nconf(conf, context, name, value)).map(X509Extension)
+        }
+    }
+
+    /// Constructs an X509 extension value. See `man x509v3_config` for information on supported
+    /// extensions and their value formats.
+    ///
+    /// Some extension types, such as `nid::SUBJECT_ALTERNATIVE_NAME`, require an `X509v3Context` to
+    /// be provided.
+    ///
+    /// See the extension module for builder types which will construct certain common extensions.
+    pub fn new_nid(conf: Option<&ConfRef>,
+                   context: Option<&X509v3Context>,
+                   name: Nid,
+                   value: &str)
+                   -> Result<X509Extension, ErrorStack> {
+        let value = CString::new(value).unwrap();
+        unsafe {
+            ffi::init();
+            let conf = conf.map_or(ptr::null_mut(), ConfRef::as_ptr);
+            let context = context.map_or(ptr::null_mut(), X509v3Context::as_ptr);
+            let name = name.as_raw();
+            let value = value.as_ptr() as *mut _;
+
+            cvt_p(ffi::X509V3_EXT_nconf_nid(conf, context, name, value)).map(X509Extension)
+        }
+    }
+}
+
+pub struct X509NameBuilder(X509Name);
+
+impl X509NameBuilder {
+    pub fn new() -> Result<X509NameBuilder, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(ffi::X509_NAME_new()).map(|p| X509NameBuilder(X509Name(p)))
+        }
+    }
+
+    pub fn append_entry_by_text(&mut self, field: &str, value: &str) -> Result<(), ErrorStack> {
+        unsafe {
+            let field = CString::new(field).unwrap();
+            assert!(value.len() <= c_int::max_value() as usize);
+            cvt(ffi::X509_NAME_add_entry_by_txt(self.0.as_ptr(),
+                                                field.as_ptr() as *mut _,
+                                                ffi::MBSTRING_UTF8,
+                                                value.as_ptr(),
+                                                value.len() as c_int,
+                                                -1,
+                                                0))
+                .map(|_| ())
+        }
+    }
+
+    pub fn append_entry_by_nid(&mut self, field: Nid, value: &str) -> Result<(), ErrorStack> {
+        unsafe {
+            assert!(value.len() <= c_int::max_value() as usize);
+            cvt(ffi::X509_NAME_add_entry_by_NID(self.0.as_ptr(),
+                                                field.as_raw(),
+                                                ffi::MBSTRING_UTF8,
+                                                value.as_ptr() as *mut _,
+                                                value.len() as c_int,
+                                                -1,
+                                                0))
+                .map(|_| ())
+        }
+    }
+
+    pub fn build(self) -> X509Name {
+        self.0
+    }
+}
+
 foreign_type! {
     type CType = ffi::X509_NAME;
     fn drop = ffi::X509_NAME_free;
@@ -554,6 +698,11 @@ foreign_type! {
 }
 
 impl X509Name {
+    /// Returns a new builder.
+    pub fn builder() -> Result<X509NameBuilder, ErrorStack> {
+        X509NameBuilder::new()
+    }
+
     /// Loads subject names from a file containing PEM-formatted certificates.
     ///
     /// This is commonly used in conjunction with `SslContextBuilder::set_client_ca_list`.
@@ -622,6 +771,70 @@ impl X509NameEntryRef {
     }
 }
 
+pub struct X509ReqBuilder(X509Req);
+
+impl X509ReqBuilder {
+    pub fn new() -> Result<X509ReqBuilder, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(ffi::X509_REQ_new()).map(|p| X509ReqBuilder(X509Req(p)))
+        }
+
+    }
+
+    pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_REQ_set_version(self.0.as_ptr(), version.into())).map(|_| ()) }
+    }
+
+    pub fn set_subject_name(&mut self, subject_name: &X509NameRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_REQ_set_subject_name(self.0.as_ptr(), subject_name.as_ptr())).map(|_| ())
+        }
+    }
+
+    pub fn set_pubkey(&mut self, key: &PKeyRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_REQ_set_pubkey(self.0.as_ptr(), key.as_ptr())).map(|_| ()) }
+    }
+
+    pub fn x509v3_context<'a>(&'a self,
+                              conf: Option<&'a ConfRef>)
+                              -> X509v3Context<'a> {
+        unsafe {
+            let mut ctx = mem::zeroed();
+
+            ffi::X509V3_set_ctx(&mut ctx,
+                                ptr::null_mut(),
+                                ptr::null_mut(),
+                                self.0.as_ptr(),
+                                ptr::null_mut(),
+                                0);
+
+            // nodb case taken care of since we zeroed ctx above
+            if let Some(conf) = conf {
+                ffi::X509V3_set_nconf(&mut ctx, conf.as_ptr());
+            }
+
+            X509v3Context(ctx, PhantomData)
+        }
+    }
+
+    pub fn add_extensions(&mut self,
+                          extensions: &StackRef<X509Extension>)
+                          -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_REQ_add_extensions(self.0.as_ptr(), extensions.as_ptr())).map(|_| ())
+        }
+    }
+
+    pub fn sign(&mut self, key: &PKeyRef, hash: MessageDigest) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_REQ_sign(self.0.as_ptr(), key.as_ptr(), hash.as_ptr())).map(|_| ()) }
+    }
+
+    pub fn build(self) -> X509Req {
+        self.0
+    }
+}
+
 foreign_type! {
     type CType = ffi::X509_REQ;
     fn drop = ffi::X509_REQ_free;
@@ -631,6 +844,10 @@ foreign_type! {
 }
 
 impl X509Req {
+    pub fn builder() -> Result<X509ReqBuilder, ErrorStack> {
+        X509ReqBuilder::new()
+    }
+
     /// Reads CSR from PEM
     pub fn from_pem(buf: &[u8]) -> Result<X509Req, ErrorStack> {
         let mem_bio = try!(MemBioSlice::new(buf));
@@ -657,24 +874,11 @@ impl X509ReqRef {
         }
     }
 
-    pub fn set_version(&mut self, value: i32) -> Result<(), ErrorStack>
-    {
-        unsafe {
-            cvt(ffi::X509_REQ_set_version(self.as_ptr(), value as c_long)).map(|_| ())
-        }
-    }
-
     pub fn subject_name(&self) -> &X509NameRef {
         unsafe {
             let name = compat::X509_REQ_get_subject_name(self.as_ptr());
             assert!(!name.is_null());
             X509NameRef::from_ptr(name)
-        }
-    }
-
-    pub fn set_subject_name(&mut self, value: &X509NameRef) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::X509_REQ_set_subject_name(self.as_ptr(), value.as_ptr())).map(|_| ())
         }
     }
 }

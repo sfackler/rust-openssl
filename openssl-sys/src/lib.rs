@@ -33,6 +33,7 @@ pub enum ASN1_OBJECT {}
 pub enum BN_CTX {}
 pub enum BN_GENCB {}
 pub enum CONF {}
+pub enum CONF_METHOD {}
 pub enum COMP_METHOD {}
 pub enum EC_KEY {}
 pub enum EC_GROUP {}
@@ -1426,20 +1427,17 @@ extern {
     pub fn BIO_set_flags(b: *mut BIO, flags: c_int);
     pub fn BIO_clear_flags(b: *mut BIO, flags: c_int);
 
+    pub fn BN_CTX_new() -> *mut BN_CTX;
+    pub fn BN_CTX_free(ctx: *mut BN_CTX);
+
     pub fn BN_new() -> *mut BIGNUM;
     pub fn BN_dup(n: *const BIGNUM) -> *mut BIGNUM;
     pub fn BN_clear(bn: *mut BIGNUM);
     pub fn BN_free(bn: *mut BIGNUM);
     pub fn BN_clear_free(bn: *mut BIGNUM);
-
-    pub fn BN_CTX_new() -> *mut BN_CTX;
-    pub fn BN_CTX_free(ctx: *mut BN_CTX);
-
     pub fn BN_num_bits(bn: *const BIGNUM) -> c_int;
     pub fn BN_set_negative(bn: *mut BIGNUM, n: c_int);
     pub fn BN_set_word(bn: *mut BIGNUM, n: BN_ULONG) -> c_int;
-
-    /* Arithmetic operations on BIGNUMs */
     pub fn BN_add(r: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM) -> c_int;
     pub fn BN_div(dv: *mut BIGNUM, rem: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn BN_exp(r: *mut BIGNUM, a: *const BIGNUM, p: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
@@ -1459,8 +1457,6 @@ extern {
     pub fn BN_mod_word(r: *const BIGNUM, w: BN_ULONG) -> BN_ULONG;
     pub fn BN_sqr(r: *mut BIGNUM, a: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn BN_sub(r: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM) -> c_int;
-
-    /* Bit operations on BIGNUMs */
     pub fn BN_clear_bit(a: *mut BIGNUM, n: c_int) -> c_int;
     pub fn BN_is_bit_set(a: *const BIGNUM, n: c_int) -> c_int;
     pub fn BN_lshift(r: *mut BIGNUM, a: *const BIGNUM, n: c_int) -> c_int;
@@ -1469,33 +1465,26 @@ extern {
     pub fn BN_rshift(r: *mut BIGNUM, a: *const BIGNUM, n: c_int) -> c_int;
     pub fn BN_set_bit(a: *mut BIGNUM, n: c_int) -> c_int;
     pub fn BN_rshift1(r: *mut BIGNUM, a: *const BIGNUM) -> c_int;
-
-    /* Comparisons on BIGNUMs */
     pub fn BN_cmp(a: *const BIGNUM, b: *const BIGNUM) -> c_int;
     pub fn BN_ucmp(a: *const BIGNUM, b: *const BIGNUM) -> c_int;
-
-    /* Prime handling */
     pub fn BN_generate_prime_ex(r: *mut BIGNUM, bits: c_int, safe: c_int, add: *const BIGNUM, rem: *const BIGNUM, cb: *mut BN_GENCB) -> c_int;
     pub fn BN_is_prime_ex(p: *const BIGNUM, checks: c_int, ctx: *mut BN_CTX, cb: *mut BN_GENCB) -> c_int;
     pub fn BN_is_prime_fasttest_ex(p: *const BIGNUM, checks: c_int, ctx: *mut BN_CTX, do_trial_division: c_int, cb: *mut BN_GENCB) -> c_int;
-
-    /* Random number handling */
     pub fn BN_rand(r: *mut BIGNUM, bits: c_int, top: c_int, bottom: c_int) -> c_int;
     pub fn BN_pseudo_rand(r: *mut BIGNUM, bits: c_int, top: c_int, bottom: c_int) -> c_int;
     pub fn BN_rand_range(r: *mut BIGNUM, range: *const BIGNUM) -> c_int;
     pub fn BN_pseudo_rand_range(r: *mut BIGNUM, range: *const BIGNUM) -> c_int;
-
-    /* Conversion from/to binary representation */
     pub fn BN_bin2bn(s: *const u8, size: c_int, ret: *mut BIGNUM) -> *mut BIGNUM;
     pub fn BN_bn2bin(a: *const BIGNUM, to: *mut u8) -> c_int;
-
-    /* Conversion from/to decimal string representation */
     pub fn BN_dec2bn(a: *mut *mut BIGNUM, s: *const c_char) -> c_int;
     pub fn BN_bn2dec(a: *const BIGNUM) -> *mut c_char;
-
-    /* Conversion from/to hexidecimal string representation */
     pub fn BN_hex2bn(a: *mut *mut BIGNUM, s: *const c_char) -> c_int;
     pub fn BN_bn2hex(a: *const BIGNUM) -> *mut c_char;
+    pub fn BN_to_ASN1_INTEGER(bn: *const BIGNUM, ai: *mut ASN1_INTEGER) -> *mut ASN1_INTEGER;
+
+    pub fn NCONF_default() -> *mut CONF_METHOD;
+    pub fn NCONF_new(meth: *mut CONF_METHOD) -> *mut CONF;
+    pub fn NCONF_free(conf: *mut CONF);
 
     pub fn CRYPTO_memcmp(a: *const c_void, b: *const c_void,
                          len: size_t) -> c_int;
@@ -1923,6 +1912,8 @@ extern {
     pub fn X509_gmtime_adj(time: *mut ASN1_TIME, adj: c_long) -> *mut ASN1_TIME;
     pub fn X509_new() -> *mut X509;
     pub fn X509_set_issuer_name(x: *mut X509, name: *mut X509_NAME) -> c_int;
+    pub fn X509_set_subject_name(x: *mut X509, name: *mut X509_NAME) -> c_int;
+    pub fn X509_set_serialNumber(x: *mut X509, sn: *mut ASN1_INTEGER) -> c_int;
     pub fn X509_set_version(x: *mut X509, version: c_long) -> c_int;
     pub fn X509_set_pubkey(x: *mut X509, pkey: *mut EVP_PKEY) -> c_int;
     pub fn X509_sign(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
@@ -1936,6 +1927,7 @@ extern {
 
     pub fn X509_EXTENSION_free(ext: *mut X509_EXTENSION);
 
+    pub fn X509_NAME_new() -> *mut X509_NAME;
     pub fn X509_NAME_free(x: *mut X509_NAME);
     pub fn X509_NAME_add_entry_by_txt(x: *mut X509_NAME, field: *const c_char, ty: c_int, bytes: *const c_uchar, len: c_int, loc: c_int, set: c_int) -> c_int;
     pub fn X509_NAME_get_index_by_NID(n: *mut X509_NAME, nid: c_int, last_pos: c_int) -> c_int;
@@ -1959,12 +1951,14 @@ extern {
     pub fn X509_STORE_CTX_get_error_depth(ctx: *mut X509_STORE_CTX) -> c_int;
 
     pub fn X509V3_set_ctx(ctx: *mut X509V3_CTX, issuer: *mut X509, subject: *mut X509, req: *mut X509_REQ, crl: *mut X509_CRL, flags: c_int);
+    pub fn X509V3_set_nconf(ctx: *mut X509V3_CTX, conf: *mut CONF);
 
+    pub fn X509_REQ_new() -> *mut X509_REQ;
+    pub fn X509_REQ_set_version(req: *mut X509_REQ, version: c_long) -> c_int;
+    pub fn X509_REQ_set_subject_name(req: *mut X509_REQ, name: *mut X509_NAME) -> c_int;
+    pub fn X509_REQ_set_pubkey(req: *mut X509_REQ, pkey: *mut EVP_PKEY) -> c_int;
     pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: *mut stack_st_X509_EXTENSION) -> c_int;
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
-    pub fn X509_REQ_set_version(x: *mut X509_REQ, version: c_long) -> c_int;
-    pub fn X509_REQ_set_subject_name(req: *mut X509_REQ, name: *mut ::X509_NAME) -> c_int;
-
 
     #[cfg(not(ossl101))]
     pub fn X509_VERIFY_PARAM_free(param: *mut X509_VERIFY_PARAM);

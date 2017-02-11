@@ -86,6 +86,7 @@ extern {
     pub fn X509_set1_notAfter(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
     pub fn X509_set1_notBefore(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
     pub fn X509_get_ext_d2i(x: *const ::X509, nid: c_int, crit: *mut c_int, idx: *mut c_int) -> *mut c_void;
+    pub fn X509_NAME_add_entry_by_NID(x: *mut ::X509_NAME, field: c_int, ty: c_int, bytes: *const c_uchar, len: c_int, loc: c_int, set: c_int) -> c_int;
     pub fn X509_get_signature_nid(x: *const X509) -> c_int;
     pub fn X509_ALGOR_get0(paobj: *mut *const ::ASN1_OBJECT, pptype: *mut c_int, ppval: *mut *const c_void, alg: *const ::X509_ALGOR);
     pub fn X509_NAME_get_entry(n: *const ::X509_NAME, loc: c_int) -> *mut ::X509_NAME_ENTRY;
@@ -182,8 +183,10 @@ extern {
 
     pub fn OpenSSL_version_num() -> c_ulong;
     pub fn OpenSSL_version(key: c_int) -> *const c_char;
+    pub fn OPENSSL_sk_new_null() -> *mut ::OPENSSL_STACK;
     pub fn OPENSSL_sk_free(st: *mut ::OPENSSL_STACK);
     pub fn OPENSSL_sk_pop_free(st: *mut ::OPENSSL_STACK, free: Option<unsafe extern "C" fn (*mut c_void)>);
+    pub fn OPENSSL_sk_push(st: *mut ::OPENSSL_STACK, data: *const c_void) -> c_int;
     pub fn OPENSSL_sk_pop(st: *mut ::OPENSSL_STACK) -> *mut c_void;
 
     pub fn PKCS12_create(pass: *const c_char,

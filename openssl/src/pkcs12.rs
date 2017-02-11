@@ -173,10 +173,12 @@ mod test {
     use hash::MessageDigest;
     use hex::ToHex;
 
-    use ::rsa::Rsa;
-    use ::pkey::*;
-    use ::x509::*;
-    use ::x509::extension::*;
+    use asn1::Asn1Time;
+    use rsa::Rsa;
+    use pkey::PKey;
+    use nid;
+    use x509::{X509, X509Name};
+    use x509::extension::KeyUsage;
 
     use super::*;
 
@@ -200,13 +202,22 @@ mod test {
         let rsa = Rsa::generate(2048).unwrap();
         let pkey = PKey::from_rsa(rsa).unwrap();
 
-        let gen = X509Generator::new()
-                               .set_valid_period(365*2)
-                               .add_name("CN".to_owned(), subject_name.to_string())
-                               .set_sign_hash(MessageDigest::sha256())
-                               .add_extension(Extension::KeyUsage(vec![KeyUsageOption::DigitalSignature]));
+        let mut name = X509Name::builder().unwrap();
+        name.append_entry_by_nid(nid::COMMONNAME, subject_name).unwrap();
+        let name = name.build();
 
-        let cert = gen.sign(&pkey).unwrap();
+        let key_usage = KeyUsage::new().digital_signature().build().unwrap();;
+
+        let mut builder = X509::builder().unwrap();
+        builder.set_version(2).unwrap();
+        builder.set_not_before(&Asn1Time::days_from_now(0).unwrap()).unwrap();
+        builder.set_not_after(&Asn1Time::days_from_now(365).unwrap()).unwrap();
+        builder.set_subject_name(&name).unwrap();
+        builder.set_issuer_name(&name).unwrap();
+        builder.append_extension(key_usage).unwrap();
+        builder.set_pubkey(&pkey).unwrap();
+        builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+        let cert = builder.build();
 
         let pkcs12_builder = Pkcs12::builder();
         let pkcs12 = pkcs12_builder.build("mypass", subject_name, &pkey, &cert).unwrap();
