@@ -649,6 +649,34 @@ impl X509Req {
 impl X509ReqRef {
     to_pem!(ffi::PEM_write_bio_X509_REQ);
     to_der!(ffi::i2d_X509_REQ);
+
+    pub fn version(&self) -> i32
+    {
+        unsafe {
+            compat::X509_REQ_get_version(self.as_ptr()) as i32
+        }
+    }
+
+    pub fn set_version(&mut self, value: i32) -> Result<(), ErrorStack>
+    {
+        unsafe {
+            cvt(ffi::X509_REQ_set_version(self.as_ptr(), value as c_long)).map(|_| ())
+        }
+    }
+
+    pub fn subject_name(&self) -> &X509NameRef {
+        unsafe {
+            let name = compat::X509_REQ_get_subject_name(self.as_ptr());
+            assert!(!name.is_null());
+            X509NameRef::from_ptr(name)
+        }
+    }
+
+    pub fn set_subject_name(&mut self, value: &X509NameRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_REQ_set_subject_name(self.as_ptr(), value.as_ptr())).map(|_| ())
+        }
+    }
 }
 
 /// A collection of X.509 extensions.
@@ -846,6 +874,8 @@ mod compat {
     pub use ffi::X509_getm_notBefore as X509_get_notBefore;
     pub use ffi::X509_up_ref;
     pub use ffi::X509_get0_extensions;
+    pub use ffi::X509_REQ_get_version;
+    pub use ffi::X509_REQ_get_subject_name;
     pub use ffi::X509_get0_signature;
     pub use ffi::X509_ALGOR_get0;
 }
@@ -882,6 +912,16 @@ mod compat {
         }
     }
 
+    pub unsafe fn X509_REQ_get_version(x: *mut ffi::X509_REQ) -> ::libc::c_long
+    {
+        ::ffi::ASN1_INTEGER_get((*(*x).req_info).version)
+    }
+
+    pub unsafe fn X509_REQ_get_subject_name(x: *mut ffi::X509_REQ) -> *mut ::ffi::X509_NAME
+    {
+        (*(*x).req_info).subject
+    }
+  
     pub unsafe fn X509_get0_signature(psig: *mut *const ffi::ASN1_BIT_STRING,
                                       palg: *mut *const ffi::X509_ALGOR, 
                                       x: *const ffi::X509) {

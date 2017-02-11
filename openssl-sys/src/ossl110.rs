@@ -28,6 +28,7 @@ pub enum stack_st_SSL_CIPHER {}
 pub enum X509 {}
 pub enum X509_ALGOR {}
 pub enum X509_VERIFY_PARAM {}
+pub enum X509_REQ {}
 
 pub const SSL_OP_MICROSOFT_SESS_ID_BUG: c_ulong =                   0x00000000;
 pub const SSL_OP_NETSCAPE_CHALLENGE_BUG: c_ulong =                  0x00000000;
@@ -195,4 +196,6 @@ extern {
                          iter: c_int,
                          mac_iter: c_int,
                          keytype: c_int) -> *mut PKCS12;
+    pub fn X509_REQ_get_version(req: *const X509_REQ) -> c_long;
+    pub fn X509_REQ_get_subject_name(req: *const X509_REQ) -> *mut ::X509_NAME;
 }

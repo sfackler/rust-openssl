@@ -95,6 +95,29 @@ impl Asn1StringRef {
 }
 
 foreign_type! {
+    type CType = ffi::ASN1_INTEGER;
+    fn drop = ffi::ASN1_INTEGER_free;
+
+    pub struct Asn1Integer;
+    pub struct Asn1IntegerRef;
+}
+
+impl Asn1IntegerRef {
+    pub fn get(&self) -> i64 {
+        unsafe {
+            ::ffi::ASN1_INTEGER_get(self.as_ptr()) as i64
+        }
+    }
+
+    pub fn set(&mut self, value: i32) -> Result<(), ErrorStack>
+    {
+        unsafe {
+            cvt(::ffi::ASN1_INTEGER_set(self.as_ptr(), value as c_long)).map(|_| ())
+        }
+    }
+}
+
+foreign_type! {
     type CType = ffi::ASN1_BIT_STRING;
     fn drop = ffi::ASN1_BIT_STRING_free;
 
