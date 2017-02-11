@@ -9,7 +9,7 @@ use x509::{X509v3Context, X509Extension};
 /// See the `Extension` documentation for more information on the different
 /// variants.
 #[derive(Clone,Hash,PartialEq,Eq)]
-#[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
+#[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
 pub enum ExtensionType {
     KeyUsage,
     ExtKeyUsage,
@@ -24,7 +24,7 @@ pub enum ExtensionType {
 /// Only one extension of each type is allow in a certificate.
 /// See RFC 3280 for more information about extensions.
 #[derive(Clone)]
-#[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
+#[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
 pub enum Extension {
     /// The purposes of the key contained in the certificate
     KeyUsage(Vec<KeyUsageOption>),
@@ -60,7 +60,7 @@ pub enum Extension {
 }
 
 impl Extension {
-    #[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
+    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn get_type(&self) -> ExtensionType {
         match self {
             &Extension::KeyUsage(_) => ExtensionType::KeyUsage,
@@ -74,7 +74,7 @@ impl Extension {
 }
 
 impl ExtensionType {
-    #[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
+    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn get_nid(&self) -> Option<Nid> {
         match self {
             &ExtensionType::KeyUsage => Some(nid::KEY_USAGE),
@@ -86,7 +86,7 @@ impl ExtensionType {
         }
     }
 
-    #[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
+    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn get_name(&self) -> Option<&str> {
         match self {
             &ExtensionType::OtherStr(ref s) => Some(s),
@@ -127,7 +127,7 @@ impl ToString for Extension {
 }
 
 #[derive(Clone,Copy)]
-#[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
+#[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
 pub enum KeyUsageOption {
     DigitalSignature,
     NonRepudiation,
@@ -157,7 +157,7 @@ impl fmt::Display for KeyUsageOption {
 }
 
 #[derive(Clone)]
-#[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
+#[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
 pub enum ExtKeyUsageOption {
     ServerAuth,
     ClientAuth,
@@ -194,7 +194,7 @@ impl fmt::Display for ExtKeyUsageOption {
 }
 
 #[derive(Clone, Copy)]
-#[deprecated(since = "0.9.1", note = "use X509Builder and X509ReqBuilder instead")]
+#[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
 pub enum AltNameOption {
     /// The value is specified as OID;content. See `man ASN1_generate_nconf` for more information on the content syntax.
     ///
