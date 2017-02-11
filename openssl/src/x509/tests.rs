@@ -234,4 +234,7 @@ fn signature() {
                 89c119297df093eb36b7fd7540224f488806780305d1e79ffc938fe2275441726522ab36d88348e6c51\
                 f13dcc46b5e1cdac23c974fd5ef86aa41e91c9311655090a52333bc79687c748d833595d4c5f987508f\
                 e121997410d37c");
+    let algorithm = cert.signature_algorithm();
+    assert_eq!(algorithm.object().nid(), nid::SHA256WITHRSAENCRYPTION);
+    assert_eq!(algorithm.object().to_string(), "sha256WithRSAEncryption");
 }

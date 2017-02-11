@@ -286,6 +286,12 @@ pub struct X509_CINF {
 }
 
 #[repr(C)]
+pub struct X509_ALGOR {
+    pub algorithm: *mut ::ASN1_OBJECT,
+    parameter: *mut c_void,
+}
+
+#[repr(C)]
 pub struct ASN1_ENCODING {
     pub enc: *mut c_uchar,
     pub len: c_long,

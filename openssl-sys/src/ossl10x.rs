@@ -293,6 +293,12 @@ pub struct X509_CINF {
 }
 
 #[repr(C)]
+pub struct X509_ALGOR {
+    pub algorithm: *mut ::ASN1_OBJECT,
+    parameter: *mut c_void,
+}
+
+#[repr(C)]
 pub struct ASN1_ENCODING {
     pub enc: *mut c_uchar,
     pub len: c_long,
@@ -835,6 +841,10 @@ extern {
     pub fn X509_get_ext_d2i(x: *mut ::X509, nid: c_int, crit: *mut c_int, idx: *mut c_int) -> *mut c_void;
     #[cfg(not(ossl101))]
     pub fn X509_get0_signature(psig: *mut *mut ::ASN1_BIT_STRING, palg: *mut *mut ::X509_ALGOR, x: *const ::X509);
+    #[cfg(not(ossl101))]
+    pub fn X509_get_signature_nid(x: *const X509) -> c_int;
+    #[cfg(not(ossl101))]
+    pub fn X509_ALGOR_get0(paobj: *mut *mut ::ASN1_OBJECT, pptype: *mut c_int, ppval: *mut *mut c_void, alg: *mut ::X509_ALGOR);
     pub fn X509_NAME_get_entry(n: *mut ::X509_NAME, loc: c_int) -> *mut ::X509_NAME_ENTRY;
     pub fn X509_NAME_ENTRY_get_data(ne: *mut ::X509_NAME_ENTRY) -> *mut ::ASN1_STRING;
     pub fn X509_STORE_CTX_get_chain(ctx: *mut ::X509_STORE_CTX) -> *mut stack_st_X509;

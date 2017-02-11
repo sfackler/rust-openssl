@@ -13,7 +13,7 @@ use std::slice;
 use std::str;
 
 use {cvt, cvt_p};
-use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef, Asn1BitStringRef};
+use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef, Asn1BitStringRef, Asn1ObjectRef};
 use bio::MemBioSlice;
 use hash::MessageDigest;
 use pkey::{PKey, PKeyRef};
@@ -438,6 +438,16 @@ impl X509Ref {
         }
     }
 
+    /// Returns the certificate's signature algorithm.
+    pub fn signature_algorithm(&self) -> &X509AlgorithmRef {
+        unsafe {
+            let mut algor = ptr::null();
+            compat::X509_get0_signature(ptr::null_mut(), &mut algor, self.as_ptr());
+            assert!(!algor.is_null());
+            X509AlgorithmRef::from_ptr(algor as *mut _)
+        }
+    }
+
     /// Returns the list of OCSP responder URLs specified in the certificate's Authority Information
     /// Access field.
     pub fn ocsp_responders(&self) -> Result<Stack<OpensslString>, ErrorStack> {
@@ -810,12 +820,23 @@ impl Stackable for GeneralName {
     type StackType = ffi::stack_st_GENERAL_NAME;
 }
 
-#[test]
-fn test_negative_serial() {
-    // I guess that's enough to get a random negative number
-    for _ in 0..1000 {
-        assert!(X509Generator::random_serial().unwrap() > 0,
-                "All serials should be positive");
+foreign_type! {
+    type CType = ffi::X509_ALGOR;
+    fn drop = ffi::X509_ALGOR_free;
+
+    pub struct X509Algorithm;
+    pub struct X509AlgorithmRef;
+}
+
+impl X509AlgorithmRef {
+    /// Returns the ASN.1 OID of this algorithm.
+    pub fn object(&self) -> &Asn1ObjectRef {
+        unsafe {
+            let mut oid = ptr::null();
+            compat::X509_ALGOR_get0(&mut oid, ptr::null_mut(), ptr::null_mut(), self.as_ptr());
+            assert!(!oid.is_null());
+            Asn1ObjectRef::from_ptr(oid as *mut _)
+        }
     }
 }
 
@@ -826,12 +847,13 @@ mod compat {
     pub use ffi::X509_up_ref;
     pub use ffi::X509_get0_extensions;
     pub use ffi::X509_get0_signature;
+    pub use ffi::X509_ALGOR_get0;
 }
 
 #[cfg(ossl10x)]
 #[allow(bad_style)]
 mod compat {
-    use libc::c_int;
+    use libc::{c_int, c_void};
     use ffi;
 
     pub unsafe fn X509_get_notAfter(x: *mut ffi::X509) -> *mut ffi::ASN1_TIME {
@@ -869,5 +891,16 @@ mod compat {
         if !palg.is_null() {
             *palg = (*x).sig_alg;
         }
+    }
+
+    pub unsafe fn X509_ALGOR_get0(paobj: *mut *const ffi::ASN1_OBJECT,
+                                  pptype: *mut c_int,
+                                  pval: *mut *mut c_void,
+                                  alg: *const ffi::X509_ALGOR) {
+        if !paobj.is_null() {
+            *paobj = (*alg).algorithm;
+        }
+        assert!(pptype.is_null());
+        assert!(pval.is_null());
     }
 }
