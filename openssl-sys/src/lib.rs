@@ -1639,7 +1639,7 @@ extern {
                                 e: *mut ENGINE,
                                 key: *const c_uchar,
                                 keylen: c_int) -> *mut EVP_PKEY;
-
+    pub fn d2i_PKCS8PrivateKey_bio(bp: *mut BIO, x: *mut *mut EVP_PKEY, cb: Option<PasswordCallback>, u: *mut c_void) -> *mut EVP_PKEY;
 
     pub fn EVP_PKEY_CTX_ctrl(ctx: *mut EVP_PKEY_CTX, keytype: c_int, optype: c_int, cmd: c_int, p1: c_int, p2: *mut c_void) -> c_int;
 
