@@ -57,7 +57,7 @@ Homebrew:
 brew install openssl
 ```
 
-> Occasionally an update of XCode or MacOS will cause the linker to fail after compilation, to rectify this you may want to try and run:
+Occasionally an update of XCode or MacOS will cause the linker to fail after compilation, to rectify this you may want to try and run:
 
 ```bash
 xcode-select --install
