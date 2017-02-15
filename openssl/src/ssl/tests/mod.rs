@@ -173,9 +173,15 @@ macro_rules! run_test(
             use ssl::SSL_VERIFY_PEER;
             use hash::MessageDigest;
             use x509::X509StoreContext;
+            #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+            use x509::X509;
+            #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+            use x509::store::X509StoreBuilder;
             use hex::FromHex;
             use foreign_types::ForeignTypeRef;
             use super::Server;
+            #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]            
+            use super::ROOT_CERT;
 
             #[test]
             fn sslv23() {
@@ -212,6 +218,25 @@ run_test!(verify_trusted, |method, stream| {
     ctx.set_verify(SSL_VERIFY_PEER);
 
     match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
+        Ok(_) => {}
+        Err(err) => panic!("Unexpected error {:?}", err),
+    }
+    match Ssl::new(&ctx.build()).unwrap().connect(stream) {
+        Ok(_) => (),
+        Err(err) => panic!("Expected success, got {:?}", err),
+    }
+});
+
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+run_test!(verify_trusted_with_set_cert, |method, stream| {
+    let x509 = X509::from_pem(ROOT_CERT).unwrap();
+    let mut store = X509StoreBuilder::new().unwrap();
+    store.add_cert(x509).unwrap();
+
+    let mut ctx = SslContext::builder(method).unwrap();
+    ctx.set_verify(SSL_VERIFY_PEER);
+
+    match ctx.set_verify_cert_store(store.build()) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
     }
