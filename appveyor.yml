@@ -5,10 +5,10 @@ environment:
     - TARGET: i686-pc-windows-gnu
       BITS: 32
       MSYS2: 1
-      OPENSSL_VERSION: 1_1_0d
+      OPENSSL_VERSION: 1_1_0e
     - TARGET: x86_64-pc-windows-msvc
       BITS: 64
-      OPENSSL_VERSION: 1_1_0d
+      OPENSSL_VERSION: 1_1_0e
       OPENSSL_DIR: C:\OpenSSL
 
     # 1.0.2, 64/32 bit
