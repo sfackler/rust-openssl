@@ -1143,6 +1143,8 @@ pub const SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE: c_int = 65;
 pub const SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP: c_int = 70;
 pub const SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP: c_int = 71;
 pub const SSL_CTRL_GET_EXTRA_CHAIN_CERTS: c_int = 82;
+#[cfg(not(any(ossl101, libressl)))]
+pub const SSL_CTRL_SET_VERIFY_CERT_STORE: c_int = 106;
 
 pub const SSL_MODE_ENABLE_PARTIAL_WRITE: c_long = 0x1;
 pub const SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER: c_long = 0x2;
@@ -1347,6 +1349,11 @@ pub unsafe fn SSL_set_tmp_ecdh(ssl: *mut SSL, key: *mut EC_KEY) -> c_long {
 
 pub unsafe fn SSL_CTX_add_extra_chain_cert(ctx: *mut SSL_CTX, x509: *mut X509) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_EXTRA_CHAIN_CERT, 0, x509 as *mut c_void)
+}
+
+#[cfg(not(any(ossl101, libressl)))]
+pub unsafe fn SSL_CTX_set0_verify_cert_store(ctx: *mut SSL_CTX, st: *mut X509_STORE) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_VERIFY_CERT_STORE, 0, st as *mut c_void)    
 }
 
 pub unsafe fn SSL_CTX_set_tlsext_servername_callback(ctx: *mut SSL_CTX,

@@ -99,6 +99,8 @@ use ec::EcKeyRef;
 use ec::EcKey;
 use x509::{X509StoreContextRef, X509FileType, X509, X509Ref, X509VerifyError, X509Name};
 use x509::store::{X509StoreBuilderRef, X509StoreRef};
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+use x509::store::X509Store;
 #[cfg(any(ossl102, ossl110))]
 use verify::X509VerifyParamRef;
 use pkey::PKeyRef;
@@ -649,6 +651,21 @@ impl SslContextBuilder {
     pub fn set_verify_depth(&mut self, depth: u32) {
         unsafe {
             ffi::SSL_CTX_set_verify_depth(self.as_ptr(), depth as c_int);
+        }
+    }
+
+    /// Sets a custom X509Store for verifying peer certificates.
+    ///
+    /// Requires the `v102` feature and OpenSSL 1.0.2, or the `v110` feature and OpenSSL 1.1.0.
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    pub fn set_verify_cert_store(&mut self, cert_store: X509Store) -> Result<(), ErrorStack> {
+        unsafe {
+            // set0 will free, set1 increments, and then requires a free
+            let ptr = cert_store.as_ptr();
+            let result = try!(cvt(ffi::SSL_CTX_set0_verify_cert_store(self.as_ptr(), ptr) as c_int).map(|_|()));
+            
+            mem::forget(cert_store);
+            Ok(result)
         }
     }
 
