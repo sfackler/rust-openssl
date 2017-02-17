@@ -662,7 +662,7 @@ impl SslContextBuilder {
         unsafe {
             // set0 will free, set1 increments, and then requires a free
             let ptr = cert_store.as_ptr();
-            let result = cvt(ffi::SSL_CTX_set0_verify_cert_store(self.as_ptr(), ptr) as c_int).map(|_|());
+            let result = try!(cvt(ffi::SSL_CTX_set0_verify_cert_store(self.as_ptr(), ptr) as c_int).map(|_|()));
             
             mem::forget(cert_store);
             result
