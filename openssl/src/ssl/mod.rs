@@ -665,7 +665,7 @@ impl SslContextBuilder {
             let result = try!(cvt(ffi::SSL_CTX_set0_verify_cert_store(self.as_ptr(), ptr) as c_int).map(|_|()));
             
             mem::forget(cert_store);
-            result
+            Ok(result)
         }
     }
 
