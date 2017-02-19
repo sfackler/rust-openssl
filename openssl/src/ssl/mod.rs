@@ -660,12 +660,11 @@ impl SslContextBuilder {
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn set_verify_cert_store(&mut self, cert_store: X509Store) -> Result<(), ErrorStack> {
         unsafe {
-            // set0 will free, set1 increments, and then requires a free
             let ptr = cert_store.as_ptr();
-            let result = try!(cvt(ffi::SSL_CTX_set0_verify_cert_store(self.as_ptr(), ptr) as c_int).map(|_|()));
-            
+            try!(cvt(ffi::SSL_CTX_set0_verify_cert_store(self.as_ptr(), ptr) as c_int));
             mem::forget(cert_store);
-            Ok(result)
+
+            Ok(())
         }
     }
 
