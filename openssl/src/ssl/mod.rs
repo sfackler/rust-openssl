@@ -119,6 +119,7 @@ use self::bio::BioMethod;
 pub use ssl::connector::{SslConnectorBuilder, SslConnector, SslAcceptorBuilder, SslAcceptor};
 pub use ssl::error::{Error, HandshakeError};
 
+// FIXME drop SSL_ prefix
 bitflags! {
     pub flags SslOption: c_ulong {
         const SSL_OP_MICROSOFT_SESS_ID_BUG = ffi::SSL_OP_MICROSOFT_SESS_ID_BUG,
