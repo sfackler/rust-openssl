@@ -21,7 +21,9 @@ below.
 
 On Linux, you can typically install OpenSSL via your package manager. The
 headers are sometimes provided in a separate package than the runtime libraries
-- look for something like `openssl-devel` or `libssl-dev`.
+- look for something like `openssl-devel` or `libssl-dev`. You will also need the
+regular development utilities, like `pkg-config`, as the custom build script relies 
+on them.
 
 ```bash
 # On Ubuntu
