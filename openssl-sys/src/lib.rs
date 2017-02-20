@@ -143,6 +143,9 @@ pub const BIO_FLAGS_SHOULD_RETRY: c_int = 0x08;
 
 pub const CRYPTO_LOCK: c_int = 1;
 
+pub const ERR_TXT_MALLOCED: c_int = 0x01;
+pub const ERR_TXT_STRING: c_int = 0x02;
+
 pub const ERR_LIB_PEM: c_int = 9;
 pub const PEM_R_NO_START_LINE: c_int = 108;
 
@@ -1542,6 +1545,7 @@ extern {
 
     pub fn ERR_peek_last_error() -> c_ulong;
     pub fn ERR_get_error() -> c_ulong;
+    pub fn ERR_get_error_line_data(file: *mut *const c_char, line: *mut c_int, data: *mut *const c_char, flags: *mut c_int) -> c_ulong;
     pub fn ERR_lib_error_string(err: c_ulong) -> *const c_char;
     pub fn ERR_func_error_string(err: c_ulong) -> *const c_char;
     pub fn ERR_reason_error_string(err: c_ulong) -> *const c_char;
