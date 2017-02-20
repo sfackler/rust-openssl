@@ -326,6 +326,23 @@ impl X509Builder {
     }
 
     /// Sets the subject name of the certificate.
+    ///
+    /// When building certificates, the `C`, `ST`, and `O` options are required for the certificate to be a valid certificate in OpenSSL. 
+    /// The `CN` field is used for the common name, such as a DNS name.
+    ///
+    /// ```
+    /// use openssl::x509::{X509, X509NameBuilder};
+    ///
+    /// let mut x509_name = openssl::x509::X509NameBuilder::new().unwrap();
+    /// x509_name.append_entry_by_text("C", "US").unwrap();
+    /// x509_name.append_entry_by_text("ST", "CA").unwrap();
+    /// x509_name.append_entry_by_text("O", "Some organization").unwrap();
+    /// x509_name.append_entry_by_text("CN", "www.example.com").unwrap();
+    /// let x509_name = x509_name.build();
+    ///
+    /// let mut x509 = openssl::x509::X509::builder().unwrap();
+    /// x509.set_subject_name(&x509_name).unwrap();
+    /// ```
     pub fn set_subject_name(&mut self, subject_name: &X509NameRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::X509_set_subject_name(self.0.as_ptr(), subject_name.as_ptr())).map(|_| ())
