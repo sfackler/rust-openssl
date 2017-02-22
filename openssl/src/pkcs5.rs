@@ -96,8 +96,38 @@ pub fn pbkdf2_hmac(pass: &[u8],
     }
 }
 
+/// Derives a key from a password and salt using the scrypt algorithm.
+///
+/// Requires the `v110` feature and OpenSSL 1.1.0.
+#[cfg(all(feature = "v110", ossl110))]
+pub fn scrypt(pass: &[u8],
+              salt: &[u8],
+              n: u64,
+              r: u64,
+              p: u64,
+              maxmem: u64,
+              key: &mut [u8])
+              -> Result<(), ErrorStack> {
+    unsafe {
+        ffi::init();
+        cvt(ffi::EVP_PBE_scrypt(pass.as_ptr() as *const _,
+                                pass.len(),
+                                salt.as_ptr() as *const _,
+                                salt.len(),
+                                n,
+                                r,
+                                p,
+                                maxmem,
+                                key.as_mut_ptr() as *mut _,
+                                key.len()))
+            .map(|_| ())
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use hex::ToHex;
+
     use hash::MessageDigest;
     use symm::Cipher;
 
@@ -110,7 +140,8 @@ mod tests {
         super::pbkdf2_hmac(b"passwd", b"salt", 1, MessageDigest::sha256(), &mut buf).unwrap();
         assert_eq!(buf,
                    &[0x55_u8, 0xac_u8, 0x04_u8, 0x6e_u8, 0x56_u8, 0xe3_u8, 0x08_u8, 0x9f_u8,
-                     0xec_u8, 0x16_u8, 0x91_u8, 0xc2_u8, 0x25_u8, 0x44_u8, 0xb6_u8, 0x05_u8][..]);
+                     0xec_u8, 0x16_u8, 0x91_u8, 0xc2_u8, 0x25_u8, 0x44_u8, 0xb6_u8, 0x05_u8]
+                        [..]);
 
         super::pbkdf2_hmac(b"Password",
                            b"NaCl",
@@ -120,7 +151,8 @@ mod tests {
             .unwrap();
         assert_eq!(buf,
                    &[0x4d_u8, 0xdc_u8, 0xd8_u8, 0xf6_u8, 0x0b_u8, 0x98_u8, 0xbe_u8, 0x21_u8,
-                     0x83_u8, 0x0c_u8, 0xee_u8, 0x5e_u8, 0xf2_u8, 0x27_u8, 0x01_u8, 0xf9_u8][..]);
+                     0x83_u8, 0x0c_u8, 0xee_u8, 0x5e_u8, 0xf2_u8, 0x27_u8, 0x01_u8, 0xf9_u8]
+                        [..]);
     }
 
     // Test vectors from
@@ -138,7 +170,8 @@ mod tests {
                      0xf8_u8, 0x14_u8, 0x8e_u8, 0x52_u8, 0x45_u8, 0x2b_u8, 0x22_u8, 0x16_u8,
                      0xb2_u8, 0xb8_u8, 0x09_u8, 0x8b_u8, 0x76_u8, 0x1f_u8, 0xc6_u8, 0x33_u8,
                      0x60_u8, 0x60_u8, 0xa0_u8, 0x9f_u8, 0x76_u8, 0x41_u8, 0x5e_u8, 0x9f_u8,
-                     0x71_u8, 0xea_u8, 0x47_u8, 0xf9_u8, 0xe9_u8, 0x06_u8, 0x43_u8, 0x06_u8][..]);
+                     0x71_u8, 0xea_u8, 0x47_u8, 0xf9_u8, 0xe9_u8, 0x06_u8, 0x43_u8, 0x06_u8]
+                        [..]);
 
         super::pbkdf2_hmac(b"pass\0word",
                            b"sa\0lt",
@@ -154,7 +187,8 @@ mod tests {
                      0xe7_u8, 0x66_u8, 0x04_u8, 0xa4_u8, 0x9a_u8, 0xf0_u8, 0x8f_u8, 0xe7_u8,
                      0xc9_u8, 0xf5_u8, 0x71_u8, 0x56_u8, 0xc8_u8, 0x79_u8, 0x09_u8, 0x96_u8,
                      0xb2_u8, 0x0f_u8, 0x06_u8, 0xbc_u8, 0x53_u8, 0x5e_u8, 0x5a_u8, 0xb5_u8,
-                     0x44_u8, 0x0d_u8, 0xf7_u8, 0xe8_u8, 0x78_u8, 0x29_u8, 0x6f_u8, 0xa7_u8][..]);
+                     0x44_u8, 0x0d_u8, 0xf7_u8, 0xe8_u8, 0x78_u8, 0x29_u8, 0x6f_u8, 0xa7_u8]
+                        [..]);
 
         super::pbkdf2_hmac(b"passwordPASSWORDpassword",
                            b"salt\0\0\0",
@@ -170,8 +204,10 @@ mod tests {
                      0x1b_u8, 0x6f_u8, 0x0b_u8, 0x2f_u8, 0xc3_u8, 0xad_u8, 0xda_u8, 0x50_u8,
                      0x54_u8, 0x12_u8, 0xe7_u8, 0x9d_u8, 0x89_u8, 0x00_u8, 0x56_u8, 0xc6_u8,
                      0x2e_u8, 0x52_u8, 0x4c_u8, 0x7d_u8, 0x51_u8, 0x15_u8, 0x4b_u8, 0x1a_u8,
-                     0x85_u8, 0x34_u8, 0x57_u8, 0x5b_u8, 0xd0_u8, 0x2d_u8, 0xee_u8, 0x39_u8][..]);
+                     0x85_u8, 0x34_u8, 0x57_u8, 0x5b_u8, 0xd0_u8, 0x2d_u8, 0xee_u8, 0x39_u8]
+                        [..]);
     }
+
     #[test]
     fn bytes_to_key() {
         let salt = [16_u8, 34_u8, 19_u8, 23_u8, 141_u8, 4_u8, 207_u8, 221_u8];
@@ -194,10 +230,24 @@ mod tests {
                                        MessageDigest::sha1(),
                                        &data,
                                        Some(&salt),
-                                       1).unwrap(),
+                                       1)
+                       .unwrap(),
                    super::KeyIvPair {
                        key: expected_key,
                        iv: Some(expected_iv),
                    });
+    }
+
+    #[test]
+    #[cfg(all(feature = "v110", ossl110))]
+    fn scrypt() {
+        let pass = "pleaseletmein";
+        let salt = "SodiumChloride";
+        let expected = "7023bdcb3afd7348461c06cd81fd38ebfda8fbba904f8e3ea9b543f6545da1f2d5432955613\
+                        f0fcf62d49705242a9af9e61e85dc0d651e40dfcf017b45575887";
+
+        let mut actual = [0; 64];
+        super::scrypt(pass.as_bytes(), salt.as_bytes(), 16384, 8, 1, 0, &mut actual).unwrap();
+        assert_eq!((&actual[..]).to_hex(), expected);
     }
 }
