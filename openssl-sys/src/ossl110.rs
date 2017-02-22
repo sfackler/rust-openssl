@@ -98,6 +98,7 @@ extern {
     pub fn EVP_CIPHER_key_length(cipher: *const EVP_CIPHER) -> c_int;
     pub fn EVP_CIPHER_block_size(cipher: *const EVP_CIPHER) -> c_int;
     pub fn EVP_CIPHER_iv_length(cipher: *const EVP_CIPHER) -> c_int;
+    pub fn EVP_PBE_scrypt(pass: *const c_char, passlen: size_t, salt: *const c_uchar, saltlen: size_t, N: u64, r: u64, p: u64, maxmem: u64, key: *mut c_uchar, keylen: size_t) -> c_int;
     pub fn DSA_get0_pqg(d: *const ::DSA,
                         p: *mut *const ::BIGNUM,
                         q: *mut *const ::BIGNUM,
