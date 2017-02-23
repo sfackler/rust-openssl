@@ -327,7 +327,7 @@ impl X509Builder {
 
     /// Sets the subject name of the certificate.
     ///
-    /// When building certificates, the `C`, `ST`, and `O` options are required for the certificate to be a valid certificate in OpenSSL. 
+    /// When building certificates, the `C`, `ST`, and `O` options are common when using the openssl command line tools.
     /// The `CN` field is used for the common name, such as a DNS name.
     ///
     /// ```
