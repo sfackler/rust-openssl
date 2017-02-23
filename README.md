@@ -122,6 +122,9 @@ other than the normal system install.
 
 The build script can be configured via environment variables:
 
+* `OPENSSL_SRC` - If specified, the path to an OpenSSL source tarball. The build
+  script will compile OpenSSL and statically link to it. This is not currently
+  supported on Windows.
 * `OPENSSL_DIR` - If specified, a directory that will be used to find
   OpenSSL installation. It's expected that under this directory the `include`
   folder has header files and a `lib` folder has the runtime libraries.

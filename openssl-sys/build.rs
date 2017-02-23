@@ -1,14 +1,18 @@
 extern crate pkg_config;
 extern crate gcc;
+extern crate tar;
+extern crate flate2;
 
+use flate2::FlateReadExt;
 use std::collections::HashSet;
 use std::env;
 use std::ffi::OsString;
-use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::fs::{self, File};
+use std::io::{BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 use std::panic::{self, AssertUnwindSafe};
 use std::process::Command;
+use tar::Archive;
 
 // The set of `OPENSSL_NO_<FOO>`s that we care about.
 const DEFINES: &'static [&'static str] = &[
@@ -36,19 +40,10 @@ enum Version {
 fn main() {
     let target = env::var("TARGET").unwrap();
 
-    let lib_dir = env::var_os("OPENSSL_LIB_DIR").map(PathBuf::from);
-    let include_dir = env::var_os("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
-
-    let (lib_dir, include_dir) = if lib_dir.is_none() || include_dir.is_none() {
-        let openssl_dir = env::var_os("OPENSSL_DIR").unwrap_or_else(|| {
-            find_openssl_dir(&target)
-        });
-        let openssl_dir = Path::new(&openssl_dir);
-        let lib_dir = lib_dir.unwrap_or_else(|| openssl_dir.join("lib"));
-        let include_dir = include_dir.unwrap_or_else(|| openssl_dir.join("include"));
-        (lib_dir, include_dir)
+    let (lib_dir, include_dir) = if let Some(tarball) = env::var_os("OPENSSL_SRC") {
+        build_openssl(&target, Path::new(&tarball))
     } else {
-        (lib_dir.unwrap(), include_dir.unwrap())
+        find_openssl(&target)
     };
 
     if !Path::new(&lib_dir).exists() {
@@ -76,6 +71,137 @@ fn main() {
     let kind = determine_mode(Path::new(&lib_dir), &libs);
     for lib in libs.iter() {
         println!("cargo:rustc-link-lib={}={}", kind, lib);
+    }
+}
+
+fn build_openssl(target: &str, tarball_path: &Path) -> (PathBuf, PathBuf) {
+    let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+    let build_dir = out_dir.join("build");
+    let install_dir = out_dir.join("install");
+    let lib_dir = install_dir.join("lib");
+    let include_dir = install_dir.join("include");
+
+    let stamp = build_dir.join("stamp");
+    let mut contents = String::new();
+    let _ = File::open(&stamp).and_then(|mut f| f.read_to_string(&mut contents));
+    if tarball_path == Path::new(&contents) {
+        return (lib_dir, include_dir);
+    }
+
+    if stamp.exists() {
+        fs::remove_file(&stamp).unwrap();
+    }
+    if build_dir.exists() {
+        fs::remove_dir_all(&build_dir).unwrap();
+    }
+    if install_dir.exists() {
+        fs::remove_dir_all(&install_dir).unwrap();
+    }
+
+    let tarball = File::open(tarball_path).unwrap().gz_decode().unwrap();
+    let mut tarball = Archive::new(tarball);
+    tarball.unpack(&build_dir).unwrap();
+
+    let inner_dir = fs::read_dir(&build_dir).unwrap().next().unwrap().unwrap().path();
+
+    let mut configure = if target == "i686-unknown-linux-gnu" {
+        let mut cmd = Command::new("setarch");
+        cmd.arg("i386").arg("./Configure");
+        cmd
+    } else {
+        Command::new("./Configure")
+    };
+
+    let os = match target {
+        "aarch64-unknown-linux-gnu" => "linux-aarch64",
+        "arm-unknown-linux-gnueabi" => "linux-armv4",
+        "arm-unknown-linux-gnueabihf" => "linux-armv4",
+        "armv7-unknown-linux-gnueabihf" => "linux-armv4",
+        "i686-apple-darwin" => "darwin-i386-cc",
+        "i686-unknown-freebsd" => "BSD-x86-elf",
+        "i686-unknown-linux-gnu" => "linux-elf",
+        "i686-unknown-linux-musl" => "linux-elf",
+        "mips-unknown-linux-gnu" => "linux-mips32",
+        "mips64-unknown-linux-gnuabi64" => "linux64-mips64",
+        "mips64el-unknown-linux-gnuabi64" => "linux64-mips64",
+        "mipsel-unknown-linux-gnu" => "linux-mips32",
+        "powerpc-unknown-linux-gnu" => "linux-ppc",
+        "powerpc64-unknown-linux-gnu" => "linux-ppc64",
+        "powerpc64le-unknown-linux-gnu" => "linux-ppc64le",
+        "s390x-unknown-linux-gnu" => "linux64-s390x",
+        "x86_64-apple-darwin" => "darwin64-x86_64-cc",
+        "x86_64-unknown-freebsd" => "BSD-x86_64",
+        "x86_64-unknown-linux-gnu" => "linux-x86_64",
+        "x86_64-unknown-linux-musl" => "linux-x86_64",
+        "x86_64-unknown-netbsd" => "BSD-x86_64",
+        _ => panic!("don't know how to configure OpenSSL for {}", target),
+    };
+
+    configure.arg(format!("--prefix={}", install_dir.display()))
+        .arg("no-dso")
+        .arg("no-ssl2")
+        .arg("no-ssl3")
+        .arg("no-comp")
+        .arg(os)
+        .arg("-fPIC");
+    if target.contains("i686") {
+        configure.arg("-m32");
+    }
+
+    configure.current_dir(&inner_dir);
+    run_command(configure, "configuring OpenSSL build");
+
+    let mut depend = Command::new("make");
+    depend.arg("depend").current_dir(&inner_dir);
+    run_command(depend, "building OpenSSL dependencies");
+
+    let mut build = Command::new("make");
+    build.current_dir(&inner_dir);
+    run_command(build, "building OpenSSL");
+
+    let mut install = Command::new("make");
+    install.arg("install").current_dir(&inner_dir);
+    run_command(install, "installing OpenSSL");
+
+    File::create(&stamp).unwrap()
+        .write_all(&tarball_path.display().to_string().as_bytes())
+        .unwrap();
+
+    (lib_dir, include_dir)
+}
+
+fn run_command(mut command: Command, desc: &str) {
+    let output = command.output().unwrap();
+    if !output.status.success() {
+        panic!("
+Error {}
+
+    Stdout:
+{}
+
+    Stderr:
+{}
+",
+            desc,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr));
+    }
+}
+
+fn find_openssl(target: &str) -> (PathBuf, PathBuf) {
+    let lib_dir = env::var_os("OPENSSL_LIB_DIR").map(PathBuf::from);
+    let include_dir = env::var_os("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
+
+    if lib_dir.is_none() || include_dir.is_none() {
+        let openssl_dir = env::var_os("OPENSSL_DIR").unwrap_or_else(|| {
+            find_openssl_dir(&target)
+        });
+        let openssl_dir = Path::new(&openssl_dir);
+        let lib_dir = lib_dir.unwrap_or_else(|| openssl_dir.join("lib"));
+        let include_dir = include_dir.unwrap_or_else(|| openssl_dir.join("include"));
+        (lib_dir, include_dir)
+    } else {
+        (lib_dir.unwrap(), include_dir.unwrap())
     }
 }
 
