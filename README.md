@@ -136,3 +136,10 @@ The build script can be configured via environment variables:
 
 If `OPENSSL_DIR` is specified, then the build script will skip the pkg-config
 step.
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally
+submitted for inclusion in the work by you, as defined in the Apache-2.0
+license, shall be dual licensed as above, without any additional terms or
+conditions.
