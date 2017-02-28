@@ -156,7 +156,9 @@ fn build_openssl(target: &str, tarball_path: &Path) -> (PathBuf, PathBuf) {
     run_command(depend, "building OpenSSL dependencies");
 
     let mut build = Command::new("make");
-    build.current_dir(&inner_dir);
+    build.current_dir(&inner_dir)
+        .arg("-j")
+        .arg(env::var_os("NUM_JOBS").unwrap());
     run_command(build, "building OpenSSL");
 
     let mut install = Command::new("make");
