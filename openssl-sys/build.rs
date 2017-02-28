@@ -176,6 +176,8 @@ fn run_command(mut command: Command, desc: &str) {
         panic!("
 Error {}
 
+    Exit status: {}
+
     Stdout:
 {}
 
@@ -183,6 +185,7 @@ Error {}
 {}
 ",
             desc,
+            output.status,
             String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr));
     }
