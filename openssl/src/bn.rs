@@ -465,7 +465,7 @@ impl BigNumRef {
 
     /// Returns a big-endian byte vector representation of the absolute value of `self`.
     ///
-    /// `self` can be recreated by using `new_from_slice`.
+    /// `self` can be recreated by using `from_slice`.
     ///
     /// ```
     /// # use openssl::bn::BigNum;
@@ -874,7 +874,7 @@ impl<'a> Shr<i32> for &'a BigNum {
     type Output = BigNum;
 
     fn shr(self, n: i32) -> BigNum {
-        self.deref().shl(n)
+        self.deref().shr(n)
     }
 }
 
@@ -923,6 +923,14 @@ mod tests {
 
         assert!(!a.is_negative());
         assert!((-a).is_negative());
+    }
+
+    #[test]
+    fn test_shift() {
+        let a = BigNum::from_u32(909829283).unwrap();
+        use std::ops::{Shl, Shr};
+
+        assert!(a == a.shl(1).shr(1));
     }
 
     #[test]
