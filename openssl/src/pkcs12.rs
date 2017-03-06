@@ -197,6 +197,17 @@ mod test {
     }
 
     #[test]
+    fn parse_empty_chain() {
+        let der = include_bytes!("../test/keystore-empty-chain.p12");
+        let pkcs12 = Pkcs12::from_der(der).unwrap();
+        let parsed = pkcs12.parse("cassandra").unwrap();
+
+
+        assert_eq!(parsed.chain.len(), 0);
+        assert_eq!(parsed.chain.into_iter().collect::<Vec<_>>().len(), 0);
+    }
+
+    #[test]
     fn create() {
         let subject_name = "ns.example.com";
         let rsa = Rsa::generate(2048).unwrap();
