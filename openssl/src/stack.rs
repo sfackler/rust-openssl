@@ -116,7 +116,7 @@ pub struct IntoIter<T: Stackable> {
 
 impl<T: Stackable> IntoIter<T> {
     fn stack_len(&self) -> c_int {
-        unsafe { OPENSSL_sk_num(self.stack as *mut _) }
+        safe_stack_size(self.stack as *mut _) as c_int
     }
 }
 
@@ -154,6 +154,15 @@ impl<T: Stackable> ExactSizeIterator for IntoIter<T> {}
 
 pub struct StackRef<T: Stackable>(Opaque, PhantomData<T>);
 
+fn safe_stack_size(stack: *mut OPENSSL_STACK) -> usize {
+    let l = unsafe { OPENSSL_sk_num(stack) as isize };
+    if l < 0 {
+        0
+    } else {
+        l as usize
+    }
+}
+
 impl<T: Stackable> ForeignTypeRef for StackRef<T> {
     type CType = T::StackType;
 }
@@ -165,7 +174,7 @@ impl<T: Stackable> StackRef<T> {
 
     /// Returns the number of items in the stack
     pub fn len(&self) -> usize {
-        unsafe { OPENSSL_sk_num(self.as_stack()) as usize }
+        safe_stack_size(self.as_stack())
     }
 
     pub fn iter(&self) -> Iter<T> {
