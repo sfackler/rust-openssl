@@ -86,6 +86,8 @@ impl<T: Stackable> ForeignType for Stack<T> {
 
     #[inline]
     unsafe fn from_ptr(ptr: *mut T::StackType) -> Stack<T> {
+        assert!(!ptr.is_null(), "Must not instantiate a Stack from a null-ptr - use Stack::new() in \
+                                 that case");
         Stack(ptr)
     }
 
@@ -116,7 +118,7 @@ pub struct IntoIter<T: Stackable> {
 
 impl<T: Stackable> IntoIter<T> {
     fn stack_len(&self) -> c_int {
-        safe_stack_size(self.stack as *mut _) as c_int
+        unsafe { OPENSSL_sk_num(self.stack as *mut _) }
     }
 }
 
@@ -154,15 +156,6 @@ impl<T: Stackable> ExactSizeIterator for IntoIter<T> {}
 
 pub struct StackRef<T: Stackable>(Opaque, PhantomData<T>);
 
-fn safe_stack_size(stack: *mut OPENSSL_STACK) -> usize {
-    let l = unsafe { OPENSSL_sk_num(stack) as isize };
-    if l < 0 {
-        0
-    } else {
-        l as usize
-    }
-}
-
 impl<T: Stackable> ForeignTypeRef for StackRef<T> {
     type CType = T::StackType;
 }
@@ -174,7 +167,7 @@ impl<T: Stackable> StackRef<T> {
 
     /// Returns the number of items in the stack
     pub fn len(&self) -> usize {
-        safe_stack_size(self.as_stack())
+        unsafe { OPENSSL_sk_num(self.as_stack()) as usize }
     }
 
     pub fn iter(&self) -> Iter<T> {

@@ -42,7 +42,12 @@ impl Pkcs12Ref {
 
             let pkey = PKey::from_ptr(pkey);
             let cert = X509::from_ptr(cert);
-            let chain = Stack::from_ptr(chain);
+
+            let chain = if chain.is_null() {
+                try!(Stack::new())
+            } else {
+                Stack::from_ptr(chain)
+            };
 
             Ok(ParsedPkcs12 {
                 pkey: pkey,
@@ -80,6 +85,7 @@ impl Pkcs12 {
 pub struct ParsedPkcs12 {
     pub pkey: PKey,
     pub cert: X509,
+    // FIXME Make this Option<Stack> in the next breaking release
     pub chain: Stack<X509>,
 }
 
@@ -201,7 +207,6 @@ mod test {
         let der = include_bytes!("../test/keystore-empty-chain.p12");
         let pkcs12 = Pkcs12::from_der(der).unwrap();
         let parsed = pkcs12.parse("cassandra").unwrap();
-
 
         assert_eq!(parsed.chain.len(), 0);
         assert_eq!(parsed.chain.into_iter().collect::<Vec<_>>().len(), 0);
