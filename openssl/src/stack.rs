@@ -86,6 +86,8 @@ impl<T: Stackable> ForeignType for Stack<T> {
 
     #[inline]
     unsafe fn from_ptr(ptr: *mut T::StackType) -> Stack<T> {
+        assert!(!ptr.is_null(), "Must not instantiate a Stack from a null-ptr - use Stack::new() in \
+                                 that case");
         Stack(ptr)
     }
 
