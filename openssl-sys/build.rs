@@ -65,16 +65,23 @@ fn main() {
 
     let version = validate_headers(&[include_dir.clone().into()]);
 
-    let libs = match version {
-        Version::Openssl101 | Version::Openssl102 if target.contains("windows") => {
-            ["ssleay32", "libeay32"]
+    let libs_env = env::var("OPENSSL_LIBS").ok();
+    let libs = match libs_env {
+        Some(ref v) => v.split(":").collect(),
+        None => {
+            match version {
+                Version::Openssl101 | Version::Openssl102 if target.contains("windows") => {
+                    vec!["ssleay32", "libeay32"]
+                }
+                Version::Openssl110 if target.contains("windows") => vec!["libssl", "libcrypto"],
+                _ => vec!["ssl", "crypto"],
+            }
         }
-        Version::Openssl110 if target.contains("windows") => ["libssl", "libcrypto"],
-        _ => ["ssl", "crypto"],
     };
 
+
     let kind = determine_mode(Path::new(&lib_dir), &libs);
-    for lib in libs.iter() {
+    for lib in libs.into_iter() {
         println!("cargo:rustc-link-lib={}={}", kind, lib);
     }
 }
