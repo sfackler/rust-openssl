@@ -133,6 +133,8 @@ The build script can be configured via environment variables:
   (if specified).
 * `OPENSSL_STATIC` - If specified, OpenSSL libraries will be statically rather
   than dynamically linked.
+* `OPENSSL_LIBS` - If specified, the names of the OpenSSL libraries that will be
+  linked, e.g. `ssl:crypto`.
 
 If `OPENSSL_DIR` is specified, then the build script will skip the pkg-config
 step.
