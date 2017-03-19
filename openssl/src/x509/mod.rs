@@ -86,6 +86,13 @@ impl X509StoreContextRef {
         }
     }
 
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    pub fn verify_cert(self) -> Result<Option<X509VerifyError>, ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_verify_cert(self.as_ptr())).map(|_| ())
+        }
+    }
+
     /// Returns the error code of the context.
     ///
     /// This corresponds to [`X509_STORE_CTX_get_error`].

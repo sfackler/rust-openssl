@@ -285,6 +285,7 @@ fn signature() {
     assert_eq!(algorithm.object().to_string(), "sha256WithRSAEncryption");
 }
 
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 #[test]
 fn clone_x509() {
     let cert = include_bytes!("../../test/cert.pem");
