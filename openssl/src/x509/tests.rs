@@ -291,3 +291,20 @@ fn clone_x509() {
     let cert = X509::from_pem(cert).unwrap();
     cert.clone();
 }
+
+#[test]
+fn test_verify_cert() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    store_bldr.add_cert(ca);
+    let store = store_bldr.build();
+
+    let store_ctx_bldr = X509StoreContext::builder().unwrap();
+    let store_ctx = store_ctx_bldr.build(store, cert, Stack::new().unwrap()).unwrap();
+
+    store_ctx.verify_cert().unwrap();
+}
