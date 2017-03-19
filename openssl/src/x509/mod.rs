@@ -86,6 +86,9 @@ impl X509StoreContextRef {
         }
     }
 
+    /// Verifies the certificate associated in the `build()` method
+    ///
+    /// This consumes self as the `X509StoreContext` must be reinitialized subsequent to any cally to verify. 
     pub fn verify_cert(self) -> Result<Option<X509VerifyError>, ErrorStack> {
         unsafe {
             try!(cvt(ffi::X509_verify_cert(self.as_ptr())).map(|_| ()))
