@@ -331,7 +331,6 @@ fn signature() {
     assert_eq!(algorithm.object().to_string(), "sha256WithRSAEncryption");
 }
 
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 #[test]
 fn test_verify_cert() {
     let cert = include_bytes!("../../test/cert.pem");
@@ -340,11 +339,11 @@ fn test_verify_cert() {
     let ca = X509::from_pem(ca).unwrap();
 
     let mut store_bldr = X509StoreBuilder::new().unwrap();
-    store_bldr.add_cert(ca);
+    store_bldr.add_cert(ca).unwrap();
     let store = store_bldr.build();
 
     let store_ctx_bldr = X509StoreContext::builder().unwrap();
     let store_ctx = store_ctx_bldr.build(&store, &cert, &Stack::new().unwrap()).unwrap();
 
-    store_ctx.verify_cert().unwrap();
+    assert!(store_ctx.verify_cert().unwrap().is_none());
 }
