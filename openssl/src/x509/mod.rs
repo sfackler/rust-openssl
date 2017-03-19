@@ -82,13 +82,10 @@ impl X509StoreContext {
 }
 
 impl X509StoreContextBuilder {
-    pub fn build(self, trust: store::X509Store, cert: X509, cert_chain: Stack<X509>) -> Result<X509StoreContext, ErrorStack> {
+    pub fn build(self, trust: &store::X509StoreRef, cert: &X509Ref, cert_chain: &StackRef<X509>) -> Result<X509StoreContext, ErrorStack> {
         unsafe {
             try!(cvt(ffi::X509_STORE_CTX_init(self.0.as_ptr(), trust.as_ptr(), cert.as_ptr(), cert_chain.as_ptr()))
                 .map(|_| ()));
-            mem::forget(trust);
-            mem::forget(cert);
-            mem::forget(cert_chain);
         }
         Ok(self.0)
     }
