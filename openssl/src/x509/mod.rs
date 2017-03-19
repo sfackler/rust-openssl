@@ -64,6 +64,36 @@ foreign_type! {
     pub struct X509StoreContextRef;
 }
 
+pub struct X509StoreContextBuilder(X509StoreContext);
+
+impl X509StoreContext {
+    pub fn builder() -> Result<X509StoreContextBuilder, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(ffi::X509_STORE_CTX_new()).map(|p| X509StoreContextBuilder(X509StoreContext(p)))
+        }
+    }
+
+    pub fn verify_cert(self) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_verify_cert(self.as_ptr())).map(|_| ())
+        }
+    }
+}
+
+impl X509StoreContextBuilder {
+    pub fn build(self, trust: store::X509Store, cert: X509, cert_chain: Stack<X509>) -> Result<X509StoreContext, ErrorStack> {
+        unsafe {
+            try!(cvt(ffi::X509_STORE_CTX_init(self.0.as_ptr(), trust.as_ptr(), cert.as_ptr(), cert_chain.as_ptr()))
+                .map(|_| ()));
+            mem::forget(trust);
+            mem::forget(cert);
+            mem::forget(cert_chain);
+        }
+        Ok(self.0)
+    }
+}
+
 impl X509StoreContextRef {
     pub fn error(&self) -> Option<X509VerifyError> {
         unsafe { X509VerifyError::from_raw(ffi::X509_STORE_CTX_get_error(self.as_ptr()) as c_long) }
