@@ -74,6 +74,7 @@ impl X509StoreContext {
         }
     }
 
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn verify_cert(self) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::X509_verify_cert(self.as_ptr())).map(|_| ())
