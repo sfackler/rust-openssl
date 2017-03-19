@@ -304,7 +304,7 @@ fn test_verify_cert() {
     let store = store_bldr.build();
 
     let store_ctx_bldr = X509StoreContext::builder().unwrap();
-    let store_ctx = store_ctx_bldr.build(store, cert, Stack::new().unwrap()).unwrap();
+    let store_ctx = store_ctx_bldr.build(&store, &cert, &Stack::new().unwrap()).unwrap();
 
     store_ctx.verify_cert().unwrap();
 }
