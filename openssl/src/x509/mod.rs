@@ -64,34 +64,38 @@ foreign_type! {
     pub struct X509StoreContextRef;
 }
 
-pub struct X509StoreContextBuilder(X509StoreContext);
-
 impl X509StoreContext {
-    pub fn builder() -> Result<X509StoreContextBuilder, ErrorStack> {
+    pub fn new() -> Result<X509StoreContext, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(ffi::X509_STORE_CTX_new()).map(|p| X509StoreContextBuilder(X509StoreContext(p)))
+            cvt_p(ffi::X509_STORE_CTX_new()).map(|p| X509StoreContext(p))
         }
     }
 
-    /// Verifies the certificate associated in the `build()` method
+    /// Initializes the store context to verify the certificate.
+    ///
+    /// This Context can only be used once, subsequent to any validation, the context must be reinitialized.
+    ///
+    /// # Arguments
+    ///
+    /// * `trust` - a store of the trusted chain of certificates, or CAs, to validated the certificate
+    /// * `cert` - certificate to validate
+    /// * `cert_chain` - the certificates chain
+    pub fn init(&self, trust: &store::X509StoreRef, cert: &X509Ref, cert_chain: &StackRef<X509>) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_STORE_CTX_init(self.as_ptr(), trust.as_ptr(), cert.as_ptr(), cert_chain.as_ptr()))
+                .map(|_| ())
+        }
+    }
+
+    /// Verifies the certificate associated in the `init()` method
     ///
     /// This consumes self as the `X509StoreContext` must be reinitialized subsequent to any cally to verify. 
-    pub fn verify_cert(self) -> Result<Option<X509VerifyError>, ErrorStack> {
+    pub fn verify_cert(&self) -> Result<Option<X509VerifyError>, ErrorStack> {
         unsafe {
             try!(cvt(ffi::X509_verify_cert(self.as_ptr())).map(|_| ()))
         }
         Ok(self.error())
-    }
-}
-
-impl X509StoreContextBuilder {
-    pub fn build(self, trust: &store::X509StoreRef, cert: &X509Ref, cert_chain: &StackRef<X509>) -> Result<X509StoreContext, ErrorStack> {
-        unsafe {
-            try!(cvt(ffi::X509_STORE_CTX_init(self.0.as_ptr(), trust.as_ptr(), cert.as_ptr(), cert_chain.as_ptr()))
-                .map(|_| ()));
-        }
-        Ok(self.0)
     }
 }
 
