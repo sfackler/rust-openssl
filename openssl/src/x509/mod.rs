@@ -88,14 +88,14 @@ impl X509StoreContextRef {
 
     /// Initializes the store context to verify the certificate.
     ///
-    /// This Context can only be used once, subsequent to any validation, the context must be reinitialized.
+    /// The context must be re-initialized before each call to `verify_cert`.
     ///
     /// # Arguments
     ///
     /// * `trust` - a store of the trusted chain of certificates, or CAs, to validated the certificate
     /// * `cert` - certificate to validate
-    /// * `cert_chain` - the certificates chain
-    pub fn init(&self, trust: &store::X509StoreRef, cert: &X509Ref, cert_chain: &StackRef<X509>) -> Result<(), ErrorStack> {
+    /// * `cert_chain` - the certificate's chain
+    pub fn init(&mut self, trust: &store::X509StoreRef, cert: &X509Ref, cert_chain: &StackRef<X509>) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::X509_STORE_CTX_init(self.as_ptr(), trust.as_ptr(), cert.as_ptr(), cert_chain.as_ptr()))
                 .map(|_| ())
@@ -113,7 +113,7 @@ impl X509StoreContextRef {
 
     /// Verifies the certificate associated in the `init()` method
     ///
-    /// This consumes self as the `X509StoreContext` must be reinitialized subsequent to any cally to verify. 
+    /// The context must be re-initialized before each call to this method.
     pub fn verify_cert(&self) -> Result<Option<X509VerifyError>, ErrorStack> {
         unsafe {
             try!(cvt(ffi::X509_verify_cert(self.as_ptr())).map(|_| ()))
