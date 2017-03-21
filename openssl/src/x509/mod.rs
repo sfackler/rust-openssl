@@ -86,14 +86,20 @@ impl X509StoreContextRef {
         }
     }
 
-    /// Verifies the certificate associated in the `build()` method
+    /// Initializes the store context to verify the certificate.
     ///
-    /// This consumes self as the `X509StoreContext` must be reinitialized subsequent to any cally to verify. 
-    pub fn verify_cert(self) -> Result<Option<X509VerifyError>, ErrorStack> {
+    /// This Context can only be used once, subsequent to any validation, the context must be reinitialized.
+    ///
+    /// # Arguments
+    ///
+    /// * `trust` - a store of the trusted chain of certificates, or CAs, to validated the certificate
+    /// * `cert` - certificate to validate
+    /// * `cert_chain` - the certificates chain
+    pub fn init(&self, trust: &store::X509StoreRef, cert: &X509Ref, cert_chain: &StackRef<X509>) -> Result<(), ErrorStack> {
         unsafe {
-            try!(cvt(ffi::X509_verify_cert(self.as_ptr())).map(|_| ()))
+            cvt(ffi::X509_STORE_CTX_init(self.as_ptr(), trust.as_ptr(), cert.as_ptr(), cert_chain.as_ptr()))
+                .map(|_| ())
         }
-        Ok(self.error())
     }
 
     /// Returns the error code of the context.
@@ -103,6 +109,16 @@ impl X509StoreContextRef {
     /// [`X509_STORE_CTX_get_error`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_STORE_CTX_get_error.html
     pub fn error(&self) -> X509VerifyResult {
         unsafe { X509VerifyResult::from_raw(ffi::X509_STORE_CTX_get_error(self.as_ptr())) }
+    }
+
+    /// Verifies the certificate associated in the `init()` method
+    ///
+    /// This consumes self as the `X509StoreContext` must be reinitialized subsequent to any cally to verify. 
+    pub fn verify_cert(&self) -> Result<Option<X509VerifyError>, ErrorStack> {
+        unsafe {
+            try!(cvt(ffi::X509_verify_cert(self.as_ptr())).map(|_| ()))
+        }
+        Ok(self.error())
     }
 
     /// Set the error code of the context.
