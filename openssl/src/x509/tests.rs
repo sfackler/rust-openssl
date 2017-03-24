@@ -303,8 +303,5 @@ fn test_verify_cert() {
     store_bldr.add_cert(ca).unwrap();
     let store = store_bldr.build();
 
-    let store_ctx = X509StoreContext::new().unwrap();
-    store_ctx.init(&store, &cert, &Stack::new().unwrap()).unwrap();
-
-    assert!(store_ctx.verify_cert().unwrap().is_none());
+    assert!(X509StoreContext::verify_cert(&store, &cert, &Stack::new().unwrap()).unwrap().is_none());
 }

@@ -112,13 +112,20 @@ impl X509StoreContextRef {
     }
 
     /// Verifies the certificate associated in the `init()` method
+    /// * `cert_chain` - the certificates chain
     ///
-    /// The context must be re-initialized before each call to this method.
-    pub fn verify_cert(&self) -> Result<Option<X509VerifyError>, ErrorStack> {
+    /// # Result
+    /// 
+    /// The Result must be `Some(None)` to be a valid certificate, otherwise the cert is not valid.
+    pub fn verify_cert(trust: &store::X509StoreRef, cert: &X509Ref, cert_chain: &StackRef<X509>) -> Result<Option<X509VerifyError>, ErrorStack> {
         unsafe {
-            try!(cvt(ffi::X509_verify_cert(self.as_ptr())).map(|_| ()))
+            ffi::init();
+            let context = try!(cvt_p(ffi::X509_STORE_CTX_new()).map(|p| X509StoreContext(p)));
+            try!(cvt(ffi::X509_STORE_CTX_init(context.as_ptr(), trust.as_ptr(), cert.as_ptr(), cert_chain.as_ptr()))
+                .map(|_| ()));
+            try!(cvt(ffi::X509_verify_cert(context.as_ptr())).map(|_| ()));
+            Ok(context.error())
         }
-        Ok(self.error())
     }
 
     /// Set the error code of the context.
