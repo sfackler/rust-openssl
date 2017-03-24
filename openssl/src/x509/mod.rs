@@ -117,14 +117,18 @@ impl X509StoreContextRef {
     /// # Result
     /// 
     /// The Result must be `Some(None)` to be a valid certificate, otherwise the cert is not valid.
-    pub fn verify_cert(trust: &store::X509StoreRef, cert: &X509Ref, cert_chain: &StackRef<X509>) -> Result<Option<X509VerifyError>, ErrorStack> {
+    pub fn verify_cert(trust: store::X509Store, cert: X509, cert_chain: Stack<X509>) -> Result<Option<X509VerifyError>, ErrorStack> {
         unsafe {
             ffi::init();
             let context = try!(cvt_p(ffi::X509_STORE_CTX_new()).map(|p| X509StoreContext(p)));
             try!(cvt(ffi::X509_STORE_CTX_init(context.as_ptr(), trust.as_ptr(), cert.as_ptr(), cert_chain.as_ptr()))
                 .map(|_| ()));
             try!(cvt(ffi::X509_verify_cert(context.as_ptr())).map(|_| ()));
-            Ok(context.error())
+            
+            let result = Ok(context.error());
+            ffi::X509_STORE_CTX_cleanup(context.as_ptr());
+
+            result
         }
     }
 
