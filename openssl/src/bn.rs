@@ -106,12 +106,12 @@ impl BigNumRef {
     /// Places a cryptographically-secure pseudo-random number nonnegative
     /// number less than `self` in `rnd`.
     pub fn rand_range(&self, rnd: &mut BigNumRef) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::BN_rand_range(self.as_ptr(), rnd.as_ptr())).map(|_| ()) }
+        unsafe { cvt(ffi::BN_rand_range(rnd.as_ptr(), self.as_ptr())).map(|_| ()) }
     }
 
     /// The cryptographically weak counterpart to `rand_in_range`.
     pub fn pseudo_rand_range(&self, rnd: &mut BigNumRef) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::BN_pseudo_rand_range(self.as_ptr(), rnd.as_ptr())).map(|_| ()) }
+        unsafe { cvt(ffi::BN_pseudo_rand_range(rnd.as_ptr(), self.as_ptr())).map(|_| ()) }
     }
 
     /// Sets bit `n`. Equivalent to `self |= (1 << n)`.
@@ -931,6 +931,24 @@ mod tests {
         use std::ops::{Shl, Shr};
 
         assert!(a == a.shl(1).shr(1));
+    }
+
+    #[test]
+    fn test_rand_range() {
+        let range = BigNum::from_u32(909829283).unwrap();
+        let mut result = BigNum::from_dec_str(
+            &range.to_dec_str().unwrap()).unwrap();
+        range.rand_range(&mut result).unwrap();
+        assert!(result >= BigNum::from_u32(0).unwrap() && result < range);
+    }
+
+    #[test]
+    fn test_pseudo_rand_range() {
+        let range = BigNum::from_u32(909829283).unwrap();
+        let mut result = BigNum::from_dec_str(
+            &range.to_dec_str().unwrap()).unwrap();
+        range.pseudo_rand_range(&mut result).unwrap();
+        assert!(result >= BigNum::from_u32(0).unwrap() && result < range);
     }
 
     #[test]
