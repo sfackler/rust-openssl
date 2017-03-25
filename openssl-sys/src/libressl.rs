@@ -1,6 +1,7 @@
 use std::sync::{Mutex, MutexGuard};
 use std::sync::{Once, ONCE_INIT};
 use std::mem;
+use std::ptr;
 
 use libc::{c_int, c_char, c_void, c_long, c_uchar, size_t, c_uint, c_ulong};
 use libc::time_t;
@@ -500,7 +501,7 @@ pub struct SSL_SESSION {
     verify_result: c_long,
     timeout: c_long,
     time: time_t,
-    references: c_int,
+    pub references: c_int,
     cipher: *const c_void,
     cipher_id: c_ulong,
     ciphers: *mut c_void,
@@ -533,6 +534,7 @@ pub struct X509_VERIFY_PARAM {
 pub enum X509_VERIFY_PARAM_ID {}
 pub enum PKCS12 {}
 
+pub const SSL_CTRL_GET_SESSION_REUSED: c_int = 8;
 pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
 pub const SSL_CTRL_SET_ECDH_AUTO: c_int = 94;
@@ -565,6 +567,7 @@ pub const SSLEAY_DIR : c_int = 5;
 
 pub const CRYPTO_LOCK_X509: c_int = 3;
 pub const CRYPTO_LOCK_SSL_CTX: c_int = 12;
+pub const CRYPTO_LOCK_SSL_SESSION: c_int = 14;
 
 static mut MUTEXES: *mut Vec<Mutex<()>> = 0 as *mut Vec<Mutex<()>>;
 static mut GUARDS: *mut Vec<Option<MutexGuard<'static, ()>>> = 0 as *mut Vec<Option<MutexGuard<'static, ()>>>;
@@ -622,11 +625,15 @@ fn set_id_callback() {}
 // macros
 
 pub unsafe fn SSL_CTX_set_ecdh_auto(ctx: *mut SSL_CTX, onoff: c_int) -> c_int {
-    ::SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff as c_long, ::std::ptr::null_mut()) as c_int
+    ::SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff as c_long, ptr::null_mut()) as c_int
 }
 
 pub unsafe fn SSL_set_ecdh_auto(ssl: *mut ::SSL, onoff: c_int) -> c_int {
-    ::SSL_ctrl(ssl, SSL_CTRL_SET_ECDH_AUTO, onoff as c_long, ::std::ptr::null_mut()) as c_int
+    ::SSL_ctrl(ssl, SSL_CTRL_SET_ECDH_AUTO, onoff as c_long, ptr::null_mut()) as c_int
+}
+
+pub unsafe fn SSL_session_reused(ssl: *mut ::SSL) -> c_int {
+    ::SSL_ctrl(ssl, SSL_CTRL_GET_SESSION_REUSED, 0, ptr::null_mut()) as c_int
 }
 
 extern {
