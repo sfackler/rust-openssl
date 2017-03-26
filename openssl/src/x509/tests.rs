@@ -303,5 +303,19 @@ fn test_verify_cert() {
     store_bldr.add_cert(ca).unwrap();
     let store = store_bldr.build();
 
-    assert!(X509StoreContext::verify_cert(store, cert, Stack::new().unwrap()).unwrap().is_none());
+    assert!(X509StoreContext::verify_cert(store, cert, Stack::new().unwrap()).is_ok());
+}
+
+#[test]
+fn test_verify_fails() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/alt_name_cert.pem");
+    let ca = X509::from_pem(ca).unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    store_bldr.add_cert(ca).unwrap();
+    let store = store_bldr.build();
+
+    assert!(X509StoreContext::verify_cert(store, cert, Stack::new().unwrap()).is_err());
 }
