@@ -1,12 +1,12 @@
 [package]
 name = "openssl-sys"
-version = "0.9.9"
+version = "0.9.10"
 authors = ["Alex Crichton <alex@alexcrichton.com>",
            "Steven Fackler <sfackler@gmail.com>"]
 license = "MIT"
 description = "FFI bindings to OpenSSL"
 repository = "https://github.com/sfackler/rust-openssl"
-documentation = "https://docs.rs/openssl-sys/0.9.9/openssl_sys"
+documentation = "https://docs.rs/openssl-sys/0.9.10/openssl_sys"
 categories = ["cryptography", "external-ffi-bindings"]
 links = "openssl"
 build = "build.rs"
