@@ -1356,7 +1356,7 @@ pub unsafe fn SSL_CTX_add_extra_chain_cert(ctx: *mut SSL_CTX, x509: *mut X509) -
 
 #[cfg(not(any(ossl101, libressl)))]
 pub unsafe fn SSL_CTX_set0_verify_cert_store(ctx: *mut SSL_CTX, st: *mut X509_STORE) -> c_long {
-    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_VERIFY_CERT_STORE, 0, st as *mut c_void)    
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_VERIFY_CERT_STORE, 0, st as *mut c_void)
 }
 
 pub unsafe fn SSL_CTX_set_tlsext_servername_callback(ctx: *mut SSL_CTX,
@@ -1891,6 +1891,7 @@ extern {
                                  client: *const c_uchar, client_len: c_uint) -> c_int;
     pub fn SSL_get0_next_proto_negotiated(s: *const SSL, data: *mut *const c_uchar, len: *mut c_uint);
     pub fn SSL_get_session(s: *const SSL) -> *mut SSL_SESSION;
+    pub fn SSL_set_session(ssl: *mut SSL, session: *mut SSL_SESSION) -> c_int;
     #[cfg(not(any(ossl101, libressl)))]
     pub fn SSL_is_server(s: *mut SSL) -> c_int;
 

@@ -76,6 +76,7 @@ use libc::{c_int, c_void, c_long, c_ulong};
 use libc::{c_uchar, c_uint};
 use std::any::Any;
 use std::any::TypeId;
+use std::borrow::Borrow;
 use std::cmp;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
@@ -1161,6 +1162,32 @@ foreign_type! {
     pub struct SslSessionRef;
 }
 
+unsafe impl Sync for SslSession {}
+unsafe impl Send for SslSession {}
+
+impl Clone for SslSession {
+    fn clone(&self) -> SslSession {
+        self.to_owned()
+    }
+}
+
+impl Borrow<SslSessionRef> for SslSession {
+    fn borrow(&self) -> &SslSessionRef {
+        &self
+    }
+}
+
+impl ToOwned for SslSessionRef {
+    type Owned = SslSession;
+
+    fn to_owned(&self) -> SslSession {
+        unsafe {
+            compat::SSL_SESSION_up_ref(self.as_ptr());
+            SslSession(self.as_ptr())
+        }
+    }
+}
+
 impl SslSessionRef {
     /// Returns the SSL session ID.
     pub fn id(&self) -> &[u8] {
@@ -1505,6 +1532,23 @@ impl SslRef {
             } else {
                 Some(SslSessionRef::from_ptr(p))
             }
+        }
+    }
+
+    /// Sets the session to be used.
+    ///
+    /// # Safety
+    ///
+    /// The caller of this method is responsible for ensuring that the session is associated
+    /// with the same `SslContext` as this `Ssl`.
+    pub unsafe fn set_session(&mut self, session: &SslSessionRef) -> Result<(), ErrorStack> {
+        cvt(ffi::SSL_set_session(self.as_ptr(), session.as_ptr())).map(|_| ())
+    }
+
+    /// Determines if the session provided to `set_session` was successfully reused.
+    pub fn session_reused(&self) -> bool {
+        unsafe {
+            ffi::SSL_session_reused(self.as_ptr()) != 0
         }
     }
 
@@ -1918,7 +1962,7 @@ mod compat {
     use libc::c_int;
 
     pub use ffi::{SSL_CTX_get_options, SSL_CTX_set_options, SSL_CTX_clear_options, SSL_CTX_up_ref,
-                  SSL_SESSION_get_master_key, SSL_is_server};
+                  SSL_SESSION_get_master_key, SSL_is_server, SSL_SESSION_up_ref};
 
     pub unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
         ffi::CRYPTO_get_ex_new_index(ffi::CRYPTO_EX_INDEX_SSL_CTX,
@@ -2013,5 +2057,14 @@ mod compat {
 
     pub unsafe fn SSL_is_server(s: *mut ffi::SSL) -> c_int {
         (*s).server
+    }
+
+    pub unsafe fn SSL_SESSION_up_ref(ses: *mut ffi::SSL_SESSION) -> c_int {
+        ffi::CRYPTO_add_lock(&mut (*ses).references,
+                             1,
+                             ffi::CRYPTO_LOCK_SSL_CTX,
+                             "mod.rs\0".as_ptr() as *const _,
+                             line!() as libc::c_int);
+        0
     }
 }

@@ -77,8 +77,7 @@ matrix:
 
 before_install:
   - ./openssl/test/build.sh
-  - curl https://static.rust-lang.org/rustup.sh |
-    sh -s -- --add-target=$TARGET --disable-sudo -y --prefix=`rustc --print sysroot`
+  - rustup target add $TARGET || true
 script:
   - ./openssl/test/run.sh
 

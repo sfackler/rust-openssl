@@ -93,11 +93,7 @@ impl SslConnector {
     pub fn connect<S>(&self, domain: &str, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
         where S: Read + Write
     {
-        let mut ssl = try!(Ssl::new(&self.0));
-        try!(ssl.set_hostname(domain));
-        try!(setup_verify(&mut ssl, domain));
-
-        ssl.connect(stream)
+        try!(self.configure()).connect(domain, stream)
     }
 
     /// Initiates a client-side TLS session on a stream without performing hostname verification.
@@ -113,7 +109,56 @@ impl SslConnector {
             &self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
         where S: Read + Write
     {
-        try!(Ssl::new(&self.0)).connect(stream)
+        try!(self.configure())
+            .danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication(stream)
+    }
+
+    /// Returns a structure allowing for configuration of a single TLS session before connection.
+    pub fn configure(&self) -> Result<ConnectConfiguration, ErrorStack> {
+        Ssl::new(&self.0).map(ConnectConfiguration)
+    }
+}
+
+/// A type which allows for configuration of a client-side TLS session before connection.
+pub struct ConnectConfiguration(Ssl);
+
+impl ConnectConfiguration {
+    /// Returns a shared reference to the inner `Ssl`.
+    pub fn ssl(&self) -> &Ssl {
+        &self.0
+    }
+
+    /// Returns a mutable reference to the inner `Ssl`.
+    pub fn ssl_mut(&mut self) -> &mut Ssl {
+        &mut self.0
+    }
+
+    /// Initiates a client-side TLS session on a stream.
+    ///
+    /// The domain is used for SNI and hostname verification.
+    pub fn connect<S>(mut self, domain: &str, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
+        where S: Read + Write
+    {
+        try!(self.0.set_hostname(domain));
+        try!(setup_verify(&mut self.0, domain));
+
+        self.0.connect(stream)
+    }
+
+    /// Initiates a client-side TLS session on a stream without performing hostname verification.
+    ///
+    /// The verification configuration of the connector's `SslContext` is not overridden.
+    ///
+    /// # Warning
+    ///
+    /// You should think very carefully before you use this method. If hostname verification is not
+    /// used, *any* valid certificate for *any* site will be trusted for use from any other. This
+    /// introduces a significant vulnerability to man-in-the-middle attacks.
+    pub fn danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication<S>(
+            self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
+        where S: Read + Write
+    {
+        self.0.connect(stream)
     }
 }
 

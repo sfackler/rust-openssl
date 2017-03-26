@@ -172,10 +172,12 @@ extern {
                                    -> c_int;
     pub fn X509_up_ref(x: *mut X509) -> c_int;
     pub fn SSL_CTX_up_ref(x: *mut SSL_CTX) -> c_int;
+    pub fn SSL_session_reused(ssl: *mut SSL) -> c_int;
     pub fn SSL_SESSION_get_master_key(session: *const SSL_SESSION,
                                       out: *mut c_uchar,
                                       outlen: size_t)
                                       -> size_t;
+    pub fn SSL_SESSION_up_ref(ses: *mut SSL_SESSION) -> c_int;
     pub fn X509_get0_extensions(req: *const ::X509) -> *const stack_st_X509_EXTENSION;
     pub fn X509_STORE_CTX_get0_chain(ctx: *mut ::X509_STORE_CTX) -> *mut stack_st_X509;
     pub fn EVP_MD_CTX_new() -> *mut EVP_MD_CTX;
