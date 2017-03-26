@@ -121,12 +121,14 @@ impl X509StoreContextRef {
         unsafe {
             ffi::init();
             let context = try!(cvt_p(ffi::X509_STORE_CTX_new()).map(|p| X509StoreContext(p)));
-            try!(cvt(ffi::X509_STORE_CTX_init(context.as_ptr(), trust.as_ptr(), cert.as_ptr(), cert_chain.as_ptr()))
-                .map(|_| ()));
+            let init_result = cvt(ffi::X509_STORE_CTX_init(context.as_ptr(), trust.as_ptr(), cert.as_ptr(), cert_chain.as_ptr()))
+                .map(|_| ());
 
             mem::forget(trust);
             mem::forget(cert);
             mem::forget(cert_chain);
+
+            try!(init_result);
 
             // verify_cert returns an error `<= 0` if there was a validation error
             try!(cvt(ffi::X509_verify_cert(context.as_ptr())).map(|_| ()));
