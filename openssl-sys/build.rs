@@ -197,10 +197,15 @@ fn try_pkg_config() {
         return
     }
 
-    let lib = pkg_config::Config::new()
+    let lib = match pkg_config::Config::new()
         .print_system_libs(false)
-        .find("openssl")
-        .unwrap();
+        .find("openssl") {
+        Ok(lib) => lib,
+        Err(e) => {
+            println!("run pkg_config fail: {:?}", e);
+            return;
+        }
+    };
 
     validate_headers(&lib.include_paths);
 
