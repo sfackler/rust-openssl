@@ -18,7 +18,7 @@ v102 = []
 v110 = []
 
 [dependencies]
-bitflags = "0.7"
+bitflags = "0.8"
 foreign-types = "0.2"
 lazy_static = "0.2"
 libc = "0.2"
