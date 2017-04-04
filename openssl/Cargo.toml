@@ -10,7 +10,6 @@ readme = "../README.md"
 keywords = ["crypto", "tls", "ssl", "dtls"]
 categories = ["cryptography", "api-bindings"]
 build = "build.rs"
-exclude = ["test/*"]
 
 [features]
 v101 = []
