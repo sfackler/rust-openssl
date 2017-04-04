@@ -314,6 +314,10 @@ impl EcKeyRef {
     pub fn check_key(&self) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::EC_KEY_check_key(self.as_ptr())).map(|_| ()) }
     }
+
+    pub fn to_owned(&self) -> Result<EcKey, ErrorStack> {
+        unsafe { cvt_p(ffi::EC_KEY_dup(self.as_ptr())).map(EcKey) }
+    }
 }
 
 impl EcKey {
@@ -438,6 +442,13 @@ mod test {
         let key = EcKey::generate(&group).unwrap();
         key.public_key().unwrap();
         key.private_key().unwrap();
+    }
+
+    #[test]
+    fn dup() {
+        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let key = EcKey::generate(&group).unwrap();
+        key.to_owned().unwrap();
     }
 
     #[test]

@@ -1,9 +1,9 @@
-use libc::{c_void, c_char, c_int};
+use libc::{c_void, c_char, c_int, size_t};
 use std::ptr;
 use std::mem;
 use std::ffi::CString;
 use ffi;
-use foreign_types::{Opaque, ForeignType, ForeignTypeRef};
+use foreign_types::{ForeignType, ForeignTypeRef};
 
 use {cvt, cvt_p};
 use bio::MemBioSlice;
@@ -199,7 +199,25 @@ impl PKey {
     }
 }
 
-pub struct PKeyCtxRef(Opaque);
+foreign_type! {
+    type CType = ffi::EVP_PKEY_CTX;
+    fn drop = ffi::EVP_PKEY_CTX_free;
+
+    pub struct PKeyCtx;
+    pub struct PKeyCtxRef;
+}
+
+unsafe impl Send for PKeyCtx {}
+unsafe impl Sync for PKeyCtx {}
+
+impl PKeyCtx {
+    pub fn from_pkey(pkey: &PKeyRef) -> Result<PKeyCtx, ErrorStack> {
+        unsafe {
+            let evp = try!(cvt_p(ffi::EVP_PKEY_CTX_new(pkey.as_ptr(), ptr::null_mut())));
+            Ok(PKeyCtx(evp))
+        }
+    }
+}
 
 impl PKeyCtxRef {
     pub fn set_rsa_padding(&mut self, pad: Padding) -> Result<(), ErrorStack> {
@@ -216,10 +234,29 @@ impl PKeyCtxRef {
         };
         Ok(Padding::from_raw(pad))
     }
-}
 
-impl ForeignTypeRef for PKeyCtxRef {
-    type CType = ffi::EVP_PKEY_CTX;
+    pub fn derive_init(&mut self) -> Result<(), ErrorStack> {
+        unsafe {
+            try!(cvt(ffi::EVP_PKEY_derive_init(self.as_ptr())));
+        }
+        Ok(())
+    }
+
+    pub fn derive_set_peer(&mut self, peer: &PKeyRef) -> Result<(), ErrorStack> {
+        unsafe {
+            try!(cvt(ffi::EVP_PKEY_derive_set_peer(self.as_ptr(), peer.as_ptr())));
+        }
+        Ok(())
+    }
+
+    pub fn derive(&mut self) -> Result<Vec<u8>, ErrorStack> {
+        let mut len: size_t = 0;
+        unsafe { try!(cvt(ffi::EVP_PKEY_derive(self.as_ptr(), ptr::null_mut(), &mut len))); }
+
+        let mut key = vec![0u8; len];
+        unsafe { try!(cvt(ffi::EVP_PKEY_derive(self.as_ptr(), key.as_mut_ptr(), &mut len))); }
+        Ok(key)
+    }
 }
 
 #[cfg(test)]
@@ -227,7 +264,7 @@ mod tests {
     use symm::Cipher;
     use dh::Dh;
     use dsa::Dsa;
-    use ec::EcKey;
+    use ec::{EcGroup, EcKey};
     use rsa::Rsa;
     use nid;
 
@@ -318,5 +355,19 @@ mod tests {
         let pkey = PKey::from_ec_key(ec_key).unwrap();
         pkey.ec_key().unwrap();
         assert!(pkey.rsa().is_err());
+    }
+
+    #[test]
+    fn test_ec_key_derive() {
+        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let ec_key = EcKey::generate(&group).unwrap();
+        let ec_key2 = EcKey::generate(&group).unwrap();
+        let pkey = PKey::from_ec_key(ec_key).unwrap();
+        let pkey2 = PKey::from_ec_key(ec_key2).unwrap();
+        let mut pkey_ctx = PKeyCtx::from_pkey(&pkey).unwrap();
+        pkey_ctx.derive_init().unwrap();
+        pkey_ctx.derive_set_peer(&pkey2).unwrap();
+        let shared = pkey_ctx.derive().unwrap();
+        assert!(!shared.is_empty());
     }
 }
