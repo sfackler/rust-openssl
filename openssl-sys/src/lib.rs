@@ -1521,13 +1521,16 @@ extern {
     pub fn EC_KEY_check_key(key: *const EC_KEY) -> c_int;
     pub fn EC_KEY_free(key: *mut EC_KEY);
 
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
     pub fn EC_GF2m_simple_method() -> *const EC_METHOD;
 
     pub fn EC_GROUP_new(meth: *const EC_METHOD) -> *mut EC_GROUP;
     pub fn EC_GROUP_new_curve_GFp(p: *const BIGNUM, a: *const BIGNUM, b: *const BIGNUM, ctx: *mut BN_CTX) -> *mut EC_GROUP;
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
     pub fn EC_GROUP_new_curve_GF2m(p: *const BIGNUM, a: *const BIGNUM, b: *const BIGNUM, ctx: *mut BN_CTX) -> *mut EC_GROUP;
     pub fn EC_GROUP_new_by_curve_name(nid: c_int) -> *mut EC_GROUP;
     pub fn EC_GROUP_get_curve_GFp(group: *const EC_GROUP, p: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
     pub fn EC_GROUP_get_curve_GF2m(group: *const EC_GROUP, p: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn EC_GROUP_get_degree(group: *const EC_GROUP) -> c_int;
     pub fn EC_GROUP_get_order(group: *const EC_GROUP, order: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;

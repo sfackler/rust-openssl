@@ -15,6 +15,7 @@ const DEFINES: &'static [&'static str] = &[
     "OPENSSL_NO_BUF_FREELISTS",
     "OPENSSL_NO_COMP",
     "OPENSSL_NO_EC",
+    "OPENSSL_NO_EC2M",
     "OPENSSL_NO_ENGINE",
     "OPENSSL_NO_KRB5",
     "OPENSSL_NO_NEXTPROTONEG",

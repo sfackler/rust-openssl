@@ -66,6 +66,7 @@ impl EcGroupRef {
     }
 
     /// Places the components of a curve over a binary field in the provided `BigNum`s.
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
     pub fn components_gf2m(&self,
                            p: &mut BigNumRef,
                            a: &mut BigNumRef,
