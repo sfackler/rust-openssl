@@ -1510,6 +1510,7 @@ extern {
 
     pub fn EC_KEY_new() -> *mut EC_KEY;
     pub fn EC_KEY_new_by_curve_name(nid: c_int) -> *mut EC_KEY;
+    pub fn EC_KEY_dup(key: *const EC_KEY) -> *mut EC_KEY;
     pub fn EC_KEY_set_group(key: *mut EC_KEY, group: *const EC_GROUP) -> c_int;
     pub fn EC_KEY_get0_group(key: *const EC_KEY) -> *const EC_GROUP;
     pub fn EC_KEY_set_public_key(key: *mut EC_KEY, key: *const EC_POINT) -> c_int;
@@ -1650,8 +1651,13 @@ extern {
                                 e: *mut ENGINE,
                                 key: *const c_uchar,
                                 keylen: c_int) -> *mut EVP_PKEY;
+    pub fn EVP_PKEY_derive_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
+    pub fn EVP_PKEY_derive_set_peer(ctx: *mut EVP_PKEY_CTX, peer: *mut EVP_PKEY) -> c_int;
+    pub fn EVP_PKEY_derive(ctx: *mut EVP_PKEY_CTX, key: *mut c_uchar, size: *mut size_t) -> c_int;
     pub fn d2i_PKCS8PrivateKey_bio(bp: *mut BIO, x: *mut *mut EVP_PKEY, cb: Option<PasswordCallback>, u: *mut c_void) -> *mut EVP_PKEY;
 
+    pub fn EVP_PKEY_CTX_new(k: *mut EVP_PKEY, e: *mut ENGINE) -> *mut EVP_PKEY_CTX;
+    pub fn EVP_PKEY_CTX_free(ctx: *mut EVP_PKEY_CTX);
     pub fn EVP_PKEY_CTX_ctrl(ctx: *mut EVP_PKEY_CTX, keytype: c_int, optype: c_int, cmd: c_int, p1: c_int, p2: *mut c_void) -> c_int;
 
     pub fn HMAC_CTX_copy(dst: *mut HMAC_CTX, src: *mut HMAC_CTX) -> c_int;
