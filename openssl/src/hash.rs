@@ -1,5 +1,7 @@
 use std::io::prelude::*;
 use std::io;
+use std::ops::{Deref, DerefMut};
+use std::fmt;
 use ffi;
 
 #[cfg(ossl110)]
@@ -118,7 +120,7 @@ impl Hasher {
         match self.state {
             Reset => return Ok(()),
             Updated => {
-                try!(self.finish());
+                try!(self.finish2());
             }
             Finalized => (),
         }
@@ -141,19 +143,27 @@ impl Hasher {
         Ok(())
     }
 
-    /// Returns the hash of the data written since creation or
-    /// the last `finish` and resets the hasher.
+    #[deprecated(note = "use finish2 instead", since = "0.9.11")]
     pub fn finish(&mut self) -> Result<Vec<u8>, ErrorStack> {
+        self.finish2().map(|b| b.to_vec())
+    }
+
+    /// Returns the hash of the data written and resets the hasher.
+    ///
+    /// Unlike `finish`, this method does not allocate.
+    pub fn finish2(&mut self) -> Result<DigestBytes, ErrorStack> {
         if self.state == Finalized {
             try!(self.init());
         }
         unsafe {
             let mut len = ffi::EVP_MAX_MD_SIZE;
-            let mut res = vec![0; len as usize];
-            try!(cvt(ffi::EVP_DigestFinal_ex(self.ctx, res.as_mut_ptr(), &mut len)));
-            res.truncate(len as usize);
+            let mut buf = [0; ffi::EVP_MAX_MD_SIZE as usize];
+            try!(cvt(ffi::EVP_DigestFinal_ex(self.ctx, buf.as_mut_ptr(), &mut len)));
             self.state = Finalized;
-            Ok(res)
+            Ok(DigestBytes {
+                buf: buf,
+                len: len as usize,
+            })
         }
     }
 }
@@ -192,34 +202,88 @@ impl Drop for Hasher {
     fn drop(&mut self) {
         unsafe {
             if self.state != Finalized {
-                drop(self.finish());
+                drop(self.finish2());
             }
             EVP_MD_CTX_free(self.ctx);
         }
     }
 }
 
-/// Computes the hash of the `data` with the hash `t`.
+/// The resulting bytes of a digest.
+///
+/// This type derefs to a byte slice - it exists to avoid allocating memory to
+/// store the digest data.
+#[derive(Copy)]
+pub struct DigestBytes {
+    buf: [u8; ffi::EVP_MAX_MD_SIZE as usize],
+    len: usize,
+}
+
+impl Clone for DigestBytes {
+    #[inline]
+    fn clone(&self) -> DigestBytes {
+        *self
+    }
+}
+
+impl Deref for DigestBytes {
+    type Target = [u8];
+
+    #[inline]
+    fn deref(&self) -> &[u8] {
+        &self.buf[..self.len]
+    }
+}
+
+impl DerefMut for DigestBytes {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut [u8] {
+        &mut self.buf[..self.len]
+    }
+}
+
+impl AsRef<[u8]> for DigestBytes {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        self.deref()
+    }
+}
+
+impl fmt::Debug for DigestBytes {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Debug::fmt(&**self, fmt)
+    }
+}
+
+#[deprecated(note = "use hash2 instead", since = "0.9.11")]
 pub fn hash(t: MessageDigest, data: &[u8]) -> Result<Vec<u8>, ErrorStack> {
+    hash2(t, data).map(|b| b.to_vec())
+}
+
+/// Computes the hash of the `data` with the hash `t`.
+///
+/// Unlike `hash`, this function does not allocate the return value.
+pub fn hash2(t: MessageDigest, data: &[u8]) -> Result<DigestBytes, ErrorStack> {
     let mut h = try!(Hasher::new(t));
     try!(h.update(data));
-    h.finish()
+    h.finish2()
 }
 
 #[cfg(test)]
 mod tests {
     use hex::{FromHex, ToHex};
-    use super::{hash, Hasher, MessageDigest};
     use std::io::prelude::*;
 
+    use super::*;
+
     fn hash_test(hashtype: MessageDigest, hashtest: &(&str, &str)) {
-        let res = hash(hashtype, &Vec::from_hex(hashtest.0).unwrap()).unwrap();
+        let res = hash2(hashtype, &Vec::from_hex(hashtest.0).unwrap()).unwrap();
         assert_eq!(res.to_hex(), hashtest.1);
     }
 
     fn hash_recycle_test(h: &mut Hasher, hashtest: &(&str, &str)) {
         let _ = h.write_all(&Vec::from_hex(hashtest.0).unwrap()).unwrap();
-        let res = h.finish().unwrap();
+        let res = h.finish2().unwrap();
         assert_eq!(res.to_hex(), hashtest.1);
     }
 
@@ -259,10 +323,10 @@ mod tests {
     fn test_finish_twice() {
         let mut h = Hasher::new(MessageDigest::md5()).unwrap();
         h.write_all(&Vec::from_hex(md5_tests[6].0).unwrap()).unwrap();
-        h.finish().unwrap();
-        let res = h.finish().unwrap();
-        let null = hash(MessageDigest::md5(), &[]).unwrap();
-        assert_eq!(res, null);
+        h.finish2().unwrap();
+        let res = h.finish2().unwrap();
+        let null = hash2(MessageDigest::md5(), &[]).unwrap();
+        assert_eq!(&*res, &*null);
     }
 
     #[test]
@@ -280,17 +344,17 @@ mod tests {
             println!("Clone an updated hasher");
             let mut h2 = h1.clone();
             h2.write_all(&inp[p..]).unwrap();
-            let res = h2.finish().unwrap();
+            let res = h2.finish2().unwrap();
             assert_eq!(res.to_hex(), md5_tests[i].1);
         }
         h1.write_all(&inp[p..]).unwrap();
-        let res = h1.finish().unwrap();
+        let res = h1.finish2().unwrap();
         assert_eq!(res.to_hex(), md5_tests[i].1);
 
         println!("Clone a finished hasher");
         let mut h3 = h1.clone();
         h3.write_all(&Vec::from_hex(md5_tests[i + 1].0).unwrap()).unwrap();
-        let res = h3.finish().unwrap();
+        let res = h3.finish2().unwrap();
         assert_eq!(res.to_hex(), md5_tests[i + 1].1);
     }
 

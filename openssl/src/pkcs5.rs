@@ -126,8 +126,6 @@ pub fn scrypt(pass: &[u8],
 
 #[cfg(test)]
 mod tests {
-    use hex::ToHex;
-
     use hash::MessageDigest;
     use symm::Cipher;
 
@@ -241,6 +239,8 @@ mod tests {
     #[test]
     #[cfg(all(feature = "v110", ossl110))]
     fn scrypt() {
+        use hex::ToHex;
+
         let pass = "pleaseletmein";
         let salt = "SodiumChloride";
         let expected = "7023bdcb3afd7348461c06cd81fd38ebfda8fbba904f8e3ea9b543f6545da1f2d5432955613\
