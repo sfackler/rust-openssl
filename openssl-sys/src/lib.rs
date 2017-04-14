@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code, overflowing_literals)]
-#![doc(html_root_url="https://docs.rs/openssl-sys/0.9.10")]
+#![doc(html_root_url="https://docs.rs/openssl-sys/0.9.11")]
 
 extern crate libc;
 
