@@ -46,6 +46,7 @@ pub mod pkey;
 pub mod rand;
 pub mod rsa;
 pub mod sign;
+pub mod sha;
 pub mod ssl;
 pub mod stack;
 pub mod string;
