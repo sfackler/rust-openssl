@@ -1786,6 +1786,12 @@ extern {
     pub fn DSA_verify(dummy: c_int, dgst: *const c_uchar, len: c_int, sigbuf: *const c_uchar,
                       siglen: c_int, dsa: *mut DSA) -> c_int;
 
+    pub fn SHA1(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
+    pub fn SHA224(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
+    pub fn SHA256(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
+    pub fn SHA384(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
+    pub fn SHA512(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
+
     pub fn SSL_new(ctx: *mut SSL_CTX) -> *mut SSL;
     pub fn SSL_pending(ssl: *const SSL) -> c_int;
     pub fn SSL_free(ssl: *mut SSL);
