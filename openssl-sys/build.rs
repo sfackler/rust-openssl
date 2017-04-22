@@ -38,11 +38,23 @@ enum Version {
 
 fn main() {
     let target = env::var("TARGET").unwrap();
+    let host = env::var("HOST").unwrap();
 
-    println!("cargo:rerun-if-env-changed=OPENSSL_LIB_DIR");
-    let lib_dir = env::var_os("OPENSSL_LIB_DIR").map(PathBuf::from);
-    println!("cargo:rerun-if-env-changed=OPENSSL_INCLUDE_DIR");
-    let include_dir = env::var_os("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
+    println!("target == {}", target);
+    println!("host == {}", host);
+
+    let mut env_lib_dir = "OPENSSL_LIB_DIR".to_string();
+    let mut env_include_dir = "OPENSSL_INCLUDE_DIR".to_string();
+
+    if target != host {
+        env_lib_dir = "TARGET_OPENSSL_LIB_DIR".to_string();
+        env_include_dir = "TARGET_OPENSSL_INCLUDE_DIR".to_string();
+    }
+
+    println!("cargo:rerun-if-env-changed={}", env_lib_dir);
+    let lib_dir = env::var_os(env_lib_dir).map(PathBuf::from);
+    println!("cargo:rerun-if-env-changed={}", env_include_dir);
+    let include_dir = env::var_os(env_include_dir).map(PathBuf::from);
 
     let (lib_dir, include_dir) = if lib_dir.is_none() || include_dir.is_none() {
         println!("cargo:rerun-if-env-changed=OPENSSL_DIR");
