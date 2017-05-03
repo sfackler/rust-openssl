@@ -723,10 +723,19 @@ impl X509Name {
     /// Loads subject names from a file containing PEM-formatted certificates.
     ///
     /// This is commonly used in conjunction with `SslContextBuilder::set_client_ca_list`.
+    #[cfg(not(all(target_arch = "x86", target_os = "android")))]
     pub fn load_client_ca_file<P: AsRef<Path>>(file: P) -> Result<Stack<X509Name>, ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
         unsafe {
             cvt_p(ffi::SSL_load_client_CA_file(file.as_ptr())).map(|p| Stack::from_ptr(p))
+        }
+    }
+
+    #[cfg(all(target_arch = "x86", target_os = "android"))]
+    pub fn load_client_ca_file<P: AsRef<Path>>(file: P) -> Result<Stack<X509Name>, ErrorStack> {
+        let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
+        unsafe {
+            cvt_p(ffi::SSL_load_client_CA_file(file.as_ptr() as *const i8)).map(|p| Stack::from_ptr(p))
         }
     }
 }
@@ -1013,12 +1022,23 @@ impl X509VerifyError {
         self.0
     }
 
+    #[cfg(not(all(target_arch = "x86", target_os = "android")))]
     pub fn error_string(&self) -> &'static str {
         ffi::init();
 
         unsafe {
             let s = ffi::X509_verify_cert_error_string(self.0);
             str::from_utf8(CStr::from_ptr(s).to_bytes()).unwrap()
+        }
+    }
+
+    #[cfg(all(target_arch = "x86", target_os = "android"))]
+    pub fn error_string(&self) -> &'static str {
+        ffi::init();
+
+        unsafe {
+            let s = ffi::X509_verify_cert_error_string(self.0);
+            str::from_utf8(CStr::from_ptr(s as *const u8).to_bytes()).unwrap()
         }
     }
 }
