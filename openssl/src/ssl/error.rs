@@ -73,7 +73,7 @@ pub enum HandshakeError<S> {
     SetupFailure(ErrorStack),
     /// The handshake failed.
     Failure(MidHandshakeSslStream<S>),
-    /// The handshake was interrupted midway through.
+    /// The handshake was interrupted midway through. This error will never be returned for blocking streams.
     Interrupted(MidHandshakeSslStream<S>),
 }
 
