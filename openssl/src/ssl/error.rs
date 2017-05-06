@@ -74,6 +74,7 @@ pub enum HandshakeError<S> {
     /// The handshake failed.
     Failure(MidHandshakeSslStream<S>),
     /// The handshake was interrupted midway through. This error will never be returned for blocking streams.
+    // FIXME change to WouldBlock
     Interrupted(MidHandshakeSslStream<S>),
 }
 
