@@ -12,15 +12,13 @@ esac
 
 echo Using features: $FEATURES
 
-if [ -n "${BUILD_LIBRESSL_VERSION}" -a -d "$HOME/libressl/lib" ]; then
+if [ -n "${BUILD_LIBRESSL_VERSION}" ]; then
     echo "Testing build libressl-${BUILD_LIBRESSL_VERSION}"
     export OPENSSL_DIR=${HOME}/libressl
     export PATH="${HOME}/libressl/bin:${PATH}"
-
-elif [ -n "${BUILD_OPENSSL_VERSION}" -a -d "$HOME/openssl/lib" ]; then
-    echo "Testing build openssl-${BUILD_LIBRESSL_VERSION}"
-    export OPENSSL_DIR="${HOME}/openssl"
-    export PATH="${HOME}/openssl/bin:${PATH}"
+elif [ -n "${BUILD_OPENSSL_VERSION}" ]; then
+    echo "Testing build openssl-${BUILD_OPENSSL_VERSION}"
+    export OPENSSL_SRC="/tmp/openssl-${BUILD_OPENSSL_VERSION}.tar.gz"
 fi
 
 if [ "$TARGET" == "arm-unknown-linux-gnueabihf" ]; then

@@ -21,6 +21,8 @@ matrix:
         TARGET=arm-unknown-linux-gnueabihf
         BUILD_OPENSSL_VERSION=1.0.2k
         CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc
+        AR=arm-linux-gnueabihf-ar
+        CC=arm-linux-gnueabihf-gcc
         QEMU_LD_PREFIX=/usr/arm-linux-gnueabihf
         RUST_TEST_THREADS=1
       addons:
@@ -34,6 +36,8 @@ matrix:
         TARGET=arm-unknown-linux-gnueabihf
         BUILD_OPENSSL_VERSION=1.1.0e
         CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc
+        AR=arm-linux-gnueabihf-ar
+        CC=arm-linux-gnueabihf-gcc
         QEMU_LD_PREFIX=/usr/arm-linux-gnueabihf
         RUST_TEST_THREADS=1
       addons:
@@ -83,6 +87,3 @@ script:
 
 cache:
   cargo: true
-  directories:
-    - $HOME/libressl
-    - $HOME/openssl
