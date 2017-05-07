@@ -9,12 +9,9 @@ env:
     - BUILD_OPENSSL_VERSION=1.0.1u
 matrix:
   include:
-    # osx 32/64
+    # osx
     - os: osx
       env: TARGET=x86_64-apple-darwin
-    - os: osx
-      env: TARGET=i686-apple-darwin
-      install: brew uninstall openssl && brew install openssl --universal --without-test
 
     # ARM-bit version compat
     - env: >
