@@ -240,9 +240,21 @@ fn validate_headers(include_dirs: &[PathBuf]) -> Version {
 #include <openssl/opensslv.h>
 #include <openssl/opensslconf.h>
 
-#ifdef LIBRESSL_VERSION_NUMBER
-RUST_LIBRESSL
-#elif OPENSSL_VERSION_NUMBER >= 0x10200000
+#if LIBRESSL_VERSION_NUMBER >= 0x20505000
+RUST_LIBRESSL_NEW
+#elif LIBRESSL_VERSION_NUMBER >= 0x20504000
+RUST_LIBRESSL_254
+#elif LIBRESSL_VERSION_NUMBER >= 0x20503000
+RUST_LIBRESSL_253
+#elif LIBRESSL_VERSION_NUMBER >= 0x20502000
+RUST_LIBRESSL_252
+#elif LIBRESSL_VERSION_NUMBER >= 0x20501000
+RUST_LIBRESSL_251
+#elif LIBRESSL_VERSION_NUMBER >= 0x20500000
+RUST_LIBRESSL_250
+#elif defined (LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20500000
+RUST_LIBRESSL_OLD
+#elif OPENSSL_VERSION_NUMBER >= 0x10101000
 RUST_OPENSSL_NEW
 #elif OPENSSL_VERSION_NUMBER >= 0x10100000
 RUST_OPENSSL_110
@@ -305,8 +317,33 @@ See rust-openssl README for more information:
     }
     println!("cargo:conf={}", enabled.join(","));
 
-    if expanded.contains("RUST_LIBRESSL") {
+    if expanded.contains("RUST_LIBRESSL_250") {
         println!("cargo:rustc-cfg=libressl");
+        println!("cargo:rustc-cfg=libressl250");
+        println!("cargo:libressl=true");
+        println!("cargo:version=101");
+        Version::Libressl
+    } else if expanded.contains("RUST_LIBRESSL_251") {
+        println!("cargo:rustc-cfg=libressl");
+        println!("cargo:rustc-cfg=libressl251");
+        println!("cargo:libressl=true");
+        println!("cargo:version=101");
+        Version::Libressl
+    } else if expanded.contains("RUST_LIBRESSL_252") {
+        println!("cargo:rustc-cfg=libressl");
+        println!("cargo:rustc-cfg=libressl252");
+        println!("cargo:libressl=true");
+        println!("cargo:version=101");
+        Version::Libressl
+    } else if expanded.contains("RUST_LIBRESSL_253") {
+        println!("cargo:rustc-cfg=libressl");
+        println!("cargo:rustc-cfg=libressl253");
+        println!("cargo:libressl=true");
+        println!("cargo:version=101");
+        Version::Libressl
+    } else if expanded.contains("RUST_LIBRESSL_254") {
+        println!("cargo:rustc-cfg=libressl");
+        println!("cargo:rustc-cfg=libressl254");
         println!("cargo:libressl=true");
         println!("cargo:version=101");
         Version::Libressl
@@ -325,9 +362,9 @@ See rust-openssl README for more information:
     } else {
         panic!("
 
-This crate is only compatible with OpenSSL 1.0.1, 1.0.2, and 1.1.0, or LibreSSL,
-but a different version of OpenSSL was found. The build is now aborting due to
-this version mismatch.
+This crate is only compatible with OpenSSL 1.0.1, 1.0.2, and 1.1.0, or LibreSSL
+2.5.0, 2.5.1, 2.5.2, 2.5.3, and 2.5.4, but a different version of OpenSSL was
+found. The build is now aborting due to this version mismatch.
 
 ");
     }
