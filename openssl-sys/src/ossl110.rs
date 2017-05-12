@@ -1,4 +1,5 @@
 use libc::{c_int, c_void, c_char, c_uchar, c_ulong, c_long, c_uint, size_t};
+use std::ptr;
 
 pub enum BIGNUM {}
 pub enum BIO {}
@@ -53,6 +54,19 @@ pub const CRYPTO_EX_INDEX_SSL_CTX: c_int = 1;
 pub const X509_CHECK_FLAG_NEVER_CHECK_SUBJECT: c_uint = 0x20;
 
 pub fn init() {}
+
+#[cfg(ossl110)]
+pub const SSL_CTRL_SET_ECDH_AUTO: c_int = 94;
+
+#[cfg(ossl110)]
+pub unsafe fn SSL_CTX_set_ecdh_auto(ctx: *mut SSL_CTX, onoff: c_int) -> c_int {
+    ::SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, onoff as c_long, ptr::null_mut()) as c_int
+}
+
+#[cfg(ossl110)]
+pub unsafe fn SSL_set_ecdh_auto(ssl: *mut ::SSL, onoff: c_int) -> c_int {
+    ::SSL_ctrl(ssl, SSL_CTRL_SET_ECDH_AUTO, onoff as c_long, ptr::null_mut()) as c_int
+}
 
 extern {
     pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
