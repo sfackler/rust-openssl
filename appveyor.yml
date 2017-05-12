@@ -24,7 +24,7 @@ install:
   # install OpenSSL
   - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe"
   - Win%BITS%OpenSSL-%OPENSSL_VERSION%.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
-  - ps: Start-FileDownload "https://curl.haxx.se/ca/cacert.pem" -FileName "C:\OpenSSL\cacert.pem"
+  - appveyor DownloadFile https://curl.haxx.se/ca/cacert.pem -FileName C:\OpenSSL\cacert.pem
 
   # Install Rust
   - curl -sSf -o rustup-init.exe https://win.rustup.rs/
