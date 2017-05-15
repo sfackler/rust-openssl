@@ -846,12 +846,12 @@ impl SslContextBuilder {
     /// Enables ECDHE key exchange with an automatically chosen curve list.
     ///
     /// Requires the `v102` feature and OpenSSL 1.0.2.
-    #[cfg(all(feature = "v102", any(ossl102, libressl)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110), all(feature = "v102", libressl)))]
     pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
         self._set_ecdh_auto(onoff)
     }
 
-    #[cfg(any(ossl102,libressl))]
+    #[cfg(any(ossl102,ossl110,libressl))]
     fn _set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_CTX_set_ecdh_auto(self.as_ptr(), onoff as c_int)).map(|_| ()) }
     }
