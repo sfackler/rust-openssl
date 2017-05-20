@@ -1,4 +1,6 @@
 use libc::{c_int, c_void, c_char, c_uchar, c_ulong, c_long, c_uint, size_t};
+use std::sync::{Once, ONCE_INIT};
+use std::ptr;
 
 pub enum BIGNUM {}
 pub enum BIO {}
@@ -25,6 +27,7 @@ pub enum stack_st_X509_NAME {}
 pub enum stack_st_X509_ATTRIBUTE {}
 pub enum stack_st_X509_EXTENSION {}
 pub enum stack_st_SSL_CIPHER {}
+pub enum OPENSSL_INIT_SETTINGS {}
 pub enum X509 {}
 pub enum X509_ALGOR {}
 pub enum X509_VERIFY_PARAM {}
@@ -50,9 +53,18 @@ pub const OPENSSL_DIR: c_int = 4;
 pub const CRYPTO_EX_INDEX_SSL: c_int = 0;
 pub const CRYPTO_EX_INDEX_SSL_CTX: c_int = 1;
 
+pub const OPENSSL_INIT_LOAD_SSL_STRINGS: u64 = 0x00200000;
+
 pub const X509_CHECK_FLAG_NEVER_CHECK_SUBJECT: c_uint = 0x20;
 
-pub fn init() {}
+pub fn init() {
+    // explicitly initialize to work around https://github.com/openssl/openssl/issues/3505
+    static INIT: Once = ONCE_INIT;
+
+    INIT.call_once(|| unsafe {
+                       OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, ptr::null_mut());
+                   })
+}
 
 extern "C" {
     pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
@@ -221,6 +233,7 @@ extern "C" {
 
     pub fn OpenSSL_version_num() -> c_ulong;
     pub fn OpenSSL_version(key: c_int) -> *const c_char;
+    pub fn OPENSSL_init_ssl(opts: u64, settings: *const OPENSSL_INIT_SETTINGS) -> c_int;
     pub fn OPENSSL_sk_new_null() -> *mut ::OPENSSL_STACK;
     pub fn OPENSSL_sk_free(st: *mut ::OPENSSL_STACK);
     pub fn OPENSSL_sk_pop_free(st: *mut ::OPENSSL_STACK,
