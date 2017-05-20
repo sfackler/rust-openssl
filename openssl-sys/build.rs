@@ -11,21 +11,19 @@ use std::panic::{self, AssertUnwindSafe};
 use std::process::Command;
 
 // The set of `OPENSSL_NO_<FOO>`s that we care about.
-const DEFINES: &'static [&'static str] = &[
-    "OPENSSL_NO_BUF_FREELISTS",
-    "OPENSSL_NO_COMP",
-    "OPENSSL_NO_EC",
-    "OPENSSL_NO_EC2M",
-    "OPENSSL_NO_ENGINE",
-    "OPENSSL_NO_KRB5",
-    "OPENSSL_NO_NEXTPROTONEG",
-    "OPENSSL_NO_PSK",
-    "OPENSSL_NO_RFC3779",
-    "OPENSSL_NO_SHA",
-    "OPENSSL_NO_SRP",
-    "OPENSSL_NO_SSL3_METHOD",
-    "OPENSSL_NO_TLSEXT",
-];
+const DEFINES: &'static [&'static str] = &["OPENSSL_NO_BUF_FREELISTS",
+                                           "OPENSSL_NO_COMP",
+                                           "OPENSSL_NO_EC",
+                                           "OPENSSL_NO_EC2M",
+                                           "OPENSSL_NO_ENGINE",
+                                           "OPENSSL_NO_KRB5",
+                                           "OPENSSL_NO_NEXTPROTONEG",
+                                           "OPENSSL_NO_PSK",
+                                           "OPENSSL_NO_RFC3779",
+                                           "OPENSSL_NO_SHA",
+                                           "OPENSSL_NO_SRP",
+                                           "OPENSSL_NO_SSL3_METHOD",
+                                           "OPENSSL_NO_TLSEXT"];
 
 enum Version {
     Openssl110,
@@ -41,9 +39,7 @@ fn main() {
     let include_dir = env::var_os("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
 
     let (lib_dir, include_dir) = if lib_dir.is_none() || include_dir.is_none() {
-        let openssl_dir = env::var_os("OPENSSL_DIR").unwrap_or_else(|| {
-            find_openssl_dir(&target)
-        });
+        let openssl_dir = env::var_os("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(&target));
         let openssl_dir = Path::new(&openssl_dir);
         let lib_dir = lib_dir.unwrap_or_else(|| openssl_dir.join("lib"));
         let include_dir = include_dir.unwrap_or_else(|| openssl_dir.join("include"));
@@ -61,7 +57,8 @@ fn main() {
                include_dir.to_string_lossy());
     }
 
-    println!("cargo:rustc-link-search=native={}", lib_dir.to_string_lossy());
+    println!("cargo:rustc-link-search=native={}",
+             lib_dir.to_string_lossy());
     println!("cargo:include={}", include_dir.to_string_lossy());
 
     let version = validate_headers(&[include_dir.clone().into()]);
@@ -71,9 +68,8 @@ fn main() {
         Some(ref v) => v.split(":").collect(),
         None => {
             match version {
-                Version::Openssl101 | Version::Openssl102 if target.contains("windows") => {
-                    vec!["ssleay32", "libeay32"]
-                }
+                Version::Openssl101 |
+                Version::Openssl102 if target.contains("windows") => vec!["ssleay32", "libeay32"],
                 Version::Openssl110 if target.contains("windows") => vec!["libssl", "libcrypto"],
                 _ => vec!["ssl", "crypto"],
             }
@@ -93,11 +89,11 @@ fn find_openssl_dir(target: &str) -> OsString {
     if host.contains("apple-darwin") && target.contains("apple-darwin") {
         let homebrew = Path::new("/usr/local/opt/openssl@1.1");
         if homebrew.exists() {
-            return homebrew.to_path_buf().into()
+            return homebrew.to_path_buf().into();
         }
         let homebrew = Path::new("/usr/local/opt/openssl");
         if homebrew.exists() {
-            return homebrew.to_path_buf().into()
+            return homebrew.to_path_buf().into();
         }
     }
 
@@ -119,7 +115,9 @@ and include information about your system as well as this message.
     openssl-sys = {}
 
 ",
-    host, target, env!("CARGO_PKG_VERSION"));
+                          host,
+                          target,
+                          env!("CARGO_PKG_VERSION"));
 
     if host.contains("apple-darwin") && target.contains("apple-darwin") {
         let system = Path::new("/usr/lib/libssl.0.9.8.dylib");
@@ -160,8 +158,7 @@ pkg-config installed. You can install these two dependencies with:
 
 and try building this crate again.
 
-"
-));
+"));
     }
 
     if host.contains("windows") && target.contains("windows-msvc") {
@@ -173,8 +170,7 @@ OpenSSL:
 
     https://github.com/sfackler/rust-openssl#windows
 
-"
-));
+"));
     }
 
     panic!(msg);
@@ -195,12 +191,12 @@ fn try_pkg_config() {
     if target.contains("windows-gnu") && host.contains("windows") {
         env::set_var("PKG_CONFIG_ALLOW_CROSS", "1");
     } else if target.contains("windows") {
-        return
+        return;
     }
 
     let lib = match pkg_config::Config::new()
-        .print_system_libs(false)
-        .find("openssl") {
+              .print_system_libs(false)
+              .find("openssl") {
         Ok(lib) => lib,
         Err(e) => {
             println!("run pkg_config fail: {:?}", e);
@@ -236,7 +232,8 @@ fn validate_headers(include_dirs: &[PathBuf]) -> Version {
     path.push("expando.c");
     let mut file = BufWriter::new(File::create(&path).unwrap());
 
-    write!(file, "\
+    write!(file,
+           "\
 #include <openssl/opensslv.h>
 #include <openssl/opensslconf.h>
 
@@ -265,14 +262,18 @@ RUST_OPENSSL_101
 #else
 RUST_OPENSSL_OLD
 #endif
-").unwrap();
+")
+            .unwrap();
 
     for define in DEFINES {
-        write!(file, "\
+        write!(file,
+               "\
 #ifdef {define}
 RUST_{define}
 #endif
-", define = define).unwrap();
+",
+               define = define)
+                .unwrap();
     }
 
     file.flush().unwrap();
@@ -384,20 +385,23 @@ fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
 
     // Next, see what files we actually have to link against, and see what our
     // possibilities even are.
-    let files = libdir.read_dir().unwrap()
-                      .map(|e| e.unwrap())
-                      .map(|e| e.file_name())
-                      .filter_map(|e| e.into_string().ok())
-                      .collect::<HashSet<_>>();
-    let can_static = libs.iter().all(|l| {
-        files.contains(&format!("lib{}.a", l)) ||
-            files.contains(&format!("{}.lib", l))
-    });
-    let can_dylib = libs.iter().all(|l| {
-        files.contains(&format!("lib{}.so", l)) ||
-            files.contains(&format!("{}.dll", l)) ||
-            files.contains(&format!("lib{}.dylib", l))
-    });
+    let files = libdir
+        .read_dir()
+        .unwrap()
+        .map(|e| e.unwrap())
+        .map(|e| e.file_name())
+        .filter_map(|e| e.into_string().ok())
+        .collect::<HashSet<_>>();
+    let can_static =
+        libs.iter()
+            .all(|l| {
+                     files.contains(&format!("lib{}.a", l)) || files.contains(&format!("{}.lib", l))
+                 });
+    let can_dylib = libs.iter()
+        .all(|l| {
+                 files.contains(&format!("lib{}.so", l)) || files.contains(&format!("{}.dll", l)) ||
+                 files.contains(&format!("lib{}.dylib", l))
+             });
     match (can_static, can_dylib) {
         (true, false) => return "static",
         (false, true) => return "dylib",
