@@ -15,11 +15,13 @@ echo Using features: $FEATURES
 if [ -n "${BUILD_LIBRESSL_VERSION}" -a -d "$HOME/libressl/lib" ]; then
     echo "Testing build libressl-${BUILD_LIBRESSL_VERSION}"
     export OPENSSL_DIR=${HOME}/libressl
+    export LD_LIBRARY_PATH="${HOME}/libressl/lib:${LD_LIBRARY_PATH}"
     export PATH="${HOME}/libressl/bin:${PATH}"
 
 elif [ -n "${BUILD_OPENSSL_VERSION}" -a -d "$HOME/openssl/lib" ]; then
     echo "Testing build openssl-${BUILD_LIBRESSL_VERSION}"
     export OPENSSL_DIR="${HOME}/openssl"
+    export LD_LIBRARY_PATH="${HOME}/openssl/lib:${LD_LIBRARY_PATH}"
     export PATH="${HOME}/openssl/bin:${PATH}"
 fi
 
