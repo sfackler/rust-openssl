@@ -13,18 +13,18 @@ use x509::store::X509StoreRef;
 use x509::{X509, X509Ref};
 
 bitflags! {
-    pub flags Flag: c_ulong {
-        const FLAG_NO_CERTS = ffi::OCSP_NOCERTS,
-        const FLAG_NO_INTERN = ffi::OCSP_NOINTERN,
-        const FLAG_NO_CHAIN = ffi::OCSP_NOCHAIN,
-        const FLAG_NO_VERIFY = ffi::OCSP_NOVERIFY,
-        const FLAG_NO_EXPLICIT = ffi::OCSP_NOEXPLICIT,
-        const FLAG_NO_CA_SIGN = ffi::OCSP_NOCASIGN,
-        const FLAG_NO_DELEGATED = ffi::OCSP_NODELEGATED,
-        const FLAG_NO_CHECKS = ffi::OCSP_NOCHECKS,
-        const FLAG_TRUST_OTHER = ffi::OCSP_TRUSTOTHER,
-        const FLAG_RESPID_KEY = ffi::OCSP_RESPID_KEY,
-        const FLAG_NO_TIME = ffi::OCSP_NOTIME,
+    pub struct Flag: c_ulong {
+        const FLAG_NO_CERTS = ffi::OCSP_NOCERTS;
+        const FLAG_NO_INTERN = ffi::OCSP_NOINTERN;
+        const FLAG_NO_CHAIN = ffi::OCSP_NOCHAIN;
+        const FLAG_NO_VERIFY = ffi::OCSP_NOVERIFY;
+        const FLAG_NO_EXPLICIT = ffi::OCSP_NOEXPLICIT;
+        const FLAG_NO_CA_SIGN = ffi::OCSP_NOCASIGN;
+        const FLAG_NO_DELEGATED = ffi::OCSP_NODELEGATED;
+        const FLAG_NO_CHECKS = ffi::OCSP_NOCHECKS;
+        const FLAG_TRUST_OTHER = ffi::OCSP_TRUSTOTHER;
+        const FLAG_RESPID_KEY = ffi::OCSP_RESPID_KEY;
+        const FLAG_NO_TIME = ffi::OCSP_NOTIME;
     }
 }
 

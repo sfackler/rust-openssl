@@ -122,60 +122,60 @@ pub use ssl::error::{Error, HandshakeError};
 
 // FIXME drop SSL_ prefix
 bitflags! {
-    pub flags SslOption: c_ulong {
-        const SSL_OP_MICROSOFT_SESS_ID_BUG = ffi::SSL_OP_MICROSOFT_SESS_ID_BUG,
-        const SSL_OP_NETSCAPE_CHALLENGE_BUG = ffi::SSL_OP_NETSCAPE_CHALLENGE_BUG,
+    pub struct SslOption: c_ulong {
+        const SSL_OP_MICROSOFT_SESS_ID_BUG = ffi::SSL_OP_MICROSOFT_SESS_ID_BUG;
+        const SSL_OP_NETSCAPE_CHALLENGE_BUG = ffi::SSL_OP_NETSCAPE_CHALLENGE_BUG;
         const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG =
-            ffi::SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG,
-        const SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER = ffi::SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER,
-        const SSL_OP_SSLEAY_080_CLIENT_DH_BUG = ffi::SSL_OP_SSLEAY_080_CLIENT_DH_BUG,
-        const SSL_OP_TLS_D5_BUG = ffi::SSL_OP_TLS_D5_BUG,
-        const SSL_OP_TLS_BLOCK_PADDING_BUG = ffi::SSL_OP_TLS_BLOCK_PADDING_BUG,
-        const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS = ffi::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS,
-        const SSL_OP_ALL = ffi::SSL_OP_ALL,
-        const SSL_OP_NO_QUERY_MTU = ffi::SSL_OP_NO_QUERY_MTU,
-        const SSL_OP_COOKIE_EXCHANGE = ffi::SSL_OP_COOKIE_EXCHANGE,
-        const SSL_OP_NO_TICKET = ffi::SSL_OP_NO_TICKET,
-        const SSL_OP_CISCO_ANYCONNECT = ffi::SSL_OP_CISCO_ANYCONNECT,
+            ffi::SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG;
+        const SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER = ffi::SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER;
+        const SSL_OP_SSLEAY_080_CLIENT_DH_BUG = ffi::SSL_OP_SSLEAY_080_CLIENT_DH_BUG;
+        const SSL_OP_TLS_D5_BUG = ffi::SSL_OP_TLS_D5_BUG;
+        const SSL_OP_TLS_BLOCK_PADDING_BUG = ffi::SSL_OP_TLS_BLOCK_PADDING_BUG;
+        const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS = ffi::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
+        const SSL_OP_ALL = ffi::SSL_OP_ALL;
+        const SSL_OP_NO_QUERY_MTU = ffi::SSL_OP_NO_QUERY_MTU;
+        const SSL_OP_COOKIE_EXCHANGE = ffi::SSL_OP_COOKIE_EXCHANGE;
+        const SSL_OP_NO_TICKET = ffi::SSL_OP_NO_TICKET;
+        const SSL_OP_CISCO_ANYCONNECT = ffi::SSL_OP_CISCO_ANYCONNECT;
         const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION =
-            ffi::SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION,
-        const SSL_OP_NO_COMPRESSION = ffi::SSL_OP_NO_COMPRESSION,
+            ffi::SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION;
+        const SSL_OP_NO_COMPRESSION = ffi::SSL_OP_NO_COMPRESSION;
         const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION =
-            ffi::SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION,
-        const SSL_OP_SINGLE_ECDH_USE = ffi::SSL_OP_SINGLE_ECDH_USE,
-        const SSL_OP_SINGLE_DH_USE = ffi::SSL_OP_SINGLE_DH_USE,
-        const SSL_OP_CIPHER_SERVER_PREFERENCE = ffi::SSL_OP_CIPHER_SERVER_PREFERENCE,
-        const SSL_OP_TLS_ROLLBACK_BUG = ffi::SSL_OP_TLS_ROLLBACK_BUG,
-        const SSL_OP_NO_SSLV2 = ffi::SSL_OP_NO_SSLv2,
-        const SSL_OP_NO_SSLV3 = ffi::SSL_OP_NO_SSLv3,
-        const SSL_OP_NO_TLSV1 = ffi::SSL_OP_NO_TLSv1,
-        const SSL_OP_NO_TLSV1_2 = ffi::SSL_OP_NO_TLSv1_2,
-        const SSL_OP_NO_TLSV1_1 = ffi::SSL_OP_NO_TLSv1_1,
+            ffi::SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
+        const SSL_OP_SINGLE_ECDH_USE = ffi::SSL_OP_SINGLE_ECDH_USE;
+        const SSL_OP_SINGLE_DH_USE = ffi::SSL_OP_SINGLE_DH_USE;
+        const SSL_OP_CIPHER_SERVER_PREFERENCE = ffi::SSL_OP_CIPHER_SERVER_PREFERENCE;
+        const SSL_OP_TLS_ROLLBACK_BUG = ffi::SSL_OP_TLS_ROLLBACK_BUG;
+        const SSL_OP_NO_SSLV2 = ffi::SSL_OP_NO_SSLv2;
+        const SSL_OP_NO_SSLV3 = ffi::SSL_OP_NO_SSLv3;
+        const SSL_OP_NO_TLSV1 = ffi::SSL_OP_NO_TLSv1;
+        const SSL_OP_NO_TLSV1_2 = ffi::SSL_OP_NO_TLSv1_2;
+        const SSL_OP_NO_TLSV1_1 = ffi::SSL_OP_NO_TLSv1_1;
         /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
         #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-        const SSL_OP_NO_DTLSV1 = ffi::SSL_OP_NO_DTLSv1,
+        const SSL_OP_NO_DTLSV1 = ffi::SSL_OP_NO_DTLSv1;
         /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
         #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-        const SSL_OP_NO_DTLSV1_2 = ffi::SSL_OP_NO_DTLSv1_2,
+        const SSL_OP_NO_DTLSV1_2 = ffi::SSL_OP_NO_DTLSv1_2;
         /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
         #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-        const SSL_OP_NO_SSL_MASK = ffi::SSL_OP_NO_SSL_MASK,
+        const SSL_OP_NO_SSL_MASK = ffi::SSL_OP_NO_SSL_MASK;
     }
 }
 
 bitflags! {
-    pub flags SslMode: c_long {
-        const SSL_MODE_ENABLE_PARTIAL_WRITE = ffi::SSL_MODE_ENABLE_PARTIAL_WRITE,
-        const SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER = ffi::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER,
-        const SSL_MODE_AUTO_RETRY = ffi::SSL_MODE_AUTO_RETRY,
-        const SSL_MODE_NO_AUTO_CHAIN = ffi::SSL_MODE_NO_AUTO_CHAIN,
-        const SSL_MODE_RELEASE_BUFFERS = ffi::SSL_MODE_RELEASE_BUFFERS,
+    pub struct SslMode: c_long {
+        const SSL_MODE_ENABLE_PARTIAL_WRITE = ffi::SSL_MODE_ENABLE_PARTIAL_WRITE;
+        const SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER = ffi::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER;
+        const SSL_MODE_AUTO_RETRY = ffi::SSL_MODE_AUTO_RETRY;
+        const SSL_MODE_NO_AUTO_CHAIN = ffi::SSL_MODE_NO_AUTO_CHAIN;
+        const SSL_MODE_RELEASE_BUFFERS = ffi::SSL_MODE_RELEASE_BUFFERS;
         #[cfg(not(libressl))]
-        const SSL_MODE_SEND_CLIENTHELLO_TIME = ffi::SSL_MODE_SEND_CLIENTHELLO_TIME,
+        const SSL_MODE_SEND_CLIENTHELLO_TIME = ffi::SSL_MODE_SEND_CLIENTHELLO_TIME;
         #[cfg(not(libressl))]
-        const SSL_MODE_SEND_SERVERHELLO_TIME = ffi::SSL_MODE_SEND_SERVERHELLO_TIME,
+        const SSL_MODE_SEND_SERVERHELLO_TIME = ffi::SSL_MODE_SEND_SERVERHELLO_TIME;
         #[cfg(not(libressl))]
-        const SSL_MODE_SEND_FALLBACK_SCSV = ffi::SSL_MODE_SEND_FALLBACK_SCSV,
+        const SSL_MODE_SEND_FALLBACK_SCSV = ffi::SSL_MODE_SEND_FALLBACK_SCSV;
     }
 }
 
@@ -210,14 +210,14 @@ impl SslMethod {
 
 /// Determines the type of certificate verification used
 bitflags! {
-    pub flags SslVerifyMode: i32 {
+    pub struct SslVerifyMode: i32 {
         /// Verify that the server's certificate is trusted
-        const SSL_VERIFY_PEER = ::ffi::SSL_VERIFY_PEER,
+        const SSL_VERIFY_PEER = ::ffi::SSL_VERIFY_PEER;
         /// Do not verify the server's certificate
-        const SSL_VERIFY_NONE = ::ffi::SSL_VERIFY_NONE,
+        const SSL_VERIFY_NONE = ::ffi::SSL_VERIFY_NONE;
         /// Terminate handshake if client did not return a certificate.
         /// Use together with SSL_VERIFY_PEER.
-        const SSL_VERIFY_FAIL_IF_NO_PEER_CERT = ::ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+        const SSL_VERIFY_FAIL_IF_NO_PEER_CERT = ::ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
     }
 }
 
