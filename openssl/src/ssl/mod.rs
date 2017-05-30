@@ -760,7 +760,7 @@ impl SslContextBuilder {
 
     /// Set the context identifier for sessions
     ///
-    /// This value identifies the server's session cache to a clients, telling them when they're
+    /// This value identifies the server's session cache to clients, telling them when they're
     /// able to reuse sessions. Should be set to a unique value per server, unless multiple servers
     /// share a session cache.
     ///
