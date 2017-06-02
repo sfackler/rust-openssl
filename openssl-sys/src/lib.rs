@@ -2252,14 +2252,15 @@ extern "C" {
                                                               arg: *mut c_void)
                                                               -> c_int,
                                             arg: *mut c_void);
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
     pub fn SSL_CTX_set_psk_client_callback(ssl: *mut SSL_CTX,
-                                           psk_client_cb: extern "C" fn(*mut SSL,
-                                                                        *const c_char,
-                                                                        *mut c_char,
-                                                                        c_uint,
-                                                                        *mut c_uchar,
-                                                                        c_uint)
-                                                                        -> c_uint);
+                                           psk_client_cb: Option<extern "C" fn(*mut SSL,
+                                                                               *const c_char,
+                                                                               *mut c_char,
+                                                                               c_uint,
+                                                                               *mut c_uchar,
+                                                                               c_uint)
+                                                                               -> c_uint>);
     pub fn SSL_select_next_proto(out: *mut *mut c_uchar,
                                  outlen: *mut c_uchar,
                                  inbuf: *const c_uchar,
