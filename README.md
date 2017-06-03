@@ -27,7 +27,7 @@ on them.
 
 ```bash
 # On Ubuntu
-sudo apt-get install libssl-dev
+sudo apt-get install pkg-config libssl-dev
 # On Arch Linux
 sudo pacman -S openssl
 # On Fedora
