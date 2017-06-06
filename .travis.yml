@@ -29,7 +29,7 @@ matrix:
             - binfmt-support
     - env: >
         TARGET=arm-unknown-linux-gnueabihf
-        BUILD_OPENSSL_VERSION=1.1.0e
+        BUILD_OPENSSL_VERSION=1.1.0f
         CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc
         QEMU_LD_PREFIX=/usr/arm-linux-gnueabihf
         RUST_TEST_THREADS=1
@@ -50,7 +50,7 @@ matrix:
 
     # 64-bit version compat
     - env: BUILD_OPENSSL_VERSION=1.0.2k
-    - env: BUILD_OPENSSL_VERSION=1.1.0e
+    - env: BUILD_OPENSSL_VERSION=1.1.0f
 
     # 32-bit version compat
     - env: TARGET=i686-unknown-linux-gnu BUILD_OPENSSL_VERSION=1.0.1u
@@ -63,7 +63,7 @@ matrix:
         apt:
           packages:
             - gcc-multilib
-    - env: TARGET=i686-unknown-linux-gnu BUILD_OPENSSL_VERSION=1.1.0e
+    - env: TARGET=i686-unknown-linux-gnu BUILD_OPENSSL_VERSION=1.1.0f
       addons:
         apt:
           packages:

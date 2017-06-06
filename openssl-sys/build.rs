@@ -253,6 +253,8 @@ RUST_LIBRESSL_250
 RUST_LIBRESSL_OLD
 #elif OPENSSL_VERSION_NUMBER >= 0x10101000
 RUST_OPENSSL_NEW
+#elif OPENSSL_VERSION_NUMBER >= 0x10100060
+RUST_OPENSSL_110F
 #elif OPENSSL_VERSION_NUMBER >= 0x10100000
 RUST_OPENSSL_110
 #elif OPENSSL_VERSION_NUMBER >= 0x10002000
@@ -348,6 +350,12 @@ See rust-openssl README for more information:
         println!("cargo:libressl=true");
         println!("cargo:version=101");
         Version::Libressl
+    } else if expanded.contains("RUST_OPENSSL_110F") {
+        println!("cargo:rustc-cfg=ossl110");
+        println!("cargo:rustc-cfg=ossl110f");
+        println!("cargo:version=110");
+        println!("cargo:patch=f");
+        Version::Openssl110
     } else if expanded.contains("RUST_OPENSSL_110") {
         println!("cargo:rustc-cfg=ossl110");
         println!("cargo:version=110");

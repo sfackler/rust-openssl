@@ -180,7 +180,7 @@ macro_rules! run_test(
             use hex::FromHex;
             use foreign_types::ForeignTypeRef;
             use super::Server;
-            #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]            
+            #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
             use super::ROOT_CERT;
 
             #[test]
@@ -743,7 +743,7 @@ fn test_alpn_server_advertise_multiple() {
 /// Test that Servers supporting ALPN don't report a protocol when none of their protocols match
 /// the client's reported protocol.
 #[test]
-#[cfg(all(feature = "v102", ossl102))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 fn test_alpn_server_select_none() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
@@ -774,38 +774,6 @@ fn test_alpn_server_select_none() {
 
     // Since the protocols from the server and client don't overlap at all, no protocol is selected
     assert_eq!(None, stream.ssl().selected_alpn_protocol());
-}
-
-// In 1.1.0, ALPN negotiation failure is a fatal error
-#[test]
-#[cfg(all(feature = "v110", ossl110))]
-fn test_alpn_server_select_none() {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let localhost = listener.local_addr().unwrap();
-    // We create a different context instance for the server...
-    let listener_ctx = {
-        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_verify(SSL_VERIFY_PEER);
-        ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]).unwrap();
-        assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
-                   .is_ok());
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM)
-            .unwrap();
-        ctx.build()
-    };
-    // Have the listener wait on the connection in a different thread.
-    thread::spawn(move || {
-        let (stream, _) = listener.accept().unwrap();
-        assert!(Ssl::new(&listener_ctx).unwrap().accept(stream).is_err());
-    });
-
-    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-    ctx.set_verify(SSL_VERIFY_PEER);
-    ctx.set_alpn_protocols(&[b"http/2"]).unwrap();
-    ctx.set_ca_file(&Path::new("test/root-ca.pem")).unwrap();
-    // Now connect to the socket and make sure the protocol negotiation works...
-    let stream = TcpStream::connect(localhost).unwrap();
-    assert!(Ssl::new(&ctx.build()).unwrap().connect(stream).is_err());
 }
 
 #[test]
