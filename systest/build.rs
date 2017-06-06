@@ -27,6 +27,9 @@ fn main() {
     } else if let Ok(version) = env::var("DEP_OPENSSL_VERSION") {
         cfg.cfg(&format!("ossl{}", version), None);
     }
+    if let (Ok(version), Ok(patch)) = (env::var("DEP_OPENSSL_VERSION"), env::var("DEP_OPENSSL_PATCH")) {
+        cfg.cfg(&format!("ossl{}{}", version, patch), None);
+    }
     if let Ok(vars) = env::var("DEP_OPENSSL_CONF") {
         for var in vars.split(",") {
             cfg.cfg("osslconf", Some(var));

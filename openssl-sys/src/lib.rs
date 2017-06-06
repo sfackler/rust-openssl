@@ -1205,8 +1205,18 @@ pub const SSL_VERIFY_FAIL_IF_NO_PEER_CERT: c_int = 2;
 #[cfg(not(ossl101))]
 pub const SSL_OP_TLSEXT_PADDING: c_ulong = 0x00000010;
 pub const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS: c_ulong = 0x00000800;
+pub const SSL_OP_CRYPTOPRO_TLSEXT_BUG: c_ulong = 0x80000000;
+pub const SSL_OP_LEGACY_SERVER_CONNECT: c_ulong = 0x00000004;
 #[cfg(not(libressl))]
+pub const SSL_OP_SAFARI_ECDHE_ECDSA_BUG: c_ulong = 0x00000040;
+#[cfg(not(any(libressl, ossl110f)))]
 pub const SSL_OP_ALL: c_ulong = 0x80000BFF;
+#[cfg(ossl110f)]
+pub const SSL_OP_ALL: c_ulong = SSL_OP_CRYPTOPRO_TLSEXT_BUG |
+                            SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS |
+                            SSL_OP_LEGACY_SERVER_CONNECT |
+                            SSL_OP_TLSEXT_PADDING |
+                            SSL_OP_SAFARI_ECDHE_ECDSA_BUG;
 pub const SSL_OP_NO_QUERY_MTU: c_ulong = 0x00001000;
 pub const SSL_OP_COOKIE_EXCHANGE: c_ulong = 0x00002000;
 pub const SSL_OP_NO_TICKET: c_ulong = 0x00004000;
@@ -2264,8 +2274,10 @@ extern "C" {
                                           len: *mut c_uint);
     pub fn SSL_get_session(s: *const SSL) -> *mut SSL_SESSION;
     pub fn SSL_set_session(ssl: *mut SSL, session: *mut SSL_SESSION) -> c_int;
-    #[cfg(not(any(ossl101, libressl)))]
+    #[cfg(not(any(ossl101, libressl, ossl110f)))]
     pub fn SSL_is_server(s: *mut SSL) -> c_int;
+    #[cfg(ossl110f)]
+    pub fn SSL_is_server(s: *const SSL) -> c_int;
 
     pub fn SSL_SESSION_free(s: *mut SSL_SESSION);
     pub fn SSL_SESSION_get_id(s: *const SSL_SESSION, len: *mut c_uint) -> *const c_uchar;
