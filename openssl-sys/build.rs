@@ -1,4 +1,6 @@
 extern crate pkg_config;
+#[cfg(target_env = "msvc")]
+extern crate vcpkg;
 extern crate gcc;
 
 use std::collections::HashSet;
@@ -98,6 +100,7 @@ fn find_openssl_dir(target: &str) -> OsString {
     }
 
     try_pkg_config();
+    try_vcpkg();
 
     let mut msg = format!("
 
@@ -212,6 +215,50 @@ fn try_pkg_config() {
 
     std::process::exit(0);
 }
+
+/// Attempt to find OpenSSL through vcpkg.
+///
+/// Note that if this succeeds then the function does not return as vcpkg
+/// should emit all of the cargo metadata that we need.
+#[cfg(target_env = "msvc")]
+fn try_vcpkg() {
+
+    // vcpkg will not emit any metadata if it can not find libraries
+    // appropriate for the target triple with the desired linkage.
+
+    let mut lib = vcpkg::Config::new()
+        .emit_includes(true)
+        .lib_name("libcrypto")
+        .lib_name("libssl")
+        .probe("openssl");
+
+    if let Err(e) = lib {
+        println!("note: vcpkg did not find openssl as libcrypto and libssl : {:?}",
+                 e);
+        lib = vcpkg::Config::new()
+            .emit_includes(true)
+            .lib_name("libeay32")
+            .lib_name("ssleay32")
+            .probe("openssl");
+    }
+    if let Err(e) = lib {
+        println!("note: vcpkg did not find openssl as ssleay32 and libeay32: {:?}",
+                 e);
+        return;
+    }
+
+    let lib = lib.unwrap();
+    validate_headers(&lib.include_paths);
+
+    println!("cargo:rustc-link-lib=user32");
+    println!("cargo:rustc-link-lib=gdi32");
+    println!("cargo:rustc-link-lib=crypt32");
+
+    std::process::exit(0);
+}
+
+#[cfg(not(target_env = "msvc"))]
+fn try_vcpkg() {}
 
 /// Validates the header files found in `include_dir` and then returns the
 /// version string of OpenSSL.
