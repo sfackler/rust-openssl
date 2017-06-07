@@ -53,29 +53,54 @@ pub fn number() -> i64 {
 
 
 /// The text variant of the version number and the release date. For example, "OpenSSL 0.9.5a 1 Apr 2000".
+#[cfg(not(all(target_arch = "x86", target_os = "android")))]
 pub fn version() -> &'static str {
     unsafe { CStr::from_ptr(OpenSSL_version(OPENSSL_VERSION)).to_str().unwrap() }
+}
+#[cfg(all(target_arch = "x86", target_os = "android"))]
+pub fn version() -> &'static str {
+    unsafe { CStr::from_ptr(OpenSSL_version(OPENSSL_VERSION) as *const u8).to_str().unwrap() }
 }
 
 /// The compiler flags set for the compilation process in the form "compiler: ..." if available or
 /// "compiler: information not available" otherwise.
+#[cfg(not(all(target_arch = "x86", target_os = "android")))]
 pub fn c_flags() -> &'static str {
     unsafe { CStr::from_ptr(OpenSSL_version(OPENSSL_CFLAGS)).to_str().unwrap() }
 }
+#[cfg(all(target_arch = "x86", target_os = "android"))]
+pub fn c_flags() -> &'static str {
+    unsafe { CStr::from_ptr(OpenSSL_version(OPENSSL_CFLAGS) as *const u8).to_str().unwrap() }
+}
 
 /// The date of the build process in the form "built on: ..." if available or "built on: date not available" otherwise.
+#[cfg(not(all(target_arch = "x86", target_os = "android")))]
 pub fn built_on() -> &'static str {
     unsafe { CStr::from_ptr(OpenSSL_version(OPENSSL_BUILT_ON)).to_str().unwrap() }
 }
+#[cfg(all(target_arch = "x86", target_os = "android"))]
+pub fn built_on() -> &'static str {
+    unsafe { CStr::from_ptr(OpenSSL_version(OPENSSL_BUILT_ON) as *const u8).to_str().unwrap() }
+}
 
 /// The "Configure" target of the library build in the form "platform: ..." if available or "platform: information not available" otherwise.
+#[cfg(not(all(target_arch = "x86", target_os = "android")))]
 pub fn platform() -> &'static str {
     unsafe { CStr::from_ptr(OpenSSL_version(OPENSSL_PLATFORM)).to_str().unwrap() }
 }
+#[cfg(all(target_arch = "x86", target_os = "android"))]
+pub fn platform() -> &'static str {
+    unsafe { CStr::from_ptr(OpenSSL_version(OPENSSL_PLATFORM) as *const u8).to_str().unwrap() }
+}
 
 /// The "OPENSSLDIR" setting of the library build in the form "OPENSSLDIR: "..."" if available or "OPENSSLDIR: N/A" otherwise.
+#[cfg(not(all(target_arch = "x86", target_os = "android")))]
 pub fn dir() -> &'static str {
     unsafe { CStr::from_ptr(OpenSSL_version(OPENSSL_DIR)).to_str().unwrap() }
+}
+#[cfg(all(target_arch = "x86", target_os = "android"))]
+pub fn dir() -> &'static str {
+    unsafe { CStr::from_ptr(OpenSSL_version(OPENSSL_DIR) as *const u8).to_str().unwrap() }
 }
 
 /// This test ensures that we do not segfault when calling the functions of this module

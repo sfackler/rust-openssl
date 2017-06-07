@@ -26,6 +26,7 @@ impl Pkcs12Ref {
 
     /// Extracts the contents of the `Pkcs12`.
     // FIXME should take an &[u8]
+    #[cfg(not(all(target_arch = "x86", target_os = "android")))]
     pub fn parse(&self, pass: &str) -> Result<ParsedPkcs12, ErrorStack> {
         unsafe {
             let pass = CString::new(pass).unwrap();
@@ -36,6 +37,38 @@ impl Pkcs12Ref {
 
             try!(cvt(ffi::PKCS12_parse(self.as_ptr(),
                                        pass.as_ptr(),
+                                       &mut pkey,
+                                       &mut cert,
+                                       &mut chain)));
+
+            let pkey = PKey::from_ptr(pkey);
+            let cert = X509::from_ptr(cert);
+
+            let chain = if chain.is_null() {
+                try!(Stack::new())
+            } else {
+                Stack::from_ptr(chain)
+            };
+
+            Ok(ParsedPkcs12 {
+                pkey: pkey,
+                cert: cert,
+                chain: chain,
+            })
+        }
+    }
+
+    #[cfg(all(target_arch = "x86", target_os = "android"))]
+    pub fn parse(&self, pass: &str) -> Result<ParsedPkcs12, ErrorStack> {
+        unsafe {
+            let pass = CString::new(pass).unwrap();
+
+            let mut pkey = ptr::null_mut();
+            let mut cert = ptr::null_mut();
+            let mut chain = ptr::null_mut();
+
+            try!(cvt(ffi::PKCS12_parse(self.as_ptr(),
+                                       pass.as_ptr() as *const i8,
                                        &mut pkey,
                                        &mut cert,
                                        &mut chain)));

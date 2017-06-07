@@ -47,9 +47,18 @@ impl Stackable for OpensslString {
 impl Deref for OpensslStringRef {
     type Target = str;
 
+    #[cfg(not(all(target_arch = "x86", target_os = "android")))]
     fn deref(&self) -> &str {
         unsafe {
             let slice = CStr::from_ptr(self.as_ptr()).to_bytes();
+            str::from_utf8_unchecked(slice)
+        }
+    }
+
+    #[cfg(all(target_arch = "x86", target_os = "android"))]
+    fn deref(&self) -> &str {
+        unsafe {
+            let slice = CStr::from_ptr(self.as_ptr() as *const u8).to_bytes();
             str::from_utf8_unchecked(slice)
         }
     }
