@@ -64,6 +64,39 @@ foreign_type! {
     pub struct X509StoreContextRef;
 }
 
+impl X509StoreContext {
+    /// Verifies the certificate 
+    ///
+    /// # Arguments
+    ///
+    /// * `trust` - a store of the trusted chain of certificates, or CAs, to validated the certificate
+    /// * `cert` - certificate to validate
+    /// * `cert_chain` - the certificates chain
+    ///
+    /// # Result
+    /// 
+    /// The Result must be `Some(None)` to be a valid certificate, otherwise the cert is not valid.
+    pub fn verify_cert(trust: store::X509Store, cert: X509, cert_chain: Stack<X509>) -> Result<(), ErrorStack> {
+        unsafe {
+            ffi::init();
+            let context = try!(cvt_p(ffi::X509_STORE_CTX_new()).map(|p| X509StoreContext(p)));
+            let init_result = cvt(ffi::X509_STORE_CTX_init(context.as_ptr(), trust.as_ptr(), cert.as_ptr(), cert_chain.as_ptr()))
+                .map(|_| ());
+
+            mem::forget(trust);
+            mem::forget(cert);
+            mem::forget(cert_chain);
+
+            try!(init_result);
+
+            // verify_cert returns an error `<= 0` if there was a validation error
+            try!(cvt(ffi::X509_verify_cert(context.as_ptr())).map(|_| ()));
+            
+            Ok(())
+        }
+    }
+}
+
 impl X509StoreContextRef {
     pub fn error(&self) -> Option<X509VerifyError> {
         unsafe { X509VerifyError::from_raw(ffi::X509_STORE_CTX_get_error(self.as_ptr()) as c_long) }

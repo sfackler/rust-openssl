@@ -8,7 +8,8 @@ use nid::X9_62_PRIME256V1;
 use pkey::PKey;
 use rsa::Rsa;
 use stack::Stack;
-use x509::{X509, X509Generator, X509Name, X509Req};
+use x509::{X509, X509Generator, X509Name, X509Req, X509StoreContext};
+use x509::store::X509StoreBuilder;
 use x509::extension::{Extension, BasicConstraints, KeyUsage, ExtendedKeyUsage,
                       SubjectKeyIdentifier, AuthorityKeyIdentifier, SubjectAlternativeName};
 use ssl::{SslMethod, SslContextBuilder};
@@ -328,4 +329,32 @@ fn signature() {
     let algorithm = cert.signature_algorithm();
     assert_eq!(algorithm.object().nid(), nid::SHA256WITHRSAENCRYPTION);
     assert_eq!(algorithm.object().to_string(), "sha256WithRSAEncryption");
+}
+
+#[test]
+fn test_verify_cert() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    store_bldr.add_cert(ca).unwrap();
+    let store = store_bldr.build();
+
+    assert!(X509StoreContext::verify_cert(store, cert, Stack::new().unwrap()).is_ok());
+}
+
+#[test]
+fn test_verify_fails() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/alt_name_cert.pem");
+    let ca = X509::from_pem(ca).unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    store_bldr.add_cert(ca).unwrap();
+    let store = store_bldr.build();
+
+    assert!(X509StoreContext::verify_cert(store, cert, Stack::new().unwrap()).is_err());
 }
