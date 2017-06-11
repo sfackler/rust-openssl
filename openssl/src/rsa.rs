@@ -126,7 +126,7 @@ impl RsaRef {
         }
     }
 
-    /// Encrypts data using the private key, returning the number of encrypted bytes.
+    /// Encrypts data using the public key, returning the number of encrypted bytes.
     ///
     /// # Panics
     ///
