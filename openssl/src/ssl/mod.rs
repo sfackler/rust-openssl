@@ -117,7 +117,8 @@ mod tests;
 
 use self::bio::BioMethod;
 
-pub use ssl::connector::{SslConnectorBuilder, SslConnector, SslAcceptorBuilder, SslAcceptor};
+pub use ssl::connector::{SslConnectorBuilder, SslConnector, SslAcceptorBuilder, SslAcceptor,
+                         ConnectConfiguration};
 pub use ssl::error::{Error, HandshakeError};
 
 // FIXME drop SSL_ prefix
