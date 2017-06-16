@@ -22,6 +22,7 @@ environment:
       OPENSSL_DIR: C:\OpenSSL
     - TARGET: x86_64-pc-windows-msvc
       VCPKG_DEFAULT_TRIPLET: x64-windows
+      VCPKGRS_DYNAMIC: 1
 install:
   # install OpenSSL
   - mkdir C:\OpenSSL
