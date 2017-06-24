@@ -141,6 +141,7 @@ impl PKey {
     private_key_from_pem!(PKey, ffi::PEM_read_bio_PrivateKey);
     public_key_from_pem!(PKey, ffi::PEM_read_bio_PUBKEY);
     public_key_from_der!(PKey, ffi::d2i_PUBKEY);
+    private_key_from_der!(PKey, ffi::d2i_AutoPrivateKey);
 
     /// Deserializes a DER-formatted PKCS#8 private key, using a callback to retrieve the password
     /// if the key is encrpyted.
@@ -315,6 +316,12 @@ mod tests {
     fn test_public_key_from_der() {
         let key = include_bytes!("../test/key.der.pub");
         PKey::public_key_from_der(key).unwrap();
+    }
+
+    #[test]
+    fn test_private_key_from_der() {
+        let key = include_bytes!("../test/key.der");
+        PKey::private_key_from_der(key).unwrap();
     }
 
     #[test]
