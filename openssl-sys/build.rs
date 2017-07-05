@@ -35,10 +35,13 @@ enum Version {
 fn main() {
     let target = env::var("TARGET").unwrap();
 
+    println!("cargo:rerun-if-env-changed=OPENSSL_LIB_DIR");
     let lib_dir = env::var_os("OPENSSL_LIB_DIR").map(PathBuf::from);
+    println!("cargo:rerun-if-env-changed=OPENSSL_INCLUDE_DIR");
     let include_dir = env::var_os("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
 
     let (lib_dir, include_dir) = if lib_dir.is_none() || include_dir.is_none() {
+        println!("cargo:rerun-if-env-changed=OPENSSL_DIR");
         let openssl_dir = env::var_os("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(&target));
         let openssl_dir = Path::new(&openssl_dir);
         let lib_dir = lib_dir.unwrap_or_else(|| openssl_dir.join("lib"));
@@ -63,6 +66,7 @@ fn main() {
 
     let version = validate_headers(&[include_dir.clone().into()]);
 
+    println!("cargo:rerun-if-env-changed=OPENSSL_LIBS");
     let libs_env = env::var("OPENSSL_LIBS").ok();
     let libs = match libs_env {
         Some(ref v) => v.split(":").collect(),
@@ -392,6 +396,7 @@ found. The build is now aborting due to this version mismatch.
 /// statically or dynamically.
 fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
     // First see if a mode was explicitly requested
+    println!("cargo:rerun-if-env-changed=OPENSSL_STATIC");
     let kind = env::var("OPENSSL_STATIC").ok();
     match kind.as_ref().map(|s| &s[..]) {
         Some("0") => return "dylib",
