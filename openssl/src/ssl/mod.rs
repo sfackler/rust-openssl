@@ -121,6 +121,11 @@ pub use ssl::connector::{SslConnectorBuilder, SslConnector, SslAcceptorBuilder, 
                          ConnectConfiguration};
 pub use ssl::error::{Error, HandshakeError};
 
+
+/// True iff rust-openssl is compiled with ALPN support.
+pub const HAS_ALPN: bool = cfg!(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)));
+
+
 // FIXME drop SSL_ prefix
 // FIXME remvove flags not used in OpenSSL 1.1
 bitflags! {
@@ -946,7 +951,8 @@ impl SslContextBuilder {
     ///
     /// Note that ordering of the protocols controls the priority with which they are chosen.
     ///
-    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0,
+    /// otherwise this function panics.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn set_alpn_protocols(&mut self, protocols: &[&[u8]]) -> Result<(), ErrorStack> {
         let protocols: Box<Vec<u8>> = Box::new(ssl_encode_byte_strings(protocols));
@@ -975,6 +981,21 @@ impl SslContextBuilder {
 
             Ok(())
         }
+    }
+
+    /// Set the protocols to be used during ALPN (application layer protocol negotiation).
+    /// If this is a server, these are the protocols we report to the client.
+    /// If this is a client, these are the protocols we try to match with those reported by the
+    /// server.
+    ///
+    /// Note that ordering of the protocols controls the priority with which they are chosen.
+    ///
+    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0,
+    /// otherwise this function panics.
+    #[cfg(not(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110))))]
+    pub fn set_alpn_protocols(&mut self, protocols: &[&[u8]]) -> Result<(), ErrorStack> {
+        let _ = protocols;
+        panic!("rust-openssl is compiled without ALPN");
     }
 
     /// Checks consistency between the private key and certificate.
@@ -1487,7 +1508,8 @@ impl SslRef {
     /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
     /// to interpret it.
     ///
-    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0,
+    /// otherwise this function panics.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn selected_alpn_protocol(&self) -> Option<&[u8]> {
         unsafe {
@@ -1503,6 +1525,18 @@ impl SslRef {
                 Some(slice::from_raw_parts(data, len as usize))
             }
         }
+    }
+
+    /// Returns the protocol selected by performing ALPN, if any.
+    ///
+    /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
+    /// to interpret it.
+    ///
+    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0,
+    /// otherwise this function panics.
+    #[cfg(not(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110))))]
+    pub fn selected_alpn_protocol(&self) -> Option<&[u8]> {
+        panic!("rust-openssl is compiled without ALPN");
     }
 
     /// Returns the number of bytes remaining in the currently processed TLS
