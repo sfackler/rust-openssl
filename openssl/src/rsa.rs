@@ -38,11 +38,15 @@ foreign_type! {
 }
 
 impl RsaRef {
+    // FIXME these need to specify output format
     private_key_to_pem!(ffi::PEM_write_bio_RSAPrivateKey);
     public_key_to_pem!(ffi::PEM_write_bio_RSA_PUBKEY);
 
     private_key_to_der!(ffi::i2d_RSAPrivateKey);
     public_key_to_der!(ffi::i2d_RSA_PUBKEY);
+
+    to_der_inner!(/// Serializes the public key to DER-encoded PKCS#1.
+        public_key_to_der_pkcs1, ffi::i2d_RSAPublicKey);
 
     // FIXME should return u32
     pub fn size(&self) -> usize {
@@ -255,10 +259,14 @@ impl Rsa {
         }
     }
 
+    // FIXME these need to identify input formats
     private_key_from_pem!(Rsa, ffi::PEM_read_bio_RSAPrivateKey);
     private_key_from_der!(Rsa, ffi::d2i_RSAPrivateKey);
     public_key_from_pem!(Rsa, ffi::PEM_read_bio_RSA_PUBKEY);
     public_key_from_der!(Rsa, ffi::d2i_RSA_PUBKEY);
+
+    from_der_inner!(/// Deserializes a public key from DER-encoded PKCS#1 data.
+        public_key_from_der_pkcs1, Rsa, ffi::d2i_RSAPublicKey);
 
     #[deprecated(since = "0.9.2", note = "use private_key_from_pem_callback")]
     pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<Rsa, ErrorStack>
@@ -440,5 +448,4 @@ mod test {
         let len = k1.private_decrypt(&emesg, &mut dmesg, PKCS1_PADDING).unwrap();
         assert_eq!(msg, &dmesg[..len]);
     }
-
 }
