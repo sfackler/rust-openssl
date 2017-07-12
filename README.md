@@ -22,7 +22,7 @@ below.
 On Linux, you can typically install OpenSSL via your package manager. The
 headers are sometimes provided in a separate package than the runtime libraries
 - look for something like `openssl-devel` or `libssl-dev`. You will also need the
-regular development utilities, like `pkg-config`, as the custom build script relies 
+regular development utilities, like `pkg-config`, as the custom build script relies
 on them.
 
 ```bash
@@ -124,7 +124,7 @@ The build script can be configured via environment variables:
 
 * `OPENSSL_SRC` - If specified, the path to an OpenSSL source tarball. The build
   script will compile OpenSSL and statically link to it. This is not currently
-  supported on Windows.
+  supported on Windows. Only OpenSSL 1.1.0 is supported.
 * `OPENSSL_DIR` - If specified, a directory that will be used to find
   OpenSSL installation. It's expected that under this directory the `include`
   folder has header files and a `lib` folder has the runtime libraries.

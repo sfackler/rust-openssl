@@ -78,8 +78,8 @@ fn build_openssl(target: &str, tarball_path: &Path) -> (PathBuf, PathBuf) {
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
     let build_dir = out_dir.join("build");
     let install_dir = out_dir.join("install");
-    let lib_dir = install_dir.join("lib");
-    let include_dir = install_dir.join("include");
+    let lib_dir = install_dir.join("usr/local/lib");
+    let include_dir = install_dir.join("usr/local/include");
 
     let stamp = build_dir.join("stamp");
     let mut contents = String::new();
@@ -104,13 +104,7 @@ fn build_openssl(target: &str, tarball_path: &Path) -> (PathBuf, PathBuf) {
 
     let inner_dir = fs::read_dir(&build_dir).unwrap().next().unwrap().unwrap().path();
 
-    let mut configure = if target == "i686-unknown-linux-gnu" {
-        let mut cmd = Command::new("setarch");
-        cmd.arg("i386").arg("./Configure");
-        cmd
-    } else {
-        Command::new("./Configure")
-    };
+    let mut configure = Command::new("./Configure");
 
     let os = match target {
         "aarch64-unknown-linux-gnu" => "linux-aarch64",
@@ -137,15 +131,60 @@ fn build_openssl(target: &str, tarball_path: &Path) -> (PathBuf, PathBuf) {
         _ => panic!("don't know how to configure OpenSSL for {}", target),
     };
 
-    configure.arg(format!("--prefix={}", install_dir.display()))
+    configure
         .arg("no-dso")
         .arg("no-ssl2")
         .arg("no-ssl3")
         .arg("no-comp")
-        .arg(os)
-        .arg("-fPIC");
+        .arg("no-shared")
+        .arg(os);
+
     if target.contains("i686") {
         configure.arg("-m32");
+    }
+
+    let host = env::var("HOST").unwrap();
+    let target = env::var("TARGET").unwrap();
+    if host != target {
+        let cross_prefix = match &*target {
+            "aarch64-unknown-linux-gnu" => Some("aarch64-linux-gnu-"),
+            "arm-unknown-linux-gnueabi" => Some("arm-linux-gnueabi-"),
+            "arm-unknown-linux-gnueabihf" => Some("arm-linux-gnueabihf-"),
+            "arm-unknown-linux-musleabi" => Some("arm-linux-musleabi-"),
+            "arm-unknown-linux-musleabihf" => Some("arm-linux-musleabihf-"),
+            "arm-unknown-netbsdelf-eabi" => Some("arm--netbsdelf-eabi-"),
+            "armv6-unknown-netbsdelf-eabihf" => Some("armv6--netbsdelf-eabihf-"),
+            "armv7-unknown-linux-gnueabihf" => Some("arm-linux-gnueabihf-"),
+            "armv7-unknown-linux-musleabihf" => Some("arm-linux-musleabihf-"),
+            "armv7-unknown-netbsdelf-eabihf" => Some("armv7--netbsdelf-eabihf-"),
+            "i686-pc-windows-gnu" => Some("i686-w64-mingw32-"),
+            "i686-unknown-linux-musl" => Some("musl-"),
+            "i686-unknown-netbsdelf" => Some("i486--netbsdelf-"),
+            "mips-unknown-linux-gnu" => Some("mips-linux-gnu-"),
+            "mipsel-unknown-linux-gnu" => Some("mipsel-linux-gnu-"),
+            "mips64-unknown-linux-gnuabi64" => Some("mips64-linux-gnuabi64-"),
+            "mips64el-unknown-linux-gnuabi64" => Some("mips64el-linux-gnuabi64-"),
+            "powerpc-unknown-linux-gnu" => Some("powerpc-linux-gnu-"),
+            "powerpc-unknown-netbsd" => Some("powerpc--netbsd-"),
+            "powerpc64-unknown-linux-gnu" => Some("powerpc-linux-gnu-"),
+            "powerpc64le-unknown-linux-gnu" => Some("powerpc64le-linux-gnu-"),
+            "s390x-unknown-linux-gnu" => Some("s390x-linux-gnu-"),
+            "sparc64-unknown-netbsd" => Some("sparc64--netbsd-"),
+            "thumbv6m-none-eabi" => Some("arm-none-eabi-"),
+            "thumbv7em-none-eabi" => Some("arm-none-eabi-"),
+            "thumbv7em-none-eabihf" => Some("arm-none-eabi-"),
+            "thumbv7m-none-eabi" => Some("arm-none-eabi-"),
+            "x86_64-pc-windows-gnu" => Some("x86_64-w64-mingw32-"),
+            "x86_64-rumprun-netbsd" => Some("x86_64-rumprun-netbsd-"),
+            "x86_64-unknown-linux-musl" => Some("musl-"),
+            "x86_64-unknown-netbsd" => Some("x86_64--netbsd-"),
+            _ => None,
+        };
+
+        if let Some(cross_prefix) = cross_prefix {
+            configure.arg("--cross-compile-prefix")
+                .arg(cross_prefix);
+        }
     }
 
     configure.current_dir(&inner_dir);
@@ -156,13 +195,12 @@ fn build_openssl(target: &str, tarball_path: &Path) -> (PathBuf, PathBuf) {
     run_command(depend, "building OpenSSL dependencies");
 
     let mut build = Command::new("make");
-    build.current_dir(&inner_dir)
-        .arg("-j")
-        .arg(env::var_os("NUM_JOBS").unwrap());
+    build.current_dir(&inner_dir);
     run_command(build, "building OpenSSL");
 
     let mut install = Command::new("make");
-    install.arg("install").current_dir(&inner_dir);
+    install.arg("install").current_dir(&inner_dir)
+        .arg(format!("DESTDIR={}", install_dir.display()));
     run_command(install, "installing OpenSSL");
 
     File::create(&stamp).unwrap()
@@ -173,23 +211,15 @@ fn build_openssl(target: &str, tarball_path: &Path) -> (PathBuf, PathBuf) {
 }
 
 fn run_command(mut command: Command, desc: &str) {
-    let output = command.output().unwrap();
-    if !output.status.success() {
+    let status = command.status().unwrap();
+    if !status.success() {
         panic!("
 Error {}
 
     Exit status: {}
-
-    Stdout:
-{}
-
-    Stderr:
-{}
 ",
             desc,
-            output.status,
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr));
+            status);
     }
 }
 
