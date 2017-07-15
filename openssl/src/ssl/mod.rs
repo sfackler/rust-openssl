@@ -93,7 +93,7 @@ use std::slice;
 use std::str;
 use std::sync::Mutex;
 
-use {init, cvt, cvt_p};
+use {init, cvt, cvt_p, cvt_n};
 use dh::{Dh, DhRef};
 use ec::EcKeyRef;
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
@@ -106,8 +106,15 @@ use x509::store::X509Store;
 use verify::X509VerifyParamRef;
 use pkey::PKeyRef;
 use error::ErrorStack;
+use ex_data::Index;
 use util::Opaque;
 use stack::{Stack, StackRef};
+use ssl::bio::BioMethod;
+use ssl::callbacks::*;
+
+pub use ssl::connector::{SslConnectorBuilder, SslConnector, SslAcceptorBuilder, SslAcceptor,
+                         ConnectConfiguration};
+pub use ssl::error::{Error, HandshakeError};
 
 mod error;
 mod callbacks;
@@ -115,13 +122,6 @@ mod connector;
 mod bio;
 #[cfg(test)]
 mod tests;
-
-use ssl::bio::BioMethod;
-use ssl::callbacks::*;
-
-pub use ssl::connector::{SslConnectorBuilder, SslConnector, SslAcceptorBuilder, SslAcceptor,
-                         ConnectConfiguration};
-pub use ssl::error::{Error, HandshakeError};
 
 // FIXME drop SSL_ prefix
 // FIXME remvove flags not used in OpenSSL 1.1
@@ -741,6 +741,14 @@ impl SslContextBuilder {
         }
     }
 
+    /// Sets the extra data at the specified index.
+    pub fn set_ex_data<T>(&mut self, index: Index<SslContext, T>, data: T) {
+        unsafe {
+            let data = Box::new(data);
+            ffi::SSL_CTX_set_ex_data(self.as_ptr(), index.as_raw(), Box::into_raw(data) as *mut c_void);
+        }
+    }
+
     pub fn build(self) -> SslContext {
         let ctx = SslContext(self.0);
         mem::forget(self);
@@ -778,6 +786,20 @@ impl fmt::Debug for SslContext {
 impl SslContext {
     pub fn builder(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
         SslContextBuilder::new(method)
+    }
+
+    /// Returns a new extra data index.
+    ///
+    /// Each invocation of this function is guaranteed to return a distinct
+    /// index.
+    pub fn new_ex_index<T>() -> Result<Index<SslContext, T>, ErrorStack>
+    where
+        T: 'static + Sync + Send
+    {
+        unsafe {
+            let idx = try!(cvt_n(compat::get_new_idx(free_data_box::<T>)));
+            Ok(Index::from_raw(idx))
+        }
     }
 }
 
@@ -823,6 +845,18 @@ impl SslContextRef {
             ffi::SSL_CTX_get_extra_chain_certs(self.as_ptr(), &mut chain);
             assert!(!chain.is_null());
             StackRef::from_ptr(chain)
+        }
+    }
+
+    /// Returns a reference to the extra data at the specified index.
+    pub fn ex_data<T>(&self, index: Index<SslContext, T>) -> Option<&T> {
+        unsafe {
+            let data = ffi::SSL_CTX_get_ex_data(self.as_ptr(), index.as_raw());
+            if data.is_null() {
+                None
+            } else {
+                Some(&*(data as *const T))
+            }
         }
     }
 }
@@ -979,6 +1013,22 @@ foreign_type! {
 
     pub struct Ssl;
     pub struct SslRef;
+}
+
+impl Ssl {
+    /// Returns a new extra data index.
+    ///
+    /// Each invocation of this function is guaranteed to return a distinct
+    /// index.
+    pub fn new_ex_index<T>() -> Result<Index<Ssl, T>, ErrorStack>
+    where
+        T: 'static + Sync + Send
+    {
+        unsafe {
+           let idx = try!(cvt_n(compat::get_new_ssl_idx(free_data_box::<T>)));
+            Ok(Index::from_raw(idx))
+        }
+    }
 }
 
 impl fmt::Debug for SslRef {
@@ -1352,6 +1402,26 @@ impl SslRef {
     /// Determines if this `Ssl` is configured for server-side or client-side use.
     pub fn is_server(&self) -> bool {
         unsafe { compat::SSL_is_server(self.as_ptr()) != 0 }
+    }
+
+    /// Sets the extra data at the specified index.
+    pub fn set_ex_data<T>(&mut self, index: Index<Ssl, T>, data: T) {
+        unsafe {
+            let data = Box::new(data);
+            ffi::SSL_set_ex_data(self.as_ptr(), index.as_raw(), Box::into_raw(data) as *mut c_void);
+        }
+    }
+
+    /// Returns a reference to the extra data at the specified index.
+    pub fn ex_data<T>(&self, index: Index<Ssl, T>) -> Option<&T> {
+        unsafe {
+            let data = ffi::SSL_get_ex_data(self.as_ptr(), index.as_raw());
+            if data.is_null() {
+                None
+            } else {
+                Some(&*(data as *const T))
+            }
+        }
     }
 }
 
