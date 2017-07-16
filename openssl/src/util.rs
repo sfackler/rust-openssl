@@ -1,6 +1,5 @@
 use libc::{c_int, c_char, c_void};
 use std::any::Any;
-use std::cell::UnsafeCell;
 use std::panic::{self, AssertUnwindSafe};
 use std::slice;
 

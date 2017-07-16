@@ -2,7 +2,6 @@
 
 [![CircleCI](https://circleci.com/gh/sfackler/rust-openssl.svg?style=shield)](https://circleci.com/gh/sfackler/rust-openssl) [![Build Status](https://travis-ci.org/sfackler/rust-openssl.svg?branch=master)](https://travis-ci.org/sfackler/rust-openssl) [![Build status](https://ci.appveyor.com/api/projects/status/d1knobws948pyynk/branch/master?svg=true)](https://ci.appveyor.com/project/sfackler/rust-openssl/branch/master)
 
-
 [Documentation](https://docs.rs/openssl).
 
 ## Warning
