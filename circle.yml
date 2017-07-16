@@ -1,0 +1,143 @@
+defaults: &DEFAULT
+  working_directory: ~/build
+  docker:
+  - image: jimmycuadra/rust:1.18.0
+  steps:
+  - checkout
+  - run: apt-get update
+  - run: apt-get install -y curl
+  - run: RUST_VERSION=1.18.0 ./test/add_target.sh
+  - restore_cache:
+      key: registry
+  - run: cargo generate-lockfile
+  - save_cache:
+      key: registry-{{ epoch }}
+      paths:
+      - ~/.cargo/registry/index
+  - run: echo "${LIBRARY}-${VERSION}-${TARGET}" > ~/lib_key
+  - restore_cache:
+      key: lib-{{ checksum "~/lib_key" }}-{{ checksum "test/build_openssl.sh"}}
+  - run: ./test/build_openssl.sh
+  - save_cache:
+      key: lib-{{ checksum "~/lib_key" }}-{{ checksum "test/build_openssl.sh"}}
+      paths:
+      - ~/openssl
+  - restore_cache:
+      key: deps-1.18.0-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}
+  - run: |
+      export OPENSSL_DIR=$HOME/openssl
+      case "${NO_RUN}" in
+        "1") CMD=build;;
+        "") CMD=run;;
+      esac
+      cargo $CMD --manifest-path=systest/Cargo.toml --target $TARGET
+  - run: |
+      export OPENSSL_DIR=$HOME/openssl
+      export PATH=$OPENSSL_DIR/bin:$PATH
+      if [ "${NO_RUN}" = "1" ]; then
+        TEST_ARGS=--no-run
+      fi
+      cargo test \
+        --manifest-path=openssl/Cargo.toml \
+        --target $TARGET \
+        --all-features \
+        $TEST_ARGS
+  - save_cache:
+      key: deps-1.18.0-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}
+      paths:
+      - target
+      - ~/.cargo/registry/cache
+
+openssl_110: &OPENSSL_110
+  LIBRARY: openssl
+  VERSION: 1.1.0f
+
+openssl_102: &OPENSSL_102
+  LIBRARY: openssl
+  VERSION: 1.0.2l
+
+openssl_101: &OPENSSL_101
+  LIBRARY: openssl
+  VERSION: 1.0.1u
+
+libressl_new: &LIBRESSL_OLD
+  LIBRARY: libressl
+  VERSION: 2.5.0
+
+libressl_new: &LIBRESSL_NEW
+  LIBRARY: libressl
+  VERSION: 2.5.5
+
+x86_64: &X86_64
+  TARGET: x86_64-unknown-linux-gnu
+
+i686: &I686
+  TARGET: i686-unknown-linux-gnu
+
+armhf: &ARMHF
+  TARGET: arm-unknown-linux-gnueabihf
+  NO_RUN: 1
+  CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
+  CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_AR: arm-linux-gnueabihf-ar
+
+version: 2
+jobs:
+  x86_64-openssl-1.1.0:
+    <<: *DEFAULT
+    environment:
+      <<: [*OPENSSL_110, *X86_64]
+  x86_64-openssl-1.0.2:
+    <<: *DEFAULT
+    environment:
+      <<: [*OPENSSL_102, *X86_64]
+  x86_64-openssl-1.0.1:
+    <<: *DEFAULT
+    environment:
+      <<: [*OPENSSL_101, *X86_64]
+  i686-openssl-1.1.0:
+    <<: *DEFAULT
+    environment:
+      <<: [*OPENSSL_110, *I686]
+  i686-openssl-1.0.2:
+    <<: *DEFAULT
+    environment:
+      <<: [*OPENSSL_102, *I686]
+  i686-openssl-1.0.1:
+    <<: *DEFAULT
+    environment:
+      <<: [*OPENSSL_101, *I686]
+  armhf-openssl-1.1.0:
+    <<: *DEFAULT
+    environment:
+      <<: [*OPENSSL_110, *ARMHF]
+  armhf-openssl-1.0.2:
+    <<: *DEFAULT
+    environment:
+      <<: [*OPENSSL_102, *ARMHF]
+  armhf-openssl-1.0.1:
+    <<: *DEFAULT
+    environment:
+      <<: [*OPENSSL_101, *ARMHF]
+  x86_64-libressl-old:
+    <<: *DEFAULT
+    environment:
+      <<: [*LIBRESSL_OLD, *X86_64]
+  x86_64-libressl-new:
+    <<: *DEFAULT
+    environment:
+      <<: [*LIBRESSL_NEW, *X86_64]
+workflows:
+  version: 2
+  tests:
+    jobs:
+    - x86_64-openssl-1.1.0
+    - x86_64-openssl-1.0.2
+    - x86_64-openssl-1.0.1
+    - i686-openssl-1.1.0
+    - i686-openssl-1.0.2
+    - i686-openssl-1.0.1
+    - armhf-openssl-1.1.0
+    - armhf-openssl-1.0.2
+    - armhf-openssl-1.0.1
+    - x86_64-libressl-old
+    - x86_64-libressl-new

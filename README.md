@@ -1,6 +1,7 @@
 # rust-openssl
 
-[![Build Status](https://travis-ci.org/sfackler/rust-openssl.svg?branch=master)](https://travis-ci.org/sfackler/rust-openssl)
+[![CircleCI](https://circleci.com/gh/sfackler/rust-openssl.svg?style=shield)](https://circleci.com/gh/sfackler/rust-openssl) [![Build Status](https://travis-ci.org/sfackler/rust-openssl.svg?branch=master)](https://travis-ci.org/sfackler/rust-openssl) [![Build status](https://ci.appveyor.com/api/projects/status/d1knobws948pyynk/branch/master?svg=true)](https://ci.appveyor.com/project/sfackler/rust-openssl/branch/master)
+
 
 [Documentation](https://docs.rs/openssl).
 
@@ -22,7 +23,7 @@ below.
 On Linux, you can typically install OpenSSL via your package manager. The
 headers are sometimes provided in a separate package than the runtime libraries
 - look for something like `openssl-devel` or `libssl-dev`. You will also need the
-regular development utilities, like `pkg-config`, as the custom build script relies 
+regular development utilities, like `pkg-config`, as the custom build script relies
 on them.
 
 ```bash
