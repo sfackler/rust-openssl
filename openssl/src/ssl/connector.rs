@@ -9,7 +9,7 @@ use x509::X509Ref;
 
 #[cfg(ossl101)]
 lazy_static! {
-    static ref HOSTNAME_IDX: ::ssl::ExIndex<Ssl, String> = Ssl::new_ex_index().unwrap();
+    static ref HOSTNAME_IDX: ::ex_data::Index<Ssl, String> = Ssl::new_ex_index().unwrap();
 }
 
 // ffdhe2048 from https://wiki.mozilla.org/Security/Server_Side_TLS#ffdhe2048
@@ -338,7 +338,7 @@ fn setup_verify_hostname(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> 
 
 #[cfg(ossl101)]
 fn setup_verify_hostname(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
-    let domain = domain.to_owned();
+    let domain = domain.to_string();
     ssl.set_ex_data(*HOSTNAME_IDX, domain);
     Ok(())
 }
