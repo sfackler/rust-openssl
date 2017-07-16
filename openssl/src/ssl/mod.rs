@@ -71,7 +71,7 @@
 //! }
 //! ```
 use ffi;
-use foreign_types::{ForeignType, ForeignTypeRef};
+use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
 use libc::{c_int, c_void, c_long, c_ulong};
 use libc::{c_uchar, c_uint};
 use std::any::Any;
@@ -107,7 +107,6 @@ use verify::X509VerifyParamRef;
 use pkey::PKeyRef;
 use error::ErrorStack;
 use ex_data::Index;
-use util::Opaque;
 use stack::{Stack, StackRef};
 use ssl::bio::BioMethod;
 use ssl::callbacks::*;

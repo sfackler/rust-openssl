@@ -1,4 +1,4 @@
-use foreign_types::{ForeignTypeRef, ForeignType};
+use foreign_types::{ForeignTypeRef, ForeignType, Opaque};
 use libc::c_int;
 use std::borrow::Borrow;
 use std::convert::AsRef;
@@ -10,8 +10,6 @@ use ffi;
 use {cvt, cvt_p};
 use error::ErrorStack;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
-
-use util::Opaque;
 
 #[cfg(ossl10x)]
 use ffi::{sk_pop as OPENSSL_sk_pop, sk_free as OPENSSL_sk_free, sk_num as OPENSSL_sk_num,

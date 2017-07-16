@@ -358,10 +358,8 @@ impl Drop for Crypter {
     }
 }
 
-#[doc = /**
- * Encrypts data, using the specified crypter type in encrypt mode with the
- * specified key and iv; returns the resulting (encrypted) data.
- */]
+/// Encrypts data, using the specified crypter type in encrypt mode with the
+/// specified key and iv; returns the resulting (encrypted) data.
 pub fn encrypt(
     t: Cipher,
     key: &[u8],
@@ -371,10 +369,8 @@ pub fn encrypt(
     cipher(t, Mode::Encrypt, key, iv, data)
 }
 
-#[doc = /**
- * Decrypts data, using the specified crypter type in decrypt mode with the
- * specified key and iv; returns the resulting (decrypted) data.
- */]
+/// Decrypts data, using the specified crypter type in decrypt mode with the
+/// specified key and iv; returns the resulting (decrypted) data.
 pub fn decrypt(
     t: Cipher,
     key: &[u8],
