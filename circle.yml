@@ -1,4 +1,4 @@
-defaults: &DEFAULT
+job: &JOB
   working_directory: ~/build
   docker:
   - image: jimmycuadra/rust:1.18.0
@@ -51,29 +51,23 @@ defaults: &DEFAULT
 openssl_110: &OPENSSL_110
   LIBRARY: openssl
   VERSION: 1.1.0f
-
 openssl_102: &OPENSSL_102
   LIBRARY: openssl
   VERSION: 1.0.2l
-
 openssl_101: &OPENSSL_101
   LIBRARY: openssl
   VERSION: 1.0.1u
-
-libressl_new: &LIBRESSL_OLD
+libressl_250: &LIBRESSL_250
   LIBRARY: libressl
   VERSION: 2.5.0
-
-libressl_new: &LIBRESSL_NEW
+libressl_260: &LIBRESSL_260
   LIBRARY: libressl
-  VERSION: 2.5.5
+  VERSION: 2.6.0
 
 x86_64: &X86_64
   TARGET: x86_64-unknown-linux-gnu
-
 i686: &I686
   TARGET: i686-unknown-linux-gnu
-
 armhf: &ARMHF
   TARGET: arm-unknown-linux-gnueabihf
   NO_RUN: 1
@@ -83,49 +77,49 @@ armhf: &ARMHF
 version: 2
 jobs:
   x86_64-openssl-1.1.0:
-    <<: *DEFAULT
+    <<: *JOB
     environment:
       <<: [*OPENSSL_110, *X86_64]
   x86_64-openssl-1.0.2:
-    <<: *DEFAULT
+    <<: *JOB
     environment:
       <<: [*OPENSSL_102, *X86_64]
   x86_64-openssl-1.0.1:
-    <<: *DEFAULT
+    <<: *JOB
     environment:
       <<: [*OPENSSL_101, *X86_64]
   i686-openssl-1.1.0:
-    <<: *DEFAULT
+    <<: *JOB
     environment:
       <<: [*OPENSSL_110, *I686]
   i686-openssl-1.0.2:
-    <<: *DEFAULT
+    <<: *JOB
     environment:
       <<: [*OPENSSL_102, *I686]
   i686-openssl-1.0.1:
-    <<: *DEFAULT
+    <<: *JOB
     environment:
       <<: [*OPENSSL_101, *I686]
   armhf-openssl-1.1.0:
-    <<: *DEFAULT
+    <<: *JOB
     environment:
       <<: [*OPENSSL_110, *ARMHF]
   armhf-openssl-1.0.2:
-    <<: *DEFAULT
+    <<: *JOB
     environment:
       <<: [*OPENSSL_102, *ARMHF]
   armhf-openssl-1.0.1:
-    <<: *DEFAULT
+    <<: *JOB
     environment:
       <<: [*OPENSSL_101, *ARMHF]
-  x86_64-libressl-old:
-    <<: *DEFAULT
+  x86_64-libressl-2.5.0:
+    <<: *JOB
     environment:
-      <<: [*LIBRESSL_OLD, *X86_64]
-  x86_64-libressl-new:
-    <<: *DEFAULT
+      <<: [*LIBRESSL_250, *X86_64]
+  x86_64-libressl-2.6.0:
+    <<: *JOB
     environment:
-      <<: [*LIBRESSL_NEW, *X86_64]
+      <<: [*LIBRESSL_260, *X86_64]
 workflows:
   version: 2
   tests:
@@ -139,5 +133,5 @@ workflows:
     - armhf-openssl-1.1.0
     - armhf-openssl-1.0.2
     - armhf-openssl-1.0.1
-    - x86_64-libressl-old
-    - x86_64-libressl-new
+    - x86_64-libressl-2.5.0
+    - x86_64-libressl-2.6.0

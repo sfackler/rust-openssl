@@ -407,8 +407,8 @@ See rust-openssl README for more information:
             "
 
 This crate is only compatible with OpenSSL 1.0.1, 1.0.2, and 1.1.0, or LibreSSL
-2.5.0, 2.5.1, 2.5.2, 2.5.3, and 2.5.4, but a different version of OpenSSL was
-found. The build is now aborting due to this version mismatch.
+2.5 and 2.6.0, but a different version of OpenSSL was found. The build is now
+aborting due to this version mismatch.
 
 "
         );
