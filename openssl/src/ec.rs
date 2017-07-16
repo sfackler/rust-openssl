@@ -49,37 +49,41 @@ impl EcGroup {
 
 impl EcGroupRef {
     /// Places the components of a curve over a prime field in the provided `BigNum`s.
-    pub fn components_gfp(&self,
-                          p: &mut BigNumRef,
-                          a: &mut BigNumRef,
-                          b: &mut BigNumRef,
-                          ctx: &mut BigNumContextRef)
-                          -> Result<(), ErrorStack> {
+    pub fn components_gfp(
+        &self,
+        p: &mut BigNumRef,
+        a: &mut BigNumRef,
+        b: &mut BigNumRef,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::EC_GROUP_get_curve_GFp(self.as_ptr(),
-                                            p.as_ptr(),
-                                            a.as_ptr(),
-                                            b.as_ptr(),
-                                            ctx.as_ptr()))
-                .map(|_| ())
+            cvt(ffi::EC_GROUP_get_curve_GFp(
+                self.as_ptr(),
+                p.as_ptr(),
+                a.as_ptr(),
+                b.as_ptr(),
+                ctx.as_ptr(),
+            )).map(|_| ())
         }
     }
 
     /// Places the components of a curve over a binary field in the provided `BigNum`s.
     #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
-    pub fn components_gf2m(&self,
-                           p: &mut BigNumRef,
-                           a: &mut BigNumRef,
-                           b: &mut BigNumRef,
-                           ctx: &mut BigNumContextRef)
-                           -> Result<(), ErrorStack> {
+    pub fn components_gf2m(
+        &self,
+        p: &mut BigNumRef,
+        a: &mut BigNumRef,
+        b: &mut BigNumRef,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::EC_GROUP_get_curve_GF2m(self.as_ptr(),
-                                             p.as_ptr(),
-                                             a.as_ptr(),
-                                             b.as_ptr(),
-                                             ctx.as_ptr()))
-                .map(|_| ())
+            cvt(ffi::EC_GROUP_get_curve_GF2m(
+                self.as_ptr(),
+                p.as_ptr(),
+                a.as_ptr(),
+                b.as_ptr(),
+                ctx.as_ptr(),
+            )).map(|_| ())
         }
     }
 
@@ -89,12 +93,17 @@ impl EcGroupRef {
     }
 
     /// Places the order of the curve in the provided `BigNum`.
-    pub fn order(&self,
-                 order: &mut BigNumRef,
-                 ctx: &mut BigNumContextRef)
-                 -> Result<(), ErrorStack> {
+    pub fn order(
+        &self,
+        order: &mut BigNumRef,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::EC_GROUP_get_order(self.as_ptr(), order.as_ptr(), ctx.as_ptr())).map(|_| ())
+            cvt(ffi::EC_GROUP_get_order(
+                self.as_ptr(),
+                order.as_ptr(),
+                ctx.as_ptr(),
+            )).map(|_| ())
         }
     }
 
@@ -120,106 +129,123 @@ foreign_type! {
 
 impl EcPointRef {
     /// Computes `a + b`, storing the result in `self`.
-    pub fn add(&mut self,
-               group: &EcGroupRef,
-               a: &EcPointRef,
-               b: &EcPointRef,
-               ctx: &mut BigNumContextRef)
-               -> Result<(), ErrorStack> {
+    pub fn add(
+        &mut self,
+        group: &EcGroupRef,
+        a: &EcPointRef,
+        b: &EcPointRef,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::EC_POINT_add(group.as_ptr(),
-                                  self.as_ptr(),
-                                  a.as_ptr(),
-                                  b.as_ptr(),
-                                  ctx.as_ptr()))
-                .map(|_| ())
+            cvt(ffi::EC_POINT_add(
+                group.as_ptr(),
+                self.as_ptr(),
+                a.as_ptr(),
+                b.as_ptr(),
+                ctx.as_ptr(),
+            )).map(|_| ())
         }
     }
 
     /// Computes `q * m`, storing the result in `self`.
-    pub fn mul(&mut self,
-               group: &EcGroupRef,
-               q: &EcPointRef,
-               m: &BigNumRef,
-               ctx: &BigNumContextRef)
-               -> Result<(), ErrorStack> {
+    pub fn mul(
+        &mut self,
+        group: &EcGroupRef,
+        q: &EcPointRef,
+        m: &BigNumRef,
+        ctx: &BigNumContextRef,
+    ) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::EC_POINT_mul(group.as_ptr(),
-                                  self.as_ptr(),
-                                  ptr::null(),
-                                  q.as_ptr(),
-                                  m.as_ptr(),
-                                  ctx.as_ptr()))
-                .map(|_| ())
+            cvt(ffi::EC_POINT_mul(
+                group.as_ptr(),
+                self.as_ptr(),
+                ptr::null(),
+                q.as_ptr(),
+                m.as_ptr(),
+                ctx.as_ptr(),
+            )).map(|_| ())
         }
     }
 
     /// Computes `generator * n`, storing the result ing `self`.
-    pub fn mul_generator(&mut self,
-                         group: &EcGroupRef,
-                         n: &BigNumRef,
-                         ctx: &BigNumContextRef)
-                         -> Result<(), ErrorStack> {
+    pub fn mul_generator(
+        &mut self,
+        group: &EcGroupRef,
+        n: &BigNumRef,
+        ctx: &BigNumContextRef,
+    ) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::EC_POINT_mul(group.as_ptr(),
-                                  self.as_ptr(),
-                                  n.as_ptr(),
-                                  ptr::null(),
-                                  ptr::null(),
-                                  ctx.as_ptr()))
-                .map(|_| ())
+            cvt(ffi::EC_POINT_mul(
+                group.as_ptr(),
+                self.as_ptr(),
+                n.as_ptr(),
+                ptr::null(),
+                ptr::null(),
+                ctx.as_ptr(),
+            )).map(|_| ())
         }
     }
 
     /// Computes `generator * n + q * m`, storing the result in `self`.
-    pub fn mul_full(&mut self,
-                    group: &EcGroupRef,
-                    n: &BigNumRef,
-                    q: &EcPointRef,
-                    m: &BigNumRef,
-                    ctx: &mut BigNumContextRef)
-                    -> Result<(), ErrorStack> {
+    pub fn mul_full(
+        &mut self,
+        group: &EcGroupRef,
+        n: &BigNumRef,
+        q: &EcPointRef,
+        m: &BigNumRef,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::EC_POINT_mul(group.as_ptr(),
-                                  self.as_ptr(),
-                                  n.as_ptr(),
-                                  q.as_ptr(),
-                                  m.as_ptr(),
-                                  ctx.as_ptr()))
-                .map(|_| ())
+            cvt(ffi::EC_POINT_mul(
+                group.as_ptr(),
+                self.as_ptr(),
+                n.as_ptr(),
+                q.as_ptr(),
+                m.as_ptr(),
+                ctx.as_ptr(),
+            )).map(|_| ())
         }
     }
 
     /// Inverts `self`.
     pub fn invert(&mut self, group: &EcGroupRef, ctx: &BigNumContextRef) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::EC_POINT_invert(group.as_ptr(), self.as_ptr(), ctx.as_ptr())).map(|_| ())
+            cvt(ffi::EC_POINT_invert(
+                group.as_ptr(),
+                self.as_ptr(),
+                ctx.as_ptr(),
+            )).map(|_| ())
         }
     }
 
     /// Serializes the point to a binary representation.
-    pub fn to_bytes(&self,
-                    group: &EcGroupRef,
-                    form: PointConversionForm,
-                    ctx: &mut BigNumContextRef)
-                    -> Result<Vec<u8>, ErrorStack> {
+    pub fn to_bytes(
+        &self,
+        group: &EcGroupRef,
+        form: PointConversionForm,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
-            let len = ffi::EC_POINT_point2oct(group.as_ptr(),
-                                              self.as_ptr(),
-                                              form.0,
-                                              ptr::null_mut(),
-                                              0,
-                                              ctx.as_ptr());
+            let len = ffi::EC_POINT_point2oct(
+                group.as_ptr(),
+                self.as_ptr(),
+                form.0,
+                ptr::null_mut(),
+                0,
+                ctx.as_ptr(),
+            );
             if len == 0 {
                 return Err(ErrorStack::get());
             }
             let mut buf = vec![0; len];
-            let len = ffi::EC_POINT_point2oct(group.as_ptr(),
-                                              self.as_ptr(),
-                                              form.0,
-                                              buf.as_mut_ptr(),
-                                              len,
-                                              ctx.as_ptr());
+            let len = ffi::EC_POINT_point2oct(
+                group.as_ptr(),
+                self.as_ptr(),
+                form.0,
+                buf.as_mut_ptr(),
+                len,
+                ctx.as_ptr(),
+            );
             if len == 0 {
                 Err(ErrorStack::get())
             } else {
@@ -229,16 +255,19 @@ impl EcPointRef {
     }
 
     /// Determines if this point is equal to another.
-    pub fn eq(&self,
-              group: &EcGroupRef,
-              other: &EcPointRef,
-              ctx: &mut BigNumContextRef)
-              -> Result<bool, ErrorStack> {
+    pub fn eq(
+        &self,
+        group: &EcGroupRef,
+        other: &EcPointRef,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<bool, ErrorStack> {
         unsafe {
-            let res = try!(cvt_n(ffi::EC_POINT_cmp(group.as_ptr(),
-                                                   self.as_ptr(),
-                                                   other.as_ptr(),
-                                                   ctx.as_ptr())));
+            let res = try!(cvt_n(ffi::EC_POINT_cmp(
+                group.as_ptr(),
+                self.as_ptr(),
+                other.as_ptr(),
+                ctx.as_ptr(),
+            )));
             Ok(res == 0)
         }
     }
@@ -250,17 +279,20 @@ impl EcPoint {
         unsafe { cvt_p(ffi::EC_POINT_new(group.as_ptr())).map(EcPoint) }
     }
 
-    pub fn from_bytes(group: &EcGroupRef,
-                      buf: &[u8],
-                      ctx: &mut BigNumContextRef)
-                      -> Result<EcPoint, ErrorStack> {
+    pub fn from_bytes(
+        group: &EcGroupRef,
+        buf: &[u8],
+        ctx: &mut BigNumContextRef,
+    ) -> Result<EcPoint, ErrorStack> {
         let point = try!(EcPoint::new(group));
         unsafe {
-            try!(cvt(ffi::EC_POINT_oct2point(group.as_ptr(),
-                                             point.as_ptr(),
-                                             buf.as_ptr(),
-                                             buf.len(),
-                                             ctx.as_ptr())));
+            try!(cvt(ffi::EC_POINT_oct2point(
+                group.as_ptr(),
+                point.as_ptr(),
+                buf.as_ptr(),
+                buf.len(),
+                ctx.as_ptr(),
+            )));
         }
         Ok(point)
     }
@@ -354,7 +386,10 @@ impl EcKey {
     /// let point = EcPoint::from_bytes(&group, &public_key, &mut ctx).unwrap();
     /// let key = EcKey::from_public_key(&group, &point);
     /// ```
-    pub fn from_public_key(group: &EcGroupRef, public_key: &EcPointRef) -> Result<EcKey, ErrorStack> {
+    pub fn from_public_key(
+        group: &EcGroupRef,
+        public_key: &EcPointRef,
+    ) -> Result<EcKey, ErrorStack> {
         let mut builder = try!(EcKeyBuilder::new());
         try!(builder.set_group(group));
         try!(builder.set_public_key(public_key));
@@ -406,23 +441,23 @@ impl EcKeyBuilder {
 
 impl EcKeyBuilderRef {
     pub fn set_group(&mut self, group: &EcGroupRef) -> Result<&mut EcKeyBuilderRef, ErrorStack> {
-        unsafe {
-            cvt(ffi::EC_KEY_set_group(self.as_ptr(), group.as_ptr())).map(|_| self)
-        }
+        unsafe { cvt(ffi::EC_KEY_set_group(self.as_ptr(), group.as_ptr())).map(|_| self) }
     }
 
-    pub fn set_public_key(&mut self,
-                          public_key: &EcPointRef)
-                          -> Result<&mut EcKeyBuilderRef, ErrorStack> {
+    pub fn set_public_key(
+        &mut self,
+        public_key: &EcPointRef,
+    ) -> Result<&mut EcKeyBuilderRef, ErrorStack> {
         unsafe {
-            cvt(ffi::EC_KEY_set_public_key(self.as_ptr(), public_key.as_ptr())).map(|_| self)
+            cvt(ffi::EC_KEY_set_public_key(
+                self.as_ptr(),
+                public_key.as_ptr(),
+            )).map(|_| self)
         }
     }
 
     pub fn generate_key(&mut self) -> Result<&mut EcKeyBuilderRef, ErrorStack> {
-        unsafe {
-            cvt(ffi::EC_KEY_generate_key(self.as_ptr())).map(|_| self)
-        }
+        unsafe { cvt(ffi::EC_KEY_generate_key(self.as_ptr())).map(|_| self) }
     }
 }
 
@@ -464,7 +499,9 @@ mod test {
         let key = EcKey::generate(&group).unwrap();
         let point = key.public_key().unwrap();
         let mut ctx = BigNumContext::new().unwrap();
-        let bytes = point.to_bytes(&group, POINT_CONVERSION_COMPRESSED, &mut ctx).unwrap();
+        let bytes = point
+            .to_bytes(&group, POINT_CONVERSION_COMPRESSED, &mut ctx)
+            .unwrap();
         let point2 = EcPoint::from_bytes(&group, &bytes, &mut ctx).unwrap();
         assert!(point.eq(&group, &point2, &mut ctx).unwrap());
     }
@@ -475,8 +512,14 @@ mod test {
         let key = EcKey::generate(&group).unwrap();
         let mut ctx = BigNumContext::new().unwrap();
         let mut public_key = EcPoint::new(&group).unwrap();
-        public_key.mul_generator(&group, key.private_key().unwrap(), &mut ctx).unwrap();
-        assert!(public_key.eq(&group, key.public_key().unwrap(), &mut ctx).unwrap());
+        public_key
+            .mul_generator(&group, key.private_key().unwrap(), &mut ctx)
+            .unwrap();
+        assert!(
+            public_key
+                .eq(&group, key.public_key().unwrap(), &mut ctx)
+                .unwrap()
+        );
     }
 
     #[test]
@@ -484,7 +527,10 @@ mod test {
         let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
         let mut ctx = BigNumContext::new().unwrap();
-        let bytes = key.public_key().unwrap().to_bytes(&group, POINT_CONVERSION_COMPRESSED, &mut ctx).unwrap();
+        let bytes = key.public_key()
+            .unwrap()
+            .to_bytes(&group, POINT_CONVERSION_COMPRESSED, &mut ctx)
+            .unwrap();
 
         drop(key);
         let public_key = EcPoint::from_bytes(&group, &bytes, &mut ctx).unwrap();

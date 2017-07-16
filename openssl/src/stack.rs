@@ -86,8 +86,11 @@ impl<T: Stackable> ForeignType for Stack<T> {
 
     #[inline]
     unsafe fn from_ptr(ptr: *mut T::StackType) -> Stack<T> {
-        assert!(!ptr.is_null(), "Must not instantiate a Stack from a null-ptr - use Stack::new() in \
-                                 that case");
+        assert!(
+            !ptr.is_null(),
+            "Must not instantiate a Stack from a null-ptr - use Stack::new() in \
+                                 that case"
+        );
         Stack(ptr)
     }
 
@@ -217,7 +220,9 @@ impl<T: Stackable> StackRef<T> {
     /// Pushes a value onto the top of the stack.
     pub fn push(&mut self, data: T) -> Result<(), ErrorStack> {
         unsafe {
-            try!(cvt(OPENSSL_sk_push(self.as_stack(), data.as_ptr() as *mut _)));
+            try!(cvt(
+                OPENSSL_sk_push(self.as_stack(), data.as_ptr() as *mut _),
+            ));
             mem::forget(data);
             Ok(())
         }
@@ -292,7 +297,8 @@ impl<'a, T: Stackable> iter::IntoIterator for &'a mut Stack<T> {
 
 /// An iterator over the stack's contents.
 pub struct Iter<'a, T: Stackable>
-    where T: 'a
+where
+    T: 'a,
 {
     stack: &'a StackRef<T>,
     pos: usize,

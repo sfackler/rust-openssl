@@ -137,7 +137,11 @@ impl Hasher {
             try!(self.init());
         }
         unsafe {
-            try!(cvt(ffi::EVP_DigestUpdate(self.ctx, data.as_ptr() as *mut _, data.len())));
+            try!(cvt(ffi::EVP_DigestUpdate(
+                self.ctx,
+                data.as_ptr() as *mut _,
+                data.len(),
+            )));
         }
         self.state = Updated;
         Ok(())
@@ -158,7 +162,11 @@ impl Hasher {
         unsafe {
             let mut len = ffi::EVP_MAX_MD_SIZE;
             let mut buf = [0; ffi::EVP_MAX_MD_SIZE as usize];
-            try!(cvt(ffi::EVP_DigestFinal_ex(self.ctx, buf.as_mut_ptr(), &mut len)));
+            try!(cvt(ffi::EVP_DigestFinal_ex(
+                self.ctx,
+                buf.as_mut_ptr(),
+                &mut len,
+            )));
             self.state = Finalized;
             Ok(DigestBytes {
                 buf: buf,
@@ -290,19 +298,24 @@ mod tests {
     // Test vectors from http://www.nsrl.nist.gov/testdata/
     #[allow(non_upper_case_globals)]
     const md5_tests: [(&'static str, &'static str); 13] =
-        [("", "d41d8cd98f00b204e9800998ecf8427e"),
-         ("7F", "83acb6e67e50e31db6ed341dd2de1595"),
-         ("EC9C", "0b07f0d4ca797d8ac58874f887cb0b68"),
-         ("FEE57A", "e0d583171eb06d56198fc0ef22173907"),
-         ("42F497E0", "7c430f178aefdf1487fee7144e9641e2"),
-         ("C53B777F1C", "75ef141d64cb37ec423da2d9d440c925"),
-         ("89D5B576327B", "ebbaf15eb0ed784c6faa9dc32831bf33"),
-         ("5D4CCE781EB190", "ce175c4b08172019f05e6b5279889f2c"),
-         ("81901FE94932D7B9", "cd4d2f62b8cdb3a0cf968a735a239281"),
-         ("C9FFDEE7788EFB4EC9", "e0841a231ab698db30c6c0f3f246c014"),
-         ("66AC4B7EBA95E53DC10B", "a3b3cea71910d9af56742aa0bb2fe329"),
-         ("A510CD18F7A56852EB0319", "577e216843dd11573574d3fb209b97d8"),
-         ("AAED18DBE8938C19ED734A8D", "6f80fb775f27e0a4ce5c2f42fc72c5f1")];
+        [
+            ("", "d41d8cd98f00b204e9800998ecf8427e"),
+            ("7F", "83acb6e67e50e31db6ed341dd2de1595"),
+            ("EC9C", "0b07f0d4ca797d8ac58874f887cb0b68"),
+            ("FEE57A", "e0d583171eb06d56198fc0ef22173907"),
+            ("42F497E0", "7c430f178aefdf1487fee7144e9641e2"),
+            ("C53B777F1C", "75ef141d64cb37ec423da2d9d440c925"),
+            ("89D5B576327B", "ebbaf15eb0ed784c6faa9dc32831bf33"),
+            ("5D4CCE781EB190", "ce175c4b08172019f05e6b5279889f2c"),
+            ("81901FE94932D7B9", "cd4d2f62b8cdb3a0cf968a735a239281"),
+            ("C9FFDEE7788EFB4EC9", "e0841a231ab698db30c6c0f3f246c014"),
+            ("66AC4B7EBA95E53DC10B", "a3b3cea71910d9af56742aa0bb2fe329"),
+            ("A510CD18F7A56852EB0319", "577e216843dd11573574d3fb209b97d8"),
+            (
+                "AAED18DBE8938C19ED734A8D",
+                "6f80fb775f27e0a4ce5c2f42fc72c5f1",
+            ),
+        ];
 
     #[test]
     fn test_md5() {
@@ -322,7 +335,8 @@ mod tests {
     #[test]
     fn test_finish_twice() {
         let mut h = Hasher::new(MessageDigest::md5()).unwrap();
-        h.write_all(&Vec::from_hex(md5_tests[6].0).unwrap()).unwrap();
+        h.write_all(&Vec::from_hex(md5_tests[6].0).unwrap())
+            .unwrap();
         h.finish2().unwrap();
         let res = h.finish2().unwrap();
         let null = hash2(MessageDigest::md5(), &[]).unwrap();
@@ -353,7 +367,8 @@ mod tests {
 
         println!("Clone a finished hasher");
         let mut h3 = h1.clone();
-        h3.write_all(&Vec::from_hex(md5_tests[i + 1].0).unwrap()).unwrap();
+        h3.write_all(&Vec::from_hex(md5_tests[i + 1].0).unwrap())
+            .unwrap();
         let res = h3.finish2().unwrap();
         assert_eq!(res.to_hex(), md5_tests[i + 1].1);
     }
@@ -369,8 +384,12 @@ mod tests {
 
     #[test]
     fn test_sha256() {
-        let tests = [("616263",
-                      "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")];
+        let tests = [
+            (
+                "616263",
+                "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            ),
+        ];
 
         for test in tests.iter() {
             hash_test(MessageDigest::sha256(), test);

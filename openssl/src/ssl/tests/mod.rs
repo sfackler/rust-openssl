@@ -19,8 +19,8 @@ use hash::MessageDigest;
 use ocsp::{OcspResponse, RESPONSE_STATUS_UNAUTHORIZED};
 use ssl;
 use ssl::{SslMethod, HandshakeError, SslContext, SslStream, Ssl, ShutdownResult,
-    SslConnectorBuilder, SslAcceptorBuilder, Error, SSL_VERIFY_PEER, SSL_VERIFY_NONE,
-    STATUS_TYPE_OCSP};
+          SslConnectorBuilder, SslAcceptorBuilder, Error, SSL_VERIFY_PEER, SSL_VERIFY_NONE,
+          STATUS_TYPE_OCSP};
 use x509::{X509StoreContext, X509, X509Name, X509_FILETYPE_PEM};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::verify::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS;
@@ -75,11 +75,13 @@ impl Server {
         if let Some(mut input) = input {
             thread::spawn(move || input(stdin));
         }
-        (Server {
-            p: child,
-            _temp: td,
-        },
-         addr)
+        (
+            Server {
+                p: child,
+                _temp: td,
+            },
+            addr,
+        )
     }
 
     fn new_tcp(args: &[&str]) -> (Server, TcpStream) {
@@ -102,26 +104,31 @@ impl Server {
 
     #[allow(dead_code)]
     fn new_alpn() -> (Server, TcpStream) {
-        Server::new_tcp(&["-www",
-                          "-nextprotoneg",
-                          "http/1.1,spdy/3.1",
-                          "-alpn",
-                          "http/1.1,spdy/3.1"])
+        Server::new_tcp(
+            &[
+                "-www",
+                "-nextprotoneg",
+                "http/1.1,spdy/3.1",
+                "-alpn",
+                "http/1.1,spdy/3.1",
+            ],
+        )
     }
 
     fn new_dtlsv1<I>(input: I) -> (Server, UdpConnected)
-        where I: IntoIterator<Item = &'static str>,
-              I::IntoIter: Send + 'static
+    where
+        I: IntoIterator<Item = &'static str>,
+        I::IntoIter: Send + 'static,
     {
         let mut input = input.into_iter();
-        let (s, addr) = Server::spawn(&["-dtls1"],
-                                      Some(Box::new(move |mut io| {
-            for s in input.by_ref() {
+        let (s, addr) = Server::spawn(
+            &["-dtls1"],
+            Some(Box::new(move |mut io| for s in input.by_ref() {
                 if io.write_all(s.as_bytes()).is_err() {
                     break;
                 }
-            }
-        })));
+            })),
+        );
         // Need to wait for the UDP socket to get bound in our child process,
         // but don't currently have a great way to do that so just wait for a
         // bit.
@@ -199,9 +206,10 @@ macro_rules! run_test(
     );
 );
 
-run_test!(new_ctx, |method, _| {
-    SslContext::builder(method).unwrap();
-});
+run_test!(
+    new_ctx,
+    |method, _| { SslContext::builder(method).unwrap(); }
+);
 
 run_test!(verify_untrusted, |method, stream| {
     let mut ctx = SslContext::builder(method).unwrap();
@@ -325,10 +333,10 @@ run_test!(verify_trusted_get_error_err, |method, stream| {
 run_test!(verify_callback_data, |method, stream| {
     let mut ctx = SslContext::builder(method).unwrap();
 
-// Node id was generated as SHA256 hash of certificate "test/cert.pem"
-// in DER format.
-// Command: openssl x509 -in test/cert.pem  -outform DER | openssl dgst -sha256
-// Please update if "test/cert.pem" will ever change
+    // Node id was generated as SHA256 hash of certificate "test/cert.pem"
+    // in DER format.
+    // Command: openssl x509 -in test/cert.pem  -outform DER | openssl dgst -sha256
+    // Please update if "test/cert.pem" will ever change
     let node_hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
     let node_id = Vec::from_hex(node_hash_str).unwrap();
     ctx.set_verify_callback(SSL_VERIFY_PEER, move |_preverify_ok, x509_ctx| {
@@ -395,8 +403,10 @@ fn test_write_hits_stream() {
 
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SSL_VERIFY_PEER);
-    ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM).unwrap();
-    ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM).unwrap();
+    ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
+        .unwrap();
+    ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM)
+        .unwrap();
     let stream = listener.accept().unwrap().0;
     let mut stream = Ssl::new(&ctx.build()).unwrap().accept(stream).unwrap();
 
@@ -488,7 +498,9 @@ fn test_read() {
     let mut stream = Ssl::new(&ctx.build()).unwrap().connect(tcp).unwrap();
     stream.write_all("GET /\r\n\r\n".as_bytes()).unwrap();
     stream.flush().unwrap();
-    io::copy(&mut stream, &mut io::sink()).ok().expect("read error");
+    io::copy(&mut stream, &mut io::sink()).ok().expect(
+        "read error",
+    );
 }
 
 #[test]
@@ -521,8 +533,10 @@ fn test_state() {
     let ctx = SslContext::builder(SslMethod::tls()).unwrap();
     let stream = Ssl::new(&ctx.build()).unwrap().connect(tcp).unwrap();
     assert_eq!(stream.ssl().state_string(), "SSLOK ");
-    assert_eq!(stream.ssl().state_string_long(),
-               "SSL negotiation finished successfully");
+    assert_eq!(
+        stream.ssl().state_string_long(),
+        "SSL negotiation finished successfully"
+    );
 }
 
 /// Tests that connecting with the client using ALPN, but the server not does not
@@ -670,8 +684,10 @@ fn test_npn_server_advertise_multiple() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         ctx.set_verify(SSL_VERIFY_PEER);
         ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]).unwrap();
-        assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
-                   .is_ok());
+        assert!(
+            ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
+                .is_ok()
+        );
         ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM)
             .unwrap();
         ctx.build()
@@ -711,8 +727,10 @@ fn test_alpn_server_advertise_multiple() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         ctx.set_verify(SSL_VERIFY_PEER);
         ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]).unwrap();
-        assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
-                   .is_ok());
+        assert!(
+            ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
+                .is_ok()
+        );
         ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM)
             .unwrap();
         ctx.build()
@@ -752,8 +770,10 @@ fn test_alpn_server_select_none() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         ctx.set_verify(SSL_VERIFY_PEER);
         ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]).unwrap();
-        assert!(ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
-                   .is_ok());
+        assert!(
+            ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
+                .is_ok()
+        );
         ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM)
             .unwrap();
         ctx.build()
@@ -990,7 +1010,11 @@ fn flush_panic() {
     let stream = ExplodingStream(stream);
 
     let ctx = SslContext::builder(SslMethod::tls()).unwrap();
-    let mut stream = Ssl::new(&ctx.build()).unwrap().connect(stream).ok().unwrap();
+    let mut stream = Ssl::new(&ctx.build())
+        .unwrap()
+        .connect(stream)
+        .ok()
+        .unwrap();
     let _ = stream.flush();
 }
 
@@ -1040,7 +1064,9 @@ fn verify_valid_hostname() {
     ctx.set_verify(SSL_VERIFY_PEER);
 
     let mut ssl = Ssl::new(&ctx.build()).unwrap();
-    ssl.param_mut().set_hostflags(X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+    ssl.param_mut().set_hostflags(
+        X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS,
+    );
     ssl.param_mut().set_host("google.com").unwrap();
 
     let s = TcpStream::connect("google.com:443").unwrap();
@@ -1063,7 +1089,9 @@ fn verify_invalid_hostname() {
     ctx.set_verify(SSL_VERIFY_PEER);
 
     let mut ssl = Ssl::new(&ctx.build()).unwrap();
-    ssl.param_mut().set_hostflags(X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+    ssl.param_mut().set_hostflags(
+        X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS,
+    );
     ssl.param_mut().set_host("foobar.com").unwrap();
 
     let s = TcpStream::connect("google.com:443").unwrap();
@@ -1143,7 +1171,10 @@ fn connector_client_server_mozilla_intermediate() {
     });
 
     let mut connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
-    connector.builder_mut().set_ca_file("test/root-ca.pem").unwrap();
+    connector
+        .builder_mut()
+        .set_ca_file("test/root-ca.pem")
+        .unwrap();
     let connector = connector.build();
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
@@ -1175,7 +1206,10 @@ fn connector_client_server_mozilla_modern() {
     });
 
     let mut connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
-    connector.builder_mut().set_ca_file("test/root-ca.pem").unwrap();
+    connector
+        .builder_mut()
+        .set_ca_file("test/root-ca.pem")
+        .unwrap();
     let connector = connector.build();
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
@@ -1196,8 +1230,10 @@ fn shutdown() {
     thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM).unwrap();
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
+            .unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM)
+            .unwrap();
         let ssl = Ssl::new(&ctx.build()).unwrap();
         let mut stream = ssl.accept(stream).unwrap();
 
@@ -1249,11 +1285,13 @@ fn tmp_dh_callback() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
 
-    thread::spawn(move ||{
+    thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM).unwrap();
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
+            .unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM)
+            .unwrap();
         ctx.set_tmp_dh_callback(|_, _, _| {
             CALLED_BACK.store(true, Ordering::SeqCst);
             let dh = include_bytes!("../../../test/dhparams.pem");
@@ -1283,11 +1321,13 @@ fn tmp_ecdh_callback() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
 
-    thread::spawn(move ||{
+    thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM).unwrap();
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
+            .unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM)
+            .unwrap();
         ctx.set_tmp_ecdh_callback(|_, _, _| {
             CALLED_BACK.store(true, Ordering::SeqCst);
             EcKey::new_by_curve_name(nid::X9_62_PRIME256V1)
@@ -1312,11 +1352,13 @@ fn tmp_dh_callback_ssl() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
 
-    thread::spawn(move ||{
+    thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM).unwrap();
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
+            .unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM)
+            .unwrap();
         let mut ssl = Ssl::new(&ctx.build()).unwrap();
         ssl.set_tmp_dh_callback(|_, _, _| {
             CALLED_BACK.store(true, Ordering::SeqCst);
@@ -1346,11 +1388,13 @@ fn tmp_ecdh_callback_ssl() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
 
-    thread::spawn(move ||{
+    thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM).unwrap();
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
+            .unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM)
+            .unwrap();
         let mut ssl = Ssl::new(&ctx.build()).unwrap();
         ssl.set_tmp_ecdh_callback(|_, _, _| {
             CALLED_BACK.store(true, Ordering::SeqCst);
@@ -1402,8 +1446,10 @@ fn status_callbacks() {
     let guard = thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM).unwrap();
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509_FILETYPE_PEM)
+            .unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509_FILETYPE_PEM)
+            .unwrap();
         ctx.set_status_callback(|ssl| {
             CALLED_BACK_SERVER.store(true, Ordering::SeqCst);
             let response = OcspResponse::create(RESPONSE_STATUS_UNAUTHORIZED, None).unwrap();

@@ -11,19 +11,21 @@ use std::panic::{self, AssertUnwindSafe};
 use std::process::Command;
 
 // The set of `OPENSSL_NO_<FOO>`s that we care about.
-const DEFINES: &'static [&'static str] = &["OPENSSL_NO_BUF_FREELISTS",
-                                           "OPENSSL_NO_COMP",
-                                           "OPENSSL_NO_EC",
-                                           "OPENSSL_NO_EC2M",
-                                           "OPENSSL_NO_ENGINE",
-                                           "OPENSSL_NO_KRB5",
-                                           "OPENSSL_NO_NEXTPROTONEG",
-                                           "OPENSSL_NO_PSK",
-                                           "OPENSSL_NO_RFC3779",
-                                           "OPENSSL_NO_SHA",
-                                           "OPENSSL_NO_SRP",
-                                           "OPENSSL_NO_SSL3_METHOD",
-                                           "OPENSSL_NO_TLSEXT"];
+const DEFINES: &'static [&'static str] = &[
+    "OPENSSL_NO_BUF_FREELISTS",
+    "OPENSSL_NO_COMP",
+    "OPENSSL_NO_EC",
+    "OPENSSL_NO_EC2M",
+    "OPENSSL_NO_ENGINE",
+    "OPENSSL_NO_KRB5",
+    "OPENSSL_NO_NEXTPROTONEG",
+    "OPENSSL_NO_PSK",
+    "OPENSSL_NO_RFC3779",
+    "OPENSSL_NO_SHA",
+    "OPENSSL_NO_SRP",
+    "OPENSSL_NO_SSL3_METHOD",
+    "OPENSSL_NO_TLSEXT",
+];
 
 enum Version {
     Openssl110,
@@ -52,16 +54,22 @@ fn main() {
     };
 
     if !Path::new(&lib_dir).exists() {
-        panic!("OpenSSL library directory does not exist: {}",
-               lib_dir.to_string_lossy());
+        panic!(
+            "OpenSSL library directory does not exist: {}",
+            lib_dir.to_string_lossy()
+        );
     }
     if !Path::new(&include_dir).exists() {
-        panic!("OpenSSL include directory does not exist: {}",
-               include_dir.to_string_lossy());
+        panic!(
+            "OpenSSL include directory does not exist: {}",
+            include_dir.to_string_lossy()
+        );
     }
 
-    println!("cargo:rustc-link-search=native={}",
-             lib_dir.to_string_lossy());
+    println!(
+        "cargo:rustc-link-search=native={}",
+        lib_dir.to_string_lossy()
+    );
     println!("cargo:include={}", include_dir.to_string_lossy());
 
     let version = validate_headers(&[include_dir.clone().into()]);
@@ -103,7 +111,8 @@ fn find_openssl_dir(target: &str) -> OsString {
 
     try_pkg_config();
 
-    let mut msg = format!("
+    let mut msg = format!(
+        "
 
 Could not find directory of OpenSSL installation, and this `-sys` crate cannot
 proceed without this knowledge. If OpenSSL is installed and this crate had
@@ -119,14 +128,16 @@ and include information about your system as well as this message.
     openssl-sys = {}
 
 ",
-                          host,
-                          target,
-                          env!("CARGO_PKG_VERSION"));
+        host,
+        target,
+        env!("CARGO_PKG_VERSION")
+    );
 
     if host.contains("apple-darwin") && target.contains("apple-darwin") {
         let system = Path::new("/usr/lib/libssl.0.9.8.dylib");
         if system.exists() {
-            msg.push_str(&format!("
+            msg.push_str(&format!(
+                "
 
 It looks like you're compiling on macOS, where the system contains a version of
 OpenSSL 0.9.8. This crate no longer supports OpenSSL 0.9.8.
@@ -137,24 +148,28 @@ install the `openssl` package, or as a maintainer you can use the openssl-sys
 
 Unfortunately though the compile cannot continue, so aborting.
 
-"));
+"
+            ));
         }
     }
 
     if host.contains("unknown-linux") && target.contains("unknown-linux-gnu") {
         if Command::new("pkg-config").output().is_err() {
-            msg.push_str(&format!("
+            msg.push_str(&format!(
+                "
 It looks like you're compiling on Linux and also targeting Linux. Currently this
 requires the `pkg-config` utility to find OpenSSL but unfortunately `pkg-config`
 could not be found. If you have OpenSSL installed you can likely fix this by
 installing `pkg-config`.
 
-"));
+"
+            ));
         }
     }
 
     if host.contains("windows") && target.contains("windows-gnu") {
-        msg.push_str(&format!("
+        msg.push_str(&format!(
+            "
 It looks like you're compiling for MinGW but you may not have either OpenSSL or
 pkg-config installed. You can install these two dependencies with:
 
@@ -162,11 +177,13 @@ pkg-config installed. You can install these two dependencies with:
 
 and try building this crate again.
 
-"));
+"
+        ));
     }
 
     if host.contains("windows") && target.contains("windows-msvc") {
-        msg.push_str(&format!("
+        msg.push_str(&format!(
+            "
 It looks like you're compiling for MSVC but we couldn't detect an OpenSSL
 installation. If there isn't one installed then you can try the rust-openssl
 README for more information about how to download precompiled binaries of
@@ -174,7 +191,8 @@ OpenSSL:
 
     https://github.com/sfackler/rust-openssl#windows
 
-"));
+"
+        ));
     }
 
     panic!(msg);
@@ -198,9 +216,9 @@ fn try_pkg_config() {
         return;
     }
 
-    let lib = match pkg_config::Config::new()
-              .print_system_libs(false)
-              .find("openssl") {
+    let lib = match pkg_config::Config::new().print_system_libs(false).find(
+        "openssl",
+    ) {
         Ok(lib) => lib,
         Err(e) => {
             println!("run pkg_config fail: {:?}", e);
@@ -236,8 +254,9 @@ fn validate_headers(include_dirs: &[PathBuf]) -> Version {
     path.push("expando.c");
     let mut file = BufWriter::new(File::create(&path).unwrap());
 
-    write!(file,
-           "\
+    write!(
+        file,
+        "\
 #include <openssl/opensslv.h>
 #include <openssl/opensslconf.h>
 
@@ -270,18 +289,19 @@ RUST_OPENSSL_101
 #else
 RUST_OPENSSL_OLD
 #endif
-")
-            .unwrap();
+"
+    ).unwrap();
 
     for define in DEFINES {
-        write!(file,
-               "\
+        write!(
+            file,
+            "\
 #ifdef {define}
 RUST_{define}
 #endif
 ",
-               define = define)
-                .unwrap();
+            define = define
+        ).unwrap();
     }
 
     file.flush().unwrap();
@@ -295,7 +315,8 @@ RUST_{define}
     let expanded = match panic::catch_unwind(AssertUnwindSafe(|| gcc.file(&path).expand())) {
         Ok(expanded) => expanded,
         Err(_) => {
-            panic!("
+            panic!(
+                "
 Failed to find OpenSSL development headers.
 
 You can try fixing this setting the `OPENSSL_DIR` environment variable
@@ -312,7 +333,8 @@ specific to your distribution:
 See rust-openssl README for more information:
 
     https://github.com/sfackler/rust-openssl#linux
-");
+"
+            );
         }
     };
     let expanded = String::from_utf8(expanded).unwrap();
@@ -381,13 +403,15 @@ See rust-openssl README for more information:
         println!("cargo:version=101");
         Version::Openssl101
     } else {
-        panic!("
+        panic!(
+            "
 
 This crate is only compatible with OpenSSL 1.0.1, 1.0.2, and 1.1.0, or LibreSSL
 2.5.0, 2.5.1, 2.5.2, 2.5.3, and 2.5.4, but a different version of OpenSSL was
 found. The build is now aborting due to this version mismatch.
 
-");
+"
+        );
     }
 }
 
@@ -413,23 +437,22 @@ fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
         .map(|e| e.file_name())
         .filter_map(|e| e.into_string().ok())
         .collect::<HashSet<_>>();
-    let can_static =
-        libs.iter()
-            .all(|l| {
-                     files.contains(&format!("lib{}.a", l)) || files.contains(&format!("{}.lib", l))
-                 });
-    let can_dylib = libs.iter()
-        .all(|l| {
-                 files.contains(&format!("lib{}.so", l)) || files.contains(&format!("{}.dll", l)) ||
-                 files.contains(&format!("lib{}.dylib", l))
-             });
+    let can_static = libs.iter().all(|l| {
+        files.contains(&format!("lib{}.a", l)) || files.contains(&format!("{}.lib", l))
+    });
+    let can_dylib = libs.iter().all(|l| {
+        files.contains(&format!("lib{}.so", l)) || files.contains(&format!("{}.dll", l)) ||
+            files.contains(&format!("lib{}.dylib", l))
+    });
     match (can_static, can_dylib) {
         (true, false) => return "static",
         (false, true) => return "dylib",
         (false, false) => {
-            panic!("OpenSSL libdir at `{}` does not contain the required files \
+            panic!(
+                "OpenSSL libdir at `{}` does not contain the required files \
                     to either statically or dynamically link OpenSSL",
-                   libdir.display());
+                libdir.display()
+            );
         }
         (true, true) => {}
     }

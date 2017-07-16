@@ -40,7 +40,7 @@ fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     ctx.set_options(opts);
 
     let mode = ssl::SSL_MODE_AUTO_RETRY | ssl::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
-               ssl::SSL_MODE_ENABLE_PARTIAL_WRITE;
+        ssl::SSL_MODE_ENABLE_PARTIAL_WRITE;
     ctx.set_mode(mode);
 
     Ok(ctx)
@@ -57,9 +57,11 @@ impl SslConnectorBuilder {
         let mut ctx = try!(ctx(method));
         try!(ctx.set_default_verify_paths());
         // From https://github.com/python/cpython/blob/c30098c8c6014f3340a369a31df9c74bdbacc269/Lib/ssl.py#L191
-        try!(ctx.set_cipher_list("ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:DH+CHACHA20:ECDH+AES256:\
+        try!(ctx.set_cipher_list(
+            "ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:DH+CHACHA20:ECDH+AES256:\
                                   DH+AES256:ECDH+AES128:DH+AES:ECDH+HIGH:DH+HIGH:RSA+AESGCM:\
-                                  RSA+AES:RSA+HIGH:!aNULL:!eNULL:!MD5:!3DES"));
+                                  RSA+AES:RSA+HIGH:!aNULL:!eNULL:!MD5:!3DES",
+        ));
         setup_verify(&mut ctx);
 
         Ok(SslConnectorBuilder(ctx))
@@ -96,7 +98,8 @@ impl SslConnector {
     ///
     /// The domain is used for SNI and hostname verification.
     pub fn connect<S>(&self, domain: &str, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
-        where S: Read + Write
+    where
+        S: Read + Write,
     {
         try!(self.configure()).connect(domain, stream)
     }
@@ -140,7 +143,8 @@ impl ConnectConfiguration {
     ///
     /// The domain is used for SNI and hostname verification.
     pub fn connect<S>(mut self, domain: &str, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
-        where S: Read + Write
+    where
+        S: Read + Write,
     {
         try!(self.0.set_hostname(domain));
         try!(setup_verify_hostname(&mut self.0, domain));
@@ -176,13 +180,15 @@ impl SslAcceptorBuilder {
     /// recommendations. See its [documentation][docs] for more details on specifics.
     ///
     /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
-    pub fn mozilla_intermediate<I>(method: SslMethod,
-                                   private_key: &PKeyRef,
-                                   certificate: &X509Ref,
-                                   chain: I)
-                                   -> Result<SslAcceptorBuilder, ErrorStack>
-        where I: IntoIterator,
-              I::Item: AsRef<X509Ref>
+    pub fn mozilla_intermediate<I>(
+        method: SslMethod,
+        private_key: &PKeyRef,
+        certificate: &X509Ref,
+        chain: I,
+    ) -> Result<SslAcceptorBuilder, ErrorStack>
+    where
+        I: IntoIterator,
+        I::Item: AsRef<X509Ref>,
     {
         let builder = try!(SslAcceptorBuilder::mozilla_intermediate_raw(method));
         builder.finish_setup(private_key, certificate, chain)
@@ -194,13 +200,15 @@ impl SslAcceptorBuilder {
     /// See its [documentation][docs] for more details on specifics.
     ///
     /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
-    pub fn mozilla_modern<I>(method: SslMethod,
-                             private_key: &PKeyRef,
-                             certificate: &X509Ref,
-                             chain: I)
-                             -> Result<SslAcceptorBuilder, ErrorStack>
-        where I: IntoIterator,
-              I::Item: AsRef<X509Ref>
+    pub fn mozilla_modern<I>(
+        method: SslMethod,
+        private_key: &PKeyRef,
+        certificate: &X509Ref,
+        chain: I,
+    ) -> Result<SslAcceptorBuilder, ErrorStack>
+    where
+        I: IntoIterator,
+        I::Item: AsRef<X509Ref>,
     {
         let builder = try!(SslAcceptorBuilder::mozilla_modern_raw(method));
         builder.finish_setup(private_key, certificate, chain)
@@ -212,7 +220,8 @@ impl SslAcceptorBuilder {
         let dh = try!(Dh::from_pem(DHPARAM_PEM.as_bytes()));
         try!(ctx.set_tmp_dh(&dh));
         try!(setup_curves(&mut ctx));
-        try!(ctx.set_cipher_list("ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:\
+        try!(ctx.set_cipher_list(
+            "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:\
                                   ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:\
                                   ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:\
                                   DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:\
@@ -225,7 +234,8 @@ impl SslAcceptorBuilder {
                                   ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:\
                                   EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:\
                                   AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:\
-                                  DES-CBC3-SHA:!DSS"));
+                                  DES-CBC3-SHA:!DSS",
+        ));
         Ok(SslAcceptorBuilder(ctx))
     }
 
@@ -233,21 +243,25 @@ impl SslAcceptorBuilder {
     pub fn mozilla_modern_raw(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
         let mut ctx = try!(ctx(method));
         try!(setup_curves(&mut ctx));
-        try!(ctx.set_cipher_list("ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:\
+        try!(ctx.set_cipher_list(
+            "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:\
                                   ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:\
                                   ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:\
                                   ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:\
-                                  ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256"));
+                                  ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256",
+        ));
         Ok(SslAcceptorBuilder(ctx))
     }
 
-    fn finish_setup<I>(mut self,
-                       private_key: &PKeyRef,
-                       certificate: &X509Ref,
-                       chain: I)
-                       -> Result<SslAcceptorBuilder, ErrorStack>
-        where I: IntoIterator,
-              I::Item: AsRef<X509Ref>
+    fn finish_setup<I>(
+        mut self,
+        private_key: &PKeyRef,
+        certificate: &X509Ref,
+        chain: I,
+    ) -> Result<SslAcceptorBuilder, ErrorStack>
+    where
+        I: IntoIterator,
+        I::Item: AsRef<X509Ref>,
     {
         try!(self.0.set_private_key(private_key));
         try!(self.0.set_certificate(certificate));
@@ -303,7 +317,8 @@ pub struct SslAcceptor(SslContext);
 impl SslAcceptor {
     /// Initiates a server-side TLS session on a stream.
     pub fn accept<S>(&self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
-        where S: Read + Write
+    where
+        S: Read + Write,
     {
         let ssl = try!(Ssl::new(&self.0));
         ssl.accept(stream)
@@ -320,7 +335,7 @@ fn setup_verify(ctx: &mut SslContextBuilder) {
     ctx.set_verify_callback(SSL_VERIFY_PEER, |p, x509| {
         let hostname = match x509.ssl() {
             Ok(Some(ssl)) => ssl.ex_data(*HOSTNAME_IDX),
-            _ => None
+            _ => None,
         };
         match hostname {
             Some(hostname) => verify::verify_callback(hostname, p, x509),
@@ -352,10 +367,11 @@ mod verify {
     use x509::{X509StoreContextRef, X509Ref, X509NameRef, GeneralName};
     use stack::Stack;
 
-    pub fn verify_callback(domain: &str,
-                           preverify_ok: bool,
-                           x509_ctx: &X509StoreContextRef)
-                           -> bool {
+    pub fn verify_callback(
+        domain: &str,
+        preverify_ok: bool,
+        x509_ctx: &X509StoreContextRef,
+    ) -> bool {
         if !preverify_ok || x509_ctx.error_depth() != 0 {
             return preverify_ok;
         }
@@ -497,14 +513,16 @@ mod verify {
         match (expected, actual.len()) {
             (&IpAddr::V4(ref addr), 4) => actual == addr.octets(),
             (&IpAddr::V6(ref addr), 16) => {
-                let segments = [((actual[0] as u16) << 8) | actual[1] as u16,
-                                ((actual[2] as u16) << 8) | actual[3] as u16,
-                                ((actual[4] as u16) << 8) | actual[5] as u16,
-                                ((actual[6] as u16) << 8) | actual[7] as u16,
-                                ((actual[8] as u16) << 8) | actual[9] as u16,
-                                ((actual[10] as u16) << 8) | actual[11] as u16,
-                                ((actual[12] as u16) << 8) | actual[13] as u16,
-                                ((actual[14] as u16) << 8) | actual[15] as u16];
+                let segments = [
+                    ((actual[0] as u16) << 8) | actual[1] as u16,
+                    ((actual[2] as u16) << 8) | actual[3] as u16,
+                    ((actual[4] as u16) << 8) | actual[5] as u16,
+                    ((actual[6] as u16) << 8) | actual[7] as u16,
+                    ((actual[8] as u16) << 8) | actual[9] as u16,
+                    ((actual[10] as u16) << 8) | actual[11] as u16,
+                    ((actual[12] as u16) << 8) | actual[13] as u16,
+                    ((actual[14] as u16) << 8) | actual[15] as u16,
+                ];
                 segments == addr.segments()
             }
             _ => false,

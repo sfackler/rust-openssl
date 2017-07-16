@@ -81,13 +81,15 @@ impl Dsa {
     pub fn generate(bits: u32) -> Result<Dsa, ErrorStack> {
         unsafe {
             let dsa = Dsa(try!(cvt_p(ffi::DSA_new())));
-            try!(cvt(ffi::DSA_generate_parameters_ex(dsa.0,
-                                                     bits as c_int,
-                                                     ptr::null(),
-                                                     0,
-                                                     ptr::null_mut(),
-                                                     ptr::null_mut(),
-                                                     ptr::null_mut())));
+            try!(cvt(ffi::DSA_generate_parameters_ex(
+                dsa.0,
+                bits as c_int,
+                ptr::null(),
+                0,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+            )));
             try!(cvt(ffi::DSA_generate_key(dsa.0)));
             Ok(dsa)
         }
@@ -100,7 +102,8 @@ impl Dsa {
 
     #[deprecated(since = "0.9.2", note = "use private_key_from_pem_callback")]
     pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<Dsa, ErrorStack>
-        where F: FnOnce(&mut [c_char]) -> usize
+    where
+        F: FnOnce(&mut [c_char]) -> usize,
     {
         ffi::init();
         let mut cb = CallbackState::new(pass_cb);
@@ -108,10 +111,12 @@ impl Dsa {
 
         unsafe {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
-            let dsa = try!(cvt_p(ffi::PEM_read_bio_DSAPrivateKey(mem_bio.as_ptr(),
-                                                                 ptr::null_mut(),
-                                                                 Some(invoke_passwd_cb_old::<F>),
-                                                                 cb_ptr)));
+            let dsa = try!(cvt_p(ffi::PEM_read_bio_DSAPrivateKey(
+                mem_bio.as_ptr(),
+                ptr::null_mut(),
+                Some(invoke_passwd_cb_old::<F>),
+                cb_ptr,
+            )));
             Ok(Dsa(dsa))
         }
     }
@@ -174,7 +179,8 @@ mod test {
     #[test]
     fn test_to_password() {
         let key = Dsa::generate(2048).unwrap();
-        let pem = key.private_key_to_pem_passphrase(Cipher::aes_128_cbc(), b"foobar").unwrap();
+        let pem = key.private_key_to_pem_passphrase(Cipher::aes_128_cbc(), b"foobar")
+            .unwrap();
         Dsa::private_key_from_pem_passphrase(&pem, b"foobar").unwrap();
         assert!(Dsa::private_key_from_pem_passphrase(&pem, b"fizzbuzz").is_err());
     }
@@ -184,11 +190,10 @@ mod test {
         let mut password_queried = false;
         let key = include_bytes!("../test/dsa-encrypted.pem");
         Dsa::private_key_from_pem_callback(key, |password| {
-                password_queried = true;
-                password[..6].copy_from_slice(b"mypass");
-                Ok(6)
-            })
-            .unwrap();
+            password_queried = true;
+            password[..6].copy_from_slice(b"mypass");
+            Ok(6)
+        }).unwrap();
 
         assert!(password_queried);
     }

@@ -24,7 +24,10 @@ impl fmt::Display for Asn1GeneralizedTimeRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         unsafe {
             let mem_bio = try!(MemBio::new());
-            try!(cvt(ffi::ASN1_GENERALIZEDTIME_print(mem_bio.as_ptr(), self.as_ptr())));
+            try!(cvt(ffi::ASN1_GENERALIZEDTIME_print(
+                mem_bio.as_ptr(),
+                self.as_ptr(),
+            )));
             write!(f, "{}", str::from_utf8_unchecked(mem_bio.get_buf()))
         }
     }
@@ -104,16 +107,11 @@ foreign_type! {
 
 impl Asn1IntegerRef {
     pub fn get(&self) -> i64 {
-        unsafe {
-            ::ffi::ASN1_INTEGER_get(self.as_ptr()) as i64
-        }
+        unsafe { ::ffi::ASN1_INTEGER_get(self.as_ptr()) as i64 }
     }
 
-    pub fn set(&mut self, value: i32) -> Result<(), ErrorStack>
-    {
-        unsafe {
-            cvt(::ffi::ASN1_INTEGER_set(self.as_ptr(), value as c_long)).map(|_| ())
-        }
+    pub fn set(&mut self, value: i32) -> Result<(), ErrorStack> {
+        unsafe { cvt(::ffi::ASN1_INTEGER_set(self.as_ptr(), value as c_long)).map(|_| ()) }
     }
 }
 
@@ -146,9 +144,7 @@ foreign_type! {
 impl Asn1ObjectRef {
     /// Returns the NID associated with this OID.
     pub fn nid(&self) -> Nid {
-        unsafe {
-            Nid::from_raw(ffi::OBJ_obj2nid(self.as_ptr()))
-        }
+        unsafe { Nid::from_raw(ffi::OBJ_obj2nid(self.as_ptr())) }
     }
 }
 
@@ -156,10 +152,12 @@ impl fmt::Display for Asn1ObjectRef {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         unsafe {
             let mut buf = [0; 80];
-            let len = ffi::OBJ_obj2txt(buf.as_mut_ptr() as *mut _,
-                                       buf.len() as c_int,
-                                       self.as_ptr(),
-                                       0);
+            let len = ffi::OBJ_obj2txt(
+                buf.as_mut_ptr() as *mut _,
+                buf.len() as c_int,
+                self.as_ptr(),
+                0,
+            );
             let s = try!(str::from_utf8(&buf[..len as usize]).map_err(|_| fmt::Error));
             fmt.write_str(s)
         }

@@ -13,9 +13,11 @@ use ffi;
 pub fn eq(a: &[u8], b: &[u8]) -> bool {
     assert!(a.len() == b.len());
     let ret = unsafe {
-        ffi::CRYPTO_memcmp(a.as_ptr() as *const _,
-                           b.as_ptr() as *const _,
-                           a.len() as size_t)
+        ffi::CRYPTO_memcmp(
+            a.as_ptr() as *const _,
+            b.as_ptr() as *const _,
+            a.len() as size_t,
+        )
     };
     ret == 0
 }

@@ -8,7 +8,7 @@ use x509::{X509v3Context, X509Extension};
 ///
 /// See the `Extension` documentation for more information on the different
 /// variants.
-#[derive(Clone,Hash,PartialEq,Eq)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
 pub enum ExtensionType {
     KeyUsage,
@@ -113,12 +113,20 @@ impl ToString for Extension {
             &Extension::KeyUsage(ref purposes) => join(purposes.iter(), ","),
             &Extension::ExtKeyUsage(ref purposes) => join(purposes.iter(), ","),
             &Extension::SubjectAltName(ref names) => {
-                join(names.iter().map(|&(ref opt, ref val)| opt.to_string() + ":" + &val),
-                     ",")
+                join(
+                    names.iter().map(|&(ref opt, ref val)| {
+                        opt.to_string() + ":" + &val
+                    }),
+                    ",",
+                )
             }
             &Extension::IssuerAltName(ref names) => {
-                join(names.iter().map(|&(ref opt, ref val)| opt.to_string() + ":" + &val),
-                     ",")
+                join(
+                    names.iter().map(|&(ref opt, ref val)| {
+                        opt.to_string() + ":" + &val
+                    }),
+                    ",",
+                )
             }
             &Extension::OtherNid(_, ref value) => value.clone(),
             &Extension::OtherStr(_, ref value) => value.clone(),
@@ -126,7 +134,7 @@ impl ToString for Extension {
     }
 }
 
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy)]
 #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
 pub enum KeyUsageOption {
     DigitalSignature,
@@ -361,10 +369,30 @@ impl KeyUsage {
         let mut value = String::new();
         let mut first = true;
         append(&mut value, &mut first, self.critical, "critical");
-        append(&mut value, &mut first, self.digital_signature, "digitalSignature");
-        append(&mut value, &mut first, self.non_repudiation, "nonRepudiation");
-        append(&mut value, &mut first, self.key_encipherment, "keyEncipherment");
-        append(&mut value, &mut first, self.data_encipherment, "dataEncipherment");
+        append(
+            &mut value,
+            &mut first,
+            self.digital_signature,
+            "digitalSignature",
+        );
+        append(
+            &mut value,
+            &mut first,
+            self.non_repudiation,
+            "nonRepudiation",
+        );
+        append(
+            &mut value,
+            &mut first,
+            self.key_encipherment,
+            "keyEncipherment",
+        );
+        append(
+            &mut value,
+            &mut first,
+            self.data_encipherment,
+            "dataEncipherment",
+        );
         append(&mut value, &mut first, self.key_agreement, "keyAgreement");
         append(&mut value, &mut first, self.key_cert_sign, "keyCertSign");
         append(&mut value, &mut first, self.crl_sign, "cRLSign");
@@ -476,7 +504,12 @@ impl ExtendedKeyUsage {
         append(&mut value, &mut first, self.server_auth, "serverAuth");
         append(&mut value, &mut first, self.client_auth, "clientAuth");
         append(&mut value, &mut first, self.code_signing, "codeSigning");
-        append(&mut value, &mut first, self.email_protection, "emailProtection");
+        append(
+            &mut value,
+            &mut first,
+            self.email_protection,
+            "emailProtection",
+        );
         append(&mut value, &mut first, self.time_stamping, "timeStamping");
         append(&mut value, &mut first, self.ms_code_ind, "msCodeInd");
         append(&mut value, &mut first, self.ms_code_com, "msCodeCom");
@@ -497,9 +530,7 @@ pub struct SubjectKeyIdentifier {
 
 impl SubjectKeyIdentifier {
     pub fn new() -> SubjectKeyIdentifier {
-        SubjectKeyIdentifier {
-            critical: false,
-        }
+        SubjectKeyIdentifier { critical: false }
     }
 
     pub fn critical(&mut self) -> &mut SubjectKeyIdentifier {

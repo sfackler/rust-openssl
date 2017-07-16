@@ -15,12 +15,13 @@ mod imp {
         }
     }
 
-    pub unsafe fn select<F: AsRawFd>(max: &F,
-                                     read: *mut fd_set,
-                                     write: *mut fd_set,
-                                     error: *mut fd_set,
-                                     timeout_ms: u32)
-                                     -> io::Result<bool> {
+    pub unsafe fn select<F: AsRawFd>(
+        max: &F,
+        read: *mut fd_set,
+        write: *mut fd_set,
+        error: *mut fd_set,
+        timeout_ms: u32,
+    ) -> io::Result<bool> {
         let mut timeout = libc::timeval {
             tv_sec: (timeout_ms / 1000) as libc::time_t,
             tv_usec: (timeout_ms % 1000 * 1000) as libc::suseconds_t,
@@ -52,12 +53,13 @@ mod imp {
         set.fd_count += 1;
     }
 
-    pub unsafe fn select<F: AsRawSocket>(_max: &F,
-                                         read: *mut fd_set,
-                                         write: *mut fd_set,
-                                         error: *mut fd_set,
-                                         timeout_ms: u32)
-                                         -> io::Result<bool> {
+    pub unsafe fn select<F: AsRawSocket>(
+        _max: &F,
+        read: *mut fd_set,
+        write: *mut fd_set,
+        error: *mut fd_set,
+        timeout_ms: u32,
+    ) -> io::Result<bool> {
         let mut timeout = winsock2::timeval {
             tv_sec: (timeout_ms / 1000) as c_long,
             tv_usec: (timeout_ms % 1000 * 1000) as c_long,
