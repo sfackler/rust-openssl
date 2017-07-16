@@ -7,6 +7,11 @@ use ssl::{self, SslMethod, SslContextBuilder, SslContext, Ssl, SSL_VERIFY_PEER, 
 use pkey::PKeyRef;
 use x509::X509Ref;
 
+#[cfg(ossl101)]
+lazy_static! {
+    static ref HOSTNAME_IDX: ::ex_data::Index<Ssl, String> = Ssl::new_ex_index().unwrap();
+}
+
 // ffdhe2048 from https://wiki.mozilla.org/Security/Server_Side_TLS#ffdhe2048
 const DHPARAM_PEM: &'static str = "
 -----BEGIN DH PARAMETERS-----
@@ -55,7 +60,7 @@ impl SslConnectorBuilder {
         try!(ctx.set_cipher_list("ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:DH+CHACHA20:ECDH+AES256:\
                                   DH+AES256:ECDH+AES128:DH+AES:ECDH+HIGH:DH+HIGH:RSA+AESGCM:\
                                   RSA+AES:RSA+HIGH:!aNULL:!eNULL:!MD5:!3DES"));
-        ctx.set_verify(SSL_VERIFY_PEER);
+        setup_verify(&mut ctx);
 
         Ok(SslConnectorBuilder(ctx))
     }
@@ -98,8 +103,6 @@ impl SslConnector {
 
     /// Initiates a client-side TLS session on a stream without performing hostname verification.
     ///
-    /// The verification configuration of the connector's `SslContext` is not overridden.
-    ///
     /// # Warning
     ///
     /// You should think very carefully before you use this method. If hostname verification is not
@@ -140,7 +143,7 @@ impl ConnectConfiguration {
         where S: Read + Write
     {
         try!(self.0.set_hostname(domain));
-        try!(setup_verify(&mut self.0, domain));
+        try!(setup_verify_hostname(&mut self.0, domain));
 
         self.0.connect(stream)
     }
@@ -308,20 +311,35 @@ impl SslAcceptor {
 }
 
 #[cfg(any(ossl102, ossl110))]
-fn setup_verify(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
-    // pass a noop closure in here to ensure that we consistently override any callback on the
-    // context
-    ssl.set_verify_callback(SSL_VERIFY_PEER, |p, _| p);
+fn setup_verify(ctx: &mut SslContextBuilder) {
+    ctx.set_verify(SSL_VERIFY_PEER);
+}
+
+#[cfg(ossl101)]
+fn setup_verify(ctx: &mut SslContextBuilder) {
+    ctx.set_verify_callback(SSL_VERIFY_PEER, |p, x509| {
+        let hostname = match x509.ssl() {
+            Ok(Some(ssl)) => ssl.ex_data(*HOSTNAME_IDX),
+            _ => None
+        };
+        match hostname {
+            Some(hostname) => verify::verify_callback(hostname, p, x509),
+            None => p,
+        }
+    });
+}
+
+#[cfg(any(ossl102, ossl110))]
+fn setup_verify_hostname(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
     let param = ssl._param_mut();
     param.set_hostflags(::verify::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
     param.set_host(domain)
 }
 
 #[cfg(ossl101)]
-fn setup_verify(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
-    let domain = domain.to_owned();
-    ssl.set_verify_callback(SSL_VERIFY_PEER,
-                            move |p, x| verify::verify_callback(&domain, p, x));
+fn setup_verify_hostname(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
+    let domain = domain.to_string();
+    ssl.set_ex_data(*HOSTNAME_IDX, domain);
     Ok(())
 }
 

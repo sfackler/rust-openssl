@@ -36,6 +36,7 @@ pub mod dsa;
 pub mod ec;
 pub mod ec_key;
 pub mod error;
+pub mod ex_data;
 pub mod hash;
 pub mod memcmp;
 pub mod nid;

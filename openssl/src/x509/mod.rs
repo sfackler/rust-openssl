@@ -14,7 +14,7 @@ use std::ptr;
 use std::slice;
 use std::str;
 
-use {cvt, cvt_p};
+use {cvt, cvt_p, cvt_n};
 use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef, Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef};
 use bio::MemBioSlice;
 use bn::{BigNum, MSB_MAYBE_ZERO};
@@ -25,6 +25,7 @@ use nid::{self, Nid};
 use pkey::{PKey, PKeyRef};
 use stack::{Stack, StackRef, Stackable};
 use string::OpensslString;
+use ssl::SslRef;
 
 #[cfg(ossl10x)]
 use ffi::{X509_set_notBefore, X509_set_notAfter, ASN1_STRING_data, X509_STORE_CTX_get_chain};
@@ -93,6 +94,19 @@ impl X509StoreContextRef {
             }
 
             Some(StackRef::from_ptr(chain))
+        }
+    }
+
+    /// Returns a reference to the `Ssl` associated with this context.
+    pub fn ssl(&self) -> Result<Option<&SslRef>, ErrorStack> {
+        unsafe {
+            let idx = try!(cvt_n(ffi::SSL_get_ex_data_X509_STORE_CTX_idx()));
+            let ssl = ffi::X509_STORE_CTX_get_ex_data(self.as_ptr(), idx);
+            if ssl.is_null() {
+                Ok(None)
+            } else {
+                Ok(Some(SslRef::from_ptr(ssl as *mut ffi::SSL)))
+            }
         }
     }
 }
@@ -1142,9 +1156,9 @@ mod compat {
     {
         (*(*x).req_info).subject
     }
-  
+
     pub unsafe fn X509_get0_signature(psig: *mut *const ffi::ASN1_BIT_STRING,
-                                      palg: *mut *const ffi::X509_ALGOR, 
+                                      palg: *mut *const ffi::X509_ALGOR,
                                       x: *const ffi::X509) {
         if !psig.is_null() {
             *psig = (*x).signature;
