@@ -797,6 +797,7 @@ impl SslContext {
         T: 'static + Sync + Send
     {
         unsafe {
+            ffi::init();
             let idx = try!(cvt_n(compat::get_new_idx(free_data_box::<T>)));
             Ok(Index::from_raw(idx))
         }
@@ -1025,7 +1026,8 @@ impl Ssl {
         T: 'static + Sync + Send
     {
         unsafe {
-           let idx = try!(cvt_n(compat::get_new_ssl_idx(free_data_box::<T>)));
+            ffi::init();
+            let idx = try!(cvt_n(compat::get_new_ssl_idx(free_data_box::<T>)));
             Ok(Index::from_raw(idx))
         }
     }
