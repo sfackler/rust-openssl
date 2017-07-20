@@ -616,7 +616,7 @@ impl X509 {
 
 impl Clone for X509 {
     fn clone(&self) -> X509 {
-        self.to_owned()
+        X509Ref::to_owned(self)
     }
 }
 

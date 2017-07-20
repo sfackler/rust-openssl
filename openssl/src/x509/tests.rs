@@ -398,3 +398,10 @@ fn signature() {
     assert_eq!(algorithm.object().nid(), nid::SHA256WITHRSAENCRYPTION);
     assert_eq!(algorithm.object().to_string(), "sha256WithRSAEncryption");
 }
+
+#[test]
+fn clone_x509() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    cert.clone();
+}
