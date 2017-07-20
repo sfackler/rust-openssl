@@ -210,7 +210,13 @@ impl fmt::Display for Error {
             Some(r) => try!(write!(fmt, ":{}", r)),
             None => try!(write!(fmt, ":reason({})", ffi::ERR_GET_FUNC(self.code()))),
         }
-        write!(fmt, ":{}:{}:{}", self.file(), self.line(), self.data().unwrap_or(""))
+        write!(
+            fmt,
+            ":{}:{}:{}",
+            self.file(),
+            self.line(),
+            self.data().unwrap_or("")
+        )
     }
 }
 

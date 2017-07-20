@@ -1,6 +1,5 @@
 use libc::{c_int, c_char, c_void};
 use std::any::Any;
-use std::cell::UnsafeCell;
 use std::panic::{self, AssertUnwindSafe};
 use std::slice;
 
@@ -35,12 +34,14 @@ impl<F> Drop for CallbackState<F> {
     }
 }
 
-pub unsafe extern fn invoke_passwd_cb_old<F>(buf: *mut c_char,
-                                             size: c_int,
-                                             _rwflag: c_int,
-                                             cb_state: *mut c_void)
-                                             -> c_int
-    where F: FnOnce(&mut [c_char]) -> usize
+pub unsafe extern "C" fn invoke_passwd_cb_old<F>(
+    buf: *mut c_char,
+    size: c_int,
+    _rwflag: c_int,
+    cb_state: *mut c_void,
+) -> c_int
+where
+    F: FnOnce(&mut [c_char]) -> usize,
 {
     let callback = &mut *(cb_state as *mut CallbackState<F>);
 
@@ -61,12 +62,14 @@ pub unsafe extern fn invoke_passwd_cb_old<F>(buf: *mut c_char,
 /// Password callback function, passed to private key loading functions.
 ///
 /// `cb_state` is expected to be a pointer to a `CallbackState`.
-pub unsafe extern fn invoke_passwd_cb<F>(buf: *mut c_char,
-                                         size: c_int,
-                                         _rwflag: c_int,
-                                         cb_state: *mut c_void)
-                                         -> c_int
-    where F: FnOnce(&mut [u8]) -> Result<usize, ErrorStack>
+pub unsafe extern "C" fn invoke_passwd_cb<F>(
+    buf: *mut c_char,
+    size: c_int,
+    _rwflag: c_int,
+    cb_state: *mut c_void,
+) -> c_int
+where
+    F: FnOnce(&mut [u8]) -> Result<usize, ErrorStack>,
 {
     let callback = &mut *(cb_state as *mut CallbackState<F>);
 
@@ -87,8 +90,3 @@ pub unsafe extern fn invoke_passwd_cb<F>(buf: *mut c_char,
         }
     }
 }
-
-/// This is intended to be used as the inner type for `FooRef` types converted from raw C pointers.
-/// It has an `UnsafeCell` internally to inform the compiler about aliasability and doesn't
-/// implement `Copy`, so it can't be dereferenced.
-pub struct Opaque(UnsafeCell<()>);

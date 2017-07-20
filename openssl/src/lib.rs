@@ -1,4 +1,4 @@
-#![doc(html_root_url="https://docs.rs/openssl/0.9.14")]
+#![doc(html_root_url="https://docs.rs/openssl/0.9.15")]
 
 #[macro_use]
 extern crate bitflags;
@@ -36,6 +36,7 @@ pub mod dsa;
 pub mod ec;
 pub mod ec_key;
 pub mod error;
+pub mod ex_data;
 pub mod hash;
 pub mod memcmp;
 pub mod nid;

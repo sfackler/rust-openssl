@@ -23,9 +23,11 @@ impl AesKey {
             assert!(key.len() <= c_int::max_value() as usize / 8);
 
             let mut aes_key = mem::uninitialized();
-            let r = ffi::AES_set_encrypt_key(key.as_ptr() as *const _,
-                                             key.len() as c_int * 8,
-                                             &mut aes_key);
+            let r = ffi::AES_set_encrypt_key(
+                key.as_ptr() as *const _,
+                key.len() as c_int * 8,
+                &mut aes_key,
+            );
             if r == 0 {
                 Ok(AesKey(aes_key))
             } else {
@@ -44,9 +46,11 @@ impl AesKey {
             assert!(key.len() <= c_int::max_value() as usize / 8);
 
             let mut aes_key = mem::uninitialized();
-            let r = ffi::AES_set_decrypt_key(key.as_ptr() as *const _,
-                                             key.len() as c_int * 8,
-                                             &mut aes_key);
+            let r = ffi::AES_set_decrypt_key(
+                key.as_ptr() as *const _,
+                key.len() as c_int * 8,
+                &mut aes_key,
+            );
 
             if r == 0 {
                 Ok(AesKey(aes_key))
@@ -73,12 +77,14 @@ pub fn aes_ige(in_: &[u8], out: &mut [u8], key: &AesKey, iv: &mut [u8], mode: Mo
             Mode::Encrypt => ffi::AES_ENCRYPT,
             Mode::Decrypt => ffi::AES_DECRYPT,
         };
-        ffi::AES_ige_encrypt(in_.as_ptr() as *const _,
-                             out.as_mut_ptr() as *mut _,
-                             in_.len(),
-                             &key.0,
-                             iv.as_mut_ptr() as *mut _,
-                             mode);
+        ffi::AES_ige_encrypt(
+            in_.as_ptr() as *const _,
+            out.as_mut_ptr() as *mut _,
+            in_.len(),
+            &key.0,
+            iv.as_mut_ptr() as *mut _,
+            mode,
+        );
     }
 }
 

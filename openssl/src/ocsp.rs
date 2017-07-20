@@ -126,11 +126,12 @@ impl<'a> Status<'a> {
     /// very old responses.
     pub fn check_validity(&self, nsec: u32, maxsec: Option<u32>) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::OCSP_check_validity(self.this_update.as_ptr(),
-                                         self.next_update.as_ptr(),
-                                         nsec as c_long,
-                                         maxsec.map(|n| n as c_long).unwrap_or(-1)))
-                .map(|_| ())
+            cvt(ffi::OCSP_check_validity(
+                self.this_update.as_ptr(),
+                self.next_update.as_ptr(),
+                nsec as c_long,
+                maxsec.map(|n| n as c_long).unwrap_or(-1),
+            )).map(|_| ())
         }
     }
 }
@@ -148,14 +149,19 @@ impl OcspBasicResponseRef {
     ///
     /// The `certs` parameter contains a set of certificates that will be searched when locating the
     /// OCSP response signing certificate. Some responders do not include this in the response.
-    pub fn verify(&self,
-                  certs: &StackRef<X509>,
-                  store: &X509StoreRef,
-                  flags: Flag)
-                  -> Result<(), ErrorStack> {
+    pub fn verify(
+        &self,
+        certs: &StackRef<X509>,
+        store: &X509StoreRef,
+        flags: Flag,
+    ) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::OCSP_basic_verify(self.as_ptr(), certs.as_ptr(), store.as_ptr(), flags.bits()))
-                .map(|_| ())
+            cvt(ffi::OCSP_basic_verify(
+                self.as_ptr(),
+                certs.as_ptr(),
+                store.as_ptr(),
+                flags.bits(),
+            )).map(|_| ())
         }
     }
 
@@ -168,13 +174,15 @@ impl OcspBasicResponseRef {
             let mut this_update = ptr::null_mut();
             let mut next_update = ptr::null_mut();
 
-            let r = ffi::OCSP_resp_find_status(self.as_ptr(),
-                                               id.as_ptr(),
-                                               &mut status,
-                                               &mut reason,
-                                               &mut revocation_time,
-                                               &mut this_update,
-                                               &mut next_update);
+            let r = ffi::OCSP_resp_find_status(
+                self.as_ptr(),
+                id.as_ptr(),
+                &mut status,
+                &mut reason,
+                &mut revocation_time,
+                &mut this_update,
+                &mut next_update,
+            );
             if r == 1 {
                 let revocation_time = if revocation_time.is_null() {
                     None
@@ -205,13 +213,17 @@ foreign_type! {
 
 impl OcspCertId {
     /// Constructs a certificate ID for certificate `subject`.
-    pub fn from_cert(digest: MessageDigest,
-                     subject: &X509Ref,
-                     issuer: &X509Ref)
-                     -> Result<OcspCertId, ErrorStack> {
+    pub fn from_cert(
+        digest: MessageDigest,
+        subject: &X509Ref,
+        issuer: &X509Ref,
+    ) -> Result<OcspCertId, ErrorStack> {
         unsafe {
-            cvt_p(ffi::OCSP_cert_to_id(digest.as_ptr(), subject.as_ptr(), issuer.as_ptr()))
-                .map(OcspCertId)
+            cvt_p(ffi::OCSP_cert_to_id(
+                digest.as_ptr(),
+                subject.as_ptr(),
+                issuer.as_ptr(),
+            )).map(OcspCertId)
         }
     }
 }
@@ -228,15 +240,17 @@ impl OcspResponse {
     /// Creates an OCSP response from the status and optional body.
     ///
     /// A body should only be provided if `status` is `RESPONSE_STATUS_SUCCESSFUL`.
-    pub fn create(status: OcspResponseStatus,
-                  body: Option<&OcspBasicResponseRef>)
-                  -> Result<OcspResponse, ErrorStack> {
+    pub fn create(
+        status: OcspResponseStatus,
+        body: Option<&OcspBasicResponseRef>,
+    ) -> Result<OcspResponse, ErrorStack> {
         unsafe {
             ffi::init();
 
-            cvt_p(ffi::OCSP_response_create(status.as_raw(),
-                                            body.map(|r| r.as_ptr()).unwrap_or(ptr::null_mut())))
-                .map(OcspResponse)
+            cvt_p(ffi::OCSP_response_create(
+                status.as_raw(),
+                body.map(|r| r.as_ptr()).unwrap_or(ptr::null_mut()),
+            )).map(OcspResponse)
         }
     }
 
@@ -248,18 +262,14 @@ impl OcspResponseRef {
 
     /// Returns the status of the response.
     pub fn status(&self) -> OcspResponseStatus {
-        unsafe {
-            OcspResponseStatus(ffi::OCSP_response_status(self.as_ptr()))
-        }
+        unsafe { OcspResponseStatus(ffi::OCSP_response_status(self.as_ptr())) }
     }
 
     /// Returns the basic response.
     ///
     /// This will only succeed if `status()` returns `RESPONSE_STATUS_SUCCESSFUL`.
     pub fn basic(&self) -> Result<OcspBasicResponse, ErrorStack> {
-        unsafe {
-            cvt_p(ffi::OCSP_response_get1_basic(self.as_ptr())).map(OcspBasicResponse)
-        }
+        unsafe { cvt_p(ffi::OCSP_response_get1_basic(self.as_ptr())).map(OcspBasicResponse) }
     }
 }
 

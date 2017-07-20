@@ -141,13 +141,15 @@ pub struct EVP_PKEY {
 #[repr(C)]
 pub struct BIO {
     pub method: *mut ::BIO_METHOD,
-    pub callback: Option<unsafe extern "C" fn(*mut ::BIO,
-                                              c_int,
-                                              *const c_char,
-                                              c_int,
-                                              c_long,
-                                              c_long)
-                                              -> c_long>,
+    pub callback: Option<
+        unsafe extern "C" fn(*mut ::BIO,
+                             c_int,
+                             *const c_char,
+                             c_int,
+                             c_long,
+                             c_long)
+                             -> c_long,
+    >,
     pub cb_arg: *mut c_char,
     pub init: c_int,
     pub shutdown: c_int,
@@ -186,23 +188,28 @@ pub struct EVP_CIPHER {
     pub key_len: c_int,
     pub iv_len: c_int,
     pub flags: c_ulong,
-    pub init: Option<unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX,
-                                          *const c_uchar,
-                                          *const c_uchar,
-                                          c_int)
-                                          -> c_int>,
-    pub do_cipher: Option<unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX,
-                                               *mut c_uchar,
-                                               *const c_uchar,
-                                               size_t)
-                                               -> c_int>,
+    pub init: Option<
+        unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX,
+                             *const c_uchar,
+                             *const c_uchar,
+                             c_int)
+                             -> c_int,
+    >,
+    pub do_cipher: Option<
+        unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX,
+                             *mut c_uchar,
+                             *const c_uchar,
+                             size_t)
+                             -> c_int,
+    >,
     pub cleanup: Option<unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX) -> c_int>,
     pub ctx_size: c_int,
     pub set_asn1_parameters:
         Option<unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX, *mut ::ASN1_TYPE) -> c_int>,
     pub get_asn1_parameters:
         Option<unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX, *mut ::ASN1_TYPE) -> c_int>,
-    pub ctrl: Option<unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX, c_int, c_int, *mut c_void) -> c_int>,
+    pub ctrl:
+        Option<unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX, c_int, c_int, *mut c_void) -> c_int>,
     pub app_data: *mut c_void,
 }
 
@@ -355,13 +362,15 @@ pub struct SSL {
     s3: *mut c_void,
     d1: *mut c_void,
     read_ahead: c_int,
-    msg_callback: Option<unsafe extern "C" fn(c_int,
-                                              c_int,
-                                              c_int,
-                                              *const c_void,
-                                              size_t,
-                                              *mut SSL,
-                                              *mut c_void)>,
+    msg_callback: Option<
+        unsafe extern "C" fn(c_int,
+                             c_int,
+                             c_int,
+                             *const c_void,
+                             size_t,
+                             *mut SSL,
+                             *mut c_void),
+    >,
     msg_callback_arg: *mut c_void,
     hit: c_int,
     param: *mut c_void,
@@ -387,13 +396,15 @@ pub struct SSL {
     #[cfg(not(osslconf = "OPENSSL_NO_KRB5"))]
     kssl_ctx: *mut c_void,
     #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
-    psk_client_callback: Option<unsafe extern "C" fn(*mut SSL,
-                                                         *const c_char,
-                                                         *mut c_char,
-                                                         c_uint,
-                                                         *mut c_uchar,
-                                                         c_uint)
-                                                         -> c_uint>,
+    psk_client_callback: Option<
+        unsafe extern "C" fn(*mut SSL,
+                             *const c_char,
+                             *mut c_char,
+                             c_uint,
+                             *mut c_uchar,
+                             c_uint)
+                             -> c_uint,
+    >,
     #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
     psk_server_callback:
         Option<unsafe extern "C" fn(*mut SSL, *const c_char, *mut c_uchar, c_uint) -> c_uint>,
@@ -726,8 +737,8 @@ pub const CRYPTO_LOCK_SSL_CTX: c_int = 12;
 pub const CRYPTO_LOCK_SSL_SESSION: c_int = 14;
 
 static mut MUTEXES: *mut Vec<Mutex<()>> = 0 as *mut Vec<Mutex<()>>;
-static mut GUARDS: *mut Vec<Option<MutexGuard<'static, ()>>> =
-    0 as *mut Vec<Option<MutexGuard<'static, ()>>>;
+static mut GUARDS: *mut Vec<Option<MutexGuard<'static, ()>>> = 0 as
+    *mut Vec<Option<MutexGuard<'static, ()>>>;
 
 unsafe extern "C" fn locking_function(mode: c_int, n: c_int, _file: *const c_char, _line: c_int) {
     let mutex = &(*MUTEXES)[n as usize];
@@ -735,9 +746,7 @@ unsafe extern "C" fn locking_function(mode: c_int, n: c_int, _file: *const c_cha
     if mode & ::CRYPTO_LOCK != 0 {
         (*GUARDS)[n as usize] = Some(mutex.lock().unwrap());
     } else {
-        &(*GUARDS)[n as usize]
-             .take()
-             .expect("lock already unlocked");
+        &(*GUARDS)[n as usize].take().expect("lock already unlocked");
     }
 }
 
@@ -745,23 +754,23 @@ pub fn init() {
     static INIT: Once = ONCE_INIT;
 
     INIT.call_once(|| unsafe {
-                       SSL_library_init();
-                       SSL_load_error_strings();
-                       OPENSSL_add_all_algorithms_noconf();
+        SSL_library_init();
+        SSL_load_error_strings();
+        OPENSSL_add_all_algorithms_noconf();
 
-                       let num_locks = ::CRYPTO_num_locks();
-                       let mut mutexes = Box::new(Vec::new());
-                       for _ in 0..num_locks {
-                           mutexes.push(Mutex::new(()));
-                       }
-                       MUTEXES = mem::transmute(mutexes);
-                       let guards: Box<Vec<Option<MutexGuard<()>>>> =
-                           Box::new((0..num_locks).map(|_| None).collect());
-                       GUARDS = mem::transmute(guards);
+        let num_locks = ::CRYPTO_num_locks();
+        let mut mutexes = Box::new(Vec::new());
+        for _ in 0..num_locks {
+            mutexes.push(Mutex::new(()));
+        }
+        MUTEXES = mem::transmute(mutexes);
+        let guards: Box<Vec<Option<MutexGuard<()>>>> =
+            Box::new((0..num_locks).map(|_| None).collect());
+        GUARDS = mem::transmute(guards);
 
-                       CRYPTO_set_locking_callback(locking_function);
-                       set_id_callback();
-                   })
+        CRYPTO_set_locking_callback(locking_function);
+        set_id_callback();
+    })
 }
 
 #[cfg(unix)]
@@ -782,18 +791,22 @@ fn set_id_callback() {}
 
 #[cfg(ossl102)]
 pub unsafe fn SSL_CTX_set_ecdh_auto(ctx: *mut SSL_CTX, onoff: c_int) -> c_int {
-    ::SSL_CTX_ctrl(ctx,
-                   SSL_CTRL_SET_ECDH_AUTO,
-                   onoff as c_long,
-                   ptr::null_mut()) as c_int
+    ::SSL_CTX_ctrl(
+        ctx,
+        SSL_CTRL_SET_ECDH_AUTO,
+        onoff as c_long,
+        ptr::null_mut(),
+    ) as c_int
 }
 
 #[cfg(ossl102)]
 pub unsafe fn SSL_set_ecdh_auto(ssl: *mut ::SSL, onoff: c_int) -> c_int {
-    ::SSL_ctrl(ssl,
-               SSL_CTRL_SET_ECDH_AUTO,
-               onoff as c_long,
-               ptr::null_mut()) as c_int
+    ::SSL_ctrl(
+        ssl,
+        SSL_CTRL_SET_ECDH_AUTO,
+        onoff as c_long,
+        ptr::null_mut(),
+    ) as c_int
 }
 
 pub unsafe fn SSL_session_reused(ssl: *mut ::SSL) -> c_int {
@@ -817,36 +830,38 @@ extern "C" {
     pub fn CRYPTO_malloc(num: c_int, file: *const c_char, line: c_int) -> *mut c_void;
     pub fn CRYPTO_free(buf: *mut c_void);
     pub fn CRYPTO_num_locks() -> c_int;
-    pub fn CRYPTO_set_locking_callback(func: unsafe extern "C" fn(mode: c_int,
-                                                                  n: c_int,
-                                                                  file: *const c_char,
-                                                                  line: c_int));
+    pub fn CRYPTO_set_locking_callback(
+        func: unsafe extern "C" fn(mode: c_int, n: c_int, file: *const c_char, line: c_int),
+    );
     pub fn CRYPTO_set_id_callback(func: unsafe extern "C" fn() -> c_ulong);
 
     pub fn ERR_load_crypto_strings();
 
-    pub fn RSA_generate_key(modsz: c_int,
-                            e: c_ulong,
-                            cb: Option<extern "C" fn(c_int, c_int, *mut c_void)>,
-                            cbarg: *mut c_void)
-                            -> *mut RSA;
+    pub fn RSA_generate_key(
+        modsz: c_int,
+        e: c_ulong,
+        cb: Option<extern "C" fn(c_int, c_int, *mut c_void)>,
+        cbarg: *mut c_void,
+    ) -> *mut RSA;
 
-    pub fn OCSP_cert_to_id(dgst: *const ::EVP_MD,
-                           subject: *mut ::X509,
-                           issuer: *mut ::X509)
-                           -> *mut ::OCSP_CERTID;
+    pub fn OCSP_cert_to_id(
+        dgst: *const ::EVP_MD,
+        subject: *mut ::X509,
+        issuer: *mut ::X509,
+    ) -> *mut ::OCSP_CERTID;
 
-    pub fn PKCS12_create(pass: *mut c_char,
-                         friendly_name: *mut c_char,
-                         pkey: *mut EVP_PKEY,
-                         cert: *mut X509,
-                         ca: *mut stack_st_X509,
-                         nid_key: c_int,
-                         nid_cert: c_int,
-                         iter: c_int,
-                         mac_iter: c_int,
-                         keytype: c_int)
-                         -> *mut PKCS12;
+    pub fn PKCS12_create(
+        pass: *mut c_char,
+        friendly_name: *mut c_char,
+        pkey: *mut EVP_PKEY,
+        cert: *mut X509,
+        ca: *mut stack_st_X509,
+        nid_key: c_int,
+        nid_cert: c_int,
+        iter: c_int,
+        mac_iter: c_int,
+        keytype: c_int,
+    ) -> *mut PKCS12;
 
     pub fn SSL_library_init() -> c_int;
     pub fn SSL_load_error_strings();
@@ -862,77 +877,88 @@ extern "C" {
     pub fn DTLSv1_method() -> *const ::SSL_METHOD;
     #[cfg(ossl102)]
     pub fn DTLSv1_2_method() -> *const ::SSL_METHOD;
-    pub fn SSL_get_ex_new_index(argl: c_long,
-                                argp: *mut c_void,
-                                new_func: Option<::CRYPTO_EX_new>,
-                                dup_func: Option<::CRYPTO_EX_dup>,
-                                free_func: Option<::CRYPTO_EX_free>)
-                                -> c_int;
-    pub fn SSL_set_tmp_ecdh_callback(ssl: *mut ::SSL,
-                                     ecdh: unsafe extern "C" fn(ssl: *mut ::SSL,
-                                                                is_export: c_int,
-                                                                keylength: c_int)
-                                                                -> *mut ::EC_KEY);
+    pub fn SSL_get_ex_new_index(
+        argl: c_long,
+        argp: *mut c_void,
+        new_func: Option<::CRYPTO_EX_new>,
+        dup_func: Option<::CRYPTO_EX_dup>,
+        free_func: Option<::CRYPTO_EX_free>,
+    ) -> c_int;
+    pub fn SSL_set_tmp_ecdh_callback(
+        ssl: *mut ::SSL,
+        ecdh: unsafe extern "C" fn(ssl: *mut ::SSL, is_export: c_int, keylength: c_int)
+                                   -> *mut ::EC_KEY,
+    );
     pub fn SSL_CIPHER_get_version(cipher: *const ::SSL_CIPHER) -> *mut c_char;
-    pub fn SSL_CTX_get_ex_new_index(argl: c_long,
-                                    argp: *mut c_void,
-                                    new_func: Option<::CRYPTO_EX_new>,
-                                    dup_func: Option<::CRYPTO_EX_dup>,
-                                    free_func: Option<::CRYPTO_EX_free>)
-                                    -> c_int;
-    pub fn SSL_CTX_set_tmp_ecdh_callback(ctx: *mut ::SSL_CTX,
-                                         ecdh: unsafe extern "C" fn(ssl: *mut ::SSL,
-                                                                    is_export: c_int,
-                                                                    keylength: c_int)
-                                                                    -> *mut ::EC_KEY);
+    pub fn SSL_CTX_get_ex_new_index(
+        argl: c_long,
+        argp: *mut c_void,
+        new_func: Option<::CRYPTO_EX_new>,
+        dup_func: Option<::CRYPTO_EX_dup>,
+        free_func: Option<::CRYPTO_EX_free>,
+    ) -> c_int;
+    pub fn SSL_CTX_set_tmp_ecdh_callback(
+        ctx: *mut ::SSL_CTX,
+        ecdh: unsafe extern "C" fn(ssl: *mut ::SSL, is_export: c_int, keylength: c_int)
+                                   -> *mut ::EC_KEY,
+    );
     pub fn X509_get_subject_name(x: *mut ::X509) -> *mut ::X509_NAME;
     pub fn X509_set_notAfter(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
     pub fn X509_set_notBefore(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
-    pub fn X509_get_ext_d2i(x: *mut ::X509,
-                            nid: c_int,
-                            crit: *mut c_int,
-                            idx: *mut c_int)
-                            -> *mut c_void;
-    pub fn X509_NAME_add_entry_by_NID(x: *mut ::X509_NAME,
-                                      field: c_int,
-                                      ty: c_int,
-                                      bytes: *mut c_uchar,
-                                      len: c_int,
-                                      loc: c_int,
-                                      set: c_int)
-                                      -> c_int;
+    pub fn X509_get_ext_d2i(
+        x: *mut ::X509,
+        nid: c_int,
+        crit: *mut c_int,
+        idx: *mut c_int,
+    ) -> *mut c_void;
+    pub fn X509_NAME_add_entry_by_NID(
+        x: *mut ::X509_NAME,
+        field: c_int,
+        ty: c_int,
+        bytes: *mut c_uchar,
+        len: c_int,
+        loc: c_int,
+        set: c_int,
+    ) -> c_int;
     #[cfg(not(ossl101))]
-    pub fn X509_get0_signature(psig: *mut *mut ::ASN1_BIT_STRING,
-                               palg: *mut *mut ::X509_ALGOR,
-                               x: *const ::X509);
+    pub fn X509_get0_signature(
+        psig: *mut *mut ::ASN1_BIT_STRING,
+        palg: *mut *mut ::X509_ALGOR,
+        x: *const ::X509,
+    );
     #[cfg(not(ossl101))]
     pub fn X509_get_signature_nid(x: *const X509) -> c_int;
     #[cfg(not(ossl101))]
-    pub fn X509_ALGOR_get0(paobj: *mut *mut ::ASN1_OBJECT,
-                           pptype: *mut c_int,
-                           ppval: *mut *mut c_void,
-                           alg: *mut ::X509_ALGOR);
+    pub fn X509_ALGOR_get0(
+        paobj: *mut *mut ::ASN1_OBJECT,
+        pptype: *mut c_int,
+        ppval: *mut *mut c_void,
+        alg: *mut ::X509_ALGOR,
+    );
     pub fn X509_NAME_get_entry(n: *mut ::X509_NAME, loc: c_int) -> *mut ::X509_NAME_ENTRY;
     pub fn X509_NAME_ENTRY_get_data(ne: *mut ::X509_NAME_ENTRY) -> *mut ::ASN1_STRING;
     pub fn X509_STORE_CTX_get_chain(ctx: *mut ::X509_STORE_CTX) -> *mut stack_st_X509;
-    pub fn X509V3_EXT_nconf_nid(conf: *mut ::CONF,
-                                ctx: *mut ::X509V3_CTX,
-                                ext_nid: c_int,
-                                value: *mut c_char)
-                                -> *mut ::X509_EXTENSION;
-    pub fn X509V3_EXT_nconf(conf: *mut ::CONF,
-                            ctx: *mut ::X509V3_CTX,
-                            name: *mut c_char,
-                            value: *mut c_char)
-                            -> *mut ::X509_EXTENSION;
+    pub fn X509V3_EXT_nconf_nid(
+        conf: *mut ::CONF,
+        ctx: *mut ::X509V3_CTX,
+        ext_nid: c_int,
+        value: *mut c_char,
+    ) -> *mut ::X509_EXTENSION;
+    pub fn X509V3_EXT_nconf(
+        conf: *mut ::CONF,
+        ctx: *mut ::X509V3_CTX,
+        name: *mut c_char,
+        value: *mut c_char,
+    ) -> *mut ::X509_EXTENSION;
     pub fn ASN1_STRING_to_UTF8(out: *mut *mut c_uchar, s: *mut ::ASN1_STRING) -> c_int;
     pub fn ASN1_STRING_data(x: *mut ::ASN1_STRING) -> *mut c_uchar;
-    pub fn CRYPTO_add_lock(pointer: *mut c_int,
-                           amount: c_int,
-                           type_: c_int,
-                           file: *const c_char,
-                           line: c_int)
-                           -> c_int;
+    pub fn CRYPTO_add_lock(
+        pointer: *mut c_int,
+        amount: c_int,
+        type_: c_int,
+        file: *const c_char,
+        line: c_int,
+    ) -> c_int;
     pub fn EVP_MD_CTX_create() -> *mut EVP_MD_CTX;
     pub fn EVP_MD_CTX_destroy(ctx: *mut EVP_MD_CTX);
     pub fn EVP_PKEY_bits(key: *mut EVP_PKEY) -> c_int;

@@ -71,9 +71,9 @@
 //! }
 //! ```
 use ffi;
-use foreign_types::{ForeignType, ForeignTypeRef};
+use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
 use libc::{c_int, c_void, c_long, c_ulong};
-use libc::{c_char, c_uchar, c_uint};
+use libc::{c_uchar, c_uint};
 use std::any::Any;
 use std::any::TypeId;
 use std::borrow::Borrow;
@@ -93,7 +93,7 @@ use std::slice;
 use std::str;
 use std::sync::Mutex;
 
-use {init, cvt, cvt_p};
+use {init, cvt, cvt_p, cvt_n};
 use dh::{Dh, DhRef};
 use ec::EcKeyRef;
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
@@ -106,20 +106,21 @@ use x509::store::X509Store;
 use verify::X509VerifyParamRef;
 use pkey::PKeyRef;
 use error::ErrorStack;
-use util::Opaque;
+use ex_data::Index;
 use stack::{Stack, StackRef};
-
-mod error;
-mod connector;
-mod bio;
-#[cfg(test)]
-mod tests;
-
-use self::bio::BioMethod;
+use ssl::bio::BioMethod;
+use ssl::callbacks::*;
 
 pub use ssl::connector::{SslConnectorBuilder, SslConnector, SslAcceptorBuilder, SslAcceptor,
                          ConnectConfiguration};
 pub use ssl::error::{Error, HandshakeError};
+
+mod error;
+mod callbacks;
+mod connector;
+mod bio;
+#[cfg(test)]
+mod tests;
 
 // FIXME drop SSL_ prefix
 // FIXME remvove flags not used in OpenSSL 1.1
@@ -249,18 +250,18 @@ lazy_static! {
 // when context is freed
 fn get_callback_idx<T: Any + 'static>() -> c_int {
     *INDEXES
-         .lock()
-         .unwrap()
-         .entry(TypeId::of::<T>())
-         .or_insert_with(|| get_new_idx::<T>())
+        .lock()
+        .unwrap()
+        .entry(TypeId::of::<T>())
+        .or_insert_with(|| get_new_idx::<T>())
 }
 
 fn get_ssl_callback_idx<T: Any + 'static>() -> c_int {
     *SSL_INDEXES
-         .lock()
-         .unwrap()
-         .entry(TypeId::of::<T>())
-         .or_insert_with(|| get_new_ssl_idx::<T>())
+        .lock()
+        .unwrap()
+        .entry(TypeId::of::<T>())
+        .or_insert_with(|| get_new_ssl_idx::<T>())
 }
 
 lazy_static! {
@@ -272,12 +273,14 @@ lazy_static! {
     static ref ALPN_PROTOS_IDX: c_int = get_new_idx::<Vec<u8>>();
 }
 
-unsafe extern "C" fn free_data_box<T>(_parent: *mut c_void,
-                                      ptr: *mut c_void,
-                                      _ad: *mut ffi::CRYPTO_EX_DATA,
-                                      _idx: c_int,
-                                      _argl: c_long,
-                                      _argp: *mut c_void) {
+unsafe extern "C" fn free_data_box<T>(
+    _parent: *mut c_void,
+    ptr: *mut c_void,
+    _ad: *mut ffi::CRYPTO_EX_DATA,
+    _idx: c_int,
+    _argl: c_long,
+    _argp: *mut c_void,
+) {
     if !ptr.is_null() {
         Box::<T>::from_raw(ptr as *mut T);
     }
@@ -299,302 +302,6 @@ fn get_new_ssl_idx<T>() -> c_int {
         assert!(idx >= 0);
         idx
     }
-}
-
-extern "C" fn raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
-    where F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send
-{
-    unsafe {
-        let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
-        let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
-        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
-        let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
-        let verify: &F = &*(verify as *mut F);
-
-        let ctx = X509StoreContextRef::from_ptr(x509_ctx);
-
-        verify(preverify_ok != 0, ctx) as c_int
-    }
-}
-
-#[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
-extern "C" fn raw_psk<F>(ssl: *mut ffi::SSL,
-                         hint: *const c_char,
-                         identity: *mut c_char,
-                         max_identity_len: c_uint,
-                         psk: *mut c_uchar,
-                         max_psk_len: c_uint) -> c_uint
-    where F: Fn(&mut SslRef, Option<&[u8]>, &mut [u8], &mut [u8]) -> Result<usize, ErrorStack> + Any + 'static + Sync + Send
-{
-    unsafe {
-        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
-        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
-        let ssl = SslRef::from_ptr_mut(ssl);
-        let callback = &*(callback as *mut F);
-        let hint = if hint != ptr::null() {
-            Some(CStr::from_ptr(hint).to_bytes())
-        } else {
-            None
-        };
-        // Give the callback mutable slices into which it can write the identity and psk.
-        let identity_sl = slice::from_raw_parts_mut(identity as *mut u8,
-                                                    max_identity_len as usize);
-        let psk_sl = slice::from_raw_parts_mut(psk as *mut u8, max_psk_len as usize);
-        match callback(ssl, hint, identity_sl, psk_sl) {
-            Ok(psk_len) => psk_len as u32,
-            _ => 0,
-        }
-    }
-}
-
-extern "C" fn ssl_raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
-    where F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send
-{
-    unsafe {
-        let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
-        let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
-        let verify = ffi::SSL_get_ex_data(ssl as *const _, get_ssl_callback_idx::<F>());
-        let verify: &F = &*(verify as *mut F);
-
-        let ctx = X509StoreContextRef::from_ptr(x509_ctx);
-
-        verify(preverify_ok != 0, ctx) as c_int
-    }
-}
-
-extern "C" fn raw_sni<F>(ssl: *mut ffi::SSL, al: *mut c_int, _arg: *mut c_void) -> c_int
-    where F: Fn(&mut SslRef) -> Result<(), SniError> + Any + 'static + Sync + Send
-{
-    unsafe {
-        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
-        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
-        let callback: &F = &*(callback as *mut F);
-        let ssl = SslRef::from_ptr_mut(ssl);
-
-        match callback(ssl) {
-            Ok(()) => ffi::SSL_TLSEXT_ERR_OK,
-            Err(SniError::Fatal(e)) => {
-                *al = e;
-                ffi::SSL_TLSEXT_ERR_ALERT_FATAL
-            }
-            Err(SniError::Warning(e)) => {
-                *al = e;
-                ffi::SSL_TLSEXT_ERR_ALERT_WARNING
-            }
-            Err(SniError::NoAck) => ffi::SSL_TLSEXT_ERR_NOACK,
-        }
-    }
-}
-
-unsafe fn select_proto_using(ssl: *mut ffi::SSL,
-                             out: *mut *mut c_uchar,
-                             outlen: *mut c_uchar,
-                             inbuf: *const c_uchar,
-                             inlen: c_uint,
-                             ex_data: c_int)
-                             -> c_int {
-
-    // First, get the list of protocols (that the client should support) saved in the context
-    // extra data.
-    let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
-    let protocols = ffi::SSL_CTX_get_ex_data(ssl_ctx, ex_data);
-    let protocols: &Vec<u8> = &*(protocols as *mut Vec<u8>);
-    // Prepare the client list parameters to be passed to the OpenSSL function...
-    let client = protocols.as_ptr();
-    let client_len = protocols.len() as c_uint;
-    // Finally, let OpenSSL find a protocol to be used, by matching the given server and
-    // client lists.
-    if ffi::SSL_select_next_proto(out, outlen, inbuf, inlen, client, client_len) !=
-       ffi::OPENSSL_NPN_NEGOTIATED {
-        ffi::SSL_TLSEXT_ERR_NOACK
-    } else {
-        ffi::SSL_TLSEXT_ERR_OK
-    }
-}
-
-/// The function is given as the callback to `SSL_CTX_set_next_proto_select_cb`.
-///
-/// It chooses the protocol that the client wishes to use, out of the given list of protocols
-/// supported by the server. It achieves this by delegating to the `SSL_select_next_proto`
-/// function. The list of protocols supported by the client is found in the extra data of the
-/// OpenSSL context.
-extern "C" fn raw_next_proto_select_cb(ssl: *mut ffi::SSL,
-                                       out: *mut *mut c_uchar,
-                                       outlen: *mut c_uchar,
-                                       inbuf: *const c_uchar,
-                                       inlen: c_uint,
-                                       _arg: *mut c_void)
-                                       -> c_int {
-    unsafe { select_proto_using(ssl, out, outlen, inbuf, inlen, *NPN_PROTOS_IDX) }
-}
-
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-extern "C" fn raw_alpn_select_cb(ssl: *mut ffi::SSL,
-                                 out: *mut *const c_uchar,
-                                 outlen: *mut c_uchar,
-                                 inbuf: *const c_uchar,
-                                 inlen: c_uint,
-                                 _arg: *mut c_void)
-                                 -> c_int {
-    unsafe { select_proto_using(ssl, out as *mut _, outlen, inbuf, inlen, *ALPN_PROTOS_IDX) }
-}
-
-unsafe extern "C" fn raw_tmp_dh<F>(ssl: *mut ffi::SSL,
-                                   is_export: c_int,
-                                   keylength: c_int)
-                                   -> *mut ffi::DH
-    where F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + Any + 'static + Sync + Send
-{
-    let ctx = ffi::SSL_get_SSL_CTX(ssl);
-    let callback = ffi::SSL_CTX_get_ex_data(ctx, get_callback_idx::<F>());
-    let callback = &*(callback as *mut F);
-
-    let ssl = SslRef::from_ptr_mut(ssl);
-    match callback(ssl, is_export != 0, keylength as u32) {
-        Ok(dh) => {
-            let ptr = dh.as_ptr();
-            mem::forget(dh);
-            ptr
-        }
-        Err(_) => {
-            // FIXME reset error stack
-            ptr::null_mut()
-        }
-    }
-}
-
-#[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
-unsafe extern "C" fn raw_tmp_ecdh<F>(ssl: *mut ffi::SSL,
-                                     is_export: c_int,
-                                     keylength: c_int)
-                                     -> *mut ffi::EC_KEY
-    where F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + Any + 'static + Sync + Send
-{
-    let ctx = ffi::SSL_get_SSL_CTX(ssl);
-    let callback = ffi::SSL_CTX_get_ex_data(ctx, get_callback_idx::<F>());
-    let callback = &*(callback as *mut F);
-
-    let ssl = SslRef::from_ptr_mut(ssl);
-    match callback(ssl, is_export != 0, keylength as u32) {
-        Ok(ec_key) => {
-            let ptr = ec_key.as_ptr();
-            mem::forget(ec_key);
-            ptr
-        }
-        Err(_) => {
-            // FIXME reset error stack
-            ptr::null_mut()
-        }
-    }
-}
-
-unsafe extern "C" fn raw_tmp_dh_ssl<F>(ssl: *mut ffi::SSL,
-                                       is_export: c_int,
-                                       keylength: c_int)
-                                       -> *mut ffi::DH
-    where F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + Any + 'static + Sync + Send
-{
-    let callback = ffi::SSL_get_ex_data(ssl, get_ssl_callback_idx::<F>());
-    let callback = &*(callback as *mut F);
-
-    let ssl = SslRef::from_ptr_mut(ssl);
-    match callback(ssl, is_export != 0, keylength as u32) {
-        Ok(dh) => {
-            let ptr = dh.as_ptr();
-            mem::forget(dh);
-            ptr
-        }
-        Err(_) => {
-            // FIXME reset error stack
-            ptr::null_mut()
-        }
-    }
-}
-
-#[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
-unsafe extern "C" fn raw_tmp_ecdh_ssl<F>(ssl: *mut ffi::SSL,
-                                         is_export: c_int,
-                                         keylength: c_int)
-                                         -> *mut ffi::EC_KEY
-    where F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + Any + 'static + Sync + Send
-{
-    let callback = ffi::SSL_get_ex_data(ssl, get_ssl_callback_idx::<F>());
-    let callback = &*(callback as *mut F);
-
-    let ssl = SslRef::from_ptr_mut(ssl);
-    match callback(ssl, is_export != 0, keylength as u32) {
-        Ok(ec_key) => {
-            let ptr = ec_key.as_ptr();
-            mem::forget(ec_key);
-            ptr
-        }
-        Err(_) => {
-            // FIXME reset error stack
-            ptr::null_mut()
-        }
-    }
-}
-
-unsafe extern "C" fn raw_tlsext_status<F>(ssl: *mut ffi::SSL, _: *mut c_void) -> c_int
-    where F: Fn(&mut SslRef) -> Result<bool, ErrorStack> + Any + 'static + Sync + Send
-{
-    let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
-    let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
-    let callback = &*(callback as *mut F);
-
-    let ssl = SslRef::from_ptr_mut(ssl);
-    let ret = callback(ssl);
-
-    if ssl.is_server() {
-        match ret {
-            Ok(true) => ffi::SSL_TLSEXT_ERR_OK,
-            Ok(false) => ffi::SSL_TLSEXT_ERR_NOACK,
-            Err(_) => {
-                // FIXME reset error stack
-                ffi::SSL_TLSEXT_ERR_ALERT_FATAL
-            }
-        }
-    } else {
-        match ret {
-            Ok(true) => 1,
-            Ok(false) => 0,
-            Err(_) => {
-                // FIXME reset error stack
-                -1
-            }
-        }
-    }
-}
-
-/// The function is given as the callback to `SSL_CTX_set_next_protos_advertised_cb`.
-///
-/// It causes the parameter `out` to point at a `*const c_uchar` instance that
-/// represents the list of protocols that the server should advertise as those
-/// that it supports.
-/// The list of supported protocols is found in the extra data of the OpenSSL
-/// context.
-extern "C" fn raw_next_protos_advertise_cb(ssl: *mut ffi::SSL,
-                                           out: *mut *const c_uchar,
-                                           outlen: *mut c_uint,
-                                           _arg: *mut c_void)
-                                           -> c_int {
-    unsafe {
-        // First, get the list of (supported) protocols saved in the context extra data.
-        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
-        let protocols = ffi::SSL_CTX_get_ex_data(ssl_ctx, *NPN_PROTOS_IDX);
-        if protocols.is_null() {
-            *out = b"".as_ptr();
-            *outlen = 0;
-        } else {
-            // If the pointer is valid, put the pointer to the actual byte array into the
-            // output parameter `out`, as well as its length into `outlen`.
-            let protocols: &Vec<u8> = &*(protocols as *mut Vec<u8>);
-            *out = protocols.as_ptr();
-            *outlen = protocols.len() as c_uint;
-        }
-    }
-
-    ffi::SSL_TLSEXT_ERR_OK
 }
 
 /// Convert a set of byte slices into a series of byte strings encoded for SSL. Encoding is a byte
@@ -660,13 +367,16 @@ impl SslContextBuilder {
     /// Configures the certificate verification method for new connections and
     /// registers a verification callback.
     pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
-        where F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send
+    where
+        F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send,
     {
         unsafe {
             let verify = Box::new(verify);
-            ffi::SSL_CTX_set_ex_data(self.as_ptr(),
-                                     get_callback_idx::<F>(),
-                                     mem::transmute(verify));
+            ffi::SSL_CTX_set_ex_data(
+                self.as_ptr(),
+                get_callback_idx::<F>(),
+                mem::transmute(verify),
+            );
             ffi::SSL_CTX_set_verify(self.as_ptr(), mode.bits as c_int, Some(raw_verify::<F>));
         }
     }
@@ -676,13 +386,16 @@ impl SslContextBuilder {
     /// Obtain the server name with `servername` then set the corresponding context
     /// with `set_ssl_context`
     pub fn set_servername_callback<F>(&mut self, callback: F)
-        where F: Fn(&mut SslRef) -> Result<(), SniError> + Any + 'static + Sync + Send
+    where
+        F: Fn(&mut SslRef) -> Result<(), SniError> + Any + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(self.as_ptr(),
-                                     get_callback_idx::<F>(),
-                                     mem::transmute(callback));
+            ffi::SSL_CTX_set_ex_data(
+                self.as_ptr(),
+                get_callback_idx::<F>(),
+                mem::transmute(callback),
+            );
             let f: extern "C" fn(_, _, _) -> _ = raw_sni::<F>;
             let f: extern "C" fn() = mem::transmute(f);
             ffi::SSL_CTX_set_tlsext_servername_callback(self.as_ptr(), Some(f));
@@ -703,7 +416,10 @@ impl SslContextBuilder {
     pub fn set_verify_cert_store(&mut self, cert_store: X509Store) -> Result<(), ErrorStack> {
         unsafe {
             let ptr = cert_store.as_ptr();
-            try!(cvt(ffi::SSL_CTX_set0_verify_cert_store(self.as_ptr(), ptr) as c_int));
+            try!(cvt(
+                ffi::SSL_CTX_set0_verify_cert_store(self.as_ptr(), ptr) as
+                    c_int,
+            ));
             mem::forget(cert_store);
 
             Ok(())
@@ -728,32 +444,41 @@ impl SslContextBuilder {
     }
 
     pub fn set_tmp_dh_callback<F>(&mut self, callback: F)
-        where F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + Any + 'static + Sync + Send
+    where
+        F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + Any + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(self.as_ptr(),
-                                     get_callback_idx::<F>(),
-                                     Box::into_raw(callback) as *mut c_void);
+            ffi::SSL_CTX_set_ex_data(
+                self.as_ptr(),
+                get_callback_idx::<F>(),
+                Box::into_raw(callback) as *mut c_void,
+            );
             let f: unsafe extern "C" fn(_, _, _) -> _ = raw_tmp_dh::<F>;
             ffi::SSL_CTX_set_tmp_dh_callback(self.as_ptr(), f);
         }
     }
 
     pub fn set_tmp_ecdh(&mut self, key: &EcKeyRef) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::SSL_CTX_set_tmp_ecdh(self.as_ptr(), key.as_ptr()) as c_int).map(|_| ()) }
+        unsafe {
+            cvt(ffi::SSL_CTX_set_tmp_ecdh(self.as_ptr(), key.as_ptr()) as
+                c_int).map(|_| ())
+        }
     }
 
     /// Requires the `v101` feature and OpenSSL 1.0.1, or the `v102` feature and OpenSSL 1.0.2.
     #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
     pub fn set_tmp_ecdh_callback<F>(&mut self, callback: F)
-        where F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + Any + 'static + Sync + Send
+    where
+        F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + Any + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(self.as_ptr(),
-                                     get_callback_idx::<F>(),
-                                     Box::into_raw(callback) as *mut c_void);
+            ffi::SSL_CTX_set_ex_data(
+                self.as_ptr(),
+                get_callback_idx::<F>(),
+                Box::into_raw(callback) as *mut c_void,
+            );
             let f: unsafe extern "C" fn(_, _, _) -> _ = raw_tmp_ecdh::<F>;
             ffi::SSL_CTX_set_tmp_ecdh_callback(self.as_ptr(), f);
         }
@@ -772,10 +497,11 @@ impl SslContextBuilder {
     pub fn set_ca_file<P: AsRef<Path>>(&mut self, file: P) -> Result<(), ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
         unsafe {
-            cvt(ffi::SSL_CTX_load_verify_locations(self.as_ptr(),
-                                                   file.as_ptr() as *const _,
-                                                   ptr::null()))
-                    .map(|_| ())
+            cvt(ffi::SSL_CTX_load_verify_locations(
+                self.as_ptr(),
+                file.as_ptr() as *const _,
+                ptr::null(),
+            )).map(|_| ())
         }
     }
 
@@ -800,24 +526,27 @@ impl SslContextBuilder {
     pub fn set_session_id_context(&mut self, sid_ctx: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             assert!(sid_ctx.len() <= c_uint::max_value() as usize);
-            cvt(ffi::SSL_CTX_set_session_id_context(self.as_ptr(),
-                                                    sid_ctx.as_ptr(),
-                                                    sid_ctx.len() as c_uint))
-                    .map(|_| ())
+            cvt(ffi::SSL_CTX_set_session_id_context(
+                self.as_ptr(),
+                sid_ctx.as_ptr(),
+                sid_ctx.len() as c_uint,
+            )).map(|_| ())
         }
     }
 
     /// Loads a certificate from a file.
-    pub fn set_certificate_file<P: AsRef<Path>>(&mut self,
-                                                file: P,
-                                                file_type: X509FileType)
-                                                -> Result<(), ErrorStack> {
+    pub fn set_certificate_file<P: AsRef<Path>>(
+        &mut self,
+        file: P,
+        file_type: X509FileType,
+    ) -> Result<(), ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
         unsafe {
-            cvt(ffi::SSL_CTX_use_certificate_file(self.as_ptr(),
-                                                  file.as_ptr() as *const _,
-                                                  file_type.as_raw()))
-                    .map(|_| ())
+            cvt(ffi::SSL_CTX_use_certificate_file(
+                self.as_ptr(),
+                file.as_ptr() as *const _,
+                file_type.as_raw(),
+            )).map(|_| ())
         }
     }
 
@@ -826,13 +555,16 @@ impl SslContextBuilder {
     /// The file should contain a sequence of PEM-formatted certificates, the first being the leaf
     /// certificate, and the remainder forming the chain of certificates up to and including the
     /// trusted root certificate.
-    pub fn set_certificate_chain_file<P: AsRef<Path>>(&mut self,
-                                                      file: P)
-                                                      -> Result<(), ErrorStack> {
+    pub fn set_certificate_chain_file<P: AsRef<Path>>(
+        &mut self,
+        file: P,
+    ) -> Result<(), ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
         unsafe {
-            cvt(ffi::SSL_CTX_use_certificate_chain_file(self.as_ptr(), file.as_ptr() as *const _))
-                .map(|_| ())
+            cvt(ffi::SSL_CTX_use_certificate_chain_file(
+                self.as_ptr(),
+                file.as_ptr() as *const _,
+            )).map(|_| ())
         }
     }
 
@@ -847,23 +579,28 @@ impl SslContextBuilder {
     /// `set_certificate` to a trusted root.
     pub fn add_extra_chain_cert(&mut self, cert: X509) -> Result<(), ErrorStack> {
         unsafe {
-            try!(cvt(ffi::SSL_CTX_add_extra_chain_cert(self.as_ptr(), cert.as_ptr()) as c_int));
+            try!(cvt(ffi::SSL_CTX_add_extra_chain_cert(
+                self.as_ptr(),
+                cert.as_ptr(),
+            ) as c_int));
             mem::forget(cert);
             Ok(())
         }
     }
 
     /// Loads the private key from a file.
-    pub fn set_private_key_file<P: AsRef<Path>>(&mut self,
-                                                file: P,
-                                                file_type: X509FileType)
-                                                -> Result<(), ErrorStack> {
+    pub fn set_private_key_file<P: AsRef<Path>>(
+        &mut self,
+        file: P,
+        file_type: X509FileType,
+    ) -> Result<(), ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
         unsafe {
-            cvt(ffi::SSL_CTX_use_PrivateKey_file(self.as_ptr(),
-                                                 file.as_ptr() as *const _,
-                                                 file_type.as_raw()))
-                    .map(|_| ())
+            cvt(ffi::SSL_CTX_use_PrivateKey_file(
+                self.as_ptr(),
+                file.as_ptr() as *const _,
+                file_type.as_raw(),
+            )).map(|_| ())
         }
     }
 
@@ -878,8 +615,10 @@ impl SslContextBuilder {
     pub fn set_cipher_list(&mut self, cipher_list: &str) -> Result<(), ErrorStack> {
         let cipher_list = CString::new(cipher_list).unwrap();
         unsafe {
-            cvt(ffi::SSL_CTX_set_cipher_list(self.as_ptr(), cipher_list.as_ptr() as *const _))
-                .map(|_| ())
+            cvt(ffi::SSL_CTX_set_cipher_list(
+                self.as_ptr(),
+                cipher_list.as_ptr() as *const _,
+            )).map(|_| ())
         }
     }
 
@@ -891,7 +630,7 @@ impl SslContextBuilder {
         self._set_ecdh_auto(onoff)
     }
 
-    #[cfg(any(ossl102,libressl))]
+    #[cfg(any(ossl102, libressl))]
     fn _set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_CTX_set_ecdh_auto(self.as_ptr(), onoff as c_int)).map(|_| ()) }
     }
@@ -921,20 +660,26 @@ impl SslContextBuilder {
         unsafe {
             // Attach the protocol list to the OpenSSL context structure,
             // so that we can refer to it within the callback.
-            try!(cvt(ffi::SSL_CTX_set_ex_data(self.as_ptr(),
-                                              *NPN_PROTOS_IDX,
-                                              Box::into_raw(protocols) as *mut c_void)));
+            try!(cvt(ffi::SSL_CTX_set_ex_data(
+                self.as_ptr(),
+                *NPN_PROTOS_IDX,
+                Box::into_raw(protocols) as *mut c_void,
+            )));
             // Now register the callback that performs the default protocol
             // matching based on the client-supported list of protocols that
             // has been saved.
-            ffi::SSL_CTX_set_next_proto_select_cb(self.as_ptr(),
-                                                  raw_next_proto_select_cb,
-                                                  ptr::null_mut());
+            ffi::SSL_CTX_set_next_proto_select_cb(
+                self.as_ptr(),
+                raw_next_proto_select_cb,
+                ptr::null_mut(),
+            );
             // Also register the callback to advertise these protocols, if a server socket is
             // created with the context.
-            ffi::SSL_CTX_set_next_protos_advertised_cb(self.as_ptr(),
-                                                       raw_next_protos_advertise_cb,
-                                                       ptr::null_mut());
+            ffi::SSL_CTX_set_next_protos_advertised_cb(
+                self.as_ptr(),
+                raw_next_protos_advertise_cb,
+                ptr::null_mut(),
+            );
             Ok(())
         }
     }
@@ -952,9 +697,11 @@ impl SslContextBuilder {
         let protocols: Box<Vec<u8>> = Box::new(ssl_encode_byte_strings(protocols));
         unsafe {
             // Set the context's internal protocol list for use if we are a server
-            let r = ffi::SSL_CTX_set_alpn_protos(self.as_ptr(),
-                                                 protocols.as_ptr(),
-                                                 protocols.len() as c_uint);
+            let r = ffi::SSL_CTX_set_alpn_protos(
+                self.as_ptr(),
+                protocols.as_ptr(),
+                protocols.len() as c_uint,
+            );
             // fun fact, SSL_CTX_set_alpn_protos has a reversed return code D:
             if r != 0 {
                 return Err(ErrorStack::get());
@@ -964,9 +711,11 @@ impl SslContextBuilder {
             // ssl ctx's ex_data so that we can configure a function to free it later. In the
             // future, it might make sense to pull this into our internal struct Ssl instead of
             // leaning on openssl and using function pointers.
-            try!(cvt(ffi::SSL_CTX_set_ex_data(self.as_ptr(),
-                                              *ALPN_PROTOS_IDX,
-                                              Box::into_raw(protocols) as *mut c_void)));
+            try!(cvt(ffi::SSL_CTX_set_ex_data(
+                self.as_ptr(),
+                *ALPN_PROTOS_IDX,
+                Box::into_raw(protocols) as *mut c_void,
+            )));
 
             // Now register the callback that performs the default protocol
             // matching based on the client-supported list of protocols that
@@ -1005,15 +754,21 @@ impl SslContextBuilder {
     /// response of `Ok(true)` indicates that the OCSP status should be returned to the client, and
     /// `Ok(false)` indicates that the status should not be returned to the client.
     pub fn set_status_callback<F>(&mut self, callback: F) -> Result<(), ErrorStack>
-        where F: Fn(&mut SslRef) -> Result<bool, ErrorStack> + Any + 'static + Sync + Send
+    where
+        F: Fn(&mut SslRef) -> Result<bool, ErrorStack> + Any + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(self.as_ptr(),
-                                     get_callback_idx::<F>(),
-                                     Box::into_raw(callback) as *mut c_void);
+            ffi::SSL_CTX_set_ex_data(
+                self.as_ptr(),
+                get_callback_idx::<F>(),
+                Box::into_raw(callback) as *mut c_void,
+            );
             let f: unsafe extern "C" fn(_, _) -> _ = raw_tlsext_status::<F>;
-            cvt(ffi::SSL_CTX_set_tlsext_status_cb(self.as_ptr(), Some(f)) as c_int).map(|_| ())
+            cvt(ffi::SSL_CTX_set_tlsext_status_cb(
+                self.as_ptr(),
+                Some(f),
+            ) as c_int).map(|_| ())
         }
     }
 
@@ -1024,14 +779,33 @@ impl SslContextBuilder {
     /// must be written as a null-terminated C string.
     #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
     pub fn set_psk_callback<F>(&mut self, callback: F)
-        where F: Fn(&mut SslRef, Option<&[u8]>, &mut [u8], &mut [u8]) -> Result<usize, ErrorStack> + Any + 'static + Sync + Send
+    where
+        F: Fn(&mut SslRef, Option<&[u8]>, &mut [u8], &mut [u8]) -> Result<usize, ErrorStack>
+            + Any
+            + 'static
+            + Sync
+            + Send,
     {
         unsafe {
             let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(self.as_ptr(),
-                                     get_callback_idx::<F>(),
-                                     mem::transmute(callback));
+            ffi::SSL_CTX_set_ex_data(
+                self.as_ptr(),
+                get_callback_idx::<F>(),
+                mem::transmute(callback),
+            );
             ffi::SSL_CTX_set_psk_client_callback(self.as_ptr(), Some(raw_psk::<F>))
+        }
+    }
+
+    /// Sets the extra data at the specified index.
+    pub fn set_ex_data<T>(&mut self, index: Index<SslContext, T>, data: T) {
+        unsafe {
+            let data = Box::new(data);
+            ffi::SSL_CTX_set_ex_data(
+                self.as_ptr(),
+                index.as_raw(),
+                Box::into_raw(data) as *mut c_void,
+            );
         }
     }
 
@@ -1072,6 +846,21 @@ impl fmt::Debug for SslContext {
 impl SslContext {
     pub fn builder(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
         SslContextBuilder::new(method)
+    }
+
+    /// Returns a new extra data index.
+    ///
+    /// Each invocation of this function is guaranteed to return a distinct
+    /// index.
+    pub fn new_ex_index<T>() -> Result<Index<SslContext, T>, ErrorStack>
+    where
+        T: 'static + Sync + Send,
+    {
+        unsafe {
+            ffi::init();
+            let idx = try!(cvt_n(compat::get_new_idx(free_data_box::<T>)));
+            Ok(Index::from_raw(idx))
+        }
     }
 }
 
@@ -1117,6 +906,18 @@ impl SslContextRef {
             ffi::SSL_CTX_get_extra_chain_certs(self.as_ptr(), &mut chain);
             assert!(!chain.is_null());
             StackRef::from_ptr(chain)
+        }
+    }
+
+    /// Returns a reference to the extra data at the specified index.
+    pub fn ex_data<T>(&self, index: Index<SslContext, T>) -> Option<&T> {
+        unsafe {
+            let data = ffi::SSL_CTX_get_ex_data(self.as_ptr(), index.as_raw());
+            if data.is_null() {
+                None
+            } else {
+                Some(&*(data as *const T))
+            }
         }
     }
 }
@@ -1275,6 +1076,23 @@ foreign_type! {
     pub struct SslRef;
 }
 
+impl Ssl {
+    /// Returns a new extra data index.
+    ///
+    /// Each invocation of this function is guaranteed to return a distinct
+    /// index.
+    pub fn new_ex_index<T>() -> Result<Index<Ssl, T>, ErrorStack>
+    where
+        T: 'static + Sync + Send,
+    {
+        unsafe {
+            ffi::init();
+            let idx = try!(cvt_n(compat::get_new_ssl_idx(free_data_box::<T>)));
+            Ok(Index::from_raw(idx))
+        }
+    }
+}
+
 impl fmt::Debug for SslRef {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let mut builder = fmt.debug_struct("Ssl");
@@ -1320,13 +1138,16 @@ impl SslRef {
     /// to the certificate chain. It should return `true` if the certificate
     /// chain is valid and `false` otherwise.
     pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
-        where F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send
+    where
+        F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send,
     {
         unsafe {
             let verify = Box::new(verify);
-            ffi::SSL_set_ex_data(self.as_ptr(),
-                                 get_ssl_callback_idx::<F>(),
-                                 mem::transmute(verify));
+            ffi::SSL_set_ex_data(
+                self.as_ptr(),
+                get_ssl_callback_idx::<F>(),
+                mem::transmute(verify),
+            );
             ffi::SSL_set_verify(self.as_ptr(), mode.bits as c_int, Some(ssl_raw_verify::<F>));
         }
     }
@@ -1336,13 +1157,16 @@ impl SslRef {
     }
 
     pub fn set_tmp_dh_callback<F>(&mut self, callback: F)
-        where F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + Any + 'static + Sync + Send
+    where
+        F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + Any + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
-            ffi::SSL_set_ex_data(self.as_ptr(),
-                                 get_ssl_callback_idx::<F>(),
-                                 Box::into_raw(callback) as *mut c_void);
+            ffi::SSL_set_ex_data(
+                self.as_ptr(),
+                get_ssl_callback_idx::<F>(),
+                Box::into_raw(callback) as *mut c_void,
+            );
             let f: unsafe extern "C" fn(_, _, _) -> _ = raw_tmp_dh_ssl::<F>;
             ffi::SSL_set_tmp_dh_callback(self.as_ptr(), f);
         }
@@ -1355,13 +1179,16 @@ impl SslRef {
     /// Requires the `v101` feature and OpenSSL 1.0.1, or the `v102` feature and OpenSSL 1.0.2.
     #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
     pub fn set_tmp_ecdh_callback<F>(&mut self, callback: F)
-        where F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + Any + 'static + Sync + Send
+    where
+        F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + Any + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
-            ffi::SSL_set_ex_data(self.as_ptr(),
-                                 get_ssl_callback_idx::<F>(),
-                                 Box::into_raw(callback) as *mut c_void);
+            ffi::SSL_set_ex_data(
+                self.as_ptr(),
+                get_ssl_callback_idx::<F>(),
+                Box::into_raw(callback) as *mut c_void,
+            );
             let f: unsafe extern "C" fn(_, _, _) -> _ = raw_tmp_ecdh_ssl::<F>;
             ffi::SSL_set_tmp_ecdh_callback(self.as_ptr(), f);
         }
@@ -1411,8 +1238,10 @@ impl SslRef {
     pub fn set_hostname(&mut self, hostname: &str) -> Result<(), ErrorStack> {
         let cstr = CString::new(hostname).unwrap();
         unsafe {
-            cvt(ffi::SSL_set_tlsext_host_name(self.as_ptr(), cstr.as_ptr() as *mut _) as c_int)
-                .map(|_| ())
+            cvt(ffi::SSL_set_tlsext_host_name(
+                self.as_ptr(),
+                cstr.as_ptr() as *mut _,
+            ) as c_int).map(|_| ())
         }
     }
 
@@ -1527,7 +1356,9 @@ impl SslRef {
                 return None;
             }
             let meth = ffi::SSL_COMP_get_name(ptr);
-            Some(str::from_utf8(CStr::from_ptr(meth as *const _).to_bytes()).unwrap())
+            Some(
+                str::from_utf8(CStr::from_ptr(meth as *const _).to_bytes()).unwrap(),
+            )
         }
     }
 
@@ -1544,7 +1375,9 @@ impl SslRef {
                 return None;
             }
 
-            Some(str::from_utf8(CStr::from_ptr(name as *const _).to_bytes()).unwrap())
+            Some(
+                str::from_utf8(CStr::from_ptr(name as *const _).to_bytes()).unwrap(),
+            )
         }
     }
 
@@ -1609,7 +1442,10 @@ impl SslRef {
     /// Sets the status response a client wishes the server to reply with.
     pub fn set_status_type(&mut self, type_: StatusType) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::SSL_set_tlsext_status_type(self.as_ptr(), type_.as_raw()) as c_int).map(|_| ())
+            cvt(ffi::SSL_set_tlsext_status_type(
+                self.as_ptr(),
+                type_.as_raw(),
+            ) as c_int).map(|_| ())
         }
     }
 
@@ -1631,21 +1467,47 @@ impl SslRef {
     pub fn set_ocsp_status(&mut self, response: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             assert!(response.len() <= c_int::max_value() as usize);
-            let p = try!(cvt_p(ffi::CRYPTO_malloc(response.len() as _,
-                                                  concat!(file!(), "\0").as_ptr() as *const _,
-                                                  line!() as c_int)));
+            let p = try!(cvt_p(ffi::CRYPTO_malloc(
+                response.len() as _,
+                concat!(file!(), "\0").as_ptr() as *const _,
+                line!() as c_int,
+            )));
             ptr::copy_nonoverlapping(response.as_ptr(), p as *mut u8, response.len());
-            cvt(ffi::SSL_set_tlsext_status_ocsp_resp(self.as_ptr(),
-                                                     p as *mut c_uchar,
-                                                     response.len() as c_long) as
-                c_int)
-                    .map(|_| ())
+            cvt(ffi::SSL_set_tlsext_status_ocsp_resp(
+                self.as_ptr(),
+                p as *mut c_uchar,
+                response.len() as c_long,
+            ) as c_int).map(|_| ())
         }
     }
 
     /// Determines if this `Ssl` is configured for server-side or client-side use.
     pub fn is_server(&self) -> bool {
         unsafe { compat::SSL_is_server(self.as_ptr()) != 0 }
+    }
+
+    /// Sets the extra data at the specified index.
+    pub fn set_ex_data<T>(&mut self, index: Index<Ssl, T>, data: T) {
+        unsafe {
+            let data = Box::new(data);
+            ffi::SSL_set_ex_data(
+                self.as_ptr(),
+                index.as_raw(),
+                Box::into_raw(data) as *mut c_void,
+            );
+        }
+    }
+
+    /// Returns a reference to the extra data at the specified index.
+    pub fn ex_data<T>(&self, index: Index<Ssl, T>) -> Option<&T> {
+        unsafe {
+            let data = ffi::SSL_get_ex_data(self.as_ptr(), index.as_raw());
+            if data.is_null() {
+                None
+            } else {
+                Some(&*(data as *const T))
+            }
+        }
     }
 }
 
@@ -1673,7 +1535,8 @@ impl Ssl {
     /// OpenSSL's default configuration is insecure. It is highly recommended to use
     /// `SslConnector` rather than `Ssl` directly, as it manages that configuration.
     pub fn connect<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
-        where S: Read + Write
+    where
+        S: Read + Write,
     {
         let mut stream = SslStream::new_base(self, stream);
         let ret = unsafe { ffi::SSL_connect(stream.ssl.as_ptr()) };
@@ -1684,15 +1547,15 @@ impl Ssl {
                 e @ Error::WantWrite(_) |
                 e @ Error::WantRead(_) => {
                     Err(HandshakeError::Interrupted(MidHandshakeSslStream {
-                                                        stream: stream,
-                                                        error: e,
-                                                    }))
+                        stream: stream,
+                        error: e,
+                    }))
                 }
                 err => {
                     Err(HandshakeError::Failure(MidHandshakeSslStream {
-                                                    stream: stream,
-                                                    error: err,
-                                                }))
+                        stream: stream,
+                        error: err,
+                    }))
                 }
             }
         }
@@ -1705,7 +1568,8 @@ impl Ssl {
     /// OpenSSL's default configuration is insecure. It is highly recommended to use
     /// `SslAcceptor` rather than `Ssl` directly, as it manages that configuration.
     pub fn accept<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
-        where S: Read + Write
+    where
+        S: Read + Write,
     {
         let mut stream = SslStream::new_base(self, stream);
         let ret = unsafe { ffi::SSL_accept(stream.ssl.as_ptr()) };
@@ -1716,15 +1580,15 @@ impl Ssl {
                 e @ Error::WantWrite(_) |
                 e @ Error::WantRead(_) => {
                     Err(HandshakeError::Interrupted(MidHandshakeSslStream {
-                                                        stream: stream,
-                                                        error: e,
-                                                    }))
+                        stream: stream,
+                        error: e,
+                    }))
                 }
                 err => {
                     Err(HandshakeError::Failure(MidHandshakeSslStream {
-                                                    stream: stream,
-                                                    error: err,
-                                                }))
+                        stream: stream,
+                        error: err,
+                    }))
                 }
             }
         }
@@ -1793,7 +1657,8 @@ pub struct SslStream<S> {
 }
 
 impl<S> fmt::Debug for SslStream<S>
-    where S: fmt::Debug
+where
+    S: fmt::Debug,
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("SslStream")
@@ -1894,8 +1759,10 @@ impl<S> SslStream<S> {
                     match self.get_bio_error() {
                         Some(err) => Error::Stream(err),
                         None => {
-                            Error::Stream(io::Error::new(io::ErrorKind::ConnectionAborted,
-                                                         "unexpected EOF observed"))
+                            Error::Stream(io::Error::new(
+                                io::ErrorKind::ConnectionAborted,
+                                "unexpected EOF observed",
+                            ))
                         }
                     }
                 } else {
@@ -1907,8 +1774,10 @@ impl<S> SslStream<S> {
                 let err = match self.get_bio_error() {
                     Some(err) => err,
                     None => {
-                        io::Error::new(io::ErrorKind::Other,
-                                       "BUG: got an SSL_ERROR_WANT_WRITE with no error in the BIO")
+                        io::Error::new(
+                            io::ErrorKind::Other,
+                            "BUG: got an SSL_ERROR_WANT_WRITE with no error in the BIO",
+                        )
                     }
                 };
                 Error::WantWrite(err)
@@ -1917,15 +1786,19 @@ impl<S> SslStream<S> {
                 let err = match self.get_bio_error() {
                     Some(err) => err,
                     None => {
-                        io::Error::new(io::ErrorKind::Other,
-                                       "BUG: got an SSL_ERROR_WANT_WRITE with no error in the BIO")
+                        io::Error::new(
+                            io::ErrorKind::Other,
+                            "BUG: got an SSL_ERROR_WANT_WRITE with no error in the BIO",
+                        )
                     }
                 };
                 Error::WantRead(err)
             }
             err => {
-                Error::Stream(io::Error::new(io::ErrorKind::InvalidData,
-                                             format!("unexpected error {}", err)))
+                Error::Stream(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("unexpected error {}", err),
+                ))
             }
         }
     }
@@ -1982,13 +1855,12 @@ impl<S: Read + Write> Read for SslStream<S> {
 
 impl<S: Read + Write> Write for SslStream<S> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.ssl_write(buf)
-            .map_err(|e| match e {
-                         Error::Stream(e) => e,
-                         Error::WantRead(e) => e,
-                         Error::WantWrite(e) => e,
-                         e => io::Error::new(io::ErrorKind::Other, e),
-                     })
+        self.ssl_write(buf).map_err(|e| match e {
+            Error::Stream(e) => e,
+            Error::WantRead(e) => e,
+            Error::WantWrite(e) => e,
+            e => io::Error::new(io::ErrorKind::Other, e),
+        })
     }
 
     fn flush(&mut self) -> io::Result<()> {
@@ -2017,21 +1889,25 @@ mod compat {
                   SSL_SESSION_get_master_key, SSL_is_server, SSL_SESSION_up_ref};
 
     pub unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
-        ffi::CRYPTO_get_ex_new_index(ffi::CRYPTO_EX_INDEX_SSL_CTX,
-                                     0,
-                                     ptr::null_mut(),
-                                     None,
-                                     None,
-                                     Some(f))
+        ffi::CRYPTO_get_ex_new_index(
+            ffi::CRYPTO_EX_INDEX_SSL_CTX,
+            0,
+            ptr::null_mut(),
+            None,
+            None,
+            Some(f),
+        )
     }
 
     pub unsafe fn get_new_ssl_idx(f: ffi::CRYPTO_EX_free) -> c_int {
-        ffi::CRYPTO_get_ex_new_index(ffi::CRYPTO_EX_INDEX_SSL,
-                                     0,
-                                     ptr::null_mut(),
-                                     None,
-                                     None,
-                                     Some(f))
+        ffi::CRYPTO_get_ex_new_index(
+            ffi::CRYPTO_EX_INDEX_SSL,
+            0,
+            ptr::null_mut(),
+            None,
+            None,
+            Some(f),
+        )
     }
 
     pub fn tls_method() -> *const ffi::SSL_METHOD {
@@ -2056,17 +1932,21 @@ mod compat {
     }
 
     pub unsafe fn SSL_CTX_set_options(ctx: *const ffi::SSL_CTX, op: c_ulong) -> c_ulong {
-        ffi::SSL_CTX_ctrl(ctx as *mut _,
-                          ffi::SSL_CTRL_OPTIONS,
-                          op as c_long,
-                          ptr::null_mut()) as c_ulong
+        ffi::SSL_CTX_ctrl(
+            ctx as *mut _,
+            ffi::SSL_CTRL_OPTIONS,
+            op as c_long,
+            ptr::null_mut(),
+        ) as c_ulong
     }
 
     pub unsafe fn SSL_CTX_clear_options(ctx: *const ffi::SSL_CTX, op: c_ulong) -> c_ulong {
-        ffi::SSL_CTX_ctrl(ctx as *mut _,
-                          ffi::SSL_CTRL_CLEAR_OPTIONS,
-                          op as c_long,
-                          ptr::null_mut()) as c_ulong
+        ffi::SSL_CTX_ctrl(
+            ctx as *mut _,
+            ffi::SSL_CTRL_CLEAR_OPTIONS,
+            op as c_long,
+            ptr::null_mut(),
+        ) as c_ulong
     }
 
     pub unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
@@ -2078,18 +1958,21 @@ mod compat {
     }
 
     pub unsafe fn SSL_CTX_up_ref(ssl: *mut ffi::SSL_CTX) -> libc::c_int {
-        ffi::CRYPTO_add_lock(&mut (*ssl).references,
-                             1,
-                             ffi::CRYPTO_LOCK_SSL_CTX,
-                             "mod.rs\0".as_ptr() as *const _,
-                             line!() as libc::c_int);
+        ffi::CRYPTO_add_lock(
+            &mut (*ssl).references,
+            1,
+            ffi::CRYPTO_LOCK_SSL_CTX,
+            "mod.rs\0".as_ptr() as *const _,
+            line!() as libc::c_int,
+        );
         0
     }
 
-    pub unsafe fn SSL_SESSION_get_master_key(session: *const ffi::SSL_SESSION,
-                                             out: *mut c_uchar,
-                                             mut outlen: size_t)
-                                             -> size_t {
+    pub unsafe fn SSL_SESSION_get_master_key(
+        session: *const ffi::SSL_SESSION,
+        out: *mut c_uchar,
+        mut outlen: size_t,
+    ) -> size_t {
         if outlen == 0 {
             return (*session).master_key_length as size_t;
         }
@@ -2113,11 +1996,13 @@ mod compat {
     }
 
     pub unsafe fn SSL_SESSION_up_ref(ses: *mut ffi::SSL_SESSION) -> c_int {
-        ffi::CRYPTO_add_lock(&mut (*ses).references,
-                             1,
-                             ffi::CRYPTO_LOCK_SSL_CTX,
-                             "mod.rs\0".as_ptr() as *const _,
-                             line!() as libc::c_int);
+        ffi::CRYPTO_add_lock(
+            &mut (*ses).references,
+            1,
+            ffi::CRYPTO_LOCK_SSL_CTX,
+            "mod.rs\0".as_ptr() as *const _,
+            line!() as libc::c_int,
+        );
         0
     }
 }

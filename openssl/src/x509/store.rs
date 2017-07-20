@@ -50,9 +50,7 @@ impl X509StoreBuilderRef {
     /// environment variables if present, or defaults specified at OpenSSL
     /// build time otherwise.
     pub fn set_default_paths(&mut self) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::X509_STORE_set_default_paths(self.as_ptr())).map(|_| ())
-        }
+        unsafe { cvt(ffi::X509_STORE_set_default_paths(self.as_ptr())).map(|_| ()) }
     }
 }
 
