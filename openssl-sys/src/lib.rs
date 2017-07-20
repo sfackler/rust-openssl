@@ -8,8 +8,6 @@ use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t, FILE
 use std::ptr;
 use std::mem;
 
-include!("errors.rs");
-
 #[cfg(any(ossl101, ossl102))]
 mod ossl10x;
 #[cfg(any(ossl101, ossl102))]
@@ -24,6 +22,9 @@ pub use ossl110::*;
 mod libressl;
 #[cfg(libressl)]
 pub use libressl::*;
+
+mod errors;
+pub use errors::*;
 
 pub enum ASN1_INTEGER {}
 pub enum ASN1_GENERALIZEDTIME {}
