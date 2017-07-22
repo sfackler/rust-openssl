@@ -74,52 +74,55 @@ armhf: &ARMHF
   CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
   CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_AR: arm-linux-gnueabihf-ar
 
+base: &BASE
+  RUST_BACKTRACE: 1
+
 version: 2
 jobs:
   x86_64-openssl-1.1.0:
     <<: *JOB
     environment:
-      <<: [*OPENSSL_110, *X86_64]
+      <<: [*OPENSSL_110, *X86_64, *BASE]
   x86_64-openssl-1.0.2:
     <<: *JOB
     environment:
-      <<: [*OPENSSL_102, *X86_64]
+      <<: [*OPENSSL_102, *X86_64, *BASE]
   x86_64-openssl-1.0.1:
     <<: *JOB
     environment:
-      <<: [*OPENSSL_101, *X86_64]
+      <<: [*OPENSSL_101, *X86_64, *BASE]
   i686-openssl-1.1.0:
     <<: *JOB
     environment:
-      <<: [*OPENSSL_110, *I686]
+      <<: [*OPENSSL_110, *I686, *BASE]
   i686-openssl-1.0.2:
     <<: *JOB
     environment:
-      <<: [*OPENSSL_102, *I686]
+      <<: [*OPENSSL_102, *I686, *BASE]
   i686-openssl-1.0.1:
     <<: *JOB
     environment:
-      <<: [*OPENSSL_101, *I686]
+      <<: [*OPENSSL_101, *I686, *BASE]
   armhf-openssl-1.1.0:
     <<: *JOB
     environment:
-      <<: [*OPENSSL_110, *ARMHF]
+      <<: [*OPENSSL_110, *ARMHF, *BASE]
   armhf-openssl-1.0.2:
     <<: *JOB
     environment:
-      <<: [*OPENSSL_102, *ARMHF]
+      <<: [*OPENSSL_102, *ARMHF, *BASE]
   armhf-openssl-1.0.1:
     <<: *JOB
     environment:
-      <<: [*OPENSSL_101, *ARMHF]
+      <<: [*OPENSSL_101, *ARMHF, *BASE]
   x86_64-libressl-2.5.0:
     <<: *JOB
     environment:
-      <<: [*LIBRESSL_250, *X86_64]
+      <<: [*LIBRESSL_250, *X86_64, *BASE]
   x86_64-libressl-2.6.0:
     <<: *JOB
     environment:
-      <<: [*LIBRESSL_260, *X86_64]
+      <<: [*LIBRESSL_260, *X86_64, *BASE]
 workflows:
   version: 2
   tests:
