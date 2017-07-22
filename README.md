@@ -26,7 +26,7 @@ regular development utilities, like `pkg-config`, as the custom build script rel
 on them.
 
 ```bash
-# On Ubuntu
+# On Debian and Ubuntu
 sudo apt-get install pkg-config libssl-dev
 # On Arch Linux
 sudo pacman -S openssl
