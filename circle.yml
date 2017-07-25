@@ -23,7 +23,7 @@ job: &JOB
       paths:
       - ~/openssl
   - restore_cache:
-      key: deps-1.18.0-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}
+      key: deps-1.19.0-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}
   - run: |
       export OPENSSL_DIR=$HOME/openssl
       cargo run --manifest-path=systest/Cargo.toml --target $TARGET
@@ -39,7 +39,7 @@ job: &JOB
         --all-features \
         $TEST_ARGS
   - save_cache:
-      key: deps-1.18.0-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}
+      key: deps-1.19.0-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}
       paths:
       - target
       - ~/.cargo/registry/cache
