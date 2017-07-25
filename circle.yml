@@ -1,12 +1,12 @@
 job: &JOB
   working_directory: ~/build
   docker:
-  - image: jimmycuadra/rust:1.18.0
+  - image: jimmycuadra/rust:1.19.0
   steps:
   - checkout
   - run: apt-get update
   - run: apt-get install -y curl
-  - run: RUST_VERSION=1.18.0 ./test/add_target.sh
+  - run: RUST_VERSION=1.19.0 ./test/add_target.sh
   - restore_cache:
       key: registry
   - run: cargo generate-lockfile
@@ -26,11 +26,7 @@ job: &JOB
       key: deps-1.18.0-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}
   - run: |
       export OPENSSL_DIR=$HOME/openssl
-      case "${NO_RUN}" in
-        "1") CMD=build;;
-        "") CMD=run;;
-      esac
-      cargo $CMD --manifest-path=systest/Cargo.toml --target $TARGET
+      cargo run --manifest-path=systest/Cargo.toml --target $TARGET
   - run: |
       export OPENSSL_DIR=$HOME/openssl
       export PATH=$OPENSSL_DIR/bin:$PATH
@@ -73,6 +69,7 @@ armhf: &ARMHF
   NO_RUN: 1
   CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
   CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_AR: arm-linux-gnueabihf-ar
+  CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUNNER: qemu-arm-static
 
 base: &BASE
   RUST_BACKTRACE: 1
