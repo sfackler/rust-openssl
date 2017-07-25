@@ -6,7 +6,7 @@ job: &JOB
   - checkout
   - run: apt-get update
   - run: apt-get install -y curl
-  - run: RUST_VERSION=1.19.0 ./test/add_target.sh
+  - run: ./test/add_target.sh
   - restore_cache:
       key: registry
   - run: cargo generate-lockfile
