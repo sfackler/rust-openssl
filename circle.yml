@@ -27,6 +27,7 @@ job: &JOB
       export OPENSSL_DIR=$HOME/openssl
       cargo run --manifest-path=systest/Cargo.toml --target $TARGET
   - run: |
+      ulimit -c unlimited
       export OPENSSL_DIR=$HOME/openssl
       export PATH=$OPENSSL_DIR/bin:$PATH
       if [ "${NO_RUN}" = "1" ]; then
@@ -37,6 +38,14 @@ job: &JOB
         --target $TARGET \
         --all-features \
         $TEST_ARGS
+  - run:
+      command: |
+        mkdir -p /tmp/core_dumps
+        find . -name "core.*" -exec cp \{\} /tmp/core_dumps \;
+        cp target/$TARGET/debug/openssl-* /tmp/core_dumps
+      when: on_fail
+  - store_artifacts:
+      path: /tmp/core_dumps
   - save_cache:
       key: deps-1.19.0-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}
       paths:

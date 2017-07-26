@@ -2,6 +2,7 @@ use std::sync::{Mutex, MutexGuard};
 use std::sync::{Once, ONCE_INIT};
 use std::mem;
 use std::ptr;
+use std::process;
 
 use libc::{c_int, c_char, c_void, c_long, c_uchar, size_t, c_uint, c_ulong};
 #[cfg(not(ossl101))]
@@ -746,7 +747,10 @@ unsafe extern "C" fn locking_function(mode: c_int, n: c_int, _file: *const c_cha
     if mode & ::CRYPTO_LOCK != 0 {
         (*GUARDS)[n as usize] = Some(mutex.lock().unwrap());
     } else {
-        &(*GUARDS)[n as usize].take().expect("lock already unlocked");
+        if let None = &(*GUARDS)[n as usize].take() {
+            println!("lock {} already unlocked", n);
+            process::abort();
+        }
     }
 }
 
