@@ -5,6 +5,9 @@ if [ -d ~/openssl ]; then
     exit 0
 fi
 
+apt-get update
+apt-get install -y --no-install-recommends curl
+
 case "${LIBRARY}" in
 "libressl")
     URL1="http://ftp3.usa.openbsd.org/pub/OpenBSD/LibreSSL/libressl-${VERSION}.tar.gz"
