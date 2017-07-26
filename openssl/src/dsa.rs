@@ -79,6 +79,7 @@ impl DsaRef {
 impl Dsa {
     /// Generate a DSA key pair.
     pub fn generate(bits: u32) -> Result<Dsa, ErrorStack> {
+        ffi::init();
         unsafe {
             let dsa = Dsa(try!(cvt_p(ffi::DSA_new())));
             try!(cvt(ffi::DSA_generate_parameters_ex(

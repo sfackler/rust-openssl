@@ -3,6 +3,7 @@ use std::sync::{Once, ONCE_INIT};
 use std::mem;
 use std::ptr;
 use std::process;
+use std::io::{self, Write};
 
 use libc::{c_int, c_char, c_void, c_long, c_uchar, size_t, c_uint, c_ulong};
 #[cfg(not(ossl101))]
@@ -748,7 +749,11 @@ unsafe extern "C" fn locking_function(mode: c_int, n: c_int, _file: *const c_cha
         (*GUARDS)[n as usize] = Some(mutex.lock().unwrap());
     } else {
         if let None = (*GUARDS)[n as usize].take() {
-            println!("lock {} already unlocked", n);
+            let _ = writeln!(
+                io::stderr(),
+                "BUG: rust-openssl lock {} already unlocked, aborting",
+                n
+            );
             process::abort();
         }
     }
