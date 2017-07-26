@@ -747,7 +747,7 @@ unsafe extern "C" fn locking_function(mode: c_int, n: c_int, _file: *const c_cha
     if mode & ::CRYPTO_LOCK != 0 {
         (*GUARDS)[n as usize] = Some(mutex.lock().unwrap());
     } else {
-        if let None = &(*GUARDS)[n as usize].take() {
+        if let None = (*GUARDS)[n as usize].take() {
             println!("lock {} already unlocked", n);
             process::abort();
         }
