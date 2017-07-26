@@ -4,6 +4,7 @@ job: &JOB
   - image: jimmycuadra/rust:1.19.0
   steps:
   - checkout
+  - apt-get update
   - run: ./test/add_target.sh
   - restore_cache:
       key: registry

@@ -5,7 +5,6 @@ if [ -d ~/openssl ]; then
     exit 0
 fi
 
-apt-get update
 apt-get install -y --no-install-recommends curl
 
 case "${LIBRARY}" in
