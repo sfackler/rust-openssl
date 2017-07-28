@@ -15,20 +15,17 @@ job: &JOB
       - ~/.cargo/registry/index
   - run: echo "${LIBRARY}-${VERSION}-${TARGET}" > ~/lib_key
   - restore_cache:
-      key: lib-{{ checksum "~/lib_key" }}-{{ checksum "test/build_openssl.sh"}}
+      key: lib-{{ checksum "~/lib_key" }}-{{ checksum "test/build_openssl.sh" }}
   - run: ./test/build_openssl.sh
   - save_cache:
-      key: lib-{{ checksum "~/lib_key" }}-{{ checksum "test/build_openssl.sh"}}
+      key: lib-{{ checksum "~/lib_key" }}-{{ checksum "test/build_openssl.sh" }}
       paths:
-      - ~/openssl
+      - /openssl
   - restore_cache:
       key: deps-1.19.0-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}
-  - run: |
-      export OPENSSL_DIR=$HOME/openssl
-      cargo run --manifest-path=systest/Cargo.toml --target $TARGET
+  - run: cargo run --manifest-path=systest/Cargo.toml --target $TARGET
   - run: |
       ulimit -c unlimited
-      export OPENSSL_DIR=$HOME/openssl
       export PATH=$OPENSSL_DIR/bin:$PATH
       if [ "${NO_RUN}" = "1" ]; then
         TEST_ARGS=--no-run
@@ -81,6 +78,7 @@ armhf: &ARMHF
 
 base: &BASE
   RUST_BACKTRACE: 1
+  OPENSSL_DIR: /openssl
 
 version: 2
 jobs:

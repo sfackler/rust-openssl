@@ -43,13 +43,12 @@ curl -o ${OUT} -L --max-redirs ${MAX_REDIRECTS} ${URL1} \
 
 tar --strip-components=1 -xzf ${OUT}
 
-PREFIX=${HOME}/openssl
 case "${LIBRARY}" in
 "openssl")
-    ./Configure --prefix=${PREFIX} ${OS_COMPILER} -fPIC -g ${OS_FLAGS} no-shared
+    ./Configure --prefix=${OPENSSL_DIR} ${OS_COMPILER} -fPIC -g ${OS_FLAGS} no-shared
     ;;
 "libressl")
-    ./configure --prefix=${PREFIX} --disable-shared --with-pic
+    ./configure --prefix=${OPENSSL_DIR} --disable-shared --with-pic
     ;;
 esac
 
