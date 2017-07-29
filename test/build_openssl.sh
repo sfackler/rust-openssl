@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-if [ -d ~/openssl ]; then
+if [ -d "${OPENSSL_DIR}" ]; then
     exit 0
 fi
 
