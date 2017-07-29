@@ -2240,6 +2240,7 @@ extern "C" {
     #[cfg(libressl)]
     pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const libc::c_void;
     pub fn SSL_get_peer_certificate(ssl: *const SSL) -> *mut X509;
+    pub fn SSL_get_peer_cert_chain(ssl: *const SSL) -> *mut stack_st_X509;
     pub fn SSL_get_ssl_method(ssl: *mut SSL) -> *const SSL_METHOD;
     pub fn SSL_get_version(ssl: *const SSL) -> *const c_char;
     pub fn SSL_state_string(ssl: *const SSL) -> *const c_char;

@@ -1257,6 +1257,21 @@ impl SslRef {
         }
     }
 
+    /// Returns the certificate chain of the peer, if present.
+    ///
+    /// On the client side, the chain includes the leaf certificate, but on the server side it does
+    /// not. Fun!
+    pub fn peer_cert_chain(&self) -> Option<&StackRef<X509>> {
+        unsafe {
+            let ptr = ffi::SSL_get_peer_cert_chain(self.as_ptr());
+            if ptr.is_null() {
+                None
+            } else {
+                Some(StackRef::from_ptr(ptr))
+            }
+        }
+    }
+
     /// Returns the certificate associated with this `Ssl`, if present.
     pub fn certificate(&self) -> Option<&X509Ref> {
         unsafe {
