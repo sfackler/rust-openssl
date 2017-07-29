@@ -197,7 +197,7 @@ macro_rules! run_test(
             }
 
             #[test]
-            #[cfg_attr(any(libressl, windows, target_arch = "arm"), ignore)] // FIXME(#467)
+            #[ignore] // FIXME(#467)
             fn dtlsv1() {
                 let (_s, stream) = Server::new_dtlsv1(Some("hello"));
                 $blk(SslMethod::dtls(), stream);
