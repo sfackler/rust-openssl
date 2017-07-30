@@ -24,7 +24,6 @@ impl DhRef {
 impl Dh {
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<Dh, ErrorStack> {
         unsafe {
-            init();
             let dh = Dh(try!(cvt_p(ffi::DH_new())));
             try!(cvt(compat::DH_set0_pqg(
                 dh.0,
@@ -43,19 +42,28 @@ impl Dh {
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn get_1024_160() -> Result<Dh, ErrorStack> {
-        unsafe { cvt_p(ffi::DH_get_1024_160()).map(Dh) }
+        unsafe {
+            init();
+            cvt_p(ffi::DH_get_1024_160()).map(Dh)
+        }
     }
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn get_2048_224() -> Result<Dh, ErrorStack> {
-        unsafe { cvt_p(ffi::DH_get_2048_224()).map(Dh) }
+        unsafe {
+            init();
+            cvt_p(ffi::DH_get_2048_224()).map(Dh)
+        }
     }
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn get_2048_256() -> Result<Dh, ErrorStack> {
-        unsafe { cvt_p(ffi::DH_get_2048_256()).map(Dh) }
+        unsafe {
+            init();
+            cvt_p(ffi::DH_get_2048_256()).map(Dh)
+        }
     }
 }
 
