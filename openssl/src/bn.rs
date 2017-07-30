@@ -52,7 +52,10 @@ foreign_type! {
 impl BigNumContext {
     /// Returns a new `BigNumContext`.
     pub fn new() -> Result<BigNumContext, ErrorStack> {
-        unsafe { cvt_p(ffi::BN_CTX_new()).map(BigNumContext) }
+        unsafe {
+            ffi::init();
+            cvt_p(ffi::BN_CTX_new()).map(BigNumContext)
+        }
     }
 }
 
