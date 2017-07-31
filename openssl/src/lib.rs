@@ -23,6 +23,8 @@ use error::ErrorStack;
 
 #[macro_use]
 mod macros;
+#[macro_use]
+mod macros_exported;
 
 mod bio;
 mod util;

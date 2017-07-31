@@ -797,6 +797,39 @@ fn test_alpn_server_select_none() {
 }
 
 #[test]
+fn test_if_has_alpn() {
+    let cfg_has_alpn = cfg!(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)));
+
+    // as expression
+    {
+        assert_eq!(cfg_has_alpn, if_has_alpn!({ true } else { false }));
+    }
+
+    // as block
+    {
+
+        let v;
+        if_has_alpn!({
+            v = true;
+        } else {
+            v = false;
+        });
+
+        assert_eq!(cfg_has_alpn, v);
+    }
+
+    // as block without else
+    {
+        let mut _v = false;
+        if_has_alpn!({
+            _v = true;
+        });
+
+        assert_eq!(cfg_has_alpn, _v);
+    }
+}
+
+#[test]
 #[cfg_attr(any(libressl, windows, target_arch = "arm"), ignore)] // FIXME(#467)
 fn test_read_dtlsv1() {
     let (_s, stream) = Server::new_dtlsv1(Some("hello"));
