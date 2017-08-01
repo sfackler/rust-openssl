@@ -53,20 +53,22 @@ impl fmt::Display for Asn1TimeRef {
 
 impl Asn1TimeRef {
     pub fn as_unix(&self) -> Result<i64, ErrorStack> {
+        Asn1Time::from_unix(0)?.diff(Some(self))
+    }
+
+    pub fn diff(&self, compare: Option<&Self>) -> Result<i64, ErrorStack> {
         let mut days = 0;
         let mut seconds = 0;
+        let other = compare.map(Self::as_ptr).unwrap_or_else(ptr::null_mut);
 
-        unsafe {
-            let epoch = ffi::ASN1_TIME_set(ptr::null_mut(), 0);
-            if epoch.is_null() {
-                return Err(ErrorStack::get());
-            }
-            if ffi::ASN1_TIME_diff(&mut days, &mut seconds, epoch, self.as_ptr()) == 0 {
-                return Err(ErrorStack::get());
-            }
+        let err = unsafe {
+            ffi::ASN1_TIME_diff(&mut days, &mut seconds, self.as_ptr(), other)
+        };
+
+        match err {
+            0 => Err(ErrorStack::get()),
+            _ => Ok(days as i64 * 24 * 60 * 60 + seconds as i64),
         }
-
-        Ok(days as i64 * 24 * 60 * 60 + seconds as i64)
     }
 }
 
@@ -83,6 +85,16 @@ impl Asn1Time {
     /// Creates a new time on specified interval in days from now
     pub fn days_from_now(days: u32) -> Result<Asn1Time, ErrorStack> {
         Asn1Time::from_period(days as c_long * 60 * 60 * 24)
+    }
+
+    pub fn from_unix(time: i64) -> Result<Self, ErrorStack> {
+        unsafe {
+            let asntime = ffi::ASN1_TIME_set(ptr::null_mut(), time);
+            match asntime.is_null() {
+                true => Err(ErrorStack::get()),
+                false => Ok(Self::from_ptr(asntime)),
+            }
+        }
     }
 }
 
