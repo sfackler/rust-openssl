@@ -142,6 +142,17 @@ fn test_cert_issue_validity() {
 }
 
 #[test]
+fn test_cert_issue_unix_time() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+    let not_before = cert.not_before().as_unix().unwrap();
+    let not_after = cert.not_after().as_unix().unwrap();
+
+    assert_eq!(not_before, 1471194003);
+    assert_eq!(not_after, 1786554003);
+}
+
+#[test]
 fn test_save_der() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");

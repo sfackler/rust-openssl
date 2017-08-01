@@ -56,6 +56,7 @@ fn main() {
         .header("openssl/pkcs12.h")
         .header("openssl/bn.h")
         .header("openssl/aes.h")
+        .header("openssl/asn1.h")
         .header("openssl/ocsp.h");
     cfg.type_name(|s, is_struct| {
         // Add some `*` on some callback parameters to get function pointer to

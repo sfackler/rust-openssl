@@ -51,6 +51,22 @@ impl fmt::Display for Asn1TimeRef {
     }
 }
 
+impl Asn1TimeRef {
+    pub fn as_unix(&self) -> Result<i64, ErrorStack> {
+        let mut days = 0;
+        let mut seconds = 0;
+
+        unsafe {
+            let epoch = ffi::ASN1_TIME_set(ptr::null_mut(), 0);
+            if ffi::ASN1_TIME_diff(&mut days, &mut seconds, epoch, self.as_ptr()) == 0 {
+                return Err(ErrorStack::get());
+            }
+        }
+
+        Ok(days as i64 * 24 * 60 * 60 + seconds as i64)
+    }
+}
+
 impl Asn1Time {
     fn from_period(period: c_long) -> Result<Asn1Time, ErrorStack> {
         ffi::init();
