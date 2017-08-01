@@ -58,6 +58,9 @@ impl Asn1TimeRef {
 
         unsafe {
             let epoch = ffi::ASN1_TIME_set(ptr::null_mut(), 0);
+            if epoch.is_null() {
+                return Err(ErrorStack::get());
+            }
             if ffi::ASN1_TIME_diff(&mut days, &mut seconds, epoch, self.as_ptr()) == 0 {
                 return Err(ErrorStack::get());
             }
