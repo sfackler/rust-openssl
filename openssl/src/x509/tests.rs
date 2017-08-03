@@ -142,6 +142,7 @@ fn test_cert_issue_validity() {
 }
 
 #[test]
+#[cfg(any(ossl102, ossl110))]
 fn test_cert_issue_unix_time() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
