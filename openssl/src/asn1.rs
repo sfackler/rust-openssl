@@ -1,6 +1,6 @@
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::{c_long, c_char, c_int};
+use libc::{c_long, c_char, c_int, time_t};
 use std::fmt;
 use std::ptr;
 use std::slice;
@@ -52,11 +52,13 @@ impl fmt::Display for Asn1TimeRef {
 }
 
 impl Asn1TimeRef {
-    pub fn as_unix(&self) -> Result<i64, ErrorStack> {
+    #[cfg(any(ossl102, ossl110))]
+    pub fn as_unix(&self) -> Result<time_t, ErrorStack> {
         Asn1Time::from_unix(0)?.diff(Some(self))
     }
 
-    pub fn diff(&self, compare: Option<&Self>) -> Result<i64, ErrorStack> {
+    #[cfg(any(ossl102, ossl110))]
+    pub fn diff(&self, compare: Option<&Self>) -> Result<time_t, ErrorStack> {
         let mut days = 0;
         let mut seconds = 0;
         let other = compare.map(Self::as_ptr).unwrap_or_else(ptr::null_mut);
@@ -67,7 +69,7 @@ impl Asn1TimeRef {
 
         match err {
             0 => Err(ErrorStack::get()),
-            _ => Ok(days as i64 * 24 * 60 * 60 + seconds as i64),
+            _ => Ok(days as time_t * 24 * 60 * 60 + seconds as time_t),
         }
     }
 }
@@ -87,7 +89,7 @@ impl Asn1Time {
         Asn1Time::from_period(days as c_long * 60 * 60 * 24)
     }
 
-    pub fn from_unix(time: i64) -> Result<Self, ErrorStack> {
+    pub fn from_unix(time: time_t) -> Result<Self, ErrorStack> {
         unsafe {
             let asntime = ffi::ASN1_TIME_set(ptr::null_mut(), time);
             match asntime.is_null() {
