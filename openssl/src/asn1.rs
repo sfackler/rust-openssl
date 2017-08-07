@@ -12,6 +12,12 @@ use error::ErrorStack;
 use nid::Nid;
 use string::OpensslString;
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TimeDiff {
+    pub days: c_int,
+    pub secs: c_int,
+}
+
 foreign_type! {
     type CType = ffi::ASN1_GENERALIZEDTIME;
     fn drop = ffi::ASN1_GENERALIZEDTIME_free;
@@ -53,12 +59,12 @@ impl fmt::Display for Asn1TimeRef {
 
 impl Asn1TimeRef {
     #[cfg(any(ossl102, ossl110))]
-    pub fn as_unix(&self) -> Result<time_t, ErrorStack> {
+    pub fn diff_from_epoch(&self) -> Result<TimeDiff, ErrorStack> {
         Asn1Time::from_unix(0)?.diff(Some(self))
     }
 
     #[cfg(any(ossl102, ossl110))]
-    pub fn diff(&self, compare: Option<&Self>) -> Result<time_t, ErrorStack> {
+    pub fn diff(&self, compare: Option<&Self>) -> Result<TimeDiff, ErrorStack> {
         let mut days = 0;
         let mut seconds = 0;
         let other = compare.map(Self::as_ptr).unwrap_or_else(ptr::null_mut);
@@ -69,7 +75,10 @@ impl Asn1TimeRef {
 
         match err {
             0 => Err(ErrorStack::get()),
-            _ => Ok(days as time_t * 24 * 60 * 60 + seconds as time_t),
+            _ => Ok(TimeDiff {
+                days: days,
+                secs: seconds,
+            }),
         }
     }
 }
@@ -90,6 +99,8 @@ impl Asn1Time {
     }
 
     pub fn from_unix(time: time_t) -> Result<Self, ErrorStack> {
+        ffi::init();
+
         unsafe {
             let asntime = ffi::ASN1_TIME_set(ptr::null_mut(), time);
             match asntime.is_null() {
