@@ -32,6 +32,7 @@ pub enum ASN1_TYPE {}
 pub enum ASN1_OBJECT {}
 pub enum BN_CTX {}
 pub enum BN_GENCB {}
+pub enum CMS_ContentInfo {}
 pub enum CONF {}
 pub enum CONF_METHOD {}
 pub enum COMP_METHOD {}
@@ -2575,4 +2576,21 @@ extern "C" {
     ) -> c_int;
     pub fn HMAC_Update(ctx: *mut HMAC_CTX, data: *const c_uchar, len: size_t) -> c_int;
     pub fn HMAC_Final(ctx: *mut HMAC_CTX, md: *mut c_uchar, len: *mut c_uint) -> c_int;
+
+    #[cfg(not(libressl))]
+    pub fn CMS_decrypt(
+        cms: *mut CMS_ContentInfo,
+        pkey: *mut EVP_PKEY,
+        cert: *mut X509,
+        dcont: *mut BIO,
+        out: *mut BIO,
+        flags: c_uint,
+    ) -> c_int;
+    #[cfg(not(libressl))]
+    pub fn SMIME_read_CMS(
+        bio: *mut BIO,
+        bcont: *mut *mut BIO,
+    ) -> *mut CMS_ContentInfo;
+    #[cfg(not(libressl))]
+    pub fn CMS_ContentInfo_free(cms: *mut CMS_ContentInfo);
 }
