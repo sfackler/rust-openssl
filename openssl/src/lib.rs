@@ -31,6 +31,8 @@ mod util;
 pub mod aes;
 pub mod asn1;
 pub mod bn;
+#[cfg(not(libressl))]
+pub mod cms;
 pub mod conf;
 pub mod crypto;
 pub mod dh;
