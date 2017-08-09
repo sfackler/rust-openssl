@@ -114,54 +114,12 @@ impl Server {
             ],
         )
     }
-
-    fn new_dtlsv1<I>(input: I) -> (Server, UdpConnected)
-    where
-        I: IntoIterator<Item = &'static str>,
-        I::IntoIter: Send + 'static,
-    {
-        let mut input = input.into_iter();
-        let (s, addr) = Server::spawn(
-            &["-dtls1"],
-            Some(Box::new(move |mut io| for s in input.by_ref() {
-                if io.write_all(s.as_bytes()).is_err() {
-                    break;
-                }
-            })),
-        );
-        // Need to wait for the UDP socket to get bound in our child process,
-        // but don't currently have a great way to do that so just wait for a
-        // bit.
-        thread::sleep(Duration::from_millis(100));
-        let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
-        socket.connect(&addr).unwrap();
-        (s, UdpConnected(socket))
-    }
 }
 
 impl Drop for Server {
     fn drop(&mut self) {
         let _ = self.p.kill();
         let _ = self.p.wait();
-    }
-}
-
-#[derive(Debug)]
-struct UdpConnected(UdpSocket);
-
-impl Read for UdpConnected {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.0.recv(buf)
-    }
-}
-
-impl Write for UdpConnected {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.0.send(buf)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
     }
 }
 
@@ -194,13 +152,6 @@ macro_rules! run_test(
             fn sslv23() {
                 let (_s, stream) = Server::new();
                 $blk(SslMethod::tls(), stream);
-            }
-
-            #[test]
-            #[ignore] // FIXME(#467)
-            fn dtlsv1() {
-                let (_s, stream) = Server::new_dtlsv1(Some("hello"));
-                $blk(SslMethod::dtls(), stream);
             }
         }
     );
@@ -478,18 +429,6 @@ run_test!(get_peer_certificate, |method, stream| {
     let node_id = Vec::from_hex(node_hash_str).unwrap();
     assert_eq!(node_id, fingerprint)
 });
-
-#[test]
-#[cfg_attr(any(libressl, windows, target_arch = "arm"), ignore)] // FIXME(#467)
-fn test_write_dtlsv1() {
-    let (_s, stream) = Server::new_dtlsv1(iter::repeat("y\n"));
-    let ctx = SslContext::builder(SslMethod::dtls()).unwrap();
-    let mut stream = Ssl::new(&ctx.build()).unwrap().connect(stream).unwrap();
-    stream.write_all(b"hello").unwrap();
-    stream.flush().unwrap();
-    stream.write_all(b" there").unwrap();
-    stream.flush().unwrap();
-}
 
 #[test]
 fn test_read() {
@@ -794,17 +733,6 @@ fn test_alpn_server_select_none() {
 
     // Since the protocols from the server and client don't overlap at all, no protocol is selected
     assert_eq!(None, stream.ssl().selected_alpn_protocol());
-}
-
-#[test]
-#[cfg_attr(any(libressl, windows, target_arch = "arm"), ignore)] // FIXME(#467)
-fn test_read_dtlsv1() {
-    let (_s, stream) = Server::new_dtlsv1(Some("hello"));
-
-    let ctx = SslContext::builder(SslMethod::dtls()).unwrap();
-    let mut stream = Ssl::new(&ctx.build()).unwrap().connect(stream).unwrap();
-    let mut buf = [0u8; 100];
-    assert!(stream.read(&mut buf).is_ok());
 }
 
 fn wait_io(stream: &TcpStream, read: bool, timeout_ms: u32) -> bool {

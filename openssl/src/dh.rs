@@ -4,7 +4,7 @@ use foreign_types::ForeignTypeRef;
 use std::mem;
 use std::ptr;
 
-use {cvt, cvt_p, init};
+use {cvt, cvt_p};
 use bn::BigNum;
 
 foreign_type! {
@@ -43,7 +43,7 @@ impl Dh {
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn get_1024_160() -> Result<Dh, ErrorStack> {
         unsafe {
-            init();
+            ffi::init();
             cvt_p(ffi::DH_get_1024_160()).map(Dh)
         }
     }
@@ -52,7 +52,7 @@ impl Dh {
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn get_2048_224() -> Result<Dh, ErrorStack> {
         unsafe {
-            init();
+            ffi::init();
             cvt_p(ffi::DH_get_2048_224()).map(Dh)
         }
     }
@@ -61,7 +61,7 @@ impl Dh {
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn get_2048_256() -> Result<Dh, ErrorStack> {
         unsafe {
-            init();
+            ffi::init();
             cvt_p(ffi::DH_get_2048_256()).map(Dh)
         }
     }
