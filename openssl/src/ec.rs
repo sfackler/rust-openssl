@@ -472,6 +472,15 @@ impl EcKeyBuilderRef {
 	    ).map(|_| self)
         }
     }
+
+    /// Sets the private key.
+    pub fn set_private_key(&mut self,
+			   key: &BigNumRef)
+			   -> Result<&mut EcKeyBuilderRef, ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_KEY_set_private_key(self.as_ptr(), key.as_ptr())).map(|_| self)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -572,5 +581,21 @@ mod test {
         let ec_key = builder.build();
         assert!(ec_key.check_key().is_ok());
         assert!(ec_key.public_key().is_some());
+    }
+
+    #[test]
+    fn set_private_key() {
+        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let d = data_encoding::base64url::decode_nopad("870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE".as_bytes())
+            .unwrap();
+
+        let dbn = BigNum::from_slice(&d).unwrap();
+
+        let mut builder = EcKeyBuilder::new().unwrap();
+        builder.set_group(&group).unwrap();
+        builder.set_private_key(&dbn).unwrap();
+
+        let ec_key = builder.build();
+        assert!(ec_key.private_key().is_some());
     }
 }
