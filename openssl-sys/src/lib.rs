@@ -23,6 +23,9 @@ mod libressl;
 #[cfg(libressl)]
 pub use libressl::*;
 
+mod errors;
+pub use errors::*;
+
 pub enum ASN1_INTEGER {}
 pub enum ASN1_GENERALIZEDTIME {}
 pub enum ASN1_STRING {}
@@ -183,7 +186,6 @@ pub const ERR_TXT_MALLOCED: c_int = 0x01;
 pub const ERR_TXT_STRING: c_int = 0x02;
 
 pub const ERR_LIB_PEM: c_int = 9;
-pub const PEM_R_NO_START_LINE: c_int = 108;
 
 pub const EVP_MAX_MD_SIZE: c_uint = 64;
 pub const EVP_PKEY_RSA: c_int = NID_rsaEncryption;

@@ -1,6 +1,8 @@
 extern crate ctest;
 
 use std::env;
+use std::path;
+use std::fs;
 
 fn main() {
     let mut cfg = ctest::TestGenerator::new();
@@ -41,22 +43,28 @@ fn main() {
         }
     }
 
-    cfg.header("openssl/comp.h")
-        .header("openssl/dh.h")
-        .header("openssl/ossl_typ.h")
-        .header("openssl/stack.h")
-        .header("openssl/x509.h")
-        .header("openssl/bio.h")
-        .header("openssl/x509v3.h")
-        .header("openssl/safestack.h")
-        .header("openssl/hmac.h")
-        .header("openssl/ssl.h")
-        .header("openssl/err.h")
-        .header("openssl/rand.h")
-        .header("openssl/pkcs12.h")
-        .header("openssl/bn.h")
-        .header("openssl/aes.h")
-        .header("openssl/ocsp.h");
+    // Exclude these headers (because they cause errors), include everything else
+    let exclude_headers = [
+        "openssl/asn1_mac.h",
+        "openssl/dtls1.h"
+    ];
+
+    let header_dir = env::var("DEP_OPENSSL_INCLUDE").unwrap();
+    let include_location = path::Path::new(&header_dir);
+
+    if let Ok(entries) = fs::read_dir(include_location.join("openssl")) {
+        for header in entries {
+            let header_path = header.unwrap().path();
+            // some/path/openssl/file.h -> openssl/file.h
+            let header_suffix = header_path.strip_prefix(include_location).unwrap();
+            let header_str = header_suffix.to_str().unwrap();
+            // Exclude files we don't want
+            if exclude_headers.iter().position(|&x| x == header_str).is_none() {
+                cfg.header(header_str);
+            }
+        }
+    }
+
     cfg.type_name(|s, is_struct| {
         // Add some `*` on some callback parameters to get function pointer to
         // typecheck in C, especially on MSVC.
