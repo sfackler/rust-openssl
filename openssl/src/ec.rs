@@ -462,8 +462,8 @@ impl EcKeyBuilderRef {
 
     /// Sets the public key based on affine coordinates.
     pub fn set_public_key_affine_coordinates(&mut self,
-                                             x: &BigNumRef,
-                                             y: &BigNumRef)
+                                             x: &mut BigNumRef,
+                                             y: &mut BigNumRef)
                                              -> Result<&mut EcKeyBuilderRef, ErrorStack> {
         unsafe {
             cvt(ffi::EC_KEY_set_public_key_affine_coordinates(self.as_ptr(), 
@@ -571,12 +571,12 @@ mod test {
         let y = data_encoding::base64url::decode_nopad("4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM".as_bytes())
             .unwrap();
 
-        let xbn = BigNum::from_slice(&x).unwrap();
-        let ybn = BigNum::from_slice(&y).unwrap();
+        let mut xbn = BigNum::from_slice(&x).unwrap();
+        let mut ybn = BigNum::from_slice(&y).unwrap();
 
         let mut builder = EcKeyBuilder::new().unwrap();
         builder.set_group(&group).unwrap();
-        builder.set_public_key_affine_coordinates(&xbn, &ybn).unwrap();
+        builder.set_public_key_affine_coordinates(&mut xbn, &mut ybn).unwrap();
 
         let ec_key = builder.build();
         assert!(ec_key.check_key().is_ok());
