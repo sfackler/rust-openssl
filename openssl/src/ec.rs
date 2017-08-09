@@ -459,12 +459,26 @@ impl EcKeyBuilderRef {
     pub fn generate_key(&mut self) -> Result<&mut EcKeyBuilderRef, ErrorStack> {
         unsafe { cvt(ffi::EC_KEY_generate_key(self.as_ptr())).map(|_| self) }
     }
+
+    /// Sets the public key based on affine coordinates.
+    pub fn set_public_key_affine_coordinates(&mut self,
+                                             x: &BigNumRef,
+                                             y: &BigNumRef)
+                                             -> Result<&mut EcKeyBuilderRef, ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_KEY_set_public_key_affine_coordinates(self.as_ptr(), 
+	                                                      x.as_ptr(), 
+							      y.as_ptr())
+	    ).map(|_| self)
+        }
+    }
 }
 
 #[cfg(test)]
 mod test {
-    use bn::BigNumContext;
+    use bn::{BigNum, BigNumContext};
     use nid;
+    use data_encoding;
     use super::*;
 
     #[test]
@@ -538,5 +552,25 @@ mod test {
         assert!(ec_key.check_key().is_ok());
         assert!(ec_key.public_key().is_some());
         assert!(ec_key.private_key().is_none());
+    }
+
+    #[test]
+    fn key_from_affine_coordinates() {
+        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let x = data_encoding::base64url::decode_nopad("MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4".as_bytes())
+            .unwrap();
+        let y = data_encoding::base64url::decode_nopad("4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM".as_bytes())
+            .unwrap();
+
+        let xbn = BigNum::from_slice(&x).unwrap();
+        let ybn = BigNum::from_slice(&y).unwrap();
+
+        let mut builder = EcKeyBuilder::new().unwrap();
+        builder.set_group(&group).unwrap();
+        builder.set_public_key_affine_coordinates(&xbn, &ybn).unwrap();
+
+        let ec_key = builder.build();
+        assert!(ec_key.check_key().is_ok());
+        assert!(ec_key.public_key().is_some());
     }
 }

@@ -1674,6 +1674,7 @@ extern "C" {
     pub fn EC_KEY_generate_key(key: *mut EC_KEY) -> c_int;
     pub fn EC_KEY_check_key(key: *const EC_KEY) -> c_int;
     pub fn EC_KEY_free(key: *mut EC_KEY);
+    pub fn EC_KEY_set_public_key_affine_coordinates(key: *mut EC_KEY, x: *const BIGNUM, y: *const BIGNUM) -> c_int;
 
     #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
     pub fn EC_GF2m_simple_method() -> *const EC_METHOD;
