@@ -38,7 +38,7 @@ job: &JOB
   - run: ./test/add_target.sh
   - <<: *RESTORE_REGISTRY
   - run: cargo generate-lockfile
-  - <<: *RESTORE_REGISTRY
+  - <<: *SAVE_REGISTRY
   - run: echo "${LIBRARY}-${VERSION}-${TARGET}" > ~/lib_key
   - <<: *RESTORE_OPENSSL
   - run: ./test/build_openssl.sh
