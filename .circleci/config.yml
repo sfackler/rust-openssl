@@ -1,28 +1,49 @@
+restore_registry: &RESTORE_REGISTRY
+  restore_cache:
+    key: registry
+save_registry: &SAVE_REGISTRY
+  save_cache:
+    key: registry-{{ .BuildNum }}
+    paths:
+    - /usr/local/cargo/registry/index
+openssl_key: &OPENSSL_KEY
+  key: lib-{{ checksum "~/lib_key" }}-{{ checksum "test/build_openssl.sh" }}
+restore_openssl: &RESTORE_OPENSSL
+  restore_cache:
+    <<: *OPENSSL_KEY
+save_openssl: &SAVE_OPENSSL
+  save_cache:
+    <<: *OPENSSL_KEY
+    paths:
+    - /openssl
+deps_key: &DEPS_KEY
+  key: deps-1.19.0-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}-2
+restore_deps: &RESTORE_DEPS
+  restore_cache:
+    <<: *DEPS_KEY
+save_deps: &SAVE_DEPS
+  save_cache:
+    <<: *DEPS_KEY
+    paths:
+    - target
+    - /usr/local/cargo/registry/cache
+
 job: &JOB
   working_directory: ~/build
   docker:
-  - image: jimmycuadra/rust:1.19.0
+  - image: rust:1.19.0
   steps:
   - checkout
   - run: apt-get update
   - run: ./test/add_target.sh
-  - restore_cache:
-      key: registry
+  - <<: *RESTORE_REGISTRY
   - run: cargo generate-lockfile
-  - save_cache:
-      key: registry-{{ epoch }}
-      paths:
-      - ~/.cargo/registry/index
+  - <<: *SAVE_REGISTRY
   - run: echo "${LIBRARY}-${VERSION}-${TARGET}" > ~/lib_key
-  - restore_cache:
-      key: lib-{{ checksum "~/lib_key" }}-{{ checksum "test/build_openssl.sh" }}
+  - <<: *RESTORE_OPENSSL
   - run: ./test/build_openssl.sh
-  - save_cache:
-      key: lib-{{ checksum "~/lib_key" }}-{{ checksum "test/build_openssl.sh" }}
-      paths:
-      - /openssl
-  - restore_cache:
-      key: deps-1.19.0-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}
+  - <<: *SAVE_OPENSSL
+  - <<: *RESTORE_DEPS
   - run: cargo run --manifest-path=systest/Cargo.toml --target $TARGET
   - run: |
       ulimit -c unlimited
@@ -43,11 +64,7 @@ job: &JOB
       when: on_fail
   - store_artifacts:
       path: /tmp/core_dumps
-  - save_cache:
-      key: deps-1.19.0-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}
-      paths:
-      - target
-      - ~/.cargo/registry/cache
+  - <<: *SAVE_DEPS
 
 openssl_110: &OPENSSL_110
   LIBRARY: openssl
