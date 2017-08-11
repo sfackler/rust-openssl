@@ -301,7 +301,7 @@ RUST_OPENSSL_OLD
             file,
             "\
 #ifdef {define}
-RUST_{define}
+RUST_{define}_RUST
 #endif
 ",
             define = define
@@ -345,7 +345,7 @@ See rust-openssl README for more information:
 
     let mut enabled = vec![];
     for &define in DEFINES {
-        if expanded.contains(&format!("RUST_{}", define)) {
+        if expanded.contains(&format!("RUST_{}_RUST", define)) {
             println!("cargo:rustc-cfg=osslconf=\"{}\"", define);
             enabled.push(define);
         }
