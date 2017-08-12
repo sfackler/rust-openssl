@@ -73,7 +73,7 @@ automatically detected.
 On MSVC it's unfortunately not always a trivial process acquiring OpenSSL. A couple of possibilities
 are downloading precompiled binaries for OpenSSL 1.1.0, or installing OpenSSL 1.0.2 using vcpkg.
 
-#### Installing OpenSSL 1.1.0 using precompiiled binaries
+#### Installing OpenSSL 1.1.0 using precompiled binaries
 
 Perhaps the easiest way to do this right now is to download [precompiled
 binaries] and install them on your system. Currently it's recommended to
