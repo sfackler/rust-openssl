@@ -20,10 +20,14 @@ environment:
       BITS: 32
       OPENSSL_VERSION: 1_0_2L
       OPENSSL_DIR: C:\OpenSSL
+    - TARGET: x86_64-pc-windows-msvc
+      VCPKG_DEFAULT_TRIPLET: x64-windows
+      VCPKGRS_DYNAMIC: 1
 install:
   # install OpenSSL
-  - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe"
-  - Win%BITS%OpenSSL-%OPENSSL_VERSION%.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
+  - mkdir C:\OpenSSL
+  - ps: if (Test-Path env:OPENSSL_VERSION) { Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" }
+  - if defined OPENSSL_VERSION Win%BITS%OpenSSL-%OPENSSL_VERSION%.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
   - appveyor DownloadFile https://curl.haxx.se/ca/cacert.pem -FileName C:\OpenSSL\cacert.pem
 
   # Install Rust
@@ -33,6 +37,10 @@ install:
   - if defined MSYS2 set PATH=C:\msys64\mingw%BITS%\bin;%PATH%
   - rustc -V
   - cargo -V
+  - if defined VCPKG_DEFAULT_TRIPLET git clone https://github.com/Microsoft/vcpkg c:\projects\vcpkg
+  - if defined VCPKG_DEFAULT_TRIPLET c:\projects\vcpkg\bootstrap-vcpkg.bat
+  - if defined VCPKG_DEFAULT_TRIPLET set VCPKG_ROOT=c:\projects\vcpkg
+  - if defined VCPKG_DEFAULT_TRIPLET %VCPKG_ROOT%\vcpkg.exe install openssl
 
 build: false
 

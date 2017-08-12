@@ -70,7 +70,11 @@ automatically detected.
 
 ### Windows MSVC
 
-On MSVC it's unfortunately not always a trivial process acquiring OpenSSL.
+On MSVC it's unfortunately not always a trivial process acquiring OpenSSL. A couple of possibilities
+are downloading precompiled binaries for OpenSSL 1.1.0, or installing OpenSSL 1.0.2 using vcpkg.
+
+#### Installing OpenSSL 1.1.0 using precompiiled binaries
+
 Perhaps the easiest way to do this right now is to download [precompiled
 binaries] and install them on your system. Currently it's recommended to
 install the 1.1.0 (non-light) installation if you're choosing this route.
@@ -84,7 +88,24 @@ installation via an environment variable:
 set OPENSSL_DIR=C:\OpenSSL-Win64
 ```
 
-Note that this OpenSSL distribution does not ship with any root certificates.
+Now you will need to [install root certificates.](#acquiring-root-certificates)
+
+#### Installing OpenSSL 1.0.2 using vcpkg
+
+Install [vcpkg](https://github.com/Microsoft/vcpkg), and install the OpenSSL port like this:
+
+```Batchfile
+vcpkg install openssl:x64-windows
+set VCPKG_ROOT=c:\path\to\vcpkg\installation
+cargo build
+```
+
+For more information see the vcpkg build helper [documentation](http://docs.rs/vcpkg).
+To finsh setting up OpenSSL you will need to [install root certificates.](#acquiring-root-certificates)
+
+#### Acquiring Root Certificates
+
+Neither of the above OpenSSL distributions ship with any root certificates.
 So to make requests to servers on the internet, you have to install them
 manually. Download the [cacert.pem file from here], copy it somewhere safe
 (`C:\OpenSSL-Win64\certs` is a good place) and point the `SSL_CERT_FILE`
