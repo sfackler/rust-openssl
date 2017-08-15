@@ -128,6 +128,16 @@ pub struct X509V3_CTX {
     // Maybe more here
 }
 
+#[repr(C)]
+pub struct SHA256_CTX {
+    pub h: [SHA_LONG; 8],
+    pub Nl: SHA_LONG,
+    pub Nh: SHA_LONG,
+    pub data: [SHA_LONG; SHA_LBLOCK as usize],
+    pub num: c_uint,
+    pub md_len: c_uint,
+}
+
 #[cfg(target_pointer_width = "64")]
 pub type BN_ULONG = libc::c_ulonglong;
 #[cfg(target_pointer_width = "32")]
@@ -158,6 +168,8 @@ pub type PasswordCallback = unsafe extern "C" fn(buf: *mut c_char,
                                                  rwflag: c_int,
                                                  user_data: *mut c_void)
                                                  -> c_int;
+
+pub type SHA_LONG = c_uint;
 
 pub const AES_ENCRYPT: c_int = 1;
 pub const AES_DECRYPT: c_int = 0;
@@ -1168,6 +1180,8 @@ pub const RSA_SSLV23_PADDING: c_int = 2;
 pub const RSA_NO_PADDING: c_int = 3;
 pub const RSA_PKCS1_OAEP_PADDING: c_int = 4;
 pub const RSA_X931_PADDING: c_int = 5;
+
+pub const SHA_LBLOCK: c_int = 16;
 
 pub const SSL_CTRL_SET_TMP_DH: c_int = 3;
 pub const SSL_CTRL_SET_TMP_ECDH: c_int = 4;
@@ -2220,6 +2234,10 @@ extern "C" {
     pub fn SHA256(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
     pub fn SHA384(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
     pub fn SHA512(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
+
+    pub fn SHA256_Init(c: *mut SHA256_CTX) -> c_int;
+    pub fn SHA256_Update(c: *mut SHA256_CTX, data: *const c_void, len: size_t) -> c_int;
+    pub fn SHA256_Final(md: *mut c_uchar, c: *mut SHA256_CTX) -> c_int;
 
     pub fn SSL_new(ctx: *mut SSL_CTX) -> *mut SSL;
     pub fn SSL_pending(ssl: *const SSL) -> c_int;

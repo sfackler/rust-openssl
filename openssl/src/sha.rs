@@ -1,4 +1,5 @@
 //! The SHA family of hashes.
+use libc::c_void;
 use ffi;
 use std::mem;
 
@@ -57,6 +58,41 @@ pub fn sha512(data: &[u8]) -> [u8; 64] {
     }
 }
 
+/// An object which calculates a SHA256 hash of some data.
+pub struct Sha256(ffi::SHA256_CTX);
+
+impl Sha256 {
+    /// Creates a new hasher.
+    #[inline]
+    pub fn new() -> Sha256 {
+        unsafe {
+            let mut ctx = mem::uninitialized();
+            ffi::SHA256_Init(&mut ctx);
+            Sha256(ctx)
+        }
+    }
+
+    /// Feeds some data into the hasher.
+    ///
+    /// This can be called multiple times.
+    #[inline]
+    pub fn update(&mut self, buf: &[u8]) {
+        unsafe {
+            ffi::SHA256_Update(&mut self.0, buf.as_ptr() as *const c_void, buf.len());
+        }
+    }
+
+    /// Returns the hash of the data.
+    #[inline]
+    pub fn finish(mut self) -> [u8; 32] {
+        unsafe {
+            let mut hash: [u8; 32] = mem::uninitialized();
+            ffi::SHA256_Final(hash.as_mut_ptr(), &mut self.0);
+            hash
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use hex::ToHex;
@@ -85,6 +121,16 @@ mod test {
         let expected = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 
         assert_eq!(sha256(data).to_hex(), expected);
+    }
+
+    #[test]
+    fn struct_256() {
+        let expected = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+
+        let mut hasher = Sha256::new();
+        hasher.update(b"a");
+        hasher.update(b"bc");
+        assert_eq!(hasher.finish().to_hex(), expected);
     }
 
     #[test]
