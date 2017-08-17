@@ -129,6 +129,19 @@ pub struct X509V3_CTX {
 }
 
 #[repr(C)]
+pub struct SHA_CTX {
+    pub h0: SHA_LONG,
+    pub h1: SHA_LONG,
+    pub h2: SHA_LONG,
+    pub h3: SHA_LONG,
+    pub h4: SHA_LONG,
+    pub Nl: SHA_LONG,
+    pub Nh: SHA_LONG,
+    pub data: [SHA_LONG; SHA_LBLOCK as usize],
+    pub num: c_uint,
+}
+
+#[repr(C)]
 pub struct SHA256_CTX {
     pub h: [SHA_LONG; 8],
     pub Nl: SHA_LONG,
@@ -2235,9 +2248,15 @@ extern "C" {
     pub fn SHA384(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
     pub fn SHA512(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
 
+    pub fn SHA1_Init(c: *mut SHA_CTX) -> c_int;
+    pub fn SHA1_Update(c: *mut SHA_CTX, data: *const c_void, len: size_t) -> c_int;
+    pub fn SHA1_Final(md: *mut c_uchar, c: *mut SHA_CTX) -> c_int;
     pub fn SHA256_Init(c: *mut SHA256_CTX) -> c_int;
     pub fn SHA256_Update(c: *mut SHA256_CTX, data: *const c_void, len: size_t) -> c_int;
     pub fn SHA256_Final(md: *mut c_uchar, c: *mut SHA256_CTX) -> c_int;
+    pub fn SHA224_Init(c: *mut SHA256_CTX) -> c_int;
+    pub fn SHA224_Update(c: *mut SHA256_CTX, data: *const c_void, len: size_t) -> c_int;
+    pub fn SHA224_Final(md: *mut c_uchar, c: *mut SHA256_CTX) -> c_int;
 
     pub fn SSL_new(ctx: *mut SSL_CTX) -> *mut SSL;
     pub fn SSL_pending(ssl: *const SSL) -> c_int;
