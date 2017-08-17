@@ -58,6 +58,81 @@ pub fn sha512(data: &[u8]) -> [u8; 64] {
     }
 }
 
+/// An object which calculates a SHA1 hash of some data.
+///
+/// # Warning
+///
+/// SHA1 is known to be insecure - it should not be used unless required for
+/// compatibility with existing systems.
+pub struct Sha1(ffi::SHA_CTX);
+
+impl Sha1 {
+    /// Creates a new hasher.
+    #[inline]
+    pub fn new() -> Sha1 {
+        unsafe {
+            let mut ctx = mem::uninitialized();
+            ffi::SHA1_Init(&mut ctx);
+            Sha1(ctx)
+        }
+    }
+
+    /// Feeds some data into the hasher.
+    ///
+    /// This can be called multiple times.
+    #[inline]
+    pub fn update(&mut self, buf: &[u8]) {
+        unsafe {
+            ffi::SHA1_Update(&mut self.0, buf.as_ptr() as *const c_void, buf.len());
+        }
+    }
+
+    /// Returns the hash of the data.
+    #[inline]
+    pub fn finish(mut self) -> [u8; 20] {
+        unsafe {
+            let mut hash: [u8; 20] = mem::uninitialized();
+            ffi::SHA1_Final(hash.as_mut_ptr(), &mut self.0);
+            hash
+        }
+    }
+}
+
+/// An object which calculates a SHA224 hash of some data.
+pub struct Sha224(ffi::SHA256_CTX);
+
+impl Sha224 {
+    /// Creates a new hasher.
+    #[inline]
+    pub fn new() -> Sha224 {
+        unsafe {
+            let mut ctx = mem::uninitialized();
+            ffi::SHA224_Init(&mut ctx);
+            Sha224(ctx)
+        }
+    }
+
+    /// Feeds some data into the hasher.
+    ///
+    /// This can be called multiple times.
+    #[inline]
+    pub fn update(&mut self, buf: &[u8]) {
+        unsafe {
+            ffi::SHA224_Update(&mut self.0, buf.as_ptr() as *const c_void, buf.len());
+        }
+    }
+
+    /// Returns the hash of the data.
+    #[inline]
+    pub fn finish(mut self) -> [u8; 28] {
+        unsafe {
+            let mut hash: [u8; 28] = mem::uninitialized();
+            ffi::SHA224_Final(hash.as_mut_ptr(), &mut self.0);
+            hash
+        }
+    }
+}
+
 /// An object which calculates a SHA256 hash of some data.
 pub struct Sha256(ffi::SHA256_CTX);
 
@@ -108,11 +183,31 @@ mod test {
     }
 
     #[test]
+    fn struct_1() {
+        let expected = "a9993e364706816aba3e25717850c26c9cd0d89d";
+
+        let mut hasher = Sha1::new();
+        hasher.update(b"a");
+        hasher.update(b"bc");
+        assert_eq!(hasher.finish().to_hex(), expected);
+    }
+
+    #[test]
     fn standalone_224() {
         let data = b"abc";
         let expected = "23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7";
 
         assert_eq!(sha224(data).to_hex(), expected);
+    }
+
+    #[test]
+    fn struct_224() {
+        let expected = "23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7";
+
+        let mut hasher = Sha224::new();
+        hasher.update(b"a");
+        hasher.update(b"bc");
+        assert_eq!(hasher.finish().to_hex(), expected);
     }
 
     #[test]
