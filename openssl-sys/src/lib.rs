@@ -151,6 +151,17 @@ pub struct SHA256_CTX {
     pub md_len: c_uint,
 }
 
+#[repr(C)]
+pub struct SHA512_CTX {
+    pub h: [SHA_LONG64; 8],
+    pub Nl: SHA_LONG64,
+    pub Nh: SHA_LONG64,
+    // this is a union but we don't want to require 1.19
+    u: [SHA_LONG64; SHA_LBLOCK as usize],
+    pub num: c_uint,
+    pub md_len: c_uint,
+}
+
 #[cfg(target_pointer_width = "64")]
 pub type BN_ULONG = libc::c_ulonglong;
 #[cfg(target_pointer_width = "32")]
@@ -183,6 +194,7 @@ pub type PasswordCallback = unsafe extern "C" fn(buf: *mut c_char,
                                                  -> c_int;
 
 pub type SHA_LONG = c_uint;
+pub type SHA_LONG64 = u64;
 
 pub const AES_ENCRYPT: c_int = 1;
 pub const AES_DECRYPT: c_int = 0;
@@ -2257,6 +2269,12 @@ extern "C" {
     pub fn SHA224_Init(c: *mut SHA256_CTX) -> c_int;
     pub fn SHA224_Update(c: *mut SHA256_CTX, data: *const c_void, len: size_t) -> c_int;
     pub fn SHA224_Final(md: *mut c_uchar, c: *mut SHA256_CTX) -> c_int;
+    pub fn SHA384_Init(c: *mut SHA512_CTX) -> c_int;
+    pub fn SHA384_Update(c: *mut SHA512_CTX, data: *const c_void, len: size_t) -> c_int;
+    pub fn SHA384_Final(md: *mut c_uchar, c: *mut SHA512_CTX) -> c_int;
+    pub fn SHA512_Init(c: *mut SHA512_CTX) -> c_int;
+    pub fn SHA512_Update(c: *mut SHA512_CTX, data: *const c_void, len: size_t) -> c_int;
+    pub fn SHA512_Final(md: *mut c_uchar, c: *mut SHA512_CTX) -> c_int;
 
     pub fn SSL_new(ctx: *mut SSL_CTX) -> *mut SSL;
     pub fn SSL_pending(ssl: *const SSL) -> c_int;

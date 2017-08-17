@@ -168,6 +168,76 @@ impl Sha256 {
     }
 }
 
+/// An object which calculates a SHA384 hash of some data.
+pub struct Sha384(ffi::SHA512_CTX);
+
+impl Sha384 {
+    /// Creates a new hasher.
+    #[inline]
+    pub fn new() -> Sha384 {
+        unsafe {
+            let mut ctx = mem::uninitialized();
+            ffi::SHA384_Init(&mut ctx);
+            Sha384(ctx)
+        }
+    }
+
+    /// Feeds some data into the hasher.
+    ///
+    /// This can be called multiple times.
+    #[inline]
+    pub fn update(&mut self, buf: &[u8]) {
+        unsafe {
+            ffi::SHA384_Update(&mut self.0, buf.as_ptr() as *const c_void, buf.len());
+        }
+    }
+
+    /// Returns the hash of the data.
+    #[inline]
+    pub fn finish(mut self) -> [u8; 48] {
+        unsafe {
+            let mut hash: [u8; 48] = mem::uninitialized();
+            ffi::SHA384_Final(hash.as_mut_ptr(), &mut self.0);
+            hash
+        }
+    }
+}
+
+/// An object which calculates a SHA512 hash of some data.
+pub struct Sha512(ffi::SHA512_CTX);
+
+impl Sha512 {
+    /// Creates a new hasher.
+    #[inline]
+    pub fn new() -> Sha512 {
+        unsafe {
+            let mut ctx = mem::uninitialized();
+            ffi::SHA512_Init(&mut ctx);
+            Sha512(ctx)
+        }
+    }
+
+    /// Feeds some data into the hasher.
+    ///
+    /// This can be called multiple times.
+    #[inline]
+    pub fn update(&mut self, buf: &[u8]) {
+        unsafe {
+            ffi::SHA512_Update(&mut self.0, buf.as_ptr() as *const c_void, buf.len());
+        }
+    }
+
+    /// Returns the hash of the data.
+    #[inline]
+    pub fn finish(mut self) -> [u8; 64] {
+        unsafe {
+            let mut hash: [u8; 64] = mem::uninitialized();
+            ffi::SHA512_Final(hash.as_mut_ptr(), &mut self.0);
+            hash
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use hex::ToHex;
@@ -238,11 +308,33 @@ mod test {
     }
 
     #[test]
+    fn struct_384() {
+        let expected = "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e\
+                        7cc2358baeca134c825a7";
+
+        let mut hasher = Sha384::new();
+        hasher.update(b"a");
+        hasher.update(b"bc");
+        assert_eq!((&hasher.finish()[..]).to_hex(), expected);
+    }
+
+    #[test]
     fn standalone_512() {
         let data = b"abc";
         let expected = "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274\
                         fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f";
 
         assert_eq!((&sha512(data)[..]).to_hex(), expected);
+    }
+
+    #[test]
+    fn struct_512() {
+        let expected = "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274\
+                        fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f";
+
+        let mut hasher = Sha512::new();
+        hasher.update(b"a");
+        hasher.update(b"bc");
+        assert_eq!((&hasher.finish()[..]).to_hex(), expected);
     }
 }
