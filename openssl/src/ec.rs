@@ -273,7 +273,7 @@ impl EcPointRef {
     }
 
     /// Place affine coordinates of a curve over a prime field in the provided x and y BigNum's
-    pub fn get_affine_coordinates_gfp(
+    pub fn affine_coordinates_gfp(
         &self,
         group: &EcGroupRef,
         x: &mut BigNumRef,
@@ -293,7 +293,7 @@ impl EcPointRef {
 
     /// Place affine coordinates of a curve over a binary field in the provided x and y BigNum's
     #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
-    pub fn get_affine_coordinates_gf2m(
+    pub fn affine_coordinates_gf2m(
         &self,
         group: &EcGroupRef,
         x: &mut BigNumRef,
@@ -665,7 +665,7 @@ mod test {
         let mut ctx = BigNumContext::new().unwrap();
         let ec_key_pk = ec_key.public_key().unwrap();
         ec_key_pk
-            .get_affine_coordinates_gfp(&group, &mut xbn2, &mut ybn2, &mut ctx)
+            .affine_coordinates_gfp(&group, &mut xbn2, &mut ybn2, &mut ctx)
             .unwrap();
         assert_eq!(xbn2, xbn);
         assert_eq!(ybn2, ybn);
