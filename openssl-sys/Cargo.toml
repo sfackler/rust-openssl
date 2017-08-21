@@ -7,6 +7,7 @@ license = "MIT"
 description = "FFI bindings to OpenSSL"
 repository = "https://github.com/sfackler/rust-openssl"
 documentation = "https://docs.rs/openssl-sys/0.9"
+readme = "README.md"
 categories = ["cryptography", "external-ffi-bindings"]
 links = "openssl"
 build = "build.rs"
