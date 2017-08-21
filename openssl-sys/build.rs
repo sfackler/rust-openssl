@@ -269,6 +269,7 @@ mod imp {
     /// should emit all of the cargo metadata that we need.
     #[cfg(target_env = "msvc")]
     fn try_vcpkg() {
+        use vcpkg;
 
         // vcpkg will not emit any metadata if it can not find libraries
         // appropriate for the target triple with the desired linkage.

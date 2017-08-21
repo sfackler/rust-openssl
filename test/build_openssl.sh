@@ -5,8 +5,6 @@ if [ -d "${OPENSSL_DIR}" ]; then
     exit 0
 fi
 
-apt-get install -y --no-install-recommends curl
-
 case "${LIBRARY}" in
 "libressl")
     URL1="http://ftp3.usa.openbsd.org/pub/OpenBSD/LibreSSL/libressl-${VERSION}.tar.gz"
@@ -15,6 +13,9 @@ case "${LIBRARY}" in
 "openssl")
     URL1="https://openssl.org/source/openssl-${VERSION}.tar.gz"
     URL2="http://mirrors.ibiblio.org/openssl/source/openssl-${VERSION}.tar.gz"
+    ;;
+"")
+    exit 0
     ;;
 esac
 
@@ -32,6 +33,8 @@ case "${TARGET}" in
     export CC=arm-linux-gnueabihf-gcc
     ;;
 esac
+
+apt-get install -y --no-install-recommends curl
 
 mkdir -p /tmp/build
 cd /tmp/build

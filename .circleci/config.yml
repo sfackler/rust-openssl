@@ -44,7 +44,7 @@ job: &JOB
   - run: ./test/build_openssl.sh
   - *SAVE_OPENSSL
   - *RESTORE_DEPS
-  - run: cargo run --manifest-path=systest/Cargo.toml --target $TARGET
+  - run: cargo run --manifest-path=systest/Cargo.toml --target "$TARGET" --features "$FEATURES"
   - run: |
       ulimit -c unlimited
       export PATH=$OPENSSL_DIR/bin:$PATH
@@ -53,8 +53,8 @@ job: &JOB
       fi
       cargo test \
         --manifest-path=openssl/Cargo.toml \
-        --target $TARGET \
-        --all-features \
+        --target "$TARGET" \
+        --features "$FEATURES" \
         $TEST_ARGS
   - run:
       command: |
@@ -66,15 +66,20 @@ job: &JOB
       path: /tmp/core_dumps
   - *SAVE_DEPS
 
+vendored: &VENDORED
+  FEATURES: vendored v110
 openssl_110: &OPENSSL_110
   LIBRARY: openssl
   VERSION: 1.1.0f
+  FEATURES: v110
 openssl_102: &OPENSSL_102
   LIBRARY: openssl
   VERSION: 1.0.2l
+  FEATURES: v102
 openssl_101: &OPENSSL_101
   LIBRARY: openssl
   VERSION: 1.0.1u
+  FEATURES: v101
 libressl_250: &LIBRESSL_250
   LIBRARY: libressl
   VERSION: 2.5.0
@@ -99,6 +104,10 @@ base: &BASE
 
 version: 2
 jobs:
+  x86_64-vendored:
+    <<: *JOB
+    environment:
+      <<: [*VENDORED, *X86_64, *BASE]
   x86_64-openssl-1.1.0:
     <<: *JOB
     environment:
@@ -111,6 +120,10 @@ jobs:
     <<: *JOB
     environment:
       <<: [*OPENSSL_101, *X86_64, *BASE]
+  i686-vendored:
+    <<: *JOB
+    environment:
+      <<: [*VENDORED, *I686, *BASE]
   i686-openssl-1.1.0:
     <<: *JOB
     environment:
@@ -123,6 +136,10 @@ jobs:
     <<: *JOB
     environment:
       <<: [*OPENSSL_101, *I686, *BASE]
+  armhf-vendored:
+    <<: *JOB
+    environment:
+      <<: [*VENDORED, *ARMHF, *BASE]
   armhf-openssl-1.1.0:
     <<: *JOB
     environment:
@@ -147,12 +164,15 @@ workflows:
   version: 2
   tests:
     jobs:
+    - x86_64-vendored
     - x86_64-openssl-1.1.0
     - x86_64-openssl-1.0.2
     - x86_64-openssl-1.0.1
+    - i686-vendored
     - i686-openssl-1.1.0
     - i686-openssl-1.0.2
     - i686-openssl-1.0.1
+    - armhf-vendored
     - armhf-openssl-1.1.0
     - armhf-openssl-1.0.2
     - armhf-openssl-1.0.1
