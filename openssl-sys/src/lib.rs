@@ -1714,7 +1714,11 @@ extern "C" {
     pub fn EC_KEY_generate_key(key: *mut EC_KEY) -> c_int;
     pub fn EC_KEY_check_key(key: *const EC_KEY) -> c_int;
     pub fn EC_KEY_free(key: *mut EC_KEY);
-    pub fn EC_KEY_set_public_key_affine_coordinates(key: *mut EC_KEY, x: *mut BIGNUM, y: *mut BIGNUM) -> c_int;
+    pub fn EC_KEY_set_public_key_affine_coordinates(
+        key: *mut EC_KEY,
+        x: *mut BIGNUM,
+        y: *mut BIGNUM,
+    ) -> c_int;
 
     #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
     pub fn EC_GF2m_simple_method() -> *const EC_METHOD;
@@ -1798,6 +1802,21 @@ extern "C" {
         ctx: *mut BN_CTX,
     ) -> c_int;
     pub fn EC_POINT_free(point: *mut EC_POINT);
+    pub fn EC_POINT_get_affine_coordinates_GFp(
+        group: *const EC_GROUP,
+        p: *const EC_POINT,
+        x: *mut BIGNUM,
+        y: *mut BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    pub fn EC_POINT_get_affine_coordinates_GF2m(
+        group: *const EC_GROUP,
+        p: *const EC_POINT,
+        x: *mut BIGNUM,
+        y: *mut BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
 
     pub fn ERR_peek_last_error() -> c_ulong;
     pub fn ERR_get_error() -> c_ulong;
@@ -2643,10 +2662,7 @@ extern "C" {
         flags: c_uint,
     ) -> c_int;
     #[cfg(not(libressl))]
-    pub fn SMIME_read_CMS(
-        bio: *mut BIO,
-        bcont: *mut *mut BIO,
-    ) -> *mut CMS_ContentInfo;
+    pub fn SMIME_read_CMS(bio: *mut BIO, bcont: *mut *mut BIO) -> *mut CMS_ContentInfo;
     #[cfg(not(libressl))]
     pub fn CMS_ContentInfo_free(cms: *mut CMS_ContentInfo);
 }

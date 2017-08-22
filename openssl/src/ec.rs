@@ -271,6 +271,45 @@ impl EcPointRef {
             Ok(res == 0)
         }
     }
+
+    /// Place affine coordinates of a curve over a prime field in the provided x and y BigNum's
+    pub fn affine_coordinates_gfp(
+        &self,
+        group: &EcGroupRef,
+        x: &mut BigNumRef,
+        y: &mut BigNumRef,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_POINT_get_affine_coordinates_GFp(
+                group.as_ptr(),
+                self.as_ptr(),
+                x.as_ptr(),
+                y.as_ptr(),
+                ctx.as_ptr(),
+            )).map(|_| ())
+        }
+    }
+
+    /// Place affine coordinates of a curve over a binary field in the provided x and y BigNum's
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    pub fn affine_coordinates_gf2m(
+        &self,
+        group: &EcGroupRef,
+        x: &mut BigNumRef,
+        y: &mut BigNumRef,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_POINT_get_affine_coordinates_GF2m(
+                group.as_ptr(),
+                self.as_ptr(),
+                x.as_ptr(),
+                y.as_ptr(),
+                ctx.as_ptr(),
+            )).map(|_| ())
+        }
+    }
 }
 
 impl EcPoint {
@@ -461,25 +500,23 @@ impl EcKeyBuilderRef {
     }
 
     /// Sets the public key based on affine coordinates.
-    pub fn set_public_key_affine_coordinates(&mut self,
-                                             x: &BigNumRef,
-                                             y: &BigNumRef)
-                                             -> Result<&mut EcKeyBuilderRef, ErrorStack> {
+    pub fn set_public_key_affine_coordinates(
+        &mut self,
+        x: &BigNumRef,
+        y: &BigNumRef,
+    ) -> Result<&mut EcKeyBuilderRef, ErrorStack> {
         unsafe {
-            cvt(ffi::EC_KEY_set_public_key_affine_coordinates(self.as_ptr(), 
-	                                                      x.as_ptr(), 
-							      y.as_ptr())
-	    ).map(|_| self)
+            cvt(ffi::EC_KEY_set_public_key_affine_coordinates(
+                self.as_ptr(),
+                x.as_ptr(),
+                y.as_ptr(),
+            )).map(|_| self)
         }
     }
 
     /// Sets the private key.
-    pub fn set_private_key(&mut self,
-			   key: &BigNumRef)
-			   -> Result<&mut EcKeyBuilderRef, ErrorStack> {
-        unsafe {
-            cvt(ffi::EC_KEY_set_private_key(self.as_ptr(), key.as_ptr())).map(|_| self)
-        }
+    pub fn set_private_key(&mut self, key: &BigNumRef) -> Result<&mut EcKeyBuilderRef, ErrorStack> {
+        unsafe { cvt(ffi::EC_KEY_set_private_key(self.as_ptr(), key.as_ptr())).map(|_| self) }
     }
 }
 
@@ -566,17 +603,21 @@ mod test {
     #[test]
     fn key_from_affine_coordinates() {
         let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
-        let x = data_encoding::base64url::decode_nopad("MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4".as_bytes())
-            .unwrap();
-        let y = data_encoding::base64url::decode_nopad("4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM".as_bytes())
-            .unwrap();
+        let x = data_encoding::base64url::decode_nopad(
+            "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4".as_bytes(),
+        ).unwrap();
+        let y = data_encoding::base64url::decode_nopad(
+            "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM".as_bytes(),
+        ).unwrap();
 
         let xbn = BigNum::from_slice(&x).unwrap();
         let ybn = BigNum::from_slice(&y).unwrap();
 
         let mut builder = EcKeyBuilder::new().unwrap();
         builder.set_group(&group).unwrap();
-        builder.set_public_key_affine_coordinates(&xbn, &ybn).unwrap();
+        builder
+            .set_public_key_affine_coordinates(&xbn, &ybn)
+            .unwrap();
 
         let ec_key = builder.build();
         assert!(ec_key.check_key().is_ok());
@@ -586,8 +627,9 @@ mod test {
     #[test]
     fn set_private_key() {
         let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
-        let d = data_encoding::base64url::decode_nopad("870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE".as_bytes())
-            .unwrap();
+        let d = data_encoding::base64url::decode_nopad(
+            "870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE".as_bytes(),
+        ).unwrap();
 
         let dbn = BigNum::from_slice(&d).unwrap();
 
@@ -597,5 +639,35 @@ mod test {
 
         let ec_key = builder.build();
         assert!(ec_key.private_key().is_some());
+    }
+
+    #[test]
+    fn get_affine_coordinates() {
+        let raw_x = "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4";
+        let raw_y = "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM";
+        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let x = data_encoding::base64url::decode_nopad(raw_x.as_bytes()).unwrap();
+        let y = data_encoding::base64url::decode_nopad(raw_y.as_bytes()).unwrap();
+
+        let xbn = BigNum::from_slice(&x).unwrap();
+        let ybn = BigNum::from_slice(&y).unwrap();
+
+        let mut builder = EcKeyBuilder::new().unwrap();
+        builder.set_group(&group).unwrap();
+        builder
+            .set_public_key_affine_coordinates(&xbn, &ybn)
+            .unwrap();
+
+        let ec_key = builder.build();
+
+        let mut xbn2 = BigNum::new().unwrap();
+        let mut ybn2 = BigNum::new().unwrap();
+        let mut ctx = BigNumContext::new().unwrap();
+        let ec_key_pk = ec_key.public_key().unwrap();
+        ec_key_pk
+            .affine_coordinates_gfp(&group, &mut xbn2, &mut ybn2, &mut ctx)
+            .unwrap();
+        assert_eq!(xbn2, xbn);
+        assert_eq!(ybn2, ybn);
     }
 }
