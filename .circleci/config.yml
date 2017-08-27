@@ -36,14 +36,14 @@ job: &JOB
   - checkout
   - run: apt-get update
   - run: ./test/add_target.sh
-  - <<: *RESTORE_REGISTRY
+  - *RESTORE_REGISTRY
   - run: cargo generate-lockfile
-  - <<: *SAVE_REGISTRY
+  - *SAVE_REGISTRY
   - run: echo "${LIBRARY}-${VERSION}-${TARGET}" > ~/lib_key
-  - <<: *RESTORE_OPENSSL
+  - *RESTORE_OPENSSL
   - run: ./test/build_openssl.sh
-  - <<: *SAVE_OPENSSL
-  - <<: *RESTORE_DEPS
+  - *SAVE_OPENSSL
+  - *RESTORE_DEPS
   - run: cargo run --manifest-path=systest/Cargo.toml --target $TARGET
   - run: |
       ulimit -c unlimited
@@ -64,7 +64,7 @@ job: &JOB
       when: on_fail
   - store_artifacts:
       path: /tmp/core_dumps
-  - <<: *SAVE_DEPS
+  - *SAVE_DEPS
 
 openssl_110: &OPENSSL_110
   LIBRARY: openssl
