@@ -39,9 +39,9 @@ compiling to a separate target, you'll typically need to compile OpenSSL from
 source. That can normally be done with:
 
 ```
-curl -O https://www.openssl.org/source/openssl-1.1.0e.tar.gz
-tar xf openssl-1.1.0e.tar.gz
-cd openssl-1.1.0e
+curl -O https://www.openssl.org/source/openssl-1.1.0f.tar.gz
+tar xf openssl-1.1.0f.tar.gz
+cd openssl-1.1.0f
 export CC=...
 ./Configure --prefix=... linux-x86_64 -fPIC
 make -j$(nproc)
