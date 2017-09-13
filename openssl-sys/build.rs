@@ -47,8 +47,9 @@ fn main() {
     let mut env_include_dir = "OPENSSL_INCLUDE_DIR".to_string();
 
     if target != host {
-        env_lib_dir = "TARGET_OPENSSL_LIB_DIR".to_string();
-        env_include_dir = "TARGET_OPENSSL_INCLUDE_DIR".to_string();
+	let prefix = target.to_uppercase().replace("-", "_");
+        env_lib_dir = format!("{}_OPENSSL_LIB_DIR", prefix);
+        env_include_dir = format!("{}_OPENSSL_INCLUDE_DIR", prefix);
     }
 
     println!("cargo:rerun-if-env-changed={}", env_lib_dir);
