@@ -36,30 +36,27 @@ enum Version {
     Libressl,
 }
 
-fn main() {
-    let target = env::var("TARGET").unwrap();
-    let host = env::var("HOST").unwrap();
+fn env(name: &str) -> Option<OsString> {
+    let prefix = env::var("TARGET").unwrap().to_uppercase().replace("-", "_");
+    let prefixed = format!("{}_{}", prefix, name);
+    println!("cargo:rerun-if-changed={}", prefixed);
 
-    println!("target == {}", target);
-    println!("host == {}", host);
-
-    let mut env_lib_dir = "OPENSSL_LIB_DIR".to_string();
-    let mut env_include_dir = "OPENSSL_INCLUDE_DIR".to_string();
-
-    if target != host {
-	let prefix = target.to_uppercase().replace("-", "_");
-        env_lib_dir = format!("{}_OPENSSL_LIB_DIR", prefix);
-        env_include_dir = format!("{}_OPENSSL_INCLUDE_DIR", prefix);
+    if let Some(var) = env::var_os(&prefixed) {
+        return Some(var);
     }
 
-    println!("cargo:rerun-if-env-changed={}", env_lib_dir);
-    let lib_dir = env::var_os(env_lib_dir).map(PathBuf::from);
-    println!("cargo:rerun-if-env-changed={}", env_include_dir);
-    let include_dir = env::var_os(env_include_dir).map(PathBuf::from);
+    println!("cargo:rerun-if-changed={}", name);
+    env::var_os(name)
+}
+
+fn main() {
+    let target = env::var("TARGET").unwrap();
+
+    let lib_dir = env("OPENSSL_LIB_DIR").map(PathBuf::from);
+    let include_dir = env("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
 
     let (lib_dir, include_dir) = if lib_dir.is_none() || include_dir.is_none() {
-        println!("cargo:rerun-if-env-changed=OPENSSL_DIR");
-        let openssl_dir = env::var_os("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(&target));
+        let openssl_dir = env("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(&target));
         let openssl_dir = Path::new(&openssl_dir);
         let lib_dir = lib_dir.unwrap_or_else(|| openssl_dir.join("lib"));
         let include_dir = include_dir.unwrap_or_else(|| openssl_dir.join("include"));
@@ -89,9 +86,8 @@ fn main() {
 
     let version = validate_headers(&[include_dir.clone().into()]);
 
-    println!("cargo:rerun-if-env-changed=OPENSSL_LIBS");
-    let libs_env = env::var("OPENSSL_LIBS").ok();
-    let libs = match libs_env {
+    let libs_env = env("OPENSSL_LIBS");
+    let libs = match libs_env.as_ref().and_then(|s| s.to_str()) {
         Some(ref v) => v.split(":").collect(),
         None => {
             match version {
@@ -490,9 +486,8 @@ aborting due to this version mismatch.
 /// statically or dynamically.
 fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
     // First see if a mode was explicitly requested
-    println!("cargo:rerun-if-env-changed=OPENSSL_STATIC");
-    let kind = env::var("OPENSSL_STATIC").ok();
-    match kind.as_ref().map(|s| &s[..]) {
+    let kind = env("OPENSSL_STATIC");
+    match kind.as_ref().and_then(|s| s.to_str()).map(|s| &s[..]) {
         Some("0") => return "dylib",
         Some(_) => return "static",
         None => {}
