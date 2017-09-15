@@ -5,6 +5,7 @@ use error::ErrorStack;
 use ssl::{self, SslMethod, SslContextBuilder, SslContext, Ssl, SSL_VERIFY_PEER, SslStream,
           HandshakeError};
 use pkey::PKeyRef;
+use version;
 use x509::X509Ref;
 
 #[cfg(ossl101)]
@@ -39,8 +40,17 @@ fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     opts |= ssl::SSL_OP_CIPHER_SERVER_PREFERENCE;
     ctx.set_options(opts);
 
-    let mode = ssl::SSL_MODE_AUTO_RETRY | ssl::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
+    let mut mode = ssl::SSL_MODE_AUTO_RETRY |
+        ssl::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
         ssl::SSL_MODE_ENABLE_PARTIAL_WRITE;
+
+    // This is quite a useful optimization for saving memory, but historically
+    // caused CVEs in OpenSSL pre-1.0.1h, according to
+    // https://bugs.python.org/issue25672
+    if version::number() >= 0x1000108f {
+        mode |= ssl::SSL_MODE_RELEASE_BUFFERS;
+    }
+
     ctx.set_mode(mode);
 
     Ok(ctx)
