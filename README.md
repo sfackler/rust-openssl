@@ -157,8 +157,13 @@ The build script can be configured via environment variables:
 * `OPENSSL_LIBS` - If specified, the names of the OpenSSL libraries that will be
   linked, e.g. `ssl:crypto`.
 
-If `OPENSSL_DIR` is specified, then the build script will skip the pkg-config
-step.
+If `OPENSSL_DIR` or `OPENSSL_LIB_DIR` and `OPENSSL_INCLUDE_DIR` is specified,
+then the build script will skip the pkg-config step.
+
+For target-specific configuration, each of these environment variables can be
+prefixed by an upper-cased target, for example,
+`X86_64_UNKNOWN_LINUX_GNU_OPENSSL_DIR`. This can be useful in cross compilation
+contexts.
 
 ### Contribution
 
