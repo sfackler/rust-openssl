@@ -68,9 +68,8 @@ impl SslConnectorBuilder {
         try!(ctx.set_default_verify_paths());
         // From https://github.com/python/cpython/blob/c30098c8c6014f3340a369a31df9c74bdbacc269/Lib/ssl.py#L191
         try!(ctx.set_cipher_list(
-            "ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:DH+CHACHA20:ECDH+AES256:\
-                                  DH+AES256:ECDH+AES128:DH+AES:ECDH+HIGH:DH+HIGH:RSA+AESGCM:\
-                                  RSA+AES:RSA+HIGH:!aNULL:!eNULL:!MD5:!3DES",
+            "ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:DH+CHACHA20:ECDH+AES256:DH+AES256:ECDH+AES128:\
+             DH+AES:ECDH+HIGH:DH+HIGH:RSA+AESGCM:RSA+AES:RSA+HIGH:!aNULL:!eNULL:!MD5:!3DES",
         ));
         setup_verify(&mut ctx);
 
