@@ -78,9 +78,9 @@ openssl_101: &OPENSSL_101
 libressl_250: &LIBRESSL_250
   LIBRARY: libressl
   VERSION: 2.5.0
-libressl_260: &LIBRESSL_260
+libressl_261: &LIBRESSL_261
   LIBRARY: libressl
-  VERSION: 2.6.0
+  VERSION: 2.6.1
 
 x86_64: &X86_64
   TARGET: x86_64-unknown-linux-gnu
@@ -139,10 +139,10 @@ jobs:
     <<: *JOB
     environment:
       <<: [*LIBRESSL_250, *X86_64, *BASE]
-  x86_64-libressl-2.6.0:
+  x86_64-libressl-2.6.1:
     <<: *JOB
     environment:
-      <<: [*LIBRESSL_260, *X86_64, *BASE]
+      <<: [*LIBRESSL_261, *X86_64, *BASE]
 workflows:
   version: 2
   tests:
@@ -157,4 +157,4 @@ workflows:
     - armhf-openssl-1.0.2
     - armhf-openssl-1.0.1
     - x86_64-libressl-2.5.0
-    - x86_64-libressl-2.6.0
+    - x86_64-libressl-2.6.1

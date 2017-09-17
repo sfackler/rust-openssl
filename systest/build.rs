@@ -41,6 +41,12 @@ fn main() {
         }
     }
 
+    let has_cms_h = if let Ok(version) = env::var("DEP_OPENSSL_LIBRESSL_VERSION") {
+        version != "261"
+    } else {
+        true
+    };
+
     cfg.header("openssl/comp.h")
         .header("openssl/dh.h")
         .header("openssl/ossl_typ.h")
@@ -56,8 +62,12 @@ fn main() {
         .header("openssl/pkcs12.h")
         .header("openssl/bn.h")
         .header("openssl/aes.h")
-        .header("openssl/ocsp.h")
-        .header("openssl/cms.h");
+        .header("openssl/ocsp.h");
+
+    if has_cms_h {
+        cfg.header("openssl/cms.h");
+    }
+
     cfg.type_name(|s, is_struct| {
         // Add some `*` on some callback parameters to get function pointer to
         // typecheck in C, especially on MSVC.
