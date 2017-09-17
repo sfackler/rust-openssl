@@ -44,7 +44,7 @@ tar xf openssl-1.1.0f.tar.gz
 cd openssl-1.1.0f
 export CC=...
 ./Configure --prefix=... linux-x86_64 -fPIC
-make -j$(nproc)
+make -j1 # OpenSSL has historically not supported parallel builds
 make install
 ```
 
