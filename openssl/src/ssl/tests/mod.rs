@@ -503,6 +503,7 @@ fn test_connect_with_unilateral_alpn() {
 /// Tests that connecting with the client using NPN, but the server not does not
 /// break the existing connection behavior.
 #[test]
+#[cfg(not(libressl261))]
 fn test_connect_with_unilateral_npn() {
     let (_s, stream) = Server::new();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
@@ -615,6 +616,7 @@ fn test_connect_with_npn_successful_single_match() {
 /// Tests that when the `SslStream` is created as a server stream, the protocols
 /// are correctly advertised to the client.
 #[test]
+#[cfg(not(libressl261))]
 fn test_npn_server_advertise_multiple() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
