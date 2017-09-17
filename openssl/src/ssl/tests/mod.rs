@@ -1241,7 +1241,7 @@ fn tmp_dh_callback() {
 }
 
 #[test]
-#[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
+#[cfg(any(all(feature = "v101", ossl101, not(libressl261)), all(feature = "v102", ossl102)))]
 fn tmp_ecdh_callback() {
     use ec::EcKey;
     use nid;
@@ -1308,7 +1308,7 @@ fn tmp_dh_callback_ssl() {
 }
 
 #[test]
-#[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
+#[cfg(any(all(feature = "v101", ossl101, not(libressl261)), all(feature = "v102", ossl102)))]
 fn tmp_ecdh_callback_ssl() {
     use ec::EcKey;
     use nid;
