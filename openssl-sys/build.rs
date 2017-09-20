@@ -39,13 +39,13 @@ enum Version {
 fn env(name: &str) -> Option<OsString> {
     let prefix = env::var("TARGET").unwrap().to_uppercase().replace("-", "_");
     let prefixed = format!("{}_{}", prefix, name);
-    println!("cargo:rerun-if-changed={}", prefixed);
+    println!("cargo:rerun-if-env-changed={}", prefixed);
 
     if let Some(var) = env::var_os(&prefixed) {
         return Some(var);
     }
 
-    println!("cargo:rerun-if-changed={}", name);
+    println!("cargo:rerun-if-env-changed={}", name);
     env::var_os(name)
 }
 
