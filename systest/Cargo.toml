@@ -9,4 +9,4 @@ libc = "0.2"
 openssl-sys = { path = "../openssl-sys" }
 
 [build-dependencies]
-ctest = "=0.1.4"
+ctest = "0.1"
