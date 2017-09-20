@@ -2587,6 +2587,12 @@ extern "C" {
         name: *const c_char,
         namelen: size_t,
     ) -> c_int;
+    #[cfg(not(any(ossl101, libressl)))]
+    pub fn X509_VERIFY_PARAM_set1_ip(
+        param: *mut X509_VERIFY_PARAM,
+        ip: *const c_uchar,
+        iplen: size_t,
+    ) -> c_int;
 
     pub fn d2i_DHparams(k: *mut *mut DH, pp: *mut *const c_uchar, length: c_long) -> *mut DH;
     pub fn i2d_DHparams(dh: *const DH, pp: *mut *mut c_uchar) -> c_int;

@@ -355,7 +355,10 @@ fn setup_verify(ctx: &mut SslContextBuilder) {
 fn setup_verify_hostname(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
     let param = ssl._param_mut();
     param.set_hostflags(::verify::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
-    param.set_host(domain)
+    match domain.parse() {
+        Ok(ip) => param.set_ip(ip),
+        Err(_) => param.set_host(domain),
+    }
 }
 
 #[cfg(ossl101)]
