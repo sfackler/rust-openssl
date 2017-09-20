@@ -1,7 +1,7 @@
 extern crate pkg_config;
 #[cfg(target_env = "msvc")]
 extern crate vcpkg;
-extern crate gcc;
+extern crate cc;
 
 use std::collections::HashSet;
 use std::env;
@@ -369,7 +369,7 @@ RUST_{define}_RUST
     file.flush().unwrap();
     drop(file);
 
-    let mut gcc = gcc::Config::new();
+    let mut gcc = cc::Build::new();
     for include_dir in include_dirs {
         gcc.include(include_dir);
     }
