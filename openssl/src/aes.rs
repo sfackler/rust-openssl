@@ -1,6 +1,35 @@
 //! Low level AES functionality
 //!
-//! The `symm` module should be used in preference to this module in most cases.
+//! Advanced Encryption Standard (AES) provides symmetric key cipher that
+//! the same key is used to encrypt and decrypt data.  This implementation
+//! Uses 128, 192, or 256 bit keys.  This module provides functions to
+//! create a new key with [`new_encrypt`] and perform an encryption/decryption
+//! using that key with [`aes_ige`].
+//!
+//! [`new_encrypt`]: struct.AesKey.html#method.new_encrypt
+//! [`aes_ige`]: fn.aes_ige.html
+//!
+//! The [`symm`] module should be used in preference to this module in most cases.
+//!
+//! [`symm`]: ../symm/index.html
+//!
+//! # Examples
+//!
+//! ```rust
+//! # extern crate openssl;
+//! extern crate hex;
+//! use openssl::aes::{AesKey, KeyError};
+//! use hex::FromHex;
+//!
+//! fn decrypt() -> Result<(), KeyError> {
+//!    let raw_key = "000102030405060708090A0B0C0D0E0F";
+//!    let key = AesKey::new_encrypt(&Vec::from_hex(raw_key).unwrap())?;
+//!    Ok(())
+//! }
+//! 
+//! # fn main() {
+//! #    decrypt();
+//! # }
 use ffi;
 use std::mem;
 use libc::c_int;
