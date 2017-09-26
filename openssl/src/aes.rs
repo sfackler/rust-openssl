@@ -49,9 +49,11 @@ use libc::c_int;
 
 use symm::Mode;
 
+/// Provides Error handling for parsing keys.
 #[derive(Debug)]
 pub struct KeyError(());
 
+/// The key used to encrypt or decrypt cipher blocks.
 pub struct AesKey(ffi::AES_KEY);
 
 impl AesKey {
@@ -104,6 +106,14 @@ impl AesKey {
 }
 
 /// Performs AES IGE encryption or decryption
+///
+/// AES IGE (Infinite Garble Extension) is the form of AES block cipher utilized in
+/// OpenSSL.  Infinite Garble referes to propogating forward errors.  IGE, like other
+/// block ciphers implemented for AES requires an initalization vector.  The IGE mode
+/// allows a stream of blocks to be encrypted or decrypted without having the entire
+/// plaintext available.  For more information, visit [AES IGE Encryption].
+///
+/// [AES IGE Encryption]: http://www.links.org/files/openssl-ige.pdf
 ///
 /// # Panics
 ///
