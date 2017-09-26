@@ -6,6 +6,10 @@
 //! create a new key with [`new_encrypt`] and perform an encryption/decryption
 //! using that key with [`aes_ige`].
 //!
+//! AES is a 128-bit (16 byte) block cipher.  The rust implmentation will panic
+//! if the input or output does not meet this 16-byte boundry.  Attention must
+//! be made in this low level implementation to pad the value to the 128-bit boundry.
+//!
 //! [`new_encrypt`]: struct.AesKey.html#method.new_encrypt
 //! [`aes_ige`]: fn.aes_ige.html
 //!
@@ -18,17 +22,26 @@
 //! ```rust
 //! # extern crate openssl;
 //! extern crate hex;
-//! use openssl::aes::{AesKey, KeyError};
-//! use hex::FromHex;
+//! use openssl::aes::{AesKey, KeyError, aes_ige};
+//! use openssl::symm::Mode;
+//! use hex::{FromHex, ToHex};
 //!
 //! fn decrypt() -> Result<(), KeyError> {
-//!    let raw_key = "000102030405060708090A0B0C0D0E0F";
-//!    let key = AesKey::new_encrypt(&Vec::from_hex(raw_key).unwrap())?;
-//!    Ok(())
+//!   let raw_key = "000102030405060708090A0B0C0D0E0F";
+//!   let hex_cipher = "12345678901234561234567890123456";
+//!   let randomness = "000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F";
+//!   if let (Ok(key_as_u8), Ok(cipher_as_u8), Ok(mut iv_as_u8)) =
+//!       (Vec::from_hex(raw_key), Vec::from_hex(hex_cipher), Vec::from_hex(randomness)) {
+//!     let key = AesKey::new_encrypt(&key_as_u8)?;
+//!     let mut output = vec![0u8; cipher_as_u8.len()];
+//!     aes_ige(&cipher_as_u8, &mut output, &key, &mut iv_as_u8, Mode::Encrypt);
+//!     assert_eq!(output.to_hex(), "a6ad974d5cea1d36d2f367980907ed32");
+//!   }
+//!   Ok(())
 //! }
-//! 
+//!
 //! # fn main() {
-//! #    decrypt();
+//! #   decrypt();
 //! # }
 use ffi;
 use std::mem;
