@@ -1,8 +1,11 @@
-//! Low level AES functionality
+//! Low level AES IGE functionality
+//!
+//! AES ECB, CBC, XTS, CTR, CFB, GCM and other conventional symmetric encryption
+//! modes are found in [`symm`].  This is the implementation of AES IGE.
 //!
 //! Advanced Encryption Standard (AES) provides symmetric key cipher that
 //! the same key is used to encrypt and decrypt data.  This implementation
-//! Uses 128, 192, or 256 bit keys.  This module provides functions to
+//! uses 128, 192, or 256 bit keys.  This module provides functions to
 //! create a new key with [`new_encrypt`] and perform an encryption/decryption
 //! using that key with [`aes_ige`].
 //!
@@ -14,8 +17,12 @@
 //! [`aes_ige`]: fn.aes_ige.html
 //!
 //! The [`symm`] module should be used in preference to this module in most cases.
+//! The IGE block cypher is a non-traditional cipher mode.  More traditional AES
+//! encryption methods are found in the [`Crypter`] and [`Cipher`] structs.
 //!
 //! [`symm`]: ../symm/index.html
+//! [`Crypter`]: ../symm/struct.Crypter.html
+//! [`Cipher`]: ../symm/struct.Cipher.html
 //!
 //! # Examples
 //!
@@ -107,7 +114,7 @@ impl AesKey {
 
 /// Performs AES IGE encryption or decryption
 ///
-/// AES IGE (Infinite Garble Extension) is the form of AES block cipher utilized in
+/// AES IGE (Infinite Garble Extension) is a form of AES block cipher utilized in
 /// OpenSSL.  Infinite Garble referes to propogating forward errors.  IGE, like other
 /// block ciphers implemented for AES requires an initalization vector.  The IGE mode
 /// allows a stream of blocks to be encrypted or decrypted without having the entire
