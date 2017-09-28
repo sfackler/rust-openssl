@@ -23,10 +23,17 @@ use bn::BigNum;
 
 foreign_type! {
     type CType = ffi::DH;
+
     fn drop = ffi::DH_free;
 
+    /// Diffie-Hellman Key agreement object
+    /// A key object that is based on the diffie-hellman algorithm
+    ///
+    /// As described here https://wiki.openssl.org/index.php/Manual:Dh(3)
+    /// and here: https://wiki.openssl.org/index.php/Diffie_Hellman
     pub struct Dh;
 
+    /// a borrowed reference of the dh type, diffie-hellman key agreement object
     pub struct DhRef;
 }
 
