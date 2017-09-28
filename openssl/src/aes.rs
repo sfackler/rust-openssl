@@ -9,10 +9,6 @@
 //! create a new key with [`new_encrypt`] and perform an encryption/decryption
 //! using that key with [`aes_ige`].
 //!
-//! AES is a 128-bit (16 byte) block cipher.  The rust implmentation will panic
-//! if the input or output does not meet this 16-byte boundry.  Attention must
-//! be made in this low level implementation to pad the value to the 128-bit boundry.
-//!
 //! [`new_encrypt`]: struct.AesKey.html#method.new_encrypt
 //! [`aes_ige`]: fn.aes_ige.html
 //!
@@ -119,6 +115,10 @@ impl AesKey {
 /// block ciphers implemented for AES requires an initalization vector.  The IGE mode
 /// allows a stream of blocks to be encrypted or decrypted without having the entire
 /// plaintext available.  For more information, visit [AES IGE Encryption].
+///
+/// This block cipher uses 16 byte blocks.  The rust implmentation will panic
+/// if the input or output does not meet this 16-byte boundry.  Attention must
+/// be made in this low level implementation to pad the value to the 128-bit boundry.
 ///
 /// [AES IGE Encryption]: http://www.links.org/files/openssl-ige.pdf
 ///
