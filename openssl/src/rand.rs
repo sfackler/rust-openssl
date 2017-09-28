@@ -8,7 +8,7 @@
 //! To generate a buffer with cryptographically strong bytes:
 //!
 //! ```
-//! let muf buf = [0; 256]
+//! let muf buf = [0; 256];
 //! rand_bytes(&mut buf).unwrap();
 //! ```
 //!
@@ -21,7 +21,7 @@ use ffi;
 use cvt;
 use error::ErrorStack;
 
-/// Fills buffer with cryptographically strong pseudo-random bytes.
+/// Fill buffer with cryptographically strong pseudo-random bytes.
 pub fn rand_bytes(buf: &mut [u8]) -> Result<(), ErrorStack> {
     unsafe {
         ffi::init();
