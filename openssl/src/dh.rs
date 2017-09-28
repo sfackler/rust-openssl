@@ -1,3 +1,15 @@
+//! dh.rs
+//! 
+//! summary: bindings for dh library of OpenSSL
+//! author: steven 
+//!
+//! dh is the diffie-hellman (dh) algorithm which allows for two parties to derive the key used for
+//! communication. in dh, the two parties agree to some large prime, `p`, and a generator, `g`,
+//! where 0 < g < p.
+//!
+//! For a full summary, please read https://wiki.openssl.org/index.php/Diffie_Hellman
+
+#![deny(missing_docs)]
 use error::ErrorStack;
 use ffi;
 use foreign_types::ForeignTypeRef;
@@ -21,7 +33,17 @@ impl DhRef {
     to_der!(ffi::i2d_DHparams);
 }
 
+
+// TODO Implement overloaded DH initialization for equivalent methods in 1.1.x
 impl Dh {
+    /// DH object contains three parameters: p, q, and g.
+    ///
+    /// This method will set the c pointers for the DH object, p, q, and g. If the parameters have
+    /// not been set, they will default to NULL.
+    /// 
+    /// This corresponds to DH_get0_pqg() on OpenSSL 1.1.0 and inits DH's fields in 1.1.x.
+    /// Note that currently we assume that you provide all three parameters. In openSSL, there is
+    /// overloading for when q, public key, private key is or isn't provided.
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<Dh, ErrorStack> {
         unsafe {
             let dh = Dh(cvt_p(ffi::DH_new())?);
@@ -35,6 +57,7 @@ impl Dh {
             Ok(dh)
         }
     }
+
 
     from_pem!(Dh, ffi::PEM_read_bio_DHparams);
     from_der!(Dh, ffi::d2i_DHparams);
