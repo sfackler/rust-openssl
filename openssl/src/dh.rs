@@ -1,13 +1,15 @@
 //! dh.rs
 //! 
 //! summary: bindings for dh library of OpenSSL
-//! author: steven 
+//! author: steven fackler
+//! version: 
 //!
 //! dh is the diffie-hellman (dh) algorithm which allows for two parties to derive the key used for
 //! communication. in dh, the two parties agree to some large prime, `p`, and a generator, `g`,
 //! where 0 < g < p.
 //!
-//! For a full summary, please read https://wiki.openssl.org/index.php/Diffie_Hellman
+//! For a full summary of the algo, please read https://wiki.openssl.org/index.php/Diffie_Hellman
+//! manpages: https://www.openssl.org/docs/manpages.html
 
 #![deny(missing_docs)]
 use error::ErrorStack;
@@ -36,14 +38,14 @@ impl DhRef {
 
 // TODO Implement overloaded DH initialization for equivalent methods in 1.1.x
 impl Dh {
-    /// DH object contains three parameters: p, q, and g.
-    ///
+    
     /// This method will set the c pointers for the DH object, p, q, and g. If the parameters have
     /// not been set, they will default to NULL.
-    /// 
-    /// This corresponds to DH_get0_pqg() on OpenSSL 1.1.0 and inits DH's fields in 1.1.x.
-    /// Note that currently we assume that you provide all three parameters. In openSSL, there is
-    /// overloading for when q, public key, private key is or isn't provided.
+    ///
+    /// This calls DH_get0_pqg() on OpenSSL 1.1.0 and inits DH's fields manually in 1.1.x.
+    /// Note that currently we assume that you only provide the parameters p, q, and g. In openSSL,
+    /// there is overloading for when q, public key, private key is or isn't provided.
+    /// openssl: https://www.openssl.org/docs/man1.1.0/crypto/DH_set0_pqg.html
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<Dh, ErrorStack> {
         unsafe {
             let dh = Dh(cvt_p(ffi::DH_new())?);
@@ -62,7 +64,11 @@ impl Dh {
     from_pem!(Dh, ffi::PEM_read_bio_DHparams);
     from_der!(Dh, ffi::d2i_DHparams);
 
+    /// return a DH object for the IETF RFC 5114 value.
+    /// get_1024_160 corresponds to DH_get_1024_160() in 1.0.2 and 1.1.x
+    ///
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+    /// openssl docs: https://www.openssl.org/docs/man1.1.0/crypto/DH_get_1024_160.html
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn get_1024_160() -> Result<Dh, ErrorStack> {
         unsafe {
@@ -71,7 +77,11 @@ impl Dh {
         }
     }
 
+    /// return a DH object for the IETF RFC 5114 value.
+    /// get_1024_160 corresponds to DH_get_2048_224() in 1.0.2 and 1.1.x
+    ///
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+    /// openssl docs: https://www.openssl.org/docs/man1.1.0/crypto/DH_get_1024_160.html
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn get_2048_224() -> Result<Dh, ErrorStack> {
         unsafe {
@@ -80,7 +90,11 @@ impl Dh {
         }
     }
 
+    /// return a DH object for the IETF RFC 5114 value.
+    /// get_1024_160 corresponds to DH_get_2028_256() in 1.0.2 and 1.1.x
+    ///
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+    /// openssl docs: https://www.openssl.org/docs/man1.1.0/crypto/DH_get_1024_160.html
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn get_2048_256() -> Result<Dh, ErrorStack> {
         unsafe {
@@ -90,11 +104,13 @@ impl Dh {
     }
 }
 
+/// sets rust-openssl to call DH_set0_pqg as defined by fn from_params if using openSSL 1.1.x
 #[cfg(ossl110)]
 mod compat {
     pub use ffi::DH_set0_pqg;
 }
 
+/// sets rust-openssl to manually constructs DH object in openSSL 1.0.2
 #[cfg(ossl10x)]
 #[allow(bad_style)]
 mod compat {
