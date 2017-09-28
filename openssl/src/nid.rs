@@ -1,15 +1,43 @@
+//! A collection of numerical identifiers for OpenSSL objects.
 use ffi;
 use libc::c_int;
 
+/// A numerical identifier for an OpenSSL object.
+///
+/// Objects in OpenSSL can have a short name, a long name, and
+/// a numerical identifier (NID). For convenience, objects
+/// are usually represented in source code using these numeric
+/// identifiers.
+///
+/// Users should generally not need to create new `Nid`s.
+///
+/// # Examples
+///
+/// To view the integer representation of a `Nid`:
+///
+/// ```
+/// use openssl::nid;
+///
+/// assert!(nid::AES_256_GCM.as_raw() == 901);
+/// ```
+///
+/// # External Documentation
+///
+/// The following documentation provides context about `Nid`s and their usage
+/// in OpenSSL.
+///
+/// - [Obj_nid2obj](https://www.openssl.org/docs/man1.1.0/crypto/OBJ_create.html)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Nid(c_int);
 
 #[allow(non_snake_case)]
 impl Nid {
+    /// Create a `Nid` from an integer representation.
     pub fn from_raw(raw: c_int) -> Nid {
         Nid(raw)
     }
 
+    /// Return the integer representation of a `Nid`.
     pub fn as_raw(&self) -> c_int {
         self.0
     }
