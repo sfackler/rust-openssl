@@ -155,6 +155,11 @@ impl Asn1StringRef {
     }
 
     /// Return the string as an array of bytes
+    ///
+    /// The bytes do not directly corespond to UTF-8 encoding.  To interact with
+    /// strings in rust, it is preferable to use [`as_utf8`]
+    ///
+    /// [`as_utf8`]: struct.Asn1String.html#method.as_utf8
     pub fn as_slice(&self) -> &[u8] {
         unsafe { slice::from_raw_parts(ASN1_STRING_data(self.as_ptr()), self.len()) }
     }
@@ -239,11 +244,17 @@ foreign_type! {
 
     /// Object Identifier
     ///
-    /// Use OBJ_nid2obj() ffi to create objects, not Asn1Object directly.
+    /// Represents an ASN.1 Object.  Typically, NIDs, or numeric identifiers
+    /// are stored as a table within the [`Nid`] module.  These constants are
+    /// used to determine attributes of a certificate, such as mapping the
+    /// attribute "CommonName" to "CN" which is represented as the OID of 13.
+    /// This attribute is a constant in the [`nid::COMMONNAME`].
     ///
-    /// OpenSSL documentation at [`ASN1_OBJECT_new`]
+    /// OpenSSL documentation at [`OBJ_nid2obj`]
     ///
-    /// [`ASN1_OBJECT_new`]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_OBJECT_new.html
+    /// [`Nid`]: ../nid/index.html
+    /// [`nid::COMMONNAME`]: ../nid/constant.COMMONNAME.html
+    /// [`OBJ_nid2obj`]: https://www.openssl.org/docs/man1.1.0/crypto/OBJ_obj2nid.html
     pub struct Asn1Object;
     /// Reference to [`Asn1Object`]
     ///
