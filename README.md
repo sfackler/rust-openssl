@@ -88,6 +88,13 @@ installation via an environment variable:
 set OPENSSL_DIR=C:\OpenSSL-Win64
 ```
 
+During the installation process if you select "Copy OpenSSL DLLs to: The OpenSSL binaries (/bin) 
+directory", you will need to add them to the `PATH` environment variable:
+
+```
+set PATH=%PATH%;C:\OpenSSL-Win64\bin
+```
+
 Now you will need to [install root certificates.](#acquiring-root-certificates)
 
 #### Installing OpenSSL 1.0.2 using vcpkg
