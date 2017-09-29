@@ -1,4 +1,3 @@
-#![deny(missing_docs)]
 //! BigNum implementation
 //!
 //! Large numbers are important for a cryptographic library.  OpenSSL implementation
