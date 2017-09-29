@@ -1,3 +1,6 @@
+//! BigNum implementation
+//!
+//! 
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
