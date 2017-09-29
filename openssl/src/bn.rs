@@ -1,6 +1,30 @@
+#![deny(missing_docs)]
 //! BigNum implementation
 //!
-//! 
+//! Large numbers are important for a cryptographic library.  OpenSSL implementation
+//! of BigNum uses dynamically assigned memory to store an array of bit chunks.  This
+//! allows numbers of any size to be compared and mathematical functions performed.
+//!
+//! OpenSSL wiki describes the [`BIGNUM`] data structure.
+//!
+//! # Examples
+//!
+//! ```
+//! use openssl::bn::BigNum;
+//! use openssl::error::ErrorStack;
+//!
+//! fn bignums() -> Result< (), ErrorStack > {
+//!   let a = BigNum::new()?; // a = 0
+//!   let b = BigNum::from_dec_str("1234567890123456789012345")?;
+//!   let c = &a * &b;
+//!   assert_eq!(a,c);
+//!   Ok(())
+//! }
+//! # fn main() {
+//! #    bignums();
+//! # }
+//!
+//! [`BIGNUM`]: https://wiki.openssl.org/index.php/Manual:Bn_internal(3)
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
@@ -48,12 +72,26 @@ foreign_type! {
     type CType = ffi::BN_CTX;
     fn drop = ffi::BN_CTX_free;
 
+    /// Temporary storage for BigNums on the secure heap
+    ///
+    /// BigNum values are stored dynamically and therefore can be expensive
+    /// to allocate.  BigNumContext and the OpenSSL [`BN_CTX`] structure are used
+    /// internally when passing BigNum values between subroutines.
+    ///
+    /// [`BN_CTX`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_CTX_new.html
     pub struct BigNumContext;
+    /// Reference to [`BigNumContext`]
+    ///
+    /// [`BigNumContext`]: struct.BigNumContext.html
     pub struct BigNumContextRef;
 }
 
 impl BigNumContext {
     /// Returns a new `BigNumContext`.
+    ///
+    /// See OpenSSL documentation at [`BN_CTX_new`].
+    ///
+    /// [`BN_CTX_new`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_CTX_new.html
     pub fn new() -> Result<BigNumContext, ErrorStack> {
         unsafe {
             ffi::init();
@@ -62,30 +100,78 @@ impl BigNumContext {
     }
 }
 
+foreign_type! {
+    type CType = ffi::BIGNUM;
+    fn drop = ffi::BN_free;
+
+    /// Dynamically sized large number impelementation
+    ///
+    /// Perform large number mathematics.  Create a new BigNum
+    /// with [`new`].  Perform stanard mathematics on large numbers using
+    /// methods from [`Dref<Target = BigNumRef>`]
+    ///
+    /// OpenSSL documenation at [`BN_new`].
+    ///
+    /// [`new`]: struct.BigNum.html#method.new
+    /// [`Dref<Target = BigNumRef>`]: struct.BigNum.html#deref-methods
+    /// [`BN_new`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_new.html
+    ///
+    /// # Examples
+    /// ```
+    /// use openssl::bn::BigNum;
+    /// # use openssl::error::ErrorStack;
+    /// # fn bignums() -> Result< (), ErrorStack > {
+    /// let little_big = BigNum::from_u32(std::u32::MAX)?;
+    /// assert_eq!(*&little_big.num_bytes(), 4);
+    /// # Ok(())
+    /// # }
+    /// # fn main () { bignums(); }
+    /// ```
+    pub struct BigNum;
+    /// Reference to a [`BigNum`]
+    ///
+    /// [`BigNum`]: struct.BigNum.html
+    pub struct BigNumRef;
+}
+
 impl BigNumRef {
     /// Erases the memory used by this `BigNum`, resetting its value to 0.
     ///
     /// This can be used to destroy sensitive data such as keys when they are no longer needed.
+    ///
+    /// OpenSSL documentation at [`BN_clear`]
+    ///
+    /// [`BN_clear`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_clear.html
     pub fn clear(&mut self) {
         unsafe { ffi::BN_clear(self.as_ptr()) }
     }
 
-    /// Adds a `u32` to `self`.
+    /// Adds a `u32` to `self`.  OpenSSL documentation at [`BN_add_word`]
+    ///
+    /// [`BN_add_word`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_add_word.html
     pub fn add_word(&mut self, w: u32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_add_word(self.as_ptr(), w as ffi::BN_ULONG)).map(|_| ()) }
     }
 
-    /// Subtracts a `u32` from `self`.
+    /// Subtracts a `u32` from `self`.  OpenSSL documentation at [`BN_sub_word`]
+    ///
+    /// [`BN_sub_word`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_sub_word.html
     pub fn sub_word(&mut self, w: u32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_sub_word(self.as_ptr(), w as ffi::BN_ULONG)).map(|_| ()) }
     }
 
-    /// Multiplies a `u32` by `self`.
+    /// Multiplies a `u32` by `self`.  OpenSSL documentation at [`BN_mul_word`]
+    ///
+    /// [`BN_mul_word`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_mul_word.html
     pub fn mul_word(&mut self, w: u32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_mul_word(self.as_ptr(), w as ffi::BN_ULONG)).map(|_| ()) }
     }
 
     /// Divides `self` by a `u32`, returning the remainder.
+    ///
+    /// OpenSSL documentation at [`BN_div_word`]
+    ///
+    /// [`BN_div_word`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_div_word.html
     pub fn div_word(&mut self, w: u32) -> Result<u64, ErrorStack> {
         unsafe {
             let r = ffi::BN_div_word(self.as_ptr(), w.into());
@@ -97,7 +183,9 @@ impl BigNumRef {
         }
     }
 
-    /// Returns the result of `self` modulo `w`.
+    /// Returns the result of `self` modulo `w`. OpenSSL documentation at [`BN_mod_word`]
+    ///
+    /// [`BN_mod_word`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_mod_word.html
     pub fn mod_word(&self, w: u32) -> Result<u64, ErrorStack> {
         unsafe {
             let r = ffi::BN_mod_word(self.as_ptr(), w.into());
@@ -109,13 +197,21 @@ impl BigNumRef {
         }
     }
 
-    /// Places a cryptographically-secure pseudo-random number nonnegative
+    /// Places a cryptographically-secure pseudo-random nonnegative
     /// number less than `self` in `rnd`.
+    ///
+    /// OpenSSL documentation at [`BN_rand_range`]
+    ///
+    /// [`BN_rand_range`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_rand_range.html
     pub fn rand_range(&self, rnd: &mut BigNumRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_rand_range(rnd.as_ptr(), self.as_ptr())).map(|_| ()) }
     }
 
     /// The cryptographically weak counterpart to `rand_in_range`.
+    ///
+    /// OpenSSL documentation at [`BN_pseudo_rand_range`]
+    ///
+    /// [`BN_pseudo_rand_range`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_pseudo_rand_range.html
     pub fn pseudo_rand_range(&self, rnd: &mut BigNumRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_pseudo_rand_range(rnd.as_ptr(), self.as_ptr())).map(|_| ()) }
     }
@@ -619,14 +715,6 @@ impl BigNumRef {
                 .map(|p| Asn1Integer::from_ptr(p))
         }
     }
-}
-
-foreign_type! {
-    type CType = ffi::BIGNUM;
-    fn drop = ffi::BN_free;
-
-    pub struct BigNum;
-    pub struct BigNumRef;
 }
 
 impl BigNum {
