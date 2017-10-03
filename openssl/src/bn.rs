@@ -145,21 +145,27 @@ impl BigNumRef {
         unsafe { ffi::BN_clear(self.as_ptr()) }
     }
 
-    /// Adds a `u32` to `self`.  OpenSSL documentation at [`BN_add_word`]
+    /// Adds a `u32` to `self`.
+    ///
+    /// OpenSSL documentation at [`BN_add_word`]
     ///
     /// [`BN_add_word`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_add_word.html
     pub fn add_word(&mut self, w: u32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_add_word(self.as_ptr(), w as ffi::BN_ULONG)).map(|_| ()) }
     }
 
-    /// Subtracts a `u32` from `self`.  OpenSSL documentation at [`BN_sub_word`]
+    /// Subtracts a `u32` from `self`.
+    ///
+    /// OpenSSL documentation at [`BN_sub_word`]
     ///
     /// [`BN_sub_word`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_sub_word.html
     pub fn sub_word(&mut self, w: u32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_sub_word(self.as_ptr(), w as ffi::BN_ULONG)).map(|_| ()) }
     }
 
-    /// Multiplies a `u32` by `self`.  OpenSSL documentation at [`BN_mul_word`]
+    /// Multiplies a `u32` by `self`.
+    ///
+    /// OpenSSL documentation at [`BN_mul_word`]
     ///
     /// [`BN_mul_word`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_mul_word.html
     pub fn mul_word(&mut self, w: u32) -> Result<(), ErrorStack> {
@@ -182,7 +188,9 @@ impl BigNumRef {
         }
     }
 
-    /// Returns the result of `self` modulo `w`. OpenSSL documentation at [`BN_mod_word`]
+    /// Returns the result of `self` modulo `w`.
+    ///
+    /// OpenSSL documentation at [`BN_mod_word`]
     ///
     /// [`BN_mod_word`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_mod_word.html
     pub fn mod_word(&self, w: u32) -> Result<u64, ErrorStack> {
@@ -218,6 +226,10 @@ impl BigNumRef {
     /// Sets bit `n`. Equivalent to `self |= (1 << n)`.
     ///
     /// When setting a bit outside of `self`, it is expanded.
+    ///
+    /// OpenSSL documentation at [`BN_set_bit`]
+    ///
+    /// [`BN_set_bit`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_set_bit.html
     pub fn set_bit(&mut self, n: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_set_bit(self.as_ptr(), n.into())).map(|_| ()) }
     }
@@ -225,11 +237,19 @@ impl BigNumRef {
     /// Clears bit `n`, setting it to 0. Equivalent to `self &= ~(1 << n)`.
     ///
     /// When clearing a bit outside of `self`, an error is returned.
+    ///
+    /// OpenSSL documentation at [`BN_clear_bit`]
+    ///
+    /// [`BN_clear_bit`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_clear_bit.html
     pub fn clear_bit(&mut self, n: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_clear_bit(self.as_ptr(), n.into())).map(|_| ()) }
     }
 
     /// Returns `true` if the `n`th bit of `self` is set to 1, `false` otherwise.
+    ///
+    /// OpenSSL documentation at [`BN_is_bit_set`]
+    ///
+    /// [`BN_is_bit_set`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_is_bit_set.html
     pub fn is_bit_set(&self, n: i32) -> bool {
         unsafe { ffi::BN_is_bit_set(self.as_ptr(), n.into()) == 1 }
     }
@@ -237,50 +257,92 @@ impl BigNumRef {
     /// Truncates `self` to the lowest `n` bits.
     ///
     /// An error occurs if `self` is already shorter than `n` bits.
+    ///
+    /// OpenSSL documentation at [`BN_mask_bits`]
+    ///
+    /// [`BN_mask_bits`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_mask_bits.html
     pub fn mask_bits(&mut self, n: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_mask_bits(self.as_ptr(), n.into())).map(|_| ()) }
     }
 
-    /// Places `a << 1` in `self`.
+    /// Places `a << 1` in `self`.  Equivalent to `self * 2`.
+    ///
+    /// OpenSSL documentation at [`BN_lshift1`]
+    ///
+    /// [`BN_lshift1`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_lshift1.html
     pub fn lshift1(&mut self, a: &BigNumRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_lshift1(self.as_ptr(), a.as_ptr())).map(|_| ()) }
     }
 
-    /// Places `a >> 1` in `self`.
+    /// Places `a >> 1` in `self`. Equivalent to `self / 2`.
+    ///
+    /// OpenSSL documentation at [`BN_rshift1`]
+    ///
+    /// [`BN_rshift1`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_rshift1.html
     pub fn rshift1(&mut self, a: &BigNumRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_rshift1(self.as_ptr(), a.as_ptr())).map(|_| ()) }
     }
 
-    /// Places `a + b` in `self`.
+    /// Places `a + b` in `self`.  [`core::ops::Add`] is also implemented for `BigNumRef`.
+    ///
+    /// OpenSSL documentation at [`BN_add`]
+    ///
+    /// [`core::ops::Add`]: struct.BigNumRef.html#method.add
+    /// [`BN_add`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_add.html
     pub fn checked_add(&mut self, a: &BigNumRef, b: &BigNumRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_add(self.as_ptr(), a.as_ptr(), b.as_ptr())).map(|_| ()) }
     }
 
-    /// Places `a - b` in `self`.
+    /// Places `a - b` in `self`. [`core::ops::Sub`] is also implemented for `BigNumRef`.
+    ///
+    /// OpenSSL documentation at [`BN_sub`]
+    ///
+    /// [`core::ops::Sub`]: struct.BigNumRef.html#method.sub
+    /// [`BN_sub`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_sub.html
     pub fn checked_sub(&mut self, a: &BigNumRef, b: &BigNumRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_sub(self.as_ptr(), a.as_ptr(), b.as_ptr())).map(|_| ()) }
     }
 
-    /// Places `a << n` in `self`.
+    /// Places `a << n` in `self`.  Equivalent to `a * 2 ^ n`.
+    ///
+    /// OpenSSL documentation at [`BN_lshift`]
+    ///
+    /// [`BN_lshift`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_lshift.html
     pub fn lshift(&mut self, a: &BigNumRef, n: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_lshift(self.as_ptr(), a.as_ptr(), n.into())).map(|_| ()) }
     }
 
-    /// Places `a >> n` in `self`.
+    /// Places `a >> n` in `self`. Equivalent to `a / 2 ^ n`.
+    ///
+    /// OpenSSL documentation at [`BN_rshift`]
+    ///
+    /// [`BN_rshift`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_rshift.html
     pub fn rshift(&mut self, a: &BigNumRef, n: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_rshift(self.as_ptr(), a.as_ptr(), n.into())).map(|_| ()) }
     }
 
+    /// Creates a new BigNum with the same value.
+    ///
+    /// OpenSSL documentation at [`BN_dup`]
+    ///
+    /// [`BN_dup`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_dup.html
     pub fn to_owned(&self) -> Result<BigNum, ErrorStack> {
         unsafe { cvt_p(ffi::BN_dup(self.as_ptr())).map(|b| BigNum::from_ptr(b)) }
     }
 
-    /// Sets the sign of `self`.
+    /// Sets the sign of `self`.  Pass true to set `self` to a negative.  False sets
+    /// `self` positive.
     pub fn set_negative(&mut self, negative: bool) {
         unsafe { ffi::BN_set_negative(self.as_ptr(), negative as c_int) }
     }
 
     /// Compare the absolute values of `self` and `oth`.
+    ///
+    /// OpenSSL documentation at [`BN_ucmp`]
+    ///
+    /// [`BN_ucmp`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_ucmp.html
+    ///
+    /// # Examples
     ///
     /// ```
     /// # use openssl::bn::BigNum;
@@ -294,6 +356,7 @@ impl BigNumRef {
         unsafe { ffi::BN_ucmp(self.as_ptr(), oth.as_ptr()).cmp(&0) }
     }
 
+    /// Returns `true` if `self` is negative.
     pub fn is_negative(&self) -> bool {
         self._is_negative()
     }
@@ -309,11 +372,15 @@ impl BigNumRef {
     }
 
     /// Returns the number of significant bits in `self`.
+    ///
+    /// OpenSSL documentation at [`BN_num_bits`]
+    ///
+    /// [`BN_num_bits`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_num_bits.html
     pub fn num_bits(&self) -> i32 {
         unsafe { ffi::BN_num_bits(self.as_ptr()) as i32 }
     }
 
-    /// Returns the size of `self` in bytes.
+    /// Returns the size of `self` in bytes. Implemented natively.
     pub fn num_bytes(&self) -> i32 {
         (self.num_bits() + 7) / 8
     }
@@ -323,8 +390,28 @@ impl BigNumRef {
     /// # Parameters
     ///
     /// * `bits`: Length of the number in bits.
-    /// * `msb`: The desired properties of the number.
+    /// * `msb`: The desired properties of the most significant bit. See [`constants`].
     /// * `odd`: If `true`, the generated number will be odd.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use openssl::bn::{BigNum,MSB_MAYBE_ZERO};
+    /// use openssl::error::ErrorStack;
+    ///
+    /// fn generate_random() -> Result< BigNum, ErrorStack > {
+    ///    let mut big = BigNum::new()?;
+    ///
+    ///    // Generates a 128-bit odd random number
+    ///    big.rand(128, MSB_MAYBE_ZERO, true);
+    ///    Ok((big))
+    /// }
+    /// ```
+    ///
+    /// OpenSSL documentation at [`BN_rand`]
+    ///
+    /// [`constants`]: index.html#constants
+    /// [`BN_rand`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_rand.html
     pub fn rand(&mut self, bits: i32, msb: MsbOption, odd: bool) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::BN_rand(
@@ -336,7 +423,11 @@ impl BigNumRef {
         }
     }
 
-    /// The cryptographically weak counterpart to `rand`.
+    /// The cryptographically weak counterpart to `rand`.  Not suitable for key generation.
+    ///
+    /// OpenSSL documentation at [`BN_psuedo_rand`]
+    ///
+    /// [`BN_psuedo_rand`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_pseudo_rand.html
     pub fn pseudo_rand(&mut self, bits: i32, msb: MsbOption, odd: bool) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::BN_pseudo_rand(
@@ -356,6 +447,25 @@ impl BigNumRef {
     /// * `safe`: If true, returns a "safe" prime `p` so that `(p-1)/2` is also prime.
     /// * `add`/`rem`: If `add` is set to `Some(add)`, `p % add == rem` will hold, where `p` is the
     ///   generated prime and `rem` is `1` if not specified (`None`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use openssl::bn::BigNum;
+    /// use openssl::error::ErrorStack;
+    ///
+    /// fn generate_weak_prime() -> Result< BigNum, ErrorStack > {
+    ///    let mut big = BigNum::new()?;
+    ///
+    ///    // Generates a 128-bit simple prime number
+    ///    big.generate_prime(128, false, None, None);
+    ///    Ok((big))
+    /// }
+    /// ```
+    ///
+    /// OpenSSL documentation at [`BN_generate_prime_ex`]
+    ///
+    /// [`BN_generate_prime_ex`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_generate_prime_ex.html
     pub fn generate_prime(
         &mut self,
         bits: i32,
@@ -376,6 +486,12 @@ impl BigNumRef {
     }
 
     /// Places the result of `a * b` in `self`.
+    /// [`core::ops::Mul`] is also implemented for `BigNumRef`.
+    ///
+    /// OpenSSL documentation at [`BN_mul`]
+    ///
+    /// [`core::ops::Mul`]: struct.BigNumRef.html#method.mul
+    /// [`BN_mul`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_mul.html
     pub fn checked_mul(
         &mut self,
         a: &BigNumRef,
@@ -392,7 +508,13 @@ impl BigNumRef {
         }
     }
 
-    /// Places the result of `a / b` in `self`.
+    /// Places the result of `a / b` in `self`. The remainder is discarded.
+    /// [`core::ops::Div`] is also implemented for `BigNumRef`.
+    ///
+    /// OpenSSL documentation at [`BN_div`]
+    ///
+    /// [`core::ops::Div`]: struct.BigNumRef.html#method.div
+    /// [`BN_div`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_div.html
     pub fn checked_div(
         &mut self,
         a: &BigNumRef,
@@ -411,6 +533,10 @@ impl BigNumRef {
     }
 
     /// Places the result of `a % b` in `self`.
+    ///
+    /// OpenSSL documentation at [`BN_div`]
+    ///
+    /// [`BN_div`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_div.html
     pub fn checked_rem(
         &mut self,
         a: &BigNumRef,
@@ -429,6 +555,10 @@ impl BigNumRef {
     }
 
     /// Places the result of `a / b` in `self` and `a % b` in `rem`.
+    ///
+    /// OpenSSL documentation at [`BN_div`]
+    ///
+    /// [`BN_div`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_div.html
     pub fn div_rem(
         &mut self,
         rem: &mut BigNumRef,
@@ -448,11 +578,20 @@ impl BigNumRef {
     }
 
     /// Places the result of `a²` in `self`.
+    ///
+    /// OpenSSL documentation at [`BN_sqr`]
+    ///
+    /// [`BN_sqr`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_sqr.html
     pub fn sqr(&mut self, a: &BigNumRef, ctx: &mut BigNumContextRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_sqr(self.as_ptr(), a.as_ptr(), ctx.as_ptr())).map(|_| ()) }
     }
 
-    /// Places the result of `a mod m` in `self`.
+    /// Places the result of `a mod m` in `self`.  As opposed to `div_rem`
+    /// the result is non-negative.
+    ///
+    /// OpenSSL documentation at [`BN_nnmod`]
+    ///
+    /// [`BN_nnmod`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_nnmod.html
     pub fn nnmod(
         &mut self,
         a: &BigNumRef,
@@ -470,6 +609,10 @@ impl BigNumRef {
     }
 
     /// Places the result of `(a + b) mod m` in `self`.
+    ///
+    /// OpenSSL documentation at [`BN_mod_add`]
+    ///
+    /// [`BN_mod_add`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_mod_add.html
     pub fn mod_add(
         &mut self,
         a: &BigNumRef,
@@ -489,6 +632,10 @@ impl BigNumRef {
     }
 
     /// Places the result of `(a - b) mod m` in `self`.
+    ///
+    /// OpenSSL documentation at [`BN_mod_sub`]
+    ///
+    /// [`BN_mod_sub`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_mod_sub.html
     pub fn mod_sub(
         &mut self,
         a: &BigNumRef,
@@ -508,6 +655,10 @@ impl BigNumRef {
     }
 
     /// Places the result of `(a * b) mod m` in `self`.
+    ///
+    /// OpenSSL documentation at [`BN_mod_mul`]
+    ///
+    /// [`BN_mod_mul`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_mod_mul.html
     pub fn mod_mul(
         &mut self,
         a: &BigNumRef,
@@ -527,6 +678,10 @@ impl BigNumRef {
     }
 
     /// Places the result of `a² mod m` in `self`.
+    ///
+    /// OpenSSL documentation at [`BN_mod_sqr`]
+    ///
+    /// [`BN_mod_sqr`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_mod_sqr.html
     pub fn mod_sqr(
         &mut self,
         a: &BigNumRef,
@@ -544,6 +699,10 @@ impl BigNumRef {
     }
 
     /// Places the result of `a^p` in `self`.
+    ///
+    /// OpenSSL documentation at [`BN_exp`]
+    ///
+    /// [`BN_exp`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_exp.html
     pub fn exp(
         &mut self,
         a: &BigNumRef,
@@ -561,6 +720,10 @@ impl BigNumRef {
     }
 
     /// Places the result of `a^p mod m` in `self`.
+    ///
+    /// OpenSSL documentation at [`BN_mod_exp`]
+    ///
+    /// [`BN_mod_exp`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_mod_exp.html
     pub fn mod_exp(
         &mut self,
         a: &BigNumRef,
@@ -597,6 +760,10 @@ impl BigNumRef {
     }
 
     /// Places the greatest common denominator of `a` and `b` in `self`.
+    ///
+    /// OpenSSL documentation at [`BN_gcd`]
+    ///
+    /// [`BN_gcd`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_gcd.html
     pub fn gcd(
         &mut self,
         a: &BigNumRef,
@@ -617,7 +784,14 @@ impl BigNumRef {
     ///
     /// Performs a Miller-Rabin probabilistic primality test with `checks` iterations.
     ///
+    /// OpenSSL documentation at [`BN_is_prime_ex`]
+    ///
+    /// [`BN_is_prime_ex`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_is_prime_ex.html
+    ///
+    /// # Return Value
+    ///
     /// Returns `true` if `self` is prime with an error probability of less than `0.25 ^ checks`.
+
     pub fn is_prime(&self, checks: i32, ctx: &mut BigNumContextRef) -> Result<bool, ErrorStack> {
         unsafe {
             cvt_n(ffi::BN_is_prime_ex(
@@ -634,6 +808,10 @@ impl BigNumRef {
     /// If `do_trial_division` is `true`, first performs trial division by a number of small primes.
     /// Then, like `is_prime`, performs a Miller-Rabin probabilistic primality test with `checks`
     /// iterations.
+    ///
+    /// OpenSSL documentation at [`BN_is_prime_fasttest_ex`]
+    ///
+    /// [`BN_is_prime_fasttest_ex`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_is_prime_fasttest_ex.html
     ///
     /// # Return Value
     ///
@@ -727,6 +905,10 @@ impl BigNum {
     }
 
     /// Creates a new `BigNum` with the given value.
+    ///
+    /// OpenSSL documentation at [`BN_set_word`]
+    ///
+    /// [`BN_set_word`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_set_word.html
     pub fn from_u32(n: u32) -> Result<BigNum, ErrorStack> {
         BigNum::new().and_then(|v| unsafe {
             cvt(ffi::BN_set_word(v.as_ptr(), n as ffi::BN_ULONG)).map(|_| v)
@@ -734,6 +916,10 @@ impl BigNum {
     }
 
     /// Creates a `BigNum` from a decimal string.
+    ///
+    /// OpenSSL documentation at [`BN_dec2bn`]
+    ///
+    /// [`BN_dec2bn`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_dec2bn.html
     pub fn from_dec_str(s: &str) -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -745,6 +931,10 @@ impl BigNum {
     }
 
     /// Creates a `BigNum` from a hexadecimal string.
+    ///
+    /// OpenSSL documentation at [`BN_hex2bn`]
+    ///
+    /// [`BN_hex2bn`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_hex2bn.html
     pub fn from_hex_str(s: &str) -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -755,6 +945,13 @@ impl BigNum {
         }
     }
 
+    /// [`RFC 2409`] defines the Internet Key Exchange.  The prime is in the order
+    /// of magnitude of `2 ^ 768`.  This is a constant.
+    ///
+    /// OpenSSL documentation at [`BN_get_rfc2409_prime_768`]
+    ///
+    /// [`RFC 2409`]: https://tools.ietf.org/html/rfc2409#page-21
+    /// [`BN_get_rfc2409_prime_768`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_get_rfc2409_prime_768.html
     pub fn get_rfc2409_prime_768() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -762,6 +959,13 @@ impl BigNum {
         }
     }
 
+    /// [`RFC 2409`] defines the Internet Key Exchange.  The prime is in the order
+    /// of magnitude of `2 ^ 1024`.  This is a constant.
+    ///
+    /// OpenSSL documentation at [`BN_get_rfc2409_prime_1024`]
+    ///
+    /// [`RFC 2409`]: https://tools.ietf.org/html/rfc2409#page-21
+    /// [`BN_get_rfc2409_prime_1024`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_get_rfc2409_prime_1024.html
     pub fn get_rfc2409_prime_1024() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -769,6 +973,13 @@ impl BigNum {
         }
     }
 
+    /// [`RFC 3526`] defines the MODP DH groups for IKE.  The prime is in the order
+    /// of magnitude of `2 ^ 1536`.  This is a constant.
+    ///
+    /// OpenSSL documentation at [`BN_get_rfc3526_prime_1536`]
+    ///
+    /// [`RFC 3526`]: https://tools.ietf.org/html/rfc3526#page-3
+    /// [`BN_get_rfc3526_prime_1536`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_get_rfc3526_prime_1536.html
     pub fn get_rfc3526_prime_1536() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -776,6 +987,13 @@ impl BigNum {
         }
     }
 
+    /// [`RFC 3526`] defines the MODP DH groups for IKE.  The prime is in the order
+    /// of magnitude of `2 ^ 2048`.  This is a constant.
+    ///
+    /// OpenSSL documentation at [`BN_get_rfc3526_prime_2048`]
+    ///
+    /// [`RFC 3526`]: https://tools.ietf.org/html/rfc3526#page-3
+    /// [`BN_get_rfc3526_prime_2048`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_get_rfc3526_prime_2048.html
     pub fn get_rfc3526_prime_2048() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -783,6 +1001,13 @@ impl BigNum {
         }
     }
 
+    /// [`RFC 3526`] defines the MODP DH groups for IKE.  The prime is in the order
+    /// of magnitude of `2 ^ 3072`.  This is a constant.
+    ///
+    /// OpenSSL documentation at [`BN_get_rfc3526_prime_3072`]
+    ///
+    /// [`RFC 3526`]: https://tools.ietf.org/html/rfc3526#page-4
+    /// [`BN_get_rfc3526_prime_3072`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_get_rfc3526_prime_3072.html
     pub fn get_rfc3526_prime_3072() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -790,6 +1015,13 @@ impl BigNum {
         }
     }
 
+    /// [`RFC 3526`] defines the MODP DH groups for IKE.  The prime is in the order
+    /// of magnitude of `2 ^ 4096`.  This is a constant.
+    ///
+    /// OpenSSL documentation at [`BN_get_rfc3526_prime_4096`]
+    ///
+    /// [`RFC 3526`]: https://tools.ietf.org/html/rfc3526#page-4
+    /// [`BN_get_rfc3526_prime_4096`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_get_rfc3526_prime_4096.html
     pub fn get_rfc3526_prime_4096() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -797,6 +1029,13 @@ impl BigNum {
         }
     }
 
+    /// [`RFC 3526`] defines the MODP DH groups for IKE.  The prime is in the order
+    /// of magnitude of `2 ^ 6144`.  This is a constant.
+    ///
+    /// OpenSSL documentation at [`BN_get_rfc3526_prime_6144`]
+    ///
+    /// [`RFC 3526`]: https://tools.ietf.org/html/rfc3526#page-6
+    /// [`BN_get_rfc3526_prime_6144`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_get_rfc3526_prime_6144.html
     pub fn get_rfc3526_prime_6144() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -804,6 +1043,13 @@ impl BigNum {
         }
     }
 
+    /// [`RFC 3526`] defines the MODP DH groups for IKE.  The prime is in the order
+    /// of magnitude of `2 ^ 8192`.  This is a constant.
+    ///
+    /// OpenSSL documentation at [`BN_get_rfc3526_prime_8192`]
+    ///
+    /// [`RFC 3526`]: https://tools.ietf.org/html/rfc3526#page-6
+    /// [`BN_get_rfc3526_prime_8192`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_get_rfc3526_prime_8192.html
     pub fn get_rfc3526_prime_8192() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -812,6 +1058,10 @@ impl BigNum {
     }
 
     /// Creates a new `BigNum` from an unsigned, big-endian encoded number of arbitrary length.
+    ///
+    /// OpenSSL documentation at [`BN_bin2bn`]
+    ///
+    /// [`BN_bin2bn`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_bin2bn.html
     ///
     /// ```
     /// # use openssl::bn::BigNum;
