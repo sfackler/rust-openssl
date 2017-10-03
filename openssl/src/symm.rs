@@ -1,3 +1,4 @@
+//! High level interface to certain symmetric ciphers.
 use std::cmp;
 use std::ptr;
 use libc::c_int;
@@ -12,6 +13,10 @@ pub enum Mode {
     Decrypt,
 }
 
+/// Represent a particular cipher algorithm.  See OpenSSL doc at [`EVP_EncryptInit`] for more
+/// information on each algorithms.
+///
+/// [`EVP_EncryptInit`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_EncryptInit.html
 #[derive(Copy, Clone)]
 pub struct Cipher(*const ffi::EVP_CIPHER);
 
@@ -152,7 +157,64 @@ impl Cipher {
     }
 }
 
-/// Represents a symmetric cipher context.
+/// Represents a symmetric cipher context.  Padding is enabled by default.
+///
+/// # Examples
+///
+/// Encrypt some plaintext in chunks, then decrypt the ciphertext back into plaintext, in AES 128
+/// CBC mode.
+///
+/// ```
+/// use openssl::symm::{Cipher, Mode, Crypter};
+///
+/// let plaintexts: [&[u8]; 2] = [b"Some Stream of", b" Crypto Text"];
+/// let key = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F";
+/// let iv = b"\x00\x01\x02\x03\x04\x05\x06\x07\x00\x01\x02\x03\x04\x05\x06\x07";
+/// let data_len = plaintexts.iter().fold(0, |sum, x| sum + x.len());
+///
+/// // Create a cipher context for encryption.
+/// let mut encrypter = Crypter::new(
+///     Cipher::aes_128_cbc(),
+///     Mode::Encrypt,
+///     key,
+///     Some(iv)).unwrap();
+///
+/// let block_size = Cipher::aes_128_cbc().block_size();
+/// let mut ciphertext = vec![0; data_len + block_size];
+///
+/// // Encrypt 2 chunks of plaintexts successively.
+/// let mut count = encrypter.update(plaintexts[0], &mut ciphertext).unwrap();
+/// count += encrypter.update(plaintexts[1], &mut ciphertext[count..]).unwrap();
+/// count += encrypter.finalize(&mut ciphertext[count..]).unwrap();
+/// ciphertext.truncate(count);
+///
+/// assert_eq!(
+///     b"\x0F\x21\x83\x7E\xB2\x88\x04\xAF\xD9\xCC\xE2\x03\x49\xB4\x88\xF6\xC4\x61\x0E\x32\x1C\xF9\
+///       \x0D\x66\xB1\xE6\x2C\x77\x76\x18\x8D\x99",
+///     &ciphertext[..]
+/// );
+///
+///
+/// // Let's pretend we don't know the plaintext, and now decrypt the ciphertext.
+/// let data_len = ciphertext.len();
+/// let ciphertexts = [&ciphertext[..9], &ciphertext[9..]];
+///
+/// // Create a cipher context for decryption.
+/// let mut decrypter = Crypter::new(
+///     Cipher::aes_128_cbc(),
+///     Mode::Decrypt,
+///     key,
+///     Some(iv)).unwrap();
+/// let mut plaintext = vec![0; data_len + block_size];
+///
+/// // Decrypt 2 chunks of ciphertexts successively.
+/// let mut count = decrypter.update(ciphertexts[0], &mut plaintext).unwrap();
+/// count += decrypter.update(ciphertexts[1], &mut plaintext[count..]).unwrap();
+/// count += decrypter.finalize(&mut plaintext[count..]).unwrap();
+/// plaintext.truncate(count);
+///
+/// assert_eq!(b"Some Stream of Crypto Text", &plaintext[..]);
+/// ```
 pub struct Crypter {
     ctx: *mut ffi::EVP_CIPHER_CTX,
     block_size: usize,
@@ -358,8 +420,34 @@ impl Drop for Crypter {
     }
 }
 
-/// Encrypts data, using the specified crypter type in encrypt mode with the
-/// specified key and iv; returns the resulting (encrypted) data.
+/// A convenient interface to `Crypter` to encrypt data, using the specified crypter type `t` in
+/// encrypt mode with the specified key and iv; returns the resulting (encrypted) data.
+///
+/// This function encrypts all data in one go.  To encrypt a stream of data increamentally , use
+/// `Crypter` instead.
+///
+/// # Examples
+///
+/// Encrypt data in AES128 CBC mode
+///
+/// ```
+/// use openssl::symm::{encrypt, Cipher};
+///
+/// let cipher = Cipher::aes_128_cbc();
+/// let data = b"Some Crypto Text";
+/// let key = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F";
+/// let iv = b"\x00\x01\x02\x03\x04\x05\x06\x07\x00\x01\x02\x03\x04\x05\x06\x07";
+/// let ciphertext = encrypt(
+///     cipher,
+///     key,
+///     Some(iv),
+///     data).unwrap();
+///
+/// assert_eq!(
+///     b"\xB4\xB9\xE7\x30\xD6\xD6\xF7\xDE\x77\x3F\x1C\xFF\xB3\x3E\x44\x5A\x91\xD7\x27\x62\x87\x4D\
+///       \xFB\x3C\x5E\xC4\x59\x72\x4A\xF4\x7C\xA1",
+///     &ciphertext[..]);
+/// ```
 pub fn encrypt(
     t: Cipher,
     key: &[u8],
@@ -369,8 +457,34 @@ pub fn encrypt(
     cipher(t, Mode::Encrypt, key, iv, data)
 }
 
-/// Decrypts data, using the specified crypter type in decrypt mode with the
-/// specified key and iv; returns the resulting (decrypted) data.
+/// A convenient interface to `Crypter` to decrypt data, using the specified crypter type `t` in
+/// decrypt mode with the specified key and iv; returns the resulting (decrypted) data.
+///
+/// This function decrypts all data in one go.  To decrypt a stream of data increamentally, use
+/// `Crypter` instead.
+///
+/// # Examples
+///
+/// Decrypt data in AES256 ECB mode
+///
+/// ```
+/// use openssl::symm::{decrypt, Cipher};
+///
+/// let cipher = Cipher::aes_128_cbc();
+/// let data = b"\xB4\xB9\xE7\x30\xD6\xD6\xF7\xDE\x77\x3F\x1C\xFF\xB3\x3E\x44\x5A\x91\xD7\x27\x62\
+///              \x87\x4D\xFB\x3C\x5E\xC4\x59\x72\x4A\xF4\x7C\xA1";
+/// let key = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F";
+/// let iv = b"\x00\x01\x02\x03\x04\x05\x06\x07\x00\x01\x02\x03\x04\x05\x06\x07";
+/// let ciphertext = decrypt(
+///     cipher,
+///     key,
+///     Some(iv),
+///     data).unwrap();
+///
+/// assert_eq!(
+///     b"Some Crypto Text",
+///     &ciphertext[..]);
+/// ```
 pub fn decrypt(
     t: Cipher,
     key: &[u8],
