@@ -244,11 +244,13 @@ pub struct Crypter {
 }
 
 impl Crypter {
-    /// Creates a new `Crypter`.
+    /// Creates a new `Crypter`.  The initialisation vector, `iv`, is not necesarry for certain
+    /// types of `Cipher`.
     ///
     /// # Panics
     ///
-    /// Panics if an IV is required by the cipher but not provided.
+    /// Panics if an IV is required by the cipher but not provided.  Also make sure that the key
+    /// and IV size are appropriate for your cipher.
     pub fn new(
         t: Cipher,
         mode: Mode,
