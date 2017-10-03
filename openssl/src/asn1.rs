@@ -63,11 +63,11 @@ foreign_type! {
 impl fmt::Display for Asn1GeneralizedTimeRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         unsafe {
-            let mem_bio = try!(MemBio::new());
-            try!(cvt(ffi::ASN1_GENERALIZEDTIME_print(
+            let mem_bio = MemBio::new()?;
+            cvt(ffi::ASN1_GENERALIZEDTIME_print(
                 mem_bio.as_ptr(),
                 self.as_ptr(),
-            )));
+            ))?;
             write!(f, "{}", str::from_utf8_unchecked(mem_bio.get_buf()))
         }
     }
@@ -96,8 +96,8 @@ foreign_type! {
 impl fmt::Display for Asn1TimeRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         unsafe {
-            let mem_bio = try!(MemBio::new());
-            try!(cvt(ffi::ASN1_TIME_print(mem_bio.as_ptr(), self.as_ptr())));
+            let mem_bio = MemBio::new()?;
+            cvt(ffi::ASN1_TIME_print(mem_bio.as_ptr(), self.as_ptr()))?;
             write!(f, "{}", str::from_utf8_unchecked(mem_bio.get_buf()))
         }
     }
@@ -108,7 +108,7 @@ impl Asn1Time {
         ffi::init();
 
         unsafe {
-            let handle = try!(cvt_p(ffi::X509_gmtime_adj(ptr::null_mut(), period)));
+            let handle = cvt_p(ffi::X509_gmtime_adj(ptr::null_mut(), period))?;
             Ok(Asn1Time::from_ptr(handle))
         }
     }
@@ -279,7 +279,7 @@ impl fmt::Display for Asn1ObjectRef {
                 self.as_ptr(),
                 0,
             );
-            let s = try!(str::from_utf8(&buf[..len as usize]).map_err(|_| fmt::Error));
+            let s = str::from_utf8(&buf[..len as usize]).map_err(|_| fmt::Error)?;
             fmt.write_str(s)
         }
     }

@@ -343,7 +343,7 @@ impl SslContextBuilder {
     pub fn new(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
         unsafe {
             init();
-            let ctx = try!(cvt_p(ffi::SSL_CTX_new(method.as_ptr())));
+            let ctx = cvt_p(ffi::SSL_CTX_new(method.as_ptr()))?;
 
             Ok(SslContextBuilder::from_ptr(ctx))
         }
@@ -416,10 +416,10 @@ impl SslContextBuilder {
     pub fn set_verify_cert_store(&mut self, cert_store: X509Store) -> Result<(), ErrorStack> {
         unsafe {
             let ptr = cert_store.as_ptr();
-            try!(cvt(
+            cvt(
                 ffi::SSL_CTX_set0_verify_cert_store(self.as_ptr(), ptr) as
                     c_int,
-            ));
+            )?;
             mem::forget(cert_store);
 
             Ok(())
@@ -579,10 +579,10 @@ impl SslContextBuilder {
     /// `set_certificate` to a trusted root.
     pub fn add_extra_chain_cert(&mut self, cert: X509) -> Result<(), ErrorStack> {
         unsafe {
-            try!(cvt(ffi::SSL_CTX_add_extra_chain_cert(
+            cvt(ffi::SSL_CTX_add_extra_chain_cert(
                 self.as_ptr(),
                 cert.as_ptr(),
-            ) as c_int));
+            ) as c_int)?;
             mem::forget(cert);
             Ok(())
         }
@@ -661,11 +661,11 @@ impl SslContextBuilder {
         unsafe {
             // Attach the protocol list to the OpenSSL context structure,
             // so that we can refer to it within the callback.
-            try!(cvt(ffi::SSL_CTX_set_ex_data(
+            cvt(ffi::SSL_CTX_set_ex_data(
                 self.as_ptr(),
                 *NPN_PROTOS_IDX,
                 Box::into_raw(protocols) as *mut c_void,
-            )));
+            ))?;
             // Now register the callback that performs the default protocol
             // matching based on the client-supported list of protocols that
             // has been saved.
@@ -712,11 +712,11 @@ impl SslContextBuilder {
             // ssl ctx's ex_data so that we can configure a function to free it later. In the
             // future, it might make sense to pull this into our internal struct Ssl instead of
             // leaning on openssl and using function pointers.
-            try!(cvt(ffi::SSL_CTX_set_ex_data(
+            cvt(ffi::SSL_CTX_set_ex_data(
                 self.as_ptr(),
                 *ALPN_PROTOS_IDX,
                 Box::into_raw(protocols) as *mut c_void,
-            )));
+            ))?;
 
             // Now register the callback that performs the default protocol
             // matching based on the client-supported list of protocols that
@@ -859,7 +859,7 @@ impl SslContext {
     {
         unsafe {
             ffi::init();
-            let idx = try!(cvt_n(compat::get_new_idx(free_data_box::<T>)));
+            let idx = cvt_n(compat::get_new_idx(free_data_box::<T>))?;
             Ok(Index::from_raw(idx))
         }
     }
@@ -1088,7 +1088,7 @@ impl Ssl {
     {
         unsafe {
             ffi::init();
-            let idx = try!(cvt_n(compat::get_new_ssl_idx(free_data_box::<T>)));
+            let idx = cvt_n(compat::get_new_ssl_idx(free_data_box::<T>))?;
             Ok(Index::from_raw(idx))
         }
     }
@@ -1484,11 +1484,11 @@ impl SslRef {
     pub fn set_ocsp_status(&mut self, response: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             assert!(response.len() <= c_int::max_value() as usize);
-            let p = try!(cvt_p(ffi::CRYPTO_malloc(
+            let p = cvt_p(ffi::CRYPTO_malloc(
                 response.len() as _,
                 concat!(file!(), "\0").as_ptr() as *const _,
                 line!() as c_int,
-            )));
+            ))?;
             ptr::copy_nonoverlapping(response.as_ptr(), p as *mut u8, response.len());
             cvt(ffi::SSL_set_tlsext_status_ocsp_resp(
                 self.as_ptr(),
@@ -1540,7 +1540,7 @@ impl fmt::Debug for Ssl {
 impl Ssl {
     pub fn new(ctx: &SslContext) -> Result<Ssl, ErrorStack> {
         unsafe {
-            let ssl = try!(cvt_p(ffi::SSL_new(ctx.as_ptr())));
+            let ssl = cvt_p(ffi::SSL_new(ctx.as_ptr()))?;
             Ok(Ssl::from_ptr(ssl))
         }
     }

@@ -34,19 +34,19 @@ impl Pkcs12Ref {
             let mut cert = ptr::null_mut();
             let mut chain = ptr::null_mut();
 
-            try!(cvt(ffi::PKCS12_parse(
+            cvt(ffi::PKCS12_parse(
                 self.as_ptr(),
                 pass.as_ptr(),
                 &mut pkey,
                 &mut cert,
                 &mut chain,
-            )));
+            ))?;
 
             let pkey = PKey::from_ptr(pkey);
             let cert = X509::from_ptr(cert);
 
             let chain = if chain.is_null() {
-                try!(Stack::new())
+                Stack::new()?
             } else {
                 Stack::from_ptr(chain)
             };

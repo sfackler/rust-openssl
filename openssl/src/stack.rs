@@ -37,7 +37,7 @@ impl<T: Stackable> Stack<T> {
     pub fn new() -> Result<Stack<T>, ErrorStack> {
         unsafe {
             ffi::init();
-            let ptr = try!(cvt_p(OPENSSL_sk_new_null()));
+            let ptr = cvt_p(OPENSSL_sk_new_null())?;
             Ok(Stack(ptr as *mut _))
         }
     }
@@ -218,9 +218,9 @@ impl<T: Stackable> StackRef<T> {
     /// Pushes a value onto the top of the stack.
     pub fn push(&mut self, data: T) -> Result<(), ErrorStack> {
         unsafe {
-            try!(cvt(
+            cvt(
                 OPENSSL_sk_push(self.as_stack(), data.as_ptr() as *mut _),
-            ));
+            )?;
             mem::forget(data);
             Ok(())
         }

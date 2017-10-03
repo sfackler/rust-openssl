@@ -77,13 +77,13 @@ impl RsaRef {
         assert!(to.len() >= self.size());
 
         unsafe {
-            let len = try!(cvt_n(ffi::RSA_private_decrypt(
+            let len = cvt_n(ffi::RSA_private_decrypt(
                 from.len() as c_int,
                 from.as_ptr(),
                 to.as_mut_ptr(),
                 self.as_ptr(),
                 padding.0,
-            )));
+            ))?;
             Ok(len as usize)
         }
     }
@@ -105,13 +105,13 @@ impl RsaRef {
         assert!(to.len() >= self.size());
 
         unsafe {
-            let len = try!(cvt_n(ffi::RSA_private_encrypt(
+            let len = cvt_n(ffi::RSA_private_encrypt(
                 from.len() as c_int,
                 from.as_ptr(),
                 to.as_mut_ptr(),
                 self.as_ptr(),
                 padding.0,
-            )));
+            ))?;
             Ok(len as usize)
         }
     }
@@ -131,13 +131,13 @@ impl RsaRef {
         assert!(to.len() >= self.size());
 
         unsafe {
-            let len = try!(cvt_n(ffi::RSA_public_decrypt(
+            let len = cvt_n(ffi::RSA_public_decrypt(
                 from.len() as c_int,
                 from.as_ptr(),
                 to.as_mut_ptr(),
                 self.as_ptr(),
                 padding.0,
-            )));
+            ))?;
             Ok(len as usize)
         }
     }
@@ -157,13 +157,13 @@ impl RsaRef {
         assert!(to.len() >= self.size());
 
         unsafe {
-            let len = try!(cvt_n(ffi::RSA_public_encrypt(
+            let len = cvt_n(ffi::RSA_public_encrypt(
                 from.len() as c_int,
                 from.as_ptr(),
                 to.as_mut_ptr(),
                 self.as_ptr(),
                 padding.0,
-            )));
+            ))?;
             Ok(len as usize)
         }
     }
@@ -229,13 +229,13 @@ impl Rsa {
     /// the supplied load and save methods for DER formatted keys.
     pub fn from_public_components(n: BigNum, e: BigNum) -> Result<Rsa, ErrorStack> {
         unsafe {
-            let rsa = Rsa(try!(cvt_p(ffi::RSA_new())));
-            try!(cvt(compat::set_key(
+            let rsa = Rsa(cvt_p(ffi::RSA_new())?);
+            cvt(compat::set_key(
                 rsa.0,
                 n.as_ptr(),
                 e.as_ptr(),
                 ptr::null_mut(),
-            )));
+            ))?;
             mem::forget((n, e));
             Ok(rsa)
         }
@@ -252,19 +252,19 @@ impl Rsa {
         qi: BigNum,
     ) -> Result<Rsa, ErrorStack> {
         unsafe {
-            let rsa = Rsa(try!(cvt_p(ffi::RSA_new())));
-            try!(cvt(
+            let rsa = Rsa(cvt_p(ffi::RSA_new())?);
+            cvt(
                 compat::set_key(rsa.0, n.as_ptr(), e.as_ptr(), d.as_ptr()),
-            ));
+            )?;
             mem::forget((n, e, d));
-            try!(cvt(compat::set_factors(rsa.0, p.as_ptr(), q.as_ptr())));
+            cvt(compat::set_factors(rsa.0, p.as_ptr(), q.as_ptr()))?;
             mem::forget((p, q));
-            try!(cvt(compat::set_crt_params(
+            cvt(compat::set_crt_params(
                 rsa.0,
                 dp.as_ptr(),
                 dq.as_ptr(),
                 qi.as_ptr(),
-            )));
+            ))?;
             mem::forget((dp, dq, qi));
             Ok(rsa)
         }
@@ -276,14 +276,14 @@ impl Rsa {
     pub fn generate(bits: u32) -> Result<Rsa, ErrorStack> {
         ffi::init();
         unsafe {
-            let rsa = Rsa(try!(cvt_p(ffi::RSA_new())));
-            let e = try!(BigNum::from_u32(ffi::RSA_F4 as u32));
-            try!(cvt(ffi::RSA_generate_key_ex(
+            let rsa = Rsa(cvt_p(ffi::RSA_new())?);
+            let e = BigNum::from_u32(ffi::RSA_F4 as u32)?;
+            cvt(ffi::RSA_generate_key_ex(
                 rsa.0,
                 bits as c_int,
                 e.as_ptr(),
                 ptr::null_mut(),
-            )));
+            ))?;
             Ok(rsa)
         }
     }
@@ -308,16 +308,16 @@ impl Rsa {
     {
         ffi::init();
         let mut cb = CallbackState::new(pass_cb);
-        let mem_bio = try!(MemBioSlice::new(buf));
+        let mem_bio = MemBioSlice::new(buf)?;
 
         unsafe {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
-            let rsa = try!(cvt_p(ffi::PEM_read_bio_RSAPrivateKey(
+            let rsa = cvt_p(ffi::PEM_read_bio_RSAPrivateKey(
                 mem_bio.as_ptr(),
                 ptr::null_mut(),
                 Some(invoke_passwd_cb_old::<F>),
                 cb_ptr,
-            )));
+            ))?;
             Ok(Rsa(rsa))
         }
     }

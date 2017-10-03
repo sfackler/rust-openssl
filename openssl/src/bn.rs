@@ -589,7 +589,7 @@ impl BigNumRef {
     /// ```
     pub fn to_dec_str(&self) -> Result<OpensslString, ErrorStack> {
         unsafe {
-            let buf = try!(cvt_p(ffi::BN_bn2dec(self.as_ptr())));
+            let buf = cvt_p(ffi::BN_bn2dec(self.as_ptr()))?;
             Ok(OpensslString::from_ptr(buf))
         }
     }
@@ -604,7 +604,7 @@ impl BigNumRef {
     /// ```
     pub fn to_hex_str(&self) -> Result<OpensslString, ErrorStack> {
         unsafe {
-            let buf = try!(cvt_p(ffi::BN_bn2hex(self.as_ptr())));
+            let buf = cvt_p(ffi::BN_bn2hex(self.as_ptr()))?;
             Ok(OpensslString::from_ptr(buf))
         }
     }
@@ -631,7 +631,7 @@ impl BigNum {
     pub fn new() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
-            let v = try!(cvt_p(ffi::BN_new()));
+            let v = cvt_p(ffi::BN_new())?;
             Ok(BigNum::from_ptr(v))
         }
     }
@@ -649,7 +649,7 @@ impl BigNum {
             ffi::init();
             let c_str = CString::new(s.as_bytes()).unwrap();
             let mut bn = ptr::null_mut();
-            try!(cvt(ffi::BN_dec2bn(&mut bn, c_str.as_ptr() as *const _)));
+            cvt(ffi::BN_dec2bn(&mut bn, c_str.as_ptr() as *const _))?;
             Ok(BigNum::from_ptr(bn))
         }
     }
@@ -660,7 +660,7 @@ impl BigNum {
             ffi::init();
             let c_str = CString::new(s.as_bytes()).unwrap();
             let mut bn = ptr::null_mut();
-            try!(cvt(ffi::BN_hex2bn(&mut bn, c_str.as_ptr() as *const _)));
+            cvt(ffi::BN_hex2bn(&mut bn, c_str.as_ptr() as *const _))?;
             Ok(BigNum::from_ptr(bn))
         }
     }
