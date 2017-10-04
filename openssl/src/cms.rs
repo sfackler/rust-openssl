@@ -1,12 +1,9 @@
-//! SMIME implementation using CMS 
+//! SMIME implementation using CMS
 //!
 //! CMS (PKCS#7) is an encyption standard.  It allows signing and ecrypting data using
-//! X.509 certificates.  cms is a command implemented in OpenSSL to support a
-//! SMIME upgrade to e-mail encryption.  Changes to adding CMS to the SMIME implementation
-//! would break SMIME backwards compatbility so the authors of OpenSSL added the CMS
-//! keyword.
-//!
-//!
+//! X.509 certificates.  The OpenSSL implementation of CMS is used in email encryption
+//! generated from a `Vec` of bytes.  This `Vec` follows the smime protocol standards.
+//! Data accepted by this module will be smime type `enveloped-data`.
 
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
