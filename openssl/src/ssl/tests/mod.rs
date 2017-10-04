@@ -616,7 +616,7 @@ fn test_connect_with_npn_successful_single_match() {
 /// Tests that when the `SslStream` is created as a server stream, the protocols
 /// are correctly advertised to the client.
 #[test]
-#[cfg(not(libressl261))]
+#[cfg(all(not(libressl261),not(libressl262)))]
 fn test_npn_server_advertise_multiple() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
