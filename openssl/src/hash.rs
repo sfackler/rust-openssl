@@ -104,7 +104,7 @@ impl Hasher {
     pub fn new(ty: MessageDigest) -> Result<Hasher, ErrorStack> {
         ffi::init();
 
-        let ctx = unsafe { try!(cvt_p(EVP_MD_CTX_new())) };
+        let ctx = unsafe { cvt_p(EVP_MD_CTX_new())? };
 
         let mut h = Hasher {
             ctx: ctx,
@@ -112,7 +112,7 @@ impl Hasher {
             type_: ty,
             state: Finalized,
         };
-        try!(h.init());
+        h.init()?;
         Ok(h)
     }
 
@@ -120,12 +120,12 @@ impl Hasher {
         match self.state {
             Reset => return Ok(()),
             Updated => {
-                try!(self.finish2());
+                self.finish2()?;
             }
             Finalized => (),
         }
         unsafe {
-            try!(cvt(ffi::EVP_DigestInit_ex(self.ctx, self.md, 0 as *mut _)));
+            cvt(ffi::EVP_DigestInit_ex(self.ctx, self.md, 0 as *mut _))?;
         }
         self.state = Reset;
         Ok(())
@@ -134,14 +134,14 @@ impl Hasher {
     /// Feeds data into the hasher.
     pub fn update(&mut self, data: &[u8]) -> Result<(), ErrorStack> {
         if self.state == Finalized {
-            try!(self.init());
+            self.init()?;
         }
         unsafe {
-            try!(cvt(ffi::EVP_DigestUpdate(
+            cvt(ffi::EVP_DigestUpdate(
                 self.ctx,
                 data.as_ptr() as *mut _,
                 data.len(),
-            )));
+            ))?;
         }
         self.state = Updated;
         Ok(())
@@ -157,16 +157,16 @@ impl Hasher {
     /// Unlike `finish`, this method does not allocate.
     pub fn finish2(&mut self) -> Result<DigestBytes, ErrorStack> {
         if self.state == Finalized {
-            try!(self.init());
+            self.init()?;
         }
         unsafe {
             let mut len = ffi::EVP_MAX_MD_SIZE;
             let mut buf = [0; ffi::EVP_MAX_MD_SIZE as usize];
-            try!(cvt(ffi::EVP_DigestFinal_ex(
+            cvt(ffi::EVP_DigestFinal_ex(
                 self.ctx,
                 buf.as_mut_ptr(),
                 &mut len,
-            )));
+            ))?;
             self.state = Finalized;
             Ok(DigestBytes {
                 buf: buf,
@@ -179,7 +179,7 @@ impl Hasher {
 impl Write for Hasher {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        try!(self.update(buf));
+        self.update(buf)?;
         Ok(buf.len())
     }
 
@@ -272,8 +272,8 @@ pub fn hash(t: MessageDigest, data: &[u8]) -> Result<Vec<u8>, ErrorStack> {
 ///
 /// Unlike `hash`, this function does not allocate the return value.
 pub fn hash2(t: MessageDigest, data: &[u8]) -> Result<DigestBytes, ErrorStack> {
-    let mut h = try!(Hasher::new(t));
-    try!(h.update(data));
+    let mut h = Hasher::new(t)?;
+    h.update(data)?;
     h.finish2()
 }
 

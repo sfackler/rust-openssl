@@ -28,7 +28,7 @@ pub enum Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        try!(fmt.write_str(self.description()));
+        fmt.write_str(self.description())?;
         if let Some(err) = self.cause() {
             write!(fmt, ": {}", err)
         } else {
@@ -98,14 +98,14 @@ impl<S: Any + fmt::Debug> StdError for HandshakeError<S> {
 
 impl<S: Any + fmt::Debug> fmt::Display for HandshakeError<S> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(f.write_str(StdError::description(self)));
+        f.write_str(StdError::description(self))?;
         match *self {
-            HandshakeError::SetupFailure(ref e) => try!(write!(f, ": {}", e)),
+            HandshakeError::SetupFailure(ref e) => write!(f, ": {}", e)?,
             HandshakeError::Failure(ref s) |
             HandshakeError::Interrupted(ref s) => {
-                try!(write!(f, ": {}", s.error()));
+                write!(f, ": {}", s.error())?;
                 if let Some(err) = s.ssl().verify_result() {
-                    try!(write!(f, ": {}", err));
+                    write!(f, ": {}", err)?;
                 }
             }
         }

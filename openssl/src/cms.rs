@@ -26,17 +26,17 @@ impl CmsContentInfoRef {
         unsafe {
             let pkey = pkey.as_ptr();
             let cert = cert.as_ptr();
-            let out = try!(MemBio::new());
+            let out = MemBio::new()?;
             let flags: u32 = 0;
 
-            try!(cvt(ffi::CMS_decrypt(
+            cvt(ffi::CMS_decrypt(
                 self.as_ptr(),
                 pkey,
                 cert,
                 ptr::null_mut(),
                 out.as_ptr(),
                 flags.into(),
-            )));
+            ))?;
 
             Ok(out.get_buf().to_owned())
         }
@@ -47,12 +47,12 @@ impl CmsContentInfoRef {
 impl CmsContentInfo {
     pub fn smime_read_cms(smime: &[u8]) -> Result<CmsContentInfo, ErrorStack> {
         unsafe {
-            let bio = try!(MemBioSlice::new(smime));
+            let bio = MemBioSlice::new(smime)?;
 
-            let cms = try!(cvt_p(ffi::SMIME_read_CMS(
+            let cms = cvt_p(ffi::SMIME_read_CMS(
                 bio.as_ptr(),
                 ptr::null_mut(),
-            )));
+            ))?;
 
             Ok(CmsContentInfo::from_ptr(cms))
         }

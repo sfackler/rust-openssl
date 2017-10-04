@@ -298,7 +298,7 @@ impl OcspRequestRef {
 
     pub fn add_id(&mut self, id: OcspCertId) -> Result<&mut OcspOneReqRef, ErrorStack> {
         unsafe {
-            let ptr = try!(cvt_p(ffi::OCSP_request_add0_id(self.as_ptr(), id.as_ptr())));
+            let ptr = cvt_p(ffi::OCSP_request_add0_id(self.as_ptr(), id.as_ptr()))?;
             mem::forget(id);
             Ok(OcspOneReqRef::from_ptr_mut(ptr))
         }

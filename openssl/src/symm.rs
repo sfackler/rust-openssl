@@ -173,7 +173,7 @@ impl Crypter {
         ffi::init();
 
         unsafe {
-            let ctx = try!(cvt_p(ffi::EVP_CIPHER_CTX_new()));
+            let ctx = cvt_p(ffi::EVP_CIPHER_CTX_new())?;
             let crypter = Crypter {
                 ctx: ctx,
                 block_size: t.block_size(),
@@ -184,46 +184,46 @@ impl Crypter {
                 Mode::Decrypt => 0,
             };
 
-            try!(cvt(ffi::EVP_CipherInit_ex(
+            cvt(ffi::EVP_CipherInit_ex(
                 crypter.ctx,
                 t.as_ptr(),
                 ptr::null_mut(),
                 ptr::null_mut(),
                 ptr::null_mut(),
                 mode,
-            )));
+            ))?;
 
             assert!(key.len() <= c_int::max_value() as usize);
-            try!(cvt(ffi::EVP_CIPHER_CTX_set_key_length(
+            cvt(ffi::EVP_CIPHER_CTX_set_key_length(
                 crypter.ctx,
                 key.len() as c_int,
-            )));
+            ))?;
 
             let key = key.as_ptr() as *mut _;
             let iv = match (iv, t.iv_len()) {
                 (Some(iv), Some(len)) => {
                     if iv.len() != len {
                         assert!(iv.len() <= c_int::max_value() as usize);
-                        try!(cvt(ffi::EVP_CIPHER_CTX_ctrl(
+                        cvt(ffi::EVP_CIPHER_CTX_ctrl(
                             crypter.ctx,
                             ffi::EVP_CTRL_GCM_SET_IVLEN,
                             iv.len() as c_int,
                             ptr::null_mut(),
-                        )));
+                        ))?;
                     }
                     iv.as_ptr() as *mut _
                 }
                 (Some(_), None) | (None, None) => ptr::null_mut(),
                 (None, Some(_)) => panic!("an IV is required for this cipher"),
             };
-            try!(cvt(ffi::EVP_CipherInit_ex(
+            cvt(ffi::EVP_CipherInit_ex(
                 crypter.ctx,
                 ptr::null(),
                 ptr::null_mut(),
                 key,
                 iv,
                 mode,
-            )));
+            ))?;
 
             Ok(crypter)
         }
@@ -292,13 +292,13 @@ impl Crypter {
             let mut outl = output.len() as c_int;
             let inl = input.len() as c_int;
 
-            try!(cvt(ffi::EVP_CipherUpdate(
+            cvt(ffi::EVP_CipherUpdate(
                 self.ctx,
                 output.as_mut_ptr(),
                 &mut outl,
                 input.as_ptr(),
                 inl,
-            )));
+            ))?;
 
             Ok(outl as usize)
         }
@@ -319,11 +319,11 @@ impl Crypter {
             assert!(output.len() >= self.block_size);
             let mut outl = cmp::min(output.len(), c_int::max_value() as usize) as c_int;
 
-            try!(cvt(ffi::EVP_CipherFinal(
+            cvt(ffi::EVP_CipherFinal(
                 self.ctx,
                 output.as_mut_ptr(),
                 &mut outl,
-            )));
+            ))?;
 
             Ok(outl as usize)
         }
@@ -387,10 +387,10 @@ fn cipher(
     iv: Option<&[u8]>,
     data: &[u8],
 ) -> Result<Vec<u8>, ErrorStack> {
-    let mut c = try!(Crypter::new(t, mode, key, iv));
+    let mut c = Crypter::new(t, mode, key, iv)?;
     let mut out = vec![0; data.len() + t.block_size()];
-    let count = try!(c.update(data, &mut out));
-    let rest = try!(c.finalize(&mut out[count..]));
+    let count = c.update(data, &mut out)?;
+    let rest = c.finalize(&mut out[count..])?;
     out.truncate(count + rest);
     Ok(out)
 }
@@ -411,12 +411,12 @@ pub fn encrypt_aead(
     data: &[u8],
     tag: &mut [u8],
 ) -> Result<Vec<u8>, ErrorStack> {
-    let mut c = try!(Crypter::new(t, Mode::Encrypt, key, iv));
+    let mut c = Crypter::new(t, Mode::Encrypt, key, iv)?;
     let mut out = vec![0; data.len() + t.block_size()];
-    try!(c.aad_update(aad));
-    let count = try!(c.update(data, &mut out));
-    let rest = try!(c.finalize(&mut out[count..]));
-    try!(c.get_tag(tag));
+    c.aad_update(aad)?;
+    let count = c.update(data, &mut out)?;
+    let rest = c.finalize(&mut out[count..])?;
+    c.get_tag(tag)?;
     out.truncate(count + rest);
     Ok(out)
 }
@@ -433,12 +433,12 @@ pub fn decrypt_aead(
     data: &[u8],
     tag: &[u8],
 ) -> Result<Vec<u8>, ErrorStack> {
-    let mut c = try!(Crypter::new(t, Mode::Decrypt, key, iv));
+    let mut c = Crypter::new(t, Mode::Decrypt, key, iv)?;
     let mut out = vec![0; data.len() + t.block_size()];
-    try!(c.aad_update(aad));
-    let count = try!(c.update(data, &mut out));
-    try!(c.set_tag(tag));
-    let rest = try!(c.finalize(&mut out[count..]));
+    c.aad_update(aad)?;
+    let count = c.update(data, &mut out)?;
+    c.set_tag(tag)?;
+    let rest = c.finalize(&mut out[count..])?;
     out.truncate(count + rest);
     Ok(out)
 }

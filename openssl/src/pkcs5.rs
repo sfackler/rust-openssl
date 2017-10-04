@@ -47,7 +47,7 @@ pub fn bytes_to_key(
         let cipher = cipher.as_ptr();
         let digest = digest.as_ptr();
 
-        let len = try!(cvt(ffi::EVP_BytesToKey(
+        let len = cvt(ffi::EVP_BytesToKey(
             cipher,
             digest,
             salt_ptr,
@@ -56,14 +56,14 @@ pub fn bytes_to_key(
             count.into(),
             ptr::null_mut(),
             ptr::null_mut(),
-        )));
+        ))?;
 
         let mut key = vec![0; len as usize];
         let iv_ptr = iv.as_mut().map(|v| v.as_mut_ptr()).unwrap_or(
             ptr::null_mut(),
         );
 
-        try!(cvt(ffi::EVP_BytesToKey(
+        cvt(ffi::EVP_BytesToKey(
             cipher,
             digest,
             salt_ptr,
@@ -72,7 +72,7 @@ pub fn bytes_to_key(
             count as c_int,
             key.as_mut_ptr(),
             iv_ptr,
-        )));
+        ))?;
 
         Ok(KeyIvPair { key: key, iv: iv })
     }

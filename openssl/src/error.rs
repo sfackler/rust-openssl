@@ -35,9 +35,9 @@ impl fmt::Display for ErrorStack {
         let mut first = true;
         for err in &self.0 {
             if !first {
-                try!(fmt.write_str(", "));
+                fmt.write_str(", ")?;
             }
-            try!(write!(fmt, "{}", err));
+            write!(fmt, "{}", err)?;
             first = false;
         }
         Ok(())
@@ -197,18 +197,18 @@ impl fmt::Debug for Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(fmt, "error:{:08X}", self.code()));
+        write!(fmt, "error:{:08X}", self.code())?;
         match self.library() {
-            Some(l) => try!(write!(fmt, ":{}", l)),
-            None => try!(write!(fmt, ":lib({})", ffi::ERR_GET_LIB(self.code()))),
+            Some(l) => write!(fmt, ":{}", l)?,
+            None => write!(fmt, ":lib({})", ffi::ERR_GET_LIB(self.code()))?,
         }
         match self.function() {
-            Some(f) => try!(write!(fmt, ":{}", f)),
-            None => try!(write!(fmt, ":func({})", ffi::ERR_GET_FUNC(self.code()))),
+            Some(f) => write!(fmt, ":{}", f)?,
+            None => write!(fmt, ":func({})", ffi::ERR_GET_FUNC(self.code()))?,
         }
         match self.reason() {
-            Some(r) => try!(write!(fmt, ":{}", r)),
-            None => try!(write!(fmt, ":reason({})", ffi::ERR_GET_FUNC(self.code()))),
+            Some(r) => write!(fmt, ":{}", r)?,
+            None => write!(fmt, ":reason({})", ffi::ERR_GET_FUNC(self.code()))?,
         }
         write!(
             fmt,

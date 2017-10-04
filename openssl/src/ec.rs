@@ -262,12 +262,12 @@ impl EcPointRef {
         ctx: &mut BigNumContextRef,
     ) -> Result<bool, ErrorStack> {
         unsafe {
-            let res = try!(cvt_n(ffi::EC_POINT_cmp(
+            let res = cvt_n(ffi::EC_POINT_cmp(
                 group.as_ptr(),
                 self.as_ptr(),
                 other.as_ptr(),
                 ctx.as_ptr(),
-            )));
+            ))?;
             Ok(res == 0)
         }
     }
@@ -323,15 +323,15 @@ impl EcPoint {
         buf: &[u8],
         ctx: &mut BigNumContextRef,
     ) -> Result<EcPoint, ErrorStack> {
-        let point = try!(EcPoint::new(group));
+        let point = EcPoint::new(group)?;
         unsafe {
-            try!(cvt(ffi::EC_POINT_oct2point(
+            cvt(ffi::EC_POINT_oct2point(
                 group.as_ptr(),
                 point.as_ptr(),
                 buf.as_ptr(),
                 buf.len(),
                 ctx.as_ptr(),
-            )));
+            ))?;
         }
         Ok(point)
     }
@@ -429,17 +429,17 @@ impl EcKey {
         group: &EcGroupRef,
         public_key: &EcPointRef,
     ) -> Result<EcKey, ErrorStack> {
-        let mut builder = try!(EcKeyBuilder::new());
-        try!(builder.set_group(group));
-        try!(builder.set_public_key(public_key));
+        let mut builder = EcKeyBuilder::new()?;
+        builder.set_group(group)?;
+        builder.set_public_key(public_key)?;
         Ok(builder.build())
     }
 
     /// Generates a new public/private key pair on the specified curve.
     pub fn generate(group: &EcGroupRef) -> Result<EcKey, ErrorStack> {
-        let mut builder = try!(EcKeyBuilder::new());
-        try!(builder.set_group(group));
-        try!(builder.generate_key());
+        let mut builder = EcKeyBuilder::new()?;
+        builder.set_group(group)?;
+        builder.generate_key()?;
         Ok(builder.build())
     }
 

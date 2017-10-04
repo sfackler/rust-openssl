@@ -26,7 +26,7 @@ ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
 ";
 
 fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
-    let mut ctx = try!(SslContextBuilder::new(method));
+    let mut ctx = SslContextBuilder::new(method)?;
 
     let mut opts = ssl::SSL_OP_ALL;
     opts &= !ssl::SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG;
@@ -64,16 +64,16 @@ impl SslConnectorBuilder {
     ///
     /// The default configuration is subject to change, and is currently derived from Python.
     pub fn new(method: SslMethod) -> Result<SslConnectorBuilder, ErrorStack> {
-        let mut ctx = try!(ctx(method));
-        try!(ctx.set_default_verify_paths());
+        let mut ctx = ctx(method)?;
+        ctx.set_default_verify_paths()?;
         // From https://github.com/python/cpython/blob/a170fa162dc03f0a014373349e548954fff2e567/Lib/ssl.py#L193
-        try!(ctx.set_cipher_list(
+        ctx.set_cipher_list(
             "TLS13-AES-256-GCM-SHA384:TLS13-CHACHA20-POLY1305-SHA256:\
              TLS13-AES-128-GCM-SHA256:\
              ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:DH+CHACHA20:ECDH+AES256:DH+AES256:\
              ECDH+AES128:DH+AES:ECDH+HIGH:DH+HIGH:RSA+AESGCM:RSA+AES:RSA+HIGH:\
              !aNULL:!eNULL:!MD5:!3DES"
-        ));
+        )?;
         setup_verify(&mut ctx);
 
         Ok(SslConnectorBuilder(ctx))
@@ -113,7 +113,7 @@ impl SslConnector {
     where
         S: Read + Write,
     {
-        try!(self.configure()).connect(domain, stream)
+        self.configure()?.connect(domain, stream)
     }
 
     /// Initiates a client-side TLS session on a stream without performing hostname verification.
@@ -127,7 +127,7 @@ impl SslConnector {
             &self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
         where S: Read + Write
     {
-        try!(self.configure())
+        self.configure()?
             .danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication(stream)
     }
 
@@ -158,8 +158,8 @@ impl ConnectConfiguration {
     where
         S: Read + Write,
     {
-        try!(self.0.set_hostname(domain));
-        try!(setup_verify_hostname(&mut self.0, domain));
+        self.0.set_hostname(domain)?;
+        setup_verify_hostname(&mut self.0, domain)?;
 
         self.0.connect(stream)
     }
@@ -202,7 +202,7 @@ impl SslAcceptorBuilder {
         I: IntoIterator,
         I::Item: AsRef<X509Ref>,
     {
-        let builder = try!(SslAcceptorBuilder::mozilla_intermediate_raw(method));
+        let builder = SslAcceptorBuilder::mozilla_intermediate_raw(method)?;
         builder.finish_setup(private_key, certificate, chain)
     }
 
@@ -222,17 +222,17 @@ impl SslAcceptorBuilder {
         I: IntoIterator,
         I::Item: AsRef<X509Ref>,
     {
-        let builder = try!(SslAcceptorBuilder::mozilla_modern_raw(method));
+        let builder = SslAcceptorBuilder::mozilla_modern_raw(method)?;
         builder.finish_setup(private_key, certificate, chain)
     }
 
     /// Like `mozilla_intermediate`, but does not load the certificate chain and private key.
     pub fn mozilla_intermediate_raw(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
-        let mut ctx = try!(ctx(method));
-        let dh = try!(Dh::from_pem(DHPARAM_PEM.as_bytes()));
-        try!(ctx.set_tmp_dh(&dh));
-        try!(setup_curves(&mut ctx));
-        try!(ctx.set_cipher_list(
+        let mut ctx = ctx(method)?;
+        let dh = Dh::from_pem(DHPARAM_PEM.as_bytes())?;
+        ctx.set_tmp_dh(&dh)?;
+        setup_curves(&mut ctx)?;
+        ctx.set_cipher_list(
             "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:\
              ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:\
              ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:\
@@ -243,20 +243,20 @@ impl SslAcceptorBuilder {
              DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:\
              EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:\
              AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS",
-            ));
+        )?;
         Ok(SslAcceptorBuilder(ctx))
     }
 
     /// Like `mozilla_modern`, but does not load the certificate chain and private key.
     pub fn mozilla_modern_raw(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
-        let mut ctx = try!(ctx(method));
-        try!(setup_curves(&mut ctx));
-        try!(ctx.set_cipher_list(
+        let mut ctx = ctx(method)?;
+        setup_curves(&mut ctx)?;
+        ctx.set_cipher_list(
             "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:\
              ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:\
              ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:\
              ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256",
-        ));
+        )?;
         Ok(SslAcceptorBuilder(ctx))
     }
 
@@ -270,11 +270,11 @@ impl SslAcceptorBuilder {
         I: IntoIterator,
         I::Item: AsRef<X509Ref>,
     {
-        try!(self.0.set_private_key(private_key));
-        try!(self.0.set_certificate(certificate));
-        try!(self.0.check_private_key());
+        self.0.set_private_key(private_key)?;
+        self.0.set_certificate(certificate)?;
+        self.0.check_private_key()?;
         for cert in chain {
-            try!(self.0.add_extra_chain_cert(cert.as_ref().to_owned()));
+            self.0.add_extra_chain_cert(cert.as_ref().to_owned())?;
         }
         Ok(self)
     }
@@ -300,7 +300,7 @@ fn setup_curves(ctx: &mut SslContextBuilder) -> Result<(), ErrorStack> {
     use ec::EcKey;
     use nid;
 
-    let curve = try!(EcKey::from_curve_name(nid::X9_62_PRIME256V1));
+    let curve = EcKey::from_curve_name(nid::X9_62_PRIME256V1)?;
     ctx.set_tmp_ecdh(&curve)
 }
 
@@ -327,7 +327,7 @@ impl SslAcceptor {
     where
         S: Read + Write,
     {
-        let ssl = try!(Ssl::new(&self.0));
+        let ssl = Ssl::new(&self.0)?;
         ssl.accept(stream)
     }
 }
