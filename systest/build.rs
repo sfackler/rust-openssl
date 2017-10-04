@@ -42,7 +42,7 @@ fn main() {
     }
 
     let has_cms_h = if let Ok(version) = env::var("DEP_OPENSSL_LIBRESSL_VERSION") {
-        version != "261"
+        version != "261" && version != "262"
     } else {
         true
     };
