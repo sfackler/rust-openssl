@@ -945,8 +945,9 @@ impl BigNum {
         }
     }
 
-    /// [`RFC 2409`] defines the Internet Key Exchange.  The prime is in the order
-    /// of magnitude of `2 ^ 768`.  This is a constant.
+    /// Returns a constant used in IKE as defined in [`RFC 2409`].  This prime number is in
+    /// the order of magnitude of `2 ^ 768`.  This number is used during calculated key
+    /// exchanges such as Diffie-Hellman.  This number is labeled Oakley group id 1.
     ///
     /// OpenSSL documentation at [`BN_get_rfc2409_prime_768`]
     ///
@@ -959,8 +960,9 @@ impl BigNum {
         }
     }
 
-    /// [`RFC 2409`] defines the Internet Key Exchange.  The prime is in the order
-    /// of magnitude of `2 ^ 1024`.  This is a constant.
+    /// Returns a constant used in IKE as defined in [`RFC 2409`].  This prime number is in
+    /// the order of magnitude of `2 ^ 1024`.  This number is used during calculated key
+    /// exchanges such as Diffie-Hellman.  This number is labeled Oakly group 2.
     ///
     /// OpenSSL documentation at [`BN_get_rfc2409_prime_1024`]
     ///
@@ -973,8 +975,9 @@ impl BigNum {
         }
     }
 
-    /// [`RFC 3526`] defines the MODP DH groups for IKE.  The prime is in the order
-    /// of magnitude of `2 ^ 1536`.  This is a constant.
+    /// Returns a constant used in IKE as defined in [`RFC 3526`].  The prime is in the order
+    /// of magnitude of `2 ^ 1536`.  This number is used during calculated key
+    /// exchanges such as Diffie-Hellman.  This number is labeled MODP group 5.
     ///
     /// OpenSSL documentation at [`BN_get_rfc3526_prime_1536`]
     ///
@@ -987,8 +990,9 @@ impl BigNum {
         }
     }
 
-    /// [`RFC 3526`] defines the MODP DH groups for IKE.  The prime is in the order
-    /// of magnitude of `2 ^ 2048`.  This is a constant.
+    /// Returns a constant used in IKE as defined in [`RFC 3526`].  The prime is in the order
+    /// of magnitude of `2 ^ 2048`.  This number is used during calculated key
+    /// exchanges such as Diffie-Hellman.  This number is labeled MODP group 14.
     ///
     /// OpenSSL documentation at [`BN_get_rfc3526_prime_2048`]
     ///
@@ -1001,8 +1005,9 @@ impl BigNum {
         }
     }
 
-    /// [`RFC 3526`] defines the MODP DH groups for IKE.  The prime is in the order
-    /// of magnitude of `2 ^ 3072`.  This is a constant.
+    /// Returns a constant used in IKE as defined in [`RFC 3526`].  The prime is in the order
+    /// of magnitude of `2 ^ 3072`.  This number is used during calculated key
+    /// exchanges such as Diffie-Hellman.  This number is labeled MODP group 15.
     ///
     /// OpenSSL documentation at [`BN_get_rfc3526_prime_3072`]
     ///
@@ -1015,8 +1020,9 @@ impl BigNum {
         }
     }
 
-    /// [`RFC 3526`] defines the MODP DH groups for IKE.  The prime is in the order
-    /// of magnitude of `2 ^ 4096`.  This is a constant.
+    /// Returns a constant used in IKE as defined in [`RFC 3526`].  The prime is in the order
+    /// of magnitude of `2 ^ 4096`.  This number is used during calculated key
+    /// exchanges such as Diffie-Hellman.  This number is labeled MODP group 16.
     ///
     /// OpenSSL documentation at [`BN_get_rfc3526_prime_4096`]
     ///
@@ -1029,8 +1035,9 @@ impl BigNum {
         }
     }
 
-    /// [`RFC 3526`] defines the MODP DH groups for IKE.  The prime is in the order
-    /// of magnitude of `2 ^ 6144`.  This is a constant.
+    /// Returns a constant used in IKE as defined in [`RFC 3526`].  The prime is in the order
+    /// of magnitude of `2 ^ 6144`.  This number is used during calculated key
+    /// exchanges such as Diffie-Hellman.  This number is labeled MODP group 17.
     ///
     /// OpenSSL documentation at [`BN_get_rfc3526_prime_6144`]
     ///
@@ -1043,8 +1050,9 @@ impl BigNum {
         }
     }
 
-    /// [`RFC 3526`] defines the MODP DH groups for IKE.  The prime is in the order
-    /// of magnitude of `2 ^ 8192`.  This is a constant.
+    /// Returns a constant used in IKE as defined in [`RFC 3526`].  The prime is in the order
+    /// of magnitude of `2 ^ 8192`.  This number is used during calculated key
+    /// exchanges such as Diffie-Hellman.  This number is labeled MODP group 18.
     ///
     /// OpenSSL documentation at [`BN_get_rfc3526_prime_8192`]
     ///
