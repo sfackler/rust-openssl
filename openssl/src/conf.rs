@@ -8,14 +8,11 @@ pub struct ConfMethod(*mut ffi::CONF_METHOD);
 
 impl ConfMethod {
     /// Retrieve handle to the default OpenSSL configuration file processing function.
-    ///
-    /// # OpenSSL Implementation Details
-    ///
-    /// `NCONF` stands for "New Conf", as described in crypto/conf/conf_lib.c. This is
-    /// a newer API than the "CONF classic" functions.
     pub fn default() -> ConfMethod {
         unsafe {
             ffi::init();
+            // `NCONF` stands for "New Conf", as described in crypto/conf/conf_lib.c. This is
+            // a newer API than the "CONF classic" functions.
             ConfMethod(ffi::NCONF_default())
         }
     }
