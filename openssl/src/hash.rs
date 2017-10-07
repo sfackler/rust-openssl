@@ -49,39 +49,66 @@ use error::ErrorStack;
 pub struct MessageDigest(*const ffi::EVP_MD);
 
 impl MessageDigest {
+    /// Construct a `MessageDigest` that will hash bytes supplied to `Hasher.update` using the MD5
+    /// hash algorithm.
+    ///
+    /// # Warning
+    ///
+    /// MD5 is no longer considered secure, and should only be used for compatibility with legacy
+    /// systems.
     pub fn md5() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_md5()) }
     }
 
+    /// Construct a `MessageDigest` that will hash bytes supplied to `Hasher.update` using the SHA1
+    /// hash algorithm.
+    ///
+    /// # Warning
+    ///
+    /// SHA1 is no longer considered secure for use in new software.  Its use should be limited to
+    /// cases where compatibility with legacy systems is required.
     pub fn sha1() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha1()) }
     }
 
+    /// Construct a `MessageDigest` that will hash bytes supplied to `Hasher.update` using the
+    /// SHA-224 hash algorithm.
     pub fn sha224() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha224()) }
     }
 
+    /// Construct a `MessageDigest` that will hash bytes supplied to `Hasher.update` using the
+    /// SHA-256 hash algorithm.
     pub fn sha256() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha256()) }
     }
 
+    /// Construct a `MessageDigest` that will hash bytes supplied to `Hasher.update` using the
+    /// SHA-384 hash algorithm.
     pub fn sha384() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha384()) }
     }
 
+    /// Construct a `MessageDigest` that will hash bytes supplied to `Hasher.update` using the
+    /// SHA-512 hash algorithm.
     pub fn sha512() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha512()) }
     }
 
+    /// Construct a `MessageDigest` that will hash bytes supplied to `Hasher.update` using the
+    /// RIPEMD-160 hash algorithm.
     pub fn ripemd160() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_ripemd160()) }
     }
 
+    /// Obtains a pointer to the underlying identifier for the message digest algorithm in use.
     pub fn as_ptr(&self) -> *const ffi::EVP_MD {
         self.0
     }
 }
 
+/// Represents the state of a message digest, which moves through three states as it is created,
+/// updated with new bytes to hash, and finalized as a way of completing a hashing operation.
 #[derive(PartialEq, Copy, Clone)]
 enum State {
     Reset,
@@ -122,9 +149,12 @@ use self::State::*;
 ///
 /// # Warning
 ///
-/// Don't actually use MD5 and SHA-1 hashes, they're not secure anymore.
+/// The MD5 and SHA-1 hash algorithms are no longer considered secure and should not be used in new
+/// software. Use of these algorithms should be restricted only to cases where compatibility with
+/// legacy systems is required.
 ///
-/// Don't ever hash passwords, use the functions in the `pkcs5` module or bcrypt/scrypt instead.
+/// The hash algorithms available here are not suited to password hashing. For such applications,
+/// prefer instead to use either the `pkcs5` module or, more simply, either bcrypt or scrypt.
 pub struct Hasher {
     ctx: *mut ffi::EVP_MD_CTX,
     md: *const ffi::EVP_MD,
@@ -133,7 +163,9 @@ pub struct Hasher {
 }
 
 impl Hasher {
-    /// Creates a new `Hasher` with the specified hash type.
+    /// Creates a new `Hasher` with the specified hash type.  The `MessageDigest` provided
+    /// ultimately determines which algorithm is used to hash bytes supplied to the `update`
+    /// method.
     pub fn new(ty: MessageDigest) -> Result<Hasher, ErrorStack> {
         ffi::init();
 
@@ -149,6 +181,9 @@ impl Hasher {
         Ok(h)
     }
 
+    /// Initialize the `Hasher` so that it enters a state wherein bytes can be supplied to the
+    /// `update` method as if the `Hasher` had just been created.  Note that if the `Hasher` had
+    /// already been updated before, any work done will be lost.
     fn init(&mut self) -> Result<(), ErrorStack> {
         match self.state {
             Reset => return Ok(()),
@@ -164,7 +199,9 @@ impl Hasher {
         Ok(())
     }
 
-    /// Feeds data into the hasher.
+    /// Add bytes for hashing. This method can be called multiple times with the effect being that
+    /// the `Hasher` will hash all of the bytes supplied via `update` as if the slices in each call
+    /// were part of one larger slice with the second concatenated at the end of the first.
     pub fn update(&mut self, data: &[u8]) -> Result<(), ErrorStack> {
         if self.state == Finalized {
             self.init()?;
