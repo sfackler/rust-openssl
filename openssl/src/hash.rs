@@ -1,3 +1,36 @@
+//! This module provides an abstract interface over various specific cryptographic hash algorithms
+//! in the `Hasher` type. It is particularly useful in cases where you need to work with any type
+//! that supports a hashing interface. Furthermore, `Hasher` implements the [std::io::Write](
+//! https://doc.rust-lang.org/std/io/trait.Write.html) trait.
+//! # Examples
+//!
+//! ```rust
+//! extern crate openssl;
+//! extern crate hex;
+//!
+//! use std::io;
+//! use std::io::Write;
+//! use openssl::hash;
+//! use hex::ToHex;
+//!
+//! fn main() {
+//!     let mut hasher = hash::Hasher::new(hash::MessageDigest::sha512()).unwrap();
+//!     let bytes_hashed = hash_stream(&mut hasher).unwrap();
+//!     let hash = hasher.finish2().unwrap();
+//!     println!("Hashed {} bytes to {}", bytes_hashed, hash.to_hex());
+//! }
+//!
+//! fn hash_stream<W: Write>(hasher: &mut W) -> io::Result<usize> {
+//!     let mut total_bytes = 0;
+//!
+//!     total_bytes += hasher.write(b"HTTP/1.1 200 OK\r\n")?;
+//!     total_bytes += hasher.write(b"Content-Length: 5\r\n")?;
+//!     total_bytes += hasher.write(b"\r\n\r\n")?;
+//!     total_bytes += hasher.write(b"hello")?;
+//!
+//!     Ok(total_bytes)
+//! }
+//! ```
 use std::io::prelude::*;
 use std::io;
 use std::ops::{Deref, DerefMut};
