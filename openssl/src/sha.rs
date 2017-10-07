@@ -37,8 +37,10 @@
 //!
 //! ```rust
 //! extern crate openssl;
+//! extern crate hex;
 //!
 //! use openssl::sha::sha256;
+//! use hex::ToHex;
 //!
 //! fn main() {
 //!     let hash = sha256(b"your data or message");
