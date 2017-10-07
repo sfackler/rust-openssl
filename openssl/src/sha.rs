@@ -1,4 +1,50 @@
 //! The SHA family of hashes.
+//!
+//! SHA, or Secure Hash Algorithms, are a family of cryptographic hashing algorithms published by
+//! the National Institute of Standards and Technology (NIST).  Hash algorithms such as those in
+//! the SHA family are used to map data of an arbitrary size to a fixed-size string of bytes.
+//! As cryptographic hashing algorithms, these mappings have the property of being irreversable.
+//! This property makes hash algorithms like these excellent for uses such as verifying the
+//! contents of a file- if you know the hash you expect beforehand, then you can verify that the
+//! data you have is correct if it hashes to the same value.
+//!
+//! # Examples
+//!
+//! When dealing with data that becomes available in chunks, such as while buffering data from IO,
+//! you can create a hasher that you can repeatedly update to add bytes to.
+//!
+//! ```rust
+//! extern crate openssl;
+//! extern crate hex;
+//! 
+//! use openssl::sha;
+//! use hex::ToHex;
+//! 
+//! fn main() {
+//!     let mut hasher = sha::Sha256::new();
+//! 
+//!     hasher.update(b"Hello, ");
+//!     hasher.update(b"world");
+//! 
+//!     let hash = hasher.finish();
+//!     println!("Hashed \"Hello, world\" to {}", hash.to_hex());
+//! }
+//! ```
+//!
+//! On the other hand, if you already have access to all of the data you woud like to hash, you
+//! may prefer to use the slightly simpler method of simply calling the hash function corresponding
+//! to the algorithm you want to use.
+//!
+//! ```rust
+//! extern crate openssl;
+//!
+//! use openssl::sha::sha256;
+//!
+//! fn main() {
+//!     let hash = sha256(b"your data or message");
+//!     println!("Hash = {}", hash.to_hex());
+//! }
+//! ```
 use libc::c_void;
 use ffi;
 use std::mem;
