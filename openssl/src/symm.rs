@@ -36,8 +36,9 @@ pub enum Mode {
     Decrypt,
 }
 
-/// Represent a particular cipher algorithm.  See OpenSSL doc at [`EVP_EncryptInit`] for more
-/// information on each algorithms.
+/// Represents a particular cipher algorithm.
+///
+/// See OpenSSL doc at [`EVP_EncryptInit`] for more information on each algorithms.
 ///
 /// [`EVP_EncryptInit`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_EncryptInit.html
 #[derive(Copy, Clone)]
@@ -180,7 +181,9 @@ impl Cipher {
     }
 }
 
-/// Represents a symmetric cipher context.  Padding is enabled by default.
+/// Represents a symmetric cipher context.
+///
+/// Padding is enabled by default.
 ///
 /// # Examples
 ///
@@ -445,11 +448,13 @@ impl Drop for Crypter {
     }
 }
 
-/// A convenient interface to `Crypter` to encrypt data, using the specified crypter type `t` in
-/// encrypt mode with the specified key and iv; returns the resulting (encrypted) data.
+/// Encrypts data in one go, and returns the encrypted data.
 ///
-/// This function encrypts all data in one go.  To encrypt a stream of data increamentally , use
-/// `Crypter` instead.
+/// Data is encrypted using the specified cipher type `t` in encrypt mode with the specified `key`
+/// and initailization vector `iv`.
+///
+/// This is a convenient interface to `Crypter` to encrypt all data in one go.  To encrypt a stream
+/// of data increamentally , use `Crypter` instead.
 ///
 /// # Examples
 ///
@@ -482,11 +487,13 @@ pub fn encrypt(
     cipher(t, Mode::Encrypt, key, iv, data)
 }
 
-/// A convenient interface to `Crypter` to decrypt data, using the specified crypter type `t` in
-/// decrypt mode with the specified key and iv; returns the resulting (decrypted) data.
+/// Decrypts data in one go, and returns the decrypted data.
 ///
-/// This function decrypts all data in one go.  To decrypt a stream of data increamentally, use
-/// `Crypter` instead.
+/// Data is decrypted using the specified cipher type `t` in decrypt mode with the specified `key`
+/// and initailization vector `iv`.
+///
+/// This is a convenient interface to `Crypter` to decrypt all data in one go.  To decrypt a  stream
+/// of data increamentally , use `Crypter` instead.
 ///
 /// # Examples
 ///
