@@ -84,8 +84,8 @@ impl Dsa {
     pub fn generate(bits: u32) -> Result<Dsa, ErrorStack> {
         ffi::init();
         unsafe {
-            let dsa = Dsa(try!(cvt_p(ffi::DSA_new())));
-            try!(cvt(ffi::DSA_generate_parameters_ex(
+            let dsa = Dsa(cvt_p(ffi::DSA_new())?);
+            cvt(ffi::DSA_generate_parameters_ex(
                 dsa.0,
                 bits as c_int,
                 ptr::null(),
@@ -93,8 +93,8 @@ impl Dsa {
                 ptr::null_mut(),
                 ptr::null_mut(),
                 ptr::null_mut(),
-            )));
-            try!(cvt(ffi::DSA_generate_key(dsa.0)));
+            ))?;
+            cvt(ffi::DSA_generate_key(dsa.0))?;
             Ok(dsa)
         }
     }
@@ -111,16 +111,16 @@ impl Dsa {
     {
         ffi::init();
         let mut cb = CallbackState::new(pass_cb);
-        let mem_bio = try!(MemBioSlice::new(buf));
+        let mem_bio = MemBioSlice::new(buf)?;
 
         unsafe {
             let cb_ptr = &mut cb as *mut _ as *mut c_void;
-            let dsa = try!(cvt_p(ffi::PEM_read_bio_DSAPrivateKey(
+            let dsa = cvt_p(ffi::PEM_read_bio_DSAPrivateKey(
                 mem_bio.as_ptr(),
                 ptr::null_mut(),
                 Some(invoke_passwd_cb_old::<F>),
                 cb_ptr,
-            )));
+            ))?;
             Ok(Dsa(dsa))
         }
     }

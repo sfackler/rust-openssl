@@ -97,7 +97,7 @@ impl<'a> Signer<'a> {
         unsafe {
             ffi::init();
 
-            let ctx = try!(cvt_p(EVP_MD_CTX_new()));
+            let ctx = cvt_p(EVP_MD_CTX_new())?;
             let mut pctx: *mut ffi::EVP_PKEY_CTX = ptr::null_mut();
             let r = ffi::EVP_DigestSignInit(
                 ctx,
@@ -142,17 +142,17 @@ impl<'a> Signer<'a> {
     pub fn finish(&self) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
             let mut len = 0;
-            try!(cvt(ffi::EVP_DigestSignFinal(
+            cvt(ffi::EVP_DigestSignFinal(
                 self.md_ctx,
                 ptr::null_mut(),
                 &mut len,
-            )));
+            ))?;
             let mut buf = vec![0; len];
-            try!(cvt(ffi::EVP_DigestSignFinal(
+            cvt(ffi::EVP_DigestSignFinal(
                 self.md_ctx,
                 buf.as_mut_ptr() as *mut _,
                 &mut len,
-            )));
+            ))?;
             // The advertised length is not always equal to the real length for things like DSA
             buf.truncate(len);
             Ok(buf)
@@ -162,7 +162,7 @@ impl<'a> Signer<'a> {
 
 impl<'a> Write for Signer<'a> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        try!(self.update(buf));
+        self.update(buf)?;
         Ok(buf.len())
     }
 
@@ -191,7 +191,7 @@ impl<'a> Verifier<'a> {
         unsafe {
             ffi::init();
 
-            let ctx = try!(cvt_p(EVP_MD_CTX_new()));
+            let ctx = cvt_p(EVP_MD_CTX_new())?;
             let mut pctx: *mut ffi::EVP_PKEY_CTX = ptr::null_mut();
             let r = ffi::EVP_DigestVerifyInit(
                 ctx,
@@ -251,7 +251,7 @@ impl<'a> Verifier<'a> {
 
 impl<'a> Write for Verifier<'a> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        try!(self.update(buf));
+        self.update(buf)?;
         Ok(buf.len())
     }
 

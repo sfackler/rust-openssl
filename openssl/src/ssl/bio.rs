@@ -40,7 +40,7 @@ pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, BioMethod), ErrorSta
     });
 
     unsafe {
-        let bio = try!(cvt_p(BIO_new(method.0.get())));
+        let bio = cvt_p(BIO_new(method.0.get()))?;
         compat::BIO_set_data(bio, Box::into_raw(state) as *mut _);
         compat::BIO_set_init(bio, 1);
 

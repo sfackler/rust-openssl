@@ -24,13 +24,13 @@ impl DhRef {
 impl Dh {
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<Dh, ErrorStack> {
         unsafe {
-            let dh = Dh(try!(cvt_p(ffi::DH_new())));
-            try!(cvt(compat::DH_set0_pqg(
+            let dh = Dh(cvt_p(ffi::DH_new())?);
+            cvt(compat::DH_set0_pqg(
                 dh.0,
                 p.as_ptr(),
                 q.as_ptr(),
                 g.as_ptr(),
-            )));
+            ))?;
             mem::forget((p, g, q));
             Ok(dh)
         }
