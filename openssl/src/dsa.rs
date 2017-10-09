@@ -1,6 +1,10 @@
 //! Digital Signatures
 //!
-//!
+//! DSA ensures a message originated from a known sender, and was not modified.
+//! DSA uses asymetrical keys and an algorithm to output a signature of the message
+//! using the private key that can be validated with the public key but not be generated
+//! without the private key.
+
 use ffi;
 use foreign_types::ForeignTypeRef;
 use libc::{c_int, c_char, c_void};
@@ -17,7 +21,39 @@ foreign_type! {
     type CType = ffi::DSA;
     fn drop = ffi::DSA_free;
 
+    /// Object representing DSA keys.
+    ///
+    /// A DSA object contains the parameters p, q, and g.  There is a private
+    /// and public key.  The values p, g, and q are:
+    ///
+    /// * `p`: DSA prime parameter
+    /// * `q`: DSA sub-prime parameter
+    /// * `g`: DSA base parameter
+    ///
+    /// These values are used to calculate a pair of asymetrical keys used for
+    /// signing.
+    ///
+    /// OpenSSL documentation at [`DSA_new`]
+    ///
+    /// [`DSA_new`]: https://www.openssl.org/docs/man1.1.0/crypto/DSA_new.html
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use openssl::dsa::Dsa;
+    /// use openssl::error::ErrorStack;
+    /// fn create_dsa() -> Result< Dsa, ErrorStack > {
+    ///     let sign = Dsa::generate(2048)?;
+    ///     Ok(sign)
+    /// }
+    /// # fn main() {
+    /// #    create_dsa();
+    /// # }
+    /// ```
     pub struct Dsa;
+    /// Reference to [`Dsa`].
+    ///
+    /// [`Dsa`]: struct.Dsa.html
     pub struct DsaRef;
 }
 
@@ -28,6 +64,12 @@ impl DsaRef {
     private_key_to_der!(ffi::i2d_DSAPrivateKey);
     public_key_to_der!(ffi::i2d_DSAPublicKey);
 
+    /// Returns the size of the signature output by `self` in bytes.  Returns
+    /// None if the keys are uninitialized.
+    ///
+    /// OpenSSL documentation at [`DSA_size`]
+    ///
+    /// [`DSA_size`]: https://www.openssl.org/docs/man1.1.0/crypto/DSA_size.html
     // FIXME should return u32
     pub fn size(&self) -> Option<u32> {
         if self.q().is_some() {
@@ -37,6 +79,7 @@ impl DsaRef {
         }
     }
 
+    /// Returns the DSA prime parameter of `self`.
     pub fn p(&self) -> Option<&BigNumRef> {
         unsafe {
             let p = compat::pqg(self.as_ptr())[0];
@@ -48,6 +91,7 @@ impl DsaRef {
         }
     }
 
+    /// Returns the DSA sub-prime parameter of `self`.
     pub fn q(&self) -> Option<&BigNumRef> {
         unsafe {
             let q = compat::pqg(self.as_ptr())[1];
@@ -59,6 +103,7 @@ impl DsaRef {
         }
     }
 
+    /// Returns the DSA base parameter of `self`.
     pub fn g(&self) -> Option<&BigNumRef> {
         unsafe {
             let g = compat::pqg(self.as_ptr())[2];
@@ -70,10 +115,14 @@ impl DsaRef {
         }
     }
 
+    /// Returns whether the DSA includes a public key, used to confirm the authenticity
+    /// of the message.
     pub fn has_public_key(&self) -> bool {
         unsafe { !compat::keys(self.as_ptr())[0].is_null() }
     }
 
+    /// Returns whether the DSA includes a private key, used to prove the authenticity
+    /// of a message.
     pub fn has_private_key(&self) -> bool {
         unsafe { !compat::keys(self.as_ptr())[1].is_null() }
     }
@@ -81,6 +130,14 @@ impl DsaRef {
 
 impl Dsa {
     /// Generate a DSA key pair.
+    ///
+    /// Calls [`DSA_generate_parameters_ex`] to populate the `p`, `g`, and `q` values.
+    /// These values are used to generate the key pair with [`DSA_generate_key`].
+    ///
+    /// The `bits` parameter coresponds to the length of the prime `p`.
+    ///
+    /// [`DSA_generate_parameters_ex`]: https://www.openssl.org/docs/man1.1.0/crypto/DSA_generate_parameters_ex.html
+    /// [`DSA_generate_key`]: https://www.openssl.org/docs/man1.1.0/crypto/DSA_generate_key.html
     pub fn generate(bits: u32) -> Result<Dsa, ErrorStack> {
         ffi::init();
         unsafe {
