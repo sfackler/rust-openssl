@@ -1,5 +1,7 @@
-//! This module provides an abstract interface over various specific cryptographic hash algorithms
-//! in the `Hasher` type. It is particularly useful in cases where you need to work with any type
+//! An abstract interface over various specific cryptographic hash algorithms.
+//!
+//! The `Hasher` type can be configured to hash bytes with any of a variety of supported hash
+//! algorithms. It is particularly useful in cases where you need to work with any type
 //! that supports a hashing interface. Furthermore, `Hasher` implements the [std::io::Write](
 //! https://doc.rust-lang.org/std/io/trait.Write.html) trait.
 //! # Examples
