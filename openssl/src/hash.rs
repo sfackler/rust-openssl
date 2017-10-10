@@ -51,8 +51,7 @@ use error::ErrorStack;
 pub struct MessageDigest(*const ffi::EVP_MD);
 
 impl MessageDigest {
-    /// Construct a `MessageDigest` that will hash bytes supplied to `Hasher.update` using the MD5
-    /// hash algorithm.
+    /// Returns a `MessageDigest` corresponding to the MD5 algorithm.
     ///
     /// # Warning
     ///
@@ -62,43 +61,37 @@ impl MessageDigest {
         unsafe { MessageDigest(ffi::EVP_md5()) }
     }
 
-    /// Construct a `MessageDigest` that will hash bytes supplied to `Hasher.update` using the SHA1
-    /// hash algorithm.
+    /// Returns a `MessageDigest` corresponding to the SHA-1 algorithm.
     ///
     /// # Warning
     ///
-    /// SHA1 is no longer considered secure for use in new software.  Its use should be limited to
+    /// SHA-1 is no longer considered secure for use in new software.  Its use should be limited to
     /// cases where compatibility with legacy systems is required.
     pub fn sha1() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha1()) }
     }
 
-    /// Construct a `MessageDigest` that will hash bytes supplied to `Hasher.update` using the
-    /// SHA-224 hash algorithm.
+    /// Returns a `MessageDigest` corresponding to the SHA-224 algorithm.
     pub fn sha224() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha224()) }
     }
 
-    /// Construct a `MessageDigest` that will hash bytes supplied to `Hasher.update` using the
-    /// SHA-256 hash algorithm.
+    /// Returns a `MessageDigest` corresponding to the SHA-256 algorithm.
     pub fn sha256() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha256()) }
     }
 
-    /// Construct a `MessageDigest` that will hash bytes supplied to `Hasher.update` using the
-    /// SHA-384 hash algorithm.
+    /// Returns a `MessageDigest` corresponding to the SHA-384 algorithm.
     pub fn sha384() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha384()) }
     }
 
-    /// Construct a `MessageDigest` that will hash bytes supplied to `Hasher.update` using the
-    /// SHA-512 hash algorithm.
+    /// Returns a `MessageDigest` corresponding to the SHA-512 algorithm.
     pub fn sha512() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha512()) }
     }
 
-    /// Construct a `MessageDigest` that will hash bytes supplied to `Hasher.update` using the
-    /// RIPEMD-160 hash algorithm.
+    /// Returns a `MessageDigest` corresponding to the RIPEMD-160 algorithm.
     pub fn ripemd160() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_ripemd160()) }
     }
