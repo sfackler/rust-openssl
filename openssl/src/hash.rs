@@ -102,8 +102,6 @@ impl MessageDigest {
     }
 }
 
-/// Represents the state of a message digest, which moves through three states as it is created,
-/// updated with new bytes to hash, and finalized as a way of completing a hashing operation.
 #[derive(PartialEq, Copy, Clone)]
 enum State {
     Reset,
@@ -149,7 +147,8 @@ use self::State::*;
 /// legacy systems is required.
 ///
 /// The hash algorithms available here are not suited to password hashing. For such applications,
-/// prefer instead to use either the `pkcs5` module or, more simply, either bcrypt or scrypt.
+/// prefer instead to use the `pkcs5` module more which includes more suitable options, such as
+/// bcrypt and scrypt.
 pub struct Hasher {
     ctx: *mut ffi::EVP_MD_CTX,
     md: *const ffi::EVP_MD,
