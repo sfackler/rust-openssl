@@ -64,7 +64,7 @@ impl DsaRef {
     private_key_to_der!(ffi::i2d_DSAPrivateKey);
     public_key_to_der!(ffi::i2d_DSAPublicKey);
 
-    /// Returns the size of the signature output by `self` in bytes.  Returns
+    /// Returns the maximum size of the signature output by `self` in bytes.  Returns
     /// None if the keys are uninitialized.
     ///
     /// OpenSSL documentation at [`DSA_size`]
