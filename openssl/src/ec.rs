@@ -1,3 +1,13 @@
+//! Elliptic Curve
+//!
+//! Cryptology relies on the difficulty of solving mathematical problems, such as the factor
+//! of large integers composed of two large prime numbers and the discrete logarithm of a
+//! random eliptic curve.  This module provides low-level features of the latter.
+//! Elliptic Curve protocols can provide the same security with smaller keys.
+//!
+//! There are 2 forms of elliptic curves, `Fp` and `F2^m`.  These curves use irreducible
+//! trinomial or pentanomial.  Being a generic interface to a wide range of algorithms,
+//! the cuves are generally referenced by [`EcGroup`]
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use std::ptr;
