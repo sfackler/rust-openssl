@@ -9,28 +9,41 @@
 //! ```rust
 //! extern crate openssl;
 //! extern crate hex;
-//!
-//! use std::io;
-//! use std::io::Write;
+//! 
 //! use openssl::hash;
 //! use hex::ToHex;
-//!
+//! 
 //! fn main() {
 //!     let mut hasher = hash::Hasher::new(hash::MessageDigest::sha512()).unwrap();
-//!     let bytes_hashed = hash_stream(&mut hasher).unwrap();
+//!     hasher.update(b"HTTP/1.1 200 OK\r\n");
+//!     hasher.update(b"Content-Length: 5\r\n");
+//!     hasher.update(b"\r\n");
+//!     hasher.update(b"hello\r\n");
+//! 
 //!     let hash = hasher.finish2().unwrap();
-//!     println!("Hashed {} bytes to {}", bytes_hashed, hash.to_hex());
+//!     println!("Hashed to {}", hash.to_hex());
 //! }
+//! ```
 //!
-//! fn hash_stream<W: Write>(hasher: &mut W) -> io::Result<usize> {
-//!     let mut total_bytes = 0;
+//! Taking advantage of the fact that `io::Write` is implemented on `Hasher`.
 //!
-//!     total_bytes += hasher.write(b"HTTP/1.1 200 OK\r\n")?;
-//!     total_bytes += hasher.write(b"Content-Length: 5\r\n")?;
-//!     total_bytes += hasher.write(b"\r\n\r\n")?;
-//!     total_bytes += hasher.write(b"hello")?;
-//!
-//!     Ok(total_bytes)
+//! ```rust
+//! extern crate openssl;
+//! extern crate hex;
+//! 
+//! use std::io;
+//! use openssl::hash;
+//! use hex::ToHex;
+//! 
+//! fn main() {
+//!     let mut response_body: &[u8] = b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello";
+//! 
+//!     let mut hasher = hash::Hasher::new(hash::MessageDigest::sha512()).unwrap();
+//! 
+//!     let _ = io::copy(&mut response_body, &mut hasher);
+//! 
+//!     let hash = hasher.finish2().unwrap();
+//!     println!("Hashed to {}", hash.to_hex());
 //! }
 //! ```
 use std::io::prelude::*;
