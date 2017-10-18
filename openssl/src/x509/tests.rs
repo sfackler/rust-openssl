@@ -1,6 +1,6 @@
 use hex::{FromHex, ToHex};
 
-use asn1::Asn1Time;
+use asn1::{Asn1Time, TimeDiff};
 use bn::{BigNum, MSB_MAYBE_ZERO};
 use ec::{NAMED_CURVE, EcGroup, EcKey};
 use hash::MessageDigest;
@@ -139,6 +139,24 @@ fn test_cert_issue_validity() {
 
     assert_eq!(not_before, "Aug 14 17:00:03 2016 GMT");
     assert_eq!(not_after, "Aug 12 17:00:03 2026 GMT");
+}
+
+#[test]
+#[cfg(any(ossl102, ossl110))]
+fn test_cert_issue_unix_time() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+    let not_before = cert.not_before().diff_from_epoch().unwrap();
+    let not_after = cert.not_after().diff_from_epoch().unwrap();
+
+    assert_eq!(not_before, TimeDiff {
+        secs: 61203,
+        days: 17027,
+    });
+    assert_eq!(not_after, TimeDiff {
+        secs: 61203,
+        days: 20677,
+    });
 }
 
 #[test]

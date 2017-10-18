@@ -26,7 +26,7 @@
 //! ```
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::{c_long, c_char, c_int};
+use libc::{c_long, c_char, c_int, time_t};
 use std::fmt;
 use std::ptr;
 use std::slice;
@@ -37,6 +37,12 @@ use bio::MemBio;
 use error::ErrorStack;
 use nid::Nid;
 use string::OpensslString;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TimeDiff {
+    pub days: c_int,
+    pub secs: c_int,
+}
 
 foreign_type! {
     type CType = ffi::ASN1_GENERALIZEDTIME;
@@ -103,6 +109,32 @@ impl fmt::Display for Asn1TimeRef {
     }
 }
 
+impl Asn1TimeRef {
+    #[cfg(any(ossl102, ossl110))]
+    pub fn diff_from_epoch(&self) -> Result<TimeDiff, ErrorStack> {
+        Asn1Time::from_unix(0)?.diff(Some(self))
+    }
+
+    #[cfg(any(ossl102, ossl110))]
+    pub fn diff(&self, compare: Option<&Self>) -> Result<TimeDiff, ErrorStack> {
+        let mut days = 0;
+        let mut seconds = 0;
+        let other = compare.map(Self::as_ptr).unwrap_or_else(ptr::null_mut);
+
+        let err = unsafe {
+            ffi::ASN1_TIME_diff(&mut days, &mut seconds, self.as_ptr(), other)
+        };
+
+        match err {
+            0 => Err(ErrorStack::get()),
+            _ => Ok(TimeDiff {
+                days: days,
+                secs: seconds,
+            }),
+        }
+    }
+}
+
 impl Asn1Time {
     fn from_period(period: c_long) -> Result<Asn1Time, ErrorStack> {
         ffi::init();
@@ -116,6 +148,18 @@ impl Asn1Time {
     /// Creates a new time on specified interval in days from now
     pub fn days_from_now(days: u32) -> Result<Asn1Time, ErrorStack> {
         Asn1Time::from_period(days as c_long * 60 * 60 * 24)
+    }
+
+    pub fn from_unix(time: time_t) -> Result<Self, ErrorStack> {
+        ffi::init();
+
+        unsafe {
+            let asntime = ffi::ASN1_TIME_set(ptr::null_mut(), time);
+            match asntime.is_null() {
+                true => Err(ErrorStack::get()),
+                false => Ok(Self::from_ptr(asntime)),
+            }
+        }
     }
 }
 

@@ -1558,6 +1558,9 @@ extern "C" {
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
     pub fn ASN1_TIME_free(tm: *mut ASN1_TIME);
     pub fn ASN1_TIME_print(b: *mut BIO, tm: *const ASN1_TIME) -> c_int;
+    #[cfg(any(ossl102, ossl110))]
+    pub fn ASN1_TIME_diff(pday: *mut c_int, psec: *mut c_int, from: *const ASN1_TIME, to: *const ASN1_TIME) -> c_int;
+    pub fn ASN1_TIME_set(from: *mut ASN1_TIME, to: libc::time_t) -> *mut ASN1_TIME;
     pub fn ASN1_BIT_STRING_free(x: *mut ASN1_BIT_STRING);
     pub fn ASN1_OBJECT_free(x: *mut ASN1_OBJECT);
 

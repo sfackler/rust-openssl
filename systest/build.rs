@@ -62,6 +62,7 @@ fn main() {
         .header("openssl/pkcs12.h")
         .header("openssl/bn.h")
         .header("openssl/aes.h")
+        .header("openssl/asn1.h")
         .header("openssl/ocsp.h");
 
     if has_cms_h {
