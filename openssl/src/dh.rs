@@ -27,6 +27,8 @@ foreign_type! {
     pub struct Dh;
 
     /// A borrowed reference of a [`Dh`].
+    ///
+    /// [`Dh`]: struct.Dh.html
     pub struct DhRef;
 }
 
@@ -39,8 +41,8 @@ impl DhRef {
 // TODO Implement overloaded DH initialization for equivalent methods in 1.1.x
 impl Dh {
     
-    /// This method will set the c pointers for the DH object, p, q, and g. If the parameters have
-    /// not been set, they will default to NULL.
+    /// This method will set the c pointers for the DH object, p, q, and g. Method call must include
+    /// values for the parameters p, q, and g.
     ///
     /// This calls DH_get0_pqg() on OpenSSL 1.1.0 and initializes DH's fields manually in 1.1.x.
     /// Note that currently we assume that you only provide the parameters p, q, and g. In OpenSSL,
