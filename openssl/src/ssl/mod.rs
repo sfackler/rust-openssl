@@ -1805,7 +1805,7 @@ impl<S> SslStream<S> {
                     None => {
                         io::Error::new(
                             io::ErrorKind::Other,
-                            "BUG: got an SSL_ERROR_WANT_WRITE with no error in the BIO",
+                            "BUG: got an SSL_ERROR_WANT_READ with no error in the BIO",
                         )
                     }
                 };
