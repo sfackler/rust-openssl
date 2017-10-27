@@ -1,3 +1,20 @@
+//! Errors returned by OpenSSL library.
+//!
+//! OpenSSL errors are stored in an `ErrorStack`.  Most methods in the crate
+/// returns a `Result<T, ErrorStack>` type.
+//!
+//! # Examples
+//!
+//! ```
+//! use openssl::error::ErrorStack;
+//! use openssl::bn::BigNum;
+//!
+//! let an_error = BigNum::from_dec_str("Cannot parse letters");
+//! match an_error {
+//!     Ok(_)  => _,
+//!     Err(e) => println!("Parsing Error: {:?}", e),
+//! }
+//! ```
 use libc::{c_ulong, c_char, c_int};
 use std::fmt;
 use std::error;
@@ -9,6 +26,9 @@ use std::borrow::Cow;
 
 use ffi;
 
+/// Collection of [`Error`]s from OpenSSL.
+///
+/// [`Error`]: struct.Error.html
 #[derive(Debug, Clone)]
 pub struct ErrorStack(Vec<Error>);
 
