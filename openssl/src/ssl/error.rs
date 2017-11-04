@@ -66,6 +66,33 @@ impl From<ErrorStack> for Error {
     }
 }
 
+/// An error indicating that the operation can be immediately retried.
+///
+/// OpenSSL's [`SSL_read`] and [`SSL_write`] functions can return `SSL_ERROR_WANT_READ` even when
+/// the underlying socket is performing blocking IO in certain cases. When this happens, the
+/// the operation can be immediately retried.
+///
+/// To signal this event, the `io::Error` inside of [`Error::WantRead`] will be constructed around
+/// a `RetryError`.
+///
+/// [`SSL_read`]: https://www.openssl.org/docs/manmaster/man3/SSL_read.html
+/// [`SSL_write`]: https://www.openssl.org/docs/manmaster/man3/SSL_write.html
+/// [`Error::WantRead`]: enum.Error.html#variant.WantRead
+#[derive(Debug)]
+pub struct RetryError;
+
+impl fmt::Display for RetryError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.write_str(error::Error::description(self))
+    }
+}
+
+impl error::Error for RetryError {
+    fn description(&self) -> &str {
+        "operation must be retried"
+    }
+}
+
 /// An error or intermediate state after a TLS handshake attempt.
 #[derive(Debug)]
 pub enum HandshakeError<S> {
