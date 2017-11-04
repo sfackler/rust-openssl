@@ -5,20 +5,20 @@ environment:
     - TARGET: i686-pc-windows-gnu
       BITS: 32
       MSYS2: 1
-      OPENSSL_VERSION: 1_1_0f
+      OPENSSL_VERSION: 1_1_0g
     - TARGET: x86_64-pc-windows-msvc
       BITS: 64
-      OPENSSL_VERSION: 1_1_0f
+      OPENSSL_VERSION: 1_1_0g
       OPENSSL_DIR: C:\OpenSSL
 
     # 1.0.2, 64/32 bit
     - TARGET: x86_64-pc-windows-gnu
       BITS: 64
       MSYS2: 1
-      OPENSSL_VERSION: 1_0_2L
+      OPENSSL_VERSION: 1_0_2m
     - TARGET: i686-pc-windows-msvc
       BITS: 32
-      OPENSSL_VERSION: 1_0_2L
+      OPENSSL_VERSION: 1_0_2m
       OPENSSL_DIR: C:\OpenSSL
     - TARGET: x86_64-pc-windows-msvc
       VCPKG_DEFAULT_TRIPLET: x64-windows
@@ -48,7 +48,3 @@ build: false
 test_script:
   - cargo run --manifest-path systest/Cargo.toml --target %TARGET%
   - cargo test --manifest-path openssl/Cargo.toml --target %TARGET%
-
-cache:
-  - target
-  - C:\Users\appveyor\.cargo\registry
