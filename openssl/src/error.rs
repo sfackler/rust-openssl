@@ -1,7 +1,7 @@
 //! Errors returned by OpenSSL library.
 //!
 //! OpenSSL errors are stored in an `ErrorStack`.  Most methods in the crate
-/// returns a `Result<T, ErrorStack>` type.
+//! returns a `Result<T, ErrorStack>` type.
 //!
 //! # Examples
 //!
@@ -11,7 +11,7 @@
 //!
 //! let an_error = BigNum::from_dec_str("Cannot parse letters");
 //! match an_error {
-//!     Ok(_)  => _,
+//!     Ok(_)  => (),
 //!     Err(e) => println!("Parsing Error: {:?}", e),
 //! }
 //! ```
