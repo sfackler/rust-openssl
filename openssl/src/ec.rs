@@ -524,7 +524,7 @@ impl EcKeyBuilderRef {
 mod test {
     use bn::{BigNum, BigNumContext};
     use nid;
-    use data_encoding;
+    use data_encoding::BASE64URL_NOPAD;
     use super::*;
 
     #[test]
@@ -603,10 +603,10 @@ mod test {
     #[test]
     fn key_from_affine_coordinates() {
         let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
-        let x = data_encoding::base64url::decode_nopad(
+        let x = BASE64URL_NOPAD.decode(
             "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4".as_bytes(),
         ).unwrap();
-        let y = data_encoding::base64url::decode_nopad(
+        let y = BASE64URL_NOPAD.decode(
             "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM".as_bytes(),
         ).unwrap();
 
@@ -627,7 +627,7 @@ mod test {
     #[test]
     fn set_private_key() {
         let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
-        let d = data_encoding::base64url::decode_nopad(
+        let d = BASE64URL_NOPAD.decode(
             "870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE".as_bytes(),
         ).unwrap();
 
@@ -643,11 +643,13 @@ mod test {
 
     #[test]
     fn get_affine_coordinates() {
-        let raw_x = "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4";
-        let raw_y = "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM";
         let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
-        let x = data_encoding::base64url::decode_nopad(raw_x.as_bytes()).unwrap();
-        let y = data_encoding::base64url::decode_nopad(raw_y.as_bytes()).unwrap();
+        let x = BASE64URL_NOPAD.decode(
+            "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4".as_bytes(),
+        ).unwrap();
+        let y = BASE64URL_NOPAD.decode(
+            "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM".as_bytes(),
+        ).unwrap();
 
         let xbn = BigNum::from_slice(&x).unwrap();
         let ybn = BigNum::from_slice(&y).unwrap();
