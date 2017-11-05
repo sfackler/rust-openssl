@@ -368,6 +368,7 @@ impl SslContextBuilder {
     /// registers a verification callback.
     pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
     where
+        // FIXME should take a mutable reference to the store
         F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send,
     {
         unsafe {
@@ -1136,6 +1137,7 @@ impl SslRef {
     /// chain is valid and `false` otherwise.
     pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
     where
+        // FIXME should take a mutable reference to the x509 store
         F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send,
     {
         unsafe {
@@ -1649,6 +1651,7 @@ impl<S> MidHandshakeSslStream<S> {
 
 /// A stream wrapper which handles SSL encryption for an underlying stream.
 pub struct SslStream<S> {
+    // FIXME use ManuallyDrop
     ssl: Ssl,
     _method: BioMethod, // NOTE: this *must* be after the Ssl field so things drop right
     _p: PhantomData<S>,
@@ -1699,6 +1702,7 @@ impl<S: Read + Write> SslStream<S> {
             Ok(ret as usize)
         } else {
             match self.make_error(ret) {
+                // FIXME only do this in read
                 // Don't treat unexpected EOFs as errors when reading
                 Error::Stream(ref e) if e.kind() == io::ErrorKind::ConnectionAborted => Ok(0),
                 e => Err(e),
