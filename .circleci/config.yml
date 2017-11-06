@@ -35,6 +35,7 @@ job: &JOB
   steps:
   - checkout
   - run: apt-get update
+  - run: apt-get remove -y libssl-dev
   - run: ./test/add_target.sh
   - *RESTORE_REGISTRY
   - run: cargo generate-lockfile
