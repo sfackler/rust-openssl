@@ -4,11 +4,10 @@
 extern crate openssl;
 
 use openssl::asn1::Asn1Time;
-use openssl::bn::BigNum;
+use openssl::bn::{BigNum, MSB_MAYBE_ZERO};
 use openssl::error::ErrorStack;
 use openssl::hash::MessageDigest;
 use openssl::pkey::{PKey, PKeyRef};
-use openssl::rand::rand_bytes;
 use openssl::rsa::Rsa;
 use openssl::x509::{X509, X509Ref};
 use openssl::x509::{X509NameBuilder, X509Req, X509ReqBuilder};
@@ -30,9 +29,9 @@ fn mk_ca_cert() -> Result<(X509, PKey), ErrorStack> {
     let mut cert_builder = X509::builder()?;
     cert_builder.set_version(2)?;
     let serial_number = {
-        let mut buf = [0;20];
-        rand_bytes(&mut buf)?;
-        BigNum::from_slice(&buf)?.to_asn1_integer()?
+        let mut serial = BigNum::new()?;
+        serial.rand(159, MSB_MAYBE_ZERO, false)?;
+        serial.to_asn1_integer()?
     };
     cert_builder.set_serial_number(&serial_number)?;
     cert_builder.set_subject_name(&x509_name)?;
@@ -88,9 +87,9 @@ fn mk_ca_signed_cert(ca_cert: &X509Ref, ca_privkey: &PKeyRef) -> Result<(X509, P
     let mut cert_builder = X509::builder()?;
     cert_builder.set_version(2)?;
     let serial_number = {
-        let mut buf = [0;20];
-        rand_bytes(&mut buf)?;
-        BigNum::from_slice(&buf)?.to_asn1_integer()?
+        let mut serial = BigNum::new()?;
+        serial.rand(159, MSB_MAYBE_ZERO, false)?;
+        serial.to_asn1_integer()?
     };
     cert_builder.set_serial_number(&serial_number)?;
     cert_builder.set_subject_name(req.subject_name())?;

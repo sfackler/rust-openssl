@@ -5,6 +5,7 @@ use std::env;
 fn main() {
     let mut cfg = ctest::TestGenerator::new();
     let target = env::var("TARGET").unwrap();
+    let mut is_libressl = false;
 
     if let Ok(out) = env::var("DEP_OPENSSL_INCLUDE") {
         cfg.include(&out);
@@ -24,6 +25,7 @@ fn main() {
 
     if let Ok(_) = env::var("DEP_OPENSSL_LIBRESSL") {
         cfg.cfg("libressl", None);
+        is_libressl = true;
     } else if let Ok(version) = env::var("DEP_OPENSSL_VERSION") {
         cfg.cfg(&format!("ossl{}", version), None);
     }
@@ -40,12 +42,6 @@ fn main() {
             cfg.cfg("osslconf", Some(var));
         }
     }
-
-    let has_cms_h = if let Ok(version) = env::var("DEP_OPENSSL_LIBRESSL_VERSION") {
-        version != "261" && version != "262"
-    } else {
-        true
-    };
 
     cfg.header("openssl/comp.h")
         .header("openssl/dh.h")
@@ -64,7 +60,7 @@ fn main() {
         .header("openssl/aes.h")
         .header("openssl/ocsp.h");
 
-    if has_cms_h {
+    if !is_libressl {
         cfg.header("openssl/cms.h");
     }
 
