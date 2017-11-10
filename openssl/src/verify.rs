@@ -20,7 +20,7 @@ bitflags! {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_VERIFY_PARAM;
     fn drop = ffi::X509_VERIFY_PARAM_free;
 

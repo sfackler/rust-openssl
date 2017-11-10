@@ -136,7 +136,7 @@ impl<'a> Status<'a> {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::OCSP_BASICRESP;
     fn drop = ffi::OCSP_BASICRESP_free;
 
@@ -203,7 +203,7 @@ impl OcspBasicResponseRef {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::OCSP_CERTID;
     fn drop = ffi::OCSP_CERTID_free;
 
@@ -228,7 +228,7 @@ impl OcspCertId {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::OCSP_RESPONSE;
     fn drop = ffi::OCSP_RESPONSE_free;
 
@@ -273,7 +273,7 @@ impl OcspResponseRef {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::OCSP_REQUEST;
     fn drop = ffi::OCSP_REQUEST_free;
 
@@ -305,7 +305,7 @@ impl OcspRequestRef {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::OCSP_ONEREQ;
     fn drop = ffi::OCSP_ONEREQ_free;
 

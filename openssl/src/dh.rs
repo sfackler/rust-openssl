@@ -7,7 +7,7 @@ use std::ptr;
 use {cvt, cvt_p};
 use bn::BigNum;
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::DH;
     fn drop = ffi::DH_free;
 

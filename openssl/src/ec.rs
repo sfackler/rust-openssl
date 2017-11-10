@@ -98,7 +98,7 @@ pub struct PointConversionForm(ffi::point_conversion_form_t);
 #[derive(Copy, Clone)]
 pub struct Asn1Flag(c_int);
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::EC_GROUP;
     fn drop = ffi::EC_GROUP_free;
 
@@ -233,7 +233,7 @@ impl EcGroupRef {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::EC_POINT;
     fn drop = ffi::EC_POINT_free;
 
@@ -498,7 +498,7 @@ impl EcPoint {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::EC_KEY;
     fn drop = ffi::EC_KEY_free;
 
@@ -646,7 +646,7 @@ impl EcKey {
 }
 
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::EC_KEY;
     fn drop = ffi::EC_KEY_free;
 

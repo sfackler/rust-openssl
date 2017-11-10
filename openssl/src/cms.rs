@@ -18,7 +18,7 @@ use pkey::PKeyRef;
 use cvt;
 use cvt_p;
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::CMS_ContentInfo;
     fn drop = ffi::CMS_ContentInfo_free;
 

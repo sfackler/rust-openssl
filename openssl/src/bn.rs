@@ -67,7 +67,7 @@ pub const MSB_ONE: MsbOption = MsbOption(0);
 /// of bits in the original numbers.
 pub const TWO_MSB_ONE: MsbOption = MsbOption(1);
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::BN_CTX;
     fn drop = ffi::BN_CTX_free;
 
@@ -99,7 +99,7 @@ impl BigNumContext {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::BIGNUM;
     fn drop = ffi::BN_free;
 

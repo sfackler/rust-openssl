@@ -13,7 +13,7 @@ use x509::X509;
 use stack::Stack;
 use nid;
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::PKCS12;
     fn drop = ffi::PKCS12_free;
 
