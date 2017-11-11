@@ -38,7 +38,7 @@ use error::ErrorStack;
 use nid::Nid;
 use string::OpensslString;
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_GENERALIZEDTIME;
     fn drop = ffi::ASN1_GENERALIZEDTIME_free;
 
@@ -73,7 +73,7 @@ impl fmt::Display for Asn1GeneralizedTimeRef {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_TIME;
     fn drop = ffi::ASN1_TIME_free;
     /// Time storage and comparison
@@ -119,7 +119,7 @@ impl Asn1Time {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_STRING;
     fn drop = ffi::ASN1_STRING_free;
     /// Primary ASN.1 type used by OpenSSL
@@ -170,7 +170,7 @@ impl Asn1StringRef {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_INTEGER;
     fn drop = ffi::ASN1_INTEGER_free;
 
@@ -211,7 +211,7 @@ impl Asn1IntegerRef {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_BIT_STRING;
     fn drop = ffi::ASN1_BIT_STRING_free;
     /// Sequence of bytes
@@ -238,7 +238,7 @@ impl Asn1BitStringRef {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_OBJECT;
     fn drop = ffi::ASN1_OBJECT_free;
 

@@ -17,7 +17,7 @@ use bn::BigNumRef;
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb_old};
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::DSA;
     fn drop = ffi::DSA_free;
 

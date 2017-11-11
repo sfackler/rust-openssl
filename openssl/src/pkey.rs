@@ -14,7 +14,7 @@ use rsa::{Rsa, Padding};
 use error::ErrorStack;
 use util::{CallbackState, invoke_passwd_cb, invoke_passwd_cb_old};
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::EVP_PKEY;
     fn drop = ffi::EVP_PKEY_free;
 
@@ -74,9 +74,6 @@ impl PKeyRef {
         unsafe { ffi::EVP_PKEY_cmp(self.as_ptr(), other.as_ptr()) == 1 }
     }
 }
-
-unsafe impl Send for PKey {}
-unsafe impl Sync for PKey {}
 
 impl PKey {
     /// Creates a new `PKey` containing an RSA key.
@@ -226,16 +223,13 @@ impl PKey {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::EVP_PKEY_CTX;
     fn drop = ffi::EVP_PKEY_CTX_free;
 
     pub struct PKeyCtx;
     pub struct PKeyCtxRef;
 }
-
-unsafe impl Send for PKeyCtx {}
-unsafe impl Sync for PKeyCtx {}
 
 impl PKeyCtx {
     pub fn from_pkey(pkey: &PKeyRef) -> Result<PKeyCtx, ErrorStack> {

@@ -27,6 +27,7 @@ use error::ErrorStack;
 mod macros;
 
 mod bio;
+#[macro_use]
 mod util;
 pub mod aes;
 pub mod asn1;

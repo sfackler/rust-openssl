@@ -29,7 +29,7 @@ pub const NO_PADDING: Padding = Padding(ffi::RSA_NO_PADDING);
 pub const PKCS1_PADDING: Padding = Padding(ffi::RSA_PKCS1_PADDING);
 pub const PKCS1_OAEP_PADDING: Padding = Padding(ffi::RSA_PKCS1_OAEP_PADDING);
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::RSA;
     fn drop = ffi::RSA_free;
 

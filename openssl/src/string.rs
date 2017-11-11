@@ -8,7 +8,7 @@ use std::str;
 
 use stack::Stackable;
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = c_char;
     fn drop = free;
 

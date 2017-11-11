@@ -28,7 +28,7 @@ impl ConfMethod {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::CONF;
     fn drop = ffi::NCONF_free;
 
