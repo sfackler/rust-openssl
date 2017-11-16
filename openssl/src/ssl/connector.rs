@@ -2,8 +2,8 @@ use std::io::{Read, Write};
 
 use dh::Dh;
 use error::ErrorStack;
-use ssl::{self, SslMethod, SslContextBuilder, SslContext, Ssl, SSL_VERIFY_PEER, SslStream,
-          HandshakeError};
+use ssl::{self, SslMethod, SslContextBuilder, SslContext, Ssl, SslVerifyMode,
+          SslStream, HandshakeError};
 use pkey::PKeyRef;
 use version;
 use x509::X509Ref;
@@ -28,27 +28,27 @@ ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
 fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     let mut ctx = SslContextBuilder::new(method)?;
 
-    let mut opts = ssl::SSL_OP_ALL;
-    opts &= !ssl::SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG;
-    opts &= !ssl::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
-    opts |= ssl::SSL_OP_NO_TICKET;
-    opts |= ssl::SSL_OP_NO_COMPRESSION;
-    opts |= ssl::SSL_OP_NO_SSLV2;
-    opts |= ssl::SSL_OP_NO_SSLV3;
-    opts |= ssl::SSL_OP_SINGLE_DH_USE;
-    opts |= ssl::SSL_OP_SINGLE_ECDH_USE;
-    opts |= ssl::SSL_OP_CIPHER_SERVER_PREFERENCE;
+    let mut opts = ssl::SslOption::ALL;
+    opts &= !ssl::SslOption::NETSCAPE_REUSE_CIPHER_CHANGE_BUG;
+    opts &= !ssl::SslOption::DONT_INSERT_EMPTY_FRAGMENTS;
+    opts |= ssl::SslOption::NO_TICKET;
+    opts |= ssl::SslOption::NO_COMPRESSION;
+    opts |= ssl::SslOption::NO_SSLV2;
+    opts |= ssl::SslOption::NO_SSLV3;
+    opts |= ssl::SslOption::SINGLE_DH_USE;
+    opts |= ssl::SslOption::SINGLE_ECDH_USE;
+    opts |= ssl::SslOption::CIPHER_SERVER_PREFERENCE;
     ctx.set_options(opts);
 
-    let mut mode = ssl::SSL_MODE_AUTO_RETRY |
-        ssl::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
-        ssl::SSL_MODE_ENABLE_PARTIAL_WRITE;
+    let mut mode = ssl::SslMode::AUTO_RETRY |
+        ssl::SslMode::ACCEPT_MOVING_WRITE_BUFFER |
+        ssl::SslMode::ENABLE_PARTIAL_WRITE;
 
     // This is quite a useful optimization for saving memory, but historically
     // caused CVEs in OpenSSL pre-1.0.1h, according to
     // https://bugs.python.org/issue25672
     if version::number() >= 0x1000108f {
-        mode |= ssl::SSL_MODE_RELEASE_BUFFERS;
+        mode |= ssl::SslMode::RELEASE_BUFFERS;
     }
 
     ctx.set_mode(mode);
@@ -334,12 +334,12 @@ impl SslAcceptor {
 
 #[cfg(any(ossl102, ossl110))]
 fn setup_verify(ctx: &mut SslContextBuilder) {
-    ctx.set_verify(SSL_VERIFY_PEER);
+    ctx.set_verify(SslVerifyMode::PEER);
 }
 
 #[cfg(ossl101)]
 fn setup_verify(ctx: &mut SslContextBuilder) {
-    ctx.set_verify_callback(SSL_VERIFY_PEER, |p, x509| {
+    ctx.set_verify_callback(SslVerifyMode::PEER, |p, x509| {
         let hostname = match x509.ssl() {
             Ok(Some(ssl)) => ssl.ex_data(*HOSTNAME_IDX),
             _ => None,
@@ -354,7 +354,7 @@ fn setup_verify(ctx: &mut SslContextBuilder) {
 #[cfg(any(ossl102, ossl110))]
 fn setup_verify_hostname(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
     let param = ssl._param_mut();
-    param.set_hostflags(::verify::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+    param.set_hostflags(::verify::X509CheckFlags::NO_PARTIAL_WILDCARDS);
     match domain.parse() {
         Ok(ip) => param.set_ip(ip),
         Err(_) => param.set_host(domain),

@@ -17,7 +17,7 @@ save_openssl: &SAVE_OPENSSL
     paths:
     - /openssl
 deps_key: &DEPS_KEY
-  key: deps-1.19.0-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}-2
+  key: deps-1.20.0-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}-2
 restore_deps: &RESTORE_DEPS
   restore_cache:
     <<: *DEPS_KEY
@@ -31,7 +31,7 @@ save_deps: &SAVE_DEPS
 job: &JOB
   working_directory: ~/build
   docker:
-  - image: rust:1.19.0
+  - image: rust:1.20.0
   steps:
   - checkout
   - run: apt-get update
