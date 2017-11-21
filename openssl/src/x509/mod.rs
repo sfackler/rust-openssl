@@ -2,7 +2,6 @@
 use libc::{c_int, c_long};
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::{CStr, CString};
@@ -620,21 +619,9 @@ impl Clone for X509 {
     }
 }
 
-impl AsRef<X509Ref> for X509 {
-    fn as_ref(&self) -> &X509Ref {
-        &*self
-    }
-}
-
 impl AsRef<X509Ref> for X509Ref {
     fn as_ref(&self) -> &X509Ref {
         self
-    }
-}
-
-impl Borrow<X509Ref> for X509 {
-    fn borrow(&self) -> &X509Ref {
-        &*self
     }
 }
 
