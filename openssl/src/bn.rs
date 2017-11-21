@@ -1090,6 +1090,12 @@ impl BigNum {
     }
 }
 
+impl AsRef<BigNumRef> for BigNum {
+    fn as_ref(&self) -> &BigNumRef {
+        self.deref()
+    }
+}
+
 impl fmt::Debug for BigNumRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.to_dec_str() {

@@ -76,6 +76,7 @@ use libc::{c_int, c_long, c_ulong, c_void};
 use libc::{c_uchar, c_uint};
 use std::any::Any;
 use std::any::TypeId;
+use std::borrow::Borrow;
 use std::cmp;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
@@ -1022,6 +1023,12 @@ unsafe impl Send for SslSession {}
 impl Clone for SslSession {
     fn clone(&self) -> SslSession {
         self.to_owned()
+    }
+}
+
+impl Borrow<SslSessionRef> for SslSession {
+    fn borrow(&self) -> &SslSessionRef {
+        &self
     }
 }
 
