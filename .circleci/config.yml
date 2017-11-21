@@ -67,6 +67,29 @@ job: &JOB
       path: /tmp/core_dumps
   - *SAVE_DEPS
 
+macos_job: &MACOS_JOB
+  macos:
+    xcode: "9.0"
+  environment:
+    RUSTUP_HOME: /usr/local/rustup
+    CARGO_HOME: /usr/local/cargo
+  steps:
+  - checkout
+  - run: sudo mkdir /opt
+  - run: sudo chown -R $USER /usr/local /opt
+  - run: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.19.0
+  - run: sudo ln -s $CARGO_HOME/bin/* /usr/local/bin
+  - *RESTORE_REGISTRY
+  - run: cargo generate-lockfile
+  - *SAVE_REGISTRY
+  - run: echo "homebrew-x86_64-apple-darwin" > ~/lib_key
+  - *RESTORE_DEPS
+  - run: cargo run --manifest-path=systest/Cargo.toml
+  - run: |
+      PATH=/usr/local/opt/openssl/bin:$PATH
+      cargo test --manifest-path=openssl/Cargo.toml --all-features
+  - *SAVE_DEPS
+
 openssl_110: &OPENSSL_110
   LIBRARY: openssl
   VERSION: 1.1.0g
@@ -93,6 +116,8 @@ armhf: &ARMHF
   CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
   CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_AR: arm-linux-gnueabihf-ar
   CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUNNER: qemu-arm-static
+darwin: &DARWIN
+  TARGET: x86_64-apple-darwin
 
 base: &BASE
   RUST_BACKTRACE: 1
@@ -144,6 +169,8 @@ jobs:
     <<: *JOB
     environment:
       <<: [*LIBRESSL_263, *X86_64, *BASE]
+  macos:
+    <<: *MACOS_JOB
 workflows:
   version: 2
   tests:
@@ -159,3 +186,4 @@ workflows:
     - armhf-openssl-1.0.1
     - x86_64-libressl-2.5.0
     - x86_64-libressl-2.6.3
+    - macos
