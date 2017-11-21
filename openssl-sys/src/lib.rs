@@ -156,7 +156,7 @@ pub struct SHA512_CTX {
     pub h: [SHA_LONG64; 8],
     pub Nl: SHA_LONG64,
     pub Nh: SHA_LONG64,
-    // this is a union but we don't want to require 1.19
+    // FIXME: This should be an union.
     u: [SHA_LONG64; SHA_LBLOCK as usize],
     pub num: c_uint,
     pub md_len: c_uint,
