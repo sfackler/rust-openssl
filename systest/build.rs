@@ -58,7 +58,9 @@ fn main() {
         .header("openssl/pkcs12.h")
         .header("openssl/bn.h")
         .header("openssl/aes.h")
-        .header("openssl/ocsp.h");
+        .header("openssl/ocsp.h")
+        .header("openssl/pkcs7.h")
+        .header("openssl/pem.h");
 
     if !is_libressl {
         cfg.header("openssl/cms.h");
@@ -88,6 +90,8 @@ fn main() {
         s == "PasswordCallback" || s == "bio_info_cb" || s.starts_with("CRYPTO_EX_")
     });
     cfg.skip_struct(|s| s == "ProbeResult");
+    cfg.skip_field(|s, field| s == "pkcs7_st" && field == "d");
+    cfg.skip_struct(|s| s == "pkcs7_st__d");
     cfg.skip_fn(move |s| {
         s == "CRYPTO_memcmp" ||                 // uses volatile
 

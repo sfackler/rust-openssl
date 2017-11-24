@@ -133,6 +133,10 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_des_ecb()) }
     }
 
+    pub fn des_ede3_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_des_ede3_cbc()) }
+    }
+
     pub fn rc4() -> Cipher {
         unsafe { Cipher(ffi::EVP_rc4()) }
     }
