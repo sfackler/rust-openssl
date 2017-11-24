@@ -94,6 +94,8 @@ fn main() {
         s == "PasswordCallback" || s == "pem_password_cb" || s == "bio_info_cb" || s.starts_with("CRYPTO_EX_")
     });
     cfg.skip_struct(|s| s == "ProbeResult");
+    cfg.skip_field(|s, field| s == "pkcs7_st" && field == "d");
+    cfg.skip_struct(|s| s == "pkcs7_st__d");
     cfg.skip_fn(move |s| {
         s == "CRYPTO_memcmp" ||                 // uses volatile
 
