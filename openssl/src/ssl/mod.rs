@@ -76,7 +76,6 @@ use libc::{c_int, c_long, c_ulong, c_void};
 use libc::{c_uchar, c_uint};
 use std::any::Any;
 use std::any::TypeId;
-use std::borrow::Borrow;
 use std::cmp;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
@@ -777,8 +776,7 @@ impl SslContextBuilder {
     #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
     pub fn set_psk_callback<F>(&mut self, callback: F)
     where
-        F: Fn(&mut SslRef, Option<&[u8]>, &mut [u8], &mut [u8])
-            -> Result<usize, ErrorStack>
+        F: Fn(&mut SslRef, Option<&[u8]>, &mut [u8], &mut [u8]) -> Result<usize, ErrorStack>
             + Any
             + 'static
             + Sync
@@ -1023,12 +1021,6 @@ unsafe impl Send for SslSession {}
 impl Clone for SslSession {
     fn clone(&self) -> SslSession {
         self.to_owned()
-    }
-}
-
-impl Borrow<SslSessionRef> for SslSession {
-    fn borrow(&self) -> &SslSessionRef {
-        &self
     }
 }
 
