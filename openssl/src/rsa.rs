@@ -222,6 +222,39 @@ impl RsaRef {
             }
         }
     }
+
+    pub fn dp(&self) -> Option<&BigNumRef> {
+        unsafe {
+            let dp = compat::crt_params(self.as_ptr())[0];
+            if dp.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_ptr(dp as *mut _))
+            }
+        }
+    }
+
+    pub fn dq(&self) -> Option<&BigNumRef> {
+        unsafe {
+            let dq = compat::crt_params(self.as_ptr())[1];
+            if dq.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_ptr(dq as *mut _))
+            }
+        }
+    }
+
+    pub fn qi(&self) -> Option<&BigNumRef> {
+        unsafe {
+            let qi = compat::crt_params(self.as_ptr())[2];
+            if qi.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_ptr(qi as *mut _))
+            }
+        }
+    }
 }
 
 impl Rsa {
@@ -348,6 +381,12 @@ mod compat {
         [p, q]
     }
 
+    pub unsafe fn crt_params(r: *const RSA) -> [*const BIGNUM; 3] {
+        let (mut dp, mut dq, mut qi) = (ptr::null(), ptr::null(), ptr::null());
+        ffi::RSA_get0_crt_params(r, &mut dp, &mut dq, &mut qi);
+        [dp, dq, qi]
+    }
+
     pub unsafe fn set_key(r: *mut RSA, n: *mut BIGNUM, e: *mut BIGNUM, d: *mut BIGNUM) -> c_int {
         ffi::RSA_set0_key(r, n, e, d)
     }
@@ -377,6 +416,10 @@ mod compat {
 
     pub unsafe fn factors(r: *const RSA) -> [*const BIGNUM; 2] {
         [(*r).p, (*r).q]
+    }
+
+    pub unsafe fn crt_params(r: *const RSA) -> [*const BIGNUM; 3] {
+        [(*r).dmp1, (*r).dmq1, (*r).iqmp]
     }
 
     pub unsafe fn set_key(r: *mut RSA, n: *mut BIGNUM, e: *mut BIGNUM, d: *mut BIGNUM) -> c_int {
