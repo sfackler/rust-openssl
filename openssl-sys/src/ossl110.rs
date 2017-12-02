@@ -172,6 +172,12 @@ extern "C" {
         d: *mut *const ::BIGNUM,
     );
     pub fn RSA_get0_factors(r: *const ::RSA, p: *mut *const ::BIGNUM, q: *mut *const ::BIGNUM);
+    pub fn RSA_get0_crt_params(
+        r: *const ::RSA,
+        dmp1: *mut *const ::BIGNUM,
+        dmq1: *mut *const ::BIGNUM,
+        iqmp: *mut *const ::BIGNUM,
+    );
     pub fn RSA_set0_key(
         r: *mut ::RSA,
         n: *mut ::BIGNUM,
