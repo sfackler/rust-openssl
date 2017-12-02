@@ -177,7 +177,7 @@ extern "C" {
         dmp1: *mut *const ::BIGNUM,
         dmq1: *mut *const ::BIGNUM,
         iqmp: *mut *const ::BIGNUM,
-    ) -> c_int;
+    );
     pub fn RSA_set0_key(
         r: *mut ::RSA,
         n: *mut ::BIGNUM,
