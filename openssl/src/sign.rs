@@ -53,7 +53,7 @@
 //! let mut signer = Signer::new(MessageDigest::sha256(), &key).unwrap();
 //! signer.update(data).unwrap();
 //! signer.update(data2).unwrap();
-//! let hmac = signer.finish().unwrap();
+//! let hmac = signer.sign_to_vec().unwrap();
 //!
 //! // `Verifier` cannot be used with HMACs; use the `memcmp::eq` function instead
 //! //
@@ -140,7 +140,10 @@ impl<'a> Signer<'a> {
     }
 
     /// Computes an upper bound on the signature length.
-    pub fn finish_len(&self) -> Result<usize, ErrorStack> {
+    ///
+    /// The actual signature may be shorter than this value. Check the return value of
+    /// `finish_into` to get the exact length.
+    pub fn len(&self) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = 0;
             cvt(ffi::EVP_DigestSignFinal(
@@ -152,13 +155,11 @@ impl<'a> Signer<'a> {
         }
     }
 
-    /// Outputs the signature into the provided buffer, returning the
-    /// length of that buffer.
+    /// Writes the signature into the provided buffer, returning the number of bytes written.
     ///
-    /// This method will fail if the buffer is not large enough for
-    /// the signature, one can use `finish_len` to get an upper bound
-    /// on the required size.
-    pub fn finish_into(&self, buf: &mut [u8]) -> Result<usize, ErrorStack> {
+    /// This method will fail if the buffer is not large enough for the signature. Use the `len`
+    /// method to get an upper bound on the required size.
+    pub fn sign(&self, buf: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = buf.len();
             cvt(ffi::EVP_DigestSignFinal(
@@ -170,15 +171,21 @@ impl<'a> Signer<'a> {
         }
     }
 
-    /// Combines `self.finish_len()` and `self.finish_into()`,
-    /// allocating a vector of the correct size for the signature.
-    pub fn finish(&self) -> Result<Vec<u8>, ErrorStack> {
-        let mut buf = vec![0; self.finish_len()?];
-        let len = self.finish_into(&mut buf)?;
+    /// Returns the signature.
+    ///
+    /// This is a simple convenience wrapper over `len` and `sign`.
+    pub fn sign_to_vec(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mut buf = vec![0; self.len()?];
+        let len = self.sign(&mut buf)?;
         // The advertised length is not always equal to the real
         // length for things like DSA
         buf.truncate(len);
         Ok(buf)
+    }
+
+    #[deprecated(since = "0.9.23", note = "renamed to sign_to_vec")]
+    pub fn finish(&self) -> Result<Vec<u8>, ErrorStack> {
+        self.sign_to_vec()
     }
 }
 
@@ -334,7 +341,7 @@ mod test {
             .set_rsa_padding(PKCS1_PADDING)
             .unwrap();
         signer.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
-        let result = signer.finish().unwrap();
+        let result = signer.sign_to_vec().unwrap();
 
         assert_eq!(result.to_hex(), SIGNATURE);
     }
@@ -382,7 +389,7 @@ mod test {
 
         let mut signer = Signer::new(MessageDigest::sha1(), &private_key).unwrap();
         signer.update(&input).unwrap();
-        let sig = signer.finish().unwrap();
+        let sig = signer.sign_to_vec().unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha1(), &public_key).unwrap();
         verifier.update(&input).unwrap();
@@ -405,7 +412,7 @@ mod test {
 
         let mut signer = Signer::new(MessageDigest::sha1(), &private_key).unwrap();
         signer.update(&input).unwrap();
-        let mut sig = signer.finish().unwrap();
+        let mut sig = signer.sign_to_vec().unwrap();
         sig[0] -= 1;
 
         let mut verifier = Verifier::new(MessageDigest::sha1(), &public_key).unwrap();
@@ -421,7 +428,7 @@ mod test {
             let pkey = PKey::hmac(key).unwrap();
             let mut signer = Signer::new(ty, &pkey).unwrap();
             signer.update(data).unwrap();
-            assert_eq!(signer.finish().unwrap(), *res);
+            assert_eq!(signer.sign_to_vec().unwrap(), *res);
         }
     }
 
