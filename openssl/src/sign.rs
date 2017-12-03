@@ -69,11 +69,11 @@ use std::ptr;
 
 use {cvt, cvt_p};
 use hash::MessageDigest;
-use pkey::{PKeyRef, PKeyCtxRef};
+use pkey::{PKeyCtxRef, PKeyRef};
 use error::ErrorStack;
 
 #[cfg(ossl110)]
-use ffi::{EVP_MD_CTX_new, EVP_MD_CTX_free};
+use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
 #[cfg(any(ossl101, ossl102))]
 use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
 
@@ -297,393 +297,29 @@ unsafe fn EVP_DigestVerifyFinal(
 
 #[cfg(test)]
 mod test {
-    use hex::FromHex;
+    use hex::{FromHex, ToHex};
     use std::iter;
 
     use hash::MessageDigest;
     use sign::{Signer, Verifier};
     use ec::{EcGroup, EcKey};
     use nid;
-    use rsa::{Rsa, PKCS1_PADDING};
+    use rsa::{PKCS1_PADDING, Rsa};
     use dsa::Dsa;
     use pkey::PKey;
 
-    static INPUT: &'static [u8] = &[
-        101,
-        121,
-        74,
-        104,
-        98,
-        71,
-        99,
-        105,
-        79,
-        105,
-        74,
-        83,
-        85,
-        122,
-        73,
-        49,
-        78,
-        105,
-        74,
-        57,
-        46,
-        101,
-        121,
-        74,
-        112,
-        99,
-        51,
-        77,
-        105,
-        79,
-        105,
-        74,
-        113,
-        98,
-        50,
-        85,
-        105,
-        76,
-        65,
-        48,
-        75,
-        73,
-        67,
-        74,
-        108,
-        101,
-        72,
-        65,
-        105,
-        79,
-        106,
-        69,
-        122,
-        77,
-        68,
-        65,
-        52,
-        77,
-        84,
-        107,
-        122,
-        79,
-        68,
-        65,
-        115,
-        68,
-        81,
-        111,
-        103,
-        73,
-        109,
-        104,
-        48,
-        100,
-        72,
-        65,
-        54,
-        76,
-        121,
-        57,
-        108,
-        101,
-        71,
-        70,
-        116,
-        99,
-        71,
-        120,
-        108,
-        76,
-        109,
-        78,
-        118,
-        98,
-        83,
-        57,
-        112,
-        99,
-        49,
-        57,
-        121,
-        98,
-        50,
-        57,
-        48,
-        73,
-        106,
-        112,
-        48,
-        99,
-        110,
-        86,
-        108,
-        102,
-        81,
-    ];
+    const INPUT: &'static str =
+        "65794a68624763694f694a53557a49314e694a392e65794a7063334d694f694a71623255694c41304b49434a6c\
+         654841694f6a457a4d4441344d546b7a4f44417344516f67496d6830644841364c79396c654746746347786c4c\
+         6d4e76625339706331397962323930496a7030636e566c6651";
 
-    static SIGNATURE: &'static [u8] = &[
-        112,
-        46,
-        33,
-        137,
-        67,
-        232,
-        143,
-        209,
-        30,
-        181,
-        216,
-        45,
-        191,
-        120,
-        69,
-        243,
-        65,
-        6,
-        174,
-        27,
-        129,
-        255,
-        247,
-        115,
-        17,
-        22,
-        173,
-        209,
-        113,
-        125,
-        131,
-        101,
-        109,
-        66,
-        10,
-        253,
-        60,
-        150,
-        238,
-        221,
-        115,
-        162,
-        102,
-        62,
-        81,
-        102,
-        104,
-        123,
-        0,
-        11,
-        135,
-        34,
-        110,
-        1,
-        135,
-        237,
-        16,
-        115,
-        249,
-        69,
-        229,
-        130,
-        173,
-        252,
-        239,
-        22,
-        216,
-        90,
-        121,
-        142,
-        232,
-        198,
-        109,
-        219,
-        61,
-        184,
-        151,
-        91,
-        23,
-        208,
-        148,
-        2,
-        190,
-        237,
-        213,
-        217,
-        217,
-        112,
-        7,
-        16,
-        141,
-        178,
-        129,
-        96,
-        213,
-        248,
-        4,
-        12,
-        167,
-        68,
-        87,
-        98,
-        184,
-        31,
-        190,
-        127,
-        249,
-        217,
-        46,
-        10,
-        231,
-        111,
-        36,
-        242,
-        91,
-        51,
-        187,
-        230,
-        244,
-        74,
-        230,
-        30,
-        177,
-        4,
-        10,
-        203,
-        32,
-        4,
-        77,
-        62,
-        249,
-        18,
-        142,
-        212,
-        1,
-        48,
-        121,
-        91,
-        212,
-        189,
-        59,
-        65,
-        238,
-        202,
-        208,
-        102,
-        171,
-        101,
-        25,
-        129,
-        253,
-        228,
-        141,
-        247,
-        127,
-        55,
-        45,
-        195,
-        139,
-        159,
-        175,
-        221,
-        59,
-        239,
-        177,
-        139,
-        93,
-        163,
-        204,
-        60,
-        46,
-        176,
-        47,
-        158,
-        58,
-        65,
-        214,
-        18,
-        202,
-        173,
-        21,
-        145,
-        18,
-        115,
-        160,
-        95,
-        35,
-        185,
-        232,
-        56,
-        250,
-        175,
-        132,
-        157,
-        105,
-        132,
-        41,
-        239,
-        90,
-        30,
-        136,
-        121,
-        130,
-        54,
-        195,
-        212,
-        14,
-        96,
-        69,
-        34,
-        165,
-        68,
-        200,
-        242,
-        122,
-        122,
-        45,
-        184,
-        6,
-        99,
-        209,
-        108,
-        247,
-        202,
-        234,
-        86,
-        222,
-        64,
-        92,
-        178,
-        33,
-        90,
-        69,
-        178,
-        194,
-        85,
-        102,
-        181,
-        90,
-        193,
-        167,
-        72,
-        160,
-        112,
-        223,
-        200,
-        163,
-        42,
-        70,
-        149,
-        67,
-        208,
-        25,
-        238,
-        251,
-        71,
-    ];
+    const SIGNATURE: &'static str =
+        "702e218943e88fd11eb5d82dbf7845f34106ae1b81fff7731116add1717d83656d420afd3c96eedd73a2663e51\
+         66687b000b87226e0187ed1073f945e582adfcef16d85a798ee8c66ddb3db8975b17d09402beedd5d9d9700710\
+         8db28160d5f8040ca7445762b81fbe7ff9d92e0ae76f24f25b33bbe6f44ae61eb1040acb20044d3ef9128ed401\
+         30795bd4bd3b41eecad066ab651981fde48df77f372dc38b9fafdd3befb18b5da3cc3c2eb02f9e3a41d612caad\
+         15911273a05f23b9e838faaf849d698429ef5a1e88798236c3d40e604522a544c8f27a7a2db80663d16cf7caea\
+         56de405cb2215a45b2c25566b55ac1a748a070dfc8a32a469543d019eefb47";
 
     #[test]
     fn rsa_sign() {
@@ -697,10 +333,10 @@ mod test {
             .pkey_ctx_mut()
             .set_rsa_padding(PKCS1_PADDING)
             .unwrap();
-        signer.update(INPUT).unwrap();
+        signer.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         let result = signer.finish().unwrap();
 
-        assert_eq!(result, SIGNATURE);
+        assert_eq!(result.to_hex(), SIGNATURE);
     }
 
     #[test]
@@ -714,8 +350,8 @@ mod test {
             verifier.pkey_ctx_mut().rsa_padding().unwrap(),
             PKCS1_PADDING
         );
-        verifier.update(INPUT).unwrap();
-        assert!(verifier.finish(SIGNATURE).unwrap());
+        verifier.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
+        assert!(verifier.finish(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
     }
 
     #[test]
@@ -725,9 +361,9 @@ mod test {
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
-        verifier.update(INPUT).unwrap();
+        verifier.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         verifier.update(b"foobar").unwrap();
-        assert!(!verifier.finish(SIGNATURE).unwrap());
+        assert!(!verifier.finish(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
     }
 
     #[test]
@@ -792,46 +428,45 @@ mod test {
     #[test]
     fn hmac_md5() {
         // test vectors from RFC 2202
-        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] =
-            [
-                (
-                    iter::repeat(0x0b_u8).take(16).collect(),
-                    b"Hi There".to_vec(),
-                    Vec::from_hex("9294727a3638bb1c13f48ef8158bfc9d").unwrap(),
-                ),
-                (
-                    b"Jefe".to_vec(),
-                    b"what do ya want for nothing?".to_vec(),
-                    Vec::from_hex("750c783e6ab0b503eaa86e310a5db738").unwrap(),
-                ),
-                (
-                    iter::repeat(0xaa_u8).take(16).collect(),
-                    iter::repeat(0xdd_u8).take(50).collect(),
-                    Vec::from_hex("56be34521d144c88dbb8c733f0e8b3f6").unwrap(),
-                ),
-                (
-                    Vec::from_hex("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
-                    iter::repeat(0xcd_u8).take(50).collect(),
-                    Vec::from_hex("697eaf0aca3a3aea3a75164746ffaa79").unwrap(),
-                ),
-                (
-                    iter::repeat(0x0c_u8).take(16).collect(),
-                    b"Test With Truncation".to_vec(),
-                    Vec::from_hex("56461ef2342edc00f9bab995690efd4c").unwrap(),
-                ),
-                (
-                    iter::repeat(0xaa_u8).take(80).collect(),
-                    b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
-                    Vec::from_hex("6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd").unwrap(),
-                ),
-                (
-                    iter::repeat(0xaa_u8).take(80).collect(),
-                    b"Test Using Larger Than Block-Size Key \
+        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [
+            (
+                iter::repeat(0x0b_u8).take(16).collect(),
+                b"Hi There".to_vec(),
+                Vec::from_hex("9294727a3638bb1c13f48ef8158bfc9d").unwrap(),
+            ),
+            (
+                b"Jefe".to_vec(),
+                b"what do ya want for nothing?".to_vec(),
+                Vec::from_hex("750c783e6ab0b503eaa86e310a5db738").unwrap(),
+            ),
+            (
+                iter::repeat(0xaa_u8).take(16).collect(),
+                iter::repeat(0xdd_u8).take(50).collect(),
+                Vec::from_hex("56be34521d144c88dbb8c733f0e8b3f6").unwrap(),
+            ),
+            (
+                Vec::from_hex("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
+                iter::repeat(0xcd_u8).take(50).collect(),
+                Vec::from_hex("697eaf0aca3a3aea3a75164746ffaa79").unwrap(),
+            ),
+            (
+                iter::repeat(0x0c_u8).take(16).collect(),
+                b"Test With Truncation".to_vec(),
+                Vec::from_hex("56461ef2342edc00f9bab995690efd4c").unwrap(),
+            ),
+            (
+                iter::repeat(0xaa_u8).take(80).collect(),
+                b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
+                Vec::from_hex("6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd").unwrap(),
+            ),
+            (
+                iter::repeat(0xaa_u8).take(80).collect(),
+                b"Test Using Larger Than Block-Size Key \
               and Larger Than One Block-Size Data"
-                        .to_vec(),
-                    Vec::from_hex("6f630fad67cda0ee1fb1f562db3aa53e").unwrap(),
-                ),
-            ];
+                    .to_vec(),
+                Vec::from_hex("6f630fad67cda0ee1fb1f562db3aa53e").unwrap(),
+            ),
+        ];
 
         test_hmac(MessageDigest::md5(), &tests);
     }
@@ -839,46 +474,45 @@ mod test {
     #[test]
     fn hmac_sha1() {
         // test vectors from RFC 2202
-        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] =
-            [
-                (
-                    iter::repeat(0x0b_u8).take(20).collect(),
-                    b"Hi There".to_vec(),
-                    Vec::from_hex("b617318655057264e28bc0b6fb378c8ef146be00").unwrap(),
-                ),
-                (
-                    b"Jefe".to_vec(),
-                    b"what do ya want for nothing?".to_vec(),
-                    Vec::from_hex("effcdf6ae5eb2fa2d27416d5f184df9c259a7c79").unwrap(),
-                ),
-                (
-                    iter::repeat(0xaa_u8).take(20).collect(),
-                    iter::repeat(0xdd_u8).take(50).collect(),
-                    Vec::from_hex("125d7342b9ac11cd91a39af48aa17b4f63f175d3").unwrap(),
-                ),
-                (
-                    Vec::from_hex("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
-                    iter::repeat(0xcd_u8).take(50).collect(),
-                    Vec::from_hex("4c9007f4026250c6bc8414f9bf50c86c2d7235da").unwrap(),
-                ),
-                (
-                    iter::repeat(0x0c_u8).take(20).collect(),
-                    b"Test With Truncation".to_vec(),
-                    Vec::from_hex("4c1a03424b55e07fe7f27be1d58bb9324a9a5a04").unwrap(),
-                ),
-                (
-                    iter::repeat(0xaa_u8).take(80).collect(),
-                    b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
-                    Vec::from_hex("aa4ae5e15272d00e95705637ce8a3b55ed402112").unwrap(),
-                ),
-                (
-                    iter::repeat(0xaa_u8).take(80).collect(),
-                    b"Test Using Larger Than Block-Size Key \
+        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [
+            (
+                iter::repeat(0x0b_u8).take(20).collect(),
+                b"Hi There".to_vec(),
+                Vec::from_hex("b617318655057264e28bc0b6fb378c8ef146be00").unwrap(),
+            ),
+            (
+                b"Jefe".to_vec(),
+                b"what do ya want for nothing?".to_vec(),
+                Vec::from_hex("effcdf6ae5eb2fa2d27416d5f184df9c259a7c79").unwrap(),
+            ),
+            (
+                iter::repeat(0xaa_u8).take(20).collect(),
+                iter::repeat(0xdd_u8).take(50).collect(),
+                Vec::from_hex("125d7342b9ac11cd91a39af48aa17b4f63f175d3").unwrap(),
+            ),
+            (
+                Vec::from_hex("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
+                iter::repeat(0xcd_u8).take(50).collect(),
+                Vec::from_hex("4c9007f4026250c6bc8414f9bf50c86c2d7235da").unwrap(),
+            ),
+            (
+                iter::repeat(0x0c_u8).take(20).collect(),
+                b"Test With Truncation".to_vec(),
+                Vec::from_hex("4c1a03424b55e07fe7f27be1d58bb9324a9a5a04").unwrap(),
+            ),
+            (
+                iter::repeat(0xaa_u8).take(80).collect(),
+                b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
+                Vec::from_hex("aa4ae5e15272d00e95705637ce8a3b55ed402112").unwrap(),
+            ),
+            (
+                iter::repeat(0xaa_u8).take(80).collect(),
+                b"Test Using Larger Than Block-Size Key \
               and Larger Than One Block-Size Data"
-                        .to_vec(),
-                    Vec::from_hex("e8e99d0f45237d786d6bbaa7965c7808bbff1a91").unwrap(),
-                ),
-            ];
+                    .to_vec(),
+                Vec::from_hex("e8e99d0f45237d786d6bbaa7965c7808bbff1a91").unwrap(),
+            ),
+        ];
 
         test_hmac(MessageDigest::sha1(), &tests);
     }
