@@ -139,7 +139,8 @@ impl<'a> Signer<'a> {
         }
     }
 
-    pub fn finish(&self) -> Result<Vec<u8>, ErrorStack> {
+    /// Computes an upper bound on the signature length.
+    pub fn finish_len(&self) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = 0;
             cvt(ffi::EVP_DigestSignFinal(
@@ -147,16 +148,38 @@ impl<'a> Signer<'a> {
                 ptr::null_mut(),
                 &mut len,
             ))?;
-            let mut buf = vec![0; len];
+            Ok(len)
+        }
+    }
+
+    /// Outputs the signature into the provided buffer, returning the
+    /// length of that buffer.
+    ///
+    /// This method will fail if the buffer is not large enough for
+    /// the signature, one can use `finish_len` to get an upper bound
+    /// on the required size.
+    pub fn finish_into<B:AsMut<[u8]>>(&self, mut buf: B) -> Result<usize, ErrorStack> {
+        unsafe {
+            let buf = buf.as_mut();
+            let mut len = buf.len();
             cvt(ffi::EVP_DigestSignFinal(
                 self.md_ctx,
                 buf.as_mut_ptr() as *mut _,
                 &mut len,
             ))?;
-            // The advertised length is not always equal to the real length for things like DSA
-            buf.truncate(len);
-            Ok(buf)
+            Ok(len)
         }
+    }
+
+    /// Combines `self.finish_len()` and `self.finish_into()`,
+    /// allocating a vector of the correct size for the signature.
+    pub fn finish(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mut buf = vec![0; self.finish_len()?];
+        let len = self.finish_into(&mut buf)?;
+        // The advertised length is not always equal to the real
+        // length for things like DSA
+        buf.truncate(len);
+        Ok(buf)
     }
 }
 
