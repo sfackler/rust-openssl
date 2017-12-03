@@ -158,9 +158,8 @@ impl<'a> Signer<'a> {
     /// This method will fail if the buffer is not large enough for
     /// the signature, one can use `finish_len` to get an upper bound
     /// on the required size.
-    pub fn finish_into<B:AsMut<[u8]>>(&self, mut buf: B) -> Result<usize, ErrorStack> {
+    pub fn finish_into(&self, buf: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
-            let buf = buf.as_mut();
             let mut len = buf.len();
             cvt(ffi::EVP_DigestSignFinal(
                 self.md_ctx,
