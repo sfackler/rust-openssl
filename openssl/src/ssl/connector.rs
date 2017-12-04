@@ -1,9 +1,10 @@
 use std::io::{Read, Write};
+use std::ops::{Deref, DerefMut};
 
 use dh::Dh;
 use error::ErrorStack;
-use ssl::{self, SslMethod, SslContextBuilder, SslContext, Ssl, SSL_VERIFY_PEER, SslStream,
-          HandshakeError};
+use ssl::{self, HandshakeError, Ssl, SslContext, SslContextBuilder, SslMethod, SslStream,
+          SSL_VERIFY_PEER};
 use pkey::PKeyRef;
 use version;
 use x509::X509Ref;
@@ -40,9 +41,8 @@ fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     opts |= ssl::SSL_OP_CIPHER_SERVER_PREFERENCE;
     ctx.set_options(opts);
 
-    let mut mode = ssl::SSL_MODE_AUTO_RETRY |
-        ssl::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
-        ssl::SSL_MODE_ENABLE_PARTIAL_WRITE;
+    let mut mode = ssl::SSL_MODE_AUTO_RETRY | ssl::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER
+        | ssl::SSL_MODE_ENABLE_PARTIAL_WRITE;
 
     // This is quite a useful optimization for saving memory, but historically
     // caused CVEs in OpenSSL pre-1.0.1h, according to
@@ -72,26 +72,42 @@ impl SslConnectorBuilder {
              TLS13-AES-128-GCM-SHA256:\
              ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:DH+CHACHA20:ECDH+AES256:DH+AES256:\
              ECDH+AES128:DH+AES:ECDH+HIGH:DH+HIGH:RSA+AESGCM:RSA+AES:RSA+HIGH:\
-             !aNULL:!eNULL:!MD5:!3DES"
+             !aNULL:!eNULL:!MD5:!3DES",
         )?;
         setup_verify(&mut ctx);
 
         Ok(SslConnectorBuilder(ctx))
     }
 
-    /// Returns a shared reference to the inner `SslContextBuilder`.
+    #[deprecated(since = "0.9.23",
+                 note = "SslConnectorBuilder now implements Deref<Target=SslContextBuilder>")]
     pub fn builder(&self) -> &SslContextBuilder {
-        &self.0
+        self
     }
 
-    /// Returns a mutable reference to the inner `SslContextBuilder`.
+    #[deprecated(since = "0.9.23",
+                 note = "SslConnectorBuilder now implements DerefMut<Target=SslContextBuilder>")]
     pub fn builder_mut(&mut self) -> &mut SslContextBuilder {
-        &mut self.0
+        self
     }
 
     /// Consumes the builder, returning a `SslConnector`.
     pub fn build(self) -> SslConnector {
         SslConnector(self.0.build())
+    }
+}
+
+impl Deref for SslConnectorBuilder {
+    type Target = SslContextBuilder;
+
+    fn deref(&self) -> &SslContextBuilder {
+        &self.0
+    }
+}
+
+impl DerefMut for SslConnectorBuilder {
+    fn deref_mut(&mut self) -> &mut SslContextBuilder {
+        &mut self.0
     }
 }
 
@@ -123,9 +139,14 @@ impl SslConnector {
     /// You should think very carefully before you use this method. If hostname verification is not
     /// used, *any* valid certificate for *any* site will be trusted for use from any other. This
     /// introduces a significant vulnerability to man-in-the-middle attacks.
-    pub fn danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication<S>(
-            &self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
-        where S: Read + Write
+    pub fn danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication<
+        S,
+    >(
+        &self,
+        stream: S,
+    ) -> Result<SslStream<S>, HandshakeError<S>>
+    where
+        S: Read + Write,
     {
         self.configure()?
             .danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication(stream)
@@ -173,9 +194,14 @@ impl ConnectConfiguration {
     /// You should think very carefully before you use this method. If hostname verification is not
     /// used, *any* valid certificate for *any* site will be trusted for use from any other. This
     /// introduces a significant vulnerability to man-in-the-middle attacks.
-    pub fn danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication<S>(
-            self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
-        where S: Read + Write
+    pub fn danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication<
+        S,
+    >(
+        self,
+        stream: S,
+    ) -> Result<SslStream<S>, HandshakeError<S>>
+    where
+        S: Read + Write,
     {
         self.0.connect(stream)
     }
@@ -279,19 +305,35 @@ impl SslAcceptorBuilder {
         Ok(self)
     }
 
-    /// Returns a shared reference to the inner `SslContextBuilder`.
+    #[deprecated(since = "0.9.23",
+                 note = "SslAcceptorBuilder now implements Deref<Target=SslContextBuilder>")]
     pub fn builder(&self) -> &SslContextBuilder {
-        &self.0
+        self
     }
 
-    /// Returns a mutable reference to the inner `SslContextBuilder`.
+    #[deprecated(since = "0.9.23",
+                 note = "SslAcceptorBuilder now implements DerefMut<Target=SslContextBuilder>")]
     pub fn builder_mut(&mut self) -> &mut SslContextBuilder {
-        &mut self.0
+        self
     }
 
     /// Consumes the builder, returning a `SslAcceptor`.
     pub fn build(self) -> SslAcceptor {
         SslAcceptor(self.0.build())
+    }
+}
+
+impl Deref for SslAcceptorBuilder {
+    type Target = SslContextBuilder;
+
+    fn deref(&self) -> &SslContextBuilder {
+        &self.0
+    }
+}
+
+impl DerefMut for SslAcceptorBuilder {
+    fn deref_mut(&mut self) -> &mut SslContextBuilder {
+        &mut self.0
     }
 }
 
@@ -374,7 +416,7 @@ mod verify {
     use std::str;
 
     use nid;
-    use x509::{X509StoreContextRef, X509Ref, X509NameRef, GeneralName};
+    use x509::{GeneralName, X509NameRef, X509Ref, X509StoreContextRef};
     use stack::Stack;
 
     pub fn verify_callback(
