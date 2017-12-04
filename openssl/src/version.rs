@@ -1,3 +1,16 @@
+//! Print OpenSSL version information.
+//! 
+//! See [OpenSSL documentation](https://www.openssl.org/docs/manmaster/man1/openssl-version.html).
+//!
+//! # Examples
+//!
+//! To display OpenSSL version info.
+//!
+//! ```
+//! use openssl::version;
+//!
+//! println!("{}", version::version());
+//! ```
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
