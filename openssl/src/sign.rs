@@ -32,7 +32,7 @@
 //! let mut verifier = Verifier::new(MessageDigest::sha256(), &keypair).unwrap();
 //! verifier.update(data).unwrap();
 //! verifier.update(data2).unwrap();
-//! assert!(verifier.finish(&signature).unwrap());
+//! assert!(verifier.verify(&signature).unwrap());
 //! ```
 //!
 //! Compute an HMAC:
@@ -77,6 +77,7 @@ use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
 #[cfg(any(ossl101, ossl102))]
 use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
 
+/// A type which computes cryptographic signatures of data.
 pub struct Signer<'a> {
     md_ctx: *mut ffi::EVP_MD_CTX,
     pkey_ctx: *mut ffi::EVP_PKEY_CTX,
@@ -93,6 +94,11 @@ impl<'a> Drop for Signer<'a> {
 }
 
 impl<'a> Signer<'a> {
+    /// Creates a new `Signer`.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestSignInit`].
+    ///
+    /// [`EVP_DigestSignInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignInit.html
     pub fn new(type_: MessageDigest, pkey: &'a PKeyRef) -> Result<Signer<'a>, ErrorStack> {
         unsafe {
             ffi::init();
@@ -121,14 +127,21 @@ impl<'a> Signer<'a> {
         }
     }
 
+    /// Returns a shared reference to the `PKeyCtx` associated with the `Signer`.
     pub fn pkey_ctx(&self) -> &PKeyCtxRef {
         unsafe { PKeyCtxRef::from_ptr(self.pkey_ctx) }
     }
 
+    /// Returns a mutable reference to the `PKeyCtx` associated with the `Signer`.
     pub fn pkey_ctx_mut(&mut self) -> &mut PKeyCtxRef {
         unsafe { PKeyCtxRef::from_ptr_mut(self.pkey_ctx) }
     }
 
+    /// Feeds more data into the `Signer`.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestUpdate`].
+    ///
+    /// [`EVP_DigestUpdate`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestInit.html
     pub fn update(&mut self, buf: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_DigestUpdate(
@@ -142,7 +155,11 @@ impl<'a> Signer<'a> {
     /// Computes an upper bound on the signature length.
     ///
     /// The actual signature may be shorter than this value. Check the return value of
-    /// `finish_into` to get the exact length.
+    /// `sign` to get the exact length.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestSignFinal`].
+    ///
+    /// [`EVP_DigestSignFinal`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestSignFinal.html
     pub fn len(&self) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = 0;
@@ -159,6 +176,10 @@ impl<'a> Signer<'a> {
     ///
     /// This method will fail if the buffer is not large enough for the signature. Use the `len`
     /// method to get an upper bound on the required size.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestSignFinal`].
+    ///
+    /// [`EVP_DigestSignFinal`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestSignFinal.html
     pub fn sign(&self, buf: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = buf.len();
@@ -177,8 +198,7 @@ impl<'a> Signer<'a> {
     pub fn sign_to_vec(&self) -> Result<Vec<u8>, ErrorStack> {
         let mut buf = vec![0; self.len()?];
         let len = self.sign(&mut buf)?;
-        // The advertised length is not always equal to the real
-        // length for things like DSA
+        // The advertised length is not always equal to the real length for things like DSA
         buf.truncate(len);
         Ok(buf)
     }
@@ -215,7 +235,13 @@ impl<'a> Drop for Verifier<'a> {
     }
 }
 
+/// A type which verifies cryptographic signatures of data.
 impl<'a> Verifier<'a> {
+    /// Creates a new `Verifier`.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestVerifyInit`].
+    ///
+    /// [`EVP_DigestVerifyInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestVerifyInit.html
     pub fn new(type_: MessageDigest, pkey: &'a PKeyRef) -> Result<Verifier<'a>, ErrorStack> {
         unsafe {
             ffi::init();
@@ -244,14 +270,21 @@ impl<'a> Verifier<'a> {
         }
     }
 
+    /// Returns a shared reference to the `PKeyCtx` associated with the `Verifier`.
     pub fn pkey_ctx(&self) -> &PKeyCtxRef {
         unsafe { PKeyCtxRef::from_ptr(self.pkey_ctx) }
     }
 
+    /// Returns a mutable reference to the `PKeyCtx` associated with the `Verifier`.
     pub fn pkey_ctx_mut(&mut self) -> &mut PKeyCtxRef {
         unsafe { PKeyCtxRef::from_ptr_mut(self.pkey_ctx) }
     }
 
+    /// Feeds more data into the `Verifier`.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestUpdate`].
+    ///
+    /// [`EVP_DigestUpdate`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestInit.html
     pub fn update(&mut self, buf: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_DigestUpdate(
@@ -262,7 +295,12 @@ impl<'a> Verifier<'a> {
         }
     }
 
-    pub fn finish(&self, signature: &[u8]) -> Result<bool, ErrorStack> {
+    /// Determines if the data fed into the `Verifier` matches the provided signature.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestVerifyFinal`].
+    ///
+    /// [`EVP_DigestVerifyFinal`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestVerifyFinal.html
+    pub fn verify(&self, signature: &[u8]) -> Result<bool, ErrorStack> {
         unsafe {
             let r =
                 EVP_DigestVerifyFinal(self.md_ctx, signature.as_ptr() as *const _, signature.len());
@@ -275,6 +313,11 @@ impl<'a> Verifier<'a> {
                 _ => Err(ErrorStack::get()),
             }
         }
+    }
+
+    #[deprecated(since = "0.9.23", note = "renamed to `verify`")]
+    pub fn finish(&self, signature: &[u8]) -> Result<bool, ErrorStack> {
+        self.verify(signature)
     }
 }
 
@@ -358,7 +401,7 @@ mod test {
             PKCS1_PADDING
         );
         verifier.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
-        assert!(verifier.finish(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
+        assert!(verifier.verify(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
     }
 
     #[test]
@@ -370,7 +413,7 @@ mod test {
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
         verifier.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         verifier.update(b"foobar").unwrap();
-        assert!(!verifier.finish(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
+        assert!(!verifier.verify(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
     }
 
     #[test]
@@ -393,7 +436,7 @@ mod test {
 
         let mut verifier = Verifier::new(MessageDigest::sha1(), &public_key).unwrap();
         verifier.update(&input).unwrap();
-        assert!(verifier.finish(&sig).unwrap());
+        assert!(verifier.verify(&sig).unwrap());
     }
 
     #[test]
@@ -417,7 +460,7 @@ mod test {
 
         let mut verifier = Verifier::new(MessageDigest::sha1(), &public_key).unwrap();
         verifier.update(&input).unwrap();
-        match verifier.finish(&sig) {
+        match verifier.verify(&sig) {
             Ok(true) => panic!("unexpected success"),
             Ok(false) | Err(_) => {}
         }
@@ -536,6 +579,6 @@ mod test {
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &key).unwrap();
         verifier.update(b"hello world").unwrap();
-        assert!(verifier.finish(&signature).unwrap());
+        assert!(verifier.verify(&signature).unwrap());
     }
 }
