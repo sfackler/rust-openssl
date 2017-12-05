@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 
 use dh::Dh;
 use error::ErrorStack;
-use ssl::{self, HandshakeError, Ssl, SslContext, SslContextBuilder, SslMethod, SslStream,
+use ssl::{self, HandshakeError, Ssl, SslRef, SslContext, SslContextBuilder, SslMethod, SslStream,
           SSL_VERIFY_PEER};
 use pkey::PKeyRef;
 use version;
@@ -91,7 +91,7 @@ impl SslConnectorBuilder {
         self
     }
 
-    /// Consumes the builder, returning a `SslConnector`.
+    /// Consumes the builder, returning an `SslConnector`.
     pub fn build(self) -> SslConnector {
         SslConnector(self.0.build())
     }
@@ -162,12 +162,14 @@ impl SslConnector {
 pub struct ConnectConfiguration(Ssl);
 
 impl ConnectConfiguration {
-    /// Returns a shared reference to the inner `Ssl`.
+    #[deprecated(since = "0.9.23",
+                 note = "ConnectConfiguration now implements Deref<Target=SslRef>")]
     pub fn ssl(&self) -> &Ssl {
         &self.0
     }
 
-    /// Returns a mutable reference to the inner `Ssl`.
+    #[deprecated(since = "0.9.23",
+                 note = "ConnectConfiguration now implements DerefMut<Target=SslRef>")]
     pub fn ssl_mut(&mut self) -> &mut Ssl {
         &mut self.0
     }
@@ -204,6 +206,20 @@ impl ConnectConfiguration {
         S: Read + Write,
     {
         self.0.connect(stream)
+    }
+}
+
+impl Deref for ConnectConfiguration {
+    type Target = SslRef;
+
+    fn deref(&self) -> &SslRef {
+        &self.0
+    }
+}
+
+impl DerefMut for ConnectConfiguration {
+    fn deref_mut(&mut self) -> &mut SslRef {
+        &mut self.0
     }
 }
 

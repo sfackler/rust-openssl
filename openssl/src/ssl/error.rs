@@ -8,6 +8,7 @@ use error::ErrorStack;
 use ssl::MidHandshakeSslStream;
 
 /// An SSL error.
+// FIXME this is missing variants
 #[derive(Debug)]
 pub enum Error {
     /// The SSL session has been closed by the other end
@@ -100,7 +101,9 @@ pub enum HandshakeError<S> {
     SetupFailure(ErrorStack),
     /// The handshake failed.
     Failure(MidHandshakeSslStream<S>),
-    /// The handshake was interrupted midway through. This error will never be returned for blocking streams.
+    /// The handshake was interrupted midway through.
+    ///
+    /// This error will never be returned for blocking streams.
     // FIXME change to WouldBlock
     Interrupted(MidHandshakeSslStream<S>),
 }

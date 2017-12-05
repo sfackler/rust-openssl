@@ -1508,20 +1508,22 @@ impl SslRef {
         unsafe { ffi::SSL_get_error(self.as_ptr(), ret) }
     }
 
-    /// Sets the verification mode to be used during the handshake process.
+    /// Like [`SslContextBuilder::set_verify`].
     ///
-    /// Use `set_verify_callback` to additionally add a callback.
+    /// This corresponds to [`SSL_set_verify`].
+    ///
+    /// [`SslContextBuilder::set_verify`]: struct.SslContextBuilder.html#method.set_verify
+    /// [`SSL_set_verify`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_verify.html
     pub fn set_verify(&mut self, mode: SslVerifyMode) {
         unsafe { ffi::SSL_set_verify(self.as_ptr(), mode.bits as c_int, None) }
     }
 
-    /// Sets the certificate verification callback to be used during the
-    /// handshake process.
+    /// Like [`SslContextBuilder::set_verify_callback`].
     ///
-    /// The callback is provided with a boolean indicating if the
-    /// preveification process was successful, and an object providing access
-    /// to the certificate chain. It should return `true` if the certificate
-    /// chain is valid and `false` otherwise.
+    /// This corresponds to [`SSL_set_verify`].
+    ///
+    /// [`SslContextBuilder::set_verify_callback`]: struct.SslContextBuilder.html#method.set_verify_callback
+    /// [`SSL_set_verify`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_verify.html
     pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
     where
         // FIXME should take a mutable reference to the x509 store
@@ -1538,10 +1540,22 @@ impl SslRef {
         }
     }
 
+    /// Like [`SslContextBuilder::set_tmp_dh`].
+    ///
+    /// This corresponds to [`SSL_set_tmp_dh`].
+    ///
+    /// [`SslContextBuilder::set_tmp_dh`]: struct.SslContextBuilder.html#method.set_tmp_dh
+    /// [`SSL_set_tmp_dh`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_tmp_dh.html
     pub fn set_tmp_dh(&mut self, dh: &DhRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_set_tmp_dh(self.as_ptr(), dh.as_ptr()) as c_int).map(|_| ()) }
     }
 
+    /// Like [`SslContextBuilder::set_tmp_dh_callback`].
+    ///
+    /// This corresponds to [`SSL_set_tmp_dh_callback`].
+    ///
+    /// [`SslContextBuilder::set_tmp_dh_callback`]: struct.SslContextBuilder.html#method.set_tmp_dh_callback
+    /// [`SSL_set_tmp_dh_callback`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_tmp_dh.html
     pub fn set_tmp_dh_callback<F>(&mut self, callback: F)
     where
         F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + Any + 'static + Sync + Send,
@@ -1558,11 +1572,22 @@ impl SslRef {
         }
     }
 
+    /// Like [`SslContextBuilder::set_tmp_ecdh`].
+    ///
+    /// This corresponds to `SSL_set_tmp_ecdh`.
+    ///
+    /// [`SslContextBuilder::set_tmp_ecdh`]: struct.SslContextBuilder.html#method.set_tmp_ecdh
     pub fn set_tmp_ecdh(&mut self, key: &EcKeyRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_set_tmp_ecdh(self.as_ptr(), key.as_ptr()) as c_int).map(|_| ()) }
     }
 
+    /// Like [`SslContextBuilder::set_tmp_ecdh_callback`].
+    ///
     /// Requires the `v101` feature and OpenSSL 1.0.1, or the `v102` feature and OpenSSL 1.0.2.
+    ///
+    /// This corresponds to `SSL_set_tmp_ecdh_callback`.
+    ///
+    /// [`SslContextBuilder::set_tmp_ecdh_callback`]: struct.SslContextBuilder.html#method.set_tmp_ecdh_callback
     #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
     pub fn set_tmp_ecdh_callback<F>(&mut self, callback: F)
     where
@@ -1580,16 +1605,24 @@ impl SslRef {
         }
     }
 
-    /// If `onoff` is set to `true`, enable ECDHE for key exchange with
-    /// compatible clients, and automatically select an appropriate elliptic
-    /// curve.
+    /// Like [`SslContextBuilder::set_ecdh_auto`].
     ///
     /// Requires the `v102` feature and OpenSSL 1.0.2.
+    ///
+    /// This corresponds to [`SSL_set_ecdh_auto`].
+    ///
+    /// [`SslContextBuilder::set_tmp_ecdh`]: struct.SslContextBuilder.html#method.set_tmp_ecdh
+    /// [`SSL_set_ecdh_auto`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_ecdh_auto.html
     #[cfg(all(feature = "v102", ossl102))]
     pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_set_ecdh_auto(self.as_ptr(), onoff as c_int)).map(|_| ()) }
     }
 
+    /// Returns the current cipher if the session is active.
+    ///
+    /// This corresponds to [`SSL_get_current_cipher`].
+    ///
+    /// [`SSL_get_current_cipher`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get_current_cipher.html
     pub fn current_cipher(&self) -> Option<&SslCipherRef> {
         unsafe {
             let ptr = ffi::SSL_get_current_cipher(self.as_ptr());
@@ -1602,6 +1635,11 @@ impl SslRef {
         }
     }
 
+    /// Returns a short string describing the state of the session.
+    ///
+    /// This corresponds to [`SSL_state_string`].
+    ///
+    /// [`SSL_state_string`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_state_string.html
     pub fn state_string(&self) -> &'static str {
         let state = unsafe {
             let ptr = ffi::SSL_state_string(self.as_ptr());
@@ -1611,6 +1649,11 @@ impl SslRef {
         str::from_utf8(state.to_bytes()).unwrap()
     }
 
+    /// Returns a longer string describing the state of the session.
+    ///
+    /// This corresponds to [`SSL_state_string_long`].
+    ///
+    /// [`SSL_state_string_long`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_state_string_long.html
     pub fn state_string_long(&self) -> &'static str {
         let state = unsafe {
             let ptr = ffi::SSL_state_string_long(self.as_ptr());
@@ -1620,7 +1663,13 @@ impl SslRef {
         str::from_utf8(state.to_bytes()).unwrap()
     }
 
-    /// Sets the host name to be used with SNI (Server Name Indication).
+    /// Sets the host name to be sent to the server for Server Name Indication (SNI).
+    ///
+    /// It has no effect for a server-side connection.
+    ///
+    /// This corresponds to [`SSL_set_tlsext_host_name`].
+    ///
+    /// [`SSL_set_tlsext_host_name`]: https://www.openssl.org/docs/manmaster/man3/SSL_get_servername_type.html
     pub fn set_hostname(&mut self, hostname: &str) -> Result<(), ErrorStack> {
         let cstr = CString::new(hostname).unwrap();
         unsafe {
@@ -1629,7 +1678,11 @@ impl SslRef {
         }
     }
 
-    /// Returns the certificate of the peer, if present.
+    /// Returns the peer's certificate, if present.
+    ///
+    /// This corresponds to [`SSL_get_peer_certificate`].
+    ///
+    /// [`SSL_get_peer_certificate`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get_peer_certificate.html
     pub fn peer_certificate(&self) -> Option<X509> {
         unsafe {
             let ptr = ffi::SSL_get_peer_certificate(self.as_ptr());
@@ -1645,6 +1698,10 @@ impl SslRef {
     ///
     /// On the client side, the chain includes the leaf certificate, but on the server side it does
     /// not. Fun!
+    ///
+    /// This corresponds to [`SSL_get_peer_cert_chain`].
+    ///
+    /// [`SSL_get_peer_cert_chain`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get_peer_cert_chain.html
     pub fn peer_cert_chain(&self) -> Option<&StackRef<X509>> {
         unsafe {
             let ptr = ffi::SSL_get_peer_cert_chain(self.as_ptr());
@@ -1656,7 +1713,11 @@ impl SslRef {
         }
     }
 
-    /// Returns the certificate associated with this `Ssl`, if present.
+    /// Like [`SslContext::certificate`].
+    ///
+    /// This corresponds to `SSL_get_certificate`.
+    ///
+    /// [`SslContext::certificate`]: struct.SslContext.html#method.certificate
     pub fn certificate(&self) -> Option<&X509Ref> {
         unsafe {
             let ptr = ffi::SSL_get_certificate(self.as_ptr());
@@ -1668,7 +1729,11 @@ impl SslRef {
         }
     }
 
-    /// Returns the private key associated with this `Ssl`, if present.
+    /// Like [`SslContext::private_key`].
+    ///
+    /// This corresponds to `SSL_get_privatekey`.
+    ///
+    /// [`SslContext::private_key`]: struct.SslContext.html#method.private_key
     pub fn private_key(&self) -> Option<&PKeyRef> {
         unsafe {
             let ptr = ffi::SSL_get_privatekey(self.as_ptr());
@@ -1680,7 +1745,11 @@ impl SslRef {
         }
     }
 
-    /// Returns the name of the protocol used for the connection, e.g. "TLSv1.2", "SSLv3", etc.
+    /// Returns a string describing the protocol version of the session.
+    ///
+    /// This corresponds to [`SSL_get_version`].
+    ///
+    /// [`SSL_get_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get_version.html
     pub fn version(&self) -> &'static str {
         let version = unsafe {
             let ptr = ffi::SSL_get_version(self.as_ptr());
@@ -1694,6 +1763,10 @@ impl SslRef {
     ///
     /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
     /// to interpret it.
+    ///
+    /// This corresponds to [`SSL_get0_next_proto_negotiated`].
+    ///
+    /// [`SSL_get0_next_proto_negotiated`]: https://www.openssl.org/docs/manmaster/man3/SSL_get0_next_proto_negotiated.html
     #[cfg(not(any(libressl261, libressl262, libressl26x)))]
     pub fn selected_npn_protocol(&self) -> Option<&[u8]> {
         unsafe {
@@ -1717,6 +1790,10 @@ impl SslRef {
     /// to interpret it.
     ///
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+    ///
+    /// This corresponds to [`SSL_get0_alpn_selected`].
+    ///
+    /// [`SSL_get0_alpn_selected`]: https://www.openssl.org/docs/manmaster/man3/SSL_get0_next_proto_negotiated.html
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn selected_alpn_protocol(&self) -> Option<&[u8]> {
         unsafe {
@@ -1734,16 +1811,21 @@ impl SslRef {
         }
     }
 
-    /// Returns the number of bytes remaining in the currently processed TLS
-    /// record.
+    /// Returns the number of bytes remaining in the currently processed TLS record.
+    ///
+    /// If this is greater than 0, the next call to `read` will not call down to the underlying
+    /// stream.
+    ///
+    /// This corresponds to [`SSL_pending]`.
+    ///
+    /// [`SSL_pending`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_pending.html
     pub fn pending(&self) -> usize {
         unsafe { ffi::SSL_pending(self.as_ptr()) as usize }
     }
 
-    /// Returns the compression currently in use.
+    /// Returns the compression method currently in use.
     ///
-    /// The result will be either None, indicating no compression is in use, or
-    /// a string with the compression name.
+    /// This corresponds to `SSL_get_current_compression`.
     pub fn compression(&self) -> Option<&str> {
         self._compression()
     }
@@ -1765,7 +1847,14 @@ impl SslRef {
         None
     }
 
-    /// Returns the server's name for the current connection
+    /// Returns the servername sent by the client via Server Name Indication (SNI).
+    ///
+    /// It is only useful on the server side.
+    ///
+    /// This corresponds to [`SSL_get_servername`].
+    ///
+    /// [`SSL_get_servername`]: https://www.openssl.org/docs/manmaster/man3/SSL_get_servername.html
+    // FIXME add name parameter
     pub fn servername(&self) -> Option<&str> {
         unsafe {
             let name = ffi::SSL_get_servername(self.as_ptr(), ffi::TLSEXT_NAMETYPE_host_name);
@@ -1778,11 +1867,19 @@ impl SslRef {
     }
 
     /// Changes the context corresponding to the current connection.
+    ///
+    /// It is most commonly used in the Server Name Indication (SNI) callback.
+    ///
+    /// This corresponds to `SSL_set_SSL_CTX`.
     pub fn set_ssl_context(&mut self, ctx: &SslContextRef) -> Result<(), ErrorStack> {
         unsafe { cvt_p(ffi::SSL_set_SSL_CTX(self.as_ptr(), ctx.as_ptr())).map(|_| ()) }
     }
 
-    /// Returns the context corresponding to the current connection
+    /// Returns the context corresponding to the current connection.
+    ///
+    /// This corresponds to [`SSL_get_SSL_CTX`].
+    ///
+    /// [`SSL_get_SSL_CTX`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_get_SSL_CTX.html
     pub fn ssl_context(&self) -> &SslContextRef {
         unsafe {
             let ssl_ctx = ffi::SSL_get_SSL_CTX(self.as_ptr());
@@ -1790,9 +1887,13 @@ impl SslRef {
         }
     }
 
-    /// Returns the X509 verification configuration.
+    /// Returns a mutable reference to the X509 verification configuration.
     ///
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or 1.1.0.
+    ///
+    /// This corresponds to [`SSL_get0_param`].
+    ///
+    /// [`SSL_get0_param`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_get0_param.html
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
     pub fn param_mut(&mut self) -> &mut X509VerifyParamRef {
         self._param_mut()
@@ -1803,12 +1904,20 @@ impl SslRef {
         unsafe { X509VerifyParamRef::from_ptr_mut(ffi::SSL_get0_param(self.as_ptr())) }
     }
 
-    /// Returns the result of X509 certificate verification.
+    /// Returns the certificate verification result.
+    ///
+    /// This corresponds to [`SSL_get_verify_result`].
+    ///
+    /// [`SSL_get_verify_result`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_get_verify_result.html
     pub fn verify_result(&self) -> Option<X509VerifyError> {
         unsafe { X509VerifyError::from_raw(ffi::SSL_get_verify_result(self.as_ptr())) }
     }
 
-    /// Returns the SSL session.
+    /// Returns a shared reference to the SSL session.
+    ///
+    /// This corresponds to [`SSL_get_session`].
+    ///
+    /// [`SSL_get_session`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get_session.html
     pub fn session(&self) -> Option<&SslSessionRef> {
         unsafe {
             let p = ffi::SSL_get_session(self.as_ptr());
@@ -1822,20 +1931,36 @@ impl SslRef {
 
     /// Sets the session to be used.
     ///
+    /// This should be called before the handshake to attempt to reuse a previously established
+    /// session. If the server is not willing to reuse the session, a new one will be transparently
+    /// negotiated.
+    ///
+    /// This corresponds to [`SSL_set_session`].
+    ///
     /// # Safety
     ///
     /// The caller of this method is responsible for ensuring that the session is associated
     /// with the same `SslContext` as this `Ssl`.
+    ///
+    /// [`SSL_set_session`]: https://www.openssl.org/docs/manmaster/man3/SSL_set_session.html
     pub unsafe fn set_session(&mut self, session: &SslSessionRef) -> Result<(), ErrorStack> {
         cvt(ffi::SSL_set_session(self.as_ptr(), session.as_ptr())).map(|_| ())
     }
 
     /// Determines if the session provided to `set_session` was successfully reused.
+    ///
+    /// This corresponds to [`SSL_session_reused`].
+    ///
+    /// [`SSL_session_reused`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_session_reused.html
     pub fn session_reused(&self) -> bool {
         unsafe { ffi::SSL_session_reused(self.as_ptr()) != 0 }
     }
 
     /// Sets the status response a client wishes the server to reply with.
+    ///
+    /// This corresponds to [`SSL_set_tlsext_status_type`].
+    ///
+    /// [`SSL_set_tlsext_status_type`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_tlsext_status_type.html
     pub fn set_status_type(&mut self, type_: StatusType) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_set_tlsext_status_type(self.as_ptr(), type_.as_raw()) as c_int).map(|_| ())
@@ -1843,6 +1968,10 @@ impl SslRef {
     }
 
     /// Returns the server's OCSP response, if present.
+    ///
+    /// This corresponds to [`SSL_get_tlsext_status_oscp_resp`].
+    ///
+    /// [`SSL_get_tlsext_status_ocsp_resp`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_tlsext_status_type.html
     pub fn ocsp_status(&self) -> Option<&[u8]> {
         unsafe {
             let mut p = ptr::null_mut();
@@ -1857,6 +1986,10 @@ impl SslRef {
     }
 
     /// Sets the OCSP response to be returned to the client.
+    ///
+    /// This corresponds to [`SSL_set_tlsext_status_oscp_resp`].
+    ///
+    /// [`SSL_set_tlsext_status_ocsp_resp`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_tlsext_status_type.html
     pub fn set_ocsp_status(&mut self, response: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             assert!(response.len() <= c_int::max_value() as usize);
@@ -1876,11 +2009,22 @@ impl SslRef {
     }
 
     /// Determines if this `Ssl` is configured for server-side or client-side use.
+    ///
+    /// This corresponds to [`SSL_is_server`].
+    ///
+    /// [`SSL_is_server`]: https://www.openssl.org/docs/manmaster/man3/SSL_is_server.html
     pub fn is_server(&self) -> bool {
         unsafe { compat::SSL_is_server(self.as_ptr()) != 0 }
     }
 
     /// Sets the extra data at the specified index.
+    ///
+    /// This can be used to provide data to callbacks registered with the context. Use the
+    /// `Ssl::new_ex_index` method to create an `Index`.
+    ///
+    /// This corresponds to [`SSL_set_ex_data`].
+    ///
+    /// [`SSL_set_ex_data`]: https://www.openssl.org/docs/manmaster/man3/SSL_set_ex_data.html
     pub fn set_ex_data<T>(&mut self, index: Index<Ssl, T>, data: T) {
         unsafe {
             let data = Box::new(data);
@@ -1893,6 +2037,10 @@ impl SslRef {
     }
 
     /// Returns a reference to the extra data at the specified index.
+    ///
+    /// This corresponds to [`SSL_get_ex_data`].
+    ///
+    /// [`SSL_get_ex_data`]: https://www.openssl.org/docs/manmaster/man3/SSL_set_ex_data.html
     pub fn ex_data<T>(&self, index: Index<Ssl, T>) -> Option<&T> {
         unsafe {
             let data = ffi::SSL_get_ex_data(self.as_ptr(), index.as_raw());
@@ -1915,6 +2063,11 @@ impl fmt::Debug for Ssl {
 }
 
 impl Ssl {
+    /// Creates a new `Ssl`.
+    ///
+    /// This corresponds to [`SSL_new`].
+    ///
+    /// [`SSL_new`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_new.html
     pub fn new(ctx: &SslContext) -> Result<Ssl, ErrorStack> {
         unsafe {
             let ssl = cvt_p(ffi::SSL_new(ctx.as_ptr()))?;
@@ -1922,12 +2075,16 @@ impl Ssl {
         }
     }
 
-    /// Creates an SSL/TLS client operating over the provided stream.
+    /// Initiates a client-side TLS handshake.
+    ///
+    /// This corresponds to [`SSL_connect`].
     ///
     /// # Warning
     ///
     /// OpenSSL's default configuration is insecure. It is highly recommended to use
     /// `SslConnector` rather than `Ssl` directly, as it manages that configuration.
+    ///
+    /// [`SSL_connect`]: https://www.openssl.org/docs/manmaster/man3/SSL_connect.html
     pub fn connect<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
     where
         S: Read + Write,
@@ -1952,12 +2109,16 @@ impl Ssl {
         }
     }
 
-    /// Creates an SSL/TLS server operating over the provided stream.
+    /// Initiates a server-side TLS handshake.
+    ///
+    /// This corresponds to [`SSL_accept`].
     ///
     /// # Warning
     ///
     /// OpenSSL's default configuration is insecure. It is highly recommended to use
     /// `SslAcceptor` rather than `Ssl` directly, as it manages that configuration.
+    ///
+    /// [`SSL_accept`]: https://www.openssl.org/docs/manmaster/man3/SSL_accept.html
     pub fn accept<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
     where
         S: Read + Write,
@@ -2017,6 +2178,10 @@ impl<S> MidHandshakeSslStream<S> {
     }
 
     /// Restarts the handshake process.
+    ///
+    /// This corresponds to [`SSL_do_handshake`].
+    ///
+    /// [`SSL_do_handshake`]: https://www.openssl.org/docs/manmaster/man3/SSL_do_handshake.html
     pub fn handshake(mut self) -> Result<SslStream<S>, HandshakeError<S>> {
         let ret = unsafe { ffi::SSL_do_handshake(self.stream.ssl.as_ptr()) };
         if ret > 0 {
@@ -2036,7 +2201,7 @@ impl<S> MidHandshakeSslStream<S> {
     }
 }
 
-/// A stream wrapper which handles SSL encryption for an underlying stream.
+/// A TLS session over a stream.
 pub struct SslStream<S> {
     // FIXME use ManuallyDrop
     ssl: Ssl,
@@ -2072,8 +2237,12 @@ impl<S: Read + Write> SslStream<S> {
 
     /// Like `read`, but returns an `ssl::Error` rather than an `io::Error`.
     ///
-    /// This is particularly useful with a nonblocking socket, where the error
-    /// value will identify if OpenSSL is waiting on read or write readiness.
+    /// It is particularly useful with a nonblocking socket, where the error value will identify if
+    /// OpenSSL is waiting on read or write readiness.
+    ///
+    /// This corresponds to [`SSL_read`].
+    ///
+    /// [`SSL_read`]: https://www.openssl.org/docs/manmaster/man3/SSL_read.html
     pub fn ssl_read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
         // The intepretation of the return code here is a little odd with a
         // zero-length write. OpenSSL will likely correctly report back to us
@@ -2099,8 +2268,12 @@ impl<S: Read + Write> SslStream<S> {
 
     /// Like `write`, but returns an `ssl::Error` rather than an `io::Error`.
     ///
-    /// This is particularly useful with a nonblocking socket, where the error
-    /// value will identify if OpenSSL is waiting on read or write readiness.
+    /// It is particularly useful with a nonblocking socket, where the error value will identify if
+    /// OpenSSL is waiting on read or write readiness.
+    ///
+    /// This corresponds to [`SSL_write`].
+    ///
+    /// [`SSL_write`]: https://www.openssl.org/docs/manmaster/man3/SSL_write.html
     pub fn ssl_write(&mut self, buf: &[u8]) -> Result<usize, Error> {
         // See above for why we short-circuit on zero-length buffers
         if buf.len() == 0 {
@@ -2117,16 +2290,15 @@ impl<S: Read + Write> SslStream<S> {
 
     /// Shuts down the session.
     ///
-    /// The shutdown process consists of two steps. The first step sends a
-    /// close notify message to the peer, after which `ShutdownResult::Sent`
-    /// is returned. The second step awaits the receipt of a close notify
-    /// message from the peer, after which `ShutdownResult::Received` is
-    /// returned.
+    /// The shutdown process consists of two steps. The first step sends a close notify message to
+    /// the peer, after which `ShutdownResult::Sent` is returned. The second step awaits the receipt
+    /// of a close notify message from the peer, after which `ShutdownResult::Received` is returned.
     ///
-    /// While the connection may be closed after the first step, it is
-    /// recommended to fully shut the session down. In particular, it must
-    /// be fully shut down if the connection is to be used for further
-    /// communication in the future.
+    /// While the connection may be closed after the first step, it is recommended to fully shut the
+    /// session down. In particular, it must be fully shut down if the connection is to be used for
+    /// further communication in the future.
+    ///
+    /// This corresponds to [`SSL_shutdown`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_shutdown.html
     pub fn shutdown(&mut self) -> Result<ShutdownResult, Error> {
         match unsafe { ffi::SSL_shutdown(self.ssl.as_ptr()) } {
             0 => Ok(ShutdownResult::Sent),
@@ -2191,7 +2363,7 @@ impl<S> SslStream<S> {
         unsafe { bio::take_error::<S>(self.ssl.get_raw_rbio()) }
     }
 
-    /// Returns a reference to the underlying stream.
+    /// Returns a shared reference to the underlying stream.
     pub fn get_ref(&self) -> &S {
         unsafe {
             let bio = self.ssl.get_raw_rbio();
@@ -2201,7 +2373,7 @@ impl<S> SslStream<S> {
 
     /// Returns a mutable reference to the underlying stream.
     ///
-    /// ## Warning
+    /// # Warning
     ///
     /// It is inadvisable to read from or write to the underlying stream as it
     /// will most likely corrupt the SSL session.
@@ -2212,7 +2384,7 @@ impl<S> SslStream<S> {
         }
     }
 
-    /// Returns the OpenSSL `Ssl` object associated with this stream.
+    /// Returns a shared reference to the `Ssl` object associated with this stream.
     pub fn ssl(&self) -> &SslRef {
         &self.ssl
     }
