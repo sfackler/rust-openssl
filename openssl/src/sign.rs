@@ -575,7 +575,7 @@ mod test {
 
         let mut signer = Signer::new(MessageDigest::sha256(), &key).unwrap();
         signer.update(b"hello world").unwrap();
-        let signature = signer.finish().unwrap();
+        let signature = signer.sign_to_vec().unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &key).unwrap();
         verifier.update(b"hello world").unwrap();

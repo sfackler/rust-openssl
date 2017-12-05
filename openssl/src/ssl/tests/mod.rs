@@ -1076,7 +1076,7 @@ fn connector_no_hostname_can_disable_verify() {
     let (_s, tcp) = Server::new();
 
     let mut connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
-    connector.builder_mut().set_verify(SSL_VERIFY_NONE);
+    connector.set_verify(SSL_VERIFY_NONE);
     let connector = connector.build();
 
     connector.danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication(tcp).unwrap();
@@ -1102,7 +1102,6 @@ fn connector_client_server_mozilla_intermediate() {
 
     let mut connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
     connector
-        .builder_mut()
         .set_ca_file("test/root-ca.pem")
         .unwrap();
     let connector = connector.build();
@@ -1137,7 +1136,6 @@ fn connector_client_server_mozilla_modern() {
 
     let mut connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
     connector
-        .builder_mut()
         .set_ca_file("test/root-ca.pem")
         .unwrap();
     let connector = connector.build();
@@ -1202,7 +1200,7 @@ fn cert_store() {
     let cert = X509::from_pem(ROOT_CERT).unwrap();
 
     let mut ctx = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
-    ctx.builder_mut().cert_store_mut().add_cert(cert).unwrap();
+    ctx.cert_store_mut().add_cert(cert).unwrap();
     let ctx = ctx.build();
 
     ctx.connect("foobar.com", tcp).unwrap();
