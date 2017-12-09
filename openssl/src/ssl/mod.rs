@@ -1378,7 +1378,7 @@ foreign_type! {
     /// These can be cached to share sessions across connections.
     pub struct SslSession;
 
-    /// Reference to [`SslSession]`.
+    /// Reference to [`SslSession`].
     ///
     /// [`SslSession`]: struct.SslSession.html
     pub struct SslSessionRef;
