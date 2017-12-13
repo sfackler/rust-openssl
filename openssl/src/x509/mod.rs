@@ -56,7 +56,7 @@ pub const X509_FILETYPE_PEM: X509FileType = X509FileType(ffi::X509_FILETYPE_PEM)
 pub const X509_FILETYPE_ASN1: X509FileType = X509FileType(ffi::X509_FILETYPE_ASN1);
 pub const X509_FILETYPE_DEFAULT: X509FileType = X509FileType(ffi::X509_FILETYPE_DEFAULT);
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE_CTX;
     fn drop = ffi::X509_STORE_CTX_free;
 
@@ -447,7 +447,7 @@ impl X509Builder {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::X509;
     fn drop = ffi::X509_free;
 
@@ -638,7 +638,7 @@ impl<'a> X509v3Context<'a> {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_EXTENSION;
     fn drop = ffi::X509_EXTENSION_free;
 
@@ -749,7 +749,7 @@ impl X509NameBuilder {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_NAME;
     fn drop = ffi::X509_NAME_free;
 
@@ -812,7 +812,7 @@ impl<'a> Iterator for X509NameEntries<'a> {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_NAME_ENTRY;
     fn drop = ffi::X509_NAME_ENTRY_free;
 
@@ -906,7 +906,7 @@ impl X509ReqBuilder {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_REQ;
     fn drop = ffi::X509_REQ_free;
 
@@ -1076,7 +1076,7 @@ impl X509VerifyError {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::GENERAL_NAME;
     fn drop = ffi::GENERAL_NAME_free;
 
@@ -1122,7 +1122,7 @@ impl Stackable for GeneralName {
     type StackType = ffi::stack_st_GENERAL_NAME;
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_ALGOR;
     fn drop = ffi::X509_ALGOR_free;
 
