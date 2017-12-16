@@ -95,7 +95,7 @@ openssl_110: &OPENSSL_110
   VERSION: 1.1.0g
 openssl_102: &OPENSSL_102
   LIBRARY: openssl
-  VERSION: 1.0.2m
+  VERSION: 1.0.2n
 openssl_101: &OPENSSL_101
   LIBRARY: openssl
   VERSION: 1.0.1u
