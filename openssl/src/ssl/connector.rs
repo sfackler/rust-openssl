@@ -494,7 +494,7 @@ mod verify {
                 }
                 Err(_) => {
                     if let Some(pattern) = name.dnsname() {
-                        if matches_dns(pattern, domain, false) {
+                        if matches_dns(pattern, domain) {
                             return true;
                         }
                     }
@@ -506,26 +506,25 @@ mod verify {
     }
 
     fn verify_subject_name(domain: &str, subject_name: &X509NameRef) -> bool {
-        if let Some(pattern) = subject_name.entries_by_nid(nid::COMMONNAME).next() {
-            let pattern = match str::from_utf8(pattern.data().as_slice()) {
-                Ok(pattern) => pattern,
-                Err(_) => return false,
-            };
+        match subject_name.entries_by_nid(nid::COMMONNAME).next() {
+            Some(pattern) => {
+                let pattern = match str::from_utf8(pattern.data().as_slice()) {
+                    Ok(pattern) => pattern,
+                    Err(_) => return false,
+                };
 
-            // Unlike with SANs, IP addresses in the subject name don't have a
-            // different encoding. We need to pass this down to matches_dns to
-            // disallow wildcard matches with bogus patterns like *.0.0.1
-            let is_ip = domain.parse::<IpAddr>().is_ok();
-
-            if matches_dns(&pattern, domain, is_ip) {
-                return true;
+                // Unlike SANs, IP addresses in the subject name don't have a
+                // different encoding.
+                match domain.parse::<IpAddr>() {
+                    Ok(ip) => pattern.parse::<IpAddr>().ok().map_or(false, |pattern| pattern == ip),
+                    Err(_) => matches_dns(pattern, domain),
+                }
             }
+            None => false,
         }
-
-        false
     }
 
-    fn matches_dns(mut pattern: &str, mut hostname: &str, is_ip: bool) -> bool {
+    fn matches_dns(mut pattern: &str, mut hostname: &str) -> bool {
         // first strip trailing . off of pattern and hostname to normalize
         if pattern.ends_with('.') {
             pattern = &pattern[..pattern.len() - 1];
@@ -534,12 +533,12 @@ mod verify {
             hostname = &hostname[..hostname.len() - 1];
         }
 
-        matches_wildcard(pattern, hostname, is_ip).unwrap_or_else(|| pattern == hostname)
+        matches_wildcard(pattern, hostname).unwrap_or_else(|| pattern == hostname)
     }
 
-    fn matches_wildcard(pattern: &str, hostname: &str, is_ip: bool) -> Option<bool> {
-        // IP addresses and internationalized domains can't involved in wildcards
-        if is_ip || pattern.starts_with("xn--") {
+    fn matches_wildcard(pattern: &str, hostname: &str) -> Option<bool> {
+        // internationalized domains can't involved in wildcards
+        if pattern.starts_with("xn--") {
             return None;
         }
 
@@ -601,22 +600,9 @@ mod verify {
     }
 
     fn matches_ip(expected: &IpAddr, actual: &[u8]) -> bool {
-        match (expected, actual.len()) {
-            (&IpAddr::V4(ref addr), 4) => actual == addr.octets(),
-            (&IpAddr::V6(ref addr), 16) => {
-                let segments = [
-                    ((actual[0] as u16) << 8) | actual[1] as u16,
-                    ((actual[2] as u16) << 8) | actual[3] as u16,
-                    ((actual[4] as u16) << 8) | actual[5] as u16,
-                    ((actual[6] as u16) << 8) | actual[7] as u16,
-                    ((actual[8] as u16) << 8) | actual[9] as u16,
-                    ((actual[10] as u16) << 8) | actual[11] as u16,
-                    ((actual[12] as u16) << 8) | actual[13] as u16,
-                    ((actual[14] as u16) << 8) | actual[15] as u16,
-                ];
-                segments == addr.segments()
-            }
-            _ => false,
+        match *expected {
+            IpAddr::V4(ref addr) => actual == addr.octets(),
+            IpAddr::V6(ref addr) => actual == addr.octets(),
         }
     }
 }
