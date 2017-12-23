@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eux
 
 if [ -d "${OPENSSL_DIR}" ]; then
     exit 0
@@ -53,4 +53,4 @@ case "${LIBRARY}" in
 esac
 
 make -j$(nproc)
-make install
+make install_sw
