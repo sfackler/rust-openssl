@@ -75,7 +75,7 @@ impl Pkcs12 {
         ffi::init();
 
         Pkcs12Builder {
-            nid_key: nid::UNDEF, //nid::PBE_WITHSHA1AND3_KEY_TRIPLEDES_CBC,
+            nid_key: nid::UNDEF,  //nid::PBE_WITHSHA1AND3_KEY_TRIPLEDES_CBC,
             nid_cert: nid::UNDEF, //nid::PBE_WITHSHA1AND40BITRC2_CBC,
             iter: ffi::PKCS12_DEFAULT_ITER,
             mac_iter: ffi::PKCS12_DEFAULT_ITER,
@@ -147,16 +147,17 @@ impl Pkcs12Builder {
         password: &str,
         friendly_name: &str,
         pkey: &PKeyRef,
-        cert: &X509,
+        cert: &X509, // FIXME X509Ref
     ) -> Result<Pkcs12, ErrorStack> {
         unsafe {
             let pass = CString::new(password).unwrap();
             let friendly_name = CString::new(friendly_name).unwrap();
             let pkey = pkey.as_ptr();
             let cert = cert.as_ptr();
-            let ca = self.ca.as_ref().map(|ca| ca.as_ptr()).unwrap_or(
-                ptr::null_mut(),
-            );
+            let ca = self.ca
+                .as_ref()
+                .map(|ca| ca.as_ptr())
+                .unwrap_or(ptr::null_mut());
             let nid_key = self.nid_key.as_raw();
             let nid_cert = self.nid_cert.as_raw();
 

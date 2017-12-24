@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eux
 
 case "${TARGET}" in
 "x86_64-unknown-linux-gnu")

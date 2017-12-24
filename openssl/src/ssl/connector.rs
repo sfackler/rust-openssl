@@ -132,13 +132,9 @@ impl SslConnector {
         self.configure()?.connect(domain, stream)
     }
 
-    /// Initiates a client-side TLS session on a stream without performing hostname verification.
-    ///
-    /// # Warning
-    ///
-    /// You should think very carefully before you use this method. If hostname verification is not
-    /// used, *any* valid certificate for *any* site will be trusted for use from any other. This
-    /// introduces a significant vulnerability to man-in-the-middle attacks.
+    #[deprecated(
+        since = "0.9.24",
+        note = "use `ConnectConfiguration::verify_hostname` and `ConnectConfiguration::use_server_name_indication` instead")]
     pub fn danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication<
         S,
     >(
@@ -149,53 +145,80 @@ impl SslConnector {
         S: Read + Write,
     {
         self.configure()?
-            .danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication(stream)
+            .use_server_name_indication(false)
+            .verify_hostname(false)
+            .connect("", stream)
     }
 
     /// Returns a structure allowing for configuration of a single TLS session before connection.
     pub fn configure(&self) -> Result<ConnectConfiguration, ErrorStack> {
-        Ssl::new(&self.0).map(ConnectConfiguration)
+        Ssl::new(&self.0).map(|ssl| ConnectConfiguration { ssl, sni: true, verify_hostname: true })
     }
 }
 
 /// A type which allows for configuration of a client-side TLS session before connection.
-pub struct ConnectConfiguration(Ssl);
+pub struct ConnectConfiguration {
+    ssl: Ssl,
+    sni: bool,
+    verify_hostname: bool,
+}
 
 impl ConnectConfiguration {
     #[deprecated(since = "0.9.23",
                  note = "ConnectConfiguration now implements Deref<Target=SslRef>")]
     pub fn ssl(&self) -> &Ssl {
-        &self.0
+        &self.ssl
     }
 
     #[deprecated(since = "0.9.23",
                  note = "ConnectConfiguration now implements DerefMut<Target=SslRef>")]
     pub fn ssl_mut(&mut self) -> &mut Ssl {
-        &mut self.0
+        &mut self.ssl
     }
 
-    /// Initiates a client-side TLS session on a stream.
+    /// Configures the use of Server Name Indication (SNI) when connecting.
     ///
-    /// The domain is used for SNI and hostname verification.
-    pub fn connect<S>(mut self, domain: &str, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
-    where
-        S: Read + Write,
-    {
-        self.0.set_hostname(domain)?;
-        setup_verify_hostname(&mut self.0, domain)?;
-
-        self.0.connect(stream)
+    /// Defaults to `true`.
+    pub fn use_server_name_indication(mut self, use_sni: bool) -> ConnectConfiguration {
+        self.sni = use_sni;
+        self
     }
 
-    /// Initiates a client-side TLS session on a stream without performing hostname verification.
+    /// Configures the use of hostname verification when connecting.
     ///
-    /// The verification configuration of the connector's `SslContext` is not overridden.
+    /// Defaults to `true`.
     ///
     /// # Warning
     ///
     /// You should think very carefully before you use this method. If hostname verification is not
     /// used, *any* valid certificate for *any* site will be trusted for use from any other. This
     /// introduces a significant vulnerability to man-in-the-middle attacks.
+    pub fn verify_hostname(mut self, verify_hostname: bool) -> ConnectConfiguration {
+        self.verify_hostname = verify_hostname;
+        self
+    }
+
+    /// Initiates a client-side TLS session on a stream.
+    ///
+    /// The domain is used for SNI and hostname verification if enabled.
+    pub fn connect<S>(mut self, domain: &str, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
+    where
+        S: Read + Write,
+    {
+        if self.sni {
+            self.ssl.set_hostname(domain)?;
+        }
+
+        if self.verify_hostname {
+            setup_verify_hostname(&mut self.ssl, domain)?;
+        }
+
+        self.ssl.connect(stream)
+    }
+
+    #[deprecated(
+        since = "0.9.24",
+        note = "use `ConnectConfiguration::verify_hostname` and `ConnectConfiguration::use_server_name_indication` instead")]
     pub fn danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication<
         S,
     >(
@@ -205,7 +228,7 @@ impl ConnectConfiguration {
     where
         S: Read + Write,
     {
-        self.0.connect(stream)
+        self.use_server_name_indication(false).verify_hostname(false).connect("", stream)
     }
 }
 
@@ -213,13 +236,13 @@ impl Deref for ConnectConfiguration {
     type Target = SslRef;
 
     fn deref(&self) -> &SslRef {
-        &self.0
+        &self.ssl
     }
 }
 
 impl DerefMut for ConnectConfiguration {
     fn deref_mut(&mut self) -> &mut SslRef {
-        &mut self.0
+        &mut self.ssl
     }
 }
 
@@ -471,7 +494,7 @@ mod verify {
                 }
                 Err(_) => {
                     if let Some(pattern) = name.dnsname() {
-                        if matches_dns(pattern, domain, false) {
+                        if matches_dns(pattern, domain) {
                             return true;
                         }
                     }
@@ -483,26 +506,25 @@ mod verify {
     }
 
     fn verify_subject_name(domain: &str, subject_name: &X509NameRef) -> bool {
-        if let Some(pattern) = subject_name.entries_by_nid(nid::COMMONNAME).next() {
-            let pattern = match str::from_utf8(pattern.data().as_slice()) {
-                Ok(pattern) => pattern,
-                Err(_) => return false,
-            };
+        match subject_name.entries_by_nid(nid::COMMONNAME).next() {
+            Some(pattern) => {
+                let pattern = match str::from_utf8(pattern.data().as_slice()) {
+                    Ok(pattern) => pattern,
+                    Err(_) => return false,
+                };
 
-            // Unlike with SANs, IP addresses in the subject name don't have a
-            // different encoding. We need to pass this down to matches_dns to
-            // disallow wildcard matches with bogus patterns like *.0.0.1
-            let is_ip = domain.parse::<IpAddr>().is_ok();
-
-            if matches_dns(&pattern, domain, is_ip) {
-                return true;
+                // Unlike SANs, IP addresses in the subject name don't have a
+                // different encoding.
+                match domain.parse::<IpAddr>() {
+                    Ok(ip) => pattern.parse::<IpAddr>().ok().map_or(false, |pattern| pattern == ip),
+                    Err(_) => matches_dns(pattern, domain),
+                }
             }
+            None => false,
         }
-
-        false
     }
 
-    fn matches_dns(mut pattern: &str, mut hostname: &str, is_ip: bool) -> bool {
+    fn matches_dns(mut pattern: &str, mut hostname: &str) -> bool {
         // first strip trailing . off of pattern and hostname to normalize
         if pattern.ends_with('.') {
             pattern = &pattern[..pattern.len() - 1];
@@ -511,12 +533,12 @@ mod verify {
             hostname = &hostname[..hostname.len() - 1];
         }
 
-        matches_wildcard(pattern, hostname, is_ip).unwrap_or_else(|| pattern == hostname)
+        matches_wildcard(pattern, hostname).unwrap_or_else(|| pattern == hostname)
     }
 
-    fn matches_wildcard(pattern: &str, hostname: &str, is_ip: bool) -> Option<bool> {
-        // IP addresses and internationalized domains can't involved in wildcards
-        if is_ip || pattern.starts_with("xn--") {
+    fn matches_wildcard(pattern: &str, hostname: &str) -> Option<bool> {
+        // internationalized domains can't involved in wildcards
+        if pattern.starts_with("xn--") {
             return None;
         }
 
@@ -578,22 +600,9 @@ mod verify {
     }
 
     fn matches_ip(expected: &IpAddr, actual: &[u8]) -> bool {
-        match (expected, actual.len()) {
-            (&IpAddr::V4(ref addr), 4) => actual == addr.octets(),
-            (&IpAddr::V6(ref addr), 16) => {
-                let segments = [
-                    ((actual[0] as u16) << 8) | actual[1] as u16,
-                    ((actual[2] as u16) << 8) | actual[3] as u16,
-                    ((actual[4] as u16) << 8) | actual[5] as u16,
-                    ((actual[6] as u16) << 8) | actual[7] as u16,
-                    ((actual[8] as u16) << 8) | actual[9] as u16,
-                    ((actual[10] as u16) << 8) | actual[11] as u16,
-                    ((actual[12] as u16) << 8) | actual[13] as u16,
-                    ((actual[14] as u16) << 8) | actual[15] as u16,
-                ];
-                segments == addr.segments()
-            }
-            _ => false,
+        match *expected {
+            IpAddr::V4(ref addr) => actual == addr.octets(),
+            IpAddr::V6(ref addr) => actual == addr.octets(),
         }
     }
 }

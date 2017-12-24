@@ -6,10 +6,10 @@ use std::io::prelude::*;
 use std::io::{self, BufReader};
 use std::iter;
 use std::mem;
-use std::net::{TcpStream, TcpListener, SocketAddr};
+use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::Path;
-use std::process::{Command, Child, Stdio, ChildStdin};
-use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT, Ordering};
+use std::process::{Child, ChildStdin, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering, ATOMIC_BOOL_INIT};
 use std::thread;
 use std::time::Duration;
 use tempdir::TempDir;
@@ -18,10 +18,9 @@ use dh::Dh;
 use hash::MessageDigest;
 use ocsp::{OcspResponse, RESPONSE_STATUS_UNAUTHORIZED};
 use ssl;
-use ssl::{SslMethod, HandshakeError, SslContext, SslStream, Ssl, ShutdownResult,
-          SslConnectorBuilder, SslAcceptorBuilder, Error, SSL_VERIFY_PEER, SSL_VERIFY_NONE,
-          STATUS_TYPE_OCSP};
-use x509::{X509StoreContext, X509, X509Name, X509_FILETYPE_PEM};
+use ssl::{Error, HandshakeError, ShutdownResult, Ssl, SslAcceptorBuilder, SslConnectorBuilder,
+          SslContext, SslMethod, SslStream, SSL_VERIFY_NONE, SSL_VERIFY_PEER, STATUS_TYPE_OCSP};
+use x509::{X509, X509Name, X509StoreContext, X509_FILETYPE_PEM};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::verify::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS;
 use pkey::PKey;
@@ -35,7 +34,7 @@ static CERT: &'static [u8] = include_bytes!("../../../test/cert.pem");
 static KEY: &'static [u8] = include_bytes!("../../../test/key.pem");
 
 fn next_addr() -> SocketAddr {
-    use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
+    use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
     static PORT: AtomicUsize = ATOMIC_USIZE_INIT;
     let port = 15411 + PORT.fetch_add(1, Ordering::SeqCst);
 
@@ -104,15 +103,13 @@ impl Server {
 
     #[allow(dead_code)]
     fn new_alpn() -> (Server, TcpStream) {
-        Server::new_tcp(
-            &[
-                "-www",
-                "-nextprotoneg",
-                "http/1.1,spdy/3.1",
-                "-alpn",
-                "http/1.1,spdy/3.1",
-            ],
-        )
+        Server::new_tcp(&[
+            "-www",
+            "-nextprotoneg",
+            "http/1.1,spdy/3.1",
+            "-alpn",
+            "http/1.1,spdy/3.1",
+        ])
     }
 }
 
@@ -157,10 +154,9 @@ macro_rules! run_test(
     );
 );
 
-run_test!(
-    new_ctx,
-    |method, _| { SslContext::builder(method).unwrap(); }
-);
+run_test!(new_ctx, |method, _| {
+    SslContext::builder(method).unwrap();
+});
 
 run_test!(verify_untrusted, |method, stream| {
     let mut ctx = SslContext::builder(method).unwrap();
@@ -309,7 +305,7 @@ run_test!(verify_callback_data, |method, stream| {
 });
 
 run_test!(ssl_verify_callback, |method, stream| {
-    use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
+    use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 
     static CHECKED: AtomicUsize = ATOMIC_USIZE_INIT;
 
@@ -437,9 +433,9 @@ fn test_read() {
     let mut stream = Ssl::new(&ctx.build()).unwrap().connect(tcp).unwrap();
     stream.write_all("GET /\r\n\r\n".as_bytes()).unwrap();
     stream.flush().unwrap();
-    io::copy(&mut stream, &mut io::sink()).ok().expect(
-        "read error",
-    );
+    io::copy(&mut stream, &mut io::sink())
+        .ok()
+        .expect("read error");
 }
 
 #[test]
@@ -994,9 +990,8 @@ fn verify_valid_hostname() {
     ctx.set_verify(SSL_VERIFY_PEER);
 
     let mut ssl = Ssl::new(&ctx.build()).unwrap();
-    ssl.param_mut().set_hostflags(
-        X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS,
-    );
+    ssl.param_mut()
+        .set_hostflags(X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
     ssl.param_mut().set_host("google.com").unwrap();
 
     let s = TcpStream::connect("google.com:443").unwrap();
@@ -1019,9 +1014,8 @@ fn verify_invalid_hostname() {
     ctx.set_verify(SSL_VERIFY_PEER);
 
     let mut ssl = Ssl::new(&ctx.build()).unwrap();
-    ssl.param_mut().set_hostflags(
-        X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS,
-    );
+    ssl.param_mut()
+        .set_hostflags(X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
     ssl.param_mut().set_host("foobar.com").unwrap();
 
     let s = TcpStream::connect("google.com:443").unwrap();
@@ -1057,7 +1051,12 @@ fn connector_invalid_no_hostname_verification() {
     let connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap().build();
 
     let s = TcpStream::connect("google.com:443").unwrap();
-    connector.danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication(s)
+    connector
+        .configure()
+        .unwrap()
+        .use_server_name_indication(false)
+        .verify_hostname(false)
+        .connect("foobar.com", s)
         .unwrap();
 }
 
@@ -1067,8 +1066,14 @@ fn connector_no_hostname_still_verifies() {
 
     let connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap().build();
 
-    assert!(connector.danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication(tcp)
-        .is_err());
+    assert!(
+        connector
+            .configure()
+            .unwrap()
+            .verify_hostname(false)
+            .connect("fizzbuzz.com", tcp)
+            .is_err()
+    );
 }
 
 #[test]
@@ -1079,7 +1084,12 @@ fn connector_no_hostname_can_disable_verify() {
     connector.set_verify(SSL_VERIFY_NONE);
     let connector = connector.build();
 
-    connector.danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication(tcp).unwrap();
+    connector
+        .configure()
+        .unwrap()
+        .verify_hostname(false)
+        .connect("foobar.com", tcp)
+        .unwrap();
 }
 
 #[test]
@@ -1101,9 +1111,7 @@ fn connector_client_server_mozilla_intermediate() {
     });
 
     let mut connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
-    connector
-        .set_ca_file("test/root-ca.pem")
-        .unwrap();
+    connector.set_ca_file("test/root-ca.pem").unwrap();
     let connector = connector.build();
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
@@ -1135,9 +1143,7 @@ fn connector_client_server_mozilla_modern() {
     });
 
     let mut connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
-    connector
-        .set_ca_file("test/root-ca.pem")
-        .unwrap();
+    connector.set_ca_file("test/root-ca.pem").unwrap();
     let connector = connector.build();
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
@@ -1239,7 +1245,8 @@ fn tmp_dh_callback() {
 }
 
 #[test]
-#[cfg(any(all(feature = "v101", ossl101, not(any(libressl261, libressl262, libressl26x))), all(feature = "v102", ossl102)))]
+#[cfg(any(all(feature = "v101", ossl101, not(any(libressl261, libressl262, libressl26x))),
+          all(feature = "v102", ossl102)))]
 fn tmp_ecdh_callback() {
     use ec::EcKey;
     use nid;
@@ -1306,7 +1313,8 @@ fn tmp_dh_callback_ssl() {
 }
 
 #[test]
-#[cfg(any(all(feature = "v101", ossl101, not(any(libressl261, libressl262, libressl26x))), all(feature = "v102", ossl102)))]
+#[cfg(any(all(feature = "v101", ossl101, not(any(libressl261, libressl262, libressl26x))),
+          all(feature = "v102", ossl102)))]
 fn tmp_ecdh_callback_ssl() {
     use ec::EcKey;
     use nid;
