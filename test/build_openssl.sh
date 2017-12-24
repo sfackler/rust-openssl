@@ -21,6 +21,7 @@ esac
 case "${TARGET}" in
 "x86_64-unknown-linux-gnu")
     OS_COMPILER=linux-x86_64
+    OS_FLAGS=""
     ;;
 "i686-unknown-linux-gnu")
     OS_COMPILER=linux-elf
@@ -28,6 +29,7 @@ case "${TARGET}" in
     ;;
 "arm-unknown-linux-gnueabihf")
     OS_COMPILER=linux-armv4
+    OS_FLAGS=""
     export AR=arm-linux-gnueabihf-ar
     export CC=arm-linux-gnueabihf-gcc
     ;;
