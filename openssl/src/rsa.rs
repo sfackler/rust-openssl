@@ -2,14 +2,12 @@ use ffi;
 use std::fmt;
 use std::ptr;
 use std::mem;
-use libc::{c_char, c_int, c_void};
+use libc::c_int;
 use foreign_types::ForeignTypeRef;
 
 use {cvt, cvt_n, cvt_p};
 use bn::{BigNum, BigNumRef};
-use bio::MemBioSlice;
 use error::ErrorStack;
-use util::{invoke_passwd_cb_old, CallbackState};
 
 /// Type of encryption padding to use.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -329,27 +327,6 @@ impl Rsa {
         Rsa,
         ffi::d2i_RSAPublicKey
     );
-
-    #[deprecated(since = "0.9.2", note = "use private_key_from_pem_callback")]
-    pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<Rsa, ErrorStack>
-    where
-        F: FnOnce(&mut [c_char]) -> usize,
-    {
-        ffi::init();
-        let mut cb = CallbackState::new(pass_cb);
-        let mem_bio = MemBioSlice::new(buf)?;
-
-        unsafe {
-            let cb_ptr = &mut cb as *mut _ as *mut c_void;
-            let rsa = cvt_p(ffi::PEM_read_bio_RSAPrivateKey(
-                mem_bio.as_ptr(),
-                ptr::null_mut(),
-                Some(invoke_passwd_cb_old::<F>),
-                cb_ptr,
-            ))?;
-            Ok(Rsa(rsa))
-        }
-    }
 }
 
 impl fmt::Debug for Rsa {

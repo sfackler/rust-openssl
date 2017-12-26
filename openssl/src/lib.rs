@@ -1,20 +1,20 @@
-#![doc(html_root_url="https://docs.rs/openssl/0.9")]
+#![doc(html_root_url = "https://docs.rs/openssl/0.9")]
 
 #[macro_use]
 extern crate bitflags;
 #[macro_use]
 extern crate foreign_types;
-extern crate libc;
 #[macro_use]
 extern crate lazy_static;
+extern crate libc;
 extern crate openssl_sys as ffi;
 
+#[cfg(test)]
+extern crate data_encoding;
 #[cfg(test)]
 extern crate hex;
 #[cfg(test)]
 extern crate tempdir;
-#[cfg(test)]
-extern crate data_encoding;
 
 #[doc(inline)]
 pub use ffi::init;
@@ -35,11 +35,9 @@ pub mod bn;
 #[cfg(not(libressl))]
 pub mod cms;
 pub mod conf;
-pub mod crypto;
 pub mod dh;
 pub mod dsa;
 pub mod ec;
-pub mod ec_key;
 pub mod error;
 pub mod ex_data;
 pub mod hash;
@@ -57,7 +55,6 @@ pub mod ssl;
 pub mod stack;
 pub mod string;
 pub mod symm;
-pub mod types;
 pub mod version;
 pub mod x509;
 #[cfg(any(ossl102, ossl110))]
@@ -80,5 +77,9 @@ fn cvt(r: c_int) -> Result<c_int, ErrorStack> {
 }
 
 fn cvt_n(r: c_int) -> Result<c_int, ErrorStack> {
-    if r < 0 { Err(ErrorStack::get()) } else { Ok(r) }
+    if r < 0 {
+        Err(ErrorStack::get())
+    } else {
+        Ok(r)
+    }
 }

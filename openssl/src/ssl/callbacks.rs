@@ -10,7 +10,7 @@ use foreign_types::ForeignTypeRef;
 use error::ErrorStack;
 use dh::Dh;
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
-use ec_key::EcKey;
+use ec::EcKey;
 use ssl::{get_callback_idx, get_ssl_callback_idx, SniError, SslRef, NPN_PROTOS_IDX};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use ssl::ALPN_PROTOS_IDX;

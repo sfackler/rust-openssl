@@ -1,4 +1,4 @@
-use libc::{c_int, c_char, c_void};
+use libc::{c_char, c_int, c_void};
 use std::any::Any;
 use std::panic::{self, AssertUnwindSafe};
 use std::slice;
@@ -30,31 +30,6 @@ impl<F> Drop for CallbackState<F> {
     fn drop(&mut self) {
         if let Some(panic) = self.panic.take() {
             panic::resume_unwind(panic);
-        }
-    }
-}
-
-pub unsafe extern "C" fn invoke_passwd_cb_old<F>(
-    buf: *mut c_char,
-    size: c_int,
-    _rwflag: c_int,
-    cb_state: *mut c_void,
-) -> c_int
-where
-    F: FnOnce(&mut [c_char]) -> usize,
-{
-    let callback = &mut *(cb_state as *mut CallbackState<F>);
-
-    let result = panic::catch_unwind(AssertUnwindSafe(|| {
-        let pass_slice = slice::from_raw_parts_mut(buf, size as usize);
-        callback.cb.take().unwrap()(pass_slice)
-    }));
-
-    match result {
-        Ok(len) => len as c_int,
-        Err(err) => {
-            callback.panic = Some(err);
-            0
         }
     }
 }

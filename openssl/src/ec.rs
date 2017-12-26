@@ -639,11 +639,6 @@ impl EcKey {
         Ok(builder.build())
     }
 
-    #[deprecated(since = "0.9.2", note = "use from_curve_name")]
-    pub fn new_by_curve_name(nid: Nid) -> Result<EcKey, ErrorStack> {
-        EcKey::from_curve_name(nid)
-    }
-
     private_key_from_pem!(EcKey, ffi::PEM_read_bio_ECPrivateKey);
     private_key_from_der!(EcKey, ffi::d2i_ECPrivateKey);
 }

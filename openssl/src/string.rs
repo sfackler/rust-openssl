@@ -1,5 +1,5 @@
 use ffi;
-use foreign_types::{ForeignType, ForeignTypeRef};
+use foreign_types::ForeignTypeRef;
 use libc::{c_char, c_void};
 use std::fmt;
 use std::ffi::CStr;
@@ -14,18 +14,6 @@ foreign_type_and_impl_send_sync! {
 
     pub struct OpensslString;
     pub struct OpensslStringRef;
-}
-
-impl OpensslString {
-    #[deprecated(note = "use from_ptr", since = "0.9.7")]
-    pub unsafe fn from_raw_parts(buf: *mut u8, _: usize) -> OpensslString {
-        OpensslString::from_ptr(buf as *mut c_char)
-    }
-
-    #[deprecated(note = "use from_ptr", since = "0.9.7")]
-    pub unsafe fn from_null_terminated(buf: *mut c_char) -> OpensslString {
-        OpensslString::from_ptr(buf)
-    }
 }
 
 impl fmt::Display for OpensslString {
