@@ -121,106 +121,85 @@ mod bio;
 #[cfg(test)]
 mod tests;
 
-// FIXME drop SSL_ prefix
-// FIXME remvove flags not used in OpenSSL 1.1
 bitflags! {
     /// Options controlling the behavior of an `SslContext`.
-    pub struct SslOption: c_ulong {
-        // FIXME remove
-        const SSL_OP_MICROSOFT_SESS_ID_BUG = ffi::SSL_OP_MICROSOFT_SESS_ID_BUG;
-        // FIXME remove
-        const SSL_OP_NETSCAPE_CHALLENGE_BUG = ffi::SSL_OP_NETSCAPE_CHALLENGE_BUG;
-        // FIXME remove
-        const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG =
-            ffi::SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG;
-        // FIXME remove
-        const SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER = ffi::SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER;
-        // FIXME remove
-        const SSL_OP_SSLEAY_080_CLIENT_DH_BUG = ffi::SSL_OP_SSLEAY_080_CLIENT_DH_BUG;
-        // FIXME remove
-        const SSL_OP_TLS_D5_BUG = ffi::SSL_OP_TLS_D5_BUG;
-        // FIXME remove
-        const SSL_OP_TLS_BLOCK_PADDING_BUG = ffi::SSL_OP_TLS_BLOCK_PADDING_BUG;
-
-        // FIXME remove? not documented anywhere
-        const SSL_OP_CISCO_ANYCONNECT = ffi::SSL_OP_CISCO_ANYCONNECT;
-
+    pub struct SslOptions: c_ulong {
         /// Disables a countermeasure against an SSLv3/TLSv1.0 vulnerability affecting CBC ciphers.
-        const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS = ffi::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
+        const DONT_INSERT_EMPTY_FRAGMENTS = ffi::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
 
         /// A "reasonable default" set of options which enables compatibility flags.
-        const SSL_OP_ALL = ffi::SSL_OP_ALL;
+        const ALL = ffi::SSL_OP_ALL;
 
         /// Do not query the MTU.
         ///
         /// Only affects DTLS connections.
-        const SSL_OP_NO_QUERY_MTU = ffi::SSL_OP_NO_QUERY_MTU;
+        const NO_QUERY_MTU = ffi::SSL_OP_NO_QUERY_MTU;
 
         /// Enables Cookie Exchange as described in [RFC 4347 Section 4.2.1].
         ///
         /// Only affects DTLS connections.
         ///
         /// [RFC 4347 Section 4.2.1]: https://tools.ietf.org/html/rfc4347#section-4.2.1
-        const SSL_OP_COOKIE_EXCHANGE = ffi::SSL_OP_COOKIE_EXCHANGE;
+        const COOKIE_EXCHANGE = ffi::SSL_OP_COOKIE_EXCHANGE;
 
         /// Disables the use of session tickets for session resumption.
-        const SSL_OP_NO_TICKET = ffi::SSL_OP_NO_TICKET;
+        const NO_TICKET = ffi::SSL_OP_NO_TICKET;
 
         /// Always start a new session when performing a renegotiation on the server side.
-        const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION =
+        const NO_SESSION_RESUMPTION_ON_RENEGOTIATION =
             ffi::SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION;
 
         /// Disables the use of TLS compression.
-        const SSL_OP_NO_COMPRESSION = ffi::SSL_OP_NO_COMPRESSION;
+        const NO_COMPRESSION = ffi::SSL_OP_NO_COMPRESSION;
 
         /// Allow legacy insecure renegotiation with servers or clients that do not support secure
         /// renegotiation.
-        const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION =
+        const ALLOW_UNSAFE_LEGACY_RENEGOTIATION =
             ffi::SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
 
         /// Creates a new key for each session when using ECDHE.
         ///
         /// This is always enabled in OpenSSL 1.1.0.
-        const SSL_OP_SINGLE_ECDH_USE = ffi::SSL_OP_SINGLE_ECDH_USE;
+        const SINGLE_ECDH_USE = ffi::SSL_OP_SINGLE_ECDH_USE;
 
         /// Creates a new key for each session when using DHE.
         ///
         /// This is always enabled in OpenSSL 1.1.0.
-        const SSL_OP_SINGLE_DH_USE = ffi::SSL_OP_SINGLE_DH_USE;
+        const SINGLE_DH_USE = ffi::SSL_OP_SINGLE_DH_USE;
 
         /// Use the server's preferences rather than the client's when selecting a cipher.
         ///
         /// This has no effect on the client side.
-        const SSL_OP_CIPHER_SERVER_PREFERENCE = ffi::SSL_OP_CIPHER_SERVER_PREFERENCE;
+        const CIPHER_SERVER_PREFERENCE = ffi::SSL_OP_CIPHER_SERVER_PREFERENCE;
 
         /// Disables version rollback attach detection.
-        const SSL_OP_TLS_ROLLBACK_BUG = ffi::SSL_OP_TLS_ROLLBACK_BUG;
+        const TLS_ROLLBACK_BUG = ffi::SSL_OP_TLS_ROLLBACK_BUG;
 
         /// Disables the use of SSLv2.
-        const SSL_OP_NO_SSLV2 = ffi::SSL_OP_NO_SSLv2;
+        const NO_SSLV2 = ffi::SSL_OP_NO_SSLv2;
 
         /// Disables the use of SSLv3.
-        const SSL_OP_NO_SSLV3 = ffi::SSL_OP_NO_SSLv3;
+        const NO_SSLV3 = ffi::SSL_OP_NO_SSLv3;
 
         /// Disables the use of TLSv1.0.
-        const SSL_OP_NO_TLSV1 = ffi::SSL_OP_NO_TLSv1;
+        const NO_TLSV1 = ffi::SSL_OP_NO_TLSv1;
 
         /// Disables the use of TLSv1.1.
-        const SSL_OP_NO_TLSV1_1 = ffi::SSL_OP_NO_TLSv1_1;
+        const NO_TLSV1_1 = ffi::SSL_OP_NO_TLSv1_1;
 
         /// Disables the use of TLSv1.2.
-        const SSL_OP_NO_TLSV1_2 = ffi::SSL_OP_NO_TLSv1_2;
+        const NO_TLSV1_2 = ffi::SSL_OP_NO_TLSv1_2;
 
         /// Disables the use of DTLSv1.0
         ///
         /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
         #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-        const SSL_OP_NO_DTLSV1 = ffi::SSL_OP_NO_DTLSv1;
+        const NO_DTLSV1 = ffi::SSL_OP_NO_DTLSv1;
 
         /// Disables the use of DTLSv1.2.
         /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
         #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-        const SSL_OP_NO_DTLSV1_2 = ffi::SSL_OP_NO_DTLSv1_2;
+        const NO_DTLSV1_2 = ffi::SSL_OP_NO_DTLSv1_2;
 
         /// Disables the use of all (D)TLS protocol versions.
         ///
@@ -238,7 +217,7 @@ bitflags! {
         /// let options = SSL_OP_NO_SSL_MASK & !SSL_OP_NO_TLSV1_2;
         /// ```
         #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-        const SSL_OP_NO_SSL_MASK = ffi::SSL_OP_NO_SSL_MASK;
+        const NO_SSL_MASK = ffi::SSL_OP_NO_SSL_MASK;
     }
 }
 
@@ -250,11 +229,11 @@ bitflags! {
         /// Normally, a write in OpenSSL will always write out all of the requested data, even if it
         /// requires more than one TLS record or write to the underlying stream. This option will
         /// cause a write to return after writing a single TLS record instead.
-        const SSL_MODE_ENABLE_PARTIAL_WRITE = ffi::SSL_MODE_ENABLE_PARTIAL_WRITE;
+        const ENABLE_PARTIAL_WRITE = ffi::SSL_MODE_ENABLE_PARTIAL_WRITE;
 
         /// Disables a check that the data buffer has not moved between calls when operating in a
         /// nonblocking context.
-        const SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER = ffi::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER;
+        const ACCEPT_MOVING_WRITE_BUFFER = ffi::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER;
 
         /// Enables automatic retries after TLS session events such as renegotiations or heartbeats.
         ///
@@ -265,25 +244,19 @@ bitflags! {
         /// Note that `SslStream::read` and `SslStream::write` will automatically retry regardless
         /// of the state of this option. It only affects `SslStream::ssl_read` and
         /// `SslStream::ssl_write`.
-        const SSL_MODE_AUTO_RETRY = ffi::SSL_MODE_AUTO_RETRY;
+        const AUTO_RETRY = ffi::SSL_MODE_AUTO_RETRY;
 
         /// Disables automatic chain building when verifying a peer's certificate.
         ///
         /// TLS peers are responsible for sending the entire certificate chain from the leaf to a
         /// trusted root, but some will incorrectly not do so. OpenSSL will try to build the chain
         /// out of certificates it knows of, and this option will disable that behavior.
-        const SSL_MODE_NO_AUTO_CHAIN = ffi::SSL_MODE_NO_AUTO_CHAIN;
+        const NO_AUTO_CHAIN = ffi::SSL_MODE_NO_AUTO_CHAIN;
 
         /// Release memory buffers when the session does not need them.
         ///
         /// This saves ~34 KiB of memory for idle streams.
-        const SSL_MODE_RELEASE_BUFFERS = ffi::SSL_MODE_RELEASE_BUFFERS;
-
-        // FIXME remove
-        #[cfg(not(libressl))]
-        const SSL_MODE_SEND_CLIENTHELLO_TIME = ffi::SSL_MODE_SEND_CLIENTHELLO_TIME;
-        #[cfg(not(libressl))]
-        const SSL_MODE_SEND_SERVERHELLO_TIME = ffi::SSL_MODE_SEND_SERVERHELLO_TIME;
+        const RELEASE_BUFFERS = ffi::SSL_MODE_RELEASE_BUFFERS;
 
         /// Sends the fake `TLS_FALLBACK_SCSV` cipher suite in the ClientHello message of a
         /// handshake.
@@ -293,7 +266,7 @@ bitflags! {
         ///
         /// Do not use this unless you know what you're doing!
         #[cfg(not(libressl))]
-        const SSL_MODE_SEND_FALLBACK_SCSV = ffi::SSL_MODE_SEND_FALLBACK_SCSV;
+        const SEND_FALLBACK_SCSV = ffi::SSL_MODE_SEND_FALLBACK_SCSV;
     }
 }
 
@@ -335,19 +308,19 @@ bitflags! {
         /// Verifies that the peer's certificate is trusted.
         ///
         /// On the server side, this will cause OpenSSL to request a certificate from the client.
-        const SSL_VERIFY_PEER = ::ffi::SSL_VERIFY_PEER;
+        const PEER = ::ffi::SSL_VERIFY_PEER;
 
         /// Disables verification of the peer's certificate.
         ///
         /// On the server side, this will cause OpenSSL to not request a certificate from the
         /// client. On the client side, the certificate will be checked for validity, but the
         /// negotiation will continue regardless of the result of that check.
-        const SSL_VERIFY_NONE = ::ffi::SSL_VERIFY_NONE;
+        const NONE = ::ffi::SSL_VERIFY_NONE;
 
         /// On the server side, abort the handshake if the client did not send a certificate.
         ///
         /// This should be paired with `SSL_VERIFY_PEER`. It has no effect on the client side.
-        const SSL_VERIFY_FAIL_IF_NO_PEER_CERT = ::ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
+        const FAIL_IF_NO_PEER_CERT = ::ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
     }
 }
 
@@ -900,9 +873,9 @@ impl SslContextBuilder {
     /// This corresponds to [`SSL_CTX_set_options`].
     ///
     /// [`SSL_CTX_set_options`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_options.html
-    pub fn set_options(&mut self, option: SslOption) -> SslOption {
+    pub fn set_options(&mut self, option: SslOptions) -> SslOptions {
         let ret = unsafe { compat::SSL_CTX_set_options(self.as_ptr(), option.bits()) };
-        SslOption::from_bits(ret).unwrap()
+        SslOptions::from_bits(ret).unwrap()
     }
 
     /// Returns the options used by the context.
@@ -910,9 +883,9 @@ impl SslContextBuilder {
     /// This corresponds to [`SSL_CTX_get_options`].
     ///
     /// [`SSL_CTX_get_options`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_options.html
-    pub fn options(&self) -> SslOption {
+    pub fn options(&self) -> SslOptions {
         let ret = unsafe { compat::SSL_CTX_get_options(self.as_ptr()) };
-        SslOption::from_bits(ret).unwrap()
+        SslOptions::from_bits(ret).unwrap()
     }
 
     /// Clears the options used by the context, returning the old set.
@@ -920,9 +893,9 @@ impl SslContextBuilder {
     /// This corresponds to [`SSL_CTX_clear_options`].
     ///
     /// [`SSL_CTX_clear_options`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_options.html
-    pub fn clear_options(&mut self, option: SslOption) -> SslOption {
+    pub fn clear_options(&mut self, option: SslOptions) -> SslOptions {
         let ret = unsafe { compat::SSL_CTX_clear_options(self.as_ptr(), option.bits()) };
-        SslOption::from_bits(ret).unwrap()
+        SslOptions::from_bits(ret).unwrap()
     }
 
     /// Set the protocols to be used during Next Protocol Negotiation (the protocols

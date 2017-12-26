@@ -16,9 +16,9 @@ use libc::c_int;
 /// To view the integer representation of a `Nid`:
 ///
 /// ```
-/// use openssl::nid;
+/// use openssl::nid::Nid;
 ///
-/// assert!(nid::AES_256_GCM.as_raw() == 901);
+/// assert!(Nid::AES_256_GCM.as_raw() == 901);
 /// ```
 ///
 /// # External Documentation

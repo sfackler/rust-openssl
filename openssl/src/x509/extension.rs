@@ -40,10 +40,10 @@ pub enum Extension {
     ///
     /// ```
     /// use openssl::x509::extension::Extension::*;
-    /// use openssl::nid;
+    /// use openssl::nid::Nid;
     ///
     /// # let generator = openssl::x509::X509Generator::new();
-    /// generator.add_extension(OtherNid(nid::BASIC_CONSTRAINTS,"critical,CA:TRUE".to_owned()));
+    /// generator.add_extension(OtherNid(Nid::BASIC_CONSTRAINTS,"critical,CA:TRUE".to_owned()));
     /// ```
     OtherNid(Nid, String),
     /// Arbitrary extensions by OID string. See `man ASN1_generate_nconf` for value syntax.

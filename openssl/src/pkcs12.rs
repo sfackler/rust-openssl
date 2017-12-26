@@ -190,7 +190,7 @@ mod test {
     use asn1::Asn1Time;
     use rsa::Rsa;
     use pkey::PKey;
-    use nid;
+    use nid::Nid;
     use x509::{X509, X509Name};
     use x509::extension::KeyUsage;
 
@@ -238,7 +238,7 @@ mod test {
         let pkey = PKey::from_rsa(rsa).unwrap();
 
         let mut name = X509Name::builder().unwrap();
-        name.append_entry_by_nid(nid::COMMONNAME, subject_name)
+        name.append_entry_by_nid(Nid::COMMONNAME, subject_name)
             .unwrap();
         let name = name.build();
 

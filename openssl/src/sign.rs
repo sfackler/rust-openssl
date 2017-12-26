@@ -353,7 +353,7 @@ mod test {
     use hash::MessageDigest;
     use sign::{Signer, Verifier};
     use ec::{EcGroup, EcKey};
-    use nid;
+    use nid::Nid;
     use rsa::{PKCS1_PADDING, Rsa};
     use dsa::Dsa;
     use pkey::PKey;
@@ -569,7 +569,7 @@ mod test {
 
     #[test]
     fn ec() {
-        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
         let key = PKey::from_ec_key(key).unwrap();
 
