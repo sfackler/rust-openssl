@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::error;
 use std::error::Error as StdError;
 use std::fmt;
@@ -107,7 +106,7 @@ pub enum HandshakeError<S> {
     WouldBlock(MidHandshakeSslStream<S>),
 }
 
-impl<S: Any + fmt::Debug> StdError for HandshakeError<S> {
+impl<S: fmt::Debug> StdError for HandshakeError<S> {
     fn description(&self) -> &str {
         match *self {
             HandshakeError::SetupFailure(_) => "stream setup failed",
@@ -124,7 +123,7 @@ impl<S: Any + fmt::Debug> StdError for HandshakeError<S> {
     }
 }
 
-impl<S: Any + fmt::Debug> fmt::Display for HandshakeError<S> {
+impl<S: fmt::Debug> fmt::Display for HandshakeError<S> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(StdError::description(self))?;
         match *self {

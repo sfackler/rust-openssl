@@ -1,6 +1,5 @@
 use ffi;
 use libc::{c_char, c_int, c_uchar, c_uint, c_void};
-use std::any::Any;
 use std::ffi::CStr;
 use std::ptr;
 use std::slice;
@@ -18,7 +17,7 @@ use x509::X509StoreContextRef;
 
 pub extern "C" fn raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
 where
-    F: Fn(bool, &mut X509StoreContextRef) -> bool + Any + 'static + Sync + Send,
+    F: Fn(bool, &mut X509StoreContextRef) -> bool + 'static + Sync + Send,
 {
     unsafe {
         let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
@@ -44,7 +43,6 @@ pub extern "C" fn raw_psk<F>(
 ) -> c_uint
 where
     F: Fn(&mut SslRef, Option<&[u8]>, &mut [u8], &mut [u8]) -> Result<usize, ErrorStack>
-        + Any
         + 'static
         + Sync
         + Send,
@@ -74,7 +72,7 @@ pub extern "C" fn ssl_raw_verify<F>(
     x509_ctx: *mut ffi::X509_STORE_CTX,
 ) -> c_int
 where
-    F: Fn(bool, &mut X509StoreContextRef) -> bool + Any + 'static + Sync + Send,
+    F: Fn(bool, &mut X509StoreContextRef) -> bool + 'static + Sync + Send,
 {
     unsafe {
         let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
@@ -90,7 +88,7 @@ where
 
 pub extern "C" fn raw_sni<F>(ssl: *mut ffi::SSL, al: *mut c_int, _arg: *mut c_void) -> c_int
 where
-    F: Fn(&mut SslRef) -> Result<(), SniError> + Any + 'static + Sync + Send,
+    F: Fn(&mut SslRef) -> Result<(), SniError> + 'static + Sync + Send,
 {
     unsafe {
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
@@ -175,7 +173,7 @@ pub unsafe extern "C" fn raw_tmp_dh<F>(
     keylength: c_int,
 ) -> *mut ffi::DH
 where
-    F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + Any + 'static + Sync + Send,
+    F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + 'static + Sync + Send,
 {
     let ctx = ffi::SSL_get_SSL_CTX(ssl);
     let callback = ffi::SSL_CTX_get_ex_data(ctx, get_callback_idx::<F>());
@@ -202,7 +200,7 @@ pub unsafe extern "C" fn raw_tmp_ecdh<F>(
     keylength: c_int,
 ) -> *mut ffi::EC_KEY
 where
-    F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + Any + 'static + Sync + Send,
+    F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + 'static + Sync + Send,
 {
     let ctx = ffi::SSL_get_SSL_CTX(ssl);
     let callback = ffi::SSL_CTX_get_ex_data(ctx, get_callback_idx::<F>());
@@ -228,7 +226,7 @@ pub unsafe extern "C" fn raw_tmp_dh_ssl<F>(
     keylength: c_int,
 ) -> *mut ffi::DH
 where
-    F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + Any + 'static + Sync + Send,
+    F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + 'static + Sync + Send,
 {
     let callback = ffi::SSL_get_ex_data(ssl, get_ssl_callback_idx::<F>());
     let callback = &*(callback as *mut F);
@@ -254,7 +252,7 @@ pub unsafe extern "C" fn raw_tmp_ecdh_ssl<F>(
     keylength: c_int,
 ) -> *mut ffi::EC_KEY
 where
-    F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + Any + 'static + Sync + Send,
+    F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + 'static + Sync + Send,
 {
     let callback = ffi::SSL_get_ex_data(ssl, get_ssl_callback_idx::<F>());
     let callback = &*(callback as *mut F);
@@ -275,7 +273,7 @@ where
 
 pub unsafe extern "C" fn raw_tlsext_status<F>(ssl: *mut ffi::SSL, _: *mut c_void) -> c_int
 where
-    F: Fn(&mut SslRef) -> Result<bool, ErrorStack> + Any + 'static + Sync + Send,
+    F: Fn(&mut SslRef) -> Result<bool, ErrorStack> + 'static + Sync + Send,
 {
     let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
     let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());

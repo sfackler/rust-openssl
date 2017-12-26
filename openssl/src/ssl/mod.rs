@@ -74,7 +74,6 @@ use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
 use libc::{c_int, c_long, c_ulong, c_void};
 use libc::{c_uchar, c_uint};
-use std::any::Any;
 use std::any::TypeId;
 use std::cmp;
 use std::collections::HashMap;
@@ -351,7 +350,7 @@ lazy_static! {
 // Creates a static index for user data of type T
 // Registers a destructor for the data which will be called
 // when context is freed
-fn get_callback_idx<T: Any + 'static>() -> c_int {
+fn get_callback_idx<T: 'static>() -> c_int {
     *INDEXES
         .lock()
         .unwrap()
@@ -359,7 +358,7 @@ fn get_callback_idx<T: Any + 'static>() -> c_int {
         .or_insert_with(|| get_new_idx::<T>())
 }
 
-fn get_ssl_callback_idx<T: Any + 'static>() -> c_int {
+fn get_ssl_callback_idx<T: 'static>() -> c_int {
     *SSL_INDEXES
         .lock()
         .unwrap()
@@ -490,7 +489,7 @@ impl SslContextBuilder {
     pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
     where
         // FIXME should take a mutable reference to the store
-        F: Fn(bool, &mut X509StoreContextRef) -> bool + Any + 'static + Sync + Send,
+        F: Fn(bool, &mut X509StoreContextRef) -> bool + 'static + Sync + Send,
     {
         unsafe {
             let verify = Box::new(verify);
@@ -516,7 +515,7 @@ impl SslContextBuilder {
     /// [`SSL_CTX_set_tlsext_servername_callback`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_tlsext_servername_callback.html
     pub fn set_servername_callback<F>(&mut self, callback: F)
     where
-        F: Fn(&mut SslRef) -> Result<(), SniError> + Any + 'static + Sync + Send,
+        F: Fn(&mut SslRef) -> Result<(), SniError> + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
@@ -612,7 +611,7 @@ impl SslContextBuilder {
     /// [`SSL_CTX_set_tmp_dh_callback`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_set_tmp_dh.html
     pub fn set_tmp_dh_callback<F>(&mut self, callback: F)
     where
-        F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + Any + 'static + Sync + Send,
+        F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
@@ -650,7 +649,7 @@ impl SslContextBuilder {
     #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
     pub fn set_tmp_ecdh_callback<F>(&mut self, callback: F)
     where
-        F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + Any + 'static + Sync + Send,
+        F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
@@ -1022,7 +1021,7 @@ impl SslContextBuilder {
     /// [`SSL_CTX_set_tlsext_status_cb`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_set_tlsext_status_cb.html
     pub fn set_status_callback<F>(&mut self, callback: F) -> Result<(), ErrorStack>
     where
-        F: Fn(&mut SslRef) -> Result<bool, ErrorStack> + Any + 'static + Sync + Send,
+        F: Fn(&mut SslRef) -> Result<bool, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
@@ -1051,7 +1050,6 @@ impl SslContextBuilder {
     pub fn set_psk_callback<F>(&mut self, callback: F)
     where
         F: Fn(&mut SslRef, Option<&[u8]>, &mut [u8], &mut [u8]) -> Result<usize, ErrorStack>
-            + Any
             + 'static
             + Sync
             + Send,
@@ -1500,7 +1498,7 @@ impl SslRef {
     pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
     where
         // FIXME should take a mutable reference to the x509 store
-        F: Fn(bool, &mut X509StoreContextRef) -> bool + Any + 'static + Sync + Send,
+        F: Fn(bool, &mut X509StoreContextRef) -> bool + 'static + Sync + Send,
     {
         unsafe {
             let verify = Box::new(verify);
@@ -1531,7 +1529,7 @@ impl SslRef {
     /// [`SSL_set_tmp_dh_callback`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_tmp_dh.html
     pub fn set_tmp_dh_callback<F>(&mut self, callback: F)
     where
-        F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + Any + 'static + Sync + Send,
+        F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
@@ -1564,7 +1562,7 @@ impl SslRef {
     #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
     pub fn set_tmp_ecdh_callback<F>(&mut self, callback: F)
     where
-        F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + Any + 'static + Sync + Send,
+        F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
