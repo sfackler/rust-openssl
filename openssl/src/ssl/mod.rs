@@ -8,11 +8,11 @@
 //! To connect as a client to a remote server:
 //!
 //! ```
-//! use openssl::ssl::{SslMethod, SslConnectorBuilder};
+//! use openssl::ssl::{SslMethod, SslConnector};
 //! use std::io::{Read, Write};
 //! use std::net::TcpStream;
 //!
-//! let connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap().build();
+//! let connector = SslConnector::builder(SslMethod::tls()).unwrap().build();
 //!
 //! let stream = TcpStream::connect("google.com:443").unwrap();
 //! let mut stream = connector.connect("google.com", stream).unwrap();
@@ -26,30 +26,20 @@
 //! To accept connections as a server from remote clients:
 //!
 //! ```no_run
-//! use openssl::pkcs12::Pkcs12;
-//! use openssl::ssl::{SslMethod, SslAcceptorBuilder, SslStream};
+//! use openssl::ssl::{SslMethod, SslAcceptor, SslStream};
+//! use openssl::x509::X509Filetype;
 //! use std::fs::File;
 //! use std::io::{Read, Write};
 //! use std::net::{TcpListener, TcpStream};
 //! use std::sync::Arc;
 //! use std::thread;
 //!
-//! // In this example we retrieve our keypair and certificate chain from a PKCS #12 archive,
-//! // but but they can also be retrieved from, for example, individual PEM- or DER-formatted
-//! // files. See the documentation for the `PKey` and `X509` types for more details.
-//! let mut file = File::open("identity.pfx").unwrap();
-//! let mut pkcs12 = vec![];
-//! file.read_to_end(&mut pkcs12).unwrap();
-//! let pkcs12 = Pkcs12::from_der(&pkcs12).unwrap();
-//! let identity = pkcs12.parse(b"password123").unwrap();
 //!
-//! let acceptor = SslAcceptorBuilder::mozilla_intermediate(SslMethod::tls(),
-//!                                                         &identity.pkey,
-//!                                                         &identity.cert,
-//!                                                         &identity.chain.unwrap())
-//!     .unwrap()
-//!     .build();
-//! let acceptor = Arc::new(acceptor);
+//! let mut acceptor = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+//! acceptor.set_private_key_file("key.pem", X509Filetype::PEM).unwrap();
+//! acceptor.set_certificate_chain_file("certs.pem").unwrap();
+//! acceptor.check_private_key().unwrap();
+//! let acceptor = Arc::new(acceptor.build());
 //!
 //! let listener = TcpListener::bind("0.0.0.0:8443").unwrap();
 //!
