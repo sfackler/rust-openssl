@@ -18,8 +18,8 @@ use dh::Dh;
 use hash::MessageDigest;
 use ocsp::{OcspResponse, OcspResponseStatus};
 use ssl;
-use ssl::{Error, HandshakeError, ShutdownResult, Ssl, SslAcceptorBuilder, SslConnectorBuilder,
-          SslContext, SslMethod, SslStream, SslVerifyMode, StatusType};
+use ssl::{Error, HandshakeError, ShutdownResult, Ssl, SslAcceptor, SslConnector, SslContext,
+          SslMethod, SslStream, SslVerifyMode, StatusType};
 use x509::{X509, X509Filetype, X509Name, X509StoreContext};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::verify::X509CheckFlags;
@@ -1022,7 +1022,7 @@ fn verify_invalid_hostname() {
 
 #[test]
 fn connector_valid_hostname() {
-    let connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap().build();
+    let connector = SslConnector::builder(SslMethod::tls()).unwrap().build();
 
     let s = TcpStream::connect("google.com:443").unwrap();
     let mut socket = connector.connect("google.com", s).unwrap();
@@ -1038,7 +1038,7 @@ fn connector_valid_hostname() {
 
 #[test]
 fn connector_invalid_hostname() {
-    let connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap().build();
+    let connector = SslConnector::builder(SslMethod::tls()).unwrap().build();
 
     let s = TcpStream::connect("google.com:443").unwrap();
     assert!(connector.connect("foobar.com", s).is_err());
@@ -1046,7 +1046,7 @@ fn connector_invalid_hostname() {
 
 #[test]
 fn connector_invalid_no_hostname_verification() {
-    let connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap().build();
+    let connector = SslConnector::builder(SslMethod::tls()).unwrap().build();
 
     let s = TcpStream::connect("google.com:443").unwrap();
     connector
@@ -1062,7 +1062,7 @@ fn connector_invalid_no_hostname_verification() {
 fn connector_no_hostname_still_verifies() {
     let (_s, tcp) = Server::new();
 
-    let connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap().build();
+    let connector = SslConnector::builder(SslMethod::tls()).unwrap().build();
 
     assert!(
         connector
@@ -1078,7 +1078,7 @@ fn connector_no_hostname_still_verifies() {
 fn connector_no_hostname_can_disable_verify() {
     let (_s, tcp) = Server::new();
 
-    let mut connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
+    let mut connector = SslConnector::builder(SslMethod::tls()).unwrap();
     connector.set_verify(SslVerifyMode::NONE);
     let connector = connector.build();
 
@@ -1098,17 +1098,17 @@ fn connector_client_server_mozilla_intermediate() {
     let t = thread::spawn(move || {
         let key = PKey::private_key_from_pem(KEY).unwrap();
         let cert = X509::from_pem(CERT).unwrap();
-        let connector =
-            SslAcceptorBuilder::mozilla_intermediate(SslMethod::tls(), &key, &cert, None::<X509>)
-                .unwrap()
-                .build();
+        let mut acceptor = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+        acceptor.set_private_key(&key).unwrap();
+        acceptor.set_certificate(&cert).unwrap();
+        let acceptor = acceptor.build();
         let stream = listener.accept().unwrap().0;
-        let mut stream = connector.accept(stream).unwrap();
+        let mut stream = acceptor.accept(stream).unwrap();
 
         stream.write_all(b"hello").unwrap();
     });
 
-    let mut connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
+    let mut connector = SslConnector::builder(SslMethod::tls()).unwrap();
     connector.set_ca_file("test/root-ca.pem").unwrap();
     let connector = connector.build();
 
@@ -1130,17 +1130,17 @@ fn connector_client_server_mozilla_modern() {
     let t = thread::spawn(move || {
         let key = PKey::private_key_from_pem(KEY).unwrap();
         let cert = X509::from_pem(CERT).unwrap();
-        let connector =
-            SslAcceptorBuilder::mozilla_modern(SslMethod::tls(), &key, &cert, None::<X509>)
-                .unwrap()
-                .build();
+        let mut acceptor = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+        acceptor.set_private_key(&key).unwrap();
+        acceptor.set_certificate(&cert).unwrap();
+        let acceptor = acceptor.build();
         let stream = listener.accept().unwrap().0;
-        let mut stream = connector.accept(stream).unwrap();
+        let mut stream = acceptor.accept(stream).unwrap();
 
         stream.write_all(b"hello").unwrap();
     });
 
-    let mut connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
+    let mut connector = SslConnector::builder(SslMethod::tls()).unwrap();
     connector.set_ca_file("test/root-ca.pem").unwrap();
     let connector = connector.build();
 
@@ -1203,7 +1203,7 @@ fn cert_store() {
 
     let cert = X509::from_pem(ROOT_CERT).unwrap();
 
-    let mut ctx = SslConnectorBuilder::new(SslMethod::tls()).unwrap();
+    let mut ctx = SslConnector::builder(SslMethod::tls()).unwrap();
     ctx.cert_store_mut().add_cert(cert).unwrap();
     let ctx = ctx.build();
 
@@ -1355,7 +1355,7 @@ fn idle_session() {
 
 #[test]
 fn active_session() {
-    let connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap().build();
+    let connector = SslConnector::builder(SslMethod::tls()).unwrap().build();
 
     let s = TcpStream::connect("google.com:443").unwrap();
     let socket = connector.connect("google.com", s).unwrap();

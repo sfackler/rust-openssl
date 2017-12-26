@@ -15,7 +15,7 @@
 //!     Err(e) => println!("Parsing Error: {:?}", e),
 //! }
 //! ```
-use libc::{c_ulong, c_char, c_int};
+use libc::{c_char, c_ulong};
 use std::fmt;
 use std::error;
 use std::ffi::CStr;
@@ -87,7 +87,7 @@ impl From<ErrorStack> for fmt::Error {
 pub struct Error {
     code: c_ulong,
     file: *const c_char,
-    line: c_int,
+    line: u32,
     data: Option<Cow<'static, str>>,
 }
 
@@ -122,10 +122,10 @@ impl Error {
                         None
                     };
                     Some(Error {
-                        code: code,
-                        file: file,
-                        line: line,
-                        data: data,
+                        code,
+                        file,
+                        line: line as u32,
+                        data,
                     })
                 }
             }
@@ -183,7 +183,7 @@ impl Error {
     }
 
     /// Returns the line in the source file which encountered the error.
-    pub fn line(&self) -> c_int {
+    pub fn line(&self) -> u32 {
         self.line
     }
 

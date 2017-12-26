@@ -5,9 +5,7 @@ use dh::Dh;
 use error::ErrorStack;
 use ssl::{HandshakeError, Ssl, SslContext, SslContextBuilder, SslMethod, SslMode, SslOptions,
           SslRef, SslStream, SslVerifyMode};
-use pkey::PKeyRef;
 use version;
-use x509::X509Ref;
 
 #[cfg(ossl101)]
 lazy_static! {
@@ -51,14 +49,21 @@ fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     Ok(ctx)
 }
 
-/// A builder for `SslConnector`s.
-pub struct SslConnectorBuilder(SslContextBuilder);
+/// A type which wraps client-side streams in a TLS session.
+///
+/// OpenSSL's default configuration is highly insecure. This connector manages the OpenSSL
+/// structures, configuring cipher suites, session options, hostname verification, and more.
+///
+/// OpenSSL's built in hostname verification is used when linking against OpenSSL 1.0.2 or 1.1.0,
+/// and a custom implementation is used when linking against OpenSSL 1.0.1.
+#[derive(Clone)]
+pub struct SslConnector(SslContext);
 
-impl SslConnectorBuilder {
+impl SslConnector {
     /// Creates a new builder for TLS connections.
     ///
     /// The default configuration is subject to change, and is currently derived from Python.
-    pub fn new(method: SslMethod) -> Result<SslConnectorBuilder, ErrorStack> {
+    pub fn builder(method: SslMethod) -> Result<SslConnectorBuilder, ErrorStack> {
         let mut ctx = ctx(method)?;
         ctx.set_default_verify_paths()?;
         // From https://github.com/python/cpython/blob/a170fa162dc03f0a014373349e548954fff2e567/Lib/ssl.py#L193
@@ -72,37 +77,6 @@ impl SslConnectorBuilder {
         Ok(SslConnectorBuilder(ctx))
     }
 
-    /// Consumes the builder, returning an `SslConnector`.
-    pub fn build(self) -> SslConnector {
-        SslConnector(self.0.build())
-    }
-}
-
-impl Deref for SslConnectorBuilder {
-    type Target = SslContextBuilder;
-
-    fn deref(&self) -> &SslContextBuilder {
-        &self.0
-    }
-}
-
-impl DerefMut for SslConnectorBuilder {
-    fn deref_mut(&mut self) -> &mut SslContextBuilder {
-        &mut self.0
-    }
-}
-
-/// A type which wraps client-side streams in a TLS session.
-///
-/// OpenSSL's default configuration is highly insecure. This connector manages the OpenSSL
-/// structures, configuring cipher suites, session options, hostname verification, and more.
-///
-/// OpenSSL's built in hostname verification is used when linking against OpenSSL 1.0.2 or 1.1.0,
-/// and a custom implementation is used when linking against OpenSSL 1.0.1.
-#[derive(Clone)]
-pub struct SslConnector(SslContext);
-
-impl SslConnector {
     /// Initiates a client-side TLS session on a stream.
     ///
     /// The domain is used for SNI and hostname verification.
@@ -120,6 +94,30 @@ impl SslConnector {
             sni: true,
             verify_hostname: true,
         })
+    }
+}
+
+/// A builder for `SslConnector`s.
+pub struct SslConnectorBuilder(SslContextBuilder);
+
+impl SslConnectorBuilder {
+    /// Consumes the builder, returning an `SslConnector`.
+    pub fn build(self) -> SslConnector {
+        SslConnector(self.0.build())
+    }
+}
+
+impl Deref for SslConnectorBuilder {
+    type Target = SslContextBuilder;
+
+    fn deref(&self) -> &SslContextBuilder {
+        &self.0
+    }
+}
+
+impl DerefMut for SslConnectorBuilder {
+    fn deref_mut(&mut self) -> &mut SslContextBuilder {
+        &mut self.0
     }
 }
 
@@ -186,10 +184,14 @@ impl DerefMut for ConnectConfiguration {
     }
 }
 
-/// A builder for `SslAcceptor`s.
-pub struct SslAcceptorBuilder(SslContextBuilder);
+/// A type which wraps server-side streams in a TLS session.
+///
+/// OpenSSL's default configuration is highly insecure. This connector manages the OpenSSL
+/// structures, configuring cipher suites, session options, and more.
+#[derive(Clone)]
+pub struct SslAcceptor(SslContext);
 
-impl SslAcceptorBuilder {
+impl SslAcceptor {
     /// Creates a new builder configured to connect to non-legacy clients. This should generally be
     /// considered a reasonable default choice.
     ///
@@ -197,42 +199,7 @@ impl SslAcceptorBuilder {
     /// recommendations. See its [documentation][docs] for more details on specifics.
     ///
     /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
-    pub fn mozilla_intermediate<I>(
-        method: SslMethod,
-        private_key: &PKeyRef,
-        certificate: &X509Ref,
-        chain: I,
-    ) -> Result<SslAcceptorBuilder, ErrorStack>
-    where
-        I: IntoIterator,
-        I::Item: AsRef<X509Ref>,
-    {
-        let builder = SslAcceptorBuilder::mozilla_intermediate_raw(method)?;
-        builder.finish_setup(private_key, certificate, chain)
-    }
-
-    /// Creates a new builder configured to connect to modern clients.
-    ///
-    /// This corresponds to the modern configuration of Mozilla's server side TLS recommendations.
-    /// See its [documentation][docs] for more details on specifics.
-    ///
-    /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
-    pub fn mozilla_modern<I>(
-        method: SslMethod,
-        private_key: &PKeyRef,
-        certificate: &X509Ref,
-        chain: I,
-    ) -> Result<SslAcceptorBuilder, ErrorStack>
-    where
-        I: IntoIterator,
-        I::Item: AsRef<X509Ref>,
-    {
-        let builder = SslAcceptorBuilder::mozilla_modern_raw(method)?;
-        builder.finish_setup(private_key, certificate, chain)
-    }
-
-    /// Like `mozilla_intermediate`, but does not load the certificate chain and private key.
-    pub fn mozilla_intermediate_raw(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
+    pub fn mozilla_intermediate(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
         let mut ctx = ctx(method)?;
         let dh = Dh::from_pem(DHPARAM_PEM.as_bytes())?;
         ctx.set_tmp_dh(&dh)?;
@@ -252,8 +219,13 @@ impl SslAcceptorBuilder {
         Ok(SslAcceptorBuilder(ctx))
     }
 
-    /// Like `mozilla_modern`, but does not load the certificate chain and private key.
-    pub fn mozilla_modern_raw(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
+    /// Creates a new builder configured to connect to modern clients.
+    ///
+    /// This corresponds to the modern configuration of Mozilla's server side TLS recommendations.
+    /// See its [documentation][docs] for more details on specifics.
+    ///
+    /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
+    pub fn mozilla_modern(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
         let mut ctx = ctx(method)?;
         setup_curves(&mut ctx)?;
         ctx.set_cipher_list(
@@ -265,25 +237,20 @@ impl SslAcceptorBuilder {
         Ok(SslAcceptorBuilder(ctx))
     }
 
-    fn finish_setup<I>(
-        mut self,
-        private_key: &PKeyRef,
-        certificate: &X509Ref,
-        chain: I,
-    ) -> Result<SslAcceptorBuilder, ErrorStack>
+    /// Initiates a server-side TLS session on a stream.
+    pub fn accept<S>(&self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
     where
-        I: IntoIterator,
-        I::Item: AsRef<X509Ref>,
+        S: Read + Write,
     {
-        self.0.set_private_key(private_key)?;
-        self.0.set_certificate(certificate)?;
-        self.0.check_private_key()?;
-        for cert in chain {
-            self.0.add_extra_chain_cert(cert.as_ref().to_owned())?;
-        }
-        Ok(self)
+        let ssl = Ssl::new(&self.0)?;
+        ssl.accept(stream)
     }
+}
 
+/// A builder for `SslAcceptor`s.
+pub struct SslAcceptorBuilder(SslContextBuilder);
+
+impl SslAcceptorBuilder {
     /// Consumes the builder, returning a `SslAcceptor`.
     pub fn build(self) -> SslAcceptor {
         SslAcceptor(self.0.build())
@@ -321,24 +288,6 @@ fn setup_curves(ctx: &mut SslContextBuilder) -> Result<(), ErrorStack> {
 #[cfg(ossl110)]
 fn setup_curves(_: &mut SslContextBuilder) -> Result<(), ErrorStack> {
     Ok(())
-}
-
-/// A type which wraps server-side streams in a TLS session.
-///
-/// OpenSSL's default configuration is highly insecure. This connector manages the OpenSSL
-/// structures, configuring cipher suites, session options, and more.
-#[derive(Clone)]
-pub struct SslAcceptor(SslContext);
-
-impl SslAcceptor {
-    /// Initiates a server-side TLS session on a stream.
-    pub fn accept<S>(&self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
-    where
-        S: Read + Write,
-    {
-        let ssl = Ssl::new(&self.0)?;
-        ssl.accept(stream)
-    }
 }
 
 #[cfg(any(ossl102, ossl110))]
