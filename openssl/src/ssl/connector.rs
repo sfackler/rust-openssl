@@ -319,7 +319,8 @@ mod verify {
 
     use ex_data::Index;
     use nid::Nid;
-    use x509::{GeneralName, X509NameRef, X509Ref, X509StoreContextRef, X509VerifyResult};
+    use x509::{GeneralName, X509NameRef, X509Ref, X509StoreContext, X509StoreContextRef,
+               X509VerifyResult};
     use stack::Stack;
     use ssl::Ssl;
 
@@ -334,11 +335,10 @@ mod verify {
 
         let ok = match (
             x509_ctx.current_cert(),
-            x509_ctx
-                .ssl()
+            X509StoreContext::ssl_idx()
                 .ok()
-                .and_then(|s| s)
-                .and_then(|s| s.ex_data(*HOSTNAME_IDX)),
+                .and_then(|idx| x509_ctx.ex_data(idx))
+                .and_then(|ssl| ssl.ex_data(*HOSTNAME_IDX)),
         ) {
             (Some(x509), Some(domain)) => verify_hostname(domain, &x509),
             _ => true,

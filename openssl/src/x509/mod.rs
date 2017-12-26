@@ -16,6 +16,7 @@ use asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1T
 use bio::MemBioSlice;
 use conf::ConfRef;
 use error::ErrorStack;
+use ex_data::Index;
 use hash::MessageDigest;
 use nid::Nid;
 use pkey::{PKey, PKeyRef};
@@ -59,7 +60,26 @@ foreign_type_and_impl_send_sync! {
     pub struct X509StoreContextRef;
 }
 
+impl X509StoreContext {
+    /// Returns the index which can be used to obtain a reference to the `Ssl` associated with a
+    /// context.
+    pub fn ssl_idx() -> Result<Index<X509StoreContext, SslRef>, ErrorStack> {
+        unsafe { cvt_n(ffi::SSL_get_ex_data_X509_STORE_CTX_idx()).map(|idx| Index::from_raw(idx)) }
+    }
+}
+
 impl X509StoreContextRef {
+    pub fn ex_data<T>(&self, index: Index<X509StoreContext, T>) -> Option<&T> {
+        unsafe {
+            let data = ffi::X509_STORE_CTX_get_ex_data(self.as_ptr(), index.as_raw());
+            if data.is_null() {
+                None
+            } else {
+                Some(&*(data as *const T))
+            }
+        }
+    }
+
     pub fn error(&self) -> X509VerifyResult {
         unsafe { X509VerifyResult::from_raw(ffi::X509_STORE_CTX_get_error(self.as_ptr())) }
     }
@@ -90,22 +110,9 @@ impl X509StoreContextRef {
             let chain = X509_STORE_CTX_get_chain(self.as_ptr());
 
             if chain.is_null() {
-                return None;
-            }
-
-            Some(StackRef::from_ptr(chain))
-        }
-    }
-
-    /// Returns a reference to the `Ssl` associated with this context.
-    pub fn ssl(&self) -> Result<Option<&SslRef>, ErrorStack> {
-        unsafe {
-            let idx = cvt_n(ffi::SSL_get_ex_data_X509_STORE_CTX_idx())?;
-            let ssl = ffi::X509_STORE_CTX_get_ex_data(self.as_ptr(), idx);
-            if ssl.is_null() {
-                Ok(None)
+                None
             } else {
-                Ok(Some(SslRef::from_ptr(ssl as *mut ffi::SSL)))
+                Some(StackRef::from_ptr(chain))
             }
         }
     }
