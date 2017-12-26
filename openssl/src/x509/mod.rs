@@ -60,8 +60,14 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl X509StoreContextRef {
-    pub fn error(&self) -> Option<X509VerifyError> {
-        unsafe { X509VerifyError::from_raw(ffi::X509_STORE_CTX_get_error(self.as_ptr()) as c_long) }
+    pub fn error(&self) -> X509VerifyResult {
+        unsafe { X509VerifyResult::from_raw(ffi::X509_STORE_CTX_get_error(self.as_ptr())) }
+    }
+
+    pub fn set_error(&mut self, result: X509VerifyResult) {
+        unsafe {
+            ffi::X509_STORE_CTX_set_error(self.as_ptr(), result.as_raw());
+        }
     }
 
     pub fn current_cert(&self) -> Option<&X509Ref> {
@@ -343,13 +349,10 @@ impl X509Ref {
     }
 
     /// Checks that this certificate issued `subject`.
-    pub fn issued(&self, subject: &X509Ref) -> Result<(), X509VerifyError> {
+    pub fn issued(&self, subject: &X509Ref) -> X509VerifyResult {
         unsafe {
             let r = ffi::X509_check_issued(self.as_ptr(), subject.as_ptr());
-            match X509VerifyError::from_raw(r as c_long) {
-                Some(e) => Err(e),
-                None => Ok(()),
-            }
+            X509VerifyResult::from_raw(r)
         }
     }
 
@@ -746,47 +749,42 @@ impl X509ReqRef {
     }
 }
 
-pub struct X509VerifyError(c_long);
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct X509VerifyResult(c_int);
 
-impl fmt::Debug for X509VerifyError {
+impl fmt::Debug for X509VerifyResult {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_struct("X509VerifyError")
+        fmt.debug_struct("X509VerifyResult")
             .field("code", &self.0)
             .field("error", &self.error_string())
             .finish()
     }
 }
 
-impl fmt::Display for X509VerifyError {
+impl fmt::Display for X509VerifyResult {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.write_str(self.error_string())
     }
 }
 
-impl Error for X509VerifyError {
+impl Error for X509VerifyResult {
     fn description(&self) -> &str {
         "an X509 validation error"
     }
 }
 
-impl X509VerifyError {
-    /// Creates an `X509VerifyError` from a raw error number.
-    ///
-    /// `None` will be returned if `err` is `X509_V_OK`.
+impl X509VerifyResult {
+    /// Creates an `X509VerifyResult` from a raw error number.
     ///
     /// # Safety
     ///
-    /// Some methods on `X509VerifyError` are not thread safe if the error
+    /// Some methods on `X509VerifyResult` are not thread safe if the error
     /// number is invalid.
-    pub unsafe fn from_raw(err: c_long) -> Option<X509VerifyError> {
-        if err == ffi::X509_V_OK as c_long {
-            None
-        } else {
-            Some(X509VerifyError(err))
-        }
+    pub unsafe fn from_raw(err: c_int) -> X509VerifyResult {
+        X509VerifyResult(err)
     }
 
-    pub fn as_raw(&self) -> c_long {
+    pub fn as_raw(&self) -> c_int {
         self.0
     }
 
@@ -794,10 +792,14 @@ impl X509VerifyError {
         ffi::init();
 
         unsafe {
-            let s = ffi::X509_verify_cert_error_string(self.0);
+            let s = ffi::X509_verify_cert_error_string(self.0 as c_long);
             str::from_utf8(CStr::from_ptr(s).to_bytes()).unwrap()
         }
     }
+
+    pub const OK: X509VerifyResult = X509VerifyResult(ffi::X509_V_OK);
+    pub const APPLICATION_VERIFICATION: X509VerifyResult =
+        X509VerifyResult(ffi::X509_V_ERR_APPLICATION_VERIFICATION);
 }
 
 foreign_type_and_impl_send_sync! {

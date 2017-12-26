@@ -20,7 +20,7 @@ use ocsp::{OcspResponse, OcspResponseStatus};
 use ssl;
 use ssl::{Error, HandshakeError, ShutdownResult, Ssl, SslAcceptor, SslConnector, SslContext,
           SslMethod, SslStream, SslVerifyMode, StatusType};
-use x509::{X509, X509Filetype, X509Name, X509StoreContext};
+use x509::{X509, X509Filetype, X509Name, X509StoreContext, X509VerifyResult};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::verify::X509CheckFlags;
 use pkey::PKey;
@@ -133,7 +133,7 @@ macro_rules! run_test(
             use ssl::SslMethod;
             use ssl::{SslContext, Ssl, SslStream, SslVerifyMode, SslOptions};
             use hash::MessageDigest;
-            use x509::X509StoreContext;
+            use x509::{X509StoreContext, X509VerifyResult};
             #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
             use x509::X509;
             #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
@@ -255,7 +255,7 @@ run_test!(verify_callback_load_certs, |method, stream| {
 run_test!(verify_trusted_get_error_ok, |method, stream| {
     let mut ctx = SslContext::builder(method).unwrap();
     ctx.set_verify_callback(SslVerifyMode::PEER, |_, x509_ctx| {
-        assert!(x509_ctx.error().is_none());
+        assert!(x509_ctx.error() == X509VerifyResult::OK);
         true
     });
 
@@ -269,7 +269,7 @@ run_test!(verify_trusted_get_error_ok, |method, stream| {
 run_test!(verify_trusted_get_error_err, |method, stream| {
     let mut ctx = SslContext::builder(method).unwrap();
     ctx.set_verify_callback(SslVerifyMode::PEER, |_, x509_ctx| {
-        assert!(x509_ctx.error().is_some());
+        assert_ne!(x509_ctx.error(), X509VerifyResult::OK);
         false
     });
 

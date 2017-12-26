@@ -7,11 +7,6 @@ use ssl::{HandshakeError, Ssl, SslContext, SslContextBuilder, SslMethod, SslMode
           SslRef, SslStream, SslVerifyMode};
 use version;
 
-#[cfg(ossl101)]
-lazy_static! {
-    static ref HOSTNAME_IDX: ::ex_data::Index<Ssl, String> = Ssl::new_ex_index().unwrap();
-}
-
 // ffdhe2048 from https://wiki.mozilla.org/Security/Server_Side_TLS#ffdhe2048
 const DHPARAM_PEM: &'static str = "
 -----BEGIN DH PARAMETERS-----
@@ -297,16 +292,7 @@ fn setup_verify(ctx: &mut SslContextBuilder) {
 
 #[cfg(ossl101)]
 fn setup_verify(ctx: &mut SslContextBuilder) {
-    ctx.set_verify_callback(SslVerifyMode::PEER, |p, x509| {
-        let hostname = match x509.ssl() {
-            Ok(Some(ssl)) => ssl.ex_data(*HOSTNAME_IDX),
-            _ => None,
-        };
-        match hostname {
-            Some(hostname) => verify::verify_callback(hostname, p, x509),
-            None => p,
-        }
-    });
+    ctx.set_verify_callback(SslVerifyMode::PEER, verify::verify_callback);
 }
 
 #[cfg(any(ossl102, ossl110))]
@@ -322,7 +308,7 @@ fn setup_verify_hostname(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> 
 #[cfg(ossl101)]
 fn setup_verify_hostname(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
     let domain = domain.to_string();
-    ssl.set_ex_data(*HOSTNAME_IDX, domain);
+    ssl.set_ex_data(*verify::HOSTNAME_IDX, domain);
     Ok(())
 }
 
@@ -331,23 +317,38 @@ mod verify {
     use std::net::IpAddr;
     use std::str;
 
+    use ex_data::Index;
     use nid::Nid;
-    use x509::{GeneralName, X509NameRef, X509Ref, X509StoreContextRef};
+    use x509::{GeneralName, X509NameRef, X509Ref, X509StoreContextRef, X509VerifyResult};
     use stack::Stack;
+    use ssl::Ssl;
 
-    pub fn verify_callback(
-        domain: &str,
-        preverify_ok: bool,
-        x509_ctx: &X509StoreContextRef,
-    ) -> bool {
+    lazy_static! {
+        pub static ref HOSTNAME_IDX: Index<Ssl, String> = Ssl::new_ex_index().unwrap();
+    }
+
+    pub fn verify_callback(preverify_ok: bool, x509_ctx: &mut X509StoreContextRef) -> bool {
         if !preverify_ok || x509_ctx.error_depth() != 0 {
             return preverify_ok;
         }
 
-        match x509_ctx.current_cert() {
-            Some(x509) => verify_hostname(domain, &x509),
-            None => true,
+        let ok = match (
+            x509_ctx.current_cert(),
+            x509_ctx
+                .ssl()
+                .ok()
+                .and_then(|s| s)
+                .and_then(|s| s.ex_data(*HOSTNAME_IDX)),
+        ) {
+            (Some(x509), Some(domain)) => verify_hostname(domain, &x509),
+            _ => true,
+        };
+
+        if !ok {
+            x509_ctx.set_error(X509VerifyResult::APPLICATION_VERIFICATION);
         }
+
+        ok
     }
 
     fn verify_hostname(domain: &str, cert: &X509Ref) -> bool {

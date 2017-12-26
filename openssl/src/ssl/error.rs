@@ -5,6 +5,7 @@ use std::io;
 
 use error::ErrorStack;
 use ssl::MidHandshakeSslStream;
+use x509::X509VerifyResult;
 
 /// An SSL error.
 // FIXME this is missing variants
@@ -130,8 +131,9 @@ impl<S: fmt::Debug> fmt::Display for HandshakeError<S> {
             HandshakeError::SetupFailure(ref e) => write!(f, ": {}", e)?,
             HandshakeError::Failure(ref s) | HandshakeError::WouldBlock(ref s) => {
                 write!(f, ": {}", s.error())?;
-                if let Some(err) = s.ssl().verify_result() {
-                    write!(f, ": {}", err)?;
+                let verify = s.ssl().verify_result();
+                if verify != X509VerifyResult::OK {
+                    write!(f, ": {}", verify)?;
                 }
             }
         }
