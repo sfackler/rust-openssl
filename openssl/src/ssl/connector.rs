@@ -29,9 +29,11 @@ ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
 fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     let mut ctx = SslContextBuilder::new(method)?;
 
-    let opts = SslOptions::ALL | SslOptions::NO_TICKET | SslOptions::NO_COMPRESSION
-        | SslOptions::NO_SSLV2 | SslOptions::NO_SSLV3 | SslOptions::SINGLE_DH_USE
+    let mut opts = SslOptions::ALL | SslOptions::NO_COMPRESSION | SslOptions::NO_SSLV2
+        | SslOptions::NO_SSLV3 | SslOptions::SINGLE_DH_USE
         | SslOptions::SINGLE_ECDH_USE | SslOptions::CIPHER_SERVER_PREFERENCE;
+    opts &= !SslOptions::DONT_INSERT_EMPTY_FRAGMENTS;
+
     ctx.set_options(opts);
 
     let mut mode =
