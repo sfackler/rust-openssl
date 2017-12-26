@@ -378,9 +378,9 @@ impl DerefMut for SslAcceptorBuilder {
 #[cfg(ossl101)]
 fn setup_curves(ctx: &mut SslContextBuilder) -> Result<(), ErrorStack> {
     use ec::EcKey;
-    use nid;
+    use nid::Nid;
 
-    let curve = EcKey::from_curve_name(nid::X9_62_PRIME256V1)?;
+    let curve = EcKey::from_curve_name(Nid::X9_62_PRIME256V1)?;
     ctx.set_tmp_ecdh(&curve)
 }
 
@@ -419,7 +419,7 @@ fn setup_verify(ctx: &mut SslContextBuilder) {
 
 #[cfg(ossl101)]
 fn setup_verify(ctx: &mut SslContextBuilder) {
-    ctx.set_verify_callback(SSL_VERIFY_PEER, |p, x509| {
+    ctx.set_verify_callback(SslVerifyMode::PEER, |p, x509| {
         let hostname = match x509.ssl() {
             Ok(Some(ssl)) => ssl.ex_data(*HOSTNAME_IDX),
             _ => None,
@@ -453,7 +453,7 @@ mod verify {
     use std::net::IpAddr;
     use std::str;
 
-    use nid;
+    use nid::Nid;
     use x509::{GeneralName, X509NameRef, X509Ref, X509StoreContextRef};
     use stack::Stack;
 
@@ -505,7 +505,7 @@ mod verify {
     }
 
     fn verify_subject_name(domain: &str, subject_name: &X509NameRef) -> bool {
-        match subject_name.entries_by_nid(nid::COMMONNAME).next() {
+        match subject_name.entries_by_nid(Nid::COMMONNAME).next() {
             Some(pattern) => {
                 let pattern = match str::from_utf8(pattern.data().as_slice()) {
                     Ok(pattern) => pattern,

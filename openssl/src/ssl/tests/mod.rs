@@ -22,7 +22,7 @@ use ssl::{Error, HandshakeError, ShutdownResult, Ssl, SslAcceptorBuilder, SslCon
           SslContext, SslMethod, SslStream, SslVerifyMode, StatusType};
 use x509::{X509, X509Filetype, X509Name, X509StoreContext};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-use x509::verify::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS;
+use x509::verify::X509CheckFlags;
 use pkey::PKey;
 
 use std::net::UdpSocket;
@@ -989,7 +989,7 @@ fn verify_valid_hostname() {
 
     let mut ssl = Ssl::new(&ctx.build()).unwrap();
     ssl.param_mut()
-        .set_hostflags(X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+        .set_hostflags(X509CheckFlags::NO_PARTIAL_WILDCARDS);
     ssl.param_mut().set_host("google.com").unwrap();
 
     let s = TcpStream::connect("google.com:443").unwrap();
@@ -1013,7 +1013,7 @@ fn verify_invalid_hostname() {
 
     let mut ssl = Ssl::new(&ctx.build()).unwrap();
     ssl.param_mut()
-        .set_hostflags(X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+        .set_hostflags(X509CheckFlags::NO_PARTIAL_WILDCARDS);
     ssl.param_mut().set_host("foobar.com").unwrap();
 
     let s = TcpStream::connect("google.com:443").unwrap();
@@ -1247,7 +1247,7 @@ fn tmp_dh_callback() {
           all(feature = "v102", ossl102)))]
 fn tmp_ecdh_callback() {
     use ec::EcKey;
-    use nid;
+    use nid::Nid;
 
     static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
 
@@ -1263,7 +1263,7 @@ fn tmp_ecdh_callback() {
             .unwrap();
         ctx.set_tmp_ecdh_callback(|_, _, _| {
             CALLED_BACK.store(true, Ordering::SeqCst);
-            EcKey::new_by_curve_name(nid::X9_62_PRIME256V1)
+            EcKey::new_by_curve_name(Nid::X9_62_PRIME256V1)
         });
         let ssl = Ssl::new(&ctx.build()).unwrap();
         ssl.accept(stream).unwrap();
@@ -1315,7 +1315,7 @@ fn tmp_dh_callback_ssl() {
           all(feature = "v102", ossl102)))]
 fn tmp_ecdh_callback_ssl() {
     use ec::EcKey;
-    use nid;
+    use nid::Nid;
 
     static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
 
@@ -1332,7 +1332,7 @@ fn tmp_ecdh_callback_ssl() {
         let mut ssl = Ssl::new(&ctx.build()).unwrap();
         ssl.set_tmp_ecdh_callback(|_, _, _| {
             CALLED_BACK.store(true, Ordering::SeqCst);
-            EcKey::new_by_curve_name(nid::X9_62_PRIME256V1)
+            EcKey::new_by_curve_name(Nid::X9_62_PRIME256V1)
         });
         ssl.accept(stream).unwrap();
     });

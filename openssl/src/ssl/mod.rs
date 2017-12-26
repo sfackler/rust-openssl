@@ -212,9 +212,9 @@ bitflags! {
         /// Only support TLSv1.2:
         ///
         /// ```rust
-        /// use openssl::ssl::{SSL_OP_NO_SSL_MASK, SSL_OP_NO_TLSV1_2};
+        /// use openssl::ssl::SslOptions;
         ///
-        /// let options = SSL_OP_NO_SSL_MASK & !SSL_OP_NO_TLSV1_2;
+        /// let options = SslOptions::NO_SSL_MASK & !SslOptions::NO_TLSV1_2;
         /// ```
         #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
         const NO_SSL_MASK = ffi::SSL_OP_NO_SSL_MASK;
