@@ -338,10 +338,10 @@ impl StatusType {
     pub fn as_raw(&self) -> c_int {
         self.0
     }
-}
 
-/// An OSCP status.
-pub const STATUS_TYPE_OCSP: StatusType = StatusType(ffi::TLSEXT_STATUSTYPE_ocsp);
+    /// An OSCP status.
+    pub const OCSP: StatusType = StatusType(ffi::TLSEXT_STATUSTYPE_ocsp);
+}
 
 lazy_static! {
     static ref INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());

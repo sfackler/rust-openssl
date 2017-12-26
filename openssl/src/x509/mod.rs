@@ -16,7 +16,7 @@ use std::str;
 use {cvt, cvt_n, cvt_p};
 use asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1Time, Asn1TimeRef};
 use bio::MemBioSlice;
-use bn::{BigNum, MSB_MAYBE_ZERO};
+use bn::{BigNum, MsbOption};
 use conf::ConfRef;
 use error::ErrorStack;
 use hash::MessageDigest;
@@ -50,11 +50,11 @@ impl X509FileType {
     pub fn as_raw(&self) -> c_int {
         self.0
     }
-}
 
-pub const X509_FILETYPE_PEM: X509FileType = X509FileType(ffi::X509_FILETYPE_PEM);
-pub const X509_FILETYPE_ASN1: X509FileType = X509FileType(ffi::X509_FILETYPE_ASN1);
-pub const X509_FILETYPE_DEFAULT: X509FileType = X509FileType(ffi::X509_FILETYPE_DEFAULT);
+    pub const PEM: X509FileType = X509FileType(ffi::X509_FILETYPE_PEM);
+    pub const ASN1: X509FileType = X509FileType(ffi::X509_FILETYPE_ASN1);
+    pub const DEFAULT: X509FileType = X509FileType(ffi::X509_FILETYPE_DEFAULT);
+}
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE_CTX;
@@ -224,7 +224,7 @@ impl X509Generator {
         builder.set_version(2)?;
 
         let mut serial = BigNum::new()?;
-        serial.rand(128, MSB_MAYBE_ZERO, false)?;
+        serial.rand(128, MsbOption::MAYBE_ZERO, false)?;
         let serial = serial.to_asn1_integer()?;
         builder.set_serial_number(&serial)?;
 

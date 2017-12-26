@@ -42,43 +42,6 @@ use bn::{BigNumContextRef, BigNumRef};
 use error::ErrorStack;
 use nid::Nid;
 
-/// Compressed conversion from point value (Default)
-pub const POINT_CONVERSION_COMPRESSED: PointConversionForm =
-    PointConversionForm(ffi::point_conversion_form_t::POINT_CONVERSION_COMPRESSED);
-
-/// Uncompressed conversion from point value (Binary curve default)
-pub const POINT_CONVERSION_UNCOMPRESSED: PointConversionForm =
-    PointConversionForm(ffi::point_conversion_form_t::POINT_CONVERSION_UNCOMPRESSED);
-
-/// Performs both compressed and uncompressed conversions
-pub const POINT_CONVERSION_HYBRID: PointConversionForm =
-    PointConversionForm(ffi::point_conversion_form_t::POINT_CONVERSION_HYBRID);
-
-/// Curve defined using polynomial parameters
-///
-/// Most applications use a named EC_GROUP curve, however, support
-/// is included to explicitly define the curve used to calculate keys
-/// This information would need to be known by both endpoint to make communication
-/// effective.
-///
-/// OPENSSL_EC_EXPLICIT_CURVE, but that was only added in 1.1.
-/// Man page documents that 0 can be used in older versions.
-///
-/// OpenSSL documentation at [`EC_GROUP`]
-///
-/// [`EC_GROUP`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_get_seed_len.html
-pub const EXPLICIT_CURVE: Asn1Flag = Asn1Flag(0);
-
-/// Standard Curves
-///
-/// Curves that make up the typical encryption use cases.  The collection of curves
-/// are well known but extensible.
-///
-/// OpenSSL documentation at [`EC_GROUP`]
-///
-/// [`EC_GROUP`]: https://www.openssl.org/docs/manmaster/man3/EC_GROUP_order_bits.html
-pub const NAMED_CURVE: Asn1Flag = Asn1Flag(ffi::OPENSSL_EC_NAMED_CURVE);
-
 /// Compressed or Uncompressed conversion
 ///
 /// Conversion from the binary value of the point on the curve is performed in one of
@@ -91,12 +54,52 @@ pub const NAMED_CURVE: Asn1Flag = Asn1Flag(ffi::OPENSSL_EC_NAMED_CURVE);
 #[derive(Copy, Clone)]
 pub struct PointConversionForm(ffi::point_conversion_form_t);
 
+impl PointConversionForm {
+    /// Compressed conversion from point value.
+    pub const COMPRESSED: PointConversionForm =
+        PointConversionForm(ffi::point_conversion_form_t::POINT_CONVERSION_COMPRESSED);
+
+    /// Uncompressed conversion from point value.
+    pub const UNCOMPRESSED: PointConversionForm =
+        PointConversionForm(ffi::point_conversion_form_t::POINT_CONVERSION_UNCOMPRESSED);
+
+    /// Performs both compressed and uncompressed conversions.
+    pub const HYBRID: PointConversionForm =
+        PointConversionForm(ffi::point_conversion_form_t::POINT_CONVERSION_HYBRID);
+}
+
 /// Named Curve or Explicit
 ///
-/// This type acts as a boolean as to whether the EC_Group is named or
-/// explicit.
+/// This type acts as a boolean as to whether the `EcGroup` is named or explicit.
 #[derive(Copy, Clone)]
 pub struct Asn1Flag(c_int);
+
+impl Asn1Flag {
+    /// Curve defined using polynomial parameters
+    ///
+    /// Most applications use a named EC_GROUP curve, however, support
+    /// is included to explicitly define the curve used to calculate keys
+    /// This information would need to be known by both endpoint to make communication
+    /// effective.
+    ///
+    /// OPENSSL_EC_EXPLICIT_CURVE, but that was only added in 1.1.
+    /// Man page documents that 0 can be used in older versions.
+    ///
+    /// OpenSSL documentation at [`EC_GROUP`]
+    ///
+    /// [`EC_GROUP`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_get_seed_len.html
+    pub const EXPLICIT_CURVE: Asn1Flag = Asn1Flag(0);
+
+    /// Standard Curves
+    ///
+    /// Curves that make up the typical encryption use cases.  The collection of curves
+    /// are well known but extensible.
+    ///
+    /// OpenSSL documentation at [`EC_GROUP`]
+    ///
+    /// [`EC_GROUP`]: https://www.openssl.org/docs/manmaster/man3/EC_GROUP_order_bits.html
+    pub const NAMED_CURVE: Asn1Flag = Asn1Flag(ffi::OPENSSL_EC_NAMED_CURVE);
+}
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::EC_GROUP;
@@ -767,7 +770,7 @@ mod test {
         let point = key.public_key().unwrap();
         let mut ctx = BigNumContext::new().unwrap();
         let bytes = point
-            .to_bytes(&group, POINT_CONVERSION_COMPRESSED, &mut ctx)
+            .to_bytes(&group, PointConversionForm::COMPRESSED, &mut ctx)
             .unwrap();
         let point2 = EcPoint::from_bytes(&group, &bytes, &mut ctx).unwrap();
         assert!(point.eq(&group, &point2, &mut ctx).unwrap());
@@ -796,7 +799,7 @@ mod test {
         let mut ctx = BigNumContext::new().unwrap();
         let bytes = key.public_key()
             .unwrap()
-            .to_bytes(&group, POINT_CONVERSION_COMPRESSED, &mut ctx)
+            .to_bytes(&group, PointConversionForm::COMPRESSED, &mut ctx)
             .unwrap();
 
         drop(key);

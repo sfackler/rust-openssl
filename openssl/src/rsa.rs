@@ -2,14 +2,14 @@ use ffi;
 use std::fmt;
 use std::ptr;
 use std::mem;
-use libc::{c_int, c_void, c_char};
+use libc::{c_char, c_int, c_void};
 use foreign_types::ForeignTypeRef;
 
-use {cvt, cvt_p, cvt_n};
+use {cvt, cvt_n, cvt_p};
 use bn::{BigNum, BigNumRef};
 use bio::MemBioSlice;
 use error::ErrorStack;
-use util::{CallbackState, invoke_passwd_cb_old};
+use util::{invoke_passwd_cb_old, CallbackState};
 
 /// Type of encryption padding to use.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -23,11 +23,11 @@ impl Padding {
     pub fn as_raw(&self) -> c_int {
         self.0
     }
-}
 
-pub const NO_PADDING: Padding = Padding(ffi::RSA_NO_PADDING);
-pub const PKCS1_PADDING: Padding = Padding(ffi::RSA_PKCS1_PADDING);
-pub const PKCS1_OAEP_PADDING: Padding = Padding(ffi::RSA_PKCS1_OAEP_PADDING);
+    pub const NONE: Padding = Padding(ffi::RSA_NO_PADDING);
+    pub const PKCS1: Padding = Padding(ffi::RSA_PKCS1_PADDING);
+    pub const PKCS1_OAEP: Padding = Padding(ffi::RSA_PKCS1_OAEP_PADDING);
+}
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::RSA;
@@ -286,9 +286,7 @@ impl Rsa {
     ) -> Result<Rsa, ErrorStack> {
         unsafe {
             let rsa = Rsa(cvt_p(ffi::RSA_new())?);
-            cvt(
-                compat::set_key(rsa.0, n.as_ptr(), e.as_ptr(), d.as_ptr()),
-            )?;
+            cvt(compat::set_key(rsa.0, n.as_ptr(), e.as_ptr(), d.as_ptr()))?;
             mem::forget((n, e, d));
             cvt(compat::set_factors(rsa.0, p.as_ptr(), q.as_ptr()))?;
             mem::forget((p, q));
@@ -490,7 +488,7 @@ mod test {
         let mut result = vec![0; public_key.size()];
         let original_data = b"This is test";
         let len = public_key
-            .public_encrypt(original_data, &mut result, PKCS1_PADDING)
+            .public_encrypt(original_data, &mut result, Padding::PKCS1)
             .unwrap();
         assert_eq!(len, 256);
 
@@ -498,7 +496,7 @@ mod test {
         let private_key = Rsa::private_key_from_pem(pkey).unwrap();
         let mut dec_result = vec![0; private_key.size()];
         let len = private_key
-            .private_decrypt(&result, &mut dec_result, PKCS1_PADDING)
+            .private_decrypt(&result, &mut dec_result, Padding::PKCS1)
             .unwrap();
 
         assert_eq!(&dec_result[..len], original_data);
@@ -513,9 +511,10 @@ mod test {
         let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
 
         let mut emesg = vec![0; k0.size()];
-        k0.private_encrypt(&msg, &mut emesg, PKCS1_PADDING).unwrap();
+        k0.private_encrypt(&msg, &mut emesg, Padding::PKCS1)
+            .unwrap();
         let mut dmesg = vec![0; k1.size()];
-        let len = k1.public_decrypt(&emesg, &mut dmesg, PKCS1_PADDING)
+        let len = k1.public_decrypt(&emesg, &mut dmesg, Padding::PKCS1)
             .unwrap();
         assert_eq!(msg, &dmesg[..len]);
     }
@@ -529,9 +528,9 @@ mod test {
         let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
 
         let mut emesg = vec![0; k0.size()];
-        k0.public_encrypt(&msg, &mut emesg, PKCS1_PADDING).unwrap();
+        k0.public_encrypt(&msg, &mut emesg, Padding::PKCS1).unwrap();
         let mut dmesg = vec![0; k1.size()];
-        let len = k1.private_decrypt(&emesg, &mut dmesg, PKCS1_PADDING)
+        let len = k1.private_decrypt(&emesg, &mut dmesg, Padding::PKCS1)
             .unwrap();
         assert_eq!(msg, &dmesg[..len]);
     }

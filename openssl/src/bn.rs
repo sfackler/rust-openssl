@@ -30,16 +30,16 @@ use libc::c_int;
 use std::cmp::Ordering;
 use std::ffi::CString;
 use std::{fmt, ptr};
-use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub, Deref};
+use std::ops::{Add, Deref, Div, Mul, Neg, Rem, Shl, Shr, Sub};
 
-use {cvt, cvt_p, cvt_n};
+use {cvt, cvt_n, cvt_p};
 use asn1::Asn1Integer;
 use error::ErrorStack;
 use string::OpensslString;
 
 #[cfg(ossl10x)]
-use ffi::{get_rfc2409_prime_768 as BN_get_rfc2409_prime_768,
-          get_rfc2409_prime_1024 as BN_get_rfc2409_prime_1024,
+use ffi::{get_rfc2409_prime_1024 as BN_get_rfc2409_prime_1024,
+          get_rfc2409_prime_768 as BN_get_rfc2409_prime_768,
           get_rfc3526_prime_1536 as BN_get_rfc3526_prime_1536,
           get_rfc3526_prime_2048 as BN_get_rfc3526_prime_2048,
           get_rfc3526_prime_3072 as BN_get_rfc3526_prime_3072,
@@ -48,24 +48,26 @@ use ffi::{get_rfc2409_prime_768 as BN_get_rfc2409_prime_768,
           get_rfc3526_prime_8192 as BN_get_rfc3526_prime_8192};
 
 #[cfg(ossl110)]
-use ffi::{BN_get_rfc2409_prime_768, BN_get_rfc2409_prime_1024, BN_get_rfc3526_prime_1536,
+use ffi::{BN_get_rfc2409_prime_1024, BN_get_rfc2409_prime_768, BN_get_rfc3526_prime_1536,
           BN_get_rfc3526_prime_2048, BN_get_rfc3526_prime_3072, BN_get_rfc3526_prime_4096,
           BN_get_rfc3526_prime_6144, BN_get_rfc3526_prime_8192};
 
 /// Options for the most significant bits of a randomly generated `BigNum`.
 pub struct MsbOption(c_int);
 
-/// The most significant bit of the number may be 0.
-pub const MSB_MAYBE_ZERO: MsbOption = MsbOption(-1);
+impl MsbOption {
+    /// The most significant bit of the number may be 0.
+    pub const MAYBE_ZERO: MsbOption = MsbOption(-1);
 
-/// The most significant bit of the number must be 1.
-pub const MSB_ONE: MsbOption = MsbOption(0);
+    /// The most significant bit of the number must be 1.
+    pub const ONE: MsbOption = MsbOption(0);
 
-/// The most significant two bits of the number must be 1.
-///
-/// The number of bits in the product of two such numbers will always be exactly twice the number
-/// of bits in the original numbers.
-pub const TWO_MSB_ONE: MsbOption = MsbOption(1);
+    /// The most significant two bits of the number must be 1.
+    ///
+    /// The number of bits in the product of two such numbers will always be exactly twice the
+    /// number of bits in the original numbers.
+    pub const TWO_ONES: MsbOption = MsbOption(1);
+}
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::BN_CTX;
@@ -396,14 +398,14 @@ impl BigNumRef {
     /// # Examples
     ///
     /// ```
-    /// use openssl::bn::{BigNum,MSB_MAYBE_ZERO};
+    /// use openssl::bn::{BigNum, MsbOption};
     /// use openssl::error::ErrorStack;
     ///
     /// fn generate_random() -> Result< BigNum, ErrorStack > {
     ///    let mut big = BigNum::new()?;
     ///
     ///    // Generates a 128-bit odd random number
-    ///    big.rand(128, MSB_MAYBE_ZERO, true);
+    ///    big.rand(128, MsbOption::MAYBE_ZERO, true);
     ///    Ok((big))
     /// }
     /// ```
@@ -1345,7 +1347,7 @@ impl Neg for BigNum {
 
 #[cfg(test)]
 mod tests {
-    use bn::{BigNumContext, BigNum};
+    use bn::{BigNum, BigNumContext};
 
     #[test]
     fn test_to_from_slice() {

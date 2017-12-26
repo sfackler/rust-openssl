@@ -13,7 +13,7 @@ use x509::store::X509StoreRef;
 use x509::{X509, X509Ref};
 
 bitflags! {
-    pub struct Flag: c_ulong {
+    pub struct OcspFlag: c_ulong {
         const NO_CERTS = ffi::OCSP_NOCERTS;
         const NO_INTERN = ffi::OCSP_NOINTERN;
         const NO_CHAIN = ffi::OCSP_NOCHAIN;
@@ -28,42 +28,6 @@ bitflags! {
     }
 }
 
-pub const RESPONSE_STATUS_SUCCESSFUL: OcspResponseStatus =
-    OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_SUCCESSFUL);
-pub const RESPONSE_STATUS_MALFORMED_REQUEST: OcspResponseStatus =
-    OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_MALFORMEDREQUEST);
-pub const RESPONSE_STATUS_INTERNAL_ERROR: OcspResponseStatus =
-    OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_INTERNALERROR);
-pub const RESPONSE_STATUS_TRY_LATER: OcspResponseStatus =
-    OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_TRYLATER);
-pub const RESPONSE_STATUS_SIG_REQUIRED: OcspResponseStatus =
-    OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_SIGREQUIRED);
-pub const RESPONSE_STATUS_UNAUTHORIZED: OcspResponseStatus =
-    OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_UNAUTHORIZED);
-
-pub const CERT_STATUS_GOOD: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_GOOD);
-pub const CERT_STATUS_REVOKED: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_REVOKED);
-pub const CERT_STATUS_UNKNOWN: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_UNKNOWN);
-
-pub const REVOKED_STATUS_NO_STATUS: OcspRevokedStatus =
-    OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_NOSTATUS);
-pub const REVOKED_STATUS_UNSPECIFIED: OcspRevokedStatus =
-    OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_UNSPECIFIED);
-pub const REVOKED_STATUS_KEY_COMPROMISE: OcspRevokedStatus =
-    OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_KEYCOMPROMISE);
-pub const REVOKED_STATUS_CA_COMPROMISE: OcspRevokedStatus =
-    OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_CACOMPROMISE);
-pub const REVOKED_STATUS_AFFILIATION_CHANGED: OcspRevokedStatus =
-    OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_AFFILIATIONCHANGED);
-pub const REVOKED_STATUS_SUPERSEDED: OcspRevokedStatus =
-    OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_SUPERSEDED);
-pub const REVOKED_STATUS_CESSATION_OF_OPERATION: OcspRevokedStatus =
-    OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_CESSATIONOFOPERATION);
-pub const REVOKED_STATUS_CERTIFICATE_HOLD: OcspRevokedStatus =
-    OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_CERTIFICATEHOLD);
-pub const REVOKED_STATUS_REMOVE_FROM_CRL: OcspRevokedStatus =
-    OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_REMOVEFROMCRL);
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct OcspResponseStatus(c_int);
 
@@ -75,6 +39,19 @@ impl OcspResponseStatus {
     pub fn as_raw(&self) -> c_int {
         self.0
     }
+
+    pub const SUCCESSFUL: OcspResponseStatus =
+        OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_SUCCESSFUL);
+    pub const MALFORMED_REQUEST: OcspResponseStatus =
+        OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_MALFORMEDREQUEST);
+    pub const INTERNAL_ERROR: OcspResponseStatus =
+        OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_INTERNALERROR);
+    pub const TRY_LATER: OcspResponseStatus =
+        OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_TRYLATER);
+    pub const SIG_REQUIRED: OcspResponseStatus =
+        OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_SIGREQUIRED);
+    pub const UNAUTHORIZED: OcspResponseStatus =
+        OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_UNAUTHORIZED);
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -88,6 +65,10 @@ impl OcspCertStatus {
     pub fn as_raw(&self) -> c_int {
         self.0
     }
+
+    pub const GOOD: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_GOOD);
+    pub const REVOKED: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_REVOKED);
+    pub const UNKNOWN: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_UNKNOWN);
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -101,9 +82,27 @@ impl OcspRevokedStatus {
     pub fn as_raw(&self) -> c_int {
         self.0
     }
+
+    pub const NO_STATUS: OcspRevokedStatus = OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_NOSTATUS);
+    pub const UNSPECIFIED: OcspRevokedStatus =
+        OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_UNSPECIFIED);
+    pub const KEY_COMPROMISE: OcspRevokedStatus =
+        OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_KEYCOMPROMISE);
+    pub const CA_COMPROMISE: OcspRevokedStatus =
+        OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_CACOMPROMISE);
+    pub const AFFILIATION_CHANGED: OcspRevokedStatus =
+        OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_AFFILIATIONCHANGED);
+    pub const STATUS_SUPERSEDED: OcspRevokedStatus =
+        OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_SUPERSEDED);
+    pub const STATUS_CESSATION_OF_OPERATION: OcspRevokedStatus =
+        OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_CESSATIONOFOPERATION);
+    pub const STATUS_CERTIFICATE_HOLD: OcspRevokedStatus =
+        OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_CERTIFICATEHOLD);
+    pub const REMOVE_FROM_CRL: OcspRevokedStatus =
+        OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_REMOVEFROMCRL);
 }
 
-pub struct Status<'a> {
+pub struct OcspStatus<'a> {
     /// The overall status of the response.
     pub status: OcspCertStatus,
     /// If `status` is `CERT_STATUS_REVOKED`, the reason for the revocation.
@@ -116,7 +115,7 @@ pub struct Status<'a> {
     pub next_update: &'a Asn1GeneralizedTimeRef,
 }
 
-impl<'a> Status<'a> {
+impl<'a> OcspStatus<'a> {
     /// Checks validity of the `this_update` and `next_update` fields.
     ///
     /// The `nsec` parameter specifies an amount of slack time that will be used when comparing
@@ -153,7 +152,7 @@ impl OcspBasicResponseRef {
         &self,
         certs: &StackRef<X509>,
         store: &X509StoreRef,
-        flags: Flag,
+        flags: OcspFlag,
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OCSP_basic_verify(
@@ -166,7 +165,7 @@ impl OcspBasicResponseRef {
     }
 
     /// Looks up the status for the specified certificate ID.
-    pub fn find_status<'a>(&'a self, id: &OcspCertIdRef) -> Option<Status<'a>> {
+    pub fn find_status<'a>(&'a self, id: &OcspCertIdRef) -> Option<OcspStatus<'a>> {
         unsafe {
             let mut status = ffi::V_OCSP_CERTSTATUS_UNKNOWN;
             let mut reason = ffi::OCSP_REVOKED_STATUS_NOSTATUS;
@@ -189,7 +188,7 @@ impl OcspBasicResponseRef {
                 } else {
                     Some(Asn1GeneralizedTimeRef::from_ptr(revocation_time))
                 };
-                Some(Status {
+                Some(OcspStatus {
                     status: OcspCertStatus(status),
                     reason: OcspRevokedStatus(status),
                     revocation_time: revocation_time,

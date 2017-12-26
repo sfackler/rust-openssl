@@ -4,7 +4,7 @@
 extern crate openssl;
 
 use openssl::asn1::Asn1Time;
-use openssl::bn::{BigNum, MSB_MAYBE_ZERO};
+use openssl::bn::{BigNum, MsbOption};
 use openssl::error::ErrorStack;
 use openssl::hash::MessageDigest;
 use openssl::pkey::{PKey, PKeyRef};
@@ -30,7 +30,7 @@ fn mk_ca_cert() -> Result<(X509, PKey), ErrorStack> {
     cert_builder.set_version(2)?;
     let serial_number = {
         let mut serial = BigNum::new()?;
-        serial.rand(159, MSB_MAYBE_ZERO, false)?;
+        serial.rand(159, MsbOption::MAYBE_ZERO, false)?;
         serial.to_asn1_integer()?
     };
     cert_builder.set_serial_number(&serial_number)?;
@@ -88,7 +88,7 @@ fn mk_ca_signed_cert(ca_cert: &X509Ref, ca_privkey: &PKeyRef) -> Result<(X509, P
     cert_builder.set_version(2)?;
     let serial_number = {
         let mut serial = BigNum::new()?;
-        serial.rand(159, MSB_MAYBE_ZERO, false)?;
+        serial.rand(159, MsbOption::MAYBE_ZERO, false)?;
         serial.to_asn1_integer()?
     };
     cert_builder.set_serial_number(&serial_number)?;
@@ -109,8 +109,8 @@ fn mk_ca_signed_cert(ca_cert: &X509Ref, ca_privkey: &PKeyRef) -> Result<(X509, P
         .key_encipherment()
         .build()?)?;
 
-    let subject_key_identifier = SubjectKeyIdentifier::new()
-        .build(&cert_builder.x509v3_context(Some(ca_cert), None))?;
+    let subject_key_identifier =
+        SubjectKeyIdentifier::new().build(&cert_builder.x509v3_context(Some(ca_cert), None))?;
     cert_builder.append_extension(subject_key_identifier)?;
 
     let auth_key_identifier = AuthorityKeyIdentifier::new()

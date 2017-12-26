@@ -1,8 +1,8 @@
 use hex::{FromHex, ToHex};
 
 use asn1::Asn1Time;
-use bn::{BigNum, MSB_MAYBE_ZERO};
-use ec::{EcGroup, EcKey, NAMED_CURVE};
+use bn::{BigNum, MsbOption};
+use ec::{Asn1Flag, EcGroup, EcKey};
 use hash::MessageDigest;
 use nid::Nid;
 use pkey::PKey;
@@ -246,7 +246,7 @@ fn x509_builder() {
     builder.set_pubkey(&pkey).unwrap();
 
     let mut serial = BigNum::new().unwrap();
-    serial.rand(128, MSB_MAYBE_ZERO, false).unwrap();
+    serial.rand(128, MsbOption::MAYBE_ZERO, false).unwrap();
     builder
         .set_serial_number(&serial.to_asn1_integer().unwrap())
         .unwrap();
@@ -361,7 +361,7 @@ fn issued() {
 #[test]
 fn ecdsa_cert() {
     let mut group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
-    group.set_asn1_flag(NAMED_CURVE);
+    group.set_asn1_flag(Asn1Flag::NAMED_CURVE);
     let key = EcKey::generate(&group).unwrap();
     let key = PKey::from_ec_key(key).unwrap();
 
