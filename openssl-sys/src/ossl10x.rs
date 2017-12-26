@@ -5,7 +5,7 @@ use std::ptr;
 use std::process;
 use std::io::{self, Write};
 
-use libc::{c_int, c_char, c_void, c_long, c_uchar, size_t, c_uint, c_ulong};
+use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, size_t};
 #[cfg(not(ossl101))]
 use libc::time_t;
 
@@ -144,13 +144,7 @@ pub struct EVP_PKEY {
 pub struct BIO {
     pub method: *mut ::BIO_METHOD,
     pub callback: Option<
-        unsafe extern "C" fn(*mut ::BIO,
-                             c_int,
-                             *const c_char,
-                             c_int,
-                             c_long,
-                             c_long)
-                             -> c_long,
+        unsafe extern "C" fn(*mut ::BIO, c_int, *const c_char, c_int, c_long, c_long) -> c_long,
     >,
     pub cb_arg: *mut c_char,
     pub init: c_int,
@@ -191,18 +185,10 @@ pub struct EVP_CIPHER {
     pub iv_len: c_int,
     pub flags: c_ulong,
     pub init: Option<
-        unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX,
-                             *const c_uchar,
-                             *const c_uchar,
-                             c_int)
-                             -> c_int,
+        unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX, *const c_uchar, *const c_uchar, c_int) -> c_int,
     >,
     pub do_cipher: Option<
-        unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX,
-                             *mut c_uchar,
-                             *const c_uchar,
-                             size_t)
-                             -> c_int,
+        unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX, *mut c_uchar, *const c_uchar, size_t) -> c_int,
     >,
     pub cleanup: Option<unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX) -> c_int>,
     pub ctx_size: c_int,
@@ -277,12 +263,9 @@ pub struct X509 {
     crldp: *mut c_void,
     altname: *mut c_void,
     nc: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_RFC3779"))]
-    rfc3779_addr: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_RFC3779"))]
-    rfc3779_asid: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_SHA"))]
-    sha1_hash: [c_uchar; 20],
+    #[cfg(not(osslconf = "OPENSSL_NO_RFC3779"))] rfc3779_addr: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_RFC3779"))] rfc3779_asid: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_SHA"))] sha1_hash: [c_uchar; 20],
     aux: *mut c_void,
 }
 
@@ -365,13 +348,7 @@ pub struct SSL {
     d1: *mut c_void,
     read_ahead: c_int,
     msg_callback: Option<
-        unsafe extern "C" fn(c_int,
-                             c_int,
-                             c_int,
-                             *const c_void,
-                             size_t,
-                             *mut SSL,
-                             *mut c_void),
+        unsafe extern "C" fn(c_int, c_int, c_int, *const c_void, size_t, *mut SSL, *mut c_void),
     >,
     msg_callback_arg: *mut c_void,
     hit: c_int,
@@ -395,17 +372,11 @@ pub struct SSL {
     info_callback: Option<unsafe extern "C" fn(*mut SSL, c_int, c_int)>,
     error: c_int,
     error_code: c_int,
-    #[cfg(not(osslconf = "OPENSSL_NO_KRB5"))]
-    kssl_ctx: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_KRB5"))] kssl_ctx: *mut c_void,
     #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
     psk_client_callback: Option<
-        unsafe extern "C" fn(*mut SSL,
-                             *const c_char,
-                             *mut c_char,
-                             c_uint,
-                             *mut c_uchar,
-                             c_uint)
-                             -> c_uint,
+        unsafe extern "C" fn(*mut SSL, *const c_char, *mut c_char, c_uint, *mut c_uchar, c_uint)
+            -> c_uint,
     >,
     #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
     psk_server_callback:
@@ -425,26 +396,16 @@ pub struct SSL {
     #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
     tlsext_debug_cb:
         Option<unsafe extern "C" fn(*mut SSL, c_int, c_int, *mut c_uchar, c_int, *mut c_void)>,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_debug_arg: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_hostname: *mut c_char,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    servername_done: c_int,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_status_type: c_int,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_status_expected: c_int,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_ocsp_ids: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_ocsp_exts: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_ocsp_resp: *mut c_uchar,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_ocsp_resplen: c_int,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_ticket_expected: c_int,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_debug_arg: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_hostname: *mut c_char,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] servername_done: c_int,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_status_type: c_int,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_status_expected: c_int,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_ocsp_ids: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_ocsp_exts: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_ocsp_resp: *mut c_uchar,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_ocsp_resplen: c_int,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_ticket_expected: c_int,
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
     tlsext_ecpointformatlist_length: size_t,
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
@@ -453,43 +414,28 @@ pub struct SSL {
     tlsext_ellipticcurvelist_length: size_t,
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
     tlsext_ellipticcurvelist: *mut c_uchar,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_opaque_prf_input: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_opaque_prf_input_len: size_t,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_session_ticket: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_opaque_prf_input: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_opaque_prf_input_len: size_t,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_session_ticket: *mut c_void,
     #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
     tlsext_session_ticket_ext_cb: ::tls_session_ticket_ext_cb_fn,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tls_session_ticket_ext_cb_arg: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tls_session_secret_cb: ::tls_session_secret_cb_fn,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tls_session_secret_cb_arg: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    initial_ctx: *mut ::SSL_CTX,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tls_session_ticket_ext_cb_arg: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tls_session_secret_cb: ::tls_session_secret_cb_fn,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tls_session_secret_cb_arg: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] initial_ctx: *mut ::SSL_CTX,
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_NEXTPROTONEG")))]
     next_proto_negotiated: *mut c_uchar,
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_NEXTPROTONEG")))]
     next_proto_negotiated_len: c_uchar,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    srtp_profiles: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    srtp_profile: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_heartbeat: c_uint,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_hb_pending: c_uint,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_hb_seq: c_uint,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] srtp_profiles: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] srtp_profile: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_heartbeat: c_uint,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_hb_pending: c_uint,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_hb_seq: c_uint,
     renegotiate: c_int,
-    #[cfg(not(osslconf = "OPENSSL_NO_SRP"))]
-    srp_ctx: ::SRP_CTX,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))]
-    alpn_client_proto_list: *mut c_uchar,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))]
-    alpn_client_proto_list_len: c_uint,
+    #[cfg(not(osslconf = "OPENSSL_NO_SRP"))] srp_ctx: ::SRP_CTX,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))] alpn_client_proto_list: *mut c_uchar,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))] alpn_client_proto_list_len: c_uint,
 }
 
 #[repr(C)]
@@ -540,46 +486,28 @@ pub struct SSL_CTX {
     quiet_shutdown: c_int,
     max_send_fragment: c_uint,
 
-    #[cfg(not(osslconf = "OPENSSL_NO_ENGINE"))]
-    client_cert_engine: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_ENGINE"))] client_cert_engine: *mut c_void,
 
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_servername_callback: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsect_servername_arg: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_tick_key_name: [c_uchar; 16],
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_tick_hmac_key: [c_uchar; 16],
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_tick_aes_key: [c_uchar; 16],
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_ticket_key_cb: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_status_cb: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_status_arg: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_opaque_prf_input_callback: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_opaque_prf_input_callback_arg: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_servername_callback: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsect_servername_arg: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_tick_key_name: [c_uchar; 16],
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_tick_hmac_key: [c_uchar; 16],
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_tick_aes_key: [c_uchar; 16],
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_ticket_key_cb: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_status_cb: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_status_arg: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_opaque_prf_input_callback: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_opaque_prf_input_callback_arg: *mut c_void,
 
-    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
-    psk_identity_hint: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
-    psk_client_callback: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
-    psk_server_callback: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))] psk_identity_hint: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))] psk_client_callback: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))] psk_server_callback: *mut c_void,
 
-    #[cfg(not(osslconf = "OPENSSL_NO_BUF_FREELISTS"))]
-    freelist_max_len: c_uint,
-    #[cfg(not(osslconf = "OPENSSL_NO_BUF_FREELISTS"))]
-    wbuf_freelist: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_BUF_FREELISTS"))]
-    rbuf_freelist: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_BUF_FREELISTS"))] freelist_max_len: c_uint,
+    #[cfg(not(osslconf = "OPENSSL_NO_BUF_FREELISTS"))] wbuf_freelist: *mut c_void,
+    #[cfg(not(osslconf = "OPENSSL_NO_BUF_FREELISTS"))] rbuf_freelist: *mut c_void,
 
-    #[cfg(not(osslconf = "OPENSSL_NO_SRP"))]
-    srp_ctx: SRP_CTX,
+    #[cfg(not(osslconf = "OPENSSL_NO_SRP"))] srp_ctx: SRP_CTX,
 
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_NEXTPROTONEG")))]
     next_protos_advertised_cb: *mut c_void,
@@ -590,19 +518,13 @@ pub struct SSL_CTX {
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_NEXTPROTONEG")))]
     next_proto_select_cb_arg: *mut c_void,
 
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl101))]
-    srtp_profiles: *mut c_void,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl101))] srtp_profiles: *mut c_void,
 
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))]
-    srtp_profiles: *mut c_void,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))]
-    alpn_select_cb: *mut c_void,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))]
-    alpn_select_cb_arg: *mut c_void,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))]
-    alpn_client_proto_list: *mut c_void,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))]
-    alpn_client_proto_list_len: c_uint,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))] srtp_profiles: *mut c_void,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))] alpn_select_cb: *mut c_void,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))] alpn_select_cb_arg: *mut c_void,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))] alpn_client_proto_list: *mut c_void,
+    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))] alpn_client_proto_list_len: c_uint,
 
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
     tlsext_ecpointformatlist_length: size_t,
@@ -625,14 +547,11 @@ pub struct SSL_SESSION {
     session_id: [c_uchar; SSL_MAX_SSL_SESSION_ID_LENGTH as usize],
     sid_ctx_length: c_uint,
     sid_ctx: [c_uchar; SSL_MAX_SID_CTX_LENGTH as usize],
-    #[cfg(not(osslconf = "OPENSSL_NO_KRB5"))]
-    krb5_client_princ_len: c_uint,
+    #[cfg(not(osslconf = "OPENSSL_NO_KRB5"))] krb5_client_princ_len: c_uint,
     #[cfg(not(osslconf = "OPENSSL_NO_KRB5"))]
     krb5_client_princ: [c_uchar; SSL_MAX_KRB5_PRINCIPAL_LENGTH as usize],
-    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
-    psk_identity_hint: *mut c_char,
-    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
-    psk_identity: *mut c_char,
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))] psk_identity_hint: *mut c_char,
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))] psk_identity: *mut c_char,
     not_resumable: c_int,
     sess_cert: *mut c_void,
     peer: *mut X509,
@@ -647,8 +566,7 @@ pub struct SSL_SESSION {
     ex_data: ::CRYPTO_EX_DATA,
     prev: *mut c_void,
     next: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_hostname: *mut c_char,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_hostname: *mut c_char,
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
     tlsext_ecpointformatlist_length: size_t,
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
@@ -657,14 +575,10 @@ pub struct SSL_SESSION {
     tlsext_ellipticcurvelist_length: size_t,
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
     tlsext_ellipticcurvelist: *mut c_uchar,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_tick: *mut c_uchar,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_ticklen: size_t,
-    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-    tlsext_tick_lifetime_hint: c_long,
-    #[cfg(not(osslconf = "OPENSSL_NO_SRP"))]
-    srp_username: *mut c_char,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_tick: *mut c_uchar,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_ticklen: size_t,
+    #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))] tlsext_tick_lifetime_hint: c_long,
+    #[cfg(not(osslconf = "OPENSSL_NO_SRP"))] srp_username: *mut c_char,
 }
 
 #[repr(C)]
@@ -738,9 +652,13 @@ pub const CRYPTO_LOCK_X509: c_int = 3;
 pub const CRYPTO_LOCK_SSL_CTX: c_int = 12;
 pub const CRYPTO_LOCK_SSL_SESSION: c_int = 14;
 
+pub const X509_V_ERR_INVALID_CALL: c_int = 65;
+pub const X509_V_ERR_STORE_LOOKUP: c_int = 66;
+pub const X509_V_ERR_PROXY_SUBJECT_NAME_VIOLATION: c_int = 67;
+
 static mut MUTEXES: *mut Vec<Mutex<()>> = 0 as *mut Vec<Mutex<()>>;
-static mut GUARDS: *mut Vec<Option<MutexGuard<'static, ()>>> = 0 as
-    *mut Vec<Option<MutexGuard<'static, ()>>>;
+static mut GUARDS: *mut Vec<Option<MutexGuard<'static, ()>>> =
+    0 as *mut Vec<Option<MutexGuard<'static, ()>>>;
 
 unsafe extern "C" fn locking_function(mode: c_int, n: c_int, _file: *const c_char, _line: c_int) {
     let mutex = &(*MUTEXES)[n as usize];
@@ -896,7 +814,7 @@ extern "C" {
     pub fn SSL_set_tmp_ecdh_callback(
         ssl: *mut ::SSL,
         ecdh: unsafe extern "C" fn(ssl: *mut ::SSL, is_export: c_int, keylength: c_int)
-                                   -> *mut ::EC_KEY,
+            -> *mut ::EC_KEY,
     );
     pub fn SSL_CIPHER_get_version(cipher: *const ::SSL_CIPHER) -> *mut c_char;
     pub fn SSL_CTX_get_ex_new_index(
@@ -909,7 +827,7 @@ extern "C" {
     pub fn SSL_CTX_set_tmp_ecdh_callback(
         ctx: *mut ::SSL_CTX,
         ecdh: unsafe extern "C" fn(ssl: *mut ::SSL, is_export: c_int, keylength: c_int)
-                                   -> *mut ::EC_KEY,
+            -> *mut ::EC_KEY,
     );
     pub fn X509_get_subject_name(x: *mut ::X509) -> *mut ::X509_NAME;
     pub fn X509_set_notAfter(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;

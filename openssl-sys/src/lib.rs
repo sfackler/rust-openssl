@@ -1,10 +1,10 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code, overflowing_literals)]
-#![doc(html_root_url="https://docs.rs/openssl-sys/0.9")]
+#![doc(html_root_url = "https://docs.rs/openssl-sys/0.9")]
 
 extern crate libc;
 
-use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t, FILE};
+use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, size_t, FILE};
 use std::ptr;
 use std::mem;
 
@@ -65,33 +65,21 @@ pub enum BN_BLINDING {}
 pub enum DSA_METHOD {}
 pub enum EVP_PKEY_ASN1_METHOD {}
 
-pub type bio_info_cb = Option<
-    unsafe extern "C" fn(*mut BIO,
-                         c_int,
-                         *const c_char,
-                         c_int,
-                         c_long,
-                         c_long),
->;
-pub type GEN_SESSION_CB = Option<
-    unsafe extern "C" fn(*const SSL, *mut c_uchar, *mut c_uint)
-                         -> c_int,
->;
-pub type tls_session_ticket_ext_cb_fn = Option<
-    unsafe extern "C" fn(*mut SSL,
-                         *const c_uchar,
-                         c_int,
-                         *mut c_void)
-                         -> c_int,
->;
+pub type bio_info_cb =
+    Option<unsafe extern "C" fn(*mut BIO, c_int, *const c_char, c_int, c_long, c_long)>;
+pub type GEN_SESSION_CB =
+    Option<unsafe extern "C" fn(*const SSL, *mut c_uchar, *mut c_uint) -> c_int>;
+pub type tls_session_ticket_ext_cb_fn =
+    Option<unsafe extern "C" fn(*mut SSL, *const c_uchar, c_int, *mut c_void) -> c_int>;
 pub type tls_session_secret_cb_fn = Option<
-    unsafe extern "C" fn(*mut SSL,
-                         *mut c_void,
-                         *mut c_int,
-                         *mut stack_st_SSL_CIPHER,
-                         *mut *mut SSL_CIPHER,
-                         *mut c_void)
-                         -> c_int,
+    unsafe extern "C" fn(
+        *mut SSL,
+        *mut c_void,
+        *mut c_int,
+        *mut stack_st_SSL_CIPHER,
+        *mut *mut SSL_CIPHER,
+        *mut c_void,
+    ) -> c_int,
 >;
 
 #[repr(C)]
@@ -167,31 +155,33 @@ pub type BN_ULONG = libc::c_ulonglong;
 #[cfg(target_pointer_width = "32")]
 pub type BN_ULONG = c_uint;
 
-pub type CRYPTO_EX_new = unsafe extern "C" fn(parent: *mut c_void,
-                                              ptr: *mut c_void,
-                                              ad: *const CRYPTO_EX_DATA,
-                                              idx: c_int,
-                                              argl: c_long,
-                                              argp: *const c_void)
-                                              -> c_int;
-pub type CRYPTO_EX_dup = unsafe extern "C" fn(to: *mut CRYPTO_EX_DATA,
-                                              from: *mut CRYPTO_EX_DATA,
-                                              from_d: *mut c_void,
-                                              idx: c_int,
-                                              argl: c_long,
-                                              argp: *mut c_void)
-                                              -> c_int;
-pub type CRYPTO_EX_free = unsafe extern "C" fn(parent: *mut c_void,
-                                               ptr: *mut c_void,
-                                               ad: *mut CRYPTO_EX_DATA,
-                                               idx: c_int,
-                                               argl: c_long,
-                                               argp: *mut c_void);
-pub type PasswordCallback = unsafe extern "C" fn(buf: *mut c_char,
-                                                 size: c_int,
-                                                 rwflag: c_int,
-                                                 user_data: *mut c_void)
-                                                 -> c_int;
+pub type CRYPTO_EX_new = unsafe extern "C" fn(
+    parent: *mut c_void,
+    ptr: *mut c_void,
+    ad: *const CRYPTO_EX_DATA,
+    idx: c_int,
+    argl: c_long,
+    argp: *const c_void,
+) -> c_int;
+pub type CRYPTO_EX_dup = unsafe extern "C" fn(
+    to: *mut CRYPTO_EX_DATA,
+    from: *mut CRYPTO_EX_DATA,
+    from_d: *mut c_void,
+    idx: c_int,
+    argl: c_long,
+    argp: *mut c_void,
+) -> c_int;
+pub type CRYPTO_EX_free = unsafe extern "C" fn(
+    parent: *mut c_void,
+    ptr: *mut c_void,
+    ad: *mut CRYPTO_EX_DATA,
+    idx: c_int,
+    argl: c_long,
+    argp: *mut c_void,
+);
+pub type PasswordCallback =
+    unsafe extern "C" fn(buf: *mut c_char, size: c_int, rwflag: c_int, user_data: *mut c_void)
+        -> c_int;
 
 pub type SHA_LONG = c_uint;
 pub type SHA_LONG64 = u64;
@@ -1265,9 +1255,9 @@ pub const SSL_OP_SAFARI_ECDHE_ECDSA_BUG: c_ulong = 0x00000040;
 #[cfg(not(any(libressl, ossl110f)))]
 pub const SSL_OP_ALL: c_ulong = 0x80000BFF;
 #[cfg(ossl110f)]
-pub const SSL_OP_ALL: c_ulong = SSL_OP_CRYPTOPRO_TLSEXT_BUG | SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS |
-    SSL_OP_LEGACY_SERVER_CONNECT | SSL_OP_TLSEXT_PADDING |
-    SSL_OP_SAFARI_ECDHE_ECDSA_BUG;
+pub const SSL_OP_ALL: c_ulong = SSL_OP_CRYPTOPRO_TLSEXT_BUG | SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS
+    | SSL_OP_LEGACY_SERVER_CONNECT | SSL_OP_TLSEXT_PADDING
+    | SSL_OP_SAFARI_ECDHE_ECDSA_BUG;
 pub const SSL_OP_NO_QUERY_MTU: c_ulong = 0x00001000;
 pub const SSL_OP_COOKIE_EXCHANGE: c_ulong = 0x00002000;
 pub const SSL_OP_NO_TICKET: c_ulong = 0x00004000;
@@ -1291,8 +1281,8 @@ pub const SSL_OP_NO_DTLSv1: c_ulong = 0x04000000;
 #[cfg(not(any(ossl101, libressl)))]
 pub const SSL_OP_NO_DTLSv1_2: c_ulong = 0x08000000;
 #[cfg(not(any(ossl101, libressl)))]
-pub const SSL_OP_NO_SSL_MASK: c_ulong = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 |
-    SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
+pub const SSL_OP_NO_SSL_MASK: c_ulong =
+    SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
 
 pub const TLSEXT_NAMETYPE_host_name: c_int = 0;
 
@@ -1313,60 +1303,83 @@ pub const V_ASN1_UTCTIME: c_int = 23;
 pub const X509_FILETYPE_ASN1: c_int = 2;
 pub const X509_FILETYPE_DEFAULT: c_int = 3;
 pub const X509_FILETYPE_PEM: c_int = 1;
-pub const X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH: c_int = 31;
-pub const X509_V_ERR_AKID_SKID_MISMATCH: c_int = 30;
-pub const X509_V_ERR_APPLICATION_VERIFICATION: c_int = 50;
-pub const X509_V_ERR_CERT_CHAIN_TOO_LONG: c_int = 22;
-pub const X509_V_ERR_CERT_HAS_EXPIRED: c_int = 10;
-pub const X509_V_ERR_CERT_NOT_YET_VALID: c_int = 9;
-pub const X509_V_ERR_CERT_REJECTED: c_int = 28;
-pub const X509_V_ERR_CERT_REVOKED: c_int = 23;
-pub const X509_V_ERR_CERT_SIGNATURE_FAILURE: c_int = 7;
-pub const X509_V_ERR_CERT_UNTRUSTED: c_int = 27;
-pub const X509_V_ERR_CRL_HAS_EXPIRED: c_int = 12;
-pub const X509_V_ERR_CRL_NOT_YET_VALID: c_int = 11;
-pub const X509_V_ERR_CRL_PATH_VALIDATION_ERROR: c_int = 54;
-pub const X509_V_ERR_CRL_SIGNATURE_FAILURE: c_int = 8;
-pub const X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT: c_int = 18;
-pub const X509_V_ERR_DIFFERENT_CRL_SCOPE: c_int = 44;
-pub const X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD: c_int = 14;
-pub const X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD: c_int = 13;
-pub const X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD: c_int = 15;
-pub const X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD: c_int = 16;
-pub const X509_V_ERR_EXCLUDED_VIOLATION: c_int = 48;
-pub const X509_V_ERR_INVALID_CA: c_int = 24;
-pub const X509_V_ERR_INVALID_EXTENSION: c_int = 41;
-pub const X509_V_ERR_INVALID_NON_CA: c_int = 37;
-pub const X509_V_ERR_INVALID_POLICY_EXTENSION: c_int = 42;
-pub const X509_V_ERR_INVALID_PURPOSE: c_int = 26;
-pub const X509_V_ERR_KEYUSAGE_NO_CERTSIGN: c_int = 32;
-pub const X509_V_ERR_KEYUSAGE_NO_CRL_SIGN: c_int = 35;
-pub const X509_V_ERR_KEYUSAGE_NO_DIGITAL_SIGNATURE: c_int = 39;
-pub const X509_V_ERR_NO_EXPLICIT_POLICY: c_int = 43;
-pub const X509_V_ERR_OUT_OF_MEM: c_int = 17;
-pub const X509_V_ERR_PATH_LENGTH_EXCEEDED: c_int = 25;
-pub const X509_V_ERR_PERMITTED_VIOLATION: c_int = 47;
-pub const X509_V_ERR_PROXY_CERTIFICATES_NOT_ALLOWED: c_int = 40;
-pub const X509_V_ERR_PROXY_PATH_LENGTH_EXCEEDED: c_int = 38;
-pub const X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN: c_int = 19;
-pub const X509_V_ERR_SUBJECT_ISSUER_MISMATCH: c_int = 29;
-pub const X509_V_ERR_SUBTREE_MINMAX: c_int = 49;
-pub const X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY: c_int = 6;
+
+pub const X509_V_OK: c_int = 0;
+#[cfg(not(libressl))]
+pub const X509_V_ERR_UNSPECIFIED: c_int = 1;
+pub const X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT: c_int = 2;
+pub const X509_V_ERR_UNABLE_TO_GET_CRL: c_int = 3;
 pub const X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE: c_int = 4;
 pub const X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE: c_int = 5;
-pub const X509_V_ERR_UNABLE_TO_GET_CRL: c_int = 3;
-pub const X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER: c_int = 33;
-pub const X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT: c_int = 2;
+pub const X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY: c_int = 6;
+pub const X509_V_ERR_CERT_SIGNATURE_FAILURE: c_int = 7;
+pub const X509_V_ERR_CRL_SIGNATURE_FAILURE: c_int = 8;
+pub const X509_V_ERR_CERT_NOT_YET_VALID: c_int = 9;
+pub const X509_V_ERR_CERT_HAS_EXPIRED: c_int = 10;
+pub const X509_V_ERR_CRL_NOT_YET_VALID: c_int = 11;
+pub const X509_V_ERR_CRL_HAS_EXPIRED: c_int = 12;
+pub const X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD: c_int = 13;
+pub const X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD: c_int = 14;
+pub const X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD: c_int = 15;
+pub const X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD: c_int = 16;
+pub const X509_V_ERR_OUT_OF_MEM: c_int = 17;
+pub const X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT: c_int = 18;
+pub const X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN: c_int = 19;
 pub const X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY: c_int = 20;
 pub const X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE: c_int = 21;
-pub const X509_V_ERR_UNHANDLED_CRITICAL_CRL_EXTENSION: c_int = 36;
+pub const X509_V_ERR_CERT_CHAIN_TOO_LONG: c_int = 22;
+pub const X509_V_ERR_CERT_REVOKED: c_int = 23;
+pub const X509_V_ERR_INVALID_CA: c_int = 24;
+pub const X509_V_ERR_PATH_LENGTH_EXCEEDED: c_int = 25;
+pub const X509_V_ERR_INVALID_PURPOSE: c_int = 26;
+pub const X509_V_ERR_CERT_UNTRUSTED: c_int = 27;
+pub const X509_V_ERR_CERT_REJECTED: c_int = 28;
+pub const X509_V_ERR_SUBJECT_ISSUER_MISMATCH: c_int = 29;
+pub const X509_V_ERR_AKID_SKID_MISMATCH: c_int = 30;
+pub const X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH: c_int = 31;
+pub const X509_V_ERR_KEYUSAGE_NO_CERTSIGN: c_int = 32;
+pub const X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER: c_int = 33;
 pub const X509_V_ERR_UNHANDLED_CRITICAL_EXTENSION: c_int = 34;
-pub const X509_V_ERR_UNNESTED_RESOURCE: c_int = 46;
-pub const X509_V_ERR_UNSUPPORTED_CONSTRAINT_SYNTAX: c_int = 52;
-pub const X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE: c_int = 51;
+pub const X509_V_ERR_KEYUSAGE_NO_CRL_SIGN: c_int = 35;
+pub const X509_V_ERR_UNHANDLED_CRITICAL_CRL_EXTENSION: c_int = 36;
+pub const X509_V_ERR_INVALID_NON_CA: c_int = 37;
+pub const X509_V_ERR_PROXY_PATH_LENGTH_EXCEEDED: c_int = 38;
+pub const X509_V_ERR_KEYUSAGE_NO_DIGITAL_SIGNATURE: c_int = 39;
+pub const X509_V_ERR_PROXY_CERTIFICATES_NOT_ALLOWED: c_int = 40;
+pub const X509_V_ERR_INVALID_EXTENSION: c_int = 41;
+pub const X509_V_ERR_INVALID_POLICY_EXTENSION: c_int = 42;
+pub const X509_V_ERR_NO_EXPLICIT_POLICY: c_int = 43;
+pub const X509_V_ERR_DIFFERENT_CRL_SCOPE: c_int = 44;
 pub const X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE: c_int = 45;
+pub const X509_V_ERR_UNNESTED_RESOURCE: c_int = 46;
+pub const X509_V_ERR_PERMITTED_VIOLATION: c_int = 47;
+pub const X509_V_ERR_EXCLUDED_VIOLATION: c_int = 48;
+pub const X509_V_ERR_SUBTREE_MINMAX: c_int = 49;
+pub const X509_V_ERR_APPLICATION_VERIFICATION: c_int = 50;
+pub const X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE: c_int = 51;
+pub const X509_V_ERR_UNSUPPORTED_CONSTRAINT_SYNTAX: c_int = 52;
 pub const X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
-pub const X509_V_OK: c_int = 0;
+pub const X509_V_ERR_CRL_PATH_VALIDATION_ERROR: c_int = 54;
+
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_SUITE_B_INVALID_VERSION: c_int = 56;
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_SUITE_B_INVALID_ALGORITHM: c_int = 57;
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_SUITE_B_INVALID_CURVE: c_int = 58;
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_SUITE_B_INVALID_SIGNATURE_ALGORITHM: c_int = 59;
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_SUITE_B_LOS_NOT_ALLOWED: c_int = 60;
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_SUITE_B_CANNOT_SIGN_P_384_WITH_P_256: c_int = 61;
+
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_HOSTNAME_MISMATCH: c_int = 62;
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_EMAIL_MISMATCH: c_int = 63;
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_IP_ADDRESS_MISMATCH: c_int = 64;
 
 #[cfg(not(any(ossl101, libressl)))]
 pub const X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT: c_uint = 0x1;
@@ -2425,35 +2438,32 @@ extern "C" {
 
     pub fn SSL_CTX_set_next_protos_advertised_cb(
         ssl: *mut SSL_CTX,
-        cb: extern "C" fn(ssl: *mut SSL,
-                          out: *mut *const c_uchar,
-                          outlen: *mut c_uint,
-                          arg: *mut c_void)
-                          -> c_int,
+        cb: extern "C" fn(
+            ssl: *mut SSL,
+            out: *mut *const c_uchar,
+            outlen: *mut c_uint,
+            arg: *mut c_void,
+        ) -> c_int,
         arg: *mut c_void,
     );
     pub fn SSL_CTX_set_next_proto_select_cb(
         ssl: *mut SSL_CTX,
-        cb: extern "C" fn(ssl: *mut SSL,
-                          out: *mut *mut c_uchar,
-                          outlen: *mut c_uchar,
-                          inbuf: *const c_uchar,
-                          inlen: c_uint,
-                          arg: *mut c_void)
-                          -> c_int,
+        cb: extern "C" fn(
+            ssl: *mut SSL,
+            out: *mut *mut c_uchar,
+            outlen: *mut c_uchar,
+            inbuf: *const c_uchar,
+            inlen: c_uint,
+            arg: *mut c_void,
+        ) -> c_int,
         arg: *mut c_void,
     );
     #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
     pub fn SSL_CTX_set_psk_client_callback(
         ssl: *mut SSL_CTX,
         psk_client_cb: Option<
-            extern "C" fn(*mut SSL,
-                          *const c_char,
-                          *mut c_char,
-                          c_uint,
-                          *mut c_uchar,
-                          c_uint)
-                          -> c_uint,
+            extern "C" fn(*mut SSL, *const c_char, *mut c_char, c_uint, *mut c_uchar, c_uint)
+                -> c_uint,
         >,
     );
     pub fn SSL_select_next_proto(
@@ -2488,13 +2498,14 @@ extern "C" {
     #[cfg(not(ossl101))]
     pub fn SSL_CTX_set_alpn_select_cb(
         ssl: *mut SSL_CTX,
-        cb: extern "C" fn(ssl: *mut SSL,
-                          out: *mut *const c_uchar,
-                          outlen: *mut c_uchar,
-                          inbuf: *const c_uchar,
-                          inlen: c_uint,
-                          arg: *mut c_void)
-                          -> c_int,
+        cb: extern "C" fn(
+            ssl: *mut SSL,
+            out: *mut *const c_uchar,
+            outlen: *mut c_uchar,
+            inbuf: *const c_uchar,
+            inlen: c_uint,
+            arg: *mut c_void,
+        ) -> c_int,
         arg: *mut c_void,
     );
     #[cfg(not(ossl101))]
@@ -2556,6 +2567,7 @@ extern "C" {
     pub fn X509_STORE_CTX_free(ctx: *mut X509_STORE_CTX);
     pub fn X509_STORE_CTX_get_current_cert(ctx: *mut X509_STORE_CTX) -> *mut X509;
     pub fn X509_STORE_CTX_get_error(ctx: *mut X509_STORE_CTX) -> c_int;
+    pub fn X509_STORE_CTX_set_error(ctx: *mut X509_STORE_CTX, error: c_int);
     pub fn X509_STORE_CTX_get_ex_data(ctx: *mut X509_STORE_CTX, idx: c_int) -> *mut c_void;
     pub fn X509_STORE_CTX_get_error_depth(ctx: *mut X509_STORE_CTX) -> c_int;
 

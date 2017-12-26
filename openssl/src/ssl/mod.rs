@@ -86,7 +86,7 @@ use dh::{Dh, DhRef};
 use ec::EcKeyRef;
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
 use ec::EcKey;
-use x509::{X509, X509Filetype, X509Name, X509Ref, X509StoreContextRef, X509VerifyError};
+use x509::{X509, X509Filetype, X509Name, X509Ref, X509StoreContextRef, X509VerifyResult};
 use x509::store::{X509StoreBuilderRef, X509StoreRef};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::store::X509Store;
@@ -1441,12 +1441,10 @@ impl Ssl {
 
 impl fmt::Debug for SslRef {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let mut builder = fmt.debug_struct("Ssl");
-        builder.field("state", &self.state_string_long());
-        if let Some(err) = self.verify_result() {
-            builder.field("verify_result", &err);
-        }
-        builder.finish()
+        fmt.debug_struct("Ssl")
+            .field("state", &self.state_string_long())
+            .field("verify_result", &self.verify_result())
+            .finish()
     }
 }
 
@@ -1870,8 +1868,8 @@ impl SslRef {
     /// This corresponds to [`SSL_get_verify_result`].
     ///
     /// [`SSL_get_verify_result`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_get_verify_result.html
-    pub fn verify_result(&self) -> Option<X509VerifyError> {
-        unsafe { X509VerifyError::from_raw(ffi::SSL_get_verify_result(self.as_ptr())) }
+    pub fn verify_result(&self) -> X509VerifyResult {
+        unsafe { X509VerifyResult::from_raw(ffi::SSL_get_verify_result(self.as_ptr()) as c_int) }
     }
 
     /// Returns a shared reference to the SSL session.

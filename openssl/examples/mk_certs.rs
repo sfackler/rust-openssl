@@ -9,8 +9,7 @@ use openssl::error::ErrorStack;
 use openssl::hash::MessageDigest;
 use openssl::pkey::{PKey, PKeyRef};
 use openssl::rsa::Rsa;
-use openssl::x509::{X509, X509Ref};
-use openssl::x509::{X509NameBuilder, X509Req, X509ReqBuilder};
+use openssl::x509::{X509, X509NameBuilder, X509Ref, X509Req, X509ReqBuilder, X509VerifyResult};
 use openssl::x509::extension::{AuthorityKeyIdentifier, BasicConstraints, KeyUsage,
                                SubjectAlternativeName, SubjectKeyIdentifier};
 
@@ -137,8 +136,8 @@ fn real_main() -> Result<(), ErrorStack> {
 
     // Verify that this cert was issued by this ca
     match ca_cert.issued(&cert) {
-        Err(ver_err) => println!("Failed to verify certificate: {}", ver_err),
-        Ok(()) => println!("Certificate verified!"),
+        X509VerifyResult::OK => println!("Certificate verified!"),
+        ver_err => println!("Failed to verify certificate: {}", ver_err),
     };
 
     Ok(())

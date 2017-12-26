@@ -1,4 +1,4 @@
-use libc::{c_int, c_void, c_char, c_uchar, c_ulong, c_long, c_uint, size_t};
+use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, size_t};
 use std::sync::{Once, ONCE_INIT};
 use std::ptr;
 
@@ -54,6 +54,14 @@ pub const CRYPTO_EX_INDEX_SSL: c_int = 0;
 pub const CRYPTO_EX_INDEX_SSL_CTX: c_int = 1;
 
 pub const OPENSSL_INIT_LOAD_SSL_STRINGS: u64 = 0x00200000;
+
+pub const X509_V_ERR_DANE_NO_MATCH: c_int = 65;
+pub const X509_V_ERR_EE_KEY_TOO_SMALL: c_int = 66;
+pub const X509_V_ERR_CA_KEY_TOO_SMALL: c_int = 67;
+pub const X509_V_ERR_CA_MD_TOO_WEAK: c_int = 68;
+pub const X509_V_ERR_INVALID_CALL: c_int = 69;
+pub const X509_V_ERR_STORE_LOOKUP: c_int = 70;
+pub const X509_V_ERR_NO_VALID_SCTS: c_int = 71;
 
 pub const X509_CHECK_FLAG_NEVER_CHECK_SUBJECT: c_uint = 0x20;
 

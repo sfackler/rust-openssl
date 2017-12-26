@@ -7,7 +7,7 @@ use nid::Nid;
 use pkey::PKey;
 use rsa::Rsa;
 use stack::Stack;
-use x509::{X509, X509Name, X509Req};
+use x509::{X509, X509Name, X509Req, X509VerifyResult};
 use x509::extension::{AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, KeyUsage,
                       SubjectAlternativeName, SubjectKeyIdentifier};
 
@@ -253,8 +253,8 @@ fn issued() {
     let ca = include_bytes!("../../test/root-ca.pem");
     let ca = X509::from_pem(ca).unwrap();
 
-    ca.issued(&cert).unwrap();
-    cert.issued(&cert).err().unwrap();
+    assert_eq!(ca.issued(&cert), X509VerifyResult::OK);
+    assert_ne!(cert.issued(&cert), X509VerifyResult::OK);
 }
 
 #[test]
