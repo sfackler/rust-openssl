@@ -1,8 +1,8 @@
 use std::fmt::{self, Write};
 
 use error::ErrorStack;
-use nid::{self, Nid};
-use x509::{X509v3Context, X509Extension};
+use nid::Nid;
+use x509::{X509Extension, X509v3Context};
 
 /// Type-only version of the `Extension` enum.
 ///
@@ -77,10 +77,10 @@ impl ExtensionType {
     #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
     pub fn get_nid(&self) -> Option<Nid> {
         match self {
-            &ExtensionType::KeyUsage => Some(nid::KEY_USAGE),
-            &ExtensionType::ExtKeyUsage => Some(nid::EXT_KEY_USAGE),
-            &ExtensionType::SubjectAltName => Some(nid::SUBJECT_ALT_NAME),
-            &ExtensionType::IssuerAltName => Some(nid::ISSUER_ALT_NAME),
+            &ExtensionType::KeyUsage => Some(Nid::KEY_USAGE),
+            &ExtensionType::ExtKeyUsage => Some(Nid::EXT_KEY_USAGE),
+            &ExtensionType::SubjectAltName => Some(Nid::SUBJECT_ALT_NAME),
+            &ExtensionType::IssuerAltName => Some(Nid::ISSUER_ALT_NAME),
             &ExtensionType::OtherNid(nid) => Some(nid),
             &ExtensionType::OtherStr(_) => None,
         }
@@ -112,22 +112,18 @@ impl ToString for Extension {
         match self {
             &Extension::KeyUsage(ref purposes) => join(purposes.iter(), ","),
             &Extension::ExtKeyUsage(ref purposes) => join(purposes.iter(), ","),
-            &Extension::SubjectAltName(ref names) => {
-                join(
-                    names.iter().map(|&(ref opt, ref val)| {
-                        opt.to_string() + ":" + &val
-                    }),
-                    ",",
-                )
-            }
-            &Extension::IssuerAltName(ref names) => {
-                join(
-                    names.iter().map(|&(ref opt, ref val)| {
-                        opt.to_string() + ":" + &val
-                    }),
-                    ",",
-                )
-            }
+            &Extension::SubjectAltName(ref names) => join(
+                names
+                    .iter()
+                    .map(|&(ref opt, ref val)| opt.to_string() + ":" + &val),
+                ",",
+            ),
+            &Extension::IssuerAltName(ref names) => join(
+                names
+                    .iter()
+                    .map(|&(ref opt, ref val)| opt.to_string() + ":" + &val),
+                ",",
+            ),
             &Extension::OtherNid(_, ref value) => value.clone(),
             &Extension::OtherStr(_, ref value) => value.clone(),
         }
@@ -282,7 +278,7 @@ impl BasicConstraints {
         if let Some(pathlen) = self.pathlen {
             write!(value, ",pathlen:{}", pathlen).unwrap();
         }
-        X509Extension::new_nid(None, None, nid::BASIC_CONSTRAINTS, &value)
+        X509Extension::new_nid(None, None, Nid::BASIC_CONSTRAINTS, &value)
     }
 }
 
@@ -398,7 +394,7 @@ impl KeyUsage {
         append(&mut value, &mut first, self.crl_sign, "cRLSign");
         append(&mut value, &mut first, self.encipher_only, "encipherOnly");
         append(&mut value, &mut first, self.decipher_only, "decipherOnly");
-        X509Extension::new_nid(None, None, nid::KEY_USAGE, &value)
+        X509Extension::new_nid(None, None, Nid::KEY_USAGE, &value)
     }
 }
 
@@ -520,7 +516,7 @@ impl ExtendedKeyUsage {
         for other in &self.other {
             append(&mut value, &mut first, true, other);
         }
-        X509Extension::new_nid(None, None, nid::EXT_KEY_USAGE, &value)
+        X509Extension::new_nid(None, None, Nid::EXT_KEY_USAGE, &value)
     }
 }
 
@@ -543,7 +539,7 @@ impl SubjectKeyIdentifier {
         let mut first = true;
         append(&mut value, &mut first, self.critical, "critical");
         append(&mut value, &mut first, true, "hash");
-        X509Extension::new_nid(None, Some(ctx), nid::SUBJECT_KEY_IDENTIFIER, &value)
+        X509Extension::new_nid(None, Some(ctx), Nid::SUBJECT_KEY_IDENTIFIER, &value)
     }
 }
 
@@ -591,7 +587,7 @@ impl AuthorityKeyIdentifier {
             Some(false) => append(&mut value, &mut first, true, "issuer"),
             None => {}
         }
-        X509Extension::new_nid(None, Some(ctx), nid::AUTHORITY_KEY_IDENTIFIER, &value)
+        X509Extension::new_nid(None, Some(ctx), Nid::AUTHORITY_KEY_IDENTIFIER, &value)
     }
 }
 
@@ -655,7 +651,7 @@ impl SubjectAlternativeName {
         for name in &self.names {
             append(&mut value, &mut first, true, name);
         }
-        X509Extension::new_nid(None, Some(ctx), nid::SUBJECT_ALT_NAME, &value)
+        X509Extension::new_nid(None, Some(ctx), Nid::SUBJECT_ALT_NAME, &value)
     }
 }
 
