@@ -51,12 +51,10 @@ impl RsaRef {
         ffi::i2d_RSAPublicKey
     );
 
-    // FIXME should return u32
-    pub fn size(&self) -> usize {
+    pub fn size(&self) -> u32 {
         unsafe {
             assert!(self.n().is_some());
-
-            ffi::RSA_size(self.as_ptr()) as usize
+            ffi::RSA_size(self.as_ptr()) as u32
         }
     }
 
@@ -74,7 +72,7 @@ impl RsaRef {
     ) -> Result<usize, ErrorStack> {
         assert!(self.d().is_some(), "private components missing");
         assert!(from.len() <= i32::max_value() as usize);
-        assert!(to.len() >= self.size());
+        assert!(to.len() >= self.size() as usize);
 
         unsafe {
             let len = cvt_n(ffi::RSA_private_decrypt(
@@ -102,7 +100,7 @@ impl RsaRef {
     ) -> Result<usize, ErrorStack> {
         assert!(self.d().is_some(), "private components missing");
         assert!(from.len() <= i32::max_value() as usize);
-        assert!(to.len() >= self.size());
+        assert!(to.len() >= self.size() as usize);
 
         unsafe {
             let len = cvt_n(ffi::RSA_private_encrypt(
@@ -128,7 +126,7 @@ impl RsaRef {
         padding: Padding,
     ) -> Result<usize, ErrorStack> {
         assert!(from.len() <= i32::max_value() as usize);
-        assert!(to.len() >= self.size());
+        assert!(to.len() >= self.size() as usize);
 
         unsafe {
             let len = cvt_n(ffi::RSA_public_decrypt(
@@ -154,7 +152,7 @@ impl RsaRef {
         padding: Padding,
     ) -> Result<usize, ErrorStack> {
         assert!(from.len() <= i32::max_value() as usize);
-        assert!(to.len() >= self.size());
+        assert!(to.len() >= self.size() as usize);
 
         unsafe {
             let len = cvt_n(ffi::RSA_public_encrypt(
@@ -485,7 +483,7 @@ mod test {
         let key = include_bytes!("../test/rsa.pem.pub");
         let public_key = Rsa::public_key_from_pem(key).unwrap();
 
-        let mut result = vec![0; public_key.size()];
+        let mut result = vec![0; public_key.size() as usize];
         let original_data = b"This is test";
         let len = public_key
             .public_encrypt(original_data, &mut result, Padding::PKCS1)
@@ -494,7 +492,7 @@ mod test {
 
         let pkey = include_bytes!("../test/rsa.pem");
         let private_key = Rsa::private_key_from_pem(pkey).unwrap();
-        let mut dec_result = vec![0; private_key.size()];
+        let mut dec_result = vec![0; private_key.size() as usize];
         let len = private_key
             .private_decrypt(&result, &mut dec_result, Padding::PKCS1)
             .unwrap();
@@ -510,10 +508,10 @@ mod test {
 
         let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
 
-        let mut emesg = vec![0; k0.size()];
+        let mut emesg = vec![0; k0.size() as usize];
         k0.private_encrypt(&msg, &mut emesg, Padding::PKCS1)
             .unwrap();
-        let mut dmesg = vec![0; k1.size()];
+        let mut dmesg = vec![0; k1.size() as usize];
         let len = k1.public_decrypt(&emesg, &mut dmesg, Padding::PKCS1)
             .unwrap();
         assert_eq!(msg, &dmesg[..len]);
@@ -527,9 +525,9 @@ mod test {
 
         let msg = vec![0xdeu8, 0xadu8, 0xd0u8, 0x0du8];
 
-        let mut emesg = vec![0; k0.size()];
+        let mut emesg = vec![0; k0.size() as usize];
         k0.public_encrypt(&msg, &mut emesg, Padding::PKCS1).unwrap();
-        let mut dmesg = vec![0; k1.size()];
+        let mut dmesg = vec![0; k1.size() as usize];
         let len = k1.private_decrypt(&emesg, &mut dmesg, Padding::PKCS1)
             .unwrap();
         assert_eq!(msg, &dmesg[..len]);

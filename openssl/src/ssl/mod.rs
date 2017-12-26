@@ -41,12 +41,12 @@
 //! let mut pkcs12 = vec![];
 //! file.read_to_end(&mut pkcs12).unwrap();
 //! let pkcs12 = Pkcs12::from_der(&pkcs12).unwrap();
-//! let identity = pkcs12.parse("password123").unwrap();
+//! let identity = pkcs12.parse(b"password123").unwrap();
 //!
 //! let acceptor = SslAcceptorBuilder::mozilla_intermediate(SslMethod::tls(),
 //!                                                         &identity.pkey,
 //!                                                         &identity.cert,
-//!                                                         &identity.chain)
+//!                                                         &identity.chain.unwrap())
 //!     .unwrap()
 //!     .build();
 //! let acceptor = Arc::new(acceptor);
@@ -83,7 +83,7 @@ use std::fmt;
 use std::io;
 use std::io::prelude::*;
 use std::marker::PhantomData;
-use std::mem;
+use std::mem::{self, ManuallyDrop};
 use std::ops::{Deref, DerefMut};
 use std::panic::resume_unwind;
 use std::path::Path;
@@ -490,7 +490,7 @@ impl SslContextBuilder {
     pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
     where
         // FIXME should take a mutable reference to the store
-        F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send,
+        F: Fn(bool, &mut X509StoreContextRef) -> bool + Any + 'static + Sync + Send,
     {
         unsafe {
             let verify = Box::new(verify);
@@ -1500,7 +1500,7 @@ impl SslRef {
     pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
     where
         // FIXME should take a mutable reference to the x509 store
-        F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send,
+        F: Fn(bool, &mut X509StoreContextRef) -> bool + Any + 'static + Sync + Send,
     {
         unsafe {
             let verify = Box::new(verify);
@@ -2069,7 +2069,7 @@ impl Ssl {
         } else {
             match stream.make_error(ret) {
                 e @ Error::WantWrite(_) | e @ Error::WantRead(_) => {
-                    Err(HandshakeError::Interrupted(MidHandshakeSslStream {
+                    Err(HandshakeError::WouldBlock(MidHandshakeSslStream {
                         stream: stream,
                         error: e,
                     }))
@@ -2103,7 +2103,7 @@ impl Ssl {
         } else {
             match stream.make_error(ret) {
                 e @ Error::WantWrite(_) | e @ Error::WantRead(_) => {
-                    Err(HandshakeError::Interrupted(MidHandshakeSslStream {
+                    Err(HandshakeError::WouldBlock(MidHandshakeSslStream {
                         stream: stream,
                         error: e,
                     }))
@@ -2163,7 +2163,7 @@ impl<S> MidHandshakeSslStream<S> {
             match self.stream.make_error(ret) {
                 e @ Error::WantWrite(_) | e @ Error::WantRead(_) => {
                     self.error = e;
-                    Err(HandshakeError::Interrupted(self))
+                    Err(HandshakeError::WouldBlock(self))
                 }
                 err => {
                     self.error = err;
@@ -2176,10 +2176,19 @@ impl<S> MidHandshakeSslStream<S> {
 
 /// A TLS session over a stream.
 pub struct SslStream<S> {
-    // FIXME use ManuallyDrop
-    ssl: Ssl,
-    _method: BioMethod, // NOTE: this *must* be after the Ssl field so things drop right
+    ssl: ManuallyDrop<Ssl>,
+    method: ManuallyDrop<BioMethod>,
     _p: PhantomData<S>,
+}
+
+impl<S> Drop for SslStream<S> {
+    fn drop(&mut self) {
+        // ssl holds a reference to method internally so it has to drop first
+        unsafe {
+            ManuallyDrop::drop(&mut self.ssl);
+            ManuallyDrop::drop(&mut self.method);
+        }
+    }
 }
 
 impl<S> fmt::Debug for SslStream<S>
@@ -2201,8 +2210,8 @@ impl<S: Read + Write> SslStream<S> {
             ffi::SSL_set_bio(ssl.as_ptr(), bio, bio);
 
             SslStream {
-                ssl: ssl,
-                _method: method,
+                ssl: ManuallyDrop::new(ssl),
+                method: ManuallyDrop::new(method),
                 _p: PhantomData,
             }
         }

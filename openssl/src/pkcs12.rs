@@ -9,7 +9,7 @@ use std::ffi::CString;
 use {cvt, cvt_p};
 use pkey::{PKey, PKeyRef};
 use error::ErrorStack;
-use x509::X509;
+use x509::{X509, X509Ref};
 use stack::Stack;
 use nid::Nid;
 
@@ -25,8 +25,7 @@ impl Pkcs12Ref {
     to_der!(ffi::i2d_PKCS12);
 
     /// Extracts the contents of the `Pkcs12`.
-    // FIXME should take an &[u8]
-    pub fn parse(&self, pass: &str) -> Result<ParsedPkcs12, ErrorStack> {
+    pub fn parse(&self, pass: &[u8]) -> Result<ParsedPkcs12, ErrorStack> {
         unsafe {
             let pass = CString::new(pass).unwrap();
 
@@ -46,9 +45,9 @@ impl Pkcs12Ref {
             let cert = X509::from_ptr(cert);
 
             let chain = if chain.is_null() {
-                Stack::new()?
+                None
             } else {
-                Stack::from_ptr(chain)
+                Some(Stack::from_ptr(chain))
             };
 
             Ok(ParsedPkcs12 {
@@ -87,8 +86,7 @@ impl Pkcs12 {
 pub struct ParsedPkcs12 {
     pub pkey: PKey,
     pub cert: X509,
-    // FIXME Make this Option<Stack> in the next breaking release
-    pub chain: Stack<X509>,
+    pub chain: Option<Stack<X509>>,
 }
 
 pub struct Pkcs12Builder {
@@ -147,7 +145,7 @@ impl Pkcs12Builder {
         password: &str,
         friendly_name: &str,
         pkey: &PKeyRef,
-        cert: &X509, // FIXME X509Ref
+        cert: &X509Ref,
     ) -> Result<Pkcs12, ErrorStack> {
         unsafe {
             let pass = CString::new(password).unwrap();
@@ -200,7 +198,7 @@ mod test {
     fn parse() {
         let der = include_bytes!("../test/identity.p12");
         let pkcs12 = Pkcs12::from_der(der).unwrap();
-        let parsed = pkcs12.parse("mypass").unwrap();
+        let parsed = pkcs12.parse("mypass".as_bytes()).unwrap();
 
         assert_eq!(
             parsed
@@ -211,9 +209,10 @@ mod test {
             "59172d9313e84459bcff27f967e79e6e9217e584"
         );
 
-        assert_eq!(parsed.chain.len(), 1);
+        let chain = parsed.chain.unwrap();
+        assert_eq!(chain.len(), 1);
         assert_eq!(
-            parsed.chain[0]
+            chain[0]
                 .fingerprint(MessageDigest::sha1())
                 .unwrap()
                 .to_hex(),
@@ -225,10 +224,8 @@ mod test {
     fn parse_empty_chain() {
         let der = include_bytes!("../test/keystore-empty-chain.p12");
         let pkcs12 = Pkcs12::from_der(der).unwrap();
-        let parsed = pkcs12.parse("cassandra").unwrap();
-
-        assert_eq!(parsed.chain.len(), 0);
-        assert_eq!(parsed.chain.into_iter().collect::<Vec<_>>().len(), 0);
+        let parsed = pkcs12.parse("cassandra".as_bytes()).unwrap();
+        assert!(parsed.chain.is_none());
     }
 
     #[test]
@@ -266,7 +263,7 @@ mod test {
         let der = pkcs12.to_der().unwrap();
 
         let pkcs12 = Pkcs12::from_der(&der).unwrap();
-        let parsed = pkcs12.parse("mypass").unwrap();
+        let parsed = pkcs12.parse("mypass".as_bytes()).unwrap();
 
         assert_eq!(
             parsed.cert.fingerprint(MessageDigest::sha1()).unwrap(),
