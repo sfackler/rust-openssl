@@ -1263,7 +1263,7 @@ fn tmp_ecdh_callback() {
             .unwrap();
         ctx.set_tmp_ecdh_callback(|_, _, _| {
             CALLED_BACK.store(true, Ordering::SeqCst);
-            EcKey::new_by_curve_name(Nid::X9_62_PRIME256V1)
+            EcKey::from_curve_name(Nid::X9_62_PRIME256V1)
         });
         let ssl = Ssl::new(&ctx.build()).unwrap();
         ssl.accept(stream).unwrap();
@@ -1332,7 +1332,7 @@ fn tmp_ecdh_callback_ssl() {
         let mut ssl = Ssl::new(&ctx.build()).unwrap();
         ssl.set_tmp_ecdh_callback(|_, _, _| {
             CALLED_BACK.store(true, Ordering::SeqCst);
-            EcKey::new_by_curve_name(Nid::X9_62_PRIME256V1)
+            EcKey::from_curve_name(Nid::X9_62_PRIME256V1)
         });
         ssl.accept(stream).unwrap();
     });

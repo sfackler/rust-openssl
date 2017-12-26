@@ -1,4 +1,4 @@
-use libc::{c_char, c_int, c_void, size_t};
+use libc::{c_int, size_t};
 use std::ptr;
 use std::mem;
 use std::ffi::CString;
@@ -12,7 +12,7 @@ use dsa::Dsa;
 use ec::EcKey;
 use rsa::{Padding, Rsa};
 use error::ErrorStack;
-use util::{invoke_passwd_cb, invoke_passwd_cb_old, CallbackState};
+use util::{invoke_passwd_cb, CallbackState};
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::EVP_PKEY;
@@ -200,25 +200,6 @@ impl PKey {
                 None,
                 passphrase.as_ptr() as *const _ as *mut _,
             )).map(PKey)
-        }
-    }
-
-    #[deprecated(since = "0.9.2", note = "use private_key_from_pem_callback")]
-    pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<PKey, ErrorStack>
-    where
-        F: FnOnce(&mut [c_char]) -> usize,
-    {
-        ffi::init();
-        let mut cb = CallbackState::new(pass_cb);
-        let mem_bio = MemBioSlice::new(buf)?;
-        unsafe {
-            let evp = cvt_p(ffi::PEM_read_bio_PrivateKey(
-                mem_bio.as_ptr(),
-                ptr::null_mut(),
-                Some(invoke_passwd_cb_old::<F>),
-                &mut cb as *mut _ as *mut c_void,
-            ))?;
-            Ok(PKey::from_ptr(evp))
         }
     }
 }

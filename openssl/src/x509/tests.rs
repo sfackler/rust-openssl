@@ -2,119 +2,18 @@ use hex::{FromHex, ToHex};
 
 use asn1::Asn1Time;
 use bn::{BigNum, MsbOption};
-use ec::{Asn1Flag, EcGroup, EcKey};
 use hash::MessageDigest;
 use nid::Nid;
 use pkey::PKey;
 use rsa::Rsa;
 use stack::Stack;
-use x509::{X509, X509Generator, X509Name, X509Req};
-use x509::extension::{AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, Extension,
-                      KeyUsage, SubjectAlternativeName, SubjectKeyIdentifier};
-use ssl::{SslContextBuilder, SslMethod};
-use x509::extension::AltNameOption as SAN;
-use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment};
-use x509::extension::ExtKeyUsageOption::{self, ClientAuth, ServerAuth};
-
-fn get_generator() -> X509Generator {
-    X509Generator::new()
-        .set_valid_period(365 * 2)
-        .add_name("CN".to_string(), "test_me".to_string())
-        .set_sign_hash(MessageDigest::sha1())
-        .add_extension(Extension::KeyUsage(vec![DigitalSignature, KeyEncipherment]))
-        .add_extension(Extension::ExtKeyUsage(vec![
-            ClientAuth,
-            ServerAuth,
-            ExtKeyUsageOption::Other("2.999.1".to_owned()),
-        ]))
-        .add_extension(Extension::SubjectAltName(vec![
-            (SAN::DNS, "example.com".to_owned()),
-        ]))
-        .add_extension(Extension::OtherNid(
-            Nid::BASIC_CONSTRAINTS,
-            "critical,CA:TRUE".to_owned(),
-        ))
-        .add_extension(Extension::OtherStr(
-            "2.999.2".to_owned(),
-            "ASN1:UTF8:example value".to_owned(),
-        ))
-}
+use x509::{X509, X509Name, X509Req};
+use x509::extension::{AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, KeyUsage,
+                      SubjectAlternativeName, SubjectKeyIdentifier};
 
 fn pkey() -> PKey {
     let rsa = Rsa::generate(2048).unwrap();
     PKey::from_rsa(rsa).unwrap()
-}
-
-#[test]
-fn test_cert_gen() {
-    let pkey = pkey();
-    let cert = get_generator().sign(&pkey).unwrap();
-
-    // FIXME: check data in result to be correct, needs implementation
-    // of X509 getters
-
-    assert_eq!(
-        pkey.public_key_to_pem().unwrap(),
-        cert.public_key().unwrap().public_key_to_pem().unwrap()
-    );
-}
-
-/// SubjectKeyIdentifier must be added before AuthorityKeyIdentifier or OpenSSL
-/// is "unable to get issuer keyid." This test ensures the order of insertion
-/// for extensions is preserved when the cert is signed.
-#[test]
-fn test_cert_gen_extension_ordering() {
-    let pkey = pkey();
-    get_generator()
-        .add_extension(Extension::OtherNid(
-            Nid::SUBJECT_KEY_IDENTIFIER,
-            "hash".to_owned(),
-        ))
-        .add_extension(Extension::OtherNid(
-            Nid::AUTHORITY_KEY_IDENTIFIER,
-            "keyid:always".to_owned(),
-        ))
-        .sign(&pkey)
-        .expect("Failed to generate cert with order-dependent extensions");
-}
-
-/// Proves that a passing result from `test_cert_gen_extension_ordering` is
-/// deterministic by reversing the order of extensions and asserting failure.
-#[test]
-fn test_cert_gen_extension_bad_ordering() {
-    let pkey = pkey();
-    let result = get_generator()
-        .add_extension(Extension::OtherNid(
-            Nid::AUTHORITY_KEY_IDENTIFIER,
-            "keyid:always".to_owned(),
-        ))
-        .add_extension(Extension::OtherNid(
-            Nid::SUBJECT_KEY_IDENTIFIER,
-            "hash".to_owned(),
-        ))
-        .sign(&pkey);
-
-    assert!(result.is_err());
-}
-
-#[test]
-fn test_req_gen() {
-    let pkey = pkey();
-
-    let req = get_generator().request(&pkey).unwrap();
-    let reqpem = req.to_pem().unwrap();
-
-    let req = X509Req::from_pem(&reqpem).ok().expect("Failed to load PEM");
-    let cn = (*req)
-        .subject_name()
-        .entries_by_nid(Nid::COMMONNAME)
-        .next()
-        .unwrap();
-    assert_eq!(0, (*req).version());
-    assert_eq!(cn.data().as_slice(), b"test_me");
-
-    // FIXME: check data in result to be correct, needs implementation
-    // of X509_REQ getters
 }
 
 #[test]
@@ -356,26 +255,6 @@ fn issued() {
 
     ca.issued(&cert).unwrap();
     cert.issued(&cert).err().unwrap();
-}
-
-#[test]
-fn ecdsa_cert() {
-    let mut group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
-    group.set_asn1_flag(Asn1Flag::NAMED_CURVE);
-    let key = EcKey::generate(&group).unwrap();
-    let key = PKey::from_ec_key(key).unwrap();
-
-    let cert = X509Generator::new()
-        .set_valid_period(365)
-        .add_name("CN".to_owned(), "TestServer".to_owned())
-        .set_sign_hash(MessageDigest::sha256())
-        .sign(&key)
-        .unwrap();
-
-    let mut ctx = SslContextBuilder::new(SslMethod::tls()).unwrap();
-    ctx.set_certificate(&cert).unwrap();
-    ctx.set_private_key(&key).unwrap();
-    ctx.check_private_key().unwrap();
 }
 
 #[test]

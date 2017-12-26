@@ -1,8 +1,6 @@
-#![allow(deprecated)]
 use libc::{c_int, c_long};
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -14,9 +12,8 @@ use std::slice;
 use std::str;
 
 use {cvt, cvt_n, cvt_p};
-use asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1Time, Asn1TimeRef};
+use asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef};
 use bio::MemBioSlice;
-use bn::{BigNum, MsbOption};
 use conf::ConfRef;
 use error::ErrorStack;
 use hash::MessageDigest;
@@ -35,8 +32,6 @@ use ffi::{ASN1_STRING_get0_data as ASN1_STRING_data,
 
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 pub mod verify;
-
-use x509::extension::{Extension, ExtensionType};
 
 pub mod extension;
 pub mod store;
@@ -106,196 +101,6 @@ impl X509StoreContextRef {
             } else {
                 Ok(Some(SslRef::from_ptr(ssl as *mut ffi::SSL)))
             }
-        }
-    }
-}
-
-#[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
-pub struct X509Generator {
-    days: u32,
-    names: Vec<(String, String)>,
-    extensions: Extensions,
-    hash_type: MessageDigest,
-}
-
-#[allow(deprecated)]
-impl X509Generator {
-    /// Creates a new generator with the following defaults:
-    ///
-    /// validity period: 365 days
-    ///
-    /// CN: "rust-openssl"
-    ///
-    /// hash: SHA1
-    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
-    pub fn new() -> X509Generator {
-        X509Generator {
-            days: 365,
-            names: vec![],
-            extensions: Extensions::new(),
-            hash_type: MessageDigest::sha1(),
-        }
-    }
-
-    /// Sets certificate validity period in days since today
-    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
-    pub fn set_valid_period(mut self, days: u32) -> X509Generator {
-        self.days = days;
-        self
-    }
-
-    /// Add attribute to the name of the certificate
-    ///
-    /// ```
-    /// # let generator = openssl::x509::X509Generator::new();
-    /// generator.add_name("CN".to_string(),"example.com".to_string());
-    /// ```
-    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
-    pub fn add_name(mut self, attr_type: String, attr_value: String) -> X509Generator {
-        self.names.push((attr_type, attr_value));
-        self
-    }
-
-    /// Add multiple attributes to the name of the certificate
-    ///
-    /// ```
-    /// # let generator = openssl::x509::X509Generator::new();
-    /// generator.add_names(vec![("CN".to_string(),"example.com".to_string())]);
-    /// ```
-    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
-    pub fn add_names<I>(mut self, attrs: I) -> X509Generator
-    where
-        I: IntoIterator<Item = (String, String)>,
-    {
-        self.names.extend(attrs);
-        self
-    }
-
-    /// Add an extension to a certificate
-    ///
-    /// If the extension already exists, it will be replaced.
-    ///
-    /// ```
-    /// use openssl::x509::extension::Extension::*;
-    /// use openssl::x509::extension::KeyUsageOption::*;
-    ///
-    /// # let generator = openssl::x509::X509Generator::new();
-    /// generator.add_extension(KeyUsage(vec![DigitalSignature, KeyEncipherment]));
-    /// ```
-    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
-    pub fn add_extension(mut self, ext: extension::Extension) -> X509Generator {
-        self.extensions.add(ext);
-        self
-    }
-
-    /// Add multiple extensions to a certificate
-    ///
-    /// If any of the extensions already exist, they will be replaced.
-    ///
-    /// ```
-    /// use openssl::x509::extension::Extension::*;
-    /// use openssl::x509::extension::KeyUsageOption::*;
-    ///
-    /// # let generator = openssl::x509::X509Generator::new();
-    /// generator.add_extensions(vec![KeyUsage(vec![DigitalSignature, KeyEncipherment])]);
-    /// ```
-    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
-    pub fn add_extensions<I>(mut self, exts: I) -> X509Generator
-    where
-        I: IntoIterator<Item = extension::Extension>,
-    {
-        for ext in exts {
-            self.extensions.add(ext);
-        }
-
-        self
-    }
-
-    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
-    pub fn set_sign_hash(mut self, hash_type: MessageDigest) -> X509Generator {
-        self.hash_type = hash_type;
-        self
-    }
-
-    /// Sets the certificate public-key, then self-sign and return it
-    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
-    pub fn sign(&self, p_key: &PKeyRef) -> Result<X509, ErrorStack> {
-        let mut builder = X509::builder()?;
-        builder.set_version(2)?;
-
-        let mut serial = BigNum::new()?;
-        serial.rand(128, MsbOption::MAYBE_ZERO, false)?;
-        let serial = serial.to_asn1_integer()?;
-        builder.set_serial_number(&serial)?;
-
-        let not_before = Asn1Time::days_from_now(0)?;
-        builder.set_not_before(&not_before)?;
-        let not_after = Asn1Time::days_from_now(self.days)?;
-        builder.set_not_after(&not_after)?;
-
-        builder.set_pubkey(p_key)?;
-
-        let mut name = X509Name::builder()?;
-        if self.names.is_empty() {
-            name.append_entry_by_nid(Nid::COMMONNAME, "rust-openssl")?;
-        } else {
-            for &(ref key, ref value) in &self.names {
-                name.append_entry_by_text(key, value)?;
-            }
-        }
-        let name = name.build();
-
-        builder.set_subject_name(&name)?;
-        builder.set_issuer_name(&name)?;
-
-        for (exttype, ext) in self.extensions.iter() {
-            let extension = match exttype.get_nid() {
-                Some(nid) => {
-                    let ctx = builder.x509v3_context(None, None);
-                    X509Extension::new_nid(None, Some(&ctx), nid, &ext.to_string())?
-                }
-                None => {
-                    let ctx = builder.x509v3_context(None, None);
-                    X509Extension::new(
-                        None,
-                        Some(&ctx),
-                        &exttype.get_name().unwrap(),
-                        &ext.to_string(),
-                    )?
-                }
-            };
-            builder.append_extension(extension)?;
-        }
-
-        builder.sign(p_key, self.hash_type)?;
-        Ok(builder.build())
-    }
-
-    /// Obtain a certificate signing request (CSR)
-    #[deprecated(since = "0.9.7", note = "use X509Builder and X509ReqBuilder instead")]
-    pub fn request(&self, p_key: &PKeyRef) -> Result<X509Req, ErrorStack> {
-        let cert = match self.sign(p_key) {
-            Ok(c) => c,
-            Err(x) => return Err(x),
-        };
-
-        unsafe {
-            let req = cvt_p(ffi::X509_to_X509_REQ(
-                cert.as_ptr(),
-                ptr::null_mut(),
-                ptr::null(),
-            ))?;
-            let req = X509Req::from_ptr(req);
-
-            let exts = compat::X509_get0_extensions(cert.as_ptr());
-            if exts != ptr::null_mut() {
-                cvt(ffi::X509_REQ_add_extensions(req.as_ptr(), exts as *mut _))?;
-            }
-
-            let hash_fn = self.hash_type.as_ptr();
-            cvt(ffi::X509_REQ_sign(req.as_ptr(), p_key.as_ptr(), hash_fn))?;
-
-            Ok(req)
         }
     }
 }
@@ -941,75 +746,6 @@ impl X509ReqRef {
     }
 }
 
-/// A collection of X.509 extensions.
-///
-/// Upholds the invariant that a certificate MUST NOT include more than one
-/// instance of a particular extension, according to RFC 3280 §4.2. Also
-/// ensures that extensions are added to the certificate during signing
-/// in the order they were inserted, which is required for certain
-/// extensions like SubjectKeyIdentifier and AuthorityKeyIdentifier.
-struct Extensions {
-    /// The extensions contained in the collection.
-    extensions: Vec<Extension>,
-    /// A map of used to keep track of added extensions and their indexes in `self.extensions`.
-    indexes: HashMap<ExtensionType, usize>,
-}
-
-impl Extensions {
-    /// Creates a new `Extensions`.
-    pub fn new() -> Extensions {
-        Extensions {
-            extensions: vec![],
-            indexes: HashMap::new(),
-        }
-    }
-
-    /// Adds a new `Extension`, replacing any existing one of the same
-    /// `ExtensionType`.
-    pub fn add(&mut self, ext: Extension) {
-        let ext_type = ext.get_type();
-
-        if let Some(index) = self.indexes.get(&ext_type) {
-            self.extensions[*index] = ext;
-            return;
-        }
-
-        self.extensions.push(ext);
-        self.indexes.insert(ext_type, self.extensions.len() - 1);
-    }
-
-    /// Returns an `ExtensionsIter` for the collection.
-    pub fn iter(&self) -> ExtensionsIter {
-        ExtensionsIter {
-            current: 0,
-            extensions: &self.extensions,
-        }
-    }
-}
-
-/// An iterator that iterates over `(ExtensionType, Extension)` for each
-/// extension in the collection.
-struct ExtensionsIter<'a> {
-    current: usize,
-    extensions: &'a Vec<Extension>,
-}
-
-impl<'a> Iterator for ExtensionsIter<'a> {
-    type Item = (ExtensionType, &'a Extension);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.current < self.extensions.len() {
-            let ext = &self.extensions[self.current];
-
-            self.current += 1;
-
-            Some((ext.get_type(), ext))
-        } else {
-            None
-        }
-    }
-}
-
 pub struct X509VerifyError(c_long);
 
 impl fmt::Debug for X509VerifyError {
@@ -1135,7 +871,6 @@ mod compat {
     pub use ffi::X509_getm_notAfter as X509_get_notAfter;
     pub use ffi::X509_getm_notBefore as X509_get_notBefore;
     pub use ffi::X509_up_ref;
-    pub use ffi::X509_get0_extensions;
     pub use ffi::X509_REQ_get_version;
     pub use ffi::X509_REQ_get_subject_name;
     pub use ffi::X509_get0_signature;
@@ -1164,17 +899,6 @@ mod compat {
             "mod.rs\0".as_ptr() as *const _,
             line!() as c_int,
         );
-    }
-
-    pub unsafe fn X509_get0_extensions(
-        cert: *const ffi::X509,
-    ) -> *const ffi::stack_st_X509_EXTENSION {
-        let info = (*cert).cert_info;
-        if info.is_null() {
-            0 as *mut _
-        } else {
-            (*info).extensions
-        }
     }
 
     pub unsafe fn X509_REQ_get_version(x: *mut ffi::X509_REQ) -> ::libc::c_long {

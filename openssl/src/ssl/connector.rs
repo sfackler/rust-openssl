@@ -72,18 +72,6 @@ impl SslConnectorBuilder {
         Ok(SslConnectorBuilder(ctx))
     }
 
-    #[deprecated(since = "0.9.23",
-                 note = "SslConnectorBuilder now implements Deref<Target=SslContextBuilder>")]
-    pub fn builder(&self) -> &SslContextBuilder {
-        self
-    }
-
-    #[deprecated(since = "0.9.23",
-                 note = "SslConnectorBuilder now implements DerefMut<Target=SslContextBuilder>")]
-    pub fn builder_mut(&mut self) -> &mut SslContextBuilder {
-        self
-    }
-
     /// Consumes the builder, returning an `SslConnector`.
     pub fn build(self) -> SslConnector {
         SslConnector(self.0.build())
@@ -125,24 +113,6 @@ impl SslConnector {
         self.configure()?.connect(domain, stream)
     }
 
-    #[deprecated(
-        since = "0.9.24",
-        note = "use `ConnectConfiguration::verify_hostname` and `ConnectConfiguration::use_server_name_indication` instead")]
-    pub fn danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication<
-        S,
-    >(
-        &self,
-        stream: S,
-    ) -> Result<SslStream<S>, HandshakeError<S>>
-    where
-        S: Read + Write,
-    {
-        self.configure()?
-            .use_server_name_indication(false)
-            .verify_hostname(false)
-            .connect("", stream)
-    }
-
     /// Returns a structure allowing for configuration of a single TLS session before connection.
     pub fn configure(&self) -> Result<ConnectConfiguration, ErrorStack> {
         Ssl::new(&self.0).map(|ssl| ConnectConfiguration {
@@ -161,18 +131,6 @@ pub struct ConnectConfiguration {
 }
 
 impl ConnectConfiguration {
-    #[deprecated(since = "0.9.23",
-                 note = "ConnectConfiguration now implements Deref<Target=SslRef>")]
-    pub fn ssl(&self) -> &Ssl {
-        &self.ssl
-    }
-
-    #[deprecated(since = "0.9.23",
-                 note = "ConnectConfiguration now implements DerefMut<Target=SslRef>")]
-    pub fn ssl_mut(&mut self) -> &mut Ssl {
-        &mut self.ssl
-    }
-
     /// Configures the use of Server Name Indication (SNI) when connecting.
     ///
     /// Defaults to `true`.
@@ -211,23 +169,6 @@ impl ConnectConfiguration {
         }
 
         self.ssl.connect(stream)
-    }
-
-    #[deprecated(
-        since = "0.9.24",
-        note = "use `ConnectConfiguration::verify_hostname` and `ConnectConfiguration::use_server_name_indication` instead")]
-    pub fn danger_connect_without_providing_domain_for_certificate_verification_and_server_name_indication<
-        S,
-    >(
-        self,
-        stream: S,
-    ) -> Result<SslStream<S>, HandshakeError<S>>
-    where
-        S: Read + Write,
-    {
-        self.use_server_name_indication(false)
-            .verify_hostname(false)
-            .connect("", stream)
     }
 }
 
@@ -341,18 +282,6 @@ impl SslAcceptorBuilder {
             self.0.add_extra_chain_cert(cert.as_ref().to_owned())?;
         }
         Ok(self)
-    }
-
-    #[deprecated(since = "0.9.23",
-                 note = "SslAcceptorBuilder now implements Deref<Target=SslContextBuilder>")]
-    pub fn builder(&self) -> &SslContextBuilder {
-        self
-    }
-
-    #[deprecated(since = "0.9.23",
-                 note = "SslAcceptorBuilder now implements DerefMut<Target=SslContextBuilder>")]
-    pub fn builder_mut(&mut self) -> &mut SslContextBuilder {
-        self
     }
 
     /// Consumes the builder, returning a `SslAcceptor`.

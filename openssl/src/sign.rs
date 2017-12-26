@@ -26,7 +26,7 @@
 //! let mut signer = Signer::new(MessageDigest::sha256(), &keypair).unwrap();
 //! signer.update(data).unwrap();
 //! signer.update(data2).unwrap();
-//! let signature = signer.finish().unwrap();
+//! let signature = signer.sign_to_vec().unwrap();
 //!
 //! // Verify the data
 //! let mut verifier = Verifier::new(MessageDigest::sha256(), &keypair).unwrap();
@@ -202,11 +202,6 @@ impl<'a> Signer<'a> {
         buf.truncate(len);
         Ok(buf)
     }
-
-    #[deprecated(since = "0.9.23", note = "renamed to sign_to_vec")]
-    pub fn finish(&self) -> Result<Vec<u8>, ErrorStack> {
-        self.sign_to_vec()
-    }
 }
 
 impl<'a> Write for Signer<'a> {
@@ -313,11 +308,6 @@ impl<'a> Verifier<'a> {
                 _ => Err(ErrorStack::get()),
             }
         }
-    }
-
-    #[deprecated(since = "0.9.23", note = "renamed to `verify`")]
-    pub fn finish(&self, signature: &[u8]) -> Result<bool, ErrorStack> {
-        self.verify(signature)
     }
 }
 
