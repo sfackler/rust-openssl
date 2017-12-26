@@ -753,7 +753,7 @@ fn wait_io(stream: &TcpStream, read: bool, timeout_ms: u32) -> bool {
 fn handshake(res: Result<SslStream<TcpStream>, HandshakeError<TcpStream>>) -> SslStream<TcpStream> {
     match res {
         Ok(s) => s,
-        Err(HandshakeError::Interrupted(s)) => {
+        Err(HandshakeError::WouldBlock(s)) => {
             wait_io(s.get_ref(), true, 1_000);
             handshake(s.handshake())
         }

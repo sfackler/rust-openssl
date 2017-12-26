@@ -7,7 +7,7 @@
 
 use ffi;
 use foreign_types::ForeignTypeRef;
-use libc::{c_int, c_char, c_void};
+use libc::{c_char, c_int, c_void};
 use std::fmt;
 use std::ptr;
 
@@ -15,7 +15,7 @@ use {cvt, cvt_p};
 use bio::MemBioSlice;
 use bn::BigNumRef;
 use error::ErrorStack;
-use util::{CallbackState, invoke_passwd_cb_old};
+use util::{invoke_passwd_cb_old, CallbackState};
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::DSA;
@@ -70,12 +70,10 @@ impl DsaRef {
     /// OpenSSL documentation at [`DSA_size`]
     ///
     /// [`DSA_size`]: https://www.openssl.org/docs/man1.1.0/crypto/DSA_size.html
-    // FIXME should return u32
-    pub fn size(&self) -> Option<u32> {
-        if self.q().is_some() {
-            unsafe { Some(ffi::DSA_size(self.as_ptr()) as u32) }
-        } else {
-            None
+    pub fn size(&self) -> u32 {
+        unsafe {
+            assert!(self.q().is_some());
+            ffi::DSA_size(self.as_ptr()) as u32
         }
     }
 

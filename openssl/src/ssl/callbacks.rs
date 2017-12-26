@@ -1,5 +1,5 @@
 use ffi;
-use libc::{c_int, c_uint, c_char, c_uchar, c_void};
+use libc::{c_char, c_int, c_uchar, c_uint, c_void};
 use std::any::Any;
 use std::ffi::CStr;
 use std::ptr;
@@ -11,14 +11,14 @@ use error::ErrorStack;
 use dh::Dh;
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
 use ec_key::EcKey;
-use ssl::{get_callback_idx, get_ssl_callback_idx, SslRef, SniError, NPN_PROTOS_IDX};
+use ssl::{get_callback_idx, get_ssl_callback_idx, SniError, SslRef, NPN_PROTOS_IDX};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use ssl::ALPN_PROTOS_IDX;
 use x509::X509StoreContextRef;
 
 pub extern "C" fn raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
 where
-    F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send,
+    F: Fn(bool, &mut X509StoreContextRef) -> bool + Any + 'static + Sync + Send,
 {
     unsafe {
         let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
@@ -27,7 +27,7 @@ where
         let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
         let verify: &F = &*(verify as *mut F);
 
-        let ctx = X509StoreContextRef::from_ptr(x509_ctx);
+        let ctx = X509StoreContextRef::from_ptr_mut(x509_ctx);
 
         verify(preverify_ok != 0, ctx) as c_int
     }
@@ -74,7 +74,7 @@ pub extern "C" fn ssl_raw_verify<F>(
     x509_ctx: *mut ffi::X509_STORE_CTX,
 ) -> c_int
 where
-    F: Fn(bool, &X509StoreContextRef) -> bool + Any + 'static + Sync + Send,
+    F: Fn(bool, &mut X509StoreContextRef) -> bool + Any + 'static + Sync + Send,
 {
     unsafe {
         let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
@@ -82,7 +82,7 @@ where
         let verify = ffi::SSL_get_ex_data(ssl as *const _, get_ssl_callback_idx::<F>());
         let verify: &F = &*(verify as *mut F);
 
-        let ctx = X509StoreContextRef::from_ptr(x509_ctx);
+        let ctx = X509StoreContextRef::from_ptr_mut(x509_ctx);
 
         verify(preverify_ok != 0, ctx) as c_int
     }
@@ -121,7 +121,6 @@ pub unsafe fn select_proto_using(
     inlen: c_uint,
     ex_data: c_int,
 ) -> c_int {
-
     // First, get the list of protocols (that the client should support) saved in the context
     // extra data.
     let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
@@ -132,8 +131,8 @@ pub unsafe fn select_proto_using(
     let client_len = protocols.len() as c_uint;
     // Finally, let OpenSSL find a protocol to be used, by matching the given server and
     // client lists.
-    if ffi::SSL_select_next_proto(out, outlen, inbuf, inlen, client, client_len) !=
-        ffi::OPENSSL_NPN_NEGOTIATED
+    if ffi::SSL_select_next_proto(out, outlen, inbuf, inlen, client, client_len)
+        != ffi::OPENSSL_NPN_NEGOTIATED
     {
         ffi::SSL_TLSEXT_ERR_NOACK
     } else {

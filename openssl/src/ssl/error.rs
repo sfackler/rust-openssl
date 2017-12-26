@@ -101,11 +101,10 @@ pub enum HandshakeError<S> {
     SetupFailure(ErrorStack),
     /// The handshake failed.
     Failure(MidHandshakeSslStream<S>),
-    /// The handshake was interrupted midway through.
+    /// The handshake encountered a `WouldBlock` error midway through.
     ///
     /// This error will never be returned for blocking streams.
-    // FIXME change to WouldBlock
-    Interrupted(MidHandshakeSslStream<S>),
+    WouldBlock(MidHandshakeSslStream<S>),
 }
 
 impl<S: Any + fmt::Debug> StdError for HandshakeError<S> {
@@ -113,15 +112,14 @@ impl<S: Any + fmt::Debug> StdError for HandshakeError<S> {
         match *self {
             HandshakeError::SetupFailure(_) => "stream setup failed",
             HandshakeError::Failure(_) => "the handshake failed",
-            HandshakeError::Interrupted(_) => "the handshake was interrupted",
+            HandshakeError::WouldBlock(_) => "the handshake was interrupted",
         }
     }
 
     fn cause(&self) -> Option<&StdError> {
         match *self {
             HandshakeError::SetupFailure(ref e) => Some(e),
-            HandshakeError::Failure(ref s) |
-            HandshakeError::Interrupted(ref s) => Some(s.error()),
+            HandshakeError::Failure(ref s) | HandshakeError::WouldBlock(ref s) => Some(s.error()),
         }
     }
 }
@@ -131,8 +129,7 @@ impl<S: Any + fmt::Debug> fmt::Display for HandshakeError<S> {
         f.write_str(StdError::description(self))?;
         match *self {
             HandshakeError::SetupFailure(ref e) => write!(f, ": {}", e)?,
-            HandshakeError::Failure(ref s) |
-            HandshakeError::Interrupted(ref s) => {
+            HandshakeError::Failure(ref s) | HandshakeError::WouldBlock(ref s) => {
                 write!(f, ": {}", s.error())?;
                 if let Some(err) = s.ssl().verify_result() {
                     write!(f, ": {}", err)?;
