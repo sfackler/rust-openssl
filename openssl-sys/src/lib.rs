@@ -1305,6 +1305,7 @@ pub const X509_FILETYPE_DEFAULT: c_int = 3;
 pub const X509_FILETYPE_PEM: c_int = 1;
 
 pub const X509_V_OK: c_int = 0;
+#[cfg(not(libressl))]
 pub const X509_V_ERR_UNSPECIFIED: c_int = 1;
 pub const X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT: c_int = 2;
 pub const X509_V_ERR_UNABLE_TO_GET_CRL: c_int = 3;
