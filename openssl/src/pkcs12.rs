@@ -11,7 +11,7 @@ use pkey::{PKey, PKeyRef};
 use error::ErrorStack;
 use x509::X509;
 use stack::Stack;
-use nid;
+use nid::Nid;
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::PKCS12;
@@ -75,8 +75,8 @@ impl Pkcs12 {
         ffi::init();
 
         Pkcs12Builder {
-            nid_key: nid::UNDEF,  //nid::PBE_WITHSHA1AND3_KEY_TRIPLEDES_CBC,
-            nid_cert: nid::UNDEF, //nid::PBE_WITHSHA1AND40BITRC2_CBC,
+            nid_key: Nid::UNDEF,  //nid::PBE_WITHSHA1AND3_KEY_TRIPLEDES_CBC,
+            nid_cert: Nid::UNDEF, //nid::PBE_WITHSHA1AND40BITRC2_CBC,
             iter: ffi::PKCS12_DEFAULT_ITER,
             mac_iter: ffi::PKCS12_DEFAULT_ITER,
             ca: None,
@@ -92,8 +92,8 @@ pub struct ParsedPkcs12 {
 }
 
 pub struct Pkcs12Builder {
-    nid_key: nid::Nid,
-    nid_cert: nid::Nid,
+    nid_key: Nid,
+    nid_cert: Nid,
     iter: c_int,
     mac_iter: c_int,
     ca: Option<Stack<X509>>,
@@ -101,13 +101,13 @@ pub struct Pkcs12Builder {
 
 impl Pkcs12Builder {
     /// The encryption algorithm that should be used for the key
-    pub fn key_algorithm(&mut self, nid: nid::Nid) -> &mut Self {
+    pub fn key_algorithm(&mut self, nid: Nid) -> &mut Self {
         self.nid_key = nid;
         self
     }
 
     /// The encryption algorithm that should be used for the cert
-    pub fn cert_algorithm(&mut self, nid: nid::Nid) -> &mut Self {
+    pub fn cert_algorithm(&mut self, nid: Nid) -> &mut Self {
         self.nid_cert = nid;
         self
     }
@@ -190,7 +190,7 @@ mod test {
     use asn1::Asn1Time;
     use rsa::Rsa;
     use pkey::PKey;
-    use nid;
+    use nid::Nid;
     use x509::{X509, X509Name};
     use x509::extension::KeyUsage;
 
@@ -238,7 +238,7 @@ mod test {
         let pkey = PKey::from_rsa(rsa).unwrap();
 
         let mut name = X509Name::builder().unwrap();
-        name.append_entry_by_nid(nid::COMMONNAME, subject_name)
+        name.append_entry_by_nid(Nid::COMMONNAME, subject_name)
             .unwrap();
         let name = name.build();
 

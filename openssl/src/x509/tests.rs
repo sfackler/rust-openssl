@@ -1,21 +1,20 @@
 use hex::{FromHex, ToHex};
 
 use asn1::Asn1Time;
-use bn::{BigNum, MSB_MAYBE_ZERO};
-use ec::{NAMED_CURVE, EcGroup, EcKey};
+use bn::{BigNum, MsbOption};
+use ec::{Asn1Flag, EcGroup, EcKey};
 use hash::MessageDigest;
-use nid::X9_62_PRIME256V1;
+use nid::Nid;
 use pkey::PKey;
 use rsa::Rsa;
 use stack::Stack;
 use x509::{X509, X509Generator, X509Name, X509Req};
-use x509::extension::{Extension, BasicConstraints, KeyUsage, ExtendedKeyUsage,
-                      SubjectKeyIdentifier, AuthorityKeyIdentifier, SubjectAlternativeName};
-use ssl::{SslMethod, SslContextBuilder};
+use x509::extension::{AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, Extension,
+                      KeyUsage, SubjectAlternativeName, SubjectKeyIdentifier};
+use ssl::{SslContextBuilder, SslMethod};
 use x509::extension::AltNameOption as SAN;
 use x509::extension::KeyUsageOption::{DigitalSignature, KeyEncipherment};
 use x509::extension::ExtKeyUsageOption::{self, ClientAuth, ServerAuth};
-use nid;
 
 fn get_generator() -> X509Generator {
     X509Generator::new()
@@ -28,11 +27,11 @@ fn get_generator() -> X509Generator {
             ServerAuth,
             ExtKeyUsageOption::Other("2.999.1".to_owned()),
         ]))
-        .add_extension(Extension::SubjectAltName(
-            vec![(SAN::DNS, "example.com".to_owned())],
-        ))
+        .add_extension(Extension::SubjectAltName(vec![
+            (SAN::DNS, "example.com".to_owned()),
+        ]))
         .add_extension(Extension::OtherNid(
-            nid::BASIC_CONSTRAINTS,
+            Nid::BASIC_CONSTRAINTS,
             "critical,CA:TRUE".to_owned(),
         ))
         .add_extension(Extension::OtherStr(
@@ -68,11 +67,11 @@ fn test_cert_gen_extension_ordering() {
     let pkey = pkey();
     get_generator()
         .add_extension(Extension::OtherNid(
-            nid::SUBJECT_KEY_IDENTIFIER,
+            Nid::SUBJECT_KEY_IDENTIFIER,
             "hash".to_owned(),
         ))
         .add_extension(Extension::OtherNid(
-            nid::AUTHORITY_KEY_IDENTIFIER,
+            Nid::AUTHORITY_KEY_IDENTIFIER,
             "keyid:always".to_owned(),
         ))
         .sign(&pkey)
@@ -86,11 +85,11 @@ fn test_cert_gen_extension_bad_ordering() {
     let pkey = pkey();
     let result = get_generator()
         .add_extension(Extension::OtherNid(
-            nid::AUTHORITY_KEY_IDENTIFIER,
+            Nid::AUTHORITY_KEY_IDENTIFIER,
             "keyid:always".to_owned(),
         ))
         .add_extension(Extension::OtherNid(
-            nid::SUBJECT_KEY_IDENTIFIER,
+            Nid::SUBJECT_KEY_IDENTIFIER,
             "hash".to_owned(),
         ))
         .sign(&pkey);
@@ -108,7 +107,7 @@ fn test_req_gen() {
     let req = X509Req::from_pem(&reqpem).ok().expect("Failed to load PEM");
     let cn = (*req)
         .subject_name()
-        .entries_by_nid(nid::COMMONNAME)
+        .entries_by_nid(Nid::COMMONNAME)
         .next()
         .unwrap();
     assert_eq!(0, (*req).version());
@@ -155,7 +154,7 @@ fn test_subject_read_cn() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
     let subject = cert.subject_name();
-    let cn = subject.entries_by_nid(nid::COMMONNAME).next().unwrap();
+    let cn = subject.entries_by_nid(Nid::COMMONNAME).next().unwrap();
     assert_eq!(cn.data().as_slice(), b"foobar.com")
 }
 
@@ -165,16 +164,16 @@ fn test_nid_values() {
     let cert = X509::from_pem(cert).unwrap();
     let subject = cert.subject_name();
 
-    let cn = subject.entries_by_nid(nid::COMMONNAME).next().unwrap();
+    let cn = subject.entries_by_nid(Nid::COMMONNAME).next().unwrap();
     assert_eq!(cn.data().as_slice(), b"example.com");
 
     let email = subject
-        .entries_by_nid(nid::PKCS9_EMAILADDRESS)
+        .entries_by_nid(Nid::PKCS9_EMAILADDRESS)
         .next()
         .unwrap();
     assert_eq!(email.data().as_slice(), b"test@example.com");
 
-    let friendly = subject.entries_by_nid(nid::FRIENDLYNAME).next().unwrap();
+    let friendly = subject.entries_by_nid(Nid::FRIENDLYNAME).next().unwrap();
     assert_eq!(&**friendly.data().as_utf8().unwrap(), "Example");
 }
 
@@ -184,7 +183,7 @@ fn test_nid_uid_value() {
     let cert = X509::from_pem(cert).unwrap();
     let subject = cert.subject_name();
 
-    let cn = subject.entries_by_nid(nid::USERID).next().unwrap();
+    let cn = subject.entries_by_nid(Nid::USERID).next().unwrap();
     assert_eq!(cn.data().as_slice(), b"this is the userId");
 }
 
@@ -230,7 +229,7 @@ fn x509_builder() {
     let pkey = pkey();
 
     let mut name = X509Name::builder().unwrap();
-    name.append_entry_by_nid(nid::COMMONNAME, "foobar.com")
+    name.append_entry_by_nid(Nid::COMMONNAME, "foobar.com")
         .unwrap();
     let name = name.build();
 
@@ -247,7 +246,7 @@ fn x509_builder() {
     builder.set_pubkey(&pkey).unwrap();
 
     let mut serial = BigNum::new().unwrap();
-    serial.rand(128, MSB_MAYBE_ZERO, false).unwrap();
+    serial.rand(128, MsbOption::MAYBE_ZERO, false).unwrap();
     builder
         .set_serial_number(&serial.to_asn1_integer().unwrap())
         .unwrap();
@@ -289,7 +288,7 @@ fn x509_builder() {
     assert!(pkey.public_eq(&x509.public_key().unwrap()));
 
     let cn = x509.subject_name()
-        .entries_by_nid(nid::COMMONNAME)
+        .entries_by_nid(Nid::COMMONNAME)
         .next()
         .unwrap();
     assert_eq!("foobar.com".as_bytes(), cn.data().as_slice());
@@ -300,7 +299,7 @@ fn x509_req_builder() {
     let pkey = pkey();
 
     let mut name = X509Name::builder().unwrap();
-    name.append_entry_by_nid(nid::COMMONNAME, "foobar.com")
+    name.append_entry_by_nid(Nid::COMMONNAME, "foobar.com")
         .unwrap();
     let name = name.build();
 
@@ -361,8 +360,8 @@ fn issued() {
 
 #[test]
 fn ecdsa_cert() {
-    let mut group = EcGroup::from_curve_name(X9_62_PRIME256V1).unwrap();
-    group.set_asn1_flag(NAMED_CURVE);
+    let mut group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+    group.set_asn1_flag(Asn1Flag::NAMED_CURVE);
     let key = EcKey::generate(&group).unwrap();
     let key = PKey::from_ec_key(key).unwrap();
 
@@ -387,15 +386,15 @@ fn signature() {
     assert_eq!(
         signature.as_slice().to_hex(),
         "4af607b889790b43470442cfa551cdb8b6d0b0340d2958f76b9e3ef6ad4992230cead6842587f0ecad5\
-                78e6e11a221521e940187e3d6652de14e84e82f6671f097cc47932e022add3c0cb54a26bf27fa84c107\
-                4971caa6bee2e42d34a5b066c427f2d452038082b8073993399548088429de034fdd589dcfb0dd33be7\
-                ebdfdf698a28d628a89568881d658151276bde333600969502c4e62e1d3470a683364dfb241f78d310a\
-                89c119297df093eb36b7fd7540224f488806780305d1e79ffc938fe2275441726522ab36d88348e6c51\
-                f13dcc46b5e1cdac23c974fd5ef86aa41e91c9311655090a52333bc79687c748d833595d4c5f987508f\
-                e121997410d37c"
+         78e6e11a221521e940187e3d6652de14e84e82f6671f097cc47932e022add3c0cb54a26bf27fa84c107\
+         4971caa6bee2e42d34a5b066c427f2d452038082b8073993399548088429de034fdd589dcfb0dd33be7\
+         ebdfdf698a28d628a89568881d658151276bde333600969502c4e62e1d3470a683364dfb241f78d310a\
+         89c119297df093eb36b7fd7540224f488806780305d1e79ffc938fe2275441726522ab36d88348e6c51\
+         f13dcc46b5e1cdac23c974fd5ef86aa41e91c9311655090a52333bc79687c748d833595d4c5f987508f\
+         e121997410d37c"
     );
     let algorithm = cert.signature_algorithm();
-    assert_eq!(algorithm.object().nid(), nid::SHA256WITHRSAENCRYPTION);
+    assert_eq!(algorithm.object().nid(), Nid::SHA256WITHRSAENCRYPTION);
     assert_eq!(algorithm.object().to_string(), "sha256WithRSAEncryption");
 }
 

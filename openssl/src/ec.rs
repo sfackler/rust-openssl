@@ -20,10 +20,10 @@
 //!
 //! ```
 //! use openssl::ec::{EcGroup, EcPoint};
-//! use openssl::nid;
+//! use openssl::nid::Nid;
 //! use openssl::error::ErrorStack;
-//! fn get_ec_point() -> Result< EcPoint, ErrorStack > {
-//!    let group = EcGroup::from_curve_name(nid::SECP224R1)?;
+//! fn get_ec_point() -> Result<EcPoint, ErrorStack> {
+//!    let group = EcGroup::from_curve_name(Nid::SECP224R1)?;
 //!    let point = EcPoint::new(&group)?;
 //!    Ok(point)
 //! }
@@ -38,46 +38,9 @@ use std::mem;
 use libc::c_int;
 
 use {cvt, cvt_n, cvt_p, init};
-use bn::{BigNumRef, BigNumContextRef};
+use bn::{BigNumContextRef, BigNumRef};
 use error::ErrorStack;
 use nid::Nid;
-
-/// Compressed conversion from point value (Default)
-pub const POINT_CONVERSION_COMPRESSED: PointConversionForm =
-    PointConversionForm(ffi::point_conversion_form_t::POINT_CONVERSION_COMPRESSED);
-
-/// Uncompressed conversion from point value (Binary curve default)
-pub const POINT_CONVERSION_UNCOMPRESSED: PointConversionForm =
-    PointConversionForm(ffi::point_conversion_form_t::POINT_CONVERSION_UNCOMPRESSED);
-
-/// Performs both compressed and uncompressed conversions
-pub const POINT_CONVERSION_HYBRID: PointConversionForm =
-    PointConversionForm(ffi::point_conversion_form_t::POINT_CONVERSION_HYBRID);
-
-/// Curve defined using polynomial parameters
-///
-/// Most applications use a named EC_GROUP curve, however, support
-/// is included to explicitly define the curve used to calculate keys
-/// This information would need to be known by both endpoint to make communication
-/// effective.
-///
-/// OPENSSL_EC_EXPLICIT_CURVE, but that was only added in 1.1.
-/// Man page documents that 0 can be used in older versions.
-///
-/// OpenSSL documentation at [`EC_GROUP`]
-///
-/// [`EC_GROUP`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_get_seed_len.html
-pub const EXPLICIT_CURVE: Asn1Flag = Asn1Flag(0);
-
-/// Standard Curves
-///
-/// Curves that make up the typical encryption use cases.  The collection of curves
-/// are well known but extensible.
-///
-/// OpenSSL documentation at [`EC_GROUP`]
-///
-/// [`EC_GROUP`]: https://www.openssl.org/docs/manmaster/man3/EC_GROUP_order_bits.html
-pub const NAMED_CURVE: Asn1Flag = Asn1Flag(ffi::OPENSSL_EC_NAMED_CURVE);
 
 /// Compressed or Uncompressed conversion
 ///
@@ -91,12 +54,52 @@ pub const NAMED_CURVE: Asn1Flag = Asn1Flag(ffi::OPENSSL_EC_NAMED_CURVE);
 #[derive(Copy, Clone)]
 pub struct PointConversionForm(ffi::point_conversion_form_t);
 
+impl PointConversionForm {
+    /// Compressed conversion from point value.
+    pub const COMPRESSED: PointConversionForm =
+        PointConversionForm(ffi::point_conversion_form_t::POINT_CONVERSION_COMPRESSED);
+
+    /// Uncompressed conversion from point value.
+    pub const UNCOMPRESSED: PointConversionForm =
+        PointConversionForm(ffi::point_conversion_form_t::POINT_CONVERSION_UNCOMPRESSED);
+
+    /// Performs both compressed and uncompressed conversions.
+    pub const HYBRID: PointConversionForm =
+        PointConversionForm(ffi::point_conversion_form_t::POINT_CONVERSION_HYBRID);
+}
+
 /// Named Curve or Explicit
 ///
-/// This type acts as a boolean as to whether the EC_Group is named or
-/// explicit.
+/// This type acts as a boolean as to whether the `EcGroup` is named or explicit.
 #[derive(Copy, Clone)]
 pub struct Asn1Flag(c_int);
+
+impl Asn1Flag {
+    /// Curve defined using polynomial parameters
+    ///
+    /// Most applications use a named EC_GROUP curve, however, support
+    /// is included to explicitly define the curve used to calculate keys
+    /// This information would need to be known by both endpoint to make communication
+    /// effective.
+    ///
+    /// OPENSSL_EC_EXPLICIT_CURVE, but that was only added in 1.1.
+    /// Man page documents that 0 can be used in older versions.
+    ///
+    /// OpenSSL documentation at [`EC_GROUP`]
+    ///
+    /// [`EC_GROUP`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_get_seed_len.html
+    pub const EXPLICIT_CURVE: Asn1Flag = Asn1Flag(0);
+
+    /// Standard Curves
+    ///
+    /// Curves that make up the typical encryption use cases.  The collection of curves
+    /// are well known but extensible.
+    ///
+    /// OpenSSL documentation at [`EC_GROUP`]
+    ///
+    /// [`EC_GROUP`]: https://www.openssl.org/docs/manmaster/man3/EC_GROUP_order_bits.html
+    pub const NAMED_CURVE: Asn1Flag = Asn1Flag(ffi::OPENSSL_EC_NAMED_CURVE);
+}
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::EC_GROUP;
@@ -606,14 +609,14 @@ impl EcKey {
     /// ```no_run
     /// use openssl::bn::BigNumContext;
     /// use openssl::ec::*;
-    /// use openssl::nid;
+    /// use openssl::nid::Nid;
     /// use openssl::pkey::PKey;
     ///
     /// // get bytes from somewhere, i.e. this will not produce a valid key
     /// let public_key: Vec<u8> = vec![];
     ///
     /// // create an EcKey from the binary form of a EcPoint
-    /// let group = EcGroup::from_curve_name(nid::SECP256K1).unwrap();
+    /// let group = EcGroup::from_curve_name(Nid::SECP256K1).unwrap();
     /// let mut ctx = BigNumContext::new().unwrap();
     /// let point = EcPoint::from_bytes(&group, &public_key, &mut ctx).unwrap();
     /// let key = EcKey::from_public_key(&group, &point);
@@ -644,7 +647,6 @@ impl EcKey {
     private_key_from_pem!(EcKey, ffi::PEM_read_bio_ECPrivateKey);
     private_key_from_der!(EcKey, ffi::d2i_ECPrivateKey);
 }
-
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::EC_KEY;
@@ -731,18 +733,18 @@ impl EcKeyBuilderRef {
 #[cfg(test)]
 mod test {
     use bn::{BigNum, BigNumContext};
-    use nid;
+    use nid::Nid;
     use data_encoding::BASE64URL_NOPAD;
     use super::*;
 
     #[test]
     fn key_new_by_curve_name() {
-        EcKey::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        EcKey::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
     }
 
     #[test]
     fn generate() {
-        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
         key.public_key().unwrap();
         key.private_key().unwrap();
@@ -750,25 +752,25 @@ mod test {
 
     #[test]
     fn dup() {
-        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
         key.to_owned().unwrap();
     }
 
     #[test]
     fn point_new() {
-        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         EcPoint::new(&group).unwrap();
     }
 
     #[test]
     fn point_bytes() {
-        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
         let point = key.public_key().unwrap();
         let mut ctx = BigNumContext::new().unwrap();
         let bytes = point
-            .to_bytes(&group, POINT_CONVERSION_COMPRESSED, &mut ctx)
+            .to_bytes(&group, PointConversionForm::COMPRESSED, &mut ctx)
             .unwrap();
         let point2 = EcPoint::from_bytes(&group, &bytes, &mut ctx).unwrap();
         assert!(point.eq(&group, &point2, &mut ctx).unwrap());
@@ -776,7 +778,7 @@ mod test {
 
     #[test]
     fn mul_generator() {
-        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
         let mut ctx = BigNumContext::new().unwrap();
         let mut public_key = EcPoint::new(&group).unwrap();
@@ -792,12 +794,12 @@ mod test {
 
     #[test]
     fn key_from_public_key() {
-        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
         let mut ctx = BigNumContext::new().unwrap();
         let bytes = key.public_key()
             .unwrap()
-            .to_bytes(&group, POINT_CONVERSION_COMPRESSED, &mut ctx)
+            .to_bytes(&group, PointConversionForm::COMPRESSED, &mut ctx)
             .unwrap();
 
         drop(key);
@@ -810,13 +812,13 @@ mod test {
 
     #[test]
     fn key_from_affine_coordinates() {
-        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
-        let x = BASE64URL_NOPAD.decode(
-            "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4".as_bytes(),
-        ).unwrap();
-        let y = BASE64URL_NOPAD.decode(
-            "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM".as_bytes(),
-        ).unwrap();
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let x = BASE64URL_NOPAD
+            .decode("MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4".as_bytes())
+            .unwrap();
+        let y = BASE64URL_NOPAD
+            .decode("4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM".as_bytes())
+            .unwrap();
 
         let xbn = BigNum::from_slice(&x).unwrap();
         let ybn = BigNum::from_slice(&y).unwrap();
@@ -834,10 +836,10 @@ mod test {
 
     #[test]
     fn set_private_key() {
-        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
-        let d = BASE64URL_NOPAD.decode(
-            "870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE".as_bytes(),
-        ).unwrap();
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let d = BASE64URL_NOPAD
+            .decode("870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE".as_bytes())
+            .unwrap();
 
         let dbn = BigNum::from_slice(&d).unwrap();
 
@@ -851,13 +853,13 @@ mod test {
 
     #[test]
     fn get_affine_coordinates() {
-        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
-        let x = BASE64URL_NOPAD.decode(
-            "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4".as_bytes(),
-        ).unwrap();
-        let y = BASE64URL_NOPAD.decode(
-            "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM".as_bytes(),
-        ).unwrap();
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let x = BASE64URL_NOPAD
+            .decode("MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4".as_bytes())
+            .unwrap();
+        let y = BASE64URL_NOPAD
+            .decode("4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM".as_bytes())
+            .unwrap();
 
         let xbn = BigNum::from_slice(&x).unwrap();
         let ybn = BigNum::from_slice(&y).unwrap();

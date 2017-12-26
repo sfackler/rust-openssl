@@ -353,8 +353,8 @@ mod test {
     use hash::MessageDigest;
     use sign::{Signer, Verifier};
     use ec::{EcGroup, EcKey};
-    use nid;
-    use rsa::{PKCS1_PADDING, Rsa};
+    use nid::Nid;
+    use rsa::{Padding, Rsa};
     use dsa::Dsa;
     use pkey::PKey;
 
@@ -378,10 +378,10 @@ mod test {
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut signer = Signer::new(MessageDigest::sha256(), &pkey).unwrap();
-        assert_eq!(signer.pkey_ctx_mut().rsa_padding().unwrap(), PKCS1_PADDING);
+        assert_eq!(signer.pkey_ctx_mut().rsa_padding().unwrap(), Padding::PKCS1);
         signer
             .pkey_ctx_mut()
-            .set_rsa_padding(PKCS1_PADDING)
+            .set_rsa_padding(Padding::PKCS1)
             .unwrap();
         signer.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         let result = signer.sign_to_vec().unwrap();
@@ -398,7 +398,7 @@ mod test {
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
         assert_eq!(
             verifier.pkey_ctx_mut().rsa_padding().unwrap(),
-            PKCS1_PADDING
+            Padding::PKCS1
         );
         verifier.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         assert!(verifier.verify(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
@@ -569,7 +569,7 @@ mod test {
 
     #[test]
     fn ec() {
-        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
         let key = PKey::from_ec_key(key).unwrap();
 

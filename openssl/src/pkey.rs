@@ -1,4 +1,4 @@
-use libc::{c_void, c_char, c_int, size_t};
+use libc::{c_char, c_int, c_void, size_t};
 use std::ptr;
 use std::mem;
 use std::ffi::CString;
@@ -10,9 +10,9 @@ use bio::MemBioSlice;
 use dh::Dh;
 use dsa::Dsa;
 use ec::EcKey;
-use rsa::{Rsa, Padding};
+use rsa::{Padding, Rsa};
 use error::ErrorStack;
-use util::{CallbackState, invoke_passwd_cb, invoke_passwd_cb_old};
+use util::{invoke_passwd_cb, invoke_passwd_cb_old, CallbackState};
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::EVP_PKEY;
@@ -254,9 +254,7 @@ impl PKeyCtxRef {
     pub fn rsa_padding(&self) -> Result<Padding, ErrorStack> {
         let mut pad: c_int = 0;
         unsafe {
-            cvt(
-                ffi::EVP_PKEY_CTX_get_rsa_padding(self.as_ptr(), &mut pad),
-            )?;
+            cvt(ffi::EVP_PKEY_CTX_get_rsa_padding(self.as_ptr(), &mut pad))?;
         };
         Ok(Padding::from_raw(pad))
     }
@@ -270,9 +268,7 @@ impl PKeyCtxRef {
 
     pub fn derive_set_peer(&mut self, peer: &PKeyRef) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(
-                ffi::EVP_PKEY_derive_set_peer(self.as_ptr(), peer.as_ptr()),
-            )?;
+            cvt(ffi::EVP_PKEY_derive_set_peer(self.as_ptr(), peer.as_ptr()))?;
         }
         Ok(())
     }
@@ -306,7 +302,7 @@ mod tests {
     use dsa::Dsa;
     use ec::{EcGroup, EcKey};
     use rsa::Rsa;
-    use nid;
+    use nid::Nid;
 
     use super::*;
 
@@ -403,7 +399,7 @@ mod tests {
 
     #[test]
     fn test_ec_key_accessor() {
-        let ec_key = EcKey::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let ec_key = EcKey::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let pkey = PKey::from_ec_key(ec_key).unwrap();
         pkey.ec_key().unwrap();
         assert!(pkey.rsa().is_err());
@@ -411,7 +407,7 @@ mod tests {
 
     #[test]
     fn test_ec_key_derive() {
-        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let ec_key = EcKey::generate(&group).unwrap();
         let ec_key2 = EcKey::generate(&group).unwrap();
         let pkey = PKey::from_ec_key(ec_key).unwrap();

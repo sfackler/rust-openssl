@@ -3,8 +3,8 @@ use std::ops::{Deref, DerefMut};
 
 use dh::Dh;
 use error::ErrorStack;
-use ssl::{self, HandshakeError, Ssl, SslRef, SslContext, SslContextBuilder, SslMethod, SslStream,
-          SSL_VERIFY_PEER};
+use ssl::{HandshakeError, Ssl, SslContext, SslContextBuilder, SslMethod, SslMode, SslOptions,
+          SslRef, SslStream, SslVerifyMode};
 use pkey::PKeyRef;
 use version;
 use x509::X509Ref;
@@ -29,26 +29,21 @@ ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
 fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     let mut ctx = SslContextBuilder::new(method)?;
 
-    let mut opts = ssl::SSL_OP_ALL;
-    opts &= !ssl::SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG;
-    opts &= !ssl::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
-    opts |= ssl::SSL_OP_NO_TICKET;
-    opts |= ssl::SSL_OP_NO_COMPRESSION;
-    opts |= ssl::SSL_OP_NO_SSLV2;
-    opts |= ssl::SSL_OP_NO_SSLV3;
-    opts |= ssl::SSL_OP_SINGLE_DH_USE;
-    opts |= ssl::SSL_OP_SINGLE_ECDH_USE;
-    opts |= ssl::SSL_OP_CIPHER_SERVER_PREFERENCE;
+    let mut opts = SslOptions::ALL | SslOptions::NO_COMPRESSION | SslOptions::NO_SSLV2
+        | SslOptions::NO_SSLV3 | SslOptions::SINGLE_DH_USE
+        | SslOptions::SINGLE_ECDH_USE | SslOptions::CIPHER_SERVER_PREFERENCE;
+    opts &= !SslOptions::DONT_INSERT_EMPTY_FRAGMENTS;
+
     ctx.set_options(opts);
 
-    let mut mode = ssl::SSL_MODE_AUTO_RETRY | ssl::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER
-        | ssl::SSL_MODE_ENABLE_PARTIAL_WRITE;
+    let mut mode =
+        SslMode::AUTO_RETRY | SslMode::ACCEPT_MOVING_WRITE_BUFFER | SslMode::ENABLE_PARTIAL_WRITE;
 
     // This is quite a useful optimization for saving memory, but historically
     // caused CVEs in OpenSSL pre-1.0.1h, according to
     // https://bugs.python.org/issue25672
     if version::number() >= 0x1000108f {
-        mode |= ssl::SSL_MODE_RELEASE_BUFFERS;
+        mode |= SslMode::RELEASE_BUFFERS;
     }
 
     ctx.set_mode(mode);
@@ -152,7 +147,11 @@ impl SslConnector {
 
     /// Returns a structure allowing for configuration of a single TLS session before connection.
     pub fn configure(&self) -> Result<ConnectConfiguration, ErrorStack> {
-        Ssl::new(&self.0).map(|ssl| ConnectConfiguration { ssl, sni: true, verify_hostname: true })
+        Ssl::new(&self.0).map(|ssl| ConnectConfiguration {
+            ssl,
+            sni: true,
+            verify_hostname: true,
+        })
     }
 }
 
@@ -228,7 +227,9 @@ impl ConnectConfiguration {
     where
         S: Read + Write,
     {
-        self.use_server_name_indication(false).verify_hostname(false).connect("", stream)
+        self.use_server_name_indication(false)
+            .verify_hostname(false)
+            .connect("", stream)
     }
 }
 
@@ -379,9 +380,9 @@ impl DerefMut for SslAcceptorBuilder {
 #[cfg(ossl101)]
 fn setup_curves(ctx: &mut SslContextBuilder) -> Result<(), ErrorStack> {
     use ec::EcKey;
-    use nid;
+    use nid::Nid;
 
-    let curve = EcKey::from_curve_name(nid::X9_62_PRIME256V1)?;
+    let curve = EcKey::from_curve_name(Nid::X9_62_PRIME256V1)?;
     ctx.set_tmp_ecdh(&curve)
 }
 
@@ -415,12 +416,12 @@ impl SslAcceptor {
 
 #[cfg(any(ossl102, ossl110))]
 fn setup_verify(ctx: &mut SslContextBuilder) {
-    ctx.set_verify(SSL_VERIFY_PEER);
+    ctx.set_verify(SslVerifyMode::PEER);
 }
 
 #[cfg(ossl101)]
 fn setup_verify(ctx: &mut SslContextBuilder) {
-    ctx.set_verify_callback(SSL_VERIFY_PEER, |p, x509| {
+    ctx.set_verify_callback(SslVerifyMode::PEER, |p, x509| {
         let hostname = match x509.ssl() {
             Ok(Some(ssl)) => ssl.ex_data(*HOSTNAME_IDX),
             _ => None,
@@ -435,7 +436,7 @@ fn setup_verify(ctx: &mut SslContextBuilder) {
 #[cfg(any(ossl102, ossl110))]
 fn setup_verify_hostname(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
     let param = ssl._param_mut();
-    param.set_hostflags(::verify::X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+    param.set_hostflags(::verify::X509CheckFlags::NO_PARTIAL_WILDCARDS);
     match domain.parse() {
         Ok(ip) => param.set_ip(ip),
         Err(_) => param.set_host(domain),
@@ -454,7 +455,7 @@ mod verify {
     use std::net::IpAddr;
     use std::str;
 
-    use nid;
+    use nid::Nid;
     use x509::{GeneralName, X509NameRef, X509Ref, X509StoreContextRef};
     use stack::Stack;
 
@@ -506,7 +507,7 @@ mod verify {
     }
 
     fn verify_subject_name(domain: &str, subject_name: &X509NameRef) -> bool {
-        match subject_name.entries_by_nid(nid::COMMONNAME).next() {
+        match subject_name.entries_by_nid(Nid::COMMONNAME).next() {
             Some(pattern) => {
                 let pattern = match str::from_utf8(pattern.data().as_slice()) {
                     Ok(pattern) => pattern,
@@ -516,7 +517,10 @@ mod verify {
                 // Unlike SANs, IP addresses in the subject name don't have a
                 // different encoding.
                 match domain.parse::<IpAddr>() {
-                    Ok(ip) => pattern.parse::<IpAddr>().ok().map_or(false, |pattern| pattern == ip),
+                    Ok(ip) => pattern
+                        .parse::<IpAddr>()
+                        .ok()
+                        .map_or(false, |pattern| pattern == ip),
                     Err(_) => matches_dns(pattern, domain),
                 }
             }

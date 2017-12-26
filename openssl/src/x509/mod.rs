@@ -13,30 +13,30 @@ use std::ptr;
 use std::slice;
 use std::str;
 
-use {cvt, cvt_p, cvt_n};
-use asn1::{Asn1StringRef, Asn1Time, Asn1TimeRef, Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef};
+use {cvt, cvt_n, cvt_p};
+use asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1Time, Asn1TimeRef};
 use bio::MemBioSlice;
-use bn::{BigNum, MSB_MAYBE_ZERO};
+use bn::{BigNum, MsbOption};
 use conf::ConfRef;
 use error::ErrorStack;
 use hash::MessageDigest;
-use nid::{self, Nid};
+use nid::Nid;
 use pkey::{PKey, PKeyRef};
 use stack::{Stack, StackRef, Stackable};
 use string::OpensslString;
 use ssl::SslRef;
 
 #[cfg(ossl10x)]
-use ffi::{X509_set_notBefore, X509_set_notAfter, ASN1_STRING_data, X509_STORE_CTX_get_chain};
+use ffi::{ASN1_STRING_data, X509_STORE_CTX_get_chain, X509_set_notAfter, X509_set_notBefore};
 #[cfg(ossl110)]
-use ffi::{X509_set1_notBefore as X509_set_notBefore, X509_set1_notAfter as X509_set_notAfter,
-          ASN1_STRING_get0_data as ASN1_STRING_data,
-          X509_STORE_CTX_get0_chain as X509_STORE_CTX_get_chain};
+use ffi::{ASN1_STRING_get0_data as ASN1_STRING_data,
+          X509_STORE_CTX_get0_chain as X509_STORE_CTX_get_chain,
+          X509_set1_notAfter as X509_set_notAfter, X509_set1_notBefore as X509_set_notBefore};
 
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 pub mod verify;
 
-use x509::extension::{ExtensionType, Extension};
+use x509::extension::{Extension, ExtensionType};
 
 pub mod extension;
 pub mod store;
@@ -44,17 +44,17 @@ pub mod store;
 #[cfg(test)]
 mod tests;
 
-pub struct X509FileType(c_int);
+pub struct X509Filetype(c_int);
 
-impl X509FileType {
+impl X509Filetype {
     pub fn as_raw(&self) -> c_int {
         self.0
     }
-}
 
-pub const X509_FILETYPE_PEM: X509FileType = X509FileType(ffi::X509_FILETYPE_PEM);
-pub const X509_FILETYPE_ASN1: X509FileType = X509FileType(ffi::X509_FILETYPE_ASN1);
-pub const X509_FILETYPE_DEFAULT: X509FileType = X509FileType(ffi::X509_FILETYPE_DEFAULT);
+    pub const PEM: X509Filetype = X509Filetype(ffi::X509_FILETYPE_PEM);
+    pub const ASN1: X509Filetype = X509Filetype(ffi::X509_FILETYPE_ASN1);
+    pub const DEFAULT: X509Filetype = X509Filetype(ffi::X509_FILETYPE_DEFAULT);
+}
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE_CTX;
@@ -224,7 +224,7 @@ impl X509Generator {
         builder.set_version(2)?;
 
         let mut serial = BigNum::new()?;
-        serial.rand(128, MSB_MAYBE_ZERO, false)?;
+        serial.rand(128, MsbOption::MAYBE_ZERO, false)?;
         let serial = serial.to_asn1_integer()?;
         builder.set_serial_number(&serial)?;
 
@@ -237,7 +237,7 @@ impl X509Generator {
 
         let mut name = X509Name::builder()?;
         if self.names.is_empty() {
-            name.append_entry_by_nid(nid::COMMONNAME, "rust-openssl")?;
+            name.append_entry_by_nid(Nid::COMMONNAME, "rust-openssl")?;
         } else {
             for &(ref key, ref value) in &self.names {
                 name.append_entry_by_text(key, value)?;
@@ -252,12 +252,7 @@ impl X509Generator {
             let extension = match exttype.get_nid() {
                 Some(nid) => {
                     let ctx = builder.x509v3_context(None, None);
-                    X509Extension::new_nid(
-                        None,
-                        Some(&ctx),
-                        nid,
-                        &ext.to_string(),
-                    )?
+                    X509Extension::new_nid(None, Some(&ctx), nid, &ext.to_string())?
                 }
                 None => {
                     let ctx = builder.x509v3_context(None, None);
@@ -294,15 +289,11 @@ impl X509Generator {
 
             let exts = compat::X509_get0_extensions(cert.as_ptr());
             if exts != ptr::null_mut() {
-                cvt(
-                    ffi::X509_REQ_add_extensions(req.as_ptr(), exts as *mut _),
-                )?;
+                cvt(ffi::X509_REQ_add_extensions(req.as_ptr(), exts as *mut _))?;
             }
 
             let hash_fn = self.hash_type.as_ptr();
-            cvt(
-                ffi::X509_REQ_sign(req.as_ptr(), p_key.as_ptr(), hash_fn),
-            )?;
+            cvt(ffi::X509_REQ_sign(req.as_ptr(), p_key.as_ptr(), hash_fn))?;
 
             Ok(req)
         }
@@ -428,9 +419,7 @@ impl X509Builder {
     /// Adds an X509 extension value to the certificate.
     pub fn append_extension(&mut self, extension: X509Extension) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(
-                ffi::X509_add_ext(self.0.as_ptr(), extension.as_ptr(), -1),
-            )?;
+            cvt(ffi::X509_add_ext(self.0.as_ptr(), extension.as_ptr(), -1))?;
             mem::forget(extension);
             Ok(())
         }
@@ -595,8 +584,8 @@ impl X509 {
                     ffi::PEM_read_bio_X509(bio.as_ptr(), ptr::null_mut(), None, ptr::null_mut());
                 if r.is_null() {
                     let err = ffi::ERR_peek_last_error();
-                    if ffi::ERR_GET_LIB(err) == ffi::ERR_LIB_PEM &&
-                        ffi::ERR_GET_REASON(err) == ffi::PEM_R_NO_START_LINE
+                    if ffi::ERR_GET_LIB(err) == ffi::ERR_LIB_PEM
+                        && ffi::ERR_GET_REASON(err) == ffi::PEM_R_NO_START_LINE
                     {
                         ffi::ERR_clear_error();
                         break;
@@ -837,7 +826,6 @@ impl X509ReqBuilder {
             ffi::init();
             cvt_p(ffi::X509_REQ_new()).map(|p| X509ReqBuilder(X509Req(p)))
         }
-
     }
 
     pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
