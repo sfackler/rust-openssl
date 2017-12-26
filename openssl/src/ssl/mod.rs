@@ -97,7 +97,7 @@ use dh::{Dh, DhRef};
 use ec::EcKeyRef;
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
 use ec::EcKey;
-use x509::{X509, X509FileType, X509Name, X509Ref, X509StoreContextRef, X509VerifyError};
+use x509::{X509, X509Filetype, X509Name, X509Ref, X509StoreContextRef, X509VerifyError};
 use x509::store::{X509StoreBuilderRef, X509StoreRef};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::store::X509Store;
@@ -744,7 +744,7 @@ impl SslContextBuilder {
     pub fn set_certificate_file<P: AsRef<Path>>(
         &mut self,
         file: P,
-        file_type: X509FileType,
+        file_type: X509Filetype,
     ) -> Result<(), ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
         unsafe {
@@ -813,7 +813,7 @@ impl SslContextBuilder {
     pub fn set_private_key_file<P: AsRef<Path>>(
         &mut self,
         file: P,
-        file_type: X509FileType,
+        file_type: X509Filetype,
     ) -> Result<(), ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
         unsafe {
