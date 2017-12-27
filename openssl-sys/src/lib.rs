@@ -2495,6 +2495,7 @@ extern "C" {
     #[cfg(not(ossl101))]
     pub fn SSL_set_alpn_protos(s: *mut SSL, data: *const c_uchar, len: c_uint) -> c_int;
 
+    // FIXME should take an Option<unsafe extern "C" fn>
     #[cfg(not(ossl101))]
     pub fn SSL_CTX_set_alpn_select_cb(
         ssl: *mut SSL_CTX,

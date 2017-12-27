@@ -479,7 +479,7 @@ fn test_connect_with_unilateral_alpn() {
     let (_s, stream) = Server::new();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SslVerifyMode::PEER);
-    ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]).unwrap();
+    ctx.set_alpn_protos(b"\x08http/1.1\x08spdy/3.1").unwrap();
     match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
@@ -493,28 +493,6 @@ fn test_connect_with_unilateral_alpn() {
     assert!(stream.ssl().selected_alpn_protocol().is_none());
 }
 
-/// Tests that connecting with the client using NPN, but the server not does not
-/// break the existing connection behavior.
-#[test]
-#[cfg(not(any(libressl261, libressl262, libressl26x)))]
-fn test_connect_with_unilateral_npn() {
-    let (_s, stream) = Server::new();
-    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-    ctx.set_verify(SslVerifyMode::PEER);
-    ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]).unwrap();
-    match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
-        Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err),
-    }
-    let stream = match Ssl::new(&ctx.build()).unwrap().connect(stream) {
-        Ok(stream) => stream,
-        Err(err) => panic!("Expected success, got {:?}", err),
-    };
-    // Since the socket to which we connected is not configured to use NPN,
-    // there should be no selected protocol...
-    assert!(stream.ssl().selected_npn_protocol().is_none());
-}
-
 /// Tests that when both the client as well as the server use ALPN and their
 /// lists of supported protocols have an overlap, the correct protocol is chosen.
 #[test]
@@ -523,7 +501,7 @@ fn test_connect_with_alpn_successful_multiple_matching() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SslVerifyMode::PEER);
-    ctx.set_alpn_protocols(&[b"spdy/3.1", b"http/1.1"]).unwrap();
+    ctx.set_alpn_protos(b"\x08http/1.1\x08spdy/3.1").unwrap();
     match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
@@ -537,28 +515,6 @@ fn test_connect_with_alpn_successful_multiple_matching() {
     assert_eq!(b"http/1.1", stream.ssl().selected_alpn_protocol().unwrap());
 }
 
-/// Tests that when both the client as well as the server use NPN and their
-/// lists of supported protocols have an overlap, the correct protocol is chosen.
-#[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-fn test_connect_with_npn_successful_multiple_matching() {
-    let (_s, stream) = Server::new_alpn();
-    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-    ctx.set_verify(SslVerifyMode::PEER);
-    ctx.set_npn_protocols(&[b"spdy/3.1", b"http/1.1"]).unwrap();
-    match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
-        Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err),
-    }
-    let stream = match Ssl::new(&ctx.build()).unwrap().connect(stream) {
-        Ok(stream) => stream,
-        Err(err) => panic!("Expected success, got {:?}", err),
-    };
-    // The server prefers "http/1.1", so that is chosen, even though the client
-    // would prefer "spdy/3.1"
-    assert_eq!(b"http/1.1", stream.ssl().selected_npn_protocol().unwrap());
-}
-
 /// Tests that when both the client as well as the server use ALPN and their
 /// lists of supported protocols have an overlap -- with only ONE protocol
 /// being valid for both.
@@ -568,7 +524,7 @@ fn test_connect_with_alpn_successful_single_match() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SslVerifyMode::PEER);
-    ctx.set_alpn_protocols(&[b"spdy/3.1"]).unwrap();
+    ctx.set_alpn_protos(b"\x08spdy/3.1").unwrap();
     match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
@@ -580,72 +536,6 @@ fn test_connect_with_alpn_successful_single_match() {
     // The client now only supports one of the server's protocols, so that one
     // is used.
     assert_eq!(b"spdy/3.1", stream.ssl().selected_alpn_protocol().unwrap());
-}
-
-/// Tests that when both the client as well as the server use NPN and their
-/// lists of supported protocols have an overlap -- with only ONE protocol
-/// being valid for both.
-#[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-fn test_connect_with_npn_successful_single_match() {
-    let (_s, stream) = Server::new_alpn();
-    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-    ctx.set_verify(SslVerifyMode::PEER);
-    ctx.set_npn_protocols(&[b"spdy/3.1"]).unwrap();
-    match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
-        Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err),
-    }
-    let stream = match Ssl::new(&ctx.build()).unwrap().connect(stream) {
-        Ok(stream) => stream,
-        Err(err) => panic!("Expected success, got {:?}", err),
-    };
-    // The client now only supports one of the server's protocols, so that one
-    // is used.
-    assert_eq!(b"spdy/3.1", stream.ssl().selected_npn_protocol().unwrap());
-}
-
-/// Tests that when the `SslStream` is created as a server stream, the protocols
-/// are correctly advertised to the client.
-#[test]
-#[cfg(not(any(libressl261, libressl262, libressl26x)))]
-fn test_npn_server_advertise_multiple() {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let localhost = listener.local_addr().unwrap();
-    // We create a different context instance for the server...
-    let listener_ctx = {
-        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_verify(SslVerifyMode::PEER);
-        ctx.set_npn_protocols(&[b"http/1.1", b"spdy/3.1"]).unwrap();
-        assert!(
-            ctx.set_certificate_file(&Path::new("test/cert.pem"), X509Filetype::PEM)
-                .is_ok()
-        );
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509Filetype::PEM)
-            .unwrap();
-        ctx.build()
-    };
-    // Have the listener wait on the connection in a different thread.
-    thread::spawn(move || {
-        let (stream, _) = listener.accept().unwrap();
-        Ssl::new(&listener_ctx).unwrap().accept(stream).unwrap();
-    });
-
-    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-    ctx.set_verify(SslVerifyMode::PEER);
-    ctx.set_npn_protocols(&[b"spdy/3.1"]).unwrap();
-    match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
-        Ok(_) => {}
-        Err(err) => panic!("Unexpected error {:?}", err),
-    }
-    // Now connect to the socket and make sure the protocol negotiation works...
-    let stream = TcpStream::connect(localhost).unwrap();
-    let stream = match Ssl::new(&ctx.build()).unwrap().connect(stream) {
-        Ok(stream) => stream,
-        Err(err) => panic!("Expected success, got {:?}", err),
-    };
-    // SPDY is selected since that's the only thing the client supports.
-    assert_eq!(b"spdy/3.1", stream.ssl().selected_npn_protocol().unwrap());
 }
 
 /// Tests that when the `SslStream` is created as a server stream, the protocols
@@ -658,8 +548,9 @@ fn test_alpn_server_advertise_multiple() {
     // We create a different context instance for the server...
     let listener_ctx = {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_verify(SslVerifyMode::PEER);
-        ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]).unwrap();
+        ctx.set_alpn_select_callback(|_, client| {
+            ssl::select_next_proto(b"\x08http/1.1\x08spdy/3.1", client).ok_or(ssl::AlpnError::NOACK)
+        });
         assert!(
             ctx.set_certificate_file(&Path::new("test/cert.pem"), X509Filetype::PEM)
                 .is_ok()
@@ -676,7 +567,7 @@ fn test_alpn_server_advertise_multiple() {
 
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SslVerifyMode::PEER);
-    ctx.set_alpn_protocols(&[b"spdy/3.1"]).unwrap();
+    ctx.set_alpn_protos(b"\x08spdy/3.1").unwrap();
     match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
         Ok(_) => {}
         Err(err) => panic!("Unexpected error {:?}", err),
@@ -691,18 +582,18 @@ fn test_alpn_server_advertise_multiple() {
     assert_eq!(b"spdy/3.1", stream.ssl().selected_alpn_protocol().unwrap());
 }
 
-/// Test that Servers supporting ALPN don't report a protocol when none of their protocols match
-/// the client's reported protocol.
 #[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-fn test_alpn_server_select_none() {
+#[cfg(all(feature = "v110", ossl110))]
+fn test_alpn_server_select_none_fatal() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
     // We create a different context instance for the server...
     let listener_ctx = {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_verify(SslVerifyMode::PEER);
-        ctx.set_alpn_protocols(&[b"http/1.1", b"spdy/3.1"]).unwrap();
+        ctx.set_alpn_select_callback(|_, client| {
+            ssl::select_next_proto(b"\x08http/1.1\x08spdy/3.1", client)
+                .ok_or(ssl::AlpnError::ALERT_FATAL)
+        });
         assert!(
             ctx.set_certificate_file(&Path::new("test/cert.pem"), X509Filetype::PEM)
                 .is_ok()
@@ -719,7 +610,40 @@ fn test_alpn_server_select_none() {
 
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SslVerifyMode::PEER);
-    ctx.set_alpn_protocols(&[b"http/2"]).unwrap();
+    ctx.set_alpn_protos(b"\x06http/2").unwrap();
+    ctx.set_ca_file(&Path::new("test/root-ca.pem")).unwrap();
+    let stream = TcpStream::connect(localhost).unwrap();
+    Ssl::new(&ctx.build()).unwrap().connect(stream).unwrap_err();
+}
+
+#[test]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+fn test_alpn_server_select_none() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let localhost = listener.local_addr().unwrap();
+    // We create a different context instance for the server...
+    let listener_ctx = {
+        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+        ctx.set_alpn_select_callback(|_, client| {
+            ssl::select_next_proto(b"\x08http/1.1\x08spdy/3.1", client).ok_or(ssl::AlpnError::NOACK)
+        });
+        assert!(
+            ctx.set_certificate_file(&Path::new("test/cert.pem"), X509Filetype::PEM)
+                .is_ok()
+        );
+        ctx.set_private_key_file(&Path::new("test/key.pem"), X509Filetype::PEM)
+            .unwrap();
+        ctx.build()
+    };
+    // Have the listener wait on the connection in a different thread.
+    thread::spawn(move || {
+        let (stream, _) = listener.accept().unwrap();
+        Ssl::new(&listener_ctx).unwrap().accept(stream).unwrap();
+    });
+
+    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    ctx.set_verify(SslVerifyMode::PEER);
+    ctx.set_alpn_protos(b"\x06http/2").unwrap();
     ctx.set_ca_file(&Path::new("test/root-ca.pem")).unwrap();
     // Now connect to the socket and make sure the protocol negotiation works...
     let stream = TcpStream::connect(localhost).unwrap();
