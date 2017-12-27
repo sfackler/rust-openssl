@@ -357,15 +357,6 @@ fn get_ssl_callback_idx<T: 'static>() -> c_int {
         .or_insert_with(|| get_new_ssl_idx::<T>())
 }
 
-lazy_static! {
-    static ref NPN_PROTOS_IDX: c_int = get_new_idx::<Vec<u8>>();
-}
-
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-lazy_static! {
-    static ref ALPN_PROTOS_IDX: c_int = get_new_idx::<Vec<u8>>();
-}
-
 unsafe extern "C" fn free_data_box<T>(
     _parent: *mut c_void,
     ptr: *mut c_void,
@@ -395,28 +386,63 @@ fn get_new_ssl_idx<T>() -> c_int {
     }
 }
 
-/// Convert a set of byte slices into a series of byte strings encoded for SSL. Encoding is a byte
-/// containing the length followed by the string.
-fn ssl_encode_byte_strings(strings: &[&[u8]]) -> Vec<u8> {
-    let mut enc = Vec::new();
-    for string in strings {
-        let len = string.len() as u8;
-        if len as usize != string.len() {
-            // If the item does not fit, discard it
-            continue;
-        }
-        enc.push(len);
-        enc.extend(string[..len as usize].to_vec());
-    }
-    enc
-}
-
 // FIXME look into this
 /// An error returned from an SNI callback.
 pub enum SniError {
     Fatal(c_int),
     Warning(c_int),
     NoAck,
+}
+
+/// An error returned from an ALPN selection callback.
+///
+/// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+pub struct AlpnError(c_int);
+
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+impl AlpnError {
+    /// Terminate the handshake with a fatal alert.
+    ///
+    /// Requires the `v110` feature and OpenSSL 1.1.0.
+    #[cfg(all(feature = "v110", ossl110))]
+    pub const ALERT_FATAL: AlpnError = AlpnError(ffi::SSL_TLSEXT_ERR_ALERT_FATAL);
+
+    /// Do not select a protocol, but continue the handshake.
+    pub const NOACK: AlpnError = AlpnError(ffi::SSL_TLSEXT_ERR_NOACK);
+}
+
+/// A standard implementation of protocol selection for Application Layer Protocol Negotiation
+/// (ALPN).
+///
+/// `server` should contain the server's list of supported protocols and `client` the client's. They
+/// must both be in the ALPN wire format. See the documentation for
+/// [`SslContextBuilder::set_alpn_protos`] for details.
+///
+/// It will select the first protocol supported by the server which is also supported by the client.
+///
+/// This corresponds to [`SSL_select_next_proto`].
+///
+/// [`SslContextBuilder::set_alpn_protos`]: struct.SslContextBuilder.html#method.set_alpn_protos
+/// [`SSL_select_next_proto`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_CTX_set_alpn_protos.html
+pub fn select_next_proto<'a>(server: &[u8], client: &'a [u8]) -> Option<&'a [u8]> {
+    unsafe {
+        let mut out = ptr::null_mut();
+        let mut outlen = 0;
+        let r = ffi::SSL_select_next_proto(
+            &mut out,
+            &mut outlen,
+            server.as_ptr(),
+            server.len() as c_uint,
+            client.as_ptr(),
+            client.len() as c_uint,
+        );
+        if r == ffi::OPENSSL_NPN_NEGOTIATED {
+            Some(slice::from_raw_parts(out as *const u8, outlen as usize))
+        } else {
+            None
+        }
+    }
 }
 
 /// A builder for `SslContext`s.
@@ -888,82 +914,68 @@ impl SslContextBuilder {
         SslOptions::from_bits(ret).unwrap()
     }
 
-    /// Set the protocols to be used during Next Protocol Negotiation (the protocols
-    /// supported by the application).
-    // FIXME overhaul
-    #[cfg(not(any(libressl261, libressl262, libressl26x)))]
-    pub fn set_npn_protocols(&mut self, protocols: &[&[u8]]) -> Result<(), ErrorStack> {
-        // Firstly, convert the list of protocols to a byte-array that can be passed to OpenSSL
-        // APIs -- a list of length-prefixed strings.
-        let protocols: Box<Vec<u8>> = Box::new(ssl_encode_byte_strings(protocols));
-
-        unsafe {
-            // Attach the protocol list to the OpenSSL context structure,
-            // so that we can refer to it within the callback.
-            cvt(ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                *NPN_PROTOS_IDX,
-                Box::into_raw(protocols) as *mut c_void,
-            ))?;
-            // Now register the callback that performs the default protocol
-            // matching based on the client-supported list of protocols that
-            // has been saved.
-            ffi::SSL_CTX_set_next_proto_select_cb(
-                self.as_ptr(),
-                raw_next_proto_select_cb,
-                ptr::null_mut(),
-            );
-            // Also register the callback to advertise these protocols, if a server socket is
-            // created with the context.
-            ffi::SSL_CTX_set_next_protos_advertised_cb(
-                self.as_ptr(),
-                raw_next_protos_advertise_cb,
-                ptr::null_mut(),
-            );
-            Ok(())
-        }
-    }
-
-    /// Set the protocols to be used during ALPN (application layer protocol negotiation).
-    /// If this is a server, these are the protocols we report to the client.
-    /// If this is a client, these are the protocols we try to match with those reported by the
-    /// server.
+    /// Sets the protocols to sent to the server for Application Layer Protocol Negotiation (ALPN).
     ///
-    /// Note that ordering of the protocols controls the priority with which they are chosen.
+    /// The input must be in ALPN "wire format". It consists of a sequence of supported protocol
+    /// names prefixed by their byte length. For example, the protocol list consisting of `spdy/1`
+    /// and `http/1.1` is encoded as `b"\x06spdy/1\x08http/1.1"`. The protocols are ordered by
+    /// preference.
+    ///
+    /// This corresponds to [`SSL_CTX_set_alpn_protos`].
     ///
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
-    // FIXME overhaul
+    ///
+    /// [`SSL_CTX_set_alpn_protos`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_CTX_set_alpn_protos.html
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn set_alpn_protocols(&mut self, protocols: &[&[u8]]) -> Result<(), ErrorStack> {
-        let protocols: Box<Vec<u8>> = Box::new(ssl_encode_byte_strings(protocols));
+    pub fn set_alpn_protos(&mut self, protocols: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            // Set the context's internal protocol list for use if we are a server
+            assert!(protocols.len() <= c_uint::max_value() as usize);
             let r = ffi::SSL_CTX_set_alpn_protos(
                 self.as_ptr(),
                 protocols.as_ptr(),
                 protocols.len() as c_uint,
             );
             // fun fact, SSL_CTX_set_alpn_protos has a reversed return code D:
-            if r != 0 {
-                return Err(ErrorStack::get());
+            if r == 0 {
+                Ok(())
+            } else {
+                Err(ErrorStack::get())
             }
+        }
+    }
 
-            // Rather than use the argument to the callback to contain our data, store it in the
-            // ssl ctx's ex_data so that we can configure a function to free it later. In the
-            // future, it might make sense to pull this into our internal struct Ssl instead of
-            // leaning on openssl and using function pointers.
-            cvt(ffi::SSL_CTX_set_ex_data(
+    /// Sets the callback used by a server to select a protocol for Application Layer Protocol
+    /// Negotiation (ALPN).
+    ///
+    /// The callback is provided with the client's protocol list in ALPN wire format. See the
+    /// documentation for [`SslContextBuilder::set_alpn_protos`] for details. It should return one
+    /// of those protocols on success. The [`select_next_proto`] function implements the standard
+    /// protocol selection algorithm.
+    ///
+    /// This corresponds to [`SSL_CTX_set_alpn_select_cb`].
+    ///
+    /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
+    ///
+    /// [`SslContextBuilder::set_alpn_protos`]: struct.SslContextBuilder.html#method.set_alpn_protos
+    /// [`select_next_proto`]: fn.select_next_proto.html
+    /// [`SSL_CTX_set_alpn_select_cb`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_CTX_set_alpn_protos.html
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    pub fn set_alpn_select_callback<F>(&mut self, callback: F)
+    where
+        F: for<'a> Fn(&mut SslRef, &'a [u8]) -> Result<&'a [u8], AlpnError> + 'static + Sync + Send,
+    {
+        unsafe {
+            let callback = Box::new(callback);
+            ffi::SSL_CTX_set_ex_data(
                 self.as_ptr(),
-                *ALPN_PROTOS_IDX,
-                Box::into_raw(protocols) as *mut c_void,
-            ))?;
-
-            // Now register the callback that performs the default protocol
-            // matching based on the client-supported list of protocols that
-            // has been saved.
-            ffi::SSL_CTX_set_alpn_select_cb(self.as_ptr(), raw_alpn_select_cb, ptr::null_mut());
-
-            Ok(())
+                get_callback_idx::<F>(),
+                Box::into_raw(callback) as *mut c_void,
+            );
+            ffi::SSL_CTX_set_alpn_select_cb(
+                self.as_ptr(),
+                callbacks::raw_alpn_select::<F>,
+                ptr::null_mut(),
+            );
         }
     }
 
@@ -1719,32 +1731,7 @@ impl SslRef {
         str::from_utf8(version.to_bytes()).unwrap()
     }
 
-    /// Returns the protocol selected by performing Next Protocol Negotiation, if any.
-    ///
-    /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
-    /// to interpret it.
-    ///
-    /// This corresponds to [`SSL_get0_next_proto_negotiated`].
-    ///
-    /// [`SSL_get0_next_proto_negotiated`]: https://www.openssl.org/docs/manmaster/man3/SSL_get0_next_proto_negotiated.html
-    #[cfg(not(any(libressl261, libressl262, libressl26x)))]
-    pub fn selected_npn_protocol(&self) -> Option<&[u8]> {
-        unsafe {
-            let mut data: *const c_uchar = ptr::null();
-            let mut len: c_uint = 0;
-            // Get the negotiated protocol from the SSL instance.
-            // `data` will point at a `c_uchar` array; `len` will contain the length of this array.
-            ffi::SSL_get0_next_proto_negotiated(self.as_ptr(), &mut data, &mut len);
-
-            if data.is_null() {
-                None
-            } else {
-                Some(slice::from_raw_parts(data, len as usize))
-            }
-        }
-    }
-
-    /// Returns the protocol selected by performing ALPN, if any.
+    /// Returns the protocol selected via Application Layer Protocol Negotiation (ALPN).
     ///
     /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
     /// to interpret it.

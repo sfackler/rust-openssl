@@ -10,9 +10,9 @@ use error::ErrorStack;
 use dh::Dh;
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
 use ec::EcKey;
-use ssl::{get_callback_idx, get_ssl_callback_idx, SniError, SslRef, NPN_PROTOS_IDX};
+use ssl::{get_callback_idx, get_ssl_callback_idx, SniError, SslRef};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-use ssl::ALPN_PROTOS_IDX;
+use ssl::AlpnError;
 use x509::X509StoreContextRef;
 
 pub extern "C" fn raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
@@ -111,60 +111,34 @@ where
     }
 }
 
-pub unsafe fn select_proto_using(
-    ssl: *mut ffi::SSL,
-    out: *mut *mut c_uchar,
-    outlen: *mut c_uchar,
-    inbuf: *const c_uchar,
-    inlen: c_uint,
-    ex_data: c_int,
-) -> c_int {
-    // First, get the list of protocols (that the client should support) saved in the context
-    // extra data.
-    let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
-    let protocols = ffi::SSL_CTX_get_ex_data(ssl_ctx, ex_data);
-    let protocols: &Vec<u8> = &*(protocols as *mut Vec<u8>);
-    // Prepare the client list parameters to be passed to the OpenSSL function...
-    let client = protocols.as_ptr();
-    let client_len = protocols.len() as c_uint;
-    // Finally, let OpenSSL find a protocol to be used, by matching the given server and
-    // client lists.
-    if ffi::SSL_select_next_proto(out, outlen, inbuf, inlen, client, client_len)
-        != ffi::OPENSSL_NPN_NEGOTIATED
-    {
-        ffi::SSL_TLSEXT_ERR_NOACK
-    } else {
-        ffi::SSL_TLSEXT_ERR_OK
-    }
-}
-
-/// The function is given as the callback to `SSL_CTX_set_next_proto_select_cb`.
-///
-/// It chooses the protocol that the client wishes to use, out of the given list of protocols
-/// supported by the server. It achieves this by delegating to the `SSL_select_next_proto`
-/// function. The list of protocols supported by the client is found in the extra data of the
-/// OpenSSL context.
-pub extern "C" fn raw_next_proto_select_cb(
-    ssl: *mut ffi::SSL,
-    out: *mut *mut c_uchar,
-    outlen: *mut c_uchar,
-    inbuf: *const c_uchar,
-    inlen: c_uint,
-    _arg: *mut c_void,
-) -> c_int {
-    unsafe { select_proto_using(ssl, out, outlen, inbuf, inlen, *NPN_PROTOS_IDX) }
-}
-
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-pub extern "C" fn raw_alpn_select_cb(
+pub extern "C" fn raw_alpn_select<F>(
     ssl: *mut ffi::SSL,
     out: *mut *const c_uchar,
     outlen: *mut c_uchar,
     inbuf: *const c_uchar,
     inlen: c_uint,
     _arg: *mut c_void,
-) -> c_int {
-    unsafe { select_proto_using(ssl, out as *mut _, outlen, inbuf, inlen, *ALPN_PROTOS_IDX) }
+) -> c_int
+where
+    F: for<'a> Fn(&mut SslRef, &'a [u8]) -> Result<&'a [u8], AlpnError> + 'static + Sync + Send,
+{
+    unsafe {
+        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
+        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
+        let callback: &F = &*(callback as *mut F);
+        let ssl = SslRef::from_ptr_mut(ssl);
+        let protos = slice::from_raw_parts(inbuf as *const u8, inlen as usize);
+
+        match callback(ssl, protos) {
+            Ok(proto) => {
+                *out = proto.as_ptr() as *const c_uchar;
+                *outlen = proto.len() as c_uchar;
+                ffi::SSL_TLSEXT_ERR_OK
+            }
+            Err(e) => e.0,
+        }
+    }
 }
 
 pub unsafe extern "C" fn raw_tmp_dh<F>(
@@ -301,36 +275,4 @@ where
             }
         }
     }
-}
-
-/// The function is given as the callback to `SSL_CTX_set_next_protos_advertised_cb`.
-///
-/// It causes the parameter `out` to point at a `*const c_uchar` instance that
-/// represents the list of protocols that the server should advertise as those
-/// that it supports.
-/// The list of supported protocols is found in the extra data of the OpenSSL
-/// context.
-pub extern "C" fn raw_next_protos_advertise_cb(
-    ssl: *mut ffi::SSL,
-    out: *mut *const c_uchar,
-    outlen: *mut c_uint,
-    _arg: *mut c_void,
-) -> c_int {
-    unsafe {
-        // First, get the list of (supported) protocols saved in the context extra data.
-        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
-        let protocols = ffi::SSL_CTX_get_ex_data(ssl_ctx, *NPN_PROTOS_IDX);
-        if protocols.is_null() {
-            *out = b"".as_ptr();
-            *outlen = 0;
-        } else {
-            // If the pointer is valid, put the pointer to the actual byte array into the
-            // output parameter `out`, as well as its length into `outlen`.
-            let protocols: &Vec<u8> = &*(protocols as *mut Vec<u8>);
-            *out = protocols.as_ptr();
-            *outlen = protocols.len() as c_uint;
-        }
-    }
-
-    ffi::SSL_TLSEXT_ERR_OK
 }
