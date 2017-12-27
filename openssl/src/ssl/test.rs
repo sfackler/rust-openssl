@@ -27,11 +27,9 @@ use pkey::PKey;
 
 use std::net::UdpSocket;
 
-mod select;
-
-static ROOT_CERT: &'static [u8] = include_bytes!("../../../test/root-ca.pem");
-static CERT: &'static [u8] = include_bytes!("../../../test/cert.pem");
-static KEY: &'static [u8] = include_bytes!("../../../test/key.pem");
+static ROOT_CERT: &'static [u8] = include_bytes!("../../test/root-ca.pem");
+static CERT: &'static [u8] = include_bytes!("../../test/cert.pem");
+static KEY: &'static [u8] = include_bytes!("../../test/key.pem");
 
 fn next_addr() -> SocketAddr {
     use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
@@ -364,9 +362,9 @@ fn test_write_hits_stream() {
 
 #[test]
 fn test_set_certificate_and_private_key() {
-    let key = include_bytes!("../../../test/key.pem");
+    let key = include_bytes!("../../test/key.pem");
     let key = PKey::private_key_from_pem(key).unwrap();
-    let cert = include_bytes!("../../../test/cert.pem");
+    let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
 
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
@@ -731,128 +729,6 @@ fn test_alpn_server_select_none() {
     assert_eq!(None, stream.ssl().selected_alpn_protocol());
 }
 
-fn wait_io(stream: &TcpStream, read: bool, timeout_ms: u32) -> bool {
-    unsafe {
-        let mut set: select::fd_set = mem::zeroed();
-        select::fd_set(&mut set, stream);
-
-        let write = if read {
-            0 as *mut _
-        } else {
-            &mut set as *mut _
-        };
-        let read = if !read {
-            0 as *mut _
-        } else {
-            &mut set as *mut _
-        };
-        select::select(stream, read, write, 0 as *mut _, timeout_ms).unwrap()
-    }
-}
-
-fn handshake(res: Result<SslStream<TcpStream>, HandshakeError<TcpStream>>) -> SslStream<TcpStream> {
-    match res {
-        Ok(s) => s,
-        Err(HandshakeError::WouldBlock(s)) => {
-            wait_io(s.get_ref(), true, 1_000);
-            handshake(s.handshake())
-        }
-        Err(err) => panic!("error on handshake {:?}", err),
-    }
-}
-
-#[test]
-fn test_write_nonblocking() {
-    let (_s, stream) = Server::new();
-    stream.set_nonblocking(true).unwrap();
-    let cx = SslContext::builder(SslMethod::tls()).unwrap().build();
-    let mut stream = handshake(Ssl::new(&cx).unwrap().connect(stream));
-
-    let mut iterations = 0;
-    loop {
-        iterations += 1;
-        if iterations > 7 {
-            // Probably a safe assumption for the foreseeable future of
-            // openssl.
-            panic!("Too many read/write round trips in handshake!!");
-        }
-        let result = stream.ssl_write(b"hello");
-        match result {
-            Ok(_) => {
-                break;
-            }
-            Err(Error::WantRead(_)) => {
-                assert!(wait_io(stream.get_ref(), true, 1000));
-            }
-            Err(Error::WantWrite(_)) => {
-                assert!(wait_io(stream.get_ref(), false, 1000));
-            }
-            Err(other) => {
-                panic!("Unexpected SSL Error: {:?}", other);
-            }
-        }
-    }
-
-    // Second write should succeed immediately--plenty of space in kernel
-    // buffer, and handshake just completed.
-    stream.write(" there".as_bytes()).unwrap();
-}
-
-#[test]
-#[cfg_attr(any(libressl, windows, target_arch = "arm"), ignore)] // FIXME(#467)
-fn test_read_nonblocking() {
-    let (_s, stream) = Server::new();
-    stream.set_nonblocking(true).unwrap();
-    let cx = SslContext::builder(SslMethod::tls()).unwrap().build();
-    let mut stream = handshake(Ssl::new(&cx).unwrap().connect(stream));
-
-    let mut iterations = 0;
-    loop {
-        iterations += 1;
-        if iterations > 7 {
-            // Probably a safe assumption for the foreseeable future of
-            // openssl.
-            panic!("Too many read/write round trips in handshake!!");
-        }
-        let result = stream.ssl_write(b"GET /\r\n\r\n");
-        match result {
-            Ok(n) => {
-                assert_eq!(n, 9);
-                break;
-            }
-            Err(Error::WantRead(..)) => {
-                assert!(wait_io(stream.get_ref(), true, 1000));
-            }
-            Err(Error::WantWrite(..)) => {
-                assert!(wait_io(stream.get_ref(), false, 1000));
-            }
-            Err(other) => {
-                panic!("Unexpected SSL Error: {:?}", other);
-            }
-        }
-    }
-    let mut input_buffer = [0u8; 1500];
-    let result = stream.ssl_read(&mut input_buffer);
-    let bytes_read = match result {
-        Ok(n) => {
-            // This branch is unlikely, but on an overloaded VM with
-            // unlucky context switching, the response could actually
-            // be in the receive buffer before we issue the read() syscall...
-            n
-        }
-        Err(Error::WantRead(..)) => {
-            assert!(wait_io(stream.get_ref(), true, 3000));
-            // Second read should return application data.
-            stream.read(&mut input_buffer).unwrap()
-        }
-        Err(other) => {
-            panic!("Unexpected SSL Error: {:?}", other);
-        }
-    };
-    assert!(bytes_read >= 5);
-    assert_eq!(&input_buffer[..5], b"HTTP/");
-}
-
 #[test]
 #[should_panic(expected = "blammo")]
 fn write_panic() {
@@ -974,7 +850,7 @@ fn default_verify_paths() {
 
 #[test]
 fn add_extra_chain_cert() {
-    let cert = include_bytes!("../../../test/cert.pem");
+    let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.add_extra_chain_cert(cert).unwrap();
@@ -1226,7 +1102,7 @@ fn tmp_dh_callback() {
             .unwrap();
         ctx.set_tmp_dh_callback(|_, _, _| {
             CALLED_BACK.store(true, Ordering::SeqCst);
-            let dh = include_bytes!("../../../test/dhparams.pem");
+            let dh = include_bytes!("../../test/dhparams.pem");
             Dh::from_pem(dh)
         });
         let ssl = Ssl::new(&ctx.build()).unwrap();
@@ -1295,7 +1171,7 @@ fn tmp_dh_callback_ssl() {
         let mut ssl = Ssl::new(&ctx.build()).unwrap();
         ssl.set_tmp_dh_callback(|_, _, _| {
             CALLED_BACK.store(true, Ordering::SeqCst);
-            let dh = include_bytes!("../../../test/dhparams.pem");
+            let dh = include_bytes!("../../test/dhparams.pem");
             Dh::from_pem(dh)
         });
         ssl.accept(stream).unwrap();

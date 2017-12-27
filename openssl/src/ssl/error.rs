@@ -1,3 +1,5 @@
+use ffi;
+use libc::c_int;
 use std::error;
 use std::error::Error as StdError;
 use std::fmt;
@@ -7,90 +9,114 @@ use error::ErrorStack;
 use ssl::MidHandshakeSslStream;
 use x509::X509VerifyResult;
 
-/// An SSL error.
-// FIXME this is missing variants
+/// An error code returned from SSL functions.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct ErrorCode(c_int);
+
+impl ErrorCode {
+    pub fn from_raw(raw: c_int) -> ErrorCode {
+        ErrorCode(raw)
+    }
+
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
+
+    /// The SSL session has been closed.
+    pub const ZERO_RETURN: ErrorCode = ErrorCode(ffi::SSL_ERROR_ZERO_RETURN);
+
+    /// An attempt to read data from the underlying socket returned `WouldBlock`.
+    ///
+    /// Wait for read readiness and retry the operation.
+    pub const WANT_READ: ErrorCode = ErrorCode(ffi::SSL_ERROR_WANT_READ);
+
+    /// An attempt to write data to the underlying socket returned `WouldBlock`.
+    ///
+    /// Wait for write readiness and retry the operation.
+    pub const WANT_WRITE: ErrorCode = ErrorCode(ffi::SSL_ERROR_WANT_WRITE);
+
+    /// A non-recoverable IO error occurred.
+    pub const SYSCALL: ErrorCode = ErrorCode(ffi::SSL_ERROR_SYSCALL);
+
+    /// An error occurred in the SSL library.
+    pub const SSL: ErrorCode = ErrorCode(ffi::SSL_ERROR_SSL);
+}
+
 #[derive(Debug)]
-pub enum Error {
-    /// The SSL session has been closed by the other end
-    ZeroReturn,
-    /// An attempt to read data from the underlying socket returned
-    /// `WouldBlock`. Wait for read readiness and reattempt the operation.
-    WantRead(io::Error),
-    /// An attempt to write data from the underlying socket returned
-    /// `WouldBlock`. Wait for write readiness and reattempt the operation.
-    WantWrite(io::Error),
-    /// The client certificate callback requested to be called again.
-    WantX509Lookup,
-    /// An error reported by the underlying stream.
-    Stream(io::Error),
-    /// An error in the OpenSSL library.
+pub(crate) enum InnerError {
+    Io(io::Error),
     Ssl(ErrorStack),
+}
+
+/// An SSL error.
+#[derive(Debug)]
+pub struct Error {
+    pub(crate) code: ErrorCode,
+    pub(crate) cause: Option<InnerError>,
+}
+
+impl Error {
+    pub fn code(&self) -> ErrorCode {
+        self.code
+    }
+
+    pub fn io_error(&self) -> Option<&io::Error> {
+        match self.cause {
+            Some(InnerError::Io(ref e)) => Some(e),
+            _ => None,
+        }
+    }
+
+    pub fn into_io_error(self) -> Result<io::Error, Error> {
+        match self.cause {
+            Some(InnerError::Io(e)) => Ok(e),
+            _ => Err(self),
+        }
+    }
+
+    pub fn ssl_error(&self) -> Option<&ErrorStack> {
+        match self.cause {
+            Some(InnerError::Ssl(ref e)) => Some(e),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.write_str(self.description())?;
-        if let Some(err) = self.cause() {
-            write!(fmt, ": {}", err)
-        } else {
-            Ok(())
+        match self.code {
+            ErrorCode::ZERO_RETURN => fmt.write_str("the SSL session has been shut down"),
+            ErrorCode::WANT_READ => match self.io_error() {
+                Some(_) => fmt.write_str("a nonblocking read call would have blocked"),
+                None => fmt.write_str("the operation should be retried"),
+            },
+            ErrorCode::SYSCALL => match self.io_error() {
+                Some(err) => write!(fmt, "the inner stream returned an error: {}", err),
+                None => fmt.write_str("unexpected EOF"),
+            },
+            ErrorCode::SSL => {
+                fmt.write_str("OpenSSL error")?;
+                if let Some(ref err) = self.ssl_error() {
+                    write!(fmt, ": {}", err)?
+                }
+                Ok(())
+            }
+            ErrorCode(code) => write!(fmt, "unknown error code {}", code),
         }
     }
 }
 
 impl error::Error for Error {
     fn description(&self) -> &str {
-        match *self {
-            Error::ZeroReturn => "The SSL session was closed by the other end",
-            Error::WantRead(_) => "A read attempt returned a `WouldBlock` error",
-            Error::WantWrite(_) => "A write attempt returned a `WouldBlock` error",
-            Error::WantX509Lookup => "The client certificate callback requested to be called again",
-            Error::Stream(_) => "The underlying stream reported an error",
-            Error::Ssl(_) => "The OpenSSL library reported an error",
-        }
+        "an OpenSSL error"
     }
 
     fn cause(&self) -> Option<&error::Error> {
-        match *self {
-            Error::WantRead(ref err) => Some(err),
-            Error::WantWrite(ref err) => Some(err),
-            Error::Stream(ref err) => Some(err),
-            Error::Ssl(ref err) => Some(err),
-            _ => None,
+        match self.cause {
+            Some(InnerError::Io(ref e)) => Some(e),
+            Some(InnerError::Ssl(ref e)) => Some(e),
+            None => None,
         }
-    }
-}
-
-impl From<ErrorStack> for Error {
-    fn from(e: ErrorStack) -> Error {
-        Error::Ssl(e)
-    }
-}
-
-/// An error indicating that the operation can be immediately retried.
-///
-/// OpenSSL's [`SSL_read`] and [`SSL_write`] functions can return `SSL_ERROR_WANT_READ` even when
-/// the underlying socket is performing blocking IO in certain cases. When this happens, the
-/// the operation can be immediately retried.
-///
-/// To signal this event, the `io::Error` inside of [`Error::WantRead`] will be constructed around
-/// a `RetryError`.
-///
-/// [`SSL_read`]: https://www.openssl.org/docs/manmaster/man3/SSL_read.html
-/// [`SSL_write`]: https://www.openssl.org/docs/manmaster/man3/SSL_write.html
-/// [`Error::WantRead`]: enum.Error.html#variant.WantRead
-#[derive(Debug)]
-pub struct RetryError;
-
-impl fmt::Display for RetryError {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.write_str(error::Error::description(self))
-    }
-}
-
-impl error::Error for RetryError {
-    fn description(&self) -> &str {
-        "operation must be retried"
     }
 }
 
