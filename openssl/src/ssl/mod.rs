@@ -97,18 +97,19 @@ use error::ErrorStack;
 use ex_data::Index;
 use stack::{Stack, StackRef};
 use ssl::bio::BioMethod;
+use ssl::error::InnerError;
 use ssl::callbacks::*;
 
 pub use ssl::connector::{ConnectConfiguration, SslAcceptor, SslAcceptorBuilder, SslConnector,
                          SslConnectorBuilder};
-pub use ssl::error::{Error, HandshakeError, RetryError};
+pub use ssl::error::{Error, ErrorCode, HandshakeError};
 
 mod error;
 mod callbacks;
 mod connector;
 mod bio;
 #[cfg(test)]
-mod tests;
+mod test;
 
 bitflags! {
     /// Options controlling the behavior of an `SslContext`.
@@ -1463,8 +1464,8 @@ impl SslRef {
         unsafe { ffi::SSL_write(self.as_ptr(), buf.as_ptr() as *const c_void, len) }
     }
 
-    fn get_error(&self, ret: c_int) -> c_int {
-        unsafe { ffi::SSL_get_error(self.as_ptr(), ret) }
+    fn get_error(&self, ret: c_int) -> ErrorCode {
+        unsafe { ErrorCode::from_raw(ffi::SSL_get_error(self.as_ptr(), ret)) }
     }
 
     /// Like [`SslContextBuilder::set_verify`].
@@ -2053,16 +2054,14 @@ impl Ssl {
         if ret > 0 {
             Ok(stream)
         } else {
-            match stream.make_error(ret) {
-                e @ Error::WantWrite(_) | e @ Error::WantRead(_) => {
-                    Err(HandshakeError::WouldBlock(MidHandshakeSslStream {
-                        stream: stream,
-                        error: e,
-                    }))
-                }
-                err => Err(HandshakeError::Failure(MidHandshakeSslStream {
-                    stream: stream,
-                    error: err,
+            let error = stream.make_error(ret);
+            match error.code() {
+                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => Err(HandshakeError::WouldBlock(
+                    MidHandshakeSslStream { stream, error },
+                )),
+                _ => Err(HandshakeError::Failure(MidHandshakeSslStream {
+                    stream,
+                    error,
                 })),
             }
         }
@@ -2087,16 +2086,14 @@ impl Ssl {
         if ret > 0 {
             Ok(stream)
         } else {
-            match stream.make_error(ret) {
-                e @ Error::WantWrite(_) | e @ Error::WantRead(_) => {
-                    Err(HandshakeError::WouldBlock(MidHandshakeSslStream {
-                        stream: stream,
-                        error: e,
-                    }))
-                }
-                err => Err(HandshakeError::Failure(MidHandshakeSslStream {
-                    stream: stream,
-                    error: err,
+            let error = stream.make_error(ret);
+            match error.code() {
+                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => Err(HandshakeError::WouldBlock(
+                    MidHandshakeSslStream { stream, error },
+                )),
+                _ => Err(HandshakeError::Failure(MidHandshakeSslStream {
+                    stream,
+                    error,
                 })),
             }
         }
@@ -2146,15 +2143,12 @@ impl<S> MidHandshakeSslStream<S> {
         if ret > 0 {
             Ok(self.stream)
         } else {
-            match self.stream.make_error(ret) {
-                e @ Error::WantWrite(_) | e @ Error::WantRead(_) => {
-                    self.error = e;
+            self.error = self.stream.make_error(ret);
+            match self.error.code() {
+                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => {
                     Err(HandshakeError::WouldBlock(self))
                 }
-                err => {
-                    self.error = err;
-                    Err(HandshakeError::Failure(self))
-                }
+                _ => Err(HandshakeError::Failure(self)),
             }
         }
     }
@@ -2225,12 +2219,7 @@ impl<S: Read + Write> SslStream<S> {
         if ret > 0 {
             Ok(ret as usize)
         } else {
-            match self.make_error(ret) {
-                // FIXME only do this in read
-                // Don't treat unexpected EOFs as errors when reading
-                Error::Stream(ref e) if e.kind() == io::ErrorKind::ConnectionAborted => Ok(0),
-                e => Err(e),
-            }
+            Err(self.make_error(ret))
         }
     }
 
@@ -2280,45 +2269,26 @@ impl<S> SslStream<S> {
     fn make_error(&mut self, ret: c_int) -> Error {
         self.check_panic();
 
-        match self.ssl.get_error(ret) {
-            ffi::SSL_ERROR_SSL => Error::Ssl(ErrorStack::get()),
-            ffi::SSL_ERROR_SYSCALL => {
+        let code = self.ssl.get_error(ret);
+
+        let cause = match code {
+            ErrorCode::SSL => Some(InnerError::Ssl(ErrorStack::get())),
+            ErrorCode::SYSCALL => {
                 let errs = ErrorStack::get();
                 if errs.errors().is_empty() {
-                    match self.get_bio_error() {
-                        Some(err) => Error::Stream(err),
-                        None => Error::Stream(io::Error::new(
-                            io::ErrorKind::ConnectionAborted,
-                            "unexpected EOF observed",
-                        )),
-                    }
+                    self.get_bio_error().map(InnerError::Io)
                 } else {
-                    Error::Ssl(errs)
+                    Some(InnerError::Ssl(errs))
                 }
             }
-            ffi::SSL_ERROR_ZERO_RETURN => Error::ZeroReturn,
-            ffi::SSL_ERROR_WANT_WRITE => {
-                let err = match self.get_bio_error() {
-                    Some(err) => err,
-                    None => io::Error::new(
-                        io::ErrorKind::Other,
-                        "BUG: got an SSL_ERROR_WANT_WRITE with no error in the BIO",
-                    ),
-                };
-                Error::WantWrite(err)
+            ErrorCode::ZERO_RETURN => None,
+            ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => {
+                self.get_bio_error().map(InnerError::Io)
             }
-            ffi::SSL_ERROR_WANT_READ => {
-                let err = match self.get_bio_error() {
-                    Some(err) => err,
-                    None => io::Error::new(io::ErrorKind::Other, RetryError),
-                };
-                Error::WantRead(err)
-            }
-            err => Error::Stream(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("unexpected error {}", err),
-            )),
-        }
+            _ => None,
+        };
+
+        Error { code, cause }
     }
 
     fn check_panic(&mut self) {
@@ -2363,13 +2333,15 @@ impl<S: Read + Write> Read for SslStream<S> {
         loop {
             match self.ssl_read(buf) {
                 Ok(n) => return Ok(n),
-                Err(Error::ZeroReturn) => return Ok(0),
-                Err(Error::WantRead(ref e))
-                    if e.get_ref().map_or(false, |e| e.is::<RetryError>()) => {}
-                Err(Error::Stream(e)) | Err(Error::WantRead(e)) | Err(Error::WantWrite(e)) => {
-                    return Err(e);
+                Err(ref e) if e.code() == ErrorCode::ZERO_RETURN => return Ok(0),
+                Err(ref e) if e.code() == ErrorCode::SYSCALL && e.io_error().is_none() => {
+                    return Ok(0)
                 }
-                Err(e) => return Err(io::Error::new(io::ErrorKind::Other, e)),
+                Err(ref e) if e.code() == ErrorCode::WANT_READ && e.io_error().is_none() => {}
+                Err(e) => {
+                    return Err(e.into_io_error()
+                        .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)))
+                }
             }
         }
     }
@@ -2380,12 +2352,11 @@ impl<S: Read + Write> Write for SslStream<S> {
         loop {
             match self.ssl_write(buf) {
                 Ok(n) => return Ok(n),
-                Err(Error::WantRead(ref e))
-                    if e.get_ref().map_or(false, |e| e.is::<RetryError>()) => {}
-                Err(Error::Stream(e)) | Err(Error::WantRead(e)) | Err(Error::WantWrite(e)) => {
-                    return Err(e);
+                Err(ref e) if e.code() == ErrorCode::WANT_READ && e.io_error().is_none() => {}
+                Err(e) => {
+                    return Err(e.into_io_error()
+                        .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)))
                 }
-                Err(e) => return Err(io::Error::new(io::ErrorKind::Other, e)),
             }
         }
     }
