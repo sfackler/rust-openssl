@@ -605,7 +605,7 @@ fn test_alpn_server_select_none_fatal() {
     // Have the listener wait on the connection in a different thread.
     thread::spawn(move || {
         let (stream, _) = listener.accept().unwrap();
-        Ssl::new(&listener_ctx).unwrap().accept(stream).unwrap();
+        Ssl::new(&listener_ctx).unwrap().accept(stream).unwrap_err();
     });
 
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
