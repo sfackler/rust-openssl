@@ -468,6 +468,13 @@ See rust-openssl README for more information:
         println!("cargo:libressl_version=263");
         println!("cargo:version=101");
         Version::Libressl
+    } else if expanded.contains("RUST_LIBRESSL_264") {
+        println!("cargo:rustc-cfg=libressl");
+        println!("cargo:rustc-cfg=libressl264");
+        println!("cargo:libressl=true");
+        println!("cargo:libressl_version=264");
+        println!("cargo:version=101");
+        Version::Libressl
     } else if expanded.contains("RUST_LIBRESSL_26X") {
         println!("cargo:rustc-cfg=libressl");
         println!("cargo:rustc-cfg=libressl26x");
