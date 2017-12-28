@@ -333,6 +333,25 @@ impl StatusType {
     pub const OCSP: StatusType = StatusType(ffi::TLSEXT_STATUSTYPE_ocsp);
 }
 
+/// An identifier of a session name type.
+#[derive(Copy, Clone)]
+pub struct NameType(c_int);
+
+impl NameType {
+    /// Constructs a `StatusType` from a raw OpenSSL value.
+    pub fn from_raw(raw: c_int) -> StatusType {
+        StatusType(raw)
+    }
+
+    /// Returns the raw OpenSSL value represented by this type.
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
+
+    /// A host name.
+    pub const HOST_NAME: NameType = NameType(ffi::TLSEXT_NAMETYPE_host_name);
+}
+
 lazy_static! {
     static ref INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
     static ref SSL_INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
@@ -505,7 +524,6 @@ impl SslContextBuilder {
     /// [`SSL_CTX_set_verify`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_CTX_set_verify.html
     pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
     where
-        // FIXME should take a mutable reference to the store
         F: Fn(bool, &mut X509StoreContextRef) -> bool + 'static + Sync + Send,
     {
         unsafe {
@@ -1498,7 +1516,6 @@ impl SslRef {
     /// [`SSL_set_verify`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_verify.html
     pub fn set_verify_callback<F>(&mut self, mode: SslVerifyMode, verify: F)
     where
-        // FIXME should take a mutable reference to the x509 store
         F: Fn(bool, &mut X509StoreContextRef) -> bool + 'static + Sync + Send,
     {
         unsafe {
@@ -1801,15 +1818,14 @@ impl SslRef {
     /// This corresponds to [`SSL_get_servername`].
     ///
     /// [`SSL_get_servername`]: https://www.openssl.org/docs/manmaster/man3/SSL_get_servername.html
-    // FIXME add name parameter
-    pub fn servername(&self) -> Option<&str> {
+    pub fn servername(&self, type_: NameType) -> Option<&str> {
         unsafe {
-            let name = ffi::SSL_get_servername(self.as_ptr(), ffi::TLSEXT_NAMETYPE_host_name);
+            let name = ffi::SSL_get_servername(self.as_ptr(), type_.0);
             if name == ptr::null() {
-                return None;
+                None
+            } else {
+                Some(str::from_utf8(CStr::from_ptr(name as *const _).to_bytes()).unwrap())
             }
-
-            Some(str::from_utf8(CStr::from_ptr(name as *const _).to_bytes()).unwrap())
         }
     }
 
