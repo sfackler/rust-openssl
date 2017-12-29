@@ -830,6 +830,7 @@ extern "C" {
             -> *mut ::EC_KEY,
     );
     pub fn X509_get_subject_name(x: *mut ::X509) -> *mut ::X509_NAME;
+    pub fn X509_get_issuer_name(x: *mut ::X509) -> *mut ::X509_NAME;
     pub fn X509_set_notAfter(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
     pub fn X509_set_notBefore(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
     pub fn X509_get_ext_d2i(
