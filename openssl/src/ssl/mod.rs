@@ -1787,30 +1787,6 @@ impl SslRef {
         unsafe { ffi::SSL_pending(self.as_ptr()) as usize }
     }
 
-    /// Returns the compression method currently in use.
-    ///
-    /// This corresponds to `SSL_get_current_compression`.
-    pub fn compression(&self) -> Option<&str> {
-        self._compression()
-    }
-
-    #[cfg(not(osslconf = "OPENSSL_NO_COMP"))]
-    fn _compression(&self) -> Option<&str> {
-        unsafe {
-            let ptr = ffi::SSL_get_current_compression(self.as_ptr());
-            if ptr == ptr::null() {
-                return None;
-            }
-            let meth = ffi::SSL_COMP_get_name(ptr);
-            Some(str::from_utf8(CStr::from_ptr(meth as *const _).to_bytes()).unwrap())
-        }
-    }
-
-    #[cfg(osslconf = "OPENSSL_NO_COMP")]
-    fn _compression(&self) -> Option<&str> {
-        None
-    }
-
     /// Returns the servername sent by the client via Server Name Indication (SNI).
     ///
     /// It is only useful on the server side.
