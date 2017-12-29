@@ -263,14 +263,37 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl X509Ref {
+    /// Returns this certificate's subject name.
+    ///
+    /// This corresponds to [`X509_get_subject_name`].
+    ///
+    /// [`X509_get_subject_name`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_subject_name.html
     pub fn subject_name(&self) -> &X509NameRef {
         unsafe {
             let name = ffi::X509_get_subject_name(self.as_ptr());
+            assert!(!name.is_null());
             X509NameRef::from_ptr(name)
         }
     }
 
-    /// Returns this certificate's SAN entries, if they exist.
+    /// Returns this certificate's issuer name.
+    ///
+    /// This corresponds to [`X509_get_issuer_name`].
+    ///
+    /// [`X509_get_issuer_name`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_subject_name.html
+    pub fn issuer_name(&self) -> &X509NameRef {
+        unsafe {
+            let name = ffi::X509_get_issuer_name(self.as_ptr());
+            assert!(!name.is_null());
+            X509NameRef::from_ptr(name)
+        }
+    }
+
+    /// Returns this certificate's subject alternative name entries, if they exist.
+    ///
+    /// This corresponds to [`X509_get_ext_d2i`] called with `NID_subject_alt_name`.
+    ///
+    /// [`X509_get_ext_d2i`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext_d2i.html
     pub fn subject_alt_names(&self) -> Option<Stack<GeneralName>> {
         unsafe {
             let stack = ffi::X509_get_ext_d2i(
@@ -280,10 +303,31 @@ impl X509Ref {
                 ptr::null_mut(),
             );
             if stack.is_null() {
-                return None;
+                None
+            } else {
+                Some(Stack::from_ptr(stack as *mut _))
             }
+        }
+    }
 
-            Some(Stack::from_ptr(stack as *mut _))
+    /// Returns this certificate's issuer alternative name entries, if they exist.
+    ///
+    /// This corresponds to [`X509_get_ext_d2i`] called with `NID_issuer_alt_name`.
+    ///
+    /// [`X509_get_ext_d2i`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext_d2i.html
+    pub fn issuer_alt_names(&self) -> Option<Stack<GeneralName>> {
+        unsafe {
+            let stack = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_issuer_alt_name,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+            if stack.is_null() {
+                None
+            } else {
+                Some(Stack::from_ptr(stack as *mut _))
+            }
         }
     }
 
