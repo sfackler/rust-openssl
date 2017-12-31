@@ -10,6 +10,7 @@ use error::ErrorStack;
 use dh::Dh;
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
 use ec::EcKey;
+use pkey::Params;
 use ssl::{get_callback_idx, get_ssl_callback_idx, SniError, SslRef};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use ssl::AlpnError;
@@ -147,7 +148,7 @@ pub unsafe extern "C" fn raw_tmp_dh<F>(
     keylength: c_int,
 ) -> *mut ffi::DH
 where
-    F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + 'static + Sync + Send,
+    F: Fn(&mut SslRef, bool, u32) -> Result<Dh<Params>, ErrorStack> + 'static + Sync + Send,
 {
     let ctx = ffi::SSL_get_SSL_CTX(ssl);
     let callback = ffi::SSL_CTX_get_ex_data(ctx, get_callback_idx::<F>());
@@ -174,7 +175,7 @@ pub unsafe extern "C" fn raw_tmp_ecdh<F>(
     keylength: c_int,
 ) -> *mut ffi::EC_KEY
 where
-    F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + 'static + Sync + Send,
+    F: Fn(&mut SslRef, bool, u32) -> Result<EcKey<Params>, ErrorStack> + 'static + Sync + Send,
 {
     let ctx = ffi::SSL_get_SSL_CTX(ssl);
     let callback = ffi::SSL_CTX_get_ex_data(ctx, get_callback_idx::<F>());
@@ -200,7 +201,7 @@ pub unsafe extern "C" fn raw_tmp_dh_ssl<F>(
     keylength: c_int,
 ) -> *mut ffi::DH
 where
-    F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + 'static + Sync + Send,
+    F: Fn(&mut SslRef, bool, u32) -> Result<Dh<Params>, ErrorStack> + 'static + Sync + Send,
 {
     let callback = ffi::SSL_get_ex_data(ssl, get_ssl_callback_idx::<F>());
     let callback = &*(callback as *mut F);
@@ -226,7 +227,7 @@ pub unsafe extern "C" fn raw_tmp_ecdh_ssl<F>(
     keylength: c_int,
 ) -> *mut ffi::EC_KEY
 where
-    F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + 'static + Sync + Send,
+    F: Fn(&mut SslRef, bool, u32) -> Result<EcKey<Params>, ErrorStack> + 'static + Sync + Send,
 {
     let callback = ffi::SSL_get_ex_data(ssl, get_ssl_callback_idx::<F>());
     let callback = &*(callback as *mut F);

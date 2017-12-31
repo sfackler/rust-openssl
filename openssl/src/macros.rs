@@ -1,6 +1,6 @@
 
 macro_rules! private_key_from_pem {
-    ($t:ident, $f:path) => {
+    ($t:ty, $f:path) => {
         from_pem_inner!(/// Deserializes a PEM-formatted private key.
             private_key_from_pem, $t, $f);
 
@@ -21,7 +21,7 @@ macro_rules! private_key_from_pem {
                          ptr::null_mut(),
                          None,
                          passphrase.as_ptr() as *const _ as *mut _))
-                    .map($t)
+                    .map(|p| ::foreign_types::ForeignType::from_ptr(p))
             }
         }
 
@@ -43,7 +43,7 @@ macro_rules! private_key_from_pem {
                          ptr::null_mut(),
                          Some(::util::invoke_passwd_cb::<F>),
                          &mut cb as *mut _ as *mut _))
-                    .map($t)
+                    .map(|p| ::foreign_types::ForeignType::from_ptr(p))
             }
         }
     }
@@ -153,68 +153,67 @@ macro_rules! public_key_to_der {
 }
 
 macro_rules! from_der_inner {
-    (#[$m:meta] $n:ident, $t:ident, $f:path) => {
+    (#[$m:meta] $n:ident, $t:ty, $f:path) => {
         #[$m]
         pub fn $n(der: &[u8]) -> Result<$t, ::error::ErrorStack> {
             unsafe {
                 ::ffi::init();
                 let len = ::std::cmp::min(der.len(), ::libc::c_long::max_value() as usize) as ::libc::c_long;
                 ::cvt_p($f(::std::ptr::null_mut(), &mut der.as_ptr(), len))
-                    .map($t)
+                    .map(|p| ::foreign_types::ForeignType::from_ptr(p))
             }
         }
     }
 }
 
 macro_rules! from_der {
-    ($t:ident, $f:path) => {
+    ($t:ty, $f:path) => {
         from_der_inner!(/// Deserializes a value from DER-formatted data.
             from_der, $t, $f);
     }
 }
 
 macro_rules! private_key_from_der {
-    ($t:ident, $f:path) => {
+    ($t:ty, $f:path) => {
         from_der_inner!(/// Deserializes a private key from DER-formatted data.
             private_key_from_der, $t, $f);
     }
 }
 
 macro_rules! public_key_from_der {
-    ($t:ident, $f:path) => {
+    ($t:ty, $f:path) => {
         from_der_inner!(/// Deserializes a public key from DER-formatted data.
             public_key_from_der, $t, $f);
     }
 }
 
 macro_rules! from_pem_inner {
-    (#[$m:meta] $n:ident, $t:ident, $f:path) => {
+    (#[$m:meta] $n:ident, $t:ty, $f:path) => {
         #[$m]
         pub fn $n(pem: &[u8]) -> Result<$t, ::error::ErrorStack> {
             unsafe {
                 ::init();
                 let bio = try!(::bio::MemBioSlice::new(pem));
                 cvt_p($f(bio.as_ptr(), ::std::ptr::null_mut(), None, ::std::ptr::null_mut()))
-                    .map($t)
+                    .map(|p| ::foreign_types::ForeignType::from_ptr(p))
             }
         }
     }
 }
 
 macro_rules! public_key_from_pem {
-    ($t:ident, $f:path) => {
+    ($t:ty, $f:path) => {
         from_pem_inner!(/// Deserializes a public key from PEM-formatted data.
             public_key_from_pem, $t, $f);
     }
 }
 
 macro_rules! from_pem {
-    ($t:ident, $f:path) => {
+    ($t:ty, $f:path) => {
         from_pem_inner!(/// Deserializes a value from PEM-formatted data.
             from_pem, $t, $f);
     }
 }
-
 
 macro_rules! foreign_type_and_impl_send_sync {
     (
@@ -245,4 +244,111 @@ macro_rules! foreign_type_and_impl_send_sync {
             unsafe impl Sync for $owned{}
             unsafe impl Sync for $borrowed{}
         };
+}
+
+macro_rules! generic_foreign_type_and_impl_send_sync {
+    (
+        $(#[$impl_attr:meta])*
+        type CType = $ctype:ty;
+        fn drop = $drop:expr;
+        $(fn clone = $clone:expr;)*
+
+        $(#[$owned_attr:meta])*
+        pub struct $owned:ident<T>;
+        $(#[$borrowed_attr:meta])*
+        pub struct $borrowed:ident<T>;
+    ) => {
+        $(#[$owned_attr])*
+        pub struct $owned<T>(*mut $ctype, ::std::marker::PhantomData<T>);
+
+        $(#[$impl_attr])*
+        impl<T> ::foreign_types::ForeignType for $owned<T> {
+            type CType = $ctype;
+            type Ref = $borrowed<T>;
+
+            #[inline]
+            unsafe fn from_ptr(ptr: *mut $ctype) -> $owned<T> {
+                $owned(ptr, ::std::marker::PhantomData)
+            }
+
+            #[inline]
+            fn as_ptr(&self) -> *mut $ctype {
+                self.0
+            }
+        }
+
+        impl<T> Drop for $owned<T> {
+            #[inline]
+            fn drop(&mut self) {
+                unsafe { $drop(self.0) }
+            }
+        }
+
+        $(
+            impl<T> Clone for $owned<T> {
+                #[inline]
+                fn clone(&self) -> $owned<T> {
+                    unsafe {
+                        let handle: *mut $ctype = $clone(self.0);
+                        ::foreign_types::ForeignType::from_ptr(handle)
+                    }
+                }
+            }
+
+            impl<T> ::std::borrow::ToOwned for $borrowed<T> {
+                type Owned = $owned<T>;
+                #[inline]
+                fn to_owned(&self) -> $owned<T> {
+                    unsafe {
+                        let handle: *mut $ctype =
+                            $clone(::foreign_types::ForeignTypeRef::as_ptr(self));
+                        $crate::ForeignType::from_ptr(handle)
+                    }
+                }
+            }
+        )*
+
+        impl<T> ::std::ops::Deref for $owned<T> {
+            type Target = $borrowed<T>;
+
+            #[inline]
+            fn deref(&self) -> &$borrowed<T> {
+                unsafe { ::foreign_types::ForeignTypeRef::from_ptr(self.0) }
+            }
+        }
+
+        impl<T> ::std::ops::DerefMut for $owned<T> {
+            #[inline]
+            fn deref_mut(&mut self) -> &mut $borrowed<T> {
+                unsafe { ::foreign_types::ForeignTypeRef::from_ptr_mut(self.0) }
+            }
+        }
+
+        impl<T> ::std::borrow::Borrow<$borrowed<T>> for $owned<T> {
+            #[inline]
+            fn borrow(&self) -> &$borrowed<T> {
+                &**self
+            }
+        }
+
+        impl<T> ::std::convert::AsRef<$borrowed<T>> for $owned<T> {
+            #[inline]
+            fn as_ref(&self) -> &$borrowed<T> {
+                &**self
+            }
+        }
+
+        $(#[$borrowed_attr])*
+        pub struct $borrowed<T>(::foreign_types::Opaque, ::std::marker::PhantomData<T>);
+
+        $(#[$impl_attr])*
+        impl<T> ::foreign_types::ForeignTypeRef for $borrowed<T> {
+            type CType = $ctype;
+        }
+
+        unsafe impl<T> Send for $owned<T>{}
+        unsafe impl<T> Send for $borrowed<T>{}
+        unsafe impl<T> Sync for $owned<T>{}
+        unsafe impl<T> Sync for $borrowed<T>{}
+    };
 }

@@ -1,30 +1,34 @@
 use error::ErrorStack;
 use ffi;
-use foreign_types::ForeignTypeRef;
+use foreign_types::{ForeignType, ForeignTypeRef};
 use std::mem;
 use std::ptr;
 
 use {cvt, cvt_p};
 use bn::BigNum;
+use pkey::{HasParams, Params};
 
-foreign_type_and_impl_send_sync! {
+generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::DH;
     fn drop = ffi::DH_free;
 
-    pub struct Dh;
+    pub struct Dh<T>;
 
-    pub struct DhRef;
+    pub struct DhRef<T>;
 }
 
-impl DhRef {
+impl<T> DhRef<T>
+where
+    T: HasParams,
+{
     to_pem!(ffi::PEM_write_bio_DHparams);
     to_der!(ffi::i2d_DHparams);
 }
 
-impl Dh {
-    pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<Dh, ErrorStack> {
+impl Dh<Params> {
+    pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<Dh<Params>, ErrorStack> {
         unsafe {
-            let dh = Dh(cvt_p(ffi::DH_new())?);
+            let dh = Dh::from_ptr(cvt_p(ffi::DH_new())?);
             cvt(compat::DH_set0_pqg(
                 dh.0,
                 p.as_ptr(),
@@ -36,33 +40,33 @@ impl Dh {
         }
     }
 
-    from_pem!(Dh, ffi::PEM_read_bio_DHparams);
-    from_der!(Dh, ffi::d2i_DHparams);
+    from_pem!(Dh<Params>, ffi::PEM_read_bio_DHparams);
+    from_der!(Dh<Params>, ffi::d2i_DHparams);
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn get_1024_160() -> Result<Dh, ErrorStack> {
+    pub fn get_1024_160() -> Result<Dh<Params>, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(ffi::DH_get_1024_160()).map(Dh)
+            cvt_p(ffi::DH_get_1024_160()).map(|p| Dh::from_ptr(p))
         }
     }
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn get_2048_224() -> Result<Dh, ErrorStack> {
+    pub fn get_2048_224() -> Result<Dh<Params>, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(ffi::DH_get_2048_224()).map(Dh)
+            cvt_p(ffi::DH_get_2048_224()).map(|p| Dh::from_ptr(p))
         }
     }
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn get_2048_256() -> Result<Dh, ErrorStack> {
+    pub fn get_2048_256() -> Result<Dh<Params>, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(ffi::DH_get_2048_256()).map(Dh)
+            cvt_p(ffi::DH_get_2048_256()).map(|p| Dh::from_ptr(p))
         }
     }
 }

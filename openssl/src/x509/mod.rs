@@ -19,7 +19,7 @@ use error::ErrorStack;
 use ex_data::Index;
 use hash::MessageDigest;
 use nid::Nid;
-use pkey::{PKey, PKeyRef};
+use pkey::{HasPrivate, HasPublic, PKey, PKeyRef, Public};
 use stack::{Stack, StackRef, Stackable};
 use string::OpensslString;
 use ssl::SslRef;
@@ -196,7 +196,10 @@ impl X509Builder {
     }
 
     /// Sets the public key associated with the certificate.
-    pub fn set_pubkey(&mut self, key: &PKeyRef) -> Result<(), ErrorStack> {
+    pub fn set_pubkey<T>(&mut self, key: &PKeyRef<T>) -> Result<(), ErrorStack>
+    where
+        T: HasPublic,
+    {
         unsafe { cvt(ffi::X509_set_pubkey(self.0.as_ptr(), key.as_ptr())).map(|_| ()) }
     }
 
@@ -244,7 +247,10 @@ impl X509Builder {
     }
 
     /// Signs the certificate with a private key.
-    pub fn sign(&mut self, key: &PKeyRef, hash: MessageDigest) -> Result<(), ErrorStack> {
+    pub fn sign<T>(&mut self, key: &PKeyRef<T>, hash: MessageDigest) -> Result<(), ErrorStack>
+    where
+        T: HasPrivate,
+    {
         unsafe { cvt(ffi::X509_sign(self.0.as_ptr(), key.as_ptr(), hash.as_ptr())).map(|_| ()) }
     }
 
@@ -331,7 +337,7 @@ impl X509Ref {
         }
     }
 
-    pub fn public_key(&self) -> Result<PKey, ErrorStack> {
+    pub fn public_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
             let pkey = cvt_p(ffi::X509_get_pubkey(self.as_ptr()))?;
             Ok(PKey::from_ptr(pkey))
@@ -700,7 +706,10 @@ impl X509ReqBuilder {
         }
     }
 
-    pub fn set_pubkey(&mut self, key: &PKeyRef) -> Result<(), ErrorStack> {
+    pub fn set_pubkey<T>(&mut self, key: &PKeyRef<T>) -> Result<(), ErrorStack>
+    where
+        T: HasPublic,
+    {
         unsafe { cvt(ffi::X509_REQ_set_pubkey(self.0.as_ptr(), key.as_ptr())).map(|_| ()) }
     }
 
@@ -738,7 +747,10 @@ impl X509ReqBuilder {
         }
     }
 
-    pub fn sign(&mut self, key: &PKeyRef, hash: MessageDigest) -> Result<(), ErrorStack> {
+    pub fn sign<T>(&mut self, key: &PKeyRef<T>, hash: MessageDigest) -> Result<(), ErrorStack>
+    where
+        T: HasPrivate,
+    {
         unsafe {
             cvt(ffi::X509_REQ_sign(
                 self.0.as_ptr(),

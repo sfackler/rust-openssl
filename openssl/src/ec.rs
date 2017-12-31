@@ -34,13 +34,13 @@
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use std::ptr;
-use std::mem;
 use libc::c_int;
 
 use {cvt, cvt_n, cvt_p, init};
 use bn::{BigNumContextRef, BigNumRef};
 use error::ErrorStack;
 use nid::Nid;
+use pkey::{HasParams, HasPrivate, HasPublic, Params, Private, Public};
 
 /// Compressed or Uncompressed conversion
 ///
@@ -501,7 +501,7 @@ impl EcPoint {
     }
 }
 
-foreign_type_and_impl_send_sync! {
+generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::EC_KEY;
     fn drop = ffi::EC_KEY_free;
 
@@ -510,62 +510,64 @@ foreign_type_and_impl_send_sync! {
     /// OpenSSL documentation at [`EC_KEY_new`]
     ///
     /// [`EC_KEY_new`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_new.html
-    pub struct EcKey;
+    pub struct EcKey<T>;
+
     /// Reference to [`EcKey`]
     ///
     /// [`EcKey`]: struct.EcKey.html
-    pub struct EcKeyRef;
+    pub struct EcKeyRef<T>;
 }
 
-impl EcKeyRef {
+impl<T> EcKeyRef<T>
+where
+    T: HasPrivate,
+{
     private_key_to_pem!(ffi::PEM_write_bio_ECPrivateKey);
     private_key_to_der!(ffi::i2d_ECPrivateKey);
-
-    /// Return [`EcGroup`] of the `EcKey`
-    ///
-    /// OpenSSL documentation at [`EC_KEY_get0_group`]
-    ///
-    /// [`EC_KEY_get0_group`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_get0_group.html
-    pub fn group(&self) -> Option<&EcGroupRef> {
-        unsafe {
-            let ptr = ffi::EC_KEY_get0_group(self.as_ptr());
-            if ptr.is_null() {
-                None
-            } else {
-                Some(EcGroupRef::from_ptr(ptr as *mut _))
-            }
-        }
-    }
-
-    /// Return [`EcPoint`] associated with the public key
-    ///
-    /// OpenSSL documentation at [`EC_KEY_get0_pubic_key`]
-    ///
-    /// [`EC_KEY_get0_pubic_key`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_get0_public_key.html
-    pub fn public_key(&self) -> Option<&EcPointRef> {
-        unsafe {
-            let ptr = ffi::EC_KEY_get0_public_key(self.as_ptr());
-            if ptr.is_null() {
-                None
-            } else {
-                Some(EcPointRef::from_ptr(ptr as *mut _))
-            }
-        }
-    }
 
     /// Return [`EcPoint`] associated with the private key
     ///
     /// OpenSSL documentation at [`EC_KEY_get0_private_key`]
     ///
     /// [`EC_KEY_get0_private_key`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_get0_private_key.html
-    pub fn private_key(&self) -> Option<&BigNumRef> {
+    pub fn private_key(&self) -> &BigNumRef {
         unsafe {
             let ptr = ffi::EC_KEY_get0_private_key(self.as_ptr());
-            if ptr.is_null() {
-                None
-            } else {
-                Some(BigNumRef::from_ptr(ptr as *mut _))
-            }
+            BigNumRef::from_ptr(ptr as *mut _)
+        }
+    }
+}
+
+impl<T> EcKeyRef<T>
+where
+    T: HasPublic,
+{
+    /// Returns the public key.
+    ///
+    /// OpenSSL documentation at [`EC_KEY_get0_pubic_key`]
+    ///
+    /// [`EC_KEY_get0_pubic_key`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_get0_public_key.html
+    pub fn public_key(&self) -> &EcPointRef {
+        unsafe {
+            let ptr = ffi::EC_KEY_get0_public_key(self.as_ptr());
+            EcPointRef::from_ptr(ptr as *mut _)
+        }
+    }
+}
+
+impl<T> EcKeyRef<T>
+where
+    T: HasParams,
+{
+    /// Return [`EcGroup`] of the `EcKey`
+    ///
+    /// OpenSSL documentation at [`EC_KEY_get0_group`]
+    ///
+    /// [`EC_KEY_get0_group`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_get0_group.html
+    pub fn group(&self) -> &EcGroupRef {
+        unsafe {
+            let ptr = ffi::EC_KEY_get0_group(self.as_ptr());
+            EcGroupRef::from_ptr(ptr as *mut _)
         }
     }
 
@@ -577,14 +579,21 @@ impl EcKeyRef {
     pub fn check_key(&self) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::EC_KEY_check_key(self.as_ptr())).map(|_| ()) }
     }
+}
 
-    /// Create a copy of the `EcKey` to allow modification
-    pub fn to_owned(&self) -> Result<EcKey, ErrorStack> {
-        unsafe { cvt_p(ffi::EC_KEY_dup(self.as_ptr())).map(EcKey) }
+impl<T> ToOwned for EcKeyRef<T> {
+    type Owned = EcKey<T>;
+
+    fn to_owned(&self) -> EcKey<T> {
+        unsafe {
+            let r = ffi::EC_KEY_up_ref(self.as_ptr());
+            assert!(r == 1);
+            EcKey::from_ptr(self.as_ptr())
+        }
     }
 }
 
-impl EcKey {
+impl EcKey<Params> {
     /// Constructs an `EcKey` corresponding to a known curve.
     ///
     /// It will not have an associated public or private key. This kind of key is primarily useful
@@ -593,13 +602,30 @@ impl EcKey {
     /// OpenSSL documenation at [`EC_KEY_new_by_curve_name`]
     ///
     /// [`EC_KEY_new_by_curve_name`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_new_by_curve_name.html
-    pub fn from_curve_name(nid: Nid) -> Result<EcKey, ErrorStack> {
+    pub fn from_curve_name(nid: Nid) -> Result<EcKey<Params>, ErrorStack> {
         unsafe {
             init();
-            cvt_p(ffi::EC_KEY_new_by_curve_name(nid.as_raw())).map(EcKey)
+            cvt_p(ffi::EC_KEY_new_by_curve_name(nid.as_raw())).map(|p| EcKey::from_ptr(p))
         }
     }
 
+    /// Constructs an `EcKey` corresponding to a curve.
+    ///
+    /// This corresponds to [`EC_KEY_set_group`].
+    ///
+    /// [`EC_KEY_set_group`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_new.html
+    pub fn from_group(group: &EcGroupRef) -> Result<EcKey<Params>, ErrorStack> {
+        unsafe {
+            cvt_p(ffi::EC_KEY_new())
+                .map(|p| EcKey::from_ptr(p))
+                .and_then(|key| {
+                    cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key)
+                })
+        }
+    }
+}
+
+impl EcKey<Public> {
     /// Constructs an `EcKey` from the specified group with the associated `EcPoint`, public_key.
     ///
     /// This will only have the associated public_key.
@@ -624,104 +650,67 @@ impl EcKey {
     pub fn from_public_key(
         group: &EcGroupRef,
         public_key: &EcPointRef,
-    ) -> Result<EcKey, ErrorStack> {
-        let mut builder = EcKeyBuilder::new()?;
-        builder.set_group(group)?;
-        builder.set_public_key(public_key)?;
-        Ok(builder.build())
-    }
-
-    /// Generates a new public/private key pair on the specified curve.
-    pub fn generate(group: &EcGroupRef) -> Result<EcKey, ErrorStack> {
-        let mut builder = EcKeyBuilder::new()?;
-        builder.set_group(group)?;
-        builder.generate_key()?;
-        Ok(builder.build())
-    }
-
-    private_key_from_pem!(EcKey, ffi::PEM_read_bio_ECPrivateKey);
-    private_key_from_der!(EcKey, ffi::d2i_ECPrivateKey);
-}
-
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::EC_KEY;
-    fn drop = ffi::EC_KEY_free;
-
-    /// Builder pattern for key generation
-    ///
-    /// Returns a `EcKeyBuilder` to be consumed by `build`
-    pub struct EcKeyBuilder;
-    /// Reference to [`EcKeyBuilder`]
-    ///
-    /// [`EcKeyBuilder`]: struct.EcKeyBuilder.html
-    pub struct EcKeyBuilderRef;
-}
-
-impl EcKeyBuilder {
-    /// Creates an empty `EcKeyBuilder` to be chained with additonal methods
-    pub fn new() -> Result<EcKeyBuilder, ErrorStack> {
+    ) -> Result<EcKey<Public>, ErrorStack> {
         unsafe {
-            init();
-            cvt_p(ffi::EC_KEY_new()).map(EcKeyBuilder)
+            cvt_p(ffi::EC_KEY_new())
+                .map(|p| EcKey::from_ptr(p))
+                .and_then(|key| {
+                    cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key)
+                })
+                .and_then(|key| {
+                    cvt(ffi::EC_KEY_set_public_key(
+                        key.as_ptr(),
+                        public_key.as_ptr(),
+                    )).map(|_| key)
+                })
         }
     }
 
-    /// Consume the `EcKeyBuilder` and return [`EcKey`]
-    ///
-    /// [`EcKey`]: struct.EcKey.html
-    pub fn build(self) -> EcKey {
-        unsafe {
-            let key = EcKey::from_ptr(self.as_ptr());
-            mem::forget(self);
-            key
-        }
-    }
-}
-
-impl EcKeyBuilderRef {
-    /// Set the [`EcGroup`] explicitly
-    ///
-    /// [`EcGroup`]: struct.EcGroup.html
-    pub fn set_group(&mut self, group: &EcGroupRef) -> Result<&mut EcKeyBuilderRef, ErrorStack> {
-        unsafe { cvt(ffi::EC_KEY_set_group(self.as_ptr(), group.as_ptr())).map(|_| self) }
-    }
-
-    /// Set public key to given `EcPoint`
-    pub fn set_public_key(
-        &mut self,
-        public_key: &EcPointRef,
-    ) -> Result<&mut EcKeyBuilderRef, ErrorStack> {
-        unsafe {
-            cvt(ffi::EC_KEY_set_public_key(
-                self.as_ptr(),
-                public_key.as_ptr(),
-            )).map(|_| self)
-        }
-    }
-
-    /// Generate public and private keys.
-    pub fn generate_key(&mut self) -> Result<&mut EcKeyBuilderRef, ErrorStack> {
-        unsafe { cvt(ffi::EC_KEY_generate_key(self.as_ptr())).map(|_| self) }
-    }
-
-    /// Sets the public key based on affine coordinates.
-    pub fn set_public_key_affine_coordinates(
-        &mut self,
+    /// Constructs a public key from its affine coordinates.
+    pub fn from_public_key_affine_coordinates(
+        group: &EcGroupRef,
         x: &BigNumRef,
         y: &BigNumRef,
-    ) -> Result<&mut EcKeyBuilderRef, ErrorStack> {
+    ) -> Result<EcKey<Public>, ErrorStack> {
         unsafe {
-            cvt(ffi::EC_KEY_set_public_key_affine_coordinates(
-                self.as_ptr(),
-                x.as_ptr(),
-                y.as_ptr(),
-            )).map(|_| self)
+            cvt_p(ffi::EC_KEY_new())
+                .map(|p| EcKey::from_ptr(p))
+                .and_then(|key| {
+                    cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key)
+                })
+                .and_then(|key| {
+                    cvt(ffi::EC_KEY_set_public_key_affine_coordinates(
+                        key.as_ptr(),
+                        x.as_ptr(),
+                        y.as_ptr(),
+                    )).map(|_| key)
+                })
+        }
+    }
+}
+
+impl EcKey<Private> {
+    /// Generates a new public/private key pair on the specified curve.
+    pub fn generate(group: &EcGroupRef) -> Result<EcKey<Private>, ErrorStack> {
+        unsafe {
+            cvt_p(ffi::EC_KEY_new())
+                .map(|p| EcKey::from_ptr(p))
+                .and_then(|key| {
+                    cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key)
+                })
+                .and_then(|key| {
+                    cvt(ffi::EC_KEY_generate_key(key.as_ptr())).map(|_| key)
+                })
         }
     }
 
-    /// Sets the private key.
-    pub fn set_private_key(&mut self, key: &BigNumRef) -> Result<&mut EcKeyBuilderRef, ErrorStack> {
-        unsafe { cvt(ffi::EC_KEY_set_private_key(self.as_ptr(), key.as_ptr())).map(|_| self) }
+    private_key_from_pem!(EcKey<Private>, ffi::PEM_read_bio_ECPrivateKey);
+    private_key_from_der!(EcKey<Private>, ffi::d2i_ECPrivateKey);
+}
+
+impl<T> Clone for EcKey<T> {
+    fn clone(&self) -> EcKey<T> {
+        (**self).to_owned()
     }
 }
 
@@ -741,15 +730,13 @@ mod test {
     fn generate() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
-        key.public_key().unwrap();
-        key.private_key().unwrap();
     }
 
     #[test]
     fn dup() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
-        key.to_owned().unwrap();
+        key.clone();
     }
 
     #[test]
@@ -762,7 +749,7 @@ mod test {
     fn point_bytes() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
-        let point = key.public_key().unwrap();
+        let point = key.public_key();
         let mut ctx = BigNumContext::new().unwrap();
         let bytes = point
             .to_bytes(&group, PointConversionForm::COMPRESSED, &mut ctx)
@@ -778,13 +765,9 @@ mod test {
         let mut ctx = BigNumContext::new().unwrap();
         let mut public_key = EcPoint::new(&group).unwrap();
         public_key
-            .mul_generator(&group, key.private_key().unwrap(), &mut ctx)
+            .mul_generator(&group, key.private_key(), &mut ctx)
             .unwrap();
-        assert!(
-            public_key
-                .eq(&group, key.public_key().unwrap(), &mut ctx)
-                .unwrap()
-        );
+        assert!(public_key.eq(&group, key.public_key(), &mut ctx).unwrap());
     }
 
     #[test]
@@ -793,7 +776,6 @@ mod test {
         let key = EcKey::generate(&group).unwrap();
         let mut ctx = BigNumContext::new().unwrap();
         let bytes = key.public_key()
-            .unwrap()
             .to_bytes(&group, PointConversionForm::COMPRESSED, &mut ctx)
             .unwrap();
 
@@ -801,8 +783,6 @@ mod test {
         let public_key = EcPoint::from_bytes(&group, &bytes, &mut ctx).unwrap();
         let ec_key = EcKey::from_public_key(&group, &public_key).unwrap();
         assert!(ec_key.check_key().is_ok());
-        assert!(ec_key.public_key().is_some());
-        assert!(ec_key.private_key().is_none());
     }
 
     #[test]
@@ -818,32 +798,8 @@ mod test {
         let xbn = BigNum::from_slice(&x).unwrap();
         let ybn = BigNum::from_slice(&y).unwrap();
 
-        let mut builder = EcKeyBuilder::new().unwrap();
-        builder.set_group(&group).unwrap();
-        builder
-            .set_public_key_affine_coordinates(&xbn, &ybn)
-            .unwrap();
-
-        let ec_key = builder.build();
+        let ec_key = EcKey::from_public_key_affine_coordinates(&group, &xbn, &ybn).unwrap();
         assert!(ec_key.check_key().is_ok());
-        assert!(ec_key.public_key().is_some());
-    }
-
-    #[test]
-    fn set_private_key() {
-        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
-        let d = BASE64URL_NOPAD
-            .decode("870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE".as_bytes())
-            .unwrap();
-
-        let dbn = BigNum::from_slice(&d).unwrap();
-
-        let mut builder = EcKeyBuilder::new().unwrap();
-        builder.set_group(&group).unwrap();
-        builder.set_private_key(&dbn).unwrap();
-
-        let ec_key = builder.build();
-        assert!(ec_key.private_key().is_some());
     }
 
     #[test]
@@ -859,18 +815,12 @@ mod test {
         let xbn = BigNum::from_slice(&x).unwrap();
         let ybn = BigNum::from_slice(&y).unwrap();
 
-        let mut builder = EcKeyBuilder::new().unwrap();
-        builder.set_group(&group).unwrap();
-        builder
-            .set_public_key_affine_coordinates(&xbn, &ybn)
-            .unwrap();
-
-        let ec_key = builder.build();
+        let ec_key = EcKey::from_public_key_affine_coordinates(&group, &xbn, &ybn).unwrap();
 
         let mut xbn2 = BigNum::new().unwrap();
         let mut ybn2 = BigNum::new().unwrap();
         let mut ctx = BigNumContext::new().unwrap();
-        let ec_key_pk = ec_key.public_key().unwrap();
+        let ec_key_pk = ec_key.public_key();
         ec_key_pk
             .affine_coordinates_gfp(&group, &mut xbn2, &mut ybn2, &mut ctx)
             .unwrap();

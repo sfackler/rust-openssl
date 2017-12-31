@@ -7,7 +7,7 @@ use std::ptr;
 use std::ffi::CString;
 
 use {cvt, cvt_p};
-use pkey::{PKey, PKeyRef};
+use pkey::{HasPrivate, PKey, PKeyRef, Private};
 use error::ErrorStack;
 use x509::{X509, X509Ref};
 use stack::Stack;
@@ -25,9 +25,9 @@ impl Pkcs12Ref {
     to_der!(ffi::i2d_PKCS12);
 
     /// Extracts the contents of the `Pkcs12`.
-    pub fn parse(&self, pass: &[u8]) -> Result<ParsedPkcs12, ErrorStack> {
+    pub fn parse(&self, pass: &str) -> Result<ParsedPkcs12, ErrorStack> {
         unsafe {
-            let pass = CString::new(pass).unwrap();
+            let pass = CString::new(pass.as_bytes()).unwrap();
 
             let mut pkey = ptr::null_mut();
             let mut cert = ptr::null_mut();
@@ -84,7 +84,7 @@ impl Pkcs12 {
 }
 
 pub struct ParsedPkcs12 {
-    pub pkey: PKey,
+    pub pkey: PKey<Private>,
     pub cert: X509,
     pub chain: Option<Stack<X509>>,
 }
@@ -140,13 +140,16 @@ impl Pkcs12Builder {
     /// * `friendly_name` - user defined name for the certificate
     /// * `pkey` - key to store
     /// * `cert` - certificate to store
-    pub fn build(
+    pub fn build<T>(
         self,
         password: &str,
         friendly_name: &str,
-        pkey: &PKeyRef,
+        pkey: &PKeyRef<T>,
         cert: &X509Ref,
-    ) -> Result<Pkcs12, ErrorStack> {
+    ) -> Result<Pkcs12, ErrorStack>
+    where
+        T: HasPrivate,
+    {
         unsafe {
             let pass = CString::new(password).unwrap();
             let friendly_name = CString::new(friendly_name).unwrap();
@@ -198,7 +201,7 @@ mod test {
     fn parse() {
         let der = include_bytes!("../test/identity.p12");
         let pkcs12 = Pkcs12::from_der(der).unwrap();
-        let parsed = pkcs12.parse("mypass".as_bytes()).unwrap();
+        let parsed = pkcs12.parse("mypass").unwrap();
 
         assert_eq!(
             parsed
@@ -224,7 +227,7 @@ mod test {
     fn parse_empty_chain() {
         let der = include_bytes!("../test/keystore-empty-chain.p12");
         let pkcs12 = Pkcs12::from_der(der).unwrap();
-        let parsed = pkcs12.parse("cassandra".as_bytes()).unwrap();
+        let parsed = pkcs12.parse("cassandra").unwrap();
         assert!(parsed.chain.is_none());
     }
 
@@ -263,7 +266,7 @@ mod test {
         let der = pkcs12.to_der().unwrap();
 
         let pkcs12 = Pkcs12::from_der(&der).unwrap();
-        let parsed = pkcs12.parse("mypass".as_bytes()).unwrap();
+        let parsed = pkcs12.parse("mypass").unwrap();
 
         assert_eq!(
             parsed.cert.fingerprint(MessageDigest::sha1()).unwrap(),

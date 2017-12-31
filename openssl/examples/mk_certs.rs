@@ -7,14 +7,14 @@ use openssl::asn1::Asn1Time;
 use openssl::bn::{BigNum, MsbOption};
 use openssl::error::ErrorStack;
 use openssl::hash::MessageDigest;
-use openssl::pkey::{PKey, PKeyRef};
+use openssl::pkey::{PKey, PKeyRef, Private};
 use openssl::rsa::Rsa;
 use openssl::x509::{X509, X509NameBuilder, X509Ref, X509Req, X509ReqBuilder, X509VerifyResult};
 use openssl::x509::extension::{AuthorityKeyIdentifier, BasicConstraints, KeyUsage,
                                SubjectAlternativeName, SubjectKeyIdentifier};
 
 /// Make a CA certificate and private key
-fn mk_ca_cert() -> Result<(X509, PKey), ErrorStack> {
+fn mk_ca_cert() -> Result<(X509, PKey<Private>), ErrorStack> {
     let rsa = Rsa::generate(2048)?;
     let privkey = PKey::from_rsa(rsa)?;
 
@@ -59,7 +59,7 @@ fn mk_ca_cert() -> Result<(X509, PKey), ErrorStack> {
 }
 
 /// Make a X509 request with the given private key
-fn mk_request(privkey: &PKey) -> Result<(X509Req), ErrorStack> {
+fn mk_request(privkey: &PKey<Private>) -> Result<X509Req, ErrorStack> {
     let mut req_builder = X509ReqBuilder::new()?;
     req_builder.set_pubkey(&privkey)?;
 
@@ -77,7 +77,10 @@ fn mk_request(privkey: &PKey) -> Result<(X509Req), ErrorStack> {
 }
 
 /// Make a certificate and private key signed by the given CA cert and private key
-fn mk_ca_signed_cert(ca_cert: &X509Ref, ca_privkey: &PKeyRef) -> Result<(X509, PKey), ErrorStack> {
+fn mk_ca_signed_cert(
+    ca_cert: &X509Ref,
+    ca_privkey: &PKeyRef<Private>,
+) -> Result<(X509, PKey<Private>), ErrorStack> {
     let rsa = Rsa::generate(2048)?;
     let privkey = PKey::from_rsa(rsa)?;
 
