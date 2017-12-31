@@ -8,15 +8,12 @@
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use std::ptr;
-use error::ErrorStack;
 
+use {cvt, cvt_p};
 use bio::{MemBio, MemBioSlice};
-
+use error::ErrorStack;
+use pkey::{HasPrivate, PKeyRef};
 use x509::X509;
-use pkey::PKeyRef;
-
-use cvt;
-use cvt_p;
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::CMS_ContentInfo;
@@ -44,7 +41,10 @@ impl CmsContentInfoRef {
     /// OpenSSL documentation at [`CMS_decrypt`]
     ///
     /// [`CMS_decrypt`]: https://www.openssl.org/docs/man1.1.0/crypto/CMS_decrypt.html
-    pub fn decrypt(&self, pkey: &PKeyRef, cert: &X509) -> Result<Vec<u8>, ErrorStack> {
+    pub fn decrypt<T>(&self, pkey: &PKeyRef<T>, cert: &X509) -> Result<Vec<u8>, ErrorStack>
+    where
+        T: HasPrivate,
+    {
         unsafe {
             let pkey = pkey.as_ptr();
             let cert = cert.as_ptr();
@@ -63,7 +63,6 @@ impl CmsContentInfoRef {
             Ok(out.get_buf().to_owned())
         }
     }
-
 }
 
 impl CmsContentInfo {
@@ -76,10 +75,7 @@ impl CmsContentInfo {
         unsafe {
             let bio = MemBioSlice::new(smime)?;
 
-            let cms = cvt_p(ffi::SMIME_read_CMS(
-                bio.as_ptr(),
-                ptr::null_mut(),
-            ))?;
+            let cms = cvt_p(ffi::SMIME_read_CMS(bio.as_ptr(), ptr::null_mut()))?;
 
             Ok(CmsContentInfo::from_ptr(cms))
         }

@@ -92,7 +92,7 @@ use x509::store::{X509StoreBuilderRef, X509StoreRef};
 use x509::store::X509Store;
 #[cfg(any(ossl102, ossl110))]
 use verify::X509VerifyParamRef;
-use pkey::PKeyRef;
+use pkey::{HasPrivate, PKeyRef, Params, Private};
 use error::ErrorStack;
 use ex_data::Index;
 use stack::{Stack, StackRef};
@@ -630,7 +630,7 @@ impl SslContextBuilder {
     /// This corresponds to [`SSL_CTX_set_tmp_dh`].
     ///
     /// [`SSL_CTX_set_tmp_dh`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_set_tmp_dh.html
-    pub fn set_tmp_dh(&mut self, dh: &DhRef) -> Result<(), ErrorStack> {
+    pub fn set_tmp_dh(&mut self, dh: &DhRef<Params>) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_CTX_set_tmp_dh(self.as_ptr(), dh.as_ptr()) as c_int).map(|_| ()) }
     }
 
@@ -646,7 +646,7 @@ impl SslContextBuilder {
     /// [`SSL_CTX_set_tmp_dh_callback`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_set_tmp_dh.html
     pub fn set_tmp_dh_callback<F>(&mut self, callback: F)
     where
-        F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + 'static + Sync + Send,
+        F: Fn(&mut SslRef, bool, u32) -> Result<Dh<Params>, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
@@ -663,7 +663,7 @@ impl SslContextBuilder {
     /// Sets the parameters to be used during ephemeral elliptic curve Diffie-Hellman key exchange.
     ///
     /// This corresponds to `SSL_CTX_set_tmp_ecdh`.
-    pub fn set_tmp_ecdh(&mut self, key: &EcKeyRef) -> Result<(), ErrorStack> {
+    pub fn set_tmp_ecdh(&mut self, key: &EcKeyRef<Params>) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_CTX_set_tmp_ecdh(self.as_ptr(), key.as_ptr())
                 as c_int)
@@ -684,7 +684,7 @@ impl SslContextBuilder {
     #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
     pub fn set_tmp_ecdh_callback<F>(&mut self, callback: F)
     where
-        F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + 'static + Sync + Send,
+        F: Fn(&mut SslRef, bool, u32) -> Result<EcKey<Params>, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
@@ -864,7 +864,10 @@ impl SslContextBuilder {
     /// This corresponds to [`SSL_CTX_use_PrivateKey`].
     ///
     /// [`SSL_CTX_use_PrivateKey`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_use_PrivateKey_file.html
-    pub fn set_private_key(&mut self, key: &PKeyRef) -> Result<(), ErrorStack> {
+    pub fn set_private_key<T>(&mut self, key: &PKeyRef<T>) -> Result<(), ErrorStack>
+    where
+        T: HasPrivate,
+    {
         unsafe { cvt(ffi::SSL_CTX_use_PrivateKey(self.as_ptr(), key.as_ptr())).map(|_| ()) }
     }
 
@@ -1202,7 +1205,7 @@ impl SslContextRef {
     ///
     /// [`SSL_CTX_get0_privatekey`]: https://www.openssl.org/docs/man1.1.0/ssl/ssl.html
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
-    pub fn private_key(&self) -> Option<&PKeyRef> {
+    pub fn private_key(&self) -> Option<&PKeyRef<Private>> {
         unsafe {
             let ptr = ffi::SSL_CTX_get0_privatekey(self.as_ptr());
             if ptr.is_null() {
@@ -1535,7 +1538,7 @@ impl SslRef {
     ///
     /// [`SslContextBuilder::set_tmp_dh`]: struct.SslContextBuilder.html#method.set_tmp_dh
     /// [`SSL_set_tmp_dh`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_tmp_dh.html
-    pub fn set_tmp_dh(&mut self, dh: &DhRef) -> Result<(), ErrorStack> {
+    pub fn set_tmp_dh(&mut self, dh: &DhRef<Params>) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_set_tmp_dh(self.as_ptr(), dh.as_ptr()) as c_int).map(|_| ()) }
     }
 
@@ -1547,7 +1550,7 @@ impl SslRef {
     /// [`SSL_set_tmp_dh_callback`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_tmp_dh.html
     pub fn set_tmp_dh_callback<F>(&mut self, callback: F)
     where
-        F: Fn(&mut SslRef, bool, u32) -> Result<Dh, ErrorStack> + 'static + Sync + Send,
+        F: Fn(&mut SslRef, bool, u32) -> Result<Dh<Params>, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
@@ -1566,7 +1569,7 @@ impl SslRef {
     /// This corresponds to `SSL_set_tmp_ecdh`.
     ///
     /// [`SslContextBuilder::set_tmp_ecdh`]: struct.SslContextBuilder.html#method.set_tmp_ecdh
-    pub fn set_tmp_ecdh(&mut self, key: &EcKeyRef) -> Result<(), ErrorStack> {
+    pub fn set_tmp_ecdh(&mut self, key: &EcKeyRef<Params>) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_set_tmp_ecdh(self.as_ptr(), key.as_ptr()) as c_int).map(|_| ()) }
     }
 
@@ -1580,7 +1583,7 @@ impl SslRef {
     #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
     pub fn set_tmp_ecdh_callback<F>(&mut self, callback: F)
     where
-        F: Fn(&mut SslRef, bool, u32) -> Result<EcKey, ErrorStack> + 'static + Sync + Send,
+        F: Fn(&mut SslRef, bool, u32) -> Result<EcKey<Params>, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
@@ -1723,7 +1726,7 @@ impl SslRef {
     /// This corresponds to `SSL_get_privatekey`.
     ///
     /// [`SslContext::private_key`]: struct.SslContext.html#method.private_key
-    pub fn private_key(&self) -> Option<&PKeyRef> {
+    pub fn private_key(&self) -> Option<&PKeyRef<Private>> {
         unsafe {
             let ptr = ffi::SSL_get_privatekey(self.as_ptr());
             if ptr.is_null() {
@@ -2038,10 +2041,9 @@ impl Ssl {
                 ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => Err(HandshakeError::WouldBlock(
                     MidHandshakeSslStream { stream, error },
                 )),
-                _ => Err(HandshakeError::Failure(MidHandshakeSslStream {
-                    stream,
-                    error,
-                })),
+                _ => Err(HandshakeError::Failure(
+                    MidHandshakeSslStream { stream, error },
+                )),
             }
         }
     }
@@ -2070,10 +2072,9 @@ impl Ssl {
                 ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => Err(HandshakeError::WouldBlock(
                     MidHandshakeSslStream { stream, error },
                 )),
-                _ => Err(HandshakeError::Failure(MidHandshakeSslStream {
-                    stream,
-                    error,
-                })),
+                _ => Err(HandshakeError::Failure(
+                    MidHandshakeSslStream { stream, error },
+                )),
             }
         }
     }
@@ -2318,8 +2319,10 @@ impl<S: Read + Write> Read for SslStream<S> {
                 }
                 Err(ref e) if e.code() == ErrorCode::WANT_READ && e.io_error().is_none() => {}
                 Err(e) => {
-                    return Err(e.into_io_error()
-                        .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)))
+                    return Err(
+                        e.into_io_error()
+                            .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)),
+                    )
                 }
             }
         }
@@ -2333,8 +2336,10 @@ impl<S: Read + Write> Write for SslStream<S> {
                 Ok(n) => return Ok(n),
                 Err(ref e) if e.code() == ErrorCode::WANT_READ && e.io_error().is_none() => {}
                 Err(e) => {
-                    return Err(e.into_io_error()
-                        .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)))
+                    return Err(
+                        e.into_io_error()
+                            .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)),
+                    )
                 }
             }
         }

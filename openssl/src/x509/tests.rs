@@ -4,14 +4,14 @@ use asn1::Asn1Time;
 use bn::{BigNum, MsbOption};
 use hash::MessageDigest;
 use nid::Nid;
-use pkey::PKey;
+use pkey::{PKey, Private};
 use rsa::Rsa;
 use stack::Stack;
 use x509::{X509, X509Name, X509Req, X509VerifyResult};
 use x509::extension::{AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, KeyUsage,
                       SubjectAlternativeName, SubjectKeyIdentifier};
 
-fn pkey() -> PKey {
+fn pkey() -> PKey<Private> {
     let rsa = Rsa::generate(2048).unwrap();
     PKey::from_rsa(rsa).unwrap()
 }

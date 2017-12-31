@@ -69,8 +69,9 @@ use std::ptr;
 
 use {cvt, cvt_p};
 use hash::MessageDigest;
-use pkey::{PKeyCtxRef, PKeyRef};
+use pkey::{HasPrivate, HasPublic, PKeyRef};
 use error::ErrorStack;
+use rsa::Padding;
 
 #[cfg(ossl110)]
 use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
@@ -80,8 +81,8 @@ use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_
 /// A type which computes cryptographic signatures of data.
 pub struct Signer<'a> {
     md_ctx: *mut ffi::EVP_MD_CTX,
-    pkey_ctx: *mut ffi::EVP_PKEY_CTX,
-    pkey_pd: PhantomData<&'a PKeyRef>,
+    pctx: *mut ffi::EVP_PKEY_CTX,
+    _p: PhantomData<&'a ()>,
 }
 
 impl<'a> Drop for Signer<'a> {
@@ -99,7 +100,10 @@ impl<'a> Signer<'a> {
     /// OpenSSL documentation at [`EVP_DigestSignInit`].
     ///
     /// [`EVP_DigestSignInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignInit.html
-    pub fn new(type_: MessageDigest, pkey: &'a PKeyRef) -> Result<Signer<'a>, ErrorStack> {
+    pub fn new<T>(type_: MessageDigest, pkey: &'a PKeyRef<T>) -> Result<Signer<'a>, ErrorStack>
+    where
+        T: HasPrivate,
+    {
         unsafe {
             ffi::init();
 
@@ -121,20 +125,39 @@ impl<'a> Signer<'a> {
 
             Ok(Signer {
                 md_ctx: ctx,
-                pkey_ctx: pctx,
-                pkey_pd: PhantomData,
+                pctx,
+                _p: PhantomData,
             })
         }
     }
 
-    /// Returns a shared reference to the `PKeyCtx` associated with the `Signer`.
-    pub fn pkey_ctx(&self) -> &PKeyCtxRef {
-        unsafe { PKeyCtxRef::from_ptr(self.pkey_ctx) }
+    /// Returns the RSA padding mode in use.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to `EVP_PKEY_CTX_get_rsa_padding`.
+    pub fn rsa_padding(&self) -> Result<Padding, ErrorStack> {
+        unsafe {
+            let mut pad = 0;
+            cvt(ffi::EVP_PKEY_CTX_get_rsa_padding(self.pctx, &mut pad))
+                .map(|_| Padding::from_raw(pad))
+        }
     }
 
-    /// Returns a mutable reference to the `PKeyCtx` associated with the `Signer`.
-    pub fn pkey_ctx_mut(&mut self) -> &mut PKeyCtxRef {
-        unsafe { PKeyCtxRef::from_ptr_mut(self.pkey_ctx) }
+    /// Sets the RSA padding mode.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_padding`].
+    ///
+    /// [`EVP_PKEY_CTX_set_rsa_padding`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_padding.html
+    pub fn set_rsa_padding(&mut self, padding: Padding) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(
+                self.pctx,
+                padding.as_raw(),
+            )).map(|_| ())
+        }
     }
 
     /// Feeds more data into the `Signer`.
@@ -217,8 +240,8 @@ impl<'a> Write for Signer<'a> {
 
 pub struct Verifier<'a> {
     md_ctx: *mut ffi::EVP_MD_CTX,
-    pkey_ctx: *mut ffi::EVP_PKEY_CTX,
-    pkey_pd: PhantomData<&'a PKeyRef>,
+    pctx: *mut ffi::EVP_PKEY_CTX,
+    pkey_pd: PhantomData<&'a ()>,
 }
 
 impl<'a> Drop for Verifier<'a> {
@@ -237,7 +260,10 @@ impl<'a> Verifier<'a> {
     /// OpenSSL documentation at [`EVP_DigestVerifyInit`].
     ///
     /// [`EVP_DigestVerifyInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestVerifyInit.html
-    pub fn new(type_: MessageDigest, pkey: &'a PKeyRef) -> Result<Verifier<'a>, ErrorStack> {
+    pub fn new<T>(type_: MessageDigest, pkey: &'a PKeyRef<T>) -> Result<Verifier<'a>, ErrorStack>
+    where
+        T: HasPublic,
+    {
         unsafe {
             ffi::init();
 
@@ -259,20 +285,39 @@ impl<'a> Verifier<'a> {
 
             Ok(Verifier {
                 md_ctx: ctx,
-                pkey_ctx: pctx,
+                pctx,
                 pkey_pd: PhantomData,
             })
         }
     }
 
-    /// Returns a shared reference to the `PKeyCtx` associated with the `Verifier`.
-    pub fn pkey_ctx(&self) -> &PKeyCtxRef {
-        unsafe { PKeyCtxRef::from_ptr(self.pkey_ctx) }
+    /// Returns the RSA padding mode in use.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to `EVP_PKEY_CTX_get_rsa_padding`.
+    pub fn rsa_padding(&self) -> Result<Padding, ErrorStack> {
+        unsafe {
+            let mut pad = 0;
+            cvt(ffi::EVP_PKEY_CTX_get_rsa_padding(self.pctx, &mut pad))
+                .map(|_| Padding::from_raw(pad))
+        }
     }
 
-    /// Returns a mutable reference to the `PKeyCtx` associated with the `Verifier`.
-    pub fn pkey_ctx_mut(&mut self) -> &mut PKeyCtxRef {
-        unsafe { PKeyCtxRef::from_ptr_mut(self.pkey_ctx) }
+    /// Sets the RSA padding mode.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_padding`].
+    ///
+    /// [`EVP_PKEY_CTX_set_rsa_padding`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_padding.html
+    pub fn set_rsa_padding(&mut self, padding: Padding) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(
+                self.pctx,
+                padding.as_raw(),
+            )).map(|_| ())
+        }
     }
 
     /// Feeds more data into the `Verifier`.
@@ -368,11 +413,8 @@ mod test {
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut signer = Signer::new(MessageDigest::sha256(), &pkey).unwrap();
-        assert_eq!(signer.pkey_ctx_mut().rsa_padding().unwrap(), Padding::PKCS1);
-        signer
-            .pkey_ctx_mut()
-            .set_rsa_padding(Padding::PKCS1)
-            .unwrap();
+        assert_eq!(signer.rsa_padding().unwrap(), Padding::PKCS1);
+        signer.set_rsa_padding(Padding::PKCS1).unwrap();
         signer.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         let result = signer.sign_to_vec().unwrap();
 
@@ -386,10 +428,7 @@ mod test {
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
-        assert_eq!(
-            verifier.pkey_ctx_mut().rsa_padding().unwrap(),
-            Padding::PKCS1
-        );
+        assert_eq!(verifier.rsa_padding().unwrap(), Padding::PKCS1);
         verifier.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         assert!(verifier.verify(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
     }
@@ -403,7 +442,9 @@ mod test {
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
         verifier.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         verifier.update(b"foobar").unwrap();
-        assert!(!verifier.verify(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
+        assert!(!verifier
+            .verify(&Vec::from_hex(SIGNATURE).unwrap())
+            .unwrap());
     }
 
     #[test]

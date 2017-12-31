@@ -35,6 +35,7 @@ pub mod bn;
 #[cfg(not(libressl))]
 pub mod cms;
 pub mod conf;
+pub mod derive;
 pub mod dh;
 pub mod dsa;
 pub mod ec;

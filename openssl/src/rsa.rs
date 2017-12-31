@@ -3,11 +3,12 @@ use std::fmt;
 use std::ptr;
 use std::mem;
 use libc::c_int;
-use foreign_types::ForeignTypeRef;
+use foreign_types::{ForeignType, ForeignTypeRef};
 
 use {cvt, cvt_n, cvt_p};
 use bn::{BigNum, BigNumRef};
 use error::ErrorStack;
+use pkey::{HasPrivate, HasPublic, Private, Public};
 
 /// Type of encryption padding to use.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -27,34 +28,21 @@ impl Padding {
     pub const PKCS1_OAEP: Padding = Padding(ffi::RSA_PKCS1_OAEP_PADDING);
 }
 
-foreign_type_and_impl_send_sync! {
+generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::RSA;
     fn drop = ffi::RSA_free;
 
-    pub struct Rsa;
-    pub struct RsaRef;
+    pub struct Rsa<T>;
+    pub struct RsaRef<T>;
 }
 
-impl RsaRef {
+impl<T> RsaRef<T>
+where
+    T: HasPrivate,
+{
     // FIXME these need to specify output format
     private_key_to_pem!(ffi::PEM_write_bio_RSAPrivateKey);
-    public_key_to_pem!(ffi::PEM_write_bio_RSA_PUBKEY);
-
     private_key_to_der!(ffi::i2d_RSAPrivateKey);
-    public_key_to_der!(ffi::i2d_RSA_PUBKEY);
-
-    to_der_inner!(
-        /// Serializes the public key to DER-encoded PKCS#1.
-        public_key_to_der_pkcs1,
-        ffi::i2d_RSAPublicKey
-    );
-
-    pub fn size(&self) -> u32 {
-        unsafe {
-            assert!(self.n().is_some());
-            ffi::RSA_size(self.as_ptr()) as u32
-        }
-    }
 
     /// Decrypts data using the private key, returning the number of decrypted bytes.
     ///
@@ -68,7 +56,6 @@ impl RsaRef {
         to: &mut [u8],
         padding: Padding,
     ) -> Result<usize, ErrorStack> {
-        assert!(self.d().is_some(), "private components missing");
         assert!(from.len() <= i32::max_value() as usize);
         assert!(to.len() >= self.size() as usize);
 
@@ -96,7 +83,6 @@ impl RsaRef {
         to: &mut [u8],
         padding: Padding,
     ) -> Result<usize, ErrorStack> {
-        assert!(self.d().is_some(), "private components missing");
         assert!(from.len() <= i32::max_value() as usize);
         assert!(to.len() >= self.size() as usize);
 
@@ -112,88 +98,10 @@ impl RsaRef {
         }
     }
 
-    /// Decrypts data using the public key, returning the number of decrypted bytes.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `to` is smaller than `self.size()`.
-    pub fn public_decrypt(
-        &self,
-        from: &[u8],
-        to: &mut [u8],
-        padding: Padding,
-    ) -> Result<usize, ErrorStack> {
-        assert!(from.len() <= i32::max_value() as usize);
-        assert!(to.len() >= self.size() as usize);
-
-        unsafe {
-            let len = cvt_n(ffi::RSA_public_decrypt(
-                from.len() as c_int,
-                from.as_ptr(),
-                to.as_mut_ptr(),
-                self.as_ptr(),
-                padding.0,
-            ))?;
-            Ok(len as usize)
-        }
-    }
-
-    /// Encrypts data using the public key, returning the number of encrypted bytes.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `to` is smaller than `self.size()`.
-    pub fn public_encrypt(
-        &self,
-        from: &[u8],
-        to: &mut [u8],
-        padding: Padding,
-    ) -> Result<usize, ErrorStack> {
-        assert!(from.len() <= i32::max_value() as usize);
-        assert!(to.len() >= self.size() as usize);
-
-        unsafe {
-            let len = cvt_n(ffi::RSA_public_encrypt(
-                from.len() as c_int,
-                from.as_ptr(),
-                to.as_mut_ptr(),
-                self.as_ptr(),
-                padding.0,
-            ))?;
-            Ok(len as usize)
-        }
-    }
-
-    pub fn n(&self) -> Option<&BigNumRef> {
-        unsafe {
-            let n = compat::key(self.as_ptr())[0];
-            if n.is_null() {
-                None
-            } else {
-                Some(BigNumRef::from_ptr(n as *mut _))
-            }
-        }
-    }
-
-    pub fn d(&self) -> Option<&BigNumRef> {
+    pub fn d(&self) -> &BigNumRef {
         unsafe {
             let d = compat::key(self.as_ptr())[2];
-            if d.is_null() {
-                None
-            } else {
-                Some(BigNumRef::from_ptr(d as *mut _))
-            }
-        }
-    }
-
-    pub fn e(&self) -> Option<&BigNumRef> {
-        unsafe {
-            let e = compat::key(self.as_ptr())[1];
-            if e.is_null() {
-                None
-            } else {
-                Some(BigNumRef::from_ptr(e as *mut _))
-            }
+            BigNumRef::from_ptr(d as *mut _)
         }
     }
 
@@ -253,12 +161,94 @@ impl RsaRef {
     }
 }
 
-impl Rsa {
-    /// only useful for associating the key material directly with the key, it's safer to use
-    /// the supplied load and save methods for DER formatted keys.
-    pub fn from_public_components(n: BigNum, e: BigNum) -> Result<Rsa, ErrorStack> {
+impl<T> RsaRef<T>
+where
+    T: HasPublic,
+{
+    public_key_to_pem!(ffi::PEM_write_bio_RSA_PUBKEY);
+    public_key_to_der!(ffi::i2d_RSA_PUBKEY);
+
+    to_der_inner!(
+        /// Serializes the public key to DER-encoded PKCS#1.
+        public_key_to_der_pkcs1,
+        ffi::i2d_RSAPublicKey
+    );
+
+    pub fn size(&self) -> u32 {
+        unsafe { ffi::RSA_size(self.as_ptr()) as u32 }
+    }
+
+    /// Decrypts data using the public key, returning the number of decrypted bytes.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `to` is smaller than `self.size()`.
+    pub fn public_decrypt(
+        &self,
+        from: &[u8],
+        to: &mut [u8],
+        padding: Padding,
+    ) -> Result<usize, ErrorStack> {
+        assert!(from.len() <= i32::max_value() as usize);
+        assert!(to.len() >= self.size() as usize);
+
         unsafe {
-            let rsa = Rsa(cvt_p(ffi::RSA_new())?);
+            let len = cvt_n(ffi::RSA_public_decrypt(
+                from.len() as c_int,
+                from.as_ptr(),
+                to.as_mut_ptr(),
+                self.as_ptr(),
+                padding.0,
+            ))?;
+            Ok(len as usize)
+        }
+    }
+
+    /// Encrypts data using the public key, returning the number of encrypted bytes.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `to` is smaller than `self.size()`.
+    pub fn public_encrypt(
+        &self,
+        from: &[u8],
+        to: &mut [u8],
+        padding: Padding,
+    ) -> Result<usize, ErrorStack> {
+        assert!(from.len() <= i32::max_value() as usize);
+        assert!(to.len() >= self.size() as usize);
+
+        unsafe {
+            let len = cvt_n(ffi::RSA_public_encrypt(
+                from.len() as c_int,
+                from.as_ptr(),
+                to.as_mut_ptr(),
+                self.as_ptr(),
+                padding.0,
+            ))?;
+            Ok(len as usize)
+        }
+    }
+
+    pub fn n(&self) -> &BigNumRef {
+        unsafe {
+            let n = compat::key(self.as_ptr())[0];
+            BigNumRef::from_ptr(n as *mut _)
+        }
+    }
+
+    pub fn e(&self) -> &BigNumRef {
+        unsafe {
+            let e = compat::key(self.as_ptr())[1];
+            BigNumRef::from_ptr(e as *mut _)
+        }
+    }
+}
+
+impl Rsa<Public> {
+    pub fn from_public_components(n: BigNum, e: BigNum) -> Result<Rsa<Public>, ErrorStack> {
+        unsafe {
+            let rsa = Rsa::from_ptr(cvt_p(ffi::RSA_new())?);
             cvt(compat::set_key(
                 rsa.0,
                 n.as_ptr(),
@@ -270,6 +260,18 @@ impl Rsa {
         }
     }
 
+    public_key_from_pem!(Rsa<Public>, ffi::PEM_read_bio_RSA_PUBKEY);
+    public_key_from_der!(Rsa<Public>, ffi::d2i_RSA_PUBKEY);
+
+    from_der_inner!(
+        /// Deserializes a public key from DER-encoded PKCS#1 data.
+        public_key_from_der_pkcs1,
+        Rsa<Public>,
+        ffi::d2i_RSAPublicKey
+    );
+}
+
+impl Rsa<Private> {
     pub fn from_private_components(
         n: BigNum,
         e: BigNum,
@@ -279,9 +281,9 @@ impl Rsa {
         dp: BigNum,
         dq: BigNum,
         qi: BigNum,
-    ) -> Result<Rsa, ErrorStack> {
+    ) -> Result<Rsa<Private>, ErrorStack> {
         unsafe {
-            let rsa = Rsa(cvt_p(ffi::RSA_new())?);
+            let rsa = Rsa::from_ptr(cvt_p(ffi::RSA_new())?);
             cvt(compat::set_key(rsa.0, n.as_ptr(), e.as_ptr(), d.as_ptr()))?;
             mem::forget((n, e, d));
             cvt(compat::set_factors(rsa.0, p.as_ptr(), q.as_ptr()))?;
@@ -300,10 +302,10 @@ impl Rsa {
     /// Generates a public/private key pair with the specified size.
     ///
     /// The public exponent will be 65537.
-    pub fn generate(bits: u32) -> Result<Rsa, ErrorStack> {
+    pub fn generate(bits: u32) -> Result<Rsa<Private>, ErrorStack> {
         ffi::init();
         unsafe {
-            let rsa = Rsa(cvt_p(ffi::RSA_new())?);
+            let rsa = Rsa::from_ptr(cvt_p(ffi::RSA_new())?);
             let e = BigNum::from_u32(ffi::RSA_F4 as u32)?;
             cvt(ffi::RSA_generate_key_ex(
                 rsa.0,
@@ -316,20 +318,11 @@ impl Rsa {
     }
 
     // FIXME these need to identify input formats
-    private_key_from_pem!(Rsa, ffi::PEM_read_bio_RSAPrivateKey);
-    private_key_from_der!(Rsa, ffi::d2i_RSAPrivateKey);
-    public_key_from_pem!(Rsa, ffi::PEM_read_bio_RSA_PUBKEY);
-    public_key_from_der!(Rsa, ffi::d2i_RSA_PUBKEY);
-
-    from_der_inner!(
-        /// Deserializes a public key from DER-encoded PKCS#1 data.
-        public_key_from_der_pkcs1,
-        Rsa,
-        ffi::d2i_RSAPublicKey
-    );
+    private_key_from_pem!(Rsa<Private>, ffi::PEM_read_bio_RSAPrivateKey);
+    private_key_from_der!(Rsa<Private>, ffi::d2i_RSAPrivateKey);
 }
 
-impl fmt::Debug for Rsa {
+impl<T> fmt::Debug for Rsa<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Rsa")
     }

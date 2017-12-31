@@ -1723,6 +1723,7 @@ extern "C" {
     pub fn EC_KEY_new() -> *mut EC_KEY;
     pub fn EC_KEY_new_by_curve_name(nid: c_int) -> *mut EC_KEY;
     pub fn EC_KEY_dup(key: *const EC_KEY) -> *mut EC_KEY;
+    pub fn EC_KEY_up_ref(key: *mut EC_KEY) -> c_int;
     pub fn EC_KEY_set_group(key: *mut EC_KEY, group: *const EC_GROUP) -> c_int;
     pub fn EC_KEY_get0_group(key: *const EC_KEY) -> *const EC_GROUP;
     pub fn EC_KEY_set_public_key(key: *mut EC_KEY, key: *const EC_POINT) -> c_int;
