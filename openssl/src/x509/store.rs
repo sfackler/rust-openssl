@@ -6,21 +6,40 @@
 //! # Example
 //!
 //! ```rust
+//!
 //! extern crate openssl;
-//! 
-//! use openssl::x509::X509;
+//!
 //! use openssl::x509::store::{X509StoreBuilder, X509Store};
+//! use openssl::x509::{X509, X509Name};
+//! use openssl::pkey::PKey;
+//! use openssl::hash::MessageDigest;
+//! use openssl::rsa::Rsa;
+//! use openssl::nid::Nid;
 //!
 //! fn main() {
-//!     let cert = include_bytes!("cert.pem");
-//!     let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+//!     let rsa = Rsa::generate(2048).unwrap();
+//!     let pkey = PKey::from_rsa(rsa).unwrap();
+//!
+//!     let mut name = X509Name::builder().unwrap();
+//!     name.append_entry_by_nid(Nid::COMMONNAME, "foobar.com").unwrap();
+//!     let name = name.build();
+//!
+//!     let mut builder = X509::builder().unwrap();
+//!     builder.set_version(2).unwrap();
+//!     builder.set_subject_name(&name).unwrap();
+//!     builder.set_issuer_name(&name).unwrap();
+//!     builder.set_pubkey(&pkey).unwrap();
+//!     builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+//! 
+//!     let certificate: X509 = builder.build();
 //!
 //!     let mut builder = X509StoreBuilder::new().unwrap();
-//!     let _ = builder.add_cert(cert);
+//!     let _ = builder.add_cert(certificate);
 //!
 //!     let store: X509Store = builder.build();
 //! }
 //! ```
+
 use ffi;
 use foreign_types::ForeignTypeRef;
 use std::mem;

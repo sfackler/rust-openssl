@@ -11,17 +11,30 @@
 //!
 //! ```rust
 //!
-//! extern crate openssl; 
+//! extern crate openssl;
 //!
-//! use openssl::x509::X509; 
+//! use openssl::x509::{X509, X509Name};
+//! use openssl::pkey::PKey;
+//! use openssl::hash::MessageDigest;
+//! use openssl::rsa::Rsa;
+//! use openssl::nid::Nid;
 //!
 //! fn main() {
-//!     let cert = include_bytes!("cert_with_alt_name.pem");
-//!     let cert = X509::from_pem(cert).unwrap();
+//!     let rsa = Rsa::generate(2048).unwrap();
+//!     let pkey = PKey::from_rsa(rsa).unwrap();
 //!
-//!     let subject_alt_names = cert.subject_alt_names().unwrap();
-//!     let mut san_iter = subject_alt_names.iter();
-//!     println!("{:?}", san_iter.next().unwrap().dnsname().unwrap());
+//!     let mut name = X509Name::builder().unwrap();
+//!     name.append_entry_by_nid(Nid::COMMONNAME, "foobar.com").unwrap();
+//!     let name = name.build();
+//!
+//!     let mut builder = X509::builder().unwrap();
+//!     builder.set_version(2).unwrap();
+//!     builder.set_subject_name(&name).unwrap();
+//!     builder.set_issuer_name(&name).unwrap();
+//!     builder.set_pubkey(&pkey).unwrap();
+//!     builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+//!
+//!     let certificate: X509 = builder.build();
 //! }
 //! ```
 
