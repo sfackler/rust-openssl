@@ -382,7 +382,7 @@ unsafe fn EVP_DigestVerifyFinal(
 
 #[cfg(test)]
 mod test {
-    use hex::{FromHex, ToHex};
+    use hex::{self, FromHex};
     use std::iter;
 
     use hash::MessageDigest;
@@ -418,7 +418,7 @@ mod test {
         signer.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         let result = signer.sign_to_vec().unwrap();
 
-        assert_eq!(result.to_hex(), SIGNATURE);
+        assert_eq!(hex::encode(result), SIGNATURE);
     }
 
     #[test]

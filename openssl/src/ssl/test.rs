@@ -19,8 +19,8 @@ use hash::MessageDigest;
 use ocsp::{OcspResponse, OcspResponseStatus};
 use ssl;
 use ssl::{Error, HandshakeError, ShutdownResult, Ssl, SslAcceptor, SslConnector, SslContext,
-          SslMethod, SslStream, SslVerifyMode, StatusType};
-use x509::{X509, X509Filetype, X509Name, X509StoreContext, X509VerifyResult};
+          SslFiletype, SslMethod, SslStream, SslVerifyMode, StatusType};
+use x509::{X509, X509Name, X509StoreContext, X509VerifyResult};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::verify::X509CheckFlags;
 use pkey::PKey;
@@ -347,9 +347,9 @@ fn test_write_hits_stream() {
 
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_verify(SslVerifyMode::PEER);
-    ctx.set_certificate_file(&Path::new("test/cert.pem"), X509Filetype::PEM)
+    ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
         .unwrap();
-    ctx.set_private_key_file(&Path::new("test/key.pem"), X509Filetype::PEM)
+    ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
         .unwrap();
     let stream = listener.accept().unwrap().0;
     let mut stream = Ssl::new(&ctx.build()).unwrap().accept(stream).unwrap();
@@ -552,10 +552,10 @@ fn test_alpn_server_advertise_multiple() {
             ssl::select_next_proto(b"\x08http/1.1\x08spdy/3.1", client).ok_or(ssl::AlpnError::NOACK)
         });
         assert!(
-            ctx.set_certificate_file(&Path::new("test/cert.pem"), X509Filetype::PEM)
+            ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
                 .is_ok()
         );
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509Filetype::PEM)
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
         ctx.build()
     };
@@ -595,10 +595,10 @@ fn test_alpn_server_select_none_fatal() {
                 .ok_or(ssl::AlpnError::ALERT_FATAL)
         });
         assert!(
-            ctx.set_certificate_file(&Path::new("test/cert.pem"), X509Filetype::PEM)
+            ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
                 .is_ok()
         );
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509Filetype::PEM)
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
         ctx.build()
     };
@@ -628,10 +628,10 @@ fn test_alpn_server_select_none() {
             ssl::select_next_proto(b"\x08http/1.1\x08spdy/3.1", client).ok_or(ssl::AlpnError::NOACK)
         });
         assert!(
-            ctx.set_certificate_file(&Path::new("test/cert.pem"), X509Filetype::PEM)
+            ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
                 .is_ok()
         );
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509Filetype::PEM)
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
         ctx.build()
     };
@@ -962,9 +962,9 @@ fn shutdown() {
     thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509Filetype::PEM)
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
             .unwrap();
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509Filetype::PEM)
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
         let ssl = Ssl::new(&ctx.build()).unwrap();
         let mut stream = ssl.accept(stream).unwrap();
@@ -1020,9 +1020,9 @@ fn tmp_dh_callback() {
     thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509Filetype::PEM)
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
             .unwrap();
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509Filetype::PEM)
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
         ctx.set_tmp_dh_callback(|_, _, _| {
             CALLED_BACK.store(true, Ordering::SeqCst);
@@ -1057,9 +1057,9 @@ fn tmp_ecdh_callback() {
     thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509Filetype::PEM)
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
             .unwrap();
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509Filetype::PEM)
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
         ctx.set_tmp_ecdh_callback(|_, _, _| {
             CALLED_BACK.store(true, Ordering::SeqCst);
@@ -1088,9 +1088,9 @@ fn tmp_dh_callback_ssl() {
     thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509Filetype::PEM)
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
             .unwrap();
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509Filetype::PEM)
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
         let mut ssl = Ssl::new(&ctx.build()).unwrap();
         ssl.set_tmp_dh_callback(|_, _, _| {
@@ -1125,9 +1125,9 @@ fn tmp_ecdh_callback_ssl() {
     thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509Filetype::PEM)
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
             .unwrap();
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509Filetype::PEM)
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
         let mut ssl = Ssl::new(&ctx.build()).unwrap();
         ssl.set_tmp_ecdh_callback(|_, _, _| {
@@ -1180,9 +1180,9 @@ fn status_callbacks() {
     let guard = thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_certificate_file(&Path::new("test/cert.pem"), X509Filetype::PEM)
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
             .unwrap();
-        ctx.set_private_key_file(&Path::new("test/key.pem"), X509Filetype::PEM)
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
         ctx.set_status_callback(|ssl| {
             CALLED_BACK_SERVER.store(true, Ordering::SeqCst);

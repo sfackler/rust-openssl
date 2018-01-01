@@ -26,17 +26,14 @@
 //! To accept connections as a server from remote clients:
 //!
 //! ```no_run
-//! use openssl::ssl::{SslMethod, SslAcceptor, SslStream};
-//! use openssl::x509::X509Filetype;
-//! use std::fs::File;
-//! use std::io::{Read, Write};
+//! use openssl::ssl::{SslMethod, SslAcceptor, SslStream, SslFiletype};
 //! use std::net::{TcpListener, TcpStream};
 //! use std::sync::Arc;
 //! use std::thread;
 //!
 //!
 //! let mut acceptor = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
-//! acceptor.set_private_key_file("key.pem", X509Filetype::PEM).unwrap();
+//! acceptor.set_private_key_file("key.pem", SslFiletype::PEM).unwrap();
 //! acceptor.set_certificate_chain_file("certs.pem").unwrap();
 //! acceptor.check_private_key().unwrap();
 //! let acceptor = Arc::new(acceptor.build());
@@ -86,7 +83,7 @@ use dh::{Dh, DhRef};
 use ec::EcKeyRef;
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
 use ec::EcKey;
-use x509::{X509, X509Filetype, X509Name, X509Ref, X509StoreContextRef, X509VerifyResult};
+use x509::{X509, X509Name, X509Ref, X509StoreContextRef, X509VerifyResult};
 use x509::store::{X509StoreBuilderRef, X509StoreRef};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use x509::store::X509Store;
@@ -312,6 +309,32 @@ bitflags! {
         /// This should be paired with `SSL_VERIFY_PEER`. It has no effect on the client side.
         const FAIL_IF_NO_PEER_CERT = ::ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
     }
+}
+
+/// An identifier of the format of a certificate or key file.
+#[derive(Copy, Clone)]
+pub struct SslFiletype(c_int);
+
+impl SslFiletype {
+    /// Constructs an `SslFiletype` from a raw OpenSSL value.
+    pub fn from_raw(raw: c_int) -> SslFiletype {
+        SslFiletype(raw)
+    }
+
+    /// Returns the raw OpenSSL value represented by this type.
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
+
+    /// The PEM format.
+    ///
+    /// This corresponds to `SSL_FILETYPE_PEM`.
+    pub const PEM: SslFiletype = SslFiletype(ffi::SSL_FILETYPE_PEM);
+
+    /// The ASN1 format.
+    ///
+    /// This corresponds to `SSL_FILETYPE_ASN1`.
+    pub const ASN1: SslFiletype = SslFiletype(ffi::SSL_FILETYPE_ASN1);
 }
 
 /// An identifier of a certificate status type.
@@ -778,7 +801,7 @@ impl SslContextBuilder {
     pub fn set_certificate_file<P: AsRef<Path>>(
         &mut self,
         file: P,
-        file_type: X509Filetype,
+        file_type: SslFiletype,
     ) -> Result<(), ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
         unsafe {
@@ -847,7 +870,7 @@ impl SslContextBuilder {
     pub fn set_private_key_file<P: AsRef<Path>>(
         &mut self,
         file: P,
-        file_type: X509Filetype,
+        file_type: SslFiletype,
     ) -> Result<(), ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
         unsafe {
@@ -2041,9 +2064,10 @@ impl Ssl {
                 ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => Err(HandshakeError::WouldBlock(
                     MidHandshakeSslStream { stream, error },
                 )),
-                _ => Err(HandshakeError::Failure(
-                    MidHandshakeSslStream { stream, error },
-                )),
+                _ => Err(HandshakeError::Failure(MidHandshakeSslStream {
+                    stream,
+                    error,
+                })),
             }
         }
     }
@@ -2072,9 +2096,10 @@ impl Ssl {
                 ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => Err(HandshakeError::WouldBlock(
                     MidHandshakeSslStream { stream, error },
                 )),
-                _ => Err(HandshakeError::Failure(
-                    MidHandshakeSslStream { stream, error },
-                )),
+                _ => Err(HandshakeError::Failure(MidHandshakeSslStream {
+                    stream,
+                    error,
+                })),
             }
         }
     }
@@ -2319,10 +2344,8 @@ impl<S: Read + Write> Read for SslStream<S> {
                 }
                 Err(ref e) if e.code() == ErrorCode::WANT_READ && e.io_error().is_none() => {}
                 Err(e) => {
-                    return Err(
-                        e.into_io_error()
-                            .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)),
-                    )
+                    return Err(e.into_io_error()
+                        .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)))
                 }
             }
         }
@@ -2336,10 +2359,8 @@ impl<S: Read + Write> Write for SslStream<S> {
                 Ok(n) => return Ok(n),
                 Err(ref e) if e.code() == ErrorCode::WANT_READ && e.io_error().is_none() => {}
                 Err(e) => {
-                    return Err(
-                        e.into_io_error()
-                            .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)),
-                    )
+                    return Err(e.into_io_error()
+                        .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)))
                 }
             }
         }

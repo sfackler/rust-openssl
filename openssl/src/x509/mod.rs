@@ -80,23 +80,6 @@ pub mod store;
 #[cfg(test)]
 mod tests;
 
-/// The file type of the encoded `X509` certificate.
-pub struct X509Filetype(c_int);
-
-impl X509Filetype {
-    /// Returns the raw OpenSSL value represented by this type.
-    pub fn as_raw(&self) -> c_int {
-        self.0
-    }
-
-    /// `PEM` encoded `X509` certificate.
-    pub const PEM: X509Filetype = X509Filetype(ffi::X509_FILETYPE_PEM);
-    /// `ASN.1` encoded `X509` certificate.
-    pub const ASN1: X509Filetype = X509Filetype(ffi::X509_FILETYPE_ASN1);
-    /// Default encoded `X509` certificate.
-    pub const DEFAULT: X509Filetype = X509Filetype(ffi::X509_FILETYPE_DEFAULT);
-}
-
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE_CTX;
     fn drop = ffi::X509_STORE_CTX_free;
