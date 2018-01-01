@@ -186,7 +186,7 @@ impl Pkcs12Builder {
 #[cfg(test)]
 mod test {
     use hash::MessageDigest;
-    use hex::ToHex;
+    use hex;
 
     use asn1::Asn1Time;
     use rsa::Rsa;
@@ -204,21 +204,19 @@ mod test {
         let parsed = pkcs12.parse("mypass").unwrap();
 
         assert_eq!(
-            parsed
+            hex::encode(parsed
                 .cert
                 .fingerprint(MessageDigest::sha1())
-                .unwrap()
-                .to_hex(),
+                .unwrap()),
             "59172d9313e84459bcff27f967e79e6e9217e584"
         );
 
         let chain = parsed.chain.unwrap();
         assert_eq!(chain.len(), 1);
         assert_eq!(
-            chain[0]
+            hex::encode(chain[0]
                 .fingerprint(MessageDigest::sha1())
-                .unwrap()
-                .to_hex(),
+                .unwrap()),
             "c0cbdf7cdd03c9773e5468e1f6d2da7d5cbb1875"
         );
     }
