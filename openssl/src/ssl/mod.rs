@@ -488,16 +488,7 @@ pub fn select_next_proto<'a>(server: &[u8], client: &'a [u8]) -> Option<&'a [u8]
 }
 
 /// A builder for `SslContext`s.
-pub struct SslContextBuilder(*mut ffi::SSL_CTX);
-
-unsafe impl Sync for SslContextBuilder {}
-unsafe impl Send for SslContextBuilder {}
-
-impl Drop for SslContextBuilder {
-    fn drop(&mut self) {
-        unsafe { ffi::SSL_CTX_free(self.as_ptr()) }
-    }
-}
+pub struct SslContextBuilder(SslContext);
 
 impl SslContextBuilder {
     /// Creates a new `SslContextBuilder`.
@@ -516,12 +507,12 @@ impl SslContextBuilder {
 
     /// Creates an `SslContextBuilder` from a pointer to a raw OpenSSL value.
     pub unsafe fn from_ptr(ctx: *mut ffi::SSL_CTX) -> SslContextBuilder {
-        SslContextBuilder(ctx)
+        SslContextBuilder(SslContext::from_ptr(ctx))
     }
 
     /// Returns a pointer to the raw OpenSSL value.
     pub fn as_ptr(&self) -> *mut ffi::SSL_CTX {
-        self.0
+        self.0.as_ptr()
     }
 
     /// Configures the certificate verification method for new connections.
@@ -896,10 +887,11 @@ impl SslContextBuilder {
 
     /// Sets the list of supported ciphers.
     ///
-    /// See `man 1 ciphers` for details on the format.
+    /// See [`ciphers`] for details on the format.
     ///
     /// This corresponds to [`SSL_CTX_set_cipher_list`].
     ///
+    /// [`ciphers`]: https://www.openssl.org/docs/man1.1.0/apps/ciphers.html
     /// [`SSL_CTX_set_cipher_list`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get_client_ciphers.html
     pub fn set_cipher_list(&mut self, cipher_list: &str) -> Result<(), ErrorStack> {
         let cipher_list = CString::new(cipher_list).unwrap();
@@ -1133,13 +1125,11 @@ impl SslContextBuilder {
 
     /// Consumes the builder, returning a new `SslContext`.
     pub fn build(self) -> SslContext {
-        let ctx = SslContext(self.0);
-        mem::forget(self);
-        ctx
+        self.0
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::SSL_CTX;
     fn drop = ffi::SSL_CTX_free;
 
@@ -1154,9 +1144,6 @@ foreign_type! {
     /// [`SslContext`]: struct.SslContext.html
     pub struct SslContextRef;
 }
-
-unsafe impl Send for SslContext {}
-unsafe impl Sync for SslContext {}
 
 impl Clone for SslContext {
     fn clone(&self) -> Self {

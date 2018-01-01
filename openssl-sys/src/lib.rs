@@ -2428,6 +2428,7 @@ extern "C" {
     pub fn SSL_CTX_check_private_key(ctx: *const SSL_CTX) -> c_int;
     pub fn SSL_CTX_set_client_CA_list(ctx: *mut SSL_CTX, list: *mut stack_st_X509_NAME);
     pub fn SSL_CTX_get_cert_store(ctx: *const SSL_CTX) -> *mut X509_STORE;
+    // FIXME should take an option
     pub fn SSL_CTX_set_tmp_dh_callback(
         ctx: *mut SSL_CTX,
         dh: unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut DH,

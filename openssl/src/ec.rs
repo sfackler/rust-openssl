@@ -698,9 +698,7 @@ impl EcKey<Private> {
                 .and_then(|key| {
                     cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key)
                 })
-                .and_then(|key| {
-                    cvt(ffi::EC_KEY_generate_key(key.as_ptr())).map(|_| key)
-                })
+                .and_then(|key| cvt(ffi::EC_KEY_generate_key(key.as_ptr())).map(|_| key))
         }
     }
 
@@ -729,7 +727,7 @@ mod test {
     #[test]
     fn generate() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
-        let key = EcKey::generate(&group).unwrap();
+        EcKey::generate(&group).unwrap();
     }
 
     #[test]
