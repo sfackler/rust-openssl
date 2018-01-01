@@ -40,18 +40,6 @@ pub mod store;
 #[cfg(test)]
 mod tests;
 
-pub struct X509Filetype(c_int);
-
-impl X509Filetype {
-    pub fn as_raw(&self) -> c_int {
-        self.0
-    }
-
-    pub const PEM: X509Filetype = X509Filetype(ffi::X509_FILETYPE_PEM);
-    pub const ASN1: X509Filetype = X509Filetype(ffi::X509_FILETYPE_ASN1);
-    pub const DEFAULT: X509Filetype = X509Filetype(ffi::X509_FILETYPE_DEFAULT);
-}
-
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE_CTX;
     fn drop = ffi::X509_STORE_CTX_free;

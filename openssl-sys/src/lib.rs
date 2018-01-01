@@ -1284,6 +1284,9 @@ pub const SSL_OP_NO_DTLSv1_2: c_ulong = 0x08000000;
 pub const SSL_OP_NO_SSL_MASK: c_ulong =
     SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
 
+pub const SSL_FILETYPE_PEM: c_int = X509_FILETYPE_PEM;
+pub const SSL_FILETYPE_ASN1: c_int = X509_FILETYPE_ASN1;
+
 pub const TLSEXT_NAMETYPE_host_name: c_int = 0;
 
 pub const TLSEXT_STATUSTYPE_ocsp: c_int = 1;
