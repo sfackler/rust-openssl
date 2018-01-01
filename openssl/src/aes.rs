@@ -27,7 +27,7 @@
 //! extern crate hex;
 //! use openssl::aes::{AesKey, KeyError, aes_ige};
 //! use openssl::symm::Mode;
-//! use hex::{FromHex, ToHex};
+//! use hex::FromHex;
 //!
 //! fn decrypt() -> Result<(), KeyError> {
 //!   let raw_key = "000102030405060708090A0B0C0D0E0F";
@@ -38,7 +38,7 @@
 //!     let key = AesKey::new_encrypt(&key_as_u8)?;
 //!     let mut output = vec![0u8; cipher_as_u8.len()];
 //!     aes_ige(&cipher_as_u8, &mut output, &key, &mut iv_as_u8, Mode::Encrypt);
-//!     assert_eq!(output.to_hex(), "a6ad974d5cea1d36d2f367980907ed32");
+//!     assert_eq!(hex::encode(output), "a6ad974d5cea1d36d2f367980907ed32");
 //!   }
 //!   Ok(())
 //! }

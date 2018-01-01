@@ -548,7 +548,7 @@ mod tests {
     #[test]
     #[cfg(all(feature = "v110", ossl110))]
     fn scrypt() {
-        use hex::ToHex;
+        use hex;
 
         let pass = "pleaseletmein";
         let salt = "SodiumChloride";
@@ -565,6 +565,6 @@ mod tests {
             0,
             &mut actual,
         ).unwrap();
-        assert_eq!((&actual[..]).to_hex(), expected);
+        assert_eq!(hex::encode(&actual[..]), expected);
     }
 }

@@ -1,4 +1,4 @@
-use hex::{FromHex, ToHex};
+use hex::{self, FromHex};
 
 use asn1::Asn1Time;
 use bn::{BigNum, MsbOption};
@@ -231,17 +231,15 @@ fn test_stack_from_pem() {
 
     assert_eq!(certs.len(), 2);
     assert_eq!(
-        certs[0]
+        hex::encode(certs[0]
             .fingerprint(MessageDigest::sha1())
-            .unwrap()
-            .to_hex(),
+            .unwrap()),
         "59172d9313e84459bcff27f967e79e6e9217e584"
     );
     assert_eq!(
-        certs[1]
+        hex::encode(certs[1]
             .fingerprint(MessageDigest::sha1())
-            .unwrap()
-            .to_hex(),
+            .unwrap()),
         "c0cbdf7cdd03c9773e5468e1f6d2da7d5cbb1875"
     );
 }
@@ -263,7 +261,7 @@ fn signature() {
     let cert = X509::from_pem(cert).unwrap();
     let signature = cert.signature();
     assert_eq!(
-        signature.as_slice().to_hex(),
+        hex::encode(signature.as_slice()),
         "4af607b889790b43470442cfa551cdb8b6d0b0340d2958f76b9e3ef6ad4992230cead6842587f0ecad5\
          78e6e11a221521e940187e3d6652de14e84e82f6671f097cc47932e022add3c0cb54a26bf27fa84c107\
          4971caa6bee2e42d34a5b066c427f2d452038082b8073993399548088429de034fdd589dcfb0dd33be7\

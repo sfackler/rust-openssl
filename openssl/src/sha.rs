@@ -18,7 +18,6 @@
 //! extern crate hex;
 //! 
 //! use openssl::sha;
-//! use hex::ToHex;
 //! 
 //! fn main() {
 //!     let mut hasher = sha::Sha256::new();
@@ -27,7 +26,7 @@
 //!     hasher.update(b"world");
 //! 
 //!     let hash = hasher.finish();
-//!     println!("Hashed \"Hello, world\" to {}", hash.to_hex());
+//!     println!("Hashed \"Hello, world\" to {}", hex::encode(hash));
 //! }
 //! ```
 //!
@@ -40,11 +39,10 @@
 //! extern crate hex;
 //!
 //! use openssl::sha::sha256;
-//! use hex::ToHex;
 //!
 //! fn main() {
 //!     let hash = sha256(b"your data or message");
-//!     println!("Hash = {}", hash.to_hex());
+//!     println!("Hash = {}", hex::encode(hash));
 //! }
 //! ```
 use libc::c_void;
@@ -288,7 +286,7 @@ impl Sha512 {
 
 #[cfg(test)]
 mod test {
-    use hex::ToHex;
+    use hex;
 
     use super::*;
 
@@ -297,7 +295,7 @@ mod test {
         let data = b"abc";
         let expected = "a9993e364706816aba3e25717850c26c9cd0d89d";
 
-        assert_eq!(sha1(data).to_hex(), expected);
+        assert_eq!(hex::encode(sha1(data)), expected);
     }
 
     #[test]
@@ -307,7 +305,7 @@ mod test {
         let mut hasher = Sha1::new();
         hasher.update(b"a");
         hasher.update(b"bc");
-        assert_eq!(hasher.finish().to_hex(), expected);
+        assert_eq!(hex::encode(hasher.finish()), expected);
     }
 
     #[test]
@@ -315,7 +313,7 @@ mod test {
         let data = b"abc";
         let expected = "23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7";
 
-        assert_eq!(sha224(data).to_hex(), expected);
+        assert_eq!(hex::encode(sha224(data)), expected);
     }
 
     #[test]
@@ -325,7 +323,7 @@ mod test {
         let mut hasher = Sha224::new();
         hasher.update(b"a");
         hasher.update(b"bc");
-        assert_eq!(hasher.finish().to_hex(), expected);
+        assert_eq!(hex::encode(hasher.finish()), expected);
     }
 
     #[test]
@@ -333,7 +331,7 @@ mod test {
         let data = b"abc";
         let expected = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 
-        assert_eq!(sha256(data).to_hex(), expected);
+        assert_eq!(hex::encode(sha256(data)), expected);
     }
 
     #[test]
@@ -343,7 +341,7 @@ mod test {
         let mut hasher = Sha256::new();
         hasher.update(b"a");
         hasher.update(b"bc");
-        assert_eq!(hasher.finish().to_hex(), expected);
+        assert_eq!(hex::encode(hasher.finish()), expected);
     }
 
     #[test]
@@ -352,7 +350,7 @@ mod test {
         let expected = "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e\
                         7cc2358baeca134c825a7";
 
-        assert_eq!((&sha384(data)[..]).to_hex(), expected);
+        assert_eq!(hex::encode(&sha384(data)[..]), expected);
     }
 
     #[test]
@@ -363,7 +361,7 @@ mod test {
         let mut hasher = Sha384::new();
         hasher.update(b"a");
         hasher.update(b"bc");
-        assert_eq!((&hasher.finish()[..]).to_hex(), expected);
+        assert_eq!(hex::encode(&hasher.finish()[..]), expected);
     }
 
     #[test]
@@ -372,7 +370,7 @@ mod test {
         let expected = "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274\
                         fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f";
 
-        assert_eq!((&sha512(data)[..]).to_hex(), expected);
+        assert_eq!(hex::encode(&sha512(data)[..]), expected);
     }
 
     #[test]
@@ -383,6 +381,6 @@ mod test {
         let mut hasher = Sha512::new();
         hasher.update(b"a");
         hasher.update(b"bc");
-        assert_eq!((&hasher.finish()[..]).to_hex(), expected);
+        assert_eq!(hex::encode(&hasher.finish()[..]), expected);
     }
 }

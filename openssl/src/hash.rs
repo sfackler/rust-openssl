@@ -265,20 +265,20 @@ pub fn hash(t: MessageDigest, data: &[u8]) -> Result<DigestBytes, ErrorStack> {
 
 #[cfg(test)]
 mod tests {
-    use hex::{FromHex, ToHex};
+    use hex::{self, FromHex};
     use std::io::prelude::*;
 
     use super::*;
 
     fn hash_test(hashtype: MessageDigest, hashtest: &(&str, &str)) {
         let res = hash(hashtype, &Vec::from_hex(hashtest.0).unwrap()).unwrap();
-        assert_eq!(res.to_hex(), hashtest.1);
+        assert_eq!(hex::encode(res), hashtest.1);
     }
 
     fn hash_recycle_test(h: &mut Hasher, hashtest: &(&str, &str)) {
         let _ = h.write_all(&Vec::from_hex(hashtest.0).unwrap()).unwrap();
         let res = h.finish().unwrap();
-        assert_eq!(res.to_hex(), hashtest.1);
+        assert_eq!(hex::encode(res), hashtest.1);
     }
 
     // Test vectors from http://www.nsrl.nist.gov/testdata/
@@ -344,18 +344,18 @@ mod tests {
             let mut h2 = h1.clone();
             h2.write_all(&inp[p..]).unwrap();
             let res = h2.finish().unwrap();
-            assert_eq!(res.to_hex(), md5_tests[i].1);
+            assert_eq!(hex::encode(res), md5_tests[i].1);
         }
         h1.write_all(&inp[p..]).unwrap();
         let res = h1.finish().unwrap();
-        assert_eq!(res.to_hex(), md5_tests[i].1);
+        assert_eq!(hex::encode(res), md5_tests[i].1);
 
         println!("Clone a finished hasher");
         let mut h3 = h1.clone();
         h3.write_all(&Vec::from_hex(md5_tests[i + 1].0).unwrap())
             .unwrap();
         let res = h3.finish().unwrap();
-        assert_eq!(res.to_hex(), md5_tests[i + 1].1);
+        assert_eq!(hex::encode(res), md5_tests[i + 1].1);
     }
 
     #[test]

@@ -615,7 +615,7 @@ use self::compat::*;
 
 #[cfg(test)]
 mod tests {
-    use hex::{FromHex, ToHex};
+    use hex::{self, FromHex};
     use super::*;
 
     // Test vectors from FIPS-197:
@@ -703,7 +703,7 @@ mod tests {
         let count = c.update(&p0, &mut r0).unwrap();
         let rest = c.finalize(&mut r0[count..]).unwrap();
         r0.truncate(count + rest);
-        assert_eq!(r0.to_hex(), c0.to_hex());
+        assert_eq!(hex::encode(&r0), hex::encode(c0));
 
         let mut c = super::Crypter::new(
             super::Cipher::aes_256_ecb(),
@@ -716,7 +716,7 @@ mod tests {
         let count = c.update(&r0, &mut p1).unwrap();
         let rest = c.finalize(&mut p1[count..]).unwrap();
         p1.truncate(count + rest);
-        assert_eq!(p1.to_hex(), p0.to_hex());
+        assert_eq!(hex::encode(p1), hex::encode(p0));
     }
 
     #[test]
@@ -818,8 +818,8 @@ mod tests {
         let expected = pt;
 
         if computed != expected {
-            println!("Computed: {}", computed.to_hex());
-            println!("Expected: {}", expected.to_hex());
+            println!("Computed: {}", hex::encode(&computed));
+            println!("Expected: {}", hex::encode(&expected));
             if computed.len() != expected.len() {
                 println!(
                     "Lengths differ: {} in computed vs {} expected",
@@ -849,8 +849,8 @@ mod tests {
         let expected = pt;
 
         if computed != expected {
-            println!("Computed: {}", computed.to_hex());
-            println!("Expected: {}", expected.to_hex());
+            println!("Computed: {}", hex::encode(&computed));
+            println!("Expected: {}", hex::encode(&expected));
             if computed.len() != expected.len() {
                 println!(
                     "Lengths differ: {} in computed vs {} expected",
@@ -1061,8 +1061,8 @@ mod tests {
             &Vec::from_hex(pt).unwrap(),
             &mut actual_tag,
         ).unwrap();
-        assert_eq!(ct, out.to_hex());
-        assert_eq!(tag, actual_tag.to_hex());
+        assert_eq!(ct, hex::encode(out));
+        assert_eq!(tag, hex::encode(actual_tag));
 
         let out = decrypt_aead(
             Cipher::aes_128_gcm(),
@@ -1072,7 +1072,7 @@ mod tests {
             &Vec::from_hex(ct).unwrap(),
             &Vec::from_hex(tag).unwrap(),
         ).unwrap();
-        assert_eq!(pt, out.to_hex());
+        assert_eq!(pt, hex::encode(out));
     }
 
     #[test]
@@ -1111,8 +1111,8 @@ mod tests {
             &Vec::from_hex(pt).unwrap(),
             &mut actual_tag,
         ).unwrap();
-        assert_eq!(ct, out.to_hex());
-        assert_eq!(tag, actual_tag.to_hex());
+        assert_eq!(ct, hex::encode(out));
+        assert_eq!(tag, hex::encode(actual_tag));
 
         let out = decrypt_aead(
             Cipher::chacha20_poly1305(),
@@ -1122,6 +1122,6 @@ mod tests {
             &Vec::from_hex(ct).unwrap(),
             &Vec::from_hex(tag).unwrap(),
         ).unwrap();
-        assert_eq!(pt, out.to_hex());
+        assert_eq!(pt, hex::encode(out));
     }
 }
