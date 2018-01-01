@@ -62,7 +62,7 @@ impl X509VerifyParamRef {
     ///
     /// This corresponds to [`X509_VERIFY_PARAM_set1_ip`].
     ///
-    /// [`X509_VERIFY_PARAM_set1_ip`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_VERIFY_PARAM_set1_ip.htm://www.openssl.org/docs/man1.1.0/crypto/X509_VERIFY_PARAM_set1_ip.html 
+    /// [`X509_VERIFY_PARAM_set1_ip`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_VERIFY_PARAM_set1_ip.html
     pub fn set_ip(&mut self, ip: IpAddr) -> Result<(), ErrorStack> {
         unsafe {
             let mut buf = [0; 16];

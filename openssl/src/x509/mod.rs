@@ -9,6 +9,8 @@
 //!
 //! # Example
 //!
+//! Build an `X509` certificate and use a generated RSA key to sign it.
+//!
 //! ```rust
 //!
 //! extern crate openssl;
@@ -102,9 +104,9 @@ impl X509StoreContext {
 impl X509StoreContextRef {
     /// Returns application data pertaining to an `X509` store context.
     ///
-    /// This corresponds to [`CRYPTO_get_ex_data`].
+    /// This corresponds to [`X509_STORE_CTX_get_ex_data`].
     ///
-    /// [`CRYPTO_get_ex_data`]: https://www.openssl.org/docs/man1.1.0/crypto/CRYPTO_get_ex_data.html
+    /// [`X509_STORE_CTX_get_ex_data`]: https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_get_ex_data.html
     pub fn ex_data<T>(&self, index: Index<X509StoreContext, T>) -> Option<&T> {
         unsafe {
             let data = ffi::X509_STORE_CTX_get_ex_data(self.as_ptr(), index.as_raw());
