@@ -1,3 +1,26 @@
+//! Describe a context in which to verify an `X509` certificate.
+//!
+//! The `X509` certificate store holds trusted CA certificates used to verify
+//! peer certificates.
+//!
+//! # Example
+//!
+//! ```rust
+//! extern crate openssl;
+//! 
+//! use openssl::x509::X509;
+//! use openssl::x509::store::{X509StoreBuilder, X509Store};
+//!
+//! fn main() {
+//!     let cert = include_bytes!("cert.pem");
+//!     let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+//!
+//!     let mut builder = X509StoreBuilder::new().unwrap();
+//!     let _ = builder.add_cert(cert);
+//!
+//!     let store: X509Store = builder.build();
+//! }
+//! ```
 use ffi;
 use foreign_types::ForeignTypeRef;
 use std::mem;
@@ -10,7 +33,9 @@ foreign_type! {
     type CType = ffi::X509_STORE;
     fn drop = ffi::X509_STORE_free;
 
+    /// A builder type used to construct an `X509Store`. 
     pub struct X509StoreBuilder;
+    /// Reference to an `X509StoreBuilder`.
     pub struct X509StoreBuilderRef;
 }
 
@@ -58,6 +83,8 @@ foreign_type! {
     type CType = ffi::X509_STORE;
     fn drop = ffi::X509_STORE_free;
 
+    /// A certificate store to hold trusted `X509` certificates.
     pub struct X509Store;
+    /// Reference to an `X509Store`.
     pub struct X509StoreRef;
 }
