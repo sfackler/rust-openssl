@@ -8,7 +8,7 @@ pub use libressl::v250::*;
 #[cfg(not(libressl250))]
 pub use libressl::v25x::*;
 
-use libc::{c_int, c_char, c_void, c_long, c_uchar, size_t, c_uint, c_ulong};
+use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, size_t};
 
 #[cfg(libressl250)]
 mod v250;
@@ -149,13 +149,7 @@ pub struct EVP_PKEY {
 pub struct BIO {
     pub method: *mut ::BIO_METHOD,
     pub callback: Option<
-        unsafe extern "C" fn(*mut ::BIO,
-                             c_int,
-                             *const c_char,
-                             c_int,
-                             c_long,
-                             c_long)
-                             -> c_long,
+        unsafe extern "C" fn(*mut ::BIO, c_int, *const c_char, c_int, c_long, c_long) -> c_long,
     >,
     pub cb_arg: *mut c_char,
     pub init: c_int,
@@ -195,18 +189,10 @@ pub struct EVP_CIPHER {
     pub iv_len: c_int,
     pub flags: c_ulong,
     pub init: Option<
-        unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX,
-                             *const c_uchar,
-                             *const c_uchar,
-                             c_int)
-                             -> c_int,
+        unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX, *const c_uchar, *const c_uchar, c_int) -> c_int,
     >,
     pub do_cipher: Option<
-        unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX,
-                             *mut c_uchar,
-                             *const c_uchar,
-                             size_t)
-                             -> c_int,
+        unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX, *mut c_uchar, *const c_uchar, size_t) -> c_int,
     >,
     pub cleanup: Option<unsafe extern "C" fn(*mut ::EVP_CIPHER_CTX) -> c_int>,
     pub ctx_size: c_int,
@@ -281,8 +267,7 @@ pub struct X509 {
     crldp: *mut c_void,
     altname: *mut c_void,
     nc: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_SHA"))]
-    sha1_hash: [c_uchar; 20],
+    #[cfg(not(osslconf = "OPENSSL_NO_SHA"))] sha1_hash: [c_uchar; 20],
     aux: *mut c_void,
 }
 
@@ -382,8 +367,8 @@ pub const CRYPTO_LOCK_SSL_CTX: c_int = 12;
 pub const CRYPTO_LOCK_SSL_SESSION: c_int = 14;
 
 static mut MUTEXES: *mut Vec<Mutex<()>> = 0 as *mut Vec<Mutex<()>>;
-static mut GUARDS: *mut Vec<Option<MutexGuard<'static, ()>>> = 0 as
-    *mut Vec<Option<MutexGuard<'static, ()>>>;
+static mut GUARDS: *mut Vec<Option<MutexGuard<'static, ()>>> =
+    0 as *mut Vec<Option<MutexGuard<'static, ()>>>;
 
 unsafe extern "C" fn locking_function(mode: c_int, n: c_int, _file: *const c_char, _line: c_int) {
     let mutex = &(*MUTEXES)[n as usize];
@@ -526,7 +511,7 @@ extern "C" {
     pub fn SSL_set_tmp_ecdh_callback(
         ssl: *mut ::SSL,
         ecdh: unsafe extern "C" fn(ssl: *mut ::SSL, is_export: c_int, keylength: c_int)
-                                   -> *mut ::EC_KEY,
+            -> *mut ::EC_KEY,
     );
     pub fn SSL_CIPHER_get_version(cipher: *const ::SSL_CIPHER) -> *mut c_char;
     pub fn SSL_CTX_get_ex_new_index(
@@ -536,10 +521,11 @@ extern "C" {
         dup_func: Option<::CRYPTO_EX_dup>,
         free_func: Option<::CRYPTO_EX_free>,
     ) -> c_int;
+    // FIXME should take an option
     pub fn SSL_CTX_set_tmp_ecdh_callback(
         ctx: *mut ::SSL_CTX,
         ecdh: unsafe extern "C" fn(ssl: *mut ::SSL, is_export: c_int, keylength: c_int)
-                                   -> *mut ::EC_KEY,
+            -> *mut ::EC_KEY,
     );
     pub fn X509_get_subject_name(x: *mut ::X509) -> *mut ::X509_NAME;
     pub fn X509_get_issuer_name(x: *mut ::X509) -> *mut ::X509_NAME;

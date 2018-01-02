@@ -824,6 +824,7 @@ extern "C" {
         dup_func: Option<::CRYPTO_EX_dup>,
         free_func: Option<::CRYPTO_EX_free>,
     ) -> c_int;
+    // FIXME should take an option
     pub fn SSL_CTX_set_tmp_ecdh_callback(
         ctx: *mut ::SSL_CTX,
         ecdh: unsafe extern "C" fn(ssl: *mut ::SSL, is_export: c_int, keylength: c_int)
