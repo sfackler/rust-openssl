@@ -7,6 +7,7 @@ use cvt;
 use error::ErrorStack;
 
 bitflags! {
+    /// Flags used to check an `X509` certificate.
     pub struct X509CheckFlags: c_uint {
         const ALWAYS_CHECK_SUBJECT = ffi::X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT;
         const FLAG_NO_WILDCARDS = ffi::X509_CHECK_FLAG_NO_WILDCARDS;
@@ -24,17 +25,29 @@ foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_VERIFY_PARAM;
     fn drop = ffi::X509_VERIFY_PARAM_free;
 
+    /// Adjust parameters associated with certificate verification.
     pub struct X509VerifyParam;
+    /// Reference to `X509VerifyParam`.
     pub struct X509VerifyParamRef;
 }
 
 impl X509VerifyParamRef {
+    /// Set the host flags.
+    ///
+    /// This corresponds to [`X509_VERIFY_PARAM_set_hostflags`].
+    ///
+    /// [`X509_VERIFY_PARAM_set_hostflags`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_VERIFY_PARAM_set_hostflags.html
     pub fn set_hostflags(&mut self, hostflags: X509CheckFlags) {
         unsafe {
             ffi::X509_VERIFY_PARAM_set_hostflags(self.as_ptr(), hostflags.bits);
         }
     }
 
+    /// Set the expected DNS hostname.
+    ///
+    /// This corresponds to [`X509_VERIFY_PARAM_set1_host`].
+    ///
+    /// [`X509_VERIFY_PARAM_set1_host`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_VERIFY_PARAM_set1_host.html
     pub fn set_host(&mut self, host: &str) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::X509_VERIFY_PARAM_set1_host(
@@ -45,6 +58,11 @@ impl X509VerifyParamRef {
         }
     }
 
+    /// Set the expected IPv4 or IPv6 address.
+    ///
+    /// This corresponds to [`X509_VERIFY_PARAM_set1_ip`].
+    ///
+    /// [`X509_VERIFY_PARAM_set1_ip`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_VERIFY_PARAM_set1_ip.html
     pub fn set_ip(&mut self, ip: IpAddr) -> Result<(), ErrorStack> {
         unsafe {
             let mut buf = [0; 16];

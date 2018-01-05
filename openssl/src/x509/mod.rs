@@ -1,3 +1,45 @@
+//! The standard defining the format of public key certificates.
+//!
+//! An `X509` certificate binds an identity to a public key, and is either
+//! signed by a certificate authority (CA) or self-signed. An entity that gets
+//! a hold of a certificate can both verify your identity (via a CA) and encrypt
+//! data with the included public key. `X509` certificates are used in many 
+//! Internet protocols, including SSL/TLS, which is the basis for HTTPS,
+//! the secure protocol for browsing the web.
+//!
+//! # Example
+//!
+//! Build an `X509` certificate and use a generated RSA key to sign it.
+//!
+//! ```rust
+//!
+//! extern crate openssl;
+//!
+//! use openssl::x509::{X509, X509Name};
+//! use openssl::pkey::PKey;
+//! use openssl::hash::MessageDigest;
+//! use openssl::rsa::Rsa;
+//! use openssl::nid::Nid;
+//!
+//! fn main() {
+//!     let rsa = Rsa::generate(2048).unwrap();
+//!     let pkey = PKey::from_rsa(rsa).unwrap();
+//!
+//!     let mut name = X509Name::builder().unwrap();
+//!     name.append_entry_by_nid(Nid::COMMONNAME, "foobar.com").unwrap();
+//!     let name = name.build();
+//!
+//!     let mut builder = X509::builder().unwrap();
+//!     builder.set_version(2).unwrap();
+//!     builder.set_subject_name(&name).unwrap();
+//!     builder.set_issuer_name(&name).unwrap();
+//!     builder.set_pubkey(&pkey).unwrap();
+//!     builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+//!
+//!     let certificate: X509 = builder.build();
+//! }
+//! ```
+
 use libc::{c_int, c_long};
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
@@ -44,7 +86,10 @@ foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE_CTX;
     fn drop = ffi::X509_STORE_CTX_free;
 
+    /// An `X509` certificate store context.
     pub struct X509StoreContext;
+
+    /// Reference to `X509StoreContext`.
     pub struct X509StoreContextRef;
 }
 
@@ -57,6 +102,11 @@ impl X509StoreContext {
 }
 
 impl X509StoreContextRef {
+    /// Returns application data pertaining to an `X509` store context.
+    ///
+    /// This corresponds to [`X509_STORE_CTX_get_ex_data`].
+    ///
+    /// [`X509_STORE_CTX_get_ex_data`]: https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_get_ex_data.html
     pub fn ex_data<T>(&self, index: Index<X509StoreContext, T>) -> Option<&T> {
         unsafe {
             let data = ffi::X509_STORE_CTX_get_ex_data(self.as_ptr(), index.as_raw());
@@ -68,16 +118,32 @@ impl X509StoreContextRef {
         }
     }
 
+    /// Returns the error code of the context.
+    ///
+    /// This corresponds to [`X509_STORE_CTX_get_error`].
+    ///
+    /// [`X509_STORE_CTX_get_error`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_STORE_CTX_get_error.html
     pub fn error(&self) -> X509VerifyResult {
         unsafe { X509VerifyResult::from_raw(ffi::X509_STORE_CTX_get_error(self.as_ptr())) }
     }
 
+    /// Set the error code of the context.
+    ///
+    /// This corresponds to [`X509_STORE_CTX_set_error`].
+    ///
+    /// [`X509_STORE_CTX_set_error`]:  https://www.openssl.org/docs/man1.1.0/crypto/X509_STORE_CTX_set_error.html
     pub fn set_error(&mut self, result: X509VerifyResult) {
         unsafe {
             ffi::X509_STORE_CTX_set_error(self.as_ptr(), result.as_raw());
         }
     }
 
+    /// Returns a reference to the certificate which caused the error or None if
+    /// no certificate is relevant to the error.
+    ///
+    /// This corresponds to [`X509_STORE_CTX_get_current_cert`].
+    ///
+    /// [`X509_STORE_CTX_get_current_cert`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_STORE_CTX_get_current_cert.html
     pub fn current_cert(&self) -> Option<&X509Ref> {
         unsafe {
             let ptr = ffi::X509_STORE_CTX_get_current_cert(self.as_ptr());
@@ -89,10 +155,23 @@ impl X509StoreContextRef {
         }
     }
 
+    /// Returns a non-negative integer representing the depth in the certificate
+    /// chain where the error occurred. If it is zero it occurred in the end
+    /// entity certificate, one if it is the certificate which signed the end
+    /// entity certificate and so on.
+    ///
+    /// This corresponds to [`X509_STORE_CTX_get_error_depth`].
+    ///
+    /// [`X509_STORE_CTX_get_error_depth`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_STORE_CTX_get_error_depth.html
     pub fn error_depth(&self) -> u32 {
         unsafe { ffi::X509_STORE_CTX_get_error_depth(self.as_ptr()) as u32 }
     }
 
+    /// Returns a reference to a complete valid `X509` certificate chain.
+    ///
+    /// This corresponds to [`X509_STORE_CTX_get0_chain`].
+    ///
+    /// [`X509_STORE_CTX_get0_chain`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_STORE_CTX_get0_chain.html
     pub fn chain(&self) -> Option<&StackRef<X509>> {
         unsafe {
             let chain = X509_STORE_CTX_get_chain(self.as_ptr());
@@ -106,7 +185,7 @@ impl X509StoreContextRef {
     }
 }
 
-/// A builder type which can create `X509` objects.
+/// A builder used to construct an `X509`.
 pub struct X509Builder(X509);
 
 impl X509Builder {
@@ -252,7 +331,9 @@ foreign_type_and_impl_send_sync! {
     type CType = ffi::X509;
     fn drop = ffi::X509_free;
 
+    /// An `X509` public key certificate.
     pub struct X509;
+    /// Reference to `X509`.
     pub struct X509Ref;
 }
 
@@ -471,7 +552,7 @@ impl Stackable for X509 {
     type StackType = ffi::stack_st_X509;
 }
 
-/// A context object required to construct certain X509 extension values.
+/// A context object required to construct certain `X509` extension values.
 pub struct X509v3Context<'a>(ffi::X509V3_CTX, PhantomData<(&'a X509Ref, &'a ConfRef)>);
 
 impl<'a> X509v3Context<'a> {
@@ -484,7 +565,9 @@ foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_EXTENSION;
     fn drop = ffi::X509_EXTENSION_free;
 
+    /// Permit additional fields to be added to an `X509` v3 certificate.
     pub struct X509Extension;
+    /// Reference to `X509Extension`.
     pub struct X509ExtensionRef;
 }
 
@@ -545,9 +628,11 @@ impl X509Extension {
     }
 }
 
+/// A builder used to construct an `X509Name`.
 pub struct X509NameBuilder(X509Name);
 
 impl X509NameBuilder {
+    /// Creates a new builder.
     pub fn new() -> Result<X509NameBuilder, ErrorStack> {
         unsafe {
             ffi::init();
@@ -555,6 +640,11 @@ impl X509NameBuilder {
         }
     }
 
+    /// Add a field entry by str.
+    ///
+    /// This corresponds to [`X509_NAME_add_entry_by_txt`].
+    ///
+    /// [`X509_NAME_add_entry_by_txt`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_add_entry_by_txt.html
     pub fn append_entry_by_text(&mut self, field: &str, value: &str) -> Result<(), ErrorStack> {
         unsafe {
             let field = CString::new(field).unwrap();
@@ -571,6 +661,11 @@ impl X509NameBuilder {
         }
     }
 
+    /// Add a field entry by NID.
+    ///
+    /// This corresponds to [`X509_NAME_add_entry_by_NID`].
+    ///
+    /// [`X509_NAME_add_entry_by_NID`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_add_entry_by_NID.html
     pub fn append_entry_by_nid(&mut self, field: Nid, value: &str) -> Result<(), ErrorStack> {
         unsafe {
             assert!(value.len() <= c_int::max_value() as usize);
@@ -586,6 +681,7 @@ impl X509NameBuilder {
         }
     }
 
+    /// Return an `X509Name`.
     pub fn build(self) -> X509Name {
         self.0
     }
@@ -595,7 +691,9 @@ foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_NAME;
     fn drop = ffi::X509_NAME_free;
 
+    /// The names of an `X509` certificate.
     pub struct X509Name;
+    /// Reference to `X509Name`.
     pub struct X509NameRef;
 }
 
@@ -619,6 +717,7 @@ impl Stackable for X509Name {
 }
 
 impl X509NameRef {
+    /// Returns the name entries by the nid.
     pub fn entries_by_nid<'a>(&'a self, nid: Nid) -> X509NameEntries<'a> {
         X509NameEntries {
             name: self,
@@ -628,6 +727,7 @@ impl X509NameRef {
     }
 }
 
+/// A type to destructure and examine an `X509Name`.
 pub struct X509NameEntries<'a> {
     name: &'a X509NameRef,
     nid: Nid,
@@ -658,11 +758,18 @@ foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_NAME_ENTRY;
     fn drop = ffi::X509_NAME_ENTRY_free;
 
+    /// A name entry associated with a `X509Name`.
     pub struct X509NameEntry;
+    /// Reference to `X509NameEntry`.
     pub struct X509NameEntryRef;
 }
 
 impl X509NameEntryRef {
+    /// Returns the field value of an `X509NameEntry`.     
+    ///
+    /// This corresponds to [`X509_NAME_ENTRY_get_data`].
+    ///
+    /// [`X509_NAME_ENTRY_get_data`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_ENTRY_get_data.html
     pub fn data(&self) -> &Asn1StringRef {
         unsafe {
             let data = ffi::X509_NAME_ENTRY_get_data(self.as_ptr());
@@ -671,9 +778,15 @@ impl X509NameEntryRef {
     }
 }
 
+/// A builder used to construct an `X509Req`.
 pub struct X509ReqBuilder(X509Req);
 
 impl X509ReqBuilder {
+    /// Returns a builder for a certificate request.
+    ///
+    /// This corresponds to [`X509_REQ_new`].
+    ///
+    ///[`X509_REQ_new`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_new.html
     pub fn new() -> Result<X509ReqBuilder, ErrorStack> {
         unsafe {
             ffi::init();
@@ -681,10 +794,20 @@ impl X509ReqBuilder {
         }
     }
 
+    /// Set the numerical value of the version field.
+    ///
+    /// This corresponds to [`X509_REQ_set_version`].
+    ///
+    ///[`X509_REQ_set_version`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_set_version.html
     pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_REQ_set_version(self.0.as_ptr(), version.into())).map(|_| ()) }
     }
 
+    /// Set the issuer name.
+    ///
+    /// This corresponds to [`X509_REQ_set_subject_name`].
+    ///
+    /// [`X509_REQ_set_subject_name`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_set_subject_name.html
     pub fn set_subject_name(&mut self, subject_name: &X509NameRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::X509_REQ_set_subject_name(
@@ -694,6 +817,11 @@ impl X509ReqBuilder {
         }
     }
 
+    /// Set the public key.
+    ///
+    /// This corresponds to [`X509_REQ_set_pubkey`].
+    ///
+    /// [`X509_REQ_set_pubkey`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_set_pubkey.html
     pub fn set_pubkey<T>(&mut self, key: &PKeyRef<T>) -> Result<(), ErrorStack>
     where
         T: HasPublic,
@@ -701,6 +829,8 @@ impl X509ReqBuilder {
         unsafe { cvt(ffi::X509_REQ_set_pubkey(self.0.as_ptr(), key.as_ptr())).map(|_| ()) }
     }
 
+    /// Return an `X509v3Context`. This context object can be used to construct
+    /// certain `X509` extensions.
     pub fn x509v3_context<'a>(&'a self, conf: Option<&'a ConfRef>) -> X509v3Context<'a> {
         unsafe {
             let mut ctx = mem::zeroed();
@@ -723,6 +853,7 @@ impl X509ReqBuilder {
         }
     }
 
+    /// Permits any number of extension fields to be added to the certificate.
     pub fn add_extensions(
         &mut self,
         extensions: &StackRef<X509Extension>,
@@ -735,6 +866,11 @@ impl X509ReqBuilder {
         }
     }
 
+    /// Sign the request using a private key.
+    ///
+    /// This corresponds to [`X509_REQ_sign`].
+    ///
+    /// [`X509_REQ_sign`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_sign.html
     pub fn sign<T>(&mut self, key: &PKeyRef<T>, hash: MessageDigest) -> Result<(), ErrorStack>
     where
         T: HasPrivate,
@@ -748,6 +884,7 @@ impl X509ReqBuilder {
         }
     }
 
+    /// Returns the `X509Req`.
     pub fn build(self) -> X509Req {
         self.0
     }
@@ -757,16 +894,19 @@ foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_REQ;
     fn drop = ffi::X509_REQ_free;
 
+    /// An `X509` certificate request.
     pub struct X509Req;
+    /// Reference to `X509Req`.
     pub struct X509ReqRef;
 }
 
 impl X509Req {
+    /// A builder for `X509Req`.
     pub fn builder() -> Result<X509ReqBuilder, ErrorStack> {
         X509ReqBuilder::new()
     }
 
-    /// Reads CSR from PEM
+    /// Reads Certifcate Signing Request (CSR) from PEM.
     pub fn from_pem(buf: &[u8]) -> Result<X509Req, ErrorStack> {
         let mem_bio = MemBioSlice::new(buf)?;
         unsafe {
@@ -787,10 +927,20 @@ impl X509ReqRef {
     to_pem!(ffi::PEM_write_bio_X509_REQ);
     to_der!(ffi::i2d_X509_REQ);
 
+    /// Returns the numerical value of the version field of the certificate request.
+    ///
+    /// This corresponds to [`X509_REQ_get_version`]
+    /// 
+    /// [`X509_REQ_get_version`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_get_version.html 
     pub fn version(&self) -> i32 {
         unsafe { compat::X509_REQ_get_version(self.as_ptr()) as i32 }
     }
 
+    /// Returns the subject name of the certificate request.
+    ///
+    /// This corresponds to [`X509_REQ_get_subject_name`]
+    ///
+    /// [`X509_REQ_get_subject_name`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_get_subject_name.html 
     pub fn subject_name(&self) -> &X509NameRef {
         unsafe {
             let name = compat::X509_REQ_get_subject_name(self.as_ptr());
@@ -800,6 +950,7 @@ impl X509ReqRef {
     }
 }
 
+/// The result of peer certificate verification.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct X509VerifyResult(c_int);
 
@@ -835,10 +986,16 @@ impl X509VerifyResult {
         X509VerifyResult(err)
     }
 
+    /// Return the integer representation of an `X509VerifyResult`.
     pub fn as_raw(&self) -> c_int {
         self.0
     }
 
+    /// Return a human readable error string from the verification error.
+    ///
+    /// This corresponds to [`X509_verify_cert_error_string`].
+    ///
+    /// [`X509_verify_cert_error_string`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_verify_cert_error_string.html
     pub fn error_string(&self) -> &'static str {
         ffi::init();
 
@@ -848,7 +1005,9 @@ impl X509VerifyResult {
         }
     }
 
+    /// Successful peer certifiate verification.
     pub const OK: X509VerifyResult = X509VerifyResult(ffi::X509_V_OK);
+    /// Application verification failure.
     pub const APPLICATION_VERIFICATION: X509VerifyResult =
         X509VerifyResult(ffi::X509_V_ERR_APPLICATION_VERIFICATION);
 }
@@ -857,7 +1016,9 @@ foreign_type_and_impl_send_sync! {
     type CType = ffi::GENERAL_NAME;
     fn drop = ffi::GENERAL_NAME_free;
 
+    /// An `X509` certificate alternative names.
     pub struct GeneralName;
+    /// Reference to `GeneralName`.
     pub struct GeneralNameRef;
 }
 
@@ -903,7 +1064,9 @@ foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_ALGOR;
     fn drop = ffi::X509_ALGOR_free;
 
+    /// An `X509` certificate signature algorithm.
     pub struct X509Algorithm;
+    /// Reference to `X509Algorithm`.
     pub struct X509AlgorithmRef;
 }
 
