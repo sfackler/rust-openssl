@@ -11,6 +11,8 @@ case "${TARGET}" in
 "arm-unknown-linux-gnueabihf")
     dpkg --add-architecture armhf
     apt-get update
+    # the amd64 and armhf versions upgrade out of sync which sometimes breaks things
+    apt-get remove -y linux-libc-dev:amd64
     apt-get install -y --no-install-recommends \
         gcc-arm-linux-gnueabihf \
         libc6-dev:armhf \
