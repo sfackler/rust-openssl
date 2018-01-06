@@ -40,9 +40,35 @@ impl<T> RsaRef<T>
 where
     T: HasPrivate,
 {
-    // FIXME these need to specify output format
-    private_key_to_pem!(ffi::PEM_write_bio_RSAPrivateKey);
-    private_key_to_der!(ffi::i2d_RSAPrivateKey);
+    private_key_to_pem! {
+        /// Serializes the private key to a PEM-encoded PKCS#1 RSAPrivateKey structure.
+        ///
+        /// The output will have a header of `-----BEGIN RSA PRIVATE KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_RSAPrivateKey`].
+        ///
+        /// [`PEM_write_bio_RSAPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_RSAPrivateKey.html
+        private_key_to_pem,
+        /// Serializes the private key to a PEM-encoded encrypted PKCS#1 RSAPrivateKey structure.
+        ///
+        /// The output will have a header of `-----BEGIN RSA PRIVATE KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_RSAPrivateKey`].
+        ///
+        /// [`PEM_write_bio_RSAPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_RSAPrivateKey.html
+        private_key_to_pem_passphrase,
+        ffi::PEM_write_bio_RSAPrivateKey
+    }
+
+    to_der! {
+        /// Serializes the private key to a DER-encoded PKCS#1 RSAPrivateKey structure.
+        ///
+        /// This corresponds to [`i2d_RSAPrivateKey`].
+        ///
+        /// [`i2d_RSAPrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_RSAPrivateKey.html
+        private_key_to_der,
+        ffi::i2d_RSAPrivateKey
+    }
 
     /// Decrypts data using the private key, returning the number of decrypted bytes.
     ///
@@ -165,14 +191,49 @@ impl<T> RsaRef<T>
 where
     T: HasPublic,
 {
-    public_key_to_pem!(ffi::PEM_write_bio_RSA_PUBKEY);
-    public_key_to_der!(ffi::i2d_RSA_PUBKEY);
+    to_pem! {
+        /// Serializes the public key into a PEM-encoded SubjectPublicKeyInfo structure.
+        ///
+        /// The output will have a header of `-----BEGIN PUBLIC KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_RSA_PUBKEY`].
+        ///
+        /// [`PEM_write_bio_RSA_PUBKEY`]: https://www.openssl.org/docs/man1.0.2/crypto/pem.html
+        public_key_to_pem,
+        ffi::PEM_write_bio_RSA_PUBKEY
+    }
 
-    to_der_inner!(
-        /// Serializes the public key to DER-encoded PKCS#1.
+    to_der! {
+        /// Serializes the public key into a DER-encoded SubjectPublicKeyInfo structure.
+        ///
+        /// This corresponds to [`i2d_RSA_PUBKEY`].
+        ///
+        /// [`i2d_RSA_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_RSA_PUBKEY.html
+        public_key_to_der,
+        ffi::i2d_RSA_PUBKEY
+    }
+
+    to_pem! {
+        /// Serializes the public key into a PEM-encoded PKCS#1 RSAPublicKey structure.
+        ///
+        /// The output will have a header of `-----BEGIN RSA PUBLIC KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_RSAPublicKey`].
+        ///
+        /// [`PEM_write_bio_RSAPublicKey`]: https://www.openssl.org/docs/man1.0.2/crypto/pem.html
+        public_key_to_pem_pkcs1,
+        ffi::PEM_write_bio_RSAPublicKey
+    }
+
+    to_der! {
+        /// Serializes the public key into a DER-encoded PKCS#1 RSAPublicKey structure.
+        ///
+        /// This corresponds to [`i2d_RSAPublicKey`].
+        ///
+        /// [`i2d_RSAPublicKey`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_RSAPublicKey.html
         public_key_to_der_pkcs1,
         ffi::i2d_RSAPublicKey
-    );
+    }
 
     pub fn size(&self) -> u32 {
         unsafe { ffi::RSA_size(self.as_ptr()) as u32 }
@@ -260,15 +321,40 @@ impl Rsa<Public> {
         }
     }
 
-    public_key_from_pem!(Rsa<Public>, ffi::PEM_read_bio_RSA_PUBKEY);
-    public_key_from_der!(Rsa<Public>, ffi::d2i_RSA_PUBKEY);
+    from_pem! {
+        /// Decodes a PEM-encoded SubjectPublicKeyInfo structure containing an RSA key.
+        ///
+        /// The input should have a header of `-----BEGIN PUBLIC KEY-----`.
+        ///
+        /// This corresponds to [`PEM_read_bio_RSA_PUBKEY`].
+        ///
+        /// [`PEM_read_bio_RSA_PUBKEY`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_read_bio_RSA_PUBKEY.html
+        public_key_from_pem,
+        Rsa<Public>,
+        ffi::PEM_read_bio_RSA_PUBKEY
+    }
 
-    from_der_inner!(
-        /// Deserializes a public key from DER-encoded PKCS#1 data.
+    from_der! {
+        /// Decodes a DER-encoded SubjectPublicKeyInfo structure containing an RSA key.
+        ///
+        /// This corresponds to [`d2i_RSA_PUBKEY`].
+        ///
+        /// [`d2i_RSA_PUBKEY`]: https://www.openssl.org/docs/man1.0.2/crypto/d2i_RSA_PUBKEY.html
+        public_key_from_der,
+        Rsa<Public>,
+        ffi::d2i_RSA_PUBKEY
+    }
+
+    from_der! {
+        /// Decodes a DER-encoded PKCS#1 RSAPublicKey structure.
+        ///
+        /// This corresponds to [`d2i_RSAPublicKey`].
+        ///
+        /// [`d2i_RSAPublicKey`]: https://www.openssl.org/docs/man1.0.2/crypto/d2i_RSA_PUBKEY.html
         public_key_from_der_pkcs1,
         Rsa<Public>,
         ffi::d2i_RSAPublicKey
-    );
+    }
 }
 
 impl Rsa<Private> {
@@ -318,8 +404,43 @@ impl Rsa<Private> {
     }
 
     // FIXME these need to identify input formats
-    private_key_from_pem!(Rsa<Private>, ffi::PEM_read_bio_RSAPrivateKey);
-    private_key_from_der!(Rsa<Private>, ffi::d2i_RSAPrivateKey);
+    private_key_from_pem! {
+        /// Deserializes a private key from a PEM-encoded PKCS#1 RSAPrivateKey structure.
+        ///
+        /// This corresponds to [`PEM_read_bio_RSAPrivateKey`].
+        ///
+        /// [`PEM_read_bio_RSAPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_read_bio_RSAPrivateKey.html
+        private_key_from_pem,
+
+        /// Deserializes a private key from a PEM-encoded encrypted PKCS#1 RSAPrivateKey structure.
+        ///
+        /// This corresponds to [`PEM_read_bio_RSAPrivateKey`].
+        ///
+        /// [`PEM_read_bio_RSAPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_read_bio_RSAPrivateKey.html
+        private_key_from_pem_passphrase,
+
+        /// Deserializes a private key from a PEM-encoded encrypted PKCS#1 RSAPrivateKey structure.
+        ///
+        /// The callback should fill the password into the provided buffer and return its length.
+        ///
+        /// This corresponds to [`PEM_read_bio_RSAPrivateKey`].
+        ///
+        /// [`PEM_read_bio_RSAPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_read_bio_RSAPrivateKey.html
+        private_key_from_pem_callback,
+        Rsa<Private>,
+        ffi::PEM_read_bio_RSAPrivateKey
+    }
+
+    from_der! {
+        /// Decodes a DER-encoded PKCS#1 RSAPrivateKey structure.
+        ///
+        /// This corresponds to [`d2i_RSAPrivateKey`].
+        ///
+        /// [`d2i_RSAPrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/d2i_RSA_PUBKEY.html
+        private_key_from_der,
+        Rsa<Private>,
+        ffi::d2i_RSAPrivateKey
+    }
 }
 
 impl<T> fmt::Debug for Rsa<T> {

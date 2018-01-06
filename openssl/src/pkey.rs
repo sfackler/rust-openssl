@@ -96,8 +96,27 @@ impl<T> PKeyRef<T>
 where
     T: HasPublic,
 {
-    public_key_to_pem!(ffi::PEM_write_bio_PUBKEY);
-    public_key_to_der!(ffi::i2d_PUBKEY);
+    to_pem! {
+        /// Serializes the public key into a PEM-encoded SubjectPublicKeyInfo structure.
+        ///
+        /// The output will have a header of `-----BEGIN PUBLIC KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_PUBKEY`].
+        ///
+        /// [`PEM_write_bio_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_PUBKEY.html
+        public_key_to_pem,
+        ffi::PEM_write_bio_PUBKEY
+    }
+
+    to_der! {
+        /// Serializes the public key into a DER-encoded SubjectPublicKeyInfo structure.
+        ///
+        /// This corresponds to [`i2d_PUBKEY`].
+        ///
+        /// [`i2d_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_PUBKEY.html
+        public_key_to_der,
+        ffi::i2d_PUBKEY
+    }
 
     /// Returns the size of the key.
     ///
@@ -120,8 +139,35 @@ impl<T> PKeyRef<T>
 where
     T: HasPrivate,
 {
-    private_key_to_pem!(ffi::PEM_write_bio_PKCS8PrivateKey);
-    private_key_to_der!(ffi::i2d_PrivateKey);
+    private_key_to_pem! {
+        /// Serializes the private key to a PEM-encoded PKCS#8 PrivateKeyInfo structure.
+        ///
+        /// The output will have a header of `-----BEGIN PRIVATE KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_PKCS8PrivateKey`].
+        ///
+        /// [`PEM_write_bio_PKCS8PrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_write_bio_PKCS8PrivateKey.html
+        private_key_to_pem_pkcs8,
+        /// Serializes the private key to a PEM-encoded PKCS#8 EncryptedPrivateKeyInfo structure.
+        ///
+        /// The output will have a header of `-----BEGIN ENCRYPTED PRIVATE KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_PKCS8PrivateKey`].
+        ///
+        /// [`PEM_write_bio_PKCS8PrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_write_bio_PKCS8PrivateKey.html
+        private_key_to_pem_pkcs8_passphrase,
+        ffi::PEM_write_bio_PKCS8PrivateKey
+    }
+
+    to_der! {
+        /// Serializes the private key to a DER-encoded key type specific format.
+        ///
+        /// This corresponds to [`i2d_PrivateKey`].
+        ///
+        /// [`i2d_PrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_PrivateKey.html
+        private_key_to_der,
+        ffi::i2d_PrivateKey
+    }
 }
 
 impl<T> PKey<T> {
@@ -205,8 +251,47 @@ impl PKey<Private> {
         }
     }
 
-    private_key_from_pem!(PKey<Private>, ffi::PEM_read_bio_PrivateKey);
-    private_key_from_der!(PKey<Public>, ffi::d2i_AutoPrivateKey);
+    private_key_from_pem! {
+        /// Deserializes a private key from a PEM-encoded key type specific format.
+        ///
+        /// This corresponds to [`PEM_read_bio_PrivateKey`].
+        ///
+        /// [`PEM_read_bio_PrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_read_bio_PrivateKey.html
+        private_key_from_pem,
+
+        /// Deserializes a private key from a PEM-encoded encrypted key type specific format.
+        ///
+        /// This corresponds to [`PEM_read_bio_PrivateKey`].
+        ///
+        /// [`PEM_read_bio_PrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_read_bio_PrivateKey.html
+        private_key_from_pem_passphrase,
+
+        /// Deserializes a private key from a PEM-encoded encrypted key type specific format.
+        ///
+        /// The callback should fill the password into the provided buffer and return its length.
+        ///
+        /// This corresponds to [`PEM_read_bio_PrivateKey`].
+        ///
+        /// [`PEM_read_bio_PrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_read_bio_PrivateKey.html
+        private_key_from_pem_callback,
+        PKey<Private>,
+        ffi::PEM_read_bio_PrivateKey
+    }
+
+    from_der! {
+        /// Decodes a DER-encoded private key.
+        ///
+        /// This function will automatically attempt to detect the underlying key format, and
+        /// supports the unencrypted PKCS#8 PrivateKeyInfo structures as well as key type specific
+        /// formats.
+        ///
+        /// This corresponds to [`d2i_AutoPrivateKey`].
+        ///
+        /// [`d2i_AutoPrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/d2i_AutoPrivateKey.html
+        private_key_from_der,
+        PKey<Public>,
+        ffi::d2i_AutoPrivateKey
+    }
 
     /// Deserializes a DER-formatted PKCS#8 private key, using a callback to retrieve the password
     /// if the key is encrpyted.
@@ -258,8 +343,29 @@ impl PKey<Private> {
 }
 
 impl PKey<Public> {
-    public_key_from_pem!(PKey<Public>, ffi::PEM_read_bio_PUBKEY);
-    public_key_from_der!(PKey<Public>, ffi::d2i_PUBKEY);
+    from_pem! {
+        /// Decodes a PEM-encoded SubjectPublicKeyInfo structure.
+        ///
+        /// The input should have a header of `-----BEGIN PUBLIC KEY-----`.
+        ///
+        /// This corresponds to [`PEM_read_bio_PUBKEY`].
+        ///
+        /// [`PEM_read_bio_PUBKEY`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_read_bio_PUBKEY.html
+        public_key_from_pem,
+        PKey<Public>,
+        ffi::PEM_read_bio_PUBKEY
+    }
+
+    from_der! {
+        /// Decodes a DER-encoded SubjectPublicKeyInfo structure.
+        ///
+        /// This corresponds to [`d2i_PUBKEY`].
+        ///
+        /// [`d2i_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_PUBKEY.html
+        public_key_from_der,
+        PKey<Public>,
+        ffi::d2i_PUBKEY
+    }
 }
 
 #[cfg(test)]
@@ -277,7 +383,7 @@ mod tests {
     fn test_to_password() {
         let rsa = Rsa::generate(2048).unwrap();
         let pkey = PKey::from_rsa(rsa).unwrap();
-        let pem = pkey.private_key_to_pem_passphrase(Cipher::aes_128_cbc(), b"foobar")
+        let pem = pkey.private_key_to_pem_pkcs8_passphrase(Cipher::aes_128_cbc(), b"foobar")
             .unwrap();
         PKey::private_key_from_pem_passphrase(&pem, b"foobar").unwrap();
         assert!(PKey::private_key_from_pem_passphrase(&pem, b"fizzbuzz").is_err());
@@ -330,7 +436,7 @@ mod tests {
         let key = include_bytes!("../test/key.pem");
         let key = PKey::private_key_from_pem(key).unwrap();
 
-        let priv_key = key.private_key_to_pem().unwrap();
+        let priv_key = key.private_key_to_pem_pkcs8().unwrap();
         let pub_key = key.public_key_to_pem().unwrap();
 
         // As a super-simple verification, just check that the buffers contain
@@ -358,7 +464,7 @@ mod tests {
     #[test]
     fn test_dh_accessor() {
         let dh = include_bytes!("../test/dhparams.pem");
-        let dh = Dh::from_pem(dh).unwrap();
+        let dh = Dh::params_from_pem(dh).unwrap();
         let pkey = PKey::from_dh(dh).unwrap();
         pkey.dh().unwrap();
         assert!(pkey.rsa().is_err());

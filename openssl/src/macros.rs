@@ -1,18 +1,9 @@
-
 macro_rules! private_key_from_pem {
-    ($t:ty, $f:path) => {
-        from_pem_inner!(/// Deserializes a PEM-formatted private key.
-            private_key_from_pem, $t, $f);
+    ($(#[$m:meta])* $n:ident, $(#[$m2:meta])* $n2:ident, $(#[$m3:meta])* $n3:ident, $t:ty, $f:path) => {
+        from_pem!($(#[$m])* $n, $t, $f);
 
-        /// Deserializes a PEM-formatted private key, using the supplied password if the key is
-        /// encrypted.
-        ///
-        /// # Panics
-        ///
-        /// Panics if `passphrase` contains an embedded null.
-        pub fn private_key_from_pem_passphrase(pem: &[u8],
-                                               passphrase: &[u8])
-                                               -> Result<$t, ::error::ErrorStack> {
+        $(#[$m2])*
+        pub fn $n2(pem: &[u8], passphrase: &[u8]) -> Result<$t, ::error::ErrorStack> {
             unsafe {
                 ffi::init();
                 let bio = try!(::bio::MemBioSlice::new(pem));
@@ -25,14 +16,8 @@ macro_rules! private_key_from_pem {
             }
         }
 
-        /// Deserializes a PEM-formatted private key, using a callback to retrieve a password if the
-        /// key is encrypted.
-        ///
-        /// The callback should copy the password into the provided buffer and return the number of
-        /// bytes written.
-        pub fn private_key_from_pem_callback<F>(pem: &[u8],
-                                                callback: F)
-                                                -> Result<$t, ::error::ErrorStack>
+        $(#[$m3])*
+        pub fn $n3<F>(pem: &[u8], callback: F) -> Result<$t, ::error::ErrorStack>
             where F: FnOnce(&mut [u8]) -> Result<usize, ::error::ErrorStack>
         {
             unsafe {
@@ -50,9 +35,9 @@ macro_rules! private_key_from_pem {
 }
 
 macro_rules! private_key_to_pem {
-    ($f:path) => {
-        /// Serializes the private key to PEM.
-        pub fn private_key_to_pem(&self) -> Result<Vec<u8>, ::error::ErrorStack> {
+    ($(#[$m:meta])* $n:ident, $(#[$m2:meta])* $n2:ident, $f:path) => {
+        $(#[$m])*
+        pub fn $n(&self) -> Result<Vec<u8>, ::error::ErrorStack> {
             unsafe {
                 let bio = try!(::bio::MemBio::new());
                 try!(cvt($f(bio.as_ptr(),
@@ -66,12 +51,12 @@ macro_rules! private_key_to_pem {
             }
         }
 
-        /// Serializes the private key to PEM, encrypting it with the specified symmetric cipher and
-        /// passphrase.
-        pub fn private_key_to_pem_passphrase(&self,
-                                             cipher: ::symm::Cipher,
-                                             passphrase: &[u8])
-                                             -> Result<Vec<u8>, ::error::ErrorStack> {
+        $(#[$m2])*
+        pub fn $n2(
+            &self,
+            cipher: ::symm::Cipher,
+            passphrase: &[u8]
+        ) -> Result<Vec<u8>, ::error::ErrorStack> {
             unsafe {
                 let bio = try!(::bio::MemBio::new());
                 assert!(passphrase.len() <= ::libc::c_int::max_value() as usize);
@@ -88,9 +73,9 @@ macro_rules! private_key_to_pem {
     }
 }
 
-macro_rules! to_pem_inner {
-    (#[$m:meta] $n:ident, $f:path) => {
-        #[$m]
+macro_rules! to_pem {
+    ($(#[$m:meta])* $n:ident, $f:path) => {
+        $(#[$m])*
         pub fn $n(&self) -> Result<Vec<u8>, ::error::ErrorStack> {
             unsafe {
                 let bio = try!(::bio::MemBio::new());
@@ -101,23 +86,9 @@ macro_rules! to_pem_inner {
     }
 }
 
-macro_rules! public_key_to_pem {
-    ($f:path) => {
-        to_pem_inner!(/// Serializes a public key to PEM.
-            public_key_to_pem, $f);
-    }
-}
-
-macro_rules! to_pem {
-    ($f:path) => {
-        to_pem_inner!(/// Serializes this value to PEM.
-            to_pem, $f);
-    }
-}
-
-macro_rules! to_der_inner {
-    (#[$m:meta] $n:ident, $f:path) => {
-        #[$m]
+macro_rules! to_der {
+    ($(#[$m:meta])* $n:ident, $f:path) => {
+        $(#[$m])*
         pub fn $n(&self) -> Result<Vec<u8>, ::error::ErrorStack> {
             unsafe {
                 let len = try!(::cvt($f(::foreign_types::ForeignTypeRef::as_ptr(self),
@@ -131,30 +102,9 @@ macro_rules! to_der_inner {
     };
 }
 
-macro_rules! to_der {
-    ($f:path) => {
-        to_der_inner!(/// Serializes this value to DER.
-            to_der, $f);
-    }
-}
-
-macro_rules! private_key_to_der {
-    ($f:path) => {
-        to_der_inner!(/// Serializes the private key to DER.
-            private_key_to_der, $f);
-    }
-}
-
-macro_rules! public_key_to_der {
-    ($f:path) => {
-        to_der_inner!(/// Serializes the public key to DER.
-            public_key_to_der, $f);
-    }
-}
-
-macro_rules! from_der_inner {
-    (#[$m:meta] $n:ident, $t:ty, $f:path) => {
-        #[$m]
+macro_rules! from_der {
+    ($(#[$m:meta])* $n:ident, $t:ty, $f:path) => {
+        $(#[$m])*
         pub fn $n(der: &[u8]) -> Result<$t, ::error::ErrorStack> {
             unsafe {
                 ::ffi::init();
@@ -166,30 +116,9 @@ macro_rules! from_der_inner {
     }
 }
 
-macro_rules! from_der {
-    ($t:ty, $f:path) => {
-        from_der_inner!(/// Deserializes a value from DER-formatted data.
-            from_der, $t, $f);
-    }
-}
-
-macro_rules! private_key_from_der {
-    ($t:ty, $f:path) => {
-        from_der_inner!(/// Deserializes a private key from DER-formatted data.
-            private_key_from_der, $t, $f);
-    }
-}
-
-macro_rules! public_key_from_der {
-    ($t:ty, $f:path) => {
-        from_der_inner!(/// Deserializes a public key from DER-formatted data.
-            public_key_from_der, $t, $f);
-    }
-}
-
-macro_rules! from_pem_inner {
-    (#[$m:meta] $n:ident, $t:ty, $f:path) => {
-        #[$m]
+macro_rules! from_pem {
+    ($(#[$m:meta])* $n:ident, $t:ty, $f:path) => {
+        $(#[$m])*
         pub fn $n(pem: &[u8]) -> Result<$t, ::error::ErrorStack> {
             unsafe {
                 ::init();
@@ -198,20 +127,6 @@ macro_rules! from_pem_inner {
                     .map(|p| ::foreign_types::ForeignType::from_ptr(p))
             }
         }
-    }
-}
-
-macro_rules! public_key_from_pem {
-    ($t:ty, $f:path) => {
-        from_pem_inner!(/// Deserializes a public key from PEM-formatted data.
-            public_key_from_pem, $t, $f);
-    }
-}
-
-macro_rules! from_pem {
-    ($t:ty, $f:path) => {
-        from_pem_inner!(/// Deserializes a value from PEM-formatted data.
-            from_pem, $t, $f);
     }
 }
 

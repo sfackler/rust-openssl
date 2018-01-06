@@ -1027,7 +1027,7 @@ fn tmp_dh_callback() {
         ctx.set_tmp_dh_callback(|_, _, _| {
             CALLED_BACK.store(true, Ordering::SeqCst);
             let dh = include_bytes!("../../test/dhparams.pem");
-            Dh::from_pem(dh)
+            Dh::params_from_pem(dh)
         });
         let ssl = Ssl::new(&ctx.build()).unwrap();
         ssl.accept(stream).unwrap();
@@ -1096,7 +1096,7 @@ fn tmp_dh_callback_ssl() {
         ssl.set_tmp_dh_callback(|_, _, _| {
             CALLED_BACK.store(true, Ordering::SeqCst);
             let dh = include_bytes!("../../test/dhparams.pem");
-            Dh::from_pem(dh)
+            Dh::params_from_pem(dh)
         });
         ssl.accept(stream).unwrap();
     });

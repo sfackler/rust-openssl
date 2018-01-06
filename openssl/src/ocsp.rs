@@ -253,11 +253,28 @@ impl OcspResponse {
         }
     }
 
-    from_der!(OcspResponse, ffi::d2i_OCSP_RESPONSE);
+    from_der! {
+        /// Deserializes a DER-encoded OCSP response.
+        ///
+        /// This corresponds to [`d2i_OCSP_RESPONSE`].
+        ///
+        /// [`d2i_OCSP_RESPONSE`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_OCSP_RESPONSE.html
+        from_der,
+        OcspResponse,
+        ffi::d2i_OCSP_RESPONSE
+    }
 }
 
 impl OcspResponseRef {
-    to_der!(ffi::i2d_OCSP_RESPONSE);
+    to_der! {
+        /// Serializes the response to its standard DER encoding.
+        ///
+        /// This corresponds to [`i2d_OCSP_RESPONSE`].
+        ///
+        /// [`i2d_OCSP_RESPONSE`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_OCSP_RESPONSE.html
+        to_der,
+        ffi::i2d_OCSP_RESPONSE
+    }
 
     /// Returns the status of the response.
     pub fn status(&self) -> OcspResponseStatus {
@@ -289,11 +306,28 @@ impl OcspRequest {
         }
     }
 
-    from_der!(OcspRequest, ffi::d2i_OCSP_REQUEST);
+    from_der! {
+        /// Deserializes a DER-encoded OCSP request.
+        ///
+        /// This corresponds to [`d2i_OCSP_REQUEST`].
+        ///
+        /// [`d2i_OCSP_REQUEST`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_OCSP_REQUEST.html
+        from_der,
+        OcspRequest,
+        ffi::d2i_OCSP_REQUEST
+    }
 }
 
 impl OcspRequestRef {
-    to_der!(ffi::i2d_OCSP_REQUEST);
+    to_der! {
+        /// Serializes the request to its standard DER encoding.
+        ///
+        /// This corresponds to [`i2d_OCSP_REQUEST`].
+        ///
+        /// [`i2d_OCSP_REQUEST`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_OCSP_REQUEST.html
+        to_der,
+        ffi::i2d_OCSP_REQUEST
+    }
 
     pub fn add_id(&mut self, id: OcspCertId) -> Result<&mut OcspOneReqRef, ErrorStack> {
         unsafe {
