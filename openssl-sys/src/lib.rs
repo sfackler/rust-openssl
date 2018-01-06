@@ -2694,4 +2694,9 @@ extern "C" {
     pub fn SMIME_read_CMS(bio: *mut BIO, bcont: *mut *mut BIO) -> *mut CMS_ContentInfo;
     #[cfg(not(libressl))]
     pub fn CMS_ContentInfo_free(cms: *mut CMS_ContentInfo);
+
+    #[cfg(not(libressl))]
+    pub fn FIPS_mode_set(onoff: c_int) -> c_int;
+    #[cfg(not(libressl))]
+    pub fn FIPS_mode() -> c_int;
 }
