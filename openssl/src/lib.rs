@@ -41,6 +41,8 @@ pub mod dsa;
 pub mod ec;
 pub mod error;
 pub mod ex_data;
+#[cfg(not(libressl))]
+pub mod fips;
 pub mod hash;
 pub mod memcmp;
 pub mod nid;
