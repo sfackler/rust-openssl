@@ -12,16 +12,17 @@
 //! use openssl::bn::BigNum;
 //! use openssl::error::ErrorStack;
 //!
-//! fn bignums() -> Result< (), ErrorStack > {
+//! fn bignums() -> Result<(), ErrorStack> {
 //!   let a = BigNum::new()?; // a = 0
 //!   let b = BigNum::from_dec_str("1234567890123456789012345")?;
 //!   let c = &a * &b;
-//!   assert_eq!(a,c);
+//!   assert_eq!(a, c);
 //!   Ok(())
 //! }
 //! # fn main() {
 //! #    bignums();
 //! # }
+//! ```
 //!
 //! [`BIGNUM`]: https://wiki.openssl.org/index.php/Manual:Bn_internal(3)
 use ffi;

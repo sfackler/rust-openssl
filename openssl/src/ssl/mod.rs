@@ -2247,7 +2247,9 @@ impl<S: Read + Write> SslStream<S> {
     /// session down. In particular, it must be fully shut down if the connection is to be used for
     /// further communication in the future.
     ///
-    /// This corresponds to [`SSL_shutdown`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_shutdown.html
+    /// This corresponds to [`SSL_shutdown`].
+    ///
+    /// [`SSL_shutdown`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_shutdown.html
     pub fn shutdown(&mut self) -> Result<ShutdownResult, Error> {
         match unsafe { ffi::SSL_shutdown(self.ssl.as_ptr()) } {
             0 => Ok(ShutdownResult::Sent),
