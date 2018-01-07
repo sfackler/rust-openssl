@@ -124,6 +124,11 @@ where
         }
     }
 
+    /// Returns a reference to the private exponent of the key.
+    ///
+    /// This corresponds to [`RSA_get0_key`].
+    ///
+    /// [`RSA_get0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_get0_key.html
     pub fn d(&self) -> &BigNumRef {
         unsafe {
             let d = compat::key(self.as_ptr())[2];
@@ -131,6 +136,11 @@ where
         }
     }
 
+    /// Returns a reference to the first factor of the exponent of the key.
+    ///
+    /// This corresponds to [`RSA_get0_factors`].
+    ///
+    /// [`RSA_get0_factors`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_get0_key.html
     pub fn p(&self) -> Option<&BigNumRef> {
         unsafe {
             let p = compat::factors(self.as_ptr())[0];
@@ -142,6 +152,11 @@ where
         }
     }
 
+    /// Returns a reference to the second factor of the exponent of the key.
+    ///
+    /// This corresponds to [`RSA_get0_factors`].
+    ///
+    /// [`RSA_get0_factors`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_get0_key.html
     pub fn q(&self) -> Option<&BigNumRef> {
         unsafe {
             let q = compat::factors(self.as_ptr())[1];
@@ -153,7 +168,12 @@ where
         }
     }
 
-    pub fn dp(&self) -> Option<&BigNumRef> {
+    /// Returns a reference to the first exponent used for CRT calculations.
+    ///
+    /// This corresponds to [`RSA_get0_crt_params`].
+    ///
+    /// [`RSA_get0_crt_params`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_get0_key.html
+    pub fn dmp1(&self) -> Option<&BigNumRef> {
         unsafe {
             let dp = compat::crt_params(self.as_ptr())[0];
             if dp.is_null() {
@@ -164,7 +184,12 @@ where
         }
     }
 
-    pub fn dq(&self) -> Option<&BigNumRef> {
+    /// Returns a reference to the second exponent used for CRT calculations.
+    ///
+    /// This corresponds to [`RSA_get0_crt_params`].
+    ///
+    /// [`RSA_get0_crt_params`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_get0_key.html
+    pub fn dmq1(&self) -> Option<&BigNumRef> {
         unsafe {
             let dq = compat::crt_params(self.as_ptr())[1];
             if dq.is_null() {
@@ -175,7 +200,12 @@ where
         }
     }
 
-    pub fn qi(&self) -> Option<&BigNumRef> {
+    /// Returns a reference to the coefficient used for CRT calculations.
+    ///
+    /// This corresponds to [`RSA_get0_crt_params`].
+    ///
+    /// [`RSA_get0_crt_params`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_get0_key.html
+    pub fn iqmp(&self) -> Option<&BigNumRef> {
         unsafe {
             let qi = compat::crt_params(self.as_ptr())[2];
             if qi.is_null() {
@@ -291,6 +321,11 @@ where
         }
     }
 
+    /// Returns a reference to the modulus of the key.
+    ///
+    /// This corresponds to [`RSA_get0_key`].
+    ///
+    /// [`RSA_get0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_get0_key.html
     pub fn n(&self) -> &BigNumRef {
         unsafe {
             let n = compat::key(self.as_ptr())[0];
@@ -298,6 +333,11 @@ where
         }
     }
 
+    /// Returns a reference to the public exponent of the key.
+    ///
+    /// This corresponds to [`RSA_get0_key`].
+    ///
+    /// [`RSA_get0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_get0_key.html
     pub fn e(&self) -> &BigNumRef {
         unsafe {
             let e = compat::key(self.as_ptr())[1];
@@ -364,9 +404,9 @@ impl Rsa<Private> {
         d: BigNum,
         p: BigNum,
         q: BigNum,
-        dp: BigNum,
-        dq: BigNum,
-        qi: BigNum,
+        dmp1: BigNum,
+        dmq1: BigNum,
+        iqmp: BigNum,
     ) -> Result<Rsa<Private>, ErrorStack> {
         unsafe {
             let rsa = Rsa::from_ptr(cvt_p(ffi::RSA_new())?);
@@ -376,11 +416,11 @@ impl Rsa<Private> {
             mem::forget((p, q));
             cvt(compat::set_crt_params(
                 rsa.0,
-                dp.as_ptr(),
-                dq.as_ptr(),
-                qi.as_ptr(),
+                dmp1.as_ptr(),
+                dmq1.as_ptr(),
+                iqmp.as_ptr(),
             ))?;
-            mem::forget((dp, dq, qi));
+            mem::forget((dmp1, dmq1, iqmp));
             Ok(rsa)
         }
     }
