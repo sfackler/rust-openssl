@@ -30,7 +30,7 @@
 //!
 //! extern crate openssl;
 //!
-//! use openssl::rsa:Rsa;
+//! use openssl::rsa::Rsa;
 //! use openssl::pkey::Pkey;
 //!
 //! fn main() {
