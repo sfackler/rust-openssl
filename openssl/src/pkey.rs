@@ -31,11 +31,11 @@
 //! extern crate openssl;
 //!
 //! use openssl::rsa::Rsa;
-//! use openssl::pkey::Pkey;
+//! use openssl::pkey::PKey;
 //!
 //! fn main() {
 //!     let rsa = Rsa::generate(2048).unwrap();
-//!     let pkey = Pkey::from_rsa(rsa).unwrap();
+//!     let pkey = PKey::from_rsa(rsa).unwrap();
 //! }
 //! ```
 
