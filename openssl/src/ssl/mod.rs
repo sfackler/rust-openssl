@@ -428,18 +428,34 @@ fn get_new_ssl_idx<T>() -> c_int {
     }
 }
 
-// FIXME look into this
-/// An error returned from an SNI callback.
-pub enum SniError {
-    Fatal(c_int),
-    Warning(c_int),
-    NoAck,
+/// An error returned from the SNI callback.
+#[derive(Debug, Copy, Clone)]
+pub struct SniError(c_int);
+
+impl SniError {
+    /// Abort the handshake with a fatal alert.
+    pub const ALERT_FATAL: SniError = SniError(ffi::SSL_TLSEXT_ERR_ALERT_FATAL);
+
+    /// Send a warning alert to the client and continue the handshake.
+    pub const ALERT_WARNING: SniError = SniError(ffi::SSL_TLSEXT_ERR_ALERT_WARNING);
+
+    pub const NOACK: SniError = SniError(ffi::SSL_TLSEXT_ERR_NOACK);
+}
+
+/// An SSL/TLS alert.
+#[derive(Debug, Copy, Clone)]
+pub struct SslAlert(c_int);
+
+impl SslAlert {
+    /// Alert 112 - `unrecognized_name`.
+    pub const UNRECOGNIZED_NAME: SslAlert = SslAlert(ffi::SSL_AD_UNRECOGNIZED_NAME);
 }
 
 /// An error returned from an ALPN selection callback.
 ///
 /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[derive(Debug, Copy, Clone)]
 pub struct AlpnError(c_int);
 
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
@@ -564,7 +580,7 @@ impl SslContextBuilder {
     /// [`SSL_CTX_set_tlsext_servername_callback`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_tlsext_servername_callback.html
     pub fn set_servername_callback<F>(&mut self, callback: F)
     where
-        F: Fn(&mut SslRef) -> Result<(), SniError> + 'static + Sync + Send,
+        F: Fn(&mut SslRef, &mut SslAlert) -> Result<(), SniError> + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);

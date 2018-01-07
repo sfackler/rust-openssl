@@ -11,7 +11,7 @@ use dh::Dh;
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
 use ec::EcKey;
 use pkey::Params;
-use ssl::{get_callback_idx, get_ssl_callback_idx, SniError, SslRef};
+use ssl::{get_callback_idx, get_ssl_callback_idx, SniError, SslAlert, SslRef};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
 use ssl::AlpnError;
 use x509::X509StoreContextRef;
@@ -89,25 +89,20 @@ where
 
 pub extern "C" fn raw_sni<F>(ssl: *mut ffi::SSL, al: *mut c_int, _arg: *mut c_void) -> c_int
 where
-    F: Fn(&mut SslRef) -> Result<(), SniError> + 'static + Sync + Send,
+    F: Fn(&mut SslRef, &mut SslAlert) -> Result<(), SniError> + 'static + Sync + Send,
 {
     unsafe {
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
         let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
         let callback: &F = &*(callback as *mut F);
         let ssl = SslRef::from_ptr_mut(ssl);
+        let mut alert = SslAlert(*al);
 
-        match callback(ssl) {
+        let r = callback(ssl, &mut alert);
+        *al = alert.0;
+        match r {
             Ok(()) => ffi::SSL_TLSEXT_ERR_OK,
-            Err(SniError::Fatal(e)) => {
-                *al = e;
-                ffi::SSL_TLSEXT_ERR_ALERT_FATAL
-            }
-            Err(SniError::Warning(e)) => {
-                *al = e;
-                ffi::SSL_TLSEXT_ERR_ALERT_WARNING
-            }
-            Err(SniError::NoAck) => ffi::SSL_TLSEXT_ERR_NOACK,
+            Err(e) => e.0,
         }
     }
 }
