@@ -1198,6 +1198,9 @@ pub const RSA_X931_PADDING: c_int = 5;
 
 pub const SHA_LBLOCK: c_int = 16;
 
+pub const TLS1_AD_UNRECOGNIZED_NAME: c_int = 112;
+pub const SSL_AD_UNRECOGNIZED_NAME: c_int = TLS1_AD_UNRECOGNIZED_NAME;
+
 pub const SSL_CTRL_SET_TMP_DH: c_int = 3;
 pub const SSL_CTRL_SET_TMP_ECDH: c_int = 4;
 pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
