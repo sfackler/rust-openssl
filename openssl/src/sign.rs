@@ -390,7 +390,6 @@ mod test {
     use ec::{EcGroup, EcKey};
     use nid::Nid;
     use rsa::{Padding, Rsa};
-    use dsa::Dsa;
     use pkey::PKey;
 
     const INPUT: &'static str =
@@ -442,59 +441,7 @@ mod test {
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
         verifier.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         verifier.update(b"foobar").unwrap();
-        assert!(!verifier
-            .verify(&Vec::from_hex(SIGNATURE).unwrap())
-            .unwrap());
-    }
-
-    #[test]
-    pub fn dsa_sign_verify() {
-        let input: Vec<u8> = (0..25).cycle().take(1024).collect();
-
-        let private_key = {
-            let key = include_bytes!("../test/dsa.pem");
-            PKey::from_dsa(Dsa::private_key_from_pem(key).unwrap()).unwrap()
-        };
-
-        let public_key = {
-            let key = include_bytes!("../test/dsa.pem.pub");
-            PKey::from_dsa(Dsa::public_key_from_pem(key).unwrap()).unwrap()
-        };
-
-        let mut signer = Signer::new(MessageDigest::sha1(), &private_key).unwrap();
-        signer.update(&input).unwrap();
-        let sig = signer.sign_to_vec().unwrap();
-
-        let mut verifier = Verifier::new(MessageDigest::sha1(), &public_key).unwrap();
-        verifier.update(&input).unwrap();
-        assert!(verifier.verify(&sig).unwrap());
-    }
-
-    #[test]
-    pub fn dsa_sign_verify_fail() {
-        let input: Vec<u8> = (0..25).cycle().take(1024).collect();
-
-        let private_key = {
-            let key = include_bytes!("../test/dsa.pem");
-            PKey::from_dsa(Dsa::private_key_from_pem(key).unwrap()).unwrap()
-        };
-
-        let public_key = {
-            let key = include_bytes!("../test/dsa.pem.pub");
-            PKey::from_dsa(Dsa::public_key_from_pem(key).unwrap()).unwrap()
-        };
-
-        let mut signer = Signer::new(MessageDigest::sha1(), &private_key).unwrap();
-        signer.update(&input).unwrap();
-        let mut sig = signer.sign_to_vec().unwrap();
-        sig[0] -= 1;
-
-        let mut verifier = Verifier::new(MessageDigest::sha1(), &public_key).unwrap();
-        verifier.update(&input).unwrap();
-        match verifier.verify(&sig) {
-            Ok(true) => panic!("unexpected success"),
-            Ok(false) | Err(_) => {}
-        }
+        assert!(!verifier.verify(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
     }
 
     fn test_hmac(ty: MessageDigest, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {

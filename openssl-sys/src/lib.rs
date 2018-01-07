@@ -2620,6 +2620,8 @@ extern "C" {
     pub fn d2i_DSAPrivateKey(a: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long)
         -> *mut DSA;
     pub fn i2d_DSAPrivateKey(a: *const DSA, pp: *mut *mut c_uchar) -> c_int;
+    pub fn d2i_DSA_PUBKEY(k: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long) -> *mut DSA;
+    pub fn i2d_DSA_PUBKEY(a: *mut DSA, pp: *mut *mut c_uchar) -> c_int;
 
     pub fn d2i_ECPrivateKey(
         k: *mut *mut EC_KEY,

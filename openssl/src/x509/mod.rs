@@ -3,7 +3,7 @@
 //! An `X509` certificate binds an identity to a public key, and is either
 //! signed by a certificate authority (CA) or self-signed. An entity that gets
 //! a hold of a certificate can both verify your identity (via a CA) and encrypt
-//! data with the included public key. `X509` certificates are used in many 
+//! data with the included public key. `X509` certificates are used in many
 //! Internet protocols, including SSL/TLS, which is the basis for HTTPS,
 //! the secure protocol for browsing the web.
 //!
@@ -482,8 +482,27 @@ impl X509Ref {
         }
     }
 
-    to_pem!(ffi::PEM_write_bio_X509);
-    to_der!(ffi::i2d_X509);
+    to_pem! {
+        /// Serializes the certificate into a PEM-encoded X509 structure.
+        ///
+        /// The output will have a header of `-----BEGIN CERTIFICATE-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_X509`].
+        ///
+        /// [`PEM_write_bio_X509`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_write_bio_X509.html
+        to_pem,
+        ffi::PEM_write_bio_X509
+    }
+
+    to_der! {
+        /// Serializes the certificate into a DER-encoded X509 structure.
+        ///
+        /// This corresponds to [`i2d_X509`].
+        ///
+        /// [`i2d_X509`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_X509.html
+        to_der,
+        ffi::i2d_X509
+    }
 }
 
 impl ToOwned for X509Ref {
@@ -503,8 +522,29 @@ impl X509 {
         X509Builder::new()
     }
 
-    from_pem!(X509, ffi::PEM_read_bio_X509);
-    from_der!(X509, ffi::d2i_X509);
+    from_pem! {
+        /// Deserializes a PEM-encoded X509 structure.
+        ///
+        /// The input should have a header of `-----BEGIN CERTIFICATE-----`.
+        ///
+        /// This corresponds to [`PEM_read_bio_X509`].
+        ///
+        /// [`PEM_read_bio_X509`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_read_bio_X509.html
+        from_pem,
+        X509,
+        ffi::PEM_read_bio_X509
+    }
+
+    from_der! {
+        /// Deserializes a DER-encoded X509 structure.
+        ///
+        /// This corresponds to [`d2i_X509`].
+        ///
+        /// [`d2i_X509`]: https://www.openssl.org/docs/manmaster/man3/d2i_X509.html
+        from_der,
+        X509,
+        ffi::d2i_X509
+    }
 
     /// Deserializes a list of PEM-formatted certificates.
     pub fn stack_from_pem(pem: &[u8]) -> Result<Vec<X509>, ErrorStack> {
@@ -765,7 +805,7 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl X509NameEntryRef {
-    /// Returns the field value of an `X509NameEntry`.     
+    /// Returns the field value of an `X509NameEntry`.
     ///
     /// This corresponds to [`X509_NAME_ENTRY_get_data`].
     ///
@@ -906,32 +946,59 @@ impl X509Req {
         X509ReqBuilder::new()
     }
 
-    /// Reads Certifcate Signing Request (CSR) from PEM.
-    pub fn from_pem(buf: &[u8]) -> Result<X509Req, ErrorStack> {
-        let mem_bio = MemBioSlice::new(buf)?;
-        unsafe {
-            let handle = cvt_p(ffi::PEM_read_bio_X509_REQ(
-                mem_bio.as_ptr(),
-                ptr::null_mut(),
-                None,
-                ptr::null_mut(),
-            ))?;
-            Ok(X509Req::from_ptr(handle))
-        }
+    from_pem! {
+        /// Deserializes a PEM-encoded PKCS#10 certificate request structure.
+        ///
+        /// The input should have a header of `-----BEGIN CERTIFICATE REQUEST-----`.
+        ///
+        /// This corresponds to [`PEM_read_bio_X509_REQ`].
+        ///
+        /// [`PEM_read_bio_X509_REQ`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_read_bio_X509_REQ.html
+        from_pem,
+        X509Req,
+        ffi::PEM_read_bio_X509_REQ
     }
 
-    from_der!(X509Req, ffi::d2i_X509_REQ);
+    from_der! {
+        /// Deserializes a DER-encoded PKCS#10 certificate request structure.
+        ///
+        /// This corresponds to [`d2i_X509_REQ`].
+        ///
+        /// [`d2i_X509_REQ`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_X509_REQ.html
+        from_der,
+        X509Req,
+        ffi::d2i_X509_REQ
+    }
 }
 
 impl X509ReqRef {
-    to_pem!(ffi::PEM_write_bio_X509_REQ);
-    to_der!(ffi::i2d_X509_REQ);
+    to_pem! {
+        /// Serializes the certificate request to a PEM-encoded PKCS#10 structure.
+        ///
+        /// The output will have a header of `-----BEGIN CERTIFICATE REQUEST-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_X509_REQ`].
+        ///
+        /// [`PEM_write_bio_X509_REQ`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_write_bio_X509_REQ.html
+        to_pem,
+        ffi::PEM_write_bio_X509_REQ
+    }
+
+    to_der! {
+        /// Serializes the certificate request to a DER-encoded PKCS#10 structure.
+        ///
+        /// This corresponds to [`i2d_X509_REQ`].
+        ///
+        /// [`i2d_X509_REQ`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_X509_REQ.html
+        to_der,
+        ffi::i2d_X509_REQ
+    }
 
     /// Returns the numerical value of the version field of the certificate request.
     ///
     /// This corresponds to [`X509_REQ_get_version`]
-    /// 
-    /// [`X509_REQ_get_version`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_get_version.html 
+    ///
+    /// [`X509_REQ_get_version`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_get_version.html
     pub fn version(&self) -> i32 {
         unsafe { compat::X509_REQ_get_version(self.as_ptr()) as i32 }
     }
@@ -940,7 +1007,7 @@ impl X509ReqRef {
     ///
     /// This corresponds to [`X509_REQ_get_subject_name`]
     ///
-    /// [`X509_REQ_get_subject_name`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_get_subject_name.html 
+    /// [`X509_REQ_get_subject_name`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_get_subject_name.html
     pub fn subject_name(&self) -> &X509NameRef {
         unsafe {
             let name = compat::X509_REQ_get_subject_name(self.as_ptr());

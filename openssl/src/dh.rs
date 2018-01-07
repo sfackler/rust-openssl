@@ -21,8 +21,27 @@ impl<T> DhRef<T>
 where
     T: HasParams,
 {
-    to_pem!(ffi::PEM_write_bio_DHparams);
-    to_der!(ffi::i2d_DHparams);
+    to_pem! {
+        /// Serializes the parameters into a PEM-encoded PKCS#3 DHparameter structure.
+        ///
+        /// The output will have a header of `-----BEGIN DH PARAMETERS-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_DHparams`].
+        ///
+        /// [`PEM_write_bio_DHparams`]: https://www.openssl.org/docs/manmaster/man3/PEM_write_bio_DHparams.html
+        params_to_pem,
+        ffi::PEM_write_bio_DHparams
+    }
+
+    to_der! {
+        /// Serializes the parameters into a DER-encoded PKCS#3 DHparameter structure.
+        ///
+        /// This corresponds to [`i2d_DHparams`].
+        ///
+        /// [`i2d_DHparams`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_DHparams.html
+        params_to_der,
+        ffi::i2d_DHparams
+    }
 }
 
 impl Dh<Params> {
@@ -40,8 +59,29 @@ impl Dh<Params> {
         }
     }
 
-    from_pem!(Dh<Params>, ffi::PEM_read_bio_DHparams);
-    from_der!(Dh<Params>, ffi::d2i_DHparams);
+    from_pem! {
+        /// Deserializes a PEM-encoded PKCS#3 DHpararameters structure.
+        ///
+        /// The input should have a header of `-----BEGIN DH PARAMETERS-----`.
+        ///
+        /// This corresponds to [`PEM_read_bio_DHparams`].
+        ///
+        /// [`PEM_read_bio_DHparams`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_read_bio_DHparams.html
+        params_from_pem,
+        Dh<Params>,
+        ffi::PEM_read_bio_DHparams
+    }
+
+    from_der! {
+        /// Deserializes a DER-encoded PKCS#3 DHparameters structure.
+        ///
+        /// This corresponds to [`d2i_DHparams`].
+        ///
+        /// [`d2i_DHparams`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_DHparams.html
+        params_from_der,
+        Dh<Params>,
+        ffi::d2i_DHparams
+    }
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
@@ -143,15 +183,15 @@ mod tests {
     fn test_dh_from_pem() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         let params = include_bytes!("../test/dhparams.pem");
-        let dh = Dh::from_pem(params).unwrap();
+        let dh = Dh::params_from_pem(params).unwrap();
         ctx.set_tmp_dh(&dh).unwrap();
     }
 
     #[test]
     fn test_dh_from_der() {
         let params = include_bytes!("../test/dhparams.pem");
-        let dh = Dh::from_pem(params).unwrap();
-        let der = dh.to_der().unwrap();
-        Dh::from_der(&der).unwrap();
+        let dh = Dh::params_from_pem(params).unwrap();
+        let der = dh.params_to_der().unwrap();
+        Dh::params_from_der(&der).unwrap();
     }
 }

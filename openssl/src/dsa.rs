@@ -14,7 +14,7 @@ use std::ptr;
 use {cvt, cvt_p};
 use bn::BigNumRef;
 use error::ErrorStack;
-use pkey::{HasParams, HasPrivate, HasPublic, Private, Public};
+use pkey::{HasParams, HasPublic, Private, Public};
 
 generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::DSA;
@@ -60,18 +60,29 @@ generic_foreign_type_and_impl_send_sync! {
 
 impl<T> DsaRef<T>
 where
-    T: HasPrivate,
-{
-    private_key_to_pem!(ffi::PEM_write_bio_DSAPrivateKey);
-    private_key_to_der!(ffi::i2d_DSAPrivateKey);
-}
-
-impl<T> DsaRef<T>
-where
     T: HasPublic,
 {
-    public_key_to_pem!(ffi::PEM_write_bio_DSA_PUBKEY);
-    public_key_to_der!(ffi::i2d_DSAPublicKey);
+    to_pem! {
+        /// Serialies the public key into a PEM-encoded SubjectPublicKeyInfo structure.
+        ///
+        /// The output will have a header of `-----BEGIN PUBLIC KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_DSA_PUBKEY`].
+        ///
+        /// [`PEM_write_bio_DSA_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_DSA_PUBKEY.html
+        public_key_to_pem,
+        ffi::PEM_write_bio_DSA_PUBKEY
+    }
+
+    to_der! {
+        /// Serializes the public key into a DER-encoded SubjectPublicKeyInfo structure.
+        ///
+        /// This corresponds to [`i2d_DSA_PUBKEY`].
+        ///
+        /// [`i2d_DSA_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_DSA_PUBKEY.html
+        public_key_to_der,
+        ffi::i2d_DSA_PUBKEY
+    }
 }
 
 impl<T> DsaRef<T>
@@ -139,14 +150,32 @@ impl Dsa<Private> {
             Ok(dsa)
         }
     }
-
-    private_key_from_pem!(Dsa<Private>, ffi::PEM_read_bio_DSAPrivateKey);
-    private_key_from_der!(Dsa<Private>, ffi::d2i_DSAPrivateKey);
 }
 
 impl Dsa<Public> {
-    public_key_from_pem!(Dsa<Public>, ffi::PEM_read_bio_DSA_PUBKEY);
-    public_key_from_der!(Dsa<Public>, ffi::d2i_DSAPublicKey);
+    from_pem! {
+        /// Decodes a PEM-encoded SubjectPublicKeyInfo structure containing a DSA key.
+        ///
+        /// The input should have a header of `-----BEGIN PUBLIC KEY-----`.
+        ///
+        /// This corresponds to [`PEM_read_bio_DSA_PUBKEY`].
+        ///
+        /// [`PEM_read_bio_DSA_PUBKEY`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_read_bio_DSA_PUBKEY.html
+        public_key_from_pem,
+        Dsa<Public>,
+        ffi::PEM_read_bio_DSA_PUBKEY
+    }
+
+    from_der! {
+        /// Decodes a DER-encoded SubjectPublicKeyInfo structure containing a DSA key.
+        ///
+        /// This corresponds to [`d2i_DSA_PUBKEY`].
+        ///
+        /// [`d2i_DSA_PUBKEY`]: https://www.openssl.org/docs/man1.0.2/crypto/d2i_DSA_PUBKEY.html
+        public_key_from_der,
+        Dsa<Public>,
+        ffi::d2i_DSA_PUBKEY
+    }
 }
 
 impl<T> fmt::Debug for Dsa<T> {
@@ -178,40 +207,10 @@ mod compat {
 
 #[cfg(test)]
 mod test {
-    use symm::Cipher;
-
     use super::*;
 
     #[test]
     pub fn test_generate() {
         Dsa::generate(1024).unwrap();
-    }
-
-    #[test]
-    pub fn test_password() {
-        let key = include_bytes!("../test/dsa-encrypted.pem");
-        Dsa::private_key_from_pem_passphrase(key, b"mypass").unwrap();
-    }
-
-    #[test]
-    fn test_to_password() {
-        let key = Dsa::generate(2048).unwrap();
-        let pem = key.private_key_to_pem_passphrase(Cipher::aes_128_cbc(), b"foobar")
-            .unwrap();
-        Dsa::private_key_from_pem_passphrase(&pem, b"foobar").unwrap();
-        assert!(Dsa::private_key_from_pem_passphrase(&pem, b"fizzbuzz").is_err());
-    }
-
-    #[test]
-    pub fn test_password_callback() {
-        let mut password_queried = false;
-        let key = include_bytes!("../test/dsa-encrypted.pem");
-        Dsa::private_key_from_pem_callback(key, |password| {
-            password_queried = true;
-            password[..6].copy_from_slice(b"mypass");
-            Ok(6)
-        }).unwrap();
-
-        assert!(password_queried);
     }
 }

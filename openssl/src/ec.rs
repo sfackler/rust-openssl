@@ -522,8 +522,35 @@ impl<T> EcKeyRef<T>
 where
     T: HasPrivate,
 {
-    private_key_to_pem!(ffi::PEM_write_bio_ECPrivateKey);
-    private_key_to_der!(ffi::i2d_ECPrivateKey);
+    private_key_to_pem! {
+        /// Serializes the private key to a PEM-encoded ECPrivateKey structure.
+        ///
+        /// The output will have a header of `-----BEGIN EC PRIVATE KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_ECPrivateKey`].
+        ///
+        /// [`PEM_write_bio_ECPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_ECPrivateKey.html
+        private_key_to_pem,
+        /// Serializes the private key to a PEM-encoded encrypted ECPrivateKey structure.
+        ///
+        /// The output will have a header of `-----BEGIN EC PRIVATE KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_ECPrivateKey`].
+        ///
+        /// [`PEM_write_bio_ECPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_ECPrivateKey.html
+        private_key_to_pem_passphrase,
+        ffi::PEM_write_bio_ECPrivateKey
+    }
+
+    to_der! {
+        /// Serializes the private key into a DER-encoded ECPrivateKey structure.
+        ///
+        /// This corresponds to [`i2d_ECPrivateKey`].
+        ///
+        /// [`i2d_ECPrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/d2i_ECPrivate_key.html
+        private_key_to_der,
+        ffi::i2d_ECPrivateKey
+    }
 
     /// Return [`EcPoint`] associated with the private key
     ///
@@ -702,8 +729,43 @@ impl EcKey<Private> {
         }
     }
 
-    private_key_from_pem!(EcKey<Private>, ffi::PEM_read_bio_ECPrivateKey);
-    private_key_from_der!(EcKey<Private>, ffi::d2i_ECPrivateKey);
+    private_key_from_pem! {
+        /// Deserializes a private key from a PEM-encoded ECPrivateKey structure.
+        ///
+        /// The input should have a header of `-----BEGIN EC PRIVATE KEY-----`.
+        ///
+        /// This corresponds to `PEM_read_bio_ECPrivateKey`.
+        private_key_from_pem,
+
+        /// Deserializes a private key from a PEM-encoded encrypted ECPrivateKey structure.
+        ///
+        /// The input should have a header of `-----BEGIN EC PRIVATE KEY-----`.
+        ///
+        /// This corresponds to `PEM_read_bio_ECPrivateKey`.
+        private_key_from_pem_passphrase,
+
+        /// Deserializes a private key from a PEM-encoded encrypted ECPrivateKey structure.
+        ///
+        /// The callback should fill the password into the provided buffer and return its length.
+        ///
+        /// The input should have a header of `-----BEGIN EC PRIVATE KEY-----`.
+        ///
+        /// This corresponds to `PEM_read_bio_ECPrivateKey`.
+        private_key_from_pem_callback,
+        EcKey<Private>,
+        ffi::PEM_read_bio_ECPrivateKey
+    }
+
+    from_der! {
+        /// Decodes a DER-encoded elliptic curve private key structure.
+        ///
+        /// This corresponds to [`d2i_ECPrivateKey`].
+        ///
+        /// [`d2i_ECPrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/d2i_ECPrivate_key.html
+        private_key_from_der,
+        EcKey<Private>,
+        ffi::d2i_ECPrivateKey
+    }
 }
 
 impl<T> Clone for EcKey<T> {

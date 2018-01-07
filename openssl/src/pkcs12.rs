@@ -22,7 +22,15 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl Pkcs12Ref {
-    to_der!(ffi::i2d_PKCS12);
+    to_der! {
+        /// Serializes the `Pkcs12` to its standard DER encoding.
+        ///
+        /// This corresponds to [`i2d_PKCS12`].
+        ///
+        /// [`i2d_PKCS12`]: https://www.openssl.org/docs/manmaster/man3/i2d_PKCS12.html
+        to_der,
+        ffi::i2d_PKCS12
+    }
 
     /// Extracts the contents of the `Pkcs12`.
     pub fn parse(&self, pass: &str) -> Result<ParsedPkcs12, ErrorStack> {
@@ -60,7 +68,16 @@ impl Pkcs12Ref {
 }
 
 impl Pkcs12 {
-    from_der!(Pkcs12, ffi::d2i_PKCS12);
+    from_der! {
+        /// Deserializes a DER-encoded PKCS#12 archive.
+        ///
+        /// This corresponds to [`d2i_PKCS12`].
+        ///
+        /// [`d2i_PKCS12`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_PKCS12.html
+        from_der,
+        Pkcs12,
+        ffi::d2i_PKCS12
+    }
 
     /// Creates a new builder for a protected pkcs12 certificate.
     ///
@@ -204,19 +221,14 @@ mod test {
         let parsed = pkcs12.parse("mypass").unwrap();
 
         assert_eq!(
-            hex::encode(parsed
-                .cert
-                .fingerprint(MessageDigest::sha1())
-                .unwrap()),
+            hex::encode(parsed.cert.fingerprint(MessageDigest::sha1()).unwrap()),
             "59172d9313e84459bcff27f967e79e6e9217e584"
         );
 
         let chain = parsed.chain.unwrap();
         assert_eq!(chain.len(), 1);
         assert_eq!(
-            hex::encode(chain[0]
-                .fingerprint(MessageDigest::sha1())
-                .unwrap()),
+            hex::encode(chain[0].fingerprint(MessageDigest::sha1()).unwrap()),
             "c0cbdf7cdd03c9773e5468e1f6d2da7d5cbb1875"
         );
     }

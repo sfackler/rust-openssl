@@ -196,7 +196,7 @@ impl SslAcceptor {
     /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
     pub fn mozilla_intermediate(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
         let mut ctx = ctx(method)?;
-        let dh = Dh::from_pem(DHPARAM_PEM.as_bytes())?;
+        let dh = Dh::params_from_pem(DHPARAM_PEM.as_bytes())?;
         ctx.set_tmp_dh(&dh)?;
         setup_curves(&mut ctx)?;
         ctx.set_cipher_list(
