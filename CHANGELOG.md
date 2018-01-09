@@ -39,6 +39,14 @@
 * Shared secret derivation is now handled by the new `derive::Deriver` type rather than
     `pkey::PKeyContext`, which has been removed.
 * `ssl::Error` is now no longer an enum, and provides more direct access to the relevant state.
+* `SslConnectorBuilder::new` has been moved and renamed to `SslConnector::builder`.
+* `SslAcceptorBuilder::mozilla_intermediate` and `SslAcceptorBuilder::mozilla_modern` have been
+    moved to `SslAcceptor` and no longer take the private key and certificate chain. Install those
+    manually after creating the builder.
+* `X509VerifyError` is now `X509VerifyResult` and can now have the "ok" value.
+* `x509::X509FileType` is now `ssl::SslFiletype`.
+* Asymmetric key serialization and deserialization methods now document the formats that they
+    correspond to, and some have been renamed to better indicate that.
 
 ### Removed
 
