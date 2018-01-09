@@ -53,6 +53,7 @@
 * All deprecated APIs have been removed.
 * NPN support has been removed. It has been supersceded by ALPN, and is hopefully no longer being
     used in practice. If you still depend on it, please file an issue!
+* `SslRef::compression` has been removed.
 * Some `ssl::SslOptions` flags have been removed as they no longer do anything.
 
 ## Older
