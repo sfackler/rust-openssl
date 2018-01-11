@@ -12,6 +12,8 @@
     in a "standard" way.
 * FIPS mode support is available in the `fips` module.
 * Accessors for the Issuer and Issuer Alternative Name fields of X509 certificates have been added.
+* The `X509VerifyResult` can now be set in the certificate verification callback via
+    `X509StoreContextRef::set_error`.
 
 ### Changed
 
@@ -43,7 +45,8 @@
 * `SslAcceptorBuilder::mozilla_intermediate` and `SslAcceptorBuilder::mozilla_modern` have been
     moved to `SslAcceptor` and no longer take the private key and certificate chain. Install those
     manually after creating the builder.
-* `X509VerifyError` is now `X509VerifyResult` and can now have the "ok" value.
+* `X509VerifyError` is now `X509VerifyResult` and can now have the "ok" value in addition to error
+    values.
 * `x509::X509FileType` is now `ssl::SslFiletype`.
 * Asymmetric key serialization and deserialization methods now document the formats that they
     correspond to, and some have been renamed to better indicate that.
