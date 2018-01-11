@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v0.10.0] - 2018-01-10
+
 ### Compatibility
 
 * openssl 0.10 still uses openssl-sys 0.9, so openssl 0.9 and 0.10 can coexist without issue.
@@ -63,5 +65,6 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/v0.9.23...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.0...master
+[v0.10.0]: https://github.com/sfackler/rust-openssl/compare/v0.9.23...openssl-v0.10.0
 [release tags]: https://github.com/sfackler/rust-openssl/releases
