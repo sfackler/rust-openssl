@@ -82,6 +82,15 @@ impl Error {
     }
 }
 
+impl From<ErrorStack> for Error {
+    fn from(e: ErrorStack) -> Error {
+        Error {
+            code: ErrorCode::SSL,
+            cause: Some(InnerError::Ssl(e)),
+        }
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self.code {
