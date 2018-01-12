@@ -124,11 +124,22 @@ pub struct ConnectConfiguration {
 }
 
 impl ConnectConfiguration {
+    /// A builder-style version of `set_use_server_name_indication`.
+    pub fn use_server_name_indication(mut self, use_sni: bool) -> ConnectConfiguration {
+        self.set_use_server_name_indication(use_sni);
+        self
+    }
+
     /// Configures the use of Server Name Indication (SNI) when connecting.
     ///
     /// Defaults to `true`.
-    pub fn use_server_name_indication(mut self, use_sni: bool) -> ConnectConfiguration {
+    pub fn set_use_server_name_indication(&mut self, use_sni: bool) {
         self.sni = use_sni;
+    }
+
+    /// A builder-style version of `set_verify_hostname`.
+    pub fn verify_hostname(mut self, verify_hostname: bool) -> ConnectConfiguration {
+        self.set_verify_hostname(verify_hostname);
         self
     }
 
@@ -141,9 +152,8 @@ impl ConnectConfiguration {
     /// You should think very carefully before you use this method. If hostname verification is not
     /// used, *any* valid certificate for *any* site will be trusted for use from any other. This
     /// introduces a significant vulnerability to man-in-the-middle attacks.
-    pub fn verify_hostname(mut self, verify_hostname: bool) -> ConnectConfiguration {
+    pub fn set_verify_hostname(&mut self, verify_hostname: bool) {
         self.verify_hostname = verify_hostname;
-        self
     }
 
     /// Initiates a client-side TLS session on a stream.
