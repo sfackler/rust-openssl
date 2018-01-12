@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v0.10.2] - 2018-01-11
+
 ### Added
 
 * Added `ConnectConfiguration::set_use_server_name_indication` and
@@ -77,7 +79,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.1...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.2...master
+[v0.10.1]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.1...openssl-v0.10.2
 [v0.10.1]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.0...openssl-v0.10.1
 [v0.10.0]: https://github.com/sfackler/rust-openssl/compare/v0.9.23...openssl-v0.10.0
 [release tags]: https://github.com/sfackler/rust-openssl/releases
