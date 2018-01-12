@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+
+* Added `ConnectConfiguration::set_use_server_name_indication` and
+    `ConnectConfiguration::set_verify_hostname` for use in contexts where you don't have ownership
+    of the `ConnectConfiguration`.
+
 ## [v0.10.1] - 2018-01-10
 
 ### Added
