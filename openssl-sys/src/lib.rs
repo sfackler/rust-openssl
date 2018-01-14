@@ -221,6 +221,7 @@ pub const PEM_R_NO_START_LINE: c_int = 108;
 pub const EVP_MAX_MD_SIZE: c_uint = 64;
 pub const EVP_PKEY_RSA: c_int = NID_rsaEncryption;
 pub const EVP_PKEY_HMAC: c_int = NID_hmac;
+pub const EVP_PKEY_CMAC: c_int = NID_cmac;
 pub const EVP_PKEY_DSA: c_int = NID_dsa;
 pub const EVP_PKEY_DH: c_int = NID_dhKeyAgreement;
 pub const EVP_PKEY_EC: c_int = NID_X9_62_id_ecPublicKey;
@@ -233,6 +234,10 @@ pub const EVP_PKEY_CTRL_RSA_PSS_SALTLEN: c_int = EVP_PKEY_ALG_CTRL + 2;
 pub const EVP_PKEY_CTRL_RSA_MGF1_MD: c_int = EVP_PKEY_ALG_CTRL + 5;
 pub const EVP_PKEY_CTRL_GET_RSA_PADDING: c_int = EVP_PKEY_ALG_CTRL + 6;
 
+pub const EVP_PKEY_CTRL_SET_MAC_KEY: c_int = 6;
+pub const EVP_PKEY_CTRL_CIPHER: c_int = 12;
+
+pub const EVP_PKEY_OP_KEYGEN: c_int = 1 << 2;
 pub const EVP_PKEY_OP_SIGN: c_int = 1 << 3;
 pub const EVP_PKEY_OP_VERIFY: c_int = 1 << 4;
 pub const EVP_PKEY_OP_VERIFYRECOVER: c_int = 1 << 5;
@@ -2093,6 +2098,7 @@ extern "C" {
     ) -> *mut EVP_PKEY;
 
     pub fn EVP_PKEY_CTX_new(k: *mut EVP_PKEY, e: *mut ENGINE) -> *mut EVP_PKEY_CTX;
+    pub fn EVP_PKEY_CTX_new_id(id: c_int, e: *mut ENGINE) -> *mut EVP_PKEY_CTX;
     pub fn EVP_PKEY_CTX_free(ctx: *mut EVP_PKEY_CTX);
     pub fn EVP_PKEY_CTX_ctrl(
         ctx: *mut EVP_PKEY_CTX,
@@ -2102,6 +2108,9 @@ extern "C" {
         p1: c_int,
         p2: *mut c_void,
     ) -> c_int;
+
+    pub fn EVP_PKEY_keygen_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
+    pub fn EVP_PKEY_keygen(ctx: *mut EVP_PKEY_CTX, key: *mut *mut EVP_PKEY) -> c_int;
 
     pub fn HMAC_CTX_copy(dst: *mut HMAC_CTX, src: *mut HMAC_CTX) -> c_int;
 

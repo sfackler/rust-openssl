@@ -130,6 +130,26 @@ impl<'a> Signer<'a> {
     where
         T: HasPrivate,
     {
+        Self::new_intern(Some(type_), pkey)
+    }
+
+    /// Creates a new `Signer` without a digest.
+    ///
+    /// This can be used to create a CMAC.
+    /// OpenSSL documentation at [`EVP_DigestSignInit`].
+    ///
+    /// [`EVP_DigestSignInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignInit.html
+    pub fn new_without_digest<T>(pkey: &'a PKeyRef<T>) -> Result<Signer<'a>, ErrorStack>
+    where
+        T: HasPrivate,
+    {
+        Self::new_intern(None, pkey)
+    }
+
+    pub fn new_intern<T>(type_: Option<MessageDigest>, pkey: &'a PKeyRef<T>) -> Result<Signer<'a>, ErrorStack>
+    where
+        T: HasPrivate,
+    {
         unsafe {
             ffi::init();
 
@@ -138,7 +158,7 @@ impl<'a> Signer<'a> {
             let r = ffi::EVP_DigestSignInit(
                 ctx,
                 &mut pctx,
-                type_.as_ptr(),
+                type_.map(|t| t.as_ptr()).unwrap_or(ptr::null()),
                 ptr::null_mut(),
                 pkey.as_ptr(),
             );
@@ -636,6 +656,21 @@ mod test {
         ];
 
         test_hmac(MessageDigest::sha1(), &tests);
+    }
+
+    #[cfg(ossl110)]
+    #[test]
+    fn test_cmac() {
+        let cipher = ::symm::Cipher::aes_128_cbc();
+        let key = Vec::from_hex("9294727a3638bb1c13f48ef8158bfc9d").unwrap();
+        let pkey = PKey::cmac(&cipher, &key).unwrap();
+        let mut signer = Signer::new_without_digest(&pkey).unwrap();
+
+        let data = b"Hi There";
+        signer.update(data as &[u8]).unwrap();
+
+        let expected = vec![136, 101, 61, 167, 61, 30, 248, 234, 124, 166, 196, 157, 203, 52, 171, 19];
+        assert_eq!(signer.sign_to_vec().unwrap(), expected);
     }
 
     #[test]

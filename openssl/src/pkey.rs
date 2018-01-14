@@ -365,6 +365,68 @@ impl PKey<Private> {
         }
     }
 
+    /// Creates a new `PKey` containing a CMAC key.
+    ///
+    /// CMAC is only supported since the version 1.1.0 of OpenSSL.
+    ///
+    /// # Note
+    ///
+    /// To compute CMAC values, use the `sign` module.
+    #[cfg(any(all(ossl110, feature = "v110"), all(ossl111, feature = "v111")))]
+    pub fn cmac(cipher: &::symm::Cipher, key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
+        unsafe {
+            assert!(key.len() <= c_int::max_value() as usize);
+            let kctx = cvt_p(ffi::EVP_PKEY_CTX_new_id(
+                ffi::EVP_PKEY_CMAC,
+                ptr::null_mut(),
+            ))?;
+
+            let ret = (|| {
+                cvt(ffi::EVP_PKEY_keygen_init(kctx))?;
+
+                // Set cipher for cmac
+                cvt(ffi::EVP_PKEY_CTX_ctrl(
+                    kctx,
+                    -1,
+                    ffi::EVP_PKEY_OP_KEYGEN,
+                    ffi::EVP_PKEY_CTRL_CIPHER,
+                    0,
+                    cipher.as_ptr() as *mut _,
+                ))?;
+
+                // Set the key data
+                cvt(ffi::EVP_PKEY_CTX_ctrl(
+                    kctx,
+                    -1,
+                    ffi::EVP_PKEY_OP_KEYGEN,
+                    ffi::EVP_PKEY_CTRL_SET_MAC_KEY,
+                    key.len() as c_int,
+                    key.as_ptr() as *mut _,
+                ))?;
+                Ok(())
+            })();
+
+            if let Err(e) = ret {
+                // Free memory
+                ffi::EVP_PKEY_CTX_free(kctx);
+                return Err(e);
+            }
+
+            // Generate key
+            let mut key = ptr::null_mut();
+            let ret = cvt(ffi::EVP_PKEY_keygen(kctx, &mut key));
+
+            // Free memory
+            ffi::EVP_PKEY_CTX_free(kctx);
+
+            if let Err(e) = ret {
+                return Err(e);
+            }
+
+            Ok(PKey::from_ptr(key))
+        }
+    }
+
     private_key_from_pem! {
         /// Deserializes a private key from a PEM-encoded key type specific format.
         ///
