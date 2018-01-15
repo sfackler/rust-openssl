@@ -92,13 +92,15 @@ fn test_subject_alt_name() {
     let cert = X509::from_pem(cert).unwrap();
 
     let subject_alt_names = cert.subject_alt_names().unwrap();
-    assert_eq!(3, subject_alt_names.len());
-    assert_eq!(Some("foobar.com"), subject_alt_names[0].dnsname());
+    assert_eq!(5, subject_alt_names.len());
+    assert_eq!(Some("example.com"), subject_alt_names[0].dnsname());
     assert_eq!(subject_alt_names[1].ipaddress(), Some(&[127, 0, 0, 1][..]));
     assert_eq!(
         subject_alt_names[2].ipaddress(),
         Some(&b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01"[..])
     );
+    assert_eq!(Some("test@example.com"), subject_alt_names[3].email());
+    assert_eq!(Some("http://www.example.com"), subject_alt_names[4].uri());
 }
 
 #[test]
@@ -110,7 +112,7 @@ fn test_subject_alt_name_iter() {
     let mut subject_alt_names_iter = subject_alt_names.iter();
     assert_eq!(
         subject_alt_names_iter.next().unwrap().dnsname(),
-        Some("foobar.com")
+        Some("example.com")
     );
     assert_eq!(
         subject_alt_names_iter.next().unwrap().ipaddress(),
@@ -119,6 +121,14 @@ fn test_subject_alt_name_iter() {
     assert_eq!(
         subject_alt_names_iter.next().unwrap().ipaddress(),
         Some(&b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01"[..])
+    );
+    assert_eq!(
+        subject_alt_names_iter.next().unwrap().email(),
+        Some("test@example.com")
+    );
+    assert_eq!(
+        subject_alt_names_iter.next().unwrap().uri(),
+        Some("http://www.example.com")
     );
     assert!(subject_alt_names_iter.next().is_none());
 }

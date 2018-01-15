@@ -1090,10 +1090,10 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl GeneralNameRef {
-    /// Returns the contents of this `GeneralName` if it is a `dNSName`.
-    pub fn dnsname(&self) -> Option<&str> {
+
+    fn ia5_string(&self, ffi_type: c_int) -> Option<&str> {
         unsafe {
-            if (*self.as_ptr()).type_ != ffi::GEN_DNS {
+            if (*self.as_ptr()).type_ != ffi_type {
                 return None;
             }
 
@@ -1101,11 +1101,26 @@ impl GeneralNameRef {
             let len = ffi::ASN1_STRING_length((*self.as_ptr()).d as *mut _);
 
             let slice = slice::from_raw_parts(ptr as *const u8, len as usize);
-            // dNSNames are stated to be ASCII (specifically IA5). Hopefully
+            // IA5Strings are stated to be ASCII (specifically IA5). Hopefully
             // OpenSSL checks that when loading a certificate but if not we'll
             // use this instead of from_utf8_unchecked just in case.
             str::from_utf8(slice).ok()
         }
+    }
+
+    /// Returns the contents of this `GeneralName` if it is an `rfc822Name`.
+    pub fn email(&self) -> Option<&str> {
+        self.ia5_string(ffi::GEN_EMAIL)
+    }
+
+    /// Returns the contents of this `GeneralName` if it is a `dNSName`.
+    pub fn dnsname(&self) -> Option<&str> {
+        self.ia5_string(ffi::GEN_DNS)
+    }
+
+    /// Returns the contents of this `GeneralName` if it is an `uniformResourceIdentifier`.
+    pub fn uri(&self) -> Option<&str> {
+        self.ia5_string(ffi::GEN_URI)
     }
 
     /// Returns the contents of this `GeneralName` if it is an `iPAddress`.
