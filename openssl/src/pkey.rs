@@ -7,7 +7,7 @@
 //! encrypt information using a user's public key. The encrypted information can
 //! only be deciphered using that user's private key.
 //!
-//! This module offers support for four popular algorithms:
+//! This module offers support for five popular algorithms:
 //!
 //! * RSA
 //!
@@ -16,6 +16,8 @@
 //! * Diffie-Hellman
 //!
 //! * Elliptic Curves
+//!
+//! * HMAC
 //!
 //! These algorithms rely on hard mathematical problems - namely integer factorization,
 //! discrete logarithms, and elliptic curve relationships - that currently do not
