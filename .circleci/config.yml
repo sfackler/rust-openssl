@@ -1,9 +1,9 @@
 restore_registry: &RESTORE_REGISTRY
   restore_cache:
-    key: registry
+    key: registry-2
 save_registry: &SAVE_REGISTRY
   save_cache:
-    key: registry-{{ .BuildNum }}
+    key: registry-2-{{ .BuildNum }}
     paths:
     - /usr/local/cargo/registry/index
 openssl_key: &OPENSSL_KEY
