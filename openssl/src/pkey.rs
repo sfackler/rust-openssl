@@ -1,3 +1,50 @@
+//! Public/private key processing.
+//!
+//! Asymmetric public key algorithms solve the problem of establishing and sharing
+//! secret keys to securely send and receive messages.
+//! This system uses a pair of keys: a public key, which can be freely
+//! distributed, and a private key, which is kept to oneself. An entity may
+//! encrypt information using a user's public key. The encrypted information can
+//! only be deciphered using that user's private key.
+//!
+//! This module offers support for five popular algorithms:
+//!
+//! * RSA
+//!
+//! * DSA
+//!
+//! * Diffie-Hellman
+//!
+//! * Elliptic Curves
+//!
+//! * HMAC
+//!
+//! These algorithms rely on hard mathematical problems - namely integer factorization,
+//! discrete logarithms, and elliptic curve relationships - that currently do not
+//! yield efficient solutions. This property ensures the security of these
+//! cryptographic algorithms.
+//!
+//! # Example
+//!
+//! Generate a 2048-bit RSA public/private key pair and print the public key.
+//!
+//! ```rust
+//!
+//! extern crate openssl;
+//!
+//! use openssl::rsa::Rsa;
+//! use openssl::pkey::PKey;
+//! use std::str;
+//!
+//! fn main() {
+//!     let rsa = Rsa::generate(2048).unwrap();
+//!     let pkey = PKey::from_rsa(rsa).unwrap();
+//!
+//!     let pub_key: Vec<u8> = pkey.public_key_to_pem().unwrap();
+//!     println!("{:?}", str::from_utf8(pub_key.as_slice()).unwrap());
+//! }
+//! ```
+
 use libc::c_int;
 use std::ptr;
 use std::mem;
@@ -54,12 +101,18 @@ generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::EVP_PKEY;
     fn drop = ffi::EVP_PKEY_free;
 
+    /// A public or private key.
     pub struct PKey<T>;
+    /// Reference to `PKey`.
     pub struct PKeyRef<T>;
 }
 
 impl<T> PKeyRef<T> {
     /// Returns a copy of the internal RSA key.
+    ///
+    /// This corresponds to [`EVP_PKEY_get1_RSA`].
+    ///
+    /// [`EVP_PKEY_get1_RSA`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_get1_RSA.html
     pub fn rsa(&self) -> Result<Rsa<T>, ErrorStack> {
         unsafe {
             let rsa = cvt_p(ffi::EVP_PKEY_get1_RSA(self.as_ptr()))?;
@@ -68,6 +121,10 @@ impl<T> PKeyRef<T> {
     }
 
     /// Returns a copy of the internal DSA key.
+    ///
+    /// This corresponds to [`EVP_PKEY_get1_DSA`].
+    ///
+    /// [`EVP_PKEY_get1_DSA`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_get1_DSA.html
     pub fn dsa(&self) -> Result<Dsa<T>, ErrorStack> {
         unsafe {
             let dsa = cvt_p(ffi::EVP_PKEY_get1_DSA(self.as_ptr()))?;
@@ -76,6 +133,10 @@ impl<T> PKeyRef<T> {
     }
 
     /// Returns a copy of the internal DH key.
+    ///
+    /// This corresponds to [`EVP_PKEY_get1_DH`].
+    ///
+    /// [`EVP_PKEY_get1_DH`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_get1_DH.html
     pub fn dh(&self) -> Result<Dh<T>, ErrorStack> {
         unsafe {
             let dh = cvt_p(ffi::EVP_PKEY_get1_DH(self.as_ptr()))?;
@@ -84,6 +145,10 @@ impl<T> PKeyRef<T> {
     }
 
     /// Returns a copy of the internal elliptic curve key.
+    ///
+    /// This corresponds to [`EVP_PKEY_get1_EC_KEY`].
+    ///
+    /// [`EVP_PKEY_get1_EC_KEY`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_get1_EC_KEY.html
     pub fn ec_key(&self) -> Result<EcKey<T>, ErrorStack> {
         unsafe {
             let ec_key = cvt_p(ffi::EVP_PKEY_get1_EC_KEY(self.as_ptr()))?;
@@ -172,6 +237,10 @@ where
 
 impl<T> PKey<T> {
     /// Creates a new `PKey` containing an RSA key.
+    ///
+    /// This corresponds to [`EVP_PKEY_assign_RSA`].
+    ///
+    /// [`EVP_PKEY_assign_RSA`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_assign_RSA.html
     pub fn from_rsa(rsa: Rsa<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
@@ -187,6 +256,10 @@ impl<T> PKey<T> {
     }
 
     /// Creates a new `PKey` containing a DSA key.
+    ///
+    /// This corresponds to [`EVP_PKEY_assign_DSA`].
+    ///
+    /// [`EVP_PKEY_assign_DSA`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_assign_DSA.html
     pub fn from_dsa(dsa: Dsa<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
@@ -202,6 +275,10 @@ impl<T> PKey<T> {
     }
 
     /// Creates a new `PKey` containing a Diffie-Hellman key.
+    ///
+    /// This corresponds to [`EVP_PKEY_assign_DH`].
+    ///
+    /// [`EVP_PKEY_assign_DH`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_assign_DH.html
     pub fn from_dh(dh: Dh<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
@@ -217,6 +294,10 @@ impl<T> PKey<T> {
     }
 
     /// Creates a new `PKey` containing an elliptic curve key.
+    ///
+    /// This corresponds to [`EVP_PKEY_assign_EC_KEY`].
+    ///
+    /// [`EVP_PKEY_assign_EC_KEY`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_assign_EC_KEY.html
     pub fn from_ec_key(ec_key: EcKey<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
