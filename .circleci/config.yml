@@ -80,7 +80,7 @@ macos_job: &MACOS_JOB
   - run: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.20.0
   - run: sudo ln -s $CARGO_HOME/bin/* /usr/local/bin
   - *RESTORE_REGISTRY
-  - run: cargo generate-lockfile
+  - run: cargo generate-lockfile --verbose
   - *SAVE_REGISTRY
   - run: echo "homebrew-x86_64-apple-darwin" > ~/lib_key
   - *RESTORE_DEPS
