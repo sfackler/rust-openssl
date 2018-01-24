@@ -82,11 +82,14 @@ impl Server {
     }
 
     fn new_tcp(args: &[&str]) -> (Server, TcpStream) {
-        let (server, addr) = Server::spawn(args, None);
+        let (mut server, addr) = Server::spawn(args, None);
         for _ in 0..20 {
             match TcpStream::connect(&addr) {
                 Ok(s) => return (server, s),
                 Err(ref e) if e.kind() == io::ErrorKind::ConnectionRefused => {
+                    if let Some(exit_status) = server.p.try_wait().expect("try_wait") {
+                        panic!("server exited: {}", exit_status);
+                    }
                     thread::sleep(Duration::from_millis(100));
                 }
                 Err(e) => panic!("wut: {}", e),
