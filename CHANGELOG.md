@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+* OpenSSL is now automatically detected on FreeBSD systems.
+
 ## [v0.10.2] - 2018-01-11
 
 ### Added
