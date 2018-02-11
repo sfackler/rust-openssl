@@ -25,7 +25,7 @@
 //!     let rsa = Rsa::generate(2048).unwrap();
 //!     let data: Vec<u8> = String::from("foobar").into_bytes();
 //!     let mut encrypted_data: Vec<u8>  = vec![0; 512];
-//!     let padding = Padding::from_raw(1); // PKCS1 Padding
+//!     let padding = Padding::PKCS1;
 //!     let _ = rsa.public_encrypt(&data, encrypted_data.as_mut_slice(), padding).unwrap();
 //! }
 //! ```
