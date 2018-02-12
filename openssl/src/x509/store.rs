@@ -36,11 +36,10 @@ impl X509StoreBuilder {
 
 impl X509StoreBuilderRef {
     /// Adds a certificate to the certificate store.
+    // FIXME should take an &X509Ref
     pub fn add_cert(&mut self, cert: X509) -> Result<(), ErrorStack> {
         unsafe {
-            let ptr = cert.as_ptr();
-            mem::forget(cert); // the cert will be freed inside of X509_STORE_add_cert on error
-            cvt(ffi::X509_STORE_add_cert(self.as_ptr(), ptr)).map(|_| ())
+            cvt(ffi::X509_STORE_add_cert(self.as_ptr(), cert.as_ptr())).map(|_| ())
         }
     }
 
