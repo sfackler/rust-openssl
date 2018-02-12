@@ -30,7 +30,7 @@
 //!     builder.set_issuer_name(&name).unwrap();
 //!     builder.set_pubkey(&pkey).unwrap();
 //!     builder.sign(&pkey, MessageDigest::sha256()).unwrap();
-//! 
+//!
 //!     let certificate: X509 = builder.build();
 //!
 //!     let mut builder = X509StoreBuilder::new().unwrap();
@@ -52,7 +52,7 @@ foreign_type! {
     type CType = ffi::X509_STORE;
     fn drop = ffi::X509_STORE_free;
 
-    /// A builder type used to construct an `X509Store`. 
+    /// A builder type used to construct an `X509Store`.
     pub struct X509StoreBuilder;
     /// Reference to an `X509StoreBuilder`.
     pub struct X509StoreBuilderRef;
@@ -80,11 +80,10 @@ impl X509StoreBuilder {
 
 impl X509StoreBuilderRef {
     /// Adds a certificate to the certificate store.
+    // FIXME should take an &X509Ref
     pub fn add_cert(&mut self, cert: X509) -> Result<(), ErrorStack> {
         unsafe {
-            let ptr = cert.as_ptr();
-            mem::forget(cert); // the cert will be freed inside of X509_STORE_add_cert on error
-            cvt(ffi::X509_STORE_add_cert(self.as_ptr(), ptr)).map(|_| ())
+            cvt(ffi::X509_STORE_add_cert(self.as_ptr(), cert.as_ptr())).map(|_| ())
         }
     }
 
