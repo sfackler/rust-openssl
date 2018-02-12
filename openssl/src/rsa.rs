@@ -1,3 +1,34 @@
+//! Rivest–Shamir–Adleman cryptosystem
+//!
+//! RSA is one of the earliest asymmetric public key encryption schemes.
+//! Like many other cryptosystems, RSA relies on the presumed difficulty of a hard
+//! mathematical problem, namely factorization of the product of two large prime
+//! numbers. At the moment there does exist an algorithm that can factor such
+//! large numbers in reasonable time. RSA is used in a wide variety of
+//! applications including digital signatures and key exchanges such as
+//! establishing a TLS/SSL connection.
+//!
+//! The RSA acronym is derived from the first letters of the surnames of the
+//! algorithm's founding trio.
+//!
+//! # Example
+//!
+//! Generate a 2048-bit RSA key pair and use the public key to encrypt some data.
+//!
+//! ```rust
+//!
+//! extern crate openssl;
+//!
+//! use openssl::rsa::{Rsa, Padding};
+//!
+//! fn main() {
+//!     let rsa = Rsa::generate(2048).unwrap();
+//!     let data: Vec<u8> = String::from("foobar").into_bytes();
+//!     let mut encrypted_data: Vec<u8>  = vec![0; 512];
+//!     let padding = Padding::PKCS1;
+//!     let _ = rsa.public_encrypt(&data, encrypted_data.as_mut_slice(), padding).unwrap();
+//! }
+//! ```
 use ffi;
 use std::fmt;
 use std::ptr;
@@ -11,14 +42,20 @@ use error::ErrorStack;
 use pkey::{HasPrivate, HasPublic, Private, Public};
 
 /// Type of encryption padding to use.
+///
+/// Random length padding is primarily used to prevent attackers from
+/// predicting or knowing the exact length of a plaintext message that
+/// can possibly lead to breaking encryption.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Padding(c_int);
 
 impl Padding {
+    /// Creates a `Padding` from an integer representation.
     pub fn from_raw(value: c_int) -> Padding {
         Padding(value)
     }
 
+    /// Returns the integer representation of `Padding`.
     pub fn as_raw(&self) -> c_int {
         self.0
     }
@@ -32,7 +69,10 @@ generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::RSA;
     fn drop = ffi::RSA_free;
 
+    /// An RSA key.
     pub struct Rsa<T>;
+
+    /// Reference to `RSA`
     pub struct RsaRef<T>;
 }
 
@@ -265,6 +305,11 @@ where
         ffi::i2d_RSAPublicKey
     }
 
+    /// Returns the size of the modulus in bytes.
+    ///
+    /// This corresponds to [`RSA_size`].
+    ///
+    /// [`RSA_size`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_size.html
     pub fn size(&self) -> u32 {
         unsafe { ffi::RSA_size(self.as_ptr()) as u32 }
     }
@@ -347,6 +392,15 @@ where
 }
 
 impl Rsa<Public> {
+    /// Creates a new RSA key with only public components.
+    ///
+    /// `n` is the modulus common to both public and private key.
+    /// `e` is the public exponent.
+    ///
+    /// This corresponds to [`RSA_new`] and uses [`RSA_set0_key`].
+    ///
+    /// [`RSA_new`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_new.html
+    /// [`RSA_set0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_set0_key.html
     pub fn from_public_components(n: BigNum, e: BigNum) -> Result<Rsa<Public>, ErrorStack> {
         unsafe {
             let rsa = Rsa::from_ptr(cvt_p(ffi::RSA_new())?);
@@ -398,6 +452,21 @@ impl Rsa<Public> {
 }
 
 impl Rsa<Private> {
+    /// Creates a new RSA key with private components (public components are assumed).
+    ///
+    /// `n` is the modulus common to both public and private key.
+    /// `e` is the public exponent and `d` is the private exponent.
+    /// `p` and `q` are the first and second factors of `n`.
+    /// `dmp1`, `dmq1`, and `iqmp` are the exponents and coefficient for
+    /// Chinese Remainder Theorem calculations which is used to speed up RSA operations.
+    ///
+    /// This corresponds to [`RSA_new`] and uses [`RSA_set0_key`],
+    /// [`RSA_set0_factors`], and [`RSA_set0_crt_params`].
+    ///
+    /// [`RSA_new`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_new.html
+    /// [`RSA_set0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_set0_key.html
+    /// [`RSA_set0_factors`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_set0_factors.html
+    /// [`RSA_set0_crt_params`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_set0_crt_params.html
     pub fn from_private_components(
         n: BigNum,
         e: BigNum,
