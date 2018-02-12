@@ -2,9 +2,17 @@
 
 ## [Unreleased]
 
+## [v0.10.3] - 2018-02-12
+
 ### Added
 
 * OpenSSL is now automatically detected on FreeBSD systems.
+* Added `GeneralName` accessors for `rfc822Name` and `uri` variants.
+* Added DES-EDE3 support.
+
+### Fixed
+
+* Fixed a memory leak in `X509StoreBuilder::add_cert`.
 
 ## [v0.10.2] - 2018-01-11
 
@@ -83,7 +91,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.2...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.3...master
+[v0.10.3]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.2...openssl-v0.10.3
 [v0.10.2]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.1...openssl-v0.10.2
 [v0.10.1]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.0...openssl-v0.10.1
 [v0.10.0]: https://github.com/sfackler/rust-openssl/compare/v0.9.23...openssl-v0.10.0
