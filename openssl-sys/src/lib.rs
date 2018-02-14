@@ -2111,6 +2111,14 @@ extern "C" {
         callback: Option<PasswordCallback>,
         user_data: *mut c_void,
     ) -> *mut RSA;
+
+    pub fn PEM_read_bio_RSAPublicKey(
+        bio: *mut BIO,
+        rsa: *mut *mut RSA,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> *mut RSA;
+
     pub fn PEM_read_bio_RSA_PUBKEY(
         bio: *mut BIO,
         rsa: *mut *mut RSA,

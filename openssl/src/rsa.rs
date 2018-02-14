@@ -428,6 +428,19 @@ impl Rsa<Public> {
         ffi::PEM_read_bio_RSA_PUBKEY
     }
 
+    from_pem! {
+        /// Decodes a PEM-encoded PKCS#1 RSAPublicKey structure.
+        ///
+        /// The input should have a header of `-----BEGIN RSA PUBLIC KEY-----`.
+        ///
+        /// This corresponds to [`PEM_read_bio_RSAPublicKey`].
+        ///
+        /// [`PEM_read_bio_RSAPublicKey`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_read_bio_RSAPublicKey.html
+        public_key_from_pem_pkcs1,
+        Rsa<Public>,
+        ffi::PEM_read_bio_RSAPublicKey
+    }
+
     from_der! {
         /// Decodes a DER-encoded SubjectPublicKeyInfo structure containing an RSA key.
         ///
@@ -732,4 +745,18 @@ mod test {
             .unwrap();
         assert_eq!(msg, &dmesg[..len]);
     }
+
+    #[test]
+    fn test_public_key_from_pem_pkcs1() {
+        let key = include_bytes!("../test/pkcs1.pem.pub");
+        Rsa::public_key_from_pem_pkcs1(key).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_public_key_from_pem_pkcs1_panic() {
+        let key = include_bytes!("../test/key.pem.pub");
+        Rsa::public_key_from_pem_pkcs1(key).unwrap();
+    }
+
 }
