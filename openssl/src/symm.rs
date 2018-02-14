@@ -137,6 +137,10 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_des_ede3()) }
     }
 
+    pub fn des_ede3_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_des_ede3_cbc()) }
+    }
+
     pub fn rc4() -> Cipher {
         unsafe { Cipher(ffi::EVP_rc4()) }
     }
@@ -1048,6 +1052,17 @@ mod tests {
         let iv = "5cc118306dc702e4";
 
         cipher_test(super::Cipher::des_ede3(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_des_ede3_cbc() {
+
+        let pt = "54686973206973206120746573742e";
+        let ct = "6f2867cfefda048a4046ef7e556c7132";
+        let key = "7cb66337f3d3c0fe7cb66337f3d3c0fe7cb66337f3d3c0fe";
+        let iv = "0001020304050607";
+
+        cipher_test(super::Cipher::des_ede3_cbc(), pt, ct, key, iv);
     }
 
     #[test]
