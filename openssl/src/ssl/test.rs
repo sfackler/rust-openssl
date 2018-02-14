@@ -895,7 +895,7 @@ fn connector_no_hostname_can_disable_verify() {
 
 #[test]
 fn connector_client_server_mozilla_intermediate() {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let listener = TcpListener::bind("127.0.0.1:1234").unwrap();
     let port = listener.local_addr().unwrap().port();
 
     let t = thread::spawn(move || {
@@ -1038,6 +1038,13 @@ fn tmp_dh_callback() {
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    // TLS 1.3 has no DH suites, and openssl isn't happy if the max version has no suites :(
+    #[cfg(ossl111)]
+    {
+        ctx.set_options(super::SslOptions {
+            bits: ::ffi::SSL_OP_NO_TLSv1_3,
+        });
+    }
     ctx.set_cipher_list("EDH").unwrap();
     let ssl = Ssl::new(&ctx.build()).unwrap();
     ssl.connect(stream).unwrap();
@@ -1106,6 +1113,13 @@ fn tmp_dh_callback_ssl() {
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    // TLS 1.3 has no DH suites, and openssl isn't happy if the max version has no suites :(
+    #[cfg(ossl111)]
+    {
+        ctx.set_options(super::SslOptions {
+            bits: ::ffi::SSL_OP_NO_TLSv1_3,
+        });
+    }
     ctx.set_cipher_list("EDH").unwrap();
     let ssl = Ssl::new(&ctx.build()).unwrap();
     ssl.connect(stream).unwrap();

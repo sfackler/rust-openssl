@@ -206,6 +206,12 @@ impl SslAcceptor {
     /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
     pub fn mozilla_intermediate(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
         let mut ctx = ctx(method)?;
+        #[cfg(ossl111)]
+        {
+            ctx.set_options(SslOptions {
+                bits: ::ffi::SSL_OP_NO_TLSv1_3,
+            });
+        }
         let dh = Dh::params_from_pem(DHPARAM_PEM.as_bytes())?;
         ctx.set_tmp_dh(&dh)?;
         setup_curves(&mut ctx)?;
@@ -232,6 +238,13 @@ impl SslAcceptor {
     /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
     pub fn mozilla_modern(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
         let mut ctx = ctx(method)?;
+        ctx.set_options(SslOptions::NO_TLSV1 | SslOptions::NO_TLSV1_1);
+        #[cfg(ossl111)]
+        {
+            ctx.set_options(SslOptions {
+                bits: ::ffi::SSL_OP_NO_TLSv1_3,
+            });
+        }
         setup_curves(&mut ctx)?;
         ctx.set_cipher_list(
             "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:\

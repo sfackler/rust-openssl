@@ -90,6 +90,9 @@ macos_job: &MACOS_JOB
       cargo test --manifest-path=openssl/Cargo.toml --all-features
   - *SAVE_DEPS
 
+openssl_111: &OPENSSL_111
+  LIBRARY: openssl
+  VERSION: 1.1.1-pre1
 openssl_110: &OPENSSL_110
   LIBRARY: openssl
   VERSION: 1.1.0g
@@ -125,6 +128,10 @@ base: &BASE
 
 version: 2
 jobs:
+  x86_64-openssl-1.1.1:
+    <<: *JOB
+    environment:
+      <<: [*OPENSSL_111, *X86_64, *BASE]
   x86_64-openssl-1.1.0:
     <<: *JOB
     environment:
@@ -137,6 +144,10 @@ jobs:
     <<: *JOB
     environment:
       <<: [*OPENSSL_101, *X86_64, *BASE]
+  i686-openssl-1.1.1:
+    <<: *JOB
+    environment:
+      <<: [*OPENSSL_111, *I686, *BASE]
   i686-openssl-1.1.0:
     <<: *JOB
     environment:
@@ -145,10 +156,10 @@ jobs:
     <<: *JOB
     environment:
       <<: [*OPENSSL_102, *I686, *BASE]
-  i686-openssl-1.0.1:
+  armhf-openssl-1.1.1:
     <<: *JOB
     environment:
-      <<: [*OPENSSL_101, *I686, *BASE]
+      <<: [*OPENSSL_111, *ARMHF, *BASE]
   armhf-openssl-1.1.0:
     <<: *JOB
     environment:
@@ -157,10 +168,6 @@ jobs:
     <<: *JOB
     environment:
       <<: [*OPENSSL_102, *ARMHF, *BASE]
-  armhf-openssl-1.0.1:
-    <<: *JOB
-    environment:
-      <<: [*OPENSSL_101, *ARMHF, *BASE]
   x86_64-libressl-2.5.0:
     <<: *JOB
     environment:
@@ -175,15 +182,16 @@ workflows:
   version: 2
   tests:
     jobs:
+    - x86_64-openssl-1.1.1
     - x86_64-openssl-1.1.0
     - x86_64-openssl-1.0.2
     - x86_64-openssl-1.0.1
+    - i686-openssl-1.1.1
     - i686-openssl-1.1.0
     - i686-openssl-1.0.2
-    - i686-openssl-1.0.1
+    - armhf-openssl-1.1.1
     - armhf-openssl-1.1.0
     - armhf-openssl-1.0.2
-    - armhf-openssl-1.0.1
     - x86_64-libressl-2.5.0
     - x86_64-libressl-2.6.3
     - macos

@@ -1,5 +1,5 @@
 //! X509 certificate verification
 //!
-//! Requires the `v102` or `v110` features and OpenSSL 1.0.2 or 1.1.0.
+//! Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
 
 pub use verify::*;

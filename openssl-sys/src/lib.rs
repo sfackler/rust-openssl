@@ -1255,9 +1255,9 @@ pub const SSL_OP_CRYPTOPRO_TLSEXT_BUG: c_ulong = 0x0;
 pub const SSL_OP_LEGACY_SERVER_CONNECT: c_ulong = 0x00000004;
 #[cfg(not(libressl))]
 pub const SSL_OP_SAFARI_ECDHE_ECDSA_BUG: c_ulong = 0x00000040;
-#[cfg(not(any(libressl, ossl110f)))]
+#[cfg(not(any(libressl, ossl110f, ossl111)))]
 pub const SSL_OP_ALL: c_ulong = 0x80000BFF;
-#[cfg(ossl110f)]
+#[cfg(any(ossl110f, ossl111))]
 pub const SSL_OP_ALL: c_ulong = SSL_OP_CRYPTOPRO_TLSEXT_BUG | SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS
     | SSL_OP_LEGACY_SERVER_CONNECT | SSL_OP_TLSEXT_PADDING
     | SSL_OP_SAFARI_ECDHE_ECDSA_BUG;
@@ -1276,16 +1276,22 @@ pub const SSL_OP_TLS_ROLLBACK_BUG: c_ulong = 0x00800000;
 #[cfg(not(libressl))]
 pub const SSL_OP_NO_SSLv3: c_ulong = 0x02000000;
 pub const SSL_OP_NO_TLSv1: c_ulong = 0x04000000;
-pub const SSL_OP_NO_TLSv1_2: c_ulong = 0x08000000;
 pub const SSL_OP_NO_TLSv1_1: c_ulong = 0x10000000;
+pub const SSL_OP_NO_TLSv1_2: c_ulong = 0x08000000;
+#[cfg(ossl111)]
+pub const SSL_OP_NO_TLSv1_3: c_ulong = 0x20000000;
 
 #[cfg(not(any(ossl101, libressl)))]
 pub const SSL_OP_NO_DTLSv1: c_ulong = 0x04000000;
 #[cfg(not(any(ossl101, libressl)))]
 pub const SSL_OP_NO_DTLSv1_2: c_ulong = 0x08000000;
-#[cfg(not(any(ossl101, libressl)))]
+#[cfg(not(any(ossl101, libressl, ossl111)))]
 pub const SSL_OP_NO_SSL_MASK: c_ulong =
     SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
+#[cfg(ossl111)]
+pub const SSL_OP_NO_SSL_MASK: c_ulong = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1
+    | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2
+    | SSL_OP_NO_TLSv1_3;
 
 pub const SSL_FILETYPE_PEM: c_int = X509_FILETYPE_PEM;
 pub const SSL_FILETYPE_ASN1: c_int = X509_FILETYPE_ASN1;
@@ -2498,9 +2504,9 @@ extern "C" {
     );
     pub fn SSL_get_session(s: *const SSL) -> *mut SSL_SESSION;
     pub fn SSL_set_session(ssl: *mut SSL, session: *mut SSL_SESSION) -> c_int;
-    #[cfg(not(any(ossl101, libressl, ossl110f)))]
+    #[cfg(not(any(ossl101, libressl, ossl110f, ossl111)))]
     pub fn SSL_is_server(s: *mut SSL) -> c_int;
-    #[cfg(ossl110f)]
+    #[cfg(any(ossl110f, ossl111))]
     pub fn SSL_is_server(s: *const SSL) -> c_int;
 
     pub fn SSL_SESSION_free(s: *mut SSL_SESSION);

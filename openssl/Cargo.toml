@@ -17,6 +17,7 @@ all-features = true
 v101 = []
 v102 = []
 v110 = []
+v111 = ["v110"]
 
 [dependencies]
 bitflags = "1.0"

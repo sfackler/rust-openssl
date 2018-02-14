@@ -15,7 +15,7 @@ bitflags! {
         const MULTI_LABEL_WILDCARDS = ffi::X509_CHECK_FLAG_MULTI_LABEL_WILDCARDS;
         const SINGLE_LABEL_SUBDOMAINS
             = ffi::X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS;
-        /// Requires the `v110` feature and OpenSSL 1.1.0.
+        /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
         #[cfg(all(feature = "v110", ossl110))]
         const NEVER_CHECK_SUBJECT = ffi::X509_CHECK_FLAG_NEVER_CHECK_SUBJECT;
     }
