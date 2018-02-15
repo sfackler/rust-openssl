@@ -28,6 +28,9 @@ fn main() {
         is_libressl = true;
     } else if let Ok(version) = env::var("DEP_OPENSSL_VERSION") {
         cfg.cfg(&format!("ossl{}", version), None);
+        if version == "111" {
+            cfg.cfg("ossl110", None);
+        }
     }
     if let (Ok(version), Ok(patch)) = (
         env::var("DEP_OPENSSL_VERSION"),
