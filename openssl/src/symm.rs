@@ -22,6 +22,36 @@
 //!       \xFB\x3C\x5E\xC4\x59\x72\x4A\xF4\x7C\xA1",
 //!     &ciphertext[..]);
 //! ```
+//!
+//! Encrypting an assymetric key with a symmetric cipher
+//!
+//! ```
+//! use openssl::rsa::{Padding, Rsa};
+//! use openssl::symm::Cipher;
+//!
+//! // Generate keypair and encrypt private key:
+//! let keypair = Rsa::generate(2048).unwrap();
+//! let cipher = Cipher::aes_256_cbc();
+//! let pubkey_pem = keypair.public_key_to_pem_pkcs1().unwrap();
+//! let privkey_pem = keypair.private_key_to_pem_passphrase(cipher, b"Rust").unwrap();
+//! // pubkey_pem and privkey_pem could be written to file here.
+//!
+//! // Load private and public key from string:
+//! let pubkey = Rsa::public_key_from_pem_pkcs1(&pubkey_pem).unwrap();
+//! let privkey = Rsa::private_key_from_pem_passphrase(&privkey_pem, b"Rust").unwrap();
+//!
+//! // Use the asymmetric keys to encrypt and decrypt a short message:
+//! let msg = b"Foo bar";
+//! let mut encrypted = vec![0; pubkey.size() as usize];
+//! let mut decrypted = vec![0; privkey.size() as usize];
+//! let len = pubkey.public_encrypt(msg, &mut encrypted, Padding::PKCS1).unwrap();
+//! assert!(len > msg.len());
+//! let len = privkey.private_decrypt(&encrypted, &mut decrypted, Padding::PKCS1).unwrap();
+//! let output_string = String::from_utf8(decrypted[..len].to_vec()).unwrap();
+//! assert_eq!("Foo bar", output_string);
+//! println!("Decrypted: '{}'", output_string);
+//! ```
+
 use std::cmp;
 use std::ptr;
 use libc::c_int;
