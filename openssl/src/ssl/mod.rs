@@ -85,7 +85,8 @@ use ec::EcKeyRef;
 use ec::EcKey;
 use x509::{X509, X509Name, X509Ref, X509StoreContextRef, X509VerifyResult};
 use x509::store::{X509StoreBuilderRef, X509StoreRef};
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+          all(feature = "v111", ossl111)))]
 use x509::store::X509Store;
 #[cfg(any(ossl102, ossl110))]
 use verify::X509VerifyParamRef;
@@ -186,12 +187,14 @@ bitflags! {
         /// Disables the use of DTLSv1.0
         ///
         /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
-        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+                all(feature = "v111", ossl111)))]
         const NO_DTLSV1 = ffi::SSL_OP_NO_DTLSv1;
 
         /// Disables the use of DTLSv1.2.
         /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
-        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+                all(feature = "v111", ossl111)))]
         const NO_DTLSV1_2 = ffi::SSL_OP_NO_DTLSv1_2;
 
         /// Disables the use of all (D)TLS protocol versions.
@@ -209,7 +212,8 @@ bitflags! {
         ///
         /// let options = SslOptions::NO_SSL_MASK & !SslOptions::NO_TLSV1_2;
         /// ```
-        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+                all(feature = "v111", ossl111)))]
         const NO_SSL_MASK = ffi::SSL_OP_NO_SSL_MASK;
     }
 }
@@ -460,16 +464,18 @@ impl SslAlert {
 /// An error returned from an ALPN selection callback.
 ///
 /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+          all(feature = "v111", ossl111)))]
 #[derive(Debug, Copy, Clone)]
 pub struct AlpnError(c_int);
 
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+          all(feature = "v111", ossl111)))]
 impl AlpnError {
     /// Terminate the handshake with a fatal alert.
     ///
     /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
-    #[cfg(all(feature = "v110", ossl110))]
+    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
     pub const ALERT_FATAL: AlpnError = AlpnError(ffi::SSL_TLSEXT_ERR_ALERT_FATAL);
 
     /// Do not select a protocol, but continue the handshake.
@@ -621,7 +627,8 @@ impl SslContextBuilder {
     /// This corresponds to [`SSL_CTX_set0_verify_cert_store`].
     ///
     /// [`SSL_CTX_set0_verify_cert_store`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_set0_verify_cert_store.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+              all(feature = "v111", ossl111)))]
     pub fn set_verify_cert_store(&mut self, cert_store: X509Store) -> Result<(), ErrorStack> {
         unsafe {
             let ptr = cert_store.as_ptr();
@@ -979,7 +986,8 @@ impl SslContextBuilder {
     /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
     ///
     /// [`SSL_CTX_set_alpn_protos`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_CTX_set_alpn_protos.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+              all(feature = "v111", ossl111)))]
     pub fn set_alpn_protos(&mut self, protocols: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             assert!(protocols.len() <= c_uint::max_value() as usize);
@@ -1012,7 +1020,8 @@ impl SslContextBuilder {
     /// [`SslContextBuilder::set_alpn_protos`]: struct.SslContextBuilder.html#method.set_alpn_protos
     /// [`select_next_proto`]: fn.select_next_proto.html
     /// [`SSL_CTX_set_alpn_select_cb`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_CTX_set_alpn_protos.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+              all(feature = "v111", ossl111)))]
     pub fn set_alpn_select_callback<F>(&mut self, callback: F)
     where
         F: for<'a> Fn(&mut SslRef, &'a [u8]) -> Result<&'a [u8], AlpnError> + 'static + Sync + Send,
@@ -1210,7 +1219,8 @@ impl SslContextRef {
     /// This corresponds to [`SSL_CTX_get0_certificate`].
     ///
     /// [`SSL_CTX_get0_certificate`]: https://www.openssl.org/docs/man1.1.0/ssl/ssl.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+              all(feature = "v111", ossl111)))]
     pub fn certificate(&self) -> Option<&X509Ref> {
         unsafe {
             let ptr = ffi::SSL_CTX_get0_certificate(self.as_ptr());
@@ -1229,7 +1239,8 @@ impl SslContextRef {
     /// This corresponds to [`SSL_CTX_get0_privatekey`].
     ///
     /// [`SSL_CTX_get0_privatekey`]: https://www.openssl.org/docs/man1.1.0/ssl/ssl.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+              all(feature = "v111", ossl111)))]
     pub fn private_key(&self) -> Option<&PKeyRef<Private>> {
         unsafe {
             let ptr = ffi::SSL_CTX_get0_privatekey(self.as_ptr());
@@ -1786,7 +1797,8 @@ impl SslRef {
     /// This corresponds to [`SSL_get0_alpn_selected`].
     ///
     /// [`SSL_get0_alpn_selected`]: https://www.openssl.org/docs/manmaster/man3/SSL_get0_next_proto_negotiated.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+              all(feature = "v111", ossl111)))]
     pub fn selected_alpn_protocol(&self) -> Option<&[u8]> {
         unsafe {
             let mut data: *const c_uchar = ptr::null();
@@ -1861,7 +1873,8 @@ impl SslRef {
     /// This corresponds to [`SSL_get0_param`].
     ///
     /// [`SSL_get0_param`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_get0_param.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+              all(feature = "v111", ossl111)))]
     pub fn param_mut(&mut self) -> &mut X509VerifyParamRef {
         self._param_mut()
     }

@@ -108,7 +108,7 @@ pub fn pbkdf2_hmac(
 /// Derives a key from a password and salt using the scrypt algorithm.
 ///
 /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
-#[cfg(all(feature = "v110", ossl110))]
+#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
 pub fn scrypt(
     pass: &[u8],
     salt: &[u8],
@@ -271,7 +271,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(all(feature = "v110", ossl110))]
+    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
     fn scrypt() {
         use hex;
 

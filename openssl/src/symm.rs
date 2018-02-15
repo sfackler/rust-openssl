@@ -142,13 +142,13 @@ impl Cipher {
     }
 
     /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
-    #[cfg(all(ossl110, feature = "v110"))]
+    #[cfg(any(all(ossl110, feature = "v110"), all(ossl111, feature = "v111")))]
     pub fn chacha20() -> Cipher {
         unsafe { Cipher(ffi::EVP_chacha20()) }
     }
 
     /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
-    #[cfg(all(ossl110, feature = "v110"))]
+    #[cfg(any(all(ossl110, feature = "v110"), all(ossl111, feature = "v111")))]
     pub fn chacha20_poly1305() -> Cipher {
         unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
     }
@@ -968,7 +968,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(all(ossl110, feature = "v110"))]
+    #[cfg(any(all(ossl110, feature = "v110"), all(ossl111, feature = "v111")))]
     fn test_chacha20() {
         let key = "0000000000000000000000000000000000000000000000000000000000000000";
         let iv = "00000000000000000000000000000000";
@@ -983,7 +983,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(all(ossl110, feature = "v110"))]
+    #[cfg(any(all(ossl110, feature = "v110"), all(ossl111, feature = "v111")))]
     fn test_chacha20_poly1305() {
         let key = "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f";
         let iv = "070000004041424344454647";

@@ -12,7 +12,8 @@ use dh::Dh;
 use ec::EcKey;
 use pkey::Params;
 use ssl::{get_callback_idx, get_ssl_callback_idx, SniError, SslAlert, SslRef};
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+          all(feature = "v111", ossl111)))]
 use ssl::AlpnError;
 use x509::X509StoreContextRef;
 
@@ -107,7 +108,8 @@ where
     }
 }
 
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+          all(feature = "v111", ossl111)))]
 pub extern "C" fn raw_alpn_select<F>(
     ssl: *mut ffi::SSL,
     out: *mut *const c_uchar,

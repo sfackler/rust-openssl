@@ -84,7 +84,8 @@ impl Dh<Params> {
     }
 
     /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+              all(feature = "v111", ossl111)))]
     pub fn get_1024_160() -> Result<Dh<Params>, ErrorStack> {
         unsafe {
             ffi::init();
@@ -93,7 +94,8 @@ impl Dh<Params> {
     }
 
     /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+              all(feature = "v111", ossl111)))]
     pub fn get_2048_224() -> Result<Dh<Params>, ErrorStack> {
         unsafe {
             ffi::init();
@@ -102,7 +104,8 @@ impl Dh<Params> {
     }
 
     /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+              all(feature = "v111", ossl111)))]
     pub fn get_2048_256() -> Result<Dh<Params>, ErrorStack> {
         unsafe {
             ffi::init();
@@ -142,7 +145,8 @@ mod tests {
     use ssl::{SslContext, SslMethod};
 
     #[test]
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+              all(feature = "v111", ossl111)))]
     fn test_dh_rfc5114() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         let dh1 = Dh::get_1024_160().unwrap();
