@@ -763,8 +763,11 @@ fn default_verify_paths() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_default_verify_paths().unwrap();
     ctx.set_verify(SslVerifyMode::PEER);
+    let ctx = ctx.build();
     let s = TcpStream::connect("google.com:443").unwrap();
-    let mut socket = Ssl::new(&ctx.build()).unwrap().connect(s).unwrap();
+    let mut ssl = Ssl::new(&ctx).unwrap();
+    ssl.set_hostname("google.com").unwrap();
+    let mut socket = ssl.connect(s).unwrap();
 
     socket.write_all(b"GET / HTTP/1.0\r\n\r\n").unwrap();
     let mut result = vec![];
@@ -794,6 +797,7 @@ fn verify_valid_hostname() {
     ssl.param_mut()
         .set_hostflags(X509CheckFlags::NO_PARTIAL_WILDCARDS);
     ssl.param_mut().set_host("google.com").unwrap();
+    ssl.set_hostname("google.com").unwrap();
 
     let s = TcpStream::connect("google.com:443").unwrap();
     let mut socket = ssl.connect(s).unwrap();
@@ -855,7 +859,6 @@ fn connector_invalid_no_hostname_verification() {
     connector
         .configure()
         .unwrap()
-        .use_server_name_indication(false)
         .verify_hostname(false)
         .connect("foobar.com", s)
         .unwrap();
