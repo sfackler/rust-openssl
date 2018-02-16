@@ -1166,7 +1166,7 @@ impl SslContextBuilder {
 
     /// Sets the callback which is called when new sessions are negotiated.
     ///
-    /// This is used by clients to implement session caching. While for TLSv1.2 the session is
+    /// This can be used by clients to implement session caching. While in TLSv1.2 the session is
     /// available to access via [`SslRef::session`] immediately after the handshake completes, this
     /// is not the case for TLSv1.3. There, a session is not generally available immediately, and
     /// the server may provide multiple session tokens to the client over a single session. The new
