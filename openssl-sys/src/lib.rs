@@ -1206,6 +1206,7 @@ pub const SSL_CTRL_SET_TMP_ECDH: c_int = 4;
 pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
 pub const SSL_CTRL_MODE: c_int = 33;
 pub const SSL_CTRL_SET_READ_AHEAD: c_int = 41;
+pub const SSL_CTRL_SET_SESS_CACHE_MODE: c_int = 44;
 pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB: c_int = 53;
 pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG: c_int = 54;
 pub const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
@@ -1295,6 +1296,16 @@ pub const SSL_OP_NO_SSL_MASK: c_ulong = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_
 
 pub const SSL_FILETYPE_PEM: c_int = X509_FILETYPE_PEM;
 pub const SSL_FILETYPE_ASN1: c_int = X509_FILETYPE_ASN1;
+
+pub const SSL_SESS_CACHE_OFF: c_long = 0;
+pub const SSL_SESS_CACHE_CLIENT: c_long = 0x1;
+pub const SSL_SESS_CACHE_SERVER: c_long = 0x2;
+pub const SSL_SESS_CACHE_BOTH: c_long = SSL_SESS_CACHE_CLIENT | SSL_SESS_CACHE_SERVER;
+pub const SSL_SESS_CACHE_NO_AUTO_CLEAR: c_long = 0x80;
+pub const SSL_SESS_CACHE_NO_INTERNAL_LOOKUP: c_long = 0x100;
+pub const SSL_SESS_CACHE_NO_INTERNAL_STORE: c_long = 0x200;
+pub const SSL_SESS_CACHE_NO_INTERNAL: c_long =
+    SSL_SESS_CACHE_NO_INTERNAL_LOOKUP | SSL_SESS_CACHE_NO_INTERNAL_STORE;
 
 pub const TLSEXT_NAMETYPE_host_name: c_int = 0;
 
@@ -1528,6 +1539,10 @@ pub unsafe fn SSL_CTX_get_extra_chain_certs(
     chain: *mut *mut stack_st_X509,
 ) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_GET_EXTRA_CHAIN_CERTS, 0, chain as *mut c_void)
+}
+
+pub unsafe fn SSL_CTX_set_session_cache_mode(ctx: *mut SSL_CTX, m: c_long) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_SESS_CACHE_MODE, m, ptr::null_mut())
 }
 
 pub unsafe fn SSL_get_tlsext_status_ocsp_resp(ssl: *mut SSL, resp: *mut *mut c_uchar) -> c_long {
@@ -2489,6 +2504,7 @@ extern "C" {
                 -> c_uint,
         >,
     );
+
     pub fn SSL_select_next_proto(
         out: *mut *mut c_uchar,
         outlen: *mut c_uchar,

@@ -20,6 +20,8 @@ use ocsp::{OcspResponse, OcspResponseStatus};
 use ssl;
 use ssl::{Error, HandshakeError, ShutdownResult, Ssl, SslAcceptor, SslConnector, SslContext,
           SslFiletype, SslMethod, SslStream, SslVerifyMode, StatusType};
+#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+use ssl::SslSessionCacheMode;
 use x509::{X509, X509Name, X509StoreContext, X509VerifyResult};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
           all(feature = "v111", ossl111)))]
@@ -1243,6 +1245,40 @@ fn status_callbacks() {
     assert!(CALLED_BACK_CLIENT.load(Ordering::SeqCst));
 
     guard.join().unwrap();
+}
+
+#[test]
+#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+fn new_session_callback() {
+    static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    thread::spawn(move || {
+        let stream = listener.accept().unwrap().0;
+        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
+            .unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
+            .unwrap();
+        ctx.set_session_id_context(b"foo").unwrap();
+        let ssl = Ssl::new(&ctx.build()).unwrap();
+        let mut stream = ssl.accept(stream).unwrap();
+        stream.write_all(&[0]).unwrap();
+    });
+
+    let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    ctx.set_session_cache_mode(SslSessionCacheMode::CLIENT | SslSessionCacheMode::NO_INTERNAL);
+    ctx.set_new_session_callback(|_, _| CALLED_BACK.store(true, Ordering::SeqCst));
+    let ssl = Ssl::new(&ctx.build()).unwrap();
+    let mut stream = ssl.connect(stream).unwrap();
+    // read 1 byte to make sure the session is received for TLSv1.3
+    let mut buf = [0];
+    stream.read_exact(&mut buf).unwrap();
+
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
 fn _check_kinds() {
