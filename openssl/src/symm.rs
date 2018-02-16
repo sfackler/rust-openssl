@@ -505,7 +505,7 @@ pub fn encrypt(
 ///
 /// # Examples
 ///
-/// Decrypt data in AES256 ECB mode
+/// Decrypt data in AES128 CBC mode
 ///
 /// ```
 /// use openssl::symm::{decrypt, Cipher};
