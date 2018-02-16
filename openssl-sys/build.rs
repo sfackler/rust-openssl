@@ -343,8 +343,10 @@ RUST_LIBRESSL_251
 RUST_LIBRESSL_250
 #elif defined (LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20500000
 RUST_LIBRESSL_OLD
-#elif OPENSSL_VERSION_NUMBER >= 0x10101000
+#elif OPENSSL_VERSION_NUMBER >= 0x10102000
 RUST_OPENSSL_NEW
+#elif OPENSSL_VERSION_NUMBER >= 0x10101000
+RUST_OPENSSL_111
 #elif OPENSSL_VERSION_NUMBER >= 0x10100060
 RUST_OPENSSL_110F
 #elif OPENSSL_VERSION_NUMBER >= 0x10100000
@@ -471,6 +473,11 @@ See rust-openssl README for more information:
         println!("cargo:libressl_version=26x");
         println!("cargo:version=101");
         Version::Libressl
+    } else if expanded.contains("RUST_OPENSSL_111") {
+        println!("cargo:rustc-cfg=ossl111");
+        println!("cargo:rustc-cfg=ossl110");
+        println!("cargo:version=111");
+        Version::Openssl110
     } else if expanded.contains("RUST_OPENSSL_110F") {
         println!("cargo:rustc-cfg=ossl110");
         println!("cargo:rustc-cfg=ossl110f");
@@ -493,9 +500,9 @@ See rust-openssl README for more information:
         panic!(
             "
 
-This crate is only compatible with OpenSSL 1.0.1, 1.0.2, and 1.1.0, or LibreSSL
-2.5 and 2.6.0, but a different version of OpenSSL was found. The build is now
-aborting due to this version mismatch.
+This crate is only compatible with OpenSSL 1.0.1 through 1.1.1, or LibreSSL 2.5
+and 2.6, but a different version of OpenSSL was found. The build is now aborting
+due to this version mismatch.
 
 "
         );

@@ -21,7 +21,8 @@ use ssl;
 use ssl::{Error, HandshakeError, ShutdownResult, Ssl, SslAcceptor, SslConnector, SslContext,
           SslFiletype, SslMethod, SslStream, SslVerifyMode, StatusType};
 use x509::{X509, X509Name, X509StoreContext, X509VerifyResult};
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+          all(feature = "v111", ossl111)))]
 use x509::verify::X509CheckFlags;
 use pkey::PKey;
 
@@ -135,14 +136,17 @@ macro_rules! run_test(
             use ssl::{SslContext, Ssl, SslStream, SslVerifyMode, SslOptions};
             use hash::MessageDigest;
             use x509::{X509StoreContext, X509VerifyResult};
-            #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+            #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+                    all(feature = "v111", ossl111)))]
             use x509::X509;
-            #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+            #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+                    all(feature = "v111", ossl111)))]
             use x509::store::X509StoreBuilder;
             use hex::FromHex;
             use foreign_types::ForeignTypeRef;
             use super::Server;
-            #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+            #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+                    all(feature = "v111", ossl111)))]
             use super::ROOT_CERT;
 
             #[test]
@@ -182,7 +186,8 @@ run_test!(verify_trusted, |method, stream| {
     }
 });
 
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+          all(feature = "v111", ossl111)))]
 run_test!(verify_trusted_with_set_cert, |method, stream| {
     let x509 = X509::from_pem(ROOT_CERT).unwrap();
     let mut store = X509StoreBuilder::new().unwrap();
@@ -477,7 +482,8 @@ fn test_state() {
 /// Tests that connecting with the client using ALPN, but the server not does not
 /// break the existing connection behavior.
 #[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+          all(feature = "v111", ossl111)))]
 fn test_connect_with_unilateral_alpn() {
     let (_s, stream) = Server::new();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
@@ -499,7 +505,8 @@ fn test_connect_with_unilateral_alpn() {
 /// Tests that when both the client as well as the server use ALPN and their
 /// lists of supported protocols have an overlap, the correct protocol is chosen.
 #[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+          all(feature = "v111", ossl111)))]
 fn test_connect_with_alpn_successful_multiple_matching() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
@@ -522,7 +529,8 @@ fn test_connect_with_alpn_successful_multiple_matching() {
 /// lists of supported protocols have an overlap -- with only ONE protocol
 /// being valid for both.
 #[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+          all(feature = "v111", ossl111)))]
 fn test_connect_with_alpn_successful_single_match() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
@@ -544,7 +552,8 @@ fn test_connect_with_alpn_successful_single_match() {
 /// Tests that when the `SslStream` is created as a server stream, the protocols
 /// are correctly advertised to the client.
 #[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+          all(feature = "v111", ossl111)))]
 fn test_alpn_server_advertise_multiple() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
@@ -586,7 +595,7 @@ fn test_alpn_server_advertise_multiple() {
 }
 
 #[test]
-#[cfg(all(feature = "v110", ossl110))]
+#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
 fn test_alpn_server_select_none_fatal() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
@@ -620,7 +629,8 @@ fn test_alpn_server_select_none_fatal() {
 }
 
 #[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+          all(feature = "v111", ossl111)))]
 fn test_alpn_server_select_none() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
@@ -763,8 +773,11 @@ fn default_verify_paths() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_default_verify_paths().unwrap();
     ctx.set_verify(SslVerifyMode::PEER);
+    let ctx = ctx.build();
     let s = TcpStream::connect("google.com:443").unwrap();
-    let mut socket = Ssl::new(&ctx.build()).unwrap().connect(s).unwrap();
+    let mut ssl = Ssl::new(&ctx).unwrap();
+    ssl.set_hostname("google.com").unwrap();
+    let mut socket = ssl.connect(s).unwrap();
 
     socket.write_all(b"GET / HTTP/1.0\r\n\r\n").unwrap();
     let mut result = vec![];
@@ -784,7 +797,8 @@ fn add_extra_chain_cert() {
 }
 
 #[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+          all(feature = "v111", ossl111)))]
 fn verify_valid_hostname() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_default_verify_paths().unwrap();
@@ -794,6 +808,7 @@ fn verify_valid_hostname() {
     ssl.param_mut()
         .set_hostflags(X509CheckFlags::NO_PARTIAL_WILDCARDS);
     ssl.param_mut().set_host("google.com").unwrap();
+    ssl.set_hostname("google.com").unwrap();
 
     let s = TcpStream::connect("google.com:443").unwrap();
     let mut socket = ssl.connect(s).unwrap();
@@ -808,7 +823,8 @@ fn verify_valid_hostname() {
 }
 
 #[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+          all(feature = "v111", ossl111)))]
 fn verify_invalid_hostname() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_default_verify_paths().unwrap();
@@ -855,7 +871,6 @@ fn connector_invalid_no_hostname_verification() {
     connector
         .configure()
         .unwrap()
-        .use_server_name_indication(false)
         .verify_hostname(false)
         .connect("foobar.com", s)
         .unwrap();
@@ -895,7 +910,7 @@ fn connector_no_hostname_can_disable_verify() {
 
 #[test]
 fn connector_client_server_mozilla_intermediate() {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let listener = TcpListener::bind("127.0.0.1:1234").unwrap();
     let port = listener.local_addr().unwrap().port();
 
     let t = thread::spawn(move || {
@@ -1038,6 +1053,13 @@ fn tmp_dh_callback() {
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    // TLS 1.3 has no DH suites, and openssl isn't happy if the max version has no suites :(
+    #[cfg(ossl111)]
+    {
+        ctx.set_options(super::SslOptions {
+            bits: ::ffi::SSL_OP_NO_TLSv1_3,
+        });
+    }
     ctx.set_cipher_list("EDH").unwrap();
     let ssl = Ssl::new(&ctx.build()).unwrap();
     ssl.connect(stream).unwrap();
@@ -1106,6 +1128,13 @@ fn tmp_dh_callback_ssl() {
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    // TLS 1.3 has no DH suites, and openssl isn't happy if the max version has no suites :(
+    #[cfg(ossl111)]
+    {
+        ctx.set_options(super::SslOptions {
+            bits: ::ffi::SSL_OP_NO_TLSv1_3,
+        });
+    }
     ctx.set_cipher_list("EDH").unwrap();
     let ssl = Ssl::new(&ctx.build()).unwrap();
     ssl.connect(stream).unwrap();

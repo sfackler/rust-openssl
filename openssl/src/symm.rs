@@ -141,14 +141,14 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_rc4()) }
     }
 
-    /// Requires the `v110` feature and OpenSSL 1.1.0.
-    #[cfg(all(ossl110, feature = "v110"))]
+    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
+    #[cfg(any(all(ossl110, feature = "v110"), all(ossl111, feature = "v111")))]
     pub fn chacha20() -> Cipher {
         unsafe { Cipher(ffi::EVP_chacha20()) }
     }
 
-    /// Requires the `v110` feature and OpenSSL 1.1.0.
-    #[cfg(all(ossl110, feature = "v110"))]
+    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
+    #[cfg(any(all(ossl110, feature = "v110"), all(ossl111, feature = "v111")))]
     pub fn chacha20_poly1305() -> Cipher {
         unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
     }
@@ -171,7 +171,11 @@ impl Cipher {
     pub fn iv_len(&self) -> Option<usize> {
         unsafe {
             let len = EVP_CIPHER_iv_length(self.0) as usize;
-            if len == 0 { None } else { Some(len) }
+            if len == 0 {
+                None
+            } else {
+                Some(len)
+            }
         }
     }
 
@@ -594,7 +598,7 @@ pub fn decrypt_aead(
 }
 
 #[cfg(ossl110)]
-use ffi::{EVP_CIPHER_iv_length, EVP_CIPHER_block_size, EVP_CIPHER_key_length};
+use ffi::{EVP_CIPHER_block_size, EVP_CIPHER_iv_length, EVP_CIPHER_key_length};
 
 #[cfg(ossl10x)]
 #[allow(bad_style)]
@@ -627,74 +631,17 @@ mod tests {
     #[test]
     fn test_aes_256_ecb() {
         let k0 = [
-            0x00u8,
-            0x01u8,
-            0x02u8,
-            0x03u8,
-            0x04u8,
-            0x05u8,
-            0x06u8,
-            0x07u8,
-            0x08u8,
-            0x09u8,
-            0x0au8,
-            0x0bu8,
-            0x0cu8,
-            0x0du8,
-            0x0eu8,
-            0x0fu8,
-            0x10u8,
-            0x11u8,
-            0x12u8,
-            0x13u8,
-            0x14u8,
-            0x15u8,
-            0x16u8,
-            0x17u8,
-            0x18u8,
-            0x19u8,
-            0x1au8,
-            0x1bu8,
-            0x1cu8,
-            0x1du8,
-            0x1eu8,
-            0x1fu8,
+            0x00u8, 0x01u8, 0x02u8, 0x03u8, 0x04u8, 0x05u8, 0x06u8, 0x07u8, 0x08u8, 0x09u8, 0x0au8,
+            0x0bu8, 0x0cu8, 0x0du8, 0x0eu8, 0x0fu8, 0x10u8, 0x11u8, 0x12u8, 0x13u8, 0x14u8, 0x15u8,
+            0x16u8, 0x17u8, 0x18u8, 0x19u8, 0x1au8, 0x1bu8, 0x1cu8, 0x1du8, 0x1eu8, 0x1fu8,
         ];
         let p0 = [
-            0x00u8,
-            0x11u8,
-            0x22u8,
-            0x33u8,
-            0x44u8,
-            0x55u8,
-            0x66u8,
-            0x77u8,
-            0x88u8,
-            0x99u8,
-            0xaau8,
-            0xbbu8,
-            0xccu8,
-            0xddu8,
-            0xeeu8,
-            0xffu8,
+            0x00u8, 0x11u8, 0x22u8, 0x33u8, 0x44u8, 0x55u8, 0x66u8, 0x77u8, 0x88u8, 0x99u8, 0xaau8,
+            0xbbu8, 0xccu8, 0xddu8, 0xeeu8, 0xffu8,
         ];
         let c0 = [
-            0x8eu8,
-            0xa2u8,
-            0xb7u8,
-            0xcau8,
-            0x51u8,
-            0x67u8,
-            0x45u8,
-            0xbfu8,
-            0xeau8,
-            0xfcu8,
-            0x49u8,
-            0x90u8,
-            0x4bu8,
-            0x49u8,
-            0x60u8,
-            0x89u8,
+            0x8eu8, 0xa2u8, 0xb7u8, 0xcau8, 0x51u8, 0x67u8, 0x45u8, 0xbfu8, 0xeau8, 0xfcu8, 0x49u8,
+            0x90u8, 0x4bu8, 0x49u8, 0x60u8, 0x89u8,
         ];
         let mut c = super::Crypter::new(
             super::Cipher::aes_256_ecb(),
@@ -726,74 +673,17 @@ mod tests {
     #[test]
     fn test_aes_256_cbc_decrypt() {
         let iv = [
-            4_u8,
-            223_u8,
-            153_u8,
-            219_u8,
-            28_u8,
-            142_u8,
-            234_u8,
-            68_u8,
-            227_u8,
-            69_u8,
-            98_u8,
-            107_u8,
-            208_u8,
-            14_u8,
-            236_u8,
-            60_u8,
+            4_u8, 223_u8, 153_u8, 219_u8, 28_u8, 142_u8, 234_u8, 68_u8, 227_u8, 69_u8, 98_u8,
+            107_u8, 208_u8, 14_u8, 236_u8, 60_u8,
         ];
         let data = [
-            143_u8,
-            210_u8,
-            75_u8,
-            63_u8,
-            214_u8,
-            179_u8,
-            155_u8,
-            241_u8,
-            242_u8,
-            31_u8,
-            154_u8,
-            56_u8,
-            198_u8,
-            145_u8,
-            192_u8,
-            64_u8,
-            2_u8,
-            245_u8,
-            167_u8,
-            220_u8,
-            55_u8,
-            119_u8,
-            233_u8,
-            136_u8,
-            139_u8,
-            27_u8,
-            71_u8,
-            242_u8,
-            119_u8,
-            175_u8,
-            65_u8,
-            207_u8,
+            143_u8, 210_u8, 75_u8, 63_u8, 214_u8, 179_u8, 155_u8, 241_u8, 242_u8, 31_u8, 154_u8,
+            56_u8, 198_u8, 145_u8, 192_u8, 64_u8, 2_u8, 245_u8, 167_u8, 220_u8, 55_u8, 119_u8,
+            233_u8, 136_u8, 139_u8, 27_u8, 71_u8, 242_u8, 119_u8, 175_u8, 65_u8, 207_u8,
         ];
         let ciphered_data = [
-            0x4a_u8,
-            0x2e_u8,
-            0xe5_u8,
-            0x6_u8,
-            0xbf_u8,
-            0xcf_u8,
-            0xf2_u8,
-            0xd7_u8,
-            0xea_u8,
-            0x2d_u8,
-            0xb1_u8,
-            0x85_u8,
-            0x6c_u8,
-            0x93_u8,
-            0x65_u8,
-            0x6f_u8,
+            0x4a_u8, 0x2e_u8, 0xe5_u8, 0x6_u8, 0xbf_u8, 0xcf_u8, 0xf2_u8, 0xd7_u8, 0xea_u8,
+            0x2d_u8, 0xb1_u8, 0x85_u8, 0x6c_u8, 0x93_u8, 0x65_u8, 0x6f_u8,
         ];
         let mut cr = super::Crypter::new(
             super::Cipher::aes_256_cbc(),
@@ -868,7 +758,6 @@ mod tests {
 
     #[test]
     fn test_rc4() {
-
         let pt = "0000000000000000000000000000000000000000000000000000000000000000000000000000";
         let ct = "A68686B04D686AA107BD8D4CAB191A3EEC0A6294BC78B60F65C25CB47BD7BB3A48EFC4D26BE4";
         let key = "97CD440324DA5FD1F7955C1C13B6B466";
@@ -894,7 +783,6 @@ mod tests {
 
     #[test]
     fn test_aes128_ctr() {
-
         let pt = "6BC1BEE22E409F96E93D7E117393172AAE2D8A571E03AC9C9EB76FAC45AF8E5130C81C46A35CE411\
                   E5FBC1191A0A52EFF69F2445DF4F9B17AD2B417BE66C3710";
         let ct = "874D6191B620E3261BEF6864990DB6CE9806F66B7970FDFF8617187BB9FFFDFF5AE4DF3EDBD5D35E\
@@ -919,7 +807,6 @@ mod tests {
 
     #[test]
     fn test_aes128_cfb128() {
-
         let pt = "6bc1bee22e409f96e93d7e117393172a";
         let ct = "3b3fd92eb72dad20333449f8e83cfb4a";
         let key = "2b7e151628aed2a6abf7158809cf4f3c";
@@ -930,7 +817,6 @@ mod tests {
 
     #[test]
     fn test_aes128_cfb8() {
-
         let pt = "6bc1bee22e409f96e93d7e117393172aae2d";
         let ct = "3b79424c9c0dd436bace9e0ed4586a4f32b9";
         let key = "2b7e151628aed2a6abf7158809cf4f3c";
@@ -941,7 +827,6 @@ mod tests {
 
     #[test]
     fn test_aes256_cfb1() {
-
         let pt = "6bc1";
         let ct = "9029";
         let key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
@@ -952,7 +837,6 @@ mod tests {
 
     #[test]
     fn test_aes256_cfb128() {
-
         let pt = "6bc1bee22e409f96e93d7e117393172a";
         let ct = "dc7e84bfda79164b7ecd8486985d3860";
         let key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
@@ -963,7 +847,6 @@ mod tests {
 
     #[test]
     fn test_aes256_cfb8() {
-
         let pt = "6bc1bee22e409f96e93d7e117393172aae2d";
         let ct = "dc1f1a8520a64db55fcc8ac554844e889700";
         let key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
@@ -986,7 +869,6 @@ mod tests {
 
     #[test]
     fn test_bf_ecb() {
-
         let pt = "5CD54CA83DEF57DA";
         let ct = "B1B8CC0B250F09A0";
         let key = "0131D9619DC1376E";
@@ -997,7 +879,6 @@ mod tests {
 
     #[test]
     fn test_bf_cfb64() {
-
         let pt = "37363534333231204E6F77206973207468652074696D6520666F722000";
         let ct = "E73214A2822139CAF26ECF6D2EB9E76E3DA3DE04D1517200519D57A6C3";
         let key = "0123456789ABCDEFF0E1D2C3B4A59687";
@@ -1008,7 +889,6 @@ mod tests {
 
     #[test]
     fn test_bf_ofb() {
-
         let pt = "37363534333231204E6F77206973207468652074696D6520666F722000";
         let ct = "E73214A2822139CA62B343CC5B65587310DD908D0C241B2263C2CF80DA";
         let key = "0123456789ABCDEFF0E1D2C3B4A59687";
@@ -1019,7 +899,6 @@ mod tests {
 
     #[test]
     fn test_des_cbc() {
-
         let pt = "54686973206973206120746573742e";
         let ct = "6f2867cfefda048a4046ef7e556c7132";
         let key = "7cb66337f3d3c0fe";
@@ -1030,7 +909,6 @@ mod tests {
 
     #[test]
     fn test_des_ecb() {
-
         let pt = "54686973206973206120746573742e";
         let ct = "0050ab8aecec758843fe157b4dde938c";
         let key = "7cb66337f3d3c0fe";
@@ -1041,7 +919,6 @@ mod tests {
 
     #[test]
     fn test_des_ede3() {
-
         let pt = "9994f4c69d40ae4f34ff403b5cf39d4c8207ea5d3e19a5fd";
         let ct = "9e5c4297d60582f81071ac8ab7d0698d4c79de8b94c519858207ea5d3e19a5fd";
         let key = "010203040506070801020304050607080102030405060708";
@@ -1091,30 +968,34 @@ mod tests {
     }
 
     #[test]
-    #[cfg(all(ossl110, feature = "v110"))]
+    #[cfg(any(all(ossl110, feature = "v110"), all(ossl111, feature = "v111")))]
     fn test_chacha20() {
         let key = "0000000000000000000000000000000000000000000000000000000000000000";
         let iv = "00000000000000000000000000000000";
-        let pt = "000000000000000000000000000000000000000000000000000000000000000000000000000000000\
-                  00000000000000000000000000000000000000000000000";
-        let ct = "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7da41597c5157488d7\
-                  724e03fb8d84a376a43b8f41518a11cc387b669b2ee6586";
+        let pt =
+            "000000000000000000000000000000000000000000000000000000000000000000000000000000000\
+             00000000000000000000000000000000000000000000000";
+        let ct =
+            "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7da41597c5157488d7\
+             724e03fb8d84a376a43b8f41518a11cc387b669b2ee6586";
 
         cipher_test(Cipher::chacha20(), pt, ct, key, iv);
     }
 
     #[test]
-    #[cfg(all(ossl110, feature = "v110"))]
+    #[cfg(any(all(ossl110, feature = "v110"), all(ossl111, feature = "v111")))]
     fn test_chacha20_poly1305() {
         let key = "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f";
         let iv = "070000004041424344454647";
         let aad = "50515253c0c1c2c3c4c5c6c7";
-        let pt = "4c616469657320616e642047656e746c656d656e206f662074686520636c617373206f66202739393\
-                  a204966204920636f756c64206f6666657220796f75206f6e6c79206f6e652074697020666f722074\
-                  6865206675747572652c2073756e73637265656e20776f756c642062652069742e";
-        let ct = "d31a8d34648e60db7b86afbc53ef7ec2a4aded51296e08fea9e2b5a736ee62d63dbea45e8ca967128\
-                  2fafb69da92728b1a71de0a9e060b2905d6a5b67ecd3b3692ddbd7f2d778b8c9803aee328091b58fa\
-                  b324e4fad675945585808b4831d7bc3ff4def08e4b7a9de576d26586cec64b6116";
+        let pt =
+            "4c616469657320616e642047656e746c656d656e206f662074686520636c617373206f66202739393\
+             a204966204920636f756c64206f6666657220796f75206f6e6c79206f6e652074697020666f722074\
+             6865206675747572652c2073756e73637265656e20776f756c642062652069742e";
+        let ct =
+            "d31a8d34648e60db7b86afbc53ef7ec2a4aded51296e08fea9e2b5a736ee62d63dbea45e8ca967128\
+             2fafb69da92728b1a71de0a9e060b2905d6a5b67ecd3b3692ddbd7f2d778b8c9803aee328091b58fa\
+             b324e4fad675945585808b4831d7bc3ff4def08e4b7a9de576d26586cec64b6116";
         let tag = "1ae10b594f09e26a7e902ecbd0600691";
 
         let mut actual_tag = [0; 16];

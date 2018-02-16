@@ -13,6 +13,10 @@ fn main() {
         Ok(ref v) if v == "110" => {
             println!("cargo:rustc-cfg=ossl110");
         }
+        Ok(ref v) if v == "111" => {
+            println!("cargo:rustc-cfg=ossl110");
+            println!("cargo:rustc-cfg=ossl111");
+        }
         _ => panic!("Unable to detect OpenSSL version"),
     }
 

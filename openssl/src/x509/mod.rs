@@ -73,7 +73,8 @@ use ffi::{ASN1_STRING_get0_data as ASN1_STRING_data,
           X509_STORE_CTX_get0_chain as X509_STORE_CTX_get_chain,
           X509_set1_notAfter as X509_set_notAfter, X509_set1_notBefore as X509_set_notBefore};
 
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
+          all(feature = "v111", ossl111)))]
 pub mod verify;
 
 pub mod extension;
@@ -1090,7 +1091,6 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl GeneralNameRef {
-
     fn ia5_string(&self, ffi_type: c_int) -> Option<&str> {
         unsafe {
             if (*self.as_ptr()).type_ != ffi_type {
