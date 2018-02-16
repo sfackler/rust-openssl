@@ -206,6 +206,10 @@ extern "C" {
     pub fn SSL_CTX_get_options(ctx: *const ::SSL_CTX) -> c_ulong;
     pub fn SSL_CTX_set_options(ctx: *mut ::SSL_CTX, op: c_ulong) -> c_ulong;
     pub fn SSL_CTX_clear_options(ctx: *mut ::SSL_CTX, op: c_ulong) -> c_ulong;
+    pub fn SSL_CTX_sess_set_new_cb(
+        ctx: *mut ::SSL_CTX,
+        new_session_cb: Option<unsafe extern "C" fn(*mut ::SSL, *mut ::SSL_SESSION) -> c_int>,
+    );
     pub fn X509_getm_notAfter(x: *const ::X509) -> *mut ::ASN1_TIME;
     pub fn X509_getm_notBefore(x: *const ::X509) -> *mut ::ASN1_TIME;
     pub fn X509_get0_signature(
@@ -224,6 +228,7 @@ extern "C" {
     pub fn BIO_get_data(a: *mut ::BIO) -> *mut c_void;
     pub fn BIO_meth_new(type_: c_int, name: *const c_char) -> *mut ::BIO_METHOD;
     pub fn BIO_meth_free(biom: *mut ::BIO_METHOD);
+    // FIXME should wrap in Option
     pub fn BIO_meth_set_write(
         biom: *mut ::BIO_METHOD,
         write: unsafe extern "C" fn(*mut ::BIO, *const c_char, c_int) -> c_int,

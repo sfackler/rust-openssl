@@ -305,19 +305,55 @@ bitflags! {
         /// Verifies that the peer's certificate is trusted.
         ///
         /// On the server side, this will cause OpenSSL to request a certificate from the client.
-        const PEER = ::ffi::SSL_VERIFY_PEER;
+        const PEER = ffi::SSL_VERIFY_PEER;
 
         /// Disables verification of the peer's certificate.
         ///
         /// On the server side, this will cause OpenSSL to not request a certificate from the
         /// client. On the client side, the certificate will be checked for validity, but the
         /// negotiation will continue regardless of the result of that check.
-        const NONE = ::ffi::SSL_VERIFY_NONE;
+        const NONE = ffi::SSL_VERIFY_NONE;
 
         /// On the server side, abort the handshake if the client did not send a certificate.
         ///
         /// This should be paired with `SSL_VERIFY_PEER`. It has no effect on the client side.
-        const FAIL_IF_NO_PEER_CERT = ::ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
+        const FAIL_IF_NO_PEER_CERT = ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
+    }
+}
+
+bitflags! {
+    /// Options controlling the behavior of session caching.
+    pub struct SslSessionCacheMode: c_long {
+        /// No session caching for the client or server takes place.
+        const OFF = ffi::SSL_SESS_CACHE_OFF;
+
+        /// Enable session caching on the client side.
+        ///
+        /// OpenSSL has no way of identifying the proper session to reuse automatically, so the
+        /// application is responsible for setting it explicitly via [`SslRef::set_session`].
+        ///
+        /// [`SslRef::set_session`]: struct.SslRef.html#method.set_session
+        const CLIENT = ffi::SSL_SESS_CACHE_CLIENT;
+
+        /// Enable session caching on the server side.
+        ///
+        /// This is the default mode.
+        const SERVER = ffi::SSL_SESS_CACHE_SERVER;
+
+        /// Enable session caching on both the client and server side.
+        const BOTH = ffi::SSL_SESS_CACHE_BOTH;
+
+        /// Disable automatic removal of expired sessions from the session cache.
+        const NO_AUTO_CLEAR = ffi::SSL_SESS_CACHE_NO_AUTO_CLEAR;
+
+        /// Disable use of the internal session cache for session lookups.
+        const NO_INTERNAL_LOOKUP = ffi::SSL_SESS_CACHE_NO_INTERNAL_LOOKUP;
+
+        /// Disable use of the internal session cache for session storage.
+        const NO_INTERNAL_STORE = ffi::SSL_SESS_CACHE_NO_INTERNAL_STORE;
+
+        /// Disable use of the internal session cache for storage and lookup.
+        const NO_INTERNAL = ffi::SSL_SESS_CACHE_NO_INTERNAL;
     }
 }
 
@@ -1125,6 +1161,54 @@ impl SslContextBuilder {
                 mem::transmute(callback),
             );
             ffi::SSL_CTX_set_psk_client_callback(self.as_ptr(), Some(raw_psk::<F>))
+        }
+    }
+
+    /// Sets the callback which is called when new sessions are negotiated.
+    ///
+    /// This can be used by clients to implement session caching. While in TLSv1.2 the session is
+    /// available to access via [`SslRef::session`] immediately after the handshake completes, this
+    /// is not the case for TLSv1.3. There, a session is not generally available immediately, and
+    /// the server may provide multiple session tokens to the client over a single session. The new
+    /// session callback is a portable way to deal with both cases.
+    ///
+    /// Note that session caching must be enabled for the callback to be invoked, and it defaults
+    /// off for clients. [`set_session_cache_mode`] controls that behavior.
+    ///
+    /// This corresponds to [`SSL_CTX_sess_set_new_cb`].
+    ///
+    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
+    ///
+    /// [`SslRef::session`]: struct.SslRef.html#method.session
+    /// [`set_session_cache_mode`]: #method.set_session_cache_mode
+    /// [`SSL_CTX_sess_set_new_cb`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_sess_set_new_cb.html
+    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+    pub fn set_new_session_callback<F>(&mut self, callback: F)
+    where
+        F: Fn(&mut SslRef, SslSession) + 'static + Sync + Send,
+    {
+        unsafe {
+            let callback = Box::new(callback);
+            ffi::SSL_CTX_set_ex_data(
+                self.as_ptr(),
+                get_callback_idx::<F>(),
+                Box::into_raw(callback) as *mut _,
+            );
+            ffi::SSL_CTX_sess_set_new_cb(self.as_ptr(), Some(callbacks::raw_new_session::<F>));
+        }
+    }
+
+    /// Sets the session caching mode use for connections made with the context.
+    ///
+    /// Returns the previous session caching mode.
+    ///
+    /// This corresponds to [`SSL_CTX_set_session_cache_mode`].
+    ///
+    /// [`SSL_CTX_set_session_cache_mode`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_CTX_get_session_cache_mode.html
+    pub fn set_session_cache_mode(&mut self, mode: SslSessionCacheMode) -> SslSessionCacheMode {
+        unsafe {
+            let bits = ffi::SSL_CTX_set_session_cache_mode(self.as_ptr(), mode.bits());
+            SslSessionCacheMode { bits }
         }
     }
 
