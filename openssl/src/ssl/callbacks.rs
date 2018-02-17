@@ -5,7 +5,6 @@ use std::ptr;
 use std::slice;
 use std::mem;
 use foreign_types::ForeignTypeRef;
-#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
 use foreign_types::ForeignType;
 
 use error::ErrorStack;
@@ -13,12 +12,11 @@ use dh::Dh;
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
 use ec::EcKey;
 use pkey::Params;
-use ssl::{get_callback_idx, get_ssl_callback_idx, SniError, SslAlert, SslRef};
+use ssl::{get_callback_idx, get_ssl_callback_idx, SniError, SslAlert, SslContextRef, SslRef,
+          SslSession, SslSessionRef};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
           all(feature = "v111", ossl111)))]
 use ssl::AlpnError;
-#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
-use ssl::SslSession;
 use x509::X509StoreContextRef;
 
 pub extern "C" fn raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
@@ -279,7 +277,6 @@ where
     }
 }
 
-#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
 pub unsafe extern "C" fn raw_new_session<F>(
     ssl: *mut ffi::SSL,
     session: *mut ffi::SSL_SESSION,
@@ -298,4 +295,51 @@ where
 
     // the return code doesn't indicate error vs success, but whether or not we consumed the session
     1
+}
+
+pub unsafe extern "C" fn raw_remove_session<F>(
+    ctx: *mut ffi::SSL_CTX,
+    session: *mut ffi::SSL_SESSION,
+) where
+    F: Fn(&SslContextRef, &SslSessionRef) + 'static + Sync + Send,
+{
+    let callback = ffi::SSL_CTX_get_ex_data(ctx, get_callback_idx::<F>());
+    let callback = &*(callback as *mut F);
+
+    let ctx = SslContextRef::from_ptr(ctx);
+    let session = SslSessionRef::from_ptr(session);
+
+    callback(ctx, session)
+}
+
+#[cfg(any(ossl110, ossl111))]
+type DataPtr = *const c_uchar;
+#[cfg(not(any(ossl110, ossl111)))]
+type DataPtr = *mut c_uchar;
+
+pub unsafe extern "C" fn raw_get_session<F>(
+    ssl: *mut ffi::SSL,
+    data: DataPtr,
+    len: c_int,
+    copy: *mut c_int,
+) -> *mut ffi::SSL_SESSION
+where
+    F: Fn(&mut SslRef, &[u8]) -> Option<SslSession> + 'static + Sync + Send,
+{
+    let ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
+    let callback = ffi::SSL_CTX_get_ex_data(ctx, get_callback_idx::<F>());
+    let callback = &*(callback as *mut F);
+
+    let ssl = SslRef::from_ptr_mut(ssl);
+    let data = slice::from_raw_parts(data as *const u8, len as usize);
+
+    match callback(ssl, data) {
+        Some(session) => {
+            let p = session.as_ptr();
+            mem::forget(p);
+            *copy = 0;
+            p
+        }
+        None => ptr::null_mut(),
+    }
 }

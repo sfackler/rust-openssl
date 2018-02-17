@@ -19,9 +19,7 @@ use hash::MessageDigest;
 use ocsp::{OcspResponse, OcspResponseStatus};
 use ssl;
 use ssl::{Error, HandshakeError, ShutdownResult, Ssl, SslAcceptor, SslConnector, SslContext,
-          SslFiletype, SslMethod, SslStream, SslVerifyMode, StatusType};
-#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
-use ssl::SslSessionCacheMode;
+          SslFiletype, SslMethod, SslSessionCacheMode, SslStream, SslVerifyMode, StatusType};
 use x509::{X509, X509Name, X509StoreContext, X509VerifyResult};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
           all(feature = "v111", ossl111)))]
@@ -1248,7 +1246,6 @@ fn status_callbacks() {
 }
 
 #[test]
-#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
 fn new_session_callback() {
     static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
 

@@ -2466,6 +2466,14 @@ extern "C" {
         ctx: *mut SSL_CTX,
         dh: unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut DH,
     );
+    pub fn SSL_CTX_sess_set_new_cb(
+        ctx: *mut SSL_CTX,
+        new_session_cb: Option<unsafe extern "C" fn(*mut SSL, *mut SSL_SESSION) -> c_int>,
+    );
+    pub fn SSL_CTX_sess_set_remove_cb(
+        ctx: *mut SSL_CTX,
+        remove_session_cb: Option<unsafe extern "C" fn(*mut SSL_CTX, *mut SSL_SESSION)>,
+    );
 
     #[cfg(not(any(ossl101, libressl)))]
     pub fn SSL_CTX_get0_certificate(ctx: *const SSL_CTX) -> *mut X509;

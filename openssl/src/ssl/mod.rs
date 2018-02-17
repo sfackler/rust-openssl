@@ -1177,12 +1177,9 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_sess_set_new_cb`].
     ///
-    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
-    ///
     /// [`SslRef::session`]: struct.SslRef.html#method.session
     /// [`set_session_cache_mode`]: #method.set_session_cache_mode
     /// [`SSL_CTX_sess_set_new_cb`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_sess_set_new_cb.html
-    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
     pub fn set_new_session_callback<F>(&mut self, callback: F)
     where
         F: Fn(&mut SslRef, SslSession) + 'static + Sync + Send,
@@ -1196,6 +1193,58 @@ impl SslContextBuilder {
             );
             ffi::SSL_CTX_sess_set_new_cb(self.as_ptr(), Some(callbacks::raw_new_session::<F>));
         }
+    }
+
+    /// Sets the callback which is called when sessions are removed from the context.
+    ///
+    /// Sessions can be removed because they have timed out or because they are considered faulty.
+    ///
+    /// This corresponds to [`SSL_CTX_sess_set_remove_cb`].
+    ///
+    /// [`SSL_CTX_sess_set_remove_cb`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_sess_set_new_cb.html
+    pub fn set_remove_session_callback<F>(&mut self, callback: F)
+    where
+        F: Fn(&SslContextRef, &SslSessionRef) + 'static + Sync + Send,
+    {
+        unsafe {
+            let callback = Box::new(callback);
+            ffi::SSL_CTX_set_ex_data(
+                self.as_ptr(),
+                get_callback_idx::<F>(),
+                Box::into_raw(callback) as *mut _,
+            );
+            ffi::SSL_CTX_sess_set_remove_cb(
+                self.as_ptr(),
+                Some(callbacks::raw_remove_session::<F>),
+            );
+        }
+    }
+
+    /// Sets the callback which is called when a client proposed to resume a session but it was not
+    /// found in the internal cache.
+    ///
+    /// The callback is passed a reference to the session ID provided by the client. It should
+    /// return the session corresponding to that ID if available. This is only used for servers, not
+    /// clients.
+    ///
+    /// This corresponds to [`SSL_CTX_sess_set_get_cb`].
+    ///
+    /// # Safety
+    ///
+    /// The returned `SslSession` must not be associated with a different `SslContext`.
+    ///
+    /// [`SSL_CTX_sess_set_get_cb`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_sess_set_new_cb.html
+    pub unsafe fn set_get_session_callback<F>(&mut self, callback: F)
+    where
+        F: Fn(&mut SslRef, &[u8]) -> Option<SslSession> + 'static + Sync + Send,
+    {
+        let callback = Box::new(callback);
+        ffi::SSL_CTX_set_ex_data(
+            self.as_ptr(),
+            get_callback_idx::<F>(),
+            Box::into_raw(callback) as *mut _,
+        );
+        ffi::SSL_CTX_sess_set_get_cb(self.as_ptr(), Some(callbacks::raw_get_session::<F>));
     }
 
     /// Sets the session caching mode use for connections made with the context.

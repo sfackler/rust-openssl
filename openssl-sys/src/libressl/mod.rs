@@ -267,7 +267,8 @@ pub struct X509 {
     crldp: *mut c_void,
     altname: *mut c_void,
     nc: *mut c_void,
-    #[cfg(not(osslconf = "OPENSSL_NO_SHA"))] sha1_hash: [c_uchar; 20],
+    #[cfg(not(osslconf = "OPENSSL_NO_SHA"))]
+    sha1_hash: [c_uchar; 20],
     aux: *mut c_void,
 }
 
@@ -526,6 +527,12 @@ extern "C" {
         ctx: *mut ::SSL_CTX,
         ecdh: unsafe extern "C" fn(ssl: *mut ::SSL, is_export: c_int, keylength: c_int)
             -> *mut ::EC_KEY,
+    );
+    pub fn SSL_CTX_sess_set_get_cb(
+        ctx: *mut ::SSL_CTX,
+        get_session_cb: Option<
+            unsafe extern "C" fn(*mut ::SSL, *mut c_uchar, c_int, *mut c_int) -> *mut SSL_SESSION,
+        >,
     );
     pub fn X509_get_subject_name(x: *mut ::X509) -> *mut ::X509_NAME;
     pub fn X509_get_issuer_name(x: *mut ::X509) -> *mut ::X509_NAME;
