@@ -1553,7 +1553,7 @@ unsafe impl Send for SslSession {}
 
 impl Clone for SslSession {
     fn clone(&self) -> SslSession {
-        self.to_owned()
+        SslSessionRef::to_owned(self)
     }
 }
 
