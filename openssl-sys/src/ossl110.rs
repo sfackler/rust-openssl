@@ -44,6 +44,9 @@ pub const SSL_OP_SINGLE_ECDH_USE: c_ulong = 0x00000000;
 pub const SSL_OP_SINGLE_DH_USE: c_ulong = 0x00000000;
 pub const SSL_OP_NO_SSLv2: c_ulong = 0x00000000;
 
+#[cfg(ossl111)]
+pub const TLS1_3_VERSION: c_int = 0x304;
+
 pub const OPENSSL_VERSION: c_int = 0;
 pub const OPENSSL_CFLAGS: c_int = 1;
 pub const OPENSSL_BUILT_ON: c_int = 2;

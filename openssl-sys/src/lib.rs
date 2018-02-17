@@ -1307,6 +1307,11 @@ pub const SSL_SESS_CACHE_NO_INTERNAL_STORE: c_long = 0x200;
 pub const SSL_SESS_CACHE_NO_INTERNAL: c_long =
     SSL_SESS_CACHE_NO_INTERNAL_LOOKUP | SSL_SESS_CACHE_NO_INTERNAL_STORE;
 
+pub const SSL3_VERSION: c_int = 0x300;
+pub const TLS1_VERSION: c_int = 0x301;
+pub const TLS1_1_VERSION: c_int = 0x302;
+pub const TLS1_2_VERSION: c_int = 0x303;
+
 pub const TLSEXT_NAMETYPE_host_name: c_int = 0;
 
 pub const TLSEXT_STATUSTYPE_ocsp: c_int = 1;
@@ -2374,6 +2379,7 @@ extern "C" {
     pub fn SSL_get_peer_cert_chain(ssl: *const SSL) -> *mut stack_st_X509;
     pub fn SSL_get_ssl_method(ssl: *mut SSL) -> *const SSL_METHOD;
     pub fn SSL_get_version(ssl: *const SSL) -> *const c_char;
+    pub fn SSL_version(ssl: *const SSL) -> c_int;
     pub fn SSL_state_string(ssl: *const SSL) -> *const c_char;
     pub fn SSL_state_string_long(ssl: *const SSL) -> *const c_char;
     pub fn SSL_set_verify(

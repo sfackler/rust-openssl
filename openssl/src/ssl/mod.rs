@@ -518,6 +518,30 @@ impl AlpnError {
     pub const NOACK: AlpnError = AlpnError(ffi::SSL_TLSEXT_ERR_NOACK);
 }
 
+/// An SSL/TLS protocol version.
+#[derive(Debug, Copy, Clone)]
+pub struct SslVersion(c_int);
+
+impl SslVersion {
+    /// SSLv3
+    pub const SSL3: SslVersion = SslVersion(ffi::SSL3_VERSION);
+
+    /// TLSv1.0
+    pub const TLS1: SslVersion = SslVersion(ffi::TLS1_VERSION);
+
+    /// TLSv1.1
+    pub const TLS1_1: SslVersion = SslVersion(ffi::TLS1_1_VERSION);
+
+    /// TLSv1.2
+    pub const TLS1_2: SslVersion = SslVersion(ffi::TLS1_2_VERSION);
+
+    /// TLSv1.3
+    ///
+    /// Requires OpenSSL 1.1.1 and the corresponding Cargo feature.
+    #[cfg(all(feature = "v111", ossl111))]
+    pub const TLS1_3: SslVersion = SslVersion(ffi::TLS1_3_VERSION);
+}
+
 /// A standard implementation of protocol selection for Application Layer Protocol Negotiation
 /// (ALPN).
 ///
@@ -1906,18 +1930,32 @@ impl SslRef {
         }
     }
 
+    /// Returns the protocol version of the session.
+    ///
+    /// This corresponds to [`SSL_version`].
+    ///
+    /// [`SSL_version`]: https://www.openssl.org/docs/manmaster/man3/SSL_version.html
+    pub fn version2(&self) -> SslVersion {
+        unsafe { SslVersion(ffi::SSL_version(self.as_ptr())) }
+    }
+
     /// Returns a string describing the protocol version of the session.
     ///
     /// This corresponds to [`SSL_get_version`].
     ///
     /// [`SSL_get_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get_version.html
-    pub fn version(&self) -> &'static str {
+    pub fn version_str(&self) -> &'static str {
         let version = unsafe {
             let ptr = ffi::SSL_get_version(self.as_ptr());
             CStr::from_ptr(ptr as *const _)
         };
 
         str::from_utf8(version.to_bytes()).unwrap()
+    }
+
+    #[deprecated(since = "0.10.4", note = "renamed to version_str")]
+    pub fn version(&self) -> &'static str {
+        self.version_str()
     }
 
     /// Returns the protocol selected via Application Layer Protocol Negotiation (ALPN).
@@ -1953,7 +1991,7 @@ impl SslRef {
     /// If this is greater than 0, the next call to `read` will not call down to the underlying
     /// stream.
     ///
-    /// This corresponds to [`SSL_pending]`.
+    /// This corresponds to [`SSL_pending`].
     ///
     /// [`SSL_pending`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_pending.html
     pub fn pending(&self) -> usize {
