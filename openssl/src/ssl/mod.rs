@@ -1177,12 +1177,9 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_sess_set_new_cb`].
     ///
-    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
-    ///
     /// [`SslRef::session`]: struct.SslRef.html#method.session
     /// [`set_session_cache_mode`]: #method.set_session_cache_mode
     /// [`SSL_CTX_sess_set_new_cb`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_sess_set_new_cb.html
-    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
     pub fn set_new_session_callback<F>(&mut self, callback: F)
     where
         F: Fn(&mut SslRef, SslSession) + 'static + Sync + Send,

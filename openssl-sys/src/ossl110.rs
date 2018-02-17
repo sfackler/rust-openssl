@@ -206,9 +206,11 @@ extern "C" {
     pub fn SSL_CTX_get_options(ctx: *const ::SSL_CTX) -> c_ulong;
     pub fn SSL_CTX_set_options(ctx: *mut ::SSL_CTX, op: c_ulong) -> c_ulong;
     pub fn SSL_CTX_clear_options(ctx: *mut ::SSL_CTX, op: c_ulong) -> c_ulong;
-    pub fn SSL_CTX_sess_set_new_cb(
+    pub fn SSL_CTX_sess_set_get_cb(
         ctx: *mut ::SSL_CTX,
-        new_session_cb: Option<unsafe extern "C" fn(*mut ::SSL, *mut ::SSL_SESSION) -> c_int>,
+        get_session_cb: Option<
+            unsafe extern "C" fn(*mut ::SSL, *const c_uchar, c_int, *mut c_int) -> *mut SSL_SESSION,
+        >,
     );
     pub fn X509_getm_notAfter(x: *const ::X509) -> *mut ::ASN1_TIME;
     pub fn X509_getm_notBefore(x: *const ::X509) -> *mut ::ASN1_TIME;

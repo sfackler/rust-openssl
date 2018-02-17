@@ -5,7 +5,6 @@ use std::ptr;
 use std::slice;
 use std::mem;
 use foreign_types::ForeignTypeRef;
-#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
 use foreign_types::ForeignType;
 
 use error::ErrorStack;
@@ -13,12 +12,10 @@ use dh::Dh;
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
 use ec::EcKey;
 use pkey::Params;
-use ssl::{get_callback_idx, get_ssl_callback_idx, SniError, SslAlert, SslRef};
+use ssl::{get_callback_idx, get_ssl_callback_idx, SniError, SslAlert, SslRef, SslSession};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
           all(feature = "v111", ossl111)))]
 use ssl::AlpnError;
-#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
-use ssl::SslSession;
 use x509::X509StoreContextRef;
 
 pub extern "C" fn raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
@@ -279,7 +276,6 @@ where
     }
 }
 
-#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
 pub unsafe extern "C" fn raw_new_session<F>(
     ssl: *mut ffi::SSL,
     session: *mut ffi::SSL_SESSION,
