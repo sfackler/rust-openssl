@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v0.10.4] - 2018-02-18
+
 ### Added
 
 * Added OpenSSL 1.1.1 support.
@@ -113,7 +115,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.3...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.4...master
+[v0.10.4]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.3...openssl-v0.10.4
 [v0.10.3]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.2...openssl-v0.10.3
 [v0.10.2]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.1...openssl-v0.10.2
 [v0.10.1]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.0...openssl-v0.10.1
