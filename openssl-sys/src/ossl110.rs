@@ -33,6 +33,10 @@ pub enum X509_ALGOR {}
 pub enum X509_VERIFY_PARAM {}
 pub enum X509_REQ {}
 
+#[cfg(ossl111)]
+pub type SSL_CTX_keylog_cb_func =
+    Option<unsafe extern "C" fn(ssl: *const SSL, line: *const c_char)>;
+
 pub const SSL_OP_MICROSOFT_SESS_ID_BUG: c_ulong = 0x00000000;
 pub const SSL_OP_NETSCAPE_CHALLENGE_BUG: c_ulong = 0x00000000;
 pub const SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG: c_ulong = 0x00000000;
@@ -215,6 +219,10 @@ extern "C" {
             unsafe extern "C" fn(*mut ::SSL, *const c_uchar, c_int, *mut c_int) -> *mut SSL_SESSION,
         >,
     );
+    pub fn SSL_get_client_random(ssl: *const SSL, out: *mut c_uchar, len: size_t) -> size_t;
+    pub fn SSL_get_server_random(ssl: *const SSL, out: *mut c_uchar, len: size_t) -> size_t;
+    #[cfg(ossl111)]
+    pub fn SSL_CTX_set_keylog_callback(ctx: *mut ::SSL_CTX, cb: SSL_CTX_keylog_cb_func);
     pub fn X509_getm_notAfter(x: *const ::X509) -> *mut ::ASN1_TIME;
     pub fn X509_getm_notBefore(x: *const ::X509) -> *mut ::ASN1_TIME;
     pub fn X509_get0_signature(

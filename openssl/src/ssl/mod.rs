@@ -475,7 +475,7 @@ fn get_new_ssl_idx<T>() -> c_int {
 }
 
 /// An error returned from the SNI callback.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct SniError(c_int);
 
 impl SniError {
@@ -489,7 +489,7 @@ impl SniError {
 }
 
 /// An SSL/TLS alert.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct SslAlert(c_int);
 
 impl SslAlert {
@@ -502,7 +502,7 @@ impl SslAlert {
 /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
           all(feature = "v111", ossl111)))]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct AlpnError(c_int);
 
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
@@ -519,7 +519,7 @@ impl AlpnError {
 }
 
 /// An SSL/TLS protocol version.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct SslVersion(c_int);
 
 impl SslVersion {
@@ -1271,6 +1271,33 @@ impl SslContextBuilder {
         ffi::SSL_CTX_sess_set_get_cb(self.as_ptr(), Some(callbacks::raw_get_session::<F>));
     }
 
+    /// Sets the TLS key logging callback.
+    ///
+    /// The callback is invoked whenever TLS key material is generated, and is passed a line of NSS
+    /// SSLKEYLOGFILE-formatted text. This can be used by tools like Wireshark to decrypt message
+    /// traffic. The line does not contain a trailing newline.
+    ///
+    /// Requires OpenSSL 1.1.1 and the corresponding Cargo feature.
+    ///
+    /// This corresponds to [`SSL_CTX_set_keylog_callback`].
+    ///
+    /// [`SSL_CTX_set_keylog_callback`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_keylog_callback.html
+    #[cfg(all(feature = "v111", ossl111))]
+    pub fn set_keylog_callback<F>(&mut self, callback: F)
+    where
+        F: Fn(&SslRef, &str) + 'static + Sync + Send,
+    {
+        unsafe {
+            let callback = Box::new(callback);
+            ffi::SSL_CTX_set_ex_data(
+                self.as_ptr(),
+                get_callback_idx::<F>(),
+                Box::into_raw(callback) as *mut _,
+            );
+            ffi::SSL_CTX_set_keylog_callback(self.as_ptr(), Some(callbacks::raw_keylog::<F>));
+        }
+    }
+
     /// Sets the session caching mode use for connections made with the context.
     ///
     /// Returns the previous session caching mode.
@@ -1617,7 +1644,7 @@ impl SslSessionRef {
 
     /// Copies the master key into the provided buffer.
     ///
-    /// Returns the number of bytes written.
+    /// Returns the number of bytes written, or the size of the master key if the buffer is empty.
     ///
     /// This corresponds to [`SSL_SESSION_get_master_key`].
     ///
@@ -1930,32 +1957,18 @@ impl SslRef {
         }
     }
 
-    /// Returns the protocol version of the session.
-    ///
-    /// This corresponds to [`SSL_version`].
-    ///
-    /// [`SSL_version`]: https://www.openssl.org/docs/manmaster/man3/SSL_version.html
-    pub fn version2(&self) -> SslVersion {
-        unsafe { SslVersion(ffi::SSL_version(self.as_ptr())) }
-    }
-
     /// Returns a string describing the protocol version of the session.
     ///
     /// This corresponds to [`SSL_get_version`].
     ///
     /// [`SSL_get_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get_version.html
-    pub fn version_str(&self) -> &'static str {
+    pub fn version(&self) -> &'static str {
         let version = unsafe {
             let ptr = ffi::SSL_get_version(self.as_ptr());
             CStr::from_ptr(ptr as *const _)
         };
 
         str::from_utf8(version.to_bytes()).unwrap()
-    }
-
-    #[deprecated(since = "0.10.4", note = "renamed to version_str")]
-    pub fn version(&self) -> &'static str {
-        self.version_str()
     }
 
     /// Returns the protocol selected via Application Layer Protocol Negotiation (ALPN).
@@ -1991,7 +2004,7 @@ impl SslRef {
     /// If this is greater than 0, the next call to `read` will not call down to the underlying
     /// stream.
     ///
-    /// This corresponds to [`SSL_pending`].
+    /// This corresponds to [`SSL_pending]`.
     ///
     /// [`SSL_pending`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_pending.html
     pub fn pending(&self) -> usize {
@@ -2080,6 +2093,40 @@ impl SslRef {
         }
     }
 
+    /// Copies the client_random value sent by the client in the TLS handshake into a buffer.
+    ///
+    /// Returns the number of bytes copied, or if the buffer is empty, the size of the client_random
+    /// value.
+    ///
+    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
+    ///
+    /// This corresponds to [`SSL_get_client_random`].
+    ///
+    /// [`SSL_get_client_random`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get_client_random.html
+    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+    pub fn client_random(&self, buf: &mut [u8]) -> usize {
+        unsafe {
+            ffi::SSL_get_client_random(self.as_ptr(), buf.as_mut_ptr() as *mut c_uchar, buf.len())
+        }
+    }
+
+    /// Copies the server_random value sent by the server in the TLS handshake into a buffer.
+    ///
+    /// Returns the number of bytes copied, or if the buffer is empty, the size of the server_random
+    /// value.
+    ///
+    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
+    ///
+    /// This corresponds to [`SSL_get_server_random`].
+    ///
+    /// [`SSL_get_server_random`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get_client_random.html
+    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+    pub fn server_random(&self, buf: &mut [u8]) -> usize {
+        unsafe {
+            ffi::SSL_get_server_random(self.as_ptr(), buf.as_mut_ptr() as *mut c_uchar, buf.len())
+        }
+    }
+
     /// Sets the session to be used.
     ///
     /// This should be called before the handshake to attempt to reuse a previously established
@@ -2120,7 +2167,7 @@ impl SslRef {
 
     /// Returns the server's OCSP response, if present.
     ///
-    /// This corresponds to [`SSL_get_tlsext_status_oscp_resp`].
+    /// This corresponds to [`SSL_get_tlsext_status_ocsp_resp`].
     ///
     /// [`SSL_get_tlsext_status_ocsp_resp`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_tlsext_status_type.html
     pub fn ocsp_status(&self) -> Option<&[u8]> {
@@ -2138,7 +2185,7 @@ impl SslRef {
 
     /// Sets the OCSP response to be returned to the client.
     ///
-    /// This corresponds to [`SSL_set_tlsext_status_oscp_resp`].
+    /// This corresponds to [`SSL_set_tlsext_status_ocsp_resp`].
     ///
     /// [`SSL_set_tlsext_status_ocsp_resp`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_tlsext_status_type.html
     pub fn set_ocsp_status(&mut self, response: &[u8]) -> Result<(), ErrorStack> {

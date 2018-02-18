@@ -4,6 +4,8 @@ use std::ffi::CStr;
 use std::ptr;
 use std::slice;
 use std::mem;
+#[cfg(all(feature = "v111", ossl111))]
+use std::str;
 use foreign_types::ForeignTypeRef;
 use foreign_types::ForeignType;
 
@@ -342,4 +344,20 @@ where
         }
         None => ptr::null_mut(),
     }
+}
+
+#[cfg(all(feature = "v111", ossl111))]
+pub unsafe extern "C" fn raw_keylog<F>(ssl: *const ffi::SSL, line: *const c_char)
+where
+    F: Fn(&SslRef, &str) + 'static + Sync + Send,
+{
+    let ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
+    let callback = ffi::SSL_CTX_get_ex_data(ctx, get_callback_idx::<F>());
+    let callback = &*(callback as *mut F);
+
+    let ssl = SslRef::from_ptr(ssl as *mut _);
+    let line = CStr::from_ptr(line).to_bytes();
+    let line = str::from_utf8_unchecked(line);
+
+    callback(ssl, line);
 }
