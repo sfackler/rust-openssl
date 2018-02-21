@@ -7,6 +7,16 @@ use ssl::{HandshakeError, Ssl, SslContext, SslContextBuilder, SslMethod, SslMode
           SslRef, SslStream, SslVerifyMode};
 use version;
 
+// From https://github.com/python/cpython/blob/a170fa162dc03f0a014373349e548954fff2e567/Lib/ssl.py#L193
+#[cfg(ossl101)]
+const CLIENT_CIPHERS: &'static str =
+    "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+HIGH:DH+HIGH:RSA+AESGCM:\
+     RSA+AES:RSA+HIGH:!aNULL:!eNULL:!MD5:!3DES";
+// From https://github.com/python/cpython/blob/892d66e422d5367673163d62ba40cd70a37d5cf7/Modules/_ssl.c#L254
+#[cfg(not(ossl101))]
+const CLIENT_CIPHERS: &'static str =
+    "DEFAULT:!aNULL:!eNULL:!MD5:!3DES:!DES:!RC4:!IDEA:!SEED:!aDSS:!SRP:!PSK";
+
 // ffdhe2048 from https://wiki.mozilla.org/Security/Server_Side_TLS#ffdhe2048
 const DHPARAM_PEM: &'static str = "
 -----BEGIN DH PARAMETERS-----
@@ -61,12 +71,7 @@ impl SslConnector {
     pub fn builder(method: SslMethod) -> Result<SslConnectorBuilder, ErrorStack> {
         let mut ctx = ctx(method)?;
         ctx.set_default_verify_paths()?;
-        // From https://github.com/python/cpython/blob/a170fa162dc03f0a014373349e548954fff2e567/Lib/ssl.py#L193
-        ctx.set_cipher_list(
-            "TLS13-AES-256-GCM-SHA384:TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-128-GCM-SHA256:\
-             ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:DH+CHACHA20:ECDH+AES256:DH+AES256:ECDH+AES128:\
-             DH+AES:ECDH+HIGH:DH+HIGH:RSA+AESGCM:RSA+AES:RSA+HIGH:!aNULL:!eNULL:!MD5:!3DES",
-        )?;
+        ctx.set_cipher_list(CLIENT_CIPHERS)?;
         setup_verify(&mut ctx);
 
         Ok(SslConnectorBuilder(ctx))
