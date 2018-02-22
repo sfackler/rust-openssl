@@ -1957,12 +1957,26 @@ impl SslRef {
         }
     }
 
+    #[deprecated(since = "0.10.5", note = "renamed to `version_str`")]
+    pub fn version(&self) -> &str {
+        self.version_str()
+    }
+
+    /// Returns the protocol version of the session.
+    ///
+    /// This corresponds to [`SSL_version`].
+    ///
+    /// [`SSL_version`]: https://www.openssl.org/docs/manmaster/man3/SSL_version.html
+    pub fn version2(&self) -> SslVersion {
+        unsafe { SslVersion(ffi::SSL_version(self.as_ptr())) }
+    }
+
     /// Returns a string describing the protocol version of the session.
     ///
     /// This corresponds to [`SSL_get_version`].
     ///
     /// [`SSL_get_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get_version.html
-    pub fn version(&self) -> &'static str {
+    pub fn version_str(&self) -> &'static str {
         let version = unsafe {
             let ptr = ffi::SSL_get_version(self.as_ptr());
             CStr::from_ptr(ptr as *const _)
@@ -2004,7 +2018,7 @@ impl SslRef {
     /// If this is greater than 0, the next call to `read` will not call down to the underlying
     /// stream.
     ///
-    /// This corresponds to [`SSL_pending]`.
+    /// This corresponds to [`SSL_pending`].
     ///
     /// [`SSL_pending`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_pending.html
     pub fn pending(&self) -> usize {

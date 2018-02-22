@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+* Added `SslRef::version2`.
+
+### Deprecated
+
+* `SslRef::version` has been deprecated. Use `SslRef::version_str` instead.
+
 ## [v0.10.4] - 2018-02-18
 
 ### Added
@@ -9,7 +17,7 @@
 * Added OpenSSL 1.1.1 support.
 * Added `Rsa::public_key_from_pem_pkcs1`.
 * Added `SslOptions::NO_TLSV1_3`. (OpenSSL 1.1.1 only)
-* Added `SslVersion` and `SslRef::version2`.
+* Added `SslVersion`.
 * Added `SslSessionCacheMode` and `SslContextBuilder::set_session_cache_mode`.
 * Added `SslContextBuilder::set_new_session_callback`,
     `SslContextBuilder::set_remove_session_callback`, and
@@ -21,10 +29,6 @@
 
 * The `SslAcceptorBuilder::mozilla_modern` constructor now disables TLSv1.0 and TLSv1.1 in
     accordance with Mozilla's recommendations.
-
-### Deprecated
-
-* `SslRef::version` has been deprecated. Use `SslRef::version_str` instead.
 
 ## [v0.10.3] - 2018-02-12
 
