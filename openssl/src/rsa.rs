@@ -754,9 +754,55 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn test_public_key_from_pem_pkcs1_panic() {
+    fn test_public_key_from_pem_pkcs1_file_panic() {
         let key = include_bytes!("../test/key.pem.pub");
         Rsa::public_key_from_pem_pkcs1(key).unwrap();
     }
 
+    #[test]
+    fn test_public_key_to_pem_pkcs1() {
+        let keypair = super::Rsa::generate(512).unwrap();
+        let pubkey_pem = keypair.public_key_to_pem_pkcs1().unwrap();
+        super::Rsa::public_key_from_pem_pkcs1(&pubkey_pem).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_public_key_from_pem_pkcs1_generate_panic() {
+        let keypair = super::Rsa::generate(512).unwrap();
+        let pubkey_pem = keypair.public_key_to_pem().unwrap();
+        super::Rsa::public_key_from_pem_pkcs1(&pubkey_pem).unwrap();
+    }
+
+    #[test]
+    fn test_pem_pkcs1_encrypt() {
+        let keypair = super::Rsa::generate(2048).unwrap();
+        let pubkey_pem = keypair.public_key_to_pem_pkcs1().unwrap();
+        let pubkey = super::Rsa::public_key_from_pem_pkcs1(&pubkey_pem).unwrap();
+        let msg = "Hello, world!".as_bytes();
+
+        let mut encrypted = vec![0; pubkey.size() as usize];
+        let len = pubkey.public_encrypt(&msg, &mut encrypted, Padding::PKCS1).unwrap();
+        assert!(len > msg.len());
+        let mut decrypted = vec![0; keypair.size() as usize];
+        let len = keypair.private_decrypt(&encrypted, &mut decrypted, Padding::PKCS1).unwrap();
+        assert_eq!(len, msg.len());
+        assert_eq!("Hello, world!", String::from_utf8_lossy(&decrypted[..len]));
+    }
+
+    #[test]
+    fn test_pem_pkcs1_padding() {
+        let keypair = super::Rsa::generate(512).unwrap();
+        let pubkey_pem = keypair.public_key_to_pem_pkcs1().unwrap();
+        let pubkey = super::Rsa::public_key_from_pem_pkcs1(&pubkey_pem).unwrap();
+        let msg = "foo".as_bytes();
+
+        let mut encrypted1 = vec![0; pubkey.size() as usize];
+        let mut encrypted2 = vec![0; pubkey.size() as usize];
+        let len1 = pubkey.public_encrypt(&msg, &mut encrypted1, Padding::PKCS1).unwrap();
+        let len2 = pubkey.public_encrypt(&msg, &mut encrypted2, Padding::PKCS1).unwrap();
+        assert!(len1 > (msg.len() + 1));
+        assert_eq!(len1, len2);
+        assert_ne!(encrypted1, encrypted2);
+    }
 }
