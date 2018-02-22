@@ -7,21 +7,6 @@ use ssl::{HandshakeError, Ssl, SslContext, SslContextBuilder, SslMethod, SslMode
           SslRef, SslStream, SslVerifyMode};
 use version;
 
-const CLIENT_CIPHERS: &'static str =
-    "DEFAULT:!aNULL:!eNULL:!MD5:!3DES:!DES:!RC4:!IDEA:!SEED:!aDSS:!SRP:!PSK";
-
-// ffdhe2048 from https://wiki.mozilla.org/Security/Server_Side_TLS#ffdhe2048
-const DHPARAM_PEM: &'static str = "
------BEGIN DH PARAMETERS-----
-MIIBCAKCAQEA//////////+t+FRYortKmq/cViAnPTzx2LnFg84tNpWp4TZBFGQz
-+8yTnc4kmz75fS/jY2MMddj2gbICrsRhetPfHtXV/WVhJDP1H18GbtCFY2VVPe0a
-87VXE15/V8k1mE8McODmi3fipona8+/och3xWKE2rec1MKzKT0g6eXq8CrGCsyT7
-YdEIqUuyyOP7uWrat2DX9GgdT0Kj3jlN9K5W7edjcrsZCwenyO4KbXCeAvzhzffi
-7MA0BM0oNC9hkXL+nOmFg/+OTxIy7vKBg8P+OxtMb61zO7X8vC7CIAXFjvGDfRaD
-ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
------END DH PARAMETERS-----
-";
-
 fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     let mut ctx = SslContextBuilder::new(method)?;
 
@@ -64,7 +49,9 @@ impl SslConnector {
     pub fn builder(method: SslMethod) -> Result<SslConnectorBuilder, ErrorStack> {
         let mut ctx = ctx(method)?;
         ctx.set_default_verify_paths()?;
-        ctx.set_cipher_list(CLIENT_CIPHERS)?;
+        ctx.set_cipher_list(
+            "DEFAULT:!aNULL:!eNULL:!MD5:!3DES:!DES:!RC4:!IDEA:!SEED:!aDSS:!SRP:!PSK",
+        )?;
         setup_verify(&mut ctx);
 
         Ok(SslConnectorBuilder(ctx))
@@ -210,7 +197,18 @@ impl SslAcceptor {
                 bits: ::ffi::SSL_OP_NO_TLSv1_3,
             });
         }
-        let dh = Dh::params_from_pem(DHPARAM_PEM.as_bytes())?;
+        let dh = Dh::params_from_pem(
+            b"
+-----BEGIN DH PARAMETERS-----
+MIIBCAKCAQEA//////////+t+FRYortKmq/cViAnPTzx2LnFg84tNpWp4TZBFGQz
++8yTnc4kmz75fS/jY2MMddj2gbICrsRhetPfHtXV/WVhJDP1H18GbtCFY2VVPe0a
+87VXE15/V8k1mE8McODmi3fipona8+/och3xWKE2rec1MKzKT0g6eXq8CrGCsyT7
+YdEIqUuyyOP7uWrat2DX9GgdT0Kj3jlN9K5W7edjcrsZCwenyO4KbXCeAvzhzffi
+7MA0BM0oNC9hkXL+nOmFg/+OTxIy7vKBg8P+OxtMb61zO7X8vC7CIAXFjvGDfRaD
+ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
+-----END DH PARAMETERS-----
+",
+        )?;
         ctx.set_tmp_dh(&dh)?;
         setup_curves(&mut ctx)?;
         ctx.set_cipher_list(
