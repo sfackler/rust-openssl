@@ -1278,6 +1278,48 @@ fn new_session_callback() {
     assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
+#[test]
+fn keying_export() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+
+    let label = "EXPERIMENTAL test";
+    let context = b"my context";
+
+    let guard = thread::spawn(move || {
+        let stream = listener.accept().unwrap().0;
+        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
+            .unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
+            .unwrap();
+        let ssl = Ssl::new(&ctx.build()).unwrap();
+        let stream = ssl.accept(stream).unwrap();
+
+        let mut buf = [0; 32];
+        stream
+            .ssl()
+            .export_keying_material(&mut buf, label, Some(context))
+            .unwrap();
+        buf
+    });
+
+    let stream = TcpStream::connect(addr).unwrap();
+    let ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    let ssl = Ssl::new(&ctx.build()).unwrap();
+    let stream = ssl.connect(stream).unwrap();
+
+    let mut buf = [1; 32];
+    stream
+        .ssl()
+        .export_keying_material(&mut buf, label, Some(context))
+        .unwrap();
+
+    let buf2 = guard.join().unwrap();
+
+    assert_eq!(buf, buf2);
+}
+
 fn _check_kinds() {
     fn is_send<T: Send>() {}
     fn is_sync<T: Sync>() {}

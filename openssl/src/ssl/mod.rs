@@ -59,8 +59,7 @@
 //! ```
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
-use libc::{c_int, c_long, c_ulong, c_void};
-use libc::{c_uchar, c_uint};
+use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void};
 use std::any::TypeId;
 use std::cmp;
 use std::collections::HashMap;
@@ -2138,6 +2137,35 @@ impl SslRef {
     pub fn server_random(&self, buf: &mut [u8]) -> usize {
         unsafe {
             ffi::SSL_get_server_random(self.as_ptr(), buf.as_mut_ptr() as *mut c_uchar, buf.len())
+        }
+    }
+
+    /// Derives keying material for application use in accordance to RFC 5705.
+    ///
+    /// This corresponds to [`SSL_export_keying_material`].
+    ///
+    /// [`SSL_export_keying_material`]: https://www.openssl.org/docs/manmaster/man3/SSL_export_keying_material.html
+    pub fn export_keying_material(
+        &self,
+        out: &mut [u8],
+        label: &str,
+        context: Option<&[u8]>,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            let (context, contextlen, use_context) = match context {
+                Some(context) => (context.as_ptr() as *const c_uchar, context.len(), 1),
+                None => (ptr::null(), 0, 0),
+            };
+            cvt(ffi::SSL_export_keying_material(
+                self.as_ptr(),
+                out.as_mut_ptr() as *mut c_uchar,
+                out.len(),
+                label.as_ptr() as *const c_char,
+                label.len(),
+                context,
+                contextlen,
+                use_context,
+            )).map(|_| ())
         }
     }
 

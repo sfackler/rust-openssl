@@ -2406,6 +2406,16 @@ extern "C" {
         ctx: *mut SSL,
         dh: unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut DH,
     );
+    pub fn SSL_export_keying_material(
+        s: *mut SSL,
+        out: *mut c_uchar,
+        olen: size_t,
+        label: *const c_char,
+        llen: size_t,
+        context: *const c_uchar,
+        contextlen: size_t,
+        use_context: c_int,
+    ) -> c_int;
 
     #[cfg(not(any(osslconf = "OPENSSL_NO_COMP", libressl)))]
     pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
