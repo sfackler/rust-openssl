@@ -1881,6 +1881,8 @@ extern "C" {
     pub fn ERR_func_error_string(err: c_ulong) -> *const c_char;
     pub fn ERR_reason_error_string(err: c_ulong) -> *const c_char;
     pub fn ERR_clear_error();
+    pub fn ERR_put_error(lib: c_int, func: c_int, reason: c_int, file: *const c_char, line: c_int);
+    pub fn ERR_set_error_data(data: *mut c_char, flags: c_int);
 
     pub fn EVP_md5() -> *const EVP_MD;
     pub fn EVP_ripemd160() -> *const EVP_MD;
