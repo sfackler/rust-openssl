@@ -15,7 +15,7 @@
 //!     Err(e) => println!("Parsing Error: {:?}", e),
 //! }
 //! ```
-use libc::{c_char, c_ulong};
+use libc::{c_char, c_int, c_ulong};
 use std::fmt;
 use std::error;
 use std::ffi::CStr;
@@ -40,6 +40,13 @@ impl ErrorStack {
             vec.push(err);
         }
         ErrorStack(vec)
+    }
+
+    /// Pushes the errors back onto the OpenSSL error stack.
+    pub fn put(&self) {
+        for error in self.errors() {
+            error.put();
+        }
     }
 }
 
@@ -87,7 +94,7 @@ impl From<ErrorStack> for fmt::Error {
 pub struct Error {
     code: c_ulong,
     file: *const c_char,
-    line: u32,
+    line: c_int,
     data: Option<Cow<'static, str>>,
 }
 
@@ -124,10 +131,44 @@ impl Error {
                     Some(Error {
                         code,
                         file,
-                        line: line as u32,
+                        line,
                         data,
                     })
                 }
+            }
+        }
+    }
+
+    /// Pushes the error back onto the OpenSSL error stack.
+    pub fn put(&self) {
+        unsafe {
+            ffi::ERR_put_error(
+                ffi::ERR_GET_LIB(self.code),
+                ffi::ERR_GET_FUNC(self.code),
+                ffi::ERR_GET_REASON(self.code),
+                self.file,
+                self.line,
+            );
+            let data = match self.data {
+                Some(Cow::Borrowed(data)) => Some((data.as_ptr() as *mut c_char, 0)),
+                Some(Cow::Owned(ref data)) => {
+                    let ptr = ffi::CRYPTO_malloc(
+                        (data.len() + 1) as _,
+                        concat!(file!(), "\0").as_ptr() as _,
+                        line!() as _,
+                    ) as *mut c_char;
+                    if ptr.is_null() {
+                        None
+                    } else {
+                        ptr::copy_nonoverlapping(data.as_ptr(), ptr as *mut u8, data.len());
+                        *ptr.offset(data.len() as isize) = 0;
+                        Some((ptr, ffi::ERR_TXT_MALLOCED))
+                    }
+                }
+                None => None,
+            };
+            if let Some((ptr, flags)) = data {
+                ffi::ERR_set_error_data(ptr, flags | ffi::ERR_TXT_STRING);
             }
         }
     }
@@ -184,7 +225,7 @@ impl Error {
 
     /// Returns the line in the source file which encountered the error.
     pub fn line(&self) -> u32 {
-        self.line
+        self.line as u32
     }
 
     /// Returns additional data describing the error.

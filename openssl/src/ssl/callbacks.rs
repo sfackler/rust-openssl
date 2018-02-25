@@ -162,8 +162,8 @@ where
             mem::forget(dh);
             ptr
         }
-        Err(_) => {
-            // FIXME reset error stack
+        Err(e) => {
+            e.put();
             ptr::null_mut()
         }
     }
@@ -189,8 +189,8 @@ where
             mem::forget(ec_key);
             ptr
         }
-        Err(_) => {
-            // FIXME reset error stack
+        Err(e) => {
+            e.put();
             ptr::null_mut()
         }
     }
@@ -214,8 +214,8 @@ where
             mem::forget(dh);
             ptr
         }
-        Err(_) => {
-            // FIXME reset error stack
+        Err(e) => {
+            e.put();
             ptr::null_mut()
         }
     }
@@ -240,8 +240,8 @@ where
             mem::forget(ec_key);
             ptr
         }
-        Err(_) => {
-            // FIXME reset error stack
+        Err(e) => {
+            e.put();
             ptr::null_mut()
         }
     }
@@ -262,8 +262,8 @@ where
         match ret {
             Ok(true) => ffi::SSL_TLSEXT_ERR_OK,
             Ok(false) => ffi::SSL_TLSEXT_ERR_NOACK,
-            Err(_) => {
-                // FIXME reset error stack
+            Err(e) => {
+                e.put();
                 ffi::SSL_TLSEXT_ERR_ALERT_FATAL
             }
         }
@@ -271,8 +271,8 @@ where
         match ret {
             Ok(true) => 1,
             Ok(false) => 0,
-            Err(_) => {
-                // FIXME reset error stack
+            Err(e) => {
+                e.put();
                 -1
             }
         }
