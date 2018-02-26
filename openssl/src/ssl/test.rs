@@ -20,6 +20,8 @@ use ocsp::{OcspResponse, OcspResponseStatus};
 use ssl;
 use ssl::{Error, HandshakeError, ShutdownResult, Ssl, SslAcceptor, SslConnector, SslContext,
           SslFiletype, SslMethod, SslSessionCacheMode, SslStream, SslVerifyMode, StatusType};
+#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+use ssl::SslVersion;
 use x509::{X509, X509Name, X509StoreContext, X509VerifyResult};
 #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
           all(feature = "v111", ossl111)))]
@@ -1318,6 +1320,37 @@ fn keying_export() {
     let buf2 = guard.join().unwrap();
 
     assert_eq!(buf, buf2);
+}
+
+#[test]
+#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+fn no_version_overlap() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+
+    let guard = thread::spawn(move || {
+        let stream = listener.accept().unwrap().0;
+        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
+            .unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
+            .unwrap();
+        ctx.set_max_proto_version(Some(SslVersion::TLS1_1)).unwrap();
+        assert_eq!(ctx.min_proto_version(), None);
+        assert_eq!(ctx.max_proto_version(), Some(SslVersion::TLS1_1));
+        let ssl = Ssl::new(&ctx.build()).unwrap();
+        ssl.accept(stream).unwrap_err();
+    });
+
+    let stream = TcpStream::connect(addr).unwrap();
+    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    ctx.set_min_proto_version(Some(SslVersion::TLS1_2)).unwrap();
+    assert_eq!(ctx.min_proto_version(), Some(SslVersion::TLS1_2));
+    assert_eq!(ctx.max_proto_version(), None);
+    let ssl = Ssl::new(&ctx.build()).unwrap();
+    ssl.connect(stream).unwrap_err();
+
+    guard.join().unwrap();
 }
 
 fn _check_kinds() {
