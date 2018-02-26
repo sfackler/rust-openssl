@@ -33,9 +33,10 @@ pub enum X509_ALGOR {}
 pub enum X509_VERIFY_PARAM {}
 pub enum X509_REQ {}
 
-#[cfg(ossl111)]
-pub type SSL_CTX_keylog_cb_func =
-    Option<unsafe extern "C" fn(ssl: *const SSL, line: *const c_char)>;
+pub const SSL_CTRL_SET_MIN_PROTO_VERSION: c_int = 123;
+pub const SSL_CTRL_SET_MAX_PROTO_VERSION: c_int = 124;
+pub const SSL_CTRL_GET_MIN_PROTO_VERSION: c_int = 130;
+pub const SSL_CTRL_GET_MAX_PROTO_VERSION: c_int = 131;
 
 pub const SSL_OP_MICROSOFT_SESS_ID_BUG: c_ulong = 0x00000000;
 pub const SSL_OP_NETSCAPE_CHALLENGE_BUG: c_ulong = 0x00000000;
@@ -47,9 +48,6 @@ pub const SSL_OP_TLS_BLOCK_PADDING_BUG: c_ulong = 0x00000000;
 pub const SSL_OP_SINGLE_ECDH_USE: c_ulong = 0x00000000;
 pub const SSL_OP_SINGLE_DH_USE: c_ulong = 0x00000000;
 pub const SSL_OP_NO_SSLv2: c_ulong = 0x00000000;
-
-#[cfg(ossl111)]
-pub const TLS1_3_VERSION: c_int = 0x304;
 
 pub const OPENSSL_VERSION: c_int = 0;
 pub const OPENSSL_CFLAGS: c_int = 1;
@@ -79,6 +77,58 @@ pub fn init() {
     INIT.call_once(|| unsafe {
         OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, ptr::null_mut());
     })
+}
+
+pub unsafe fn SSL_CTX_set_min_proto_version(ctx: *mut ::SSL_CTX, version: c_int) -> c_int {
+    ::SSL_CTX_ctrl(
+        ctx,
+        SSL_CTRL_SET_MIN_PROTO_VERSION,
+        version as c_long,
+        ptr::null_mut(),
+    ) as c_int
+}
+
+pub unsafe fn SSL_CTX_set_max_proto_version(ctx: *mut ::SSL_CTX, version: c_int) -> c_int {
+    ::SSL_CTX_ctrl(
+        ctx,
+        SSL_CTRL_SET_MAX_PROTO_VERSION,
+        version as c_long,
+        ptr::null_mut(),
+    ) as c_int
+}
+
+pub unsafe fn SSL_CTX_get_min_proto_version(ctx: *mut ::SSL_CTX) -> c_int {
+    ::SSL_CTX_ctrl(ctx, SSL_CTRL_GET_MIN_PROTO_VERSION, 0, ptr::null_mut()) as c_int
+}
+
+pub unsafe fn SSL_CTX_get_max_proto_version(ctx: *mut ::SSL_CTX) -> c_int {
+    ::SSL_CTX_ctrl(ctx, SSL_CTRL_GET_MAX_PROTO_VERSION, 0, ptr::null_mut()) as c_int
+}
+
+pub unsafe fn SSL_set_min_proto_version(s: *mut ::SSL, version: c_int) -> c_int {
+    ::SSL_ctrl(
+        s,
+        SSL_CTRL_SET_MIN_PROTO_VERSION,
+        version as c_long,
+        ptr::null_mut(),
+    ) as c_int
+}
+
+pub unsafe fn SSL_set_max_proto_version(s: *mut ::SSL, version: c_int) -> c_int {
+    ::SSL_ctrl(
+        s,
+        SSL_CTRL_SET_MAX_PROTO_VERSION,
+        version as c_long,
+        ptr::null_mut(),
+    ) as c_int
+}
+
+pub unsafe fn SSL_get_min_proto_version(s: *mut ::SSL) -> c_int {
+    ::SSL_ctrl(s, SSL_CTRL_GET_MIN_PROTO_VERSION, 0, ptr::null_mut()) as c_int
+}
+
+pub unsafe fn SSL_get_max_proto_version(s: *mut ::SSL) -> c_int {
+    ::SSL_ctrl(s, SSL_CTRL_GET_MAX_PROTO_VERSION, 0, ptr::null_mut()) as c_int
 }
 
 extern "C" {
@@ -221,8 +271,6 @@ extern "C" {
     );
     pub fn SSL_get_client_random(ssl: *const SSL, out: *mut c_uchar, len: size_t) -> size_t;
     pub fn SSL_get_server_random(ssl: *const SSL, out: *mut c_uchar, len: size_t) -> size_t;
-    #[cfg(ossl111)]
-    pub fn SSL_CTX_set_keylog_callback(ctx: *mut ::SSL_CTX, cb: SSL_CTX_keylog_cb_func);
     pub fn X509_getm_notAfter(x: *const ::X509) -> *mut ::ASN1_TIME;
     pub fn X509_getm_notBefore(x: *const ::X509) -> *mut ::ASN1_TIME;
     pub fn X509_get0_signature(

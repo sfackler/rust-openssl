@@ -1007,6 +1007,11 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_set_options`].
     ///
+    /// # Note
+    ///
+    /// This *enables* the specified options, but does not disable unspecified options. Use
+    /// `clear_options` for that.
+    ///
     /// [`SSL_CTX_set_options`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_options.html
     pub fn set_options(&mut self, option: SslOptions) -> SslOptions {
         let bits = unsafe { compat::SSL_CTX_set_options(self.as_ptr(), option.bits()) };
@@ -1031,6 +1036,90 @@ impl SslContextBuilder {
     pub fn clear_options(&mut self, option: SslOptions) -> SslOptions {
         let bits = unsafe { compat::SSL_CTX_clear_options(self.as_ptr(), option.bits()) };
         SslOptions { bits }
+    }
+
+    /// Sets the minimum supported protocol version.
+    ///
+    /// A value of `None` will enable protocol versions down the the lowest version supported by
+    /// OpenSSL.
+    ///
+    /// This corresponds to [`SSL_CTX_set_min_proto_version`].
+    ///
+    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
+    ///
+    /// [`SSL_CTX_set_min_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
+    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+    pub fn set_min_proto_version(&mut self, version: Option<SslVersion>) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_CTX_set_min_proto_version(
+                self.as_ptr(),
+                version.map_or(0, |v| v.0),
+            )).map(|_| ())
+        }
+    }
+
+    /// Sets the maximum supported protocol version.
+    ///
+    /// A value of `None` will enable protocol versions down the the highest version supported by
+    /// OpenSSL.
+    ///
+    /// This corresponds to [`SSL_CTX_set_max_proto_version`].
+    ///
+    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
+    ///
+    /// [`SSL_CTX_set_max_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
+    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+    pub fn set_max_proto_version(&mut self, version: Option<SslVersion>) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_CTX_set_max_proto_version(
+                self.as_ptr(),
+                version.map_or(0, |v| v.0),
+            )).map(|_| ())
+        }
+    }
+
+    /// Gets the minimum supported protocol version.
+    ///
+    /// A value of `None` indicates that all versions down the the lowest version supported by
+    /// OpenSSL are enabled.
+    ///
+    /// This corresponds to [`SSL_CTX_get_min_proto_version`].
+    ///
+    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
+    ///
+    /// [`SSL_CTX_get_min_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
+    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+    pub fn min_proto_version(&mut self) -> Option<SslVersion> {
+        unsafe {
+            let r = ffi::SSL_CTX_get_min_proto_version(self.as_ptr());
+            if r == 0 {
+                None
+            } else {
+                Some(SslVersion(r))
+            }
+        }
+    }
+
+    /// Gets the maximum supported protocol version.
+    ///
+    /// A value of `None` indicates that all versions down the the highest version supported by
+    /// OpenSSL are enabled.
+    ///
+    /// This corresponds to [`SSL_CTX_get_max_proto_version`].
+    ///
+    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
+    ///
+    /// [`SSL_CTX_get_max_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
+    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+    pub fn max_proto_version(&mut self) -> Option<SslVersion> {
+        unsafe {
+            let r = ffi::SSL_CTX_get_max_proto_version(self.as_ptr());
+            if r == 0 {
+                None
+            } else {
+                Some(SslVersion(r))
+            }
+        }
     }
 
     /// Sets the protocols to sent to the server for Application Layer Protocol Negotiation (ALPN).
@@ -1319,7 +1408,7 @@ impl SslContextBuilder {
     /// This corresponds to `SSL_CTX_set_cookie_generate_cb`.
     pub fn set_cookie_generate_cb<F>(&mut self, callback: F)
     where
-        F: Fn(&mut SslRef, &mut [u8]) -> Result<usize, ErrorStack> + 'static + Sync + Send
+        F: Fn(&mut SslRef, &mut [u8]) -> Result<usize, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
@@ -1343,7 +1432,7 @@ impl SslContextBuilder {
     /// This corresponds to `SSL_CTX_set_cookie_verify_cb`.
     pub fn set_cookie_verify_cb<F>(&mut self, callback: F)
     where
-        F: Fn(&mut SslRef, &[u8]) -> bool + 'static + Sync + Send
+        F: Fn(&mut SslRef, &[u8]) -> bool + 'static + Sync + Send,
     {
         unsafe {
             let callback = Box::new(callback);
@@ -2011,8 +2100,15 @@ impl SslRef {
     /// This corresponds to [`SSL_version`].
     ///
     /// [`SSL_version`]: https://www.openssl.org/docs/manmaster/man3/SSL_version.html
-    pub fn version2(&self) -> SslVersion {
-        unsafe { SslVersion(ffi::SSL_version(self.as_ptr())) }
+    pub fn version2(&self) -> Option<SslVersion> {
+        unsafe {
+            let r = ffi::SSL_version(self.as_ptr());
+            if r == 0 {
+                None
+            } else {
+                Some(SslVersion(r))
+            }
+        }
     }
 
     /// Returns a string describing the protocol version of the session.
