@@ -361,3 +361,53 @@ where
 
     callback(ssl, line);
 }
+
+pub extern "C" fn raw_cookie_generate<F>(
+    ssl: *mut ffi::SSL,
+    cookie: *mut c_uchar,
+    cookie_len: *mut c_uint
+) -> c_int
+where
+    F: Fn(&mut SslRef, &mut [u8]) -> Result<usize, ErrorStack> + 'static + Sync + Send
+{
+    unsafe {
+        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
+        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
+        let ssl = SslRef::from_ptr_mut(ssl);
+        let callback = &*(callback as *mut F);
+        // We subtract 1 from DTLS1_COOKIE_LENGTH as the ostensible value, 256, is erroneous but retained for
+        // compatibility. See comments in dtls1.h.
+        let slice = slice::from_raw_parts_mut(cookie as *mut u8, ffi::DTLS1_COOKIE_LENGTH as usize - 1);
+        match callback(ssl, slice) {
+            Ok(len) => {
+                *cookie_len = len as c_uint;
+                1
+            }
+            Err(_) => 0,
+        }
+    }
+}
+
+#[cfg(ossl110)]
+type CookiePtr = *const c_uchar;
+
+#[cfg(not(ossl110))]
+type CookiePtr = *mut c_uchar;
+
+pub extern "C" fn raw_cookie_verify<F>(
+    ssl: *mut ffi::SSL,
+    cookie: CookiePtr,
+    cookie_len: c_uint
+) -> c_int
+where
+    F: Fn(&mut SslRef, &[u8]) -> bool + 'static + Sync + Send
+{
+    unsafe {
+        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
+        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
+        let ssl = SslRef::from_ptr_mut(ssl);
+        let callback = &*(callback as *mut F);
+        let slice = slice::from_raw_parts(cookie as *const c_uchar as *const u8, cookie_len as usize);
+        callback(ssl, slice) as c_int
+    }
+}
