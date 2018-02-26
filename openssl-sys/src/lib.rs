@@ -18,6 +18,11 @@ mod ossl110;
 #[cfg(ossl110)]
 pub use ossl110::*;
 
+#[cfg(ossl111)]
+mod ossl111;
+#[cfg(ossl111)]
+pub use ossl111::*;
+
 #[cfg(libressl)]
 mod libressl;
 #[cfg(libressl)]
@@ -1430,6 +1435,8 @@ pub const GEN_URI: c_int = 6;
 pub const GEN_IPADD: c_int = 7;
 pub const GEN_RID: c_int = 8;
 
+pub const DTLS1_COOKIE_LENGTH: c_uint = 256;
+
 // macros
 pub unsafe fn BIO_get_mem_data(b: *mut BIO, pp: *mut *mut c_char) -> c_long {
     BIO_ctrl(b, BIO_CTRL_INFO, 0, pp as *mut c_void)
@@ -2762,4 +2769,33 @@ extern "C" {
     pub fn FIPS_mode_set(onoff: c_int) -> c_int;
     #[cfg(not(libressl))]
     pub fn FIPS_mode() -> c_int;
+
+    pub fn SSL_CTX_set_cookie_generate_cb(
+        s: *mut SSL_CTX,
+        cb: Option<extern "C" fn(
+            ssl: *mut SSL,
+            cookie: *mut c_uchar,
+            cookie_len: *mut c_uint
+        ) -> c_int>
+    );
+
+    #[cfg(ossl110)]
+    pub fn SSL_CTX_set_cookie_verify_cb(
+        s: *mut SSL_CTX,
+        cb: Option<extern "C" fn(
+            ssl: *mut SSL,
+            cookie: *const c_uchar,
+            cookie_len: c_uint
+        ) -> c_int>
+    );
+
+    #[cfg(not(ossl110))]
+    pub fn SSL_CTX_set_cookie_verify_cb(
+        s: *mut SSL_CTX,
+        cb: Option<extern "C" fn(
+            ssl: *mut SSL,
+            cookie: *mut c_uchar,
+            cookie_len: c_uint
+        ) -> c_int>
+    );
 }
