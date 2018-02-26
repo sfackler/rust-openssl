@@ -1311,6 +1311,51 @@ impl SslContextBuilder {
         }
     }
 
+    /// Sets the callback for generating an application cookie for stateless handshakes.
+    ///
+    /// The callback will be called with the SSL context and a slice into which the cookie
+    /// should be written. The callback should return the number of bytes written.
+    ///
+    /// This corresponds to `SSL_CTX_set_cookie_generate_cb`.
+    pub fn set_cookie_generate_cb<F>(&mut self, callback: F)
+    where
+        F: Fn(&mut SslRef, &mut [u8]) -> Result<usize, ErrorStack> + 'static + Sync + Send
+    {
+        unsafe {
+            let callback = Box::new(callback);
+            ffi::SSL_CTX_set_ex_data(
+                self.as_ptr(),
+                get_callback_idx::<F>(),
+                mem::transmute(callback),
+            );
+            ffi::SSL_CTX_set_cookie_generate_cb(self.as_ptr(), Some(raw_cookie_generate::<F>))
+        }
+    }
+
+    /// Sets the callback for verifying an application cookie for stateless handshakes.
+    ///
+    /// The callback will be called with the SSL context and the cookie supplied by the
+    /// client. It should return true if and only if the cookie is valid.
+    ///
+    /// Note that the OpenSSL implementation independently verifies the integrity of
+    /// application cookies using an HMAC before invoking the supplied callback.
+    ///
+    /// This corresponds to `SSL_CTX_set_cookie_verify_cb`.
+    pub fn set_cookie_verify_cb<F>(&mut self, callback: F)
+    where
+        F: Fn(&mut SslRef, &[u8]) -> bool + 'static + Sync + Send
+    {
+        unsafe {
+            let callback = Box::new(callback);
+            ffi::SSL_CTX_set_ex_data(
+                self.as_ptr(),
+                get_callback_idx::<F>(),
+                mem::transmute(callback),
+            );
+            ffi::SSL_CTX_set_cookie_verify_cb(self.as_ptr(), Some(raw_cookie_verify::<F>))
+        }
+    }
+
     /// Sets the extra data at the specified index.
     ///
     /// This can be used to provide data to callbacks registered with the context. Use the
