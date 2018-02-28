@@ -2,9 +2,24 @@
 
 ## [Unreleased]
 
+### Fixed
+
+* `ErrorStack`'s `Display` implementation no longer writes an empty string if it contains no errors.
+
 ### Added
 
 * Added `SslRef::version2`.
+* Added `Cipher::des_ede3_cbc`.
+* Added `SslRef::export_keying_material`.
+* Added the ability to push an `Error` or `ErrorStack` back onto OpenSSL's error stack. Various
+    callback bindings use this to propagate errors properly.
+* Added `SslContextBuilder::set_cookie_generate_cb` and `SslContextBuilder::set_cookie_verify_cb`.
+* Added `SslContextBuilder::set_max_proto_version`, `SslContextBuilder::set_min_proto_version`,
+    `SslContextBuilder::max_proto_version`, and `SslContextBuilder::min_proto_version`.
+
+### Changed
+
+* Updated `SslConnector`'s default cipher list to match Python's.
 
 ### Deprecated
 
