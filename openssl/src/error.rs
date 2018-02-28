@@ -59,6 +59,10 @@ impl ErrorStack {
 
 impl fmt::Display for ErrorStack {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        if self.0.is_empty() {
+            return fmt.write_str("OpenSSL error");
+        }
+
         let mut first = true;
         for err in &self.0 {
             if !first {
