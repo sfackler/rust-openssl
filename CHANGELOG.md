@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v0.10.5] - 2018-02-28
+
 ### Fixed
 
 * `ErrorStack`'s `Display` implementation no longer writes an empty string if it contains no errors.
@@ -134,7 +136,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.4...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.5...master
+[v0.10.5]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.4...openssl-v0.10.5
 [v0.10.4]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.3...openssl-v0.10.4
 [v0.10.3]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.2...openssl-v0.10.3
 [v0.10.2]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.1...openssl-v0.10.2
