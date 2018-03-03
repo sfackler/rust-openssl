@@ -214,6 +214,13 @@ bitflags! {
         #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
                 all(feature = "v111", ossl111)))]
         const NO_SSL_MASK = ffi::SSL_OP_NO_SSL_MASK;
+
+        /// Enable TLSv1.3 Compatibility mode.
+        ///
+        /// This is on by default in OpenSSL 1.1.1. A future version may have this
+        /// disabled by default.
+        #[cfg(all(feature = "v111", ossl111))]
+        const ENABLE_MIDDLEBOX_COMPAT = ffi::SSL_OP_ENABLE_MIDDLEBOX_COMPAT;
     }
 }
 
