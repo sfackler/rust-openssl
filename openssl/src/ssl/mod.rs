@@ -61,6 +61,8 @@ use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
 use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void};
 use std::any::TypeId;
+#[cfg(all(feature = "v111", ossl111))]
+use std::borrow::Cow;
 use std::cmp;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
@@ -363,6 +365,36 @@ bitflags! {
     }
 }
 
+#[cfg(all(feature = "v111", ossl111))]
+bitflags! {
+    /// Which messages and under which conditions an extension should be added or expected.
+    pub struct ExtensionContext: c_uint {
+        /// This extension is only allowed in TLS
+        const TLS_ONLY = ffi::SSL_EXT_TLS_ONLY;
+        /// This extension is only allowed in DTLS
+        const DTLS_ONLY = ffi::SSL_EXT_DTLS_ONLY;
+        /// Some extensions may be allowed in DTLS but we don't implement them for it
+        const TLS_IMPLEMENTATION_ONLY = ffi::SSL_EXT_TLS_IMPLEMENTATION_ONLY;
+        /// Most extensions are not defined for SSLv3 but EXT_TYPE_renegotiate is
+        const SSL3_ALLOWED = ffi::SSL_EXT_SSL3_ALLOWED;
+        /// Extension is only defined for TLS1.2 and below
+        const TLS1_2_AND_BELOW_ONLY = ffi::SSL_EXT_TLS1_2_AND_BELOW_ONLY;
+        /// Extension is only defined for TLS1.3 and above
+        const TLS1_3_ONLY = ffi::SSL_EXT_TLS1_3_ONLY;
+        /// Ignore this extension during parsing if we are resuming
+        const IGNORE_ON_RESUMPTION = ffi::SSL_EXT_IGNORE_ON_RESUMPTION;
+        const CLIENT_HELLO = ffi::SSL_EXT_CLIENT_HELLO;
+        /// Really means TLS1.2 or below
+        const TLS1_2_SERVER_HELLO = ffi::SSL_EXT_TLS1_2_SERVER_HELLO;
+        const TLS1_3_SERVER_HELLO = ffi::SSL_EXT_TLS1_3_SERVER_HELLO;
+        const TLS1_3_ENCRYPTED_EXTENSIONS = ffi::SSL_EXT_TLS1_3_ENCRYPTED_EXTENSIONS;
+        const TLS1_3_HELLO_RETRY_REQUEST = ffi::SSL_EXT_TLS1_3_HELLO_RETRY_REQUEST;
+        const TLS1_3_CERTIFICATE = ffi::SSL_EXT_TLS1_3_CERTIFICATE;
+        const TLS1_3_NEW_SESSION_TICKET = ffi::SSL_EXT_TLS1_3_NEW_SESSION_TICKET;
+        const TLS1_3_CERTIFICATE_REQUEST = ffi::SSL_EXT_TLS1_3_CERTIFICATE_REQUEST;
+    }
+}
+
 /// An identifier of the format of a certificate or key file.
 #[derive(Copy, Clone)]
 pub struct SslFiletype(c_int);
@@ -501,6 +533,8 @@ pub struct SslAlert(c_int);
 impl SslAlert {
     /// Alert 112 - `unrecognized_name`.
     pub const UNRECOGNIZED_NAME: SslAlert = SslAlert(ffi::SSL_AD_UNRECOGNIZED_NAME);
+    pub const ILLEGAL_PARAMETER: SslAlert = SslAlert(ffi::SSL_AD_ILLEGAL_PARAMETER);
+    pub const DECODE_ERROR: SslAlert = SslAlert(ffi::SSL_AD_DECODE_ERROR);
 }
 
 /// An error returned from an ALPN selection callback.
@@ -1468,6 +1502,48 @@ impl SslContextBuilder {
                 index.as_raw(),
                 Box::into_raw(data) as *mut c_void,
             );
+        }
+    }
+
+    /// Adds a custom extension for a TLS/DTLS client or server for all supported protocol versions.
+    ///
+    /// This corresponds to [`SSL_CTX_add_custom_ext`].
+    ///
+    /// [`SSL_CTX_add_custom_ext`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_add_custom_ext.html
+    #[cfg(all(feature = "v111", ossl111))]
+    pub fn add_custom_ext<AddFn, ParseFn>(&mut self, ext_type: u16, context: ExtensionContext, add_cb: AddFn, parse_cb: ParseFn)
+                                          -> Result<(), ErrorStack>
+        where AddFn: Fn(&mut SslRef, ExtensionContext, Option<(usize, &X509Ref)>)
+                        -> Result<Option<Cow<'static, [u8]>>, SslAlert> + 'static + Sync + Send,
+              ParseFn: Fn(&mut SslRef, ExtensionContext, &[u8], Option<(usize, &X509Ref)>)
+                          -> Result<(), SslAlert> + 'static + Sync + Send,
+    {
+        let ret = unsafe {
+            let add_cb = Box::new(add_cb);
+            ffi::SSL_CTX_set_ex_data(
+                self.as_ptr(),
+                get_callback_idx::<AddFn>(),
+                Box::into_raw(add_cb) as *mut _
+            );
+
+            let parse_cb = Box::new(parse_cb);
+            ffi::SSL_CTX_set_ex_data(
+                self.as_ptr(),
+                get_callback_idx::<ParseFn>(),
+                Box::into_raw(parse_cb) as *mut _,
+            );
+
+            ffi::SSL_CTX_add_custom_ext(self.as_ptr(), ext_type as c_uint, context.bits(),
+                                        Some(raw_custom_ext_add::<AddFn>),
+                                        Some(raw_custom_ext_free),
+                                        ptr::null_mut(),
+                                        Some(raw_custom_ext_parse::<ParseFn>),
+                                        ptr::null_mut())
+        };
+        if ret == 1 {
+            Ok(())
+        } else {
+            Err(ErrorStack::get())
         }
     }
 

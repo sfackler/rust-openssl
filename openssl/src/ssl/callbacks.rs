@@ -1,5 +1,9 @@
 use ffi;
 use libc::{c_char, c_int, c_uchar, c_uint, c_void};
+#[cfg(all(feature = "v111", ossl111))]
+use libc::size_t;
+#[cfg(all(feature = "v111", ossl111))]
+use std::borrow::Cow;
 use std::ffi::CStr;
 use std::ptr;
 use std::slice;
@@ -20,6 +24,10 @@ use ssl::{get_callback_idx, get_ssl_callback_idx, SniError, SslAlert, SslContext
           all(feature = "v111", ossl111)))]
 use ssl::AlpnError;
 use x509::X509StoreContextRef;
+#[cfg(all(feature = "v111", ossl111))]
+use ssl::ExtensionContext;
+#[cfg(all(feature = "v111", ossl111))]
+use x509::X509Ref;
 
 pub extern "C" fn raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
 where
@@ -414,5 +422,90 @@ where
         let slice =
             slice::from_raw_parts(cookie as *const c_uchar as *const u8, cookie_len as usize);
         callback(ssl, slice) as c_int
+    }
+}
+
+#[cfg(all(feature = "v111", ossl111))]
+pub struct CustomExtAddState(Option<Cow<'static, [u8]>>);
+
+#[cfg(all(feature = "v111", ossl111))]
+pub extern "C" fn raw_custom_ext_add<F>(ssl: *mut ffi::SSL, _: c_uint,
+                                        context: c_uint,
+                                        out: *mut *const c_uchar,
+                                        outlen: *mut size_t, x: *mut ffi::X509,
+                                        chainidx: size_t, al: *mut c_int,
+                                        _: *mut c_void)
+                                        -> c_int
+    where F: Fn(&mut SslRef, ExtensionContext, Option<(usize, &X509Ref)>) -> Result<Option<Cow<'static, [u8]>>, SslAlert> + 'static
+{
+    unsafe {
+        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
+        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
+        let callback = &*(callback as *mut F);
+        let ssl = SslRef::from_ptr_mut(ssl);
+        let ectx = ExtensionContext::from_bits_truncate(context);
+        let cert = if ectx.contains(ExtensionContext::TLS1_3_CERTIFICATE) { Some((chainidx, X509Ref::from_ptr(x))) } else { None };
+        match (callback)(ssl, ectx, cert) {
+            Ok(None) => 0,
+            Ok(Some(buf)) => {
+                *outlen = buf.len() as size_t;
+                *out = buf.as_ptr();
+
+                let idx = get_ssl_callback_idx::<CustomExtAddState>();
+                let ptr = ffi::SSL_get_ex_data(ssl.as_ptr(), idx);
+                if ptr.is_null() {
+                    let x = Box::into_raw(Box::<CustomExtAddState>::new(CustomExtAddState(Some(buf)))) as *mut c_void;
+                    ffi::SSL_set_ex_data(ssl.as_ptr(), idx, x);
+                } else {
+                    *(ptr as *mut _) = CustomExtAddState(Some(buf))
+                }
+                1
+            }
+            Err(alert) => {
+                *al = alert.0;
+                -1
+            }
+        }
+    }
+}
+
+#[cfg(all(feature = "v111", ossl111))]
+pub extern "C" fn raw_custom_ext_free(ssl: *mut ffi::SSL, _: c_uint,
+                                      _: c_uint,
+                                      _: *mut *const c_uchar,
+                                      _: *mut c_void)
+{
+    unsafe {
+        let state = ffi::SSL_get_ex_data(ssl, get_ssl_callback_idx::<CustomExtAddState>());
+        let state = &mut (*(state as *mut CustomExtAddState)).0;
+        state.take();
+    }
+}
+
+#[cfg(all(feature = "v111", ossl111))]
+pub extern "C" fn raw_custom_ext_parse<F>(ssl: *mut ffi::SSL, _: c_uint,
+                                          context: c_uint,
+                                          input: *const c_uchar,
+                                          inlen: size_t, x: *mut ffi::X509,
+                                          chainidx: size_t, al: *mut c_int,
+                                          _: *mut c_void)
+                                        -> c_int
+    where F: FnMut(&mut SslRef, ExtensionContext, &[u8], Option<(usize, &X509Ref)>) -> Result<(), SslAlert> + 'static
+{
+    unsafe {
+        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
+        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
+        let ssl = SslRef::from_ptr_mut(ssl);
+        let callback = &mut *(callback as *mut F);
+        let ectx = ExtensionContext::from_bits_truncate(context);
+        let slice = slice::from_raw_parts(input as *const u8, inlen as usize);
+        let cert = if ectx.contains(ExtensionContext::TLS1_3_CERTIFICATE) { Some((chainidx, X509Ref::from_ptr(x))) } else { None };
+        match callback(ssl, ectx, slice, cert) {
+            Ok(()) => 1,
+            Err(alert) => {
+                *al = alert.0;
+                0
+            }
+        }
     }
 }

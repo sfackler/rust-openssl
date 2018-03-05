@@ -1353,6 +1353,44 @@ fn no_version_overlap() {
     guard.join().unwrap();
 }
 
+#[test]
+#[cfg(all(feature = "v111", ossl111))]
+fn custom_extensions() {
+    static FOUND_EXTENSION: AtomicBool = ATOMIC_BOOL_INIT;
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+
+    let guard = thread::spawn(move || {
+        let stream = listener.accept().unwrap().0;
+        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
+            .unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
+            .unwrap();
+        ctx.add_custom_ext(
+            12345, ssl::ExtensionContext::CLIENT_HELLO,
+            |_, _, _| unreachable!(),
+            |_, _, data, _| { FOUND_EXTENSION.store(data == b"hello", Ordering::SeqCst); Ok(()) }
+        ).unwrap();
+        let ssl = Ssl::new(&ctx.build()).unwrap();
+        ssl.accept(stream).unwrap();
+    });
+
+    let stream = TcpStream::connect(addr).unwrap();
+    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    ctx.add_custom_ext(
+        12345, ssl::ExtensionContext::CLIENT_HELLO,
+        |_, _, _| Ok(Some(b"hello"[..].into())),
+        |_, _, _, _| unreachable!()
+    ).unwrap();
+    let ssl = Ssl::new(&ctx.build()).unwrap();
+    ssl.connect(stream).unwrap();
+
+    guard.join().unwrap();
+    assert!(FOUND_EXTENSION.load(Ordering::SeqCst));
+}
+
 fn _check_kinds() {
     fn is_send<T: Send>() {}
     fn is_sync<T: Sync>() {}
