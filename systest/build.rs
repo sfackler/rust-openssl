@@ -109,7 +109,7 @@ fn main() {
     cfg.skip_signededness(|s| {
         s.ends_with("_cb") || s.ends_with("_CB") || s.ends_with("_cb_fn")
             || s.starts_with("CRYPTO_") || s == "PasswordCallback"
-            || s.ends_with("_cb_func")
+            || s.ends_with("_cb_func") || s.ends_with("_cb_ex")
     });
     cfg.field_name(|_s, field| {
         if field == "type_" {

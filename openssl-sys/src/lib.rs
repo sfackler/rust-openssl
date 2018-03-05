@@ -1203,6 +1203,12 @@ pub const RSA_X931_PADDING: c_int = 5;
 
 pub const SHA_LBLOCK: c_int = 16;
 
+pub const SSL3_AD_ILLEGAL_PARAMETER: c_int = 47;
+pub const SSL_AD_ILLEGAL_PARAMETER: c_int = SSL3_AD_ILLEGAL_PARAMETER;
+
+pub const TLS1_AD_DECODE_ERROR: c_int = 50;
+pub const SSL_AD_DECODE_ERROR: c_int = TLS1_AD_DECODE_ERROR;
+
 pub const TLS1_AD_UNRECOGNIZED_NAME: c_int = 112;
 pub const SSL_AD_UNRECOGNIZED_NAME: c_int = TLS1_AD_UNRECOGNIZED_NAME;
 

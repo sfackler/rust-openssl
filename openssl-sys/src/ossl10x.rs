@@ -969,4 +969,7 @@ extern "C" {
 
     pub fn SSLeay() -> c_ulong;
     pub fn SSLeay_version(key: c_int) -> *const c_char;
+
+    #[cfg(ossl102)]
+    pub fn SSL_extension_supported(ext_type: c_uint) -> c_int;
 }

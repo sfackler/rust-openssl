@@ -363,4 +363,5 @@ extern "C" {
     ) -> *mut PKCS12;
     pub fn X509_REQ_get_version(req: *const X509_REQ) -> c_long;
     pub fn X509_REQ_get_subject_name(req: *const X509_REQ) -> *mut ::X509_NAME;
+    pub fn SSL_extension_supported(ext_type: c_uint) -> c_int;
 }
