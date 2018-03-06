@@ -6,39 +6,6 @@
 //! data with the included public key. `X509` certificates are used in many
 //! Internet protocols, including SSL/TLS, which is the basis for HTTPS,
 //! the secure protocol for browsing the web.
-//!
-//! # Example
-//!
-//! Build an `X509` certificate and use a generated RSA key to sign it.
-//!
-//! ```rust
-//!
-//! extern crate openssl;
-//!
-//! use openssl::x509::{X509, X509Name};
-//! use openssl::pkey::PKey;
-//! use openssl::hash::MessageDigest;
-//! use openssl::rsa::Rsa;
-//! use openssl::nid::Nid;
-//!
-//! fn main() {
-//!     let rsa = Rsa::generate(2048).unwrap();
-//!     let pkey = PKey::from_rsa(rsa).unwrap();
-//!
-//!     let mut name = X509Name::builder().unwrap();
-//!     name.append_entry_by_nid(Nid::COMMONNAME, "foobar.com").unwrap();
-//!     let name = name.build();
-//!
-//!     let mut builder = X509::builder().unwrap();
-//!     builder.set_version(2).unwrap();
-//!     builder.set_subject_name(&name).unwrap();
-//!     builder.set_issuer_name(&name).unwrap();
-//!     builder.set_pubkey(&pkey).unwrap();
-//!     builder.sign(&pkey, MessageDigest::sha256()).unwrap();
-//!
-//!     let certificate: X509 = builder.build();
-//! }
-//! ```
 
 use libc::{c_int, c_long};
 use ffi;
