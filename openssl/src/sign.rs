@@ -66,6 +66,7 @@ use foreign_types::ForeignTypeRef;
 use std::io::{self, Write};
 use std::marker::PhantomData;
 use std::ptr;
+use libc::c_int;
 
 use {cvt, cvt_p};
 use hash::MessageDigest;
@@ -156,6 +157,38 @@ impl<'a> Signer<'a> {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(
                 self.pctx,
                 padding.as_raw(),
+            )).map(|_| ())
+        }
+    }
+
+    /// Sets the RSA PSS salt length.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_pss_saltlen`].
+    ///
+    /// [`EVP_PKEY_CTX_set_rsa_pss_saltlen`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_pss_saltlen.html
+    pub fn set_rsa_pss_saltlen(&mut self, len: c_int) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_pss_saltlen(
+                self.pctx,
+                len,
+            )).map(|_| ())
+        }
+    }
+
+    /// Sets the RSA MGF1 algorithm.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_mgf1_md`].
+    ///
+    /// [`EVP_PKEY_CTX_set_rsa_mgf1_md`]: https://www.openssl.org/docs/manmaster/man7/RSA-PSS.html
+    pub fn set_rsa_mgf1_md(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_mgf1_md(
+                self.pctx,
+                md.as_ptr() as *mut _,
             )).map(|_| ())
         }
     }
@@ -316,6 +349,38 @@ impl<'a> Verifier<'a> {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(
                 self.pctx,
                 padding.as_raw(),
+            )).map(|_| ())
+        }
+    }
+
+    /// Sets the RSA PSS salt length.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_pss_saltlen`].
+    ///
+    /// [`EVP_PKEY_CTX_set_rsa_pss_saltlen`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_pss_saltlen.html
+    pub fn set_rsa_pss_saltlen(&mut self, len: c_int) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_pss_saltlen(
+                self.pctx,
+                len,
+            )).map(|_| ())
+        }
+    }
+
+    /// Sets the RSA MGF1 algorithm.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_mgf1_md`].
+    ///
+    /// [`EVP_PKEY_CTX_set_rsa_mgf1_md`]: https://www.openssl.org/docs/manmaster/man7/RSA-PSS.html
+    pub fn set_rsa_mgf1_md(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_mgf1_md(
+                self.pctx,
+                md.as_ptr() as *mut _,
             )).map(|_| ())
         }
     }
@@ -557,6 +622,28 @@ mod test {
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &key).unwrap();
         verifier.update(b"hello world").unwrap();
+        assert!(verifier.verify(&signature).unwrap());
+    }
+
+    #[test]
+    fn rsa_sign_verify() {
+        let key = include_bytes!("../test/rsa.pem");
+        let private_key = Rsa::private_key_from_pem(key).unwrap();
+        let pkey = PKey::from_rsa(private_key).unwrap();
+
+        let mut signer = Signer::new(MessageDigest::sha256(), &pkey).unwrap();
+        signer.set_rsa_padding(Padding::PKCS1_PSS).unwrap();
+        assert_eq!(signer.rsa_padding().unwrap(), Padding::PKCS1_PSS);
+        signer.set_rsa_pss_saltlen(-1).unwrap();
+        signer.set_rsa_mgf1_md(MessageDigest::sha256()).unwrap();
+        signer.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
+        let signature = signer.sign_to_vec().unwrap();
+
+        let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
+        verifier.set_rsa_padding(Padding::PKCS1_PSS).unwrap();
+        verifier.set_rsa_pss_saltlen(-1).unwrap();
+        verifier.set_rsa_mgf1_md(MessageDigest::sha256()).unwrap();
+        verifier.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         assert!(verifier.verify(&signature).unwrap());
     }
 }
