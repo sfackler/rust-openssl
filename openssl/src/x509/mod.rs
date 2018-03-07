@@ -67,6 +67,18 @@ impl X509StoreContext {
     pub fn ssl_idx() -> Result<Index<X509StoreContext, SslRef>, ErrorStack> {
         unsafe { cvt_n(ffi::SSL_get_ex_data_X509_STORE_CTX_idx()).map(|idx| Index::from_raw(idx)) }
     }
+
+    /// Creates a new `X509StoreContext` instance.
+    ///
+    /// This corresponds to [`X509_STORE_CTX_new`].
+    ///
+    /// [`X509_STORE_CTX_new`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_STORE_CTX_new.html
+    pub fn new() -> Result<X509StoreContext, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(ffi::X509_STORE_CTX_new()).map(|p| X509StoreContext(p))
+        }
+    }
 }
 
 impl X509StoreContextRef {
@@ -86,22 +98,6 @@ impl X509StoreContextRef {
         }
     }
 
-    /// Initializes the store context to verify the certificate.
-    ///
-    /// The context must be re-initialized before each call to `verify_cert`.
-    ///
-    /// # Arguments
-    ///
-    /// * `trust` - a store of the trusted chain of certificates, or CAs, to validated the certificate
-    /// * `cert` - certificate to validate
-    /// * `cert_chain` - the certificate's chain
-    pub fn init(&mut self, trust: &store::X509StoreRef, cert: &X509Ref, cert_chain: &StackRef<X509>) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::X509_STORE_CTX_init(self.as_ptr(), trust.as_ptr(), cert.as_ptr(), cert_chain.as_ptr()))
-                .map(|_| ())
-        }
-    }
-
     /// Returns the error code of the context.
     ///
     /// This corresponds to [`X509_STORE_CTX_get_error`].
@@ -111,27 +107,30 @@ impl X509StoreContextRef {
         unsafe { X509VerifyResult::from_raw(ffi::X509_STORE_CTX_get_error(self.as_ptr())) }
     }
 
-    /// Verifies the certificate associated in the `init()` method
-    /// * `cert_chain` - the certificates chain
+    /// Verifies a certificate with the given certificate store.
+    /// * `trust` - The certificate store with the trusted certificates.
+    /// * `cert` - The certificate that should be verified.
+    /// * `cert_chain` - The certificates chain.
+    ///
+    /// This corresponds to [`X509_STORE_CTX_init`] followed by [`X509_verify_cert`] and
+    /// [`X509_STORE_CTX_cleanup`].
+    ///
+    /// [`X509_STORE_CTX_init`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_init.html
+    /// [`X509_verify_cert`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_verify_cert.html
+    /// [`X509_STORE_CTX_cleanup`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_cleanup.html
     ///
     /// # Result
     /// 
-    /// The Result must be `Some(None)` to be a valid certificate, otherwise the cert is not valid.
-    pub fn verify_cert(trust: store::X509Store, cert: X509, cert_chain: Stack<X509>) -> Result<(), ErrorStack> {
+    /// The Result must be `Ok(())` to be a valid certificate, otherwise the cert is not valid.
+    pub fn verify_cert(&mut self, trust: &store::X509StoreRef, cert: &X509Ref,
+                       cert_chain: &StackRef<X509>) -> Result<(), ErrorStack> {
         unsafe {
-            ffi::init();
-            let context = try!(cvt_p(ffi::X509_STORE_CTX_new()).map(|p| X509StoreContext(p)));
-            let init_result = cvt(ffi::X509_STORE_CTX_init(context.as_ptr(), trust.as_ptr(), cert.as_ptr(), cert_chain.as_ptr()))
-                .map(|_| ());
+            cvt(ffi::X509_STORE_CTX_init(self.as_ptr(), trust.as_ptr(),
+                                        cert.as_ptr(), cert_chain.as_ptr()))?;
 
-            mem::forget(trust);
-            mem::forget(cert);
-            mem::forget(cert_chain);
+            cvt(ffi::X509_verify_cert(self.as_ptr()))?;
 
-            try!(init_result);
-
-            // verify_cert returns an error `<= 0` if there was a validation error
-            try!(cvt(ffi::X509_verify_cert(context.as_ptr())).map(|_| ()));
+            ffi::X509_STORE_CTX_cleanup(self.as_ptr());
             
             Ok(())
         }

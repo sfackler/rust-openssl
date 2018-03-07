@@ -7,9 +7,10 @@ use nid::Nid;
 use pkey::{PKey, Private};
 use rsa::Rsa;
 use stack::Stack;
-use x509::{X509, X509Name, X509Req, X509VerifyResult};
+use x509::{X509, X509Name, X509Req, X509VerifyResult, X509StoreContext};
 use x509::extension::{AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, KeyUsage,
                       SubjectAlternativeName, SubjectKeyIdentifier};
+use x509::store::X509StoreBuilder;
 
 fn pkey() -> PKey<Private> {
     let rsa = Rsa::generate(2048).unwrap();
@@ -298,12 +299,14 @@ fn test_verify_cert() {
     let cert = X509::from_pem(cert).unwrap();
     let ca = include_bytes!("../../test/root-ca.pem");
     let ca = X509::from_pem(ca).unwrap();
+    let chain = Stack::new().unwrap();
 
     let mut store_bldr = X509StoreBuilder::new().unwrap();
     store_bldr.add_cert(ca).unwrap();
     let store = store_bldr.build();
 
-    assert!(X509StoreContext::verify_cert(store, cert, Stack::new().unwrap()).is_ok());
+    let mut context = X509StoreContext::new().unwrap();
+    assert!(context.verify_cert(&store, &cert, &chain).is_ok());
 }
 
 #[test]
@@ -312,10 +315,12 @@ fn test_verify_fails() {
     let cert = X509::from_pem(cert).unwrap();
     let ca = include_bytes!("../../test/alt_name_cert.pem");
     let ca = X509::from_pem(ca).unwrap();
+    let chain = Stack::new().unwrap();
 
     let mut store_bldr = X509StoreBuilder::new().unwrap();
     store_bldr.add_cert(ca).unwrap();
     let store = store_bldr.build();
 
-    assert!(X509StoreContext::verify_cert(store, cert, Stack::new().unwrap()).is_err());
+    let mut context = X509StoreContext::new().unwrap();
+    assert!(context.verify_cert(&store, &cert, &chain).is_err());
 }
