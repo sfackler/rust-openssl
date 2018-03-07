@@ -1200,6 +1200,7 @@ pub const RSA_SSLV23_PADDING: c_int = 2;
 pub const RSA_NO_PADDING: c_int = 3;
 pub const RSA_PKCS1_OAEP_PADDING: c_int = 4;
 pub const RSA_X931_PADDING: c_int = 5;
+pub const RSA_PKCS1_PSS_PADDING: c_int = 6;
 
 pub const SHA_LBLOCK: c_int = 16;
 
