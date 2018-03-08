@@ -1,5 +1,5 @@
 //! Low level Elliptic Curve Digital Signature Algorithm (ECDSA) functions.
-//! 
+//!
 
 
 use bn::{BigNum, BigNumRef};
@@ -127,6 +127,16 @@ mod test {
     use ec::EcGroup;
     use super::*;
 
+    #[cfg(ossl10x)]
+    static CURVE_IDENTIFER: Nid = Nid::SECP192K1;
+    #[cfg(ossl10x)]
+    static DGST_LEN: i32 = 20;
+
+    #[cfg(ossl110)]
+    static CURVE_IDENTIFER: Nid = Nid::X9_62_PRIME256V1;
+    #[cfg(ossl110)]
+    static DGST_LEN: i32 = 32;
+
     fn get_public_key(group: &EcGroup, x: &EcKey<Private>) -> Result<EcKey<Public>, ErrorStack> {
         let public_key_point = x.public_key();
         Ok(EcKey::from_public_key(group, public_key_point)?)
@@ -134,7 +144,7 @@ mod test {
 
     #[test]
     fn sign_and_verify() {
-        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let group = EcGroup::from_curve_name(CURVE_IDENTIFER).unwrap();
         let private_key = EcKey::generate(&group).unwrap();
         let public_key = get_public_key(&group, &private_key).unwrap();
 
@@ -142,30 +152,30 @@ mod test {
         let public_key2 = get_public_key(&group, &private_key2).unwrap();
 
         let data = String::from("hello");
-        let res = EcdsaSig::sign(data.as_bytes(), 32, &private_key).unwrap();
+        let res = EcdsaSig::sign(data.as_bytes(), DGST_LEN, &private_key).unwrap();
 
         // Signature can be verified using the correct data & correct public key
-        let verification = res.verify(data.as_bytes(), 32, &public_key).unwrap();
+        let verification = res.verify(data.as_bytes(), DGST_LEN, &public_key).unwrap();
         assert!(verification);
 
         // Signature will not be verified using the incorrect data but the correct public key
-        let verification2 = res.verify(String::from("hello2").as_bytes(), 32, &public_key).unwrap();
+        let verification2 = res.verify(String::from("hello2").as_bytes(), DGST_LEN, &public_key).unwrap();
         assert!(verification2 == false);
 
         // Signature will not be verified using the correct data but the incorrect public key
-        let verification3 = res.verify(data.as_bytes(), 32, &public_key2).unwrap();
+        let verification3 = res.verify(data.as_bytes(), DGST_LEN, &public_key2).unwrap();
         assert!(verification3 == false);
     }
 
     #[test]
     fn check_private_components() {
-        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let group = EcGroup::from_curve_name(CURVE_IDENTIFER).unwrap();
         let private_key = EcKey::generate(&group).unwrap();
         let public_key = get_public_key(&group, &private_key).unwrap();
         let data = String::from("hello");
-        let res = EcdsaSig::sign(data.as_bytes(), 32, &private_key).unwrap();
+        let res = EcdsaSig::sign(data.as_bytes(), DGST_LEN, &private_key).unwrap();
 
-        let verification = res.verify(data.as_bytes(), 32, &public_key).unwrap();
+        let verification = res.verify(data.as_bytes(), DGST_LEN, &public_key).unwrap();
         assert!(verification);
 
         let x = res.private_components();
@@ -173,7 +183,7 @@ mod test {
         let s = x.1.unwrap().to_owned().unwrap();
 
         let res2 = EcdsaSig::from_private_components(r, s).unwrap();
-        let verification2 = res2.verify(data.as_bytes(), 32, &public_key).unwrap();
+        let verification2 = res2.verify(data.as_bytes(), DGST_LEN, &public_key).unwrap();
         assert!(verification2);
     }
 }

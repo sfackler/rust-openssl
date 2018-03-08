@@ -1879,8 +1879,8 @@ extern "C" {
     pub fn ECDSA_SIG_new() -> *mut ECDSA_SIG;
     pub fn ECDSA_SIG_free(sig: *mut ECDSA_SIG);
     pub fn ECDSA_do_verify(dgst: *const c_uchar, dgst_len: c_int,
-                           sig: *const ECDSA_SIG, eckey: *mut ::EC_KEY) -> c_int;
-    pub fn ECDSA_do_sign(dgst: *const c_uchar, dgst_len: c_int, eckey: *mut ::EC_KEY) -> *mut ECDSA_SIG;
+                           sig: *const ECDSA_SIG, eckey: *mut EC_KEY) -> c_int;
+    pub fn ECDSA_do_sign(dgst: *const c_uchar, dgst_len: c_int, eckey: *mut EC_KEY) -> *mut ECDSA_SIG;
 
     pub fn ERR_peek_last_error() -> c_ulong;
     pub fn ERR_get_error() -> c_ulong;
