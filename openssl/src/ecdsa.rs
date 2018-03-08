@@ -4,7 +4,7 @@
 
 use bn::{BigNum, BigNumRef};
 use {cvt, cvt_n, cvt_p};
-use ec::EcKey;
+use ec::EcKeyRef;
 use error::ErrorStack;
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
@@ -36,7 +36,7 @@ impl EcdsaSig {
     /// OpenSSL documentation at [`ECDSA_do_sign`]
     ///
     /// [`ECDSA_do_sign`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_do_sign.html
-    pub fn sign(data: &[u8], dgstlen: i32, eckey: &EcKey<Private>) -> Result<EcdsaSig, ErrorStack> {
+    pub fn sign(data: &[u8], dgstlen: i32, eckey: &EcKeyRef<Private>) -> Result<EcdsaSig, ErrorStack> {
         unsafe {
             let sig = cvt_p(ffi::ECDSA_do_sign(data.as_ptr(), dgstlen, eckey.as_ptr()))?;
             Ok(EcdsaSig::from_ptr(sig as *mut _))
@@ -63,24 +63,36 @@ impl EcdsaSig {
     /// OpenSSL documentation at [`ECDSA_do_verify`]
     ///
     /// [`ECDSA_do_verify`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_do_verify.html
-    pub fn verify(&self, data: &[u8], dgstlen: i32, eckey: &EcKey<Public>) -> Result<bool, ErrorStack> {
+    pub fn verify(&self, data: &[u8], dgstlen: i32, eckey: &EcKeyRef<Public>) -> Result<bool, ErrorStack> {
         unsafe {
             let x = cvt_n(ffi::ECDSA_do_verify(data.as_ptr(), dgstlen, self.as_ptr(), eckey.as_ptr()))?;
             Ok(x == 1)
         }
     }
 
-    /// Returns internal components: `r` and `s` of a `EcdsaSig`. (See X9.62 or FIPS 186-2)
+    /// Returns internal component: `r` of a `EcdsaSig`. (See X9.62 or FIPS 186-2)
     ///
     /// OpenSSL documentation at [`ECDSA_SIG_get0`]
     ///
     /// [`ECDSA_SIG_get0`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_SIG_get0.html
-    pub fn private_components(&self) -> (Option<&BigNumRef>, Option<&BigNumRef>) {
+    pub fn private_component_r(&self) -> Option<&BigNumRef> {
         unsafe {
             let xs = compat::get_numbers(self.as_ptr());
             let r = if xs[0].is_null() { None } else { Some(BigNumRef::from_ptr(xs[0] as *mut _)) };
+            r
+        }
+    }
+
+    /// Returns internal components: `s` of a `EcdsaSig`. (See X9.62 or FIPS 186-2)
+    ///
+    /// OpenSSL documentation at [`ECDSA_SIG_get0`]
+    ///
+    /// [`ECDSA_SIG_get0`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_SIG_get0.html
+    pub fn private_component_s(&self) -> Option<&BigNumRef> {
+        unsafe {
+            let xs = compat::get_numbers(self.as_ptr());
             let s = if xs[1].is_null() { None } else { Some(BigNumRef::from_ptr(xs[1] as *mut _)) };
-            (r, s)
+            s
         }
     }
 
@@ -125,6 +137,7 @@ mod compat {
 mod test {
     use nid::Nid;
     use ec::EcGroup;
+    use ec::EcKey;
     use super::*;
 
     static DGST_LEN: i32 = 20;
@@ -176,9 +189,8 @@ mod test {
         let verification = res.verify(data.as_bytes(), DGST_LEN, &public_key).unwrap();
         assert!(verification);
 
-        let x = res.private_components();
-        let r = x.0.unwrap().to_owned().unwrap();
-        let s = x.1.unwrap().to_owned().unwrap();
+        let r = res.private_component_r().unwrap().to_owned().unwrap();
+        let s = res.private_component_s().unwrap().to_owned().unwrap();
 
         let res2 = EcdsaSig::from_private_components(r, s).unwrap();
         let verification2 = res2.verify(data.as_bytes(), DGST_LEN, &public_key).unwrap();
