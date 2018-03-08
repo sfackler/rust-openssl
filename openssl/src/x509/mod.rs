@@ -108,16 +108,16 @@ impl X509StoreContextRef {
     }
 
     /// Verifies a certificate with the given certificate store.
+    /// For successive calls to this function, it is required to call `cleanup` in beforehand.
+    ///
     /// * `trust` - The certificate store with the trusted certificates.
     /// * `cert` - The certificate that should be verified.
     /// * `cert_chain` - The certificates chain.
     ///
-    /// This corresponds to [`X509_STORE_CTX_init`] followed by [`X509_verify_cert`] and
-    /// [`X509_STORE_CTX_cleanup`].
+    /// This corresponds to [`X509_STORE_CTX_init`] followed by [`X509_verify_cert`].
     ///
     /// [`X509_STORE_CTX_init`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_init.html
     /// [`X509_verify_cert`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_verify_cert.html
-    /// [`X509_STORE_CTX_cleanup`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_cleanup.html
     ///
     /// # Result
     /// 
@@ -129,10 +129,19 @@ impl X509StoreContextRef {
                                         cert.as_ptr(), cert_chain.as_ptr()))?;
 
             cvt(ffi::X509_verify_cert(self.as_ptr()))?;
-
-            ffi::X509_STORE_CTX_cleanup(self.as_ptr());
             
             Ok(())
+        }
+    }
+
+    /// Cleans-up the context.
+    ///
+    /// This corresponds to [`X509_STORE_CTX_cleanup`].
+    ///
+    /// [`X509_STORE_CTX_cleanup`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_cleanup.html
+    pub fn cleanup(&mut self) {
+        unsafe {
+            ffi::X509_STORE_CTX_cleanup(self.as_ptr());
         }
     }
 
