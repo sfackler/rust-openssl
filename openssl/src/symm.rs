@@ -71,7 +71,7 @@ pub enum Mode {
 /// See OpenSSL doc at [`EVP_EncryptInit`] for more information on each algorithms.
 ///
 /// [`EVP_EncryptInit`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_EncryptInit.html
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Cipher(*const ffi::EVP_CIPHER);
 
 impl Cipher {
@@ -107,6 +107,10 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_gcm()) }
     }
 
+    pub fn aes_128_ccm() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_128_ccm()) }
+    }
+
     pub fn aes_256_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_ecb()) }
     }
@@ -137,6 +141,10 @@ impl Cipher {
 
     pub fn aes_256_gcm() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_gcm()) }
+    }
+
+    pub fn aes_256_ccm() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_256_ccm()) }
     }
 
     pub fn bf_cbc() -> Cipher {
@@ -220,6 +228,12 @@ impl Cipher {
     /// Stream ciphers such as RC4 have a block size of 1.
     pub fn block_size(&self) -> usize {
         unsafe { EVP_CIPHER_block_size(self.0) as usize }
+    }
+
+    /// Determines whether the cipher is using CCM mode
+    fn is_ccm(&self) -> bool {
+        // NOTE: OpenSSL returns pointers to static structs, which makes this work as expected
+        *self == Cipher::aes_128_ccm() || *self == Cipher::aes_256_ccm()
     }
 }
 
@@ -383,6 +397,41 @@ impl Crypter {
                 ffi::EVP_CTRL_GCM_SET_TAG,
                 tag.len() as c_int,
                 tag.as_ptr() as *mut _,
+            )).map(|_| ())
+        }
+    }
+
+    /// Sets the length of the authentication tag to generate in AES CCM.
+    ///
+    /// When encrypting with AES CCM, the tag length needs to be explicitly set in order
+    /// to use a value different than the default 12 bytes.
+    pub fn set_tag_len(&mut self, tag: &[u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            assert!(tag.len() <= c_int::max_value() as usize);
+            // NB: this constant is actually more general than just GCM.
+            cvt(ffi::EVP_CIPHER_CTX_ctrl(
+                self.ctx,
+                ffi::EVP_CTRL_GCM_SET_TAG,
+                tag.len() as c_int,
+                ptr::null_mut(),
+            )).map(|_| ())
+        }
+    }
+
+    /// Feeds total plaintext length to the cipher.
+    ///
+    /// The total plaintext or ciphertext length MUST be passed to the cipher when it operates in
+    /// CCM mode.
+    pub fn ccm_update(&mut self, input: &[u8])-> Result<(), ErrorStack> {
+        unsafe {
+            assert!(input.len() <= c_int::max_value() as usize);
+            let mut len = 0;
+            cvt(ffi::EVP_CipherUpdate(
+                self.ctx,
+                ptr::null_mut(),
+                &mut len,
+                ptr::null_mut(),
+                input.len() as c_int,
             )).map(|_| ())
         }
     }
@@ -601,6 +650,12 @@ pub fn encrypt_aead(
 ) -> Result<Vec<u8>, ErrorStack> {
     let mut c = Crypter::new(t, Mode::Encrypt, key, iv)?;
     let mut out = vec![0; data.len() + t.block_size()];
+
+    if t.is_ccm() {
+        c.set_tag_len(tag)?;
+        c.ccm_update(data)?;
+    }
+
     c.aad_update(aad)?;
     let count = c.update(data, &mut out)?;
     let rest = c.finalize(&mut out[count..])?;
@@ -623,10 +678,21 @@ pub fn decrypt_aead(
 ) -> Result<Vec<u8>, ErrorStack> {
     let mut c = Crypter::new(t, Mode::Decrypt, key, iv)?;
     let mut out = vec![0; data.len() + t.block_size()];
+
+    if t.is_ccm() {
+        c.set_tag(tag)?;
+        c.ccm_update(data)?;
+    }
+
     c.aad_update(aad)?;
     let count = c.update(data, &mut out)?;
-    c.set_tag(tag)?;
-    let rest = c.finalize(&mut out[count..])?;
+    let mut rest = 0;
+
+    if !t.is_ccm() {
+        c.set_tag(tag)?;
+        rest = c.finalize(&mut out[count..])?;
+    }
+
     out.truncate(count + rest);
     Ok(out)
 }
@@ -1005,6 +1071,74 @@ mod tests {
             Cipher::aes_128_gcm(),
             &Vec::from_hex(key).unwrap(),
             Some(&Vec::from_hex(iv).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(ct).unwrap(),
+            &Vec::from_hex(tag).unwrap(),
+        ).unwrap();
+        assert_eq!(pt, hex::encode(out));
+    }
+
+    #[test]
+    fn test_aes128_ccm() {
+        let key = "3ee186594f110fb788a8bf8aa8be5d4a";
+        let nonce = "44f705d52acf27b7f17196aa9b";
+        let aad = "2c16724296ff85e079627be3053ea95adf35722c21886baba343bd6c79b5cb57";
+
+        let pt = "d71864877f2578db092daba2d6a1f9f4698a9c356c7830a1";
+        let ct = "b4dd74e7a0cc51aea45dfb401a41d5822c96901a83247ea0";
+        let tag = "d6965f5aa6e31302a9cc2b36";
+
+        let mut actual_tag = [0; 12];
+        let out = encrypt_aead(
+            Cipher::aes_128_ccm(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(nonce).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(pt).unwrap(),
+            &mut actual_tag,
+        ).unwrap();
+
+        assert_eq!(ct, hex::encode(out));
+        assert_eq!(tag, hex::encode(actual_tag));
+
+        let out = decrypt_aead(
+            Cipher::aes_128_ccm(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(nonce).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(ct).unwrap(),
+            &Vec::from_hex(tag).unwrap(),
+        ).unwrap();
+        assert_eq!(pt, hex::encode(out));
+    }
+
+    #[test]
+    fn test_aes256_ccm() {
+        let key = "7f4af6765cad1d511db07e33aaafd57646ec279db629048aa6770af24849aa0d";
+        let nonce = "dde2a362ce81b2b6913abc3095";
+        let aad = "404f5df97ece7431987bc098cce994fc3c063b519ffa47b0365226a0015ef695";
+
+        let pt = "7ebef26bf4ecf6f0ebb2eb860edbf900f27b75b4a6340fdb";
+        let ct = "353022db9c568bd7183a13c40b1ba30fcc768c54264aa2cd";
+        let tag = "2927a053c9244d3217a7ad05";
+
+        let mut actual_tag = [0; 12];
+        let out = encrypt_aead(
+            Cipher::aes_256_ccm(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(nonce).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(pt).unwrap(),
+            &mut actual_tag,
+        ).unwrap();
+
+        assert_eq!(ct, hex::encode(out));
+        assert_eq!(tag, hex::encode(actual_tag));
+
+        let out = decrypt_aead(
+            Cipher::aes_256_ccm(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(nonce).unwrap()),
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(ct).unwrap(),
             &Vec::from_hex(tag).unwrap(),
