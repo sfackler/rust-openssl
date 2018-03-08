@@ -129,6 +129,12 @@ pub struct DSA {
 }
 
 #[repr(C)]
+pub struct ECDSA_SIG {
+    pub r: *mut BIGNUM,
+    pub s: *mut BIGNUM
+}
+
+#[repr(C)]
 pub struct EVP_PKEY {
     pub type_: c_int,
     pub save_type: c_int,
@@ -822,6 +828,26 @@ extern "C" {
         func: unsafe extern "C" fn(mode: c_int, n: c_int, file: *const c_char, line: c_int),
     );
     pub fn CRYPTO_set_id_callback(func: unsafe extern "C" fn() -> c_ulong);
+
+    pub fn ECDSA_SIG_new() -> *mut ECDSA_SIG;
+    pub fn ECDSA_SIG_free(sig: *mut ECDSA_SIG);
+    pub fn i2d_ECDSA_SIG(sig: *const ECDSA_SIG, pp: *mut *mut c_uchar) -> c_int;
+    pub fn d2i_ECDSA_SIG(sig: *mut *mut ECDSA_SIG, pp: *mut *const c_uchar, len: c_long) -> *mut ECDSA_SIG;
+    pub fn ECDSA_size(eckey: *const ::EC_KEY) -> c_int;
+    pub fn ECDSA_sign(_type: c_int, dgst: *const c_uchar, dgstlen: c_int,
+                      sig: *mut c_uchar, siglen: *mut c_uint, eckey: *mut ::EC_KEY) -> c_int;
+    pub fn ECDSA_do_sign(dgst: *const c_uchar, dgst_len: c_int, eckey: *mut ::EC_KEY) -> *mut ECDSA_SIG;
+    pub fn ECDSA_verify(_type: c_int, dgst: *const c_uchar, dgstlen: c_int,
+                       sig: *const c_uchar, siglen: c_int, eckey: *mut ::EC_KEY) -> c_int;
+    pub fn ECDSA_do_verify(dgst: *const c_uchar, dgst_len: c_int,
+                           sig: *const ECDSA_SIG, eckey: *mut ::EC_KEY) -> c_int;
+    pub fn ECDSA_do_sign_ex(dgst: *const c_uchar, dgstlen: c_int,
+                            kinv: *const BIGNUM, rp: *const BIGNUM,
+                            eckey: *mut ::EC_KEY) -> *mut ECDSA_SIG;
+    pub fn ECDSA_sign_setup(eckey: *mut ::EC_KEY, ctx: *mut ::BN_CTX, kinv: *mut *mut BIGNUM, rp: *mut *mut BIGNUM) -> c_int;
+    pub fn ECDSA_sign_ex(_type: c_int, dgst: *const c_uchar, dgstlen: c_int,
+                         sig: *mut c_uchar, siglen: *mut c_uint,
+                         kinv: *const BIGNUM, rp: *const BIGNUM, eckey: *mut ::EC_KEY) -> c_int;
 
     pub fn ERR_load_crypto_strings();
 
