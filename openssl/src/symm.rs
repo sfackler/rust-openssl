@@ -405,14 +405,14 @@ impl Crypter {
     ///
     /// When encrypting with AES CCM, the tag length needs to be explicitly set in order
     /// to use a value different than the default 12 bytes.
-    pub fn set_tag_len(&mut self, tag: &[u8]) -> Result<(), ErrorStack> {
+    pub fn set_tag_len(&mut self, tag_len: usize) -> Result<(), ErrorStack> {
         unsafe {
-            assert!(tag.len() <= c_int::max_value() as usize);
+            assert!(tag_len <= c_int::max_value() as usize);
             // NB: this constant is actually more general than just GCM.
             cvt(ffi::EVP_CIPHER_CTX_ctrl(
                 self.ctx,
                 ffi::EVP_CTRL_GCM_SET_TAG,
-                tag.len() as c_int,
+                tag_len as c_int,
                 ptr::null_mut(),
             )).map(|_| ())
         }
@@ -422,16 +422,16 @@ impl Crypter {
     ///
     /// The total plaintext or ciphertext length MUST be passed to the cipher when it operates in
     /// CCM mode.
-    pub fn ccm_update(&mut self, input: &[u8])-> Result<(), ErrorStack> {
+    pub fn set_data_len(&mut self, data_len: usize)-> Result<(), ErrorStack> {
         unsafe {
-            assert!(input.len() <= c_int::max_value() as usize);
+            assert!(data_len <= c_int::max_value() as usize);
             let mut len = 0;
             cvt(ffi::EVP_CipherUpdate(
                 self.ctx,
                 ptr::null_mut(),
                 &mut len,
                 ptr::null_mut(),
-                input.len() as c_int,
+                data_len as c_int,
             )).map(|_| ())
         }
     }
@@ -652,8 +652,8 @@ pub fn encrypt_aead(
     let mut out = vec![0; data.len() + t.block_size()];
 
     if t.is_ccm() {
-        c.set_tag_len(tag)?;
-        c.ccm_update(data)?;
+        c.set_tag_len(tag.len())?;
+        c.set_data_len(data.len())?;
     }
 
     c.aad_update(aad)?;
@@ -681,7 +681,7 @@ pub fn decrypt_aead(
 
     if t.is_ccm() {
         c.set_tag(tag)?;
-        c.ccm_update(data)?;
+        c.set_data_len(data.len())?;
     }
 
     c.aad_update(aad)?;
