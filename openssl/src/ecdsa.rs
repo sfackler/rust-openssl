@@ -127,8 +127,13 @@ mod test {
     use ec::EcGroup;
     use super::*;
 
-    static CURVE_IDENTIFER: Nid = Nid::X9_62_C2TNB191V1;
     static DGST_LEN: i32 = 20;
+
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    static CURVE_IDENTIFER: Nid = Nid::X9_62_PRIME192V1;
+
+    #[cfg(osslconf = "OPENSSL_NO_EC2M")]
+    static CURVE_IDENTIFER: Nid = Nid::X9_62_C2TNB191V1;
 
     fn get_public_key(group: &EcGroup, x: &EcKey<Private>) -> Result<EcKey<Public>, ErrorStack> {
         let public_key_point = x.public_key();
