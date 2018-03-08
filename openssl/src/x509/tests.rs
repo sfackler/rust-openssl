@@ -307,6 +307,8 @@ fn test_verify_cert() {
 
     let mut context = X509StoreContext::new().unwrap();
     assert!(context.verify_cert(&store, &cert, &chain).is_ok());
+    context.cleanup();
+    assert!(context.verify_cert(&store, &cert, &chain).is_ok());
 }
 
 #[test]
