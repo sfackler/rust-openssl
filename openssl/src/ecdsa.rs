@@ -127,7 +127,7 @@ mod test {
     use ec::EcGroup;
     use super::*;
 
-    static CURVE_IDENTIFER: Nid = Nid::X9_62_PRIME192V1;
+    static CURVE_IDENTIFER: Nid = Nid::X9_62_C2TNB191V1;
     static DGST_LEN: i32 = 20;
 
     fn get_public_key(group: &EcGroup, x: &EcKey<Private>) -> Result<EcKey<Public>, ErrorStack> {
