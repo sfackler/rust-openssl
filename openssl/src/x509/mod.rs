@@ -107,30 +107,38 @@ impl X509StoreContextRef {
         unsafe { X509VerifyResult::from_raw(ffi::X509_STORE_CTX_get_error(self.as_ptr())) }
     }
 
-    /// Verifies a certificate with the given certificate store.
+    /// Initializes this context with the given certificate, certificates chain and certificate
+    /// store.
     /// For successive calls to this function, it is required to call `cleanup` in beforehand.
     ///
     /// * `trust` - The certificate store with the trusted certificates.
     /// * `cert` - The certificate that should be verified.
     /// * `cert_chain` - The certificates chain.
     ///
-    /// This corresponds to [`X509_STORE_CTX_init`] followed by [`X509_verify_cert`].
+    /// This corresponds to [`X509_STORE_CTX_init`].
     ///
     /// [`X509_STORE_CTX_init`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_init.html
+    pub fn init(&mut self, trust: &store::X509StoreRef, cert: &X509Ref,
+                cert_chain: &StackRef<X509>) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_STORE_CTX_init(self.as_ptr(), trust.as_ptr(),
+                                         cert.as_ptr(), cert_chain.as_ptr())).map(|_| ())
+        }
+    }
+
+    /// Verifies the stored certificate.
+    /// It is required to call `init` in beforehand, to initialize the required values.
+    ///
+    /// This corresponds to [`X509_verify_cert`].
+    ///
     /// [`X509_verify_cert`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_verify_cert.html
     ///
     /// # Result
     /// 
     /// The Result must be `Ok(())` to be a valid certificate, otherwise the cert is not valid.
-    pub fn verify_cert(&mut self, trust: &store::X509StoreRef, cert: &X509Ref,
-                       cert_chain: &StackRef<X509>) -> Result<(), ErrorStack> {
+    pub fn verify_cert(&mut self) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::X509_STORE_CTX_init(self.as_ptr(), trust.as_ptr(),
-                                        cert.as_ptr(), cert_chain.as_ptr()))?;
-
-            cvt(ffi::X509_verify_cert(self.as_ptr()))?;
-            
-            Ok(())
+            cvt(ffi::X509_verify_cert(self.as_ptr())).map(|_| ())
         }
     }
 

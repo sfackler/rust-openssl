@@ -306,9 +306,11 @@ fn test_verify_cert() {
     let store = store_bldr.build();
 
     let mut context = X509StoreContext::new().unwrap();
-    assert!(context.verify_cert(&store, &cert, &chain).is_ok());
+    assert!(context.init(&store, &cert, &chain).is_ok());
+    assert!(context.verify_cert().is_ok());
     context.cleanup();
-    assert!(context.verify_cert(&store, &cert, &chain).is_ok());
+    assert!(context.init(&store, &cert, &chain).is_ok());
+    assert!(context.verify_cert().is_ok());
 }
 
 #[test]
@@ -324,5 +326,6 @@ fn test_verify_fails() {
     let store = store_bldr.build();
 
     let mut context = X509StoreContext::new().unwrap();
-    assert!(context.verify_cert(&store, &cert, &chain).is_err());
+    assert!(context.init(&store, &cert, &chain).is_ok());
+    assert!(context.verify_cert().is_err());
 }
