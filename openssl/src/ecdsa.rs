@@ -30,15 +30,14 @@ foreign_type_and_impl_send_sync! {
 
 impl EcdsaSig {
 
-    /// Computes a digital signature of the `dgstlen` bytes hash value `data` using the private EC key eckey.
-    /// Some example values associated with `dgstlen` are: for SHA-1, it is 20; for SHA-256 it is 32 etc.
+    /// Computes a digital signature of the hash value `data` using the private EC key eckey.
     ///
     /// OpenSSL documentation at [`ECDSA_do_sign`]
     ///
     /// [`ECDSA_do_sign`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_do_sign.html
-    pub fn sign(data: &[u8], dgstlen: i32, eckey: &EcKeyRef<Private>) -> Result<EcdsaSig, ErrorStack> {
+    pub fn sign(data: &[u8], eckey: &EcKeyRef<Private>) -> Result<EcdsaSig, ErrorStack> {
         unsafe {
-            let sig = cvt_p(ffi::ECDSA_do_sign(data.as_ptr(), dgstlen, eckey.as_ptr()))?;
+            let sig = cvt_p(ffi::ECDSA_do_sign(data.as_ptr(), data.len() as i32, eckey.as_ptr()))?;
             Ok(EcdsaSig::from_ptr(sig as *mut _))
         }
     }
@@ -63,9 +62,9 @@ impl EcdsaSig {
     /// OpenSSL documentation at [`ECDSA_do_verify`]
     ///
     /// [`ECDSA_do_verify`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_do_verify.html
-    pub fn verify(&self, data: &[u8], dgstlen: i32, eckey: &EcKeyRef<Public>) -> Result<bool, ErrorStack> {
+    pub fn verify(&self, data: &[u8], eckey: &EcKeyRef<Public>) -> Result<bool, ErrorStack> {
         unsafe {
-            let x = cvt_n(ffi::ECDSA_do_verify(data.as_ptr(), dgstlen, self.as_ptr(), eckey.as_ptr()))?;
+            let x = cvt_n(ffi::ECDSA_do_verify(data.as_ptr(), data.len() as i32, self.as_ptr(), eckey.as_ptr()))?;
             Ok(x == 1)
         }
     }
@@ -140,8 +139,6 @@ mod test {
     use ec::EcKey;
     use super::*;
 
-    static DGST_LEN: i32 = 20;
-
     #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
     static CURVE_IDENTIFER: Nid = Nid::X9_62_PRIME192V1;
 
@@ -163,18 +160,18 @@ mod test {
         let public_key2 = get_public_key(&group, &private_key2).unwrap();
 
         let data = String::from("hello");
-        let res = EcdsaSig::sign(data.as_bytes(), DGST_LEN, &private_key).unwrap();
+        let res = EcdsaSig::sign(data.as_bytes(), &private_key).unwrap();
 
         // Signature can be verified using the correct data & correct public key
-        let verification = res.verify(data.as_bytes(), DGST_LEN, &public_key).unwrap();
+        let verification = res.verify(data.as_bytes(), &public_key).unwrap();
         assert!(verification);
 
         // Signature will not be verified using the incorrect data but the correct public key
-        let verification2 = res.verify(String::from("hello2").as_bytes(), DGST_LEN, &public_key).unwrap();
+        let verification2 = res.verify(String::from("hello2").as_bytes(), &public_key).unwrap();
         assert!(verification2 == false);
 
         // Signature will not be verified using the correct data but the incorrect public key
-        let verification3 = res.verify(data.as_bytes(), DGST_LEN, &public_key2).unwrap();
+        let verification3 = res.verify(data.as_bytes(), &public_key2).unwrap();
         assert!(verification3 == false);
     }
 
@@ -184,16 +181,16 @@ mod test {
         let private_key = EcKey::generate(&group).unwrap();
         let public_key = get_public_key(&group, &private_key).unwrap();
         let data = String::from("hello");
-        let res = EcdsaSig::sign(data.as_bytes(), DGST_LEN, &private_key).unwrap();
+        let res = EcdsaSig::sign(data.as_bytes(), &private_key).unwrap();
 
-        let verification = res.verify(data.as_bytes(), DGST_LEN, &public_key).unwrap();
+        let verification = res.verify(data.as_bytes(), &public_key).unwrap();
         assert!(verification);
 
         let r = res.private_component_r().unwrap().to_owned().unwrap();
         let s = res.private_component_s().unwrap().to_owned().unwrap();
 
         let res2 = EcdsaSig::from_private_components(r, s).unwrap();
-        let verification2 = res2.verify(data.as_bytes(), DGST_LEN, &public_key).unwrap();
+        let verification2 = res2.verify(data.as_bytes(), &public_key).unwrap();
         assert!(verification2);
     }
 }
