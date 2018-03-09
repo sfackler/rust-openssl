@@ -729,6 +729,33 @@ impl EcKey<Private> {
         }
     }
 
+    /// Constructs an public/private key pair given a curve, a private key and a public key point.
+    pub fn from_keys(
+        group: &EcGroupRef,
+        private_number: &BigNumRef,
+        public_key: &EcPointRef,
+    ) -> Result<EcKey<Private>, ErrorStack> {
+        unsafe {
+            cvt_p(ffi::EC_KEY_new())
+                .map(|p| EcKey::from_ptr(p))
+                .and_then(|key| {
+                    cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key)
+                })
+                .and_then(|key| {
+                    cvt(ffi::EC_KEY_set_private_key(
+                        key.as_ptr(),
+                        private_number.as_ptr(),
+                    )).map(|_| key)
+                })
+                .and_then(|key| {
+                    cvt(ffi::EC_KEY_set_public_key(
+                        key.as_ptr(),
+                        public_key.as_ptr(),
+                    )).map(|_| key)
+                })
+        }
+    }
+
     private_key_from_pem! {
         /// Deserializes a private key from a PEM-encoded ECPrivateKey structure.
         ///
@@ -843,6 +870,18 @@ mod test {
         let public_key = EcPoint::from_bytes(&group, &bytes, &mut ctx).unwrap();
         let ec_key = EcKey::from_public_key(&group, &public_key).unwrap();
         assert!(ec_key.check_key().is_ok());
+    }
+
+    #[test]
+    fn key_from_keys() {
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let key = EcKey::generate(&group).unwrap();
+
+        let dup_key = EcKey::from_keys(&group, key.private_key(), key.public_key()).unwrap();
+        let res = dup_key.check_key().unwrap();
+
+        assert!(res == ());
+        assert!(key.private_key() == dup_key.private_key());
     }
 
     #[test]
