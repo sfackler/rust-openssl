@@ -178,8 +178,7 @@ impl<T> PKeyRef<T> {
         }
     }
 
-    /// Returns `Some(Oid)` as the type of this key or `None`, if the Oid is supported by this
-    /// library.
+    /// Returns the Oid that represents the type of this key.
     ///
     /// This corresponds to [`EVP_PKEY_id`].
     ///

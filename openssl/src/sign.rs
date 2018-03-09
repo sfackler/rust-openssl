@@ -80,26 +80,25 @@ use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
 use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
 
 /// Salt lengths that must be used with `set_rsa_pss_saltlen`.
-pub enum RsaPssSaltlen {
-    /// The salt length is set to the digest length.
-    /// Corresponds to the special value `-1`.
-    DigestLength,
-    /// The salt length is set to the maximum permissible value.
-    /// Corresponds to the special value `-2`.
-    MaximumLength,
-    /// Sets the salt length to the given value.
-    Custom(u32)
-}
+pub struct RsaPssSaltlen(c_int);
 
 impl RsaPssSaltlen {
-    /// Returns the integer representation of `Oid`.
+    /// Returns the integer representation of `RsaPssSaltlen`.
     fn as_raw(&self) -> c_int {
-        match *self {
-            RsaPssSaltlen::DigestLength => -1,
-            RsaPssSaltlen::MaximumLength => -2,
-            RsaPssSaltlen::Custom(val) => val as c_int,
-        }
+        self.0
     }
+
+    /// Sets the salt length to the given value.
+    pub fn custom(val: c_int) -> RsaPssSaltlen {
+        RsaPssSaltlen(val)
+    }
+
+    /// The salt length is set to the digest length.
+    /// Corresponds to the special value `-1`.
+    pub const DIGEST_LENGTH: RsaPssSaltlen = RsaPssSaltlen(-1);
+    /// The salt length is set to the maximum permissible value.
+    /// Corresponds to the special value `-2`.
+    pub const MAXIMUM_LENGTH: RsaPssSaltlen = RsaPssSaltlen(-2);
 }
 
 /// A type which computes cryptographic signatures of data.
@@ -657,14 +656,14 @@ mod test {
         let mut signer = Signer::new(MessageDigest::sha256(), &pkey).unwrap();
         signer.set_rsa_padding(Padding::PKCS1_PSS).unwrap();
         assert_eq!(signer.rsa_padding().unwrap(), Padding::PKCS1_PSS);
-        signer.set_rsa_pss_saltlen(RsaPssSaltlen::DigestLength).unwrap();
+        signer.set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH).unwrap();
         signer.set_rsa_mgf1_md(MessageDigest::sha256()).unwrap();
         signer.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         let signature = signer.sign_to_vec().unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
         verifier.set_rsa_padding(Padding::PKCS1_PSS).unwrap();
-        verifier.set_rsa_pss_saltlen(RsaPssSaltlen::DigestLength).unwrap();
+        verifier.set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH).unwrap();
         verifier.set_rsa_mgf1_md(MessageDigest::sha256()).unwrap();
         verifier.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         assert!(verifier.verify(&signature).unwrap());
