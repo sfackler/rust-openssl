@@ -223,6 +223,9 @@ impl Cipher {
     }
 }
 
+unsafe impl Sync for Cipher {}
+unsafe impl Send for Cipher {}
+
 /// Represents a symmetric cipher context.
 ///
 /// Padding is enabled by default.
@@ -287,6 +290,9 @@ pub struct Crypter {
     ctx: *mut ffi::EVP_CIPHER_CTX,
     block_size: usize,
 }
+
+unsafe impl Sync for Crypter {}
+unsafe impl Send for Crypter {}
 
 impl Crypter {
     /// Creates a new `Crypter`.  The initialisation vector, `iv`, is not necesarry for certain
@@ -963,7 +969,6 @@ mod tests {
 
     #[test]
     fn test_des_ede3_cbc() {
-
         let pt = "54686973206973206120746573742e";
         let ct = "6f2867cfefda048a4046ef7e556c7132";
         let key = "7cb66337f3d3c0fe7cb66337f3d3c0fe7cb66337f3d3c0fe";

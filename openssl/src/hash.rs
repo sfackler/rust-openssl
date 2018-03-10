@@ -49,6 +49,9 @@ impl MessageDigest {
     }
 }
 
+unsafe impl Sync for MessageDigest {}
+unsafe impl Send for MessageDigest {}
+
 #[derive(PartialEq, Copy, Clone)]
 enum State {
     Reset,
@@ -98,6 +101,9 @@ pub struct Hasher {
     type_: MessageDigest,
     state: State,
 }
+
+unsafe impl Sync for Hasher {}
+unsafe impl Send for Hasher {}
 
 impl Hasher {
     /// Creates a new `Hasher` with the specified hash type.
