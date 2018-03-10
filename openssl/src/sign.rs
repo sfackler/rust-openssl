@@ -85,6 +85,9 @@ pub struct Signer<'a> {
     _p: PhantomData<&'a ()>,
 }
 
+unsafe impl<'a> Sync for Signer<'a> {}
+unsafe impl<'a> Send for Signer<'a> {}
+
 impl<'a> Drop for Signer<'a> {
     fn drop(&mut self) {
         // pkey_ctx is owned by the md_ctx, so no need to explicitly free it.
@@ -243,6 +246,9 @@ pub struct Verifier<'a> {
     pctx: *mut ffi::EVP_PKEY_CTX,
     pkey_pd: PhantomData<&'a ()>,
 }
+
+unsafe impl<'a> Sync for Verifier<'a> {}
+unsafe impl<'a> Send for Verifier<'a> {}
 
 impl<'a> Drop for Verifier<'a> {
     fn drop(&mut self) {

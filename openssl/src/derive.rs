@@ -11,6 +11,9 @@ use pkey::{HasPrivate, HasPublic, PKeyRef};
 /// A type used to derive a shared secret between two keys.
 pub struct Deriver<'a>(*mut ffi::EVP_PKEY_CTX, PhantomData<&'a ()>);
 
+unsafe impl<'a> Sync for Deriver<'a> {}
+unsafe impl<'a> Send for Deriver<'a> {}
+
 impl<'a> Deriver<'a> {
     /// Creates a new `Deriver` using the provided private key.
     ///
