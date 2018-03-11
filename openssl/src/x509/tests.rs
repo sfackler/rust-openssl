@@ -7,7 +7,7 @@ use nid::Nid;
 use pkey::{PKey, Private};
 use rsa::Rsa;
 use stack::Stack;
-use x509::{X509, X509Name, X509Req, X509VerifyResult, X509StoreContext};
+use x509::{X509, X509Name, X509Req, X509StoreContext, X509VerifyResult};
 use x509::extension::{AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, KeyUsage,
                       SubjectAlternativeName, SubjectKeyIdentifier};
 use x509::store::X509StoreBuilder;
@@ -242,15 +242,11 @@ fn test_stack_from_pem() {
 
     assert_eq!(certs.len(), 2);
     assert_eq!(
-        hex::encode(certs[0]
-            .fingerprint(MessageDigest::sha1())
-            .unwrap()),
+        hex::encode(certs[0].fingerprint(MessageDigest::sha1()).unwrap()),
         "59172d9313e84459bcff27f967e79e6e9217e584"
     );
     assert_eq!(
-        hex::encode(certs[1]
-            .fingerprint(MessageDigest::sha1())
-            .unwrap()),
+        hex::encode(certs[1].fingerprint(MessageDigest::sha1()).unwrap()),
         "c0cbdf7cdd03c9773e5468e1f6d2da7d5cbb1875"
     );
 }
@@ -306,8 +302,16 @@ fn test_verify_cert() {
     let store = store_bldr.build();
 
     let mut context = X509StoreContext::new().unwrap();
-    assert!(context.init(&store, &cert, &chain, |c| c.verify_cert()).is_ok());
-    assert!(context.init(&store, &cert, &chain, |c| c.verify_cert()).is_ok());
+    assert!(
+        context
+            .init(&store, &cert, &chain, |c| c.verify_cert())
+            .unwrap()
+    );
+    assert!(
+        context
+            .init(&store, &cert, &chain, |c| c.verify_cert())
+            .unwrap()
+    );
 }
 
 #[test]
@@ -323,5 +327,7 @@ fn test_verify_fails() {
     let store = store_bldr.build();
 
     let mut context = X509StoreContext::new().unwrap();
-    assert!(context.init(&store, &cert, &chain, |c| c.verify_cert()).is_err());
+    assert!(!context
+        .init(&store, &cert, &chain, |c| c.verify_cert())
+        .unwrap());
 }
