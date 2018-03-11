@@ -108,21 +108,39 @@ impl X509StoreContextRef {
     }
 
     /// Initializes this context with the given certificate, certificates chain and certificate
-    /// store.
-    /// For successive calls to this function, it is required to call `cleanup` in beforehand.
+    /// store. After initializing the context, the `with_context` closure is called with the prepared
+    /// context. As long as the closure is running, the context stays initialized and can be used
+    /// to e.g. verify a certificate. The context will be cleaned up, after the closure finished.
     ///
     /// * `trust` - The certificate store with the trusted certificates.
     /// * `cert` - The certificate that should be verified.
     /// * `cert_chain` - The certificates chain.
+    /// * `with_context` - The closure that is called with the initialized context.
     ///
-    /// This corresponds to [`X509_STORE_CTX_init`].
+    /// This corresponds to [`X509_STORE_CTX_init`] before calling `with_context` and to
+    /// [`X509_STORE_CTX_cleanup`] after calling `with_context`.
     ///
     /// [`X509_STORE_CTX_init`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_init.html
-    pub fn init(&mut self, trust: &store::X509StoreRef, cert: &X509Ref,
-                cert_chain: &StackRef<X509>) -> Result<(), ErrorStack> {
+    /// [`X509_STORE_CTX_cleanup`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_cleanup.html
+    pub fn init<F, T>(&mut self, trust: &store::X509StoreRef, cert: &X509Ref,
+                      cert_chain: &StackRef<X509>, with_context: F) -> Result<T, ErrorStack>
+    where
+        F: FnOnce(&mut X509StoreContextRef) -> Result<T, ErrorStack>
+    {
+        struct Cleanup<'a>(&'a mut X509StoreContextRef);
+
+        impl<'a> Drop for Cleanup<'a> {
+            fn drop(&mut self) {
+                self.0.cleanup();
+            }
+        }
+
         unsafe {
             cvt(ffi::X509_STORE_CTX_init(self.as_ptr(), trust.as_ptr(),
-                                         cert.as_ptr(), cert_chain.as_ptr())).map(|_| ())
+                                         cert.as_ptr(), cert_chain.as_ptr()))?;
+
+            let cleanup = Cleanup(self);
+            with_context(cleanup.0)
         }
     }
 
@@ -147,7 +165,7 @@ impl X509StoreContextRef {
     /// This corresponds to [`X509_STORE_CTX_cleanup`].
     ///
     /// [`X509_STORE_CTX_cleanup`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_cleanup.html
-    pub fn cleanup(&mut self) {
+    fn cleanup(&mut self) {
         unsafe {
             ffi::X509_STORE_CTX_cleanup(self.as_ptr());
         }
