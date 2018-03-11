@@ -1370,7 +1370,7 @@ fn custom_extensions() {
             .unwrap();
         ctx.add_custom_ext(
             12345, ssl::ExtensionContext::CLIENT_HELLO,
-            |_, _, _| unreachable!(),
+            |_, _, _| -> Result<Option<&'static [u8]>, _> { unreachable!() },
             |_, _, data, _| { FOUND_EXTENSION.store(data == b"hello", Ordering::SeqCst); Ok(()) }
         ).unwrap();
         let ssl = Ssl::new(&ctx.build()).unwrap();
@@ -1381,7 +1381,7 @@ fn custom_extensions() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.add_custom_ext(
         12345, ssl::ExtensionContext::CLIENT_HELLO,
-        |_, _, _| Ok(Some(b"hello"[..].into())),
+        |_, _, _| Ok(Some(b"hello")),
         |_, _, _, _| unreachable!()
     ).unwrap();
     let ssl = Ssl::new(&ctx.build()).unwrap();

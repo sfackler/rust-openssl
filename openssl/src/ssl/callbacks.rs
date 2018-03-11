@@ -2,8 +2,6 @@ use ffi;
 use libc::{c_char, c_int, c_uchar, c_uint, c_void};
 #[cfg(all(feature = "v111", ossl111))]
 use libc::size_t;
-#[cfg(all(feature = "v111", ossl111))]
-use std::borrow::Cow;
 use std::ffi::CStr;
 use std::ptr;
 use std::slice;
@@ -426,17 +424,18 @@ where
 }
 
 #[cfg(all(feature = "v111", ossl111))]
-pub struct CustomExtAddState(Option<Cow<'static, [u8]>>);
+pub struct CustomExtAddState<T>(Option<T>);
 
 #[cfg(all(feature = "v111", ossl111))]
-pub extern "C" fn raw_custom_ext_add<F>(ssl: *mut ffi::SSL, _: c_uint,
-                                        context: c_uint,
-                                        out: *mut *const c_uchar,
-                                        outlen: *mut size_t, x: *mut ffi::X509,
-                                        chainidx: size_t, al: *mut c_int,
-                                        _: *mut c_void)
-                                        -> c_int
-    where F: Fn(&mut SslRef, ExtensionContext, Option<(usize, &X509Ref)>) -> Result<Option<Cow<'static, [u8]>>, SslAlert> + 'static
+pub extern "C" fn raw_custom_ext_add<F, T>(ssl: *mut ffi::SSL, _: c_uint,
+                                           context: c_uint,
+                                           out: *mut *const c_uchar,
+                                           outlen: *mut size_t, x: *mut ffi::X509,
+                                           chainidx: size_t, al: *mut c_int,
+                                           _: *mut c_void)
+                                           -> c_int
+    where F: Fn(&mut SslRef, ExtensionContext, Option<(usize, &X509Ref)>) -> Result<Option<T>, SslAlert> + 'static,
+          T: AsRef<[u8]> + 'static,
 {
     unsafe {
         let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
@@ -448,13 +447,13 @@ pub extern "C" fn raw_custom_ext_add<F>(ssl: *mut ffi::SSL, _: c_uint,
         match (callback)(ssl, ectx, cert) {
             Ok(None) => 0,
             Ok(Some(buf)) => {
-                *outlen = buf.len() as size_t;
-                *out = buf.as_ptr();
+                *outlen = buf.as_ref().len() as size_t;
+                *out = buf.as_ref().as_ptr();
 
-                let idx = get_ssl_callback_idx::<CustomExtAddState>();
+                let idx = get_ssl_callback_idx::<CustomExtAddState<T>>();
                 let ptr = ffi::SSL_get_ex_data(ssl.as_ptr(), idx);
                 if ptr.is_null() {
-                    let x = Box::into_raw(Box::<CustomExtAddState>::new(CustomExtAddState(Some(buf)))) as *mut c_void;
+                    let x = Box::into_raw(Box::<CustomExtAddState<T>>::new(CustomExtAddState(Some(buf)))) as *mut c_void;
                     ffi::SSL_set_ex_data(ssl.as_ptr(), idx, x);
                 } else {
                     *(ptr as *mut _) = CustomExtAddState(Some(buf))
@@ -470,14 +469,15 @@ pub extern "C" fn raw_custom_ext_add<F>(ssl: *mut ffi::SSL, _: c_uint,
 }
 
 #[cfg(all(feature = "v111", ossl111))]
-pub extern "C" fn raw_custom_ext_free(ssl: *mut ffi::SSL, _: c_uint,
-                                      _: c_uint,
-                                      _: *mut *const c_uchar,
-                                      _: *mut c_void)
+pub extern "C" fn raw_custom_ext_free<T>(ssl: *mut ffi::SSL, _: c_uint,
+                                         _: c_uint,
+                                         _: *mut *const c_uchar,
+                                         _: *mut c_void)
+    where T: 'static
 {
     unsafe {
-        let state = ffi::SSL_get_ex_data(ssl, get_ssl_callback_idx::<CustomExtAddState>());
-        let state = &mut (*(state as *mut CustomExtAddState)).0;
+        let state = ffi::SSL_get_ex_data(ssl, get_ssl_callback_idx::<CustomExtAddState<T>>());
+        let state = &mut (*(state as *mut CustomExtAddState<T>)).0;
         state.take();
     }
 }

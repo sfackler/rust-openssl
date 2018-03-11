@@ -61,8 +61,6 @@ use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
 use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void};
 use std::any::TypeId;
-#[cfg(all(feature = "v111", ossl111))]
-use std::borrow::Cow;
 use std::cmp;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
@@ -1511,10 +1509,12 @@ impl SslContextBuilder {
     ///
     /// [`SSL_CTX_add_custom_ext`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_add_custom_ext.html
     #[cfg(all(feature = "v111", ossl111))]
-    pub fn add_custom_ext<AddFn, ParseFn>(&mut self, ext_type: u16, context: ExtensionContext, add_cb: AddFn, parse_cb: ParseFn)
-                                          -> Result<(), ErrorStack>
+    pub fn add_custom_ext<AddFn, ParseFn, T>(
+        &mut self, ext_type: u16, context: ExtensionContext, add_cb: AddFn, parse_cb: ParseFn
+    ) -> Result<(), ErrorStack>
         where AddFn: Fn(&mut SslRef, ExtensionContext, Option<(usize, &X509Ref)>)
-                        -> Result<Option<Cow<'static, [u8]>>, SslAlert> + 'static + Sync + Send,
+                        -> Result<Option<T>, SslAlert> + 'static + Sync + Send,
+              T: AsRef<[u8]> + 'static,
               ParseFn: Fn(&mut SslRef, ExtensionContext, &[u8], Option<(usize, &X509Ref)>)
                           -> Result<(), SslAlert> + 'static + Sync + Send,
     {
@@ -1534,8 +1534,8 @@ impl SslContextBuilder {
             );
 
             ffi::SSL_CTX_add_custom_ext(self.as_ptr(), ext_type as c_uint, context.bits(),
-                                        Some(raw_custom_ext_add::<AddFn>),
-                                        Some(raw_custom_ext_free),
+                                        Some(raw_custom_ext_add::<AddFn, T>),
+                                        Some(raw_custom_ext_free::<T>),
                                         ptr::null_mut(),
                                         Some(raw_custom_ext_parse::<ParseFn>),
                                         ptr::null_mut())
