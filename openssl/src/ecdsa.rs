@@ -1,16 +1,14 @@
 //! Low level Elliptic Curve Digital Signature Algorithm (ECDSA) functions.
-//!
-
+use ffi;
+use foreign_types::{ForeignType, ForeignTypeRef};
+use libc::c_int;
+use std::mem;
 
 use bn::{BigNum, BigNumRef};
 use {cvt, cvt_n, cvt_p};
 use ec::EcKeyRef;
 use error::ErrorStack;
-use ffi;
-use foreign_types::{ForeignType, ForeignTypeRef};
 use pkey::{Private, Public};
-use std::mem;
-
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ECDSA_SIG;
@@ -29,7 +27,6 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl EcdsaSig {
-
     /// Computes a digital signature of the hash value `data` using the private EC key eckey.
     ///
     /// OpenSSL documentation at [`ECDSA_do_sign`]
@@ -37,7 +34,12 @@ impl EcdsaSig {
     /// [`ECDSA_do_sign`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_do_sign.html
     pub fn sign(data: &[u8], eckey: &EcKeyRef<Private>) -> Result<EcdsaSig, ErrorStack> {
         unsafe {
-            let sig = cvt_p(ffi::ECDSA_do_sign(data.as_ptr(), data.len() as i32, eckey.as_ptr()))?;
+            assert!(data.len() <= c_int::max_value() as usize);
+            let sig = cvt_p(ffi::ECDSA_do_sign(
+                data.as_ptr(),
+                data.len() as c_int,
+                eckey.as_ptr(),
+            ))?;
             Ok(EcdsaSig::from_ptr(sig as *mut _))
         }
     }
@@ -57,15 +59,20 @@ impl EcdsaSig {
         }
     }
 
-    /// Verifies if the signature is a valid ECDSA signature using the given public key
+    /// Verifies if the signature is a valid ECDSA signature using the given public key.
     ///
     /// OpenSSL documentation at [`ECDSA_do_verify`]
     ///
     /// [`ECDSA_do_verify`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_do_verify.html
     pub fn verify(&self, data: &[u8], eckey: &EcKeyRef<Public>) -> Result<bool, ErrorStack> {
         unsafe {
-            let x = cvt_n(ffi::ECDSA_do_verify(data.as_ptr(), data.len() as i32, self.as_ptr(), eckey.as_ptr()))?;
-            Ok(x == 1)
+            assert!(data.len() <= c_int::max_value() as usize);
+            cvt_n(ffi::ECDSA_do_verify(
+                data.as_ptr(),
+                data.len() as c_int,
+                self.as_ptr(),
+                eckey.as_ptr(),
+            )).map(|x| x == 1)
         }
     }
 
@@ -74,11 +81,10 @@ impl EcdsaSig {
     /// OpenSSL documentation at [`ECDSA_SIG_get0`]
     ///
     /// [`ECDSA_SIG_get0`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_SIG_get0.html
-    pub fn private_component_r(&self) -> Option<&BigNumRef> {
+    pub fn r(&self) -> &BigNumRef {
         unsafe {
             let xs = compat::get_numbers(self.as_ptr());
-            let r = if xs[0].is_null() { None } else { Some(BigNumRef::from_ptr(xs[0] as *mut _)) };
-            r
+            BigNumRef::from_ptr(xs[0] as *mut _)
         }
     }
 
@@ -87,14 +93,12 @@ impl EcdsaSig {
     /// OpenSSL documentation at [`ECDSA_SIG_get0`]
     ///
     /// [`ECDSA_SIG_get0`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_SIG_get0.html
-    pub fn private_component_s(&self) -> Option<&BigNumRef> {
+    pub fn s(&self) -> &BigNumRef {
         unsafe {
             let xs = compat::get_numbers(self.as_ptr());
-            let s = if xs[1].is_null() { None } else { Some(BigNumRef::from_ptr(xs[1] as *mut _)) };
-            s
+            BigNumRef::from_ptr(xs[1] as *mut _)
         }
     }
-
 }
 
 #[cfg(ossl110)]
@@ -167,7 +171,8 @@ mod test {
         assert!(verification);
 
         // Signature will not be verified using the incorrect data but the correct public key
-        let verification2 = res.verify(String::from("hello2").as_bytes(), &public_key).unwrap();
+        let verification2 = res.verify(String::from("hello2").as_bytes(), &public_key)
+            .unwrap();
         assert!(verification2 == false);
 
         // Signature will not be verified using the correct data but the incorrect public key
@@ -186,8 +191,8 @@ mod test {
         let verification = res.verify(data.as_bytes(), &public_key).unwrap();
         assert!(verification);
 
-        let r = res.private_component_r().unwrap().to_owned().unwrap();
-        let s = res.private_component_s().unwrap().to_owned().unwrap();
+        let r = res.r().to_owned().unwrap();
+        let s = res.s().to_owned().unwrap();
 
         let res2 = EcdsaSig::from_private_components(r, s).unwrap();
         let verification2 = res2.verify(data.as_bytes(), &public_key).unwrap();
