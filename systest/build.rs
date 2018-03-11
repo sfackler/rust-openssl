@@ -59,7 +59,8 @@ fn main() {
         .header("openssl/pkcs12.h")
         .header("openssl/bn.h")
         .header("openssl/aes.h")
-        .header("openssl/ocsp.h");
+        .header("openssl/ocsp.h")
+        .header("openssl/evp.h");
 
     if !is_libressl {
         cfg.header("openssl/cms.h");
