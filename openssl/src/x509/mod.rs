@@ -122,22 +122,33 @@ impl X509StoreContextRef {
     ///
     /// [`X509_STORE_CTX_init`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_init.html
     /// [`X509_STORE_CTX_cleanup`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_cleanup.html
-    pub fn init<F, T>(&mut self, trust: &store::X509StoreRef, cert: &X509Ref,
-                      cert_chain: &StackRef<X509>, with_context: F) -> Result<T, ErrorStack>
+    pub fn init<F, T>(
+        &mut self,
+        trust: &store::X509StoreRef,
+        cert: &X509Ref,
+        cert_chain: &StackRef<X509>,
+        with_context: F,
+    ) -> Result<T, ErrorStack>
     where
-        F: FnOnce(&mut X509StoreContextRef) -> Result<T, ErrorStack>
+        F: FnOnce(&mut X509StoreContextRef) -> Result<T, ErrorStack>,
     {
         struct Cleanup<'a>(&'a mut X509StoreContextRef);
 
         impl<'a> Drop for Cleanup<'a> {
             fn drop(&mut self) {
-                self.0.cleanup();
+                unsafe {
+                    ffi::X509_STORE_CTX_cleanup(self.0.as_ptr());
+                }
             }
         }
 
         unsafe {
-            cvt(ffi::X509_STORE_CTX_init(self.as_ptr(), trust.as_ptr(),
-                                         cert.as_ptr(), cert_chain.as_ptr()))?;
+            cvt(ffi::X509_STORE_CTX_init(
+                self.as_ptr(),
+                trust.as_ptr(),
+                cert.as_ptr(),
+                cert_chain.as_ptr(),
+            ))?;
 
             let cleanup = Cleanup(self);
             with_context(cleanup.0)
@@ -145,30 +156,17 @@ impl X509StoreContextRef {
     }
 
     /// Verifies the stored certificate.
-    /// It is required to call `init` in beforehand, to initialize the required values.
+    ///
+    /// Returns `true` if verification succeeds. The `error` method will return the specific
+    /// validation error if the certificate was not valid.
+    ///
+    /// This will only work inside of a call to `init`.
     ///
     /// This corresponds to [`X509_verify_cert`].
     ///
     /// [`X509_verify_cert`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_verify_cert.html
-    ///
-    /// # Result
-    /// 
-    /// The Result must be `Ok(())` to be a valid certificate, otherwise the cert is not valid.
-    pub fn verify_cert(&mut self) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::X509_verify_cert(self.as_ptr())).map(|_| ())
-        }
-    }
-
-    /// Cleans-up the context.
-    ///
-    /// This corresponds to [`X509_STORE_CTX_cleanup`].
-    ///
-    /// [`X509_STORE_CTX_cleanup`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_cleanup.html
-    fn cleanup(&mut self) {
-        unsafe {
-            ffi::X509_STORE_CTX_cleanup(self.as_ptr());
-        }
+    pub fn verify_cert(&mut self) -> Result<bool, ErrorStack> {
+        unsafe { cvt_n(ffi::X509_verify_cert(self.as_ptr())).map(|n| n != 0) }
     }
 
     /// Set the error code of the context.
