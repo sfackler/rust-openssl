@@ -39,6 +39,7 @@ pub mod derive;
 pub mod dh;
 pub mod dsa;
 pub mod ec;
+pub mod ecdsa;
 pub mod error;
 pub mod ex_data;
 #[cfg(not(libressl))]

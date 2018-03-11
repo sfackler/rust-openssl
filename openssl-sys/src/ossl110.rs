@@ -8,6 +8,7 @@ pub enum BIO_METHOD {}
 pub enum CRYPTO_EX_DATA {}
 pub enum DH {}
 pub enum DSA {}
+pub enum ECDSA_SIG {}
 pub enum EVP_CIPHER {}
 pub enum EVP_MD_CTX {}
 pub enum EVP_PKEY {}
@@ -364,4 +365,6 @@ extern "C" {
     pub fn X509_REQ_get_version(req: *const X509_REQ) -> c_long;
     pub fn X509_REQ_get_subject_name(req: *const X509_REQ) -> *mut ::X509_NAME;
     pub fn SSL_extension_supported(ext_type: c_uint) -> c_int;
+    pub fn ECDSA_SIG_get0(sig: *const ECDSA_SIG, pr: *mut *const BIGNUM, ps: *mut *const BIGNUM);
+    pub fn ECDSA_SIG_set0(sig: *mut ECDSA_SIG, pr: *mut BIGNUM, ps: *mut BIGNUM) -> c_int;
 }

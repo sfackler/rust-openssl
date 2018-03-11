@@ -228,8 +228,23 @@ pub const EVP_PKEY_EC: c_int = NID_X9_62_id_ecPublicKey;
 pub const EVP_PKEY_ALG_CTRL: c_int = 0x1000;
 
 pub const EVP_PKEY_CTRL_RSA_PADDING: c_int = EVP_PKEY_ALG_CTRL + 1;
+pub const EVP_PKEY_CTRL_RSA_PSS_SALTLEN: c_int = EVP_PKEY_ALG_CTRL + 2;
 
+pub const EVP_PKEY_CTRL_RSA_MGF1_MD: c_int = EVP_PKEY_ALG_CTRL + 5;
 pub const EVP_PKEY_CTRL_GET_RSA_PADDING: c_int = EVP_PKEY_ALG_CTRL + 6;
+
+pub const EVP_PKEY_OP_SIGN: c_int = 1 << 3;
+pub const EVP_PKEY_OP_VERIFY: c_int = 1 << 4;
+pub const EVP_PKEY_OP_VERIFYRECOVER: c_int = 1 << 5;
+pub const EVP_PKEY_OP_SIGNCTX: c_int = 1 << 6;
+pub const EVP_PKEY_OP_VERIFYCTX: c_int = 1 << 7;
+pub const EVP_PKEY_OP_ENCRYPT: c_int = 1 << 8;
+pub const EVP_PKEY_OP_DECRYPT: c_int = 1 << 9;
+
+pub const EVP_PKEY_OP_TYPE_SIG: c_int = EVP_PKEY_OP_SIGN | EVP_PKEY_OP_VERIFY
+    | EVP_PKEY_OP_VERIFYRECOVER | EVP_PKEY_OP_SIGNCTX | EVP_PKEY_OP_VERIFYCTX;
+
+pub const EVP_PKEY_OP_TYPE_CRYPT: c_int = EVP_PKEY_OP_ENCRYPT | EVP_PKEY_OP_DECRYPT;
 
 pub const EVP_CTRL_GCM_SET_IVLEN: c_int = 0x9;
 pub const EVP_CTRL_GCM_GET_TAG: c_int = 0x10;
@@ -1200,6 +1215,7 @@ pub const RSA_SSLV23_PADDING: c_int = 2;
 pub const RSA_NO_PADDING: c_int = 3;
 pub const RSA_PKCS1_OAEP_PADDING: c_int = 4;
 pub const RSA_X931_PADDING: c_int = 5;
+pub const RSA_PKCS1_PSS_PADDING: c_int = 6;
 
 pub const SHA_LBLOCK: c_int = 16;
 
@@ -1480,6 +1496,28 @@ pub unsafe fn EVP_PKEY_CTX_get_rsa_padding(ctx: *mut EVP_PKEY_CTX, ppad: *mut c_
         EVP_PKEY_CTRL_GET_RSA_PADDING,
         0,
         ppad as *mut c_void,
+    )
+}
+
+pub unsafe fn EVP_PKEY_CTX_set_rsa_pss_saltlen(ctx: *mut EVP_PKEY_CTX, len: c_int) -> c_int {
+    EVP_PKEY_CTX_ctrl(
+        ctx,
+        EVP_PKEY_RSA,
+        EVP_PKEY_OP_SIGN | EVP_PKEY_OP_VERIFY,
+        EVP_PKEY_CTRL_RSA_PSS_SALTLEN,
+        len,
+        ptr::null_mut(),
+    )
+}
+
+pub unsafe fn EVP_PKEY_CTX_set_rsa_mgf1_md(ctx: *mut EVP_PKEY_CTX, md: *mut EVP_MD) -> c_int {
+    EVP_PKEY_CTX_ctrl(
+        ctx,
+        EVP_PKEY_RSA,
+        EVP_PKEY_OP_TYPE_SIG | EVP_PKEY_OP_TYPE_CRYPT,
+        EVP_PKEY_CTRL_RSA_MGF1_MD,
+        0,
+        md as *mut c_void,
     )
 }
 
@@ -1882,6 +1920,12 @@ extern "C" {
         ctx: *mut BN_CTX,
     ) -> c_int;
 
+    pub fn ECDSA_SIG_new() -> *mut ECDSA_SIG;
+    pub fn ECDSA_SIG_free(sig: *mut ECDSA_SIG);
+    pub fn ECDSA_do_verify(dgst: *const c_uchar, dgst_len: c_int,
+                           sig: *const ECDSA_SIG, eckey: *mut EC_KEY) -> c_int;
+    pub fn ECDSA_do_sign(dgst: *const c_uchar, dgst_len: c_int, eckey: *mut EC_KEY) -> *mut ECDSA_SIG;
+
     pub fn ERR_peek_last_error() -> c_ulong;
     pub fn ERR_get_error() -> c_ulong;
     pub fn ERR_get_error_line_data(
@@ -2029,6 +2073,7 @@ extern "C" {
     pub fn EVP_PKEY_get1_DH(k: *mut EVP_PKEY) -> *mut DH;
     pub fn EVP_PKEY_get1_EC_KEY(k: *mut EVP_PKEY) -> *mut EC_KEY;
     pub fn EVP_PKEY_cmp(a: *const EVP_PKEY, b: *const EVP_PKEY) -> c_int;
+    pub fn EVP_PKEY_id(pkey: *const EVP_PKEY) -> c_int;
     pub fn EVP_PKEY_new_mac_key(
         type_: c_int,
         e: *mut ENGINE,
@@ -2611,6 +2656,7 @@ extern "C" {
     pub fn X509_sign(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
     pub fn X509_get_pubkey(x: *mut X509) -> *mut EVP_PKEY;
     pub fn X509_to_X509_REQ(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> *mut X509_REQ;
+    pub fn X509_verify_cert(ctx: *mut X509_STORE_CTX) -> c_int;
     pub fn X509_verify_cert_error_string(n: c_long) -> *const c_char;
     pub fn X509_get1_ocsp(x: *mut X509) -> *mut stack_st_OPENSSL_STRING;
     pub fn X509_check_issued(issuer: *mut X509, subject: *mut X509) -> c_int;
@@ -2644,6 +2690,9 @@ extern "C" {
     pub fn X509_STORE_add_cert(store: *mut X509_STORE, x: *mut X509) -> c_int;
     pub fn X509_STORE_set_default_paths(store: *mut X509_STORE) -> c_int;
 
+    pub fn X509_STORE_CTX_new() -> *mut X509_STORE_CTX;
+    pub fn X509_STORE_CTX_cleanup(ctx: *mut X509_STORE_CTX);
+    pub fn X509_STORE_CTX_init(ctx: *mut X509_STORE_CTX, store: *mut X509_STORE, x509: *mut X509, chain: *mut stack_st_X509) -> c_int;
     pub fn X509_STORE_CTX_free(ctx: *mut X509_STORE_CTX);
     pub fn X509_STORE_CTX_get_current_cert(ctx: *mut X509_STORE_CTX) -> *mut X509;
     pub fn X509_STORE_CTX_get_error(ctx: *mut X509_STORE_CTX) -> c_int;

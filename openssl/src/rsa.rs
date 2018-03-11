@@ -63,6 +63,7 @@ impl Padding {
     pub const NONE: Padding = Padding(ffi::RSA_NO_PADDING);
     pub const PKCS1: Padding = Padding(ffi::RSA_PKCS1_PADDING);
     pub const PKCS1_OAEP: Padding = Padding(ffi::RSA_PKCS1_OAEP_PADDING);
+    pub const PKCS1_PSS: Padding = Padding(ffi::RSA_PKCS1_PSS_PADDING);
 }
 
 generic_foreign_type_and_impl_send_sync! {

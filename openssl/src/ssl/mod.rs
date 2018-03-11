@@ -305,6 +305,9 @@ impl SslMethod {
     }
 }
 
+unsafe impl Sync for SslMethod {}
+unsafe impl Send for SslMethod {}
+
 bitflags! {
     /// Options controling the behavior of certificate verification.
     pub struct SslVerifyMode: i32 {

@@ -70,6 +70,28 @@ pub enum Public {}
 /// A tag type indicating that a key has private components.
 pub enum Private {}
 
+/// An identifier of a kind of key.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct Id(c_int);
+
+impl Id {
+    /// Creates a `Id` from an integer representation.
+    pub fn from_raw(value: c_int) -> Id {
+        Id(value)
+    }
+
+    /// Returns the integer representation of the `Id`.
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
+
+    pub const RSA: Id = Id(ffi::EVP_PKEY_RSA);
+    pub const HMAC: Id = Id(ffi::EVP_PKEY_HMAC);
+    pub const DSA: Id = Id(ffi::EVP_PKEY_DSA);
+    pub const DH: Id = Id(ffi::EVP_PKEY_DH);
+    pub const EC: Id = Id(ffi::EVP_PKEY_EC);
+}
+
 /// A trait indicating that a key has parameters.
 pub unsafe trait HasParams {}
 
@@ -153,6 +175,17 @@ impl<T> PKeyRef<T> {
         unsafe {
             let ec_key = cvt_p(ffi::EVP_PKEY_get1_EC_KEY(self.as_ptr()))?;
             Ok(EcKey::from_ptr(ec_key))
+        }
+    }
+
+    /// Returns the `Id` that represents the type of this key.
+    ///
+    /// This corresponds to [`EVP_PKEY_id`].
+    ///
+    /// [`EVP_PKEY_id`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_id.html
+    pub fn id(&self) -> Id {
+        unsafe {
+            Id::from_raw(ffi::EVP_PKEY_id(self.as_ptr()))
         }
     }
 }
@@ -531,6 +564,7 @@ mod tests {
         let rsa = Rsa::generate(2048).unwrap();
         let pkey = PKey::from_rsa(rsa).unwrap();
         pkey.rsa().unwrap();
+        assert_eq!(pkey.id(), Id::RSA);
         assert!(pkey.dsa().is_err());
     }
 
@@ -539,6 +573,7 @@ mod tests {
         let dsa = Dsa::generate(2048).unwrap();
         let pkey = PKey::from_dsa(dsa).unwrap();
         pkey.dsa().unwrap();
+        assert_eq!(pkey.id(), Id::DSA);
         assert!(pkey.rsa().is_err());
     }
 
@@ -548,6 +583,7 @@ mod tests {
         let dh = Dh::params_from_pem(dh).unwrap();
         let pkey = PKey::from_dh(dh).unwrap();
         pkey.dh().unwrap();
+        assert_eq!(pkey.id(), Id::DH);
         assert!(pkey.rsa().is_err());
     }
 
@@ -556,6 +592,7 @@ mod tests {
         let ec_key = EcKey::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let pkey = PKey::from_ec_key(ec_key).unwrap();
         pkey.ec_key().unwrap();
+        assert_eq!(pkey.id(), Id::EC);
         assert!(pkey.rsa().is_err());
     }
 }
