@@ -1113,6 +1113,26 @@ mod tests {
     }
 
     #[test]
+    fn test_aes128_ccm_verify_fail() {
+        let key = "3ee186594f110fb788a8bf8aa8be5d4a";
+        let nonce = "44f705d52acf27b7f17196aa9b";
+        let aad = "2c16724296ff85e079627be3053ea95adf35722c21886baba343bd6c79b5cb57";
+
+        let ct = "b4dd74e7a0cc51aea45dfb401a41d5822c96901a83247ea0";
+        let tag = "00005f5aa6e31302a9cc2b36";
+
+        let out = decrypt_aead(
+            Cipher::aes_128_ccm(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(nonce).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(ct).unwrap(),
+            &Vec::from_hex(tag).unwrap(),
+        );
+        assert!(out.is_err());
+    }
+
+    #[test]
     fn test_aes256_ccm() {
         let key = "7f4af6765cad1d511db07e33aaafd57646ec279db629048aa6770af24849aa0d";
         let nonce = "dde2a362ce81b2b6913abc3095";
@@ -1144,6 +1164,26 @@ mod tests {
             &Vec::from_hex(tag).unwrap(),
         ).unwrap();
         assert_eq!(pt, hex::encode(out));
+    }
+
+    #[test]
+    fn test_aes256_ccm_verify_fail() {
+        let key = "7f4af6765cad1d511db07e33aaafd57646ec279db629048aa6770af24849aa0d";
+        let nonce = "dde2a362ce81b2b6913abc3095";
+        let aad = "404f5df97ece7431987bc098cce994fc3c063b519ffa47b0365226a0015ef695";
+
+        let ct = "353022db9c568bd7183a13c40b1ba30fcc768c54264aa2cd";
+        let tag = "0000a053c9244d3217a7ad05";
+
+        let out = decrypt_aead(
+            Cipher::aes_256_ccm(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(nonce).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(ct).unwrap(),
+            &Vec::from_hex(tag).unwrap(),
+        );
+        assert!(out.is_err());
     }
 
     #[test]
