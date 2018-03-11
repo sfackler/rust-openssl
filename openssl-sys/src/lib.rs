@@ -2644,6 +2644,7 @@ extern "C" {
     pub fn X509_sign(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
     pub fn X509_get_pubkey(x: *mut X509) -> *mut EVP_PKEY;
     pub fn X509_to_X509_REQ(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> *mut X509_REQ;
+    pub fn X509_verify_cert(ctx: *mut X509_STORE_CTX) -> c_int;
     pub fn X509_verify_cert_error_string(n: c_long) -> *const c_char;
     pub fn X509_get1_ocsp(x: *mut X509) -> *mut stack_st_OPENSSL_STRING;
     pub fn X509_check_issued(issuer: *mut X509, subject: *mut X509) -> c_int;
@@ -2677,6 +2678,9 @@ extern "C" {
     pub fn X509_STORE_add_cert(store: *mut X509_STORE, x: *mut X509) -> c_int;
     pub fn X509_STORE_set_default_paths(store: *mut X509_STORE) -> c_int;
 
+    pub fn X509_STORE_CTX_new() -> *mut X509_STORE_CTX;
+    pub fn X509_STORE_CTX_cleanup(ctx: *mut X509_STORE_CTX);
+    pub fn X509_STORE_CTX_init(ctx: *mut X509_STORE_CTX, store: *mut X509_STORE, x509: *mut X509, chain: *mut stack_st_X509) -> c_int;
     pub fn X509_STORE_CTX_free(ctx: *mut X509_STORE_CTX);
     pub fn X509_STORE_CTX_get_current_cert(ctx: *mut X509_STORE_CTX) -> *mut X509;
     pub fn X509_STORE_CTX_get_error(ctx: *mut X509_STORE_CTX) -> c_int;

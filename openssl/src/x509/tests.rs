@@ -7,9 +7,10 @@ use nid::Nid;
 use pkey::{PKey, Private};
 use rsa::Rsa;
 use stack::Stack;
-use x509::{X509, X509Name, X509Req, X509VerifyResult};
+use x509::{X509, X509Name, X509Req, X509VerifyResult, X509StoreContext};
 use x509::extension::{AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, KeyUsage,
                       SubjectAlternativeName, SubjectKeyIdentifier};
+use x509::store::X509StoreBuilder;
 
 fn pkey() -> PKey<Private> {
     let rsa = Rsa::generate(2048).unwrap();
@@ -290,4 +291,37 @@ fn clone_x509() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
     cert.clone();
+}
+
+#[test]
+fn test_verify_cert() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+    let chain = Stack::new().unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    store_bldr.add_cert(ca).unwrap();
+    let store = store_bldr.build();
+
+    let mut context = X509StoreContext::new().unwrap();
+    assert!(context.init(&store, &cert, &chain, |c| c.verify_cert()).is_ok());
+    assert!(context.init(&store, &cert, &chain, |c| c.verify_cert()).is_ok());
+}
+
+#[test]
+fn test_verify_fails() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/alt_name_cert.pem");
+    let ca = X509::from_pem(ca).unwrap();
+    let chain = Stack::new().unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    store_bldr.add_cert(ca).unwrap();
+    let store = store_bldr.build();
+
+    let mut context = X509StoreContext::new().unwrap();
+    assert!(context.init(&store, &cert, &chain, |c| c.verify_cert()).is_err());
 }
