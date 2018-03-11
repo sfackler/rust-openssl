@@ -66,6 +66,7 @@ use foreign_types::ForeignTypeRef;
 use std::io::{self, Write};
 use std::marker::PhantomData;
 use std::ptr;
+use libc::c_int;
 
 use {cvt, cvt_p};
 use hash::MessageDigest;
@@ -77,6 +78,28 @@ use rsa::Padding;
 use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
 #[cfg(any(ossl101, ossl102))]
 use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
+
+/// Salt lengths that must be used with `set_rsa_pss_saltlen`.
+pub struct RsaPssSaltlen(c_int);
+
+impl RsaPssSaltlen {
+    /// Returns the integer representation of `RsaPssSaltlen`.
+    fn as_raw(&self) -> c_int {
+        self.0
+    }
+
+    /// Sets the salt length to the given value.
+    pub fn custom(val: c_int) -> RsaPssSaltlen {
+        RsaPssSaltlen(val)
+    }
+
+    /// The salt length is set to the digest length.
+    /// Corresponds to the special value `-1`.
+    pub const DIGEST_LENGTH: RsaPssSaltlen = RsaPssSaltlen(-1);
+    /// The salt length is set to the maximum permissible value.
+    /// Corresponds to the special value `-2`.
+    pub const MAXIMUM_LENGTH: RsaPssSaltlen = RsaPssSaltlen(-2);
+}
 
 /// A type which computes cryptographic signatures of data.
 pub struct Signer<'a> {
@@ -159,6 +182,38 @@ impl<'a> Signer<'a> {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(
                 self.pctx,
                 padding.as_raw(),
+            )).map(|_| ())
+        }
+    }
+
+    /// Sets the RSA PSS salt length.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_pss_saltlen`].
+    ///
+    /// [`EVP_PKEY_CTX_set_rsa_pss_saltlen`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_pss_saltlen.html
+    pub fn set_rsa_pss_saltlen(&mut self, len: RsaPssSaltlen) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_pss_saltlen(
+                self.pctx,
+                len.as_raw(),
+            )).map(|_| ())
+        }
+    }
+
+    /// Sets the RSA MGF1 algorithm.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_mgf1_md`].
+    ///
+    /// [`EVP_PKEY_CTX_set_rsa_mgf1_md`]: https://www.openssl.org/docs/manmaster/man7/RSA-PSS.html
+    pub fn set_rsa_mgf1_md(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_mgf1_md(
+                self.pctx,
+                md.as_ptr() as *mut _,
             )).map(|_| ())
         }
     }
@@ -326,6 +381,38 @@ impl<'a> Verifier<'a> {
         }
     }
 
+    /// Sets the RSA PSS salt length.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_pss_saltlen`].
+    ///
+    /// [`EVP_PKEY_CTX_set_rsa_pss_saltlen`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_pss_saltlen.html
+    pub fn set_rsa_pss_saltlen(&mut self, len: RsaPssSaltlen) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_pss_saltlen(
+                self.pctx,
+                len.as_raw(),
+            )).map(|_| ())
+        }
+    }
+
+    /// Sets the RSA MGF1 algorithm.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_mgf1_md`].
+    ///
+    /// [`EVP_PKEY_CTX_set_rsa_mgf1_md`]: https://www.openssl.org/docs/manmaster/man7/RSA-PSS.html
+    pub fn set_rsa_mgf1_md(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_mgf1_md(
+                self.pctx,
+                md.as_ptr() as *mut _,
+            )).map(|_| ())
+        }
+    }
+
     /// Feeds more data into the `Verifier`.
     ///
     /// OpenSSL documentation at [`EVP_DigestUpdate`].
@@ -392,7 +479,7 @@ mod test {
     use std::iter;
 
     use hash::MessageDigest;
-    use sign::{Signer, Verifier};
+    use sign::{Signer, Verifier, RsaPssSaltlen};
     use ec::{EcGroup, EcKey};
     use nid::Nid;
     use rsa::{Padding, Rsa};
@@ -563,6 +650,28 @@ mod test {
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &key).unwrap();
         verifier.update(b"hello world").unwrap();
+        assert!(verifier.verify(&signature).unwrap());
+    }
+
+    #[test]
+    fn rsa_sign_verify() {
+        let key = include_bytes!("../test/rsa.pem");
+        let private_key = Rsa::private_key_from_pem(key).unwrap();
+        let pkey = PKey::from_rsa(private_key).unwrap();
+
+        let mut signer = Signer::new(MessageDigest::sha256(), &pkey).unwrap();
+        signer.set_rsa_padding(Padding::PKCS1_PSS).unwrap();
+        assert_eq!(signer.rsa_padding().unwrap(), Padding::PKCS1_PSS);
+        signer.set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH).unwrap();
+        signer.set_rsa_mgf1_md(MessageDigest::sha256()).unwrap();
+        signer.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
+        let signature = signer.sign_to_vec().unwrap();
+
+        let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
+        verifier.set_rsa_padding(Padding::PKCS1_PSS).unwrap();
+        verifier.set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH).unwrap();
+        verifier.set_rsa_mgf1_md(MessageDigest::sha256()).unwrap();
+        verifier.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         assert!(verifier.verify(&signature).unwrap());
     }
 }
