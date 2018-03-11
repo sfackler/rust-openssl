@@ -2,13 +2,14 @@
 //!
 
 
-use bn::BigNumRef;
+use bn::{BigNum, BigNumRef};
 use {cvt, cvt_n, cvt_p};
 use ec::EcKeyRef;
 use error::ErrorStack;
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use pkey::{Private, Public};
+use std::mem;
 
 
 foreign_type_and_impl_send_sync! {
@@ -47,10 +48,11 @@ impl EcdsaSig {
     /// OpenSSL documentation at [`ECDSA_SIG_set0`]
     ///
     /// [`ECDSA_SIG_set0`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_SIG_set0.html
-    pub fn from_private_components(r: &BigNumRef, s: &BigNumRef) -> Result<EcdsaSig, ErrorStack> {
+    pub fn from_private_components(r: BigNum, s: BigNum) -> Result<EcdsaSig, ErrorStack> {
         unsafe {
             let sig = cvt_p(ffi::ECDSA_SIG_new())?;
             cvt(compat::set_numbers(sig, r.as_ptr(), s.as_ptr()))?;
+            mem::forget((r, s));
             Ok(EcdsaSig::from_ptr(sig as *mut _))
         }
     }
@@ -187,7 +189,7 @@ mod test {
         let r = res.private_component_r().unwrap().to_owned().unwrap();
         let s = res.private_component_s().unwrap().to_owned().unwrap();
 
-        let res2 = EcdsaSig::from_private_components(&r, &s).unwrap();
+        let res2 = EcdsaSig::from_private_components(r, s).unwrap();
         let verification2 = res2.verify(data.as_bytes(), &public_key).unwrap();
         assert!(verification2);
     }
