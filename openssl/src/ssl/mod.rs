@@ -1513,20 +1513,29 @@ impl SslContextBuilder {
     /// [`SSL_CTX_add_custom_ext`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_add_custom_ext.html
     #[cfg(all(feature = "v111", ossl111))]
     pub fn add_custom_ext<AddFn, ParseFn, T>(
-        &mut self, ext_type: u16, context: ExtensionContext, add_cb: AddFn, parse_cb: ParseFn
+        &mut self,
+        ext_type: u16,
+        context: ExtensionContext,
+        add_cb: AddFn,
+        parse_cb: ParseFn,
     ) -> Result<(), ErrorStack>
-        where AddFn: Fn(&mut SslRef, ExtensionContext, Option<(usize, &X509Ref)>)
-                        -> Result<Option<T>, SslAlert> + 'static + Sync + Send,
-              T: AsRef<[u8]> + 'static,
-              ParseFn: Fn(&mut SslRef, ExtensionContext, &[u8], Option<(usize, &X509Ref)>)
-                          -> Result<(), SslAlert> + 'static + Sync + Send,
+    where
+        AddFn: Fn(&mut SslRef, ExtensionContext, Option<(usize, &X509Ref)>) -> Result<Option<T>, SslAlert>
+            + 'static
+            + Sync
+            + Send,
+        T: AsRef<[u8]> + 'static + Sync + Send,
+        ParseFn: Fn(&mut SslRef, ExtensionContext, &[u8], Option<(usize, &X509Ref)>) -> Result<(), SslAlert>
+            + 'static
+            + Sync
+            + Send,
     {
         let ret = unsafe {
             let add_cb = Box::new(add_cb);
             ffi::SSL_CTX_set_ex_data(
                 self.as_ptr(),
                 get_callback_idx::<AddFn>(),
-                Box::into_raw(add_cb) as *mut _
+                Box::into_raw(add_cb) as *mut _,
             );
 
             let parse_cb = Box::new(parse_cb);
@@ -1536,12 +1545,16 @@ impl SslContextBuilder {
                 Box::into_raw(parse_cb) as *mut _,
             );
 
-            ffi::SSL_CTX_add_custom_ext(self.as_ptr(), ext_type as c_uint, context.bits(),
-                                        Some(raw_custom_ext_add::<AddFn, T>),
-                                        Some(raw_custom_ext_free::<T>),
-                                        ptr::null_mut(),
-                                        Some(raw_custom_ext_parse::<ParseFn>),
-                                        ptr::null_mut())
+            ffi::SSL_CTX_add_custom_ext(
+                self.as_ptr(),
+                ext_type as c_uint,
+                context.bits(),
+                Some(raw_custom_ext_add::<AddFn, T>),
+                Some(raw_custom_ext_free::<T>),
+                ptr::null_mut(),
+                Some(raw_custom_ext_parse::<ParseFn>),
+                ptr::null_mut(),
+            )
         };
         if ret == 1 {
             Ok(())
