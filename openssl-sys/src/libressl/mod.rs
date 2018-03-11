@@ -134,6 +134,12 @@ pub struct DSA {
 }
 
 #[repr(C)]
+pub struct ECDSA_SIG {
+    pub r: *mut ::BIGNUM,
+    pub s: *mut ::BIGNUM
+}
+
+#[repr(C)]
 pub struct EVP_PKEY {
     pub type_: c_int,
     pub save_type: c_int,
