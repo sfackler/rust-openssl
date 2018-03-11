@@ -92,7 +92,7 @@ macos_job: &MACOS_JOB
 
 openssl_111: &OPENSSL_111
   LIBRARY: openssl
-  VERSION: 1.1.1-pre1
+  VERSION: 1.1.1-pre2
 openssl_110: &OPENSSL_110
   LIBRARY: openssl
   VERSION: 1.1.0g
