@@ -730,7 +730,7 @@ impl EcKey<Private> {
     }
 
     /// Constructs an public/private key pair given a curve, a private key and a public key point.
-    pub fn from_keys(
+    pub fn from_private_components(
         group: &EcGroupRef,
         private_number: &BigNumRef,
         public_key: &EcPointRef,
@@ -873,11 +873,11 @@ mod test {
     }
 
     #[test]
-    fn key_from_keys() {
+    fn key_from_private_components() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
 
-        let dup_key = EcKey::from_keys(&group, key.private_key(), key.public_key()).unwrap();
+        let dup_key = EcKey::from_private_components(&group, key.private_key(), key.public_key()).unwrap();
         let res = dup_key.check_key().unwrap();
 
         assert!(res == ());
