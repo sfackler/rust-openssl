@@ -64,4 +64,5 @@ extern "C" {
                                   parse_cb: SSL_custom_ext_parse_cb_ex,
                                   parse_arg: *mut c_void) -> c_int;
     pub fn SSL_stateless(s: *mut ::SSL) -> c_int;
+    pub fn SSL_CIPHER_get_handshake_digest(cipher: *const ::SSL_CIPHER) -> *const ::EVP_MD;
 }

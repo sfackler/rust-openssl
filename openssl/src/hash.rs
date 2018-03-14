@@ -16,6 +16,8 @@ use error::ErrorStack;
 pub struct MessageDigest(*const ffi::EVP_MD);
 
 impl MessageDigest {
+    pub unsafe fn from_ptr(x: *const ffi::EVP_MD) -> Self { MessageDigest(x) }
+
     pub fn md5() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_md5()) }
     }
@@ -46,6 +48,11 @@ impl MessageDigest {
 
     pub fn as_ptr(&self) -> *const ffi::EVP_MD {
         self.0
+    }
+
+    /// The size of the digest in bytes
+    pub fn size(&self) -> usize {
+        unsafe { ffi::EVP_MD_size(self.0) as usize }
     }
 }
 

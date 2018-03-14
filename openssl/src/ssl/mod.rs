@@ -96,6 +96,8 @@ use stack::{Stack, StackRef};
 use ssl::bio::BioMethod;
 use ssl::error::InnerError;
 use ssl::callbacks::*;
+use nid::Nid;
+use hash::MessageDigest;
 
 pub use ssl::connector::{ConnectConfiguration, SslAcceptor, SslAcceptorBuilder, SslConnector,
                          SslConnectorBuilder};
@@ -1813,6 +1815,30 @@ impl SslCipherRef {
             let ptr = ffi::SSL_CIPHER_description(self.as_ptr(), buf.as_mut_ptr(), 128);
             String::from_utf8(CStr::from_ptr(ptr as *const _).to_bytes().to_vec()).unwrap()
         }
+    }
+
+    /// Returns the handshake digest of the cipher.
+    ///
+    /// Available as of OpenSSL 1.1.1. This corresponds to [`SSL_CIPHER_get_handshake_digest`].
+    ///
+    /// [`SSL_CIPHER_get_handshake_digest`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CIPHER_get_handshake_digest.html
+    #[cfg(all(feature = "v111", ossl111))]
+    pub fn handshake_digest(&self) -> Option<MessageDigest> {
+        unsafe {
+            let ptr = ffi::SSL_CIPHER_get_handshake_digest(self.as_ptr());
+            if ptr.is_null() { None } else { Some(MessageDigest::from_ptr(ptr)) }
+        }
+    }
+
+    /// Returns the NID corresponding to the cipher.
+    ///
+    /// Available as of OpenSSL 1.1.0. This corresponds to [`SSL_CIPHER_get_cipher_nid`]
+    ///
+    /// [`SSL_CIPHER_get_cipher_nid`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_CIPHER_get_cipher_nid.html
+    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+    pub fn cipher_nid(&self) -> Option<Nid> {
+        let n = unsafe { ffi::SSL_CIPHER_get_cipher_nid(self.as_ptr()) };
+        if n == 0 { None } else { Some(Nid::from_raw(n)) }
     }
 }
 

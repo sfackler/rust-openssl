@@ -59,6 +59,7 @@ use ffi;
 
 use {cvt, cvt_p};
 use error::ErrorStack;
+use nid::Nid;
 
 #[derive(Copy, Clone)]
 pub enum Mode {
@@ -75,6 +76,16 @@ pub enum Mode {
 pub struct Cipher(*const ffi::EVP_CIPHER);
 
 impl Cipher {
+    /// Looks up the cipher for a certain nid.
+    ///
+    /// This corresponds to [`EVP_get_cipherbynid`]
+    ///
+    /// [`EVP_get_cipherbynid`]: https://www.openssl.org/docs/man1.0.2/crypto/EVP_get_cipherbyname.html
+    pub fn from_nid(nid: Nid) -> Option<Cipher> {
+        let ptr = unsafe { ffi::EVP_get_cipherbyname(ffi::OBJ_nid2sn(nid.as_raw())) };
+        if ptr.is_null() { None } else { Some(Cipher(ptr)) }
+    }
+
     pub fn aes_128_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_ecb()) }
     }
