@@ -1999,6 +1999,7 @@ extern "C" {
         ptr: *mut c_void,
     ) -> c_int;
     pub fn EVP_CIPHER_CTX_free(ctx: *mut EVP_CIPHER_CTX);
+    pub fn EVP_CIPHER_CTX_cipher(ctx: *const EVP_CIPHER_CTX) -> *const EVP_CIPHER;
 
     pub fn EVP_CipherInit(
         ctx: *mut EVP_CIPHER_CTX,

@@ -381,6 +381,49 @@ impl Crypter {
         }
     }
 
+    /// Returns the cipher in use
+    pub fn cipher(&self) -> Cipher {
+        unsafe { Cipher(ffi::EVP_CIPHER_CTX_cipher(self.ctx)) }
+    }
+
+    /// Resets state, allowing a new encryption or decryption to take place.
+    ///
+    /// This is more efficient than creating a new `Crypter`.
+    pub fn reset(&mut self, mode: Mode, key: &[u8], iv: Option<&[u8]>) -> Result<(), ErrorStack> {
+        let mode = match mode {
+            Mode::Encrypt => 1,
+            Mode::Decrypt => 0,
+        };
+        let key = key.as_ptr() as *mut _;
+        unsafe {
+            let iv = match (iv, self.cipher().iv_len()) {
+                (Some(iv), Some(len)) => {
+                    if iv.len() != len {
+                        assert!(iv.len() <= c_int::max_value() as usize);
+                        cvt(ffi::EVP_CIPHER_CTX_ctrl(
+                            self.ctx,
+                            ffi::EVP_CTRL_GCM_SET_IVLEN,
+                            iv.len() as c_int,
+                            ptr::null_mut(),
+                        ))?;
+                    }
+                    iv.as_ptr() as *mut _
+                }
+                (Some(_), None) | (None, None) => ptr::null_mut(),
+                (None, Some(_)) => panic!("an IV is required for this cipher"),
+            };
+            cvt(ffi::EVP_CipherInit_ex(
+                self.ctx,
+                ptr::null(),
+                ptr::null_mut(),
+                key,
+                iv,
+                mode,
+            ))?;
+        }
+        Ok(())
+    }
+
     /// Enables or disables padding.
     ///
     /// If padding is disabled, total amount of data encrypted/decrypted must
@@ -496,7 +539,7 @@ impl Crypter {
     ///
     /// The number of bytes written to `output` is returned.
     ///
-    /// `update` should not be called after this method.
+    /// `update` should not be called after this method without first calling `reset`.
     ///
     /// # Panics
     ///
