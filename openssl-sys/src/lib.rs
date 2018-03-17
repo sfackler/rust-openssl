@@ -2112,6 +2112,7 @@ extern "C" {
         a: *const ASN1_OBJECT,
         no_name: c_int,
     ) -> c_int;
+    pub fn OBJ_nid2sn(nid: c_int) -> *const c_char;
 
     pub fn OCSP_BASICRESP_new() -> *mut OCSP_BASICRESP;
     pub fn OCSP_BASICRESP_free(r: *mut OCSP_BASICRESP);
@@ -2855,4 +2856,7 @@ extern "C" {
             cookie_len: c_uint
         ) -> c_int>
     );
+
+    pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
+    pub fn EVP_get_cipherbyname(name: *const c_char) -> *const EVP_CIPHER;
 }
