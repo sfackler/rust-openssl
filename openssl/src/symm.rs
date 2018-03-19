@@ -83,7 +83,11 @@ impl Cipher {
     /// [`EVP_get_cipherbynid`]: https://www.openssl.org/docs/man1.0.2/crypto/EVP_get_cipherbyname.html
     pub fn from_nid(nid: Nid) -> Option<Cipher> {
         let ptr = unsafe { ffi::EVP_get_cipherbyname(ffi::OBJ_nid2sn(nid.as_raw())) };
-        if ptr.is_null() { None } else { Some(Cipher(ptr)) }
+        if ptr.is_null() {
+            None
+        } else {
+            Some(Cipher(ptr))
+        }
     }
 
     pub fn aes_128_ecb() -> Cipher {
@@ -194,14 +198,14 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_rc4()) }
     }
 
-    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
-    #[cfg(any(all(ossl110, feature = "v110"), all(ossl111, feature = "v111")))]
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[cfg(any(ossl110))]
     pub fn chacha20() -> Cipher {
         unsafe { Cipher(ffi::EVP_chacha20()) }
     }
 
-    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
-    #[cfg(any(all(ossl110, feature = "v110"), all(ossl111, feature = "v111")))]
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[cfg(any(ossl110))]
     pub fn chacha20_poly1305() -> Cipher {
         unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
     }
@@ -439,7 +443,7 @@ impl Crypter {
     ///
     /// The total plaintext or ciphertext length MUST be passed to the cipher when it operates in
     /// CCM mode.
-    pub fn set_data_len(&mut self, data_len: usize)-> Result<(), ErrorStack> {
+    pub fn set_data_len(&mut self, data_len: usize) -> Result<(), ErrorStack> {
         unsafe {
             assert!(data_len <= c_int::max_value() as usize);
             let mut len = 0;
@@ -1203,7 +1207,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(any(all(ossl110, feature = "v110"), all(ossl111, feature = "v111")))]
+    #[cfg(any(ossl110))]
     fn test_chacha20() {
         let key = "0000000000000000000000000000000000000000000000000000000000000000";
         let iv = "00000000000000000000000000000000";
@@ -1218,7 +1222,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(any(all(ossl110, feature = "v110"), all(ossl111, feature = "v111")))]
+    #[cfg(any(ossl110))]
     fn test_chacha20_poly1305() {
         let key = "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f";
         let iv = "070000004041424344454647";

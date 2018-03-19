@@ -13,6 +13,7 @@ build = "build.rs"
 [package.metadata.docs.rs]
 all-features = true
 
+# these are deprecated and don't do anything anymore
 [features]
 v101 = []
 v102 = []

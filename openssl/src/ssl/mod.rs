@@ -80,12 +80,11 @@ use std::sync::Mutex;
 use {cvt, cvt_n, cvt_p, init};
 use dh::{Dh, DhRef};
 use ec::EcKeyRef;
-#[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
+#[cfg(any(ossl101, ossl102))]
 use ec::EcKey;
 use x509::{X509, X509Name, X509Ref, X509StoreContextRef, X509VerifyResult};
 use x509::store::{X509StoreBuilderRef, X509StoreRef};
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-          all(feature = "v111", ossl111)))]
+#[cfg(any(ossl102, ossl110))]
 use x509::store::X509Store;
 #[cfg(any(ossl102, ossl110))]
 use verify::X509VerifyParamRef;
@@ -97,6 +96,7 @@ use ssl::bio::BioMethod;
 use ssl::error::InnerError;
 use ssl::callbacks::*;
 use nid::Nid;
+#[cfg(ossl111)]
 use hash::MessageDigest;
 
 pub use ssl::connector::{ConnectConfiguration, SslAcceptor, SslAcceptorBuilder, SslConnector,
@@ -181,28 +181,27 @@ bitflags! {
 
         /// Disables the use of TLSv1.3.
         ///
-        /// Requires the `v111` feature and OpenSSL 1.1.1.
-        #[cfg(all(feature = "v111", ossl111))]
+        /// Requires OpenSSL 1.1.1 or newer.
+        #[cfg(ossl111)]
         const NO_TLSV1_3 = ffi::SSL_OP_NO_TLSv1_3;
 
         /// Disables the use of DTLSv1.0
         ///
-        /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
-        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-                all(feature = "v111", ossl111)))]
+        /// Requires OpenSSL 1.0.2 or newer.
+        #[cfg(any(ossl102, ossl110))]
         const NO_DTLSV1 = ffi::SSL_OP_NO_DTLSv1;
 
         /// Disables the use of DTLSv1.2.
-        /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
-        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-                all(feature = "v111", ossl111)))]
+        ///
+        /// Requires OpenSSL 1.0.2, or newer.
+        #[cfg(any(ossl102, ossl110))]
         const NO_DTLSV1_2 = ffi::SSL_OP_NO_DTLSv1_2;
 
         /// Disables the use of all (D)TLS protocol versions.
         ///
         /// This can be used as a mask when whitelisting protocol versions.
         ///
-        /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
+        /// Requires OpenSSL 1.0.2 or newer.
         ///
         /// # Examples
         ///
@@ -213,15 +212,14 @@ bitflags! {
         ///
         /// let options = SslOptions::NO_SSL_MASK & !SslOptions::NO_TLSV1_2;
         /// ```
-        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-                all(feature = "v111", ossl111)))]
+        #[cfg(any(ossl102, ossl110))]
         const NO_SSL_MASK = ffi::SSL_OP_NO_SSL_MASK;
 
         /// Enable TLSv1.3 Compatibility mode.
         ///
-        /// This is on by default in OpenSSL 1.1.1. A future version may have this
-        /// disabled by default.
-        #[cfg(all(feature = "v111", ossl111))]
+        /// Requires OpenSSL 1.1.1 or newer. This is on by default in 1.1.1, but a future version
+        /// may have this disabled by default.
+        #[cfg(ossl111)]
         const ENABLE_MIDDLEBOX_COMPAT = ffi::SSL_OP_ENABLE_MIDDLEBOX_COMPAT;
     }
 }
@@ -368,7 +366,7 @@ bitflags! {
     }
 }
 
-#[cfg(all(feature = "v111", ossl111))]
+#[cfg(ossl111)]
 bitflags! {
     /// Which messages and under which conditions an extension should be added or expected.
     pub struct ExtensionContext: c_uint {
@@ -542,19 +540,17 @@ impl SslAlert {
 
 /// An error returned from an ALPN selection callback.
 ///
-/// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-          all(feature = "v111", ossl111)))]
+/// Requires OpenSSL 1.0.2 or newer.
+#[cfg(any(ossl102, ossl110))]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct AlpnError(c_int);
 
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-          all(feature = "v111", ossl111)))]
+#[cfg(any(ossl102, ossl110))]
 impl AlpnError {
     /// Terminate the handshake with a fatal alert.
     ///
-    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
-    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[cfg(any(ossl110))]
     pub const ALERT_FATAL: AlpnError = AlpnError(ffi::SSL_TLSEXT_ERR_ALERT_FATAL);
 
     /// Do not select a protocol, but continue the handshake.
@@ -580,8 +576,8 @@ impl SslVersion {
 
     /// TLSv1.3
     ///
-    /// Requires OpenSSL 1.1.1 and the corresponding Cargo feature.
-    #[cfg(all(feature = "v111", ossl111))]
+    /// Requires OpenSSL 1.1.1 or newer.
+    #[cfg(ossl111)]
     pub const TLS1_3: SslVersion = SslVersion(ffi::TLS1_3_VERSION);
 }
 
@@ -725,13 +721,12 @@ impl SslContextBuilder {
 
     /// Sets a custom certificate store for verifying peer certificates.
     ///
-    /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
+    /// Requires OpenSSL 1.0.2 or newer.
     ///
     /// This corresponds to [`SSL_CTX_set0_verify_cert_store`].
     ///
     /// [`SSL_CTX_set0_verify_cert_store`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_set0_verify_cert_store.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-              all(feature = "v111", ossl111)))]
+    #[cfg(any(ossl102, ossl110))]
     pub fn set_verify_cert_store(&mut self, cert_store: X509Store) -> Result<(), ErrorStack> {
         unsafe {
             let ptr = cert_store.as_ptr();
@@ -819,10 +814,10 @@ impl SslContextBuilder {
     /// indicating if the selected cipher is export-grade, and the key length. The export and key
     /// length options are archaic and should be ignored in almost all cases.
     ///
-    /// Requires the `v101` feature and OpenSSL 1.0.1, or the `v102` feature and OpenSSL 1.0.2.
+    /// Requires OpenSSL 1.0.1 or 1.0.2.
     ///
     /// This corresponds to `SSL_CTX_set_tmp_ecdh_callback`.
-    #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
+    #[cfg(any(ossl101, ossl102))]
     pub fn set_tmp_ecdh_callback<F>(&mut self, callback: F)
     where
         F: Fn(&mut SslRef, bool, u32) -> Result<EcKey<Params>, ErrorStack> + 'static + Sync + Send,
@@ -1032,18 +1027,13 @@ impl SslContextBuilder {
 
     /// Enables ECDHE key exchange with an automatically chosen curve list.
     ///
-    /// Requires the `v102` feature and OpenSSL 1.0.2.
+    /// Requires OpenSSL 1.0.2.
     ///
     /// This corresponds to [`SSL_CTX_set_ecdh_auto`].
     ///
     /// [`SSL_CTX_set_ecdh_auto`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_set_ecdh_auto.html
-    #[cfg(all(feature = "v102", any(ossl102, libressl)))]
-    pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
-        self._set_ecdh_auto(onoff)
-    }
-
     #[cfg(any(ossl102, libressl))]
-    fn _set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
+    pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_CTX_set_ecdh_auto(self.as_ptr(), onoff as c_int)).map(|_| ()) }
     }
 
@@ -1089,10 +1079,10 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_set_min_proto_version`].
     ///
-    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
+    /// Requires OpenSSL 1.1.0 or newer.
     ///
     /// [`SSL_CTX_set_min_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
-    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+    #[cfg(any(ossl110))]
     pub fn set_min_proto_version(&mut self, version: Option<SslVersion>) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_CTX_set_min_proto_version(
@@ -1109,10 +1099,10 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_set_max_proto_version`].
     ///
-    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
+    /// Requires OpenSSL 1.1.0 or newer.
     ///
     /// [`SSL_CTX_set_max_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
-    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+    #[cfg(any(ossl110))]
     pub fn set_max_proto_version(&mut self, version: Option<SslVersion>) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_CTX_set_max_proto_version(
@@ -1129,10 +1119,10 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_get_min_proto_version`].
     ///
-    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
+    /// Requires OpenSSL 1.1.0 or newer.
     ///
     /// [`SSL_CTX_get_min_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
-    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+    #[cfg(any(ossl110))]
     pub fn min_proto_version(&mut self) -> Option<SslVersion> {
         unsafe {
             let r = ffi::SSL_CTX_get_min_proto_version(self.as_ptr());
@@ -1151,10 +1141,10 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_get_max_proto_version`].
     ///
-    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
+    /// Requires OpenSSL 1.1.0 or newer.
     ///
     /// [`SSL_CTX_get_max_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
-    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+    #[cfg(any(ossl110))]
     pub fn max_proto_version(&mut self) -> Option<SslVersion> {
         unsafe {
             let r = ffi::SSL_CTX_get_max_proto_version(self.as_ptr());
@@ -1175,11 +1165,10 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_set_alpn_protos`].
     ///
-    /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
+    /// Requires OpenSSL 1.0.2 or newer.
     ///
     /// [`SSL_CTX_set_alpn_protos`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_CTX_set_alpn_protos.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-              all(feature = "v111", ossl111)))]
+    #[cfg(any(ossl102, ossl110))]
     pub fn set_alpn_protos(&mut self, protocols: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             assert!(protocols.len() <= c_uint::max_value() as usize);
@@ -1207,13 +1196,12 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_set_alpn_select_cb`].
     ///
-    /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
+    /// Requires OpenSSL 1.0.2 or newer.
     ///
     /// [`SslContextBuilder::set_alpn_protos`]: struct.SslContextBuilder.html#method.set_alpn_protos
     /// [`select_next_proto`]: fn.select_next_proto.html
     /// [`SSL_CTX_set_alpn_select_cb`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_CTX_set_alpn_protos.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-              all(feature = "v111", ossl111)))]
+    #[cfg(any(ossl102, ossl110))]
     pub fn set_alpn_select_callback<F>(&mut self, callback: F)
     where
         F: for<'a> Fn(&mut SslRef, &'a [u8]) -> Result<&'a [u8], AlpnError> + 'static + Sync + Send,
@@ -1409,12 +1397,12 @@ impl SslContextBuilder {
     /// SSLKEYLOGFILE-formatted text. This can be used by tools like Wireshark to decrypt message
     /// traffic. The line does not contain a trailing newline.
     ///
-    /// Requires OpenSSL 1.1.1 and the corresponding Cargo feature.
+    /// Requires OpenSSL 1.1.1 or newer.
     ///
     /// This corresponds to [`SSL_CTX_set_keylog_callback`].
     ///
     /// [`SSL_CTX_set_keylog_callback`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_keylog_callback.html
-    #[cfg(all(feature = "v111", ossl111))]
+    #[cfg(ossl111)]
     pub fn set_keylog_callback<F>(&mut self, callback: F)
     where
         F: Fn(&SslRef, &str) + 'static + Sync + Send,
@@ -1510,10 +1498,12 @@ impl SslContextBuilder {
 
     /// Adds a custom extension for a TLS/DTLS client or server for all supported protocol versions.
     ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
     /// This corresponds to [`SSL_CTX_add_custom_ext`].
     ///
     /// [`SSL_CTX_add_custom_ext`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_add_custom_ext.html
-    #[cfg(all(feature = "v111", ossl111))]
+    #[cfg(ossl111)]
     pub fn add_custom_ext<AddFn, ParseFn, T>(
         &mut self,
         ext_type: u16,
@@ -1632,13 +1622,12 @@ impl SslContext {
 impl SslContextRef {
     /// Returns the certificate associated with this `SslContext`, if present.
     ///
-    /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
+    /// Requires OpenSSL 1.0.2 or newer.
     ///
     /// This corresponds to [`SSL_CTX_get0_certificate`].
     ///
     /// [`SSL_CTX_get0_certificate`]: https://www.openssl.org/docs/man1.1.0/ssl/ssl.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-              all(feature = "v111", ossl111)))]
+    #[cfg(any(ossl102, ossl110))]
     pub fn certificate(&self) -> Option<&X509Ref> {
         unsafe {
             let ptr = ffi::SSL_CTX_get0_certificate(self.as_ptr());
@@ -1652,13 +1641,12 @@ impl SslContextRef {
 
     /// Returns the private key associated with this `SslContext`, if present.
     ///
-    /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
+    /// Requires OpenSSL 1.0.2 or newer.
     ///
     /// This corresponds to [`SSL_CTX_get0_privatekey`].
     ///
     /// [`SSL_CTX_get0_privatekey`]: https://www.openssl.org/docs/man1.1.0/ssl/ssl.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-              all(feature = "v111", ossl111)))]
+    #[cfg(any(ossl102, ossl110))]
     pub fn private_key(&self) -> Option<&PKeyRef<Private>> {
         unsafe {
             let ptr = ffi::SSL_CTX_get0_privatekey(self.as_ptr());
@@ -1819,26 +1807,38 @@ impl SslCipherRef {
 
     /// Returns the handshake digest of the cipher.
     ///
-    /// Available as of OpenSSL 1.1.1. This corresponds to [`SSL_CIPHER_get_handshake_digest`].
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
+    /// This corresponds to [`SSL_CIPHER_get_handshake_digest`].
     ///
     /// [`SSL_CIPHER_get_handshake_digest`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CIPHER_get_handshake_digest.html
-    #[cfg(all(feature = "v111", ossl111))]
+    #[cfg(ossl111)]
     pub fn handshake_digest(&self) -> Option<MessageDigest> {
         unsafe {
             let ptr = ffi::SSL_CIPHER_get_handshake_digest(self.as_ptr());
-            if ptr.is_null() { None } else { Some(MessageDigest::from_ptr(ptr)) }
+            if ptr.is_null() {
+                None
+            } else {
+                Some(MessageDigest::from_ptr(ptr))
+            }
         }
     }
 
     /// Returns the NID corresponding to the cipher.
     ///
-    /// Available as of OpenSSL 1.1.0. This corresponds to [`SSL_CIPHER_get_cipher_nid`]
+    /// Requires OpenSSL 1.1.0 or newer.
+    ///
+    /// This corresponds to [`SSL_CIPHER_get_cipher_nid`].
     ///
     /// [`SSL_CIPHER_get_cipher_nid`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_CIPHER_get_cipher_nid.html
-    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+    #[cfg(any(ossl110))]
     pub fn cipher_nid(&self) -> Option<Nid> {
         let n = unsafe { ffi::SSL_CIPHER_get_cipher_nid(self.as_ptr()) };
-        if n == 0 { None } else { Some(Nid::from_raw(n)) }
+        if n == 0 {
+            None
+        } else {
+            Some(Nid::from_raw(n))
+        }
     }
 }
 
@@ -2053,12 +2053,12 @@ impl SslRef {
 
     /// Like [`SslContextBuilder::set_tmp_ecdh_callback`].
     ///
-    /// Requires the `v101` feature and OpenSSL 1.0.1, or the `v102` feature and OpenSSL 1.0.2.
+    /// Requires OpenSSL 1.0.1 or 1.0.2.
     ///
     /// This corresponds to `SSL_set_tmp_ecdh_callback`.
     ///
     /// [`SslContextBuilder::set_tmp_ecdh_callback`]: struct.SslContextBuilder.html#method.set_tmp_ecdh_callback
-    #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
+    #[cfg(any(ossl101, ossl102))]
     pub fn set_tmp_ecdh_callback<F>(&mut self, callback: F)
     where
         F: Fn(&mut SslRef, bool, u32) -> Result<EcKey<Params>, ErrorStack> + 'static + Sync + Send,
@@ -2077,13 +2077,13 @@ impl SslRef {
 
     /// Like [`SslContextBuilder::set_ecdh_auto`].
     ///
-    /// Requires the `v102` feature and OpenSSL 1.0.2.
+    /// Requires OpenSSL 1.0.2.
     ///
     /// This corresponds to [`SSL_set_ecdh_auto`].
     ///
     /// [`SslContextBuilder::set_tmp_ecdh`]: struct.SslContextBuilder.html#method.set_tmp_ecdh
     /// [`SSL_set_ecdh_auto`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_ecdh_auto.html
-    #[cfg(all(feature = "v102", ossl102))]
+    #[cfg(ossl102)]
     pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_set_ecdh_auto(self.as_ptr(), onoff as c_int)).map(|_| ()) }
     }
@@ -2255,13 +2255,12 @@ impl SslRef {
     /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
     /// to interpret it.
     ///
-    /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
+    /// Requires OpenSSL 1.0.2 or newer.
     ///
     /// This corresponds to [`SSL_get0_alpn_selected`].
     ///
     /// [`SSL_get0_alpn_selected`]: https://www.openssl.org/docs/manmaster/man3/SSL_get0_next_proto_negotiated.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-              all(feature = "v111", ossl111)))]
+    #[cfg(any(ossl102, ossl110))]
     pub fn selected_alpn_protocol(&self) -> Option<&[u8]> {
         unsafe {
             let mut data: *const c_uchar = ptr::null();
@@ -2331,19 +2330,13 @@ impl SslRef {
 
     /// Returns a mutable reference to the X509 verification configuration.
     ///
-    /// Requires OpenSSL 1.0.2, 1.1.0, or 1.1.1 and the corresponding Cargo feature.
+    /// Requires OpenSSL 1.0.2 or newer.
     ///
     /// This corresponds to [`SSL_get0_param`].
     ///
     /// [`SSL_get0_param`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_get0_param.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-              all(feature = "v111", ossl111)))]
-    pub fn param_mut(&mut self) -> &mut X509VerifyParamRef {
-        self._param_mut()
-    }
-
     #[cfg(any(ossl102, ossl110))]
-    fn _param_mut(&mut self) -> &mut X509VerifyParamRef {
+    pub fn param_mut(&mut self) -> &mut X509VerifyParamRef {
         unsafe { X509VerifyParamRef::from_ptr_mut(ffi::SSL_get0_param(self.as_ptr())) }
     }
 
@@ -2377,12 +2370,12 @@ impl SslRef {
     /// Returns the number of bytes copied, or if the buffer is empty, the size of the client_random
     /// value.
     ///
-    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
+    /// Requires OpenSSL 1.1.0 or newer.
     ///
     /// This corresponds to [`SSL_get_client_random`].
     ///
     /// [`SSL_get_client_random`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get_client_random.html
-    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+    #[cfg(any(ossl110))]
     pub fn client_random(&self, buf: &mut [u8]) -> usize {
         unsafe {
             ffi::SSL_get_client_random(self.as_ptr(), buf.as_mut_ptr() as *mut c_uchar, buf.len())
@@ -2394,12 +2387,12 @@ impl SslRef {
     /// Returns the number of bytes copied, or if the buffer is empty, the size of the server_random
     /// value.
     ///
-    /// Requires OpenSSL 1.1.0 or 1.1.1 and the corresponding Cargo feature.
+    /// Requires OpenSSL 1.1.0 or newer.
     ///
     /// This corresponds to [`SSL_get_server_random`].
     ///
     /// [`SSL_get_server_random`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get_client_random.html
-    #[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+    #[cfg(any(ossl110))]
     pub fn server_random(&self, buf: &mut [u8]) -> usize {
         unsafe {
             ffi::SSL_get_server_random(self.as_ptr(), buf.as_mut_ptr() as *mut c_uchar, buf.len())

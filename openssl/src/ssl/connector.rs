@@ -296,7 +296,7 @@ fn setup_curves(ctx: &mut SslContextBuilder) -> Result<(), ErrorStack> {
 
 #[cfg(ossl102)]
 fn setup_curves(ctx: &mut SslContextBuilder) -> Result<(), ErrorStack> {
-    ctx._set_ecdh_auto(true)
+    ctx.set_ecdh_auto(true)
 }
 
 #[cfg(ossl110)]
@@ -316,7 +316,7 @@ fn setup_verify(ctx: &mut SslContextBuilder) {
 
 #[cfg(any(ossl102, ossl110))]
 fn setup_verify_hostname(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
-    let param = ssl._param_mut();
+    let param = ssl.param_mut();
     param.set_hostflags(::verify::X509CheckFlags::NO_PARTIAL_WILDCARDS);
     match domain.parse() {
         Ok(ip) => param.set_ip(ip),

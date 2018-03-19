@@ -55,7 +55,6 @@ job: &JOB
       cargo test \
         --manifest-path=openssl/Cargo.toml \
         --target $TARGET \
-        --all-features \
         $TEST_ARGS
   - run:
       command: |
@@ -87,7 +86,7 @@ macos_job: &MACOS_JOB
   - run: cargo run --manifest-path=systest/Cargo.toml
   - run: |
       PATH=/usr/local/opt/openssl/bin:$PATH
-      cargo test --manifest-path=openssl/Cargo.toml --all-features
+      cargo test --manifest-path=openssl/Cargo.toml
   - *SAVE_DEPS
 
 openssl_111: &OPENSSL_111

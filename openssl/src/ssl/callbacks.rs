@@ -1,30 +1,29 @@
 use ffi;
 use libc::{c_char, c_int, c_uchar, c_uint, c_void};
-#[cfg(all(feature = "v111", ossl111))]
+#[cfg(ossl111)]
 use libc::size_t;
 use std::ffi::CStr;
 use std::ptr;
 use std::slice;
 use std::mem;
-#[cfg(all(feature = "v111", ossl111))]
+#[cfg(ossl111)]
 use std::str;
 use foreign_types::ForeignTypeRef;
 use foreign_types::ForeignType;
 
 use error::ErrorStack;
 use dh::Dh;
-#[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
+#[cfg(any(ossl101, ossl102))]
 use ec::EcKey;
 use pkey::Params;
 use ssl::{get_callback_idx, get_ssl_callback_idx, SniError, SslAlert, SslContextRef, SslRef,
           SslSession, SslSessionRef};
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-          all(feature = "v111", ossl111)))]
+#[cfg(any(ossl102, ossl110))]
 use ssl::AlpnError;
 use x509::X509StoreContextRef;
-#[cfg(all(feature = "v111", ossl111))]
+#[cfg(ossl111)]
 use ssl::ExtensionContext;
-#[cfg(all(feature = "v111", ossl111))]
+#[cfg(ossl111)]
 use x509::X509Ref;
 
 pub extern "C" fn raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
@@ -118,8 +117,7 @@ where
     }
 }
 
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-          all(feature = "v111", ossl111)))]
+#[cfg(any(ossl102, ossl110))]
 pub extern "C" fn raw_alpn_select<F>(
     ssl: *mut ffi::SSL,
     out: *mut *const c_uchar,
@@ -175,7 +173,7 @@ where
     }
 }
 
-#[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
+#[cfg(any(ossl101, ossl102))]
 pub unsafe extern "C" fn raw_tmp_ecdh<F>(
     ssl: *mut ffi::SSL,
     is_export: c_int,
@@ -227,7 +225,7 @@ where
     }
 }
 
-#[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
+#[cfg(any(ossl101, ossl102))]
 pub unsafe extern "C" fn raw_tmp_ecdh_ssl<F>(
     ssl: *mut ffi::SSL,
     is_export: c_int,
@@ -320,9 +318,9 @@ pub unsafe extern "C" fn raw_remove_session<F>(
     callback(ctx, session)
 }
 
-#[cfg(any(ossl110, ossl111))]
+#[cfg(any(ossl110))]
 type DataPtr = *const c_uchar;
-#[cfg(not(any(ossl110, ossl111)))]
+#[cfg(not(any(ossl110)))]
 type DataPtr = *mut c_uchar;
 
 pub unsafe extern "C" fn raw_get_session<F>(
@@ -352,7 +350,7 @@ where
     }
 }
 
-#[cfg(all(feature = "v111", ossl111))]
+#[cfg(ossl111)]
 pub unsafe extern "C" fn raw_keylog<F>(ssl: *const ffi::SSL, line: *const c_char)
 where
     F: Fn(&SslRef, &str) + 'static + Sync + Send,
@@ -423,10 +421,10 @@ where
     }
 }
 
-#[cfg(all(feature = "v111", ossl111))]
+#[cfg(ossl111)]
 pub struct CustomExtAddState<T>(Option<T>);
 
-#[cfg(all(feature = "v111", ossl111))]
+#[cfg(ossl111)]
 pub extern "C" fn raw_custom_ext_add<F, T>(
     ssl: *mut ffi::SSL,
     _: c_uint,
@@ -480,7 +478,7 @@ where
     }
 }
 
-#[cfg(all(feature = "v111", ossl111))]
+#[cfg(ossl111)]
 pub extern "C" fn raw_custom_ext_free<T>(
     ssl: *mut ffi::SSL,
     _: c_uint,
@@ -497,7 +495,7 @@ pub extern "C" fn raw_custom_ext_free<T>(
     }
 }
 
-#[cfg(all(feature = "v111", ossl111))]
+#[cfg(ossl111)]
 pub extern "C" fn raw_custom_ext_parse<F>(
     ssl: *mut ffi::SSL,
     _: c_uint,
