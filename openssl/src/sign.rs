@@ -146,7 +146,10 @@ impl<'a> Signer<'a> {
         Self::new_intern(None, pkey)
     }
 
-    pub fn new_intern<T>(type_: Option<MessageDigest>, pkey: &'a PKeyRef<T>) -> Result<Signer<'a>, ErrorStack>
+    pub fn new_intern<T>(
+        type_: Option<MessageDigest>,
+        pkey: &'a PKeyRef<T>,
+    ) -> Result<Signer<'a>, ErrorStack>
     where
         T: HasPrivate,
     {
@@ -499,7 +502,7 @@ mod test {
     use std::iter;
 
     use hash::MessageDigest;
-    use sign::{Signer, Verifier, RsaPssSaltlen};
+    use sign::{RsaPssSaltlen, Signer, Verifier};
     use ec::{EcGroup, EcKey};
     use nid::Nid;
     use rsa::{Padding, Rsa};
@@ -658,8 +661,8 @@ mod test {
         test_hmac(MessageDigest::sha1(), &tests);
     }
 
-    #[cfg(ossl110)]
     #[test]
+    #[cfg(ossl110)]
     fn test_cmac() {
         let cipher = ::symm::Cipher::aes_128_cbc();
         let key = Vec::from_hex("9294727a3638bb1c13f48ef8158bfc9d").unwrap();
@@ -669,7 +672,9 @@ mod test {
         let data = b"Hi There";
         signer.update(data as &[u8]).unwrap();
 
-        let expected = vec![136, 101, 61, 167, 61, 30, 248, 234, 124, 166, 196, 157, 203, 52, 171, 19];
+        let expected = vec![
+            136, 101, 61, 167, 61, 30, 248, 234, 124, 166, 196, 157, 203, 52, 171, 19
+        ];
         assert_eq!(signer.sign_to_vec().unwrap(), expected);
     }
 
@@ -697,14 +702,18 @@ mod test {
         let mut signer = Signer::new(MessageDigest::sha256(), &pkey).unwrap();
         signer.set_rsa_padding(Padding::PKCS1_PSS).unwrap();
         assert_eq!(signer.rsa_padding().unwrap(), Padding::PKCS1_PSS);
-        signer.set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH).unwrap();
+        signer
+            .set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)
+            .unwrap();
         signer.set_rsa_mgf1_md(MessageDigest::sha256()).unwrap();
         signer.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         let signature = signer.sign_to_vec().unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
         verifier.set_rsa_padding(Padding::PKCS1_PSS).unwrap();
-        verifier.set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH).unwrap();
+        verifier
+            .set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)
+            .unwrap();
         verifier.set_rsa_mgf1_md(MessageDigest::sha256()).unwrap();
         verifier.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         assert!(verifier.verify(&signature).unwrap());
