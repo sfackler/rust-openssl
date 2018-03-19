@@ -184,9 +184,7 @@ impl<T> PKeyRef<T> {
     ///
     /// [`EVP_PKEY_id`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_id.html
     pub fn id(&self) -> Id {
-        unsafe {
-            Id::from_raw(ffi::EVP_PKEY_id(self.as_ptr()))
-        }
+        unsafe { Id::from_raw(ffi::EVP_PKEY_id(self.as_ptr())) }
     }
 }
 
@@ -367,12 +365,12 @@ impl PKey<Private> {
 
     /// Creates a new `PKey` containing a CMAC key.
     ///
-    /// CMAC is only supported since the version 1.1.0 of OpenSSL.
+    /// Requires OpenSSL 1.1.0 or newer.
     ///
     /// # Note
     ///
     /// To compute CMAC values, use the `sign` module.
-    #[cfg(any(all(ossl110, feature = "v110"), all(ossl111, feature = "v111")))]
+    #[cfg(ossl110)]
     pub fn cmac(cipher: &::symm::Cipher, key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize);
