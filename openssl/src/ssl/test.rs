@@ -20,11 +20,10 @@ use ocsp::{OcspResponse, OcspResponseStatus};
 use ssl;
 use ssl::{Error, HandshakeError, ShutdownResult, Ssl, SslAcceptor, SslConnector, SslContext,
           SslFiletype, SslMethod, SslSessionCacheMode, SslStream, SslVerifyMode, StatusType};
-#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+#[cfg(any(ossl110))]
 use ssl::SslVersion;
 use x509::{X509, X509Name, X509StoreContext, X509VerifyResult};
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-          all(feature = "v111", ossl111)))]
+#[cfg(any(ossl102, ossl110))]
 use x509::verify::X509CheckFlags;
 use pkey::PKey;
 
@@ -138,17 +137,14 @@ macro_rules! run_test(
             use ssl::{SslContext, Ssl, SslStream, SslVerifyMode, SslOptions};
             use hash::MessageDigest;
             use x509::{X509StoreContext, X509VerifyResult};
-            #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-                    all(feature = "v111", ossl111)))]
+            #[cfg(any(ossl102, ossl110))]
             use x509::X509;
-            #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-                    all(feature = "v111", ossl111)))]
+            #[cfg(any(ossl102, ossl110))]
             use x509::store::X509StoreBuilder;
             use hex::FromHex;
             use foreign_types::ForeignTypeRef;
             use super::Server;
-            #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-                    all(feature = "v111", ossl111)))]
+            #[cfg(any(ossl102, ossl110))]
             use super::ROOT_CERT;
 
             #[test]
@@ -188,8 +184,7 @@ run_test!(verify_trusted, |method, stream| {
     }
 });
 
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-          all(feature = "v111", ossl111)))]
+#[cfg(any(ossl102, ossl110))]
 run_test!(verify_trusted_with_set_cert, |method, stream| {
     let x509 = X509::from_pem(ROOT_CERT).unwrap();
     let mut store = X509StoreBuilder::new().unwrap();
@@ -484,8 +479,7 @@ fn test_state() {
 /// Tests that connecting with the client using ALPN, but the server not does not
 /// break the existing connection behavior.
 #[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-          all(feature = "v111", ossl111)))]
+#[cfg(any(ossl102, ossl110))]
 fn test_connect_with_unilateral_alpn() {
     let (_s, stream) = Server::new();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
@@ -507,8 +501,7 @@ fn test_connect_with_unilateral_alpn() {
 /// Tests that when both the client as well as the server use ALPN and their
 /// lists of supported protocols have an overlap, the correct protocol is chosen.
 #[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-          all(feature = "v111", ossl111)))]
+#[cfg(any(ossl102, ossl110))]
 fn test_connect_with_alpn_successful_multiple_matching() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
@@ -531,8 +524,7 @@ fn test_connect_with_alpn_successful_multiple_matching() {
 /// lists of supported protocols have an overlap -- with only ONE protocol
 /// being valid for both.
 #[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-          all(feature = "v111", ossl111)))]
+#[cfg(any(ossl102, ossl110))]
 fn test_connect_with_alpn_successful_single_match() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
@@ -554,8 +546,7 @@ fn test_connect_with_alpn_successful_single_match() {
 /// Tests that when the `SslStream` is created as a server stream, the protocols
 /// are correctly advertised to the client.
 #[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-          all(feature = "v111", ossl111)))]
+#[cfg(any(ossl102, ossl110))]
 fn test_alpn_server_advertise_multiple() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
@@ -597,7 +588,7 @@ fn test_alpn_server_advertise_multiple() {
 }
 
 #[test]
-#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+#[cfg(any(ossl110))]
 fn test_alpn_server_select_none_fatal() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
@@ -631,8 +622,7 @@ fn test_alpn_server_select_none_fatal() {
 }
 
 #[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-          all(feature = "v111", ossl111)))]
+#[cfg(any(ossl102, ossl110))]
 fn test_alpn_server_select_none() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
@@ -799,8 +789,7 @@ fn add_extra_chain_cert() {
 }
 
 #[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-          all(feature = "v111", ossl111)))]
+#[cfg(any(ossl102, ossl110))]
 fn verify_valid_hostname() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_default_verify_paths().unwrap();
@@ -825,8 +814,7 @@ fn verify_valid_hostname() {
 }
 
 #[test]
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110),
-          all(feature = "v111", ossl111)))]
+#[cfg(any(ossl102, ossl110))]
 fn verify_invalid_hostname() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_default_verify_paths().unwrap();
@@ -1070,8 +1058,7 @@ fn tmp_dh_callback() {
 }
 
 #[test]
-#[cfg(any(all(feature = "v101", ossl101, not(any(libressl261, libressl262, libressl26x))),
-          all(feature = "v102", ossl102)))]
+#[cfg(any(all(ossl101, not(libressl)), ossl102))]
 fn tmp_ecdh_callback() {
     use ec::EcKey;
     use nid::Nid;
@@ -1145,8 +1132,7 @@ fn tmp_dh_callback_ssl() {
 }
 
 #[test]
-#[cfg(any(all(feature = "v101", ossl101, not(any(libressl261, libressl262, libressl26x))),
-          all(feature = "v102", ossl102)))]
+#[cfg(any(all(ossl101, not(libressl)), ossl102))]
 fn tmp_ecdh_callback_ssl() {
     use ec::EcKey;
     use nid::Nid;
@@ -1323,7 +1309,7 @@ fn keying_export() {
 }
 
 #[test]
-#[cfg(any(all(feature = "v110", ossl110), all(feature = "v111", ossl111)))]
+#[cfg(any(ossl110))]
 fn no_version_overlap() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
@@ -1354,7 +1340,7 @@ fn no_version_overlap() {
 }
 
 #[test]
-#[cfg(all(feature = "v111", ossl111))]
+#[cfg(ossl111)]
 fn custom_extensions() {
     static FOUND_EXTENSION: AtomicBool = ATOMIC_BOOL_INIT;
 
@@ -1369,9 +1355,13 @@ fn custom_extensions() {
         ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
         ctx.add_custom_ext(
-            12345, ssl::ExtensionContext::CLIENT_HELLO,
+            12345,
+            ssl::ExtensionContext::CLIENT_HELLO,
             |_, _, _| -> Result<Option<&'static [u8]>, _> { unreachable!() },
-            |_, _, data, _| { FOUND_EXTENSION.store(data == b"hello", Ordering::SeqCst); Ok(()) }
+            |_, _, data, _| {
+                FOUND_EXTENSION.store(data == b"hello", Ordering::SeqCst);
+                Ok(())
+            },
         ).unwrap();
         let ssl = Ssl::new(&ctx.build()).unwrap();
         ssl.accept(stream).unwrap();
@@ -1380,9 +1370,10 @@ fn custom_extensions() {
     let stream = TcpStream::connect(addr).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.add_custom_ext(
-        12345, ssl::ExtensionContext::CLIENT_HELLO,
+        12345,
+        ssl::ExtensionContext::CLIENT_HELLO,
         |_, _, _| Ok(Some(b"hello")),
-        |_, _, _, _| unreachable!()
+        |_, _, _, _| unreachable!(),
     ).unwrap();
     let ssl = Ssl::new(&ctx.build()).unwrap();
     ssl.connect(stream).unwrap();
