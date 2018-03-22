@@ -323,8 +323,10 @@ fn validate_headers(include_dirs: &[PathBuf]) -> Version {
 #include <openssl/opensslv.h>
 #include <openssl/opensslconf.h>
 
-#if LIBRESSL_VERSION_NUMBER >= 0x20700000
+#if LIBRESSL_VERSION_NUMBER >= 0x20701000
 RUST_LIBRESSL_NEW
+#elif LIBRESSL_VERSION_NUMBER >= 0x20700000
+RUST_LIBRESSL_270
 #elif LIBRESSL_VERSION_NUMBER >= 0x20603000
 RUST_LIBRESSL_26X
 #elif LIBRESSL_VERSION_NUMBER >= 0x20602000
@@ -471,6 +473,13 @@ See rust-openssl README for more information:
         println!("cargo:rustc-cfg=libressl26x");
         println!("cargo:libressl=true");
         println!("cargo:libressl_version=26x");
+        println!("cargo:version=101");
+        Version::Libressl
+    } else if expanded.contains("RUST_LIBRESSL_270") {
+        println!("cargo:rustc-cfg=libressl");
+        println!("cargo:rustc-cfg=libressl270");
+        println!("cargo:libressl=true");
+        println!("cargo:libressl_version=270");
         println!("cargo:version=101");
         Version::Libressl
     } else if expanded.contains("RUST_OPENSSL_111") {
