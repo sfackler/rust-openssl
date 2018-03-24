@@ -247,7 +247,8 @@ pub const EVP_PKEY_OP_ENCRYPT: c_int = 1 << 8;
 pub const EVP_PKEY_OP_DECRYPT: c_int = 1 << 9;
 
 pub const EVP_PKEY_OP_TYPE_SIG: c_int = EVP_PKEY_OP_SIGN | EVP_PKEY_OP_VERIFY
-    | EVP_PKEY_OP_VERIFYRECOVER | EVP_PKEY_OP_SIGNCTX | EVP_PKEY_OP_VERIFYCTX;
+    | EVP_PKEY_OP_VERIFYRECOVER | EVP_PKEY_OP_SIGNCTX
+    | EVP_PKEY_OP_VERIFYCTX;
 
 pub const EVP_PKEY_OP_TYPE_CRYPT: c_int = EVP_PKEY_OP_ENCRYPT | EVP_PKEY_OP_DECRYPT;
 
@@ -1276,14 +1277,14 @@ pub const SSL_VERIFY_NONE: c_int = 0;
 pub const SSL_VERIFY_PEER: c_int = 1;
 pub const SSL_VERIFY_FAIL_IF_NO_PEER_CERT: c_int = 2;
 
-#[cfg(not(any(libressl261, libressl262, libressl26x, ossl101)))]
+#[cfg(not(any(libressl261, libressl262, libressl26x, libressl270, ossl101)))]
 pub const SSL_OP_TLSEXT_PADDING: c_ulong = 0x00000010;
-#[cfg(any(libressl261, libressl262, libressl26x))]
+#[cfg(any(libressl261, libressl262, libressl26x, libressl270))]
 pub const SSL_OP_TLSEXT_PADDING: c_ulong = 0x0;
 pub const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS: c_ulong = 0x00000800;
-#[cfg(not(any(libressl261, libressl262, libressl26x)))]
+#[cfg(not(any(libressl261, libressl262, libressl26x, libressl270)))]
 pub const SSL_OP_CRYPTOPRO_TLSEXT_BUG: c_ulong = 0x80000000;
-#[cfg(any(libressl261, libressl262, libressl26x))]
+#[cfg(any(libressl261, libressl262, libressl26x, libressl270))]
 pub const SSL_OP_CRYPTOPRO_TLSEXT_BUG: c_ulong = 0x0;
 pub const SSL_OP_LEGACY_SERVER_CONNECT: c_ulong = 0x00000004;
 #[cfg(not(libressl))]
@@ -1927,9 +1928,17 @@ extern "C" {
 
     pub fn ECDSA_SIG_new() -> *mut ECDSA_SIG;
     pub fn ECDSA_SIG_free(sig: *mut ECDSA_SIG);
-    pub fn ECDSA_do_verify(dgst: *const c_uchar, dgst_len: c_int,
-                           sig: *const ECDSA_SIG, eckey: *mut EC_KEY) -> c_int;
-    pub fn ECDSA_do_sign(dgst: *const c_uchar, dgst_len: c_int, eckey: *mut EC_KEY) -> *mut ECDSA_SIG;
+    pub fn ECDSA_do_verify(
+        dgst: *const c_uchar,
+        dgst_len: c_int,
+        sig: *const ECDSA_SIG,
+        eckey: *mut EC_KEY,
+    ) -> c_int;
+    pub fn ECDSA_do_sign(
+        dgst: *const c_uchar,
+        dgst_len: c_int,
+        eckey: *mut EC_KEY,
+    ) -> *mut ECDSA_SIG;
 
     pub fn ERR_peek_last_error() -> c_ulong;
     pub fn ERR_get_error() -> c_ulong;
@@ -2704,7 +2713,12 @@ extern "C" {
 
     pub fn X509_STORE_CTX_new() -> *mut X509_STORE_CTX;
     pub fn X509_STORE_CTX_cleanup(ctx: *mut X509_STORE_CTX);
-    pub fn X509_STORE_CTX_init(ctx: *mut X509_STORE_CTX, store: *mut X509_STORE, x509: *mut X509, chain: *mut stack_st_X509) -> c_int;
+    pub fn X509_STORE_CTX_init(
+        ctx: *mut X509_STORE_CTX,
+        store: *mut X509_STORE,
+        x509: *mut X509,
+        chain: *mut stack_st_X509,
+    ) -> c_int;
     pub fn X509_STORE_CTX_free(ctx: *mut X509_STORE_CTX);
     pub fn X509_STORE_CTX_get_current_cert(ctx: *mut X509_STORE_CTX) -> *mut X509;
     pub fn X509_STORE_CTX_get_error(ctx: *mut X509_STORE_CTX) -> c_int;
@@ -2839,31 +2853,23 @@ extern "C" {
 
     pub fn SSL_CTX_set_cookie_generate_cb(
         s: *mut SSL_CTX,
-        cb: Option<extern "C" fn(
-            ssl: *mut SSL,
-            cookie: *mut c_uchar,
-            cookie_len: *mut c_uint
-        ) -> c_int>
+        cb: Option<
+            extern "C" fn(ssl: *mut SSL, cookie: *mut c_uchar, cookie_len: *mut c_uint) -> c_int,
+        >,
     );
 
     #[cfg(ossl110)]
     pub fn SSL_CTX_set_cookie_verify_cb(
         s: *mut SSL_CTX,
-        cb: Option<extern "C" fn(
-            ssl: *mut SSL,
-            cookie: *const c_uchar,
-            cookie_len: c_uint
-        ) -> c_int>
+        cb: Option<
+            extern "C" fn(ssl: *mut SSL, cookie: *const c_uchar, cookie_len: c_uint) -> c_int,
+        >,
     );
 
     #[cfg(not(ossl110))]
     pub fn SSL_CTX_set_cookie_verify_cb(
         s: *mut SSL_CTX,
-        cb: Option<extern "C" fn(
-            ssl: *mut SSL,
-            cookie: *mut c_uchar,
-            cookie_len: c_uint
-        ) -> c_int>
+        cb: Option<extern "C" fn(ssl: *mut SSL, cookie: *mut c_uchar, cookie_len: c_uint) -> c_int>,
     );
 
     pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
