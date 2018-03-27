@@ -1,10 +1,10 @@
 #![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
 #![allow(dead_code, overflowing_literals)]
-#![doc(html_root_url="https://docs.rs/openssl-sys/0.9.9")]
+#![doc(html_root_url = "https://docs.rs/openssl-sys/0.9")]
 
 extern crate libc;
 
-use libc::{c_void, c_int, c_char, c_ulong, c_long, c_uint, c_uchar, size_t, FILE};
+use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, size_t, FILE};
 use std::ptr;
 use std::mem;
 
@@ -17,6 +17,11 @@ pub use ossl10x::*;
 mod ossl110;
 #[cfg(ossl110)]
 pub use ossl110::*;
+
+#[cfg(ossl111)]
+mod ossl111;
+#[cfg(ossl111)]
+pub use ossl111::*;
 
 #[cfg(libressl)]
 mod libressl;
@@ -32,6 +37,7 @@ pub enum ASN1_TYPE {}
 pub enum ASN1_OBJECT {}
 pub enum BN_CTX {}
 pub enum BN_GENCB {}
+pub enum CMS_ContentInfo {}
 pub enum CONF {}
 pub enum CONF_METHOD {}
 pub enum COMP_METHOD {}
@@ -64,10 +70,22 @@ pub enum BN_BLINDING {}
 pub enum DSA_METHOD {}
 pub enum EVP_PKEY_ASN1_METHOD {}
 
-pub type bio_info_cb = Option<unsafe extern fn(*mut BIO, c_int, *const c_char, c_int, c_long, c_long)>;
-pub type GEN_SESSION_CB = Option<unsafe extern fn(*const SSL, *mut c_uchar, *mut c_uint) -> c_int>;
-pub type tls_session_ticket_ext_cb_fn = Option<unsafe extern fn(*mut SSL, *const c_uchar, c_int, *mut c_void) -> c_int>;
-pub type tls_session_secret_cb_fn = Option<unsafe extern fn(*mut SSL, *mut c_void, *mut c_int, *mut stack_st_SSL_CIPHER, *mut *mut SSL_CIPHER, *mut c_void) -> c_int>;
+pub type bio_info_cb =
+    Option<unsafe extern "C" fn(*mut BIO, c_int, *const c_char, c_int, c_long, c_long)>;
+pub type GEN_SESSION_CB =
+    Option<unsafe extern "C" fn(*const SSL, *mut c_uchar, *mut c_uint) -> c_int>;
+pub type tls_session_ticket_ext_cb_fn =
+    Option<unsafe extern "C" fn(*mut SSL, *const c_uchar, c_int, *mut c_void) -> c_int>;
+pub type tls_session_secret_cb_fn = Option<
+    unsafe extern "C" fn(
+        *mut SSL,
+        *mut c_void,
+        *mut c_int,
+        *mut stack_st_SSL_CIPHER,
+        *mut *mut SSL_CIPHER,
+        *mut c_void,
+    ) -> c_int,
+>;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -103,24 +121,75 @@ pub struct X509V3_CTX {
     // Maybe more here
 }
 
+#[repr(C)]
+pub struct SHA_CTX {
+    pub h0: SHA_LONG,
+    pub h1: SHA_LONG,
+    pub h2: SHA_LONG,
+    pub h3: SHA_LONG,
+    pub h4: SHA_LONG,
+    pub Nl: SHA_LONG,
+    pub Nh: SHA_LONG,
+    pub data: [SHA_LONG; SHA_LBLOCK as usize],
+    pub num: c_uint,
+}
+
+#[repr(C)]
+pub struct SHA256_CTX {
+    pub h: [SHA_LONG; 8],
+    pub Nl: SHA_LONG,
+    pub Nh: SHA_LONG,
+    pub data: [SHA_LONG; SHA_LBLOCK as usize],
+    pub num: c_uint,
+    pub md_len: c_uint,
+}
+
+#[repr(C)]
+pub struct SHA512_CTX {
+    pub h: [SHA_LONG64; 8],
+    pub Nl: SHA_LONG64,
+    pub Nh: SHA_LONG64,
+    // this is a union but we don't want to require 1.19
+    u: [SHA_LONG64; SHA_LBLOCK as usize],
+    pub num: c_uint,
+    pub md_len: c_uint,
+}
+
 #[cfg(target_pointer_width = "64")]
 pub type BN_ULONG = libc::c_ulonglong;
 #[cfg(target_pointer_width = "32")]
 pub type BN_ULONG = c_uint;
 
-pub type CRYPTO_EX_new = unsafe extern fn(parent: *mut c_void, ptr: *mut c_void,
-                                          ad: *const CRYPTO_EX_DATA, idx: c_int,
-                                          argl: c_long, argp: *const c_void) -> c_int;
-pub type CRYPTO_EX_dup = unsafe extern fn(to: *mut CRYPTO_EX_DATA,
-                                          from: *mut CRYPTO_EX_DATA, from_d: *mut c_void,
-                                          idx: c_int, argl: c_long, argp: *mut c_void)
-                                          -> c_int;
-pub type CRYPTO_EX_free = unsafe extern fn(parent: *mut c_void, ptr: *mut c_void,
-                                           ad: *mut CRYPTO_EX_DATA, idx: c_int,
-                                           argl: c_long, argp: *mut c_void);
-pub type PasswordCallback = unsafe extern fn(buf: *mut c_char, size: c_int,
-                                             rwflag: c_int, user_data: *mut c_void)
-                                             -> c_int;
+pub type CRYPTO_EX_new = unsafe extern "C" fn(
+    parent: *mut c_void,
+    ptr: *mut c_void,
+    ad: *const CRYPTO_EX_DATA,
+    idx: c_int,
+    argl: c_long,
+    argp: *const c_void,
+) -> c_int;
+pub type CRYPTO_EX_dup = unsafe extern "C" fn(
+    to: *mut CRYPTO_EX_DATA,
+    from: *mut CRYPTO_EX_DATA,
+    from_d: *mut c_void,
+    idx: c_int,
+    argl: c_long,
+    argp: *mut c_void,
+) -> c_int;
+pub type CRYPTO_EX_free = unsafe extern "C" fn(
+    parent: *mut c_void,
+    ptr: *mut c_void,
+    ad: *mut CRYPTO_EX_DATA,
+    idx: c_int,
+    argl: c_long,
+    argp: *mut c_void,
+);
+pub type PasswordCallback =
+    unsafe extern "C" fn(buf: *mut c_char, size: c_int, rwflag: c_int, user_data: *mut c_void)
+        -> c_int;
+
+pub type SHA_LONG = c_uint;
+pub type SHA_LONG64 = u64;
 
 pub const AES_ENCRYPT: c_int = 1;
 pub const AES_DECRYPT: c_int = 0;
@@ -152,6 +221,7 @@ pub const PEM_R_NO_START_LINE: c_int = 108;
 pub const EVP_MAX_MD_SIZE: c_uint = 64;
 pub const EVP_PKEY_RSA: c_int = NID_rsaEncryption;
 pub const EVP_PKEY_HMAC: c_int = NID_hmac;
+pub const EVP_PKEY_CMAC: c_int = NID_cmac;
 pub const EVP_PKEY_DSA: c_int = NID_dsa;
 pub const EVP_PKEY_DH: c_int = NID_dhKeyAgreement;
 pub const EVP_PKEY_EC: c_int = NID_X9_62_id_ecPublicKey;
@@ -159,15 +229,35 @@ pub const EVP_PKEY_EC: c_int = NID_X9_62_id_ecPublicKey;
 pub const EVP_PKEY_ALG_CTRL: c_int = 0x1000;
 
 pub const EVP_PKEY_CTRL_RSA_PADDING: c_int = EVP_PKEY_ALG_CTRL + 1;
+pub const EVP_PKEY_CTRL_RSA_PSS_SALTLEN: c_int = EVP_PKEY_ALG_CTRL + 2;
 
+pub const EVP_PKEY_CTRL_RSA_MGF1_MD: c_int = EVP_PKEY_ALG_CTRL + 5;
 pub const EVP_PKEY_CTRL_GET_RSA_PADDING: c_int = EVP_PKEY_ALG_CTRL + 6;
+
+pub const EVP_PKEY_CTRL_SET_MAC_KEY: c_int = 6;
+pub const EVP_PKEY_CTRL_CIPHER: c_int = 12;
+
+pub const EVP_PKEY_OP_KEYGEN: c_int = 1 << 2;
+pub const EVP_PKEY_OP_SIGN: c_int = 1 << 3;
+pub const EVP_PKEY_OP_VERIFY: c_int = 1 << 4;
+pub const EVP_PKEY_OP_VERIFYRECOVER: c_int = 1 << 5;
+pub const EVP_PKEY_OP_SIGNCTX: c_int = 1 << 6;
+pub const EVP_PKEY_OP_VERIFYCTX: c_int = 1 << 7;
+pub const EVP_PKEY_OP_ENCRYPT: c_int = 1 << 8;
+pub const EVP_PKEY_OP_DECRYPT: c_int = 1 << 9;
+
+pub const EVP_PKEY_OP_TYPE_SIG: c_int = EVP_PKEY_OP_SIGN | EVP_PKEY_OP_VERIFY
+    | EVP_PKEY_OP_VERIFYRECOVER | EVP_PKEY_OP_SIGNCTX
+    | EVP_PKEY_OP_VERIFYCTX;
+
+pub const EVP_PKEY_OP_TYPE_CRYPT: c_int = EVP_PKEY_OP_ENCRYPT | EVP_PKEY_OP_DECRYPT;
 
 pub const EVP_CTRL_GCM_SET_IVLEN: c_int = 0x9;
 pub const EVP_CTRL_GCM_GET_TAG: c_int = 0x10;
 pub const EVP_CTRL_GCM_SET_TAG: c_int = 0x11;
 
-pub const MBSTRING_ASC:  c_int = MBSTRING_FLAG | 1;
-pub const MBSTRING_BMP:  c_int = MBSTRING_FLAG | 2;
+pub const MBSTRING_ASC: c_int = MBSTRING_FLAG | 1;
+pub const MBSTRING_BMP: c_int = MBSTRING_FLAG | 2;
 pub const MBSTRING_FLAG: c_int = 0x1000;
 pub const MBSTRING_UNIV: c_int = MBSTRING_FLAG | 4;
 pub const MBSTRING_UTF8: c_int = MBSTRING_FLAG;
@@ -1131,13 +1221,26 @@ pub const RSA_SSLV23_PADDING: c_int = 2;
 pub const RSA_NO_PADDING: c_int = 3;
 pub const RSA_PKCS1_OAEP_PADDING: c_int = 4;
 pub const RSA_X931_PADDING: c_int = 5;
+pub const RSA_PKCS1_PSS_PADDING: c_int = 6;
+
+pub const SHA_LBLOCK: c_int = 16;
+
+pub const SSL3_AD_ILLEGAL_PARAMETER: c_int = 47;
+pub const SSL_AD_ILLEGAL_PARAMETER: c_int = SSL3_AD_ILLEGAL_PARAMETER;
+
+pub const TLS1_AD_DECODE_ERROR: c_int = 50;
+pub const SSL_AD_DECODE_ERROR: c_int = TLS1_AD_DECODE_ERROR;
+
+pub const TLS1_AD_UNRECOGNIZED_NAME: c_int = 112;
+pub const SSL_AD_UNRECOGNIZED_NAME: c_int = TLS1_AD_UNRECOGNIZED_NAME;
 
 pub const SSL_CTRL_SET_TMP_DH: c_int = 3;
 pub const SSL_CTRL_SET_TMP_ECDH: c_int = 4;
 pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
 pub const SSL_CTRL_MODE: c_int = 33;
 pub const SSL_CTRL_SET_READ_AHEAD: c_int = 41;
-pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB:  c_int = 53;
+pub const SSL_CTRL_SET_SESS_CACHE_MODE: c_int = 44;
+pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB: c_int = 53;
 pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG: c_int = 54;
 pub const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
 pub const SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB: c_int = 63;
@@ -1174,36 +1277,73 @@ pub const SSL_VERIFY_NONE: c_int = 0;
 pub const SSL_VERIFY_PEER: c_int = 1;
 pub const SSL_VERIFY_FAIL_IF_NO_PEER_CERT: c_int = 2;
 
-#[cfg(not(ossl101))]
-pub const SSL_OP_TLSEXT_PADDING: c_ulong =                          0x00000010;
-pub const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS: c_ulong =             0x00000800;
+#[cfg(not(any(libressl261, libressl262, libressl26x, libressl270, ossl101)))]
+pub const SSL_OP_TLSEXT_PADDING: c_ulong = 0x00000010;
+#[cfg(any(libressl261, libressl262, libressl26x, libressl270))]
+pub const SSL_OP_TLSEXT_PADDING: c_ulong = 0x0;
+pub const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS: c_ulong = 0x00000800;
+#[cfg(not(any(libressl261, libressl262, libressl26x, libressl270)))]
+pub const SSL_OP_CRYPTOPRO_TLSEXT_BUG: c_ulong = 0x80000000;
+#[cfg(any(libressl261, libressl262, libressl26x, libressl270))]
+pub const SSL_OP_CRYPTOPRO_TLSEXT_BUG: c_ulong = 0x0;
+pub const SSL_OP_LEGACY_SERVER_CONNECT: c_ulong = 0x00000004;
 #[cfg(not(libressl))]
-pub const SSL_OP_ALL: c_ulong =                                     0x80000BFF;
-pub const SSL_OP_NO_QUERY_MTU: c_ulong =                            0x00001000;
-pub const SSL_OP_COOKIE_EXCHANGE: c_ulong =                         0x00002000;
-pub const SSL_OP_NO_TICKET: c_ulong =                               0x00004000;
+pub const SSL_OP_SAFARI_ECDHE_ECDSA_BUG: c_ulong = 0x00000040;
+#[cfg(not(any(libressl, ossl110f, ossl111)))]
+pub const SSL_OP_ALL: c_ulong = 0x80000BFF;
+#[cfg(any(ossl110f, ossl111))]
+pub const SSL_OP_ALL: c_ulong = SSL_OP_CRYPTOPRO_TLSEXT_BUG | SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS
+    | SSL_OP_LEGACY_SERVER_CONNECT | SSL_OP_TLSEXT_PADDING
+    | SSL_OP_SAFARI_ECDHE_ECDSA_BUG;
+pub const SSL_OP_NO_QUERY_MTU: c_ulong = 0x00001000;
+pub const SSL_OP_COOKIE_EXCHANGE: c_ulong = 0x00002000;
+pub const SSL_OP_NO_TICKET: c_ulong = 0x00004000;
 #[cfg(not(libressl))]
-pub const SSL_OP_CISCO_ANYCONNECT: c_ulong =                        0x00008000;
-pub const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION: c_ulong =  0x00010000;
+pub const SSL_OP_CISCO_ANYCONNECT: c_ulong = 0x00008000;
+pub const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION: c_ulong = 0x00010000;
 #[cfg(not(libressl))]
-pub const SSL_OP_NO_COMPRESSION: c_ulong =                          0x00020000;
+pub const SSL_OP_NO_COMPRESSION: c_ulong = 0x00020000;
 #[cfg(not(libressl))]
-pub const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION: c_ulong =       0x00040000;
-pub const SSL_OP_CIPHER_SERVER_PREFERENCE: c_ulong =                0x00400000;
-pub const SSL_OP_TLS_ROLLBACK_BUG: c_ulong =                        0x00800000;
+pub const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION: c_ulong = 0x00040000;
+pub const SSL_OP_CIPHER_SERVER_PREFERENCE: c_ulong = 0x00400000;
+pub const SSL_OP_TLS_ROLLBACK_BUG: c_ulong = 0x00800000;
 #[cfg(not(libressl))]
-pub const SSL_OP_NO_SSLv3: c_ulong =                                0x02000000;
-pub const SSL_OP_NO_TLSv1: c_ulong =                                0x04000000;
-pub const SSL_OP_NO_TLSv1_2: c_ulong =                              0x08000000;
-pub const SSL_OP_NO_TLSv1_1: c_ulong =                              0x10000000;
+pub const SSL_OP_NO_SSLv3: c_ulong = 0x02000000;
+pub const SSL_OP_NO_TLSv1: c_ulong = 0x04000000;
+pub const SSL_OP_NO_TLSv1_1: c_ulong = 0x10000000;
+pub const SSL_OP_NO_TLSv1_2: c_ulong = 0x08000000;
+#[cfg(ossl111)]
+pub const SSL_OP_NO_TLSv1_3: c_ulong = 0x20000000;
 
 #[cfg(not(any(ossl101, libressl)))]
-pub const SSL_OP_NO_DTLSv1: c_ulong =                               0x04000000;
+pub const SSL_OP_NO_DTLSv1: c_ulong = 0x04000000;
 #[cfg(not(any(ossl101, libressl)))]
-pub const SSL_OP_NO_DTLSv1_2: c_ulong =                             0x08000000;
-#[cfg(not(any(ossl101, libressl)))]
-pub const SSL_OP_NO_SSL_MASK: c_ulong = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 |
-    SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
+pub const SSL_OP_NO_DTLSv1_2: c_ulong = 0x08000000;
+#[cfg(not(any(ossl101, libressl, ossl111)))]
+pub const SSL_OP_NO_SSL_MASK: c_ulong =
+    SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
+#[cfg(ossl111)]
+pub const SSL_OP_NO_SSL_MASK: c_ulong = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1
+    | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2
+    | SSL_OP_NO_TLSv1_3;
+
+pub const SSL_FILETYPE_PEM: c_int = X509_FILETYPE_PEM;
+pub const SSL_FILETYPE_ASN1: c_int = X509_FILETYPE_ASN1;
+
+pub const SSL_SESS_CACHE_OFF: c_long = 0;
+pub const SSL_SESS_CACHE_CLIENT: c_long = 0x1;
+pub const SSL_SESS_CACHE_SERVER: c_long = 0x2;
+pub const SSL_SESS_CACHE_BOTH: c_long = SSL_SESS_CACHE_CLIENT | SSL_SESS_CACHE_SERVER;
+pub const SSL_SESS_CACHE_NO_AUTO_CLEAR: c_long = 0x80;
+pub const SSL_SESS_CACHE_NO_INTERNAL_LOOKUP: c_long = 0x100;
+pub const SSL_SESS_CACHE_NO_INTERNAL_STORE: c_long = 0x200;
+pub const SSL_SESS_CACHE_NO_INTERNAL: c_long =
+    SSL_SESS_CACHE_NO_INTERNAL_LOOKUP | SSL_SESS_CACHE_NO_INTERNAL_STORE;
+
+pub const SSL3_VERSION: c_int = 0x300;
+pub const TLS1_VERSION: c_int = 0x301;
+pub const TLS1_1_VERSION: c_int = 0x302;
+pub const TLS1_2_VERSION: c_int = 0x303;
 
 pub const TLSEXT_NAMETYPE_host_name: c_int = 0;
 
@@ -1219,65 +1359,88 @@ pub const OPENSSL_NPN_NEGOTIATED: c_int = 1;
 pub const OPENSSL_NPN_NO_OVERLAP: c_int = 2;
 
 pub const V_ASN1_GENERALIZEDTIME: c_int = 24;
-pub const V_ASN1_UTCTIME:         c_int = 23;
+pub const V_ASN1_UTCTIME: c_int = 23;
 
 pub const X509_FILETYPE_ASN1: c_int = 2;
 pub const X509_FILETYPE_DEFAULT: c_int = 3;
 pub const X509_FILETYPE_PEM: c_int = 1;
-pub const X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH: c_int = 31;
-pub const X509_V_ERR_AKID_SKID_MISMATCH: c_int = 30;
-pub const X509_V_ERR_APPLICATION_VERIFICATION: c_int = 50;
-pub const X509_V_ERR_CERT_CHAIN_TOO_LONG: c_int = 22;
-pub const X509_V_ERR_CERT_HAS_EXPIRED: c_int = 10;
-pub const X509_V_ERR_CERT_NOT_YET_VALID: c_int = 9;
-pub const X509_V_ERR_CERT_REJECTED: c_int = 28;
-pub const X509_V_ERR_CERT_REVOKED: c_int = 23;
-pub const X509_V_ERR_CERT_SIGNATURE_FAILURE: c_int = 7;
-pub const X509_V_ERR_CERT_UNTRUSTED: c_int = 27;
-pub const X509_V_ERR_CRL_HAS_EXPIRED: c_int = 12;
-pub const X509_V_ERR_CRL_NOT_YET_VALID: c_int = 11;
-pub const X509_V_ERR_CRL_PATH_VALIDATION_ERROR: c_int = 54;
-pub const X509_V_ERR_CRL_SIGNATURE_FAILURE: c_int = 8;
-pub const X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT: c_int = 18;
-pub const X509_V_ERR_DIFFERENT_CRL_SCOPE: c_int = 44;
-pub const X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD: c_int = 14;
-pub const X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD: c_int = 13;
-pub const X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD: c_int = 15;
-pub const X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD: c_int = 16;
-pub const X509_V_ERR_EXCLUDED_VIOLATION: c_int = 48;
-pub const X509_V_ERR_INVALID_CA: c_int = 24;
-pub const X509_V_ERR_INVALID_EXTENSION: c_int = 41;
-pub const X509_V_ERR_INVALID_NON_CA: c_int = 37;
-pub const X509_V_ERR_INVALID_POLICY_EXTENSION: c_int = 42;
-pub const X509_V_ERR_INVALID_PURPOSE: c_int = 26;
-pub const X509_V_ERR_KEYUSAGE_NO_CERTSIGN: c_int = 32;
-pub const X509_V_ERR_KEYUSAGE_NO_CRL_SIGN: c_int = 35;
-pub const X509_V_ERR_KEYUSAGE_NO_DIGITAL_SIGNATURE: c_int = 39;
-pub const X509_V_ERR_NO_EXPLICIT_POLICY: c_int = 43;
-pub const X509_V_ERR_OUT_OF_MEM: c_int = 17;
-pub const X509_V_ERR_PATH_LENGTH_EXCEEDED: c_int = 25;
-pub const X509_V_ERR_PERMITTED_VIOLATION: c_int = 47;
-pub const X509_V_ERR_PROXY_CERTIFICATES_NOT_ALLOWED: c_int = 40;
-pub const X509_V_ERR_PROXY_PATH_LENGTH_EXCEEDED: c_int = 38;
-pub const X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN: c_int = 19;
-pub const X509_V_ERR_SUBJECT_ISSUER_MISMATCH: c_int = 29;
-pub const X509_V_ERR_SUBTREE_MINMAX: c_int = 49;
-pub const X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY: c_int = 6;
+
+pub const X509_V_OK: c_int = 0;
+#[cfg(not(libressl))]
+pub const X509_V_ERR_UNSPECIFIED: c_int = 1;
+pub const X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT: c_int = 2;
+pub const X509_V_ERR_UNABLE_TO_GET_CRL: c_int = 3;
 pub const X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE: c_int = 4;
 pub const X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE: c_int = 5;
-pub const X509_V_ERR_UNABLE_TO_GET_CRL: c_int = 3;
-pub const X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER: c_int = 33;
-pub const X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT: c_int = 2;
+pub const X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY: c_int = 6;
+pub const X509_V_ERR_CERT_SIGNATURE_FAILURE: c_int = 7;
+pub const X509_V_ERR_CRL_SIGNATURE_FAILURE: c_int = 8;
+pub const X509_V_ERR_CERT_NOT_YET_VALID: c_int = 9;
+pub const X509_V_ERR_CERT_HAS_EXPIRED: c_int = 10;
+pub const X509_V_ERR_CRL_NOT_YET_VALID: c_int = 11;
+pub const X509_V_ERR_CRL_HAS_EXPIRED: c_int = 12;
+pub const X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD: c_int = 13;
+pub const X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD: c_int = 14;
+pub const X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD: c_int = 15;
+pub const X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD: c_int = 16;
+pub const X509_V_ERR_OUT_OF_MEM: c_int = 17;
+pub const X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT: c_int = 18;
+pub const X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN: c_int = 19;
 pub const X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY: c_int = 20;
 pub const X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE: c_int = 21;
-pub const X509_V_ERR_UNHANDLED_CRITICAL_CRL_EXTENSION: c_int = 36;
+pub const X509_V_ERR_CERT_CHAIN_TOO_LONG: c_int = 22;
+pub const X509_V_ERR_CERT_REVOKED: c_int = 23;
+pub const X509_V_ERR_INVALID_CA: c_int = 24;
+pub const X509_V_ERR_PATH_LENGTH_EXCEEDED: c_int = 25;
+pub const X509_V_ERR_INVALID_PURPOSE: c_int = 26;
+pub const X509_V_ERR_CERT_UNTRUSTED: c_int = 27;
+pub const X509_V_ERR_CERT_REJECTED: c_int = 28;
+pub const X509_V_ERR_SUBJECT_ISSUER_MISMATCH: c_int = 29;
+pub const X509_V_ERR_AKID_SKID_MISMATCH: c_int = 30;
+pub const X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH: c_int = 31;
+pub const X509_V_ERR_KEYUSAGE_NO_CERTSIGN: c_int = 32;
+pub const X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER: c_int = 33;
 pub const X509_V_ERR_UNHANDLED_CRITICAL_EXTENSION: c_int = 34;
-pub const X509_V_ERR_UNNESTED_RESOURCE: c_int = 46;
-pub const X509_V_ERR_UNSUPPORTED_CONSTRAINT_SYNTAX: c_int = 52;
-pub const X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE: c_int = 51;
+pub const X509_V_ERR_KEYUSAGE_NO_CRL_SIGN: c_int = 35;
+pub const X509_V_ERR_UNHANDLED_CRITICAL_CRL_EXTENSION: c_int = 36;
+pub const X509_V_ERR_INVALID_NON_CA: c_int = 37;
+pub const X509_V_ERR_PROXY_PATH_LENGTH_EXCEEDED: c_int = 38;
+pub const X509_V_ERR_KEYUSAGE_NO_DIGITAL_SIGNATURE: c_int = 39;
+pub const X509_V_ERR_PROXY_CERTIFICATES_NOT_ALLOWED: c_int = 40;
+pub const X509_V_ERR_INVALID_EXTENSION: c_int = 41;
+pub const X509_V_ERR_INVALID_POLICY_EXTENSION: c_int = 42;
+pub const X509_V_ERR_NO_EXPLICIT_POLICY: c_int = 43;
+pub const X509_V_ERR_DIFFERENT_CRL_SCOPE: c_int = 44;
 pub const X509_V_ERR_UNSUPPORTED_EXTENSION_FEATURE: c_int = 45;
+pub const X509_V_ERR_UNNESTED_RESOURCE: c_int = 46;
+pub const X509_V_ERR_PERMITTED_VIOLATION: c_int = 47;
+pub const X509_V_ERR_EXCLUDED_VIOLATION: c_int = 48;
+pub const X509_V_ERR_SUBTREE_MINMAX: c_int = 49;
+pub const X509_V_ERR_APPLICATION_VERIFICATION: c_int = 50;
+pub const X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE: c_int = 51;
+pub const X509_V_ERR_UNSUPPORTED_CONSTRAINT_SYNTAX: c_int = 52;
 pub const X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
-pub const X509_V_OK: c_int = 0;
+pub const X509_V_ERR_CRL_PATH_VALIDATION_ERROR: c_int = 54;
+
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_SUITE_B_INVALID_VERSION: c_int = 56;
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_SUITE_B_INVALID_ALGORITHM: c_int = 57;
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_SUITE_B_INVALID_CURVE: c_int = 58;
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_SUITE_B_INVALID_SIGNATURE_ALGORITHM: c_int = 59;
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_SUITE_B_LOS_NOT_ALLOWED: c_int = 60;
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_SUITE_B_CANNOT_SIGN_P_384_WITH_P_256: c_int = 61;
+
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_HOSTNAME_MISMATCH: c_int = 62;
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_EMAIL_MISMATCH: c_int = 63;
+#[cfg(not(any(ossl101, libressl)))]
+pub const X509_V_ERR_IP_ADDRESS_MISMATCH: c_int = 64;
 
 #[cfg(not(any(ossl101, libressl)))]
 pub const X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT: c_uint = 0x1;
@@ -1300,6 +1463,8 @@ pub const GEN_URI: c_int = 6;
 pub const GEN_IPADD: c_int = 7;
 pub const GEN_RID: c_int = 8;
 
+pub const DTLS1_COOKIE_LENGTH: c_uint = 256;
+
 // macros
 pub unsafe fn BIO_get_mem_data(b: *mut BIO, pp: *mut *mut c_char) -> c_long {
     BIO_ctrl(b, BIO_CTRL_INFO, 0, pp as *mut c_void)
@@ -1319,11 +1484,47 @@ pub unsafe fn BIO_set_retry_write(b: *mut BIO) {
 
 // EVP_PKEY_CTX_ctrl macros
 pub unsafe fn EVP_PKEY_CTX_set_rsa_padding(ctx: *mut EVP_PKEY_CTX, pad: c_int) -> c_int {
-    EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, -1, EVP_PKEY_CTRL_RSA_PADDING, pad, ptr::null_mut())
+    EVP_PKEY_CTX_ctrl(
+        ctx,
+        EVP_PKEY_RSA,
+        -1,
+        EVP_PKEY_CTRL_RSA_PADDING,
+        pad,
+        ptr::null_mut(),
+    )
 }
 
 pub unsafe fn EVP_PKEY_CTX_get_rsa_padding(ctx: *mut EVP_PKEY_CTX, ppad: *mut c_int) -> c_int {
-    EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, -1, EVP_PKEY_CTRL_GET_RSA_PADDING, 0, ppad as *mut c_void)
+    EVP_PKEY_CTX_ctrl(
+        ctx,
+        EVP_PKEY_RSA,
+        -1,
+        EVP_PKEY_CTRL_GET_RSA_PADDING,
+        0,
+        ppad as *mut c_void,
+    )
+}
+
+pub unsafe fn EVP_PKEY_CTX_set_rsa_pss_saltlen(ctx: *mut EVP_PKEY_CTX, len: c_int) -> c_int {
+    EVP_PKEY_CTX_ctrl(
+        ctx,
+        EVP_PKEY_RSA,
+        EVP_PKEY_OP_SIGN | EVP_PKEY_OP_VERIFY,
+        EVP_PKEY_CTRL_RSA_PSS_SALTLEN,
+        len,
+        ptr::null_mut(),
+    )
+}
+
+pub unsafe fn EVP_PKEY_CTX_set_rsa_mgf1_md(ctx: *mut EVP_PKEY_CTX, md: *mut EVP_MD) -> c_int {
+    EVP_PKEY_CTX_ctrl(
+        ctx,
+        EVP_PKEY_RSA,
+        EVP_PKEY_OP_TYPE_SIG | EVP_PKEY_OP_TYPE_CRYPT,
+        EVP_PKEY_CTRL_RSA_MGF1_MD,
+        0,
+        md as *mut c_void,
+    )
 }
 
 pub unsafe fn SSL_CTX_set_mode(ctx: *mut SSL_CTX, op: c_long) -> c_long {
@@ -1356,28 +1557,38 @@ pub unsafe fn SSL_CTX_add_extra_chain_cert(ctx: *mut SSL_CTX, x509: *mut X509) -
 
 #[cfg(not(any(ossl101, libressl)))]
 pub unsafe fn SSL_CTX_set0_verify_cert_store(ctx: *mut SSL_CTX, st: *mut X509_STORE) -> c_long {
-    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_VERIFY_CERT_STORE, 0, st as *mut c_void)    
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_VERIFY_CERT_STORE, 0, st as *mut c_void)
 }
 
-pub unsafe fn SSL_CTX_set_tlsext_servername_callback(ctx: *mut SSL_CTX,
-                                                     cb: Option<extern fn()>)
-                                                     -> c_long {
+pub unsafe fn SSL_CTX_set_tlsext_servername_callback(
+    ctx: *mut SSL_CTX,
+    cb: Option<extern "C" fn()>,
+) -> c_long {
     SSL_CTX_callback_ctrl(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, cb)
 }
 
 pub unsafe fn SSL_set_tlsext_host_name(s: *mut SSL, name: *mut c_char) -> c_long {
-    SSL_ctrl(s, SSL_CTRL_SET_TLSEXT_HOSTNAME,
-             TLSEXT_NAMETYPE_host_name as c_long,
-             name as *mut c_void)
+    SSL_ctrl(
+        s,
+        SSL_CTRL_SET_TLSEXT_HOSTNAME,
+        TLSEXT_NAMETYPE_host_name as c_long,
+        name as *mut c_void,
+    )
 }
 
 pub unsafe fn SSL_set_tlsext_status_type(s: *mut SSL, type_: c_int) -> c_long {
-    SSL_ctrl(s, SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE, type_ as c_long, ptr::null_mut())
+    SSL_ctrl(
+        s,
+        SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE,
+        type_ as c_long,
+        ptr::null_mut(),
+    )
 }
 
-pub unsafe fn SSL_CTX_set_tlsext_status_cb(ctx: *mut SSL_CTX,
-                                           cb: Option<unsafe extern fn(*mut SSL, *mut c_void) -> c_int>)
-                                           -> c_long {
+pub unsafe fn SSL_CTX_set_tlsext_status_cb(
+    ctx: *mut SSL_CTX,
+    cb: Option<unsafe extern "C" fn(*mut SSL, *mut c_void) -> c_int>,
+) -> c_long {
     SSL_CTX_callback_ctrl(ctx, SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB, mem::transmute(cb))
 }
 
@@ -1385,16 +1596,37 @@ pub unsafe fn SSL_CTX_set_tlsext_status_arg(ctx: *mut SSL_CTX, arg: *mut c_void)
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG, 0, arg)
 }
 
-pub unsafe fn SSL_CTX_get_extra_chain_certs(ctx: *mut SSL_CTX, chain: *mut *mut stack_st_X509) -> c_long {
+pub unsafe fn SSL_CTX_get_extra_chain_certs(
+    ctx: *mut SSL_CTX,
+    chain: *mut *mut stack_st_X509,
+) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_GET_EXTRA_CHAIN_CERTS, 0, chain as *mut c_void)
 }
 
-pub unsafe fn SSL_get_tlsext_status_ocsp_resp(ssl: *mut SSL, resp: *mut *mut c_uchar) -> c_long {
-    SSL_ctrl(ssl, SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP, 0, resp as *mut c_void)
+pub unsafe fn SSL_CTX_set_session_cache_mode(ctx: *mut SSL_CTX, m: c_long) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_SESS_CACHE_MODE, m, ptr::null_mut())
 }
 
-pub unsafe fn SSL_set_tlsext_status_ocsp_resp(ssl: *mut SSL, resp: *mut c_uchar, len: c_long) -> c_long {
-    SSL_ctrl(ssl, SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP, len, resp as *mut c_void)
+pub unsafe fn SSL_get_tlsext_status_ocsp_resp(ssl: *mut SSL, resp: *mut *mut c_uchar) -> c_long {
+    SSL_ctrl(
+        ssl,
+        SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP,
+        0,
+        resp as *mut c_void,
+    )
+}
+
+pub unsafe fn SSL_set_tlsext_status_ocsp_resp(
+    ssl: *mut SSL,
+    resp: *mut c_uchar,
+    len: c_long,
+) -> c_long {
+    SSL_ctrl(
+        ssl,
+        SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP,
+        len,
+        resp as *mut c_void,
+    )
 }
 
 pub fn ERR_GET_LIB(l: c_ulong) -> c_int {
@@ -1409,10 +1641,17 @@ pub fn ERR_GET_REASON(l: c_ulong) -> c_int {
     (l & 0xFFF) as c_int
 }
 
-extern {
+extern "C" {
     pub fn AES_set_encrypt_key(userKey: *const c_uchar, bits: c_int, key: *mut AES_KEY) -> c_int;
     pub fn AES_set_decrypt_key(userKey: *const c_uchar, bits: c_int, key: *mut AES_KEY) -> c_int;
-    pub fn AES_ige_encrypt(in_: *const c_uchar, out: *mut c_uchar, length: size_t, key: *const AES_KEY, ivec: *mut c_uchar, enc: c_int);
+    pub fn AES_ige_encrypt(
+        in_: *const c_uchar,
+        out: *mut c_uchar,
+        length: size_t,
+        key: *const AES_KEY,
+        ivec: *mut c_uchar,
+        enc: c_int,
+    );
 
     pub fn ASN1_INTEGER_get(dest: *const ASN1_INTEGER) -> c_long;
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
@@ -1449,17 +1688,62 @@ extern {
     pub fn BN_set_negative(bn: *mut BIGNUM, n: c_int);
     pub fn BN_set_word(bn: *mut BIGNUM, n: BN_ULONG) -> c_int;
     pub fn BN_add(r: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM) -> c_int;
-    pub fn BN_div(dv: *mut BIGNUM, rem: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn BN_div(
+        dv: *mut BIGNUM,
+        rem: *mut BIGNUM,
+        a: *const BIGNUM,
+        b: *const BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
     pub fn BN_exp(r: *mut BIGNUM, a: *const BIGNUM, p: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn BN_gcd(r: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
-    pub fn BN_mod_add(r: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM, m: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
-    pub fn BN_mod_exp(r: *mut BIGNUM, a: *const BIGNUM, p: *const BIGNUM, m: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
-    pub fn BN_mod_inverse(r: *mut BIGNUM, a: *const BIGNUM, n: *const BIGNUM, ctx: *mut BN_CTX) -> *mut BIGNUM;
-    pub fn BN_mod_mul(r: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM, m: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
-    pub fn BN_mod_sqr(r: *mut BIGNUM, a: *const BIGNUM, m: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
-    pub fn BN_mod_sub(r: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM, m: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn BN_mod_add(
+        r: *mut BIGNUM,
+        a: *const BIGNUM,
+        b: *const BIGNUM,
+        m: *const BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+    pub fn BN_mod_exp(
+        r: *mut BIGNUM,
+        a: *const BIGNUM,
+        p: *const BIGNUM,
+        m: *const BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+    pub fn BN_mod_inverse(
+        r: *mut BIGNUM,
+        a: *const BIGNUM,
+        n: *const BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> *mut BIGNUM;
+    pub fn BN_mod_mul(
+        r: *mut BIGNUM,
+        a: *const BIGNUM,
+        b: *const BIGNUM,
+        m: *const BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+    pub fn BN_mod_sqr(
+        r: *mut BIGNUM,
+        a: *const BIGNUM,
+        m: *const BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+    pub fn BN_mod_sub(
+        r: *mut BIGNUM,
+        a: *const BIGNUM,
+        b: *const BIGNUM,
+        m: *const BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
     pub fn BN_mul(r: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
-    pub fn BN_nnmod(rem: *mut BIGNUM, a: *const BIGNUM, m: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn BN_nnmod(
+        rem: *mut BIGNUM,
+        a: *const BIGNUM,
+        m: *const BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
     pub fn BN_add_word(r: *mut BIGNUM, w: BN_ULONG) -> c_int;
     pub fn BN_sub_word(r: *mut BIGNUM, w: BN_ULONG) -> c_int;
     pub fn BN_mul_word(r: *mut BIGNUM, w: BN_ULONG) -> c_int;
@@ -1477,9 +1761,27 @@ extern {
     pub fn BN_rshift1(r: *mut BIGNUM, a: *const BIGNUM) -> c_int;
     pub fn BN_cmp(a: *const BIGNUM, b: *const BIGNUM) -> c_int;
     pub fn BN_ucmp(a: *const BIGNUM, b: *const BIGNUM) -> c_int;
-    pub fn BN_generate_prime_ex(r: *mut BIGNUM, bits: c_int, safe: c_int, add: *const BIGNUM, rem: *const BIGNUM, cb: *mut BN_GENCB) -> c_int;
-    pub fn BN_is_prime_ex(p: *const BIGNUM, checks: c_int, ctx: *mut BN_CTX, cb: *mut BN_GENCB) -> c_int;
-    pub fn BN_is_prime_fasttest_ex(p: *const BIGNUM, checks: c_int, ctx: *mut BN_CTX, do_trial_division: c_int, cb: *mut BN_GENCB) -> c_int;
+    pub fn BN_generate_prime_ex(
+        r: *mut BIGNUM,
+        bits: c_int,
+        safe: c_int,
+        add: *const BIGNUM,
+        rem: *const BIGNUM,
+        cb: *mut BN_GENCB,
+    ) -> c_int;
+    pub fn BN_is_prime_ex(
+        p: *const BIGNUM,
+        checks: c_int,
+        ctx: *mut BN_CTX,
+        cb: *mut BN_GENCB,
+    ) -> c_int;
+    pub fn BN_is_prime_fasttest_ex(
+        p: *const BIGNUM,
+        checks: c_int,
+        ctx: *mut BN_CTX,
+        do_trial_division: c_int,
+        cb: *mut BN_GENCB,
+    ) -> c_int;
     pub fn BN_rand(r: *mut BIGNUM, bits: c_int, top: c_int, bottom: c_int) -> c_int;
     pub fn BN_pseudo_rand(r: *mut BIGNUM, bits: c_int, top: c_int, bottom: c_int) -> c_int;
     pub fn BN_rand_range(r: *mut BIGNUM, range: *const BIGNUM) -> c_int;
@@ -1496,8 +1798,7 @@ extern {
     pub fn NCONF_new(meth: *mut CONF_METHOD) -> *mut CONF;
     pub fn NCONF_free(conf: *mut CONF);
 
-    pub fn CRYPTO_memcmp(a: *const c_void, b: *const c_void,
-                         len: size_t) -> c_int;
+    pub fn CRYPTO_memcmp(a: *const c_void, b: *const c_void, len: size_t) -> c_int;
 
     pub fn DH_new() -> *mut DH;
     pub fn DH_free(dh: *mut DH);
@@ -1510,6 +1811,8 @@ extern {
 
     pub fn EC_KEY_new() -> *mut EC_KEY;
     pub fn EC_KEY_new_by_curve_name(nid: c_int) -> *mut EC_KEY;
+    pub fn EC_KEY_dup(key: *const EC_KEY) -> *mut EC_KEY;
+    pub fn EC_KEY_up_ref(key: *mut EC_KEY) -> c_int;
     pub fn EC_KEY_set_group(key: *mut EC_KEY, group: *const EC_GROUP) -> c_int;
     pub fn EC_KEY_get0_group(key: *const EC_KEY) -> *const EC_GROUP;
     pub fn EC_KEY_set_public_key(key: *mut EC_KEY, key: *const EC_POINT) -> c_int;
@@ -1519,37 +1822,138 @@ extern {
     pub fn EC_KEY_generate_key(key: *mut EC_KEY) -> c_int;
     pub fn EC_KEY_check_key(key: *const EC_KEY) -> c_int;
     pub fn EC_KEY_free(key: *mut EC_KEY);
+    pub fn EC_KEY_set_public_key_affine_coordinates(
+        key: *mut EC_KEY,
+        x: *mut BIGNUM,
+        y: *mut BIGNUM,
+    ) -> c_int;
 
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
     pub fn EC_GF2m_simple_method() -> *const EC_METHOD;
 
     pub fn EC_GROUP_new(meth: *const EC_METHOD) -> *mut EC_GROUP;
-    pub fn EC_GROUP_new_curve_GFp(p: *const BIGNUM, a: *const BIGNUM, b: *const BIGNUM, ctx: *mut BN_CTX) -> *mut EC_GROUP;
-    pub fn EC_GROUP_new_curve_GF2m(p: *const BIGNUM, a: *const BIGNUM, b: *const BIGNUM, ctx: *mut BN_CTX) -> *mut EC_GROUP;
+    pub fn EC_GROUP_new_curve_GFp(
+        p: *const BIGNUM,
+        a: *const BIGNUM,
+        b: *const BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> *mut EC_GROUP;
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    pub fn EC_GROUP_new_curve_GF2m(
+        p: *const BIGNUM,
+        a: *const BIGNUM,
+        b: *const BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> *mut EC_GROUP;
     pub fn EC_GROUP_new_by_curve_name(nid: c_int) -> *mut EC_GROUP;
-    pub fn EC_GROUP_get_curve_GFp(group: *const EC_GROUP, p: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
-    pub fn EC_GROUP_get_curve_GF2m(group: *const EC_GROUP, p: *mut BIGNUM, a: *mut BIGNUM, b: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_GROUP_get_curve_GFp(
+        group: *const EC_GROUP,
+        p: *mut BIGNUM,
+        a: *mut BIGNUM,
+        b: *mut BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    pub fn EC_GROUP_get_curve_GF2m(
+        group: *const EC_GROUP,
+        p: *mut BIGNUM,
+        a: *mut BIGNUM,
+        b: *mut BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
     pub fn EC_GROUP_get_degree(group: *const EC_GROUP) -> c_int;
-    pub fn EC_GROUP_get_order(group: *const EC_GROUP, order: *mut BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_GROUP_get_order(
+        group: *const EC_GROUP,
+        order: *mut BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
     pub fn EC_GROUP_set_asn1_flag(key: *mut EC_GROUP, flag: c_int);
 
     pub fn EC_GROUP_free(group: *mut EC_GROUP);
 
     pub fn EC_POINT_new(group: *const EC_GROUP) -> *mut EC_POINT;
-    pub fn EC_POINT_add(group: *const EC_GROUP, r: *mut EC_POINT, a: *const EC_POINT, b: *const EC_POINT, ctx: *mut BN_CTX) -> c_int;
-    pub fn EC_POINT_mul(group: *const EC_GROUP, r: *mut EC_POINT, n: *const BIGNUM, q: *const EC_POINT, m: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_POINT_add(
+        group: *const EC_GROUP,
+        r: *mut EC_POINT,
+        a: *const EC_POINT,
+        b: *const EC_POINT,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+    pub fn EC_POINT_mul(
+        group: *const EC_GROUP,
+        r: *mut EC_POINT,
+        n: *const BIGNUM,
+        q: *const EC_POINT,
+        m: *const BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
     pub fn EC_POINT_invert(group: *const EC_GROUP, r: *mut EC_POINT, ctx: *mut BN_CTX) -> c_int;
-    pub fn EC_POINT_point2oct(group: *const EC_GROUP, p: *const EC_POINT, form: point_conversion_form_t, buf: *mut c_uchar, len: size_t, ctx: *mut BN_CTX) -> size_t;
-    pub fn EC_POINT_oct2point(group: *const EC_GROUP, p: *mut EC_POINT, buf: *const c_uchar, len: size_t, ctx: *mut BN_CTX) -> c_int;
-    pub fn EC_POINT_cmp(group: *const EC_GROUP, a: *const EC_POINT, b: *const EC_POINT, ctx: *mut BN_CTX) -> c_int;
+    pub fn EC_POINT_point2oct(
+        group: *const EC_GROUP,
+        p: *const EC_POINT,
+        form: point_conversion_form_t,
+        buf: *mut c_uchar,
+        len: size_t,
+        ctx: *mut BN_CTX,
+    ) -> size_t;
+    pub fn EC_POINT_oct2point(
+        group: *const EC_GROUP,
+        p: *mut EC_POINT,
+        buf: *const c_uchar,
+        len: size_t,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+    pub fn EC_POINT_cmp(
+        group: *const EC_GROUP,
+        a: *const EC_POINT,
+        b: *const EC_POINT,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
     pub fn EC_POINT_free(point: *mut EC_POINT);
+    pub fn EC_POINT_get_affine_coordinates_GFp(
+        group: *const EC_GROUP,
+        p: *const EC_POINT,
+        x: *mut BIGNUM,
+        y: *mut BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    pub fn EC_POINT_get_affine_coordinates_GF2m(
+        group: *const EC_GROUP,
+        p: *const EC_POINT,
+        x: *mut BIGNUM,
+        y: *mut BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+
+    pub fn ECDSA_SIG_new() -> *mut ECDSA_SIG;
+    pub fn ECDSA_SIG_free(sig: *mut ECDSA_SIG);
+    pub fn ECDSA_do_verify(
+        dgst: *const c_uchar,
+        dgst_len: c_int,
+        sig: *const ECDSA_SIG,
+        eckey: *mut EC_KEY,
+    ) -> c_int;
+    pub fn ECDSA_do_sign(
+        dgst: *const c_uchar,
+        dgst_len: c_int,
+        eckey: *mut EC_KEY,
+    ) -> *mut ECDSA_SIG;
 
     pub fn ERR_peek_last_error() -> c_ulong;
     pub fn ERR_get_error() -> c_ulong;
-    pub fn ERR_get_error_line_data(file: *mut *const c_char, line: *mut c_int, data: *mut *const c_char, flags: *mut c_int) -> c_ulong;
+    pub fn ERR_get_error_line_data(
+        file: *mut *const c_char,
+        line: *mut c_int,
+        data: *mut *const c_char,
+        flags: *mut c_int,
+    ) -> c_ulong;
     pub fn ERR_lib_error_string(err: c_ulong) -> *const c_char;
     pub fn ERR_func_error_string(err: c_ulong) -> *const c_char;
     pub fn ERR_reason_error_string(err: c_ulong) -> *const c_char;
     pub fn ERR_clear_error();
+    pub fn ERR_put_error(lib: c_int, func: c_int, reason: c_int, file: *const c_char, line: c_int);
+    pub fn ERR_set_error_data(data: *mut c_char, flags: c_int);
 
     pub fn EVP_md5() -> *const EVP_MD;
     pub fn EVP_ripemd160() -> *const EVP_MD;
@@ -1564,6 +1968,7 @@ extern {
     pub fn EVP_aes_128_xts() -> *const EVP_CIPHER;
     pub fn EVP_aes_128_ctr() -> *const EVP_CIPHER;
     pub fn EVP_aes_128_gcm() -> *const EVP_CIPHER;
+    pub fn EVP_aes_128_ccm() -> *const EVP_CIPHER;
     pub fn EVP_aes_128_cfb1() -> *const EVP_CIPHER;
     pub fn EVP_aes_128_cfb128() -> *const EVP_CIPHER;
     pub fn EVP_aes_128_cfb8() -> *const EVP_CIPHER;
@@ -1572,6 +1977,7 @@ extern {
     pub fn EVP_aes_256_xts() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_ctr() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_gcm() -> *const EVP_CIPHER;
+    pub fn EVP_aes_256_ccm() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_cfb1() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_cfb128() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_cfb8() -> *const EVP_CIPHER;
@@ -1583,56 +1989,93 @@ extern {
 
     pub fn EVP_des_cbc() -> *const EVP_CIPHER;
     pub fn EVP_des_ecb() -> *const EVP_CIPHER;
+    pub fn EVP_des_ede3() -> *const EVP_CIPHER;
+    pub fn EVP_des_ede3_cbc() -> *const EVP_CIPHER;
 
-    pub fn EVP_BytesToKey(typ: *const EVP_CIPHER, md: *const EVP_MD,
-                          salt: *const u8, data: *const u8, datalen: c_int,
-                          count: c_int, key: *mut u8, iv: *mut u8) -> c_int;
+    pub fn EVP_BytesToKey(
+        typ: *const EVP_CIPHER,
+        md: *const EVP_MD,
+        salt: *const u8,
+        data: *const u8,
+        datalen: c_int,
+        count: c_int,
+        key: *mut u8,
+        iv: *mut u8,
+    ) -> c_int;
 
     pub fn EVP_CIPHER_CTX_new() -> *mut EVP_CIPHER_CTX;
     pub fn EVP_CIPHER_CTX_set_padding(ctx: *mut EVP_CIPHER_CTX, padding: c_int) -> c_int;
     pub fn EVP_CIPHER_CTX_set_key_length(ctx: *mut EVP_CIPHER_CTX, keylen: c_int) -> c_int;
-    pub fn EVP_CIPHER_CTX_ctrl(ctx: *mut EVP_CIPHER_CTX, type_: c_int, arg: c_int, ptr: *mut c_void) -> c_int;
+    pub fn EVP_CIPHER_CTX_ctrl(
+        ctx: *mut EVP_CIPHER_CTX,
+        type_: c_int,
+        arg: c_int,
+        ptr: *mut c_void,
+    ) -> c_int;
     pub fn EVP_CIPHER_CTX_free(ctx: *mut EVP_CIPHER_CTX);
 
-    pub fn EVP_CipherInit(ctx: *mut EVP_CIPHER_CTX, evp: *const EVP_CIPHER,
-                          key: *const u8, iv: *const u8, mode: c_int) -> c_int;
-    pub fn EVP_CipherInit_ex(ctx: *mut EVP_CIPHER_CTX,
-                             type_: *const EVP_CIPHER,
-                             impl_: *mut ENGINE,
-                             key: *const c_uchar,
-                             iv: *const c_uchar,
-                             enc: c_int) -> c_int;
-    pub fn EVP_CipherUpdate(ctx: *mut EVP_CIPHER_CTX, outbuf: *mut u8,
-                            outlen: *mut c_int, inbuf: *const u8, inlen: c_int) -> c_int;
+    pub fn EVP_CipherInit(
+        ctx: *mut EVP_CIPHER_CTX,
+        evp: *const EVP_CIPHER,
+        key: *const u8,
+        iv: *const u8,
+        mode: c_int,
+    ) -> c_int;
+    pub fn EVP_CipherInit_ex(
+        ctx: *mut EVP_CIPHER_CTX,
+        type_: *const EVP_CIPHER,
+        impl_: *mut ENGINE,
+        key: *const c_uchar,
+        iv: *const c_uchar,
+        enc: c_int,
+    ) -> c_int;
+    pub fn EVP_CipherUpdate(
+        ctx: *mut EVP_CIPHER_CTX,
+        outbuf: *mut u8,
+        outlen: *mut c_int,
+        inbuf: *const u8,
+        inlen: c_int,
+    ) -> c_int;
     pub fn EVP_CipherFinal(ctx: *mut EVP_CIPHER_CTX, res: *mut u8, len: *mut c_int) -> c_int;
 
     pub fn EVP_DigestInit(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD) -> c_int;
-    pub fn EVP_DigestInit_ex(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD, imple: *mut ENGINE) -> c_int;
+    pub fn EVP_DigestInit_ex(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD, imple: *mut ENGINE)
+        -> c_int;
     pub fn EVP_DigestUpdate(ctx: *mut EVP_MD_CTX, data: *const c_void, n: size_t) -> c_int;
     pub fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
     pub fn EVP_DigestFinal_ex(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
 
-    pub fn EVP_DigestSignInit(ctx: *mut EVP_MD_CTX,
-                              pctx: *mut *mut EVP_PKEY_CTX,
-                              type_: *const EVP_MD,
-                              e: *mut ENGINE,
-                              pkey: *mut EVP_PKEY) -> c_int;
-    pub fn EVP_DigestSignFinal(ctx: *mut EVP_MD_CTX,
-                               sig: *mut c_uchar,
-                               siglen: *mut size_t) -> c_int;
-    pub fn EVP_DigestVerifyInit(ctx: *mut EVP_MD_CTX,
-                                pctx: *mut *mut EVP_PKEY_CTX,
-                                type_: *const EVP_MD,
-                                e: *mut ENGINE,
-                                pkey: *mut EVP_PKEY) -> c_int;
+    pub fn EVP_DigestSignInit(
+        ctx: *mut EVP_MD_CTX,
+        pctx: *mut *mut EVP_PKEY_CTX,
+        type_: *const EVP_MD,
+        e: *mut ENGINE,
+        pkey: *mut EVP_PKEY,
+    ) -> c_int;
+    pub fn EVP_DigestSignFinal(
+        ctx: *mut EVP_MD_CTX,
+        sig: *mut c_uchar,
+        siglen: *mut size_t,
+    ) -> c_int;
+    pub fn EVP_DigestVerifyInit(
+        ctx: *mut EVP_MD_CTX,
+        pctx: *mut *mut EVP_PKEY_CTX,
+        type_: *const EVP_MD,
+        e: *mut ENGINE,
+        pkey: *mut EVP_PKEY,
+    ) -> c_int;
     #[cfg(any(ossl101, libressl))]
-    pub fn EVP_DigestVerifyFinal(ctx: *mut EVP_MD_CTX,
-                                 sigret: *mut c_uchar,
-                                 siglen: size_t) -> c_int;
+    pub fn EVP_DigestVerifyFinal(
+        ctx: *mut EVP_MD_CTX,
+        sigret: *mut c_uchar,
+        siglen: size_t,
+    ) -> c_int;
     #[cfg(not(any(ossl101, libressl)))]
-    pub fn EVP_DigestVerifyFinal(ctx: *mut EVP_MD_CTX,
-                                 sigret: *const c_uchar,
-                                 siglen: size_t) -> c_int;
+    pub fn EVP_DigestVerifyFinal(
+        ctx: *mut EVP_MD_CTX,
+        sigret: *const c_uchar,
+        siglen: size_t,
+    ) -> c_int;
 
     pub fn EVP_MD_CTX_copy_ex(dst: *mut EVP_MD_CTX, src: *const EVP_MD_CTX) -> c_int;
 
@@ -1646,31 +2089,83 @@ extern {
     pub fn EVP_PKEY_get1_DH(k: *mut EVP_PKEY) -> *mut DH;
     pub fn EVP_PKEY_get1_EC_KEY(k: *mut EVP_PKEY) -> *mut EC_KEY;
     pub fn EVP_PKEY_cmp(a: *const EVP_PKEY, b: *const EVP_PKEY) -> c_int;
-    pub fn EVP_PKEY_new_mac_key(type_: c_int,
-                                e: *mut ENGINE,
-                                key: *const c_uchar,
-                                keylen: c_int) -> *mut EVP_PKEY;
-    pub fn d2i_PKCS8PrivateKey_bio(bp: *mut BIO, x: *mut *mut EVP_PKEY, cb: Option<PasswordCallback>, u: *mut c_void) -> *mut EVP_PKEY;
+    pub fn EVP_PKEY_id(pkey: *const EVP_PKEY) -> c_int;
+    pub fn EVP_PKEY_new_mac_key(
+        type_: c_int,
+        e: *mut ENGINE,
+        key: *const c_uchar,
+        keylen: c_int,
+    ) -> *mut EVP_PKEY;
+    pub fn EVP_PKEY_derive_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
+    pub fn EVP_PKEY_derive_set_peer(ctx: *mut EVP_PKEY_CTX, peer: *mut EVP_PKEY) -> c_int;
+    pub fn EVP_PKEY_derive(ctx: *mut EVP_PKEY_CTX, key: *mut c_uchar, size: *mut size_t) -> c_int;
+    pub fn d2i_PKCS8PrivateKey_bio(
+        bp: *mut BIO,
+        x: *mut *mut EVP_PKEY,
+        cb: Option<PasswordCallback>,
+        u: *mut c_void,
+    ) -> *mut EVP_PKEY;
 
-    pub fn EVP_PKEY_CTX_ctrl(ctx: *mut EVP_PKEY_CTX, keytype: c_int, optype: c_int, cmd: c_int, p1: c_int, p2: *mut c_void) -> c_int;
+    pub fn EVP_PKEY_CTX_new(k: *mut EVP_PKEY, e: *mut ENGINE) -> *mut EVP_PKEY_CTX;
+    pub fn EVP_PKEY_CTX_new_id(id: c_int, e: *mut ENGINE) -> *mut EVP_PKEY_CTX;
+    pub fn EVP_PKEY_CTX_free(ctx: *mut EVP_PKEY_CTX);
+    pub fn EVP_PKEY_CTX_ctrl(
+        ctx: *mut EVP_PKEY_CTX,
+        keytype: c_int,
+        optype: c_int,
+        cmd: c_int,
+        p1: c_int,
+        p2: *mut c_void,
+    ) -> c_int;
+
+    pub fn EVP_PKEY_keygen_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
+    pub fn EVP_PKEY_keygen(ctx: *mut EVP_PKEY_CTX, key: *mut *mut EVP_PKEY) -> c_int;
 
     pub fn HMAC_CTX_copy(dst: *mut HMAC_CTX, src: *mut HMAC_CTX) -> c_int;
 
     pub fn OBJ_obj2nid(o: *const ASN1_OBJECT) -> c_int;
-    pub fn OBJ_obj2txt(buf: *mut c_char, buf_len: c_int, a: *const ASN1_OBJECT, no_name: c_int) -> c_int;
+    pub fn OBJ_obj2txt(
+        buf: *mut c_char,
+        buf_len: c_int,
+        a: *const ASN1_OBJECT,
+        no_name: c_int,
+    ) -> c_int;
+    pub fn OBJ_nid2sn(nid: c_int) -> *const c_char;
 
     pub fn OCSP_BASICRESP_new() -> *mut OCSP_BASICRESP;
     pub fn OCSP_BASICRESP_free(r: *mut OCSP_BASICRESP);
-    pub fn OCSP_basic_verify(bs: *mut OCSP_BASICRESP, certs: *mut stack_st_X509, st: *mut X509_STORE, flags: c_ulong) -> c_int;
-    pub fn OCSP_resp_find_status(bs: *mut OCSP_BASICRESP, id: *mut OCSP_CERTID, status: *mut c_int, reason: *mut c_int, revtime: *mut *mut ASN1_GENERALIZEDTIME, thisupd: *mut *mut ASN1_GENERALIZEDTIME, nextupd: *mut *mut ASN1_GENERALIZEDTIME) -> c_int;
-    pub fn OCSP_check_validity(thisupd: *mut ASN1_GENERALIZEDTIME, nextupd: *mut ASN1_GENERALIZEDTIME, sec: c_long, maxsec: c_long) -> c_int;
+    pub fn OCSP_basic_verify(
+        bs: *mut OCSP_BASICRESP,
+        certs: *mut stack_st_X509,
+        st: *mut X509_STORE,
+        flags: c_ulong,
+    ) -> c_int;
+    pub fn OCSP_resp_find_status(
+        bs: *mut OCSP_BASICRESP,
+        id: *mut OCSP_CERTID,
+        status: *mut c_int,
+        reason: *mut c_int,
+        revtime: *mut *mut ASN1_GENERALIZEDTIME,
+        thisupd: *mut *mut ASN1_GENERALIZEDTIME,
+        nextupd: *mut *mut ASN1_GENERALIZEDTIME,
+    ) -> c_int;
+    pub fn OCSP_check_validity(
+        thisupd: *mut ASN1_GENERALIZEDTIME,
+        nextupd: *mut ASN1_GENERALIZEDTIME,
+        sec: c_long,
+        maxsec: c_long,
+    ) -> c_int;
 
     pub fn OCSP_CERTID_free(id: *mut OCSP_CERTID);
 
     pub fn OCSP_RESPONSE_new() -> *mut OCSP_RESPONSE;
     pub fn OCSP_RESPONSE_free(r: *mut OCSP_RESPONSE);
     pub fn i2d_OCSP_RESPONSE(a: *mut OCSP_RESPONSE, pp: *mut *mut c_uchar) -> c_int;
-    pub fn d2i_OCSP_RESPONSE(a: *mut *mut OCSP_RESPONSE, pp: *mut *const c_uchar, length: c_long) -> *mut OCSP_RESPONSE;
+    pub fn d2i_OCSP_RESPONSE(
+        a: *mut *mut OCSP_RESPONSE,
+        pp: *mut *const c_uchar,
+        length: c_long,
+    ) -> *mut OCSP_RESPONSE;
     pub fn OCSP_response_create(status: c_int, bs: *mut OCSP_BASICRESP) -> *mut OCSP_RESPONSE;
     pub fn OCSP_response_status(resp: *mut OCSP_RESPONSE) -> c_int;
     pub fn OCSP_response_get1_basic(resp: *mut OCSP_RESPONSE) -> *mut OCSP_BASICRESP;
@@ -1678,104 +2173,269 @@ extern {
     pub fn OCSP_REQUEST_new() -> *mut OCSP_REQUEST;
     pub fn OCSP_REQUEST_free(r: *mut OCSP_REQUEST);
     pub fn i2d_OCSP_REQUEST(a: *mut OCSP_REQUEST, pp: *mut *mut c_uchar) -> c_int;
-    pub fn d2i_OCSP_REQUEST(a: *mut *mut OCSP_REQUEST, pp: *mut *const c_uchar, length: c_long) -> *mut OCSP_REQUEST;
+    pub fn d2i_OCSP_REQUEST(
+        a: *mut *mut OCSP_REQUEST,
+        pp: *mut *const c_uchar,
+        length: c_long,
+    ) -> *mut OCSP_REQUEST;
     pub fn OCSP_request_add0_id(r: *mut OCSP_REQUEST, id: *mut OCSP_CERTID) -> *mut OCSP_ONEREQ;
 
     pub fn OCSP_ONEREQ_free(r: *mut OCSP_ONEREQ);
 
-    pub fn PEM_read_bio_DHparams(bio: *mut BIO, out: *mut *mut DH, callback: Option<PasswordCallback>,
-                             user_data: *mut c_void) -> *mut DH;
-    pub fn PEM_read_bio_X509(bio: *mut BIO, out: *mut *mut X509, callback: Option<PasswordCallback>,
-                             user_data: *mut c_void) -> *mut X509;
-    pub fn PEM_read_bio_X509_REQ(bio: *mut BIO, out: *mut *mut X509_REQ, callback: Option<PasswordCallback>,
-                             user_data: *mut c_void) -> *mut X509_REQ;
-    pub fn PEM_read_bio_PrivateKey(bio: *mut BIO, out: *mut *mut EVP_PKEY, callback: Option<PasswordCallback>,
-                             user_data: *mut c_void) -> *mut EVP_PKEY;
-    pub fn PEM_read_bio_PUBKEY(bio: *mut BIO, out: *mut *mut EVP_PKEY, callback: Option<PasswordCallback>,
-                             user_data: *mut c_void) -> *mut EVP_PKEY;
+    pub fn PEM_read_bio_DHparams(
+        bio: *mut BIO,
+        out: *mut *mut DH,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> *mut DH;
+    pub fn PEM_read_bio_X509(
+        bio: *mut BIO,
+        out: *mut *mut X509,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> *mut X509;
+    pub fn PEM_read_bio_X509_REQ(
+        bio: *mut BIO,
+        out: *mut *mut X509_REQ,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> *mut X509_REQ;
+    pub fn PEM_read_bio_PrivateKey(
+        bio: *mut BIO,
+        out: *mut *mut EVP_PKEY,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> *mut EVP_PKEY;
+    pub fn PEM_read_bio_PUBKEY(
+        bio: *mut BIO,
+        out: *mut *mut EVP_PKEY,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> *mut EVP_PKEY;
 
-    pub fn PEM_read_bio_RSAPrivateKey(bio: *mut BIO, rsa: *mut *mut RSA, callback: Option<PasswordCallback>, user_data: *mut c_void) -> *mut RSA;
-    pub fn PEM_read_bio_RSA_PUBKEY(bio:    *mut BIO, rsa: *mut *mut RSA, callback: Option<PasswordCallback>, user_data: *mut c_void) -> *mut RSA;
+    pub fn PEM_read_bio_RSAPrivateKey(
+        bio: *mut BIO,
+        rsa: *mut *mut RSA,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> *mut RSA;
+
+    pub fn PEM_read_bio_RSAPublicKey(
+        bio: *mut BIO,
+        rsa: *mut *mut RSA,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> *mut RSA;
+
+    pub fn PEM_read_bio_RSA_PUBKEY(
+        bio: *mut BIO,
+        rsa: *mut *mut RSA,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> *mut RSA;
 
     pub fn PEM_write_bio_DHparams(bio: *mut BIO, x: *const DH) -> c_int;
-    pub fn PEM_write_bio_PrivateKey(bio: *mut BIO, pkey: *mut EVP_PKEY, cipher: *const EVP_CIPHER,
-                                    kstr: *mut c_uchar, klen: c_int,
-                                    callback: Option<PasswordCallback>,
-                                    user_data: *mut c_void) -> c_int;
-    pub fn PEM_write_bio_PKCS8PrivateKey(bio: *mut BIO, pkey: *mut EVP_PKEY, cipher: *const EVP_CIPHER,
-                                        kstr: *mut c_char, klen: c_int,
-                                        callback: Option<PasswordCallback>,
-                                        user_data: *mut c_void) -> c_int;
+    pub fn PEM_write_bio_PrivateKey(
+        bio: *mut BIO,
+        pkey: *mut EVP_PKEY,
+        cipher: *const EVP_CIPHER,
+        kstr: *mut c_uchar,
+        klen: c_int,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> c_int;
+    pub fn PEM_write_bio_PKCS8PrivateKey(
+        bio: *mut BIO,
+        pkey: *mut EVP_PKEY,
+        cipher: *const EVP_CIPHER,
+        kstr: *mut c_char,
+        klen: c_int,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> c_int;
     pub fn PEM_write_bio_PUBKEY(bp: *mut BIO, x: *mut EVP_PKEY) -> c_int;
-    pub fn PEM_write_bio_RSAPrivateKey(bp: *mut BIO, rsa: *mut RSA, cipher: *const EVP_CIPHER,
-                                        kstr: *mut c_uchar, klen: c_int,
-                                        callback: Option<PasswordCallback>,
-                                        user_data: *mut c_void) -> c_int;
+    pub fn PEM_write_bio_RSAPrivateKey(
+        bp: *mut BIO,
+        rsa: *mut RSA,
+        cipher: *const EVP_CIPHER,
+        kstr: *mut c_uchar,
+        klen: c_int,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> c_int;
     pub fn PEM_write_bio_RSAPublicKey(bp: *mut BIO, rsa: *const RSA) -> c_int;
     pub fn PEM_write_bio_RSA_PUBKEY(bp: *mut BIO, rsa: *mut RSA) -> c_int;
 
-    pub fn PEM_read_bio_DSAPrivateKey(bp: *mut BIO, dsa: *mut *mut DSA, callback: Option<PasswordCallback>,
-                                      user_data: *mut c_void) -> *mut DSA;
-    pub fn PEM_read_bio_DSA_PUBKEY(bp: *mut BIO, dsa: *mut *mut DSA, callback: Option<PasswordCallback>,
-                                   user_data: *mut c_void) -> *mut DSA;
-    pub fn PEM_write_bio_DSAPrivateKey(bp: *mut BIO, dsa: *mut DSA, cipher: *const EVP_CIPHER,
-                                       kstr: *mut c_uchar, klen: c_int, callback: Option<PasswordCallback>,
-                                       user_data: *mut c_void) -> c_int;
+    pub fn PEM_read_bio_DSAPrivateKey(
+        bp: *mut BIO,
+        dsa: *mut *mut DSA,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> *mut DSA;
+    pub fn PEM_read_bio_DSA_PUBKEY(
+        bp: *mut BIO,
+        dsa: *mut *mut DSA,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> *mut DSA;
+    pub fn PEM_write_bio_DSAPrivateKey(
+        bp: *mut BIO,
+        dsa: *mut DSA,
+        cipher: *const EVP_CIPHER,
+        kstr: *mut c_uchar,
+        klen: c_int,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> c_int;
     pub fn PEM_write_bio_DSA_PUBKEY(bp: *mut BIO, dsa: *mut DSA) -> c_int;
 
     pub fn PEM_write_bio_X509(bio: *mut BIO, x509: *mut X509) -> c_int;
     pub fn PEM_write_bio_X509_REQ(bio: *mut BIO, x509: *mut X509_REQ) -> c_int;
 
-    pub fn PEM_write_bio_ECPrivateKey(bio: *mut BIO,
-                                      key: *mut EC_KEY,
-                                      cipher: *const EVP_CIPHER,
-                                      kstr: *mut c_uchar,
-                                      klen: c_int,
-                                      callback: Option<PasswordCallback>,
-                                      user_data: *mut c_void)
-                                      -> c_int;
-    pub fn PEM_read_bio_ECPrivateKey(bio: *mut BIO, key: *mut *mut EC_KEY, callback: Option<PasswordCallback>, user_data: *mut c_void) -> *mut EC_KEY;
+    pub fn PEM_write_bio_ECPrivateKey(
+        bio: *mut BIO,
+        key: *mut EC_KEY,
+        cipher: *const EVP_CIPHER,
+        kstr: *mut c_uchar,
+        klen: c_int,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> c_int;
+    pub fn PEM_read_bio_ECPrivateKey(
+        bio: *mut BIO,
+        key: *mut *mut EC_KEY,
+        callback: Option<PasswordCallback>,
+        user_data: *mut c_void,
+    ) -> *mut EC_KEY;
 
-    pub fn PKCS5_PBKDF2_HMAC_SHA1(pass: *const c_char, passlen: c_int,
-                                  salt: *const u8, saltlen: c_int,
-                                  iter: c_int, keylen: c_int,
-                                  out: *mut u8) -> c_int;
-    pub fn PKCS5_PBKDF2_HMAC(pass: *const c_char, passlen: c_int,
-                             salt: *const c_uchar, saltlen: c_int,
-                             iter: c_int, digest: *const EVP_MD, keylen: c_int,
-                             out: *mut u8) -> c_int;
+    pub fn PKCS5_PBKDF2_HMAC_SHA1(
+        pass: *const c_char,
+        passlen: c_int,
+        salt: *const u8,
+        saltlen: c_int,
+        iter: c_int,
+        keylen: c_int,
+        out: *mut u8,
+    ) -> c_int;
+    pub fn PKCS5_PBKDF2_HMAC(
+        pass: *const c_char,
+        passlen: c_int,
+        salt: *const c_uchar,
+        saltlen: c_int,
+        iter: c_int,
+        digest: *const EVP_MD,
+        keylen: c_int,
+        out: *mut u8,
+    ) -> c_int;
 
     pub fn RAND_bytes(buf: *mut u8, num: c_int) -> c_int;
     pub fn RAND_status() -> c_int;
 
     pub fn RSA_new() -> *mut RSA;
     pub fn RSA_free(rsa: *mut RSA);
-    pub fn RSA_generate_key_ex(rsa: *mut RSA, bits: c_int, e: *mut BIGNUM, cb: *mut BN_GENCB) -> c_int;
-    pub fn RSA_private_decrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA,
-                               pad: c_int) -> c_int;
-    pub fn RSA_public_decrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA,
-                               pad: c_int) -> c_int;
-    pub fn RSA_private_encrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA,
-                              pad: c_int) -> c_int;
-    pub fn RSA_public_encrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA,
-                              pad: c_int) -> c_int;
-    pub fn RSA_sign(t: c_int, m: *const u8, mlen: c_uint, sig: *mut u8, siglen: *mut c_uint,
-                    k: *mut RSA) -> c_int;
+    pub fn RSA_generate_key_ex(
+        rsa: *mut RSA,
+        bits: c_int,
+        e: *mut BIGNUM,
+        cb: *mut BN_GENCB,
+    ) -> c_int;
+    pub fn RSA_private_decrypt(
+        flen: c_int,
+        from: *const u8,
+        to: *mut u8,
+        k: *mut RSA,
+        pad: c_int,
+    ) -> c_int;
+    pub fn RSA_public_decrypt(
+        flen: c_int,
+        from: *const u8,
+        to: *mut u8,
+        k: *mut RSA,
+        pad: c_int,
+    ) -> c_int;
+    pub fn RSA_private_encrypt(
+        flen: c_int,
+        from: *const u8,
+        to: *mut u8,
+        k: *mut RSA,
+        pad: c_int,
+    ) -> c_int;
+    pub fn RSA_public_encrypt(
+        flen: c_int,
+        from: *const u8,
+        to: *mut u8,
+        k: *mut RSA,
+        pad: c_int,
+    ) -> c_int;
+    pub fn RSA_sign(
+        t: c_int,
+        m: *const u8,
+        mlen: c_uint,
+        sig: *mut u8,
+        siglen: *mut c_uint,
+        k: *mut RSA,
+    ) -> c_int;
     pub fn RSA_size(k: *const RSA) -> c_int;
-    pub fn RSA_verify(t: c_int, m: *const u8, mlen: c_uint, sig: *const u8, siglen: c_uint,
-                      k: *mut RSA) -> c_int;
+    pub fn RSA_verify(
+        t: c_int,
+        m: *const u8,
+        mlen: c_uint,
+        sig: *const u8,
+        siglen: c_uint,
+        k: *mut RSA,
+    ) -> c_int;
 
     pub fn DSA_new() -> *mut DSA;
     pub fn DSA_free(dsa: *mut DSA);
     pub fn DSA_size(dsa: *const DSA) -> c_int;
-    pub fn DSA_generate_parameters_ex(dsa: *mut DSA, bits: c_int, seed: *const c_uchar, seed_len: c_int,
-                                      counter_ref: *mut c_int, h_ret: *mut c_ulong,
-                                      cb: *mut BN_GENCB) -> c_int;
+    pub fn DSA_generate_parameters_ex(
+        dsa: *mut DSA,
+        bits: c_int,
+        seed: *const c_uchar,
+        seed_len: c_int,
+        counter_ref: *mut c_int,
+        h_ret: *mut c_ulong,
+        cb: *mut BN_GENCB,
+    ) -> c_int;
     pub fn DSA_generate_key(dsa: *mut DSA) -> c_int;
-    pub fn DSA_sign(dummy: c_int, dgst: *const c_uchar, len: c_int, sigret: *mut c_uchar,
-                    siglen: *mut c_uint, dsa: *mut DSA) -> c_int;
-    pub fn DSA_verify(dummy: c_int, dgst: *const c_uchar, len: c_int, sigbuf: *const c_uchar,
-                      siglen: c_int, dsa: *mut DSA) -> c_int;
+    pub fn DSA_sign(
+        dummy: c_int,
+        dgst: *const c_uchar,
+        len: c_int,
+        sigret: *mut c_uchar,
+        siglen: *mut c_uint,
+        dsa: *mut DSA,
+    ) -> c_int;
+    pub fn DSA_verify(
+        dummy: c_int,
+        dgst: *const c_uchar,
+        len: c_int,
+        sigbuf: *const c_uchar,
+        siglen: c_int,
+        dsa: *mut DSA,
+    ) -> c_int;
+
+    pub fn SHA1(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
+    pub fn SHA224(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
+    pub fn SHA256(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
+    pub fn SHA384(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
+    pub fn SHA512(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
+
+    pub fn SHA1_Init(c: *mut SHA_CTX) -> c_int;
+    pub fn SHA1_Update(c: *mut SHA_CTX, data: *const c_void, len: size_t) -> c_int;
+    pub fn SHA1_Final(md: *mut c_uchar, c: *mut SHA_CTX) -> c_int;
+    pub fn SHA256_Init(c: *mut SHA256_CTX) -> c_int;
+    pub fn SHA256_Update(c: *mut SHA256_CTX, data: *const c_void, len: size_t) -> c_int;
+    pub fn SHA256_Final(md: *mut c_uchar, c: *mut SHA256_CTX) -> c_int;
+    pub fn SHA224_Init(c: *mut SHA256_CTX) -> c_int;
+    pub fn SHA224_Update(c: *mut SHA256_CTX, data: *const c_void, len: size_t) -> c_int;
+    pub fn SHA224_Final(md: *mut c_uchar, c: *mut SHA256_CTX) -> c_int;
+    pub fn SHA384_Init(c: *mut SHA512_CTX) -> c_int;
+    pub fn SHA384_Update(c: *mut SHA512_CTX, data: *const c_void, len: size_t) -> c_int;
+    pub fn SHA384_Final(md: *mut c_uchar, c: *mut SHA512_CTX) -> c_int;
+    pub fn SHA512_Init(c: *mut SHA512_CTX) -> c_int;
+    pub fn SHA512_Update(c: *mut SHA512_CTX, data: *const c_void, len: size_t) -> c_int;
+    pub fn SHA512_Final(md: *mut c_uchar, c: *mut SHA512_CTX) -> c_int;
 
     pub fn SSL_new(ctx: *mut SSL_CTX) -> *mut SSL;
     pub fn SSL_pending(ssl: *const SSL) -> c_int;
@@ -1786,8 +2446,7 @@ extern {
     pub fn SSL_accept(ssl: *mut SSL) -> c_int;
     pub fn SSL_connect(ssl: *mut SSL) -> c_int;
     pub fn SSL_do_handshake(ssl: *mut SSL) -> c_int;
-    pub fn SSL_ctrl(ssl: *mut SSL, cmd: c_int, larg: c_long,
-                    parg: *mut c_void) -> c_long;
+    pub fn SSL_ctrl(ssl: *mut SSL, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
     pub fn SSL_get_error(ssl: *const SSL, ret: c_int) -> c_int;
     pub fn SSL_read(ssl: *mut SSL, buf: *mut c_void, num: c_int) -> c_int;
     pub fn SSL_write(ssl: *mut SSL, buf: *const c_void, num: c_int) -> c_int;
@@ -1799,13 +2458,17 @@ extern {
     #[cfg(libressl)]
     pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const libc::c_void;
     pub fn SSL_get_peer_certificate(ssl: *const SSL) -> *mut X509;
+    pub fn SSL_get_peer_cert_chain(ssl: *const SSL) -> *mut stack_st_X509;
     pub fn SSL_get_ssl_method(ssl: *mut SSL) -> *const SSL_METHOD;
     pub fn SSL_get_version(ssl: *const SSL) -> *const c_char;
+    pub fn SSL_version(ssl: *const SSL) -> c_int;
     pub fn SSL_state_string(ssl: *const SSL) -> *const c_char;
     pub fn SSL_state_string_long(ssl: *const SSL) -> *const c_char;
-    pub fn SSL_set_verify(ssl: *mut SSL,
-                          mode: c_int,
-                          verify_callback: Option<extern fn(c_int, *mut X509_STORE_CTX) -> c_int>);
+    pub fn SSL_set_verify(
+        ssl: *mut SSL,
+        mode: c_int,
+        verify_callback: Option<extern "C" fn(c_int, *mut X509_STORE_CTX) -> c_int>,
+    );
     pub fn SSL_set_ex_data(ssl: *mut SSL, idx: c_int, data: *mut c_void) -> c_int;
     pub fn SSL_get_ex_data(ssl: *const SSL, idx: c_int) -> *mut c_void;
     pub fn SSL_get_servername(ssl: *const SSL, name_type: c_int) -> *const c_char;
@@ -1820,11 +2483,20 @@ extern {
     #[cfg(not(any(ossl101, libressl)))]
     pub fn SSL_get_privatekey(ssl: *const SSL) -> *mut EVP_PKEY;
     pub fn SSL_load_client_CA_file(file: *const c_char) -> *mut stack_st_X509_NAME;
-    pub fn SSL_set_tmp_dh_callback(ctx: *mut SSL,
-                                   dh: unsafe extern fn(ssl: *mut SSL,
-                                                        is_export: c_int,
-                                                        keylength: c_int)
-                                                        -> *mut DH);
+    pub fn SSL_set_tmp_dh_callback(
+        ctx: *mut SSL,
+        dh: unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut DH,
+    );
+    pub fn SSL_export_keying_material(
+        s: *mut SSL,
+        out: *mut c_uchar,
+        olen: size_t,
+        label: *const c_char,
+        llen: size_t,
+        context: *const c_uchar,
+        contextlen: size_t,
+        use_context: c_int,
+    ) -> c_int;
 
     #[cfg(not(any(osslconf = "OPENSSL_NO_COMP", libressl)))]
     pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
@@ -1833,37 +2505,73 @@ extern {
 
     pub fn SSL_CIPHER_get_name(cipher: *const SSL_CIPHER) -> *const c_char;
     pub fn SSL_CIPHER_get_bits(cipher: *const SSL_CIPHER, alg_bits: *mut c_int) -> c_int;
-    pub fn SSL_CIPHER_description(cipher: *const SSL_CIPHER, buf: *mut c_char, size: c_int) -> *mut c_char;
+    pub fn SSL_CIPHER_description(
+        cipher: *const SSL_CIPHER,
+        buf: *mut c_char,
+        size: c_int,
+    ) -> *mut c_char;
 
     pub fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
     pub fn SSL_CTX_free(ctx: *mut SSL_CTX);
     pub fn SSL_CTX_ctrl(ctx: *mut SSL_CTX, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
-    pub fn SSL_CTX_callback_ctrl(ctx: *mut SSL_CTX, cmd: c_int, fp: Option<extern fn()>) -> c_long;
-    pub fn SSL_CTX_set_verify(ctx: *mut SSL_CTX, mode: c_int,
-                              verify_callback: Option<extern fn(c_int, *mut X509_STORE_CTX) -> c_int>);
+    pub fn SSL_CTX_callback_ctrl(
+        ctx: *mut SSL_CTX,
+        cmd: c_int,
+        fp: Option<extern "C" fn()>,
+    ) -> c_long;
+    pub fn SSL_CTX_set_verify(
+        ctx: *mut SSL_CTX,
+        mode: c_int,
+        verify_callback: Option<extern "C" fn(c_int, *mut X509_STORE_CTX) -> c_int>,
+    );
     pub fn SSL_CTX_set_verify_depth(ctx: *mut SSL_CTX, depth: c_int);
-    pub fn SSL_CTX_load_verify_locations(ctx: *mut SSL_CTX, CAfile: *const c_char,
-                                         CApath: *const c_char) -> c_int;
+    pub fn SSL_CTX_load_verify_locations(
+        ctx: *mut SSL_CTX,
+        CAfile: *const c_char,
+        CApath: *const c_char,
+    ) -> c_int;
     pub fn SSL_CTX_set_default_verify_paths(ctx: *mut SSL_CTX) -> c_int;
-    pub fn SSL_CTX_set_ex_data(ctx: *mut SSL_CTX, idx: c_int, data: *mut c_void)
-                               -> c_int;
+    pub fn SSL_CTX_set_ex_data(ctx: *mut SSL_CTX, idx: c_int, data: *mut c_void) -> c_int;
     pub fn SSL_CTX_get_ex_data(ctx: *const SSL_CTX, idx: c_int) -> *mut c_void;
-    pub fn SSL_CTX_set_session_id_context(ssl: *mut SSL_CTX, sid_ctx: *const c_uchar, sid_ctx_len: c_uint) -> c_int;
+    pub fn SSL_CTX_set_session_id_context(
+        ssl: *mut SSL_CTX,
+        sid_ctx: *const c_uchar,
+        sid_ctx_len: c_uint,
+    ) -> c_int;
 
-    pub fn SSL_CTX_use_certificate_file(ctx: *mut SSL_CTX, cert_file: *const c_char, file_type: c_int) -> c_int;
-    pub fn SSL_CTX_use_certificate_chain_file(ctx: *mut SSL_CTX, cert_chain_file: *const c_char) -> c_int;
+    pub fn SSL_CTX_use_certificate_file(
+        ctx: *mut SSL_CTX,
+        cert_file: *const c_char,
+        file_type: c_int,
+    ) -> c_int;
+    pub fn SSL_CTX_use_certificate_chain_file(
+        ctx: *mut SSL_CTX,
+        cert_chain_file: *const c_char,
+    ) -> c_int;
     pub fn SSL_CTX_use_certificate(ctx: *mut SSL_CTX, cert: *mut X509) -> c_int;
 
-    pub fn SSL_CTX_use_PrivateKey_file(ctx: *mut SSL_CTX, key_file: *const c_char, file_type: c_int) -> c_int;
+    pub fn SSL_CTX_use_PrivateKey_file(
+        ctx: *mut SSL_CTX,
+        key_file: *const c_char,
+        file_type: c_int,
+    ) -> c_int;
     pub fn SSL_CTX_use_PrivateKey(ctx: *mut SSL_CTX, key: *mut EVP_PKEY) -> c_int;
     pub fn SSL_CTX_check_private_key(ctx: *const SSL_CTX) -> c_int;
     pub fn SSL_CTX_set_client_CA_list(ctx: *mut SSL_CTX, list: *mut stack_st_X509_NAME);
     pub fn SSL_CTX_get_cert_store(ctx: *const SSL_CTX) -> *mut X509_STORE;
-    pub fn SSL_CTX_set_tmp_dh_callback(ctx: *mut SSL_CTX,
-                                       dh: unsafe extern fn(ssl: *mut SSL,
-                                                            is_export: c_int,
-                                                            keylength: c_int)
-                                                            -> *mut DH);
+    // FIXME should take an option
+    pub fn SSL_CTX_set_tmp_dh_callback(
+        ctx: *mut SSL_CTX,
+        dh: unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut DH,
+    );
+    pub fn SSL_CTX_sess_set_new_cb(
+        ctx: *mut SSL_CTX,
+        new_session_cb: Option<unsafe extern "C" fn(*mut SSL, *mut SSL_SESSION) -> c_int>,
+    );
+    pub fn SSL_CTX_sess_set_remove_cb(
+        ctx: *mut SSL_CTX,
+        remove_session_cb: Option<unsafe extern "C" fn(*mut SSL_CTX, *mut SSL_SESSION)>,
+    );
 
     #[cfg(not(any(ossl101, libressl)))]
     pub fn SSL_CTX_get0_certificate(ctx: *const SSL_CTX) -> *mut X509;
@@ -1872,27 +2580,56 @@ extern {
 
     pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;
 
-    pub fn SSL_CTX_set_next_protos_advertised_cb(ssl: *mut SSL_CTX,
-                                                 cb: extern "C" fn(ssl: *mut SSL,
-                                                                   out: *mut *const c_uchar,
-                                                                   outlen: *mut c_uint,
-                                                                   arg: *mut c_void) -> c_int,
-                                                 arg: *mut c_void);
-    pub fn SSL_CTX_set_next_proto_select_cb(ssl: *mut SSL_CTX,
-                                            cb: extern "C" fn(ssl: *mut SSL,
-                                                              out: *mut *mut c_uchar,
-                                                              outlen: *mut c_uchar,
-                                                              inbuf: *const c_uchar,
-                                                              inlen: c_uint,
-                                                              arg: *mut c_void) -> c_int,
-                                            arg: *mut c_void);
-    pub fn SSL_select_next_proto(out: *mut *mut c_uchar, outlen: *mut c_uchar,
-                                 inbuf: *const c_uchar, inlen: c_uint,
-                                 client: *const c_uchar, client_len: c_uint) -> c_int;
-    pub fn SSL_get0_next_proto_negotiated(s: *const SSL, data: *mut *const c_uchar, len: *mut c_uint);
+    pub fn SSL_CTX_set_next_protos_advertised_cb(
+        ssl: *mut SSL_CTX,
+        cb: extern "C" fn(
+            ssl: *mut SSL,
+            out: *mut *const c_uchar,
+            outlen: *mut c_uint,
+            arg: *mut c_void,
+        ) -> c_int,
+        arg: *mut c_void,
+    );
+    pub fn SSL_CTX_set_next_proto_select_cb(
+        ssl: *mut SSL_CTX,
+        cb: extern "C" fn(
+            ssl: *mut SSL,
+            out: *mut *mut c_uchar,
+            outlen: *mut c_uchar,
+            inbuf: *const c_uchar,
+            inlen: c_uint,
+            arg: *mut c_void,
+        ) -> c_int,
+        arg: *mut c_void,
+    );
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+    pub fn SSL_CTX_set_psk_client_callback(
+        ssl: *mut SSL_CTX,
+        psk_client_cb: Option<
+            extern "C" fn(*mut SSL, *const c_char, *mut c_char, c_uint, *mut c_uchar, c_uint)
+                -> c_uint,
+        >,
+    );
+
+    pub fn SSL_select_next_proto(
+        out: *mut *mut c_uchar,
+        outlen: *mut c_uchar,
+        inbuf: *const c_uchar,
+        inlen: c_uint,
+        client: *const c_uchar,
+        client_len: c_uint,
+    ) -> c_int;
+    pub fn SSL_get0_next_proto_negotiated(
+        s: *const SSL,
+        data: *mut *const c_uchar,
+        len: *mut c_uint,
+    );
     pub fn SSL_get_session(s: *const SSL) -> *mut SSL_SESSION;
-    #[cfg(not(any(ossl101, libressl)))]
+    pub fn SSL_set_session(ssl: *mut SSL, session: *mut SSL_SESSION) -> c_int;
+    #[cfg(not(any(ossl101, libressl, ossl110f, ossl111)))]
     pub fn SSL_is_server(s: *mut SSL) -> c_int;
+    #[cfg(any(ossl110f, ossl111))]
+    pub fn SSL_is_server(s: *const SSL) -> c_int;
 
     pub fn SSL_SESSION_free(s: *mut SSL_SESSION);
     pub fn SSL_SESSION_get_id(s: *const SSL_SESSION, len: *mut c_uint) -> *const c_uchar;
@@ -1903,20 +2640,30 @@ extern {
     #[cfg(not(ossl101))]
     pub fn SSL_set_alpn_protos(s: *mut SSL, data: *const c_uchar, len: c_uint) -> c_int;
 
+    // FIXME should take an Option<unsafe extern "C" fn>
     #[cfg(not(ossl101))]
-    pub fn SSL_CTX_set_alpn_select_cb(ssl: *mut SSL_CTX,
-                                      cb: extern fn(ssl: *mut SSL,
-                                                    out: *mut *const c_uchar,
-                                                    outlen: *mut c_uchar,
-                                                    inbuf: *const c_uchar,
-                                                    inlen: c_uint,
-                                                    arg: *mut c_void) -> c_int,
-                                      arg: *mut c_void);
+    pub fn SSL_CTX_set_alpn_select_cb(
+        ssl: *mut SSL_CTX,
+        cb: extern "C" fn(
+            ssl: *mut SSL,
+            out: *mut *const c_uchar,
+            outlen: *mut c_uchar,
+            inbuf: *const c_uchar,
+            inlen: c_uint,
+            arg: *mut c_void,
+        ) -> c_int,
+        arg: *mut c_void,
+    );
     #[cfg(not(ossl101))]
     pub fn SSL_get0_alpn_selected(s: *const SSL, data: *mut *const c_uchar, len: *mut c_uint);
 
     pub fn X509_add_ext(x: *mut X509, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
-    pub fn X509_digest(x: *const X509, digest: *const EVP_MD, buf: *mut c_uchar, len: *mut c_uint) -> c_int;
+    pub fn X509_digest(
+        x: *const X509,
+        digest: *const EVP_MD,
+        buf: *mut c_uchar,
+        len: *mut c_uint,
+    ) -> c_int;
     pub fn X509_free(x: *mut X509);
     pub fn X509_REQ_free(x: *mut X509_REQ);
     pub fn X509_get_serialNumber(x: *mut X509) -> *mut ASN1_INTEGER;
@@ -1930,6 +2677,7 @@ extern {
     pub fn X509_sign(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
     pub fn X509_get_pubkey(x: *mut X509) -> *mut EVP_PKEY;
     pub fn X509_to_X509_REQ(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> *mut X509_REQ;
+    pub fn X509_verify_cert(ctx: *mut X509_STORE_CTX) -> c_int;
     pub fn X509_verify_cert_error_string(n: c_long) -> *const c_char;
     pub fn X509_get1_ocsp(x: *mut X509) -> *mut stack_st_OPENSSL_STRING;
     pub fn X509_check_issued(issuer: *mut X509, subject: *mut X509) -> c_int;
@@ -1940,7 +2688,15 @@ extern {
 
     pub fn X509_NAME_new() -> *mut X509_NAME;
     pub fn X509_NAME_free(x: *mut X509_NAME);
-    pub fn X509_NAME_add_entry_by_txt(x: *mut X509_NAME, field: *const c_char, ty: c_int, bytes: *const c_uchar, len: c_int, loc: c_int, set: c_int) -> c_int;
+    pub fn X509_NAME_add_entry_by_txt(
+        x: *mut X509_NAME,
+        field: *const c_char,
+        ty: c_int,
+        bytes: *const c_uchar,
+        len: c_int,
+        loc: c_int,
+        set: c_int,
+    ) -> c_int;
     pub fn X509_NAME_get_index_by_NID(n: *mut X509_NAME, nid: c_int, last_pos: c_int) -> c_int;
 
     pub fn X509_NAME_ENTRY_free(x: *mut X509_NAME_ENTRY);
@@ -1955,20 +2711,37 @@ extern {
     pub fn X509_STORE_add_cert(store: *mut X509_STORE, x: *mut X509) -> c_int;
     pub fn X509_STORE_set_default_paths(store: *mut X509_STORE) -> c_int;
 
+    pub fn X509_STORE_CTX_new() -> *mut X509_STORE_CTX;
+    pub fn X509_STORE_CTX_cleanup(ctx: *mut X509_STORE_CTX);
+    pub fn X509_STORE_CTX_init(
+        ctx: *mut X509_STORE_CTX,
+        store: *mut X509_STORE,
+        x509: *mut X509,
+        chain: *mut stack_st_X509,
+    ) -> c_int;
     pub fn X509_STORE_CTX_free(ctx: *mut X509_STORE_CTX);
     pub fn X509_STORE_CTX_get_current_cert(ctx: *mut X509_STORE_CTX) -> *mut X509;
     pub fn X509_STORE_CTX_get_error(ctx: *mut X509_STORE_CTX) -> c_int;
+    pub fn X509_STORE_CTX_set_error(ctx: *mut X509_STORE_CTX, error: c_int);
     pub fn X509_STORE_CTX_get_ex_data(ctx: *mut X509_STORE_CTX, idx: c_int) -> *mut c_void;
     pub fn X509_STORE_CTX_get_error_depth(ctx: *mut X509_STORE_CTX) -> c_int;
 
-    pub fn X509V3_set_ctx(ctx: *mut X509V3_CTX, issuer: *mut X509, subject: *mut X509, req: *mut X509_REQ, crl: *mut X509_CRL, flags: c_int);
+    pub fn X509V3_set_ctx(
+        ctx: *mut X509V3_CTX,
+        issuer: *mut X509,
+        subject: *mut X509,
+        req: *mut X509_REQ,
+        crl: *mut X509_CRL,
+        flags: c_int,
+    );
     pub fn X509V3_set_nconf(ctx: *mut X509V3_CTX, conf: *mut CONF);
 
     pub fn X509_REQ_new() -> *mut X509_REQ;
     pub fn X509_REQ_set_version(req: *mut X509_REQ, version: c_long) -> c_int;
     pub fn X509_REQ_set_subject_name(req: *mut X509_REQ, name: *mut X509_NAME) -> c_int;
     pub fn X509_REQ_set_pubkey(req: *mut X509_REQ, pkey: *mut EVP_PKEY) -> c_int;
-    pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: *mut stack_st_X509_EXTENSION) -> c_int;
+    pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: *mut stack_st_X509_EXTENSION)
+        -> c_int;
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
 
     #[cfg(not(ossl101))]
@@ -1976,28 +2749,53 @@ extern {
     #[cfg(not(any(ossl101, libressl)))]
     pub fn X509_VERIFY_PARAM_set_hostflags(param: *mut X509_VERIFY_PARAM, flags: c_uint);
     #[cfg(not(any(ossl101, libressl)))]
-    pub fn X509_VERIFY_PARAM_set1_host(param: *mut X509_VERIFY_PARAM,
-                                       name: *const c_char,
-                                       namelen: size_t) -> c_int;
+    pub fn X509_VERIFY_PARAM_set1_host(
+        param: *mut X509_VERIFY_PARAM,
+        name: *const c_char,
+        namelen: size_t,
+    ) -> c_int;
+    #[cfg(not(any(ossl101, libressl)))]
+    pub fn X509_VERIFY_PARAM_set1_ip(
+        param: *mut X509_VERIFY_PARAM,
+        ip: *const c_uchar,
+        iplen: size_t,
+    ) -> c_int;
 
     pub fn d2i_DHparams(k: *mut *mut DH, pp: *mut *const c_uchar, length: c_long) -> *mut DH;
     pub fn i2d_DHparams(dh: *const DH, pp: *mut *mut c_uchar) -> c_int;
 
     pub fn d2i_DSAPublicKey(a: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long) -> *mut DSA;
     pub fn i2d_DSAPublicKey(a: *const DSA, pp: *mut *mut c_uchar) -> c_int;
-    pub fn d2i_DSAPrivateKey(a: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long) -> *mut DSA;
+    pub fn d2i_DSAPrivateKey(a: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long)
+        -> *mut DSA;
     pub fn i2d_DSAPrivateKey(a: *const DSA, pp: *mut *mut c_uchar) -> c_int;
+    pub fn d2i_DSA_PUBKEY(k: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long) -> *mut DSA;
+    pub fn i2d_DSA_PUBKEY(a: *mut DSA, pp: *mut *mut c_uchar) -> c_int;
 
-    pub fn d2i_ECPrivateKey(k: *mut *mut EC_KEY, pp: *mut *const c_uchar, length: c_long) -> *mut EC_KEY;
+    pub fn d2i_ECPrivateKey(
+        k: *mut *mut EC_KEY,
+        pp: *mut *const c_uchar,
+        length: c_long,
+    ) -> *mut EC_KEY;
     pub fn i2d_ECPrivateKey(ec_key: *mut EC_KEY, pp: *mut *mut c_uchar) -> c_int;
 
     pub fn d2i_X509(a: *mut *mut X509, pp: *mut *const c_uchar, length: c_long) -> *mut X509;
-    pub fn d2i_X509_REQ(a: *mut *mut X509_REQ, pp: *mut *const c_uchar, length: c_long) -> *mut X509_REQ;
+    pub fn d2i_X509_REQ(
+        a: *mut *mut X509_REQ,
+        pp: *mut *const c_uchar,
+        length: c_long,
+    ) -> *mut X509_REQ;
     pub fn i2d_X509_bio(b: *mut BIO, x: *mut X509) -> c_int;
     pub fn i2d_X509(x: *mut X509, buf: *mut *mut u8) -> c_int;
     pub fn i2d_X509_REQ_bio(b: *mut BIO, x: *mut X509_REQ) -> c_int;
     pub fn i2d_X509_REQ(x: *mut X509_REQ, buf: *mut *mut u8) -> c_int;
 
+    pub fn d2i_AutoPrivateKey(
+        a: *mut *mut EVP_PKEY,
+        pp: *mut *const c_uchar,
+        length: c_long,
+    ) -> *mut EVP_PKEY;
+    pub fn d2i_PUBKEY(k: *mut *mut EVP_PKEY, buf: *mut *const u8, len: c_long) -> *mut EVP_PKEY;
     pub fn i2d_PUBKEY_bio(b: *mut BIO, x: *mut EVP_PKEY) -> c_int;
     pub fn i2d_PrivateKey_bio(b: *mut BIO, x: *mut EVP_PKEY) -> c_int;
     pub fn i2d_PUBKEY(k: *mut EVP_PKEY, buf: *mut *mut u8) -> c_int;
@@ -2005,31 +2803,75 @@ extern {
 
     pub fn i2d_RSA_PUBKEY(k: *mut RSA, buf: *mut *mut u8) -> c_int;
     pub fn d2i_RSA_PUBKEY(k: *mut *mut RSA, buf: *mut *const u8, len: c_long) -> *mut RSA;
+    pub fn i2d_RSAPublicKey(k: *const RSA, buf: *mut *mut u8) -> c_int;
+    pub fn d2i_RSAPublicKey(k: *mut *mut RSA, buf: *mut *const u8, len: c_long) -> *mut RSA;
     pub fn i2d_RSAPrivateKey(k: *const RSA, buf: *mut *mut u8) -> c_int;
     pub fn d2i_RSAPrivateKey(k: *mut *mut RSA, buf: *mut *const u8, len: c_long) -> *mut RSA;
 
     pub fn i2d_PKCS12_bio(b: *mut BIO, a: *mut PKCS12) -> c_int;
     pub fn i2d_PKCS12(a: *mut PKCS12, buf: *mut *mut u8) -> c_int;
     pub fn d2i_PKCS12(a: *mut *mut PKCS12, pp: *mut *const u8, length: c_long) -> *mut PKCS12;
-    pub fn PKCS12_parse(p12: *mut PKCS12,
-                        pass: *const c_char,
-                        pkey: *mut *mut EVP_PKEY,
-                        cert: *mut *mut X509,
-                        ca: *mut *mut stack_st_X509)
-                        -> c_int;
+    pub fn PKCS12_parse(
+        p12: *mut PKCS12,
+        pass: *const c_char,
+        pkey: *mut *mut EVP_PKEY,
+        cert: *mut *mut X509,
+        ca: *mut *mut stack_st_X509,
+    ) -> c_int;
     pub fn PKCS12_free(p12: *mut PKCS12);
 
     pub fn GENERAL_NAME_free(name: *mut GENERAL_NAME);
 
-    pub fn HMAC_Init_ex(ctx: *mut HMAC_CTX,
-                        key: *const c_void,
-                        len: c_int,
-                        md: *const EVP_MD,
-                        impl_: *mut ENGINE) -> c_int;
-    pub fn HMAC_Update(ctx: *mut HMAC_CTX,
-                       data: *const c_uchar,
-                       len: size_t) -> c_int;
-    pub fn HMAC_Final(ctx: *mut HMAC_CTX,
-                      md: *mut c_uchar,
-                      len: *mut c_uint) -> c_int;
+    pub fn HMAC_Init_ex(
+        ctx: *mut HMAC_CTX,
+        key: *const c_void,
+        len: c_int,
+        md: *const EVP_MD,
+        impl_: *mut ENGINE,
+    ) -> c_int;
+    pub fn HMAC_Update(ctx: *mut HMAC_CTX, data: *const c_uchar, len: size_t) -> c_int;
+    pub fn HMAC_Final(ctx: *mut HMAC_CTX, md: *mut c_uchar, len: *mut c_uint) -> c_int;
+
+    #[cfg(not(libressl))]
+    pub fn CMS_decrypt(
+        cms: *mut CMS_ContentInfo,
+        pkey: *mut EVP_PKEY,
+        cert: *mut X509,
+        dcont: *mut BIO,
+        out: *mut BIO,
+        flags: c_uint,
+    ) -> c_int;
+    #[cfg(not(libressl))]
+    pub fn SMIME_read_CMS(bio: *mut BIO, bcont: *mut *mut BIO) -> *mut CMS_ContentInfo;
+    #[cfg(not(libressl))]
+    pub fn CMS_ContentInfo_free(cms: *mut CMS_ContentInfo);
+
+    #[cfg(not(libressl))]
+    pub fn FIPS_mode_set(onoff: c_int) -> c_int;
+    #[cfg(not(libressl))]
+    pub fn FIPS_mode() -> c_int;
+
+    pub fn SSL_CTX_set_cookie_generate_cb(
+        s: *mut SSL_CTX,
+        cb: Option<
+            extern "C" fn(ssl: *mut SSL, cookie: *mut c_uchar, cookie_len: *mut c_uint) -> c_int,
+        >,
+    );
+
+    #[cfg(ossl110)]
+    pub fn SSL_CTX_set_cookie_verify_cb(
+        s: *mut SSL_CTX,
+        cb: Option<
+            extern "C" fn(ssl: *mut SSL, cookie: *const c_uchar, cookie_len: c_uint) -> c_int,
+        >,
+    );
+
+    #[cfg(not(ossl110))]
+    pub fn SSL_CTX_set_cookie_verify_cb(
+        s: *mut SSL_CTX,
+        cb: Option<extern "C" fn(ssl: *mut SSL, cookie: *mut c_uchar, cookie_len: c_uint) -> c_int>,
+    );
+
+    pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
+    pub fn EVP_get_cipherbyname(name: *const c_char) -> *const EVP_CIPHER;
 }

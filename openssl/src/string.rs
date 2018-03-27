@@ -1,5 +1,5 @@
 use ffi;
-use foreign_types::{ForeignType, ForeignTypeRef};
+use foreign_types::ForeignTypeRef;
 use libc::{c_char, c_void};
 use std::fmt;
 use std::ffi::CStr;
@@ -8,24 +8,12 @@ use std::str;
 
 use stack::Stackable;
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = c_char;
     fn drop = free;
 
     pub struct OpensslString;
     pub struct OpensslStringRef;
-}
-
-impl OpensslString {
-    #[deprecated(note = "use from_ptr", since = "0.9.7")]
-    pub unsafe fn from_raw_parts(buf: *mut u8, _: usize) -> OpensslString {
-        OpensslString::from_ptr(buf as *mut c_char)
-    }
-
-    #[deprecated(note = "use from_ptr", since = "0.9.7")]
-    pub unsafe fn from_null_terminated(buf: *mut c_char) -> OpensslString {
-        OpensslString::from_ptr(buf)
-    }
 }
 
 impl fmt::Display for OpensslString {
@@ -74,7 +62,9 @@ unsafe fn free(buf: *mut c_char) {
 
 #[cfg(ossl110)]
 unsafe fn free(buf: *mut c_char) {
-    ::ffi::CRYPTO_free(buf as *mut c_void,
-                       concat!(file!(), "\0").as_ptr() as *const c_char,
-                       line!() as ::libc::c_int);
+    ::ffi::CRYPTO_free(
+        buf as *mut c_void,
+        concat!(file!(), "\0").as_ptr() as *const c_char,
+        line!() as ::libc::c_int,
+    );
 }

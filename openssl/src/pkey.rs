@@ -1,65 +1,218 @@
-use libc::{c_void, c_char, c_int};
+//! Public/private key processing.
+//!
+//! Asymmetric public key algorithms solve the problem of establishing and sharing
+//! secret keys to securely send and receive messages.
+//! This system uses a pair of keys: a public key, which can be freely
+//! distributed, and a private key, which is kept to oneself. An entity may
+//! encrypt information using a user's public key. The encrypted information can
+//! only be deciphered using that user's private key.
+//!
+//! This module offers support for five popular algorithms:
+//!
+//! * RSA
+//!
+//! * DSA
+//!
+//! * Diffie-Hellman
+//!
+//! * Elliptic Curves
+//!
+//! * HMAC
+//!
+//! These algorithms rely on hard mathematical problems - namely integer factorization,
+//! discrete logarithms, and elliptic curve relationships - that currently do not
+//! yield efficient solutions. This property ensures the security of these
+//! cryptographic algorithms.
+//!
+//! # Example
+//!
+//! Generate a 2048-bit RSA public/private key pair and print the public key.
+//!
+//! ```rust
+//!
+//! extern crate openssl;
+//!
+//! use openssl::rsa::Rsa;
+//! use openssl::pkey::PKey;
+//! use std::str;
+//!
+//! fn main() {
+//!     let rsa = Rsa::generate(2048).unwrap();
+//!     let pkey = PKey::from_rsa(rsa).unwrap();
+//!
+//!     let pub_key: Vec<u8> = pkey.public_key_to_pem().unwrap();
+//!     println!("{:?}", str::from_utf8(pub_key.as_slice()).unwrap());
+//! }
+//! ```
+
+use libc::c_int;
 use std::ptr;
 use std::mem;
 use std::ffi::CString;
 use ffi;
-use foreign_types::{Opaque, ForeignType, ForeignTypeRef};
+use foreign_types::{ForeignType, ForeignTypeRef};
 
 use {cvt, cvt_p};
 use bio::MemBioSlice;
 use dh::Dh;
 use dsa::Dsa;
 use ec::EcKey;
-use rsa::{Rsa, Padding};
+use rsa::Rsa;
 use error::ErrorStack;
-use util::{CallbackState, invoke_passwd_cb, invoke_passwd_cb_old};
+use util::{invoke_passwd_cb, CallbackState};
 
-foreign_type! {
+/// A tag type indicating that a key only has parameters.
+pub enum Params {}
+
+/// A tag type indicating that a key only has public components.
+pub enum Public {}
+
+/// A tag type indicating that a key has private components.
+pub enum Private {}
+
+/// An identifier of a kind of key.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct Id(c_int);
+
+impl Id {
+    /// Creates a `Id` from an integer representation.
+    pub fn from_raw(value: c_int) -> Id {
+        Id(value)
+    }
+
+    /// Returns the integer representation of the `Id`.
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
+
+    pub const RSA: Id = Id(ffi::EVP_PKEY_RSA);
+    pub const HMAC: Id = Id(ffi::EVP_PKEY_HMAC);
+    pub const DSA: Id = Id(ffi::EVP_PKEY_DSA);
+    pub const DH: Id = Id(ffi::EVP_PKEY_DH);
+    pub const EC: Id = Id(ffi::EVP_PKEY_EC);
+}
+
+/// A trait indicating that a key has parameters.
+pub unsafe trait HasParams {}
+
+unsafe impl HasParams for Params {}
+
+unsafe impl<T> HasParams for T
+where
+    T: HasPublic,
+{
+}
+
+/// A trait indicating that a key has public components.
+pub unsafe trait HasPublic {}
+
+unsafe impl HasPublic for Public {}
+
+unsafe impl<T> HasPublic for T
+where
+    T: HasPrivate,
+{
+}
+
+/// A trait indicating that a key has private components.
+pub unsafe trait HasPrivate {}
+
+unsafe impl HasPrivate for Private {}
+
+generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::EVP_PKEY;
     fn drop = ffi::EVP_PKEY_free;
 
-    pub struct PKey;
-    pub struct PKeyRef;
+    /// A public or private key.
+    pub struct PKey<T>;
+    /// Reference to `PKey`.
+    pub struct PKeyRef<T>;
 }
 
-impl PKeyRef {
+impl<T> PKeyRef<T> {
     /// Returns a copy of the internal RSA key.
-    pub fn rsa(&self) -> Result<Rsa, ErrorStack> {
+    ///
+    /// This corresponds to [`EVP_PKEY_get1_RSA`].
+    ///
+    /// [`EVP_PKEY_get1_RSA`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_get1_RSA.html
+    pub fn rsa(&self) -> Result<Rsa<T>, ErrorStack> {
         unsafe {
-            let rsa = try!(cvt_p(ffi::EVP_PKEY_get1_RSA(self.as_ptr())));
+            let rsa = cvt_p(ffi::EVP_PKEY_get1_RSA(self.as_ptr()))?;
             Ok(Rsa::from_ptr(rsa))
         }
     }
 
     /// Returns a copy of the internal DSA key.
-    pub fn dsa(&self) -> Result<Dsa, ErrorStack> {
+    ///
+    /// This corresponds to [`EVP_PKEY_get1_DSA`].
+    ///
+    /// [`EVP_PKEY_get1_DSA`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_get1_DSA.html
+    pub fn dsa(&self) -> Result<Dsa<T>, ErrorStack> {
         unsafe {
-            let dsa = try!(cvt_p(ffi::EVP_PKEY_get1_DSA(self.as_ptr())));
+            let dsa = cvt_p(ffi::EVP_PKEY_get1_DSA(self.as_ptr()))?;
             Ok(Dsa::from_ptr(dsa))
         }
     }
 
     /// Returns a copy of the internal DH key.
-    pub fn dh(&self) -> Result<Dh, ErrorStack> {
+    ///
+    /// This corresponds to [`EVP_PKEY_get1_DH`].
+    ///
+    /// [`EVP_PKEY_get1_DH`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_get1_DH.html
+    pub fn dh(&self) -> Result<Dh<T>, ErrorStack> {
         unsafe {
-            let dh = try!(cvt_p(ffi::EVP_PKEY_get1_DH(self.as_ptr())));
+            let dh = cvt_p(ffi::EVP_PKEY_get1_DH(self.as_ptr()))?;
             Ok(Dh::from_ptr(dh))
         }
     }
 
     /// Returns a copy of the internal elliptic curve key.
-    pub fn ec_key(&self) -> Result<EcKey, ErrorStack> {
+    ///
+    /// This corresponds to [`EVP_PKEY_get1_EC_KEY`].
+    ///
+    /// [`EVP_PKEY_get1_EC_KEY`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_get1_EC_KEY.html
+    pub fn ec_key(&self) -> Result<EcKey<T>, ErrorStack> {
         unsafe {
-            let ec_key = try!(cvt_p(ffi::EVP_PKEY_get1_EC_KEY(self.as_ptr())));
+            let ec_key = cvt_p(ffi::EVP_PKEY_get1_EC_KEY(self.as_ptr()))?;
             Ok(EcKey::from_ptr(ec_key))
         }
     }
 
-    public_key_to_pem!(ffi::PEM_write_bio_PUBKEY);
-    private_key_to_pem!(ffi::PEM_write_bio_PKCS8PrivateKey);
+    /// Returns the `Id` that represents the type of this key.
+    ///
+    /// This corresponds to [`EVP_PKEY_id`].
+    ///
+    /// [`EVP_PKEY_id`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_id.html
+    pub fn id(&self) -> Id {
+        unsafe { Id::from_raw(ffi::EVP_PKEY_id(self.as_ptr())) }
+    }
+}
 
-    private_key_to_der!(ffi::i2d_PrivateKey);
-    public_key_to_der!(ffi::i2d_PUBKEY);
+impl<T> PKeyRef<T>
+where
+    T: HasPublic,
+{
+    to_pem! {
+        /// Serializes the public key into a PEM-encoded SubjectPublicKeyInfo structure.
+        ///
+        /// The output will have a header of `-----BEGIN PUBLIC KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_PUBKEY`].
+        ///
+        /// [`PEM_write_bio_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_PUBKEY.html
+        public_key_to_pem,
+        ffi::PEM_write_bio_PUBKEY
+    }
+
+    to_der! {
+        /// Serializes the public key into a DER-encoded SubjectPublicKeyInfo structure.
+        ///
+        /// This corresponds to [`i2d_PUBKEY`].
+        ///
+        /// [`i2d_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_PUBKEY.html
+        public_key_to_der,
+        ffi::i2d_PUBKEY
+    }
 
     /// Returns the size of the key.
     ///
@@ -70,94 +223,272 @@ impl PKeyRef {
     }
 
     /// Compares the public component of this key with another.
-    pub fn public_eq(&self, other: &PKeyRef) -> bool {
+    pub fn public_eq<U>(&self, other: &PKeyRef<U>) -> bool
+    where
+        U: HasPublic,
+    {
         unsafe { ffi::EVP_PKEY_cmp(self.as_ptr(), other.as_ptr()) == 1 }
     }
 }
 
-unsafe impl Send for PKey {}
-unsafe impl Sync for PKey {}
+impl<T> PKeyRef<T>
+where
+    T: HasPrivate,
+{
+    private_key_to_pem! {
+        /// Serializes the private key to a PEM-encoded PKCS#8 PrivateKeyInfo structure.
+        ///
+        /// The output will have a header of `-----BEGIN PRIVATE KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_PKCS8PrivateKey`].
+        ///
+        /// [`PEM_write_bio_PKCS8PrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_write_bio_PKCS8PrivateKey.html
+        private_key_to_pem_pkcs8,
+        /// Serializes the private key to a PEM-encoded PKCS#8 EncryptedPrivateKeyInfo structure.
+        ///
+        /// The output will have a header of `-----BEGIN ENCRYPTED PRIVATE KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_PKCS8PrivateKey`].
+        ///
+        /// [`PEM_write_bio_PKCS8PrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_write_bio_PKCS8PrivateKey.html
+        private_key_to_pem_pkcs8_passphrase,
+        ffi::PEM_write_bio_PKCS8PrivateKey
+    }
 
-impl PKey {
+    to_der! {
+        /// Serializes the private key to a DER-encoded key type specific format.
+        ///
+        /// This corresponds to [`i2d_PrivateKey`].
+        ///
+        /// [`i2d_PrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_PrivateKey.html
+        private_key_to_der,
+        ffi::i2d_PrivateKey
+    }
+}
+
+impl<T> PKey<T> {
     /// Creates a new `PKey` containing an RSA key.
-    pub fn from_rsa(rsa: Rsa) -> Result<PKey, ErrorStack> {
+    ///
+    /// This corresponds to [`EVP_PKEY_assign_RSA`].
+    ///
+    /// [`EVP_PKEY_assign_RSA`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_assign_RSA.html
+    pub fn from_rsa(rsa: Rsa<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
-            let evp = try!(cvt_p(ffi::EVP_PKEY_new()));
-            let pkey = PKey(evp);
-            try!(cvt(ffi::EVP_PKEY_assign(pkey.0, ffi::EVP_PKEY_RSA, rsa.as_ptr() as *mut _)));
+            let evp = cvt_p(ffi::EVP_PKEY_new())?;
+            let pkey = PKey::from_ptr(evp);
+            cvt(ffi::EVP_PKEY_assign(
+                pkey.0,
+                ffi::EVP_PKEY_RSA,
+                rsa.as_ptr() as *mut _,
+            ))?;
             mem::forget(rsa);
             Ok(pkey)
         }
     }
 
     /// Creates a new `PKey` containing a DSA key.
-    pub fn from_dsa(dsa: Dsa) -> Result<PKey, ErrorStack> {
+    ///
+    /// This corresponds to [`EVP_PKEY_assign_DSA`].
+    ///
+    /// [`EVP_PKEY_assign_DSA`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_assign_DSA.html
+    pub fn from_dsa(dsa: Dsa<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
-            let evp = try!(cvt_p(ffi::EVP_PKEY_new()));
-            let pkey = PKey(evp);
-            try!(cvt(ffi::EVP_PKEY_assign(pkey.0, ffi::EVP_PKEY_DSA, dsa.as_ptr() as *mut _)));
+            let evp = cvt_p(ffi::EVP_PKEY_new())?;
+            let pkey = PKey::from_ptr(evp);
+            cvt(ffi::EVP_PKEY_assign(
+                pkey.0,
+                ffi::EVP_PKEY_DSA,
+                dsa.as_ptr() as *mut _,
+            ))?;
             mem::forget(dsa);
             Ok(pkey)
         }
     }
 
     /// Creates a new `PKey` containing a Diffie-Hellman key.
-    pub fn from_dh(dh: Dh) -> Result<PKey, ErrorStack> {
+    ///
+    /// This corresponds to [`EVP_PKEY_assign_DH`].
+    ///
+    /// [`EVP_PKEY_assign_DH`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_assign_DH.html
+    pub fn from_dh(dh: Dh<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
-            let evp = try!(cvt_p(ffi::EVP_PKEY_new()));
-            let pkey = PKey(evp);
-            try!(cvt(ffi::EVP_PKEY_assign(pkey.0, ffi::EVP_PKEY_DH, dh.as_ptr() as *mut _)));
+            let evp = cvt_p(ffi::EVP_PKEY_new())?;
+            let pkey = PKey::from_ptr(evp);
+            cvt(ffi::EVP_PKEY_assign(
+                pkey.0,
+                ffi::EVP_PKEY_DH,
+                dh.as_ptr() as *mut _,
+            ))?;
             mem::forget(dh);
             Ok(pkey)
         }
     }
 
     /// Creates a new `PKey` containing an elliptic curve key.
-    pub fn from_ec_key(ec_key: EcKey) -> Result<PKey, ErrorStack> {
+    ///
+    /// This corresponds to [`EVP_PKEY_assign_EC_KEY`].
+    ///
+    /// [`EVP_PKEY_assign_EC_KEY`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_assign_EC_KEY.html
+    pub fn from_ec_key(ec_key: EcKey<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
-            let evp = try!(cvt_p(ffi::EVP_PKEY_new()));
-            let pkey = PKey(evp);
-            try!(cvt(ffi::EVP_PKEY_assign(pkey.0, ffi::EVP_PKEY_EC, ec_key.as_ptr() as *mut _)));
+            let evp = cvt_p(ffi::EVP_PKEY_new())?;
+            let pkey = PKey::from_ptr(evp);
+            cvt(ffi::EVP_PKEY_assign(
+                pkey.0,
+                ffi::EVP_PKEY_EC,
+                ec_key.as_ptr() as *mut _,
+            ))?;
             mem::forget(ec_key);
             Ok(pkey)
         }
     }
+}
 
+impl PKey<Private> {
     /// Creates a new `PKey` containing an HMAC key.
     ///
     /// # Note
+    ///
     /// To compute HMAC values, use the `sign` module.
-    pub fn hmac(key: &[u8]) -> Result<PKey, ErrorStack> {
+    pub fn hmac(key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize);
-            let key = try!(cvt_p(ffi::EVP_PKEY_new_mac_key(ffi::EVP_PKEY_HMAC,
-                                                           ptr::null_mut(),
-                                                           key.as_ptr() as *const _,
-                                                           key.len() as c_int)));
-            Ok(PKey(key))
+            let key = cvt_p(ffi::EVP_PKEY_new_mac_key(
+                ffi::EVP_PKEY_HMAC,
+                ptr::null_mut(),
+                key.as_ptr() as *const _,
+                key.len() as c_int,
+            ))?;
+            Ok(PKey::from_ptr(key))
         }
     }
 
-    private_key_from_pem!(PKey, ffi::PEM_read_bio_PrivateKey);
-    public_key_from_pem!(PKey, ffi::PEM_read_bio_PUBKEY);
+    /// Creates a new `PKey` containing a CMAC key.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    ///
+    /// # Note
+    ///
+    /// To compute CMAC values, use the `sign` module.
+    #[cfg(ossl110)]
+    pub fn cmac(cipher: &::symm::Cipher, key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
+        unsafe {
+            assert!(key.len() <= c_int::max_value() as usize);
+            let kctx = cvt_p(ffi::EVP_PKEY_CTX_new_id(
+                ffi::EVP_PKEY_CMAC,
+                ptr::null_mut(),
+            ))?;
+
+            let ret = (|| {
+                cvt(ffi::EVP_PKEY_keygen_init(kctx))?;
+
+                // Set cipher for cmac
+                cvt(ffi::EVP_PKEY_CTX_ctrl(
+                    kctx,
+                    -1,
+                    ffi::EVP_PKEY_OP_KEYGEN,
+                    ffi::EVP_PKEY_CTRL_CIPHER,
+                    0,
+                    cipher.as_ptr() as *mut _,
+                ))?;
+
+                // Set the key data
+                cvt(ffi::EVP_PKEY_CTX_ctrl(
+                    kctx,
+                    -1,
+                    ffi::EVP_PKEY_OP_KEYGEN,
+                    ffi::EVP_PKEY_CTRL_SET_MAC_KEY,
+                    key.len() as c_int,
+                    key.as_ptr() as *mut _,
+                ))?;
+                Ok(())
+            })();
+
+            if let Err(e) = ret {
+                // Free memory
+                ffi::EVP_PKEY_CTX_free(kctx);
+                return Err(e);
+            }
+
+            // Generate key
+            let mut key = ptr::null_mut();
+            let ret = cvt(ffi::EVP_PKEY_keygen(kctx, &mut key));
+
+            // Free memory
+            ffi::EVP_PKEY_CTX_free(kctx);
+
+            if let Err(e) = ret {
+                return Err(e);
+            }
+
+            Ok(PKey::from_ptr(key))
+        }
+    }
+
+    private_key_from_pem! {
+        /// Deserializes a private key from a PEM-encoded key type specific format.
+        ///
+        /// This corresponds to [`PEM_read_bio_PrivateKey`].
+        ///
+        /// [`PEM_read_bio_PrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_read_bio_PrivateKey.html
+        private_key_from_pem,
+
+        /// Deserializes a private key from a PEM-encoded encrypted key type specific format.
+        ///
+        /// This corresponds to [`PEM_read_bio_PrivateKey`].
+        ///
+        /// [`PEM_read_bio_PrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_read_bio_PrivateKey.html
+        private_key_from_pem_passphrase,
+
+        /// Deserializes a private key from a PEM-encoded encrypted key type specific format.
+        ///
+        /// The callback should fill the password into the provided buffer and return its length.
+        ///
+        /// This corresponds to [`PEM_read_bio_PrivateKey`].
+        ///
+        /// [`PEM_read_bio_PrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_read_bio_PrivateKey.html
+        private_key_from_pem_callback,
+        PKey<Private>,
+        ffi::PEM_read_bio_PrivateKey
+    }
+
+    from_der! {
+        /// Decodes a DER-encoded private key.
+        ///
+        /// This function will automatically attempt to detect the underlying key format, and
+        /// supports the unencrypted PKCS#8 PrivateKeyInfo structures as well as key type specific
+        /// formats.
+        ///
+        /// This corresponds to [`d2i_AutoPrivateKey`].
+        ///
+        /// [`d2i_AutoPrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/d2i_AutoPrivateKey.html
+        private_key_from_der,
+        PKey<Public>,
+        ffi::d2i_AutoPrivateKey
+    }
 
     /// Deserializes a DER-formatted PKCS#8 private key, using a callback to retrieve the password
     /// if the key is encrpyted.
     ///
     /// The callback should copy the password into the provided buffer and return the number of
     /// bytes written.
-    pub fn private_key_from_pkcs8_callback<F>(der: &[u8], callback: F) -> Result<PKey, ErrorStack>
-        where F: FnOnce(&mut [u8]) -> Result<usize, ErrorStack>
+    pub fn private_key_from_pkcs8_callback<F>(
+        der: &[u8],
+        callback: F,
+    ) -> Result<PKey<Private>, ErrorStack>
+    where
+        F: FnOnce(&mut [u8]) -> Result<usize, ErrorStack>,
     {
         unsafe {
             ffi::init();
             let mut cb = CallbackState::new(callback);
-            let bio = try!(MemBioSlice::new(der));
-            cvt_p(ffi::d2i_PKCS8PrivateKey_bio(bio.as_ptr(),
-                                               ptr::null_mut(),
-                                               Some(invoke_passwd_cb::<F>),
-                                               &mut cb as *mut _ as *mut _))
-                .map(PKey)
+            let bio = MemBioSlice::new(der)?;
+            cvt_p(ffi::d2i_PKCS8PrivateKey_bio(
+                bio.as_ptr(),
+                ptr::null_mut(),
+                Some(invoke_passwd_cb::<F>),
+                &mut cb as *mut _ as *mut _,
+            )).map(|p| PKey::from_ptr(p))
         }
     }
 
@@ -167,59 +498,48 @@ impl PKey {
     /// # Panics
     ///
     /// Panics if `passphrase` contains an embedded null.
-    pub fn private_key_from_pkcs8_passphrase(der: &[u8],
-                                             passphrase: &[u8])
-                                             -> Result<PKey, ErrorStack> {
+    pub fn private_key_from_pkcs8_passphrase(
+        der: &[u8],
+        passphrase: &[u8],
+    ) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
             ffi::init();
-            let bio = try!(MemBioSlice::new(der));
+            let bio = MemBioSlice::new(der)?;
             let passphrase = CString::new(passphrase).unwrap();
-            cvt_p(ffi::d2i_PKCS8PrivateKey_bio(bio.as_ptr(),
-                                               ptr::null_mut(),
-                                               None,
-                                               passphrase.as_ptr() as *const _ as *mut _))
-                .map(PKey)
-        }
-    }
-
-    #[deprecated(since = "0.9.2", note = "use private_key_from_pem_callback")]
-    pub fn private_key_from_pem_cb<F>(buf: &[u8], pass_cb: F) -> Result<PKey, ErrorStack>
-        where F: FnOnce(&mut [c_char]) -> usize
-    {
-        ffi::init();
-        let mut cb = CallbackState::new(pass_cb);
-        let mem_bio = try!(MemBioSlice::new(buf));
-        unsafe {
-            let evp = try!(cvt_p(ffi::PEM_read_bio_PrivateKey(mem_bio.as_ptr(),
-                                                              ptr::null_mut(),
-                                                              Some(invoke_passwd_cb_old::<F>),
-                                                              &mut cb as *mut _ as *mut c_void)));
-            Ok(PKey::from_ptr(evp))
+            cvt_p(ffi::d2i_PKCS8PrivateKey_bio(
+                bio.as_ptr(),
+                ptr::null_mut(),
+                None,
+                passphrase.as_ptr() as *const _ as *mut _,
+            )).map(|p| PKey::from_ptr(p))
         }
     }
 }
 
-pub struct PKeyCtxRef(Opaque);
-
-impl PKeyCtxRef {
-    pub fn set_rsa_padding(&mut self, pad: Padding) -> Result<(), ErrorStack> {
-        unsafe {
-            try!(cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(self.as_ptr(), pad.as_raw())));
-        }
-        Ok(())
+impl PKey<Public> {
+    from_pem! {
+        /// Decodes a PEM-encoded SubjectPublicKeyInfo structure.
+        ///
+        /// The input should have a header of `-----BEGIN PUBLIC KEY-----`.
+        ///
+        /// This corresponds to [`PEM_read_bio_PUBKEY`].
+        ///
+        /// [`PEM_read_bio_PUBKEY`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_read_bio_PUBKEY.html
+        public_key_from_pem,
+        PKey<Public>,
+        ffi::PEM_read_bio_PUBKEY
     }
 
-    pub fn rsa_padding(&self) -> Result<Padding, ErrorStack> {
-        let mut pad: c_int = 0;
-        unsafe {
-            try!(cvt(ffi::EVP_PKEY_CTX_get_rsa_padding(self.as_ptr(), &mut pad)));
-        };
-        Ok(Padding::from_raw(pad))
+    from_der! {
+        /// Decodes a DER-encoded SubjectPublicKeyInfo structure.
+        ///
+        /// This corresponds to [`d2i_PUBKEY`].
+        ///
+        /// [`d2i_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_PUBKEY.html
+        public_key_from_der,
+        PKey<Public>,
+        ffi::d2i_PUBKEY
     }
-}
-
-impl ForeignTypeRef for PKeyCtxRef {
-    type CType = ffi::EVP_PKEY_CTX;
 }
 
 #[cfg(test)]
@@ -229,7 +549,7 @@ mod tests {
     use dsa::Dsa;
     use ec::EcKey;
     use rsa::Rsa;
-    use nid;
+    use nid::Nid;
 
     use super::*;
 
@@ -237,7 +557,8 @@ mod tests {
     fn test_to_password() {
         let rsa = Rsa::generate(2048).unwrap();
         let pkey = PKey::from_rsa(rsa).unwrap();
-        let pem = pkey.private_key_to_pem_passphrase(Cipher::aes_128_cbc(), b"foobar").unwrap();
+        let pem = pkey.private_key_to_pem_pkcs8_passphrase(Cipher::aes_128_cbc(), b"foobar")
+            .unwrap();
         PKey::private_key_from_pem_passphrase(&pem, b"foobar").unwrap();
         assert!(PKey::private_key_from_pem_passphrase(&pem, b"fizzbuzz").is_err());
     }
@@ -253,11 +574,10 @@ mod tests {
         let mut password_queried = false;
         let key = include_bytes!("../test/pkcs8.der");
         PKey::private_key_from_pkcs8_callback(key, |password| {
-                password_queried = true;
-                password[..6].copy_from_slice(b"mypass");
-                Ok(6)
-            })
-            .unwrap();
+            password_queried = true;
+            password[..6].copy_from_slice(b"mypass");
+            Ok(6)
+        }).unwrap();
         assert!(password_queried);
     }
 
@@ -274,11 +594,23 @@ mod tests {
     }
 
     #[test]
+    fn test_public_key_from_der() {
+        let key = include_bytes!("../test/key.der.pub");
+        PKey::public_key_from_der(key).unwrap();
+    }
+
+    #[test]
+    fn test_private_key_from_der() {
+        let key = include_bytes!("../test/key.der");
+        PKey::private_key_from_der(key).unwrap();
+    }
+
+    #[test]
     fn test_pem() {
         let key = include_bytes!("../test/key.pem");
         let key = PKey::private_key_from_pem(key).unwrap();
 
-        let priv_key = key.private_key_to_pem().unwrap();
+        let priv_key = key.private_key_to_pem_pkcs8().unwrap();
         let pub_key = key.public_key_to_pem().unwrap();
 
         // As a super-simple verification, just check that the buffers contain
@@ -292,6 +624,7 @@ mod tests {
         let rsa = Rsa::generate(2048).unwrap();
         let pkey = PKey::from_rsa(rsa).unwrap();
         pkey.rsa().unwrap();
+        assert_eq!(pkey.id(), Id::RSA);
         assert!(pkey.dsa().is_err());
     }
 
@@ -300,23 +633,26 @@ mod tests {
         let dsa = Dsa::generate(2048).unwrap();
         let pkey = PKey::from_dsa(dsa).unwrap();
         pkey.dsa().unwrap();
+        assert_eq!(pkey.id(), Id::DSA);
         assert!(pkey.rsa().is_err());
     }
 
     #[test]
     fn test_dh_accessor() {
         let dh = include_bytes!("../test/dhparams.pem");
-        let dh = Dh::from_pem(dh).unwrap();
+        let dh = Dh::params_from_pem(dh).unwrap();
         let pkey = PKey::from_dh(dh).unwrap();
         pkey.dh().unwrap();
+        assert_eq!(pkey.id(), Id::DH);
         assert!(pkey.rsa().is_err());
     }
 
     #[test]
     fn test_ec_key_accessor() {
-        let ec_key = EcKey::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let ec_key = EcKey::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let pkey = PKey::from_ec_key(ec_key).unwrap();
         pkey.ec_key().unwrap();
+        assert_eq!(pkey.id(), Id::EC);
         assert!(pkey.rsa().is_err());
     }
 }

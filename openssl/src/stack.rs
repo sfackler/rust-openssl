@@ -1,4 +1,4 @@
-use foreign_types::{ForeignTypeRef, ForeignType};
+use foreign_types::{ForeignTypeRef, ForeignType, Opaque};
 use libc::c_int;
 use std::borrow::Borrow;
 use std::convert::AsRef;
@@ -10,8 +10,6 @@ use ffi;
 use {cvt, cvt_p};
 use error::ErrorStack;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
-
-use util::Opaque;
 
 #[cfg(ossl10x)]
 use ffi::{sk_pop as OPENSSL_sk_pop, sk_free as OPENSSL_sk_free, sk_num as OPENSSL_sk_num,
@@ -39,7 +37,7 @@ impl<T: Stackable> Stack<T> {
     pub fn new() -> Result<Stack<T>, ErrorStack> {
         unsafe {
             ffi::init();
-            let ptr = try!(cvt_p(OPENSSL_sk_new_null()));
+            let ptr = cvt_p(OPENSSL_sk_new_null())?;
             Ok(Stack(ptr as *mut _))
         }
     }
@@ -86,8 +84,11 @@ impl<T: Stackable> ForeignType for Stack<T> {
 
     #[inline]
     unsafe fn from_ptr(ptr: *mut T::StackType) -> Stack<T> {
-        assert!(!ptr.is_null(), "Must not instantiate a Stack from a null-ptr - use Stack::new() in \
-                                 that case");
+        assert!(
+            !ptr.is_null(),
+            "Must not instantiate a Stack from a null-ptr - use Stack::new() in \
+                                 that case"
+        );
         Stack(ptr)
     }
 
@@ -217,7 +218,9 @@ impl<T: Stackable> StackRef<T> {
     /// Pushes a value onto the top of the stack.
     pub fn push(&mut self, data: T) -> Result<(), ErrorStack> {
         unsafe {
-            try!(cvt(OPENSSL_sk_push(self.as_stack(), data.as_ptr() as *mut _)));
+            cvt(
+                OPENSSL_sk_push(self.as_stack(), data.as_ptr() as *mut _),
+            )?;
             mem::forget(data);
             Ok(())
         }
@@ -292,7 +295,8 @@ impl<'a, T: Stackable> iter::IntoIterator for &'a mut Stack<T> {
 
 /// An iterator over the stack's contents.
 pub struct Iter<'a, T: Stackable>
-    where T: 'a
+where
+    T: 'a,
 {
     stack: &'a StackRef<T>,
     pos: usize,

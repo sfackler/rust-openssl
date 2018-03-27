@@ -1,5 +1,7 @@
+extern crate cc;
 extern crate pkg_config;
-extern crate gcc;
+#[cfg(target_env = "msvc")]
+extern crate vcpkg;
 
 use std::collections::HashSet;
 use std::env;
@@ -15,6 +17,7 @@ const DEFINES: &'static [&'static str] = &[
     "OPENSSL_NO_BUF_FREELISTS",
     "OPENSSL_NO_COMP",
     "OPENSSL_NO_EC",
+    "OPENSSL_NO_EC2M",
     "OPENSSL_NO_ENGINE",
     "OPENSSL_NO_KRB5",
     "OPENSSL_NO_NEXTPROTONEG",
@@ -33,16 +36,27 @@ enum Version {
     Libressl,
 }
 
+fn env(name: &str) -> Option<OsString> {
+    let prefix = env::var("TARGET").unwrap().to_uppercase().replace("-", "_");
+    let prefixed = format!("{}_{}", prefix, name);
+    println!("cargo:rerun-if-env-changed={}", prefixed);
+
+    if let Some(var) = env::var_os(&prefixed) {
+        return Some(var);
+    }
+
+    println!("cargo:rerun-if-env-changed={}", name);
+    env::var_os(name)
+}
+
 fn main() {
     let target = env::var("TARGET").unwrap();
 
-    let lib_dir = env::var_os("OPENSSL_LIB_DIR").map(PathBuf::from);
-    let include_dir = env::var_os("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
+    let lib_dir = env("OPENSSL_LIB_DIR").map(PathBuf::from);
+    let include_dir = env("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
 
     let (lib_dir, include_dir) = if lib_dir.is_none() || include_dir.is_none() {
-        let openssl_dir = env::var_os("OPENSSL_DIR").unwrap_or_else(|| {
-            find_openssl_dir(&target)
-        });
+        let openssl_dir = env("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(&target));
         let openssl_dir = Path::new(&openssl_dir);
         let lib_dir = lib_dir.unwrap_or_else(|| openssl_dir.join("lib"));
         let include_dir = include_dir.unwrap_or_else(|| openssl_dir.join("include"));
@@ -52,33 +66,37 @@ fn main() {
     };
 
     if !Path::new(&lib_dir).exists() {
-        panic!("OpenSSL library directory does not exist: {}",
-               lib_dir.to_string_lossy());
+        panic!(
+            "OpenSSL library directory does not exist: {}",
+            lib_dir.to_string_lossy()
+        );
     }
     if !Path::new(&include_dir).exists() {
-        panic!("OpenSSL include directory does not exist: {}",
-               include_dir.to_string_lossy());
+        panic!(
+            "OpenSSL include directory does not exist: {}",
+            include_dir.to_string_lossy()
+        );
     }
 
-    println!("cargo:rustc-link-search=native={}", lib_dir.to_string_lossy());
+    println!(
+        "cargo:rustc-link-search=native={}",
+        lib_dir.to_string_lossy()
+    );
     println!("cargo:include={}", include_dir.to_string_lossy());
 
     let version = validate_headers(&[include_dir.clone().into()]);
 
-    let libs_env = env::var("OPENSSL_LIBS").ok();
-    let libs = match libs_env {
+    let libs_env = env("OPENSSL_LIBS");
+    let libs = match libs_env.as_ref().and_then(|s| s.to_str()) {
         Some(ref v) => v.split(":").collect(),
-        None => {
-            match version {
-                Version::Openssl101 | Version::Openssl102 if target.contains("windows") => {
-                    vec!["ssleay32", "libeay32"]
-                }
-                Version::Openssl110 if target.contains("windows") => vec!["libssl", "libcrypto"],
-                _ => vec!["ssl", "crypto"],
+        None => match version {
+            Version::Openssl101 | Version::Openssl102 if target.contains("windows") => {
+                vec!["ssleay32", "libeay32"]
             }
-        }
+            Version::Openssl110 if target.contains("windows") => vec!["libssl", "libcrypto"],
+            _ => vec!["ssl", "crypto"],
+        },
     };
-
 
     let kind = determine_mode(Path::new(&lib_dir), &libs);
     for lib in libs.into_iter() {
@@ -89,20 +107,27 @@ fn main() {
 fn find_openssl_dir(target: &str) -> OsString {
     let host = env::var("HOST").unwrap();
 
-    if host.contains("apple-darwin") && target.contains("apple-darwin") {
+    if host == target && target.contains("apple-darwin") {
         let homebrew = Path::new("/usr/local/opt/openssl@1.1");
         if homebrew.exists() {
-            return homebrew.to_path_buf().into()
+            return homebrew.to_path_buf().into();
         }
         let homebrew = Path::new("/usr/local/opt/openssl");
         if homebrew.exists() {
-            return homebrew.to_path_buf().into()
+            return homebrew.to_path_buf().into();
         }
     }
 
     try_pkg_config();
+    try_vcpkg();
 
-    let mut msg = format!("
+    // FreeBSD ships with OpenSSL but doesn't include a pkg-config file :(
+    if host == target && target.contains("freebsd") {
+        return OsString::from("/usr");
+    }
+
+    let mut msg = format!(
+        "
 
 Could not find directory of OpenSSL installation, and this `-sys` crate cannot
 proceed without this knowledge. If OpenSSL is installed and this crate had
@@ -118,12 +143,16 @@ and include information about your system as well as this message.
     openssl-sys = {}
 
 ",
-    host, target, env!("CARGO_PKG_VERSION"));
+        host,
+        target,
+        env!("CARGO_PKG_VERSION")
+    );
 
     if host.contains("apple-darwin") && target.contains("apple-darwin") {
         let system = Path::new("/usr/lib/libssl.0.9.8.dylib");
         if system.exists() {
-            msg.push_str(&format!("
+            msg.push_str(&format!(
+                "
 
 It looks like you're compiling on macOS, where the system contains a version of
 OpenSSL 0.9.8. This crate no longer supports OpenSSL 0.9.8.
@@ -134,37 +163,42 @@ install the `openssl` package, or as a maintainer you can use the openssl-sys
 
 Unfortunately though the compile cannot continue, so aborting.
 
-"));
+"
+            ));
         }
     }
 
     if host.contains("unknown-linux") && target.contains("unknown-linux-gnu") {
         if Command::new("pkg-config").output().is_err() {
-            msg.push_str(&format!("
+            msg.push_str(&format!(
+                "
 It looks like you're compiling on Linux and also targeting Linux. Currently this
 requires the `pkg-config` utility to find OpenSSL but unfortunately `pkg-config`
 could not be found. If you have OpenSSL installed you can likely fix this by
 installing `pkg-config`.
 
-"));
+"
+            ));
         }
     }
 
     if host.contains("windows") && target.contains("windows-gnu") {
-        msg.push_str(&format!("
+        msg.push_str(&format!(
+            "
 It looks like you're compiling for MinGW but you may not have either OpenSSL or
 pkg-config installed. You can install these two dependencies with:
 
-    pacman -S openssl pkg-config
+    pacman -S openssl-devel pkg-config
 
 and try building this crate again.
 
 "
-));
+        ));
     }
 
     if host.contains("windows") && target.contains("windows-msvc") {
-        msg.push_str(&format!("
+        msg.push_str(&format!(
+            "
 It looks like you're compiling for MSVC but we couldn't detect an OpenSSL
 installation. If there isn't one installed then you can try the rust-openssl
 README for more information about how to download precompiled binaries of
@@ -173,7 +207,7 @@ OpenSSL:
     https://github.com/sfackler/rust-openssl#windows
 
 "
-));
+        ));
     }
 
     panic!(msg);
@@ -194,13 +228,19 @@ fn try_pkg_config() {
     if target.contains("windows-gnu") && host.contains("windows") {
         env::set_var("PKG_CONFIG_ALLOW_CROSS", "1");
     } else if target.contains("windows") {
-        return
+        return;
     }
 
-    let lib = pkg_config::Config::new()
+    let lib = match pkg_config::Config::new()
         .print_system_libs(false)
         .find("openssl")
-        .unwrap();
+    {
+        Ok(lib) => lib,
+        Err(e) => {
+            println!("run pkg_config fail: {:?}", e);
+            return;
+        }
+    };
 
     validate_headers(&lib.include_paths);
 
@@ -210,6 +250,53 @@ fn try_pkg_config() {
 
     std::process::exit(0);
 }
+
+/// Attempt to find OpenSSL through vcpkg.
+///
+/// Note that if this succeeds then the function does not return as vcpkg
+/// should emit all of the cargo metadata that we need.
+#[cfg(target_env = "msvc")]
+fn try_vcpkg() {
+    // vcpkg will not emit any metadata if it can not find libraries
+    // appropriate for the target triple with the desired linkage.
+
+    let mut lib = vcpkg::Config::new()
+        .emit_includes(true)
+        .lib_name("libcrypto")
+        .lib_name("libssl")
+        .probe("openssl");
+
+    if let Err(e) = lib {
+        println!(
+            "note: vcpkg did not find openssl as libcrypto and libssl : {:?}",
+            e
+        );
+        lib = vcpkg::Config::new()
+            .emit_includes(true)
+            .lib_name("libeay32")
+            .lib_name("ssleay32")
+            .probe("openssl");
+    }
+    if let Err(e) = lib {
+        println!(
+            "note: vcpkg did not find openssl as ssleay32 and libeay32: {:?}",
+            e
+        );
+        return;
+    }
+
+    let lib = lib.unwrap();
+    validate_headers(&lib.include_paths);
+
+    println!("cargo:rustc-link-lib=user32");
+    println!("cargo:rustc-link-lib=gdi32");
+    println!("cargo:rustc-link-lib=crypt32");
+
+    std::process::exit(0);
+}
+
+#[cfg(not(target_env = "msvc"))]
+fn try_vcpkg() {}
 
 /// Validates the header files found in `include_dir` and then returns the
 /// version string of OpenSSL.
@@ -230,14 +317,40 @@ fn validate_headers(include_dirs: &[PathBuf]) -> Version {
     path.push("expando.c");
     let mut file = BufWriter::new(File::create(&path).unwrap());
 
-    write!(file, "\
+    write!(
+        file,
+        "\
 #include <openssl/opensslv.h>
 #include <openssl/opensslconf.h>
 
-#ifdef LIBRESSL_VERSION_NUMBER
-RUST_LIBRESSL
-#elif OPENSSL_VERSION_NUMBER >= 0x10200000
+#if LIBRESSL_VERSION_NUMBER >= 0x20701000
+RUST_LIBRESSL_NEW
+#elif LIBRESSL_VERSION_NUMBER >= 0x20700000
+RUST_LIBRESSL_270
+#elif LIBRESSL_VERSION_NUMBER >= 0x20603000
+RUST_LIBRESSL_26X
+#elif LIBRESSL_VERSION_NUMBER >= 0x20602000
+RUST_LIBRESSL_262
+#elif LIBRESSL_VERSION_NUMBER >= 0x20601000
+RUST_LIBRESSL_261
+#elif LIBRESSL_VERSION_NUMBER >= 0x20600000
+RUST_LIBRESSL_260
+#elif LIBRESSL_VERSION_NUMBER >= 0x20503000
+RUST_LIBRESSL_25X
+#elif LIBRESSL_VERSION_NUMBER >= 0x20502000
+RUST_LIBRESSL_252
+#elif LIBRESSL_VERSION_NUMBER >= 0x20501000
+RUST_LIBRESSL_251
+#elif LIBRESSL_VERSION_NUMBER >= 0x20500000
+RUST_LIBRESSL_250
+#elif defined (LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20500000
+RUST_LIBRESSL_OLD
+#elif OPENSSL_VERSION_NUMBER >= 0x10102000
 RUST_OPENSSL_NEW
+#elif OPENSSL_VERSION_NUMBER >= 0x10101000
+RUST_OPENSSL_111
+#elif OPENSSL_VERSION_NUMBER >= 0x10100060
+RUST_OPENSSL_110F
 #elif OPENSSL_VERSION_NUMBER >= 0x10100000
 RUST_OPENSSL_110
 #elif OPENSSL_VERSION_NUMBER >= 0x10002000
@@ -247,20 +360,25 @@ RUST_OPENSSL_101
 #else
 RUST_OPENSSL_OLD
 #endif
-").unwrap();
+"
+    ).unwrap();
 
     for define in DEFINES {
-        write!(file, "\
+        write!(
+            file,
+            "\
 #ifdef {define}
-RUST_{define}
+RUST_{define}_RUST
 #endif
-", define = define).unwrap();
+",
+            define = define
+        ).unwrap();
     }
 
     file.flush().unwrap();
     drop(file);
 
-    let mut gcc = gcc::Config::new();
+    let mut gcc = cc::Build::new();
     for include_dir in include_dirs {
         gcc.include(include_dir);
     }
@@ -268,7 +386,8 @@ RUST_{define}
     let expanded = match panic::catch_unwind(AssertUnwindSafe(|| gcc.file(&path).expand())) {
         Ok(expanded) => expanded,
         Err(_) => {
-            panic!("
+            panic!(
+                "
 Failed to find OpenSSL development headers.
 
 You can try fixing this setting the `OPENSSL_DIR` environment variable
@@ -285,25 +404,95 @@ specific to your distribution:
 See rust-openssl README for more information:
 
     https://github.com/sfackler/rust-openssl#linux
-");
+"
+            );
         }
     };
     let expanded = String::from_utf8(expanded).unwrap();
 
     let mut enabled = vec![];
     for &define in DEFINES {
-        if expanded.contains(&format!("RUST_{}", define)) {
+        if expanded.contains(&format!("RUST_{}_RUST", define)) {
             println!("cargo:rustc-cfg=osslconf=\"{}\"", define);
             enabled.push(define);
         }
     }
     println!("cargo:conf={}", enabled.join(","));
 
-    if expanded.contains("RUST_LIBRESSL") {
+    if expanded.contains("RUST_LIBRESSL_250") {
         println!("cargo:rustc-cfg=libressl");
+        println!("cargo:rustc-cfg=libressl250");
         println!("cargo:libressl=true");
+        println!("cargo:libressl_version=250");
         println!("cargo:version=101");
         Version::Libressl
+    } else if expanded.contains("RUST_LIBRESSL_251") {
+        println!("cargo:rustc-cfg=libressl");
+        println!("cargo:rustc-cfg=libressl251");
+        println!("cargo:libressl=true");
+        println!("cargo:libressl_version=251");
+        println!("cargo:version=101");
+        Version::Libressl
+    } else if expanded.contains("RUST_LIBRESSL_252") {
+        println!("cargo:rustc-cfg=libressl");
+        println!("cargo:rustc-cfg=libressl252");
+        println!("cargo:libressl=true");
+        println!("cargo:libressl_version=252");
+        println!("cargo:version=101");
+        Version::Libressl
+    } else if expanded.contains("RUST_LIBRESSL_25X") {
+        println!("cargo:rustc-cfg=libressl");
+        println!("cargo:rustc-cfg=libressl25x");
+        println!("cargo:libressl=true");
+        println!("cargo:libressl_version=25x");
+        println!("cargo:version=101");
+        Version::Libressl
+    } else if expanded.contains("RUST_LIBRESSL_260") {
+        println!("cargo:rustc-cfg=libressl");
+        println!("cargo:rustc-cfg=libressl260");
+        println!("cargo:libressl=true");
+        println!("cargo:libressl_version=260");
+        println!("cargo:version=101");
+        Version::Libressl
+    } else if expanded.contains("RUST_LIBRESSL_261") {
+        println!("cargo:rustc-cfg=libressl");
+        println!("cargo:rustc-cfg=libressl261");
+        println!("cargo:libressl=true");
+        println!("cargo:libressl_version=261");
+        println!("cargo:version=101");
+        Version::Libressl
+    } else if expanded.contains("RUST_LIBRESSL_262") {
+        println!("cargo:rustc-cfg=libressl");
+        println!("cargo:rustc-cfg=libressl262");
+        println!("cargo:libressl=true");
+        println!("cargo:libressl_version=262");
+        println!("cargo:version=101");
+        Version::Libressl
+    } else if expanded.contains("RUST_LIBRESSL_26X") {
+        println!("cargo:rustc-cfg=libressl");
+        println!("cargo:rustc-cfg=libressl26x");
+        println!("cargo:libressl=true");
+        println!("cargo:libressl_version=26x");
+        println!("cargo:version=101");
+        Version::Libressl
+    } else if expanded.contains("RUST_LIBRESSL_270") {
+        println!("cargo:rustc-cfg=libressl");
+        println!("cargo:rustc-cfg=libressl270");
+        println!("cargo:libressl=true");
+        println!("cargo:libressl_version=270");
+        println!("cargo:version=101");
+        Version::Libressl
+    } else if expanded.contains("RUST_OPENSSL_111") {
+        println!("cargo:rustc-cfg=ossl111");
+        println!("cargo:rustc-cfg=ossl110");
+        println!("cargo:version=111");
+        Version::Openssl110
+    } else if expanded.contains("RUST_OPENSSL_110F") {
+        println!("cargo:rustc-cfg=ossl110");
+        println!("cargo:rustc-cfg=ossl110f");
+        println!("cargo:version=110");
+        println!("cargo:patch=f");
+        Version::Openssl110
     } else if expanded.contains("RUST_OPENSSL_110") {
         println!("cargo:rustc-cfg=ossl110");
         println!("cargo:version=110");
@@ -317,13 +506,15 @@ See rust-openssl README for more information:
         println!("cargo:version=101");
         Version::Openssl101
     } else {
-        panic!("
+        panic!(
+            "
 
-This crate is only compatible with OpenSSL 1.0.1, 1.0.2, and 1.1.0, or LibreSSL,
-but a different version of OpenSSL was found. The build is now aborting due to
-this version mismatch.
+This crate is only compatible with OpenSSL 1.0.1 through 1.1.1, or LibreSSL 2.5
+and 2.6, but a different version of OpenSSL was found. The build is now aborting
+due to this version mismatch.
 
-");
+"
+        );
     }
 }
 
@@ -332,8 +523,8 @@ this version mismatch.
 /// statically or dynamically.
 fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
     // First see if a mode was explicitly requested
-    let kind = env::var("OPENSSL_STATIC").ok();
-    match kind.as_ref().map(|s| &s[..]) {
+    let kind = env("OPENSSL_STATIC");
+    match kind.as_ref().and_then(|s| s.to_str()).map(|s| &s[..]) {
         Some("0") => return "dylib",
         Some(_) => return "static",
         None => {}
@@ -341,27 +532,28 @@ fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
 
     // Next, see what files we actually have to link against, and see what our
     // possibilities even are.
-    let files = libdir.read_dir().unwrap()
-                      .map(|e| e.unwrap())
-                      .map(|e| e.file_name())
-                      .filter_map(|e| e.into_string().ok())
-                      .collect::<HashSet<_>>();
-    let can_static = libs.iter().all(|l| {
-        files.contains(&format!("lib{}.a", l)) ||
-            files.contains(&format!("{}.lib", l))
-    });
+    let files = libdir
+        .read_dir()
+        .unwrap()
+        .map(|e| e.unwrap())
+        .map(|e| e.file_name())
+        .filter_map(|e| e.into_string().ok())
+        .collect::<HashSet<_>>();
+    let can_static = libs.iter()
+        .all(|l| files.contains(&format!("lib{}.a", l)) || files.contains(&format!("{}.lib", l)));
     let can_dylib = libs.iter().all(|l| {
-        files.contains(&format!("lib{}.so", l)) ||
-            files.contains(&format!("{}.dll", l)) ||
-            files.contains(&format!("lib{}.dylib", l))
+        files.contains(&format!("lib{}.so", l)) || files.contains(&format!("{}.dll", l))
+            || files.contains(&format!("lib{}.dylib", l))
     });
     match (can_static, can_dylib) {
         (true, false) => return "static",
         (false, true) => return "dylib",
         (false, false) => {
-            panic!("OpenSSL libdir at `{}` does not contain the required files \
-                    to either statically or dynamically link OpenSSL",
-                   libdir.display());
+            panic!(
+                "OpenSSL libdir at `{}` does not contain the required files \
+                 to either statically or dynamically link OpenSSL",
+                libdir.display()
+            );
         }
         (true, true) => {}
     }

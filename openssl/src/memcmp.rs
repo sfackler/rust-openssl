@@ -1,3 +1,34 @@
+//! Utilities to safely compare cryptographic values.
+//!
+//! Extra care must be taken when comparing values in
+//! cryptographic code. If done incorrectly, it can lead
+//! to a [timing attack](https://en.wikipedia.org/wiki/Timing_attack).
+//! By analyzing the time taken to execute parts of a cryptographic
+//! algorithm, and attacker can attempt to compromise the
+//! cryptosystem.
+//!
+//! The utilities in this module are designed to be resistant
+//! to this type of attack.
+//!
+//! # Examples
+//!
+//! To perform a constant-time comparision of two arrays of the same length but different
+//! values:
+//!
+//! ```
+//! use openssl::memcmp::eq;
+//!
+//! // We want to compare `a` to `b` and `c`, without giving
+//! // away through timing analysis that `c` is more similar to `a`
+//! // than `b`.
+//! let a = [0, 0, 0];
+//! let b = [1, 1, 1];
+//! let c = [0, 0, 1];
+//!
+//! // These statements will execute in the same amount of time.
+//! assert!(!eq(&a, &b));
+//! assert!(!eq(&a, &c));
+//! ```
 use libc::size_t;
 use ffi;
 
@@ -10,12 +41,34 @@ use ffi;
 ///
 /// This function will panic the current task if `a` and `b` do not have the same
 /// length.
+///
+/// # Examples
+///
+/// To perform a constant-time comparision of two arrays of the same length but different
+/// values:
+///
+/// ```
+/// use openssl::memcmp::eq;
+///
+/// // We want to compare `a` to `b` and `c`, without giving
+/// // away through timing analysis that `c` is more similar to `a`
+/// // than `b`.
+/// let a = [0, 0, 0];
+/// let b = [1, 1, 1];
+/// let c = [0, 0, 1];
+///
+/// // These statements will execute in the same amount of time.
+/// assert!(!eq(&a, &b));
+/// assert!(!eq(&a, &c));
+/// ```
 pub fn eq(a: &[u8], b: &[u8]) -> bool {
     assert!(a.len() == b.len());
     let ret = unsafe {
-        ffi::CRYPTO_memcmp(a.as_ptr() as *const _,
-                           b.as_ptr() as *const _,
-                           a.len() as size_t)
+        ffi::CRYPTO_memcmp(
+            a.as_ptr() as *const _,
+            b.as_ptr() as *const _,
+            a.len() as size_t,
+        )
     };
     ret == 0
 }

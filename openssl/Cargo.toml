@@ -1,31 +1,33 @@
 [package]
 name = "openssl"
-version = "0.9.9"
+version = "0.10.5"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
 repository = "https://github.com/sfackler/rust-openssl"
-documentation = "https://docs.rs/openssl/0.9.9/openssl"
-readme = "../README.md"
+readme = "README.md"
 keywords = ["crypto", "tls", "ssl", "dtls"]
 categories = ["cryptography", "api-bindings"]
 build = "build.rs"
-exclude = ["test/*"]
 
+[package.metadata.docs.rs]
+all-features = true
+
+# these are deprecated and don't do anything anymore
 [features]
 v101 = []
 v102 = []
 v110 = []
+v111 = []
 
 [dependencies]
-bitflags = "0.7"
-foreign-types = "0.2"
-lazy_static = "0.2"
+bitflags = "1.0"
+foreign-types = "0.3.1"
+lazy_static = "1"
 libc = "0.2"
-openssl-sys = { version = "0.9.9", path = "../openssl-sys" }
+openssl-sys = { version = "0.9.27", path = "../openssl-sys" }
 
 [dev-dependencies]
 tempdir = "0.3"
-winapi = "0.2"
-ws2_32-sys = "0.2"
-hex = "0.2"
+hex = "0.3"
+data-encoding = "2.0"

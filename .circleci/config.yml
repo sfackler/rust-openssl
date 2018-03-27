@@ -1,0 +1,196 @@
+restore_registry: &RESTORE_REGISTRY
+  restore_cache:
+    key: registry-2
+save_registry: &SAVE_REGISTRY
+  save_cache:
+    key: registry-2-{{ .BuildNum }}
+    paths:
+    - /usr/local/cargo/registry/index
+openssl_key: &OPENSSL_KEY
+  key: lib-{{ checksum "~/lib_key" }}-{{ checksum "test/build_openssl.sh" }}
+restore_openssl: &RESTORE_OPENSSL
+  restore_cache:
+    <<: *OPENSSL_KEY
+save_openssl: &SAVE_OPENSSL
+  save_cache:
+    <<: *OPENSSL_KEY
+    paths:
+    - /openssl
+deps_key: &DEPS_KEY
+  key: deps-1.20.0-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}-2
+restore_deps: &RESTORE_DEPS
+  restore_cache:
+    <<: *DEPS_KEY
+save_deps: &SAVE_DEPS
+  save_cache:
+    <<: *DEPS_KEY
+    paths:
+    - target
+    - /usr/local/cargo/registry/cache
+
+job: &JOB
+  working_directory: ~/build
+  docker:
+  - image: rust:1.20.0
+  steps:
+  - checkout
+  - run: apt-get update
+  - run: apt-get remove -y libssl-dev
+  - run: ./test/add_target.sh
+  - *RESTORE_REGISTRY
+  - run: cargo generate-lockfile
+  - *SAVE_REGISTRY
+  - run: echo "${LIBRARY}-${VERSION}-${TARGET}" > ~/lib_key
+  - *RESTORE_OPENSSL
+  - run: ./test/build_openssl.sh
+  - *SAVE_OPENSSL
+  - *RESTORE_DEPS
+  - run: cargo run --manifest-path=systest/Cargo.toml --target $TARGET
+  - run: |
+      ulimit -c unlimited
+      export PATH=$OPENSSL_DIR/bin:$PATH
+      if [ "${NO_RUN}" = "1" ]; then
+        TEST_ARGS=--no-run
+      fi
+      cargo test \
+        --manifest-path=openssl/Cargo.toml \
+        --target $TARGET \
+        $TEST_ARGS
+  - run:
+      command: |
+        mkdir -p /tmp/core_dumps
+        find . -name "core.*" -exec cp \{\} /tmp/core_dumps \;
+        cp target/$TARGET/debug/openssl-* /tmp/core_dumps
+      when: on_fail
+  - store_artifacts:
+      path: /tmp/core_dumps
+  - *SAVE_DEPS
+
+macos_job: &MACOS_JOB
+  macos:
+    xcode: "9.0"
+  environment:
+    RUSTUP_HOME: /usr/local/rustup
+    CARGO_HOME: /usr/local/cargo
+  steps:
+  - checkout
+  - run: sudo mkdir /opt
+  - run: sudo chown -R $USER /usr/local /opt
+  - run: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.20.0
+  - run: sudo ln -s $CARGO_HOME/bin/* /usr/local/bin
+  - *RESTORE_REGISTRY
+  - run: cargo generate-lockfile --verbose
+  - *SAVE_REGISTRY
+  - run: echo "homebrew-x86_64-apple-darwin" > ~/lib_key
+  - *RESTORE_DEPS
+  - run: cargo run --manifest-path=systest/Cargo.toml
+  - run: |
+      PATH=/usr/local/opt/openssl/bin:$PATH
+      cargo test --manifest-path=openssl/Cargo.toml
+  - *SAVE_DEPS
+
+openssl_111: &OPENSSL_111
+  LIBRARY: openssl
+  VERSION: 1.1.1-pre2
+openssl_110: &OPENSSL_110
+  LIBRARY: openssl
+  VERSION: 1.1.0g
+openssl_102: &OPENSSL_102
+  LIBRARY: openssl
+  VERSION: 1.0.2n
+openssl_101: &OPENSSL_101
+  LIBRARY: openssl
+  VERSION: 1.0.1u
+libressl_250: &LIBRESSL_250
+  LIBRARY: libressl
+  VERSION: 2.5.0
+libressl_263: &LIBRESSL_270
+  LIBRARY: libressl
+  VERSION: 2.7.0
+
+x86_64: &X86_64
+  TARGET: x86_64-unknown-linux-gnu
+i686: &I686
+  TARGET: i686-unknown-linux-gnu
+armhf: &ARMHF
+  TARGET: arm-unknown-linux-gnueabihf
+  NO_RUN: 1
+  CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
+  CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_AR: arm-linux-gnueabihf-ar
+  CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUNNER: qemu-arm-static
+darwin: &DARWIN
+  TARGET: x86_64-apple-darwin
+
+base: &BASE
+  RUST_BACKTRACE: 1
+  OPENSSL_DIR: /openssl
+
+version: 2
+jobs:
+  x86_64-openssl-1.1.1:
+    <<: *JOB
+    environment:
+      <<: [*OPENSSL_111, *X86_64, *BASE]
+  x86_64-openssl-1.1.0:
+    <<: *JOB
+    environment:
+      <<: [*OPENSSL_110, *X86_64, *BASE]
+  x86_64-openssl-1.0.2:
+    <<: *JOB
+    environment:
+      <<: [*OPENSSL_102, *X86_64, *BASE]
+  x86_64-openssl-1.0.1:
+    <<: *JOB
+    environment:
+      <<: [*OPENSSL_101, *X86_64, *BASE]
+  i686-openssl-1.1.1:
+    <<: *JOB
+    environment:
+      <<: [*OPENSSL_111, *I686, *BASE]
+  i686-openssl-1.1.0:
+    <<: *JOB
+    environment:
+      <<: [*OPENSSL_110, *I686, *BASE]
+  i686-openssl-1.0.2:
+    <<: *JOB
+    environment:
+      <<: [*OPENSSL_102, *I686, *BASE]
+  armhf-openssl-1.1.1:
+    <<: *JOB
+    environment:
+      <<: [*OPENSSL_111, *ARMHF, *BASE]
+  armhf-openssl-1.1.0:
+    <<: *JOB
+    environment:
+      <<: [*OPENSSL_110, *ARMHF, *BASE]
+  armhf-openssl-1.0.2:
+    <<: *JOB
+    environment:
+      <<: [*OPENSSL_102, *ARMHF, *BASE]
+  x86_64-libressl-2.5.0:
+    <<: *JOB
+    environment:
+      <<: [*LIBRESSL_250, *X86_64, *BASE]
+  x86_64-libressl-2.7.0:
+    <<: *JOB
+    environment:
+      <<: [*LIBRESSL_270, *X86_64, *BASE]
+  macos:
+    <<: *MACOS_JOB
+workflows:
+  version: 2
+  tests:
+    jobs:
+    - x86_64-openssl-1.1.1
+    - x86_64-openssl-1.1.0
+    - x86_64-openssl-1.0.2
+    - x86_64-openssl-1.0.1
+    - i686-openssl-1.1.1
+    - i686-openssl-1.1.0
+    - i686-openssl-1.0.2
+    - armhf-openssl-1.1.1
+    - armhf-openssl-1.1.0
+    - armhf-openssl-1.0.2
+    - x86_64-libressl-2.5.0
+    - x86_64-libressl-2.7.0
+    - macos

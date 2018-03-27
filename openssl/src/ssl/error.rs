@@ -1,4 +1,5 @@
-use std::any::Any;
+use ffi;
+use libc::c_int;
 use std::error;
 use std::error::Error as StdError;
 use std::fmt;
@@ -6,55 +7,76 @@ use std::io;
 
 use error::ErrorStack;
 use ssl::MidHandshakeSslStream;
+use x509::X509VerifyResult;
 
-/// An SSL error.
+/// An error code returned from SSL functions.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct ErrorCode(c_int);
+
+impl ErrorCode {
+    pub fn from_raw(raw: c_int) -> ErrorCode {
+        ErrorCode(raw)
+    }
+
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
+
+    /// The SSL session has been closed.
+    pub const ZERO_RETURN: ErrorCode = ErrorCode(ffi::SSL_ERROR_ZERO_RETURN);
+
+    /// An attempt to read data from the underlying socket returned `WouldBlock`.
+    ///
+    /// Wait for read readiness and retry the operation.
+    pub const WANT_READ: ErrorCode = ErrorCode(ffi::SSL_ERROR_WANT_READ);
+
+    /// An attempt to write data to the underlying socket returned `WouldBlock`.
+    ///
+    /// Wait for write readiness and retry the operation.
+    pub const WANT_WRITE: ErrorCode = ErrorCode(ffi::SSL_ERROR_WANT_WRITE);
+
+    /// A non-recoverable IO error occurred.
+    pub const SYSCALL: ErrorCode = ErrorCode(ffi::SSL_ERROR_SYSCALL);
+
+    /// An error occurred in the SSL library.
+    pub const SSL: ErrorCode = ErrorCode(ffi::SSL_ERROR_SSL);
+}
+
 #[derive(Debug)]
-pub enum Error {
-    /// The SSL session has been closed by the other end
-    ZeroReturn,
-    /// An attempt to read data from the underlying socket returned
-    /// `WouldBlock`. Wait for read readiness and reattempt the operation.
-    WantRead(io::Error),
-    /// An attempt to write data from the underlying socket returned
-    /// `WouldBlock`. Wait for write readiness and reattempt the operation.
-    WantWrite(io::Error),
-    /// The client certificate callback requested to be called again.
-    WantX509Lookup,
-    /// An error reported by the underlying stream.
-    Stream(io::Error),
-    /// An error in the OpenSSL library.
+pub(crate) enum InnerError {
+    Io(io::Error),
     Ssl(ErrorStack),
 }
 
-impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        try!(fmt.write_str(self.description()));
-        if let Some(err) = self.cause() {
-            write!(fmt, ": {}", err)
-        } else {
-            Ok(())
-        }
-    }
+/// An SSL error.
+#[derive(Debug)]
+pub struct Error {
+    pub(crate) code: ErrorCode,
+    pub(crate) cause: Option<InnerError>,
 }
 
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::ZeroReturn => "The SSL session was closed by the other end",
-            Error::WantRead(_) => "A read attempt returned a `WouldBlock` error",
-            Error::WantWrite(_) => "A write attempt returned a `WouldBlock` error",
-            Error::WantX509Lookup => "The client certificate callback requested to be called again",
-            Error::Stream(_) => "The underlying stream reported an error",
-            Error::Ssl(_) => "The OpenSSL library reported an error",
+impl Error {
+    pub fn code(&self) -> ErrorCode {
+        self.code
+    }
+
+    pub fn io_error(&self) -> Option<&io::Error> {
+        match self.cause {
+            Some(InnerError::Io(ref e)) => Some(e),
+            _ => None,
         }
     }
 
-    fn cause(&self) -> Option<&error::Error> {
-        match *self {
-            Error::WantRead(ref err) => Some(err),
-            Error::WantWrite(ref err) => Some(err),
-            Error::Stream(ref err) => Some(err),
-            Error::Ssl(ref err) => Some(err),
+    pub fn into_io_error(self) -> Result<io::Error, Error> {
+        match self.cause {
+            Some(InnerError::Io(e)) => Ok(e),
+            _ => Err(self),
+        }
+    }
+
+    pub fn ssl_error(&self) -> Option<&ErrorStack> {
+        match self.cause {
+            Some(InnerError::Ssl(ref e)) => Some(e),
             _ => None,
         }
     }
@@ -62,7 +84,48 @@ impl error::Error for Error {
 
 impl From<ErrorStack> for Error {
     fn from(e: ErrorStack) -> Error {
-        Error::Ssl(e)
+        Error {
+            code: ErrorCode::SSL,
+            cause: Some(InnerError::Ssl(e)),
+        }
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self.code {
+            ErrorCode::ZERO_RETURN => fmt.write_str("the SSL session has been shut down"),
+            ErrorCode::WANT_READ => match self.io_error() {
+                Some(_) => fmt.write_str("a nonblocking read call would have blocked"),
+                None => fmt.write_str("the operation should be retried"),
+            },
+            ErrorCode::SYSCALL => match self.io_error() {
+                Some(err) => write!(fmt, "the inner stream returned an error: {}", err),
+                None => fmt.write_str("unexpected EOF"),
+            },
+            ErrorCode::SSL => {
+                fmt.write_str("OpenSSL error")?;
+                if let Some(ref err) = self.ssl_error() {
+                    write!(fmt, ": {}", err)?
+                }
+                Ok(())
+            }
+            ErrorCode(code) => write!(fmt, "unknown error code {}", code),
+        }
+    }
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        "an OpenSSL error"
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match self.cause {
+            Some(InnerError::Io(ref e)) => Some(e),
+            Some(InnerError::Ssl(ref e)) => Some(e),
+            None => None,
+        }
     }
 }
 
@@ -73,38 +136,39 @@ pub enum HandshakeError<S> {
     SetupFailure(ErrorStack),
     /// The handshake failed.
     Failure(MidHandshakeSslStream<S>),
-    /// The handshake was interrupted midway through.
-    Interrupted(MidHandshakeSslStream<S>),
+    /// The handshake encountered a `WouldBlock` error midway through.
+    ///
+    /// This error will never be returned for blocking streams.
+    WouldBlock(MidHandshakeSslStream<S>),
 }
 
-impl<S: Any + fmt::Debug> StdError for HandshakeError<S> {
+impl<S: fmt::Debug> StdError for HandshakeError<S> {
     fn description(&self) -> &str {
         match *self {
             HandshakeError::SetupFailure(_) => "stream setup failed",
             HandshakeError::Failure(_) => "the handshake failed",
-            HandshakeError::Interrupted(_) => "the handshake was interrupted",
+            HandshakeError::WouldBlock(_) => "the handshake was interrupted",
         }
     }
 
     fn cause(&self) -> Option<&StdError> {
         match *self {
             HandshakeError::SetupFailure(ref e) => Some(e),
-            HandshakeError::Failure(ref s) |
-            HandshakeError::Interrupted(ref s) => Some(s.error()),
+            HandshakeError::Failure(ref s) | HandshakeError::WouldBlock(ref s) => Some(s.error()),
         }
     }
 }
 
-impl<S: Any + fmt::Debug> fmt::Display for HandshakeError<S> {
+impl<S: fmt::Debug> fmt::Display for HandshakeError<S> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(f.write_str(StdError::description(self)));
+        f.write_str(StdError::description(self))?;
         match *self {
-            HandshakeError::SetupFailure(ref e) => try!(write!(f, ": {}", e)),
-            HandshakeError::Failure(ref s) |
-            HandshakeError::Interrupted(ref s) => {
-                try!(write!(f, ": {}", s.error()));
-                if let Some(err) = s.ssl().verify_result() {
-                    try!(write!(f, ": {}", err));
+            HandshakeError::SetupFailure(ref e) => write!(f, ": {}", e)?,
+            HandshakeError::Failure(ref s) | HandshakeError::WouldBlock(ref s) => {
+                write!(f, ": {}", s.error())?;
+                let verify = s.ssl().verify_result();
+                if verify != X509VerifyResult::OK {
+                    write!(f, ": {}", verify)?;
                 }
             }
         }

@@ -1,4 +1,21 @@
-use libc::{c_ulong, c_char, c_int};
+//! Errors returned by OpenSSL library.
+//!
+//! OpenSSL errors are stored in an `ErrorStack`.  Most methods in the crate
+//! returns a `Result<T, ErrorStack>` type.
+//!
+//! # Examples
+//!
+//! ```
+//! use openssl::error::ErrorStack;
+//! use openssl::bn::BigNum;
+//!
+//! let an_error = BigNum::from_dec_str("Cannot parse letters");
+//! match an_error {
+//!     Ok(_)  => (),
+//!     Err(e) => println!("Parsing Error: {:?}", e),
+//! }
+//! ```
+use libc::{c_char, c_int, c_ulong};
 use std::fmt;
 use std::error;
 use std::ffi::CStr;
@@ -9,6 +26,9 @@ use std::borrow::Cow;
 
 use ffi;
 
+/// Collection of [`Error`]s from OpenSSL.
+///
+/// [`Error`]: struct.Error.html
 #[derive(Debug, Clone)]
 pub struct ErrorStack(Vec<Error>);
 
@@ -21,6 +41,13 @@ impl ErrorStack {
         }
         ErrorStack(vec)
     }
+
+    /// Pushes the errors back onto the OpenSSL error stack.
+    pub fn put(&self) {
+        for error in self.errors() {
+            error.put();
+        }
+    }
 }
 
 impl ErrorStack {
@@ -32,12 +59,16 @@ impl ErrorStack {
 
 impl fmt::Display for ErrorStack {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        if self.0.is_empty() {
+            return fmt.write_str("OpenSSL error");
+        }
+
         let mut first = true;
         for err in &self.0 {
             if !first {
-                try!(fmt.write_str(", "));
+                fmt.write_str(", ")?;
             }
-            try!(write!(fmt, "{}", err));
+            write!(fmt, "{}", err)?;
             first = false;
         }
         Ok(())
@@ -102,12 +133,46 @@ impl Error {
                         None
                     };
                     Some(Error {
-                        code: code,
-                        file: file,
-                        line: line,
-                        data: data,
+                        code,
+                        file,
+                        line,
+                        data,
                     })
                 }
+            }
+        }
+    }
+
+    /// Pushes the error back onto the OpenSSL error stack.
+    pub fn put(&self) {
+        unsafe {
+            ffi::ERR_put_error(
+                ffi::ERR_GET_LIB(self.code),
+                ffi::ERR_GET_FUNC(self.code),
+                ffi::ERR_GET_REASON(self.code),
+                self.file,
+                self.line,
+            );
+            let data = match self.data {
+                Some(Cow::Borrowed(data)) => Some((data.as_ptr() as *mut c_char, 0)),
+                Some(Cow::Owned(ref data)) => {
+                    let ptr = ffi::CRYPTO_malloc(
+                        (data.len() + 1) as _,
+                        concat!(file!(), "\0").as_ptr() as _,
+                        line!() as _,
+                    ) as *mut c_char;
+                    if ptr.is_null() {
+                        None
+                    } else {
+                        ptr::copy_nonoverlapping(data.as_ptr(), ptr as *mut u8, data.len());
+                        *ptr.offset(data.len() as isize) = 0;
+                        Some((ptr, ffi::ERR_TXT_MALLOCED))
+                    }
+                }
+                None => None,
+            };
+            if let Some((ptr, flags)) = data {
+                ffi::ERR_set_error_data(ptr, flags | ffi::ERR_TXT_STRING);
             }
         }
     }
@@ -163,8 +228,8 @@ impl Error {
     }
 
     /// Returns the line in the source file which encountered the error.
-    pub fn line(&self) -> c_int {
-        self.line
+    pub fn line(&self) -> u32 {
+        self.line as u32
     }
 
     /// Returns additional data describing the error.
@@ -197,20 +262,26 @@ impl fmt::Debug for Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(fmt, "error:{:08X}", self.code()));
+        write!(fmt, "error:{:08X}", self.code())?;
         match self.library() {
-            Some(l) => try!(write!(fmt, ":{}", l)),
-            None => try!(write!(fmt, ":lib({})", ffi::ERR_GET_LIB(self.code()))),
+            Some(l) => write!(fmt, ":{}", l)?,
+            None => write!(fmt, ":lib({})", ffi::ERR_GET_LIB(self.code()))?,
         }
         match self.function() {
-            Some(f) => try!(write!(fmt, ":{}", f)),
-            None => try!(write!(fmt, ":func({})", ffi::ERR_GET_FUNC(self.code()))),
+            Some(f) => write!(fmt, ":{}", f)?,
+            None => write!(fmt, ":func({})", ffi::ERR_GET_FUNC(self.code()))?,
         }
         match self.reason() {
-            Some(r) => try!(write!(fmt, ":{}", r)),
-            None => try!(write!(fmt, ":reason({})", ffi::ERR_GET_FUNC(self.code()))),
+            Some(r) => write!(fmt, ":{}", r)?,
+            None => write!(fmt, ":reason({})", ffi::ERR_GET_FUNC(self.code()))?,
         }
-        write!(fmt, ":{}:{}:{}", self.file(), self.line(), self.data().unwrap_or(""))
+        write!(
+            fmt,
+            ":{}:{}:{}",
+            self.file(),
+            self.line(),
+            self.data().unwrap_or("")
+        )
     }
 }
 

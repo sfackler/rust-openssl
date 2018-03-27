@@ -1,15 +1,62 @@
-//! Low level AES functionality
+//! Low level AES IGE functionality
 //!
-//! The `symm` module should be used in preference to this module in most cases.
+//! AES ECB, CBC, XTS, CTR, CFB, GCM and other conventional symmetric encryption
+//! modes are found in [`symm`].  This is the implementation of AES IGE.
+//!
+//! Advanced Encryption Standard (AES) provides symmetric key cipher that
+//! the same key is used to encrypt and decrypt data.  This implementation
+//! uses 128, 192, or 256 bit keys.  This module provides functions to
+//! create a new key with [`new_encrypt`] and perform an encryption/decryption
+//! using that key with [`aes_ige`].
+//!
+//! [`new_encrypt`]: struct.AesKey.html#method.new_encrypt
+//! [`aes_ige`]: fn.aes_ige.html
+//!
+//! The [`symm`] module should be used in preference to this module in most cases.
+//! The IGE block cypher is a non-traditional cipher mode.  More traditional AES
+//! encryption methods are found in the [`Crypter`] and [`Cipher`] structs.
+//!
+//! [`symm`]: ../symm/index.html
+//! [`Crypter`]: ../symm/struct.Crypter.html
+//! [`Cipher`]: ../symm/struct.Cipher.html
+//!
+//! # Examples
+//!
+//! ```rust
+//! # extern crate openssl;
+//! extern crate hex;
+//! use openssl::aes::{AesKey, KeyError, aes_ige};
+//! use openssl::symm::Mode;
+//! use hex::FromHex;
+//!
+//! fn decrypt() -> Result<(), KeyError> {
+//!   let raw_key = "000102030405060708090A0B0C0D0E0F";
+//!   let hex_cipher = "12345678901234561234567890123456";
+//!   let randomness = "000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F";
+//!   if let (Ok(key_as_u8), Ok(cipher_as_u8), Ok(mut iv_as_u8)) =
+//!       (Vec::from_hex(raw_key), Vec::from_hex(hex_cipher), Vec::from_hex(randomness)) {
+//!     let key = AesKey::new_encrypt(&key_as_u8)?;
+//!     let mut output = vec![0u8; cipher_as_u8.len()];
+//!     aes_ige(&cipher_as_u8, &mut output, &key, &mut iv_as_u8, Mode::Encrypt);
+//!     assert_eq!(hex::encode(output), "a6ad974d5cea1d36d2f367980907ed32");
+//!   }
+//!   Ok(())
+//! }
+//!
+//! # fn main() {
+//! #   decrypt();
+//! # }
 use ffi;
 use std::mem;
 use libc::c_int;
 
 use symm::Mode;
 
+/// Provides Error handling for parsing keys.
 #[derive(Debug)]
 pub struct KeyError(());
 
+/// The key used to encrypt or decrypt cipher blocks.
 pub struct AesKey(ffi::AES_KEY);
 
 impl AesKey {
@@ -23,9 +70,11 @@ impl AesKey {
             assert!(key.len() <= c_int::max_value() as usize / 8);
 
             let mut aes_key = mem::uninitialized();
-            let r = ffi::AES_set_encrypt_key(key.as_ptr() as *const _,
-                                             key.len() as c_int * 8,
-                                             &mut aes_key);
+            let r = ffi::AES_set_encrypt_key(
+                key.as_ptr() as *const _,
+                key.len() as c_int * 8,
+                &mut aes_key,
+            );
             if r == 0 {
                 Ok(AesKey(aes_key))
             } else {
@@ -44,9 +93,11 @@ impl AesKey {
             assert!(key.len() <= c_int::max_value() as usize / 8);
 
             let mut aes_key = mem::uninitialized();
-            let r = ffi::AES_set_decrypt_key(key.as_ptr() as *const _,
-                                             key.len() as c_int * 8,
-                                             &mut aes_key);
+            let r = ffi::AES_set_decrypt_key(
+                key.as_ptr() as *const _,
+                key.len() as c_int * 8,
+                &mut aes_key,
+            );
 
             if r == 0 {
                 Ok(AesKey(aes_key))
@@ -58,6 +109,18 @@ impl AesKey {
 }
 
 /// Performs AES IGE encryption or decryption
+///
+/// AES IGE (Infinite Garble Extension) is a form of AES block cipher utilized in
+/// OpenSSL.  Infinite Garble referes to propogating forward errors.  IGE, like other
+/// block ciphers implemented for AES requires an initalization vector.  The IGE mode
+/// allows a stream of blocks to be encrypted or decrypted without having the entire
+/// plaintext available.  For more information, visit [AES IGE Encryption].
+///
+/// This block cipher uses 16 byte blocks.  The rust implmentation will panic
+/// if the input or output does not meet this 16-byte boundry.  Attention must
+/// be made in this low level implementation to pad the value to the 128-bit boundry.
+///
+/// [AES IGE Encryption]: http://www.links.org/files/openssl-ige.pdf
 ///
 /// # Panics
 ///
@@ -73,12 +136,14 @@ pub fn aes_ige(in_: &[u8], out: &mut [u8], key: &AesKey, iv: &mut [u8], mode: Mo
             Mode::Encrypt => ffi::AES_ENCRYPT,
             Mode::Decrypt => ffi::AES_DECRYPT,
         };
-        ffi::AES_ige_encrypt(in_.as_ptr() as *const _,
-                             out.as_mut_ptr() as *mut _,
-                             in_.len(),
-                             &key.0,
-                             iv.as_mut_ptr() as *mut _,
-                             mode);
+        ffi::AES_ige_encrypt(
+            in_.as_ptr() as *const _,
+            out.as_mut_ptr() as *mut _,
+            in_.len(),
+            &key.0,
+            iv.as_mut_ptr() as *mut _,
+            mode,
+        );
     }
 }
 

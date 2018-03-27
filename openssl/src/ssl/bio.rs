@@ -40,7 +40,7 @@ pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, BioMethod), ErrorSta
     });
 
     unsafe {
-        let bio = try!(cvt_p(BIO_new(method.0.get())));
+        let bio = cvt_p(BIO_new(method.0.get()))?;
         compat::BIO_set_data(bio, Box::into_raw(state) as *mut _);
         compat::BIO_set_init(bio, 1);
 
@@ -71,7 +71,7 @@ unsafe fn state<'a, S: 'a>(bio: *mut BIO) -> &'a mut StreamState<S> {
     &mut *(compat::BIO_get_data(bio) as *mut _)
 }
 
-unsafe extern fn bwrite<S: Write>(bio: *mut BIO, buf: *const c_char, len: c_int) -> c_int {
+unsafe extern "C" fn bwrite<S: Write>(bio: *mut BIO, buf: *const c_char, len: c_int) -> c_int {
     BIO_clear_retry_flags(bio);
 
     let state = state::<S>(bio);
@@ -93,7 +93,7 @@ unsafe extern fn bwrite<S: Write>(bio: *mut BIO, buf: *const c_char, len: c_int)
     }
 }
 
-unsafe extern fn bread<S: Read>(bio: *mut BIO, buf: *mut c_char, len: c_int) -> c_int {
+unsafe extern "C" fn bread<S: Read>(bio: *mut BIO, buf: *mut c_char, len: c_int) -> c_int {
     BIO_clear_retry_flags(bio);
 
     let state = state::<S>(bio);
@@ -123,15 +123,16 @@ fn retriable_error(err: &io::Error) -> bool {
     }
 }
 
-unsafe extern fn bputs<S: Write>(bio: *mut BIO, s: *const c_char) -> c_int {
+unsafe extern "C" fn bputs<S: Write>(bio: *mut BIO, s: *const c_char) -> c_int {
     bwrite::<S>(bio, s, strlen(s) as c_int)
 }
 
-unsafe extern fn ctrl<S: Write>(bio: *mut BIO,
-                                    cmd: c_int,
-                                    _num: c_long,
-                                    _ptr: *mut c_void)
-                                    -> c_long {
+unsafe extern "C" fn ctrl<S: Write>(
+    bio: *mut BIO,
+    cmd: c_int,
+    _num: c_long,
+    _ptr: *mut c_void,
+) -> c_long {
     if cmd == BIO_CTRL_FLUSH {
         let state = state::<S>(bio);
 
@@ -151,7 +152,7 @@ unsafe extern fn ctrl<S: Write>(bio: *mut BIO,
     }
 }
 
-unsafe extern fn create(bio: *mut BIO) -> c_int {
+unsafe extern "C" fn create(bio: *mut BIO) -> c_int {
     compat::BIO_set_init(bio, 0);
     compat::BIO_set_num(bio, 0);
     compat::BIO_set_data(bio, ptr::null_mut());
@@ -159,7 +160,7 @@ unsafe extern fn create(bio: *mut BIO) -> c_int {
     1
 }
 
-unsafe extern fn destroy<S>(bio: *mut BIO) -> c_int {
+unsafe extern "C" fn destroy<S>(bio: *mut BIO) -> c_int {
     if bio.is_null() {
         return 0;
     }

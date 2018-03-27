@@ -1,14 +1,16 @@
-#![doc(html_root_url="https://docs.rs/openssl/0.9.9")]
+#![doc(html_root_url = "https://docs.rs/openssl/0.10")]
 
 #[macro_use]
 extern crate bitflags;
 #[macro_use]
 extern crate foreign_types;
-extern crate libc;
 #[macro_use]
 extern crate lazy_static;
+extern crate libc;
 extern crate openssl_sys as ffi;
 
+#[cfg(test)]
+extern crate data_encoding;
 #[cfg(test)]
 extern crate hex;
 #[cfg(test)]
@@ -25,17 +27,23 @@ use error::ErrorStack;
 mod macros;
 
 mod bio;
+#[macro_use]
 mod util;
 pub mod aes;
 pub mod asn1;
 pub mod bn;
+#[cfg(not(libressl))]
+pub mod cms;
 pub mod conf;
-pub mod crypto;
+pub mod derive;
 pub mod dh;
 pub mod dsa;
 pub mod ec;
-pub mod ec_key;
+pub mod ecdsa;
 pub mod error;
+pub mod ex_data;
+#[cfg(not(libressl))]
+pub mod fips;
 pub mod hash;
 pub mod memcmp;
 pub mod nid;
@@ -46,11 +54,11 @@ pub mod pkey;
 pub mod rand;
 pub mod rsa;
 pub mod sign;
+pub mod sha;
 pub mod ssl;
 pub mod stack;
 pub mod string;
 pub mod symm;
-pub mod types;
 pub mod version;
 pub mod x509;
 #[cfg(any(ossl102, ossl110))]
@@ -73,5 +81,9 @@ fn cvt(r: c_int) -> Result<c_int, ErrorStack> {
 }
 
 fn cvt_n(r: c_int) -> Result<c_int, ErrorStack> {
-    if r < 0 { Err(ErrorStack::get()) } else { Ok(r) }
+    if r < 0 {
+        Err(ErrorStack::get())
+    } else {
+        Ok(r)
+    }
 }

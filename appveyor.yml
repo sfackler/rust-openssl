@@ -5,26 +5,30 @@ environment:
     - TARGET: i686-pc-windows-gnu
       BITS: 32
       MSYS2: 1
-      OPENSSL_VERSION: 1_1_0e
+      OPENSSL_VERSION: 1_1_0g
     - TARGET: x86_64-pc-windows-msvc
       BITS: 64
-      OPENSSL_VERSION: 1_1_0e
+      OPENSSL_VERSION: 1_1_0g
       OPENSSL_DIR: C:\OpenSSL
 
     # 1.0.2, 64/32 bit
     - TARGET: x86_64-pc-windows-gnu
       BITS: 64
       MSYS2: 1
-      OPENSSL_VERSION: 1_0_2k
+      OPENSSL_VERSION: 1_0_2n
     - TARGET: i686-pc-windows-msvc
       BITS: 32
-      OPENSSL_VERSION: 1_0_2k
+      OPENSSL_VERSION: 1_0_2n
       OPENSSL_DIR: C:\OpenSSL
+    - TARGET: x86_64-pc-windows-msvc
+      VCPKG_DEFAULT_TRIPLET: x64-windows
+      VCPKGRS_DYNAMIC: 1
 install:
   # install OpenSSL
-  - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe"
-  - Win%BITS%OpenSSL-%OPENSSL_VERSION%.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
-  - ps: Start-FileDownload "https://curl.haxx.se/ca/cacert.pem" -FileName "C:\OpenSSL\cacert.pem"
+  - mkdir C:\OpenSSL
+  - ps: if (Test-Path env:OPENSSL_VERSION) { Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" }
+  - if defined OPENSSL_VERSION Win%BITS%OpenSSL-%OPENSSL_VERSION%.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
+  - appveyor DownloadFile https://curl.haxx.se/ca/cacert.pem -FileName C:\OpenSSL\cacert.pem
 
   # Install Rust
   - curl -sSf -o rustup-init.exe https://win.rustup.rs/
@@ -33,13 +37,14 @@ install:
   - if defined MSYS2 set PATH=C:\msys64\mingw%BITS%\bin;%PATH%
   - rustc -V
   - cargo -V
+  - if defined VCPKG_DEFAULT_TRIPLET git clone https://github.com/Microsoft/vcpkg c:\projects\vcpkg
+  - if defined VCPKG_DEFAULT_TRIPLET c:\projects\vcpkg\bootstrap-vcpkg.bat
+  - if defined VCPKG_DEFAULT_TRIPLET set VCPKG_ROOT=c:\projects\vcpkg
+  - if defined VCPKG_DEFAULT_TRIPLET echo yes > %VCPKG_ROOT%\Downloads\AlwaysAllowDownloads
+  - if defined VCPKG_DEFAULT_TRIPLET %VCPKG_ROOT%\vcpkg.exe install openssl
 
 build: false
 
 test_script:
   - cargo run --manifest-path systest/Cargo.toml --target %TARGET%
   - cargo test --manifest-path openssl/Cargo.toml --target %TARGET%
-
-cache:
-  - target
-  - C:\Users\appveyor\.cargo\registry

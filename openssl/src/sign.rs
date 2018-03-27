@@ -26,13 +26,13 @@
 //! let mut signer = Signer::new(MessageDigest::sha256(), &keypair).unwrap();
 //! signer.update(data).unwrap();
 //! signer.update(data2).unwrap();
-//! let signature = signer.finish().unwrap();
+//! let signature = signer.sign_to_vec().unwrap();
 //!
 //! // Verify the data
 //! let mut verifier = Verifier::new(MessageDigest::sha256(), &keypair).unwrap();
 //! verifier.update(data).unwrap();
 //! verifier.update(data2).unwrap();
-//! assert!(verifier.finish(&signature).unwrap());
+//! assert!(verifier.verify(&signature).unwrap());
 //! ```
 //!
 //! Compute an HMAC:
@@ -53,7 +53,7 @@
 //! let mut signer = Signer::new(MessageDigest::sha256(), &key).unwrap();
 //! signer.update(data).unwrap();
 //! signer.update(data2).unwrap();
-//! let hmac = signer.finish().unwrap();
+//! let hmac = signer.sign_to_vec().unwrap();
 //!
 //! // `Verifier` cannot be used with HMACs; use the `memcmp::eq` function instead
 //! //
@@ -66,22 +66,50 @@ use foreign_types::ForeignTypeRef;
 use std::io::{self, Write};
 use std::marker::PhantomData;
 use std::ptr;
+use libc::c_int;
 
 use {cvt, cvt_p};
 use hash::MessageDigest;
-use pkey::{PKeyRef, PKeyCtxRef};
+use pkey::{HasPrivate, HasPublic, PKeyRef};
 use error::ErrorStack;
+use rsa::Padding;
 
 #[cfg(ossl110)]
-use ffi::{EVP_MD_CTX_new, EVP_MD_CTX_free};
+use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
 #[cfg(any(ossl101, ossl102))]
 use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
 
+/// Salt lengths that must be used with `set_rsa_pss_saltlen`.
+pub struct RsaPssSaltlen(c_int);
+
+impl RsaPssSaltlen {
+    /// Returns the integer representation of `RsaPssSaltlen`.
+    fn as_raw(&self) -> c_int {
+        self.0
+    }
+
+    /// Sets the salt length to the given value.
+    pub fn custom(val: c_int) -> RsaPssSaltlen {
+        RsaPssSaltlen(val)
+    }
+
+    /// The salt length is set to the digest length.
+    /// Corresponds to the special value `-1`.
+    pub const DIGEST_LENGTH: RsaPssSaltlen = RsaPssSaltlen(-1);
+    /// The salt length is set to the maximum permissible value.
+    /// Corresponds to the special value `-2`.
+    pub const MAXIMUM_LENGTH: RsaPssSaltlen = RsaPssSaltlen(-2);
+}
+
+/// A type which computes cryptographic signatures of data.
 pub struct Signer<'a> {
     md_ctx: *mut ffi::EVP_MD_CTX,
-    pkey_ctx: *mut ffi::EVP_PKEY_CTX,
-    pkey_pd: PhantomData<&'a PKeyRef>,
+    pctx: *mut ffi::EVP_PKEY_CTX,
+    _p: PhantomData<&'a ()>,
 }
+
+unsafe impl<'a> Sync for Signer<'a> {}
+unsafe impl<'a> Send for Signer<'a> {}
 
 impl<'a> Drop for Signer<'a> {
     fn drop(&mut self) {
@@ -93,17 +121,50 @@ impl<'a> Drop for Signer<'a> {
 }
 
 impl<'a> Signer<'a> {
-    pub fn new(type_: MessageDigest, pkey: &'a PKeyRef) -> Result<Signer<'a>, ErrorStack> {
+    /// Creates a new `Signer`.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestSignInit`].
+    ///
+    /// [`EVP_DigestSignInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignInit.html
+    pub fn new<T>(type_: MessageDigest, pkey: &'a PKeyRef<T>) -> Result<Signer<'a>, ErrorStack>
+    where
+        T: HasPrivate,
+    {
+        Self::new_intern(Some(type_), pkey)
+    }
+
+    /// Creates a new `Signer` without a digest.
+    ///
+    /// This can be used to create a CMAC.
+    /// OpenSSL documentation at [`EVP_DigestSignInit`].
+    ///
+    /// [`EVP_DigestSignInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignInit.html
+    pub fn new_without_digest<T>(pkey: &'a PKeyRef<T>) -> Result<Signer<'a>, ErrorStack>
+    where
+        T: HasPrivate,
+    {
+        Self::new_intern(None, pkey)
+    }
+
+    pub fn new_intern<T>(
+        type_: Option<MessageDigest>,
+        pkey: &'a PKeyRef<T>,
+    ) -> Result<Signer<'a>, ErrorStack>
+    where
+        T: HasPrivate,
+    {
         unsafe {
             ffi::init();
 
-            let ctx = try!(cvt_p(EVP_MD_CTX_new()));
+            let ctx = cvt_p(EVP_MD_CTX_new())?;
             let mut pctx: *mut ffi::EVP_PKEY_CTX = ptr::null_mut();
-            let r = ffi::EVP_DigestSignInit(ctx,
-                                            &mut pctx,
-                                            type_.as_ptr(),
-                                            ptr::null_mut(),
-                                            pkey.as_ptr());
+            let r = ffi::EVP_DigestSignInit(
+                ctx,
+                &mut pctx,
+                type_.map(|t| t.as_ptr()).unwrap_or(ptr::null()),
+                ptr::null_mut(),
+                pkey.as_ptr(),
+            );
             if r != 1 {
                 EVP_MD_CTX_free(ctx);
                 return Err(ErrorStack::get());
@@ -113,42 +174,143 @@ impl<'a> Signer<'a> {
 
             Ok(Signer {
                 md_ctx: ctx,
-                pkey_ctx: pctx,
-                pkey_pd: PhantomData,
+                pctx,
+                _p: PhantomData,
             })
         }
     }
 
-    pub fn pkey_ctx(&self) -> &PKeyCtxRef {
-        unsafe { PKeyCtxRef::from_ptr(self.pkey_ctx) }
+    /// Returns the RSA padding mode in use.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to `EVP_PKEY_CTX_get_rsa_padding`.
+    pub fn rsa_padding(&self) -> Result<Padding, ErrorStack> {
+        unsafe {
+            let mut pad = 0;
+            cvt(ffi::EVP_PKEY_CTX_get_rsa_padding(self.pctx, &mut pad))
+                .map(|_| Padding::from_raw(pad))
+        }
     }
 
-    pub fn pkey_ctx_mut(&mut self) -> &mut PKeyCtxRef {
-        unsafe { PKeyCtxRef::from_ptr_mut(self.pkey_ctx) }
+    /// Sets the RSA padding mode.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_padding`].
+    ///
+    /// [`EVP_PKEY_CTX_set_rsa_padding`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_padding.html
+    pub fn set_rsa_padding(&mut self, padding: Padding) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(
+                self.pctx,
+                padding.as_raw(),
+            )).map(|_| ())
+        }
     }
 
+    /// Sets the RSA PSS salt length.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_pss_saltlen`].
+    ///
+    /// [`EVP_PKEY_CTX_set_rsa_pss_saltlen`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_pss_saltlen.html
+    pub fn set_rsa_pss_saltlen(&mut self, len: RsaPssSaltlen) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_pss_saltlen(
+                self.pctx,
+                len.as_raw(),
+            )).map(|_| ())
+        }
+    }
+
+    /// Sets the RSA MGF1 algorithm.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_mgf1_md`].
+    ///
+    /// [`EVP_PKEY_CTX_set_rsa_mgf1_md`]: https://www.openssl.org/docs/manmaster/man7/RSA-PSS.html
+    pub fn set_rsa_mgf1_md(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_mgf1_md(
+                self.pctx,
+                md.as_ptr() as *mut _,
+            )).map(|_| ())
+        }
+    }
+
+    /// Feeds more data into the `Signer`.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestUpdate`].
+    ///
+    /// [`EVP_DigestUpdate`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestInit.html
     pub fn update(&mut self, buf: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::EVP_DigestUpdate(self.md_ctx, buf.as_ptr() as *const _, buf.len())).map(|_| ())
+            cvt(ffi::EVP_DigestUpdate(
+                self.md_ctx,
+                buf.as_ptr() as *const _,
+                buf.len(),
+            )).map(|_| ())
         }
     }
 
-    pub fn finish(&self) -> Result<Vec<u8>, ErrorStack> {
+    /// Computes an upper bound on the signature length.
+    ///
+    /// The actual signature may be shorter than this value. Check the return value of
+    /// `sign` to get the exact length.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestSignFinal`].
+    ///
+    /// [`EVP_DigestSignFinal`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestSignFinal.html
+    pub fn len(&self) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = 0;
-            try!(cvt(ffi::EVP_DigestSignFinal(self.md_ctx, ptr::null_mut(), &mut len)));
-            let mut buf = vec![0; len];
-            try!(cvt(ffi::EVP_DigestSignFinal(self.md_ctx, buf.as_mut_ptr() as *mut _, &mut len)));
-            // The advertised length is not always equal to the real length for things like DSA
-            buf.truncate(len);
-            Ok(buf)
+            cvt(ffi::EVP_DigestSignFinal(
+                self.md_ctx,
+                ptr::null_mut(),
+                &mut len,
+            ))?;
+            Ok(len)
         }
+    }
+
+    /// Writes the signature into the provided buffer, returning the number of bytes written.
+    ///
+    /// This method will fail if the buffer is not large enough for the signature. Use the `len`
+    /// method to get an upper bound on the required size.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestSignFinal`].
+    ///
+    /// [`EVP_DigestSignFinal`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestSignFinal.html
+    pub fn sign(&self, buf: &mut [u8]) -> Result<usize, ErrorStack> {
+        unsafe {
+            let mut len = buf.len();
+            cvt(ffi::EVP_DigestSignFinal(
+                self.md_ctx,
+                buf.as_mut_ptr() as *mut _,
+                &mut len,
+            ))?;
+            Ok(len)
+        }
+    }
+
+    /// Returns the signature.
+    ///
+    /// This is a simple convenience wrapper over `len` and `sign`.
+    pub fn sign_to_vec(&self) -> Result<Vec<u8>, ErrorStack> {
+        let mut buf = vec![0; self.len()?];
+        let len = self.sign(&mut buf)?;
+        // The advertised length is not always equal to the real length for things like DSA
+        buf.truncate(len);
+        Ok(buf)
     }
 }
 
 impl<'a> Write for Signer<'a> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        try!(self.update(buf));
+        self.update(buf)?;
         Ok(buf.len())
     }
 
@@ -159,9 +321,12 @@ impl<'a> Write for Signer<'a> {
 
 pub struct Verifier<'a> {
     md_ctx: *mut ffi::EVP_MD_CTX,
-    pkey_ctx: *mut ffi::EVP_PKEY_CTX,
-    pkey_pd: PhantomData<&'a PKeyRef>,
+    pctx: *mut ffi::EVP_PKEY_CTX,
+    pkey_pd: PhantomData<&'a ()>,
 }
+
+unsafe impl<'a> Sync for Verifier<'a> {}
+unsafe impl<'a> Send for Verifier<'a> {}
 
 impl<'a> Drop for Verifier<'a> {
     fn drop(&mut self) {
@@ -172,18 +337,29 @@ impl<'a> Drop for Verifier<'a> {
     }
 }
 
+/// A type which verifies cryptographic signatures of data.
 impl<'a> Verifier<'a> {
-    pub fn new(type_: MessageDigest, pkey: &'a PKeyRef) -> Result<Verifier<'a>, ErrorStack> {
+    /// Creates a new `Verifier`.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestVerifyInit`].
+    ///
+    /// [`EVP_DigestVerifyInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestVerifyInit.html
+    pub fn new<T>(type_: MessageDigest, pkey: &'a PKeyRef<T>) -> Result<Verifier<'a>, ErrorStack>
+    where
+        T: HasPublic,
+    {
         unsafe {
             ffi::init();
 
-            let ctx = try!(cvt_p(EVP_MD_CTX_new()));
+            let ctx = cvt_p(EVP_MD_CTX_new())?;
             let mut pctx: *mut ffi::EVP_PKEY_CTX = ptr::null_mut();
-            let r = ffi::EVP_DigestVerifyInit(ctx,
-                                              &mut pctx,
-                                              type_.as_ptr(),
-                                              ptr::null_mut(),
-                                              pkey.as_ptr());
+            let r = ffi::EVP_DigestVerifyInit(
+                ctx,
+                &mut pctx,
+                type_.as_ptr(),
+                ptr::null_mut(),
+                pkey.as_ptr(),
+            );
             if r != 1 {
                 EVP_MD_CTX_free(ctx);
                 return Err(ErrorStack::get());
@@ -193,29 +369,97 @@ impl<'a> Verifier<'a> {
 
             Ok(Verifier {
                 md_ctx: ctx,
-                pkey_ctx: pctx,
+                pctx,
                 pkey_pd: PhantomData,
             })
         }
     }
 
-    pub fn pkey_ctx(&self) -> &PKeyCtxRef {
-        unsafe { PKeyCtxRef::from_ptr(self.pkey_ctx) }
-    }
-
-    pub fn pkey_ctx_mut(&mut self) -> &mut PKeyCtxRef {
-        unsafe { PKeyCtxRef::from_ptr_mut(self.pkey_ctx) }
-    }
-
-    pub fn update(&mut self, buf: &[u8]) -> Result<(), ErrorStack> {
+    /// Returns the RSA padding mode in use.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to `EVP_PKEY_CTX_get_rsa_padding`.
+    pub fn rsa_padding(&self) -> Result<Padding, ErrorStack> {
         unsafe {
-            cvt(ffi::EVP_DigestUpdate(self.md_ctx, buf.as_ptr() as *const _, buf.len())).map(|_| ())
+            let mut pad = 0;
+            cvt(ffi::EVP_PKEY_CTX_get_rsa_padding(self.pctx, &mut pad))
+                .map(|_| Padding::from_raw(pad))
         }
     }
 
-    pub fn finish(&self, signature: &[u8]) -> Result<bool, ErrorStack> {
+    /// Sets the RSA padding mode.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_padding`].
+    ///
+    /// [`EVP_PKEY_CTX_set_rsa_padding`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_padding.html
+    pub fn set_rsa_padding(&mut self, padding: Padding) -> Result<(), ErrorStack> {
         unsafe {
-            let r = EVP_DigestVerifyFinal(self.md_ctx, signature.as_ptr() as *const _, signature.len());
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(
+                self.pctx,
+                padding.as_raw(),
+            )).map(|_| ())
+        }
+    }
+
+    /// Sets the RSA PSS salt length.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_pss_saltlen`].
+    ///
+    /// [`EVP_PKEY_CTX_set_rsa_pss_saltlen`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_pss_saltlen.html
+    pub fn set_rsa_pss_saltlen(&mut self, len: RsaPssSaltlen) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_pss_saltlen(
+                self.pctx,
+                len.as_raw(),
+            )).map(|_| ())
+        }
+    }
+
+    /// Sets the RSA MGF1 algorithm.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_mgf1_md`].
+    ///
+    /// [`EVP_PKEY_CTX_set_rsa_mgf1_md`]: https://www.openssl.org/docs/manmaster/man7/RSA-PSS.html
+    pub fn set_rsa_mgf1_md(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_rsa_mgf1_md(
+                self.pctx,
+                md.as_ptr() as *mut _,
+            )).map(|_| ())
+        }
+    }
+
+    /// Feeds more data into the `Verifier`.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestUpdate`].
+    ///
+    /// [`EVP_DigestUpdate`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestInit.html
+    pub fn update(&mut self, buf: &[u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_DigestUpdate(
+                self.md_ctx,
+                buf.as_ptr() as *const _,
+                buf.len(),
+            )).map(|_| ())
+        }
+    }
+
+    /// Determines if the data fed into the `Verifier` matches the provided signature.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestVerifyFinal`].
+    ///
+    /// [`EVP_DigestVerifyFinal`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestVerifyFinal.html
+    pub fn verify(&self, signature: &[u8]) -> Result<bool, ErrorStack> {
+        unsafe {
+            let r =
+                EVP_DigestVerifyFinal(self.md_ctx, signature.as_ptr() as *const _, signature.len());
             match r {
                 1 => Ok(true),
                 0 => {
@@ -230,7 +474,7 @@ impl<'a> Verifier<'a> {
 
 impl<'a> Write for Verifier<'a> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        try!(self.update(buf));
+        self.update(buf)?;
         Ok(buf.len())
     }
 
@@ -244,49 +488,38 @@ use ffi::EVP_DigestVerifyFinal;
 
 #[cfg(ossl101)]
 #[allow(bad_style)]
-unsafe fn EVP_DigestVerifyFinal(ctx: *mut ffi::EVP_MD_CTX,
-                                sigret: *const ::libc::c_uchar,
-                                siglen: ::libc::size_t)
-                                -> ::libc::c_int {
+unsafe fn EVP_DigestVerifyFinal(
+    ctx: *mut ffi::EVP_MD_CTX,
+    sigret: *const ::libc::c_uchar,
+    siglen: ::libc::size_t,
+) -> ::libc::c_int {
     ffi::EVP_DigestVerifyFinal(ctx, sigret as *mut _, siglen)
 }
 
 #[cfg(test)]
 mod test {
-    use hex::FromHex;
+    use hex::{self, FromHex};
     use std::iter;
 
     use hash::MessageDigest;
-    use sign::{Signer, Verifier};
+    use sign::{RsaPssSaltlen, Signer, Verifier};
     use ec::{EcGroup, EcKey};
-    use nid;
-    use rsa::{Rsa, PKCS1_PADDING};
-    use dsa::Dsa;
+    use nid::Nid;
+    use rsa::{Padding, Rsa};
     use pkey::PKey;
 
-    static INPUT: &'static [u8] =
-        &[101, 121, 74, 104, 98, 71, 99, 105, 79, 105, 74, 83, 85, 122, 73, 49, 78, 105, 74, 57,
-          46, 101, 121, 74, 112, 99, 51, 77, 105, 79, 105, 74, 113, 98, 50, 85, 105, 76, 65, 48,
-          75, 73, 67, 74, 108, 101, 72, 65, 105, 79, 106, 69, 122, 77, 68, 65, 52, 77, 84, 107,
-          122, 79, 68, 65, 115, 68, 81, 111, 103, 73, 109, 104, 48, 100, 72, 65, 54, 76, 121, 57,
-          108, 101, 71, 70, 116, 99, 71, 120, 108, 76, 109, 78, 118, 98, 83, 57, 112, 99, 49, 57,
-          121, 98, 50, 57, 48, 73, 106, 112, 48, 99, 110, 86, 108, 102, 81];
+    const INPUT: &'static str =
+        "65794a68624763694f694a53557a49314e694a392e65794a7063334d694f694a71623255694c41304b49434a6c\
+         654841694f6a457a4d4441344d546b7a4f44417344516f67496d6830644841364c79396c654746746347786c4c\
+         6d4e76625339706331397962323930496a7030636e566c6651";
 
-    static SIGNATURE: &'static [u8] =
-        &[112, 46, 33, 137, 67, 232, 143, 209, 30, 181, 216, 45, 191, 120, 69, 243, 65, 6, 174,
-          27, 129, 255, 247, 115, 17, 22, 173, 209, 113, 125, 131, 101, 109, 66, 10, 253, 60, 150,
-          238, 221, 115, 162, 102, 62, 81, 102, 104, 123, 0, 11, 135, 34, 110, 1, 135, 237, 16,
-          115, 249, 69, 229, 130, 173, 252, 239, 22, 216, 90, 121, 142, 232, 198, 109, 219, 61,
-          184, 151, 91, 23, 208, 148, 2, 190, 237, 213, 217, 217, 112, 7, 16, 141, 178, 129, 96,
-          213, 248, 4, 12, 167, 68, 87, 98, 184, 31, 190, 127, 249, 217, 46, 10, 231, 111, 36,
-          242, 91, 51, 187, 230, 244, 74, 230, 30, 177, 4, 10, 203, 32, 4, 77, 62, 249, 18, 142,
-          212, 1, 48, 121, 91, 212, 189, 59, 65, 238, 202, 208, 102, 171, 101, 25, 129, 253, 228,
-          141, 247, 127, 55, 45, 195, 139, 159, 175, 221, 59, 239, 177, 139, 93, 163, 204, 60, 46,
-          176, 47, 158, 58, 65, 214, 18, 202, 173, 21, 145, 18, 115, 160, 95, 35, 185, 232, 56,
-          250, 175, 132, 157, 105, 132, 41, 239, 90, 30, 136, 121, 130, 54, 195, 212, 14, 96, 69,
-          34, 165, 68, 200, 242, 122, 122, 45, 184, 6, 99, 209, 108, 247, 202, 234, 86, 222, 64,
-          92, 178, 33, 90, 69, 178, 194, 85, 102, 181, 90, 193, 167, 72, 160, 112, 223, 200, 163,
-          42, 70, 149, 67, 208, 25, 238, 251, 71];
+    const SIGNATURE: &'static str =
+        "702e218943e88fd11eb5d82dbf7845f34106ae1b81fff7731116add1717d83656d420afd3c96eedd73a2663e51\
+         66687b000b87226e0187ed1073f945e582adfcef16d85a798ee8c66ddb3db8975b17d09402beedd5d9d9700710\
+         8db28160d5f8040ca7445762b81fbe7ff9d92e0ae76f24f25b33bbe6f44ae61eb1040acb20044d3ef9128ed401\
+         30795bd4bd3b41eecad066ab651981fde48df77f372dc38b9fafdd3befb18b5da3cc3c2eb02f9e3a41d612caad\
+         15911273a05f23b9e838faaf849d698429ef5a1e88798236c3d40e604522a544c8f27a7a2db80663d16cf7caea\
+         56de405cb2215a45b2c25566b55ac1a748a070dfc8a32a469543d019eefb47";
 
     #[test]
     fn rsa_sign() {
@@ -295,12 +528,12 @@ mod test {
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut signer = Signer::new(MessageDigest::sha256(), &pkey).unwrap();
-        assert_eq!(signer.pkey_ctx_mut().rsa_padding().unwrap(), PKCS1_PADDING);
-        signer.pkey_ctx_mut().set_rsa_padding(PKCS1_PADDING).unwrap();
-        signer.update(INPUT).unwrap();
-        let result = signer.finish().unwrap();
+        assert_eq!(signer.rsa_padding().unwrap(), Padding::PKCS1);
+        signer.set_rsa_padding(Padding::PKCS1).unwrap();
+        signer.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
+        let result = signer.sign_to_vec().unwrap();
 
-        assert_eq!(result, SIGNATURE);
+        assert_eq!(hex::encode(result), SIGNATURE);
     }
 
     #[test]
@@ -310,9 +543,9 @@ mod test {
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
-        assert_eq!(verifier.pkey_ctx_mut().rsa_padding().unwrap(), PKCS1_PADDING);
-        verifier.update(INPUT).unwrap();
-        assert!(verifier.finish(SIGNATURE).unwrap());
+        assert_eq!(verifier.rsa_padding().unwrap(), Padding::PKCS1);
+        verifier.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
+        assert!(verifier.verify(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
     }
 
     #[test]
@@ -322,59 +555,9 @@ mod test {
         let pkey = PKey::from_rsa(private_key).unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
-        verifier.update(INPUT).unwrap();
+        verifier.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         verifier.update(b"foobar").unwrap();
-        assert!(!verifier.finish(SIGNATURE).unwrap());
-    }
-
-    #[test]
-    pub fn dsa_sign_verify() {
-        let input: Vec<u8> = (0..25).cycle().take(1024).collect();
-
-        let private_key = {
-            let key = include_bytes!("../test/dsa.pem");
-            PKey::from_dsa(Dsa::private_key_from_pem(key).unwrap()).unwrap()
-        };
-
-        let public_key = {
-            let key = include_bytes!("../test/dsa.pem.pub");
-            PKey::from_dsa(Dsa::public_key_from_pem(key).unwrap()).unwrap()
-        };
-
-        let mut signer = Signer::new(MessageDigest::sha1(), &private_key).unwrap();
-        signer.update(&input).unwrap();
-        let sig = signer.finish().unwrap();
-
-        let mut verifier = Verifier::new(MessageDigest::sha1(), &public_key).unwrap();
-        verifier.update(&input).unwrap();
-        assert!(verifier.finish(&sig).unwrap());
-    }
-
-    #[test]
-    pub fn dsa_sign_verify_fail() {
-        let input: Vec<u8> = (0..25).cycle().take(1024).collect();
-
-        let private_key = {
-            let key = include_bytes!("../test/dsa.pem");
-            PKey::from_dsa(Dsa::private_key_from_pem(key).unwrap()).unwrap()
-        };
-
-        let public_key = {
-            let key = include_bytes!("../test/dsa.pem.pub");
-            PKey::from_dsa(Dsa::public_key_from_pem(key).unwrap()).unwrap()
-        };
-
-        let mut signer = Signer::new(MessageDigest::sha1(), &private_key).unwrap();
-        signer.update(&input).unwrap();
-        let mut sig = signer.finish().unwrap();
-        sig[0] -= 1;
-
-        let mut verifier = Verifier::new(MessageDigest::sha1(), &public_key).unwrap();
-        verifier.update(&input).unwrap();
-        match verifier.finish(&sig) {
-            Ok(true) => panic!("unexpected success"),
-            Ok(false) | Err(_) => {}
-        }
+        assert!(!verifier.verify(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
     }
 
     fn test_hmac(ty: MessageDigest, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
@@ -382,37 +565,52 @@ mod test {
             let pkey = PKey::hmac(key).unwrap();
             let mut signer = Signer::new(ty, &pkey).unwrap();
             signer.update(data).unwrap();
-            assert_eq!(signer.finish().unwrap(), *res);
+            assert_eq!(signer.sign_to_vec().unwrap(), *res);
         }
     }
 
     #[test]
     fn hmac_md5() {
         // test vectors from RFC 2202
-        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] =
-            [(iter::repeat(0x0b_u8).take(16).collect(),
-              b"Hi There".to_vec(),
-              Vec::from_hex("9294727a3638bb1c13f48ef8158bfc9d").unwrap()),
-             (b"Jefe".to_vec(),
-              b"what do ya want for nothing?".to_vec(),
-              Vec::from_hex("750c783e6ab0b503eaa86e310a5db738").unwrap()),
-             (iter::repeat(0xaa_u8).take(16).collect(),
-              iter::repeat(0xdd_u8).take(50).collect(),
-              Vec::from_hex("56be34521d144c88dbb8c733f0e8b3f6").unwrap()),
-             (Vec::from_hex("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
-              iter::repeat(0xcd_u8).take(50).collect(),
-              Vec::from_hex("697eaf0aca3a3aea3a75164746ffaa79").unwrap()),
-             (iter::repeat(0x0c_u8).take(16).collect(),
-              b"Test With Truncation".to_vec(),
-              Vec::from_hex("56461ef2342edc00f9bab995690efd4c").unwrap()),
-             (iter::repeat(0xaa_u8).take(80).collect(),
-              b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
-              Vec::from_hex("6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd").unwrap()),
-             (iter::repeat(0xaa_u8).take(80).collect(),
-              b"Test Using Larger Than Block-Size Key \
+        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [
+            (
+                iter::repeat(0x0b_u8).take(16).collect(),
+                b"Hi There".to_vec(),
+                Vec::from_hex("9294727a3638bb1c13f48ef8158bfc9d").unwrap(),
+            ),
+            (
+                b"Jefe".to_vec(),
+                b"what do ya want for nothing?".to_vec(),
+                Vec::from_hex("750c783e6ab0b503eaa86e310a5db738").unwrap(),
+            ),
+            (
+                iter::repeat(0xaa_u8).take(16).collect(),
+                iter::repeat(0xdd_u8).take(50).collect(),
+                Vec::from_hex("56be34521d144c88dbb8c733f0e8b3f6").unwrap(),
+            ),
+            (
+                Vec::from_hex("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
+                iter::repeat(0xcd_u8).take(50).collect(),
+                Vec::from_hex("697eaf0aca3a3aea3a75164746ffaa79").unwrap(),
+            ),
+            (
+                iter::repeat(0x0c_u8).take(16).collect(),
+                b"Test With Truncation".to_vec(),
+                Vec::from_hex("56461ef2342edc00f9bab995690efd4c").unwrap(),
+            ),
+            (
+                iter::repeat(0xaa_u8).take(80).collect(),
+                b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
+                Vec::from_hex("6b1ab7fe4bd7bf8f0b62e6ce61b9d0cd").unwrap(),
+            ),
+            (
+                iter::repeat(0xaa_u8).take(80).collect(),
+                b"Test Using Larger Than Block-Size Key \
               and Larger Than One Block-Size Data"
-                 .to_vec(),
-              Vec::from_hex("6f630fad67cda0ee1fb1f562db3aa53e").unwrap())];
+                    .to_vec(),
+                Vec::from_hex("6f630fad67cda0ee1fb1f562db3aa53e").unwrap(),
+            ),
+        ];
 
         test_hmac(MessageDigest::md5(), &tests);
     }
@@ -420,46 +618,104 @@ mod test {
     #[test]
     fn hmac_sha1() {
         // test vectors from RFC 2202
-        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] =
-            [(iter::repeat(0x0b_u8).take(20).collect(),
-              b"Hi There".to_vec(),
-              Vec::from_hex("b617318655057264e28bc0b6fb378c8ef146be00").unwrap()),
-             (b"Jefe".to_vec(),
-              b"what do ya want for nothing?".to_vec(),
-              Vec::from_hex("effcdf6ae5eb2fa2d27416d5f184df9c259a7c79").unwrap()),
-             (iter::repeat(0xaa_u8).take(20).collect(),
-              iter::repeat(0xdd_u8).take(50).collect(),
-              Vec::from_hex("125d7342b9ac11cd91a39af48aa17b4f63f175d3").unwrap()),
-             (Vec::from_hex("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
-              iter::repeat(0xcd_u8).take(50).collect(),
-              Vec::from_hex("4c9007f4026250c6bc8414f9bf50c86c2d7235da").unwrap()),
-             (iter::repeat(0x0c_u8).take(20).collect(),
-              b"Test With Truncation".to_vec(),
-              Vec::from_hex("4c1a03424b55e07fe7f27be1d58bb9324a9a5a04").unwrap()),
-             (iter::repeat(0xaa_u8).take(80).collect(),
-              b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
-              Vec::from_hex("aa4ae5e15272d00e95705637ce8a3b55ed402112").unwrap()),
-             (iter::repeat(0xaa_u8).take(80).collect(),
-              b"Test Using Larger Than Block-Size Key \
+        let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [
+            (
+                iter::repeat(0x0b_u8).take(20).collect(),
+                b"Hi There".to_vec(),
+                Vec::from_hex("b617318655057264e28bc0b6fb378c8ef146be00").unwrap(),
+            ),
+            (
+                b"Jefe".to_vec(),
+                b"what do ya want for nothing?".to_vec(),
+                Vec::from_hex("effcdf6ae5eb2fa2d27416d5f184df9c259a7c79").unwrap(),
+            ),
+            (
+                iter::repeat(0xaa_u8).take(20).collect(),
+                iter::repeat(0xdd_u8).take(50).collect(),
+                Vec::from_hex("125d7342b9ac11cd91a39af48aa17b4f63f175d3").unwrap(),
+            ),
+            (
+                Vec::from_hex("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap(),
+                iter::repeat(0xcd_u8).take(50).collect(),
+                Vec::from_hex("4c9007f4026250c6bc8414f9bf50c86c2d7235da").unwrap(),
+            ),
+            (
+                iter::repeat(0x0c_u8).take(20).collect(),
+                b"Test With Truncation".to_vec(),
+                Vec::from_hex("4c1a03424b55e07fe7f27be1d58bb9324a9a5a04").unwrap(),
+            ),
+            (
+                iter::repeat(0xaa_u8).take(80).collect(),
+                b"Test Using Larger Than Block-Size Key - Hash Key First".to_vec(),
+                Vec::from_hex("aa4ae5e15272d00e95705637ce8a3b55ed402112").unwrap(),
+            ),
+            (
+                iter::repeat(0xaa_u8).take(80).collect(),
+                b"Test Using Larger Than Block-Size Key \
               and Larger Than One Block-Size Data"
-                 .to_vec(),
-              Vec::from_hex("e8e99d0f45237d786d6bbaa7965c7808bbff1a91").unwrap())];
+                    .to_vec(),
+                Vec::from_hex("e8e99d0f45237d786d6bbaa7965c7808bbff1a91").unwrap(),
+            ),
+        ];
 
         test_hmac(MessageDigest::sha1(), &tests);
     }
 
     #[test]
+    #[cfg(ossl110)]
+    fn test_cmac() {
+        let cipher = ::symm::Cipher::aes_128_cbc();
+        let key = Vec::from_hex("9294727a3638bb1c13f48ef8158bfc9d").unwrap();
+        let pkey = PKey::cmac(&cipher, &key).unwrap();
+        let mut signer = Signer::new_without_digest(&pkey).unwrap();
+
+        let data = b"Hi There";
+        signer.update(data as &[u8]).unwrap();
+
+        let expected = vec![
+            136, 101, 61, 167, 61, 30, 248, 234, 124, 166, 196, 157, 203, 52, 171, 19
+        ];
+        assert_eq!(signer.sign_to_vec().unwrap(), expected);
+    }
+
+    #[test]
     fn ec() {
-        let group = EcGroup::from_curve_name(nid::X9_62_PRIME256V1).unwrap();
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
         let key = PKey::from_ec_key(key).unwrap();
 
         let mut signer = Signer::new(MessageDigest::sha256(), &key).unwrap();
         signer.update(b"hello world").unwrap();
-        let signature = signer.finish().unwrap();
+        let signature = signer.sign_to_vec().unwrap();
 
         let mut verifier = Verifier::new(MessageDigest::sha256(), &key).unwrap();
         verifier.update(b"hello world").unwrap();
-        assert!(verifier.finish(&signature).unwrap());
+        assert!(verifier.verify(&signature).unwrap());
+    }
+
+    #[test]
+    fn rsa_sign_verify() {
+        let key = include_bytes!("../test/rsa.pem");
+        let private_key = Rsa::private_key_from_pem(key).unwrap();
+        let pkey = PKey::from_rsa(private_key).unwrap();
+
+        let mut signer = Signer::new(MessageDigest::sha256(), &pkey).unwrap();
+        signer.set_rsa_padding(Padding::PKCS1_PSS).unwrap();
+        assert_eq!(signer.rsa_padding().unwrap(), Padding::PKCS1_PSS);
+        signer
+            .set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)
+            .unwrap();
+        signer.set_rsa_mgf1_md(MessageDigest::sha256()).unwrap();
+        signer.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
+        let signature = signer.sign_to_vec().unwrap();
+
+        let mut verifier = Verifier::new(MessageDigest::sha256(), &pkey).unwrap();
+        verifier.set_rsa_padding(Padding::PKCS1_PSS).unwrap();
+        verifier
+            .set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)
+            .unwrap();
+        verifier.set_rsa_mgf1_md(MessageDigest::sha256()).unwrap();
+        verifier.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
+        assert!(verifier.verify(&signature).unwrap());
     }
 }
