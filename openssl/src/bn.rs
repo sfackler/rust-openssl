@@ -406,7 +406,8 @@ impl BigNumRef {
         }
     }
 
-    /// Places the result of `a^p mod m` in `a`.
+    /// Places the result of `self^p mod m` in `self`. This makes it possible to avoid allocating
+    /// a new BigNum for each exponentiation. Useful for computations like `(((g^x_1 mod n)^x_2 mod n)^x_3 mod n)...`
     pub fn mod_exp_mut(
         &mut self,
         p: &BigNumRef,
@@ -984,14 +985,10 @@ mod tests {
         let start_since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH)
             .expect("Time went backwards");
         for i in 0..total {
-            /*let start_since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH)
-                .expect("Time went backwards");*/
             accumulator.mod_exp_mut(&primes[i], &modulus, &mut bn_ctx).unwrap();
-            /*let end_since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH)
-                .expect("Time went backwards");*/
         }
         let end_since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH)
             .expect("Time went backwards");
-        println!("mod_exp: Time to generate and exponentiate {} primes is {:?}", total, end_since_the_epoch.as_secs()-start_since_the_epoch.as_secs());
+        println!("Time to exponentiate {} primes is {:?}", total, end_since_the_epoch.as_secs()-start_since_the_epoch.as_secs());
     }
 }
