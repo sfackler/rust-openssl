@@ -366,6 +366,55 @@ where
     callback(ssl, line);
 }
 
+#[cfg(ossl111)]
+pub extern "C" fn raw_stateless_cookie_generate<F>(
+    ssl: *mut ffi::SSL,
+    cookie: *mut c_uchar,
+    cookie_len: *mut size_t,
+) -> c_int
+where
+    F: Fn(&mut SslRef, &mut [u8]) -> Result<usize, ErrorStack> + 'static + Sync + Send,
+{
+    unsafe {
+        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
+        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
+        let ssl = SslRef::from_ptr_mut(ssl);
+        let callback = &*(callback as *mut F);
+        let slice =
+            slice::from_raw_parts_mut(cookie as *mut u8, ffi::SSL_COOKIE_LENGTH as usize);
+        match callback(ssl, slice) {
+            Ok(len) => {
+                *cookie_len = len as size_t;
+                1
+            }
+            Err(e) => {
+                e.put();
+                0
+            }
+        }
+    }
+}
+
+#[cfg(ossl111)]
+pub extern "C" fn raw_stateless_cookie_verify<F>(
+    ssl: *mut ffi::SSL,
+    cookie: *const c_uchar,
+    cookie_len: size_t,
+) -> c_int
+where
+    F: Fn(&mut SslRef, &[u8]) -> bool + 'static + Sync + Send,
+{
+    unsafe {
+        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
+        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
+        let ssl = SslRef::from_ptr_mut(ssl);
+        let callback = &*(callback as *mut F);
+        let slice =
+            slice::from_raw_parts(cookie as *const c_uchar as *const u8, cookie_len as usize);
+        callback(ssl, slice) as c_int
+    }
+}
+
 pub extern "C" fn raw_cookie_generate<F>(
     ssl: *mut ffi::SSL,
     cookie: *mut c_uchar,

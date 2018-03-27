@@ -25,7 +25,7 @@ pub type SSL_custom_ext_parse_cb_ex =
                                 chainidx: size_t, al: *mut c_int,
                                 parse_arg: *mut c_void) -> c_int>;
 
-pub const SSL_COOKIE_LENGTH: c_int = 255;
+pub const SSL_COOKIE_LENGTH: c_int = 4096;
 
 pub const SSL_OP_ENABLE_MIDDLEBOX_COMPAT: c_ulong = 0x00100000;
 
@@ -65,4 +65,20 @@ extern "C" {
                                   parse_arg: *mut c_void) -> c_int;
     pub fn SSL_stateless(s: *mut ::SSL) -> c_int;
     pub fn SSL_CIPHER_get_handshake_digest(cipher: *const ::SSL_CIPHER) -> *const ::EVP_MD;
+    pub fn SSL_CTX_set_stateless_cookie_generate_cb(
+        s: *mut ::SSL_CTX,
+        cb: Option<unsafe extern "C" fn(
+            ssl: *mut ::SSL,
+            cookie: *mut c_uchar,
+            cookie_len: *mut size_t
+        ) -> c_int>
+    );
+    pub fn SSL_CTX_set_stateless_cookie_verify_cb(
+        s: *mut ::SSL_CTX,
+        cb: Option<unsafe extern "C" fn(
+            ssl: *mut ::SSL,
+            cookie: *const c_uchar,
+            cookie_len: size_t
+        ) -> c_int>
+    );
 }
