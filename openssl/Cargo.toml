@@ -10,9 +10,6 @@ keywords = ["crypto", "tls", "ssl", "dtls"]
 categories = ["cryptography", "api-bindings"]
 build = "build.rs"
 
-[package.metadata.docs.rs]
-all-features = true
-
 # these are deprecated and don't do anything anymore
 [features]
 v101 = []
