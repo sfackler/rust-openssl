@@ -87,7 +87,7 @@ use x509::store::{X509StoreBuilderRef, X509StoreRef};
 #[cfg(any(ossl102, ossl110))]
 use x509::store::X509Store;
 #[cfg(any(ossl102, ossl110))]
-use verify::X509VerifyParamRef;
+use x509::verify::X509VerifyParamRef;
 use pkey::{HasPrivate, PKeyRef, Params, Private};
 use error::ErrorStack;
 use ex_data::Index;
@@ -1512,12 +1512,14 @@ impl SslContextBuilder {
         parse_cb: ParseFn,
     ) -> Result<(), ErrorStack>
     where
-        AddFn: Fn(&mut SslRef, ExtensionContext, Option<(usize, &X509Ref)>) -> Result<Option<T>, SslAlert>
+        AddFn: Fn(&mut SslRef, ExtensionContext, Option<(usize, &X509Ref)>)
+                -> Result<Option<T>, SslAlert>
             + 'static
             + Sync
             + Send,
         T: AsRef<[u8]> + 'static + Sync + Send,
-        ParseFn: Fn(&mut SslRef, ExtensionContext, &[u8], Option<(usize, &X509Ref)>) -> Result<(), SslAlert>
+        ParseFn: Fn(&mut SslRef, ExtensionContext, &[u8], Option<(usize, &X509Ref)>)
+                -> Result<(), SslAlert>
             + 'static
             + Sync
             + Send,

@@ -192,11 +192,7 @@ impl SslAcceptor {
     pub fn mozilla_intermediate(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
         let mut ctx = ctx(method)?;
         #[cfg(ossl111)]
-        {
-            ctx.set_options(SslOptions {
-                bits: ::ffi::SSL_OP_NO_TLSv1_3,
-            });
-        }
+        ctx.set_options(SslOptions::NO_TLSV1_3);
         let dh = Dh::params_from_pem(
             b"
 -----BEGIN DH PARAMETERS-----
@@ -236,11 +232,7 @@ ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
         let mut ctx = ctx(method)?;
         ctx.set_options(SslOptions::NO_TLSV1 | SslOptions::NO_TLSV1_1);
         #[cfg(ossl111)]
-        {
-            ctx.set_options(SslOptions {
-                bits: ::ffi::SSL_OP_NO_TLSv1_3,
-            });
-        }
+        ctx.set_options(SslOptions::NO_TLSV1_3);
         setup_curves(&mut ctx)?;
         ctx.set_cipher_list(
             "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:\
@@ -316,8 +308,10 @@ fn setup_verify(ctx: &mut SslContextBuilder) {
 
 #[cfg(any(ossl102, ossl110))]
 fn setup_verify_hostname(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
+    use x509::verify::X509CheckFlags;
+
     let param = ssl.param_mut();
-    param.set_hostflags(::verify::X509CheckFlags::NO_PARTIAL_WILDCARDS);
+    param.set_hostflags(X509CheckFlags::NO_PARTIAL_WILDCARDS);
     match domain.parse() {
         Ok(ip) => param.set_ip(ip),
         Err(_) => param.set_host(domain),
