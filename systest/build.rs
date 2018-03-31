@@ -21,6 +21,9 @@ fn main() {
         if target.contains("msvc") {
             cfg.flag("/wd4090");
         }
+
+        // https://github.com/sfackler/rust-openssl/issues/889
+        cfg.define("WIN32_LEAN_AND_MEAN", None);
     }
 
     if let Ok(_) = env::var("DEP_OPENSSL_LIBRESSL") {
