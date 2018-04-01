@@ -91,13 +91,13 @@ macos_job: &MACOS_JOB
 
 openssl_111: &OPENSSL_111
   LIBRARY: openssl
-  VERSION: 1.1.1-pre2
+  VERSION: 1.1.1-pre3
 openssl_110: &OPENSSL_110
   LIBRARY: openssl
-  VERSION: 1.1.0g
+  VERSION: 1.1.0h
 openssl_102: &OPENSSL_102
   LIBRARY: openssl
-  VERSION: 1.0.2n
+  VERSION: 1.0.2o
 openssl_101: &OPENSSL_101
   LIBRARY: openssl
   VERSION: 1.0.1u

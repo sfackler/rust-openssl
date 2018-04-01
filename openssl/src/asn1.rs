@@ -26,7 +26,7 @@
 //! ```
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::{c_long, c_char, c_int};
+use libc::{c_char, c_int, c_long};
 use std::fmt;
 use std::ptr;
 use std::slice;
@@ -34,6 +34,7 @@ use std::str;
 
 use {cvt, cvt_p};
 use bio::MemBio;
+use bn::BigNum;
 use error::ErrorStack;
 use nid::Nid;
 use string::OpensslString;
@@ -191,14 +192,24 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl Asn1IntegerRef {
-    /// Returns value of ASN.1 integer, or -1 if there is an error, and 0 if the integer is Null.
-    ///
-    /// OpenSSL documentation at [`ASN1_INTEGER_get`].
-    ///
-    /// [`ASN1_INTEGER_get`]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_INTEGER_get.html
+    #[allow(missing_docs)]
+    #[deprecated(since = "0.10.6", note = "use to_bn instead")]
     pub fn get(&self) -> i64 {
         unsafe { ::ffi::ASN1_INTEGER_get(self.as_ptr()) as i64 }
     }
+
+    /// Converts the integer to a `BigNum`.
+    ///
+    /// This corresponds to [`ASN1_INTEGER_to_BN`].
+    ///
+    /// [`ASN1_INTEGER_to_BN`]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_INTEGER_get.html
+    pub fn to_bn(&self) -> Result<BigNum, ErrorStack> {
+        unsafe {
+            cvt_p(::ffi::ASN1_INTEGER_to_BN(self.as_ptr(), ptr::null_mut()))
+                .map(|p| BigNum::from_ptr(p))
+        }
+    }
+
     /// Sets the ASN.1 value to the value of a signed 32-bit integer, for larger numbers
     /// see [`bn`].
     ///

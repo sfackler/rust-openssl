@@ -523,6 +523,19 @@ impl X509Ref {
         }
     }
 
+    /// Returns this certificate's serial number.
+    ///
+    /// This corresponds to [`X509_get_serialNumber`].
+    ///
+    /// [`X509_get_serialNumber`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_serialNumber.html
+    pub fn serial_number(&self) -> &Asn1IntegerRef {
+        unsafe {
+            let r = ffi::X509_get_serialNumber(self.as_ptr());
+            assert!(!r.is_null());
+            Asn1IntegerRef::from_ptr(r)
+        }
+    }
+
     to_pem! {
         /// Serializes the certificate into a PEM-encoded X509 structure.
         ///

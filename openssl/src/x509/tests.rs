@@ -202,6 +202,7 @@ fn x509_builder() {
         .next()
         .unwrap();
     assert_eq!("foobar.com".as_bytes(), cn.data().as_slice());
+    assert_eq!(serial, x509.serial_number().to_bn().unwrap());
 }
 
 #[test]
