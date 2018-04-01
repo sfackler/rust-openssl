@@ -745,8 +745,11 @@ impl BigNumRef {
         }
     }
 
-    /// Places the result of `self^p mod m` in `self`. This makes it possible to avoid allocating
-    /// a new BigNum for each exponentiation. Useful for computations like `(((g^x_1 mod n)^x_2 mod n)^x_3 mod n)...`
+    /// Places the result of `self^p mod m` in `self`. This makes it possible to avoid allocating a new BigNum for each exponentiation. Useful for computations like `(((g^x_1 mod n)^x_2 mod n)^x_3 mod n)...`
+    ///
+    /// Uses `BN_mod_exp`. OpenSSL documentation at [`BN_mod_exp`]
+    ///
+    /// [`BN_mod_exp`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_mod_exp.html
     pub fn mod_exp_into_self(
         &mut self,
         p: &BigNumRef,
@@ -1454,10 +1457,11 @@ mod tests {
         let mut accumulator_1 = BigNum::from_dec_str(&base_str).unwrap();
         let start = Instant::now();
         for i in 0..num_exponentiations {
-            let new_number = BigNum::new().unwrap();
+            let mut new_number = BigNum::new().unwrap();
             new_number.mod_exp(&accumulator_1, &primes[i], &modulus, &mut bn_ctx).unwrap();
             accumulator_1 = new_number;
         }
+        println!("mod_exp: time to exponentiate {} primes is {:?}", num_exponentiations, start.elapsed().as_secs());
         assert_eq!(accumulator, accumulator_1);
     }
 }
