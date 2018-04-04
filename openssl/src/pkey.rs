@@ -463,7 +463,7 @@ impl PKey<Private> {
         ///
         /// [`d2i_AutoPrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/d2i_AutoPrivateKey.html
         private_key_from_der,
-        PKey<Public>,
+        PKey<Private>,
         ffi::d2i_AutoPrivateKey
     }
 
