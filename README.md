@@ -108,7 +108,7 @@ cargo build
 ```
 
 For more information see the vcpkg build helper [documentation](http://docs.rs/vcpkg).
-To finsh setting up OpenSSL you will need to [install root certificates.](#acquiring-root-certificates)
+To finish setting up OpenSSL you will need to [install root certificates.](#acquiring-root-certificates)
 
 #### Acquiring Root Certificates
 
