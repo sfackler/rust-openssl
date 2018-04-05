@@ -2,6 +2,40 @@
 
 ## [Unreleased]
 
+## [v0.10.6] - 2018-03-05
+
+### Added
+
+* Added `SslOptions::ENABLE_MIDDLEBOX_COMPAT`.
+* Added more `Sync` and `Send` implementations.
+* Added `PKeyRef::id`.
+* Added `Padding::PKCS1_PSS`.
+* Added `Signer::set_rsa_pss_saltlen`, `Signer::set_rsa_mgf1_md`, `Signer::set_rsa_pss_saltlen`, and
+    `Signer::set_rsa_mgf1_md`
+* Added `X509StoreContextRef::verify` to directly verify certificates.
+* Added low level ECDSA support.
+* Added support for TLSv1.3 custom extensions. (OpenSSL 1.1.1 only)
+* Added AES-CCM support.
+* Added `EcKey::from_private_components`.
+* Added CMAC support.
+* Added support for LibreSSL 2.7.
+* Added `X509Ref::serial_number`.
+* Added `Asn1IntegerRef::to_bn`.
+* Added support for TLSv1.3 stateless handshakes. (OpenSSL 1.1.1 only)
+
+### Changed
+
+* The Cargo features previously used to gate access to version-specific OpenSSL APIs have been
+    removed. Those APIs will be available automatically when building against an appropriate OpenSSL
+    version.
+* Fixed `PKey::private_key_from_der` to return a `PKey<Private>` rather than a `PKey<Public>`. This
+    is technically a breaking change but the function was pretty useless previously.
+
+### Deprecated
+
+* `X509CheckFlags::FLAG_NO_WILDCARDS` has been renamed to `X509CheckFlags::NO_WILDCARDS` and the old
+    name deprecated.
+
 ## [v0.10.5] - 2018-02-28
 
 ### Fixed
@@ -136,7 +170,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.5...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.6...master
+[v0.10.5]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.5...openssl-v0.10.6
 [v0.10.5]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.4...openssl-v0.10.5
 [v0.10.4]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.3...openssl-v0.10.4
 [v0.10.3]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.2...openssl-v0.10.3
