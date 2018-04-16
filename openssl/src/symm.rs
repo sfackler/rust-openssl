@@ -563,7 +563,7 @@ impl Drop for Crypter {
 /// Encrypts data in one go, and returns the encrypted data.
 ///
 /// Data is encrypted using the specified cipher type `t` in encrypt mode with the specified `key`
-/// and initailization vector `iv`.
+/// and initailization vector `iv`. Padding is enabled.
 ///
 /// This is a convenient interface to `Crypter` to encrypt all data in one go.  To encrypt a stream
 /// of data increamentally , use `Crypter` instead.
@@ -602,7 +602,7 @@ pub fn encrypt(
 /// Decrypts data in one go, and returns the decrypted data.
 ///
 /// Data is decrypted using the specified cipher type `t` in decrypt mode with the specified `key`
-/// and initailization vector `iv`.
+/// and initailization vector `iv`. Padding is enabled.
 ///
 /// This is a convenient interface to `Crypter` to decrypt all data in one go.  To decrypt a  stream
 /// of data increamentally , use `Crypter` instead.
