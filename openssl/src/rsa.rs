@@ -465,22 +465,88 @@ impl Rsa<Public> {
     }
 }
 
-impl Rsa<Private> {
-    /// Creates a new RSA key with private components (public components are assumed).
+pub struct RsaPrivateKeyBuilder {
+    rsa: Rsa<Private>
+}
+
+impl RsaPrivateKeyBuilder {
+    /// Creates a new `RsaPrivateKeyBuilder`.
     ///
     /// `n` is the modulus common to both public and private key.
     /// `e` is the public exponent and `d` is the private exponent.
-    /// `p` and `q` are the first and second factors of `n`.
-    /// `dmp1`, `dmq1`, and `iqmp` are the exponents and coefficient for
-    /// Chinese Remainder Theorem calculations which is used to speed up RSA operations.
     ///
-    /// This corresponds to [`RSA_new`] and uses [`RSA_set0_key`],
-    /// [`RSA_set0_factors`], and [`RSA_set0_crt_params`].
+    /// This corresponds to [`RSA_new`] and uses [`RSA_set0_key`].
     ///
     /// [`RSA_new`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_new.html
     /// [`RSA_set0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_set0_key.html
+    pub fn new(
+        n: BigNum,
+        e: BigNum,
+        d: BigNum) -> Result<RsaPrivateKeyBuilder, ErrorStack> {
+        unsafe {
+            let rsa = Rsa::from_ptr(cvt_p(ffi::RSA_new())?);
+            cvt(compat::set_key(rsa.0, n.as_ptr(), e.as_ptr(), d.as_ptr()))?;
+            mem::forget((n, e, d));
+            Ok(RsaPrivateKeyBuilder{
+                rsa
+            })
+        }
+    }
+
+    /// Sets the factors of the Rsa key.
+    ///
+    /// `p` and `q` are the first and second factors of `n`.
+    ///
+    /// This correspond to [`RSA_set0_factors`].
+    ///
     /// [`RSA_set0_factors`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_set0_factors.html
+    pub fn set_factors(
+        self,
+        p: BigNum,
+        q: BigNum) -> Result<RsaPrivateKeyBuilder, ErrorStack> {
+        unsafe {
+            cvt(compat::set_factors(self.rsa.0, p.as_ptr(), q.as_ptr()))?;
+            mem::forget((p, q));
+        }
+        Ok(self)
+    }
+
+    /// Sets the Chinese Remainder Theorem params of the Rsa key.
+    ///
+    /// `dmp1`, `dmq1`, and `iqmp` are the exponents and coefficient for
+    /// CRT calculations which is used to speed up RSA operations.
+    ///
+    /// This correspond to [`RSA_set0_crt_params`].
+    ///
     /// [`RSA_set0_crt_params`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_set0_crt_params.html
+    pub fn set_crt_params(
+        self,
+        dmp1: BigNum,
+        dmq1: BigNum,
+        iqmp: BigNum) -> Result<RsaPrivateKeyBuilder, ErrorStack> {
+        unsafe {
+            cvt(compat::set_crt_params(
+                self.rsa.0,
+                dmp1.as_ptr(),
+                dmq1.as_ptr(),
+                iqmp.as_ptr(),
+            ))?;
+            mem::forget((dmp1, dmq1, iqmp));
+        }
+        Ok(self)
+    }
+
+    /// Returns the Rsa key.
+    pub fn build(self) -> Rsa<Private> {
+        self.rsa
+    }
+}
+
+impl Rsa<Private> {
+    /// Creates a new RSA key with private components (public components are assumed).
+    ///
+    /// This a convenience method over
+    /// `Rsa::build(n, e, q)?.set_factors(p, q)?.set_crt_params(dmp1, dmq1, iqmp)?.build()`
     pub fn from_private_components(
         n: BigNum,
         e: BigNum,
@@ -491,21 +557,24 @@ impl Rsa<Private> {
         dmq1: BigNum,
         iqmp: BigNum,
     ) -> Result<Rsa<Private>, ErrorStack> {
-        unsafe {
-            let rsa = Rsa::from_ptr(cvt_p(ffi::RSA_new())?);
-            cvt(compat::set_key(rsa.0, n.as_ptr(), e.as_ptr(), d.as_ptr()))?;
-            mem::forget((n, e, d));
-            cvt(compat::set_factors(rsa.0, p.as_ptr(), q.as_ptr()))?;
-            mem::forget((p, q));
-            cvt(compat::set_crt_params(
-                rsa.0,
-                dmp1.as_ptr(),
-                dmq1.as_ptr(),
-                iqmp.as_ptr(),
-            ))?;
-            mem::forget((dmp1, dmq1, iqmp));
-            Ok(rsa)
-        }
+        Ok(RsaPrivateKeyBuilder::new(n, e, d)?
+           .set_factors(p, q)?
+           .set_crt_params(dmp1, dmq1, iqmp)?
+           .build())
+    }
+
+    /// Creates a new `RsaPrivateKeyBuilder` from the [`RSA_set0_key`] factors.
+    ///
+    /// `n` is the modulus common to both public and private key.
+    /// `e` is the public exponent and `d` is the private exponent.
+    ///
+    /// [`RSA_set0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_set0_key.html
+    pub fn build(
+        n: BigNum,
+        e: BigNum,
+        d: BigNum
+    ) -> Result<RsaPrivateKeyBuilder, ErrorStack> {
+        RsaPrivateKeyBuilder::new(n, e, d)
     }
 
     /// Generates a public/private key pair with the specified size.
