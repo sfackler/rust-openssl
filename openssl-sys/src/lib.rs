@@ -2848,9 +2848,9 @@ extern "C" {
     pub fn CMS_ContentInfo_free(cms: *mut CMS_ContentInfo);
     #[cfg(not(libressl))]
     pub fn CMS_sign(
-        signcert: *const X509,
-        pkey: *const EVP_PKEY,
-        certs: *const stack_st_X509,
+        signcert: *mut X509,
+        pkey: *mut EVP_PKEY,
+        certs: *mut stack_st_X509,
         data: *mut BIO,
         flags: c_uint,
     ) -> *mut CMS_ContentInfo;
