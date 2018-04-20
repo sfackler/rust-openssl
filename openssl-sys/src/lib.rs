@@ -5,8 +5,8 @@
 extern crate libc;
 
 use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, size_t, FILE};
-use std::ptr;
 use std::mem;
+use std::ptr;
 
 #[cfg(any(ossl101, ossl102))]
 mod ossl10x;
@@ -2846,6 +2846,16 @@ extern "C" {
     pub fn SMIME_read_CMS(bio: *mut BIO, bcont: *mut *mut BIO) -> *mut CMS_ContentInfo;
     #[cfg(not(libressl))]
     pub fn CMS_ContentInfo_free(cms: *mut CMS_ContentInfo);
+    #[cfg(not(libressl))]
+    pub fn CMS_sign(
+        signcert: *const X509,
+        pkey: *const EVP_PKEY,
+        certs: *const stack_st_X509,
+        data: *mut BIO,
+        flags: c_uint,
+    ) -> *mut CMS_ContentInfo;
+    #[cfg(not(libressl))]
+    pub fn i2d_CMS_ContentInfo(a: *mut CMS_ContentInfo, pp: *mut *mut c_uchar) -> c_int;
 
     #[cfg(not(libressl))]
     pub fn FIPS_mode_set(onoff: c_int) -> c_int;

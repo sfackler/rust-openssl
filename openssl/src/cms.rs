@@ -9,11 +9,12 @@ use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use std::ptr;
 
-use {cvt, cvt_p};
 use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
 use pkey::{HasPrivate, PKeyRef};
+use stack::Stack;
 use x509::X509;
+use {cvt, cvt_p};
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::CMS_ContentInfo;
@@ -78,6 +79,53 @@ impl CmsContentInfo {
             let cms = cvt_p(ffi::SMIME_read_CMS(bio.as_ptr(), ptr::null_mut()))?;
 
             Ok(CmsContentInfo::from_ptr(cms))
+        }
+    }
+
+    /// Given a signing cert `signcert`, private key `pkey`, an optional certificate stack `certs`,
+    /// data `data` and flags `flags`, create a CmsContentInfo struct.
+    ///
+    /// OpenSSL documentation at [`CMS_sign`]
+    ///
+    /// [`CMS_sign`]: https://www.openssl.org/docs/manmaster/man3/CMS_sign.html
+    pub fn sign<T: HasPrivate>(
+        signcert: &X509,
+        pkey: &PKeyRef<T>,
+        certs: Option<&Stack<X509>>,
+        data: &[u8],
+        flags: u32,
+    ) -> Result<CmsContentInfo, ErrorStack> {
+        unsafe {
+            let signcert = signcert.as_ptr();
+            let pkey = pkey.as_ptr();
+            let data_bio = MemBioSlice::new(data)?;
+            let cms = cvt_p(ffi::CMS_sign(
+                signcert,
+                pkey,
+                certs.unwrap_or(&Stack::<X509>::new()?).as_ptr(),
+                data_bio.as_ptr(),
+                flags,
+            ))?;
+
+            Ok(CmsContentInfo::from_ptr(cms))
+        }
+    }
+
+    /// Serializes this CmsContentInfo using DER.
+    ///
+    /// OpenSSL documentation at [`i2d_CMS_ContentInfo`]
+    ///
+    /// [`i2d_CMS_ContentInfo`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_CMS_ContentInfo.html
+    pub fn to_der(&mut self) -> Result<Vec<u8>, ErrorStack> {
+        unsafe {
+            let size = ffi::i2d_CMS_ContentInfo(self.as_ptr(), ptr::null_mut());
+            let mut der = vec![0u8; size as usize];
+
+            let raw_ptr = Box::into_raw(Box::new(der.as_mut_ptr()));
+            ffi::i2d_CMS_ContentInfo(self.as_ptr(), raw_ptr);
+
+            Box::from_raw(raw_ptr);
+            Ok(der)
         }
     }
 }
