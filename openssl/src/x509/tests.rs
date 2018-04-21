@@ -234,6 +234,10 @@ fn x509_req_builder() {
     builder.add_extensions(&extensions).unwrap();
 
     builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+
+    let req = builder.build();
+    assert!(req.public_key().unwrap().public_eq(&pkey));
+    assert_eq!(req.extensions().unwrap().len(), extensions.len());
 }
 
 #[test]
