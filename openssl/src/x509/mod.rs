@@ -1069,6 +1069,28 @@ impl X509ReqRef {
             X509NameRef::from_ptr(name)
         }
     }
+
+    /// Returns the public key of the certificate request.
+    ///
+    /// This corresponds to [`X509_REQ_get_pubkey"]
+    ///
+    /// [`X509_REQ_get_pubkey`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_get_pubkey.html
+    pub fn public_key(&self) -> Result<PKey<Public>, ErrorStack> {
+        unsafe {
+            let key = cvt_p(ffi::X509_REQ_get_pubkey(self.as_ptr()))?;
+            Ok(PKey::from_ptr(key))
+        }
+    }
+
+    /// Returns the extensions of the certificate request.
+    ///
+    /// This corresponds to [`X509_REQ_get_extensions"]
+    pub fn extensions(&self) -> Result<Stack<X509Extension>, ErrorStack> {
+        unsafe {
+            let extensions = cvt_p(ffi::X509_REQ_get_extensions(self.as_ptr()))?;
+            Ok(Stack::from_ptr(extensions))
+        }
+    }
 }
 
 /// The result of peer certificate verification.
