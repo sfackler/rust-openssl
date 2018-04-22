@@ -64,6 +64,16 @@ impl CmsContentInfoRef {
             Ok(out.get_buf().to_owned())
         }
     }
+
+    to_der! {
+    /// Serializes this CmsContentInfo using DER.
+    ///
+    /// OpenSSL documentation at [`i2d_CMS_ContentInfo`]
+    ///
+    /// [`i2d_CMS_ContentInfo`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_CMS_ContentInfo.html
+    to_der,
+    ffi::i2d_CMS_ContentInfo
+    }
 }
 
 impl CmsContentInfo {
@@ -82,50 +92,42 @@ impl CmsContentInfo {
         }
     }
 
-    /// Given a signing cert `signcert`, private key `pkey`, an optional certificate stack `certs`,
+    /// Given a signing cert `signcert`, private key `pkey`, a certificate stack `certs`,
     /// data `data` and flags `flags`, create a CmsContentInfo struct.
+    ///
+    /// All arguments are optional.
     ///
     /// OpenSSL documentation at [`CMS_sign`]
     ///
     /// [`CMS_sign`]: https://www.openssl.org/docs/manmaster/man3/CMS_sign.html
     pub fn sign<T: HasPrivate>(
-        signcert: &X509,
-        pkey: &PKeyRef<T>,
+        signcert: Option<&X509>,
+        pkey: Option<&PKeyRef<T>>,
         certs: Option<&Stack<X509>>,
-        data: &[u8],
+        data: Option<&[u8]>,
         flags: u32,
     ) -> Result<CmsContentInfo, ErrorStack> {
         unsafe {
-            let signcert = signcert.as_ptr();
-            let pkey = pkey.as_ptr();
-            let data_bio = MemBioSlice::new(data)?;
-            let cms = cvt_p(ffi::CMS_sign(
-                signcert,
-                pkey,
-                certs.unwrap_or(&Stack::<X509>::new()?).as_ptr(),
-                data_bio.as_ptr(),
-                flags,
-            ))?;
+            let signcert = match signcert {
+                Some(cert) => cert.as_ptr(),
+                None => ptr::null_mut(),
+            };
+            let pkey = match pkey {
+                Some(pkey) => pkey.as_ptr(),
+                None => ptr::null_mut(),
+            };
+            let data_bio_ptr = match data {
+                Some(data) => MemBioSlice::new(data)?.as_ptr(),
+                None => ptr::null_mut(),
+            };
+            let certs = match certs {
+                Some(certs) => certs.as_ptr(),
+                None => ptr::null_mut(),
+            };
+
+            let cms = cvt_p(ffi::CMS_sign(signcert, pkey, certs, data_bio_ptr, flags))?;
 
             Ok(CmsContentInfo::from_ptr(cms))
-        }
-    }
-
-    /// Serializes this CmsContentInfo using DER.
-    ///
-    /// OpenSSL documentation at [`i2d_CMS_ContentInfo`]
-    ///
-    /// [`i2d_CMS_ContentInfo`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_CMS_ContentInfo.html
-    pub fn to_der(&mut self) -> Result<Vec<u8>, ErrorStack> {
-        unsafe {
-            let size = ffi::i2d_CMS_ContentInfo(self.as_ptr(), ptr::null_mut());
-            let mut der = vec![0u8; size as usize];
-
-            let raw_ptr = Box::into_raw(Box::new(der.as_mut_ptr()));
-            ffi::i2d_CMS_ContentInfo(self.as_ptr(), raw_ptr);
-
-            Box::from_raw(raw_ptr);
-            Ok(der)
         }
     }
 }
