@@ -16,6 +16,33 @@ use stack::Stack;
 use x509::X509;
 use {cvt, cvt_p};
 
+bitflags! {
+    pub struct CMSOptions : u32 {
+        const CMS_TEXT = 0x1;
+        const CMS_NOCERTS = 0x2;
+        const CMS_NO_CONTENT_VERIFY = 0x4;
+        const CMS_NO_ATTR_VERIFY = 0x8;
+        const CMS_NOSIGS = 0x4 | 0x8;
+        const CMS_NOINTERN = 0x10;
+        const CMS_NO_SIGNER_CERT_VERIFY = 0x20;
+        const CMS_NOVERIFY = 0x20;
+        const CMS_DETACHED = 0x40;
+        const CMS_BINARY = 0x80;
+        const CMS_NOATTR = 0x100;
+        const CMS_NOSMIMECAP = 0x200;
+        const CMS_NOOLDMIMETYPE = 0x400;
+        const CMS_CRLFEOL = 0x800;
+        const CMS_STREAM = 0x1000;
+        const CMS_NOCRL = 0x2000;
+        const CMS_PARTIAL = 0x4000;
+        const CMS_REUSE_DIGEST = 0x8000;
+        const CMS_USE_KEYID = 0x10000;
+        const CMS_DEBUG_DECRYPT = 0x20000;
+        const CMS_KEY_PARAM = 0x40000;
+        const CMS_ASCIICRLF = 0x80000;
+    }
+}
+
 foreign_type_and_impl_send_sync! {
     type CType = ffi::CMS_ContentInfo;
     fn drop = ffi::CMS_ContentInfo_free;
@@ -105,7 +132,7 @@ impl CmsContentInfo {
         pkey: Option<&PKeyRef<T>>,
         certs: Option<&Stack<X509>>,
         data: Option<&[u8]>,
-        flags: u32,
+        flags: CMSOptions,
     ) -> Result<CmsContentInfo, ErrorStack> {
         unsafe {
             let signcert = match signcert {
@@ -125,7 +152,7 @@ impl CmsContentInfo {
                 None => ptr::null_mut(),
             };
 
-            let cms = cvt_p(ffi::CMS_sign(signcert, pkey, certs, data_bio_ptr, flags))?;
+            let cms = cvt_p(ffi::CMS_sign(signcert, pkey, certs, data_bio_ptr, flags.bits()))?;
 
             Ok(CmsContentInfo::from_ptr(cms))
         }
