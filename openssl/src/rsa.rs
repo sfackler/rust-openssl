@@ -30,16 +30,16 @@
 //! }
 //! ```
 use ffi;
-use std::fmt;
-use std::ptr;
-use std::mem;
-use libc::c_int;
 use foreign_types::{ForeignType, ForeignTypeRef};
+use libc::c_int;
+use std::fmt;
+use std::mem;
+use std::ptr;
 
-use {cvt, cvt_n, cvt_p};
 use bn::{BigNum, BigNumRef};
 use error::ErrorStack;
 use pkey::{HasPrivate, HasPublic, Private, Public};
+use {cvt, cvt_n, cvt_p};
 
 /// Type of encryption padding to use.
 ///
@@ -466,7 +466,7 @@ impl Rsa<Public> {
 }
 
 pub struct RsaPrivateKeyBuilder {
-    rsa: Rsa<Private>
+    rsa: Rsa<Private>,
 }
 
 impl RsaPrivateKeyBuilder {
@@ -479,17 +479,12 @@ impl RsaPrivateKeyBuilder {
     ///
     /// [`RSA_new`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_new.html
     /// [`RSA_set0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_set0_key.html
-    pub fn new(
-        n: BigNum,
-        e: BigNum,
-        d: BigNum) -> Result<RsaPrivateKeyBuilder, ErrorStack> {
+    pub fn new(n: BigNum, e: BigNum, d: BigNum) -> Result<RsaPrivateKeyBuilder, ErrorStack> {
         unsafe {
             let rsa = Rsa::from_ptr(cvt_p(ffi::RSA_new())?);
             cvt(compat::set_key(rsa.0, n.as_ptr(), e.as_ptr(), d.as_ptr()))?;
             mem::forget((n, e, d));
-            Ok(RsaPrivateKeyBuilder{
-                rsa
-            })
+            Ok(RsaPrivateKeyBuilder { rsa })
         }
     }
 
@@ -500,10 +495,7 @@ impl RsaPrivateKeyBuilder {
     /// This correspond to [`RSA_set0_factors`].
     ///
     /// [`RSA_set0_factors`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_set0_factors.html
-    pub fn set_factors(
-        self,
-        p: BigNum,
-        q: BigNum) -> Result<RsaPrivateKeyBuilder, ErrorStack> {
+    pub fn set_factors(self, p: BigNum, q: BigNum) -> Result<RsaPrivateKeyBuilder, ErrorStack> {
         unsafe {
             cvt(compat::set_factors(self.rsa.0, p.as_ptr(), q.as_ptr()))?;
             mem::forget((p, q));
@@ -523,7 +515,8 @@ impl RsaPrivateKeyBuilder {
         self,
         dmp1: BigNum,
         dmq1: BigNum,
-        iqmp: BigNum) -> Result<RsaPrivateKeyBuilder, ErrorStack> {
+        iqmp: BigNum,
+    ) -> Result<RsaPrivateKeyBuilder, ErrorStack> {
         unsafe {
             cvt(compat::set_crt_params(
                 self.rsa.0,
@@ -558,23 +551,9 @@ impl Rsa<Private> {
         iqmp: BigNum,
     ) -> Result<Rsa<Private>, ErrorStack> {
         Ok(RsaPrivateKeyBuilder::new(n, e, d)?
-           .set_factors(p, q)?
-           .set_crt_params(dmp1, dmq1, iqmp)?
-           .build())
-    }
-
-    /// Creates a new `RsaPrivateKeyBuilder` from the [`RSA_set0_key`] factors.
-    ///
-    /// `n` is the modulus common to both public and private key.
-    /// `e` is the public exponent and `d` is the private exponent.
-    ///
-    /// [`RSA_set0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_set0_key.html
-    pub fn build(
-        n: BigNum,
-        e: BigNum,
-        d: BigNum
-    ) -> Result<RsaPrivateKeyBuilder, ErrorStack> {
-        RsaPrivateKeyBuilder::new(n, e, d)
+            .set_factors(p, q)?
+            .set_crt_params(dmp1, dmq1, iqmp)?
+            .build())
     }
 
     /// Generates a public/private key pair with the specified size.
@@ -686,8 +665,8 @@ mod compat {
 
 #[cfg(ossl10x)]
 mod compat {
-    use libc::c_int;
     use ffi::{BIGNUM, RSA};
+    use libc::c_int;
 
     pub unsafe fn key(r: *const RSA) -> [*const BIGNUM; 3] {
         [(*r).n, (*r).e, (*r).d]
@@ -852,10 +831,14 @@ mod test {
         let msg = "Hello, world!".as_bytes();
 
         let mut encrypted = vec![0; pubkey.size() as usize];
-        let len = pubkey.public_encrypt(&msg, &mut encrypted, Padding::PKCS1).unwrap();
+        let len = pubkey
+            .public_encrypt(&msg, &mut encrypted, Padding::PKCS1)
+            .unwrap();
         assert!(len > msg.len());
         let mut decrypted = vec![0; keypair.size() as usize];
-        let len = keypair.private_decrypt(&encrypted, &mut decrypted, Padding::PKCS1).unwrap();
+        let len = keypair
+            .private_decrypt(&encrypted, &mut decrypted, Padding::PKCS1)
+            .unwrap();
         assert_eq!(len, msg.len());
         assert_eq!("Hello, world!", String::from_utf8_lossy(&decrypted[..len]));
     }
@@ -869,8 +852,12 @@ mod test {
 
         let mut encrypted1 = vec![0; pubkey.size() as usize];
         let mut encrypted2 = vec![0; pubkey.size() as usize];
-        let len1 = pubkey.public_encrypt(&msg, &mut encrypted1, Padding::PKCS1).unwrap();
-        let len2 = pubkey.public_encrypt(&msg, &mut encrypted2, Padding::PKCS1).unwrap();
+        let len1 = pubkey
+            .public_encrypt(&msg, &mut encrypted1, Padding::PKCS1)
+            .unwrap();
+        let len2 = pubkey
+            .public_encrypt(&msg, &mut encrypted2, Padding::PKCS1)
+            .unwrap();
         assert!(len1 > (msg.len() + 1));
         assert_eq!(len1, len2);
         assert_ne!(encrypted1, encrypted2);
