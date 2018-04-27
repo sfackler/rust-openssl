@@ -29,9 +29,8 @@ const DEFINES: &'static [&'static str] = &[
 ];
 
 enum Version {
-    Openssl110,
-    Openssl102,
-    Openssl101,
+    Openssl11x,
+    Openssl10x,
     Libressl,
 }
 
@@ -89,10 +88,8 @@ fn main() {
     let libs = match libs_env.as_ref().and_then(|s| s.to_str()) {
         Some(ref v) => v.split(":").collect(),
         None => match version {
-            Version::Openssl101 | Version::Openssl102 if target.contains("windows") => {
-                vec!["ssleay32", "libeay32"]
-            }
-            Version::Openssl110 if target.contains("windows") => vec!["libssl", "libcrypto"],
+            Version::Openssl10x if target.contains("windows") => vec!["ssleay32", "libeay32"],
+            Version::Openssl11x if target.contains("windows") => vec!["libssl", "libcrypto"],
             _ => vec!["ssl", "crypto"],
         },
     };
@@ -446,25 +443,25 @@ See rust-openssl README for more information:
             println!("cargo:rustc-cfg=ossl111");
             println!("cargo:rustc-cfg=ossl110");
             println!("cargo:version=111");
-            Version::Openssl110
+            Version::Openssl11x
         } else if openssl_version >= 0x1_01_00_06_0 {
             println!("cargo:rustc-cfg=ossl110");
             println!("cargo:rustc-cfg=ossl110f");
             println!("cargo:version=110");
             println!("cargo:patch=f");
-            Version::Openssl110
+            Version::Openssl11x
         } else if openssl_version >= 0x1_01_00_00_0 {
             println!("cargo:rustc-cfg=ossl110");
             println!("cargo:version=110");
-            Version::Openssl110
+            Version::Openssl11x
         } else if openssl_version >= 0x1_00_02_00_0 {
             println!("cargo:rustc-cfg=ossl102");
             println!("cargo:version=102");
-            Version::Openssl102
+            Version::Openssl10x
         } else if openssl_version >= 0x1_00_01_00_0 {
             println!("cargo:rustc-cfg=ossl101");
             println!("cargo:version=101");
-            Version::Openssl101
+            Version::Openssl10x
         } else {
             version_error()
         }
