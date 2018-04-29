@@ -1914,6 +1914,19 @@ impl Clone for SslSession {
     }
 }
 
+impl SslSession {
+    from_der! {
+        /// Deserializes a DER-encoded session structure.
+        ///
+        /// This corresponds to [`d2i_SSL_SESSION`].
+        ///
+        /// [`d2i_SSL_SESSION`]: https://www.openssl.org/docs/man1.0.2/ssl/d2i_SSL_SESSION.html
+        from_der,
+        SslSession,
+        ffi::d2i_SSL_SESSION
+    }
+}
+
 impl ToOwned for SslSessionRef {
     type Owned = SslSession;
 
@@ -1957,6 +1970,16 @@ impl SslSessionRef {
     /// [`SSL_SESSION_get_master_key`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_SESSION_get_master_key.html
     pub fn master_key(&self, buf: &mut [u8]) -> usize {
         unsafe { compat::SSL_SESSION_get_master_key(self.as_ptr(), buf.as_mut_ptr(), buf.len()) }
+    }
+
+    to_der! {
+        /// Serializes the session into a DER-encoded structure.
+        ///
+        /// This corresponds to [`i2d_SSL_SESSION`].
+        ///
+        /// [`i2d_SSL_SESSION`]: https://www.openssl.org/docs/man1.0.2/ssl/i2d_SSL_SESSION.html
+        to_der,
+        ffi::i2d_SSL_SESSION
     }
 }
 
