@@ -2635,6 +2635,9 @@ extern "C" {
     pub fn SSL_SESSION_free(s: *mut SSL_SESSION);
     pub fn SSL_SESSION_get_id(s: *const SSL_SESSION, len: *mut c_uint) -> *const c_uchar;
 
+    pub fn d2i_SSL_SESSION(a: *mut *mut SSL_SESSION, pp: *mut *const c_uchar, len: c_long) -> *mut SSL_SESSION;
+    pub fn i2d_SSL_SESSION(s: *mut SSL_SESSION, pp: *mut *mut c_uchar) -> c_int;
+
     #[cfg(not(ossl101))]
     pub fn SSL_CTX_set_alpn_protos(s: *mut SSL_CTX, data: *const c_uchar, len: c_uint) -> c_int;
 
