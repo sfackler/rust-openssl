@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [v0.10.7] - 2018-04-30
+
+### Added
+
+* Added `X509Req::public_key` and `X509Req::extensions`.
+* Added `RsaPrivateKeyBuilder` to allow control over initialization of optional components of an RSA
+    private key.
+* Added DER encode/decode support to `SslSession`.
+* openssl-sys now provides the `OPENSSL_VERSION_NUMBER` and `OPENSSL_LIBRESSL_VERSION_NUMBER`
+    environment variables to downstream build scripts which contains the hex-encoded version number
+    of the OpenSSL or LibreSSL distribution being built against. The other variables are deprecated.
+
 ## [v0.10.6] - 2018-03-05
 
 ### Added
@@ -170,8 +182,9 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.6...master
-[v0.10.5]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.5...openssl-v0.10.6
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.7...master
+[v0.10.7]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.6...openssl-v0.10.7
+[v0.10.6]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.5...openssl-v0.10.6
 [v0.10.5]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.4...openssl-v0.10.5
 [v0.10.4]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.3...openssl-v0.10.4
 [v0.10.3]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.2...openssl-v0.10.3
