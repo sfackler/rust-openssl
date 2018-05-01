@@ -10,9 +10,10 @@
 * Added `RsaPrivateKeyBuilder` to allow control over initialization of optional components of an RSA
     private key.
 * Added DER encode/decode support to `SslSession`.
-* openssl-sys now provides the `OPENSSL_VERSION_NUMBER` and `OPENSSL_LIBRESSL_VERSION_NUMBER`
-    environment variables to downstream build scripts which contains the hex-encoded version number
-    of the OpenSSL or LibreSSL distribution being built against. The other variables are deprecated.
+* openssl-sys now provides the `DEP_OPENSSL_VERSION_NUMBER` and
+    `DEP_OPENSSL_LIBRESSL_VERSION_NUMBER` environment variables to downstream build scripts which
+    contains the hex-encoded version number of the OpenSSL or LibreSSL distribution being built
+    against. The other variables are deprecated.
 
 ## [v0.10.6] - 2018-03-05
 
