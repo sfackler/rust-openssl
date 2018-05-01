@@ -1,13 +1,13 @@
+use std::io::{self, Write};
+use std::mem;
+use std::process;
+use std::ptr;
 use std::sync::{Mutex, MutexGuard};
 use std::sync::{Once, ONCE_INIT};
-use std::mem;
-use std::ptr;
-use std::process;
-use std::io::{self, Write};
 
-use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, size_t};
 #[cfg(not(ossl101))]
 use libc::time_t;
+use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, size_t};
 
 #[repr(C)]
 pub struct stack_st_ASN1_OBJECT {
@@ -131,7 +131,7 @@ pub struct DSA {
 #[repr(C)]
 pub struct ECDSA_SIG {
     pub r: *mut BIGNUM,
-    pub s: *mut BIGNUM
+    pub s: *mut BIGNUM,
 }
 
 #[repr(C)]
@@ -719,8 +719,11 @@ pub const CRYPTO_LOCK_X509: c_int = 3;
 pub const CRYPTO_LOCK_SSL_CTX: c_int = 12;
 pub const CRYPTO_LOCK_SSL_SESSION: c_int = 14;
 
+#[cfg(ossl102h)]
 pub const X509_V_ERR_INVALID_CALL: c_int = 65;
+#[cfg(ossl102h)]
 pub const X509_V_ERR_STORE_LOOKUP: c_int = 66;
+#[cfg(ossl102h)]
 pub const X509_V_ERR_PROXY_SUBJECT_NAME_VIOLATION: c_int = 67;
 
 static mut MUTEXES: *mut Vec<Mutex<()>> = 0 as *mut Vec<Mutex<()>>;

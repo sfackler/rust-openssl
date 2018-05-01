@@ -437,6 +437,10 @@ See rust-openssl README for more information:
         let openssl_version = openssl_version.unwrap();
         println!("cargo:version_number={:x}", openssl_version);
 
+        if openssl_version >= 0x1_00_02_08_0 {
+            println!("cargo:rustc-cfg=ossl102h");
+        }
+
         if openssl_version >= 0x1_01_02_00_0 {
             version_error()
         } else if openssl_version >= 0x1_01_01_00_0 {
