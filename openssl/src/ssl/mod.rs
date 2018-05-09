@@ -77,36 +77,37 @@ use std::slice;
 use std::str;
 use std::sync::Mutex;
 
-use {cvt, cvt_n, cvt_p, init};
 use dh::{Dh, DhRef};
-use ec::EcKeyRef;
 #[cfg(any(ossl101, ossl102))]
 use ec::EcKey;
-use x509::{X509, X509Name, X509Ref, X509StoreContextRef, X509VerifyResult};
-use x509::store::{X509StoreBuilderRef, X509StoreRef};
-#[cfg(any(ossl102, ossl110))]
-use x509::store::X509Store;
-#[cfg(any(ossl102, ossl110))]
-use x509::verify::X509VerifyParamRef;
-use pkey::{HasPrivate, PKeyRef, Params, Private};
+use ec::EcKeyRef;
 use error::ErrorStack;
 use ex_data::Index;
-use stack::{Stack, StackRef};
-use ssl::bio::BioMethod;
-use ssl::error::InnerError;
-use ssl::callbacks::*;
-use nid::Nid;
 #[cfg(ossl111)]
 use hash::MessageDigest;
+use nid::Nid;
+use pkey::{HasPrivate, PKeyRef, Params, Private};
+use ssl::bio::BioMethod;
+use ssl::callbacks::*;
+use ssl::error::InnerError;
+use stack::{Stack, StackRef};
+#[cfg(any(ossl102, ossl110))]
+use x509::store::X509Store;
+use x509::store::{X509StoreBuilderRef, X509StoreRef};
+#[cfg(any(ossl102, ossl110))]
+use x509::verify::X509VerifyParamRef;
+use x509::{X509, X509Name, X509Ref, X509StoreContextRef, X509VerifyResult};
+use {cvt, cvt_n, cvt_p, init};
 
-pub use ssl::connector::{ConnectConfiguration, SslAcceptor, SslAcceptorBuilder, SslConnector,
-                         SslConnectorBuilder};
+pub use ssl::connector::{
+    ConnectConfiguration, SslAcceptor, SslAcceptorBuilder, SslConnector, SslConnectorBuilder,
+};
 pub use ssl::error::{Error, ErrorCode, HandshakeError};
 
-mod error;
+mod bio;
 mod callbacks;
 mod connector;
-mod bio;
+mod error;
 #[cfg(test)]
 mod test;
 
@@ -1119,10 +1120,10 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_get_min_proto_version`].
     ///
-    /// Requires OpenSSL 1.1.0 or newer.
+    /// Requires OpenSSL 1.1.0g or newer.
     ///
     /// [`SSL_CTX_get_min_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
-    #[cfg(any(ossl110))]
+    #[cfg(any(ossl110g))]
     pub fn min_proto_version(&mut self) -> Option<SslVersion> {
         unsafe {
             let r = ffi::SSL_CTX_get_min_proto_version(self.as_ptr());
@@ -1141,10 +1142,10 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_get_max_proto_version`].
     ///
-    /// Requires OpenSSL 1.1.0 or newer.
+    /// Requires OpenSSL 1.1.0g or newer.
     ///
     /// [`SSL_CTX_get_max_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
-    #[cfg(any(ossl110))]
+    #[cfg(any(ossl110g))]
     pub fn max_proto_version(&mut self) -> Option<SslVersion> {
         unsafe {
             let r = ffi::SSL_CTX_get_max_proto_version(self.as_ptr());
@@ -1451,7 +1452,10 @@ impl SslContextBuilder {
                 get_callback_idx::<F>(),
                 Box::into_raw(callback) as *mut _,
             );
-            ffi::SSL_CTX_set_stateless_cookie_generate_cb(self.as_ptr(), Some(raw_stateless_cookie_generate::<F>))
+            ffi::SSL_CTX_set_stateless_cookie_generate_cb(
+                self.as_ptr(),
+                Some(raw_stateless_cookie_generate::<F>),
+            )
         }
     }
 
@@ -1477,7 +1481,10 @@ impl SslContextBuilder {
                 get_callback_idx::<F>(),
                 Box::into_raw(callback) as *mut _,
             );
-            ffi::SSL_CTX_set_stateless_cookie_verify_cb(self.as_ptr(), Some(raw_stateless_cookie_verify::<F>))
+            ffi::SSL_CTX_set_stateless_cookie_verify_cb(
+                self.as_ptr(),
+                Some(raw_stateless_cookie_verify::<F>),
+            )
         }
     }
 
@@ -2950,11 +2957,12 @@ impl<S: Read + Write> Write for SslStream<S> {
 
 /// A partially constructed `SslStream`, useful for unusual handshakes.
 pub struct SslStreamBuilder<S> {
-    inner: SslStream<S>
+    inner: SslStream<S>,
 }
 
 impl<S> SslStreamBuilder<S>
-    where S: Read + Write
+where
+    S: Read + Write,
 {
     /// Begin creating an `SslStream` atop `stream`
     pub fn new(ssl: Ssl, stream: S) -> Self {
@@ -3053,7 +3061,9 @@ impl<S> SslStreamBuilder<S> {
     }
 
     /// Returns a shared reference to the `Ssl` object associated with this builder.
-    pub fn ssl(&self) -> &SslRef { &self.inner.ssl }
+    pub fn ssl(&self) -> &SslRef {
+        &self.inner.ssl
+    }
 }
 
 /// The result of a shutdown request.
@@ -3073,8 +3083,10 @@ mod compat {
     use ffi;
     use libc::c_int;
 
-    pub use ffi::{SSL_CTX_clear_options, SSL_CTX_get_options, SSL_CTX_set_options, SSL_CTX_up_ref,
-                  SSL_SESSION_get_master_key, SSL_SESSION_up_ref, SSL_is_server};
+    pub use ffi::{
+        SSL_CTX_clear_options, SSL_CTX_get_options, SSL_CTX_set_options, SSL_CTX_up_ref,
+        SSL_SESSION_get_master_key, SSL_SESSION_up_ref, SSL_is_server,
+    };
 
     pub unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
         ffi::CRYPTO_get_ex_new_index(

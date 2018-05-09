@@ -1,6 +1,6 @@
 use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, size_t};
-use std::sync::{Once, ONCE_INIT};
 use std::ptr;
+use std::sync::{Once, ONCE_INIT};
 
 pub enum BIGNUM {}
 pub enum BIO {}
@@ -36,7 +36,9 @@ pub enum X509_REQ {}
 
 pub const SSL_CTRL_SET_MIN_PROTO_VERSION: c_int = 123;
 pub const SSL_CTRL_SET_MAX_PROTO_VERSION: c_int = 124;
+#[cfg(ossl110g)]
 pub const SSL_CTRL_GET_MIN_PROTO_VERSION: c_int = 130;
+#[cfg(ossl110g)]
 pub const SSL_CTRL_GET_MAX_PROTO_VERSION: c_int = 131;
 
 pub const SSL_OP_MICROSOFT_SESS_ID_BUG: c_ulong = 0x00000000;
@@ -98,10 +100,12 @@ pub unsafe fn SSL_CTX_set_max_proto_version(ctx: *mut ::SSL_CTX, version: c_int)
     ) as c_int
 }
 
+#[cfg(ossl110g)]
 pub unsafe fn SSL_CTX_get_min_proto_version(ctx: *mut ::SSL_CTX) -> c_int {
     ::SSL_CTX_ctrl(ctx, SSL_CTRL_GET_MIN_PROTO_VERSION, 0, ptr::null_mut()) as c_int
 }
 
+#[cfg(ossl110g)]
 pub unsafe fn SSL_CTX_get_max_proto_version(ctx: *mut ::SSL_CTX) -> c_int {
     ::SSL_CTX_ctrl(ctx, SSL_CTRL_GET_MAX_PROTO_VERSION, 0, ptr::null_mut()) as c_int
 }
@@ -124,10 +128,12 @@ pub unsafe fn SSL_set_max_proto_version(s: *mut ::SSL, version: c_int) -> c_int 
     ) as c_int
 }
 
+#[cfg(ossl110g)]
 pub unsafe fn SSL_get_min_proto_version(s: *mut ::SSL) -> c_int {
     ::SSL_ctrl(s, SSL_CTRL_GET_MIN_PROTO_VERSION, 0, ptr::null_mut()) as c_int
 }
 
+#[cfg(ossl110g)]
 pub unsafe fn SSL_get_max_proto_version(s: *mut ::SSL) -> c_int {
     ::SSL_ctrl(s, SSL_CTRL_GET_MAX_PROTO_VERSION, 0, ptr::null_mut()) as c_int
 }
