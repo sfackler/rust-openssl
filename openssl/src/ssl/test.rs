@@ -21,9 +21,10 @@ use pkey::PKey;
 use ssl;
 #[cfg(any(ossl110, ossl111))]
 use ssl::SslVersion;
-use ssl::{Error, HandshakeError, MidHandshakeSslStream, ShutdownResult, Ssl, SslAcceptor,
-          SslConnector, SslContext, SslFiletype, SslMethod, SslSessionCacheMode, SslStream,
-          SslVerifyMode, StatusType};
+use ssl::{
+    Error, HandshakeError, MidHandshakeSslStream, ShutdownResult, Ssl, SslAcceptor, SslConnector,
+    SslContext, SslFiletype, SslMethod, SslSessionCacheMode, SslStream, SslVerifyMode, StatusType,
+};
 #[cfg(any(ossl102, ossl110))]
 use x509::verify::X509CheckFlags;
 use x509::{X509, X509Name, X509StoreContext, X509VerifyResult};
@@ -1323,7 +1324,9 @@ fn no_version_overlap() {
         ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
         ctx.set_max_proto_version(Some(SslVersion::TLS1_1)).unwrap();
+        #[cfg(ossl110g)]
         assert_eq!(ctx.min_proto_version(), None);
+        #[cfg(ossl110g)]
         assert_eq!(ctx.max_proto_version(), Some(SslVersion::TLS1_1));
         let ssl = Ssl::new(&ctx.build()).unwrap();
         ssl.accept(stream).unwrap_err();
@@ -1332,7 +1335,9 @@ fn no_version_overlap() {
     let stream = TcpStream::connect(addr).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_min_proto_version(Some(SslVersion::TLS1_2)).unwrap();
+    #[cfg(ossl110g)]
     assert_eq!(ctx.min_proto_version(), Some(SslVersion::TLS1_2));
+    #[cfg(ossl110g)]
     assert_eq!(ctx.max_proto_version(), None);
     let ssl = Ssl::new(&ctx.build()).unwrap();
     ssl.connect(stream).unwrap_err();
