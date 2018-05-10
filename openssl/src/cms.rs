@@ -39,8 +39,9 @@ bitflags! {
         const REUSE_DIGEST = ffi::CMS_REUSE_DIGEST;
         const USE_KEYID = ffi::CMS_USE_KEYID;
         const DEBUG_DECRYPT = ffi::CMS_DEBUG_DECRYPT;
+        #[cfg(all(not(libressl), not(ossl101)))]
         const KEY_PARAM = ffi::CMS_KEY_PARAM;
-        #[cfg(all(not(libressl), any(ossl101, ossl102)))]
+        #[cfg(all(not(libressl), not(ossl101), not(ossl102)))]
         const ASCIICRLF = ffi::CMS_ASCIICRLF;
     }
 }

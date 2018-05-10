@@ -1505,7 +1505,7 @@ pub const CMS_REUSE_DIGEST: c_uint = 0x8000;
 pub const CMS_USE_KEYID: c_uint = 0x10000;
 #[cfg(not(libressl))]
 pub const CMS_DEBUG_DECRYPT: c_uint = 0x20000;
-#[cfg(not(libressl))]
+#[cfg(all(not(libressl), not(ossl101)))]
 pub const CMS_KEY_PARAM: c_uint = 0x40000;
 #[cfg(all(not(libressl), not(ossl101), not(ossl102)))]
 pub const CMS_ASCIICRLF: c_uint = 0x80000;
