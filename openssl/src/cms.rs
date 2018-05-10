@@ -11,35 +11,36 @@ use std::ptr;
 
 use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
+use libc::c_uint;
 use pkey::{HasPrivate, PKeyRef};
 use stack::Stack;
 use x509::X509;
 use {cvt, cvt_p};
 
 bitflags! {
-    pub struct CMSOptions : u32 {
-        const CMS_TEXT = 0x1;
-        const CMS_NOCERTS = 0x2;
-        const CMS_NO_CONTENT_VERIFY = 0x4;
-        const CMS_NO_ATTR_VERIFY = 0x8;
-        const CMS_NOSIGS = 0x4 | 0x8;
-        const CMS_NOINTERN = 0x10;
-        const CMS_NO_SIGNER_CERT_VERIFY = 0x20;
-        const CMS_NOVERIFY = 0x20;
-        const CMS_DETACHED = 0x40;
-        const CMS_BINARY = 0x80;
-        const CMS_NOATTR = 0x100;
-        const CMS_NOSMIMECAP = 0x200;
-        const CMS_NOOLDMIMETYPE = 0x400;
-        const CMS_CRLFEOL = 0x800;
-        const CMS_STREAM = 0x1000;
-        const CMS_NOCRL = 0x2000;
-        const CMS_PARTIAL = 0x4000;
-        const CMS_REUSE_DIGEST = 0x8000;
-        const CMS_USE_KEYID = 0x10000;
-        const CMS_DEBUG_DECRYPT = 0x20000;
-        const CMS_KEY_PARAM = 0x40000;
-        const CMS_ASCIICRLF = 0x80000;
+    pub struct CMSOptions : c_uint {
+        const TEXT = ffi::CMS_TEXT;
+        const CMS_NOCERTS = ffi::CMS_NOCERTS;
+        const NO_CONTENT_VERIFY = ffi::CMS_NO_CONTENT_VERIFY;
+        const NO_ATTR_VERIFY = ffi::CMS_NO_ATTR_VERIFY;
+        const NOSIGS = ffi::CMS_NOSIGS;
+        const NOINTERN = ffi::CMS_NOINTERN;
+        const NO_SIGNER_CERT_VERIFY = ffi::CMS_NO_SIGNER_CERT_VERIFY;
+        const NOVERIFY = ffi::CMS_NOVERIFY;
+        const DETACHED = ffi::CMS_DETACHED;
+        const BINARY = ffi::CMS_BINARY;
+        const NOATTR = ffi::CMS_NOATTR;
+        const NOSMIMECAP = ffi::CMS_NOSMIMECAP;
+        const NOOLDMIMETYPE = ffi::CMS_NOOLDMIMETYPE;
+        const CRLFEOL = ffi::CMS_CRLFEOL;
+        const STREAM = ffi::CMS_STREAM;
+        const NOCRL = ffi::CMS_NOCRL;
+        const PARTIAL = ffi::CMS_PARTIAL;
+        const REUSE_DIGEST = ffi::CMS_REUSE_DIGEST;
+        const USE_KEYID = ffi::CMS_USE_KEYID;
+        const DEBUG_DECRYPT = ffi::CMS_DEBUG_DECRYPT;
+        const KEY_PARAM = ffi::CMS_KEY_PARAM;
+        const ASCIICRLF = ffi::CMS_ASCIICRLF;
     }
 }
 
@@ -152,7 +153,13 @@ impl CmsContentInfo {
                 None => ptr::null_mut(),
             };
 
-            let cms = cvt_p(ffi::CMS_sign(signcert, pkey, certs, data_bio_ptr, flags.bits()))?;
+            let cms = cvt_p(ffi::CMS_sign(
+                signcert,
+                pkey,
+                certs,
+                data_bio_ptr,
+                flags.bits(),
+            ))?;
 
             Ok(CmsContentInfo::from_ptr(cms))
         }
