@@ -40,6 +40,7 @@ bitflags! {
         const USE_KEYID = ffi::CMS_USE_KEYID;
         const DEBUG_DECRYPT = ffi::CMS_DEBUG_DECRYPT;
         const KEY_PARAM = ffi::CMS_KEY_PARAM;
+        #[cfg(all(not(libressl), any(ossl101, ossl102)))]
         const ASCIICRLF = ffi::CMS_ASCIICRLF;
     }
 }
