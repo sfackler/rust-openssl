@@ -7,7 +7,7 @@
 //!
 //! To connect as a client to a remote server:
 //!
-//! ```
+//! ```no_run
 //! use openssl::ssl::{SslMethod, SslConnector};
 //! use std::io::{Read, Write};
 //! use std::net::TcpStream;

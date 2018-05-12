@@ -763,6 +763,7 @@ fn refcount_ssl_context() {
 }
 
 #[test]
+#[cfg_attr(libressl250, ignore)]
 fn default_verify_paths() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_default_verify_paths().unwrap();
@@ -832,6 +833,7 @@ fn verify_invalid_hostname() {
 }
 
 #[test]
+#[cfg_attr(libressl250, ignore)]
 fn connector_valid_hostname() {
     let connector = SslConnector::builder(SslMethod::tls()).unwrap().build();
 
@@ -856,6 +858,7 @@ fn connector_invalid_hostname() {
 }
 
 #[test]
+#[cfg_attr(libressl250, ignore)]
 fn connector_invalid_no_hostname_verification() {
     let connector = SslConnector::builder(SslMethod::tls()).unwrap().build();
 
@@ -1176,6 +1179,7 @@ fn idle_session() {
 }
 
 #[test]
+#[cfg_attr(libressl250, ignore)]
 fn active_session() {
     let connector = SslConnector::builder(SslMethod::tls()).unwrap().build();
 
