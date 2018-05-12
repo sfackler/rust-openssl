@@ -1902,6 +1902,15 @@ foreign_type! {
     pub struct SslRef;
 }
 
+unsafe impl Sync for Ssl {}
+unsafe impl Send for Ssl {}
+
+impl fmt::Debug for Ssl {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Debug::fmt(&**self, fmt)
+    }
+}
+
 impl Ssl {
     /// Returns a new extra data index.
     ///
@@ -1935,6 +1944,52 @@ impl Ssl {
                 .or_insert_with(|| Ssl::new_ex_index::<T>().unwrap().as_raw());
             Index::from_raw(idx)
         }
+    }
+
+    /// Creates a new `Ssl`.
+    ///
+    /// This corresponds to [`SSL_new`].
+    ///
+    /// [`SSL_new`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_new.html
+    pub fn new(ctx: &SslContext) -> Result<Ssl, ErrorStack> {
+        unsafe {
+            let ssl = cvt_p(ffi::SSL_new(ctx.as_ptr()))?;
+            Ok(Ssl::from_ptr(ssl))
+        }
+    }
+
+    /// Initiates a client-side TLS handshake.
+    ///
+    /// This corresponds to [`SSL_connect`].
+    ///
+    /// # Warning
+    ///
+    /// OpenSSL's default configuration is insecure. It is highly recommended to use
+    /// `SslConnector` rather than `Ssl` directly, as it manages that configuration.
+    ///
+    /// [`SSL_connect`]: https://www.openssl.org/docs/manmaster/man3/SSL_connect.html
+    pub fn connect<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
+    where
+        S: Read + Write,
+    {
+        SslStreamBuilder::new(self, stream).connect()
+    }
+
+    /// Initiates a server-side TLS handshake.
+    ///
+    /// This corresponds to [`SSL_accept`].
+    ///
+    /// # Warning
+    ///
+    /// OpenSSL's default configuration is insecure. It is highly recommended to use
+    /// `SslAcceptor` rather than `Ssl` directly, as it manages that configuration.
+    ///
+    /// [`SSL_accept`]: https://www.openssl.org/docs/manmaster/man3/SSL_accept.html
+    pub fn accept<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
+    where
+        S: Read + Write,
+    {
+        SslStreamBuilder::new(self, stream).accept()
     }
 }
 
@@ -2538,63 +2593,6 @@ impl SslRef {
                 Some(&mut *(data as *mut T))
             }
         }
-    }
-}
-
-unsafe impl Sync for Ssl {}
-unsafe impl Send for Ssl {}
-
-impl fmt::Debug for Ssl {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Debug::fmt(&**self, fmt)
-    }
-}
-
-impl Ssl {
-    /// Creates a new `Ssl`.
-    ///
-    /// This corresponds to [`SSL_new`].
-    ///
-    /// [`SSL_new`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_new.html
-    pub fn new(ctx: &SslContext) -> Result<Ssl, ErrorStack> {
-        unsafe {
-            let ssl = cvt_p(ffi::SSL_new(ctx.as_ptr()))?;
-            Ok(Ssl::from_ptr(ssl))
-        }
-    }
-
-    /// Initiates a client-side TLS handshake.
-    ///
-    /// This corresponds to [`SSL_connect`].
-    ///
-    /// # Warning
-    ///
-    /// OpenSSL's default configuration is insecure. It is highly recommended to use
-    /// `SslConnector` rather than `Ssl` directly, as it manages that configuration.
-    ///
-    /// [`SSL_connect`]: https://www.openssl.org/docs/manmaster/man3/SSL_connect.html
-    pub fn connect<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
-    where
-        S: Read + Write,
-    {
-        SslStreamBuilder::new(self, stream).connect()
-    }
-
-    /// Initiates a server-side TLS handshake.
-    ///
-    /// This corresponds to [`SSL_accept`].
-    ///
-    /// # Warning
-    ///
-    /// OpenSSL's default configuration is insecure. It is highly recommended to use
-    /// `SslAcceptor` rather than `Ssl` directly, as it manages that configuration.
-    ///
-    /// [`SSL_accept`]: https://www.openssl.org/docs/manmaster/man3/SSL_accept.html
-    pub fn accept<S>(self, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
-    where
-        S: Read + Write,
-    {
-        SslStreamBuilder::new(self, stream).accept()
     }
 }
 
