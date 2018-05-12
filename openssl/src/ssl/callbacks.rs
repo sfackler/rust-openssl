@@ -1,45 +1,51 @@
 use ffi;
-use libc::{c_char, c_int, c_uchar, c_uint, c_void};
+use foreign_types::ForeignType;
+use foreign_types::ForeignTypeRef;
 #[cfg(ossl111)]
 use libc::size_t;
+use libc::{c_char, c_int, c_uchar, c_uint, c_void};
 use std::ffi::CStr;
+use std::mem;
 use std::ptr;
 use std::slice;
-use std::mem;
 #[cfg(ossl111)]
 use std::str;
-use foreign_types::ForeignTypeRef;
-use foreign_types::ForeignType;
 
-use error::ErrorStack;
 use dh::Dh;
 #[cfg(any(ossl101, ossl102))]
 use ec::EcKey;
+use error::ErrorStack;
 use pkey::Params;
-use ssl::{get_callback_idx, get_ssl_callback_idx, SniError, SslAlert, SslContextRef, SslRef,
-          SslSession, SslSessionRef};
 #[cfg(any(ossl102, ossl110))]
 use ssl::AlpnError;
-use x509::X509StoreContextRef;
 #[cfg(ossl111)]
 use ssl::ExtensionContext;
+use ssl::{
+    get_ssl_callback_idx, SniError, SslAlert, SslContext, SslContextRef, SslRef, SslSession,
+    SslSessionRef,
+};
 #[cfg(ossl111)]
 use x509::X509Ref;
+use x509::{X509StoreContext, X509StoreContextRef};
 
 pub extern "C" fn raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
 where
     F: Fn(bool, &mut X509StoreContextRef) -> bool + 'static + Sync + Send,
 {
     unsafe {
-        let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
-        let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
-        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
-        let verify = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
-        let verify: &F = &*(verify as *mut F);
-
         let ctx = X509StoreContextRef::from_ptr_mut(x509_ctx);
+        let ssl_idx = X509StoreContext::ssl_idx().expect("BUG: store context ssl index missing");
+        let verify_idx = SslContext::cached_ex_index::<F>();
 
-        verify(preverify_ok != 0, ctx) as c_int
+        // raw pointer shenanigans to break the borrow of ctx
+        // the callback can't mess with its own ex_data slot so this is safe
+        let verify = ctx.ex_data(ssl_idx)
+            .expect("BUG: store context missing ssl")
+            .ssl_context()
+            .ex_data(verify_idx)
+            .expect("BUG: verify callback missing") as *const F;
+
+        (*verify)(preverify_ok != 0, ctx) as c_int
     }
 }
 
@@ -59,10 +65,12 @@ where
         + Send,
 {
     unsafe {
-        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
-        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
         let ssl = SslRef::from_ptr_mut(ssl);
-        let callback = &*(callback as *mut F);
+        let callback_idx = SslContext::cached_ex_index::<F>();
+
+        let callback = ssl.ssl_context()
+            .ex_data(callback_idx)
+            .expect("BUG: psk callback missing") as *const F;
         let hint = if hint != ptr::null() {
             Some(CStr::from_ptr(hint).to_bytes())
         } else {
@@ -71,7 +79,7 @@ where
         // Give the callback mutable slices into which it can write the identity and psk.
         let identity_sl = slice::from_raw_parts_mut(identity as *mut u8, max_identity_len as usize);
         let psk_sl = slice::from_raw_parts_mut(psk as *mut u8, max_psk_len as usize);
-        match callback(ssl, hint, identity_sl, psk_sl) {
+        match (*callback)(ssl, hint, identity_sl, psk_sl) {
             Ok(psk_len) => psk_len as u32,
             _ => 0,
         }
@@ -102,13 +110,13 @@ where
     F: Fn(&mut SslRef, &mut SslAlert) -> Result<(), SniError> + 'static + Sync + Send,
 {
     unsafe {
-        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
-        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
-        let callback: &F = &*(callback as *mut F);
         let ssl = SslRef::from_ptr_mut(ssl);
+        let callback = ssl.ssl_context()
+            .ex_data(SslContext::cached_ex_index::<F>())
+            .expect("BUG: sni callback missing") as *const F;
         let mut alert = SslAlert(*al);
 
-        let r = callback(ssl, &mut alert);
+        let r = (*callback)(ssl, &mut alert);
         *al = alert.0;
         match r {
             Ok(()) => ffi::SSL_TLSEXT_ERR_OK,
@@ -130,13 +138,13 @@ where
     F: for<'a> Fn(&mut SslRef, &'a [u8]) -> Result<&'a [u8], AlpnError> + 'static + Sync + Send,
 {
     unsafe {
-        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl);
-        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
-        let callback: &F = &*(callback as *mut F);
         let ssl = SslRef::from_ptr_mut(ssl);
+        let callback = ssl.ssl_context()
+            .ex_data(SslContext::cached_ex_index::<F>())
+            .expect("BUG: alpn callback missing") as *const F;
         let protos = slice::from_raw_parts(inbuf as *const u8, inlen as usize);
 
-        match callback(ssl, protos) {
+        match (*callback)(ssl, protos) {
             Ok(proto) => {
                 *out = proto.as_ptr() as *const c_uchar;
                 *outlen = proto.len() as c_uchar;
@@ -155,12 +163,12 @@ pub unsafe extern "C" fn raw_tmp_dh<F>(
 where
     F: Fn(&mut SslRef, bool, u32) -> Result<Dh<Params>, ErrorStack> + 'static + Sync + Send,
 {
-    let ctx = ffi::SSL_get_SSL_CTX(ssl);
-    let callback = ffi::SSL_CTX_get_ex_data(ctx, get_callback_idx::<F>());
-    let callback = &*(callback as *mut F);
-
     let ssl = SslRef::from_ptr_mut(ssl);
-    match callback(ssl, is_export != 0, keylength as u32) {
+    let callback = ssl.ssl_context()
+        .ex_data(SslContext::cached_ex_index::<F>())
+        .expect("BUG: tmp dh callback missing") as *const F;
+
+    match (*callback)(ssl, is_export != 0, keylength as u32) {
         Ok(dh) => {
             let ptr = dh.as_ptr();
             mem::forget(dh);
@@ -182,12 +190,12 @@ pub unsafe extern "C" fn raw_tmp_ecdh<F>(
 where
     F: Fn(&mut SslRef, bool, u32) -> Result<EcKey<Params>, ErrorStack> + 'static + Sync + Send,
 {
-    let ctx = ffi::SSL_get_SSL_CTX(ssl);
-    let callback = ffi::SSL_CTX_get_ex_data(ctx, get_callback_idx::<F>());
-    let callback = &*(callback as *mut F);
-
     let ssl = SslRef::from_ptr_mut(ssl);
-    match callback(ssl, is_export != 0, keylength as u32) {
+    let callback = ssl.ssl_context()
+        .ex_data(SslContext::cached_ex_index::<F>())
+        .expect("BUG: tmp ecdh callback missing") as *const F;
+
+    match (*callback)(ssl, is_export != 0, keylength as u32) {
         Ok(ec_key) => {
             let ptr = ec_key.as_ptr();
             mem::forget(ec_key);
@@ -255,12 +263,11 @@ pub unsafe extern "C" fn raw_tlsext_status<F>(ssl: *mut ffi::SSL, _: *mut c_void
 where
     F: Fn(&mut SslRef) -> Result<bool, ErrorStack> + 'static + Sync + Send,
 {
-    let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
-    let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
-    let callback = &*(callback as *mut F);
-
     let ssl = SslRef::from_ptr_mut(ssl);
-    let ret = callback(ssl);
+    let callback = ssl.ssl_context()
+        .ex_data(SslContext::cached_ex_index::<F>())
+        .expect("BUG: ocsp callback missing") as *const F;
+    let ret = (*callback)(ssl);
 
     if ssl.is_server() {
         match ret {
@@ -290,14 +297,13 @@ pub unsafe extern "C" fn raw_new_session<F>(
 where
     F: Fn(&mut SslRef, SslSession) + 'static + Sync + Send,
 {
-    let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
-    let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
-    let callback = &*(callback as *mut F);
-
     let ssl = SslRef::from_ptr_mut(ssl);
+    let callback = ssl.ssl_context()
+        .ex_data(SslContext::cached_ex_index::<F>())
+        .expect("BUG: new session callback missing") as *const F;
     let session = SslSession::from_ptr(session);
 
-    callback(ssl, session);
+    (*callback)(ssl, session);
 
     // the return code doesn't indicate error vs success, but whether or not we consumed the session
     1
@@ -309,18 +315,17 @@ pub unsafe extern "C" fn raw_remove_session<F>(
 ) where
     F: Fn(&SslContextRef, &SslSessionRef) + 'static + Sync + Send,
 {
-    let callback = ffi::SSL_CTX_get_ex_data(ctx, get_callback_idx::<F>());
-    let callback = &*(callback as *mut F);
-
     let ctx = SslContextRef::from_ptr(ctx);
+    let callback = ctx.ex_data(SslContext::cached_ex_index::<F>())
+        .expect("BUG: remove session callback missing");
     let session = SslSessionRef::from_ptr(session);
 
     callback(ctx, session)
 }
 
-#[cfg(any(ossl110))]
+#[cfg(ossl110)]
 type DataPtr = *const c_uchar;
-#[cfg(not(any(ossl110)))]
+#[cfg(not(ossl110))]
 type DataPtr = *mut c_uchar;
 
 pub unsafe extern "C" fn raw_get_session<F>(
@@ -332,14 +337,13 @@ pub unsafe extern "C" fn raw_get_session<F>(
 where
     F: Fn(&mut SslRef, &[u8]) -> Option<SslSession> + 'static + Sync + Send,
 {
-    let ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
-    let callback = ffi::SSL_CTX_get_ex_data(ctx, get_callback_idx::<F>());
-    let callback = &*(callback as *mut F);
-
     let ssl = SslRef::from_ptr_mut(ssl);
+    let callback = ssl.ssl_context()
+        .ex_data(SslContext::cached_ex_index::<F>())
+        .expect("BUG: get session callback missing") as *const F;
     let data = slice::from_raw_parts(data as *const u8, len as usize);
 
-    match callback(ssl, data) {
+    match (*callback)(ssl, data) {
         Some(session) => {
             let p = session.as_ptr();
             mem::forget(p);
@@ -355,11 +359,10 @@ pub unsafe extern "C" fn raw_keylog<F>(ssl: *const ffi::SSL, line: *const c_char
 where
     F: Fn(&SslRef, &str) + 'static + Sync + Send,
 {
-    let ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
-    let callback = ffi::SSL_CTX_get_ex_data(ctx, get_callback_idx::<F>());
-    let callback = &*(callback as *mut F);
-
     let ssl = SslRef::from_ptr(ssl as *mut _);
+    let callback = ssl.ssl_context()
+        .ex_data(SslContext::cached_ex_index::<F>())
+        .expect("BUG: get session callback missing");
     let line = CStr::from_ptr(line).to_bytes();
     let line = str::from_utf8_unchecked(line);
 
@@ -367,7 +370,7 @@ where
 }
 
 #[cfg(ossl111)]
-pub extern "C" fn raw_stateless_cookie_generate<F>(
+pub unsafe extern "C" fn raw_stateless_cookie_generate<F>(
     ssl: *mut ffi::SSL,
     cookie: *mut c_uchar,
     cookie_len: *mut size_t,
@@ -375,28 +378,25 @@ pub extern "C" fn raw_stateless_cookie_generate<F>(
 where
     F: Fn(&mut SslRef, &mut [u8]) -> Result<usize, ErrorStack> + 'static + Sync + Send,
 {
-    unsafe {
-        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
-        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
-        let ssl = SslRef::from_ptr_mut(ssl);
-        let callback = &*(callback as *mut F);
-        let slice =
-            slice::from_raw_parts_mut(cookie as *mut u8, ffi::SSL_COOKIE_LENGTH as usize);
-        match callback(ssl, slice) {
-            Ok(len) => {
-                *cookie_len = len as size_t;
-                1
-            }
-            Err(e) => {
-                e.put();
-                0
-            }
+    let ssl = SslRef::from_ptr_mut(ssl);
+    let callback = ssl.ssl_context()
+        .ex_data(SslContext::cached_ex_index::<F>())
+        .expect("BUG: stateless cookie generate callback missing") as *const F;
+    let slice = slice::from_raw_parts_mut(cookie as *mut u8, ffi::SSL_COOKIE_LENGTH as usize);
+    match (*callback)(ssl, slice) {
+        Ok(len) => {
+            *cookie_len = len as size_t;
+            1
+        }
+        Err(e) => {
+            e.put();
+            0
         }
     }
 }
 
 #[cfg(ossl111)]
-pub extern "C" fn raw_stateless_cookie_verify<F>(
+pub unsafe extern "C" fn raw_stateless_cookie_verify<F>(
     ssl: *mut ffi::SSL,
     cookie: *const c_uchar,
     cookie_len: size_t,
@@ -404,15 +404,12 @@ pub extern "C" fn raw_stateless_cookie_verify<F>(
 where
     F: Fn(&mut SslRef, &[u8]) -> bool + 'static + Sync + Send,
 {
-    unsafe {
-        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
-        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
-        let ssl = SslRef::from_ptr_mut(ssl);
-        let callback = &*(callback as *mut F);
-        let slice =
-            slice::from_raw_parts(cookie as *const c_uchar as *const u8, cookie_len as usize);
-        callback(ssl, slice) as c_int
-    }
+    let ssl = SslRef::from_ptr_mut(ssl);
+    let callback = ssl.ssl_context()
+        .ex_data(SslContext::cached_ex_index::<F>())
+        .expect("BUG: stateless cookie verify callback missing") as *const F;
+    let slice = slice::from_raw_parts(cookie as *const c_uchar as *const u8, cookie_len as usize);
+    (*callback)(ssl, slice) as c_int
 }
 
 pub extern "C" fn raw_cookie_generate<F>(
@@ -424,15 +421,15 @@ where
     F: Fn(&mut SslRef, &mut [u8]) -> Result<usize, ErrorStack> + 'static + Sync + Send,
 {
     unsafe {
-        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
-        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
         let ssl = SslRef::from_ptr_mut(ssl);
-        let callback = &*(callback as *mut F);
+        let callback = ssl.ssl_context()
+            .ex_data(SslContext::cached_ex_index::<F>())
+            .expect("BUG: cookie generate callback missing") as *const F;
         // We subtract 1 from DTLS1_COOKIE_LENGTH as the ostensible value, 256, is erroneous but retained for
         // compatibility. See comments in dtls1.h.
         let slice =
             slice::from_raw_parts_mut(cookie as *mut u8, ffi::DTLS1_COOKIE_LENGTH as usize - 1);
-        match callback(ssl, slice) {
+        match (*callback)(ssl, slice) {
             Ok(len) => {
                 *cookie_len = len as c_uint;
                 1
@@ -460,13 +457,13 @@ where
     F: Fn(&mut SslRef, &[u8]) -> bool + 'static + Sync + Send,
 {
     unsafe {
-        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
-        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
         let ssl = SslRef::from_ptr_mut(ssl);
-        let callback = &*(callback as *mut F);
+        let callback = ssl.ssl_context()
+            .ex_data(SslContext::cached_ex_index::<F>())
+            .expect("BUG: cookie verify callback missing") as *const F;
         let slice =
             slice::from_raw_parts(cookie as *const c_uchar as *const u8, cookie_len as usize);
-        callback(ssl, slice) as c_int
+        (*callback)(ssl, slice) as c_int
     }
 }
 
@@ -487,21 +484,23 @@ pub extern "C" fn raw_custom_ext_add<F, T>(
 ) -> c_int
 where
     F: Fn(&mut SslRef, ExtensionContext, Option<(usize, &X509Ref)>) -> Result<Option<T>, SslAlert>
-        + 'static,
+        + 'static
+        + Sync
+        + Send,
     T: AsRef<[u8]> + 'static + Sync + Send,
 {
     unsafe {
-        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
-        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
-        let callback = &*(callback as *mut F);
         let ssl = SslRef::from_ptr_mut(ssl);
+        let callback = ssl.ssl_context()
+            .ex_data(SslContext::cached_ex_index::<F>())
+            .expect("BUG: custom ext add callback missing") as *const F;
         let ectx = ExtensionContext::from_bits_truncate(context);
         let cert = if ectx.contains(ExtensionContext::TLS1_3_CERTIFICATE) {
             Some((chainidx, X509Ref::from_ptr(x)))
         } else {
             None
         };
-        match (callback)(ssl, ectx, cert) {
+        match (*callback)(ssl, ectx, cert) {
             Ok(None) => 0,
             Ok(Some(buf)) => {
                 *outlen = buf.as_ref().len() as size_t;
@@ -557,14 +556,16 @@ pub extern "C" fn raw_custom_ext_parse<F>(
     _: *mut c_void,
 ) -> c_int
 where
-    F: FnMut(&mut SslRef, ExtensionContext, &[u8], Option<(usize, &X509Ref)>) -> Result<(), SslAlert>
-        + 'static,
+    F: Fn(&mut SslRef, ExtensionContext, &[u8], Option<(usize, &X509Ref)>) -> Result<(), SslAlert>
+        + 'static
+        + Sync
+        + Send,
 {
     unsafe {
-        let ssl_ctx = ffi::SSL_get_SSL_CTX(ssl as *const _);
-        let callback = ffi::SSL_CTX_get_ex_data(ssl_ctx, get_callback_idx::<F>());
         let ssl = SslRef::from_ptr_mut(ssl);
-        let callback = &mut *(callback as *mut F);
+        let callback = ssl.ssl_context()
+            .ex_data(SslContext::cached_ex_index::<F>())
+            .expect("BUG: custom ext parse callback missing") as *const F;
         let ectx = ExtensionContext::from_bits_truncate(context);
         let slice = slice::from_raw_parts(input as *const u8, inlen as usize);
         let cert = if ectx.contains(ExtensionContext::TLS1_3_CERTIFICATE) {
@@ -572,7 +573,7 @@ where
         } else {
             None
         };
-        match callback(ssl, ectx, slice, cert) {
+        match (*callback)(ssl, ectx, slice, cert) {
             Ok(()) => 1,
             Err(alert) => {
                 *al = alert.0;

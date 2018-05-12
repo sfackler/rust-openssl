@@ -2635,7 +2635,11 @@ extern "C" {
     pub fn SSL_SESSION_free(s: *mut SSL_SESSION);
     pub fn SSL_SESSION_get_id(s: *const SSL_SESSION, len: *mut c_uint) -> *const c_uchar;
 
-    pub fn d2i_SSL_SESSION(a: *mut *mut SSL_SESSION, pp: *mut *const c_uchar, len: c_long) -> *mut SSL_SESSION;
+    pub fn d2i_SSL_SESSION(
+        a: *mut *mut SSL_SESSION,
+        pp: *mut *const c_uchar,
+        len: c_long,
+    ) -> *mut SSL_SESSION;
     pub fn i2d_SSL_SESSION(s: *mut SSL_SESSION, pp: *mut *mut c_uchar) -> c_int;
 
     #[cfg(not(ossl101))]
@@ -2857,6 +2861,7 @@ extern "C" {
     #[cfg(not(libressl))]
     pub fn FIPS_mode() -> c_int;
 
+    // FIXME change to unsafe extern "C" fn
     pub fn SSL_CTX_set_cookie_generate_cb(
         s: *mut SSL_CTX,
         cb: Option<
@@ -2864,6 +2869,7 @@ extern "C" {
         >,
     );
 
+    // FIXME change to unsafe extern "C" fn
     #[cfg(ossl110)]
     pub fn SSL_CTX_set_cookie_verify_cb(
         s: *mut SSL_CTX,
