@@ -466,17 +466,6 @@ lazy_static! {
     static ref SSL_INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
 }
 
-// Creates a static index for user data of type T
-// Registers a destructor for the data which will be called
-// when context is freed
-fn get_callback_idx<T: 'static>() -> c_int {
-    *INDEXES
-        .lock()
-        .unwrap()
-        .entry(TypeId::of::<T>())
-        .or_insert_with(|| get_new_idx::<T>())
-}
-
 fn get_ssl_callback_idx<T: 'static>() -> c_int {
     *SSL_INDEXES
         .lock()
@@ -495,14 +484,6 @@ unsafe extern "C" fn free_data_box<T>(
 ) {
     if !ptr.is_null() {
         Box::<T>::from_raw(ptr as *mut T);
-    }
-}
-
-fn get_new_idx<T>() -> c_int {
-    unsafe {
-        let idx = compat::get_new_idx(free_data_box::<T>);
-        assert!(idx >= 0);
-        idx
     }
 }
 
@@ -669,12 +650,7 @@ impl SslContextBuilder {
         F: Fn(bool, &mut X509StoreContextRef) -> bool + 'static + Sync + Send,
     {
         unsafe {
-            let verify = Box::new(verify);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                get_callback_idx::<F>(),
-                mem::transmute(verify),
-            );
+            self.set_ex_data(SslContext::cached_ex_index::<F>(), verify);
             ffi::SSL_CTX_set_verify(self.as_ptr(), mode.bits as c_int, Some(raw_verify::<F>));
         }
     }
@@ -695,12 +671,7 @@ impl SslContextBuilder {
         F: Fn(&mut SslRef, &mut SslAlert) -> Result<(), SniError> + 'static + Sync + Send,
     {
         unsafe {
-            let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                get_callback_idx::<F>(),
-                mem::transmute(callback),
-            );
+            self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
             let f: extern "C" fn(_, _, _) -> _ = raw_sni::<F>;
             let f: extern "C" fn() = mem::transmute(f);
             ffi::SSL_CTX_set_tlsext_servername_callback(self.as_ptr(), Some(f));
@@ -790,14 +761,8 @@ impl SslContextBuilder {
         F: Fn(&mut SslRef, bool, u32) -> Result<Dh<Params>, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
-            let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                get_callback_idx::<F>(),
-                Box::into_raw(callback) as *mut c_void,
-            );
-            let f: unsafe extern "C" fn(_, _, _) -> _ = raw_tmp_dh::<F>;
-            ffi::SSL_CTX_set_tmp_dh_callback(self.as_ptr(), f);
+            self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
+            ffi::SSL_CTX_set_tmp_dh_callback(self.as_ptr(), raw_tmp_dh::<F>);
         }
     }
 
@@ -824,14 +789,8 @@ impl SslContextBuilder {
         F: Fn(&mut SslRef, bool, u32) -> Result<EcKey<Params>, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
-            let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                get_callback_idx::<F>(),
-                Box::into_raw(callback) as *mut c_void,
-            );
-            let f: unsafe extern "C" fn(_, _, _) -> _ = raw_tmp_ecdh::<F>;
-            ffi::SSL_CTX_set_tmp_ecdh_callback(self.as_ptr(), f);
+            self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
+            ffi::SSL_CTX_set_tmp_ecdh_callback(self.as_ptr(), raw_tmp_ecdh::<F>);
         }
     }
 
@@ -1208,12 +1167,7 @@ impl SslContextBuilder {
         F: for<'a> Fn(&mut SslRef, &'a [u8]) -> Result<&'a [u8], AlpnError> + 'static + Sync + Send,
     {
         unsafe {
-            let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                get_callback_idx::<F>(),
-                Box::into_raw(callback) as *mut c_void,
-            );
+            self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
             ffi::SSL_CTX_set_alpn_select_cb(
                 self.as_ptr(),
                 callbacks::raw_alpn_select::<F>,
@@ -1270,14 +1224,11 @@ impl SslContextBuilder {
         F: Fn(&mut SslRef) -> Result<bool, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
-            let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                get_callback_idx::<F>(),
-                Box::into_raw(callback) as *mut c_void,
-            );
-            let f: unsafe extern "C" fn(_, _) -> _ = raw_tlsext_status::<F>;
-            cvt(ffi::SSL_CTX_set_tlsext_status_cb(self.as_ptr(), Some(f)) as c_int).map(|_| ())
+            self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
+            cvt(
+                ffi::SSL_CTX_set_tlsext_status_cb(self.as_ptr(), Some(raw_tlsext_status::<F>))
+                    as c_int,
+            ).map(|_| ())
         }
     }
 
@@ -1299,13 +1250,8 @@ impl SslContextBuilder {
             + Send,
     {
         unsafe {
-            let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                get_callback_idx::<F>(),
-                mem::transmute(callback),
-            );
-            ffi::SSL_CTX_set_psk_client_callback(self.as_ptr(), Some(raw_psk::<F>))
+            self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
+            ffi::SSL_CTX_set_psk_client_callback(self.as_ptr(), Some(raw_psk::<F>));
         }
     }
 
@@ -1330,12 +1276,7 @@ impl SslContextBuilder {
         F: Fn(&mut SslRef, SslSession) + 'static + Sync + Send,
     {
         unsafe {
-            let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                get_callback_idx::<F>(),
-                Box::into_raw(callback) as *mut _,
-            );
+            self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
             ffi::SSL_CTX_sess_set_new_cb(self.as_ptr(), Some(callbacks::raw_new_session::<F>));
         }
     }
@@ -1352,12 +1293,7 @@ impl SslContextBuilder {
         F: Fn(&SslContextRef, &SslSessionRef) + 'static + Sync + Send,
     {
         unsafe {
-            let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                get_callback_idx::<F>(),
-                Box::into_raw(callback) as *mut _,
-            );
+            self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
             ffi::SSL_CTX_sess_set_remove_cb(
                 self.as_ptr(),
                 Some(callbacks::raw_remove_session::<F>),
@@ -1383,12 +1319,7 @@ impl SslContextBuilder {
     where
         F: Fn(&mut SslRef, &[u8]) -> Option<SslSession> + 'static + Sync + Send,
     {
-        let callback = Box::new(callback);
-        ffi::SSL_CTX_set_ex_data(
-            self.as_ptr(),
-            get_callback_idx::<F>(),
-            Box::into_raw(callback) as *mut _,
-        );
+        self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
         ffi::SSL_CTX_sess_set_get_cb(self.as_ptr(), Some(callbacks::raw_get_session::<F>));
     }
 
@@ -1409,12 +1340,7 @@ impl SslContextBuilder {
         F: Fn(&SslRef, &str) + 'static + Sync + Send,
     {
         unsafe {
-            let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                get_callback_idx::<F>(),
-                Box::into_raw(callback) as *mut _,
-            );
+            self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
             ffi::SSL_CTX_set_keylog_callback(self.as_ptr(), Some(callbacks::raw_keylog::<F>));
         }
     }
@@ -1446,16 +1372,11 @@ impl SslContextBuilder {
         F: Fn(&mut SslRef, &mut [u8]) -> Result<usize, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
-            let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                get_callback_idx::<F>(),
-                Box::into_raw(callback) as *mut _,
-            );
+            self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
             ffi::SSL_CTX_set_stateless_cookie_generate_cb(
                 self.as_ptr(),
                 Some(raw_stateless_cookie_generate::<F>),
-            )
+            );
         }
     }
 
@@ -1475,12 +1396,7 @@ impl SslContextBuilder {
         F: Fn(&mut SslRef, &[u8]) -> bool + 'static + Sync + Send,
     {
         unsafe {
-            let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                get_callback_idx::<F>(),
-                Box::into_raw(callback) as *mut _,
-            );
+            self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
             ffi::SSL_CTX_set_stateless_cookie_verify_cb(
                 self.as_ptr(),
                 Some(raw_stateless_cookie_verify::<F>),
@@ -1499,13 +1415,8 @@ impl SslContextBuilder {
         F: Fn(&mut SslRef, &mut [u8]) -> Result<usize, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
-            let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                get_callback_idx::<F>(),
-                Box::into_raw(callback) as *mut _,
-            );
-            ffi::SSL_CTX_set_cookie_generate_cb(self.as_ptr(), Some(raw_cookie_generate::<F>))
+            self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
+            ffi::SSL_CTX_set_cookie_generate_cb(self.as_ptr(), Some(raw_cookie_generate::<F>));
         }
     }
 
@@ -1520,13 +1431,8 @@ impl SslContextBuilder {
         F: Fn(&mut SslRef, &[u8]) -> bool + 'static + Sync + Send,
     {
         unsafe {
-            let callback = Box::new(callback);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                get_callback_idx::<F>(),
-                Box::into_raw(callback) as *mut _,
-            );
-            ffi::SSL_CTX_set_cookie_verify_cb(self.as_ptr(), Some(raw_cookie_verify::<F>))
+            self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
+            ffi::SSL_CTX_set_cookie_verify_cb(self.as_ptr(), Some(raw_cookie_verify::<F>));
         }
     }
 
@@ -1578,19 +1484,8 @@ impl SslContextBuilder {
             + Send,
     {
         let ret = unsafe {
-            let add_cb = Box::new(add_cb);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                get_callback_idx::<AddFn>(),
-                Box::into_raw(add_cb) as *mut _,
-            );
-
-            let parse_cb = Box::new(parse_cb);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                get_callback_idx::<ParseFn>(),
-                Box::into_raw(parse_cb) as *mut _,
-            );
+            self.set_ex_data(SslContext::cached_ex_index::<AddFn>(), add_cb);
+            self.set_ex_data(SslContext::cached_ex_index::<ParseFn>(), parse_cb);
 
             ffi::SSL_CTX_add_custom_ext(
                 self.as_ptr(),
@@ -1670,6 +1565,21 @@ impl SslContext {
             ffi::init();
             let idx = cvt_n(compat::get_new_idx(free_data_box::<T>))?;
             Ok(Index::from_raw(idx))
+        }
+    }
+
+    // FIXME should return a result?
+    fn cached_ex_index<T>() -> Index<SslContext, T>
+    where
+        T: 'static + Sync + Send,
+    {
+        unsafe {
+            let idx = *INDEXES
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .entry(TypeId::of::<T>())
+                .or_insert_with(|| SslContext::new_ex_index::<T>().unwrap().as_raw());
+            Index::from_raw(idx)
         }
     }
 }
