@@ -75,7 +75,7 @@ use std::path::Path;
 use std::ptr;
 use std::slice;
 use std::str;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use dh::{Dh, DhRef};
 #[cfg(any(ossl101, ossl102))]
@@ -466,14 +466,6 @@ lazy_static! {
     static ref SSL_INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
 }
 
-fn get_ssl_callback_idx<T: 'static>() -> c_int {
-    *SSL_INDEXES
-        .lock()
-        .unwrap()
-        .entry(TypeId::of::<T>())
-        .or_insert_with(|| get_new_ssl_idx::<T>())
-}
-
 unsafe extern "C" fn free_data_box<T>(
     _parent: *mut c_void,
     ptr: *mut c_void,
@@ -484,14 +476,6 @@ unsafe extern "C" fn free_data_box<T>(
 ) {
     if !ptr.is_null() {
         Box::<T>::from_raw(ptr as *mut T);
-    }
-}
-
-fn get_new_ssl_idx<T>() -> c_int {
-    unsafe {
-        let idx = compat::get_new_ssl_idx(free_data_box::<T>);
-        assert!(idx >= 0);
-        idx
     }
 }
 
@@ -1937,6 +1921,21 @@ impl Ssl {
             Ok(Index::from_raw(idx))
         }
     }
+
+    // FIXME should return a result?
+    fn cached_ex_index<T>() -> Index<Ssl, T>
+    where
+        T: 'static + Sync + Send,
+    {
+        unsafe {
+            let idx = *SSL_INDEXES
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .entry(TypeId::of::<T>())
+                .or_insert_with(|| Ssl::new_ex_index::<T>().unwrap().as_raw());
+            Index::from_raw(idx)
+        }
+    }
 }
 
 impl fmt::Debug for SslRef {
@@ -1988,12 +1987,8 @@ impl SslRef {
         F: Fn(bool, &mut X509StoreContextRef) -> bool + 'static + Sync + Send,
     {
         unsafe {
-            let verify = Box::new(verify);
-            ffi::SSL_set_ex_data(
-                self.as_ptr(),
-                get_ssl_callback_idx::<F>(),
-                mem::transmute(verify),
-            );
+            // this needs to be in an Arc since the callback can register a new callback!
+            self.set_ex_data(Ssl::cached_ex_index(), Arc::new(verify));
             ffi::SSL_set_verify(self.as_ptr(), mode.bits as c_int, Some(ssl_raw_verify::<F>));
         }
     }
@@ -2019,14 +2014,9 @@ impl SslRef {
         F: Fn(&mut SslRef, bool, u32) -> Result<Dh<Params>, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
-            let callback = Box::new(callback);
-            ffi::SSL_set_ex_data(
-                self.as_ptr(),
-                get_ssl_callback_idx::<F>(),
-                Box::into_raw(callback) as *mut c_void,
-            );
-            let f: unsafe extern "C" fn(_, _, _) -> _ = raw_tmp_dh_ssl::<F>;
-            ffi::SSL_set_tmp_dh_callback(self.as_ptr(), f);
+            // this needs to be in an Arc since the callback can register a new callback!
+            self.set_ex_data(Ssl::cached_ex_index(), Arc::new(callback));
+            ffi::SSL_set_tmp_dh_callback(self.as_ptr(), raw_tmp_dh_ssl::<F>);
         }
     }
 
@@ -2052,14 +2042,9 @@ impl SslRef {
         F: Fn(&mut SslRef, bool, u32) -> Result<EcKey<Params>, ErrorStack> + 'static + Sync + Send,
     {
         unsafe {
-            let callback = Box::new(callback);
-            ffi::SSL_set_ex_data(
-                self.as_ptr(),
-                get_ssl_callback_idx::<F>(),
-                Box::into_raw(callback) as *mut c_void,
-            );
-            let f: unsafe extern "C" fn(_, _, _) -> _ = raw_tmp_ecdh_ssl::<F>;
-            ffi::SSL_set_tmp_ecdh_callback(self.as_ptr(), f);
+            // this needs to be in an Arc since the callback can register a new callback!
+            self.set_ex_data(Ssl::cached_ex_index(), Arc::new(callback));
+            ffi::SSL_set_tmp_ecdh_callback(self.as_ptr(), raw_tmp_ecdh_ssl::<F>);
         }
     }
 
@@ -2535,6 +2520,22 @@ impl SslRef {
                 None
             } else {
                 Some(&*(data as *const T))
+            }
+        }
+    }
+
+    /// Returns a mutable reference to the extra data at the specified index.
+    ///
+    /// This corresponds to [`SSL_get_ex_data`].
+    ///
+    /// [`SSL_get_ex_data`]: https://www.openssl.org/docs/manmaster/man3/SSL_set_ex_data.html
+    pub fn ex_data_mut<T>(&mut self, index: Index<Ssl, T>) -> Option<&mut T> {
+        unsafe {
+            let data = ffi::SSL_get_ex_data(self.as_ptr(), index.as_raw());
+            if data.is_null() {
+                None
+            } else {
+                Some(&mut *(data as *mut T))
             }
         }
     }

@@ -10,6 +10,7 @@ use std::ptr;
 use std::slice;
 #[cfg(ossl111)]
 use std::str;
+use std::sync::Arc;
 
 use dh::Dh;
 #[cfg(any(ossl101, ossl102))]
@@ -20,10 +21,7 @@ use pkey::Params;
 use ssl::AlpnError;
 #[cfg(ossl111)]
 use ssl::ExtensionContext;
-use ssl::{
-    get_ssl_callback_idx, SniError, SslAlert, SslContext, SslContextRef, SslRef, SslSession,
-    SslSessionRef,
-};
+use ssl::{SniError, Ssl, SslAlert, SslContext, SslContextRef, SslRef, SslSession, SslSessionRef};
 #[cfg(ossl111)]
 use x509::X509Ref;
 use x509::{X509StoreContext, X509StoreContextRef};
@@ -94,14 +92,17 @@ where
     F: Fn(bool, &mut X509StoreContextRef) -> bool + 'static + Sync + Send,
 {
     unsafe {
-        let idx = ffi::SSL_get_ex_data_X509_STORE_CTX_idx();
-        let ssl = ffi::X509_STORE_CTX_get_ex_data(x509_ctx, idx);
-        let verify = ffi::SSL_get_ex_data(ssl as *const _, get_ssl_callback_idx::<F>());
-        let verify: &F = &*(verify as *mut F);
-
         let ctx = X509StoreContextRef::from_ptr_mut(x509_ctx);
+        let ssl_idx = X509StoreContext::ssl_idx().expect("BUG: store context ssl index missing");
+        let callback_idx = Ssl::cached_ex_index::<Arc<F>>();
 
-        verify(preverify_ok != 0, ctx) as c_int
+        let callback = ctx.ex_data(ssl_idx)
+            .expect("BUG: store context missing ssl")
+            .ex_data(callback_idx)
+            .expect("BUG: ssl verify callback missing")
+            .clone();
+
+        callback(preverify_ok != 0, ctx) as c_int
     }
 }
 
@@ -216,10 +217,11 @@ pub unsafe extern "C" fn raw_tmp_dh_ssl<F>(
 where
     F: Fn(&mut SslRef, bool, u32) -> Result<Dh<Params>, ErrorStack> + 'static + Sync + Send,
 {
-    let callback = ffi::SSL_get_ex_data(ssl, get_ssl_callback_idx::<F>());
-    let callback = &*(callback as *mut F);
-
     let ssl = SslRef::from_ptr_mut(ssl);
+    let callback = ssl.ex_data(Ssl::cached_ex_index::<Arc<F>>())
+        .expect("BUG: ssl tmp dh callback missing")
+        .clone();
+
     match callback(ssl, is_export != 0, keylength as u32) {
         Ok(dh) => {
             let ptr = dh.as_ptr();
@@ -242,10 +244,11 @@ pub unsafe extern "C" fn raw_tmp_ecdh_ssl<F>(
 where
     F: Fn(&mut SslRef, bool, u32) -> Result<EcKey<Params>, ErrorStack> + 'static + Sync + Send,
 {
-    let callback = ffi::SSL_get_ex_data(ssl, get_ssl_callback_idx::<F>());
-    let callback = &*(callback as *mut F);
-
     let ssl = SslRef::from_ptr_mut(ssl);
+    let callback = ssl.ex_data(Ssl::cached_ex_index::<Arc<F>>())
+        .expect("BUG: ssl tmp ecdh callback missing")
+        .clone();
+
     match callback(ssl, is_export != 0, keylength as u32) {
         Ok(ec_key) => {
             let ptr = ec_key.as_ptr();
@@ -503,18 +506,20 @@ where
         match (*callback)(ssl, ectx, cert) {
             Ok(None) => 0,
             Ok(Some(buf)) => {
-                *outlen = buf.as_ref().len() as size_t;
+                *outlen = buf.as_ref().len();
                 *out = buf.as_ref().as_ptr();
 
-                let idx = get_ssl_callback_idx::<CustomExtAddState<T>>();
-                let ptr = ffi::SSL_get_ex_data(ssl.as_ptr(), idx);
-                if ptr.is_null() {
-                    let x = Box::into_raw(Box::<CustomExtAddState<T>>::new(CustomExtAddState(
-                        Some(buf),
-                    ))) as *mut c_void;
-                    ffi::SSL_set_ex_data(ssl.as_ptr(), idx, x);
-                } else {
-                    *(ptr as *mut _) = CustomExtAddState(Some(buf))
+                let idx = Ssl::cached_ex_index::<CustomExtAddState<T>>();
+                let mut buf = Some(buf);
+                let new = match ssl.ex_data_mut(idx) {
+                    Some(state) => {
+                        state.0 = buf.take();
+                        false
+                    }
+                    None => true,
+                };
+                if new {
+                    ssl.set_ex_data(idx, CustomExtAddState(buf));
                 }
                 1
             }
@@ -537,9 +542,11 @@ pub extern "C" fn raw_custom_ext_free<T>(
     T: 'static + Sync + Send,
 {
     unsafe {
-        let state = ffi::SSL_get_ex_data(ssl, get_ssl_callback_idx::<CustomExtAddState<T>>());
-        let state = &mut (*(state as *mut CustomExtAddState<T>)).0;
-        state.take();
+        let ssl = SslRef::from_ptr_mut(ssl);
+        let idx = Ssl::cached_ex_index::<CustomExtAddState<T>>();
+        if let Some(state) = ssl.ex_data_mut(idx) {
+            state.0 = None;
+        }
     }
 }
 
