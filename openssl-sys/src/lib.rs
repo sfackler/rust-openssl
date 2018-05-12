@@ -2334,6 +2334,7 @@ extern "C" {
 
     pub fn RSA_new() -> *mut RSA;
     pub fn RSA_free(rsa: *mut RSA);
+    pub fn RSA_up_ref(rsa: *mut RSA) -> c_int;
     pub fn RSA_generate_key_ex(
         rsa: *mut RSA,
         bits: c_int,
