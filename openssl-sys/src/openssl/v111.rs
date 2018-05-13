@@ -28,6 +28,7 @@ pub type SSL_custom_ext_parse_cb_ex =
 pub const SSL_COOKIE_LENGTH: c_int = 4096;
 
 pub const SSL_OP_ENABLE_MIDDLEBOX_COMPAT: c_ulong = 0x00100000;
+pub const SSL_OP_NO_TLSv1_3: c_ulong = 0x20000000;
 
 pub const TLS1_3_VERSION: c_int = 0x304;
 
