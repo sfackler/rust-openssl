@@ -8,20 +8,10 @@ use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, size_t, FILE
 use std::mem;
 use std::ptr;
 
-#[cfg(any(ossl101, ossl102))]
-mod ossl10x;
-#[cfg(any(ossl101, ossl102))]
-pub use ossl10x::*;
-
-#[cfg(ossl110)]
-mod ossl110;
-#[cfg(ossl110)]
-pub use ossl110::*;
-
-#[cfg(ossl111)]
-mod ossl111;
-#[cfg(ossl111)]
-pub use ossl111::*;
+#[cfg(not(libressl))]
+mod openssl;
+#[cfg(not(libressl))]
+pub use openssl::*;
 
 #[cfg(libressl)]
 mod libressl;
@@ -1249,20 +1239,12 @@ pub const SSL_CTRL_SET_TLSEXT_STATUS_REQ_TYPE: c_int = 65;
 pub const SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP: c_int = 70;
 pub const SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP: c_int = 71;
 pub const SSL_CTRL_GET_EXTRA_CHAIN_CERTS: c_int = 82;
-#[cfg(not(any(ossl101, libressl)))]
-pub const SSL_CTRL_SET_VERIFY_CERT_STORE: c_int = 106;
 
 pub const SSL_MODE_ENABLE_PARTIAL_WRITE: c_long = 0x1;
 pub const SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER: c_long = 0x2;
 pub const SSL_MODE_AUTO_RETRY: c_long = 0x4;
 pub const SSL_MODE_NO_AUTO_CHAIN: c_long = 0x8;
 pub const SSL_MODE_RELEASE_BUFFERS: c_long = 0x10;
-#[cfg(not(libressl))]
-pub const SSL_MODE_SEND_CLIENTHELLO_TIME: c_long = 0x20;
-#[cfg(not(libressl))]
-pub const SSL_MODE_SEND_SERVERHELLO_TIME: c_long = 0x40;
-#[cfg(not(libressl))]
-pub const SSL_MODE_SEND_FALLBACK_SCSV: c_long = 0x80;
 
 pub const SSL_ERROR_NONE: c_int = 0;
 pub const SSL_ERROR_SSL: c_int = 1;
@@ -1287,8 +1269,6 @@ pub const SSL_OP_CRYPTOPRO_TLSEXT_BUG: c_ulong = 0x80000000;
 #[cfg(any(libressl261, libressl262, libressl26x, libressl27x))]
 pub const SSL_OP_CRYPTOPRO_TLSEXT_BUG: c_ulong = 0x0;
 pub const SSL_OP_LEGACY_SERVER_CONNECT: c_ulong = 0x00000004;
-#[cfg(not(libressl))]
-pub const SSL_OP_SAFARI_ECDHE_ECDSA_BUG: c_ulong = 0x00000040;
 #[cfg(not(any(libressl, ossl110f, ossl111)))]
 pub const SSL_OP_ALL: c_ulong = 0x80000BFF;
 #[cfg(any(ossl110f, ossl111))]
@@ -1298,27 +1278,13 @@ pub const SSL_OP_ALL: c_ulong = SSL_OP_CRYPTOPRO_TLSEXT_BUG | SSL_OP_DONT_INSERT
 pub const SSL_OP_NO_QUERY_MTU: c_ulong = 0x00001000;
 pub const SSL_OP_COOKIE_EXCHANGE: c_ulong = 0x00002000;
 pub const SSL_OP_NO_TICKET: c_ulong = 0x00004000;
-#[cfg(not(libressl))]
-pub const SSL_OP_CISCO_ANYCONNECT: c_ulong = 0x00008000;
 pub const SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION: c_ulong = 0x00010000;
-#[cfg(not(libressl))]
-pub const SSL_OP_NO_COMPRESSION: c_ulong = 0x00020000;
-#[cfg(not(libressl))]
-pub const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION: c_ulong = 0x00040000;
 pub const SSL_OP_CIPHER_SERVER_PREFERENCE: c_ulong = 0x00400000;
 pub const SSL_OP_TLS_ROLLBACK_BUG: c_ulong = 0x00800000;
-#[cfg(not(libressl))]
-pub const SSL_OP_NO_SSLv3: c_ulong = 0x02000000;
 pub const SSL_OP_NO_TLSv1: c_ulong = 0x04000000;
 pub const SSL_OP_NO_TLSv1_1: c_ulong = 0x10000000;
 pub const SSL_OP_NO_TLSv1_2: c_ulong = 0x08000000;
-#[cfg(ossl111)]
-pub const SSL_OP_NO_TLSv1_3: c_ulong = 0x20000000;
 
-#[cfg(not(any(ossl101, libressl)))]
-pub const SSL_OP_NO_DTLSv1: c_ulong = 0x04000000;
-#[cfg(not(any(ossl101, libressl)))]
-pub const SSL_OP_NO_DTLSv1_2: c_ulong = 0x08000000;
 #[cfg(not(any(ossl101, libressl, ossl111)))]
 pub const SSL_OP_NO_SSL_MASK: c_ulong =
     SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
@@ -1366,8 +1332,6 @@ pub const X509_FILETYPE_DEFAULT: c_int = 3;
 pub const X509_FILETYPE_PEM: c_int = 1;
 
 pub const X509_V_OK: c_int = 0;
-#[cfg(not(libressl))]
-pub const X509_V_ERR_UNSPECIFIED: c_int = 1;
 pub const X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT: c_int = 2;
 pub const X509_V_ERR_UNABLE_TO_GET_CRL: c_int = 3;
 pub const X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE: c_int = 4;
@@ -1464,51 +1428,6 @@ pub const GEN_IPADD: c_int = 7;
 pub const GEN_RID: c_int = 8;
 
 pub const DTLS1_COOKIE_LENGTH: c_uint = 256;
-
-#[cfg(not(libressl))]
-pub const CMS_TEXT: c_uint = 0x1;
-#[cfg(not(libressl))]
-pub const CMS_NOCERTS: c_uint = 0x2;
-#[cfg(not(libressl))]
-pub const CMS_NO_CONTENT_VERIFY: c_uint = 0x4;
-#[cfg(not(libressl))]
-pub const CMS_NO_ATTR_VERIFY: c_uint = 0x8;
-#[cfg(not(libressl))]
-pub const CMS_NOSIGS: c_uint = 0x4 | 0x8;
-#[cfg(not(libressl))]
-pub const CMS_NOINTERN: c_uint = 0x10;
-#[cfg(not(libressl))]
-pub const CMS_NO_SIGNER_CERT_VERIFY: c_uint = 0x20;
-#[cfg(not(libressl))]
-pub const CMS_NOVERIFY: c_uint = 0x20;
-#[cfg(not(libressl))]
-pub const CMS_DETACHED: c_uint = 0x40;
-#[cfg(not(libressl))]
-pub const CMS_BINARY: c_uint = 0x80;
-#[cfg(not(libressl))]
-pub const CMS_NOATTR: c_uint = 0x100;
-#[cfg(not(libressl))]
-pub const CMS_NOSMIMECAP: c_uint = 0x200;
-#[cfg(not(libressl))]
-pub const CMS_NOOLDMIMETYPE: c_uint = 0x400;
-#[cfg(not(libressl))]
-pub const CMS_CRLFEOL: c_uint = 0x800;
-#[cfg(not(libressl))]
-pub const CMS_STREAM: c_uint = 0x1000;
-#[cfg(not(libressl))]
-pub const CMS_NOCRL: c_uint = 0x2000;
-#[cfg(not(libressl))]
-pub const CMS_PARTIAL: c_uint = 0x4000;
-#[cfg(not(libressl))]
-pub const CMS_REUSE_DIGEST: c_uint = 0x8000;
-#[cfg(not(libressl))]
-pub const CMS_USE_KEYID: c_uint = 0x10000;
-#[cfg(not(libressl))]
-pub const CMS_DEBUG_DECRYPT: c_uint = 0x20000;
-#[cfg(all(not(libressl), not(ossl101)))]
-pub const CMS_KEY_PARAM: c_uint = 0x40000;
-#[cfg(all(not(libressl), not(ossl101), not(ossl102)))]
-pub const CMS_ASCIICRLF: c_uint = 0x80000;
 
 // macros
 pub unsafe fn BIO_get_mem_data(b: *mut BIO, pp: *mut *mut c_char) -> c_long {
@@ -2887,35 +2806,6 @@ extern "C" {
     ) -> c_int;
     pub fn HMAC_Update(ctx: *mut HMAC_CTX, data: *const c_uchar, len: size_t) -> c_int;
     pub fn HMAC_Final(ctx: *mut HMAC_CTX, md: *mut c_uchar, len: *mut c_uint) -> c_int;
-
-    #[cfg(not(libressl))]
-    pub fn CMS_decrypt(
-        cms: *mut CMS_ContentInfo,
-        pkey: *mut EVP_PKEY,
-        cert: *mut X509,
-        dcont: *mut BIO,
-        out: *mut BIO,
-        flags: c_uint,
-    ) -> c_int;
-    #[cfg(not(libressl))]
-    pub fn SMIME_read_CMS(bio: *mut BIO, bcont: *mut *mut BIO) -> *mut CMS_ContentInfo;
-    #[cfg(not(libressl))]
-    pub fn CMS_ContentInfo_free(cms: *mut CMS_ContentInfo);
-    #[cfg(not(libressl))]
-    pub fn CMS_sign(
-        signcert: *mut X509,
-        pkey: *mut EVP_PKEY,
-        certs: *mut stack_st_X509,
-        data: *mut BIO,
-        flags: c_uint,
-    ) -> *mut CMS_ContentInfo;
-    #[cfg(not(libressl))]
-    pub fn i2d_CMS_ContentInfo(a: *mut CMS_ContentInfo, pp: *mut *mut c_uchar) -> c_int;
-
-    #[cfg(not(libressl))]
-    pub fn FIPS_mode_set(onoff: c_int) -> c_int;
-    #[cfg(not(libressl))]
-    pub fn FIPS_mode() -> c_int;
 
     // FIXME change to unsafe extern "C" fn
     pub fn SSL_CTX_set_cookie_generate_cb(

@@ -34,6 +34,8 @@ pub enum X509_ALGOR {}
 pub enum X509_VERIFY_PARAM {}
 pub enum X509_REQ {}
 
+pub const CMS_ASCIICRLF: c_uint = 0x80000;
+
 pub const SSL_CTRL_SET_MIN_PROTO_VERSION: c_int = 123;
 pub const SSL_CTRL_SET_MAX_PROTO_VERSION: c_int = 124;
 #[cfg(ossl110g)]
