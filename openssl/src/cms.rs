@@ -9,11 +9,42 @@ use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use std::ptr;
 
-use {cvt, cvt_p};
 use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
+use libc::c_uint;
 use pkey::{HasPrivate, PKeyRef};
+use stack::Stack;
 use x509::X509;
+use {cvt, cvt_p};
+
+bitflags! {
+    pub struct CMSOptions : c_uint {
+        const TEXT = ffi::CMS_TEXT;
+        const CMS_NOCERTS = ffi::CMS_NOCERTS;
+        const NO_CONTENT_VERIFY = ffi::CMS_NO_CONTENT_VERIFY;
+        const NO_ATTR_VERIFY = ffi::CMS_NO_ATTR_VERIFY;
+        const NOSIGS = ffi::CMS_NOSIGS;
+        const NOINTERN = ffi::CMS_NOINTERN;
+        const NO_SIGNER_CERT_VERIFY = ffi::CMS_NO_SIGNER_CERT_VERIFY;
+        const NOVERIFY = ffi::CMS_NOVERIFY;
+        const DETACHED = ffi::CMS_DETACHED;
+        const BINARY = ffi::CMS_BINARY;
+        const NOATTR = ffi::CMS_NOATTR;
+        const NOSMIMECAP = ffi::CMS_NOSMIMECAP;
+        const NOOLDMIMETYPE = ffi::CMS_NOOLDMIMETYPE;
+        const CRLFEOL = ffi::CMS_CRLFEOL;
+        const STREAM = ffi::CMS_STREAM;
+        const NOCRL = ffi::CMS_NOCRL;
+        const PARTIAL = ffi::CMS_PARTIAL;
+        const REUSE_DIGEST = ffi::CMS_REUSE_DIGEST;
+        const USE_KEYID = ffi::CMS_USE_KEYID;
+        const DEBUG_DECRYPT = ffi::CMS_DEBUG_DECRYPT;
+        #[cfg(all(not(libressl), not(ossl101)))]
+        const KEY_PARAM = ffi::CMS_KEY_PARAM;
+        #[cfg(all(not(libressl), not(ossl101), not(ossl102)))]
+        const ASCIICRLF = ffi::CMS_ASCIICRLF;
+    }
+}
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::CMS_ContentInfo;
@@ -63,6 +94,16 @@ impl CmsContentInfoRef {
             Ok(out.get_buf().to_owned())
         }
     }
+
+    to_der! {
+    /// Serializes this CmsContentInfo using DER.
+    ///
+    /// OpenSSL documentation at [`i2d_CMS_ContentInfo`]
+    ///
+    /// [`i2d_CMS_ContentInfo`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_CMS_ContentInfo.html
+    to_der,
+    ffi::i2d_CMS_ContentInfo
+    }
 }
 
 impl CmsContentInfo {
@@ -76,6 +117,51 @@ impl CmsContentInfo {
             let bio = MemBioSlice::new(smime)?;
 
             let cms = cvt_p(ffi::SMIME_read_CMS(bio.as_ptr(), ptr::null_mut()))?;
+
+            Ok(CmsContentInfo::from_ptr(cms))
+        }
+    }
+
+    /// Given a signing cert `signcert`, private key `pkey`, a certificate stack `certs`,
+    /// data `data` and flags `flags`, create a CmsContentInfo struct.
+    ///
+    /// All arguments are optional.
+    ///
+    /// OpenSSL documentation at [`CMS_sign`]
+    ///
+    /// [`CMS_sign`]: https://www.openssl.org/docs/manmaster/man3/CMS_sign.html
+    pub fn sign<T: HasPrivate>(
+        signcert: Option<&X509>,
+        pkey: Option<&PKeyRef<T>>,
+        certs: Option<&Stack<X509>>,
+        data: Option<&[u8]>,
+        flags: CMSOptions,
+    ) -> Result<CmsContentInfo, ErrorStack> {
+        unsafe {
+            let signcert = match signcert {
+                Some(cert) => cert.as_ptr(),
+                None => ptr::null_mut(),
+            };
+            let pkey = match pkey {
+                Some(pkey) => pkey.as_ptr(),
+                None => ptr::null_mut(),
+            };
+            let data_bio_ptr = match data {
+                Some(data) => MemBioSlice::new(data)?.as_ptr(),
+                None => ptr::null_mut(),
+            };
+            let certs = match certs {
+                Some(certs) => certs.as_ptr(),
+                None => ptr::null_mut(),
+            };
+
+            let cms = cvt_p(ffi::CMS_sign(
+                signcert,
+                pkey,
+                certs,
+                data_bio_ptr,
+                flags.bits(),
+            ))?;
 
             Ok(CmsContentInfo::from_ptr(cms))
         }
