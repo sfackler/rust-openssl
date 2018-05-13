@@ -77,6 +77,23 @@ generic_foreign_type_and_impl_send_sync! {
     pub struct RsaRef<T>;
 }
 
+impl<T> Clone for Rsa<T> {
+    fn clone(&self) -> Rsa<T> {
+        (**self).to_owned()
+    }
+}
+
+impl<T> ToOwned for RsaRef<T> {
+    type Owned = Rsa<T>;
+
+    fn to_owned(&self) -> Rsa<T> {
+        unsafe {
+            ffi::RSA_up_ref(self.as_ptr());
+            Rsa::from_ptr(self.as_ptr())
+        }
+    }
+}
+
 impl<T> RsaRef<T>
 where
     T: HasPrivate,
@@ -845,7 +862,7 @@ mod test {
 
     #[test]
     fn test_pem_pkcs1_padding() {
-        let keypair = super::Rsa::generate(512).unwrap();
+        let keypair = super::Rsa::generate(2048).unwrap();
         let pubkey_pem = keypair.public_key_to_pem_pkcs1().unwrap();
         let pubkey = super::Rsa::public_key_from_pem_pkcs1(&pubkey_pem).unwrap();
         let msg = "foo".as_bytes();
@@ -861,5 +878,11 @@ mod test {
         assert!(len1 > (msg.len() + 1));
         assert_eq!(len1, len2);
         assert_ne!(encrypted1, encrypted2);
+    }
+
+    #[test]
+    fn clone() {
+        let key = Rsa::generate(2048).unwrap();
+        key.clone();
     }
 }
