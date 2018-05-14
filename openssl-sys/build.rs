@@ -48,13 +48,21 @@ fn env(name: &str) -> Option<OsString> {
 }
 
 fn main() {
+    let host = env::var("HOST").unwrap();
     let target = env::var("TARGET").unwrap();
 
-    let lib_dir = env("OPENSSL_LIB_DIR").map(PathBuf::from);
-    let include_dir = env("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
+    // some distros like debian require special treatment when cross-compiling, since they split
+    // the `lib` and `include` dirs, we attempt to find individual dirs first
+    let lib_dir = env("OPENSSL_LIB_DIR")
+        .or_else(|| find_openssl_lib_dir(&host, &target))
+        .map(PathBuf::from);
+
+    let include_dir = env("OPENSSL_INCLUDE_DIR")
+        .or_else(|| find_openssl_include_dir(&host, &target))
+        .map(PathBuf::from);
 
     let (lib_dir, include_dir) = if lib_dir.is_none() || include_dir.is_none() {
-        let openssl_dir = env("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(&target));
+        let openssl_dir = env("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(&host, &target));
         let openssl_dir = Path::new(&openssl_dir);
         let lib_dir = lib_dir.unwrap_or_else(|| openssl_dir.join("lib"));
         let include_dir = include_dir.unwrap_or_else(|| openssl_dir.join("include"));
@@ -100,9 +108,30 @@ fn main() {
     }
 }
 
-fn find_openssl_dir(target: &str) -> OsString {
-    let host = env::var("HOST").unwrap();
+fn find_openssl_lib_dir(host: &str, target: &str) -> Option<OsString> {
+    // On multi-arch debian-based systems, the target-system libraries reside in arch-prefixed
+    // subdirectories of `/usr/lib`
+    if host != target && target.contains("unknown-linux") {
+        let debian_target = target.replace("unknown-linux", "linux");
+        let candidate = Path::new("/usr/lib/").join(&debian_target);
+        if candidate.exists() {
+            return Some(candidate.into());
+        }
+    }
 
+    None
+}
+
+fn find_openssl_include_dir(host: &str, target: &str) -> Option<OsString> {
+    // Multi-arch systems use the host include files
+    if host != target && target.contains("unknown-linux") {
+        return Some("/usr/include/".into());
+    }
+
+    None
+}
+
+fn find_openssl_dir(host: &str, target: &str) -> OsString {
     if host == target && target.contains("apple-darwin") {
         let homebrew = Path::new("/usr/local/opt/openssl@1.1");
         if homebrew.exists() {
