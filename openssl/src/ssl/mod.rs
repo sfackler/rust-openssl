@@ -1226,7 +1226,7 @@ impl SslContextBuilder {
     ///
     /// [`SSL_CTX_set_psk_client_callback`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_set_psk_client_callback.html
     #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
-    pub fn set_psk_callback<F>(&mut self, callback: F)
+    pub fn set_psk_client_callback<F>(&mut self, callback: F)
     where
         F: Fn(&mut SslRef, Option<&[u8]>, &mut [u8], &mut [u8]) -> Result<usize, ErrorStack>
             + 'static
@@ -1235,7 +1235,30 @@ impl SslContextBuilder {
     {
         unsafe {
             self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
-            ffi::SSL_CTX_set_psk_client_callback(self.as_ptr(), Some(raw_psk::<F>));
+            ffi::SSL_CTX_set_psk_client_callback(self.as_ptr(), Some(raw_client_psk::<F>));
+        }
+    }
+
+    /// Sets the callback for providing an identity and pre-shared key for a TLS-PSK server.
+    ///
+    /// The callback will be called with the SSL context, an identity provided by the client,
+    /// and, a mutable slice for the pre-shared key bytes. The callback returns the number of
+    /// bytes in the pre-shared key.
+    ///
+    /// This corresponds to [`SSL_CTX_set_psk_server_callback`].
+    ///
+    /// [`SSL_CTX_set_psk_server_callback`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_set_psk_server_callback.html
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+    pub fn set_psk_server_callback<F>(&mut self, callback: F)
+    where
+        F: Fn(&mut SslRef, Option<&[u8]>, &mut [u8]) -> Result<usize, ErrorStack>
+            + 'static
+            + Sync
+            + Send,
+    {
+        unsafe {
+            self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
+            ffi::SSL_CTX_set_psk_server_callback(self.as_ptr(), Some(raw_server_psk::<F>));
         }
     }
 
