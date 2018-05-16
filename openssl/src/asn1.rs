@@ -27,6 +27,7 @@
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_char, c_int, c_long};
+use std::ffi::CString;
 use std::fmt;
 use std::ptr;
 use std::slice;
@@ -271,6 +272,18 @@ foreign_type_and_impl_send_sync! {
     ///
     /// [`Asn1Object`]: struct.Asn1Object.html
     pub struct Asn1ObjectRef;
+}
+
+impl Asn1Object {
+    /// Returns an ASN1_object from a given OID in text form.
+    pub fn from_txt(oid: &str, no_name: bool) -> Asn1Object {
+        unsafe {
+            Asn1Object::from_ptr(ffi::OBJ_txt2obj(
+                CString::new(oid).unwrap().as_ptr(),
+                no_name as c_int,
+            ))
+        }
+    }
 }
 
 impl Asn1ObjectRef {

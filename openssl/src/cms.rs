@@ -6,16 +6,59 @@
 //! Data accepted by this module will be smime type `enveloped-data`.
 
 use ffi;
-use foreign_types::{ForeignType, ForeignTypeRef};
+use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
+use libc::c_void;
 use std::ptr;
 
+use asn1::Asn1Object;
 use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
+use hash::MessageDigest;
 use libc::c_uint;
 use pkey::{HasPrivate, PKeyRef};
-use stack::StackRef;
-use x509::{X509, X509Ref};
-use {cvt, cvt_p};
+use stack::{Stack, StackRef};
+use x509::store::X509Store;
+use x509::{X509Ref, X509};
+use {cvt, cvt_n, cvt_p};
+
+pub struct CmsSignerInfoRef(Opaque);
+
+impl ForeignTypeRef for CmsSignerInfoRef {
+    type CType = ffi::CMS_SignerInfo;
+}
+
+pub struct CmsSignerInfo(*mut ffi::CMS_SignerInfo);
+
+impl ForeignType for CmsSignerInfo {
+    type CType = ffi::CMS_SignerInfo;
+    type Ref = CmsSignerInfoRef;
+
+    unsafe fn from_ptr(ptr: *mut ffi::CMS_SignerInfo) -> CmsSignerInfo {
+        CmsSignerInfo(ptr)
+    }
+
+    fn as_ptr(&self) -> *mut ffi::CMS_SignerInfo {
+        self.0
+    }
+}
+
+impl CmsSignerInfo {
+    pub fn add_attr(&mut self, obj: &Asn1Object, data_type: i32, data: &[u8]) -> i32 {
+        unsafe {
+            ffi::CMS_signed_add1_attr_by_OBJ(
+                self.as_ptr(),
+                obj.as_ptr(),
+                data_type,
+                data.as_ptr() as *const c_void,
+                data.len() as i32,
+            )
+        }
+    }
+
+    pub fn sign(&mut self) -> i32 {
+        unsafe { ffi::CMS_SignerInfo_sign(self.as_ptr()) }
+    }
+}
 
 bitflags! {
     pub struct CMSOptions : c_uint {
@@ -104,6 +147,105 @@ impl CmsContentInfoRef {
     to_der,
     ffi::i2d_CMS_ContentInfo
     }
+
+    from_der! {
+    /// Deserializes this CmsContentInfo using DER.
+    ///
+    /// OpenSSL documentation at [`d2i_CMS_ContentInfo`]
+    ///
+    /// [`i2d_CMS_ContentInfo`]: https://www.openssl.org/docs/man1.0.2/crypto/d2i_CMS_ContentInfo.html
+    from_der,
+    CmsContentInfo,
+    ffi::d2i_CMS_ContentInfo
+    }
+
+    pub fn add_signer<T: HasPrivate>(
+        &mut self,
+        signcert: &X509,
+        pkey: &PKeyRef<T>,
+        digest: Option<MessageDigest>,
+        flags: CMSOptions,
+    ) -> Result<CmsSignerInfo, ErrorStack> {
+        let md_ptr = match digest {
+            Some(md) => md.as_ptr(),
+            None => ptr::null_mut(),
+        };
+
+        unsafe {
+            Ok(ForeignType::from_ptr(cvt_p(ffi::CMS_add1_signer(
+                self.as_ptr(),
+                signcert.as_ptr(),
+                pkey.as_ptr(),
+                md_ptr,
+                flags.bits(),
+            ))?))
+        }
+    }
+
+    pub fn finalize(
+        &mut self,
+        data: &[u8],
+        dcont: Option<&MemBioSlice>,
+        flags: CMSOptions,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            let bio = MemBioSlice::new(data)?;
+            let dcont_ptr = match dcont {
+                Some(p) => p.as_ptr(),
+                None => ptr::null_mut(),
+            };
+
+            cvt(ffi::CMS_final(
+                self.as_ptr(),
+                bio.as_ptr(),
+                dcont_ptr,
+                flags.bits(),
+            ))?;
+
+            Ok(())
+        }
+    }
+
+    pub fn verify(
+        &mut self,
+        certs: Option<&Stack<X509>>,
+        store: Option<&X509Store>,
+        data: Option<&[u8]>,
+        output_data: Option<&mut Vec<u8>>,
+        flags: CMSOptions,
+    ) -> Result<bool, ErrorStack> {
+        unsafe {
+            let certs = match certs {
+                Some(certs) => certs.as_ptr(),
+                None => ptr::null_mut(),
+            };
+            let store = match store {
+                Some(store) => store.as_ptr(),
+                None => ptr::null_mut(),
+            };
+            let in_data = match data {
+                Some(data) => MemBioSlice::new(data)?.as_ptr(),
+                None => ptr::null_mut(),
+            };
+            let out_bio = MemBio::new()?;
+
+            let is_valid = cvt_n(ffi::CMS_verify(
+                self.as_ptr(),
+                certs,
+                store,
+                in_data,
+                out_bio.as_ptr(),
+                flags.bits(),
+            ))? == 1;
+
+            if let Some(out_data) = output_data {
+                out_data.clear();
+                out_data.extend_from_slice(out_bio.get_buf());
+            };
+
+            Ok(is_valid)
+        }
+    }
 }
 
 impl CmsContentInfo {
@@ -159,6 +301,26 @@ impl CmsContentInfo {
             ))?;
 
             Ok(CmsContentInfo::from_ptr(cms))
+        }
+    }
+
+    pub fn partial(
+        certs: Option<&Stack<X509>>,
+        flags: CMSOptions,
+    ) -> Result<CmsContentInfo, ErrorStack> {
+        let certs = match certs {
+            Some(certs) => certs.as_ptr(),
+            None => ptr::null_mut(),
+        };
+
+        unsafe {
+            Ok(CmsContentInfo::from_ptr(cvt_p(ffi::CMS_sign(
+                ptr::null_mut(),
+                ptr::null_mut(),
+                certs,
+                ptr::null_mut(),
+                flags.bits(),
+            ))?))
         }
     }
 }

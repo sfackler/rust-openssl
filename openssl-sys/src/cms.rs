@@ -1,6 +1,7 @@
 use libc::*;
 
 pub enum CMS_ContentInfo {}
+pub enum CMS_SignerInfo {}
 
 extern "C" {
     #[cfg(ossl101)]
@@ -56,6 +57,15 @@ pub const CMS_ASCIICRLF: c_uint = 0x80000;
 
 extern "C" {
     #[cfg(ossl101)]
+    pub fn CMS_decrypt(
+        cms: *mut ::CMS_ContentInfo,
+        pkey: *mut ::EVP_PKEY,
+        cert: *mut ::X509,
+        dcont: *mut ::BIO,
+        out: *mut ::BIO,
+        flags: c_uint,
+    ) -> c_int;
+    #[cfg(ossl101)]
     pub fn SMIME_read_CMS(bio: *mut ::BIO, bcont: *mut *mut ::BIO) -> *mut ::CMS_ContentInfo;
 
     #[cfg(ossl101)]
@@ -66,14 +76,43 @@ extern "C" {
         data: *mut ::BIO,
         flags: c_uint,
     ) -> *mut ::CMS_ContentInfo;
-
     #[cfg(ossl101)]
-    pub fn CMS_decrypt(
+    pub fn CMS_add1_signer(
         cms: *mut ::CMS_ContentInfo,
+        signcert: *mut ::X509,
         pkey: *mut ::EVP_PKEY,
-        cert: *mut ::X509,
+        md: *const ::EVP_MD,
+        flags: c_uint,
+    ) -> *mut ::CMS_SignerInfo;
+    #[cfg(ossl101)]
+    pub fn CMS_final(
+        cms: *mut ::CMS_ContentInfo,
+        data: *mut ::BIO,
         dcont: *mut ::BIO,
+        flags: c_uint,
+    ) -> c_int;
+    #[cfg(ossl101)]
+    pub fn CMS_verify(
+        cms: *mut ::CMS_ContentInfo,
+        certs: *mut ::stack_st_X509,
+        store: *mut ::X509_STORE,
+        indata: *mut ::BIO,
         out: *mut ::BIO,
         flags: c_uint,
     ) -> c_int;
+    #[cfg(ossl101)]
+    pub fn d2i_CMS_ContentInfo(
+        a: *mut *mut ::CMS_ContentInfo,
+        ppin: *mut *const c_uchar,
+        length: c_long,
+    ) -> *mut ::CMS_ContentInfo;
+    pub fn CMS_signed_add1_attr_by_OBJ(
+        si: *mut ::CMS_SignerInfo,
+        obj: *const ::ASN1_OBJECT,
+        bytes_type: c_int,
+        bytes: *const c_void,
+        len: c_int,
+    ) -> c_int;
+    #[cfg(ossl101)]
+    pub fn CMS_SignerInfo_sign(si: *mut ::CMS_SignerInfo) -> c_int;
 }

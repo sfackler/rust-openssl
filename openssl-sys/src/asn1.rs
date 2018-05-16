@@ -25,6 +25,7 @@ extern "C" {
 stack!(stack_st_ASN1_OBJECT);
 
 extern "C" {
+    pub fn OBJ_txt2obj(oid: *const c_char, no_name: c_int) -> *mut ASN1_OBJECT;
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
     #[cfg(any(ossl110, libressl273))]
     pub fn ASN1_STRING_get0_data(x: *const ASN1_STRING) -> *const c_uchar;
