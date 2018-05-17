@@ -1489,6 +1489,24 @@ impl SslContextBuilder {
         }
     }
 
+    /// Sets the maximum amount of early data that will be accepted on incoming connections.
+    ///
+    /// Defaults to 0.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
+    /// This corresponds to [`SSL_CTX_set_max_early_data`].
+    ///
+    /// [`SSL_CTX_set_max_early_data`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_max_early_data.html
+    #[cfg(ossl111)]
+    pub fn set_max_early_data(&mut self, bytes: u32) -> Result<(), ErrorStack> {
+        if unsafe { ffi::SSL_CTX_set_max_early_data(self.as_ptr(), bytes) } == 1 {
+            Ok(())
+        } else {
+            Err(ErrorStack::get())
+        }
+    }
+
     /// Consumes the builder, returning a new `SslContext`.
     pub fn build(self) -> SslContext {
         self.0
@@ -1642,6 +1660,18 @@ impl SslContextRef {
                 Some(&*(data as *const T))
             }
         }
+    }
+
+    /// Gets the maximum amount of early data that will be accepted on incoming connections.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
+    /// This corresponds to [`SSL_CTX_get_max_early_data`].
+    ///
+    /// [`SSL_CTX_get_max_early_data`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_get_max_early_data.html
+    #[cfg(ossl111)]
+    pub fn max_early_data(&self) -> u32 {
+        unsafe { ffi::SSL_CTX_get_max_early_data(self.as_ptr()) }
     }
 }
 
@@ -1871,6 +1901,18 @@ impl SslSessionRef {
     /// [`SSL_SESSION_get_master_key`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_SESSION_get_master_key.html
     pub fn master_key(&self, buf: &mut [u8]) -> usize {
         unsafe { compat::SSL_SESSION_get_master_key(self.as_ptr(), buf.as_mut_ptr(), buf.len()) }
+    }
+
+    /// Gets the maximum amount of early data that can be sent on this session.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
+    /// This corresponds to [`SSL_SESSION_get_max_early_data`].
+    ///
+    /// [`SSL_SESSION_get_max_early_data`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_SESSION_get_max_early_data.html
+    #[cfg(ossl111)]
+    pub fn max_early_data(&self) -> u32 {
+        unsafe { ffi::SSL_SESSION_get_max_early_data(self.as_ptr()) }
     }
 
     to_der! {
@@ -2593,6 +2635,34 @@ impl SslRef {
                 Some(&mut *(data as *mut T))
             }
         }
+    }
+
+    /// Sets the maximum amount of early data that will be accepted on this connection.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
+    /// This corresponds to [`SSL_set_max_early_data`].
+    ///
+    /// [`SSL_set_max_early_data`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_set_max_early_data.html
+    #[cfg(ossl111)]
+    pub fn set_max_early_data(&mut self, bytes: u32) -> Result<(), ErrorStack> {
+        if unsafe { ffi::SSL_set_max_early_data(self.as_ptr(), bytes) } == 1 {
+            Ok(())
+        } else {
+            Err(ErrorStack::get())
+        }
+    }
+
+    /// Gets the maximum amount of early data that can be sent on this connection.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
+    /// This corresponds to [`SSL_get_max_early_data`].
+    ///
+    /// [`SSL_get_max_early_data`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_get_max_early_data.html
+    #[cfg(ossl111)]
+    pub fn max_early_data(&self) -> u32 {
+        unsafe { ffi::SSL_get_max_early_data(self.as_ptr()) }
     }
 }
 
