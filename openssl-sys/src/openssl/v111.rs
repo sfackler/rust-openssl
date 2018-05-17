@@ -89,4 +89,14 @@ extern "C" {
     pub fn SSL_get_max_early_data(ctx: *const ::SSL) -> u32;
     pub fn SSL_SESSION_set_max_early_data(ctx: *mut ::SSL_SESSION, max_early_data: u32) -> c_int;
     pub fn SSL_SESSION_get_max_early_data(ctx: *const ::SSL_SESSION) -> u32;
+
+    pub fn SSL_export_keying_material_early(
+        s: *mut ::SSL,
+        out: *mut c_uchar,
+        olen: size_t,
+        label: *const c_char,
+        llen: size_t,
+        context: *const c_uchar,
+        contextlen: size_t,
+    ) -> c_int;
 }

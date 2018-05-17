@@ -2498,6 +2498,33 @@ impl SslRef {
         }
     }
 
+    /// Derives keying material for application use in accordance to RFC 5705.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
+    /// This corresponds to [`SSL_export_keying_material_early`].
+    ///
+    /// [`SSL_export_keying_material_early`]: https://www.openssl.org/docs/manmaster/man3/SSL_export_keying_material_early.html
+    #[cfg(ossl111)]
+    pub fn export_keying_material_early(
+        &self,
+        out: &mut [u8],
+        label: &str,
+        context: &[u8],
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_export_keying_material_early(
+                self.as_ptr(),
+                out.as_mut_ptr() as *mut c_uchar,
+                out.len(),
+                label.as_ptr() as *const c_char,
+                label.len(),
+                context.as_ptr() as *const c_uchar,
+                context.len(),
+            )).map(|_| ())
+        }
+    }
+
     /// Sets the session to be used.
     ///
     /// This should be called before the handshake to attempt to reuse a previously established
