@@ -2500,6 +2500,9 @@ impl SslRef {
 
     /// Derives keying material for application use in accordance to RFC 5705.
     ///
+    /// This function is only usable with TLSv1.3, wherein there is no distinction between an empty context and no
+    /// context. Therefore, unlike `export_keying_material`, `context` must always be supplied.
+    ///
     /// Requires OpenSSL 1.1.1 or newer.
     ///
     /// This corresponds to [`SSL_export_keying_material_early`].
@@ -3001,6 +3004,24 @@ where
         }
     }
 
+    /// Configure as an outgoing stream from a client.
+    ///
+    /// This corresponds to [`SSL_set_connect_state`].
+    ///
+    /// [`SSL_set_connect_state`]: https://www.openssl.org/docs/manmaster/man3/SSL_set_connect_state.html
+    pub fn set_connect_state(&mut self) {
+        unsafe { ffi::SSL_set_connect_state(self.inner.ssl.as_ptr()) }
+    }
+
+    /// Configure as an incoming stream to a server.
+    ///
+    /// This corresponds to [`SSL_set_accept_state`].
+    ///
+    /// [`SSL_set_accept_state`]: https://www.openssl.org/docs/manmaster/man3/SSL_set_accept_state.html
+    pub fn set_accept_state(&mut self) {
+        unsafe { ffi::SSL_set_accept_state(self.inner.ssl.as_ptr()) }
+    }
+
     /// See `Ssl::connect`
     pub fn connect(self) -> Result<SslStream<S>, HandshakeError<S>> {
         let mut stream = self.inner;
@@ -3041,7 +3062,74 @@ where
         }
     }
 
-    // Future work: early IO methods
+    /// Initiates the handshake.
+    ///
+    /// This will fail if `set_accept_state` or `set_connect_state` was not called first.
+    ///
+    /// This corresponds to [`SSL_do_handshake`].
+    ///
+    /// [`SSL_do_handshake`]: https://www.openssl.org/docs/manmaster/man3/SSL_do_handshake.html
+    pub fn handshake(self) -> Result<SslStream<S>, HandshakeError<S>> {
+        let mut stream = self.inner;
+        let ret = unsafe { ffi::SSL_do_handshake(stream.ssl.as_ptr()) };
+        if ret > 0 {
+            Ok(stream)
+        } else {
+            let error = stream.make_error(ret);
+            match error.code() {
+                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => {
+                    Err(HandshakeError::WouldBlock(MidHandshakeSslStream { stream, error }))
+                }
+                _ => Err(HandshakeError::Failure(MidHandshakeSslStream { stream, error })),
+            }
+        }
+    }
+
+    /// Read application data transmitted by a client before handshake
+    /// completion.
+    ///
+    /// Useful for reducing latency, but vulnerable to replay attacks. Call
+    /// `set_accept_state` first.
+    ///
+    /// Returns `Ok(0)` if all early data has been read.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
+    /// This corresponds to [`SSL_read_early_data`].
+    ///
+    /// [`SSL_read_early_data`]: https://www.openssl.org/docs/manmaster/man3/SSL_read_early_data.html
+    #[cfg(ossl111)]
+    pub fn read_early_data(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
+        let mut read = 0;
+        let ret = unsafe { ffi::SSL_read_early_data(self.inner.ssl.as_ptr(), buf.as_ptr() as *mut c_void, buf.len(), &mut read) };
+        match ret {
+            ffi::SSL_READ_EARLY_DATA_ERROR => Err(self.inner.make_error(ret)),
+            ffi::SSL_READ_EARLY_DATA_SUCCESS => Ok(read),
+            ffi::SSL_READ_EARLY_DATA_FINISH => Ok(0),
+            _ => unreachable!(),
+        }
+    }
+
+    /// Send data to the server without blocking on handshake completion.
+    ///
+    /// Useful for reducing latency, but vulnerable to replay attacks. Call
+    /// `set_connect_state` first.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
+    /// This corresponds to [`SSL_write_early_data`].
+    ///
+    /// [`SSL_write_early_data`]: https://www.openssl.org/docs/manmaster/man3/SSL_write_early_data.html
+    #[cfg(ossl111)]
+    pub fn write_early_data(&mut self, buf: &[u8]) -> Result<usize, Error> {
+        let mut written = 0;
+        let ret = unsafe { ffi::SSL_write_early_data(self.inner.ssl.as_ptr(), buf.as_ptr() as *const c_void, buf.len(), &mut written) };
+        if ret > 0 {
+            Ok(written as usize)
+        } else {
+            Err(self.inner.make_error(ret))
+        }
+    }
 }
 
 impl<S> SslStreamBuilder<S> {
