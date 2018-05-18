@@ -48,25 +48,25 @@ make -j$(nproc)
 make install
 ```
 
-### OSX
+### macOS
 
-Although OpenSSL 0.9.8 is preinstalled on OSX this library is being phased out
-of OSX and this crate also does not support that version of OpenSSL. To use this
-crate on OSX you'll need to install OpenSSL via some alternate means, typically
+Although OpenSSL 0.9.8 is preinstalled on macOS this library is being phased out
+of macOS and this crate also does not support that version of OpenSSL. To use this
+crate on macOS you'll need to install OpenSSL via some alternate means, typically
 Homebrew:
 
 ```bash
 brew install openssl
 ```
 
-Occasionally an update of XCode or MacOS will cause the linker to fail after compilation, to rectify this you may want to try and run:
+Occasionally an update of XCode or macOS will cause the linker to fail after compilation, to rectify this you may want to try and run:
 
 ```bash
 xcode-select --install
 ```
 
-If Homebrew is installed to the default location of `/usr/local`, OpenSSL will be
-automatically detected.
+If you're using latest version of Homebrew which supports `--prefix` command,
+OpenSSL will be automatically detected.
 
 ### Windows MSVC
 

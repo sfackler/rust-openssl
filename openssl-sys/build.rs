@@ -104,6 +104,8 @@ fn find_openssl_dir(target: &str) -> OsString {
     let host = env::var("HOST").unwrap();
 
     if host == target && target.contains("apple-darwin") {
+        // Check up default Homebrew installation location first
+        // for quick resolution if possible.
         let homebrew = Path::new("/usr/local/opt/openssl@1.1");
         if homebrew.exists() {
             return homebrew.to_path_buf().into();
@@ -111,6 +113,22 @@ fn find_openssl_dir(target: &str) -> OsString {
         let homebrew = Path::new("/usr/local/opt/openssl");
         if homebrew.exists() {
             return homebrew.to_path_buf().into();
+        }
+        // Calling `brew --prefix <package>` command usually slow and 
+        // takes seconds, and will be used only as a last resort.
+        let output = execute_command_and_get_output("brew", &["--prefix", "openssl@1.1"]);
+        if let Some(ref output) = output {
+            let homebrew = Path::new(&output);
+            if homebrew.exists() {
+                return homebrew.to_path_buf().into();
+            }
+        }
+        let output = execute_command_and_get_output("brew", &["--prefix", "openssl"]);
+        if let Some(ref output) = output {
+            let homebrew = Path::new(&output);
+            if homebrew.exists() {
+                return homebrew.to_path_buf().into();
+            }
         }
     }
 
@@ -548,3 +566,19 @@ fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
     // practices with security libs", let's link dynamically.
     "dylib"
 }
+
+
+
+fn execute_command_and_get_output(cmd: &str, args: &[&str]) -> Option<String> {
+    let out = Command::new(cmd).args(args).output();
+    if let Ok(ref r1) = out {
+        if r1.status.success() {
+            let r2 = String::from_utf8(r1.stdout.clone());
+            if let Ok(r3) = r2 {
+                return Some(r3.trim().to_string());
+            } 
+        }
+    }
+    return None;
+}
+
