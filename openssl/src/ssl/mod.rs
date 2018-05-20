@@ -85,6 +85,7 @@ use error::ErrorStack;
 use ex_data::Index;
 #[cfg(ossl111)]
 use hash::MessageDigest;
+#[cfg(ossl110)]
 use nid::Nid;
 use pkey::{HasPrivate, PKeyRef, Params, Private};
 use ssl::bio::BioMethod;
@@ -506,12 +507,12 @@ impl SslAlert {
 
 /// An error returned from an ALPN selection callback.
 ///
-/// Requires OpenSSL 1.0.2 or newer.
-#[cfg(any(ossl102, ossl110))]
+/// Requires OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
+#[cfg(any(ossl102, libressl261))]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct AlpnError(c_int);
 
-#[cfg(any(ossl102, ossl110))]
+#[cfg(any(ossl102, libressl261))]
 impl AlpnError {
     /// Terminate the handshake with a fatal alert.
     ///
@@ -1109,10 +1110,10 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_set_alpn_protos`].
     ///
-    /// Requires OpenSSL 1.0.2 or newer.
+    /// Requires OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
     ///
     /// [`SSL_CTX_set_alpn_protos`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_CTX_set_alpn_protos.html
-    #[cfg(any(ossl102, ossl110))]
+    #[cfg(any(ossl102, libressl261))]
     pub fn set_alpn_protos(&mut self, protocols: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             assert!(protocols.len() <= c_uint::max_value() as usize);
@@ -1140,12 +1141,12 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_set_alpn_select_cb`].
     ///
-    /// Requires OpenSSL 1.0.2 or newer.
+    /// Requires OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
     ///
     /// [`SslContextBuilder::set_alpn_protos`]: struct.SslContextBuilder.html#method.set_alpn_protos
     /// [`select_next_proto`]: fn.select_next_proto.html
     /// [`SSL_CTX_set_alpn_select_cb`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_CTX_set_alpn_protos.html
-    #[cfg(any(ossl102, ossl110))]
+    #[cfg(any(ossl102, libressl261))]
     pub fn set_alpn_select_callback<F>(&mut self, callback: F)
     where
         F: for<'a> Fn(&mut SslRef, &'a [u8]) -> Result<&'a [u8], AlpnError> + 'static + Sync + Send,
@@ -2283,12 +2284,12 @@ impl SslRef {
     /// The protocol's name is returned is an opaque sequence of bytes. It is up to the client
     /// to interpret it.
     ///
-    /// Requires OpenSSL 1.0.2 or newer.
+    /// Requires OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
     ///
     /// This corresponds to [`SSL_get0_alpn_selected`].
     ///
     /// [`SSL_get0_alpn_selected`]: https://www.openssl.org/docs/manmaster/man3/SSL_get0_next_proto_negotiated.html
-    #[cfg(any(ossl102, ossl110))]
+    #[cfg(any(ossl102, libressl261))]
     pub fn selected_alpn_protocol(&self) -> Option<&[u8]> {
         unsafe {
             let mut data: *const c_uchar = ptr::null();
