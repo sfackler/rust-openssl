@@ -40,21 +40,24 @@ pub trait Stackable: ForeignType {
 /// An owned stack of `T`.
 pub struct Stack<T: Stackable>(*mut T::StackType);
 
-impl<T: Stackable> Stack<T> {
-    pub fn new() -> Result<Stack<T>, ErrorStack> {
-        unsafe {
-            ffi::init();
-            let ptr = cvt_p(OPENSSL_sk_new_null())?;
-            Ok(Stack(ptr as *mut _))
-        }
-    }
-}
+unsafe impl<T: Stackable + Send> Send for Stack<T> {}
+unsafe impl<T: Stackable + Sync> Sync for Stack<T> {}
 
 impl<T: Stackable> Drop for Stack<T> {
     fn drop(&mut self) {
         unsafe {
             while let Some(_) = self.pop() {}
             OPENSSL_sk_free(self.0 as *mut _);
+        }
+    }
+}
+
+impl<T: Stackable> Stack<T> {
+    pub fn new() -> Result<Stack<T>, ErrorStack> {
+        unsafe {
+            ffi::init();
+            let ptr = cvt_p(OPENSSL_sk_new_null())?;
+            Ok(Stack(ptr as *mut _))
         }
     }
 }
@@ -163,6 +166,9 @@ impl<T: Stackable> Iterator for IntoIter<T> {
 impl<T: Stackable> ExactSizeIterator for IntoIter<T> {}
 
 pub struct StackRef<T: Stackable>(Opaque, PhantomData<T>);
+
+unsafe impl<T: Stackable + Send> Send for StackRef<T> {}
+unsafe impl<T: Stackable + Sync> Sync for StackRef<T> {}
 
 impl<T: Stackable> ForeignTypeRef for StackRef<T> {
     type CType = T::StackType;
