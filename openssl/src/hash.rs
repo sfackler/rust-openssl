@@ -1,22 +1,27 @@
-use std::io::prelude::*;
-use std::io;
-use std::ops::{Deref, DerefMut};
-use std::fmt;
 use ffi;
+use std::fmt;
+use std::io;
+use std::io::prelude::*;
+use std::ops::{Deref, DerefMut};
 
-#[cfg(ossl110)]
-use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
-#[cfg(any(ossl101, ossl102))]
-use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
+    } else {
+        use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
+    }
+}
 
-use {cvt, cvt_p};
 use error::ErrorStack;
+use {cvt, cvt_p};
 
 #[derive(Copy, Clone)]
 pub struct MessageDigest(*const ffi::EVP_MD);
 
 impl MessageDigest {
-    pub unsafe fn from_ptr(x: *const ffi::EVP_MD) -> Self { MessageDigest(x) }
+    pub unsafe fn from_ptr(x: *const ffi::EVP_MD) -> Self {
+        MessageDigest(x)
+    }
 
     pub fn md5() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_md5()) }
@@ -382,12 +387,10 @@ mod tests {
 
     #[test]
     fn test_sha256() {
-        let tests = [
-            (
-                "616263",
-                "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
-            ),
-        ];
+        let tests = [(
+            "616263",
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+        )];
 
         for test in tests.iter() {
             hash_test(MessageDigest::sha256(), test);

@@ -32,12 +32,12 @@ use std::ptr;
 use std::slice;
 use std::str;
 
-use {cvt, cvt_p};
 use bio::MemBio;
 use bn::BigNum;
 use error::ErrorStack;
 use nid::Nid;
 use string::OpensslString;
+use {cvt, cvt_p};
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_GENERALIZEDTIME;
@@ -162,7 +162,7 @@ impl Asn1StringRef {
     ///
     /// [`as_utf8`]: struct.Asn1String.html#method.as_utf8
     pub fn as_slice(&self) -> &[u8] {
-        unsafe { slice::from_raw_parts(ASN1_STRING_data(self.as_ptr()), self.len()) }
+        unsafe { slice::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr()), self.len()) }
     }
 
     /// Return the length of the Asn1String (number of bytes)
@@ -241,11 +241,11 @@ foreign_type_and_impl_send_sync! {
 impl Asn1BitStringRef {
     /// Returns the Asn1BitString as a slice
     pub fn as_slice(&self) -> &[u8] {
-        unsafe { slice::from_raw_parts(ASN1_STRING_data(self.as_ptr() as *mut _), self.len()) }
+        unsafe { slice::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr() as *mut _), self.len()) }
     }
     /// Length of Asn1BitString in number of bytes.
     pub fn len(&self) -> usize {
-        unsafe { ffi::ASN1_STRING_length(self.as_ptr() as *mut _) as usize }
+        unsafe { ffi::ASN1_STRING_length(self.as_ptr() as *const _) as usize }
     }
 }
 
@@ -296,11 +296,13 @@ impl fmt::Display for Asn1ObjectRef {
     }
 }
 
-#[cfg(any(ossl101, ossl102))]
-use ffi::ASN1_STRING_data;
-
-#[cfg(ossl110)]
-#[allow(bad_style)]
-unsafe fn ASN1_STRING_data(s: *mut ffi::ASN1_STRING) -> *mut ::libc::c_uchar {
-    ffi::ASN1_STRING_get0_data(s) as *mut _
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::ASN1_STRING_get0_data;
+    } else {
+        #[allow(bad_style)]
+        unsafe fn ASN1_STRING_get0_data(s: *mut ffi::ASN1_STRING) -> *const ::libc::c_uchar {
+            ffi::ASN1_STRING_data(s)
+        }
+    }
 }

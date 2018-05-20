@@ -78,7 +78,7 @@ use std::str;
 use std::sync::{Arc, Mutex};
 
 use dh::{Dh, DhRef};
-#[cfg(any(ossl101, ossl102))]
+#[cfg(all(ossl101, not(ossl110)))]
 use ec::EcKey;
 use ec::EcKeyRef;
 use error::ErrorStack;
@@ -91,10 +91,10 @@ use ssl::bio::BioMethod;
 use ssl::callbacks::*;
 use ssl::error::InnerError;
 use stack::{Stack, StackRef};
-#[cfg(any(ossl102, ossl110))]
+#[cfg(ossl102)]
 use x509::store::X509Store;
 use x509::store::{X509StoreBuilderRef, X509StoreRef};
-#[cfg(any(ossl102, ossl110))]
+#[cfg(any(ossl102, libressl261))]
 use x509::verify::X509VerifyParamRef;
 use x509::{X509, X509Name, X509Ref, X509StoreContextRef, X509VerifyResult};
 use {cvt, cvt_n, cvt_p, init};
@@ -284,7 +284,7 @@ impl SslMethod {
     /// This corresponds to `TLS_method` on OpenSSL 1.1.0 and `SSLv23_method`
     /// on OpenSSL 1.0.x.
     pub fn tls() -> SslMethod {
-        SslMethod(compat::tls_method())
+        unsafe { SslMethod(TLS_method()) }
     }
 
     /// Support all versions of the DTLS protocol.
@@ -292,7 +292,7 @@ impl SslMethod {
     /// This corresponds to `DTLS_method` on OpenSSL 1.1.0 and `DTLSv1_method`
     /// on OpenSSL 1.0.x.
     pub fn dtls() -> SslMethod {
-        SslMethod(compat::dtls_method())
+        unsafe { SslMethod(DTLS_method()) }
     }
 
     /// Constructs an `SslMethod` from a pointer to the underlying OpenSSL value.
@@ -767,7 +767,7 @@ impl SslContextBuilder {
     /// Requires OpenSSL 1.0.1 or 1.0.2.
     ///
     /// This corresponds to `SSL_CTX_set_tmp_ecdh_callback`.
-    #[cfg(any(ossl101, ossl102))]
+    #[cfg(all(ossl101, not(ossl110)))]
     pub fn set_tmp_ecdh_callback<F>(&mut self, callback: F)
     where
         F: Fn(&mut SslRef, bool, u32) -> Result<EcKey<Params>, ErrorStack> + 'static + Sync + Send,
@@ -976,7 +976,7 @@ impl SslContextBuilder {
     /// This corresponds to [`SSL_CTX_set_ecdh_auto`].
     ///
     /// [`SSL_CTX_set_ecdh_auto`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_set_ecdh_auto.html
-    #[cfg(any(ossl102, libressl))]
+    #[cfg(any(libressl, all(ossl102, not(ossl110))))]
     pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_CTX_set_ecdh_auto(self.as_ptr(), onoff as c_int)).map(|_| ()) }
     }
@@ -992,7 +992,7 @@ impl SslContextBuilder {
     ///
     /// [`SSL_CTX_set_options`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_options.html
     pub fn set_options(&mut self, option: SslOptions) -> SslOptions {
-        let bits = unsafe { compat::SSL_CTX_set_options(self.as_ptr(), option.bits()) };
+        let bits = unsafe { ffi::SSL_CTX_set_options(self.as_ptr(), option.bits()) };
         SslOptions { bits }
     }
 
@@ -1002,7 +1002,7 @@ impl SslContextBuilder {
     ///
     /// [`SSL_CTX_get_options`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_options.html
     pub fn options(&self) -> SslOptions {
-        let bits = unsafe { compat::SSL_CTX_get_options(self.as_ptr()) };
+        let bits = unsafe { ffi::SSL_CTX_get_options(self.as_ptr()) };
         SslOptions { bits }
     }
 
@@ -1012,7 +1012,7 @@ impl SslContextBuilder {
     ///
     /// [`SSL_CTX_clear_options`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_options.html
     pub fn clear_options(&mut self, option: SslOptions) -> SslOptions {
-        let bits = unsafe { compat::SSL_CTX_clear_options(self.as_ptr(), option.bits()) };
+        let bits = unsafe { ffi::SSL_CTX_clear_options(self.as_ptr(), option.bits()) };
         SslOptions { bits }
     }
 
@@ -1514,7 +1514,7 @@ foreign_type_and_impl_send_sync! {
 impl Clone for SslContext {
     fn clone(&self) -> Self {
         unsafe {
-            compat::SSL_CTX_up_ref(self.as_ptr());
+            SSL_CTX_up_ref(self.as_ptr());
             SslContext::from_ptr(self.as_ptr())
         }
     }
@@ -1547,7 +1547,7 @@ impl SslContext {
     {
         unsafe {
             ffi::init();
-            let idx = cvt_n(compat::get_new_idx(free_data_box::<T>))?;
+            let idx = cvt_n(get_new_idx(free_data_box::<T>))?;
             Ok(Index::from_raw(idx))
         }
     }
@@ -1833,7 +1833,7 @@ impl ToOwned for SslSessionRef {
 
     fn to_owned(&self) -> SslSession {
         unsafe {
-            compat::SSL_SESSION_up_ref(self.as_ptr());
+            SSL_SESSION_up_ref(self.as_ptr());
             SslSession(self.as_ptr())
         }
     }
@@ -1859,7 +1859,7 @@ impl SslSessionRef {
     ///
     /// [`SSL_SESSION_get_master_key`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_SESSION_get_master_key.html
     pub fn master_key_len(&self) -> usize {
-        unsafe { compat::SSL_SESSION_get_master_key(self.as_ptr(), ptr::null_mut(), 0) }
+        unsafe { SSL_SESSION_get_master_key(self.as_ptr(), ptr::null_mut(), 0) }
     }
 
     /// Copies the master key into the provided buffer.
@@ -1870,7 +1870,7 @@ impl SslSessionRef {
     ///
     /// [`SSL_SESSION_get_master_key`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_SESSION_get_master_key.html
     pub fn master_key(&self, buf: &mut [u8]) -> usize {
-        unsafe { compat::SSL_SESSION_get_master_key(self.as_ptr(), buf.as_mut_ptr(), buf.len()) }
+        unsafe { SSL_SESSION_get_master_key(self.as_ptr(), buf.as_mut_ptr(), buf.len()) }
     }
 
     to_der! {
@@ -1926,7 +1926,7 @@ impl Ssl {
     {
         unsafe {
             ffi::init();
-            let idx = cvt_n(compat::get_new_ssl_idx(free_data_box::<T>))?;
+            let idx = cvt_n(get_new_ssl_idx(free_data_box::<T>))?;
             Ok(Index::from_raw(idx))
         }
     }
@@ -2091,7 +2091,7 @@ impl SslRef {
     /// This corresponds to `SSL_set_tmp_ecdh_callback`.
     ///
     /// [`SslContextBuilder::set_tmp_ecdh_callback`]: struct.SslContextBuilder.html#method.set_tmp_ecdh_callback
-    #[cfg(any(ossl101, ossl102))]
+    #[cfg(any(all(ossl101, not(ossl110))))]
     pub fn set_tmp_ecdh_callback<F>(&mut self, callback: F)
     where
         F: Fn(&mut SslRef, bool, u32) -> Result<EcKey<Params>, ErrorStack> + 'static + Sync + Send,
@@ -2111,7 +2111,7 @@ impl SslRef {
     ///
     /// [`SslContextBuilder::set_tmp_ecdh`]: struct.SslContextBuilder.html#method.set_tmp_ecdh
     /// [`SSL_set_ecdh_auto`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_ecdh_auto.html
-    #[cfg(ossl102)]
+    #[cfg(all(ossl102, not(ossl110)))]
     pub fn set_ecdh_auto(&mut self, onoff: bool) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_set_ecdh_auto(self.as_ptr(), onoff as c_int)).map(|_| ()) }
     }
@@ -2363,7 +2363,7 @@ impl SslRef {
     /// This corresponds to [`SSL_get0_param`].
     ///
     /// [`SSL_get0_param`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_get0_param.html
-    #[cfg(any(ossl102, ossl110))]
+    #[cfg(any(ossl102, libressl261))]
     pub fn param_mut(&mut self) -> &mut X509VerifyParamRef {
         unsafe { X509VerifyParamRef::from_ptr_mut(ffi::SSL_get0_param(self.as_ptr())) }
     }
@@ -2541,7 +2541,7 @@ impl SslRef {
     ///
     /// [`SSL_is_server`]: https://www.openssl.org/docs/manmaster/man3/SSL_is_server.html
     pub fn is_server(&self) -> bool {
-        unsafe { compat::SSL_is_server(self.as_ptr()) != 0 }
+        unsafe { SSL_is_server(self.as_ptr()) != 0 }
     }
 
     /// Sets the extra data at the specified index.
@@ -2987,133 +2987,88 @@ pub enum ShutdownResult {
     Received,
 }
 
-#[cfg(ossl110)]
-mod compat {
-    use std::ptr;
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::{
+            SSL_CTX_up_ref,
+            SSL_SESSION_get_master_key, SSL_SESSION_up_ref, SSL_is_server, TLS_method, DTLS_method,
+        };
 
-    use ffi;
-    use libc::c_int;
-
-    pub use ffi::{
-        SSL_CTX_clear_options, SSL_CTX_get_options, SSL_CTX_set_options, SSL_CTX_up_ref,
-        SSL_SESSION_get_master_key, SSL_SESSION_up_ref, SSL_is_server,
-    };
-
-    pub unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
-        ffi::CRYPTO_get_ex_new_index(
-            ffi::CRYPTO_EX_INDEX_SSL_CTX,
-            0,
-            ptr::null_mut(),
-            None,
-            None,
-            Some(f),
-        )
-    }
-
-    pub unsafe fn get_new_ssl_idx(f: ffi::CRYPTO_EX_free) -> c_int {
-        ffi::CRYPTO_get_ex_new_index(
-            ffi::CRYPTO_EX_INDEX_SSL,
-            0,
-            ptr::null_mut(),
-            None,
-            None,
-            Some(f),
-        )
-    }
-
-    pub fn tls_method() -> *const ffi::SSL_METHOD {
-        unsafe { ffi::TLS_method() }
-    }
-
-    pub fn dtls_method() -> *const ffi::SSL_METHOD {
-        unsafe { ffi::DTLS_method() }
-    }
-}
-
-#[cfg(ossl10x)]
-#[allow(bad_style)]
-mod compat {
-    use std::ptr;
-
-    use ffi;
-    use libc::{self, c_int, c_long, c_uchar, c_ulong, size_t};
-
-    pub unsafe fn SSL_CTX_get_options(ctx: *const ffi::SSL_CTX) -> c_ulong {
-        ffi::SSL_CTX_ctrl(ctx as *mut _, ffi::SSL_CTRL_OPTIONS, 0, ptr::null_mut()) as c_ulong
-    }
-
-    pub unsafe fn SSL_CTX_set_options(ctx: *const ffi::SSL_CTX, op: c_ulong) -> c_ulong {
-        ffi::SSL_CTX_ctrl(
-            ctx as *mut _,
-            ffi::SSL_CTRL_OPTIONS,
-            op as c_long,
-            ptr::null_mut(),
-        ) as c_ulong
-    }
-
-    pub unsafe fn SSL_CTX_clear_options(ctx: *const ffi::SSL_CTX, op: c_ulong) -> c_ulong {
-        ffi::SSL_CTX_ctrl(
-            ctx as *mut _,
-            ffi::SSL_CTRL_CLEAR_OPTIONS,
-            op as c_long,
-            ptr::null_mut(),
-        ) as c_ulong
-    }
-
-    pub unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
-        ffi::SSL_CTX_get_ex_new_index(0, ptr::null_mut(), None, None, Some(f))
-    }
-
-    pub unsafe fn get_new_ssl_idx(f: ffi::CRYPTO_EX_free) -> c_int {
-        ffi::SSL_get_ex_new_index(0, ptr::null_mut(), None, None, Some(f))
-    }
-
-    pub unsafe fn SSL_CTX_up_ref(ssl: *mut ffi::SSL_CTX) -> libc::c_int {
-        ffi::CRYPTO_add_lock(
-            &mut (*ssl).references,
-            1,
-            ffi::CRYPTO_LOCK_SSL_CTX,
-            "mod.rs\0".as_ptr() as *const _,
-            line!() as libc::c_int,
-        );
-        0
-    }
-
-    pub unsafe fn SSL_SESSION_get_master_key(
-        session: *const ffi::SSL_SESSION,
-        out: *mut c_uchar,
-        mut outlen: size_t,
-    ) -> size_t {
-        if outlen == 0 {
-            return (*session).master_key_length as size_t;
+        pub unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
+            ffi::CRYPTO_get_ex_new_index(
+                ffi::CRYPTO_EX_INDEX_SSL_CTX,
+                0,
+                ptr::null_mut(),
+                None,
+                None,
+                Some(f),
+            )
         }
-        if outlen > (*session).master_key_length as size_t {
-            outlen = (*session).master_key_length as size_t;
+
+        pub unsafe fn get_new_ssl_idx(f: ffi::CRYPTO_EX_free) -> c_int {
+            ffi::CRYPTO_get_ex_new_index(
+                ffi::CRYPTO_EX_INDEX_SSL,
+                0,
+                ptr::null_mut(),
+                None,
+                None,
+                Some(f),
+            )
         }
-        ptr::copy_nonoverlapping((*session).master_key.as_ptr(), out, outlen);
-        outlen
-    }
+    } else {
+        use ffi::{SSLv23_method as TLS_method, DTLSv1_method as DTLS_method};
 
-    pub fn tls_method() -> *const ffi::SSL_METHOD {
-        unsafe { ffi::SSLv23_method() }
-    }
+        pub unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
+            ffi::SSL_CTX_get_ex_new_index(0, ptr::null_mut(), None, None, Some(f))
+        }
 
-    pub fn dtls_method() -> *const ffi::SSL_METHOD {
-        unsafe { ffi::DTLSv1_method() }
-    }
+        pub unsafe fn get_new_ssl_idx(f: ffi::CRYPTO_EX_free) -> c_int {
+            ffi::SSL_get_ex_new_index(0, ptr::null_mut(), None, None, Some(f))
+        }
 
-    pub unsafe fn SSL_is_server(s: *mut ffi::SSL) -> c_int {
-        (*s).server
-    }
+        #[allow(bad_style)]
+        pub unsafe fn SSL_CTX_up_ref(ssl: *mut ffi::SSL_CTX) -> c_int {
+            ffi::CRYPTO_add_lock(
+                &mut (*ssl).references,
+                1,
+                ffi::CRYPTO_LOCK_SSL_CTX,
+                "mod.rs\0".as_ptr() as *const _,
+                line!() as c_int,
+            );
+            0
+        }
 
-    pub unsafe fn SSL_SESSION_up_ref(ses: *mut ffi::SSL_SESSION) -> c_int {
-        ffi::CRYPTO_add_lock(
-            &mut (*ses).references,
-            1,
-            ffi::CRYPTO_LOCK_SSL_CTX,
-            "mod.rs\0".as_ptr() as *const _,
-            line!() as libc::c_int,
-        );
-        0
+        #[allow(bad_style)]
+        pub unsafe fn SSL_SESSION_get_master_key(
+            session: *const ffi::SSL_SESSION,
+            out: *mut c_uchar,
+            mut outlen: usize,
+        ) -> usize {
+            if outlen == 0 {
+                return (*session).master_key_length as usize;
+            }
+            if outlen > (*session).master_key_length as usize {
+                outlen = (*session).master_key_length as usize;
+            }
+            ptr::copy_nonoverlapping((*session).master_key.as_ptr(), out, outlen);
+            outlen
+        }
+
+        #[allow(bad_style)]
+        pub unsafe fn SSL_is_server(s: *mut ffi::SSL) -> c_int {
+            (*s).server
+        }
+
+        #[allow(bad_style)]
+        pub unsafe fn SSL_SESSION_up_ref(ses: *mut ffi::SSL_SESSION) -> c_int {
+            ffi::CRYPTO_add_lock(
+                &mut (*ses).references,
+                1,
+                ffi::CRYPTO_LOCK_SSL_CTX,
+                "mod.rs\0".as_ptr() as *const _,
+                line!() as c_int,
+            );
+            0
+        }
     }
 }

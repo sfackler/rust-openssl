@@ -18,9 +18,11 @@ v111 = []
 
 [dependencies]
 bitflags = "1.0"
+cfg-if = "0.1"
 foreign-types = "0.3.1"
 lazy_static = "1"
 libc = "0.2"
+
 openssl-sys = { version = "0.9.30", path = "../openssl-sys" }
 
 [dev-dependencies]

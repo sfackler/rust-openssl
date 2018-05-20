@@ -1,6 +1,6 @@
-use libc::c_uint;
 use ffi;
 use foreign_types::ForeignTypeRef;
+use libc::c_uint;
 use std::net::IpAddr;
 
 use cvt;
