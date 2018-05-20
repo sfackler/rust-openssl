@@ -1,9 +1,12 @@
 use ffi;
 use foreign_types::ForeignType;
 use foreign_types::ForeignTypeRef;
+#[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+use libc::c_char;
 #[cfg(ossl111)]
 use libc::size_t;
-use libc::{c_char, c_int, c_uchar, c_uint, c_void};
+use libc::{c_int, c_uchar, c_uint, c_void};
+#[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
 use std::ffi::CStr;
 use std::mem;
 use std::ptr;
@@ -17,7 +20,7 @@ use dh::Dh;
 use ec::EcKey;
 use error::ErrorStack;
 use pkey::Params;
-#[cfg(ossl102)]
+#[cfg(any(ossl102, libressl261))]
 use ssl::AlpnError;
 #[cfg(ossl111)]
 use ssl::ExtensionContext;
@@ -130,7 +133,7 @@ where
     }
 }
 
-#[cfg(any(ossl102, ossl110))]
+#[cfg(any(ossl102, libressl261))]
 pub extern "C" fn raw_alpn_select<F>(
     ssl: *mut ffi::SSL,
     out: *mut *const c_uchar,

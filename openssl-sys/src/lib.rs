@@ -2614,14 +2614,14 @@ extern "C" {
     ) -> *mut SSL_SESSION;
     pub fn i2d_SSL_SESSION(s: *mut SSL_SESSION, pp: *mut *mut c_uchar) -> c_int;
 
-    #[cfg(ossl102)]
+    #[cfg(any(ossl102, libressl261))]
     pub fn SSL_CTX_set_alpn_protos(s: *mut SSL_CTX, data: *const c_uchar, len: c_uint) -> c_int;
 
-    #[cfg(ossl102)]
+    #[cfg(any(ossl102, libressl261))]
     pub fn SSL_set_alpn_protos(s: *mut SSL, data: *const c_uchar, len: c_uint) -> c_int;
 
     // FIXME should take an Option<unsafe extern "C" fn>
-    #[cfg(ossl102)]
+    #[cfg(any(ossl102, libressl261))]
     pub fn SSL_CTX_set_alpn_select_cb(
         ssl: *mut SSL_CTX,
         cb: extern "C" fn(
@@ -2634,7 +2634,7 @@ extern "C" {
         ) -> c_int,
         arg: *mut c_void,
     );
-    #[cfg(ossl102)]
+    #[cfg(any(ossl102, libressl261))]
     pub fn SSL_get0_alpn_selected(s: *const SSL, data: *mut *const c_uchar, len: *mut c_uint);
 
     pub fn X509_add_ext(x: *mut X509, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
