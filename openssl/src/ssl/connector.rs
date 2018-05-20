@@ -3,16 +3,22 @@ use std::ops::{Deref, DerefMut};
 
 use dh::Dh;
 use error::ErrorStack;
-use ssl::{HandshakeError, Ssl, SslContext, SslContextBuilder, SslMethod, SslMode, SslOptions,
-          SslRef, SslStream, SslVerifyMode};
+use ssl::{
+    HandshakeError, Ssl, SslContext, SslContextBuilder, SslMethod, SslMode, SslOptions, SslRef,
+    SslStream, SslVerifyMode,
+};
 use version;
 
 fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     let mut ctx = SslContextBuilder::new(method)?;
 
-    let mut opts = SslOptions::ALL | SslOptions::NO_COMPRESSION | SslOptions::NO_SSLV2
-        | SslOptions::NO_SSLV3 | SslOptions::SINGLE_DH_USE
-        | SslOptions::SINGLE_ECDH_USE | SslOptions::CIPHER_SERVER_PREFERENCE;
+    let mut opts = SslOptions::ALL
+        | SslOptions::NO_COMPRESSION
+        | SslOptions::NO_SSLV2
+        | SslOptions::NO_SSLV3
+        | SslOptions::SINGLE_DH_USE
+        | SslOptions::SINGLE_ECDH_USE
+        | SslOptions::CIPHER_SERVER_PREFERENCE;
     opts &= !SslOptions::DONT_INSERT_EMPTY_FRAGMENTS;
 
     ctx.set_options(opts);
@@ -23,7 +29,7 @@ fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     // This is quite a useful optimization for saving memory, but historically
     // caused CVEs in OpenSSL pre-1.0.1h, according to
     // https://bugs.python.org/issue25672
-    if version::number() >= 0x1000108f {
+    if version::number() >= 0x1_00_01_08_0 {
         mode |= SslMode::RELEASE_BUFFERS;
     }
 
@@ -277,226 +283,228 @@ impl DerefMut for SslAcceptorBuilder {
     }
 }
 
-#[cfg(ossl101)]
-fn setup_curves(ctx: &mut SslContextBuilder) -> Result<(), ErrorStack> {
-    use ec::EcKey;
-    use nid::Nid;
-
-    let curve = EcKey::from_curve_name(Nid::X9_62_PRIME256V1)?;
-    ctx.set_tmp_ecdh(&curve)
-}
-
-#[cfg(ossl102)]
-fn setup_curves(ctx: &mut SslContextBuilder) -> Result<(), ErrorStack> {
-    ctx.set_ecdh_auto(true)
-}
-
-#[cfg(ossl110)]
-fn setup_curves(_: &mut SslContextBuilder) -> Result<(), ErrorStack> {
-    Ok(())
-}
-
-#[cfg(any(ossl102, ossl110))]
-fn setup_verify(ctx: &mut SslContextBuilder) {
-    ctx.set_verify(SslVerifyMode::PEER);
-}
-
-#[cfg(ossl101)]
-fn setup_verify(ctx: &mut SslContextBuilder) {
-    ctx.set_verify_callback(SslVerifyMode::PEER, verify::verify_callback);
-}
-
-#[cfg(any(ossl102, ossl110))]
-fn setup_verify_hostname(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
-    use x509::verify::X509CheckFlags;
-
-    let param = ssl.param_mut();
-    param.set_hostflags(X509CheckFlags::NO_PARTIAL_WILDCARDS);
-    match domain.parse() {
-        Ok(ip) => param.set_ip(ip),
-        Err(_) => param.set_host(domain),
-    }
-}
-
-#[cfg(ossl101)]
-fn setup_verify_hostname(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
-    let domain = domain.to_string();
-    ssl.set_ex_data(*verify::HOSTNAME_IDX, domain);
-    Ok(())
-}
-
-#[cfg(ossl101)]
-mod verify {
-    use std::net::IpAddr;
-    use std::str;
-
-    use ex_data::Index;
-    use nid::Nid;
-    use x509::{GeneralName, X509NameRef, X509Ref, X509StoreContext, X509StoreContextRef,
-               X509VerifyResult};
-    use stack::Stack;
-    use ssl::Ssl;
-
-    lazy_static! {
-        pub static ref HOSTNAME_IDX: Index<Ssl, String> = Ssl::new_ex_index().unwrap();
-    }
-
-    pub fn verify_callback(preverify_ok: bool, x509_ctx: &mut X509StoreContextRef) -> bool {
-        if !preverify_ok || x509_ctx.error_depth() != 0 {
-            return preverify_ok;
+cfg_if! {
+    if #[cfg(ossl110)] {
+        fn setup_curves(_: &mut SslContextBuilder) -> Result<(), ErrorStack> {
+            Ok(())
         }
-
-        let ok = match (
-            x509_ctx.current_cert(),
-            X509StoreContext::ssl_idx()
-                .ok()
-                .and_then(|idx| x509_ctx.ex_data(idx))
-                .and_then(|ssl| ssl.ex_data(*HOSTNAME_IDX)),
-        ) {
-            (Some(x509), Some(domain)) => verify_hostname(domain, &x509),
-            _ => true,
-        };
-
-        if !ok {
-            x509_ctx.set_error(X509VerifyResult::APPLICATION_VERIFICATION);
+    } else if #[cfg(any(ossl102, libressl))] {
+        fn setup_curves(ctx: &mut SslContextBuilder) -> Result<(), ErrorStack> {
+            ctx.set_ecdh_auto(true)
         }
+    } else {
+        fn setup_curves(ctx: &mut SslContextBuilder) -> Result<(), ErrorStack> {
+            use ec::EcKey;
+            use nid::Nid;
 
-        ok
-    }
-
-    fn verify_hostname(domain: &str, cert: &X509Ref) -> bool {
-        match cert.subject_alt_names() {
-            Some(names) => verify_subject_alt_names(domain, names),
-            None => verify_subject_name(domain, &cert.subject_name()),
+            let curve = EcKey::from_curve_name(Nid::X9_62_PRIME256V1)?;
+            ctx.set_tmp_ecdh(&curve)
         }
     }
+}
 
-    fn verify_subject_alt_names(domain: &str, names: Stack<GeneralName>) -> bool {
-        let ip = domain.parse();
+cfg_if! {
+    if #[cfg(any(ossl102, libressl261))] {
+        fn setup_verify(ctx: &mut SslContextBuilder) {
+            ctx.set_verify(SslVerifyMode::PEER);
+        }
 
-        for name in &names {
-            match ip {
-                Ok(ip) => {
-                    if let Some(actual) = name.ipaddress() {
-                        if matches_ip(&ip, actual) {
-                            return true;
-                        }
-                    }
-                }
-                Err(_) => {
-                    if let Some(pattern) = name.dnsname() {
-                        if matches_dns(pattern, domain) {
-                            return true;
-                        }
-                    }
-                }
+        fn setup_verify_hostname(ssl: &mut SslRef, domain: &str) -> Result<(), ErrorStack> {
+            use x509::verify::X509CheckFlags;
+
+            let param = ssl.param_mut();
+            param.set_hostflags(X509CheckFlags::NO_PARTIAL_WILDCARDS);
+            match domain.parse() {
+                Ok(ip) => param.set_ip(ip),
+                Err(_) => param.set_host(domain),
             }
         }
+    } else {
+        fn setup_verify(ctx: &mut SslContextBuilder) {
+            ctx.set_verify_callback(SslVerifyMode::PEER, verify::verify_callback);
+        }
 
-        false
-    }
+        fn setup_verify_hostname(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
+            let domain = domain.to_string();
+            ssl.set_ex_data(*verify::HOSTNAME_IDX, domain);
+            Ok(())
+        }
 
-    fn verify_subject_name(domain: &str, subject_name: &X509NameRef) -> bool {
-        match subject_name.entries_by_nid(Nid::COMMONNAME).next() {
-            Some(pattern) => {
-                let pattern = match str::from_utf8(pattern.data().as_slice()) {
-                    Ok(pattern) => pattern,
-                    Err(_) => return false,
+        mod verify {
+            use std::net::IpAddr;
+            use std::str;
+
+            use ex_data::Index;
+            use nid::Nid;
+            use ssl::Ssl;
+            use stack::Stack;
+            use x509::{
+                GeneralName, X509NameRef, X509Ref, X509StoreContext, X509StoreContextRef,
+                X509VerifyResult,
+            };
+
+            lazy_static! {
+                pub static ref HOSTNAME_IDX: Index<Ssl, String> = Ssl::new_ex_index().unwrap();
+            }
+
+            pub fn verify_callback(preverify_ok: bool, x509_ctx: &mut X509StoreContextRef) -> bool {
+                if !preverify_ok || x509_ctx.error_depth() != 0 {
+                    return preverify_ok;
+                }
+
+                let ok = match (
+                    x509_ctx.current_cert(),
+                    X509StoreContext::ssl_idx()
+                        .ok()
+                        .and_then(|idx| x509_ctx.ex_data(idx))
+                        .and_then(|ssl| ssl.ex_data(*HOSTNAME_IDX)),
+                ) {
+                    (Some(x509), Some(domain)) => verify_hostname(domain, &x509),
+                    _ => true,
                 };
 
-                // Unlike SANs, IP addresses in the subject name don't have a
-                // different encoding.
-                match domain.parse::<IpAddr>() {
-                    Ok(ip) => pattern
-                        .parse::<IpAddr>()
-                        .ok()
-                        .map_or(false, |pattern| pattern == ip),
-                    Err(_) => matches_dns(pattern, domain),
+                if !ok {
+                    x509_ctx.set_error(X509VerifyResult::APPLICATION_VERIFICATION);
+                }
+
+                ok
+            }
+
+            fn verify_hostname(domain: &str, cert: &X509Ref) -> bool {
+                match cert.subject_alt_names() {
+                    Some(names) => verify_subject_alt_names(domain, names),
+                    None => verify_subject_name(domain, &cert.subject_name()),
                 }
             }
-            None => false,
-        }
-    }
 
-    fn matches_dns(mut pattern: &str, mut hostname: &str) -> bool {
-        // first strip trailing . off of pattern and hostname to normalize
-        if pattern.ends_with('.') {
-            pattern = &pattern[..pattern.len() - 1];
-        }
-        if hostname.ends_with('.') {
-            hostname = &hostname[..hostname.len() - 1];
-        }
+            fn verify_subject_alt_names(domain: &str, names: Stack<GeneralName>) -> bool {
+                let ip = domain.parse();
 
-        matches_wildcard(pattern, hostname).unwrap_or_else(|| pattern == hostname)
-    }
+                for name in &names {
+                    match ip {
+                        Ok(ip) => {
+                            if let Some(actual) = name.ipaddress() {
+                                if matches_ip(&ip, actual) {
+                                    return true;
+                                }
+                            }
+                        }
+                        Err(_) => {
+                            if let Some(pattern) = name.dnsname() {
+                                if matches_dns(pattern, domain) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
 
-    fn matches_wildcard(pattern: &str, hostname: &str) -> Option<bool> {
-        // internationalized domains can't involved in wildcards
-        if pattern.starts_with("xn--") {
-            return None;
-        }
+                false
+            }
 
-        let wildcard_location = match pattern.find('*') {
-            Some(l) => l,
-            None => return None,
-        };
+            fn verify_subject_name(domain: &str, subject_name: &X509NameRef) -> bool {
+                match subject_name.entries_by_nid(Nid::COMMONNAME).next() {
+                    Some(pattern) => {
+                        let pattern = match str::from_utf8(pattern.data().as_slice()) {
+                            Ok(pattern) => pattern,
+                            Err(_) => return false,
+                        };
 
-        let mut dot_idxs = pattern.match_indices('.').map(|(l, _)| l);
-        let wildcard_end = match dot_idxs.next() {
-            Some(l) => l,
-            None => return None,
-        };
+                        // Unlike SANs, IP addresses in the subject name don't have a
+                        // different encoding.
+                        match domain.parse::<IpAddr>() {
+                            Ok(ip) => pattern
+                                .parse::<IpAddr>()
+                                .ok()
+                                .map_or(false, |pattern| pattern == ip),
+                            Err(_) => matches_dns(pattern, domain),
+                        }
+                    }
+                    None => false,
+                }
+            }
 
-        // Never match wildcards if the pattern has less than 2 '.'s (no *.com)
-        //
-        // This is a bit dubious, as it doesn't disallow other TLDs like *.co.uk.
-        // Chrome has a black- and white-list for this, but Firefox (via NSS) does
-        // the same thing we do here.
-        //
-        // The Public Suffix (https://www.publicsuffix.org/) list could
-        // potentially be used here, but it's both huge and updated frequently
-        // enough that management would be a PITA.
-        if dot_idxs.next().is_none() {
-            return None;
-        }
+            fn matches_dns(mut pattern: &str, mut hostname: &str) -> bool {
+                // first strip trailing . off of pattern and hostname to normalize
+                if pattern.ends_with('.') {
+                    pattern = &pattern[..pattern.len() - 1];
+                }
+                if hostname.ends_with('.') {
+                    hostname = &hostname[..hostname.len() - 1];
+                }
 
-        // Wildcards can only be in the first component
-        if wildcard_location > wildcard_end {
-            return None;
-        }
+                matches_wildcard(pattern, hostname).unwrap_or_else(|| pattern == hostname)
+            }
 
-        let hostname_label_end = match hostname.find('.') {
-            Some(l) => l,
-            None => return None,
-        };
+            fn matches_wildcard(pattern: &str, hostname: &str) -> Option<bool> {
+                // internationalized domains can't involved in wildcards
+                if pattern.starts_with("xn--") {
+                    return None;
+                }
 
-        // check that the non-wildcard parts are identical
-        if pattern[wildcard_end..] != hostname[hostname_label_end..] {
-            return Some(false);
-        }
+                let wildcard_location = match pattern.find('*') {
+                    Some(l) => l,
+                    None => return None,
+                };
 
-        let wildcard_prefix = &pattern[..wildcard_location];
-        let wildcard_suffix = &pattern[wildcard_location + 1..wildcard_end];
+                let mut dot_idxs = pattern.match_indices('.').map(|(l, _)| l);
+                let wildcard_end = match dot_idxs.next() {
+                    Some(l) => l,
+                    None => return None,
+                };
 
-        let hostname_label = &hostname[..hostname_label_end];
+                // Never match wildcards if the pattern has less than 2 '.'s (no *.com)
+                //
+                // This is a bit dubious, as it doesn't disallow other TLDs like *.co.uk.
+                // Chrome has a black- and white-list for this, but Firefox (via NSS) does
+                // the same thing we do here.
+                //
+                // The Public Suffix (https://www.publicsuffix.org/) list could
+                // potentially be used here, but it's both huge and updated frequently
+                // enough that management would be a PITA.
+                if dot_idxs.next().is_none() {
+                    return None;
+                }
 
-        // check the prefix of the first label
-        if !hostname_label.starts_with(wildcard_prefix) {
-            return Some(false);
-        }
+                // Wildcards can only be in the first component
+                if wildcard_location > wildcard_end {
+                    return None;
+                }
 
-        // and the suffix
-        if !hostname_label[wildcard_prefix.len()..].ends_with(wildcard_suffix) {
-            return Some(false);
-        }
+                let hostname_label_end = match hostname.find('.') {
+                    Some(l) => l,
+                    None => return None,
+                };
 
-        Some(true)
-    }
+                // check that the non-wildcard parts are identical
+                if pattern[wildcard_end..] != hostname[hostname_label_end..] {
+                    return Some(false);
+                }
 
-    fn matches_ip(expected: &IpAddr, actual: &[u8]) -> bool {
-        match *expected {
-            IpAddr::V4(ref addr) => actual == addr.octets(),
-            IpAddr::V6(ref addr) => actual == addr.octets(),
+                let wildcard_prefix = &pattern[..wildcard_location];
+                let wildcard_suffix = &pattern[wildcard_location + 1..wildcard_end];
+
+                let hostname_label = &hostname[..hostname_label_end];
+
+                // check the prefix of the first label
+                if !hostname_label.starts_with(wildcard_prefix) {
+                    return Some(false);
+                }
+
+                // and the suffix
+                if !hostname_label[wildcard_prefix.len()..].ends_with(wildcard_suffix) {
+                    return Some(false);
+                }
+
+                Some(true)
+            }
+
+            fn matches_ip(expected: &IpAddr, actual: &[u8]) -> bool {
+                match *expected {
+                    IpAddr::V4(ref addr) => actual == addr.octets(),
+                    IpAddr::V6(ref addr) => actual == addr.octets(),
+                }
+            }
         }
     }
 }

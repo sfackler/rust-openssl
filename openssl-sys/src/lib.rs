@@ -1413,15 +1413,15 @@ pub const X509_V_ERR_EMAIL_MISMATCH: c_int = 63;
 #[cfg(ossl102)]
 pub const X509_V_ERR_IP_ADDRESS_MISMATCH: c_int = 64;
 
-#[cfg(ossl102)]
+#[cfg(any(ossl102, libressl261))]
 pub const X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT: c_uint = 0x1;
-#[cfg(ossl102)]
+#[cfg(any(ossl102, libressl261))]
 pub const X509_CHECK_FLAG_NO_WILDCARDS: c_uint = 0x2;
-#[cfg(ossl102)]
+#[cfg(any(ossl102, libressl261))]
 pub const X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS: c_uint = 0x4;
-#[cfg(ossl102)]
+#[cfg(any(ossl102, libressl261))]
 pub const X509_CHECK_FLAG_MULTI_LABEL_WILDCARDS: c_uint = 0x8;
-#[cfg(ossl102)]
+#[cfg(any(ossl102, libressl261))]
 pub const X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS: c_uint = 0x10;
 
 pub const GEN_OTHERNAME: c_int = 0;

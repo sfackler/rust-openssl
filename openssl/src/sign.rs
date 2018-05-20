@@ -63,21 +63,24 @@
 //! ```
 use ffi;
 use foreign_types::ForeignTypeRef;
+use libc::c_int;
 use std::io::{self, Write};
 use std::marker::PhantomData;
 use std::ptr;
-use libc::c_int;
 
-use {cvt, cvt_p};
+use error::ErrorStack;
 use hash::MessageDigest;
 use pkey::{HasPrivate, HasPublic, PKeyRef};
-use error::ErrorStack;
 use rsa::Padding;
+use {cvt, cvt_p};
 
-#[cfg(ossl110)]
-use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
-#[cfg(any(ossl101, ossl102))]
-use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
+    } else {
+        use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
+    }
+}
 
 /// Salt lengths that must be used with `set_rsa_pss_saltlen`.
 pub struct RsaPssSaltlen(c_int);
@@ -459,7 +462,7 @@ impl<'a> Verifier<'a> {
     pub fn verify(&self, signature: &[u8]) -> Result<bool, ErrorStack> {
         unsafe {
             let r =
-                EVP_DigestVerifyFinal(self.md_ctx, signature.as_ptr() as *const _, signature.len());
+                EVP_DigestVerifyFinal(self.md_ctx, signature.as_ptr() as *mut _, signature.len());
             match r {
                 1 => Ok(true),
                 0 => {
@@ -501,12 +504,12 @@ mod test {
     use hex::{self, FromHex};
     use std::iter;
 
-    use hash::MessageDigest;
-    use sign::{RsaPssSaltlen, Signer, Verifier};
     use ec::{EcGroup, EcKey};
+    use hash::MessageDigest;
     use nid::Nid;
-    use rsa::{Padding, Rsa};
     use pkey::PKey;
+    use rsa::{Padding, Rsa};
+    use sign::{RsaPssSaltlen, Signer, Verifier};
 
     const INPUT: &'static str =
         "65794a68624763694f694a53557a49314e694a392e65794a7063334d694f694a71623255694c41304b49434a6c\
@@ -673,7 +676,7 @@ mod test {
         signer.update(data as &[u8]).unwrap();
 
         let expected = vec![
-            136, 101, 61, 167, 61, 30, 248, 234, 124, 166, 196, 157, 203, 52, 171, 19
+            136, 101, 61, 167, 61, 30, 248, 234, 124, 166, 196, 157, 203, 52, 171, 19,
         ];
         assert_eq!(signer.sign_to_vec().unwrap(), expected);
     }

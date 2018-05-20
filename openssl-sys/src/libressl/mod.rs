@@ -447,6 +447,28 @@ pub unsafe fn SSL_session_reused(ssl: *mut ::SSL) -> c_int {
     ::SSL_ctrl(ssl, SSL_CTRL_GET_SESSION_REUSED, 0, ptr::null_mut()) as c_int
 }
 
+pub unsafe fn SSL_CTX_get_options(ctx: *const ::SSL_CTX) -> c_ulong {
+    ::SSL_CTX_ctrl(ctx as *mut _, ::SSL_CTRL_OPTIONS, 0, ptr::null_mut()) as c_ulong
+}
+
+pub unsafe fn SSL_CTX_set_options(ctx: *const ::SSL_CTX, op: c_ulong) -> c_ulong {
+    ::SSL_CTX_ctrl(
+        ctx as *mut _,
+        ::SSL_CTRL_OPTIONS,
+        op as c_long,
+        ptr::null_mut(),
+    ) as c_ulong
+}
+
+pub unsafe fn SSL_CTX_clear_options(ctx: *const ::SSL_CTX, op: c_ulong) -> c_ulong {
+    ::SSL_CTX_ctrl(
+        ctx as *mut _,
+        ::SSL_CTRL_CLEAR_OPTIONS,
+        op as c_long,
+        ptr::null_mut(),
+    ) as c_ulong
+}
+
 extern "C" {
     pub fn BIO_new(type_: *mut BIO_METHOD) -> *mut BIO;
     pub fn BIO_s_file() -> *mut BIO_METHOD;

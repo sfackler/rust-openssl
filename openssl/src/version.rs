@@ -13,15 +13,21 @@
 
 use std::ffi::CStr;
 
-#[cfg(ossl10x)]
-use ffi::{SSLEAY_VERSION as OPENSSL_VERSION, SSLEAY_CFLAGS as OPENSSL_CFLAGS,
-          SSLEAY_BUILT_ON as OPENSSL_BUILT_ON, SSLEAY_PLATFORM as OPENSSL_PLATFORM,
-          SSLEAY_DIR as OPENSSL_DIR, SSLeay as OpenSSL_version_num,
-          SSLeay_version as OpenSSL_version};
-
-#[cfg(ossl110)]
-use ffi::{OPENSSL_VERSION, OPENSSL_CFLAGS, OPENSSL_BUILT_ON, OPENSSL_PLATFORM, OPENSSL_DIR,
-          OpenSSL_version_num, OpenSSL_version};
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::{
+            OPENSSL_VERSION, OPENSSL_CFLAGS, OPENSSL_BUILT_ON, OPENSSL_PLATFORM, OPENSSL_DIR,
+            OpenSSL_version_num, OpenSSL_version,
+        };
+    } else {
+        use ffi::{
+            SSLEAY_VERSION as OPENSSL_VERSION, SSLEAY_CFLAGS as OPENSSL_CFLAGS,
+            SSLEAY_BUILT_ON as OPENSSL_BUILT_ON, SSLEAY_PLATFORM as OPENSSL_PLATFORM,
+            SSLEAY_DIR as OPENSSL_DIR, SSLeay as OpenSSL_version_num,
+            SSLeay_version as OpenSSL_version,
+        };
+    }
+}
 
 /// OPENSSL_VERSION_NUMBER is a numeric release version identifier:
 ///
@@ -50,7 +56,6 @@ use ffi::{OPENSSL_VERSION, OPENSSL_CFLAGS, OPENSSL_BUILT_ON, OPENSSL_PLATFORM, O
 pub fn number() -> i64 {
     unsafe { OpenSSL_version_num() as i64 }
 }
-
 
 /// The text variant of the version number and the release date. For example, "OpenSSL 0.9.5a 1 Apr 2000".
 pub fn version() -> &'static str {

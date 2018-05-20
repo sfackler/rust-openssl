@@ -1063,7 +1063,7 @@ fn tmp_dh_callback() {
 }
 
 #[test]
-#[cfg(any(all(ossl101, not(libressl)), ossl102))]
+#[cfg(all(ossl101, not(ossl110)))]
 fn tmp_ecdh_callback() {
     use ec::EcKey;
     use nid::Nid;
@@ -1137,7 +1137,7 @@ fn tmp_dh_callback_ssl() {
 }
 
 #[test]
-#[cfg(any(all(ossl101, not(libressl)), ossl102))]
+#[cfg(all(ossl101, not(ossl110)))]
 fn tmp_ecdh_callback_ssl() {
     use ec::EcKey;
     use nid::Nid;

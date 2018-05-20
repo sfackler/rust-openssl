@@ -13,11 +13,11 @@ use std::str;
 use std::sync::Arc;
 
 use dh::Dh;
-#[cfg(any(ossl101, ossl102))]
+#[cfg(all(ossl101, not(ossl110)))]
 use ec::EcKey;
 use error::ErrorStack;
 use pkey::Params;
-#[cfg(any(ossl102, ossl110))]
+#[cfg(ossl102)]
 use ssl::AlpnError;
 #[cfg(ossl111)]
 use ssl::ExtensionContext;
@@ -37,7 +37,8 @@ where
 
         // raw pointer shenanigans to break the borrow of ctx
         // the callback can't mess with its own ex_data slot so this is safe
-        let verify = ctx.ex_data(ssl_idx)
+        let verify = ctx
+            .ex_data(ssl_idx)
             .expect("BUG: store context missing ssl")
             .ssl_context()
             .ex_data(verify_idx)
@@ -66,7 +67,8 @@ where
         let ssl = SslRef::from_ptr_mut(ssl);
         let callback_idx = SslContext::cached_ex_index::<F>();
 
-        let callback = ssl.ssl_context()
+        let callback = ssl
+            .ssl_context()
             .ex_data(callback_idx)
             .expect("BUG: psk callback missing") as *const F;
         let hint = if hint != ptr::null() {
@@ -96,7 +98,8 @@ where
         let ssl_idx = X509StoreContext::ssl_idx().expect("BUG: store context ssl index missing");
         let callback_idx = Ssl::cached_ex_index::<Arc<F>>();
 
-        let callback = ctx.ex_data(ssl_idx)
+        let callback = ctx
+            .ex_data(ssl_idx)
             .expect("BUG: store context missing ssl")
             .ex_data(callback_idx)
             .expect("BUG: ssl verify callback missing")
@@ -112,7 +115,8 @@ where
 {
     unsafe {
         let ssl = SslRef::from_ptr_mut(ssl);
-        let callback = ssl.ssl_context()
+        let callback = ssl
+            .ssl_context()
             .ex_data(SslContext::cached_ex_index::<F>())
             .expect("BUG: sni callback missing") as *const F;
         let mut alert = SslAlert(*al);
@@ -140,7 +144,8 @@ where
 {
     unsafe {
         let ssl = SslRef::from_ptr_mut(ssl);
-        let callback = ssl.ssl_context()
+        let callback = ssl
+            .ssl_context()
             .ex_data(SslContext::cached_ex_index::<F>())
             .expect("BUG: alpn callback missing") as *const F;
         let protos = slice::from_raw_parts(inbuf as *const u8, inlen as usize);
@@ -165,7 +170,8 @@ where
     F: Fn(&mut SslRef, bool, u32) -> Result<Dh<Params>, ErrorStack> + 'static + Sync + Send,
 {
     let ssl = SslRef::from_ptr_mut(ssl);
-    let callback = ssl.ssl_context()
+    let callback = ssl
+        .ssl_context()
         .ex_data(SslContext::cached_ex_index::<F>())
         .expect("BUG: tmp dh callback missing") as *const F;
 
@@ -182,7 +188,7 @@ where
     }
 }
 
-#[cfg(any(ossl101, ossl102))]
+#[cfg(all(ossl101, not(ossl110)))]
 pub unsafe extern "C" fn raw_tmp_ecdh<F>(
     ssl: *mut ffi::SSL,
     is_export: c_int,
@@ -192,7 +198,8 @@ where
     F: Fn(&mut SslRef, bool, u32) -> Result<EcKey<Params>, ErrorStack> + 'static + Sync + Send,
 {
     let ssl = SslRef::from_ptr_mut(ssl);
-    let callback = ssl.ssl_context()
+    let callback = ssl
+        .ssl_context()
         .ex_data(SslContext::cached_ex_index::<F>())
         .expect("BUG: tmp ecdh callback missing") as *const F;
 
@@ -218,7 +225,8 @@ where
     F: Fn(&mut SslRef, bool, u32) -> Result<Dh<Params>, ErrorStack> + 'static + Sync + Send,
 {
     let ssl = SslRef::from_ptr_mut(ssl);
-    let callback = ssl.ex_data(Ssl::cached_ex_index::<Arc<F>>())
+    let callback = ssl
+        .ex_data(Ssl::cached_ex_index::<Arc<F>>())
         .expect("BUG: ssl tmp dh callback missing")
         .clone();
 
@@ -235,7 +243,7 @@ where
     }
 }
 
-#[cfg(any(ossl101, ossl102))]
+#[cfg(all(ossl101, not(ossl110)))]
 pub unsafe extern "C" fn raw_tmp_ecdh_ssl<F>(
     ssl: *mut ffi::SSL,
     is_export: c_int,
@@ -245,7 +253,8 @@ where
     F: Fn(&mut SslRef, bool, u32) -> Result<EcKey<Params>, ErrorStack> + 'static + Sync + Send,
 {
     let ssl = SslRef::from_ptr_mut(ssl);
-    let callback = ssl.ex_data(Ssl::cached_ex_index::<Arc<F>>())
+    let callback = ssl
+        .ex_data(Ssl::cached_ex_index::<Arc<F>>())
         .expect("BUG: ssl tmp ecdh callback missing")
         .clone();
 
@@ -267,7 +276,8 @@ where
     F: Fn(&mut SslRef) -> Result<bool, ErrorStack> + 'static + Sync + Send,
 {
     let ssl = SslRef::from_ptr_mut(ssl);
-    let callback = ssl.ssl_context()
+    let callback = ssl
+        .ssl_context()
         .ex_data(SslContext::cached_ex_index::<F>())
         .expect("BUG: ocsp callback missing") as *const F;
     let ret = (*callback)(ssl);
@@ -301,7 +311,8 @@ where
     F: Fn(&mut SslRef, SslSession) + 'static + Sync + Send,
 {
     let ssl = SslRef::from_ptr_mut(ssl);
-    let callback = ssl.ssl_context()
+    let callback = ssl
+        .ssl_context()
         .ex_data(SslContext::cached_ex_index::<F>())
         .expect("BUG: new session callback missing") as *const F;
     let session = SslSession::from_ptr(session);
@@ -319,7 +330,8 @@ pub unsafe extern "C" fn raw_remove_session<F>(
     F: Fn(&SslContextRef, &SslSessionRef) + 'static + Sync + Send,
 {
     let ctx = SslContextRef::from_ptr(ctx);
-    let callback = ctx.ex_data(SslContext::cached_ex_index::<F>())
+    let callback = ctx
+        .ex_data(SslContext::cached_ex_index::<F>())
         .expect("BUG: remove session callback missing");
     let session = SslSessionRef::from_ptr(session);
 
@@ -341,7 +353,8 @@ where
     F: Fn(&mut SslRef, &[u8]) -> Option<SslSession> + 'static + Sync + Send,
 {
     let ssl = SslRef::from_ptr_mut(ssl);
-    let callback = ssl.ssl_context()
+    let callback = ssl
+        .ssl_context()
         .ex_data(SslContext::cached_ex_index::<F>())
         .expect("BUG: get session callback missing") as *const F;
     let data = slice::from_raw_parts(data as *const u8, len as usize);
@@ -363,7 +376,8 @@ where
     F: Fn(&SslRef, &str) + 'static + Sync + Send,
 {
     let ssl = SslRef::from_ptr(ssl as *mut _);
-    let callback = ssl.ssl_context()
+    let callback = ssl
+        .ssl_context()
         .ex_data(SslContext::cached_ex_index::<F>())
         .expect("BUG: get session callback missing");
     let line = CStr::from_ptr(line).to_bytes();
@@ -382,7 +396,8 @@ where
     F: Fn(&mut SslRef, &mut [u8]) -> Result<usize, ErrorStack> + 'static + Sync + Send,
 {
     let ssl = SslRef::from_ptr_mut(ssl);
-    let callback = ssl.ssl_context()
+    let callback = ssl
+        .ssl_context()
         .ex_data(SslContext::cached_ex_index::<F>())
         .expect("BUG: stateless cookie generate callback missing") as *const F;
     let slice = slice::from_raw_parts_mut(cookie as *mut u8, ffi::SSL_COOKIE_LENGTH as usize);
@@ -408,7 +423,8 @@ where
     F: Fn(&mut SslRef, &[u8]) -> bool + 'static + Sync + Send,
 {
     let ssl = SslRef::from_ptr_mut(ssl);
-    let callback = ssl.ssl_context()
+    let callback = ssl
+        .ssl_context()
         .ex_data(SslContext::cached_ex_index::<F>())
         .expect("BUG: stateless cookie verify callback missing") as *const F;
     let slice = slice::from_raw_parts(cookie as *const c_uchar as *const u8, cookie_len as usize);
@@ -425,7 +441,8 @@ where
 {
     unsafe {
         let ssl = SslRef::from_ptr_mut(ssl);
-        let callback = ssl.ssl_context()
+        let callback = ssl
+            .ssl_context()
             .ex_data(SslContext::cached_ex_index::<F>())
             .expect("BUG: cookie generate callback missing") as *const F;
         // We subtract 1 from DTLS1_COOKIE_LENGTH as the ostensible value, 256, is erroneous but retained for
@@ -461,7 +478,8 @@ where
 {
     unsafe {
         let ssl = SslRef::from_ptr_mut(ssl);
-        let callback = ssl.ssl_context()
+        let callback = ssl
+            .ssl_context()
             .ex_data(SslContext::cached_ex_index::<F>())
             .expect("BUG: cookie verify callback missing") as *const F;
         let slice =
@@ -494,7 +512,8 @@ where
 {
     unsafe {
         let ssl = SslRef::from_ptr_mut(ssl);
-        let callback = ssl.ssl_context()
+        let callback = ssl
+            .ssl_context()
             .ex_data(SslContext::cached_ex_index::<F>())
             .expect("BUG: custom ext add callback missing") as *const F;
         let ectx = ExtensionContext::from_bits_truncate(context);
@@ -570,7 +589,8 @@ where
 {
     unsafe {
         let ssl = SslRef::from_ptr_mut(ssl);
-        let callback = ssl.ssl_context()
+        let callback = ssl
+            .ssl_context()
             .ex_data(SslContext::cached_ex_index::<F>())
             .expect("BUG: custom ext parse callback missing") as *const F;
         let ectx = ExtensionContext::from_bits_truncate(context);

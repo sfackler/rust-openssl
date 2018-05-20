@@ -1,25 +1,6 @@
 use std::env;
 
 fn main() {
-    match env::var("DEP_OPENSSL_VERSION") {
-        Ok(ref v) if v == "101" => {
-            println!("cargo:rustc-cfg=ossl101");
-            println!("cargo:rustc-cfg=ossl10x");
-        }
-        Ok(ref v) if v == "102" => {
-            println!("cargo:rustc-cfg=ossl102");
-            println!("cargo:rustc-cfg=ossl10x");
-        }
-        Ok(ref v) if v == "110" => {
-            println!("cargo:rustc-cfg=ossl110");
-        }
-        Ok(ref v) if v == "111" => {
-            println!("cargo:rustc-cfg=ossl110");
-            println!("cargo:rustc-cfg=ossl111");
-        }
-        _ => panic!("Unable to detect OpenSSL version"),
-    }
-
     if let Ok(_) = env::var("DEP_OPENSSL_LIBRESSL") {
         println!("cargo:rustc-cfg=libressl");
     }
@@ -37,8 +18,20 @@ fn main() {
     if let Ok(version) = env::var("DEP_OPENSSL_VERSION_NUMBER") {
         let version = u64::from_str_radix(&version, 16).unwrap();
 
+        if version >= 0x1_00_01_00_0 {
+            println!("cargo:rustc-cfg=ossl101");
+        }
+        if version >= 0x1_00_02_00_0 {
+            println!("cargo:rustc-cfg=ossl102");
+        }
+        if version >= 0x1_01_00_00_0 {
+            println!("cargo:rustc-cfg=ossl110");
+        }
         if version >= 0x1_01_00_07_0 {
             println!("cargo:rustc-cfg=ossl110g");
+        }
+        if version >= 0x1_01_01_00_0 {
+            println!("cargo:rustc-cfg=ossl111");
         }
     }
 

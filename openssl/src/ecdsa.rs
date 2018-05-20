@@ -3,12 +3,13 @@ use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::mem;
+use std::ptr;
 
 use bn::{BigNum, BigNumRef};
-use {cvt, cvt_n, cvt_p};
 use ec::EcKeyRef;
 use error::ErrorStack;
 use pkey::{Private, Public};
+use {cvt_n, cvt_p};
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ECDSA_SIG;
@@ -53,7 +54,7 @@ impl EcdsaSig {
     pub fn from_private_components(r: BigNum, s: BigNum) -> Result<EcdsaSig, ErrorStack> {
         unsafe {
             let sig = cvt_p(ffi::ECDSA_SIG_new())?;
-            cvt(compat::set_numbers(sig, r.as_ptr(), s.as_ptr()))?;
+            ECDSA_SIG_set0(sig, r.as_ptr(), s.as_ptr());
             mem::forget((r, s));
             Ok(EcdsaSig::from_ptr(sig as *mut _))
         }
@@ -83,8 +84,9 @@ impl EcdsaSig {
     /// [`ECDSA_SIG_get0`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_SIG_get0.html
     pub fn r(&self) -> &BigNumRef {
         unsafe {
-            let xs = compat::get_numbers(self.as_ptr());
-            BigNumRef::from_ptr(xs[0] as *mut _)
+            let mut r = ptr::null();
+            ECDSA_SIG_get0(self.as_ptr(), &mut r, ptr::null_mut());
+            BigNumRef::from_ptr(r as *mut _)
         }
     }
 
@@ -95,53 +97,50 @@ impl EcdsaSig {
     /// [`ECDSA_SIG_get0`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_SIG_get0.html
     pub fn s(&self) -> &BigNumRef {
         unsafe {
-            let xs = compat::get_numbers(self.as_ptr());
-            BigNumRef::from_ptr(xs[1] as *mut _)
+            let mut s = ptr::null();
+            ECDSA_SIG_get0(self.as_ptr(), ptr::null_mut(), &mut s);
+            BigNumRef::from_ptr(s as *mut _)
         }
     }
 }
 
-#[cfg(ossl110)]
-mod compat {
-    use std::ptr;
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::{ECDSA_SIG_set0, ECDSA_SIG_get0};
+    } else {
+        #[allow(bad_style)]
+        unsafe fn ECDSA_SIG_set0(
+            sig: *mut ffi::ECDSA_SIG,
+            r: *mut ffi::BIGNUM,
+            s: *mut ffi::BIGNUM,
+        ) -> c_int {
+            (*sig).r = r;
+            (*sig).s = s;
+            1
+        }
 
-    use libc::c_int;
-    use ffi::{self, BIGNUM, ECDSA_SIG};
-
-    pub unsafe fn set_numbers(sig: *mut ECDSA_SIG, r: *mut BIGNUM, s: *mut BIGNUM) -> c_int {
-        ffi::ECDSA_SIG_set0(sig, r, s)
+        #[allow(bad_style)]
+        unsafe fn ECDSA_SIG_get0(
+            sig: *const ffi::ECDSA_SIG,
+            pr: *mut *const ffi::BIGNUM,
+            ps: *mut *const ffi::BIGNUM)
+        {
+            if !pr.is_null() {
+                (*pr) = (*sig).r;
+            }
+            if !ps.is_null() {
+                (*ps) = (*sig).s;
+            }
+        }
     }
-
-    pub unsafe fn get_numbers(sig: *mut ECDSA_SIG) -> [*const BIGNUM; 2] {
-        let (mut r, mut s) = (ptr::null(), ptr::null());
-        ffi::ECDSA_SIG_get0(sig, &mut r, &mut s);
-        [r, s]
-    }
-}
-
-#[cfg(ossl10x)]
-mod compat {
-    use libc::c_int;
-    use ffi::{BIGNUM, ECDSA_SIG};
-
-    pub unsafe fn set_numbers(sig: *mut ECDSA_SIG, r: *mut BIGNUM, s: *mut BIGNUM) -> c_int {
-        (*sig).r = r;
-        (*sig).s = s;
-        1
-    }
-
-    pub unsafe fn get_numbers(sig: *mut ECDSA_SIG) -> [*const BIGNUM; 2] {
-        [(*sig).r, (*sig).s]
-    }
-
 }
 
 #[cfg(test)]
 mod test {
-    use nid::Nid;
+    use super::*;
     use ec::EcGroup;
     use ec::EcKey;
-    use super::*;
+    use nid::Nid;
 
     #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
     static CURVE_IDENTIFER: Nid = Nid::X9_62_PRIME192V1;
@@ -171,7 +170,8 @@ mod test {
         assert!(verification);
 
         // Signature will not be verified using the incorrect data but the correct public key
-        let verification2 = res.verify(String::from("hello2").as_bytes(), &public_key)
+        let verification2 = res
+            .verify(String::from("hello2").as_bytes(), &public_key)
             .unwrap();
         assert!(verification2 == false);
 

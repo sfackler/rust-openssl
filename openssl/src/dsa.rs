@@ -11,10 +11,10 @@ use libc::c_int;
 use std::fmt;
 use std::ptr;
 
-use {cvt, cvt_p};
 use bn::BigNumRef;
 use error::ErrorStack;
 use pkey::{HasParams, HasPublic, Private, Public};
+use {cvt, cvt_p};
 
 generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::DSA;
@@ -101,7 +101,8 @@ where
     /// Returns the DSA prime parameter of `self`.
     pub fn p(&self) -> &BigNumRef {
         unsafe {
-            let p = compat::pqg(self.as_ptr())[0];
+            let mut p = ptr::null();
+            DSA_get0_pqg(self.as_ptr(), &mut p, ptr::null_mut(), ptr::null_mut());
             BigNumRef::from_ptr(p as *mut _)
         }
     }
@@ -109,7 +110,8 @@ where
     /// Returns the DSA sub-prime parameter of `self`.
     pub fn q(&self) -> &BigNumRef {
         unsafe {
-            let q = compat::pqg(self.as_ptr())[1];
+            let mut q = ptr::null();
+            DSA_get0_pqg(self.as_ptr(), ptr::null_mut(), &mut q, ptr::null_mut());
             BigNumRef::from_ptr(q as *mut _)
         }
     }
@@ -117,7 +119,8 @@ where
     /// Returns the DSA base parameter of `self`.
     pub fn g(&self) -> &BigNumRef {
         unsafe {
-            let g = compat::pqg(self.as_ptr())[2];
+            let mut g = ptr::null();
+            DSA_get0_pqg(self.as_ptr(), ptr::null_mut(), ptr::null_mut(), &mut g);
             BigNumRef::from_ptr(g as *mut _)
         }
     }
@@ -184,24 +187,27 @@ impl<T> fmt::Debug for Dsa<T> {
     }
 }
 
-#[cfg(ossl110)]
-mod compat {
-    use std::ptr;
-    use ffi::{self, BIGNUM, DSA};
-
-    pub unsafe fn pqg(d: *const DSA) -> [*const BIGNUM; 3] {
-        let (mut p, mut q, mut g) = (ptr::null(), ptr::null(), ptr::null());
-        ffi::DSA_get0_pqg(d, &mut p, &mut q, &mut g);
-        [p, q, g]
-    }
-}
-
-#[cfg(ossl10x)]
-mod compat {
-    use ffi::{BIGNUM, DSA};
-
-    pub unsafe fn pqg(d: *const DSA) -> [*const BIGNUM; 3] {
-        [(*d).p, (*d).q, (*d).g]
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::DSA_get0_pqg;
+    } else {
+        #[allow(bad_style)]
+        unsafe fn DSA_get0_pqg(
+            d: *mut ffi::DSA,
+            p: *mut *const ffi::BIGNUM,
+            q: *mut *const ffi::BIGNUM,
+            g: *mut *const ffi::BIGNUM)
+        {
+            if !p.is_null() {
+                *p = (*d).p;
+            }
+            if !q.is_null() {
+                *q = (*d).q;
+            }
+            if !g.is_null() {
+                *g = (*d).g;
+            }
+        }
     }
 }
 

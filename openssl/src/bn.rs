@@ -30,28 +30,39 @@ use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::cmp::Ordering;
 use std::ffi::CString;
-use std::{fmt, ptr};
 use std::ops::{Add, Deref, Div, Mul, Neg, Rem, Shl, Shr, Sub};
+use std::{fmt, ptr};
 
-use {cvt, cvt_n, cvt_p};
 use asn1::Asn1Integer;
 use error::ErrorStack;
 use string::OpensslString;
+use {cvt, cvt_n, cvt_p};
 
-#[cfg(ossl10x)]
-use ffi::{get_rfc2409_prime_1024 as BN_get_rfc2409_prime_1024,
-          get_rfc2409_prime_768 as BN_get_rfc2409_prime_768,
-          get_rfc3526_prime_1536 as BN_get_rfc3526_prime_1536,
-          get_rfc3526_prime_2048 as BN_get_rfc3526_prime_2048,
-          get_rfc3526_prime_3072 as BN_get_rfc3526_prime_3072,
-          get_rfc3526_prime_4096 as BN_get_rfc3526_prime_4096,
-          get_rfc3526_prime_6144 as BN_get_rfc3526_prime_6144,
-          get_rfc3526_prime_8192 as BN_get_rfc3526_prime_8192};
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::{
+            BN_get_rfc2409_prime_1024, BN_get_rfc2409_prime_768, BN_get_rfc3526_prime_1536,
+            BN_get_rfc3526_prime_2048, BN_get_rfc3526_prime_3072, BN_get_rfc3526_prime_4096,
+            BN_get_rfc3526_prime_6144, BN_get_rfc3526_prime_8192, BN_is_negative,
+        };
+    } else {
+        use ffi::{
+            get_rfc2409_prime_1024 as BN_get_rfc2409_prime_1024,
+            get_rfc2409_prime_768 as BN_get_rfc2409_prime_768,
+            get_rfc3526_prime_1536 as BN_get_rfc3526_prime_1536,
+            get_rfc3526_prime_2048 as BN_get_rfc3526_prime_2048,
+            get_rfc3526_prime_3072 as BN_get_rfc3526_prime_3072,
+            get_rfc3526_prime_4096 as BN_get_rfc3526_prime_4096,
+            get_rfc3526_prime_6144 as BN_get_rfc3526_prime_6144,
+            get_rfc3526_prime_8192 as BN_get_rfc3526_prime_8192,
+        };
 
-#[cfg(ossl110)]
-use ffi::{BN_get_rfc2409_prime_1024, BN_get_rfc2409_prime_768, BN_get_rfc3526_prime_1536,
-          BN_get_rfc3526_prime_2048, BN_get_rfc3526_prime_3072, BN_get_rfc3526_prime_4096,
-          BN_get_rfc3526_prime_6144, BN_get_rfc3526_prime_8192};
+        #[allow(bad_style)]
+        unsafe fn BN_is_negative(bn: *const ffi::BIGNUM) -> c_int {
+            (*bn).neg
+        }
+    }
+}
 
 /// Options for the most significant bits of a randomly generated `BigNum`.
 pub struct MsbOption(c_int);
@@ -361,17 +372,7 @@ impl BigNumRef {
 
     /// Returns `true` if `self` is negative.
     pub fn is_negative(&self) -> bool {
-        self._is_negative()
-    }
-
-    #[cfg(ossl10x)]
-    fn _is_negative(&self) -> bool {
-        unsafe { (*self.as_ptr()).neg == 1 }
-    }
-
-    #[cfg(ossl110)]
-    fn _is_negative(&self) -> bool {
-        unsafe { ffi::BN_is_negative(self.as_ptr()) == 1 }
+        unsafe { BN_is_negative(self.as_ptr()) == 1 }
     }
 
     /// Returns the number of significant bits in `self`.
@@ -1218,7 +1219,7 @@ macro_rules! delegate {
                 $t::$m(self.deref(), oth.deref())
             }
         }
-    }
+    };
 }
 
 impl<'a, 'b> Add<&'b BigNumRef> for &'a BigNumRef {

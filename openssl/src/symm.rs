@@ -52,14 +52,14 @@
 //! println!("Decrypted: '{}'", output_string);
 //! ```
 
+use ffi;
+use libc::c_int;
 use std::cmp;
 use std::ptr;
-use libc::c_int;
-use ffi;
 
-use {cvt, cvt_p};
 use error::ErrorStack;
 use nid::Nid;
+use {cvt, cvt_p};
 
 #[derive(Copy, Clone)]
 pub enum Mode {
@@ -718,34 +718,31 @@ pub fn decrypt_aead(
     Ok(out)
 }
 
-#[cfg(ossl110)]
-use ffi::{EVP_CIPHER_block_size, EVP_CIPHER_iv_length, EVP_CIPHER_key_length};
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::{EVP_CIPHER_block_size, EVP_CIPHER_iv_length, EVP_CIPHER_key_length};
+    } else {
+        #[allow(bad_style)]
+        pub unsafe fn EVP_CIPHER_iv_length(ptr: *const ffi::EVP_CIPHER) -> c_int {
+            (*ptr).iv_len
+        }
 
-#[cfg(ossl10x)]
-#[allow(bad_style)]
-mod compat {
-    use libc::c_int;
-    use ffi::EVP_CIPHER;
+        #[allow(bad_style)]
+        pub unsafe fn EVP_CIPHER_block_size(ptr: *const ffi::EVP_CIPHER) -> c_int {
+            (*ptr).block_size
+        }
 
-    pub unsafe fn EVP_CIPHER_iv_length(ptr: *const EVP_CIPHER) -> c_int {
-        (*ptr).iv_len
-    }
-
-    pub unsafe fn EVP_CIPHER_block_size(ptr: *const EVP_CIPHER) -> c_int {
-        (*ptr).block_size
-    }
-
-    pub unsafe fn EVP_CIPHER_key_length(ptr: *const EVP_CIPHER) -> c_int {
-        (*ptr).key_len
+        #[allow(bad_style)]
+        pub unsafe fn EVP_CIPHER_key_length(ptr: *const ffi::EVP_CIPHER) -> c_int {
+            (*ptr).key_len
+        }
     }
 }
-#[cfg(ossl10x)]
-use self::compat::*;
 
 #[cfg(test)]
 mod tests {
-    use hex::{self, FromHex};
     use super::*;
+    use hex::{self, FromHex};
 
     // Test vectors from FIPS-197:
     // http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
