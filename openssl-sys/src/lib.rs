@@ -1261,7 +1261,7 @@ pub const SSL_VERIFY_NONE: c_int = 0;
 pub const SSL_VERIFY_PEER: c_int = 1;
 pub const SSL_VERIFY_FAIL_IF_NO_PEER_CERT: c_int = 2;
 
-#[cfg(not(any(libressl261, ossl101)))]
+#[cfg(any(ossl102, all(libressl, not(libressl261))))]
 pub const SSL_OP_TLSEXT_PADDING: c_ulong = 0x00000010;
 #[cfg(libressl261)]
 pub const SSL_OP_TLSEXT_PADDING: c_ulong = 0x0;
@@ -1271,9 +1271,9 @@ pub const SSL_OP_CRYPTOPRO_TLSEXT_BUG: c_ulong = 0x80000000;
 #[cfg(libressl261)]
 pub const SSL_OP_CRYPTOPRO_TLSEXT_BUG: c_ulong = 0x0;
 pub const SSL_OP_LEGACY_SERVER_CONNECT: c_ulong = 0x00000004;
-#[cfg(not(any(libressl, ossl110f, ossl111)))]
+#[cfg(not(any(libressl, ossl110f)))]
 pub const SSL_OP_ALL: c_ulong = 0x80000BFF;
-#[cfg(any(ossl110f, ossl111))]
+#[cfg(ossl110f)]
 pub const SSL_OP_ALL: c_ulong = SSL_OP_CRYPTOPRO_TLSEXT_BUG
     | SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS
     | SSL_OP_LEGACY_SERVER_CONNECT
@@ -1289,7 +1289,7 @@ pub const SSL_OP_NO_TLSv1: c_ulong = 0x04000000;
 pub const SSL_OP_NO_TLSv1_1: c_ulong = 0x10000000;
 pub const SSL_OP_NO_TLSv1_2: c_ulong = 0x08000000;
 
-#[cfg(not(any(ossl101, libressl, ossl111)))]
+#[cfg(all(ossl102, not(ossl111)))]
 pub const SSL_OP_NO_SSL_MASK: c_ulong =
     SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
 #[cfg(ossl111)]
@@ -1393,35 +1393,35 @@ pub const X509_V_ERR_UNSUPPORTED_CONSTRAINT_SYNTAX: c_int = 52;
 pub const X509_V_ERR_UNSUPPORTED_NAME_SYNTAX: c_int = 53;
 pub const X509_V_ERR_CRL_PATH_VALIDATION_ERROR: c_int = 54;
 
-#[cfg(not(any(ossl101, libressl)))]
+#[cfg(ossl102)]
 pub const X509_V_ERR_SUITE_B_INVALID_VERSION: c_int = 56;
-#[cfg(not(any(ossl101, libressl)))]
+#[cfg(ossl102)]
 pub const X509_V_ERR_SUITE_B_INVALID_ALGORITHM: c_int = 57;
-#[cfg(not(any(ossl101, libressl)))]
+#[cfg(ossl102)]
 pub const X509_V_ERR_SUITE_B_INVALID_CURVE: c_int = 58;
-#[cfg(not(any(ossl101, libressl)))]
+#[cfg(ossl102)]
 pub const X509_V_ERR_SUITE_B_INVALID_SIGNATURE_ALGORITHM: c_int = 59;
-#[cfg(not(any(ossl101, libressl)))]
+#[cfg(ossl102)]
 pub const X509_V_ERR_SUITE_B_LOS_NOT_ALLOWED: c_int = 60;
-#[cfg(not(any(ossl101, libressl)))]
+#[cfg(ossl102)]
 pub const X509_V_ERR_SUITE_B_CANNOT_SIGN_P_384_WITH_P_256: c_int = 61;
 
-#[cfg(not(any(ossl101, libressl)))]
+#[cfg(ossl102)]
 pub const X509_V_ERR_HOSTNAME_MISMATCH: c_int = 62;
-#[cfg(not(any(ossl101, libressl)))]
+#[cfg(ossl102)]
 pub const X509_V_ERR_EMAIL_MISMATCH: c_int = 63;
-#[cfg(not(any(ossl101, libressl)))]
+#[cfg(ossl102)]
 pub const X509_V_ERR_IP_ADDRESS_MISMATCH: c_int = 64;
 
-#[cfg(not(any(ossl101, libressl)))]
+#[cfg(ossl102)]
 pub const X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT: c_uint = 0x1;
-#[cfg(not(any(ossl101, libressl)))]
+#[cfg(ossl102)]
 pub const X509_CHECK_FLAG_NO_WILDCARDS: c_uint = 0x2;
-#[cfg(not(any(ossl101, libressl)))]
+#[cfg(ossl102)]
 pub const X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS: c_uint = 0x4;
-#[cfg(not(any(ossl101, libressl)))]
+#[cfg(ossl102)]
 pub const X509_CHECK_FLAG_MULTI_LABEL_WILDCARDS: c_uint = 0x8;
-#[cfg(not(any(ossl101, libressl)))]
+#[cfg(ossl102)]
 pub const X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS: c_uint = 0x10;
 
 pub const GEN_OTHERNAME: c_int = 0;
@@ -1526,7 +1526,7 @@ pub unsafe fn SSL_CTX_add_extra_chain_cert(ctx: *mut SSL_CTX, x509: *mut X509) -
     SSL_CTX_ctrl(ctx, SSL_CTRL_EXTRA_CHAIN_CERT, 0, x509 as *mut c_void)
 }
 
-#[cfg(not(any(ossl101, libressl)))]
+#[cfg(ossl102)]
 pub unsafe fn SSL_CTX_set0_verify_cert_store(ctx: *mut SSL_CTX, st: *mut X509_STORE) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_VERIFY_CERT_STORE, 0, st as *mut c_void)
 }
@@ -1641,9 +1641,9 @@ extern "C" {
     pub fn BIO_new_socket(sock: c_int, close_flag: c_int) -> *mut BIO;
     pub fn BIO_read(b: *mut BIO, buf: *mut c_void, len: c_int) -> c_int;
     pub fn BIO_write(b: *mut BIO, buf: *const c_void, len: c_int) -> c_int;
-    #[cfg(any(ossl101, libressl))]
+    #[cfg(not(ossl102))]
     pub fn BIO_new_mem_buf(buf: *mut c_void, len: c_int) -> *mut BIO;
-    #[cfg(not(any(ossl101, libressl)))]
+    #[cfg(ossl102)]
     pub fn BIO_new_mem_buf(buf: *const c_void, len: c_int) -> *mut BIO;
     pub fn BIO_set_flags(b: *mut BIO, flags: c_int);
     pub fn BIO_clear_flags(b: *mut BIO, flags: c_int);
@@ -1774,11 +1774,11 @@ extern "C" {
 
     pub fn DH_new() -> *mut DH;
     pub fn DH_free(dh: *mut DH);
-    #[cfg(not(any(ossl101, libressl)))]
+    #[cfg(ossl102)]
     pub fn DH_get_1024_160() -> *mut DH;
-    #[cfg(not(any(ossl101, libressl)))]
+    #[cfg(ossl102)]
     pub fn DH_get_2048_224() -> *mut DH;
-    #[cfg(not(any(ossl101, libressl)))]
+    #[cfg(ossl102)]
     pub fn DH_get_2048_256() -> *mut DH;
 
     pub fn EC_KEY_new() -> *mut EC_KEY;
@@ -2036,13 +2036,13 @@ extern "C" {
         e: *mut ENGINE,
         pkey: *mut EVP_PKEY,
     ) -> c_int;
-    #[cfg(any(ossl101, libressl))]
+    #[cfg(not(ossl102))]
     pub fn EVP_DigestVerifyFinal(
         ctx: *mut EVP_MD_CTX,
         sigret: *mut c_uchar,
         siglen: size_t,
     ) -> c_int;
-    #[cfg(not(any(ossl101, libressl)))]
+    #[cfg(ossl102)]
     pub fn EVP_DigestVerifyFinal(
         ctx: *mut EVP_MD_CTX,
         sigret: *const c_uchar,
@@ -2446,14 +2446,14 @@ extern "C" {
     pub fn SSL_get_ex_data(ssl: *const SSL, idx: c_int) -> *mut c_void;
     pub fn SSL_get_servername(ssl: *const SSL, name_type: c_int) -> *const c_char;
     pub fn SSL_get_current_cipher(ssl: *const SSL) -> *const SSL_CIPHER;
-    #[cfg(not(any(ossl101, libressl)))]
+    #[cfg(ossl102)]
     pub fn SSL_get0_param(ssl: *mut SSL) -> *mut X509_VERIFY_PARAM;
     pub fn SSL_get_verify_result(ssl: *const SSL) -> c_long;
     pub fn SSL_shutdown(ssl: *mut SSL) -> c_int;
     pub fn SSL_get_certificate(ssl: *const SSL) -> *mut X509;
-    #[cfg(any(ossl101, libressl))]
+    #[cfg(not(ossl102))]
     pub fn SSL_get_privatekey(ssl: *mut SSL) -> *mut EVP_PKEY;
-    #[cfg(not(any(ossl101, libressl)))]
+    #[cfg(ossl102)]
     pub fn SSL_get_privatekey(ssl: *const SSL) -> *mut EVP_PKEY;
     pub fn SSL_load_client_CA_file(file: *const c_char) -> *mut stack_st_X509_NAME;
     pub fn SSL_set_tmp_dh_callback(
@@ -2546,9 +2546,9 @@ extern "C" {
         remove_session_cb: Option<unsafe extern "C" fn(*mut SSL_CTX, *mut SSL_SESSION)>,
     );
 
-    #[cfg(not(any(ossl101, libressl)))]
+    #[cfg(ossl102)]
     pub fn SSL_CTX_get0_certificate(ctx: *const SSL_CTX) -> *mut X509;
-    #[cfg(not(any(ossl101, libressl)))]
+    #[cfg(ossl102)]
     pub fn SSL_CTX_get0_privatekey(ctx: *const SSL_CTX) -> *mut EVP_PKEY;
 
     pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;
@@ -2599,9 +2599,9 @@ extern "C" {
     );
     pub fn SSL_get_session(s: *const SSL) -> *mut SSL_SESSION;
     pub fn SSL_set_session(ssl: *mut SSL, session: *mut SSL_SESSION) -> c_int;
-    #[cfg(not(any(ossl101, libressl, ossl110f, ossl111)))]
+    #[cfg(all(ossl102, not(ossl110f)))]
     pub fn SSL_is_server(s: *mut SSL) -> c_int;
-    #[cfg(any(ossl110f, ossl111))]
+    #[cfg(ossl110f)]
     pub fn SSL_is_server(s: *const SSL) -> c_int;
 
     pub fn SSL_SESSION_free(s: *mut SSL_SESSION);
@@ -2614,14 +2614,14 @@ extern "C" {
     ) -> *mut SSL_SESSION;
     pub fn i2d_SSL_SESSION(s: *mut SSL_SESSION, pp: *mut *mut c_uchar) -> c_int;
 
-    #[cfg(not(ossl101))]
+    #[cfg(ossl102)]
     pub fn SSL_CTX_set_alpn_protos(s: *mut SSL_CTX, data: *const c_uchar, len: c_uint) -> c_int;
 
-    #[cfg(not(ossl101))]
+    #[cfg(ossl102)]
     pub fn SSL_set_alpn_protos(s: *mut SSL, data: *const c_uchar, len: c_uint) -> c_int;
 
     // FIXME should take an Option<unsafe extern "C" fn>
-    #[cfg(not(ossl101))]
+    #[cfg(ossl102)]
     pub fn SSL_CTX_set_alpn_select_cb(
         ssl: *mut SSL_CTX,
         cb: extern "C" fn(
@@ -2634,7 +2634,7 @@ extern "C" {
         ) -> c_int,
         arg: *mut c_void,
     );
-    #[cfg(not(ossl101))]
+    #[cfg(ossl102)]
     pub fn SSL_get0_alpn_selected(s: *const SSL, data: *mut *const c_uchar, len: *mut c_uint);
 
     pub fn X509_add_ext(x: *mut X509, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
@@ -2726,17 +2726,17 @@ extern "C" {
     pub fn X509_REQ_get_extensions(req: *mut X509_REQ) -> *mut stack_st_X509_EXTENSION;
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
 
-    #[cfg(not(ossl101))]
+    #[cfg(ossl102)]
     pub fn X509_VERIFY_PARAM_free(param: *mut X509_VERIFY_PARAM);
-    #[cfg(not(any(ossl101, libressl)))]
+    #[cfg(ossl102)]
     pub fn X509_VERIFY_PARAM_set_hostflags(param: *mut X509_VERIFY_PARAM, flags: c_uint);
-    #[cfg(not(any(ossl101, libressl)))]
+    #[cfg(ossl102)]
     pub fn X509_VERIFY_PARAM_set1_host(
         param: *mut X509_VERIFY_PARAM,
         name: *const c_char,
         namelen: size_t,
     ) -> c_int;
-    #[cfg(not(any(ossl101, libressl)))]
+    #[cfg(ossl102)]
     pub fn X509_VERIFY_PARAM_set1_ip(
         param: *mut X509_VERIFY_PARAM,
         ip: *const c_uchar,

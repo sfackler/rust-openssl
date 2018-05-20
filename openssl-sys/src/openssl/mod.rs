@@ -1,8 +1,8 @@
 use libc::{c_int, c_long, c_uchar, c_uint, c_ulong};
 
-#[cfg(any(ossl101, ossl102))]
+#[cfg(not(ossl110))]
 mod v10x;
-#[cfg(any(ossl101, ossl102))]
+#[cfg(not(ossl110))]
 pub use openssl::v10x::*;
 
 #[cfg(ossl110)]
@@ -15,7 +15,7 @@ mod v111;
 #[cfg(ossl111)]
 pub use openssl::v111::*;
 
-#[cfg(not(ossl101))]
+#[cfg(ossl102)]
 pub const SSL_CTRL_SET_VERIFY_CERT_STORE: c_int = 106;
 
 pub const SSL_MODE_SEND_CLIENTHELLO_TIME: c_long = 0x20;
@@ -28,9 +28,9 @@ pub const SSL_OP_CISCO_ANYCONNECT: c_ulong = 0x00008000;
 pub const SSL_OP_NO_COMPRESSION: c_ulong = 0x00020000;
 pub const SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION: c_ulong = 0x00040000;
 pub const SSL_OP_NO_SSLv3: c_ulong = 0x02000000;
-#[cfg(not(ossl101))]
+#[cfg(ossl102)]
 pub const SSL_OP_NO_DTLSv1: c_ulong = 0x04000000;
-#[cfg(not(ossl101))]
+#[cfg(ossl102)]
 pub const SSL_OP_NO_DTLSv1_2: c_ulong = 0x08000000;
 
 pub const X509_V_ERR_UNSPECIFIED: c_int = 1;
@@ -55,7 +55,7 @@ pub const CMS_PARTIAL: c_uint = 0x4000;
 pub const CMS_REUSE_DIGEST: c_uint = 0x8000;
 pub const CMS_USE_KEYID: c_uint = 0x10000;
 pub const CMS_DEBUG_DECRYPT: c_uint = 0x20000;
-#[cfg(not(ossl101))]
+#[cfg(ossl102)]
 pub const CMS_KEY_PARAM: c_uint = 0x40000;
 
 extern "C" {

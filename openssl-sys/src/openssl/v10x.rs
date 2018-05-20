@@ -5,7 +5,7 @@ use std::ptr;
 use std::sync::{Mutex, MutexGuard};
 use std::sync::{Once, ONCE_INIT};
 
-#[cfg(not(ossl101))]
+#[cfg(ossl102)]
 use libc::time_t;
 use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, size_t};
 
@@ -573,9 +573,6 @@ pub struct SSL_CTX {
 
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl101))]
     srtp_profiles: *mut c_void,
-
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))]
-    srtp_profiles: *mut c_void,
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))]
     alpn_select_cb: *mut c_void,
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))]
@@ -669,7 +666,7 @@ pub struct SRP_CTX {
 }
 
 #[repr(C)]
-#[cfg(not(ossl101))]
+#[cfg(ossl102)]
 pub struct X509_VERIFY_PARAM {
     pub name: *mut c_char,
     pub check_time: time_t,
@@ -682,7 +679,7 @@ pub struct X509_VERIFY_PARAM {
     pub id: *mut X509_VERIFY_PARAM_ID,
 }
 
-#[cfg(not(ossl101))]
+#[cfg(ossl102)]
 pub enum X509_VERIFY_PARAM_ID {}
 pub enum PKCS12 {}
 
@@ -925,15 +922,15 @@ extern "C" {
         loc: c_int,
         set: c_int,
     ) -> c_int;
-    #[cfg(not(ossl101))]
+    #[cfg(ossl102)]
     pub fn X509_get0_signature(
         psig: *mut *mut ::ASN1_BIT_STRING,
         palg: *mut *mut ::X509_ALGOR,
         x: *const ::X509,
     );
-    #[cfg(not(ossl101))]
+    #[cfg(ossl102)]
     pub fn X509_get_signature_nid(x: *const X509) -> c_int;
-    #[cfg(not(ossl101))]
+    #[cfg(ossl102)]
     pub fn X509_ALGOR_get0(
         paobj: *mut *mut ::ASN1_OBJECT,
         pptype: *mut c_int,
