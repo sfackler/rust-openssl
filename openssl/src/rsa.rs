@@ -751,7 +751,8 @@ mod test {
     #[test]
     fn test_to_password() {
         let key = Rsa::generate(2048).unwrap();
-        let pem = key.private_key_to_pem_passphrase(Cipher::aes_128_cbc(), b"foobar")
+        let pem = key
+            .private_key_to_pem_passphrase(Cipher::aes_128_cbc(), b"foobar")
             .unwrap();
         Rsa::private_key_from_pem_passphrase(&pem, b"foobar").unwrap();
         assert!(Rsa::private_key_from_pem_passphrase(&pem, b"fizzbuzz").is_err());
@@ -791,7 +792,8 @@ mod test {
         k0.private_encrypt(&msg, &mut emesg, Padding::PKCS1)
             .unwrap();
         let mut dmesg = vec![0; k1.size() as usize];
-        let len = k1.public_decrypt(&emesg, &mut dmesg, Padding::PKCS1)
+        let len = k1
+            .public_decrypt(&emesg, &mut dmesg, Padding::PKCS1)
             .unwrap();
         assert_eq!(msg, &dmesg[..len]);
     }
@@ -807,7 +809,8 @@ mod test {
         let mut emesg = vec![0; k0.size() as usize];
         k0.public_encrypt(&msg, &mut emesg, Padding::PKCS1).unwrap();
         let mut dmesg = vec![0; k1.size() as usize];
-        let len = k1.private_decrypt(&emesg, &mut dmesg, Padding::PKCS1)
+        let len = k1
+            .private_decrypt(&emesg, &mut dmesg, Padding::PKCS1)
             .unwrap();
         assert_eq!(msg, &dmesg[..len]);
     }
@@ -883,6 +886,6 @@ mod test {
     #[test]
     fn clone() {
         let key = Rsa::generate(2048).unwrap();
-        key.clone();
+        drop(key.clone());
     }
 }

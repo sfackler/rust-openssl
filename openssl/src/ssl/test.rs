@@ -19,7 +19,7 @@ use hash::MessageDigest;
 use ocsp::{OcspResponse, OcspResponseStatus};
 use pkey::PKey;
 use ssl;
-#[cfg(any(ossl110, ossl111))]
+#[cfg(any(ossl110, ossl111, libressl261))]
 use ssl::SslVersion;
 use ssl::{
     Error, HandshakeError, MidHandshakeSslStream, ShutdownResult, Ssl, SslAcceptor, SslConnector,
@@ -1315,7 +1315,7 @@ fn keying_export() {
 }
 
 #[test]
-#[cfg(any(ossl110))]
+#[cfg(any(ossl110, libressl261))]
 fn no_version_overlap() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
@@ -1330,7 +1330,7 @@ fn no_version_overlap() {
         ctx.set_max_proto_version(Some(SslVersion::TLS1_1)).unwrap();
         #[cfg(ossl110g)]
         assert_eq!(ctx.min_proto_version(), None);
-        #[cfg(ossl110g)]
+        #[cfg(any(ossl110g, libressl270))]
         assert_eq!(ctx.max_proto_version(), Some(SslVersion::TLS1_1));
         let ssl = Ssl::new(&ctx.build()).unwrap();
         ssl.accept(stream).unwrap_err();
@@ -1339,7 +1339,7 @@ fn no_version_overlap() {
     let stream = TcpStream::connect(addr).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_min_proto_version(Some(SslVersion::TLS1_2)).unwrap();
-    #[cfg(ossl110g)]
+    #[cfg(any(ossl110g, libressl270))]
     assert_eq!(ctx.min_proto_version(), Some(SslVersion::TLS1_2));
     #[cfg(ossl110g)]
     assert_eq!(ctx.max_proto_version(), None);

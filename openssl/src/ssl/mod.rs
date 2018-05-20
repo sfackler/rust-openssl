@@ -1023,15 +1023,15 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_set_min_proto_version`].
     ///
-    /// Requires OpenSSL 1.1.0 or newer.
+    /// Requires OpenSSL 1.1.0 or LibreSSL 2.6.1 or newer.
     ///
     /// [`SSL_CTX_set_min_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
-    #[cfg(any(ossl110))]
+    #[cfg(any(ossl110, libressl261))]
     pub fn set_min_proto_version(&mut self, version: Option<SslVersion>) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_CTX_set_min_proto_version(
                 self.as_ptr(),
-                version.map_or(0, |v| v.0),
+                version.map_or(0, |v| v.0 as _),
             )).map(|_| ())
         }
     }
@@ -1043,15 +1043,15 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_set_max_proto_version`].
     ///
-    /// Requires OpenSSL 1.1.0 or newer.
+    /// Requires OpenSSL 1.1.0 or or LibreSSL 2.6.1 or newer.
     ///
     /// [`SSL_CTX_set_max_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
-    #[cfg(any(ossl110))]
+    #[cfg(any(ossl110, libressl261))]
     pub fn set_max_proto_version(&mut self, version: Option<SslVersion>) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_CTX_set_max_proto_version(
                 self.as_ptr(),
-                version.map_or(0, |v| v.0),
+                version.map_or(0, |v| v.0 as _),
             )).map(|_| ())
         }
     }
@@ -1063,10 +1063,10 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_get_min_proto_version`].
     ///
-    /// Requires OpenSSL 1.1.0g or newer.
+    /// Requires OpenSSL 1.1.0g or LibreSSL 2.7.0 or newer.
     ///
     /// [`SSL_CTX_get_min_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
-    #[cfg(any(ossl110g))]
+    #[cfg(any(ossl110g, libressl270))]
     pub fn min_proto_version(&mut self) -> Option<SslVersion> {
         unsafe {
             let r = ffi::SSL_CTX_get_min_proto_version(self.as_ptr());
@@ -1085,10 +1085,10 @@ impl SslContextBuilder {
     ///
     /// This corresponds to [`SSL_CTX_get_max_proto_version`].
     ///
-    /// Requires OpenSSL 1.1.0g or newer.
+    /// Requires OpenSSL 1.1.0g or LibreSSL 2.7.0 or newer.
     ///
     /// [`SSL_CTX_get_max_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
-    #[cfg(any(ossl110g))]
+    #[cfg(any(ossl110g, libressl270))]
     pub fn max_proto_version(&mut self) -> Option<SslVersion> {
         unsafe {
             let r = ffi::SSL_CTX_get_max_proto_version(self.as_ptr());
@@ -2837,7 +2837,8 @@ impl<S: Read + Write> Read for SslStream<S> {
                 }
                 Err(ref e) if e.code() == ErrorCode::WANT_READ && e.io_error().is_none() => {}
                 Err(e) => {
-                    return Err(e.into_io_error()
+                    return Err(e
+                        .into_io_error()
                         .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)))
                 }
             }
@@ -2852,7 +2853,8 @@ impl<S: Read + Write> Write for SslStream<S> {
                 Ok(n) => return Ok(n),
                 Err(ref e) if e.code() == ErrorCode::WANT_READ && e.io_error().is_none() => {}
                 Err(e) => {
-                    return Err(e.into_io_error()
+                    return Err(e
+                        .into_io_error()
                         .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)))
                 }
             }

@@ -11,6 +11,8 @@ use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod cfgs;
+
 // The set of `OPENSSL_NO_<FOO>`s that we care about.
 const DEFINES: &'static [&'static str] = &[
     "OPENSSL_NO_BUF_FREELISTS",
@@ -114,7 +116,7 @@ fn find_openssl_dir(target: &str) -> OsString {
         if homebrew.exists() {
             return homebrew.to_path_buf().into();
         }
-        // Calling `brew --prefix <package>` command usually slow and 
+        // Calling `brew --prefix <package>` command usually slow and
         // takes seconds, and will be used only as a last resort.
         let output = execute_command_and_get_output("brew", &["--prefix", "openssl@1.1"]);
         if let Some(ref output) = output {
@@ -427,6 +429,10 @@ See rust-openssl README for more information:
     }
     println!("cargo:conf={}", enabled.join(","));
 
+    for cfg in cfgs::get(openssl_version, libressl_version) {
+        println!("cargo:rustc-cfg={}", cfg);
+    }
+
     if let Some(libressl_version) = libressl_version {
         println!("cargo:libressl_version_number={:x}", libressl_version);
 
@@ -445,8 +451,6 @@ See rust-openssl README for more information:
             _ => version_error(),
         };
 
-        println!("cargo:rustc-cfg=libressl");
-        println!("cargo:rustc-cfg=libressl2{}{}", minor, fix);
         println!("cargo:libressl=true");
         println!("cargo:libressl_version=2{}{}", minor, fix);
         println!("cargo:version=101");
@@ -455,37 +459,22 @@ See rust-openssl README for more information:
         let openssl_version = openssl_version.unwrap();
         println!("cargo:version_number={:x}", openssl_version);
 
-        if openssl_version >= 0x1_00_02_08_0 {
-            println!("cargo:rustc-cfg=ossl102h");
-        }
-
-        if openssl_version >= 0x1_01_00_07_0 {
-            println!("cargo:rustc-cfg=ossl110g");
-        }
-
         if openssl_version >= 0x1_01_02_00_0 {
             version_error()
         } else if openssl_version >= 0x1_01_01_00_0 {
-            println!("cargo:rustc-cfg=ossl111");
-            println!("cargo:rustc-cfg=ossl110");
             println!("cargo:version=111");
             Version::Openssl11x
         } else if openssl_version >= 0x1_01_00_06_0 {
-            println!("cargo:rustc-cfg=ossl110");
-            println!("cargo:rustc-cfg=ossl110f");
             println!("cargo:version=110");
             println!("cargo:patch=f");
             Version::Openssl11x
         } else if openssl_version >= 0x1_01_00_00_0 {
-            println!("cargo:rustc-cfg=ossl110");
             println!("cargo:version=110");
             Version::Openssl11x
         } else if openssl_version >= 0x1_00_02_00_0 {
-            println!("cargo:rustc-cfg=ossl102");
             println!("cargo:version=102");
             Version::Openssl10x
         } else if openssl_version >= 0x1_00_01_00_0 {
-            println!("cargo:rustc-cfg=ossl101");
             println!("cargo:version=101");
             Version::Openssl10x
         } else {
@@ -542,10 +531,12 @@ fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
         .map(|e| e.file_name())
         .filter_map(|e| e.into_string().ok())
         .collect::<HashSet<_>>();
-    let can_static = libs.iter()
+    let can_static = libs
+        .iter()
         .all(|l| files.contains(&format!("lib{}.a", l)) || files.contains(&format!("{}.lib", l)));
     let can_dylib = libs.iter().all(|l| {
-        files.contains(&format!("lib{}.so", l)) || files.contains(&format!("{}.dll", l))
+        files.contains(&format!("lib{}.so", l))
+            || files.contains(&format!("{}.dll", l))
             || files.contains(&format!("lib{}.dylib", l))
     });
     match (can_static, can_dylib) {
@@ -567,8 +558,6 @@ fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
     "dylib"
 }
 
-
-
 fn execute_command_and_get_output(cmd: &str, args: &[&str]) -> Option<String> {
     let out = Command::new(cmd).args(args).output();
     if let Ok(ref r1) = out {
@@ -576,9 +565,8 @@ fn execute_command_and_get_output(cmd: &str, args: &[&str]) -> Option<String> {
             let r2 = String::from_utf8(r1.stdout.clone());
             if let Ok(r3) = r2 {
                 return Some(r3.trim().to_string());
-            } 
+            }
         }
     }
     return None;
 }
-

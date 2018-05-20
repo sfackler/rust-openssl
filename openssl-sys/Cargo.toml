@@ -9,6 +9,7 @@ repository = "https://github.com/sfackler/rust-openssl"
 readme = "README.md"
 categories = ["cryptography", "external-ffi-bindings"]
 links = "openssl"
+build = "build/main.rs"
 
 [dependencies]
 libc = "0.2"
