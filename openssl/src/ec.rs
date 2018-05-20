@@ -33,14 +33,14 @@
 //! ```
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use std::ptr;
 use libc::c_int;
+use std::ptr;
 
-use {cvt, cvt_n, cvt_p, init};
 use bn::{BigNumContextRef, BigNumRef};
 use error::ErrorStack;
 use nid::Nid;
 use pkey::{HasParams, HasPrivate, HasPublic, Params, Private, Public};
+use {cvt, cvt_n, cvt_p, init};
 
 /// Compressed or Uncompressed conversion
 ///
@@ -803,10 +803,10 @@ impl<T> Clone for EcKey<T> {
 
 #[cfg(test)]
 mod test {
-    use bn::{BigNum, BigNumContext};
-    use nid::Nid;
-    use data_encoding::BASE64URL_NOPAD;
     use super::*;
+    use bn::{BigNum, BigNumContext};
+    use data_encoding::BASE64URL_NOPAD;
+    use nid::Nid;
 
     #[test]
     fn key_new_by_curve_name() {
@@ -823,7 +823,7 @@ mod test {
     fn dup() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
-        key.clone();
+        drop(key.clone());
     }
 
     #[test]
@@ -862,7 +862,8 @@ mod test {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
         let mut ctx = BigNumContext::new().unwrap();
-        let bytes = key.public_key()
+        let bytes = key
+            .public_key()
             .to_bytes(&group, PointConversionForm::COMPRESSED, &mut ctx)
             .unwrap();
 
@@ -877,7 +878,8 @@ mod test {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let key = EcKey::generate(&group).unwrap();
 
-        let dup_key = EcKey::from_private_components(&group, key.private_key(), key.public_key()).unwrap();
+        let dup_key =
+            EcKey::from_private_components(&group, key.private_key(), key.public_key()).unwrap();
         let res = dup_key.check_key().unwrap();
 
         assert!(res == ());

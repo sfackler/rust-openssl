@@ -1,19 +1,18 @@
+use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, size_t};
 use std::mem;
 use std::ptr;
 use std::sync::{Mutex, MutexGuard};
 use std::sync::{Once, ONCE_INIT};
 
-#[cfg(libressl250)]
+#[cfg(not(libressl251))]
 pub use libressl::v250::*;
-#[cfg(not(libressl250))]
-pub use libressl::v25x::*;
+#[cfg(libressl251)]
+pub use libressl::v251::*;
 
-use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, size_t};
-
-#[cfg(libressl250)]
+#[cfg(not(libressl251))]
 mod v250;
-#[cfg(not(libressl250))]
-mod v25x;
+#[cfg(libressl251)]
+mod v251;
 
 #[repr(C)]
 pub struct stack_st_ASN1_OBJECT {
@@ -337,9 +336,9 @@ pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
 pub const SSL_CTRL_SET_ECDH_AUTO: c_int = 94;
 
-#[cfg(any(libressl261, libressl262, libressl26x, libressl27x))]
+#[cfg(libressl261)]
 pub const SSL_OP_ALL: c_ulong = 0x4;
-#[cfg(not(any(libressl261, libressl262, libressl26x, libressl27x)))]
+#[cfg(not(libressl261))]
 pub const SSL_OP_ALL: c_ulong = 0x80000014;
 pub const SSL_OP_CISCO_ANYCONNECT: c_ulong = 0x0;
 pub const SSL_OP_NO_COMPRESSION: c_ulong = 0x0;
@@ -352,9 +351,9 @@ pub const SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER: c_ulong = 0x0;
 pub const SSL_OP_SSLEAY_080_CLIENT_DH_BUG: c_ulong = 0x0;
 pub const SSL_OP_TLS_D5_BUG: c_ulong = 0x0;
 pub const SSL_OP_TLS_BLOCK_PADDING_BUG: c_ulong = 0x0;
-#[cfg(any(libressl261, libressl262, libressl26x, libressl27x))]
+#[cfg(libressl261)]
 pub const SSL_OP_SINGLE_ECDH_USE: c_ulong = 0x0;
-#[cfg(not(any(libressl261, libressl262, libressl26x, libressl27x)))]
+#[cfg(not(libressl261))]
 pub const SSL_OP_SINGLE_ECDH_USE: c_ulong = 0x00080000;
 pub const SSL_OP_SINGLE_DH_USE: c_ulong = 0x00100000;
 pub const SSL_OP_NO_SSLv2: c_ulong = 0x0;
@@ -540,6 +539,15 @@ extern "C" {
             unsafe extern "C" fn(*mut ::SSL, *mut c_uchar, c_int, *mut c_int) -> *mut SSL_SESSION,
         >,
     );
+    #[cfg(libressl261)]
+    pub fn SSL_CTX_set_min_proto_version(ctx: *mut ::SSL_CTX, version: u16) -> c_int;
+    #[cfg(libressl261)]
+    pub fn SSL_CTX_set_max_proto_version(ctx: *mut ::SSL_CTX, version: u16) -> c_int;
+    #[cfg(libressl270)]
+    pub fn SSL_CTX_get_min_proto_version(ctx: *mut ::SSL_CTX) -> c_int;
+    #[cfg(libressl270)]
+    pub fn SSL_CTX_get_max_proto_version(ctx: *mut ::SSL_CTX) -> c_int;
+
     pub fn X509_get_subject_name(x: *mut ::X509) -> *mut ::X509_NAME;
     pub fn X509_get_issuer_name(x: *mut ::X509) -> *mut ::X509_NAME;
     pub fn X509_set_notAfter(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;

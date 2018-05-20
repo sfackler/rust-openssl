@@ -236,8 +236,10 @@ pub const EVP_PKEY_OP_VERIFYCTX: c_int = 1 << 7;
 pub const EVP_PKEY_OP_ENCRYPT: c_int = 1 << 8;
 pub const EVP_PKEY_OP_DECRYPT: c_int = 1 << 9;
 
-pub const EVP_PKEY_OP_TYPE_SIG: c_int = EVP_PKEY_OP_SIGN | EVP_PKEY_OP_VERIFY
-    | EVP_PKEY_OP_VERIFYRECOVER | EVP_PKEY_OP_SIGNCTX
+pub const EVP_PKEY_OP_TYPE_SIG: c_int = EVP_PKEY_OP_SIGN
+    | EVP_PKEY_OP_VERIFY
+    | EVP_PKEY_OP_VERIFYRECOVER
+    | EVP_PKEY_OP_SIGNCTX
     | EVP_PKEY_OP_VERIFYCTX;
 
 pub const EVP_PKEY_OP_TYPE_CRYPT: c_int = EVP_PKEY_OP_ENCRYPT | EVP_PKEY_OP_DECRYPT;
@@ -1259,21 +1261,23 @@ pub const SSL_VERIFY_NONE: c_int = 0;
 pub const SSL_VERIFY_PEER: c_int = 1;
 pub const SSL_VERIFY_FAIL_IF_NO_PEER_CERT: c_int = 2;
 
-#[cfg(not(any(libressl261, libressl262, libressl26x, libressl27x, ossl101)))]
+#[cfg(not(any(libressl261, ossl101)))]
 pub const SSL_OP_TLSEXT_PADDING: c_ulong = 0x00000010;
-#[cfg(any(libressl261, libressl262, libressl26x, libressl27x))]
+#[cfg(libressl261)]
 pub const SSL_OP_TLSEXT_PADDING: c_ulong = 0x0;
 pub const SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS: c_ulong = 0x00000800;
-#[cfg(not(any(libressl261, libressl262, libressl26x, libressl27x)))]
+#[cfg(not(libressl261))]
 pub const SSL_OP_CRYPTOPRO_TLSEXT_BUG: c_ulong = 0x80000000;
-#[cfg(any(libressl261, libressl262, libressl26x, libressl27x))]
+#[cfg(libressl261)]
 pub const SSL_OP_CRYPTOPRO_TLSEXT_BUG: c_ulong = 0x0;
 pub const SSL_OP_LEGACY_SERVER_CONNECT: c_ulong = 0x00000004;
 #[cfg(not(any(libressl, ossl110f, ossl111)))]
 pub const SSL_OP_ALL: c_ulong = 0x80000BFF;
 #[cfg(any(ossl110f, ossl111))]
-pub const SSL_OP_ALL: c_ulong = SSL_OP_CRYPTOPRO_TLSEXT_BUG | SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS
-    | SSL_OP_LEGACY_SERVER_CONNECT | SSL_OP_TLSEXT_PADDING
+pub const SSL_OP_ALL: c_ulong = SSL_OP_CRYPTOPRO_TLSEXT_BUG
+    | SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS
+    | SSL_OP_LEGACY_SERVER_CONNECT
+    | SSL_OP_TLSEXT_PADDING
     | SSL_OP_SAFARI_ECDHE_ECDSA_BUG;
 pub const SSL_OP_NO_QUERY_MTU: c_ulong = 0x00001000;
 pub const SSL_OP_COOKIE_EXCHANGE: c_ulong = 0x00002000;
@@ -1289,8 +1293,11 @@ pub const SSL_OP_NO_TLSv1_2: c_ulong = 0x08000000;
 pub const SSL_OP_NO_SSL_MASK: c_ulong =
     SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
 #[cfg(ossl111)]
-pub const SSL_OP_NO_SSL_MASK: c_ulong = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1
-    | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2
+pub const SSL_OP_NO_SSL_MASK: c_ulong = SSL_OP_NO_SSLv2
+    | SSL_OP_NO_SSLv3
+    | SSL_OP_NO_TLSv1
+    | SSL_OP_NO_TLSv1_1
+    | SSL_OP_NO_TLSv1_2
     | SSL_OP_NO_TLSv1_3;
 
 pub const SSL_FILETYPE_PEM: c_int = X509_FILETYPE_PEM;

@@ -2,10 +2,12 @@ extern crate ctest;
 
 use std::env;
 
+#[path = "../openssl-sys/build/cfgs.rs"]
+mod cfgs;
+
 fn main() {
     let mut cfg = ctest::TestGenerator::new();
     let target = env::var("TARGET").unwrap();
-    let mut is_libressl = false;
 
     if let Ok(out) = env::var("DEP_OPENSSL_INCLUDE") {
         cfg.include(&out);
@@ -26,21 +28,17 @@ fn main() {
         cfg.define("WIN32_LEAN_AND_MEAN", None);
     }
 
-    if let Ok(_) = env::var("DEP_OPENSSL_LIBRESSL") {
-        cfg.cfg("libressl", None);
-        is_libressl = true;
-    } else if let Ok(version) = env::var("DEP_OPENSSL_VERSION") {
-        cfg.cfg(&format!("ossl{}", version), None);
-        if version == "111" {
-            cfg.cfg("ossl110", None);
-        }
+    let openssl_version = env::var("DEP_OPENSSL_VERSION_NUMBER")
+        .ok()
+        .map(|v| u64::from_str_radix(&v, 16).unwrap());
+    let libressl_version = env::var("DEP_OPENSSL_LIBRESSL_VERSION_NUMBER")
+        .ok()
+        .map(|v| u64::from_str_radix(&v, 16).unwrap());
+
+    for c in cfgs::get(openssl_version, libressl_version) {
+        cfg.cfg(c, None);
     }
-    if let (Ok(version), Ok(patch)) = (
-        env::var("DEP_OPENSSL_VERSION"),
-        env::var("DEP_OPENSSL_PATCH"),
-    ) {
-        cfg.cfg(&format!("ossl{}{}", version, patch), None);
-    }
+
     if let Ok(vars) = env::var("DEP_OPENSSL_CONF") {
         for var in vars.split(",") {
             cfg.cfg("osslconf", Some(var));
@@ -65,7 +63,7 @@ fn main() {
         .header("openssl/ocsp.h")
         .header("openssl/evp.h");
 
-    if !is_libressl {
+    if openssl_version.is_some() {
         cfg.header("openssl/cms.h");
     }
 
@@ -79,7 +77,8 @@ fn main() {
         } else if s == "_STACK" {
             format!("struct stack_st")
         // This logic should really be cleaned up
-        } else if is_struct && s != "point_conversion_form_t"
+        } else if is_struct
+            && s != "point_conversion_form_t"
             && s.chars().next().unwrap().is_lowercase()
         {
             format!("struct {}", s)
@@ -111,9 +110,13 @@ fn main() {
             (s == "GENERAL_NAME" && field == "d") // union
     });
     cfg.skip_signededness(|s| {
-        s.ends_with("_cb") || s.ends_with("_CB") || s.ends_with("_cb_fn")
-            || s.starts_with("CRYPTO_") || s == "PasswordCallback"
-            || s.ends_with("_cb_func") || s.ends_with("_cb_ex")
+        s.ends_with("_cb")
+            || s.ends_with("_CB")
+            || s.ends_with("_cb_fn")
+            || s.starts_with("CRYPTO_")
+            || s == "PasswordCallback"
+            || s.ends_with("_cb_func")
+            || s.ends_with("_cb_ex")
     });
     cfg.field_name(|_s, field| {
         if field == "type_" {
