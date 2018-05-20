@@ -2446,7 +2446,7 @@ extern "C" {
     pub fn SSL_get_ex_data(ssl: *const SSL, idx: c_int) -> *mut c_void;
     pub fn SSL_get_servername(ssl: *const SSL, name_type: c_int) -> *const c_char;
     pub fn SSL_get_current_cipher(ssl: *const SSL) -> *const SSL_CIPHER;
-    #[cfg(ossl102)]
+    #[cfg(any(ossl102, libressl261))]
     pub fn SSL_get0_param(ssl: *mut SSL) -> *mut X509_VERIFY_PARAM;
     pub fn SSL_get_verify_result(ssl: *const SSL) -> c_long;
     pub fn SSL_shutdown(ssl: *mut SSL) -> c_int;
@@ -2726,17 +2726,17 @@ extern "C" {
     pub fn X509_REQ_get_extensions(req: *mut X509_REQ) -> *mut stack_st_X509_EXTENSION;
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
 
-    #[cfg(ossl102)]
+    #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_free(param: *mut X509_VERIFY_PARAM);
-    #[cfg(ossl102)]
+    #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_set_hostflags(param: *mut X509_VERIFY_PARAM, flags: c_uint);
-    #[cfg(ossl102)]
+    #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_set1_host(
         param: *mut X509_VERIFY_PARAM,
         name: *const c_char,
         namelen: size_t,
     ) -> c_int;
-    #[cfg(ossl102)]
+    #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_set1_ip(
         param: *mut X509_VERIFY_PARAM,
         ip: *const c_uchar,
