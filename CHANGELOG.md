@@ -206,7 +206,7 @@
 Look at the [release tags] for information about older releases.
 
 [Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.8...master
-[v0.10.8]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.8...openssl-v0.10.8
+[v0.10.8]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.7...openssl-v0.10.8
 [v0.10.7]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.6...openssl-v0.10.7
 [v0.10.6]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.5...openssl-v0.10.6
 [v0.10.5]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.4...openssl-v0.10.5
