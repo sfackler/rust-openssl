@@ -99,17 +99,18 @@ impl fmt::Display for Error {
                 Some(_) => fmt.write_str("a nonblocking read call would have blocked"),
                 None => fmt.write_str("the operation should be retried"),
             },
+            ErrorCode::WANT_WRITE => match self.io_error() {
+                Some(_) => fmt.write_str("a nonblocking write call would have blocked"),
+                None => fmt.write_str("the operation should be retried"),
+            },
             ErrorCode::SYSCALL => match self.io_error() {
-                Some(err) => write!(fmt, "the inner stream returned an error: {}", err),
+                Some(err) => write!(fmt, "{}", err),
                 None => fmt.write_str("unexpected EOF"),
             },
-            ErrorCode::SSL => {
-                fmt.write_str("OpenSSL error")?;
-                if let Some(ref err) = self.ssl_error() {
-                    write!(fmt, ": {}", err)?
-                }
-                Ok(())
-            }
+            ErrorCode::SSL => match self.ssl_error() {
+                Some(e) => write!(fmt, "{}", e),
+                None => fmt.write_str("OpenSSL error"),
+            },
             ErrorCode(code) => write!(fmt, "unknown error code {}", code),
         }
     }
