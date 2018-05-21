@@ -1057,50 +1057,6 @@ impl SslContextBuilder {
         }
     }
 
-    /// Gets the minimum supported protocol version.
-    ///
-    /// A value of `None` indicates that all versions down the the lowest version supported by
-    /// OpenSSL are enabled.
-    ///
-    /// This corresponds to [`SSL_CTX_get_min_proto_version`].
-    ///
-    /// Requires OpenSSL 1.1.0g or LibreSSL 2.7.0 or newer.
-    ///
-    /// [`SSL_CTX_get_min_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
-    #[cfg(any(ossl110g, libressl270))]
-    pub fn min_proto_version(&mut self) -> Option<SslVersion> {
-        unsafe {
-            let r = ffi::SSL_CTX_get_min_proto_version(self.as_ptr());
-            if r == 0 {
-                None
-            } else {
-                Some(SslVersion(r))
-            }
-        }
-    }
-
-    /// Gets the maximum supported protocol version.
-    ///
-    /// A value of `None` indicates that all versions down the the highest version supported by
-    /// OpenSSL are enabled.
-    ///
-    /// This corresponds to [`SSL_CTX_get_max_proto_version`].
-    ///
-    /// Requires OpenSSL 1.1.0g or LibreSSL 2.7.0 or newer.
-    ///
-    /// [`SSL_CTX_get_max_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
-    #[cfg(any(ossl110g, libressl270))]
-    pub fn max_proto_version(&mut self) -> Option<SslVersion> {
-        unsafe {
-            let r = ffi::SSL_CTX_get_max_proto_version(self.as_ptr());
-            if r == 0 {
-                None
-            } else {
-                Some(SslVersion(r))
-            }
-        }
-    }
-
     /// Sets the protocols to sent to the server for Application Layer Protocol Negotiation (ALPN).
     ///
     /// The input must be in ALPN "wire format". It consists of a sequence of supported protocol
@@ -1496,6 +1452,14 @@ impl SslContextBuilder {
     }
 }
 
+impl Deref for SslContextBuilder {
+    type Target = SslContextRef;
+
+    fn deref(&self) -> &SslContextRef {
+        &self.0
+    }
+}
+
 foreign_type_and_impl_send_sync! {
     type CType = ffi::SSL_CTX;
     fn drop = ffi::SSL_CTX_free;
@@ -1641,6 +1605,50 @@ impl SslContextRef {
                 None
             } else {
                 Some(&*(data as *const T))
+            }
+        }
+    }
+
+    /// Gets the minimum supported protocol version.
+    ///
+    /// A value of `None` indicates that all versions down the the lowest version supported by
+    /// OpenSSL are enabled.
+    ///
+    /// This corresponds to [`SSL_CTX_get_min_proto_version`].
+    ///
+    /// Requires OpenSSL 1.1.0g or LibreSSL 2.7.0 or newer.
+    ///
+    /// [`SSL_CTX_get_min_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
+    #[cfg(any(ossl110g, libressl270))]
+    pub fn min_proto_version(&self) -> Option<SslVersion> {
+        unsafe {
+            let r = ffi::SSL_CTX_get_min_proto_version(self.as_ptr());
+            if r == 0 {
+                None
+            } else {
+                Some(SslVersion(r))
+            }
+        }
+    }
+
+    /// Gets the maximum supported protocol version.
+    ///
+    /// A value of `None` indicates that all versions down the the highest version supported by
+    /// OpenSSL are enabled.
+    ///
+    /// This corresponds to [`SSL_CTX_get_max_proto_version`].
+    ///
+    /// Requires OpenSSL 1.1.0g or LibreSSL 2.7.0 or newer.
+    ///
+    /// [`SSL_CTX_get_max_proto_version`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_min_proto_version.html
+    #[cfg(any(ossl110g, libressl270))]
+    pub fn max_proto_version(&self) -> Option<SslVersion> {
+        unsafe {
+            let r = ffi::SSL_CTX_get_max_proto_version(self.as_ptr());
+            if r == 0 {
+                None
+            } else {
+                Some(SslVersion(r))
             }
         }
     }
