@@ -11,8 +11,8 @@
 * The `X509_V_ERR_INVALID_CALL`, `X509_V_ERR_STORE_LOOKUP`, and
     `X509_V_ERR_PROXY_SUBJECT_NAME_VIOLATION` constants in `openssl-sys` are now only present when
     building against 1.1.0g and up rather than 1.1.0.
-* `SslContextBuilder::max_proto_version` and `SslContextBuilder::min_proto_version` have been moved
-    to `SslContextRef` and are only present when building against 1.1.0g and up rather than 1.1.0.
+* `SslContextBuilder::max_proto_version` and `SslContextBuilder::min_proto_version` are only present
+    when building against 1.1.0g and up rather than 1.1.0.
 
 ### Added
 
