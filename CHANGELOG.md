@@ -2,6 +2,28 @@
 
 ## [Unreleased]
 
+## [v0.10.8] - 2018-05-20
+
+### Fixed
+
+* `openssl-sys` will now detect Homebrew-installed OpenSSL when installed to a non-default
+    directory.
+* The `X509_V_ERR_INVALID_CALL`, `X509_V_ERR_STORE_LOOKUP`, and
+    `X509_V_ERR_PROXY_SUBJECT_NAME_VIOLATION` constants in `openssl-sys` are now only present when
+    building against 1.1.0g and up rather than 1.1.0.
+* `SslContextBuilder::max_proto_version` and `SslContextBuilder::min_proto_version` have been moved
+    to `SslContextRef` and are only present when building against 1.1.0g and up rather than 1.1.0.
+
+### Added
+
+* Added `CmsContentInfo::sign`.
+* Added `Clone` and `ToOwned` implementations to `Rsa` and `RsaRef` respectively.
+* The `min_proto_version` and `max_proto_version` methods are available when linking against
+    LibreSSL 2.6.1 and up in addition to OpenSSL.
+* `X509VerifyParam` is available when linking against LibreSSL 2.6.1 and up in addition to OpenSSL.
+* ALPN support is available when linking against LibreSSL 2.6.1 and up in addition to OpenSSL.
+* `Stack` and `StackRef` are now `Sync` and `Send`.
+
 ## [v0.10.7] - 2018-04-30
 
 ### Added
@@ -183,7 +205,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.7...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.8...master
+[v0.10.8]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.8...openssl-v0.10.8
 [v0.10.7]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.6...openssl-v0.10.7
 [v0.10.6]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.5...openssl-v0.10.6
 [v0.10.5]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.4...openssl-v0.10.5
