@@ -2839,4 +2839,7 @@ extern "C" {
 
     pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
     pub fn EVP_get_cipherbyname(name: *const c_char) -> *const EVP_CIPHER;
+
+    pub fn SSL_set_connect_state(s: *mut SSL);
+    pub fn SSL_set_accept_state(s: *mut SSL);
 }

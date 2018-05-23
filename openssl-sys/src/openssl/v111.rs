@@ -55,6 +55,9 @@ pub const SSL_EXT_TLS1_3_CERTIFICATE: c_uint = 0x1000;
 pub const SSL_EXT_TLS1_3_NEW_SESSION_TICKET: c_uint = 0x2000;
 pub const SSL_EXT_TLS1_3_CERTIFICATE_REQUEST: c_uint = 0x4000;
 
+pub const SSL_READ_EARLY_DATA_ERROR: c_int = 0;
+pub const SSL_READ_EARLY_DATA_SUCCESS: c_int = 1;
+pub const SSL_READ_EARLY_DATA_FINISH: c_int = 2;
 
 extern "C" {
     pub fn SSL_CTX_set_keylog_callback(ctx: *mut ::SSL_CTX, cb: SSL_CTX_keylog_cb_func);
@@ -82,4 +85,24 @@ extern "C" {
             cookie_len: size_t
         ) -> c_int>
     );
+
+    pub fn SSL_CTX_set_max_early_data(ctx: *mut ::SSL_CTX, max_early_data: u32) -> c_int;
+    pub fn SSL_CTX_get_max_early_data(ctx: *const ::SSL_CTX) -> u32;
+    pub fn SSL_set_max_early_data(ctx: *mut ::SSL, max_early_data: u32) -> c_int;
+    pub fn SSL_get_max_early_data(ctx: *const ::SSL) -> u32;
+    pub fn SSL_SESSION_set_max_early_data(ctx: *mut ::SSL_SESSION, max_early_data: u32) -> c_int;
+    pub fn SSL_SESSION_get_max_early_data(ctx: *const ::SSL_SESSION) -> u32;
+
+    pub fn SSL_export_keying_material_early(
+        s: *mut ::SSL,
+        out: *mut c_uchar,
+        olen: size_t,
+        label: *const c_char,
+        llen: size_t,
+        context: *const c_uchar,
+        contextlen: size_t,
+    ) -> c_int;
+
+    pub fn SSL_write_early_data(s: *mut ::SSL, buf: *const c_void, num: size_t, written: *mut size_t) -> c_int;
+    pub fn SSL_read_early_data(s: *mut ::SSL, buf: *mut c_void, num: size_t, readbytes: *mut size_t) -> c_int;
 }
