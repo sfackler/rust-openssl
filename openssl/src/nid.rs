@@ -3,6 +3,9 @@ use ffi;
 use libc::c_int;
 use std::ptr;
 
+use std::ffi::CStr;
+use std::str;
+
 /// A numerical identifier for an OpenSSL object.
 ///
 /// Objects in OpenSSL can have a short name, a long name, and
@@ -53,6 +56,38 @@ impl Nid {
                 Some(Nid(digest))
             } else {
                 None
+            }
+        }
+    }
+
+    /// Return the string representation of a `Nid` (long)
+    /// This corresponds to [`OBJ_nid2ln`]
+    ///
+    /// [`OBJ_nid2ln`]: https://www.openssl.org/docs/man1.1.0/crypto/OBJ_nid2ln.html
+    pub fn to_long_name(&self) -> Option<&'static str> {
+        unsafe {
+            let s = ffi::OBJ_nid2ln(self.0);
+            if s.is_null() {
+                None
+            }
+            else {
+                Some(str::from_utf8(CStr::from_ptr(s).to_bytes()).unwrap())
+            }
+        }
+    }
+
+    /// Return the string representation of a `Nid` (short)
+    /// This corresponds to [`OBJ_nid2sn`]
+    ///
+    /// [`OBJ_nid2sn`]: https://www.openssl.org/docs/man1.1.0/crypto/OBJ_nid2sn.html
+    pub fn to_short_name(&self) -> Option<&'static str> {
+        unsafe {
+            let s = ffi::OBJ_nid2sn(self.0);
+            if s.is_null() {
+                None
+            }
+            else {
+                Some(str::from_utf8(CStr::from_ptr(s).to_bytes()).unwrap())
             }
         }
     }
@@ -1017,5 +1052,39 @@ mod test {
             Nid::SHA256WITHRSAENCRYPTION.digest_algorithm(),
             Some(Nid::SHA256)
         );
+    }
+
+    #[test]
+    fn test_long_name_conversion() {
+        let common_name = Nid::COMMONNAME;
+        let organizational_unit_name = Nid::ORGANIZATIONALUNITNAME;
+        let aes256_cbc_hmac_sha1 = Nid::AES_256_CBC_HMAC_SHA1;
+        let id_cmc_lrapopwitness = Nid::ID_CMC_LRAPOPWITNESS;
+        let ms_ctl_sign = Nid::MS_CTL_SIGN;
+        let undefined_nid = Nid::from_raw(118);
+
+        assert_eq!(common_name.to_long_name(), Some("commonName"));
+        assert_eq!(organizational_unit_name.to_long_name(), Some("organizationalUnitName"));
+        assert_eq!(aes256_cbc_hmac_sha1.to_long_name(), Some("aes-256-cbc-hmac-sha1"));
+        assert_eq!(id_cmc_lrapopwitness.to_long_name(), Some("id-cmc-lraPOPWitness"));
+        assert_eq!(ms_ctl_sign.to_long_name(), Some("Microsoft Trust List Signing"));
+        assert_eq!(undefined_nid.to_long_name(), None);
+    }
+
+    #[test]
+    fn test_short_name_conversion() {
+        let common_name = Nid::COMMONNAME;
+        let organizational_unit_name = Nid::ORGANIZATIONALUNITNAME;
+        let aes256_cbc_hmac_sha1 = Nid::AES_256_CBC_HMAC_SHA1;
+        let id_cmc_lrapopwitness = Nid::ID_CMC_LRAPOPWITNESS;
+        let ms_ctl_sign = Nid::MS_CTL_SIGN;
+        let undefined_nid = Nid::from_raw(118);
+
+        assert_eq!(common_name.to_short_name(), Some("CN"));
+        assert_eq!(organizational_unit_name.to_short_name(), Some("OU"));
+        assert_eq!(aes256_cbc_hmac_sha1.to_short_name(), Some("AES-256-CBC-HMAC-SHA1"));
+        assert_eq!(id_cmc_lrapopwitness.to_short_name(), Some("id-cmc-lraPOPWitness"));
+        assert_eq!(ms_ctl_sign.to_short_name(), Some("msCTLSign"));
+        assert_eq!(undefined_nid.to_long_name(), None);
     }
 }
