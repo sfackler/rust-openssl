@@ -2366,14 +2366,38 @@ impl SslRef {
     ///
     /// This corresponds to [`SSL_get_servername`].
     ///
+    /// # Note
+    ///
+    /// While the SNI specification requires that servernames be valid domain names (and therefore
+    /// ASCII), OpenSSL does not enforce this restriction. If the servername provided by the client
+    /// is not valid UTF-8, this function will return `None`. The `servername_raw` method returns
+    /// the raw bytes and does not have this restriction.
+    ///
     /// [`SSL_get_servername`]: https://www.openssl.org/docs/manmaster/man3/SSL_get_servername.html
+    // FIXME maybe rethink in 0.11?
     pub fn servername(&self, type_: NameType) -> Option<&str> {
+        self.servername_raw(type_)
+            .and_then(|b| str::from_utf8(b).ok())
+    }
+
+    /// Returns the servername sent by the client via Server Name Indication (SNI).
+    ///
+    /// It is only useful on the server side.
+    ///
+    /// This corresponds to [`SSL_get_servername`].
+    ///
+    /// # Note
+    ///
+    /// Unlike `servername`, this method does not require the name be valid UTF-8.
+    ///
+    /// [`SSL_get_servername`]: https://www.openssl.org/docs/manmaster/man3/SSL_get_servername.html
+    pub fn servername_raw(&self, type_: NameType) -> Option<&[u8]> {
         unsafe {
             let name = ffi::SSL_get_servername(self.as_ptr(), type_.0);
             if name == ptr::null() {
                 None
             } else {
-                Some(str::from_utf8(CStr::from_ptr(name as *const _).to_bytes()).unwrap())
+                Some(CStr::from_ptr(name as *const _).to_bytes())
             }
         }
     }
