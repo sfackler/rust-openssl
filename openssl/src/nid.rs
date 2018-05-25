@@ -1,6 +1,7 @@
 //! A collection of numerical identifiers for OpenSSL objects.
 use ffi;
 use libc::c_int;
+use std::ptr;
 
 /// A numerical identifier for an OpenSSL object.
 ///
@@ -40,6 +41,20 @@ impl Nid {
     /// Return the integer representation of a `Nid`.
     pub fn as_raw(&self) -> c_int {
         self.0
+    }
+
+    /// Returns the `Nid` of the digest algorithm associated with a signature ID.
+    ///
+    /// This corresponds to `OBJ_find_sigid_algs`.
+    pub fn digest_algorithm(&self) -> Option<Nid> {
+        unsafe {
+            let mut digest = 0;
+            if ffi::OBJ_find_sigid_algs(self.0, &mut digest, ptr::null_mut()) == 1 {
+                Some(Nid(digest))
+            } else {
+                None
+            }
+        }
     }
 
     pub const UNDEF: Nid = Nid(ffi::NID_undef);
@@ -990,4 +1005,17 @@ impl Nid {
     pub const AES_128_CBC_HMAC_SHA1: Nid = Nid(ffi::NID_aes_128_cbc_hmac_sha1);
     pub const AES_192_CBC_HMAC_SHA1: Nid = Nid(ffi::NID_aes_192_cbc_hmac_sha1);
     pub const AES_256_CBC_HMAC_SHA1: Nid = Nid(ffi::NID_aes_256_cbc_hmac_sha1);
+}
+
+#[cfg(test)]
+mod test {
+    use super::Nid;
+
+    #[test]
+    fn signature_digest() {
+        assert_eq!(
+            Nid::SHA256WITHRSAENCRYPTION.digest_algorithm(),
+            Some(Nid::SHA256)
+        );
+    }
 }

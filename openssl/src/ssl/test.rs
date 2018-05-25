@@ -295,8 +295,8 @@ run_test!(verify_callback_data, |method, stream| {
         match cert {
             None => false,
             Some(cert) => {
-                let fingerprint = cert.fingerprint(MessageDigest::sha1()).unwrap();
-                fingerprint == node_id
+                let fingerprint = cert.digest(MessageDigest::sha1()).unwrap();
+                node_id == &*fingerprint
             }
         }
     });
@@ -323,8 +323,8 @@ run_test!(ssl_verify_callback, |method, stream| {
         match x509.current_cert() {
             None => false,
             Some(cert) => {
-                let fingerprint = cert.fingerprint(MessageDigest::sha1()).unwrap();
-                fingerprint == node_id
+                let fingerprint = cert.digest(MessageDigest::sha1()).unwrap();
+                node_id == &*fingerprint
             }
         }
     });
@@ -424,10 +424,10 @@ run_test!(get_peer_certificate, |method, stream| {
     let ctx = SslContext::builder(method).unwrap();
     let stream = Ssl::new(&ctx.build()).unwrap().connect(stream).unwrap();
     let cert = stream.ssl().peer_certificate().unwrap();
-    let fingerprint = cert.fingerprint(MessageDigest::sha1()).unwrap();
+    let fingerprint = cert.digest(MessageDigest::sha1()).unwrap();
     let node_hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
     let node_id = Vec::from_hex(node_hash_str).unwrap();
-    assert_eq!(node_id, fingerprint)
+    assert_eq!(node_id, &*fingerprint)
 });
 
 #[test]
