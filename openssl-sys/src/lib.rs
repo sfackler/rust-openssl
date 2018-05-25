@@ -1453,6 +1453,10 @@ pub unsafe fn BIO_set_retry_write(b: *mut BIO) {
     BIO_set_flags(b, BIO_FLAGS_WRITE | BIO_FLAGS_SHOULD_RETRY)
 }
 
+pub unsafe fn EVP_get_digestbynid(type_: c_int) -> *const EVP_MD {
+    EVP_get_digestbyname(OBJ_nid2sn(type_))
+}
+
 // EVP_PKEY_CTX_ctrl macros
 pub unsafe fn EVP_PKEY_CTX_set_rsa_padding(ctx: *mut EVP_PKEY_CTX, pad: c_int) -> c_int {
     EVP_PKEY_CTX_ctrl(
@@ -2103,6 +2107,8 @@ extern "C" {
         no_name: c_int,
     ) -> c_int;
     pub fn OBJ_nid2sn(nid: c_int) -> *const c_char;
+    pub fn OBJ_find_sigid_algs(signid: c_int, pdig_nid: *mut c_int, ppkey_nid: *mut c_int)
+        -> c_int;
 
     pub fn OCSP_BASICRESP_new() -> *mut OCSP_BASICRESP;
     pub fn OCSP_BASICRESP_free(r: *mut OCSP_BASICRESP);
@@ -2840,6 +2846,7 @@ extern "C" {
     );
 
     pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
+    pub fn EVP_get_digestbyname(name: *const c_char) -> *const EVP_MD;
     pub fn EVP_get_cipherbyname(name: *const c_char) -> *const EVP_CIPHER;
 
     pub fn SSL_set_connect_state(s: *mut SSL);

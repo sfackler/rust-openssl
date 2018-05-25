@@ -4,6 +4,10 @@ use std::io;
 use std::io::prelude::*;
 use std::ops::{Deref, DerefMut};
 
+use error::ErrorStack;
+use nid::Nid;
+use {cvt, cvt_p};
+
 cfg_if! {
     if #[cfg(ossl110)] {
         use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
@@ -12,15 +16,28 @@ cfg_if! {
     }
 }
 
-use error::ErrorStack;
-use {cvt, cvt_p};
-
 #[derive(Copy, Clone)]
 pub struct MessageDigest(*const ffi::EVP_MD);
 
 impl MessageDigest {
     pub unsafe fn from_ptr(x: *const ffi::EVP_MD) -> Self {
         MessageDigest(x)
+    }
+
+    /// Returns the `MessageDigest` corresponding to an `Nid`.
+    ///
+    /// This corresponds to [`EVP_get_digestbynid`].
+    ///
+    /// [`EVP_get_digestbynid`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestInit.html
+    pub fn from_nid(type_: Nid) -> Option<MessageDigest> {
+        unsafe {
+            let ptr = ffi::EVP_get_digestbynid(type_.as_raw());
+            if ptr.is_null() {
+                None
+            } else {
+                Some(MessageDigest(ptr))
+            }
+        }
     }
 
     pub fn md5() -> MessageDigest {
@@ -404,5 +421,13 @@ mod tests {
         for test in tests.iter() {
             hash_test(MessageDigest::ripemd160(), test);
         }
+    }
+
+    #[test]
+    fn from_nid() {
+        assert_eq!(
+            MessageDigest::from_nid(Nid::SHA256).unwrap().as_ptr(),
+            MessageDigest::sha256().as_ptr()
+        );
     }
 }
