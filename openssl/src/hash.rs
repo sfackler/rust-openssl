@@ -251,8 +251,8 @@ impl Drop for Hasher {
 /// store the digest data.
 #[derive(Copy)]
 pub struct DigestBytes {
-    buf: [u8; ffi::EVP_MAX_MD_SIZE as usize],
-    len: usize,
+    pub(crate) buf: [u8; ffi::EVP_MAX_MD_SIZE as usize],
+    pub(crate) len: usize,
 }
 
 impl Clone for DigestBytes {

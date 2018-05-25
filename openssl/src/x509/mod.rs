@@ -25,7 +25,7 @@ use bio::MemBioSlice;
 use conf::ConfRef;
 use error::ErrorStack;
 use ex_data::Index;
-use hash::MessageDigest;
+use hash::{DigestBytes, MessageDigest};
 use nid::Nid;
 use pkey::{HasPrivate, HasPublic, PKey, PKeyRef, Public};
 use ssl::SslRef;
@@ -447,21 +447,33 @@ impl X509Ref {
         }
     }
 
-    /// Returns certificate fingerprint calculated using provided hash
-    pub fn fingerprint(&self, hash_type: MessageDigest) -> Result<Vec<u8>, ErrorStack> {
+    /// Returns a digest of the DER representation of the certificate.
+    ///
+    /// This corresponds to [`X509_digest`].
+    ///
+    /// [`X509_digest`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_digest.html
+    pub fn digest(&self, hash_type: MessageDigest) -> Result<DigestBytes, ErrorStack> {
         unsafe {
-            let evp = hash_type.as_ptr();
+            let mut digest = DigestBytes {
+                buf: [0; ffi::EVP_MAX_MD_SIZE as usize],
+                len: ffi::EVP_MAX_MD_SIZE as usize,
+            };
             let mut len = ffi::EVP_MAX_MD_SIZE;
-            let mut buf = vec![0u8; len as usize];
             cvt(ffi::X509_digest(
                 self.as_ptr(),
-                evp,
-                buf.as_mut_ptr() as *mut _,
+                hash_type.as_ptr(),
+                digest.buf.as_mut_ptr() as *mut _,
                 &mut len,
             ))?;
-            buf.truncate(len as usize);
-            Ok(buf)
+            digest.len = len as usize;
+
+            Ok(digest)
         }
+    }
+
+    #[deprecated(since = "0.10.9", note = "renamed to digest")]
+    pub fn fingerprint(&self, hash_type: MessageDigest) -> Result<Vec<u8>, ErrorStack> {
+        self.digest(hash_type).map(|b| b.to_vec())
     }
 
     /// Returns the certificate's Not After validity period.
