@@ -2603,6 +2603,8 @@ extern "C" {
     pub fn SSL_is_server(s: *mut SSL) -> c_int;
     #[cfg(ossl110f)]
     pub fn SSL_is_server(s: *const SSL) -> c_int;
+    pub fn SSL_get_finished(s: *const SSL, buf: *mut c_void, count: size_t) -> size_t;
+    pub fn SSL_get_peer_finished(s: *const SSL, buf: *mut c_void, count: size_t) -> size_t;
 
     pub fn SSL_SESSION_free(s: *mut SSL_SESSION);
     pub fn SSL_SESSION_get_id(s: *const SSL_SESSION, len: *mut c_uint) -> *const c_uchar;
