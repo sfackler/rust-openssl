@@ -2695,6 +2695,29 @@ impl SslRef {
     pub fn max_early_data(&self) -> u32 {
         unsafe { ffi::SSL_get_max_early_data(self.as_ptr()) }
     }
+
+    /// Copies the contents of the last Finished message sent to the peer into the provided buffer.
+    ///
+    /// The total size of the message is returned, so this can be used to determine the size of the
+    /// buffer required.
+    ///
+    /// This corresponds to `SSL_get_finished`.
+    pub fn finished(&self, buf: &mut [u8]) -> usize {
+        unsafe { ffi::SSL_get_finished(self.as_ptr(), buf.as_mut_ptr() as *mut c_void, buf.len()) }
+    }
+
+    /// Copies the contents of the last Finished message received from the peer into the provided
+    /// buffer.
+    ///
+    /// The total size of the message is returned, so this can be used to determine the size of the
+    /// buffer required.
+    ///
+    /// This corresponds to `SSL_get_finished`.
+    pub fn peer_finished(&self, buf: &mut [u8]) -> usize {
+        unsafe {
+            ffi::SSL_get_peer_finished(self.as_ptr(), buf.as_mut_ptr() as *mut c_void, buf.len())
+        }
+    }
 }
 
 /// An SSL stream midway through the handshake process.
@@ -3080,10 +3103,13 @@ where
         } else {
             let error = stream.make_error(ret);
             match error.code() {
-                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => {
-                    Err(HandshakeError::WouldBlock(MidHandshakeSslStream { stream, error }))
-                }
-                _ => Err(HandshakeError::Failure(MidHandshakeSslStream { stream, error })),
+                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => Err(HandshakeError::WouldBlock(
+                    MidHandshakeSslStream { stream, error },
+                )),
+                _ => Err(HandshakeError::Failure(MidHandshakeSslStream {
+                    stream,
+                    error,
+                })),
             }
         }
     }
@@ -3104,7 +3130,14 @@ where
     #[cfg(ossl111)]
     pub fn read_early_data(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
         let mut read = 0;
-        let ret = unsafe { ffi::SSL_read_early_data(self.inner.ssl.as_ptr(), buf.as_ptr() as *mut c_void, buf.len(), &mut read) };
+        let ret = unsafe {
+            ffi::SSL_read_early_data(
+                self.inner.ssl.as_ptr(),
+                buf.as_ptr() as *mut c_void,
+                buf.len(),
+                &mut read,
+            )
+        };
         match ret {
             ffi::SSL_READ_EARLY_DATA_ERROR => Err(self.inner.make_error(ret)),
             ffi::SSL_READ_EARLY_DATA_SUCCESS => Ok(read),
@@ -3126,7 +3159,14 @@ where
     #[cfg(ossl111)]
     pub fn write_early_data(&mut self, buf: &[u8]) -> Result<usize, Error> {
         let mut written = 0;
-        let ret = unsafe { ffi::SSL_write_early_data(self.inner.ssl.as_ptr(), buf.as_ptr() as *const c_void, buf.len(), &mut written) };
+        let ret = unsafe {
+            ffi::SSL_write_early_data(
+                self.inner.ssl.as_ptr(),
+                buf.as_ptr() as *const c_void,
+                buf.len(),
+                &mut written,
+            )
+        };
         if ret > 0 {
             Ok(written as usize)
         } else {
