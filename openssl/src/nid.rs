@@ -1,10 +1,13 @@
 //! A collection of numerical identifiers for OpenSSL objects.
 use ffi;
-use libc::c_int;
+use libc::{c_int,c_char};
 use std::ptr;
 
 use std::ffi::CStr;
 use std::str;
+
+use error::ErrorStack;
+use cvt_p;
 
 /// A numerical identifier for an OpenSSL object.
 ///
@@ -64,15 +67,10 @@ impl Nid {
     /// This corresponds to [`OBJ_nid2ln`]
     ///
     /// [`OBJ_nid2ln`]: https://www.openssl.org/docs/man1.1.0/crypto/OBJ_nid2ln.html
-    pub fn to_long_name(&self) -> Option<&'static str> {
+    pub fn long_name(&self) -> Result<&'static str, ErrorStack> {
         unsafe {
-            let s = ffi::OBJ_nid2ln(self.0);
-            if s.is_null() {
-                None
-            }
-            else {
-                Some(str::from_utf8(CStr::from_ptr(s).to_bytes()).unwrap())
-            }
+            cvt_p(ffi::OBJ_nid2ln(self.0) as *mut c_char)
+                .map(|nameptr| str::from_utf8(CStr::from_ptr(nameptr).to_bytes()).unwrap())
         }
     }
 
@@ -80,15 +78,10 @@ impl Nid {
     /// This corresponds to [`OBJ_nid2sn`]
     ///
     /// [`OBJ_nid2sn`]: https://www.openssl.org/docs/man1.1.0/crypto/OBJ_nid2sn.html
-    pub fn to_short_name(&self) -> Option<&'static str> {
+    pub fn short_name(&self) -> Result<&'static str, ErrorStack> {
         unsafe {
-            let s = ffi::OBJ_nid2sn(self.0);
-            if s.is_null() {
-                None
-            }
-            else {
-                Some(str::from_utf8(CStr::from_ptr(s).to_bytes()).unwrap())
-            }
+            cvt_p(ffi::OBJ_nid2sn(self.0) as *mut c_char)
+                .map(|nameptr| str::from_utf8(CStr::from_ptr(nameptr).to_bytes()).unwrap())
         }
     }
 
@@ -1063,12 +1056,12 @@ mod test {
         let ms_ctl_sign = Nid::MS_CTL_SIGN;
         let undefined_nid = Nid::from_raw(118);
 
-        assert_eq!(common_name.to_long_name(), Some("commonName"));
-        assert_eq!(organizational_unit_name.to_long_name(), Some("organizationalUnitName"));
-        assert_eq!(aes256_cbc_hmac_sha1.to_long_name(), Some("aes-256-cbc-hmac-sha1"));
-        assert_eq!(id_cmc_lrapopwitness.to_long_name(), Some("id-cmc-lraPOPWitness"));
-        assert_eq!(ms_ctl_sign.to_long_name(), Some("Microsoft Trust List Signing"));
-        assert_eq!(undefined_nid.to_long_name(), None);
+        assert_eq!(common_name.long_name().unwrap(), "commonName");
+        assert_eq!(organizational_unit_name.long_name().unwrap(), "organizationalUnitName");
+        assert_eq!(aes256_cbc_hmac_sha1.long_name().unwrap(), "aes-256-cbc-hmac-sha1");
+        assert_eq!(id_cmc_lrapopwitness.long_name().unwrap(), "id-cmc-lraPOPWitness");
+        assert_eq!(ms_ctl_sign.long_name().unwrap(), "Microsoft Trust List Signing");
+        assert!(undefined_nid.long_name().is_err(), "undefined_nid should not return a valid value");
     }
 
     #[test]
@@ -1080,11 +1073,11 @@ mod test {
         let ms_ctl_sign = Nid::MS_CTL_SIGN;
         let undefined_nid = Nid::from_raw(118);
 
-        assert_eq!(common_name.to_short_name(), Some("CN"));
-        assert_eq!(organizational_unit_name.to_short_name(), Some("OU"));
-        assert_eq!(aes256_cbc_hmac_sha1.to_short_name(), Some("AES-256-CBC-HMAC-SHA1"));
-        assert_eq!(id_cmc_lrapopwitness.to_short_name(), Some("id-cmc-lraPOPWitness"));
-        assert_eq!(ms_ctl_sign.to_short_name(), Some("msCTLSign"));
-        assert_eq!(undefined_nid.to_long_name(), None);
+        assert_eq!(common_name.short_name().unwrap(), "CN");
+        assert_eq!(organizational_unit_name.short_name().unwrap(), "OU");
+        assert_eq!(aes256_cbc_hmac_sha1.short_name().unwrap(), "AES-256-CBC-HMAC-SHA1");
+        assert_eq!(id_cmc_lrapopwitness.short_name().unwrap(), "id-cmc-lraPOPWitness");
+        assert_eq!(ms_ctl_sign.short_name().unwrap(), "msCTLSign");
+        assert!(undefined_nid.short_name().is_err(), "undefined_nid should not return a valid value");
     }
 }
