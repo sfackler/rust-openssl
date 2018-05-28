@@ -87,12 +87,15 @@ fn test_nameref_iterator() {
     let mut all_entries = subject.all_entries();
 
     let email = all_entries.next().unwrap();
+    assert_eq!(email.object().nid().as_raw(), Nid::PKCS9_EMAILADDRESS.as_raw());
     assert_eq!(email.data().as_slice(), b"test@example.com");
 
     let cn = all_entries.next().unwrap();
+    assert_eq!(cn.object().nid().as_raw(), Nid::COMMONNAME.as_raw());
     assert_eq!(cn.data().as_slice(), b"example.com");
 
     let friendly = all_entries.next().unwrap();
+    assert_eq!(friendly.object().nid().as_raw(), Nid::FRIENDLYNAME.as_raw());
     assert_eq!(&**friendly.data().as_utf8().unwrap(), "Example");
 
     if let Some(_) = all_entries.next() {

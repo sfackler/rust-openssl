@@ -895,6 +895,19 @@ impl X509NameEntryRef {
             Asn1StringRef::from_ptr(data)
         }
     }
+
+    /// Returns the `Asn1Object` value of an `X509NameEntry`.
+    /// This is useful for finding out about the actual `Nid` when iterating over all `X509NameEntries`.
+    ///
+    /// This corresponds to [`X509_NAME_ENTRY_get_object`].
+    ///
+    /// [`X509_NAME_ENTRY_get_object`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_ENTRY_get_object.html
+    pub fn object(&self) -> &Asn1ObjectRef {
+        unsafe {
+            let object = ffi::X509_NAME_ENTRY_get_object(self.as_ptr());
+            Asn1ObjectRef::from_ptr(object)
+        }
+    }
 }
 
 /// A builder used to construct an `X509Req`.

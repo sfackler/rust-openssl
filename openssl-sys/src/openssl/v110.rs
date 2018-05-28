@@ -201,6 +201,7 @@ extern "C" {
     pub fn X509_NAME_entry_count(n: *const ::X509_NAME) -> c_int;
     pub fn X509_NAME_get_entry(n: *const ::X509_NAME, loc: c_int) -> *mut ::X509_NAME_ENTRY;
     pub fn X509_NAME_ENTRY_get_data(ne: *const ::X509_NAME_ENTRY) -> *mut ::ASN1_STRING;
+    pub fn X509_NAME_ENTRY_get_object(ne: *const ::X509_NAME_ENTRY) -> *mut ::ASN1_OBJECT;
     pub fn X509V3_EXT_nconf_nid(
         conf: *mut ::CONF,
         ctx: *mut ::X509V3_CTX,
