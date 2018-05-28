@@ -820,8 +820,17 @@ impl X509NameRef {
     pub fn entries_by_nid<'a>(&'a self, nid: Nid) -> X509NameEntries<'a> {
         X509NameEntries {
             name: self,
-            nid: nid,
+            nid: Some(nid),
             loc: -1,
+        }
+    }
+
+    /// Returns an iterator over all `X509NameEntry` values
+    pub fn all_entries<'a>(&'a self) -> X509NameEntries<'a> {
+        X509NameEntries {
+            name: self,
+            nid: None,
+            loc: -1
         }
     }
 }
@@ -829,7 +838,7 @@ impl X509NameRef {
 /// A type to destructure and examine an `X509Name`.
 pub struct X509NameEntries<'a> {
     name: &'a X509NameRef,
-    nid: Nid,
+    nid: Option<Nid>,
     loc: c_int,
 }
 
@@ -838,10 +847,21 @@ impl<'a> Iterator for X509NameEntries<'a> {
 
     fn next(&mut self) -> Option<&'a X509NameEntryRef> {
         unsafe {
-            self.loc =
-                ffi::X509_NAME_get_index_by_NID(self.name.as_ptr(), self.nid.as_raw(), self.loc);
+            let entry_count = ffi::X509_NAME_entry_count(self.name.as_ptr());
 
-            if self.loc == -1 {
+            match self.nid {
+                Some(nid) => {
+                    // There is a `Nid` specified to search for
+                    self.loc =
+                        ffi::X509_NAME_get_index_by_NID(self.name.as_ptr(), nid.as_raw(), self.loc);
+                }
+                None => {
+                    // Iterate over all `Nid`s
+                    self.loc += 1;
+                }
+            }
+
+            if self.loc == -1 || self.loc >= entry_count {
                 return None;
             }
 

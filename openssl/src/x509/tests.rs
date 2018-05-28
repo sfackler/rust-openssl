@@ -80,6 +80,27 @@ fn test_nid_values() {
 }
 
 #[test]
+fn test_nameref_iterator() {
+    let cert = include_bytes!("../../test/nid_test_cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let subject = cert.subject_name();
+    let mut all_entries = subject.all_entries();
+
+    let email = all_entries.next().unwrap();
+    assert_eq!(email.data().as_slice(), b"test@example.com");
+
+    let cn = all_entries.next().unwrap();
+    assert_eq!(cn.data().as_slice(), b"example.com");
+
+    let friendly = all_entries.next().unwrap();
+    assert_eq!(&**friendly.data().as_utf8().unwrap(), "Example");
+
+    if let Some(_) = all_entries.next() {
+        assert!(false);
+    }
+}
+
+#[test]
 fn test_nid_uid_value() {
     let cert = include_bytes!("../../test/nid_uid_test_cert.pem");
     let cert = X509::from_pem(cert).unwrap();

@@ -198,6 +198,7 @@ extern "C" {
         ppval: *mut *const c_void,
         alg: *const ::X509_ALGOR,
     );
+    pub fn X509_NAME_entry_count(n: *const ::X509_NAME) -> c_int;
     pub fn X509_NAME_get_entry(n: *const ::X509_NAME, loc: c_int) -> *mut ::X509_NAME_ENTRY;
     pub fn X509_NAME_ENTRY_get_data(ne: *const ::X509_NAME_ENTRY) -> *mut ::ASN1_STRING;
     pub fn X509V3_EXT_nconf_nid(

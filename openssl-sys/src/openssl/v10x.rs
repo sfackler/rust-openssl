@@ -959,6 +959,7 @@ extern "C" {
         ppval: *mut *mut c_void,
         alg: *mut ::X509_ALGOR,
     );
+    pub fn X509_NAME_entry_count(n: *mut ::X509_NAME) -> c_int;
     pub fn X509_NAME_get_entry(n: *mut ::X509_NAME, loc: c_int) -> *mut ::X509_NAME_ENTRY;
     pub fn X509_NAME_ENTRY_get_data(ne: *mut ::X509_NAME_ENTRY) -> *mut ::ASN1_STRING;
     pub fn X509_STORE_CTX_get_chain(ctx: *mut ::X509_STORE_CTX) -> *mut stack_st_X509;
