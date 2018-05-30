@@ -1822,7 +1822,7 @@ impl SslCipherRef {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::SSL_SESSION;
     fn drop = ffi::SSL_SESSION_free;
 
@@ -1836,9 +1836,6 @@ foreign_type! {
     /// [`SslSession`]: struct.SslSession.html
     pub struct SslSessionRef;
 }
-
-unsafe impl Sync for SslSession {}
-unsafe impl Send for SslSession {}
 
 impl Clone for SslSession {
     fn clone(&self) -> SslSession {
@@ -1927,7 +1924,7 @@ impl SslSessionRef {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::SSL;
     fn drop = ffi::SSL_free;
 
@@ -1944,9 +1941,6 @@ foreign_type! {
     /// [`Ssl`]: struct.Ssl.html
     pub struct SslRef;
 }
-
-unsafe impl Sync for Ssl {}
-unsafe impl Send for Ssl {}
 
 impl fmt::Debug for Ssl {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -2246,6 +2240,30 @@ impl SslRef {
     pub fn peer_cert_chain(&self) -> Option<&StackRef<X509>> {
         unsafe {
             let ptr = ffi::SSL_get_peer_cert_chain(self.as_ptr());
+            if ptr.is_null() {
+                None
+            } else {
+                Some(StackRef::from_ptr(ptr))
+            }
+        }
+    }
+
+    /// Returns the verified certificate chani of the peer, including the leaf certificate.
+    ///
+    /// If verification was not successful (i.e. [`verify_result`] does not return
+    /// [`X509VerifyResult::OK`]), this chain may be incomplete or invalid.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    ///
+    /// This corresponds to [`SSL_get0_verified_chain`].
+    ///
+    /// [`verify_result`]: #method.verify_result
+    /// [`X509VerifyResult::OK`]: ../x509/struct.X509VerifyResult.html#associatedconstant.OK
+    /// [`SSL_get0_verified_chain`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get0_verified_chain.html
+    #[cfg(ossl110)]
+    pub fn verified_chain(&self) -> Option<&StackRef<X509>> {
+        unsafe {
+            let ptr = ffi::SSL_get0_verified_chain(self.as_ptr());
             if ptr.is_null() {
                 None
             } else {

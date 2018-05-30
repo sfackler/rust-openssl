@@ -44,11 +44,11 @@ use ffi;
 use foreign_types::ForeignTypeRef;
 use std::mem;
 
-use {cvt, cvt_p};
 use error::ErrorStack;
 use x509::X509;
+use {cvt, cvt_p};
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE;
     fn drop = ffi::X509_STORE_free;
 
@@ -82,9 +82,7 @@ impl X509StoreBuilderRef {
     /// Adds a certificate to the certificate store.
     // FIXME should take an &X509Ref
     pub fn add_cert(&mut self, cert: X509) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::X509_STORE_add_cert(self.as_ptr(), cert.as_ptr())).map(|_| ())
-        }
+        unsafe { cvt(ffi::X509_STORE_add_cert(self.as_ptr(), cert.as_ptr())).map(|_| ()) }
     }
 
     /// Load certificates from their default locations.
@@ -97,7 +95,7 @@ impl X509StoreBuilderRef {
     }
 }
 
-foreign_type! {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE;
     fn drop = ffi::X509_STORE_free;
 
