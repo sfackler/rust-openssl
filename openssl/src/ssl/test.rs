@@ -1540,6 +1540,7 @@ fn stateless() {
 #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
 #[test]
 fn psk_ciphers() {
+    const CIPHER: &'static str = "PSK-AES128-CBC-SHA";
     const PSK: &[u8] = b"thisisaverysecurekey";
     const CLIENT_IDENT: &[u8] = b"thisisaclient";
 
@@ -1549,7 +1550,7 @@ fn psk_ciphers() {
     thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        ctx.set_cipher_list("ECDHE-PSK-CHACHA20-POLY1305").unwrap();
+        ctx.set_cipher_list(CIPHER).unwrap();
         ctx.set_psk_server_callback(move |_, identity, psk| {
             assert!(identity.unwrap_or(&[]) == CLIENT_IDENT);
             psk[..PSK.len()].copy_from_slice(&PSK);
@@ -1561,7 +1562,7 @@ fn psk_ciphers() {
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-    ctx.set_cipher_list("ECDHE-PSK-CHACHA20-POLY1305").unwrap();
+    ctx.set_cipher_list(CIPHER).unwrap();
     ctx.set_psk_client_callback(move |_, _, identity, psk| {
         identity[..CLIENT_IDENT.len()].copy_from_slice(&CLIENT_IDENT);
         identity[CLIENT_IDENT.len()] = 0;
