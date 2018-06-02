@@ -4,9 +4,9 @@ use foreign_types::{ForeignType, ForeignTypeRef};
 use std::mem;
 use std::ptr;
 
-use {cvt, cvt_p};
 use bn::BigNum;
 use pkey::{HasParams, Params};
+use {cvt, cvt_p};
 
 generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::DH;
@@ -48,12 +48,7 @@ impl Dh<Params> {
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<Dh<Params>, ErrorStack> {
         unsafe {
             let dh = Dh::from_ptr(cvt_p(ffi::DH_new())?);
-            cvt(compat::DH_set0_pqg(
-                dh.0,
-                p.as_ptr(),
-                q.as_ptr(),
-                g.as_ptr(),
-            ))?;
+            cvt(DH_set0_pqg(dh.0, p.as_ptr(), q.as_ptr(), g.as_ptr()))?;
             mem::forget((p, g, q));
             Ok(dh)
         }
@@ -111,34 +106,29 @@ impl Dh<Params> {
     }
 }
 
-#[cfg(ossl110)]
-mod compat {
-    pub use ffi::DH_set0_pqg;
-}
-
-#[cfg(ossl10x)]
-#[allow(bad_style)]
-mod compat {
-    use ffi;
-    use libc::c_int;
-
-    pub unsafe fn DH_set0_pqg(
-        dh: *mut ffi::DH,
-        p: *mut ffi::BIGNUM,
-        q: *mut ffi::BIGNUM,
-        g: *mut ffi::BIGNUM,
-    ) -> c_int {
-        (*dh).p = p;
-        (*dh).q = q;
-        (*dh).g = g;
-        1
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::DH_set0_pqg;
+    } else {
+        #[allow(bad_style)]
+        unsafe fn DH_set0_pqg(
+            dh: *mut ffi::DH,
+            p: *mut ffi::BIGNUM,
+            q: *mut ffi::BIGNUM,
+            g: *mut ffi::BIGNUM,
+        ) -> ::libc::c_int {
+            (*dh).p = p;
+            (*dh).q = q;
+            (*dh).g = g;
+            1
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use dh::Dh;
     use bn::BigNum;
+    use dh::Dh;
     use ssl::{SslContext, SslMethod};
 
     #[test]

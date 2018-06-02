@@ -1,6 +1,6 @@
 [package]
 name = "openssl-sys"
-version = "0.9.30"
+version = "0.9.32"
 authors = ["Alex Crichton <alex@alexcrichton.com>",
            "Steven Fackler <sfackler@gmail.com>"]
 license = "MIT"
@@ -9,6 +9,7 @@ repository = "https://github.com/sfackler/rust-openssl"
 readme = "README.md"
 categories = ["cryptography", "external-ffi-bindings"]
 links = "openssl"
+build = "build/main.rs"
 
 [dependencies]
 libc = "0.2"

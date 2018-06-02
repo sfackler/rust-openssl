@@ -7,10 +7,12 @@ use nid::Nid;
 use pkey::{PKey, Private};
 use rsa::Rsa;
 use stack::Stack;
-use x509::{X509, X509Name, X509Req, X509StoreContext, X509VerifyResult};
-use x509::extension::{AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, KeyUsage,
-                      SubjectAlternativeName, SubjectKeyIdentifier};
+use x509::extension::{
+    AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, KeyUsage, SubjectAlternativeName,
+    SubjectKeyIdentifier,
+};
 use x509::store::X509StoreBuilder;
+use x509::{X509, X509Name, X509Req, X509StoreContext, X509VerifyResult};
 
 fn pkey() -> PKey<Private> {
     let rsa = Rsa::generate(2048).unwrap();
@@ -21,12 +23,12 @@ fn pkey() -> PKey<Private> {
 fn test_cert_loading() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
-    let fingerprint = cert.fingerprint(MessageDigest::sha1()).unwrap();
+    let fingerprint = cert.digest(MessageDigest::sha1()).unwrap();
 
     let hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
     let hash_vec = Vec::from_hex(hash_str).unwrap();
 
-    assert_eq!(fingerprint, hash_vec);
+    assert_eq!(hash_vec, &*fingerprint);
 }
 
 #[test]
@@ -197,7 +199,8 @@ fn x509_builder() {
 
     assert!(pkey.public_eq(&x509.public_key().unwrap()));
 
-    let cn = x509.subject_name()
+    let cn = x509
+        .subject_name()
         .entries_by_nid(Nid::COMMONNAME)
         .next()
         .unwrap();
@@ -247,11 +250,11 @@ fn test_stack_from_pem() {
 
     assert_eq!(certs.len(), 2);
     assert_eq!(
-        hex::encode(certs[0].fingerprint(MessageDigest::sha1()).unwrap()),
+        hex::encode(certs[0].digest(MessageDigest::sha1()).unwrap()),
         "59172d9313e84459bcff27f967e79e6e9217e584"
     );
     assert_eq!(
-        hex::encode(certs[1].fingerprint(MessageDigest::sha1()).unwrap()),
+        hex::encode(certs[1].digest(MessageDigest::sha1()).unwrap()),
         "c0cbdf7cdd03c9773e5468e1f6d2da7d5cbb1875"
     );
 }
@@ -291,7 +294,7 @@ fn signature() {
 fn clone_x509() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
-    cert.clone();
+    drop(cert.clone());
 }
 
 #[test]

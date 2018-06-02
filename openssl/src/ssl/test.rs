@@ -19,7 +19,7 @@ use hash::MessageDigest;
 use ocsp::{OcspResponse, OcspResponseStatus};
 use pkey::PKey;
 use ssl;
-#[cfg(any(ossl110, ossl111))]
+#[cfg(any(ossl110, ossl111, libressl261))]
 use ssl::SslVersion;
 use ssl::{
     Error, HandshakeError, MidHandshakeSslStream, ShutdownResult, Ssl, SslAcceptor, SslConnector,
@@ -295,8 +295,8 @@ run_test!(verify_callback_data, |method, stream| {
         match cert {
             None => false,
             Some(cert) => {
-                let fingerprint = cert.fingerprint(MessageDigest::sha1()).unwrap();
-                fingerprint == node_id
+                let fingerprint = cert.digest(MessageDigest::sha1()).unwrap();
+                node_id == &*fingerprint
             }
         }
     });
@@ -323,8 +323,8 @@ run_test!(ssl_verify_callback, |method, stream| {
         match x509.current_cert() {
             None => false,
             Some(cert) => {
-                let fingerprint = cert.fingerprint(MessageDigest::sha1()).unwrap();
-                fingerprint == node_id
+                let fingerprint = cert.digest(MessageDigest::sha1()).unwrap();
+                node_id == &*fingerprint
             }
         }
     });
@@ -424,10 +424,10 @@ run_test!(get_peer_certificate, |method, stream| {
     let ctx = SslContext::builder(method).unwrap();
     let stream = Ssl::new(&ctx.build()).unwrap().connect(stream).unwrap();
     let cert = stream.ssl().peer_certificate().unwrap();
-    let fingerprint = cert.fingerprint(MessageDigest::sha1()).unwrap();
+    let fingerprint = cert.digest(MessageDigest::sha1()).unwrap();
     let node_hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
     let node_id = Vec::from_hex(node_hash_str).unwrap();
-    assert_eq!(node_id, fingerprint)
+    assert_eq!(node_id, &*fingerprint)
 });
 
 #[test]
@@ -481,7 +481,7 @@ fn test_state() {
 /// Tests that connecting with the client using ALPN, but the server not does not
 /// break the existing connection behavior.
 #[test]
-#[cfg(any(ossl102, ossl110))]
+#[cfg(any(ossl102, libressl261))]
 fn test_connect_with_unilateral_alpn() {
     let (_s, stream) = Server::new();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
@@ -503,7 +503,7 @@ fn test_connect_with_unilateral_alpn() {
 /// Tests that when both the client as well as the server use ALPN and their
 /// lists of supported protocols have an overlap, the correct protocol is chosen.
 #[test]
-#[cfg(any(ossl102, ossl110))]
+#[cfg(any(ossl102, libressl261))]
 fn test_connect_with_alpn_successful_multiple_matching() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
@@ -526,7 +526,7 @@ fn test_connect_with_alpn_successful_multiple_matching() {
 /// lists of supported protocols have an overlap -- with only ONE protocol
 /// being valid for both.
 #[test]
-#[cfg(any(ossl102, ossl110))]
+#[cfg(any(ossl102, libressl261))]
 fn test_connect_with_alpn_successful_single_match() {
     let (_s, stream) = Server::new_alpn();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
@@ -548,7 +548,7 @@ fn test_connect_with_alpn_successful_single_match() {
 /// Tests that when the `SslStream` is created as a server stream, the protocols
 /// are correctly advertised to the client.
 #[test]
-#[cfg(any(ossl102, ossl110))]
+#[cfg(any(ossl102, libressl261))]
 fn test_alpn_server_advertise_multiple() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
@@ -624,7 +624,7 @@ fn test_alpn_server_select_none_fatal() {
 }
 
 #[test]
-#[cfg(any(ossl102, ossl110))]
+#[cfg(any(ossl102, libressl261))]
 fn test_alpn_server_select_none() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let localhost = listener.local_addr().unwrap();
@@ -1063,7 +1063,7 @@ fn tmp_dh_callback() {
 }
 
 #[test]
-#[cfg(any(all(ossl101, not(libressl)), ossl102))]
+#[cfg(all(ossl101, not(ossl110)))]
 fn tmp_ecdh_callback() {
     use ec::EcKey;
     use nid::Nid;
@@ -1137,7 +1137,7 @@ fn tmp_dh_callback_ssl() {
 }
 
 #[test]
-#[cfg(any(all(ossl101, not(libressl)), ossl102))]
+#[cfg(all(ossl101, not(ossl110)))]
 fn tmp_ecdh_callback_ssl() {
     use ec::EcKey;
     use nid::Nid;
@@ -1315,7 +1315,7 @@ fn keying_export() {
 }
 
 #[test]
-#[cfg(any(ossl110))]
+#[cfg(any(ossl110, libressl261))]
 fn no_version_overlap() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
@@ -1330,7 +1330,7 @@ fn no_version_overlap() {
         ctx.set_max_proto_version(Some(SslVersion::TLS1_1)).unwrap();
         #[cfg(ossl110g)]
         assert_eq!(ctx.min_proto_version(), None);
-        #[cfg(ossl110g)]
+        #[cfg(any(ossl110g, libressl270))]
         assert_eq!(ctx.max_proto_version(), Some(SslVersion::TLS1_1));
         let ssl = Ssl::new(&ctx.build()).unwrap();
         ssl.accept(stream).unwrap_err();
@@ -1339,7 +1339,7 @@ fn no_version_overlap() {
     let stream = TcpStream::connect(addr).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_min_proto_version(Some(SslVersion::TLS1_2)).unwrap();
-    #[cfg(ossl110g)]
+    #[cfg(any(ossl110g, libressl270))]
     assert_eq!(ctx.min_proto_version(), Some(SslVersion::TLS1_2));
     #[cfg(ossl110g)]
     assert_eq!(ctx.max_proto_version(), None);

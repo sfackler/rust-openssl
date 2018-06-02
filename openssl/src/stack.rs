@@ -1,23 +1,30 @@
-use foreign_types::{ForeignTypeRef, ForeignType, Opaque};
+use ffi;
+use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
 use libc::c_int;
 use std::borrow::Borrow;
 use std::convert::AsRef;
 use std::iter;
 use std::marker::PhantomData;
 use std::mem;
-use ffi;
 
-use {cvt, cvt_p};
 use error::ErrorStack;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
+use {cvt, cvt_p};
 
-#[cfg(ossl10x)]
-use ffi::{sk_pop as OPENSSL_sk_pop, sk_free as OPENSSL_sk_free, sk_num as OPENSSL_sk_num,
-          sk_value as OPENSSL_sk_value, _STACK as OPENSSL_STACK,
-          sk_new_null as OPENSSL_sk_new_null, sk_push as OPENSSL_sk_push};
-#[cfg(ossl110)]
-use ffi::{OPENSSL_sk_pop, OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_value, OPENSSL_STACK,
-          OPENSSL_sk_new_null, OPENSSL_sk_push};
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::{
+            OPENSSL_sk_pop, OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_value, OPENSSL_STACK,
+            OPENSSL_sk_new_null, OPENSSL_sk_push,
+        };
+    } else {
+        use ffi::{
+            sk_pop as OPENSSL_sk_pop, sk_free as OPENSSL_sk_free, sk_num as OPENSSL_sk_num,
+            sk_value as OPENSSL_sk_value, _STACK as OPENSSL_STACK,
+            sk_new_null as OPENSSL_sk_new_null, sk_push as OPENSSL_sk_push,
+        };
+    }
+}
 
 /// Trait implemented by types which can be placed in a stack.
 ///
@@ -33,21 +40,24 @@ pub trait Stackable: ForeignType {
 /// An owned stack of `T`.
 pub struct Stack<T: Stackable>(*mut T::StackType);
 
-impl<T: Stackable> Stack<T> {
-    pub fn new() -> Result<Stack<T>, ErrorStack> {
-        unsafe {
-            ffi::init();
-            let ptr = cvt_p(OPENSSL_sk_new_null())?;
-            Ok(Stack(ptr as *mut _))
-        }
-    }
-}
+unsafe impl<T: Stackable + Send> Send for Stack<T> {}
+unsafe impl<T: Stackable + Sync> Sync for Stack<T> {}
 
 impl<T: Stackable> Drop for Stack<T> {
     fn drop(&mut self) {
         unsafe {
             while let Some(_) = self.pop() {}
             OPENSSL_sk_free(self.0 as *mut _);
+        }
+    }
+}
+
+impl<T: Stackable> Stack<T> {
+    pub fn new() -> Result<Stack<T>, ErrorStack> {
+        unsafe {
+            ffi::init();
+            let ptr = cvt_p(OPENSSL_sk_new_null())?;
+            Ok(Stack(ptr as *mut _))
         }
     }
 }
@@ -87,7 +97,7 @@ impl<T: Stackable> ForeignType for Stack<T> {
         assert!(
             !ptr.is_null(),
             "Must not instantiate a Stack from a null-ptr - use Stack::new() in \
-                                 that case"
+             that case"
         );
         Stack(ptr)
     }
@@ -157,6 +167,9 @@ impl<T: Stackable> ExactSizeIterator for IntoIter<T> {}
 
 pub struct StackRef<T: Stackable>(Opaque, PhantomData<T>);
 
+unsafe impl<T: Stackable + Send> Send for StackRef<T> {}
+unsafe impl<T: Stackable + Sync> Sync for StackRef<T> {}
+
 impl<T: Stackable> ForeignTypeRef for StackRef<T> {
     type CType = T::StackType;
 }
@@ -218,9 +231,7 @@ impl<T: Stackable> StackRef<T> {
     /// Pushes a value onto the top of the stack.
     pub fn push(&mut self, data: T) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(
-                OPENSSL_sk_push(self.as_stack(), data.as_ptr() as *mut _),
-            )?;
+            cvt(OPENSSL_sk_push(self.as_stack(), data.as_ptr() as *mut _))?;
             mem::forget(data);
             Ok(())
         }

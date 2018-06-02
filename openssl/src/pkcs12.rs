@@ -3,15 +3,15 @@
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
-use std::ptr;
 use std::ffi::CString;
+use std::ptr;
 
-use {cvt, cvt_p};
-use pkey::{HasPrivate, PKey, PKeyRef, Private};
 use error::ErrorStack;
-use x509::{X509, X509Ref};
-use stack::Stack;
 use nid::Nid;
+use pkey::{HasPrivate, PKey, PKeyRef, Private};
+use stack::Stack;
+use x509::{X509, X509Ref};
+use {cvt, cvt_p};
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::PKCS12;
@@ -172,7 +172,8 @@ impl Pkcs12Builder {
             let friendly_name = CString::new(friendly_name).unwrap();
             let pkey = pkey.as_ptr();
             let cert = cert.as_ptr();
-            let ca = self.ca
+            let ca = self
+                .ca
                 .as_ref()
                 .map(|ca| ca.as_ptr())
                 .unwrap_or(ptr::null_mut());
@@ -206,11 +207,11 @@ mod test {
     use hex;
 
     use asn1::Asn1Time;
-    use rsa::Rsa;
-    use pkey::PKey;
     use nid::Nid;
-    use x509::{X509, X509Name};
+    use pkey::PKey;
+    use rsa::Rsa;
     use x509::extension::KeyUsage;
+    use x509::{X509, X509Name};
 
     use super::*;
 
@@ -221,14 +222,14 @@ mod test {
         let parsed = pkcs12.parse("mypass").unwrap();
 
         assert_eq!(
-            hex::encode(parsed.cert.fingerprint(MessageDigest::sha1()).unwrap()),
+            hex::encode(parsed.cert.digest(MessageDigest::sha1()).unwrap()),
             "59172d9313e84459bcff27f967e79e6e9217e584"
         );
 
         let chain = parsed.chain.unwrap();
         assert_eq!(chain.len(), 1);
         assert_eq!(
-            hex::encode(chain[0].fingerprint(MessageDigest::sha1()).unwrap()),
+            hex::encode(chain[0].digest(MessageDigest::sha1()).unwrap()),
             "c0cbdf7cdd03c9773e5468e1f6d2da7d5cbb1875"
         );
     }
@@ -279,8 +280,8 @@ mod test {
         let parsed = pkcs12.parse("mypass").unwrap();
 
         assert_eq!(
-            parsed.cert.fingerprint(MessageDigest::sha1()).unwrap(),
-            cert.fingerprint(MessageDigest::sha1()).unwrap()
+            &*parsed.cert.digest(MessageDigest::sha1()).unwrap(),
+            &*cert.digest(MessageDigest::sha1()).unwrap()
         );
         assert!(parsed.pkey.public_eq(&pkey));
     }

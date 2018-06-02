@@ -1,4 +1,4 @@
-use libc::{c_int, c_char, c_void, c_long, c_uchar, size_t, c_uint, c_ulong, time_t};
+use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, size_t, time_t};
 
 use super::*;
 
@@ -84,6 +84,6 @@ pub struct X509_VERIFY_PARAM {
     pub purpose: c_int,
     pub trust: c_int,
     pub depth: c_int,
-    policies: *mut stack_st_ASN1_OBJECT,
+    pub policies: *mut stack_st_ASN1_OBJECT,
     id: *mut c_void,
 }

@@ -13,8 +13,8 @@ use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
 use libc::c_uint;
 use pkey::{HasPrivate, PKeyRef};
-use stack::Stack;
-use x509::X509;
+use stack::StackRef;
+use x509::{X509, X509Ref};
 use {cvt, cvt_p};
 
 bitflags! {
@@ -130,30 +130,25 @@ impl CmsContentInfo {
     /// OpenSSL documentation at [`CMS_sign`]
     ///
     /// [`CMS_sign`]: https://www.openssl.org/docs/manmaster/man3/CMS_sign.html
-    pub fn sign<T: HasPrivate>(
-        signcert: Option<&X509>,
+    pub fn sign<T>(
+        signcert: Option<&X509Ref>,
         pkey: Option<&PKeyRef<T>>,
-        certs: Option<&Stack<X509>>,
+        certs: Option<&StackRef<X509>>,
         data: Option<&[u8]>,
         flags: CMSOptions,
-    ) -> Result<CmsContentInfo, ErrorStack> {
+    ) -> Result<CmsContentInfo, ErrorStack>
+    where
+        T: HasPrivate,
+    {
         unsafe {
-            let signcert = match signcert {
-                Some(cert) => cert.as_ptr(),
-                None => ptr::null_mut(),
+            let signcert = signcert.map_or(ptr::null_mut(), |p| p.as_ptr());
+            let pkey = pkey.map_or(ptr::null_mut(), |p| p.as_ptr());
+            let data_bio = match data {
+                Some(data) => Some(MemBioSlice::new(data)?),
+                None => None,
             };
-            let pkey = match pkey {
-                Some(pkey) => pkey.as_ptr(),
-                None => ptr::null_mut(),
-            };
-            let data_bio_ptr = match data {
-                Some(data) => MemBioSlice::new(data)?.as_ptr(),
-                None => ptr::null_mut(),
-            };
-            let certs = match certs {
-                Some(certs) => certs.as_ptr(),
-                None => ptr::null_mut(),
-            };
+            let data_bio_ptr = data_bio.as_ref().map_or(ptr::null_mut(), |p| p.as_ptr());
+            let certs = certs.map_or(ptr::null_mut(), |p| p.as_ptr());
 
             let cms = cvt_p(ffi::CMS_sign(
                 signcert,

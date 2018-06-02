@@ -2,6 +2,50 @@
 
 ## [Unreleased]
 
+## [v0.10.9] - 2018-06-01
+
+### Fixed
+
+* Fixed a use-after-free in `CmsContentInfo::sign`.
+* `SslRef::servername` now returns `None` rather than panicking on a non-UTF8 name.
+
+### Added
+
+* Added `MessageDigest::from_nid`.
+* Added `Nid::signature_algorithms`, `Nid::long_name`, and `Nid::short_name`.
+* Added early data and early keying material export support for TLS 1.3.
+* Added `SslRef::verified_chain`.
+* Added `SslRef::servername_raw` which returns a `&[u8]` rather than `&str`.
+* Added `SslRef::finished` and `SslRef::peer_finished`.
+* Added `X509Ref::digest` to replace `X509Ref::fingerprint`.
+* `X509StoreBuilder` and `X509Store` now implement `Sync` and `Send`.
+
+### Deprecated
+
+* `X509Ref::fingerprint` has been deprecated in favor of `X509Ref::digest`.
+
+## [v0.10.8] - 2018-05-20
+
+### Fixed
+
+* `openssl-sys` will now detect Homebrew-installed OpenSSL when installed to a non-default
+    directory.
+* The `X509_V_ERR_INVALID_CALL`, `X509_V_ERR_STORE_LOOKUP`, and
+    `X509_V_ERR_PROXY_SUBJECT_NAME_VIOLATION` constants in `openssl-sys` are now only present when
+    building against 1.1.0g and up rather than 1.1.0.
+* `SslContextBuilder::max_proto_version` and `SslContextBuilder::min_proto_version` are only present
+    when building against 1.1.0g and up rather than 1.1.0.
+
+### Added
+
+* Added `CmsContentInfo::sign`.
+* Added `Clone` and `ToOwned` implementations to `Rsa` and `RsaRef` respectively.
+* The `min_proto_version` and `max_proto_version` methods are available when linking against
+    LibreSSL 2.6.1 and up in addition to OpenSSL.
+* `X509VerifyParam` is available when linking against LibreSSL 2.6.1 and up in addition to OpenSSL.
+* ALPN support is available when linking against LibreSSL 2.6.1 and up in addition to OpenSSL.
+* `Stack` and `StackRef` are now `Sync` and `Send`.
+
 ## [v0.10.7] - 2018-04-30
 
 ### Added
@@ -183,7 +227,9 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.7...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.9...master
+[v0.10.9]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.8...openssl-v0.10.9
+[v0.10.8]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.7...openssl-v0.10.8
 [v0.10.7]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.6...openssl-v0.10.7
 [v0.10.6]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.5...openssl-v0.10.6
 [v0.10.5]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.4...openssl-v0.10.5

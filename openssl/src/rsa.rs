@@ -189,7 +189,8 @@ where
     /// [`RSA_get0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_get0_key.html
     pub fn d(&self) -> &BigNumRef {
         unsafe {
-            let d = compat::key(self.as_ptr())[2];
+            let mut d = ptr::null();
+            RSA_get0_key(self.as_ptr(), ptr::null_mut(), ptr::null_mut(), &mut d);
             BigNumRef::from_ptr(d as *mut _)
         }
     }
@@ -201,7 +202,8 @@ where
     /// [`RSA_get0_factors`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_get0_key.html
     pub fn p(&self) -> Option<&BigNumRef> {
         unsafe {
-            let p = compat::factors(self.as_ptr())[0];
+            let mut p = ptr::null();
+            RSA_get0_factors(self.as_ptr(), &mut p, ptr::null_mut());
             if p.is_null() {
                 None
             } else {
@@ -217,7 +219,8 @@ where
     /// [`RSA_get0_factors`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_get0_key.html
     pub fn q(&self) -> Option<&BigNumRef> {
         unsafe {
-            let q = compat::factors(self.as_ptr())[1];
+            let mut q = ptr::null();
+            RSA_get0_factors(self.as_ptr(), ptr::null_mut(), &mut q);
             if q.is_null() {
                 None
             } else {
@@ -233,7 +236,8 @@ where
     /// [`RSA_get0_crt_params`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_get0_key.html
     pub fn dmp1(&self) -> Option<&BigNumRef> {
         unsafe {
-            let dp = compat::crt_params(self.as_ptr())[0];
+            let mut dp = ptr::null();
+            RSA_get0_crt_params(self.as_ptr(), &mut dp, ptr::null_mut(), ptr::null_mut());
             if dp.is_null() {
                 None
             } else {
@@ -249,7 +253,8 @@ where
     /// [`RSA_get0_crt_params`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_get0_key.html
     pub fn dmq1(&self) -> Option<&BigNumRef> {
         unsafe {
-            let dq = compat::crt_params(self.as_ptr())[1];
+            let mut dq = ptr::null();
+            RSA_get0_crt_params(self.as_ptr(), ptr::null_mut(), &mut dq, ptr::null_mut());
             if dq.is_null() {
                 None
             } else {
@@ -265,7 +270,8 @@ where
     /// [`RSA_get0_crt_params`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_get0_key.html
     pub fn iqmp(&self) -> Option<&BigNumRef> {
         unsafe {
-            let qi = compat::crt_params(self.as_ptr())[2];
+            let mut qi = ptr::null();
+            RSA_get0_crt_params(self.as_ptr(), ptr::null_mut(), ptr::null_mut(), &mut qi);
             if qi.is_null() {
                 None
             } else {
@@ -391,7 +397,8 @@ where
     /// [`RSA_get0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_get0_key.html
     pub fn n(&self) -> &BigNumRef {
         unsafe {
-            let n = compat::key(self.as_ptr())[0];
+            let mut n = ptr::null();
+            RSA_get0_key(self.as_ptr(), &mut n, ptr::null_mut(), ptr::null_mut());
             BigNumRef::from_ptr(n as *mut _)
         }
     }
@@ -403,7 +410,8 @@ where
     /// [`RSA_get0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_get0_key.html
     pub fn e(&self) -> &BigNumRef {
         unsafe {
-            let e = compat::key(self.as_ptr())[1];
+            let mut e = ptr::null();
+            RSA_get0_key(self.as_ptr(), ptr::null_mut(), &mut e, ptr::null_mut());
             BigNumRef::from_ptr(e as *mut _)
         }
     }
@@ -421,15 +429,10 @@ impl Rsa<Public> {
     /// [`RSA_set0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_set0_key.html
     pub fn from_public_components(n: BigNum, e: BigNum) -> Result<Rsa<Public>, ErrorStack> {
         unsafe {
-            let rsa = Rsa::from_ptr(cvt_p(ffi::RSA_new())?);
-            cvt(compat::set_key(
-                rsa.0,
-                n.as_ptr(),
-                e.as_ptr(),
-                ptr::null_mut(),
-            ))?;
+            let rsa = cvt_p(ffi::RSA_new())?;
+            RSA_set0_key(rsa, n.as_ptr(), e.as_ptr(), ptr::null_mut());
             mem::forget((n, e));
-            Ok(rsa)
+            Ok(Rsa::from_ptr(rsa))
         }
     }
 
@@ -498,10 +501,12 @@ impl RsaPrivateKeyBuilder {
     /// [`RSA_set0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_set0_key.html
     pub fn new(n: BigNum, e: BigNum, d: BigNum) -> Result<RsaPrivateKeyBuilder, ErrorStack> {
         unsafe {
-            let rsa = Rsa::from_ptr(cvt_p(ffi::RSA_new())?);
-            cvt(compat::set_key(rsa.0, n.as_ptr(), e.as_ptr(), d.as_ptr()))?;
+            let rsa = cvt_p(ffi::RSA_new())?;
+            RSA_set0_key(rsa, n.as_ptr(), e.as_ptr(), d.as_ptr());
             mem::forget((n, e, d));
-            Ok(RsaPrivateKeyBuilder { rsa })
+            Ok(RsaPrivateKeyBuilder {
+                rsa: Rsa::from_ptr(rsa),
+            })
         }
     }
 
@@ -512,9 +517,10 @@ impl RsaPrivateKeyBuilder {
     /// This correspond to [`RSA_set0_factors`].
     ///
     /// [`RSA_set0_factors`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_set0_factors.html
+    // FIXME should be infallible
     pub fn set_factors(self, p: BigNum, q: BigNum) -> Result<RsaPrivateKeyBuilder, ErrorStack> {
         unsafe {
-            cvt(compat::set_factors(self.rsa.0, p.as_ptr(), q.as_ptr()))?;
+            RSA_set0_factors(self.rsa.as_ptr(), p.as_ptr(), q.as_ptr());
             mem::forget((p, q));
         }
         Ok(self)
@@ -528,6 +534,7 @@ impl RsaPrivateKeyBuilder {
     /// This correspond to [`RSA_set0_crt_params`].
     ///
     /// [`RSA_set0_crt_params`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_set0_crt_params.html
+    // FIXME should be infallible
     pub fn set_crt_params(
         self,
         dmp1: BigNum,
@@ -535,12 +542,12 @@ impl RsaPrivateKeyBuilder {
         iqmp: BigNum,
     ) -> Result<RsaPrivateKeyBuilder, ErrorStack> {
         unsafe {
-            cvt(compat::set_crt_params(
-                self.rsa.0,
+            RSA_set0_crt_params(
+                self.rsa.as_ptr(),
                 dmp1.as_ptr(),
                 dmq1.as_ptr(),
                 iqmp.as_ptr(),
-            ))?;
+            );
             mem::forget((dmp1, dmq1, iqmp));
         }
         Ok(self)
@@ -637,89 +644,99 @@ impl<T> fmt::Debug for Rsa<T> {
     }
 }
 
-#[cfg(ossl110)]
-mod compat {
-    use std::ptr;
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::{
+            RSA_get0_key, RSA_get0_factors, RSA_get0_crt_params, RSA_set0_key, RSA_set0_factors,
+            RSA_set0_crt_params,
+        };
+    } else {
+        #[allow(bad_style)]
+        unsafe fn RSA_get0_key(
+            r: *const ffi::RSA,
+            n: *mut *const ffi::BIGNUM,
+            e: *mut *const ffi::BIGNUM,
+            d: *mut *const ffi::BIGNUM,
+        ) {
+            if !n.is_null() {
+                *n = (*r).n;
+            }
+            if !e.is_null() {
+                *e = (*r).e;
+            }
+            if !d.is_null() {
+                *d = (*r).d;
+            }
+        }
 
-    use ffi::{self, BIGNUM, RSA};
-    use libc::c_int;
+        #[allow(bad_style)]
+        unsafe fn RSA_get0_factors(
+            r: *const ffi::RSA,
+            p: *mut *const ffi::BIGNUM,
+            q: *mut *const ffi::BIGNUM,
+        ) {
+            if !p.is_null() {
+                *p = (*r).p;
+            }
+            if !q.is_null() {
+                *q = (*r).q;
+            }
+        }
 
-    pub unsafe fn key(r: *const RSA) -> [*const BIGNUM; 3] {
-        let (mut n, mut e, mut d) = (ptr::null(), ptr::null(), ptr::null());
-        ffi::RSA_get0_key(r, &mut n, &mut e, &mut d);
-        [n, e, d]
-    }
+        #[allow(bad_style)]
+        unsafe fn RSA_get0_crt_params(
+            r: *const ffi::RSA,
+            dmp1: *mut *const ffi::BIGNUM,
+            dmq1: *mut *const ffi::BIGNUM,
+            iqmp: *mut *const ffi::BIGNUM,
+        ) {
+            if !dmp1.is_null() {
+                *dmp1 = (*r).dmp1;
+            }
+            if !dmq1.is_null() {
+                *dmq1 = (*r).dmq1;
+            }
+            if !iqmp.is_null() {
+                *iqmp = (*r).iqmp;
+            }
+        }
 
-    pub unsafe fn factors(r: *const RSA) -> [*const BIGNUM; 2] {
-        let (mut p, mut q) = (ptr::null(), ptr::null());
-        ffi::RSA_get0_factors(r, &mut p, &mut q);
-        [p, q]
-    }
+        #[allow(bad_style)]
+        unsafe fn RSA_set0_key(
+            r: *mut ffi::RSA,
+            n: *mut ffi::BIGNUM,
+            e: *mut ffi::BIGNUM,
+            d: *mut ffi::BIGNUM,
+        ) -> c_int {
+            (*r).n = n;
+            (*r).e = e;
+            (*r).d = d;
+            1
+        }
 
-    pub unsafe fn crt_params(r: *const RSA) -> [*const BIGNUM; 3] {
-        let (mut dp, mut dq, mut qi) = (ptr::null(), ptr::null(), ptr::null());
-        ffi::RSA_get0_crt_params(r, &mut dp, &mut dq, &mut qi);
-        [dp, dq, qi]
-    }
+        #[allow(bad_style)]
+        unsafe fn RSA_set0_factors(
+            r: *mut ffi::RSA,
+            p: *mut ffi::BIGNUM,
+            q: *mut ffi::BIGNUM,
+        ) -> c_int {
+            (*r).p = p;
+            (*r).q = q;
+            1
+        }
 
-    pub unsafe fn set_key(r: *mut RSA, n: *mut BIGNUM, e: *mut BIGNUM, d: *mut BIGNUM) -> c_int {
-        ffi::RSA_set0_key(r, n, e, d)
-    }
-
-    pub unsafe fn set_factors(r: *mut RSA, p: *mut BIGNUM, q: *mut BIGNUM) -> c_int {
-        ffi::RSA_set0_factors(r, p, q)
-    }
-
-    pub unsafe fn set_crt_params(
-        r: *mut RSA,
-        dmp1: *mut BIGNUM,
-        dmq1: *mut BIGNUM,
-        iqmp: *mut BIGNUM,
-    ) -> c_int {
-        ffi::RSA_set0_crt_params(r, dmp1, dmq1, iqmp)
-    }
-}
-
-#[cfg(ossl10x)]
-mod compat {
-    use ffi::{BIGNUM, RSA};
-    use libc::c_int;
-
-    pub unsafe fn key(r: *const RSA) -> [*const BIGNUM; 3] {
-        [(*r).n, (*r).e, (*r).d]
-    }
-
-    pub unsafe fn factors(r: *const RSA) -> [*const BIGNUM; 2] {
-        [(*r).p, (*r).q]
-    }
-
-    pub unsafe fn crt_params(r: *const RSA) -> [*const BIGNUM; 3] {
-        [(*r).dmp1, (*r).dmq1, (*r).iqmp]
-    }
-
-    pub unsafe fn set_key(r: *mut RSA, n: *mut BIGNUM, e: *mut BIGNUM, d: *mut BIGNUM) -> c_int {
-        (*r).n = n;
-        (*r).e = e;
-        (*r).d = d;
-        1 // TODO: is this right? should it be 0? what's success?
-    }
-
-    pub unsafe fn set_factors(r: *mut RSA, p: *mut BIGNUM, q: *mut BIGNUM) -> c_int {
-        (*r).p = p;
-        (*r).q = q;
-        1 // TODO: is this right? should it be 0? what's success?
-    }
-
-    pub unsafe fn set_crt_params(
-        r: *mut RSA,
-        dmp1: *mut BIGNUM,
-        dmq1: *mut BIGNUM,
-        iqmp: *mut BIGNUM,
-    ) -> c_int {
-        (*r).dmp1 = dmp1;
-        (*r).dmq1 = dmq1;
-        (*r).iqmp = iqmp;
-        1 // TODO: is this right? should it be 0? what's success?
+        #[allow(bad_style)]
+        unsafe fn RSA_set0_crt_params(
+            r: *mut ffi::RSA,
+            dmp1: *mut ffi::BIGNUM,
+            dmq1: *mut ffi::BIGNUM,
+            iqmp: *mut ffi::BIGNUM,
+        ) -> c_int {
+            (*r).dmp1 = dmp1;
+            (*r).dmq1 = dmq1;
+            (*r).iqmp = iqmp;
+            1
+        }
     }
 }
 
@@ -751,7 +768,8 @@ mod test {
     #[test]
     fn test_to_password() {
         let key = Rsa::generate(2048).unwrap();
-        let pem = key.private_key_to_pem_passphrase(Cipher::aes_128_cbc(), b"foobar")
+        let pem = key
+            .private_key_to_pem_passphrase(Cipher::aes_128_cbc(), b"foobar")
             .unwrap();
         Rsa::private_key_from_pem_passphrase(&pem, b"foobar").unwrap();
         assert!(Rsa::private_key_from_pem_passphrase(&pem, b"fizzbuzz").is_err());
@@ -791,7 +809,8 @@ mod test {
         k0.private_encrypt(&msg, &mut emesg, Padding::PKCS1)
             .unwrap();
         let mut dmesg = vec![0; k1.size() as usize];
-        let len = k1.public_decrypt(&emesg, &mut dmesg, Padding::PKCS1)
+        let len = k1
+            .public_decrypt(&emesg, &mut dmesg, Padding::PKCS1)
             .unwrap();
         assert_eq!(msg, &dmesg[..len]);
     }
@@ -807,7 +826,8 @@ mod test {
         let mut emesg = vec![0; k0.size() as usize];
         k0.public_encrypt(&msg, &mut emesg, Padding::PKCS1).unwrap();
         let mut dmesg = vec![0; k1.size() as usize];
-        let len = k1.private_decrypt(&emesg, &mut dmesg, Padding::PKCS1)
+        let len = k1
+            .private_decrypt(&emesg, &mut dmesg, Padding::PKCS1)
             .unwrap();
         assert_eq!(msg, &dmesg[..len]);
     }
@@ -883,6 +903,6 @@ mod test {
     #[test]
     fn clone() {
         let key = Rsa::generate(2048).unwrap();
-        key.clone();
+        drop(key.clone());
     }
 }

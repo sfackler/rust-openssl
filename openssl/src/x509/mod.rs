@@ -7,9 +7,9 @@
 //! Internet protocols, including SSL/TLS, which is the basis for HTTPS,
 //! the secure protocol for browsing the web.
 
-use libc::{c_int, c_long};
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
+use libc::{c_int, c_long};
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -20,27 +20,20 @@ use std::ptr;
 use std::slice;
 use std::str;
 
-use {cvt, cvt_n, cvt_p};
 use asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef};
 use bio::MemBioSlice;
 use conf::ConfRef;
 use error::ErrorStack;
 use ex_data::Index;
-use hash::MessageDigest;
+use hash::{DigestBytes, MessageDigest};
 use nid::Nid;
 use pkey::{HasPrivate, HasPublic, PKey, PKeyRef, Public};
+use ssl::SslRef;
 use stack::{Stack, StackRef, Stackable};
 use string::OpensslString;
-use ssl::SslRef;
+use {cvt, cvt_n, cvt_p};
 
-#[cfg(ossl10x)]
-use ffi::{ASN1_STRING_data, X509_STORE_CTX_get_chain, X509_set_notAfter, X509_set_notBefore};
-#[cfg(ossl110)]
-use ffi::{ASN1_STRING_get0_data as ASN1_STRING_data,
-          X509_STORE_CTX_get0_chain as X509_STORE_CTX_get_chain,
-          X509_set1_notAfter as X509_set_notAfter, X509_set1_notBefore as X509_set_notBefore};
-
-#[cfg(any(ossl102, ossl110))]
+#[cfg(any(ossl102, libressl261))]
 pub mod verify;
 
 pub mod extension;
@@ -215,7 +208,7 @@ impl X509StoreContextRef {
     /// [`X509_STORE_CTX_get0_chain`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_STORE_CTX_get0_chain.html
     pub fn chain(&self) -> Option<&StackRef<X509>> {
         unsafe {
-            let chain = X509_STORE_CTX_get_chain(self.as_ptr());
+            let chain = X509_STORE_CTX_get0_chain(self.as_ptr());
 
             if chain.is_null() {
                 None
@@ -240,12 +233,12 @@ impl X509Builder {
 
     /// Sets the notAfter constraint on the certificate.
     pub fn set_not_after(&mut self, not_after: &Asn1TimeRef) -> Result<(), ErrorStack> {
-        unsafe { cvt(X509_set_notAfter(self.0.as_ptr(), not_after.as_ptr())).map(|_| ()) }
+        unsafe { cvt(X509_set1_notAfter(self.0.as_ptr(), not_after.as_ptr())).map(|_| ()) }
     }
 
     /// Sets the notBefore constraint on the certificate.
     pub fn set_not_before(&mut self, not_before: &Asn1TimeRef) -> Result<(), ErrorStack> {
-        unsafe { cvt(X509_set_notBefore(self.0.as_ptr(), not_before.as_ptr())).map(|_| ()) }
+        unsafe { cvt(X509_set1_notBefore(self.0.as_ptr(), not_before.as_ptr())).map(|_| ()) }
     }
 
     /// Sets the version of the certificate.
@@ -454,27 +447,39 @@ impl X509Ref {
         }
     }
 
-    /// Returns certificate fingerprint calculated using provided hash
-    pub fn fingerprint(&self, hash_type: MessageDigest) -> Result<Vec<u8>, ErrorStack> {
+    /// Returns a digest of the DER representation of the certificate.
+    ///
+    /// This corresponds to [`X509_digest`].
+    ///
+    /// [`X509_digest`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_digest.html
+    pub fn digest(&self, hash_type: MessageDigest) -> Result<DigestBytes, ErrorStack> {
         unsafe {
-            let evp = hash_type.as_ptr();
+            let mut digest = DigestBytes {
+                buf: [0; ffi::EVP_MAX_MD_SIZE as usize],
+                len: ffi::EVP_MAX_MD_SIZE as usize,
+            };
             let mut len = ffi::EVP_MAX_MD_SIZE;
-            let mut buf = vec![0u8; len as usize];
             cvt(ffi::X509_digest(
                 self.as_ptr(),
-                evp,
-                buf.as_mut_ptr() as *mut _,
+                hash_type.as_ptr(),
+                digest.buf.as_mut_ptr() as *mut _,
                 &mut len,
             ))?;
-            buf.truncate(len as usize);
-            Ok(buf)
+            digest.len = len as usize;
+
+            Ok(digest)
         }
+    }
+
+    #[deprecated(since = "0.10.9", note = "renamed to digest")]
+    pub fn fingerprint(&self, hash_type: MessageDigest) -> Result<Vec<u8>, ErrorStack> {
+        self.digest(hash_type).map(|b| b.to_vec())
     }
 
     /// Returns the certificate's Not After validity period.
     pub fn not_after(&self) -> &Asn1TimeRef {
         unsafe {
-            let date = compat::X509_get_notAfter(self.as_ptr());
+            let date = X509_getm_notAfter(self.as_ptr());
             assert!(!date.is_null());
             Asn1TimeRef::from_ptr(date)
         }
@@ -483,7 +488,7 @@ impl X509Ref {
     /// Returns the certificate's Not Before validity period.
     pub fn not_before(&self) -> &Asn1TimeRef {
         unsafe {
-            let date = compat::X509_get_notBefore(self.as_ptr());
+            let date = X509_getm_notBefore(self.as_ptr());
             assert!(!date.is_null());
             Asn1TimeRef::from_ptr(date)
         }
@@ -493,7 +498,7 @@ impl X509Ref {
     pub fn signature(&self) -> &Asn1BitStringRef {
         unsafe {
             let mut signature = ptr::null();
-            compat::X509_get0_signature(&mut signature, ptr::null_mut(), self.as_ptr());
+            X509_get0_signature(&mut signature, ptr::null_mut(), self.as_ptr());
             assert!(!signature.is_null());
             Asn1BitStringRef::from_ptr(signature as *mut _)
         }
@@ -503,7 +508,7 @@ impl X509Ref {
     pub fn signature_algorithm(&self) -> &X509AlgorithmRef {
         unsafe {
             let mut algor = ptr::null();
-            compat::X509_get0_signature(ptr::null_mut(), &mut algor, self.as_ptr());
+            X509_get0_signature(ptr::null_mut(), &mut algor, self.as_ptr());
             assert!(!algor.is_null());
             X509AlgorithmRef::from_ptr(algor as *mut _)
         }
@@ -564,7 +569,7 @@ impl ToOwned for X509Ref {
 
     fn to_owned(&self) -> X509 {
         unsafe {
-            compat::X509_up_ref(self.as_ptr());
+            X509_up_ref(self.as_ptr());
             X509::from_ptr(self.as_ptr())
         }
     }
@@ -1054,7 +1059,7 @@ impl X509ReqRef {
     ///
     /// [`X509_REQ_get_version`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_get_version.html
     pub fn version(&self) -> i32 {
-        unsafe { compat::X509_REQ_get_version(self.as_ptr()) as i32 }
+        unsafe { X509_REQ_get_version(self.as_ptr()) as i32 }
     }
 
     /// Returns the subject name of the certificate request.
@@ -1064,7 +1069,7 @@ impl X509ReqRef {
     /// [`X509_REQ_get_subject_name`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_get_subject_name.html
     pub fn subject_name(&self) -> &X509NameRef {
         unsafe {
-            let name = compat::X509_REQ_get_subject_name(self.as_ptr());
+            let name = X509_REQ_get_subject_name(self.as_ptr());
             assert!(!name.is_null());
             X509NameRef::from_ptr(name)
         }
@@ -1172,7 +1177,7 @@ impl GeneralNameRef {
                 return None;
             }
 
-            let ptr = ASN1_STRING_data((*self.as_ptr()).d as *mut _);
+            let ptr = ASN1_STRING_get0_data((*self.as_ptr()).d as *mut _);
             let len = ffi::ASN1_STRING_length((*self.as_ptr()).d as *mut _);
 
             let slice = slice::from_raw_parts(ptr as *const u8, len as usize);
@@ -1205,7 +1210,7 @@ impl GeneralNameRef {
                 return None;
             }
 
-            let ptr = ASN1_STRING_data((*self.as_ptr()).d as *mut _);
+            let ptr = ASN1_STRING_get0_data((*self.as_ptr()).d as *mut _);
             let len = ffi::ASN1_STRING_length((*self.as_ptr()).d as *mut _);
 
             Some(slice::from_raw_parts(ptr as *const u8, len as usize))
@@ -1232,79 +1237,86 @@ impl X509AlgorithmRef {
     pub fn object(&self) -> &Asn1ObjectRef {
         unsafe {
             let mut oid = ptr::null();
-            compat::X509_ALGOR_get0(&mut oid, ptr::null_mut(), ptr::null_mut(), self.as_ptr());
+            X509_ALGOR_get0(&mut oid, ptr::null_mut(), ptr::null_mut(), self.as_ptr());
             assert!(!oid.is_null());
             Asn1ObjectRef::from_ptr(oid as *mut _)
         }
     }
 }
 
-#[cfg(ossl110)]
-mod compat {
-    pub use ffi::X509_getm_notAfter as X509_get_notAfter;
-    pub use ffi::X509_getm_notBefore as X509_get_notBefore;
-    pub use ffi::X509_up_ref;
-    pub use ffi::X509_REQ_get_version;
-    pub use ffi::X509_REQ_get_subject_name;
-    pub use ffi::X509_get0_signature;
-    pub use ffi::X509_ALGOR_get0;
-}
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::{
+            X509_ALGOR_get0, X509_REQ_get_subject_name, X509_REQ_get_version,
+            X509_get0_signature, X509_getm_notAfter, X509_getm_notBefore, X509_up_ref,
+            ASN1_STRING_get0_data, X509_STORE_CTX_get0_chain, X509_set1_notAfter,
+            X509_set1_notBefore,
+        };
+    } else {
+        use ffi::{
+            ASN1_STRING_data as ASN1_STRING_get0_data,
+            X509_STORE_CTX_get_chain as X509_STORE_CTX_get0_chain,
+            X509_set_notAfter as X509_set1_notAfter,
+            X509_set_notBefore as X509_set1_notBefore,
+        };
 
-#[cfg(ossl10x)]
-#[allow(bad_style)]
-mod compat {
-    use libc::{c_int, c_void};
-    use ffi;
-
-    pub unsafe fn X509_get_notAfter(x: *mut ffi::X509) -> *mut ffi::ASN1_TIME {
-        (*(*(*x).cert_info).validity).notAfter
-    }
-
-    pub unsafe fn X509_get_notBefore(x: *mut ffi::X509) -> *mut ffi::ASN1_TIME {
-        (*(*(*x).cert_info).validity).notBefore
-    }
-
-    pub unsafe fn X509_up_ref(x: *mut ffi::X509) {
-        ffi::CRYPTO_add_lock(
-            &mut (*x).references,
-            1,
-            ffi::CRYPTO_LOCK_X509,
-            "mod.rs\0".as_ptr() as *const _,
-            line!() as c_int,
-        );
-    }
-
-    pub unsafe fn X509_REQ_get_version(x: *mut ffi::X509_REQ) -> ::libc::c_long {
-        ::ffi::ASN1_INTEGER_get((*(*x).req_info).version)
-    }
-
-    pub unsafe fn X509_REQ_get_subject_name(x: *mut ffi::X509_REQ) -> *mut ::ffi::X509_NAME {
-        (*(*x).req_info).subject
-    }
-
-    pub unsafe fn X509_get0_signature(
-        psig: *mut *const ffi::ASN1_BIT_STRING,
-        palg: *mut *const ffi::X509_ALGOR,
-        x: *const ffi::X509,
-    ) {
-        if !psig.is_null() {
-            *psig = (*x).signature;
+        #[allow(bad_style)]
+        unsafe fn X509_getm_notAfter(x: *mut ffi::X509) -> *mut ffi::ASN1_TIME {
+            (*(*(*x).cert_info).validity).notAfter
         }
-        if !palg.is_null() {
-            *palg = (*x).sig_alg;
-        }
-    }
 
-    pub unsafe fn X509_ALGOR_get0(
-        paobj: *mut *const ffi::ASN1_OBJECT,
-        pptype: *mut c_int,
-        pval: *mut *mut c_void,
-        alg: *const ffi::X509_ALGOR,
-    ) {
-        if !paobj.is_null() {
-            *paobj = (*alg).algorithm;
+        #[allow(bad_style)]
+        unsafe fn X509_getm_notBefore(x: *mut ffi::X509) -> *mut ffi::ASN1_TIME {
+            (*(*(*x).cert_info).validity).notBefore
         }
-        assert!(pptype.is_null());
-        assert!(pval.is_null());
+
+        #[allow(bad_style)]
+        unsafe fn X509_up_ref(x: *mut ffi::X509) {
+            ffi::CRYPTO_add_lock(
+                &mut (*x).references,
+                1,
+                ffi::CRYPTO_LOCK_X509,
+                "mod.rs\0".as_ptr() as *const _,
+                line!() as c_int,
+            );
+        }
+
+        #[allow(bad_style)]
+        unsafe fn X509_REQ_get_version(x: *mut ffi::X509_REQ) -> ::libc::c_long {
+            ffi::ASN1_INTEGER_get((*(*x).req_info).version)
+        }
+
+        #[allow(bad_style)]
+        unsafe fn X509_REQ_get_subject_name(x: *mut ffi::X509_REQ) -> *mut ::ffi::X509_NAME {
+            (*(*x).req_info).subject
+        }
+
+        #[allow(bad_style)]
+        unsafe fn X509_get0_signature(
+            psig: *mut *const ffi::ASN1_BIT_STRING,
+            palg: *mut *const ffi::X509_ALGOR,
+            x: *const ffi::X509,
+        ) {
+            if !psig.is_null() {
+                *psig = (*x).signature;
+            }
+            if !palg.is_null() {
+                *palg = (*x).sig_alg;
+            }
+        }
+
+        #[allow(bad_style)]
+        unsafe fn X509_ALGOR_get0(
+            paobj: *mut *const ffi::ASN1_OBJECT,
+            pptype: *mut c_int,
+            pval: *mut *mut ::libc::c_void,
+            alg: *const ffi::X509_ALGOR,
+        ) {
+            if !paobj.is_null() {
+                *paobj = (*alg).algorithm;
+            }
+            assert!(pptype.is_null());
+            assert!(pval.is_null());
+        }
     }
 }
