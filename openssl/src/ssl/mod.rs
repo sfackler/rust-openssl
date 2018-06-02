@@ -952,7 +952,9 @@ impl SslContextBuilder {
         unsafe { cvt(ffi::SSL_CTX_use_PrivateKey(self.as_ptr(), key.as_ptr())).map(|_| ()) }
     }
 
-    /// Sets the list of supported ciphers.
+    /// Sets the list of supported ciphers for protocols before TLSv1.3.
+    ///
+    /// The `set_ciphersuites` method controls the cipher suites for TLSv1.3.
     ///
     /// See [`ciphers`] for details on the format.
     ///
@@ -964,6 +966,29 @@ impl SslContextBuilder {
         let cipher_list = CString::new(cipher_list).unwrap();
         unsafe {
             cvt(ffi::SSL_CTX_set_cipher_list(
+                self.as_ptr(),
+                cipher_list.as_ptr() as *const _,
+            )).map(|_| ())
+        }
+    }
+
+    /// Sets the list of supported ciphers for the TLSv1.3 protocol.
+    ///
+    /// The `set_cipher_list` method controls lthe cipher suites for protocols before TLSv1.3.
+    ///
+    /// The format consists of TLSv1.3 ciphersuite names separated by `:` characters in order of
+    /// preference.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
+    /// This corresponds to [`SSL_CTX_set_ciphersuites`].
+    ///
+    /// [`SSL_CTX_set_ciphersuites`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_ciphersuites.html
+    #[cfg(ossl111)]
+    pub fn set_ciphersuites(&mut self, cipher_list: &str) -> Result<(), ErrorStack> {
+        let cipher_list = CString::new(cipher_list).unwrap();
+        unsafe {
+            cvt(ffi::SSL_CTX_set_ciphersuites(
                 self.as_ptr(),
                 cipher_list.as_ptr() as *const _,
             )).map(|_| ())
