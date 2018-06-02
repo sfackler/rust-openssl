@@ -74,7 +74,7 @@ where
             .ssl_context()
             .ex_data(callback_idx)
             .expect("BUG: psk callback missing") as *const F;
-        let hint = if hint != ptr::null() {
+        let hint = if !hint.is_null() {
             Some(CStr::from_ptr(hint).to_bytes())
         } else {
             None
