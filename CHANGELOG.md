@@ -2,6 +2,28 @@
 
 ## [Unreleased]
 
+## [v0.10.9] - 2018-06-01
+
+### Fixed
+
+* Fixed a use-after-free in `CmsContentInfo::sign`.
+* `SslRef::servername` now returns `None` rather than panicking on a non-UTF8 name.
+
+### Added
+
+* Added `MessageDigest::from_nid`.
+* Added `Nid::signature_algorithms`, `Nid::long_name`, and `Nid::short_name`.
+* Added early data and early keying material export support for TLS 1.3.
+* Added `SslRef::verified_chain`.
+* Added `SslRef::servername_raw` which returns a `&[u8]` rather than `&str`.
+* Added `SslRef::finished` and `SslRef::peer_finished`.
+* Added `X509Ref::digest` to replace `X509Ref::fingerprint`.
+* `X509StoreBuilder` and `X509Store` now implement `Sync` and `Send`.
+
+### Deprecated
+
+* `X509Ref::fingerprint` has been deprecated in favor of `X509Ref::digest`.
+
 ## [v0.10.8] - 2018-05-20
 
 ### Fixed
@@ -205,7 +227,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.8...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.9...master
+[v0.10.9]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.8...openssl-v0.10.9
 [v0.10.8]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.7...openssl-v0.10.8
 [v0.10.7]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.6...openssl-v0.10.7
 [v0.10.6]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.5...openssl-v0.10.6
