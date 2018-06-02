@@ -84,7 +84,10 @@ where
         let psk_sl = slice::from_raw_parts_mut(psk as *mut u8, max_psk_len as usize);
         match (*callback)(ssl, hint, identity_sl, psk_sl) {
             Ok(psk_len) => psk_len as u32,
-            _ => 0,
+            Err(e) => {
+                e.put();
+                0
+            }
         }
     }
 }
@@ -118,7 +121,10 @@ where
         let psk_sl = slice::from_raw_parts_mut(psk as *mut u8, max_psk_len as usize);
         match (*callback)(ssl, identity, psk_sl) {
             Ok(psk_len) => psk_len as u32,
-            _ => 0,
+            Err(e) => {
+                e.put();
+                0
+            }
         }
     }
 }
