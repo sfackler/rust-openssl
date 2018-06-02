@@ -1240,6 +1240,18 @@ impl SslContextBuilder {
         }
     }
 
+    #[deprecated(since = "0.10.10", note = "renamed to `set_psk_client_callback`")]
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+    pub fn set_psk_callback<F>(&mut self, callback: F)
+    where
+        F: Fn(&mut SslRef, Option<&[u8]>, &mut [u8], &mut [u8]) -> Result<usize, ErrorStack>
+            + 'static
+            + Sync
+            + Send,
+    {
+        self.set_psk_client_callback(callback)
+    }
+
     /// Sets the callback for providing an identity and pre-shared key for a TLS-PSK server.
     ///
     /// The callback will be called with the SSL context, an identity provided by the client,

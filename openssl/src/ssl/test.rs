@@ -1536,3 +1536,38 @@ fn stateless() {
     send(client_stream.get_mut(), server_stream.get_mut());
     hs(server_stream.handshake()).unwrap();
 }
+
+#[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+#[test]
+fn psk_ciphers() {
+    const PSK: &[u8] = b"thisisaverysecurekey";
+    const CLIENT_IDENT: &[u8] = b"thisisaclient";
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    thread::spawn(move || {
+        let stream = listener.accept().unwrap().0;
+        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+        ctx.set_cipher_list("ECDHE-PSK-CHACHA20-POLY1305").unwrap();
+        ctx.set_psk_server_callback(move |_, identity, psk| {
+            assert!(identity.unwrap_or(&[]) == CLIENT_IDENT);
+            psk[..PSK.len()].copy_from_slice(&PSK);
+            Ok(PSK.len())
+        });
+        let ssl = Ssl::new(&ctx.build()).unwrap();
+        ssl.accept(stream).unwrap();
+    });
+
+    let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    ctx.set_cipher_list("ECDHE-PSK-CHACHA20-POLY1305").unwrap();
+    ctx.set_psk_client_callback(move |_, _, identity, psk| {
+        identity[..CLIENT_IDENT.len()].copy_from_slice(&CLIENT_IDENT);
+        identity[CLIENT_IDENT.len()] = 0;
+        psk[..PSK.len()].copy_from_slice(&PSK);
+        Ok(PSK.len())
+    });
+    let ssl = Ssl::new(&ctx.build()).unwrap();
+    ssl.connect(stream).unwrap();
+}
