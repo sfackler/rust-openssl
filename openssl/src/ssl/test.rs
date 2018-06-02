@@ -1543,6 +1543,8 @@ fn psk_ciphers() {
     const CIPHER: &'static str = "PSK-AES128-CBC-SHA";
     const PSK: &[u8] = b"thisisaverysecurekey";
     const CLIENT_IDENT: &[u8] = b"thisisaclient";
+    static CLIENT_CALLED: AtomicBool = ATOMIC_BOOL_INIT;
+    static SERVER_CALLED: AtomicBool = ATOMIC_BOOL_INIT;
 
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
@@ -1554,6 +1556,7 @@ fn psk_ciphers() {
         ctx.set_psk_server_callback(move |_, identity, psk| {
             assert!(identity.unwrap_or(&[]) == CLIENT_IDENT);
             psk[..PSK.len()].copy_from_slice(&PSK);
+            SERVER_CALLED.store(true, Ordering::SeqCst);
             Ok(PSK.len())
         });
         let ssl = Ssl::new(&ctx.build()).unwrap();
@@ -1567,8 +1570,11 @@ fn psk_ciphers() {
         identity[..CLIENT_IDENT.len()].copy_from_slice(&CLIENT_IDENT);
         identity[CLIENT_IDENT.len()] = 0;
         psk[..PSK.len()].copy_from_slice(&PSK);
+        CLIENT_CALLED.store(true, Ordering::SeqCst);
         Ok(PSK.len())
     });
     let ssl = Ssl::new(&ctx.build()).unwrap();
     ssl.connect(stream).unwrap();
+
+    assert!(CLIENT_CALLED.load(Ordering::SeqCst) && SERVER_CALLED.load(Ordering::SeqCst));
 }
