@@ -13,8 +13,8 @@ use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
 use libc::c_uint;
 use pkey::{HasPrivate, PKeyRef};
-use stack::Stack;
-use x509::X509;
+use stack::StackRef;
+use x509::{X509, X509Ref};
 use {cvt, cvt_p};
 
 bitflags! {
@@ -130,13 +130,16 @@ impl CmsContentInfo {
     /// OpenSSL documentation at [`CMS_sign`]
     ///
     /// [`CMS_sign`]: https://www.openssl.org/docs/manmaster/man3/CMS_sign.html
-    pub fn sign<T: HasPrivate>(
-        signcert: Option<&X509>,
+    pub fn sign<T>(
+        signcert: Option<&X509Ref>,
         pkey: Option<&PKeyRef<T>>,
-        certs: Option<&Stack<X509>>,
+        certs: Option<&StackRef<X509>>,
         data: Option<&[u8]>,
         flags: CMSOptions,
-    ) -> Result<CmsContentInfo, ErrorStack> {
+    ) -> Result<CmsContentInfo, ErrorStack>
+    where
+        T: HasPrivate,
+    {
         unsafe {
             let signcert = signcert.map_or(ptr::null_mut(), |p| p.as_ptr());
             let pkey = pkey.map_or(ptr::null_mut(), |p| p.as_ptr());
