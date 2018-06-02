@@ -1056,7 +1056,7 @@ mod test {
     #[test]
     fn signature_digest() {
         let algs = Nid::SHA256WITHRSAENCRYPTION.signature_algorithms().unwrap();
-        assert_eq!(algs.digest, Nid::SHA256,);
+        assert_eq!(algs.digest, Nid::SHA256);
         assert_eq!(algs.pkey, Nid::RSAENCRYPTION);
     }
 
