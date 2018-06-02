@@ -2365,6 +2365,14 @@ extern "C" {
         k: *mut RSA,
     ) -> c_int;
 
+    pub fn RSA_padding_check_PKCS1_type_2(
+        to: *mut c_uchar,
+        tlen: c_int,
+        f: *const c_uchar,
+        fl: c_int,
+        rsa_len: c_int,
+    ) -> c_int;
+
     pub fn DSA_new() -> *mut DSA;
     pub fn DSA_free(dsa: *mut DSA);
     pub fn DSA_size(dsa: *const DSA) -> c_int;
