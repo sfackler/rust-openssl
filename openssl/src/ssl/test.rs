@@ -567,9 +567,10 @@ fn test_alpn_server_advertise_multiple() {
         ctx.build()
     };
     // Have the listener wait on the connection in a different thread.
-    thread::spawn(move || {
+    let guard = thread::spawn(move || {
         let (stream, _) = listener.accept().unwrap();
-        Ssl::new(&listener_ctx).unwrap().accept(stream).unwrap();
+        let mut stream = Ssl::new(&listener_ctx).unwrap().accept(stream).unwrap();
+        stream.write_all(&[0]).unwrap();
     });
 
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
@@ -581,12 +582,16 @@ fn test_alpn_server_advertise_multiple() {
     }
     // Now connect to the socket and make sure the protocol negotiation works...
     let stream = TcpStream::connect(localhost).unwrap();
-    let stream = match Ssl::new(&ctx.build()).unwrap().connect(stream) {
+    let mut stream = match Ssl::new(&ctx.build()).unwrap().connect(stream) {
         Ok(stream) => stream,
         Err(err) => panic!("Expected success, got {:?}", err),
     };
     // SPDY is selected since that's the only thing the client supports.
     assert_eq!(b"spdy/3.1", stream.ssl().selected_alpn_protocol().unwrap());
+    let mut buf = [0];
+    stream.read_exact(&mut buf).unwrap();
+
+    guard.join().unwrap();
 }
 
 #[test]
@@ -643,9 +648,10 @@ fn test_alpn_server_select_none() {
         ctx.build()
     };
     // Have the listener wait on the connection in a different thread.
-    thread::spawn(move || {
+    let guard = thread::spawn(move || {
         let (stream, _) = listener.accept().unwrap();
-        Ssl::new(&listener_ctx).unwrap().accept(stream).unwrap();
+        let mut stream = Ssl::new(&listener_ctx).unwrap().accept(stream).unwrap();
+        stream.write_all(&[0]).unwrap();
     });
 
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
@@ -654,10 +660,15 @@ fn test_alpn_server_select_none() {
     ctx.set_ca_file(&Path::new("test/root-ca.pem")).unwrap();
     // Now connect to the socket and make sure the protocol negotiation works...
     let stream = TcpStream::connect(localhost).unwrap();
-    let stream = Ssl::new(&ctx.build()).unwrap().connect(stream).unwrap();
+    let mut stream = Ssl::new(&ctx.build()).unwrap().connect(stream).unwrap();
 
     // Since the protocols from the server and client don't overlap at all, no protocol is selected
     assert_eq!(None, stream.ssl().selected_alpn_protocol());
+
+    let mut buf = [0];
+    stream.read_exact(&mut buf).unwrap();
+
+    guard.join().unwrap();
 }
 
 #[test]
@@ -972,7 +983,7 @@ fn shutdown() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
 
-    thread::spawn(move || {
+    let guard = thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
@@ -999,6 +1010,8 @@ fn shutdown() {
 
     assert_eq!(stream.shutdown().unwrap(), ShutdownResult::Sent);
     assert_eq!(stream.shutdown().unwrap(), ShutdownResult::Received);
+
+    guard.join().unwrap();
 }
 
 #[test]
@@ -1030,7 +1043,7 @@ fn tmp_dh_callback() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
 
-    thread::spawn(move || {
+    let guard = thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
@@ -1043,23 +1056,24 @@ fn tmp_dh_callback() {
             Dh::params_from_pem(dh)
         });
         let ssl = Ssl::new(&ctx.build()).unwrap();
-        ssl.accept(stream).unwrap();
+        let mut stream = ssl.accept(stream).unwrap();
+        stream.write_all(&[0]).unwrap();
     });
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-    // TLS 1.3 has no DH suites, and openssl isn't happy if the max version has no suites :(
+    // TLS 1.3 has no DH suites, so make sure we don't pick that version
     #[cfg(ossl111)]
-    {
-        ctx.set_options(super::SslOptions {
-            bits: ::ffi::SSL_OP_NO_TLSv1_3,
-        });
-    }
+    ctx.set_options(super::SslOptions::NO_TLSV1_3);
     ctx.set_cipher_list("EDH").unwrap();
     let ssl = Ssl::new(&ctx.build()).unwrap();
-    ssl.connect(stream).unwrap();
+    let mut stream = ssl.connect(stream).unwrap();
+
+    stream.read_exact(&mut [0]).unwrap();
 
     assert!(CALLED_BACK.load(Ordering::SeqCst));
+
+    guard.join().unwrap();
 }
 
 #[test]
@@ -1073,7 +1087,7 @@ fn tmp_ecdh_callback() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
 
-    thread::spawn(move || {
+    let guard = thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
@@ -1085,16 +1099,20 @@ fn tmp_ecdh_callback() {
             EcKey::from_curve_name(Nid::X9_62_PRIME256V1)
         });
         let ssl = Ssl::new(&ctx.build()).unwrap();
-        ssl.accept(stream).unwrap();
+        let mut stream = ssl.accept(stream).unwrap();
+        stream.write_all(&[0]).unwrap();
     });
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_cipher_list("ECDH").unwrap();
     let ssl = Ssl::new(&ctx.build()).unwrap();
-    ssl.connect(stream).unwrap();
+    let mut stream = ssl.connect(stream).unwrap();
+    stream.read_exact(&mut [0]).unwrap();
 
     assert!(CALLED_BACK.load(Ordering::SeqCst));
+
+    guard.join().unwrap();
 }
 
 #[test]
@@ -1104,7 +1122,7 @@ fn tmp_dh_callback_ssl() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
 
-    thread::spawn(move || {
+    let guard = thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
@@ -1117,23 +1135,23 @@ fn tmp_dh_callback_ssl() {
             let dh = include_bytes!("../../test/dhparams.pem");
             Dh::params_from_pem(dh)
         });
-        ssl.accept(stream).unwrap();
+        let mut stream = ssl.accept(stream).unwrap();
+        stream.write_all(&[0]).unwrap();
     });
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-    // TLS 1.3 has no DH suites, and openssl isn't happy if the max version has no suites :(
+    // TLS 1.3 has no DH suites, so make sure we don't pick that version
     #[cfg(ossl111)]
-    {
-        ctx.set_options(super::SslOptions {
-            bits: ::ffi::SSL_OP_NO_TLSv1_3,
-        });
-    }
+    ctx.set_options(super::SslOptions::NO_TLSV1_3);
     ctx.set_cipher_list("EDH").unwrap();
     let ssl = Ssl::new(&ctx.build()).unwrap();
-    ssl.connect(stream).unwrap();
+    let mut stream = ssl.connect(stream).unwrap();
+    stream.read_exact(&mut [0]).unwrap();
 
     assert!(CALLED_BACK.load(Ordering::SeqCst));
+
+    guard.join().unwrap();
 }
 
 #[test]
@@ -1147,7 +1165,7 @@ fn tmp_ecdh_callback_ssl() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
 
-    thread::spawn(move || {
+    let guard = thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
@@ -1159,16 +1177,20 @@ fn tmp_ecdh_callback_ssl() {
             CALLED_BACK.store(true, Ordering::SeqCst);
             EcKey::from_curve_name(Nid::X9_62_PRIME256V1)
         });
-        ssl.accept(stream).unwrap();
+        let mut stream = ssl.accept(stream).unwrap();
+        stream.write_all(&[0]).unwrap();
     });
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_cipher_list("ECDH").unwrap();
     let ssl = Ssl::new(&ctx.build()).unwrap();
-    ssl.connect(stream).unwrap();
+    let mut stream = ssl.connect(stream).unwrap();
+    stream.read_exact(&mut [0]).unwrap();
 
     assert!(CALLED_BACK.load(Ordering::SeqCst));
+
+    guard.join().unwrap();
 }
 
 #[test]
@@ -1200,7 +1222,7 @@ fn status_callbacks() {
     static CALLED_BACK_SERVER: AtomicBool = ATOMIC_BOOL_INIT;
     static CALLED_BACK_CLIENT: AtomicBool = ATOMIC_BOOL_INIT;
 
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let listener = TcpListener::bind("127.0.0.1:12345").unwrap();
     let port = listener.local_addr().unwrap().port();
 
     let guard = thread::spawn(move || {
@@ -1218,7 +1240,8 @@ fn status_callbacks() {
             Ok(true)
         }).unwrap();
         let ssl = Ssl::new(&ctx.build()).unwrap();
-        ssl.accept(stream).unwrap();
+        let mut stream = ssl.accept(stream).unwrap();
+        stream.write_all(&[0]).unwrap();
     });
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
@@ -1231,7 +1254,9 @@ fn status_callbacks() {
     }).unwrap();
     let mut ssl = Ssl::new(&ctx.build()).unwrap();
     ssl.set_status_type(StatusType::OCSP).unwrap();
-    ssl.connect(stream).unwrap();
+    let mut stream = ssl.connect(stream).unwrap();
+    let mut buf = [0];
+    stream.read_exact(&mut buf).unwrap();
 
     assert!(CALLED_BACK_SERVER.load(Ordering::SeqCst));
     assert!(CALLED_BACK_CLIENT.load(Ordering::SeqCst));
@@ -1246,7 +1271,7 @@ fn new_session_callback() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
 
-    thread::spawn(move || {
+    let guard = thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
@@ -1265,11 +1290,11 @@ fn new_session_callback() {
     ctx.set_new_session_callback(|_, _| CALLED_BACK.store(true, Ordering::SeqCst));
     let ssl = Ssl::new(&ctx.build()).unwrap();
     let mut stream = ssl.connect(stream).unwrap();
-    // read 1 byte to make sure the session is received for TLSv1.3
-    let mut buf = [0];
-    stream.read_exact(&mut buf).unwrap();
+    stream.read_exact(&mut [0]).unwrap();
 
     assert!(CALLED_BACK.load(Ordering::SeqCst));
+
+    guard.join().unwrap();
 }
 
 #[test]
@@ -1288,26 +1313,31 @@ fn keying_export() {
         ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
         let ssl = Ssl::new(&ctx.build()).unwrap();
-        let stream = ssl.accept(stream).unwrap();
+        let mut stream = ssl.accept(stream).unwrap();
 
         let mut buf = [0; 32];
         stream
             .ssl()
             .export_keying_material(&mut buf, label, Some(context))
             .unwrap();
+
+        stream.write_all(&[0]).unwrap();
+
         buf
     });
 
     let stream = TcpStream::connect(addr).unwrap();
     let ctx = SslContext::builder(SslMethod::tls()).unwrap();
     let ssl = Ssl::new(&ctx.build()).unwrap();
-    let stream = ssl.connect(stream).unwrap();
+    let mut stream = ssl.connect(stream).unwrap();
 
     let mut buf = [1; 32];
     stream
         .ssl()
         .export_keying_material(&mut buf, label, Some(context))
         .unwrap();
+
+    stream.read_exact(&mut [0]).unwrap();
 
     let buf2 = guard.join().unwrap();
 
@@ -1374,7 +1404,8 @@ fn custom_extensions() {
             },
         ).unwrap();
         let ssl = Ssl::new(&ctx.build()).unwrap();
-        ssl.accept(stream).unwrap();
+        let mut stream = ssl.accept(stream).unwrap();
+        stream.write_all(&[0]).unwrap();
     });
 
     let stream = TcpStream::connect(addr).unwrap();
@@ -1386,7 +1417,8 @@ fn custom_extensions() {
         |_, _, _, _| unreachable!(),
     ).unwrap();
     let ssl = Ssl::new(&ctx.build()).unwrap();
-    ssl.connect(stream).unwrap();
+    let mut stream = ssl.connect(stream).unwrap();
+    stream.read_exact(&mut [0]).unwrap();
 
     guard.join().unwrap();
     assert!(FOUND_EXTENSION.load(Ordering::SeqCst));
