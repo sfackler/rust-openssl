@@ -1,13 +1,23 @@
 //! A collection of numerical identifiers for OpenSSL objects.
 use ffi;
-use libc::{c_int,c_char};
-use std::ptr;
+use libc::{c_char, c_int};
 
 use std::ffi::CStr;
 use std::str;
 
-use error::ErrorStack;
 use cvt_p;
+use error::ErrorStack;
+
+/// The digest and public-key algorithms associated with a signature.
+pub struct SignatureAlgorithms {
+    /// The signature's digest.
+    ///
+    /// If the signature does not specify a digest, this will be `NID::UNDEF`.
+    pub digest: Nid,
+
+    /// The signature's public-key.
+    pub pkey: Nid,
+}
 
 /// A numerical identifier for an OpenSSL object.
 ///
@@ -49,14 +59,18 @@ impl Nid {
         self.0
     }
 
-    /// Returns the `Nid` of the digest algorithm associated with a signature ID.
+    /// Returns the `Nid`s of the digest and public key algorithms associated with a signature ID.
     ///
     /// This corresponds to `OBJ_find_sigid_algs`.
-    pub fn digest_algorithm(&self) -> Option<Nid> {
+    pub fn signature_algorithms(&self) -> Option<SignatureAlgorithms> {
         unsafe {
             let mut digest = 0;
-            if ffi::OBJ_find_sigid_algs(self.0, &mut digest, ptr::null_mut()) == 1 {
-                Some(Nid(digest))
+            let mut pkey = 0;
+            if ffi::OBJ_find_sigid_algs(self.0, &mut digest, &mut pkey) == 1 {
+                Some(SignatureAlgorithms {
+                    digest: Nid(digest),
+                    pkey: Nid(pkey),
+                })
             } else {
                 None
             }
@@ -1041,10 +1055,9 @@ mod test {
 
     #[test]
     fn signature_digest() {
-        assert_eq!(
-            Nid::SHA256WITHRSAENCRYPTION.digest_algorithm(),
-            Some(Nid::SHA256)
-        );
+        let algs = Nid::SHA256WITHRSAENCRYPTION.signature_algorithms().unwrap();
+        assert_eq!(algs.digest, Nid::SHA256,);
+        assert_eq!(algs.pkey, Nid::RSAENCRYPTION);
     }
 
     #[test]
@@ -1057,11 +1070,26 @@ mod test {
         let undefined_nid = Nid::from_raw(118);
 
         assert_eq!(common_name.long_name().unwrap(), "commonName");
-        assert_eq!(organizational_unit_name.long_name().unwrap(), "organizationalUnitName");
-        assert_eq!(aes256_cbc_hmac_sha1.long_name().unwrap(), "aes-256-cbc-hmac-sha1");
-        assert_eq!(id_cmc_lrapopwitness.long_name().unwrap(), "id-cmc-lraPOPWitness");
-        assert_eq!(ms_ctl_sign.long_name().unwrap(), "Microsoft Trust List Signing");
-        assert!(undefined_nid.long_name().is_err(), "undefined_nid should not return a valid value");
+        assert_eq!(
+            organizational_unit_name.long_name().unwrap(),
+            "organizationalUnitName"
+        );
+        assert_eq!(
+            aes256_cbc_hmac_sha1.long_name().unwrap(),
+            "aes-256-cbc-hmac-sha1"
+        );
+        assert_eq!(
+            id_cmc_lrapopwitness.long_name().unwrap(),
+            "id-cmc-lraPOPWitness"
+        );
+        assert_eq!(
+            ms_ctl_sign.long_name().unwrap(),
+            "Microsoft Trust List Signing"
+        );
+        assert!(
+            undefined_nid.long_name().is_err(),
+            "undefined_nid should not return a valid value"
+        );
     }
 
     #[test]
@@ -1075,9 +1103,18 @@ mod test {
 
         assert_eq!(common_name.short_name().unwrap(), "CN");
         assert_eq!(organizational_unit_name.short_name().unwrap(), "OU");
-        assert_eq!(aes256_cbc_hmac_sha1.short_name().unwrap(), "AES-256-CBC-HMAC-SHA1");
-        assert_eq!(id_cmc_lrapopwitness.short_name().unwrap(), "id-cmc-lraPOPWitness");
+        assert_eq!(
+            aes256_cbc_hmac_sha1.short_name().unwrap(),
+            "AES-256-CBC-HMAC-SHA1"
+        );
+        assert_eq!(
+            id_cmc_lrapopwitness.short_name().unwrap(),
+            "id-cmc-lraPOPWitness"
+        );
         assert_eq!(ms_ctl_sign.short_name().unwrap(), "msCTLSign");
-        assert!(undefined_nid.short_name().is_err(), "undefined_nid should not return a valid value");
+        assert!(
+            undefined_nid.short_name().is_err(),
+            "undefined_nid should not return a valid value"
+        );
     }
 }
