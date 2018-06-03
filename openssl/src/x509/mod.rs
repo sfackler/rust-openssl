@@ -826,7 +826,7 @@ impl X509NameRef {
     }
 
     /// Returns an iterator over all `X509NameEntry` values
-    pub fn all_entries<'a>(&'a self) -> X509NameEntries<'a> {
+    pub fn entries<'a>(&'a self) -> X509NameEntries<'a> {
         X509NameEntries {
             name: self,
             nid: None,
@@ -854,15 +854,17 @@ impl<'a> Iterator for X509NameEntries<'a> {
                     // There is a `Nid` specified to search for
                     self.loc =
                         ffi::X509_NAME_get_index_by_NID(self.name.as_ptr(), nid.as_raw(), self.loc);
+                    if self.loc == -1 {
+                        return None;
+                    }
                 }
                 None => {
                     // Iterate over all `Nid`s
                     self.loc += 1;
+                    if self.loc >= entry_count {
+                        return None;
+                    }
                 }
-            }
-
-            if self.loc == -1 || self.loc >= entry_count {
-                return None;
             }
 
             let entry = ffi::X509_NAME_get_entry(self.name.as_ptr(), self.loc);

@@ -84,7 +84,7 @@ fn test_nameref_iterator() {
     let cert = include_bytes!("../../test/nid_test_cert.pem");
     let cert = X509::from_pem(cert).unwrap();
     let subject = cert.subject_name();
-    let mut all_entries = subject.all_entries();
+    let mut all_entries = subject.entries();
 
     let email = all_entries.next().unwrap();
     assert_eq!(email.object().nid().as_raw(), Nid::PKCS9_EMAILADDRESS.as_raw());
