@@ -2178,6 +2178,32 @@ impl SslRef {
         unsafe { cvt(ffi::SSL_set_ecdh_auto(self.as_ptr(), onoff as c_int)).map(|_| ()) }
     }
 
+    /// Like [`SslContextBuilder::set_alpn_protos`].
+    ///
+    /// Requires OpenSSL 1.0.2 or LibreSSL 2.6.1 or newer.
+    ///
+    /// This corresponds to [`SSL_set_alpn_protos`].
+    ///
+    /// [`SslContextBuilder::set_alpn_protos`]: struct.SslContextBuilder.html#method.set_alpn_protos
+    /// [`SSL_set_alpn_protos`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_set_alpn_protos.html
+    #[cfg(any(ossl102, libressl261))]
+    pub fn set_alpn_protos(&mut self, protocols: &[u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            assert!(protocols.len() <= c_uint::max_value() as usize);
+            let r = ffi::SSL_set_alpn_protos(
+                self.as_ptr(),
+                protocols.as_ptr(),
+                protocols.len() as c_uint,
+            );
+            // fun fact, SSL_set_alpn_protos has a reversed return code D:
+            if r == 0 {
+                Ok(())
+            } else {
+                Err(ErrorStack::get())
+            }
+        }
+    }
+
     /// Returns the current cipher if the session is active.
     ///
     /// This corresponds to [`SSL_get_current_cipher`].
