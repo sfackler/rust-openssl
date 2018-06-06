@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [v0.10.10] - 2018-06-06
+
+### Added
+
+* Added `SslRef::set_alpn_protos`.
+* Added `SslContextBuilder::set_ciphersuites`.
+
 ## [v0.10.9] - 2018-06-01
 
 ### Fixed
@@ -227,7 +234,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.9...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.10...master
+[v0.10.10]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.9...openssl-v0.10.10
 [v0.10.9]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.8...openssl-v0.10.9
 [v0.10.8]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.7...openssl-v0.10.8
 [v0.10.7]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.6...openssl-v0.10.7
