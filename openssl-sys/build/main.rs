@@ -100,6 +100,10 @@ fn main() {
     for lib in libs.into_iter() {
         println!("cargo:rustc-link-lib={}={}", kind, lib);
     }
+
+    if kind == "static" && target.contains("windows") {
+        println!("cargo:rustc-link-lib=dylib=gdi32");
+    }
 }
 
 fn find_openssl_dir(target: &str) -> OsString {
