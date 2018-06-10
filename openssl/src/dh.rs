@@ -107,7 +107,7 @@ impl Dh<Params> {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl273))] {
         use ffi::DH_set0_pqg;
     } else {
         #[allow(bad_style)]

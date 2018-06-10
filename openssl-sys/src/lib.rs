@@ -2616,7 +2616,7 @@ extern "C" {
     pub fn SSL_set_session(ssl: *mut SSL, session: *mut SSL_SESSION) -> c_int;
     #[cfg(all(ossl102, not(ossl110f)))]
     pub fn SSL_is_server(s: *mut SSL) -> c_int;
-    #[cfg(ossl110f)]
+    #[cfg(any(ossl110f, libressl273))]
     pub fn SSL_is_server(s: *const SSL) -> c_int;
     pub fn SSL_get_finished(s: *const SSL, buf: *mut c_void, count: size_t) -> size_t;
     pub fn SSL_get_peer_finished(s: *const SSL, buf: *mut c_void, count: size_t) -> size_t;

@@ -188,7 +188,7 @@ impl<T> fmt::Debug for Dsa<T> {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl273))] {
         use ffi::DSA_get0_pqg;
     } else {
         #[allow(bad_style)]
