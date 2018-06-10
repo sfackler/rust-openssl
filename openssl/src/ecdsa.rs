@@ -105,7 +105,7 @@ impl EcdsaSig {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl273))] {
         use ffi::{ECDSA_SIG_set0, ECDSA_SIG_get0};
     } else {
         #[allow(bad_style)]

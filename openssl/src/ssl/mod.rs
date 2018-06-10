@@ -3307,44 +3307,9 @@ pub enum ShutdownResult {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
-        use ffi::{
-            SSL_CTX_up_ref,
-            SSL_SESSION_get_master_key, SSL_SESSION_up_ref, SSL_is_server, TLS_method, DTLS_method,
-        };
-
-        pub unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
-            ffi::CRYPTO_get_ex_new_index(
-                ffi::CRYPTO_EX_INDEX_SSL_CTX,
-                0,
-                ptr::null_mut(),
-                None,
-                None,
-                Some(f),
-            )
-        }
-
-        pub unsafe fn get_new_ssl_idx(f: ffi::CRYPTO_EX_free) -> c_int {
-            ffi::CRYPTO_get_ex_new_index(
-                ffi::CRYPTO_EX_INDEX_SSL,
-                0,
-                ptr::null_mut(),
-                None,
-                None,
-                Some(f),
-            )
-        }
+    if #[cfg(any(ossl110, libressl273))] {
+        use ffi::{SSL_CTX_up_ref, SSL_SESSION_get_master_key, SSL_SESSION_up_ref, SSL_is_server};
     } else {
-        use ffi::{SSLv23_method as TLS_method, DTLSv1_method as DTLS_method};
-
-        pub unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
-            ffi::SSL_CTX_get_ex_new_index(0, ptr::null_mut(), None, None, Some(f))
-        }
-
-        pub unsafe fn get_new_ssl_idx(f: ffi::CRYPTO_EX_free) -> c_int {
-            ffi::SSL_get_ex_new_index(0, ptr::null_mut(), None, None, Some(f))
-        }
-
         #[allow(bad_style)]
         pub unsafe fn SSL_CTX_up_ref(ssl: *mut ffi::SSL_CTX) -> c_int {
             ffi::CRYPTO_add_lock(
@@ -3388,6 +3353,44 @@ cfg_if! {
                 line!() as c_int,
             );
             0
+        }
+    }
+}
+
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::{TLS_method, DTLS_method};
+
+        pub unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
+            ffi::CRYPTO_get_ex_new_index(
+                ffi::CRYPTO_EX_INDEX_SSL_CTX,
+                0,
+                ptr::null_mut(),
+                None,
+                None,
+                Some(f),
+            )
+        }
+
+        pub unsafe fn get_new_ssl_idx(f: ffi::CRYPTO_EX_free) -> c_int {
+            ffi::CRYPTO_get_ex_new_index(
+                ffi::CRYPTO_EX_INDEX_SSL,
+                0,
+                ptr::null_mut(),
+                None,
+                None,
+                Some(f),
+            )
+        }
+    } else {
+        use ffi::{SSLv23_method as TLS_method, DTLSv1_method as DTLS_method};
+
+        pub unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
+            ffi::SSL_CTX_get_ex_new_index(0, ptr::null_mut(), None, None, Some(f))
+        }
+
+        pub unsafe fn get_new_ssl_idx(f: ffi::CRYPTO_EX_free) -> c_int {
+            ffi::SSL_get_ex_new_index(0, ptr::null_mut(), None, None, Some(f))
         }
     }
 }

@@ -8,11 +8,15 @@ use std::sync::{Once, ONCE_INIT};
 pub use libressl::v250::*;
 #[cfg(libressl251)]
 pub use libressl::v251::*;
+#[cfg(libressl273)]
+pub use libressl::v273::*;
 
 #[cfg(not(libressl251))]
 mod v250;
 #[cfg(libressl251)]
 mod v251;
+#[cfg(libressl273)]
+mod v273;
 
 #[repr(C)]
 pub struct stack_st_ASN1_OBJECT {
