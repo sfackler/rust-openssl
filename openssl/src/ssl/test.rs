@@ -1565,6 +1565,13 @@ fn psk_ciphers() {
 
     let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    // TLS 1.3 has no DH suites, and openssl isn't happy if the max version has no suites :(
+    #[cfg(ossl111)]
+    {
+        ctx.set_options(super::SslOptions {
+            bits: ::ffi::SSL_OP_NO_TLSv1_3,
+        });
+    }
     ctx.set_cipher_list(CIPHER).unwrap();
     ctx.set_psk_client_callback(move |_, _, identity, psk| {
         identity[..CLIENT_IDENT.len()].copy_from_slice(&CLIENT_IDENT);
