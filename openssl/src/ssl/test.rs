@@ -1568,3 +1568,52 @@ fn stateless() {
     send(client_stream.get_mut(), server_stream.get_mut());
     hs(server_stream.handshake()).unwrap();
 }
+
+#[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+#[test]
+fn psk_ciphers() {
+    const CIPHER: &'static str = "PSK-AES128-CBC-SHA";
+    const PSK: &[u8] = b"thisisaverysecurekey";
+    const CLIENT_IDENT: &[u8] = b"thisisaclient";
+    static CLIENT_CALLED: AtomicBool = ATOMIC_BOOL_INIT;
+    static SERVER_CALLED: AtomicBool = ATOMIC_BOOL_INIT;
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    thread::spawn(move || {
+        let stream = listener.accept().unwrap().0;
+        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+        ctx.set_cipher_list(CIPHER).unwrap();
+        ctx.set_psk_server_callback(move |_, identity, psk| {
+            assert!(identity.unwrap_or(&[]) == CLIENT_IDENT);
+            psk[..PSK.len()].copy_from_slice(&PSK);
+            SERVER_CALLED.store(true, Ordering::SeqCst);
+            Ok(PSK.len())
+        });
+        let ssl = Ssl::new(&ctx.build()).unwrap();
+        ssl.accept(stream).unwrap();
+    });
+
+    let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    // TLS 1.3 has no DH suites, and openssl isn't happy if the max version has no suites :(
+    #[cfg(ossl111)]
+    {
+        ctx.set_options(super::SslOptions {
+            bits: ::ffi::SSL_OP_NO_TLSv1_3,
+        });
+    }
+    ctx.set_cipher_list(CIPHER).unwrap();
+    ctx.set_psk_client_callback(move |_, _, identity, psk| {
+        identity[..CLIENT_IDENT.len()].copy_from_slice(&CLIENT_IDENT);
+        identity[CLIENT_IDENT.len()] = 0;
+        psk[..PSK.len()].copy_from_slice(&PSK);
+        CLIENT_CALLED.store(true, Ordering::SeqCst);
+        Ok(PSK.len())
+    });
+    let ssl = Ssl::new(&ctx.build()).unwrap();
+    ssl.connect(stream).unwrap();
+
+    assert!(CLIENT_CALLED.load(Ordering::SeqCst) && SERVER_CALLED.load(Ordering::SeqCst));
+}
