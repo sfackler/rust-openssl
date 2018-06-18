@@ -280,7 +280,7 @@ cfg_if! {
         }
 
         #[allow(bad_style)]
-        unsafe fn DSA_get0_pqg(
+        unsafe fn DSA_get0_key(
             d: *mut ffi::DSA,
             pub_key: *mut *const ffi::BIGNUM,
             priv_key: *mut *const ffi::BIGNUM)
@@ -299,8 +299,8 @@ cfg_if! {
             pub_key: *mut ffi::BIGNUM,
             priv_key: *mut ffi::BIGNUM) -> c_int
         {
-            (*d).pub_key = *pub_key;
-            (*d).priv_key = *priv_key;
+            (*d).pub_key = pub_key;
+            (*d).priv_key = priv_key;
             1
         }
 
@@ -311,9 +311,9 @@ cfg_if! {
             q: *mut ffi::BIGNUM,
             g: *mut ffi::BIGNUM) -> c_int
         {
-            (*d).p = *p;
-            (*d).q = *q;
-            (*d).g = *g;
+            (*d).p = p;
+            (*d).q = q;
+            (*d).g = g;
             1
         }
     }
