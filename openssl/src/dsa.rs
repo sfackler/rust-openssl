@@ -322,9 +322,81 @@ cfg_if! {
 #[cfg(test)]
 mod test {
     use super::*;
+    use sign::{Signer, Verifier};
+    use hash::MessageDigest;
+    use pkey::PKey;
 
     #[test]
     pub fn test_generate() {
         Dsa::generate(1024).unwrap();
+    }
+
+    #[test]
+    fn test_pubkey_generation() {
+        let dsa = Dsa::generate(1024).unwrap();
+        let p = dsa.p();
+        let g = dsa.g();
+        let priv_key = dsa.priv_key();
+        let pub_key = dsa.pub_key();
+        let mut ctx = BigNumContext::new().unwrap();
+        let mut calc = BigNum::new().unwrap();
+        calc.mod_exp(g, priv_key, p, &mut ctx).unwrap();
+        assert_eq!(&calc, pub_key)
+    }
+
+    #[test]
+    fn test_priv_key_from_parts() {
+        let p = BigNum::from_u32(283).unwrap();
+        let q = BigNum::from_u32(47).unwrap();
+        let g = BigNum::from_u32(60).unwrap();
+        let priv_key = BigNum::from_u32(15).unwrap();
+
+        let dsa = Dsa::from_private_components(p, q, g, priv_key).unwrap();
+        assert_eq!(dsa.pub_key(), &BigNum::from_u32(207).unwrap());
+    }
+
+    #[test]
+    fn test_pub_key_from_parts() {
+        let p = BigNum::from_u32(283).unwrap();
+        let q = BigNum::from_u32(47).unwrap();
+        let g = BigNum::from_u32(60).unwrap();
+        let pub_key = BigNum::from_u32(207).unwrap();
+
+        Dsa::from_private_components(p, q, g, pub_key).unwrap();
+    }
+
+    #[test]
+    fn test_signature() {
+        const TEST_DATA: &[u8] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let dsa_ref = Dsa::generate(1024).unwrap();
+
+        let p = dsa_ref.p();
+        let q = dsa_ref.q();
+        let g = dsa_ref.g();
+
+        let pub_key = dsa_ref.pub_key();
+        let priv_key = dsa_ref.priv_key();
+
+        let priv_key = Dsa::from_private_components(
+            BigNumRef::to_owned(p).unwrap(),
+            BigNumRef::to_owned(q).unwrap(),
+            BigNumRef::to_owned(g).unwrap(),
+            BigNumRef::to_owned(priv_key).unwrap()).unwrap();
+        let priv_key = PKey::from_dsa(priv_key).unwrap();
+
+        let pub_key = Dsa::from_public_components(
+            BigNumRef::to_owned(p).unwrap(),
+            BigNumRef::to_owned(q).unwrap(),
+            BigNumRef::to_owned(g).unwrap(),
+            BigNumRef::to_owned(pub_key).unwrap()).unwrap();
+        let pub_key = PKey::from_dsa(pub_key).unwrap();
+
+        let mut signer = Signer::new(MessageDigest::sha256(), &priv_key).unwrap();
+        signer.update(TEST_DATA).unwrap();
+
+        let signature = signer.sign_to_vec().unwrap();
+        let mut verifier = Verifier::new(MessageDigest::sha256(), &pub_key).unwrap();
+        verifier.update(TEST_DATA).unwrap();
+        assert!(verifier.verify(&signature[..]).unwrap());
     }
 }
