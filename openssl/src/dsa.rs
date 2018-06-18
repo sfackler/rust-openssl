@@ -13,7 +13,7 @@ use std::ptr;
 
 use bn::BigNumRef;
 use error::ErrorStack;
-use pkey::{HasParams, HasPublic, Private, Public};
+use pkey::{HasParams, HasPrivate, HasPublic, Private, Public};
 use {cvt, cvt_p};
 
 generic_foreign_type_and_impl_send_sync! {
@@ -82,6 +82,28 @@ where
         /// [`i2d_DSA_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_DSA_PUBKEY.html
         public_key_to_der,
         ffi::i2d_DSA_PUBKEY
+    }
+
+    /// Returns a reference to the public exponent.
+    pub fn pub_key(&self) -> &BigNumRef {
+        unsafe {
+            let mut pub_key = ptr::null();
+            DSA_get0_key(self.as_ptr(), &mut pub_key, ptr::null_mut());
+            BigNumRef::from_ptr(pub_key as *mut _)
+        }
+    }
+}
+
+impl<T> DsaRef<T>
+where
+    T: HasPrivate,
+{
+    pub fn priv_key(&self) -> &BigNumRef {
+        unsafe {
+            let mut priv_key = ptr::null();
+            DSA_get0_key(self.as_ptr(), ptr::null_mut(), &mut priv_key);
+            BigNumRef::from_ptr(priv_key as *mut _)
+        }
     }
 }
 
@@ -206,6 +228,26 @@ cfg_if! {
             }
             if !g.is_null() {
                 *g = (*d).g;
+            }
+        }
+    }
+}
+
+cfg_if! {
+    if #[cfg(any(ossl110, libressl273))] {
+        use ffi::DSA_get0_key;
+    } else {
+        #[allow(bad_style)]
+        unsafe fn DSA_get0_pqg(
+            d: *mut ffi::DSA,
+            pub_key: *mut *const ffi::BIGNUM,
+            priv_key: *mut *const ffi::BIGNUM)
+        {
+            if !pub_key.is_null() {
+                *pub_key = (*d).pub_key;
+            }
+            if !priv_key.is_null() {
+                *priv_key = (*d).priv_key;
             }
         }
     }
