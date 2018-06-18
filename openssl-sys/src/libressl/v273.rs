@@ -47,6 +47,22 @@ extern "C" {
         q: *mut *const ::BIGNUM,
         q: *mut *const ::BIGNUM,
     );
+    pub fn DSA_set0_pqg(
+        d: *mut ::DSA,
+        p: *mut ::BIGNUM,
+        q: *mut ::BIGNUM,
+        q: *mut ::BIGNUM,
+    ) -> c_int;
+    pub fn DSA_get0_key(
+        d: *const ::DSA,
+        pub_key: *mut *const ::BIGNUM,
+        priv_key: *mut *const ::BIGNUM,
+    );
+    pub fn DSA_set0_key(
+        d: *mut ::DSA,
+        pub_key: *mut ::BIGNUM,
+        priv_key: *mut ::BIGNUM,
+    ) -> c_int;
 
     pub fn ECDSA_SIG_get0(
         sig: *const ::ECDSA_SIG,

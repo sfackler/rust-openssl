@@ -10,8 +10,9 @@ use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::fmt;
 use std::ptr;
+use std::mem;
 
-use bn::BigNumRef;
+use bn::{BigNum, BigNumRef, BigNumContext};
 use error::ErrorStack;
 use pkey::{HasParams, HasPrivate, HasPublic, Private, Public};
 use {cvt, cvt_p};
@@ -84,7 +85,7 @@ where
         ffi::i2d_DSA_PUBKEY
     }
 
-    /// Returns a reference to the public exponent.
+    /// Returns a reference to the public key component of `self`.
     pub fn pub_key(&self) -> &BigNumRef {
         unsafe {
             let mut pub_key = ptr::null();
@@ -98,6 +99,7 @@ impl<T> DsaRef<T>
 where
     T: HasPrivate,
 {
+    /// Returns a reference to the private key component of `self`.
     pub fn priv_key(&self) -> &BigNumRef {
         unsafe {
             let mut priv_key = ptr::null();
@@ -154,7 +156,7 @@ impl Dsa<Private> {
     /// Calls [`DSA_generate_parameters_ex`] to populate the `p`, `g`, and `q` values.
     /// These values are used to generate the key pair with [`DSA_generate_key`].
     ///
-    /// The `bits` parameter coresponds to the length of the prime `p`.
+    /// The `bits` parameter corresponds to the length of the prime `p`.
     ///
     /// [`DSA_generate_parameters_ex`]: https://www.openssl.org/docs/man1.1.0/crypto/DSA_generate_parameters_ex.html
     /// [`DSA_generate_key`]: https://www.openssl.org/docs/man1.1.0/crypto/DSA_generate_key.html
@@ -172,6 +174,31 @@ impl Dsa<Private> {
                 ptr::null_mut(),
             ))?;
             cvt(ffi::DSA_generate_key(dsa.0))?;
+            Ok(dsa)
+        }
+    }
+
+    /// Create a DSA key pair with the given parameters
+    ///
+    /// `p`, `q` and `g` are the common parameters.
+    /// `priv_key` is the private component of the key pair.
+    /// The corresponding public component is calculated from the private component.
+    pub fn from_private_components(
+        p: BigNum,
+        q: BigNum,
+        g: BigNum,
+        priv_key: BigNum,
+    ) -> Result<Dsa<Private>, ErrorStack> {
+        ffi::init();
+        unsafe {
+            let mut bn_ctx = BigNumContext::new()?;
+            let mut pub_key = BigNum::new()?;
+            pub_key.mod_exp(&g, &priv_key, &p, &mut bn_ctx)?;
+            let dsa = Dsa::from_ptr(cvt_p(ffi::DSA_new())?);
+            cvt(DSA_set0_pqg(dsa.0, p.as_ptr(), q.as_ptr(), g.as_ptr()))?;
+            mem::forget((p, q, g));
+            cvt(DSA_set0_key(dsa.0, pub_key.as_ptr(), priv_key.as_ptr()))?;
+            mem::forget((pub_key, priv_key));
             Ok(dsa)
         }
     }
@@ -201,6 +228,27 @@ impl Dsa<Public> {
         Dsa<Public>,
         ffi::d2i_DSA_PUBKEY
     }
+
+    /// Create a new DSA key with only public components.
+    ///
+    /// `p`, `q` and `g` are the common parameters.
+    /// `pub_key` is the public component of the key.
+    pub fn from_public_components(
+        p: BigNum,
+        q: BigNum,
+        g: BigNum,
+        pub_key: BigNum,
+    ) -> Result<Dsa<Public>, ErrorStack> {
+        ffi::init();
+        unsafe {
+            let dsa = Dsa::from_ptr(cvt_p(ffi::DSA_new())?);
+            cvt(DSA_set0_pqg(dsa.0, p.as_ptr(), q.as_ptr(), g.as_ptr()))?;
+            mem::forget((p, q, g));
+            cvt(DSA_set0_key(dsa.0, pub_key.as_ptr(), ptr::null_mut()))?;
+            mem::forget(pub_key);
+            Ok(dsa)
+        }
+    }
 }
 
 impl<T> fmt::Debug for Dsa<T> {
@@ -211,7 +259,7 @@ impl<T> fmt::Debug for Dsa<T> {
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl273))] {
-        use ffi::DSA_get0_pqg;
+        use ffi::{DSA_get0_key, DSA_get0_pqg, DSA_set0_key, DSA_set0_pqg};
     } else {
         #[allow(bad_style)]
         unsafe fn DSA_get0_pqg(
@@ -230,13 +278,7 @@ cfg_if! {
                 *g = (*d).g;
             }
         }
-    }
-}
 
-cfg_if! {
-    if #[cfg(any(ossl110, libressl273))] {
-        use ffi::DSA_get0_key;
-    } else {
         #[allow(bad_style)]
         unsafe fn DSA_get0_pqg(
             d: *mut ffi::DSA,
@@ -249,6 +291,30 @@ cfg_if! {
             if !priv_key.is_null() {
                 *priv_key = (*d).priv_key;
             }
+        }
+
+        #[allow(bad_style)]
+        unsafe fn DSA_set0_key(
+            d: *mut ffi::DSA,
+            pub_key: *mut ffi::BIGNUM,
+            priv_key: *mut ffi::BIGNUM) -> c_int
+        {
+            (*d).pub_key = *pub_key;
+            (*d).priv_key = *priv_key;
+            1
+        }
+
+        #[allow(bad_style)]
+        unsafe fn DSA_set0_pqg(
+            d: *mut ffi::DSA,
+            p: *mut ffi::BIGNUM,
+            q: *mut ffi::BIGNUM,
+            g: *mut ffi::BIGNUM) -> c_int
+        {
+            (*d).p = *p;
+            (*d).q = *q;
+            (*d).g = *g;
+            1
         }
     }
 }
