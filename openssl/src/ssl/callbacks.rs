@@ -1,12 +1,12 @@
 use ffi;
 use foreign_types::ForeignType;
 use foreign_types::ForeignTypeRef;
-#[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+#[cfg(any(ossl111, not(osslconf = "OPENSSL_NO_PSK")))]
 use libc::c_char;
 #[cfg(ossl111)]
 use libc::size_t;
 use libc::{c_int, c_uchar, c_uint, c_void};
-#[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+#[cfg(any(ossl111, not(osslconf = "OPENSSL_NO_PSK")))]
 use std::ffi::CStr;
 use std::mem;
 use std::ptr;
