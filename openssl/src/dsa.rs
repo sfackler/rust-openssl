@@ -12,7 +12,7 @@ use std::fmt;
 use std::ptr;
 use std::mem;
 
-use bn::{BigNum, BigNumRef, BigNumContext};
+use bn::{BigNum, BigNumRef};
 use error::ErrorStack;
 use pkey::{HasParams, HasPrivate, HasPublic, Private, Public};
 use {cvt, cvt_p};
@@ -182,18 +182,16 @@ impl Dsa<Private> {
     ///
     /// `p`, `q` and `g` are the common parameters.
     /// `priv_key` is the private component of the key pair.
-    /// The corresponding public component is calculated from the private component.
+    /// `pub_key` is the public component of the key. Can be computed via `g^(priv_key) mod p`
     pub fn from_private_components(
         p: BigNum,
         q: BigNum,
         g: BigNum,
         priv_key: BigNum,
+        pub_key: BigNum,
     ) -> Result<Dsa<Private>, ErrorStack> {
         ffi::init();
         unsafe {
-            let mut bn_ctx = BigNumContext::new()?;
-            let mut pub_key = BigNum::new()?;
-            pub_key.mod_exp(&g, &priv_key, &p, &mut bn_ctx)?;
             let dsa = Dsa::from_ptr(cvt_p(ffi::DSA_new())?);
             cvt(DSA_set0_pqg(dsa.0, p.as_ptr(), q.as_ptr(), g.as_ptr()))?;
             mem::forget((p, q, g));
@@ -322,6 +320,7 @@ cfg_if! {
 #[cfg(test)]
 mod test {
     use super::*;
+    use bn::BigNumContext;
     use sign::{Signer, Verifier};
     use hash::MessageDigest;
     use pkey::PKey;
@@ -350,9 +349,14 @@ mod test {
         let q = BigNum::from_u32(47).unwrap();
         let g = BigNum::from_u32(60).unwrap();
         let priv_key = BigNum::from_u32(15).unwrap();
+        let pub_key = BigNum::from_u32(207).unwrap();
 
-        let dsa = Dsa::from_private_components(p, q, g, priv_key).unwrap();
+        let dsa = Dsa::from_private_components(p, q, g, priv_key, pub_key).unwrap();
         assert_eq!(dsa.pub_key(), &BigNum::from_u32(207).unwrap());
+        assert_eq!(dsa.priv_key(), &BigNum::from_u32(15).unwrap());
+        assert_eq!(dsa.p(), &BigNum::from_u32(283).unwrap());
+        assert_eq!(dsa.q(), &BigNum::from_u32(47).unwrap());
+        assert_eq!(dsa.g(), &BigNum::from_u32(60).unwrap());
     }
 
     #[test]
@@ -362,7 +366,11 @@ mod test {
         let g = BigNum::from_u32(60).unwrap();
         let pub_key = BigNum::from_u32(207).unwrap();
 
-        Dsa::from_private_components(p, q, g, pub_key).unwrap();
+        let dsa = Dsa::from_public_components(p, q, g, pub_key).unwrap();
+        assert_eq!(dsa.pub_key(), &BigNum::from_u32(207).unwrap());
+        assert_eq!(dsa.p(), &BigNum::from_u32(283).unwrap());
+        assert_eq!(dsa.q(), &BigNum::from_u32(47).unwrap());
+        assert_eq!(dsa.g(), &BigNum::from_u32(60).unwrap());
     }
 
     #[test]
@@ -381,7 +389,8 @@ mod test {
             BigNumRef::to_owned(p).unwrap(),
             BigNumRef::to_owned(q).unwrap(),
             BigNumRef::to_owned(g).unwrap(),
-            BigNumRef::to_owned(priv_key).unwrap()).unwrap();
+            BigNumRef::to_owned(priv_key).unwrap(),
+            BigNumRef::to_owned(pub_key).unwrap()).unwrap();
         let priv_key = PKey::from_dsa(priv_key).unwrap();
 
         let pub_key = Dsa::from_public_components(
