@@ -10,10 +10,11 @@ use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::fmt;
 use std::ptr;
+use std::mem;
 
-use bn::BigNumRef;
+use bn::{BigNum, BigNumRef};
 use error::ErrorStack;
-use pkey::{HasParams, HasPublic, Private, Public};
+use pkey::{HasParams, HasPrivate, HasPublic, Private, Public};
 use {cvt, cvt_p};
 
 generic_foreign_type_and_impl_send_sync! {
@@ -83,6 +84,29 @@ where
         public_key_to_der,
         ffi::i2d_DSA_PUBKEY
     }
+
+    /// Returns a reference to the public key component of `self`.
+    pub fn pub_key(&self) -> &BigNumRef {
+        unsafe {
+            let mut pub_key = ptr::null();
+            DSA_get0_key(self.as_ptr(), &mut pub_key, ptr::null_mut());
+            BigNumRef::from_ptr(pub_key as *mut _)
+        }
+    }
+}
+
+impl<T> DsaRef<T>
+where
+    T: HasPrivate,
+{
+    /// Returns a reference to the private key component of `self`.
+    pub fn priv_key(&self) -> &BigNumRef {
+        unsafe {
+            let mut priv_key = ptr::null();
+            DSA_get0_key(self.as_ptr(), ptr::null_mut(), &mut priv_key);
+            BigNumRef::from_ptr(priv_key as *mut _)
+        }
+    }
 }
 
 impl<T> DsaRef<T>
@@ -132,7 +156,7 @@ impl Dsa<Private> {
     /// Calls [`DSA_generate_parameters_ex`] to populate the `p`, `g`, and `q` values.
     /// These values are used to generate the key pair with [`DSA_generate_key`].
     ///
-    /// The `bits` parameter coresponds to the length of the prime `p`.
+    /// The `bits` parameter corresponds to the length of the prime `p`.
     ///
     /// [`DSA_generate_parameters_ex`]: https://www.openssl.org/docs/man1.1.0/crypto/DSA_generate_parameters_ex.html
     /// [`DSA_generate_key`]: https://www.openssl.org/docs/man1.1.0/crypto/DSA_generate_key.html
@@ -150,6 +174,29 @@ impl Dsa<Private> {
                 ptr::null_mut(),
             ))?;
             cvt(ffi::DSA_generate_key(dsa.0))?;
+            Ok(dsa)
+        }
+    }
+
+    /// Create a DSA key pair with the given parameters
+    ///
+    /// `p`, `q` and `g` are the common parameters.
+    /// `priv_key` is the private component of the key pair.
+    /// `pub_key` is the public component of the key. Can be computed via `g^(priv_key) mod p`
+    pub fn from_private_components(
+        p: BigNum,
+        q: BigNum,
+        g: BigNum,
+        priv_key: BigNum,
+        pub_key: BigNum,
+    ) -> Result<Dsa<Private>, ErrorStack> {
+        ffi::init();
+        unsafe {
+            let dsa = Dsa::from_ptr(cvt_p(ffi::DSA_new())?);
+            cvt(DSA_set0_pqg(dsa.0, p.as_ptr(), q.as_ptr(), g.as_ptr()))?;
+            mem::forget((p, q, g));
+            cvt(DSA_set0_key(dsa.0, pub_key.as_ptr(), priv_key.as_ptr()))?;
+            mem::forget((pub_key, priv_key));
             Ok(dsa)
         }
     }
@@ -179,6 +226,27 @@ impl Dsa<Public> {
         Dsa<Public>,
         ffi::d2i_DSA_PUBKEY
     }
+
+    /// Create a new DSA key with only public components.
+    ///
+    /// `p`, `q` and `g` are the common parameters.
+    /// `pub_key` is the public component of the key.
+    pub fn from_public_components(
+        p: BigNum,
+        q: BigNum,
+        g: BigNum,
+        pub_key: BigNum,
+    ) -> Result<Dsa<Public>, ErrorStack> {
+        ffi::init();
+        unsafe {
+            let dsa = Dsa::from_ptr(cvt_p(ffi::DSA_new())?);
+            cvt(DSA_set0_pqg(dsa.0, p.as_ptr(), q.as_ptr(), g.as_ptr()))?;
+            mem::forget((p, q, g));
+            cvt(DSA_set0_key(dsa.0, pub_key.as_ptr(), ptr::null_mut()))?;
+            mem::forget(pub_key);
+            Ok(dsa)
+        }
+    }
 }
 
 impl<T> fmt::Debug for Dsa<T> {
@@ -189,7 +257,7 @@ impl<T> fmt::Debug for Dsa<T> {
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl273))] {
-        use ffi::DSA_get0_pqg;
+        use ffi::{DSA_get0_key, DSA_get0_pqg, DSA_set0_key, DSA_set0_pqg};
     } else {
         #[allow(bad_style)]
         unsafe fn DSA_get0_pqg(
@@ -208,15 +276,136 @@ cfg_if! {
                 *g = (*d).g;
             }
         }
+
+        #[allow(bad_style)]
+        unsafe fn DSA_get0_key(
+            d: *mut ffi::DSA,
+            pub_key: *mut *const ffi::BIGNUM,
+            priv_key: *mut *const ffi::BIGNUM)
+        {
+            if !pub_key.is_null() {
+                *pub_key = (*d).pub_key;
+            }
+            if !priv_key.is_null() {
+                *priv_key = (*d).priv_key;
+            }
+        }
+
+        #[allow(bad_style)]
+        unsafe fn DSA_set0_key(
+            d: *mut ffi::DSA,
+            pub_key: *mut ffi::BIGNUM,
+            priv_key: *mut ffi::BIGNUM) -> c_int
+        {
+            (*d).pub_key = pub_key;
+            (*d).priv_key = priv_key;
+            1
+        }
+
+        #[allow(bad_style)]
+        unsafe fn DSA_set0_pqg(
+            d: *mut ffi::DSA,
+            p: *mut ffi::BIGNUM,
+            q: *mut ffi::BIGNUM,
+            g: *mut ffi::BIGNUM) -> c_int
+        {
+            (*d).p = p;
+            (*d).q = q;
+            (*d).g = g;
+            1
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use bn::BigNumContext;
+    use sign::{Signer, Verifier};
+    use hash::MessageDigest;
+    use pkey::PKey;
 
     #[test]
     pub fn test_generate() {
         Dsa::generate(1024).unwrap();
+    }
+
+    #[test]
+    fn test_pubkey_generation() {
+        let dsa = Dsa::generate(1024).unwrap();
+        let p = dsa.p();
+        let g = dsa.g();
+        let priv_key = dsa.priv_key();
+        let pub_key = dsa.pub_key();
+        let mut ctx = BigNumContext::new().unwrap();
+        let mut calc = BigNum::new().unwrap();
+        calc.mod_exp(g, priv_key, p, &mut ctx).unwrap();
+        assert_eq!(&calc, pub_key)
+    }
+
+    #[test]
+    fn test_priv_key_from_parts() {
+        let p = BigNum::from_u32(283).unwrap();
+        let q = BigNum::from_u32(47).unwrap();
+        let g = BigNum::from_u32(60).unwrap();
+        let priv_key = BigNum::from_u32(15).unwrap();
+        let pub_key = BigNum::from_u32(207).unwrap();
+
+        let dsa = Dsa::from_private_components(p, q, g, priv_key, pub_key).unwrap();
+        assert_eq!(dsa.pub_key(), &BigNum::from_u32(207).unwrap());
+        assert_eq!(dsa.priv_key(), &BigNum::from_u32(15).unwrap());
+        assert_eq!(dsa.p(), &BigNum::from_u32(283).unwrap());
+        assert_eq!(dsa.q(), &BigNum::from_u32(47).unwrap());
+        assert_eq!(dsa.g(), &BigNum::from_u32(60).unwrap());
+    }
+
+    #[test]
+    fn test_pub_key_from_parts() {
+        let p = BigNum::from_u32(283).unwrap();
+        let q = BigNum::from_u32(47).unwrap();
+        let g = BigNum::from_u32(60).unwrap();
+        let pub_key = BigNum::from_u32(207).unwrap();
+
+        let dsa = Dsa::from_public_components(p, q, g, pub_key).unwrap();
+        assert_eq!(dsa.pub_key(), &BigNum::from_u32(207).unwrap());
+        assert_eq!(dsa.p(), &BigNum::from_u32(283).unwrap());
+        assert_eq!(dsa.q(), &BigNum::from_u32(47).unwrap());
+        assert_eq!(dsa.g(), &BigNum::from_u32(60).unwrap());
+    }
+
+    #[test]
+    fn test_signature() {
+        const TEST_DATA: &[u8] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let dsa_ref = Dsa::generate(1024).unwrap();
+
+        let p = dsa_ref.p();
+        let q = dsa_ref.q();
+        let g = dsa_ref.g();
+
+        let pub_key = dsa_ref.pub_key();
+        let priv_key = dsa_ref.priv_key();
+
+        let priv_key = Dsa::from_private_components(
+            BigNumRef::to_owned(p).unwrap(),
+            BigNumRef::to_owned(q).unwrap(),
+            BigNumRef::to_owned(g).unwrap(),
+            BigNumRef::to_owned(priv_key).unwrap(),
+            BigNumRef::to_owned(pub_key).unwrap()).unwrap();
+        let priv_key = PKey::from_dsa(priv_key).unwrap();
+
+        let pub_key = Dsa::from_public_components(
+            BigNumRef::to_owned(p).unwrap(),
+            BigNumRef::to_owned(q).unwrap(),
+            BigNumRef::to_owned(g).unwrap(),
+            BigNumRef::to_owned(pub_key).unwrap()).unwrap();
+        let pub_key = PKey::from_dsa(pub_key).unwrap();
+
+        let mut signer = Signer::new(MessageDigest::sha256(), &priv_key).unwrap();
+        signer.update(TEST_DATA).unwrap();
+
+        let signature = signer.sign_to_vec().unwrap();
+        let mut verifier = Verifier::new(MessageDigest::sha256(), &pub_key).unwrap();
+        verifier.update(TEST_DATA).unwrap();
+        assert!(verifier.verify(&signature[..]).unwrap());
     }
 }

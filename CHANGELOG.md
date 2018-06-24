@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+* Added `DsaRef::pub_key` and `DsaRef::priv_key`.
+* Added `Dsa::from_private_components` and `Dsa::from_public_components`.
+
 ## [v0.10.10] - 2018-06-06
 
 ### Added
