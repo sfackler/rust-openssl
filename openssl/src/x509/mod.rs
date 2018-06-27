@@ -847,8 +847,6 @@ impl<'a> Iterator for X509NameEntries<'a> {
 
     fn next(&mut self) -> Option<&'a X509NameEntryRef> {
         unsafe {
-            let entry_count = ffi::X509_NAME_entry_count(self.name.as_ptr());
-
             match self.nid {
                 Some(nid) => {
                     // There is a `Nid` specified to search for
@@ -861,7 +859,7 @@ impl<'a> Iterator for X509NameEntries<'a> {
                 None => {
                     // Iterate over all `Nid`s
                     self.loc += 1;
-                    if self.loc >= entry_count {
+                    if self.loc >= ffi::X509_NAME_entry_count(self.name.as_ptr()) {
                         return None;
                     }
                 }
