@@ -103,6 +103,10 @@ fn main() {
 
     if kind == "static" && target.contains("windows") {
         println!("cargo:rustc-link-lib=dylib=gdi32");
+        println!("cargo:rustc-link-lib=dylib=user32");
+        println!("cargo:rustc-link-lib=dylib=crypt32");
+        println!("cargo:rustc-link-lib=dylib=ws2_32");
+        println!("cargo:rustc-link-lib=dylib=advapi32");
     }
 }
 
