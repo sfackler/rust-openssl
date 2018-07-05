@@ -23,32 +23,21 @@
 //! # Examples
 //!
 //! ```rust
-//! # extern crate openssl;
-//! extern crate hex;
-//! use openssl::aes::{AesKey, KeyError, aes_ige};
+//! use openssl::aes::{AesKey, aes_ige};
 //! use openssl::symm::Mode;
-//! use hex::FromHex;
 //!
-//! fn decrypt() -> Result<(), KeyError> {
-//!   let raw_key = "000102030405060708090A0B0C0D0E0F";
-//!   let hex_cipher = "12345678901234561234567890123456";
-//!   let randomness = "000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F";
-//!   if let (Ok(key_as_u8), Ok(cipher_as_u8), Ok(mut iv_as_u8)) =
-//!       (Vec::from_hex(raw_key), Vec::from_hex(hex_cipher), Vec::from_hex(randomness)) {
-//!     let key = AesKey::new_encrypt(&key_as_u8)?;
-//!     let mut output = vec![0u8; cipher_as_u8.len()];
-//!     aes_ige(&cipher_as_u8, &mut output, &key, &mut iv_as_u8, Mode::Encrypt);
-//!     assert_eq!(hex::encode(output), "a6ad974d5cea1d36d2f367980907ed32");
-//!   }
-//!   Ok(())
-//! }
+//! let key = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F";
+//! let plaintext = b"\x12\x34\x56\x78\x90\x12\x34\x56\x12\x34\x56\x78\x90\x12\x34\x56";
+//! let mut iv = *b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F\
+//!                 \x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D\x1E\x1F";
 //!
-//! # fn main() {
-//! #   decrypt();
-//! # }
+//!  let key = AesKey::new_encrypt(key).unwrap();
+//!  let mut output = [0u8; 16];
+//!  aes_ige(plaintext, &mut output, &key, &mut iv, Mode::Encrypt);
+//!  assert_eq!(output, *b"\xa6\xad\x97\x4d\x5c\xea\x1d\x36\xd2\xf3\x67\x98\x09\x07\xed\x32");
 use ffi;
-use std::mem;
 use libc::c_int;
+use std::mem;
 
 use symm::Mode;
 
@@ -151,8 +140,8 @@ pub fn aes_ige(in_: &[u8], out: &mut [u8], key: &AesKey, iv: &mut [u8], mode: Mo
 mod test {
     use hex::FromHex;
 
-    use symm::Mode;
     use super::*;
+    use symm::Mode;
 
     // From https://www.mgp25.com/AESIGE/
     #[test]
