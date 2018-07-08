@@ -820,8 +820,17 @@ impl X509NameRef {
     pub fn entries_by_nid<'a>(&'a self, nid: Nid) -> X509NameEntries<'a> {
         X509NameEntries {
             name: self,
-            nid: nid,
+            nid: Some(nid),
             loc: -1,
+        }
+    }
+
+    /// Returns an iterator over all `X509NameEntry` values
+    pub fn entries<'a>(&'a self) -> X509NameEntries<'a> {
+        X509NameEntries {
+            name: self,
+            nid: None,
+            loc: -1
         }
     }
 }
@@ -829,7 +838,7 @@ impl X509NameRef {
 /// A type to destructure and examine an `X509Name`.
 pub struct X509NameEntries<'a> {
     name: &'a X509NameRef,
-    nid: Nid,
+    nid: Option<Nid>,
     loc: c_int,
 }
 
@@ -838,11 +847,22 @@ impl<'a> Iterator for X509NameEntries<'a> {
 
     fn next(&mut self) -> Option<&'a X509NameEntryRef> {
         unsafe {
-            self.loc =
-                ffi::X509_NAME_get_index_by_NID(self.name.as_ptr(), self.nid.as_raw(), self.loc);
-
-            if self.loc == -1 {
-                return None;
+            match self.nid {
+                Some(nid) => {
+                    // There is a `Nid` specified to search for
+                    self.loc =
+                        ffi::X509_NAME_get_index_by_NID(self.name.as_ptr(), nid.as_raw(), self.loc);
+                    if self.loc == -1 {
+                        return None;
+                    }
+                }
+                None => {
+                    // Iterate over all `Nid`s
+                    self.loc += 1;
+                    if self.loc >= ffi::X509_NAME_entry_count(self.name.as_ptr()) {
+                        return None;
+                    }
+                }
             }
 
             let entry = ffi::X509_NAME_get_entry(self.name.as_ptr(), self.loc);
@@ -873,6 +893,19 @@ impl X509NameEntryRef {
         unsafe {
             let data = ffi::X509_NAME_ENTRY_get_data(self.as_ptr());
             Asn1StringRef::from_ptr(data)
+        }
+    }
+
+    /// Returns the `Asn1Object` value of an `X509NameEntry`.
+    /// This is useful for finding out about the actual `Nid` when iterating over all `X509NameEntries`.
+    ///
+    /// This corresponds to [`X509_NAME_ENTRY_get_object`].
+    ///
+    /// [`X509_NAME_ENTRY_get_object`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_ENTRY_get_object.html
+    pub fn object(&self) -> &Asn1ObjectRef {
+        unsafe {
+            let object = ffi::X509_NAME_ENTRY_get_object(self.as_ptr());
+            Asn1ObjectRef::from_ptr(object)
         }
     }
 }
