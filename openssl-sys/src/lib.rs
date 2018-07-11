@@ -178,6 +178,12 @@ pub type PasswordCallback =
     unsafe extern "C" fn(buf: *mut c_char, size: c_int, rwflag: c_int, user_data: *mut c_void)
         -> c_int;
 
+#[repr(C)]
+pub struct ERR_STRING_DATA {
+    pub error: c_ulong,
+    pub string: *const c_char,
+}
+
 pub type SHA_LONG = c_uint;
 pub type SHA_LONG64 = u64;
 
@@ -1930,6 +1936,11 @@ extern "C" {
     pub fn ERR_clear_error();
     pub fn ERR_put_error(lib: c_int, func: c_int, reason: c_int, file: *const c_char, line: c_int);
     pub fn ERR_set_error_data(data: *mut c_char, flags: c_int);
+    #[cfg(ossl110)]
+    pub fn ERR_load_strings(lib: c_int, str: *mut ERR_STRING_DATA) -> c_int;
+    #[cfg(not(ossl110))]
+    pub fn ERR_load_strings(lib: c_int, str: *mut ERR_STRING_DATA);
+    pub fn ERR_get_next_error_library() -> c_int;
 
     pub fn EVP_md5() -> *const EVP_MD;
     pub fn EVP_ripemd160() -> *const EVP_MD;
@@ -2602,8 +2613,7 @@ extern "C" {
     pub fn SSL_CTX_set_psk_server_callback(
         ssl: *mut SSL_CTX,
         psk_server_cb: Option<
-            extern "C" fn(*mut SSL, *const c_char, *mut c_uchar, c_uint)
-                -> c_uint,
+            extern "C" fn(*mut SSL, *const c_char, *mut c_uchar, c_uint) -> c_uint,
         >,
     );
 
