@@ -23,7 +23,7 @@
 //!     &ciphertext[..]);
 //! ```
 //!
-//! Encrypting an assymetric key with a symmetric cipher
+//! Encrypting an asymmetric key with a symmetric cipher
 //!
 //! ```
 //! use openssl::rsa::{Padding, Rsa};
