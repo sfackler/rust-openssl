@@ -1265,7 +1265,10 @@ impl SslContextBuilder {
         }
     }
 
-    #[deprecated(since = "0.10.10", note = "renamed to `set_psk_client_callback`")]
+    #[deprecated(
+        since = "0.10.10",
+        note = "renamed to `set_psk_client_callback`"
+    )]
     #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
     pub fn set_psk_callback<F>(&mut self, callback: F)
     where
@@ -1792,7 +1795,7 @@ impl SslCipherRef {
     /// This corresponds to [`SSL_CIPHER_get_name`].
     ///
     /// [`SSL_CIPHER_get_name`]: https://www.openssl.org/docs/manmaster/man3/SSL_CIPHER_get_name.html
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &'static str {
         let name = unsafe {
             let ptr = ffi::SSL_CIPHER_get_name(self.as_ptr());
             CStr::from_ptr(ptr as *const _)
@@ -1806,7 +1809,7 @@ impl SslCipherRef {
     /// This corresponds to [`SSL_CIPHER_get_version`].
     ///
     /// [`SSL_CIPHER_get_version`]: https://www.openssl.org/docs/manmaster/man3/SSL_CIPHER_get_name.html
-    pub fn version(&self) -> &str {
+    pub fn version(&self) -> &'static str {
         let version = unsafe {
             let ptr = ffi::SSL_CIPHER_get_version(self.as_ptr());
             CStr::from_ptr(ptr as *const _)
