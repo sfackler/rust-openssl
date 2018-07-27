@@ -1,9 +1,9 @@
 restore_registry: &RESTORE_REGISTRY
   restore_cache:
-    key: registry-3
+    key: registry-4
 save_registry: &SAVE_REGISTRY
   save_cache:
-    key: registry-3-{{ .BuildNum }}
+    key: registry-4-{{ .BuildNum }}
     paths:
     - /usr/local/cargo/registry/index
 openssl_key: &OPENSSL_KEY
@@ -38,14 +38,14 @@ job: &JOB
   - run: apt-get remove -y libssl-dev
   - run: ./test/add_target.sh
   - *RESTORE_REGISTRY
-  - run: cargo generate-lockfile
+  - run: cargo generate-lockfile --verbose
   - *SAVE_REGISTRY
   - run: echo "${LIBRARY}-${VERSION}-${TARGET}" > ~/lib_key
   - *RESTORE_OPENSSL
   - run: ./test/build_openssl.sh
   - *SAVE_OPENSSL
   - *RESTORE_DEPS
-  - run: cargo run --manifest-path=systest/Cargo.toml --target $TARGET
+  - run: cargo run --manifest-path=systest/Cargo.toml --target $TARGET --features "$FEATURES"
   - run: |
       ulimit -c unlimited
       export PATH=$OPENSSL_DIR/bin:$PATH
@@ -55,6 +55,7 @@ job: &JOB
       cargo test \
         --manifest-path=openssl/Cargo.toml \
         --target $TARGET \
+        --features "$FEATURES" \
         $TEST_ARGS
   - run:
       command: |
@@ -69,9 +70,6 @@ job: &JOB
 macos_job: &MACOS_JOB
   macos:
     xcode: "9.0"
-  environment:
-    RUSTUP_HOME: /usr/local/rustup
-    CARGO_HOME: /usr/local/cargo
   steps:
   - checkout
   - run: sudo mkdir /opt
@@ -83,12 +81,18 @@ macos_job: &MACOS_JOB
   - *SAVE_REGISTRY
   - run: echo "homebrew-x86_64-apple-darwin" > ~/lib_key
   - *RESTORE_DEPS
-  - run: cargo run --manifest-path=systest/Cargo.toml
+  - run: cargo run --manifest-path=systest/Cargo.toml --features "$FEATURES"
   - run: |
       PATH=/usr/local/opt/openssl/bin:$PATH
-      cargo test --manifest-path=openssl/Cargo.toml
+      cargo test --manifest-path=openssl/Cargo.toml --features "$FEATURES"
   - *SAVE_DEPS
+macos_env: &MACOS_ENV
+  RUSTUP_HOME: /usr/local/rustup
+  CARGO_HOME: /usr/local/cargo
 
+vendored: &VENDORED
+  FEATURES: vendored
+  LIBRARY: ""
 openssl_111: &OPENSSL_111
   LIBRARY: openssl
   VERSION: 1.1.1-pre8
@@ -110,6 +114,8 @@ libressl_270: &LIBRESSL_272
 
 x86_64: &X86_64
   TARGET: x86_64-unknown-linux-gnu
+musl: &MUSL
+  TARGET: x86_64-unknown-linux-musl
 i686: &I686
   TARGET: i686-unknown-linux-gnu
 armhf: &ARMHF
@@ -127,6 +133,16 @@ base: &BASE
 
 version: 2
 jobs:
+  musl-vendored:
+    <<: *JOB
+    docker:
+    - image: rust:1.21.0
+    environment:
+      <<: [*VENDORED, *MUSL, *BASE]
+  x86_64-vendored:
+    <<: *JOB
+    environment:
+      <<: [*VENDORED, *X86_64, *BASE]
   x86_64-openssl-1.1.1:
     <<: *JOB
     environment:
@@ -143,6 +159,10 @@ jobs:
     <<: *JOB
     environment:
       <<: [*OPENSSL_101, *X86_64, *BASE]
+  i686-vendored:
+    <<: *JOB
+    environment:
+      <<: [*VENDORED, *I686, *BASE]
   i686-openssl-1.1.1:
     <<: *JOB
     environment:
@@ -155,6 +175,10 @@ jobs:
     <<: *JOB
     environment:
       <<: [*OPENSSL_102, *I686, *BASE]
+  armhf-vendored:
+    <<: *JOB
+    environment:
+      <<: [*VENDORED, *ARMHF, *BASE]
   armhf-openssl-1.1.1:
     <<: *JOB
     environment:
@@ -177,20 +201,31 @@ jobs:
       <<: [*LIBRESSL_272, *X86_64, *BASE]
   macos:
     <<: *MACOS_JOB
+    environment:
+      <<: [*MACOS_ENV]
+  macos-vendored:
+    <<: *MACOS_JOB
+    environment:
+      <<: [*VENDORED, *MACOS_ENV]
 workflows:
   version: 2
   tests:
     jobs:
+    - musl-vendored
+    - x86_64-vendored
     - x86_64-openssl-1.1.1
     - x86_64-openssl-1.1.0
     - x86_64-openssl-1.0.2
     - x86_64-openssl-1.0.1
+    - i686-vendored
     - i686-openssl-1.1.1
     - i686-openssl-1.1.0
     - i686-openssl-1.0.2
+    - armhf-vendored
     - armhf-openssl-1.1.1
     - armhf-openssl-1.1.0
     - armhf-openssl-1.0.2
     - x86_64-libressl-2.5.0
     - x86_64-libressl-2.7.2
     - macos
+    - macos-vendored

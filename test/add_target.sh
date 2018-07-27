@@ -8,6 +8,9 @@ case "${TARGET}" in
 "i686-unknown-linux-gnu")
     apt-get install -y --no-install-recommends gcc-multilib
     ;;
+"x86_64-unknown-linux-musl")
+    apt-get install -y --no-install-recommends musl-tools
+    ;;
 "arm-unknown-linux-gnueabihf")
     dpkg --add-architecture armhf
     apt-get update

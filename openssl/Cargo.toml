@@ -16,6 +16,8 @@ v102 = []
 v110 = []
 v111 = []
 
+vendored = ['openssl-sys/vendored']
+
 [dependencies]
 bitflags = "1.0"
 cfg-if = "0.1"

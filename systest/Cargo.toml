@@ -9,3 +9,6 @@ openssl-sys = { path = "../openssl-sys" }
 
 [build-dependencies]
 ctest = "0.1"
+
+[features]
+vendored = ['openssl-sys/vendored']
