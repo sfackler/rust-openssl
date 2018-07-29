@@ -142,20 +142,15 @@ mod test {
     use ec::EcKey;
     use nid::Nid;
 
-    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
-    static CURVE_IDENTIFER: Nid = Nid::X9_62_PRIME192V1;
-
-    #[cfg(osslconf = "OPENSSL_NO_EC2M")]
-    static CURVE_IDENTIFER: Nid = Nid::X9_62_C2TNB191V1;
-
     fn get_public_key(group: &EcGroup, x: &EcKey<Private>) -> Result<EcKey<Public>, ErrorStack> {
         let public_key_point = x.public_key();
         Ok(EcKey::from_public_key(group, public_key_point)?)
     }
 
     #[test]
+    #[cfg_attr(osslconf = "OPENSSL_NO_EC2M", ignore)]
     fn sign_and_verify() {
-        let group = EcGroup::from_curve_name(CURVE_IDENTIFER).unwrap();
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME192V1).unwrap();
         let private_key = EcKey::generate(&group).unwrap();
         let public_key = get_public_key(&group, &private_key).unwrap();
 
@@ -181,8 +176,9 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(osslconf = "OPENSSL_NO_EC2M", ignore)]
     fn check_private_components() {
-        let group = EcGroup::from_curve_name(CURVE_IDENTIFER).unwrap();
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME192V1).unwrap();
         let private_key = EcKey::generate(&group).unwrap();
         let public_key = get_public_key(&group, &private_key).unwrap();
         let data = String::from("hello");
