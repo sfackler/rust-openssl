@@ -5,8 +5,6 @@ if [ -d "${OPENSSL_DIR}" ]; then
     exit 0
 fi
 
-apt-get install -y --no-install-recommends curl
-
 case "${LIBRARY}" in
 "libressl")
     URL1="http://ftp3.usa.openbsd.org/pub/OpenBSD/LibreSSL/libressl-${VERSION}.tar.gz"
@@ -16,7 +14,13 @@ case "${LIBRARY}" in
     URL1="https://openssl.org/source/openssl-${VERSION}.tar.gz"
     URL2="http://mirrors.ibiblio.org/openssl/source/openssl-${VERSION}.tar.gz"
     ;;
+"")
+    # using the vendored builds
+    exit 0;
+    ;;
 esac
+
+apt-get install -y --no-install-recommends curl
 
 case "${TARGET}" in
 "x86_64-unknown-linux-gnu")

@@ -2,6 +2,8 @@ extern crate cc;
 extern crate pkg_config;
 #[cfg(target_env = "msvc")]
 extern crate vcpkg;
+#[cfg(feature = "vendored")]
+extern crate openssl_src;
 
 use std::collections::HashSet;
 use std::env;
@@ -9,7 +11,6 @@ use std::ffi::OsString;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 mod cfgs;
 
@@ -52,18 +53,7 @@ fn env(name: &str) -> Option<OsString> {
 fn main() {
     let target = env::var("TARGET").unwrap();
 
-    let lib_dir = env("OPENSSL_LIB_DIR").map(PathBuf::from);
-    let include_dir = env("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
-
-    let (lib_dir, include_dir) = if lib_dir.is_none() || include_dir.is_none() {
-        let openssl_dir = env("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(&target));
-        let openssl_dir = Path::new(&openssl_dir);
-        let lib_dir = lib_dir.unwrap_or_else(|| openssl_dir.join("lib"));
-        let include_dir = include_dir.unwrap_or_else(|| openssl_dir.join("include"));
-        (lib_dir, include_dir)
-    } else {
-        (lib_dir.unwrap(), include_dir.unwrap())
-    };
+    let (lib_dir, include_dir) = imp::get_openssl(&target);
 
     if !Path::new(&lib_dir).exists() {
         panic!(
@@ -110,48 +100,83 @@ fn main() {
     }
 }
 
-fn find_openssl_dir(target: &str) -> OsString {
-    let host = env::var("HOST").unwrap();
+#[cfg(feature = "vendored")]
+mod imp {
+	use std::path::PathBuf;
+	use openssl_src;
 
-    if host == target && target.contains("apple-darwin") {
-        // Check up default Homebrew installation location first
-        // for quick resolution if possible.
-        let homebrew = Path::new("/usr/local/opt/openssl@1.1");
-        if homebrew.exists() {
-            return homebrew.to_path_buf().into();
-        }
-        let homebrew = Path::new("/usr/local/opt/openssl");
-        if homebrew.exists() {
-            return homebrew.to_path_buf().into();
-        }
-        // Calling `brew --prefix <package>` command usually slow and
-        // takes seconds, and will be used only as a last resort.
-        let output = execute_command_and_get_output("brew", &["--prefix", "openssl@1.1"]);
-        if let Some(ref output) = output {
-            let homebrew = Path::new(&output);
-            if homebrew.exists() {
-                return homebrew.to_path_buf().into();
-            }
-        }
-        let output = execute_command_and_get_output("brew", &["--prefix", "openssl"]);
-        if let Some(ref output) = output {
-            let homebrew = Path::new(&output);
-            if homebrew.exists() {
-                return homebrew.to_path_buf().into();
-            }
+	pub fn get_openssl(_target: &str) -> (PathBuf, PathBuf) {
+		let artifacts = openssl_src::Build::new().build();
+		(artifacts.lib_dir().to_path_buf(), artifacts.include_dir().to_path_buf())
+	}
+}
+
+#[cfg(not(feature = "vendored"))]
+mod imp {
+    use pkg_config;
+    use std::path::{Path, PathBuf};
+    use std::ffi::OsString;
+    use std::process::{self, Command};
+
+    use super::env;
+
+    pub fn get_openssl(target: &str) -> (PathBuf, PathBuf) {
+        let lib_dir = env("OPENSSL_LIB_DIR").map(PathBuf::from);
+        let include_dir = env("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
+
+        if lib_dir.is_none() || include_dir.is_none() {
+            let openssl_dir = env("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(&target));
+            let openssl_dir = Path::new(&openssl_dir);
+            let lib_dir = lib_dir.unwrap_or_else(|| openssl_dir.join("lib"));
+            let include_dir = include_dir.unwrap_or_else(|| openssl_dir.join("include"));
+            (lib_dir, include_dir)
+        } else {
+            (lib_dir.unwrap(), include_dir.unwrap())
         }
     }
 
-    try_pkg_config();
-    try_vcpkg();
+    fn find_openssl_dir(target: &str) -> OsString {
+        let host = env::var("HOST").unwrap();
 
-    // FreeBSD ships with OpenSSL but doesn't include a pkg-config file :(
-    if host == target && target.contains("freebsd") {
-        return OsString::from("/usr");
-    }
+        if host == target && target.contains("apple-darwin") {
+            // Check up default Homebrew installation location first
+            // for quick resolution if possible.
+            let homebrew = Path::new("/usr/local/opt/openssl@1.1");
+            if homebrew.exists() {
+                return homebrew.to_path_buf().into();
+            }
+            let homebrew = Path::new("/usr/local/opt/openssl");
+            if homebrew.exists() {
+                return homebrew.to_path_buf().into();
+            }
+            // Calling `brew --prefix <package>` command usually slow and
+            // takes seconds, and will be used only as a last resort.
+            let output = execute_command_and_get_output("brew", &["--prefix", "openssl@1.1"]);
+            if let Some(ref output) = output {
+                let homebrew = Path::new(&output);
+                if homebrew.exists() {
+                    return homebrew.to_path_buf().into();
+                }
+            }
+            let output = execute_command_and_get_output("brew", &["--prefix", "openssl"]);
+            if let Some(ref output) = output {
+                let homebrew = Path::new(&output);
+                if homebrew.exists() {
+                    return homebrew.to_path_buf().into();
+                }
+            }
+        }
 
-    let mut msg = format!(
-        "
+        try_pkg_config();
+        try_vcpkg();
+
+        // FreeBSD ships with OpenSSL but doesn't include a pkg-config file :(
+        if host == target && target.contains("freebsd") {
+            return OsString::from("/usr");
+        }
+
+        let mut msg = format!(
+            "
 
 Could not find directory of OpenSSL installation, and this `-sys` crate cannot
 proceed without this knowledge. If OpenSSL is installed and this crate had
@@ -170,16 +195,16 @@ and include information about your system as well as this message.
     openssl-sys = {}
 
 ",
-        host,
-        target,
-        env!("CARGO_PKG_VERSION")
-    );
+            host,
+            target,
+            env!("CARGO_PKG_VERSION")
+        );
 
-    if host.contains("apple-darwin") && target.contains("apple-darwin") {
-        let system = Path::new("/usr/lib/libssl.0.9.8.dylib");
-        if system.exists() {
-            msg.push_str(&format!(
-                "
+        if host.contains("apple-darwin") && target.contains("apple-darwin") {
+            let system = Path::new("/usr/lib/libssl.0.9.8.dylib");
+            if system.exists() {
+                msg.push_str(&format!(
+                    "
 
 It looks like you're compiling on macOS, where the system contains a version of
 OpenSSL 0.9.8. This crate no longer supports OpenSSL 0.9.8.
@@ -191,27 +216,27 @@ install the `openssl` package, or as a maintainer you can use the openssl-sys
 Unfortunately though the compile cannot continue, so aborting.
 
 "
-            ));
+                ));
+            }
         }
-    }
 
-    if host.contains("unknown-linux") && target.contains("unknown-linux-gnu") {
-        if Command::new("pkg-config").output().is_err() {
-            msg.push_str(&format!(
-                "
+        if host.contains("unknown-linux") && target.contains("unknown-linux-gnu") {
+            if Command::new("pkg-config").output().is_err() {
+                msg.push_str(&format!(
+                    "
 It looks like you're compiling on Linux and also targeting Linux. Currently this
 requires the `pkg-config` utility to find OpenSSL but unfortunately `pkg-config`
 could not be found. If you have OpenSSL installed you can likely fix this by
 installing `pkg-config`.
 
 "
-            ));
+                ));
+            }
         }
-    }
 
-    if host.contains("windows") && target.contains("windows-gnu") {
-        msg.push_str(&format!(
-            "
+        if host.contains("windows") && target.contains("windows-gnu") {
+            msg.push_str(&format!(
+                "
 It looks like you're compiling for MinGW but you may not have either OpenSSL or
 pkg-config installed. You can install these two dependencies with:
 
@@ -220,12 +245,12 @@ pkg-config installed. You can install these two dependencies with:
 and try building this crate again.
 
 "
-        ));
-    }
+            ));
+        }
 
-    if host.contains("windows") && target.contains("windows-msvc") {
-        msg.push_str(&format!(
-            "
+        if host.contains("windows") && target.contains("windows-msvc") {
+            msg.push_str(&format!(
+                "
 It looks like you're compiling for MSVC but we couldn't detect an OpenSSL
 installation. If there isn't one installed then you can try the rust-openssl
 README for more information about how to download precompiled binaries of
@@ -234,96 +259,112 @@ OpenSSL:
     https://github.com/sfackler/rust-openssl#windows
 
 "
-        ));
+            ));
+        }
+
+        panic!(msg);
     }
 
-    panic!(msg);
-}
+    /// Attempt to find OpenSSL through pkg-config.
+    ///
+    /// Note that if this succeeds then the function does not return as pkg-config
+    /// typically tells us all the information that we need.
+    fn try_pkg_config() {
+        let target = env::var("TARGET").unwrap();
+        let host = env::var("HOST").unwrap();
 
-/// Attempt to find OpenSSL through pkg-config.
-///
-/// Note that if this succeeds then the function does not return as pkg-config
-/// typically tells us all the information that we need.
-fn try_pkg_config() {
-    let target = env::var("TARGET").unwrap();
-    let host = env::var("HOST").unwrap();
-
-    // If we're going to windows-gnu we can use pkg-config, but only so long as
-    // we're coming from a windows host.
-    //
-    // Otherwise if we're going to windows we probably can't use pkg-config.
-    if target.contains("windows-gnu") && host.contains("windows") {
-        env::set_var("PKG_CONFIG_ALLOW_CROSS", "1");
-    } else if target.contains("windows") {
-        return;
-    }
-
-    let lib = match pkg_config::Config::new()
-        .print_system_libs(false)
-        .find("openssl")
-    {
-        Ok(lib) => lib,
-        Err(e) => {
-            println!("run pkg_config fail: {:?}", e);
+        // If we're going to windows-gnu we can use pkg-config, but only so long as
+        // we're coming from a windows host.
+        //
+        // Otherwise if we're going to windows we probably can't use pkg-config.
+        if target.contains("windows-gnu") && host.contains("windows") {
+            env::set_var("PKG_CONFIG_ALLOW_CROSS", "1");
+        } else if target.contains("windows") {
             return;
         }
-    };
 
-    validate_headers(&lib.include_paths);
+        let lib = match pkg_config::Config::new()
+            .print_system_libs(false)
+            .find("openssl")
+        {
+            Ok(lib) => lib,
+            Err(e) => {
+                println!("run pkg_config fail: {:?}", e);
+                return;
+            }
+        };
 
-    for include in lib.include_paths.iter() {
-        println!("cargo:include={}", include.display());
+        super::validate_headers(&lib.include_paths);
+
+        for include in lib.include_paths.iter() {
+            println!("cargo:include={}", include.display());
+        }
+
+        process::exit(0);
     }
 
-    std::process::exit(0);
-}
+    /// Attempt to find OpenSSL through vcpkg.
+    ///
+    /// Note that if this succeeds then the function does not return as vcpkg
+    /// should emit all of the cargo metadata that we need.
+    #[cfg(target_env = "msvc")]
+    fn try_vcpkg() {
+        use vcpkg;
 
-/// Attempt to find OpenSSL through vcpkg.
-///
-/// Note that if this succeeds then the function does not return as vcpkg
-/// should emit all of the cargo metadata that we need.
-#[cfg(target_env = "msvc")]
-fn try_vcpkg() {
-    // vcpkg will not emit any metadata if it can not find libraries
-    // appropriate for the target triple with the desired linkage.
+        // vcpkg will not emit any metadata if it can not find libraries
+        // appropriate for the target triple with the desired linkage.
 
-    let mut lib = vcpkg::Config::new()
-        .emit_includes(true)
-        .lib_name("libcrypto")
-        .lib_name("libssl")
-        .probe("openssl");
-
-    if let Err(e) = lib {
-        println!(
-            "note: vcpkg did not find openssl as libcrypto and libssl : {:?}",
-            e
-        );
-        lib = vcpkg::Config::new()
+        let mut lib = vcpkg::Config::new()
             .emit_includes(true)
-            .lib_name("libeay32")
-            .lib_name("ssleay32")
+            .lib_name("libcrypto")
+            .lib_name("libssl")
             .probe("openssl");
+
+        if let Err(e) = lib {
+            println!(
+                "note: vcpkg did not find openssl as libcrypto and libssl : {:?}",
+                e
+            );
+            lib = vcpkg::Config::new()
+                .emit_includes(true)
+                .lib_name("libeay32")
+                .lib_name("ssleay32")
+                .probe("openssl");
+        }
+        if let Err(e) = lib {
+            println!(
+                "note: vcpkg did not find openssl as ssleay32 and libeay32: {:?}",
+                e
+            );
+            return;
+        }
+
+        let lib = lib.unwrap();
+        super::validate_headers(&lib.include_paths);
+
+        println!("cargo:rustc-link-lib=user32");
+        println!("cargo:rustc-link-lib=gdi32");
+        println!("cargo:rustc-link-lib=crypt32");
+
+        process::exit(0);
     }
-    if let Err(e) = lib {
-        println!(
-            "note: vcpkg did not find openssl as ssleay32 and libeay32: {:?}",
-            e
-        );
-        return;
+
+    #[cfg(not(target_env = "msvc"))]
+    fn try_vcpkg() {}
+
+    fn execute_command_and_get_output(cmd: &str, args: &[&str]) -> Option<String> {
+        let out = Command::new(cmd).args(args).output();
+        if let Ok(ref r1) = out {
+            if r1.status.success() {
+                let r2 = String::from_utf8(r1.stdout.clone());
+                if let Ok(r3) = r2 {
+                    return Some(r3.trim().to_string());
+                }
+            }
+        }
+        return None;
     }
-
-    let lib = lib.unwrap();
-    validate_headers(&lib.include_paths);
-
-    println!("cargo:rustc-link-lib=user32");
-    println!("cargo:rustc-link-lib=gdi32");
-    println!("cargo:rustc-link-lib=crypt32");
-
-    std::process::exit(0);
 }
-
-#[cfg(not(target_env = "msvc"))]
-fn try_vcpkg() {}
 
 /// Validates the header files found in `include_dir` and then returns the
 /// version string of OpenSSL.
@@ -564,17 +605,4 @@ fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
     // link dynamically. In the interest of "security upgrades" and/or "best
     // practices with security libs", let's link dynamically.
     "dylib"
-}
-
-fn execute_command_and_get_output(cmd: &str, args: &[&str]) -> Option<String> {
-    let out = Command::new(cmd).args(args).output();
-    if let Ok(ref r1) = out {
-        if r1.status.success() {
-            let r2 = String::from_utf8(r1.stdout.clone());
-            if let Ok(r3) = r2 {
-                return Some(r3.trim().to_string());
-            }
-        }
-    }
-    return None;
 }
