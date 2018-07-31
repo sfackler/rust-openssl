@@ -17,6 +17,21 @@ libraries and headers need to be present in the build environment before this
 crate is compiled, and some instructions of how to do this are in the sections
 below.
 
+### Vendored
+
+```toml
+[dependencies]
+openssl = { version = "0.10", features = ["vendored"] }
+```
+
+If the `vendored` Cargo feature is enabled, the `openssl-src` crate will be used
+to compile OpenSSL from source and statically link to it. OpenSSL version 1.1.0
+is currently used, but that will be upgraded to 1.1.1 at some point after it is
+released *without* a major version bump to this crate.
+
+This vendored copy will not be configured to automatically find the system's
+root certificates, but the `openssl-probe` crate can be used to do that instead.
+
 ### Linux
 
 On Linux, you can typically install OpenSSL via your package manager. The
