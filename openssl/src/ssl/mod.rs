@@ -805,8 +805,11 @@ impl SslContextBuilder {
                 self.as_ptr(),
                 file.as_ptr() as *const _,
                 ptr::null(),
-            )).map(|_| ())
+            ))?;
         }
+        // https://github.com/openssl/openssl/issues/6851
+        ErrorStack::get();
+        Ok(())
     }
 
     /// Sets the list of CA names sent to the client.
@@ -2734,8 +2737,7 @@ impl SslRef {
                 self.as_ptr(),
                 p as *mut c_uchar,
                 response.len() as c_long,
-            ) as c_int)
-                .map(|_| ())
+            ) as c_int).map(|_| ())
         }
     }
 
@@ -3188,9 +3190,12 @@ where
         } else {
             let error = stream.make_error(ret);
             match error.code() {
-                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => Err(HandshakeError::WouldBlock(
-                    MidHandshakeSslStream { stream, error },
-                )),
+                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => {
+                    Err(HandshakeError::WouldBlock(MidHandshakeSslStream {
+                        stream,
+                        error,
+                    }))
+                }
                 _ => Err(HandshakeError::Failure(MidHandshakeSslStream {
                     stream,
                     error,
@@ -3208,9 +3213,12 @@ where
         } else {
             let error = stream.make_error(ret);
             match error.code() {
-                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => Err(HandshakeError::WouldBlock(
-                    MidHandshakeSslStream { stream, error },
-                )),
+                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => {
+                    Err(HandshakeError::WouldBlock(MidHandshakeSslStream {
+                        stream,
+                        error,
+                    }))
+                }
                 _ => Err(HandshakeError::Failure(MidHandshakeSslStream {
                     stream,
                     error,
@@ -3234,9 +3242,12 @@ where
         } else {
             let error = stream.make_error(ret);
             match error.code() {
-                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => Err(HandshakeError::WouldBlock(
-                    MidHandshakeSslStream { stream, error },
-                )),
+                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => {
+                    Err(HandshakeError::WouldBlock(MidHandshakeSslStream {
+                        stream,
+                        error,
+                    }))
+                }
                 _ => Err(HandshakeError::Failure(MidHandshakeSslStream {
                     stream,
                     error,
