@@ -33,6 +33,7 @@ pub const SSL_OP_NO_DTLSv1: c_ulong = 0x04000000;
 #[cfg(ossl102)]
 pub const SSL_OP_NO_DTLSv1_2: c_ulong = 0x08000000;
 
+#[cfg(ossl102f)]
 pub const X509_V_ERR_UNSPECIFIED: c_int = 1;
 
 pub const CMS_TEXT: c_uint = 0x1;
