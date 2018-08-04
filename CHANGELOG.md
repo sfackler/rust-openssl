@@ -2,9 +2,21 @@
 
 ## [Unreleased]
 
+## [v0.10.11] - 2018-08-04
+
 ### Added
+
+* The new `vendored` cargo feature will cause openssl-sys to compile and statically link to a
+    vendored copy of OpenSSL.
+* Added `SslContextBuilder::set_psk_server_callback`.
 * Added `DsaRef::pub_key` and `DsaRef::priv_key`.
 * Added `Dsa::from_private_components` and `Dsa::from_public_components`.
+* Added `X509NameRef::entries`.
+
+### Deprecated
+
+* `SslContextBuilder::set_psk_callback` has been renamed to
+    `SslContextBuilder::set_psk_client_callback` and deprecated.
 
 ## [v0.10.10] - 2018-06-06
 
@@ -238,7 +250,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.10...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.11...master
+[v0.10.11]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.10...openssl-v0.10.11
 [v0.10.10]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.9...openssl-v0.10.10
 [v0.10.9]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.8...openssl-v0.10.9
 [v0.10.8]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.7...openssl-v0.10.8
