@@ -54,6 +54,18 @@ pub struct stack_st_OPENSSL_STRING {
     pub stack: _STACK,
 }
 
+
+#[repr(C)]
+pub struct stack_st_SRTP_PROTECTION_PROFILE {
+    pub stack: _STACK,
+}
+
+#[repr(C)]
+pub struct SRTP_PROTECTION_PROFILE {
+    pub name: *const c_char,
+    pub id: c_ulong,
+}
+
 #[repr(C)]
 pub struct _STACK {
     pub num: c_int,
@@ -716,6 +728,14 @@ pub const CRYPTO_LOCK_X509: c_int = 3;
 pub const CRYPTO_LOCK_SSL_CTX: c_int = 12;
 pub const CRYPTO_LOCK_SSL_SESSION: c_int = 14;
 
+
+pub const SRTP_AES128_CM_SHA1_80: c_ulong = 0x0001;
+pub const SRTP_AES128_CM_SHA1_32: c_ulong = 0x0002;
+pub const SRTP_AES128_F8_SHA1_80: c_ulong = 0x0003;
+pub const SRTP_AES128_F8_SHA1_32: c_ulong = 0x0004;
+pub const SRTP_NULL_SHA1_80: c_ulong = 0x0005;
+pub const SRTP_NULL_SHA1_32: c_ulong = 0x0006;
+
 #[cfg(ossl102h)]
 pub const X509_V_ERR_INVALID_CALL: c_int = 65;
 #[cfg(ossl102h)]
@@ -828,6 +848,8 @@ pub unsafe fn SSL_CTX_clear_options(ctx: *const ::SSL_CTX, op: c_ulong) -> c_ulo
         ptr::null_mut(),
     ) as c_ulong
 }
+
+pub fn SRTP_PROTECTION_PROFILE_free(_profile: *mut SRTP_PROTECTION_PROFILE) {}
 
 extern "C" {
     pub fn BIO_new(type_: *mut BIO_METHOD) -> *mut BIO;
@@ -1002,4 +1024,9 @@ extern "C" {
 
     #[cfg(ossl102)]
     pub fn SSL_extension_supported(ext_type: c_uint) -> c_int;
+
+    pub fn SSL_set_tlsext_use_srtp(ssl: *mut ::SSL, profiles: *const c_char) -> c_int;
+    pub fn SSL_CTX_set_tlsext_use_srtp(ctx: *mut ::SSL_CTX, profiles: *const c_char) -> c_int;
+    pub fn SSL_get_srtp_profiles(ssl: *mut ::SSL) -> *mut stack_st_SRTP_PROTECTION_PROFILE;
+    pub fn SSL_get_selected_srtp_profile(ssl: *mut ::SSL) -> *mut SRTP_PROTECTION_PROFILE;
 }

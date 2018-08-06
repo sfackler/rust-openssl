@@ -62,6 +62,17 @@ pub struct stack_st_SSL_CIPHER {
 pub struct stack_st_OPENSSL_STRING {
     pub stack: _STACK,
 }
+#[repr(C)]
+pub struct stack_st_SRTP_PROTECTION_PROFILE {
+    pub stack: _STACK,
+}
+
+#[repr(C)]
+pub struct SRTP_PROTECTION_PROFILE {
+    pub name: *const c_char,
+    pub id: c_ulong,
+}
+pub fn SRTP_PROTECTION_PROFILE_free(_profile: *mut SRTP_PROTECTION_PROFILE) {}
 
 #[repr(C)]
 pub struct _STACK {
@@ -472,6 +483,12 @@ pub unsafe fn SSL_CTX_clear_options(ctx: *const ::SSL_CTX, op: c_ulong) -> c_ulo
         ptr::null_mut(),
     ) as c_ulong
 }
+pub const SRTP_AES128_CM_SHA1_80: c_ulong = 0x0001;
+pub const SRTP_AES128_CM_SHA1_32: c_ulong = 0x0002;
+pub const SRTP_AES128_F8_SHA1_80: c_ulong = 0x0003;
+pub const SRTP_AES128_F8_SHA1_32: c_ulong = 0x0004;
+pub const SRTP_NULL_SHA1_80: c_ulong = 0x0005;
+pub const SRTP_NULL_SHA1_32: c_ulong = 0x0006;
 
 extern "C" {
     pub fn BIO_new(type_: *mut BIO_METHOD) -> *mut BIO;
@@ -633,4 +650,10 @@ extern "C" {
 
     pub fn SSLeay() -> c_ulong;
     pub fn SSLeay_version(key: c_int) -> *const c_char;
+
+    pub fn SSL_set_tlsext_use_srtp(ssl: *mut ::SSL, profiles: *const c_char) -> c_int;
+    pub fn SSL_CTX_set_tlsext_use_srtp(ctx: *mut ::SSL_CTX, profiles: *const c_char) -> c_int;
+    pub fn SSL_get_srtp_profiles(ssl: *mut ::SSL) -> *mut stack_st_SRTP_PROTECTION_PROFILE;
+    pub fn SSL_get_selected_srtp_profile(ssl: *mut ::SSL) -> *mut SRTP_PROTECTION_PROFILE;
+
 }
