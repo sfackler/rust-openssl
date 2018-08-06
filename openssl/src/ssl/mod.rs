@@ -1156,6 +1156,24 @@ impl SslContextBuilder {
         }
     }
 
+
+    pub fn set_tlsext_use_srtp(&mut self, protocols: &str) -> Result<(), ErrorStack> {
+        unsafe {
+            assert!(protocols.len() <= c_uint::max_value() as usize);
+            let cstr = CString::new(protocols).unwrap();
+
+            let r = ffi::SSL_CTX_set_tlsext_use_srtp(
+                self.as_ptr(),
+                cstr.as_ptr(),
+            );
+            // fun fact, set_tlsext_use_srtp has a reversed return code D:
+            if r == 0 {
+                Ok(())
+            } else {
+                Err(ErrorStack::get())
+            }
+        }
+    }
     /// Sets the callback used by a server to select a protocol for Application Layer Protocol
     /// Negotiation (ALPN).
     ///
@@ -1930,6 +1948,24 @@ impl ToOwned for SslSessionRef {
     }
 }
 
+#[allow(non_camel_case_types)]
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum SrtpProfileId {
+    SRTP_AES128_CM_SHA1_80,
+    SRTP_AES128_CM_SHA1_32,
+    SRTP_AES128_F8_SHA1_80,
+    SRTP_AES128_F8_SHA1_32,
+    SRTP_NULL_SHA1_80,
+    SRTP_NULL_SHA1_32,
+    Other(u64),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct SrtpProfile<'a> {
+    pub id: SrtpProfileId,
+    pub name: &'a str,
+}
+
 impl SslSessionRef {
     /// Returns the SSL session ID.
     ///
@@ -2454,6 +2490,34 @@ impl SslRef {
             }
         }
     }
+
+
+    pub fn selected_srtp_profile(&self) -> Option<SrtpProfile> {
+        unsafe {
+            let profile = ffi::SSL_get_selected_srtp_profile(self.as_ptr());
+
+            if profile.is_null() {
+                None
+            } else {
+                let name = str::from_utf8(CStr::from_ptr((*profile).name as *const _).to_bytes()).expect("str");
+                let id = (*profile).id;
+
+                let profile_id =
+                    match id {
+                        ffi::SRTP_AES128_CM_SHA1_80 => SrtpProfileId::SRTP_AES128_CM_SHA1_80,
+                        ffi::SRTP_AES128_CM_SHA1_32 => SrtpProfileId::SRTP_AES128_CM_SHA1_32,
+                        ffi::SRTP_AES128_F8_SHA1_80 => SrtpProfileId::SRTP_AES128_F8_SHA1_80,
+                        ffi::SRTP_AES128_F8_SHA1_32 => SrtpProfileId::SRTP_AES128_F8_SHA1_32,
+                        ffi::SRTP_NULL_SHA1_80 => SrtpProfileId::SRTP_NULL_SHA1_80,
+                        ffi::SRTP_NULL_SHA1_32 => SrtpProfileId::SRTP_NULL_SHA1_32,
+                        other @ _ => SrtpProfileId::Other(other)
+                    };
+
+                Some(SrtpProfile { id: profile_id, name: name })
+            }
+        }
+    }
+
 
     /// Returns the number of bytes remaining in the currently processed TLS record.
     ///
