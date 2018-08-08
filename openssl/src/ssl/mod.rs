@@ -2734,8 +2734,7 @@ impl SslRef {
                 self.as_ptr(),
                 p as *mut c_uchar,
                 response.len() as c_long,
-            ) as c_int)
-                .map(|_| ())
+            ) as c_int).map(|_| ())
         }
     }
 
@@ -3016,6 +3015,30 @@ impl<S: Read + Write> SslStream<S> {
             n => Err(self.make_error(n)),
         }
     }
+
+    /// Returns the session's shutdown state.
+    ///
+    /// This corresponds to [`SSL_get_shutdown`].
+    ///
+    /// [`SSL_get_shutdown`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_set_shutdown.html
+    pub fn get_shutdown(&mut self) -> ShutdownState {
+        unsafe {
+            let bits = ffi::SSL_get_shutdown(self.ssl.as_ptr());
+            ShutdownState { bits }
+        }
+    }
+
+    /// Sets the session's shutdown state.
+    ///
+    /// This can be used to tell OpenSSL that the session should be cached even if a full two-way
+    /// shutdown was not completed.
+    ///
+    /// This corresponds to [`SSL_set_shutdown`].
+    ///
+    /// [`SSL_set_shutdown`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_set_shutdown.html
+    pub fn set_shutdown(&mut self, state: ShutdownState) {
+        unsafe { ffi::SSL_set_shutdown(self.ssl.as_ptr(), state.bits()) }
+    }
 }
 
 impl<S> SslStream<S> {
@@ -3188,9 +3211,12 @@ where
         } else {
             let error = stream.make_error(ret);
             match error.code() {
-                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => Err(HandshakeError::WouldBlock(
-                    MidHandshakeSslStream { stream, error },
-                )),
+                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => {
+                    Err(HandshakeError::WouldBlock(MidHandshakeSslStream {
+                        stream,
+                        error,
+                    }))
+                }
                 _ => Err(HandshakeError::Failure(MidHandshakeSslStream {
                     stream,
                     error,
@@ -3208,9 +3234,12 @@ where
         } else {
             let error = stream.make_error(ret);
             match error.code() {
-                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => Err(HandshakeError::WouldBlock(
-                    MidHandshakeSslStream { stream, error },
-                )),
+                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => {
+                    Err(HandshakeError::WouldBlock(MidHandshakeSslStream {
+                        stream,
+                        error,
+                    }))
+                }
                 _ => Err(HandshakeError::Failure(MidHandshakeSslStream {
                     stream,
                     error,
@@ -3234,9 +3263,12 @@ where
         } else {
             let error = stream.make_error(ret);
             match error.code() {
-                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => Err(HandshakeError::WouldBlock(
-                    MidHandshakeSslStream { stream, error },
-                )),
+                ErrorCode::WANT_READ | ErrorCode::WANT_WRITE => {
+                    Err(HandshakeError::WouldBlock(MidHandshakeSslStream {
+                        stream,
+                        error,
+                    }))
+                }
                 _ => Err(HandshakeError::Failure(MidHandshakeSslStream {
                     stream,
                     error,
@@ -3342,6 +3374,16 @@ pub enum ShutdownResult {
 
     /// A close notify response message has been received from the peer.
     Received,
+}
+
+bitflags! {
+    /// The shutdown state of a session.
+    pub struct ShutdownState: c_int {
+        /// A close notify message has been sent to the peer.
+        const SENT = ffi::SSL_SENT_SHUTDOWN;
+        /// A close notify message has been received from the peer.
+        const RECEIVED = ffi::SSL_RECEIVED_SHUTDOWN;
+    }
 }
 
 cfg_if! {
