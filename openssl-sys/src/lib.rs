@@ -1319,6 +1319,9 @@ pub const SSL_SESS_CACHE_NO_INTERNAL_STORE: c_long = 0x200;
 pub const SSL_SESS_CACHE_NO_INTERNAL: c_long =
     SSL_SESS_CACHE_NO_INTERNAL_LOOKUP | SSL_SESS_CACHE_NO_INTERNAL_STORE;
 
+pub const SSL_SENT_SHUTDOWN: c_int = 1;
+pub const SSL_RECEIVED_SHUTDOWN: c_int = 2;
+
 pub const SSL3_VERSION: c_int = 0x300;
 pub const TLS1_VERSION: c_int = 0x301;
 pub const TLS1_1_VERSION: c_int = 0x302;
@@ -2476,6 +2479,8 @@ extern "C" {
     pub fn SSL_get0_param(ssl: *mut SSL) -> *mut X509_VERIFY_PARAM;
     pub fn SSL_get_verify_result(ssl: *const SSL) -> c_long;
     pub fn SSL_shutdown(ssl: *mut SSL) -> c_int;
+    pub fn SSL_get_shutdown(ssl: *const SSL) -> c_int;
+    pub fn SSL_set_shutdown(ss: *mut SSL, mode: c_int);
     pub fn SSL_get_certificate(ssl: *const SSL) -> *mut X509;
     #[cfg(not(ossl102))]
     pub fn SSL_get_privatekey(ssl: *mut SSL) -> *mut EVP_PKEY;
