@@ -22,9 +22,8 @@ use ssl;
 #[cfg(any(ossl110, ossl111, libressl261))]
 use ssl::SslVersion;
 use ssl::{
-    Error, HandshakeError, MidHandshakeSslStream, ShutdownResult, ShutdownState, Ssl, SslAcceptor,
-    SslConnector, SslContext, SslFiletype, SslMethod, SslSessionCacheMode, SslStream,
-    SslVerifyMode, StatusType,
+    Error, HandshakeError, MidHandshakeSslStream, ShutdownResult, SrtpProfileId, ShutdownState, Ssl, SslAcceptor,
+    SslConnector, SslContext, SslFiletype, SslMethod, SslSessionCacheMode, SslStream, SslVerifyMode, StatusType,
 };
 #[cfg(any(ossl102, ossl110))]
 use x509::verify::X509CheckFlags;
@@ -102,6 +101,21 @@ impl Server {
         }
         panic!("server never came online");
     }
+    fn new_udp(args: &[&str]) -> (Server, UdpSocket) {
+        let mut addrs: Vec<SocketAddr> = Vec::with_capacity(10);
+        for i in 0..10 {
+            addrs.push(SocketAddr::from(([127, 0, 0, 1], 34000 + i)));
+        }
+
+        let socket = UdpSocket::bind(&addrs[..]).unwrap();
+        let (server, addr) = Server::spawn(args, Some(Box::new(|_stdin:ChildStdin|{
+            thread::sleep(Duration::from_millis(5000));
+        })));
+        match socket.connect(&addr) {
+            Ok(_) => return (server, socket),
+            Err(e) => panic!("wut: {}", e),
+        }
+    }
 
     fn new() -> (Server, TcpStream) {
         Server::new_tcp(&["-www"])
@@ -115,6 +129,15 @@ impl Server {
             "http/1.1,spdy/3.1",
             "-alpn",
             "http/1.1,spdy/3.1",
+        ])
+    }
+
+    #[allow(dead_code)]
+    fn new_srtp() -> (Server, UdpSocket) {
+        Server::new_udp(&[
+            "-dtls1",
+            "-use_srtp",
+            "SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32",
         ])
     }
 }
@@ -545,6 +568,68 @@ fn test_connect_with_alpn_successful_single_match() {
     // is used.
     assert_eq!(b"spdy/3.1", stream.ssl().selected_alpn_protocol().unwrap());
 }
+
+#[derive(Debug)]
+struct SocketRw {
+    stream: UdpSocket
+}
+
+impl<'a> io::Write for &'a mut SocketRw {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.stream.send(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+impl<'a> io::Read for &'a mut SocketRw {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.stream.recv(buf)
+    }
+}
+
+/// Tests that when both the client as well as the server use SRTP and their
+/// lists of supported protocols have an overlap -- with only ONE protocol
+/// being valid for both.
+#[test]
+#[cfg(any(ossl102, libressl261))]
+fn test_connect_with_srtp_successful_single_match() {
+    let (mut server, stream) = Server::new_srtp();
+    let mut rw = SocketRw { stream };
+    for _ in 0..20 {
+        println!("trying to connect");
+        let mut ctx = SslContext::builder(SslMethod::dtls()).unwrap();
+        ctx.set_verify(SslVerifyMode::PEER);
+        ctx.set_tlsext_use_srtp("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32").unwrap();
+        match ctx.set_ca_file(&Path::new("test/root-ca.pem")) {
+            Ok(_) => {}
+            Err(err) => panic!("Unexpected error {:?}", err),
+        }
+
+        match Ssl::new(&ctx.build()).unwrap().connect(&mut rw) {
+            Ok(stream) => {
+
+                // The client now only supports one of the server's protocols, so that one
+                // is used.
+                let srtp_profile = stream.ssl().selected_srtp_profile().unwrap();
+                assert_eq!("SRTP_AES128_CM_SHA1_80", srtp_profile.name);
+                assert_eq!(SrtpProfileId::SRTP_AES128_CM_SHA1_80, srtp_profile.id);
+                return;
+            }
+            Err(err) => {
+
+                if let Some(exit_status) = server.p.try_wait().expect("try_wait") {
+                    panic!("server exited: {}, {}", exit_status,err);
+                }
+                thread::sleep(Duration::from_millis(100));
+            }
+        };
+    }
+    panic!("never success");
+}
+
 
 /// Tests that when the `SslStream` is created as a server stream, the protocols
 /// are correctly advertised to the client.

@@ -27,6 +27,7 @@ pub enum stack_st_X509 {}
 pub enum stack_st_X509_NAME {}
 pub enum stack_st_X509_ATTRIBUTE {}
 pub enum stack_st_X509_EXTENSION {}
+pub enum stack_st_SRTP_PROTECTION_PROFILE {}
 pub enum stack_st_SSL_CIPHER {}
 pub enum OPENSSL_INIT_SETTINGS {}
 pub enum X509 {}
@@ -74,6 +75,12 @@ pub const X509_V_ERR_STORE_LOOKUP: c_int = 70;
 pub const X509_V_ERR_NO_VALID_SCTS: c_int = 71;
 
 pub const X509_CHECK_FLAG_NEVER_CHECK_SUBJECT: c_uint = 0x20;
+pub const SRTP_AES128_CM_SHA1_80: c_ulong = 0x0001;
+pub const SRTP_AES128_CM_SHA1_32: c_ulong = 0x0002;
+pub const SRTP_AES128_F8_SHA1_80: c_ulong = 0x0003;
+pub const SRTP_AES128_F8_SHA1_32: c_ulong = 0x0004;
+pub const SRTP_NULL_SHA1_80: c_ulong = 0x0005;
+pub const SRTP_NULL_SHA1_32: c_ulong = 0x0006;
 
 pub fn init() {
     // explicitly initialize to work around https://github.com/openssl/openssl/issues/3505
@@ -140,6 +147,12 @@ pub unsafe fn SSL_get_max_proto_version(s: *mut ::SSL) -> c_int {
     ::SSL_ctrl(s, SSL_CTRL_GET_MAX_PROTO_VERSION, 0, ptr::null_mut()) as c_int
 }
 
+
+#[repr(C)]
+pub struct SRTP_PROTECTION_PROFILE {
+    pub name: *const c_char,
+    pub id: c_ulong,
+}
 extern "C" {
     pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
     pub fn BIO_s_file() -> *const BIO_METHOD;
@@ -392,4 +405,10 @@ extern "C" {
 
     pub fn SSL_CIPHER_get_cipher_nid(c: *const ::SSL_CIPHER) -> c_int;
     pub fn SSL_CIPHER_get_digest_nid(c: *const ::SSL_CIPHER) -> c_int;
+
+    pub fn SSL_set_tlsext_use_srtp(ssl: *mut ::SSL, profiles: *const c_char) -> c_int;
+    pub fn SSL_CTX_set_tlsext_use_srtp(ctx: *mut ::SSL_CTX, profiles: *const c_char) -> c_int;
+    pub fn SSL_get_srtp_profiles(ssl: *mut ::SSL) -> *mut stack_st_SRTP_PROTECTION_PROFILE;
+    pub fn SSL_get_selected_srtp_profile(ssl: *mut ::SSL) -> *mut SRTP_PROTECTION_PROFILE;
+
 }
