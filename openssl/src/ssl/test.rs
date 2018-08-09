@@ -22,8 +22,8 @@ use ssl;
 #[cfg(any(ossl110, ossl111, libressl261))]
 use ssl::SslVersion;
 use ssl::{
-    Error, HandshakeError, MidHandshakeSslStream, ShutdownResult, SrtpProfileId, Ssl, SslAcceptor, SslConnector,
-    SslContext, SslFiletype, SslMethod, SslSessionCacheMode, SslStream, SslVerifyMode, StatusType,
+    Error, HandshakeError, MidHandshakeSslStream, ShutdownResult, SrtpProfileId, ShutdownState, Ssl, SslAcceptor,
+    SslConnector, SslContext, SslFiletype, SslMethod, SslSessionCacheMode, SslStream, SslVerifyMode, StatusType,
 };
 #[cfg(any(ossl102, ossl110))]
 use x509::verify::X509CheckFlags;
@@ -1099,8 +1099,14 @@ fn shutdown() {
     stream.read_exact(&mut buf).unwrap();
     assert_eq!(b"hello", &buf);
 
+    assert_eq!(stream.get_shutdown(), ShutdownState::empty());
     assert_eq!(stream.shutdown().unwrap(), ShutdownResult::Sent);
+    assert_eq!(stream.get_shutdown(), ShutdownState::SENT);
     assert_eq!(stream.shutdown().unwrap(), ShutdownResult::Received);
+    assert_eq!(
+        stream.get_shutdown(),
+        ShutdownState::SENT | ShutdownState::RECEIVED
+    );
 
     guard.join().unwrap();
 }
