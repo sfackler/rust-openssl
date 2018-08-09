@@ -1957,7 +1957,7 @@ pub enum SrtpProfileId {
     SRTP_AES128_F8_SHA1_32,
     SRTP_NULL_SHA1_80,
     SRTP_NULL_SHA1_32,
-    Other(u64),
+    Other(usize),
 }
 
 #[derive(Debug, PartialEq)]
@@ -2510,7 +2510,7 @@ impl SslRef {
                         ffi::SRTP_AES128_F8_SHA1_32 => SrtpProfileId::SRTP_AES128_F8_SHA1_32,
                         ffi::SRTP_NULL_SHA1_80 => SrtpProfileId::SRTP_NULL_SHA1_80,
                         ffi::SRTP_NULL_SHA1_32 => SrtpProfileId::SRTP_NULL_SHA1_32,
-                        other @ _ => SrtpProfileId::Other(other)
+                        other @ _ => SrtpProfileId::Other(other as usize)
                     };
 
                 Some(SrtpProfile { id: profile_id, name: name })
