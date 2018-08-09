@@ -40,11 +40,6 @@ pub type SSL_custom_ext_parse_cb_ex = Option<
         parse_arg: *mut c_void,
     ) -> c_int,
 >;
-#[repr(C)]
-pub struct SRTP_PROTECTION_PROFILE {
-    pub name: *const c_char,
-    pub id: c_ulong,
-}
 
 pub const SSL_COOKIE_LENGTH: c_int = 4096;
 
@@ -79,12 +74,6 @@ pub const SSL_EXT_TLS1_3_CERTIFICATE_REQUEST: c_uint = 0x4000;
 pub const SSL_READ_EARLY_DATA_ERROR: c_int = 0;
 pub const SSL_READ_EARLY_DATA_SUCCESS: c_int = 1;
 pub const SSL_READ_EARLY_DATA_FINISH: c_int = 2;
-pub const SRTP_AES128_CM_SHA1_80: c_ulong = 0x0001;
-pub const SRTP_AES128_CM_SHA1_32: c_ulong = 0x0002;
-pub const SRTP_AES128_F8_SHA1_80: c_ulong = 0x0003;
-pub const SRTP_AES128_F8_SHA1_32: c_ulong = 0x0004;
-pub const SRTP_NULL_SHA1_80: c_ulong = 0x0005;
-pub const SRTP_NULL_SHA1_32: c_ulong = 0x0006;
 
 extern "C" {
     pub fn SSL_CTX_set_keylog_callback(ctx: *mut ::SSL_CTX, cb: SSL_CTX_keylog_cb_func);
@@ -145,9 +134,5 @@ extern "C" {
 
     pub fn SSL_SESSION_set_max_early_data(ctx: *mut ::SSL_SESSION, max_early_data: u32) -> c_int;
     pub fn SSL_SESSION_get_max_early_data(ctx: *const ::SSL_SESSION) -> u32;
-    pub fn SSL_set_tlsext_use_srtp(ssl: *mut ::SSL, profiles: *const c_char) -> c_int;
-    pub fn SSL_CTX_set_tlsext_use_srtp(ctx: *mut ::SSL_CTX, profiles: *const c_char) -> c_int;
-    pub fn SSL_get_srtp_profiles(ssl: *mut ::SSL) -> *mut ::OPENSSL_STACK;
-    pub fn SSL_get_selected_srtp_profile(ssl: *mut ::SSL) -> *mut SRTP_PROTECTION_PROFILE;
 
 }
