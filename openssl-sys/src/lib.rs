@@ -197,9 +197,6 @@ pub struct SRTP_PROTECTION_PROFILE {
     pub id: c_ulong,
 }
 
-/// fake free method, since SRTP_PROTECTION_PROFILE is static
-pub unsafe fn SRTP_PROTECTION_PROFILE_free(_profile: *mut SRTP_PROTECTION_PROFILE) {}
-
 pub type SHA_LONG = c_uint;
 pub type SHA_LONG64 = u64;
 
@@ -2899,4 +2896,9 @@ extern "C" {
 
     pub fn SSL_set_connect_state(s: *mut SSL);
     pub fn SSL_set_accept_state(s: *mut SSL);
+
+    pub fn SSL_set_tlsext_use_srtp(ssl: *mut ::SSL, profiles: *const c_char) -> c_int;
+    pub fn SSL_CTX_set_tlsext_use_srtp(ctx: *mut ::SSL_CTX, profiles: *const c_char) -> c_int;
+    pub fn SSL_get_srtp_profiles(ssl: *mut ::SSL) -> *mut stack_st_SRTP_PROTECTION_PROFILE;
+    pub fn SSL_get_selected_srtp_profile(ssl: *mut ::SSL) -> *mut SRTP_PROTECTION_PROFILE;
 }

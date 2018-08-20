@@ -98,7 +98,7 @@ use x509::store::X509Store;
 use x509::store::{X509StoreBuilderRef, X509StoreRef};
 #[cfg(any(ossl102, libressl261))]
 use x509::verify::X509VerifyParamRef;
-use x509::{X509, X509Name, X509Ref, X509StoreContextRef, X509VerifyResult};
+use x509::{X509Name, X509Ref, X509StoreContextRef, X509VerifyResult, X509};
 use {cvt, cvt_n, cvt_p, init};
 
 pub use ssl::connector::{
@@ -652,6 +652,7 @@ impl SslContextBuilder {
     /// This corresponds to [`SSL_CTX_set_tlsext_servername_callback`].
     ///
     /// [`SSL_CTX_set_tlsext_servername_callback`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_tlsext_servername_callback.html
+    // FIXME tlsext prefix?
     pub fn set_servername_callback<F>(&mut self, callback: F)
     where
         F: Fn(&mut SslRef, &mut SslAlert) -> Result<(), SniError> + 'static + Sync + Send,
@@ -1166,10 +1167,7 @@ impl SslContextBuilder {
         unsafe {
             let cstr = CString::new(protocols).unwrap();
 
-            let r = ffi::SSL_CTX_set_tlsext_use_srtp(
-                self.as_ptr(),
-                cstr.as_ptr(),
-            );
+            let r = ffi::SSL_CTX_set_tlsext_use_srtp(self.as_ptr(), cstr.as_ptr());
             // fun fact, set_tlsext_use_srtp has a reversed return code D:
             if r == 0 {
                 Ok(())
@@ -2478,7 +2476,6 @@ impl SslRef {
         }
     }
 
-
     /// Enables the DTLS extension "use_srtp" as defined in RFC5764.
     ///
     /// This corresponds to [`SSL_set_tlsext_use_srtp`].
@@ -2488,10 +2485,7 @@ impl SslRef {
         unsafe {
             let cstr = CString::new(protocols).unwrap();
 
-            let r = ffi::SSL_set_tlsext_use_srtp(
-                self.as_ptr(),
-                cstr.as_ptr(),
-            );
+            let r = ffi::SSL_set_tlsext_use_srtp(self.as_ptr(), cstr.as_ptr());
             // fun fact, set_tlsext_use_srtp has a reversed return code D:
             if r == 0 {
                 Ok(())
@@ -2508,7 +2502,7 @@ impl SslRef {
     /// This corresponds to [`SSL_get_srtp_profiles`].
     ///
     /// [`SSL_get_srtp_profiles`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_tlsext_use_srtp.html
-    pub fn get_srtp_profiles(&self) -> Option<&StackRef<SrtpProtectionProfile>> {
+    pub fn srtp_profiles(&self) -> Option<&StackRef<SrtpProtectionProfile>> {
         unsafe {
             let chain = ffi::SSL_get_srtp_profiles(self.as_ptr());
 
@@ -2519,6 +2513,7 @@ impl SslRef {
             }
         }
     }
+
     /// Gets the SRTP profile selected by handshake.
     ///
     /// DTLS extension "use_srtp" as defined in RFC5764 has to be enabled.
@@ -2536,18 +2531,6 @@ impl SslRef {
                 Some(SrtpProtectionProfileRef::from_ptr(profile as *mut _))
             }
         }
-    }
-
-    /// Derives keying material for SRTP usage.
-    ///
-    /// DTLS extension "use_srtp" as defined in RFC5764 has to be enabled.
-    ///
-    /// This corresponds to [`SSL_export_keying_material`] with a label of "EXTRACTOR-dtls_srtp".
-    ///
-    /// [`SSL_export_keying_material`]: https://www.openssl.org/docs/manmaster/man3/SSL_export_keying_material.html
-    /// [`SSL_CTX_set_tlsext_use_srtp`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_tlsext_use_srtp.html
-    pub fn export_srtp_keying_material(&self, out: &mut [u8]) -> Result<(), ErrorStack> {
-        self.export_keying_material(out, "EXTRACTOR-dtls_srtp", None)
     }
 
     /// Returns the number of bytes remaining in the currently processed TLS record.
