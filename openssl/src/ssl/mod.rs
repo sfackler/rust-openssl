@@ -797,9 +797,9 @@ impl SslContextBuilder {
     ///
     /// The file should contain a sequence of PEM-formatted CA certificates.
     ///
-    /// This corresponds to [`SSL_CTX_set_default_verify_file`].
+    /// This corresponds to [`SSL_CTX_load_verify_locations`].
     ///
-    /// [`SSL_CTX_set_default_verify_file`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_CTX_set_default_verify_paths.html
+    /// [`SSL_CTX_load_verify_locations`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_load_verify_locations.html
     pub fn set_ca_file<P: AsRef<Path>>(&mut self, file: P) -> Result<(), ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
         unsafe {
