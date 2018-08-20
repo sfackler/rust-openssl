@@ -88,6 +88,7 @@ use hash::MessageDigest;
 #[cfg(ossl110)]
 use nid::Nid;
 use pkey::{HasPrivate, PKeyRef, Params, Private};
+use srtp::{SrtpProtectionProfile, SrtpProtectionProfileRef};
 use ssl::bio::BioMethod;
 use ssl::callbacks::*;
 use ssl::error::InnerError;
@@ -1148,6 +1149,28 @@ impl SslContextBuilder {
                 protocols.len() as c_uint,
             );
             // fun fact, SSL_CTX_set_alpn_protos has a reversed return code D:
+            if r == 0 {
+                Ok(())
+            } else {
+                Err(ErrorStack::get())
+            }
+        }
+    }
+
+    /// Enables the DTLS extension "use_srtp" as defined in RFC5764.
+    ///
+    /// This corresponds to [`SSL_CTX_set_tlsext_use_srtp`].
+    ///
+    /// [`SSL_CTX_set_tlsext_use_srtp`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_tlsext_use_srtp.html
+    pub fn set_tlsext_use_srtp(&mut self, protocols: &str) -> Result<(), ErrorStack> {
+        unsafe {
+            let cstr = CString::new(protocols).unwrap();
+
+            let r = ffi::SSL_CTX_set_tlsext_use_srtp(
+                self.as_ptr(),
+                cstr.as_ptr(),
+            );
+            // fun fact, set_tlsext_use_srtp has a reversed return code D:
             if r == 0 {
                 Ok(())
             } else {
@@ -2453,6 +2476,78 @@ impl SslRef {
                 Some(slice::from_raw_parts(data, len as usize))
             }
         }
+    }
+
+
+    /// Enables the DTLS extension "use_srtp" as defined in RFC5764.
+    ///
+    /// This corresponds to [`SSL_set_tlsext_use_srtp`].
+    ///
+    /// [`SSL_set_tlsext_use_srtp`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_tlsext_use_srtp.html
+    pub fn set_tlsext_use_srtp(&mut self, protocols: &str) -> Result<(), ErrorStack> {
+        unsafe {
+            let cstr = CString::new(protocols).unwrap();
+
+            let r = ffi::SSL_set_tlsext_use_srtp(
+                self.as_ptr(),
+                cstr.as_ptr(),
+            );
+            // fun fact, set_tlsext_use_srtp has a reversed return code D:
+            if r == 0 {
+                Ok(())
+            } else {
+                Err(ErrorStack::get())
+            }
+        }
+    }
+
+    /// Gets all SRTP profiles that are enabled for handshake via set_tlsext_use_srtp
+    ///
+    /// DTLS extension "use_srtp" as defined in RFC5764 has to be enabled.
+    ///
+    /// This corresponds to [`SSL_get_srtp_profiles`].
+    ///
+    /// [`SSL_get_srtp_profiles`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_tlsext_use_srtp.html
+    pub fn get_srtp_profiles(&self) -> Option<&StackRef<SrtpProtectionProfile>> {
+        unsafe {
+            let chain = ffi::SSL_get_srtp_profiles(self.as_ptr());
+
+            if chain.is_null() {
+                None
+            } else {
+                Some(StackRef::from_ptr(chain))
+            }
+        }
+    }
+    /// Gets the SRTP profile selected by handshake.
+    ///
+    /// DTLS extension "use_srtp" as defined in RFC5764 has to be enabled.
+    ///
+    /// This corresponds to [`SSL_get_selected_srtp_profile`].
+    ///
+    /// [`SSL_get_selected_srtp_profile`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_tlsext_use_srtp.html
+    pub fn selected_srtp_profile(&self) -> Option<&SrtpProtectionProfileRef> {
+        unsafe {
+            let profile = ffi::SSL_get_selected_srtp_profile(self.as_ptr());
+
+            if profile.is_null() {
+                None
+            } else {
+                Some(SrtpProtectionProfileRef::from_ptr(profile as *mut _))
+            }
+        }
+    }
+
+    /// Derives keying material for SRTP usage.
+    ///
+    /// DTLS extension "use_srtp" as defined in RFC5764 has to be enabled.
+    ///
+    /// This corresponds to [`SSL_export_keying_material`] with a label of "EXTRACTOR-dtls_srtp".
+    ///
+    /// [`SSL_export_keying_material`]: https://www.openssl.org/docs/manmaster/man3/SSL_export_keying_material.html
+    /// [`SSL_CTX_set_tlsext_use_srtp`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_tlsext_use_srtp.html
+    pub fn export_srtp_keying_material(&self, out: &mut [u8]) -> Result<(), ErrorStack> {
+        self.export_keying_material(out, "EXTRACTOR-dtls_srtp", None)
     }
 
     /// Returns the number of bytes remaining in the currently processed TLS record.

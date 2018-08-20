@@ -21,6 +21,7 @@ use pkey::PKey;
 use ssl;
 #[cfg(any(ossl110, ossl111, libressl261))]
 use ssl::SslVersion;
+use srtp::SrtpProfileId;
 use ssl::{
     Error, HandshakeError, MidHandshakeSslStream, ShutdownResult, ShutdownState, Ssl, SslAcceptor,
     SslConnector, SslContext, SslFiletype, SslMethod, SslSessionCacheMode, SslStream,
@@ -544,6 +545,119 @@ fn test_connect_with_alpn_successful_single_match() {
     // The client now only supports one of the server's protocols, so that one
     // is used.
     assert_eq!(b"spdy/3.1", stream.ssl().selected_alpn_protocol().unwrap());
+}
+
+/// Tests that when both the client as well as the server use SRTP and their
+/// lists of supported protocols have an overlap -- with only ONE protocol
+/// being valid for both.
+#[test]
+fn test_connect_with_srtp_ctx() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+
+
+    let guard = thread::spawn(move || {
+        let stream = listener.accept().unwrap().0;
+        let mut ctx = SslContext::builder(SslMethod::dtls()).unwrap();
+        ctx.set_tlsext_use_srtp("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32").unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
+            .unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
+            .unwrap();
+        let ssl = Ssl::new(&ctx.build()).unwrap();
+        let mut stream = ssl.accept(stream).unwrap();
+
+        let mut buf = [0; 60];
+        stream
+            .ssl()
+            .export_srtp_keying_material(&mut buf)
+            .unwrap();
+
+        stream.write_all(&[0]).unwrap();
+
+        buf
+    });
+
+    let stream = TcpStream::connect(addr).unwrap();
+    let mut ctx = SslContext::builder(SslMethod::dtls()).unwrap();
+    ctx.set_tlsext_use_srtp("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32").unwrap();
+    let ssl = Ssl::new(&ctx.build()).unwrap();
+    let mut stream = ssl.connect(stream).unwrap();
+
+    let mut buf = [1; 60];
+    {
+        let srtp_profile = stream.ssl().selected_srtp_profile().unwrap();
+        assert_eq!("SRTP_AES128_CM_SHA1_80", srtp_profile.name());
+        assert_eq!(SrtpProfileId::SRTP_AES128_CM_SHA1_80, srtp_profile.id());
+    }
+    stream.ssl().export_srtp_keying_material(&mut buf).expect("extract");
+
+    stream.read_exact(&mut [0]).unwrap();
+
+    let buf2 = guard.join().unwrap();
+
+    assert_eq!(buf[..], buf2[..]);
+}
+
+/// Tests that when both the client as well as the server use SRTP and their
+/// lists of supported protocols have an overlap -- with only ONE protocol
+/// being valid for both.
+#[test]
+fn test_connect_with_srtp_ssl() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+
+
+    let guard = thread::spawn(move || {
+        let stream = listener.accept().unwrap().0;
+        let mut ctx = SslContext::builder(SslMethod::dtls()).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
+            .unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
+            .unwrap();
+        let mut ssl = Ssl::new(&ctx.build()).unwrap();
+        ssl.set_tlsext_use_srtp("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32").unwrap();
+        let mut profilenames = String::new();
+        for profile in ssl.get_srtp_profiles().unwrap() {
+            if profilenames.len()>0 {
+                profilenames.push(':');
+            }
+            profilenames += profile.name();
+
+        }
+        assert_eq!("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32", profilenames);
+        let mut stream = ssl.accept(stream).unwrap();
+
+        let mut buf = [0; 60];
+        stream
+            .ssl()
+            .export_srtp_keying_material(&mut buf)
+            .unwrap();
+
+        stream.write_all(&[0]).unwrap();
+
+        buf
+    });
+
+    let stream = TcpStream::connect(addr).unwrap();
+    let ctx = SslContext::builder(SslMethod::dtls()).unwrap();
+    let mut ssl = Ssl::new(&ctx.build()).unwrap();
+    ssl.set_tlsext_use_srtp("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32").unwrap();
+    let mut stream = ssl.connect(stream).unwrap();
+
+    let mut buf = [1; 60];
+    {
+        let srtp_profile = stream.ssl().selected_srtp_profile().unwrap();
+        assert_eq!("SRTP_AES128_CM_SHA1_80", srtp_profile.name());
+        assert_eq!(SrtpProfileId::SRTP_AES128_CM_SHA1_80, srtp_profile.id());
+    }
+    stream.ssl().export_srtp_keying_material(&mut buf).expect("extract");
+
+    stream.read_exact(&mut [0]).unwrap();
+
+    let buf2 = guard.join().unwrap();
+
+    assert_eq!(buf[..], buf2[..]);
 }
 
 /// Tests that when the `SslStream` is created as a server stream, the protocols

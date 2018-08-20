@@ -1,6 +1,7 @@
 use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, size_t};
 use std::ptr;
 use std::sync::{Once, ONCE_INIT};
+use SRTP_PROTECTION_PROFILE;
 
 pub enum BIGNUM {}
 pub enum BIO {}
@@ -27,6 +28,7 @@ pub enum stack_st_X509 {}
 pub enum stack_st_X509_NAME {}
 pub enum stack_st_X509_ATTRIBUTE {}
 pub enum stack_st_X509_EXTENSION {}
+pub enum stack_st_SRTP_PROTECTION_PROFILE {}
 pub enum stack_st_SSL_CIPHER {}
 pub enum OPENSSL_INIT_SETTINGS {}
 pub enum X509 {}
@@ -139,6 +141,7 @@ pub unsafe fn SSL_get_min_proto_version(s: *mut ::SSL) -> c_int {
 pub unsafe fn SSL_get_max_proto_version(s: *mut ::SSL) -> c_int {
     ::SSL_ctrl(s, SSL_CTRL_GET_MAX_PROTO_VERSION, 0, ptr::null_mut()) as c_int
 }
+
 
 extern "C" {
     pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
@@ -392,4 +395,9 @@ extern "C" {
 
     pub fn SSL_CIPHER_get_cipher_nid(c: *const ::SSL_CIPHER) -> c_int;
     pub fn SSL_CIPHER_get_digest_nid(c: *const ::SSL_CIPHER) -> c_int;
+
+    pub fn SSL_set_tlsext_use_srtp(ssl: *mut ::SSL, profiles: *const c_char) -> c_int;
+    pub fn SSL_CTX_set_tlsext_use_srtp(ctx: *mut ::SSL_CTX, profiles: *const c_char) -> c_int;
+    pub fn SSL_get_srtp_profiles(ssl: *mut ::SSL) -> *mut stack_st_SRTP_PROTECTION_PROFILE;
+    pub fn SSL_get_selected_srtp_profile(ssl: *mut ::SSL) -> *mut SRTP_PROTECTION_PROFILE;
 }

@@ -184,6 +184,22 @@ pub struct ERR_STRING_DATA {
     pub string: *const c_char,
 }
 
+pub const SRTP_AES128_CM_SHA1_80: c_ulong = 0x0001;
+pub const SRTP_AES128_CM_SHA1_32: c_ulong = 0x0002;
+pub const SRTP_AES128_F8_SHA1_80: c_ulong = 0x0003;
+pub const SRTP_AES128_F8_SHA1_32: c_ulong = 0x0004;
+pub const SRTP_NULL_SHA1_80: c_ulong = 0x0005;
+pub const SRTP_NULL_SHA1_32: c_ulong = 0x0006;
+
+#[repr(C)]
+pub struct SRTP_PROTECTION_PROFILE {
+    pub name: *const c_char,
+    pub id: c_ulong,
+}
+
+/// fake free method, since SRTP_PROTECTION_PROFILE is static
+pub unsafe fn SRTP_PROTECTION_PROFILE_free(_profile: *mut SRTP_PROTECTION_PROFILE) {}
+
 pub type SHA_LONG = c_uint;
 pub type SHA_LONG64 = u64;
 

@@ -10,6 +10,7 @@ pub use libressl::v250::*;
 pub use libressl::v251::*;
 #[cfg(libressl273)]
 pub use libressl::v273::*;
+use SRTP_PROTECTION_PROFILE;
 
 #[cfg(not(libressl251))]
 mod v250;
@@ -62,6 +63,11 @@ pub struct stack_st_SSL_CIPHER {
 pub struct stack_st_OPENSSL_STRING {
     pub stack: _STACK,
 }
+#[repr(C)]
+pub struct stack_st_SRTP_PROTECTION_PROFILE {
+    pub stack: _STACK,
+}
+
 
 #[repr(C)]
 pub struct _STACK {
@@ -633,4 +639,9 @@ extern "C" {
 
     pub fn SSLeay() -> c_ulong;
     pub fn SSLeay_version(key: c_int) -> *const c_char;
+
+    pub fn SSL_set_tlsext_use_srtp(ssl: *mut ::SSL, profiles: *const c_char) -> c_int;
+    pub fn SSL_CTX_set_tlsext_use_srtp(ctx: *mut ::SSL_CTX, profiles: *const c_char) -> c_int;
+    pub fn SSL_get_srtp_profiles(ssl: *mut ::SSL) -> *mut stack_st_SRTP_PROTECTION_PROFILE;
+    pub fn SSL_get_selected_srtp_profile(ssl: *mut ::SSL) -> *mut SRTP_PROTECTION_PROFILE;
 }

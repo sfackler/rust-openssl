@@ -4,6 +4,7 @@ use std::process;
 use std::ptr;
 use std::sync::{Mutex, MutexGuard};
 use std::sync::{Once, ONCE_INIT};
+use SRTP_PROTECTION_PROFILE;
 
 #[cfg(ossl102)]
 use libc::time_t;
@@ -51,6 +52,12 @@ pub struct stack_st_SSL_CIPHER {
 
 #[repr(C)]
 pub struct stack_st_OPENSSL_STRING {
+    pub stack: _STACK,
+}
+
+
+#[repr(C)]
+pub struct stack_st_SRTP_PROTECTION_PROFILE {
     pub stack: _STACK,
 }
 
@@ -1002,4 +1009,9 @@ extern "C" {
 
     #[cfg(ossl102)]
     pub fn SSL_extension_supported(ext_type: c_uint) -> c_int;
+
+    pub fn SSL_set_tlsext_use_srtp(ssl: *mut ::SSL, profiles: *const c_char) -> c_int;
+    pub fn SSL_CTX_set_tlsext_use_srtp(ctx: *mut ::SSL_CTX, profiles: *const c_char) -> c_int;
+    pub fn SSL_get_srtp_profiles(ssl: *mut ::SSL) -> *mut stack_st_SRTP_PROTECTION_PROFILE;
+    pub fn SSL_get_selected_srtp_profile(ssl: *mut ::SSL) -> *mut SRTP_PROTECTION_PROFILE;
 }

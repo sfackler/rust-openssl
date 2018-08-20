@@ -57,6 +57,7 @@ pub mod rand;
 pub mod rsa;
 pub mod sha;
 pub mod sign;
+pub mod srtp;
 pub mod ssl;
 pub mod stack;
 pub mod string;
