@@ -4,7 +4,6 @@ use std::process;
 use std::ptr;
 use std::sync::{Mutex, MutexGuard};
 use std::sync::{Once, ONCE_INIT};
-use SRTP_PROTECTION_PROFILE;
 
 #[cfg(ossl102)]
 use libc::time_t;
@@ -54,7 +53,6 @@ pub struct stack_st_SSL_CIPHER {
 pub struct stack_st_OPENSSL_STRING {
     pub stack: _STACK,
 }
-
 
 #[repr(C)]
 pub struct stack_st_SRTP_PROTECTION_PROFILE {
@@ -433,13 +431,25 @@ pub struct SSL {
     tlsext_ocsp_resplen: c_int,
     #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
     tlsext_ticket_expected: c_int,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_EC")
+    ))]
     tlsext_ecpointformatlist_length: size_t,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_EC")
+    ))]
     tlsext_ecpointformatlist: *mut c_uchar,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_EC")
+    ))]
     tlsext_ellipticcurvelist_length: size_t,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_EC")
+    ))]
     tlsext_ellipticcurvelist: *mut c_uchar,
     #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
     tlsext_opaque_prf_input: *mut c_void,
@@ -457,9 +467,15 @@ pub struct SSL {
     tls_session_secret_cb_arg: *mut c_void,
     #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
     initial_ctx: *mut ::SSL_CTX,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_NEXTPROTONEG")))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_NEXTPROTONEG")
+    ))]
     next_proto_negotiated: *mut c_uchar,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_NEXTPROTONEG")))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_NEXTPROTONEG")
+    ))]
     next_proto_negotiated_len: c_uchar,
     #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
     srtp_profiles: *mut c_void,
@@ -569,13 +585,25 @@ pub struct SSL_CTX {
     #[cfg(not(osslconf = "OPENSSL_NO_SRP"))]
     srp_ctx: SRP_CTX,
 
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_NEXTPROTONEG")))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_NEXTPROTONEG")
+    ))]
     next_protos_advertised_cb: *mut c_void,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_NEXTPROTONEG")))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_NEXTPROTONEG")
+    ))]
     next_protos_advertised_cb_arg: *mut c_void,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_NEXTPROTONEG")))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_NEXTPROTONEG")
+    ))]
     next_proto_select_cb: *mut c_void,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_NEXTPROTONEG")))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_NEXTPROTONEG")
+    ))]
     next_proto_select_cb_arg: *mut c_void,
 
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl101))]
@@ -589,13 +617,29 @@ pub struct SSL_CTX {
     #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))]
     alpn_client_proto_list_len: c_uint,
 
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_EC"),
+        ossl102
+    ))]
     tlsext_ecpointformatlist_length: size_t,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_EC"),
+        ossl102
+    ))]
     tlsext_ecpointformatlist: *mut c_uchar,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_EC"),
+        ossl102
+    ))]
     tlsext_ellipticcurvelist_length: size_t,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC"), ossl102))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_EC"),
+        ossl102
+    ))]
     tlsext_ellipticcurvelist: *mut c_uchar,
 }
 
@@ -634,13 +678,25 @@ pub struct SSL_SESSION {
     next: *mut c_void,
     #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
     tlsext_hostname: *mut c_char,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_EC")
+    ))]
     tlsext_ecpointformatlist_length: size_t,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_EC")
+    ))]
     tlsext_ecpointformatlist: *mut c_uchar,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_EC")
+    ))]
     tlsext_ellipticcurvelist_length: size_t,
-    #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), not(osslconf = "OPENSSL_NO_EC")))]
+    #[cfg(all(
+        not(osslconf = "OPENSSL_NO_TLSEXT"),
+        not(osslconf = "OPENSSL_NO_EC")
+    ))]
     tlsext_ellipticcurvelist: *mut c_uchar,
     #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
     tlsext_tick: *mut c_uchar,
@@ -1009,9 +1065,4 @@ extern "C" {
 
     #[cfg(ossl102)]
     pub fn SSL_extension_supported(ext_type: c_uint) -> c_int;
-
-    pub fn SSL_set_tlsext_use_srtp(ssl: *mut ::SSL, profiles: *const c_char) -> c_int;
-    pub fn SSL_CTX_set_tlsext_use_srtp(ctx: *mut ::SSL_CTX, profiles: *const c_char) -> c_int;
-    pub fn SSL_get_srtp_profiles(ssl: *mut ::SSL) -> *mut stack_st_SRTP_PROTECTION_PROFILE;
-    pub fn SSL_get_selected_srtp_profile(ssl: *mut ::SSL) -> *mut SRTP_PROTECTION_PROFILE;
 }

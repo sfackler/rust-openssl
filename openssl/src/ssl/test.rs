@@ -18,10 +18,10 @@ use dh::Dh;
 use hash::MessageDigest;
 use ocsp::{OcspResponse, OcspResponseStatus};
 use pkey::PKey;
+use srtp::SrtpProfileId;
 use ssl;
 #[cfg(any(ossl110, ossl111, libressl261))]
 use ssl::SslVersion;
-use srtp::SrtpProfileId;
 use ssl::{
     Error, HandshakeError, MidHandshakeSslStream, ShutdownResult, ShutdownState, Ssl, SslAcceptor,
     SslConnector, SslContext, SslFiletype, SslMethod, SslSessionCacheMode, SslStream,
@@ -29,7 +29,7 @@ use ssl::{
 };
 #[cfg(any(ossl102, ossl110))]
 use x509::verify::X509CheckFlags;
-use x509::{X509, X509Name, X509StoreContext, X509VerifyResult};
+use x509::{X509Name, X509StoreContext, X509VerifyResult, X509};
 
 use std::net::UdpSocket;
 
@@ -555,11 +555,11 @@ fn test_connect_with_srtp_ctx() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
 
-
     let guard = thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::dtls()).unwrap();
-        ctx.set_tlsext_use_srtp("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32").unwrap();
+        ctx.set_tlsext_use_srtp("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32")
+            .unwrap();
         ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
             .unwrap();
         ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
@@ -570,7 +570,7 @@ fn test_connect_with_srtp_ctx() {
         let mut buf = [0; 60];
         stream
             .ssl()
-            .export_srtp_keying_material(&mut buf)
+            .export_keying_material(&mut buf, "EXTRACTOR-dtls_srtp", None)
             .unwrap();
 
         stream.write_all(&[0]).unwrap();
@@ -580,7 +580,8 @@ fn test_connect_with_srtp_ctx() {
 
     let stream = TcpStream::connect(addr).unwrap();
     let mut ctx = SslContext::builder(SslMethod::dtls()).unwrap();
-    ctx.set_tlsext_use_srtp("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32").unwrap();
+    ctx.set_tlsext_use_srtp("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32")
+        .unwrap();
     let ssl = Ssl::new(&ctx.build()).unwrap();
     let mut stream = ssl.connect(stream).unwrap();
 
@@ -590,7 +591,10 @@ fn test_connect_with_srtp_ctx() {
         assert_eq!("SRTP_AES128_CM_SHA1_80", srtp_profile.name());
         assert_eq!(SrtpProfileId::SRTP_AES128_CM_SHA1_80, srtp_profile.id());
     }
-    stream.ssl().export_srtp_keying_material(&mut buf).expect("extract");
+    stream
+        .ssl()
+        .export_keying_material(&mut buf, "EXTRACTOR-dtls_srtp", None)
+        .expect("extract");
 
     stream.read_exact(&mut [0]).unwrap();
 
@@ -607,7 +611,6 @@ fn test_connect_with_srtp_ssl() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
 
-
     let guard = thread::spawn(move || {
         let stream = listener.accept().unwrap().0;
         let mut ctx = SslContext::builder(SslMethod::dtls()).unwrap();
@@ -616,22 +619,25 @@ fn test_connect_with_srtp_ssl() {
         ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
         let mut ssl = Ssl::new(&ctx.build()).unwrap();
-        ssl.set_tlsext_use_srtp("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32").unwrap();
+        ssl.set_tlsext_use_srtp("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32")
+            .unwrap();
         let mut profilenames = String::new();
-        for profile in ssl.get_srtp_profiles().unwrap() {
-            if profilenames.len()>0 {
+        for profile in ssl.srtp_profiles().unwrap() {
+            if profilenames.len() > 0 {
                 profilenames.push(':');
             }
             profilenames += profile.name();
-
         }
-        assert_eq!("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32", profilenames);
+        assert_eq!(
+            "SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32",
+            profilenames
+        );
         let mut stream = ssl.accept(stream).unwrap();
 
         let mut buf = [0; 60];
         stream
             .ssl()
-            .export_srtp_keying_material(&mut buf)
+            .export_keying_material(&mut buf, "EXTRACTOR-dtls_srtp", None)
             .unwrap();
 
         stream.write_all(&[0]).unwrap();
@@ -642,7 +648,8 @@ fn test_connect_with_srtp_ssl() {
     let stream = TcpStream::connect(addr).unwrap();
     let ctx = SslContext::builder(SslMethod::dtls()).unwrap();
     let mut ssl = Ssl::new(&ctx.build()).unwrap();
-    ssl.set_tlsext_use_srtp("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32").unwrap();
+    ssl.set_tlsext_use_srtp("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32")
+        .unwrap();
     let mut stream = ssl.connect(stream).unwrap();
 
     let mut buf = [1; 60];
@@ -651,7 +658,10 @@ fn test_connect_with_srtp_ssl() {
         assert_eq!("SRTP_AES128_CM_SHA1_80", srtp_profile.name());
         assert_eq!(SrtpProfileId::SRTP_AES128_CM_SHA1_80, srtp_profile.id());
     }
-    stream.ssl().export_srtp_keying_material(&mut buf).expect("extract");
+    stream
+        .ssl()
+        .export_keying_material(&mut buf, "EXTRACTOR-dtls_srtp", None)
+        .expect("extract");
 
     stream.read_exact(&mut [0]).unwrap();
 
