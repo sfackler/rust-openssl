@@ -95,13 +95,13 @@ vendored: &VENDORED
   LIBRARY: ""
 openssl_111: &OPENSSL_111
   LIBRARY: openssl
-  VERSION: 1.1.1-pre8
+  VERSION: 1.1.1-pre9
 openssl_110: &OPENSSL_110
   LIBRARY: openssl
-  VERSION: 1.1.0h
+  VERSION: 1.1.0i
 openssl_102: &OPENSSL_102
   LIBRARY: openssl
-  VERSION: 1.0.2o
+  VERSION: 1.0.2p
 openssl_101: &OPENSSL_101
   LIBRARY: openssl
   VERSION: 1.0.1u
