@@ -658,7 +658,14 @@ impl SslContextBuilder {
         F: Fn(&mut SslRef, &mut SslAlert) -> Result<(), SniError> + 'static + Sync + Send,
     {
         unsafe {
-            self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
+            // The SNI callback is somewhat unique in that the callback associated with the original
+            // context associated with an SSL can be used even if the SSL's context has been swapped
+            // out. When that happens, we wouldn't be able to look up the callback's state in the
+            // context's ex data. Instead, pass the pointer directly as the servername arg. It's
+            // still stored in ex data to manage the lifetime.
+            let arg = self.set_ex_data_inner(SslContext::cached_ex_index::<F>(), callback);
+            ffi::SSL_CTX_set_tlsext_servername_arg(self.as_ptr(), arg);
+
             let f: extern "C" fn(_, _, _) -> _ = raw_sni::<F>;
             let f: extern "C" fn() = mem::transmute(f);
             ffi::SSL_CTX_set_tlsext_servername_callback(self.as_ptr(), Some(f));
@@ -1514,13 +1521,14 @@ impl SslContextBuilder {
     ///
     /// [`SSL_CTX_set_ex_data`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_set_ex_data.html
     pub fn set_ex_data<T>(&mut self, index: Index<SslContext, T>, data: T) {
+        self.set_ex_data_inner(index, data);
+    }
+
+    fn set_ex_data_inner<T>(&mut self, index: Index<SslContext, T>, data: T) -> *mut c_void {
         unsafe {
-            let data = Box::new(data);
-            ffi::SSL_CTX_set_ex_data(
-                self.as_ptr(),
-                index.as_raw(),
-                Box::into_raw(data) as *mut c_void,
-            );
+            let data = Box::into_raw(Box::new(data)) as *mut c_void;
+            ffi::SSL_CTX_set_ex_data(self.as_ptr(), index.as_raw(), data);
+            data
         }
     }
 
