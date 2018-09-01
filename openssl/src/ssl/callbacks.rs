@@ -109,7 +109,8 @@ where
         let ssl = SslRef::from_ptr_mut(ssl);
         let callback_idx = SslContext::cached_ex_index::<F>();
 
-        let callback = ssl.ssl_context()
+        let callback = ssl
+            .ssl_context()
             .ex_data(callback_idx)
             .expect("BUG: psk callback missing") as *const F;
         let identity = if identity != ptr::null() {
@@ -152,16 +153,13 @@ where
     }
 }
 
-pub extern "C" fn raw_sni<F>(ssl: *mut ffi::SSL, al: *mut c_int, _arg: *mut c_void) -> c_int
+pub extern "C" fn raw_sni<F>(ssl: *mut ffi::SSL, al: *mut c_int, arg: *mut c_void) -> c_int
 where
     F: Fn(&mut SslRef, &mut SslAlert) -> Result<(), SniError> + 'static + Sync + Send,
 {
     unsafe {
         let ssl = SslRef::from_ptr_mut(ssl);
-        let callback = ssl
-            .ssl_context()
-            .ex_data(SslContext::cached_ex_index::<F>())
-            .expect("BUG: sni callback missing") as *const F;
+        let callback = arg as *const F;
         let mut alert = SslAlert(*al);
 
         let r = (*callback)(ssl, &mut alert);

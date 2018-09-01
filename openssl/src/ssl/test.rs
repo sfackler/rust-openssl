@@ -29,7 +29,7 @@ use ssl::{
 };
 #[cfg(any(ossl102, ossl110))]
 use x509::verify::X509CheckFlags;
-use x509::{X509Name, X509StoreContext, X509VerifyResult, X509};
+use x509::{X509, X509Name, X509StoreContext, X509VerifyResult};
 
 use std::net::UdpSocket;
 
@@ -1753,4 +1753,43 @@ fn psk_ciphers() {
     ssl.connect(stream).unwrap();
 
     assert!(CLIENT_CALLED.load(Ordering::SeqCst) && SERVER_CALLED.load(Ordering::SeqCst));
+}
+
+#[test]
+fn sni_callback_swapped_ctx() {
+    static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    let guard = thread::spawn(move || {
+        let stream = listener.accept().unwrap().0;
+        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+        ctx.set_servername_callback(|_, _| {
+            CALLED_BACK.store(true, Ordering::SeqCst);
+            Ok(())
+        });
+        let mut ssl = Ssl::new(&ctx.build()).unwrap();
+
+        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
+            .unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
+            .unwrap();
+        ssl.set_ssl_context(&ctx.build()).unwrap();
+
+        let mut stream = ssl.accept(stream).unwrap();
+        stream.write_all(&[0]).unwrap();
+    });
+
+    let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    let ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    let ssl = Ssl::new(&ctx.build()).unwrap();
+
+    let mut stream = ssl.connect(stream).unwrap();
+    stream.read_exact(&mut [0]).unwrap();
+
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
+
+    guard.join().unwrap();
 }
