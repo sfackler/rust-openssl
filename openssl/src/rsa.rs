@@ -3,7 +3,7 @@
 //! RSA is one of the earliest asymmetric public key encryption schemes.
 //! Like many other cryptosystems, RSA relies on the presumed difficulty of a hard
 //! mathematical problem, namely factorization of the product of two large prime
-//! numbers. At the moment there does exist an algorithm that can factor such
+//! numbers. At the moment there does not exist an algorithm that can factor such
 //! large numbers in reasonable time. RSA is used in a wide variety of
 //! applications including digital signatures and key exchanges such as
 //! establishing a TLS/SSL connection.
