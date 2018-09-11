@@ -95,7 +95,7 @@ vendored: &VENDORED
   LIBRARY: ""
 openssl_111: &OPENSSL_111
   LIBRARY: openssl
-  VERSION: 1.1.1-pre9
+  VERSION: 1.1.1
 openssl_110: &OPENSSL_110
   LIBRARY: openssl
   VERSION: 1.1.0i
