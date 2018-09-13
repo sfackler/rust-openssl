@@ -68,6 +68,7 @@ cfg_if! {
     } else {
         extern "C" {
             pub fn BIO_s_file() -> *mut BIO_METHOD;
+            pub fn BIO_new(type_: *mut BIO_METHOD) -> *mut BIO;
         }
     }
 }
