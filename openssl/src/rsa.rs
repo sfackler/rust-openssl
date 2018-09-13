@@ -562,7 +562,7 @@ impl Rsa<Private> {
     /// Creates a new RSA key with private components (public components are assumed).
     ///
     /// This a convenience method over
-    /// `Rsa::build(n, e, q)?.set_factors(p, q)?.set_crt_params(dmp1, dmq1, iqmp)?.build()`
+    /// `Rsa::build(n, e, d)?.set_factors(p, q)?.set_crt_params(dmp1, dmq1, iqmp)?.build()`
     pub fn from_private_components(
         n: BigNum,
         e: BigNum,
