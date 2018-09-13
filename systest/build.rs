@@ -91,7 +91,7 @@ fn main() {
     cfg.skip_type(|s| {
         // function pointers are declared without a `*` in openssl so their
         // sizeof is 1 which isn't what we want.
-        s == "PasswordCallback" || s == "bio_info_cb" || s.starts_with("CRYPTO_EX_")
+        s == "PasswordCallback" || s == "pem_password_cb" || s == "bio_info_cb" || s.starts_with("CRYPTO_EX_")
     });
     cfg.skip_struct(|s| s == "ProbeResult");
     cfg.skip_fn(move |s| {
@@ -100,6 +100,9 @@ fn main() {
         // Skip some functions with function pointers on windows, not entirely
         // sure how to get them to work out...
         (target.contains("windows") && {
+            s.starts_with("PEM_read_bio_") ||
+            (s.starts_with("PEM_write_bio_") && s.ends_with("PrivateKey")) ||
+            s == "d2i_PKCS8PrivateKey_bio" ||
             s == "SSL_get_ex_new_index" ||
             s == "SSL_CTX_get_ex_new_index" ||
             s == "CRYPTO_get_ex_new_index"
