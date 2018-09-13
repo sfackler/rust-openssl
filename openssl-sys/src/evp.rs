@@ -108,19 +108,28 @@ extern "C" {
         e: *mut ENGINE,
         pkey: *mut EVP_PKEY,
     ) -> c_int;
-    #[cfg(not(ossl102))]
-    pub fn EVP_DigestVerifyFinal(
-        ctx: *mut EVP_MD_CTX,
-        sigret: *mut c_uchar,
-        siglen: size_t,
-    ) -> c_int;
-    #[cfg(ossl102)]
-    pub fn EVP_DigestVerifyFinal(
-        ctx: *mut EVP_MD_CTX,
-        sigret: *const c_uchar,
-        siglen: size_t,
-    ) -> c_int;
+}
+cfg_if! {
+    if #[cfg(any(ossl102, libressl280))] {
+        extern "C" {
+            pub fn EVP_DigestVerifyFinal(
+                ctx: *mut EVP_MD_CTX,
+                sigret: *const c_uchar,
+                siglen: size_t,
+            ) -> c_int;
+        }
+    } else {
+        extern "C" {
+            pub fn EVP_DigestVerifyFinal(
+                ctx: *mut EVP_MD_CTX,
+                sigret: *mut c_uchar,
+                siglen: size_t,
+            ) -> c_int;
+        }
+    }
+}
 
+extern "C" {
     pub fn EVP_CIPHER_CTX_new() -> *mut EVP_CIPHER_CTX;
     pub fn EVP_CIPHER_CTX_free(ctx: *mut EVP_CIPHER_CTX);
     pub fn EVP_MD_CTX_copy_ex(dst: *mut EVP_MD_CTX, src: *const EVP_MD_CTX) -> c_int;
@@ -181,7 +190,7 @@ extern "C" {
     pub fn EVP_PKEY_id(pkey: *const EVP_PKEY) -> c_int;
 }
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         extern "C" {
             pub fn EVP_PKEY_bits(key: *const EVP_PKEY) -> c_int;
         }

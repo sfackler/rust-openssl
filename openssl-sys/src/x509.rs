@@ -191,7 +191,7 @@ extern "C" {
     pub fn X509_set_issuer_name(x: *mut X509, name: *mut X509_NAME) -> c_int;
 }
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         extern "C" {
             pub fn X509_get_issuer_name(x: *const ::X509) -> *mut ::X509_NAME;
         }
@@ -205,15 +205,24 @@ extern "C" {
     pub fn X509_set_subject_name(x: *mut X509, name: *mut X509_NAME) -> c_int;
 }
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         extern "C" {
             pub fn X509_get_subject_name(x: *const ::X509) -> *mut ::X509_NAME;
+        }
+    } else {
+        extern "C" {
+            pub fn X509_get_subject_name(x: *mut ::X509) -> *mut ::X509_NAME;
+        }
+    }
+}
+cfg_if! {
+    if #[cfg(ossl110)] {
+        extern "C" {
             pub fn X509_set1_notBefore(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
             pub fn X509_set1_notAfter(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
         }
     } else {
         extern "C" {
-            pub fn X509_get_subject_name(x: *mut ::X509) -> *mut ::X509_NAME;
             pub fn X509_set_notBefore(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
             pub fn X509_set_notAfter(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
         }
@@ -244,7 +253,7 @@ extern "C" {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         extern "C" {
             pub fn X509_NAME_entry_count(n: *const X509_NAME) -> c_int;
         }
@@ -255,11 +264,19 @@ cfg_if! {
     }
 }
 
-extern "C" {
-    pub fn X509_NAME_get_index_by_NID(n: *mut X509_NAME, nid: c_int, last_pos: c_int) -> c_int;
+cfg_if! {
+    if #[cfg(libressl280)] {
+        extern "C" {
+            pub fn X509_NAME_get_index_by_NID(n: *const X509_NAME, nid: c_int, last_pos: c_int) -> c_int;
+        }
+    } else {
+        extern "C" {
+            pub fn X509_NAME_get_index_by_NID(n: *mut X509_NAME, nid: c_int, last_pos: c_int) -> c_int;
+        }
+    }
 }
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         extern "C" {
             pub fn X509_NAME_get_entry(n: *const X509_NAME, loc: c_int) -> *mut X509_NAME_ENTRY;
             pub fn X509_NAME_add_entry_by_NID(
@@ -305,7 +322,7 @@ extern "C" {
     pub fn X509_add_ext(x: *mut X509, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
 }
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         extern "C" {
             pub fn X509_get_ext_d2i(
                 x: *const ::X509,
