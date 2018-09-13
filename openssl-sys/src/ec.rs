@@ -166,7 +166,7 @@ extern "C" {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum ECDSA_SIG {}
     } else {
         #[repr(C)]

@@ -379,10 +379,13 @@ pub unsafe extern "C" fn raw_remove_session<F>(
     callback(ctx, session)
 }
 
-#[cfg(ossl110)]
-type DataPtr = *const c_uchar;
-#[cfg(not(ossl110))]
-type DataPtr = *mut c_uchar;
+cfg_if! {
+    if #[cfg(any(ossl110, libressl280))] {
+        type DataPtr = *const c_uchar;
+    } else {
+        type DataPtr = *mut c_uchar;
+    }
+}
 
 pub unsafe extern "C" fn raw_get_session<F>(
     ssl: *mut ffi::SSL,
@@ -503,11 +506,13 @@ where
     }
 }
 
-#[cfg(ossl110)]
-type CookiePtr = *const c_uchar;
-
-#[cfg(not(ossl110))]
-type CookiePtr = *mut c_uchar;
+cfg_if! {
+    if #[cfg(any(ossl110, libressl280))] {
+        type CookiePtr = *const c_uchar;
+    } else {
+        type CookiePtr = *mut c_uchar;
+    }
+}
 
 pub extern "C" fn raw_cookie_verify<F>(
     ssl: *mut ffi::SSL,

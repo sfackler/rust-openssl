@@ -18,7 +18,7 @@ extern "C" {
     ) -> c_int;
 }
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         extern "C" {
             pub fn PKCS12_create(
                 pass: *const c_char,

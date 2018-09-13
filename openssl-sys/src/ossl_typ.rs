@@ -13,7 +13,7 @@ pub enum ASN1_OBJECT {}
 
 pub enum bio_st {} // FIXME remove
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum BIO {}
     } else {
         #[repr(C)]
@@ -59,7 +59,7 @@ pub enum BN_CTX {}
 pub enum BN_GENCB {}
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum EVP_CIPHER {}
     } else {
         #[repr(C)]
@@ -90,7 +90,7 @@ cfg_if! {
 pub enum EVP_CIPHER_CTX {}
 pub enum EVP_MD {}
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum EVP_MD_CTX {}
     } else {
         #[repr(C)]
@@ -105,7 +105,7 @@ cfg_if! {
     }
 }
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum EVP_PKEY {}
     } else {
         #[repr(C)]
@@ -127,7 +127,7 @@ pub enum EVP_PKEY_ASN1_METHOD {}
 pub enum EVP_PKEY_CTX {}
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum HMAC_CTX {}
     } else {
         #[repr(C)]
@@ -143,7 +143,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum DH {}
     } else {
         #[repr(C)]
@@ -172,7 +172,7 @@ cfg_if! {
 pub enum DH_METHOD {}
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum DSA {}
     } else {
         #[repr(C)]
@@ -201,7 +201,7 @@ cfg_if! {
 pub enum DSA_METHOD {}
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum RSA {}
     } else if #[cfg(libressl)] {
         #[repr(C)]
@@ -267,7 +267,7 @@ pub enum RSA_METHOD {}
 pub enum EC_KEY {}
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum X509 {}
     } else if #[cfg(libressl)] {
         #[repr(C)]
@@ -344,7 +344,7 @@ pub enum X509_STORE {}
 pub enum X509_STORE_CTX {}
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum X509_VERIFY_PARAM {} 
     } else if #[cfg(libressl251)] {
         #[repr(C)]
@@ -406,7 +406,7 @@ pub enum OPENSSL_INIT_SETTINGS {}
 
 pub enum ENGINE {}
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum SSL {}
     } else if #[cfg(libressl251)] {
         #[repr(C)]
@@ -708,7 +708,7 @@ cfg_if! {
     }
 }
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum SSL_CTX {}
     } else if #[cfg(libressl251)] {
         #[repr(C)]
@@ -970,7 +970,7 @@ cfg_if! {
 pub enum COMP_METHOD {}
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum CRYPTO_EX_DATA {}
     } else if #[cfg(libressl)] {
         #[repr(C)]

@@ -25,7 +25,7 @@ pub const SSL_FILETYPE_ASN1: c_int = X509_FILETYPE_ASN1;
 pub enum SSL_METHOD {}
 pub enum SSL_CIPHER {}
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum SSL_SESSION {}
     } else if #[cfg(libressl251)] {
         #[repr(C)]
@@ -292,7 +292,13 @@ cfg_if! {
 pub const SSL_OP_ENABLE_MIDDLEBOX_COMPAT: c_ulong = 0x00100000;
 
 pub const SSL_OP_CIPHER_SERVER_PREFERENCE: c_ulong = 0x00400000;
-pub const SSL_OP_TLS_ROLLBACK_BUG: c_ulong = 0x00800000;
+cfg_if! {
+    if #[cfg(libressl280)] {
+        pub const SSL_OP_TLS_ROLLBACK_BUG: c_ulong = 0;
+    } else {
+        pub const SSL_OP_TLS_ROLLBACK_BUG: c_ulong = 0x00800000;
+    }
+}
 
 
 cfg_if! {
@@ -466,7 +472,7 @@ extern "C" {
     );
 }
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         extern "C" {
             pub fn SSL_CTX_sess_set_get_cb(
                 ctx: *mut ::SSL_CTX,
@@ -497,7 +503,7 @@ extern "C" {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         extern "C" {
             pub fn SSL_CTX_set_cookie_verify_cb(
                 s: *mut SSL_CTX,
@@ -843,7 +849,7 @@ extern "C" {
     pub fn SSL_CIPHER_get_bits(cipher: *const SSL_CIPHER, alg_bits: *mut c_int) -> c_int;
 }
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         extern "C" {
             pub fn SSL_CIPHER_get_version(cipher: *const SSL_CIPHER) -> *const c_char;
         }
@@ -1036,11 +1042,20 @@ extern "C" {
     ) -> *mut c_char;
 
     pub fn SSL_get_certificate(ssl: *const SSL) -> *mut X509;
-    #[cfg(not(ossl102))]
-    pub fn SSL_get_privatekey(ssl: *mut SSL) -> *mut EVP_PKEY;
-    #[cfg(ossl102)]
-    pub fn SSL_get_privatekey(ssl: *const SSL) -> *mut EVP_PKEY;
+}
+cfg_if! {
+    if #[cfg(any(ossl102, libressl280))] {
+        extern "C" {
+            pub fn SSL_get_privatekey(ssl: *const SSL) -> *mut EVP_PKEY;
+        }
+    } else {
+        extern "C" {
+            pub fn SSL_get_privatekey(ssl: *mut SSL) -> *mut EVP_PKEY;
+        }
+    }
+}
 
+extern "C" {
     #[cfg(ossl102)]
     pub fn SSL_CTX_get0_certificate(ctx: *const SSL_CTX) -> *mut X509;
     #[cfg(ossl102)]

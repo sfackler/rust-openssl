@@ -76,9 +76,7 @@ macos_job: &MACOS_JOB
   - run: sudo chown -R $USER /usr/local /opt
   - run: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.20.0
   - run: sudo ln -s $CARGO_HOME/bin/* /usr/local/bin
-  - *RESTORE_REGISTRY
   - run: cargo generate-lockfile --verbose
-  - *SAVE_REGISTRY
   - run: echo "homebrew-x86_64-apple-darwin" > ~/lib_key
   - *RESTORE_DEPS
   - run: cargo run --manifest-path=systest/Cargo.toml --features "$FEATURES"
@@ -108,9 +106,9 @@ openssl_101: &OPENSSL_101
 libressl_250: &LIBRESSL_250
   LIBRARY: libressl
   VERSION: 2.5.0
-libressl_270: &LIBRESSL_272
+libressl_270: &LIBRESSL_280
   LIBRARY: libressl
-  VERSION: 2.7.2
+  VERSION: 2.8.0
 
 x86_64: &X86_64
   TARGET: x86_64-unknown-linux-gnu
@@ -195,10 +193,10 @@ jobs:
     <<: *JOB
     environment:
       <<: [*LIBRESSL_250, *X86_64, *BASE]
-  x86_64-libressl-2.7.2:
+  x86_64-libressl-2.8.0:
     <<: *JOB
     environment:
-      <<: [*LIBRESSL_272, *X86_64, *BASE]
+      <<: [*LIBRESSL_280, *X86_64, *BASE]
   macos:
     <<: *MACOS_JOB
     environment:
@@ -226,6 +224,6 @@ workflows:
     - armhf-openssl-1.1.0
     - armhf-openssl-1.0.2
     - x86_64-libressl-2.5.0
-    - x86_64-libressl-2.7.2
+    - x86_64-libressl-2.8.0
     - macos
     - macos-vendored

@@ -36,7 +36,7 @@ pub type bio_info_cb =
     Option<unsafe extern "C" fn(*mut BIO, c_int, *const c_char, c_int, c_long, c_long)>;
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         pub enum BIO_METHOD {}
     } else {
         #[repr(C)]
@@ -60,23 +60,14 @@ pub unsafe fn BIO_get_mem_data(b: *mut BIO, pp: *mut *mut c_char) -> c_long {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         extern "C" {
             pub fn BIO_s_file() -> *const BIO_METHOD;
-        }
-    } else {
-        extern "C" {
-            pub fn BIO_s_file() -> *mut BIO_METHOD;
-        }
-    }
-}
-cfg_if! {
-    if #[cfg(ossl110)] {
-        extern "C" {
             pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
         }
     } else {
         extern "C" {
+            pub fn BIO_s_file() -> *mut BIO_METHOD;
             pub fn BIO_new(type_: *mut BIO_METHOD) -> *mut BIO;
         }
     }
@@ -96,7 +87,7 @@ extern "C" {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         extern "C" {
             pub fn BIO_s_mem() -> *const BIO_METHOD;
         }
@@ -107,7 +98,7 @@ cfg_if! {
     }
 }
 cfg_if! {
-    if #[cfg(ossl102)] {
+    if #[cfg(any(ossl102, libressl280))] {
         extern "C" {
             pub fn BIO_new_mem_buf(buf: *const c_void, len: c_int) -> *mut BIO;
         }

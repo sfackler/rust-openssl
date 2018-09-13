@@ -41,7 +41,7 @@ pub const X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS: c_uint = 0x10;
 pub const X509_CHECK_FLAG_NEVER_CHECK_SUBJECT: c_uint = 0x20;
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl280))] {
         extern "C" {
             pub fn X509V3_EXT_nconf_nid(
                 conf: *mut CONF,
