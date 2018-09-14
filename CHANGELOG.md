@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [v0.10.12] - 2018-09-13
+
+### Fixed
+
+* Fixed handling of SNI callbacks during renegotiation.
+
+### Added
+
+* Added `SslRef::get_shutdown` and `SslRef::set_shutdown`.
+* Added support for SRTP in DTLS sessions.
+* Added support for LibreSSL 2.8.0.
+
 ## [v0.10.11] - 2018-08-04
 
 ### Added
@@ -250,7 +262,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.11...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.12...master
+[v0.10.12]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.11...openssl-v0.10.12
 [v0.10.11]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.10...openssl-v0.10.11
 [v0.10.10]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.9...openssl-v0.10.10
 [v0.10.9]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.8...openssl-v0.10.9
