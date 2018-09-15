@@ -1793,3 +1793,49 @@ fn sni_callback_swapped_ctx() {
 
     guard.join().unwrap();
 }
+
+#[test]
+#[cfg(ossl111)]
+fn client_hello() {
+    use ssl::ClientHelloResponse;
+
+    static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+
+    let guard = thread::spawn(move || {
+        let stream = listener.accept().unwrap().0;
+        let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+        ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
+            .unwrap();
+        ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
+            .unwrap();
+        ctx.set_client_hello_callback(|ssl, _| {
+            assert!(!ssl.client_hello_isv2());
+            assert_eq!(ssl.client_hello_legacy_version(), Some(SslVersion::TLS1_2));
+            assert!(ssl.client_hello_random().is_some());
+            assert!(ssl.client_hello_session_id().is_some());
+            assert!(ssl.client_hello_ciphers().is_some());
+            assert!(ssl.client_hello_compression_methods().is_some());
+
+            CALLED_BACK.store(true, Ordering::SeqCst);
+            Ok(ClientHelloResponse::SUCCESS)
+        });
+
+        let ssl = Ssl::new(&ctx.build()).unwrap();
+        let mut stream = ssl.accept(stream).unwrap();
+        stream.write_all(&mut [0]).unwrap();
+    });
+
+    let stream = TcpStream::connect(addr).unwrap();
+    let ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    let ssl = Ssl::new(&ctx.build()).unwrap();
+
+    let mut stream = ssl.connect(stream).unwrap();
+    stream.read_exact(&mut [0]).unwrap();
+
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
+
+    guard.join().unwrap();
+}
