@@ -40,6 +40,12 @@ impl ErrorCode {
 
     /// An error occurred in the SSL library.
     pub const SSL: ErrorCode = ErrorCode(ffi::SSL_ERROR_SSL);
+
+    /// The client hello callback indicated that it needed to be retried.
+    /// 
+    /// Requires OpenSSL 1.1.1 or newer.
+    #[cfg(ossl111)]
+    pub const WANT_CLIENT_HELLO_CB: ErrorCode = ErrorCode(ffi::SSL_ERROR_WANT_CLIENT_HELLO_CB);
 }
 
 #[derive(Debug)]
@@ -131,6 +137,7 @@ impl error::Error for Error {
 }
 
 /// An error or intermediate state after a TLS handshake attempt.
+// FIXME overhaul
 #[derive(Debug)]
 pub enum HandshakeError<S> {
     /// Setup failed.

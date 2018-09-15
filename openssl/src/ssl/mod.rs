@@ -525,6 +525,22 @@ impl AlpnError {
     pub const NOACK: AlpnError = AlpnError(ffi::SSL_TLSEXT_ERR_NOACK);
 }
 
+/// The result of a client hello callback.
+///
+/// Requires OpenSSL 1.1.1 or newer.
+#[cfg(ossl111)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct ClientHelloResponse(c_int);
+
+#[cfg(ossl111)]
+impl ClientHelloResponse {
+    /// Continue the handshake.
+    pub const SUCCESS: ClientHelloResponse = ClientHelloResponse(ffi::SSL_CLIENT_HELLO_SUCCESS);
+
+    /// Return from the handshake with an `ErrorCode::WANT_CLIENT_HELLO_CB` error.
+    pub const RETRY: ClientHelloResponse = ClientHelloResponse(ffi::SSL_CLIENT_HELLO_RETRY);
+}
+
 /// An SSL/TLS protocol version.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct SslVersion(c_int);
@@ -1597,6 +1613,31 @@ impl SslContextBuilder {
             Ok(())
         } else {
             Err(ErrorStack::get())
+        }
+    }
+
+    /// Sets a callback which will be invoked just after the client's hello message is received.
+    /// 
+    /// Requires OpenSSL 1.1.1 or newer.
+    /// 
+    /// This corresponds to [`SSL_CTX_set_client_hello_cb`].
+    ///
+    /// [`SSL_CTX_set_client_hello_cb`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_client_hello_cb.html
+    #[cfg(ossl111)]
+    pub fn set_client_hello_callback<F>(&mut self, callback: F)
+    where
+        F: Fn(&mut SslRef, &mut SslAlert) -> Result<ClientHelloResponse, ErrorStack>
+            + 'static
+            + Sync
+            + Send,
+    {
+        unsafe {
+            let ptr = self.set_ex_data_inner(SslContext::cached_ex_index::<F>(), callback);
+            ffi::SSL_CTX_set_client_hello_cb(
+                self.as_ptr(),
+                Some(callbacks::raw_client_hello::<F>),
+                ptr,
+            );
         }
     }
 
@@ -2932,6 +2973,131 @@ impl SslRef {
     pub fn peer_finished(&self, buf: &mut [u8]) -> usize {
         unsafe {
             ffi::SSL_get_peer_finished(self.as_ptr(), buf.as_mut_ptr() as *mut c_void, buf.len())
+        }
+    }
+
+    /// Determines if the client's hello message is in the SSLv2 format.
+    /// 
+    /// This can only be used inside of the client hello callback. Otherwise, `false` is returned.
+    /// 
+    /// Requires OpenSSL 1.1.1 or newer.
+    /// 
+    /// This corresponds to [`SSL_client_hello_isv2`].
+    /// 
+    /// [`SSL_client_hello_isv2`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_client_hello_cb.html
+    #[cfg(ossl111)]
+    pub fn client_hello_isv2(&self) -> bool {
+        unsafe {
+            ffi::SSL_client_hello_isv2(self.as_ptr()) != 0
+        }
+    }
+
+    /// Returns the legacy version field of the client's hello message.
+    /// 
+    /// This can only be used inside of the client hello callback. Otherwise, `None` is returned.
+    /// 
+    /// Requires OpenSSL 1.1.1 or newer.
+    /// 
+    /// This corresponds to [`SSL_client_hello_get0_legacy_version`].
+    /// 
+    /// [`SSL_client_hello_get0_legacy_version`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_client_hello_cb.html
+    #[cfg(ossl111)]
+    pub fn client_hello_legacy_version(&self) -> Option<SslVersion> {
+        unsafe {
+            let version = ffi::SSL_client_hello_get0_legacy_version(self.as_ptr());
+            if version == 0 {
+                None
+            } else {
+                Some(SslVersion(version as c_int))
+            }
+        }
+    }
+
+    /// Returns the random field of the client's hello message.
+    /// 
+    /// This can only be used inside of the client hello callback. Otherwise, `None` is returend.
+    /// 
+    /// Requires OpenSSL 1.1.1 or newer.
+    /// 
+    /// This corresponds to [`SSL_client_hello_get0_random`].
+    /// 
+    /// [`SSL_client_hello_get0_random`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_client_hello_cb.html
+    #[cfg(ossl111)]
+    pub fn client_hello_random(&self) -> Option<&[u8]> {
+        unsafe {
+            let mut ptr = ptr::null();
+            let len = ffi::SSL_client_hello_get0_random(self.as_ptr(), &mut ptr);
+            if len == 0 {
+                None
+            } else {
+                Some(slice::from_raw_parts(ptr, len))
+            }
+        }
+    }
+
+    /// Returns the session ID field of the client's hello message.
+    /// 
+    /// This can only be used inside of the client hello callback. Otherwise, `None` is returend.
+    /// 
+    /// Requires OpenSSL 1.1.1 or newer.
+    /// 
+    /// This corresponds to [`SSL_client_hello_get0_session_id`].
+    /// 
+    /// [`SSL_client_hello_get0_session_id`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_client_hello_cb.html
+    #[cfg(ossl111)]
+    pub fn client_hello_session_id(&self) -> Option<&[u8]> {
+        unsafe {
+            let mut ptr = ptr::null();
+            let len = ffi::SSL_client_hello_get0_session_id(self.as_ptr(), &mut ptr);
+            if len == 0 {
+                None
+            } else {
+                Some(slice::from_raw_parts(ptr, len))
+            }
+        }
+    }
+
+    /// Returns the ciphers field of the client's hello message.
+    /// 
+    /// This can only be used inside of the client hello callback. Otherwise, `None` is returend.
+    /// 
+    /// Requires OpenSSL 1.1.1 or newer.
+    /// 
+    /// This corresponds to [`SSL_client_hello_get0_ciphers`].
+    /// 
+    /// [`SSL_client_hello_get0_ciphers`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_client_hello_cb.html
+    #[cfg(ossl111)]
+    pub fn client_hello_ciphers(&self) -> Option<&[u8]> {
+        unsafe {
+            let mut ptr = ptr::null();
+            let len = ffi::SSL_client_hello_get0_ciphers(self.as_ptr(), &mut ptr);
+            if len == 0 {
+                None
+            } else {
+                Some(slice::from_raw_parts(ptr, len))
+            }
+        }
+    }
+
+    /// Returns the compression methods field of the client's hello message.
+    /// 
+    /// This can only be used inside of the client hello callback. Otherwise, `None` is returend.
+    /// 
+    /// Requires OpenSSL 1.1.1 or newer.
+    /// 
+    /// This corresponds to [`SSL_client_hello_get0_compression_methods`].
+    /// 
+    /// [`SSL_client_hello_get0_compression_methods`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_client_hello_cb.html
+    #[cfg(ossl111)]
+    pub fn client_hello_compression_methods(&self) -> Option<&[u8]> {
+        unsafe {
+            let mut ptr = ptr::null();
+            let len = ffi::SSL_client_hello_get0_compression_methods(self.as_ptr(), &mut ptr);
+            if len == 0 {
+                None
+            } else {
+                Some(slice::from_raw_parts(ptr, len))
+            }
         }
     }
 }

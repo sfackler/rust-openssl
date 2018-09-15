@@ -300,7 +300,6 @@ cfg_if! {
     }
 }
 
-
 cfg_if! {
     if #[cfg(ossl101)] {
         pub const SSL_OP_NO_SSLv3: c_ulong = 0x02000000;
@@ -672,6 +671,8 @@ pub const SSL_ERROR_WANT_READ: c_int = 2;
 pub const SSL_ERROR_WANT_WRITE: c_int = 3;
 pub const SSL_ERROR_WANT_X509_LOOKUP: c_int = 4;
 pub const SSL_ERROR_ZERO_RETURN: c_int = 6;
+#[cfg(ossl111)]
+pub const SSL_ERROR_WANT_CLIENT_HELLO_CB: c_int = 11;
 pub const SSL_VERIFY_NONE: c_int = 0;
 pub const SSL_VERIFY_PEER: c_int = 1;
 pub const SSL_VERIFY_FAIL_IF_NO_PEER_CERT: c_int = 2;
@@ -942,6 +943,53 @@ extern "C" {
 
     #[cfg(any(ossl102, libressl261))]
     pub fn SSL_get0_param(ssl: *mut SSL) -> *mut X509_VERIFY_PARAM;
+}
+
+#[cfg(ossl111)]
+pub const SSL_CLIENT_HELLO_SUCCESS: c_int = 1;
+#[cfg(ossl111)]
+pub const SSL_CLIENT_HELLO_ERROR: c_int = 0;
+#[cfg(ossl111)]
+pub const SSL_CLIENT_HELLO_RETRY: c_int = -1;
+
+#[cfg(ossl111)]
+pub type SSL_client_hello_cb_fn =
+    Option<unsafe extern "C" fn(s: *mut SSL, al: *mut c_int, arg: *mut c_void) -> c_int>;
+extern "C" {
+    #[cfg(ossl111)]
+    pub fn SSL_CTX_set_client_hello_cb(
+        c: *mut SSL_CTX,
+        cb: SSL_client_hello_cb_fn,
+        arg: *mut c_void,
+    );
+    #[cfg(ossl111)]
+    pub fn SSL_client_hello_isv2(s: *mut SSL) -> c_int;
+    #[cfg(ossl111)]
+    pub fn SSL_client_hello_get0_legacy_version(s: *mut SSL) -> c_uint;
+    #[cfg(ossl111)]
+    pub fn SSL_client_hello_get0_random(s: *mut SSL, out: *mut *const c_uchar) -> size_t;
+    #[cfg(ossl111)]
+    pub fn SSL_client_hello_get0_session_id(s: *mut SSL, out: *mut *const c_uchar) -> size_t;
+    #[cfg(ossl111)]
+    pub fn SSL_client_hello_get0_ciphers(s: *mut SSL, out: *mut *const c_uchar) -> size_t;
+    #[cfg(ossl111)]
+    pub fn SSL_client_hello_get0_compression_methods(
+        s: *mut SSL,
+        out: *mut *const c_uchar,
+    ) -> size_t;
+    #[cfg(ossl111)]
+    pub fn SSL_client_hello_get1_extensions_present(
+        s: *mut SSL,
+        out: *mut *mut c_int,
+        outlen: *mut size_t,
+    ) -> c_int;
+    #[cfg(ossl111)]
+    pub fn SSL_client_hello_get0_ext(
+        s: *mut SSL,
+        type_: c_uint,
+        out: *mut *const c_uchar,
+        outlen: *mut size_t,
+    ) -> c_int;
 
     pub fn SSL_free(ssl: *mut SSL);
     pub fn SSL_accept(ssl: *mut SSL) -> c_int;
