@@ -406,7 +406,7 @@ where
     match (*callback)(ssl, data) {
         Some(session) => {
             let p = session.as_ptr();
-            mem::forget(p);
+            mem::forget(session);
             *copy = 0;
             p
         }
