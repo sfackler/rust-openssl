@@ -45,7 +45,6 @@ job: &JOB
   - run: ./test/build_openssl.sh
   - *SAVE_OPENSSL
   - *RESTORE_DEPS
-  - run: cargo run --manifest-path=systest/Cargo.toml --target $TARGET
   - run: |
       ulimit -c unlimited
       export PATH=$OPENSSL_DIR/bin:$PATH

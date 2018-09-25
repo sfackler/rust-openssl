@@ -23,7 +23,7 @@ bitflags = "0.9"
 foreign-types = "0.3.1"
 lazy_static = "1"
 libc = "0.2"
-openssl-sys = { version = "0.9.23", path = "../openssl-sys" }
+openssl-sys = "0.9.23"
 
 [dev-dependencies]
 tempdir = "0.3"
