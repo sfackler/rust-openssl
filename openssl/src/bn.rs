@@ -47,7 +47,7 @@ use ffi::{get_rfc2409_prime_768 as BN_get_rfc2409_prime_768,
           get_rfc3526_prime_6144 as BN_get_rfc3526_prime_6144,
           get_rfc3526_prime_8192 as BN_get_rfc3526_prime_8192};
 
-#[cfg(ossl110)]
+#[cfg(ossl11x)]
 use ffi::{BN_get_rfc2409_prime_768, BN_get_rfc2409_prime_1024, BN_get_rfc3526_prime_1536,
           BN_get_rfc3526_prime_2048, BN_get_rfc3526_prime_3072, BN_get_rfc3526_prime_4096,
           BN_get_rfc3526_prime_6144, BN_get_rfc3526_prime_8192};
@@ -366,7 +366,7 @@ impl BigNumRef {
         unsafe { (*self.as_ptr()).neg == 1 }
     }
 
-    #[cfg(ossl110)]
+    #[cfg(ossl11x)]
     fn _is_negative(&self) -> bool {
         unsafe { ffi::BN_is_negative(self.as_ptr()) == 1 }
     }

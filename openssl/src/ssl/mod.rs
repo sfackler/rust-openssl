@@ -99,9 +99,9 @@ use ec::EcKeyRef;
 use ec::EcKey;
 use x509::{X509, X509FileType, X509Name, X509Ref, X509StoreContextRef, X509VerifyError};
 use x509::store::{X509StoreBuilderRef, X509StoreRef};
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
 use x509::store::X509Store;
-#[cfg(any(ossl102, ossl110))]
+#[cfg(any(ossl102, ossl11x))]
 use verify::X509VerifyParamRef;
 use pkey::PKeyRef;
 use error::ErrorStack;
@@ -211,15 +211,21 @@ bitflags! {
         /// Disables the use of TLSv1.2.
         const SSL_OP_NO_TLSV1_2 = ffi::SSL_OP_NO_TLSv1_2;
 
+        /// Disables the use of TLSv1.3.
+        ///
+        /// Requires OpenSSL 1.1.1 or newer.
+        #[cfg(ossl111)]
+        const SSL_OP_NO_TLSV1_3 = ffi::SSL_OP_NO_TLSv1_3;
+
         /// Disables the use of DTLSv1.0
         ///
         /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
-        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
         const SSL_OP_NO_DTLSV1 = ffi::SSL_OP_NO_DTLSv1;
 
         /// Disables the use of DTLSv1.2.
         /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
-        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
         const SSL_OP_NO_DTLSV1_2 = ffi::SSL_OP_NO_DTLSv1_2;
 
         /// Disables the use of all (D)TLS protocol versions.
@@ -237,8 +243,15 @@ bitflags! {
         ///
         /// let options = SSL_OP_NO_SSL_MASK & !SSL_OP_NO_TLSV1_2;
         /// ```
-        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+        #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
         const SSL_OP_NO_SSL_MASK = ffi::SSL_OP_NO_SSL_MASK;
+
+        /// Enable TLSv1.3 Compatibility mode.
+        ///
+        /// Requires OpenSSL 1.1.1 or newer. This is on by default in 1.1.1, but a future version
+        /// may have this disabled by default.
+        #[cfg(ossl111)]
+        const SSL_OP_ENABLE_MIDDLEBOX_COMPAT = ffi::SSL_OP_ENABLE_MIDDLEBOX_COMPAT;
     }
 }
 
@@ -398,7 +411,7 @@ lazy_static! {
     static ref NPN_PROTOS_IDX: c_int = get_new_idx::<Vec<u8>>();
 }
 
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
 lazy_static! {
     static ref ALPN_PROTOS_IDX: c_int = get_new_idx::<Vec<u8>>();
 }
@@ -578,7 +591,7 @@ impl SslContextBuilder {
     /// This corresponds to [`SSL_CTX_set0_verify_cert_store`].
     ///
     /// [`SSL_CTX_set0_verify_cert_store`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_set0_verify_cert_store.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
     pub fn set_verify_cert_store(&mut self, cert_store: X509Store) -> Result<(), ErrorStack> {
         unsafe {
             let ptr = cert_store.as_ptr();
@@ -970,7 +983,7 @@ impl SslContextBuilder {
     ///
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
     // FIXME overhaul
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
     pub fn set_alpn_protocols(&mut self, protocols: &[&[u8]]) -> Result<(), ErrorStack> {
         let protocols: Box<Vec<u8>> = Box::new(ssl_encode_byte_strings(protocols));
         unsafe {
@@ -1190,7 +1203,7 @@ impl SslContextRef {
     /// This corresponds to [`SSL_CTX_get0_certificate`].
     ///
     /// [`SSL_CTX_get0_certificate`]: https://www.openssl.org/docs/man1.1.0/ssl/ssl.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
     pub fn certificate(&self) -> Option<&X509Ref> {
         unsafe {
             let ptr = ffi::SSL_CTX_get0_certificate(self.as_ptr());
@@ -1209,7 +1222,7 @@ impl SslContextRef {
     /// This corresponds to [`SSL_CTX_get0_privatekey`].
     ///
     /// [`SSL_CTX_get0_privatekey`]: https://www.openssl.org/docs/man1.1.0/ssl/ssl.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
     pub fn private_key(&self) -> Option<&PKeyRef> {
         unsafe {
             let ptr = ffi::SSL_CTX_get0_privatekey(self.as_ptr());
@@ -1794,7 +1807,7 @@ impl SslRef {
     /// This corresponds to [`SSL_get0_alpn_selected`].
     ///
     /// [`SSL_get0_alpn_selected`]: https://www.openssl.org/docs/manmaster/man3/SSL_get0_next_proto_negotiated.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
     pub fn selected_alpn_protocol(&self) -> Option<&[u8]> {
         unsafe {
             let mut data: *const c_uchar = ptr::null();
@@ -1894,12 +1907,12 @@ impl SslRef {
     /// This corresponds to [`SSL_get0_param`].
     ///
     /// [`SSL_get0_param`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_get0_param.html
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
     pub fn param_mut(&mut self) -> &mut X509VerifyParamRef {
         self._param_mut()
     }
 
-    #[cfg(any(ossl102, ossl110))]
+    #[cfg(any(ossl102, ossl11x))]
     fn _param_mut(&mut self) -> &mut X509VerifyParamRef {
         unsafe { X509VerifyParamRef::from_ptr_mut(ffi::SSL_get0_param(self.as_ptr())) }
     }
@@ -2437,7 +2450,7 @@ pub enum ShutdownResult {
     Received,
 }
 
-#[cfg(ossl110)]
+#[cfg(ossl11x)]
 mod compat {
     use std::ptr;
 

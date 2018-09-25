@@ -288,7 +288,7 @@ impl fmt::Display for Asn1ObjectRef {
 #[cfg(any(ossl101, ossl102))]
 use ffi::ASN1_STRING_data;
 
-#[cfg(ossl110)]
+#[cfg(ossl11x)]
 #[allow(bad_style)]
 unsafe fn ASN1_STRING_data(s: *mut ffi::ASN1_STRING) -> *mut ::libc::c_uchar {
     ffi::ASN1_STRING_get0_data(s) as *mut _

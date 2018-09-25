@@ -12,7 +12,7 @@ use dh::Dh;
 #[cfg(any(all(feature = "v101", ossl101), all(feature = "v102", ossl102)))]
 use ec_key::EcKey;
 use ssl::{get_callback_idx, get_ssl_callback_idx, SslRef, SniError, NPN_PROTOS_IDX};
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
 use ssl::ALPN_PROTOS_IDX;
 use x509::X509StoreContextRef;
 
@@ -158,7 +158,7 @@ pub extern "C" fn raw_next_proto_select_cb(
     unsafe { select_proto_using(ssl, out, outlen, inbuf, inlen, *NPN_PROTOS_IDX) }
 }
 
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
 pub extern "C" fn raw_alpn_select_cb(
     ssl: *mut ffi::SSL,
     out: *mut *const c_uchar,

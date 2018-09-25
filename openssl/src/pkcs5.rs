@@ -108,7 +108,7 @@ pub fn pbkdf2_hmac(
 /// Derives a key from a password and salt using the scrypt algorithm.
 ///
 /// Requires the `v110` feature and OpenSSL 1.1.0.
-#[cfg(all(feature = "v110", ossl110))]
+#[cfg(all(feature = "v110", ossl11x))]
 pub fn scrypt(
     pass: &[u8],
     salt: &[u8],
@@ -546,7 +546,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(all(feature = "v110", ossl110))]
+    #[cfg(all(feature = "v110", ossl11x))]
     fn scrypt() {
         use hex::ToHex;
 

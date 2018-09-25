@@ -72,7 +72,7 @@ use hash::MessageDigest;
 use pkey::{PKeyCtxRef, PKeyRef};
 use error::ErrorStack;
 
-#[cfg(ossl110)]
+#[cfg(ossl11x)]
 use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
 #[cfg(any(ossl101, ossl102))]
 use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};

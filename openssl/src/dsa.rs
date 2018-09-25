@@ -189,7 +189,7 @@ impl fmt::Debug for Dsa {
     }
 }
 
-#[cfg(ossl110)]
+#[cfg(ossl11x)]
 mod compat {
     use std::ptr;
     use ffi::{self, BIGNUM, DSA};

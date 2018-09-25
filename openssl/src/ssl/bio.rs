@@ -173,7 +173,7 @@ unsafe extern "C" fn destroy<S>(bio: *mut BIO) -> c_int {
     1
 }
 
-#[cfg(ossl110)]
+#[cfg(ossl11x)]
 #[allow(bad_style)]
 mod compat {
     use std::io::{Read, Write};

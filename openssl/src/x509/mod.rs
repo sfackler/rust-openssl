@@ -28,12 +28,12 @@ use ssl::SslRef;
 
 #[cfg(ossl10x)]
 use ffi::{X509_set_notBefore, X509_set_notAfter, ASN1_STRING_data, X509_STORE_CTX_get_chain};
-#[cfg(ossl110)]
+#[cfg(ossl11x)]
 use ffi::{X509_set1_notBefore as X509_set_notBefore, X509_set1_notAfter as X509_set_notAfter,
           ASN1_STRING_get0_data as ASN1_STRING_data,
           X509_STORE_CTX_get0_chain as X509_STORE_CTX_get_chain};
 
-#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+#[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
 pub mod verify;
 
 use x509::extension::{ExtensionType, Extension};
@@ -1142,7 +1142,7 @@ impl X509AlgorithmRef {
     }
 }
 
-#[cfg(ossl110)]
+#[cfg(ossl11x)]
 mod compat {
     pub use ffi::X509_getm_notAfter as X509_get_notAfter;
     pub use ffi::X509_getm_notBefore as X509_get_notBefore;
