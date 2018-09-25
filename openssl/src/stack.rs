@@ -15,7 +15,7 @@ use std::ops::{Deref, DerefMut, Index, IndexMut};
 use ffi::{sk_pop as OPENSSL_sk_pop, sk_free as OPENSSL_sk_free, sk_num as OPENSSL_sk_num,
           sk_value as OPENSSL_sk_value, _STACK as OPENSSL_STACK,
           sk_new_null as OPENSSL_sk_new_null, sk_push as OPENSSL_sk_push};
-#[cfg(ossl110)]
+#[cfg(ossl11x)]
 use ffi::{OPENSSL_sk_pop, OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_value, OPENSSL_STACK,
           OPENSSL_sk_new_null, OPENSSL_sk_push};
 

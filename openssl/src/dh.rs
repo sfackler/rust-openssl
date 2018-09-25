@@ -40,7 +40,7 @@ impl Dh {
     from_der!(Dh, ffi::d2i_DHparams);
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
     pub fn get_1024_160() -> Result<Dh, ErrorStack> {
         unsafe {
             ffi::init();
@@ -49,7 +49,7 @@ impl Dh {
     }
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
     pub fn get_2048_224() -> Result<Dh, ErrorStack> {
         unsafe {
             ffi::init();
@@ -58,7 +58,7 @@ impl Dh {
     }
 
     /// Requires the `v102` or `v110` features and OpenSSL 1.0.2 or OpenSSL 1.1.0.
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
     pub fn get_2048_256() -> Result<Dh, ErrorStack> {
         unsafe {
             ffi::init();
@@ -67,7 +67,7 @@ impl Dh {
     }
 }
 
-#[cfg(ossl110)]
+#[cfg(ossl11x)]
 mod compat {
     pub use ffi::DH_set0_pqg;
 }
@@ -98,7 +98,7 @@ mod tests {
     use ssl::{SslMethod, SslContext};
 
     #[test]
-    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl110)))]
+    #[cfg(any(all(feature = "v102", ossl102), all(feature = "v110", ossl11x)))]
     fn test_dh_rfc5114() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         let dh1 = Dh::get_1024_160().unwrap();

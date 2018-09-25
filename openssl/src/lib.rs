@@ -60,7 +60,7 @@ pub mod symm;
 pub mod types;
 pub mod version;
 pub mod x509;
-#[cfg(any(ossl102, ossl110))]
+#[cfg(any(ossl102, ossl11x))]
 mod verify;
 
 fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {

@@ -4,7 +4,7 @@ use std::ops::{Deref, DerefMut};
 use std::fmt;
 use ffi;
 
-#[cfg(ossl110)]
+#[cfg(ossl11x)]
 use ffi::{EVP_MD_CTX_new, EVP_MD_CTX_free};
 #[cfg(any(ossl101, ossl102))]
 use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};

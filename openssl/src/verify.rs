@@ -15,7 +15,7 @@ bitflags! {
         const X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS
             = ffi::X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS;
         /// Requires the `v110` feature and OpenSSL 1.1.0.
-        #[cfg(all(feature = "v110", ossl110))]
+        #[cfg(all(feature = "v110", ossl11x))]
         const X509_CHECK_FLAG_NEVER_CHECK_SUBJECT = ffi::X509_CHECK_FLAG_NEVER_CHECK_SUBJECT;
     }
 }
