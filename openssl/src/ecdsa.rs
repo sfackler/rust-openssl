@@ -102,6 +102,25 @@ impl EcdsaSig {
             BigNumRef::from_ptr(s as *mut _)
         }
     }
+
+    from_der! {
+        /// Decodes a DER-encoded ECDSA signature.
+        ///
+        /// This corresponds to [`d2i_ECDSA_SIG`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_ECDSA_SIG.html
+        from_der,
+        EcdsaSig,
+        ffi::d2i_ECDSA_SIG
+	}
+}
+
+impl EcdsaSigRef {
+    to_der! {
+        /// Serializes the ECDSA signature into a DER-encoded ECDSASignature structure.
+        ///
+        /// This corresponds to [`i2d_ECDSA_SIG`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_ECDSA_SIG.html
+        to_der,
+        ffi::i2d_ECDSA_SIG
+	}
 }
 
 cfg_if! {
@@ -193,5 +212,22 @@ mod test {
         let res2 = EcdsaSig::from_private_components(r, s).unwrap();
         let verification2 = res2.verify(data.as_bytes(), &public_key).unwrap();
         assert!(verification2);
+    }
+
+    #[test]
+    #[cfg_attr(osslconf = "OPENSSL_NO_EC2M", ignore)]
+    fn serialize_deserialize() {
+        let group = EcGroup::from_curve_name(Nid::SECP256K1).unwrap();
+        let private_key = EcKey::generate(&group).unwrap();
+        let public_key = get_public_key(&group, &private_key).unwrap();
+
+        let data = String::from("hello");
+        let res = EcdsaSig::sign(data.as_bytes(), &private_key).unwrap();
+
+        let der = res.to_der().unwrap();
+        let sig = EcdsaSig::from_der(&der).unwrap();
+
+        let verification = sig.verify(data.as_bytes(), &public_key).unwrap();
+        assert!(verification);
     }
 }

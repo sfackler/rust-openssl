@@ -200,4 +200,12 @@ extern "C" {
         sig: *const ECDSA_SIG,
         eckey: *mut EC_KEY,
     ) -> c_int;
+
+    pub fn d2i_ECDSA_SIG(
+        sig: *mut *mut ECDSA_SIG,
+        inp: *mut *const c_uchar,
+        length: c_long,
+    ) -> *mut ECDSA_SIG;
+
+    pub fn i2d_ECDSA_SIG(sig: *const ECDSA_SIG, out: *mut *mut c_uchar) -> c_int;
 }
