@@ -108,7 +108,7 @@ libressl_250: &LIBRESSL_250
   VERSION: 2.5.0
 libressl_270: &LIBRESSL_280
   LIBRARY: libressl
-  VERSION: 2.8.0
+  VERSION: 2.8.1
 
 x86_64: &X86_64
   TARGET: x86_64-unknown-linux-gnu
