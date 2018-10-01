@@ -108,6 +108,9 @@ libressl_250: &LIBRESSL_250
   VERSION: 2.5.0
 libressl_270: &LIBRESSL_280
   LIBRARY: libressl
+  VERSION: 2.8.0
+libressl_281: &LIBRESSL_281
+  LIBRARY: libressl
   VERSION: 2.8.1
 
 x86_64: &X86_64
@@ -197,6 +200,10 @@ jobs:
     <<: *JOB
     environment:
       <<: [*LIBRESSL_280, *X86_64, *BASE]
+  x86_64-libressl-2.8.1:
+    <<: *JOB
+    environment:
+      <<: [*LIBRESSL_281, *X86_64, *BASE]
   macos:
     <<: *MACOS_JOB
     environment:
@@ -225,5 +232,6 @@ workflows:
     - armhf-openssl-1.0.2
     - x86_64-libressl-2.5.0
     - x86_64-libressl-2.8.0
+    - x86_64-libressl-2.8.1
     - macos
     - macos-vendored
