@@ -45,7 +45,7 @@ pub const V_OCSP_CERTSTATUS_UNKNOWN: c_int = 2;
 pub enum OCSP_BASICRESP {}
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl281))] {
         extern "C" {
             pub fn OCSP_cert_to_id(
                 dgst: *const EVP_MD,
