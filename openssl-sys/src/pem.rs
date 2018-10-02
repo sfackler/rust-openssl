@@ -132,6 +132,15 @@ extern "C" {
         cb: pem_password_cb,
         u: *mut c_void,
     ) -> *mut EVP_PKEY;
+
+    pub fn PEM_read_bio_PKCS7(
+        bio: *mut BIO,
+        out: *mut *mut PKCS7,
+        cb: pem_password_cb,
+        u: *mut c_void,
+    ) -> *mut PKCS7;
+
+    pub fn PEM_write_bio_PKCS7(bp: *mut BIO, x: *mut PKCS7) -> c_int;
 }
 
 pub const PEM_R_NO_START_LINE: c_int = 108;
