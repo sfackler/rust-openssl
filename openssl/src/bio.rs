@@ -67,7 +67,7 @@ impl MemBio {
         }
     }
 
-    pub fn from_ptr(bio: *mut ffi::BIO) -> MemBio {
+    pub unsafe fn from_ptr(bio: *mut ffi::BIO) -> MemBio {
         MemBio(bio)
     }
 }
