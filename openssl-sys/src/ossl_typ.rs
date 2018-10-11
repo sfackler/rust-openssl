@@ -10,6 +10,7 @@ pub enum ASN1_BIT_STRING {}
 pub enum ASN1_TIME {}
 pub enum ASN1_TYPE {}
 pub enum ASN1_OBJECT {}
+pub enum ASN1_OCTET_STRING {}
 
 pub enum bio_st {} // FIXME remove
 cfg_if! {
