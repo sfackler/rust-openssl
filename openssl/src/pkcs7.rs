@@ -1,15 +1,14 @@
-use x509::{X509, X509Ref};
-use x509::store::X509Store;
-use ffi;
 use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
-use stack::Stack;
-use foreign_types::ForeignType;
-use symm::Cipher;
-use pkey::{HasPrivate, PKeyRef};
-use libc::c_int;
-use std::ptr::null_mut;
+use ffi;
 use foreign_types::ForeignTypeRef;
+use libc::c_int;
+use pkey::{HasPrivate, PKeyRef};
+use stack::StackRef;
+use std::ptr;
+use symm::Cipher;
+use x509::store::X509StoreRef;
+use x509::{X509Ref, X509};
 use {cvt, cvt_p};
 
 foreign_type_and_impl_send_sync! {
@@ -63,27 +62,28 @@ impl Pkcs7 {
     }
 
     /// Parses a message in S/MIME format.
-    /// 
+    ///
     /// Returns the loaded signature, along with the cleartext message (if
     /// available).
     ///
     /// This corresponds to [`SMIME_read_PKCS7`].
     ///
     /// [`SMIME_read_PKCS7`]: https://www.openssl.org/docs/man1.1.0/crypto/SMIME_read_PKCS7.html
-    pub fn from_smime(input: &[u8]) -> Result<(Self, Option<Vec<u8>>), ErrorStack> {
+    pub fn from_smime(input: &[u8]) -> Result<(Pkcs7, Option<Vec<u8>>), ErrorStack> {
         ffi::init();
 
         let input_bio = MemBioSlice::new(input)?;
-        let mut bcont_bio = null_mut();
+        let mut bcont_bio = ptr::null_mut();
         unsafe {
-            let pkcs7= cvt_p(ffi::SMIME_read_PKCS7(input_bio.as_ptr(), &mut bcont_bio))?;
+            let pkcs7 =
+                cvt_p(ffi::SMIME_read_PKCS7(input_bio.as_ptr(), &mut bcont_bio)).map(Pkcs7)?;
             let out = if !bcont_bio.is_null() {
                 let bcont_bio = MemBio::from_ptr(bcont_bio);
                 Some(bcont_bio.get_buf().to_vec())
             } else {
                 None
             };
-            Ok((Pkcs7::from_ptr(pkcs7), out))
+            Ok((pkcs7, out))
         }
     }
 
@@ -96,9 +96,12 @@ impl Pkcs7 {
     /// This corresponds to [`PKCS7_encrypt`].
     ///
     /// [`PKCS7_encrypt`]: https://www.openssl.org/docs/man1.0.2/crypto/PKCS7_encrypt.html
-    pub fn encrypt(certs: &Stack<X509>, input: &[u8], cipher: Cipher, flags: Pkcs7Flags) -> Result<Self, ErrorStack> {
-        ffi::init();
-
+    pub fn encrypt(
+        certs: &StackRef<X509>,
+        input: &[u8],
+        cipher: Cipher,
+        flags: Pkcs7Flags,
+    ) -> Result<Pkcs7, ErrorStack> {
         let input_bio = MemBioSlice::new(input)?;
 
         unsafe {
@@ -106,8 +109,8 @@ impl Pkcs7 {
                 certs.as_ptr(),
                 input_bio.as_ptr(),
                 cipher.as_ptr(),
-                flags.bits)
-            ).map(|p| Pkcs7::from_ptr(p))
+                flags.bits,
+            )).map(Pkcs7)
         }
     }
 
@@ -124,15 +127,13 @@ impl Pkcs7 {
     pub fn sign<PT>(
         signcert: &X509Ref,
         pkey: &PKeyRef<PT>,
-        certs: &Stack<X509>,
+        certs: &StackRef<X509>,
         input: &[u8],
-        flags: Pkcs7Flags
-    ) -> Result<Self, ErrorStack>
+        flags: Pkcs7Flags,
+    ) -> Result<Pkcs7, ErrorStack>
     where
-        PT: HasPrivate
+        PT: HasPrivate,
     {
-        ffi::init();
-
         let input_bio = MemBioSlice::new(input)?;
         unsafe {
             cvt_p(ffi::PKCS7_sign(
@@ -140,8 +141,8 @@ impl Pkcs7 {
                 pkey.as_ptr(),
                 certs.as_ptr(),
                 input_bio.as_ptr(),
-                flags.bits)
-            ).map(|p| Pkcs7::from_ptr(p))
+                flags.bits,
+            )).map(Pkcs7)
         }
     }
 }
@@ -152,26 +153,16 @@ impl Pkcs7Ref {
     /// This corresponds to [`SMIME_write_PKCS7`].
     ///
     /// [`SMIME_write_PKCS7`]: https://www.openssl.org/docs/man1.1.0/crypto/SMIME_write_PKCS7.html
-    pub fn to_smime(
-        &self,
-        input: &[u8],
-        flags: Pkcs7Flags
-    ) -> Result<Vec<u8>, ErrorStack>
-    {
-        ffi::init();
-
+    pub fn to_smime(&self, input: &[u8], flags: Pkcs7Flags) -> Result<Vec<u8>, ErrorStack> {
         let input_bio = MemBioSlice::new(input)?;
         let output = MemBio::new()?;
         unsafe {
-            cvt(
-                ffi::SMIME_write_PKCS7(
-                    output.as_ptr(),
-                    self.as_ptr(),
-                    input_bio.as_ptr(),
-                    flags.bits)
-            ).and(
-                Ok(output.get_buf().to_owned())
-            )
+            cvt(ffi::SMIME_write_PKCS7(
+                output.as_ptr(),
+                self.as_ptr(),
+                input_bio.as_ptr(),
+                flags.bits,
+            )).map(|_| output.get_buf().to_owned())
         }
     }
 
@@ -197,17 +188,25 @@ impl Pkcs7Ref {
     /// This corresponds to [`PKCS7_decrypt`].
     ///
     /// [`PKCS7_decrypt`]: https://www.openssl.org/docs/man1.0.2/crypto/PKCS7_decrypt.html
-    pub fn decrypt<PT>(&self, pkey: &PKeyRef<PT>, cert: &X509Ref) -> Result<Vec<u8>, ErrorStack>
-        where
-            PT: HasPrivate
+    pub fn decrypt<PT>(
+        &self,
+        pkey: &PKeyRef<PT>,
+        cert: &X509Ref,
+        flags: Pkcs7Flags,
+    ) -> Result<Vec<u8>, ErrorStack>
+    where
+        PT: HasPrivate,
     {
-        ffi::init();
-
         let output = MemBio::new()?;
 
         unsafe {
-            cvt(ffi::PKCS7_decrypt(self.as_ptr(), pkey.as_ptr(), cert.as_ptr(), output.as_ptr(), 0))
-                .and(Ok(output.get_buf().to_owned()))
+            cvt(ffi::PKCS7_decrypt(
+                self.as_ptr(),
+                pkey.as_ptr(),
+                cert.as_ptr(),
+                output.as_ptr(),
+                flags.bits,
+            )).map(|_| output.get_buf().to_owned())
         }
     }
 
@@ -223,50 +222,48 @@ impl Pkcs7Ref {
     /// [`PKCS7_verify`]: https://www.openssl.org/docs/man1.0.2/crypto/PKCS7_verify.html
     pub fn verify(
         &self,
-        certs: &Stack<X509>,
-        store: &X509Store,
+        certs: &StackRef<X509>,
+        store: &X509StoreRef,
         indata: Option<&[u8]>,
         out: Option<&mut Vec<u8>>,
-        flags: Pkcs7Flags
+        flags: Pkcs7Flags,
     ) -> Result<(), ErrorStack> {
-        ffi::init();
-
         let out_bio = MemBio::new()?;
 
         let indata_bio = match indata {
             Some(data) => Some(MemBioSlice::new(data)?),
             None => None,
         };
-        let indata_bio_ptr = indata_bio.as_ref().map_or(null_mut(), |p| p.as_ptr());
+        let indata_bio_ptr = indata_bio.as_ref().map_or(ptr::null_mut(), |p| p.as_ptr());
 
-        let result = unsafe {
+        unsafe {
             cvt(ffi::PKCS7_verify(
                 self.as_ptr(),
                 certs.as_ptr(),
                 store.as_ptr(),
                 indata_bio_ptr,
                 out_bio.as_ptr(),
-                flags.bits))
-            .map(|_r| ())
-        };
+                flags.bits,
+            )).map(|_| ())?
+        }
 
         if let Some(data) = out {
             data.clear();
-            data.append(&mut out_bio.get_buf().to_vec());
+            data.extend_from_slice(out_bio.get_buf());
         }
 
-        result
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use x509::X509;
-    use x509::store::X509StoreBuilder;
-    use symm::Cipher;
     use pkcs7::{Pkcs7, Pkcs7Flags};
     use pkey::PKey;
     use stack::Stack;
+    use symm::Cipher;
+    use x509::store::X509StoreBuilder;
+    use x509::X509;
 
     #[test]
     fn encrypt_decrypt_test() {
@@ -280,13 +277,18 @@ mod tests {
         let pkey = include_bytes!("../test/key.pem");
         let pkey = PKey::private_key_from_pem(pkey).unwrap();
 
-        let pkcs7 = Pkcs7::encrypt(&certs, message.as_bytes(), cypher, flags).expect("should succeed");
+        let pkcs7 =
+            Pkcs7::encrypt(&certs, message.as_bytes(), cypher, flags).expect("should succeed");
 
-        let encrypted = pkcs7.to_smime(message.as_bytes(), flags).expect("should succeed");
+        let encrypted = pkcs7
+            .to_smime(message.as_bytes(), flags)
+            .expect("should succeed");
 
         let (pkcs7_decoded, _) = Pkcs7::from_smime(encrypted.as_slice()).expect("should succeed");
 
-        let decoded = pkcs7_decoded.decrypt(&pkey, &cert).expect("should succeed");
+        let decoded = pkcs7_decoded
+            .decrypt(&pkey, &cert, Pkcs7Flags::empty())
+            .expect("should succeed");
 
         assert_eq!(decoded, message.into_bytes());
     }
@@ -308,18 +310,31 @@ mod tests {
 
         let store = store_builder.build();
 
-        let pkcs7 = Pkcs7::sign(&cert, &pkey, &certs, message.as_bytes(), flags).expect("should succeed");
+        let pkcs7 =
+            Pkcs7::sign(&cert, &pkey, &certs, message.as_bytes(), flags).expect("should succeed");
 
-        let signed = pkcs7.to_smime(message.as_bytes(), flags).expect("should succeed");
+        let signed = pkcs7
+            .to_smime(message.as_bytes(), flags)
+            .expect("should succeed");
         println!("{:?}", String::from_utf8(signed.clone()).unwrap());
-        let (pkcs7_decoded, content) = Pkcs7::from_smime(signed.as_slice()).expect("should succeed");
+        let (pkcs7_decoded, content) =
+            Pkcs7::from_smime(signed.as_slice()).expect("should succeed");
 
         let mut output = Vec::new();
-        pkcs7_decoded.verify(&certs, &store, Some(message.as_bytes()), Some(&mut output), flags)
-            .expect("should succeed");
+        pkcs7_decoded
+            .verify(
+                &certs,
+                &store,
+                Some(message.as_bytes()),
+                Some(&mut output),
+                flags,
+            ).expect("should succeed");
 
         assert_eq!(message.clone().into_bytes(), output);
-        assert_eq!(message.clone().into_bytes(), content.expect("should be non-empty"));
+        assert_eq!(
+            message.clone().into_bytes(),
+            content.expect("should be non-empty")
+        );
     }
 
     #[test]
@@ -339,14 +354,20 @@ mod tests {
 
         let store = store_builder.build();
 
-        let pkcs7 = Pkcs7::sign(&cert, &pkey, &certs, message.as_bytes(), flags).expect("should succeed");
+        let pkcs7 =
+            Pkcs7::sign(&cert, &pkey, &certs, message.as_bytes(), flags).expect("should succeed");
 
-        let signed = pkcs7.to_smime(message.as_bytes(), flags).expect("should succeed");
+        let signed = pkcs7
+            .to_smime(message.as_bytes(), flags)
+            .expect("should succeed");
 
-        let (pkcs7_decoded, content) = Pkcs7::from_smime(signed.as_slice()).expect("should succeed");
+        let (pkcs7_decoded, content) =
+            Pkcs7::from_smime(signed.as_slice()).expect("should succeed");
 
         let mut output = Vec::new();
-        pkcs7_decoded.verify(&certs, &store, None, Some(&mut output), flags).expect("should succeed");
+        pkcs7_decoded
+            .verify(&certs, &store, None, Some(&mut output), flags)
+            .expect("should succeed");
 
         assert_eq!(message.clone().into_bytes(), output);
         assert!(content.is_none());
