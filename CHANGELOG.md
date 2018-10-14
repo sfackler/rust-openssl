@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [v0.10.13] - 2018-10-14
+
+### Fixed
+
+* Fixed a double-free in the `SslContextBuilder::set_get_session_callback` API.
+
+### Added
+
+* Added `SslContextBuilder::set_client_hello_callback`.
+* Added support for LibreSSL 2.8.1.
+* Added `EcdsaSig::from_der` and `EcdsaSig::to_der`.
+* Added PKCS#7 support.
+
 ## [v0.10.12] - 2018-09-13
 
 ### Fixed
