@@ -29,6 +29,7 @@ const DEFINES: &'static [&'static str] = &[
     "OPENSSL_NO_SRP",
     "OPENSSL_NO_SSL3_METHOD",
     "OPENSSL_NO_TLSEXT",
+    "OPENSSL_NO_STDIO",
 ];
 
 enum Version {
