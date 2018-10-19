@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [v0.10.14] - 2018-10-18
+
+### Fixed
+
+* Made some accidentally exposed internal functions private.
+
+### Added
+
+* Added support for LibreSSL 2.8.
+
+### Changed
+
+* The OpenSSL version used with the `vendored` feature has been upgraded from 1.1.0 to 1.1.1.
+
 ## [v0.10.13] - 2018-10-14
 
 ### Fixed
@@ -275,7 +289,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.13...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.14...master
+[v0.10.14]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.13...openssl-v0.10.14
 [v0.10.13]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.12...openssl-v0.10.13
 [v0.10.12]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.11...openssl-v0.10.12
 [v0.10.11]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.10...openssl-v0.10.11
