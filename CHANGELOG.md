@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [v0.10.15] - 2018-10-22
+
+### Added
+
+* Implemented `DoubleEndedIterator` for stack iterators.
+
 ## [v0.10.14] - 2018-10-18
 
 ### Fixed
@@ -289,7 +295,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.14...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.15...master
+[v0.10.15]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.14...openssl-v0.10.15
 [v0.10.14]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.13...openssl-v0.10.14
 [v0.10.13]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.12...openssl-v0.10.13
 [v0.10.12]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.11...openssl-v0.10.12
