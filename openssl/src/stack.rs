@@ -6,9 +6,9 @@ use std::convert::AsRef;
 use std::iter;
 use std::marker::PhantomData;
 use std::mem;
+use std::ops::{Deref, DerefMut, Index, IndexMut, Range};
 
 use error::ErrorStack;
-use std::ops::{Deref, DerefMut, Index, IndexMut};
 use {cvt, cvt_p};
 
 cfg_if! {
@@ -69,7 +69,7 @@ impl<T: Stackable> iter::IntoIterator for Stack<T> {
     fn into_iter(self) -> IntoIter<T> {
         let it = IntoIter {
             stack: self.0,
-            idx: 0,
+            idxs: 0..self.len() as c_int,
         };
         mem::forget(self);
         it
@@ -124,13 +124,7 @@ impl<T: Stackable> DerefMut for Stack<T> {
 
 pub struct IntoIter<T: Stackable> {
     stack: *mut T::StackType,
-    idx: c_int,
-}
-
-impl<T: Stackable> IntoIter<T> {
-    fn stack_len(&self) -> c_int {
-        unsafe { OPENSSL_sk_num(self.stack as *mut _) }
-    }
+    idxs: Range<c_int>,
 }
 
 impl<T: Stackable> Drop for IntoIter<T> {
@@ -147,19 +141,24 @@ impl<T: Stackable> Iterator for IntoIter<T> {
 
     fn next(&mut self) -> Option<T> {
         unsafe {
-            if self.idx == self.stack_len() {
-                None
-            } else {
-                let ptr = OPENSSL_sk_value(self.stack as *mut _, self.idx);
-                self.idx += 1;
-                Some(T::from_ptr(ptr as *mut _))
-            }
+            self.idxs
+                .next()
+                .map(|i| T::from_ptr(OPENSSL_sk_value(self.stack as *mut _, i) as *mut _))
         }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = (self.stack_len() - self.idx) as usize;
-        (size, Some(size))
+        self.idxs.size_hint()
+    }
+}
+
+impl<T: Stackable> DoubleEndedIterator for IntoIter<T> {
+    fn next_back(&mut self) -> Option<T> {
+        unsafe {
+            self.idxs
+                .next_back()
+                .map(|i| T::from_ptr(OPENSSL_sk_value(self.stack as *mut _, i) as *mut _))
+        }
     }
 }
 
@@ -185,22 +184,16 @@ impl<T: Stackable> StackRef<T> {
     }
 
     pub fn iter(&self) -> Iter<T> {
-        // Unfortunately we can't simply convert the stack into a
-        // slice and use that because OpenSSL 1.1.0 doesn't directly
-        // expose the stack data (we have to use `OPENSSL_sk_value`
-        // instead). We have to rewrite the entire iteration framework
-        // instead.
-
         Iter {
             stack: self,
-            pos: 0,
+            idxs: 0..self.len() as c_int,
         }
     }
 
     pub fn iter_mut(&mut self) -> IterMut<T> {
         IterMut {
+            idxs: 0..self.len() as c_int,
             stack: self,
-            pos: 0,
         }
     }
 
@@ -310,62 +303,67 @@ where
     T: 'a,
 {
     stack: &'a StackRef<T>,
-    pos: usize,
+    idxs: Range<c_int>,
 }
 
-impl<'a, T: Stackable> iter::Iterator for Iter<'a, T> {
+impl<'a, T: Stackable> Iterator for Iter<'a, T> {
     type Item = &'a T::Ref;
 
     fn next(&mut self) -> Option<&'a T::Ref> {
-        let n = self.stack.get(self.pos);
-
-        if n.is_some() {
-            self.pos += 1;
+        unsafe {
+            self.idxs
+                .next()
+                .map(|i| T::Ref::from_ptr(OPENSSL_sk_value(self.stack.as_stack(), i) as *mut _))
         }
-
-        n
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let rem = self.stack.len() - self.pos;
-
-        (rem, Some(rem))
+        self.idxs.size_hint()
     }
 }
 
-impl<'a, T: Stackable> iter::ExactSizeIterator for Iter<'a, T> {}
+impl<'a, T: Stackable> DoubleEndedIterator for Iter<'a, T> {
+    fn next_back(&mut self) -> Option<&'a T::Ref> {
+        unsafe {
+            self.idxs
+                .next_back()
+                .map(|i| T::Ref::from_ptr(OPENSSL_sk_value(self.stack.as_stack(), i) as *mut _))
+        }
+    }
+}
+
+impl<'a, T: Stackable> ExactSizeIterator for Iter<'a, T> {}
 
 /// A mutable iterator over the stack's contents.
 pub struct IterMut<'a, T: Stackable + 'a> {
     stack: &'a mut StackRef<T>,
-    pos: usize,
+    idxs: Range<c_int>,
 }
 
-impl<'a, T: Stackable> iter::Iterator for IterMut<'a, T> {
+impl<'a, T: Stackable> Iterator for IterMut<'a, T> {
     type Item = &'a mut T::Ref;
 
     fn next(&mut self) -> Option<&'a mut T::Ref> {
-        if self.pos >= self.stack.len() {
-            None
-        } else {
-            // Rust won't allow us to get a mutable reference into
-            // `stack` in this situation since it can't statically
-            // guarantee that we won't return several references to
-            // the same object, so we have to use unsafe code for
-            // mutable iterators.
-            let n = unsafe { Some(T::Ref::from_ptr_mut(self.stack._get(self.pos))) };
-
-            self.pos += 1;
-
-            n
+        unsafe {
+            self.idxs
+                .next()
+                .map(|i| T::Ref::from_ptr_mut(OPENSSL_sk_value(self.stack.as_stack(), i) as *mut _))
         }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let rem = self.stack.len() - self.pos;
-
-        (rem, Some(rem))
+        self.idxs.size_hint()
     }
 }
 
-impl<'a, T: Stackable> iter::ExactSizeIterator for IterMut<'a, T> {}
+impl<'a, T: Stackable> DoubleEndedIterator for IterMut<'a, T> {
+    fn next_back(&mut self) -> Option<&'a mut T::Ref> {
+        unsafe {
+            self.idxs
+                .next_back()
+                .map(|i| T::Ref::from_ptr_mut(OPENSSL_sk_value(self.stack.as_stack(), i) as *mut _))
+        }
+    }
+}
+
+impl<'a, T: Stackable> ExactSizeIterator for IterMut<'a, T> {}
