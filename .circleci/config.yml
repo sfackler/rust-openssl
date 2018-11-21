@@ -17,7 +17,7 @@ save_openssl: &SAVE_OPENSSL
     paths:
     - /openssl
 deps_key: &DEPS_KEY
-  key: deps-1.20.0-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}-2
+  key: deps-1.24.1-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}-2
 restore_deps: &RESTORE_DEPS
   restore_cache:
     <<: *DEPS_KEY
@@ -31,7 +31,7 @@ save_deps: &SAVE_DEPS
 job: &JOB
   working_directory: ~/build
   docker:
-  - image: rust:1.20.0
+  - image: rust:1.24.1
   steps:
   - checkout
   - run: apt-get update
@@ -74,7 +74,7 @@ macos_job: &MACOS_JOB
   - checkout
   - run: sudo mkdir /opt
   - run: sudo chown -R $USER /usr/local /opt
-  - run: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.20.0
+  - run: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.24.1
   - run: sudo ln -s $CARGO_HOME/bin/* /usr/local/bin
   - run: cargo generate-lockfile --verbose
   - run: echo "homebrew-x86_64-apple-darwin" > ~/lib_key
@@ -134,7 +134,7 @@ jobs:
   musl-vendored:
     <<: *JOB
     docker:
-    - image: rust:1.21.0
+    - image: rust:1.24.1
     environment:
       <<: [*VENDORED, *MUSL, *BASE]
   x86_64-vendored:
