@@ -84,6 +84,16 @@ impl MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha3_512()) }
     }
 
+    #[cfg(ossl111)]
+    pub fn shake_128() -> MessageDigest {
+        unsafe { MessageDigest(ffi::EVP_shake128()) }
+    }
+
+    #[cfg(ossl111)]
+    pub fn shake_256() -> MessageDigest {
+        unsafe { MessageDigest(ffi::EVP_shake256()) }
+    }
+
     pub fn ripemd160() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_ripemd160()) }
     }
@@ -139,11 +149,29 @@ use self::State::*;
 /// assert_eq!(&*res, spec);
 /// ```
 ///
+/// Use an XOF hasher (OpenSSL 1.1.1+):
+///
+/// ```
+/// #[cfg(ossl111)]
+/// {
+///     use openssl::hash::{hash_xof, MessageDigest};
+///
+///     let data = b"\x41\x6c\x6c\x20\x79\x6f\x75\x72\x20\x62\x61\x73\x65\x20\x61\x72\x65\x20\x62\x65\x6c\x6f\x6e\x67\x20\x74\x6f\x20\x75\x73";
+///     let spec = b"\x49\xd0\x69\x7f\xf5\x08\x11\x1d\x8b\x84\xf1\x5e\x46\xda\xf1\x35";
+///     let mut buf = vec![0; 16];
+///     hash_xof(MessageDigest::shake_128(), data, buf.as_mut_slice()).unwrap();
+///     assert_eq!(buf, spec);
+/// }
+/// ```
+///
 /// # Warning
 ///
 /// Don't actually use MD5 and SHA-1 hashes, they're not secure anymore.
 ///
 /// Don't ever hash passwords, use the functions in the `pkcs5` module or bcrypt/scrypt instead.
+///
+/// For extendable output functions (XOFs, i.e. SHAKE128/SHAKE256), you must use finish_xof instead
+/// of finish and provide a buf to store the hash. The hash will be as long as the buf.
 pub struct Hasher {
     ctx: *mut ffi::EVP_MD_CTX,
     md: *const ffi::EVP_MD,
@@ -202,7 +230,7 @@ impl Hasher {
         Ok(())
     }
 
-    /// Returns the hash of the data written and resets the hasher.
+    /// Returns the hash of the data written and resets the non-XOF hasher.
     pub fn finish(&mut self) -> Result<DigestBytes, ErrorStack> {
         if self.state == Finalized {
             self.init()?;
@@ -220,6 +248,24 @@ impl Hasher {
                 buf: buf,
                 len: len as usize,
             })
+        }
+    }
+
+    /// Writes the hash of the data into the supplied buf and resets the XOF hasher.
+    /// The hash will be as long as the buf.
+    #[cfg(ossl111)]
+    pub fn finish_xof(&mut self, buf: &mut[u8]) -> Result<(), ErrorStack> {
+        if self.state == Finalized {
+            self.init()?;
+        }
+        unsafe {
+            cvt(ffi::EVP_DigestFinalXOF(
+                self.ctx,
+                buf.as_mut_ptr(),
+                buf.len(),
+            ))?;
+            self.state = Finalized;
+            Ok(())
         }
     }
 }
@@ -311,11 +357,19 @@ impl fmt::Debug for DigestBytes {
     }
 }
 
-/// Computes the hash of the `data` with the hash `t`.
+/// Computes the hash of the `data` with the non-XOF hasher `t`.
 pub fn hash(t: MessageDigest, data: &[u8]) -> Result<DigestBytes, ErrorStack> {
     let mut h = Hasher::new(t)?;
     h.update(data)?;
     h.finish()
+}
+
+/// Computes the hash of the `data` with the XOF hasher `t` and stores it in `buf`.
+#[cfg(ossl111)]
+pub fn hash_xof(t: MessageDigest, data: &[u8], buf: &mut[u8]) -> Result<(), ErrorStack> {
+    let mut h = Hasher::new(t)?;
+    h.update(data)?;
+    h.finish_xof(buf)
 }
 
 #[cfg(test)]
@@ -328,6 +382,14 @@ mod tests {
     fn hash_test(hashtype: MessageDigest, hashtest: &(&str, &str)) {
         let res = hash(hashtype, &Vec::from_hex(hashtest.0).unwrap()).unwrap();
         assert_eq!(hex::encode(res), hashtest.1);
+    }
+
+    #[cfg(ossl111)]
+    fn hash_xof_test(hashtype: MessageDigest, hashtest: &(&str, &str)) {
+        let expected = Vec::from_hex(hashtest.1).unwrap();
+        let mut buf = vec![0; expected.len()];
+        hash_xof(hashtype, &Vec::from_hex(hashtest.0).unwrap(), buf.as_mut_slice()).unwrap();
+        assert_eq!(buf, expected);
     }
 
     fn hash_recycle_test(h: &mut Hasher, hashtest: &(&str, &str)) {
@@ -481,6 +543,30 @@ mod tests {
 
         for test in tests.iter() {
             hash_test(MessageDigest::sha3_512(), test);
+        }
+    }
+
+    #[cfg(ossl111)]
+    #[test]
+    fn test_shake_128() {
+        let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
+            "49d0697ff508111d8b84f15e46daf135"
+        )];
+
+        for test in tests.iter() {
+            hash_xof_test(MessageDigest::shake_128(), test);
+        }
+    }
+
+    #[cfg(ossl111)]
+    #[test]
+    fn test_shake_256() {
+        let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
+            "4e2dfdaa75d1e049d0eaeffe28e76b17cea47b650fb8826fe48b94664326a697"
+        )];
+
+        for test in tests.iter() {
+            hash_xof_test(MessageDigest::shake_256(), test);
         }
     }
 
