@@ -64,6 +64,26 @@ impl MessageDigest {
         unsafe { MessageDigest(ffi::EVP_sha512()) }
     }
 
+    #[cfg(ossl111)]
+    pub fn sha3_224() -> MessageDigest {
+        unsafe { MessageDigest(ffi::EVP_sha3_224()) }
+    }
+
+    #[cfg(ossl111)]
+    pub fn sha3_256() -> MessageDigest {
+        unsafe { MessageDigest(ffi::EVP_sha3_256()) }
+    }
+
+    #[cfg(ossl111)]
+    pub fn sha3_384() -> MessageDigest {
+        unsafe { MessageDigest(ffi::EVP_sha3_384()) }
+    }
+
+    #[cfg(ossl111)]
+    pub fn sha3_512() -> MessageDigest {
+        unsafe { MessageDigest(ffi::EVP_sha3_512()) }
+    }
+
     pub fn ripemd160() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_ripemd160()) }
     }
@@ -411,6 +431,56 @@ mod tests {
 
         for test in tests.iter() {
             hash_test(MessageDigest::sha256(), test);
+        }
+    }
+
+    #[cfg(ossl111)]
+    #[test]
+    fn test_sha3_224() {
+        let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
+            "1de092dd9fbcbbf450f26264f4778abd48af851f2832924554c56913"
+        )];
+
+        for test in tests.iter() {
+            hash_test(MessageDigest::sha3_224(), test);
+        }
+    }
+
+    #[cfg(ossl111)]
+    #[test]
+    fn test_sha3_256() {
+        let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
+            "b38e38f08bc1c0091ed4b5f060fe13e86aa4179578513ad11a6e3abba0062f61"
+        )];
+
+        for test in tests.iter() {
+            hash_test(MessageDigest::sha3_256(), test);
+        }
+    }
+
+    #[cfg(ossl111)]
+    #[test]
+    fn test_sha3_384() {
+        let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
+            "966ee786ab3482dd811bf7c8fa8db79aa1f52f6c3c369942ef14240ebd857c6ff626ec35d9e131ff64d328\
+            ef2008ff16"
+        )];
+
+        for test in tests.iter() {
+            hash_test(MessageDigest::sha3_384(), test);
+        }
+    }
+
+    #[cfg(ossl111)]
+    #[test]
+    fn test_sha3_512() {
+        let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
+            "c072288ef728cd53a029c47687960b9225893532f42b923156e37020bdc1eda753aafbf30af859d4f4c3a1\
+            807caee3a79f8eb02dcd61589fbbdf5f40c8787a72"
+        )];
+
+        for test in tests.iter() {
+            hash_test(MessageDigest::sha3_512(), test);
         }
     }
 
