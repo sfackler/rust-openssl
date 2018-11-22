@@ -53,6 +53,8 @@ extern "C" {
     pub fn EVP_DigestFinal_ex(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
     pub fn EVP_DigestInit(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD) -> c_int;
     pub fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
+    #[cfg(ossl111)]
+    pub fn EVP_DigestFinalXOF(ctx: *mut EVP_MD_CTX, res: *mut u8, len: usize) -> c_int;
 
     pub fn EVP_BytesToKey(
         typ: *const EVP_CIPHER,
@@ -148,6 +150,18 @@ extern "C" {
     pub fn EVP_sha256() -> *const EVP_MD;
     pub fn EVP_sha384() -> *const EVP_MD;
     pub fn EVP_sha512() -> *const EVP_MD;
+    #[cfg(ossl111)]
+    pub fn EVP_sha3_224() -> *const EVP_MD;
+    #[cfg(ossl111)]
+    pub fn EVP_sha3_256() -> *const EVP_MD;
+    #[cfg(ossl111)]
+    pub fn EVP_sha3_384() -> *const EVP_MD;
+    #[cfg(ossl111)]
+    pub fn EVP_sha3_512() -> *const EVP_MD;
+    #[cfg(ossl111)]
+    pub fn EVP_shake128() -> *const EVP_MD;
+    #[cfg(ossl111)]
+    pub fn EVP_shake256() -> *const EVP_MD;
     pub fn EVP_ripemd160() -> *const EVP_MD;
     pub fn EVP_des_ecb() -> *const EVP_CIPHER;
     pub fn EVP_des_ede3() -> *const EVP_CIPHER;

@@ -5,20 +5,20 @@ environment:
     - TARGET: i686-pc-windows-gnu
       BITS: 32
       MSYS2: 1
-      OPENSSL_VERSION: 1_1_0i
+      OPENSSL_VERSION: 1_1_0j
     - TARGET: x86_64-pc-windows-msvc
       BITS: 64
-      OPENSSL_VERSION: 1_1_0i
+      OPENSSL_VERSION: 1_1_0j
       OPENSSL_DIR: C:\OpenSSL
 
     # 1.0.2, 64/32 bit
     - TARGET: x86_64-pc-windows-gnu
       BITS: 64
       MSYS2: 1
-      OPENSSL_VERSION: 1_0_2p
+      OPENSSL_VERSION: 1_0_2q
     - TARGET: i686-pc-windows-msvc
       BITS: 32
-      OPENSSL_VERSION: 1_0_2p
+      OPENSSL_VERSION: 1_0_2q
       OPENSSL_DIR: C:\OpenSSL
     - TARGET: x86_64-pc-windows-msvc
       VCPKG_DEFAULT_TRIPLET: x64-windows
