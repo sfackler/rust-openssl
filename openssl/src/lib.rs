@@ -16,7 +16,7 @@
 //! 
 //! ```toml
 //! [dependencies]
-//! openssl = { version = "0.10", feature = ["vendored"] }
+//! openssl = { version = "0.10", features = ["vendored"] }
 //! ```
 //! 
 //! The vendored copy will not be configured to automatically find the system's root certificates, but the
