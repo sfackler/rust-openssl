@@ -106,9 +106,6 @@ openssl_101: &OPENSSL_101
 libressl_250: &LIBRESSL_250
   LIBRARY: libressl
   VERSION: 2.5.0
-libressl_28x: &LIBRESSL_28x
-  LIBRARY: libressl
-  VERSION: 2.8.2
 libressl_290: &LIBRESSL_290
   LIBRARY: libressl
   VERSION: 2.9.0
@@ -196,10 +193,6 @@ jobs:
     <<: *JOB
     environment:
       <<: [*LIBRESSL_250, *X86_64, *BASE]
-  x86_64-libressl-2.8.x:
-    <<: *JOB
-    environment:
-      <<: [*LIBRESSL_28x, *X86_64, *BASE]
   x86_64-libressl-2.9.0:
     <<: *JOB
     environment:
@@ -231,6 +224,6 @@ workflows:
     - armhf-openssl-1.1.0
     - armhf-openssl-1.0.2
     - x86_64-libressl-2.5.0
-    - x86_64-libressl-2.8.x
+    - x86_64-libressl-2.9.0
     - macos
     - macos-vendored
