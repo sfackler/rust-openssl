@@ -109,6 +109,9 @@ libressl_250: &LIBRESSL_250
 libressl_28x: &LIBRESSL_28x
   LIBRARY: libressl
   VERSION: 2.8.2
+libressl_290: &LIBRESSL_290
+  LIBRARY: libressl
+  VERSION: 2.9.0
 
 x86_64: &X86_64
   TARGET: x86_64-unknown-linux-gnu
@@ -197,6 +200,10 @@ jobs:
     <<: *JOB
     environment:
       <<: [*LIBRESSL_28x, *X86_64, *BASE]
+  x86_64-libressl-2.9.0:
+    <<: *JOB
+    environment:
+      <<: [*LIBRESSL_290, *X86_64, *BASE]
   macos:
     <<: *MACOS_JOB
     environment:
