@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [v0.10.16] - 2018-12-16
+
+### Added
+
+* Added SHA3 and SHAKE to `MessageDigest`.
+* Added `rand::keep_random_devices_open`.
+* Added support for LibreSSL 2.9.0.
+
 ## [v0.10.15] - 2018-10-22
 
 ### Added
@@ -295,7 +303,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.15...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.16...master
+[v0.10.16]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.15...openssl-v0.10.16
 [v0.10.15]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.14...openssl-v0.10.15
 [v0.10.14]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.13...openssl-v0.10.14
 [v0.10.13]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.12...openssl-v0.10.13
