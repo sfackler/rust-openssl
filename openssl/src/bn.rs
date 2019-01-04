@@ -120,7 +120,7 @@ foreign_type_and_impl_send_sync! {
     /// Dynamically sized large number impelementation
     ///
     /// Perform large number mathematics.  Create a new BigNum
-    /// with [`new`].  Perform stanard mathematics on large numbers using
+    /// with [`new`].  Perform standard mathematics on large numbers using
     /// methods from [`Dref<Target = BigNumRef>`]
     ///
     /// OpenSSL documenation at [`BN_new`].
