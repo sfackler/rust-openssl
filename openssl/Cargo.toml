@@ -30,4 +30,3 @@ openssl-sys = { version = "0.9.40", path = "../openssl-sys" }
 [dev-dependencies]
 tempdir = "0.3"
 hex = "0.3"
-data-encoding = "2.0"

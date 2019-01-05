@@ -121,8 +121,6 @@ extern crate libc;
 extern crate openssl_sys as ffi;
 
 #[cfg(test)]
-extern crate data_encoding;
-#[cfg(test)]
 extern crate hex;
 #[cfg(test)]
 extern crate tempdir;
