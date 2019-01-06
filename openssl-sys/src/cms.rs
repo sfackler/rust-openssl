@@ -67,7 +67,6 @@ extern "C" {
     ) -> c_int;
     #[cfg(ossl101)]
     pub fn SMIME_read_CMS(bio: *mut ::BIO, bcont: *mut *mut ::BIO) -> *mut ::CMS_ContentInfo;
-
     #[cfg(ossl101)]
     pub fn CMS_sign(
         signcert: *mut ::X509,
@@ -106,6 +105,7 @@ extern "C" {
         ppin: *mut *const c_uchar,
         length: c_long,
     ) -> *mut ::CMS_ContentInfo;
+    #[cfg(ossl101)]
     pub fn CMS_signed_add1_attr_by_OBJ(
         si: *mut ::CMS_SignerInfo,
         obj: *const ::ASN1_OBJECT,
