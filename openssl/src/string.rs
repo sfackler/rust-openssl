@@ -1,8 +1,9 @@
 use ffi;
 use foreign_types::ForeignTypeRef;
 use libc::{c_char, c_void};
-use std::fmt;
+use std::convert::AsRef;
 use std::ffi::CStr;
+use std::fmt;
 use std::ops::Deref;
 use std::str;
 
@@ -32,6 +33,18 @@ impl Stackable for OpensslString {
     type StackType = ffi::stack_st_OPENSSL_STRING;
 }
 
+impl AsRef<str> for OpensslString {
+    fn as_ref(&self) -> &str {
+        &**self
+    }
+}
+
+impl AsRef<[u8]> for OpensslString {
+    fn as_ref(&self) -> &[u8] {
+        self.as_bytes()
+    }
+}
+
 impl Deref for OpensslStringRef {
     type Target = str;
 
@@ -40,6 +53,18 @@ impl Deref for OpensslStringRef {
             let slice = CStr::from_ptr(self.as_ptr()).to_bytes();
             str::from_utf8_unchecked(slice)
         }
+    }
+}
+
+impl AsRef<str> for OpensslStringRef {
+    fn as_ref(&self) -> &str {
+        &*self
+    }
+}
+
+impl AsRef<[u8]> for OpensslStringRef {
+    fn as_ref(&self) -> &[u8] {
+        self.as_bytes()
     }
 }
 
