@@ -33,7 +33,7 @@ use std::slice;
 use std::str;
 
 use bio::MemBio;
-use bn::BigNum;
+use bn::{BigNum, BigNumRef};
 use error::ErrorStack;
 use nid::Nid;
 use string::OpensslString;
@@ -191,6 +191,20 @@ foreign_type_and_impl_send_sync! {
     pub struct Asn1IntegerRef;
 }
 
+impl Asn1Integer {
+    /// Converts a bignum to an `Asn1Integer`.
+    ///
+    /// Corresponds to [`BN_to_ASN1_INTEGER`].
+    ///
+    /// [`BN_to_ASN1_INTEGER`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_to_ASN1_INTEGER.html
+    pub fn from_bn(bn: &BigNumRef) -> Result<Self, ErrorStack> {
+        unsafe {
+            cvt_p(::ffi::BN_to_ASN1_INTEGER(bn.as_ptr(), ptr::null_mut()))
+                .map(|p| Asn1Integer::from_ptr(p))
+        }
+    }
+}
+
 impl Asn1IntegerRef {
     #[allow(missing_docs)]
     #[deprecated(since = "0.10.6", note = "use to_bn instead")]
@@ -304,5 +318,26 @@ cfg_if! {
         unsafe fn ASN1_STRING_get0_data(s: *mut ffi::ASN1_STRING) -> *const ::libc::c_uchar {
             ffi::ASN1_STRING_data(s)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use bn::BigNum;
+
+    /// Tests conversion between BigNum and Asn1Integer.
+    #[test]
+    fn bn_cvt() {
+        fn roundtrip(bn: BigNum) {
+            let large = Asn1Integer::from_bn(&bn).unwrap();
+            assert_eq!(large.to_bn().unwrap(), bn);
+        }
+
+        roundtrip(BigNum::from_dec_str("1000000000000000000000000000000000").unwrap());
+        roundtrip(-BigNum::from_dec_str("1000000000000000000000000000000000").unwrap());
+        roundtrip(BigNum::from_u32(1234).unwrap());
+        roundtrip(-BigNum::from_u32(1234).unwrap());
     }
 }
