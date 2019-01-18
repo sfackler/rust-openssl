@@ -194,14 +194,13 @@ foreign_type_and_impl_send_sync! {
 impl Asn1Integer {
     /// Converts a bignum to an `Asn1Integer`.
     ///
-    /// Corresponds to [`BN_to_ASN1_INTEGER`].
+    /// Corresponds to [`BN_to_ASN1_INTEGER`]. Also see
+    /// [`BigNumRef::to_asn1_integer`].
     ///
     /// [`BN_to_ASN1_INTEGER`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_to_ASN1_INTEGER.html
+    /// [`BigNumRef::to_asn1_integer`]: ../bn/struct.BigNumRef.html#method.to_asn1_integer
     pub fn from_bn(bn: &BigNumRef) -> Result<Self, ErrorStack> {
-        unsafe {
-            cvt_p(::ffi::BN_to_ASN1_INTEGER(bn.as_ptr(), ptr::null_mut()))
-                .map(|p| Asn1Integer::from_ptr(p))
-        }
+        bn.to_asn1_integer()
     }
 }
 
