@@ -107,6 +107,7 @@ pub use ssl::connector::{
 pub use ssl::error::{Error, ErrorCode, HandshakeError};
 
 mod bio;
+mod cache;
 mod callbacks;
 mod connector;
 mod error;
