@@ -278,6 +278,22 @@ where
             }
         }
     }
+
+    /// Validates RSA parameters for correctness
+    ///
+    /// This corresponds to [`RSA_check_key`].
+    ///
+    /// [`RSA_check_key`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_check_key.html
+    pub fn check_key(&self) -> Result<bool, ErrorStack> {
+        unsafe {
+            let result =  ffi::RSA_check_key(self.as_ptr()) as i32;
+            if result == -1 {
+                Err(ErrorStack::get())
+            } else {
+                Ok(result == 1)
+            }
+        }
+    }
 }
 
 impl<T> RsaRef<T>
