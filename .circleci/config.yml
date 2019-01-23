@@ -1,229 +1,268 @@
-restore_registry: &RESTORE_REGISTRY
-  restore_cache:
-    key: registry-4
-save_registry: &SAVE_REGISTRY
-  save_cache:
-    key: registry-4-{{ .BuildNum }}
-    paths:
-    - /usr/local/cargo/registry/index
-openssl_key: &OPENSSL_KEY
-  key: lib-{{ checksum "~/lib_key" }}-{{ checksum "test/build_openssl.sh" }}
-restore_openssl: &RESTORE_OPENSSL
-  restore_cache:
-    <<: *OPENSSL_KEY
-save_openssl: &SAVE_OPENSSL
-  save_cache:
-    <<: *OPENSSL_KEY
-    paths:
-    - /openssl
-deps_key: &DEPS_KEY
-  key: deps-1.24.1-{{ checksum "Cargo.lock" }}-{{ checksum "~/lib_key" }}-2
-restore_deps: &RESTORE_DEPS
-  restore_cache:
-    <<: *DEPS_KEY
-save_deps: &SAVE_DEPS
-  save_cache:
-    <<: *DEPS_KEY
-    paths:
-    - target
-    - /usr/local/cargo/registry/cache
+version: 2.1
 
-job: &JOB
-  working_directory: ~/build
-  docker:
-  - image: rust:1.24.1
-  steps:
-  - checkout
-  - run: apt-get update
-  - run: apt-get remove -y libssl-dev
-  - run: ./test/add_target.sh
-  - *RESTORE_REGISTRY
-  - run: cargo generate-lockfile --verbose
-  - *SAVE_REGISTRY
-  - run: echo "${LIBRARY}-${VERSION}-${TARGET}" > ~/lib_key
-  - *RESTORE_OPENSSL
-  - run: ./test/build_openssl.sh
-  - *SAVE_OPENSSL
-  - *RESTORE_DEPS
-  - run: cargo run --manifest-path=systest/Cargo.toml --target $TARGET --features "$FEATURES"
-  - run: |
-      ulimit -c unlimited
-      export PATH=$OPENSSL_DIR/bin:$PATH
-      if [ "${NO_RUN}" = "1" ]; then
-        TEST_ARGS=--no-run
-      fi
-      cargo test \
-        --manifest-path=openssl/Cargo.toml \
-        --target $TARGET \
-        --features "$FEATURES" \
-        $TEST_ARGS
-  - run:
-      command: |
-        mkdir -p /tmp/core_dumps
-        find . -name "core.*" -exec cp \{\} /tmp/core_dumps \;
-        cp target/$TARGET/debug/openssl-* /tmp/core_dumps
-      when: on_fail
-  - store_artifacts:
-      path: /tmp/core_dumps
-  - *SAVE_DEPS
-
-macos_job: &MACOS_JOB
-  macos:
-    xcode: "9.0"
-  steps:
-  - checkout
-  - run: sudo mkdir /opt
-  - run: sudo chown -R $USER /usr/local /opt
-  - run: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.24.1
-  - run: sudo ln -s $CARGO_HOME/bin/* /usr/local/bin
-  - run: cargo generate-lockfile --verbose
-  - run: echo "homebrew-x86_64-apple-darwin" > ~/lib_key
-  - *RESTORE_DEPS
-  - run: cargo run --manifest-path=systest/Cargo.toml --features "$FEATURES"
-  - run: |
-      PATH=/usr/local/opt/openssl/bin:$PATH
-      cargo test --manifest-path=openssl/Cargo.toml --features "$FEATURES"
-  - *SAVE_DEPS
-macos_env: &MACOS_ENV
-  RUSTUP_HOME: /usr/local/rustup
-  CARGO_HOME: /usr/local/cargo
-
-vendored: &VENDORED
-  FEATURES: vendored
-  LIBRARY: ""
-openssl_111: &OPENSSL_111
-  LIBRARY: openssl
-  VERSION: 1.1.1
-openssl_110: &OPENSSL_110
-  LIBRARY: openssl
-  VERSION: 1.1.0i
-openssl_102: &OPENSSL_102
-  LIBRARY: openssl
-  VERSION: 1.0.2p
-openssl_101: &OPENSSL_101
-  LIBRARY: openssl
-  VERSION: 1.0.1u
-libressl_250: &LIBRESSL_250
-  LIBRARY: libressl
-  VERSION: 2.5.0
-libressl_290: &LIBRESSL_290
-  LIBRARY: libressl
-  VERSION: 2.9.0
-
-x86_64: &X86_64
-  TARGET: x86_64-unknown-linux-gnu
-musl: &MUSL
-  TARGET: x86_64-unknown-linux-musl
-i686: &I686
-  TARGET: i686-unknown-linux-gnu
-armhf: &ARMHF
-  TARGET: arm-unknown-linux-gnueabihf
-  NO_RUN: 1
-  CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
-  CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_AR: arm-linux-gnueabihf-ar
-  CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUNNER: qemu-arm-static
-darwin: &DARWIN
-  TARGET: x86_64-apple-darwin
-
-base: &BASE
-  RUST_BACKTRACE: 1
-  OPENSSL_DIR: /openssl
-
-version: 2
 jobs:
-  musl-vendored:
-    <<: *JOB
+  linux:
+    parameters:
+      target:
+        type: string
+      library:
+        type: string
+        default: ""
+      version:
+        type: string
+        default: ""
+      vendored:
+        type: boolean
+        default: false
+      no_run:
+        type: boolean
+        default: false
     docker:
-    - image: rust:1.24.1
+      - image: rust:1.24.1
     environment:
-      <<: [*VENDORED, *MUSL, *BASE]
-  x86_64-vendored:
-    <<: *JOB
-    environment:
-      <<: [*VENDORED, *X86_64, *BASE]
-  x86_64-openssl-1.1.1:
-    <<: *JOB
-    environment:
-      <<: [*OPENSSL_111, *X86_64, *BASE]
-  x86_64-openssl-1.1.0:
-    <<: *JOB
-    environment:
-      <<: [*OPENSSL_110, *X86_64, *BASE]
-  x86_64-openssl-1.0.2:
-    <<: *JOB
-    environment:
-      <<: [*OPENSSL_102, *X86_64, *BASE]
-  x86_64-openssl-1.0.1:
-    <<: *JOB
-    environment:
-      <<: [*OPENSSL_101, *X86_64, *BASE]
-  i686-vendored:
-    <<: *JOB
-    environment:
-      <<: [*VENDORED, *I686, *BASE]
-  i686-openssl-1.1.1:
-    <<: *JOB
-    environment:
-      <<: [*OPENSSL_111, *I686, *BASE]
-  i686-openssl-1.1.0:
-    <<: *JOB
-    environment:
-      <<: [*OPENSSL_110, *I686, *BASE]
-  i686-openssl-1.0.2:
-    <<: *JOB
-    environment:
-      <<: [*OPENSSL_102, *I686, *BASE]
-  armhf-vendored:
-    <<: *JOB
-    environment:
-      <<: [*VENDORED, *ARMHF, *BASE]
-  armhf-openssl-1.1.1:
-    <<: *JOB
-    environment:
-      <<: [*OPENSSL_111, *ARMHF, *BASE]
-  armhf-openssl-1.1.0:
-    <<: *JOB
-    environment:
-      <<: [*OPENSSL_110, *ARMHF, *BASE]
-  armhf-openssl-1.0.2:
-    <<: *JOB
-    environment:
-      <<: [*OPENSSL_102, *ARMHF, *BASE]
-  x86_64-libressl-2.5.0:
-    <<: *JOB
-    environment:
-      <<: [*LIBRESSL_250, *X86_64, *BASE]
-  x86_64-libressl-2.9.0:
-    <<: *JOB
-    environment:
-      <<: [*LIBRESSL_290, *X86_64, *BASE]
+      RUST_BACKTRACE: 1
+      OPENSSL_DIR: /opt/openssl
+      CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
+      CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_AR: arm-linux-gnueabihf-ar
+      CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUNNER: qemu-arm-static
+    steps:
+      - checkout
+      - run: apt-get update
+      - run: apt-get remove -y libssl-dev
+      - run: |
+          case "<< parameters.target >>" in
+          "i686-unknown-linux-gnu")
+            apt-get install -y --no-install-recommends gcc-multilib
+            ;;
+          "x86_64-unknown-linux-musl")
+            apt-get install -y --no-install-recommends musl-tools
+            ;;
+          "arm-unknown-linux-gnueabihf")
+            dpkg --add-architecture armhf
+            apt-get update
+            apt-get install -y --no-install-recommends \
+              gcc-arm-linux-gnueabihf \
+              libc6-dev:armhf \
+              qemu-user-static
+            ;;
+          "x86_64-unknown-linux-gnu")
+            exit 0
+          esac
+
+          rustup target add << parameters.target >>
+      - restore_cache:
+          key: openssl-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>
+      - run: |
+          if [ -d "$OPENSSL_DIR" ]; then
+            exit 0
+          fi
+
+          case "<< parameters.library >>" in
+          "libressl")
+            URL="https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-<< parameters.version >>.tar.gz"
+            ;;
+          "openssl")
+            URL="https://openssl.org/source/openssl-<< parameters.version >>.tar.gz"
+            ;;
+          "")
+            exit 0
+            ;;
+          esac
+
+          case "<< parameters.target >>" in
+          "x86_64-unknown-linux-gnu")
+            OS_COMPILER=linux-x86_64
+            OS_FLAGS=""
+            ;;
+          "i686-unknown-linux-gnu")
+            OS_COMPILER=linux-elf
+            OS_FLAGS=-m32
+            ;;
+          "arm-unknown-linux-gnueabihf")
+            OS_COMPILER=linux-armv4
+            OS_FLAGS=""
+            export AR=arm-linux-gnueabihf-ar
+            export CC=arm-linux-gnueabihf-gcc
+            ;;
+          esac
+
+          mkdir /tmp/build
+          cd /tmp/build
+
+          curl -L $URL | tar --strip-components=1 -xzf -
+
+          case "<< parameters.library >>" in
+          "openssl")
+            ./Configure --prefix=$OPENSSL_DIR $OS_COMPILER -fPIC -g $OS_FLAGS no-shared
+            ;;
+          "libressl")
+            ./configure --prefix=$OPENSSL_DIR --disable-shared --with-pic
+            ;;
+          esac
+
+          make
+          make install_sw
+      - save_cache:
+          key: openssl-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>
+          paths:
+            - /opt/openssl
+      - restore_cache:
+          key: registry
+      - run: cargo generate-lockfile
+      - save_cache:
+          key: registry-{{ .BuildNum }}
+          paths:
+            - /usr/local/cargo/registry/index
+      - restore_cache:
+          key: deps-1.24.1-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>-{{ checksum "Cargo.lock" }}
+      - run: |
+          cargo run \
+            --manifest-path=systest/Cargo.toml \
+            <<# parameters.vendored >>--features vendored<</ parameters.vendored >> \
+            --target << parameters.target >>
+      - run: |
+          ulimit -c unlimited
+          export PATH=$OPENSSL_DIR/bin:$PATH
+          cargo test \
+            --manifest-path=openssl/Cargo.toml \
+            <<# parameters.vendored >>--features vendored<</ parameters.vendored >> \
+            --target << parameters.target >> \
+            <<# parameters.no_run >>--no-run<</ parameters.no_run >>
+      - save_cache:
+          key: deps-1.24.1-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>-{{ checksum "Cargo.lock" }}
+          paths:
+            - /usr/local/cargo/registry/cache
+            - target
+      - run:
+          command: |
+            mkdir -p /tmp/core_dumps
+            find . -name "core.*" -exec cp \{\} /tmp/core_dumps \;
+            cp target/<< parameters.target >>/debug/openssl-* /tmp/core_dumps
+          when: on_fail
+      - store_artifacts:
+          path: /tmp/core_dumps
+
   macos:
-    <<: *MACOS_JOB
+    parameters:
+      vendored:
+        type: boolean
+        default: false
+    macos:
+      xcode: "9.0"
     environment:
-      <<: [*MACOS_ENV]
-  macos-vendored:
-    <<: *MACOS_JOB
-    environment:
-      <<: [*VENDORED, *MACOS_ENV]
+      RUST_BACKTRACE: 1
+    steps:
+      - checkout
+      - run: sudo mkdir /opt
+      - run: sudo chown -R $USER /usr/local/ /opt
+      - run: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.24.1
+      - run: sudo ln -s ~/.cargo/bin/* /usr/local/bin
+      - run: cargo generate-lockfile
+      - restore_cache:
+          key: deps-1.24.1-macos-<< parameters.vendored >>-{{ checksum "Cargo.lock" }}
+      - run: |
+          cargo run \
+            --manifest-path=systest/Cargo.toml \
+            <<# parameters.vendored >> --features vendored <</ parameters.vendored >>
+      - run: |
+          PATH=/usr/local/opt/openssl/bin:$PATH
+          cargo test \
+            --manifest-path=openssl/Cargo.toml \
+            <<# parameters.vendored >> --features vendored <</ parameters.vendored >>
+      - save_cache:
+          key: deps-1.24.1-macos-<< parameters.vendored >>-{{ checksum "Cargo.lock" }}
+          paths:
+            - ~/.cargo/registry/cache
+            - target
+
+openssl_111: &openssl_111
+  library: openssl
+  version: 1.1.1a
+openssl_110: &openssl_110
+  library: openssl
+  version: 1.1.0j
+openssl_102: &openssl_102
+  library: openssl
+  version: 1.0.2q
+openssl_101: &openssl_101
+  library: openssl
+  version: 1.0.1u
+
 workflows:
-  version: 2
-  tests:
+  test:
     jobs:
-    - musl-vendored
-    - x86_64-vendored
-    - x86_64-openssl-1.1.1
-    - x86_64-openssl-1.1.0
-    - x86_64-openssl-1.0.2
-    - x86_64-openssl-1.0.1
-    - i686-vendored
-    - i686-openssl-1.1.1
-    - i686-openssl-1.1.0
-    - i686-openssl-1.0.2
-    - armhf-vendored
-    - armhf-openssl-1.1.1
-    - armhf-openssl-1.1.0
-    - armhf-openssl-1.0.2
-    - x86_64-libressl-2.5.0
-    - x86_64-libressl-2.9.0
-    - macos
-    - macos-vendored
+      - linux:
+          name: musl-vendored
+          target: x86_64-unknown-linux-musl
+          vendored: true
+      - linux:
+          name: x86_64-vendored
+          target: x86_64-unknown-linux-gnu
+          vendored: true
+      - linux:
+          <<: *openssl_111
+          name: x86_64-openssl-1.1.1
+          target: x86_64-unknown-linux-gnu
+      - linux:
+          <<: *openssl_110
+          name: x86_64-openssl-1.1.0
+          target: x86_64-unknown-linux-gnu
+      - linux:
+          <<: *openssl_102
+          name: x86_64-openssl-1.0.2
+          target: x86_64-unknown-linux-gnu
+      - linux:
+          <<: *openssl_101
+          name: x86_64-openssl-1.0.1
+          target: x86_64-unknown-linux-gnu
+      - linux:
+          name: i686-vendored
+          target: i686-unknown-linux-gnu
+          vendored: true
+      - linux:
+          <<: *openssl_111
+          name: i686-openssl-1.1.1
+          target: i686-unknown-linux-gnu
+      - linux:
+          <<: *openssl_110
+          name: i686-openssl-1.1.0
+          target: i686-unknown-linux-gnu
+      - linux:
+          <<: *openssl_102
+          name: i686-openssl-1.0.2
+          target: i686-unknown-linux-gnu
+      - linux:
+          name: armhf-vendored
+          target: arm-unknown-linux-gnueabihf
+          vendored: true
+          no_run: true
+      - linux:
+          <<: *openssl_111
+          name: armhf-openssl-1.1.1
+          target: arm-unknown-linux-gnueabihf
+          no_run: true
+      - linux:
+          <<: *openssl_110
+          name: armhf-openssl-1.1.0
+          target: arm-unknown-linux-gnueabihf
+          no_run: true
+      - linux:
+          <<: *openssl_102
+          name: armhf-openssl-1.0.2
+          target: arm-unknown-linux-gnueabihf
+          no_run: true
+      - linux:
+          name: x86_64-libressl-2.5
+          target: x86_64-unknown-linux-gnu
+          library: libressl
+          version: 2.5.5
+      - linux:
+          name: x86_64-libressl-2.9
+          target: x86_64-unknown-linux-gnu
+          library: libressl
+          version: 2.9.0
+      - macos:
+          name: macos
+      - macos:
+          name: macos-vendored
+          vendored: true
