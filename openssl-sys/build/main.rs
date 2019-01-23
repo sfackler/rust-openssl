@@ -78,16 +78,43 @@ fn main() {
     let version = validate_headers(&[include_dir.clone().into()]);
 
     let libs_env = env("OPENSSL_LIBS");
-    let libs = match libs_env.as_ref().and_then(|s| s.to_str()) {
-        Some(ref v) => v.split(":").collect(),
+    let (kind, libs) = match libs_env.as_ref().and_then(|s| s.to_str()) {
+        Some(ref v) => {
+            let libs: Vec<_> = v.split(":").collect();
+            (determine_mode(Path::new(&lib_dir), &libs), libs)
+        }
         None => match version {
-            Version::Openssl10x if target.contains("windows") => vec!["ssleay32", "libeay32"],
-            Version::Openssl11x if target.contains("windows") => vec!["libssl", "libcrypto"],
-            _ => vec!["ssl", "crypto"],
+            Version::Openssl10x if target.contains("windows") => {
+                let libs = vec!["ssleay32", "libeay32"];
+                (determine_mode(Path::new(&lib_dir), &libs), libs)
+            }
+            Version::Openssl11x if target.contains("windows") => {
+                let libs = vec!["libssl", "libcrypto"];
+                if let Ok(kind) = determine_mode(Path::new(&lib_dir), &libs) {
+                    (Ok(kind), libs)
+                } else {
+                    // With mingw (as opposed to msvc) lib*.a files are created if static
+                    let libs = vec!["ssl", "crypto"];
+                    (determine_mode(Path::new(&lib_dir), &libs), libs)
+                }
+            }
+            _ => {
+                let libs = vec!["ssl", "crypto"];
+                (determine_mode(Path::new(&lib_dir), &libs), libs)
+            }
         },
     };
 
-    let kind = determine_mode(Path::new(&lib_dir), &libs);
+    let kind = if let Ok(kind) = kind {
+        kind
+    } else {
+        panic!(
+            "OpenSSL libdir at `{}` does not contain the required files \
+             to either statically or dynamically link OpenSSL",
+            Path::new(&lib_dir).display()
+        );
+    };
+
     for lib in libs.into_iter() {
         println!("cargo:rustc-link-lib={}={}", kind, lib);
     }
@@ -570,14 +597,19 @@ fn parse_version(version: &str) -> u64 {
 /// Given a libdir for OpenSSL (where artifacts are located) as well as the name
 /// of the libraries we're linking to, figure out whether we should link them
 /// statically or dynamically.
-fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
+fn determine_mode(libdir: &Path, libs: &[&str]) -> Result<&'static str, ()> {
+    const NONE: u8 = 0;
+    const STATIC: u8 = 1;
+    const DYLIB: u8 = 2;
+    const BOTH: u8 = STATIC | DYLIB;
+
     // First see if a mode was explicitly requested
     let kind = env("OPENSSL_STATIC");
-    match kind.as_ref().and_then(|s| s.to_str()).map(|s| &s[..]) {
-        Some("0") => return "dylib",
-        Some(_) => return "static",
-        None => {}
-    }
+    let requested_mode = match kind.as_ref().and_then(|s| s.to_str()).map(|s| &s[..]) {
+        Some("0") => DYLIB,
+        Some(_) => STATIC,
+        None => BOTH,
+    };
 
     // Next, see what files we actually have to link against, and see what our
     // possibilities even are.
@@ -596,21 +628,22 @@ fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
             || files.contains(&format!("{}.dll", l))
             || files.contains(&format!("lib{}.dylib", l))
     });
-    match (can_static, can_dylib) {
-        (true, false) => return "static",
-        (false, true) => return "dylib",
-        (false, false) => {
-            panic!(
-                "OpenSSL libdir at `{}` does not contain the required files \
-                 to either statically or dynamically link OpenSSL",
-                libdir.display()
-            );
-        }
-        (true, true) => {}
-    }
+    let possible_mode = match (can_static, can_dylib) {
+        (true, false) => STATIC,
+        (false, true) => DYLIB,
+        (false, false) => NONE,
+        (true, true) => BOTH,
+    };
 
-    // Ok, we've got not explicit preference and can *either* link statically or
-    // link dynamically. In the interest of "security upgrades" and/or "best
-    // practices with security libs", let's link dynamically.
-    "dylib"
+    match possible_mode & requested_mode {
+        STATIC => Ok("static"),
+        DYLIB => Ok("dylib"),
+        BOTH => {
+            // Ok, we've got not explicit preference and can *either* link statically or
+            // link dynamically. In the interest of "security upgrades" and/or "best
+            // practices with security libs", let's link dynamically.
+            Ok("dylib")
+        }
+        _ => Err(()),
+    }
 }
