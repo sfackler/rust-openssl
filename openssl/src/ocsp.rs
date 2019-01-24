@@ -381,3 +381,41 @@ pub fn check_nonce(req: &OcspRequestRef, bs: &OcspBasicResponseRef) -> Result<()
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use hex::FromHex;
+
+    use super::*;
+    use hash::MessageDigest;
+    use x509::X509;
+
+    #[test]
+    fn test_create_ocsp_request() {
+        let subject = include_bytes!("../test/cert.pem");
+        let subject = X509::from_pem(subject).unwrap();
+        let issuer = include_bytes!("../test/root-ca.pem");
+        let issuer = X509::from_pem(issuer).unwrap();
+
+        let req_der = include_bytes!("../test/ocsp-req.der");
+        let req_nonce_der = include_bytes!("../test/ocsp-req-nonce.der");
+
+        let cert_id = OcspCertId::from_cert(
+            MessageDigest::sha1(),
+            &subject,
+            &issuer
+            ).unwrap();
+
+        let mut req = OcspRequest::new().unwrap();
+        req.add_id(cert_id).unwrap();
+
+        assert_eq!(&*req.to_der().unwrap(), req_der.as_ref());
+
+
+        let nonce = Vec::from_hex("4413A2C5019A7C3A384CDD8AB30E3816").unwrap();
+        req.add_nonce(Some(&nonce)).unwrap();
+
+        assert_eq!(&*req.to_der().unwrap(), req_nonce_der.as_ref());
+    }
+
+}
