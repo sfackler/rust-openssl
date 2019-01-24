@@ -200,6 +200,24 @@ impl OcspBasicResponseRef {
             }
         }
     }
+
+    pub fn add_nonce(&mut self, val: Option<&[u8]>) -> Result<(), ErrorStack> {
+        unsafe {
+            let (ptr, len) = match val {
+                Some(slice) => (slice.as_ptr() as *mut _, slice.len() as c_int),
+                None => (ptr::null_mut(), 0),
+            };
+            cvt(ffi::OCSP_basic_add1_nonce(self.as_ptr(), ptr, len))?;
+            Ok(())
+        }
+    }
+
+    pub fn copy_nonce(&mut self, req: OcspRequestRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::OCSP_copy_nonce(self.as_ptr(), req.as_ptr()))?;
+            Ok(())
+        }
+    }
 }
 
 foreign_type_and_impl_send_sync! {
@@ -336,6 +354,17 @@ impl OcspRequestRef {
             Ok(OcspOneReqRef::from_ptr_mut(ptr))
         }
     }
+
+    pub fn add_nonce(&mut self, val: Option<&[u8]>) -> Result<(), ErrorStack> {
+        unsafe {
+            let (ptr, len) = match val {
+                Some(slice) => (slice.as_ptr() as *mut _, slice.len() as c_int),
+                None => (ptr::null_mut(), 0),
+            };
+            cvt(ffi::OCSP_request_add1_nonce(self.as_ptr(), ptr, len))?;
+            Ok(())
+        }
+    }
 }
 
 foreign_type_and_impl_send_sync! {
@@ -344,4 +373,11 @@ foreign_type_and_impl_send_sync! {
 
     pub struct OcspOneReq;
     pub struct OcspOneReqRef;
+}
+
+pub fn check_nonce(req: &OcspRequestRef, bs: &OcspBasicResponseRef) -> Result<(), ErrorStack> {
+    unsafe {
+        cvt(ffi::OCSP_check_nonce(req.as_ptr(), bs.as_ptr()))?;
+        Ok(())
+    }
 }

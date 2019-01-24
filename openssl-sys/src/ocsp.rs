@@ -66,6 +66,7 @@ cfg_if! {
 
 extern "C" {
     pub fn OCSP_request_add0_id(r: *mut OCSP_REQUEST, id: *mut OCSP_CERTID) -> *mut OCSP_ONEREQ;
+    pub fn OCSP_request_add1_nonce(req: *mut OCSP_REQUEST, val: *mut c_uchar, len: c_int) -> c_int;
 
     pub fn OCSP_resp_find_status(
         bs: *mut OCSP_BASICRESP,
@@ -85,6 +86,9 @@ extern "C" {
 
     pub fn OCSP_response_status(resp: *mut OCSP_RESPONSE) -> c_int;
     pub fn OCSP_response_get1_basic(resp: *mut OCSP_RESPONSE) -> *mut OCSP_BASICRESP;
+    pub fn OCSP_basic_add1_nonce(resp: *mut OCSP_BASICRESP, val: *mut c_uchar, len: c_int)
+        -> c_int;
+    pub fn OCSP_copy_nonce(resp: *mut OCSP_BASICRESP, req: *mut OCSP_REQUEST) -> c_int;
 
     pub fn OCSP_response_create(status: c_int, bs: *mut OCSP_BASICRESP) -> *mut OCSP_RESPONSE;
 
@@ -115,4 +119,6 @@ extern "C" {
         st: *mut X509_STORE,
         flags: c_ulong,
     ) -> c_int;
+
+    pub fn OCSP_check_nonce(req: *mut OCSP_REQUEST, bs: *mut OCSP_BASICRESP) -> c_int;
 }
