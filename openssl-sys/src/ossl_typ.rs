@@ -947,6 +947,7 @@ cfg_if! {
         }
 
         #[repr(C)]
+        #[cfg(not(osslconf = "OPENSSL_NO_SRP"))]
         pub struct SRP_CTX {
             SRP_cb_arg: *mut c_void,
             TLS_ext_srp_username_callback: *mut c_void,
