@@ -65,8 +65,11 @@ impl fmt::Display for OcspNonceCheckErrorResult {
     }
 }
 
-impl Error for OcspNonceCheckErrorResult {}
-
+impl Error for OcspNonceCheckErrorResult {
+    fn description(&self) -> &str {
+        "an error in OCSP nonce checking"
+    }
+}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct OcspResponseStatus(c_int);
