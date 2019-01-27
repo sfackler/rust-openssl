@@ -1,6 +1,8 @@
 use ffi;
 use foreign_types::ForeignTypeRef;
 use libc::{c_int, c_long, c_ulong};
+use std::error::Error;
+use std::fmt;
 use std::ptr;
 use std::mem;
 
@@ -27,6 +29,44 @@ bitflags! {
         const NO_TIME = ffi::OCSP_NOTIME;
     }
 }
+
+#[derive(Debug)]
+pub enum OcspNonceCheckSuccessResult {
+    PresentAndEqual, // 1
+    Absent, // 2
+    PresentInResponseOnly, // 3
+}
+
+impl fmt::Display for OcspNonceCheckSuccessResult {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let message = match *self {
+            OcspNonceCheckSuccessResult::PresentAndEqual => "Nonces Present and Equal",
+            OcspNonceCheckSuccessResult::Absent => "Nonces Absent from Request and Response",
+            OcspNonceCheckSuccessResult::PresentInResponseOnly => "Nonce Present in Response Only",
+        };
+        write!(f, "{}", message)
+    }
+}
+
+#[derive(Debug)]
+pub enum OcspNonceCheckErrorResult {
+    PresentAndUnequal, // 0
+    PresentInRequestOnly, // -1
+    Unknown(ErrorStack), // any other return value
+}
+
+impl fmt::Display for OcspNonceCheckErrorResult {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            OcspNonceCheckErrorResult::PresentAndUnequal => write!(f, "Nonces Present and Unequal!"),
+            OcspNonceCheckErrorResult::PresentInRequestOnly => write!(f, "Nonce Present in Request Only!"),
+            OcspNonceCheckErrorResult::Unknown(ref err) => err.fmt(f),
+        }
+    }
+}
+
+impl Error for OcspNonceCheckErrorResult {}
+
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct OcspResponseStatus(c_int);
@@ -375,10 +415,18 @@ foreign_type_and_impl_send_sync! {
     pub struct OcspOneReqRef;
 }
 
-pub fn check_nonce(req: &OcspRequestRef, bs: &OcspBasicResponseRef) -> Result<(), ErrorStack> {
+pub fn check_nonce(req: &OcspRequestRef, bs: &OcspBasicResponseRef) -> Result<OcspNonceCheckSuccessResult, OcspNonceCheckErrorResult> {
     unsafe {
-        cvt(ffi::OCSP_check_nonce(req.as_ptr(), bs.as_ptr()))?;
-        Ok(())
+        match ffi::OCSP_check_nonce(req.as_ptr(), bs.as_ptr()) {
+            // good cases
+            1 => Ok(OcspNonceCheckSuccessResult::PresentAndEqual),
+            2 => Ok(OcspNonceCheckSuccessResult::Absent),
+            3 => Ok(OcspNonceCheckSuccessResult::PresentInResponseOnly),
+            // bad cases
+            0 => Err(OcspNonceCheckErrorResult::PresentAndUnequal),
+            -1 => Err(OcspNonceCheckErrorResult::PresentInRequestOnly),
+            _ => Err(OcspNonceCheckErrorResult::Unknown(ErrorStack::get())), //something else!
+        }
     }
 }
 
