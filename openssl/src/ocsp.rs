@@ -252,7 +252,7 @@ impl OcspBasicResponseRef {
         }
     }
 
-    pub fn copy_nonce(&mut self, req: OcspRequestRef) -> Result<(), ErrorStack> {
+    pub fn copy_nonce(&mut self, req: &OcspRequestRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::OCSP_copy_nonce(self.as_ptr(), req.as_ptr()))?;
             Ok(())
