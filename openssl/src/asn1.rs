@@ -27,6 +27,7 @@
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_char, c_int, c_long};
+use std::ffi::CString;
 use std::fmt;
 use std::ptr;
 use std::slice;
@@ -105,6 +106,15 @@ impl fmt::Display for Asn1TimeRef {
 }
 
 impl Asn1Time {
+    fn new() -> Result<Asn1Time, ErrorStack> {
+        ffi::init();
+
+        unsafe {
+            let handle = cvt_p(ffi::ASN1_TIME_new())?;
+            Ok(Asn1Time::from_ptr(handle))
+        }
+    }
+
     fn from_period(period: c_long) -> Result<Asn1Time, ErrorStack> {
         ffi::init();
 
@@ -117,6 +127,38 @@ impl Asn1Time {
     /// Creates a new time on specified interval in days from now
     pub fn days_from_now(days: u32) -> Result<Asn1Time, ErrorStack> {
         Asn1Time::from_period(days as c_long * 60 * 60 * 24)
+    }
+
+    /// Creates a new time corresponding to the specified ASN1 time string.
+    ///
+    /// This corresponds to [`ASN1_TIME_set_string`].
+    ///
+    /// [`ASN1_TIME_set_string`]: https://www.openssl.org/docs/manmaster/man3/ASN1_TIME_set_string.html
+    pub fn from_str(s: &str) -> Result<Asn1Time, ErrorStack> {
+        unsafe {
+            let s = CString::new(s).unwrap();
+
+            let time = Asn1Time::new()?;
+            cvt(ffi::ASN1_TIME_set_string(time.as_ptr(), s.as_ptr()))?;
+
+            Ok(time)
+        }
+    }
+
+    /// Creates a new time corresponding to the specified X509 time string.
+    ///
+    /// This corresponds to [`ASN1_TIME_set_string_X509`].
+    ///
+    /// [`ASN1_TIME_set_string`]: https://www.openssl.org/docs/manmaster/man3/ASN1_TIME_set_string.html
+    pub fn from_str_x509(s: &str) -> Result<Asn1Time, ErrorStack> {
+        unsafe {
+            let s = CString::new(s).unwrap();
+
+            let time = Asn1Time::new()?;
+            cvt(ffi::ASN1_TIME_set_string_X509(time.as_ptr(), s.as_ptr()))?;
+
+            Ok(time)
+        }
     }
 }
 
@@ -338,5 +380,11 @@ mod tests {
         roundtrip(-BigNum::from_dec_str("1000000000000000000000000000000000").unwrap());
         roundtrip(BigNum::from_u32(1234).unwrap());
         roundtrip(-BigNum::from_u32(1234).unwrap());
+    }
+
+    #[test]
+    fn time_from_str() {
+        Asn1Time::from_str("99991231235959Z").unwrap();
+        Asn1Time::from_str_x509("99991231235959Z").unwrap();
     }
 }
