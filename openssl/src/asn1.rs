@@ -149,7 +149,10 @@ impl Asn1Time {
     ///
     /// This corresponds to [`ASN1_TIME_set_string_X509`].
     ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
     /// [`ASN1_TIME_set_string`]: https://www.openssl.org/docs/manmaster/man3/ASN1_TIME_set_string.html
+    #[cfg(ossl111)]
     pub fn from_str_x509(s: &str) -> Result<Asn1Time, ErrorStack> {
         unsafe {
             let s = CString::new(s).unwrap();
@@ -385,6 +388,7 @@ mod tests {
     #[test]
     fn time_from_str() {
         Asn1Time::from_str("99991231235959Z").unwrap();
+        #[cfg(ossl111)]
         Asn1Time::from_str_x509("99991231235959Z").unwrap();
     }
 }
