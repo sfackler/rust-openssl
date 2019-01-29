@@ -613,6 +613,25 @@ impl Rsa<Private> {
         }
     }
 
+    /// Generates a public/private key pair with the specified size.
+    ///
+    /// This corresponds to [`RSA_generate_key_ex`].
+    ///
+    /// [`RSA_generate_key_ex`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_generate_key_ex.html
+    pub fn generate_with_e(bits: u32, e: &BigNumRef) -> Result<Rsa<Private>, ErrorStack> {
+        ffi::init();
+        unsafe {
+            let rsa = Rsa::from_ptr(cvt_p(ffi::RSA_new())?);
+            cvt(ffi::RSA_generate_key_ex(
+                rsa.0,
+                bits as c_int,
+                e.as_ptr(),
+                ptr::null_mut(),
+            ))?;
+            Ok(rsa)
+        }
+    }
+
     // FIXME these need to identify input formats
     private_key_from_pem! {
         /// Deserializes a private key from a PEM-encoded PKCS#1 RSAPrivateKey structure.
