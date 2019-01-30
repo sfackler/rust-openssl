@@ -598,28 +598,23 @@ impl Rsa<Private> {
     /// Generates a public/private key pair with the specified size.
     ///
     /// The public exponent will be 65537.
+    ///
+    /// This corresponds to [`RSA_generate_key_ex`].
+    ///
+    /// [`RSA_generate_key_ex`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_generate_key_ex.html
     pub fn generate(bits: u32) -> Result<Rsa<Private>, ErrorStack> {
-        ffi::init();
-        unsafe {
-            let rsa = Rsa::from_ptr(cvt_p(ffi::RSA_new())?);
-            let e = BigNum::from_u32(ffi::RSA_F4 as u32)?;
-            cvt(ffi::RSA_generate_key_ex(
-                rsa.0,
-                bits as c_int,
-                e.as_ptr(),
-                ptr::null_mut(),
-            ))?;
-            Ok(rsa)
-        }
+        let e = BigNum::from_u32(ffi::RSA_F4 as u32)?;
+        Rsa::generate_with_e(bits, &e)
     }
 
-    /// Generates a public/private key pair with the specified size.
+    /// Generates a public/private key pair with the specified size and a custom exponent.
+    ///
+    /// Unless you have specific needs and know what you're doing, use `Rsa::generate` instead.
     ///
     /// This corresponds to [`RSA_generate_key_ex`].
     ///
     /// [`RSA_generate_key_ex`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_generate_key_ex.html
     pub fn generate_with_e(bits: u32, e: &BigNumRef) -> Result<Rsa<Private>, ErrorStack> {
-        ffi::init();
         unsafe {
             let rsa = Rsa::from_ptr(cvt_p(ffi::RSA_new())?);
             cvt(ffi::RSA_generate_key_ex(
@@ -938,5 +933,11 @@ mod test {
     fn clone() {
         let key = Rsa::generate(2048).unwrap();
         drop(key.clone());
+    }
+
+    #[test]
+    fn generate_with_e() {
+        let e = BigNum::from_u32(0x10001).unwrap();
+        Rsa::generate_with_e(2048, &e).unwrap();
     }
 }
