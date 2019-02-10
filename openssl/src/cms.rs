@@ -44,9 +44,14 @@ impl ForeignType for CmsSignerInfo {
 
 impl CmsSignerInfo {
     /// Add an attribute to this CmsSignerInfo with the ASN1 type obj.
-    /// 
+    ///
     /// `data_type` is an opaque integer.
-    pub fn add_attr(&mut self, obj: &Asn1Object, data_type: i32, data: &[u8]) -> Result<i32, ErrorStack> {
+    pub fn add_attr(
+        &mut self,
+        obj: &Asn1Object,
+        data_type: i32,
+        data: &[u8],
+    ) -> Result<i32, ErrorStack> {
         unsafe {
             cvt(ffi::CMS_signed_add1_attr_by_OBJ(
                 self.as_ptr(),
@@ -167,7 +172,7 @@ impl CmsContentInfoRef {
     /// for the keypair or digest.
     ///
     /// OpenSSL documentation at [`CMS_add1_signer`]
-    /// 
+    ///
     /// [`CMS_add1_signer`]: https://www.openssl.org/docs/man1.1.0/man3/CMS_add1_signer.html
     pub fn add_signer<T: HasPrivate>(
         &mut self,
@@ -220,9 +225,9 @@ impl CmsContentInfoRef {
     /// in certs, an X509 store in store. If the signature is detached, the
     /// data can be passed in data. The data sans signature will be copied
     /// into output_data if it is present.
-    /// 
+    ///
     /// OpenSSL documentation at [`CMS_verify`]
-    /// 
+    ///
     /// [`CMS_verify`]: https://www.openssl.org/docs/manmaster/man3/CMS_verify.html
     pub fn verify(
         &mut self,
@@ -325,7 +330,7 @@ impl CmsContentInfo {
     /// Create a partial CmsContentInfo by only specifying the flags. This is
     /// used in conjunction with CmsContentInfo::add_signer to customize the
     /// keypair, message digest and flags.
-    /// 
+    ///
     /// OpenSSL documentation at [`CMS_sign`]
     ///
     /// [`CMS_sign`]: https://www.openssl.org/docs/manmaster/man3/CMS_sign.html
