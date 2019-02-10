@@ -43,15 +43,15 @@ impl ForeignType for CmsSignerInfo {
 }
 
 impl CmsSignerInfo {
-    pub fn add_attr(&mut self, obj: &Asn1Object, data_type: i32, data: &[u8]) -> i32 {
+    pub fn add_attr(&mut self, obj: &Asn1Object, data_type: i32, data: &[u8]) -> Result<i32, ErrorStack> {
         unsafe {
-            ffi::CMS_signed_add1_attr_by_OBJ(
+            cvt(ffi::CMS_signed_add1_attr_by_OBJ(
                 self.as_ptr(),
                 obj.as_ptr(),
                 data_type,
                 data.as_ptr() as *const c_void,
                 data.len() as i32,
-            )
+            ))
         }
     }
 
