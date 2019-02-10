@@ -159,6 +159,13 @@ impl CmsContentInfoRef {
     ffi::d2i_CMS_ContentInfo
     }
 
+    /// Add a signer to this CmsContentInfo. This is useful when the CmsContentInfo is
+    /// created using CmsContentInfo::partial and additional configuration is required
+    /// for the keypair or digest.
+    ///
+    /// OpenSSL documentation at [`CMS_add1_signer`]
+    /// 
+    /// [`CMS_add1_signer`]: https://www.openssl.org/docs/man1.1.0/man3/CMS_add1_signer.html
     pub fn add_signer<T: HasPrivate>(
         &mut self,
         signcert: &X509,
