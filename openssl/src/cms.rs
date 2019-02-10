@@ -213,6 +213,14 @@ impl CmsContentInfoRef {
         }
     }
 
+    /// Verify this CmsContentInfo's signature, given a stack of certificates
+    /// in certs, an X509 store in store. If the signature is detached, the
+    /// data can be passed in data. The data sans signature will be copied
+    /// into output_data if it is present.
+    /// 
+    /// OpenSSL documentation at [`CMS_verify`]
+    /// 
+    /// [`CMS_verify`]: https://www.openssl.org/docs/manmaster/man3/CMS_verify.html
     pub fn verify(
         &mut self,
         certs: Option<&Stack<X509>>,
