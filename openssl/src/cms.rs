@@ -322,6 +322,13 @@ impl CmsContentInfo {
         }
     }
 
+    /// Create a partial CmsContentInfo by only specifying the flags. This is
+    /// used in conjunction with CmsContentInfo::add_signer to customize the
+    /// keypair, message digest and flags.
+    /// 
+    /// OpenSSL documentation at [`CMS_sign`]
+    ///
+    /// [`CMS_sign`]: https://www.openssl.org/docs/manmaster/man3/CMS_sign.html
     pub fn partial(
         certs: Option<&Stack<X509>>,
         flags: CMSOptions,
