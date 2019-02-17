@@ -166,6 +166,7 @@ extern "C" {
     pub fn EVP_des_ecb() -> *const EVP_CIPHER;
     pub fn EVP_des_ede3() -> *const EVP_CIPHER;
     pub fn EVP_des_ede3_cbc() -> *const EVP_CIPHER;
+    pub fn EVP_des_ede3_cfb() -> *const EVP_CIPHER;
     pub fn EVP_des_cbc() -> *const EVP_CIPHER;
     pub fn EVP_rc4() -> *const EVP_CIPHER;
     pub fn EVP_bf_ecb() -> *const EVP_CIPHER;
