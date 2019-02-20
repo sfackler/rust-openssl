@@ -331,6 +331,16 @@ foreign_type_and_impl_send_sync! {
     pub struct Asn1ObjectRef;
 }
 
+impl Asn1Object {
+    /// Returns an ASN1_object from a given OID in text form.
+    pub fn from_txt(oid: &str, no_name: bool) -> Asn1Object {
+        unsafe {
+            let asn1 = ffi::OBJ_txt2obj(CString::new(oid).unwrap().as_ptr(), no_name as c_int);
+            Asn1Object::from_ptr(asn1)
+        }
+    }
+}
+
 impl Asn1ObjectRef {
     /// Returns the NID associated with this OID.
     pub fn nid(&self) -> Nid {
