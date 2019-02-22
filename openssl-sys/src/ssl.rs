@@ -876,6 +876,10 @@ extern "C" {
     #[cfg(ossl111)]
     pub fn SSL_CIPHER_get_handshake_digest(cipher: *const ::SSL_CIPHER) -> *const ::EVP_MD;
     pub fn SSL_CIPHER_get_name(cipher: *const SSL_CIPHER) -> *const c_char;
+    #[cfg(ossl111)]
+    pub fn SSL_CIPHER_standard_name(cipher: *const SSL_CIPHER) -> *const c_char;
+    #[cfg(ossl111)]
+    pub fn OPENSSL_cipher_name(rfc_name: *const c_char) -> *const c_char;
 
     pub fn SSL_pending(ssl: *const SSL) -> c_int;
     pub fn SSL_set_bio(ssl: *mut SSL, rbio: *mut BIO, wbio: *mut BIO);
