@@ -1838,3 +1838,12 @@ fn client_hello() {
 
     guard.join().unwrap();
 }
+
+#[test]
+#[cfg(ossl111)]
+fn openssl_cipher_name() {
+    assert_eq!(
+        super::cipher_name("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384"),
+        Some("ECDHE-RSA-AES256-SHA384")
+    );
+}

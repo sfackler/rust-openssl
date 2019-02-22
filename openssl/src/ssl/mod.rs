@@ -113,6 +113,28 @@ mod error;
 #[cfg(test)]
 mod test;
 
+/// Returns the OpenSSL name of a cipher corresponding to an RFC-standard cipher name.
+///
+/// Requires OpenSSL 1.1.1 or newer.
+///
+/// This corresponds to [`OPENSSL_cipher_name`]
+///
+/// [`OPENSSL_cipher_name`]: https://www.openssl.org/docs/manmaster/man3/SSL_CIPHER_get_name.html
+#[cfg(ossl111)]
+pub fn cipher_name(std_name: &str) -> Option<&'static str> {
+    unsafe {
+        ffi::init();
+
+        let s = CString::new(std_name).unwrap();
+        let ptr = ffi::OPENSSL_cipher_name(s.as_ptr());
+        if ptr.is_null() {
+            None
+        } else {
+            Some(CStr::from_ptr(ptr).to_str().unwrap())
+        }
+    }
+}
+
 bitflags! {
     /// Options controlling the behavior of an `SslContext`.
     pub struct SslOptions: c_ulong {
@@ -1880,12 +1902,29 @@ impl SslCipherRef {
     ///
     /// [`SSL_CIPHER_get_name`]: https://www.openssl.org/docs/manmaster/man3/SSL_CIPHER_get_name.html
     pub fn name(&self) -> &'static str {
-        let name = unsafe {
+        unsafe {
             let ptr = ffi::SSL_CIPHER_get_name(self.as_ptr());
-            CStr::from_ptr(ptr as *const _)
-        };
+            CStr::from_ptr(ptr).to_str().unwrap()
+        }
+    }
 
-        str::from_utf8(name.to_bytes()).unwrap()
+    /// Returns the RFC-standard name of the cipher, if one exists.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
+    /// This corresponds to [`SSL_CIPHER_standard_name`].
+    ///
+    /// [`SSL_CIPHER_standard_name`]: https://www.openssl.org/docs/manmaster/man3/SSL_CIPHER_get_name.html
+    #[cfg(ossl111)]
+    pub fn standard_name(&self) -> Option<&'static str> {
+        unsafe {
+            let ptr = ffi::SSL_CIPHER_standard_name(self.as_ptr());
+            if ptr.is_null() {
+                None
+            } else {
+                Some(CStr::from_ptr(ptr).to_str().unwrap())
+            }
+        }
     }
 
     /// Returns the SSL/TLS protocol version that first defined the cipher.
