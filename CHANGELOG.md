@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [v0.10.17] - 2019-02-22
+
+### Added
+
+* Implemented `AsRef<str>` and `AsRef<[u8]>` for `OpenSslString`.
+* Added `Asn1Integer::from_bn`.
+* Added `RsaRef::check_key`.
+* Added `Asn1Time::from_str` and `Asn1Time::from_str_x509`.
+* Added `Rsa::generate_with_e`.
+* Added `Cipher::des_ede3_cfb64`.
+* Added `SslCipherRef::standard_name` and `ssl::cipher_name`.
+
 ## [v0.10.16] - 2018-12-16
 
 ### Added
@@ -303,7 +315,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.16...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.17...master
+[v0.10.17]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.16...openssl-v0.10.17
 [v0.10.16]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.15...openssl-v0.10.16
 [v0.10.15]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.14...openssl-v0.10.15
 [v0.10.14]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.13...openssl-v0.10.14
