@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [v0.10.18] - 2019-02-22
+
+### Fixed
+
+* Fixed the return type of `ssl::cipher_name`.
+
 ## [v0.10.17] - 2019-02-22
 
 ### Added
@@ -315,7 +321,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.17...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.18...master
+[v0.10.18]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.17...openssl-v0.10.18
 [v0.10.17]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.16...openssl-v0.10.17
 [v0.10.16]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.15...openssl-v0.10.16
 [v0.10.15]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.14...openssl-v0.10.15
