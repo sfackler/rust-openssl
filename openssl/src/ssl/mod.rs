@@ -115,23 +115,21 @@ mod test;
 
 /// Returns the OpenSSL name of a cipher corresponding to an RFC-standard cipher name.
 ///
+/// If the cipher has no corresponding OpenSSL name, the string `(NONE)` is returned.
+///
 /// Requires OpenSSL 1.1.1 or newer.
 ///
 /// This corresponds to [`OPENSSL_cipher_name`]
 ///
 /// [`OPENSSL_cipher_name`]: https://www.openssl.org/docs/manmaster/man3/SSL_CIPHER_get_name.html
 #[cfg(ossl111)]
-pub fn cipher_name(std_name: &str) -> Option<&'static str> {
+pub fn cipher_name(std_name: &str) -> &'static str {
     unsafe {
         ffi::init();
 
         let s = CString::new(std_name).unwrap();
         let ptr = ffi::OPENSSL_cipher_name(s.as_ptr());
-        if ptr.is_null() {
-            None
-        } else {
-            Some(CStr::from_ptr(ptr).to_str().unwrap())
-        }
+        CStr::from_ptr(ptr).to_str().unwrap()
     }
 }
 
