@@ -1,12 +1,12 @@
 //! Shared secret derivation.
 use ffi;
+use foreign_types::ForeignTypeRef;
 use std::marker::PhantomData;
 use std::ptr;
-use foreign_types::ForeignTypeRef;
 
-use {cvt, cvt_p};
 use error::ErrorStack;
 use pkey::{HasPrivate, HasPublic, PKeyRef};
+use {cvt, cvt_p};
 
 /// A type used to derive a shared secret between two keys.
 pub struct Deriver<'a>(*mut ffi::EVP_PKEY_CTX, PhantomData<&'a ()>);
@@ -72,7 +72,8 @@ impl<'a> Deriver<'a> {
                 self.0,
                 buf.as_mut_ptr() as *mut _,
                 &mut len,
-            )).map(|_| len)
+            ))
+            .map(|_| len)
         }
     }
 

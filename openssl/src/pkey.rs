@@ -45,21 +45,21 @@
 //! }
 //! ```
 
-use libc::c_int;
-use std::ptr;
-use std::mem;
-use std::ffi::CString;
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
+use libc::c_int;
+use std::ffi::CString;
+use std::mem;
+use std::ptr;
 
-use {cvt, cvt_p};
 use bio::MemBioSlice;
 use dh::Dh;
 use dsa::Dsa;
 use ec::EcKey;
-use rsa::Rsa;
 use error::ErrorStack;
+use rsa::Rsa;
 use util::{invoke_passwd_cb, CallbackState};
+use {cvt, cvt_p};
 
 /// A tag type indicating that a key only has parameters.
 pub enum Params {}
@@ -97,22 +97,14 @@ pub unsafe trait HasParams {}
 
 unsafe impl HasParams for Params {}
 
-unsafe impl<T> HasParams for T
-where
-    T: HasPublic,
-{
-}
+unsafe impl<T> HasParams for T where T: HasPublic {}
 
 /// A trait indicating that a key has public components.
 pub unsafe trait HasPublic {}
 
 unsafe impl HasPublic for Public {}
 
-unsafe impl<T> HasPublic for T
-where
-    T: HasPrivate,
-{
-}
+unsafe impl<T> HasPublic for T where T: HasPrivate {}
 
 /// A trait indicating that a key has private components.
 pub unsafe trait HasPrivate {}
@@ -488,7 +480,8 @@ impl PKey<Private> {
                 ptr::null_mut(),
                 Some(invoke_passwd_cb::<F>),
                 &mut cb as *mut _ as *mut _,
-            )).map(|p| PKey::from_ptr(p))
+            ))
+            .map(|p| PKey::from_ptr(p))
         }
     }
 
@@ -511,7 +504,8 @@ impl PKey<Private> {
                 ptr::null_mut(),
                 None,
                 passphrase.as_ptr() as *const _ as *mut _,
-            )).map(|p| PKey::from_ptr(p))
+            ))
+            .map(|p| PKey::from_ptr(p))
         }
     }
 }
@@ -544,12 +538,12 @@ impl PKey<Public> {
 
 #[cfg(test)]
 mod tests {
-    use symm::Cipher;
     use dh::Dh;
     use dsa::Dsa;
     use ec::EcKey;
-    use rsa::Rsa;
     use nid::Nid;
+    use rsa::Rsa;
+    use symm::Cipher;
 
     use super::*;
 
@@ -557,7 +551,8 @@ mod tests {
     fn test_to_password() {
         let rsa = Rsa::generate(2048).unwrap();
         let pkey = PKey::from_rsa(rsa).unwrap();
-        let pem = pkey.private_key_to_pem_pkcs8_passphrase(Cipher::aes_128_cbc(), b"foobar")
+        let pem = pkey
+            .private_key_to_pem_pkcs8_passphrase(Cipher::aes_128_cbc(), b"foobar")
             .unwrap();
         PKey::private_key_from_pem_passphrase(&pem, b"foobar").unwrap();
         assert!(PKey::private_key_from_pem_passphrase(&pem, b"fizzbuzz").is_err());
@@ -577,7 +572,8 @@ mod tests {
             password_queried = true;
             password[..6].copy_from_slice(b"mypass");
             Ok(6)
-        }).unwrap();
+        })
+        .unwrap();
         assert!(password_queried);
     }
 

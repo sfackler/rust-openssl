@@ -29,7 +29,7 @@ use ssl::{
 };
 #[cfg(any(ossl102, ossl110))]
 use x509::verify::X509CheckFlags;
-use x509::{X509, X509Name, X509StoreContext, X509VerifyResult};
+use x509::{X509Name, X509StoreContext, X509VerifyResult, X509};
 
 use std::net::UdpSocket;
 
@@ -683,10 +683,9 @@ fn test_alpn_server_advertise_multiple() {
         ctx.set_alpn_select_callback(|_, client| {
             ssl::select_next_proto(b"\x08http/1.1\x08spdy/3.1", client).ok_or(ssl::AlpnError::NOACK)
         });
-        assert!(
-            ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
-                .is_ok()
-        );
+        assert!(ctx
+            .set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
+            .is_ok());
         ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
         ctx.build()
@@ -731,10 +730,9 @@ fn test_alpn_server_select_none_fatal() {
             ssl::select_next_proto(b"\x08http/1.1\x08spdy/3.1", client)
                 .ok_or(ssl::AlpnError::ALERT_FATAL)
         });
-        assert!(
-            ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
-                .is_ok()
-        );
+        assert!(ctx
+            .set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
+            .is_ok());
         ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
         ctx.build()
@@ -764,10 +762,9 @@ fn test_alpn_server_select_none() {
         ctx.set_alpn_select_callback(|_, client| {
             ssl::select_next_proto(b"\x08http/1.1\x08spdy/3.1", client).ok_or(ssl::AlpnError::NOACK)
         });
-        assert!(
-            ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
-                .is_ok()
-        );
+        assert!(ctx
+            .set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
+            .is_ok());
         ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
         ctx.build()
@@ -1018,14 +1015,12 @@ fn connector_no_hostname_still_verifies() {
 
     let connector = SslConnector::builder(SslMethod::tls()).unwrap().build();
 
-    assert!(
-        connector
-            .configure()
-            .unwrap()
-            .verify_hostname(false)
-            .connect("fizzbuzz.com", tcp)
-            .is_err()
-    );
+    assert!(connector
+        .configure()
+        .unwrap()
+        .verify_hostname(false)
+        .connect("fizzbuzz.com", tcp)
+        .is_err());
 }
 
 #[test]
@@ -1375,7 +1370,8 @@ fn status_callbacks() {
             let response = response.to_der().unwrap();
             ssl.set_ocsp_status(&response).unwrap();
             Ok(true)
-        }).unwrap();
+        })
+        .unwrap();
         let ssl = Ssl::new(&ctx.build()).unwrap();
         let mut stream = ssl.accept(stream).unwrap();
         stream.write_all(&[0]).unwrap();
@@ -1388,7 +1384,8 @@ fn status_callbacks() {
         let response = OcspResponse::from_der(ssl.ocsp_status().unwrap()).unwrap();
         assert_eq!(response.status(), OcspResponseStatus::UNAUTHORIZED);
         Ok(true)
-    }).unwrap();
+    })
+    .unwrap();
     let mut ssl = Ssl::new(&ctx.build()).unwrap();
     ssl.set_status_type(StatusType::OCSP).unwrap();
     let mut stream = ssl.connect(stream).unwrap();
@@ -1539,7 +1536,8 @@ fn custom_extensions() {
                 FOUND_EXTENSION.store(data == b"hello", Ordering::SeqCst);
                 Ok(())
             },
-        ).unwrap();
+        )
+        .unwrap();
         let ssl = Ssl::new(&ctx.build()).unwrap();
         let mut stream = ssl.accept(stream).unwrap();
         stream.write_all(&[0]).unwrap();
@@ -1552,7 +1550,8 @@ fn custom_extensions() {
         ssl::ExtensionContext::CLIENT_HELLO,
         |_, _, _| Ok(Some(b"hello")),
         |_, _, _, _| unreachable!(),
-    ).unwrap();
+    )
+    .unwrap();
     let ssl = Ssl::new(&ctx.build()).unwrap();
     let mut stream = ssl.connect(stream).unwrap();
     stream.read_exact(&mut [0]).unwrap();

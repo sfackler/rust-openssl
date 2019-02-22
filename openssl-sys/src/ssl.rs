@@ -526,16 +526,22 @@ extern "C" {
     pub fn SSL_CTX_set_stateless_cookie_generate_cb(
         s: *mut SSL_CTX,
         cb: Option<
-            unsafe extern "C" fn(ssl: *mut SSL, cookie: *mut c_uchar, cookie_len: *mut size_t)
-                -> c_int,
+            unsafe extern "C" fn(
+                ssl: *mut SSL,
+                cookie: *mut c_uchar,
+                cookie_len: *mut size_t,
+            ) -> c_int,
         >,
     );
     #[cfg(ossl111)]
     pub fn SSL_CTX_set_stateless_cookie_verify_cb(
         s: *mut SSL_CTX,
         cb: Option<
-            unsafe extern "C" fn(ssl: *mut SSL, cookie: *const c_uchar, cookie_len: size_t)
-                -> c_int,
+            unsafe extern "C" fn(
+                ssl: *mut SSL,
+                cookie: *const c_uchar,
+                cookie_len: size_t,
+            ) -> c_int,
         >,
     );
 
@@ -609,8 +615,14 @@ extern "C" {
     pub fn SSL_CTX_set_psk_client_callback(
         ssl: *mut SSL_CTX,
         psk_client_cb: Option<
-            extern "C" fn(*mut SSL, *const c_char, *mut c_char, c_uint, *mut c_uchar, c_uint)
-                -> c_uint,
+            extern "C" fn(
+                *mut SSL,
+                *const c_char,
+                *mut c_char,
+                c_uint,
+                *mut c_uchar,
+                c_uint,
+            ) -> c_uint,
         >,
     );
     pub fn SSL_CTX_set_psk_server_callback(
@@ -1212,15 +1224,21 @@ extern "C" {
     #[cfg(not(ossl110))]
     pub fn SSL_CTX_set_tmp_ecdh_callback(
         ctx: *mut ::SSL_CTX,
-        ecdh: unsafe extern "C" fn(ssl: *mut ::SSL, is_export: c_int, keylength: c_int)
-            -> *mut ::EC_KEY,
+        ecdh: unsafe extern "C" fn(
+            ssl: *mut ::SSL,
+            is_export: c_int,
+            keylength: c_int,
+        ) -> *mut ::EC_KEY,
     );
     // FIXME should take an option
     #[cfg(not(ossl110))]
     pub fn SSL_set_tmp_ecdh_callback(
         ssl: *mut SSL,
-        ecdh: unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int)
-            -> *mut EC_KEY,
+        ecdh: unsafe extern "C" fn(
+            ssl: *mut SSL,
+            is_export: c_int,
+            keylength: c_int,
+        ) -> *mut EC_KEY,
     );
 }
 

@@ -42,7 +42,7 @@ impl ErrorCode {
     pub const SSL: ErrorCode = ErrorCode(ffi::SSL_ERROR_SSL);
 
     /// The client hello callback indicated that it needed to be retried.
-    /// 
+    ///
     /// Requires OpenSSL 1.1.1 or newer.
     #[cfg(ossl111)]
     pub const WANT_CLIENT_HELLO_CB: ErrorCode = ErrorCode(ffi::SSL_ERROR_WANT_CLIENT_HELLO_CB);

@@ -423,7 +423,8 @@ impl BigNumRef {
                 bits.into(),
                 msb.0,
                 odd as c_int,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -439,7 +440,8 @@ impl BigNumRef {
                 bits.into(),
                 msb.0,
                 odd as c_int,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -485,7 +487,8 @@ impl BigNumRef {
                 add.map(|n| n.as_ptr()).unwrap_or(ptr::null_mut()),
                 rem.map(|n| n.as_ptr()).unwrap_or(ptr::null_mut()),
                 ptr::null_mut(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -508,7 +511,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 b.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -532,7 +536,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 b.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -554,7 +559,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 b.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -577,7 +583,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 b.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -608,7 +615,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 m.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -631,7 +639,8 @@ impl BigNumRef {
                 b.as_ptr(),
                 m.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -654,7 +663,8 @@ impl BigNumRef {
                 b.as_ptr(),
                 m.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -677,7 +687,8 @@ impl BigNumRef {
                 b.as_ptr(),
                 m.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -698,7 +709,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 m.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -719,7 +731,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 p.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -742,7 +755,8 @@ impl BigNumRef {
                 p.as_ptr(),
                 m.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -759,7 +773,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 n.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -780,7 +795,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 b.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -803,7 +819,8 @@ impl BigNumRef {
                 checks.into(),
                 ctx.as_ptr(),
                 ptr::null_mut(),
-            )).map(|r| r != 0)
+            ))
+            .map(|r| r != 0)
         }
     }
 
@@ -833,7 +850,8 @@ impl BigNumRef {
                 ctx.as_ptr(),
                 do_trial_division as c_int,
                 ptr::null_mut(),
-            )).map(|r| r != 0)
+            ))
+            .map(|r| r != 0)
         }
     }
 
@@ -1089,7 +1107,8 @@ impl BigNum {
                 n.as_ptr(),
                 n.len() as c_int,
                 ptr::null_mut(),
-            )).map(|p| BigNum::from_ptr(p))
+            ))
+            .map(|p| BigNum::from_ptr(p))
         }
     }
 }

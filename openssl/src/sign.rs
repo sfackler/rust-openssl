@@ -208,7 +208,8 @@ impl<'a> Signer<'a> {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(
                 self.pctx,
                 padding.as_raw(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -224,7 +225,8 @@ impl<'a> Signer<'a> {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_pss_saltlen(
                 self.pctx,
                 len.as_raw(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -240,7 +242,8 @@ impl<'a> Signer<'a> {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_mgf1_md(
                 self.pctx,
                 md.as_ptr() as *mut _,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -255,7 +258,8 @@ impl<'a> Signer<'a> {
                 self.md_ctx,
                 buf.as_ptr() as *const _,
                 buf.len(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -403,7 +407,8 @@ impl<'a> Verifier<'a> {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(
                 self.pctx,
                 padding.as_raw(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -419,7 +424,8 @@ impl<'a> Verifier<'a> {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_pss_saltlen(
                 self.pctx,
                 len.as_raw(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -435,7 +441,8 @@ impl<'a> Verifier<'a> {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_mgf1_md(
                 self.pctx,
                 md.as_ptr() as *mut _,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -450,7 +457,8 @@ impl<'a> Verifier<'a> {
                 self.md_ctx,
                 buf.as_ptr() as *const _,
                 buf.len(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 

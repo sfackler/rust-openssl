@@ -25,8 +25,8 @@ pub use object::*;
 pub use ocsp::*;
 pub use ossl_typ::*;
 pub use pem::*;
-pub use pkcs7::*;
 pub use pkcs12::*;
+pub use pkcs7::*;
 pub use rand::*;
 pub use rsa::*;
 pub use safestack::*;
@@ -62,8 +62,8 @@ mod object;
 mod ocsp;
 mod ossl_typ;
 mod pem;
-mod pkcs7;
 mod pkcs12;
+mod pkcs7;
 mod rand;
 mod rsa;
 mod safestack;
@@ -78,9 +78,12 @@ mod x509_vfy;
 mod x509v3;
 
 // FIXME remove
-pub type PasswordCallback =
-    unsafe extern "C" fn(buf: *mut c_char, size: c_int, rwflag: c_int, user_data: *mut c_void)
-        -> c_int;
+pub type PasswordCallback = unsafe extern "C" fn(
+    buf: *mut c_char,
+    size: c_int,
+    rwflag: c_int,
+    user_data: *mut c_void,
+) -> c_int;
 
 #[cfg(ossl110)]
 pub fn init() {

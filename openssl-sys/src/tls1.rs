@@ -1,6 +1,6 @@
 use libc::*;
-use std::ptr;
 use std::mem;
+use std::ptr;
 
 use *;
 

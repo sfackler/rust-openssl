@@ -143,9 +143,7 @@ extern "C" {
         k: *mut RSA,
         pad: c_int,
     ) -> c_int;
-    pub fn RSA_check_key(
-        r: *const ::RSA,
-    ) -> c_int;
+    pub fn RSA_check_key(r: *const ::RSA) -> c_int;
     pub fn RSA_free(rsa: *mut RSA);
     pub fn RSA_up_ref(rsa: *mut RSA) -> c_int;
 

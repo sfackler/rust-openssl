@@ -9,8 +9,8 @@ use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::fmt;
-use std::ptr;
 use std::mem;
+use std::ptr;
 
 use bn::{BigNum, BigNumRef};
 use error::ErrorStack;
@@ -321,9 +321,9 @@ cfg_if! {
 mod test {
     use super::*;
     use bn::BigNumContext;
-    use sign::{Signer, Verifier};
     use hash::MessageDigest;
     use pkey::PKey;
+    use sign::{Signer, Verifier};
 
     #[test]
     pub fn test_generate() {
@@ -390,14 +390,18 @@ mod test {
             BigNumRef::to_owned(q).unwrap(),
             BigNumRef::to_owned(g).unwrap(),
             BigNumRef::to_owned(priv_key).unwrap(),
-            BigNumRef::to_owned(pub_key).unwrap()).unwrap();
+            BigNumRef::to_owned(pub_key).unwrap(),
+        )
+        .unwrap();
         let priv_key = PKey::from_dsa(priv_key).unwrap();
 
         let pub_key = Dsa::from_public_components(
             BigNumRef::to_owned(p).unwrap(),
             BigNumRef::to_owned(q).unwrap(),
             BigNumRef::to_owned(g).unwrap(),
-            BigNumRef::to_owned(pub_key).unwrap()).unwrap();
+            BigNumRef::to_owned(pub_key).unwrap(),
+        )
+        .unwrap();
         let pub_key = PKey::from_dsa(pub_key).unwrap();
 
         let mut signer = Signer::new(MessageDigest::sha256(), &priv_key).unwrap();

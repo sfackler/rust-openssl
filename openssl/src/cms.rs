@@ -14,7 +14,7 @@ use error::ErrorStack;
 use libc::c_uint;
 use pkey::{HasPrivate, PKeyRef};
 use stack::StackRef;
-use x509::{X509, X509Ref};
+use x509::{X509Ref, X509};
 use {cvt, cvt_p};
 
 bitflags! {

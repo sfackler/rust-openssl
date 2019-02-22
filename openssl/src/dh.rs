@@ -164,7 +164,8 @@ mod tests {
         ).unwrap();
         let q = BigNum::from_hex_str(
             "8CF83642A709A097B447997640129DA299B1A47D1EB3750BA308B0FE64F5FBD3",
-        ).unwrap();
+        )
+        .unwrap();
         let dh = Dh::from_params(p, g, q).unwrap();
         ctx.set_tmp_dh(&dh).unwrap();
     }

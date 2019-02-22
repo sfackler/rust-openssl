@@ -73,7 +73,8 @@ impl EcdsaSig {
                 data.len() as c_int,
                 self.as_ptr(),
                 eckey.as_ptr(),
-            )).map(|x| x == 1)
+            ))
+            .map(|x| x == 1)
         }
     }
 
@@ -110,7 +111,7 @@ impl EcdsaSig {
         from_der,
         EcdsaSig,
         ffi::d2i_ECDSA_SIG
-	}
+    }
 }
 
 impl EcdsaSigRef {
@@ -120,7 +121,7 @@ impl EcdsaSigRef {
         /// This corresponds to [`i2d_ECDSA_SIG`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_ECDSA_SIG.html
         to_der,
         ffi::i2d_ECDSA_SIG
-	}
+    }
 }
 
 cfg_if! {

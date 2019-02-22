@@ -110,7 +110,8 @@ impl Pkcs7 {
                 input_bio.as_ptr(),
                 cipher.as_ptr(),
                 flags.bits,
-            )).map(Pkcs7)
+            ))
+            .map(Pkcs7)
         }
     }
 
@@ -142,7 +143,8 @@ impl Pkcs7 {
                 certs.as_ptr(),
                 input_bio.as_ptr(),
                 flags.bits,
-            )).map(Pkcs7)
+            ))
+            .map(Pkcs7)
         }
     }
 }
@@ -162,7 +164,8 @@ impl Pkcs7Ref {
                 self.as_ptr(),
                 input_bio.as_ptr(),
                 flags.bits,
-            )).map(|_| output.get_buf().to_owned())
+            ))
+            .map(|_| output.get_buf().to_owned())
         }
     }
 
@@ -206,7 +209,8 @@ impl Pkcs7Ref {
                 cert.as_ptr(),
                 output.as_ptr(),
                 flags.bits,
-            )).map(|_| output.get_buf().to_owned())
+            ))
+            .map(|_| output.get_buf().to_owned())
         }
     }
 
@@ -244,7 +248,8 @@ impl Pkcs7Ref {
                 indata_bio_ptr,
                 out_bio.as_ptr(),
                 flags.bits,
-            )).map(|_| ())?
+            ))
+            .map(|_| ())?
         }
 
         if let Some(data) = out {
@@ -328,7 +333,8 @@ mod tests {
                 Some(message.as_bytes()),
                 Some(&mut output),
                 flags,
-            ).expect("should succeed");
+            )
+            .expect("should succeed");
 
         assert_eq!(message.clone().into_bytes(), output);
         assert_eq!(

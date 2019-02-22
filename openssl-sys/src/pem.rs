@@ -2,9 +2,14 @@ use libc::*;
 
 use *;
 
-pub type pem_password_cb = 
-    Option<unsafe extern "C" fn(buf: *mut c_char, size: c_int, rwflag: c_int, user_data: *mut c_void)
-        -> c_int>;
+pub type pem_password_cb = Option<
+    unsafe extern "C" fn(
+        buf: *mut c_char,
+        size: c_int,
+        rwflag: c_int,
+        user_data: *mut c_void,
+    ) -> c_int,
+>;
 
 extern "C" {
     pub fn PEM_read_bio_X509(

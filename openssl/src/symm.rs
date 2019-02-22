@@ -422,7 +422,8 @@ impl Crypter {
                 ffi::EVP_CTRL_GCM_SET_TAG,
                 tag.len() as c_int,
                 tag.as_ptr() as *mut _,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -439,7 +440,8 @@ impl Crypter {
                 ffi::EVP_CTRL_GCM_SET_TAG,
                 tag_len as c_int,
                 ptr::null_mut(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -457,7 +459,8 @@ impl Crypter {
                 &mut len,
                 ptr::null_mut(),
                 data_len as c_int,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -476,7 +479,8 @@ impl Crypter {
                 &mut len,
                 input.as_ptr(),
                 input.len() as c_int,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -551,7 +555,8 @@ impl Crypter {
                 ffi::EVP_CTRL_GCM_GET_TAG,
                 tag.len() as c_int,
                 tag.as_mut_ptr() as *mut _,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 }
@@ -770,7 +775,8 @@ mod tests {
             super::Mode::Encrypt,
             &k0,
             None,
-        ).unwrap();
+        )
+        .unwrap();
         c.pad(false);
         let mut r0 = vec![0; c0.len() + super::Cipher::aes_256_ecb().block_size()];
         let count = c.update(&p0, &mut r0).unwrap();
@@ -783,7 +789,8 @@ mod tests {
             super::Mode::Decrypt,
             &k0,
             None,
-        ).unwrap();
+        )
+        .unwrap();
         c.pad(false);
         let mut p1 = vec![0; r0.len() + super::Cipher::aes_256_ecb().block_size()];
         let count = c.update(&r0, &mut p1).unwrap();
@@ -812,7 +819,8 @@ mod tests {
             super::Mode::Decrypt,
             &data,
             Some(&iv),
-        ).unwrap();
+        )
+        .unwrap();
         cr.pad(false);
         let mut unciphered_data = vec![0; data.len() + super::Cipher::aes_256_cbc().block_size()];
         let count = cr.update(&ciphered_data, &mut unciphered_data).unwrap();
@@ -1094,7 +1102,8 @@ mod tests {
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(pt).unwrap(),
             &mut actual_tag,
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(ct, hex::encode(out));
         assert_eq!(tag, hex::encode(actual_tag));
 
@@ -1105,7 +1114,8 @@ mod tests {
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(ct).unwrap(),
             &Vec::from_hex(tag).unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(pt, hex::encode(out));
     }
 
@@ -1127,7 +1137,8 @@ mod tests {
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(pt).unwrap(),
             &mut actual_tag,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(ct, hex::encode(out));
         assert_eq!(tag, hex::encode(actual_tag));
@@ -1139,7 +1150,8 @@ mod tests {
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(ct).unwrap(),
             &Vec::from_hex(tag).unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(pt, hex::encode(out));
     }
 
@@ -1181,7 +1193,8 @@ mod tests {
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(pt).unwrap(),
             &mut actual_tag,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(ct, hex::encode(out));
         assert_eq!(tag, hex::encode(actual_tag));
@@ -1193,7 +1206,8 @@ mod tests {
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(ct).unwrap(),
             &Vec::from_hex(tag).unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(pt, hex::encode(out));
     }
 
@@ -1256,7 +1270,8 @@ mod tests {
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(pt).unwrap(),
             &mut actual_tag,
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(ct, hex::encode(out));
         assert_eq!(tag, hex::encode(actual_tag));
 
@@ -1267,7 +1282,8 @@ mod tests {
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(ct).unwrap(),
             &Vec::from_hex(tag).unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(pt, hex::encode(out));
     }
 }

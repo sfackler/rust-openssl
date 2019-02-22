@@ -23,7 +23,7 @@ use pkey::Params;
 #[cfg(any(ossl102, libressl261))]
 use ssl::AlpnError;
 #[cfg(ossl111)]
-use ssl::{ExtensionContext, ClientHelloResponse};
+use ssl::{ClientHelloResponse, ExtensionContext};
 use ssl::{SniError, Ssl, SslAlert, SslContext, SslContextRef, SslRef, SslSession, SslSessionRef};
 #[cfg(ossl111)]
 use x509::X509Ref;

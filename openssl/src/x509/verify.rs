@@ -56,7 +56,8 @@ impl X509VerifyParamRef {
                 self.as_ptr(),
                 host.as_ptr() as *const _,
                 host.len(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -82,7 +83,8 @@ impl X509VerifyParamRef {
                 self.as_ptr(),
                 buf.as_ptr() as *const _,
                 len,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 }

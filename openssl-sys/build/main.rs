@@ -404,7 +404,8 @@ VERSION(OPENSSL, OPENSSL_VERSION_NUMBER)
 VERSION(LIBRESSL, LIBRESSL_VERSION_NUMBER)
 #endif
 "
-    ).unwrap();
+    )
+    .unwrap();
 
     for define in DEFINES {
         write!(
@@ -415,7 +416,8 @@ RUST_CONF_{define}
 #endif
 ",
             define = define
-        ).unwrap();
+        )
+        .unwrap();
     }
 
     file.flush().unwrap();

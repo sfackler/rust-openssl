@@ -255,7 +255,8 @@ impl X509Builder {
             cvt(ffi::X509_set_serialNumber(
                 self.0.as_ptr(),
                 serial_number.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -265,7 +266,8 @@ impl X509Builder {
             cvt(ffi::X509_set_issuer_name(
                 self.0.as_ptr(),
                 issuer_name.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -292,7 +294,8 @@ impl X509Builder {
             cvt(ffi::X509_set_subject_name(
                 self.0.as_ptr(),
                 subject_name.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -756,7 +759,8 @@ impl X509NameBuilder {
                 value.len() as c_int,
                 -1,
                 0,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -776,7 +780,8 @@ impl X509NameBuilder {
                 value.len() as c_int,
                 -1,
                 0,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -830,7 +835,7 @@ impl X509NameRef {
         X509NameEntries {
             name: self,
             nid: None,
-            loc: -1
+            loc: -1,
         }
     }
 }
@@ -945,7 +950,8 @@ impl X509ReqBuilder {
             cvt(ffi::X509_REQ_set_subject_name(
                 self.0.as_ptr(),
                 subject_name.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -994,7 +1000,8 @@ impl X509ReqBuilder {
             cvt(ffi::X509_REQ_add_extensions(
                 self.0.as_ptr(),
                 extensions.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -1012,7 +1019,8 @@ impl X509ReqBuilder {
                 self.0.as_ptr(),
                 key.as_ptr(),
                 hash.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 

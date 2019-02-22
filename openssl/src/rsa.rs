@@ -286,7 +286,7 @@ where
     /// [`RSA_check_key`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_check_key.html
     pub fn check_key(&self) -> Result<bool, ErrorStack> {
         unsafe {
-            let result =  ffi::RSA_check_key(self.as_ptr()) as i32;
+            let result = ffi::RSA_check_key(self.as_ptr()) as i32;
             if result == -1 {
                 Err(ErrorStack::get())
             } else {
@@ -789,7 +789,8 @@ mod test {
             password_queried = true;
             password[..6].copy_from_slice(b"mypass");
             Ok(6)
-        }).unwrap();
+        })
+        .unwrap();
 
         assert!(password_queried);
     }

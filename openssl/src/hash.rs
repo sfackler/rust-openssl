@@ -254,7 +254,7 @@ impl Hasher {
     /// Writes the hash of the data into the supplied buf and resets the XOF hasher.
     /// The hash will be as long as the buf.
     #[cfg(ossl111)]
-    pub fn finish_xof(&mut self, buf: &mut[u8]) -> Result<(), ErrorStack> {
+    pub fn finish_xof(&mut self, buf: &mut [u8]) -> Result<(), ErrorStack> {
         if self.state == Finalized {
             self.init()?;
         }
@@ -366,7 +366,7 @@ pub fn hash(t: MessageDigest, data: &[u8]) -> Result<DigestBytes, ErrorStack> {
 
 /// Computes the hash of the `data` with the XOF hasher `t` and stores it in `buf`.
 #[cfg(ossl111)]
-pub fn hash_xof(t: MessageDigest, data: &[u8], buf: &mut[u8]) -> Result<(), ErrorStack> {
+pub fn hash_xof(t: MessageDigest, data: &[u8], buf: &mut [u8]) -> Result<(), ErrorStack> {
     let mut h = Hasher::new(t)?;
     h.update(data)?;
     h.finish_xof(buf)
@@ -388,7 +388,12 @@ mod tests {
     fn hash_xof_test(hashtype: MessageDigest, hashtest: &(&str, &str)) {
         let expected = Vec::from_hex(hashtest.1).unwrap();
         let mut buf = vec![0; expected.len()];
-        hash_xof(hashtype, &Vec::from_hex(hashtest.0).unwrap(), buf.as_mut_slice()).unwrap();
+        hash_xof(
+            hashtype,
+            &Vec::from_hex(hashtest.0).unwrap(),
+            buf.as_mut_slice(),
+        )
+        .unwrap();
         assert_eq!(buf, expected);
     }
 
@@ -499,8 +504,9 @@ mod tests {
     #[cfg(ossl111)]
     #[test]
     fn test_sha3_224() {
-        let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
-            "1de092dd9fbcbbf450f26264f4778abd48af851f2832924554c56913"
+        let tests = [(
+            "416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
+            "1de092dd9fbcbbf450f26264f4778abd48af851f2832924554c56913",
         )];
 
         for test in tests.iter() {
@@ -511,8 +517,9 @@ mod tests {
     #[cfg(ossl111)]
     #[test]
     fn test_sha3_256() {
-        let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
-            "b38e38f08bc1c0091ed4b5f060fe13e86aa4179578513ad11a6e3abba0062f61"
+        let tests = [(
+            "416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
+            "b38e38f08bc1c0091ed4b5f060fe13e86aa4179578513ad11a6e3abba0062f61",
         )];
 
         for test in tests.iter() {
@@ -549,8 +556,9 @@ mod tests {
     #[cfg(ossl111)]
     #[test]
     fn test_shake_128() {
-        let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
-            "49d0697ff508111d8b84f15e46daf135"
+        let tests = [(
+            "416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
+            "49d0697ff508111d8b84f15e46daf135",
         )];
 
         for test in tests.iter() {
@@ -561,8 +569,9 @@ mod tests {
     #[cfg(ossl111)]
     #[test]
     fn test_shake_256() {
-        let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
-            "4e2dfdaa75d1e049d0eaeffe28e76b17cea47b650fb8826fe48b94664326a697"
+        let tests = [(
+            "416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
+            "4e2dfdaa75d1e049d0eaeffe28e76b17cea47b650fb8826fe48b94664326a697",
         )];
 
         for test in tests.iter() {

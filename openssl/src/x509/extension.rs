@@ -1,4 +1,4 @@
-//! Add extensions to an `X509` certificate or certificate request. 
+//! Add extensions to an `X509` certificate or certificate request.
 //!
 //! The extensions defined for X.509 v3 certificates provide methods for
 //! associating additional attributes with users or public keys and for
@@ -11,11 +11,11 @@
 //! extern crate openssl;
 //!
 //! use openssl::x509::extension::BasicConstraints;
-//! use openssl::x509::X509Extension; 
+//! use openssl::x509::X509Extension;
 //!
 //! fn main() {
 //!     let mut bc = BasicConstraints::new();
-//!     let bc = bc.critical().ca().pathlen(1); 
+//!     let bc = bc.critical().ca().pathlen(1);
 //!
 //!     let extension: X509Extension = bc.build().unwrap();
 //! }

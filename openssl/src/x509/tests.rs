@@ -12,7 +12,7 @@ use x509::extension::{
     SubjectKeyIdentifier,
 };
 use x509::store::X509StoreBuilder;
-use x509::{X509, X509Name, X509Req, X509StoreContext, X509VerifyResult};
+use x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
 
 fn pkey() -> PKey<Private> {
     let rsa = Rsa::generate(2048).unwrap();
@@ -87,7 +87,10 @@ fn test_nameref_iterator() {
     let mut all_entries = subject.entries();
 
     let email = all_entries.next().unwrap();
-    assert_eq!(email.object().nid().as_raw(), Nid::PKCS9_EMAILADDRESS.as_raw());
+    assert_eq!(
+        email.object().nid().as_raw(),
+        Nid::PKCS9_EMAILADDRESS.as_raw()
+    );
     assert_eq!(email.data().as_slice(), b"test@example.com");
 
     let cn = all_entries.next().unwrap();
@@ -334,16 +337,12 @@ fn test_verify_cert() {
     let store = store_bldr.build();
 
     let mut context = X509StoreContext::new().unwrap();
-    assert!(
-        context
-            .init(&store, &cert, &chain, |c| c.verify_cert())
-            .unwrap()
-    );
-    assert!(
-        context
-            .init(&store, &cert, &chain, |c| c.verify_cert())
-            .unwrap()
-    );
+    assert!(context
+        .init(&store, &cert, &chain, |c| c.verify_cert())
+        .unwrap());
+    assert!(context
+        .init(&store, &cert, &chain, |c| c.verify_cert())
+        .unwrap());
 }
 
 #[test]

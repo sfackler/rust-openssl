@@ -65,5 +65,5 @@ macro_rules! stack {
                 }
             }
         }
-    }
+    };
 }

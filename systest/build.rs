@@ -91,7 +91,10 @@ fn main() {
     cfg.skip_type(|s| {
         // function pointers are declared without a `*` in openssl so their
         // sizeof is 1 which isn't what we want.
-        s == "PasswordCallback" || s == "pem_password_cb" || s == "bio_info_cb" || s.starts_with("CRYPTO_EX_")
+        s == "PasswordCallback"
+            || s == "pem_password_cb"
+            || s == "bio_info_cb"
+            || s.starts_with("CRYPTO_EX_")
     });
     cfg.skip_struct(|s| s == "ProbeResult");
     cfg.skip_fn(move |s| {

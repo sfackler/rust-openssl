@@ -1,16 +1,16 @@
 use ffi;
 use foreign_types::ForeignTypeRef;
 use libc::{c_int, c_long, c_ulong};
-use std::ptr;
 use std::mem;
+use std::ptr;
 
-use {cvt, cvt_p};
 use asn1::Asn1GeneralizedTimeRef;
 use error::ErrorStack;
 use hash::MessageDigest;
 use stack::StackRef;
 use x509::store::X509StoreRef;
-use x509::{X509, X509Ref};
+use x509::{X509Ref, X509};
+use {cvt, cvt_p};
 
 bitflags! {
     pub struct OcspFlag: c_ulong {
@@ -130,7 +130,8 @@ impl<'a> OcspStatus<'a> {
                 self.next_update.as_ptr(),
                 nsec as c_long,
                 maxsec.map(|n| n as c_long).unwrap_or(-1),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 }
@@ -160,7 +161,8 @@ impl OcspBasicResponseRef {
                 certs.as_ptr(),
                 store.as_ptr(),
                 flags.bits(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -222,7 +224,8 @@ impl OcspCertId {
                 digest.as_ptr(),
                 subject.as_ptr(),
                 issuer.as_ptr(),
-            )).map(OcspCertId)
+            ))
+            .map(OcspCertId)
         }
     }
 }
@@ -249,7 +252,8 @@ impl OcspResponse {
             cvt_p(ffi::OCSP_response_create(
                 status.as_raw(),
                 body.map(|r| r.as_ptr()).unwrap_or(ptr::null_mut()),
-            )).map(OcspResponse)
+            ))
+            .map(OcspResponse)
         }
     }
 

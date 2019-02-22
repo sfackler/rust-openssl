@@ -830,7 +830,8 @@ impl SslContextBuilder {
                 self.as_ptr(),
                 file.as_ptr() as *const _,
                 ptr::null(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -868,7 +869,8 @@ impl SslContextBuilder {
                 self.as_ptr(),
                 sid_ctx.as_ptr(),
                 sid_ctx.len() as c_uint,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -892,7 +894,8 @@ impl SslContextBuilder {
                 self.as_ptr(),
                 file.as_ptr() as *const _,
                 file_type.as_raw(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -914,7 +917,8 @@ impl SslContextBuilder {
             cvt(ffi::SSL_CTX_use_certificate_chain_file(
                 self.as_ptr(),
                 file.as_ptr() as *const _,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -961,7 +965,8 @@ impl SslContextBuilder {
                 self.as_ptr(),
                 file.as_ptr() as *const _,
                 file_type.as_raw(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -993,7 +998,8 @@ impl SslContextBuilder {
             cvt(ffi::SSL_CTX_set_cipher_list(
                 self.as_ptr(),
                 cipher_list.as_ptr() as *const _,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -1016,7 +1022,8 @@ impl SslContextBuilder {
             cvt(ffi::SSL_CTX_set_ciphersuites(
                 self.as_ptr(),
                 cipher_list.as_ptr() as *const _,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -1083,7 +1090,8 @@ impl SslContextBuilder {
             cvt(ffi::SSL_CTX_set_min_proto_version(
                 self.as_ptr(),
                 version.map_or(0, |v| v.0 as _),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -1103,7 +1111,8 @@ impl SslContextBuilder {
             cvt(ffi::SSL_CTX_set_max_proto_version(
                 self.as_ptr(),
                 version.map_or(0, |v| v.0 as _),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -1282,7 +1291,8 @@ impl SslContextBuilder {
             cvt(
                 ffi::SSL_CTX_set_tlsext_status_cb(self.as_ptr(), Some(raw_tlsext_status::<F>))
                     as c_int,
-            ).map(|_| ())
+            )
+            .map(|_| ())
         }
     }
 
@@ -1309,10 +1319,7 @@ impl SslContextBuilder {
         }
     }
 
-    #[deprecated(
-        since = "0.10.10",
-        note = "renamed to `set_psk_client_callback`"
-    )]
+    #[deprecated(since = "0.10.10", note = "renamed to `set_psk_client_callback`")]
     #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
     pub fn set_psk_callback<F>(&mut self, callback: F)
     where
@@ -1564,14 +1571,21 @@ impl SslContextBuilder {
         parse_cb: ParseFn,
     ) -> Result<(), ErrorStack>
     where
-        AddFn: Fn(&mut SslRef, ExtensionContext, Option<(usize, &X509Ref)>)
-                -> Result<Option<T>, SslAlert>
+        AddFn: Fn(
+                &mut SslRef,
+                ExtensionContext,
+                Option<(usize, &X509Ref)>,
+            ) -> Result<Option<T>, SslAlert>
             + 'static
             + Sync
             + Send,
         T: AsRef<[u8]> + 'static + Sync + Send,
-        ParseFn: Fn(&mut SslRef, ExtensionContext, &[u8], Option<(usize, &X509Ref)>)
-                -> Result<(), SslAlert>
+        ParseFn: Fn(
+                &mut SslRef,
+                ExtensionContext,
+                &[u8],
+                Option<(usize, &X509Ref)>,
+            ) -> Result<(), SslAlert>
             + 'static
             + Sync
             + Send,
@@ -1617,9 +1631,9 @@ impl SslContextBuilder {
     }
 
     /// Sets a callback which will be invoked just after the client's hello message is received.
-    /// 
+    ///
     /// Requires OpenSSL 1.1.1 or newer.
-    /// 
+    ///
     /// This corresponds to [`SSL_CTX_set_client_hello_cb`].
     ///
     /// [`SSL_CTX_set_client_hello_cb`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_client_hello_cb.html
@@ -2753,7 +2767,8 @@ impl SslRef {
                 context,
                 contextlen,
                 use_context,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -2783,7 +2798,8 @@ impl SslRef {
                 label.len(),
                 context.as_ptr() as *const c_uchar,
                 context.len(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -2861,7 +2877,8 @@ impl SslRef {
                 self.as_ptr(),
                 p as *mut c_uchar,
                 response.len() as c_long,
-            ) as c_int).map(|_| ())
+            ) as c_int)
+            .map(|_| ())
         }
     }
 
@@ -2977,29 +2994,27 @@ impl SslRef {
     }
 
     /// Determines if the client's hello message is in the SSLv2 format.
-    /// 
+    ///
     /// This can only be used inside of the client hello callback. Otherwise, `false` is returned.
-    /// 
+    ///
     /// Requires OpenSSL 1.1.1 or newer.
-    /// 
+    ///
     /// This corresponds to [`SSL_client_hello_isv2`].
-    /// 
+    ///
     /// [`SSL_client_hello_isv2`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_client_hello_cb.html
     #[cfg(ossl111)]
     pub fn client_hello_isv2(&self) -> bool {
-        unsafe {
-            ffi::SSL_client_hello_isv2(self.as_ptr()) != 0
-        }
+        unsafe { ffi::SSL_client_hello_isv2(self.as_ptr()) != 0 }
     }
 
     /// Returns the legacy version field of the client's hello message.
-    /// 
+    ///
     /// This can only be used inside of the client hello callback. Otherwise, `None` is returned.
-    /// 
+    ///
     /// Requires OpenSSL 1.1.1 or newer.
-    /// 
+    ///
     /// This corresponds to [`SSL_client_hello_get0_legacy_version`].
-    /// 
+    ///
     /// [`SSL_client_hello_get0_legacy_version`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_client_hello_cb.html
     #[cfg(ossl111)]
     pub fn client_hello_legacy_version(&self) -> Option<SslVersion> {
@@ -3014,13 +3029,13 @@ impl SslRef {
     }
 
     /// Returns the random field of the client's hello message.
-    /// 
+    ///
     /// This can only be used inside of the client hello callback. Otherwise, `None` is returend.
-    /// 
+    ///
     /// Requires OpenSSL 1.1.1 or newer.
-    /// 
+    ///
     /// This corresponds to [`SSL_client_hello_get0_random`].
-    /// 
+    ///
     /// [`SSL_client_hello_get0_random`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_client_hello_cb.html
     #[cfg(ossl111)]
     pub fn client_hello_random(&self) -> Option<&[u8]> {
@@ -3036,13 +3051,13 @@ impl SslRef {
     }
 
     /// Returns the session ID field of the client's hello message.
-    /// 
+    ///
     /// This can only be used inside of the client hello callback. Otherwise, `None` is returend.
-    /// 
+    ///
     /// Requires OpenSSL 1.1.1 or newer.
-    /// 
+    ///
     /// This corresponds to [`SSL_client_hello_get0_session_id`].
-    /// 
+    ///
     /// [`SSL_client_hello_get0_session_id`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_client_hello_cb.html
     #[cfg(ossl111)]
     pub fn client_hello_session_id(&self) -> Option<&[u8]> {
@@ -3058,13 +3073,13 @@ impl SslRef {
     }
 
     /// Returns the ciphers field of the client's hello message.
-    /// 
+    ///
     /// This can only be used inside of the client hello callback. Otherwise, `None` is returend.
-    /// 
+    ///
     /// Requires OpenSSL 1.1.1 or newer.
-    /// 
+    ///
     /// This corresponds to [`SSL_client_hello_get0_ciphers`].
-    /// 
+    ///
     /// [`SSL_client_hello_get0_ciphers`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_client_hello_cb.html
     #[cfg(ossl111)]
     pub fn client_hello_ciphers(&self) -> Option<&[u8]> {
@@ -3080,13 +3095,13 @@ impl SslRef {
     }
 
     /// Returns the compression methods field of the client's hello message.
-    /// 
+    ///
     /// This can only be used inside of the client hello callback. Otherwise, `None` is returend.
-    /// 
+    ///
     /// Requires OpenSSL 1.1.1 or newer.
-    /// 
+    ///
     /// This corresponds to [`SSL_client_hello_get0_compression_methods`].
-    /// 
+    ///
     /// [`SSL_client_hello_get0_compression_methods`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_client_hello_cb.html
     #[cfg(ossl111)]
     pub fn client_hello_compression_methods(&self) -> Option<&[u8]> {
@@ -3363,13 +3378,13 @@ impl<S: Read + Write> Read for SslStream<S> {
                 Ok(n) => return Ok(n),
                 Err(ref e) if e.code() == ErrorCode::ZERO_RETURN => return Ok(0),
                 Err(ref e) if e.code() == ErrorCode::SYSCALL && e.io_error().is_none() => {
-                    return Ok(0)
+                    return Ok(0);
                 }
                 Err(ref e) if e.code() == ErrorCode::WANT_READ && e.io_error().is_none() => {}
                 Err(e) => {
                     return Err(e
                         .into_io_error()
-                        .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)))
+                        .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)));
                 }
             }
         }
@@ -3385,7 +3400,7 @@ impl<S: Read + Write> Write for SslStream<S> {
                 Err(e) => {
                     return Err(e
                         .into_io_error()
-                        .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)))
+                        .unwrap_or_else(|e| io::Error::new(io::ErrorKind::Other, e)));
                 }
             }
         }

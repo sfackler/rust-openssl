@@ -15,10 +15,5 @@ extern "C" {
     pub fn DH_get_2048_256() -> *mut DH;
 
     #[cfg(any(ossl110, libressl273))]
-    pub fn DH_set0_pqg(
-        dh: *mut DH,
-        p: *mut BIGNUM,
-        q: *mut BIGNUM,
-        g: *mut BIGNUM,
-    ) -> c_int;
+    pub fn DH_set0_pqg(dh: *mut DH, p: *mut BIGNUM, q: *mut BIGNUM, g: *mut BIGNUM) -> c_int;
 }

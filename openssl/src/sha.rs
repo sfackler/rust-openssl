@@ -16,15 +16,15 @@
 //! ```rust
 //! extern crate openssl;
 //! extern crate hex;
-//! 
+//!
 //! use openssl::sha;
-//! 
+//!
 //! fn main() {
 //!     let mut hasher = sha::Sha256::new();
-//! 
+//!
 //!     hasher.update(b"Hello, ");
 //!     hasher.update(b"world");
-//! 
+//!
 //!     let hash = hasher.finish();
 //!     println!("Hashed \"Hello, world\" to {}", hex::encode(hash));
 //! }
@@ -45,8 +45,8 @@
 //!     println!("Hash = {}", hex::encode(hash));
 //! }
 //! ```
-use libc::c_void;
 use ffi;
+use libc::c_void;
 use std::mem;
 
 /// Computes the SHA1 hash of some data.
@@ -347,16 +347,18 @@ mod test {
     #[test]
     fn standalone_384() {
         let data = b"abc";
-        let expected = "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e\
-                        7cc2358baeca134c825a7";
+        let expected =
+            "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e\
+             7cc2358baeca134c825a7";
 
         assert_eq!(hex::encode(&sha384(data)[..]), expected);
     }
 
     #[test]
     fn struct_384() {
-        let expected = "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e\
-                        7cc2358baeca134c825a7";
+        let expected =
+            "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e\
+             7cc2358baeca134c825a7";
 
         let mut hasher = Sha384::new();
         hasher.update(b"a");
@@ -367,16 +369,18 @@ mod test {
     #[test]
     fn standalone_512() {
         let data = b"abc";
-        let expected = "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274\
-                        fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f";
+        let expected =
+            "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274\
+             fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f";
 
         assert_eq!(hex::encode(&sha512(data)[..]), expected);
     }
 
     #[test]
     fn struct_512() {
-        let expected = "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274\
-                        fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f";
+        let expected =
+            "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274\
+             fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f";
 
         let mut hasher = Sha512::new();
         hasher.update(b"a");

@@ -10,7 +10,7 @@ use error::ErrorStack;
 use nid::Nid;
 use pkey::{HasPrivate, PKey, PKeyRef, Private};
 use stack::Stack;
-use x509::{X509, X509Ref};
+use x509::{X509Ref, X509};
 use {cvt, cvt_p};
 
 foreign_type_and_impl_send_sync! {
@@ -196,7 +196,8 @@ impl Pkcs12Builder {
                 self.iter,
                 self.mac_iter,
                 keytype,
-            )).map(Pkcs12)
+            ))
+            .map(Pkcs12)
         }
     }
 }
@@ -211,7 +212,7 @@ mod test {
     use pkey::PKey;
     use rsa::Rsa;
     use x509::extension::KeyUsage;
-    use x509::{X509, X509Name};
+    use x509::{X509Name, X509};
 
     use super::*;
 
