@@ -1,6 +1,6 @@
 [package]
 name = "openssl"
-version = "0.10.16"
+version = "0.10.17"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
