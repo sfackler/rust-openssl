@@ -1090,9 +1090,21 @@ extern "C" {
         CAfile: *const c_char,
         CApath: *const c_char,
     ) -> c_int;
+}
 
-    pub fn SSL_get_ssl_method(ssl: *mut SSL) -> *const SSL_METHOD;
+cfg_if! {
+    if #[cfg(ossl111b)] {
+        extern "C" {
+            pub fn SSL_get_ssl_method(ssl: *const SSL) -> *const SSL_METHOD;
+        }
+    } else {
+        extern "C" {
+            pub fn SSL_get_ssl_method(ssl: *mut SSL) -> *const SSL_METHOD;
+        }
+    }
+}
 
+extern "C" {
     pub fn SSL_set_connect_state(s: *mut SSL);
     pub fn SSL_set_accept_state(s: *mut SSL);
 
@@ -1250,11 +1262,25 @@ cfg_if! {
     if #[cfg(libressl)] {
         extern "C" {
             pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const libc::c_void;
+        }
+    } else if #[cfg(osslconf = "OPENSSL_NO_COMP")] {
+    } else if #[cfg(openssl111b)] {
+        extern "C" {
+            pub fn SSL_get_current_compression(ssl: *const SSL) -> *const COMP_METHOD;
+        }
+    } else {
+        extern "C" {
+            pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const COMP_METHOD;
+        }
+    }
+}
+cfg_if! {
+    if #[cfg(libressl)] {
+        extern "C" {
             pub fn SSL_COMP_get_name(comp: *const libc::c_void) -> *const c_char;
         }
     } else if #[cfg(not(osslconf = "OPENSSL_NO_COMP"))] {
         extern "C" {
-            pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const COMP_METHOD;
             pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
         }
     }
