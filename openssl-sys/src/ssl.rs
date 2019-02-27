@@ -1264,7 +1264,7 @@ cfg_if! {
             pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const libc::c_void;
         }
     } else if #[cfg(osslconf = "OPENSSL_NO_COMP")] {
-    } else if #[cfg(openssl111b)] {
+    } else if #[cfg(ossl111b)] {
         extern "C" {
             pub fn SSL_get_current_compression(ssl: *const SSL) -> *const COMP_METHOD;
         }
