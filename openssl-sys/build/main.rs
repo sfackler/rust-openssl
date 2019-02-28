@@ -8,8 +8,6 @@ extern crate vcpkg;
 use std::collections::HashSet;
 use std::env;
 use std::ffi::OsString;
-use std::fs::File;
-use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 mod cfgs;
@@ -17,24 +15,6 @@ mod cfgs;
 #[cfg_attr(feature = "vendored", path = "find_vendored.rs")]
 #[cfg_attr(not(feature = "vendored"), path = "find_normal.rs")]
 mod find;
-
-// The set of `OPENSSL_NO_<FOO>`s that we care about.
-const DEFINES: &'static [&'static str] = &[
-    "OPENSSL_NO_BUF_FREELISTS",
-    "OPENSSL_NO_COMP",
-    "OPENSSL_NO_EC",
-    "OPENSSL_NO_EC2M",
-    "OPENSSL_NO_ENGINE",
-    "OPENSSL_NO_KRB5",
-    "OPENSSL_NO_NEXTPROTONEG",
-    "OPENSSL_NO_PSK",
-    "OPENSSL_NO_RFC3779",
-    "OPENSSL_NO_SHA",
-    "OPENSSL_NO_SRP",
-    "OPENSSL_NO_SSL3_METHOD",
-    "OPENSSL_NO_TLSEXT",
-    "OPENSSL_NO_STDIO",
-];
 
 enum Version {
     Openssl11x,
@@ -125,55 +105,17 @@ fn validate_headers(include_dirs: &[PathBuf]) -> Version {
     // file of OpenSSL, `opensslconf.h`, and then dump out everything it defines
     // as our own #[cfg] directives. That way the `ossl10x.rs` bindings can
     // account for compile differences and such.
-    let mut path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
-    path.push("expando.c");
-    let mut file = BufWriter::new(File::create(&path).unwrap());
-
-    write!(
-        file,
-        "\
-#include <openssl/opensslv.h>
-#include <openssl/opensslconf.h>
-
-#define VERSION2(n, v) RUST_VERSION_ ## n ## _ ## v
-#define VERSION(n, v) VERSION2(n, v)
-
-VERSION(OPENSSL, OPENSSL_VERSION_NUMBER)
-
-#ifdef LIBRESSL_VERSION_NUMBER
-VERSION(LIBRESSL, LIBRESSL_VERSION_NUMBER)
-#endif
-"
-    )
-    .unwrap();
-
-    for define in DEFINES {
-        write!(
-            file,
-            "\
-#ifdef {define}
-RUST_CONF_{define}
-#endif
-",
-            define = define
-        )
-        .unwrap();
-    }
-
-    file.flush().unwrap();
-    drop(file);
-
     let mut gcc = cc::Build::new();
     for include_dir in include_dirs {
         gcc.include(include_dir);
     }
-    let expanded = match gcc.file(&path).try_expand() {
+    let expanded = match gcc.file("build/expando.c").try_expand() {
         Ok(expanded) => expanded,
         Err(e) => {
             panic!(
                 "
 Header expansion error:
-{}
+{:?}
 
 Failed to find OpenSSL development headers.
 
