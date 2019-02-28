@@ -59,6 +59,23 @@ generic_foreign_type_and_impl_send_sync! {
     pub struct DsaRef<T>;
 }
 
+impl<T> Clone for Dsa<T> {
+    fn clone(&self) -> Dsa<T> {
+        (**self).to_owned()
+    }
+}
+
+impl<T> ToOwned for DsaRef<T> {
+    type Owned = Dsa<T>;
+
+    fn to_owned(&self) -> Dsa<T> {
+        unsafe {
+            ffi::DSA_up_ref(self.as_ptr());
+            Dsa::from_ptr(self.as_ptr())
+        }
+    }
+}
+
 impl<T> DsaRef<T>
 where
     T: HasPublic,
@@ -411,5 +428,11 @@ mod test {
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pub_key).unwrap();
         verifier.update(TEST_DATA).unwrap();
         assert!(verifier.verify(&signature[..]).unwrap());
+    }
+
+    #[test]
+    fn clone() {
+        let key = Dsa::generate(2048).unwrap();
+        drop(key.clone());
     }
 }

@@ -5,6 +5,7 @@ use *;
 extern "C" {
     pub fn DSA_new() -> *mut DSA;
     pub fn DSA_free(dsa: *mut DSA);
+    pub fn DSA_up_ref(dsa: *mut DSA) -> c_int;
     pub fn DSA_size(dsa: *const DSA) -> c_int;
     pub fn DSA_sign(
         dummy: c_int,
