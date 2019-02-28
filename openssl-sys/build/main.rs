@@ -2,6 +2,7 @@ extern crate cc;
 #[cfg(feature = "vendored")]
 extern crate openssl_src;
 extern crate pkg_config;
+extern crate rustc_version;
 #[cfg(target_env = "msvc")]
 extern crate vcpkg;
 
@@ -41,6 +42,8 @@ fn env(name: &str) -> Option<OsString> {
 }
 
 fn main() {
+    check_rustc_versions();
+
     let target = env::var("TARGET").unwrap();
 
     let (lib_dir, include_dir) = find::get_openssl(&target);
@@ -87,6 +90,14 @@ fn main() {
         println!("cargo:rustc-link-lib=dylib=crypt32");
         println!("cargo:rustc-link-lib=dylib=ws2_32");
         println!("cargo:rustc-link-lib=dylib=advapi32");
+    }
+}
+
+fn check_rustc_versions() {
+    let version = rustc_version::version().unwrap();
+
+    if version >= rustc_version::Version::new(1, 31, 0) {
+        println!("cargo:rustc-cfg=const_fn");
     }
 }
 

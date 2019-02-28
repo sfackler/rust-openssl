@@ -5,16 +5,24 @@ pub const ERR_TXT_STRING: c_int = 0x02;
 
 pub const ERR_LIB_PEM: c_int = 9;
 
-pub fn ERR_GET_LIB(l: c_ulong) -> c_int {
-    ((l >> 24) & 0x0FF) as c_int
-}
+const_fn! {
+    pub const fn ERR_PACK(l: c_int, f: c_int, r: c_int) -> c_ulong {
+        ((l as c_ulong & 0x0FF) << 24) |
+        ((f as c_ulong & 0xFFF) << 12) |
+        ((r as c_ulong & 0xFFF))
+    }
 
-pub fn ERR_GET_FUNC(l: c_ulong) -> c_int {
-    ((l >> 12) & 0xFFF) as c_int
-}
+    pub const fn ERR_GET_LIB(l: c_ulong) -> c_int {
+        ((l >> 24) & 0x0FF) as c_int
+    }
 
-pub fn ERR_GET_REASON(l: c_ulong) -> c_int {
-    (l & 0xFFF) as c_int
+    pub const fn ERR_GET_FUNC(l: c_ulong) -> c_int {
+        ((l >> 12) & 0xFFF) as c_int
+    }
+
+    pub const fn ERR_GET_REASON(l: c_ulong) -> c_int {
+        (l & 0xFFF) as c_int
+    }
 }
 
 #[repr(C)]
