@@ -919,6 +919,11 @@ extern "C" {
     pub fn SSL_state_string(ssl: *const SSL) -> *const c_char;
     pub fn SSL_state_string_long(ssl: *const SSL) -> *const c_char;
 
+    pub fn SSL_SESSION_get_time(s: *const SSL_SESSION) -> c_long;
+    pub fn SSL_SESSION_get_timeout(s: *const SSL_SESSION) -> c_long;
+    #[cfg(ossl110)]
+    pub fn SSL_SESSION_get_protocol_version(s: *const SSL_SESSION) -> c_int;
+
     #[cfg(ossl111)]
     pub fn SSL_SESSION_set_max_early_data(ctx: *mut SSL_SESSION, max_early_data: u32) -> c_int;
     #[cfg(ossl111)]

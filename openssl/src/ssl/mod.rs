@@ -2129,6 +2129,41 @@ impl SslSessionRef {
         unsafe { ffi::SSL_SESSION_get_max_early_data(self.as_ptr()) }
     }
 
+    /// Returns the time at which the session was established, in seconds since the Unix epoch.
+    ///
+    /// This corresponds to [`SSL_SESSION_get_time`].
+    ///
+    /// [`SSL_SESSION_get_time`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_SESSION_get_time.html
+    pub fn time(&self) -> i64 {
+        unsafe { ffi::SSL_SESSION_get_time(self.as_ptr()) as i64 }
+    }
+
+    /// Returns the sessions timeout, in seconds.
+    ///
+    /// A session older than this time should not be used for session resumption.
+    ///
+    /// This corresponds to [`SSL_SESSION_get_timeout`].
+    ///
+    /// [`SSL_SESSION_get_timeout`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_SESSION_get_time.html
+    pub fn timeout(&self) -> i64 {
+        unsafe { ffi::SSL_SESSION_get_timeout(self.as_ptr()) as i64 }
+    }
+
+    /// Returns the session's TLS protocol version.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    ///
+    /// This corresponds to [`SSL_SESSION_get_protocol_version`].
+    ///
+    /// [`SSL_SESSION_get_protocol_version`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_SESSION_get_time.html
+    #[cfg(ossl110)]
+    pub fn protocol_version(&self) -> SslVersion {
+        unsafe {
+            let version = ffi::SSL_SESSION_get_protocol_version(self.as_ptr());
+            SslVersion(version)
+        }
+    }
+
     to_der! {
         /// Serializes the session into a DER-encoded structure.
         ///
