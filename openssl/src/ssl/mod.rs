@@ -2157,7 +2157,7 @@ impl SslSessionRef {
     ///
     /// [`SSL_SESSION_get_time`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_SESSION_get_time.html
     pub fn time(&self) -> i64 {
-        unsafe { ffi::SSL_SESSION_get_time(self.as_ptr()) as i64 }
+        unsafe { ffi::SSL_SESSION_get_time(self.as_ptr()).into() }
     }
 
     /// Returns the sessions timeout, in seconds.
@@ -2168,7 +2168,7 @@ impl SslSessionRef {
     ///
     /// [`SSL_SESSION_get_timeout`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_SESSION_get_time.html
     pub fn timeout(&self) -> i64 {
-        unsafe { ffi::SSL_SESSION_get_timeout(self.as_ptr()) as i64 }
+        unsafe { ffi::SSL_SESSION_get_timeout(self.as_ptr()).into() }
     }
 
     /// Returns the session's TLS protocol version.
