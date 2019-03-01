@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [v0.10.19] - 2019-03-01
+
+### Added
+
+* The openssl-sys build script now logs the values of environment variables.
+* Added `ERR_PACK` to openssl-sys.
+* The `ERR_*` functions in openssl-sys are const functions when building against newer Rust versions.
+* Implemented `Clone` for `Dsa`.
+* Added `SslContextRef::add_session` and `SslContextRef::remove_session`.
+* Added `SslSessionRef::time`, `SslSessionRef::timeout`, and `SslSessionRef::protocol_version`.
+* Added `SslContextBuilder::set_session_cache_size` and `SslContextRef::session_cache_size`.
+
 ## [v0.10.18] - 2019-02-22
 
 ### Fixed
@@ -321,7 +333,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.18...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.19...master
+[v0.10.18]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.18...openssl-v0.10.19
 [v0.10.18]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.17...openssl-v0.10.18
 [v0.10.17]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.16...openssl-v0.10.17
 [v0.10.16]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.15...openssl-v0.10.16
