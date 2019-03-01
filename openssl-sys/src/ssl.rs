@@ -930,6 +930,8 @@ extern "C" {
     pub fn SSL_SESSION_free(s: *mut SSL_SESSION);
     pub fn i2d_SSL_SESSION(s: *mut SSL_SESSION, pp: *mut *mut c_uchar) -> c_int;
     pub fn SSL_set_session(ssl: *mut SSL, session: *mut SSL_SESSION) -> c_int;
+    pub fn SSL_CTX_add_session(ctx: *mut SSL_CTX, session: *mut SSL_SESSION) -> c_int;
+    pub fn SSL_CTX_remove_session(ctx: *mut SSL_CTX, session: *mut SSL_SESSION) -> c_int;
     pub fn d2i_SSL_SESSION(
         a: *mut *mut SSL_SESSION,
         pp: *mut *const c_uchar,

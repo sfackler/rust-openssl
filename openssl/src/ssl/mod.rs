@@ -1841,6 +1841,38 @@ impl SslContextRef {
     pub fn max_early_data(&self) -> u32 {
         unsafe { ffi::SSL_CTX_get_max_early_data(self.as_ptr()) }
     }
+
+    /// Adds a session to the context's cache.
+    ///
+    /// Returns `true` if the session was successfully added to the cache, and `false` if it was already present.
+    ///
+    /// This corresponds to [`SSL_CTX_add_session`].
+    ///
+    /// # Safety
+    ///
+    /// The caller of this method is responsible for ensuring that the session has never been used with another
+    /// `SslContext` than this one.
+    ///
+    /// [`SSL_CTX_add_session`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_remove_session.html
+    pub unsafe fn add_session(&self, session: &SslSessionRef) -> bool {
+        ffi::SSL_CTX_add_session(self.as_ptr(), session.as_ptr()) != 0
+    }
+
+    /// Removes a session from the context's cache and marks it as non-resumable.
+    ///
+    /// Returns `true` if the session was successfully found and removed, and `false` otherwise.
+    ///
+    /// This corresponds to [`SSL_CTX_remove_session`].
+    ///
+    /// # Safety
+    ///
+    /// The caller of this method is responsible for ensuring that the session has never been used with another
+    /// `SslContext` than this one.
+    ///
+    /// [`SSL_CTX_remove_session`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_remove_session.html
+    pub unsafe fn remove_session(&self, session: &SslSessionRef) -> bool {
+        ffi::SSL_CTX_remove_session(self.as_ptr(), session.as_ptr()) != 0
+    }
 }
 
 /// Information about the state of a cipher.
