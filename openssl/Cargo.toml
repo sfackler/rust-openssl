@@ -25,7 +25,7 @@ foreign-types = "0.3.1"
 lazy_static = "1"
 libc = "0.2"
 
-openssl-sys = { version = "0.9.41", path = "../openssl-sys" }
+openssl-sys = { version = "0.9.42", path = "../openssl-sys" }
 
 [dev-dependencies]
 tempdir = "0.3"
