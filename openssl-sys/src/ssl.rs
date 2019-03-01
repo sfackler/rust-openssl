@@ -697,6 +697,8 @@ pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
 pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_MODE: c_int = 33;
 pub const SSL_CTRL_SET_READ_AHEAD: c_int = 41;
+pub const SSL_CTRL_SET_SESS_CACHE_SIZE: c_int = 42;
+pub const SSL_CTRL_GET_SESS_CACHE_SIZE: c_int = 43;
 pub const SSL_CTRL_SET_SESS_CACHE_MODE: c_int = 44;
 pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB: c_int = 53;
 pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG: c_int = 54;
@@ -1222,6 +1224,14 @@ extern "C" {
     pub fn SSL_CTX_get_ex_data(ctx: *const SSL_CTX, idx: c_int) -> *mut c_void;
 
     pub fn SSL_get_ex_data_X509_STORE_CTX_idx() -> c_int;
+}
+
+pub unsafe fn SSL_CTX_sess_set_cache_size(ctx: *mut SSL_CTX, t: c_long) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_SESS_CACHE_SIZE, t, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_sess_get_cache_size(ctx: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_GET_SESS_CACHE_SIZE, 0, ptr::null_mut())
 }
 
 pub unsafe fn SSL_CTX_set_session_cache_mode(ctx: *mut SSL_CTX, m: c_long) -> c_long {

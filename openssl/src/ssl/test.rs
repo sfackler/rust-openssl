@@ -1849,3 +1849,11 @@ fn openssl_cipher_name() {
 
     assert_eq!(super::cipher_name("asdf"), "(NONE)");
 }
+
+#[test]
+fn session_cache_size() {
+    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    ctx.set_session_cache_size(1234);
+    let ctx = ctx.build();
+    assert_eq!(ctx.session_cache_size(), 1234);
+}

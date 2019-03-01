@@ -1675,6 +1675,17 @@ impl SslContextBuilder {
         }
     }
 
+    /// Sets the context's session cache size limit, returning the previous limit.
+    ///
+    /// A value of 0 means that the cache size is unbounded.
+    ///
+    /// This corresponds to [`SSL_CTX_sess_get_cache_size`].
+    ///
+    /// [`SSL_CTX_sess_get_cache_size`]: https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_sess_set_cache_size.html
+    pub fn set_session_cache_size(&mut self, size: i32) -> i64 {
+        unsafe { ffi::SSL_CTX_sess_set_cache_size(self.as_ptr(), size.into()).into() }
+    }
+
     /// Consumes the builder, returning a new `SslContext`.
     pub fn build(self) -> SslContext {
         self.0
@@ -1872,6 +1883,17 @@ impl SslContextRef {
     /// [`SSL_CTX_remove_session`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_remove_session.html
     pub unsafe fn remove_session(&self, session: &SslSessionRef) -> bool {
         ffi::SSL_CTX_remove_session(self.as_ptr(), session.as_ptr()) != 0
+    }
+
+    /// Returns the context's session cache size limit.
+    ///
+    /// A value of 0 means that the cache size is unbounded.
+    ///
+    /// This corresponds to [`SSL_CTX_sess_get_cache_size`].
+    ///
+    /// [`SSL_CTX_sess_get_cache_size`]: https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_sess_set_cache_size.html
+    pub fn session_cache_size(&self) -> i64 {
+        unsafe { ffi::SSL_CTX_sess_get_cache_size(self.as_ptr()).into() }
     }
 }
 
