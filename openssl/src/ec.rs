@@ -237,6 +237,49 @@ impl EcGroupRef {
             ffi::EC_GROUP_set_asn1_flag(self.as_ptr(), flag.0);
         }
     }
+
+    /// Check if two curves are equal.
+    ///
+    /// OpenSSL documentation available at [`EC_GROUP_cmp`]
+    ///
+    /// [`EC_GROUP_cmp`]: https://www.openssl.org/docs/man1.1.0/man3/EC_GROUP_cmp.html
+    pub fn eq(&self, other: &EcGroupRef, ctx: &mut BigNumContextRef) -> Result<bool, ErrorStack> {
+        unsafe {
+            let res = cvt_n(ffi::EC_GROUP_cmp(
+                self.as_ptr(),
+                other.as_ptr(),
+                ctx.as_ptr(),
+            ))?;
+            Ok(res == 0)
+        }
+    }
+
+    /// Allows a `Nid` to be associated with a curve.
+    ///
+    /// OpenSSL documentation available at [`EC_GROUP_set_curve_name`]
+    ///
+    /// [`EC_GROUP_set_curve_name`]: https://www.openssl.org/docs/man1.1.0/man3/EC_GROUP_set_curve_name.html
+    pub fn set_curve_name(&self, nid: Option<Nid>) {
+        unsafe {
+            ffi::EC_GROUP_set_curve_name(self.as_ptr(), nid.unwrap_or(Nid::UNDEF).as_raw());
+        }
+    }
+
+    /// Returns the Nid associated with a curve. Returns `None` if no `Nid` associated.
+    ///
+    /// OpenSSL documentation available at [`EC_GROUP_get_curve_name`]
+    ///
+    /// [`EC_GROUP_get_curve_name`]: https://www.openssl.org/docs/man1.1.0/man3/EC_GROUP_get_curve_name.html
+    pub fn get_curve_name(&self) -> Option<Nid> {
+        let n = unsafe { ffi::EC_GROUP_get_curve_name(self.as_ptr()) };
+
+        let nid = Nid::from_raw(n);
+        if nid == Nid::UNDEF {
+            None
+        } else {
+            Some(nid)
+        }
+    }
 }
 
 foreign_type_and_impl_send_sync! {
@@ -939,4 +982,42 @@ mod test {
         assert_eq!(xbn2, xbn);
         assert_eq!(ybn2, ybn);
     }
+
+    #[test]
+    fn group_eq() {
+        let group1 = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let group2 = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+
+        let mut ctx = BigNumContext::new().unwrap();
+        assert!(group1.eq(&group2, &mut ctx).unwrap());
+
+        let other_group = EcGroup::from_curve_name(Nid::SECP224R1).unwrap();
+        assert_eq!(false, group1.eq(&other_group, &mut ctx).unwrap());
+    }
+
+    #[test]
+    fn curve_name_for_named_group() {
+        let group_with_name = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        assert_eq!(
+            Some(Nid::X9_62_PRIME256V1),
+            group_with_name.get_curve_name()
+        );
+    }
+
+    #[test]
+    fn curve_name_for_unnamed_group() {
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        group.set_curve_name(None);
+
+        assert_eq!(None, group.get_curve_name());
+    }
+
+    #[test]
+    fn change_curve_name() {
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        group.set_curve_name(Some(Nid::SECP224R1));
+
+        assert_eq!(Some(Nid::SECP224R1), group.get_curve_name());
+    }
+
 }
