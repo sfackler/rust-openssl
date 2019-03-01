@@ -1675,6 +1675,17 @@ impl SslContextBuilder {
         }
     }
 
+    /// Sets the context's session cache size limit, returning the previous limit.
+    ///
+    /// A value of 0 means that the cache size is unbounded.
+    ///
+    /// This corresponds to [`SSL_CTX_sess_get_cache_size`].
+    ///
+    /// [`SSL_CTX_sess_get_cache_size`]: https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_sess_set_cache_size.html
+    pub fn set_session_cache_size(&mut self, size: i32) -> i64 {
+        unsafe { ffi::SSL_CTX_sess_set_cache_size(self.as_ptr(), size.into()).into() }
+    }
+
     /// Consumes the builder, returning a new `SslContext`.
     pub fn build(self) -> SslContext {
         self.0
@@ -1840,6 +1851,49 @@ impl SslContextRef {
     #[cfg(ossl111)]
     pub fn max_early_data(&self) -> u32 {
         unsafe { ffi::SSL_CTX_get_max_early_data(self.as_ptr()) }
+    }
+
+    /// Adds a session to the context's cache.
+    ///
+    /// Returns `true` if the session was successfully added to the cache, and `false` if it was already present.
+    ///
+    /// This corresponds to [`SSL_CTX_add_session`].
+    ///
+    /// # Safety
+    ///
+    /// The caller of this method is responsible for ensuring that the session has never been used with another
+    /// `SslContext` than this one.
+    ///
+    /// [`SSL_CTX_add_session`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_remove_session.html
+    pub unsafe fn add_session(&self, session: &SslSessionRef) -> bool {
+        ffi::SSL_CTX_add_session(self.as_ptr(), session.as_ptr()) != 0
+    }
+
+    /// Removes a session from the context's cache and marks it as non-resumable.
+    ///
+    /// Returns `true` if the session was successfully found and removed, and `false` otherwise.
+    ///
+    /// This corresponds to [`SSL_CTX_remove_session`].
+    ///
+    /// # Safety
+    ///
+    /// The caller of this method is responsible for ensuring that the session has never been used with another
+    /// `SslContext` than this one.
+    ///
+    /// [`SSL_CTX_remove_session`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_remove_session.html
+    pub unsafe fn remove_session(&self, session: &SslSessionRef) -> bool {
+        ffi::SSL_CTX_remove_session(self.as_ptr(), session.as_ptr()) != 0
+    }
+
+    /// Returns the context's session cache size limit.
+    ///
+    /// A value of 0 means that the cache size is unbounded.
+    ///
+    /// This corresponds to [`SSL_CTX_sess_get_cache_size`].
+    ///
+    /// [`SSL_CTX_sess_get_cache_size`]: https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_sess_set_cache_size.html
+    pub fn session_cache_size(&self) -> i64 {
+        unsafe { ffi::SSL_CTX_sess_get_cache_size(self.as_ptr()).into() }
     }
 }
 
@@ -2095,6 +2149,41 @@ impl SslSessionRef {
     #[cfg(ossl111)]
     pub fn max_early_data(&self) -> u32 {
         unsafe { ffi::SSL_SESSION_get_max_early_data(self.as_ptr()) }
+    }
+
+    /// Returns the time at which the session was established, in seconds since the Unix epoch.
+    ///
+    /// This corresponds to [`SSL_SESSION_get_time`].
+    ///
+    /// [`SSL_SESSION_get_time`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_SESSION_get_time.html
+    pub fn time(&self) -> i64 {
+        unsafe { ffi::SSL_SESSION_get_time(self.as_ptr()) as i64 }
+    }
+
+    /// Returns the sessions timeout, in seconds.
+    ///
+    /// A session older than this time should not be used for session resumption.
+    ///
+    /// This corresponds to [`SSL_SESSION_get_timeout`].
+    ///
+    /// [`SSL_SESSION_get_timeout`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_SESSION_get_time.html
+    pub fn timeout(&self) -> i64 {
+        unsafe { ffi::SSL_SESSION_get_timeout(self.as_ptr()) as i64 }
+    }
+
+    /// Returns the session's TLS protocol version.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    ///
+    /// This corresponds to [`SSL_SESSION_get_protocol_version`].
+    ///
+    /// [`SSL_SESSION_get_protocol_version`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_SESSION_get_time.html
+    #[cfg(ossl110)]
+    pub fn protocol_version(&self) -> SslVersion {
+        unsafe {
+            let version = ffi::SSL_SESSION_get_protocol_version(self.as_ptr());
+            SslVersion(version)
+        }
     }
 
     to_der! {
