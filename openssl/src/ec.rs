@@ -259,7 +259,7 @@ impl EcGroupRef {
     /// OpenSSL documentation available at [`EC_GROUP_set_curve_name`]
     ///
     /// [`EC_GROUP_set_curve_name`]: https://www.openssl.org/docs/man1.1.0/man3/EC_GROUP_set_curve_name.html
-    pub fn set_curve_name(&self, nid: Option<Nid>) {
+    pub fn set_curve_name(&mut self, nid: Option<Nid>) {
         unsafe {
             ffi::EC_GROUP_set_curve_name(self.as_ptr(), nid.unwrap_or(Nid::UNDEF).as_raw());
         }
@@ -1006,7 +1006,7 @@ mod test {
 
     #[test]
     fn curve_name_for_unnamed_group() {
-        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let mut group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         group.set_curve_name(None);
 
         assert_eq!(None, group.get_curve_name());
@@ -1014,7 +1014,7 @@ mod test {
 
     #[test]
     fn change_curve_name() {
-        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let mut group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         group.set_curve_name(Some(Nid::SECP224R1));
 
         assert_eq!(Some(Nid::SECP224R1), group.get_curve_name());
