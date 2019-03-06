@@ -225,6 +225,7 @@ fn x509_builder() {
     let x509 = builder.build();
 
     assert!(pkey.public_eq(&x509.public_key().unwrap()));
+    assert!(x509.verify(&pkey).unwrap());
 
     let cn = x509
         .subject_name()
@@ -268,6 +269,7 @@ fn x509_req_builder() {
     let req = builder.build();
     assert!(req.public_key().unwrap().public_eq(&pkey));
     assert_eq!(req.extensions().unwrap().len(), extensions.len());
+    assert!(req.verify(&pkey).unwrap());
 }
 
 #[test]
