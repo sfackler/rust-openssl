@@ -88,4 +88,14 @@ extern "C" {
         out: *mut ::BIO,
         flags: c_uint,
     ) -> c_int;
+
+    #[cfg(ossl101)]
+    pub fn CMS_verify(
+        cms: *mut ::CMS_ContentInfo,
+        certs: *mut ::stack_st_X509,
+        store: *mut ::X509_STORE,
+        indata: *mut ::BIO,
+        out: *mut ::BIO,
+        flags: c_uint,
+    ) -> c_int;
 }
