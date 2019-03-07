@@ -16,7 +16,8 @@ use pkey::{HasPrivate, PKeyRef};
 use stack::StackRef;
 use symm::Cipher;
 use x509::{X509Ref, X509};
-use {cvt, cvt_p};
+use x509::store::X509StoreRef;
+use {cvt, cvt_n, cvt_p};
 
 bitflags! {
     pub struct CMSOptions : c_uint {
@@ -93,6 +94,81 @@ impl CmsContentInfoRef {
             ))?;
 
             Ok(out.get_buf().to_owned())
+        }
+    }
+
+    /// Verify the sender's signature given an optional sender's certificate `cert` and CA store
+    /// `store`. If the signature is correct, signed data are returned, otherwise `None`.
+    ///
+    /// OpenSSL documentation at [`CMS_verify`]
+    /// 
+    /// [`CMS_verify`]: https://www.openssl.org/docs/manmaster/man3/CMS_verify.html
+    pub fn verify(
+        &self,
+        certs: Option<&StackRef<X509>>,
+        store: &X509StoreRef,
+        flags: CMSOptions,
+    ) -> Result<Option<Vec<u8>>, ErrorStack> {
+        let mut out = MemBio::new()?;
+        let is_valid = self._verify(certs, store, None, Some(&mut out), flags)?;
+        if is_valid {
+            Ok(Some(out.get_buf().to_owned()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Verify the sender's signature given an optional sender's certificate `cert` and CA store
+    /// `store`. If the signature is correct, returns `true`, otherwise `false`.
+    /// This is the version for detached signatures.
+    ///
+    /// OpenSSL documentation at [`CMS_verify`]
+    /// 
+    /// [`CMS_verify`]: https://www.openssl.org/docs/manmaster/man3/CMS_verify.html
+    pub fn verify_detached(
+        &self,
+        certs: Option<&StackRef<X509>>,
+        store: &X509StoreRef,
+        data: &[u8],
+        flags: CMSOptions,
+    ) -> Result<bool, ErrorStack> {
+        let mut in_data = MemBioSlice::new(data)?;
+        self._verify(certs, store, Some(&mut in_data), None, flags)
+    }
+
+    fn _verify(
+        &self,
+        certs: Option<&StackRef<X509>>,
+        store: &X509StoreRef,
+        data: Option<&mut MemBioSlice>,
+        out: Option<&mut MemBio>,
+        flags: CMSOptions,
+    ) -> Result<bool, ErrorStack> {
+        unsafe {
+            let certs = match certs {
+                Some(certs) => certs.as_ptr(),
+                None => ptr::null_mut(),
+            };
+            let store = store.as_ptr();
+            let in_ptr = match data {
+                Some(in_ptr) => in_ptr.as_ptr(),
+                None => ptr::null_mut(),
+            };
+            let out_ptr = match out {
+                Some(out_ptr) => out_ptr.as_ptr(),
+                None => ptr::null_mut(),
+            };
+
+            let is_valid = cvt_n(ffi::CMS_verify(
+                self.as_ptr(),
+                certs,
+                store,
+                in_ptr,
+                out_ptr,
+                flags.bits(),
+            ))? == 1;
+
+            Ok(is_valid)
         }
     }
 
@@ -228,6 +304,7 @@ mod test {
     use pkcs12::Pkcs12;
     use stack::Stack;
     use x509::X509;
+    use x509::store::X509StoreBuilder;
 
     #[test]
     fn cms_encrypt_decrypt() {
@@ -282,5 +359,62 @@ mod test {
                 String::from_utf8(decrypt).expect("failed to create string from cms content");
             assert_eq!(input, decrypt);
         }
+    }
+
+    #[test]
+    fn cms_sign_verify() {
+        // load cert with private key
+        let priv_cert_bytes = include_bytes!("../test/cms.p12");
+        let priv_cert = Pkcs12::from_der(priv_cert_bytes).expect("failed to load priv cert");
+        let priv_cert = priv_cert.parse("mypass").expect("failed to parse priv cert");
+
+        // sign cms message using private key cert
+        let input = String::from("My Message");
+        let sign = CmsContentInfo::sign(Some(&priv_cert.cert), Some(&priv_cert.pkey), None, Some(&input.as_bytes()), CMSOptions::empty())
+            .expect("failed create signed cms");
+        let sign = sign.to_der().expect("failed to create der from cms");
+
+        // verify signature on cms message
+        let verify = CmsContentInfo::from_der(&sign).expect("failed read cms from der");
+
+        let mut cert_stack = Stack::new().expect("failed to create stack");
+        cert_stack.push(priv_cert.cert.clone()).expect("failed to add cert to stack");
+
+        let mut store_builder = X509StoreBuilder::new().expect("failed to create store builder");
+        store_builder.add_cert(priv_cert.cert.clone()).expect("failed to add certificate to store");
+        let store = store_builder.build();
+
+        let verify = verify.verify(Some(&cert_stack), &store, CMSOptions::empty()).expect("failed to verify cms");
+        let verify = verify.expect("cms verification returned None");
+        let verify = String::from_utf8(verify).expect("failed to create string from cms content");
+
+        assert_eq!(input, verify);
+    }
+
+    #[test]
+    fn cms_sign_verify_detached() {
+        // load cert with private key
+        let priv_cert_bytes = include_bytes!("../test/cms.p12");
+        let priv_cert = Pkcs12::from_der(priv_cert_bytes).expect("failed to load priv cert");
+        let priv_cert = priv_cert.parse("mypass").expect("failed to parse priv cert");
+
+        // sign cms message using private key cert
+        let input = String::from("My Message");
+        let sign = CmsContentInfo::sign(Some(&priv_cert.cert), Some(&priv_cert.pkey), None, Some(&input.as_bytes()), CMSOptions::DETACHED)
+            .expect("failed create signed cms");
+        let sign = sign.to_der().expect("failed to create der from cms");
+
+        // verify signature on cms message
+        let verify = CmsContentInfo::from_der(&sign).expect("failed read cms from der");
+
+        let mut cert_stack = Stack::new().expect("failed to create stack");
+        cert_stack.push(priv_cert.cert.clone()).expect("failed to add cert to stack");
+
+        let mut store_builder = X509StoreBuilder::new().expect("failed to create store builder");
+        store_builder.add_cert(priv_cert.cert.clone()).expect("failed to add certificate to store");
+        let store = store_builder.build();
+
+        let verify = verify.verify_detached(Some(&cert_stack), &store, input.as_bytes(), CMSOptions::empty()).expect("failed to verify cms");
+        assert!(verify);
     }
 }
