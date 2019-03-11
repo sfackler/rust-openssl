@@ -129,6 +129,12 @@ jobs:
                   --manifest-path=systest/Cargo.toml \
                   <<# parameters.vendored >>--features vendored<</ parameters.vendored >> \
                   --target << parameters.target >>
+            - run: |
+                cargo test \
+                  --manifest-path=openssl-errors/Cargo.toml \
+                  <<# parameters.vendored >>--features openssl-sys/vendored<</ parameters.vendored >> \
+                  --target << parameters.target >> \
+                  <<# parameters.no_run >>--no-run<</ parameters.no_run >>
       - run: |
           ulimit -c unlimited
           export PATH=$OPENSSL_DIR/bin:$PATH
@@ -176,6 +182,10 @@ jobs:
           cargo run \
             --manifest-path=systest/Cargo.toml \
             <<# parameters.vendored >> --features vendored <</ parameters.vendored >>
+      - run: |
+          cargo run \
+            --manifest-path=openssl-errors/Cargo.toml \
+            <<# parameters.vendored >> --features openssl-sys/vendored <</ parameters.vendored >>
       - run: |
           PATH=/usr/local/opt/openssl/bin:$PATH
           cargo test \
