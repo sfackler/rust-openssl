@@ -17,8 +17,11 @@ jobs:
       no_run:
         type: boolean
         default: false
+      image:
+        type: string
+        default: 1.24.1
     docker:
-      - image: rust:1.24.1
+      - image: rust:<< parameters.image >>
     environment:
       RUST_BACKTRACE: 1
       OPENSSL_DIR: /opt/openssl
@@ -50,62 +53,62 @@ jobs:
           esac
 
           rustup target add << parameters.target >>
-      - restore_cache:
-          key: openssl-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>
-      - run: |
-          if [ -d "$OPENSSL_DIR" ]; then
-            exit 0
-          fi
+      - unless:
+          condition: << parameters.vendored >>
+          steps:
+            - restore_cache:
+                key: openssl-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>
+            - run: |
+                if [ -d "$OPENSSL_DIR" ]; then
+                  exit 0
+                fi
 
-          case "<< parameters.library >>" in
-          "libressl")
-            URL="https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-<< parameters.version >>.tar.gz"
-            ;;
-          "openssl")
-            URL="https://openssl.org/source/openssl-<< parameters.version >>.tar.gz"
-            ;;
-          "")
-            exit 0
-            ;;
-          esac
+                case "<< parameters.library >>" in
+                "libressl")
+                  URL="https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-<< parameters.version >>.tar.gz"
+                  ;;
+                "openssl")
+                  URL="https://openssl.org/source/openssl-<< parameters.version >>.tar.gz"
+                  ;;
+                esac
 
-          case "<< parameters.target >>" in
-          "x86_64-unknown-linux-gnu")
-            OS_COMPILER=linux-x86_64
-            OS_FLAGS=""
-            ;;
-          "i686-unknown-linux-gnu")
-            OS_COMPILER=linux-elf
-            OS_FLAGS=-m32
-            ;;
-          "arm-unknown-linux-gnueabihf")
-            OS_COMPILER=linux-armv4
-            OS_FLAGS=""
-            export AR=arm-linux-gnueabihf-ar
-            export CC=arm-linux-gnueabihf-gcc
-            ;;
-          esac
+                case "<< parameters.target >>" in
+                "x86_64-unknown-linux-gnu")
+                  OS_COMPILER=linux-x86_64
+                  OS_FLAGS=""
+                  ;;
+                "i686-unknown-linux-gnu")
+                  OS_COMPILER=linux-elf
+                  OS_FLAGS=-m32
+                  ;;
+                "arm-unknown-linux-gnueabihf")
+                  OS_COMPILER=linux-armv4
+                  OS_FLAGS=""
+                  export AR=arm-linux-gnueabihf-ar
+                  export CC=arm-linux-gnueabihf-gcc
+                  ;;
+                esac
 
-          mkdir /tmp/build
-          cd /tmp/build
+                mkdir /tmp/build
+                cd /tmp/build
 
-          curl -L $URL | tar --strip-components=1 -xzf -
+                curl -L $URL | tar --strip-components=1 -xzf -
 
-          case "<< parameters.library >>" in
-          "openssl")
-            ./Configure --prefix=$OPENSSL_DIR $OS_COMPILER -fPIC -g $OS_FLAGS no-shared
-            ;;
-          "libressl")
-            ./configure --prefix=$OPENSSL_DIR --disable-shared --with-pic
-            ;;
-          esac
+                case "<< parameters.library >>" in
+                "openssl")
+                  ./Configure --prefix=$OPENSSL_DIR $OS_COMPILER -fPIC -g $OS_FLAGS no-shared
+                  ;;
+                "libressl")
+                  ./configure --prefix=$OPENSSL_DIR --disable-shared --with-pic
+                  ;;
+                esac
 
-          make
-          make install_sw
-      - save_cache:
-          key: openssl-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>
-          paths:
-            - /opt/openssl
+                make
+                make install_sw
+            - save_cache:
+                key: openssl-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>
+                paths:
+                  - /opt/openssl
       - restore_cache:
           key: registry
       - run: cargo generate-lockfile
@@ -114,7 +117,7 @@ jobs:
           paths:
             - /usr/local/cargo/registry/index
       - restore_cache:
-          key: deps-1.24.1-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>-{{ checksum "Cargo.lock" }}
+          key: deps-<< parameters.image >>-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>-{{ checksum "Cargo.lock" }}
       - run: |
           cargo run \
             --manifest-path=systest/Cargo.toml \
@@ -129,7 +132,7 @@ jobs:
             --target << parameters.target >> \
             <<# parameters.no_run >>--no-run<</ parameters.no_run >>
       - save_cache:
-          key: deps-1.24.1-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>-{{ checksum "Cargo.lock" }}
+          key: deps-<< parameters.image >>-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>-{{ checksum "Cargo.lock" }}
           paths:
             - /usr/local/cargo/registry/cache
             - target
@@ -147,6 +150,9 @@ jobs:
       vendored:
         type: boolean
         default: false
+      image:
+        type: string
+        default: 1.24.1
     macos:
       xcode: "9.0"
     environment:
@@ -155,11 +161,11 @@ jobs:
       - checkout
       - run: sudo mkdir /opt
       - run: sudo chown -R $USER /usr/local/ /opt
-      - run: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.24.1
+      - run: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain << parameters.image >>
       - run: sudo ln -s ~/.cargo/bin/* /usr/local/bin
       - run: cargo generate-lockfile
       - restore_cache:
-          key: deps-1.24.1-macos-<< parameters.vendored >>-{{ checksum "Cargo.lock" }}
+          key: deps-<< parameters.image >>-macos-<< parameters.vendored >>-{{ checksum "Cargo.lock" }}
       - run: |
           cargo run \
             --manifest-path=systest/Cargo.toml \
@@ -170,7 +176,7 @@ jobs:
             --manifest-path=openssl/Cargo.toml \
             <<# parameters.vendored >> --features vendored <</ parameters.vendored >>
       - save_cache:
-          key: deps-1.24.1-macos-<< parameters.vendored >>-{{ checksum "Cargo.lock" }}
+          key: deps-<< parameters.image >>-macos-<< parameters.vendored >>-{{ checksum "Cargo.lock" }}
           paths:
             - ~/.cargo/registry/cache
             - target
