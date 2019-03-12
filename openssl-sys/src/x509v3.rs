@@ -76,6 +76,7 @@ cfg_if! {
 
 extern "C" {
     pub fn X509_check_issued(issuer: *mut X509, subject: *mut X509) -> c_int;
+    pub fn X509_verify(req: *mut X509, pkey: *mut EVP_PKEY) -> c_int;
 
     pub fn X509V3_set_nconf(ctx: *mut X509V3_CTX, conf: *mut CONF);
 

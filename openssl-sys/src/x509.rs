@@ -241,6 +241,7 @@ extern "C" {
     pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: *mut stack_st_X509_EXTENSION)
         -> c_int;
     pub fn X509_set_pubkey(x: *mut X509, pkey: *mut EVP_PKEY) -> c_int;
+    pub fn X509_REQ_verify(req: *mut X509_REQ, pkey: *mut EVP_PKEY) -> c_int;
     #[cfg(any(ossl110, libressl273))]
     pub fn X509_getm_notBefore(x: *const X509) -> *mut ASN1_TIME;
     #[cfg(any(ossl110, libressl273))]

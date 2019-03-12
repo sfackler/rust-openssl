@@ -531,6 +531,23 @@ impl X509Ref {
         }
     }
 
+    /// Check if the certificate is signed using the given public key.
+    ///
+    /// Only the signature is checked: no other checks (such as certificate chain validity)
+    /// are performed.
+    ///
+    /// Returns `true` if verification succeeds.
+    ///
+    /// This corresponds to [`X509_verify"].
+    ///
+    /// [`X509_verify`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_verify.html
+    pub fn verify<T>(&self, key: &PKeyRef<T>) -> Result<bool, ErrorStack>
+    where
+        T: HasPublic,
+    {
+        unsafe { cvt_n(ffi::X509_verify(self.as_ptr(), key.as_ptr())).map(|n| n != 0) }
+    }
+
     /// Returns this certificate's serial number.
     ///
     /// This corresponds to [`X509_get_serialNumber`].
@@ -1126,6 +1143,20 @@ impl X509ReqRef {
             let key = cvt_p(ffi::X509_REQ_get_pubkey(self.as_ptr()))?;
             Ok(PKey::from_ptr(key))
         }
+    }
+
+    /// Check if the certificate request is signed using the given public key.
+    ///
+    /// Returns `true` if verification succeeds.
+    ///
+    /// This corresponds to [`X509_REQ_verify"].
+    ///
+    /// [`X509_REQ_verify`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_verify.html
+    pub fn verify<T>(&self, key: &PKeyRef<T>) -> Result<bool, ErrorStack>
+    where
+        T: HasPublic,
+    {
+        unsafe { cvt_n(ffi::X509_REQ_verify(self.as_ptr(), key.as_ptr())).map(|n| n != 0) }
     }
 
     /// Returns the extensions of the certificate request.
