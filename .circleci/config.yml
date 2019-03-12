@@ -19,7 +19,10 @@ jobs:
         default: false
       image:
         type: string
-        default: 1.24.1
+        default: 1.33.0
+      minimal_build:
+        type: bool
+        default: false
     docker:
       - image: rust:<< parameters.image >>
     environment:
@@ -118,11 +121,14 @@ jobs:
             - /usr/local/cargo/registry/index
       - restore_cache:
           key: deps-<< parameters.image >>-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>-{{ checksum "Cargo.lock" }}
-      - run: |
-          cargo run \
-            --manifest-path=systest/Cargo.toml \
-            <<# parameters.vendored >>--features vendored<</ parameters.vendored >> \
-            --target << parameters.target >>
+      - unless:
+          condition: minimal_build
+          steps:
+            - run: |
+                cargo run \
+                  --manifest-path=systest/Cargo.toml \
+                  <<# parameters.vendored >>--features vendored<</ parameters.vendored >> \
+                  --target << parameters.target >>
       - run: |
           ulimit -c unlimited
           export PATH=$OPENSSL_DIR/bin:$PATH
@@ -152,7 +158,7 @@ jobs:
         default: false
       image:
         type: string
-        default: 1.24.1
+        default: 1.33.0
     macos:
       xcode: "9.0"
     environment:
@@ -197,6 +203,12 @@ openssl_101: &openssl_101
 workflows:
   test:
     jobs:
+      - linux:
+          name: mimimal-version
+          target: x86_64-unknown-linux-musl
+          vendored: true
+          image: 1.24.1
+          minimal_build: true
       - linux:
           name: musl-vendored
           target: x86_64-unknown-linux-musl

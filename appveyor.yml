@@ -1,10 +1,10 @@
 environment:
   SSL_CERT_FILE: "C:\\OpenSSL\\cacert.pem"
   matrix:
-    # 1.1.0, 64/32 bit
+    # 1.1.1, 64 bit
     - TARGET: x86_64-pc-windows-msvc
       BITS: 64
-      OPENSSL_VERSION: 1_1_0j
+      OPENSSL_VERSION: 1_1_1b
       OPENSSL_DIR: C:\OpenSSL
 
     # 1.0.2, 64/32 bit
@@ -16,6 +16,8 @@ environment:
       BITS: 32
       OPENSSL_VERSION: 1_0_2r
       OPENSSL_DIR: C:\OpenSSL
+
+    # vcpkg
     - TARGET: x86_64-pc-windows-msvc
       VCPKG_DEFAULT_TRIPLET: x64-windows
       VCPKGRS_DYNAMIC: 1
