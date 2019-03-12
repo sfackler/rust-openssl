@@ -21,7 +21,7 @@ jobs:
         type: string
         default: 1.33.0
       minimal_build:
-        type: bool
+        type: boolean
         default: false
     docker:
       - image: rust:<< parameters.image >>
@@ -122,7 +122,7 @@ jobs:
       - restore_cache:
           key: deps-<< parameters.image >>-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>-{{ checksum "Cargo.lock" }}
       - unless:
-          condition: minimal_build
+          condition: << parameters.minimal_build >>
           steps:
             - run: |
                 cargo run \
