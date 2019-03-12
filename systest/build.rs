@@ -67,7 +67,7 @@ fn main() {
         cfg.header("openssl/cms.h");
     }
 
-    cfg.type_name(|s, is_struct| {
+    cfg.type_name(|s, is_struct, _is_union| {
         // Add some `*` on some callback parameters to get function pointer to
         // typecheck in C, especially on MSVC.
         if s == "PasswordCallback" {
