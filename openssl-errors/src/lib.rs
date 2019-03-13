@@ -1,7 +1,7 @@
 use libc::{c_char, c_int};
-use std::ptr;
 use std::borrow::Cow;
 use std::marker::PhantomData;
+use std::ptr;
 
 #[doc(hidden)]
 pub mod export {
@@ -84,7 +84,7 @@ pub unsafe fn __put_error<T>(
                 Some((ptr, openssl_sys::ERR_TXT_MALLOCED))
             }
         }
-        None => None
+        None => None,
     };
     if let Some((ptr, flags)) = data {
         openssl_sys::ERR_set_error_data(ptr, flags | openssl_sys::ERR_TXT_STRING);
@@ -135,20 +135,24 @@ macro_rules! put_error {
 #[macro_export]
 macro_rules! openssl_errors {
     ($(
+        $(#[$lib_attr:meta])*
         $lib_vis:vis library $lib_name:ident($lib_str:expr) {
             functions {
                 $(
+                    $(#[$func_attr:meta])*
                     $func_name:ident($func_str:expr);
                 )*
             }
 
             reasons {
                 $(
+                    $(#[$reason_attr:meta])*
                     $reason_name:ident($reason_str:expr);
                 )*
             }
         }
     )*) => {$(
+        $(#[$lib_attr])*
         $lib_vis enum $lib_name {}
 
         impl $crate::Library for $lib_name {
@@ -192,16 +196,18 @@ macro_rules! openssl_errors {
         }
 
         impl $lib_name {
-            $crate::openssl_errors!(@func_consts $lib_name; 1; $($func_name;)*);
-            $crate::openssl_errors!(@reason_consts $lib_name; 1; $($reason_name;)*);
+            $crate::openssl_errors!(@func_consts $lib_name; 1; $($(#[$func_attr])* $func_name;)*);
+            $crate::openssl_errors!(@reason_consts $lib_name; 1; $($(#[$reason_attr])* $reason_name;)*);
         }
     )*};
-    (@func_consts $lib_name:ident; $n:expr; $name:ident; $($tt:tt)*) => {
+    (@func_consts $lib_name:ident; $n:expr; $(#[$attr:meta])* $name:ident; $($tt:tt)*) => {
+        $(#[$attr])*
         pub const $name: $crate::Function<$lib_name> = $crate::Function::from_raw($n);
         $crate::openssl_errors!(@func_consts $lib_name; $n + 1; $($tt)*);
     };
     (@func_consts $lib_name:ident; $n:expr;) => {};
-    (@reason_consts $lib_name:ident; $n:expr; $name:ident; $($tt:tt)*) => {
+    (@reason_consts $lib_name:ident; $n:expr; $(#[$attr:meta])* $name:ident; $($tt:tt)*) => {
+        $(#[$attr])*
         pub const $name: $crate::Reason<$lib_name> = $crate::Reason::from_raw($n);
         $crate::openssl_errors!(@reason_consts $lib_name; $n + 1; $($tt)*);
     };
