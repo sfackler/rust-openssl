@@ -1432,6 +1432,66 @@ fn new_session_callback() {
 }
 
 #[test]
+fn connector_use_session_cache() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    ctx.set_certificate_file(&Path::new("test/cert.pem"), SslFiletype::PEM)
+        .unwrap();
+    ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
+        .unwrap();
+    ctx.set_session_id_context(b"foo").unwrap();
+    let ctx = ctx.build();
+
+    let guard = thread::spawn(move || {
+        for i in 0..10 {
+            let stream = listener.accept().unwrap().0;
+            let ssl = Ssl::new(&ctx).unwrap();
+            let mut stream = ssl.accept(stream).unwrap();
+            stream.write_all(&[0]).unwrap();
+
+            if i > 0 {
+                assert!(stream.ssl().session_reused());
+            } else {
+                assert!(!stream.ssl().session_reused());
+            }
+        }
+    });
+
+    let mut connector_builder = SslConnector::builder(SslMethod::tls()).unwrap();
+    connector_builder.set_use_session_cache(true);
+    connector_builder.set_verify(SslVerifyMode::NONE);
+    let connector = connector_builder.build();
+
+    for i in 0..10 {
+        let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+
+        let mut config = connector.configure().unwrap();
+        config.set_session_cache_key("127.0.0.1".to_string(), port);
+        config.set_use_server_name_indication(false);
+        config.set_verify_hostname(false);
+
+        let mut stream = config.connect("127.0.0.1", stream).unwrap();
+
+        // Give server a chance to send the ticket in TLS 1.3, where the ticket
+        // can be sent after the handshake.
+        stream.read_exact(&mut [0]).unwrap();
+
+        // OpenSSL removes the session unless shut down.
+        stream.set_shutdown(ShutdownState::SENT);
+
+        if i > 0 {
+            assert!(stream.ssl().session_reused());
+        } else {
+            assert!(!stream.ssl().session_reused());
+        }
+    }
+
+    guard.join().unwrap();
+}
+
+#[test]
 fn keying_export() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();

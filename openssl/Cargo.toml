@@ -24,6 +24,7 @@ cfg-if = "0.1"
 foreign-types = "0.3.1"
 lazy_static = "1"
 libc = "0.2"
+linked_hash_set = "0.1"
 
 openssl-sys = { version = "0.9.42", path = "../openssl-sys" }
 

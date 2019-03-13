@@ -118,6 +118,7 @@ extern crate foreign_types;
 #[macro_use]
 extern crate lazy_static;
 extern crate libc;
+extern crate linked_hash_set;
 extern crate openssl_sys as ffi;
 
 #[cfg(test)]
