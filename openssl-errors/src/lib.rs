@@ -1,3 +1,51 @@
+//! Custom error library support for the `openssl` crate.
+//!
+//! OpenSSL allows third-party libraries to integrate with its error API. This crate provides a safe interface to that.
+//!
+//! # Examples
+//!
+//! ```
+//! use openssl_errors::{openssl_errors, put_error};
+//! use openssl::error::Error;
+//!
+//! // Errors are organized at the top level into "libraries". The
+//! // openssl_errors! macro can define these.
+//! //
+//! // Libraries contain a set of functions and reasons. The library itself,
+//! // its functions, and its definitions all all have an associated message
+//! // string. This string is what's shown in OpenSSL errors.
+//! //
+//! // The macro creates a type for each library with associated constants for
+//! // its functions and reasons.
+//! openssl_errors! {
+//!     pub library MyLib("my cool library") {
+//!         functions {
+//!             FIND_PRIVATE_KEY("find_private_key");
+//!         }
+//!
+//!         reasons {
+//!             IO_ERROR("IO error");
+//!             BAD_PASSWORD("invalid private key password");
+//!         }
+//!     }
+//! }
+//!
+//! // The put_error! macro pushes errors onto the OpenSSL error stack.
+//! put_error!(MyLib::FIND_PRIVATE_KEY, MyLib::BAD_PASSWORD);
+//!
+//! // Prints `error:80001002:my cool library:find_private_key:invalid private key password:src/lib.rs:27:`
+//! println!("{}", Error::get().unwrap());
+//!
+//! // You can also optionally attach an extra string of context using the
+//! // standard Rust format syntax.
+//! let tries = 2;
+//! put_error!(MyLib::FIND_PRIVATE_KEY, MyLib::IO_ERROR, "tried {} times", tries);
+//!
+//! // Prints `error:80001001:my cool library:find_private_key:IO error:src/lib.rs:34:tried 2 times`
+//! println!("{}", Error::get().unwrap());
+//! ```
+#![warn(missing_docs)]
+
 use libc::{c_char, c_int};
 use std::borrow::Cow;
 use std::marker::PhantomData;
@@ -15,32 +63,40 @@ pub mod export {
     pub use std::sync::Once;
 }
 
+/// An OpenSSL error library.
 pub trait Library {
+    /// Returns the ID assigned to this library by OpenSSL.
     fn id() -> c_int;
 }
 
+/// A function declaration, parameterized by its error library.
 pub struct Function<T>(c_int, PhantomData<T>);
 
 impl<T> Function<T> {
+    /// Creates a function from its raw identifier.
     #[inline]
     pub const fn from_raw(raw: c_int) -> Function<T> {
         Function(raw, PhantomData)
     }
 
+    /// Returns the function's raw identifier.
     #[inline]
     pub const fn as_raw(&self) -> c_int {
         self.0
     }
 }
 
+/// A reason declaration, parameterized by its error library.
 pub struct Reason<T>(c_int, PhantomData<T>);
 
 impl<T> Reason<T> {
+    /// Creates a reason from its raw identifier.
     #[inline]
     pub const fn from_raw(raw: c_int) -> Reason<T> {
         Reason(raw, PhantomData)
     }
 
+    /// Returns the reason's raw identifier.
     #[inline]
     pub const fn as_raw(&self) -> c_int {
         self.0
@@ -91,6 +147,10 @@ pub unsafe fn __put_error<T>(
     }
 }
 
+/// Pushes an error onto the OpenSSL error stack.
+///
+/// A function and reason are required, and must be associated with the same error library. An additional formatted
+/// message string can also optionally be provided.
 #[macro_export]
 macro_rules! put_error {
     ($function:expr, $reason:expr) => {
@@ -132,6 +192,9 @@ macro_rules! put_error {
     };
 }
 
+/// Defines custom OpenSSL error libraries.
+///
+/// The created libraries can be used with the `put_error!` macro to create custom OpenSSL errors.
 #[macro_export]
 macro_rules! openssl_errors {
     ($(
@@ -159,7 +222,10 @@ macro_rules! openssl_errors {
             fn id() -> $crate::export::c_int {
                 static INIT: $crate::export::Once = $crate::export::Once::new();
                 static mut LIB_NUM: $crate::export::c_int = 0;
-                static mut STRINGS: [$crate::export::ERR_STRING_DATA; 2 + $crate::openssl_errors!(@count $($func_name;)* $($reason_name;)*)] = [
+                static mut STRINGS: [
+                    $crate::export::ERR_STRING_DATA;
+                    2 + $crate::openssl_errors!(@count $($func_name;)* $($reason_name;)*)
+                ] = [
                     $crate::export::ERR_STRING_DATA {
                         error: 0,
                         string: concat!($lib_str, "\0").as_ptr() as *const $crate::export::c_char,
