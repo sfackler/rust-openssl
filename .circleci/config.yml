@@ -183,7 +183,7 @@ jobs:
             --manifest-path=systest/Cargo.toml \
             <<# parameters.vendored >> --features vendored <</ parameters.vendored >>
       - run: |
-          cargo run \
+          cargo test \
             --manifest-path=openssl-errors/Cargo.toml \
             <<# parameters.vendored >> --features openssl-sys/vendored <</ parameters.vendored >>
       - run: |
