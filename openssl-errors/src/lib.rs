@@ -45,6 +45,7 @@
 //! println!("{}", Error::get().unwrap());
 //! ```
 #![warn(missing_docs)]
+#![doc(html_root_url = "https://docs.rs/openssl-errors/0.1")]
 
 use libc::{c_char, c_int};
 use std::borrow::Cow;

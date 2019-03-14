@@ -3,6 +3,11 @@ name = "openssl-errors"
 version = "0.1.0"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 edition = "2018"
+license = "MIT/Apache-2.0"
+description = "Custom error library support for the openssl crate."
+repository = "https://github.com/sfackler/rust-openssl"
+readme = "README.md"
+categories = ["api-bindings"]
 
 [dependencies]
 libc = "0.2"
