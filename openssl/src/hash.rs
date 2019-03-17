@@ -16,7 +16,7 @@ cfg_if! {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct MessageDigest(*const ffi::EVP_MD);
 
 impl MessageDigest {
