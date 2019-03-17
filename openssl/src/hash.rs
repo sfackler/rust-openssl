@@ -106,6 +106,11 @@ impl MessageDigest {
     pub fn size(&self) -> usize {
         unsafe { ffi::EVP_MD_size(self.0) as usize }
     }
+
+    /// The name of the digest
+    pub fn type_(&self) -> Nid {
+        Nid::from_raw(unsafe { ffi::EVP_MD_type(self.0) })
+    }
 }
 
 unsafe impl Sync for MessageDigest {}
