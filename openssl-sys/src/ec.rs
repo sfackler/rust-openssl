@@ -22,6 +22,8 @@ extern "C" {
 
     pub fn EC_GROUP_new(meth: *const EC_METHOD) -> *mut EC_GROUP;
 
+    pub fn EC_GROUP_cmp(a: *const EC_GROUP, b: *const EC_GROUP, ctx: *mut BN_CTX) -> c_int;
+
     pub fn EC_GROUP_free(group: *mut EC_GROUP);
 
     pub fn EC_GROUP_get_order(
@@ -67,6 +69,10 @@ extern "C" {
     ) -> *mut EC_GROUP;
 
     pub fn EC_GROUP_new_by_curve_name(nid: c_int) -> *mut EC_GROUP;
+
+    pub fn EC_GROUP_get_curve_name(group: *const EC_GROUP) -> c_int;
+
+    pub fn EC_GROUP_set_curve_name(group: *mut EC_GROUP, nid: c_int);
 
     pub fn EC_POINT_new(group: *const EC_GROUP) -> *mut EC_POINT;
 
