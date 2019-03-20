@@ -237,6 +237,16 @@ impl EcGroupRef {
             ffi::EC_GROUP_set_asn1_flag(self.as_ptr(), flag.0);
         }
     }
+
+    /// Returns the name of the curve, if a name is associated.
+    ///
+    /// OpenSSL documentation at [`EC_GROUP_get_curve_name`]
+    ///
+    /// [`EC_GROUP_get_curve_name`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_get_curve_name.html
+    pub fn curve_name(&self) -> Option<Nid> {
+        let nid = unsafe { ffi::EC_GROUP_get_curve_name(self.as_ptr()) };
+        if nid > 0 { Some(Nid::from_raw(nid)) } else { None }
+    }
 }
 
 foreign_type_and_impl_send_sync! {
