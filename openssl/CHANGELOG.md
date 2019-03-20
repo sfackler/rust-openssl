@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [v0.10.20] - 2019-03-20
+
+### Added
+
+* Added `CmsContentInfo::from_der` and `CmsContentInfo::encrypt`.
+* Added `X509Ref::verify` and `X509ReqRef::verify`.
+* Implemented `PartialEq` and `Eq` for `MessageDigest`.
+* Added `MessageDigest::type_` and `EcGroupRef::curve_name`.
+
 ## [v0.10.19] - 2019-03-01
 
 ### Added
@@ -333,8 +342,9 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.19...master
-[v0.10.18]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.18...openssl-v0.10.19
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.20...master
+[v0.10.20]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.19...openssl-v0.10.20
+[v0.10.19]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.18...openssl-v0.10.19
 [v0.10.18]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.17...openssl-v0.10.18
 [v0.10.17]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.16...openssl-v0.10.17
 [v0.10.16]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.15...openssl-v0.10.16
