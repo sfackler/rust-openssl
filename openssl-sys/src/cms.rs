@@ -62,6 +62,9 @@ pub const CMS_KEY_PARAM: c_uint = 0x40000;
 #[cfg(ossl110)]
 pub const CMS_ASCIICRLF: c_uint = 0x80000;
 
+pub enum CMS_RecipientInfo {}
+stack!(stack_st_CMS_RecipientInfo);
+
 extern "C" {
     #[cfg(ossl101)]
     pub fn SMIME_read_CMS(bio: *mut ::BIO, bcont: *mut *mut ::BIO) -> *mut ::CMS_ContentInfo;
@@ -101,5 +104,18 @@ extern "C" {
         indata: *mut ::BIO,
         out: *mut ::BIO,
         flags: c_uint,
+    ) -> c_int;
+
+    #[cfg(ossl101)]
+    pub fn CMS_get0_RecipientInfos(
+        cms: *mut ::CMS_ContentInfo,
+    ) -> *mut ::stack_st_CMS_RecipientInfo;
+
+    #[cfg(ossl101)]
+    pub fn CMS_RecipientInfo_ktri_get0_signer_id(
+        ri: *mut ::CMS_RecipientInfo,
+        keyid: *mut *mut ::ASN1_OCTET_STRING,
+        issuer: *mut *mut ::X509_NAME,
+        sno: *mut *mut ::ASN1_INTEGER,
     ) -> c_int;
 }
