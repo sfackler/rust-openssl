@@ -54,6 +54,7 @@
 
 use ffi;
 use libc::c_int;
+use paste::item;
 use std::cmp;
 use std::ptr;
 
@@ -75,6 +76,18 @@ pub enum Mode {
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Cipher(*const ffi::EVP_CIPHER);
 
+macro_rules! make_aes_cipher {
+    ($len:expr, $($mode:ident),*) => (
+        item! {
+            $(
+                pub fn [<aes _ $len _ $mode>]() -> Cipher {
+                    unsafe { Cipher(ffi::[<EVP_aes_ $len _ $mode>]()) }
+                }
+            )*
+        }
+    )
+}
+
 impl Cipher {
     /// Looks up the cipher for a certain nid.
     ///
@@ -90,77 +103,9 @@ impl Cipher {
         }
     }
 
-    pub fn aes_128_ecb() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_128_ecb()) }
-    }
-
-    pub fn aes_128_cbc() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_128_cbc()) }
-    }
-
-    pub fn aes_128_xts() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_128_xts()) }
-    }
-
-    pub fn aes_128_ctr() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_128_ctr()) }
-    }
-
-    pub fn aes_128_cfb1() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_128_cfb1()) }
-    }
-
-    pub fn aes_128_cfb128() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_128_cfb128()) }
-    }
-
-    pub fn aes_128_cfb8() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_128_cfb8()) }
-    }
-
-    pub fn aes_128_gcm() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_128_gcm()) }
-    }
-
-    pub fn aes_128_ccm() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_128_ccm()) }
-    }
-
-    pub fn aes_256_ecb() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_256_ecb()) }
-    }
-
-    pub fn aes_256_cbc() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_256_cbc()) }
-    }
-
-    pub fn aes_256_xts() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_256_xts()) }
-    }
-
-    pub fn aes_256_ctr() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_256_ctr()) }
-    }
-
-    pub fn aes_256_cfb1() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_256_cfb1()) }
-    }
-
-    pub fn aes_256_cfb128() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_256_cfb128()) }
-    }
-
-    pub fn aes_256_cfb8() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_256_cfb8()) }
-    }
-
-    pub fn aes_256_gcm() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_256_gcm()) }
-    }
-
-    pub fn aes_256_ccm() -> Cipher {
-        unsafe { Cipher(ffi::EVP_aes_256_ccm()) }
-    }
+    make_aes_cipher!(128, ecb, cbc, cfb1, cfb8, cfb128, xts, ctr, gcm, ccm, ofb);
+    make_aes_cipher!(192, ecb, cbc, cfb1, cfb8, cfb128, ctr, gcm, ccm, ofb);
+    make_aes_cipher!(256, ecb, cbc, cfb1, cfb8, cfb128, xts, ctr, gcm, ccm, ofb);
 
     pub fn bf_cbc() -> Cipher {
         unsafe { Cipher(ffi::EVP_bf_cbc()) }
@@ -897,7 +842,7 @@ mod tests {
     }
 
     #[test]
-    fn test_aes256_xts() {
+    fn test_aes_256_xts() {
         // Test case 174 from
         // http://csrc.nist.gov/groups/STM/cavp/documents/aes/XTSTestVectors.zip
         let pt = "77f4ef63d734ebd028508da66c22cdebdd52ecd6ee2ab0a50bc8ad0cfd692ca5fcd4e6dedc45df7f\
@@ -912,7 +857,7 @@ mod tests {
     }
 
     #[test]
-    fn test_aes128_ctr() {
+    fn test_aes_128_ctr() {
         let pt = "6BC1BEE22E409F96E93D7E117393172AAE2D8A571E03AC9C9EB76FAC45AF8E5130C81C46A35CE411\
                   E5FBC1191A0A52EFF69F2445DF4F9B17AD2B417BE66C3710";
         let ct = "874D6191B620E3261BEF6864990DB6CE9806F66B7970FDFF8617187BB9FFFDFF5AE4DF3EDBD5D35E\
@@ -924,7 +869,7 @@ mod tests {
     }
 
     #[test]
-    fn test_aes128_cfb1() {
+    fn test_aes_128_cfb1() {
         // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
 
         let pt = "6bc1";
@@ -936,7 +881,7 @@ mod tests {
     }
 
     #[test]
-    fn test_aes128_cfb128() {
+    fn test_aes_128_cfb128() {
         let pt = "6bc1bee22e409f96e93d7e117393172a";
         let ct = "3b3fd92eb72dad20333449f8e83cfb4a";
         let key = "2b7e151628aed2a6abf7158809cf4f3c";
@@ -946,7 +891,7 @@ mod tests {
     }
 
     #[test]
-    fn test_aes128_cfb8() {
+    fn test_aes_128_cfb8() {
         let pt = "6bc1bee22e409f96e93d7e117393172aae2d";
         let ct = "3b79424c9c0dd436bace9e0ed4586a4f32b9";
         let key = "2b7e151628aed2a6abf7158809cf4f3c";
@@ -956,7 +901,7 @@ mod tests {
     }
 
     #[test]
-    fn test_aes256_cfb1() {
+    fn test_aes_256_cfb1() {
         let pt = "6bc1";
         let ct = "9029";
         let key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
@@ -966,7 +911,7 @@ mod tests {
     }
 
     #[test]
-    fn test_aes256_cfb128() {
+    fn test_aes_256_cfb128() {
         let pt = "6bc1bee22e409f96e93d7e117393172a";
         let ct = "dc7e84bfda79164b7ecd8486985d3860";
         let key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
@@ -976,13 +921,43 @@ mod tests {
     }
 
     #[test]
-    fn test_aes256_cfb8() {
+    fn test_aes_256_cfb8() {
         let pt = "6bc1bee22e409f96e93d7e117393172aae2d";
         let ct = "dc1f1a8520a64db55fcc8ac554844e889700";
         let key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
         let iv = "000102030405060708090a0b0c0d0e0f";
 
         cipher_test(super::Cipher::aes_256_cfb8(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes_128_ofb() {
+        let pt = "6bc1bee22e409f96e93d7e117393172a";
+        let ct = "3b3fd92eb72dad20333449f8e83cfb4a";
+        let key = "2b7e151628aed2a6abf7158809cf4f3c";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Cipher::aes_128_ofb(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes_192_ofb() {
+        let pt = "6bc1bee22e409f96e93d7e117393172a";
+        let ct = "cdc80d6fddf18cab34c25909c99a4174";
+        let key = "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Cipher::aes_192_ofb(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes_256_ofb() {
+        let pt = "6bc1bee22e409f96e93d7e117393172a";
+        let ct = "dc7e84bfda79164b7ecd8486985d3860";
+        let key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Cipher::aes_256_ofb(), pt, ct, key, iv);
     }
 
     #[test]
@@ -1078,7 +1053,7 @@ mod tests {
     }
 
     #[test]
-    fn test_aes128_gcm() {
+    fn test_aes_128_gcm() {
         let key = "0e00c76561d2bd9b40c3c15427e2b08f";
         let iv = "492cadaccd3ca3fbc9cf9f06eb3325c4e159850b0dbe98199b89b7af528806610b6f63998e1eae80c348e7\
              4cbb921d8326631631fc6a5d304f39166daf7ea15fa1977f101819adb510b50fe9932e12c5a85aa3fd1e73\
@@ -1120,7 +1095,7 @@ mod tests {
     }
 
     #[test]
-    fn test_aes128_ccm() {
+    fn test_aes_128_ccm() {
         let key = "3ee186594f110fb788a8bf8aa8be5d4a";
         let nonce = "44f705d52acf27b7f17196aa9b";
         let aad = "2c16724296ff85e079627be3053ea95adf35722c21886baba343bd6c79b5cb57";
@@ -1156,7 +1131,7 @@ mod tests {
     }
 
     #[test]
-    fn test_aes128_ccm_verify_fail() {
+    fn test_aes_128_ccm_verify_fail() {
         let key = "3ee186594f110fb788a8bf8aa8be5d4a";
         let nonce = "44f705d52acf27b7f17196aa9b";
         let aad = "2c16724296ff85e079627be3053ea95adf35722c21886baba343bd6c79b5cb57";
@@ -1176,7 +1151,7 @@ mod tests {
     }
 
     #[test]
-    fn test_aes256_ccm() {
+    fn test_aes_256_ccm() {
         let key = "7f4af6765cad1d511db07e33aaafd57646ec279db629048aa6770af24849aa0d";
         let nonce = "dde2a362ce81b2b6913abc3095";
         let aad = "404f5df97ece7431987bc098cce994fc3c063b519ffa47b0365226a0015ef695";
@@ -1212,7 +1187,7 @@ mod tests {
     }
 
     #[test]
-    fn test_aes256_ccm_verify_fail() {
+    fn test_aes_256_ccm_verify_fail() {
         let key = "7f4af6765cad1d511db07e33aaafd57646ec279db629048aa6770af24849aa0d";
         let nonce = "dde2a362ce81b2b6913abc3095";
         let aad = "404f5df97ece7431987bc098cce994fc3c063b519ffa47b0365226a0015ef695";

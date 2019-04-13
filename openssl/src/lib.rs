@@ -119,6 +119,7 @@ extern crate foreign_types;
 extern crate lazy_static;
 extern crate libc;
 extern crate openssl_sys as ffi;
+extern crate paste;
 
 #[cfg(test)]
 extern crate hex;
