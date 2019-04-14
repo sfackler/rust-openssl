@@ -150,6 +150,7 @@ pub mod dsa;
 pub mod ec;
 pub mod ecdsa;
 pub mod error;
+pub mod evp;
 pub mod ex_data;
 #[cfg(not(libressl))]
 pub mod fips;
