@@ -234,9 +234,19 @@ fn x509_builder() {
         .unwrap();
     assert_eq!("foobar.com".as_bytes(), cn.data().as_slice());
     assert_eq!(serial, x509.serial_number().to_bn().unwrap());
+}
+
+#[test]
+fn test_extension_readback() {
+    const KEY_ID: [u8; 20] = [
+        0xE5, 0x43, 0x9D, 0x5F, 0x5E, 0xAF, 0x8E, 0x7A, 0xA4, 0xA8, 0x4B, 0xAF, 0x28, 0x69, 0x9C,
+        0xA8, 0x5C, 0xFA, 0x79, 0x4E,
+    ];
+    let cert = include_bytes!("../../test/cert_with_extensions.pem");
+    let cert = X509::from_pem(cert).unwrap();
 
     // Check to ensure that we can read back the extended key usage
-    let fetched_ext_key_usage = x509.ext_key_usage();
+    let fetched_ext_key_usage = cert.ext_key_usage();
     assert!(fetched_ext_key_usage.is_some());
 
     let mut found_server_auth = false;
@@ -260,15 +270,15 @@ fn x509_builder() {
     assert!(found_other);
 
     // Check to ensure that we can read back the authority key identifier
-    let akid = x509.authority_keyid();
-    assert!(akid.is_some());
+    let akid = cert
+        .authority_keyid()
+        .expect("could not read authority key identifier");
 
-    let akid = akid.unwrap();
-    let keyid = akid.keyid();
-    assert!(keyid.is_some());
+    let keyid = akid
+        .keyid()
+        .expect("could not read authority key identifier keyid");
 
-    let keyid = keyid.unwrap();
-    // TODO: what to compare against?
+    assert_eq!(keyid.as_slice(), KEY_ID);
 }
 
 #[test]
