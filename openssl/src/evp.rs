@@ -34,12 +34,10 @@ use error::ErrorStack;
 use ffi;
 use foreign_types::ForeignType;
 use libc::{c_int, c_uchar};
+use pkey::{PKey, Private, Public};
 use std::cmp;
 use symm::Cipher;
-use {
-    cvt, cvt_p,
-    pkey::{PKey, Private, Public},
-};
+use {cvt, cvt_p};
 
 /// Represents a EVP_Seal context.
 pub struct EvpSeal {
@@ -253,7 +251,8 @@ impl Drop for EvpOpen {
 #[cfg(test)]
 mod test {
     use super::*;
-    use {pkey::PKey, symm::Cipher};
+    use pkey::PKey;
+    use symm::Cipher;
 
     #[test]
     fn public_encrypt_private_decrypt() {
