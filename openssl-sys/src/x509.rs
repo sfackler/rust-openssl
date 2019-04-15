@@ -321,6 +321,16 @@ extern "C" {
     ) -> c_int;
 
     pub fn X509_add_ext(x: *mut X509, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
+
+    pub fn X509_EXTENSION_get_object(ext: *mut X509_EXTENSION) -> *mut ASN1_OBJECT;
+
+    pub fn X509_EXTENSION_get_critical(ext: *const X509_EXTENSION) -> c_int;
+
+    pub fn X509_EXTENSION_get_data(ext: *mut X509_EXTENSION) -> *mut ASN1_STRING;
+
+    pub fn X509_get_ext_by_NID(ext: *const X509, nid: c_int, last_pos: c_int) -> c_int;
+
+    pub fn X509_get_ext(ext: *const X509, loc: c_int) -> *mut X509_EXTENSION;
 }
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {

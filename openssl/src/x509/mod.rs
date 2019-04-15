@@ -20,7 +20,9 @@ use std::ptr;
 use std::slice;
 use std::str;
 
-use asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef};
+use asn1::{
+    Asn1BitStringRef, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef,
+};
 use bio::MemBioSlice;
 use conf::ConfRef;
 use error::ErrorStack;
@@ -443,6 +445,28 @@ impl X509Ref {
         }
     }
 
+    /// Returns this certificate's extended key usage, if it exists.
+    ///
+    /// This corresponds to [`X509_get_ext_d2i`] called with `NID_ext_key_usage`.
+    ///
+    /// [`X509_get_ext_d2i`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext_d2i.html
+    pub fn ext_key_usage(&self) -> Option<Stack<Asn1Object>> {
+        unsafe {
+            let ext_key_usage = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_ext_key_usage,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+
+            if ext_key_usage.is_null() {
+                None
+            } else {
+                Some(Stack::from_ptr(ext_key_usage as *mut _))
+            }
+        }
+    }
+
     pub fn public_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
             let pkey = cvt_p(ffi::X509_get_pubkey(self.as_ptr()))?;
@@ -669,6 +693,10 @@ impl AsRef<X509Ref> for X509Ref {
 
 impl Stackable for X509 {
     type StackType = ffi::stack_st_X509;
+}
+
+impl Stackable for Asn1Object {
+    type StackType = ffi::stack_st_ASN1_OBJECT;
 }
 
 /// A context object required to construct certain `X509` extension values.

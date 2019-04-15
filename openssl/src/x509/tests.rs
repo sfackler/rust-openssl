@@ -234,6 +234,28 @@ fn x509_builder() {
         .unwrap();
     assert_eq!("foobar.com".as_bytes(), cn.data().as_slice());
     assert_eq!(serial, x509.serial_number().to_bn().unwrap());
+
+    let fetched_ext_key_usage = x509.ext_key_usage();
+    assert!(fetched_ext_key_usage.is_some());
+
+    let mut found_server_auth = false;
+    let mut found_client_auth = false;
+    let mut found_other = false;
+
+    for ext in fetched_ext_key_usage.unwrap() {
+        match ext.nid() {
+            Nid::SERVER_AUTH => found_server_auth = true,
+            Nid::CLIENT_AUTH => found_client_auth = true,
+            Nid::UNDEF => {
+                found_other = true;
+            }
+            n => panic!("unexpcted NID: {:?}", n),
+        }
+    }
+
+    assert!(found_server_auth);
+    assert!(found_client_auth);
+    assert!(found_other);
 }
 
 #[test]
