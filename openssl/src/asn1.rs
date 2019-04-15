@@ -655,16 +655,18 @@ impl fmt::Display for Asn1ObjectRef {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         unsafe {
             let mut buf = [0; 80];
+            // NOTE: `len` may be greater than the size of the buffer we provided, which would
+            // indicate that the result is truncated. See docs here:
+            // https://www.openssl.org/docs/man1.0.2/man3/OBJ_obj2txt.html
             let len = ffi::OBJ_obj2txt(
                 buf.as_mut_ptr() as *mut _,
                 buf.len() as c_int,
                 self.as_ptr(),
                 0,
             );
-            match str::from_utf8(&buf[..len as usize]) {
-                Err(_) => fmt.write_str("error"),
-                Ok(s) => fmt.write_str(s),
-            }
+
+            let s = str::from_utf8(&buf[..len as usize]).map_err(|_| fmt::Error)?;
+            fmt.write_str(s)
         }
     }
 }

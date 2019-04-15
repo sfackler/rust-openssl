@@ -269,6 +269,7 @@ fn x509_builder() {
     assert_eq!(cn.data().as_slice(), b"foobar.com");
     assert_eq!(serial, x509.serial_number().to_bn().unwrap());
 
+    // Check to ensure that we can read back the extended key usage
     let fetched_ext_key_usage = x509.ext_key_usage();
     assert!(fetched_ext_key_usage.is_some());
 
@@ -282,6 +283,7 @@ fn x509_builder() {
             Nid::CLIENT_AUTH => found_client_auth = true,
             Nid::UNDEF => {
                 found_other = true;
+                assert_eq!(ext.to_string(), "2.999.1");
             }
             n => panic!("unexpcted NID: {:?}", n),
         }
@@ -290,6 +292,17 @@ fn x509_builder() {
     assert!(found_server_auth);
     assert!(found_client_auth);
     assert!(found_other);
+
+    // Check to ensure that we can read back the authority key identifier
+    let akid = x509.authority_keyid();
+    assert!(akid.is_some());
+
+    let akid = akid.unwrap();
+    let keyid = akid.keyid();
+    assert!(keyid.is_some());
+
+    let keyid = keyid.unwrap();
+    // TODO: what to compare against?
 }
 
 #[test]

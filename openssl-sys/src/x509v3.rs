@@ -41,7 +41,7 @@ extern "C" {
 
 #[repr(C)]
 pub struct AUTHORITY_KEYID {
-    pub keyid: *mut ASN1_OCTET_STRING,
+    pub keyid: *mut ASN1_STRING,
     pub issuer: *mut stack_st_GENERAL_NAME,
     pub serial: *mut ASN1_INTEGER,
 }
