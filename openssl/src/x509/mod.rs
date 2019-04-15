@@ -467,9 +467,9 @@ impl X509Ref {
         }
     }
 
-    /// Returns this certificate's extended key usage, if it exists.
+    /// Returns this certificate `AuthorityKeyId`, if it exists.
     ///
-    /// This corresponds to [`X509_get_ext_d2i`] called with `NID_ext_key_usage`.
+    /// This corresponds to [`X509_get_ext_d2i`] called with `NID_authority_key_identifier`.
     ///
     /// [`X509_get_ext_d2i`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext_d2i.html
     pub fn authority_keyid(&self) -> Option<AuthorityKeyId> {
