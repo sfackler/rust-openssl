@@ -616,16 +616,17 @@ const_ptr_api! {
     }
 }
 
-extern "C" {
-    pub fn X509_verify_cert(ctx: *mut X509_STORE_CTX) -> c_int;
-}
-
 const_ptr_api! {
     extern "C" {
         #[cfg(any(ossl110, libressl270))]
         pub fn X509_STORE_get0_objects(ctx: #[const_ptr_if(ossl300)] X509_STORE) -> *mut stack_st_X509_OBJECT;
     }
 }
+
+extern "C" {
+    pub fn X509_verify_cert(ctx: *mut X509_STORE_CTX) -> c_int;
+}
+
 #[cfg(any(ossl110, libressl270))]
 extern "C" {
     pub fn X509_OBJECT_get0_X509(x: *const X509_OBJECT) -> *mut X509;
