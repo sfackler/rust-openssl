@@ -121,6 +121,7 @@ extern "C" {
         npubk: c_int,
     ) -> c_int;
     pub fn EVP_SealFinal(ctx: *mut EVP_CIPHER_CTX, out: *mut c_uchar, outl: *mut c_int) -> c_int;
+    #[cfg(ossl111)]
     pub fn EVP_PKEY_size(pkey: *const EVP_PKEY) -> c_int;
     pub fn EVP_EncryptUpdate(
         ctx: *mut EVP_CIPHER_CTX,
