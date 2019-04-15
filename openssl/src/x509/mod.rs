@@ -467,6 +467,28 @@ impl X509Ref {
         }
     }
 
+    /// Returns this certificate's extended key usage, if it exists.
+    ///
+    /// This corresponds to [`X509_get_ext_d2i`] called with `NID_ext_key_usage`.
+    ///
+    /// [`X509_get_ext_d2i`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext_d2i.html
+    pub fn authority_keyid(&self) -> Option<AuthorityKeyId> {
+        unsafe {
+            let akid = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_authority_key_identifier,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+
+            if akid.is_null() {
+                None
+            } else {
+                Some(AuthorityKeyId::from_ptr(akid as *mut _))
+            }
+        }
+    }
+
     pub fn public_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
             let pkey = cvt_p(ffi::X509_get_pubkey(self.as_ptr()))?;
@@ -772,6 +794,41 @@ impl X509Extension {
 
             cvt_p(ffi::X509V3_EXT_nconf_nid(conf, context, name, value)).map(X509Extension)
         }
+    }
+}
+
+impl X509ExtensionRef {
+    /// Returns the `Asn1StringRef` relating to the unparsed ASN.1 data for an `X509NameEntry`.
+    ///
+    /// This corresponds to [`X509_NAME_ENTRY_get_data`].
+    ///
+    /// [`X509_NAME_ENTRY_get_data`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_EXTENSION_get_data.html
+    pub fn data(&self) -> &Asn1StringRef {
+        unsafe {
+            let data = ffi::X509_EXTENSION_get_data(self.as_ptr());
+            Asn1StringRef::from_ptr(data)
+        }
+    }
+
+    /// Returns the `Asn1Object` of an `X509Extension`
+    ///
+    /// This corresponds to [`X509_EXTENSION_get_object`].
+    ///
+    /// [`X509_EXTENSION_get_object`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_EXTENSION_get_object.html
+    pub fn object(&self) -> &Asn1ObjectRef {
+        unsafe {
+            let object = ffi::X509_EXTENSION_get_object(self.as_ptr());
+            Asn1ObjectRef::from_ptr(object)
+        }
+    }
+
+    /// Returns the flag indicating whether an extension is critical for an `X509Extension`
+    ///
+    /// This corresponds to [`X509_EXTENSION_get_object`].
+    ///
+    /// [`X509_EXTENSION_get_object`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_EXTENSION_get_object.html
+    pub fn critical(&self) -> bool {
+        unsafe { ffi::X509_EXTENSION_get_critical(self.as_ptr()) != 0 }
     }
 }
 
@@ -1320,6 +1377,51 @@ impl GeneralNameRef {
 
 impl Stackable for GeneralName {
     type StackType = ffi::stack_st_GENERAL_NAME;
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::AUTHORITY_KEYID;
+    fn drop = ffi::AUTHORITY_KEYID_free;
+
+    /// An `X509` certificate alternative names.
+    pub struct AuthorityKeyId;
+    /// Reference to `GeneralName`.
+    pub struct AuthorityKeyIdRef;
+}
+
+impl AuthorityKeyIdRef {
+    pub fn keyid(&self) -> Option<&Asn1StringRef> {
+        unsafe {
+            let keyid_ptr = (*self.as_ptr()).keyid;
+            if keyid_ptr.is_null() {
+                None
+            } else {
+                Some(Asn1StringRef::from_ptr(keyid_ptr as *mut _))
+            }
+        }
+    }
+
+    pub fn issuer(&self) -> Option<Stack<GeneralName>> {
+        unsafe {
+            let issuer_ptr = (*self.as_ptr()).issuer;
+            if issuer_ptr.is_null() {
+                None
+            } else {
+                Some(Stack::from_ptr(issuer_ptr as *mut _))
+            }
+        }
+    }
+
+    pub fn serial(&self) -> Option<&Asn1IntegerRef> {
+        unsafe {
+            let serial_ptr = (*self.as_ptr()).serial;
+            if serial_ptr.is_null() {
+                None
+            } else {
+                Some(Asn1IntegerRef::from_ptr(serial_ptr as *mut _))
+            }
+        }
+    }
 }
 
 foreign_type_and_impl_send_sync! {

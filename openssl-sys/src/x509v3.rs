@@ -27,6 +27,17 @@ extern "C" {
     pub fn GENERAL_NAME_free(name: *mut GENERAL_NAME);
 }
 
+#[repr(C)]
+pub struct AUTHORITY_KEYID {
+    pub keyid: *mut ASN1_STRING,
+    pub issuer: *mut stack_st_GENERAL_NAME,
+    pub serial: *mut ASN1_INTEGER,
+}
+
+extern "C" {
+    pub fn AUTHORITY_KEYID_free(akid: *mut AUTHORITY_KEYID);
+}
+
 #[cfg(any(ossl102, libressl261))]
 pub const X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT: c_uint = 0x1;
 #[cfg(any(ossl102, libressl261))]
