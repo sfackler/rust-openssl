@@ -11,6 +11,7 @@ use bitflags::bitflags;
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
+use std::cmp;
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -505,7 +506,7 @@ impl X509Ref {
             }
 
             let mut flags: u32 = 0;
-            let num_bytes = std::cmp::min(key_usage_str.len(), std::mem::size_of::<u32>());
+            let num_bytes = cmp::min(key_usage_str.len(), mem::size_of::<u32>());
             let data = key_usage_str.as_slice();
 
             for i in 0..num_bytes {
