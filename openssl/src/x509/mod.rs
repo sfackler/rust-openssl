@@ -460,14 +460,38 @@ impl X509Ref {
 
     /// Returns this certificate's key usage.
     ///
-    /// This corresponds to [`X509_get_key_usage`].
+    /// This corresponds to [`X509_get_ext_d2i`] called with `NID_key_usage`.
     ///
-    /// [`X509_get_key_usage`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_key_usage.html
+    /// [`X509_get_ext_d2i`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext_d2i.html
     pub fn key_usage(&self) -> Option<KeyUsageFlags> {
         unsafe {
-            let key_usage = ffi::X509_get_key_usage(self.as_ptr());
+            let key_usage_ptr = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_key_usage,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
 
-            KeyUsageFlags::from_bits(key_usage)
+            if key_usage_ptr.is_null() {
+                return None;
+            }
+
+            let key_usage_str = Asn1BitString::from_ptr(key_usage_ptr as *mut _);
+            if key_usage_str.len() == 0 {
+                return None;
+            }
+
+            let mut flags: u32 = 0;
+            let num_bytes = std::cmp::min(key_usage_str.len(), std::mem::size_of::<u32>());
+            let data = key_usage_str.as_slice();
+
+            for i in 0..num_bytes {
+                flags ^= (data[i] as u32) << ((num_bytes - (i + 1)) * 8);
+            }
+
+            println!("{}", num_bytes);
+
+            KeyUsageFlags::from_bits(flags)
         }
     }
 

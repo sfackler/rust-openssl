@@ -86,7 +86,6 @@ cfg_if! {
 }
 
 extern "C" {
-    pub fn X509_get_key_usage(x: *mut X509) -> u32;
     pub fn X509_check_issued(issuer: *mut X509, subject: *mut X509) -> c_int;
     pub fn X509_verify(req: *mut X509, pkey: *mut EVP_PKEY) -> c_int;
 
