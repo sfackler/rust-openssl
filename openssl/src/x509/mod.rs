@@ -7,6 +7,7 @@
 //! Internet protocols, including SSL/TLS, which is the basis for HTTPS,
 //! the secure protocol for browsing the web.
 
+use bitflags::bitflags;
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
@@ -21,8 +22,8 @@ use std::slice;
 use std::str;
 
 use crate::asn1::{
-    Asn1BitStringRef, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef,
-    Asn1Type,
+    Asn1BitStringRef, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1String, Asn1StringRef,
+    Asn1TimeRef, Asn1Type,
 };
 use crate::bio::MemBioSlice;
 use crate::conf::ConfRef;
@@ -45,6 +46,18 @@ pub mod store;
 
 #[cfg(test)]
 mod tests;
+
+bitflags! {
+    pub struct KeyUsageFlags: u32 {
+        const DIGITAL_SIGNATURE = 0x0080;
+        const NON_REPUDIATION = 0x0040;
+        const KEY_ENCIPHERMENT = 0x0020;
+        const KEY_CERT_SIGN = 0x0004;
+        const CRL_SIGN = 0x0002;
+        const ENCIPHER_ONLY = 0x0001;
+        const UNDEF = 0xffff;
+    }
+}
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE_CTX;
@@ -468,6 +481,19 @@ impl X509Ref {
         }
     }
 
+    /// Returns this certificate's key usage.
+    ///
+    /// This corresponds to [`X509_get_key_usage`].
+    ///
+    /// [`X509_get_key_usage`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_key_usage.html
+    pub fn key_usage(&self) -> Option<KeyUsageFlags> {
+        unsafe {
+            let key_usage = ffi::X509_get_key_usage(self.as_ptr());
+
+            KeyUsageFlags::from_bits(key_usage)
+        }
+    }
+
     /// Returns this certificate's extended key usage, if it exists.
     ///
     /// This corresponds to [`X509_get_ext_d2i`] called with `NID_ext_key_usage`.
@@ -508,6 +534,28 @@ impl X509Ref {
                 None
             } else {
                 Some(AuthorityKeyId::from_ptr(akid as *mut _))
+            }
+        }
+    }
+
+    /// Returns this certificate subject key ID, if it exists.
+    ///
+    /// This corresponds to [`X509_get_ext_d2i`] called with `NID_subject_key_identifier`.
+    ///
+    /// [`X509_get_ext_d2i`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext_d2i.html
+    pub fn subject_keyid(&self) -> Option<Asn1String> {
+        unsafe {
+            let skid = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_subject_key_identifier,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+
+            if skid.is_null() {
+                None
+            } else {
+                Some(Asn1String::from_ptr(skid as *mut _))
             }
         }
     }

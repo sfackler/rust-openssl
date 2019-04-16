@@ -1,3 +1,4 @@
+use super::KeyUsageFlags;
 use crate::asn1::Asn1Time;
 use crate::bn::{BigNum, MsbOption};
 use crate::hash::MessageDigest;
@@ -287,6 +288,13 @@ fn test_extension_readback() {
     let mut found_client_auth = false;
     let mut found_other = false;
 
+    // Check key usage
+    let key_usage = cert.key_usage().expect("could not get key usage");
+    assert_eq!(
+        key_usage,
+        KeyUsageFlags::DIGITAL_SIGNATURE | KeyUsageFlags::KEY_ENCIPHERMENT
+    );
+
     for ext in fetched_ext_key_usage.unwrap() {
         match ext.nid() {
             Nid::SERVER_AUTH => found_server_auth = true,
@@ -313,6 +321,13 @@ fn test_extension_readback() {
         .expect("could not read authority key identifier keyid");
 
     assert_eq!(keyid.as_slice(), KEY_ID);
+
+    // Check to ensure that we can read back the subject key identifier
+    let skid = cert
+        .subject_keyid()
+        .expect("could not read subject key identifier");
+
+    assert_eq!(skid.as_slice(), KEY_ID);
 }
 
 #[test]
