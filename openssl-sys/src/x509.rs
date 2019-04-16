@@ -568,6 +568,8 @@ extern "C" {
     pub fn X509_EXTENSION_set_data(ex: *mut X509_EXTENSION, data: *mut ASN1_STRING) -> c_int;
     pub fn X509_EXTENSION_get_object(ext: *mut X509_EXTENSION) -> *mut ASN1_OBJECT;
     pub fn X509_EXTENSION_get_data(ext: *mut X509_EXTENSION) -> *mut ASN1_STRING;
+
+    pub fn X509_EXTENSION_get_object(ext: *mut X509_EXTENSION) -> *mut ASN1_OBJECT;
 }
 const_ptr_api! {
     extern "C" {
@@ -646,8 +648,6 @@ cfg_if! {
                 crit: *mut c_int,
                 idx: *mut c_int,
             ) -> *mut c_void;
-            pub fn X509_EXTENSION_get_object(ext: *mut X509_EXTENSION) -> *mut ASN1_OBJECT;
-
 
             pub fn X509_get_ext_by_NID(ext: *const X509, nid: c_int, last_pos: c_int) -> c_int;
 
@@ -667,6 +667,7 @@ cfg_if! {
             pub fn X509_get_ext_by_NID(ext: *mut X509, nid: c_int, last_pos: c_int) -> c_int;
 
             pub fn X509_get_ext(ext: *mut X509, loc: c_int) -> *mut X509_EXTENSION;
+
         }
     }
 }
