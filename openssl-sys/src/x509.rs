@@ -640,6 +640,33 @@ cfg_if! {
     } else {
         extern "C" {
             pub fn X509_OBJECT_free_contents(a: *mut X509_OBJECT);
+            pub fn X509_get_ext_d2i(
+                x: *const ::X509,
+                nid: c_int,
+                crit: *mut c_int,
+                idx: *mut c_int,
+            ) -> *mut c_void;
+            pub fn X509_EXTENSION_get_object(ext: *mut X509_EXTENSION) -> *mut ASN1_OBJECT;
+
+
+            pub fn X509_get_ext_by_NID(ext: *const X509, nid: c_int, last_pos: c_int) -> c_int;
+
+            pub fn X509_get_ext(ext: *const X509, loc: c_int) -> *mut X509_EXTENSION;
+
+            pub fn X509_EXTENSION_get_critical(ext: *const X509_EXTENSION) -> c_int;
+
+            pub fn X509_get_ext_d2i(
+                x: *mut ::X509,
+                nid: c_int,
+                crit: *mut c_int,
+                idx: *mut c_int,
+            ) -> *mut c_void;
+
+            pub fn X509_EXTENSION_get_critical(ext: *mut X509_EXTENSION) -> c_int;
+
+            pub fn X509_get_ext_by_NID(ext: *mut X509, nid: c_int, last_pos: c_int) -> c_int;
+
+            pub fn X509_get_ext(ext: *mut X509, loc: c_int) -> *mut X509_EXTENSION;
         }
     }
 }
