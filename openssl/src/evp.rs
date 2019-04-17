@@ -23,18 +23,18 @@
 //!             .unwrap();
 //!     let public_key = PKey::from_rsa(pub_rsa).unwrap();
 //!     let cipher = Cipher::aes_256_cbc();
-//!     let mut seal = EvpSeal::new(cipher, vec![public_key]).unwrap();
+//!     let mut seal = EvpSeal::new(cipher, &[public_key]).unwrap();
 //!     let secret = b"My secret message";
-//!     let mut encrypted = vec![0; secret.len() + seal.bs()];
+//!     let mut encrypted = vec![0; secret.len() + cipher.block_size()];
 //!     let mut enc_len = seal.update(secret, &mut encrypted).unwrap();
 //!     enc_len += seal.finalize(&mut encrypted[enc_len..]).unwrap();
 //! }
 //! ```
 use error::ErrorStack;
 use ffi;
-use foreign_types::ForeignType;
+use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_uchar};
-use pkey::{PKey, Private, Public};
+use pkey::{HasPrivate, HasPublic, PKey, PKeyRef};
 use std::cmp;
 use symm::Cipher;
 use {cvt, cvt_p};
@@ -55,13 +55,16 @@ pub struct EvpOpen {
 
 impl EvpSeal {
     /// Creates a new `EvpSeal`.
-    pub fn new(t: Cipher, pub_keys: Vec<PKey<Public>>) -> Result<EvpSeal, ErrorStack> {
+    pub fn new<T>(t: Cipher, pub_keys: &[PKey<T>]) -> Result<EvpSeal, ErrorStack>
+    where
+        T: HasPublic,
+    {
         unsafe {
             let ctx = cvt_p(ffi::EVP_CIPHER_CTX_new())?;
             let mut ek = Vec::new();
             let mut pubk: Vec<*mut ffi::EVP_PKEY> = Vec::new();
             let mut my_ek = Vec::new();
-            for key in &pub_keys {
+            for key in pub_keys {
                 let mut key_buffer: Vec<c_uchar>;
                 key_buffer = vec![0; ffi::EVP_PKEY_size(key.as_ptr()) as usize];
                 let tmp = key_buffer.as_mut_ptr();
@@ -92,12 +95,12 @@ impl EvpSeal {
     }
 
     /// Return used initialization vector.
-    pub fn iv(&self) -> &Vec<u8> {
+    pub fn iv(&self) -> &[u8] {
         &self.iv
     }
 
     /// Return vector of keys encrypted by public key.
-    pub fn ek(&self) -> &Vec<Vec<u8>> {
+    pub fn encrypted_keys(&self) -> &[Vec<u8>] {
         &self.ek
     }
 
@@ -113,6 +116,8 @@ impl EvpSeal {
     /// or if `output.len() > c_int::max_value()`.
     pub fn update(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
+            assert!(output.len() >= input.len() + self.block_size);
+            assert!(output.len() <= c_int::max_value() as usize);
             let mut outl = output.len() as c_int;
             let inl = input.len() as c_int;
             cvt(ffi::EVP_EncryptUpdate(
@@ -145,11 +150,6 @@ impl EvpSeal {
             Ok(outl as usize)
         }
     }
-
-    /// Returns block size of inner cipher.
-    pub fn bs(&self) -> usize {
-        self.block_size
-    }
 }
 
 impl Drop for EvpSeal {
@@ -162,12 +162,15 @@ impl Drop for EvpSeal {
 
 impl EvpOpen {
     /// Creates a new `EvpOpen`.
-    pub fn new(
+    pub fn new<T>(
         t: Cipher,
-        priv_key: &PKey<Private>,
-        iv: &mut [u8],
-        ek: &mut [u8],
-    ) -> Result<EvpOpen, ErrorStack> {
+        priv_key: &PKeyRef<T>,
+        iv: &[u8],
+        ek: &[u8],
+    ) -> Result<EvpOpen, ErrorStack>
+    where
+        T: HasPrivate,
+    {
         unsafe {
             let ctx = cvt_p(ffi::EVP_CIPHER_CTX_new())?;
             let ekl = ek.len() as c_int;
@@ -177,7 +180,7 @@ impl EvpOpen {
                 t.as_ptr(),
                 ek.as_ptr(),
                 ekl,
-                iv.as_mut_ptr(),
+                iv.as_ptr(),
                 priv_key.as_ptr(),
             ))?;
             Ok(EvpOpen {
@@ -233,11 +236,6 @@ impl EvpOpen {
             Ok(outl as usize)
         }
     }
-
-    /// Returns block size of inner cipher.
-    pub fn bs(&self) -> usize {
-        self.block_size
-    }
 }
 
 impl Drop for EvpOpen {
@@ -261,17 +259,17 @@ mod test {
         let private_key = PKey::private_key_from_pem(private_pem).unwrap();
         let public_key = PKey::public_key_from_pem(public_pem).unwrap();
         let cipher = Cipher::aes_256_cbc();
-        let mut seal = EvpSeal::new(cipher, vec![public_key]).unwrap();
         let secret = b"My secret message";
-        let mut encrypted = vec![0; secret.len() + seal.bs()];
+
+        let mut seal = EvpSeal::new(cipher, &[public_key]).unwrap();
+        let mut encrypted = vec![0; secret.len() + cipher.block_size()];
         let mut enc_len = seal.update(secret, &mut encrypted).unwrap();
         enc_len += seal.finalize(&mut encrypted[enc_len..]).unwrap();
-        let mut iv = seal.iv().clone();
-        let encrypted_key = &seal.ek()[0].clone();
+        let iv = seal.iv();
+        let encrypted_key = &seal.encrypted_keys()[0];
 
-        let mut open =
-            EvpOpen::new(cipher, &private_key, &mut iv, &mut encrypted_key.clone()).unwrap();
-        let mut decrypted = vec![0; enc_len + open.bs()];
+        let mut open = EvpOpen::new(cipher, &private_key, &iv, &encrypted_key.clone()).unwrap();
+        let mut decrypted = vec![0; enc_len + cipher.block_size()];
         let mut dec_len = open.update(&encrypted[..enc_len], &mut decrypted).unwrap();
         dec_len += open.finalize(&mut decrypted[dec_len..]).unwrap();
 
