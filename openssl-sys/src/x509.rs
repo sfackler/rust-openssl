@@ -566,7 +566,6 @@ extern "C" {
     ) -> *mut X509_EXTENSION;
     pub fn X509_EXTENSION_set_critical(ex: *mut X509_EXTENSION, crit: c_int) -> c_int;
     pub fn X509_EXTENSION_set_data(ex: *mut X509_EXTENSION, data: *mut ASN1_STRING) -> c_int;
-    pub fn X509_EXTENSION_get_object(ext: *mut X509_EXTENSION) -> *mut ASN1_OBJECT;
     pub fn X509_EXTENSION_get_data(ext: *mut X509_EXTENSION) -> *mut ASN1_STRING;
 
     pub fn X509_EXTENSION_get_object(ext: *mut X509_EXTENSION) -> *mut ASN1_OBJECT;
@@ -655,6 +654,8 @@ cfg_if! {
 
             pub fn X509_EXTENSION_get_critical(ext: *const X509_EXTENSION) -> c_int;
 
+            pub fn X509_get_ext_count(ext: *const X509) -> c_int;
+
             pub fn X509_get_ext_d2i(
                 x: *mut ::X509,
                 nid: c_int,
@@ -668,6 +669,7 @@ cfg_if! {
 
             pub fn X509_get_ext(ext: *mut X509, loc: c_int) -> *mut X509_EXTENSION;
 
+            pub fn X509_get_ext_count(ext: *mut X509) -> c_int;
         }
     }
 }

@@ -328,6 +328,47 @@ fn test_extension_readback() {
         .expect("could not read subject key identifier");
 
     assert_eq!(skid.as_slice(), KEY_ID);
+
+    // Check to ensure we can grab an extension by NID
+    let ext = cert
+        .extension_from_nid(Nid::AUTHORITY_KEY_IDENTIFIER)
+        .unwrap();
+
+    assert_eq!(
+        ext.object().nid().short_name().unwrap(),
+        "authorityKeyIdentifier"
+    );
+
+    // Nid::NAME isn't an extension so this should fail
+    let ext = cert.extension_from_nid(Nid::NAME);
+    assert!(ext.is_none());
+}
+
+#[test]
+fn test_extensions_iterator() {
+    let cert = include_bytes!("../../test/cert_with_extensions.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    let extension_names: Vec<&str> = cert
+        .extensions()
+        .map(|e| {
+            e.object()
+                .nid()
+                .short_name()
+                .expect("no short name for extension")
+        })
+        .collect();
+
+    let expected_names: Vec<&str> = vec![
+        "basicConstraints",
+        "keyUsage",
+        "extendedKeyUsage",
+        "subjectKeyIdentifier",
+        "authorityKeyIdentifier",
+        "subjectAltName",
+    ];
+
+    assert_eq!(extension_names, expected_names);
 }
 
 #[test]
