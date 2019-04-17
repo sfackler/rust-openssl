@@ -25,11 +25,8 @@ extern "C" {
     pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
     pub fn EVP_MD_type(md: *const EVP_MD) -> c_int;
 
-    #[cfg(any(ossl110, libressl273))]
     pub fn EVP_CIPHER_key_length(cipher: *const EVP_CIPHER) -> c_int;
-    #[cfg(any(ossl110, libressl273))]
     pub fn EVP_CIPHER_block_size(cipher: *const EVP_CIPHER) -> c_int;
-    #[cfg(any(ossl110, libressl273))]
     pub fn EVP_CIPHER_iv_length(cipher: *const EVP_CIPHER) -> c_int;
 }
 
@@ -121,14 +118,12 @@ extern "C" {
         npubk: c_int,
     ) -> c_int;
     pub fn EVP_SealFinal(ctx: *mut EVP_CIPHER_CTX, out: *mut c_uchar, outl: *mut c_int) -> c_int;
-    #[cfg(ossl111)]
-    pub fn EVP_PKEY_size(pkey: *const EVP_PKEY) -> c_int;
     pub fn EVP_EncryptUpdate(
         ctx: *mut EVP_CIPHER_CTX,
         out: *mut c_uchar,
         outl: *mut c_int,
-        inbuf: *const u8,
-        inlen: c_int,
+        in_: *const u8,
+        inl: c_int,
     ) -> c_int;
     pub fn EVP_OpenInit(
         ctx: *mut EVP_CIPHER_CTX,
@@ -143,9 +138,20 @@ extern "C" {
         ctx: *mut EVP_CIPHER_CTX,
         out: *mut c_uchar,
         outl: *mut c_int,
-        inbuf: *const u8,
-        inlen: c_int,
+        in_: *const u8,
+        inl: c_int,
     ) -> c_int;
+}
+cfg_if! {
+    if #[cfg(any(ossl111, libressl280))] {
+        extern "C" {
+            pub fn EVP_PKEY_size(pkey: *const EVP_PKEY) -> c_int;
+        }
+    } else {
+        extern "C" {
+            pub fn EVP_PKEY_size(pkey: *mut EVP_PKEY) -> c_int;
+        }
+    }
 }
 cfg_if! {
     if #[cfg(any(ossl102, libressl280))] {

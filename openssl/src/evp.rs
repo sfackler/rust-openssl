@@ -66,7 +66,7 @@ impl EvpSeal {
             let mut my_ek = Vec::new();
             for key in pub_keys {
                 let mut key_buffer: Vec<c_uchar>;
-                key_buffer = vec![0; ffi::EVP_PKEY_size(key.as_ptr()) as usize];
+                key_buffer = vec![0; ffi::EVP_PKEY_size(key.as_ptr() as *mut _) as usize];
                 let tmp = key_buffer.as_mut_ptr();
                 my_ek.push(key_buffer);
                 ek.push(tmp);
