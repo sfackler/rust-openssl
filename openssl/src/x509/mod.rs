@@ -34,6 +34,7 @@ use nid::Nid;
 use pkey::{HasPrivate, HasPublic, PKey, PKeyRef, Public};
 use ssl::SslRef;
 use stack::{Stack, StackRef, Stackable};
+use std::ops::Range;
 use string::OpensslString;
 use {cvt, cvt_n, cvt_p};
 
@@ -558,6 +559,50 @@ impl X509Ref {
                 None
             } else {
                 Some(Asn1String::from_ptr(skid as *mut _))
+            }
+        }
+    }
+
+    /// Returns an iterator that allows iterating over the `X509Extensions` present in
+    /// this certificate.
+    ///
+    /// This issues one call to [`X509_get_ext_count`] to get the number of extensions, while the
+    /// iterator itself will lazily fetch each extension.
+    ///
+    /// [`X509_get_ext_count`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext_count.html
+    pub fn extensions(&self) -> Extensions {
+        let extension_count: c_int;
+
+        unsafe {
+            extension_count = ffi::X509_get_ext_count(self.as_ptr());
+        }
+
+        Extensions {
+            idxs: 0..extension_count,
+            cert: &*self,
+        }
+    }
+
+    /// Returns an `X509ExtensionRef` corresponding to the given NID, if it exists.
+    ///
+    /// This is corresponds to [`X509_get_by_NID`] to get the NID position, followed by a call
+    /// to [`X509_get_ext`] if the extension exists.
+    ///
+    /// [`X509_get_by_NID`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext_by_NID.html
+    /// [`X509_get_ext`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext.html
+    pub fn extension_from_nid(&self, nid: Nid) -> Option<&X509ExtensionRef> {
+        unsafe {
+            let pos = ffi::X509_get_ext_by_NID(self.as_ptr(), nid.as_raw(), -1);
+
+            if pos < 0 {
+                return None;
+            }
+
+            let ext_ptr = ffi::X509_get_ext(self.as_ptr(), pos);
+            if ext_ptr.is_null() {
+                None
+            } else {
+                Some(X509ExtensionRef::from_ptr(ext_ptr as *mut _))
             }
         }
     }
@@ -1596,6 +1641,29 @@ cfg_if! {
             }
             assert!(pptype.is_null());
             assert!(pval.is_null());
+        }
+    }
+}
+
+/// An iterator over `X509Extensions` in an `X509`.
+///
+/// Each call to `next()` corresponds to [`X509_get_ext`] with the current externsion index provided.
+///
+/// [`X509_get_ext`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext.html
+pub struct Extensions<'a> {
+    idxs: Range<c_int>,
+    cert: &'a X509Ref,
+}
+
+impl<'a> Iterator for Extensions<'a> {
+    type Item = &'a X509ExtensionRef;
+
+    fn next(&mut self) -> Option<&'a X509ExtensionRef> {
+        unsafe {
+            self.idxs.next().map(|i| {
+                println!("{}", i);
+                X509ExtensionRef::from_ptr(ffi::X509_get_ext(self.cert.as_ptr(), i))
+            })
         }
     }
 }
