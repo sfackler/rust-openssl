@@ -289,7 +289,7 @@ fn test_extension_readback() {
     let mut found_other = false;
 
     // Check key usage
-    let key_usage = cert.key_usage().expect("could not get key usage");
+    let key_usage = cert.key_usage();
     assert_eq!(
         key_usage,
         KeyUsageFlags::DIGITAL_SIGNATURE | KeyUsageFlags::KEY_ENCIPHERMENT
@@ -313,25 +313,25 @@ fn test_extension_readback() {
 
     // Check to ensure that we can read back the authority key identifier
     let akid = cert
-        .authority_keyid()
+        .authority_key_id()
         .expect("could not read authority key identifier");
 
-    let keyid = akid
-        .keyid()
+    let key_id = akid
+        .key_id()
         .expect("could not read authority key identifier keyid");
 
-    assert_eq!(keyid.as_slice(), KEY_ID);
+    assert_eq!(key_id.as_slice(), KEY_ID);
 
     // Check to ensure that we can read back the subject key identifier
     let skid = cert
-        .subject_keyid()
+        .subject_key_id()
         .expect("could not read subject key identifier");
 
     assert_eq!(skid.as_slice(), KEY_ID);
 
     // Check to ensure we can grab an extension by NID
     let ext = cert
-        .extension_from_nid(Nid::AUTHORITY_KEY_IDENTIFIER)
+        .extension_by_nid(Nid::AUTHORITY_KEY_IDENTIFIER)
         .unwrap();
 
     assert_eq!(
@@ -340,7 +340,7 @@ fn test_extension_readback() {
     );
 
     // Nid::NAME isn't an extension so this should fail
-    let ext = cert.extension_from_nid(Nid::NAME);
+    let ext = cert.extension_by_nid(Nid::NAME);
     assert!(ext.is_none());
 }
 
@@ -369,6 +369,24 @@ fn test_extensions_iterator() {
     ];
 
     assert_eq!(extension_names, expected_names);
+}
+
+#[test]
+fn test_certificate_with_no_key_usage() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    // not strictly required but this is a sanity check to ensure that the cert does not have the
+    // key usage extension since we want to test that the behavior of X509::key_usage is correct
+    // under this case
+    for ext in cert.extensions() {
+        assert!(ext.object().nid().short_name().unwrap() != "keyUsage");
+    }
+
+    let key_usage = cert.key_usage();
+
+    // since this certificate
+    assert_eq!(key_usage, KeyUsageFlags::all());
 }
 
 #[test]

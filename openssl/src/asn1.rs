@@ -39,6 +39,7 @@ use crate::bio::MemBio;
 use crate::bn::{BigNum, BigNumRef};
 use crate::error::ErrorStack;
 use crate::nid::Nid;
+use crate::stack::Stackable;
 use crate::string::OpensslString;
 use crate::{cvt, cvt_p};
 
@@ -665,7 +666,17 @@ impl fmt::Display for Asn1ObjectRef {
                 0,
             );
 
-            let s = str::from_utf8(&buf[..len as usize]).map_err(|_| fmt::Error)?;
+            if len < 0 {
+                return Err(fmt::Error {});
+            }
+
+            let len = if len as usize > buf.len() {
+                buf.len()
+            } else {
+                len as usize
+            };
+
+            let s = str::from_utf8(&buf[..len]).map_err(|_| fmt::Error)?;
             fmt.write_str(s)
         }
     }
@@ -675,6 +686,10 @@ impl fmt::Debug for Asn1ObjectRef {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.write_str(self.to_string().as_str())
     }
+}
+
+impl Stackable for Asn1Object {
+    type StackType = ffi::stack_st_ASN1_OBJECT;
 }
 
 cfg_if! {
