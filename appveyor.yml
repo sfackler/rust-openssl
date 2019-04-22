@@ -7,15 +7,16 @@ environment:
       OPENSSL_VERSION: 1_1_1b
       OPENSSL_DIR: C:\OpenSSL
 
-    # 1.0.2, 64/32 bit
-    - TARGET: x86_64-pc-windows-gnu
-      BITS: 64
-      MSYS2: 1
-      OPENSSL_VERSION: 1_0_2r
+    # 1.0.2, 32 bit
     - TARGET: i686-pc-windows-msvc
       BITS: 32
       OPENSSL_VERSION: 1_0_2r
       OPENSSL_DIR: C:\OpenSSL
+
+    # mingw
+    - TARGET: x86_64-pc-windows-gnu
+      BITS: 64
+      MSYS2: 1
 
     # vcpkg
     - TARGET: x86_64-pc-windows-msvc
