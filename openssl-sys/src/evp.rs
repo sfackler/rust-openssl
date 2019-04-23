@@ -143,7 +143,7 @@ extern "C" {
     ) -> c_int;
 }
 cfg_if! {
-    if #[cfg(any(ossl111, libressl280))] {
+    if #[cfg(any(ossl111b, libressl280))] {
         extern "C" {
             pub fn EVP_PKEY_size(pkey: *const EVP_PKEY) -> c_int;
         }
