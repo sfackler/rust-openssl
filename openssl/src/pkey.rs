@@ -178,6 +178,15 @@ impl<T> PKeyRef<T> {
     pub fn id(&self) -> Id {
         unsafe { Id::from_raw(ffi::EVP_PKEY_id(self.as_ptr())) }
     }
+
+    /// Returns the maximum size of a signature in bytes.
+    ///
+    /// This corresponds to [`EVP_PKEY_size`].
+    ///
+    /// [`EVP_PKEY_size`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_PKEY_size.html
+    pub fn size(&self) -> usize {
+        unsafe { ffi::EVP_PKEY_size(self.as_ptr()) as usize }
+    }
 }
 
 impl<T> PKeyRef<T>
