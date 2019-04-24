@@ -3831,7 +3831,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl110, libressl291)] {
+    if #[cfg(any(ossl110, libressl291))] {
         use ffi::{TLS_method, DTLS_method};
 
         unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
