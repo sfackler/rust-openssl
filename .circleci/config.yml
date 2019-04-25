@@ -121,6 +121,11 @@ jobs:
             - /usr/local/cargo/registry/index
       - restore_cache:
           key: deps-<< parameters.image >>-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>-{{ checksum "Cargo.lock" }}
+      - run: |
+          cargo build \
+            --manifest-path=openssl/Cargo.toml \
+            <<# parameters.vendored >>--features vendored<</ parameters.vendored >> \
+            --target << parameters.target >>
       - unless:
           condition: << parameters.minimal_build >>
           steps:
@@ -135,13 +140,13 @@ jobs:
                   <<# parameters.vendored >>--features openssl-sys/vendored<</ parameters.vendored >> \
                   --target << parameters.target >> \
                   <<# parameters.no_run >>--no-run<</ parameters.no_run >>
-      - run: |
-          ulimit -c unlimited
-          cargo test \
-            --manifest-path=openssl/Cargo.toml \
-            <<# parameters.vendored >>--features vendored<</ parameters.vendored >> \
-            --target << parameters.target >> \
-            <<# parameters.no_run >>--no-run<</ parameters.no_run >>
+            - run: |
+                ulimit -c unlimited
+                cargo test \
+                  --manifest-path=openssl/Cargo.toml \
+                  <<# parameters.vendored >>--features vendored<</ parameters.vendored >> \
+                  --target << parameters.target >> \
+                  <<# parameters.no_run >>--no-run<</ parameters.no_run >>
       - save_cache:
           key: deps-<< parameters.image >>-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>-{{ checksum "Cargo.lock" }}
           paths:

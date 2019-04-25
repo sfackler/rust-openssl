@@ -11,7 +11,7 @@ use std::net::UdpSocket;
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::Path;
 use std::process::{Child, ChildStdin, Command, Stdio};
-use std::sync::atomic::{AtomicBool, Ordering, ATOMIC_BOOL_INIT};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 use tempdir::TempDir;
@@ -192,7 +192,7 @@ fn verify_trusted_get_error_err() {
 
 #[test]
 fn verify_callback() {
-    static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
     let server = Server::builder().build();
 
@@ -214,7 +214,7 @@ fn verify_callback() {
 
 #[test]
 fn ssl_verify_callback() {
-    static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
     let server = Server::builder().build();
 
@@ -843,7 +843,7 @@ fn cert_store() {
 
 #[test]
 fn tmp_dh_callback() {
-    static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
     let mut server = Server::builder();
     server.ctx().set_tmp_dh_callback(|_, _, _| {
@@ -870,7 +870,7 @@ fn tmp_ecdh_callback() {
     use ec::EcKey;
     use nid::Nid;
 
-    static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
     let mut server = Server::builder();
     server.ctx().set_tmp_ecdh_callback(|_, _, _| {
@@ -889,7 +889,7 @@ fn tmp_ecdh_callback() {
 
 #[test]
 fn tmp_dh_callback_ssl() {
-    static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
     let mut server = Server::builder();
     server.ssl_cb(|ssl| {
@@ -918,7 +918,7 @@ fn tmp_ecdh_callback_ssl() {
     use ec::EcKey;
     use nid::Nid;
 
-    static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
     let mut server = Server::builder();
     server.ssl_cb(|ssl| {
@@ -962,8 +962,8 @@ fn active_session() {
 
 #[test]
 fn status_callbacks() {
-    static CALLED_BACK_SERVER: AtomicBool = ATOMIC_BOOL_INIT;
-    static CALLED_BACK_CLIENT: AtomicBool = ATOMIC_BOOL_INIT;
+    static CALLED_BACK_SERVER: AtomicBool = AtomicBool::new(false);
+    static CALLED_BACK_CLIENT: AtomicBool = AtomicBool::new(false);
 
     let mut server = Server::builder();
     server
@@ -1001,7 +1001,7 @@ fn status_callbacks() {
 
 #[test]
 fn new_session_callback() {
-    static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
     let mut server = Server::builder();
     server.ctx().set_session_id_context(b"foo").unwrap();
@@ -1098,7 +1098,7 @@ fn no_version_overlap() {
 #[test]
 #[cfg(ossl111)]
 fn custom_extensions() {
-    static FOUND_EXTENSION: AtomicBool = ATOMIC_BOOL_INIT;
+    static FOUND_EXTENSION: AtomicBool = AtomicBool::new(false);
 
     let mut server = Server::builder();
     server
@@ -1283,8 +1283,8 @@ fn psk_ciphers() {
     const CIPHER: &'static str = "PSK-AES128-CBC-SHA";
     const PSK: &[u8] = b"thisisaverysecurekey";
     const CLIENT_IDENT: &[u8] = b"thisisaclient";
-    static CLIENT_CALLED: AtomicBool = ATOMIC_BOOL_INIT;
-    static SERVER_CALLED: AtomicBool = ATOMIC_BOOL_INIT;
+    static CLIENT_CALLED: AtomicBool = AtomicBool::new(false);
+    static SERVER_CALLED: AtomicBool = AtomicBool::new(false);
 
     let mut server = Server::builder();
     server.ctx().set_cipher_list(CIPHER).unwrap();
@@ -1319,7 +1319,7 @@ fn psk_ciphers() {
 
 #[test]
 fn sni_callback_swapped_ctx() {
-    static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
     let mut server = Server::builder();
 
@@ -1342,7 +1342,7 @@ fn sni_callback_swapped_ctx() {
 #[test]
 #[cfg(ossl111)]
 fn client_hello() {
-    static CALLED_BACK: AtomicBool = ATOMIC_BOOL_INIT;
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
     let mut server = Server::builder();
     server.ctx().set_client_hello_callback(|ssl, _| {
