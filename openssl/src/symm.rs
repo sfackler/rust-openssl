@@ -492,12 +492,16 @@ impl Crypter {
     ///
     /// # Panics
     ///
-    /// Panics if `output.len() < input.len() + block_size` where
-    /// `block_size` is the block size of the cipher (see `Cipher::block_size`),
-    /// or if `output.len() > c_int::max_value()`.
+    /// Panics for stream ciphers if `output.len() < input.len()`.
+    ///
+    /// Panics for block ciphers if `output.len() < input.len() + block_size`,
+    /// where `block_size` is the block size of the cipher (see `Cipher::block_size`).
+    ///
+    /// Panics if `output.len() > c_int::max_value()`.
     pub fn update(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
-            assert!(output.len() >= input.len() + self.block_size);
+            let block_size = if self.block_size > 1 { self.block_size } else { 0 };
+            assert!(output.len() >= input.len() + block_size);
             assert!(output.len() <= c_int::max_value() as usize);
             let mut outl = output.len() as c_int;
             let inl = input.len() as c_int;
@@ -523,10 +527,11 @@ impl Crypter {
     ///
     /// # Panics
     ///
-    /// Panics if `output` is less than the cipher's block size.
+    /// Panics for block ciphers if `output.len() < block_size`,
+    /// where `block_size` is the block size of the cipher (see `Cipher::block_size`).
     pub fn finalize(&mut self, output: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
-            assert!(output.len() >= self.block_size);
+            if self.block_size > 1 { assert!(output.len() >= self.block_size); }
             let mut outl = cmp::min(output.len(), c_int::max_value() as usize) as c_int;
 
             cvt(ffi::EVP_CipherFinal(
@@ -752,6 +757,22 @@ cfg_if! {
 mod tests {
     use super::*;
     use hex::{self, FromHex};
+
+    #[test]
+    fn test_stream_cipher_output() {
+        let key = [0u8; 16];
+        let iv = [0u8; 16];
+        let mut c = super::Crypter::new(
+            super::Cipher::aes_128_ctr(),
+            super::Mode::Encrypt,
+            &key,
+            Some(&iv),
+        ).unwrap();
+
+        assert_eq!(c.update(&[0u8; 15], &mut [0u8; 15]).unwrap(), 15);
+        assert_eq!(c.update(&[0u8; 1], &mut [0u8; 1]).unwrap(), 1);
+        assert_eq!(c.finalize(&mut [0u8; 0]).unwrap(), 0);
+    }
 
     // Test vectors from FIPS-197:
     // http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
