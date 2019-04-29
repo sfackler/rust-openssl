@@ -492,12 +492,9 @@ impl Crypter {
     ///
     /// # Panics
     ///
-    /// Panics if `output.len() < input.len() + block_size` where
-    /// `block_size` is the block size of the cipher (see `Cipher::block_size`),
-    /// or if `output.len() > c_int::max_value()`.
+    /// Panics if `output.len() > c_int::max_value()`.
     pub fn update(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
-            assert!(output.len() >= input.len() + self.block_size);
             assert!(output.len() <= c_int::max_value() as usize);
             let mut outl = output.len() as c_int;
             let inl = input.len() as c_int;
@@ -520,13 +517,8 @@ impl Crypter {
     /// The number of bytes written to `output` is returned.
     ///
     /// `update` should not be called after this method.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `output` is less than the cipher's block size.
     pub fn finalize(&mut self, output: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
-            assert!(output.len() >= self.block_size);
             let mut outl = cmp::min(output.len(), c_int::max_value() as usize) as c_int;
 
             cvt(ffi::EVP_CipherFinal(
