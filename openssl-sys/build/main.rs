@@ -73,8 +73,8 @@ fn main() {
     let libs = match libs_env.as_ref().and_then(|s| s.to_str()) {
         Some(ref v) => v.split(":").collect(),
         None => match version {
-            Version::Openssl10x if target.contains("windows") => vec!["ssleay32", "libeay32"],
-            Version::Openssl11x if target.contains("windows") => vec!["libssl", "libcrypto"],
+            Version::Openssl10x if target.contains("windows-msvc") => vec!["ssleay32", "libeay32"],
+            Version::Openssl11x if target.contains("windows-msvc") => vec!["libssl", "libcrypto"],
             _ => vec!["ssl", "crypto"],
         },
     };
