@@ -2,7 +2,7 @@ extern crate cc;
 #[cfg(feature = "vendored")]
 extern crate openssl_src;
 extern crate pkg_config;
-extern crate rustc_version;
+extern crate autocfg;
 #[cfg(target_env = "msvc")]
 extern crate vcpkg;
 
@@ -94,9 +94,9 @@ fn main() {
 }
 
 fn check_rustc_versions() {
-    let version = rustc_version::version().unwrap();
+    let cfg = autocfg::new();
 
-    if version >= rustc_version::Version::new(1, 31, 0) {
+    if cfg.probe_rustc_version(1, 31) {
         println!("cargo:rustc-cfg=const_fn");
     }
 }
