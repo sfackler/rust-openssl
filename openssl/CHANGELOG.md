@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [v0.10.21] - 2019-04-30
+
+### Fixed
+
+* Fixed overly conservatifve buffer size checks in `Crypter` when using stream ciphers.
+
+### Added
+
+* Added bindings to envelope encryption APIs.
+* Added `PkeyRef::size`.
+
 ## [v0.10.20] - 2019-03-20
 
 ### Added
@@ -342,7 +353,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.20...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.21...master
+[v0.10.20]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.20...openssl-v0.10.21
 [v0.10.20]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.19...openssl-v0.10.20
 [v0.10.19]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.18...openssl-v0.10.19
 [v0.10.18]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.17...openssl-v0.10.18
