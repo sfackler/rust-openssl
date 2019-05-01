@@ -199,6 +199,7 @@ See rust-openssl README for more information:
             (8, 1) => ('8', '1'),
             (8, _) => ('8', 'x'),
             (9, 0) => ('9', '0'),
+            (9, 1) => ('9', '1'),
             _ => version_error(),
         };
 
