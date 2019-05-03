@@ -151,7 +151,7 @@ impl Asn1Time {
     ///
     /// Requires OpenSSL 1.1.1 or newer.
     ///
-    /// [`ASN1_TIME_set_string`]: https://www.openssl.org/docs/manmaster/man3/ASN1_TIME_set_string.html
+    /// [`ASN1_TIME_set_string_X509`]: https://www.openssl.org/docs/manmaster/man3/ASN1_TIME_set_string.html
     #[cfg(ossl111)]
     pub fn from_str_x509(s: &str) -> Result<Asn1Time, ErrorStack> {
         unsafe {
