@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [v0.9.45] - 2019-05-03
+
+### Fixed
+
+* Reverted a change to windows-gnu library names that caused regressions.
+
 ## [v0.9.44] - 2019-04-30
 
 ### Added
@@ -22,6 +28,7 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.44...master
-[v0.9.44]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.44...openssl-sys-v0.9.44
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.45...master
+[v0.9.45]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.44...openssl-sys-v0.9.45
+[v0.9.44]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.43...openssl-sys-v0.9.44
 [v0.9.43]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.42...openssl-sys-v0.9.43
