@@ -1,5 +1,7 @@
 use libc::*;
 
+use *;
+
 pub const ERR_TXT_MALLOCED: c_int = 0x01;
 pub const ERR_TXT_STRING: c_int = 0x02;
 
@@ -55,4 +57,7 @@ extern "C" {
     pub fn ERR_load_crypto_strings();
 
     pub fn ERR_get_next_error_library() -> c_int;
+
+    #[cfg(not(ossl110))]
+    pub fn ERR_set_implementation(fns: *const ERR_FNS) -> c_int;
 }

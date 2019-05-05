@@ -55,6 +55,7 @@ mod dh;
 mod dsa;
 mod dtls1;
 mod ec;
+#[macro_use]
 mod engine;
 mod err;
 mod evp;
@@ -166,7 +167,7 @@ pub fn init() {
             Box::new((0..num_locks).map(|_| None).collect());
         GUARDS = mem::transmute(guards);
 
-        CRYPTO_set_locking_callback(locking_function);
+        CRYPTO_set_locking_callback(Some(locking_function));
         set_id_callback();
     })
 }

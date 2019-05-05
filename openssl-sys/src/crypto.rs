@@ -98,7 +98,7 @@ extern "C" {
     pub fn CRYPTO_num_locks() -> c_int;
     #[cfg(not(ossl110))]
     pub fn CRYPTO_set_locking_callback(
-        func: unsafe extern "C" fn(mode: c_int, n: c_int, file: *const c_char, line: c_int),
+        func: Option<unsafe extern "C" fn(mode: c_int, n: c_int, file: *const c_char, line: c_int)>,
     );
 
     #[cfg(not(ossl110))]
@@ -112,6 +112,43 @@ extern "C" {
         file: *const c_char,
         line: c_int,
     ) -> c_int;
+
+    #[cfg(not(ossl110))]
+    pub fn CRYPTO_set_add_lock_callback(
+        func: Option<
+            unsafe extern "C" fn(
+                num: *mut c_int,
+                mount: c_int,
+                _type: c_int,
+                file: *const c_char,
+                line: c_int,
+            ) -> c_int,
+        >,
+    );
+
+    #[cfg(not(ossl110))]
+    pub fn CRYPTO_set_dynlock_create_callback(
+        dyn_create_function: Option<
+            unsafe extern "C" fn(file: *const c_char, line: c_int) -> *mut CRYPTO_dynlock_value,
+        >,
+    );
+    #[cfg(not(ossl110))]
+    pub fn CRYPTO_set_dynlock_lock_callback(
+        dyn_lock_function: Option<
+            unsafe extern "C" fn(
+                mode: c_int,
+                l: *mut CRYPTO_dynlock_value,
+                file: *const c_char,
+                line: c_int,
+            ),
+        >,
+    );
+    #[cfg(not(ossl110))]
+    pub fn CRYPTO_set_dynlock_destroy_callback(
+        dyn_destroy_function: Option<
+            unsafe extern "C" fn(l: *mut CRYPTO_dynlock_value, file: *const c_char, line: c_int),
+        >,
+    );
 }
 
 cfg_if! {
@@ -119,11 +156,23 @@ cfg_if! {
         extern "C" {
             pub fn CRYPTO_malloc(num: size_t, file: *const c_char, line: c_int) -> *mut c_void;
             pub fn CRYPTO_free(buf: *mut c_void, file: *const c_char, line: c_int);
+
+            pub fn CRYPTO_set_mem_functions(
+                m: Option<unsafe extern "C" fn(num: size_t, file: *const c_char, line: c_int) -> *mut c_void>,
+                r: Option<unsafe extern "C" fn(buf: *mut c_void, num: size_t, file: *const c_char, line: c_int) -> *mut c_void>,
+                f: Option<unsafe extern "C" fn(buf:*mut c_void, file: *const c_char, line: c_int)>,
+            ) -> c_int;
         }
     } else {
         extern "C" {
             pub fn CRYPTO_malloc(num: c_int, file: *const c_char, line: c_int) -> *mut c_void;
             pub fn CRYPTO_free(buf: *mut c_void);
+
+            pub fn CRYPTO_set_mem_functions(
+                m: Option<unsafe extern "C" fn(num: size_t) -> *mut c_void>,
+                r: Option<unsafe extern "C" fn(buf: *mut c_void, num: size_t) -> *mut c_void>,
+                f: Option<unsafe extern "C" fn(buf: *mut c_void)>,
+            ) -> c_int;
         }
     }
 }
@@ -189,5 +238,9 @@ cfg_if! {
     } else {
         pub enum CRYPTO_dynlock_value {}
         pub enum CRYPTO_EX_DATA_IMPL {}
+
+        extern "C" {
+            pub fn CRYPTO_set_ex_data_implementation(i: *const CRYPTO_EX_DATA_IMPL) -> c_int;
+        }
     }
 }

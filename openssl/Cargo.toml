@@ -8,6 +8,7 @@ repository = "https://github.com/sfackler/rust-openssl"
 readme = "README.md"
 keywords = ["crypto", "tls", "ssl", "dtls"]
 categories = ["cryptography", "api-bindings"]
+autoexamples = false
 
 # these are deprecated and don't do anything anymore
 [features]
@@ -30,3 +31,10 @@ openssl-sys = { version = "0.9.44", path = "../openssl-sys" }
 [dev-dependencies]
 tempdir = "0.3"
 hex = "0.3"
+
+[[example]]
+name = "mk_certs"
+
+[[example]]
+name = "keyless"
+crate-type = ["cdylib"]

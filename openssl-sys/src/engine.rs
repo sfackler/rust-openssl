@@ -213,19 +213,13 @@ extern "C" {
     #[cfg(not(ossl110))]
     pub fn ENGINE_set_ECDH(e: *mut ENGINE, ecdh_meth: *const ECDH_METHOD) -> c_int;
     #[cfg(not(ossl110))]
-    pub fn ENGINE_set_ECDSA(
-        e: *mut ENGINE,
-        ecdsa_meth: *const ECDSA_METHOD,
-    ) -> c_int;
+    pub fn ENGINE_set_ECDSA(e: *mut ENGINE, ecdsa_meth: *const ECDSA_METHOD) -> c_int;
     #[cfg(ossl110)]
     pub fn ENGINE_set_EC(e: *mut ENGINE, ecdsa_meth: *const EC_KEY_METHOD) -> c_int;
     pub fn ENGINE_set_DH(e: *mut ENGINE, dh_meth: *const DH_METHOD) -> c_int;
     pub fn ENGINE_set_RAND(e: *mut ENGINE, rand_meth: *const RAND_METHOD) -> c_int;
     #[cfg(not(ossl110))]
-    pub fn ENGINE_set_STORE(
-        e: *mut ENGINE,
-        store_meth: *const STORE_METHOD,
-    ) -> c_int;
+    pub fn ENGINE_set_STORE(e: *mut ENGINE, store_meth: *const STORE_METHOD) -> c_int;
     pub fn ENGINE_set_destroy_function(e: *mut ENGINE, destroy_f: ENGINE_GEN_INT_FUNC_PTR)
         -> c_int;
     pub fn ENGINE_set_init_function(e: *mut ENGINE, init_f: ENGINE_GEN_INT_FUNC_PTR) -> c_int;
@@ -389,34 +383,8 @@ cfg_if! {
             pub fn ERR_load_ENGINE_strings() -> c_int;
         }
 
-        pub type dyn_MEM_malloc_fn =
-            Option<unsafe extern "C" fn(usize, *const c_char, c_int) -> *mut c_void>;
-        pub type dyn_MEM_realloc_fn = Option<
-            unsafe extern "C" fn(
-                 *mut c_void,
-                 usize,
-                 *const c_char,
-                 c_int
-            ) -> *mut c_void,
-        >;
-        pub type dyn_MEM_free_fn =
-            Option<unsafe extern "C" fn(arg1: *mut c_void, *const c_char, c_int)>;
-        #[repr(C)]
-        #[derive(Debug, Copy, Clone)]
-        pub struct st_dynamic_MEM_fns {
-            pub malloc_fn: dyn_MEM_malloc_fn,
-            pub realloc_fn: dyn_MEM_realloc_fn,
-            pub free_fn: dyn_MEM_free_fn,
-        }
-        pub type dynamic_MEM_fns = st_dynamic_MEM_fns;
-
-        #[repr(C)]
-        #[derive(Debug, Copy, Clone)]
-        pub struct st_dynamic_fns {
-            static_state: *mut c_void,
-            pub mem_fns: dynamic_MEM_fns,
-        }
-        pub type dynamic_fns = st_dynamic_fns;
+        pub const OSSL_DYNAMIC_VERSION: c_ulong = 0x00030000;
+        pub const OSSL_DYNAMIC_OLDEST: c_ulong = 0x00030000;
     } else {
         extern "C" {
             pub fn ENGINE_load_openssl();
@@ -455,6 +423,89 @@ cfg_if! {
             pub fn ERR_load_ENGINE_strings();
         }
 
+
+        pub const OSSL_DYNAMIC_VERSION: c_ulong = 0x00020000;
+        pub const OSSL_DYNAMIC_OLDEST: c_ulong = 0x00020000;
+    }
+}
+
+pub type dynamic_v_check_fn = Option<unsafe extern "C" fn(ossl_version: c_ulong) -> c_ulong>;
+
+#[macro_export]
+macro_rules! IMPLEMENT_DYNAMIC_CHECK_FN {
+    () => {
+        #[no_mangle]
+        pub extern "C" fn v_check(v: ::std::os::raw::c_ulong) -> ::std::os::raw::c_ulong {
+            if v >= OSSL_DYNAMIC_OLDEST {
+                OSSL_DYNAMIC_VERSION
+            } else {
+                0
+            }
+        }
+    };
+}
+
+pub type dynamic_bind_engine = Option<
+    unsafe extern "C" fn(e: *mut ENGINE, id: *const c_char, fns: *const dynamic_fns) -> c_int,
+>;
+
+cfg_if! {
+    if #[cfg(ossl110)] {
+        pub type dyn_MEM_malloc_fn =
+            Option<unsafe extern "C" fn(usize, *const c_char, c_int) -> *mut c_void>;
+        pub type dyn_MEM_realloc_fn = Option<
+            unsafe extern "C" fn(
+                 *mut c_void,
+                 usize,
+                 *const c_char,
+                 c_int
+            ) -> *mut c_void,
+        >;
+        pub type dyn_MEM_free_fn =
+            Option<unsafe extern "C" fn(arg1: *mut c_void, *const c_char, c_int)>;
+        #[repr(C)]
+        #[derive(Debug, Copy, Clone)]
+        pub struct st_dynamic_MEM_fns {
+            pub malloc_fn: dyn_MEM_malloc_fn,
+            pub realloc_fn: dyn_MEM_realloc_fn,
+            pub free_fn: dyn_MEM_free_fn,
+        }
+        pub type dynamic_MEM_fns = st_dynamic_MEM_fns;
+
+        #[repr(C)]
+        #[derive(Debug, Copy, Clone)]
+        pub struct st_dynamic_fns {
+            pub static_state: *mut c_void,
+            pub mem_fns: dynamic_MEM_fns,
+        }
+        pub type dynamic_fns = st_dynamic_fns;
+
+        #[macro_export]
+        macro_rules! IMPLEMENT_DYNAMIC_BIND_FN {
+            ($fn:ident) => {
+                #[no_mangle]
+                pub extern "C" fn bind_engine(
+                    e: *mut ENGINE,
+                    id: *const c_char,
+                    fns: *const dynamic_fns,
+                ) -> c_int {
+                    unsafe {
+                        let fns = fns.as_ref().unwrap();
+
+                        if ENGINE_get_static_state() != fns.static_state {
+                            CRYPTO_set_mem_functions(
+                                fns.mem_fns.malloc_fn,
+                                fns.mem_fns.realloc_fn,
+                                fns.mem_fns.free_fn,
+                            );
+                        }
+
+                        $fn(e, id)
+                    }
+                }
+            };
+        }
+    } else {
         pub type dyn_MEM_malloc_cb =
             Option<unsafe extern "C" fn(arg1: usize) -> *mut c_void>;
         pub type dyn_MEM_realloc_cb = Option<
@@ -534,16 +585,46 @@ cfg_if! {
         }
         pub type dynamic_fns = st_dynamic_fns;
 
-        pub type dynamic_v_check_fn = Option<
-            unsafe extern "C" fn(ossl_version: c_ulong) -> c_ulong,
-        >;
-        pub type dynamic_bind_engine = Option<
-            unsafe extern "C" fn(
-                e: *mut ENGINE,
-                id: *const c_char,
-                fns: *const dynamic_fns,
-            ) -> c_int,
-        >;
+        #[macro_export]
+        macro_rules! IMPLEMENT_DYNAMIC_BIND_FN {
+            ($fn:ident) => {
+                #[no_mangle]
+                pub extern "C" fn bind_engine(
+                    e: *mut ENGINE,
+                    id: *const c_char,
+                    fns: *const dynamic_fns,
+                ) -> c_int {
+                    unsafe {
+                        let fns = fns.as_ref().unwrap();
+
+                        if ENGINE_get_static_state() != fns.static_state {
+                            if 0 == CRYPTO_set_mem_functions(
+                                fns.mem_fns.malloc_cb,
+                                fns.mem_fns.realloc_cb,
+                                fns.mem_fns.free_cb,
+                            ) {
+                                return 0;
+                            }
+
+                            CRYPTO_set_locking_callback(fns.lock_fns.lock_locking_cb);
+                            CRYPTO_set_add_lock_callback(fns.lock_fns.lock_add_lock_cb);
+                            CRYPTO_set_dynlock_create_callback(fns.lock_fns.dynlock_create_cb);
+                            CRYPTO_set_dynlock_lock_callback(fns.lock_fns.dynlock_lock_cb);
+                            CRYPTO_set_dynlock_destroy_callback(fns.lock_fns.dynlock_destroy_cb);
+
+                            if 0 == CRYPTO_set_ex_data_implementation(fns.ex_data_fns) {
+                                return 0;
+                            }
+                            if 0 == ERR_set_implementation(fns.err_fns) {
+                                return 0;
+                            }
+                        }
+
+                        $fn(e, id)
+                    }
+                }
+            };
+        }
     }
 }
 
@@ -554,7 +635,7 @@ extern "C" {
 // Error codes for the ENGINE functions. */
 // Function codes.
 #[cfg(ossl111)]
-pub const ENGINE_F_DIGEST_UPDATE : u32 = 198;
+pub const ENGINE_F_DIGEST_UPDATE: u32 = 198;
 pub const ENGINE_F_DYNAMIC_CTRL: u32 = 180;
 pub const ENGINE_F_DYNAMIC_GET_DATA_CTX: u32 = 181;
 pub const ENGINE_F_DYNAMIC_LOAD: u32 = 182;
