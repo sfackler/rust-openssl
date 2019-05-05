@@ -61,6 +61,7 @@ fn main() {
         .header("openssl/bn.h")
         .header("openssl/aes.h")
         .header("openssl/ocsp.h")
+        .header("openssl/engine.h")
         .header("openssl/evp.h");
 
     if openssl_version.is_some() {

@@ -125,6 +125,8 @@ cfg_if! {
 
 pub enum EVP_PKEY_ASN1_METHOD {}
 
+pub enum EVP_PKEY_METHOD {}
+
 pub enum EVP_PKEY_CTX {}
 
 cfg_if! {
@@ -266,6 +268,15 @@ cfg_if! {
 pub enum RSA_METHOD {}
 
 pub enum EC_KEY {}
+#[cfg(ossl110)]
+pub enum EC_KEY_METHOD {}
+
+pub enum RAND_METHOD {}
+
+#[cfg(not(ossl110))]
+pub enum ECDH_METHOD {}
+#[cfg(not(ossl110))]
+pub enum ECDSA_METHOD {}
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {
@@ -404,6 +415,14 @@ pub struct X509V3_CTX {
 pub enum CONF {}
 #[cfg(ossl110)]
 pub enum OPENSSL_INIT_SETTINGS {}
+
+pub enum STORE_METHOD {}
+
+pub enum UI {}
+pub enum UI_METHOD {}
+
+#[cfg(not(ossl110))]
+pub enum ERR_FNS {}
 
 pub enum ENGINE {}
 cfg_if! {
