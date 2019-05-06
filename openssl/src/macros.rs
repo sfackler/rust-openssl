@@ -217,7 +217,7 @@ macro_rules! generic_foreign_type_and_impl_send_sync {
                     unsafe {
                         let handle: *mut $ctype =
                             $clone(::foreign_types::ForeignTypeRef::as_ptr(self));
-                        $crate::ForeignType::from_ptr(handle)
+                        ::foreign_types::ForeignType::from_ptr(handle)
                     }
                 }
             }
