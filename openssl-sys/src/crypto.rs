@@ -54,41 +54,59 @@ cfg_if! {
 }
 
 // FIXME should be options
-pub type CRYPTO_EX_new = unsafe extern "C" fn(
+pub type CRYPTO_EX_new = Option<unsafe extern "C" fn(
     parent: *mut c_void,
     ptr: *mut c_void,
     ad: *const CRYPTO_EX_DATA,
     idx: c_int,
     argl: c_long,
     argp: *const c_void,
-) -> c_int;
-pub type CRYPTO_EX_dup = unsafe extern "C" fn(
+) -> c_int>;
+pub type CRYPTO_EX_dup = Option<unsafe extern "C" fn(
     to: *mut CRYPTO_EX_DATA,
     from: *mut CRYPTO_EX_DATA,
     from_d: *mut c_void,
     idx: c_int,
     argl: c_long,
     argp: *mut c_void,
-) -> c_int;
-pub type CRYPTO_EX_free = unsafe extern "C" fn(
+) -> c_int>;
+pub type CRYPTO_EX_free = Option<unsafe extern "C" fn(
     parent: *mut c_void,
     ptr: *mut c_void,
     ad: *mut CRYPTO_EX_DATA,
     idx: c_int,
     argl: c_long,
     argp: *mut c_void,
-);
-extern "C" {
-    #[cfg(ossl110)]
-    #[must_use]
-    pub fn CRYPTO_get_ex_new_index(
-        class_index: c_int,
-        argl: c_long,
-        argp: *mut c_void,
-        new_func: Option<CRYPTO_EX_new>,
-        dup_func: Option<CRYPTO_EX_dup>,
-        free_func: Option<CRYPTO_EX_free>,
-    ) -> c_int;
+)>;
+
+cfg_if! {
+    if #[cfg(ossl110)] {
+        extern "C" {
+        #[must_use]
+            pub fn CRYPTO_get_ex_new_index(
+                class_index: c_int,
+                argl: c_long,
+                argp: *mut c_void,
+                new_func: CRYPTO_EX_new,
+                dup_func: CRYPTO_EX_dup,
+                free_func: CRYPTO_EX_free,
+            ) -> c_int;
+
+            pub fn CRYPTO_free_ex_index(class_index: c_int, idx: c_int) -> c_int;
+        }
+    } else {
+        pub struct crypto_ex_data_func_st {
+            argl: c_long,
+            argp: *mut c_void,
+            new_func: CRYPTO_EX_new,
+            dup_func: CRYPTO_EX_dup,
+            free_func: CRYPTO_EX_free,
+        }
+
+        pub type CRYPTO_EX_DATA_FUNCS = crypto_ex_data_func_st;
+
+        stack!(stack_st_CRYPTO_EX_DATA_FUNCS);
+    }
 }
 
 pub const CRYPTO_LOCK: c_int = 1;

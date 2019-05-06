@@ -1744,7 +1744,7 @@ impl SslContext {
     {
         unsafe {
             ffi::init();
-            let idx = cvt_n(get_new_idx(free_data_box::<T>))?;
+            let idx = cvt_n(get_new_idx(Some(free_data_box::<T>)))?;
             Ok(Index::from_raw(idx))
         }
     }
@@ -2236,7 +2236,7 @@ impl Ssl {
     {
         unsafe {
             ffi::init();
-            let idx = cvt_n(get_new_ssl_idx(free_data_box::<T>))?;
+            let idx = cvt_n(get_new_ssl_idx(Some(free_data_box::<T>)))?;
             Ok(Index::from_raw(idx))
         }
     }
@@ -3841,7 +3841,7 @@ cfg_if! {
                 ptr::null_mut(),
                 None,
                 None,
-                Some(f),
+                f,
             )
         }
 
@@ -3852,18 +3852,18 @@ cfg_if! {
                 ptr::null_mut(),
                 None,
                 None,
-                Some(f),
+                f,
             )
         }
     } else {
         use ffi::{SSLv23_method as TLS_method, DTLSv1_method as DTLS_method};
 
         unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
-            ffi::SSL_CTX_get_ex_new_index(0, ptr::null_mut(), None, None, Some(f))
+            ffi::SSL_CTX_get_ex_new_index(0, ptr::null_mut(), None, None, f)
         }
 
         unsafe fn get_new_ssl_idx(f: ffi::CRYPTO_EX_free) -> c_int {
-            ffi::SSL_get_ex_new_index(0, ptr::null_mut(), None, None, Some(f))
+            ffi::SSL_get_ex_new_index(0, ptr::null_mut(), None, None, f)
         }
     }
 }

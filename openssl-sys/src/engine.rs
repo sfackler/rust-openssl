@@ -368,7 +368,7 @@ cfg_if! {
             dup_func: CRYPTO_EX_dup,
             free_func: CRYPTO_EX_free,
         ) -> c_int {
-            CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_ENGINE, argl, argp, Some(new_func), Some(dup_func), Some(free_func))
+            CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_ENGINE, argl, argp, new_func, dup_func, free_func)
         }
         /// This function previously cleaned up anything that needs it.
         /// Auto-deinit will now take care of it so it is no longer required to call this function.
