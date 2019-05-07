@@ -5,8 +5,13 @@ use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long, c_uint, c_void};
 
 use error::ErrorStack;
+use ex_data::Index;
 use ffi;
-use {cvt, cvt_n, ex_data::Index};
+use pkey::{PKey, Private, Public};
+use ssl::SslRef;
+use stack::Stack;
+use x509::{X509Name, X509};
+use {cvt, cvt_n, cvt_p};
 
 bitflags! {
     /// These flags are used to control combinations of algorithm (methods) by bitwise "OR"ing.
@@ -242,8 +247,209 @@ impl Engine {
         unsafe { ffi::ENGINE_set_table_flags(flags.bits) }
     }
 
+    pub fn load_openssl() {
+        unsafe {
+            ffi::ENGINE_load_openssl();
+        }
+    }
+    pub fn load_dynamic() {
+        unsafe {
+            ffi::ENGINE_load_dynamic();
+        }
+    }
+    #[cfg(not(any(libressl, ossl110)))]
+    pub fn load_4758cca() {
+        unsafe {
+            ffi::ENGINE_load_4758cca();
+        }
+    }
+    #[cfg(not(any(libressl, ossl110)))]
+    pub fn load_aep() {
+        unsafe {
+            ffi::ENGINE_load_aep();
+        }
+    }
+    #[cfg(not(any(libressl, ossl110)))]
+    pub fn load_atalla() {
+        unsafe {
+            ffi::ENGINE_load_atalla();
+        }
+    }
+    #[cfg(not(any(libressl, ossl110)))]
+    pub fn load_chil() {
+        unsafe {
+            ffi::ENGINE_load_chil();
+        }
+    }
+    #[cfg(not(any(libressl, ossl110)))]
+    pub fn load_cswift() {
+        unsafe {
+            ffi::ENGINE_load_cswift();
+        }
+    }
+    #[cfg(not(any(libressl, ossl110)))]
+    pub fn load_nuron() {
+        unsafe {
+            ffi::ENGINE_load_nuron();
+        }
+    }
+    #[cfg(not(any(libressl, ossl110)))]
+    pub fn load_sureware() {
+        unsafe {
+            ffi::ENGINE_load_sureware();
+        }
+    }
+    #[cfg(not(any(libressl, ossl110)))]
+    pub fn load_ubsec() {
+        unsafe {
+            ffi::ENGINE_load_ubsec();
+        }
+    }
+    pub fn load_padlock() {
+        unsafe {
+            ffi::ENGINE_load_padlock();
+        }
+    }
+    #[cfg(not(libressl))]
+    pub fn load_capi() {
+        unsafe {
+            ffi::ENGINE_load_capi();
+        }
+    }
+    #[cfg(ossl110)]
+    pub fn load_afalg() {
+        unsafe {
+            ffi::ENGINE_load_afalg();
+        }
+    }
+    #[cfg(not(libressl))]
+    pub fn load_cryptodev() {
+        unsafe {
+            ffi::ENGINE_load_cryptodev();
+        }
+    }
+    #[cfg(not(libressl))]
+    pub fn load_rdrand() {
+        unsafe {
+            ffi::ENGINE_load_rdrand();
+        }
+    }
+    pub fn load_builtin_engines() {
+        unsafe { ffi::ENGINE_load_builtin_engines() }
+    }
+
+    pub fn register_all_rsa() {
+        unsafe {
+            ffi::ENGINE_register_all_RSA();
+        }
+    }
+    pub fn register_all_dsa() {
+        unsafe {
+            ffi::ENGINE_register_all_DSA();
+        }
+    }
+    #[cfg(not(ossl110))]
+    pub fn register_all_ecdh() {
+        unsafe {
+            ffi::ENGINE_register_all_ECDH();
+        }
+    }
+    #[cfg(not(ossl110))]
+    pub fn register_all_ecdsa() {
+        unsafe {
+            ffi::ENGINE_register_all_ECDSA();
+        }
+    }
+    #[cfg(ossl110)]
+    pub fn register_all_ec() {
+        unsafe {
+            ffi::ENGINE_register_all_EC();
+        }
+    }
+    pub fn register_all_dh() {
+        unsafe {
+            ffi::ENGINE_register_all_DH();
+        }
+    }
+    pub fn register_all_rand() {
+        unsafe {
+            ffi::ENGINE_register_all_RAND();
+        }
+    }
+    #[cfg(not(ossl110))]
+    pub fn register_all_store() {
+        unsafe {
+            ffi::ENGINE_register_all_STORE();
+        }
+    }
+    pub fn register_all_ciphers() {
+        unsafe {
+            ffi::ENGINE_register_all_ciphers();
+        }
+    }
+    pub fn register_all_digests() {
+        unsafe {
+            ffi::ENGINE_register_all_digests();
+        }
+    }
+    pub fn register_all_pkey_meths() {
+        unsafe {
+            ffi::ENGINE_register_all_pkey_meths();
+        }
+    }
+    pub fn register_all_pkey_asn1_meths() {
+        unsafe {
+            ffi::ENGINE_register_all_pkey_asn1_meths();
+        }
+    }
+    pub fn register_all_complete() {
+        unsafe {
+            ffi::ENGINE_register_all_complete();
+        }
+    }
+
+    pub fn add_conf_module() {
+        unsafe { ffi::ENGINE_add_conf_module() }
+    }
+
+    /// If the loading application (or library) and the loaded ENGINE library
+    /// share the same static data (eg. they're both dynamically linked to the
+    /// same libcrypto.so) we need a way to avoid trying to set system callbacks -
+    /// this would fail, and for the same reason that it's unnecessary to try. If
+    /// the loaded ENGINE has (or gets from through the loader) its own copy of
+    /// the libcrypto static data, we will need to set the callbacks. The easiest
+    /// way to detect this is to have a function that returns a pointer to some
+    /// static data and let the loading application and loaded ENGINE compare
+    /// their respective values.
+    pub fn get_static_state() -> *const c_void {
+        unsafe { ffi::ENGINE_get_static_state() }
+    }
+
     pub fn cleanup() {
         unsafe { ffi::ENGINE_cleanup() }
+    }
+
+    /// These functions are useful for manufacturing new ENGINE structures. They
+    /// don't address reference counting at all - one uses them to populate an
+    /// ENGINE structure with personalised implementations of things prior to
+    /// using it directly or adding it to the builtin ENGINE list in OpenSSL.
+    /// These are also here so that the ENGINE structure doesn't have to be
+    /// exposed and break binary compatibility!
+    pub fn new() -> Self {
+        unsafe { Engine::from_ptr(ffi::ENGINE_new()) }
+    }
+
+    ///  Retrieve an engine from the list by its unique "id" value.
+    pub fn by_id(id: &str) -> Option<Self> {
+        unsafe {
+            let e = ffi::ENGINE_by_id(CString::new(id).unwrap().as_ptr());
+
+            if e.is_null() {
+                None
+            } else {
+                Some(Engine::from_ptr(e))
+            }
+        }
     }
 }
 
@@ -496,6 +702,292 @@ impl EngineRef {
             )
         })
         .map(|_| ())
+    }
+
+    pub fn register_rsa(&self) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_register_RSA(self.as_ptr()) }).map(|_| ())
+    }
+    pub fn register_dsa(&self) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_register_DSA(self.as_ptr()) }).map(|_| ())
+    }
+    #[cfg(not(ossl110))]
+    pub fn register_ecdh(&self) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_register_ECDH(self.as_ptr()) }).map(|_| ())
+    }
+    #[cfg(not(ossl110))]
+    pub fn register_ecdsa(&self) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_register_ECDSA(self.as_ptr()) }).map(|_| ())
+    }
+    #[cfg(ossl110)]
+    pub fn register_ec(&self) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_register_EC(self.as_ptr()) }).map(|_| ())
+    }
+    pub fn register_dh(&self) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_register_DH(self.as_ptr()) }).map(|_| ())
+    }
+    pub fn register_rand(&self) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_register_RAND(self.as_ptr()) }).map(|_| ())
+    }
+    #[cfg(not(ossl110))]
+    pub fn register_store(&self) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_register_STORE(self.as_ptr()) }).map(|_| ())
+    }
+    pub fn register_ciphers(&self) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_register_ciphers(self.as_ptr()) }).map(|_| ())
+    }
+    pub fn register_digests(&self) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_register_digests(self.as_ptr()) }).map(|_| ())
+    }
+    pub fn register_pkey_meths(&self) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_register_pkey_meths(self.as_ptr()) }).map(|_| ())
+    }
+    pub fn register_pkey_asn1_meths(&self) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_register_pkey_asn1_meths(self.as_ptr()) }).map(|_| ())
+    }
+    pub fn register_complete(&self) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_register_complete(self.as_ptr()) }).map(|_| ())
+    }
+
+    pub fn unregister_rsa(&self) {
+        unsafe {
+            ffi::ENGINE_unregister_RSA(self.as_ptr());
+        }
+    }
+    pub fn unregister_dsa(&self) {
+        unsafe {
+            ffi::ENGINE_unregister_DSA(self.as_ptr());
+        }
+    }
+    #[cfg(not(ossl110))]
+    pub fn unregister_ecdh(&self) {
+        unsafe {
+            ffi::ENGINE_unregister_ECDH(self.as_ptr());
+        }
+    }
+    #[cfg(not(ossl110))]
+    pub fn unregister_ecdsa(&self) {
+        unsafe {
+            ffi::ENGINE_unregister_ECDSA(self.as_ptr());
+        }
+    }
+    #[cfg(ossl110)]
+    pub fn unregister_ec(&self) {
+        unsafe {
+            ffi::ENGINE_unregister_EC(self.as_ptr());
+        }
+    }
+    pub fn unregister_dh(&self) {
+        unsafe {
+            ffi::ENGINE_unregister_DH(self.as_ptr());
+        }
+    }
+    pub fn unregister_rand(&self) {
+        unsafe {
+            ffi::ENGINE_unregister_RAND(self.as_ptr());
+        }
+    }
+    #[cfg(not(ossl110))]
+    pub fn unregister_store(&self) {
+        unsafe {
+            ffi::ENGINE_unregister_STORE(self.as_ptr());
+        }
+    }
+    pub fn unregister_ciphers(&self) {
+        unsafe {
+            ffi::ENGINE_unregister_ciphers(self.as_ptr());
+        }
+    }
+    pub fn unregister_digests(&self) {
+        unsafe {
+            ffi::ENGINE_unregister_digests(self.as_ptr());
+        }
+    }
+    pub fn unregister_pkey_meths(&self) {
+        unsafe {
+            ffi::ENGINE_unregister_pkey_meths(self.as_ptr());
+        }
+    }
+    pub fn unregister_pkey_asn1_meths(&self) {
+        unsafe {
+            ffi::ENGINE_unregister_pkey_asn1_meths(self.as_ptr());
+        }
+    }
+
+    /// Initialise a engine type for use (or up its reference count if it's
+    /// already in use). This will fail if the engine is not currently operational
+    /// and cannot initialise.
+    pub fn init(&self) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_init(self.as_ptr()) }).map(|_| ())
+    }
+
+    /// Free a functional reference to a engine type. This does not require a
+    /// corresponding call to ENGINE_free as it also releases a structural
+    /// reference.
+    pub fn finish(&self) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_finish(self.as_ptr()) }).map(|_| ())
+    }
+
+    /// Send parameterised control commands to the engine. The possibilities to
+    /// send down an integer, a pointer to data or a function pointer are
+    /// provided. Any of the parameters may or may not be NULL, depending on the
+    /// command number. In actuality, this function only requires a structural
+    /// (rather than functional) reference to an engine, but many control commands
+    /// may require the engine be functional. The caller should be aware of trying
+    /// commands that require an operational ENGINE, and only use functional
+    /// references in such situations.
+    pub fn ctrl(
+        &self,
+        cmd: c_int,
+        i: Option<c_long>,
+        p: Option<*mut c_void>,
+        f: Option<unsafe extern "C" fn()>,
+    ) -> Result<(), ErrorStack> {
+        cvt(unsafe {
+            ffi::ENGINE_ctrl(
+                self.as_ptr(),
+                cmd,
+                i.unwrap_or_default(),
+                p.unwrap_or_else(ptr::null_mut),
+                f,
+            )
+        })
+        .map(|_| ())
+    }
+
+    /// This function tests if an ENGINE-specific command is usable as a
+    /// "setting". Eg. in an application's config file that gets processed through
+    /// ENGINE_ctrl_cmd_string(). If this returns zero, it is not available to
+    /// ENGINE_ctrl_cmd_string(), only ENGINE_ctrl().
+    pub fn cmd_is_executable(&self, cmd: c_int) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_cmd_is_executable(self.as_ptr(), cmd) }).map(|_| ())
+    }
+
+    /// This function works like ENGINE_ctrl() with the exception of taking a
+    /// command name instead of a command number, and can handle optional
+    /// commands. See the comment on ENGINE_ctrl_cmd_string() for an explanation
+    /// on how to use the cmd_name and cmd_optional.
+    pub fn ctrl_cmd(
+        &self,
+        cmd: &str,
+        i: Option<c_long>,
+        p: Option<*mut c_void>,
+        f: Option<unsafe extern "C" fn()>,
+        cmd_optional: c_int,
+    ) -> Result<(), ErrorStack> {
+        cvt(unsafe {
+            ffi::ENGINE_ctrl_cmd(
+                self.as_ptr(),
+                CString::new(cmd).unwrap().as_ptr(),
+                i.unwrap_or_default(),
+                p.unwrap_or_else(ptr::null_mut),
+                f,
+                cmd_optional,
+            )
+        })
+        .map(|_| ())
+    }
+
+    /// This function passes a command-name and argument to an ENGINE. The
+    /// cmd_name is converted to a command number and the control command is
+    /// called using 'arg' as an argument (unless the ENGINE doesn't support such
+    /// a command, in which case no control command is called). The command is
+    /// checked for input flags, and if necessary the argument will be converted
+    /// to a numeric value. If cmd_optional is non-zero, then if the ENGINE
+    /// doesn't support the given cmd_name the return value will be success
+    /// anyway. This function is intended for applications to use so that users
+    /// (or config files) can supply engine-specific config data to the ENGINE at
+    /// run-time to control behaviour of specific engines. As such, it shouldn't
+    /// be used for calling ENGINE_ctrl() functions that return data, deal with
+    /// binary data, or that are otherwise supposed to be used directly through
+    /// ENGINE_ctrl() in application code. Any "return" data from an ENGINE_ctrl()
+    /// operation in this function will be lost - the return value is interpreted
+    /// as failure if the return value is zero, success otherwise, and this
+    /// function returns a boolean value as a result. In other words, vendors of
+    /// 'ENGINE'-enabled devices should write ENGINE implementations with
+    /// parameterisations that work in this scheme, so that compliant ENGINE-based
+    /// applications can work consistently with the same configuration for the
+    /// same ENGINE-enabled devices, across applications.
+    pub fn ctrl_cmd_string(
+        &self,
+        cmd_name: &str,
+        arg: &str,
+        cmd_optional: c_int,
+    ) -> Result<(), ErrorStack> {
+        cvt(unsafe {
+            ffi::ENGINE_ctrl_cmd_string(
+                self.as_ptr(),
+                CString::new(cmd_name).unwrap().as_ptr(),
+                CString::new(arg).unwrap().as_ptr(),
+                cmd_optional,
+            )
+        })
+        .map(|_| ())
+    }
+
+    pub fn load_private_key<T>(
+        &self,
+        key_id: &str,
+        ui_method: Option<&mut ffi::UI_METHOD>,
+        callback_data: Option<&mut T>,
+    ) -> Result<PKey<Private>, ErrorStack> {
+        cvt_p(unsafe {
+            ffi::ENGINE_load_private_key(
+                self.as_ptr(),
+                CString::new(key_id).unwrap().as_ptr(),
+                ui_method.map_or_else(ptr::null_mut, |v| &mut *v),
+                callback_data.map_or_else(ptr::null_mut, |v| &mut *v) as *mut _,
+            )
+        })
+        .map(|p| unsafe { PKey::from_ptr(p) })
+    }
+
+    pub fn load_public_key<T>(
+        &self,
+        key_id: &str,
+        ui_method: Option<&mut ffi::UI_METHOD>,
+        callback_data: Option<&mut T>,
+    ) -> Result<PKey<Public>, ErrorStack> {
+        cvt_p(unsafe {
+            ffi::ENGINE_load_public_key(
+                self.as_ptr(),
+                CString::new(key_id).unwrap().as_ptr(),
+                ui_method.map_or_else(ptr::null_mut, |v| &mut *v),
+                callback_data.map_or_else(ptr::null_mut, |v| &mut *v) as *mut _,
+            )
+        })
+        .map(|p| unsafe { PKey::from_ptr(p) })
+    }
+
+    pub fn load_ssl_client_cert<T>(
+        &self,
+        ssl: &SslRef,
+        ca_dn: &Stack<X509Name>,
+        ui_method: Option<&mut ffi::UI_METHOD>,
+        callback_data: Option<&mut T>,
+    ) -> Result<(X509, PKey<Private>, Stack<X509>), ErrorStack> {
+        let mut pcert = ptr::null_mut();
+        let mut ppkey = ptr::null_mut();
+        let mut pother = ptr::null_mut();
+
+        cvt(unsafe {
+            ffi::ENGINE_load_ssl_client_cert(
+                self.as_ptr(),
+                ssl.as_ptr(),
+                ca_dn.as_ptr(),
+                &mut pcert,
+                &mut ppkey,
+                &mut pother,
+                ui_method.map_or_else(ptr::null_mut, |v| &mut *v),
+                callback_data.map_or_else(ptr::null_mut, |v| &mut *v) as *mut _,
+            )
+        })
+        .map(|_| unsafe {
+            (
+                X509::from_ptr(pcert),
+                PKey::from_ptr(ppkey),
+                Stack::<X509>::from_ptr(pother),
+            )
+        })
     }
 }
 

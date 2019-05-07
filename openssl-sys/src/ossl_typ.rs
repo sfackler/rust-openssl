@@ -418,8 +418,126 @@ pub enum OPENSSL_INIT_SETTINGS {}
 
 pub enum STORE_METHOD {}
 
-pub enum UI {}
-pub enum UI_METHOD {}
+#[repr(C)]
+pub struct ui_method_st {
+    pub name: *const c_char,
+
+    /*
+     * Open whatever channel for this, be it the console, an X window or
+     * whatever. This function should use the ex_data structure to save
+     * intermediate data.
+     */
+    pub ui_open_session: Option<unsafe extern "C" fn(ui: *mut UI) -> c_int>,
+    pub ui_write_string: Option<unsafe extern "C" fn(ui: *mut UI, uis: *mut UI_STRING) -> c_int>,
+    /*
+     * Flush the output.  If a GUI dialog box is used, this function can be
+     * used to actually display it.
+     */
+    pub ui_flush: Option<unsafe extern "C" fn(ui: *mut UI) -> c_int>,
+    pub ui_read_string: Option<unsafe extern "C" fn(ui: *mut UI, uis: *mut UI_STRING) -> c_int>,
+    pub ui_close_session: Option<unsafe extern "C" fn(ui: *mut UI) -> c_int>,
+    /*
+     * Construct a prompt in a user-defined manner.  object_desc is a textual
+     * short description of the object, for example "pass phrase", and
+     * object_name is the name of the object (might be a card name or a file
+     * name. The returned string shall always be allocated on the heap with
+     * OPENSSL_malloc(), and need to be free'd with OPENSSL_free().
+     */
+    pub ui_construct_prompt: Option<
+        unsafe extern "C" fn(
+            ui: *mut UI,
+            object_desc: *const c_char,
+            object_name: *const c_char,
+        ) -> *mut c_char,
+    >,
+}
+
+/// The different types of strings that are currently supported.
+/// This is only needed by method authors.
+#[repr(C)]
+pub enum UI_string_types {
+    UIT_NONE = 0,
+    /// Prompt for a string
+    UIT_PROMPT,
+    /// Prompt for a string and verify
+    UIT_VERIFY,
+    /// Prompt for a yes/no response
+    UIT_BOOLEAN,
+    /// Send info to the user
+    UIT_INFO,
+    /// Send an error message to the user
+    UIT_ERROR,
+}
+
+pub const OUT_STRING_FREEABLE: c_int = 0x01;
+
+#[repr(C)]
+pub struct ui_string_st {
+    /// Input
+    pub _type: UI_string_types,
+    /// Input
+    pub out_string: *const c_char,
+    /// Flags from the user
+    pub input_flags: c_int,
+    /*
+     * The following parameters are completely irrelevant for UIT_INFO, and
+     * can therefore be set to 0 or NULL
+     */
+    /// Input and Output: If not NULL,  user-defined with size in result_maxsize.
+    /// Otherwise, it may be allocated by the UI routine,
+    /// meaning result_minsize is going to be overwritten.
+    pub result_buf: *mut c_char,
+
+    pub data: ui_string_st_data,
+
+    /// flags for internal use
+    pub flags: c_int,
+}
+
+#[repr(C)]
+pub union ui_string_st_data {
+    pub string: ui_string_st_string_data,
+    pub boolean: ui_string_st_boolean_data,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct ui_string_st_string_data {
+    /// Input: minimum required size of the result.
+    pub result_minsize: c_int,
+    /// Input: maximum permitted size of the result
+    pub result_maxsize: c_int,
+    /// Input: test string to verify against
+    pub test_buf: *const c_char,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union ui_string_st_boolean_data {
+    pub action_desc: *const c_char,
+    pub ok_chars: *const c_char,
+    pub cancel_chars: *const c_char,
+}
+
+pub const UI_FLAG_REDOABLE: c_int = 0x0001;
+pub const UI_FLAG_PRINT_ERRORS: c_int = 0x0100;
+
+#[repr(C)]
+pub struct ui_st {
+    pub meth: *const UI_METHOD,
+    /// We might want to prompt for more than one thing at a time, and with different echoing status.
+    pub strings: *mut stack_st_UI_STRING,
+    pub user_data: *mut c_void,
+    pub ex_data: CRYPTO_EX_DATA,
+    pub flags: c_int,
+}
+
+pub type UI_STRING = ui_string_st;
+
+stack!(stack_st_UI_STRING);
+
+pub type UI = ui_st;
+pub type UI_METHOD = ui_method_st;
 
 #[cfg(not(ossl110))]
 pub enum ERR_FNS {}

@@ -355,6 +355,15 @@ cfg_if! {
         pub unsafe fn ENGINE_load_dynamic() {
             OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_DYNAMIC, ptr::null());
         }
+        pub unsafe fn ENGINE_load_padlock() {
+            OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_PADLOCK, ptr::null());
+        }
+        pub unsafe fn ENGINE_load_capi() {
+            OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_CAPI, ptr::null());
+        }
+        pub unsafe fn ENGINE_load_afalg() {
+            OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_AFALG, ptr::null());
+        }
         pub unsafe fn ENGINE_load_cryptodev() {
             OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_CRYPTODEV, ptr::null());
         }
@@ -390,6 +399,25 @@ cfg_if! {
         extern "C" {
             pub fn ENGINE_load_openssl();
             pub fn ENGINE_load_dynamic();
+            #[cfg(not(libressl))]
+            pub fn ENGINE_load_4758cca();
+            #[cfg(not(libressl))]
+            pub fn ENGINE_load_aep();
+            #[cfg(not(libressl))]
+            pub fn ENGINE_load_atalla();
+            #[cfg(not(libressl))]
+            pub fn ENGINE_load_chil();
+            #[cfg(not(libressl))]
+            pub fn ENGINE_load_cswift();
+            #[cfg(not(libressl))]
+            pub fn ENGINE_load_nuron();
+            #[cfg(not(libressl))]
+            pub fn ENGINE_load_sureware();
+            #[cfg(not(libressl))]
+            pub fn ENGINE_load_ubsec();
+            pub fn ENGINE_load_padlock();
+            #[cfg(not(libressl))]
+            pub fn ENGINE_load_capi();
             #[cfg(not(libressl))]
             pub fn ENGINE_load_cryptodev();
             #[cfg(not(libressl))]
