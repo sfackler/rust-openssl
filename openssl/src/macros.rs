@@ -267,3 +267,43 @@ macro_rules! generic_foreign_type_and_impl_send_sync {
         unsafe impl<T> Sync for $borrowed<T>{}
     };
 }
+
+macro_rules! OPENSSL_FILE {
+    () => {
+        concat!(file!(), "\0").as_ptr() as _
+    };
+}
+
+macro_rules! OPENSSL_LINE {
+    () => {
+        line!() as _
+    };
+}
+
+macro_rules! OPENSSL_malloc {
+    ($num:expr) => {
+        ffi::CRYPTO_malloc($num as c_int, OPENSSL_FILE!(), OPENSSL_LINE!())
+    };
+}
+
+macro_rules! OPENSSL_strdup {
+    ($s:expr) => {
+        ffi::CRYPTO_strdup($s, OPENSSL_FILE!(), OPENSSL_LINE!())
+    };
+}
+
+cfg_if! {
+    if #[cfg(ossl110)] {
+        macro_rules! OPENSSL_free {
+            ($ptr:expr) => {
+                ffi::CRYPTO_free($ptr as *mut _, OPENSSL_FILE!(), OPENSSL_LINE!())
+            };
+        }
+    } else {
+        macro_rules! OPENSSL_free {
+            ($ptr:expr) => {
+                ffi::CRYPTO_free($ptr as *mut _)
+            };
+        }
+    }
+}

@@ -202,6 +202,10 @@ cfg_if! {
 }
 
 extern "C" {
+    pub fn CRYPTO_strdup(str: *const c_char, file: *const c_char, line: c_int) -> *mut c_char;
+}
+
+extern "C" {
     #[cfg(ossl101)]
     pub fn FIPS_mode() -> c_int;
     #[cfg(ossl101)]

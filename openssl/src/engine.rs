@@ -1,4 +1,5 @@
 use std::ffi::{CStr, CString};
+use std::mem;
 use std::ptr;
 
 use foreign_types::{ForeignType, ForeignTypeRef};
@@ -15,7 +16,7 @@ use {cvt, cvt_n, cvt_p};
 
 bitflags! {
     /// These flags are used to control combinations of algorithm (methods) by bitwise "OR"ing.
-    pub struct EngineMethod: c_uint {
+    pub struct Method: c_uint {
         const RSA = ffi::ENGINE_METHOD_RSA;
         const DSA = ffi::ENGINE_METHOD_DSA;
         const DH = ffi::ENGINE_METHOD_DH;
@@ -49,7 +50,7 @@ bitflags! {
 
 bitflags! {
     /// ENGINE flags that can be set by `ENGINE_set_flags()`.
-    pub struct EngineFlags: c_int {
+    pub struct Flags: c_int {
         /// This flag is for ENGINEs that wish to handle the various 'CMD'-related
         /// control commands on their own. Without this flag, ENGINE_ctrl() handles
         /// these control commands on behalf of the ENGINE using their "cmd_defns" data.
@@ -236,7 +237,7 @@ impl Engine {
     pub fn set_default_pkey_asn1_meths(e: &EngineRef) -> Result<(), ErrorStack> {
         cvt(unsafe { ffi::ENGINE_set_default_pkey_asn1_meths(e.as_ptr()) }).map(|_| ())
     }
-    pub fn set_default(e: &EngineRef, methods: EngineMethod) -> Result<(), ErrorStack> {
+    pub fn set_default(e: &EngineRef, methods: Method) -> Result<(), ErrorStack> {
         cvt(unsafe { ffi::ENGINE_set_default(e.as_ptr(), methods.bits) }).map(|_| ())
     }
 
@@ -439,17 +440,10 @@ impl Engine {
         unsafe { Engine::from_ptr(ffi::ENGINE_new()) }
     }
 
-    ///  Retrieve an engine from the list by its unique "id" value.
-    pub fn by_id(id: &str) -> Option<Self> {
-        unsafe {
-            let e = ffi::ENGINE_by_id(CString::new(id).unwrap().as_ptr());
-
-            if e.is_null() {
-                None
-            } else {
-                Some(Engine::from_ptr(e))
-            }
-        }
+    pub fn into_ptr(self) -> *mut <Self as ForeignType>::CType {
+        let raw = self.as_ptr();
+        mem::forget(self);
+        raw
     }
 }
 
@@ -462,8 +456,8 @@ impl EngineRef {
         unsafe { CStr::from_ptr(ffi::ENGINE_get_name(self.as_ptr())) }
     }
 
-    pub fn flags(&self) -> EngineFlags {
-        EngineFlags::from_bits_truncate(unsafe { ffi::ENGINE_get_flags(self.as_ptr()) })
+    pub fn flags(&self) -> Flags {
+        Flags::from_bits_truncate(unsafe { ffi::ENGINE_get_flags(self.as_ptr()) })
     }
 
     pub fn rsa(&self) -> Option<&ffi::RSA_METHOD> {
@@ -660,14 +654,11 @@ impl EngineRef {
     ) -> Result<(), ErrorStack> {
         cvt(unsafe { ffi::ENGINE_set_pkey_asn1_meths(self.as_ptr(), f) }).map(|_| ())
     }
-    pub fn set_flags(&self, flags: EngineFlags) -> Result<(), ErrorStack> {
+    pub fn set_flags(&self, flags: Flags) -> Result<(), ErrorStack> {
         cvt(unsafe { ffi::ENGINE_set_flags(self.as_ptr(), flags.bits) }).map(|_| ())
     }
-    pub fn set_cmd_defns(&self, defns: Option<&ffi::ENGINE_CMD_DEFN>) -> Result<(), ErrorStack> {
-        cvt(unsafe {
-            ffi::ENGINE_set_cmd_defns(self.as_ptr(), defns.map_or_else(ptr::null, |v| &*v))
-        })
-        .map(|_| ())
+    pub fn set_cmd_defns(&self, defns: &[ffi::ENGINE_CMD_DEFN]) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::ENGINE_set_cmd_defns(self.as_ptr(), defns.as_ptr()) }).map(|_| ())
     }
 
     pub fn new_ex_index<T>() -> Result<Index<Engine, T>, ErrorStack>
@@ -1002,4 +993,49 @@ unsafe extern "C" fn free_data_box<T>(
     if !ptr.is_null() {
         Box::<T>::from_raw(ptr as *mut T);
     }
+}
+
+/// Get the first "ENGINE" type available.
+pub fn first() -> Option<Engine> {
+    cvt_p(unsafe { ffi::ENGINE_get_first() })
+        .map(|e| unsafe { Engine::from_ptr(e) })
+        .ok()
+}
+
+/// Get the last "ENGINE" type available.
+pub fn last() -> Option<Engine> {
+    cvt_p(unsafe { ffi::ENGINE_get_last() })
+        .map(|e| unsafe { Engine::from_ptr(e) })
+        .ok()
+}
+
+/// Iterate to the next "ENGINE" type
+pub fn next(e: &EngineRef) -> Option<Engine> {
+    cvt_p(unsafe { ffi::ENGINE_get_next(e.as_ptr()) })
+        .map(|e| unsafe { Engine::from_ptr(e) })
+        .ok()
+}
+
+/// Iterate to the previous "ENGINE" type
+pub fn prev(e: &EngineRef) -> Option<Engine> {
+    cvt_p(unsafe { ffi::ENGINE_get_prev(e.as_ptr()) })
+        .map(|e| unsafe { Engine::from_ptr(e) })
+        .ok()
+}
+
+/// Add another "ENGINE" type into the array.
+pub fn add(e: &EngineRef) -> Result<(), ErrorStack> {
+    cvt(unsafe { ffi::ENGINE_add(e.as_ptr()) }).map(|_| ())
+}
+
+/// Remove an existing "ENGINE" type from the array.
+pub fn remove(e: &EngineRef) -> Result<(), ErrorStack> {
+    cvt(unsafe { ffi::ENGINE_remove(e.as_ptr()) }).map(|_| ())
+}
+
+/// Retrieve an engine from the list by its unique "id" value.
+pub fn by_id(id: &str) -> Option<Engine> {
+    cvt_p(unsafe { ffi::ENGINE_by_id(CString::new(id).unwrap().as_ptr()) })
+        .map(|e| unsafe { Engine::from_ptr(e) })
+        .ok()
 }

@@ -206,6 +206,7 @@ pub enum DSA_METHOD {}
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {
         pub enum RSA {}
+        pub enum RSA_METHOD {}
     } else if #[cfg(libressl)] {
         #[repr(C)]
         pub struct RSA {
@@ -233,6 +234,97 @@ cfg_if! {
 
             pub blinding: *mut ::BN_BLINDING,
             pub mt_blinding: *mut ::BN_BLINDING,
+        }
+        #[repr(C)]
+        #[derive(Debug, Copy, Clone)]
+        pub struct RSA_METHOD {
+            pub name: *const ::std::os::raw::c_char,
+            pub rsa_pub_enc: ::std::option::Option<
+                unsafe extern "C" fn(
+                    flen: ::std::os::raw::c_int,
+                    from: *const ::std::os::raw::c_uchar,
+                    to: *mut ::std::os::raw::c_uchar,
+                    rsa: *mut RSA,
+                    padding: ::std::os::raw::c_int,
+                ) -> ::std::os::raw::c_int,
+            >,
+            pub rsa_pub_dec: ::std::option::Option<
+                unsafe extern "C" fn(
+                    flen: ::std::os::raw::c_int,
+                    from: *const ::std::os::raw::c_uchar,
+                    to: *mut ::std::os::raw::c_uchar,
+                    rsa: *mut RSA,
+                    padding: ::std::os::raw::c_int,
+                ) -> ::std::os::raw::c_int,
+            >,
+            pub rsa_priv_enc: ::std::option::Option<
+                unsafe extern "C" fn(
+                    flen: ::std::os::raw::c_int,
+                    from: *const ::std::os::raw::c_uchar,
+                    to: *mut ::std::os::raw::c_uchar,
+                    rsa: *mut RSA,
+                    padding: ::std::os::raw::c_int,
+                ) -> ::std::os::raw::c_int,
+            >,
+            pub rsa_priv_dec: ::std::option::Option<
+                unsafe extern "C" fn(
+                    flen: ::std::os::raw::c_int,
+                    from: *const ::std::os::raw::c_uchar,
+                    to: *mut ::std::os::raw::c_uchar,
+                    rsa: *mut RSA,
+                    padding: ::std::os::raw::c_int,
+                ) -> ::std::os::raw::c_int,
+            >,
+            pub rsa_mod_exp: ::std::option::Option<
+                unsafe extern "C" fn(
+                    r0: *mut BIGNUM,
+                    I: *const BIGNUM,
+                    rsa: *mut RSA,
+                    ctx: *mut BN_CTX,
+                ) -> ::std::os::raw::c_int,
+            >,
+            pub bn_mod_exp: ::std::option::Option<
+                unsafe extern "C" fn(
+                    r: *mut BIGNUM,
+                    a: *const BIGNUM,
+                    p: *const BIGNUM,
+                    m: *const BIGNUM,
+                    ctx: *mut BN_CTX,
+                    m_ctx: *mut BN_MONT_CTX,
+                ) -> ::std::os::raw::c_int,
+            >,
+            pub init: ::std::option::Option<unsafe extern "C" fn(rsa: *mut RSA) -> ::std::os::raw::c_int>,
+            pub finish: ::std::option::Option<unsafe extern "C" fn(rsa: *mut RSA) -> ::std::os::raw::c_int>,
+            pub flags: ::std::os::raw::c_int,
+            pub app_data: *mut ::std::os::raw::c_char,
+            pub rsa_sign: ::std::option::Option<
+                unsafe extern "C" fn(
+                    type_: ::std::os::raw::c_int,
+                    m: *const ::std::os::raw::c_uchar,
+                    m_length: ::std::os::raw::c_uint,
+                    sigret: *mut ::std::os::raw::c_uchar,
+                    siglen: *mut ::std::os::raw::c_uint,
+                    rsa: *const RSA,
+                ) -> ::std::os::raw::c_int,
+            >,
+            pub rsa_verify: ::std::option::Option<
+                unsafe extern "C" fn(
+                    dtype: ::std::os::raw::c_int,
+                    m: *const ::std::os::raw::c_uchar,
+                    m_length: ::std::os::raw::c_uint,
+                    sigbuf: *const ::std::os::raw::c_uchar,
+                    siglen: ::std::os::raw::c_uint,
+                    rsa: *const RSA,
+                ) -> ::std::os::raw::c_int,
+            >,
+            pub rsa_keygen: ::std::option::Option<
+                unsafe extern "C" fn(
+                    rsa: *mut RSA,
+                    bits: ::std::os::raw::c_int,
+                    e: *mut BIGNUM,
+                    cb: *mut BN_GENCB,
+                ) -> ::std::os::raw::c_int,
+            >,
         }
     } else {
         #[repr(C)]
@@ -263,9 +355,100 @@ cfg_if! {
             pub blinding: *mut ::BN_BLINDING,
             pub mt_blinding: *mut ::BN_BLINDING,
         }
+
+        #[repr(C)]
+        #[derive(Debug, Copy, Clone)]
+        pub struct RSA_METHOD {
+            pub name: *const ::std::os::raw::c_char,
+            pub rsa_pub_enc: ::std::option::Option<
+                unsafe extern "C" fn(
+                    flen: ::std::os::raw::c_int,
+                    from: *const ::std::os::raw::c_uchar,
+                    to: *mut ::std::os::raw::c_uchar,
+                    rsa: *mut RSA,
+                    padding: ::std::os::raw::c_int,
+                ) -> ::std::os::raw::c_int,
+            >,
+            pub rsa_pub_dec: ::std::option::Option<
+                unsafe extern "C" fn(
+                    flen: ::std::os::raw::c_int,
+                    from: *const ::std::os::raw::c_uchar,
+                    to: *mut ::std::os::raw::c_uchar,
+                    rsa: *mut RSA,
+                    padding: ::std::os::raw::c_int,
+                ) -> ::std::os::raw::c_int,
+            >,
+            pub rsa_priv_enc: ::std::option::Option<
+                unsafe extern "C" fn(
+                    flen: ::std::os::raw::c_int,
+                    from: *const ::std::os::raw::c_uchar,
+                    to: *mut ::std::os::raw::c_uchar,
+                    rsa: *mut RSA,
+                    padding: ::std::os::raw::c_int,
+                ) -> ::std::os::raw::c_int,
+            >,
+            pub rsa_priv_dec: ::std::option::Option<
+                unsafe extern "C" fn(
+                    flen: ::std::os::raw::c_int,
+                    from: *const ::std::os::raw::c_uchar,
+                    to: *mut ::std::os::raw::c_uchar,
+                    rsa: *mut RSA,
+                    padding: ::std::os::raw::c_int,
+                ) -> ::std::os::raw::c_int,
+            >,
+            pub rsa_mod_exp: ::std::option::Option<
+                unsafe extern "C" fn(
+                    r0: *mut BIGNUM,
+                    I: *const BIGNUM,
+                    rsa: *mut RSA,
+                    ctx: *mut BN_CTX,
+                ) -> ::std::os::raw::c_int,
+            >,
+            pub bn_mod_exp: ::std::option::Option<
+                unsafe extern "C" fn(
+                    r: *mut BIGNUM,
+                    a: *const BIGNUM,
+                    p: *const BIGNUM,
+                    m: *const BIGNUM,
+                    ctx: *mut BN_CTX,
+                    m_ctx: *mut BN_MONT_CTX,
+                ) -> ::std::os::raw::c_int,
+            >,
+            pub init: ::std::option::Option<unsafe extern "C" fn(rsa: *mut RSA) -> ::std::os::raw::c_int>,
+            pub finish: ::std::option::Option<unsafe extern "C" fn(rsa: *mut RSA) -> ::std::os::raw::c_int>,
+            pub flags: ::std::os::raw::c_int,
+            pub app_data: *mut ::std::os::raw::c_char,
+            pub rsa_sign: ::std::option::Option<
+                unsafe extern "C" fn(
+                    type_: ::std::os::raw::c_int,
+                    m: *const ::std::os::raw::c_uchar,
+                    m_length: ::std::os::raw::c_uint,
+                    sigret: *mut ::std::os::raw::c_uchar,
+                    siglen: *mut ::std::os::raw::c_uint,
+                    rsa: *const RSA,
+                ) -> ::std::os::raw::c_int,
+            >,
+            pub rsa_verify: ::std::option::Option<
+                unsafe extern "C" fn(
+                    dtype: ::std::os::raw::c_int,
+                    m: *const ::std::os::raw::c_uchar,
+                    m_length: ::std::os::raw::c_uint,
+                    sigbuf: *const ::std::os::raw::c_uchar,
+                    siglen: ::std::os::raw::c_uint,
+                    rsa: *const RSA,
+                ) -> ::std::os::raw::c_int,
+            >,
+            pub rsa_keygen: ::std::option::Option<
+                unsafe extern "C" fn(
+                    rsa: *mut RSA,
+                    bits: ::std::os::raw::c_int,
+                    e: *mut BIGNUM,
+                    cb: *mut BN_GENCB,
+                ) -> ::std::os::raw::c_int,
+            >,
+        }
     }
 }
-pub enum RSA_METHOD {}
 
 pub enum EC_KEY {}
 #[cfg(ossl110)]

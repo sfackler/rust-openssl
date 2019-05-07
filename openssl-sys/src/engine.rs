@@ -65,6 +65,9 @@ pub struct ENGINE_CMD_DEFN {
     pub cmd_flags: c_uint,
 }
 
+unsafe impl Send for ENGINE_CMD_DEFN {}
+unsafe impl Sync for ENGINE_CMD_DEFN {}
+
 pub type ENGINE_GEN_FUNC_PTR = Option<unsafe extern "C" fn() -> c_int>;
 pub type ENGINE_GEN_INT_FUNC_PTR = Option<unsafe extern "C" fn(arg1: *mut ENGINE) -> c_int>;
 pub type ENGINE_CTRL_FUNC_PTR = Option<
@@ -380,9 +383,10 @@ cfg_if! {
         ) -> c_int {
             CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_ENGINE, argl, argp, new_func, dup_func, free_func)
         }
+
         /// This function previously cleaned up anything that needs it.
         /// Auto-deinit will now take care of it so it is no longer required to call this function.
-        pub fn ENGINE_cleanup() {}
+        pub unsafe fn ENGINE_cleanup() {}
 
         extern "C" {
             pub fn ENGINE_register_EC(e: *mut ENGINE) -> c_int;
@@ -458,6 +462,16 @@ cfg_if! {
     }
 }
 
+/// The version checking function should be of this prototype. NB: The
+/// ossl_version value passed in is the OSSL_DYNAMIC_VERSION of the loading
+/// code. If this function returns zero, it indicates a (potential) version
+/// incompatibility and the loaded library doesn't believe it can proceed.
+/// Otherwise, the returned value is the (latest) version supported by the
+/// loading library. The loader may still decide that the loaded code's
+/// version is unsatisfactory and could veto the load. The function is
+/// expected to be implemented with the symbol name "v_check", and a default
+/// implementation can be fully instantiated with
+/// IMPLEMENT_DYNAMIC_CHECK_FN().
 pub type dynamic_v_check_fn = Option<unsafe extern "C" fn(ossl_version: c_ulong) -> c_ulong>;
 
 #[macro_export]
@@ -474,6 +488,22 @@ macro_rules! IMPLEMENT_DYNAMIC_CHECK_FN {
     };
 }
 
+/// This function is passed the ENGINE structure to initialise with its own
+/// function and command settings. It should not adjust the structural or
+/// functional reference counts. If this function returns zero, (a) the load
+/// will be aborted, (b) the previous ENGINE state will be memcpy'd back onto
+/// the structure, and (c) the shared library will be unloaded. So
+/// implementations should do their own internal cleanup in failure
+/// circumstances otherwise they could leak. The 'id' parameter, if non-NULL,
+/// represents the ENGINE id that the loader is looking for. If this is NULL,
+/// the shared library can choose to return failure or to initialise a
+/// 'default' ENGINE. If non-NULL, the shared library must initialise only an
+/// ENGINE matching the passed 'id'. The function is expected to be
+/// implemented with the symbol name "bind_engine". A standard implementation
+/// can be instantiated with IMPLEMENT_DYNAMIC_BIND_FN(fn) where the parameter
+/// 'fn' is a callback function that populates the ENGINE structure and
+/// returns an int value (zero for failure). 'fn' should have prototype;
+/// [static] int fn(ENGINE *e, const char *id);
 pub type dynamic_bind_engine = Option<
     unsafe extern "C" fn(e: *mut ENGINE, id: *const c_char, fns: *const dynamic_fns) -> c_int,
 >;
