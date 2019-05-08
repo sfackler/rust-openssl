@@ -319,9 +319,59 @@ extern "C" {
         fl: c_int,
         rsa_len: c_int,
     ) -> c_int;
+
+    pub fn RSA_get_ex_data(r: *const RSA, idx: c_int) -> *mut c_void;
+
+    pub fn RSA_set_ex_data(r: *mut RSA, idx: c_int, arg: *mut c_void) -> c_int;
+}
+
+cfg_if! {
+    if #[cfg(ossl110)] {
+        pub unsafe fn RSA_get_ex_new_index(
+            argl: c_long,
+            argp: *mut c_void,
+            new_func: CRYPTO_EX_new,
+            dup_func: CRYPTO_EX_dup,
+            free_func: CRYPTO_EX_free,
+        ) -> c_int {
+            CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_RSA, argl, argp, new_func, dup_func, free_func)
+        }
+    } else {
+        extern "C" {
+            pub fn RSA_get_ex_new_index(
+                argl: c_long,
+                argp: *mut c_void,
+                new_func: CRYPTO_EX_new,
+                dup_func: CRYPTO_EX_dup,
+                free_func: CRYPTO_EX_free,
+            ) -> c_int;
+        }
+    }
 }
 
 pub const RSA_METHOD_FLAG_NO_CHECK: u32 = 0x0001;
+
+extern "C" {
+    pub fn RSA_get_default_method() -> *const RSA_METHOD;
+
+    pub fn RSA_set_default_method(meth: *const RSA_METHOD);
+
+    pub fn RSA_get_method(rsa: *const RSA) -> *const RSA_METHOD;
+
+    pub fn RSA_set_method(rsa: *mut RSA, meth: *const RSA_METHOD) -> c_int;
+}
+
+cfg_if! {
+    if #[cfg(ossl110)] {
+        extern "C" {
+            pub fn RSA_PKCS1_OpenSSL() -> *const RSA_METHOD;
+        }
+    } else {
+        extern "C" {
+            pub fn RSA_PKCS1_SSLeay() -> *const RSA_METHOD;
+        }
+    }
+}
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {
@@ -358,7 +408,7 @@ cfg_if! {
 
             pub fn RSA_meth_get_pub_enc(
                 meth: *const RSA_METHOD,
-            ) -> ::std::option::Option<
+            ) -> Option<
                 unsafe extern "C" fn(
                     meth: c_int,
                     arg1: *const c_uchar,
@@ -370,7 +420,7 @@ cfg_if! {
 
             pub fn RSA_meth_set_pub_enc(
                 rsa: *mut RSA_METHOD,
-                pub_enc: ::std::option::Option<
+                pub_enc: Option<
                     unsafe extern "C" fn(
                         flen: c_int,
                         from: *const c_uchar,
@@ -383,7 +433,7 @@ cfg_if! {
 
             pub fn RSA_meth_get_pub_dec(
                 meth: *const RSA_METHOD,
-            ) -> ::std::option::Option<
+            ) -> Option<
                 unsafe extern "C" fn(
                     meth: c_int,
                     arg1: *const c_uchar,
@@ -395,7 +445,7 @@ cfg_if! {
 
             pub fn RSA_meth_set_pub_dec(
                 rsa: *mut RSA_METHOD,
-                pub_dec: ::std::option::Option<
+                pub_dec: Option<
                     unsafe extern "C" fn(
                         flen: c_int,
                         from: *const c_uchar,
@@ -408,7 +458,7 @@ cfg_if! {
 
             pub fn RSA_meth_get_priv_enc(
                 meth: *const RSA_METHOD,
-            ) -> ::std::option::Option<
+            ) -> Option<
                 unsafe extern "C" fn(
                     meth: c_int,
                     arg1: *const c_uchar,
@@ -420,7 +470,7 @@ cfg_if! {
 
             pub fn RSA_meth_set_priv_enc(
                 rsa: *mut RSA_METHOD,
-                priv_enc: ::std::option::Option<
+                priv_enc: Option<
                     unsafe extern "C" fn(
                         flen: c_int,
                         from: *const c_uchar,
@@ -433,7 +483,7 @@ cfg_if! {
 
             pub fn RSA_meth_get_priv_dec(
                 meth: *const RSA_METHOD,
-            ) -> ::std::option::Option<
+            ) -> Option<
                 unsafe extern "C" fn(
                     meth: c_int,
                     arg1: *const c_uchar,
@@ -445,7 +495,7 @@ cfg_if! {
 
             pub fn RSA_meth_set_priv_dec(
                 rsa: *mut RSA_METHOD,
-                priv_dec: ::std::option::Option<
+                priv_dec: Option<
                     unsafe extern "C" fn(
                         flen: c_int,
                         from: *const c_uchar,
@@ -458,7 +508,7 @@ cfg_if! {
 
             pub fn RSA_meth_get_mod_exp(
                 meth: *const RSA_METHOD,
-            ) -> ::std::option::Option<
+            ) -> Option<
                 unsafe extern "C" fn(
                     meth: *mut BIGNUM,
                     arg1: *const BIGNUM,
@@ -469,7 +519,7 @@ cfg_if! {
 
             pub fn RSA_meth_set_mod_exp(
                 rsa: *mut RSA_METHOD,
-                mod_exp: ::std::option::Option<
+                mod_exp: Option<
                     unsafe extern "C" fn(
                         r0: *mut BIGNUM,
                         i: *const BIGNUM,
@@ -481,7 +531,7 @@ cfg_if! {
 
             pub fn RSA_meth_get_bn_mod_exp(
                 meth: *const RSA_METHOD,
-            ) -> ::std::option::Option<
+            ) -> Option<
                 unsafe extern "C" fn(
                     meth: *mut BIGNUM,
                     arg1: *const BIGNUM,
@@ -494,7 +544,7 @@ cfg_if! {
 
             pub fn RSA_meth_set_bn_mod_exp(
                 rsa: *mut RSA_METHOD,
-                bn_mod_exp: ::std::option::Option<
+                bn_mod_exp: Option<
                     unsafe extern "C" fn(
                         r: *mut BIGNUM,
                         a: *const BIGNUM,
@@ -508,25 +558,25 @@ cfg_if! {
 
             pub fn RSA_meth_get_init(
                 meth: *const RSA_METHOD,
-            ) -> ::std::option::Option<unsafe extern "C" fn(meth: *mut RSA) -> c_int>;
+            ) -> Option<unsafe extern "C" fn(meth: *mut RSA) -> c_int>;
 
             pub fn RSA_meth_set_init(
                 rsa: *mut RSA_METHOD,
-                init: ::std::option::Option<unsafe extern "C" fn(rsa: *mut RSA) -> c_int>,
+                init: Option<unsafe extern "C" fn(rsa: *mut RSA) -> c_int>,
             ) -> c_int;
 
             pub fn RSA_meth_get_finish(
                 meth: *const RSA_METHOD,
-            ) -> ::std::option::Option<unsafe extern "C" fn(meth: *mut RSA) -> c_int>;
+            ) -> Option<unsafe extern "C" fn(meth: *mut RSA) -> c_int>;
 
             pub fn RSA_meth_set_finish(
                 rsa: *mut RSA_METHOD,
-                finish: ::std::option::Option<unsafe extern "C" fn(rsa: *mut RSA) -> c_int>,
+                finish: Option<unsafe extern "C" fn(rsa: *mut RSA) -> c_int>,
             ) -> c_int;
 
             pub fn RSA_meth_get_sign(
                 meth: *const RSA_METHOD,
-            ) -> ::std::option::Option<
+            ) -> Option<
                 unsafe extern "C" fn(
                     meth: c_int,
                     arg1: *const c_uchar,
@@ -539,7 +589,7 @@ cfg_if! {
 
             pub fn RSA_meth_set_sign(
                 rsa: *mut RSA_METHOD,
-                sign: ::std::option::Option<
+                sign: Option<
                     unsafe extern "C" fn(
                         type_: c_int,
                         m: *const c_uchar,
@@ -553,7 +603,7 @@ cfg_if! {
 
             pub fn RSA_meth_get_verify(
                 meth: *const RSA_METHOD,
-            ) -> ::std::option::Option<
+            ) -> Option<
                 unsafe extern "C" fn(
                     meth: c_int,
                     arg1: *const c_uchar,
@@ -566,7 +616,7 @@ cfg_if! {
 
             pub fn RSA_meth_set_verify(
                 rsa: *mut RSA_METHOD,
-                verify: ::std::option::Option<
+                verify: Option<
                     unsafe extern "C" fn(
                         dtype: c_int,
                         m: *const c_uchar,
@@ -580,7 +630,7 @@ cfg_if! {
 
             pub fn RSA_meth_get_keygen(
                 meth: *const RSA_METHOD,
-            ) -> ::std::option::Option<
+            ) -> Option<
                 unsafe extern "C" fn(
                     meth: *mut RSA,
                     arg1: c_int,
@@ -591,7 +641,7 @@ cfg_if! {
 
             pub fn RSA_meth_set_keygen(
                 rsa: *mut RSA_METHOD,
-                keygen: ::std::option::Option<
+                keygen: Option<
                     unsafe extern "C" fn(
                         rsa: *mut RSA,
                         bits: c_int,
@@ -604,7 +654,7 @@ cfg_if! {
             #[cfg(ossl111)]
             pub fn RSA_meth_get_multi_prime_keygen(
                 meth: *const RSA_METHOD,
-            ) -> ::std::option::Option<
+            ) -> Option<
                 unsafe extern "C" fn(
                     meth: *mut RSA,
                     arg1: c_int,
@@ -617,7 +667,7 @@ cfg_if! {
             #[cfg(ossl111)]
             pub fn RSA_meth_set_multi_prime_keygen(
                 meth: *mut RSA_METHOD,
-                keygen: ::std::option::Option<
+                keygen: Option<
                     unsafe extern "C" fn(
                         rsa: *mut RSA,
                         bits: c_int,

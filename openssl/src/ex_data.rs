@@ -1,4 +1,4 @@
-use libc::c_int;
+use libc::{c_int, c_long, c_void};
 use std::marker::PhantomData;
 
 /// A slot in a type's "extra data" structure.
@@ -22,5 +22,18 @@ impl<T, U> Index<T, U> {
 
     pub fn as_raw(&self) -> c_int {
         self.0
+    }
+}
+
+pub unsafe extern "C" fn free_data_box<T>(
+    _parent: *mut c_void,
+    ptr: *mut c_void,
+    _ad: *mut ffi::CRYPTO_EX_DATA,
+    _idx: c_int,
+    _argl: c_long,
+    _argp: *mut c_void,
+) {
+    if !ptr.is_null() {
+        Box::<T>::from_raw(ptr as *mut T);
     }
 }

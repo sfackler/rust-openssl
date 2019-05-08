@@ -32,7 +32,7 @@
 
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::{c_int, c_uchar, c_uint};
+use libc::{c_int, c_uchar, c_uint, c_void};
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::mem;
@@ -40,6 +40,7 @@ use std::ptr;
 
 use bn::{BigNum, BigNumRef};
 use error::ErrorStack;
+use ex_data::{free_data_box, Index};
 use pkey::{HasPrivate, HasPublic, Private, Public};
 use {cvt, cvt_n, cvt_p};
 
@@ -296,6 +297,14 @@ where
                 Ok(result == 1)
             }
         }
+    }
+
+    pub fn method(&self) -> &RsaMethodRef {
+        unsafe { RsaMethodRef::from_ptr(ffi::RSA_get_method(self.as_ptr()) as *mut _) }
+    }
+
+    pub fn set_method(&self, method: &RsaMethod) -> Result<(), ErrorStack> {
+        cvt(unsafe { ffi::RSA_set_method(self.as_ptr(), method.as_ptr()) }).map(|_| ())
     }
 }
 
@@ -772,6 +781,44 @@ cfg_if! {
     }
 }
 
+impl<T> Rsa<T> {
+    pub fn new_ex_index<D>() -> Result<Index<Self, D>, ErrorStack>
+    where
+        T: 'static + Sync + Send,
+    {
+        unsafe {
+            let idx = cvt_n(ffi::RSA_get_ex_new_index(
+                0,
+                ptr::null_mut(),
+                None,
+                None,
+                Some(free_data_box::<D>),
+            ))?;
+
+            Ok(Index::from_raw(idx))
+        }
+    }
+}
+
+impl<T> RsaRef<T> {
+    pub fn ex_data<D>(&self, idx: Index<Rsa<T>, D>) -> Option<&D> {
+        unsafe { (ffi::RSA_get_ex_data(self.as_ptr(), idx.as_raw()) as *const D).as_ref() }
+    }
+
+    pub fn set_ex_data<D>(&mut self, index: Index<Rsa<T>, D>, data: D) -> Result<(), ErrorStack> {
+        cvt(unsafe {
+            let data = Box::new(data);
+
+            ffi::RSA_set_ex_data(
+                self.as_ptr(),
+                index.as_raw(),
+                Box::into_raw(data) as *mut c_void,
+            )
+        })
+        .map(|_| ())
+    }
+}
+
 bitflags! {
     pub struct Flags: c_int {
         /// don't check pub/private match
@@ -784,15 +831,45 @@ foreign_type_and_impl_send_sync! {
     fn drop = RSA_meth_free;
     fn clone = RSA_meth_dup;
 
-    /// An RSA key.
+    /// A RSA methods.
     pub struct RsaMethod;
 
-    /// Reference to `RSA`
+    /// Reference to `RsaMethod`
     pub struct RsaMethodRef;
 }
 
 impl RsaMethod {
-    pub fn new(name: &str, flags: Flags) -> Self {
+    /// these are the actual RSA functions
+    #[cfg(ossl110)]
+    pub fn openssl() -> &'static RsaMethodRef {
+        unsafe { RsaMethodRef::from_ptr(ffi::RSA_PKCS1_OpenSSL() as *mut _) }
+    }
+
+    /// these are the actual RSA functions
+    #[cfg(not(ossl110))]
+    pub fn openssl() -> &'static RsaMethodRef {
+        unsafe { RsaMethodRef::from_ptr(ffi::RSA_PKCS1_SSLeay() as *mut _) }
+    }
+
+    pub fn default_method() -> Option<&'static RsaMethodRef> {
+        let meth = unsafe { ffi::RSA_get_default_method() };
+
+        if meth.is_null() {
+            None
+        } else {
+            Some(unsafe { RsaMethodRef::from_ptr(meth as *mut _) })
+        }
+    }
+
+    pub fn set_default_method(meth: Option<&RsaMethodRef>) {
+        unsafe { ffi::RSA_set_default_method(meth.map_or_else(ptr::null_mut, |m| m.as_ptr())) }
+    }
+
+    pub fn new(name: &str) -> Self {
+        Self::with_flags(name, Flags::empty())
+    }
+
+    pub fn with_flags(name: &str, flags: Flags) -> Self {
         unsafe {
             RsaMethod::from_ptr(RSA_meth_new(
                 CString::new(name).unwrap().as_ptr(),
@@ -971,7 +1048,7 @@ cfg_if! {
             RSA_meth_new, RSA_meth_set0_app_data, RSA_meth_set1_name, RSA_meth_set_flags,
         };
     } else {
-        use libc::{c_char, c_void};
+        use libc::c_char;
 
         pub unsafe fn RSA_meth_new(name: *const c_char, flags: c_int) -> *mut ffi::RSA_METHOD {
             let ptr = OPENSSL_zalloc!(mem::size_of::<ffi::RSA_METHOD>()) as *mut ffi::RSA_METHOD;

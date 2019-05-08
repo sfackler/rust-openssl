@@ -6,7 +6,7 @@ use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long, c_uint, c_void};
 
 use error::ErrorStack;
-use ex_data::Index;
+use ex_data::{free_data_box, Index};
 use ffi;
 use pkey::{PKey, Private, Public};
 use ssl::SslRef;
@@ -447,6 +447,44 @@ impl Engine {
     }
 }
 
+impl Engine {
+    pub fn new_ex_index<T>() -> Result<Index<Self, T>, ErrorStack>
+    where
+        T: 'static + Sync + Send,
+    {
+        unsafe {
+            let idx = cvt_n(ffi::ENGINE_get_ex_new_index(
+                0,
+                ptr::null_mut(),
+                None,
+                None,
+                Some(free_data_box::<T>),
+            ))?;
+
+            Ok(Index::from_raw(idx))
+        }
+    }
+}
+
+impl EngineRef {
+    pub fn ex_data<T>(&self, idx: Index<Engine, T>) -> Option<&T> {
+        unsafe { (ffi::ENGINE_get_ex_data(self.as_ptr(), idx.as_raw()) as *const T).as_ref() }
+    }
+
+    pub fn set_ex_data<T>(&mut self, index: Index<Engine, T>, data: T) -> Result<(), ErrorStack> {
+        cvt(unsafe {
+            let data = Box::new(data);
+
+            ffi::ENGINE_set_ex_data(
+                self.as_ptr(),
+                index.as_raw(),
+                Box::into_raw(data) as *mut c_void,
+            )
+        })
+        .map(|_| ())
+    }
+}
+
 impl EngineRef {
     pub fn id(&self) -> &CStr {
         unsafe { CStr::from_ptr(ffi::ENGINE_get_id(self.as_ptr())) }
@@ -579,9 +617,17 @@ impl EngineRef {
         cvt(unsafe { ffi::ENGINE_set_name(self.as_ptr(), CString::new(name).unwrap().as_ptr()) })
             .map(|_| ())
     }
-    pub fn set_rsa(&self, meth: Option<&ffi::RSA_METHOD>) -> Result<(), ErrorStack> {
-        cvt(unsafe { ffi::ENGINE_set_RSA(self.as_ptr(), meth.map_or_else(ptr::null, |v| &*v)) })
-            .map(|_| ())
+    pub fn set_rsa<T>(&self, meth: Option<&T>) -> Result<(), ErrorStack>
+    where
+        T: ForeignTypeRef<CType = ffi::RSA_METHOD>,
+    {
+        cvt(unsafe {
+            ffi::ENGINE_set_RSA(
+                self.as_ptr(),
+                meth.map_or_else(ptr::null_mut, ForeignTypeRef::as_ptr),
+            )
+        })
+        .map(|_| ())
     }
     pub fn set_dsa(&self, meth: Option<&ffi::DSA_METHOD>) -> Result<(), ErrorStack> {
         cvt(unsafe { ffi::ENGINE_set_DSA(self.as_ptr(), meth.map_or_else(ptr::null, |v| &*v)) })
@@ -659,40 +705,6 @@ impl EngineRef {
     }
     pub fn set_cmd_defns(&self, defns: &[ffi::ENGINE_CMD_DEFN]) -> Result<(), ErrorStack> {
         cvt(unsafe { ffi::ENGINE_set_cmd_defns(self.as_ptr(), defns.as_ptr()) }).map(|_| ())
-    }
-
-    pub fn new_ex_index<T>() -> Result<Index<Engine, T>, ErrorStack>
-    where
-        T: 'static + Sync + Send,
-    {
-        unsafe {
-            let idx = cvt_n(ffi::ENGINE_get_ex_new_index(
-                0,
-                ptr::null_mut(),
-                None,
-                None,
-                Some(free_data_box::<T>),
-            ))?;
-
-            Ok(Index::from_raw(idx))
-        }
-    }
-
-    pub fn ex_data<T>(&self, idx: Index<Engine, T>) -> Option<&T> {
-        unsafe { (ffi::ENGINE_get_ex_data(self.as_ptr(), idx.as_raw()) as *const T).as_ref() }
-    }
-
-    pub fn set_ex_data<T>(&mut self, index: Index<Engine, T>, data: T) -> Result<(), ErrorStack> {
-        cvt(unsafe {
-            let data = Box::new(data);
-
-            ffi::ENGINE_set_ex_data(
-                self.as_ptr(),
-                index.as_raw(),
-                Box::into_raw(data) as *mut c_void,
-            )
-        })
-        .map(|_| ())
     }
 
     pub fn register_rsa(&self) -> Result<(), ErrorStack> {
@@ -979,19 +991,6 @@ impl EngineRef {
                 Stack::<X509>::from_ptr(pother),
             )
         })
-    }
-}
-
-unsafe extern "C" fn free_data_box<T>(
-    _parent: *mut c_void,
-    ptr: *mut c_void,
-    _ad: *mut ffi::CRYPTO_EX_DATA,
-    _idx: c_int,
-    _argl: c_long,
-    _argp: *mut c_void,
-) {
-    if !ptr.is_null() {
-        Box::<T>::from_raw(ptr as *mut T);
     }
 }
 
