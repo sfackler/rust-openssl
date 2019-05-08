@@ -28,9 +28,12 @@
 //!     let encrypted_len = rsa.public_encrypt(data, &mut buf, Padding::PKCS1).unwrap();
 //! }
 //! ```
+#![allow(non_snake_case)]
+
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::c_int;
+use libc::{c_int, c_uchar, c_uint};
+use std::ffi::{CStr, CString};
 use std::fmt;
 use std::mem;
 use std::ptr;
@@ -764,6 +767,296 @@ cfg_if! {
             (*r).dmp1 = dmp1;
             (*r).dmq1 = dmq1;
             (*r).iqmp = iqmp;
+            1
+        }
+    }
+}
+
+bitflags! {
+    pub struct Flags: c_int {
+        /// don't check pub/private match
+        const NO_CHECK = ffi::RSA_METHOD_FLAG_NO_CHECK as i32;
+    }
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::RSA_METHOD;
+    fn drop = RSA_meth_free;
+    fn clone = RSA_meth_dup;
+
+    /// An RSA key.
+    pub struct RsaMethod;
+
+    /// Reference to `RSA`
+    pub struct RsaMethodRef;
+}
+
+impl RsaMethod {
+    pub fn new(name: &str, flags: Flags) -> Self {
+        unsafe {
+            RsaMethod::from_ptr(RSA_meth_new(
+                CString::new(name).unwrap().as_ptr(),
+                flags.bits,
+            ))
+        }
+    }
+}
+
+macro_rules! properties {
+    ( $( pub $name:ident : $ty:ty { $getter:ident = $get:ident ; $setter:ident = $set:ident ; } )* ) => {
+        $(
+            #[cfg(any(ossl110, libressl280))]
+            pub fn $getter(&self) -> $ty {
+                unsafe { ffi::$get(self.as_ptr()) }
+            }
+
+            #[cfg(any(ossl110, libressl280))]
+            pub fn $setter(&self, value: $ty) -> Result<(), ErrorStack> {
+                cvt(unsafe { ffi::$set(self.as_ptr(), value) }).map(|_| ())
+            }
+
+            #[cfg(not(any(ossl110, libressl280)))]
+            pub fn $getter(&self) -> $ty {
+                unsafe { (*self.as_ptr()).$name }
+            }
+
+            #[cfg(not(any(ossl110, libressl280)))]
+            pub fn $setter(&self, value: $ty) -> Result<(), ErrorStack> {
+                unsafe { (*self.as_ptr()).$name = value }
+
+                Ok(())
+            }
+        )*
+    };
+}
+
+impl RsaMethodRef {
+    pub fn name(&self) -> &CStr {
+        unsafe { CStr::from_ptr(RSA_meth_get0_name(self.as_ptr())) }
+    }
+
+    pub fn set_name(&self, name: &str) -> Result<(), ErrorStack> {
+        cvt(unsafe { RSA_meth_set1_name(self.as_ptr(), CString::new(name).unwrap().as_ptr()) })
+            .map(|_| ())
+    }
+
+    pub fn flags(&self) -> Flags {
+        Flags::from_bits_truncate(unsafe { RSA_meth_get_flags(self.as_ptr()) })
+    }
+
+    pub fn set_flags(&self, flags: Flags) -> Result<(), ErrorStack> {
+        cvt(unsafe { RSA_meth_set_flags(self.as_ptr(), flags.bits) }).map(|_| ())
+    }
+
+    pub fn app_data<T>(&self) -> Option<&T> {
+        unsafe { (RSA_meth_get0_app_data(self.as_ptr()) as *const T).as_ref() }
+    }
+
+    pub fn set_app_data<T>(&self, data: Option<&mut T>) -> Result<(), ErrorStack> {
+        cvt(unsafe {
+            RSA_meth_set0_app_data(
+                self.as_ptr(),
+                data.map_or_else(ptr::null_mut, |v| &mut *v) as *mut _,
+            )
+        })
+        .map(|_| ())
+    }
+
+    properties! {
+        pub rsa_pub_enc: Option<
+            unsafe extern "C" fn(
+                flen: c_int,
+                from: *const c_uchar,
+                to: *mut c_uchar,
+                rsa: *mut ffi::RSA,
+                padding: c_int,
+            ) -> c_int,
+        > { pub_enc = RSA_meth_get_pub_enc; set_pub_enc = RSA_meth_set_pub_enc; }
+
+        pub rsa_pub_dec: Option<
+            unsafe extern "C" fn(
+                flen: c_int,
+                from: *const c_uchar,
+                to: *mut c_uchar,
+                rsa: *mut ffi::RSA,
+                padding: c_int,
+            ) -> c_int,
+        > { pub_dec = RSA_meth_get_pub_dec; set_pub_dec = RSA_meth_set_pub_dec; }
+
+        pub rsa_priv_enc: Option<
+            unsafe extern "C" fn(
+                flen: c_int,
+                from: *const c_uchar,
+                to: *mut c_uchar,
+                rsa: *mut ffi::RSA,
+                padding: c_int,
+            ) -> c_int,
+        > { priv_enc = RSA_meth_get_priv_enc; set_priv_enc = RSA_meth_set_priv_enc; }
+
+        pub rsa_priv_dec: Option<
+            unsafe extern "C" fn(
+                flen: c_int,
+                from: *const c_uchar,
+                to: *mut c_uchar,
+                rsa: *mut ffi::RSA,
+                padding: c_int,
+            ) -> c_int,
+        > { priv_dec = RSA_meth_get_priv_dec; set_priv_dec = RSA_meth_set_priv_dec; }
+
+        pub rsa_mod_exp: Option<
+            unsafe extern "C" fn(
+                r0: *mut ffi::BIGNUM,
+                I: *const ffi::BIGNUM,
+                rsa: *mut ffi::RSA,
+                ctx: *mut ffi::BN_CTX,
+            ) -> c_int,
+        > { mod_exp = RSA_meth_get_mod_exp; set_mod_exp = RSA_meth_set_mod_exp; }
+
+        pub bn_mod_exp: Option<
+            unsafe extern "C" fn(
+                r: *mut ffi::BIGNUM,
+                a: *const ffi::BIGNUM,
+                p: *const ffi::BIGNUM,
+                m: *const ffi::BIGNUM,
+                ctx: *mut ffi::BN_CTX,
+                m_ctx: *mut ffi::BN_MONT_CTX,
+            ) -> c_int,
+        > { bn_mod_exp = RSA_meth_get_bn_mod_exp; set_bn_mod_exp = RSA_meth_set_bn_mod_exp; }
+
+        pub init: Option<
+            unsafe extern "C" fn(rsa: *mut ffi::RSA) -> c_int
+        > { init = RSA_meth_get_init; set_init = RSA_meth_set_init; }
+
+        pub finish: Option<
+            unsafe extern "C" fn(rsa: *mut ffi::RSA) -> c_int
+        > { finish = RSA_meth_get_finish; set_finish = RSA_meth_set_finish; }
+
+        pub rsa_sign: Option<
+            unsafe extern "C" fn(
+                type_: c_int,
+                m: *const c_uchar,
+                m_length: c_uint,
+                sigret: *mut c_uchar,
+                siglen: *mut c_uint,
+                rsa: *const ffi::RSA,
+            ) -> c_int,
+        > { sign = RSA_meth_get_sign; set_sign = RSA_meth_set_sign; }
+
+        pub rsa_verify: Option<
+            unsafe extern "C" fn(
+                dtype: c_int,
+                m: *const c_uchar,
+                m_length: c_uint,
+                sigbuf: *const c_uchar,
+                siglen: c_uint,
+                rsa: *const ffi::RSA,
+            ) -> c_int,
+        > { verify = RSA_meth_get_verify; set_verify = RSA_meth_set_verify; }
+
+        pub rsa_keygen: Option<
+            unsafe extern "C" fn(
+                rsa: *mut ffi::RSA,
+                bits: c_int,
+                e: *mut ffi::BIGNUM,
+                cb: *mut ffi::BN_GENCB,
+            ) -> c_int,
+        > { keygen = RSA_meth_get_keygen; set_keygen = RSA_meth_set_keygen; }
+    }
+}
+
+cfg_if! {
+    if #[cfg(any(ossl110, libressl280))] {
+        use ffi::{
+            RSA_meth_dup, RSA_meth_free, RSA_meth_get0_app_data, RSA_meth_get0_name, RSA_meth_get_flags,
+            RSA_meth_new, RSA_meth_set0_app_data, RSA_meth_set1_name, RSA_meth_set_flags,
+        };
+    } else {
+        use libc::{c_char, c_void};
+
+        pub unsafe fn RSA_meth_new(name: *const c_char, flags: c_int) -> *mut ffi::RSA_METHOD {
+            let ptr = OPENSSL_zalloc!(mem::size_of::<ffi::RSA_METHOD>()) as *mut ffi::RSA_METHOD;
+
+            if let Some(meth) = ptr.as_mut() {
+                meth.flags = flags;
+                meth.name = OPENSSL_strdup!(name);
+
+                if !meth.name.is_null() {
+                    return ptr;
+                }
+
+                OPENSSL_free!(ptr)
+            }
+
+            RSAerr!(RSA_F_RSA_METH_NEW, ERR_R_MALLOC_FAILURE);
+
+            ptr::null_mut()
+        }
+
+        pub unsafe fn RSA_meth_free(meth: *mut ffi::RSA_METHOD) {
+            if !meth.is_null() {
+                OPENSSL_free!((*meth).name);
+                OPENSSL_free!(meth);
+            }
+        }
+
+        pub unsafe fn RSA_meth_dup(meth: *const ffi::RSA_METHOD) -> *mut ffi::RSA_METHOD {
+            let n = mem::size_of::<ffi::RSA_METHOD>();
+            let ret = OPENSSL_malloc!(n) as *mut ffi::RSA_METHOD;
+
+            if !ret.is_null() {
+                libc::memcpy(ret as *mut _, meth as *mut _, n);
+
+                (*ret).name = OPENSSL_strdup!((*meth).name);
+
+                if !(*ret).name.is_null() {
+                    return ret;
+                }
+
+                OPENSSL_free!(ret)
+            }
+
+            RSAerr!(RSA_F_RSA_METH_DUP, ERR_R_MALLOC_FAILURE);
+
+            ptr::null_mut()
+        }
+
+        pub unsafe fn RSA_meth_get0_name(meth: *const ffi::RSA_METHOD) -> *const c_char {
+            (*meth).name
+        }
+
+        pub unsafe fn RSA_meth_set1_name(meth: *mut ffi::RSA_METHOD, name: *const c_char) -> c_int {
+            let name = OPENSSL_strdup!(name);
+
+            if name.is_null() {
+                RSAerr!(RSA_F_RSA_METH_SET1_NAME, ERR_R_MALLOC_FAILURE);
+
+                0
+            } else {
+                OPENSSL_free!((*meth).name);
+                (*meth).name = name;
+
+                1
+            }
+        }
+
+        pub unsafe fn RSA_meth_get_flags(meth: *const ffi::RSA_METHOD) -> c_int {
+            (*meth).flags
+        }
+
+        pub unsafe fn RSA_meth_set_flags(meth: *mut ffi::RSA_METHOD, flags: c_int) -> c_int {
+            (*meth).flags = flags;
+            1
+        }
+
+        pub unsafe fn RSA_meth_get0_app_data(meth: *const ffi::RSA_METHOD) -> *mut c_void {
+            (*meth).app_data as *mut _
+        }
+
+        pub unsafe fn RSA_meth_set0_app_data(
+            meth: *mut ffi::RSA_METHOD,
+            app_data: *mut c_void,
+        ) -> c_int {
+            (*meth).app_data = app_data as *mut _;
             1
         }
     }

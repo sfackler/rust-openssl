@@ -1,9 +1,150 @@
-use std::ptr;
 use std::mem;
+use std::ptr;
 
 use libc::*;
 
 use *;
+
+//  Function codes.
+
+pub const RSA_F_CHECK_PADDING_MD: i32 = 140;
+pub const RSA_F_ENCODE_PKCS1: i32 = 146;
+pub const RSA_F_INT_RSA_VERIFY: i32 = 145;
+pub const RSA_F_OLD_RSA_PRIV_DECODE: i32 = 147;
+pub const RSA_F_PKEY_PSS_INIT: i32 = 165;
+pub const RSA_F_PKEY_RSA_CTRL: i32 = 143;
+pub const RSA_F_PKEY_RSA_CTRL_STR: i32 = 144;
+pub const RSA_F_PKEY_RSA_SIGN: i32 = 142;
+pub const RSA_F_PKEY_RSA_VERIFY: i32 = 149;
+pub const RSA_F_PKEY_RSA_VERIFYRECOVER: i32 = 141;
+pub const RSA_F_RSA_ALGOR_TO_MD: i32 = 156;
+pub const RSA_F_RSA_BUILTIN_KEYGEN: i32 = 129;
+pub const RSA_F_RSA_CHECK_KEY: i32 = 123;
+pub const RSA_F_RSA_CHECK_KEY_EX: i32 = 160;
+pub const RSA_F_RSA_CMS_DECRYPT: i32 = 159;
+pub const RSA_F_RSA_CMS_VERIFY: i32 = 158;
+pub const RSA_F_RSA_ITEM_VERIFY: i32 = 148;
+pub const RSA_F_RSA_METH_DUP: i32 = 161;
+pub const RSA_F_RSA_METH_NEW: i32 = 162;
+pub const RSA_F_RSA_METH_SET1_NAME: i32 = 163;
+pub const RSA_F_RSA_MGF1_TO_MD: i32 = 157;
+pub const RSA_F_RSA_MULTIP_INFO_NEW: i32 = 166;
+pub const RSA_F_RSA_NEW_METHOD: i32 = 106;
+pub const RSA_F_RSA_NULL: i32 = 124;
+pub const RSA_F_RSA_NULL_PRIVATE_DECRYPT: i32 = 132;
+pub const RSA_F_RSA_NULL_PRIVATE_ENCRYPT: i32 = 133;
+pub const RSA_F_RSA_NULL_PUBLIC_DECRYPT: i32 = 134;
+pub const RSA_F_RSA_NULL_PUBLIC_ENCRYPT: i32 = 135;
+pub const RSA_F_RSA_OSSL_PRIVATE_DECRYPT: i32 = 101;
+pub const RSA_F_RSA_OSSL_PRIVATE_ENCRYPT: i32 = 102;
+pub const RSA_F_RSA_OSSL_PUBLIC_DECRYPT: i32 = 103;
+pub const RSA_F_RSA_OSSL_PUBLIC_ENCRYPT: i32 = 104;
+pub const RSA_F_RSA_PADDING_ADD_NONE: i32 = 107;
+pub const RSA_F_RSA_PADDING_ADD_PKCS1_OAEP: i32 = 121;
+pub const RSA_F_RSA_PADDING_ADD_PKCS1_OAEP_MGF1: i32 = 154;
+pub const RSA_F_RSA_PADDING_ADD_PKCS1_PSS: i32 = 125;
+pub const RSA_F_RSA_PADDING_ADD_PKCS1_PSS_MGF1: i32 = 152;
+pub const RSA_F_RSA_PADDING_ADD_PKCS1_TYPE_1: i32 = 108;
+pub const RSA_F_RSA_PADDING_ADD_PKCS1_TYPE_2: i32 = 109;
+pub const RSA_F_RSA_PADDING_ADD_SSLV23: i32 = 110;
+pub const RSA_F_RSA_PADDING_ADD_X931: i32 = 127;
+pub const RSA_F_RSA_PADDING_CHECK_NONE: i32 = 111;
+pub const RSA_F_RSA_PADDING_CHECK_PKCS1_OAEP: i32 = 122;
+pub const RSA_F_RSA_PADDING_CHECK_PKCS1_OAEP_MGF1: i32 = 153;
+pub const RSA_F_RSA_PADDING_CHECK_PKCS1_TYPE_1: i32 = 112;
+pub const RSA_F_RSA_PADDING_CHECK_PKCS1_TYPE_2: i32 = 113;
+pub const RSA_F_RSA_PADDING_CHECK_SSLV23: i32 = 114;
+pub const RSA_F_RSA_PADDING_CHECK_X931: i32 = 128;
+pub const RSA_F_RSA_PARAM_DECODE: i32 = 164;
+pub const RSA_F_RSA_PRINT: i32 = 115;
+pub const RSA_F_RSA_PRINT_FP: i32 = 116;
+pub const RSA_F_RSA_PRIV_DECODE: i32 = 150;
+pub const RSA_F_RSA_PRIV_ENCODE: i32 = 138;
+pub const RSA_F_RSA_PSS_GET_PARAM: i32 = 151;
+pub const RSA_F_RSA_PSS_TO_CTX: i32 = 155;
+pub const RSA_F_RSA_PUB_DECODE: i32 = 139;
+pub const RSA_F_RSA_SETUP_BLINDING: i32 = 136;
+pub const RSA_F_RSA_SIGN: i32 = 117;
+pub const RSA_F_RSA_SIGN_ASN1_OCTET_STRING: i32 = 118;
+pub const RSA_F_RSA_VERIFY: i32 = 119;
+pub const RSA_F_RSA_VERIFY_ASN1_OCTET_STRING: i32 = 120;
+pub const RSA_F_RSA_VERIFY_PKCS1_PSS_MGF1: i32 = 126;
+pub const RSA_F_SETUP_TBUF: i32 = 167;
+
+// Reason codes.
+
+pub const RSA_R_ALGORITHM_MISMATCH: u32 = 100;
+pub const RSA_R_BAD_E_VALUE: u32 = 101;
+pub const RSA_R_BAD_FIXED_HEADER_DECRYPT: u32 = 102;
+pub const RSA_R_BAD_PAD_BYTE_COUNT: u32 = 103;
+pub const RSA_R_BAD_SIGNATURE: u32 = 104;
+pub const RSA_R_BLOCK_TYPE_IS_NOT_01: u32 = 106;
+pub const RSA_R_BLOCK_TYPE_IS_NOT_02: u32 = 107;
+pub const RSA_R_DATA_GREATER_THAN_MOD_LEN: u32 = 108;
+pub const RSA_R_DATA_TOO_LARGE: u32 = 109;
+pub const RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE: u32 = 110;
+pub const RSA_R_DATA_TOO_LARGE_FOR_MODULUS: u32 = 132;
+pub const RSA_R_DATA_TOO_SMALL: u32 = 111;
+pub const RSA_R_DATA_TOO_SMALL_FOR_KEY_SIZE: u32 = 122;
+pub const RSA_R_DIGEST_DOES_NOT_MATCH: u32 = 158;
+pub const RSA_R_DIGEST_NOT_ALLOWED: u32 = 145;
+pub const RSA_R_DIGEST_TOO_BIG_FOR_RSA_KEY: u32 = 112;
+pub const RSA_R_DMP1_NOT_CONGRUENT_TO_D: u32 = 124;
+pub const RSA_R_DMQ1_NOT_CONGRUENT_TO_D: u32 = 125;
+pub const RSA_R_D_E_NOT_CONGRUENT_TO_1: u32 = 123;
+pub const RSA_R_FIRST_OCTET_INVALID: u32 = 133;
+pub const RSA_R_ILLEGAL_OR_UNSUPPORTED_PADDING_MODE: u32 = 144;
+pub const RSA_R_INVALID_DIGEST: u32 = 157;
+pub const RSA_R_INVALID_DIGEST_LENGTH: u32 = 143;
+pub const RSA_R_INVALID_HEADER: u32 = 137;
+pub const RSA_R_INVALID_LABEL: u32 = 160;
+pub const RSA_R_INVALID_MESSAGE_LENGTH: u32 = 131;
+pub const RSA_R_INVALID_MGF1_MD: u32 = 156;
+pub const RSA_R_INVALID_MULTI_PRIME_KEY: u32 = 167;
+pub const RSA_R_INVALID_OAEP_PARAMETERS: u32 = 161;
+pub const RSA_R_INVALID_PADDING: u32 = 138;
+pub const RSA_R_INVALID_PADDING_MODE: u32 = 141;
+pub const RSA_R_INVALID_PSS_PARAMETERS: u32 = 149;
+pub const RSA_R_INVALID_PSS_SALTLEN: u32 = 146;
+pub const RSA_R_INVALID_SALT_LENGTH: u32 = 150;
+pub const RSA_R_INVALID_TRAILER: u32 = 139;
+pub const RSA_R_INVALID_X931_DIGEST: u32 = 142;
+pub const RSA_R_IQMP_NOT_INVERSE_OF_Q: u32 = 126;
+pub const RSA_R_KEY_PRIME_NUM_INVALID: u32 = 165;
+pub const RSA_R_KEY_SIZE_TOO_SMALL: u32 = 120;
+pub const RSA_R_LAST_OCTET_INVALID: u32 = 134;
+pub const RSA_R_MGF1_DIGEST_NOT_ALLOWED: u32 = 152;
+pub const RSA_R_MODULUS_TOO_LARGE: u32 = 105;
+pub const RSA_R_MP_COEFFICIENT_NOT_INVERSE_OF_R: u32 = 168;
+pub const RSA_R_MP_EXPONENT_NOT_CONGRUENT_TO_D: u32 = 169;
+pub const RSA_R_MP_R_NOT_PRIME: u32 = 170;
+pub const RSA_R_NO_PUBLIC_EXPONENT: u32 = 140;
+pub const RSA_R_NULL_BEFORE_BLOCK_MISSING: u32 = 113;
+pub const RSA_R_N_DOES_NOT_EQUAL_PRODUCT_OF_PRIMES: u32 = 172;
+pub const RSA_R_N_DOES_NOT_EQUAL_P_Q: u32 = 127;
+pub const RSA_R_OAEP_DECODING_ERROR: u32 = 121;
+pub const RSA_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE: u32 = 148;
+pub const RSA_R_PADDING_CHECK_FAILED: u32 = 114;
+pub const RSA_R_PKCS_DECODING_ERROR: u32 = 159;
+pub const RSA_R_PSS_SALTLEN_TOO_SMALL: u32 = 164;
+pub const RSA_R_P_NOT_PRIME: u32 = 128;
+pub const RSA_R_Q_NOT_PRIME: u32 = 129;
+pub const RSA_R_RSA_OPERATIONS_NOT_SUPPORTED: u32 = 130;
+pub const RSA_R_SLEN_CHECK_FAILED: u32 = 136;
+pub const RSA_R_SLEN_RECOVERY_FAILED: u32 = 135;
+pub const RSA_R_SSLV3_ROLLBACK_ATTACK: u32 = 115;
+pub const RSA_R_THE_ASN1_OBJECT_IDENTIFIER_IS_NOT_KNOWN_FOR_THIS_MD: u32 = 116;
+pub const RSA_R_UNKNOWN_ALGORITHM_TYPE: u32 = 117;
+pub const RSA_R_UNKNOWN_DIGEST: u32 = 166;
+pub const RSA_R_UNKNOWN_MASK_DIGEST: u32 = 151;
+pub const RSA_R_UNKNOWN_PADDING_TYPE: u32 = 118;
+pub const RSA_R_UNSUPPORTED_ENCRYPTION_TYPE: u32 = 162;
+pub const RSA_R_UNSUPPORTED_LABEL_SOURCE: u32 = 163;
+pub const RSA_R_UNSUPPORTED_MASK_ALGORITHM: u32 = 153;
+pub const RSA_R_UNSUPPORTED_MASK_PARAMETER: u32 = 154;
+pub const RSA_R_UNSUPPORTED_SIGNATURE_TYPE: u32 = 155;
+pub const RSA_R_VALUE_MISSING: u32 = 147;
+pub const RSA_R_WRONG_SIGNATURE_LENGTH: u32 = 119;
 
 pub const RSA_F4: c_long = 0x10001;
 
@@ -179,6 +320,8 @@ extern "C" {
         rsa_len: c_int,
     ) -> c_int;
 }
+
+pub const RSA_METHOD_FLAG_NO_CHECK: u32 = 0x0001;
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {
@@ -458,6 +601,7 @@ cfg_if! {
                 >,
             ) -> c_int;
 
+            #[cfg(ossl111)]
             pub fn RSA_meth_get_multi_prime_keygen(
                 meth: *const RSA_METHOD,
             ) -> ::std::option::Option<
@@ -470,6 +614,7 @@ cfg_if! {
                 ) -> c_int,
             >;
 
+            #[cfg(ossl111)]
             pub fn RSA_meth_set_multi_prime_keygen(
                 meth: *mut RSA_METHOD,
                 keygen: ::std::option::Option<

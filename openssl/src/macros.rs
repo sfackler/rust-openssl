@@ -286,6 +286,18 @@ macro_rules! OPENSSL_malloc {
     };
 }
 
+macro_rules! OPENSSL_zalloc {
+    ($num:expr) => {{
+        let p = ffi::CRYPTO_malloc($num as c_int, OPENSSL_FILE!(), OPENSSL_LINE!());
+
+        if !p.is_null() {
+            libc::memset(p, 0, $num);
+        }
+
+        p
+    }};
+}
+
 macro_rules! OPENSSL_strdup {
     ($s:expr) => {
         ffi::CRYPTO_strdup($s, OPENSSL_FILE!(), OPENSSL_LINE!())
@@ -306,4 +318,10 @@ cfg_if! {
             };
         }
     }
+}
+
+macro_rules! RSAerr {
+    ($f:ident, $r:ident) => {
+        ffi::ERR_put_error(ffi::ERR_LIB_RSA, ffi::$f, ffi::$r, OPENSSL_FILE!(), OPENSSL_LINE!())
+    };
 }
