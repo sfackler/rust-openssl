@@ -471,7 +471,7 @@ impl EngineRef {
         unsafe { (ffi::ENGINE_get_ex_data(self.as_ptr(), idx.as_raw()) as *const T).as_ref() }
     }
 
-    pub fn set_ex_data<T>(&mut self, index: Index<Engine, T>, data: T) -> Result<(), ErrorStack> {
+    pub fn set_ex_data<T>(&self, index: Index<Engine, T>, data: T) -> Result<(), ErrorStack> {
         cvt(unsafe {
             let data = Box::new(data);
 

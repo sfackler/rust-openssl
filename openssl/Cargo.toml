@@ -31,6 +31,9 @@ openssl-sys = { version = "0.9.45", path = "../openssl-sys" }
 [dev-dependencies]
 tempdir = "0.3"
 hex = "0.3"
+log = "0.4"
+log-derive = "0.3"
+pretty_env_logger = "0.3"
 
 [[example]]
 name = "mk_certs"
