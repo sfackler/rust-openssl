@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [v0.10.22]
+
+### Added
+
+* Added support for the LibreSSL 2.9.x series.
+
 ## [v0.10.21] - 2019-04-30
 
 ### Fixed
@@ -353,8 +359,9 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.21...master
-[v0.10.20]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.20...openssl-v0.10.21
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.22...master
+[v0.10.22]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.21...openssl-v0.10.22
+[v0.10.21]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.20...openssl-v0.10.21
 [v0.10.20]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.19...openssl-v0.10.20
 [v0.10.19]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.18...openssl-v0.10.19
 [v0.10.18]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.17...openssl-v0.10.18

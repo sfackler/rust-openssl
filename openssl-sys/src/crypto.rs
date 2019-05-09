@@ -30,7 +30,30 @@ cfg_if! {
         pub const CRYPTO_EX_INDEX_UI_METHOD: c_int = 14;
         pub const CRYPTO_EX_INDEX_DRBG: c_int = 15;
         pub const CRYPTO_EX_INDEX__COUNT: c_int = 16;
+    } else {
+        pub const CRYPTO_EX_INDEX_SSL: c_int = 1;
+        pub const CRYPTO_EX_INDEX_SSL_CTX: c_int = 2;
+        pub const CRYPTO_EX_INDEX_SSL_SESSION: c_int = 3;
+        pub const CRYPTO_EX_INDEX_X509_STORE: c_int = 4;
+        pub const CRYPTO_EX_INDEX_X509_STORE_CTX: c_int = 5;
+        pub const CRYPTO_EX_INDEX_RSA: c_int = 6;
+        pub const CRYPTO_EX_INDEX_DSA: c_int = 7;
+        pub const CRYPTO_EX_INDEX_DH: c_int = 8;
+        pub const CRYPTO_EX_INDEX_ENGINE: c_int = 9;
+        pub const CRYPTO_EX_INDEX_X509: c_int = 10;
+        pub const CRYPTO_EX_INDEX_UI: c_int = 11;
+        pub const CRYPTO_EX_INDEX_ECDSA: c_int = 12;
+        pub const CRYPTO_EX_INDEX_ECDH: c_int = 13;
+        pub const CRYPTO_EX_INDEX_COMP: c_int = 14;
+        pub const CRYPTO_EX_INDEX_STORE: c_int = 15;
+        #[cfg(libressl)]
+        pub const CRYPTO_EX_INDEX_EC_KEY: c_int = 16;
+        pub const CRYPTO_EX_INDEX_USER: c_int = 100;
+    }
+}
 
+cfg_if! {
+    if #[cfg(any(ossl110, libressl271))] {
         extern "C" {
             pub fn OpenSSL_version_num() -> c_ulong;
             pub fn OpenSSL_version(key: c_int) -> *const c_char;
@@ -53,7 +76,6 @@ cfg_if! {
     }
 }
 
-// FIXME should be options
 pub type CRYPTO_EX_new = Option<
     unsafe extern "C" fn(
         parent: *mut c_void,
@@ -86,7 +108,7 @@ pub type CRYPTO_EX_free = Option<
 >;
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl))] {
         extern "C" {
         #[must_use]
             pub fn CRYPTO_get_ex_new_index(

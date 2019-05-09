@@ -291,7 +291,7 @@ workflows:
           name: x86_64-libressl-2.9
           target: x86_64-unknown-linux-gnu
           library: libressl
-          version: 2.9.0
+          version: 2.9.1
       - macos:
           name: macos
       - macos:
