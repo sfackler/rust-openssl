@@ -36,6 +36,8 @@ log = "0.4"
 log-derive = "0.3"
 pretty_env_logger = "0.3"
 
+openssl-errors = { version = "0.1", path = "../openssl-errors" }
+
 [[example]]
 name = "mk_certs"
 

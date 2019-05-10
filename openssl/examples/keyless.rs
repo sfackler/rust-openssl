@@ -11,8 +11,11 @@ extern crate pretty_env_logger;
 extern crate lazy_static;
 extern crate foreign_types;
 extern crate libc;
+#[macro_use]
 extern crate openssl;
 extern crate openssl_sys as ffi;
+#[macro_use]
+extern crate openssl_errors as err;
 
 use std::ffi::CStr;
 use std::mem;
@@ -20,7 +23,7 @@ use std::net::IpAddr;
 use std::ptr;
 use std::sync::{Arc, Once, ONCE_INIT};
 
-use foreign_types::{ForeignType, ForeignTypeRef};
+use foreign_types::ForeignTypeRef;
 use libc::*;
 
 use ffi::*;
@@ -32,11 +35,38 @@ use openssl::{
     rsa::{Rsa, RsaMethod, RsaRef},
 };
 
+macro_rules! cstr {
+    ($s:expr) => {
+        concat!($s, "\0")
+    };
+}
+
+openssl_errors! {
+    pub library Keyless("Keyless engine") {
+        functions {
+            KEYLESS_INIT("keyless_init");
+            KEYLESS_CTRL("keyless_ctrl");
+            KEYLESS_FINISH("keyless_finish");
+            KEYLESS_DESTROY("keyless_destroy");
+            KEYLESS_RSA_PRIV_DEC("keyless_rsa_priv_dec");
+            KEYLESS_RSA_SIGN("keyless_rsa_sign");
+        }
+
+        reasons {
+            ENGINE_NOT_INITIALIZED("engine not initialized");
+            CANT_FIND_CONTEXT("cant find context");
+            CANT_SET_USER_DATA("cant set user data");
+            UNKNOWN_COMMAND("unknown command");
+            UTF8_ERROR("invalid UTF-8 string");
+        }
+    }
+}
+
 const TRUE: c_int = 1;
 const FALSE: c_int = 0;
 
 const ENGINE_KEYLESS_ID: &str = "keyless";
-const ENGINE_KEYLESS_NAME: &str = "Keyless engine support";
+const ENGINE_KEYLESS_NAME: &str = "Keyless engine";
 
 IMPLEMENT_DYNAMIC_CHECK_FN!();
 IMPLEMENT_DYNAMIC_BIND_FN!(bind_helper);
@@ -87,14 +117,27 @@ fn bind_keyless(e: &EngineRef) -> Result<(), ErrorStack> {
     e.set_rsa(Some(&**KEYLESS_RSA_METHOD))?;
     e.set_cmd_defns(KEYLESS_CMD_DEFNS.as_slice())?;
     e.set_ctrl_function(Some(keyless_ctrl))?;
-    e.set_ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX, EngineContext::default())?;
+    e.set_ex_data(
+        *KEYLESS_ENGINE_CONTEXT_INDEX,
+        Some(EngineContext::default()),
+    )?;
 
     Ok(())
 }
 
+ENGINE_CMD_DEFINES! {
+    static KEYLESS_CMD_DEFNS = {
+        {
+            KEYLESS_CMD_HOSTNAME,
+            "hostname",
+            "the HOST[:PORT] address of keyless server",
+            ENGINE_CMD_FLAG_STRING
+        }
+    }
+}
+
 lazy_static! {
     static ref KEYLESS_RSA_METHOD: RsaMethod = RsaMethod::new("Keyless RSA method");
-    static ref KEYLESS_CMD_DEFNS: Vec<ffi::ENGINE_CMD_DEFN> = vec![unsafe { mem::zeroed() },];
     static ref KEYLESS_ENGINE_CONTEXT_INDEX: Index<Engine, EngineContext> =
         Engine::new_ex_index().unwrap();
     static ref KEYLESS_RSA_CONTEXT_INDEX: Index<Rsa<Private>, RsaContext> =
@@ -106,83 +149,145 @@ struct EngineContext {
     hostname: String,
 }
 
+impl EngineContext {
+    pub fn init(&mut self, _engine: &EngineRef) -> Result<(), err::Reason<Keyless>> {
+        static INIT: Once = ONCE_INIT;
+
+        INIT.call_once(|| {
+            let ossl_rsa_meth = RsaMethod::openssl();
+
+            KEYLESS_RSA_METHOD
+                .set_pub_enc(ossl_rsa_meth.pub_enc())
+                .unwrap();
+            KEYLESS_RSA_METHOD
+                .set_pub_dec(ossl_rsa_meth.pub_dec())
+                .unwrap();
+            KEYLESS_RSA_METHOD
+                .set_priv_enc(ossl_rsa_meth.priv_enc())
+                .unwrap();
+            KEYLESS_RSA_METHOD
+                .set_priv_dec(Some(keyless_rsa_priv_dec))
+                .unwrap();
+            KEYLESS_RSA_METHOD
+                .set_mod_exp(ossl_rsa_meth.mod_exp())
+                .unwrap();
+            KEYLESS_RSA_METHOD
+                .set_bn_mod_exp(ossl_rsa_meth.bn_mod_exp())
+                .unwrap();
+            KEYLESS_RSA_METHOD.set_sign(Some(keyless_rsa_sign)).unwrap();
+        });
+
+        Ok(())
+    }
+
+    pub fn finish(&mut self, engine: &EngineRef) -> Result<(), err::Reason<Keyless>> {
+        engine
+            .set_ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX, None)
+            .map_err(|_| Keyless::CANT_SET_USER_DATA)?;
+
+        Ok(())
+    }
+
+    pub fn destroy(&mut self, _engine: &EngineRef) -> Result<(), err::Reason<Keyless>> {
+        Ok(())
+    }
+
+    pub fn ctrl(
+        &mut self,
+        _engine: &EngineRef,
+        cmd: c_int,
+        _l: c_long,
+        p: *mut c_void,
+        _f: Option<unsafe extern "C" fn()>,
+    ) -> Result<(), err::Reason<Keyless>> {
+        match cmd {
+            KEYLESS_CMD_HOSTNAME => {
+                self.hostname = unsafe { CStr::from_ptr(p as *const _) }
+                    .to_str()
+                    .map_err(|_| Keyless::UTF8_ERROR)?
+                    .to_owned();
+
+                Ok(())
+            }
+            _ => Err(Keyless::UNKNOWN_COMMAND),
+        }
+    }
+}
+
 #[derive(Debug)]
 struct RsaContext {
     sni: String,
     client: IpAddr,
 }
 
-static INIT: Once = ONCE_INIT;
-
 #[logfn(ok = "DEBUG", err = "ERROR")]
 #[logfn_inputs(Trace)]
 unsafe extern "C" fn keyless_init(e: *mut ENGINE) -> c_int {
-    let e = EngineRef::from_ptr(e);
+    let engine = EngineRef::from_ptr(e);
 
-    INIT.call_once(|| {
-        let ossl_rsa_meth = RsaMethod::openssl();
-
-        KEYLESS_RSA_METHOD
-            .set_pub_enc(ossl_rsa_meth.pub_enc())
-            .unwrap();
-        KEYLESS_RSA_METHOD
-            .set_pub_dec(ossl_rsa_meth.pub_dec())
-            .unwrap();
-        KEYLESS_RSA_METHOD
-            .set_priv_enc(ossl_rsa_meth.priv_enc())
-            .unwrap();
-        KEYLESS_RSA_METHOD
-            .set_priv_dec(Some(keyless_rsa_priv_dec))
-            .unwrap();
-        KEYLESS_RSA_METHOD
-            .set_mod_exp(ossl_rsa_meth.mod_exp())
-            .unwrap();
-        KEYLESS_RSA_METHOD
-            .set_bn_mod_exp(ossl_rsa_meth.bn_mod_exp())
-            .unwrap();
-        KEYLESS_RSA_METHOD.set_sign(Some(keyless_rsa_sign)).unwrap();
-    });
-
-    TRUE
+    engine
+        .ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX)
+        .ok_or(Keyless::CANT_FIND_CONTEXT)
+        .and_then(|ctx| ctx.init(engine))
+        .map(|_| TRUE)
+        .unwrap_or_else(|reason| {
+            put_error!(Keyless::KEYLESS_INIT, reason);
+            FALSE
+        })
 }
 
 #[logfn(ok = "DEBUG", err = "ERROR")]
 #[logfn_inputs(Trace)]
 unsafe extern "C" fn keyless_finish(e: *mut ENGINE) -> c_int {
-    let e = EngineRef::from_ptr(e);
-    if let Some(ctx) = e.ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX) {
-        TRUE
-    } else {
-        FALSE
-    }
+    let engine = EngineRef::from_ptr(e);
+
+    engine
+        .ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX)
+        .ok_or(Keyless::CANT_FIND_CONTEXT)
+        .and_then(|ctx| ctx.finish(engine))
+        .map(|_| TRUE)
+        .unwrap_or_else(|reason| {
+            put_error!(Keyless::KEYLESS_FINISH, reason);
+            FALSE
+        })
 }
 
 #[logfn(ok = "DEBUG", err = "ERROR")]
 #[logfn_inputs(Trace)]
 unsafe extern "C" fn keyless_destroy(e: *mut ENGINE) -> c_int {
-    let e = EngineRef::from_ptr(e);
-    if let Some(ctx) = e.ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX) {
-        TRUE
-    } else {
-        FALSE
-    }
+    let engine = EngineRef::from_ptr(e);
+
+    engine
+        .ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX)
+        .ok_or(Keyless::CANT_FIND_CONTEXT)
+        .and_then(|ctx| ctx.destroy(engine))
+        .map(|_| TRUE)
+        .unwrap_or_else(|reason| {
+            put_error!(Keyless::KEYLESS_DESTROY, reason);
+            FALSE
+        })
 }
 
 #[logfn(ok = "DEBUG", err = "ERROR")]
 #[logfn_inputs(Trace)]
 unsafe extern "C" fn keyless_ctrl(
     e: *mut ENGINE,
-    i: c_int,
+    cmd: c_int,
     l: c_long,
     p: *mut c_void,
     f: Option<unsafe extern "C" fn()>,
 ) -> c_int {
-    let e = EngineRef::from_ptr(e);
-    if let Some(ctx) = e.ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX) {
-        TRUE
-    } else {
-        FALSE
-    }
+    let engine = EngineRef::from_ptr(e);
+
+    engine
+        .ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX)
+        .ok_or(Keyless::CANT_FIND_CONTEXT)
+        .and_then(|ctx| ctx.ctrl(engine, cmd, l, p, f))
+        .map(|_| TRUE)
+        .unwrap_or_else(|reason| {
+            put_error!(Keyless::KEYLESS_CTRL, reason);
+            FALSE
+        })
 }
 
 #[logfn(ok = "TRACE", err = "WARN")]
@@ -200,6 +305,7 @@ unsafe extern "C" fn keyless_rsa_priv_dec(
     if let Some(ctx) = rsa.ex_data(*KEYLESS_RSA_CONTEXT_INDEX) {
         TRUE
     } else {
+        put_error!(Keyless::KEYLESS_RSA_PRIV_DEC, Keyless::CANT_FIND_CONTEXT);
         FALSE
     }
 }
@@ -220,6 +326,7 @@ unsafe extern "C" fn keyless_rsa_sign(
     if let Some(ctx) = rsa.ex_data(*KEYLESS_RSA_CONTEXT_INDEX) {
         TRUE
     } else {
+        put_error!(Keyless::KEYLESS_RSA_SIGN, Keyless::CANT_FIND_CONTEXT);
         FALSE
     }
 }
@@ -228,7 +335,7 @@ pub mod proto {
     use std::convert::{TryFrom, TryInto};
     use std::io::{self, prelude::*, Cursor};
     use std::mem;
-    use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+    use std::net::IpAddr;
     use std::sync::atomic::{AtomicU32, Ordering};
 
     /// Tag marks the type of an Item.

@@ -467,19 +467,21 @@ impl Engine {
 }
 
 impl EngineRef {
-    pub fn ex_data<T>(&self, idx: Index<Engine, T>) -> Option<&T> {
-        unsafe { (ffi::ENGINE_get_ex_data(self.as_ptr(), idx.as_raw()) as *const T).as_ref() }
+    pub fn ex_data<T>(&self, idx: Index<Engine, T>) -> Option<&mut T> {
+        unsafe { (ffi::ENGINE_get_ex_data(self.as_ptr(), idx.as_raw()) as *mut T).as_mut() }
     }
 
-    pub fn set_ex_data<T>(&self, index: Index<Engine, T>, data: T) -> Result<(), ErrorStack> {
+    pub fn set_ex_data<T>(
+        &self,
+        index: Index<Engine, T>,
+        data: Option<T>,
+    ) -> Result<(), ErrorStack> {
         cvt(unsafe {
-            let data = Box::new(data);
+            let data = data.map_or_else(ptr::null_mut, |data| {
+                Box::into_raw(Box::new(data)) as *mut c_void
+            });
 
-            ffi::ENGINE_set_ex_data(
-                self.as_ptr(),
-                index.as_raw(),
-                Box::into_raw(data) as *mut c_void,
-            )
+            ffi::ENGINE_set_ex_data(self.as_ptr(), index.as_raw(), data)
         })
         .map(|_| ())
     }

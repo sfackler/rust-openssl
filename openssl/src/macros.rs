@@ -268,9 +268,15 @@ macro_rules! generic_foreign_type_and_impl_send_sync {
     };
 }
 
+macro_rules! cstr {
+    ($s:expr) => {
+        concat!($s, "\0")
+    };
+}
+
 macro_rules! OPENSSL_FILE {
     () => {
-        concat!(file!(), "\0").as_ptr() as _
+        cstr!(file!()).as_ptr() as _
     };
 }
 
@@ -322,6 +328,12 @@ cfg_if! {
 
 macro_rules! RSAerr {
     ($f:ident, $r:ident) => {
-        ffi::ERR_put_error(ffi::ERR_LIB_RSA, ffi::$f, ffi::$r, OPENSSL_FILE!(), OPENSSL_LINE!())
+        ffi::ERR_put_error(
+            ffi::ERR_LIB_RSA,
+            ffi::$f,
+            ffi::$r,
+            OPENSSL_FILE!(),
+            OPENSSL_LINE!(),
+        )
     };
 }

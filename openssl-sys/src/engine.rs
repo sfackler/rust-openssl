@@ -34,32 +34,33 @@ pub const ENGINE_CMD_FLAG_STRING: u32 = 0x0002;
 pub const ENGINE_CMD_FLAG_NO_INPUT: u32 = 0x0004;
 pub const ENGINE_CMD_FLAG_INTERNAL: u32 = 0x0008;
 
-pub const ENGINE_CTRL_SET_LOGSTREAM: u32 = 1;
-pub const ENGINE_CTRL_SET_PASSWORD_CALLBACK: u32 = 2;
-pub const ENGINE_CTRL_HUP: u32 = 3;
-pub const ENGINE_CTRL_SET_USER_INTERFACE: u32 = 4;
-pub const ENGINE_CTRL_SET_CALLBACK_DATA: u32 = 5;
-pub const ENGINE_CTRL_LOAD_CONFIGURATION: u32 = 6;
-pub const ENGINE_CTRL_LOAD_SECTION: u32 = 7;
-pub const ENGINE_CTRL_HAS_CTRL_FUNCTION: u32 = 10;
-pub const ENGINE_CTRL_GET_FIRST_CMD_TYPE: u32 = 11;
-pub const ENGINE_CTRL_GET_NEXT_CMD_TYPE: u32 = 12;
-pub const ENGINE_CTRL_GET_CMD_FROM_NAME: u32 = 13;
-pub const ENGINE_CTRL_GET_NAME_LEN_FROM_CMD: u32 = 14;
-pub const ENGINE_CTRL_GET_NAME_FROM_CMD: u32 = 15;
-pub const ENGINE_CTRL_GET_DESC_LEN_FROM_CMD: u32 = 16;
-pub const ENGINE_CTRL_GET_DESC_FROM_CMD: u32 = 17;
-pub const ENGINE_CTRL_GET_CMD_FLAGS: u32 = 18;
-pub const ENGINE_CMD_BASE: u32 = 200;
+pub const ENGINE_CTRL_SET_LOGSTREAM: i32 = 1;
+pub const ENGINE_CTRL_SET_PASSWORD_CALLBACK: i32 = 2;
+pub const ENGINE_CTRL_HUP: i32 = 3;
+pub const ENGINE_CTRL_SET_USER_INTERFACE: i32 = 4;
+pub const ENGINE_CTRL_SET_CALLBACK_DATA: i32 = 5;
+pub const ENGINE_CTRL_LOAD_CONFIGURATION: i32 = 6;
+pub const ENGINE_CTRL_LOAD_SECTION: i32 = 7;
+pub const ENGINE_CTRL_HAS_CTRL_FUNCTION: i32 = 10;
+pub const ENGINE_CTRL_GET_FIRST_CMD_TYPE: i32 = 11;
+pub const ENGINE_CTRL_GET_NEXT_CMD_TYPE: i32 = 12;
+pub const ENGINE_CTRL_GET_CMD_FROM_NAME: i32 = 13;
+pub const ENGINE_CTRL_GET_NAME_LEN_FROM_CMD: i32 = 14;
+pub const ENGINE_CTRL_GET_NAME_FROM_CMD: i32 = 15;
+pub const ENGINE_CTRL_GET_DESC_LEN_FROM_CMD: i32 = 16;
+pub const ENGINE_CTRL_GET_DESC_FROM_CMD: i32 = 17;
+pub const ENGINE_CTRL_GET_CMD_FLAGS: i32 = 18;
 #[cfg(not(libressl))]
-pub const ENGINE_CTRL_CHIL_SET_FORKCHECK: u32 = 100;
+pub const ENGINE_CTRL_CHIL_SET_FORKCHECK: i32 = 100;
 #[cfg(not(libressl))]
-pub const ENGINE_CTRL_CHIL_NO_LOCKING: u32 = 101;
+pub const ENGINE_CTRL_CHIL_NO_LOCKING: i32 = 101;
+
+pub const ENGINE_CMD_BASE: i32 = 200;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct ENGINE_CMD_DEFN {
-    pub cmd_num: c_uint,
+    pub cmd_num: c_int,
     pub cmd_name: *const c_char,
     pub cmd_desc: *const c_char,
     pub cmd_flags: c_uint,
@@ -67,6 +68,47 @@ pub struct ENGINE_CMD_DEFN {
 
 unsafe impl Send for ENGINE_CMD_DEFN {}
 unsafe impl Sync for ENGINE_CMD_DEFN {}
+
+#[macro_export]
+macro_rules! ENGINE_CMD_DEFINES {
+    (
+        static $cmds:ident = {
+            $({
+                $id:ident, $name:expr, $desc:expr, $ty:ident
+            }),*
+        }
+    ) => {
+        #[repr(i32)]
+        #[derive(Clone, Copy, Debug, PartialEq)]
+        pub enum EngineCmd {
+            BASE = ffi::ENGINE_CMD_BASE,
+            $( $id ),*
+        }
+
+        $(
+            pub const $id: i32 = EngineCmd::$id as i32;
+        )*
+
+        lazy_static! {
+            static ref $cmds: Vec<ffi::ENGINE_CMD_DEFN> = vec![
+                $(
+                    {
+                        static name: &str = concat!($name, "\0");
+                        static desc: &str = concat!($desc, "\0");
+
+                        ffi::ENGINE_CMD_DEFN {
+                            cmd_num: $id,
+                            cmd_name: name.as_ptr() as *const _,
+                            cmd_desc: desc.as_ptr() as *const _,
+                            cmd_flags: $ty,
+                        }
+                    },
+                )*
+                unsafe { mem::zeroed() },
+            ];
+        }
+    };
+}
 
 pub type ENGINE_GEN_FUNC_PTR = Option<unsafe extern "C" fn() -> c_int>;
 pub type ENGINE_GEN_INT_FUNC_PTR = Option<unsafe extern "C" fn(arg1: *mut ENGINE) -> c_int>;
