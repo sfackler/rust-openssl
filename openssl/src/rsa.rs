@@ -42,6 +42,7 @@ use bn::{BigNum, BigNumRef};
 use error::ErrorStack;
 use ex_data::{free_data_box, Index};
 use pkey::{HasPrivate, HasPublic, Private, Public};
+use engine::EngineRef;
 use {cvt, cvt_n, cvt_p};
 
 /// Type of encryption padding to use.
@@ -297,6 +298,16 @@ where
                 Ok(result == 1)
             }
         }
+    }
+
+    #[cfg(ossl110)]
+    pub fn engine(&self) -> &EngineRef {
+        unsafe { EngineRef::from_ptr(ffi::RSA_get0_engine(self.as_ptr())) }
+    }
+
+    #[cfg(not(ossl110))]
+    pub fn engine(&self) -> &EngineRef {
+        unsafe { EngineRef::from_ptr(self.engine) }
     }
 
     pub fn method(&self) -> &RsaMethodRef {

@@ -17,11 +17,13 @@ extern crate openssl_sys as ffi;
 #[macro_use]
 extern crate openssl_errors as err;
 
+use std::cell::RefCell;
 use std::ffi::CStr;
 use std::mem;
 use std::net::IpAddr;
 use std::ptr;
-use std::sync::{Arc, Once, ONCE_INIT};
+use std::slice;
+use std::sync::{Arc, Condvar, Mutex, Once, ONCE_INIT};
 
 use foreign_types::ForeignTypeRef;
 use libc::*;
@@ -31,15 +33,10 @@ use openssl::{
     engine::{self, Engine, EngineRef},
     error::ErrorStack,
     ex_data::Index,
+    nid::Nid,
     pkey::Private,
-    rsa::{Rsa, RsaMethod, RsaRef},
+    rsa::{Padding, Rsa, RsaMethod, RsaRef},
 };
-
-macro_rules! cstr {
-    ($s:expr) => {
-        concat!($s, "\0")
-    };
-}
 
 openssl_errors! {
     pub library Keyless("Keyless engine") {
@@ -58,6 +55,12 @@ openssl_errors! {
             CANT_SET_USER_DATA("cant set user data");
             UNKNOWN_COMMAND("unknown command");
             UTF8_ERROR("invalid UTF-8 string");
+            LOCK_POISON("lock are poisoned");
+            UNSUPPORTED_ALGORITHM_NID("unsupported algorithm nid");
+            UNSUPPORTED_PADDING("unsupported padding");
+            CONNECT_FAILED("connect to server failed");
+            SEND_FAILED("send request failed");
+            RECV_FAILED("receive response failed");
         }
     }
 }
@@ -117,39 +120,59 @@ fn bind_keyless(e: &EngineRef) -> Result<(), ErrorStack> {
     e.set_rsa(Some(&**KEYLESS_RSA_METHOD))?;
     e.set_cmd_defns(KEYLESS_CMD_DEFNS.as_slice())?;
     e.set_ctrl_function(Some(keyless_ctrl))?;
-    e.set_ex_data(
-        *KEYLESS_ENGINE_CONTEXT_INDEX,
-        Some(EngineContext::default()),
-    )?;
+    e.set_ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX, Some(Client::default()))?;
 
     Ok(())
 }
 
+const DEFAULT_MAX_RETRY_TIMES: usize = 3;
+
 ENGINE_CMD_DEFINES! {
     static KEYLESS_CMD_DEFNS = {
         {
-            KEYLESS_CMD_HOSTNAME,
-            "hostname",
+            KEYLESS_CMD_SERVER,
+            "keyless_server",
             "the HOST[:PORT] address of keyless server",
             ENGINE_CMD_FLAG_STRING
+        },
+        {
+            KEYLESS_CMD_MAX_RETRY_TIMES,
+            "max_retry_times",
+            "the maxium retry times",
+            ENGINE_CMD_FLAG_NUMERIC
         }
     }
 }
 
 lazy_static! {
     static ref KEYLESS_RSA_METHOD: RsaMethod = RsaMethod::new("Keyless RSA method");
-    static ref KEYLESS_ENGINE_CONTEXT_INDEX: Index<Engine, EngineContext> =
+    static ref KEYLESS_ENGINE_CONTEXT_INDEX: Index<Engine, Client> =
         Engine::new_ex_index().unwrap();
     static ref KEYLESS_RSA_CONTEXT_INDEX: Index<Rsa<Private>, RsaContext> =
         Rsa::new_ex_index().unwrap();
 }
 
 #[derive(Debug, Default)]
-struct EngineContext {
+struct Client {
     hostname: String,
+    max_retry_times: Option<usize>,
+    state: Mutex<RefCell<State>>,
 }
 
-impl EngineContext {
+#[derive(Debug)]
+enum State {
+    Unknown,
+    Initialized,
+    Connected(client::Sender, client::Receiver),
+}
+
+impl Default for State {
+    fn default() -> Self {
+        State::Unknown
+    }
+}
+
+impl Client {
     pub fn init(&mut self, _engine: &EngineRef) -> Result<(), err::Reason<Keyless>> {
         static INIT: Once = ONCE_INIT;
 
@@ -177,18 +200,15 @@ impl EngineContext {
             KEYLESS_RSA_METHOD.set_sign(Some(keyless_rsa_sign)).unwrap();
         });
 
-        Ok(())
-    }
-
-    pub fn finish(&mut self, engine: &EngineRef) -> Result<(), err::Reason<Keyless>> {
-        engine
-            .set_ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX, None)
-            .map_err(|_| Keyless::CANT_SET_USER_DATA)?;
+        self.state
+            .get_mut()
+            .map_err(|_| Keyless::LOCK_POISON)?
+            .replace(State::Initialized);
 
         Ok(())
     }
 
-    pub fn destroy(&mut self, _engine: &EngineRef) -> Result<(), err::Reason<Keyless>> {
+    pub fn finish(&mut self, _engine: &EngineRef) -> Result<(), err::Reason<Keyless>> {
         Ok(())
     }
 
@@ -196,28 +216,198 @@ impl EngineContext {
         &mut self,
         _engine: &EngineRef,
         cmd: c_int,
-        _l: c_long,
+        l: c_long,
         p: *mut c_void,
         _f: Option<unsafe extern "C" fn()>,
     ) -> Result<(), err::Reason<Keyless>> {
         match cmd {
-            KEYLESS_CMD_HOSTNAME => {
-                self.hostname = unsafe { CStr::from_ptr(p as *const _) }
+            KEYLESS_CMD_SERVER => {
+                let hostname = unsafe { CStr::from_ptr(p as *const _) };
+
+                debug!("set keyless_server = {:?}", hostname);
+
+                self.hostname = hostname
                     .to_str()
                     .map_err(|_| Keyless::UTF8_ERROR)?
                     .to_owned();
+
+                self.reset(State::Initialized)
+            }
+            KEYLESS_CMD_MAX_RETRY_TIMES => {
+                debug!("set max_retry_times = {}", l);
+
+                self.max_retry_times = Some(l as usize);
 
                 Ok(())
             }
             _ => Err(Keyless::UNKNOWN_COMMAND),
         }
     }
+
+    fn reset(&self, state: State) -> Result<(), err::Reason<Keyless>> {
+        let state = self
+            .state
+            .lock()
+            .map_err(|_| Keyless::LOCK_POISON)?
+            .replace(state);
+
+        if let State::Connected(sender, receiver) = state {
+            debug!("graceful shutdown receiver and waiting the pendding requests finish");
+
+            mem::drop(sender);
+
+            if receiver.join().is_err() {
+                warn!("fail to graceful shutdown receiver")
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn send(&mut self, req: proto::Request) -> Result<proto::Response, err::Reason<Keyless>> {
+        let mut remaining_retry_times = self
+            .max_retry_times
+            .unwrap_or(DEFAULT_MAX_RETRY_TIMES)
+            .max(1);
+
+        while remaining_retry_times > 0 {
+            let sender = self.sender()?;
+
+            let next_state = if let Some(sender) = sender {
+                match self.send_request(sender, &req) {
+                    Ok(res) => return Ok(res),
+                    Err(_) => {
+                        remaining_retry_times -= 1;
+
+                        State::Initialized
+                    }
+                }
+            } else {
+                self.connect()?
+            };
+
+            self.state
+                .get_mut()
+                .map_err(|_| Keyless::LOCK_POISON)?
+                .replace(next_state);
+        }
+
+        Err(Keyless::SEND_FAILED)
+    }
+
+    fn sender(&self) -> Result<Option<client::Sender>, err::Reason<Keyless>> {
+        let state = self.state.lock().unwrap();
+        let state = state.borrow();
+
+        match *state {
+            State::Unknown => return Err(Keyless::ENGINE_NOT_INITIALIZED),
+            State::Initialized => Ok(None),
+            State::Connected(ref sender, _) => Ok(Some(sender.clone())),
+        }
+    }
+
+    fn send_request(
+        &self,
+        sender: client::Sender,
+        req: &proto::Request,
+    ) -> Result<proto::Response, err::Reason<Keyless>> {
+        let ctxt = Arc::new((Mutex::new(None), Condvar::new()));
+        let receiver_ctxt = ctxt.clone();
+
+        let callback = Box::new(move |response| {
+            let &(ref lock, ref cvar) = &*receiver_ctxt;
+            let mut res = lock.lock().unwrap();
+            *res = Some(response);
+            cvar.notify_one();
+        });
+
+        match sender.send((req.clone(), callback)) {
+            Ok(_) => {
+                let &(ref lock, ref cvar) = &*ctxt;
+                let mut res = lock.lock().map_err(|_| Keyless::LOCK_POISON)?;
+                while res.is_none() {
+                    let mut res = cvar.wait(res).map_err(|_| Keyless::LOCK_POISON)?;
+
+                    return res.take().ok_or(Keyless::RECV_FAILED);
+                }
+
+                Err(Keyless::RECV_FAILED)
+            }
+            Err(err) => {
+                warn!("send request failed, {}", err);
+
+                Err(Keyless::SEND_FAILED)
+            }
+        }
+    }
+
+    fn connect(&self) -> Result<State, err::Reason<Keyless>> {
+        let (sender, receiver) = client::connect(&self.hostname).map_err(|err| {
+            warn!(
+                "connect to keyless server @ {} failed, {}",
+                self.hostname, err
+            );
+
+            Keyless::CONNECT_FAILED
+        })?;
+
+        Ok(State::Connected(sender, receiver))
+    }
 }
 
 #[derive(Debug)]
 struct RsaContext {
-    sni: String,
+    domain: String,
     client: IpAddr,
+}
+
+impl RsaContext {
+    pub fn priv_dec(
+        &self,
+        rsa: &RsaRef<Private>,
+        from: &[u8],
+        padding: Padding,
+    ) -> Result<proto::Request, err::Reason<Keyless>> {
+        match padding {
+            Padding::NONE | Padding::PKCS1 | Padding::PKCS1_OAEP | Padding::PKCS1_PSS => {}
+            _ => return Err(Keyless::UNSUPPORTED_PADDING),
+        }
+
+        Ok(proto::Request {
+            cert_digest: rsa.n().to_vec(),
+            sni: self.domain.clone(),
+            client: self.client.clone(),
+            op: proto::OpCode::RSADecrypt,
+            payload: from.to_vec(),
+        })
+    }
+
+    pub fn sign(
+        &self,
+        rsa: &RsaRef<Private>,
+        meth: Nid,
+        m: &[u8],
+    ) -> Result<proto::Request, err::Reason<Keyless>> {
+        use proto::OpCode::*;
+
+        let op = match meth {
+            Nid::MD5_SHA1 => RSASignMD5SHA1,
+            Nid::SHA1 | Nid::SHA1WITHRSA => RSASignSHA1,
+            Nid::SHA224 => RSASignSHA224,
+            Nid::SHA256 => RSASignSHA256,
+            Nid::SHA384 => RSASignSHA384,
+            Nid::SHA512 => RSASignSHA512,
+            _ => return Err(Keyless::UNSUPPORTED_ALGORITHM_NID),
+        };
+
+        Ok(proto::Request {
+            cert_digest: rsa.n().to_vec(),
+            sni: self.domain.clone(),
+            client: self.client.clone(),
+            op,
+            payload: m.to_vec(),
+        })
+    }
 }
 
 #[logfn(ok = "DEBUG", err = "ERROR")]
@@ -228,7 +418,7 @@ unsafe extern "C" fn keyless_init(e: *mut ENGINE) -> c_int {
     engine
         .ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX)
         .ok_or(Keyless::CANT_FIND_CONTEXT)
-        .and_then(|ctx| ctx.init(engine))
+        .and_then(|client| client.init(engine))
         .map(|_| TRUE)
         .unwrap_or_else(|reason| {
             put_error!(Keyless::KEYLESS_INIT, reason);
@@ -244,7 +434,7 @@ unsafe extern "C" fn keyless_finish(e: *mut ENGINE) -> c_int {
     engine
         .ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX)
         .ok_or(Keyless::CANT_FIND_CONTEXT)
-        .and_then(|ctx| ctx.finish(engine))
+        .and_then(|client| client.finish(engine))
         .map(|_| TRUE)
         .unwrap_or_else(|reason| {
             put_error!(Keyless::KEYLESS_FINISH, reason);
@@ -255,17 +445,9 @@ unsafe extern "C" fn keyless_finish(e: *mut ENGINE) -> c_int {
 #[logfn(ok = "DEBUG", err = "ERROR")]
 #[logfn_inputs(Trace)]
 unsafe extern "C" fn keyless_destroy(e: *mut ENGINE) -> c_int {
-    let engine = EngineRef::from_ptr(e);
+    let _engine = EngineRef::from_ptr(e);
 
-    engine
-        .ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX)
-        .ok_or(Keyless::CANT_FIND_CONTEXT)
-        .and_then(|ctx| ctx.destroy(engine))
-        .map(|_| TRUE)
-        .unwrap_or_else(|reason| {
-            put_error!(Keyless::KEYLESS_DESTROY, reason);
-            FALSE
-        })
+    TRUE
 }
 
 #[logfn(ok = "DEBUG", err = "ERROR")]
@@ -282,7 +464,7 @@ unsafe extern "C" fn keyless_ctrl(
     engine
         .ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX)
         .ok_or(Keyless::CANT_FIND_CONTEXT)
-        .and_then(|ctx| ctx.ctrl(engine, cmd, l, p, f))
+        .and_then(|client| client.ctrl(engine, cmd, l, p, f))
         .map(|_| TRUE)
         .unwrap_or_else(|reason| {
             put_error!(Keyless::KEYLESS_CTRL, reason);
@@ -300,14 +482,29 @@ unsafe extern "C" fn keyless_rsa_priv_dec(
     padding: c_int,
 ) -> c_int {
     let rsa = RsaRef::from_ptr(rsa);
-    let n = rsa.n();
 
-    if let Some(ctx) = rsa.ex_data(*KEYLESS_RSA_CONTEXT_INDEX) {
-        TRUE
-    } else {
-        put_error!(Keyless::KEYLESS_RSA_PRIV_DEC, Keyless::CANT_FIND_CONTEXT);
-        FALSE
-    }
+    rsa.ex_data(*KEYLESS_RSA_CONTEXT_INDEX)
+        .ok_or(Keyless::CANT_FIND_CONTEXT)
+        .and_then(|ctx| {
+            let to = slice::from_raw_parts_mut(to, rsa.size() as usize);
+
+            ctx.priv_dec(
+                rsa,
+                slice::from_raw_parts(from, flen as usize),
+                Padding::from_raw(padding),
+            )
+            .and_then(|req| {
+                rsa.engine()
+                    .ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX)
+                    .ok_or(Keyless::CANT_FIND_CONTEXT)
+                    .and_then(|client| client.send(req))
+            })
+        })
+        .map(|_| TRUE)
+        .unwrap_or_else(|reason| {
+            put_error!(Keyless::KEYLESS_RSA_PRIV_DEC, reason);
+            FALSE
+        })
 }
 
 #[logfn(ok = "TRACE", err = "WARN")]
@@ -321,14 +518,30 @@ unsafe extern "C" fn keyless_rsa_sign(
     rsa: *const RSA,
 ) -> c_int {
     let rsa = RsaRef::from_ptr(rsa as *mut _);
-    let n = rsa.n();
 
-    if let Some(ctx) = rsa.ex_data(*KEYLESS_RSA_CONTEXT_INDEX) {
-        TRUE
-    } else {
-        put_error!(Keyless::KEYLESS_RSA_SIGN, Keyless::CANT_FIND_CONTEXT);
-        FALSE
-    }
+    rsa.ex_data(*KEYLESS_RSA_CONTEXT_INDEX)
+        .ok_or(Keyless::CANT_FIND_CONTEXT)
+        .and_then(|ctx| {
+            let sig = slice::from_raw_parts_mut(sigret, rsa.size() as usize);
+            *siglen = rsa.size();
+
+            ctx.sign(
+                rsa,
+                Nid::from_raw(meth),
+                slice::from_raw_parts(m, m_length as usize),
+            )
+            .and_then(|req| {
+                rsa.engine()
+                    .ex_data(*KEYLESS_ENGINE_CONTEXT_INDEX)
+                    .ok_or(Keyless::CANT_FIND_CONTEXT)
+                    .and_then(|client| client.send(req))
+            })
+        })
+        .map(|_| TRUE)
+        .unwrap_or_else(|reason| {
+            put_error!(Keyless::KEYLESS_RSA_SIGN, reason);
+            FALSE
+        })
 }
 
 pub mod proto {
@@ -468,6 +681,7 @@ pub mod proto {
         }
     }
 
+    #[derive(Clone, Debug)]
     pub struct Request {
         pub cert_digest: Vec<u8>,
         pub sni: String,
@@ -475,6 +689,8 @@ pub mod proto {
         pub op: OpCode,
         pub payload: Vec<u8>,
     }
+
+    unsafe impl Send for Request {}
 
     static ID: AtomicU32 = AtomicU32::new(0);
 
@@ -502,6 +718,7 @@ pub mod proto {
         }
     }
 
+    #[derive(Debug)]
     pub enum Response {
         Success(Vec<u8>),
         Error(Error),
@@ -563,7 +780,7 @@ pub mod proto {
             let (len, id) = buf.split_at(2);
 
             Ok(Header {
-                version: (buf[0], buf[1]),
+                version: (version[0], version[1]),
                 length: u16::from_ne_bytes(len.try_into().unwrap()),
                 id: u32::from_ne_bytes(id.try_into().unwrap()),
             })
@@ -576,6 +793,8 @@ pub mod proto {
             buf[1] = self.version.1;
             buf[2..4].copy_from_slice(&self.length.to_ne_bytes());
             buf[4..8].copy_from_slice(&self.id.to_ne_bytes());
+
+            writer.write_all(&buf)?;
 
             Ok(HEADER_SIZE)
         }
@@ -718,28 +937,32 @@ pub mod client {
     use proto::{Request, Response};
 
     pub type Callback = Box<Fn(Response) + Send + Sync>;
+    pub type Sender = mpsc::Sender<(Request, Callback)>;
+    pub type Receiver = thread::JoinHandle<Result<(), Error>>;
 
-    #[derive(Clone, Debug)]
-    pub struct Sender(mpsc::Sender<(Request, Callback)>);
+    pub fn connect(hostname: &str) -> Result<(Sender, Receiver), Error> {
+        debug!("connect to keyless server @ {}", hostname);
 
-    #[derive(Debug)]
-    pub struct Receiver(thread::JoinHandle<Result<(), Error>>);
-
-    pub fn connect<T>(hostname: &str) -> Result<(Sender, Receiver), Error> {
         let connector = SslConnector::builder(SslMethod::tls())?.build();
         let stream = TcpStream::connect(hostname)?;
         let mut stream = connector.connect(hostname.split(':').next().unwrap(), stream)?;
         let (sender, receiver) = mpsc::channel::<(Request, Callback)>();
         let receiver = thread::spawn(move || -> Result<(), Error> {
+            debug!("receiving keyless request");
+
             let mut callbacks = HashMap::new();
 
             loop {
                 let (req, callback) = receiver.recv()?;
                 let id = Request::current_id();
 
+                trace!("send request #{}, {:#?}", id, req);
+
                 req.write_to(&mut stream)?;
 
                 let (header, res) = Response::read_from(&mut stream)?;
+
+                trace!("received response, {:#?}", res);
 
                 if header.id == id {
                     callback(res);
@@ -753,6 +976,6 @@ pub mod client {
             }
         });
 
-        Ok((Sender(sender), Receiver(receiver)))
+        Ok((sender, receiver))
     }
 }

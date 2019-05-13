@@ -243,6 +243,11 @@ extern "C" {
         iqmp: *mut *const ::BIGNUM,
     );
 
+    #[cfg(ossl110)]
+    pub fn RSA_get0_engine(
+        r: *const ::RSA,
+    ) -> *mut ENGINE;
+
     #[cfg(not(ossl110))]
     pub fn RSA_generate_key(
         modsz: c_int,
