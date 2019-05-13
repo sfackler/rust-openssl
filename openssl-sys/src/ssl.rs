@@ -1093,6 +1093,9 @@ extern "C" {
 
     pub fn SSL_CTX_set_client_CA_list(ctx: *mut SSL_CTX, list: *mut stack_st_X509_NAME);
 
+    #[cfg(not(libressl))]
+    pub fn SSL_CTX_add_client_CA(ctx: *mut SSL_CTX, cacert: *mut X509) -> c_int;
+
     pub fn SSL_CTX_set_default_verify_paths(ctx: *mut SSL_CTX) -> c_int;
     pub fn SSL_CTX_load_verify_locations(
         ctx: *mut SSL_CTX,
