@@ -877,7 +877,7 @@ impl SslContextBuilder {
     ///
     /// [`SSL_CTX_add_client_CA`]: https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_set_client_CA_list.html
     #[cfg(not(libressl))]
-    pub fn add_client_ca(&mut self, cacert: &mut X509) -> Result<(), ErrorStack> {
+    pub fn add_client_ca(&mut self, cacert: &mut X509Ref) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_CTX_add_client_CA(
                 self.as_ptr(),
