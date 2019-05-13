@@ -63,6 +63,7 @@ pub const CMS_KEY_PARAM: c_uint = 0x40000;
 pub const CMS_ASCIICRLF: c_uint = 0x80000;
 
 pub enum CMS_RecipientInfo {}
+#[cfg(ossl110)]
 stack!(stack_st_CMS_RecipientInfo);
 
 extern "C" {
@@ -106,7 +107,7 @@ extern "C" {
         flags: c_uint,
     ) -> c_int;
 
-    #[cfg(ossl101)]
+    #[cfg(ossl110)]
     pub fn CMS_get0_RecipientInfos(
         cms: *mut ::CMS_ContentInfo,
     ) -> *mut ::stack_st_CMS_RecipientInfo;

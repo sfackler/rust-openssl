@@ -6,18 +6,25 @@
 //! Data accepted by this module will be smime type `enveloped-data`.
 
 use ffi;
-use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
+use foreign_types::{ForeignType, ForeignTypeRef};
+#[cfg(ossl110)]
+use foreign_types::Opaque;
 use std::ptr;
 
+#[cfg(ossl110)]
 use asn1::Asn1IntegerRef;
 use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
 use libc::c_uint;
 use pkey::{HasPrivate, PKeyRef};
+#[cfg(ossl110)]
 use stack::{Stackable, StackRef};
 use symm::Cipher;
-use x509::{X509Ref, X509, X509NameRef};
-use x509::store::{X509Store, X509StoreRef};
+use x509::{X509Ref, X509};
+#[cfg(ossl110)]
+use x509::X509NameRef;
+use x509::store::{X509StoreRef, X509StoreRef};
+use symm::Cipher;
 use {cvt, cvt_n, cvt_p};
 
 bitflags! {
@@ -173,6 +180,7 @@ impl CmsContentInfoRef {
         }
     }
 
+    #[cfg(ossl110)]
     /// Given that we're dealing with the `EnvelopedData`, returns the recipients of the message.
     ///
     /// OpenSSL documentation at [`CMS_get0_RecipientInfos`]
@@ -311,12 +319,13 @@ impl CmsContentInfo {
     }
 }
 
-
+#[cfg(ossl110)]
 /// An owned version of [`CmsRecipientInfoRef`]
 ///
 /// [`CmsRecipientInfoRef`]:struct.CmsRecipientInfoRef.html
 pub struct CmsRecipientInfo(*mut ffi::CMS_RecipientInfo);
 
+#[cfg(ossl110)]
 impl ForeignType for CmsRecipientInfo {
     type CType = ffi::CMS_RecipientInfo;
     type Ref = CmsRecipientInfoRef;
@@ -332,19 +341,23 @@ impl ForeignType for CmsRecipientInfo {
     }
 }
 
+#[cfg(ossl110)]
 /// Reference to a [`CMS_RecipientInfo`].
 ///
 /// [`CMS_RecipientInfo`]: https://www.openssl.org/docs/manmaster/man3/CMS_RecipientInfo_decrypt.html
 pub struct CmsRecipientInfoRef(Opaque);
 
+#[cfg(ossl110)]
 impl ForeignTypeRef for CmsRecipientInfoRef {
     type CType = ffi::CMS_RecipientInfo;
 }
 
+#[cfg(ossl110)]
 impl Stackable for CmsRecipientInfo {
     type StackType = ffi::stack_st_CMS_RecipientInfo;
 }
 
+#[cfg(ossl110)]
 /// The bindings to the openssl's type of `CMS_RecipientInfo` which can be extracted with
 /// openssl's `CMS_RecipientInfo_ktri_get0_singer_id()` function.
 pub enum RecipientInfo<'cms> {
@@ -355,6 +368,7 @@ pub enum RecipientInfo<'cms> {
     },
 }
 
+#[cfg(ossl110)]
 impl CmsRecipientInfoRef {
     /// Implementation of [`CMS_RecipientInfo_ktri_get0_signer_id`].
     ///
@@ -520,32 +534,38 @@ mod test {
         let encrypt = encrypt.to_der().expect("failed to create der from cms");
 
         // decrypt cms message using private key cert
-        let enveloped_data = CmsContentInfo::from_der(&encrypt).expect("failed read cms from der");
+        #[cfg(not(ossl110))]
+        let _ = CmsContentInfo::from_der(&encrypt).expect("failed read cms from der");
 
-        // extract the recipient's information
-        let recipients = enveloped_data.get_recipient_infos().expect("failed to get recipient infos");
-        assert_eq!(recipients.len(), 1);
+        #[cfg(ossl110)] 
+        {
+            let enveloped_data = CmsContentInfo::from_der(&encrypt).expect("failed read cms from der");
 
-        let recp = recipients.get(0).unwrap().get_recipient_info().expect("failed to get recipient info");
-        match recp {
-            RecipientInfo::Identifier => {
-                panic!("wrong information inside the recipient data");
-            }
-            RecipientInfo::Info { issuer, serial_number } => {
-                // compare the serial numbers
-                let pub_cert_serial_number = pub_cert.serial_number()
-                    .to_bn()
-                    .expect("could not convert serial number to bn")
-                    .to_string();
-                let recp_serial_number = serial_number
-                    .to_bn()
-                    .expect("could not convert recipient's serial number to bn")
-                    .to_string();
-                assert_eq!(pub_cert_serial_number, recp_serial_number);
+            // extract the recipient's information
+            let recipients = enveloped_data.get_recipient_infos().expect("failed to get recipient infos");
+            assert_eq!(recipients.len(), 1);
 
-                // compare issuers
-                for (cert, expected) in pub_cert.issuer_name().entries().zip(issuer.entries()) {
-                    assert_eq!(cert.data().as_slice(), expected.data().as_slice());
+            let recp = recipients.get(0).unwrap().get_recipient_info().expect("failed to get recipient info");
+            match recp {
+                RecipientInfo::Identifier => {
+                    panic!("wrong information inside the recipient data");
+                }
+                RecipientInfo::Info { issuer, serial_number } => {
+                    // compare the serial numbers
+                    let pub_cert_serial_number = pub_cert.serial_number()
+                        .to_bn()
+                        .expect("could not convert serial number to bn")
+                        .to_string();
+                    let recp_serial_number = serial_number
+                        .to_bn()
+                        .expect("could not convert recipient's serial number to bn")
+                        .to_string();
+                    assert_eq!(pub_cert_serial_number, recp_serial_number);
+
+                    // compare issuers
+                    for (cert, expected) in pub_cert.issuer_name().entries().zip(issuer.entries()) {
+                        assert_eq!(cert.data().as_slice(), expected.data().as_slice());
+                    }
                 }
             }
         }
