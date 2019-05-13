@@ -870,6 +870,23 @@ impl SslContextBuilder {
         }
     }
 
+    /// Add the provided CA certificate to the list sent by the server to the client when
+    /// requesting client-side TLS authentication.
+    ///
+    /// This corresponds to [`SSL_CTX_add_client_CA`].
+    ///
+    /// [`SSL_CTX_add_client_CA`]: https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_set_client_CA_list.html
+    #[cfg(not(libressl))]
+    pub fn add_client_ca(&mut self, cacert: &mut X509) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_CTX_add_client_CA(
+                self.as_ptr(),
+                cacert.as_ptr()
+            ))
+            .map(|_| ())
+        }
+    }
+
     /// Set the context identifier for sessions.
     ///
     /// This value identifies the server's session cache to clients, telling them when they're
