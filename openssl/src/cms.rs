@@ -340,7 +340,7 @@ mod recipient_info {
 
         #[inline]
         unsafe fn from_ptr(ptr: *mut Self::CType) -> Self {
-            Self(ptr)
+            CmsRecipientInfo(ptr)
         }
 
         #[inline]
