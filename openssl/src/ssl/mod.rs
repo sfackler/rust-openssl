@@ -486,6 +486,8 @@ impl NameType {
 lazy_static! {
     static ref INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
     static ref SSL_INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
+
+    static ref SESSION_CTX_INDEX: Index<Ssl, SslContext> = Ssl::new_ex_index().unwrap();
 }
 
 unsafe extern "C" fn free_data_box<T>(
@@ -2278,10 +2280,14 @@ impl Ssl {
     /// This corresponds to [`SSL_new`].
     ///
     /// [`SSL_new`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_new.html
+    // FIXME should take &SslContextRef
     pub fn new(ctx: &SslContext) -> Result<Ssl, ErrorStack> {
         unsafe {
-            let ssl = cvt_p(ffi::SSL_new(ctx.as_ptr()))?;
-            Ok(Ssl::from_ptr(ssl))
+            let ptr = cvt_p(ffi::SSL_new(ctx.as_ptr()))?;
+            let mut ssl = Ssl::from_ptr(ptr);
+            ssl.set_ex_data(*SESSION_CTX_INDEX, ctx.clone());
+
+            Ok(ssl)
         }
     }
 

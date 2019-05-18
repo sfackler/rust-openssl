@@ -24,7 +24,7 @@ use pkey::Params;
 use ssl::AlpnError;
 #[cfg(ossl111)]
 use ssl::{ClientHelloResponse, ExtensionContext};
-use ssl::{SniError, Ssl, SslAlert, SslContext, SslContextRef, SslRef, SslSession, SslSessionRef};
+use ssl::{SniError, Ssl, SslAlert, SslContext, SslContextRef, SslRef, SslSession, SslSessionRef, SESSION_CTX_INDEX};
 #[cfg(ossl111)]
 use x509::X509Ref;
 use x509::{X509StoreContext, X509StoreContextRef};
@@ -353,7 +353,8 @@ where
 {
     let ssl = SslRef::from_ptr_mut(ssl);
     let callback = ssl
-        .ssl_context()
+        .ex_data(*SESSION_CTX_INDEX)
+        .expect("BUG: session context missing")
         .ex_data(SslContext::cached_ex_index::<F>())
         .expect("BUG: new session callback missing") as *const F;
     let session = SslSession::from_ptr(session);
@@ -398,7 +399,8 @@ where
 {
     let ssl = SslRef::from_ptr_mut(ssl);
     let callback = ssl
-        .ssl_context()
+        .ex_data(*SESSION_CTX_INDEX)
+        .expect("BUG: session context missing")
         .ex_data(SslContext::cached_ex_index::<F>())
         .expect("BUG: get session callback missing") as *const F;
     let data = slice::from_raw_parts(data as *const u8, len as usize);

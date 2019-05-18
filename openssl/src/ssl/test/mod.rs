@@ -30,7 +30,7 @@ use ssl::{ClientHelloResponse, ExtensionContext};
 use ssl::{
     Error, HandshakeError, MidHandshakeSslStream, ShutdownResult, ShutdownState, Ssl, SslAcceptor,
     SslConnector, SslContext, SslFiletype, SslMethod, SslOptions, SslSessionCacheMode, SslStream,
-    SslVerifyMode, StatusType,
+    SslVerifyMode, StatusType, SslContextBuilder
 };
 #[cfg(ossl102)]
 use x509::store::X509StoreBuilder;
@@ -1018,6 +1018,34 @@ fn new_session_callback() {
     client
         .ctx()
         .set_new_session_callback(|_, _| CALLED_BACK.store(true, Ordering::SeqCst));
+
+    client.connect();
+
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
+}
+
+#[test]
+fn new_session_callback_swapped_ctx() {
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
+
+    let mut server = Server::builder();
+    server.ctx().set_session_id_context(b"foo").unwrap();
+
+    let server = server.build();
+
+    let mut client = server.client();
+
+    client
+        .ctx()
+        .set_session_cache_mode(SslSessionCacheMode::CLIENT | SslSessionCacheMode::NO_INTERNAL);
+    client
+        .ctx()
+        .set_new_session_callback(|_, _| CALLED_BACK.store(true, Ordering::SeqCst));
+    
+    let mut client = client.build().builder();
+
+    let ctx = SslContextBuilder::new(SslMethod::tls()).unwrap().build();
+    client.ssl().set_ssl_context(&ctx).unwrap();
 
     client.connect();
 
