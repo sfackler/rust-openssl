@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [v0.9.47] - 2019-05-18
+
+### Added
+
+* Added `SSL_CTX_add_client_CA`.
+
 ## [v0.9.46] - 2019-05-08
 
 ### Added
@@ -34,7 +40,8 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.46...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.47...master
+[v0.9.47]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.46...openssl-sys-v0.9.47
 [v0.9.46]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.45...openssl-sys-v0.9.46
 [v0.9.45]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.44...openssl-sys-v0.9.45
 [v0.9.44]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.43...openssl-sys-v0.9.44
