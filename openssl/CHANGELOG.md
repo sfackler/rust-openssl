@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [v0.10.23]
+
+### Fixed
+
+* Fixed session callbacks when an `Ssl`'s context is replaced.
+
+### Added
+
+* Added `SslContextBuilder::add_client_ca`.
+
 ## [v0.10.22]
 
 ### Added
@@ -359,7 +369,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.22...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.23...master
+[v0.10.23]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.22...openssl-v0.10.23
 [v0.10.22]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.21...openssl-v0.10.22
 [v0.10.21]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.20...openssl-v0.10.21
 [v0.10.20]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.19...openssl-v0.10.20
