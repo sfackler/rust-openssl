@@ -273,7 +273,7 @@ impl fmt::Display for Error {
         }
         match self.reason() {
             Some(r) => write!(fmt, ":{}", r)?,
-            None => write!(fmt, ":reason({})", ffi::ERR_GET_FUNC(self.code()))?,
+            None => write!(fmt, ":reason({})", ffi::ERR_GET_REASON(self.code()))?,
         }
         write!(
             fmt,
