@@ -4,13 +4,13 @@ environment:
     # 1.1.1, 64 bit
     - TARGET: x86_64-pc-windows-msvc
       BITS: 64
-      OPENSSL_VERSION: 1_1_1b
+      OPENSSL_VERSION: 1_1_1c
       OPENSSL_DIR: C:\OpenSSL
 
     # 1.0.2, 32 bit
     - TARGET: i686-pc-windows-msvc
       BITS: 32
-      OPENSSL_VERSION: 1_0_2r
+      OPENSSL_VERSION: 1_0_2s
       OPENSSL_DIR: C:\OpenSSL
 
     # mingw

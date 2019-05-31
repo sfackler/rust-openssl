@@ -202,13 +202,13 @@ jobs:
 
 openssl_111: &openssl_111
   library: openssl
-  version: 1.1.1b
+  version: 1.1.1c
 openssl_110: &openssl_110
   library: openssl
-  version: 1.1.0j
+  version: 1.1.0k
 openssl_102: &openssl_102
   library: openssl
-  version: 1.0.2r
+  version: 1.0.2s
 openssl_101: &openssl_101
   library: openssl
   version: 1.0.1u
