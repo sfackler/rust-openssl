@@ -1314,7 +1314,11 @@ extern "C" {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(ossl111c)] {
+        extern "C" {
+            pub fn SSL_session_reused(ssl: *const SSL) -> c_int;
+        }
+    } else if #[cfg(ossl110)] {
         extern "C" {
             pub fn SSL_session_reused(ssl: *mut SSL) -> c_int;
         }
