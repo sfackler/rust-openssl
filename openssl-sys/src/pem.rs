@@ -19,6 +19,13 @@ extern "C" {
         user_data: *mut c_void,
     ) -> *mut X509;
     pub fn PEM_write_bio_X509(bio: *mut BIO, x509: *mut X509) -> c_int;
+    pub fn PEM_read_bio_X509_CRL(
+        bio: *mut BIO,
+        out: *mut *mut X509_CRL,
+        callback: pem_password_cb,
+        user_data: *mut c_void,
+    ) -> *mut X509_CRL;
+    pub fn PEM_write_bio_X509_CRL(bio: *mut BIO, x509: *mut X509_CRL) -> c_int;
     pub fn PEM_read_bio_X509_REQ(
         bio: *mut BIO,
         out: *mut *mut X509_REQ,
