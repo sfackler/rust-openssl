@@ -57,10 +57,8 @@
 //!
 use ffi;
 use libc::{c_int, c_uint};
-use std::mem;
+use std::{mem, ptr};
 
-use cvt;
-use error::ErrorStack;
 use symm::Mode;
 
 /// Provides Error handling for parsing keys.
@@ -165,28 +163,33 @@ pub fn aes_ige(in_: &[u8], out: &mut [u8], key: &AesKey, iv: &mut [u8], mode: Mo
 /// * `out`: The output buffer to store the ciphertext
 /// * `in_`: The input buffer, storing the key to be wrapped
 ///
+/// Returns the number of bytes written into `out`
+/// 
 /// # Panics
 ///
 /// Panics if either `out` or `in_` do not have sizes that are a multiple of 8, or if
-/// `out` is not 8 bytes longer than `in_`.
+/// `out` is not 8 bytes longer than `in_`
 pub fn wrap_key(
     key: &AesKey,
     iv: Option<[u8; 8]>,
     out: &mut [u8],
     in_: &[u8],
-) -> Result<usize, ErrorStack> {
+) -> Result<usize, KeyError> {
     unsafe {
-        assert!(out.len() == in_.len() + 8); // Ciphertext is 64 bits longer (see 2.2.1)
-        assert!(in_.len() % 8 == 0); // Input (and hence output, given above) are integer multiples of 64 bit values
-
-        cvt(ffi::AES_wrap_key(
+        assert!(out.len() >= in_.len() + 8); // Ciphertext is 64 bits longer (see 2.2.1)
+        
+        let written = ffi::AES_wrap_key(
             &key.0 as *const _ as *mut _, // this is safe, the implementation only uses the key as a const pointer.
-            iv.map_or(std::ptr::null(), |iv| iv.as_ptr() as *const _),
+            iv.as_ref().map_or(ptr::null(), |iv| iv.as_ptr() as *const _),
             out.as_ptr() as *mut _,
             in_.as_ptr() as *const _,
             in_.len() as c_uint,
-        ))
-        .map(|written| written as usize) // convert is safe, cvt only return ok with positive numbers
+        );
+        if written <= 0 {
+            Err(KeyError(()))
+        } else {
+            Ok(written as usize)
+        }
     }
 }
 
@@ -197,28 +200,34 @@ pub fn wrap_key(
 /// * `out`: The buffer to write the unwrapped key to
 /// * `in_`: The input ciphertext
 ///
+/// Returns the number of bytes written into `out`
+/// 
 /// # Panics
 ///
 /// Panics if either `out` or `in_` do not have sizes that are a multiple of 8, or
-/// if `in` is not 8 bytes longer than `in_`.
+/// if `in` is not 8 bytes longer than `in_`
 pub fn unwrap_key(
     key: &AesKey,
     iv: Option<[u8; 8]>,
     out: &mut [u8],
     in_: &[u8],
-) -> Result<usize, ErrorStack> {
+) -> Result<usize, KeyError> {
     unsafe {
-        assert!(in_.len() == out.len() + 8);
-        assert!(in_.len() % 8 == 0);
+        assert!(out.len() + 8 <= in_.len());
 
-        cvt(ffi::AES_unwrap_key(
+        let written = ffi::AES_unwrap_key(
             &key.0 as *const _ as *mut _, // this is safe, the implementation only uses the key as a const pointer.
-            iv.map_or(std::ptr::null(), |iv| iv.as_ptr() as *const _),
+            iv.as_ref().map_or(ptr::null(), |iv| iv.as_ptr() as *const _),
             out.as_ptr() as *mut _,
             in_.as_ptr() as *const _,
             in_.len() as c_uint,
-        ))
-        .map(|written| written as usize)
+        );
+
+        if written <= 0 {
+            Err(KeyError(()))
+        } else {
+            Ok(written as usize)
+        }
     }
 }
 
