@@ -34,6 +34,7 @@
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
+use std::fmt;
 use std::ptr;
 
 use bn::{BigNumContextRef, BigNumRef};
@@ -822,6 +823,12 @@ impl EcKey<Private> {
 impl<T> Clone for EcKey<T> {
     fn clone(&self) -> EcKey<T> {
         (**self).to_owned()
+    }
+}
+
+impl<T> fmt::Debug for EcKey<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "EcKey")
     }
 }
 
