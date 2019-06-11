@@ -14,7 +14,7 @@ use crate::x509::store::X509StoreBuilder;
 use crate::x509::verify::X509VerifyFlags;
 #[cfg(ossl110)]
 use crate::x509::X509Builder;
-use crate::x509::{X509Crl, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
+use crate::x509::{CrlStatus, X509Crl, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
 use hex::{self, FromHex};
 
 fn pkey() -> PKey<Private> {
@@ -466,7 +466,10 @@ fn test_load_crl() {
     let cert = include_bytes!("../../test/subca.crt");
     let cert = X509::from_pem(cert).unwrap();
 
-    let revoked = crl.get_by_cert(&cert).unwrap();
+    let revoked = match crl.get_by_cert(&cert) {
+        CrlStatus::Revoked(revoked) => revoked,
+        _ => panic!("cert should be revoked"),
+    };
 
     assert_eq!(
         revoked.serial_number().to_bn().unwrap(),

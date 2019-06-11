@@ -1363,6 +1363,23 @@ foreign_type_and_impl_send_sync! {
     pub struct X509CrlRef;
 }
 
+/// The status of a certificate in a revoction list
+///
+/// Corresponds to the return value from the [`X509_CRL_get0_by_*`] methods.
+///
+/// [`X509_CRL_get0_by_*`]: https://www.openssl.org/docs/man1.1.0/man3/X509_CRL_get0_by_serial.html
+pub enum CrlStatus<'a> {
+    /// The certificate is not present in the list
+    NotRevoked,
+    /// The certificate is in the list and is revoked
+    Revoked(&'a X509RevokedRef),
+    /// The certificate is in the list, but has the "removeFromCrl" status.
+    ///
+    /// This can occur if the certificate was revoked with the "CertificateHold"
+    /// reason, and has since been unrevoked.
+    RemoveFromCrl(&'a X509RevokedRef),
+}
+
 impl X509Crl {
     from_pem! {
         /// Deserializes a PEM-encoded Certificate Revocation List
@@ -1413,13 +1430,13 @@ impl X509CrlRef {
     }
 
     /// Get the stack of revocation entries
-    pub fn get_revoked(&self) -> Option<Stack<X509Revoked>> {
+    pub fn get_revoked(&self) -> Option<&StackRef<X509Revoked>> {
         unsafe {
             let revoked = X509_CRL_get_REVOKED(self.as_ptr());
             if revoked.is_null() {
                 None
             } else {
-                Some(Stack::from_ptr(revoked))
+                Some(StackRef::from_ptr(revoked))
             }
         }
     }
@@ -1455,20 +1472,36 @@ impl X509CrlRef {
         }
     }
 
+    // Helper used by the X509_CRL_get0_by_* methods to convert their return value to the status enum
+    unsafe fn to_crl_status<'a>(
+        status: c_int,
+        revoked_entry: *mut ffi::X509_REVOKED,
+    ) -> CrlStatus<'a> {
+        match status {
+            0 => CrlStatus::NotRevoked,
+            1 => {
+                assert!(!revoked_entry.is_null());
+                CrlStatus::Revoked(X509RevokedRef::from_ptr(revoked_entry))
+            }
+            2 => {
+                assert!(!revoked_entry.is_null());
+                CrlStatus::RemoveFromCrl(X509RevokedRef::from_ptr(revoked_entry))
+            }
+            _ => unreachable!("X509_CRL_get0_by_{{serial,cert}} should only return 0, 1, or 2."),
+        }
+    }
+
     /// Get the revocation status of a certificate by its serial number
     ///
     /// This corresponds to [`X509_CRL_get0_by_serial`]
     ///
     /// [`X509_CRL_get0_by_serial`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_CRL_get0_by_serial.html
-    pub fn get_by_serial(&self, serial: &Asn1IntegerRef) -> Option<&X509RevokedRef> {
+    pub fn get_by_serial<'a>(&'a self, serial: &Asn1IntegerRef) -> CrlStatus<'a> {
         unsafe {
             let mut ret = ptr::null_mut::<ffi::X509_REVOKED>();
-            ffi::X509_CRL_get0_by_serial(self.as_ptr(), &mut ret as *mut _, serial.as_ptr());
-            if ret.is_null() {
-                None
-            } else {
-                Some(X509RevokedRef::from_ptr(ret))
-            }
+            let status =
+                ffi::X509_CRL_get0_by_serial(self.as_ptr(), &mut ret as *mut _, serial.as_ptr());
+            Self::to_crl_status(status, ret)
         }
     }
 
@@ -1477,15 +1510,12 @@ impl X509CrlRef {
     /// This corresponds to [`X509_CRL_get0_by_cert`]
     ///
     /// [`X509_CRL_get0_by_cert`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_CRL_get0_by_cert.html
-    pub fn get_by_cert(&self, cert: &X509) -> Option<&X509RevokedRef> {
+    pub fn get_by_cert<'a>(&'a self, cert: &X509) -> CrlStatus<'a> {
         unsafe {
             let mut ret = ptr::null_mut::<ffi::X509_REVOKED>();
-            ffi::X509_CRL_get0_by_cert(self.as_ptr(), &mut ret as *mut _, cert.as_ptr());
-            if ret.is_null() {
-                None
-            } else {
-                Some(X509RevokedRef::from_ptr(ret))
-            }
+            let status =
+                ffi::X509_CRL_get0_by_cert(self.as_ptr(), &mut ret as *mut _, cert.as_ptr());
+            Self::to_crl_status(status, ret)
         }
     }
 
