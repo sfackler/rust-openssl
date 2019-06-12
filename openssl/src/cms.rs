@@ -105,6 +105,16 @@ impl CmsContentInfoRef {
     to_der,
     ffi::i2d_CMS_ContentInfo
     }
+
+    to_pem! {
+        /// Serializes this CmsContentInfo using DER.
+        ///
+        /// OpenSSL documentation at [`PEM_write_bio_CMS`]
+        ///
+        /// [`PEM_write_bio_CMS`]: https://www.openssl.org/docs/man1.1.0/man3/PEM_write_bio_CMS.html
+        to_pem,
+        ffi::PEM_write_bio_CMS
+    }
 }
 
 impl CmsContentInfo {
@@ -132,6 +142,17 @@ impl CmsContentInfo {
         from_der,
         CmsContentInfo,
         ffi::d2i_CMS_ContentInfo
+    }
+
+    from_pem! {
+        /// Deserializes a PEM-encoded ContentInfo structure.
+        ///
+        /// This corresponds to [`PEM_read_bio_CMS`].
+        ///
+        /// [`PEM_read_bio_CMS`]: https://www.openssl.org/docs/man1.1.0/man3/PEM_read_bio_CMS.html
+        from_pem,
+        CmsContentInfo,
+        ffi::PEM_read_bio_CMS
     }
 
     /// Given a signing cert `signcert`, private key `pkey`, a certificate stack `certs`,
