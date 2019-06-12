@@ -97,13 +97,13 @@ impl CmsContentInfoRef {
     }
 
     to_der! {
-    /// Serializes this CmsContentInfo using DER.
-    ///
-    /// OpenSSL documentation at [`i2d_CMS_ContentInfo`]
-    ///
-    /// [`i2d_CMS_ContentInfo`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_CMS_ContentInfo.html
-    to_der,
-    ffi::i2d_CMS_ContentInfo
+        /// Serializes this CmsContentInfo using DER.
+        ///
+        /// OpenSSL documentation at [`i2d_CMS_ContentInfo`]
+        ///
+        /// [`i2d_CMS_ContentInfo`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_CMS_ContentInfo.html
+        to_der,
+        ffi::i2d_CMS_ContentInfo
     }
 
     to_pem! {
