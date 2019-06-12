@@ -248,13 +248,23 @@ mod test {
 
         let encrypt = CmsContentInfo::encrypt(&cert_stack, &input.as_bytes(), Cipher::des_ede3_cbc(), CMSOptions::empty())
             .expect("failed create encrypted cms");
-        let encrypt = encrypt.to_der().expect("failed to create der from cms");
+        let encrypted_der = encrypt.to_der().expect("failed to create der from cms");
+        let encrypted_pem = encrypt.to_pem().expect("failed to create pem from cms");
 
-        // decrypt cms message using private key cert
-        let decrypt = CmsContentInfo::from_der(&encrypt).expect("failed read cms from der");
-        let decrypt = decrypt.decrypt(&priv_cert.pkey, &priv_cert.cert).expect("failed to decrypt cms");
-        let decrypt = String::from_utf8(decrypt).expect("failed to create string from cms content");
+        // decrypt cms message using private key cert (DER)
+        {
+            let decrypt = CmsContentInfo::from_der(&encrypted_der).expect("failed read cms from der");
+            let decrypt = decrypt.decrypt(&priv_cert.pkey, &priv_cert.cert).expect("failed to decrypt cms");
+            let decrypt = String::from_utf8(decrypt).expect("failed to create string from cms content");
+            assert_eq!(input, decrypt);
+        }
 
-        assert_eq!(input, decrypt);
+        // decrypt cms message using private key cert (PEM)
+        {
+            let decrypt = CmsContentInfo::from_pem(&encrypted_pem).expect("failed read cms from pem");
+            let decrypt = decrypt.decrypt(&priv_cert.pkey, &priv_cert.cert).expect("failed to decrypt cms");
+            let decrypt = String::from_utf8(decrypt).expect("failed to create string from cms content");
+            assert_eq!(input, decrypt);
+        }
     }
 }
