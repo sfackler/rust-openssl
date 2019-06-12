@@ -97,13 +97,23 @@ impl CmsContentInfoRef {
     }
 
     to_der! {
-    /// Serializes this CmsContentInfo using DER.
-    ///
-    /// OpenSSL documentation at [`i2d_CMS_ContentInfo`]
-    ///
-    /// [`i2d_CMS_ContentInfo`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_CMS_ContentInfo.html
-    to_der,
-    ffi::i2d_CMS_ContentInfo
+        /// Serializes this CmsContentInfo using DER.
+        ///
+        /// OpenSSL documentation at [`i2d_CMS_ContentInfo`]
+        ///
+        /// [`i2d_CMS_ContentInfo`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_CMS_ContentInfo.html
+        to_der,
+        ffi::i2d_CMS_ContentInfo
+    }
+
+    to_pem! {
+        /// Serializes this CmsContentInfo using DER.
+        ///
+        /// OpenSSL documentation at [`PEM_write_bio_CMS`]
+        ///
+        /// [`PEM_write_bio_CMS`]: https://www.openssl.org/docs/man1.1.0/man3/PEM_write_bio_CMS.html
+        to_pem,
+        ffi::PEM_write_bio_CMS
     }
 }
 
@@ -132,6 +142,17 @@ impl CmsContentInfo {
         from_der,
         CmsContentInfo,
         ffi::d2i_CMS_ContentInfo
+    }
+
+    from_pem! {
+        /// Deserializes a PEM-encoded ContentInfo structure.
+        ///
+        /// This corresponds to [`PEM_read_bio_CMS`].
+        ///
+        /// [`PEM_read_bio_CMS`]: https://www.openssl.org/docs/man1.1.0/man3/PEM_read_bio_CMS.html
+        from_pem,
+        CmsContentInfo,
+        ffi::PEM_read_bio_CMS
     }
 
     /// Given a signing cert `signcert`, private key `pkey`, a certificate stack `certs`,
@@ -227,13 +248,23 @@ mod test {
 
         let encrypt = CmsContentInfo::encrypt(&cert_stack, &input.as_bytes(), Cipher::des_ede3_cbc(), CMSOptions::empty())
             .expect("failed create encrypted cms");
-        let encrypt = encrypt.to_der().expect("failed to create der from cms");
 
-        // decrypt cms message using private key cert
-        let decrypt = CmsContentInfo::from_der(&encrypt).expect("failed read cms from der");
-        let decrypt = decrypt.decrypt(&priv_cert.pkey, &priv_cert.cert).expect("failed to decrypt cms");
-        let decrypt = String::from_utf8(decrypt).expect("failed to create string from cms content");
+        // decrypt cms message using private key cert (DER)
+        {
+            let encrypted_der = encrypt.to_der().expect("failed to create der from cms");
+            let decrypt = CmsContentInfo::from_der(&encrypted_der).expect("failed read cms from der");
+            let decrypt = decrypt.decrypt(&priv_cert.pkey, &priv_cert.cert).expect("failed to decrypt cms");
+            let decrypt = String::from_utf8(decrypt).expect("failed to create string from cms content");
+            assert_eq!(input, decrypt);
+        }
 
-        assert_eq!(input, decrypt);
+        // decrypt cms message using private key cert (PEM)
+        {
+            let encrypted_pem = encrypt.to_pem().expect("failed to create pem from cms");
+            let decrypt = CmsContentInfo::from_pem(&encrypted_pem).expect("failed read cms from pem");
+            let decrypt = decrypt.decrypt(&priv_cert.pkey, &priv_cert.cert).expect("failed to decrypt cms");
+            let decrypt = String::from_utf8(decrypt).expect("failed to create string from cms content");
+            assert_eq!(input, decrypt);
+        }
     }
 }
