@@ -208,6 +208,18 @@ impl EcGroupRef {
         unsafe { ffi::EC_GROUP_get_degree(self.as_ptr()) as u32 }
     }
 
+    /// Returns the generator for the given curve as a [`EcPoint`].
+    ///
+    /// OpenSSL documentation at [`EC_GROUP_get0_generator`]
+    ///
+    /// [`EC_GROUP_get0_generator`]: https://www.openssl.org/docs/man1.1.0/man3/EC_GROUP_get0_generator.html
+    pub fn generator(&self) -> &EcPointRef {
+        unsafe {
+            let ptr = ffi::EC_GROUP_get0_generator(self.as_ptr());
+            EcPointRef::from_ptr(ptr as *mut _)
+        }
+    }
+
     /// Places the order of the curve in the provided `BigNum`.
     ///
     /// OpenSSL documentation at [`EC_GROUP_get_order`]
@@ -887,6 +899,17 @@ mod test {
             .mul_generator(&group, key.private_key(), &mut ctx)
             .unwrap();
         assert!(public_key.eq(&group, key.public_key(), &mut ctx).unwrap());
+    }
+
+    #[test]
+    fn generator() {
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let gen = group.generator();
+        let one = BigNum::from_u32(1).unwrap();
+        let mut ctx = BigNumContext::new().unwrap();
+        let mut ecp = EcPoint::new(&group).unwrap();
+        ecp.mul_generator(&group, &one, &mut ctx).unwrap();
+        assert!(ecp.eq(&group, gen, &mut ctx).unwrap());
     }
 
     #[test]
