@@ -30,6 +30,12 @@ extern "C" {
         ctx: *mut BN_CTX,
     ) -> c_int;
 
+    pub fn EC_GROUP_get_cofactor(
+        group: *const EC_GROUP,
+        cofactor: *mut BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+
     pub fn EC_GROUP_get0_generator(group: *const EC_GROUP) -> *const EC_POINT;
 
     pub fn EC_GROUP_get_curve_name(group: *const EC_GROUP) -> c_int;
