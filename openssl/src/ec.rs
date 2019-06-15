@@ -199,6 +199,26 @@ impl EcGroupRef {
         }
     }
 
+    /// Places the cofactor of the group in the provided `BigNum`.
+    ///
+    /// OpenSSL documentation at [`EC_GROUP_get_cofactor`]
+    ///
+    /// [`EC_GROUP_get_cofactor`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_get_cofactor.html
+    pub fn cofactor(
+        &self,
+        cofactor: &mut BigNumRef,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_GROUP_get_cofactor(
+                self.as_ptr(),
+                cofactor.as_ptr(),
+                ctx.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
     /// Returns the degree of the curve.
     ///
     /// OpenSSL documentation at [`EC_GROUP_get_degree`]
@@ -328,7 +348,7 @@ impl EcPointRef {
         }
     }
 
-    /// Computes `generator * n`, storing the result ing `self`.
+    /// Computes `generator * n`, storing the result in `self`.
     pub fn mul_generator(
         &mut self,
         group: &EcGroupRef,
@@ -861,6 +881,16 @@ mod test {
     fn generate() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         EcKey::generate(&group).unwrap();
+    }
+
+    #[test]
+    fn cofactor() {
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let mut ctx = BigNumContext::new().unwrap();
+	let mut cofactor = BigNum::new().unwrap();
+        group.cofactor(&mut cofactor, &mut ctx).unwrap();
+        let one = BigNum::from_u32(1).unwrap();
+        assert_eq!(cofactor, one);
     }
 
     #[test]
