@@ -82,6 +82,11 @@ extern "C" {
 
     pub fn EC_POINT_free(point: *mut EC_POINT);
 
+    pub fn EC_POINT_dup(
+        p: *const EC_POINT,
+        group: *const EC_GROUP,
+    ) -> *mut EC_POINT;
+
     pub fn EC_POINT_get_affine_coordinates_GFp(
         group: *const EC_GROUP,
         p: *const EC_POINT,

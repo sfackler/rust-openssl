@@ -446,6 +446,20 @@ impl EcPointRef {
         }
     }
 
+    /// Creates a new point on the specified curve with the same value.
+    ///
+    /// OpenSSL documentation at [`EC_POINT_dup`]
+    ///
+    /// [`EC_POINT_dup`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_dup.html
+    pub fn to_owned(
+        &self,
+        group: &EcGroupRef,
+    ) -> Result<EcPoint, ErrorStack> {
+        unsafe {
+            cvt_p(ffi::EC_POINT_dup(self.as_ptr(), group.as_ptr())).map(EcPoint)
+        }
+    }
+
     /// Determines if this point is equal to another.
     ///
     /// OpenSSL doucmentation at [`EC_POINT_cmp`]
@@ -917,6 +931,16 @@ mod test {
             .unwrap();
         let point2 = EcPoint::from_bytes(&group, &bytes, &mut ctx).unwrap();
         assert!(point.eq(&group, &point2, &mut ctx).unwrap());
+    }
+
+    #[test]
+    fn point_owned() {
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let key = EcKey::generate(&group).unwrap();
+        let point = key.public_key();
+        let owned = point.to_owned(&group).unwrap();
+        let mut ctx = BigNumContext::new().unwrap();
+        assert!(owned.eq(&group, point, &mut ctx).unwrap());
     }
 
     #[test]
