@@ -88,4 +88,7 @@ extern "C" {
         out: *mut ::BIO,
         flags: c_uint,
     ) -> c_int;
+
+    #[cfg(ossl101)]
+    pub fn CMS_get0_signers(cms: *mut ::CMS_ContentInfo) -> *mut stack_st_X509;
 }
