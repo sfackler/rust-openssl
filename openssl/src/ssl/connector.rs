@@ -9,6 +9,17 @@ use ssl::{
 };
 use version;
 
+const FFDHE_2048: &str = "
+-----BEGIN DH PARAMETERS-----
+MIIBCAKCAQEA//////////+t+FRYortKmq/cViAnPTzx2LnFg84tNpWp4TZBFGQz
++8yTnc4kmz75fS/jY2MMddj2gbICrsRhetPfHtXV/WVhJDP1H18GbtCFY2VVPe0a
+87VXE15/V8k1mE8McODmi3fipona8+/och3xWKE2rec1MKzKT0g6eXq8CrGCsyT7
+YdEIqUuyyOP7uWrat2DX9GgdT0Kj3jlN9K5W7edjcrsZCwenyO4KbXCeAvzhzffi
+7MA0BM0oNC9hkXL+nOmFg/+OTxIy7vKBg8P+OxtMb61zO7X8vC7CIAXFjvGDfRaD
+ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
+-----END DH PARAMETERS-----
+";
+
 fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     let mut ctx = SslContextBuilder::new(method)?;
 
@@ -17,8 +28,7 @@ fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
         | SslOptions::NO_SSLV2
         | SslOptions::NO_SSLV3
         | SslOptions::SINGLE_DH_USE
-        | SslOptions::SINGLE_ECDH_USE
-        | SslOptions::CIPHER_SERVER_PREFERENCE;
+        | SslOptions::SINGLE_ECDH_USE;
     opts &= !SslOptions::DONT_INSERT_EMPTY_FRAGMENTS;
 
     ctx.set_options(opts);
@@ -191,26 +201,60 @@ impl SslAcceptor {
     /// Creates a new builder configured to connect to non-legacy clients. This should generally be
     /// considered a reasonable default choice.
     ///
-    /// This corresponds to the intermediate configuration of Mozilla's server side TLS
+    /// This corresponds to the intermediate configuration of version 5 of Mozilla's server side TLS
     /// recommendations. See its [documentation][docs] for more details on specifics.
     ///
     /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
+    pub fn mozilla_intermediate_v5(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
+        let mut ctx = ctx(method)?;
+        ctx.set_options(SslOptions::NO_TLSV1 | SslOptions::NO_TLSV1_1);
+        let dh = Dh::params_from_pem(FFDHE_2048.as_bytes())?;
+        ctx.set_tmp_dh(&dh)?;
+        setup_curves(&mut ctx)?;
+        ctx.set_cipher_list(
+            "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:\
+             ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:\
+             DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"
+        )?;
+        #[cfg(ossl111)]
+        ctx.set_ciphersuites(
+            "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256",
+        )?;
+        Ok(SslAcceptorBuilder(ctx))
+    }
+
+    /// Creates a new builder configured to connect to modern clients.
+    ///
+    /// This corresponds to the modern configuration of version 5 of Mozilla's server side TLS recommendations.
+    /// See its [documentation][docs] for more details on specifics.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
+    /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
+    #[cfg(ossl111)]
+    pub fn mozilla_modern_v5(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
+        let mut ctx = ctx(method)?;
+        ctx.set_options(SslOptions::NO_SSL_MASK & !SslOptions::NO_TLSV1_3);
+        ctx.set_ciphersuites(
+            "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256",
+        )?;
+        Ok(SslAcceptorBuilder(ctx))
+    }
+
+    /// Creates a new builder configured to connect to non-legacy clients. This should generally be
+    /// considered a reasonable default choice.
+    ///
+    /// This corresponds to the intermediate configuration of version 4 of Mozilla's server side TLS
+    /// recommendations. See its [documentation][docs] for more details on specifics.
+    ///
+    /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
+    // FIXME remove in next major version
     pub fn mozilla_intermediate(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
         let mut ctx = ctx(method)?;
+        ctx.set_options(SslOptions::CIPHER_SERVER_PREFERENCE);
         #[cfg(ossl111)]
         ctx.set_options(SslOptions::NO_TLSV1_3);
-        let dh = Dh::params_from_pem(
-            b"
------BEGIN DH PARAMETERS-----
-MIIBCAKCAQEA//////////+t+FRYortKmq/cViAnPTzx2LnFg84tNpWp4TZBFGQz
-+8yTnc4kmz75fS/jY2MMddj2gbICrsRhetPfHtXV/WVhJDP1H18GbtCFY2VVPe0a
-87VXE15/V8k1mE8McODmi3fipona8+/och3xWKE2rec1MKzKT0g6eXq8CrGCsyT7
-YdEIqUuyyOP7uWrat2DX9GgdT0Kj3jlN9K5W7edjcrsZCwenyO4KbXCeAvzhzffi
-7MA0BM0oNC9hkXL+nOmFg/+OTxIy7vKBg8P+OxtMb61zO7X8vC7CIAXFjvGDfRaD
-ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
------END DH PARAMETERS-----
-",
-        )?;
+        let dh = Dh::params_from_pem(FFDHE_2048.as_bytes())?;
         ctx.set_tmp_dh(&dh)?;
         setup_curves(&mut ctx)?;
         ctx.set_cipher_list(
@@ -228,13 +272,16 @@ ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
 
     /// Creates a new builder configured to connect to modern clients.
     ///
-    /// This corresponds to the modern configuration of Mozilla's server side TLS recommendations.
+    /// This corresponds to the modern configuration of version 4 of Mozilla's server side TLS recommendations.
     /// See its [documentation][docs] for more details on specifics.
     ///
     /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
+    // FIXME remove in next major version
     pub fn mozilla_modern(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
         let mut ctx = ctx(method)?;
-        ctx.set_options(SslOptions::NO_TLSV1 | SslOptions::NO_TLSV1_1);
+        ctx.set_options(
+            SslOptions::CIPHER_SERVER_PREFERENCE | SslOptions::NO_TLSV1 | SslOptions::NO_TLSV1_1,
+        );
         #[cfg(ossl111)]
         ctx.set_options(SslOptions::NO_TLSV1_3);
         setup_curves(&mut ctx)?;
