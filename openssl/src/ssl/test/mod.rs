@@ -17,6 +17,7 @@ use std::time::Duration;
 use tempdir::TempDir;
 
 use dh::Dh;
+use error::ErrorStack;
 use hash::MessageDigest;
 use ocsp::{OcspResponse, OcspResponseStatus};
 use pkey::PKey;
@@ -29,8 +30,8 @@ use ssl::SslVersion;
 use ssl::{ClientHelloResponse, ExtensionContext};
 use ssl::{
     Error, HandshakeError, MidHandshakeSslStream, ShutdownResult, ShutdownState, Ssl, SslAcceptor,
-    SslConnector, SslContext, SslFiletype, SslMethod, SslOptions, SslSessionCacheMode, SslStream,
-    SslVerifyMode, StatusType, SslContextBuilder
+    SslAcceptorBuilder, SslConnector, SslContext, SslContextBuilder, SslFiletype, SslMethod,
+    SslOptions, SslSessionCacheMode, SslStream, SslVerifyMode, StatusType,
 };
 #[cfg(ossl102)]
 use x509::store::X509StoreBuilder;
@@ -737,15 +738,14 @@ fn connector_no_hostname_can_disable_verify() {
     s.read_exact(&mut [0]).unwrap();
 }
 
-#[test]
-fn connector_client_server_mozilla_intermediate() {
+fn test_mozilla_server(new: fn(SslMethod) -> Result<SslAcceptorBuilder, ErrorStack>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
 
     let t = thread::spawn(move || {
         let key = PKey::private_key_from_pem(KEY).unwrap();
         let cert = X509::from_pem(CERT).unwrap();
-        let mut acceptor = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+        let mut acceptor = new(SslMethod::tls()).unwrap();
         acceptor.set_private_key(&key).unwrap();
         acceptor.set_certificate(&cert).unwrap();
         let acceptor = acceptor.build();
@@ -767,103 +767,27 @@ fn connector_client_server_mozilla_intermediate() {
     assert_eq!(b"hello", &buf);
 
     t.join().unwrap();
+}
+
+#[test]
+fn connector_client_server_mozilla_intermediate() {
+    test_mozilla_server(SslAcceptor::mozilla_intermediate);
 }
 
 #[test]
 fn connector_client_server_mozilla_modern() {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let port = listener.local_addr().unwrap().port();
-
-    let t = thread::spawn(move || {
-        let key = PKey::private_key_from_pem(KEY).unwrap();
-        let cert = X509::from_pem(CERT).unwrap();
-        let mut acceptor = SslAcceptor::mozilla_modern(SslMethod::tls()).unwrap();
-        acceptor.set_private_key(&key).unwrap();
-        acceptor.set_certificate(&cert).unwrap();
-        let acceptor = acceptor.build();
-        let stream = listener.accept().unwrap().0;
-        let mut stream = acceptor.accept(stream).unwrap();
-
-        stream.write_all(b"hello").unwrap();
-    });
-
-    let mut connector = SslConnector::builder(SslMethod::tls()).unwrap();
-    connector.set_ca_file("test/root-ca.pem").unwrap();
-    let connector = connector.build();
-
-    let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
-    let mut stream = connector.connect("foobar.com", stream).unwrap();
-
-    let mut buf = [0; 5];
-    stream.read_exact(&mut buf).unwrap();
-    assert_eq!(b"hello", &buf);
-
-    t.join().unwrap();
+    test_mozilla_server(SslAcceptor::mozilla_modern);
 }
 
 #[test]
 fn connector_client_server_mozilla_intermediate_v5() {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let port = listener.local_addr().unwrap().port();
-
-    let t = thread::spawn(move || {
-        let key = PKey::private_key_from_pem(KEY).unwrap();
-        let cert = X509::from_pem(CERT).unwrap();
-        let mut acceptor = SslAcceptor::mozilla_intermediate_v5(SslMethod::tls()).unwrap();
-        acceptor.set_private_key(&key).unwrap();
-        acceptor.set_certificate(&cert).unwrap();
-        let acceptor = acceptor.build();
-        let stream = listener.accept().unwrap().0;
-        let mut stream = acceptor.accept(stream).unwrap();
-
-        stream.write_all(b"hello").unwrap();
-    });
-
-    let mut connector = SslConnector::builder(SslMethod::tls()).unwrap();
-    connector.set_ca_file("test/root-ca.pem").unwrap();
-    let connector = connector.build();
-
-    let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
-    let mut stream = connector.connect("foobar.com", stream).unwrap();
-
-    let mut buf = [0; 5];
-    stream.read_exact(&mut buf).unwrap();
-    assert_eq!(b"hello", &buf);
-
-    t.join().unwrap();
+    test_mozilla_server(SslAcceptor::mozilla_intermediate_v5);
 }
 
 #[test]
 #[cfg(ossl111)]
 fn connector_client_server_mozilla_modern_v5() {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let port = listener.local_addr().unwrap().port();
-
-    let t = thread::spawn(move || {
-        let key = PKey::private_key_from_pem(KEY).unwrap();
-        let cert = X509::from_pem(CERT).unwrap();
-        let mut acceptor = SslAcceptor::mozilla_modern_v5(SslMethod::tls()).unwrap();
-        acceptor.set_private_key(&key).unwrap();
-        acceptor.set_certificate(&cert).unwrap();
-        let acceptor = acceptor.build();
-        let stream = listener.accept().unwrap().0;
-        let mut stream = acceptor.accept(stream).unwrap();
-
-        stream.write_all(b"hello").unwrap();
-    });
-
-    let mut connector = SslConnector::builder(SslMethod::tls()).unwrap();
-    connector.set_ca_file("test/root-ca.pem").unwrap();
-    let connector = connector.build();
-
-    let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
-    let mut stream = connector.connect("foobar.com", stream).unwrap();
-
-    let mut buf = [0; 5];
-    stream.read_exact(&mut buf).unwrap();
-    assert_eq!(b"hello", &buf);
-
-    t.join().unwrap();
+    test_mozilla_server(SslAcceptor::mozilla_modern_v5);
 }
 
 #[test]
@@ -1106,7 +1030,7 @@ fn new_session_callback_swapped_ctx() {
     client
         .ctx()
         .set_new_session_callback(|_, _| CALLED_BACK.store(true, Ordering::SeqCst));
-    
+
     let mut client = client.build().builder();
 
     let ctx = SslContextBuilder::new(SslMethod::tls()).unwrap().build();
