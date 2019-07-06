@@ -1021,6 +1021,78 @@ mod tests {
     }
 
     #[test]
+    fn test_aes128_ofb() {
+        // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+        let pt = "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710";
+        let ct = "3b3fd92eb72dad20333449f8e83cfb4a7789508d16918f03f53c52dac54ed8259740051e9c5fecf64344f7a82260edcc304c6528f659c77866a510d9c1d6ae5e";
+        let key = "2b7e151628aed2a6abf7158809cf4f3c";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Cipher::aes_128_ofb(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes192_ctr() {
+        // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+        let pt = "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710";
+        let ct = "1abc932417521ca24f2b0459fe7e6e0b090339ec0aa6faefd5ccc2c6f4ce8e941e36b26bd1ebc670d1bd1d665620abf74f78a7f6d29809585a97daec58c6b050";
+        let key = "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b";
+        let iv = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff";
+
+        cipher_test(super::Cipher::aes_192_ctr(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes192_cfb1() {
+        // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+        let pt = "6bc1";
+        let ct = "9359";
+        let key = "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Cipher::aes_192_cfb1(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes192_cfb128() {
+        // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+        let pt = "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710";
+        let ct = "cdc80d6fddf18cab34c25909c99a417467ce7f7f81173621961a2b70171d3d7a2e1e8a1dd59b88b1c8e60fed1efac4c9c05f9f9ca9834fa042ae8fba584b09ff";
+        let key = "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Cipher::aes_192_cfb128(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes192_cfb8() {
+        // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+        let pt = "6bc1bee22e409f96e93d7e117393172aae2d";
+        let ct = "cda2521ef0a905ca44cd057cbf0d47a0678a";
+        let key = "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Cipher::aes_192_cfb8(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes192_ofb() {
+        // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+        let pt = "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710";
+        let ct = "cdc80d6fddf18cab34c25909c99a4174fcc28b8d4c63837c09e81700c11004018d9a9aeac0f6596f559c6d4daf59a5f26d9f200857ca6c3e9cac524bd9acc92a";
+        let key = "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Cipher::aes_192_ofb(), pt, ct, key, iv);
+    }
+
+    #[test]
     fn test_aes256_cfb1() {
         let pt = "6bc1";
         let ct = "9029";
@@ -1048,6 +1120,18 @@ mod tests {
         let iv = "000102030405060708090a0b0c0d0e0f";
 
         cipher_test(super::Cipher::aes_256_cfb8(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes256_ofb() {
+        // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+        let pt = "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710";
+        let ct = "dc7e84bfda79164b7ecd8486985d38604febdc6740d20b3ac88f6ad82a4fb08d71ab47a086e86eedf39d1c5bba97c4080126141d67f37be8538f5a8be740e484";
+        let key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Cipher::aes_256_ofb(), pt, ct, key, iv);
     }
 
     #[test]
