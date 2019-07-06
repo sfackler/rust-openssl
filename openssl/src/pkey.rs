@@ -90,6 +90,11 @@ impl Id {
     pub const DSA: Id = Id(ffi::EVP_PKEY_DSA);
     pub const DH: Id = Id(ffi::EVP_PKEY_DH);
     pub const EC: Id = Id(ffi::EVP_PKEY_EC);
+
+    #[cfg(ossl111)]
+    pub const ED25519: Id = Id(ffi::EVP_PKEY_ED25519);
+    #[cfg(ossl111)]
+    pub const ED448: Id = Id(ffi::EVP_PKEY_ED448);
 }
 
 /// A trait indicating that a key has parameters.
@@ -424,6 +429,35 @@ impl PKey<Private> {
 
             Ok(PKey::from_ptr(key))
         }
+    }
+
+    fn generate_eddsa(nid: c_int) -> Result<PKey<Private>, ErrorStack> {
+        unsafe {
+            let kctx = cvt_p(ffi::EVP_PKEY_CTX_new_id(nid, ptr::null_mut()))?;
+            let ret = cvt(ffi::EVP_PKEY_keygen_init(kctx));
+            if let Err(e) = ret {
+                ffi::EVP_PKEY_CTX_free(kctx);
+                return Err(e);
+            }
+            let mut key = ptr::null_mut();
+            let ret = cvt(ffi::EVP_PKEY_keygen(kctx, &mut key));
+
+            ffi::EVP_PKEY_CTX_free(kctx);
+
+            if let Err(e) = ret {
+                return Err(e);
+            }
+
+            Ok(PKey::from_ptr(key))
+        }
+    }
+
+    pub fn generate_ed25519() -> Result<PKey<Private>, ErrorStack> {
+        PKey::generate_eddsa(ffi::EVP_PKEY_ED25519)
+    }
+
+    pub fn generate_ed448() -> Result<PKey<Private>, ErrorStack> {
+        PKey::generate_eddsa(ffi::EVP_PKEY_ED448)
     }
 
     private_key_from_pem! {
