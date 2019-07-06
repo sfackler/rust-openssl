@@ -126,6 +126,46 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_ccm()) }
     }
 
+    pub fn aes_128_ofb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_128_ofb()) }
+    }
+
+    pub fn aes_192_ecb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_ecb()) }
+    }
+
+    pub fn aes_192_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_cbc()) }
+    }
+
+    pub fn aes_192_ctr() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_ctr()) }
+    }
+
+    pub fn aes_192_cfb1() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_cfb1()) }
+    }
+
+    pub fn aes_192_cfb128() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_cfb128()) }
+    }
+
+    pub fn aes_192_cfb8() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_cfb8()) }
+    }
+
+    pub fn aes_192_gcm() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_gcm()) }
+    }
+
+    pub fn aes_192_ccm() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_ccm()) }
+    }
+
+    pub fn aes_192_ofb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_ofb()) }
+    }
+
     pub fn aes_256_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_ecb()) }
     }
@@ -160,6 +200,10 @@ impl Cipher {
 
     pub fn aes_256_ccm() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_ccm()) }
+    }
+
+    pub fn aes_256_ofb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_256_ofb()) }
     }
 
     pub fn bf_cbc() -> Cipher {
