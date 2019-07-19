@@ -821,6 +821,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(ossl111)]
     fn eddsa() {
         let key = PKey::generate_ed25519().unwrap();
 
@@ -832,6 +833,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(ossl111)]
     fn rsa_sign_verify() {
         let key = include_bytes!("../test/rsa.pem");
         let private_key = Rsa::private_key_from_pem(key).unwrap();
