@@ -32,6 +32,7 @@ use std::fmt;
 use std::ptr;
 use std::slice;
 use std::str;
+use std::time::Duration;
 
 use bio::MemBio;
 use bn::{BigNum, BigNumRef};
@@ -124,9 +125,14 @@ impl Asn1Time {
         }
     }
 
-    /// Creates a new time on specified interval in days from now
-    pub fn days_from_now(days: u32) -> Result<Asn1Time, ErrorStack> {
-        Asn1Time::from_period(days as c_long * 60 * 60 * 24)
+    /// Creates a new `Asn1Time` representing the current point in time.
+    pub fn now() -> Result<Self, ErrorStack> {
+        Self::from_period(0)
+    }
+
+    /// Creates a new time on specified interval in days from now.
+    pub fn days_from_now(days: u32) -> Result<Self, ErrorStack> {
+        Self::from_period(days as c_long * 60 * 60 * 24)
     }
 
     /// Creates a new time corresponding to the specified ASN1 time string.
@@ -134,7 +140,7 @@ impl Asn1Time {
     /// This corresponds to [`ASN1_TIME_set_string`].
     ///
     /// [`ASN1_TIME_set_string`]: https://www.openssl.org/docs/manmaster/man3/ASN1_TIME_set_string.html
-    pub fn from_str(s: &str) -> Result<Asn1Time, ErrorStack> {
+    pub fn from_str(s: &str) -> Result<Self, ErrorStack> {
         unsafe {
             let s = CString::new(s).unwrap();
 
@@ -153,7 +159,7 @@ impl Asn1Time {
     ///
     /// [`ASN1_TIME_set_string_X509`]: https://www.openssl.org/docs/manmaster/man3/ASN1_TIME_set_string.html
     #[cfg(ossl111)]
-    pub fn from_str_x509(s: &str) -> Result<Asn1Time, ErrorStack> {
+    pub fn from_str_x509(s: &str) -> Result<Self, ErrorStack> {
         unsafe {
             let s = CString::new(s).unwrap();
 
@@ -161,6 +167,28 @@ impl Asn1Time {
             cvt(ffi::ASN1_TIME_set_string_X509(time.as_ptr(), s.as_ptr()))?;
 
             Ok(time)
+        }
+    }
+}
+
+impl Asn1TimeRef {
+    /// Returns the duration between `older` and `self`.
+    ///
+    /// If `self` represents an earlier time than `older`, or `self` or `older` are invalid, or
+    /// the duration between `older` and `self` does not fit in a `Duration`, this will return
+    /// `None`.
+    pub fn duration_since(&self, older: &Self) -> Option<Duration> {
+        unsafe {
+            let mut days = 0;
+            let mut secs = 0;
+            cvt(ffi::ASN1_TIME_diff(&mut days, &mut secs, older.as_ptr(), self.as_ptr())).ok()?;
+
+            if days < 0 || secs < 0 {
+                None
+            } else {
+                secs = secs.checked_add(days.checked_mul(24 * 60 * 60)?)?;
+                Some(Duration::from_secs(secs as u64))
+            }
         }
     }
 }
@@ -390,5 +418,16 @@ mod tests {
         Asn1Time::from_str("99991231235959Z").unwrap();
         #[cfg(ossl111)]
         Asn1Time::from_str_x509("99991231235959Z").unwrap();
+    }
+
+    #[test]
+    fn duration() {
+        let now = Asn1Time::now().unwrap();
+        let tomorrow = Asn1Time::days_from_now(1).unwrap();
+
+        assert!(now.duration_since(&tomorrow).is_none());
+        let seconds = tomorrow.duration_since(&now).unwrap().as_secs();
+        let one_day = 24 * 60 * 60;
+        assert!(one_day - 1 < seconds && seconds < one_day + 1);
     }
 }
