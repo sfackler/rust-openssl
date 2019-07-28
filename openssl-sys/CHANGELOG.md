@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [v0.9.48] - 2019-07-19
+
+### Added
+
+* Added `AES_wrap_key` and `AES_unwrap_key`.
+* Added `EC_GROUP_get_cofactor`, `EC_GROUP_get0_generator`, and `EC_POINT_dup`.
+* Added `EVP_aes_128_ofb`, `EVP_aes_192_ecb`, `EVP_aes_192_cbc`, `EVP_aes_192_cfb1`, `EVP_aes_192_cfb8`,
+    `EVP_aes_192_cfb_128`, `EVP_aes_192_ctr`, `EVP_aes_192_ccm`, `EVP_aes_192_gcm`, `EVP_aes_192_ofb`, and
+    `EVP_aes_256_ofb`.
+* Added `PEM_read_bio_CMS` and `PEM_write_bio_CMS`.
+
 ## [v0.9.47] - 2019-05-18
 
 ### Added
@@ -40,7 +51,8 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.47...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.48...master
+[v0.9.47]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.47...openssl-sys-v0.9.48
 [v0.9.47]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.46...openssl-sys-v0.9.47
 [v0.9.46]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.45...openssl-sys-v0.9.46
 [v0.9.45]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.44...openssl-sys-v0.9.45

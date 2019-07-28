@@ -2,7 +2,25 @@
 
 ## [Unreleased]
 
-## [v0.10.23]
+## [v0.10.24] - 2019-07-19
+
+### Fixed
+
+* Worked around an OpenSSL 1.0.x bug triggered by code calling `SSL_set_app_data`.
+
+### Added
+
+* Added `aes::{wrap_key, unwrap_key}`.
+* Added `CmsContentInfoRef::to_pem` and `CmsContentInfo::from_pem`.
+* Added `DsaRef::private_key_to_pem`.
+* Added `EcGroupRef::{cofactor, generator}`.
+* Added `EcPointRef::to_owned`.
+* Added a `Debug` implementation for `EcKey`.
+* Added `SslAcceptor::{mozilla_intermediate_v5, mozilla_modern_v5}`.
+* Added `Cipher::{aes_128_ofb, aes_192_ecb, aes_192_cbc, aes_192_ctr, aes_192_cfb1, aes_192_cfb128, aes_192_cfb8,
+    aes_192_gcm, aes_192_ccm, aes_192_ofb, aes_256_ofb}`.
+
+## [v0.10.23] - 2019-05-18
 
 ### Fixed
 
@@ -12,7 +30,7 @@
 
 * Added `SslContextBuilder::add_client_ca`.
 
-## [v0.10.22]
+## [v0.10.22] - 2019-05-08
 
 ### Added
 
@@ -369,7 +387,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.23...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.24...master
+[v0.10.24]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.23...openssl-v0.10.24
 [v0.10.23]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.22...openssl-v0.10.23
 [v0.10.22]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.21...openssl-v0.10.22
 [v0.10.21]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.20...openssl-v0.10.21

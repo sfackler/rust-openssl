@@ -3884,11 +3884,25 @@ cfg_if! {
             )
         }
     } else {
+        use std::sync::{Once, ONCE_INIT};
+
         unsafe fn get_new_idx(f: ffi::CRYPTO_EX_free) -> c_int {
+            // hack around https://rt.openssl.org/Ticket/Display.html?id=3710&user=guest&pass=guest
+            static ONCE: Once = ONCE_INIT;
+            ONCE.call_once(|| {
+                ffi::SSL_CTX_get_ex_new_index(0, ptr::null_mut(), None, None, None);
+            });
+
             ffi::SSL_CTX_get_ex_new_index(0, ptr::null_mut(), None, None, Some(f))
         }
 
         unsafe fn get_new_ssl_idx(f: ffi::CRYPTO_EX_free) -> c_int {
+            // hack around https://rt.openssl.org/Ticket/Display.html?id=3710&user=guest&pass=guest
+            static ONCE: Once = ONCE_INIT;
+            ONCE.call_once(|| {
+                ffi::SSL_get_ex_new_index(0, ptr::null_mut(), None, None, None);
+            });
+
             ffi::SSL_get_ex_new_index(0, ptr::null_mut(), None, None, Some(f))
         }
     }
