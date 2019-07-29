@@ -32,7 +32,6 @@ use std::fmt;
 use std::ptr;
 use std::slice;
 use std::str;
-use std::time::Duration;
 
 use bio::MemBio;
 use bn::{BigNum, BigNumRef};
@@ -174,22 +173,48 @@ impl Asn1Time {
 impl Asn1TimeRef {
     /// Returns the duration between `older` and `self`.
     ///
-    /// If `self` represents an earlier time than `older`, or `self` or `older` are invalid, or
-    /// the duration between `older` and `self` does not fit in a `Duration`, this will return
-    /// `None`.
-    pub fn duration_since(&self, older: &Self) -> Option<Duration> {
+    /// If `self` represents an earlier time than `older`, the returned
+    /// `Asn1TimeDiff` will be negative (both `secs` and `days` will return
+    /// negative values).
+    ///
+    /// If `self` or `older` are invalid, this will return `None`.
+    pub fn duration_since(&self, older: &Self) -> Option<Asn1TimeDiff> {
         unsafe {
             let mut days = 0;
             let mut secs = 0;
-            cvt(ffi::ASN1_TIME_diff(&mut days, &mut secs, older.as_ptr(), self.as_ptr())).ok()?;
+            cvt(ffi::ASN1_TIME_diff(
+                &mut days,
+                &mut secs,
+                older.as_ptr(),
+                self.as_ptr(),
+            ))
+            .ok()?;
 
-            if days < 0 || secs < 0 {
-                None
-            } else {
-                secs = secs.checked_add(days.checked_mul(24 * 60 * 60)?)?;
-                Some(Duration::from_secs(secs as u64))
-            }
+            Some(Asn1TimeDiff {
+                secs: i64::from(secs),
+                days: i64::from(days),
+            })
         }
+    }
+}
+
+/// Difference in time between 2 `Asn1Time`s.
+pub struct Asn1TimeDiff {
+    secs: i64,
+    days: i64,
+}
+
+impl Asn1TimeDiff {
+    /// Returns the seconds stored in this time difference.
+    ///
+    /// This is always less than the number of seconds in a day.
+    pub fn secs(&self) -> i64 {
+        self.secs
+    }
+
+    /// Returns the number of days stored in this time difference.
+    pub fn days(&self) -> i64 {
+        self.days
     }
 }
 
@@ -423,11 +448,9 @@ mod tests {
     #[test]
     fn duration() {
         let now = Asn1Time::now().unwrap();
-        let tomorrow = Asn1Time::days_from_now(1).unwrap();
+        let two_days = Asn1Time::days_from_now(2).unwrap();
 
-        assert!(now.duration_since(&tomorrow).is_none());
-        let seconds = tomorrow.duration_since(&now).unwrap().as_secs();
-        let one_day = 24 * 60 * 60;
-        assert!(one_day - 1 < seconds && seconds < one_day + 1);
+        let days = two_days.duration_since(&now).unwrap().days();
+        assert!(days >= 1 && days < 3);
     }
 }
