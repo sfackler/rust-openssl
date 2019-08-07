@@ -183,28 +183,30 @@ See rust-openssl README for more information:
     if let Some(libressl_version) = libressl_version {
         println!("cargo:libressl_version_number={:x}", libressl_version);
 
+        let major = (libressl_version >> 28) as u8;
         let minor = (libressl_version >> 20) as u8;
         let fix = (libressl_version >> 12) as u8;
-        let (minor, fix) = match (minor, fix) {
-            (5, 0) => ('5', '0'),
-            (5, 1) => ('5', '1'),
-            (5, 2) => ('5', '2'),
-            (5, _) => ('5', 'x'),
-            (6, 0) => ('6', '0'),
-            (6, 1) => ('6', '1'),
-            (6, 2) => ('6', '2'),
-            (6, _) => ('6', 'x'),
-            (7, _) => ('7', 'x'),
-            (8, 0) => ('8', '0'),
-            (8, 1) => ('8', '1'),
-            (8, _) => ('8', 'x'),
-            (9, 0) => ('9', '0'),
-            (9, _) => ('9', 'x'),
+        let (major, minor, fix) = match (major, minor, fix) {
+            (2, 5, 0) => ('2', '5', '0'),
+            (2, 5, 1) => ('2', '5', '1'),
+            (2, 5, 2) => ('2', '5', '2'),
+            (2, 5, _) => ('2', '5', 'x'),
+            (2, 6, 0) => ('2', '6', '0'),
+            (2, 6, 1) => ('2', '6', '1'),
+            (2, 6, 2) => ('2', '6', '2'),
+            (2, 6, _) => ('2', '6', 'x'),
+            (2, 7, _) => ('2', '7', 'x'),
+            (2, 8, 0) => ('2', '8', '0'),
+            (2, 8, 1) => ('2', '8', '1'),
+            (2, 8, _) => ('2', '8', 'x'),
+            (2, 9, 0) => ('2', '9', '0'),
+            (2, 9, _) => ('2', '9', 'x'),
+            (3, 0, 0) => ('3', '0', '0'),
             _ => version_error(),
         };
 
         println!("cargo:libressl=true");
-        println!("cargo:libressl_version=2{}{}", minor, fix);
+        println!("cargo:libressl_version={}{}{}", major, minor, fix);
         println!("cargo:version=101");
         Version::Libressl
     } else {
