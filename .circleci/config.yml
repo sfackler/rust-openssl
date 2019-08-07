@@ -115,6 +115,10 @@ jobs:
       - restore_cache:
           key: registry
       - run: cargo generate-lockfile
+      - when:
+          condition: << parameters.minimal_build >>
+          steps:
+            - run: cargo update -p pkg-config --precise 0.3.14
       - save_cache:
           key: registry-{{ .BuildNum }}
           paths:
