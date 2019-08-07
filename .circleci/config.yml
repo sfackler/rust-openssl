@@ -115,6 +115,10 @@ jobs:
       - restore_cache:
           key: registry
       - run: cargo generate-lockfile
+      - when:
+          condition: << parameters.minimal_build >>
+          steps:
+            - run: cargo update -p pkg-config --precise 0.3.14
       - save_cache:
           key: registry-{{ .BuildNum }}
           paths:
@@ -288,10 +292,10 @@ workflows:
           library: libressl
           version: 2.5.5
       - linux:
-          name: x86_64-libressl-2.9
+          name: x86_64-libressl-3.0
           target: x86_64-unknown-linux-gnu
           library: libressl
-          version: 2.9.1
+          version: 3.0.0
       - macos:
           name: macos
       - macos:
