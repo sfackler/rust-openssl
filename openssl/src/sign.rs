@@ -126,6 +126,9 @@ impl<'a> Drop for Signer<'a> {
 impl<'a> Signer<'a> {
     /// Creates a new `Signer`.
     ///
+    /// This cannot be used with Ed25519 or Ed448 keys. Please refer to
+    /// `new_without_digest`.
+    ///
     /// OpenSSL documentation at [`EVP_DigestSignInit`].
     ///
     /// [`EVP_DigestSignInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignInit.html
@@ -138,7 +141,9 @@ impl<'a> Signer<'a> {
 
     /// Creates a new `Signer` without a digest.
     ///
-    /// This can be used to create a CMAC.
+    /// This is the only way to create a `Verifier` for Ed25519 or Ed448 keys.
+    /// It can also be used to create a CMAC.
+    ///
     /// OpenSSL documentation at [`EVP_DigestSignInit`].
     ///
     /// [`EVP_DigestSignInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignInit.html
@@ -249,6 +254,9 @@ impl<'a> Signer<'a> {
 
     /// Feeds more data into the `Signer`.
     ///
+    /// Please note that PureEdDSA (Ed25519 and Ed448 keys) do not support streaming.
+    /// Use `sign_oneshot` instead.
+    ///
     /// OpenSSL documentation at [`EVP_DigestUpdate`].
     ///
     /// [`EVP_DigestUpdate`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestInit.html
@@ -271,6 +279,7 @@ impl<'a> Signer<'a> {
     /// OpenSSL documentation at [`EVP_DigestSignFinal`].
     ///
     /// [`EVP_DigestSignFinal`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestSignFinal.html
+    #[cfg(not(ossl111))]
     pub fn len(&self) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = 0;
@@ -278,6 +287,21 @@ impl<'a> Signer<'a> {
                 self.md_ctx,
                 ptr::null_mut(),
                 &mut len,
+            ))?;
+            Ok(len)
+        }
+    }
+
+    #[cfg(ossl111)]
+    pub fn len(&self) -> Result<usize, ErrorStack> {
+        unsafe {
+            let mut len = 0;
+            cvt(ffi::EVP_DigestSign(
+                self.md_ctx,
+                ptr::null_mut(),
+                &mut len,
+                ptr::null(),
+                0
             ))?;
             Ok(len)
         }
@@ -312,6 +336,44 @@ impl<'a> Signer<'a> {
         // The advertised length is not always equal to the real length for things like DSA
         buf.truncate(len);
         Ok(buf)
+    }
+
+    /// Signs the data in data_buf and writes the siganture into the buffer sig_buf, returning the
+    /// number of bytes written.
+    ///
+    /// For PureEdDSA (Ed25519 and Ed448 keys) this is the only way to sign data.
+    ///
+    /// This method will fail if the buffer is not large enough for the signature. Use the `len`
+    /// method to get an upper bound on the required size.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestSign`].
+    ///
+    /// [`EVP_DigestSign`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_DigestSign.html
+    #[cfg(ossl111)]
+    pub fn sign_oneshot(&self, sig_buf: &mut [u8], data_buf: &[u8]) -> Result<usize, ErrorStack> {
+        unsafe {
+            let mut sig_len = sig_buf.len();
+            cvt(ffi::EVP_DigestSign(
+                    self.md_ctx,
+                    sig_buf.as_mut_ptr() as *mut _,
+                    &mut sig_len,
+                    data_buf.as_ptr() as *const _,
+                    data_buf.len()
+                    ))?;
+            Ok(sig_len)
+        }
+    }
+
+    /// Returns the signature.
+    ///
+    /// This is a simple convenience wrapper over `len` and `sign_oneshot`.
+    #[cfg(ossl111)]
+    pub fn sign_oneshot_to_vec(&self, data_buf: &[u8]) -> Result<Vec<u8>, ErrorStack> {
+        let mut sig_buf = vec![0; self.len()?];
+        let len = self.sign_oneshot(&mut sig_buf, data_buf)?;
+        // The advertised length is not always equal to the real length for things like DSA
+        sig_buf.truncate(len);
+        Ok(sig_buf)
     }
 }
 
@@ -348,10 +410,35 @@ impl<'a> Drop for Verifier<'a> {
 impl<'a> Verifier<'a> {
     /// Creates a new `Verifier`.
     ///
+    /// This cannot be used with Ed25519 or Ed448 keys. Please refer to
+    /// `new_without_digest`.
+    ///
     /// OpenSSL documentation at [`EVP_DigestVerifyInit`].
     ///
     /// [`EVP_DigestVerifyInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestVerifyInit.html
     pub fn new<T>(type_: MessageDigest, pkey: &'a PKeyRef<T>) -> Result<Verifier<'a>, ErrorStack>
+    where
+        T: HasPublic,
+    {
+        Verifier::new_intern(Some(type_), pkey)
+    }
+
+    /// Creates a new `Verifier` without a digest.
+    ///
+    /// This is the only way to create a `Verifier` for Ed25519 or Ed448 keys.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestVerifyInit`].
+    ///
+    /// [`EVP_DigestVerifyInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestVerifyInit.html
+    pub fn new_without_digest<T>(pkey: &'a PKeyRef<T>) -> Result<Verifier<'a>, ErrorStack>
+    where
+        T: HasPublic
+    {
+        Verifier::new_intern(None, pkey)
+    }
+
+
+    fn new_intern<T>(type_: Option<MessageDigest>, pkey: &'a PKeyRef<T>) -> Result<Verifier<'a>, ErrorStack>
     where
         T: HasPublic,
     {
@@ -363,7 +450,7 @@ impl<'a> Verifier<'a> {
             let r = ffi::EVP_DigestVerifyInit(
                 ctx,
                 &mut pctx,
-                type_.as_ptr(),
+                type_.map(|t| t.as_ptr()).unwrap_or(ptr::null()),
                 ptr::null_mut(),
                 pkey.as_ptr(),
             );
@@ -448,6 +535,9 @@ impl<'a> Verifier<'a> {
 
     /// Feeds more data into the `Verifier`.
     ///
+    /// Please note that PureEdDSA (Ed25519 and Ed448 keys) do not support streaming.
+    /// Use `verify_oneshot` instead.
+    ///
     /// OpenSSL documentation at [`EVP_DigestUpdate`].
     ///
     /// [`EVP_DigestUpdate`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestInit.html
@@ -477,6 +567,32 @@ impl<'a> Verifier<'a> {
                     ErrorStack::get(); // discard error stack
                     Ok(false)
                 }
+                _ => Err(ErrorStack::get()),
+            }
+        }
+    }
+
+    /// Determines if the data given in buf matches the provided signature.
+    ///
+    /// OpenSSL documentation at [`EVP_DigestVerify`].
+    ///
+    /// [`EVP_DigestVerify`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_DigestVerify.html
+    #[cfg(ossl111)]
+    pub fn verify_oneshot(&self, signature: &[u8], buf: &[u8]) -> Result<bool, ErrorStack> {
+        unsafe {
+            let r = ffi::EVP_DigestVerify(
+                self.md_ctx,
+                signature.as_ptr() as *const _,
+                signature.len(),
+                buf.as_ptr() as *const _,
+                buf.len(),
+                );
+            match r {
+                1 => Ok(true),
+                0 => {
+                    ErrorStack::get();
+                    Ok(false)
+                },
                 _ => Err(ErrorStack::get()),
             }
         }
@@ -705,6 +821,19 @@ mod test {
     }
 
     #[test]
+    #[cfg(ossl111)]
+    fn eddsa() {
+        let key = PKey::generate_ed25519().unwrap();
+
+        let signer = Signer::new_without_digest(&key).unwrap();
+        let signature = signer.sign_oneshot_to_vec(b"hello world").unwrap();
+
+        let verifier = Verifier::new_without_digest(&key).unwrap();
+        assert!(verifier.verify_oneshot(&signature, b"hello world").unwrap());
+    }
+
+    #[test]
+    #[cfg(ossl111)]
     fn rsa_sign_verify() {
         let key = include_bytes!("../test/rsa.pem");
         let private_key = Rsa::private_key_from_pem(key).unwrap();
