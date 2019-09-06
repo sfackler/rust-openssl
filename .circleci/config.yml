@@ -224,7 +224,7 @@ workflows:
           name: mimimal-version
           target: x86_64-unknown-linux-musl
           vendored: true
-          image: 1.24.1
+          image: 1.27.2
           minimal_build: true
       - linux:
           name: musl-vendored
