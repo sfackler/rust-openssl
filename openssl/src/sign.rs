@@ -279,8 +279,12 @@ impl<'a> Signer<'a> {
     /// OpenSSL documentation at [`EVP_DigestSignFinal`].
     ///
     /// [`EVP_DigestSignFinal`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestSignFinal.html
-    #[cfg(not(ossl111))]
     pub fn len(&self) -> Result<usize, ErrorStack> {
+        self.len_intern()
+    }
+
+    #[cfg(not(ossl111))]
+    fn len_intern(&self) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = 0;
             cvt(ffi::EVP_DigestSignFinal(
@@ -293,7 +297,7 @@ impl<'a> Signer<'a> {
     }
 
     #[cfg(ossl111)]
-    pub fn len(&self) -> Result<usize, ErrorStack> {
+    fn len_intern(&self) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = 0;
             cvt(ffi::EVP_DigestSign(
