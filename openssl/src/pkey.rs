@@ -126,6 +126,17 @@ generic_foreign_type_and_impl_send_sync! {
     pub struct PKeyRef<T>;
 }
 
+impl<T> ToOwned for PKeyRef<T> {
+    type Owned = PKey<T>;
+
+    fn to_owned(&self) -> PKey<T> {
+        unsafe {
+            EVP_PKEY_up_ref(self.as_ptr());
+            PKey::from_ptr(self.as_ptr())
+        }
+    }
+}
+
 impl<T> PKeyRef<T> {
     /// Returns a copy of the internal RSA key.
     ///
@@ -269,6 +280,12 @@ where
         /// [`i2d_PrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_PrivateKey.html
         private_key_to_der,
         ffi::i2d_PrivateKey
+    }
+}
+
+impl<T> Clone for PKey<T> {
+    fn clone(&self) -> PKey<T> {
+        PKeyRef::to_owned(self)
     }
 }
 
@@ -581,6 +598,22 @@ impl PKey<Public> {
         public_key_from_der,
         PKey<Public>,
         ffi::d2i_PUBKEY
+    }
+}
+
+cfg_if! {
+    if #[cfg(any(ossl110, libressl270))] {
+        use ffi::EVP_PKEY_up_ref;
+    } else {
+        unsafe extern "C" fn EVP_PKEY_up_ref(pkey: *mut ffi::EVP_PKEY) {
+            ffi::CRYPTO_add_lock(
+                &mut (*pkey).references,
+                1,
+                ffi::CRYPTO_LOCK_EVP_PKEY,
+                "pkey.rs\0".as_ptr() as *const _,
+                line!() as c_int,
+            );
+        }
     }
 }
 

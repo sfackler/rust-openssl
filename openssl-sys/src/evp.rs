@@ -304,6 +304,8 @@ extern "C" {
 
     pub fn EVP_PKEY_new() -> *mut EVP_PKEY;
     pub fn EVP_PKEY_free(k: *mut EVP_PKEY);
+    #[cfg(any(ossl110, libressl270))]
+    pub fn EVP_PKEY_up_ref(pkey: *mut EVP_PKEY) -> c_int;
 
     pub fn d2i_AutoPrivateKey(
         a: *mut *mut EVP_PKEY,
