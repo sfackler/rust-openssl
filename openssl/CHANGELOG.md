@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [v0.10.25] - 2019-10-02
+
+### Fixed
+
+* Fixed a memory leak in `EcdsaSig::from_private_components` when using OpenSSL 1.0.x.
+
+### Added
+
+* Added support for Ed25519 and Ed448 keys.
+* Implemented `ToOwned` for `PKeyRef` and `Clone` for `PKey`.
+
 ## [v0.10.24] - 2019-07-19
 
 ### Fixed
