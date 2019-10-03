@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [v0.9.50] - 2019-10-02
+
+### Added
+
+* Added `CRYPTO_LOCK_EVP_PKEY`.
+* Added `EVP_PKEY_ED25519` and `EVP_PKEY_ED448`.
+* Added `EVP_DigestSign` and `EVP_DigestVerify`.
+* Added `EVP_PKEY_up_ref`.
+* Added `NID_ED25519` and `NID_ED448`.
+
 ## [v0.9.49] - 2019-08-15
 
 ### Added
