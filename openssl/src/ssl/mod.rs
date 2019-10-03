@@ -3804,6 +3804,20 @@ impl<S> SslStreamBuilder<S> {
     pub fn ssl(&self) -> &SslRef {
         &self.inner.ssl
     }
+
+    /// Set the DTLS MTU size.
+    ///
+    /// It will be ignored if the value is smaller than the minimum packet size
+    /// the DTLS protocol requires.
+    ///
+    /// # Panics
+    /// This function panics if the given mtu size can't be represented in a positive `c_long` range
+    pub fn set_dtls_mtu_size(&mut self, mtu_size: usize) {
+        unsafe {
+            let bio = self.inner.ssl.get_raw_rbio();
+            bio::set_dtls_mtu_size::<S>(bio, mtu_size);
+        }
+    }
 }
 
 /// The result of a shutdown request.
