@@ -63,8 +63,17 @@ impl SslConnector {
     ///
     /// The default configuration is subject to change, and is currently derived from Python.
     pub fn builder(method: SslMethod) -> Result<SslConnectorBuilder, ErrorStack> {
+        let mut builder = Self::builder_no_default_verify_paths(method)?;
+        builder.set_default_verify_paths()?;
+        Ok(builder)
+    }
+
+    /// Creates a new builder for TLS connections, without setting the default locations of
+    /// trusted certificates for verification.
+    ///
+    /// The default configuration is subject to change, and is currently derived from Python.
+    pub fn builder_no_default_verify_paths(method: SslMethod) -> Result<SslConnectorBuilder, ErrorStack> {
         let mut ctx = ctx(method)?;
-        ctx.set_default_verify_paths()?;
         ctx.set_cipher_list(
             "DEFAULT:!aNULL:!eNULL:!MD5:!3DES:!DES:!RC4:!IDEA:!SEED:!aDSS:!SRP:!PSK",
         )?;
