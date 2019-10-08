@@ -17,7 +17,7 @@ use error::ErrorStack;
 pub struct StreamState<S> {
     pub stream: S,
     pub error: Option<io::Error>,
-    pub panic: Option<Box<Any + Send>>,
+    pub panic: Option<Box<dyn Any + Send>>,
 }
 
 /// Safe wrapper for BIO_METHOD
@@ -55,7 +55,7 @@ pub unsafe fn take_error<S>(bio: *mut BIO) -> Option<io::Error> {
     state.error.take()
 }
 
-pub unsafe fn take_panic<S>(bio: *mut BIO) -> Option<Box<Any + Send>> {
+pub unsafe fn take_panic<S>(bio: *mut BIO) -> Option<Box<dyn Any + Send>> {
     let state = state::<S>(bio);
     state.panic.take()
 }
