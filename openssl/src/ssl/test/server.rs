@@ -46,8 +46,8 @@ impl Server {
 
 pub struct Builder {
     ctx: SslContextBuilder,
-    ssl_cb: Box<FnMut(&mut SslRef) + Send>,
-    io_cb: Box<FnMut(SslStream<TcpStream>) + Send>,
+    ssl_cb: Box<dyn FnMut(&mut SslRef) + Send>,
+    io_cb: Box<dyn FnMut(SslStream<TcpStream>) + Send>,
     should_error: bool,
 }
 

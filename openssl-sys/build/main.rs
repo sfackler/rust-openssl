@@ -259,7 +259,7 @@ fn parse_version(version: &str) -> u64 {
 
     // and the type specifier suffix
     let version = version.trim_right_matches(|c: char| match c {
-        '0'...'9' | 'a'...'f' | 'A'...'F' => false,
+        '0'..='9' | 'a'..='f' | 'A'..='F' => false,
         _ => true,
     });
 

@@ -127,7 +127,7 @@ impl error::Error for Error {
         "an OpenSSL error"
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match self.cause {
             Some(InnerError::Io(ref e)) => Some(e),
             Some(InnerError::Ssl(ref e)) => Some(e),
@@ -159,7 +159,7 @@ impl<S: fmt::Debug> StdError for HandshakeError<S> {
         }
     }
 
-    fn cause(&self) -> Option<&StdError> {
+    fn cause(&self) -> Option<&dyn StdError> {
         match *self {
             HandshakeError::SetupFailure(ref e) => Some(e),
             HandshakeError::Failure(ref s) | HandshakeError::WouldBlock(ref s) => Some(s.error()),
