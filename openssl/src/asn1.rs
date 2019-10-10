@@ -26,7 +26,7 @@
 //! ```
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::{c_char, c_int, c_long};
+use libc::{c_char, c_int, c_long, time_t};
 #[cfg(ossl102)]
 use std::cmp::Ordering;
 use std::ffi::CString;
@@ -235,6 +235,16 @@ impl Asn1Time {
     /// Creates a new time on specified interval in days from now
     pub fn days_from_now(days: u32) -> Result<Asn1Time, ErrorStack> {
         Asn1Time::from_period(days as c_long * 60 * 60 * 24)
+    }
+
+    /// Creates a new time from the specified `time_t` value
+    pub fn from_unix(time: time_t) -> Result<Asn1Time, ErrorStack> {
+        ffi::init();
+
+        unsafe {
+            let handle = cvt_p(ffi::ASN1_TIME_set(ptr::null_mut(), time))?;
+            Ok(Asn1Time::from_ptr(handle))
+        }
     }
 
     /// Creates a new time corresponding to the specified ASN1 time string.
@@ -540,6 +550,12 @@ mod tests {
         Asn1Time::from_str("99991231235959Z").unwrap();
         #[cfg(ossl111)]
         Asn1Time::from_str_x509("99991231235959Z").unwrap();
+    }
+
+    #[test]
+    fn time_from_unix() {
+        let t = Asn1Time::from_unix(0).unwrap();
+        assert_eq!("Jan  1 00:00:00 1970 GMT", t.to_string());
     }
 
     #[test]
