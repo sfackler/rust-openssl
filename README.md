@@ -10,7 +10,7 @@ OpenSSL bindings for the Rust programming language.
 
 ## Release Support
 
-The current supported release is 0.10.
+The current supported release of `openssl` is 0.10 and `openssl-sys` is 0.9.
 
 New major versions will be published at most once per year. After a new
 release, the previous major version will be partially supported with bug
