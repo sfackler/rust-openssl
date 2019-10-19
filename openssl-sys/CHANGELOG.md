@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [v0.9.52] - 2019-10-19
+
+### Added
+
+* Added support for LibreSSL 3.0.x.
+
 ## [v0.9.51] - 2019-10-02
 
 ### Added
