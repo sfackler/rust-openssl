@@ -26,7 +26,9 @@
 //! ```
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::{c_char, c_int, c_long};
+use libc::{c_char, c_int, c_long, time_t};
+#[cfg(ossl102)]
+use std::cmp::Ordering;
 use std::ffi::CString;
 use std::fmt;
 use std::ptr;
@@ -75,6 +77,24 @@ impl fmt::Display for Asn1GeneralizedTimeRef {
     }
 }
 
+/// Difference between two ASN1 times.
+///
+/// This `struct` is created by the [`diff`] method on [`Asn1TimeRef`]. See its
+/// documentation for more.
+///
+/// [`diff`]: struct.Asn1TimeRef.html#method.diff
+/// [`Asn1TimeRef`]: struct.Asn1TimeRef.html
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg(ossl102)]
+pub struct TimeDiff {
+    /// Difference in days
+    pub days: c_int,
+    /// Difference in seconds.
+    ///
+    /// This is always less than the number of seconds in a day.
+    pub secs: c_int,
+}
+
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_TIME;
     fn drop = ffi::ASN1_TIME_free;
@@ -93,6 +113,94 @@ foreign_type_and_impl_send_sync! {
     ///
     /// [`Asn1Time`]: struct.Asn1Time.html
     pub struct Asn1TimeRef;
+}
+
+impl Asn1TimeRef {
+    /// Find difference between two times
+    ///
+    /// This corresponds to [`ASN1_TIME_diff`].
+    ///
+    /// [`ASN1_TIME_diff`]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_TIME_diff.html
+    #[cfg(ossl102)]
+    pub fn diff(&self, compare: &Self) -> Result<TimeDiff, ErrorStack> {
+        let mut days = 0;
+        let mut seconds = 0;
+        let other = compare.as_ptr();
+
+        let err = unsafe {
+            ffi::ASN1_TIME_diff(&mut days, &mut seconds, self.as_ptr(), other)
+        };
+
+        match err {
+            0 => Err(ErrorStack::get()),
+            _ => Ok(TimeDiff {
+                days: days,
+                secs: seconds,
+            }),
+        }
+    }
+
+    /// Compare two times
+    ///
+    /// This corresponds to [`ASN1_TIME_compare`] but is implemented using [`diff`] so that it is
+    /// also supported on older versions of OpenSSL.
+    ///
+    /// [`ASN1_TIME_compare`]: https://www.openssl.org/docs/man1.1.1/man3/ASN1_TIME_compare.html
+    /// [`diff`]: struct.Asn1TimeRef.html#method.diff
+    #[cfg(ossl102)]
+    pub fn compare(&self, other: &Self) -> Result<Ordering, ErrorStack> {
+        let d = self.diff(other)?;
+        if d.days > 0 || d.secs > 0 {
+            return Ok(Ordering::Less);
+        }
+        if d.days < 0 || d.secs < 0 {
+            return Ok(Ordering::Greater);
+        }
+
+        Ok(Ordering::Equal)
+    }
+}
+
+#[cfg(ossl102)]
+impl PartialEq for Asn1TimeRef {
+    fn eq(&self, other: &Asn1TimeRef) -> bool {
+        self.diff(other).map(|t| t.days == 0 && t.secs == 0).unwrap_or(false)
+    }
+}
+
+#[cfg(ossl102)]
+impl PartialEq<Asn1Time> for Asn1TimeRef {
+    fn eq(&self, other: &Asn1Time) -> bool {
+        self.diff(other).map(|t| t.days == 0 && t.secs == 0).unwrap_or(false)
+    }
+}
+
+#[cfg(ossl102)]
+impl<'a> PartialEq<Asn1Time> for &'a Asn1TimeRef {
+    fn eq(&self, other: &Asn1Time) -> bool {
+        self.diff(other).map(|t| t.days == 0 && t.secs == 0).unwrap_or(false)
+    }
+}
+
+#[cfg(ossl102)]
+impl PartialOrd for Asn1TimeRef {
+    fn partial_cmp(&self, other: &Asn1TimeRef) -> Option<Ordering> {
+        self.compare(other).ok()
+    }
+}
+
+#[cfg(ossl102)]
+impl PartialOrd<Asn1Time> for Asn1TimeRef {
+    fn partial_cmp(&self, other: &Asn1Time) -> Option<Ordering> {
+        self.compare(other).ok()
+    }
+}
+
+#[cfg(ossl102)]
+impl<'a> PartialOrd<Asn1Time> for &'a Asn1TimeRef {
+    fn partial_cmp(&self, other: &Asn1Time) -> Option<Ordering> {
+        self.compare(other).ok()
+    }
 }
 
 impl fmt::Display for Asn1TimeRef {
@@ -129,6 +237,16 @@ impl Asn1Time {
         Asn1Time::from_period(days as c_long * 60 * 60 * 24)
     }
 
+    /// Creates a new time from the specified `time_t` value
+    pub fn from_unix(time: time_t) -> Result<Asn1Time, ErrorStack> {
+        ffi::init();
+
+        unsafe {
+            let handle = cvt_p(ffi::ASN1_TIME_set(ptr::null_mut(), time))?;
+            Ok(Asn1Time::from_ptr(handle))
+        }
+    }
+
     /// Creates a new time corresponding to the specified ASN1 time string.
     ///
     /// This corresponds to [`ASN1_TIME_set_string`].
@@ -162,6 +280,48 @@ impl Asn1Time {
 
             Ok(time)
         }
+    }
+}
+
+#[cfg(ossl102)]
+impl PartialEq for Asn1Time {
+    fn eq(&self, other: &Asn1Time) -> bool {
+        self.diff(other).map(|t| t.days == 0 && t.secs == 0).unwrap_or(false)
+    }
+}
+
+#[cfg(ossl102)]
+impl PartialEq<Asn1TimeRef> for Asn1Time {
+    fn eq(&self, other: &Asn1TimeRef) -> bool {
+        self.diff(other).map(|t| t.days == 0 && t.secs == 0).unwrap_or(false)
+    }
+}
+
+#[cfg(ossl102)]
+impl<'a> PartialEq<&'a Asn1TimeRef> for Asn1Time {
+    fn eq(&self, other: & &'a Asn1TimeRef) -> bool {
+        self.diff(other).map(|t| t.days == 0 && t.secs == 0).unwrap_or(false)
+    }
+}
+
+#[cfg(ossl102)]
+impl PartialOrd for Asn1Time {
+    fn partial_cmp(&self, other: &Asn1Time) -> Option<Ordering> {
+        self.compare(other).ok()
+    }
+}
+
+#[cfg(ossl102)]
+impl PartialOrd<Asn1TimeRef> for Asn1Time {
+    fn partial_cmp(&self, other: &Asn1TimeRef) -> Option<Ordering> {
+        self.compare(other).ok()
+    }
+}
+
+#[cfg(ossl102)]
+impl<'a> PartialOrd<&'a Asn1TimeRef> for Asn1Time {
+    fn partial_cmp(&self, other: &&'a Asn1TimeRef) -> Option<Ordering> {
+        self.compare(other).ok()
     }
 }
 
@@ -390,5 +550,60 @@ mod tests {
         Asn1Time::from_str("99991231235959Z").unwrap();
         #[cfg(ossl111)]
         Asn1Time::from_str_x509("99991231235959Z").unwrap();
+    }
+
+    #[test]
+    fn time_from_unix() {
+        let t = Asn1Time::from_unix(0).unwrap();
+        assert_eq!("Jan  1 00:00:00 1970 GMT", t.to_string());
+    }
+
+    #[test]
+    #[cfg(ossl102)]
+    fn time_eq() {
+        let a = Asn1Time::from_str("99991231235959Z").unwrap();
+        let b = Asn1Time::from_str("99991231235959Z").unwrap();
+        let c = Asn1Time::from_str("99991231235958Z").unwrap();
+        let a_ref = a.as_ref();
+        let b_ref = b.as_ref();
+        let c_ref = c.as_ref();
+        assert!(a == b);
+        assert!(a != c);
+        assert!(a == b_ref);
+        assert!(a != c_ref);
+        assert!(b_ref == a);
+        assert!(c_ref != a);
+        assert!(a_ref == b_ref);
+        assert!(a_ref != c_ref);
+    }
+
+    #[test]
+    #[cfg(ossl102)]
+    fn time_ord() {
+        let a = Asn1Time::from_str("99991231235959Z").unwrap();
+        let b = Asn1Time::from_str("99991231235959Z").unwrap();
+        let c = Asn1Time::from_str("99991231235958Z").unwrap();
+        let a_ref = a.as_ref();
+        let b_ref = b.as_ref();
+        let c_ref = c.as_ref();
+        assert!(a >= b);
+        assert!(a > c);
+        assert!(b <= a);
+        assert!(c < a);
+
+        assert!(a_ref >= b);
+        assert!(a_ref > c);
+        assert!(b_ref <= a);
+        assert!(c_ref < a);
+
+        assert!(a >= b_ref);
+        assert!(a > c_ref);
+        assert!(b <= a_ref);
+        assert!(c < a_ref);
+
+        assert!(a_ref >= b_ref);
+        assert!(a_ref > c_ref);
+        assert!(b_ref <= a_ref);
+        assert!(c_ref < a_ref);
     }
 }
