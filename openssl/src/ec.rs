@@ -233,6 +233,7 @@ impl EcGroupRef {
     /// OpenSSL documentation at [`EC_GROUP_order_bits`]
     ///
     /// [`EC_GROUP_order_bits`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_order_bits.html
+    #[cfg(ossl110)]
     pub fn order_bits(&self) -> u32 {
         unsafe { ffi::EC_GROUP_order_bits(self.as_ptr()) as u32 }
     }
