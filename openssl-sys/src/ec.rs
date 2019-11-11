@@ -61,6 +61,8 @@ extern "C" {
 
     pub fn EC_GROUP_get_degree(group: *const EC_GROUP) -> c_int;
 
+    pub fn EC_GROUP_order_bits(group: *const EC_GROUP) -> c_int;
+
     pub fn EC_GROUP_new_curve_GFp(
         p: *const BIGNUM,
         a: *const BIGNUM,
