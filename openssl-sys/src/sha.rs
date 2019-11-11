@@ -5,6 +5,7 @@ pub type SHA_LONG = c_uint;
 pub const SHA_LBLOCK: c_int = 16;
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct SHA_CTX {
     pub h0: SHA_LONG,
     pub h1: SHA_LONG,

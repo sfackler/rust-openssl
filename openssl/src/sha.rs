@@ -110,6 +110,7 @@ pub fn sha512(data: &[u8]) -> [u8; 64] {
 ///
 /// SHA1 is known to be insecure - it should not be used unless required for
 /// compatibility with existing systems.
+#[derive(Clone)]
 pub struct Sha1(ffi::SHA_CTX);
 
 impl Sha1 {
