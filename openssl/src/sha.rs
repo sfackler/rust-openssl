@@ -146,6 +146,7 @@ impl Sha1 {
 }
 
 /// An object which calculates a SHA224 hash of some data.
+#[derive(Clone)]
 pub struct Sha224(ffi::SHA256_CTX);
 
 impl Sha224 {
@@ -181,6 +182,7 @@ impl Sha224 {
 }
 
 /// An object which calculates a SHA256 hash of some data.
+#[derive(Clone)]
 pub struct Sha256(ffi::SHA256_CTX);
 
 impl Sha256 {
@@ -216,6 +218,7 @@ impl Sha256 {
 }
 
 /// An object which calculates a SHA384 hash of some data.
+#[derive(Clone)]
 pub struct Sha384(ffi::SHA512_CTX);
 
 impl Sha384 {
@@ -251,6 +254,7 @@ impl Sha384 {
 }
 
 /// An object which calculates a SHA512 hash of some data.
+#[derive(Clone)]
 pub struct Sha512(ffi::SHA512_CTX);
 
 impl Sha512 {

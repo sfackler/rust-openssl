@@ -26,6 +26,7 @@ extern "C" {
 }
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct SHA256_CTX {
     pub h: [SHA_LONG; 8],
     pub Nl: SHA_LONG,
@@ -49,6 +50,7 @@ extern "C" {
 pub type SHA_LONG64 = u64;
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct SHA512_CTX {
     pub h: [SHA_LONG64; 8],
     pub Nl: SHA_LONG64,
