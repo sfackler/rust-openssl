@@ -110,6 +110,7 @@ pub fn sha512(data: &[u8]) -> [u8; 64] {
 ///
 /// SHA1 is known to be insecure - it should not be used unless required for
 /// compatibility with existing systems.
+#[derive(Clone)]
 pub struct Sha1(ffi::SHA_CTX);
 
 impl Sha1 {
@@ -145,6 +146,7 @@ impl Sha1 {
 }
 
 /// An object which calculates a SHA224 hash of some data.
+#[derive(Clone)]
 pub struct Sha224(ffi::SHA256_CTX);
 
 impl Sha224 {
@@ -180,6 +182,7 @@ impl Sha224 {
 }
 
 /// An object which calculates a SHA256 hash of some data.
+#[derive(Clone)]
 pub struct Sha256(ffi::SHA256_CTX);
 
 impl Sha256 {
@@ -215,6 +218,7 @@ impl Sha256 {
 }
 
 /// An object which calculates a SHA384 hash of some data.
+#[derive(Clone)]
 pub struct Sha384(ffi::SHA512_CTX);
 
 impl Sha384 {
@@ -250,6 +254,7 @@ impl Sha384 {
 }
 
 /// An object which calculates a SHA512 hash of some data.
+#[derive(Clone)]
 pub struct Sha512(ffi::SHA512_CTX);
 
 impl Sha512 {
@@ -306,6 +311,20 @@ mod test {
         hasher.update(b"a");
         hasher.update(b"bc");
         assert_eq!(hex::encode(hasher.finish()), expected);
+    }
+
+    #[test]
+    fn cloning_allows_incremental_hashing() {
+        let expected = "a9993e364706816aba3e25717850c26c9cd0d89d";
+
+        let mut hasher = Sha1::new();
+        hasher.update(b"a");
+
+        let mut incr_hasher = hasher.clone();
+        incr_hasher.update(b"bc");
+
+        assert_eq!(hex::encode(incr_hasher.finish()), expected);
+        assert_ne!(hex::encode(hasher.finish()), expected);
     }
 
     #[test]
