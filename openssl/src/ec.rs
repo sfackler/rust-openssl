@@ -238,6 +238,12 @@ impl EcGroupRef {
         unsafe { ffi::EC_GROUP_order_bits(self.as_ptr()) as u32 }
     }
 
+    /// Returns the number of bytes in the group order. Implemented natively.
+    #[cfg(ossl110)]
+    pub fn order_bytes(&self) -> u32 {
+        (self.order_bits() + 7) / 8
+    }
+
     /// Returns the generator for the given curve as a [`EcPoint`].
     ///
     /// OpenSSL documentation at [`EC_GROUP_get0_generator`]
