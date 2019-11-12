@@ -228,6 +228,16 @@ impl EcGroupRef {
         unsafe { ffi::EC_GROUP_get_degree(self.as_ptr()) as u32 }
     }
 
+    /// Returns the number of bits in the group order.
+    ///
+    /// OpenSSL documentation at [`EC_GROUP_order_bits`]
+    ///
+    /// [`EC_GROUP_order_bits`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_order_bits.html
+    #[cfg(ossl110)]
+    pub fn order_bits(&self) -> u32 {
+        unsafe { ffi::EC_GROUP_order_bits(self.as_ptr()) as u32 }
+    }
+
     /// Returns the generator for the given curve as a [`EcPoint`].
     ///
     /// OpenSSL documentation at [`EC_GROUP_get0_generator`]
