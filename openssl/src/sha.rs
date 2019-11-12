@@ -314,6 +314,20 @@ mod test {
     }
 
     #[test]
+    fn cloning_allows_incremental_hashing() {
+        let expected = "a9993e364706816aba3e25717850c26c9cd0d89d";
+
+        let mut hasher = Sha1::new();
+        hasher.update(b"a");
+
+        let mut incr_hasher = hasher.clone();
+        incr_hasher.update(b"bc");
+
+        assert_eq!(hex::encode(incr_hasher.finish()), expected);
+        assert_ne!(hex::encode(hasher.finish()), expected);
+    }
+
+    #[test]
     fn standalone_224() {
         let data = b"abc";
         let expected = "23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7";
