@@ -305,7 +305,7 @@ impl<'a> Signer<'a> {
                 ptr::null_mut(),
                 &mut len,
                 ptr::null(),
-                0
+                0,
             ))?;
             Ok(len)
         }
@@ -358,12 +358,12 @@ impl<'a> Signer<'a> {
         unsafe {
             let mut sig_len = sig_buf.len();
             cvt(ffi::EVP_DigestSign(
-                    self.md_ctx,
-                    sig_buf.as_mut_ptr() as *mut _,
-                    &mut sig_len,
-                    data_buf.as_ptr() as *const _,
-                    data_buf.len()
-                    ))?;
+                self.md_ctx,
+                sig_buf.as_mut_ptr() as *mut _,
+                &mut sig_len,
+                data_buf.as_ptr() as *const _,
+                data_buf.len(),
+            ))?;
             Ok(sig_len)
         }
     }
@@ -436,13 +436,15 @@ impl<'a> Verifier<'a> {
     /// [`EVP_DigestVerifyInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestVerifyInit.html
     pub fn new_without_digest<T>(pkey: &'a PKeyRef<T>) -> Result<Verifier<'a>, ErrorStack>
     where
-        T: HasPublic
+        T: HasPublic,
     {
         Verifier::new_intern(None, pkey)
     }
 
-
-    fn new_intern<T>(type_: Option<MessageDigest>, pkey: &'a PKeyRef<T>) -> Result<Verifier<'a>, ErrorStack>
+    fn new_intern<T>(
+        type_: Option<MessageDigest>,
+        pkey: &'a PKeyRef<T>,
+    ) -> Result<Verifier<'a>, ErrorStack>
     where
         T: HasPublic,
     {
@@ -590,13 +592,13 @@ impl<'a> Verifier<'a> {
                 signature.len(),
                 buf.as_ptr() as *const _,
                 buf.len(),
-                );
+            );
             match r {
                 1 => Ok(true),
                 0 => {
                     ErrorStack::get();
                     Ok(false)
-                },
+                }
                 _ => Err(ErrorStack::get()),
             }
         }

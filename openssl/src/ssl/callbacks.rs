@@ -24,7 +24,10 @@ use pkey::Params;
 use ssl::AlpnError;
 #[cfg(ossl111)]
 use ssl::{ClientHelloResponse, ExtensionContext};
-use ssl::{SniError, Ssl, SslAlert, SslContext, SslContextRef, SslRef, SslSession, SslSessionRef, SESSION_CTX_INDEX};
+use ssl::{
+    SniError, Ssl, SslAlert, SslContext, SslContextRef, SslRef, SslSession, SslSessionRef,
+    SESSION_CTX_INDEX,
+};
 #[cfg(ossl111)]
 use x509::X509Ref;
 use x509::{X509StoreContext, X509StoreContextRef};

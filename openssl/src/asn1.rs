@@ -127,9 +127,7 @@ impl Asn1TimeRef {
         let mut seconds = 0;
         let other = compare.as_ptr();
 
-        let err = unsafe {
-            ffi::ASN1_TIME_diff(&mut days, &mut seconds, self.as_ptr(), other)
-        };
+        let err = unsafe { ffi::ASN1_TIME_diff(&mut days, &mut seconds, self.as_ptr(), other) };
 
         match err {
             0 => Err(ErrorStack::get()),
@@ -164,21 +162,27 @@ impl Asn1TimeRef {
 #[cfg(ossl102)]
 impl PartialEq for Asn1TimeRef {
     fn eq(&self, other: &Asn1TimeRef) -> bool {
-        self.diff(other).map(|t| t.days == 0 && t.secs == 0).unwrap_or(false)
+        self.diff(other)
+            .map(|t| t.days == 0 && t.secs == 0)
+            .unwrap_or(false)
     }
 }
 
 #[cfg(ossl102)]
 impl PartialEq<Asn1Time> for Asn1TimeRef {
     fn eq(&self, other: &Asn1Time) -> bool {
-        self.diff(other).map(|t| t.days == 0 && t.secs == 0).unwrap_or(false)
+        self.diff(other)
+            .map(|t| t.days == 0 && t.secs == 0)
+            .unwrap_or(false)
     }
 }
 
 #[cfg(ossl102)]
 impl<'a> PartialEq<Asn1Time> for &'a Asn1TimeRef {
     fn eq(&self, other: &Asn1Time) -> bool {
-        self.diff(other).map(|t| t.days == 0 && t.secs == 0).unwrap_or(false)
+        self.diff(other)
+            .map(|t| t.days == 0 && t.secs == 0)
+            .unwrap_or(false)
     }
 }
 
@@ -286,21 +290,27 @@ impl Asn1Time {
 #[cfg(ossl102)]
 impl PartialEq for Asn1Time {
     fn eq(&self, other: &Asn1Time) -> bool {
-        self.diff(other).map(|t| t.days == 0 && t.secs == 0).unwrap_or(false)
+        self.diff(other)
+            .map(|t| t.days == 0 && t.secs == 0)
+            .unwrap_or(false)
     }
 }
 
 #[cfg(ossl102)]
 impl PartialEq<Asn1TimeRef> for Asn1Time {
     fn eq(&self, other: &Asn1TimeRef) -> bool {
-        self.diff(other).map(|t| t.days == 0 && t.secs == 0).unwrap_or(false)
+        self.diff(other)
+            .map(|t| t.days == 0 && t.secs == 0)
+            .unwrap_or(false)
     }
 }
 
 #[cfg(ossl102)]
 impl<'a> PartialEq<&'a Asn1TimeRef> for Asn1Time {
-    fn eq(&self, other: & &'a Asn1TimeRef) -> bool {
-        self.diff(other).map(|t| t.days == 0 && t.secs == 0).unwrap_or(false)
+    fn eq(&self, other: &&'a Asn1TimeRef) -> bool {
+        self.diff(other)
+            .map(|t| t.days == 0 && t.secs == 0)
+            .unwrap_or(false)
     }
 }
 

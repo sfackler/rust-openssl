@@ -486,7 +486,6 @@ impl NameType {
 lazy_static! {
     static ref INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
     static ref SSL_INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
-
     static ref SESSION_CTX_INDEX: Index<Ssl, SslContext> = Ssl::new_ex_index().unwrap();
 }
 
@@ -880,13 +879,7 @@ impl SslContextBuilder {
     /// [`SSL_CTX_add_client_CA`]: https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_set_client_CA_list.html
     #[cfg(not(libressl))]
     pub fn add_client_ca(&mut self, cacert: &X509Ref) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::SSL_CTX_add_client_CA(
-                self.as_ptr(),
-                cacert.as_ptr()
-            ))
-            .map(|_| ())
-        }
+        unsafe { cvt(ffi::SSL_CTX_add_client_CA(self.as_ptr(), cacert.as_ptr())).map(|_| ()) }
     }
 
     /// Set the context identifier for sessions.
