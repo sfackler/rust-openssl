@@ -19,14 +19,16 @@ pub fn encode_block(src: &[u8]) -> String {
     let src_len = src.len() as c_int;
 
     let len = encoded_len(src_len).unwrap();
-    let mut out = vec![0; len as usize];
+    let mut out = Vec::new();
+    out.reserve(len as usize);
 
     // SAFETY: `encoded_len` ensures space for 4 output characters
     // for every 3 input bytes including padding and nul terminator.
     // `EVP_EncodeBlock` will write only single byte ASCII characters.
+    // `EVP_EncodeBlock` will only write to not read from `out`.
     unsafe {
         let out_len = ffi::EVP_EncodeBlock(out.as_mut_ptr(), src.as_ptr(), src_len);
-        out.truncate(out_len as usize);
+        out.set_len(out_len as usize);
         String::from_utf8_unchecked(out)
     }
 }
@@ -44,15 +46,17 @@ pub fn decode_block(src: &str) -> Result<Vec<u8>, ErrorStack> {
     let src_len = src.len() as c_int;
 
     let len = decoded_len(src_len).unwrap();
-    let mut out = vec![0; len as usize];
+    let mut out = Vec::new();
+    out.reserve(len as usize);
 
     // SAFETY: `decoded_len` ensures space for 3 output bytes
     // for every 4 input characters including padding.
     // `EVP_DecodeBlock` can write fewer bytes after stripping
     // leading and trailing whitespace, but never more.
+    // `EVP_DecodeBlock` will only write to not read from `out`.
     unsafe {
         let out_len = cvt_n(ffi::EVP_DecodeBlock(out.as_mut_ptr(), src.as_ptr(), src_len))?;
-        out.truncate(out_len as usize);
+        out.set_len(out_len as usize);
     }
 
     if src.ends_with("=") {
