@@ -13,11 +13,6 @@ environment:
       OPENSSL_VERSION: 1_0_2t
       OPENSSL_DIR: C:\OpenSSL
 
-    # mingw
-    - TARGET: x86_64-pc-windows-gnu
-      BITS: 64
-      MSYS2: 1
-
     # vcpkg
     - TARGET: x86_64-pc-windows-msvc
       VCPKG_DEFAULT_TRIPLET: x64-windows
