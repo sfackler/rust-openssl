@@ -486,7 +486,6 @@ impl NameType {
 lazy_static! {
     static ref INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
     static ref SSL_INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
-
     static ref SESSION_CTX_INDEX: Index<Ssl, SslContext> = Ssl::new_ex_index().unwrap();
 }
 
@@ -880,13 +879,7 @@ impl SslContextBuilder {
     /// [`SSL_CTX_add_client_CA`]: https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_set_client_CA_list.html
     #[cfg(not(libressl))]
     pub fn add_client_ca(&mut self, cacert: &X509Ref) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::SSL_CTX_add_client_CA(
-                self.as_ptr(),
-                cacert.as_ptr()
-            ))
-            .map(|_| ())
-        }
+        unsafe { cvt(ffi::SSL_CTX_add_client_CA(self.as_ptr(), cacert.as_ptr())).map(|_| ()) }
     }
 
     /// Set the context identifier for sessions.
@@ -1703,6 +1696,37 @@ impl SslContextBuilder {
     /// [`SSL_CTX_sess_get_cache_size`]: https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_sess_set_cache_size.html
     pub fn set_session_cache_size(&mut self, size: i32) -> i64 {
         unsafe { ffi::SSL_CTX_sess_set_cache_size(self.as_ptr(), size.into()).into() }
+    }
+
+    /// Sets the context's supported signature algorithms.
+    ///
+    /// This corresponds to [`SSL_CTX_set1_sigalgs_list`].
+    ///
+    /// Requires OpenSSL 1.0.2 or newer.
+    ///
+    /// [`SSL_CTX_set1_sigalgs_list`]: https://www.openssl.org/docs/man1.1.0/man3/SSL_CTX_set1_sigalgs_list.html
+    #[cfg(ossl102)]
+    pub fn set_sigalgs_list(&mut self, sigalgs: &str) -> Result<(), ErrorStack> {
+        let sigalgs = CString::new(sigalgs).unwrap();
+        unsafe {
+            cvt(ffi::SSL_CTX_set1_sigalgs_list(self.as_ptr(), sigalgs.as_ptr()) as c_int)
+                .map(|_| ())
+        }
+    }
+
+    /// Sets the context's supported elliptic curve groups.
+    ///
+    /// This corresponds to [`SSL_CTX_set1_groups_list`].
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
+    /// [`SSL_CTX_set1_groups_list`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set1_groups_list.html
+    #[cfg(ossl111)]
+    pub fn set_groups_list(&mut self, groups: &str) -> Result<(), ErrorStack> {
+        let groups = CString::new(groups).unwrap();
+        unsafe {
+            cvt(ffi::SSL_CTX_set1_groups_list(self.as_ptr(), groups.as_ptr()) as c_int).map(|_| ())
+        }
     }
 
     /// Consumes the builder, returning a new `SslContext`.

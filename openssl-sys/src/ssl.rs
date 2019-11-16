@@ -711,8 +711,12 @@ pub const SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP: c_int = 71;
 #[cfg(any(libressl, all(ossl101, not(ossl110))))]
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
 pub const SSL_CTRL_GET_EXTRA_CHAIN_CERTS: c_int = 82;
+#[cfg(ossl111)]
+pub const SSL_CTRL_SET_GROUPS_LIST: c_int = 92;
 #[cfg(any(libressl, all(ossl102, not(ossl110))))]
 pub const SSL_CTRL_SET_ECDH_AUTO: c_int = 94;
+#[cfg(ossl102)]
+pub const SSL_CTRL_SET_SIGALGS_LIST: c_int = 98;
 #[cfg(ossl102)]
 pub const SSL_CTRL_SET_VERIFY_CERT_STORE: c_int = 106;
 #[cfg(ossl110)]
@@ -754,6 +758,26 @@ pub unsafe fn SSL_CTX_get_extra_chain_certs(
 #[cfg(ossl102)]
 pub unsafe fn SSL_CTX_set0_verify_cert_store(ctx: *mut SSL_CTX, st: *mut X509_STORE) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_VERIFY_CERT_STORE, 0, st as *mut c_void)
+}
+
+#[cfg(ossl111)]
+pub unsafe fn SSL_CTX_set1_groups_list(ctx: *mut SSL_CTX, s: *const c_char) -> c_long {
+    SSL_CTX_ctrl(
+        ctx,
+        SSL_CTRL_SET_GROUPS_LIST,
+        0,
+        s as *const c_void as *mut c_void,
+    )
+}
+
+#[cfg(ossl102)]
+pub unsafe fn SSL_CTX_set1_sigalgs_list(ctx: *mut SSL_CTX, s: *const c_char) -> c_long {
+    SSL_CTX_ctrl(
+        ctx,
+        SSL_CTRL_SET_SIGALGS_LIST,
+        0,
+        s as *const c_void as *mut c_void,
+    )
 }
 
 #[cfg(any(libressl, all(ossl102, not(ossl110))))]
