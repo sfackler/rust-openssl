@@ -140,6 +140,7 @@ mod bio;
 mod util;
 pub mod aes;
 pub mod asn1;
+pub mod base64;
 pub mod bn;
 #[cfg(not(libressl))]
 pub mod cms;
