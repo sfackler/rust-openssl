@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## [v0.10.26] - 2019-11-22
+
+### Fixed
+
+* Fixed improper handling of the IV buffer in `envelope::{Seal, Unseal}`.
+
+### Added
+
+* Added `Asn1TimeRef::{diff, compare}`.
+* Added `Asn1Time::from_unix`.
+* Added `PartialEq` and `PartialOrd` implementations for `Asn1Time` and `Asn1TimeRef`.
+* Added `base64::{encode_block, decode_block}`.
+* Added `EcGroupRef::order_bits`.
+* Added `Clone` implementations for `Sha1`, `Sha224`, `Sha256`, `Sha384`, and `Sha512`.
+* Added `SslContextBuilder::{set_sigalgs_list, set_groups_list}`.
+
 ## [v0.10.25] - 2019-10-02
 
 ### Fixed
@@ -398,7 +414,9 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.24...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.26...master
+[v0.10.26]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.25...openssl-v0.10.26
+[v0.10.25]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.24...openssl-v0.10.25
 [v0.10.24]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.23...openssl-v0.10.24
 [v0.10.23]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.22...openssl-v0.10.23
 [v0.10.22]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.21...openssl-v0.10.22
