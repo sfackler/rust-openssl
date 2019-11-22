@@ -64,7 +64,7 @@ impl Seal {
                 enc_key_ptrs.push(enc_key_ptr);
                 pub_key_ptrs.push(key.as_ptr());
             }
-            let mut iv = cipher.iv_len().map(|len| Vec::with_capacity(len));
+            let mut iv = cipher.iv_len().map(|len| vec![0; len]);
             let iv_ptr = iv.as_mut().map_or(ptr::null_mut(), |v| v.as_mut_ptr());
             let mut enc_key_lens = vec![0; enc_keys.len()];
 
@@ -176,7 +176,12 @@ impl Open {
     {
         unsafe {
             assert!(encrypted_key.len() <= c_int::max_value() as usize);
-            assert!(cipher.iv_len().is_none() || iv.is_some());
+            match (cipher.iv_len(), iv) {
+                (Some(len), Some(iv)) => assert_eq!(len, iv.len(), "IV length mismatch"),
+                (None, None) => {}
+                (Some(_), None) => panic!("an IV was required but not provided"),
+                (None, Some(_)) => panic!("an IV was provided but not required"),
+            }
 
             let ctx = cvt_p(ffi::EVP_CIPHER_CTX_new())?;
             cvt(ffi::EVP_OpenInit(
