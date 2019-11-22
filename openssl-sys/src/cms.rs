@@ -10,7 +10,11 @@ extern "C" {
     pub fn i2d_CMS_ContentInfo(a: *mut ::CMS_ContentInfo, pp: *mut *mut c_uchar) -> c_int;
 
     #[cfg(ossl101)]
-    pub fn d2i_CMS_ContentInfo(a: *mut *mut ::CMS_ContentInfo, pp: *mut *const c_uchar, length: c_long) -> *mut ::CMS_ContentInfo;
+    pub fn d2i_CMS_ContentInfo(
+        a: *mut *mut ::CMS_ContentInfo,
+        pp: *mut *const c_uchar,
+        length: c_long,
+    ) -> *mut ::CMS_ContentInfo;
 }
 
 #[cfg(ossl101)]
@@ -76,7 +80,7 @@ extern "C" {
         certs: *mut stack_st_X509,
         data: *mut ::BIO,
         cipher: *const EVP_CIPHER,
-        flags: c_uint
+        flags: c_uint,
     ) -> *mut ::CMS_ContentInfo;
 
     #[cfg(ossl101)]

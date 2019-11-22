@@ -1,8 +1,8 @@
+extern crate autocfg;
 extern crate cc;
 #[cfg(feature = "vendored")]
 extern crate openssl_src;
 extern crate pkg_config;
-extern crate autocfg;
 #[cfg(target_env = "msvc")]
 extern crate vcpkg;
 

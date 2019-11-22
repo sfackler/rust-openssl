@@ -288,7 +288,11 @@ impl EcGroupRef {
     /// [`EC_GROUP_get_curve_name`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_get_curve_name.html
     pub fn curve_name(&self) -> Option<Nid> {
         let nid = unsafe { ffi::EC_GROUP_get_curve_name(self.as_ptr()) };
-        if nid > 0 { Some(Nid::from_raw(nid)) } else { None }
+        if nid > 0 {
+            Some(Nid::from_raw(nid))
+        } else {
+            None
+        }
     }
 }
 
@@ -461,13 +465,8 @@ impl EcPointRef {
     /// OpenSSL documentation at [`EC_POINT_dup`]
     ///
     /// [`EC_POINT_dup`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_dup.html
-    pub fn to_owned(
-        &self,
-        group: &EcGroupRef,
-    ) -> Result<EcPoint, ErrorStack> {
-        unsafe {
-            cvt_p(ffi::EC_POINT_dup(self.as_ptr(), group.as_ptr())).map(EcPoint)
-        }
+    pub fn to_owned(&self, group: &EcGroupRef) -> Result<EcPoint, ErrorStack> {
+        unsafe { cvt_p(ffi::EC_POINT_dup(self.as_ptr(), group.as_ptr())).map(EcPoint) }
     }
 
     /// Determines if this point is equal to another.
@@ -911,7 +910,7 @@ mod test {
     fn cofactor() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let mut ctx = BigNumContext::new().unwrap();
-	let mut cofactor = BigNum::new().unwrap();
+        let mut cofactor = BigNum::new().unwrap();
         group.cofactor(&mut cofactor, &mut ctx).unwrap();
         let one = BigNum::from_u32(1).unwrap();
         assert_eq!(cofactor, one);

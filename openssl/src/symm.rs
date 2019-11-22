@@ -544,7 +544,11 @@ impl Crypter {
     /// Panics if `output.len() > c_int::max_value()`.
     pub fn update(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
-            let block_size = if self.block_size > 1 { self.block_size } else { 0 };
+            let block_size = if self.block_size > 1 {
+                self.block_size
+            } else {
+                0
+            };
             assert!(output.len() >= input.len() + block_size);
             assert!(output.len() <= c_int::max_value() as usize);
             let mut outl = output.len() as c_int;
@@ -575,7 +579,9 @@ impl Crypter {
     /// where `block_size` is the block size of the cipher (see `Cipher::block_size`).
     pub fn finalize(&mut self, output: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
-            if self.block_size > 1 { assert!(output.len() >= self.block_size); }
+            if self.block_size > 1 {
+                assert!(output.len() >= self.block_size);
+            }
             let mut outl = cmp::min(output.len(), c_int::max_value() as usize) as c_int;
 
             cvt(ffi::EVP_CipherFinal(
@@ -811,7 +817,8 @@ mod tests {
             super::Mode::Encrypt,
             &key,
             Some(&iv),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(c.update(&[0u8; 15], &mut [0u8; 15]).unwrap(), 15);
         assert_eq!(c.update(&[0u8; 1], &mut [0u8; 1]).unwrap(), 1);
