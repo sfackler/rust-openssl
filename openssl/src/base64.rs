@@ -1,19 +1,18 @@
-//! Utilities for base64 coding
-//!
-//! See manual page of [`EVP_EncodeInit`] for more information on the specific base64 variant.
-//!
-//! [`EVP_EncodeInit`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_EncodeInit.html
+//! Base64 encoding support.
 use cvt_n;
 use error::ErrorStack;
 use ffi;
 use libc::c_int;
 
-/// Encodes a given block of bytes to base64.
+/// Encodes a slice of bytes to a base64 string.
+///
+/// This corresponds to [`EVP_EncodeBlock`].
 ///
 /// # Panics
 ///
-/// Panics if the input length or computed output length
-/// overflow a signed C integer.
+/// Panics if the input length or computed output length overflow a signed C integer.
+///
+/// [`EVP_EncodeBlock`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_DecodeBlock.html
 pub fn encode_block(src: &[u8]) -> String {
     assert!(src.len() <= c_int::max_value() as usize);
     let src_len = src.len() as c_int;
@@ -32,12 +31,15 @@ pub fn encode_block(src: &[u8]) -> String {
     }
 }
 
-/// Decodes a given base64-encoded text to bytes.
+/// Decodes a base64-encoded string to bytes.
+///
+/// This corresponds to [`EVP_DecodeBlock`].
 ///
 /// # Panics
 ///
-/// Panics if the input length or computed output length
-/// overflow a signed C integer.
+/// Panics if the input length or computed output length overflow a signed C integer.
+///
+/// [`EVP_DecodeBlock`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_DecodeBlock.html
 pub fn decode_block(src: &str) -> Result<Vec<u8>, ErrorStack> {
     let src = src.trim();
 
