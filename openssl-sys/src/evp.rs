@@ -211,6 +211,7 @@ extern "C" {
         ptr: *mut c_void,
     ) -> c_int;
 
+    pub fn EVP_md_null() -> *const EVP_MD;
     pub fn EVP_md5() -> *const EVP_MD;
     pub fn EVP_sha1() -> *const EVP_MD;
     pub fn EVP_sha224() -> *const EVP_MD;

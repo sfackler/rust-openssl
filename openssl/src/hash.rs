@@ -40,6 +40,10 @@ impl MessageDigest {
         }
     }
 
+    pub fn null() -> MessageDigest {
+        unsafe { MessageDigest(ffi::EVP_md_null()) }
+    }
+
     pub fn md5() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_md5()) }
     }
