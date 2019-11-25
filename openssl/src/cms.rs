@@ -376,7 +376,7 @@ mod recipient_info {
         /// Implementation of [`CMS_RecipientInfo_ktri_get0_signer_id`].
         ///
         /// [`CMS_RecipientInfo_ktri_get0_signer_id`]: https://www.openssl.org/docs/manmaster/man3/CMS_RecipientInfo_decrypt.html
-        pub fn get_recipient_info<'cms>(&self) -> Result<RecipientInfo<'cms>, ErrorStack> {
+        pub fn get_recipient_info<'cms>(&'cms self) -> Result<RecipientInfo<'cms>, ErrorStack> {
             unsafe {
                 let mut key_id = ptr::null_mut();
                 let mut issuer = ptr::null_mut();
