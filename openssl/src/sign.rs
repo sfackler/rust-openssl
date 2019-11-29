@@ -63,7 +63,7 @@
 //! ```
 use ffi;
 use foreign_types::ForeignTypeRef;
-use libc::c_int;
+use libc::{c_int, c_void};
 use std::io::{self, Write};
 use std::marker::PhantomData;
 use std::ptr;
@@ -152,6 +152,53 @@ impl<'a> Signer<'a> {
         T: HasPrivate,
     {
         Self::new_intern(None, pkey)
+    }
+
+    /// Creates a new `Signer` with an id.
+    ///
+    /// This is the only way to create a `Signer` for SM2 keys.
+    ///
+    /// OpenSSL documentation at [`SM2`].
+    ///
+    /// [`SM2`]: https://www.openssl.org/docs/manmaster/man7/SM2.html
+    #[cfg(ossl111)]
+    pub fn new_with_id<T>(
+        type_: MessageDigest,
+        pkey: &'a PKeyRef<T>,
+        id: &[u8],
+    ) -> Result<Signer<'a>, ErrorStack>
+    where
+        T: HasPrivate,
+    {
+        unsafe {
+            ffi::init();
+
+            let ctx = cvt_p(EVP_MD_CTX_new())?;
+            let pctx = cvt_p(ffi::EVP_PKEY_CTX_new(pkey.as_ptr(), ptr::null_mut()))?;
+            cvt(ffi::EVP_PKEY_CTX_set1_id(
+                pctx,
+                id.as_ptr() as *const c_void,
+                id.len(),
+            ))?;
+            ffi::EVP_MD_CTX_set_pkey_ctx(ctx, pctx);
+            let r = ffi::EVP_DigestSignInit(
+                ctx,
+                ptr::null_mut(),
+                type_.as_ptr(),
+                ptr::null_mut(),
+                pkey.as_ptr(),
+            );
+            if r != 1 {
+                EVP_MD_CTX_free(ctx);
+                return Err(ErrorStack::get());
+            }
+
+            Ok(Signer {
+                md_ctx: ctx,
+                pctx,
+                _p: PhantomData,
+            })
+        }
     }
 
     pub fn new_intern<T>(
@@ -439,6 +486,45 @@ impl<'a> Verifier<'a> {
         T: HasPublic,
     {
         Verifier::new_intern(None, pkey)
+    }
+
+    pub fn new_with_id<T>(
+        type_: MessageDigest,
+        pkey: &'a PKeyRef<T>,
+        id: &[u8],
+    ) -> Result<Verifier<'a>, ErrorStack>
+    where
+        T: HasPublic,
+    {
+        unsafe {
+            ffi::init();
+
+            let ctx = cvt_p(EVP_MD_CTX_new())?;
+            let mut pctx = cvt_p(ffi::EVP_PKEY_CTX_new(pkey.as_ptr(), ptr::null_mut()))?;
+            cvt(ffi::EVP_PKEY_CTX_set1_id(
+                pctx,
+                id.as_ptr() as *const c_void,
+                id.len(),
+            ))?;
+            ffi::EVP_MD_CTX_set_pkey_ctx(ctx, pctx);
+            let r = ffi::EVP_DigestVerifyInit(
+                ctx,
+                &mut pctx,
+                type_.as_ptr(),
+                ptr::null_mut(),
+                pkey.as_ptr(),
+            );
+            if r != 1 {
+                EVP_MD_CTX_free(ctx);
+                return Err(ErrorStack::get());
+            }
+
+            Ok(Verifier {
+                md_ctx: ctx,
+                pctx,
+                pkey_pd: PhantomData,
+            })
+        }
     }
 
     fn new_intern<T>(
@@ -863,5 +949,55 @@ mod test {
         verifier.set_rsa_mgf1_md(MessageDigest::sha256()).unwrap();
         verifier.update(&Vec::from_hex(INPUT).unwrap()).unwrap();
         assert!(verifier.verify(&signature).unwrap());
+    }
+
+    #[test]
+    #[cfg(ossl111)]
+    fn test_sm2_sm3() {
+        let id = "ALICE123@YAHOO.COM";
+        let msg = "message digest";
+
+        let group = EcGroup::from_curve_name(Nid::SM2).unwrap();
+        let key = EcKey::generate(&group).unwrap();
+        let mut pkey = PKey::from_ec_key(key).unwrap();
+        pkey.set_alias_type(Nid::SM2).unwrap();
+
+        let mut signer = Signer::new_with_id(MessageDigest::sm3(), &pkey, id.as_ref()).unwrap();
+        signer.update(msg.as_ref()).unwrap();
+        let signature = signer.sign_to_vec().unwrap();
+
+        let mut verifier = Verifier::new_with_id(MessageDigest::sm3(), &pkey, id.as_ref()).unwrap();
+        verifier.update(msg.as_ref()).unwrap();
+        assert!(verifier.verify(&signature).unwrap());
+    }
+
+    // From https://tools.ietf.org/html/draft-shen-sm2-ecdsa-02#appendix-A
+    #[test]
+    fn test_sm2_verify() {
+        let pubkey = "-----BEGIN PUBLIC KEY-----\n\
+                      MIIBMzCB7AYHKoZIzj0CATCB4AIBATAsBgcqhkjOPQEBAiEAhULWnkwETxjouSQ1\n\
+                      v2/33kVyg5FcRVF9ci7biwjx38MwRAQgeHlotPoyw/0kF4Quc7v+/y88hItoMdfg\n\
+                      7GUiizk35JgEIGPkxtOyOwyEnPhCQUhL/kj2HVmlsWugbm4S0donxSSaBEEEQh3r\n\
+                      1hti6rZ0ZDTrw8wxXjIiCzut1QvcTE5sFH/t1D0GgFEry7QsB9RzSdIVO3DE5df9\n\
+                      /L+jbqGoWEG55G4JogIhAIVC1p5MBE8Y6LkkNb9v990pdyBjBIVijVrnTufDLnm3\n\
+                      AgEBA0IABArkx3mKoPEZRxvuEYJb5GICu3nipYRElel8BP9N8lSKfAJA+I8c1OFj\n\
+                      Uqc8F7fxbwc1PlOhdtaEqf4Ma7eY6Fc=\n\
+                      -----END PUBLIC KEY-----\n";
+        let msg = "message digest";
+        let id = "ALICE123@YAHOO.COM";
+        let signature: Vec<u8> = vec![
+            0x30, 0x44, 0x02, 0x20, 0x40, 0xF1, 0xEC, 0x59, 0xF7, 0x93, 0xD9, 0xF4, 0x9E, 0x09,
+            0xDC, 0xEF, 0x49, 0x13, 0x0D, 0x41, 0x94, 0xF7, 0x9F, 0xB1, 0xEE, 0xD2, 0xCA, 0xA5,
+            0x5B, 0xAC, 0xDB, 0x49, 0xC4, 0xE7, 0x55, 0xD1, 0x02, 0x20, 0x6F, 0xC6, 0xDA, 0xC3,
+            0x2C, 0x5D, 0x5C, 0xF1, 0x0C, 0x77, 0xDF, 0xB2, 0x0F, 0x7C, 0x2E, 0xB6, 0x67, 0xA4,
+            0x57, 0x87, 0x2F, 0xB0, 0x9E, 0xC5, 0x63, 0x27, 0xA6, 0x7E, 0xC7, 0xDE, 0xEB, 0xE7,
+        ];
+
+        let mut pkey = PKey::public_key_from_pem(pubkey.as_bytes()).unwrap();
+        pkey.set_alias_type(Nid::SM2).unwrap();
+        let mut verifier =
+            Verifier::new_with_id(MessageDigest::sm3(), &pkey, id.as_bytes()).unwrap();
+        verifier.update(msg.as_bytes()).unwrap();
+        assert!(verifier.verify(signature.as_ref()).unwrap());
     }
 }
