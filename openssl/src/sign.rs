@@ -488,6 +488,13 @@ impl<'a> Verifier<'a> {
         Verifier::new_intern(None, pkey)
     }
 
+    /// Creates a new `Verifier` without an id.
+    ///
+    /// This is the only way to create a `Verifier` for SM2 keys.
+    ///
+    /// OpenSSL documentation at [`SM2`].
+    ///
+    /// [`SM2`]: https://www.openssl.org/docs/manmaster/man7/SM2.html
     pub fn new_with_id<T>(
         type_: MessageDigest,
         pkey: &'a PKeyRef<T>,
