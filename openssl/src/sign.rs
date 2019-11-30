@@ -495,6 +495,7 @@ impl<'a> Verifier<'a> {
     /// OpenSSL documentation at [`SM2`].
     ///
     /// [`SM2`]: https://www.openssl.org/docs/manmaster/man7/SM2.html
+    #[cfg(ossl111)]
     pub fn new_with_id<T>(
         type_: MessageDigest,
         pkey: &'a PKeyRef<T>,
@@ -980,6 +981,7 @@ mod test {
 
     // From https://tools.ietf.org/html/draft-shen-sm2-ecdsa-02#appendix-A
     #[test]
+    #[cfg(ossl111)]
     fn test_sm2_verify() {
         let pubkey = "-----BEGIN PUBLIC KEY-----\n\
                       MIIBMzCB7AYHKoZIzj0CATCB4AIBATAsBgcqhkjOPQEBAiEAhULWnkwETxjouSQ1\n\
