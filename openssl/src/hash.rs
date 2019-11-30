@@ -605,6 +605,7 @@ mod tests {
     // GB/T 32905-2016
     // http://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=45B1A67F20F3BF339211C391E9278F5E
     #[test]
+    #[cfg(ossl111)]
     fn test_sm3() {
         let tests = [(
             "616263",
