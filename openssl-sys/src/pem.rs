@@ -141,9 +141,6 @@ extern "C" {
         bp: *mut BIO,
         x: *mut *mut PKCS8_PRIV_KEY_INFO,
     ) -> *mut PKCS8_PRIV_KEY_INFO;
-    pub fn EVP_PKCS82PKEY(
-        p8: *const PKCS8_PRIV_KEY_INFO,
-    ) -> *mut EVP_PKEY;
 
     pub fn PEM_read_bio_PKCS7(
         bio: *mut BIO,
