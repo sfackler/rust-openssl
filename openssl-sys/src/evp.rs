@@ -403,7 +403,18 @@ extern "C" {
 
     pub fn EVP_PKEY_keygen_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
     pub fn EVP_PKEY_keygen(ctx: *mut EVP_PKEY_CTX, key: *mut *mut EVP_PKEY) -> c_int;
-    pub fn EVP_PKCS82PKEY(p8: *mut PKCS8_PRIV_KEY_INFO) -> *mut EVP_PKEY;
+}
+
+cfg_if! {
+    if #[cfg(any(ossl110, libressl280))] {
+        extern "C" {
+            pub fn EVP_PKCS82PKEY(p8: *const PKCS8_PRIV_KEY_INFO) -> *mut EVP_PKEY;
+        }
+    } else {
+        extern "C" {
+            pub fn EVP_PKCS82PKEY(p8: *mut PKCS8_PRIV_KEY_INFO) -> *mut EVP_PKEY;
+        }
+    }
 }
 
 extern "C" {
