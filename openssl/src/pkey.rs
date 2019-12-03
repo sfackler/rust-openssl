@@ -538,8 +538,10 @@ impl PKey<Private> {
                 bio.as_ptr(),
                 ptr::null_mut(),
             ))?;
-            cvt_p(ffi::EVP_PKCS82PKEY(p8inf))
-                .map(|p| PKey::from_ptr(p))
+            let res = cvt_p(ffi::EVP_PKCS82PKEY(p8inf))
+                .map(|p| PKey::from_ptr(p));
+            ffi::PKCS8_PRIV_KEY_INFO_free(p8inf);
+            res
         }
     }
 
