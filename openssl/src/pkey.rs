@@ -47,7 +47,7 @@
 
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::c_int;
+use libc::{c_int, c_long};
 use std::ffi::CString;
 use std::mem;
 use std::ptr;
@@ -524,6 +524,28 @@ impl PKey<Private> {
         ffi::d2i_AutoPrivateKey
     }
 
+    /// Deserializes a DER-formatted PKCS#8 unencrypted private key.
+    ///
+    /// This method is mainly for interoperability reasons. Encrypted keyfiles should be preferred.
+    pub fn private_key_from_pkcs8(
+        der: &[u8],
+    ) -> Result<PKey<Private>, ErrorStack>
+    {
+        unsafe {
+            ffi::init();
+            let len = der.len().min(c_long::max_value() as usize) as c_long;
+            let p8inf = cvt_p(ffi::d2i_PKCS8_PRIV_KEY_INFO(
+                ptr::null_mut(),
+                &mut der.as_ptr(),
+                len,
+            ))?;
+            let res = cvt_p(ffi::EVP_PKCS82PKEY(p8inf))
+                .map(|p| PKey::from_ptr(p));
+            ffi::PKCS8_PRIV_KEY_INFO_free(p8inf);
+            res
+        }
+    }
+
     /// Deserializes a DER-formatted PKCS#8 private key, using a callback to retrieve the password
     /// if the key is encrpyted.
     ///
@@ -637,6 +659,12 @@ mod tests {
             .unwrap();
         PKey::private_key_from_pem_passphrase(&pem, b"foobar").unwrap();
         assert!(PKey::private_key_from_pem_passphrase(&pem, b"fizzbuzz").is_err());
+    }
+
+    #[test]
+    fn test_unencrypted_pkcs8() {
+        let key = include_bytes!("../test/pkcs8-nocrypt.der");
+        PKey::private_key_from_pkcs8(key).unwrap();
     }
 
     #[test]
