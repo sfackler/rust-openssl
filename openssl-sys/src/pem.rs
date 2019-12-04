@@ -137,9 +137,10 @@ extern "C" {
         cb: pem_password_cb,
         u: *mut c_void,
     ) -> *mut EVP_PKEY;
-    pub fn d2i_PKCS8_PRIV_KEY_INFO_bio(
-        bp: *mut BIO,
-        x: *mut *mut PKCS8_PRIV_KEY_INFO,
+    pub fn d2i_PKCS8_PRIV_KEY_INFO(
+        k: *mut *mut PKCS8_PRIV_KEY_INFO,
+        buf: *mut *const u8,
+        length: c_long,
     ) -> *mut PKCS8_PRIV_KEY_INFO;
     pub fn PKCS8_PRIV_KEY_INFO_free(
         p8inf: *mut PKCS8_PRIV_KEY_INFO,

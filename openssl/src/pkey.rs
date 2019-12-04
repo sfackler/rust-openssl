@@ -47,7 +47,7 @@
 
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::c_int;
+use libc::{c_int, c_long};
 use std::ffi::CString;
 use std::mem;
 use std::ptr;
@@ -533,10 +533,11 @@ impl PKey<Private> {
     {
         unsafe {
             ffi::init();
-            let bio = MemBioSlice::new(der)?;
-            let p8inf = cvt_p(ffi::d2i_PKCS8_PRIV_KEY_INFO_bio(
-                bio.as_ptr(),
+            let len = der.len().min(c_long::max_value() as usize) as c_long;
+            let p8inf = cvt_p(ffi::d2i_PKCS8_PRIV_KEY_INFO(
                 ptr::null_mut(),
+                &mut der.as_ptr(),
+                len,
             ))?;
             let res = cvt_p(ffi::EVP_PKCS82PKEY(p8inf))
                 .map(|p| PKey::from_ptr(p));
