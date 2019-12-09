@@ -104,7 +104,7 @@ foreign_type_and_impl_send_sync! {
     /// using certificates.  If Asn1Time is set using a string, it must
     /// be in either YYMMDDHHMMSSZ, YYYYMMDDHHMMSSZ, or another ASN.1 format.
     ///
-    /// [ASN_TIME_set] documentation at OpenSSL explains the ASN.1 implementaiton
+    /// [ASN_TIME_set] documentation at OpenSSL explains the ASN.1 implementation
     /// used by OpenSSL.
     ///
     /// [ASN_TIME_set]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_TIME_set.html
