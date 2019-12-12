@@ -2220,7 +2220,7 @@ impl SslSessionRef {
     ///
     /// This corresponds to [`SSL_SESSION_get_protocol_version`].
     ///
-    /// [`SSL_SESSION_get_protocol_version`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_SESSION_get_time.html
+    /// [`SSL_SESSION_get_protocol_version`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_SESSION_get_protocol_version.html
     #[cfg(ossl110)]
     pub fn protocol_version(&self) -> SslVersion {
         unsafe {
