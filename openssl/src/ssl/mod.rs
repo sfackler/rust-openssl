@@ -2594,7 +2594,7 @@ impl SslRef {
         }
     }
 
-    /// Returns the verified certificate chani of the peer, including the leaf certificate.
+    /// Returns the verified certificate chain of the peer, including the leaf certificate.
     ///
     /// If verification was not successful (i.e. [`verify_result`] does not return
     /// [`X509VerifyResult::OK`]), this chain may be incomplete or invalid.
