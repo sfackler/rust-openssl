@@ -868,13 +868,46 @@ impl BigNumRef {
     /// assert_eq!(BigNum::from_slice(&s_vec).unwrap(), r);
     /// ```
     pub fn to_vec(&self) -> Vec<u8> {
-        let size = self.num_bytes() as usize;
-        let mut v = Vec::with_capacity(size);
-        unsafe {
-            ffi::BN_bn2bin(self.as_ptr(), v.as_mut_ptr());
-            v.set_len(size);
-        }
+        let mut v = vec![0u8; self.num_bytes() as usize];
+        self.to_slice(&mut v).unwrap();
         v
+    }
+
+    /// Encodes the absolute value of `self` into a big-endian buffer.
+    ///
+    /// `self` can be recreated by using `from_slice`.
+    ///
+    /// This method fails if the buffer is not large enough. If the
+    /// buffer is larger than necessary, the number is prefixed by
+    /// zeroes so that the result is always a valid big-endian number.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let s = -BigNum::from_u32(4543).unwrap();
+    /// let r = BigNum::from_u32(4543).unwrap();
+    ///
+    /// let mut b = [0u8; 4];
+    /// s.to_slice(&mut b).unwrap();
+    /// assert_eq!(BigNum::from_slice(&b).unwrap(), r);
+    ///
+    /// let mut b = [0u8; 1];
+    /// assert_eq!(s.to_slice(&mut b), Err(()));
+    /// ```
+    pub fn to_slice(&self, buf: &mut [u8]) -> Result<(), ()> {
+        let ilen = self.num_bytes() as usize;
+        let olen = buf.len();
+        if olen < ilen {
+            return Err(());
+        }
+
+        let (zero, data) = buf.split_at_mut(olen - ilen);
+
+        unsafe {
+            core::ptr::write_bytes(zero.as_mut_ptr(), 0, zero.len());
+            ffi::BN_bn2bin(self.as_ptr(), data.as_mut_ptr());
+        }
+
+        Ok(())
     }
 
     /// Returns a decimal string representation of `self`.
@@ -1373,10 +1406,17 @@ mod tests {
     #[test]
     fn test_to_from_slice() {
         let v0 = BigNum::from_u32(10203004).unwrap();
+
         let vec = v0.to_vec();
         let v1 = BigNum::from_slice(&vec).unwrap();
+        assert_eq!(v0, v1);
 
-        assert!(v0 == v1);
+        let mut buf = [1u8; 4];
+        v0.to_slice(&mut buf).unwrap();
+        let v2 = BigNum::from_slice(&buf).unwrap();
+        assert_eq!(v0, v2);
+
+        assert_eq!(v0.to_slice(&mut [1u8; 2]), Err(()));
     }
 
     #[test]
