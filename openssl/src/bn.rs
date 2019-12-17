@@ -1399,6 +1399,42 @@ impl Neg for BigNum {
     }
 }
 
+macro_rules! mkconvert {
+    ($($t:ty)+) => {
+        $(
+            impl core::convert::TryFrom<$t> for BigNum {
+                type Error = ErrorStack;
+
+                fn try_from(value: $t) -> Result<Self, ErrorStack> {
+                    BigNum::from_slice(&value.to_be_bytes())
+                }
+            }
+
+            impl core::convert::TryFrom<&BigNum> for $t {
+                type Error = ();
+
+                fn try_from(value: &BigNum) -> Result<Self, ()> {
+                    let mut buf = Self::default().to_ne_bytes(); // Zero
+                    value.to_slice(&mut buf)?;
+                    Ok(Self::from_be_bytes(buf))
+                }
+            }
+
+            impl core::convert::TryFrom<&BigNumRef> for $t {
+                type Error = ();
+
+                fn try_from(value: &BigNumRef) -> Result<Self, ()> {
+                    let mut buf = Self::default().to_ne_bytes(); // Zero
+                    value.to_slice(&mut buf)?;
+                    Ok(Self::from_be_bytes(buf))
+                }
+            }
+        )+
+    };
+}
+
+mkconvert!(u8 u16 u32 u64 u128 usize);
+
 #[cfg(test)]
 mod tests {
     use bn::{BigNum, BigNumContext};
@@ -1460,5 +1496,30 @@ mod tests {
         let mut ctx = BigNumContext::new().unwrap();
         assert!(p.is_prime(100, &mut ctx).unwrap());
         assert!(p.is_prime_fasttest(100, &mut ctx, true).unwrap());
+    }
+
+    #[test]
+    fn test_conversion() {
+        use std::convert::*;
+
+        // Test that conversion from integer to BigNum works.
+        assert_eq!(BigNum::try_from(255u8).unwrap(), BigNum::from_u32(255).unwrap());
+        assert_eq!(BigNum::try_from(256u16).unwrap(), BigNum::from_u32(256).unwrap());
+        assert_eq!(BigNum::try_from(256u32).unwrap(), BigNum::from_u32(256).unwrap());
+        assert_eq!(BigNum::try_from(256u64).unwrap(), BigNum::from_u32(256).unwrap());
+        assert_eq!(BigNum::try_from(256u128).unwrap(), BigNum::from_u32(256).unwrap());
+        assert_eq!(BigNum::try_from(256usize).unwrap(), BigNum::from_u32(256).unwrap());
+
+        // Test that conversion from BigNum to integer works.
+        assert_eq!(u8::try_from(&BigNum::from_u32(17).unwrap()).unwrap(), 17u8);
+        assert_eq!(u16::try_from(&BigNum::from_u32(17).unwrap()).unwrap(), 17u16);
+        assert_eq!(u32::try_from(&BigNum::from_u32(17).unwrap()).unwrap(), 17u32);
+        assert_eq!(u64::try_from(&BigNum::from_u32(17).unwrap()).unwrap(), 17u64);
+        assert_eq!(u128::try_from(&BigNum::from_u32(17).unwrap()).unwrap(), 17u128);
+        assert_eq!(usize::try_from(&BigNum::from_u32(17).unwrap()).unwrap(), 17usize);
+
+        // Test that conversion from BigNum to integer fails when the BigNum is too large.
+        assert_eq!(u8::try_from(&*BigNum::from_u32(u32::max_value()).unwrap()), Err(()));
+        assert_eq!(u16::try_from(&*BigNum::from_u32(u32::max_value()).unwrap()), Err(()));
     }
 }
