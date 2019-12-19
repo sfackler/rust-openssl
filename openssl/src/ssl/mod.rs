@@ -885,7 +885,7 @@ impl SslContextBuilder {
     /// Set the context identifier for sessions.
     ///
     /// This value identifies the server's session cache to clients, telling them when they're
-    /// able to reuse sessions. It should be be set to a unique value per server, unless multiple
+    /// able to reuse sessions. It should be set to a unique value per server, unless multiple
     /// servers share a session cache.
     ///
     /// This value should be set when using client certificates, or each request will fail its
@@ -956,7 +956,8 @@ impl SslContextBuilder {
 
     /// Sets the leaf certificate.
     ///
-    /// Use `add_extra_chain_cert` to add the remainder of the certificate chain.
+    /// This chain should contain all certificates necessary to go from the certificate specified by
+    /// `set_certificate` to a trusted root.
     ///
     /// This corresponds to [`SSL_CTX_use_certificate`].
     ///
@@ -967,8 +968,7 @@ impl SslContextBuilder {
 
     /// Appends a certificate to the certificate chain.
     ///
-    /// This chain should contain all certificates necessary to go from the certificate specified by
-    /// `set_certificate` to a trusted root.
+    /// Use `add_extra_chain_cert` to add the remainder of the certificate chain.
     ///
     /// This corresponds to [`SSL_CTX_add_extra_chain_cert`].
     ///
@@ -1016,14 +1016,14 @@ impl SslContextBuilder {
 
     /// Sets the list of supported ciphers for protocols before TLSv1.3.
     ///
-    /// The `set_ciphersuites` method controls the cipher suites for TLSv1.3.
+    /// The `set_cipher_list` method controls the cipher suites for protocols before TLSv1.3.
     ///
     /// See [`ciphers`] for details on the format.
     ///
     /// This corresponds to [`SSL_CTX_set_cipher_list`].
     ///
     /// [`ciphers`]: https://www.openssl.org/docs/man1.1.0/apps/ciphers.html
-    /// [`SSL_CTX_set_cipher_list`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get_client_ciphers.html
+    /// [`SSL_CTX_set_cipher_list`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_cipher_list.html
     pub fn set_cipher_list(&mut self, cipher_list: &str) -> Result<(), ErrorStack> {
         let cipher_list = CString::new(cipher_list).unwrap();
         unsafe {
@@ -1037,7 +1037,7 @@ impl SslContextBuilder {
 
     /// Sets the list of supported ciphers for the TLSv1.3 protocol.
     ///
-    /// The `set_cipher_list` method controls lthe cipher suites for protocols before TLSv1.3.
+    /// The `set_ciphersuites` method controls the cipher suites for TLSv1.3.
     ///
     /// The format consists of TLSv1.3 ciphersuite names separated by `:` characters in order of
     /// preference.
