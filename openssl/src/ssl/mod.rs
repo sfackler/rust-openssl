@@ -1037,7 +1037,7 @@ impl SslContextBuilder {
 
     /// Sets the list of supported ciphers for the TLSv1.3 protocol.
     ///
-    /// The `set_cipher_list` method controls lthe cipher suites for protocols before TLSv1.3.
+    /// The `set_cipher_list` method controls the cipher suites for protocols before TLSv1.3.
     ///
     /// The format consists of TLSv1.3 ciphersuite names separated by `:` characters in order of
     /// preference.
