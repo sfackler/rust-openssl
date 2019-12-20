@@ -1023,7 +1023,7 @@ impl SslContextBuilder {
     /// This corresponds to [`SSL_CTX_set_cipher_list`].
     ///
     /// [`ciphers`]: https://www.openssl.org/docs/man1.1.0/apps/ciphers.html
-    /// [`SSL_CTX_set_cipher_list`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get_client_ciphers.html
+    /// [`SSL_CTX_set_cipher_list`]: https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_cipher_list.html
     pub fn set_cipher_list(&mut self, cipher_list: &str) -> Result<(), ErrorStack> {
         let cipher_list = CString::new(cipher_list).unwrap();
         unsafe {
