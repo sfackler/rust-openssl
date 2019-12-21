@@ -75,11 +75,7 @@ impl fmt::Display for ErrorStack {
     }
 }
 
-impl error::Error for ErrorStack {
-    fn description(&self) -> &str {
-        "An OpenSSL error stack"
-    }
-}
+impl error::Error for ErrorStack {}
 
 impl From<ErrorStack> for io::Error {
     fn from(e: ErrorStack) -> io::Error {
@@ -285,8 +281,4 @@ impl fmt::Display for Error {
     }
 }
 
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        "an OpenSSL error"
-    }
-}
+impl error::Error for Error {}
