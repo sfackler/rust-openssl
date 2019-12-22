@@ -1189,11 +1189,7 @@ impl fmt::Display for X509VerifyResult {
     }
 }
 
-impl Error for X509VerifyResult {
-    fn description(&self) -> &str {
-        "an X509 validation error"
-    }
-}
+impl Error for X509VerifyResult {}
 
 impl X509VerifyResult {
     /// Creates an `X509VerifyResult` from a raw error number.

@@ -123,11 +123,7 @@ impl fmt::Display for Error {
 }
 
 impl error::Error for Error {
-    fn description(&self) -> &str {
-        "an OpenSSL error"
-    }
-
-    fn cause(&self) -> Option<&dyn error::Error> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self.cause {
             Some(InnerError::Io(ref e)) => Some(e),
             Some(InnerError::Ssl(ref e)) => Some(e),
@@ -151,15 +147,7 @@ pub enum HandshakeError<S> {
 }
 
 impl<S: fmt::Debug> StdError for HandshakeError<S> {
-    fn description(&self) -> &str {
-        match *self {
-            HandshakeError::SetupFailure(_) => "stream setup failed",
-            HandshakeError::Failure(_) => "the handshake failed",
-            HandshakeError::WouldBlock(_) => "the handshake was interrupted",
-        }
-    }
-
-    fn cause(&self) -> Option<&dyn StdError> {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match *self {
             HandshakeError::SetupFailure(ref e) => Some(e),
             HandshakeError::Failure(ref s) | HandshakeError::WouldBlock(ref s) => Some(s.error()),
@@ -169,11 +157,17 @@ impl<S: fmt::Debug> StdError for HandshakeError<S> {
 
 impl<S: fmt::Debug> fmt::Display for HandshakeError<S> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(StdError::description(self))?;
         match *self {
-            HandshakeError::SetupFailure(ref e) => write!(f, ": {}", e)?,
-            HandshakeError::Failure(ref s) | HandshakeError::WouldBlock(ref s) => {
-                write!(f, ": {}", s.error())?;
+            HandshakeError::SetupFailure(ref e) => write!(f, "stream setup failed: {}", e)?,
+            HandshakeError::Failure(ref s) => {
+                write!(f, "the handshake failed: {}", s.error())?;
+                let verify = s.ssl().verify_result();
+                if verify != X509VerifyResult::OK {
+                    write!(f, ": {}", verify)?;
+                }
+            }
+            HandshakeError::WouldBlock(ref s) => {
+                write!(f, "the handshake was interrupted: {}", s.error())?;
                 let verify = s.ssl().verify_result();
                 if verify != X509VerifyResult::OK {
                     write!(f, ": {}", verify)?;
