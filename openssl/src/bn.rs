@@ -891,6 +891,35 @@ impl BigNumRef {
         v
     }
 
+    /// Stores the absolute value of `self` as big-endian in the supplied buffer.
+    ///
+    /// `self` can be recreated by using `from_be_bytes`.
+    ///
+    /// If the buffer is larger than needed, it will be appropriately zero-padded.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let s = -BigNum::from_u32(0x1234).unwrap();
+    /// let r = BigNum::from_u32(0x1234).unwrap();
+    ///
+    /// let mut buf = [1u8; 4];
+    /// s.to_be_bytes(&mut buf).unwrap();
+    /// assert_eq!(buf, [0x00, 0x00, 0x12, 0x34]);
+    /// assert_eq!(BigNum::from_be_bytes(&buf).unwrap(), r);
+    ///
+    /// let mut buf = [1u8; 1];
+    /// assert!(s.to_be_bytes(&mut buf).is_err());
+    /// ```
+    #[cfg(ossl110)]
+    pub fn to_be_bytes(&self, n: &mut [u8]) -> Result<usize, ErrorStack> {
+        let ptr = n.as_mut_ptr();
+        let len = n.len();
+
+        assert!(len <= c_int::max_value() as usize);
+
+        cvt_n(unsafe { ffi::BN_bn2binpad(self.as_ptr(), ptr, len as c_int) }).map(|x| x as usize)
+    }
+
     /// Returns a decimal string representation of `self`.
     ///
     /// ```
