@@ -949,6 +949,20 @@ impl BigNumRef {
         cvt_n(unsafe { ffi::BN_bn2lebinpad(self.as_ptr(), ptr, len as c_int) }).map(|x| x as usize)
     }
 
+    /// Stores the absolute value of `self` as native-endian in the supplied buffer.
+    ///
+    /// `self` can be recreated by using `from_ne_bytes`.
+    ///
+    /// See `to_be_bytes` and `to_le_bytes` for details.
+    #[cfg(ossl110)]
+    pub fn to_ne_bytes(&self, n: &mut [u8]) -> Result<usize, ErrorStack> {
+        if cfg!(target_endian = "little") {
+            self.to_le_bytes(n)
+        } else {
+            self.to_be_bytes(n)
+        }
+    }
+
     /// Returns a decimal string representation of `self`.
     ///
     /// ```
