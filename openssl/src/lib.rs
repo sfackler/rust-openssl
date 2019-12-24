@@ -199,3 +199,8 @@ fn cvt_n(r: c_int) -> Result<c_int, ErrorStack> {
         Ok(r)
     }
 }
+
+#[allow(deprecated)]
+unsafe fn uninitialized<T>() -> T {
+    core::mem::uninitialized()
+}
