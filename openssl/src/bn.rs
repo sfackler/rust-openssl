@@ -863,6 +863,12 @@ impl BigNumRef {
         }
     }
 
+    /// Deprecated. See: `to_be_vec`.
+    #[deprecated]
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.to_be_vec()
+    }
+
     /// Returns a big-endian byte vector representation of the absolute value of `self`.
     ///
     /// `self` can be recreated by using `from_be_bytes`.
@@ -872,10 +878,10 @@ impl BigNumRef {
     /// let s = -BigNum::from_u32(4543).unwrap();
     /// let r = BigNum::from_u32(4543).unwrap();
     ///
-    /// let s_vec = s.to_vec();
+    /// let s_vec = s.to_be_vec();
     /// assert_eq!(BigNum::from_be_bytes(&s_vec).unwrap(), r);
     /// ```
-    pub fn to_vec(&self) -> Vec<u8> {
+    pub fn to_be_vec(&self) -> Vec<u8> {
         let size = self.num_bytes() as usize;
         let mut v = Vec::with_capacity(size);
         unsafe {
@@ -1425,7 +1431,7 @@ mod tests {
     #[test]
     fn test_to_from_slice() {
         let v0 = BigNum::from_u32(10_203_004).unwrap();
-        let vec = v0.to_vec();
+        let vec = v0.to_be_vec();
         let v1 = BigNum::from_be_bytes(&vec).unwrap();
 
         assert_eq!(v0, v1);
