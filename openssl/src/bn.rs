@@ -1151,6 +1151,18 @@ impl BigNum {
             .map(|p| BigNum::from_ptr(p))
         }
     }
+
+    /// Creates a new `BigNum` from an unsigned, native-endian encoded number of arbitrary length.
+    ///
+    /// See `from_be_bytes` and `from_le_bytes` for details.
+    #[cfg(ossl110)]
+    pub fn from_ne_bytes(n: &[u8]) -> Result<Self, ErrorStack> {
+        if cfg!(target_endian = "little") {
+            Self::from_le_bytes(n)
+        } else {
+            Self::from_be_bytes(n)
+        }
+    }
 }
 
 impl fmt::Debug for BigNumRef {
