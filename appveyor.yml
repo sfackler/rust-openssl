@@ -10,7 +10,7 @@ environment:
     # 1.0.2, 32 bit
     - TARGET: i686-pc-windows-msvc
       BITS: 32
-      OPENSSL_VERSION: 1_0_2t
+      OPENSSL_VERSION: 1_0_2u
       OPENSSL_DIR: C:\OpenSSL
 
     # vcpkg

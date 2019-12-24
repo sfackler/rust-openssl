@@ -212,7 +212,7 @@ openssl_110: &openssl_110
   version: 1.1.0l
 openssl_102: &openssl_102
   library: openssl
-  version: 1.0.2t
+  version: 1.0.2u
 openssl_101: &openssl_101
   library: openssl
   version: 1.0.1u
