@@ -1125,6 +1125,32 @@ impl BigNum {
             .map(|p| BigNum::from_ptr(p))
         }
     }
+
+    /// Creates a new `BigNum` from an unsigned, little-endian encoded number of arbitrary length.
+    ///
+    /// OpenSSL documentation at [`BN_lebin2bn`]
+    ///
+    /// [`BN_lebin2bn`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_lebin2bn.html
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let bignum = BigNum::from_le_bytes(&[0x34, 0x00, 0x12]).unwrap();
+    ///
+    /// assert_eq!(bignum, BigNum::from_u32(0x120034).unwrap());
+    /// ```
+    #[cfg(ossl110)]
+    pub fn from_le_bytes(n: &[u8]) -> Result<Self, ErrorStack> {
+        unsafe {
+            ffi::init();
+            assert!(n.len() <= c_int::max_value() as usize);
+            cvt_p(ffi::BN_lebin2bn(
+                n.as_ptr(),
+                n.len() as c_int,
+                ptr::null_mut(),
+            ))
+            .map(|p| BigNum::from_ptr(p))
+        }
+    }
 }
 
 impl fmt::Debug for BigNumRef {
