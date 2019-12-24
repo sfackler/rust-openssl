@@ -912,6 +912,27 @@ impl BigNumRef {
         v
     }
 
+    /// Returns a native-endian byte vector representation of the absolute value of `self`.
+    ///
+    /// `self` can be recreated by using `from_ne_bytes`.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let s = -BigNum::from_u32(4543).unwrap();
+    /// let r = BigNum::from_u32(4543).unwrap();
+    ///
+    /// let s_vec = s.to_ne_vec();
+    /// assert_eq!(BigNum::from_ne_bytes(&s_vec).unwrap(), r);
+    /// ```
+    #[cfg(ossl110)]
+    pub fn to_ne_vec(&self) -> Vec<u8> {
+        if cfg!(target_endian = "little") {
+            self.to_le_vec()
+        } else {
+            self.to_be_vec()
+        }
+    }
+
     /// Stores the absolute value of `self` as big-endian in the supplied buffer.
     ///
     /// `self` can be recreated by using `from_be_bytes`.
