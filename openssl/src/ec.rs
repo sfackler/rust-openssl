@@ -1044,8 +1044,8 @@ mod test {
         let y = Vec::from_hex("e04b65e92456d9888b52b379bdfbd51ee869ef1f0fc65b6659695b6cce081723")
             .unwrap();
 
-        let xbn = BigNum::from_slice(&x).unwrap();
-        let ybn = BigNum::from_slice(&y).unwrap();
+        let xbn = BigNum::from_be_bytes(&x).unwrap();
+        let ybn = BigNum::from_be_bytes(&y).unwrap();
 
         let ec_key = EcKey::from_public_key_affine_coordinates(&group, &xbn, &ybn).unwrap();
         assert!(ec_key.check_key().is_ok());
@@ -1059,8 +1059,8 @@ mod test {
         let y = Vec::from_hex("e04b65e92456d9888b52b379bdfbd51ee869ef1f0fc65b6659695b6cce081723")
             .unwrap();
 
-        let xbn = BigNum::from_slice(&x).unwrap();
-        let ybn = BigNum::from_slice(&y).unwrap();
+        let xbn = BigNum::from_be_bytes(&x).unwrap();
+        let ybn = BigNum::from_be_bytes(&y).unwrap();
 
         let ec_key = EcKey::from_public_key_affine_coordinates(&group, &xbn, &ybn).unwrap();
 

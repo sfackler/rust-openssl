@@ -865,7 +865,7 @@ impl BigNumRef {
 
     /// Returns a big-endian byte vector representation of the absolute value of `self`.
     ///
-    /// `self` can be recreated by using `from_slice`.
+    /// `self` can be recreated by using `from_be_bytes`.
     ///
     /// ```
     /// # use openssl::bn::BigNum;
@@ -873,7 +873,7 @@ impl BigNumRef {
     /// let r = BigNum::from_u32(4543).unwrap();
     ///
     /// let s_vec = s.to_vec();
-    /// assert_eq!(BigNum::from_slice(&s_vec).unwrap(), r);
+    /// assert_eq!(BigNum::from_be_bytes(&s_vec).unwrap(), r);
     /// ```
     pub fn to_vec(&self) -> Vec<u8> {
         let size = self.num_bytes() as usize;
@@ -1095,6 +1095,12 @@ impl BigNum {
         }
     }
 
+    /// Deprecated. See: `from_be_bytes`.
+    #[deprecated]
+    pub fn from_slice(n: &[u8]) -> Result<Self, ErrorStack> {
+        Self::from_be_bytes(n)
+    }
+
     /// Creates a new `BigNum` from an unsigned, big-endian encoded number of arbitrary length.
     ///
     /// OpenSSL documentation at [`BN_bin2bn`]
@@ -1103,11 +1109,11 @@ impl BigNum {
     ///
     /// ```
     /// # use openssl::bn::BigNum;
-    /// let bignum = BigNum::from_slice(&[0x12, 0x00, 0x34]).unwrap();
+    /// let bignum = BigNum::from_be_bytes(&[0x12, 0x00, 0x34]).unwrap();
     ///
     /// assert_eq!(bignum, BigNum::from_u32(0x120034).unwrap());
     /// ```
-    pub fn from_slice(n: &[u8]) -> Result<BigNum, ErrorStack> {
+    pub fn from_be_bytes(n: &[u8]) -> Result<Self, ErrorStack> {
         unsafe {
             ffi::init();
             assert!(n.len() <= c_int::max_value() as usize);
@@ -1382,7 +1388,7 @@ mod tests {
     fn test_to_from_slice() {
         let v0 = BigNum::from_u32(10_203_004).unwrap();
         let vec = v0.to_vec();
-        let v1 = BigNum::from_slice(&vec).unwrap();
+        let v1 = BigNum::from_be_bytes(&vec).unwrap();
 
         assert_eq!(v0, v1);
     }
