@@ -1538,6 +1538,50 @@ impl Neg for BigNum {
     }
 }
 
+macro_rules! mkconvert {
+    ($($t:ty)+) => {
+        $(
+            #[cfg(ossl110)]
+            impl core::convert::TryFrom<$t> for BigNum {
+                type Error = ErrorStack;
+
+                #[allow(unused_comparisons)]
+                fn try_from(value: $t) -> Result<Self, Self::Error> {
+                    if value < 0 { return Err(ErrorStack::get()); }
+                    BigNum::from_be_bytes(&value.to_be_bytes())
+                }
+            }
+
+            #[cfg(ossl110)]
+            impl core::convert::TryFrom<&BigNum> for $t {
+                type Error = ErrorStack;
+
+                fn try_from(value: &BigNum) -> Result<Self, Self::Error> {
+                    let mut buf = Self::default().to_ne_bytes(); // Zero
+                    value.to_be_bytes(&mut buf)?;
+                    Ok(Self::from_be_bytes(buf))
+                }
+            }
+
+            #[cfg(ossl110)]
+            impl core::convert::TryFrom<&BigNumRef> for $t {
+                type Error = ErrorStack;
+
+                fn try_from(value: &BigNumRef) -> Result<Self, Self::Error> {
+                    let mut buf = Self::default().to_ne_bytes(); // Zero
+                    value.to_be_bytes(&mut buf)?;
+                    Ok(Self::from_be_bytes(buf))
+                }
+            }
+        )+
+    };
+}
+
+mkconvert! {
+    u8 u16 u32 u64 u128 usize
+    i8 i16 i32 i64 i128 isize
+}
+
 #[cfg(test)]
 mod tests {
     use bn::{BigNum, BigNumContext};
@@ -1591,5 +1635,64 @@ mod tests {
         let mut ctx = BigNumContext::new().unwrap();
         assert!(p.is_prime(100, &mut ctx).unwrap());
         assert!(p.is_prime_fasttest(100, &mut ctx, true).unwrap());
+    }
+
+    #[cfg(ossl110)]
+    #[test]
+    fn test_conversion() {
+        use std::convert::TryFrom;
+
+        // Test that conversion from integer to BigNum works.
+        assert_eq!(
+            BigNum::try_from(255u8).unwrap(),
+            BigNum::try_from(255).unwrap()
+        );
+        assert_eq!(
+            BigNum::try_from(256u16).unwrap(),
+            BigNum::try_from(256).unwrap()
+        );
+        assert_eq!(
+            BigNum::try_from(256u32).unwrap(),
+            BigNum::try_from(256).unwrap()
+        );
+        assert_eq!(
+            BigNum::try_from(256u64).unwrap(),
+            BigNum::try_from(256).unwrap()
+        );
+        assert_eq!(
+            BigNum::try_from(256u128).unwrap(),
+            BigNum::try_from(256).unwrap()
+        );
+        assert_eq!(
+            BigNum::try_from(256usize).unwrap(),
+            BigNum::try_from(256).unwrap()
+        );
+
+        // Test that conversion from BigNum to integer works.
+        assert_eq!(u8::try_from(&BigNum::try_from(17).unwrap()).unwrap(), 17u8);
+        assert_eq!(
+            u16::try_from(&BigNum::try_from(17).unwrap()).unwrap(),
+            17u16
+        );
+        assert_eq!(
+            u32::try_from(&BigNum::try_from(17).unwrap()).unwrap(),
+            17u32
+        );
+        assert_eq!(
+            u64::try_from(&BigNum::try_from(17).unwrap()).unwrap(),
+            17u64
+        );
+        assert_eq!(
+            u128::try_from(&BigNum::try_from(17).unwrap()).unwrap(),
+            17u128
+        );
+        assert_eq!(
+            usize::try_from(&BigNum::try_from(17).unwrap()).unwrap(),
+            17usize
+        );
+
+        // Test that conversion from BigNum to integer fails when the BigNum is too large.
+        assert!(u8::try_from(&*BigNum::try_from(u32::max_value()).unwrap()).is_err());
+        assert!(u16::try_from(&*BigNum::try_from(u32::max_value()).unwrap()).is_err());
     }
 }
