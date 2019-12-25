@@ -128,10 +128,11 @@ foreign_type_and_impl_send_sync! {
     ///
     /// # Examples
     /// ```
+    /// use std::convert::TryFrom;
     /// use openssl::bn::BigNum;
     /// # use openssl::error::ErrorStack;
     /// # fn bignums() -> Result< (), ErrorStack > {
-    /// let little_big = BigNum::from_u32(std::u32::MAX)?;
+    /// let little_big = BigNum::try_from(std::u32::MAX)?;
     /// assert_eq!(*&little_big.num_bytes(), 4);
     /// # Ok(())
     /// # }
@@ -364,10 +365,11 @@ impl BigNumRef {
     /// # Examples
     ///
     /// ```
+    /// use std::convert::TryFrom;
     /// # use openssl::bn::BigNum;
     /// # use std::cmp::Ordering;
-    /// let s = -BigNum::from_u32(8).unwrap();
-    /// let o = BigNum::from_u32(8).unwrap();
+    /// let s = -BigNum::try_from(8).unwrap();
+    /// let o = BigNum::try_from(8).unwrap();
     ///
     /// assert_eq!(s.ucmp(&o), Ordering::Equal);
     /// ```
@@ -875,8 +877,9 @@ impl BigNumRef {
     ///
     /// ```
     /// # use openssl::bn::BigNum;
-    /// let s = -BigNum::from_u32(4543).unwrap();
-    /// let r = BigNum::from_u32(4543).unwrap();
+    /// use std::convert::TryFrom;
+    /// let s = -BigNum::try_from(4543).unwrap();
+    /// let r = BigNum::try_from(4543).unwrap();
     ///
     /// let s_vec = s.to_be_vec();
     /// assert_eq!(BigNum::from_be_bytes(&s_vec).unwrap(), r);
@@ -897,8 +900,9 @@ impl BigNumRef {
     ///
     /// ```
     /// # use openssl::bn::BigNum;
-    /// let s = -BigNum::from_u32(4543).unwrap();
-    /// let r = BigNum::from_u32(4543).unwrap();
+    /// use std::convert::TryFrom;
+    /// let s = -BigNum::try_from(4543).unwrap();
+    /// let r = BigNum::try_from(4543).unwrap();
     ///
     /// let s_vec = s.to_le_vec();
     /// assert_eq!(BigNum::from_le_bytes(&s_vec).unwrap(), r);
@@ -918,8 +922,9 @@ impl BigNumRef {
     ///
     /// ```
     /// # use openssl::bn::BigNum;
-    /// let s = -BigNum::from_u32(4543).unwrap();
-    /// let r = BigNum::from_u32(4543).unwrap();
+    /// use std::convert::TryFrom;
+    /// let s = -BigNum::try_from(4543).unwrap();
+    /// let r = BigNum::try_from(4543).unwrap();
     ///
     /// let s_vec = s.to_ne_vec();
     /// assert_eq!(BigNum::from_ne_bytes(&s_vec).unwrap(), r);
@@ -941,8 +946,9 @@ impl BigNumRef {
     ///
     /// ```
     /// # use openssl::bn::BigNum;
-    /// let s = -BigNum::from_u32(0x1234).unwrap();
-    /// let r = BigNum::from_u32(0x1234).unwrap();
+    /// use std::convert::TryFrom;
+    /// let s = -BigNum::try_from(0x1234).unwrap();
+    /// let r = BigNum::try_from(0x1234).unwrap();
     ///
     /// let mut buf = [1u8; 4];
     /// s.to_be_bytes(&mut buf).unwrap();
@@ -970,8 +976,9 @@ impl BigNumRef {
     ///
     /// ```
     /// # use openssl::bn::BigNum;
-    /// let s = -BigNum::from_u32(0x1234).unwrap();
-    /// let r = BigNum::from_u32(0x1234).unwrap();
+    /// use std::convert::TryFrom;
+    /// let s = -BigNum::try_from(0x1234).unwrap();
+    /// let r = BigNum::try_from(0x1234).unwrap();
     ///
     /// let mut buf = [1u8; 4];
     /// s.to_le_bytes(&mut buf).unwrap();
@@ -1009,7 +1016,8 @@ impl BigNumRef {
     ///
     /// ```
     /// # use openssl::bn::BigNum;
-    /// let s = -BigNum::from_u32(12345).unwrap();
+    /// use std::convert::TryFrom;
+    /// let s = -BigNum::try_from(12345).unwrap();
     ///
     /// assert_eq!(&**s.to_dec_str().unwrap(), "-12345");
     /// ```
@@ -1024,7 +1032,8 @@ impl BigNumRef {
     ///
     /// ```
     /// # use openssl::bn::BigNum;
-    /// let s = -BigNum::from_u32(0x99ff).unwrap();
+    /// use std::convert::TryFrom;
+    /// let s = -BigNum::try_from(0x99ff).unwrap();
     ///
     /// assert_eq!(&**s.to_hex_str().unwrap(), "-99FF");
     /// ```
@@ -1054,11 +1063,8 @@ impl BigNum {
         }
     }
 
-    /// Creates a new `BigNum` with the given value.
-    ///
-    /// OpenSSL documentation at [`BN_set_word`]
-    ///
-    /// [`BN_set_word`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_set_word.html
+    /// Deprecated. Use the `TryFrom` interface for integer conversions.
+    #[deprecated]
     pub fn from_u32(n: u32) -> Result<BigNum, ErrorStack> {
         BigNum::new().and_then(|v| unsafe {
             cvt(ffi::BN_set_word(v.as_ptr(), n as ffi::BN_ULONG)).map(|_| v)
@@ -1229,9 +1235,10 @@ impl BigNum {
     ///
     /// ```
     /// # use openssl::bn::BigNum;
+    /// use std::convert::TryFrom;
     /// let bignum = BigNum::from_be_bytes(&[0x12, 0x00, 0x34]).unwrap();
     ///
-    /// assert_eq!(bignum, BigNum::from_u32(0x120034).unwrap());
+    /// assert_eq!(bignum, BigNum::try_from(0x120034).unwrap());
     /// ```
     pub fn from_be_bytes(n: &[u8]) -> Result<Self, ErrorStack> {
         unsafe {
@@ -1254,9 +1261,10 @@ impl BigNum {
     ///
     /// ```
     /// # use openssl::bn::BigNum;
+    /// use std::convert::TryFrom;
     /// let bignum = BigNum::from_le_bytes(&[0x34, 0x00, 0x12]).unwrap();
     ///
-    /// assert_eq!(bignum, BigNum::from_u32(0x120034).unwrap());
+    /// assert_eq!(bignum, BigNum::try_from(0x120034).unwrap());
     /// ```
     #[cfg(ossl110)]
     pub fn from_le_bytes(n: &[u8]) -> Result<Self, ErrorStack> {
@@ -1541,7 +1549,6 @@ impl Neg for BigNum {
 macro_rules! mkconvert {
     ($($t:ty)+) => {
         $(
-            #[cfg(ossl110)]
             impl core::convert::TryFrom<$t> for BigNum {
                 type Error = ErrorStack;
 
@@ -1585,10 +1592,11 @@ mkconvert! {
 #[cfg(test)]
 mod tests {
     use bn::{BigNum, BigNumContext};
+    use std::convert::TryFrom;
 
     #[test]
     fn test_to_from_slice() {
-        let v0 = BigNum::from_u32(10_203_004).unwrap();
+        let v0 = BigNum::try_from(10_203_004u32).unwrap();
         let vec = v0.to_be_vec();
         let v1 = BigNum::from_be_bytes(&vec).unwrap();
 
@@ -1597,7 +1605,7 @@ mod tests {
 
     #[test]
     fn test_negation() {
-        let a = BigNum::from_u32(909_829_283).unwrap();
+        let a = BigNum::try_from(909_829_283u32).unwrap();
 
         assert!(!a.is_negative());
         assert!((-a).is_negative());
@@ -1605,30 +1613,30 @@ mod tests {
 
     #[test]
     fn test_shift() {
-        let a = BigNum::from_u32(909_829_283).unwrap();
+        let a = BigNum::try_from(909_829_283u32).unwrap();
 
         assert_eq!(a, &(&a << 1) >> 1);
     }
 
     #[test]
     fn test_rand_range() {
-        let range = BigNum::from_u32(909_829_283).unwrap();
+        let range = BigNum::try_from(909_829_283u32).unwrap();
         let mut result = BigNum::from_dec_str(&range.to_dec_str().unwrap()).unwrap();
         range.rand_range(&mut result).unwrap();
-        assert!(result >= BigNum::from_u32(0).unwrap() && result < range);
+        assert!(result >= BigNum::try_from(0).unwrap() && result < range);
     }
 
     #[test]
     fn test_pseudo_rand_range() {
-        let range = BigNum::from_u32(909_829_283).unwrap();
+        let range = BigNum::try_from(909_829_283u32).unwrap();
         let mut result = BigNum::from_dec_str(&range.to_dec_str().unwrap()).unwrap();
         range.pseudo_rand_range(&mut result).unwrap();
-        assert!(result >= BigNum::from_u32(0).unwrap() && result < range);
+        assert!(result >= BigNum::try_from(0).unwrap() && result < range);
     }
 
     #[test]
     fn test_prime_numbers() {
-        let a = BigNum::from_u32(19_029_017).unwrap();
+        let a = BigNum::try_from(19_029_017u32).unwrap();
         let mut p = BigNum::new().unwrap();
         p.generate_prime(128, true, None, Some(&a)).unwrap();
 

@@ -593,10 +593,12 @@ mod tests {
             assert_eq!(large.to_bn().unwrap(), bn);
         }
 
+        use std::convert::TryFrom;
+
         roundtrip(BigNum::from_dec_str("1000000000000000000000000000000000").unwrap());
         roundtrip(-BigNum::from_dec_str("1000000000000000000000000000000000").unwrap());
-        roundtrip(BigNum::from_u32(1234).unwrap());
-        roundtrip(-BigNum::from_u32(1234).unwrap());
+        roundtrip(BigNum::try_from(1234).unwrap());
+        roundtrip(-BigNum::try_from(1234).unwrap());
     }
 
     #[test]

@@ -361,6 +361,7 @@ mod test {
     use hash::MessageDigest;
     use pkey::PKey;
     use sign::{Signer, Verifier};
+    use std::convert::TryFrom;
 
     #[test]
     pub fn test_generate() {
@@ -382,32 +383,32 @@ mod test {
 
     #[test]
     fn test_priv_key_from_parts() {
-        let p = BigNum::from_u32(283).unwrap();
-        let q = BigNum::from_u32(47).unwrap();
-        let g = BigNum::from_u32(60).unwrap();
-        let priv_key = BigNum::from_u32(15).unwrap();
-        let pub_key = BigNum::from_u32(207).unwrap();
+        let p = BigNum::try_from(283).unwrap();
+        let q = BigNum::try_from(47).unwrap();
+        let g = BigNum::try_from(60).unwrap();
+        let priv_key = BigNum::try_from(15).unwrap();
+        let pub_key = BigNum::try_from(207).unwrap();
 
         let dsa = Dsa::from_private_components(p, q, g, priv_key, pub_key).unwrap();
-        assert_eq!(dsa.pub_key(), &BigNum::from_u32(207).unwrap());
-        assert_eq!(dsa.priv_key(), &BigNum::from_u32(15).unwrap());
-        assert_eq!(dsa.p(), &BigNum::from_u32(283).unwrap());
-        assert_eq!(dsa.q(), &BigNum::from_u32(47).unwrap());
-        assert_eq!(dsa.g(), &BigNum::from_u32(60).unwrap());
+        assert_eq!(dsa.pub_key(), &BigNum::try_from(207).unwrap());
+        assert_eq!(dsa.priv_key(), &BigNum::try_from(15).unwrap());
+        assert_eq!(dsa.p(), &BigNum::try_from(283).unwrap());
+        assert_eq!(dsa.q(), &BigNum::try_from(47).unwrap());
+        assert_eq!(dsa.g(), &BigNum::try_from(60).unwrap());
     }
 
     #[test]
     fn test_pub_key_from_parts() {
-        let p = BigNum::from_u32(283).unwrap();
-        let q = BigNum::from_u32(47).unwrap();
-        let g = BigNum::from_u32(60).unwrap();
-        let pub_key = BigNum::from_u32(207).unwrap();
+        let p = BigNum::try_from(283).unwrap();
+        let q = BigNum::try_from(47).unwrap();
+        let g = BigNum::try_from(60).unwrap();
+        let pub_key = BigNum::try_from(207).unwrap();
 
         let dsa = Dsa::from_public_components(p, q, g, pub_key).unwrap();
-        assert_eq!(dsa.pub_key(), &BigNum::from_u32(207).unwrap());
-        assert_eq!(dsa.p(), &BigNum::from_u32(283).unwrap());
-        assert_eq!(dsa.q(), &BigNum::from_u32(47).unwrap());
-        assert_eq!(dsa.g(), &BigNum::from_u32(60).unwrap());
+        assert_eq!(dsa.pub_key(), &BigNum::try_from(207).unwrap());
+        assert_eq!(dsa.p(), &BigNum::try_from(283).unwrap());
+        assert_eq!(dsa.q(), &BigNum::try_from(47).unwrap());
+        assert_eq!(dsa.g(), &BigNum::try_from(60).unwrap());
     }
 
     #[test]

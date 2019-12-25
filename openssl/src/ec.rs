@@ -922,6 +922,7 @@ impl<T> fmt::Debug for EcKey<T> {
 #[cfg(test)]
 mod test {
     use hex::FromHex;
+    use std::convert::TryFrom;
 
     use super::*;
     use bn::{BigNum, BigNumContext};
@@ -944,7 +945,7 @@ mod test {
         let mut ctx = BigNumContext::new().unwrap();
         let mut cofactor = BigNum::new().unwrap();
         group.cofactor(&mut cofactor, &mut ctx).unwrap();
-        let one = BigNum::from_u32(1).unwrap();
+        let one = BigNum::try_from(1).unwrap();
         assert_eq!(cofactor, one);
     }
 
@@ -1001,7 +1002,7 @@ mod test {
     fn generator() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let gen = group.generator();
-        let one = BigNum::from_u32(1).unwrap();
+        let one = BigNum::try_from(1).unwrap();
         let mut ctx = BigNumContext::new().unwrap();
         let mut ecp = EcPoint::new(&group).unwrap();
         ecp.mul_generator(&group, &one, &ctx).unwrap();
