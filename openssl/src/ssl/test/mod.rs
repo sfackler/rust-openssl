@@ -601,7 +601,10 @@ fn default_verify_paths() {
     ctx.set_default_verify_paths().unwrap();
     ctx.set_verify(SslVerifyMode::PEER);
     let ctx = ctx.build();
-    let s = TcpStream::connect("google.com:443").unwrap();
+    let s = match TcpStream::connect("google.com:443") {
+        Ok(s) => s,
+        Err(_) => return,
+    };
     let mut ssl = Ssl::new(&ctx).unwrap();
     ssl.set_hostname("google.com").unwrap();
     let mut socket = ssl.connect(s).unwrap();
