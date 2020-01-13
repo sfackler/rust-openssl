@@ -7,6 +7,7 @@ pub const BIO_TYPE_NONE: c_int = 0;
 pub const BIO_CTRL_EOF: c_int = 2;
 pub const BIO_CTRL_INFO: c_int = 3;
 pub const BIO_CTRL_FLUSH: c_int = 11;
+pub const BIO_CTRL_DGRAM_QUERY_MTU: c_int = 40;
 pub const BIO_C_SET_BUF_MEM_EOF_RETURN: c_int = 130;
 
 extern "C" {
