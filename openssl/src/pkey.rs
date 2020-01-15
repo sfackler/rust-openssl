@@ -57,6 +57,7 @@ use dh::Dh;
 use dsa::Dsa;
 use ec::EcKey;
 use error::ErrorStack;
+use nid::Nid;
 use rsa::Rsa;
 use util::{invoke_passwd_cb, CallbackState};
 use {cvt, cvt_p};
@@ -95,6 +96,8 @@ impl Id {
     pub const ED25519: Id = Id(ffi::EVP_PKEY_ED25519);
     #[cfg(ossl111)]
     pub const ED448: Id = Id(ffi::EVP_PKEY_ED448);
+    #[cfg(ossl111)]
+    pub const SM2: Id = Id(ffi::EVP_PKEY_SM2);
 }
 
 /// A trait indicating that a key has parameters.
@@ -363,6 +366,20 @@ impl<T> PKey<T> {
             ))?;
             mem::forget(ec_key);
             Ok(pkey)
+        }
+    }
+
+    /// Modifying a `PKey` to use a different set of algorithms than the default.
+    ///
+    /// This is currently used to support SM2 keys.
+    ///
+    /// [`EVP_PKEY_set_alias_type`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_PKEY_set_alias_type.html
+    #[cfg(ossl111)]
+    pub fn set_alias_type(&mut self, nid: Nid) -> Result<(), ErrorStack> {
+        unsafe {
+            let pkey = self.as_ptr() as *mut ffi::EVP_PKEY;
+            cvt(ffi::EVP_PKEY_set_alias_type(pkey, nid.as_raw()))?;
+            Ok(())
         }
     }
 }

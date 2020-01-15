@@ -102,6 +102,11 @@ impl MessageDigest {
         unsafe { MessageDigest(ffi::EVP_ripemd160()) }
     }
 
+    #[cfg(ossl111)]
+    pub fn sm3() -> MessageDigest {
+        unsafe { MessageDigest(ffi::EVP_sm3()) }
+    }
+
     pub fn as_ptr(&self) -> *const ffi::EVP_MD {
         self.0
     }
@@ -594,6 +599,21 @@ mod tests {
 
         for test in tests.iter() {
             hash_test(MessageDigest::ripemd160(), test);
+        }
+    }
+
+    // GB/T 32905-2016
+    // http://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=45B1A67F20F3BF339211C391E9278F5E
+    #[test]
+    #[cfg(ossl111)]
+    fn test_sm3() {
+        let tests = [(
+            "616263",
+            "66c7f0f462eeedd9d1f2d46bdc10e4e24167c4875cf2f7a2297da02b8f4ba8e0",
+        )];
+
+        for test in tests.iter() {
+            hash_test(MessageDigest::sm3(), test);
         }
     }
 

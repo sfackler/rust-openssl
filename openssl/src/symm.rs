@@ -258,6 +258,31 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
     }
 
+    #[cfg(ossl111)]
+    pub fn sm4_ecb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_sm4_ecb()) }
+    }
+
+    #[cfg(ossl111)]
+    pub fn sm4_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_sm4_cbc()) }
+    }
+
+    #[cfg(ossl111)]
+    pub fn sm4_ctr() -> Cipher {
+        unsafe { Cipher(ffi::EVP_sm4_ctr()) }
+    }
+
+    #[cfg(ossl111)]
+    pub fn sm4_cfb128() -> Cipher {
+        unsafe { Cipher(ffi::EVP_sm4_cfb128()) }
+    }
+
+    #[cfg(ossl111)]
+    pub fn sm4_ofb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_sm4_ofb()) }
+    }
+
     pub unsafe fn from_ptr(ptr: *const ffi::EVP_CIPHER) -> Cipher {
         Cipher(ptr)
     }
@@ -1441,5 +1466,47 @@ mod tests {
         )
         .unwrap();
         assert_eq!(pt, hex::encode(out));
+    }
+
+    // GB/T 32907-2016
+    // http://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=7803DE42D3BC5E80B0C3E5D8E873D56A
+    #[test]
+    #[cfg(ossl111)]
+    fn test_sm4_ecb() {
+        use std::mem;
+
+        let key = vec![
+            0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54,
+            0x32, 0x10,
+        ];
+        let pt = vec![
+            0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54,
+            0x32, 0x10,
+        ];
+        let ct = vec![
+            0x68, 0x1e, 0xdf, 0x34, 0xd2, 0x06, 0x96, 0x5e, 0x86, 0xb3, 0xe9, 0x4f, 0x53, 0x6e,
+            0x42, 0x46,
+        ];
+        let ct1 = vec![
+            0x59, 0x52, 0x98, 0xc7, 0xc6, 0xfd, 0x27, 0x1f, 0x04, 0x02, 0xf8, 0x04, 0xc3, 0x3d,
+            0x3f, 0x66,
+        ];
+
+        let block_size = Cipher::sm4_ecb().block_size();
+        let mut c = Crypter::new(Cipher::sm4_ecb(), Mode::Encrypt, &key, None).unwrap();
+        c.pad(false);
+
+        // 1 round
+        let mut r = vec![0; pt.len() + Cipher::sm4_ecb().block_size()];
+        let count = c.update(&pt, &mut r).unwrap();
+        assert_eq!(ct, &r[..count]);
+
+        // 1000000 rounds
+        let mut r1 = vec![0; pt.len() + Cipher::sm4_ecb().block_size()];
+        for _ in 0..999999 {
+            c.update(&r[..block_size], &mut r1).unwrap();
+            mem::swap(&mut r, &mut r1);
+        }
+        assert_eq!(ct1, &r[..count]);
     }
 }
