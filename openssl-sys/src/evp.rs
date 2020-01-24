@@ -122,12 +122,24 @@ extern "C" {
         npubk: c_int,
     ) -> c_int;
     pub fn EVP_SealFinal(ctx: *mut EVP_CIPHER_CTX, out: *mut c_uchar, outl: *mut c_int) -> c_int;
+    pub fn EVP_EncryptInit_ex(
+        ctx: *mut EVP_CIPHER_CTX,
+        cipher: *const EVP_CIPHER,
+        impl_: *mut ENGINE,
+        key: *const c_uchar,
+        iv: *const c_uchar,
+    ) -> c_int;
     pub fn EVP_EncryptUpdate(
         ctx: *mut EVP_CIPHER_CTX,
         out: *mut c_uchar,
         outl: *mut c_int,
         in_: *const u8,
         inl: c_int,
+    ) -> c_int;
+    pub fn EVP_EncryptFinal_ex(
+        ctx: *mut EVP_CIPHER_CTX,
+        out: *mut c_uchar,
+        outl: *mut c_int,
     ) -> c_int;
     pub fn EVP_OpenInit(
         ctx: *mut EVP_CIPHER_CTX,
@@ -138,12 +150,24 @@ extern "C" {
         priv_: *mut EVP_PKEY,
     ) -> c_int;
     pub fn EVP_OpenFinal(ctx: *mut EVP_CIPHER_CTX, out: *mut c_uchar, outl: *mut c_int) -> c_int;
+    pub fn EVP_DecryptInit_ex(
+        ctx: *mut EVP_CIPHER_CTX,
+        cipher: *const EVP_CIPHER,
+        impl_: *mut ENGINE,
+        key: *const c_uchar,
+        iv: *const c_uchar,
+    ) -> c_int;
     pub fn EVP_DecryptUpdate(
         ctx: *mut EVP_CIPHER_CTX,
         out: *mut c_uchar,
         outl: *mut c_int,
         in_: *const u8,
         inl: c_int,
+    ) -> c_int;
+    pub fn EVP_DecryptFinal_ex(
+        ctx: *mut EVP_CIPHER_CTX,
+        outm: *mut c_uchar,
+        outl: *mut c_int
     ) -> c_int;
 }
 cfg_if! {
