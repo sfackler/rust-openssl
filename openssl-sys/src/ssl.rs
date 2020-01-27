@@ -318,6 +318,9 @@ pub const SSL_OP_NO_DTLSv1_2: c_ulong = 0x08000000;
 #[cfg(ossl111)]
 pub const SSL_OP_NO_TLSv1_3: c_ulong = 0x20000000;
 
+#[cfg(ossl110h)]
+pub const SSL_OP_NO_RENEGOTIATION: c_ulong = 0x40000000;
+
 cfg_if! {
     if #[cfg(ossl111)] {
         pub const SSL_OP_NO_SSL_MASK: c_ulong = SSL_OP_NO_SSLv2

@@ -238,6 +238,12 @@ bitflags! {
         #[cfg(any(ossl102, ossl110))]
         const NO_SSL_MASK = ffi::SSL_OP_NO_SSL_MASK;
 
+        /// Disallow all renegotiation in TLSv1.2 and earlier.
+        ///
+        /// Requires OpenSSL 1.1.0h or newer.
+        #[cfg(ossl110h)]
+        const NO_RENEGOTIATION = ffi::SSL_OP_NO_RENEGOTIATION;
+
         /// Enable TLSv1.3 Compatibility mode.
         ///
         /// Requires OpenSSL 1.1.1 or newer. This is on by default in 1.1.1, but a future version
