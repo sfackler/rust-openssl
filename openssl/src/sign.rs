@@ -154,7 +154,7 @@ impl<'a> Signer<'a> {
         Self::new_intern(None, pkey)
     }
 
-    pub fn new_intern<T>(
+    fn new_intern<T>(
         type_: Option<MessageDigest>,
         pkey: &'a PKeyRef<T>,
     ) -> Result<Signer<'a>, ErrorStack>
