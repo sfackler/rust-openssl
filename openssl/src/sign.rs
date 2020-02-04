@@ -354,7 +354,7 @@ impl<'a> Signer<'a> {
     ///
     /// [`EVP_DigestSign`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_DigestSign.html
     #[cfg(ossl111)]
-    pub fn sign_oneshot(&self, sig_buf: &mut [u8], data_buf: &[u8]) -> Result<usize, ErrorStack> {
+    pub fn sign_oneshot(&mut self, sig_buf: &mut [u8], data_buf: &[u8]) -> Result<usize, ErrorStack> {
         unsafe {
             let mut sig_len = sig_buf.len();
             cvt(ffi::EVP_DigestSign(
@@ -372,7 +372,7 @@ impl<'a> Signer<'a> {
     ///
     /// This is a simple convenience wrapper over `len` and `sign_oneshot`.
     #[cfg(ossl111)]
-    pub fn sign_oneshot_to_vec(&self, data_buf: &[u8]) -> Result<Vec<u8>, ErrorStack> {
+    pub fn sign_oneshot_to_vec(&mut self, data_buf: &[u8]) -> Result<Vec<u8>, ErrorStack> {
         let mut sig_buf = vec![0; self.len()?];
         let len = self.sign_oneshot(&mut sig_buf, data_buf)?;
         // The advertised length is not always equal to the real length for things like DSA
@@ -584,7 +584,7 @@ impl<'a> Verifier<'a> {
     ///
     /// [`EVP_DigestVerify`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_DigestVerify.html
     #[cfg(ossl111)]
-    pub fn verify_oneshot(&self, signature: &[u8], buf: &[u8]) -> Result<bool, ErrorStack> {
+    pub fn verify_oneshot(&mut self, signature: &[u8], buf: &[u8]) -> Result<bool, ErrorStack> {
         unsafe {
             let r = ffi::EVP_DigestVerify(
                 self.md_ctx,
@@ -831,10 +831,10 @@ mod test {
     fn eddsa() {
         let key = PKey::generate_ed25519().unwrap();
 
-        let signer = Signer::new_without_digest(&key).unwrap();
+        let mut signer = Signer::new_without_digest(&key).unwrap();
         let signature = signer.sign_oneshot_to_vec(b"hello world").unwrap();
 
-        let verifier = Verifier::new_without_digest(&key).unwrap();
+        let mut verifier = Verifier::new_without_digest(&key).unwrap();
         assert!(verifier.verify_oneshot(&signature, b"hello world").unwrap());
     }
 
