@@ -58,9 +58,9 @@ use std::mem;
 #[inline]
 pub fn sha1(data: &[u8]) -> [u8; 20] {
     unsafe {
-        let mut hash: [u8; 20] = mem::uninitialized();
-        ffi::SHA1(data.as_ptr(), data.len(), hash.as_mut_ptr());
-        hash
+        let mut hash: mem::MaybeUninit<[u8; 20]> = mem::MaybeUninit::uninit();
+        ffi::SHA1(data.as_ptr(), data.len(), hash.as_mut_ptr() as *mut u8);
+        hash.assume_init()
     }
 }
 
@@ -68,9 +68,9 @@ pub fn sha1(data: &[u8]) -> [u8; 20] {
 #[inline]
 pub fn sha224(data: &[u8]) -> [u8; 28] {
     unsafe {
-        let mut hash: [u8; 28] = mem::uninitialized();
-        ffi::SHA224(data.as_ptr(), data.len(), hash.as_mut_ptr());
-        hash
+        let mut hash: mem::MaybeUninit<[u8; 28]> = mem::MaybeUninit::uninit();
+        ffi::SHA224(data.as_ptr(), data.len(), hash.as_mut_ptr() as *mut u8);
+        hash.assume_init()
     }
 }
 
@@ -78,9 +78,9 @@ pub fn sha224(data: &[u8]) -> [u8; 28] {
 #[inline]
 pub fn sha256(data: &[u8]) -> [u8; 32] {
     unsafe {
-        let mut hash: [u8; 32] = mem::uninitialized();
-        ffi::SHA256(data.as_ptr(), data.len(), hash.as_mut_ptr());
-        hash
+        let mut hash: mem::MaybeUninit<[u8; 32]> = mem::MaybeUninit::uninit();
+        ffi::SHA256(data.as_ptr(), data.len(), hash.as_mut_ptr() as *mut u8);
+        hash.assume_init()
     }
 }
 
@@ -88,9 +88,9 @@ pub fn sha256(data: &[u8]) -> [u8; 32] {
 #[inline]
 pub fn sha384(data: &[u8]) -> [u8; 48] {
     unsafe {
-        let mut hash: [u8; 48] = mem::uninitialized();
-        ffi::SHA384(data.as_ptr(), data.len(), hash.as_mut_ptr());
-        hash
+        let mut hash: mem::MaybeUninit<[u8; 48]> = mem::MaybeUninit::uninit();
+        ffi::SHA384(data.as_ptr(), data.len(), hash.as_mut_ptr() as *mut u8);
+        hash.assume_init()
     }
 }
 
@@ -98,9 +98,9 @@ pub fn sha384(data: &[u8]) -> [u8; 48] {
 #[inline]
 pub fn sha512(data: &[u8]) -> [u8; 64] {
     unsafe {
-        let mut hash: [u8; 64] = mem::uninitialized();
-        ffi::SHA512(data.as_ptr(), data.len(), hash.as_mut_ptr());
-        hash
+        let mut hash: mem::MaybeUninit<[u8; 64]> = mem::MaybeUninit::uninit();
+        ffi::SHA512(data.as_ptr(), data.len(), hash.as_mut_ptr() as *mut u8);
+        hash.assume_init()
     }
 }
 
@@ -118,9 +118,9 @@ impl Sha1 {
     #[inline]
     pub fn new() -> Sha1 {
         unsafe {
-            let mut ctx = mem::uninitialized();
-            ffi::SHA1_Init(&mut ctx);
-            Sha1(ctx)
+            let mut ctx: mem::MaybeUninit<ffi::SHA_CTX> = mem::MaybeUninit::uninit();
+            ffi::SHA1_Init(ctx.as_mut_ptr());
+            Sha1(ctx.assume_init())
         }
     }
 
@@ -138,9 +138,9 @@ impl Sha1 {
     #[inline]
     pub fn finish(mut self) -> [u8; 20] {
         unsafe {
-            let mut hash: [u8; 20] = mem::uninitialized();
-            ffi::SHA1_Final(hash.as_mut_ptr(), &mut self.0);
-            hash
+            let mut hash: mem::MaybeUninit<[u8; 20]> = mem::MaybeUninit::uninit();
+            ffi::SHA1_Final(hash.as_mut_ptr() as *mut u8, &mut self.0);
+            hash.assume_init()
         }
     }
 }
@@ -154,9 +154,9 @@ impl Sha224 {
     #[inline]
     pub fn new() -> Sha224 {
         unsafe {
-            let mut ctx = mem::uninitialized();
-            ffi::SHA224_Init(&mut ctx);
-            Sha224(ctx)
+            let mut ctx: mem::MaybeUninit<ffi::SHA256_CTX> = mem::MaybeUninit::uninit();
+            ffi::SHA224_Init(ctx.as_mut_ptr());
+            Sha224(ctx.assume_init())
         }
     }
 
@@ -174,9 +174,9 @@ impl Sha224 {
     #[inline]
     pub fn finish(mut self) -> [u8; 28] {
         unsafe {
-            let mut hash: [u8; 28] = mem::uninitialized();
-            ffi::SHA224_Final(hash.as_mut_ptr(), &mut self.0);
-            hash
+            let mut hash: mem::MaybeUninit<[u8; 28]> = mem::MaybeUninit::uninit();
+            ffi::SHA224_Final(hash.as_mut_ptr() as *mut u8, &mut self.0);
+            hash.assume_init()
         }
     }
 }
@@ -190,9 +190,9 @@ impl Sha256 {
     #[inline]
     pub fn new() -> Sha256 {
         unsafe {
-            let mut ctx = mem::uninitialized();
-            ffi::SHA256_Init(&mut ctx);
-            Sha256(ctx)
+            let mut ctx: mem::MaybeUninit<ffi::SHA256_CTX> = mem::MaybeUninit::uninit();
+            ffi::SHA256_Init(ctx.as_mut_ptr());
+            Sha256(ctx.assume_init())
         }
     }
 
@@ -210,9 +210,9 @@ impl Sha256 {
     #[inline]
     pub fn finish(mut self) -> [u8; 32] {
         unsafe {
-            let mut hash: [u8; 32] = mem::uninitialized();
-            ffi::SHA256_Final(hash.as_mut_ptr(), &mut self.0);
-            hash
+            let mut hash: mem::MaybeUninit<[u8; 32]> = mem::MaybeUninit::uninit();
+            ffi::SHA256_Final(hash.as_mut_ptr() as *mut u8, &mut self.0);
+            hash.assume_init()
         }
     }
 }
@@ -226,9 +226,9 @@ impl Sha384 {
     #[inline]
     pub fn new() -> Sha384 {
         unsafe {
-            let mut ctx = mem::uninitialized();
-            ffi::SHA384_Init(&mut ctx);
-            Sha384(ctx)
+            let mut ctx: mem::MaybeUninit<ffi::SHA512_CTX> = mem::MaybeUninit::uninit();
+            ffi::SHA384_Init(ctx.as_mut_ptr());
+            Sha384(ctx.assume_init())
         }
     }
 
@@ -246,9 +246,9 @@ impl Sha384 {
     #[inline]
     pub fn finish(mut self) -> [u8; 48] {
         unsafe {
-            let mut hash: [u8; 48] = mem::uninitialized();
-            ffi::SHA384_Final(hash.as_mut_ptr(), &mut self.0);
-            hash
+            let mut hash: mem::MaybeUninit<[u8; 48]> = mem::MaybeUninit::uninit();
+            ffi::SHA384_Final(hash.as_mut_ptr() as *mut u8, &mut self.0);
+            hash.assume_init()
         }
     }
 }
@@ -262,9 +262,9 @@ impl Sha512 {
     #[inline]
     pub fn new() -> Sha512 {
         unsafe {
-            let mut ctx = mem::uninitialized();
-            ffi::SHA512_Init(&mut ctx);
-            Sha512(ctx)
+            let mut ctx: mem::MaybeUninit<ffi::SHA512_CTX> = mem::MaybeUninit::uninit();
+            ffi::SHA512_Init(ctx.as_mut_ptr());
+            Sha512(ctx.assume_init())
         }
     }
 
@@ -282,9 +282,9 @@ impl Sha512 {
     #[inline]
     pub fn finish(mut self) -> [u8; 64] {
         unsafe {
-            let mut hash: [u8; 64] = mem::uninitialized();
-            ffi::SHA512_Final(hash.as_mut_ptr(), &mut self.0);
-            hash
+            let mut hash: mem::MaybeUninit<[u8; 64]> = mem::MaybeUninit::uninit();
+            ffi::SHA512_Final(hash.as_mut_ptr() as *mut u8, &mut self.0);
+            hash.assume_init()
         }
     }
 }

@@ -78,14 +78,14 @@ impl AesKey {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize / 8);
 
-            let mut aes_key = mem::uninitialized();
+            let mut aes_key = mem::MaybeUninit::uninit();
             let r = ffi::AES_set_encrypt_key(
                 key.as_ptr() as *const _,
                 key.len() as c_int * 8,
-                &mut aes_key,
+                aes_key.as_mut_ptr(),
             );
             if r == 0 {
-                Ok(AesKey(aes_key))
+                Ok(AesKey(aes_key.assume_init()))
             } else {
                 Err(KeyError(()))
             }
@@ -101,15 +101,15 @@ impl AesKey {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize / 8);
 
-            let mut aes_key = mem::uninitialized();
+            let mut aes_key = mem::MaybeUninit::uninit();
             let r = ffi::AES_set_decrypt_key(
                 key.as_ptr() as *const _,
                 key.len() as c_int * 8,
-                &mut aes_key,
+                aes_key.as_mut_ptr(),
             );
 
             if r == 0 {
-                Ok(AesKey(aes_key))
+                Ok(AesKey(aes_key.assume_init()))
             } else {
                 Err(KeyError(()))
             }
