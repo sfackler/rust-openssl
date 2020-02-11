@@ -627,6 +627,7 @@ cfg_if! {
     if #[cfg(any(ossl110, libressl270))] {
         use ffi::EVP_PKEY_up_ref;
     } else {
+        #[allow(bad_style)]
         unsafe extern "C" fn EVP_PKEY_up_ref(pkey: *mut ffi::EVP_PKEY) {
             ffi::CRYPTO_add_lock(
                 &mut (*pkey).references,
