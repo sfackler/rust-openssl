@@ -74,6 +74,7 @@ impl AesKey {
     /// # Failure
     ///
     /// Returns an error if the key is not 128, 192, or 256 bits.
+    #[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
     pub fn new_encrypt(key: &[u8]) -> Result<AesKey, KeyError> {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize / 8);
@@ -97,6 +98,7 @@ impl AesKey {
     /// # Failure
     ///
     /// Returns an error if the key is not 128, 192, or 256 bits.
+    #[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
     pub fn new_decrypt(key: &[u8]) -> Result<AesKey, KeyError> {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize / 8);
