@@ -4,7 +4,7 @@ use std::ops::{Deref, DerefMut};
 use dh::Dh;
 use error::ErrorStack;
 use ssl::{
-    HandshakeError, Ssl, SslContext, SslContextBuilder, SslMethod, SslMode, SslOptions, SslRef,
+    HandshakeError, Ssl, SslContext, SslContextRef, SslContextBuilder, SslMethod, SslMode, SslOptions, SslRef,
     SslStream, SslVerifyMode,
 };
 use version;
@@ -90,6 +90,14 @@ impl SslConnector {
             sni: true,
             verify_hostname: true,
         })
+    }
+
+    pub fn into_ssl_context(self) -> SslContext {
+        self.0
+    }
+
+    pub fn ssl_context_ref(&self) -> &SslContextRef {
+        &*self.0
     }
 }
 
@@ -300,6 +308,14 @@ impl SslAcceptor {
     {
         let ssl = Ssl::new(&self.0)?;
         ssl.accept(stream)
+    }
+
+    pub fn into_ssl_context(self) -> SslContext {
+        self.0
+    }
+
+    pub fn ssl_context_ref(&self) -> &SslContextRef {
+        &*self.0
     }
 }
 
