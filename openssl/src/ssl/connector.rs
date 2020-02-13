@@ -4,8 +4,8 @@ use std::ops::{Deref, DerefMut};
 use dh::Dh;
 use error::ErrorStack;
 use ssl::{
-    HandshakeError, Ssl, SslContext, SslContextRef, SslContextBuilder, SslMethod, SslMode, SslOptions, SslRef,
-    SslStream, SslVerifyMode,
+    HandshakeError, Ssl, SslContext, SslContextBuilder, SslContextRef, SslMethod, SslMode,
+    SslOptions, SslRef, SslStream, SslVerifyMode,
 };
 use version;
 
@@ -92,11 +92,13 @@ impl SslConnector {
         })
     }
 
-    pub fn into_ssl_context(self) -> SslContext {
+    /// Consumes the `SslConnector`, returning the inner raw `SslContext`.
+    pub fn into_context(self) -> SslContext {
         self.0
     }
 
-    pub fn ssl_context_ref(&self) -> &SslContextRef {
+    /// Returns a shared reference to the inner raw `SslContext`.
+    pub fn context(&self) -> &SslContextRef {
         &*self.0
     }
 }
@@ -310,11 +312,13 @@ impl SslAcceptor {
         ssl.accept(stream)
     }
 
-    pub fn into_ssl_context(self) -> SslContext {
+    /// Consumes the `SslAcceptor`, returning the inner raw `SslContext`.
+    pub fn into_context(self) -> SslContext {
         self.0
     }
 
-    pub fn ssl_context_ref(&self) -> &SslContextRef {
+    /// Returns a shared reference to the inner raw `SslContext`.
+    pub fn context(&self) -> &SslContextRef {
         &*self.0
     }
 }
