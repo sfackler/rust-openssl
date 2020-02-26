@@ -12,7 +12,7 @@ use x509::extension::{
     SubjectKeyIdentifier,
 };
 use x509::store::X509StoreBuilder;
-use x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
+use x509::{KeyUsageFlags, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
 
 fn pkey() -> PKey<Private> {
     let rsa = Rsa::generate(2048).unwrap();
@@ -234,6 +234,124 @@ fn x509_builder() {
         .unwrap();
     assert_eq!("foobar.com".as_bytes(), cn.data().as_slice());
     assert_eq!(serial, x509.serial_number().to_bn().unwrap());
+}
+
+#[test]
+fn test_extension_readback() {
+    const KEY_ID: [u8; 20] = [
+        0xE5, 0x43, 0x9D, 0x5F, 0x5E, 0xAF, 0x8E, 0x7A, 0xA4, 0xA8, 0x4B, 0xAF, 0x28, 0x69, 0x9C,
+        0xA8, 0x5C, 0xFA, 0x79, 0x4E,
+    ];
+    let cert = include_bytes!("../../test/cert_with_extensions.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    // Check to ensure that we can read back the extended key usage
+    let fetched_ext_key_usage = cert.ext_key_usage();
+    assert!(fetched_ext_key_usage.is_some());
+
+    let mut found_server_auth = false;
+    let mut found_client_auth = false;
+    let mut found_other = false;
+
+    // Check key usage
+    let key_usage = cert.key_usage();
+    assert_eq!(
+        key_usage,
+        KeyUsageFlags::DIGITAL_SIGNATURE | KeyUsageFlags::KEY_ENCIPHERMENT
+    );
+
+    for ext in fetched_ext_key_usage.unwrap() {
+        match ext.nid() {
+            Nid::SERVER_AUTH => found_server_auth = true,
+            Nid::CLIENT_AUTH => found_client_auth = true,
+            Nid::UNDEF => {
+                found_other = true;
+                assert_eq!(ext.to_string(), "2.999.1");
+            }
+            n => panic!("unexpcted NID: {:?}", n),
+        }
+    }
+
+    assert!(found_server_auth);
+    assert!(found_client_auth);
+    assert!(found_other);
+
+    // Check to ensure that we can read back the authority key identifier
+    let akid = cert
+        .authority_key_id()
+        .expect("could not read authority key identifier");
+
+    let key_id = akid
+        .key_id()
+        .expect("could not read authority key identifier keyid");
+
+    assert_eq!(key_id.as_slice(), KEY_ID);
+
+    // Check to ensure that we can read back the subject key identifier
+    let skid = cert
+        .subject_key_id()
+        .expect("could not read subject key identifier");
+
+    assert_eq!(skid.as_slice(), KEY_ID);
+
+    // Check to ensure we can grab an extension by NID
+    let ext = cert
+        .extension_by_nid(Nid::AUTHORITY_KEY_IDENTIFIER)
+        .unwrap();
+
+    assert_eq!(
+        ext.object().nid().short_name().unwrap(),
+        "authorityKeyIdentifier"
+    );
+
+    // Nid::NAME isn't an extension so this should fail
+    let ext = cert.extension_by_nid(Nid::NAME);
+    assert!(ext.is_none());
+}
+
+#[test]
+fn test_extensions_iterator() {
+    let cert = include_bytes!("../../test/cert_with_extensions.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    let extension_names: Vec<&str> = cert
+        .extensions()
+        .map(|e| {
+            e.object()
+                .nid()
+                .short_name()
+                .expect("no short name for extension")
+        })
+        .collect();
+
+    let expected_names: Vec<&str> = vec![
+        "basicConstraints",
+        "keyUsage",
+        "extendedKeyUsage",
+        "subjectKeyIdentifier",
+        "authorityKeyIdentifier",
+        "subjectAltName",
+    ];
+
+    assert_eq!(extension_names, expected_names);
+}
+
+#[test]
+fn test_certificate_with_no_key_usage() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    // not strictly required but this is a sanity check to ensure that the cert does not have the
+    // key usage extension since we want to test that the behavior of X509::key_usage is correct
+    // under this case
+    for ext in cert.extensions() {
+        assert!(ext.object().nid().short_name().unwrap() != "keyUsage");
+    }
+
+    let key_usage = cert.key_usage();
+
+    // since this certificate
+    assert_eq!(key_usage, KeyUsageFlags::all());
 }
 
 #[test]

@@ -10,6 +10,7 @@
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
+use std::cmp;
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -20,7 +21,10 @@ use std::ptr;
 use std::slice;
 use std::str;
 
-use asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef};
+use asn1::{
+    Asn1BitString, Asn1BitStringRef, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1String,
+    Asn1StringRef, Asn1TimeRef,
+};
 use bio::MemBioSlice;
 use conf::ConfRef;
 use error::ErrorStack;
@@ -30,6 +34,7 @@ use nid::Nid;
 use pkey::{HasPrivate, HasPublic, PKey, PKeyRef, Public};
 use ssl::SslRef;
 use stack::{Stack, StackRef, Stackable};
+use std::ops::Range;
 use string::OpensslString;
 use {cvt, cvt_n, cvt_p};
 
@@ -41,6 +46,17 @@ pub mod store;
 
 #[cfg(test)]
 mod tests;
+
+bitflags! {
+    pub struct KeyUsageFlags: u32 {
+        const DIGITAL_SIGNATURE = 0x0080;
+        const NON_REPUDIATION = 0x0040;
+        const KEY_ENCIPHERMENT = 0x0020;
+        const KEY_CERT_SIGN = 0x0004;
+        const CRL_SIGN = 0x0002;
+        const ENCIPHER_ONLY = 0x0001;
+    }
+}
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE_CTX;
@@ -453,6 +469,149 @@ impl X509Ref {
         }
     }
 
+    /// Returns this certificate's key usage.
+    ///
+    /// This corresponds to [`X509_get_ext_d2i`] called with `NID_key_usage`.
+    ///
+    /// [`X509_get_ext_d2i`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext_d2i.html
+    pub fn key_usage(&self) -> KeyUsageFlags {
+        unsafe {
+            let key_usage_ptr = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_key_usage,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+
+            // if there's no key usage defined, all bits are set
+            // see: https://github.com/openssl/openssl/blob/ffd2df135a5d9f6d2627bd125f362298430fdc06/crypto/x509v3/v3_purp.c#L861-L868
+            if key_usage_ptr.is_null() {
+                return KeyUsageFlags::all();
+            }
+
+            let key_usage_str = Asn1BitString::from_ptr(key_usage_ptr as *mut _);
+            if key_usage_str.len() == 0 {
+                return KeyUsageFlags::from_bits_truncate(0);
+            }
+
+            let mut flags: u32 = 0;
+            let num_bytes = cmp::min(key_usage_str.len(), mem::size_of::<u32>());
+            let data = key_usage_str.as_slice();
+
+            for i in 0..num_bytes {
+                flags ^= (data[i] as u32) << ((num_bytes - (i + 1)) * 8);
+            }
+
+            KeyUsageFlags::from_bits_truncate(flags)
+        }
+    }
+
+    /// Returns this certificate's extended key usage, if it exists.
+    ///
+    /// This corresponds to [`X509_get_ext_d2i`] called with `NID_ext_key_usage`.
+    ///
+    /// [`X509_get_ext_d2i`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext_d2i.html
+    pub fn ext_key_usage(&self) -> Option<Stack<Asn1Object>> {
+        unsafe {
+            let ext_key_usage = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_ext_key_usage,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+
+            if ext_key_usage.is_null() {
+                None
+            } else {
+                Some(Stack::from_ptr(ext_key_usage as *mut _))
+            }
+        }
+    }
+
+    /// Returns this certificate `AuthorityKeyId`, if it exists.
+    ///
+    /// This corresponds to [`X509_get_ext_d2i`] called with `NID_authority_key_identifier`.
+    ///
+    /// [`X509_get_ext_d2i`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext_d2i.html
+    pub fn authority_key_id(&self) -> Option<AuthorityKeyId> {
+        unsafe {
+            let akid = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_authority_key_identifier,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+
+            if akid.is_null() {
+                None
+            } else {
+                Some(AuthorityKeyId::from_ptr(akid as *mut _))
+            }
+        }
+    }
+
+    /// Returns this certificate subject key ID, if it exists.
+    ///
+    /// This corresponds to [`X509_get_ext_d2i`] called with `NID_subject_key_identifier`.
+    ///
+    /// [`X509_get_ext_d2i`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext_d2i.html
+    pub fn subject_key_id(&self) -> Option<Asn1String> {
+        unsafe {
+            let skid = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_subject_key_identifier,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+
+            if skid.is_null() {
+                None
+            } else {
+                Some(Asn1String::from_ptr(skid as *mut _))
+            }
+        }
+    }
+
+    /// Returns an iterator that allows iterating over the `X509Extensions` present in
+    /// this certificate.
+    ///
+    /// This issues one call to [`X509_get_ext_count`] to get the number of extensions, while the
+    /// iterator itself will lazily fetch each extension.
+    ///
+    /// [`X509_get_ext_count`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext_count.html
+    pub fn extensions(&self) -> Extensions {
+        let extension_count = unsafe { ffi::X509_get_ext_count(self.as_ptr()) };
+
+        Extensions {
+            idxs: 0..extension_count,
+            cert: &*self,
+        }
+    }
+
+    /// Returns an `X509ExtensionRef` corresponding to the given NID, if it exists.
+    ///
+    /// This is corresponds to [`X509_get_by_NID`] to get the NID position, followed by a call
+    /// to [`X509_get_ext`] if the extension exists.
+    ///
+    /// [`X509_get_by_NID`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext_by_NID.html
+    /// [`X509_get_ext`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext.html
+    pub fn extension_by_nid(&self, nid: Nid) -> Option<&X509ExtensionRef> {
+        unsafe {
+            let pos = ffi::X509_get_ext_by_NID(self.as_ptr(), nid.as_raw(), -1);
+
+            if pos < 0 {
+                return None;
+            }
+
+            let ext_ptr = ffi::X509_get_ext(self.as_ptr(), pos);
+            if ext_ptr.is_null() {
+                None
+            } else {
+                Some(X509ExtensionRef::from_ptr(ext_ptr as *mut _))
+            }
+        }
+    }
+
     pub fn public_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
             let pkey = cvt_p(ffi::X509_get_pubkey(self.as_ptr()))?;
@@ -754,6 +913,41 @@ impl X509Extension {
 
             cvt_p(ffi::X509V3_EXT_nconf_nid(conf, context, name, value)).map(X509Extension)
         }
+    }
+}
+
+impl X509ExtensionRef {
+    /// Returns the `Asn1StringRef` relating to the unparsed ASN.1 data for an `X509NameEntry`.
+    ///
+    /// This corresponds to [`X509_NAME_ENTRY_get_data`].
+    ///
+    /// [`X509_NAME_ENTRY_get_data`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_EXTENSION_get_data.html
+    pub fn data(&self) -> &Asn1StringRef {
+        unsafe {
+            let data = ffi::X509_EXTENSION_get_data(self.as_ptr());
+            Asn1StringRef::from_ptr(data)
+        }
+    }
+
+    /// Returns the `Asn1Object` of an `X509Extension`
+    ///
+    /// This corresponds to [`X509_EXTENSION_get_object`].
+    ///
+    /// [`X509_EXTENSION_get_object`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_EXTENSION_get_object.html
+    pub fn object(&self) -> &Asn1ObjectRef {
+        unsafe {
+            let object = ffi::X509_EXTENSION_get_object(self.as_ptr());
+            Asn1ObjectRef::from_ptr(object)
+        }
+    }
+
+    /// Returns the flag indicating whether an extension is critical for an `X509Extension`
+    ///
+    /// This corresponds to [`X509_EXTENSION_get_object`].
+    ///
+    /// [`X509_EXTENSION_get_object`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_EXTENSION_get_object.html
+    pub fn critical(&self) -> bool {
+        unsafe { ffi::X509_EXTENSION_get_critical(self.as_ptr()) != 0 }
     }
 }
 
@@ -1301,6 +1495,54 @@ impl Stackable for GeneralName {
 }
 
 foreign_type_and_impl_send_sync! {
+    type CType = ffi::AUTHORITY_KEYID;
+    fn drop = ffi::AUTHORITY_KEYID_free;
+
+    /// An `X509` certificate's authority key identifying information.
+    pub struct AuthorityKeyId;
+    /// Reference to `AuthorityKeyId`.
+    pub struct AuthorityKeyIdRef;
+}
+
+impl AuthorityKeyIdRef {
+    /// Returns the authority cert unqiue identifier, if it exists.
+    pub fn key_id(&self) -> Option<&Asn1StringRef> {
+        unsafe {
+            let key_id_ptr = (*self.as_ptr()).keyid;
+            if key_id_ptr.is_null() {
+                None
+            } else {
+                Some(Asn1StringRef::from_ptr(key_id_ptr as *mut _))
+            }
+        }
+    }
+
+    /// Returns authority cert issuer, if it exists.
+    pub fn issuer(&self) -> Option<Stack<GeneralName>> {
+        unsafe {
+            let issuer_ptr = (*self.as_ptr()).issuer;
+            if issuer_ptr.is_null() {
+                None
+            } else {
+                Some(Stack::from_ptr(issuer_ptr as *mut _))
+            }
+        }
+    }
+
+    /// Returns the authority cert serial number, if it exists.
+    pub fn serial(&self) -> Option<&Asn1IntegerRef> {
+        unsafe {
+            let serial_ptr = (*self.as_ptr()).serial;
+            if serial_ptr.is_null() {
+                None
+            } else {
+                Some(Asn1IntegerRef::from_ptr(serial_ptr as *mut _))
+            }
+        }
+    }
+}
+
+foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_ALGOR;
     fn drop = ffi::X509_ALGOR_free;
 
@@ -1399,6 +1641,28 @@ cfg_if! {
             }
             assert!(pptype.is_null());
             assert!(pval.is_null());
+        }
+    }
+}
+
+/// An iterator over `X509Extensions` in an `X509`.
+///
+/// Each call to `next()` corresponds to [`X509_get_ext`] with the current externsion index provided.
+///
+/// [`X509_get_ext`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext.html
+pub struct Extensions<'a> {
+    idxs: Range<c_int>,
+    cert: &'a X509Ref,
+}
+
+impl<'a> Iterator for Extensions<'a> {
+    type Item = &'a X509ExtensionRef;
+
+    fn next(&mut self) -> Option<&'a X509ExtensionRef> {
+        unsafe {
+            self.idxs
+                .next()
+                .map(|i| X509ExtensionRef::from_ptr(ffi::X509_get_ext(self.cert.as_ptr(), i)))
         }
     }
 }

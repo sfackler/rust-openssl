@@ -39,6 +39,7 @@ use bio::MemBio;
 use bn::{BigNum, BigNumRef};
 use error::ErrorStack;
 use nid::Nid;
+use stack::Stackable;
 use string::OpensslString;
 use {cvt, cvt_p};
 
@@ -512,16 +513,34 @@ impl fmt::Display for Asn1ObjectRef {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         unsafe {
             let mut buf = [0; 80];
+            // NOTE: `len` may be greater than the size of the buffer we provided, which would
+            // indicate that the result is truncated. See docs here:
+            // https://www.openssl.org/docs/man1.0.2/man3/OBJ_obj2txt.html
             let len = ffi::OBJ_obj2txt(
                 buf.as_mut_ptr() as *mut _,
                 buf.len() as c_int,
                 self.as_ptr(),
                 0,
             );
-            let s = str::from_utf8(&buf[..len as usize]).map_err(|_| fmt::Error)?;
+
+            if len < 0 {
+                return Err(fmt::Error {});
+            }
+
+            let len = if len as usize > buf.len() {
+                buf.len()
+            } else {
+                len as usize
+            };
+
+            let s = str::from_utf8(&buf[..len]).map_err(|_| fmt::Error)?;
             fmt.write_str(s)
         }
     }
+}
+
+impl Stackable for Asn1Object {
+    type StackType = ffi::stack_st_ASN1_OBJECT;
 }
 
 cfg_if! {
