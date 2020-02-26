@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+* Fixed windows-msvc library names when using OpenSSL from vcpkg.
+
 ## [v0.9.54] - 2020-01-29
 
 ### Added
