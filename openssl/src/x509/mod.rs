@@ -342,10 +342,20 @@ impl X509Builder {
     }
 
     /// Adds an X509 extension value to the certificate.
+    ///
+    /// This works just as `append_extension` except it takes ownership of the `X509Extension`.
     pub fn append_extension(&mut self, extension: X509Extension) -> Result<(), ErrorStack> {
+        self.append_extension2(&extension)
+    }
+
+    /// Adds an X509 extension value to the certificate.
+    ///
+    /// This corresponds to [`X509_add_ext`].
+    ///
+    /// [`X509_add_ext`]: https://www.openssl.org/docs/man1.1.0/man3/X509_get_ext.html
+    pub fn append_extension2(&mut self, extension: &X509ExtensionRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::X509_add_ext(self.0.as_ptr(), extension.as_ptr(), -1))?;
-            mem::forget(extension);
             Ok(())
         }
     }
