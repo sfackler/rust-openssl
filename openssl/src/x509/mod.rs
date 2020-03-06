@@ -398,6 +398,11 @@ impl X509Ref {
         }
     }
 
+    /// Returns the hash of the certificates subject
+    pub fn subject_name_hash(&self) -> u64 {
+        unsafe { ffi::X509_subject_name_hash(self.as_ptr()) }
+    }
+
     /// Returns this certificate's issuer name.
     ///
     /// This corresponds to [`X509_get_issuer_name`].
