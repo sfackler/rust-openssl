@@ -1335,10 +1335,11 @@ foreign_type_and_impl_send_sync! {
 impl X509ObjectRef {
     pub fn x509(&self) -> Option<&X509Ref> {
         unsafe {
-            if X509_OBJECT_get_type(self.as_ptr()) == ffi::X509_LU_X509 {
-                Some(X509Ref::from_ptr(X509_OBJECT_get0_X509(self.as_ptr())))
-            } else {
+            let ptr = X509_OBJECT_get0_X509(self.as_ptr());
+            if ptr.is_null() {
                 None
+            } else {
+                Some(X509Ref::from_ptr(ptr))
             }
         }
     }
@@ -1431,16 +1432,15 @@ cfg_if! {
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl270))] {
-        use ffi::{X509_OBJECT_get_type, X509_OBJECT_get0_X509};
+        use ffi::X509_OBJECT_get0_X509;
     } else {
         #[allow(bad_style)]
-        unsafe fn X509_OBJECT_get_type(x: *mut ffi::X509_OBJECT) -> ffi::X509_LOOKUP_TYPE {
-            (*x).type_
-        }
-
-        #[allow(bad_style)]
         unsafe fn X509_OBJECT_get0_X509(x: *mut ffi::X509_OBJECT) -> *mut ffi::X509 {
-            (*x).data.x509
+            if (*x).type_ == ffi::X509_LU_X509 {
+                (*x).data.x509
+            } else {
+                ptr::null_mut()
+            }
         }
     }
 }
