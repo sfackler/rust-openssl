@@ -85,7 +85,7 @@ cfg_if! {
     } else {
         #[repr(C)]
         pub struct X509_OBJECT {
-            pub type_: X509_LOOKUP_TYPE,
+            pub type_: c_int,
             pub data: X509_OBJECT_data,
         }
         #[repr(C)]
