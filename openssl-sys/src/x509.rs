@@ -74,10 +74,13 @@ cfg_if! {
 
 stack!(stack_st_X509);
 
-pub type X509_LOOKUP_TYPE = u32;
-pub const X509_LU_NONE: X509_LOOKUP_TYPE = 0;
-pub const X509_LU_X509: X509_LOOKUP_TYPE = 1;
-pub const X509_LU_CRL: X509_LOOKUP_TYPE = 2;
+cfg_if! {
+    if #[cfg(not(ossl110))] {
+        pub const X509_LU_FAIL: c_int = 0;
+        pub const X509_LU_X509: c_int = 1;
+        pub const X509_LU_CRL: c_int = 2;
+    }
+}
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl270))] {
@@ -382,7 +385,6 @@ extern "C" {
 cfg_if! {
     if #[cfg(any(ossl110, libressl270))] {
         extern "C" {
-            pub fn X509_OBJECT_get_type(x: *const X509_OBJECT) -> X509_LOOKUP_TYPE;
             pub fn X509_OBJECT_get0_X509(x: *const X509_OBJECT) -> *mut X509;
         }
     }
