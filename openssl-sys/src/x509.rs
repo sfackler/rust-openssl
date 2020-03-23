@@ -74,7 +74,7 @@ cfg_if! {
 
 stack!(stack_st_X509);
 
-pub type X509_LOOKUP_TYPE = i32;
+pub type X509_LOOKUP_TYPE = u32;
 pub const X509_LU_NONE: X509_LOOKUP_TYPE = 0;
 pub const X509_LU_X509: X509_LOOKUP_TYPE = 1;
 pub const X509_LU_CRL: X509_LOOKUP_TYPE = 2;
