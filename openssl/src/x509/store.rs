@@ -45,7 +45,8 @@ use foreign_types::ForeignTypeRef;
 use std::mem;
 
 use error::ErrorStack;
-use x509::X509;
+use stack::StackRef;
+use x509::{X509Object, X509};
 use {cvt, cvt_p};
 
 foreign_type_and_impl_send_sync! {
@@ -103,4 +104,11 @@ foreign_type_and_impl_send_sync! {
     pub struct X509Store;
     /// Reference to an `X509Store`.
     pub struct X509StoreRef;
+}
+
+impl X509StoreRef {
+    /// Get a reference to the cache of certificates in this store.
+    pub fn certs(&self) -> &StackRef<X509Object> {
+        unsafe { StackRef::from_ptr(ffi::X509_STORE_get0_objects(self.as_ptr())) }
+    }
 }
