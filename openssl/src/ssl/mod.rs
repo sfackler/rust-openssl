@@ -323,6 +323,22 @@ impl SslMethod {
         unsafe { SslMethod(DTLS_method()) }
     }
 
+    /// Support all versions of the TLS protocol, explicitly as a client.
+    ///
+    /// This corresponds to `TLS_client_method` on OpenSSL 1.1.0 and
+    /// `SSLv23_client_method` on OpenSSL 1.0.x.
+    pub fn tls_client() -> SslMethod {
+        unsafe { SslMethod(TLS_client_method()) }
+    }
+
+    /// Support all versions of the TLS protocol, explicitly as a server.
+    ///
+    /// This corresponds to `TLS_server_method` on OpenSSL 1.1.0 and
+    /// `SSLv23_server_method` on OpenSSL 1.0.x.
+    pub fn tls_server() -> SslMethod {
+        unsafe { SslMethod(TLS_server_method()) }
+    }
+
     /// Constructs an `SslMethod` from a pointer to the underlying OpenSSL value.
     pub unsafe fn from_ptr(ptr: *const ffi::SSL_METHOD) -> SslMethod {
         SslMethod(ptr)
@@ -3899,9 +3915,12 @@ cfg_if! {
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl291))] {
-        use ffi::{TLS_method, DTLS_method};
+        use ffi::{TLS_method, DTLS_method, TLS_client_method, TLS_server_method};
     } else {
-        use ffi::{SSLv23_method as TLS_method, DTLSv1_method as DTLS_method};
+        use ffi::{
+            SSLv23_method as TLS_method, DTLSv1_method as DTLS_method, SSLv23_client_method as TLS_client_method,
+            SSLv23_server_method as TLS_server_method,
+        };
     }
 }
 cfg_if! {
