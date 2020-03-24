@@ -672,6 +672,21 @@ extern "C" {
 
     pub fn SSL_get_finished(s: *const SSL, buf: *mut c_void, count: size_t) -> size_t;
     pub fn SSL_get_peer_finished(s: *const SSL, buf: *mut c_void, count: size_t) -> size_t;
+
+    pub fn SSL_CTX_get_verify_mode(ctx: *const SSL_CTX) -> c_int;
+    pub fn SSL_get_verify_mode(s: *const SSL) -> c_int;
+}
+
+cfg_if! {
+    if #[cfg(ossl111)] {
+        extern "C" {
+            pub fn SSL_is_init_finished(s: *const SSL) -> c_int;
+        }
+    } else if #[cfg(ossl110)] {
+        extern "C" {
+            pub fn SSL_is_init_finished(s: *mut SSL) -> c_int;
+        }
+    }
 }
 
 pub const SSL_AD_ILLEGAL_PARAMETER: c_int = SSL3_AD_ILLEGAL_PARAMETER;

@@ -1944,6 +1944,16 @@ impl SslContextRef {
     pub fn session_cache_size(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_get_cache_size(self.as_ptr()).into() }
     }
+
+    /// Returns the verify mode that was set on this context from [`SslContextBuilder::set_verify`].
+    ///
+    /// This corresponds to `SSL_CTX_get_verify_mode`.
+    ///
+    /// [`SslContextBuilder::set_verify`]: struct.SslContextBuilder.html#method.set_verify
+    pub fn verify_mode(&self) -> SslVerifyMode {
+        let mode = unsafe { ffi::SSL_CTX_get_verify_mode(self.as_ptr()) };
+        SslVerifyMode::from_bits(mode).expect("SSL_CTX_get_verify_mode returned invalid mode")
+    }
 }
 
 /// Information about the state of a cipher.
@@ -2392,6 +2402,14 @@ impl SslRef {
     /// [`SSL_set_verify`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_set_verify.html
     pub fn set_verify(&mut self, mode: SslVerifyMode) {
         unsafe { ffi::SSL_set_verify(self.as_ptr(), mode.bits as c_int, None) }
+    }
+
+    /// Returns the verify mode that was set using `set_verify`.
+    ///
+    /// This corresponds to `SSL_get_verify_mode`.
+    pub fn verify_mode(&self) -> SslVerifyMode {
+        let mode = unsafe { ffi::SSL_get_verify_mode(self.as_ptr()) };
+        SslVerifyMode::from_bits(mode).expect("SSL_get_verify_mode returned invalid mode")
     }
 
     /// Like [`SslContextBuilder::set_verify_callback`].
@@ -3170,6 +3188,14 @@ impl SslRef {
         unsafe {
             ffi::SSL_get_peer_finished(self.as_ptr(), buf.as_mut_ptr() as *mut c_void, buf.len())
         }
+    }
+
+    /// Determines if the initial handshake has been completed.
+    ///
+    /// This corresponds to `SSL_is_init_finished`.
+    #[cfg(ossl110)]
+    pub fn init_finished(&self) -> bool {
+        unsafe { ffi::SSL_is_init_finished(self.as_ptr()) != 0 }
     }
 
     /// Determines if the client's hello message is in the SSLv2 format.
