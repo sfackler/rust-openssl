@@ -74,6 +74,39 @@ cfg_if! {
 
 stack!(stack_st_X509);
 
+cfg_if! {
+    if #[cfg(not(ossl110))] {
+        pub const X509_LU_FAIL: c_int = 0;
+        pub const X509_LU_X509: c_int = 1;
+        pub const X509_LU_CRL: c_int = 2;
+    }
+}
+
+cfg_if! {
+    if #[cfg(any(ossl110, libressl270))] {
+        pub enum X509_OBJECT {}
+    } else {
+        #[repr(C)]
+        pub struct X509_OBJECT {
+            pub type_: c_int,
+            pub data: X509_OBJECT_data,
+        }
+        #[repr(C)]
+        pub union X509_OBJECT_data {
+            pub ptr: *mut c_char,
+            pub x509: *mut X509,
+            pub crl: *mut X509_CRL,
+            pub pkey: *mut EVP_PKEY,
+        }
+    }
+}
+
+stack!(stack_st_X509_OBJECT);
+
+pub enum X509_LOOKUP {}
+
+stack!(stack_st_X509_LOOKUP);
+
 extern "C" {
     pub fn X509_verify_cert_error_string(n: c_long) -> *const c_char;
 
@@ -346,4 +379,22 @@ cfg_if! {
 
 extern "C" {
     pub fn X509_verify_cert(ctx: *mut X509_STORE_CTX) -> c_int;
+}
+
+#[cfg(any(ossl110, libressl270))]
+extern "C" {
+    pub fn X509_STORE_get0_objects(ctx: *mut X509_STORE) -> *mut stack_st_X509_OBJECT;
+    pub fn X509_OBJECT_get0_X509(x: *const X509_OBJECT) -> *mut X509;
+}
+
+cfg_if! {
+    if #[cfg(ossl110)] {
+        extern "C" {
+            pub fn X509_OBJECT_free(a: *mut X509_OBJECT);
+        }
+    } else {
+        extern "C" {
+            pub fn X509_OBJECT_free_contents(a: *mut X509_OBJECT);
+        }
+    }
 }
