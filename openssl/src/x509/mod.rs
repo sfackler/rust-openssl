@@ -1324,7 +1324,7 @@ impl X509AlgorithmRef {
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_OBJECT;
-    fn drop = ffi::X509_OBJECT_free;
+    fn drop = X509_OBJECT_free;
 
     /// An `X509` or an X509 certificate revocation list.
     pub struct X509Object;
@@ -1441,6 +1441,18 @@ cfg_if! {
             } else {
                 ptr::null_mut()
             }
+        }
+    }
+}
+
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::X509_OBJECT_free;
+    } else {
+        #[allow(bad_style)]
+        unsafe fn X509_OBJECT_free(x: *mut ffi::X509_OBJECT) {
+            ffi::X509_OBJECT_free_contents(x);
+            ffi::CRYPTO_free(x as *mut libc::c_void);
         }
     }
 }
