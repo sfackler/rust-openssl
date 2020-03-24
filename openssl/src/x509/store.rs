@@ -108,7 +108,7 @@ foreign_type_and_impl_send_sync! {
 
 impl X509StoreRef {
     /// Get a reference to the cache of certificates in this store.
-    pub fn certs(&self) -> &StackRef<X509Object> {
+    pub fn objects(&self) -> &StackRef<X509Object> {
         unsafe { StackRef::from_ptr(X509_STORE_get0_objects(self.as_ptr())) }
     }
 }
