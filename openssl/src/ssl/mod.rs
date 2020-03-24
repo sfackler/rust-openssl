@@ -1947,7 +1947,7 @@ impl SslContextRef {
 
     /// Returns the verify mode that was set on this context from [`SslContextBuilder::set_verify`].
     ///
-    /// This corresponds to `SSL_CTX_get_verify_mode`.
+    /// This corresponds to [`SSL_CTX_get_verify_mode`].
     ///
     /// [`SslContextBuilder::set_verify`]: struct.SslContextBuilder.html#method.set_verify
     /// [`SSL_CTX_get_verify_mode`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_get_verify_mode.html
