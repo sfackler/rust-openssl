@@ -1950,6 +1950,7 @@ impl SslContextRef {
     /// This corresponds to `SSL_CTX_get_verify_mode`.
     ///
     /// [`SslContextBuilder::set_verify`]: struct.SslContextBuilder.html#method.set_verify
+    /// [`SSL_CTX_get_verify_mode`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_get_verify_mode.html
     pub fn verify_mode(&self) -> SslVerifyMode {
         let mode = unsafe { ffi::SSL_CTX_get_verify_mode(self.as_ptr()) };
         SslVerifyMode::from_bits(mode).expect("SSL_CTX_get_verify_mode returned invalid mode")
@@ -2406,7 +2407,9 @@ impl SslRef {
 
     /// Returns the verify mode that was set using `set_verify`.
     ///
-    /// This corresponds to `SSL_get_verify_mode`.
+    /// This corresponds to [`SSL_get_verify_mode`].
+    ///
+    /// [`SSL_get_verify_mode`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_get_verify_mode.html
     pub fn verify_mode(&self) -> SslVerifyMode {
         let mode = unsafe { ffi::SSL_get_verify_mode(self.as_ptr()) };
         SslVerifyMode::from_bits(mode).expect("SSL_get_verify_mode returned invalid mode")
@@ -3192,9 +3195,11 @@ impl SslRef {
 
     /// Determines if the initial handshake has been completed.
     ///
-    /// This corresponds to `SSL_is_init_finished`.
+    /// This corresponds to [`SSL_is_init_finished`].
+    ///
+    /// [`SSL_is_init_finished`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_is_init_finished.html
     #[cfg(ossl110)]
-    pub fn init_finished(&self) -> bool {
+    pub fn is_init_finished(&self) -> bool {
         unsafe { ffi::SSL_is_init_finished(self.as_ptr()) != 0 }
     }
 
