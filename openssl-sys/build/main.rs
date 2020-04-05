@@ -13,9 +13,9 @@ use std::path::{Path, PathBuf};
 
 mod cfgs;
 
-#[cfg_attr(feature = "vendored", path = "find_vendored.rs")]
-#[cfg_attr(not(feature = "vendored"), path = "find_normal.rs")]
-mod find;
+mod find_normal;
+#[cfg(feature = "vendored")]
+mod find_vendored;
 
 enum Version {
     Openssl11x,
@@ -41,12 +41,24 @@ fn env(name: &str) -> Option<OsString> {
     env_inner(&prefixed).or_else(|| env_inner(name))
 }
 
+fn find_openssl(target: &str) -> (PathBuf, PathBuf) {
+    #[cfg(feature = "vendored")]
+    {
+        // vendor if the feature is present, unless
+        // OPENSSL_NO_VENDOR exists and isn't `0`
+        if env("OPENSSL_NO_VENDOR").map_or(true, |s| s == "0") {
+            return find_vendored::get_openssl(target);
+        }
+    }
+    find_normal::get_openssl(target)
+}
+
 fn main() {
     check_rustc_versions();
 
     let target = env::var("TARGET").unwrap();
 
-    let (lib_dir, include_dir) = find::get_openssl(&target);
+    let (lib_dir, include_dir) = find_openssl(&target);
 
     if !Path::new(&lib_dir).exists() {
         panic!(
