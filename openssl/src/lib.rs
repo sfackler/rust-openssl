@@ -53,6 +53,7 @@
 //! * `OPENSSL_STATIC` - If set, the crate will statically link to OpenSSL rather than dynamically link.
 //! * `OPENSSL_LIBS` - If set, a `:`-separated list of library names to link to (e.g. `ssl:crypto`). This can be used
 //!     if nonstandard library names were used for whatever reason.
+//! * `OPENSSL_NO_VENDOR` - If set, always find OpenSSL in the system, even if the `vendored` feature is enabled.
 //!
 //! Additionally, these variables can be prefixed with the upper-cased target architecture (e.g.
 //!     `X86_64_UNKNOWN_LINUX_GNU_OPENSSL_DIR`), which can be useful when cross compiling.
