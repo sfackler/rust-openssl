@@ -93,9 +93,7 @@ use ssl::bio::BioMethod;
 use ssl::callbacks::*;
 use ssl::error::InnerError;
 use stack::{Stack, StackRef};
-#[cfg(ossl102)]
-use x509::store::X509Store;
-use x509::store::{X509StoreBuilderRef, X509StoreRef};
+use x509::store::{X509Store, X509StoreBuilderRef, X509StoreRef};
 #[cfg(any(ossl102, libressl261))]
 use x509::verify::X509VerifyParamRef;
 use x509::{X509Name, X509Ref, X509StoreContextRef, X509VerifyResult, X509};
