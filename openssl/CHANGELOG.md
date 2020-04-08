@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [v0.10.29] - 2020-04-07
+
+### Fixed
+
+* Fixed a memory leak in `X509Builder::append_extension`.
+
+### Added
+
+* Added `SslConnector::into_context` and `SslConnector::context`.
+* Added `SslAcceptor::into_context` and `SslAcceptor::context`.
+* Added `SslMethod::tls_client` and `SslMethod::tls_server`.
+* Added `SslContextBuilder::set_cert_store`.
+* Added `SslContextRef::verify_mode` and `SslRef::verify_mode`.
+* Added `SslRef::is_init_finished`.
+* Added `X509Object`.
+* Added `X509StoreRef::objects`.
+
 ## [v0.10.28] - 2020-02-04
 
 ### Fixed
@@ -430,7 +447,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.28...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.29...master
+[v0.10.29]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.28...openssl-v0.10.29
 [v0.10.28]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.27...openssl-v0.10.28
 [v0.10.27]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.26...openssl-v0.10.27
 [v0.10.26]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.25...openssl-v0.10.26
