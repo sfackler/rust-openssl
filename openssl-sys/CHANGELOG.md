@@ -2,9 +2,21 @@
 
 ## [Unreleased]
 
+## [v0.9.55] - 2020-04-07
+
 ### Fixed
 
 * Fixed windows-msvc library names when using OpenSSL from vcpkg.
+
+### Added
+
+* If the `OPENSSL_NO_VENDOR` environment variable is set, vendoring will not be used even if enabled.
+* Added `SSL_CTX_get_verify_mode` and `SSL_get_verify_mode`.
+* Added `SSL_is_init_finished`.
+* Added `SSL_CTX_set_cert_store`.
+* Added `TLS_server_method` and `TLS_client_method`.
+* Added `X509_STORE_get0_objects`.
+* Added `X509_OBJECT_free`, `X509_OBJECT_get_type`, and `X509_OBJECT_get0_X509`.
 
 ## [v0.9.54] - 2020-01-29
 
@@ -105,7 +117,8 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.54...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.55...master
+[v0.9.55]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.54...openssl-sys-v0.9.55
 [v0.9.54]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.53...openssl-sys-v0.9.54
 [v0.9.53]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.52...openssl-sys-v0.9.53
 [v0.9.52]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.51...openssl-sys-v0.9.52
