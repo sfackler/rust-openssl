@@ -762,6 +762,18 @@ impl SslContextBuilder {
         }
     }
 
+    /// Replaces the context's certificate store.
+    ///
+    /// This corresponds to [`SSL_CTX_set_cert_store`].
+    ///
+    /// [`SSL_CTX_set_cert_store`]: https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_set_cert_store.html
+    pub fn set_cert_store(&mut self, cert_store: X509Store) {
+        unsafe {
+            ffi::SSL_CTX_set_cert_store(self.as_ptr(), cert_store.as_ptr());
+            mem::forget(cert_store);
+        }
+    }
+
     /// Controls read ahead behavior.
     ///
     /// If enabled, OpenSSL will read as much data as is available from the underlying stream,
