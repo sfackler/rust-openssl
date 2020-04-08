@@ -93,9 +93,7 @@ use ssl::bio::BioMethod;
 use ssl::callbacks::*;
 use ssl::error::InnerError;
 use stack::{Stack, StackRef};
-#[cfg(ossl102)]
-use x509::store::X509Store;
-use x509::store::{X509StoreBuilderRef, X509StoreRef};
+use x509::store::{X509Store, X509StoreBuilderRef, X509StoreRef};
 #[cfg(any(ossl102, libressl261))]
 use x509::verify::X509VerifyParamRef;
 use x509::{X509Name, X509Ref, X509StoreContextRef, X509VerifyResult, X509};
@@ -759,6 +757,18 @@ impl SslContextBuilder {
             mem::forget(cert_store);
 
             Ok(())
+        }
+    }
+
+    /// Replaces the context's certificate store.
+    ///
+    /// This corresponds to [`SSL_CTX_set_cert_store`].
+    ///
+    /// [`SSL_CTX_set_cert_store`]: https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_set_cert_store.html
+    pub fn set_cert_store(&mut self, cert_store: X509Store) {
+        unsafe {
+            ffi::SSL_CTX_set_cert_store(self.as_ptr(), cert_store.as_ptr());
+            mem::forget(cert_store);
         }
     }
 

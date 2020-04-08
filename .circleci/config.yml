@@ -8,6 +8,9 @@ jobs:
       library:
         type: string
         default: ""
+      dl_path:
+        type: string
+        default: ""
       version:
         type: string
         default: ""
@@ -71,7 +74,7 @@ jobs:
                   URL="https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-<< parameters.version >>.tar.gz"
                   ;;
                 "openssl")
-                  URL="https://openssl.org/source/openssl-<< parameters.version >>.tar.gz"
+                  URL="https://openssl.org/source<< parameters.dl_path >>/openssl-<< parameters.version >>.tar.gz"
                   ;;
                 esac
 
@@ -210,12 +213,15 @@ openssl_111: &openssl_111
 openssl_110: &openssl_110
   library: openssl
   version: 1.1.0l
+  dl_path: /old/1.1.0
 openssl_102: &openssl_102
   library: openssl
   version: 1.0.2u
+  dl_path: /old/1.0.2
 openssl_101: &openssl_101
   library: openssl
   version: 1.0.1u
+  dl_path: /old/1.0.1
 
 workflows:
   test:
