@@ -3212,7 +3212,7 @@ impl SslRef {
     /// The total size of the message is returned, so this can be used to determine the size of the
     /// buffer required.
     ///
-    /// This corresponds to `SSL_get_finished`.
+    /// This corresponds to `SSL_get_peer_finished`.
     pub fn peer_finished(&self, buf: &mut [u8]) -> usize {
         unsafe {
             ffi::SSL_get_peer_finished(self.as_ptr(), buf.as_mut_ptr() as *mut c_void, buf.len())
