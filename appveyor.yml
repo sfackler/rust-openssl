@@ -4,7 +4,7 @@ environment:
     # 1.1.1, 64 bit
     - TARGET: x86_64-pc-windows-msvc
       BITS: 64
-      OPENSSL_VERSION: 1_1_1f
+      OPENSSL_VERSION: 1_1_1g
       OPENSSL_DIR: C:\OpenSSL
 
     # 1.0.2, 32 bit
