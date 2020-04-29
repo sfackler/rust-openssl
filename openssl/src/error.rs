@@ -95,6 +95,7 @@ pub struct Error {
     code: c_ulong,
     file: *const c_char,
     line: c_int,
+    func: *const c_char,
     data: Option<Cow<'static, str>>,
 }
 
@@ -109,9 +110,10 @@ impl Error {
 
             let mut file = ptr::null();
             let mut line = 0;
+            let mut func = ptr::null();
             let mut data = ptr::null();
             let mut flags = 0;
-            match ffi::ERR_get_error_line_data(&mut file, &mut line, &mut data, &mut flags) {
+            match ERR_get_error_all(&mut file, &mut line, &mut func, &mut data, &mut flags) {
                 0 => None,
                 code => {
                     // The memory referenced by data is only valid until that slot is overwritten
@@ -132,6 +134,7 @@ impl Error {
                         code,
                         file,
                         line,
+                        func,
                         data,
                     })
                 }
@@ -172,7 +175,7 @@ impl Error {
     fn put_error(&self) {
         unsafe {
             ffi::ERR_new();
-            ffi::ERR_set_debug(self.file, self.line, ffi::ERR_func_error_string(self.code));
+            ffi::ERR_set_debug(self.file, self.line, self.func);
             ffi::ERR_set_error(
                 ffi::ERR_GET_LIB(self.code),
                 ffi::ERR_GET_REASON(self.code),
@@ -214,11 +217,10 @@ impl Error {
     /// Returns the name of the function reporting the error.
     pub fn function(&self) -> Option<&'static str> {
         unsafe {
-            let cstr = ffi::ERR_func_error_string(self.code);
-            if cstr.is_null() {
+            if self.func.is_null() {
                 return None;
             }
-            let bytes = CStr::from_ptr(cstr as *const _).to_bytes();
+            let bytes = CStr::from_ptr(self.func).to_bytes();
             Some(str::from_utf8(bytes).unwrap())
         }
     }
@@ -303,3 +305,22 @@ impl fmt::Display for Error {
 }
 
 impl error::Error for Error {}
+
+cfg_if! {
+    if #[cfg(ossl300)] {
+        use ffi::ERR_get_error_all;
+    } else {
+        #[allow(bad_style)]
+        unsafe extern "C" fn ERR_get_error_all(
+            file: *mut *const c_char,
+            line: *mut c_int,
+            func: *mut *const c_char,
+            data: *mut *const c_char,
+            flags: *mut c_int,
+        ) -> c_ulong {
+            let code = ffi::ERR_get_error_line_data(file, line, data, flags);
+            *func = ffi::ERR_func_error_string(code);
+            code
+        }
+    }
+}

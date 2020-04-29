@@ -49,6 +49,14 @@ extern "C" {
     pub fn ERR_set_error_data(data: *mut c_char, flags: c_int);
 
     pub fn ERR_get_error() -> c_ulong;
+    #[cfg(ossl300)]
+    pub fn ERR_get_error_all(
+        file: *mut *const c_char,
+        line: *mut c_int,
+        func: *mut *const c_char,
+        data: *mut *const c_char,
+        flags: *mut c_int,
+    ) -> c_ulong;
     pub fn ERR_get_error_line_data(
         file: *mut *const c_char,
         line: *mut c_int,
