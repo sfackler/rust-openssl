@@ -354,7 +354,11 @@ impl<'a> Signer<'a> {
     ///
     /// [`EVP_DigestSign`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_DigestSign.html
     #[cfg(ossl111)]
-    pub fn sign_oneshot(&mut self, sig_buf: &mut [u8], data_buf: &[u8]) -> Result<usize, ErrorStack> {
+    pub fn sign_oneshot(
+        &mut self,
+        sig_buf: &mut [u8],
+        data_buf: &[u8],
+    ) -> Result<usize, ErrorStack> {
         unsafe {
             let mut sig_len = sig_buf.len();
             cvt(ffi::EVP_DigestSign(
@@ -796,6 +800,7 @@ mod test {
 
     #[test]
     #[cfg(ossl110)]
+    #[cfg_attr(ossl300, ignore)] // https://github.com/openssl/openssl/issues/11671
     fn test_cmac() {
         let cipher = ::symm::Cipher::aes_128_cbc();
         let key = Vec::from_hex("9294727a3638bb1c13f48ef8158bfc9d").unwrap();

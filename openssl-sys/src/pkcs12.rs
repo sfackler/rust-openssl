@@ -6,7 +6,19 @@ pub enum PKCS12 {}
 
 extern "C" {
     pub fn PKCS12_free(p12: *mut PKCS12);
-    pub fn i2d_PKCS12(a: *mut PKCS12, buf: *mut *mut u8) -> c_int;
+}
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn i2d_PKCS12(a: *const PKCS12, buf: *mut *mut u8) -> c_int;
+        }
+    } else {
+        extern "C" {
+            pub fn i2d_PKCS12(a: *mut PKCS12, buf: *mut *mut u8) -> c_int;
+        }
+    }
+}
+extern "C" {
     pub fn d2i_PKCS12(a: *mut *mut PKCS12, pp: *mut *const u8, length: c_long) -> *mut PKCS12;
 
     pub fn PKCS12_parse(
@@ -51,6 +63,14 @@ cfg_if! {
     }
 }
 
-extern "C" {
-    pub fn i2d_PKCS12_bio(b: *mut BIO, a: *mut PKCS12) -> c_int;
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn i2d_PKCS12_bio(b: *mut BIO, a: *const PKCS12) -> c_int;
+        }
+    } else {
+        extern "C" {
+            pub fn i2d_PKCS12_bio(b: *mut BIO, a: *mut PKCS12) -> c_int;
+        }
+    }
 }

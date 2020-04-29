@@ -31,8 +31,21 @@ pub struct ERR_STRING_DATA {
     pub string: *const c_char,
 }
 
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn ERR_new();
+            pub fn ERR_set_debug(file: *const c_char, line: c_int, func: *const c_char);
+            pub fn ERR_set_error(lib: c_int, reason: c_int, fmt: *const c_char, ...);
+        }
+    } else {
+        extern "C" {
+            pub fn ERR_put_error(lib: c_int, func: c_int, reason: c_int, file: *const c_char, line: c_int);
+        }
+    }
+}
+
 extern "C" {
-    pub fn ERR_put_error(lib: c_int, func: c_int, reason: c_int, file: *const c_char, line: c_int);
     pub fn ERR_set_error_data(data: *mut c_char, flags: c_int);
 
     pub fn ERR_get_error() -> c_ulong;

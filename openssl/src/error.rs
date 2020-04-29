@@ -141,14 +141,9 @@ impl Error {
 
     /// Pushes the error back onto the OpenSSL error stack.
     pub fn put(&self) {
+        self.put_error();
+
         unsafe {
-            ffi::ERR_put_error(
-                ffi::ERR_GET_LIB(self.code),
-                ffi::ERR_GET_FUNC(self.code),
-                ffi::ERR_GET_REASON(self.code),
-                self.file,
-                self.line,
-            );
             let data = match self.data {
                 Some(Cow::Borrowed(data)) => Some((data.as_ptr() as *mut c_char, 0)),
                 Some(Cow::Owned(ref data)) => {
@@ -170,6 +165,32 @@ impl Error {
             if let Some((ptr, flags)) = data {
                 ffi::ERR_set_error_data(ptr, flags | ffi::ERR_TXT_STRING);
             }
+        }
+    }
+
+    #[cfg(ossl300)]
+    fn put_error(&self) {
+        unsafe {
+            ffi::ERR_new();
+            ffi::ERR_set_debug(self.file, self.line, ffi::ERR_func_error_string(self.code));
+            ffi::ERR_set_error(
+                ffi::ERR_GET_LIB(self.code),
+                ffi::ERR_GET_REASON(self.code),
+                ptr::null(),
+            );
+        }
+    }
+
+    #[cfg(not(ossl300))]
+    fn put_error(&self) {
+        unsafe {
+            ffi::ERR_put_error(
+                ffi::ERR_GET_LIB(self.code),
+                ffi::ERR_GET_FUNC(self.code),
+                ffi::ERR_GET_REASON(self.code),
+                self.file,
+                self.line,
+            );
         }
     }
 

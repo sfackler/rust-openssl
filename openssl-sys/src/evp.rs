@@ -167,7 +167,7 @@ extern "C" {
     pub fn EVP_DecryptFinal_ex(
         ctx: *mut EVP_CIPHER_CTX,
         outm: *mut c_uchar,
-        outl: *mut c_int
+        outl: *mut c_int,
     ) -> c_int;
 }
 cfg_if! {
@@ -378,13 +378,25 @@ extern "C" {
 }
 
 pub const EVP_PKEY_OP_KEYGEN: c_int = 1 << 2;
-pub const EVP_PKEY_OP_SIGN: c_int = 1 << 3;
-pub const EVP_PKEY_OP_VERIFY: c_int = 1 << 4;
-pub const EVP_PKEY_OP_VERIFYRECOVER: c_int = 1 << 5;
-pub const EVP_PKEY_OP_SIGNCTX: c_int = 1 << 6;
-pub const EVP_PKEY_OP_VERIFYCTX: c_int = 1 << 7;
-pub const EVP_PKEY_OP_ENCRYPT: c_int = 1 << 8;
-pub const EVP_PKEY_OP_DECRYPT: c_int = 1 << 9;
+cfg_if! {
+    if #[cfg(ossl300)] {
+        pub const EVP_PKEY_OP_SIGN: c_int = 1 << 5;
+        pub const EVP_PKEY_OP_VERIFY: c_int = 1 << 6;
+        pub const EVP_PKEY_OP_VERIFYRECOVER: c_int = 1 << 7;
+        pub const EVP_PKEY_OP_SIGNCTX: c_int = 1 << 8;
+        pub const EVP_PKEY_OP_VERIFYCTX: c_int = 1 << 9;
+        pub const EVP_PKEY_OP_ENCRYPT: c_int = 1 << 10;
+        pub const EVP_PKEY_OP_DECRYPT: c_int = 1 << 11;
+    } else {
+        pub const EVP_PKEY_OP_SIGN: c_int = 1 << 3;
+        pub const EVP_PKEY_OP_VERIFY: c_int = 1 << 4;
+        pub const EVP_PKEY_OP_VERIFYRECOVER: c_int = 1 << 5;
+        pub const EVP_PKEY_OP_SIGNCTX: c_int = 1 << 6;
+        pub const EVP_PKEY_OP_VERIFYCTX: c_int = 1 << 7;
+        pub const EVP_PKEY_OP_ENCRYPT: c_int = 1 << 8;
+        pub const EVP_PKEY_OP_DECRYPT: c_int = 1 << 9;
+    }
+}
 
 pub const EVP_PKEY_OP_TYPE_SIG: c_int = EVP_PKEY_OP_SIGN
     | EVP_PKEY_OP_VERIFY

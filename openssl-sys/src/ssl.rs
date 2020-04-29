@@ -978,7 +978,19 @@ extern "C" {
     #[cfg(any(ossl110, libressl273))]
     pub fn SSL_SESSION_up_ref(ses: *mut SSL_SESSION) -> c_int;
     pub fn SSL_SESSION_free(s: *mut SSL_SESSION);
-    pub fn i2d_SSL_SESSION(s: *mut SSL_SESSION, pp: *mut *mut c_uchar) -> c_int;
+}
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn i2d_SSL_SESSION(s: *const SSL_SESSION, pp: *mut *mut c_uchar) -> c_int;
+        }
+    } else {
+        extern "C" {
+            pub fn i2d_SSL_SESSION(s: *mut SSL_SESSION, pp: *mut *mut c_uchar) -> c_int;
+        }
+    }
+}
+extern "C" {
     pub fn SSL_set_session(ssl: *mut SSL, session: *mut SSL_SESSION) -> c_int;
     pub fn SSL_CTX_add_session(ctx: *mut SSL_CTX, session: *mut SSL_SESSION) -> c_int;
     pub fn SSL_CTX_remove_session(ctx: *mut SSL_CTX, session: *mut SSL_SESSION) -> c_int;
