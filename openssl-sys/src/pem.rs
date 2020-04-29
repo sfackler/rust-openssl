@@ -107,12 +107,12 @@ cfg_if! {
                 callback: pem_password_cb,
                 user_data: *mut c_void,
             ) -> c_int;
-            pub fn PEM_write_bio_DSA_PUBKEY(bp: *mut BIO, dsa: *const DSA) -> c_int;
+            pub fn PEM_write_bio_DSA_PUBKEY(bp: *mut BIO, dsa: *mut DSA) -> c_int;
             pub fn PEM_write_bio_PrivateKey(
                 bio: *mut BIO,
-                pkey: *const EVP_PKEY,
+                pkey: *mut EVP_PKEY,
                 cipher: *const EVP_CIPHER,
-                kstr: *const c_uchar,
+                kstr: *mut c_uchar,
                 klen: c_int,
                 callback: pem_password_cb,
                 user_data: *mut c_void,
