@@ -50,6 +50,10 @@ fn find_openssl_dir(target: &str) -> OsString {
                 return homebrew.to_path_buf().into();
             }
         }
+        let port_out = get_macport_openssl();
+        if !port_out.is_empty() {
+            return OsString::from(port_out);
+        }
     }
 
     try_pkg_config();
@@ -207,10 +211,7 @@ fn try_vcpkg() {
         .find_package("openssl");
 
     if let Err(e) = lib {
-        println!(
-            "note: vcpkg did not find openssl: {}",
-            e
-        );
+        println!("note: vcpkg did not find openssl: {}", e);
         return;
     }
 
@@ -238,4 +239,41 @@ fn execute_command_and_get_output(cmd: &str, args: &[&str]) -> Option<String> {
         }
     }
     return None;
+}
+
+/// find openssl path on macport
+fn get_macport_openssl() -> std::string::String {
+    let out = Command::new("port")
+        .arg("-q")
+        .arg("installed")
+        .arg("openssl")
+        .output();
+    let mut result = std::string::String::new();
+    if out.is_ok() {
+        let res = out.ok().unwrap();
+        let outputs = std::str::from_utf8(&res.stdout).unwrap();
+        let version = get_macport_openssl_version(outputs);
+        if version >= std::string::String::from("@1.1") {
+            result = std::string::String::from("/opt/local");
+        }
+    }
+    return result;
+}
+
+/// get openssl version from the string printed out by port command
+fn get_macport_openssl_version(port_outputs: &str) -> std::string::String {
+    let mut result = std::string::String::new();
+
+    for elem in port_outputs.split("\n") {
+        let active_pos = elem.find("(active)");
+        if active_pos.is_some() {
+            let ver_start = elem.find("@");
+            if ver_start.is_some() {
+                let ver = elem.get(ver_start.unwrap()..active_pos.unwrap()).unwrap();
+                result = std::string::String::from(ver.trim());
+                break;
+            }
+        }
+    }
+    return result;
 }
