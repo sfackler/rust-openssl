@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [v0.9.56] - 2020-05-07
+
+### Fixed
+
+* Fixed vendored builds on windows-gnu targets.
+
+### Added
+
+* Added support for LibreSSL 3.0.0.
+
 ## [v0.9.55] - 2020-04-07
 
 ### Fixed
@@ -117,7 +127,8 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.55...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.56...master
+[v0.9.56]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.55...openssl-sys-v0.9.56
 [v0.9.55]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.54...openssl-sys-v0.9.55
 [v0.9.54]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.53...openssl-sys-v0.9.54
 [v0.9.53]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.52...openssl-sys-v0.9.53
