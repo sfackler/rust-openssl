@@ -86,7 +86,7 @@ fn main() {
         Some(ref v) => v.split(":").collect(),
         None => match version {
             Version::Openssl10x if target.contains("windows") => vec!["ssleay32", "libeay32"],
-            Version::Openssl11x if target.contains("windows") => vec!["libssl", "libcrypto"],
+            Version::Openssl11x if target.contains("windows-msvc") => vec!["libssl", "libcrypto"],
             _ => vec!["ssl", "crypto"],
         },
     };
