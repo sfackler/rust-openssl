@@ -21,12 +21,6 @@ pub const EVP_CTRL_GCM_SET_IVLEN: c_int = 0x9;
 pub const EVP_CTRL_GCM_GET_TAG: c_int = 0x10;
 pub const EVP_CTRL_GCM_SET_TAG: c_int = 0x11;
 
-// Keeping above for backwards compatability
-pub const EVP_CTRL_AEAD_SET_IVLEN: c_int = EVP_CTRL_GCM_SET_IVLEN;
-pub const EVP_CTRL_AEAD_GET_TAG: c_int = EVP_CTRL_GCM_GET_TAG;
-pub const EVP_CTRL_AEAD_SET_TAG: c_int = EVP_CTRL_GCM_SET_TAG;
-
-
 pub unsafe fn EVP_get_digestbynid(type_: c_int) -> *const EVP_MD {
     EVP_get_digestbyname(OBJ_nid2sn(type_))
 }
@@ -281,6 +275,7 @@ extern "C" {
     pub fn EVP_aes_128_gcm() -> *const EVP_CIPHER;
     pub fn EVP_aes_128_xts() -> *const EVP_CIPHER;
     pub fn EVP_aes_128_ofb() -> *const EVP_CIPHER;
+    #[cfg(ossl110)]
     pub fn EVP_aes_128_ocb() -> *const EVP_CIPHER;
     pub fn EVP_aes_192_ecb() -> *const EVP_CIPHER;
     pub fn EVP_aes_192_cbc() -> *const EVP_CIPHER;
@@ -291,6 +286,7 @@ extern "C" {
     pub fn EVP_aes_192_ccm() -> *const EVP_CIPHER;
     pub fn EVP_aes_192_gcm() -> *const EVP_CIPHER;
     pub fn EVP_aes_192_ofb() -> *const EVP_CIPHER;
+    #[cfg(ossl110)]
     pub fn EVP_aes_192_ocb() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_ecb() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_cbc() -> *const EVP_CIPHER;
@@ -302,6 +298,7 @@ extern "C" {
     pub fn EVP_aes_256_gcm() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_xts() -> *const EVP_CIPHER;
     pub fn EVP_aes_256_ofb() -> *const EVP_CIPHER;
+    #[cfg(ossl110)]
     pub fn EVP_aes_256_ocb() -> *const EVP_CIPHER;
     #[cfg(ossl110)]
     pub fn EVP_chacha20() -> *const ::EVP_CIPHER;

@@ -130,6 +130,8 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_ofb()) }
     }
 
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[cfg(any(ossl110))]
     pub fn aes_128_ocb() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_ocb()) }
     }
@@ -170,6 +172,8 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_ofb()) }
     }
 
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[cfg(any(ossl110))]
     pub fn aes_192_ocb() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_ocb()) }
     }
@@ -214,6 +218,8 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_ofb()) }
     }
 
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[cfg(any(ossl110))]
     pub fn aes_256_ocb() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_ocb()) }
     }
@@ -312,10 +318,16 @@ impl Cipher {
     }
 
     /// Determines whether the cipher is using OCB mode
+    #[cfg(any(ossl110))]
     fn is_ocb(&self) -> bool {
         *self == Cipher::aes_128_ocb() ||
         *self == Cipher::aes_192_ocb() ||
         *self == Cipher::aes_256_ocb()
+    }
+
+    #[cfg(not(any(ossl110)))]
+    const fn is_ocb(&self) -> bool {
+        false
     }
 }
 
@@ -440,7 +452,7 @@ impl Crypter {
                         assert!(iv.len() <= c_int::max_value() as usize);
                         cvt(ffi::EVP_CIPHER_CTX_ctrl(
                             crypter.ctx,
-                            ffi::EVP_CTRL_AEAD_SET_IVLEN,
+                            ffi::EVP_CTRL_GCM_SET_IVLEN,
                             iv.len() as c_int,
                             ptr::null_mut(),
                         ))?;
@@ -482,7 +494,7 @@ impl Crypter {
             // NB: this constant is actually more general than just GCM.
             cvt(ffi::EVP_CIPHER_CTX_ctrl(
                 self.ctx,
-                ffi::EVP_CTRL_AEAD_SET_TAG,
+                ffi::EVP_CTRL_GCM_SET_TAG,
                 tag.len() as c_int,
                 tag.as_ptr() as *mut _,
             ))
@@ -500,7 +512,7 @@ impl Crypter {
             // NB: this constant is actually more general than just GCM.
             cvt(ffi::EVP_CIPHER_CTX_ctrl(
                 self.ctx,
-                ffi::EVP_CTRL_AEAD_SET_TAG,
+                ffi::EVP_CTRL_GCM_SET_TAG,
                 tag_len as c_int,
                 ptr::null_mut(),
             ))
@@ -626,7 +638,7 @@ impl Crypter {
             assert!(tag.len() <= c_int::max_value() as usize);
             cvt(ffi::EVP_CIPHER_CTX_ctrl(
                 self.ctx,
-                ffi::EVP_CTRL_AEAD_GET_TAG,
+                ffi::EVP_CTRL_GCM_GET_TAG,
                 tag.len() as c_int,
                 tag.as_mut_ptr() as *mut _,
             ))
@@ -1413,6 +1425,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(any(ossl110))]
     fn test_aes_128_ocb() {
         let key = "000102030405060708090a0b0c0d0e0f";
         let aad = "0001020304050607";
@@ -1448,6 +1461,7 @@ mod tests {
      }
 
     #[test]
+    #[cfg(any(ossl110))]
     fn test_aes_128_ocb_fail() {
         let key = "000102030405060708090a0b0c0d0e0f";
         let aad = "0001020304050607";
