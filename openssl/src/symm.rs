@@ -130,6 +130,10 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_ofb()) }
     }
 
+    pub fn aes_128_ocb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_128_ocb()) }
+    }
+
     pub fn aes_192_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_ecb()) }
     }
@@ -164,6 +168,10 @@ impl Cipher {
 
     pub fn aes_192_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_ofb()) }
+    }
+
+    pub fn aes_192_ocb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_ocb()) }
     }
 
     pub fn aes_256_ecb() -> Cipher {
@@ -204,6 +212,10 @@ impl Cipher {
 
     pub fn aes_256_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_ofb()) }
+    }
+
+    pub fn aes_256_ocb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_256_ocb()) }
     }
 
     pub fn bf_cbc() -> Cipher {
@@ -297,6 +309,13 @@ impl Cipher {
     fn is_ccm(&self) -> bool {
         // NOTE: OpenSSL returns pointers to static structs, which makes this work as expected
         *self == Cipher::aes_128_ccm() || *self == Cipher::aes_256_ccm()
+    }
+
+    /// Determines whether the cipher is using OCB mode
+    fn is_ocb(&self) -> bool {
+        *self == Cipher::aes_128_ocb() ||
+        *self == Cipher::aes_192_ocb() ||
+        *self == Cipher::aes_256_ocb()
     }
 }
 
@@ -421,7 +440,7 @@ impl Crypter {
                         assert!(iv.len() <= c_int::max_value() as usize);
                         cvt(ffi::EVP_CIPHER_CTX_ctrl(
                             crypter.ctx,
-                            ffi::EVP_CTRL_GCM_SET_IVLEN,
+                            ffi::EVP_CTRL_AEAD_SET_IVLEN,
                             iv.len() as c_int,
                             ptr::null_mut(),
                         ))?;
@@ -463,7 +482,7 @@ impl Crypter {
             // NB: this constant is actually more general than just GCM.
             cvt(ffi::EVP_CIPHER_CTX_ctrl(
                 self.ctx,
-                ffi::EVP_CTRL_GCM_SET_TAG,
+                ffi::EVP_CTRL_AEAD_SET_TAG,
                 tag.len() as c_int,
                 tag.as_ptr() as *mut _,
             ))
@@ -481,7 +500,7 @@ impl Crypter {
             // NB: this constant is actually more general than just GCM.
             cvt(ffi::EVP_CIPHER_CTX_ctrl(
                 self.ctx,
-                ffi::EVP_CTRL_GCM_SET_TAG,
+                ffi::EVP_CTRL_AEAD_SET_TAG,
                 tag_len as c_int,
                 ptr::null_mut(),
             ))
@@ -607,7 +626,7 @@ impl Crypter {
             assert!(tag.len() <= c_int::max_value() as usize);
             cvt(ffi::EVP_CIPHER_CTX_ctrl(
                 self.ctx,
-                ffi::EVP_CTRL_GCM_GET_TAG,
+                ffi::EVP_CTRL_AEAD_GET_TAG,
                 tag.len() as c_int,
                 tag.as_mut_ptr() as *mut _,
             ))
@@ -736,9 +755,12 @@ pub fn encrypt_aead(
     let mut c = Crypter::new(t, Mode::Encrypt, key, iv)?;
     let mut out = vec![0; data.len() + t.block_size()];
 
-    if t.is_ccm() {
+    let is_ccm = t.is_ccm();
+    if is_ccm || t.is_ocb() {
         c.set_tag_len(tag.len())?;
-        c.set_data_len(data.len())?;
+        if is_ccm {
+            c.set_data_len(data.len())?;
+        }
     }
 
     c.aad_update(aad)?;
@@ -764,9 +786,12 @@ pub fn decrypt_aead(
     let mut c = Crypter::new(t, Mode::Decrypt, key, iv)?;
     let mut out = vec![0; data.len() + t.block_size()];
 
-    if t.is_ccm() {
+    let is_ccm = t.is_ccm();
+    if is_ccm || t.is_ocb() {
         c.set_tag(tag)?;
-        c.set_data_len(data.len())?;
+        if is_ccm {
+            c.set_data_len(data.len())?;
+        }
     }
 
     c.aad_update(aad)?;
@@ -1380,6 +1405,60 @@ mod tests {
             Cipher::aes_256_ccm(),
             &Vec::from_hex(key).unwrap(),
             Some(&Vec::from_hex(nonce).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(ct).unwrap(),
+            &Vec::from_hex(tag).unwrap(),
+        );
+        assert!(out.is_err());
+    }
+
+    #[test]
+    fn test_aes_128_ocb() {
+        let key = "000102030405060708090a0b0c0d0e0f";
+        let aad = "0001020304050607";
+        let tag = "16dc76a46d47e1ead537209e8a96d14e";
+        let iv = "000102030405060708090a0b";
+        let pt = "0001020304050607";
+        let ct = "92b657130a74b85a";
+
+        let mut actual_tag = [0; 16];
+        let out = encrypt_aead(
+            Cipher::aes_128_ocb(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(iv).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(pt).unwrap(),
+            &mut actual_tag,
+        )
+        .unwrap();
+
+        assert_eq!(ct, hex::encode(out));
+        assert_eq!(tag, hex::encode(actual_tag));
+
+        let out = decrypt_aead(
+            Cipher::aes_128_ocb(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(iv).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(ct).unwrap(),
+            &Vec::from_hex(tag).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(pt, hex::encode(out));
+     }
+
+    #[test]
+    fn test_aes_128_ocb_fail() {
+        let key = "000102030405060708090a0b0c0d0e0f";
+        let aad = "0001020304050607";
+        let tag = "16dc76a46d47e1ead537209e8a96d14e";
+        let iv = "000000000405060708090a0b";
+        let ct = "92b657130a74b85a";
+
+        let out = decrypt_aead(
+            Cipher::aes_128_ocb(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(iv).unwrap()),
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(ct).unwrap(),
             &Vec::from_hex(tag).unwrap(),
