@@ -130,6 +130,12 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_ofb()) }
     }
 
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[cfg(ossl110)]
+    pub fn aes_128_ocb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_128_ocb()) }
+    }
+
     pub fn aes_192_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_ecb()) }
     }
@@ -164,6 +170,12 @@ impl Cipher {
 
     pub fn aes_192_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_ofb()) }
+    }
+
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[cfg(ossl110)]
+    pub fn aes_192_ocb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_ocb()) }
     }
 
     pub fn aes_256_ecb() -> Cipher {
@@ -204,6 +216,12 @@ impl Cipher {
 
     pub fn aes_256_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_ofb()) }
+    }
+
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[cfg(ossl110)]
+    pub fn aes_256_ocb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_256_ocb()) }
     }
 
     pub fn bf_cbc() -> Cipher {
@@ -297,6 +315,19 @@ impl Cipher {
     fn is_ccm(&self) -> bool {
         // NOTE: OpenSSL returns pointers to static structs, which makes this work as expected
         *self == Cipher::aes_128_ccm() || *self == Cipher::aes_256_ccm()
+    }
+
+    /// Determines whether the cipher is using OCB mode
+    #[cfg(ossl110)]
+    fn is_ocb(&self) -> bool {
+        *self == Cipher::aes_128_ocb() ||
+        *self == Cipher::aes_192_ocb() ||
+        *self == Cipher::aes_256_ocb()
+    }
+
+    #[cfg(not(ossl110))]
+    const fn is_ocb(&self) -> bool {
+        false
     }
 }
 
@@ -736,9 +767,12 @@ pub fn encrypt_aead(
     let mut c = Crypter::new(t, Mode::Encrypt, key, iv)?;
     let mut out = vec![0; data.len() + t.block_size()];
 
-    if t.is_ccm() {
+    let is_ccm = t.is_ccm();
+    if is_ccm || t.is_ocb() {
         c.set_tag_len(tag.len())?;
-        c.set_data_len(data.len())?;
+        if is_ccm {
+            c.set_data_len(data.len())?;
+        }
     }
 
     c.aad_update(aad)?;
@@ -764,9 +798,12 @@ pub fn decrypt_aead(
     let mut c = Crypter::new(t, Mode::Decrypt, key, iv)?;
     let mut out = vec![0; data.len() + t.block_size()];
 
-    if t.is_ccm() {
+    let is_ccm = t.is_ccm();
+    if is_ccm || t.is_ocb() {
         c.set_tag(tag)?;
-        c.set_data_len(data.len())?;
+        if is_ccm {
+            c.set_data_len(data.len())?;
+        }
     }
 
     c.aad_update(aad)?;
@@ -1380,6 +1417,62 @@ mod tests {
             Cipher::aes_256_ccm(),
             &Vec::from_hex(key).unwrap(),
             Some(&Vec::from_hex(nonce).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(ct).unwrap(),
+            &Vec::from_hex(tag).unwrap(),
+        );
+        assert!(out.is_err());
+    }
+
+    #[test]
+    #[cfg(ossl110)]
+    fn test_aes_128_ocb() {
+        let key = "000102030405060708090a0b0c0d0e0f";
+        let aad = "0001020304050607";
+        let tag = "16dc76a46d47e1ead537209e8a96d14e";
+        let iv = "000102030405060708090a0b";
+        let pt = "0001020304050607";
+        let ct = "92b657130a74b85a";
+
+        let mut actual_tag = [0; 16];
+        let out = encrypt_aead(
+            Cipher::aes_128_ocb(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(iv).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(pt).unwrap(),
+            &mut actual_tag,
+        )
+        .unwrap();
+
+        assert_eq!(ct, hex::encode(out));
+        assert_eq!(tag, hex::encode(actual_tag));
+
+        let out = decrypt_aead(
+            Cipher::aes_128_ocb(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(iv).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(ct).unwrap(),
+            &Vec::from_hex(tag).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(pt, hex::encode(out));
+     }
+
+    #[test]
+    #[cfg(ossl110)]
+    fn test_aes_128_ocb_fail() {
+        let key = "000102030405060708090a0b0c0d0e0f";
+        let aad = "0001020304050607";
+        let tag = "16dc76a46d47e1ead537209e8a96d14e";
+        let iv = "000000000405060708090a0b";
+        let ct = "92b657130a74b85a";
+
+        let out = decrypt_aead(
+            Cipher::aes_128_ocb(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(iv).unwrap()),
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(ct).unwrap(),
             &Vec::from_hex(tag).unwrap(),
