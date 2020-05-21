@@ -132,6 +132,7 @@ pub use ffi::init;
 use libc::c_int;
 
 use error::ErrorStack;
+use std::ptr::NonNull;
 
 #[macro_use]
 mod macros;
@@ -176,11 +177,11 @@ pub mod symm;
 pub mod version;
 pub mod x509;
 
-fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {
-    if r.is_null() {
-        Err(ErrorStack::get())
+fn cvt_p<T>(r: *mut T) -> Result<NonNull<T>, ErrorStack> {
+    if let Some(ptr) = NonNull::new(r) {
+        Ok(ptr)
     } else {
-        Ok(r)
+        Err(ErrorStack::get())
     }
 }
 

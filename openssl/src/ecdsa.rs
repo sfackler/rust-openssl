@@ -11,20 +11,16 @@ use error::ErrorStack;
 use pkey::{Private, Public};
 use {cvt_n, cvt_p};
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::ECDSA_SIG;
-    fn drop = ffi::ECDSA_SIG_free;
-
+foreign_type! {
     /// A low level interface to ECDSA
     ///
     /// OpenSSL documentation at [`ECDSA_sign`]
     ///
     /// [`ECDSA_sign`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_sign.html
-    pub struct EcdsaSig;
-    /// Reference to [`EcdsaSig`]
-    ///
-    /// [`EcdsaSig`]: struct.EcdsaSig.html
-    pub struct EcdsaSigRef;
+    pub unsafe type EcdsaSig : Send + Sync {
+       type CType = ffi::ECDSA_SIG;
+       fn drop = ffi::ECDSA_SIG_free;
+    }
 }
 
 impl EcdsaSig {
@@ -41,7 +37,7 @@ impl EcdsaSig {
                 data.len() as c_int,
                 eckey.as_ptr(),
             ))?;
-            Ok(EcdsaSig::from_ptr(sig as *mut _))
+            Ok(EcdsaSig::from_ptr(sig.as_ptr() as *mut _))
         }
     }
 
@@ -54,9 +50,9 @@ impl EcdsaSig {
     pub fn from_private_components(r: BigNum, s: BigNum) -> Result<EcdsaSig, ErrorStack> {
         unsafe {
             let sig = cvt_p(ffi::ECDSA_SIG_new())?;
-            ECDSA_SIG_set0(sig, r.as_ptr(), s.as_ptr());
+            ECDSA_SIG_set0(sig.as_ptr(), r.as_ptr(), s.as_ptr());
             mem::forget((r, s));
-            Ok(EcdsaSig::from_ptr(sig as *mut _))
+            Ok(EcdsaSig::from_ptr(sig.as_ptr() as *mut _))
         }
     }
 

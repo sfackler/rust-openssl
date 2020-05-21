@@ -102,10 +102,7 @@ impl Asn1Flag {
     pub const NAMED_CURVE: Asn1Flag = Asn1Flag(ffi::OPENSSL_EC_NAMED_CURVE);
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::EC_GROUP;
-    fn drop = ffi::EC_GROUP_free;
-
+foreign_type! {
     /// Describes the curve
     ///
     /// A curve can be of the named curve type.  These curves can be discovered
@@ -122,11 +119,10 @@ foreign_type_and_impl_send_sync! {
     ///
     /// [wiki]: https://wiki.openssl.org/index.php/Command_Line_Elliptic_Curve_Operations
     /// [`Nid`]: ../nid/index.html
-    pub struct EcGroup;
-    /// Reference to [`EcGroup`]
-    ///
-    /// [`EcGroup`]: struct.EcGroup.html
-    pub struct EcGroupRef;
+    pub unsafe type EcGroup : Send + Sync {
+    type CType = ffi::EC_GROUP;
+    fn drop = ffi::EC_GROUP_free;
+    }
 }
 
 impl EcGroup {
@@ -296,20 +292,16 @@ impl EcGroupRef {
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::EC_POINT;
-    fn drop = ffi::EC_POINT_free;
-
+foreign_type! {
     /// Represents a point on the curve
     ///
     /// OpenSSL documentation at [`EC_POINT_new`]
     ///
     /// [`EC_POINT_new`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_new.html
-    pub struct EcPoint;
-    /// Reference to [`EcPoint`]
-    ///
-    /// [`EcPoint`]: struct.EcPoint.html
-    pub struct EcPointRef;
+    pub unsafe type EcPoint : Send + Sync {
+    type CType = ffi::EC_POINT;
+    fn drop = ffi::EC_POINT_free;
+    }
 }
 
 impl EcPointRef {
@@ -577,21 +569,17 @@ impl EcPoint {
     }
 }
 
-generic_foreign_type_and_impl_send_sync! {
-    type CType = ffi::EC_KEY;
-    fn drop = ffi::EC_KEY_free;
-
+foreign_type! {
     /// Public and optional Private key on the given curve
     ///
     /// OpenSSL documentation at [`EC_KEY_new`]
     ///
     /// [`EC_KEY_new`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_new.html
-    pub struct EcKey<T>;
-
-    /// Reference to [`EcKey`]
-    ///
-    /// [`EcKey`]: struct.EcKey.html
-    pub struct EcKeyRef<T>;
+    pub unsafe type EcKey<T> : Send + Sync {
+    type CType = ffi::EC_KEY;
+    type PhantomData = T;
+    fn drop = ffi::EC_KEY_free;
+    }
 }
 
 impl<T> EcKeyRef<T>
@@ -708,7 +696,7 @@ impl EcKey<Params> {
     pub fn from_curve_name(nid: Nid) -> Result<EcKey<Params>, ErrorStack> {
         unsafe {
             init();
-            cvt_p(ffi::EC_KEY_new_by_curve_name(nid.as_raw())).map(|p| EcKey::from_ptr(p))
+            cvt_p(ffi::EC_KEY_new_by_curve_name(nid.as_raw())).map(|p| EcKey::from_ptr(p.as_ptr()))
         }
     }
 
@@ -720,7 +708,7 @@ impl EcKey<Params> {
     pub fn from_group(group: &EcGroupRef) -> Result<EcKey<Params>, ErrorStack> {
         unsafe {
             cvt_p(ffi::EC_KEY_new())
-                .map(|p| EcKey::from_ptr(p))
+                .map(|p| EcKey::from_ptr(p.as_ptr()))
                 .and_then(|key| {
                     cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key)
                 })
@@ -756,7 +744,7 @@ impl EcKey<Public> {
     ) -> Result<EcKey<Public>, ErrorStack> {
         unsafe {
             cvt_p(ffi::EC_KEY_new())
-                .map(|p| EcKey::from_ptr(p))
+                .map(|p| EcKey::from_ptr(p.as_ptr()))
                 .and_then(|key| {
                     cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key)
                 })
@@ -778,7 +766,7 @@ impl EcKey<Public> {
     ) -> Result<EcKey<Public>, ErrorStack> {
         unsafe {
             cvt_p(ffi::EC_KEY_new())
-                .map(|p| EcKey::from_ptr(p))
+                .map(|p| EcKey::from_ptr(p.as_ptr()))
                 .and_then(|key| {
                     cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key)
                 })
@@ -799,7 +787,7 @@ impl EcKey<Private> {
     pub fn generate(group: &EcGroupRef) -> Result<EcKey<Private>, ErrorStack> {
         unsafe {
             cvt_p(ffi::EC_KEY_new())
-                .map(|p| EcKey::from_ptr(p))
+                .map(|p| EcKey::from_ptr(p.as_ptr()))
                 .and_then(|key| {
                     cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key)
                 })
@@ -815,7 +803,7 @@ impl EcKey<Private> {
     ) -> Result<EcKey<Private>, ErrorStack> {
         unsafe {
             cvt_p(ffi::EC_KEY_new())
-                .map(|p| EcKey::from_ptr(p))
+                .map(|p| EcKey::from_ptr(p.as_ptr()))
                 .and_then(|key| {
                     cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key)
                 })

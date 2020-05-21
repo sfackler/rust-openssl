@@ -1,5 +1,3 @@
-#![deny(missing_docs)]
-
 //! Defines the format of certificiates
 //!
 //! This module is used by [`x509`] and other certificate building functions
@@ -42,10 +40,7 @@ use nid::Nid;
 use string::OpensslString;
 use {cvt, cvt_p};
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::ASN1_GENERALIZEDTIME;
-    fn drop = ffi::ASN1_GENERALIZEDTIME_free;
-
+foreign_type! {
     /// Non-UTC representation of time
     ///
     /// If a time can be represented by UTCTime, UTCTime is used
@@ -57,11 +52,10 @@ foreign_type_and_impl_send_sync! {
     /// branch as documentation on the 1.1.0 branch did not include this page.
     ///
     /// [ASN1_GENERALIZEDTIME_set]: https://www.openssl.org/docs/manmaster/man3/ASN1_GENERALIZEDTIME_set.html
-    pub struct Asn1GeneralizedTime;
-    /// Reference to a [`Asn1GeneralizedTime`]
-    ///
-    /// [`Asn1GeneralizedTime`]: struct.Asn1GeneralizedTime.html
-    pub struct Asn1GeneralizedTimeRef;
+    pub unsafe type Asn1GeneralizedTime : Send + Sync {
+      type CType = ffi::ASN1_GENERALIZEDTIME;
+      fn drop = ffi::ASN1_GENERALIZEDTIME_free;
+    }
 }
 
 impl fmt::Display for Asn1GeneralizedTimeRef {
@@ -95,9 +89,7 @@ pub struct TimeDiff {
     pub secs: c_int,
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::ASN1_TIME;
-    fn drop = ffi::ASN1_TIME_free;
+foreign_type! {
     /// Time storage and comparison
     ///
     /// Asn1Time should be used to store and share time information
@@ -108,11 +100,10 @@ foreign_type_and_impl_send_sync! {
     /// used by OpenSSL.
     ///
     /// [ASN_TIME_set]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_TIME_set.html
-    pub struct Asn1Time;
-    /// Reference to an [`Asn1Time`]
-    ///
-    /// [`Asn1Time`]: struct.Asn1Time.html
-    pub struct Asn1TimeRef;
+    pub unsafe type Asn1Time : Send + Sync {
+       type CType = ffi::ASN1_TIME;
+       fn drop = ffi::ASN1_TIME_free;
+    }
 }
 
 impl Asn1TimeRef {
@@ -223,7 +214,7 @@ impl Asn1Time {
 
         unsafe {
             let handle = cvt_p(ffi::ASN1_TIME_new())?;
-            Ok(Asn1Time::from_ptr(handle))
+            Ok(Asn1Time(handle))
         }
     }
 
@@ -232,7 +223,7 @@ impl Asn1Time {
 
         unsafe {
             let handle = cvt_p(ffi::X509_gmtime_adj(ptr::null_mut(), period))?;
-            Ok(Asn1Time::from_ptr(handle))
+            Ok(Asn1Time(handle))
         }
     }
 
@@ -247,7 +238,7 @@ impl Asn1Time {
 
         unsafe {
             let handle = cvt_p(ffi::ASN1_TIME_set(ptr::null_mut(), time))?;
-            Ok(Asn1Time::from_ptr(handle))
+            Ok(Asn1Time(handle))
         }
     }
 
@@ -335,9 +326,7 @@ impl<'a> PartialOrd<&'a Asn1TimeRef> for Asn1Time {
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::ASN1_STRING;
-    fn drop = ffi::ASN1_STRING_free;
+foreign_type! {
     /// Primary ASN.1 type used by OpenSSL
     ///
     /// Almost all ASN.1 types in OpenSSL are represented by ASN1_STRING
@@ -345,11 +334,10 @@ foreign_type_and_impl_send_sync! {
     /// compatibility with Rust's String.
     ///
     /// [ASN1_STRING-to_UTF8]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_STRING_to_UTF8.html
-    pub struct Asn1String;
-    /// Reference to [`Asn1String`]
-    ///
-    /// [`Asn1String`]: struct.Asn1String.html
-    pub struct Asn1StringRef;
+    pub unsafe type Asn1String : Send + Sync {
+       type CType = ffi::ASN1_STRING;
+       fn drop = ffi::ASN1_STRING_free;
+    }
 }
 
 impl Asn1StringRef {
@@ -386,10 +374,7 @@ impl Asn1StringRef {
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::ASN1_INTEGER;
-    fn drop = ffi::ASN1_INTEGER_free;
-
+foreign_type! {
     /// Numeric representation
     ///
     /// Integers in ASN.1 may include BigNum, int64 or uint64.  BigNum implementation
@@ -399,11 +384,10 @@ foreign_type_and_impl_send_sync! {
     ///
     /// [`bn`]: ../bn/index.html
     /// [`ASN1_INTEGER_set`]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_INTEGER_set.html
-    pub struct Asn1Integer;
-    /// Reference to [`Asn1Integer`]
-    ///
-    /// [`Asn1Integer`]: struct.Asn1Integer.html
-    pub struct Asn1IntegerRef;
+    pub unsafe type Asn1Integer: Send + Sync {
+      type CType = ffi::ASN1_INTEGER;
+      fn drop = ffi::ASN1_INTEGER_free;
+    }
 }
 
 impl Asn1Integer {
@@ -434,7 +418,7 @@ impl Asn1IntegerRef {
     pub fn to_bn(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
             cvt_p(::ffi::ASN1_INTEGER_to_BN(self.as_ptr(), ptr::null_mut()))
-                .map(|p| BigNum::from_ptr(p))
+                .map(|p| BigNum::from_ptr(p.as_ptr()))
         }
     }
 
@@ -450,20 +434,17 @@ impl Asn1IntegerRef {
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::ASN1_BIT_STRING;
-    fn drop = ffi::ASN1_BIT_STRING_free;
+foreign_type! {
     /// Sequence of bytes
     ///
     /// Asn1BitString is used in [`x509`] certificates for the signature.
     /// The bit string acts as a collection of bytes.
     ///
     /// [`x509`]: ../x509/struct.X509.html#method.signature
-    pub struct Asn1BitString;
-    /// Reference to [`Asn1BitString`]
-    ///
-    /// [`Asn1BitString`]: struct.Asn1BitString.html
-    pub struct Asn1BitStringRef;
+    pub unsafe type Asn1BitString : Send + Sync {
+       type CType = ffi::ASN1_BIT_STRING;
+       fn drop = ffi::ASN1_BIT_STRING_free;
+    }
 }
 
 impl Asn1BitStringRef {
@@ -477,10 +458,7 @@ impl Asn1BitStringRef {
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::ASN1_OBJECT;
-    fn drop = ffi::ASN1_OBJECT_free;
-
+foreign_type! {
     /// Object Identifier
     ///
     /// Represents an ASN.1 Object.  Typically, NIDs, or numeric identifiers
@@ -494,11 +472,10 @@ foreign_type_and_impl_send_sync! {
     /// [`Nid`]: ../nid/index.html
     /// [`nid::COMMONNAME`]: ../nid/constant.COMMONNAME.html
     /// [`OBJ_nid2obj`]: https://www.openssl.org/docs/man1.1.0/crypto/OBJ_obj2nid.html
-    pub struct Asn1Object;
-    /// Reference to [`Asn1Object`]
-    ///
-    /// [`Asn1Object`]: struct.Asn1Object.html
-    pub struct Asn1ObjectRef;
+    pub unsafe type Asn1Object: Send + Sync {
+       type CType = ffi::ASN1_OBJECT;
+       fn drop = ffi::ASN1_OBJECT_free;
+    }
 }
 
 impl Asn1ObjectRef {

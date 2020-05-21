@@ -167,21 +167,21 @@ impl<'a> Signer<'a> {
             let ctx = cvt_p(EVP_MD_CTX_new())?;
             let mut pctx: *mut ffi::EVP_PKEY_CTX = ptr::null_mut();
             let r = ffi::EVP_DigestSignInit(
-                ctx,
+                ctx.as_ptr(),
                 &mut pctx,
                 type_.map(|t| t.as_ptr()).unwrap_or(ptr::null()),
                 ptr::null_mut(),
                 pkey.as_ptr(),
             );
             if r != 1 {
-                EVP_MD_CTX_free(ctx);
+                EVP_MD_CTX_free(ctx.as_ptr());
                 return Err(ErrorStack::get());
             }
 
             assert!(!pctx.is_null());
 
             Ok(Signer {
-                md_ctx: ctx,
+                md_ctx: ctx.as_ptr(),
                 pctx,
                 _p: PhantomData,
             })
@@ -454,21 +454,21 @@ impl<'a> Verifier<'a> {
             let ctx = cvt_p(EVP_MD_CTX_new())?;
             let mut pctx: *mut ffi::EVP_PKEY_CTX = ptr::null_mut();
             let r = ffi::EVP_DigestVerifyInit(
-                ctx,
+                ctx.as_ptr(),
                 &mut pctx,
                 type_.map(|t| t.as_ptr()).unwrap_or(ptr::null()),
                 ptr::null_mut(),
                 pkey.as_ptr(),
             );
             if r != 1 {
-                EVP_MD_CTX_free(ctx);
+                EVP_MD_CTX_free(ctx.as_ptr());
                 return Err(ErrorStack::get());
             }
 
             assert!(!pctx.is_null());
 
             Ok(Verifier {
-                md_ctx: ctx,
+                md_ctx: ctx.as_ptr(),
                 pctx,
                 pkey_pd: PhantomData,
             })

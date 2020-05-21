@@ -28,12 +28,11 @@ impl ConfMethod {
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::CONF;
-    fn drop = ffi::NCONF_free;
-
-    pub struct Conf;
-    pub struct ConfRef;
+foreign_type! {
+    pub unsafe type Conf : Send + Sync {
+      type CType = ffi::CONF;
+      fn drop = ffi::NCONF_free;
+    }
 }
 
 impl Conf {

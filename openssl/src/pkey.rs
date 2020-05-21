@@ -116,14 +116,13 @@ pub unsafe trait HasPrivate {}
 
 unsafe impl HasPrivate for Private {}
 
-generic_foreign_type_and_impl_send_sync! {
-    type CType = ffi::EVP_PKEY;
-    fn drop = ffi::EVP_PKEY_free;
-
+foreign_type! {
     /// A public or private key.
-    pub struct PKey<T>;
-    /// Reference to `PKey`.
-    pub struct PKeyRef<T>;
+    pub unsafe type PKey<T> : Send + Sync {
+      type CType = ffi::EVP_PKEY;
+      type PhantomData = T;
+      fn drop = ffi::EVP_PKEY_free;
+    }
 }
 
 impl<T> ToOwned for PKeyRef<T> {
@@ -146,7 +145,7 @@ impl<T> PKeyRef<T> {
     pub fn rsa(&self) -> Result<Rsa<T>, ErrorStack> {
         unsafe {
             let rsa = cvt_p(ffi::EVP_PKEY_get1_RSA(self.as_ptr()))?;
-            Ok(Rsa::from_ptr(rsa))
+            Ok(Rsa::from_ptr(rsa.as_ptr()))
         }
     }
 
@@ -158,7 +157,7 @@ impl<T> PKeyRef<T> {
     pub fn dsa(&self) -> Result<Dsa<T>, ErrorStack> {
         unsafe {
             let dsa = cvt_p(ffi::EVP_PKEY_get1_DSA(self.as_ptr()))?;
-            Ok(Dsa::from_ptr(dsa))
+            Ok(Dsa::from_ptr(dsa.as_ptr()))
         }
     }
 
@@ -170,7 +169,7 @@ impl<T> PKeyRef<T> {
     pub fn dh(&self) -> Result<Dh<T>, ErrorStack> {
         unsafe {
             let dh = cvt_p(ffi::EVP_PKEY_get1_DH(self.as_ptr()))?;
-            Ok(Dh::from_ptr(dh))
+            Ok(Dh::from_ptr(dh.as_ptr()))
         }
     }
 
@@ -182,7 +181,7 @@ impl<T> PKeyRef<T> {
     pub fn ec_key(&self) -> Result<EcKey<T>, ErrorStack> {
         unsafe {
             let ec_key = cvt_p(ffi::EVP_PKEY_get1_EC_KEY(self.as_ptr()))?;
-            Ok(EcKey::from_ptr(ec_key))
+            Ok(EcKey::from_ptr(ec_key.as_ptr()))
         }
     }
 
@@ -298,9 +297,9 @@ impl<T> PKey<T> {
     pub fn from_rsa(rsa: Rsa<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
-            let pkey = PKey::from_ptr(evp);
+            let pkey = PKey::from_ptr(evp.as_ptr());
             cvt(ffi::EVP_PKEY_assign(
-                pkey.0,
+                pkey.0.as_ptr(),
                 ffi::EVP_PKEY_RSA,
                 rsa.as_ptr() as *mut _,
             ))?;
@@ -317,9 +316,9 @@ impl<T> PKey<T> {
     pub fn from_dsa(dsa: Dsa<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
-            let pkey = PKey::from_ptr(evp);
+            let pkey = PKey::from_ptr(evp.as_ptr());
             cvt(ffi::EVP_PKEY_assign(
-                pkey.0,
+                pkey.0.as_ptr(),
                 ffi::EVP_PKEY_DSA,
                 dsa.as_ptr() as *mut _,
             ))?;
@@ -336,9 +335,9 @@ impl<T> PKey<T> {
     pub fn from_dh(dh: Dh<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
-            let pkey = PKey::from_ptr(evp);
+            let pkey = PKey::from_ptr(evp.as_ptr());
             cvt(ffi::EVP_PKEY_assign(
-                pkey.0,
+                pkey.0.as_ptr(),
                 ffi::EVP_PKEY_DH,
                 dh.as_ptr() as *mut _,
             ))?;
@@ -355,9 +354,9 @@ impl<T> PKey<T> {
     pub fn from_ec_key(ec_key: EcKey<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
-            let pkey = PKey::from_ptr(evp);
+            let pkey = PKey::from_ptr(evp.as_ptr());
             cvt(ffi::EVP_PKEY_assign(
-                pkey.0,
+                pkey.0.as_ptr(),
                 ffi::EVP_PKEY_EC,
                 ec_key.as_ptr() as *mut _,
             ))?;
@@ -382,7 +381,7 @@ impl PKey<Private> {
                 key.as_ptr() as *const _,
                 key.len() as c_int,
             ))?;
-            Ok(PKey::from_ptr(key))
+            Ok(PKey::from_ptr(key.as_ptr()))
         }
     }
 
@@ -403,11 +402,11 @@ impl PKey<Private> {
             ))?;
 
             let ret = (|| {
-                cvt(ffi::EVP_PKEY_keygen_init(kctx))?;
+                cvt(ffi::EVP_PKEY_keygen_init(kctx.as_ptr()))?;
 
                 // Set cipher for cmac
                 cvt(ffi::EVP_PKEY_CTX_ctrl(
-                    kctx,
+                    kctx.as_ptr(),
                     -1,
                     ffi::EVP_PKEY_OP_KEYGEN,
                     ffi::EVP_PKEY_CTRL_CIPHER,
@@ -417,7 +416,7 @@ impl PKey<Private> {
 
                 // Set the key data
                 cvt(ffi::EVP_PKEY_CTX_ctrl(
-                    kctx,
+                    kctx.as_ptr(),
                     -1,
                     ffi::EVP_PKEY_OP_KEYGEN,
                     ffi::EVP_PKEY_CTRL_SET_MAC_KEY,
@@ -429,16 +428,16 @@ impl PKey<Private> {
 
             if let Err(e) = ret {
                 // Free memory
-                ffi::EVP_PKEY_CTX_free(kctx);
+                ffi::EVP_PKEY_CTX_free(kctx.as_ptr());
                 return Err(e);
             }
 
             // Generate key
             let mut key = ptr::null_mut();
-            let ret = cvt(ffi::EVP_PKEY_keygen(kctx, &mut key));
+            let ret = cvt(ffi::EVP_PKEY_keygen(kctx.as_ptr(), &mut key));
 
             // Free memory
-            ffi::EVP_PKEY_CTX_free(kctx);
+            ffi::EVP_PKEY_CTX_free(kctx.as_ptr());
 
             if let Err(e) = ret {
                 return Err(e);
@@ -452,15 +451,15 @@ impl PKey<Private> {
     fn generate_eddsa(nid: c_int) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
             let kctx = cvt_p(ffi::EVP_PKEY_CTX_new_id(nid, ptr::null_mut()))?;
-            let ret = cvt(ffi::EVP_PKEY_keygen_init(kctx));
+            let ret = cvt(ffi::EVP_PKEY_keygen_init(kctx.as_ptr()));
             if let Err(e) = ret {
-                ffi::EVP_PKEY_CTX_free(kctx);
+                ffi::EVP_PKEY_CTX_free(kctx.as_ptr());
                 return Err(e);
             }
             let mut key = ptr::null_mut();
-            let ret = cvt(ffi::EVP_PKEY_keygen(kctx, &mut key));
+            let ret = cvt(ffi::EVP_PKEY_keygen(kctx.as_ptr(), &mut key));
 
-            ffi::EVP_PKEY_CTX_free(kctx);
+            ffi::EVP_PKEY_CTX_free(kctx.as_ptr());
 
             if let Err(e) = ret {
                 return Err(e);
@@ -539,9 +538,9 @@ impl PKey<Private> {
                 &mut der.as_ptr(),
                 len,
             ))?;
-            let res = cvt_p(ffi::EVP_PKCS82PKEY(p8inf))
-                .map(|p| PKey::from_ptr(p));
-            ffi::PKCS8_PRIV_KEY_INFO_free(p8inf);
+            let res = cvt_p(ffi::EVP_PKCS82PKEY(p8inf.as_ptr()))
+                .map(|p| PKey::from_ptr(p.as_ptr()));
+            ffi::PKCS8_PRIV_KEY_INFO_free(p8inf.as_ptr());
             res
         }
     }
@@ -568,7 +567,7 @@ impl PKey<Private> {
                 Some(invoke_passwd_cb::<F>),
                 &mut cb as *mut _ as *mut _,
             ))
-            .map(|p| PKey::from_ptr(p))
+            .map(|p| PKey::from_ptr(p.as_ptr()))
         }
     }
 
@@ -592,7 +591,7 @@ impl PKey<Private> {
                 None,
                 passphrase.as_ptr() as *const _ as *mut _,
             ))
-            .map(|p| PKey::from_ptr(p))
+            .map(|p| PKey::from_ptr(p.as_ptr()))
         }
     }
 }

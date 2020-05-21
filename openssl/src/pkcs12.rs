@@ -13,12 +13,11 @@ use stack::Stack;
 use x509::{X509Ref, X509};
 use {cvt, cvt_p};
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::PKCS12;
-    fn drop = ffi::PKCS12_free;
-
-    pub struct Pkcs12;
-    pub struct Pkcs12Ref;
+foreign_type! {
+    pub unsafe type Pkcs12 : Send + Sync {
+      type CType = ffi::PKCS12;
+      fn drop = ffi::PKCS12_free;
+    }
 }
 
 impl Pkcs12Ref {

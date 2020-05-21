@@ -9,13 +9,11 @@ use std::str;
 unsafe fn free(_profile: *mut ffi::SRTP_PROTECTION_PROFILE) {}
 
 #[allow(unused_unsafe)]
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::SRTP_PROTECTION_PROFILE;
-    fn drop = free;
-
-    pub struct SrtpProtectionProfile;
-    /// Reference to `SrtpProtectionProfile`.
-    pub struct SrtpProtectionProfileRef;
+foreign_type! {
+    pub unsafe type SrtpProtectionProfile : Send + Sync {
+       type CType = ffi::SRTP_PROTECTION_PROFILE;
+       fn drop = free;
+    }
 }
 
 impl Stackable for SrtpProtectionProfile {

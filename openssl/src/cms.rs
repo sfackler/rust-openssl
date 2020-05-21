@@ -47,10 +47,7 @@ bitflags! {
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::CMS_ContentInfo;
-    fn drop = ffi::CMS_ContentInfo_free;
-
+foreign_type! {
     /// High level CMS wrapper
     ///
     /// CMS supports nesting various types of data, including signatures, certificates,
@@ -59,11 +56,10 @@ foreign_type_and_impl_send_sync! {
     /// CMS and OpenSSL follows this RFC's implmentation.
     ///
     /// [`RFC 5652`]: https://tools.ietf.org/html/rfc5652#page-6
-    pub struct CmsContentInfo;
-    /// Reference to [`CMSContentInfo`]
-    ///
-    /// [`CMSContentInfo`]:struct.CmsContentInfo.html
-    pub struct CmsContentInfoRef;
+    pub unsafe type CmsContentInfo : Send + Sync {
+       type CType = ffi::CMS_ContentInfo;
+       fn drop = ffi::CMS_ContentInfo_free;
+    }
 }
 
 impl CmsContentInfoRef {
@@ -129,7 +125,7 @@ impl CmsContentInfo {
 
             let cms = cvt_p(ffi::SMIME_read_CMS(bio.as_ptr(), ptr::null_mut()))?;
 
-            Ok(CmsContentInfo::from_ptr(cms))
+            Ok(CmsContentInfo(cms))
         }
     }
 
@@ -191,7 +187,7 @@ impl CmsContentInfo {
                 flags.bits(),
             ))?;
 
-            Ok(CmsContentInfo::from_ptr(cms))
+            Ok(CmsContentInfo(cms))
         }
     }
 
@@ -217,7 +213,7 @@ impl CmsContentInfo {
                 flags.bits(),
             ))?;
 
-            Ok(CmsContentInfo::from_ptr(cms))
+            Ok(CmsContentInfo(cms))
         }
     }
 }

@@ -653,7 +653,7 @@ impl SslContextBuilder {
             init();
             let ctx = cvt_p(ffi::SSL_CTX_new(method.as_ptr()))?;
 
-            Ok(SslContextBuilder::from_ptr(ctx))
+            Ok(SslContextBuilder::from_ptr(ctx.as_ptr()))
         }
     }
 
@@ -1767,20 +1767,15 @@ impl SslContextBuilder {
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::SSL_CTX;
-    fn drop = ffi::SSL_CTX_free;
-
+foreign_type! {
     /// A context object for TLS streams.
     ///
     /// Applications commonly configure a single `SslContext` that is shared by all of its
     /// `SslStreams`.
-    pub struct SslContext;
-
-    /// Reference to [`SslContext`]
-    ///
-    /// [`SslContext`]: struct.SslContext.html
-    pub struct SslContextRef;
+    pub unsafe type SslContext : Send + Sync {
+      type CType = ffi::SSL_CTX;
+      fn drop = ffi::SSL_CTX_free;
+    }
 }
 
 impl Clone for SslContext {
@@ -1995,7 +1990,7 @@ pub struct CipherBits {
 /// Information about a cipher.
 pub struct SslCipher(*mut ffi::SSL_CIPHER);
 
-impl ForeignType for SslCipher {
+unsafe impl ForeignType for SslCipher {
     type CType = ffi::SSL_CIPHER;
     type Ref = SslCipherRef;
 
@@ -2029,7 +2024,7 @@ impl DerefMut for SslCipher {
 /// [`SslCipher`]: struct.SslCipher.html
 pub struct SslCipherRef(Opaque);
 
-impl ForeignTypeRef for SslCipherRef {
+unsafe impl ForeignTypeRef for SslCipherRef {
     type CType = ffi::SSL_CIPHER;
 }
 
@@ -2146,19 +2141,14 @@ impl SslCipherRef {
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::SSL_SESSION;
-    fn drop = ffi::SSL_SESSION_free;
-
+foreign_type! {
     /// An encoded SSL session.
     ///
     /// These can be cached to share sessions across connections.
-    pub struct SslSession;
-
-    /// Reference to [`SslSession`].
-    ///
-    /// [`SslSession`]: struct.SslSession.html
-    pub struct SslSessionRef;
+    pub unsafe type SslSession : Send + Sync {
+      type CType = ffi::SSL_SESSION;
+      fn drop = ffi::SSL_SESSION_free;
+    }
 }
 
 impl Clone for SslSession {
@@ -2186,7 +2176,7 @@ impl ToOwned for SslSessionRef {
     fn to_owned(&self) -> SslSession {
         unsafe {
             SSL_SESSION_up_ref(self.as_ptr());
-            SslSession(self.as_ptr())
+            SslSession::from_ptr(self.as_ptr())
         }
     }
 }
@@ -2283,22 +2273,17 @@ impl SslSessionRef {
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::SSL;
-    fn drop = ffi::SSL_free;
-
+foreign_type! {
     /// The state of an SSL/TLS session.
     ///
     /// `Ssl` objects are created from an [`SslContext`], which provides configuration defaults.
     /// These defaults can be overridden on a per-`Ssl` basis, however.
     ///
     /// [`SslContext`]: struct.SslContext.html
-    pub struct Ssl;
-
-    /// Reference to an [`Ssl`].
-    ///
-    /// [`Ssl`]: struct.Ssl.html
-    pub struct SslRef;
+    pub unsafe type Ssl : Send + Sync {
+    type CType = ffi::SSL;
+    fn drop = ffi::SSL_free;
+    }
 }
 
 impl fmt::Debug for Ssl {
@@ -2351,7 +2336,7 @@ impl Ssl {
     pub fn new(ctx: &SslContext) -> Result<Ssl, ErrorStack> {
         unsafe {
             let ptr = cvt_p(ffi::SSL_new(ctx.as_ptr()))?;
-            let mut ssl = Ssl::from_ptr(ptr);
+            let mut ssl = Ssl::from_ptr(ptr.as_ptr());
             ssl.set_ex_data(*SESSION_CTX_INDEX, ctx.clone());
 
             Ok(ssl)
@@ -3098,10 +3083,10 @@ impl SslRef {
                 concat!(file!(), "\0").as_ptr() as *const _,
                 line!() as c_int,
             ))?;
-            ptr::copy_nonoverlapping(response.as_ptr(), p as *mut u8, response.len());
+            ptr::copy_nonoverlapping(response.as_ptr(), p.as_ptr() as *mut u8, response.len());
             cvt(ffi::SSL_set_tlsext_status_ocsp_resp(
                 self.as_ptr(),
-                p as *mut c_uchar,
+                p.as_ptr() as *mut c_uchar,
                 response.len() as c_long,
             ) as c_int)
             .map(|_| ())

@@ -136,12 +136,11 @@ impl<'a> OcspStatus<'a> {
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::OCSP_BASICRESP;
-    fn drop = ffi::OCSP_BASICRESP_free;
-
-    pub struct OcspBasicResponse;
-    pub struct OcspBasicResponseRef;
+foreign_type! {
+    pub unsafe type OcspBasicResponse : Send + Sync {
+      type CType = ffi::OCSP_BASICRESP;
+      fn drop = ffi::OCSP_BASICRESP_free;
+    }
 }
 
 impl OcspBasicResponseRef {
@@ -204,12 +203,11 @@ impl OcspBasicResponseRef {
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::OCSP_CERTID;
-    fn drop = ffi::OCSP_CERTID_free;
-
-    pub struct OcspCertId;
-    pub struct OcspCertIdRef;
+foreign_type! {
+    pub unsafe type OcspCertId : Send + Sync {
+      type CType = ffi::OCSP_CERTID;
+      fn drop = ffi::OCSP_CERTID_free;
+    }
 }
 
 impl OcspCertId {
@@ -230,12 +228,11 @@ impl OcspCertId {
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::OCSP_RESPONSE;
-    fn drop = ffi::OCSP_RESPONSE_free;
-
-    pub struct OcspResponse;
-    pub struct OcspResponseRef;
+foreign_type! {
+    pub unsafe type OcspResponse : Send + Sync {
+      type CType = ffi::OCSP_RESPONSE;
+      fn drop = ffi::OCSP_RESPONSE_free;
+    }
 }
 
 impl OcspResponse {
@@ -293,12 +290,11 @@ impl OcspResponseRef {
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::OCSP_REQUEST;
-    fn drop = ffi::OCSP_REQUEST_free;
-
-    pub struct OcspRequest;
-    pub struct OcspRequestRef;
+foreign_type! {
+    pub unsafe type OcspRequest : Send + Sync {
+      type CType = ffi::OCSP_REQUEST;
+      fn drop = ffi::OCSP_REQUEST_free;
+    }
 }
 
 impl OcspRequest {
@@ -337,15 +333,14 @@ impl OcspRequestRef {
         unsafe {
             let ptr = cvt_p(ffi::OCSP_request_add0_id(self.as_ptr(), id.as_ptr()))?;
             mem::forget(id);
-            Ok(OcspOneReqRef::from_ptr_mut(ptr))
+            Ok(OcspOneReqRef::from_ptr_mut(ptr.as_ptr()))
         }
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::OCSP_ONEREQ;
-    fn drop = ffi::OCSP_ONEREQ_free;
-
-    pub struct OcspOneReq;
-    pub struct OcspOneReqRef;
+foreign_type! {
+    pub unsafe type OcspOneReq : Send + Sync {
+      type CType = ffi::OCSP_ONEREQ;
+      fn drop = ffi::OCSP_ONEREQ_free;
+    }
 }

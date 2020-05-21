@@ -10,6 +10,7 @@ use std::ops::{Deref, DerefMut, Index, IndexMut, Range};
 
 use error::ErrorStack;
 use {cvt, cvt_p};
+use std::ptr::NonNull;
 
 cfg_if! {
     if #[cfg(ossl110)] {
@@ -38,7 +39,7 @@ pub trait Stackable: ForeignType {
 }
 
 /// An owned stack of `T`.
-pub struct Stack<T: Stackable>(*mut T::StackType);
+pub struct Stack<T: Stackable>(NonNull<T::StackType>);
 
 unsafe impl<T: Stackable + Send> Send for Stack<T> {}
 unsafe impl<T: Stackable + Sync> Sync for Stack<T> {}
@@ -47,7 +48,7 @@ impl<T: Stackable> Drop for Stack<T> {
     fn drop(&mut self) {
         unsafe {
             while let Some(_) = self.pop() {}
-            OPENSSL_sk_free(self.0 as *mut _);
+            OPENSSL_sk_free(self.0.as_ptr() as *mut _);
         }
     }
 }
@@ -57,7 +58,7 @@ impl<T: Stackable> Stack<T> {
         unsafe {
             ffi::init();
             let ptr = cvt_p(OPENSSL_sk_new_null())?;
-            Ok(Stack(ptr as *mut _))
+            Ok(Stack(ptr.cast()))
         }
     }
 }
@@ -88,23 +89,24 @@ impl<T: Stackable> Borrow<StackRef<T>> for Stack<T> {
     }
 }
 
-impl<T: Stackable> ForeignType for Stack<T> {
+unsafe impl<T: Stackable> ForeignType for Stack<T> {
     type CType = T::StackType;
     type Ref = StackRef<T>;
 
     #[inline]
     unsafe fn from_ptr(ptr: *mut T::StackType) -> Stack<T> {
-        assert!(
-            !ptr.is_null(),
-            "Must not instantiate a Stack from a null-ptr - use Stack::new() in \
-             that case"
-        );
-        Stack(ptr)
+        if let Some(stack) = NonNull::new(ptr) {
+            Stack(stack)
+        } else {
+            panic!(
+                "Must not instantiate a Stack from a null-ptr - use Stack::new() in \
+             that case")
+        }
     }
 
     #[inline]
     fn as_ptr(&self) -> *mut T::StackType {
-        self.0
+        self.0.as_ptr()
     }
 }
 
@@ -112,18 +114,18 @@ impl<T: Stackable> Deref for Stack<T> {
     type Target = StackRef<T>;
 
     fn deref(&self) -> &StackRef<T> {
-        unsafe { StackRef::from_ptr(self.0) }
+        unsafe { StackRef::from_ptr(self.0.as_ptr()) }
     }
 }
 
 impl<T: Stackable> DerefMut for Stack<T> {
     fn deref_mut(&mut self) -> &mut StackRef<T> {
-        unsafe { StackRef::from_ptr_mut(self.0) }
+        unsafe { StackRef::from_ptr_mut(self.0.as_ptr()) }
     }
 }
 
 pub struct IntoIter<T: Stackable> {
-    stack: *mut T::StackType,
+    stack: NonNull<T::StackType>,
     idxs: Range<c_int>,
 }
 
@@ -131,7 +133,7 @@ impl<T: Stackable> Drop for IntoIter<T> {
     fn drop(&mut self) {
         unsafe {
             while let Some(_) = self.next() {}
-            OPENSSL_sk_free(self.stack as *mut _);
+            OPENSSL_sk_free(self.stack.as_ptr() as *mut _);
         }
     }
 }
@@ -143,7 +145,7 @@ impl<T: Stackable> Iterator for IntoIter<T> {
         unsafe {
             self.idxs
                 .next()
-                .map(|i| T::from_ptr(OPENSSL_sk_value(self.stack as *mut _, i) as *mut _))
+                .map(|i| T::from_ptr(OPENSSL_sk_value(self.stack.as_ptr() as *mut _, i) as *mut _))
         }
     }
 
@@ -157,7 +159,7 @@ impl<T: Stackable> DoubleEndedIterator for IntoIter<T> {
         unsafe {
             self.idxs
                 .next_back()
-                .map(|i| T::from_ptr(OPENSSL_sk_value(self.stack as *mut _, i) as *mut _))
+                .map(|i| T::from_ptr(OPENSSL_sk_value(self.stack.as_ptr() as *mut _, i) as *mut _))
         }
     }
 }
@@ -169,7 +171,7 @@ pub struct StackRef<T: Stackable>(Opaque, PhantomData<T>);
 unsafe impl<T: Stackable + Send> Send for StackRef<T> {}
 unsafe impl<T: Stackable + Sync> Sync for StackRef<T> {}
 
-impl<T: Stackable> ForeignTypeRef for StackRef<T> {
+unsafe impl<T: Stackable> ForeignTypeRef for StackRef<T> {
     type CType = T::StackType;
 }
 

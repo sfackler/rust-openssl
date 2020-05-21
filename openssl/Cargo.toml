@@ -21,7 +21,7 @@ vendored = ['openssl-sys/vendored']
 [dependencies]
 bitflags = "1.0"
 cfg-if = "0.1"
-foreign-types = "0.3.1"
+foreign-types = "0.5.0"
 lazy_static = "1"
 libc = "0.2"
 

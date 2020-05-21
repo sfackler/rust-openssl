@@ -65,15 +65,13 @@ impl Padding {
     pub const PKCS1_PSS: Padding = Padding(ffi::RSA_PKCS1_PSS_PADDING);
 }
 
-generic_foreign_type_and_impl_send_sync! {
-    type CType = ffi::RSA;
-    fn drop = ffi::RSA_free;
-
+foreign_type! {
     /// An RSA key.
-    pub struct Rsa<T>;
-
-    /// Reference to `RSA`
-    pub struct RsaRef<T>;
+    pub unsafe type Rsa<T> : Send + Sync {
+      type CType = ffi::RSA;
+      type PhantomData = T;
+      fn drop = ffi::RSA_free;
+    }
 }
 
 impl<T> Clone for Rsa<T> {
@@ -445,9 +443,9 @@ impl Rsa<Public> {
     pub fn from_public_components(n: BigNum, e: BigNum) -> Result<Rsa<Public>, ErrorStack> {
         unsafe {
             let rsa = cvt_p(ffi::RSA_new())?;
-            RSA_set0_key(rsa, n.as_ptr(), e.as_ptr(), ptr::null_mut());
+            RSA_set0_key(rsa.as_ptr(), n.as_ptr(), e.as_ptr(), ptr::null_mut());
             mem::forget((n, e));
-            Ok(Rsa::from_ptr(rsa))
+            Ok(Rsa::from_ptr(rsa.as_ptr()))
         }
     }
 
@@ -517,10 +515,10 @@ impl RsaPrivateKeyBuilder {
     pub fn new(n: BigNum, e: BigNum, d: BigNum) -> Result<RsaPrivateKeyBuilder, ErrorStack> {
         unsafe {
             let rsa = cvt_p(ffi::RSA_new())?;
-            RSA_set0_key(rsa, n.as_ptr(), e.as_ptr(), d.as_ptr());
+            RSA_set0_key(rsa.as_ptr(), n.as_ptr(), e.as_ptr(), d.as_ptr());
             mem::forget((n, e, d));
             Ok(RsaPrivateKeyBuilder {
-                rsa: Rsa::from_ptr(rsa),
+                rsa: Rsa::from_ptr(rsa.as_ptr()),
             })
         }
     }
@@ -616,9 +614,9 @@ impl Rsa<Private> {
     /// [`RSA_generate_key_ex`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_generate_key_ex.html
     pub fn generate_with_e(bits: u32, e: &BigNumRef) -> Result<Rsa<Private>, ErrorStack> {
         unsafe {
-            let rsa = Rsa::from_ptr(cvt_p(ffi::RSA_new())?);
+            let rsa = Rsa::from_ptr(cvt_p(ffi::RSA_new())?.as_ptr());
             cvt(ffi::RSA_generate_key_ex(
-                rsa.0,
+                rsa.0.as_ptr(),
                 bits as c_int,
                 e.as_ptr(),
                 ptr::null_mut(),

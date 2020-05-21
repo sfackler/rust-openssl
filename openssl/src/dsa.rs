@@ -17,10 +17,7 @@ use error::ErrorStack;
 use pkey::{HasParams, HasPrivate, HasPublic, Private, Public};
 use {cvt, cvt_p};
 
-generic_foreign_type_and_impl_send_sync! {
-    type CType = ffi::DSA;
-    fn drop = ffi::DSA_free;
-
+foreign_type! {
     /// Object representing DSA keys.
     ///
     /// A DSA object contains the parameters p, q, and g.  There is a private
@@ -52,11 +49,11 @@ generic_foreign_type_and_impl_send_sync! {
     /// #    create_dsa();
     /// # }
     /// ```
-    pub struct Dsa<T>;
-    /// Reference to [`Dsa`].
-    ///
-    /// [`Dsa`]: struct.Dsa.html
-    pub struct DsaRef<T>;
+    pub unsafe type Dsa<T> : Send + Sync {
+      type CType = ffi::DSA;
+      type PhantomData = T;
+      fn drop = ffi::DSA_free;
+    }
 }
 
 impl<T> Clone for Dsa<T> {
@@ -200,9 +197,9 @@ impl Dsa<Private> {
     pub fn generate(bits: u32) -> Result<Dsa<Private>, ErrorStack> {
         ffi::init();
         unsafe {
-            let dsa = Dsa::from_ptr(cvt_p(ffi::DSA_new())?);
+            let dsa = Dsa::from_ptr(cvt_p(ffi::DSA_new())?.as_ptr());
             cvt(ffi::DSA_generate_parameters_ex(
-                dsa.0,
+                dsa.0.as_ptr(),
                 bits as c_int,
                 ptr::null(),
                 0,
@@ -210,7 +207,7 @@ impl Dsa<Private> {
                 ptr::null_mut(),
                 ptr::null_mut(),
             ))?;
-            cvt(ffi::DSA_generate_key(dsa.0))?;
+            cvt(ffi::DSA_generate_key(dsa.0.as_ptr()))?;
             Ok(dsa)
         }
     }
@@ -229,10 +226,10 @@ impl Dsa<Private> {
     ) -> Result<Dsa<Private>, ErrorStack> {
         ffi::init();
         unsafe {
-            let dsa = Dsa::from_ptr(cvt_p(ffi::DSA_new())?);
-            cvt(DSA_set0_pqg(dsa.0, p.as_ptr(), q.as_ptr(), g.as_ptr()))?;
+            let dsa = Dsa::from_ptr(cvt_p(ffi::DSA_new())?.as_ptr());
+            cvt(DSA_set0_pqg(dsa.0.as_ptr(), p.as_ptr(), q.as_ptr(), g.as_ptr()))?;
             mem::forget((p, q, g));
-            cvt(DSA_set0_key(dsa.0, pub_key.as_ptr(), priv_key.as_ptr()))?;
+            cvt(DSA_set0_key(dsa.0.as_ptr(), pub_key.as_ptr(), priv_key.as_ptr()))?;
             mem::forget((pub_key, priv_key));
             Ok(dsa)
         }
@@ -276,10 +273,10 @@ impl Dsa<Public> {
     ) -> Result<Dsa<Public>, ErrorStack> {
         ffi::init();
         unsafe {
-            let dsa = Dsa::from_ptr(cvt_p(ffi::DSA_new())?);
-            cvt(DSA_set0_pqg(dsa.0, p.as_ptr(), q.as_ptr(), g.as_ptr()))?;
+            let dsa = Dsa::from_ptr(cvt_p(ffi::DSA_new())?.as_ptr());
+            cvt(DSA_set0_pqg(dsa.0.as_ptr(), p.as_ptr(), q.as_ptr(), g.as_ptr()))?;
             mem::forget((p, q, g));
-            cvt(DSA_set0_key(dsa.0, pub_key.as_ptr(), ptr::null_mut()))?;
+            cvt(DSA_set0_key(dsa.0.as_ptr(), pub_key.as_ptr(), ptr::null_mut()))?;
             mem::forget(pub_key);
             Ok(dsa)
         }

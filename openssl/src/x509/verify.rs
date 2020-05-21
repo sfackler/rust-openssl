@@ -23,14 +23,12 @@ bitflags! {
     }
 }
 
-foreign_type_and_impl_send_sync! {
+foreign_type! {
+    /// Adjust parameters associated with certificate verification.
+    pub unsafe type X509VerifyParam : Send + Sync {
     type CType = ffi::X509_VERIFY_PARAM;
     fn drop = ffi::X509_VERIFY_PARAM_free;
-
-    /// Adjust parameters associated with certificate verification.
-    pub struct X509VerifyParam;
-    /// Reference to `X509VerifyParam`.
-    pub struct X509VerifyParamRef;
+    }
 }
 
 impl X509VerifyParamRef {

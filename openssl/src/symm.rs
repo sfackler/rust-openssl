@@ -60,6 +60,7 @@ use std::ptr;
 use error::ErrorStack;
 use nid::Nid;
 use {cvt, cvt_p};
+use std::ptr::NonNull;
 
 #[derive(Copy, Clone)]
 pub enum Mode {
@@ -395,7 +396,7 @@ unsafe impl Send for Cipher {}
 /// assert_eq!(b"Some Stream of Crypto Text", &plaintext[..]);
 /// ```
 pub struct Crypter {
-    ctx: *mut ffi::EVP_CIPHER_CTX,
+    ctx: NonNull<ffi::EVP_CIPHER_CTX>,
     block_size: usize,
 }
 
@@ -421,7 +422,7 @@ impl Crypter {
         unsafe {
             let ctx = cvt_p(ffi::EVP_CIPHER_CTX_new())?;
             let crypter = Crypter {
-                ctx: ctx,
+                ctx,
                 block_size: t.block_size(),
             };
 
@@ -431,7 +432,7 @@ impl Crypter {
             };
 
             cvt(ffi::EVP_CipherInit_ex(
-                crypter.ctx,
+                crypter.ctx.as_ptr(),
                 t.as_ptr(),
                 ptr::null_mut(),
                 ptr::null_mut(),
@@ -441,7 +442,7 @@ impl Crypter {
 
             assert!(key.len() <= c_int::max_value() as usize);
             cvt(ffi::EVP_CIPHER_CTX_set_key_length(
-                crypter.ctx,
+                crypter.ctx.as_ptr(),
                 key.len() as c_int,
             ))?;
 
@@ -451,7 +452,7 @@ impl Crypter {
                     if iv.len() != len {
                         assert!(iv.len() <= c_int::max_value() as usize);
                         cvt(ffi::EVP_CIPHER_CTX_ctrl(
-                            crypter.ctx,
+                            crypter.ctx.as_ptr(),
                             ffi::EVP_CTRL_GCM_SET_IVLEN,
                             iv.len() as c_int,
                             ptr::null_mut(),
@@ -463,7 +464,7 @@ impl Crypter {
                 (None, Some(_)) => panic!("an IV is required for this cipher"),
             };
             cvt(ffi::EVP_CipherInit_ex(
-                crypter.ctx,
+                crypter.ctx.as_ptr(),
                 ptr::null(),
                 ptr::null_mut(),
                 key,
@@ -481,7 +482,7 @@ impl Crypter {
     /// be a multiple of the cipher's block size.
     pub fn pad(&mut self, padding: bool) {
         unsafe {
-            ffi::EVP_CIPHER_CTX_set_padding(self.ctx, padding as c_int);
+            ffi::EVP_CIPHER_CTX_set_padding(self.ctx.as_ptr(), padding as c_int);
         }
     }
 
@@ -493,7 +494,7 @@ impl Crypter {
             assert!(tag.len() <= c_int::max_value() as usize);
             // NB: this constant is actually more general than just GCM.
             cvt(ffi::EVP_CIPHER_CTX_ctrl(
-                self.ctx,
+                self.ctx.as_ptr(),
                 ffi::EVP_CTRL_GCM_SET_TAG,
                 tag.len() as c_int,
                 tag.as_ptr() as *mut _,
@@ -511,7 +512,7 @@ impl Crypter {
             assert!(tag_len <= c_int::max_value() as usize);
             // NB: this constant is actually more general than just GCM.
             cvt(ffi::EVP_CIPHER_CTX_ctrl(
-                self.ctx,
+                self.ctx.as_ptr(),
                 ffi::EVP_CTRL_GCM_SET_TAG,
                 tag_len as c_int,
                 ptr::null_mut(),
@@ -529,7 +530,7 @@ impl Crypter {
             assert!(data_len <= c_int::max_value() as usize);
             let mut len = 0;
             cvt(ffi::EVP_CipherUpdate(
-                self.ctx,
+                self.ctx.as_ptr(),
                 ptr::null_mut(),
                 &mut len,
                 ptr::null_mut(),
@@ -549,7 +550,7 @@ impl Crypter {
             assert!(input.len() <= c_int::max_value() as usize);
             let mut len = 0;
             cvt(ffi::EVP_CipherUpdate(
-                self.ctx,
+                self.ctx.as_ptr(),
                 ptr::null_mut(),
                 &mut len,
                 input.as_ptr(),
@@ -586,7 +587,7 @@ impl Crypter {
             let inl = input.len() as c_int;
 
             cvt(ffi::EVP_CipherUpdate(
-                self.ctx,
+                self.ctx.as_ptr(),
                 output.as_mut_ptr(),
                 &mut outl,
                 input.as_ptr(),
@@ -616,7 +617,7 @@ impl Crypter {
             let mut outl = cmp::min(output.len(), c_int::max_value() as usize) as c_int;
 
             cvt(ffi::EVP_CipherFinal(
-                self.ctx,
+                self.ctx.as_ptr(),
                 output.as_mut_ptr(),
                 &mut outl,
             ))?;
@@ -637,7 +638,7 @@ impl Crypter {
         unsafe {
             assert!(tag.len() <= c_int::max_value() as usize);
             cvt(ffi::EVP_CIPHER_CTX_ctrl(
-                self.ctx,
+                self.ctx.as_ptr(),
                 ffi::EVP_CTRL_GCM_GET_TAG,
                 tag.len() as c_int,
                 tag.as_mut_ptr() as *mut _,
@@ -650,7 +651,7 @@ impl Crypter {
 impl Drop for Crypter {
     fn drop(&mut self) {
         unsafe {
-            ffi::EVP_CIPHER_CTX_free(self.ctx);
+            ffi::EVP_CIPHER_CTX_free(self.ctx.as_ptr());
         }
     }
 }

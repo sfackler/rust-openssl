@@ -32,6 +32,7 @@ use ssl::SslRef;
 use stack::{Stack, StackRef, Stackable};
 use string::OpensslString;
 use {cvt, cvt_n, cvt_p};
+use std::ptr::NonNull;
 
 #[cfg(any(ossl102, libressl261))]
 pub mod verify;
@@ -42,15 +43,12 @@ pub mod store;
 #[cfg(test)]
 mod tests;
 
-foreign_type_and_impl_send_sync! {
+foreign_type! {
+    /// An `X509` certificate store context.
+    pub unsafe type X509StoreContext : Send + Sync {
     type CType = ffi::X509_STORE_CTX;
     fn drop = ffi::X509_STORE_CTX_free;
-
-    /// An `X509` certificate store context.
-    pub struct X509StoreContext;
-
-    /// Reference to `X509StoreContext`.
-    pub struct X509StoreContextRef;
+    }
 }
 
 impl X509StoreContext {
@@ -374,14 +372,12 @@ impl X509Builder {
     }
 }
 
-foreign_type_and_impl_send_sync! {
+foreign_type! {
+    /// An `X509` public key certificate.
+    pub unsafe type X509 : Send + Sync {
     type CType = ffi::X509;
     fn drop = ffi::X509_free;
-
-    /// An `X509` public key certificate.
-    pub struct X509;
-    /// Reference to `X509`.
-    pub struct X509Ref;
+    }
 }
 
 impl X509Ref {
@@ -456,7 +452,7 @@ impl X509Ref {
     pub fn public_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
             let pkey = cvt_p(ffi::X509_get_pubkey(self.as_ptr()))?;
-            Ok(PKey::from_ptr(pkey))
+            Ok(PKey::from_ptr(pkey.as_ptr()))
         }
     }
 
@@ -530,7 +526,7 @@ impl X509Ref {
     /// Returns the list of OCSP responder URLs specified in the certificate's Authority Information
     /// Access field.
     pub fn ocsp_responders(&self) -> Result<Stack<OpensslString>, ErrorStack> {
-        unsafe { cvt_p(ffi::X509_get1_ocsp(self.as_ptr())).map(|p| Stack::from_ptr(p)) }
+        unsafe { cvt_p(ffi::X509_get1_ocsp(self.as_ptr())).map(|p| Stack::from_ptr(p.as_ptr())) }
     }
 
     /// Checks that this certificate issued `subject`.
@@ -645,7 +641,9 @@ impl X509 {
             loop {
                 let r =
                     ffi::PEM_read_bio_X509(bio.as_ptr(), ptr::null_mut(), None, ptr::null_mut());
-                if r.is_null() {
+                if let Some(x509) = NonNull::new(r) {
+                    certs.push(X509(x509));
+                } else {
                     let err = ffi::ERR_peek_last_error();
                     if ffi::ERR_GET_LIB(err) == ffi::ERR_LIB_PEM
                         && ffi::ERR_GET_REASON(err) == ffi::PEM_R_NO_START_LINE
@@ -655,8 +653,6 @@ impl X509 {
                     }
 
                     return Err(ErrorStack::get());
-                } else {
-                    certs.push(X509(r));
                 }
             }
 
@@ -690,14 +686,12 @@ impl<'a> X509v3Context<'a> {
     }
 }
 
-foreign_type_and_impl_send_sync! {
+foreign_type! {
+    /// Permit additional fields to be added to an `X509` v3 certificate.
+    pub unsafe type X509Extension : Send + Sync {
     type CType = ffi::X509_EXTENSION;
     fn drop = ffi::X509_EXTENSION_free;
-
-    /// Permit additional fields to be added to an `X509` v3 certificate.
-    pub struct X509Extension;
-    /// Reference to `X509Extension`.
-    pub struct X509ExtensionRef;
+    }
 }
 
 impl Stackable for X509Extension {
@@ -818,14 +812,12 @@ impl X509NameBuilder {
     }
 }
 
-foreign_type_and_impl_send_sync! {
+foreign_type! {
+    /// The names of an `X509` certificate.
+    pub unsafe type X509Name : Send + Sync {
     type CType = ffi::X509_NAME;
     fn drop = ffi::X509_NAME_free;
-
-    /// The names of an `X509` certificate.
-    pub struct X509Name;
-    /// Reference to `X509Name`.
-    pub struct X509NameRef;
+    }
 }
 
 impl X509Name {
@@ -839,7 +831,7 @@ impl X509Name {
     /// This is commonly used in conjunction with `SslContextBuilder::set_client_ca_list`.
     pub fn load_client_ca_file<P: AsRef<Path>>(file: P) -> Result<Stack<X509Name>, ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
-        unsafe { cvt_p(ffi::SSL_load_client_CA_file(file.as_ptr())).map(|p| Stack::from_ptr(p)) }
+        unsafe { cvt_p(ffi::SSL_load_client_CA_file(file.as_ptr())).map(|p| Stack::from_ptr(p.as_ptr())) }
     }
 }
 
@@ -905,14 +897,12 @@ impl<'a> Iterator for X509NameEntries<'a> {
     }
 }
 
-foreign_type_and_impl_send_sync! {
+foreign_type! {
+    /// A name entry associated with a `X509Name`.
+    pub unsafe type X509NameEntry : Send + Sync {
     type CType = ffi::X509_NAME_ENTRY;
     fn drop = ffi::X509_NAME_ENTRY_free;
-
-    /// A name entry associated with a `X509Name`.
-    pub struct X509NameEntry;
-    /// Reference to `X509NameEntry`.
-    pub struct X509NameEntryRef;
+    }
 }
 
 impl X509NameEntryRef {
@@ -1057,14 +1047,12 @@ impl X509ReqBuilder {
     }
 }
 
-foreign_type_and_impl_send_sync! {
+foreign_type! {
+    /// An `X509` certificate request.
+    pub unsafe type X509Req : Send + Sync {
     type CType = ffi::X509_REQ;
     fn drop = ffi::X509_REQ_free;
-
-    /// An `X509` certificate request.
-    pub struct X509Req;
-    /// Reference to `X509Req`.
-    pub struct X509ReqRef;
+    }
 }
 
 impl X509Req {
@@ -1151,7 +1139,7 @@ impl X509ReqRef {
     pub fn public_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
             let key = cvt_p(ffi::X509_REQ_get_pubkey(self.as_ptr()))?;
-            Ok(PKey::from_ptr(key))
+            Ok(PKey::from_ptr(key.as_ptr()))
         }
     }
 
@@ -1175,7 +1163,7 @@ impl X509ReqRef {
     pub fn extensions(&self) -> Result<Stack<X509Extension>, ErrorStack> {
         unsafe {
             let extensions = cvt_p(ffi::X509_REQ_get_extensions(self.as_ptr()))?;
-            Ok(Stack::from_ptr(extensions))
+            Ok(Stack::from_ptr(extensions.as_ptr()))
         }
     }
 }
@@ -1238,14 +1226,12 @@ impl X509VerifyResult {
         X509VerifyResult(ffi::X509_V_ERR_APPLICATION_VERIFICATION);
 }
 
-foreign_type_and_impl_send_sync! {
+foreign_type! {
+    /// An `X509` certificate alternative names.
+    pub unsafe type GeneralName : Send + Sync {
     type CType = ffi::GENERAL_NAME;
     fn drop = ffi::GENERAL_NAME_free;
-
-    /// An `X509` certificate alternative names.
-    pub struct GeneralName;
-    /// Reference to `GeneralName`.
-    pub struct GeneralNameRef;
+    }
 }
 
 impl GeneralNameRef {
@@ -1300,14 +1286,12 @@ impl Stackable for GeneralName {
     type StackType = ffi::stack_st_GENERAL_NAME;
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::X509_ALGOR;
-    fn drop = ffi::X509_ALGOR_free;
-
+foreign_type! {
     /// An `X509` certificate signature algorithm.
-    pub struct X509Algorithm;
-    /// Reference to `X509Algorithm`.
-    pub struct X509AlgorithmRef;
+    pub unsafe type X509Algorithm : Send + Sync {
+      type CType = ffi::X509_ALGOR;
+      fn drop = ffi::X509_ALGOR_free;
+    }
 }
 
 impl X509AlgorithmRef {
@@ -1322,14 +1306,12 @@ impl X509AlgorithmRef {
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::X509_OBJECT;
-    fn drop = X509_OBJECT_free;
-
+foreign_type! {
     /// An `X509` or an X509 certificate revocation list.
-    pub struct X509Object;
-    /// Reference to `X509Object`
-    pub struct X509ObjectRef;
+    pub unsafe type X509Object : Send + Sync {
+      type CType = ffi::X509_OBJECT;
+      fn drop = X509_OBJECT_free;
+    }
 }
 
 impl X509ObjectRef {

@@ -49,14 +49,12 @@ use stack::StackRef;
 use x509::{X509Object, X509};
 use {cvt, cvt_p};
 
-foreign_type_and_impl_send_sync! {
+foreign_type! {
+    /// A builder type used to construct an `X509Store`.
+    pub unsafe type X509StoreBuilder : Send + Sync {
     type CType = ffi::X509_STORE;
     fn drop = ffi::X509_STORE_free;
-
-    /// A builder type used to construct an `X509Store`.
-    pub struct X509StoreBuilder;
-    /// Reference to an `X509StoreBuilder`.
-    pub struct X509StoreBuilderRef;
+    }
 }
 
 impl X509StoreBuilder {
@@ -96,14 +94,12 @@ impl X509StoreBuilderRef {
     }
 }
 
-foreign_type_and_impl_send_sync! {
+foreign_type! {
+    /// A certificate store to hold trusted `X509` certificates.
+    pub unsafe type X509Store : Send + Sync {
     type CType = ffi::X509_STORE;
     fn drop = ffi::X509_STORE_free;
-
-    /// A certificate store to hold trusted `X509` certificates.
-    pub struct X509Store;
-    /// Reference to an `X509Store`.
-    pub struct X509StoreRef;
+    }
 }
 
 impl X509StoreRef {

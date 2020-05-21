@@ -35,10 +35,11 @@ use std::cmp;
 use std::ptr;
 use symm::Cipher;
 use {cvt, cvt_p};
+use std::ptr::NonNull;
 
 /// Represents an EVP_Seal context.
 pub struct Seal {
-    ctx: *mut ffi::EVP_CIPHER_CTX,
+    ctx: NonNull<ffi::EVP_CIPHER_CTX>,
     block_size: usize,
     iv: Option<Vec<u8>>,
     enc_keys: Vec<Vec<u8>>,
@@ -69,7 +70,7 @@ impl Seal {
             let mut enc_key_lens = vec![0; enc_keys.len()];
 
             cvt(ffi::EVP_SealInit(
-                ctx,
+                ctx.as_ptr(),
                 cipher.as_ptr(),
                 enc_key_ptrs.as_mut_ptr(),
                 enc_key_lens.as_mut_ptr(),
@@ -118,7 +119,7 @@ impl Seal {
             let mut outl = output.len() as c_int;
             let inl = input.len() as c_int;
             cvt(ffi::EVP_EncryptUpdate(
-                self.ctx,
+                self.ctx.as_ptr(),
                 output.as_mut_ptr(),
                 &mut outl,
                 input.as_ptr(),
@@ -142,7 +143,7 @@ impl Seal {
             assert!(output.len() >= self.block_size);
             let mut outl = cmp::min(output.len(), c_int::max_value() as usize) as c_int;
 
-            cvt(ffi::EVP_SealFinal(self.ctx, output.as_mut_ptr(), &mut outl))?;
+            cvt(ffi::EVP_SealFinal(self.ctx.as_ptr(), output.as_mut_ptr(), &mut outl))?;
 
             Ok(outl as usize)
         }
@@ -152,14 +153,14 @@ impl Seal {
 impl Drop for Seal {
     fn drop(&mut self) {
         unsafe {
-            ffi::EVP_CIPHER_CTX_free(self.ctx);
+            ffi::EVP_CIPHER_CTX_free(self.ctx.as_ptr());
         }
     }
 }
 
 /// Represents an EVP_Open context.
 pub struct Open {
-    ctx: *mut ffi::EVP_CIPHER_CTX,
+    ctx: NonNull<ffi::EVP_CIPHER_CTX>,
     block_size: usize,
 }
 
@@ -185,7 +186,7 @@ impl Open {
 
             let ctx = cvt_p(ffi::EVP_CIPHER_CTX_new())?;
             cvt(ffi::EVP_OpenInit(
-                ctx,
+                ctx.as_ptr(),
                 cipher.as_ptr(),
                 encrypted_key.as_ptr(),
                 encrypted_key.len() as c_int,
@@ -216,7 +217,7 @@ impl Open {
             let mut outl = output.len() as c_int;
             let inl = input.len() as c_int;
             cvt(ffi::EVP_DecryptUpdate(
-                self.ctx,
+                self.ctx.as_ptr(),
                 output.as_mut_ptr(),
                 &mut outl,
                 input.as_ptr(),
@@ -240,7 +241,7 @@ impl Open {
             assert!(output.len() >= self.block_size);
             let mut outl = cmp::min(output.len(), c_int::max_value() as usize) as c_int;
 
-            cvt(ffi::EVP_OpenFinal(self.ctx, output.as_mut_ptr(), &mut outl))?;
+            cvt(ffi::EVP_OpenFinal(self.ctx.as_ptr(), output.as_mut_ptr(), &mut outl))?;
 
             Ok(outl as usize)
         }
@@ -250,7 +251,7 @@ impl Open {
 impl Drop for Open {
     fn drop(&mut self) {
         unsafe {
-            ffi::EVP_CIPHER_CTX_free(self.ctx);
+            ffi::EVP_CIPHER_CTX_free(self.ctx.as_ptr());
         }
     }
 }

@@ -128,6 +128,7 @@ enum State {
 }
 
 use self::State::*;
+use std::ptr::NonNull;
 
 /// Provides message digest (hash) computation.
 ///
@@ -182,7 +183,7 @@ use self::State::*;
 /// For extendable output functions (XOFs, i.e. SHAKE128/SHAKE256), you must use finish_xof instead
 /// of finish and provide a buf to store the hash. The hash will be as long as the buf.
 pub struct Hasher {
-    ctx: *mut ffi::EVP_MD_CTX,
+    ctx: NonNull<ffi::EVP_MD_CTX>,
     md: *const ffi::EVP_MD,
     type_: MessageDigest,
     state: State,
@@ -199,7 +200,7 @@ impl Hasher {
         let ctx = unsafe { cvt_p(EVP_MD_CTX_new())? };
 
         let mut h = Hasher {
-            ctx: ctx,
+            ctx,
             md: ty.as_ptr(),
             type_: ty,
             state: Finalized,
@@ -217,7 +218,7 @@ impl Hasher {
             Finalized => (),
         }
         unsafe {
-            cvt(ffi::EVP_DigestInit_ex(self.ctx, self.md, 0 as *mut _))?;
+            cvt(ffi::EVP_DigestInit_ex(self.ctx.as_ptr(), self.md, 0 as *mut _))?;
         }
         self.state = Reset;
         Ok(())
@@ -230,7 +231,7 @@ impl Hasher {
         }
         unsafe {
             cvt(ffi::EVP_DigestUpdate(
-                self.ctx,
+                self.ctx.as_ptr(),
                 data.as_ptr() as *mut _,
                 data.len(),
             ))?;
@@ -248,7 +249,7 @@ impl Hasher {
             let mut len = ffi::EVP_MAX_MD_SIZE;
             let mut buf = [0; ffi::EVP_MAX_MD_SIZE as usize];
             cvt(ffi::EVP_DigestFinal_ex(
-                self.ctx,
+                self.ctx.as_ptr(),
                 buf.as_mut_ptr(),
                 &mut len,
             ))?;
@@ -269,7 +270,7 @@ impl Hasher {
         }
         unsafe {
             cvt(ffi::EVP_DigestFinalXOF(
-                self.ctx,
+                self.ctx.as_ptr(),
                 buf.as_mut_ptr(),
                 buf.len(),
             ))?;
@@ -293,18 +294,17 @@ impl Write for Hasher {
 
 impl Clone for Hasher {
     fn clone(&self) -> Hasher {
-        let ctx = unsafe {
+        unsafe {
             let ctx = EVP_MD_CTX_new();
             assert!(!ctx.is_null());
-            let r = ffi::EVP_MD_CTX_copy_ex(ctx, self.ctx);
+            let r = ffi::EVP_MD_CTX_copy_ex(ctx, self.ctx.as_ptr());
             assert_eq!(r, 1);
-            ctx
-        };
-        Hasher {
-            ctx: ctx,
-            md: self.md,
-            type_: self.type_,
-            state: self.state,
+            Hasher {
+                ctx: NonNull::new_unchecked(ctx),
+                md: self.md,
+                type_: self.type_,
+                state: self.state,
+            }
         }
     }
 }
@@ -315,7 +315,7 @@ impl Drop for Hasher {
             if self.state != Finalized {
                 drop(self.finish());
             }
-            EVP_MD_CTX_free(self.ctx);
+            EVP_MD_CTX_free(self.ctx.as_ptr());
         }
     }
 }

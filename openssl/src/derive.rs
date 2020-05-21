@@ -7,9 +7,10 @@ use std::ptr;
 use error::ErrorStack;
 use pkey::{HasPrivate, HasPublic, PKeyRef};
 use {cvt, cvt_p};
+use bitflags::_core::ptr::NonNull;
 
 /// A type used to derive a shared secret between two keys.
-pub struct Deriver<'a>(*mut ffi::EVP_PKEY_CTX, PhantomData<&'a ()>);
+pub struct Deriver<'a>(NonNull<ffi::EVP_PKEY_CTX>, PhantomData<&'a ()>);
 
 unsafe impl<'a> Sync for Deriver<'a> {}
 unsafe impl<'a> Send for Deriver<'a> {}
@@ -27,7 +28,7 @@ impl<'a> Deriver<'a> {
         unsafe {
             cvt_p(ffi::EVP_PKEY_CTX_new(key.as_ptr(), ptr::null_mut()))
                 .map(|p| Deriver(p, PhantomData))
-                .and_then(|ctx| cvt(ffi::EVP_PKEY_derive_init(ctx.0)).map(|_| ctx))
+                .and_then(|ctx| cvt(ffi::EVP_PKEY_derive_init(ctx.0.as_ptr())).map(|_| ctx))
         }
     }
 
@@ -40,7 +41,7 @@ impl<'a> Deriver<'a> {
     where
         T: HasPublic,
     {
-        unsafe { cvt(ffi::EVP_PKEY_derive_set_peer(self.0, key.as_ptr())).map(|_| ()) }
+        unsafe { cvt(ffi::EVP_PKEY_derive_set_peer(self.0.as_ptr(), key.as_ptr())).map(|_| ()) }
     }
 
     /// Returns the size of the shared secret.
@@ -54,7 +55,7 @@ impl<'a> Deriver<'a> {
     pub fn len(&mut self) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = 0;
-            cvt(ffi::EVP_PKEY_derive(self.0, ptr::null_mut(), &mut len)).map(|_| len)
+            cvt(ffi::EVP_PKEY_derive(self.0.as_ptr(), ptr::null_mut(), &mut len)).map(|_| len)
         }
     }
 
@@ -69,7 +70,7 @@ impl<'a> Deriver<'a> {
         let mut len = buf.len();
         unsafe {
             cvt(ffi::EVP_PKEY_derive(
-                self.0,
+                self.0.as_ptr(),
                 buf.as_mut_ptr() as *mut _,
                 &mut len,
             ))

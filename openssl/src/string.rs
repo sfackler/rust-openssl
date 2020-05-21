@@ -9,12 +9,11 @@ use std::str;
 
 use stack::Stackable;
 
-foreign_type_and_impl_send_sync! {
+foreign_type! {
+    pub unsafe type OpensslString : Send + Sync {
     type CType = c_char;
     fn drop = free;
-
-    pub struct OpensslString;
-    pub struct OpensslStringRef;
+    }
 }
 
 impl fmt::Display for OpensslString {

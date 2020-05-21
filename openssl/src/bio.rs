@@ -6,13 +6,14 @@ use std::slice;
 
 use cvt_p;
 use error::ErrorStack;
+use std::ptr::NonNull;
 
-pub struct MemBioSlice<'a>(*mut ffi::BIO, PhantomData<&'a [u8]>);
+pub struct MemBioSlice<'a>(NonNull<ffi::BIO>, PhantomData<&'a [u8]>);
 
 impl<'a> Drop for MemBioSlice<'a> {
     fn drop(&mut self) {
         unsafe {
-            ffi::BIO_free_all(self.0);
+            ffi::BIO_free_all(self.0.as_ptr());
         }
     }
 }
@@ -33,16 +34,16 @@ impl<'a> MemBioSlice<'a> {
     }
 
     pub fn as_ptr(&self) -> *mut ffi::BIO {
-        self.0
+        self.0.as_ptr()
     }
 }
 
-pub struct MemBio(*mut ffi::BIO);
+pub struct MemBio(NonNull<ffi::BIO>);
 
 impl Drop for MemBio {
     fn drop(&mut self) {
         unsafe {
-            ffi::BIO_free_all(self.0);
+            ffi::BIO_free_all(self.0.as_ptr());
         }
     }
 }
@@ -56,19 +57,19 @@ impl MemBio {
     }
 
     pub fn as_ptr(&self) -> *mut ffi::BIO {
-        self.0
+        self.0.as_ptr()
     }
 
     pub fn get_buf(&self) -> &[u8] {
         unsafe {
             let mut ptr = ptr::null_mut();
-            let len = ffi::BIO_get_mem_data(self.0, &mut ptr);
+            let len = ffi::BIO_get_mem_data(self.0.as_ptr(), &mut ptr);
             slice::from_raw_parts(ptr as *const _ as *const _, len as usize)
         }
     }
 
     pub unsafe fn from_ptr(bio: *mut ffi::BIO) -> MemBio {
-        MemBio(bio)
+        MemBio(NonNull::new_unchecked(bio))
     }
 }
 

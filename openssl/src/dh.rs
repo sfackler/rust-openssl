@@ -8,13 +8,12 @@ use bn::BigNum;
 use pkey::{HasParams, Params};
 use {cvt, cvt_p};
 
-generic_foreign_type_and_impl_send_sync! {
-    type CType = ffi::DH;
-    fn drop = ffi::DH_free;
-
-    pub struct Dh<T>;
-
-    pub struct DhRef<T>;
+foreign_type! {
+    pub unsafe type Dh<T> : Send + Sync {
+      type CType = ffi::DH;
+      type PhantomData = T;
+      fn drop = ffi::DH_free;
+    }
 }
 
 impl<T> DhRef<T>
@@ -47,8 +46,8 @@ where
 impl Dh<Params> {
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<Dh<Params>, ErrorStack> {
         unsafe {
-            let dh = Dh::from_ptr(cvt_p(ffi::DH_new())?);
-            cvt(DH_set0_pqg(dh.0, p.as_ptr(), q.as_ptr(), g.as_ptr()))?;
+            let dh = Dh::from_ptr(cvt_p(ffi::DH_new())?.as_ptr());
+            cvt(DH_set0_pqg(dh.0.as_ptr(), p.as_ptr(), q.as_ptr(), g.as_ptr()))?;
             mem::forget((p, g, q));
             Ok(dh)
         }
@@ -83,7 +82,7 @@ impl Dh<Params> {
     pub fn get_1024_160() -> Result<Dh<Params>, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(ffi::DH_get_1024_160()).map(|p| Dh::from_ptr(p))
+            cvt_p(ffi::DH_get_1024_160()).map(|p| Dh::from_ptr(p.as_ptr()))
         }
     }
 
@@ -92,7 +91,7 @@ impl Dh<Params> {
     pub fn get_2048_224() -> Result<Dh<Params>, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(ffi::DH_get_2048_224()).map(|p| Dh::from_ptr(p))
+            cvt_p(ffi::DH_get_2048_224()).map(|p| Dh::from_ptr(p.as_ptr()))
         }
     }
 
@@ -101,7 +100,7 @@ impl Dh<Params> {
     pub fn get_2048_256() -> Result<Dh<Params>, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(ffi::DH_get_2048_256()).map(|p| Dh::from_ptr(p))
+            cvt_p(ffi::DH_get_2048_256()).map(|p| Dh::from_ptr(p.as_ptr()))
         }
     }
 }

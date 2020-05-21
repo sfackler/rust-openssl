@@ -11,17 +11,14 @@ use x509::store::X509StoreRef;
 use x509::{X509Ref, X509};
 use {cvt, cvt_p};
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::PKCS7;
-    fn drop = ffi::PKCS7_free;
-
+foreign_type! {
     /// A PKCS#7 structure.
     ///
     /// Contains signed and/or encrypted data.
-    pub struct Pkcs7;
-
-    /// Reference to `Pkcs7`
-    pub struct Pkcs7Ref;
+    pub unsafe type Pkcs7 : Send + Sync {
+     type CType = ffi::PKCS7;
+     fn drop = ffi::PKCS7_free;
+    }
 }
 
 bitflags! {

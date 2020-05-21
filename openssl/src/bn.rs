@@ -81,10 +81,7 @@ impl MsbOption {
     pub const TWO_ONES: MsbOption = MsbOption(1);
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::BN_CTX;
-    fn drop = ffi::BN_CTX_free;
-
+foreign_type! {
     /// Temporary storage for BigNums on the secure heap
     ///
     /// BigNum values are stored dynamically and therefore can be expensive
@@ -92,11 +89,10 @@ foreign_type_and_impl_send_sync! {
     /// internally when passing BigNum values between subroutines.
     ///
     /// [`BN_CTX`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_CTX_new.html
-    pub struct BigNumContext;
-    /// Reference to [`BigNumContext`]
-    ///
-    /// [`BigNumContext`]: struct.BigNumContext.html
-    pub struct BigNumContextRef;
+    pub unsafe type BigNumContext : Send + Sync {
+      type CType = ffi::BN_CTX;
+      fn drop = ffi::BN_CTX_free;
+    }
 }
 
 impl BigNumContext {
@@ -113,10 +109,7 @@ impl BigNumContext {
     }
 }
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::BIGNUM;
-    fn drop = ffi::BN_free;
-
+foreign_type! {
     /// Dynamically sized large number impelementation
     ///
     /// Perform large number mathematics.  Create a new BigNum
@@ -140,11 +133,10 @@ foreign_type_and_impl_send_sync! {
     /// # }
     /// # fn main () { bignums(); }
     /// ```
-    pub struct BigNum;
-    /// Reference to a [`BigNum`]
-    ///
-    /// [`BigNum`]: struct.BigNum.html
-    pub struct BigNumRef;
+    pub unsafe type BigNum : Send + Sync {
+      type CType = ffi::BIGNUM;
+      fn drop = ffi::BN_free;
+    }
 }
 
 impl BigNumRef {
@@ -341,7 +333,7 @@ impl BigNumRef {
     ///
     /// [`BN_dup`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_dup.html
     pub fn to_owned(&self) -> Result<BigNum, ErrorStack> {
-        unsafe { cvt_p(ffi::BN_dup(self.as_ptr())).map(|b| BigNum::from_ptr(b)) }
+        unsafe { cvt_p(ffi::BN_dup(self.as_ptr())).map(BigNum) }
     }
 
     /// Sets the sign of `self`.  Pass true to set `self` to a negative.  False sets
@@ -888,7 +880,7 @@ impl BigNumRef {
     pub fn to_dec_str(&self) -> Result<OpensslString, ErrorStack> {
         unsafe {
             let buf = cvt_p(ffi::BN_bn2dec(self.as_ptr()))?;
-            Ok(OpensslString::from_ptr(buf))
+            Ok(OpensslString::from_ptr(buf.as_ptr()))
         }
     }
 
@@ -903,7 +895,7 @@ impl BigNumRef {
     pub fn to_hex_str(&self) -> Result<OpensslString, ErrorStack> {
         unsafe {
             let buf = cvt_p(ffi::BN_bn2hex(self.as_ptr()))?;
-            Ok(OpensslString::from_ptr(buf))
+            Ok(OpensslString::from_ptr(buf.as_ptr()))
         }
     }
 
@@ -911,7 +903,7 @@ impl BigNumRef {
     pub fn to_asn1_integer(&self) -> Result<Asn1Integer, ErrorStack> {
         unsafe {
             cvt_p(ffi::BN_to_ASN1_INTEGER(self.as_ptr(), ptr::null_mut()))
-                .map(|p| Asn1Integer::from_ptr(p))
+                .map(|p| Asn1Integer::from_ptr(p.as_ptr()))
         }
     }
 }
@@ -922,7 +914,7 @@ impl BigNum {
         unsafe {
             ffi::init();
             let v = cvt_p(ffi::BN_new())?;
-            Ok(BigNum::from_ptr(v))
+            Ok(BigNum::from_ptr(v.as_ptr()))
         }
     }
 
@@ -1108,7 +1100,7 @@ impl BigNum {
                 n.len() as c_int,
                 ptr::null_mut(),
             ))
-            .map(|p| BigNum::from_ptr(p))
+            .map(|p| BigNum::from_ptr(p.as_ptr()))
         }
     }
 }
