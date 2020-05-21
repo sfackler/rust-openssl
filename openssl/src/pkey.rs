@@ -606,7 +606,7 @@ impl PKey<Private> {
                                                               ptr::null_mut(),
                                                               key.as_ref().as_ptr(),
                                                               key.len()))?;
-            Ok(PKey::from_ptr(key.as_ptr()))
+            Ok(PKey::from_ptr(key))
         }
     }
 
@@ -785,7 +785,7 @@ impl PKey<Public> {
                                                               ptr::null_mut(),
                                                               key.as_ptr(),
                                                               key.len()))?;
-            Ok(PKey::from_ptr(key.as_ptr()))
+            Ok(PKey::from_ptr(key))
         }
     }
 
