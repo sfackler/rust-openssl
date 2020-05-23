@@ -268,7 +268,7 @@ where
             cvt(ffi::EVP_PKEY_get_raw_public_key(
                 self.as_ptr(),
                 ptr::null_mut(),
-                &mut len as *mut _))?;
+                &mut len))?;
             Ok(len)
         }
     }
@@ -286,7 +286,7 @@ where
             cvt(ffi::EVP_PKEY_get_raw_public_key(
                 self.as_ptr(),
                 buf.as_mut_ptr(),
-                &mut len as *mut _))?;
+                &mut len))?;
         }
         Ok(len)
     }
@@ -354,7 +354,7 @@ where
             cvt(ffi::EVP_PKEY_get_raw_private_key(
                 self.as_ptr(),
                 ptr::null_mut(),
-                &mut len as *mut _))?;
+                &mut len))?;
             Ok(len)
         }
     }
@@ -372,7 +372,7 @@ where
             cvt(ffi::EVP_PKEY_get_raw_private_key(
                 self.as_ptr(),
                 buf.as_mut_ptr(),
-                &mut len as *mut _))?;
+                &mut len))?;
         }
         Ok(len)
     }
@@ -599,43 +599,18 @@ impl PKey<Private> {
         PKey::generate_eddsa(ffi::EVP_PKEY_ED448)
     }
 
+    /// Wraps a raw private key. Raw private keys are currently supported for Ed25519, Ed448,
+    /// X25519, X448 and HMAC keys. The slice `key_bytes` MUST be of length 32 for Ed25519
+    /// and X25519 keys and of length 57 for Ed448 and X448 keys.
     #[cfg(ossl111)]
-    fn import_raw_private_key(typ: c_int, key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
+    pub fn import_raw_private_key(typ: Id, key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
-            let key = cvt_p(ffi::EVP_PKEY_new_raw_private_key(typ,
+            let key = cvt_p(ffi::EVP_PKEY_new_raw_private_key(typ.0,
                                                               ptr::null_mut(),
                                                               key.as_ref().as_ptr(),
                                                               key.len()))?;
             Ok(PKey::from_ptr(key))
         }
-    }
-
-    /// Wraps a raw private Ed25519 key in a PKey struct.
-    /// Please note that `key_bytes` MUST be of length 32.
-    #[cfg(ossl111)]
-    pub fn import_raw_private_ed25519_key(key_bytes: &[u8]) -> Result<PKey<Private>, ErrorStack> {
-        PKey::import_raw_private_key(ffi::EVP_PKEY_ED25519, key_bytes)
-    }
-
-    /// Wraps a raw private X25519 key in a PKey struct.
-    /// Please note that `key_bytes` MUST be of length 32.
-    #[cfg(ossl111)]
-    pub fn import_raw_private_x25519_key(key_bytes: &[u8]) -> Result<PKey<Private>, ErrorStack> {
-        PKey::import_raw_private_key(ffi::EVP_PKEY_X25519, key_bytes)
-    }
-
-    /// Wraps a raw private Ed448 key in a PKey struct.
-    /// Please note that `key_bytes` MUST be of length 57.
-    #[cfg(ossl111)]
-    pub fn import_raw_private_ed448_key(key_bytes: &[u8]) -> Result<PKey<Private>, ErrorStack> {
-        PKey::import_raw_private_key(ffi::EVP_PKEY_ED448, key_bytes)
-    }
-
-    /// Wraps a raw private X448 key in a PKey struct.
-    /// Please note that `key_bytes` MUST be of length 57.
-    #[cfg(ossl111)]
-    pub fn import_raw_private_x448_key(key_bytes: &[u8]) -> Result<PKey<Private>, ErrorStack> {
-        PKey::import_raw_private_key(ffi::EVP_PKEY_X448, key_bytes)
     }
 
     private_key_from_pem! {
@@ -778,43 +753,18 @@ impl PKey<Public> {
         ffi::d2i_PUBKEY
     }
 
+    /// Wraps a raw public key. Raw public keys are currently supported for Ed25519, Ed448,
+    /// X25519 and X448 keys. The slice `key_bytes` MUST be of length 32 for Ed25519
+    /// and X25519 keys and of length 57 for Ed448 and X448 keys.
     #[cfg(ossl111)]
-    fn import_raw_public_key(typ: c_int, key: &[u8]) -> Result<PKey<Public>, ErrorStack> {
+    pub fn import_raw_public_key(typ: Id, key: &[u8]) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
-            let key = cvt_p(ffi::EVP_PKEY_new_raw_public_key(typ,
+            let key = cvt_p(ffi::EVP_PKEY_new_raw_public_key(typ.0,
                                                               ptr::null_mut(),
                                                               key.as_ptr(),
                                                               key.len()))?;
             Ok(PKey::from_ptr(key))
         }
-    }
-
-    /// Wraps a raw public Ed25519 key in a PKey struct.
-    /// Please note that `key_bytes` MUST be of length 32.
-    #[cfg(ossl111)]
-    pub fn import_raw_public_ed25519_key(key_bytes: &[u8]) -> Result<PKey<Public>, ErrorStack> {
-        PKey::import_raw_public_key(ffi::EVP_PKEY_ED25519, key_bytes)
-    }
-
-    /// Wraps a raw public X25519 key in a PKey struct.
-    /// Please note that `key_bytes` MUST be of length 32.
-    #[cfg(ossl111)]
-    pub fn import_raw_public_x25519_key(key_bytes: &[u8]) -> Result<PKey<Public>, ErrorStack> {
-        PKey::import_raw_public_key(ffi::EVP_PKEY_X25519, key_bytes)
-    }
-
-    /// Wraps a raw public Ed448 key in a PKey struct.
-    /// Please note that `key_bytes` MUST be of length 57.
-    #[cfg(ossl111)]
-    pub fn import_raw_public_ed448_key(key_bytes: &[u8]) -> Result<PKey<Public>, ErrorStack> {
-        PKey::import_raw_public_key(ffi::EVP_PKEY_ED448, key_bytes)
-    }
-
-    /// Wraps a raw public X448 key in a PKey struct.
-    /// Please note that `key_bytes` MUST be of length 57.
-    #[cfg(ossl111)]
-    pub fn import_raw_public_x448_key(key_bytes: &[u8]) -> Result<PKey<Public>, ErrorStack> {
-        PKey::import_raw_public_key(ffi::EVP_PKEY_X448, key_bytes)
     }
 }
 
