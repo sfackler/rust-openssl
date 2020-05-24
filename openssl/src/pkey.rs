@@ -527,10 +527,7 @@ impl PKey<Private> {
     /// Deserializes a DER-formatted PKCS#8 unencrypted private key.
     ///
     /// This method is mainly for interoperability reasons. Encrypted keyfiles should be preferred.
-    pub fn private_key_from_pkcs8(
-        der: &[u8],
-    ) -> Result<PKey<Private>, ErrorStack>
-    {
+    pub fn private_key_from_pkcs8(der: &[u8]) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
             ffi::init();
             let len = der.len().min(c_long::max_value() as usize) as c_long;
@@ -539,8 +536,7 @@ impl PKey<Private> {
                 &mut der.as_ptr(),
                 len,
             ))?;
-            let res = cvt_p(ffi::EVP_PKCS82PKEY(p8inf))
-                .map(|p| PKey::from_ptr(p));
+            let res = cvt_p(ffi::EVP_PKCS82PKEY(p8inf)).map(|p| PKey::from_ptr(p));
             ffi::PKCS8_PRIV_KEY_INFO_free(p8inf);
             res
         }

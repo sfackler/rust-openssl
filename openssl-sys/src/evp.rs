@@ -167,7 +167,7 @@ extern "C" {
     pub fn EVP_DecryptFinal_ex(
         ctx: *mut EVP_CIPHER_CTX,
         outm: *mut c_uchar,
-        outl: *mut c_int
+        outl: *mut c_int,
     ) -> c_int;
 }
 cfg_if! {

@@ -320,9 +320,9 @@ impl Cipher {
     /// Determines whether the cipher is using OCB mode
     #[cfg(ossl110)]
     fn is_ocb(&self) -> bool {
-        *self == Cipher::aes_128_ocb() ||
-        *self == Cipher::aes_192_ocb() ||
-        *self == Cipher::aes_256_ocb()
+        *self == Cipher::aes_128_ocb()
+            || *self == Cipher::aes_192_ocb()
+            || *self == Cipher::aes_256_ocb()
     }
 
     #[cfg(not(ossl110))]
@@ -1458,7 +1458,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(pt, hex::encode(out));
-     }
+    }
 
     #[test]
     #[cfg(ossl110)]

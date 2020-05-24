@@ -207,10 +207,7 @@ fn try_vcpkg() {
         .find_package("openssl");
 
     if let Err(e) = lib {
-        println!(
-            "note: vcpkg did not find openssl: {}",
-            e
-        );
+        println!("note: vcpkg did not find openssl: {}", e);
         return;
     }
 
