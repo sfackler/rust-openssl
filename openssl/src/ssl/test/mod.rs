@@ -41,9 +41,9 @@ use x509::{X509Name, X509StoreContext, X509VerifyResult, X509};
 
 mod server;
 
-static ROOT_CERT: &'static [u8] = include_bytes!("../../../test/root-ca.pem");
-static CERT: &'static [u8] = include_bytes!("../../../test/cert.pem");
-static KEY: &'static [u8] = include_bytes!("../../../test/key.pem");
+static ROOT_CERT: &[u8] = include_bytes!("../../../test/root-ca.pem");
+static CERT: &[u8] = include_bytes!("../../../test/cert.pem");
+static KEY: &[u8] = include_bytes!("../../../test/key.pem");
 
 #[test]
 fn verify_untrusted() {
@@ -385,7 +385,7 @@ fn test_connect_with_srtp_ssl() {
             .unwrap();
         let mut profilenames = String::new();
         for profile in ssl.srtp_profiles().unwrap() {
-            if profilenames.len() > 0 {
+            if !profilenames.is_empty() {
                 profilenames.push(':');
             }
             profilenames += profile.name();
@@ -1310,7 +1310,7 @@ fn stateless() {
 #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
 #[test]
 fn psk_ciphers() {
-    const CIPHER: &'static str = "PSK-AES128-CBC-SHA";
+    const CIPHER: &str = "PSK-AES128-CBC-SHA";
     const PSK: &[u8] = b"thisisaverysecurekey";
     const CLIENT_IDENT: &[u8] = b"thisisaclient";
     static CLIENT_CALLED: AtomicBool = AtomicBool::new(false);

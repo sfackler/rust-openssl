@@ -124,17 +124,14 @@ impl Asn1TimeRef {
     #[cfg(ossl102)]
     pub fn diff(&self, compare: &Self) -> Result<TimeDiff, ErrorStack> {
         let mut days = 0;
-        let mut seconds = 0;
+        let mut secs = 0;
         let other = compare.as_ptr();
 
-        let err = unsafe { ffi::ASN1_TIME_diff(&mut days, &mut seconds, self.as_ptr(), other) };
+        let err = unsafe { ffi::ASN1_TIME_diff(&mut days, &mut secs, self.as_ptr(), other) };
 
         match err {
             0 => Err(ErrorStack::get()),
-            _ => Ok(TimeDiff {
-                days: days,
-                secs: seconds,
-            }),
+            _ => Ok(TimeDiff { days, secs }),
         }
     }
 
@@ -256,6 +253,7 @@ impl Asn1Time {
     /// This corresponds to [`ASN1_TIME_set_string`].
     ///
     /// [`ASN1_TIME_set_string`]: https://www.openssl.org/docs/manmaster/man3/ASN1_TIME_set_string.html
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Result<Asn1Time, ErrorStack> {
         unsafe {
             let s = CString::new(s).unwrap();
@@ -370,9 +368,9 @@ impl Asn1StringRef {
         }
     }
 
-    /// Return the string as an array of bytes
+    /// Return the string as an array of bytes.
     ///
-    /// The bytes do not directly corespond to UTF-8 encoding.  To interact with
+    /// The bytes do not directly correspond to UTF-8 encoding.  To interact with
     /// strings in rust, it is preferable to use [`as_utf8`]
     ///
     /// [`as_utf8`]: struct.Asn1String.html#method.as_utf8
@@ -380,9 +378,14 @@ impl Asn1StringRef {
         unsafe { slice::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr()), self.len()) }
     }
 
-    /// Return the length of the Asn1String (number of bytes)
+    /// Returns the number of bytes in the string.
     pub fn len(&self) -> usize {
         unsafe { ffi::ASN1_STRING_length(self.as_ptr()) as usize }
+    }
+
+    /// Determines if the string is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 
@@ -467,13 +470,19 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl Asn1BitStringRef {
-    /// Returns the Asn1BitString as a slice
+    /// Returns the Asn1BitString as a slice.
     pub fn as_slice(&self) -> &[u8] {
         unsafe { slice::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr() as *mut _), self.len()) }
     }
-    /// Length of Asn1BitString in number of bytes.
+
+    /// Returns the number of bytes in the string.
     pub fn len(&self) -> usize {
         unsafe { ffi::ASN1_STRING_length(self.as_ptr() as *const _) as usize }
+    }
+
+    /// Determines if the string is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 

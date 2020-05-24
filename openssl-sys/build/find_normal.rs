@@ -9,14 +9,15 @@ pub fn get_openssl(target: &str) -> (PathBuf, PathBuf) {
     let lib_dir = env("OPENSSL_LIB_DIR").map(PathBuf::from);
     let include_dir = env("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
 
-    if lib_dir.is_none() || include_dir.is_none() {
-        let openssl_dir = env("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(&target));
-        let openssl_dir = Path::new(&openssl_dir);
-        let lib_dir = lib_dir.unwrap_or_else(|| openssl_dir.join("lib"));
-        let include_dir = include_dir.unwrap_or_else(|| openssl_dir.join("include"));
-        (lib_dir, include_dir)
-    } else {
-        (lib_dir.unwrap(), include_dir.unwrap())
+    match (lib_dir, include_dir) {
+        (Some(lib_dir), Some(include_dir)) => (lib_dir, include_dir),
+        (lib_dir, include_dir) => {
+            let openssl_dir = env("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(&target));
+            let openssl_dir = Path::new(&openssl_dir);
+            let lib_dir = lib_dir.unwrap_or_else(|| openssl_dir.join("lib"));
+            let include_dir = include_dir.unwrap_or_else(|| openssl_dir.join("include"));
+            (lib_dir, include_dir)
+        }
     }
 }
 
@@ -93,7 +94,7 @@ openssl-sys = {}
     if host.contains("apple-darwin") && target.contains("apple-darwin") {
         let system = Path::new("/usr/lib/libssl.0.9.8.dylib");
         if system.exists() {
-            msg.push_str(&format!(
+            msg.push_str(
                 "
 
 It looks like you're compiling on macOS, where the system contains a version of
@@ -105,27 +106,28 @@ install the `openssl` package, or as a maintainer you can use the openssl-sys
 
 Unfortunately though the compile cannot continue, so aborting.
 
-"
-            ));
+",
+            );
         }
     }
 
-    if host.contains("unknown-linux") && target.contains("unknown-linux-gnu") {
-        if Command::new("pkg-config").output().is_err() {
-            msg.push_str(&format!(
-                "
+    if host.contains("unknown-linux")
+        && target.contains("unknown-linux-gnu")
+        && Command::new("pkg-config").output().is_err()
+    {
+        msg.push_str(
+            "
 It looks like you're compiling on Linux and also targeting Linux. Currently this
 requires the `pkg-config` utility to find OpenSSL but unfortunately `pkg-config`
 could not be found. If you have OpenSSL installed you can likely fix this by
 installing `pkg-config`.
 
-"
-            ));
-        }
+",
+        );
     }
 
     if host.contains("windows") && target.contains("windows-gnu") {
-        msg.push_str(&format!(
+        msg.push_str(
             "
 It looks like you're compiling for MinGW but you may not have either OpenSSL or
 pkg-config installed. You can install these two dependencies with:
@@ -134,12 +136,12 @@ pacman -S openssl-devel pkg-config
 
 and try building this crate again.
 
-"
-        ));
+",
+        );
     }
 
     if host.contains("windows") && target.contains("windows-msvc") {
-        msg.push_str(&format!(
+        msg.push_str(
             "
 It looks like you're compiling for MSVC but we couldn't detect an OpenSSL
 installation. If there isn't one installed then you can try the rust-openssl
@@ -148,8 +150,8 @@ OpenSSL:
 
 https://github.com/sfackler/rust-openssl#windows
 
-"
-        ));
+",
+        );
     }
 
     panic!(msg);
@@ -234,5 +236,6 @@ fn execute_command_and_get_output(cmd: &str, args: &[&str]) -> Option<String> {
             }
         }
     }
-    return None;
+
+    None
 }

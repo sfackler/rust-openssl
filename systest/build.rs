@@ -40,7 +40,7 @@ fn main() {
     }
 
     if let Ok(vars) = env::var("DEP_OPENSSL_CONF") {
-        for var in vars.split(",") {
+        for var in vars.split(',') {
             cfg.cfg("osslconf", Some(var));
         }
     }
@@ -68,15 +68,16 @@ fn main() {
         cfg.header("openssl/cms.h");
     }
 
+    #[allow(clippy::if_same_then_else)]
     cfg.type_name(|s, is_struct, _is_union| {
         // Add some `*` on some callback parameters to get function pointer to
         // typecheck in C, especially on MSVC.
         if s == "PasswordCallback" {
-            format!("pem_password_cb*")
+            "pem_password_cb*".to_string()
         } else if s == "bio_info_cb" {
-            format!("bio_info_cb*")
+            "bio_info_cb*".to_string()
         } else if s == "_STACK" {
-            format!("struct stack_st")
+            "struct stack_st".to_string()
         // This logic should really be cleaned up
         } else if is_struct
             && s != "point_conversion_form_t"
@@ -86,7 +87,7 @@ fn main() {
         } else if s.starts_with("stack_st_") {
             format!("struct {}", s)
         } else {
-            format!("{}", s)
+            s.to_string()
         }
     });
     cfg.skip_type(|s| {
@@ -130,9 +131,9 @@ fn main() {
     });
     cfg.field_name(|_s, field| {
         if field == "type_" {
-            format!("type")
+            "type".to_string()
         } else {
-            format!("{}", field)
+            field.to_string()
         }
     });
     cfg.fn_cname(|rust, link_name| link_name.unwrap_or(rust).to_string());

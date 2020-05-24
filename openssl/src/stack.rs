@@ -178,9 +178,14 @@ impl<T: Stackable> StackRef<T> {
         self.as_ptr() as *mut _
     }
 
-    /// Returns the number of items in the stack
+    /// Returns the number of items in the stack.
     pub fn len(&self) -> usize {
         unsafe { OPENSSL_sk_num(self.as_stack()) as usize }
+    }
+
+    /// Determines if the stack is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn iter(&self) -> Iter<T> {

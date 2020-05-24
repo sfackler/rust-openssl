@@ -58,6 +58,8 @@ use dsa::Dsa;
 use ec::EcKey;
 use error::ErrorStack;
 use rsa::Rsa;
+#[cfg(ossl110)]
+use symm::Cipher;
 use util::{invoke_passwd_cb, CallbackState};
 use {cvt, cvt_p};
 
@@ -75,16 +77,6 @@ pub enum Private {}
 pub struct Id(c_int);
 
 impl Id {
-    /// Creates a `Id` from an integer representation.
-    pub fn from_raw(value: c_int) -> Id {
-        Id(value)
-    }
-
-    /// Returns the integer representation of the `Id`.
-    pub fn as_raw(&self) -> c_int {
-        self.0
-    }
-
     pub const RSA: Id = Id(ffi::EVP_PKEY_RSA);
     pub const HMAC: Id = Id(ffi::EVP_PKEY_HMAC);
     pub const DSA: Id = Id(ffi::EVP_PKEY_DSA);
@@ -95,6 +87,17 @@ impl Id {
     pub const ED25519: Id = Id(ffi::EVP_PKEY_ED25519);
     #[cfg(ossl111)]
     pub const ED448: Id = Id(ffi::EVP_PKEY_ED448);
+
+    /// Creates a `Id` from an integer representation.
+    pub fn from_raw(value: c_int) -> Id {
+        Id(value)
+    }
+
+    /// Returns the integer representation of the `Id`.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
 }
 
 /// A trait indicating that a key has parameters.
@@ -394,7 +397,8 @@ impl PKey<Private> {
     ///
     /// To compute CMAC values, use the `sign` module.
     #[cfg(ossl110)]
-    pub fn cmac(cipher: &::symm::Cipher, key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn cmac(cipher: &Cipher, key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize);
             let kctx = cvt_p(ffi::EVP_PKEY_CTX_new_id(

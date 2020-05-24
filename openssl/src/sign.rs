@@ -123,6 +123,7 @@ impl<'a> Drop for Signer<'a> {
     }
 }
 
+#[allow(clippy::len_without_is_empty)]
 impl<'a> Signer<'a> {
     /// Creates a new `Signer`.
     ///
@@ -645,12 +646,12 @@ mod test {
     use rsa::{Padding, Rsa};
     use sign::{RsaPssSaltlen, Signer, Verifier};
 
-    const INPUT: &'static str =
+    const INPUT: &str =
         "65794a68624763694f694a53557a49314e694a392e65794a7063334d694f694a71623255694c41304b49434a6c\
          654841694f6a457a4d4441344d546b7a4f44417344516f67496d6830644841364c79396c654746746347786c4c\
          6d4e76625339706331397962323930496a7030636e566c6651";
 
-    const SIGNATURE: &'static str =
+    const SIGNATURE: &str =
         "702e218943e88fd11eb5d82dbf7845f34106ae1b81fff7731116add1717d83656d420afd3c96eedd73a2663e51\
          66687b000b87226e0187ed1073f945e582adfcef16d85a798ee8c66ddb3db8975b17d09402beedd5d9d9700710\
          8db28160d5f8040ca7445762b81fbe7ff9d92e0ae76f24f25b33bbe6f44ae61eb1040acb20044d3ef9128ed401\

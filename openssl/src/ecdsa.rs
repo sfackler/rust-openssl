@@ -197,11 +197,11 @@ mod test {
         let verification2 = res
             .verify(String::from("hello2").as_bytes(), &public_key)
             .unwrap();
-        assert!(verification2 == false);
+        assert!(!verification2);
 
         // Signature will not be verified using the correct data but the incorrect public key
         let verification3 = res.verify(data.as_bytes(), &public_key2).unwrap();
-        assert!(verification3 == false);
+        assert!(!verification3);
     }
 
     #[test]
