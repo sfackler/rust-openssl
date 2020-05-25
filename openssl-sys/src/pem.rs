@@ -142,9 +142,7 @@ extern "C" {
         buf: *mut *const u8,
         length: c_long,
     ) -> *mut PKCS8_PRIV_KEY_INFO;
-    pub fn PKCS8_PRIV_KEY_INFO_free(
-        p8inf: *mut PKCS8_PRIV_KEY_INFO,
-    );
+    pub fn PKCS8_PRIV_KEY_INFO_free(p8inf: *mut PKCS8_PRIV_KEY_INFO);
 
     pub fn PEM_read_bio_PKCS7(
         bio: *mut BIO,

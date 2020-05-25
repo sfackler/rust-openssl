@@ -81,7 +81,6 @@ impl CmsContentInfoRef {
             let pkey = pkey.as_ptr();
             let cert = cert.as_ptr();
             let out = MemBio::new()?;
-            let flags: u32 = 0;
 
             cvt(ffi::CMS_decrypt(
                 self.as_ptr(),
@@ -89,7 +88,7 @@ impl CmsContentInfoRef {
                 cert,
                 ptr::null_mut(),
                 out.as_ptr(),
-                flags.into(),
+                0,
             ))?;
 
             Ok(out.get_buf().to_owned())

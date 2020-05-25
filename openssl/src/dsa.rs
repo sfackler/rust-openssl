@@ -451,6 +451,7 @@ mod test {
     }
 
     #[test]
+    #[allow(clippy::redundant_clone)]
     fn clone() {
         let key = Dsa::generate(2048).unwrap();
         drop(key.clone());

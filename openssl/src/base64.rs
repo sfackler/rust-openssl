@@ -63,7 +63,7 @@ pub fn decode_block(src: &str) -> Result<Vec<u8>, ErrorStack> {
         out.set_len(out_len as usize);
     }
 
-    if src.ends_with("=") {
+    if src.ends_with('=') {
         out.pop();
         if src.ends_with("==") {
             out.pop();

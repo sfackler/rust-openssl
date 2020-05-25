@@ -58,11 +58,7 @@ impl Pkcs12Ref {
                 Some(Stack::from_ptr(chain))
             };
 
-            Ok(ParsedPkcs12 {
-                pkey: pkey,
-                cert: cert,
-                chain: chain,
-            })
+            Ok(ParsedPkcs12 { pkey, cert, chain })
         }
     }
 }

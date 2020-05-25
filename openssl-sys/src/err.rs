@@ -9,7 +9,7 @@ const_fn! {
     pub const fn ERR_PACK(l: c_int, f: c_int, r: c_int) -> c_ulong {
         ((l as c_ulong & 0x0FF) << 24) |
         ((f as c_ulong & 0xFFF) << 12) |
-        ((r as c_ulong & 0xFFF))
+        (r as c_ulong & 0xFFF)
     }
 
     pub const fn ERR_GET_LIB(l: c_ulong) -> c_int {

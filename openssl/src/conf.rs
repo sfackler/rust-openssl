@@ -18,6 +18,10 @@ impl ConfMethod {
     }
 
     /// Construct from raw pointer.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the pointer is valid.
     pub unsafe fn from_ptr(ptr: *mut ffi::CONF_METHOD) -> ConfMethod {
         ConfMethod(ptr)
     }

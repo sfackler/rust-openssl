@@ -276,21 +276,29 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
     }
 
+    /// Creates a `Cipher` from a raw pointer to its OpenSSL type.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the pointer is valid for the `'static` lifetime.
     pub unsafe fn from_ptr(ptr: *const ffi::EVP_CIPHER) -> Cipher {
         Cipher(ptr)
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn as_ptr(&self) -> *const ffi::EVP_CIPHER {
         self.0
     }
 
     /// Returns the length of keys used with this cipher.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn key_len(&self) -> usize {
         unsafe { EVP_CIPHER_key_length(self.0) as usize }
     }
 
     /// Returns the length of the IV used with this cipher, or `None` if the
     /// cipher does not use an IV.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn iv_len(&self) -> Option<usize> {
         unsafe {
             let len = EVP_CIPHER_iv_length(self.0) as usize;
@@ -307,26 +315,27 @@ impl Cipher {
     /// # Note
     ///
     /// Stream ciphers such as RC4 have a block size of 1.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn block_size(&self) -> usize {
         unsafe { EVP_CIPHER_block_size(self.0) as usize }
     }
 
     /// Determines whether the cipher is using CCM mode
-    fn is_ccm(&self) -> bool {
+    fn is_ccm(self) -> bool {
         // NOTE: OpenSSL returns pointers to static structs, which makes this work as expected
-        *self == Cipher::aes_128_ccm() || *self == Cipher::aes_256_ccm()
+        self == Cipher::aes_128_ccm() || self == Cipher::aes_256_ccm()
     }
 
     /// Determines whether the cipher is using OCB mode
     #[cfg(ossl110)]
-    fn is_ocb(&self) -> bool {
-        *self == Cipher::aes_128_ocb() ||
-        *self == Cipher::aes_192_ocb() ||
-        *self == Cipher::aes_256_ocb()
+    fn is_ocb(self) -> bool {
+        self == Cipher::aes_128_ocb()
+            || self == Cipher::aes_192_ocb()
+            || self == Cipher::aes_256_ocb()
     }
 
     #[cfg(not(ossl110))]
-    const fn is_ocb(&self) -> bool {
+    const fn is_ocb(self) -> bool {
         false
     }
 }
@@ -421,7 +430,7 @@ impl Crypter {
         unsafe {
             let ctx = cvt_p(ffi::EVP_CIPHER_CTX_new())?;
             let crypter = Crypter {
-                ctx: ctx,
+                ctx,
                 block_size: t.block_size(),
             };
 
@@ -808,12 +817,13 @@ pub fn decrypt_aead(
 
     c.aad_update(aad)?;
     let count = c.update(data, &mut out)?;
-    let mut rest = 0;
 
-    if !t.is_ccm() {
+    let rest = if t.is_ccm() {
+        0
+    } else {
         c.set_tag(tag)?;
-        rest = c.finalize(&mut out[count..])?;
-    }
+        c.finalize(&mut out[count..])?
+    };
 
     out.truncate(count + rest);
     Ok(out)
@@ -1458,7 +1468,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(pt, hex::encode(out));
-     }
+    }
 
     #[test]
     #[cfg(ossl110)]

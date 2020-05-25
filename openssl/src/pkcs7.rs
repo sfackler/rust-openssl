@@ -303,7 +303,7 @@ mod tests {
         let cert = include_bytes!("../test/cert.pem");
         let cert = X509::from_pem(cert).unwrap();
         let certs = Stack::new().unwrap();
-        let message: String = String::from("foo");
+        let message = "foo";
         let flags = Pkcs7Flags::STREAM | Pkcs7Flags::DETACHED;
         let pkey = include_bytes!("../test/key.pem");
         let pkey = PKey::private_key_from_pem(pkey).unwrap();
@@ -336,11 +336,8 @@ mod tests {
             )
             .expect("should succeed");
 
-        assert_eq!(message.clone().into_bytes(), output);
-        assert_eq!(
-            message.clone().into_bytes(),
-            content.expect("should be non-empty")
-        );
+        assert_eq!(output, message.as_bytes());
+        assert_eq!(content.expect("should be non-empty"), message.as_bytes());
     }
 
     #[test]
@@ -348,7 +345,7 @@ mod tests {
         let cert = include_bytes!("../test/cert.pem");
         let cert = X509::from_pem(cert).unwrap();
         let certs = Stack::new().unwrap();
-        let message: String = String::from("foo");
+        let message = "foo";
         let flags = Pkcs7Flags::STREAM;
         let pkey = include_bytes!("../test/key.pem");
         let pkey = PKey::private_key_from_pem(pkey).unwrap();
@@ -375,7 +372,7 @@ mod tests {
             .verify(&certs, &store, None, Some(&mut output), flags)
             .expect("should succeed");
 
-        assert_eq!(message.clone().into_bytes(), output);
+        assert_eq!(output, message.as_bytes());
         assert!(content.is_none());
     }
 

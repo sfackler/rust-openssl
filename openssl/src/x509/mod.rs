@@ -68,7 +68,7 @@ impl X509StoreContext {
     pub fn new() -> Result<X509StoreContext, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(ffi::X509_STORE_CTX_new()).map(|p| X509StoreContext(p))
+            cvt_p(ffi::X509_STORE_CTX_new()).map(X509StoreContext)
         }
     }
 }
@@ -849,7 +849,7 @@ impl Stackable for X509Name {
 
 impl X509NameRef {
     /// Returns the name entries by the nid.
-    pub fn entries_by_nid<'a>(&'a self, nid: Nid) -> X509NameEntries<'a> {
+    pub fn entries_by_nid(&self, nid: Nid) -> X509NameEntries<'_> {
         X509NameEntries {
             name: self,
             nid: Some(nid),
@@ -858,7 +858,7 @@ impl X509NameRef {
     }
 
     /// Returns an iterator over all `X509NameEntry` values
-    pub fn entries<'a>(&'a self) -> X509NameEntries<'a> {
+    pub fn entries(&self) -> X509NameEntries<'_> {
         X509NameEntries {
             name: self,
             nid: None,
@@ -1213,6 +1213,7 @@ impl X509VerifyResult {
     }
 
     /// Return the integer representation of an `X509VerifyResult`.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn as_raw(&self) -> c_int {
         self.0
     }
@@ -1222,6 +1223,7 @@ impl X509VerifyResult {
     /// This corresponds to [`X509_verify_cert_error_string`].
     ///
     /// [`X509_verify_cert_error_string`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_verify_cert_error_string.html
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn error_string(&self) -> &'static str {
         ffi::init();
 

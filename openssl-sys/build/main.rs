@@ -1,3 +1,5 @@
+#![allow(clippy::inconsistent_digit_grouping)]
+
 extern crate autocfg;
 extern crate cc;
 #[cfg(feature = "vendored")]
@@ -79,11 +81,11 @@ fn main() {
     );
     println!("cargo:include={}", include_dir.to_string_lossy());
 
-    let version = validate_headers(&[include_dir.clone().into()]);
+    let version = validate_headers(&[include_dir]);
 
     let libs_env = env("OPENSSL_LIBS");
     let libs = match libs_env.as_ref().and_then(|s| s.to_str()) {
-        Some(ref v) => v.split(":").collect(),
+        Some(ref v) => v.split(':').collect(),
         None => match version {
             Version::Openssl10x if target.contains("windows") => vec!["ssleay32", "libeay32"],
             Version::Openssl11x if target.contains("windows-msvc") => vec!["libssl", "libcrypto"],

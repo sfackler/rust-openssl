@@ -118,6 +118,13 @@ pub fn sha512(data: &[u8]) -> [u8; 64] {
 #[derive(Clone)]
 pub struct Sha1(ffi::SHA_CTX);
 
+impl Default for Sha1 {
+    #[inline]
+    fn default() -> Sha1 {
+        Sha1::new()
+    }
+}
+
 impl Sha1 {
     /// Creates a new hasher.
     #[inline]
@@ -155,6 +162,13 @@ impl Sha1 {
 /// An object which calculates a SHA224 hash of some data.
 #[derive(Clone)]
 pub struct Sha224(ffi::SHA256_CTX);
+
+impl Default for Sha224 {
+    #[inline]
+    fn default() -> Sha224 {
+        Sha224::new()
+    }
+}
 
 impl Sha224 {
     /// Creates a new hasher.
@@ -194,6 +208,13 @@ impl Sha224 {
 #[derive(Clone)]
 pub struct Sha256(ffi::SHA256_CTX);
 
+impl Default for Sha256 {
+    #[inline]
+    fn default() -> Sha256 {
+        Sha256::new()
+    }
+}
+
 impl Sha256 {
     /// Creates a new hasher.
     #[inline]
@@ -232,6 +253,13 @@ impl Sha256 {
 #[derive(Clone)]
 pub struct Sha384(ffi::SHA512_CTX);
 
+impl Default for Sha384 {
+    #[inline]
+    fn default() -> Sha384 {
+        Sha384::new()
+    }
+}
+
 impl Sha384 {
     /// Creates a new hasher.
     #[inline]
@@ -269,6 +297,13 @@ impl Sha384 {
 /// An object which calculates a SHA512 hash of some data.
 #[derive(Clone)]
 pub struct Sha512(ffi::SHA512_CTX);
+
+impl Default for Sha512 {
+    #[inline]
+    fn default() -> Sha512 {
+        Sha512::new()
+    }
+}
 
 impl Sha512 {
     /// Creates a new hasher.
