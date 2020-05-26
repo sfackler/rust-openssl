@@ -33,6 +33,13 @@ jobs:
       - name: Get rust version
         id: rust-version
         run: echo "::set-output name=version::$(rustc --version)"
+      - name: Cache cargo index
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry/index
+          key: index-${{ runner.os }}-${{ github.run_number }}
+          restore-keys:
+            - index-${{ runner.os }}-
       - name: Create lockfile
         run: cargo generate-lockfile
       - name: Cache cargo registry
@@ -47,5 +54,39 @@ jobs:
         with:
           path: target
           key: clippy-target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
-      - name: Check clippy
+      - name: Run clippy clippy
         run: cargo clippy --all --all-targets
+
+  min-version:
+    name: min-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        run: rustup update 1.31.0 && rustup default 1.31.0
+      - name: Get rust version
+        id: rust-version
+        run: echo "::set-output name=version::$(rustc --version)"
+      - name: Cache cargo index
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry/index
+          key: index-${{ runner.os }}-${{ github.run_number }}
+          restore-keys:
+            - index-${{ runner.os }}-
+      - name: Create lockfile
+        run: cargo generate-lockfile
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry/cache
+          key: registry-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+      - name: Fetch dependencies
+        run: cargo fetch
+      - name: Cache target directory
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: clippy-target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+      - name: Check openssl
+        run: cargo check -p openssl
