@@ -3368,6 +3368,13 @@ impl SslRef {
             }
         }
     }
+
+    /// Sets the MTU used for DTLS connections.
+    ///
+    /// This corresponds to `SSL_set_mtu`.
+    pub fn set_mtu(&mut self, mtu: u32) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::SSL_set_mtu(self.as_ptr(), mtu as c_long) as c_int).map(|_| ()) }
+    }
 }
 
 /// An SSL stream midway through the handshake process.
@@ -3892,6 +3899,7 @@ impl<S> SslStreamBuilder<S> {
     ///
     /// # Panics
     /// This function panics if the given mtu size can't be represented in a positive `c_long` range
+    #[deprecated(note = "Use SslRef::set_mtu instead", since = "0.10.30")]
     pub fn set_dtls_mtu_size(&mut self, mtu_size: usize) {
         unsafe {
             let bio = self.inner.ssl.get_raw_rbio();

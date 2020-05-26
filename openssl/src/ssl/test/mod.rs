@@ -321,10 +321,9 @@ fn test_connect_with_srtp_ctx() {
             .unwrap();
         ctx.set_private_key_file(&Path::new("test/key.pem"), SslFiletype::PEM)
             .unwrap();
-        let ssl = Ssl::new(&ctx.build()).unwrap();
-        let mut builder = SslStreamBuilder::new(ssl, stream);
-        builder.set_dtls_mtu_size(1500);
-        let mut stream = builder.accept().unwrap();
+        let mut ssl = Ssl::new(&ctx.build()).unwrap();
+        ssl.set_mtu(1500).unwrap();
+        let mut stream = ssl.accept(stream).unwrap();
 
         let mut buf = [0; 60];
         stream
@@ -341,10 +340,9 @@ fn test_connect_with_srtp_ctx() {
     let mut ctx = SslContext::builder(SslMethod::dtls()).unwrap();
     ctx.set_tlsext_use_srtp("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32")
         .unwrap();
-    let ssl = Ssl::new(&ctx.build()).unwrap();
-    let mut builder = SslStreamBuilder::new(ssl, stream);
-    builder.set_dtls_mtu_size(1500);
-    let mut stream = builder.connect().unwrap();
+    let mut ssl = Ssl::new(&ctx.build()).unwrap();
+    ssl.set_mtu(1500).unwrap();
+    let mut stream = ssl.connect(stream).unwrap();
 
     let mut buf = [1; 60];
     {
@@ -394,9 +392,8 @@ fn test_connect_with_srtp_ssl() {
             "SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32",
             profilenames
         );
-        let mut builder = SslStreamBuilder::new(ssl, stream);
-        builder.set_dtls_mtu_size(1500);
-        let mut stream = builder.accept().unwrap();
+        ssl.set_mtu(1500).unwrap();
+        let mut stream = ssl.accept(stream).unwrap();
 
         let mut buf = [0; 60];
         stream
@@ -414,9 +411,8 @@ fn test_connect_with_srtp_ssl() {
     let mut ssl = Ssl::new(&ctx.build()).unwrap();
     ssl.set_tlsext_use_srtp("SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32")
         .unwrap();
-    let mut builder = SslStreamBuilder::new(ssl, stream);
-    builder.set_dtls_mtu_size(1500);
-    let mut stream = builder.connect().unwrap();
+    ssl.set_mtu(1500).unwrap();
+    let mut stream = ssl.connect(stream).unwrap();
 
     let mut buf = [1; 60];
     {
