@@ -257,12 +257,6 @@ where
     /// This function will return 32 for Ed25519 and X25519 keys and 57 for Ed448 and X448 keys.
     #[cfg(ossl111)]
     pub fn get_raw_public_key_len(&self) -> Result<usize, ErrorStack> {
-        match self.id() {
-            Id::ED25519 | Id::X25519 => return Ok(32),
-            Id::ED448 | Id::X448 => return Ok(57),
-            _ => ()
-        }
-        // currently unreachable. May be useful in future extensions.
         unsafe {
             let mut len = 0;
             cvt(ffi::EVP_PKEY_get_raw_public_key(
@@ -344,11 +338,6 @@ where
     /// This function will return 32 for Ed25519 and X25519 keys and 57 for Ed448 and X448 keys.
     #[cfg(ossl111)]
     pub fn get_raw_private_key_len(&self) -> Result<usize, ErrorStack> {
-        match self.id() {
-            Id::ED25519 | Id::X25519 => return Ok(32),
-            Id::ED448 | Id::X448 => return Ok(57),
-            _ => ()
-        }
         unsafe {
             let mut len = 0;
             cvt(ffi::EVP_PKEY_get_raw_private_key(
