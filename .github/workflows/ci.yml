@@ -38,8 +38,8 @@ jobs:
         with:
           path: ~/.cargo/registry/index
           key: index-${{ runner.os }}-${{ github.run_number }}
-          restore-keys:
-            - index-${{ runner.os }}-
+          restore-keys: |
+            index-${{ runner.os }}-
       - name: Create lockfile
         run: cargo generate-lockfile
       - name: Cache cargo registry
@@ -72,8 +72,8 @@ jobs:
         with:
           path: ~/.cargo/registry/index
           key: index-${{ runner.os }}-${{ github.run_number }}
-          restore-keys:
-            - index-${{ runner.os }}-
+          restore-keys: |
+            index-${{ runner.os }}-
       - name: Create lockfile
         run: cargo generate-lockfile
       - name: Cache cargo registry
