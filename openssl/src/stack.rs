@@ -3,6 +3,7 @@ use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
 use libc::c_int;
 use std::borrow::Borrow;
 use std::convert::AsRef;
+use std::fmt;
 use std::iter;
 use std::marker::PhantomData;
 use std::mem;
@@ -43,6 +44,15 @@ pub struct Stack<T: Stackable>(*mut T::StackType);
 unsafe impl<T: Stackable + Send> Send for Stack<T> {}
 unsafe impl<T: Stackable + Sync> Sync for Stack<T> {}
 
+impl<T> fmt::Debug for Stack<T>
+where
+    T: Stackable,
+    T::Ref: fmt::Debug,
+{
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_list().entries(self).finish()
+    }
+}
 impl<T: Stackable> Drop for Stack<T> {
     fn drop(&mut self) {
         unsafe {
