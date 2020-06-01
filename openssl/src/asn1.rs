@@ -67,15 +67,17 @@ foreign_type_and_impl_send_sync! {
 impl fmt::Display for Asn1GeneralizedTimeRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         unsafe {
-            match MemBio::new() {
+            let mem_bio = match MemBio::new() {
+                Err(_) => return f.write_str(""),
+                Ok(m) => m,
+            };
+            let print_result = cvt(ffi::ASN1_GENERALIZEDTIME_print(
+                mem_bio.as_ptr(),
+                self.as_ptr(),
+            ));
+            match print_result {
                 Err(_) => f.write_str(""),
-                Ok(mem_bio) => match cvt(ffi::ASN1_GENERALIZEDTIME_print(
-                    mem_bio.as_ptr(),
-                    self.as_ptr(),
-                )) {
-                    Err(_) => f.write_str(""),
-                    Ok(_) => f.write_str(str::from_utf8_unchecked(mem_bio.get_buf())),
-                },
+                Ok(_) => f.write_str(str::from_utf8_unchecked(mem_bio.get_buf())),
             }
         }
     }
@@ -211,12 +213,14 @@ impl<'a> PartialOrd<Asn1Time> for &'a Asn1TimeRef {
 impl fmt::Display for Asn1TimeRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         unsafe {
-            match MemBio::new() {
+            let mem_bio = match MemBio::new() {
+                Err(_) => return f.write_str("error"),
+                Ok(m) => m,
+            };
+            let print_result = cvt(ffi::ASN1_TIME_print(mem_bio.as_ptr(), self.as_ptr()));
+            match print_result {
                 Err(_) => f.write_str("error"),
-                Ok(mem_bio) => match cvt(ffi::ASN1_TIME_print(mem_bio.as_ptr(), self.as_ptr())) {
-                    Err(_) => f.write_str("error"),
-                    Ok(_) => f.write_str(str::from_utf8_unchecked(mem_bio.get_buf())),
-                },
+                Ok(_) => f.write_str(str::from_utf8_unchecked(mem_bio.get_buf())),
             }
         }
     }

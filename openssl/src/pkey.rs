@@ -301,9 +301,7 @@ impl<T> fmt::Debug for PKey<T> {
             Id::ED448 => "Ed448",
             _ => "unknown",
         };
-        fmt.debug_struct("public_key")
-            .field("algorithm", &alg)
-            .finish()
+        fmt.debug_struct("PKey").field("algorithm", &alg).finish()
         // TODO: Print details for each specific type of key
     }
 }

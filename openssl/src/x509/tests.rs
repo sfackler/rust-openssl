@@ -52,7 +52,7 @@ fn test_debug() {
     ],
     not_before: Aug 14 17:00:03 2016 GMT,
     not_after: Aug 12 17:00:03 2026 GMT,
-    public_key: public_key {
+    public_key: PKey {
         algorithm: "RSA",
     },
 }"#;

@@ -1342,19 +1342,17 @@ impl GeneralNameRef {
 impl fmt::Debug for GeneralNameRef {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         if let Some(email) = self.email() {
-            return formatter.write_str(email);
-        }
-        if let Some(dnsname) = self.dnsname() {
-            return formatter.write_str(dnsname);
-        }
-        if let Some(uri) = self.uri() {
-            return formatter.write_str(uri);
-        }
-        if let Some(ipaddress) = self.ipaddress() {
+            formatter.write_str(email)
+        } else if let Some(dnsname) = self.dnsname() {
+            formatter.write_str(dnsname)
+        } else if let Some(uri) = self.uri() {
+            formatter.write_str(uri)
+        } else if let Some(ipaddress) = self.ipaddress() {
             let result = String::from_utf8_lossy(ipaddress);
-            return formatter.write_str(&result);
+            formatter.write_str(&result)
+        } else {
+            formatter.write_str("(empty)")
         }
-        Ok(())
     }
 }
 
