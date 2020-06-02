@@ -68,7 +68,7 @@ impl fmt::Display for Asn1GeneralizedTimeRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         unsafe {
             let mem_bio = match MemBio::new() {
-                Err(_) => return f.write_str(""),
+                Err(_) => return f.write_str("error"),
                 Ok(m) => m,
             };
             let print_result = cvt(ffi::ASN1_GENERALIZEDTIME_print(
@@ -76,7 +76,7 @@ impl fmt::Display for Asn1GeneralizedTimeRef {
                 self.as_ptr(),
             ));
             match print_result {
-                Err(_) => f.write_str(""),
+                Err(_) => f.write_str("error"),
                 Ok(_) => f.write_str(str::from_utf8_unchecked(mem_bio.get_buf())),
             }
         }
