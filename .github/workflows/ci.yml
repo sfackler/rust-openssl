@@ -87,6 +87,6 @@ jobs:
         uses: actions/cache@v1
         with:
           path: target
-          key: clippy-target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+          key: min-version-target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
       - name: Check openssl
         run: cargo check -p openssl
