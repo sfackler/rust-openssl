@@ -15,4 +15,5 @@ extern "C" {
 
     pub fn OBJ_find_sigid_algs(signid: c_int, pdig_nid: *mut c_int, ppkey_nid: *mut c_int)
         -> c_int;
+    pub fn OBJ_sn2nid(sn: *const libc::c_char) -> libc::c_int;
 }
