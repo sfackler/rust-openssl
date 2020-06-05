@@ -49,6 +49,7 @@ use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
 use std::ffi::CString;
+use std::fmt;
 use std::mem;
 use std::ptr;
 
@@ -283,6 +284,25 @@ where
         /// [`i2d_PrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_PrivateKey.html
         private_key_to_der,
         ffi::i2d_PrivateKey
+    }
+}
+
+impl<T> fmt::Debug for PKey<T> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let alg = match self.id() {
+            Id::RSA => "RSA",
+            Id::HMAC => "HMAC",
+            Id::DSA => "DSA",
+            Id::DH => "DH",
+            Id::EC => "EC",
+            #[cfg(ossl111)]
+            Id::ED25519 => "Ed25519",
+            #[cfg(ossl111)]
+            Id::ED448 => "Ed448",
+            _ => "unknown",
+        };
+        fmt.debug_struct("PKey").field("algorithm", &alg).finish()
+        // TODO: Print details for each specific type of key
     }
 }
 

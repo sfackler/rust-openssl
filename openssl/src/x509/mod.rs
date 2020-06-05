@@ -671,6 +671,35 @@ impl Clone for X509 {
     }
 }
 
+impl fmt::Debug for X509 {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        let serial = match &self.serial_number().to_bn() {
+            Ok(bn) => match bn.to_hex_str() {
+                Ok(hex) => hex.to_string(),
+                Err(_) => "".to_string(),
+            },
+            Err(_) => "".to_string(),
+        };
+        let mut debug_struct = formatter.debug_struct("X509");
+        debug_struct.field("serial_number", &serial);
+        debug_struct.field("signature_algorithm", &self.signature_algorithm().object());
+        debug_struct.field("issuer", &self.issuer_name());
+        debug_struct.field("subject", &self.subject_name());
+        if let Some(subject_alt_names) = &self.subject_alt_names() {
+            debug_struct.field("subject_alt_names", subject_alt_names);
+        }
+        debug_struct.field("not_before", &self.not_before());
+        debug_struct.field("not_after", &self.not_after());
+
+        if let Ok(public_key) = &self.public_key() {
+            debug_struct.field("public_key", public_key);
+        };
+        // TODO: Print extensions once they are supported on the X509 struct.
+
+        debug_struct.finish()
+    }
+}
+
 impl AsRef<X509Ref> for X509Ref {
     fn as_ref(&self) -> &X509Ref {
         self
@@ -867,6 +896,12 @@ impl X509NameRef {
     }
 }
 
+impl fmt::Debug for X509NameRef {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.debug_list().entries(self.entries()).finish()
+    }
+}
+
 /// A type to destructure and examine an `X509Name`.
 pub struct X509NameEntries<'a> {
     name: &'a X509NameRef,
@@ -939,6 +974,12 @@ impl X509NameEntryRef {
             let object = ffi::X509_NAME_ENTRY_get_object(self.as_ptr());
             Asn1ObjectRef::from_ptr(object)
         }
+    }
+}
+
+impl fmt::Debug for X509NameEntryRef {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_fmt(format_args!("{:?} = {:?}", self.object(), self.data()))
     }
 }
 
@@ -1294,6 +1335,23 @@ impl GeneralNameRef {
             let len = ffi::ASN1_STRING_length((*self.as_ptr()).d as *mut _);
 
             Some(slice::from_raw_parts(ptr as *const u8, len as usize))
+        }
+    }
+}
+
+impl fmt::Debug for GeneralNameRef {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(email) = self.email() {
+            formatter.write_str(email)
+        } else if let Some(dnsname) = self.dnsname() {
+            formatter.write_str(dnsname)
+        } else if let Some(uri) = self.uri() {
+            formatter.write_str(uri)
+        } else if let Some(ipaddress) = self.ipaddress() {
+            let result = String::from_utf8_lossy(ipaddress);
+            formatter.write_str(&result)
+        } else {
+            formatter.write_str("(empty)")
         }
     }
 }

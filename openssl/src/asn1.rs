@@ -67,12 +67,18 @@ foreign_type_and_impl_send_sync! {
 impl fmt::Display for Asn1GeneralizedTimeRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         unsafe {
-            let mem_bio = MemBio::new()?;
-            cvt(ffi::ASN1_GENERALIZEDTIME_print(
+            let mem_bio = match MemBio::new() {
+                Err(_) => return f.write_str("error"),
+                Ok(m) => m,
+            };
+            let print_result = cvt(ffi::ASN1_GENERALIZEDTIME_print(
                 mem_bio.as_ptr(),
                 self.as_ptr(),
-            ))?;
-            write!(f, "{}", str::from_utf8_unchecked(mem_bio.get_buf()))
+            ));
+            match print_result {
+                Err(_) => f.write_str("error"),
+                Ok(_) => f.write_str(str::from_utf8_unchecked(mem_bio.get_buf())),
+            }
         }
     }
 }
@@ -207,10 +213,22 @@ impl<'a> PartialOrd<Asn1Time> for &'a Asn1TimeRef {
 impl fmt::Display for Asn1TimeRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         unsafe {
-            let mem_bio = MemBio::new()?;
-            cvt(ffi::ASN1_TIME_print(mem_bio.as_ptr(), self.as_ptr()))?;
-            write!(f, "{}", str::from_utf8_unchecked(mem_bio.get_buf()))
+            let mem_bio = match MemBio::new() {
+                Err(_) => return f.write_str("error"),
+                Ok(m) => m,
+            };
+            let print_result = cvt(ffi::ASN1_TIME_print(mem_bio.as_ptr(), self.as_ptr()));
+            match print_result {
+                Err(_) => f.write_str("error"),
+                Ok(_) => f.write_str(str::from_utf8_unchecked(mem_bio.get_buf())),
+            }
         }
+    }
+}
+
+impl fmt::Debug for Asn1TimeRef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(&self.to_string())
     }
 }
 
@@ -389,6 +407,15 @@ impl Asn1StringRef {
     }
 }
 
+impl fmt::Debug for Asn1StringRef {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self.as_utf8() {
+            Ok(openssl_string) => openssl_string.fmt(fmt),
+            Err(_) => fmt.write_str("error"),
+        }
+    }
+}
+
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_INTEGER;
     fn drop = ffi::ASN1_INTEGER_free;
@@ -527,9 +554,17 @@ impl fmt::Display for Asn1ObjectRef {
                 self.as_ptr(),
                 0,
             );
-            let s = str::from_utf8(&buf[..len as usize]).map_err(|_| fmt::Error)?;
-            fmt.write_str(s)
+            match str::from_utf8(&buf[..len as usize]) {
+                Err(_) => fmt.write_str("error"),
+                Ok(s) => fmt.write_str(s),
+            }
         }
+    }
+}
+
+impl fmt::Debug for Asn1ObjectRef {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.write_str(self.to_string().as_str())
     }
 }
 
