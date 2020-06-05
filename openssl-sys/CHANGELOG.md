@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [v0.9.58] - 2020-06-05
+
+### Added
+
+* Added `SSL_set_mtu`.
+* Added support for LibreSSL 3.2.0.
+* Added `PEM_read_bio_EC_PUBKEY`, `PEM_write_bio_EC_PUBKEY`, `d2i_EC_PUBKEY`, and `i2d_EC_PUBKEY`.
+* Added `EVP_PKEY_encrypt_init`, `EVP_PKEY_encrypt`, `EVP_PKEY_decrypt_init`, `EVP_PKEY_decrypt`,
+    `EVP_PKEY_get_raw_public_key`, `EVP_PKEY_new_raw_public_key`, `EVP_PKEY_get_raw_private_key`,
+    and `EVP_PKEY_new_raw_private_key`.
+* Added `OBJ_sn2nid`.
+
 ## [v0.9.57] - 2020-05-24
 
 ### Added
