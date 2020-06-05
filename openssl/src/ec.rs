@@ -642,6 +642,28 @@ where
             EcPointRef::from_ptr(ptr as *mut _)
         }
     }
+
+    to_pem! {
+        /// Serialies the public key into a PEM-encoded SubjectPublicKeyInfo structure.
+        ///
+        /// The output will have a header of `-----BEGIN PUBLIC KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_EC_PUBKEY`].
+        ///
+        /// [`PEM_write_bio_EC_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_EC_PUBKEY.html
+        public_key_to_pem,
+        ffi::PEM_write_bio_EC_PUBKEY
+    }
+
+    to_der! {
+        /// Serializes the public key into a DER-encoded SubjectPublicKeyInfo structure.
+        ///
+        /// This corresponds to [`i2d_EC_PUBKEY`].
+        ///
+        /// [`i2d_EC_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_EC_PUBKEY.html
+        public_key_to_der,
+        ffi::i2d_EC_PUBKEY
+    }
 }
 
 impl<T> EcKeyRef<T>
@@ -777,6 +799,30 @@ impl EcKey<Public> {
                     .map(|_| key)
                 })
         }
+    }
+
+    from_pem! {
+        /// Decodes a PEM-encoded SubjectPublicKeyInfo structure containing a EC key.
+        ///
+        /// The input should have a header of `-----BEGIN PUBLIC KEY-----`.
+        ///
+        /// This corresponds to [`PEM_read_bio_EC_PUBKEY`].
+        ///
+        /// [`PEM_read_bio_EC_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_read_bio_EC_PUBKEY.html
+        public_key_from_pem,
+        EcKey<Public>,
+        ffi::PEM_read_bio_EC_PUBKEY
+    }
+
+    from_der! {
+        /// Decodes a DER-encoded SubjectPublicKeyInfo structure containing a EC key.
+        ///
+        /// This corresponds to [`d2i_EC_PUBKEY`].
+        ///
+        /// [`d2i_EC_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_EC_PUBKEY.html
+        public_key_from_der,
+        EcKey<Public>,
+        ffi::d2i_EC_PUBKEY
     }
 }
 

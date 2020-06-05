@@ -92,6 +92,13 @@ extern "C" {
         callback: pem_password_cb,
         user_data: *mut c_void,
     ) -> c_int;
+    pub fn PEM_read_bio_EC_PUBKEY(
+        bp: *mut BIO,
+        ec: *mut *mut EC_KEY,
+        callback: pem_password_cb,
+        user_data: *mut c_void,
+    ) -> *mut EC_KEY;
+    pub fn PEM_write_bio_EC_PUBKEY(bp: *mut BIO, ec: *mut EC_KEY) -> c_int;
     pub fn PEM_read_bio_DHparams(
         bio: *mut BIO,
         out: *mut *mut DH,
