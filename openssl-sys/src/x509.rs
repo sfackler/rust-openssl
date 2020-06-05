@@ -132,6 +132,12 @@ extern "C" {
     pub fn i2d_RSA_PUBKEY(k: *mut RSA, buf: *mut *mut u8) -> c_int;
     pub fn d2i_DSA_PUBKEY(k: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long) -> *mut DSA;
     pub fn i2d_DSA_PUBKEY(a: *mut DSA, pp: *mut *mut c_uchar) -> c_int;
+    pub fn d2i_EC_PUBKEY(
+        a: *mut *mut EC_KEY,
+        pp: *mut *const c_uchar,
+        length: c_long,
+    ) -> *mut EC_KEY;
+    pub fn i2d_EC_PUBKEY(a: *mut EC_KEY, pp: *mut *mut c_uchar) -> c_int;
     pub fn i2d_PrivateKey(k: *mut EVP_PKEY, buf: *mut *mut u8) -> c_int;
 
     pub fn d2i_ECPrivateKey(
