@@ -56,7 +56,7 @@ fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
 ///
 /// OpenSSL's built in hostname verification is used when linking against OpenSSL 1.0.2 or 1.1.0,
 /// and a custom implementation is used when linking against OpenSSL 1.0.1.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SslConnector(SslContext);
 
 impl SslConnector {
