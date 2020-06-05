@@ -46,7 +46,7 @@ unsafe impl<T: Stackable + Sync> Sync for Stack<T> {}
 impl<T: Stackable> Drop for Stack<T> {
     fn drop(&mut self) {
         unsafe {
-            while let Some(_) = self.pop() {}
+            while self.pop().is_some() {}
             OPENSSL_sk_free(self.0 as *mut _);
         }
     }

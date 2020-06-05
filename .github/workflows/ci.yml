@@ -54,7 +54,7 @@ jobs:
         with:
           path: target
           key: clippy-target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
-      - name: Run clippy clippy
+      - name: Run clippy
         run: cargo clippy --all --all-targets
 
   min-version:

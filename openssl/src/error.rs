@@ -229,6 +229,7 @@ impl Error {
     }
 
     /// Returns additional data describing the error.
+    #[allow(clippy::option_as_ref_deref)]
     pub fn data(&self) -> Option<&str> {
         self.data.as_ref().map(|s| &**s)
     }
