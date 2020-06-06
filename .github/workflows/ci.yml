@@ -102,5 +102,7 @@ jobs:
       - name: Get rust version
         id: rust-version
         run: echo "::set-output name=version::$(rustc --version)"
+      - name: Update vcpkg
+        run: vcpkg update
       - name: Install OpenSSL
         run: vcpkg install openssl
