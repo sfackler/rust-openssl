@@ -106,8 +106,6 @@ jobs:
         run: echo "::set-output name=version::$(rustc --version)"
       - name: Set vcpkg root
         run: echo "::set-env name=VCPKG_ROOT::$Env:VCPKG_INSTALLATION_ROOT"
-      - name: test
-        run: echo $Env:VCPKG_ROOT
       - name: Install OpenSSL
         run: vcpkg install openssl:x64-windows
       - name: Cache cargo index
