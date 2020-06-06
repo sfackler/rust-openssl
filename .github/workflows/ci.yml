@@ -106,6 +106,8 @@ jobs:
         run: echo "::set-output name=version::$(rustc --version)"
       - name: Install OpenSSL
         run: vcpkg install openssl:x64-windows
+      - name: Set vcpkg root
+        run: echo "::set-env name=VCPKG_ROOT::$VCPKG_INSTALLATION_ROOT"
       - name: Cache cargo index
         uses: actions/cache@v1
         with:
