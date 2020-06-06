@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - master
+      - actions-vcpkg
 
 env:
   RUSTFLAGS: -Dwarnings
@@ -90,3 +91,16 @@ jobs:
           key: min-version-target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
       - name: Check openssl
         run: cargo check -p openssl
+
+  windows-vcpkg:
+    name: windows-vcpkg
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        run: rustup update stable && rustup default stable
+      - name: Get rust version
+        id: rust-version
+        run: echo "::set-output name=version::$(rustc --version)"
+      - name: Install OpenSSL
+        run: vcpkg install openssl
