@@ -343,7 +343,7 @@ impl<'a> Signer<'a> {
         Ok(buf)
     }
 
-    /// Signs the data in data_buf and writes the siganture into the buffer sig_buf, returning the
+    /// Signs the data in data_buf and writes the signature into the buffer sig_buf, returning the
     /// number of bytes written.
     ///
     /// For PureEdDSA (Ed25519 and Ed448 keys) this is the only way to sign data.
