@@ -3474,6 +3474,18 @@ impl<S: Read + Write> SslStream<S> {
         }
     }
 
+    /// Constructs an `SslStream` from a pointer to the underlying OpenSSL `SSL` struct.
+    ///
+    /// This is useful if the handshake has already been completed elsewhere.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the pointer is valid.
+    pub unsafe fn from_raw_parts(ssl: *mut ffi::SSL, stream: S) -> Self {
+        let ssl = Ssl::from_ptr(ssl);
+        Self::new_base(ssl, stream)
+    }
+
     /// Like `read`, but returns an `ssl::Error` rather than an `io::Error`.
     ///
     /// It is particularly useful with a nonblocking socket, where the error value will identify if
