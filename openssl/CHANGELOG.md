@@ -2,6 +2,29 @@
 
 ## [Unreleased]
 
+## [v0.10.30] - 2020-06-25
+
+### Fixed
+
+* `DsaRef::private_key_to_pem` can no longer be called without a private key.
+
+### Changed
+
+* Improved the `Debug` implementations of many types.
+
+### Added
+
+* Added `is_empty` implementations for `Asn1StringRef` and `Asn1BitStringRef`.
+* Added `EcPointRef::{to_pem, to_dir}` and `EcKeyRef::{public_key_from_pem, public_key_from_der}`.
+* Added `Default` implementations for many types.
+* Added `Debug` implementations for many types.
+* Added `SslRef::set_mtu`.
+* Added `Cipher::{aes_128_ocb, aes_192_ocb, aes_256_ocb}`.
+
+### Deprecated
+
+* Deprecated `SslStreamBuilder::set_dtls_mtu_size` in favor of `SslRef::set_mtu`.
+
 ## [v0.10.29] - 2020-04-07
 
 ### Fixed
@@ -447,7 +470,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.29...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.30...master
+[v0.10.30]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.29...openssl-v0.10.30
 [v0.10.29]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.28...openssl-v0.10.29
 [v0.10.28]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.27...openssl-v0.10.28
 [v0.10.27]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.26...openssl-v0.10.27
