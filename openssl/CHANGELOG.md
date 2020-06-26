@@ -18,6 +18,7 @@
 * Added `EcPointRef::{to_pem, to_dir}` and `EcKeyRef::{public_key_from_pem, public_key_from_der}`.
 * Added `Default` implementations for many types.
 * Added `Debug` implementations for many types.
+* Added `SslStream::from_raw_parts`.
 * Added `SslRef::set_mtu`.
 * Added `Cipher::{aes_128_ocb, aes_192_ocb, aes_256_ocb}`.
 
