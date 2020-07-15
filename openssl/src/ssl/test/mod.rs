@@ -1,5 +1,6 @@
 #![allow(unused_imports)]
 
+use foreign_types::ForeignTypeRef;
 use hex;
 use std::env;
 use std::fs::File;
@@ -1407,4 +1408,12 @@ fn session_cache_size() {
     ctx.set_session_cache_size(1234);
     let ctx = ctx.build();
     assert_eq!(ctx.session_cache_size(), 1234);
+}
+
+#[test]
+fn test_ssl_stream_drop_when_from_raw_parts() {
+    let server = Server::builder().build();
+    let mut s = server.client().connect();
+    let ssl_ptr = s.ssl().as_ptr();
+    let _ = unsafe { SslStream::from_raw_parts(ssl_ptr, s.get_mut()) };
 }

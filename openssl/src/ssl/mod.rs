@@ -3435,6 +3435,7 @@ impl<S> MidHandshakeSslStream<S> {
 pub struct SslStream<S> {
     ssl: ManuallyDrop<Ssl>,
     method: ManuallyDrop<BioMethod>,
+    skip_drop_ssl: bool,
     _p: PhantomData<S>,
 }
 
@@ -3442,7 +3443,9 @@ impl<S> Drop for SslStream<S> {
     fn drop(&mut self) {
         // ssl holds a reference to method internally so it has to drop first
         unsafe {
-            ManuallyDrop::drop(&mut self.ssl);
+            if !self.skip_drop_ssl {
+                ManuallyDrop::drop(&mut self.ssl);
+            }
             ManuallyDrop::drop(&mut self.method);
         }
     }
@@ -3469,6 +3472,7 @@ impl<S: Read + Write> SslStream<S> {
             SslStream {
                 ssl: ManuallyDrop::new(ssl),
                 method: ManuallyDrop::new(method),
+                skip_drop_ssl: false,
                 _p: PhantomData,
             }
         }
@@ -3483,7 +3487,9 @@ impl<S: Read + Write> SslStream<S> {
     /// The caller must ensure the pointer is valid.
     pub unsafe fn from_raw_parts(ssl: *mut ffi::SSL, stream: S) -> Self {
         let ssl = Ssl::from_ptr(ssl);
-        Self::new_base(ssl, stream)
+        let mut this = Self::new_base(ssl, stream);
+        this.skip_drop_ssl = true;
+        this
     }
 
     /// Like `read`, but returns an `ssl::Error` rather than an `io::Error`.
