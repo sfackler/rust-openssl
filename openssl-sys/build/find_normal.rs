@@ -77,6 +77,8 @@ compilation process.
 Make sure you also have the development packages of openssl installed.
 For example, `libssl-dev` on Ubuntu or `openssl-devel` on Fedora.
 
+Make sure you also have `pkg-config` installed on linux platforms.
+
 If you're in a situation where you think the directory *should* be found
 automatically, please open a bug at https://github.com/sfackler/rust-openssl
 and include information about your system as well as this message.
