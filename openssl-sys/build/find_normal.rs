@@ -1,5 +1,6 @@
-use pkg_config;
+use pkg_config::{self, Error as PkgConfigError};
 use std::ffi::OsString;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
 
@@ -177,11 +178,15 @@ fn try_pkg_config() {
 
     let lib = match pkg_config::Config::new()
         .print_system_libs(false)
-        .find("openssl")
+        .probe("openssl")
     {
         Ok(lib) => lib,
-        Err(e) => {
-            println!("run pkg_config fail: {:?}", e);
+        Err(PkgConfigError::Command { cause, .. }) if cause.kind() == io::ErrorKind::NotFound => {
+            println!("failed to run pkg-config; is it installed?");
+            return;
+        }
+        Err(err) => {
+            print!("pkg-config error: {}", err);
             return;
         }
     };
