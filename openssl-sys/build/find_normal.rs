@@ -181,7 +181,9 @@ fn try_pkg_config() {
         .probe("openssl")
     {
         Ok(lib) => lib,
-        Err(PkgConfigError::Command { cause, .. }) if cause.kind() == io::ErrorKind::NotFound => {
+        Err(PkgConfigError::Command { ref cause, .. })
+            if cause.kind() == io::ErrorKind::NotFound =>
+        {
             println!("failed to run pkg-config; is it installed?");
             return;
         }
