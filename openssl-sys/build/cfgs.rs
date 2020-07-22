@@ -1,3 +1,4 @@
+#[allow(clippy::inconsistent_digit_grouping)]
 pub fn get(openssl_version: Option<u64>, libressl_version: Option<u64>) -> Vec<&'static str> {
     let mut cfgs = vec![];
 

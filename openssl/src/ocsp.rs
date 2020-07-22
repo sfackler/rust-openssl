@@ -32,14 +32,6 @@ bitflags! {
 pub struct OcspResponseStatus(c_int);
 
 impl OcspResponseStatus {
-    pub fn from_raw(raw: c_int) -> OcspResponseStatus {
-        OcspResponseStatus(raw)
-    }
-
-    pub fn as_raw(&self) -> c_int {
-        self.0
-    }
-
     pub const SUCCESSFUL: OcspResponseStatus =
         OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_SUCCESSFUL);
     pub const MALFORMED_REQUEST: OcspResponseStatus =
@@ -52,37 +44,39 @@ impl OcspResponseStatus {
         OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_SIGREQUIRED);
     pub const UNAUTHORIZED: OcspResponseStatus =
         OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_UNAUTHORIZED);
+
+    pub fn from_raw(raw: c_int) -> OcspResponseStatus {
+        OcspResponseStatus(raw)
+    }
+
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct OcspCertStatus(c_int);
 
 impl OcspCertStatus {
+    pub const GOOD: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_GOOD);
+    pub const REVOKED: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_REVOKED);
+    pub const UNKNOWN: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_UNKNOWN);
+
     pub fn from_raw(raw: c_int) -> OcspCertStatus {
         OcspCertStatus(raw)
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn as_raw(&self) -> c_int {
         self.0
     }
-
-    pub const GOOD: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_GOOD);
-    pub const REVOKED: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_REVOKED);
-    pub const UNKNOWN: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_UNKNOWN);
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct OcspRevokedStatus(c_int);
 
 impl OcspRevokedStatus {
-    pub fn from_raw(raw: c_int) -> OcspRevokedStatus {
-        OcspRevokedStatus(raw)
-    }
-
-    pub fn as_raw(&self) -> c_int {
-        self.0
-    }
-
     pub const NO_STATUS: OcspRevokedStatus = OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_NOSTATUS);
     pub const UNSPECIFIED: OcspRevokedStatus =
         OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_UNSPECIFIED);
@@ -100,6 +94,15 @@ impl OcspRevokedStatus {
         OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_CERTIFICATEHOLD);
     pub const REMOVE_FROM_CRL: OcspRevokedStatus =
         OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_REMOVEFROMCRL);
+
+    pub fn from_raw(raw: c_int) -> OcspRevokedStatus {
+        OcspRevokedStatus(raw)
+    }
+
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
 }
 
 pub struct OcspStatus<'a> {
@@ -190,10 +193,11 @@ impl OcspBasicResponseRef {
                 } else {
                     Some(Asn1GeneralizedTimeRef::from_ptr(revocation_time))
                 };
+
                 Some(OcspStatus {
                     status: OcspCertStatus(status),
                     reason: OcspRevokedStatus(status),
-                    revocation_time: revocation_time,
+                    revocation_time,
                     this_update: Asn1GeneralizedTimeRef::from_ptr(this_update),
                     next_update: Asn1GeneralizedTimeRef::from_ptr(next_update),
                 })

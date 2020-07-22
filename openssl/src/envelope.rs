@@ -92,6 +92,7 @@ impl Seal {
     }
 
     /// Returns the initialization vector, if the cipher uses one.
+    #[allow(clippy::option_as_ref_deref)]
     pub fn iv(&self) -> Option<&[u8]> {
         self.iv.as_ref().map(|v| &**v)
     }

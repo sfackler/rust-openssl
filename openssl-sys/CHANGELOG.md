@@ -2,6 +2,34 @@
 
 ## [Unreleased]
 
+## [v0.9.58] - 2020-06-05
+
+### Added
+
+* Added `SSL_set_mtu`.
+* Added support for LibreSSL 3.2.0.
+* Added `PEM_read_bio_EC_PUBKEY`, `PEM_write_bio_EC_PUBKEY`, `d2i_EC_PUBKEY`, and `i2d_EC_PUBKEY`.
+* Added `EVP_PKEY_encrypt_init`, `EVP_PKEY_encrypt`, `EVP_PKEY_decrypt_init`, `EVP_PKEY_decrypt`,
+    `EVP_PKEY_get_raw_public_key`, `EVP_PKEY_new_raw_public_key`, `EVP_PKEY_get_raw_private_key`,
+    and `EVP_PKEY_new_raw_private_key`.
+* Added `OBJ_sn2nid`.
+
+## [v0.9.57] - 2020-05-24
+
+### Added
+
+* Added support for LibreSSL 3.1.x.
+
+## [v0.9.56] - 2020-05-07
+
+### Fixed
+
+* Fixed vendored builds on windows-gnu targets.
+
+### Added
+
+* Added support for LibreSSL 3.0.0.
+
 ## [v0.9.55] - 2020-04-07
 
 ### Fixed
@@ -117,7 +145,10 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.55...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.58...master
+[v0.9.58]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.57...openssl-sys-v0.9.58
+[v0.9.57]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.56...openssl-sys-v0.9.57
+[v0.9.56]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.55...openssl-sys-v0.9.56
 [v0.9.55]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.54...openssl-sys-v0.9.55
 [v0.9.54]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.53...openssl-sys-v0.9.54
 [v0.9.53]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.52...openssl-sys-v0.9.53

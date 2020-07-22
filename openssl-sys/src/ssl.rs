@@ -450,6 +450,10 @@ cfg_if! {
     }
 }
 
+pub unsafe fn SSL_set_mtu(ssl: *mut SSL, mtu: c_long) -> c_long {
+    SSL_ctrl(ssl, SSL_CTRL_SET_MTU, mtu, ptr::null_mut())
+}
+
 pub type GEN_SESSION_CB =
     Option<unsafe extern "C" fn(*const SSL, *mut c_uchar, *mut c_uint) -> c_int>;
 
@@ -711,6 +715,7 @@ pub const SSL_CTRL_SET_TMP_ECDH: c_int = 4;
 #[cfg(any(libressl, all(ossl101, not(ossl110))))]
 pub const SSL_CTRL_GET_SESSION_REUSED: c_int = 8;
 pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
+pub const SSL_CTRL_SET_MTU: c_int = 17;
 #[cfg(any(libressl, all(ossl101, not(ossl110))))]
 pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_MODE: c_int = 33;

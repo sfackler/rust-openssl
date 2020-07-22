@@ -338,11 +338,16 @@ impl SslMethod {
     }
 
     /// Constructs an `SslMethod` from a pointer to the underlying OpenSSL value.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the pointer is valid.
     pub unsafe fn from_ptr(ptr: *const ffi::SSL_METHOD) -> SslMethod {
         SslMethod(ptr)
     }
 
     /// Returns a pointer to the underlying OpenSSL value.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn as_ptr(&self) -> *const ffi::SSL_METHOD {
         self.0
     }
@@ -444,16 +449,6 @@ bitflags! {
 pub struct SslFiletype(c_int);
 
 impl SslFiletype {
-    /// Constructs an `SslFiletype` from a raw OpenSSL value.
-    pub fn from_raw(raw: c_int) -> SslFiletype {
-        SslFiletype(raw)
-    }
-
-    /// Returns the raw OpenSSL value represented by this type.
-    pub fn as_raw(&self) -> c_int {
-        self.0
-    }
-
     /// The PEM format.
     ///
     /// This corresponds to `SSL_FILETYPE_PEM`.
@@ -463,6 +458,17 @@ impl SslFiletype {
     ///
     /// This corresponds to `SSL_FILETYPE_ASN1`.
     pub const ASN1: SslFiletype = SslFiletype(ffi::SSL_FILETYPE_ASN1);
+
+    /// Constructs an `SslFiletype` from a raw OpenSSL value.
+    pub fn from_raw(raw: c_int) -> SslFiletype {
+        SslFiletype(raw)
+    }
+
+    /// Returns the raw OpenSSL value represented by this type.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
 }
 
 /// An identifier of a certificate status type.
@@ -470,18 +476,19 @@ impl SslFiletype {
 pub struct StatusType(c_int);
 
 impl StatusType {
+    /// An OSCP status.
+    pub const OCSP: StatusType = StatusType(ffi::TLSEXT_STATUSTYPE_ocsp);
+
     /// Constructs a `StatusType` from a raw OpenSSL value.
     pub fn from_raw(raw: c_int) -> StatusType {
         StatusType(raw)
     }
 
     /// Returns the raw OpenSSL value represented by this type.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn as_raw(&self) -> c_int {
         self.0
     }
-
-    /// An OSCP status.
-    pub const OCSP: StatusType = StatusType(ffi::TLSEXT_STATUSTYPE_ocsp);
 }
 
 /// An identifier of a session name type.
@@ -489,18 +496,19 @@ impl StatusType {
 pub struct NameType(c_int);
 
 impl NameType {
+    /// A host name.
+    pub const HOST_NAME: NameType = NameType(ffi::TLSEXT_NAMETYPE_host_name);
+
     /// Constructs a `StatusType` from a raw OpenSSL value.
     pub fn from_raw(raw: c_int) -> StatusType {
         StatusType(raw)
     }
 
     /// Returns the raw OpenSSL value represented by this type.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn as_raw(&self) -> c_int {
         self.0
     }
-
-    /// A host name.
-    pub const HOST_NAME: NameType = NameType(ffi::TLSEXT_NAMETYPE_host_name);
 }
 
 lazy_static! {
@@ -658,6 +666,10 @@ impl SslContextBuilder {
     }
 
     /// Creates an `SslContextBuilder` from a pointer to a raw OpenSSL value.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the pointer is valid and uniquely owned by the builder.
     pub unsafe fn from_ptr(ctx: *mut ffi::SSL_CTX) -> SslContextBuilder {
         SslContextBuilder(SslContext::from_ptr(ctx))
     }
@@ -1726,6 +1738,7 @@ impl SslContextBuilder {
     /// This corresponds to [`SSL_CTX_sess_get_cache_size`].
     ///
     /// [`SSL_CTX_sess_get_cache_size`]: https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_sess_set_cache_size.html
+    #[allow(clippy::identity_conversion)]
     pub fn set_session_cache_size(&mut self, size: i32) -> i64 {
         unsafe { ffi::SSL_CTX_sess_set_cache_size(self.as_ptr(), size.into()).into() }
     }
@@ -1967,6 +1980,7 @@ impl SslContextRef {
     /// This corresponds to [`SSL_CTX_sess_get_cache_size`].
     ///
     /// [`SSL_CTX_sess_get_cache_size`]: https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_sess_set_cache_size.html
+    #[allow(clippy::identity_conversion)]
     pub fn session_cache_size(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_get_cache_size(self.as_ptr()).into() }
     }
@@ -2084,6 +2098,7 @@ impl SslCipherRef {
     /// This corresponds to [`SSL_CIPHER_get_bits`].
     ///
     /// [`SSL_CIPHER_get_bits`]: https://www.openssl.org/docs/manmaster/man3/SSL_CIPHER_get_name.html
+    #[allow(clippy::identity_conversion)]
     pub fn bits(&self) -> CipherBits {
         unsafe {
             let mut algo_bits = 0;
@@ -2242,6 +2257,7 @@ impl SslSessionRef {
     /// This corresponds to [`SSL_SESSION_get_time`].
     ///
     /// [`SSL_SESSION_get_time`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_SESSION_get_time.html
+    #[allow(clippy::identity_conversion)]
     pub fn time(&self) -> i64 {
         unsafe { ffi::SSL_SESSION_get_time(self.as_ptr()).into() }
     }
@@ -2253,6 +2269,7 @@ impl SslSessionRef {
     /// This corresponds to [`SSL_SESSION_get_timeout`].
     ///
     /// [`SSL_SESSION_get_timeout`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_SESSION_get_time.html
+    #[allow(clippy::identity_conversion)]
     pub fn timeout(&self) -> i64 {
         unsafe { ffi::SSL_SESSION_get_timeout(self.as_ptr()).into() }
     }
@@ -2868,7 +2885,7 @@ impl SslRef {
     pub fn servername_raw(&self, type_: NameType) -> Option<&[u8]> {
         unsafe {
             let name = ffi::SSL_get_servername(self.as_ptr(), type_.0);
-            if name == ptr::null() {
+            if name.is_null() {
                 None
             } else {
                 Some(CStr::from_ptr(name as *const _).to_bytes())
@@ -3351,6 +3368,13 @@ impl SslRef {
             }
         }
     }
+
+    /// Sets the MTU used for DTLS connections.
+    ///
+    /// This corresponds to `SSL_set_mtu`.
+    pub fn set_mtu(&mut self, mtu: u32) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::SSL_set_mtu(self.as_ptr(), mtu as c_long) as c_int).map(|_| ()) }
+    }
 }
 
 /// An SSL stream midway through the handshake process.
@@ -3450,6 +3474,18 @@ impl<S: Read + Write> SslStream<S> {
         }
     }
 
+    /// Constructs an `SslStream` from a pointer to the underlying OpenSSL `SSL` struct.
+    ///
+    /// This is useful if the handshake has already been completed elsewhere.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the pointer is valid.
+    pub unsafe fn from_raw_parts(ssl: *mut ffi::SSL, stream: S) -> Self {
+        let ssl = Ssl::from_ptr(ssl);
+        Self::new_base(ssl, stream)
+    }
+
     /// Like `read`, but returns an `ssl::Error` rather than an `io::Error`.
     ///
     /// It is particularly useful with a nonblocking socket, where the error value will identify if
@@ -3464,7 +3500,7 @@ impl<S: Read + Write> SslStream<S> {
         // that it read zero bytes, but zero is also the sentinel for "error".
         // To avoid that confusion short-circuit that logic and return quickly
         // if `buf` has a length of zero.
-        if buf.len() == 0 {
+        if buf.is_empty() {
             return Ok(0);
         }
 
@@ -3486,7 +3522,7 @@ impl<S: Read + Write> SslStream<S> {
     /// [`SSL_write`]: https://www.openssl.org/docs/manmaster/man3/SSL_write.html
     pub fn ssl_write(&mut self, buf: &[u8]) -> Result<usize, Error> {
         // See above for why we short-circuit on zero-length buffers
-        if buf.len() == 0 {
+        if buf.is_empty() {
             return Ok(0);
         }
 
@@ -3875,6 +3911,7 @@ impl<S> SslStreamBuilder<S> {
     ///
     /// # Panics
     /// This function panics if the given mtu size can't be represented in a positive `c_long` range
+    #[deprecated(note = "Use SslRef::set_mtu instead", since = "0.10.30")]
     pub fn set_dtls_mtu_size(&mut self, mtu_size: usize) {
         unsafe {
             let bio = self.inner.ssl.get_raw_rbio();

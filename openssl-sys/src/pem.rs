@@ -74,6 +74,7 @@ cfg_if! {
                 user_data: *mut c_void,
             ) -> c_int;
             pub fn PEM_write_bio_PKCS7(bp: *mut BIO, x: *const PKCS7) -> c_int;
+            pub fn PEM_write_bio_EC_PUBKEY(bp: *mut BIO, ec: *const EC_KEY) -> c_int;
         }
     } else {
         extern "C" {
@@ -128,6 +129,7 @@ cfg_if! {
                 user_data: *mut c_void,
             ) -> c_int;
             pub fn PEM_write_bio_PKCS7(bp: *mut BIO, x: *mut PKCS7) -> c_int;
+            pub fn PEM_write_bio_EC_PUBKEY(bp: *mut BIO, ec: *mut EC_KEY) -> c_int;
         }
     }
 }
@@ -173,6 +175,12 @@ extern "C" {
     pub fn PEM_read_bio_ECPrivateKey(
         bio: *mut BIO,
         key: *mut *mut EC_KEY,
+        callback: pem_password_cb,
+        user_data: *mut c_void,
+    ) -> *mut EC_KEY;
+    pub fn PEM_read_bio_EC_PUBKEY(
+        bp: *mut BIO,
+        ec: *mut *mut EC_KEY,
         callback: pem_password_cb,
         user_data: *mut c_void,
     ) -> *mut EC_KEY;

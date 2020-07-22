@@ -208,7 +208,7 @@ pub fn wrap_key(
 /// # Panics
 ///
 /// Panics if either `out` or `in_` do not have sizes that are a multiple of 8, or
-/// if `in` is not 8 bytes longer than `in_`
+/// if `in_` is not 8 bytes longer than `out`
 pub fn unwrap_key(
     key: &AesKey,
     iv: Option<[u8; 8]>,

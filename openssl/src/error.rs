@@ -159,7 +159,7 @@ impl Error {
                         None
                     } else {
                         ptr::copy_nonoverlapping(data.as_ptr(), ptr as *mut u8, data.len());
-                        *ptr.offset(data.len() as isize) = 0;
+                        *ptr.add(data.len()) = 0;
                         Some((ptr, ffi::ERR_TXT_MALLOCED))
                     }
                 }
@@ -252,6 +252,7 @@ impl Error {
     }
 
     /// Returns additional data describing the error.
+    #[allow(clippy::option_as_ref_deref)]
     pub fn data(&self) -> Option<&str> {
         self.data.as_ref().map(|s| &**s)
     }

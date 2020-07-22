@@ -135,6 +135,7 @@ cfg_if! {
             pub fn i2d_DSA_PUBKEY(a: *const DSA, pp: *mut *mut c_uchar) -> c_int;
             pub fn i2d_PrivateKey(k: *const EVP_PKEY, buf: *mut *mut u8) -> c_int;
             pub fn i2d_ECPrivateKey(ec_key: *const EC_KEY, pp: *mut *mut c_uchar) -> c_int;
+            pub fn i2d_EC_PUBKEY(a: *const EC_KEY, pp: *mut *mut c_uchar) -> c_int;
         }
     } else {
         extern "C" {
@@ -148,6 +149,7 @@ cfg_if! {
             pub fn i2d_DSA_PUBKEY(a: *mut DSA, pp: *mut *mut c_uchar) -> c_int;
             pub fn i2d_PrivateKey(k: *mut EVP_PKEY, buf: *mut *mut u8) -> c_int;
             pub fn i2d_ECPrivateKey(ec_key: *mut EC_KEY, pp: *mut *mut c_uchar) -> c_int;
+            pub fn i2d_EC_PUBKEY(a: *mut EC_KEY, pp: *mut *mut c_uchar) -> c_int;
         }
     }
 }
@@ -155,6 +157,11 @@ extern "C" {
     pub fn d2i_PUBKEY(k: *mut *mut EVP_PKEY, buf: *mut *const u8, len: c_long) -> *mut EVP_PKEY;
     pub fn d2i_RSA_PUBKEY(k: *mut *mut RSA, buf: *mut *const u8, len: c_long) -> *mut RSA;
     pub fn d2i_DSA_PUBKEY(k: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long) -> *mut DSA;
+    pub fn d2i_EC_PUBKEY(
+        a: *mut *mut EC_KEY,
+        pp: *mut *const c_uchar,
+        length: c_long,
+    ) -> *mut EC_KEY;
 
     pub fn d2i_ECPrivateKey(
         k: *mut *mut EC_KEY,

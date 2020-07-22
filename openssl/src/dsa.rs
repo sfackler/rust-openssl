@@ -80,26 +80,6 @@ impl<T> DsaRef<T>
 where
     T: HasPublic,
 {
-    private_key_to_pem! {
-        /// Serializes the private key to a PEM-encoded DSAPrivateKey structure.
-        ///
-        /// The output will have a header of `-----BEGIN DSA PRIVATE KEY-----`.
-        ///
-        /// This corresponds to [`PEM_write_bio_DSAPrivateKey`].
-        ///
-        /// [`PEM_write_bio_DSAPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_DSAPrivateKey.html
-        private_key_to_pem,
-        /// Serializes the private key to a PEM-encoded encrypted DSAPrivateKey structure.
-        ///
-        /// The output will have a header of `-----BEGIN DSA PRIVATE KEY-----`.
-        ///
-        /// This corresponds to [`PEM_write_bio_DSAPrivateKey`].
-        ///
-        /// [`PEM_write_bio_DSAPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_DSAPrivateKey.html
-        private_key_to_pem_passphrase,
-        ffi::PEM_write_bio_DSAPrivateKey
-    }
-
     to_pem! {
         /// Serialies the public key into a PEM-encoded SubjectPublicKeyInfo structure.
         ///
@@ -136,6 +116,26 @@ impl<T> DsaRef<T>
 where
     T: HasPrivate,
 {
+    private_key_to_pem! {
+        /// Serializes the private key to a PEM-encoded DSAPrivateKey structure.
+        ///
+        /// The output will have a header of `-----BEGIN DSA PRIVATE KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_DSAPrivateKey`].
+        ///
+        /// [`PEM_write_bio_DSAPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_DSAPrivateKey.html
+        private_key_to_pem,
+        /// Serializes the private key to a PEM-encoded encrypted DSAPrivateKey structure.
+        ///
+        /// The output will have a header of `-----BEGIN DSA PRIVATE KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_DSAPrivateKey`].
+        ///
+        /// [`PEM_write_bio_DSAPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_DSAPrivateKey.html
+        private_key_to_pem_passphrase,
+        ffi::PEM_write_bio_DSAPrivateKey
+    }
+
     /// Returns a reference to the private key component of `self`.
     pub fn priv_key(&self) -> &BigNumRef {
         unsafe {
@@ -451,6 +451,7 @@ mod test {
     }
 
     #[test]
+    #[allow(clippy::redundant_clone)]
     fn clone() {
         let key = Dsa::generate(2048).unwrap();
         drop(key.clone());
