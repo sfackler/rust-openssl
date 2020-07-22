@@ -1000,7 +1000,10 @@ extern "C" {
         len: c_long,
     ) -> *mut SSL_SESSION;
 
+    #[cfg(not(ossl300))]
     pub fn SSL_get_peer_certificate(ssl: *const SSL) -> *mut X509;
+    #[cfg(ossl300)]
+    pub fn SSL_get1_peer_certificate(ssl: *const SSL) -> *mut X509;
 
     pub fn SSL_get_peer_cert_chain(ssl: *const SSL) -> *mut stack_st_X509;
 

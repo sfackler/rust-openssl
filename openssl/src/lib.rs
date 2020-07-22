@@ -154,7 +154,7 @@ pub mod ecdsa;
 pub mod envelope;
 pub mod error;
 pub mod ex_data;
-#[cfg(not(libressl))]
+#[cfg(not(any(libressl, ossl300)))]
 pub mod fips;
 pub mod hash;
 pub mod memcmp;

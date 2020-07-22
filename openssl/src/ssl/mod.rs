@@ -2619,7 +2619,7 @@ impl SslRef {
     /// [`SSL_get_peer_certificate`]: https://www.openssl.org/docs/man1.1.0/ssl/SSL_get_peer_certificate.html
     pub fn peer_certificate(&self) -> Option<X509> {
         unsafe {
-            let ptr = ffi::SSL_get_peer_certificate(self.as_ptr());
+            let ptr = SSL_get1_peer_certificate(self.as_ptr());
             if ptr.is_null() {
                 None
             } else {
@@ -3954,6 +3954,13 @@ cfg_if! {
     }
 }
 
+cfg_if! {
+    if #[cfg(ossl300)] {
+        use ffi::SSL_get1_peer_certificate;
+    } else {
+        use ffi::SSL_get_peer_certificate as SSL_get1_peer_certificate;
+    }
+}
 cfg_if! {
     if #[cfg(any(ossl110, libressl291))] {
         use ffi::{TLS_method, DTLS_method, TLS_client_method, TLS_server_method};
