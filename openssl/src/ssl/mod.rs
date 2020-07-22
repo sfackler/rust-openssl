@@ -1738,7 +1738,7 @@ impl SslContextBuilder {
     /// This corresponds to [`SSL_CTX_sess_get_cache_size`].
     ///
     /// [`SSL_CTX_sess_get_cache_size`]: https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_sess_set_cache_size.html
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn set_session_cache_size(&mut self, size: i32) -> i64 {
         unsafe { ffi::SSL_CTX_sess_set_cache_size(self.as_ptr(), size.into()).into() }
     }
@@ -1980,7 +1980,7 @@ impl SslContextRef {
     /// This corresponds to [`SSL_CTX_sess_get_cache_size`].
     ///
     /// [`SSL_CTX_sess_get_cache_size`]: https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_sess_set_cache_size.html
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn session_cache_size(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_get_cache_size(self.as_ptr()).into() }
     }
@@ -2098,7 +2098,7 @@ impl SslCipherRef {
     /// This corresponds to [`SSL_CIPHER_get_bits`].
     ///
     /// [`SSL_CIPHER_get_bits`]: https://www.openssl.org/docs/manmaster/man3/SSL_CIPHER_get_name.html
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn bits(&self) -> CipherBits {
         unsafe {
             let mut algo_bits = 0;
@@ -2257,7 +2257,7 @@ impl SslSessionRef {
     /// This corresponds to [`SSL_SESSION_get_time`].
     ///
     /// [`SSL_SESSION_get_time`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_SESSION_get_time.html
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn time(&self) -> i64 {
         unsafe { ffi::SSL_SESSION_get_time(self.as_ptr()).into() }
     }
@@ -2269,7 +2269,7 @@ impl SslSessionRef {
     /// This corresponds to [`SSL_SESSION_get_timeout`].
     ///
     /// [`SSL_SESSION_get_timeout`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_SESSION_get_time.html
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn timeout(&self) -> i64 {
         unsafe { ffi::SSL_SESSION_get_timeout(self.as_ptr()).into() }
     }

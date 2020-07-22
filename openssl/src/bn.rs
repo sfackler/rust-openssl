@@ -188,7 +188,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_div_word`]
     ///
     /// [`BN_div_word`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_div_word.html
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn div_word(&mut self, w: u32) -> Result<u64, ErrorStack> {
         unsafe {
             let r = ffi::BN_div_word(self.as_ptr(), w.into());
@@ -205,7 +205,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_mod_word`]
     ///
     /// [`BN_mod_word`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_mod_word.html
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn mod_word(&self, w: u32) -> Result<u64, ErrorStack> {
         unsafe {
             let r = ffi::BN_mod_word(self.as_ptr(), w.into());
@@ -243,7 +243,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_set_bit`]
     ///
     /// [`BN_set_bit`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_set_bit.html
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn set_bit(&mut self, n: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_set_bit(self.as_ptr(), n.into())).map(|_| ()) }
     }
@@ -255,7 +255,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_clear_bit`]
     ///
     /// [`BN_clear_bit`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_clear_bit.html
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn clear_bit(&mut self, n: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_clear_bit(self.as_ptr(), n.into())).map(|_| ()) }
     }
@@ -265,7 +265,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_is_bit_set`]
     ///
     /// [`BN_is_bit_set`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_is_bit_set.html
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn is_bit_set(&self, n: i32) -> bool {
         unsafe { ffi::BN_is_bit_set(self.as_ptr(), n.into()) == 1 }
     }
@@ -277,7 +277,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_mask_bits`]
     ///
     /// [`BN_mask_bits`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_mask_bits.html
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn mask_bits(&mut self, n: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_mask_bits(self.as_ptr(), n.into())).map(|_| ()) }
     }
@@ -325,7 +325,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_lshift`]
     ///
     /// [`BN_lshift`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_lshift.html
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn lshift(&mut self, a: &BigNumRef, n: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_lshift(self.as_ptr(), a.as_ptr(), n.into())).map(|_| ()) }
     }
@@ -335,7 +335,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_rshift`]
     ///
     /// [`BN_rshift`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_rshift.html
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn rshift(&mut self, a: &BigNumRef, n: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_rshift(self.as_ptr(), a.as_ptr(), n.into())).map(|_| ()) }
     }
@@ -421,7 +421,7 @@ impl BigNumRef {
     ///
     /// [`constants`]: index.html#constants
     /// [`BN_rand`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_rand.html
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn rand(&mut self, bits: i32, msb: MsbOption, odd: bool) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::BN_rand(
@@ -439,7 +439,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_psuedo_rand`]
     ///
     /// [`BN_psuedo_rand`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_pseudo_rand.html
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn pseudo_rand(&mut self, bits: i32, msb: MsbOption, odd: bool) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::BN_pseudo_rand(
@@ -818,7 +818,7 @@ impl BigNumRef {
     /// # Return Value
     ///
     /// Returns `true` if `self` is prime with an error probability of less than `0.25 ^ checks`.
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn is_prime(&self, checks: i32, ctx: &mut BigNumContextRef) -> Result<bool, ErrorStack> {
         unsafe {
             cvt_n(ffi::BN_is_prime_ex(
@@ -844,7 +844,7 @@ impl BigNumRef {
     /// # Return Value
     ///
     /// Returns `true` if `self` is prime with an error probability of less than `0.25 ^ checks`.
-    #[allow(clippy::identity_conversion)]
+    #[allow(clippy::useless_conversion)]
     pub fn is_prime_fasttest(
         &self,
         checks: i32,
