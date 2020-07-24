@@ -207,6 +207,9 @@ jobs:
             - ~/.cargo/registry/cache
             - target
 
+openssl_300: &openssl_300
+  library: openssl
+  version: 3.0.0-alpha5
 openssl_111: &openssl_111
   library: openssl
   version: 1.1.1g
@@ -235,6 +238,10 @@ workflows:
           target: x86_64-unknown-linux-gnu
           vendored: true
       - linux:
+          <<: *openssl_300
+          name: x86_64-openssl-3.0.0
+          target: x86_64-unknown-linux-gnu
+      - linux:
           <<: *openssl_111
           name: x86_64-openssl-1.1.1
           target: x86_64-unknown-linux-gnu
@@ -255,6 +262,10 @@ workflows:
           target: i686-unknown-linux-gnu
           vendored: true
       - linux:
+          <<: *openssl_300
+          name: i686-openssl-3.0.0
+          target: i686-unknown-linux-gnu
+      - linux:
           <<: *openssl_111
           name: i686-openssl-1.1.1
           target: i686-unknown-linux-gnu
@@ -270,6 +281,11 @@ workflows:
           name: armhf-vendored
           target: arm-unknown-linux-gnueabihf
           vendored: true
+          no_run: true
+      - linux:
+          <<: *openssl_300
+          name: armhf-openssl-3.0.0
+          target: arm-unknown-linux-gnueabihf
           no_run: true
       - linux:
           <<: *openssl_111
