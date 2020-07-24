@@ -27,7 +27,8 @@ fn basic() {
     assert_eq!(error.line(), 20);
     cfg_if! {
         if #[cfg(ossl300)] {
-            assert_eq!(error.data(), Some(""));
+            // https://github.com/openssl/openssl/issues/12530
+            assert!(error.data() == None || error.data() == Some(""));
         } else {
             assert_eq!(error.data(), None);
         }
