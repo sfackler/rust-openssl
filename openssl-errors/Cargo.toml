@@ -10,6 +10,7 @@ readme = "README.md"
 categories = ["api-bindings"]
 
 [dependencies]
+cfg-if = "0.1"
 libc = "0.2"
 
 openssl-sys = { version = "0.9.42", path = "../openssl-sys" }

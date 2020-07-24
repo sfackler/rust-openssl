@@ -1,3 +1,4 @@
+use cfg_if::cfg_if;
 use openssl::error::Error;
 
 openssl_errors::openssl_errors! {
@@ -23,8 +24,14 @@ fn basic() {
     assert_eq!(error.function().unwrap(), "function foo");
     assert_eq!(error.reason().unwrap(), "out of milk");
     assert_eq!(error.file(), "openssl-errors/tests/test.rs");
-    assert_eq!(error.line(), 19);
-    assert_eq!(error.data(), None);
+    assert_eq!(error.line(), 20);
+    cfg_if! {
+        if #[cfg(ossl300)] {
+            assert_eq!(error.data(), Some(""));
+        } else {
+            assert_eq!(error.data(), None);
+        }
+    }
 }
 
 #[test]
@@ -36,7 +43,7 @@ fn static_data() {
     assert_eq!(error.function().unwrap(), "function bar");
     assert_eq!(error.reason().unwrap(), "out of bacon");
     assert_eq!(error.file(), "openssl-errors/tests/test.rs");
-    assert_eq!(error.line(), 32);
+    assert_eq!(error.line(), 39);
     assert_eq!(error.data(), Some("foobar"));
 }
 
@@ -49,6 +56,6 @@ fn dynamic_data() {
     assert_eq!(error.function().unwrap(), "function bar");
     assert_eq!(error.reason().unwrap(), "out of milk");
     assert_eq!(error.file(), "openssl-errors/tests/test.rs");
-    assert_eq!(error.line(), 45);
+    assert_eq!(error.line(), 52);
     assert_eq!(error.data(), Some("hello world"));
 }
