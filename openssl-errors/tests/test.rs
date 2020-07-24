@@ -44,7 +44,7 @@ fn static_data() {
     assert_eq!(error.function().unwrap(), "function bar");
     assert_eq!(error.reason().unwrap(), "out of bacon");
     assert_eq!(error.file(), "openssl-errors/tests/test.rs");
-    assert_eq!(error.line(), 39);
+    assert_eq!(error.line(), 40);
     assert_eq!(error.data(), Some("foobar"));
 }
 
@@ -57,6 +57,6 @@ fn dynamic_data() {
     assert_eq!(error.function().unwrap(), "function bar");
     assert_eq!(error.reason().unwrap(), "out of milk");
     assert_eq!(error.file(), "openssl-errors/tests/test.rs");
-    assert_eq!(error.line(), 52);
+    assert_eq!(error.line(), 53);
     assert_eq!(error.data(), Some("hello world"));
 }
