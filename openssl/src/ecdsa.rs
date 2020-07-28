@@ -1,4 +1,5 @@
 //! Low level Elliptic Curve Digital Signature Algorithm (ECDSA) functions.
+
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
@@ -8,7 +9,7 @@ use std::ptr;
 use bn::{BigNum, BigNumRef};
 use ec::EcKeyRef;
 use error::ErrorStack;
-use pkey::{Private, Public};
+use pkey::{HasPrivate, HasPublic};
 use {cvt_n, cvt_p};
 
 foreign_type_and_impl_send_sync! {
@@ -33,7 +34,10 @@ impl EcdsaSig {
     /// OpenSSL documentation at [`ECDSA_do_sign`]
     ///
     /// [`ECDSA_do_sign`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_do_sign.html
-    pub fn sign(data: &[u8], eckey: &EcKeyRef<Private>) -> Result<EcdsaSig, ErrorStack> {
+    pub fn sign<T>(data: &[u8], eckey: &EcKeyRef<T>) -> Result<EcdsaSig, ErrorStack>
+    where
+        T: HasPrivate,
+    {
         unsafe {
             assert!(data.len() <= c_int::max_value() as usize);
             let sig = cvt_p(ffi::ECDSA_do_sign(
@@ -60,50 +64,6 @@ impl EcdsaSig {
         }
     }
 
-    /// Verifies if the signature is a valid ECDSA signature using the given public key.
-    ///
-    /// OpenSSL documentation at [`ECDSA_do_verify`]
-    ///
-    /// [`ECDSA_do_verify`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_do_verify.html
-    pub fn verify(&self, data: &[u8], eckey: &EcKeyRef<Public>) -> Result<bool, ErrorStack> {
-        unsafe {
-            assert!(data.len() <= c_int::max_value() as usize);
-            cvt_n(ffi::ECDSA_do_verify(
-                data.as_ptr(),
-                data.len() as c_int,
-                self.as_ptr(),
-                eckey.as_ptr(),
-            ))
-            .map(|x| x == 1)
-        }
-    }
-
-    /// Returns internal component: `r` of a `EcdsaSig`. (See X9.62 or FIPS 186-2)
-    ///
-    /// OpenSSL documentation at [`ECDSA_SIG_get0`]
-    ///
-    /// [`ECDSA_SIG_get0`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_SIG_get0.html
-    pub fn r(&self) -> &BigNumRef {
-        unsafe {
-            let mut r = ptr::null();
-            ECDSA_SIG_get0(self.as_ptr(), &mut r, ptr::null_mut());
-            BigNumRef::from_ptr(r as *mut _)
-        }
-    }
-
-    /// Returns internal components: `s` of a `EcdsaSig`. (See X9.62 or FIPS 186-2)
-    ///
-    /// OpenSSL documentation at [`ECDSA_SIG_get0`]
-    ///
-    /// [`ECDSA_SIG_get0`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_SIG_get0.html
-    pub fn s(&self) -> &BigNumRef {
-        unsafe {
-            let mut s = ptr::null();
-            ECDSA_SIG_get0(self.as_ptr(), ptr::null_mut(), &mut s);
-            BigNumRef::from_ptr(s as *mut _)
-        }
-    }
-
     from_der! {
         /// Decodes a DER-encoded ECDSA signature.
         ///
@@ -125,6 +85,53 @@ impl EcdsaSigRef {
         /// [`i2d_ECDSA_SIG`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_ECDSA_SIG.html
         to_der,
         ffi::i2d_ECDSA_SIG
+    }
+
+    /// Verifies if the signature is a valid ECDSA signature using the given public key.
+    ///
+    /// OpenSSL documentation at [`ECDSA_do_verify`]
+    ///
+    /// [`ECDSA_do_verify`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_do_verify.html
+    pub fn verify<T>(&self, data: &[u8], eckey: &EcKeyRef<T>) -> Result<bool, ErrorStack>
+    where
+        T: HasPublic,
+    {
+        unsafe {
+            assert!(data.len() <= c_int::max_value() as usize);
+            cvt_n(ffi::ECDSA_do_verify(
+                data.as_ptr(),
+                data.len() as c_int,
+                self.as_ptr(),
+                eckey.as_ptr(),
+            ))
+            .map(|x| x == 1)
+        }
+    }
+
+    /// Returns internal component: `r` of an `EcdsaSig`. (See X9.62 or FIPS 186-2)
+    ///
+    /// OpenSSL documentation at [`ECDSA_SIG_get0`]
+    ///
+    /// [`ECDSA_SIG_get0`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_SIG_get0.html
+    pub fn r(&self) -> &BigNumRef {
+        unsafe {
+            let mut r = ptr::null();
+            ECDSA_SIG_get0(self.as_ptr(), &mut r, ptr::null_mut());
+            BigNumRef::from_ptr(r as *mut _)
+        }
+    }
+
+    /// Returns internal components: `s` of an `EcdsaSig`. (See X9.62 or FIPS 186-2)
+    ///
+    /// OpenSSL documentation at [`ECDSA_SIG_get0`]
+    ///
+    /// [`ECDSA_SIG_get0`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_SIG_get0.html
+    pub fn s(&self) -> &BigNumRef {
+        unsafe {
+            let mut s = ptr::null();
+            ECDSA_SIG_get0(self.as_ptr(), ptr::null_mut(), &mut s);
+            BigNumRef::from_ptr(s as *mut _)
+        }
     }
 }
 
@@ -170,6 +177,7 @@ mod test {
     use ec::EcGroup;
     use ec::EcKey;
     use nid::Nid;
+    use pkey::{Private, Public};
 
     fn get_public_key(group: &EcGroup, x: &EcKey<Private>) -> Result<EcKey<Public>, ErrorStack> {
         let public_key_point = x.public_key();
