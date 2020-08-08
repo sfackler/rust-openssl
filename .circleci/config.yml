@@ -209,7 +209,7 @@ jobs:
 
 openssl_300: &openssl_300
   library: openssl
-  version: 3.0.0-alpha5
+  version: 3.0.0-alpha6
 openssl_111: &openssl_111
   library: openssl
   version: 1.1.1g
