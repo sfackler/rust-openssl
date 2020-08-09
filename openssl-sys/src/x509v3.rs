@@ -125,6 +125,59 @@ pub const X509V3_ADD_KEEP_EXISTING: c_ulong = 4;
 pub const X509V3_ADD_DELETE: c_ulong = 5;
 pub const X509V3_ADD_SILENT: c_ulong = 0x10;
 
+// X509_get_extension_flags
+pub const EXFLAG_BCONS: u32 = 0x1;
+pub const EXFLAG_KUSAGE: u32 = 0x2;
+pub const EXFLAG_XKUSAGE: u32 = 0x4;
+pub const EXFLAG_NSCERT: u32 = 0x8;
+pub const EXFLAG_CA: u32 = 0x10;
+pub const EXFLAG_SI: u32 = 0x20;
+pub const EXFLAG_V1: u32 = 0x40;
+pub const EXFLAG_INVALID: u32 = 0x80;
+pub const EXFLAG_SET: u32 = 0x100;
+pub const EXFLAG_CRITICAL: u32 = 0x200;
+pub const EXFLAG_PROXY: u32 = 0x400;
+pub const EXFLAG_INVALID_POLICY: u32 = 0x800;
+pub const EXFLAG_FRESHEST: u32 = 0x1000;
+// before ossl102 / libressl260 EXFLAG_SS was 0x20 (the same as EXFLAG_SI); probably not useful semantic
+#[cfg(any(ossl102, libressl261))]
+pub const EXFLAG_SS: u32 = 0x2000;
+/*
+cfg_if! {
+    // probably gonna be in openssl-3.0.0-alpha7
+    if #[cfg(any(ossl300))] {
+        pub const EXFLAG_BCONS_CRITICAL: u32 = 0x10000;
+        pub const EXFLAG_AKID_CRITICAL: u32 = 0x20000;
+        pub const EXFLAG_SKID_CRITICAL: u32 = 0x40000;
+        pub const EXFLAG_SAN_CRITICAL: u32 = 0x80000;
+    }
+}
+*/
+
+// X509_get_key_usage
+pub const X509v3_KU_DIGITAL_SIGNATURE: u32 = 0x0080;
+pub const X509v3_KU_NON_REPUDIATION: u32 = 0x0040;
+pub const X509v3_KU_KEY_ENCIPHERMENT: u32 = 0x0020;
+pub const X509v3_KU_DATA_ENCIPHERMENT: u32 = 0x0010;
+pub const X509v3_KU_KEY_AGREEMENT: u32 = 0x0008;
+pub const X509v3_KU_KEY_CERT_SIGN: u32 = 0x0004;
+pub const X509v3_KU_CRL_SIGN: u32 = 0x0002;
+pub const X509v3_KU_ENCIPHER_ONLY: u32 = 0x0001;
+pub const X509v3_KU_DECIPHER_ONLY: u32 = 0x8000;
+pub const X509v3_KU_UNDEF: u32 = 0xffff;
+
+// X509_get_extended_key_usage
+pub const XKU_SSL_SERVER: u32 = 0x1;
+pub const XKU_SSL_CLIENT: u32 = 0x2;
+pub const XKU_SMIME: u32 = 0x4;
+pub const XKU_CODE_SIGN: u32 = 0x8;
+pub const XKU_SGC: u32 = 0x10;
+pub const XKU_OCSP_SIGN: u32 = 0x20;
+pub const XKU_TIMESTAMP: u32 = 0x40;
+pub const XKU_DVCS: u32 = 0x80;
+#[cfg(ossl110)]
+pub const XKU_ANYEKU: u32 = 0x100;
+
 extern "C" {
     pub fn X509V3_EXT_d2i(ext: *mut X509_EXTENSION) -> *mut c_void;
     pub fn X509V3_EXT_i2d(ext_nid: c_int, crit: c_int, ext: *mut c_void) -> *mut X509_EXTENSION;
@@ -141,4 +194,11 @@ extern "C" {
         flag: c_ulong,
         indent: c_int,
     ) -> c_int;
+
+    #[cfg(ossl110)]
+    pub fn X509_get_extension_flags(x: *mut X509) -> u32;
+    #[cfg(ossl110)]
+    pub fn X509_get_key_usage(x: *mut X509) -> u32;
+    #[cfg(ossl110)]
+    pub fn X509_get_extended_key_usage(x: *mut X509) -> u32;
 }
