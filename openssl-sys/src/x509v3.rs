@@ -91,3 +91,54 @@ extern "C" {
 
     pub fn X509_get1_ocsp(x: *mut X509) -> *mut stack_st_OPENSSL_STRING;
 }
+
+cfg_if! {
+    if #[cfg(any(ossl110, libressl280))] {
+        extern "C" {
+            pub fn X509V3_get_d2i(
+                x: *const stack_st_X509_EXTENSION,
+                nid: c_int,
+                crit: *mut c_int,
+                idx: *mut c_int,
+            ) -> *mut c_void;
+            pub fn X509V3_extensions_print(out: *mut BIO, title: *const c_char, exts: *const stack_st_X509_EXTENSION, flag: c_ulong, indent: c_int) -> c_int;
+        }
+    } else {
+        extern "C" {
+            pub fn X509V3_get_d2i(
+                x: *mut stack_st_X509_EXTENSION,
+                nid: c_int,
+                crit: *mut c_int,
+                idx: *mut c_int,
+            ) -> *mut c_void;
+            pub fn X509V3_extensions_print(out: *mut BIO, title: *mut c_char, exts: *mut stack_st_X509_EXTENSION, flag: c_ulong, indent: c_int) -> c_int;
+        }
+    }
+}
+
+// X509V3_add1_i2d (and *_add1_ext_i2d)
+pub const X509V3_ADD_DEFAULT: c_ulong = 0;
+pub const X509V3_ADD_APPEND: c_ulong = 1;
+pub const X509V3_ADD_REPLACE: c_ulong = 2;
+pub const X509V3_ADD_REPLACE_EXISTING: c_ulong = 3;
+pub const X509V3_ADD_KEEP_EXISTING: c_ulong = 4;
+pub const X509V3_ADD_DELETE: c_ulong = 5;
+pub const X509V3_ADD_SILENT: c_ulong = 0x10;
+
+extern "C" {
+    pub fn X509V3_EXT_d2i(ext: *mut X509_EXTENSION) -> *mut c_void;
+    pub fn X509V3_EXT_i2d(ext_nid: c_int, crit: c_int, ext: *mut c_void) -> *mut X509_EXTENSION;
+    pub fn X509V3_add1_i2d(
+        x: *mut *mut stack_st_X509_EXTENSION,
+        nid: c_int,
+        value: *mut c_void,
+        crit: c_int,
+        flags: c_ulong,
+    ) -> c_int;
+    pub fn X509V3_EXT_print(
+        out: *mut BIO,
+        ext: *mut X509_EXTENSION,
+        flag: c_ulong,
+        indent: c_int,
+    ) -> c_int;
+}
