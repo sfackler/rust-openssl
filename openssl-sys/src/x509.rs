@@ -228,6 +228,8 @@ extern "C" {
     pub fn X509_set_serialNumber(x: *mut X509, sn: *mut ASN1_INTEGER) -> c_int;
     pub fn X509_get_serialNumber(x: *mut X509) -> *mut ASN1_INTEGER;
     pub fn X509_set_issuer_name(x: *mut X509, name: *mut X509_NAME) -> c_int;
+
+    pub fn X509_subject_name_hash(x: *mut ::X509) -> c_ulong;
 }
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {
