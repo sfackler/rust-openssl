@@ -22,7 +22,11 @@ fn basic() {
     assert_eq!(error.library().unwrap(), "test library");
     assert_eq!(error.function().unwrap(), "function foo");
     assert_eq!(error.reason().unwrap(), "out of milk");
-    assert_eq!(error.file(), "openssl-errors/tests/test.rs");
+    // Replace Windows `\` separators with `/`
+    assert_eq!(
+        error.file().replace(r"\", "/"),
+        "openssl-errors/tests/test.rs"
+    );
     assert_eq!(error.line(), 19);
     assert_eq!(error.data(), None);
 }
@@ -35,8 +39,12 @@ fn static_data() {
     assert_eq!(error.library().unwrap(), "test library");
     assert_eq!(error.function().unwrap(), "function bar");
     assert_eq!(error.reason().unwrap(), "out of bacon");
-    assert_eq!(error.file(), "openssl-errors/tests/test.rs");
-    assert_eq!(error.line(), 32);
+    // Replace Windows `\` separators with `/`
+    assert_eq!(
+        error.file().replace(r"\", "/"),
+        "openssl-errors/tests/test.rs"
+    );
+    assert_eq!(error.line(), 36);
     assert_eq!(error.data(), Some("foobar"));
 }
 
@@ -48,7 +56,11 @@ fn dynamic_data() {
     assert_eq!(error.library().unwrap(), "test library");
     assert_eq!(error.function().unwrap(), "function bar");
     assert_eq!(error.reason().unwrap(), "out of milk");
-    assert_eq!(error.file(), "openssl-errors/tests/test.rs");
-    assert_eq!(error.line(), 45);
+    // Replace Windows `\` separators with `/`
+    assert_eq!(
+        error.file().replace(r"\", "/"),
+        "openssl-errors/tests/test.rs"
+    );
+    assert_eq!(error.line(), 53);
     assert_eq!(error.data(), Some("hello world"));
 }
