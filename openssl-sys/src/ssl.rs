@@ -1413,6 +1413,8 @@ cfg_if! {
 
 #[cfg(ossl110)]
 pub const OPENSSL_INIT_LOAD_SSL_STRINGS: u64 = 0x00200000;
+#[cfg(ossl111b)]
+pub const OPENSSL_INIT_NO_ATEXIT: u64 = 0x00080000;
 
 extern "C" {
     #[cfg(ossl110)]

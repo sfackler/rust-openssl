@@ -283,6 +283,9 @@ cfg_if! {
         }
     }
 }
+extern "C" {
+    pub fn X509_subject_name_hash(x: *mut ::X509) -> c_ulong;
+}
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {
         extern "C" {

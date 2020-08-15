@@ -132,3 +132,5 @@ jobs:
         run: cargo run -p systest
       - name: Test openssl
         run: cargo test -p openssl
+      - name: Test openssl-errors
+        run: cargo test -p openssl-errors
