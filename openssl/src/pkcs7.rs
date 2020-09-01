@@ -61,6 +61,17 @@ impl Pkcs7 {
         ffi::PEM_read_bio_PKCS7
     }
 
+    from_der! {
+        /// Deserializes a DER-encoded PKCS#7 signature
+        ///
+        /// This corresponds to [`d2i_PKCS7`].
+        ///
+        /// [`d2i_PKCS7`]: https://www.openssl.org/docs/man1.1.0/man3/d2i_PKCS7.html
+        from_der,
+        Pkcs7,
+        ffi::d2i_PKCS7
+    }
+
     /// Parses a message in S/MIME format.
     ///
     /// Returns the loaded signature, along with the cleartext message (if
@@ -179,6 +190,16 @@ impl Pkcs7Ref {
         /// [`PEM_write_bio_PKCS7`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_write_bio_PKCS7.html
         to_pem,
         ffi::PEM_write_bio_PKCS7
+    }
+
+    to_der! {
+        /// Serializes the data into a DER-encoded PKCS#7 structure.
+        ///
+        /// This corresponds to [`i2d_PKCS7`].
+        ///
+        /// [`i2d_PKCS7`]: https://www.openssl.org/docs/man1.1.0/man3/i2d_PKCS7.html
+        to_der,
+        ffi::i2d_PKCS7
     }
 
     /// Decrypts data using the provided private key.
