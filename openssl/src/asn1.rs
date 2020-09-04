@@ -537,6 +537,24 @@ foreign_type_and_impl_send_sync! {
     pub struct Asn1ObjectRef;
 }
 
+impl Asn1Object {
+    /// Constructs an ASN.1 Object Identifier from a string representation of
+    /// the OID.
+    ///
+    /// This corresponds to [`OBJ_txt2obj`].
+    ///
+    /// [`OBJ_txt2obj`]: https://www.openssl.org/docs/man1.1.0/man3/OBJ_txt2obj.html
+    #[allow(clippy::should_implement_trait)]
+    pub fn from_str(txt: &str) -> Result<Asn1Object, ErrorStack> {
+        unsafe {
+            ffi::init();
+            let txt = CString::new(txt).unwrap();
+            let obj: *mut ffi::ASN1_OBJECT = cvt_p(ffi::OBJ_txt2obj(txt.as_ptr() as *const _, 0))?;
+            Ok(Asn1Object::from_ptr(obj))
+        }
+    }
+}
+
 impl Asn1ObjectRef {
     /// Returns the NID associated with this OID.
     pub fn nid(&self) -> Nid {
@@ -584,6 +602,7 @@ mod tests {
     use super::*;
 
     use bn::BigNum;
+    use nid::Nid;
 
     /// Tests conversion between BigNum and Asn1Integer.
     #[test]
@@ -659,5 +678,18 @@ mod tests {
         assert!(a_ref > c_ref);
         assert!(b_ref <= a_ref);
         assert!(c_ref < a_ref);
+    }
+
+    #[test]
+    fn object_from_str() {
+        let object = Asn1Object::from_str("2.16.840.1.101.3.4.2.1").unwrap();
+        assert_eq!(object.nid(), Nid::SHA256);
+    }
+
+    #[test]
+    fn object_from_str_with_invalid_input() {
+        Asn1Object::from_str("NOT AN OID")
+            .map(|object| object.to_string())
+            .expect_err("parsing invalid OID should fail");
     }
 }
