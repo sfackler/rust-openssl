@@ -128,10 +128,11 @@ foreign_type_and_impl_send_sync! {
     ///
     /// # Examples
     /// ```
+    /// use std::convert::TryFrom;
     /// use openssl::bn::BigNum;
     /// # use openssl::error::ErrorStack;
     /// # fn bignums() -> Result< (), ErrorStack > {
-    /// let little_big = BigNum::from_u32(std::u32::MAX)?;
+    /// let little_big = BigNum::try_from(std::u32::MAX)?;
     /// assert_eq!(*&little_big.num_bytes(), 4);
     /// # Ok(())
     /// # }
@@ -364,10 +365,11 @@ impl BigNumRef {
     /// # Examples
     ///
     /// ```
+    /// use std::convert::TryFrom;
     /// # use openssl::bn::BigNum;
     /// # use std::cmp::Ordering;
-    /// let s = -BigNum::from_u32(8).unwrap();
-    /// let o = BigNum::from_u32(8).unwrap();
+    /// let s = -BigNum::try_from(8).unwrap();
+    /// let o = BigNum::try_from(8).unwrap();
     ///
     /// assert_eq!(s.ucmp(&o), Ordering::Equal);
     /// ```
@@ -863,19 +865,26 @@ impl BigNumRef {
         }
     }
 
+    /// Deprecated. See: `to_be_vec`.
+    #[deprecated]
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.to_be_vec()
+    }
+
     /// Returns a big-endian byte vector representation of the absolute value of `self`.
     ///
-    /// `self` can be recreated by using `from_slice`.
+    /// `self` can be recreated by using `from_be_bytes`.
     ///
     /// ```
     /// # use openssl::bn::BigNum;
-    /// let s = -BigNum::from_u32(4543).unwrap();
-    /// let r = BigNum::from_u32(4543).unwrap();
+    /// use std::convert::TryFrom;
+    /// let s = -BigNum::try_from(4543).unwrap();
+    /// let r = BigNum::try_from(4543).unwrap();
     ///
-    /// let s_vec = s.to_vec();
-    /// assert_eq!(BigNum::from_slice(&s_vec).unwrap(), r);
+    /// let s_vec = s.to_be_vec();
+    /// assert_eq!(BigNum::from_be_bytes(&s_vec).unwrap(), r);
     /// ```
-    pub fn to_vec(&self) -> Vec<u8> {
+    pub fn to_be_vec(&self) -> Vec<u8> {
         let size = self.num_bytes() as usize;
         let mut v = Vec::with_capacity(size);
         unsafe {
@@ -885,11 +894,130 @@ impl BigNumRef {
         v
     }
 
+    /// Returns a little-endian byte vector representation of the absolute value of `self`.
+    ///
+    /// `self` can be recreated by using `from_le_bytes`.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// use std::convert::TryFrom;
+    /// let s = -BigNum::try_from(4543).unwrap();
+    /// let r = BigNum::try_from(4543).unwrap();
+    ///
+    /// let s_vec = s.to_le_vec();
+    /// assert_eq!(BigNum::from_le_bytes(&s_vec).unwrap(), r);
+    /// ```
+    #[cfg(ossl110)]
+    pub fn to_le_vec(&self) -> Vec<u8> {
+        let size = self.num_bytes() as usize;
+        let mut v = Vec::with_capacity(size);
+        unsafe { v.set_len(size) };
+        self.to_le_bytes(&mut v).unwrap();
+        v
+    }
+
+    /// Returns a native-endian byte vector representation of the absolute value of `self`.
+    ///
+    /// `self` can be recreated by using `from_ne_bytes`.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// use std::convert::TryFrom;
+    /// let s = -BigNum::try_from(4543).unwrap();
+    /// let r = BigNum::try_from(4543).unwrap();
+    ///
+    /// let s_vec = s.to_ne_vec();
+    /// assert_eq!(BigNum::from_ne_bytes(&s_vec).unwrap(), r);
+    /// ```
+    #[cfg(ossl110)]
+    pub fn to_ne_vec(&self) -> Vec<u8> {
+        if cfg!(target_endian = "little") {
+            self.to_le_vec()
+        } else {
+            self.to_be_vec()
+        }
+    }
+
+    /// Stores the absolute value of `self` as big-endian in the supplied buffer.
+    ///
+    /// `self` can be recreated by using `from_be_bytes`.
+    ///
+    /// If the buffer is larger than needed, it will be appropriately zero-padded.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// use std::convert::TryFrom;
+    /// let s = -BigNum::try_from(0x1234).unwrap();
+    /// let r = BigNum::try_from(0x1234).unwrap();
+    ///
+    /// let mut buf = [1u8; 4];
+    /// s.to_be_bytes(&mut buf).unwrap();
+    /// assert_eq!(buf, [0x00, 0x00, 0x12, 0x34]);
+    /// assert_eq!(BigNum::from_be_bytes(&buf).unwrap(), r);
+    ///
+    /// let mut buf = [1u8; 1];
+    /// assert!(s.to_be_bytes(&mut buf).is_err());
+    /// ```
+    #[cfg(ossl110)]
+    pub fn to_be_bytes(&self, n: &mut [u8]) -> Result<usize, ErrorStack> {
+        let ptr = n.as_mut_ptr();
+        let len = n.len();
+
+        assert!(len <= c_int::max_value() as usize);
+
+        cvt_n(unsafe { ffi::BN_bn2binpad(self.as_ptr(), ptr, len as c_int) }).map(|x| x as usize)
+    }
+
+    /// Stores the absolute value of `self` as little-endian in the supplied buffer.
+    ///
+    /// `self` can be recreated by using `from_le_bytes`.
+    ///
+    /// If the buffer is larger than needed, it will be appropriately zero-padded.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// use std::convert::TryFrom;
+    /// let s = -BigNum::try_from(0x1234).unwrap();
+    /// let r = BigNum::try_from(0x1234).unwrap();
+    ///
+    /// let mut buf = [1u8; 4];
+    /// s.to_le_bytes(&mut buf).unwrap();
+    /// assert_eq!(buf, [0x34, 0x12, 0x00, 0x00]);
+    /// assert_eq!(BigNum::from_le_bytes(&buf).unwrap(), r);
+    ///
+    /// let mut buf = [1u8; 1];
+    /// assert!(s.to_le_bytes(&mut buf).is_err());
+    /// ```
+    #[cfg(ossl110)]
+    pub fn to_le_bytes(&self, n: &mut [u8]) -> Result<usize, ErrorStack> {
+        let ptr = n.as_mut_ptr();
+        let len = n.len();
+
+        assert!(len <= c_int::max_value() as usize);
+
+        cvt_n(unsafe { ffi::BN_bn2lebinpad(self.as_ptr(), ptr, len as c_int) }).map(|x| x as usize)
+    }
+
+    /// Stores the absolute value of `self` as native-endian in the supplied buffer.
+    ///
+    /// `self` can be recreated by using `from_ne_bytes`.
+    ///
+    /// See `to_be_bytes` and `to_le_bytes` for details.
+    #[cfg(ossl110)]
+    pub fn to_ne_bytes(&self, n: &mut [u8]) -> Result<usize, ErrorStack> {
+        if cfg!(target_endian = "little") {
+            self.to_le_bytes(n)
+        } else {
+            self.to_be_bytes(n)
+        }
+    }
+
     /// Returns a decimal string representation of `self`.
     ///
     /// ```
     /// # use openssl::bn::BigNum;
-    /// let s = -BigNum::from_u32(12345).unwrap();
+    /// use std::convert::TryFrom;
+    /// let s = -BigNum::try_from(12345).unwrap();
     ///
     /// assert_eq!(&**s.to_dec_str().unwrap(), "-12345");
     /// ```
@@ -904,7 +1032,8 @@ impl BigNumRef {
     ///
     /// ```
     /// # use openssl::bn::BigNum;
-    /// let s = -BigNum::from_u32(0x99ff).unwrap();
+    /// use std::convert::TryFrom;
+    /// let s = -BigNum::try_from(0x99ff).unwrap();
     ///
     /// assert_eq!(&**s.to_hex_str().unwrap(), "-99FF");
     /// ```
@@ -934,11 +1063,8 @@ impl BigNum {
         }
     }
 
-    /// Creates a new `BigNum` with the given value.
-    ///
-    /// OpenSSL documentation at [`BN_set_word`]
-    ///
-    /// [`BN_set_word`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_set_word.html
+    /// Deprecated. Use the `TryFrom` interface for integer conversions.
+    #[deprecated]
     pub fn from_u32(n: u32) -> Result<BigNum, ErrorStack> {
         BigNum::new().and_then(|v| unsafe {
             cvt(ffi::BN_set_word(v.as_ptr(), n as ffi::BN_ULONG)).map(|_| v)
@@ -1095,6 +1221,12 @@ impl BigNum {
         }
     }
 
+    /// Deprecated. See: `from_be_bytes`.
+    #[deprecated]
+    pub fn from_slice(n: &[u8]) -> Result<Self, ErrorStack> {
+        Self::from_be_bytes(n)
+    }
+
     /// Creates a new `BigNum` from an unsigned, big-endian encoded number of arbitrary length.
     ///
     /// OpenSSL documentation at [`BN_bin2bn`]
@@ -1103,11 +1235,12 @@ impl BigNum {
     ///
     /// ```
     /// # use openssl::bn::BigNum;
-    /// let bignum = BigNum::from_slice(&[0x12, 0x00, 0x34]).unwrap();
+    /// use std::convert::TryFrom;
+    /// let bignum = BigNum::from_be_bytes(&[0x12, 0x00, 0x34]).unwrap();
     ///
-    /// assert_eq!(bignum, BigNum::from_u32(0x120034).unwrap());
+    /// assert_eq!(bignum, BigNum::try_from(0x120034).unwrap());
     /// ```
-    pub fn from_slice(n: &[u8]) -> Result<BigNum, ErrorStack> {
+    pub fn from_be_bytes(n: &[u8]) -> Result<Self, ErrorStack> {
         unsafe {
             ffi::init();
             assert!(n.len() <= c_int::max_value() as usize);
@@ -1117,6 +1250,45 @@ impl BigNum {
                 ptr::null_mut(),
             ))
             .map(|p| BigNum::from_ptr(p))
+        }
+    }
+
+    /// Creates a new `BigNum` from an unsigned, little-endian encoded number of arbitrary length.
+    ///
+    /// OpenSSL documentation at [`BN_lebin2bn`]
+    ///
+    /// [`BN_lebin2bn`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_lebin2bn.html
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// use std::convert::TryFrom;
+    /// let bignum = BigNum::from_le_bytes(&[0x34, 0x00, 0x12]).unwrap();
+    ///
+    /// assert_eq!(bignum, BigNum::try_from(0x120034).unwrap());
+    /// ```
+    #[cfg(ossl110)]
+    pub fn from_le_bytes(n: &[u8]) -> Result<Self, ErrorStack> {
+        unsafe {
+            ffi::init();
+            assert!(n.len() <= c_int::max_value() as usize);
+            cvt_p(ffi::BN_lebin2bn(
+                n.as_ptr(),
+                n.len() as c_int,
+                ptr::null_mut(),
+            ))
+            .map(|p| BigNum::from_ptr(p))
+        }
+    }
+
+    /// Creates a new `BigNum` from an unsigned, native-endian encoded number of arbitrary length.
+    ///
+    /// See `from_be_bytes` and `from_le_bytes` for details.
+    #[cfg(ossl110)]
+    pub fn from_ne_bytes(n: &[u8]) -> Result<Self, ErrorStack> {
+        if cfg!(target_endian = "little") {
+            Self::from_le_bytes(n)
+        } else {
+            Self::from_be_bytes(n)
         }
     }
 }
@@ -1374,22 +1546,66 @@ impl Neg for BigNum {
     }
 }
 
+macro_rules! mkconvert {
+    ($($t:ty)+) => {
+        $(
+            impl core::convert::TryFrom<$t> for BigNum {
+                type Error = ErrorStack;
+
+                #[allow(unused_comparisons)]
+                fn try_from(value: $t) -> Result<Self, Self::Error> {
+                    if value < 0 { return Err(ErrorStack::get()); }
+                    BigNum::from_be_bytes(&value.to_be_bytes())
+                }
+            }
+
+            #[cfg(ossl110)]
+            impl core::convert::TryFrom<&BigNum> for $t {
+                type Error = ErrorStack;
+
+                fn try_from(value: &BigNum) -> Result<Self, Self::Error> {
+                    let mut buf = Self::default().to_ne_bytes(); // Zero
+                    value.to_be_bytes(&mut buf)?;
+                    Ok(Self::from_be_bytes(buf))
+                }
+            }
+
+            #[cfg(ossl110)]
+            impl core::convert::TryFrom<&BigNumRef> for $t {
+                type Error = ErrorStack;
+
+                fn try_from(value: &BigNumRef) -> Result<Self, Self::Error> {
+                    let mut buf = Self::default().to_ne_bytes(); // Zero
+                    value.to_be_bytes(&mut buf)?;
+                    Ok(Self::from_be_bytes(buf))
+                }
+            }
+        )+
+    };
+}
+
+mkconvert! {
+    u8 u16 u32 u64 u128 usize
+    i8 i16 i32 i64 i128 isize
+}
+
 #[cfg(test)]
 mod tests {
     use bn::{BigNum, BigNumContext};
+    use std::convert::TryFrom;
 
     #[test]
     fn test_to_from_slice() {
-        let v0 = BigNum::from_u32(10_203_004).unwrap();
-        let vec = v0.to_vec();
-        let v1 = BigNum::from_slice(&vec).unwrap();
+        let v0 = BigNum::try_from(10_203_004u32).unwrap();
+        let vec = v0.to_be_vec();
+        let v1 = BigNum::from_be_bytes(&vec).unwrap();
 
         assert_eq!(v0, v1);
     }
 
     #[test]
     fn test_negation() {
-        let a = BigNum::from_u32(909_829_283).unwrap();
+        let a = BigNum::try_from(909_829_283u32).unwrap();
 
         assert!(!a.is_negative());
         assert!((-a).is_negative());
@@ -1397,35 +1613,94 @@ mod tests {
 
     #[test]
     fn test_shift() {
-        let a = BigNum::from_u32(909_829_283).unwrap();
+        let a = BigNum::try_from(909_829_283u32).unwrap();
 
         assert_eq!(a, &(&a << 1) >> 1);
     }
 
     #[test]
     fn test_rand_range() {
-        let range = BigNum::from_u32(909_829_283).unwrap();
+        let range = BigNum::try_from(909_829_283u32).unwrap();
         let mut result = BigNum::from_dec_str(&range.to_dec_str().unwrap()).unwrap();
         range.rand_range(&mut result).unwrap();
-        assert!(result >= BigNum::from_u32(0).unwrap() && result < range);
+        assert!(result >= BigNum::try_from(0).unwrap() && result < range);
     }
 
     #[test]
     fn test_pseudo_rand_range() {
-        let range = BigNum::from_u32(909_829_283).unwrap();
+        let range = BigNum::try_from(909_829_283u32).unwrap();
         let mut result = BigNum::from_dec_str(&range.to_dec_str().unwrap()).unwrap();
         range.pseudo_rand_range(&mut result).unwrap();
-        assert!(result >= BigNum::from_u32(0).unwrap() && result < range);
+        assert!(result >= BigNum::try_from(0).unwrap() && result < range);
     }
 
     #[test]
     fn test_prime_numbers() {
-        let a = BigNum::from_u32(19_029_017).unwrap();
+        let a = BigNum::try_from(19_029_017u32).unwrap();
         let mut p = BigNum::new().unwrap();
         p.generate_prime(128, true, None, Some(&a)).unwrap();
 
         let mut ctx = BigNumContext::new().unwrap();
         assert!(p.is_prime(100, &mut ctx).unwrap());
         assert!(p.is_prime_fasttest(100, &mut ctx, true).unwrap());
+    }
+
+    #[cfg(ossl110)]
+    #[test]
+    fn test_conversion() {
+        use std::convert::TryFrom;
+
+        // Test that conversion from integer to BigNum works.
+        assert_eq!(
+            BigNum::try_from(255u8).unwrap(),
+            BigNum::try_from(255).unwrap()
+        );
+        assert_eq!(
+            BigNum::try_from(256u16).unwrap(),
+            BigNum::try_from(256).unwrap()
+        );
+        assert_eq!(
+            BigNum::try_from(256u32).unwrap(),
+            BigNum::try_from(256).unwrap()
+        );
+        assert_eq!(
+            BigNum::try_from(256u64).unwrap(),
+            BigNum::try_from(256).unwrap()
+        );
+        assert_eq!(
+            BigNum::try_from(256u128).unwrap(),
+            BigNum::try_from(256).unwrap()
+        );
+        assert_eq!(
+            BigNum::try_from(256usize).unwrap(),
+            BigNum::try_from(256).unwrap()
+        );
+
+        // Test that conversion from BigNum to integer works.
+        assert_eq!(u8::try_from(&BigNum::try_from(17).unwrap()).unwrap(), 17u8);
+        assert_eq!(
+            u16::try_from(&BigNum::try_from(17).unwrap()).unwrap(),
+            17u16
+        );
+        assert_eq!(
+            u32::try_from(&BigNum::try_from(17).unwrap()).unwrap(),
+            17u32
+        );
+        assert_eq!(
+            u64::try_from(&BigNum::try_from(17).unwrap()).unwrap(),
+            17u64
+        );
+        assert_eq!(
+            u128::try_from(&BigNum::try_from(17).unwrap()).unwrap(),
+            17u128
+        );
+        assert_eq!(
+            usize::try_from(&BigNum::try_from(17).unwrap()).unwrap(),
+            17usize
+        );
+
+        // Test that conversion from BigNum to integer fails when the BigNum is too large.
+        assert!(u8::try_from(&*BigNum::try_from(u32::max_value()).unwrap()).is_err());
+        assert!(u16::try_from(&*BigNum::try_from(u32::max_value()).unwrap()).is_err());
     }
 }

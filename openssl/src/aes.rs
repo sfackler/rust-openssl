@@ -57,7 +57,7 @@
 //!
 use ffi;
 use libc::{c_int, c_uint};
-use std::{mem, ptr};
+use std::ptr;
 
 use symm::Mode;
 
@@ -79,7 +79,7 @@ impl AesKey {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize / 8);
 
-            let mut aes_key = mem::uninitialized();
+            let mut aes_key = super::uninitialized();
             let r = ffi::AES_set_encrypt_key(
                 key.as_ptr() as *const _,
                 key.len() as c_int * 8,
@@ -103,7 +103,7 @@ impl AesKey {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize / 8);
 
-            let mut aes_key = mem::uninitialized();
+            let mut aes_key = super::uninitialized();
             let r = ffi::AES_set_decrypt_key(
                 key.as_ptr() as *const _,
                 key.len() as c_int * 8,

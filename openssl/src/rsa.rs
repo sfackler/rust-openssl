@@ -31,6 +31,7 @@
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
+use std::convert::TryFrom;
 use std::fmt;
 use std::mem;
 use std::ptr;
@@ -605,7 +606,7 @@ impl Rsa<Private> {
     ///
     /// [`RSA_generate_key_ex`]: https://www.openssl.org/docs/man1.1.0/crypto/RSA_generate_key_ex.html
     pub fn generate(bits: u32) -> Result<Rsa<Private>, ErrorStack> {
-        let e = BigNum::from_u32(ffi::RSA_F4 as u32)?;
+        let e = BigNum::try_from(ffi::RSA_F4)?;
         Rsa::generate_with_e(bits, &e)
     }
 
@@ -941,7 +942,7 @@ mod test {
 
     #[test]
     fn generate_with_e() {
-        let e = BigNum::from_u32(0x10001).unwrap();
+        let e = BigNum::try_from(0x10001u32).unwrap();
         Rsa::generate_with_e(2048, &e).unwrap();
     }
 }

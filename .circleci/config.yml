@@ -22,7 +22,7 @@ jobs:
         default: false
       image:
         type: string
-        default: 1.33.0
+        default: 1.34.0
       minimal_build:
         type: boolean
         default: false
@@ -175,7 +175,7 @@ jobs:
         default: false
       image:
         type: string
-        default: 1.33.0
+        default: 1.34.0
     macos:
       xcode: "9.0"
     environment:

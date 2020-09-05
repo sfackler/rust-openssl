@@ -922,6 +922,7 @@ impl<T> fmt::Debug for EcKey<T> {
 #[cfg(test)]
 mod test {
     use hex::FromHex;
+    use std::convert::TryFrom;
 
     use super::*;
     use bn::{BigNum, BigNumContext};
@@ -944,7 +945,7 @@ mod test {
         let mut ctx = BigNumContext::new().unwrap();
         let mut cofactor = BigNum::new().unwrap();
         group.cofactor(&mut cofactor, &mut ctx).unwrap();
-        let one = BigNum::from_u32(1).unwrap();
+        let one = BigNum::try_from(1).unwrap();
         assert_eq!(cofactor, one);
     }
 
@@ -1001,7 +1002,7 @@ mod test {
     fn generator() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let gen = group.generator();
-        let one = BigNum::from_u32(1).unwrap();
+        let one = BigNum::try_from(1).unwrap();
         let mut ctx = BigNumContext::new().unwrap();
         let mut ecp = EcPoint::new(&group).unwrap();
         ecp.mul_generator(&group, &one, &ctx).unwrap();
@@ -1044,8 +1045,8 @@ mod test {
         let y = Vec::from_hex("e04b65e92456d9888b52b379bdfbd51ee869ef1f0fc65b6659695b6cce081723")
             .unwrap();
 
-        let xbn = BigNum::from_slice(&x).unwrap();
-        let ybn = BigNum::from_slice(&y).unwrap();
+        let xbn = BigNum::from_be_bytes(&x).unwrap();
+        let ybn = BigNum::from_be_bytes(&y).unwrap();
 
         let ec_key = EcKey::from_public_key_affine_coordinates(&group, &xbn, &ybn).unwrap();
         assert!(ec_key.check_key().is_ok());
@@ -1059,8 +1060,8 @@ mod test {
         let y = Vec::from_hex("e04b65e92456d9888b52b379bdfbd51ee869ef1f0fc65b6659695b6cce081723")
             .unwrap();
 
-        let xbn = BigNum::from_slice(&x).unwrap();
-        let ybn = BigNum::from_slice(&y).unwrap();
+        let xbn = BigNum::from_be_bytes(&x).unwrap();
+        let ybn = BigNum::from_be_bytes(&y).unwrap();
 
         let ec_key = EcKey::from_public_key_affine_coordinates(&group, &xbn, &ybn).unwrap();
 
