@@ -11,6 +11,10 @@ pub const EVP_PKEY_DSA: c_int = NID_dsa;
 pub const EVP_PKEY_DH: c_int = NID_dhKeyAgreement;
 pub const EVP_PKEY_EC: c_int = NID_X9_62_id_ecPublicKey;
 #[cfg(ossl111)]
+pub const EVP_PKEY_X25519: c_int = NID_X25519;
+#[cfg(ossl111)]
+pub const EVP_PKEY_X448: c_int = NID_X448;
+#[cfg(ossl111)]
 pub const EVP_PKEY_ED25519: c_int = NID_ED25519;
 #[cfg(ossl111)]
 pub const EVP_PKEY_ED448: c_int = NID_ED448;
@@ -337,6 +341,33 @@ extern "C" {
     pub fn EVP_PKEY_free(k: *mut EVP_PKEY);
     #[cfg(any(ossl110, libressl270))]
     pub fn EVP_PKEY_up_ref(pkey: *mut EVP_PKEY) -> c_int;
+
+    #[cfg(ossl111)]
+    pub fn EVP_PKEY_new_raw_private_key(
+        typ: c_int,
+        e: *mut ENGINE,
+        key: *const c_uchar,
+        keylen: size_t
+    ) -> *mut EVP_PKEY;
+    #[cfg(ossl111)]
+    pub fn EVP_PKEY_new_raw_public_key(
+        typ: c_int,
+        e: *mut ENGINE,
+        key: *const c_uchar,
+        keylen: size_t
+    ) -> *mut EVP_PKEY;
+    #[cfg(ossl111)]
+    pub fn EVP_PKEY_get_raw_private_key(
+        pkey: *const EVP_PKEY,
+        priv_key: *mut c_uchar,
+        len: *mut size_t
+    ) -> c_int;
+    #[cfg(ossl111)]
+    pub fn EVP_PKEY_get_raw_public_key(
+        pkey: *const EVP_PKEY,
+        pub_key: *mut c_uchar,
+        len: *mut size_t
+    ) -> c_int;
 
     pub fn d2i_AutoPrivateKey(
         a: *mut *mut EVP_PKEY,

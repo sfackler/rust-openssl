@@ -85,6 +85,10 @@ impl Id {
     pub const EC: Id = Id(ffi::EVP_PKEY_EC);
 
     #[cfg(ossl111)]
+    pub const X25519: Id = Id(ffi::EVP_PKEY_X25519);
+    #[cfg(ossl111)]
+    pub const X448: Id = Id(ffi::EVP_PKEY_X448);
+    #[cfg(ossl111)]
     pub const ED25519: Id = Id(ffi::EVP_PKEY_ED25519);
     #[cfg(ossl111)]
     pub const ED448: Id = Id(ffi::EVP_PKEY_ED448);
@@ -250,6 +254,52 @@ where
     {
         unsafe { ffi::EVP_PKEY_cmp(self.as_ptr(), other.as_ptr()) == 1 }
     }
+
+    /// Retrieves the length of the raw public key.
+    /// Please note that retrieving the raw public keys is only supported on keys of type
+    /// Ed25519, Ed448, X25519, X448.
+    /// This function will return 32 for Ed25519 and X25519 keys and 57 for Ed448 and X448 keys.
+    #[cfg(ossl111)]
+    pub fn get_raw_public_key_len(&self) -> Result<usize, ErrorStack> {
+        unsafe {
+            let mut len = 0;
+            cvt(ffi::EVP_PKEY_get_raw_public_key(
+                self.as_ptr(),
+                ptr::null_mut(),
+                &mut len))?;
+            Ok(len)
+        }
+    }
+
+    /// Writes the raw public key bytes into the supplied buffer. The necessary length of the
+    /// buffer can be determined by `get_raw_public_key_len`. The function returns the number of
+    /// bytes written. Please note that retrieving the raw public keys is only supported
+    /// on keys of type Ed25519, Ed448, X25519, X448.
+    /// For Ed25519 and X25519 keys the buffer needs to be at least 32 bytes long for Ed448 and
+    /// X448 keys 57 bytes.
+    #[cfg(ossl111)]
+    pub fn get_raw_public_key(&self, buf: &mut [u8]) -> Result<usize, ErrorStack> {
+        let mut len = buf.len();
+        unsafe {
+            cvt(ffi::EVP_PKEY_get_raw_public_key(
+                self.as_ptr(),
+                buf.as_mut_ptr(),
+                &mut len))?;
+        }
+        Ok(len)
+    }
+
+    /// Returns the raw public key bytes as `Vec<u8>`.
+    /// Please note that retrieving the raw public keys is only supported
+    /// on keys of type Ed25519, Ed448, X25519, X448.
+    #[cfg(ossl111)]
+    pub fn get_raw_public_key_vec(&self) -> Result<Vec<u8>, ErrorStack> {
+        let len = self.get_raw_public_key_len()?;
+        let mut ret = Vec::new();
+        ret.resize(len, 0);
+        self.get_raw_public_key(&mut ret)?;
+        Ok(ret)
+    }
 }
 
 impl<T> PKeyRef<T>
@@ -284,6 +334,52 @@ where
         /// [`i2d_PrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_PrivateKey.html
         private_key_to_der,
         ffi::i2d_PrivateKey
+    }
+
+    /// Retrieves the length of the raw private key.
+    /// Please note that retrieving the raw private keys is only supported on keys of type
+    /// Ed25519, Ed448, X25519, X448 and HMAC keys.
+    /// This function will return 32 for Ed25519 and X25519 keys and 57 for Ed448 and X448 keys.
+    #[cfg(ossl111)]
+    pub fn get_raw_private_key_len(&self) -> Result<usize, ErrorStack> {
+        unsafe {
+            let mut len = 0;
+            cvt(ffi::EVP_PKEY_get_raw_private_key(
+                self.as_ptr(),
+                ptr::null_mut(),
+                &mut len))?;
+            Ok(len)
+        }
+    }
+
+    /// Writes the raw private key bytes into the supplied buffer. The necessary length of the
+    /// buffer can be determined by `get_raw_private_key_len`. The function returns the number of
+    /// bytes written. Please note that retrieving the raw private keys is only supported
+    /// on keys of type Ed25519, Ed448, X25519, X448 and HMAC keys.
+    /// For Ed25519 and X25519 keys the buffer needs to be at least 32 bytes long for Ed448 and
+    /// X448 keys 57 bytes.
+    #[cfg(ossl111)]
+    pub fn get_raw_private_key(&self, buf: &mut [u8]) -> Result<usize, ErrorStack> {
+        let mut len = buf.len();
+        unsafe {
+            cvt(ffi::EVP_PKEY_get_raw_private_key(
+                self.as_ptr(),
+                buf.as_mut_ptr(),
+                &mut len))?;
+        }
+        Ok(len)
+    }
+
+    /// Returns the raw private key bytes as `Vec<u8>`.
+    /// Please note that retrieving the raw private keys is only supported
+    /// on keys of type Ed25519, Ed448, X25519, X448 and HMAC keys.
+    #[cfg(ossl111)]
+    pub fn get_raw_private_key_vec(&self) -> Result<Vec<u8>, ErrorStack> {
+        let len = self.get_raw_private_key_len()?;
+        let mut ret = Vec::new();
+        ret.resize(len, 0);
+        self.get_raw_private_key(&mut ret)?;
+        Ok(ret)
     }
 }
 
@@ -494,6 +590,16 @@ impl PKey<Private> {
         }
     }
 
+    /// Generates a new private X25519 key
+    #[cfg(ossl111)]
+    pub fn generate_x25519() -> Result<PKey<Private>, ErrorStack> {
+        PKey::generate_eddsa(ffi::EVP_PKEY_X25519)
+    }
+    /// Generates a new private X448 key
+    #[cfg(ossl111)]
+    pub fn generate_x448() -> Result<PKey<Private>, ErrorStack> {
+        PKey::generate_eddsa(ffi::EVP_PKEY_X448)
+    }
     /// Generates a new private Ed25519 key
     #[cfg(ossl111)]
     pub fn generate_ed25519() -> Result<PKey<Private>, ErrorStack> {
@@ -504,6 +610,20 @@ impl PKey<Private> {
     #[cfg(ossl111)]
     pub fn generate_ed448() -> Result<PKey<Private>, ErrorStack> {
         PKey::generate_eddsa(ffi::EVP_PKEY_ED448)
+    }
+
+    /// Wraps a raw private key. Raw private keys are currently supported for Ed25519, Ed448,
+    /// X25519, X448 and HMAC keys. The slice `key_bytes` MUST be of length 32 for Ed25519
+    /// and X25519 keys and of length 57 for Ed448 and X448 keys.
+    #[cfg(ossl111)]
+    pub fn import_raw_private_key(typ: Id, key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
+        unsafe {
+            let key = cvt_p(ffi::EVP_PKEY_new_raw_private_key(typ.0,
+                                                              ptr::null_mut(),
+                                                              key.as_ref().as_ptr(),
+                                                              key.len()))?;
+            Ok(PKey::from_ptr(key))
+        }
     }
 
     private_key_from_pem! {
@@ -640,6 +760,20 @@ impl PKey<Public> {
         public_key_from_der,
         PKey<Public>,
         ffi::d2i_PUBKEY
+    }
+
+    /// Wraps a raw public key. Raw public keys are currently supported for Ed25519, Ed448,
+    /// X25519 and X448 keys. The slice `key_bytes` MUST be of length 32 for Ed25519
+    /// and X25519 keys and of length 57 for Ed448 and X448 keys.
+    #[cfg(ossl111)]
+    pub fn import_raw_public_key(typ: Id, key: &[u8]) -> Result<PKey<Public>, ErrorStack> {
+        unsafe {
+            let key = cvt_p(ffi::EVP_PKEY_new_raw_public_key(typ.0,
+                                                              ptr::null_mut(),
+                                                              key.as_ptr(),
+                                                              key.len()))?;
+            Ok(PKey::from_ptr(key))
+        }
     }
 }
 
