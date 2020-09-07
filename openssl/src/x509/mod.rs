@@ -1226,6 +1226,38 @@ impl X509ReqRef {
             Ok(Stack::from_ptr(extensions))
         }
     }
+
+    /// Sign the certificate request using the provided CA certificate and private key.
+    ///
+    /// All extensions from the request are added. The version, subject name, public key are
+    /// extracted from the request. The issuer name is extracted from the provided certificate. The
+    /// remaining fields can be influenced by calling the appropriate methods on the provided
+    /// builder object.
+    pub fn sign<T: HasPrivate>(
+        &self,
+        mut builder: X509Builder,
+        cert: &X509Ref,
+        key: &PKeyRef<T>,
+        hash: MessageDigest,
+    ) -> Result<X509, ErrorStack> {
+        builder.set_version(self.version())?;
+        builder.set_subject_name(self.subject_name())?;
+        builder.set_pubkey(&*self.public_key()?)?;
+
+        match self.extensions() {
+            Ok(extensions) => extensions
+                .iter()
+                .map(|ext| builder.append_extension2(ext))
+                .collect::<Result<Vec<_>, _>>()
+                .map(|_| ()),
+            _ => Ok(()),
+        }?;
+
+        builder.set_issuer_name(cert.subject_name())?;
+        builder.sign(key, hash)?;
+
+        Ok(builder.build())
+    }
 }
 
 /// The result of peer certificate verification.

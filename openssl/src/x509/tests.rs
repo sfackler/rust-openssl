@@ -286,6 +286,47 @@ fn x509_req_builder() {
 }
 
 #[test]
+fn x509_req_sign() {
+    let ca_cert = include_bytes!("../../test/root-ca.pem");
+    let ca_cert = X509::from_pem(ca_cert).unwrap();
+
+    let ca_key = include_bytes!("../../test/root-ca.key");
+    let ca_key = PKey::private_key_from_pem(ca_key).unwrap();
+
+    let req = include_bytes!("../../test/request.pem");
+    let req = X509Req::from_pem(req).unwrap();
+
+    let pkey = include_bytes!("../../test/rsa.pem.pub");
+    let pkey = PKey::public_key_from_pem(pkey).unwrap();
+
+    let mut builder = X509::builder().unwrap();
+
+    let mut serial = BigNum::new().unwrap();
+    serial.rand(128, MsbOption::MAYBE_ZERO, false).unwrap();
+    builder
+        .set_serial_number(&serial.to_asn1_integer().unwrap())
+        .unwrap();
+    builder
+        .set_not_before(&Asn1Time::days_from_now(0).unwrap())
+        .unwrap();
+    builder
+        .set_not_after(&Asn1Time::days_from_now(365).unwrap())
+        .unwrap();
+
+    let signed = req
+        .sign(
+            builder,
+            ca_cert.as_ref(),
+            ca_key.as_ref(),
+            MessageDigest::sha256(),
+        )
+        .unwrap();
+
+    assert_eq!(ca_cert.issued(&signed), X509VerifyResult::OK);
+    assert!(signed.public_key().unwrap().public_eq(&pkey));
+}
+
+#[test]
 fn test_stack_from_pem() {
     let certs = include_bytes!("../../test/certs.pem");
     let certs = X509::stack_from_pem(certs).unwrap();
