@@ -129,7 +129,7 @@ extern crate tempdir;
 #[doc(inline)]
 pub use ffi::init;
 
-use libc::{c_int, c_long};
+use libc::c_int;
 
 use error::ErrorStack;
 
@@ -197,38 +197,5 @@ fn cvt_n(r: c_int) -> Result<c_int, ErrorStack> {
         Err(ErrorStack::get())
     } else {
         Ok(r)
-    }
-}
-
-/// Checks that `r` is not negative.
-/// # Returns
-/// `r`, if it passes validation.
-fn cvt_long_n(r: c_long) -> Result<c_long, ErrorStack> {
-    if r < 0 {
-        // Covered with `cvt_long_n_is_negative()` test
-        Err(ErrorStack::get())
-    } else {
-        // Covered with `cvt_long_n_is_positive()`, `cvt_long_n_is_0()` tests
-        Ok(r)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use cvt_long_n;
-
-    #[test]
-    fn cvt_long_n_is_positive() {
-        cvt_long_n(1).expect("Positive value should pass validation");
-    }
-
-    #[test]
-    fn cvt_long_n_is_0() {
-        cvt_long_n(0).expect("Zero value should pass validation");
-    }
-
-    #[test]
-    fn cvt_long_n_is_negative() {
-        cvt_long_n(-1).expect_err("Negative value should not pass validation");
     }
 }

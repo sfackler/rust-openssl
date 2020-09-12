@@ -31,7 +31,7 @@ use pkey::{HasPrivate, HasPublic, PKey, PKeyRef, Public};
 use ssl::SslRef;
 use stack::{Stack, StackRef, Stackable};
 use string::OpensslString;
-use {cvt, cvt_long_n, cvt_n, cvt_p};
+use {cvt, cvt_n, cvt_p};
 
 #[cfg(any(ossl102, libressl261))]
 pub mod verify;
@@ -52,9 +52,7 @@ mod tests {
             .set_version(expected_version)
             .expect("Failed to set certificate version");
         let cert = builder.build();
-        let actual_version = cert
-            .version()
-            .expect("Failed to obtain certificate version");
+        let actual_version = cert.version();
         assert_eq!(
             expected_version as i64, actual_version,
             "Obtained certificate version is incorrect",
@@ -66,9 +64,7 @@ mod tests {
     #[test]
     fn x509_ref_version_no_version_set() {
         let cert = X509Builder::new().unwrap().build();
-        let actual_version = cert
-            .version()
-            .expect("Failed to obtain certificate version");
+        let actual_version = cert.version();
         assert_eq!(
             0, actual_version,
             "Default certificate version is incorrect",
@@ -90,9 +86,7 @@ mod tests {
             .set_version(-1)
             .expect_err("It should not be possible to set negative certificate version");
         let cert = builder.build();
-        let actual_version = cert
-            .version()
-            .expect("Failed to obtain certificate version");
+        let actual_version = cert.version();
         assert_eq!(
             0, actual_version,
             "Default certificate version is incorrect",
@@ -614,10 +608,10 @@ impl X509Ref {
     /// This corresponds to [`X509_get_version`].
     ///
     /// [`X509_get_version`]: https://www.openssl.org/docs/man1.1.1/man3/X509_get_version.html
-    pub fn version(&self) -> Result<i64, ErrorStack> {
+    pub fn version(&self) -> i64 {
         // Covered with `x509_ref_version()`, `x509_ref_version_no_version_set()`,
         // `x509_ref_version_incorrect_version_set()` tests
-        unsafe { cvt_long_n(ffi::X509_get_version(self.as_ptr())) }
+        unsafe { ffi::X509_get_version(self.as_ptr()) }
     }
 
     /// Check if the certificate is signed using the given public key.
