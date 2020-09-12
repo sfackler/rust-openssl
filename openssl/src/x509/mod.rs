@@ -48,11 +48,17 @@ mod tests {
     fn x509_ref_version() {
         let mut builder = X509Builder::new().unwrap();
         let expected_version = 2;
-        builder.set_version(expected_version).expect("Failed to set certificate version");
+        builder
+            .set_version(expected_version)
+            .expect("Failed to set certificate version");
         let cert = builder.build();
-        let actual_version = cert.version().expect("Failed to obtain certificate version");
+        let actual_version = cert
+            .version()
+            .expect("Failed to obtain certificate version");
         assert_eq!(
-            expected_version as i64, actual_version, "Obtained certificate version is incorrect");
+            expected_version as i64, actual_version,
+            "Obtained certificate version is incorrect",
+        );
     }
 
     /// Tests `X509Ref::version`. Checks case when no version has been set, so a default one is
@@ -60,8 +66,13 @@ mod tests {
     #[test]
     fn x509_ref_version_no_version_set() {
         let cert = X509Builder::new().unwrap().build();
-        let actual_version = cert.version().expect("Failed to obtain certificate version");
-        assert_eq!(0, actual_version, "Default certificate version is incorrect");
+        let actual_version = cert
+            .version()
+            .expect("Failed to obtain certificate version");
+        assert_eq!(
+            0, actual_version,
+            "Default certificate version is incorrect",
+        );
     }
 
     /// Tests `X509Ref::version`. Checks case when there was an attempt to set incorrect version
@@ -75,11 +86,17 @@ mod tests {
     #[ignore]
     fn x509_ref_version_incorrect_version_set() {
         let mut builder = X509Builder::new().unwrap();
-        builder.set_version(-1)
+        builder
+            .set_version(-1)
             .expect_err("It should not be possible to set negative certificate version");
         let cert = builder.build();
-        let actual_version = cert.version().expect("Failed to obtain certificate version");
-        assert_eq!(0, actual_version, "Default certificate version is incorrect");
+        let actual_version = cert
+            .version()
+            .expect("Failed to obtain certificate version");
+        assert_eq!(
+            0, actual_version,
+            "Default certificate version is incorrect",
+        );
     }
 }
 
