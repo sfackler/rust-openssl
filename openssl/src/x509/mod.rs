@@ -54,7 +54,7 @@ mod tests {
         let cert = builder.build();
         let actual_version = cert.version();
         assert_eq!(
-            expected_version as i64, actual_version,
+            expected_version, actual_version,
             "Obtained certificate version is incorrect",
         );
     }
@@ -608,10 +608,10 @@ impl X509Ref {
     /// This corresponds to [`X509_get_version`].
     ///
     /// [`X509_get_version`]: https://www.openssl.org/docs/man1.1.1/man3/X509_get_version.html
-    pub fn version(&self) -> i64 {
+    pub fn version(&self) -> i32 {
         // Covered with `x509_ref_version()`, `x509_ref_version_no_version_set()`,
         // `x509_ref_version_incorrect_version_set()` tests
-        unsafe { ffi::X509_get_version(self.as_ptr()) }
+        unsafe { ffi::X509_get_version(self.as_ptr()) as i32 }
     }
 
     /// Check if the certificate is signed using the given public key.
