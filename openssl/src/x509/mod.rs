@@ -31,7 +31,7 @@ use pkey::{HasPrivate, HasPublic, PKey, PKeyRef, Public};
 use ssl::SslRef;
 use stack::{Stack, StackRef, Stackable};
 use string::OpensslString;
-use {cvt, cvt_n, cvt_p};
+use {cvt, cvt_long_n, cvt_n, cvt_p};
 
 #[cfg(any(ossl102, libressl261))]
 pub mod verify;
@@ -40,7 +40,48 @@ pub mod extension;
 pub mod store;
 
 #[cfg(test)]
-mod tests;
+mod tests {
+    use x509::X509Builder;
+
+    /// Tests `X509Ref::version` happy path.
+    #[test]
+    fn x509_ref_version() {
+        let mut builder = X509Builder::new().unwrap();
+        let expected_version = 2;
+        builder.set_version(expected_version).expect("Failed to set certificate version");
+        let cert = builder.build();
+        let actual_version = cert.version().expect("Failed to obtain certificate version");
+        assert_eq!(
+            expected_version as i64, actual_version, "Obtained certificate version is incorrect");
+    }
+
+    /// Tests `X509Ref::version`. Checks case when no version has been set, so a default one is
+    /// returned.
+    #[test]
+    fn x509_ref_version_no_version_set() {
+        let cert = X509Builder::new().unwrap().build();
+        let actual_version = cert.version().expect("Failed to obtain certificate version");
+        assert_eq!(0, actual_version, "Default certificate version is incorrect");
+    }
+
+    /// Tests `X509Ref::version`. Checks case when there was an attempt to set incorrect version
+    /// before a call to the tested method.
+    ///
+    /// _Note._ As for now this test is disabled since OpenSSL erroneously allows to set any number
+    /// as a certificate version. See corresponding [`issue`].
+    ///
+    /// [`issue`]: https://github.com/openssl/openssl/issues/12138
+    #[test]
+    #[ignore]
+    fn x509_ref_version_incorrect_version_set() {
+        let mut builder = X509Builder::new().unwrap();
+        builder.set_version(-1)
+            .expect_err("It should not be possible to set negative certificate version");
+        let cert = builder.build();
+        let actual_version = cert.version().expect("Failed to obtain certificate version");
+        assert_eq!(0, actual_version, "Default certificate version is incorrect");
+    }
+}
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE_CTX;
@@ -546,6 +587,20 @@ impl X509Ref {
             let r = ffi::X509_check_issued(self.as_ptr(), subject.as_ptr());
             X509VerifyResult::from_raw(r)
         }
+    }
+
+    /// Returns certificate version. If this certificate has no explicit version set, it defaults to
+    /// version&nbsp;1.
+    ///
+    /// Note that `0` return value stands for version 1, `1`&nbsp;&ndash; for version 2 and so on.
+    ///
+    /// This corresponds to [`X509_get_version`].
+    ///
+    /// [`X509_get_version`]: https://www.openssl.org/docs/man1.1.1/man3/X509_get_version.html
+    pub fn version(&self) -> Result<i64, ErrorStack> {
+        // Covered with `x509_ref_version()`, `x509_ref_version_no_version_set()`,
+        // `x509_ref_version_incorrect_version_set()` tests
+        unsafe { cvt_long_n(ffi::X509_get_version(self.as_ptr())) }
     }
 
     /// Check if the certificate is signed using the given public key.
