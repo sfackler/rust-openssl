@@ -225,6 +225,7 @@ extern "C" {
     pub fn X509_get_pubkey(x: *mut X509) -> *mut EVP_PKEY;
 
     pub fn X509_set_version(x: *mut X509, version: c_long) -> c_int;
+    #[cfg(ossl110)]
     pub fn X509_get_version(x: *const X509) -> c_long;
     pub fn X509_set_serialNumber(x: *mut X509, sn: *mut ASN1_INTEGER) -> c_int;
     pub fn X509_get_serialNumber(x: *mut X509) -> *mut ASN1_INTEGER;

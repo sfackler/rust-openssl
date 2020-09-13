@@ -41,9 +41,11 @@ pub mod store;
 
 #[cfg(test)]
 mod tests {
+    #[cfg(ossl110)]
     use x509::X509Builder;
 
     /// Tests `X509Ref::version` happy path.
+    #[cfg(ossl110)]
     #[test]
     fn x509_ref_version() {
         let mut builder = X509Builder::new().unwrap();
@@ -61,6 +63,7 @@ mod tests {
 
     /// Tests `X509Ref::version`. Checks case when no version has been set, so a default one is
     /// returned.
+    #[cfg(ossl110)]
     #[test]
     fn x509_ref_version_no_version_set() {
         let cert = X509Builder::new().unwrap().build();
@@ -78,6 +81,7 @@ mod tests {
     /// as a certificate version. See corresponding [`issue`].
     ///
     /// [`issue`]: https://github.com/openssl/openssl/issues/12138
+    #[cfg(ossl110)]
     #[test]
     #[ignore]
     fn x509_ref_version_incorrect_version_set() {
@@ -608,6 +612,7 @@ impl X509Ref {
     /// This corresponds to [`X509_get_version`].
     ///
     /// [`X509_get_version`]: https://www.openssl.org/docs/man1.1.1/man3/X509_get_version.html
+    #[cfg(ossl110)]
     pub fn version(&self) -> i32 {
         // Covered with `x509_ref_version()`, `x509_ref_version_no_version_set()`,
         // `x509_ref_version_incorrect_version_set()` tests
