@@ -73,29 +73,6 @@ mod tests {
             "Default certificate version is incorrect",
         );
     }
-
-    /// Tests `X509Ref::version`. Checks case when there was an attempt to set incorrect version
-    /// before a call to the tested method.
-    ///
-    /// _Note._ As for now this test is disabled since OpenSSL erroneously allows to set any number
-    /// as a certificate version. See corresponding [`issue`].
-    ///
-    /// [`issue`]: https://github.com/openssl/openssl/issues/12138
-    #[cfg(ossl110)]
-    #[test]
-    #[ignore]
-    fn x509_ref_version_incorrect_version_set() {
-        let mut builder = X509Builder::new().unwrap();
-        builder
-            .set_version(-1)
-            .expect_err("It should not be possible to set negative certificate version");
-        let cert = builder.build();
-        let actual_version = cert.version();
-        assert_eq!(
-            0, actual_version,
-            "Default certificate version is incorrect",
-        );
-    }
 }
 
 foreign_type_and_impl_send_sync! {
@@ -614,8 +591,7 @@ impl X509Ref {
     /// [`X509_get_version`]: https://www.openssl.org/docs/man1.1.1/man3/X509_get_version.html
     #[cfg(ossl110)]
     pub fn version(&self) -> i32 {
-        // Covered with `x509_ref_version()`, `x509_ref_version_no_version_set()`,
-        // `x509_ref_version_incorrect_version_set()` tests
+        // Covered with `x509_ref_version()`, `x509_ref_version_no_version_set()` tests
         unsafe { ffi::X509_get_version(self.as_ptr()) as i32 }
     }
 
