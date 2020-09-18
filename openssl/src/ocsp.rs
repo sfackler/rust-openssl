@@ -32,8 +32,8 @@ bitflags! {
 
 #[derive(Debug)]
 pub enum OcspNonceCheckSuccessResult {
-    PresentAndEqual, // 1
-    Absent, // 2
+    PresentAndEqual,       // 1
+    Absent,                // 2
     PresentInResponseOnly, // 3
 }
 
@@ -50,16 +50,20 @@ impl fmt::Display for OcspNonceCheckSuccessResult {
 
 #[derive(Debug)]
 pub enum OcspNonceCheckErrorResult {
-    PresentAndUnequal, // 0
+    PresentAndUnequal,    // 0
     PresentInRequestOnly, // -1
-    Unknown(ErrorStack), // any other return value
+    Unknown(ErrorStack),  // any other return value
 }
 
 impl fmt::Display for OcspNonceCheckErrorResult {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            OcspNonceCheckErrorResult::PresentAndUnequal => write!(f, "Nonces Present and Unequal!"),
-            OcspNonceCheckErrorResult::PresentInRequestOnly => write!(f, "Nonce Present in Request Only!"),
+            OcspNonceCheckErrorResult::PresentAndUnequal => {
+                write!(f, "Nonces Present and Unequal!")
+            }
+            OcspNonceCheckErrorResult::PresentInRequestOnly => {
+                write!(f, "Nonce Present in Request Only!")
+            }
             OcspNonceCheckErrorResult::Unknown(ref err) => err.fmt(f),
         }
     }
@@ -426,7 +430,10 @@ foreign_type_and_impl_send_sync! {
     pub struct OcspOneReqRef;
 }
 
-pub fn check_nonce(req: &OcspRequestRef, bs: &OcspBasicResponseRef) -> Result<OcspNonceCheckSuccessResult, OcspNonceCheckErrorResult> {
+pub fn check_nonce(
+    req: &OcspRequestRef,
+    bs: &OcspBasicResponseRef,
+) -> Result<OcspNonceCheckSuccessResult, OcspNonceCheckErrorResult> {
     unsafe {
         match ffi::OCSP_check_nonce(req.as_ptr(), bs.as_ptr()) {
             // good cases
@@ -459,22 +466,16 @@ mod tests {
         let req_der = include_bytes!("../test/ocsp-req.der");
         let req_nonce_der = include_bytes!("../test/ocsp-req-nonce.der");
 
-        let cert_id = OcspCertId::from_cert(
-            MessageDigest::sha1(),
-            &subject,
-            &issuer
-            ).unwrap();
+        let cert_id = OcspCertId::from_cert(MessageDigest::sha1(), &subject, &issuer).unwrap();
 
         let mut req = OcspRequest::new().unwrap();
         req.add_id(cert_id).unwrap();
 
         assert_eq!(&*req.to_der().unwrap(), req_der.as_ref());
 
-
         let nonce = Vec::from_hex("4413A2C5019A7C3A384CDD8AB30E3816").unwrap();
         req.add_nonce(Some(&nonce)).unwrap();
 
         assert_eq!(&*req.to_der().unwrap(), req_nonce_der.as_ref());
     }
-
 }
