@@ -5,6 +5,8 @@ use *;
 #[cfg(not(ossl110))]
 pub const CRYPTO_LOCK_X509: c_int = 3;
 #[cfg(not(ossl110))]
+pub const CRYPTO_LOCK_EVP_PKEY: c_int = 10;
+#[cfg(not(ossl110))]
 pub const CRYPTO_LOCK_SSL_CTX: c_int = 12;
 #[cfg(not(ossl110))]
 pub const CRYPTO_LOCK_SSL_SESSION: c_int = 14;
@@ -15,7 +17,13 @@ cfg_if! {
     if #[cfg(ossl110)] {
         pub const CRYPTO_EX_INDEX_SSL: c_int = 0;
         pub const CRYPTO_EX_INDEX_SSL_CTX: c_int = 1;
-
+    } else if #[cfg(libressl)] {
+        pub const CRYPTO_EX_INDEX_SSL: c_int = 1;
+        pub const CRYPTO_EX_INDEX_SSL_CTX: c_int = 2;
+    }
+}
+cfg_if! {
+    if #[cfg(any(ossl110, libressl271))] {
         extern "C" {
             pub fn OpenSSL_version_num() -> c_ulong;
             pub fn OpenSSL_version(key: c_int) -> *const c_char;
@@ -64,7 +72,7 @@ pub type CRYPTO_EX_free = unsafe extern "C" fn(
     argp: *mut c_void,
 );
 extern "C" {
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl))]
     pub fn CRYPTO_get_ex_new_index(
         class_index: c_int,
         argl: c_long,

@@ -1,11 +1,11 @@
+use ffi;
 use libc::c_int;
 use std::ptr;
-use ffi;
 
 use cvt;
+use error::ErrorStack;
 use hash::MessageDigest;
 use symm::Cipher;
-use error::ErrorStack;
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct KeyIvPair {
@@ -23,6 +23,7 @@ pub struct KeyIvPair {
 ///
 /// New applications should not use this and instead use
 /// `pbkdf2_hmac` or another more modern key derivation algorithm.
+#[allow(clippy::useless_conversion)]
 pub fn bytes_to_key(
     cipher: Cipher,
     digest: MessageDigest,
@@ -59,7 +60,8 @@ pub fn bytes_to_key(
         ))?;
 
         let mut key = vec![0; len as usize];
-        let iv_ptr = iv.as_mut()
+        let iv_ptr = iv
+            .as_mut()
             .map(|v| v.as_mut_ptr())
             .unwrap_or(ptr::null_mut());
 
@@ -74,7 +76,7 @@ pub fn bytes_to_key(
             iv_ptr,
         ))?;
 
-        Ok(KeyIvPair { key: key, iv: iv })
+        Ok(KeyIvPair { key, iv })
     }
 }
 
@@ -101,7 +103,8 @@ pub fn pbkdf2_hmac(
             hash.as_ptr(),
             key.len() as c_int,
             key.as_mut_ptr(),
-        )).map(|_| ())
+        ))
+        .map(|_| ())
     }
 }
 
@@ -131,7 +134,8 @@ pub fn scrypt(
             maxmem,
             key.as_mut_ptr() as *mut _,
             key.len(),
-        )).map(|_| ())
+        ))
+        .map(|_| ())
     }
 }
 
@@ -161,7 +165,8 @@ mod tests {
             80000,
             MessageDigest::sha256(),
             &mut buf,
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(
             buf,
             &[
@@ -198,7 +203,8 @@ mod tests {
             1,
             MessageDigest::sha512(),
             &mut buf,
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(
             &buf[..],
             &[
@@ -219,7 +225,8 @@ mod tests {
             50,
             MessageDigest::sha512(),
             &mut buf,
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(
             &buf[..],
             &[
@@ -262,7 +269,8 @@ mod tests {
                 &data,
                 Some(&salt),
                 1,
-            ).unwrap(),
+            )
+            .unwrap(),
             super::KeyIvPair {
                 key: expected_key,
                 iv: Some(expected_iv),
@@ -290,7 +298,8 @@ mod tests {
             1,
             0,
             &mut actual,
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(hex::encode(&actual[..]), expected);
     }
 }

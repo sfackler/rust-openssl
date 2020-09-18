@@ -9,8 +9,8 @@ use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::fmt;
-use std::ptr;
 use std::mem;
+use std::ptr;
 
 use bn::{BigNum, BigNumRef};
 use error::ErrorStack;
@@ -59,6 +59,23 @@ generic_foreign_type_and_impl_send_sync! {
     pub struct DsaRef<T>;
 }
 
+impl<T> Clone for Dsa<T> {
+    fn clone(&self) -> Dsa<T> {
+        (**self).to_owned()
+    }
+}
+
+impl<T> ToOwned for DsaRef<T> {
+    type Owned = Dsa<T>;
+
+    fn to_owned(&self) -> Dsa<T> {
+        unsafe {
+            ffi::DSA_up_ref(self.as_ptr());
+            Dsa::from_ptr(self.as_ptr())
+        }
+    }
+}
+
 impl<T> DsaRef<T>
 where
     T: HasPublic,
@@ -99,6 +116,26 @@ impl<T> DsaRef<T>
 where
     T: HasPrivate,
 {
+    private_key_to_pem! {
+        /// Serializes the private key to a PEM-encoded DSAPrivateKey structure.
+        ///
+        /// The output will have a header of `-----BEGIN DSA PRIVATE KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_DSAPrivateKey`].
+        ///
+        /// [`PEM_write_bio_DSAPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_DSAPrivateKey.html
+        private_key_to_pem,
+        /// Serializes the private key to a PEM-encoded encrypted DSAPrivateKey structure.
+        ///
+        /// The output will have a header of `-----BEGIN DSA PRIVATE KEY-----`.
+        ///
+        /// This corresponds to [`PEM_write_bio_DSAPrivateKey`].
+        ///
+        /// [`PEM_write_bio_DSAPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_DSAPrivateKey.html
+        private_key_to_pem_passphrase,
+        ffi::PEM_write_bio_DSAPrivateKey
+    }
+
     /// Returns a reference to the private key component of `self`.
     pub fn priv_key(&self) -> &BigNumRef {
         unsafe {
@@ -321,9 +358,9 @@ cfg_if! {
 mod test {
     use super::*;
     use bn::BigNumContext;
-    use sign::{Signer, Verifier};
     use hash::MessageDigest;
     use pkey::PKey;
+    use sign::{Signer, Verifier};
 
     #[test]
     pub fn test_generate() {
@@ -390,14 +427,18 @@ mod test {
             BigNumRef::to_owned(q).unwrap(),
             BigNumRef::to_owned(g).unwrap(),
             BigNumRef::to_owned(priv_key).unwrap(),
-            BigNumRef::to_owned(pub_key).unwrap()).unwrap();
+            BigNumRef::to_owned(pub_key).unwrap(),
+        )
+        .unwrap();
         let priv_key = PKey::from_dsa(priv_key).unwrap();
 
         let pub_key = Dsa::from_public_components(
             BigNumRef::to_owned(p).unwrap(),
             BigNumRef::to_owned(q).unwrap(),
             BigNumRef::to_owned(g).unwrap(),
-            BigNumRef::to_owned(pub_key).unwrap()).unwrap();
+            BigNumRef::to_owned(pub_key).unwrap(),
+        )
+        .unwrap();
         let pub_key = PKey::from_dsa(pub_key).unwrap();
 
         let mut signer = Signer::new(MessageDigest::sha256(), &priv_key).unwrap();
@@ -407,5 +448,12 @@ mod test {
         let mut verifier = Verifier::new(MessageDigest::sha256(), &pub_key).unwrap();
         verifier.update(TEST_DATA).unwrap();
         assert!(verifier.verify(&signature[..]).unwrap());
+    }
+
+    #[test]
+    #[allow(clippy::redundant_clone)]
+    fn clone() {
+        let key = Dsa::generate(2048).unwrap();
+        drop(key.clone());
     }
 }

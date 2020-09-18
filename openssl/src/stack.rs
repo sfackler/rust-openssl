@@ -3,6 +3,7 @@ use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
 use libc::c_int;
 use std::borrow::Borrow;
 use std::convert::AsRef;
+use std::fmt;
 use std::iter;
 use std::marker::PhantomData;
 use std::mem;
@@ -43,10 +44,19 @@ pub struct Stack<T: Stackable>(*mut T::StackType);
 unsafe impl<T: Stackable + Send> Send for Stack<T> {}
 unsafe impl<T: Stackable + Sync> Sync for Stack<T> {}
 
+impl<T> fmt::Debug for Stack<T>
+where
+    T: Stackable,
+    T::Ref: fmt::Debug,
+{
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_list().entries(self).finish()
+    }
+}
 impl<T: Stackable> Drop for Stack<T> {
     fn drop(&mut self) {
         unsafe {
-            while let Some(_) = self.pop() {}
+            while self.pop().is_some() {}
             OPENSSL_sk_free(self.0 as *mut _);
         }
     }
@@ -178,9 +188,14 @@ impl<T: Stackable> StackRef<T> {
         self.as_ptr() as *mut _
     }
 
-    /// Returns the number of items in the stack
+    /// Returns the number of items in the stack.
     pub fn len(&self) -> usize {
         unsafe { OPENSSL_sk_num(self.as_stack()) as usize }
+    }
+
+    /// Determines if the stack is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn iter(&self) -> Iter<T> {

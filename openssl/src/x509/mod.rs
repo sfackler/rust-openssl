@@ -68,7 +68,7 @@ impl X509StoreContext {
     pub fn new() -> Result<X509StoreContext, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(ffi::X509_STORE_CTX_new()).map(|p| X509StoreContext(p))
+            cvt_p(ffi::X509_STORE_CTX_new()).map(X509StoreContext)
         }
     }
 }
@@ -255,7 +255,8 @@ impl X509Builder {
             cvt(ffi::X509_set_serialNumber(
                 self.0.as_ptr(),
                 serial_number.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -265,7 +266,8 @@ impl X509Builder {
             cvt(ffi::X509_set_issuer_name(
                 self.0.as_ptr(),
                 issuer_name.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -292,7 +294,8 @@ impl X509Builder {
             cvt(ffi::X509_set_subject_name(
                 self.0.as_ptr(),
                 subject_name.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -339,10 +342,20 @@ impl X509Builder {
     }
 
     /// Adds an X509 extension value to the certificate.
+    ///
+    /// This works just as `append_extension` except it takes ownership of the `X509Extension`.
     pub fn append_extension(&mut self, extension: X509Extension) -> Result<(), ErrorStack> {
+        self.append_extension2(&extension)
+    }
+
+    /// Adds an X509 extension value to the certificate.
+    ///
+    /// This corresponds to [`X509_add_ext`].
+    ///
+    /// [`X509_add_ext`]: https://www.openssl.org/docs/man1.1.0/man3/X509_get_ext.html
+    pub fn append_extension2(&mut self, extension: &X509ExtensionRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::X509_add_ext(self.0.as_ptr(), extension.as_ptr(), -1))?;
-            mem::forget(extension);
             Ok(())
         }
     }
@@ -383,6 +396,13 @@ impl X509Ref {
             assert!(!name.is_null());
             X509NameRef::from_ptr(name)
         }
+    }
+
+    /// Returns the hash of the certificates subject
+    ///
+    /// This corresponds to `X509_subject_name_hash`.
+    pub fn subject_name_hash(&self) -> u32 {
+        unsafe { ffi::X509_subject_name_hash(self.as_ptr()) as u32 }
     }
 
     /// Returns this certificate's issuer name.
@@ -528,6 +548,23 @@ impl X509Ref {
         }
     }
 
+    /// Check if the certificate is signed using the given public key.
+    ///
+    /// Only the signature is checked: no other checks (such as certificate chain validity)
+    /// are performed.
+    ///
+    /// Returns `true` if verification succeeds.
+    ///
+    /// This corresponds to [`X509_verify"].
+    ///
+    /// [`X509_verify`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_verify.html
+    pub fn verify<T>(&self, key: &PKeyRef<T>) -> Result<bool, ErrorStack>
+    where
+        T: HasPublic,
+    {
+        unsafe { cvt_n(ffi::X509_verify(self.as_ptr(), key.as_ptr())).map(|n| n != 0) }
+    }
+
     /// Returns this certificate's serial number.
     ///
     /// This corresponds to [`X509_get_serialNumber`].
@@ -638,6 +675,35 @@ impl X509 {
 impl Clone for X509 {
     fn clone(&self) -> X509 {
         X509Ref::to_owned(self)
+    }
+}
+
+impl fmt::Debug for X509 {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        let serial = match &self.serial_number().to_bn() {
+            Ok(bn) => match bn.to_hex_str() {
+                Ok(hex) => hex.to_string(),
+                Err(_) => "".to_string(),
+            },
+            Err(_) => "".to_string(),
+        };
+        let mut debug_struct = formatter.debug_struct("X509");
+        debug_struct.field("serial_number", &serial);
+        debug_struct.field("signature_algorithm", &self.signature_algorithm().object());
+        debug_struct.field("issuer", &self.issuer_name());
+        debug_struct.field("subject", &self.subject_name());
+        if let Some(subject_alt_names) = &self.subject_alt_names() {
+            debug_struct.field("subject_alt_names", subject_alt_names);
+        }
+        debug_struct.field("not_before", &self.not_before());
+        debug_struct.field("not_after", &self.not_after());
+
+        if let Ok(public_key) = &self.public_key() {
+            debug_struct.field("public_key", public_key);
+        };
+        // TODO: Print extensions once they are supported on the X509 struct.
+
+        debug_struct.finish()
     }
 }
 
@@ -756,7 +822,8 @@ impl X509NameBuilder {
                 value.len() as c_int,
                 -1,
                 0,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -776,7 +843,8 @@ impl X509NameBuilder {
                 value.len() as c_int,
                 -1,
                 0,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -817,7 +885,7 @@ impl Stackable for X509Name {
 
 impl X509NameRef {
     /// Returns the name entries by the nid.
-    pub fn entries_by_nid<'a>(&'a self, nid: Nid) -> X509NameEntries<'a> {
+    pub fn entries_by_nid(&self, nid: Nid) -> X509NameEntries<'_> {
         X509NameEntries {
             name: self,
             nid: Some(nid),
@@ -826,12 +894,18 @@ impl X509NameRef {
     }
 
     /// Returns an iterator over all `X509NameEntry` values
-    pub fn entries<'a>(&'a self) -> X509NameEntries<'a> {
+    pub fn entries(&self) -> X509NameEntries<'_> {
         X509NameEntries {
             name: self,
             nid: None,
-            loc: -1
+            loc: -1,
         }
+    }
+}
+
+impl fmt::Debug for X509NameRef {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.debug_list().entries(self.entries()).finish()
     }
 }
 
@@ -910,6 +984,12 @@ impl X509NameEntryRef {
     }
 }
 
+impl fmt::Debug for X509NameEntryRef {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_fmt(format_args!("{:?} = {:?}", self.object(), self.data()))
+    }
+}
+
 /// A builder used to construct an `X509Req`.
 pub struct X509ReqBuilder(X509Req);
 
@@ -945,7 +1025,8 @@ impl X509ReqBuilder {
             cvt(ffi::X509_REQ_set_subject_name(
                 self.0.as_ptr(),
                 subject_name.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -994,7 +1075,8 @@ impl X509ReqBuilder {
             cvt(ffi::X509_REQ_add_extensions(
                 self.0.as_ptr(),
                 extensions.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -1012,7 +1094,8 @@ impl X509ReqBuilder {
                 self.0.as_ptr(),
                 key.as_ptr(),
                 hash.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -1120,6 +1203,20 @@ impl X509ReqRef {
         }
     }
 
+    /// Check if the certificate request is signed using the given public key.
+    ///
+    /// Returns `true` if verification succeeds.
+    ///
+    /// This corresponds to [`X509_REQ_verify"].
+    ///
+    /// [`X509_REQ_verify`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_verify.html
+    pub fn verify<T>(&self, key: &PKeyRef<T>) -> Result<bool, ErrorStack>
+    where
+        T: HasPublic,
+    {
+        unsafe { cvt_n(ffi::X509_REQ_verify(self.as_ptr(), key.as_ptr())).map(|n| n != 0) }
+    }
+
     /// Returns the extensions of the certificate request.
     ///
     /// This corresponds to [`X509_REQ_get_extensions"]
@@ -1150,11 +1247,7 @@ impl fmt::Display for X509VerifyResult {
     }
 }
 
-impl Error for X509VerifyResult {
-    fn description(&self) -> &str {
-        "an X509 validation error"
-    }
-}
+impl Error for X509VerifyResult {}
 
 impl X509VerifyResult {
     /// Creates an `X509VerifyResult` from a raw error number.
@@ -1168,6 +1261,7 @@ impl X509VerifyResult {
     }
 
     /// Return the integer representation of an `X509VerifyResult`.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn as_raw(&self) -> c_int {
         self.0
     }
@@ -1177,6 +1271,7 @@ impl X509VerifyResult {
     /// This corresponds to [`X509_verify_cert_error_string`].
     ///
     /// [`X509_verify_cert_error_string`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_verify_cert_error_string.html
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn error_string(&self) -> &'static str {
         ffi::init();
 
@@ -1251,6 +1346,23 @@ impl GeneralNameRef {
     }
 }
 
+impl fmt::Debug for GeneralNameRef {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(email) = self.email() {
+            formatter.write_str(email)
+        } else if let Some(dnsname) = self.dnsname() {
+            formatter.write_str(dnsname)
+        } else if let Some(uri) = self.uri() {
+            formatter.write_str(uri)
+        } else if let Some(ipaddress) = self.ipaddress() {
+            let result = String::from_utf8_lossy(ipaddress);
+            formatter.write_str(&result)
+        } else {
+            formatter.write_str("(empty)")
+        }
+    }
+}
+
 impl Stackable for GeneralName {
     type StackType = ffi::stack_st_GENERAL_NAME;
 }
@@ -1275,6 +1387,33 @@ impl X509AlgorithmRef {
             Asn1ObjectRef::from_ptr(oid as *mut _)
         }
     }
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::X509_OBJECT;
+    fn drop = X509_OBJECT_free;
+
+    /// An `X509` or an X509 certificate revocation list.
+    pub struct X509Object;
+    /// Reference to `X509Object`
+    pub struct X509ObjectRef;
+}
+
+impl X509ObjectRef {
+    pub fn x509(&self) -> Option<&X509Ref> {
+        unsafe {
+            let ptr = X509_OBJECT_get0_X509(self.as_ptr());
+            if ptr.is_null() {
+                None
+            } else {
+                Some(X509Ref::from_ptr(ptr))
+            }
+        }
+    }
+}
+
+impl Stackable for X509Object {
+    type StackType = ffi::stack_st_X509_OBJECT;
 }
 
 cfg_if! {
@@ -1354,6 +1493,33 @@ cfg_if! {
             }
             assert!(pptype.is_null());
             assert!(pval.is_null());
+        }
+    }
+}
+
+cfg_if! {
+    if #[cfg(any(ossl110, libressl270))] {
+        use ffi::X509_OBJECT_get0_X509;
+    } else {
+        #[allow(bad_style)]
+        unsafe fn X509_OBJECT_get0_X509(x: *mut ffi::X509_OBJECT) -> *mut ffi::X509 {
+            if (*x).type_ == ffi::X509_LU_X509 {
+                (*x).data.x509
+            } else {
+                ptr::null_mut()
+            }
+        }
+    }
+}
+
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::X509_OBJECT_free;
+    } else {
+        #[allow(bad_style)]
+        unsafe fn X509_OBJECT_free(x: *mut ffi::X509_OBJECT) {
+            ffi::X509_OBJECT_free_contents(x);
+            ffi::CRYPTO_free(x as *mut libc::c_void);
         }
     }
 }

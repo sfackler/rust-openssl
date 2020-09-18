@@ -126,6 +126,58 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_ccm()) }
     }
 
+    pub fn aes_128_ofb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_128_ofb()) }
+    }
+
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[cfg(ossl110)]
+    pub fn aes_128_ocb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_128_ocb()) }
+    }
+
+    pub fn aes_192_ecb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_ecb()) }
+    }
+
+    pub fn aes_192_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_cbc()) }
+    }
+
+    pub fn aes_192_ctr() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_ctr()) }
+    }
+
+    pub fn aes_192_cfb1() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_cfb1()) }
+    }
+
+    pub fn aes_192_cfb128() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_cfb128()) }
+    }
+
+    pub fn aes_192_cfb8() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_cfb8()) }
+    }
+
+    pub fn aes_192_gcm() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_gcm()) }
+    }
+
+    pub fn aes_192_ccm() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_ccm()) }
+    }
+
+    pub fn aes_192_ofb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_ofb()) }
+    }
+
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[cfg(ossl110)]
+    pub fn aes_192_ocb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_192_ocb()) }
+    }
+
     pub fn aes_256_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_ecb()) }
     }
@@ -162,6 +214,16 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_ccm()) }
     }
 
+    pub fn aes_256_ofb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_256_ofb()) }
+    }
+
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[cfg(ossl110)]
+    pub fn aes_256_ocb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_aes_256_ocb()) }
+    }
+
     pub fn bf_cbc() -> Cipher {
         unsafe { Cipher(ffi::EVP_bf_cbc()) }
     }
@@ -194,6 +256,10 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_des_ede3_cbc()) }
     }
 
+    pub fn des_ede3_cfb64() -> Cipher {
+        unsafe { Cipher(ffi::EVP_des_ede3_cfb64()) }
+    }
+
     pub fn rc4() -> Cipher {
         unsafe { Cipher(ffi::EVP_rc4()) }
     }
@@ -210,21 +276,29 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
     }
 
+    /// Creates a `Cipher` from a raw pointer to its OpenSSL type.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the pointer is valid for the `'static` lifetime.
     pub unsafe fn from_ptr(ptr: *const ffi::EVP_CIPHER) -> Cipher {
         Cipher(ptr)
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn as_ptr(&self) -> *const ffi::EVP_CIPHER {
         self.0
     }
 
     /// Returns the length of keys used with this cipher.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn key_len(&self) -> usize {
         unsafe { EVP_CIPHER_key_length(self.0) as usize }
     }
 
     /// Returns the length of the IV used with this cipher, or `None` if the
     /// cipher does not use an IV.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn iv_len(&self) -> Option<usize> {
         unsafe {
             let len = EVP_CIPHER_iv_length(self.0) as usize;
@@ -241,14 +315,28 @@ impl Cipher {
     /// # Note
     ///
     /// Stream ciphers such as RC4 have a block size of 1.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn block_size(&self) -> usize {
         unsafe { EVP_CIPHER_block_size(self.0) as usize }
     }
 
     /// Determines whether the cipher is using CCM mode
-    fn is_ccm(&self) -> bool {
+    fn is_ccm(self) -> bool {
         // NOTE: OpenSSL returns pointers to static structs, which makes this work as expected
-        *self == Cipher::aes_128_ccm() || *self == Cipher::aes_256_ccm()
+        self == Cipher::aes_128_ccm() || self == Cipher::aes_256_ccm()
+    }
+
+    /// Determines whether the cipher is using OCB mode
+    #[cfg(ossl110)]
+    fn is_ocb(self) -> bool {
+        self == Cipher::aes_128_ocb()
+            || self == Cipher::aes_192_ocb()
+            || self == Cipher::aes_256_ocb()
+    }
+
+    #[cfg(not(ossl110))]
+    const fn is_ocb(self) -> bool {
+        false
     }
 }
 
@@ -342,7 +430,7 @@ impl Crypter {
         unsafe {
             let ctx = cvt_p(ffi::EVP_CIPHER_CTX_new())?;
             let crypter = Crypter {
-                ctx: ctx,
+                ctx,
                 block_size: t.block_size(),
             };
 
@@ -418,7 +506,8 @@ impl Crypter {
                 ffi::EVP_CTRL_GCM_SET_TAG,
                 tag.len() as c_int,
                 tag.as_ptr() as *mut _,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -435,7 +524,8 @@ impl Crypter {
                 ffi::EVP_CTRL_GCM_SET_TAG,
                 tag_len as c_int,
                 ptr::null_mut(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -453,7 +543,8 @@ impl Crypter {
                 &mut len,
                 ptr::null_mut(),
                 data_len as c_int,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -472,7 +563,8 @@ impl Crypter {
                 &mut len,
                 input.as_ptr(),
                 input.len() as c_int,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -484,12 +576,20 @@ impl Crypter {
     ///
     /// # Panics
     ///
-    /// Panics if `output.len() < input.len() + block_size` where
-    /// `block_size` is the block size of the cipher (see `Cipher::block_size`),
-    /// or if `output.len() > c_int::max_value()`.
+    /// Panics for stream ciphers if `output.len() < input.len()`.
+    ///
+    /// Panics for block ciphers if `output.len() < input.len() + block_size`,
+    /// where `block_size` is the block size of the cipher (see `Cipher::block_size`).
+    ///
+    /// Panics if `output.len() > c_int::max_value()`.
     pub fn update(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
-            assert!(output.len() >= input.len() + self.block_size);
+            let block_size = if self.block_size > 1 {
+                self.block_size
+            } else {
+                0
+            };
+            assert!(output.len() >= input.len() + block_size);
             assert!(output.len() <= c_int::max_value() as usize);
             let mut outl = output.len() as c_int;
             let inl = input.len() as c_int;
@@ -515,10 +615,13 @@ impl Crypter {
     ///
     /// # Panics
     ///
-    /// Panics if `output` is less than the cipher's block size.
+    /// Panics for block ciphers if `output.len() < block_size`,
+    /// where `block_size` is the block size of the cipher (see `Cipher::block_size`).
     pub fn finalize(&mut self, output: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
-            assert!(output.len() >= self.block_size);
+            if self.block_size > 1 {
+                assert!(output.len() >= self.block_size);
+            }
             let mut outl = cmp::min(output.len(), c_int::max_value() as usize) as c_int;
 
             cvt(ffi::EVP_CipherFinal(
@@ -547,7 +650,8 @@ impl Crypter {
                 ffi::EVP_CTRL_GCM_GET_TAG,
                 tag.len() as c_int,
                 tag.as_mut_ptr() as *mut _,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 }
@@ -672,9 +776,12 @@ pub fn encrypt_aead(
     let mut c = Crypter::new(t, Mode::Encrypt, key, iv)?;
     let mut out = vec![0; data.len() + t.block_size()];
 
-    if t.is_ccm() {
+    let is_ccm = t.is_ccm();
+    if is_ccm || t.is_ocb() {
         c.set_tag_len(tag.len())?;
-        c.set_data_len(data.len())?;
+        if is_ccm {
+            c.set_data_len(data.len())?;
+        }
     }
 
     c.aad_update(aad)?;
@@ -700,19 +807,23 @@ pub fn decrypt_aead(
     let mut c = Crypter::new(t, Mode::Decrypt, key, iv)?;
     let mut out = vec![0; data.len() + t.block_size()];
 
-    if t.is_ccm() {
+    let is_ccm = t.is_ccm();
+    if is_ccm || t.is_ocb() {
         c.set_tag(tag)?;
-        c.set_data_len(data.len())?;
+        if is_ccm {
+            c.set_data_len(data.len())?;
+        }
     }
 
     c.aad_update(aad)?;
     let count = c.update(data, &mut out)?;
-    let mut rest = 0;
 
-    if !t.is_ccm() {
+    let rest = if t.is_ccm() {
+        0
+    } else {
         c.set_tag(tag)?;
-        rest = c.finalize(&mut out[count..])?;
-    }
+        c.finalize(&mut out[count..])?
+    };
 
     out.truncate(count + rest);
     Ok(out)
@@ -744,6 +855,23 @@ mod tests {
     use super::*;
     use hex::{self, FromHex};
 
+    #[test]
+    fn test_stream_cipher_output() {
+        let key = [0u8; 16];
+        let iv = [0u8; 16];
+        let mut c = super::Crypter::new(
+            super::Cipher::aes_128_ctr(),
+            super::Mode::Encrypt,
+            &key,
+            Some(&iv),
+        )
+        .unwrap();
+
+        assert_eq!(c.update(&[0u8; 15], &mut [0u8; 15]).unwrap(), 15);
+        assert_eq!(c.update(&[0u8; 1], &mut [0u8; 1]).unwrap(), 1);
+        assert_eq!(c.finalize(&mut [0u8; 0]).unwrap(), 0);
+    }
+
     // Test vectors from FIPS-197:
     // http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
     #[test]
@@ -766,7 +894,8 @@ mod tests {
             super::Mode::Encrypt,
             &k0,
             None,
-        ).unwrap();
+        )
+        .unwrap();
         c.pad(false);
         let mut r0 = vec![0; c0.len() + super::Cipher::aes_256_ecb().block_size()];
         let count = c.update(&p0, &mut r0).unwrap();
@@ -779,7 +908,8 @@ mod tests {
             super::Mode::Decrypt,
             &k0,
             None,
-        ).unwrap();
+        )
+        .unwrap();
         c.pad(false);
         let mut p1 = vec![0; r0.len() + super::Cipher::aes_256_ecb().block_size()];
         let count = c.update(&r0, &mut p1).unwrap();
@@ -808,7 +938,8 @@ mod tests {
             super::Mode::Decrypt,
             &data,
             Some(&iv),
-        ).unwrap();
+        )
+        .unwrap();
         cr.pad(false);
         let mut unciphered_data = vec![0; data.len() + super::Cipher::aes_256_cbc().block_size()];
         let count = cr.update(&ciphered_data, &mut unciphered_data).unwrap();
@@ -944,6 +1075,78 @@ mod tests {
     }
 
     #[test]
+    fn test_aes128_ofb() {
+        // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+        let pt = "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710";
+        let ct = "3b3fd92eb72dad20333449f8e83cfb4a7789508d16918f03f53c52dac54ed8259740051e9c5fecf64344f7a82260edcc304c6528f659c77866a510d9c1d6ae5e";
+        let key = "2b7e151628aed2a6abf7158809cf4f3c";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Cipher::aes_128_ofb(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes192_ctr() {
+        // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+        let pt = "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710";
+        let ct = "1abc932417521ca24f2b0459fe7e6e0b090339ec0aa6faefd5ccc2c6f4ce8e941e36b26bd1ebc670d1bd1d665620abf74f78a7f6d29809585a97daec58c6b050";
+        let key = "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b";
+        let iv = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff";
+
+        cipher_test(super::Cipher::aes_192_ctr(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes192_cfb1() {
+        // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+        let pt = "6bc1";
+        let ct = "9359";
+        let key = "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Cipher::aes_192_cfb1(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes192_cfb128() {
+        // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+        let pt = "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710";
+        let ct = "cdc80d6fddf18cab34c25909c99a417467ce7f7f81173621961a2b70171d3d7a2e1e8a1dd59b88b1c8e60fed1efac4c9c05f9f9ca9834fa042ae8fba584b09ff";
+        let key = "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Cipher::aes_192_cfb128(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes192_cfb8() {
+        // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+        let pt = "6bc1bee22e409f96e93d7e117393172aae2d";
+        let ct = "cda2521ef0a905ca44cd057cbf0d47a0678a";
+        let key = "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Cipher::aes_192_cfb8(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes192_ofb() {
+        // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+        let pt = "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710";
+        let ct = "cdc80d6fddf18cab34c25909c99a4174fcc28b8d4c63837c09e81700c11004018d9a9aeac0f6596f559c6d4daf59a5f26d9f200857ca6c3e9cac524bd9acc92a";
+        let key = "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Cipher::aes_192_ofb(), pt, ct, key, iv);
+    }
+
+    #[test]
     fn test_aes256_cfb1() {
         let pt = "6bc1";
         let ct = "9029";
@@ -971,6 +1174,18 @@ mod tests {
         let iv = "000102030405060708090a0b0c0d0e0f";
 
         cipher_test(super::Cipher::aes_256_cfb8(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_aes256_ofb() {
+        // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+        let pt = "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710";
+        let ct = "dc7e84bfda79164b7ecd8486985d38604febdc6740d20b3ac88f6ad82a4fb08d71ab47a086e86eedf39d1c5bba97c4080126141d67f37be8538f5a8be740e484";
+        let key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4";
+        let iv = "000102030405060708090a0b0c0d0e0f";
+
+        cipher_test(super::Cipher::aes_256_ofb(), pt, ct, key, iv);
     }
 
     #[test]
@@ -1056,6 +1271,16 @@ mod tests {
     }
 
     #[test]
+    fn test_des_ede3_cfb64() {
+        let pt = "2b1773784b5889dc788477367daa98ad";
+        let ct = "6f2867cfefda048a4046ef7e556c7132";
+        let key = "7cb66337f3d3c0fe7cb66337f3d3c0fe7cb66337f3d3c0fe";
+        let iv = "0001020304050607";
+
+        cipher_test(super::Cipher::des_ede3_cfb64(), pt, ct, key, iv);
+    }
+
+    #[test]
     fn test_aes128_gcm() {
         let key = "0e00c76561d2bd9b40c3c15427e2b08f";
         let iv = "492cadaccd3ca3fbc9cf9f06eb3325c4e159850b0dbe98199b89b7af528806610b6f63998e1eae80c348e7\
@@ -1080,7 +1305,8 @@ mod tests {
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(pt).unwrap(),
             &mut actual_tag,
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(ct, hex::encode(out));
         assert_eq!(tag, hex::encode(actual_tag));
 
@@ -1091,7 +1317,8 @@ mod tests {
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(ct).unwrap(),
             &Vec::from_hex(tag).unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(pt, hex::encode(out));
     }
 
@@ -1113,7 +1340,8 @@ mod tests {
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(pt).unwrap(),
             &mut actual_tag,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(ct, hex::encode(out));
         assert_eq!(tag, hex::encode(actual_tag));
@@ -1125,7 +1353,8 @@ mod tests {
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(ct).unwrap(),
             &Vec::from_hex(tag).unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(pt, hex::encode(out));
     }
 
@@ -1167,7 +1396,8 @@ mod tests {
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(pt).unwrap(),
             &mut actual_tag,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(ct, hex::encode(out));
         assert_eq!(tag, hex::encode(actual_tag));
@@ -1179,7 +1409,8 @@ mod tests {
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(ct).unwrap(),
             &Vec::from_hex(tag).unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(pt, hex::encode(out));
     }
 
@@ -1196,6 +1427,62 @@ mod tests {
             Cipher::aes_256_ccm(),
             &Vec::from_hex(key).unwrap(),
             Some(&Vec::from_hex(nonce).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(ct).unwrap(),
+            &Vec::from_hex(tag).unwrap(),
+        );
+        assert!(out.is_err());
+    }
+
+    #[test]
+    #[cfg(ossl110)]
+    fn test_aes_128_ocb() {
+        let key = "000102030405060708090a0b0c0d0e0f";
+        let aad = "0001020304050607";
+        let tag = "16dc76a46d47e1ead537209e8a96d14e";
+        let iv = "000102030405060708090a0b";
+        let pt = "0001020304050607";
+        let ct = "92b657130a74b85a";
+
+        let mut actual_tag = [0; 16];
+        let out = encrypt_aead(
+            Cipher::aes_128_ocb(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(iv).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(pt).unwrap(),
+            &mut actual_tag,
+        )
+        .unwrap();
+
+        assert_eq!(ct, hex::encode(out));
+        assert_eq!(tag, hex::encode(actual_tag));
+
+        let out = decrypt_aead(
+            Cipher::aes_128_ocb(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(iv).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(ct).unwrap(),
+            &Vec::from_hex(tag).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(pt, hex::encode(out));
+    }
+
+    #[test]
+    #[cfg(ossl110)]
+    fn test_aes_128_ocb_fail() {
+        let key = "000102030405060708090a0b0c0d0e0f";
+        let aad = "0001020304050607";
+        let tag = "16dc76a46d47e1ead537209e8a96d14e";
+        let iv = "000000000405060708090a0b";
+        let ct = "92b657130a74b85a";
+
+        let out = decrypt_aead(
+            Cipher::aes_128_ocb(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(iv).unwrap()),
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(ct).unwrap(),
             &Vec::from_hex(tag).unwrap(),
@@ -1242,7 +1529,8 @@ mod tests {
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(pt).unwrap(),
             &mut actual_tag,
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(ct, hex::encode(out));
         assert_eq!(tag, hex::encode(actual_tag));
 
@@ -1253,7 +1541,8 @@ mod tests {
             &Vec::from_hex(aad).unwrap(),
             &Vec::from_hex(ct).unwrap(),
             &Vec::from_hex(tag).unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(pt, hex::encode(out));
     }
 }

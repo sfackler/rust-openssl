@@ -38,20 +38,21 @@ impl SrtpProtectionProfileRef {
 pub struct SrtpProfileId(c_ulong);
 
 impl SrtpProfileId {
-    /// Creates a `SrtpProfileId` from an integer representation.
-    pub fn from_raw(value: c_ulong) -> SrtpProfileId {
-        SrtpProfileId(value)
-    }
-
-    /// Returns the integer representation of `SrtpProfileId`.
-    pub fn as_raw(&self) -> c_ulong {
-        self.0
-    }
-
     pub const SRTP_AES128_CM_SHA1_80: SrtpProfileId = SrtpProfileId(ffi::SRTP_AES128_CM_SHA1_80);
     pub const SRTP_AES128_CM_SHA1_32: SrtpProfileId = SrtpProfileId(ffi::SRTP_AES128_CM_SHA1_32);
     pub const SRTP_AES128_F8_SHA1_80: SrtpProfileId = SrtpProfileId(ffi::SRTP_AES128_F8_SHA1_80);
     pub const SRTP_AES128_F8_SHA1_32: SrtpProfileId = SrtpProfileId(ffi::SRTP_AES128_F8_SHA1_32);
     pub const SRTP_NULL_SHA1_80: SrtpProfileId = SrtpProfileId(ffi::SRTP_NULL_SHA1_80);
     pub const SRTP_NULL_SHA1_32: SrtpProfileId = SrtpProfileId(ffi::SRTP_NULL_SHA1_32);
+
+    /// Creates a `SrtpProfileId` from an integer representation.
+    pub fn from_raw(value: c_ulong) -> SrtpProfileId {
+        SrtpProfileId(value)
+    }
+
+    /// Returns the integer representation of `SrtpProfileId`.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn as_raw(&self) -> c_ulong {
+        self.0
+    }
 }

@@ -25,4 +25,20 @@ extern "C" {
         ivec: *mut c_uchar,
         enc: c_int,
     );
+
+    pub fn AES_wrap_key(
+        key: *mut AES_KEY,
+        iv: *const c_uchar,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        inlen: c_uint,
+    ) -> c_int;
+
+    pub fn AES_unwrap_key(
+        key: *mut AES_KEY,
+        iv: *const c_uchar,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        inlen: c_uint,
+    ) -> c_int;
 }

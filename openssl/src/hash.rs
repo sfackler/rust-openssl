@@ -3,6 +3,7 @@ use std::fmt;
 use std::io;
 use std::io::prelude::*;
 use std::ops::{Deref, DerefMut};
+use std::ptr;
 
 use error::ErrorStack;
 use nid::Nid;
@@ -16,10 +17,15 @@ cfg_if! {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct MessageDigest(*const ffi::EVP_MD);
 
 impl MessageDigest {
+    /// Creates a `MessageDigest` from a raw OpenSSL pointer.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the pointer is valid.
     pub unsafe fn from_ptr(x: *const ffi::EVP_MD) -> Self {
         MessageDigest(x)
     }
@@ -38,6 +44,10 @@ impl MessageDigest {
                 Some(MessageDigest(ptr))
             }
         }
+    }
+
+    pub fn null() -> MessageDigest {
+        unsafe { MessageDigest(ffi::EVP_md_null()) }
     }
 
     pub fn md5() -> MessageDigest {
@@ -98,13 +108,21 @@ impl MessageDigest {
         unsafe { MessageDigest(ffi::EVP_ripemd160()) }
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn as_ptr(&self) -> *const ffi::EVP_MD {
         self.0
     }
 
-    /// The size of the digest in bytes
+    /// The size of the digest in bytes.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn size(&self) -> usize {
         unsafe { ffi::EVP_MD_size(self.0) as usize }
+    }
+
+    /// The name of the digest.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn type_(&self) -> Nid {
+        Nid::from_raw(unsafe { ffi::EVP_MD_type(self.0) })
     }
 }
 
@@ -190,7 +208,7 @@ impl Hasher {
         let ctx = unsafe { cvt_p(EVP_MD_CTX_new())? };
 
         let mut h = Hasher {
-            ctx: ctx,
+            ctx,
             md: ty.as_ptr(),
             type_: ty,
             state: Finalized,
@@ -208,7 +226,7 @@ impl Hasher {
             Finalized => (),
         }
         unsafe {
-            cvt(ffi::EVP_DigestInit_ex(self.ctx, self.md, 0 as *mut _))?;
+            cvt(ffi::EVP_DigestInit_ex(self.ctx, self.md, ptr::null_mut()))?;
         }
         self.state = Reset;
         Ok(())
@@ -245,7 +263,7 @@ impl Hasher {
             ))?;
             self.state = Finalized;
             Ok(DigestBytes {
-                buf: buf,
+                buf,
                 len: len as usize,
             })
         }
@@ -254,7 +272,7 @@ impl Hasher {
     /// Writes the hash of the data into the supplied buf and resets the XOF hasher.
     /// The hash will be as long as the buf.
     #[cfg(ossl111)]
-    pub fn finish_xof(&mut self, buf: &mut[u8]) -> Result<(), ErrorStack> {
+    pub fn finish_xof(&mut self, buf: &mut [u8]) -> Result<(), ErrorStack> {
         if self.state == Finalized {
             self.init()?;
         }
@@ -292,7 +310,7 @@ impl Clone for Hasher {
             ctx
         };
         Hasher {
-            ctx: ctx,
+            ctx,
             md: self.md,
             type_: self.type_,
             state: self.state,
@@ -366,7 +384,7 @@ pub fn hash(t: MessageDigest, data: &[u8]) -> Result<DigestBytes, ErrorStack> {
 
 /// Computes the hash of the `data` with the XOF hasher `t` and stores it in `buf`.
 #[cfg(ossl111)]
-pub fn hash_xof(t: MessageDigest, data: &[u8], buf: &mut[u8]) -> Result<(), ErrorStack> {
+pub fn hash_xof(t: MessageDigest, data: &[u8], buf: &mut [u8]) -> Result<(), ErrorStack> {
     let mut h = Hasher::new(t)?;
     h.update(data)?;
     h.finish_xof(buf)
@@ -388,19 +406,23 @@ mod tests {
     fn hash_xof_test(hashtype: MessageDigest, hashtest: &(&str, &str)) {
         let expected = Vec::from_hex(hashtest.1).unwrap();
         let mut buf = vec![0; expected.len()];
-        hash_xof(hashtype, &Vec::from_hex(hashtest.0).unwrap(), buf.as_mut_slice()).unwrap();
+        hash_xof(
+            hashtype,
+            &Vec::from_hex(hashtest.0).unwrap(),
+            buf.as_mut_slice(),
+        )
+        .unwrap();
         assert_eq!(buf, expected);
     }
 
     fn hash_recycle_test(h: &mut Hasher, hashtest: &(&str, &str)) {
-        let _ = h.write_all(&Vec::from_hex(hashtest.0).unwrap()).unwrap();
+        h.write_all(&Vec::from_hex(hashtest.0).unwrap()).unwrap();
         let res = h.finish().unwrap();
         assert_eq!(hex::encode(res), hashtest.1);
     }
 
     // Test vectors from http://www.nsrl.nist.gov/testdata/
-    #[allow(non_upper_case_globals)]
-    const md5_tests: [(&'static str, &'static str); 13] = [
+    const MD5_TESTS: [(&str, &str); 13] = [
         ("", "d41d8cd98f00b204e9800998ecf8427e"),
         ("7F", "83acb6e67e50e31db6ed341dd2de1595"),
         ("EC9C", "0b07f0d4ca797d8ac58874f887cb0b68"),
@@ -421,7 +443,7 @@ mod tests {
 
     #[test]
     fn test_md5() {
-        for test in md5_tests.iter() {
+        for test in MD5_TESTS.iter() {
             hash_test(MessageDigest::md5(), test);
         }
     }
@@ -429,7 +451,7 @@ mod tests {
     #[test]
     fn test_md5_recycle() {
         let mut h = Hasher::new(MessageDigest::md5()).unwrap();
-        for test in md5_tests.iter() {
+        for test in MD5_TESTS.iter() {
             hash_recycle_test(&mut h, test);
         }
     }
@@ -437,7 +459,7 @@ mod tests {
     #[test]
     fn test_finish_twice() {
         let mut h = Hasher::new(MessageDigest::md5()).unwrap();
-        h.write_all(&Vec::from_hex(md5_tests[6].0).unwrap())
+        h.write_all(&Vec::from_hex(MD5_TESTS[6].0).unwrap())
             .unwrap();
         h.finish().unwrap();
         let res = h.finish().unwrap();
@@ -446,9 +468,10 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::redundant_clone)]
     fn test_clone() {
         let i = 7;
-        let inp = Vec::from_hex(md5_tests[i].0).unwrap();
+        let inp = Vec::from_hex(MD5_TESTS[i].0).unwrap();
         assert!(inp.len() > 2);
         let p = inp.len() / 2;
         let h0 = Hasher::new(MessageDigest::md5()).unwrap();
@@ -461,18 +484,18 @@ mod tests {
             let mut h2 = h1.clone();
             h2.write_all(&inp[p..]).unwrap();
             let res = h2.finish().unwrap();
-            assert_eq!(hex::encode(res), md5_tests[i].1);
+            assert_eq!(hex::encode(res), MD5_TESTS[i].1);
         }
         h1.write_all(&inp[p..]).unwrap();
         let res = h1.finish().unwrap();
-        assert_eq!(hex::encode(res), md5_tests[i].1);
+        assert_eq!(hex::encode(res), MD5_TESTS[i].1);
 
         println!("Clone a finished hasher");
         let mut h3 = h1.clone();
-        h3.write_all(&Vec::from_hex(md5_tests[i + 1].0).unwrap())
+        h3.write_all(&Vec::from_hex(MD5_TESTS[i + 1].0).unwrap())
             .unwrap();
         let res = h3.finish().unwrap();
-        assert_eq!(hex::encode(res), md5_tests[i + 1].1);
+        assert_eq!(hex::encode(res), MD5_TESTS[i + 1].1);
     }
 
     #[test]
@@ -499,8 +522,9 @@ mod tests {
     #[cfg(ossl111)]
     #[test]
     fn test_sha3_224() {
-        let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
-            "1de092dd9fbcbbf450f26264f4778abd48af851f2832924554c56913"
+        let tests = [(
+            "416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
+            "1de092dd9fbcbbf450f26264f4778abd48af851f2832924554c56913",
         )];
 
         for test in tests.iter() {
@@ -511,8 +535,9 @@ mod tests {
     #[cfg(ossl111)]
     #[test]
     fn test_sha3_256() {
-        let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
-            "b38e38f08bc1c0091ed4b5f060fe13e86aa4179578513ad11a6e3abba0062f61"
+        let tests = [(
+            "416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
+            "b38e38f08bc1c0091ed4b5f060fe13e86aa4179578513ad11a6e3abba0062f61",
         )];
 
         for test in tests.iter() {
@@ -549,8 +574,9 @@ mod tests {
     #[cfg(ossl111)]
     #[test]
     fn test_shake_128() {
-        let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
-            "49d0697ff508111d8b84f15e46daf135"
+        let tests = [(
+            "416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
+            "49d0697ff508111d8b84f15e46daf135",
         )];
 
         for test in tests.iter() {
@@ -561,8 +587,9 @@ mod tests {
     #[cfg(ossl111)]
     #[test]
     fn test_shake_256() {
-        let tests = [("416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
-            "4e2dfdaa75d1e049d0eaeffe28e76b17cea47b650fb8826fe48b94664326a697"
+        let tests = [(
+            "416c6c20796f75722062617365206172652062656c6f6e6720746f207573",
+            "4e2dfdaa75d1e049d0eaeffe28e76b17cea47b650fb8826fe48b94664326a697",
         )];
 
         for test in tests.iter() {

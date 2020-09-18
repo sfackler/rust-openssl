@@ -1,12 +1,11 @@
 use ffi::{
     self, BIO_clear_retry_flags, BIO_new, BIO_set_retry_read, BIO_set_retry_write, BIO,
-    BIO_CTRL_FLUSH,
+    BIO_CTRL_DGRAM_QUERY_MTU, BIO_CTRL_FLUSH,
 };
 use libc::{c_char, c_int, c_long, c_void, strlen};
 use std::any::Any;
 use std::io;
 use std::io::prelude::*;
-use std::mem;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr;
 use std::slice;
@@ -17,7 +16,8 @@ use error::ErrorStack;
 pub struct StreamState<S> {
     pub stream: S,
     pub error: Option<io::Error>,
-    pub panic: Option<Box<Any + Send>>,
+    pub panic: Option<Box<dyn Any + Send>>,
+    pub dtls_mtu_size: c_long,
 }
 
 /// Safe wrapper for BIO_METHOD
@@ -36,9 +36,10 @@ pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, BioMethod), ErrorSta
     let method = BioMethod::new::<S>();
 
     let state = Box::new(StreamState {
-        stream: stream,
+        stream,
         error: None,
         panic: None,
+        dtls_mtu_size: 0,
     });
 
     unsafe {
@@ -46,7 +47,7 @@ pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, BioMethod), ErrorSta
         BIO_set_data(bio, Box::into_raw(state) as *mut _);
         BIO_set_init(bio, 1);
 
-        return Ok((bio, method));
+        Ok((bio, method))
     }
 }
 
@@ -55,18 +56,28 @@ pub unsafe fn take_error<S>(bio: *mut BIO) -> Option<io::Error> {
     state.error.take()
 }
 
-pub unsafe fn take_panic<S>(bio: *mut BIO) -> Option<Box<Any + Send>> {
+pub unsafe fn take_panic<S>(bio: *mut BIO) -> Option<Box<dyn Any + Send>> {
     let state = state::<S>(bio);
     state.panic.take()
 }
 
 pub unsafe fn get_ref<'a, S: 'a>(bio: *mut BIO) -> &'a S {
-    let state: &'a StreamState<S> = mem::transmute(BIO_get_data(bio));
+    let state = &*(BIO_get_data(bio) as *const StreamState<S>);
     &state.stream
 }
 
 pub unsafe fn get_mut<'a, S: 'a>(bio: *mut BIO) -> &'a mut S {
     &mut state(bio).stream
+}
+
+pub unsafe fn set_dtls_mtu_size<S>(bio: *mut BIO, mtu_size: usize) {
+    if mtu_size as u64 > c_long::max_value() as u64 {
+        panic!(
+            "Given MTU size {} can't be represented in a positive `c_long` range",
+            mtu_size
+        )
+    }
+    state::<S>(bio).dtls_mtu_size = mtu_size as c_long;
 }
 
 unsafe fn state<'a, S: 'a>(bio: *mut BIO) -> &'a mut StreamState<S> {
@@ -134,9 +145,9 @@ unsafe extern "C" fn ctrl<S: Write>(
     _num: c_long,
     _ptr: *mut c_void,
 ) -> c_long {
-    if cmd == BIO_CTRL_FLUSH {
-        let state = state::<S>(bio);
+    let state = state::<S>(bio);
 
+    if cmd == BIO_CTRL_FLUSH {
         match catch_unwind(AssertUnwindSafe(|| state.stream.flush())) {
             Ok(Ok(())) => 1,
             Ok(Err(err)) => {
@@ -148,6 +159,8 @@ unsafe extern "C" fn ctrl<S: Write>(
                 0
             }
         }
+    } else if cmd == BIO_CTRL_DGRAM_QUERY_MTU {
+        state.dtls_mtu_size
     } else {
         0
     }
@@ -196,7 +209,7 @@ cfg_if! {
                     assert!(ffi::BIO_meth_set_ctrl(ptr, ctrl::<S>) != 0);
                     assert!(ffi::BIO_meth_set_create(ptr, create) != 0);
                     assert!(ffi::BIO_meth_set_destroy(ptr, destroy::<S>) != 0);
-                    return ret;
+                    ret
                 }
             }
 

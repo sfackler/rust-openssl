@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+env:
+  RUSTFLAGS: -Dwarnings
+  RUST_BACKTRACE: 1
+
+jobs:
+  rustfmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        run: rustup update stable && rustup default stable
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  clippy:
+    name: clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        run: rustup update stable && rustup default stable
+      - name: Get rust version
+        id: rust-version
+        run: echo "::set-output name=version::$(rustc --version)"
+      - name: Cache cargo index
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry/index
+          key: index-${{ runner.os }}-${{ github.run_number }}
+          restore-keys: |
+            index-${{ runner.os }}-
+      - name: Create lockfile
+        run: cargo generate-lockfile
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry/cache
+          key: registry-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+      - name: Fetch dependencies
+        run: cargo fetch
+      - name: Cache target directory
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: clippy-target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+      - name: Run clippy
+        run: cargo clippy --all --all-targets
+
+  min-version:
+    name: min-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        run: rustup update 1.31.0 && rustup default 1.31.0
+      - name: Get rust version
+        id: rust-version
+        run: echo "::set-output name=version::$(rustc --version)"
+      - name: Cache cargo index
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry/index
+          key: index-${{ runner.os }}-${{ github.run_number }}
+          restore-keys: |
+            index-${{ runner.os }}-
+      - name: Create lockfile
+        run: cargo generate-lockfile
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry/cache
+          key: registry-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+      - name: Fetch dependencies
+        run: cargo fetch
+      - name: Cache target directory
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: min-version-target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+      - name: Check openssl
+        run: cargo check -p openssl
+
+  windows-vcpkg:
+    name: windows-vcpkg
+    runs-on: windows-latest
+    env:
+      VCPKGRS_DYNAMIC: 1
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        run: rustup update stable && rustup default stable
+      - name: Get rust version
+        id: rust-version
+        run: echo "::set-output name=version::$(rustc --version)"
+      - name: Set vcpkg root
+        run: echo "::set-env name=VCPKG_ROOT::$Env:VCPKG_INSTALLATION_ROOT"
+      - name: Install OpenSSL
+        run: vcpkg install openssl:x64-windows
+      - name: Cache cargo index
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry/index
+          key: index-${{ runner.os }}-${{ github.run_number }}
+          restore-keys: |
+            index-${{ runner.os }}-
+      - name: Create lockfile
+        run: cargo generate-lockfile
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry/cache
+          key: registry-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+      - name: Fetch dependencies
+        run: cargo fetch
+      - name: Cache target directory
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: min-version-target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+      - name: Run systest
+        run: cargo run -p systest
+      - name: Test openssl
+        run: cargo test -p openssl
+      - name: Test openssl-errors
+        run: cargo test -p openssl-errors

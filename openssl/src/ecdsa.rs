@@ -1,4 +1,5 @@
 //! Low level Elliptic Curve Digital Signature Algorithm (ECDSA) functions.
+
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
@@ -8,7 +9,7 @@ use std::ptr;
 use bn::{BigNum, BigNumRef};
 use ec::EcKeyRef;
 use error::ErrorStack;
-use pkey::{Private, Public};
+use pkey::{HasPrivate, HasPublic};
 use {cvt_n, cvt_p};
 
 foreign_type_and_impl_send_sync! {
@@ -33,7 +34,10 @@ impl EcdsaSig {
     /// OpenSSL documentation at [`ECDSA_do_sign`]
     ///
     /// [`ECDSA_do_sign`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_do_sign.html
-    pub fn sign(data: &[u8], eckey: &EcKeyRef<Private>) -> Result<EcdsaSig, ErrorStack> {
+    pub fn sign<T>(data: &[u8], eckey: &EcKeyRef<T>) -> Result<EcdsaSig, ErrorStack>
+    where
+        T: HasPrivate,
+    {
         unsafe {
             assert!(data.len() <= c_int::max_value() as usize);
             let sig = cvt_p(ffi::ECDSA_do_sign(
@@ -60,12 +64,38 @@ impl EcdsaSig {
         }
     }
 
+    from_der! {
+        /// Decodes a DER-encoded ECDSA signature.
+        ///
+        /// This corresponds to [`d2i_ECDSA_SIG`].
+        ///
+        /// [`d2i_ECDSA_SIG`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_ECDSA_SIG.html
+        from_der,
+        EcdsaSig,
+        ffi::d2i_ECDSA_SIG
+    }
+}
+
+impl EcdsaSigRef {
+    to_der! {
+        /// Serializes the ECDSA signature into a DER-encoded ECDSASignature structure.
+        ///
+        /// This corresponds to [`i2d_ECDSA_SIG`].
+        ///
+        /// [`i2d_ECDSA_SIG`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_ECDSA_SIG.html
+        to_der,
+        ffi::i2d_ECDSA_SIG
+    }
+
     /// Verifies if the signature is a valid ECDSA signature using the given public key.
     ///
     /// OpenSSL documentation at [`ECDSA_do_verify`]
     ///
     /// [`ECDSA_do_verify`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_do_verify.html
-    pub fn verify(&self, data: &[u8], eckey: &EcKeyRef<Public>) -> Result<bool, ErrorStack> {
+    pub fn verify<T>(&self, data: &[u8], eckey: &EcKeyRef<T>) -> Result<bool, ErrorStack>
+    where
+        T: HasPublic,
+    {
         unsafe {
             assert!(data.len() <= c_int::max_value() as usize);
             cvt_n(ffi::ECDSA_do_verify(
@@ -73,11 +103,12 @@ impl EcdsaSig {
                 data.len() as c_int,
                 self.as_ptr(),
                 eckey.as_ptr(),
-            )).map(|x| x == 1)
+            ))
+            .map(|x| x == 1)
         }
     }
 
-    /// Returns internal component: `r` of a `EcdsaSig`. (See X9.62 or FIPS 186-2)
+    /// Returns internal component: `r` of an `EcdsaSig`. (See X9.62 or FIPS 186-2)
     ///
     /// OpenSSL documentation at [`ECDSA_SIG_get0`]
     ///
@@ -90,7 +121,7 @@ impl EcdsaSig {
         }
     }
 
-    /// Returns internal components: `s` of a `EcdsaSig`. (See X9.62 or FIPS 186-2)
+    /// Returns internal components: `s` of an `EcdsaSig`. (See X9.62 or FIPS 186-2)
     ///
     /// OpenSSL documentation at [`ECDSA_SIG_get0`]
     ///
@@ -102,25 +133,6 @@ impl EcdsaSig {
             BigNumRef::from_ptr(s as *mut _)
         }
     }
-
-    from_der! {
-        /// Decodes a DER-encoded ECDSA signature.
-        ///
-        /// This corresponds to [`d2i_ECDSA_SIG`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_ECDSA_SIG.html
-        from_der,
-        EcdsaSig,
-        ffi::d2i_ECDSA_SIG
-	}
-}
-
-impl EcdsaSigRef {
-    to_der! {
-        /// Serializes the ECDSA signature into a DER-encoded ECDSASignature structure.
-        ///
-        /// This corresponds to [`i2d_ECDSA_SIG`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_ECDSA_SIG.html
-        to_der,
-        ffi::i2d_ECDSA_SIG
-	}
 }
 
 cfg_if! {
@@ -133,6 +145,11 @@ cfg_if! {
             r: *mut ffi::BIGNUM,
             s: *mut ffi::BIGNUM,
         ) -> c_int {
+            if r.is_null() || s.is_null() {
+                return 0;
+            }
+            ffi::BN_clear_free((*sig).r);
+            ffi::BN_clear_free((*sig).s);
             (*sig).r = r;
             (*sig).s = s;
             1
@@ -160,6 +177,7 @@ mod test {
     use ec::EcGroup;
     use ec::EcKey;
     use nid::Nid;
+    use pkey::{Private, Public};
 
     fn get_public_key(group: &EcGroup, x: &EcKey<Private>) -> Result<EcKey<Public>, ErrorStack> {
         let public_key_point = x.public_key();
@@ -187,11 +205,11 @@ mod test {
         let verification2 = res
             .verify(String::from("hello2").as_bytes(), &public_key)
             .unwrap();
-        assert!(verification2 == false);
+        assert!(!verification2);
 
         // Signature will not be verified using the correct data but the incorrect public key
         let verification3 = res.verify(data.as_bytes(), &public_key2).unwrap();
-        assert!(verification3 == false);
+        assert!(!verification3);
     }
 
     #[test]

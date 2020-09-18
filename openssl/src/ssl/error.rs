@@ -14,14 +14,6 @@ use x509::X509VerifyResult;
 pub struct ErrorCode(c_int);
 
 impl ErrorCode {
-    pub fn from_raw(raw: c_int) -> ErrorCode {
-        ErrorCode(raw)
-    }
-
-    pub fn as_raw(&self) -> c_int {
-        self.0
-    }
-
     /// The SSL session has been closed.
     pub const ZERO_RETURN: ErrorCode = ErrorCode(ffi::SSL_ERROR_ZERO_RETURN);
 
@@ -42,10 +34,19 @@ impl ErrorCode {
     pub const SSL: ErrorCode = ErrorCode(ffi::SSL_ERROR_SSL);
 
     /// The client hello callback indicated that it needed to be retried.
-    /// 
+    ///
     /// Requires OpenSSL 1.1.1 or newer.
     #[cfg(ossl111)]
     pub const WANT_CLIENT_HELLO_CB: ErrorCode = ErrorCode(ffi::SSL_ERROR_WANT_CLIENT_HELLO_CB);
+
+    pub fn from_raw(raw: c_int) -> ErrorCode {
+        ErrorCode(raw)
+    }
+
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
 }
 
 #[derive(Debug)]
@@ -123,11 +124,7 @@ impl fmt::Display for Error {
 }
 
 impl error::Error for Error {
-    fn description(&self) -> &str {
-        "an OpenSSL error"
-    }
-
-    fn cause(&self) -> Option<&error::Error> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self.cause {
             Some(InnerError::Io(ref e)) => Some(e),
             Some(InnerError::Ssl(ref e)) => Some(e),
@@ -151,15 +148,7 @@ pub enum HandshakeError<S> {
 }
 
 impl<S: fmt::Debug> StdError for HandshakeError<S> {
-    fn description(&self) -> &str {
-        match *self {
-            HandshakeError::SetupFailure(_) => "stream setup failed",
-            HandshakeError::Failure(_) => "the handshake failed",
-            HandshakeError::WouldBlock(_) => "the handshake was interrupted",
-        }
-    }
-
-    fn cause(&self) -> Option<&StdError> {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match *self {
             HandshakeError::SetupFailure(ref e) => Some(e),
             HandshakeError::Failure(ref s) | HandshakeError::WouldBlock(ref s) => Some(s.error()),
@@ -169,11 +158,17 @@ impl<S: fmt::Debug> StdError for HandshakeError<S> {
 
 impl<S: fmt::Debug> fmt::Display for HandshakeError<S> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(StdError::description(self))?;
         match *self {
-            HandshakeError::SetupFailure(ref e) => write!(f, ": {}", e)?,
-            HandshakeError::Failure(ref s) | HandshakeError::WouldBlock(ref s) => {
-                write!(f, ": {}", s.error())?;
+            HandshakeError::SetupFailure(ref e) => write!(f, "stream setup failed: {}", e)?,
+            HandshakeError::Failure(ref s) => {
+                write!(f, "the handshake failed: {}", s.error())?;
+                let verify = s.ssl().verify_result();
+                if verify != X509VerifyResult::OK {
+                    write!(f, ": {}", verify)?;
+                }
+            }
+            HandshakeError::WouldBlock(ref s) => {
+                write!(f, "the handshake was interrupted: {}", s.error())?;
                 let verify = s.ssl().verify_result();
                 if verify != X509VerifyResult::OK {
                     write!(f, ": {}", verify)?;

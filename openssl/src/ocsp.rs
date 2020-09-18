@@ -3,16 +3,16 @@ use foreign_types::ForeignTypeRef;
 use libc::{c_int, c_long, c_ulong};
 use std::error::Error;
 use std::fmt;
-use std::ptr;
 use std::mem;
+use std::ptr;
 
-use {cvt, cvt_p};
 use asn1::Asn1GeneralizedTimeRef;
 use error::ErrorStack;
 use hash::MessageDigest;
 use stack::StackRef;
 use x509::store::X509StoreRef;
-use x509::{X509, X509Ref};
+use x509::{X509Ref, X509};
+use {cvt, cvt_p};
 
 bitflags! {
     pub struct OcspFlag: c_ulong {
@@ -75,14 +75,6 @@ impl Error for OcspNonceCheckErrorResult {
 pub struct OcspResponseStatus(c_int);
 
 impl OcspResponseStatus {
-    pub fn from_raw(raw: c_int) -> OcspResponseStatus {
-        OcspResponseStatus(raw)
-    }
-
-    pub fn as_raw(&self) -> c_int {
-        self.0
-    }
-
     pub const SUCCESSFUL: OcspResponseStatus =
         OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_SUCCESSFUL);
     pub const MALFORMED_REQUEST: OcspResponseStatus =
@@ -95,37 +87,39 @@ impl OcspResponseStatus {
         OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_SIGREQUIRED);
     pub const UNAUTHORIZED: OcspResponseStatus =
         OcspResponseStatus(ffi::OCSP_RESPONSE_STATUS_UNAUTHORIZED);
+
+    pub fn from_raw(raw: c_int) -> OcspResponseStatus {
+        OcspResponseStatus(raw)
+    }
+
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct OcspCertStatus(c_int);
 
 impl OcspCertStatus {
+    pub const GOOD: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_GOOD);
+    pub const REVOKED: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_REVOKED);
+    pub const UNKNOWN: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_UNKNOWN);
+
     pub fn from_raw(raw: c_int) -> OcspCertStatus {
         OcspCertStatus(raw)
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn as_raw(&self) -> c_int {
         self.0
     }
-
-    pub const GOOD: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_GOOD);
-    pub const REVOKED: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_REVOKED);
-    pub const UNKNOWN: OcspCertStatus = OcspCertStatus(ffi::V_OCSP_CERTSTATUS_UNKNOWN);
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct OcspRevokedStatus(c_int);
 
 impl OcspRevokedStatus {
-    pub fn from_raw(raw: c_int) -> OcspRevokedStatus {
-        OcspRevokedStatus(raw)
-    }
-
-    pub fn as_raw(&self) -> c_int {
-        self.0
-    }
-
     pub const NO_STATUS: OcspRevokedStatus = OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_NOSTATUS);
     pub const UNSPECIFIED: OcspRevokedStatus =
         OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_UNSPECIFIED);
@@ -143,6 +137,15 @@ impl OcspRevokedStatus {
         OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_CERTIFICATEHOLD);
     pub const REMOVE_FROM_CRL: OcspRevokedStatus =
         OcspRevokedStatus(ffi::OCSP_REVOKED_STATUS_REMOVEFROMCRL);
+
+    pub fn from_raw(raw: c_int) -> OcspRevokedStatus {
+        OcspRevokedStatus(raw)
+    }
+
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
 }
 
 pub struct OcspStatus<'a> {
@@ -173,7 +176,8 @@ impl<'a> OcspStatus<'a> {
                 self.next_update.as_ptr(),
                 nsec as c_long,
                 maxsec.map(|n| n as c_long).unwrap_or(-1),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 }
@@ -203,7 +207,8 @@ impl OcspBasicResponseRef {
                 certs.as_ptr(),
                 store.as_ptr(),
                 flags.bits(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -231,10 +236,11 @@ impl OcspBasicResponseRef {
                 } else {
                     Some(Asn1GeneralizedTimeRef::from_ptr(revocation_time))
                 };
+
                 Some(OcspStatus {
                     status: OcspCertStatus(status),
                     reason: OcspRevokedStatus(status),
-                    revocation_time: revocation_time,
+                    revocation_time,
                     this_update: Asn1GeneralizedTimeRef::from_ptr(this_update),
                     next_update: Asn1GeneralizedTimeRef::from_ptr(next_update),
                 })
@@ -283,7 +289,8 @@ impl OcspCertId {
                 digest.as_ptr(),
                 subject.as_ptr(),
                 issuer.as_ptr(),
-            )).map(OcspCertId)
+            ))
+            .map(OcspCertId)
         }
     }
 }
@@ -310,7 +317,8 @@ impl OcspResponse {
             cvt_p(ffi::OCSP_response_create(
                 status.as_raw(),
                 body.map(|r| r.as_ptr()).unwrap_or(ptr::null_mut()),
-            )).map(OcspResponse)
+            ))
+            .map(OcspResponse)
         }
     }
 

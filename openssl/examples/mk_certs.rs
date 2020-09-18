@@ -9,9 +9,11 @@ use openssl::error::ErrorStack;
 use openssl::hash::MessageDigest;
 use openssl::pkey::{PKey, PKeyRef, Private};
 use openssl::rsa::Rsa;
-use openssl::x509::{X509, X509NameBuilder, X509Ref, X509Req, X509ReqBuilder, X509VerifyResult};
-use openssl::x509::extension::{AuthorityKeyIdentifier, BasicConstraints, KeyUsage,
-                               SubjectAlternativeName, SubjectKeyIdentifier};
+use openssl::x509::extension::{
+    AuthorityKeyIdentifier, BasicConstraints, KeyUsage, SubjectAlternativeName,
+    SubjectKeyIdentifier,
+};
+use openssl::x509::{X509NameBuilder, X509Ref, X509Req, X509ReqBuilder, X509VerifyResult, X509};
 
 /// Make a CA certificate and private key
 fn mk_ca_cert() -> Result<(X509, PKey<Private>), ErrorStack> {
@@ -42,11 +44,13 @@ fn mk_ca_cert() -> Result<(X509, PKey<Private>), ErrorStack> {
     cert_builder.set_not_after(&not_after)?;
 
     cert_builder.append_extension(BasicConstraints::new().critical().ca().build()?)?;
-    cert_builder.append_extension(KeyUsage::new()
-        .critical()
-        .key_cert_sign()
-        .crl_sign()
-        .build()?)?;
+    cert_builder.append_extension(
+        KeyUsage::new()
+            .critical()
+            .key_cert_sign()
+            .crl_sign()
+            .build()?,
+    )?;
 
     let subject_key_identifier =
         SubjectKeyIdentifier::new().build(&cert_builder.x509v3_context(None, None))?;
@@ -104,12 +108,14 @@ fn mk_ca_signed_cert(
 
     cert_builder.append_extension(BasicConstraints::new().build()?)?;
 
-    cert_builder.append_extension(KeyUsage::new()
-        .critical()
-        .non_repudiation()
-        .digital_signature()
-        .key_encipherment()
-        .build()?)?;
+    cert_builder.append_extension(
+        KeyUsage::new()
+            .critical()
+            .non_repudiation()
+            .digital_signature()
+            .key_encipherment()
+            .build()?,
+    )?;
 
     let subject_key_identifier =
         SubjectKeyIdentifier::new().build(&cert_builder.x509v3_context(Some(ca_cert), None))?;

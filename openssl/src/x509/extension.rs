@@ -1,4 +1,4 @@
-//! Add extensions to an `X509` certificate or certificate request. 
+//! Add extensions to an `X509` certificate or certificate request.
 //!
 //! The extensions defined for X.509 v3 certificates provide methods for
 //! associating additional attributes with users or public keys and for
@@ -11,11 +11,11 @@
 //! extern crate openssl;
 //!
 //! use openssl::x509::extension::BasicConstraints;
-//! use openssl::x509::X509Extension; 
+//! use openssl::x509::X509Extension;
 //!
 //! fn main() {
 //!     let mut bc = BasicConstraints::new();
-//!     let bc = bc.critical().ca().pathlen(1); 
+//!     let bc = bc.critical().ca().pathlen(1);
 //!
 //!     let extension: X509Extension = bc.build().unwrap();
 //! }
@@ -31,6 +31,12 @@ pub struct BasicConstraints {
     critical: bool,
     ca: bool,
     pathlen: Option<u32>,
+}
+
+impl Default for BasicConstraints {
+    fn default() -> BasicConstraints {
+        BasicConstraints::new()
+    }
 }
 
 impl BasicConstraints {
@@ -93,6 +99,12 @@ pub struct KeyUsage {
     crl_sign: bool,
     encipher_only: bool,
     decipher_only: bool,
+}
+
+impl Default for KeyUsage {
+    fn default() -> KeyUsage {
+        KeyUsage::new()
+    }
 }
 
 impl KeyUsage {
@@ -228,6 +240,12 @@ pub struct ExtendedKeyUsage {
     other: Vec<String>,
 }
 
+impl Default for ExtendedKeyUsage {
+    fn default() -> ExtendedKeyUsage {
+        ExtendedKeyUsage::new()
+    }
+}
+
 impl ExtendedKeyUsage {
     /// Construct a new `ExtendedKeyUsage` extension.
     pub fn new() -> ExtendedKeyUsage {
@@ -354,6 +372,12 @@ pub struct SubjectKeyIdentifier {
     critical: bool,
 }
 
+impl Default for SubjectKeyIdentifier {
+    fn default() -> SubjectKeyIdentifier {
+        SubjectKeyIdentifier::new()
+    }
+}
+
 impl SubjectKeyIdentifier {
     /// Construct a new `SubjectKeyIdentifier` extension.
     pub fn new() -> SubjectKeyIdentifier {
@@ -382,6 +406,12 @@ pub struct AuthorityKeyIdentifier {
     critical: bool,
     keyid: Option<bool>,
     issuer: Option<bool>,
+}
+
+impl Default for AuthorityKeyIdentifier {
+    fn default() -> AuthorityKeyIdentifier {
+        AuthorityKeyIdentifier::new()
+    }
 }
 
 impl AuthorityKeyIdentifier {
@@ -436,6 +466,12 @@ impl AuthorityKeyIdentifier {
 pub struct SubjectAlternativeName {
     critical: bool,
     names: Vec<String>,
+}
+
+impl Default for SubjectAlternativeName {
+    fn default() -> SubjectAlternativeName {
+        SubjectAlternativeName::new()
+    }
 }
 
 impl SubjectAlternativeName {

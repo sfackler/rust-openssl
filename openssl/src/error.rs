@@ -16,13 +16,13 @@
 //! }
 //! ```
 use libc::{c_char, c_int, c_ulong};
-use std::fmt;
+use std::borrow::Cow;
 use std::error;
 use std::ffi::CStr;
+use std::fmt;
 use std::io;
-use std::str;
 use std::ptr;
-use std::borrow::Cow;
+use std::str;
 
 use ffi;
 
@@ -75,11 +75,7 @@ impl fmt::Display for ErrorStack {
     }
 }
 
-impl error::Error for ErrorStack {
-    fn description(&self) -> &str {
-        "An OpenSSL error stack"
-    }
-}
+impl error::Error for ErrorStack {}
 
 impl From<ErrorStack> for io::Error {
     fn from(e: ErrorStack) -> io::Error {
@@ -165,7 +161,7 @@ impl Error {
                         None
                     } else {
                         ptr::copy_nonoverlapping(data.as_ptr(), ptr as *mut u8, data.len());
-                        *ptr.offset(data.len() as isize) = 0;
+                        *ptr.add(data.len()) = 0;
                         Some((ptr, ffi::ERR_TXT_MALLOCED))
                     }
                 }
@@ -233,6 +229,7 @@ impl Error {
     }
 
     /// Returns additional data describing the error.
+    #[allow(clippy::option_as_ref_deref)]
     pub fn data(&self) -> Option<&str> {
         self.data.as_ref().map(|s| &**s)
     }
@@ -273,7 +270,7 @@ impl fmt::Display for Error {
         }
         match self.reason() {
             Some(r) => write!(fmt, ":{}", r)?,
-            None => write!(fmt, ":reason({})", ffi::ERR_GET_FUNC(self.code()))?,
+            None => write!(fmt, ":reason({})", ffi::ERR_GET_REASON(self.code()))?,
         }
         write!(
             fmt,
@@ -285,8 +282,4 @@ impl fmt::Display for Error {
     }
 }
 
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        "an OpenSSL error"
-    }
-}
+impl error::Error for Error {}

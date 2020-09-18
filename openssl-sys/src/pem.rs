@@ -2,9 +2,14 @@ use libc::*;
 
 use *;
 
-pub type pem_password_cb = 
-    Option<unsafe extern "C" fn(buf: *mut c_char, size: c_int, rwflag: c_int, user_data: *mut c_void)
-        -> c_int>;
+pub type pem_password_cb = Option<
+    unsafe extern "C" fn(
+        buf: *mut c_char,
+        size: c_int,
+        rwflag: c_int,
+        user_data: *mut c_void,
+    ) -> c_int,
+>;
 
 extern "C" {
     pub fn PEM_read_bio_X509(
@@ -87,6 +92,13 @@ extern "C" {
         callback: pem_password_cb,
         user_data: *mut c_void,
     ) -> c_int;
+    pub fn PEM_read_bio_EC_PUBKEY(
+        bp: *mut BIO,
+        ec: *mut *mut EC_KEY,
+        callback: pem_password_cb,
+        user_data: *mut c_void,
+    ) -> *mut EC_KEY;
+    pub fn PEM_write_bio_EC_PUBKEY(bp: *mut BIO, ec: *mut EC_KEY) -> c_int;
     pub fn PEM_read_bio_DHparams(
         bio: *mut BIO,
         out: *mut *mut DH,
@@ -132,6 +144,12 @@ extern "C" {
         cb: pem_password_cb,
         u: *mut c_void,
     ) -> *mut EVP_PKEY;
+    pub fn d2i_PKCS8_PRIV_KEY_INFO(
+        k: *mut *mut PKCS8_PRIV_KEY_INFO,
+        buf: *mut *const u8,
+        length: c_long,
+    ) -> *mut PKCS8_PRIV_KEY_INFO;
+    pub fn PKCS8_PRIV_KEY_INFO_free(p8inf: *mut PKCS8_PRIV_KEY_INFO);
 
     pub fn PEM_read_bio_PKCS7(
         bio: *mut BIO,
@@ -141,6 +159,16 @@ extern "C" {
     ) -> *mut PKCS7;
 
     pub fn PEM_write_bio_PKCS7(bp: *mut BIO, x: *mut PKCS7) -> c_int;
+
+    #[cfg(ossl101)]
+    pub fn PEM_read_bio_CMS(
+        bio: *mut BIO,
+        out: *mut *mut CMS_ContentInfo,
+        callback: pem_password_cb,
+        user_data: *mut c_void,
+    ) -> *mut CMS_ContentInfo;
+    #[cfg(ossl101)]
+    pub fn PEM_write_bio_CMS(bio: *mut BIO, cms: *const CMS_ContentInfo) -> c_int;
 }
 
 pub const PEM_R_NO_START_LINE: c_int = 108;

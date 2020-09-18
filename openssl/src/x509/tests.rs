@@ -12,7 +12,7 @@ use x509::extension::{
     SubjectKeyIdentifier,
 };
 use x509::store::X509StoreBuilder;
-use x509::{X509, X509Name, X509Req, X509StoreContext, X509VerifyResult};
+use x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
 
 fn pkey() -> PKey<Private> {
     let rsa = Rsa::generate(2048).unwrap();
@@ -22,7 +22,7 @@ fn pkey() -> PKey<Private> {
 #[test]
 fn test_cert_loading() {
     let cert = include_bytes!("../../test/cert.pem");
-    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+    let cert = X509::from_pem(cert).unwrap();
     let fingerprint = cert.digest(MessageDigest::sha1()).unwrap();
 
     let hash_str = "59172d9313e84459bcff27f967e79e6e9217e584";
@@ -32,9 +32,22 @@ fn test_cert_loading() {
 }
 
 #[test]
+fn test_debug() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let debugged = format!("{:#?}", cert);
+    assert!(debugged.contains(r#"serial_number: "8771F7BDEE982FA5""#));
+    assert!(debugged.contains(r#"signature_algorithm: sha256WithRSAEncryption"#));
+    assert!(debugged.contains(r#"countryName = "AU""#));
+    assert!(debugged.contains(r#"stateOrProvinceName = "Some-State""#));
+    assert!(debugged.contains(r#"not_before: Aug 14 17:00:03 2016 GMT"#));
+    assert!(debugged.contains(r#"not_after: Aug 12 17:00:03 2026 GMT"#));
+}
+
+#[test]
 fn test_cert_issue_validity() {
     let cert = include_bytes!("../../test/cert.pem");
-    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+    let cert = X509::from_pem(cert).unwrap();
     let not_before = cert.not_before().to_string();
     let not_after = cert.not_after().to_string();
 
@@ -45,7 +58,7 @@ fn test_cert_issue_validity() {
 #[test]
 fn test_save_der() {
     let cert = include_bytes!("../../test/cert.pem");
-    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+    let cert = X509::from_pem(cert).unwrap();
 
     let der = cert.to_der().unwrap();
     assert!(!der.is_empty());
@@ -87,7 +100,10 @@ fn test_nameref_iterator() {
     let mut all_entries = subject.entries();
 
     let email = all_entries.next().unwrap();
-    assert_eq!(email.object().nid().as_raw(), Nid::PKCS9_EMAILADDRESS.as_raw());
+    assert_eq!(
+        email.object().nid().as_raw(),
+        Nid::PKCS9_EMAILADDRESS.as_raw()
+    );
     assert_eq!(email.data().as_slice(), b"test@example.com");
 
     let cn = all_entries.next().unwrap();
@@ -98,8 +114,8 @@ fn test_nameref_iterator() {
     assert_eq!(friendly.object().nid().as_raw(), Nid::FRIENDLYNAME.as_raw());
     assert_eq!(&**friendly.data().as_utf8().unwrap(), "Example");
 
-    if let Some(_) = all_entries.next() {
-        assert!(false);
+    if all_entries.next().is_some() {
+        panic!();
     }
 }
 
@@ -133,7 +149,7 @@ fn test_subject_alt_name() {
 #[test]
 fn test_subject_alt_name_iter() {
     let cert = include_bytes!("../../test/alt_name_cert.pem");
-    let cert = X509::from_pem(cert).ok().expect("Failed to load PEM");
+    let cert = X509::from_pem(cert).unwrap();
 
     let subject_alt_names = cert.subject_alt_names().unwrap();
     let mut subject_alt_names_iter = subject_alt_names.iter();
@@ -222,13 +238,14 @@ fn x509_builder() {
     let x509 = builder.build();
 
     assert!(pkey.public_eq(&x509.public_key().unwrap()));
+    assert!(x509.verify(&pkey).unwrap());
 
     let cn = x509
         .subject_name()
         .entries_by_nid(Nid::COMMONNAME)
         .next()
         .unwrap();
-    assert_eq!("foobar.com".as_bytes(), cn.data().as_slice());
+    assert_eq!(cn.data().as_slice(), b"foobar.com");
     assert_eq!(serial, x509.serial_number().to_bn().unwrap());
 }
 
@@ -265,6 +282,7 @@ fn x509_req_builder() {
     let req = builder.build();
     assert!(req.public_key().unwrap().public_eq(&pkey));
     assert_eq!(req.extensions().unwrap().len(), extensions.len());
+    assert!(req.verify(&pkey).unwrap());
 }
 
 #[test]
@@ -315,6 +333,7 @@ fn signature() {
 }
 
 #[test]
+#[allow(clippy::redundant_clone)]
 fn clone_x509() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -334,16 +353,12 @@ fn test_verify_cert() {
     let store = store_bldr.build();
 
     let mut context = X509StoreContext::new().unwrap();
-    assert!(
-        context
-            .init(&store, &cert, &chain, |c| c.verify_cert())
-            .unwrap()
-    );
-    assert!(
-        context
-            .init(&store, &cert, &chain, |c| c.verify_cert())
-            .unwrap()
-    );
+    assert!(context
+        .init(&store, &cert, &chain, |c| c.verify_cert())
+        .unwrap());
+    assert!(context
+        .init(&store, &cert, &chain, |c| c.verify_cert())
+        .unwrap());
 }
 
 #[test]

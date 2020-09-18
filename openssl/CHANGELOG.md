@@ -2,6 +2,174 @@
 
 ## [Unreleased]
 
+## [v0.10.30] - 2020-06-25
+
+### Fixed
+
+* `DsaRef::private_key_to_pem` can no longer be called without a private key.
+
+### Changed
+
+* Improved the `Debug` implementations of many types.
+
+### Added
+
+* Added `is_empty` implementations for `Asn1StringRef` and `Asn1BitStringRef`.
+* Added `EcPointRef::{to_pem, to_dir}` and `EcKeyRef::{public_key_from_pem, public_key_from_der}`.
+* Added `Default` implementations for many types.
+* Added `Debug` implementations for many types.
+* Added `SslStream::from_raw_parts`.
+* Added `SslRef::set_mtu`.
+* Added `Cipher::{aes_128_ocb, aes_192_ocb, aes_256_ocb}`.
+
+### Deprecated
+
+* Deprecated `SslStreamBuilder::set_dtls_mtu_size` in favor of `SslRef::set_mtu`.
+
+## [v0.10.29] - 2020-04-07
+
+### Fixed
+
+* Fixed a memory leak in `X509Builder::append_extension`.
+
+### Added
+
+* Added `SslConnector::into_context` and `SslConnector::context`.
+* Added `SslAcceptor::into_context` and `SslAcceptor::context`.
+* Added `SslMethod::tls_client` and `SslMethod::tls_server`.
+* Added `SslContextBuilder::set_cert_store`.
+* Added `SslContextRef::verify_mode` and `SslRef::verify_mode`.
+* Added `SslRef::is_init_finished`.
+* Added `X509Object`.
+* Added `X509StoreRef::objects`.
+
+## [v0.10.28] - 2020-02-04
+
+### Fixed
+
+* Fixed the mutability of `Signer::sign_oneshot` and `Verifier::verify_oneshot`. This is unfortunately a breaking
+    change, but a necessary soundness fix.
+
+## [v0.10.27] - 2020-01-29
+
+### Added
+
+* Added `MessageDigest::null`.
+* Added `PKey::private_key_from_pkcs8`.
+* Added `SslOptions::NO_RENEGOTIATION`.
+* Added `SslStreamBuilder::set_dtls_mtu_size`.
+
+## [v0.10.26] - 2019-11-22
+
+### Fixed
+
+* Fixed improper handling of the IV buffer in `envelope::{Seal, Unseal}`.
+
+### Added
+
+* Added `Asn1TimeRef::{diff, compare}`.
+* Added `Asn1Time::from_unix`.
+* Added `PartialEq` and `PartialOrd` implementations for `Asn1Time` and `Asn1TimeRef`.
+* Added `base64::{encode_block, decode_block}`.
+* Added `EcGroupRef::order_bits`.
+* Added `Clone` implementations for `Sha1`, `Sha224`, `Sha256`, `Sha384`, and `Sha512`.
+* Added `SslContextBuilder::{set_sigalgs_list, set_groups_list}`.
+
+## [v0.10.25] - 2019-10-02
+
+### Fixed
+
+* Fixed a memory leak in `EcdsaSig::from_private_components` when using OpenSSL 1.0.x.
+
+### Added
+
+* Added support for Ed25519 and Ed448 keys.
+* Implemented `ToOwned` for `PKeyRef` and `Clone` for `PKey`.
+
+## [v0.10.24] - 2019-07-19
+
+### Fixed
+
+* Worked around an OpenSSL 1.0.x bug triggered by code calling `SSL_set_app_data`.
+
+### Added
+
+* Added `aes::{wrap_key, unwrap_key}`.
+* Added `CmsContentInfoRef::to_pem` and `CmsContentInfo::from_pem`.
+* Added `DsaRef::private_key_to_pem`.
+* Added `EcGroupRef::{cofactor, generator}`.
+* Added `EcPointRef::to_owned`.
+* Added a `Debug` implementation for `EcKey`.
+* Added `SslAcceptor::{mozilla_intermediate_v5, mozilla_modern_v5}`.
+* Added `Cipher::{aes_128_ofb, aes_192_ecb, aes_192_cbc, aes_192_ctr, aes_192_cfb1, aes_192_cfb128, aes_192_cfb8,
+    aes_192_gcm, aes_192_ccm, aes_192_ofb, aes_256_ofb}`.
+
+## [v0.10.23] - 2019-05-18
+
+### Fixed
+
+* Fixed session callbacks when an `Ssl`'s context is replaced.
+
+### Added
+
+* Added `SslContextBuilder::add_client_ca`.
+
+## [v0.10.22] - 2019-05-08
+
+### Added
+
+* Added support for the LibreSSL 2.9.x series.
+
+## [v0.10.21] - 2019-04-30
+
+### Fixed
+
+* Fixed overly conservatifve buffer size checks in `Crypter` when using stream ciphers.
+
+### Added
+
+* Added bindings to envelope encryption APIs.
+* Added `PkeyRef::size`.
+
+## [v0.10.20] - 2019-03-20
+
+### Added
+
+* Added `CmsContentInfo::from_der` and `CmsContentInfo::encrypt`.
+* Added `X509Ref::verify` and `X509ReqRef::verify`.
+* Implemented `PartialEq` and `Eq` for `MessageDigest`.
+* Added `MessageDigest::type_` and `EcGroupRef::curve_name`.
+
+## [v0.10.19] - 2019-03-01
+
+### Added
+
+* The openssl-sys build script now logs the values of environment variables.
+* Added `ERR_PACK` to openssl-sys.
+* The `ERR_*` functions in openssl-sys are const functions when building against newer Rust versions.
+* Implemented `Clone` for `Dsa`.
+* Added `SslContextRef::add_session` and `SslContextRef::remove_session`.
+* Added `SslSessionRef::time`, `SslSessionRef::timeout`, and `SslSessionRef::protocol_version`.
+* Added `SslContextBuilder::set_session_cache_size` and `SslContextRef::session_cache_size`.
+
+## [v0.10.18] - 2019-02-22
+
+### Fixed
+
+* Fixed the return type of `ssl::cipher_name`.
+
+## [v0.10.17] - 2019-02-22
+
+### Added
+
+* Implemented `AsRef<str>` and `AsRef<[u8]>` for `OpenSslString`.
+* Added `Asn1Integer::from_bn`.
+* Added `RsaRef::check_key`.
+* Added `Asn1Time::from_str` and `Asn1Time::from_str_x509`.
+* Added `Rsa::generate_with_e`.
+* Added `Cipher::des_ede3_cfb64`.
+* Added `SslCipherRef::standard_name` and `ssl::cipher_name`.
+
 ## [v0.10.16] - 2018-12-16
 
 ### Added
@@ -303,7 +471,21 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.16...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.30...master
+[v0.10.30]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.29...openssl-v0.10.30
+[v0.10.29]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.28...openssl-v0.10.29
+[v0.10.28]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.27...openssl-v0.10.28
+[v0.10.27]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.26...openssl-v0.10.27
+[v0.10.26]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.25...openssl-v0.10.26
+[v0.10.25]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.24...openssl-v0.10.25
+[v0.10.24]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.23...openssl-v0.10.24
+[v0.10.23]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.22...openssl-v0.10.23
+[v0.10.22]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.21...openssl-v0.10.22
+[v0.10.21]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.20...openssl-v0.10.21
+[v0.10.20]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.19...openssl-v0.10.20
+[v0.10.19]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.18...openssl-v0.10.19
+[v0.10.18]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.17...openssl-v0.10.18
+[v0.10.17]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.16...openssl-v0.10.17
 [v0.10.16]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.15...openssl-v0.10.16
 [v0.10.15]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.14...openssl-v0.10.15
 [v0.10.14]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.13...openssl-v0.10.14

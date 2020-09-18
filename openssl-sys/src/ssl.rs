@@ -318,6 +318,9 @@ pub const SSL_OP_NO_DTLSv1_2: c_ulong = 0x08000000;
 #[cfg(ossl111)]
 pub const SSL_OP_NO_TLSv1_3: c_ulong = 0x20000000;
 
+#[cfg(ossl110h)]
+pub const SSL_OP_NO_RENEGOTIATION: c_ulong = 0x40000000;
+
 cfg_if! {
     if #[cfg(ossl111)] {
         pub const SSL_OP_NO_SSL_MASK: c_ulong = SSL_OP_NO_SSLv2
@@ -447,6 +450,10 @@ cfg_if! {
     }
 }
 
+pub unsafe fn SSL_set_mtu(ssl: *mut SSL, mtu: c_long) -> c_long {
+    SSL_ctrl(ssl, SSL_CTRL_SET_MTU, mtu, ptr::null_mut())
+}
+
 pub type GEN_SESSION_CB =
     Option<unsafe extern "C" fn(*const SSL, *mut c_uchar, *mut c_uint) -> c_int>;
 
@@ -526,16 +533,22 @@ extern "C" {
     pub fn SSL_CTX_set_stateless_cookie_generate_cb(
         s: *mut SSL_CTX,
         cb: Option<
-            unsafe extern "C" fn(ssl: *mut SSL, cookie: *mut c_uchar, cookie_len: *mut size_t)
-                -> c_int,
+            unsafe extern "C" fn(
+                ssl: *mut SSL,
+                cookie: *mut c_uchar,
+                cookie_len: *mut size_t,
+            ) -> c_int,
         >,
     );
     #[cfg(ossl111)]
     pub fn SSL_CTX_set_stateless_cookie_verify_cb(
         s: *mut SSL_CTX,
         cb: Option<
-            unsafe extern "C" fn(ssl: *mut SSL, cookie: *const c_uchar, cookie_len: size_t)
-                -> c_int,
+            unsafe extern "C" fn(
+                ssl: *mut SSL,
+                cookie: *const c_uchar,
+                cookie_len: size_t,
+            ) -> c_int,
         >,
     );
 
@@ -609,8 +622,14 @@ extern "C" {
     pub fn SSL_CTX_set_psk_client_callback(
         ssl: *mut SSL_CTX,
         psk_client_cb: Option<
-            extern "C" fn(*mut SSL, *const c_char, *mut c_char, c_uint, *mut c_uchar, c_uint)
-                -> c_uint,
+            extern "C" fn(
+                *mut SSL,
+                *const c_char,
+                *mut c_char,
+                c_uint,
+                *mut c_uchar,
+                c_uint,
+            ) -> c_uint,
         >,
     );
     pub fn SSL_CTX_set_psk_server_callback(
@@ -657,6 +676,21 @@ extern "C" {
 
     pub fn SSL_get_finished(s: *const SSL, buf: *mut c_void, count: size_t) -> size_t;
     pub fn SSL_get_peer_finished(s: *const SSL, buf: *mut c_void, count: size_t) -> size_t;
+
+    pub fn SSL_CTX_get_verify_mode(ctx: *const SSL_CTX) -> c_int;
+    pub fn SSL_get_verify_mode(s: *const SSL) -> c_int;
+}
+
+cfg_if! {
+    if #[cfg(ossl111)] {
+        extern "C" {
+            pub fn SSL_is_init_finished(s: *const SSL) -> c_int;
+        }
+    } else if #[cfg(ossl110)] {
+        extern "C" {
+            pub fn SSL_is_init_finished(s: *mut SSL) -> c_int;
+        }
+    }
 }
 
 pub const SSL_AD_ILLEGAL_PARAMETER: c_int = SSL3_AD_ILLEGAL_PARAMETER;
@@ -681,10 +715,13 @@ pub const SSL_CTRL_SET_TMP_ECDH: c_int = 4;
 #[cfg(any(libressl, all(ossl101, not(ossl110))))]
 pub const SSL_CTRL_GET_SESSION_REUSED: c_int = 8;
 pub const SSL_CTRL_EXTRA_CHAIN_CERT: c_int = 14;
+pub const SSL_CTRL_SET_MTU: c_int = 17;
 #[cfg(any(libressl, all(ossl101, not(ossl110))))]
 pub const SSL_CTRL_OPTIONS: c_int = 32;
 pub const SSL_CTRL_MODE: c_int = 33;
 pub const SSL_CTRL_SET_READ_AHEAD: c_int = 41;
+pub const SSL_CTRL_SET_SESS_CACHE_SIZE: c_int = 42;
+pub const SSL_CTRL_GET_SESS_CACHE_SIZE: c_int = 43;
 pub const SSL_CTRL_SET_SESS_CACHE_MODE: c_int = 44;
 pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB: c_int = 53;
 pub const SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG: c_int = 54;
@@ -697,8 +734,12 @@ pub const SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP: c_int = 71;
 #[cfg(any(libressl, all(ossl101, not(ossl110))))]
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
 pub const SSL_CTRL_GET_EXTRA_CHAIN_CERTS: c_int = 82;
+#[cfg(ossl111)]
+pub const SSL_CTRL_SET_GROUPS_LIST: c_int = 92;
 #[cfg(any(libressl, all(ossl102, not(ossl110))))]
 pub const SSL_CTRL_SET_ECDH_AUTO: c_int = 94;
+#[cfg(ossl102)]
+pub const SSL_CTRL_SET_SIGALGS_LIST: c_int = 98;
 #[cfg(ossl102)]
 pub const SSL_CTRL_SET_VERIFY_CERT_STORE: c_int = 106;
 #[cfg(ossl110)]
@@ -740,6 +781,26 @@ pub unsafe fn SSL_CTX_get_extra_chain_certs(
 #[cfg(ossl102)]
 pub unsafe fn SSL_CTX_set0_verify_cert_store(ctx: *mut SSL_CTX, st: *mut X509_STORE) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_VERIFY_CERT_STORE, 0, st as *mut c_void)
+}
+
+#[cfg(ossl111)]
+pub unsafe fn SSL_CTX_set1_groups_list(ctx: *mut SSL_CTX, s: *const c_char) -> c_long {
+    SSL_CTX_ctrl(
+        ctx,
+        SSL_CTRL_SET_GROUPS_LIST,
+        0,
+        s as *const c_void as *mut c_void,
+    )
+}
+
+#[cfg(ossl102)]
+pub unsafe fn SSL_CTX_set1_sigalgs_list(ctx: *mut SSL_CTX, s: *const c_char) -> c_long {
+    SSL_CTX_ctrl(
+        ctx,
+        SSL_CTRL_SET_SIGALGS_LIST,
+        0,
+        s as *const c_void as *mut c_void,
+    )
 }
 
 #[cfg(any(libressl, all(ossl102, not(ossl110))))]
@@ -845,6 +906,7 @@ extern "C" {
     #[cfg(any(ossl110, libressl273))]
     pub fn SSL_CTX_up_ref(x: *mut SSL_CTX) -> c_int;
     pub fn SSL_CTX_get_cert_store(ctx: *const SSL_CTX) -> *mut X509_STORE;
+    pub fn SSL_CTX_set_cert_store(ctx: *mut SSL_CTX, store: *mut X509_STORE);
 
     pub fn SSL_get_current_cipher(ssl: *const SSL) -> *const SSL_CIPHER;
     pub fn SSL_CIPHER_get_bits(cipher: *const SSL_CIPHER, alg_bits: *mut c_int) -> c_int;
@@ -864,6 +926,10 @@ extern "C" {
     #[cfg(ossl111)]
     pub fn SSL_CIPHER_get_handshake_digest(cipher: *const ::SSL_CIPHER) -> *const ::EVP_MD;
     pub fn SSL_CIPHER_get_name(cipher: *const SSL_CIPHER) -> *const c_char;
+    #[cfg(ossl111)]
+    pub fn SSL_CIPHER_standard_name(cipher: *const SSL_CIPHER) -> *const c_char;
+    #[cfg(ossl111)]
+    pub fn OPENSSL_cipher_name(rfc_name: *const c_char) -> *const c_char;
 
     pub fn SSL_pending(ssl: *const SSL) -> c_int;
     pub fn SSL_set_bio(ssl: *mut SSL, rbio: *mut BIO, wbio: *mut BIO);
@@ -903,6 +969,11 @@ extern "C" {
     pub fn SSL_state_string(ssl: *const SSL) -> *const c_char;
     pub fn SSL_state_string_long(ssl: *const SSL) -> *const c_char;
 
+    pub fn SSL_SESSION_get_time(s: *const SSL_SESSION) -> c_long;
+    pub fn SSL_SESSION_get_timeout(s: *const SSL_SESSION) -> c_long;
+    #[cfg(ossl110)]
+    pub fn SSL_SESSION_get_protocol_version(s: *const SSL_SESSION) -> c_int;
+
     #[cfg(ossl111)]
     pub fn SSL_SESSION_set_max_early_data(ctx: *mut SSL_SESSION, max_early_data: u32) -> c_int;
     #[cfg(ossl111)]
@@ -914,6 +985,8 @@ extern "C" {
     pub fn SSL_SESSION_free(s: *mut SSL_SESSION);
     pub fn i2d_SSL_SESSION(s: *mut SSL_SESSION, pp: *mut *mut c_uchar) -> c_int;
     pub fn SSL_set_session(ssl: *mut SSL, session: *mut SSL_SESSION) -> c_int;
+    pub fn SSL_CTX_add_session(ctx: *mut SSL_CTX, session: *mut SSL_SESSION) -> c_int;
+    pub fn SSL_CTX_remove_session(ctx: *mut SSL_CTX, session: *mut SSL_SESSION) -> c_int;
     pub fn d2i_SSL_SESSION(
         a: *mut *mut SSL_SESSION,
         pp: *mut *const c_uchar,
@@ -1032,11 +1105,15 @@ extern "C" {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl291))] {
         extern "C" {
             pub fn TLS_method() -> *const SSL_METHOD;
 
             pub fn DTLS_method() -> *const SSL_METHOD;
+
+            pub fn TLS_server_method() -> *const SSL_METHOD;
+
+            pub fn TLS_client_method() -> *const SSL_METHOD;
         }
     } else {
         extern "C" {
@@ -1044,6 +1121,10 @@ cfg_if! {
             pub fn SSLv3_method() -> *const SSL_METHOD;
 
             pub fn SSLv23_method() -> *const SSL_METHOD;
+
+            pub fn SSLv23_client_method() -> *const SSL_METHOD;
+
+            pub fn SSLv23_server_method() -> *const SSL_METHOD;
 
             pub fn TLSv1_method() -> *const SSL_METHOD;
 
@@ -1068,15 +1149,30 @@ extern "C" {
 
     pub fn SSL_CTX_set_client_CA_list(ctx: *mut SSL_CTX, list: *mut stack_st_X509_NAME);
 
+    #[cfg(not(libressl))]
+    pub fn SSL_CTX_add_client_CA(ctx: *mut SSL_CTX, cacert: *mut X509) -> c_int;
+
     pub fn SSL_CTX_set_default_verify_paths(ctx: *mut SSL_CTX) -> c_int;
     pub fn SSL_CTX_load_verify_locations(
         ctx: *mut SSL_CTX,
         CAfile: *const c_char,
         CApath: *const c_char,
     ) -> c_int;
+}
 
-    pub fn SSL_get_ssl_method(ssl: *mut SSL) -> *const SSL_METHOD;
+cfg_if! {
+    if #[cfg(ossl111b)] {
+        extern "C" {
+            pub fn SSL_get_ssl_method(ssl: *const SSL) -> *const SSL_METHOD;
+        }
+    } else {
+        extern "C" {
+            pub fn SSL_get_ssl_method(ssl: *mut SSL) -> *const SSL_METHOD;
+        }
+    }
+}
 
+extern "C" {
     pub fn SSL_set_connect_state(s: *mut SSL);
     pub fn SSL_set_accept_state(s: *mut SSL);
 
@@ -1189,6 +1285,14 @@ extern "C" {
     pub fn SSL_get_ex_data_X509_STORE_CTX_idx() -> c_int;
 }
 
+pub unsafe fn SSL_CTX_sess_set_cache_size(ctx: *mut SSL_CTX, t: c_long) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_SET_SESS_CACHE_SIZE, t, ptr::null_mut())
+}
+
+pub unsafe fn SSL_CTX_sess_get_cache_size(ctx: *mut SSL_CTX) -> c_long {
+    SSL_CTX_ctrl(ctx, SSL_CTRL_GET_SESS_CACHE_SIZE, 0, ptr::null_mut())
+}
+
 pub unsafe fn SSL_CTX_set_session_cache_mode(ctx: *mut SSL_CTX, m: c_long) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_SESS_CACHE_MODE, m, ptr::null_mut())
 }
@@ -1212,15 +1316,21 @@ extern "C" {
     #[cfg(not(ossl110))]
     pub fn SSL_CTX_set_tmp_ecdh_callback(
         ctx: *mut ::SSL_CTX,
-        ecdh: unsafe extern "C" fn(ssl: *mut ::SSL, is_export: c_int, keylength: c_int)
-            -> *mut ::EC_KEY,
+        ecdh: unsafe extern "C" fn(
+            ssl: *mut ::SSL,
+            is_export: c_int,
+            keylength: c_int,
+        ) -> *mut ::EC_KEY,
     );
     // FIXME should take an option
     #[cfg(not(ossl110))]
     pub fn SSL_set_tmp_ecdh_callback(
         ssl: *mut SSL,
-        ecdh: unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int)
-            -> *mut EC_KEY,
+        ecdh: unsafe extern "C" fn(
+            ssl: *mut SSL,
+            is_export: c_int,
+            keylength: c_int,
+        ) -> *mut EC_KEY,
     );
 }
 
@@ -1228,11 +1338,25 @@ cfg_if! {
     if #[cfg(libressl)] {
         extern "C" {
             pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const libc::c_void;
+        }
+    } else if #[cfg(osslconf = "OPENSSL_NO_COMP")] {
+    } else if #[cfg(ossl111b)] {
+        extern "C" {
+            pub fn SSL_get_current_compression(ssl: *const SSL) -> *const COMP_METHOD;
+        }
+    } else {
+        extern "C" {
+            pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const COMP_METHOD;
+        }
+    }
+}
+cfg_if! {
+    if #[cfg(libressl)] {
+        extern "C" {
             pub fn SSL_COMP_get_name(comp: *const libc::c_void) -> *const c_char;
         }
     } else if #[cfg(not(osslconf = "OPENSSL_NO_COMP"))] {
         extern "C" {
-            pub fn SSL_get_current_compression(ssl: *mut SSL) -> *const COMP_METHOD;
             pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
         }
     }
@@ -1246,7 +1370,11 @@ extern "C" {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(ossl111c)] {
+        extern "C" {
+            pub fn SSL_session_reused(ssl: *const SSL) -> c_int;
+        }
+    } else if #[cfg(ossl110)] {
         extern "C" {
             pub fn SSL_session_reused(ssl: *mut SSL) -> c_int;
         }
@@ -1270,6 +1398,8 @@ cfg_if! {
 
 #[cfg(ossl110)]
 pub const OPENSSL_INIT_LOAD_SSL_STRINGS: u64 = 0x00200000;
+#[cfg(ossl111b)]
+pub const OPENSSL_INIT_NO_ATEXIT: u64 = 0x00080000;
 
 extern "C" {
     #[cfg(ossl110)]

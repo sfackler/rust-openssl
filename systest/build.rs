@@ -40,7 +40,7 @@ fn main() {
     }
 
     if let Ok(vars) = env::var("DEP_OPENSSL_CONF") {
-        for var in vars.split(",") {
+        for var in vars.split(',') {
             cfg.cfg("osslconf", Some(var));
         }
     }
@@ -61,21 +61,23 @@ fn main() {
         .header("openssl/bn.h")
         .header("openssl/aes.h")
         .header("openssl/ocsp.h")
-        .header("openssl/evp.h");
+        .header("openssl/evp.h")
+        .header("openssl/x509_vfy.h");
 
     if openssl_version.is_some() {
         cfg.header("openssl/cms.h");
     }
 
-    cfg.type_name(|s, is_struct| {
+    #[allow(clippy::if_same_then_else)]
+    cfg.type_name(|s, is_struct, _is_union| {
         // Add some `*` on some callback parameters to get function pointer to
         // typecheck in C, especially on MSVC.
         if s == "PasswordCallback" {
-            format!("pem_password_cb*")
+            "pem_password_cb*".to_string()
         } else if s == "bio_info_cb" {
-            format!("bio_info_cb*")
+            "bio_info_cb*".to_string()
         } else if s == "_STACK" {
-            format!("struct stack_st")
+            "struct stack_st".to_string()
         // This logic should really be cleaned up
         } else if is_struct
             && s != "point_conversion_form_t"
@@ -85,15 +87,20 @@ fn main() {
         } else if s.starts_with("stack_st_") {
             format!("struct {}", s)
         } else {
-            format!("{}", s)
+            s.to_string()
         }
     });
     cfg.skip_type(|s| {
         // function pointers are declared without a `*` in openssl so their
         // sizeof is 1 which isn't what we want.
-        s == "PasswordCallback" || s == "pem_password_cb" || s == "bio_info_cb" || s.starts_with("CRYPTO_EX_")
+        s == "PasswordCallback"
+            || s == "pem_password_cb"
+            || s == "bio_info_cb"
+            || s.starts_with("CRYPTO_EX_")
     });
-    cfg.skip_struct(|s| s == "ProbeResult");
+    cfg.skip_struct(|s| {
+        s == "ProbeResult" || s == "X509_OBJECT_data" // inline union
+    });
     cfg.skip_fn(move |s| {
         s == "CRYPTO_memcmp" ||                 // uses volatile
 
@@ -110,7 +117,8 @@ fn main() {
     });
     cfg.skip_field_type(|s, field| {
         (s == "EVP_PKEY" && field == "pkey") ||      // union
-            (s == "GENERAL_NAME" && field == "d") // union
+            (s == "GENERAL_NAME" && field == "d") || // union
+            (s == "X509_OBJECT" && field == "data") // union
     });
     cfg.skip_signededness(|s| {
         s.ends_with("_cb")
@@ -123,9 +131,9 @@ fn main() {
     });
     cfg.field_name(|_s, field| {
         if field == "type_" {
-            format!("type")
+            "type".to_string()
         } else {
-            format!("{}", field)
+            field.to_string()
         }
     });
     cfg.fn_cname(|rust, link_name| link_name.unwrap_or(rust).to_string());

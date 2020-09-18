@@ -30,6 +30,16 @@ extern "C" {
         ctx: *mut BN_CTX,
     ) -> c_int;
 
+    pub fn EC_GROUP_get_cofactor(
+        group: *const EC_GROUP,
+        cofactor: *mut BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+
+    pub fn EC_GROUP_get0_generator(group: *const EC_GROUP) -> *const EC_POINT;
+
+    pub fn EC_GROUP_get_curve_name(group: *const EC_GROUP) -> c_int;
+
     pub fn EC_GROUP_set_asn1_flag(key: *mut EC_GROUP, flag: c_int);
 
     pub fn EC_GROUP_get_curve_GFp(
@@ -51,6 +61,9 @@ extern "C" {
 
     pub fn EC_GROUP_get_degree(group: *const EC_GROUP) -> c_int;
 
+    #[cfg(ossl110)]
+    pub fn EC_GROUP_order_bits(group: *const EC_GROUP) -> c_int;
+
     pub fn EC_GROUP_new_curve_GFp(
         p: *const BIGNUM,
         a: *const BIGNUM,
@@ -71,6 +84,8 @@ extern "C" {
     pub fn EC_POINT_new(group: *const EC_GROUP) -> *mut EC_POINT;
 
     pub fn EC_POINT_free(point: *mut EC_POINT);
+
+    pub fn EC_POINT_dup(p: *const EC_POINT, group: *const EC_GROUP) -> *mut EC_POINT;
 
     pub fn EC_POINT_get_affine_coordinates_GFp(
         group: *const EC_GROUP,

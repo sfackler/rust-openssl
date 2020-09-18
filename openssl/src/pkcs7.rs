@@ -61,6 +61,17 @@ impl Pkcs7 {
         ffi::PEM_read_bio_PKCS7
     }
 
+    from_der! {
+        /// Deserializes a DER-encoded PKCS#7 signature
+        ///
+        /// This corresponds to [`d2i_PKCS7`].
+        ///
+        /// [`d2i_PKCS7`]: https://www.openssl.org/docs/man1.1.0/man3/d2i_PKCS7.html
+        from_der,
+        Pkcs7,
+        ffi::d2i_PKCS7
+    }
+
     /// Parses a message in S/MIME format.
     ///
     /// Returns the loaded signature, along with the cleartext message (if
@@ -110,7 +121,8 @@ impl Pkcs7 {
                 input_bio.as_ptr(),
                 cipher.as_ptr(),
                 flags.bits,
-            )).map(Pkcs7)
+            ))
+            .map(Pkcs7)
         }
     }
 
@@ -142,7 +154,8 @@ impl Pkcs7 {
                 certs.as_ptr(),
                 input_bio.as_ptr(),
                 flags.bits,
-            )).map(Pkcs7)
+            ))
+            .map(Pkcs7)
         }
     }
 }
@@ -162,7 +175,8 @@ impl Pkcs7Ref {
                 self.as_ptr(),
                 input_bio.as_ptr(),
                 flags.bits,
-            )).map(|_| output.get_buf().to_owned())
+            ))
+            .map(|_| output.get_buf().to_owned())
         }
     }
 
@@ -176,6 +190,16 @@ impl Pkcs7Ref {
         /// [`PEM_write_bio_PKCS7`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_write_bio_PKCS7.html
         to_pem,
         ffi::PEM_write_bio_PKCS7
+    }
+
+    to_der! {
+        /// Serializes the data into a DER-encoded PKCS#7 structure.
+        ///
+        /// This corresponds to [`i2d_PKCS7`].
+        ///
+        /// [`i2d_PKCS7`]: https://www.openssl.org/docs/man1.1.0/man3/i2d_PKCS7.html
+        to_der,
+        ffi::i2d_PKCS7
     }
 
     /// Decrypts data using the provided private key.
@@ -206,7 +230,8 @@ impl Pkcs7Ref {
                 cert.as_ptr(),
                 output.as_ptr(),
                 flags.bits,
-            )).map(|_| output.get_buf().to_owned())
+            ))
+            .map(|_| output.get_buf().to_owned())
         }
     }
 
@@ -244,7 +269,8 @@ impl Pkcs7Ref {
                 indata_bio_ptr,
                 out_bio.as_ptr(),
                 flags.bits,
-            )).map(|_| ())?
+            ))
+            .map(|_| ())?
         }
 
         if let Some(data) = out {
@@ -298,7 +324,7 @@ mod tests {
         let cert = include_bytes!("../test/cert.pem");
         let cert = X509::from_pem(cert).unwrap();
         let certs = Stack::new().unwrap();
-        let message: String = String::from("foo");
+        let message = "foo";
         let flags = Pkcs7Flags::STREAM | Pkcs7Flags::DETACHED;
         let pkey = include_bytes!("../test/key.pem");
         let pkey = PKey::private_key_from_pem(pkey).unwrap();
@@ -328,13 +354,11 @@ mod tests {
                 Some(message.as_bytes()),
                 Some(&mut output),
                 flags,
-            ).expect("should succeed");
+            )
+            .expect("should succeed");
 
-        assert_eq!(message.clone().into_bytes(), output);
-        assert_eq!(
-            message.clone().into_bytes(),
-            content.expect("should be non-empty")
-        );
+        assert_eq!(output, message.as_bytes());
+        assert_eq!(content.expect("should be non-empty"), message.as_bytes());
     }
 
     #[test]
@@ -342,7 +366,7 @@ mod tests {
         let cert = include_bytes!("../test/cert.pem");
         let cert = X509::from_pem(cert).unwrap();
         let certs = Stack::new().unwrap();
-        let message: String = String::from("foo");
+        let message = "foo";
         let flags = Pkcs7Flags::STREAM;
         let pkey = include_bytes!("../test/key.pem");
         let pkey = PKey::private_key_from_pem(pkey).unwrap();
@@ -369,7 +393,7 @@ mod tests {
             .verify(&certs, &store, None, Some(&mut output), flags)
             .expect("should succeed");
 
-        assert_eq!(message.clone().into_bytes(), output);
+        assert_eq!(output, message.as_bytes());
         assert!(content.is_none());
     }
 

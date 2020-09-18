@@ -12,16 +12,13 @@
 //! use openssl::bn::BigNum;
 //! use openssl::error::ErrorStack;
 //!
-//! fn bignums() -> Result<(), ErrorStack> {
+//! fn main() -> Result<(), ErrorStack> {
 //!   let a = BigNum::new()?; // a = 0
 //!   let b = BigNum::from_dec_str("1234567890123456789012345")?;
 //!   let c = &a * &b;
 //!   assert_eq!(a, c);
 //!   Ok(())
 //! }
-//! # fn main() {
-//! #    bignums();
-//! # }
 //! ```
 //!
 //! [`BIGNUM`]: https://wiki.openssl.org/index.php/Manual:Bn_internal(3)
@@ -191,6 +188,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_div_word`]
     ///
     /// [`BN_div_word`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_div_word.html
+    #[allow(clippy::useless_conversion)]
     pub fn div_word(&mut self, w: u32) -> Result<u64, ErrorStack> {
         unsafe {
             let r = ffi::BN_div_word(self.as_ptr(), w.into());
@@ -207,6 +205,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_mod_word`]
     ///
     /// [`BN_mod_word`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_mod_word.html
+    #[allow(clippy::useless_conversion)]
     pub fn mod_word(&self, w: u32) -> Result<u64, ErrorStack> {
         unsafe {
             let r = ffi::BN_mod_word(self.as_ptr(), w.into());
@@ -244,6 +243,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_set_bit`]
     ///
     /// [`BN_set_bit`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_set_bit.html
+    #[allow(clippy::useless_conversion)]
     pub fn set_bit(&mut self, n: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_set_bit(self.as_ptr(), n.into())).map(|_| ()) }
     }
@@ -255,6 +255,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_clear_bit`]
     ///
     /// [`BN_clear_bit`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_clear_bit.html
+    #[allow(clippy::useless_conversion)]
     pub fn clear_bit(&mut self, n: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_clear_bit(self.as_ptr(), n.into())).map(|_| ()) }
     }
@@ -264,6 +265,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_is_bit_set`]
     ///
     /// [`BN_is_bit_set`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_is_bit_set.html
+    #[allow(clippy::useless_conversion)]
     pub fn is_bit_set(&self, n: i32) -> bool {
         unsafe { ffi::BN_is_bit_set(self.as_ptr(), n.into()) == 1 }
     }
@@ -275,6 +277,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_mask_bits`]
     ///
     /// [`BN_mask_bits`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_mask_bits.html
+    #[allow(clippy::useless_conversion)]
     pub fn mask_bits(&mut self, n: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_mask_bits(self.as_ptr(), n.into())).map(|_| ()) }
     }
@@ -322,6 +325,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_lshift`]
     ///
     /// [`BN_lshift`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_lshift.html
+    #[allow(clippy::useless_conversion)]
     pub fn lshift(&mut self, a: &BigNumRef, n: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_lshift(self.as_ptr(), a.as_ptr(), n.into())).map(|_| ()) }
     }
@@ -331,6 +335,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_rshift`]
     ///
     /// [`BN_rshift`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_rshift.html
+    #[allow(clippy::useless_conversion)]
     pub fn rshift(&mut self, a: &BigNumRef, n: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_rshift(self.as_ptr(), a.as_ptr(), n.into())).map(|_| ()) }
     }
@@ -416,6 +421,7 @@ impl BigNumRef {
     ///
     /// [`constants`]: index.html#constants
     /// [`BN_rand`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_rand.html
+    #[allow(clippy::useless_conversion)]
     pub fn rand(&mut self, bits: i32, msb: MsbOption, odd: bool) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::BN_rand(
@@ -423,7 +429,8 @@ impl BigNumRef {
                 bits.into(),
                 msb.0,
                 odd as c_int,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -432,6 +439,7 @@ impl BigNumRef {
     /// OpenSSL documentation at [`BN_psuedo_rand`]
     ///
     /// [`BN_psuedo_rand`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_pseudo_rand.html
+    #[allow(clippy::useless_conversion)]
     pub fn pseudo_rand(&mut self, bits: i32, msb: MsbOption, odd: bool) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::BN_pseudo_rand(
@@ -439,7 +447,8 @@ impl BigNumRef {
                 bits.into(),
                 msb.0,
                 odd as c_int,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -485,7 +494,8 @@ impl BigNumRef {
                 add.map(|n| n.as_ptr()).unwrap_or(ptr::null_mut()),
                 rem.map(|n| n.as_ptr()).unwrap_or(ptr::null_mut()),
                 ptr::null_mut(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -508,7 +518,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 b.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -532,7 +543,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 b.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -554,7 +566,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 b.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -577,7 +590,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 b.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -608,7 +622,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 m.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -631,7 +646,8 @@ impl BigNumRef {
                 b.as_ptr(),
                 m.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -654,7 +670,8 @@ impl BigNumRef {
                 b.as_ptr(),
                 m.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -677,7 +694,8 @@ impl BigNumRef {
                 b.as_ptr(),
                 m.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -698,7 +716,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 m.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -719,7 +738,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 p.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -742,7 +762,8 @@ impl BigNumRef {
                 p.as_ptr(),
                 m.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -759,7 +780,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 n.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -780,7 +802,8 @@ impl BigNumRef {
                 a.as_ptr(),
                 b.as_ptr(),
                 ctx.as_ptr(),
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 
@@ -795,7 +818,7 @@ impl BigNumRef {
     /// # Return Value
     ///
     /// Returns `true` if `self` is prime with an error probability of less than `0.25 ^ checks`.
-
+    #[allow(clippy::useless_conversion)]
     pub fn is_prime(&self, checks: i32, ctx: &mut BigNumContextRef) -> Result<bool, ErrorStack> {
         unsafe {
             cvt_n(ffi::BN_is_prime_ex(
@@ -803,7 +826,8 @@ impl BigNumRef {
                 checks.into(),
                 ctx.as_ptr(),
                 ptr::null_mut(),
-            )).map(|r| r != 0)
+            ))
+            .map(|r| r != 0)
         }
     }
 
@@ -820,6 +844,7 @@ impl BigNumRef {
     /// # Return Value
     ///
     /// Returns `true` if `self` is prime with an error probability of less than `0.25 ^ checks`.
+    #[allow(clippy::useless_conversion)]
     pub fn is_prime_fasttest(
         &self,
         checks: i32,
@@ -833,7 +858,8 @@ impl BigNumRef {
                 ctx.as_ptr(),
                 do_trial_division as c_int,
                 ptr::null_mut(),
-            )).map(|r| r != 0)
+            ))
+            .map(|r| r != 0)
         }
     }
 
@@ -1089,7 +1115,8 @@ impl BigNum {
                 n.as_ptr(),
                 n.len() as c_int,
                 ptr::null_mut(),
-            )).map(|p| BigNum::from_ptr(p))
+            ))
+            .map(|p| BigNum::from_ptr(p))
         }
     }
 }
@@ -1353,16 +1380,16 @@ mod tests {
 
     #[test]
     fn test_to_from_slice() {
-        let v0 = BigNum::from_u32(10203004).unwrap();
+        let v0 = BigNum::from_u32(10_203_004).unwrap();
         let vec = v0.to_vec();
         let v1 = BigNum::from_slice(&vec).unwrap();
 
-        assert!(v0 == v1);
+        assert_eq!(v0, v1);
     }
 
     #[test]
     fn test_negation() {
-        let a = BigNum::from_u32(909829283).unwrap();
+        let a = BigNum::from_u32(909_829_283).unwrap();
 
         assert!(!a.is_negative());
         assert!((-a).is_negative());
@@ -1370,15 +1397,14 @@ mod tests {
 
     #[test]
     fn test_shift() {
-        let a = BigNum::from_u32(909829283).unwrap();
-        use std::ops::{Shl, Shr};
+        let a = BigNum::from_u32(909_829_283).unwrap();
 
-        assert!(a == a.shl(1).shr(1));
+        assert_eq!(a, &(&a << 1) >> 1);
     }
 
     #[test]
     fn test_rand_range() {
-        let range = BigNum::from_u32(909829283).unwrap();
+        let range = BigNum::from_u32(909_829_283).unwrap();
         let mut result = BigNum::from_dec_str(&range.to_dec_str().unwrap()).unwrap();
         range.rand_range(&mut result).unwrap();
         assert!(result >= BigNum::from_u32(0).unwrap() && result < range);
@@ -1386,7 +1412,7 @@ mod tests {
 
     #[test]
     fn test_pseudo_rand_range() {
-        let range = BigNum::from_u32(909829283).unwrap();
+        let range = BigNum::from_u32(909_829_283).unwrap();
         let mut result = BigNum::from_dec_str(&range.to_dec_str().unwrap()).unwrap();
         range.pseudo_rand_range(&mut result).unwrap();
         assert!(result >= BigNum::from_u32(0).unwrap() && result < range);
@@ -1394,7 +1420,7 @@ mod tests {
 
     #[test]
     fn test_prime_numbers() {
-        let a = BigNum::from_u32(19029017).unwrap();
+        let a = BigNum::from_u32(19_029_017).unwrap();
         let mut p = BigNum::new().unwrap();
         p.generate_prime(128, true, None, Some(&a)).unwrap();
 

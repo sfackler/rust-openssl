@@ -65,5 +65,23 @@ macro_rules! stack {
                 }
             }
         }
+    };
+}
+
+#[cfg(const_fn)]
+macro_rules! const_fn {
+    ($(pub const fn $name:ident($($arg:ident: $t:ty),*) -> $ret:ty $b:block)*) => {
+        $(
+            pub const fn $name($($arg: $t),*) -> $ret $b
+        )*
+    }
+}
+
+#[cfg(not(const_fn))]
+macro_rules! const_fn {
+    ($(pub const fn $name:ident($($arg:ident: $t:ty),*) -> $ret:ty $b:block)*) => {
+        $(
+            pub fn $name($($arg: $t),*) -> $ret $b
+        )*
     }
 }

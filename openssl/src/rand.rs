@@ -31,7 +31,7 @@ use error::ErrorStack;
 /// rand_bytes(&mut buf).unwrap();
 /// ```
 ///
-/// [`RAND_bytes`](https://www.openssl.org/docs/man1.1.0/crypto/RAND_bytes.html)
+/// [`RAND_bytes`]: https://www.openssl.org/docs/man1.1.0/crypto/RAND_bytes.html
 pub fn rand_bytes(buf: &mut [u8]) -> Result<(), ErrorStack> {
     unsafe {
         ffi::init();

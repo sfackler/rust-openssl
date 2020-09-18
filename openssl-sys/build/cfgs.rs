@@ -1,3 +1,4 @@
+#[allow(clippy::inconsistent_digit_grouping)]
 pub fn get(openssl_version: Option<u64>, libressl_version: Option<u64>) -> Vec<&'static str> {
     let mut cfgs = vec![];
 
@@ -13,6 +14,9 @@ pub fn get(openssl_version: Option<u64>, libressl_version: Option<u64>) -> Vec<&
         if libressl_version >= 0x2_07_00_00_0 {
             cfgs.push("libressl270");
         }
+        if libressl_version >= 0x2_07_01_00_0 {
+            cfgs.push("libressl271");
+        }
         if libressl_version >= 0x2_07_03_00_0 {
             cfgs.push("libressl273");
         }
@@ -21,6 +25,9 @@ pub fn get(openssl_version: Option<u64>, libressl_version: Option<u64>) -> Vec<&
         }
         if libressl_version >= 0x2_08_01_00_0 {
             cfgs.push("libressl281");
+        }
+        if libressl_version >= 0x2_09_01_00_0 {
+            cfgs.push("libressl291");
         }
     } else {
         let openssl_version = openssl_version.unwrap();
@@ -46,8 +53,17 @@ pub fn get(openssl_version: Option<u64>, libressl_version: Option<u64>) -> Vec<&
         if openssl_version >= 0x1_01_00_07_0 {
             cfgs.push("ossl110g");
         }
+        if openssl_version >= 0x1_01_00_08_0 {
+            cfgs.push("ossl110h");
+        }
         if openssl_version >= 0x1_01_01_00_0 {
             cfgs.push("ossl111");
+        }
+        if openssl_version >= 0x1_01_01_02_0 {
+            cfgs.push("ossl111b");
+        }
+        if openssl_version >= 0x1_01_01_03_0 {
+            cfgs.push("ossl111c");
         }
     }
 

@@ -14,7 +14,7 @@ pub struct CallbackState<F> {
     cb: Option<F>,
     /// If the callback panics, we place the panic object here, to be re-thrown once OpenSSL
     /// returns.
-    panic: Option<Box<Any + Send + 'static>>,
+    panic: Option<Box<dyn Any + Send + 'static>>,
 }
 
 impl<F> CallbackState<F> {

@@ -1,5 +1,13 @@
-#![allow(non_camel_case_types, non_upper_case_globals, non_snake_case)]
-#![allow(dead_code, overflowing_literals, unused_imports)]
+#![allow(
+    clippy::missing_safety_doc,
+    clippy::unreadable_literal,
+    dead_code,
+    non_camel_case_types,
+    non_snake_case,
+    non_upper_case_globals,
+    overflowing_literals,
+    unused_imports
+)]
 #![doc(html_root_url = "https://docs.rs/openssl-sys/0.9")]
 
 extern crate libc;
@@ -25,8 +33,8 @@ pub use object::*;
 pub use ocsp::*;
 pub use ossl_typ::*;
 pub use pem::*;
-pub use pkcs7::*;
 pub use pkcs12::*;
+pub use pkcs7::*;
 pub use rand::*;
 pub use rsa::*;
 pub use safestack::*;
@@ -62,8 +70,8 @@ mod object;
 mod ocsp;
 mod ossl_typ;
 mod pem;
-mod pkcs7;
 mod pkcs12;
+mod pkcs7;
 mod rand;
 mod rsa;
 mod safestack;
@@ -78,20 +86,28 @@ mod x509_vfy;
 mod x509v3;
 
 // FIXME remove
-pub type PasswordCallback =
-    unsafe extern "C" fn(buf: *mut c_char, size: c_int, rwflag: c_int, user_data: *mut c_void)
-        -> c_int;
+pub type PasswordCallback = unsafe extern "C" fn(
+    buf: *mut c_char,
+    size: c_int,
+    rwflag: c_int,
+    user_data: *mut c_void,
+) -> c_int;
 
 #[cfg(ossl110)]
 pub fn init() {
     use std::ptr;
-    use std::sync::{Once, ONCE_INIT};
+    use std::sync::Once;
 
     // explicitly initialize to work around https://github.com/openssl/openssl/issues/3505
-    static INIT: Once = ONCE_INIT;
+    static INIT: Once = Once::new();
+
+    #[cfg(not(ossl111b))]
+    let init_options = OPENSSL_INIT_LOAD_SSL_STRINGS;
+    #[cfg(ossl111b)]
+    let init_options = OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_NO_ATEXIT;
 
     INIT.call_once(|| unsafe {
-        OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, ptr::null_mut());
+        OPENSSL_init_ssl(init_options, ptr::null_mut());
     })
 }
 
@@ -100,7 +116,7 @@ pub fn init() {
     use std::io::{self, Write};
     use std::mem;
     use std::process;
-    use std::sync::{Mutex, MutexGuard, Once, ONCE_INIT};
+    use std::sync::{Mutex, MutexGuard, Once};
 
     static mut MUTEXES: *mut Vec<Mutex<()>> = 0 as *mut Vec<Mutex<()>>;
     static mut GUARDS: *mut Vec<Option<MutexGuard<'static, ()>>> =
@@ -144,7 +160,7 @@ pub fn init() {
         }
     }
 
-    static INIT: Once = ONCE_INIT;
+    static INIT: Once = Once::new();
 
     INIT.call_once(|| unsafe {
         SSL_library_init();
