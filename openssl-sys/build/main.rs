@@ -29,11 +29,6 @@ fn env_inner(name: &str) -> Option<OsString> {
     let var = env::var_os(name);
     println!("cargo:rerun-if-env-changed={}", name);
 
-    match var {
-        Some(ref v) => println!("{} = {}", name, v.to_string_lossy()),
-        None => println!("{} unset", name),
-    }
-
     var
 }
 
