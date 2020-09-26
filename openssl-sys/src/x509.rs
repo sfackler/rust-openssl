@@ -375,6 +375,13 @@ extern "C" {
     #[cfg(ossl110)]
     pub fn X509_REVOKED_get0_revocationDate(req: *const X509_REVOKED) -> *const ASN1_TIME;
 
+    pub fn X509_CRL_sign(x: *mut X509_CRL, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
+    pub fn X509_CRL_digest(
+        x: *const X509_CRL,
+        digest: *const EVP_MD,
+        md: *mut c_uchar,
+        len: *mut c_uint,
+    ) -> c_int;
     pub fn X509_CRL_verify(crl: *mut X509_CRL, pkey: *mut EVP_PKEY) -> c_int;
     pub fn X509_CRL_get0_by_cert(
         x: *mut X509_CRL,
@@ -398,6 +405,27 @@ extern "C" {
 
     #[cfg(ossl110)]
     pub fn X509_get0_extensions(req: *const ::X509) -> *const stack_st_X509_EXTENSION;
+
+    pub fn X509_CRL_set_version(crl: *mut X509_CRL, version: c_long) -> c_int;
+    pub fn X509_CRL_set_issuer_name(crl: *mut X509_CRL, name: *mut X509_NAME) -> c_int;
+    pub fn X509_CRL_sort(crl: *mut X509_CRL) -> c_int;
+
+    #[cfg(any(ossl110, libressl270))]
+    pub fn X509_CRL_up_ref(crl: *mut X509_CRL) -> c_int;
+}
+cfg_if! {
+    if #[cfg(any(ossl110, libressl270))] {
+        extern "C" {
+            pub fn X509_CRL_set1_lastUpdate(crl: *mut X509_CRL, tm: *const ASN1_TIME) -> c_int;
+            pub fn X509_CRL_set1_nextUpdate(crl: *mut X509_CRL, tm: *const ASN1_TIME) -> c_int;
+        }
+    } else {
+        // libressl270 kept them, ossl110 "#define"s them to the variants above
+        extern "C" {
+            pub fn X509_CRL_set_lastUpdate(crl: *mut X509_CRL, tm: *const ASN1_TIME) -> c_int;
+            pub fn X509_CRL_set_nextUpdate(crl: *mut X509_CRL, tm: *const ASN1_TIME) -> c_int;
+        }
+    }
 }
 
 cfg_if! {
