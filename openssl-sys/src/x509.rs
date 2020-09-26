@@ -370,10 +370,12 @@ extern "C" {
     #[cfg(any(ossl110, libressl273))]
     pub fn X509_up_ref(x: *mut X509) -> c_int;
 
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl270))]
     pub fn X509_REVOKED_get0_serialNumber(req: *const X509_REVOKED) -> *const ASN1_INTEGER;
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl270))]
     pub fn X509_REVOKED_get0_revocationDate(req: *const X509_REVOKED) -> *const ASN1_TIME;
+    #[cfg(any(ossl110, libressl270))]
+    pub fn X509_REVOKED_get0_extensions(r: *const X509_REVOKED) -> *const stack_st_X509_EXTENSION;
 
     pub fn X509_CRL_sign(x: *mut X509_CRL, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
     pub fn X509_CRL_digest(
@@ -412,6 +414,7 @@ extern "C" {
 
     #[cfg(any(ossl110, libressl270))]
     pub fn X509_CRL_up_ref(crl: *mut X509_CRL) -> c_int;
+    pub fn X509_CRL_add0_revoked(crl: *mut X509_CRL, rev: *mut X509_REVOKED) -> c_int;
 }
 cfg_if! {
     if #[cfg(any(ossl110, libressl270))] {
