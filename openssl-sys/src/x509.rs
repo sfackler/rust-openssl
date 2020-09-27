@@ -535,6 +535,27 @@ extern "C" {
         crit: c_int,
         flags: c_ulong,
     ) -> c_int;
+    // X509_EXTENSION stack
+    // - these getters always used *const STACK
+    pub fn X509v3_get_ext_count(x: *const stack_st_X509_EXTENSION) -> c_int;
+    pub fn X509v3_get_ext_by_NID(
+        x: *const stack_st_X509_EXTENSION,
+        nid: c_int,
+        lastpos: c_int,
+    ) -> c_int;
+    pub fn X509v3_get_ext_by_critical(
+        x: *const stack_st_X509_EXTENSION,
+        crit: c_int,
+        lastpos: c_int,
+    ) -> c_int;
+    pub fn X509v3_get_ext(x: *const stack_st_X509_EXTENSION, loc: c_int) -> *mut X509_EXTENSION;
+    pub fn X509v3_delete_ext(x: *mut stack_st_X509_EXTENSION, loc: c_int) -> *mut X509_EXTENSION;
+    pub fn X509v3_add_ext(
+        x: *mut *mut stack_st_X509_EXTENSION,
+        ex: *mut X509_EXTENSION,
+        loc: c_int,
+    ) -> *mut stack_st_X509_EXTENSION;
+    // - X509V3_add1_i2d in x509v3.rs
     // X509_EXTENSION itself
     pub fn X509_EXTENSION_create_by_NID(
         ex: *mut *mut X509_EXTENSION,
@@ -586,6 +607,8 @@ cfg_if! {
                 crit: *mut c_int,
                 idx: *mut c_int,
             ) -> *mut c_void;
+            // X509_EXTENSION stack
+            pub fn X509v3_get_ext_by_OBJ(x: *const stack_st_X509_EXTENSION, obj: *const ASN1_OBJECT, lastpos: c_int) -> c_int;
             // X509_EXTENSION itself
             pub fn X509_EXTENSION_create_by_OBJ(ex: *mut *mut X509_EXTENSION, obj: *const ASN1_OBJECT, crit: c_int, data: *mut ASN1_OCTET_STRING) -> *mut X509_EXTENSION;
             pub fn X509_EXTENSION_set_object(ex: *mut X509_EXTENSION, obj: *const ASN1_OBJECT) -> c_int;
@@ -629,6 +652,8 @@ cfg_if! {
                 crit: *mut c_int,
                 idx: *mut c_int,
             ) -> *mut c_void;
+            // X509_EXTENSION stack
+            pub fn X509v3_get_ext_by_OBJ(x: *const stack_st_X509_EXTENSION, obj: *mut ASN1_OBJECT, lastpos: c_int) -> c_int;
             // X509_EXTENSION itself
             pub fn X509_EXTENSION_create_by_OBJ(ex: *mut *mut X509_EXTENSION, obj: *mut ASN1_OBJECT, crit: c_int, data: *mut ASN1_OCTET_STRING) -> *mut X509_EXTENSION;
             pub fn X509_EXTENSION_set_object(ex: *mut X509_EXTENSION, obj: *mut ASN1_OBJECT) -> c_int;
