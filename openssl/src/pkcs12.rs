@@ -10,6 +10,7 @@ use error::ErrorStack;
 use nid::Nid;
 use pkey::{HasPrivate, PKey, PKeyRef, Private};
 use stack::Stack;
+use util::ForeignTypeExt;
 use x509::{X509Ref, X509};
 use {cvt, cvt_p};
 
@@ -52,11 +53,7 @@ impl Pkcs12Ref {
             let pkey = PKey::from_ptr(pkey);
             let cert = X509::from_ptr(cert);
 
-            let chain = if chain.is_null() {
-                None
-            } else {
-                Some(Stack::from_ptr(chain))
-            };
+            let chain = Stack::from_ptr_opt(chain);
 
             Ok(ParsedPkcs12 { pkey, cert, chain })
         }

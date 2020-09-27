@@ -28,6 +28,7 @@ use ssl::{
     SniError, Ssl, SslAlert, SslContext, SslContextRef, SslRef, SslSession, SslSessionRef,
     SESSION_CTX_INDEX,
 };
+use util::ForeignTypeRefExt;
 #[cfg(ossl111)]
 use x509::X509Ref;
 use x509::{X509StoreContext, X509StoreContextRef};
@@ -424,7 +425,7 @@ pub unsafe extern "C" fn raw_keylog<F>(ssl: *const ffi::SSL, line: *const c_char
 where
     F: Fn(&SslRef, &str) + 'static + Sync + Send,
 {
-    let ssl = SslRef::from_ptr(ssl as *mut _);
+    let ssl = SslRef::from_const_ptr(ssl);
     let callback = ssl
         .ssl_context()
         .ex_data(SslContext::cached_ex_index::<F>())

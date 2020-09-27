@@ -25,6 +25,7 @@ use bn::{BigNumContextRef, BigNumRef};
 use error::ErrorStack;
 use nid::Nid;
 use pkey::{HasParams, HasPrivate, HasPublic, Params, Private, Public};
+use util::ForeignTypeRefExt;
 use {cvt, cvt_n, cvt_p, init};
 
 /// Compressed or Uncompressed conversion
@@ -230,7 +231,7 @@ impl EcGroupRef {
     pub fn generator(&self) -> &EcPointRef {
         unsafe {
             let ptr = ffi::EC_GROUP_get0_generator(self.as_ptr());
-            EcPointRef::from_ptr(ptr as *mut _)
+            EcPointRef::from_const_ptr(ptr)
         }
     }
 
@@ -622,7 +623,7 @@ where
     pub fn private_key(&self) -> &BigNumRef {
         unsafe {
             let ptr = ffi::EC_KEY_get0_private_key(self.as_ptr());
-            BigNumRef::from_ptr(ptr as *mut _)
+            BigNumRef::from_const_ptr(ptr)
         }
     }
 }
@@ -639,7 +640,7 @@ where
     pub fn public_key(&self) -> &EcPointRef {
         unsafe {
             let ptr = ffi::EC_KEY_get0_public_key(self.as_ptr());
-            EcPointRef::from_ptr(ptr as *mut _)
+            EcPointRef::from_const_ptr(ptr)
         }
     }
 
@@ -678,7 +679,7 @@ where
     pub fn group(&self) -> &EcGroupRef {
         unsafe {
             let ptr = ffi::EC_KEY_get0_group(self.as_ptr());
-            EcGroupRef::from_ptr(ptr as *mut _)
+            EcGroupRef::from_const_ptr(ptr)
         }
     }
 

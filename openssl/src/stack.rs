@@ -10,6 +10,7 @@ use std::mem;
 use std::ops::{Deref, DerefMut, Index, IndexMut, Range};
 
 use error::ErrorStack;
+use util::ForeignTypeExt;
 use {cvt, cvt_p};
 
 cfg_if! {
@@ -249,11 +250,7 @@ impl<T: Stackable> StackRef<T> {
     pub fn pop(&mut self) -> Option<T> {
         unsafe {
             let ptr = OPENSSL_sk_pop(self.as_stack());
-            if ptr.is_null() {
-                None
-            } else {
-                Some(T::from_ptr(ptr as *mut _))
-            }
+            T::from_ptr_opt(ptr as *mut _)
         }
     }
 

@@ -93,6 +93,7 @@ use ssl::bio::BioMethod;
 use ssl::callbacks::*;
 use ssl::error::InnerError;
 use stack::{Stack, StackRef};
+use util::{ForeignTypeExt, ForeignTypeRefExt};
 use x509::store::{X509Store, X509StoreBuilderRef, X509StoreRef};
 #[cfg(any(ossl102, libressl261))]
 use x509::verify::X509VerifyParamRef;
@@ -1865,11 +1866,7 @@ impl SslContextRef {
     pub fn certificate(&self) -> Option<&X509Ref> {
         unsafe {
             let ptr = ffi::SSL_CTX_get0_certificate(self.as_ptr());
-            if ptr.is_null() {
-                None
-            } else {
-                Some(X509Ref::from_ptr(ptr))
-            }
+            X509Ref::from_const_ptr_opt(ptr)
         }
     }
 
@@ -1884,11 +1881,7 @@ impl SslContextRef {
     pub fn private_key(&self) -> Option<&PKeyRef<Private>> {
         unsafe {
             let ptr = ffi::SSL_CTX_get0_privatekey(self.as_ptr());
-            if ptr.is_null() {
-                None
-            } else {
-                Some(PKeyRef::from_ptr(ptr))
-            }
+            PKeyRef::from_const_ptr_opt(ptr)
         }
     }
 
@@ -1908,8 +1901,7 @@ impl SslContextRef {
         unsafe {
             let mut chain = ptr::null_mut();
             ffi::SSL_CTX_get_extra_chain_certs(self.as_ptr(), &mut chain);
-            assert!(!chain.is_null());
-            StackRef::from_ptr(chain)
+            StackRef::from_const_ptr_opt(chain).expect("extra chain certs must not be null")
         }
     }
 
@@ -2578,11 +2570,7 @@ impl SslRef {
         unsafe {
             let ptr = ffi::SSL_get_current_cipher(self.as_ptr());
 
-            if ptr.is_null() {
-                None
-            } else {
-                Some(SslCipherRef::from_ptr(ptr as *mut _))
-            }
+            SslCipherRef::from_const_ptr_opt(ptr)
         }
     }
 
@@ -2637,11 +2625,7 @@ impl SslRef {
     pub fn peer_certificate(&self) -> Option<X509> {
         unsafe {
             let ptr = ffi::SSL_get_peer_certificate(self.as_ptr());
-            if ptr.is_null() {
-                None
-            } else {
-                Some(X509::from_ptr(ptr))
-            }
+            X509::from_ptr_opt(ptr)
         }
     }
 
@@ -2656,11 +2640,7 @@ impl SslRef {
     pub fn peer_cert_chain(&self) -> Option<&StackRef<X509>> {
         unsafe {
             let ptr = ffi::SSL_get_peer_cert_chain(self.as_ptr());
-            if ptr.is_null() {
-                None
-            } else {
-                Some(StackRef::from_ptr(ptr))
-            }
+            StackRef::from_const_ptr_opt(ptr)
         }
     }
 
@@ -2680,11 +2660,7 @@ impl SslRef {
     pub fn verified_chain(&self) -> Option<&StackRef<X509>> {
         unsafe {
             let ptr = ffi::SSL_get0_verified_chain(self.as_ptr());
-            if ptr.is_null() {
-                None
-            } else {
-                Some(StackRef::from_ptr(ptr))
-            }
+            StackRef::from_const_ptr_opt(ptr)
         }
     }
 
@@ -2696,11 +2672,7 @@ impl SslRef {
     pub fn certificate(&self) -> Option<&X509Ref> {
         unsafe {
             let ptr = ffi::SSL_get_certificate(self.as_ptr());
-            if ptr.is_null() {
-                None
-            } else {
-                Some(X509Ref::from_ptr(ptr))
-            }
+            X509Ref::from_const_ptr_opt(ptr)
         }
     }
 
@@ -2712,11 +2684,7 @@ impl SslRef {
     pub fn private_key(&self) -> Option<&PKeyRef<Private>> {
         unsafe {
             let ptr = ffi::SSL_get_privatekey(self.as_ptr());
-            if ptr.is_null() {
-                None
-            } else {
-                Some(PKeyRef::from_ptr(ptr))
-            }
+            PKeyRef::from_const_ptr_opt(ptr)
         }
     }
 
@@ -2812,11 +2780,7 @@ impl SslRef {
         unsafe {
             let chain = ffi::SSL_get_srtp_profiles(self.as_ptr());
 
-            if chain.is_null() {
-                None
-            } else {
-                Some(StackRef::from_ptr(chain))
-            }
+            StackRef::from_const_ptr_opt(chain)
         }
     }
 
@@ -2831,11 +2795,7 @@ impl SslRef {
         unsafe {
             let profile = ffi::SSL_get_selected_srtp_profile(self.as_ptr());
 
-            if profile.is_null() {
-                None
-            } else {
-                Some(SrtpProtectionProfileRef::from_ptr(profile as *mut _))
-            }
+            SrtpProtectionProfileRef::from_const_ptr_opt(profile)
         }
     }
 
@@ -2943,11 +2903,7 @@ impl SslRef {
     pub fn session(&self) -> Option<&SslSessionRef> {
         unsafe {
             let p = ffi::SSL_get_session(self.as_ptr());
-            if p.is_null() {
-                None
-            } else {
-                Some(SslSessionRef::from_ptr(p))
-            }
+            SslSessionRef::from_const_ptr_opt(p)
         }
     }
 

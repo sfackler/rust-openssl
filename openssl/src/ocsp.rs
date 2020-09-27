@@ -8,6 +8,7 @@ use asn1::Asn1GeneralizedTimeRef;
 use error::ErrorStack;
 use hash::MessageDigest;
 use stack::StackRef;
+use util::ForeignTypeRefExt;
 use x509::store::X509StoreRef;
 use x509::{X509Ref, X509};
 use {cvt, cvt_p};
@@ -188,11 +189,7 @@ impl OcspBasicResponseRef {
                 &mut next_update,
             );
             if r == 1 {
-                let revocation_time = if revocation_time.is_null() {
-                    None
-                } else {
-                    Some(Asn1GeneralizedTimeRef::from_ptr(revocation_time))
-                };
+                let revocation_time = Asn1GeneralizedTimeRef::from_const_ptr_opt(revocation_time);
 
                 Some(OcspStatus {
                     status: OcspCertStatus(status),
