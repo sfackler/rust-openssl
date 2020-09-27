@@ -401,13 +401,13 @@ extern "C" {
         serial: *mut ASN1_INTEGER,
     ) -> c_int;
 
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl281))]
     pub fn X509_CRL_get_REVOKED(crl: *mut X509_CRL) -> *mut stack_st_X509_REVOKED;
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl281))]
     pub fn X509_CRL_get0_nextUpdate(x: *const X509_CRL) -> *const ASN1_TIME;
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl281))]
     pub fn X509_CRL_get0_lastUpdate(x: *const X509_CRL) -> *const ASN1_TIME;
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl281))]
     pub fn X509_CRL_get_issuer(x: *const X509_CRL) -> *mut X509_NAME;
 
     #[cfg(ossl110)]
