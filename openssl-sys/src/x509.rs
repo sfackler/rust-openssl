@@ -90,7 +90,7 @@ cfg_if! {
         pub struct X509_REVOKED {
             pub serialNumber: *mut ASN1_INTEGER,
             pub revocationDate: *mut ASN1_TIME,
-            extensions: *mut stack_st_X509_EXTENSION,
+            pub extensions: *mut stack_st_X509_EXTENSION,
             issuer: *mut stack_st_GENERAL_NAME,
             reason: c_int,
             sequence: c_int,
@@ -242,6 +242,8 @@ extern "C" {
 
     pub fn X509_REVOKED_new() -> *mut X509_REVOKED;
     pub fn X509_REVOKED_free(x: *mut X509_REVOKED);
+    #[cfg(any(ossl110, libressl270))]
+    pub fn X509_REVOKED_dup(rev: *mut X509_REVOKED) -> *mut X509_REVOKED;
     pub fn d2i_X509_REVOKED(
         a: *mut *mut X509_REVOKED,
         pp: *mut *const c_uchar,
@@ -376,6 +378,9 @@ extern "C" {
     pub fn X509_REVOKED_get0_revocationDate(req: *const X509_REVOKED) -> *const ASN1_TIME;
     #[cfg(any(ossl110, libressl270))]
     pub fn X509_REVOKED_get0_extensions(r: *const X509_REVOKED) -> *const stack_st_X509_EXTENSION;
+
+    pub fn X509_REVOKED_set_serialNumber(r: *mut X509_REVOKED, serial: *mut ASN1_INTEGER) -> c_int;
+    pub fn X509_REVOKED_set_revocationDate(r: *mut X509_REVOKED, tm: *mut ASN1_TIME) -> c_int;
 
     pub fn X509_CRL_sign(x: *mut X509_CRL, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
     pub fn X509_CRL_digest(
