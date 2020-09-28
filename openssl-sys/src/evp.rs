@@ -38,18 +38,17 @@ extern "C" {
     pub fn EVP_CIPHER_iv_length(cipher: *const EVP_CIPHER) -> c_int;
 }
 
-cfg_if! {
-    if #[cfg(ossl110)] {
-        extern "C" {
-            pub fn EVP_MD_CTX_new() -> *mut EVP_MD_CTX;
-            pub fn EVP_MD_CTX_free(ctx: *mut EVP_MD_CTX);
-        }
-    } else {
-        extern "C" {
-            pub fn EVP_MD_CTX_create() -> *mut EVP_MD_CTX;
-            pub fn EVP_MD_CTX_destroy(ctx: *mut EVP_MD_CTX);
-        }
-    }
+declare_std_functions! {
+    type CType = EVP_MD_CTX;
+    #[cfg(any(ossl110, libressl270))]
+    fn new = EVP_MD_CTX_new;
+    #[cfg(any(ossl110, libressl270))]
+    fn free = EVP_MD_CTX_free;
+    // libressl kept those around as symbols; openssl #defines them
+    #[cfg(not(ossl110))]
+    fn new = EVP_MD_CTX_create;
+    #[cfg(not(ossl110))]
+    fn free = EVP_MD_CTX_destroy;
 }
 
 extern "C" {
@@ -328,6 +327,14 @@ cfg_if! {
         }
     }
 }
+declare_std_functions! {
+    type CType = EVP_PKEY;
+    fn new = EVP_PKEY_new;
+    fn free = EVP_PKEY_free;
+    #[cfg(any(ossl110, libressl270))]
+    fn up_ref = EVP_PKEY_up_ref;
+    fn d2i = d2i_AutoPrivateKey;
+}
 extern "C" {
     pub fn EVP_PKEY_assign(pkey: *mut EVP_PKEY, typ: c_int, key: *mut c_void) -> c_int;
 
@@ -336,17 +343,6 @@ extern "C" {
     pub fn EVP_PKEY_get1_DSA(k: *mut EVP_PKEY) -> *mut DSA;
     pub fn EVP_PKEY_get1_DH(k: *mut EVP_PKEY) -> *mut DH;
     pub fn EVP_PKEY_get1_EC_KEY(k: *mut EVP_PKEY) -> *mut EC_KEY;
-
-    pub fn EVP_PKEY_new() -> *mut EVP_PKEY;
-    pub fn EVP_PKEY_free(k: *mut EVP_PKEY);
-    #[cfg(any(ossl110, libressl270))]
-    pub fn EVP_PKEY_up_ref(pkey: *mut EVP_PKEY) -> c_int;
-
-    pub fn d2i_AutoPrivateKey(
-        a: *mut *mut EVP_PKEY,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut EVP_PKEY;
 
     pub fn EVP_PKEY_cmp(a: *const EVP_PKEY, b: *const EVP_PKEY) -> c_int;
 

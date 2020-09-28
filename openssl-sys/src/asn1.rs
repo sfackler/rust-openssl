@@ -2,6 +2,8 @@ use libc::*;
 
 use *;
 
+pub enum ASN1_ITEM {}
+
 pub const V_ASN1_UTCTIME: c_int = 23;
 pub const V_ASN1_GENERALIZEDTIME: c_int = 24;
 
@@ -18,11 +20,38 @@ pub struct ASN1_ENCODING {
     pub modified: c_int,
 }
 
-extern "C" {
-    pub fn ASN1_OBJECT_free(x: *mut ASN1_OBJECT);
+declare_std_functions! {
+    type CType = ASN1_OBJECT;
+    fn free = ASN1_OBJECT_free;
 }
 
 stack!(stack_st_ASN1_OBJECT);
+
+declare_std_functions! {
+    type CType = ASN1_INTEGER;
+    fn free = ASN1_INTEGER_free;
+}
+
+declare_std_functions! {
+    type CType = ASN1_BIT_STRING;
+    fn free = ASN1_BIT_STRING_free;
+}
+
+declare_std_functions! {
+    type CType = ASN1_TIME;
+    fn new = ASN1_TIME_new;
+    fn free = ASN1_TIME_free;
+}
+
+declare_std_functions! {
+    type CType = ASN1_GENERALIZEDTIME;
+    fn free = ASN1_GENERALIZEDTIME_free;
+}
+
+declare_std_functions! {
+    type CType = ASN1_STRING;
+    fn free = ASN1_STRING_free;
+}
 
 extern "C" {
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
@@ -31,14 +60,9 @@ extern "C" {
     #[cfg(any(all(ossl101, not(ossl110)), libressl))]
     pub fn ASN1_STRING_data(x: *mut ASN1_STRING) -> *mut c_uchar;
 
-    pub fn ASN1_BIT_STRING_free(x: *mut ASN1_BIT_STRING);
-
-    pub fn ASN1_STRING_free(x: *mut ASN1_STRING);
     pub fn ASN1_STRING_length(x: *const ASN1_STRING) -> c_int;
 
-    pub fn ASN1_GENERALIZEDTIME_free(tm: *mut ASN1_GENERALIZEDTIME);
     pub fn ASN1_GENERALIZEDTIME_print(b: *mut BIO, tm: *const ASN1_GENERALIZEDTIME) -> c_int;
-    pub fn ASN1_TIME_new() -> *mut ASN1_TIME;
     #[cfg(ossl102)]
     pub fn ASN1_TIME_diff(
         pday: *mut c_int,
@@ -46,11 +70,9 @@ extern "C" {
         from: *const ASN1_TIME,
         to: *const ASN1_TIME,
     ) -> c_int;
-    pub fn ASN1_TIME_free(tm: *mut ASN1_TIME);
     pub fn ASN1_TIME_print(b: *mut BIO, tm: *const ASN1_TIME) -> c_int;
     pub fn ASN1_TIME_set(from: *mut ASN1_TIME, to: time_t) -> *mut ASN1_TIME;
 
-    pub fn ASN1_INTEGER_free(x: *mut ASN1_INTEGER);
     pub fn ASN1_INTEGER_get(dest: *const ASN1_INTEGER) -> c_long;
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn BN_to_ASN1_INTEGER(bn: *const BIGNUM, ai: *mut ASN1_INTEGER) -> *mut ASN1_INTEGER;

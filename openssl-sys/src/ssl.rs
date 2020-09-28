@@ -899,12 +899,15 @@ pub unsafe fn SSL_get_max_proto_version(s: *mut SSL) -> c_int {
     SSL_ctrl(s, SSL_CTRL_GET_MAX_PROTO_VERSION, 0, ptr::null_mut()) as c_int
 }
 
+declare_std_functions! {
+    type CType = SSL_CTX;
+    fn free = SSL_CTX_free;
+    #[cfg(any(ossl110, libressl273))]
+    fn up_ref = SSL_CTX_up_ref;
+}
 extern "C" {
     pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;
     pub fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
-    pub fn SSL_CTX_free(ctx: *mut SSL_CTX);
-    #[cfg(any(ossl110, libressl273))]
-    pub fn SSL_CTX_up_ref(x: *mut SSL_CTX) -> c_int;
     pub fn SSL_CTX_get_cert_store(ctx: *const SSL_CTX) -> *mut X509_STORE;
     pub fn SSL_CTX_set_cert_store(ctx: *mut SSL_CTX, store: *mut X509_STORE);
 
@@ -922,6 +925,16 @@ cfg_if! {
         }
     }
 }
+
+declare_std_functions! {
+    type CType = SSL_SESSION;
+    fn free = SSL_SESSION_free;
+    #[cfg(any(ossl110, libressl273))]
+    fn up_ref = SSL_SESSION_up_ref;
+    fn d2i = d2i_SSL_SESSION;
+    fn i2d = i2d_SSL_SESSION;
+}
+
 extern "C" {
     #[cfg(ossl111)]
     pub fn SSL_CIPHER_get_handshake_digest(cipher: *const ::SSL_CIPHER) -> *const ::EVP_MD;
@@ -980,18 +993,9 @@ extern "C" {
     pub fn SSL_SESSION_get_max_early_data(ctx: *const SSL_SESSION) -> u32;
 
     pub fn SSL_SESSION_get_id(s: *const SSL_SESSION, len: *mut c_uint) -> *const c_uchar;
-    #[cfg(any(ossl110, libressl273))]
-    pub fn SSL_SESSION_up_ref(ses: *mut SSL_SESSION) -> c_int;
-    pub fn SSL_SESSION_free(s: *mut SSL_SESSION);
-    pub fn i2d_SSL_SESSION(s: *mut SSL_SESSION, pp: *mut *mut c_uchar) -> c_int;
     pub fn SSL_set_session(ssl: *mut SSL, session: *mut SSL_SESSION) -> c_int;
     pub fn SSL_CTX_add_session(ctx: *mut SSL_CTX, session: *mut SSL_SESSION) -> c_int;
     pub fn SSL_CTX_remove_session(ctx: *mut SSL_CTX, session: *mut SSL_SESSION) -> c_int;
-    pub fn d2i_SSL_SESSION(
-        a: *mut *mut SSL_SESSION,
-        pp: *mut *const c_uchar,
-        len: c_long,
-    ) -> *mut SSL_SESSION;
 
     pub fn SSL_get_peer_certificate(ssl: *const SSL) -> *mut X509;
 

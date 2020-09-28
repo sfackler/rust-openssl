@@ -63,8 +63,18 @@ pub const RSA_PKCS1_OAEP_PADDING: c_int = 4;
 pub const RSA_X931_PADDING: c_int = 5;
 pub const RSA_PKCS1_PSS_PADDING: c_int = 6;
 
+declare_std_functions! {
+    type CType = RSA;
+    fn new = RSA_new;
+    fn free = RSA_free;
+    fn up_ref = RSA_up_ref;
+    fn d2i = d2i_RSAPublicKey;
+    fn i2d_constapi = i2d_RSAPublicKey;
+    fn d2i = d2i_RSAPrivateKey;
+    fn i2d_constapi = i2d_RSAPrivateKey;
+}
+
 extern "C" {
-    pub fn RSA_new() -> *mut RSA;
     pub fn RSA_size(k: *const RSA) -> c_int;
 
     #[cfg(any(ossl110, libressl273))]
@@ -144,13 +154,6 @@ extern "C" {
         pad: c_int,
     ) -> c_int;
     pub fn RSA_check_key(r: *const ::RSA) -> c_int;
-    pub fn RSA_free(rsa: *mut RSA);
-    pub fn RSA_up_ref(rsa: *mut RSA) -> c_int;
-
-    pub fn i2d_RSAPublicKey(k: *const RSA, buf: *mut *mut u8) -> c_int;
-    pub fn d2i_RSAPublicKey(k: *mut *mut RSA, buf: *mut *const u8, len: c_long) -> *mut RSA;
-    pub fn i2d_RSAPrivateKey(k: *const RSA, buf: *mut *mut u8) -> c_int;
-    pub fn d2i_RSAPrivateKey(k: *mut *mut RSA, buf: *mut *const u8, len: c_long) -> *mut RSA;
 
     pub fn RSA_sign(
         t: c_int,

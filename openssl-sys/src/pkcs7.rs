@@ -28,11 +28,14 @@ pub const PKCS7_REUSE_DIGEST: c_int = 0x8000;
 #[cfg(not(any(ossl101, ossl102, libressl)))]
 pub const PKCS7_NO_DUAL_CONTENT: c_int = 0x10000;
 
+declare_std_functions! {
+    type CType = PKCS7;
+    fn free = PKCS7_free;
+    fn d2i = d2i_PKCS7;
+    fn i2d = i2d_PKCS7;
+}
+
 extern "C" {
-    pub fn d2i_PKCS7(a: *mut *mut PKCS7, pp: *mut *const c_uchar, length: c_long) -> *mut PKCS7;
-
-    pub fn i2d_PKCS7(a: *mut PKCS7, buf: *mut *mut u8) -> c_int;
-
     pub fn PKCS7_encrypt(
         certs: *mut stack_st_X509,
         b: *mut BIO,
@@ -64,8 +67,6 @@ extern "C" {
         data: *mut BIO,
         flags: c_int,
     ) -> c_int;
-
-    pub fn PKCS7_free(pkcs7: *mut PKCS7);
 
     pub fn SMIME_write_PKCS7(
         out: *mut BIO,

@@ -7,14 +7,24 @@ pub type BN_ULONG = c_ulonglong;
 #[cfg(target_pointer_width = "32")]
 pub type BN_ULONG = c_uint;
 
+declare_std_functions! {
+    type CType = BN_CTX;
+    fn new = BN_CTX_new;
+    fn free = BN_CTX_free;
+}
+
+declare_std_functions! {
+    type CType = BIGNUM;
+    fn new = BN_new;
+    fn free = BN_free;
+    fn dup = BN_dup;
+}
+
 extern "C" {
-    pub fn BN_CTX_new() -> *mut BN_CTX;
-    pub fn BN_CTX_free(ctx: *mut BN_CTX);
     pub fn BN_rand(r: *mut BIGNUM, bits: c_int, top: c_int, bottom: c_int) -> c_int;
     pub fn BN_pseudo_rand(r: *mut BIGNUM, bits: c_int, top: c_int, bottom: c_int) -> c_int;
     pub fn BN_rand_range(r: *mut BIGNUM, range: *const BIGNUM) -> c_int;
     pub fn BN_pseudo_rand_range(r: *mut BIGNUM, range: *const BIGNUM) -> c_int;
-    pub fn BN_new() -> *mut BIGNUM;
     pub fn BN_num_bits(bn: *const BIGNUM) -> c_int;
     pub fn BN_clear_free(bn: *mut BIGNUM);
     pub fn BN_bin2bn(s: *const u8, size: c_int, ret: *mut BIGNUM) -> *mut BIGNUM;
@@ -76,7 +86,6 @@ extern "C" {
     pub fn BN_set_word(bn: *mut BIGNUM, n: BN_ULONG) -> c_int;
 
     pub fn BN_cmp(a: *const BIGNUM, b: *const BIGNUM) -> c_int;
-    pub fn BN_free(bn: *mut BIGNUM);
     pub fn BN_is_bit_set(a: *const BIGNUM, n: c_int) -> c_int;
     pub fn BN_lshift(r: *mut BIGNUM, a: *const BIGNUM, n: c_int) -> c_int;
     pub fn BN_lshift1(r: *mut BIGNUM, a: *const BIGNUM) -> c_int;
@@ -105,7 +114,6 @@ extern "C" {
         ctx: *mut BN_CTX,
     ) -> *mut BIGNUM;
     pub fn BN_clear(bn: *mut BIGNUM);
-    pub fn BN_dup(n: *const BIGNUM) -> *mut BIGNUM;
     pub fn BN_ucmp(a: *const BIGNUM, b: *const BIGNUM) -> c_int;
     pub fn BN_set_bit(a: *mut BIGNUM, n: c_int) -> c_int;
     pub fn BN_clear_bit(a: *mut BIGNUM, n: c_int) -> c_int;

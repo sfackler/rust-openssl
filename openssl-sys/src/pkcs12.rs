@@ -4,11 +4,15 @@ use *;
 
 pub enum PKCS12 {}
 
-extern "C" {
-    pub fn PKCS12_free(p12: *mut PKCS12);
-    pub fn i2d_PKCS12(a: *mut PKCS12, buf: *mut *mut u8) -> c_int;
-    pub fn d2i_PKCS12(a: *mut *mut PKCS12, pp: *mut *const u8, length: c_long) -> *mut PKCS12;
+declare_std_functions! {
+    type CType = PKCS12;
+    fn free = PKCS12_free;
+    fn d2i = d2i_PKCS12;
+    fn i2d = i2d_PKCS12;
+    fn i2d_bio = i2d_PKCS12_bio;
+}
 
+extern "C" {
     pub fn PKCS12_parse(
         p12: *mut PKCS12,
         pass: *const c_char,
@@ -49,8 +53,4 @@ cfg_if! {
             ) -> *mut PKCS12;
         }
     }
-}
-
-extern "C" {
-    pub fn i2d_PKCS12_bio(b: *mut BIO, a: *mut PKCS12) -> c_int;
 }

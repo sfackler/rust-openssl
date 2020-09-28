@@ -146,16 +146,18 @@ extern "C" {
         m: *const BIGNUM,
         ctx: *mut BN_CTX,
     ) -> c_int;
+}
 
-    pub fn EC_KEY_new() -> *mut EC_KEY;
+declare_std_functions! {
+    type CType = EC_KEY;
+    fn new = EC_KEY_new;
+    fn free = EC_KEY_free;
+    fn dup = EC_KEY_dup;
+    fn up_ref = EC_KEY_up_ref;
+}
 
+extern "C" {
     pub fn EC_KEY_new_by_curve_name(nid: c_int) -> *mut EC_KEY;
-
-    pub fn EC_KEY_free(key: *mut EC_KEY);
-
-    pub fn EC_KEY_dup(key: *const EC_KEY) -> *mut EC_KEY;
-
-    pub fn EC_KEY_up_ref(key: *mut EC_KEY) -> c_int;
 
     pub fn EC_KEY_get0_group(key: *const EC_KEY) -> *const EC_GROUP;
 
@@ -192,11 +194,15 @@ cfg_if! {
     }
 }
 
+declare_std_functions! {
+    type CType = ECDSA_SIG;
+    fn new = ECDSA_SIG_new;
+    fn free = ECDSA_SIG_free;
+    fn d2i = d2i_ECDSA_SIG;
+    fn i2d_constapi = i2d_ECDSA_SIG;
+}
+
 extern "C" {
-    pub fn ECDSA_SIG_new() -> *mut ECDSA_SIG;
-
-    pub fn ECDSA_SIG_free(sig: *mut ECDSA_SIG);
-
     #[cfg(any(ossl110, libressl273))]
     pub fn ECDSA_SIG_get0(sig: *const ECDSA_SIG, pr: *mut *const BIGNUM, ps: *mut *const BIGNUM);
 
@@ -215,12 +221,4 @@ extern "C" {
         sig: *const ECDSA_SIG,
         eckey: *mut EC_KEY,
     ) -> c_int;
-
-    pub fn d2i_ECDSA_SIG(
-        sig: *mut *mut ECDSA_SIG,
-        inp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut ECDSA_SIG;
-
-    pub fn i2d_ECDSA_SIG(sig: *const ECDSA_SIG, out: *mut *mut c_uchar) -> c_int;
 }

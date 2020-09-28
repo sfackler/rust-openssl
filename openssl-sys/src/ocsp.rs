@@ -64,6 +64,38 @@ cfg_if! {
     }
 }
 
+declare_std_functions! {
+    type CType = OCSP_BASICRESP;
+    fn new = OCSP_BASICRESP_new;
+    fn free = OCSP_BASICRESP_free;
+}
+
+declare_std_functions! {
+    type CType = OCSP_RESPONSE;
+    fn new = OCSP_RESPONSE_new;
+    fn free = OCSP_RESPONSE_free;
+    fn i2d = i2d_OCSP_RESPONSE;
+    fn d2i = d2i_OCSP_RESPONSE;
+}
+
+declare_std_functions! {
+    type CType = OCSP_ONEREQ;
+    fn free = OCSP_ONEREQ_free;
+}
+
+declare_std_functions! {
+    type CType = OCSP_CERTID;
+    fn free = OCSP_CERTID_free;
+}
+
+declare_std_functions! {
+    type CType = OCSP_REQUEST;
+    fn new = OCSP_REQUEST_new;
+    fn free = OCSP_REQUEST_free;
+    fn i2d = i2d_OCSP_REQUEST;
+    fn d2i = d2i_OCSP_REQUEST;
+}
+
 extern "C" {
     pub fn OCSP_request_add0_id(r: *mut OCSP_REQUEST, id: *mut OCSP_CERTID) -> *mut OCSP_ONEREQ;
 
@@ -87,27 +119,6 @@ extern "C" {
     pub fn OCSP_response_get1_basic(resp: *mut OCSP_RESPONSE) -> *mut OCSP_BASICRESP;
 
     pub fn OCSP_response_create(status: c_int, bs: *mut OCSP_BASICRESP) -> *mut OCSP_RESPONSE;
-
-    pub fn OCSP_BASICRESP_new() -> *mut OCSP_BASICRESP;
-    pub fn OCSP_BASICRESP_free(r: *mut OCSP_BASICRESP);
-    pub fn OCSP_RESPONSE_new() -> *mut OCSP_RESPONSE;
-    pub fn OCSP_RESPONSE_free(r: *mut OCSP_RESPONSE);
-    pub fn i2d_OCSP_RESPONSE(a: *mut OCSP_RESPONSE, pp: *mut *mut c_uchar) -> c_int;
-    pub fn d2i_OCSP_RESPONSE(
-        a: *mut *mut OCSP_RESPONSE,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut OCSP_RESPONSE;
-    pub fn OCSP_ONEREQ_free(r: *mut OCSP_ONEREQ);
-    pub fn OCSP_CERTID_free(id: *mut OCSP_CERTID);
-    pub fn OCSP_REQUEST_new() -> *mut OCSP_REQUEST;
-    pub fn OCSP_REQUEST_free(r: *mut OCSP_REQUEST);
-    pub fn i2d_OCSP_REQUEST(a: *mut OCSP_REQUEST, pp: *mut *mut c_uchar) -> c_int;
-    pub fn d2i_OCSP_REQUEST(
-        a: *mut *mut OCSP_REQUEST,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut OCSP_REQUEST;
 
     pub fn OCSP_basic_verify(
         bs: *mut OCSP_BASICRESP,

@@ -170,6 +170,64 @@ pub enum X509_LOOKUP {}
 
 stack!(stack_st_X509_LOOKUP);
 
+declare_std_functions! {
+    type CType = X509;
+    fn new = X509_new;
+    fn free = X509_free;
+    #[cfg(any(ossl110, libressl273))]
+    fn up_ref = X509_up_ref;
+    fn d2i = d2i_X509;
+    fn i2d = i2d_X509;
+    fn i2d_bio = i2d_X509_bio;
+    fn ext_delete = X509_delete_ext;
+    fn ext_add = X509_add_ext;
+    fn ext_add1_i2d = X509_add1_ext_i2d;
+    fn ext_get_count = X509_get_ext_count;
+    fn ext_get_by_NID = X509_get_ext_by_NID;
+    fn ext_get_by_OBJ = X509_get_ext_by_OBJ;
+    fn ext_get_by_critical = X509_get_ext_by_critical;
+    fn ext_get = X509_get_ext;
+    fn ext_get_d2i = X509_get_ext_d2i;
+}
+
+declare_std_functions! {
+    type CType = X509_REQ;
+    fn new = X509_REQ_new;
+    fn free = X509_REQ_free;
+    fn d2i = d2i_X509_REQ;
+    fn i2d = i2d_X509_REQ;
+    fn i2d_bio = i2d_X509_REQ_bio;
+}
+
+declare_std_functions! {
+    type CType = EVP_PKEY;
+    fn d2i = d2i_PUBKEY;
+    fn i2d = i2d_PUBKEY;
+    fn i2d = i2d_PrivateKey;
+    fn i2d_bio = i2d_PUBKEY_bio;
+    fn i2d_bio = i2d_PrivateKey_bio;
+}
+
+declare_std_functions! {
+    type CType = RSA;
+    fn d2i = d2i_RSA_PUBKEY;
+    fn i2d = i2d_RSA_PUBKEY;
+}
+
+declare_std_functions! {
+    type CType = DSA;
+    fn d2i = d2i_DSA_PUBKEY;
+    fn i2d = i2d_DSA_PUBKEY;
+}
+
+declare_std_functions! {
+    type CType = EC_KEY;
+    fn d2i = d2i_EC_PUBKEY;
+    fn i2d = i2d_EC_PUBKEY;
+    fn d2i = d2i_ECPrivateKey;
+    fn i2d = i2d_ECPrivateKey;
+}
+
 extern "C" {
     pub fn X509_verify_cert_error_string(n: c_long) -> *const c_char;
 
@@ -183,32 +241,6 @@ extern "C" {
     ) -> c_int;
 
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
-
-    pub fn i2d_X509_bio(b: *mut BIO, x: *mut X509) -> c_int;
-    pub fn i2d_X509_REQ_bio(b: *mut BIO, x: *mut X509_REQ) -> c_int;
-    pub fn i2d_PrivateKey_bio(b: *mut BIO, x: *mut EVP_PKEY) -> c_int;
-    pub fn i2d_PUBKEY_bio(b: *mut BIO, x: *mut EVP_PKEY) -> c_int;
-
-    pub fn i2d_PUBKEY(k: *mut EVP_PKEY, buf: *mut *mut u8) -> c_int;
-    pub fn d2i_PUBKEY(k: *mut *mut EVP_PKEY, buf: *mut *const u8, len: c_long) -> *mut EVP_PKEY;
-    pub fn d2i_RSA_PUBKEY(k: *mut *mut RSA, buf: *mut *const u8, len: c_long) -> *mut RSA;
-    pub fn i2d_RSA_PUBKEY(k: *mut RSA, buf: *mut *mut u8) -> c_int;
-    pub fn d2i_DSA_PUBKEY(k: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long) -> *mut DSA;
-    pub fn i2d_DSA_PUBKEY(a: *mut DSA, pp: *mut *mut c_uchar) -> c_int;
-    pub fn d2i_EC_PUBKEY(
-        a: *mut *mut EC_KEY,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut EC_KEY;
-    pub fn i2d_EC_PUBKEY(a: *mut EC_KEY, pp: *mut *mut c_uchar) -> c_int;
-    pub fn i2d_PrivateKey(k: *mut EVP_PKEY, buf: *mut *mut u8) -> c_int;
-
-    pub fn d2i_ECPrivateKey(
-        k: *mut *mut EC_KEY,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut EC_KEY;
-    pub fn i2d_ECPrivateKey(ec_key: *mut EC_KEY, pp: *mut *mut c_uchar) -> c_int;
 }
 
 cfg_if! {
@@ -233,40 +265,107 @@ cfg_if! {
     }
 }
 
+declare_std_functions! {
+    type CType = X509_REVOKED;
+    fn new = X509_REVOKED_new;
+    fn free = X509_REVOKED_free;
+    #[cfg(any(ossl110, libressl270))]
+    fn dup_oldapi = X509_REVOKED_dup;
+    fn d2i = d2i_X509_REVOKED;
+    fn i2d = i2d_X509_REVOKED;
+    fn ext_delete = X509_REVOKED_delete_ext;
+    fn ext_add = X509_REVOKED_add_ext;
+    fn ext_add1_i2d = X509_REVOKED_add1_ext_i2d;
+    fn ext_get_count = X509_REVOKED_get_ext_count;
+    fn ext_get_by_NID = X509_REVOKED_get_ext_by_NID;
+    fn ext_get_by_OBJ = X509_REVOKED_get_ext_by_OBJ;
+    fn ext_get_by_critical = X509_REVOKED_get_ext_by_critical;
+    fn ext_get = X509_REVOKED_get_ext;
+    fn ext_get_d2i = X509_REVOKED_get_ext_d2i;
+}
+
+declare_std_functions! {
+    type CType = X509_CRL;
+    fn new = X509_CRL_new;
+    fn free = X509_CRL_free;
+    #[cfg(any(ossl110, libressl270))]
+    fn up_ref = X509_CRL_up_ref;
+    fn d2i = d2i_X509_CRL;
+    fn i2d = i2d_X509_CRL;
+    fn ext_delete = X509_CRL_delete_ext;
+    fn ext_add = X509_CRL_add_ext;
+    fn ext_add1_i2d = X509_CRL_add1_ext_i2d;
+    fn ext_get_count = X509_CRL_get_ext_count;
+    fn ext_get_by_NID = X509_CRL_get_ext_by_NID;
+    fn ext_get_by_OBJ = X509_CRL_get_ext_by_OBJ;
+    fn ext_get_by_critical = X509_CRL_get_ext_by_critical;
+    fn ext_get = X509_CRL_get_ext;
+    fn ext_get_d2i = X509_CRL_get_ext_d2i;
+}
+
+declare_std_functions! {
+    type CType = stack_st_X509_EXTENSION;
+    // add defined for `*mut stack_st_X509_EXTENSION`
+    fn ext_delete = X509v3_delete_ext;
+    // fn ext_get_count_constapi = X509v3_get_ext_count;
+    // fn ext_get_by_NID_constapi = X509v3_get_ext_by_NID;
+    #[cfg(any(ossl110, libressl280))]
+    fn ext_get_by_OBJ = X509v3_get_ext_by_OBJ;
+    // fn ext_get_by_critical_constapi = X509v3_get_ext_by_critical;
+    // fn ext_get = X509v3_get_ext;
+    // fn ext_get_d2i -> x509v3.rs
+}
+extern "C" {
+    // always used *const STACK but *mut ASN1_OBJECT in old versions
+    #[cfg(not(any(ossl110, libressl280)))]
+    pub fn X509v3_get_ext_by_OBJ(
+        x: *const stack_st_X509_EXTENSION,
+        obj: *mut ASN1_OBJECT,
+        lastpos: c_int,
+    ) -> c_int;
+    // these getters always used *const STACK
+    pub fn X509v3_get_ext_count(x: *const stack_st_X509_EXTENSION) -> c_int;
+    pub fn X509v3_get_ext_by_NID(
+        x: *const stack_st_X509_EXTENSION,
+        nid: c_int,
+        lastpos: c_int,
+    ) -> c_int;
+    pub fn X509v3_get_ext_by_critical(
+        x: *const stack_st_X509_EXTENSION,
+        crit: c_int,
+        lastpos: c_int,
+    ) -> c_int;
+    pub fn X509v3_get_ext(x: *const stack_st_X509_EXTENSION, loc: c_int) -> *mut X509_EXTENSION;
+    // return value non-standard scheme (others return c_int)
+    pub fn X509v3_add_ext(
+        x: *mut *mut stack_st_X509_EXTENSION,
+        ex: *mut X509_EXTENSION,
+        loc: c_int,
+    ) -> *mut stack_st_X509_EXTENSION;
+}
+
 extern "C" {
     pub fn X509_gmtime_adj(time: *mut ASN1_TIME, adj: c_long) -> *mut ASN1_TIME;
 
     pub fn X509_to_X509_REQ(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> *mut X509_REQ;
 
     pub fn X509_ALGOR_free(x: *mut X509_ALGOR);
+}
 
-    pub fn X509_REVOKED_new() -> *mut X509_REVOKED;
-    pub fn X509_REVOKED_free(x: *mut X509_REVOKED);
-    #[cfg(any(ossl110, libressl270))]
-    pub fn X509_REVOKED_dup(rev: *mut X509_REVOKED) -> *mut X509_REVOKED;
-    pub fn d2i_X509_REVOKED(
-        a: *mut *mut X509_REVOKED,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut X509_REVOKED;
-    pub fn i2d_X509_REVOKED(x: *mut X509_REVOKED, buf: *mut *mut u8) -> c_int;
-    pub fn X509_CRL_new() -> *mut X509_CRL;
-    pub fn X509_CRL_free(x: *mut X509_CRL);
-    pub fn d2i_X509_CRL(
-        a: *mut *mut X509_CRL,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut X509_CRL;
-    pub fn i2d_X509_CRL(x: *mut X509_CRL, buf: *mut *mut u8) -> c_int;
+declare_std_functions! {
+    type CType = X509_NAME;
+    fn new = X509_NAME_new;
+    fn free = X509_NAME_free;
+}
 
-    pub fn X509_REQ_new() -> *mut X509_REQ;
-    pub fn X509_REQ_free(x: *mut X509_REQ);
-    pub fn d2i_X509_REQ(
-        a: *mut *mut X509_REQ,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut X509_REQ;
-    pub fn i2d_X509_REQ(x: *mut X509_REQ, buf: *mut *mut u8) -> c_int;
+declare_std_functions! {
+    type CType = X509_NAME_ENTRY;
+    fn free = X509_NAME_ENTRY_free;
+}
+
+declare_std_functions! {
+    type CType = X509_EXTENSION;
+    fn free = X509_EXTENSION_free;
 }
 
 cfg_if! {
@@ -291,18 +390,6 @@ cfg_if! {
 extern "C" {
     #[cfg(ossl102)]
     pub fn X509_get_signature_nid(x: *const X509) -> c_int;
-
-    pub fn X509_EXTENSION_free(ext: *mut X509_EXTENSION);
-
-    pub fn X509_NAME_ENTRY_free(x: *mut X509_NAME_ENTRY);
-
-    pub fn X509_NAME_new() -> *mut X509_NAME;
-    pub fn X509_NAME_free(x: *mut X509_NAME);
-
-    pub fn X509_new() -> *mut X509;
-    pub fn X509_free(x: *mut X509);
-    pub fn i2d_X509(x: *mut X509, buf: *mut *mut u8) -> c_int;
-    pub fn d2i_X509(a: *mut *mut X509, pp: *mut *const c_uchar, length: c_long) -> *mut X509;
 
     pub fn X509_get_pubkey(x: *mut X509) -> *mut EVP_PKEY;
 
@@ -369,8 +456,6 @@ extern "C" {
     pub fn X509_getm_notBefore(x: *const X509) -> *mut ASN1_TIME;
     #[cfg(any(ossl110, libressl273))]
     pub fn X509_getm_notAfter(x: *const X509) -> *mut ASN1_TIME;
-    #[cfg(any(ossl110, libressl273))]
-    pub fn X509_up_ref(x: *mut X509) -> c_int;
 
     #[cfg(any(ossl110, libressl270))]
     pub fn X509_REVOKED_get0_serialNumber(req: *const X509_REVOKED) -> *const ASN1_INTEGER;
@@ -417,8 +502,6 @@ extern "C" {
     pub fn X509_CRL_set_issuer_name(crl: *mut X509_CRL, name: *mut X509_NAME) -> c_int;
     pub fn X509_CRL_sort(crl: *mut X509_CRL) -> c_int;
 
-    #[cfg(any(ossl110, libressl270))]
-    pub fn X509_CRL_up_ref(crl: *mut X509_CRL) -> c_int;
     pub fn X509_CRL_add0_revoked(crl: *mut X509_CRL, rev: *mut X509_REVOKED) -> c_int;
 }
 cfg_if! {
@@ -504,64 +587,7 @@ extern "C" {
     ) -> c_int;
 }
 
-// "raw" X509_EXTENSION related functions
 extern "C" {
-    // in X509
-    pub fn X509_delete_ext(x: *mut X509, loc: c_int) -> *mut X509_EXTENSION;
-    pub fn X509_add_ext(x: *mut X509, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
-    pub fn X509_add1_ext_i2d(
-        x: *mut X509,
-        nid: c_int,
-        value: *mut c_void,
-        crit: c_int,
-        flags: c_ulong,
-    ) -> c_int;
-    // in X509_CRL
-    pub fn X509_CRL_delete_ext(x: *mut X509_CRL, loc: c_int) -> *mut X509_EXTENSION;
-    pub fn X509_CRL_add_ext(x: *mut X509_CRL, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
-    pub fn X509_CRL_add1_ext_i2d(
-        x: *mut X509_CRL,
-        nid: c_int,
-        value: *mut c_void,
-        crit: c_int,
-        flags: c_ulong,
-    ) -> c_int;
-    // in X509_REVOKED
-    pub fn X509_REVOKED_delete_ext(x: *mut X509_REVOKED, loc: c_int) -> *mut X509_EXTENSION;
-    pub fn X509_REVOKED_add_ext(
-        x: *mut X509_REVOKED,
-        ext: *mut X509_EXTENSION,
-        loc: c_int,
-    ) -> c_int;
-    pub fn X509_REVOKED_add1_ext_i2d(
-        x: *mut X509_REVOKED,
-        nid: c_int,
-        value: *mut c_void,
-        crit: c_int,
-        flags: c_ulong,
-    ) -> c_int;
-    // X509_EXTENSION stack
-    // - these getters always used *const STACK
-    pub fn X509v3_get_ext_count(x: *const stack_st_X509_EXTENSION) -> c_int;
-    pub fn X509v3_get_ext_by_NID(
-        x: *const stack_st_X509_EXTENSION,
-        nid: c_int,
-        lastpos: c_int,
-    ) -> c_int;
-    pub fn X509v3_get_ext_by_critical(
-        x: *const stack_st_X509_EXTENSION,
-        crit: c_int,
-        lastpos: c_int,
-    ) -> c_int;
-    pub fn X509v3_get_ext(x: *const stack_st_X509_EXTENSION, loc: c_int) -> *mut X509_EXTENSION;
-    pub fn X509v3_delete_ext(x: *mut stack_st_X509_EXTENSION, loc: c_int) -> *mut X509_EXTENSION;
-    pub fn X509v3_add_ext(
-        x: *mut *mut stack_st_X509_EXTENSION,
-        ex: *mut X509_EXTENSION,
-        loc: c_int,
-    ) -> *mut stack_st_X509_EXTENSION;
-    // - X509V3_add1_i2d in x509v3.rs
-    // X509_EXTENSION itself
     pub fn X509_EXTENSION_create_by_NID(
         ex: *mut *mut X509_EXTENSION,
         nid: c_int,
@@ -576,90 +602,12 @@ extern "C" {
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {
         extern "C" {
-            // in X509
-            pub fn X509_get_ext_count(x: *const X509) -> c_int;
-            pub fn X509_get_ext_by_NID(x: *const X509, nid: c_int, lastpos: c_int) -> c_int;
-            pub fn X509_get_ext_by_OBJ(x: *const X509, obj: *const ASN1_OBJECT, lastpos: c_int) -> c_int;
-            pub fn X509_get_ext_by_critical(x: *const X509, crit: c_int, lastpos: c_int) -> c_int;
-            pub fn X509_get_ext(x: *const X509, loc: c_int) -> *mut X509_EXTENSION;
-            pub fn X509_get_ext_d2i(
-                x: *const ::X509,
-                nid: c_int,
-                crit: *mut c_int,
-                idx: *mut c_int,
-            ) -> *mut c_void;
-            // in X509_CRL
-            pub fn X509_CRL_get_ext_count(x: *const X509_CRL) -> c_int;
-            pub fn X509_CRL_get_ext_by_NID(x: *const X509_CRL, nid: c_int, lastpos: c_int) -> c_int;
-            pub fn X509_CRL_get_ext_by_OBJ(x: *const X509_CRL, obj: *const ASN1_OBJECT, lastpos: c_int) -> c_int;
-            pub fn X509_CRL_get_ext_by_critical(x: *const X509_CRL, crit: c_int, lastpos: c_int) -> c_int;
-            pub fn X509_CRL_get_ext(x: *const X509_CRL, loc: c_int) -> *mut X509_EXTENSION;
-            pub fn X509_CRL_get_ext_d2i(
-                x: *const ::X509_CRL,
-                nid: c_int,
-                crit: *mut c_int,
-                idx: *mut c_int,
-            ) -> *mut c_void;
-            // in X509_REVOKED
-            pub fn X509_REVOKED_get_ext_count(x: *const X509_REVOKED) -> c_int;
-            pub fn X509_REVOKED_get_ext_by_NID(x: *const X509_REVOKED, nid: c_int, lastpos: c_int) -> c_int;
-            pub fn X509_REVOKED_get_ext_by_OBJ(x: *const X509_REVOKED, obj: *const ASN1_OBJECT, lastpos: c_int) -> c_int;
-            pub fn X509_REVOKED_get_ext_by_critical(x: *const X509_REVOKED, crit: c_int, lastpos: c_int) -> c_int;
-            pub fn X509_REVOKED_get_ext(x: *const X509_REVOKED, loc: c_int) -> *mut X509_EXTENSION;
-            pub fn X509_REVOKED_get_ext_d2i(
-                x: *const ::X509_REVOKED,
-                nid: c_int,
-                crit: *mut c_int,
-                idx: *mut c_int,
-            ) -> *mut c_void;
-            // X509_EXTENSION stack
-            pub fn X509v3_get_ext_by_OBJ(x: *const stack_st_X509_EXTENSION, obj: *const ASN1_OBJECT, lastpos: c_int) -> c_int;
-            // X509_EXTENSION itself
             pub fn X509_EXTENSION_create_by_OBJ(ex: *mut *mut X509_EXTENSION, obj: *const ASN1_OBJECT, crit: c_int, data: *mut ASN1_OCTET_STRING) -> *mut X509_EXTENSION;
             pub fn X509_EXTENSION_set_object(ex: *mut X509_EXTENSION, obj: *const ASN1_OBJECT) -> c_int;
             pub fn X509_EXTENSION_get_critical(ex: *const X509_EXTENSION) -> c_int;
         }
     } else {
         extern "C" {
-            // in X509
-            pub fn X509_get_ext_count(x: *mut X509) -> c_int;
-            pub fn X509_get_ext_by_NID(x: *mut X509, nid: c_int, lastpos: c_int) -> c_int;
-            pub fn X509_get_ext_by_OBJ(x: *mut X509, obj: *mut ASN1_OBJECT, lastpos: c_int) -> c_int;
-            pub fn X509_get_ext_by_critical(x: *mut X509, crit: c_int, lastpos: c_int) -> c_int;
-            pub fn X509_get_ext(x: *mut X509, loc: c_int) -> *mut X509_EXTENSION;
-            pub fn X509_get_ext_d2i(
-                x: *mut ::X509,
-                nid: c_int,
-                crit: *mut c_int,
-                idx: *mut c_int,
-            ) -> *mut c_void;
-            // in X509_CRL
-            pub fn X509_CRL_get_ext_count(x: *mut X509_CRL) -> c_int;
-            pub fn X509_CRL_get_ext_by_NID(x: *mut X509_CRL, nid: c_int, lastpos: c_int) -> c_int;
-            pub fn X509_CRL_get_ext_by_OBJ(x: *mut X509_CRL, obj: *mut ASN1_OBJECT, lastpos: c_int) -> c_int;
-            pub fn X509_CRL_get_ext_by_critical(x: *mut X509_CRL, crit: c_int, lastpos: c_int) -> c_int;
-            pub fn X509_CRL_get_ext(x: *mut X509_CRL, loc: c_int) -> *mut X509_EXTENSION;
-            pub fn X509_CRL_get_ext_d2i(
-                x: *mut ::X509_CRL,
-                nid: c_int,
-                crit: *mut c_int,
-                idx: *mut c_int,
-            ) -> *mut c_void;
-            // in X509_REVOKED
-            pub fn X509_REVOKED_get_ext_count(x: *mut X509_REVOKED) -> c_int;
-            pub fn X509_REVOKED_get_ext_by_NID(x: *mut X509_REVOKED, nid: c_int, lastpos: c_int) -> c_int;
-            pub fn X509_REVOKED_get_ext_by_OBJ(x: *mut X509_REVOKED, obj: *mut ASN1_OBJECT, lastpos: c_int) -> c_int;
-            pub fn X509_REVOKED_get_ext_by_critical(x: *mut X509_REVOKED, crit: c_int, lastpos: c_int) -> c_int;
-            pub fn X509_REVOKED_get_ext(x: *mut X509_REVOKED, loc: c_int) -> *mut X509_EXTENSION;
-            pub fn X509_REVOKED_get_ext_d2i(
-                x: *mut ::X509_REVOKED,
-                nid: c_int,
-                crit: *mut c_int,
-                idx: *mut c_int,
-            ) -> *mut c_void;
-            // X509_EXTENSION stack
-            pub fn X509v3_get_ext_by_OBJ(x: *const stack_st_X509_EXTENSION, obj: *mut ASN1_OBJECT, lastpos: c_int) -> c_int;
-            // X509_EXTENSION itself
             pub fn X509_EXTENSION_create_by_OBJ(ex: *mut *mut X509_EXTENSION, obj: *mut ASN1_OBJECT, crit: c_int, data: *mut ASN1_OCTET_STRING) -> *mut X509_EXTENSION;
             pub fn X509_EXTENSION_set_object(ex: *mut X509_EXTENSION, obj: *mut ASN1_OBJECT) -> c_int;
             pub fn X509_EXTENSION_get_critical(ex: *mut X509_EXTENSION) -> c_int;
@@ -677,14 +625,10 @@ extern "C" {
     pub fn X509_OBJECT_get0_X509(x: *const X509_OBJECT) -> *mut X509;
 }
 
-cfg_if! {
-    if #[cfg(ossl110)] {
-        extern "C" {
-            pub fn X509_OBJECT_free(a: *mut X509_OBJECT);
-        }
-    } else {
-        extern "C" {
-            pub fn X509_OBJECT_free_contents(a: *mut X509_OBJECT);
-        }
-    }
+declare_std_functions! {
+    type CType = X509_OBJECT;
+    #[cfg(ossl110)]
+    fn free = X509_OBJECT_free;
+    #[cfg(not(ossl110))]
+    fn free = X509_OBJECT_free_contents;
 }

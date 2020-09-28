@@ -2,10 +2,18 @@ use libc::*;
 
 use *;
 
+declare_std_functions! {
+    type CType = DSA;
+    fn new = DSA_new;
+    fn free = DSA_free;
+    fn up_ref = DSA_up_ref;
+    fn d2i = d2i_DSAPublicKey;
+    fn i2d_constapi = i2d_DSAPublicKey;
+    fn d2i = d2i_DSAPrivateKey;
+    fn i2d_constapi = i2d_DSAPrivateKey;
+}
+
 extern "C" {
-    pub fn DSA_new() -> *mut DSA;
-    pub fn DSA_free(dsa: *mut DSA);
-    pub fn DSA_up_ref(dsa: *mut DSA) -> c_int;
     pub fn DSA_size(dsa: *const DSA) -> c_int;
     pub fn DSA_sign(
         dummy: c_int,
@@ -24,10 +32,6 @@ extern "C" {
         dsa: *mut DSA,
     ) -> c_int;
 
-    pub fn d2i_DSAPublicKey(a: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long) -> *mut DSA;
-    pub fn d2i_DSAPrivateKey(a: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long)
-        -> *mut DSA;
-
     pub fn DSA_generate_parameters_ex(
         dsa: *mut DSA,
         bits: c_int,
@@ -39,8 +43,6 @@ extern "C" {
     ) -> c_int;
 
     pub fn DSA_generate_key(dsa: *mut DSA) -> c_int;
-    pub fn i2d_DSAPublicKey(a: *const DSA, pp: *mut *mut c_uchar) -> c_int;
-    pub fn i2d_DSAPrivateKey(a: *const DSA, pp: *mut *mut c_uchar) -> c_int;
 
     #[cfg(any(ossl110, libressl273))]
     pub fn DSA_get0_pqg(

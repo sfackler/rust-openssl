@@ -95,13 +95,19 @@ cfg_if! {
     }
 }
 
+declare_std_functions! {
+    type CType = X509_STORE;
+    fn new = X509_STORE_new;
+    fn free = X509_STORE_free;
+}
+
+declare_std_functions! {
+    type CType = X509_STORE_CTX;
+    fn new = X509_STORE_CTX_new;
+    fn free = X509_STORE_CTX_free;
+}
+
 extern "C" {
-    pub fn X509_STORE_new() -> *mut X509_STORE;
-    pub fn X509_STORE_free(store: *mut X509_STORE);
-
-    pub fn X509_STORE_CTX_new() -> *mut X509_STORE_CTX;
-
-    pub fn X509_STORE_CTX_free(ctx: *mut X509_STORE_CTX);
     pub fn X509_STORE_CTX_init(
         ctx: *mut X509_STORE_CTX,
         store: *mut X509_STORE,

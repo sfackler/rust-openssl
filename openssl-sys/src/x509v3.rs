@@ -106,22 +106,10 @@ extern "C" {
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {
         extern "C" {
-            pub fn X509V3_get_d2i(
-                x: *const stack_st_X509_EXTENSION,
-                nid: c_int,
-                crit: *mut c_int,
-                idx: *mut c_int,
-            ) -> *mut c_void;
             pub fn X509V3_extensions_print(out: *mut BIO, title: *const c_char, exts: *const stack_st_X509_EXTENSION, flag: c_ulong, indent: c_int) -> c_int;
         }
     } else {
         extern "C" {
-            pub fn X509V3_get_d2i(
-                x: *mut stack_st_X509_EXTENSION,
-                nid: c_int,
-                crit: *mut c_int,
-                idx: *mut c_int,
-            ) -> *mut c_void;
             pub fn X509V3_extensions_print(out: *mut BIO, title: *mut c_char, exts: *mut stack_st_X509_EXTENSION, flag: c_ulong, indent: c_int) -> c_int;
         }
     }
@@ -189,16 +177,19 @@ pub const XKU_DVCS: u32 = 0x80;
 #[cfg(ossl110)]
 pub const XKU_ANYEKU: u32 = 0x100;
 
+declare_std_functions! {
+    type CType = stack_st_X509_EXTENSION;
+    fn ext_get_d2i = X509V3_get_d2i;
+}
+
+declare_std_functions! {
+    type CType = *mut stack_st_X509_EXTENSION;
+    fn ext_add1_i2d = X509V3_add1_i2d;
+}
+
 extern "C" {
     pub fn X509V3_EXT_d2i(ext: *mut X509_EXTENSION) -> *mut c_void;
     pub fn X509V3_EXT_i2d(ext_nid: c_int, crit: c_int, ext: *mut c_void) -> *mut X509_EXTENSION;
-    pub fn X509V3_add1_i2d(
-        x: *mut *mut stack_st_X509_EXTENSION,
-        nid: c_int,
-        value: *mut c_void,
-        crit: c_int,
-        flags: c_ulong,
-    ) -> c_int;
     pub fn X509V3_EXT_print(
         out: *mut BIO,
         ext: *mut X509_EXTENSION,
