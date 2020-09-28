@@ -545,7 +545,7 @@ extern "C" {
     pub fn X509_EXTENSION_set_critical(ex: *mut X509_EXTENSION, crit: c_int) -> c_int;
     pub fn X509_EXTENSION_set_data(ex: *mut X509_EXTENSION, data: *mut ASN1_OCTET_STRING) -> c_int;
     pub fn X509_EXTENSION_get_object(ext: *mut X509_EXTENSION) -> *mut ASN1_OBJECT;
-    pub fn X509_EXTENSION_get_data(ext: *mut X509_EXTENSION) -> *mut ASN1_STRING;
+    pub fn X509_EXTENSION_get_data(ext: *mut X509_EXTENSION) -> *mut ASN1_OCTET_STRING;
 }
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {
