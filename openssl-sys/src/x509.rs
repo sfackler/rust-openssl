@@ -90,7 +90,7 @@ cfg_if! {
         pub struct X509_REVOKED {
             pub serialNumber: *mut ASN1_INTEGER,
             pub revocationDate: *mut ASN1_TIME,
-            extensions: *mut stack_st_X509_EXTENSION,
+            pub extensions: *mut stack_st_X509_EXTENSION,
             issuer: *mut stack_st_GENERAL_NAME,
             reason: c_int,
             sequence: c_int,
@@ -242,6 +242,8 @@ extern "C" {
 
     pub fn X509_REVOKED_new() -> *mut X509_REVOKED;
     pub fn X509_REVOKED_free(x: *mut X509_REVOKED);
+    #[cfg(any(ossl110, libressl270))]
+    pub fn X509_REVOKED_dup(rev: *mut X509_REVOKED) -> *mut X509_REVOKED;
     pub fn d2i_X509_REVOKED(
         a: *mut *mut X509_REVOKED,
         pp: *mut *const c_uchar,
@@ -377,6 +379,9 @@ extern "C" {
     #[cfg(any(ossl110, libressl270))]
     pub fn X509_REVOKED_get0_extensions(r: *const X509_REVOKED) -> *const stack_st_X509_EXTENSION;
 
+    pub fn X509_REVOKED_set_serialNumber(r: *mut X509_REVOKED, serial: *mut ASN1_INTEGER) -> c_int;
+    pub fn X509_REVOKED_set_revocationDate(r: *mut X509_REVOKED, tm: *mut ASN1_TIME) -> c_int;
+
     pub fn X509_CRL_sign(x: *mut X509_CRL, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
     pub fn X509_CRL_digest(
         x: *const X509_CRL,
@@ -396,13 +401,13 @@ extern "C" {
         serial: *mut ASN1_INTEGER,
     ) -> c_int;
 
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl281))]
     pub fn X509_CRL_get_REVOKED(crl: *mut X509_CRL) -> *mut stack_st_X509_REVOKED;
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl281))]
     pub fn X509_CRL_get0_nextUpdate(x: *const X509_CRL) -> *const ASN1_TIME;
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl281))]
     pub fn X509_CRL_get0_lastUpdate(x: *const X509_CRL) -> *const ASN1_TIME;
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl281))]
     pub fn X509_CRL_get_issuer(x: *const X509_CRL) -> *mut X509_NAME;
 
     #[cfg(ossl110)]
@@ -535,6 +540,27 @@ extern "C" {
         crit: c_int,
         flags: c_ulong,
     ) -> c_int;
+    // X509_EXTENSION stack
+    // - these getters always used *const STACK
+    pub fn X509v3_get_ext_count(x: *const stack_st_X509_EXTENSION) -> c_int;
+    pub fn X509v3_get_ext_by_NID(
+        x: *const stack_st_X509_EXTENSION,
+        nid: c_int,
+        lastpos: c_int,
+    ) -> c_int;
+    pub fn X509v3_get_ext_by_critical(
+        x: *const stack_st_X509_EXTENSION,
+        crit: c_int,
+        lastpos: c_int,
+    ) -> c_int;
+    pub fn X509v3_get_ext(x: *const stack_st_X509_EXTENSION, loc: c_int) -> *mut X509_EXTENSION;
+    pub fn X509v3_delete_ext(x: *mut stack_st_X509_EXTENSION, loc: c_int) -> *mut X509_EXTENSION;
+    pub fn X509v3_add_ext(
+        x: *mut *mut stack_st_X509_EXTENSION,
+        ex: *mut X509_EXTENSION,
+        loc: c_int,
+    ) -> *mut stack_st_X509_EXTENSION;
+    // - X509V3_add1_i2d in x509v3.rs
     // X509_EXTENSION itself
     pub fn X509_EXTENSION_create_by_NID(
         ex: *mut *mut X509_EXTENSION,
@@ -586,6 +612,8 @@ cfg_if! {
                 crit: *mut c_int,
                 idx: *mut c_int,
             ) -> *mut c_void;
+            // X509_EXTENSION stack
+            pub fn X509v3_get_ext_by_OBJ(x: *const stack_st_X509_EXTENSION, obj: *const ASN1_OBJECT, lastpos: c_int) -> c_int;
             // X509_EXTENSION itself
             pub fn X509_EXTENSION_create_by_OBJ(ex: *mut *mut X509_EXTENSION, obj: *const ASN1_OBJECT, crit: c_int, data: *mut ASN1_OCTET_STRING) -> *mut X509_EXTENSION;
             pub fn X509_EXTENSION_set_object(ex: *mut X509_EXTENSION, obj: *const ASN1_OBJECT) -> c_int;
@@ -629,6 +657,8 @@ cfg_if! {
                 crit: *mut c_int,
                 idx: *mut c_int,
             ) -> *mut c_void;
+            // X509_EXTENSION stack
+            pub fn X509v3_get_ext_by_OBJ(x: *const stack_st_X509_EXTENSION, obj: *mut ASN1_OBJECT, lastpos: c_int) -> c_int;
             // X509_EXTENSION itself
             pub fn X509_EXTENSION_create_by_OBJ(ex: *mut *mut X509_EXTENSION, obj: *mut ASN1_OBJECT, crit: c_int, data: *mut ASN1_OCTET_STRING) -> *mut X509_EXTENSION;
             pub fn X509_EXTENSION_set_object(ex: *mut X509_EXTENSION, obj: *mut ASN1_OBJECT) -> c_int;
