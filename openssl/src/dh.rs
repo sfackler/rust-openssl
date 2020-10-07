@@ -45,12 +45,36 @@ where
 }
 
 impl Dh<Params> {
-    pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<Dh<Params>, ErrorStack> {
+    pub fn from_params(p: BigNum, g: BigNum, q: Option<BigNum>) -> Result<Dh<Params>, ErrorStack> {
         unsafe {
             let dh = Dh::from_ptr(cvt_p(ffi::DH_new())?);
-            cvt(DH_set0_pqg(dh.0, p.as_ptr(), q.as_ptr(), g.as_ptr()))?;
+            cvt(DH_set0_pqg(
+                dh.0,
+                p.as_ptr(),
+                q.as_ref().map_or(ptr::null_mut(), |q| q.as_ptr()),
+                g.as_ptr(),
+            ))?;
             mem::forget((p, g, q));
             Ok(dh)
+        }
+    }
+
+    pub fn get_params(&self) -> Result<(BigNum, BigNum, Option<BigNum>), ErrorStack> {
+        let mut p = ptr::null();
+        let mut g = ptr::null();
+        let mut q = ptr::null();
+        unsafe {
+            ffi::DH_get0_pqg(self.0, &mut p, &mut q, &mut g);
+            let q = if q.is_null() {
+                None
+            } else {
+                Some(BigNum::from_ptr(cvt_p(ffi::BN_dup(q))?))
+            };
+            Ok((
+                BigNum::from_ptr(cvt_p(ffi::BN_dup(p))?),
+                BigNum::from_ptr(cvt_p(ffi::BN_dup(g))?),
+                q,
+            ))
         }
     }
 
@@ -132,9 +156,8 @@ where
 {
     pub fn get_public_key(&self) -> Result<BigNum, ErrorStack> {
         let mut pub_key = ptr::null();
-        let mut priv_key = ptr::null();
         unsafe {
-            ffi::DH_get0_key(self.0, &mut pub_key, &mut priv_key);
+            ffi::DH_get0_key(self.0, &mut pub_key, ptr::null_mut());
             Ok(BigNum::from_ptr(cvt_p(ffi::BN_dup(pub_key))?))
         }
     }
@@ -194,7 +217,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dh_from_params() {
+    fn test_dh_params() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         let p = BigNum::from_hex_str(
             "87A8E61DB4B6663CFFBBD19C651959998CEEF608660DD0F25D2CEED4435E3B00E00DF8F1D61957D4FAF7DF\
@@ -216,8 +239,19 @@ mod tests {
             "8CF83642A709A097B447997640129DA299B1A47D1EB3750BA308B0FE64F5FBD3",
         )
         .unwrap();
-        let dh = Dh::from_params(p, g, q).unwrap();
+        let dh = Dh::from_params(
+            p.to_owned().unwrap(),
+            g.to_owned().unwrap(),
+            Some(q.to_owned().unwrap()),
+        )
+        .unwrap();
         ctx.set_tmp_dh(&dh).unwrap();
+
+        let (p1, g1, q1) = dh.get_params().unwrap();
+
+        assert_eq!(p1, p);
+        assert_eq!(g1, g);
+        assert_eq!(q1.unwrap(), q);
     }
 
     #[test]
@@ -237,10 +271,26 @@ mod tests {
     }
 
     #[test]
-    fn test_dh_generate_compute_key() {
+    fn test_dh_generate_key_compute_key() {
         let dh1 = Dh::get_2048_224().unwrap().generate_key().unwrap();
 
         let dh2 = Dh::get_2048_224().unwrap().generate_key().unwrap();
+
+        let shared_a = dh1.compute_key(dh2.get_public_key().unwrap()).unwrap();
+        let shared_b = dh2.compute_key(dh1.get_public_key().unwrap()).unwrap();
+
+        assert_eq!(shared_a, shared_b);
+    }
+
+    #[test]
+    fn test_dh_generate_params_generate_key_compute_key() {
+        let dh_params1 = Dh::generate_params(1024, 2).unwrap();
+
+        let (prime, generator, _) = dh_params1.get_params().unwrap();
+        let dh1 = dh_params1.generate_key().unwrap();
+
+        let dh_params2 = Dh::from_params(prime, generator, None).unwrap();
+        let dh2 = dh_params2.generate_key().unwrap();
 
         let shared_a = dh1.compute_key(dh2.get_public_key().unwrap()).unwrap();
         let shared_b = dh2.compute_key(dh1.get_public_key().unwrap()).unwrap();

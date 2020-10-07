@@ -27,7 +27,15 @@ extern "C" {
 
     #[cfg(any(ossl110, libressl273))]
     pub fn DH_set0_pqg(dh: *mut DH, p: *mut BIGNUM, q: *mut BIGNUM, g: *mut BIGNUM) -> c_int;
+    #[cfg(any(ossl110, libressl273))]
+    pub fn DH_get0_pqg(
+        dh: *const DH,
+        p: *mut *const BIGNUM,
+        q: *mut *const BIGNUM,
+        g: *mut *const BIGNUM,
+    );
 
     #[cfg(ossl102)]
     pub fn DH_get0_key(dh: *const DH, pub_key: *mut *const BIGNUM, priv_key: *mut *const BIGNUM);
+
 }
