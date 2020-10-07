@@ -4,6 +4,17 @@ extern "C" {
     pub fn DH_new() -> *mut DH;
     pub fn DH_free(dh: *mut DH);
 
+    pub fn DH_generate_parameters(
+        prime_len: c_int,
+        generator: c_int,
+        callback: Option<extern "C" fn(c_int, c_int, *mut c_void)>,
+        cb_arg: *mut c_void,
+    ) -> *mut DH;
+
+    pub fn DH_generate_key(dh: *mut DH) -> c_int;
+    pub fn DH_compute_key(key: *mut c_uchar, pub_key: *const BIGNUM, dh: *mut DH) -> c_int;
+    pub fn DH_size(dh: *const DH) -> c_int;
+
     pub fn d2i_DHparams(k: *mut *mut DH, pp: *mut *const c_uchar, length: c_long) -> *mut DH;
     pub fn i2d_DHparams(dh: *const DH, pp: *mut *mut c_uchar) -> c_int;
 
@@ -16,4 +27,7 @@ extern "C" {
 
     #[cfg(any(ossl110, libressl273))]
     pub fn DH_set0_pqg(dh: *mut DH, p: *mut BIGNUM, q: *mut BIGNUM, g: *mut BIGNUM) -> c_int;
+
+    #[cfg(ossl102)]
+    pub fn DH_get0_key(dh: *const DH, pub_key: *mut *const BIGNUM, priv_key: *mut *const BIGNUM);
 }

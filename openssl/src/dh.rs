@@ -5,7 +5,7 @@ use std::mem;
 use std::ptr;
 
 use bn::BigNum;
-use pkey::{HasParams, Params};
+use pkey::{HasParams, HasPrivate, HasPublic, Params, Private};
 use {cvt, cvt_p};
 
 generic_foreign_type_and_impl_send_sync! {
@@ -51,6 +51,26 @@ impl Dh<Params> {
             cvt(DH_set0_pqg(dh.0, p.as_ptr(), q.as_ptr(), g.as_ptr()))?;
             mem::forget((p, g, q));
             Ok(dh)
+        }
+    }
+
+    pub fn generate_params(prime_len: u32, generator: u32) -> Result<Dh<Params>, ErrorStack> {
+        unsafe {
+            Ok(Dh::from_ptr(cvt_p(ffi::DH_generate_parameters(
+                prime_len as i32,
+                generator as i32,
+                None,
+                ptr::null_mut(),
+            ))?))
+        }
+    }
+
+    pub fn generate_key(self) -> Result<Dh<Private>, ErrorStack> {
+        unsafe {
+            let dh_ptr = self.0;
+            cvt(ffi::DH_generate_key(dh_ptr))?;
+            mem::forget(self);
+            Ok(Dh::from_ptr(dh_ptr))
         }
     }
 
@@ -102,6 +122,38 @@ impl Dh<Params> {
         unsafe {
             ffi::init();
             cvt_p(ffi::DH_get_2048_256()).map(|p| Dh::from_ptr(p))
+        }
+    }
+}
+
+impl<T> Dh<T>
+where
+    T: HasPublic,
+{
+    pub fn get_public_key(&self) -> Result<BigNum, ErrorStack> {
+        let mut pub_key = ptr::null();
+        let mut priv_key = ptr::null();
+        unsafe {
+            ffi::DH_get0_key(self.0, &mut pub_key, &mut priv_key);
+            Ok(BigNum::from_ptr(cvt_p(ffi::BN_dup(pub_key))?))
+        }
+    }
+}
+
+impl<T> Dh<T>
+where
+    T: HasPrivate,
+{
+    pub fn compute_key(&self, public_key: BigNum) -> Result<Vec<u8>, ErrorStack> {
+        unsafe {
+            let key_len = ffi::DH_size(self.0);
+            let mut key = vec![0u8; key_len as usize];
+            cvt(ffi::DH_compute_key(
+                key.as_mut_ptr(),
+                public_key.as_ptr(),
+                self.0,
+            ))?;
+            Ok(key)
         }
     }
 }

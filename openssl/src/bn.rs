@@ -114,7 +114,7 @@ foreign_type_and_impl_send_sync! {
     type CType = ffi::BIGNUM;
     fn drop = ffi::BN_free;
 
-    /// Dynamically sized large number impelementation
+    /// Dynamically sized large number implementation
     ///
     /// Perform large number mathematics.  Create a new BigNum
     /// with [`new`].  Perform standard mathematics on large numbers using
