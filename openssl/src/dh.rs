@@ -194,7 +194,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dh() {
+    fn test_dh_from_params() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
         let p = BigNum::from_hex_str(
             "87A8E61DB4B6663CFFBBD19C651959998CEEF608660DD0F25D2CEED4435E3B00E00DF8F1D61957D4FAF7DF\
@@ -234,5 +234,17 @@ mod tests {
         let dh = Dh::params_from_pem(params).unwrap();
         let der = dh.params_to_der().unwrap();
         Dh::params_from_der(&der).unwrap();
+    }
+
+    #[test]
+    fn test_dh_generate_compute_key() {
+        let dh1 = Dh::get_2048_224().unwrap().generate_key().unwrap();
+
+        let dh2 = Dh::get_2048_224().unwrap().generate_key().unwrap();
+
+        let shared_a = dh1.compute_key(dh2.get_public_key().unwrap()).unwrap();
+        let shared_b = dh2.compute_key(dh1.get_public_key().unwrap()).unwrap();
+
+        assert_eq!(shared_a, shared_b);
     }
 }
