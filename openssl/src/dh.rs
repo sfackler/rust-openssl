@@ -4,7 +4,7 @@ use foreign_types::{ForeignType, ForeignTypeRef};
 use std::mem;
 use std::ptr;
 
-use bn::BigNum;
+use bn::{BigNum, BigNumRef};
 use pkey::{HasParams, HasPrivate, HasPublic, Params, Private};
 use {cvt, cvt_p};
 
@@ -59,25 +59,30 @@ impl Dh<Params> {
         }
     }
 
-    pub fn get_params(&self) -> Result<(BigNum, BigNum, Option<BigNum>), ErrorStack> {
+    pub fn get_params(&self) -> (&BigNumRef, &BigNumRef, Option<&BigNumRef>) {
         let mut p = ptr::null();
         let mut g = ptr::null();
         let mut q = ptr::null();
         unsafe {
-            ffi::DH_get0_pqg(self.0, &mut p, &mut q, &mut g);
+            DH_get0_pqg(self.0, &mut p, &mut q, &mut g);
             let q = if q.is_null() {
                 None
             } else {
-                Some(BigNum::from_ptr(cvt_p(ffi::BN_dup(q))?))
+                Some(BigNumRef::from_ptr(q as *mut _))
             };
-            Ok((
-                BigNum::from_ptr(cvt_p(ffi::BN_dup(p))?),
-                BigNum::from_ptr(cvt_p(ffi::BN_dup(g))?),
+            (
+                &BigNumRef::from_ptr(p as *mut _),
+                &BigNumRef::from_ptr(g as *mut _),
                 q,
-            ))
+            )
         }
     }
 
+    /// Generates DH params based on the given `prime_len` and a fixed `generator` value.
+    ///
+    /// This corresponds to [`DH_generate_parameters`].
+    ///
+    /// [`DH_generate_parameters`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_generate_parameters.html
     pub fn generate_params(prime_len: u32, generator: u32) -> Result<Dh<Params>, ErrorStack> {
         unsafe {
             Ok(Dh::from_ptr(cvt_p(ffi::DH_generate_parameters(
@@ -89,6 +94,11 @@ impl Dh<Params> {
         }
     }
 
+    /// Generates a public and a private key based on the DH params.
+    ///
+    /// This corresponds to [`DH_generate_key`].
+    ///
+    /// [`DH_generate_key`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_generate_key.html
     pub fn generate_key(self) -> Result<Dh<Private>, ErrorStack> {
         unsafe {
             let dh_ptr = self.0;
@@ -154,11 +164,16 @@ impl<T> Dh<T>
 where
     T: HasPublic,
 {
-    pub fn get_public_key(&self) -> Result<BigNum, ErrorStack> {
+    /// Gets the public key from the DH instance.
+    ///
+    /// This corresponds to [`DH_get0_key`].
+    ///
+    /// [`DH_get0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_key.html
+    pub fn get_public_key(&self) -> &BigNumRef {
         let mut pub_key = ptr::null();
         unsafe {
             ffi::DH_get0_key(self.0, &mut pub_key, ptr::null_mut());
-            Ok(BigNum::from_ptr(cvt_p(ffi::BN_dup(pub_key))?))
+            BigNumRef::from_ptr(pub_key as *mut _)
         }
     }
 }
@@ -167,7 +182,12 @@ impl<T> Dh<T>
 where
     T: HasPrivate,
 {
-    pub fn compute_key(&self, public_key: BigNum) -> Result<Vec<u8>, ErrorStack> {
+    /// Computes a shared secret from the own private key and the given `public_key`.
+    ///
+    /// This corresponds to [`DH_compute_key`].
+    ///
+    /// [`DH_compute_key`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_compute_key.html
+    pub fn compute_key(&self, public_key: &BigNumRef) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
             let key_len = ffi::DH_size(self.0);
             let mut key = vec![0u8; key_len as usize];
@@ -182,8 +202,8 @@ where
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl273))] {
-        use ffi::DH_set0_pqg;
+    if #[cfg(any(ossl110, libressl270))] {
+        use ffi::{DH_set0_pqg, DH_get0_pqg};
     } else {
         #[allow(bad_style)]
         unsafe fn DH_set0_pqg(
@@ -196,6 +216,18 @@ cfg_if! {
             (*dh).q = q;
             (*dh).g = g;
             1
+        }
+
+        #[allow(bad_style)]
+        unsafe fn DH_get0_pqg(
+            dh: *mut ffi::DH,
+            p: *mut *const ffi::BIGNUM,
+            q: *mut *const ffi::BIGNUM,
+            g: *mut *const ffi::BIGNUM,
+        ) {
+            *p = (*dh).p;
+            *q = (*dh).q;
+            *g = (*dh).g;
         }
     }
 }
@@ -247,11 +279,11 @@ mod tests {
         .unwrap();
         ctx.set_tmp_dh(&dh).unwrap();
 
-        let (p1, g1, q1) = dh.get_params().unwrap();
+        let (p1, g1, q1) = dh.get_params();
 
-        assert_eq!(p1, p);
-        assert_eq!(g1, g);
-        assert_eq!(q1.unwrap(), q);
+        assert_eq!(p1, &p);
+        assert_eq!(g1, &g);
+        assert_eq!(q1.unwrap(), &q);
     }
 
     #[test]
@@ -273,11 +305,10 @@ mod tests {
     #[test]
     fn test_dh_generate_key_compute_key() {
         let dh1 = Dh::get_2048_224().unwrap().generate_key().unwrap();
-
         let dh2 = Dh::get_2048_224().unwrap().generate_key().unwrap();
 
-        let shared_a = dh1.compute_key(dh2.get_public_key().unwrap()).unwrap();
-        let shared_b = dh2.compute_key(dh1.get_public_key().unwrap()).unwrap();
+        let shared_a = dh1.compute_key(dh2.get_public_key()).unwrap();
+        let shared_b = dh2.compute_key(dh1.get_public_key()).unwrap();
 
         assert_eq!(shared_a, shared_b);
     }
@@ -285,15 +316,19 @@ mod tests {
     #[test]
     fn test_dh_generate_params_generate_key_compute_key() {
         let dh_params1 = Dh::generate_params(1024, 2).unwrap();
+        let (prime, generator, _) = dh_params1.get_params();
+        let dh_params2 = Dh::from_params(
+            prime.to_owned().unwrap(),
+            generator.to_owned().unwrap(),
+            None,
+        )
+        .unwrap();
 
-        let (prime, generator, _) = dh_params1.get_params().unwrap();
         let dh1 = dh_params1.generate_key().unwrap();
-
-        let dh_params2 = Dh::from_params(prime, generator, None).unwrap();
         let dh2 = dh_params2.generate_key().unwrap();
 
-        let shared_a = dh1.compute_key(dh2.get_public_key().unwrap()).unwrap();
-        let shared_b = dh2.compute_key(dh1.get_public_key().unwrap()).unwrap();
+        let shared_a = dh1.compute_key(dh2.get_public_key()).unwrap();
+        let shared_b = dh2.compute_key(dh1.get_public_key()).unwrap();
 
         assert_eq!(shared_a, shared_b);
     }
