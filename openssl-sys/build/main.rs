@@ -270,6 +270,7 @@ due to this version mismatch.
 
 // parses a string that looks like "0x100020cfL"
 #[allow(deprecated)] // trim_right_matches is now trim_end_matches
+#[allow(clippy::match_like_matches_macro)] // matches macro requires rust 1.42.0
 fn parse_version(version: &str) -> u64 {
     // cut off the 0x prefix
     assert!(version.starts_with("0x"));
