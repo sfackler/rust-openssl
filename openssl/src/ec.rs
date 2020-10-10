@@ -633,9 +633,9 @@ where
 {
     /// Returns the public key.
     ///
-    /// OpenSSL documentation at [`EC_KEY_get0_pubic_key`]
+    /// OpenSSL documentation at [`EC_KEY_get0_public_key`]
     ///
-    /// [`EC_KEY_get0_pubic_key`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_get0_public_key.html
+    /// [`EC_KEY_get0_public_key`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_get0_public_key.html
     pub fn public_key(&self) -> &EcPointRef {
         unsafe {
             let ptr = ffi::EC_KEY_get0_public_key(self.as_ptr());
