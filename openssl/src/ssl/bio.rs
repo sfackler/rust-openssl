@@ -128,6 +128,7 @@ unsafe extern "C" fn bread<S: Read>(bio: *mut BIO, buf: *mut c_char, len: c_int)
     }
 }
 
+#[allow(clippy::match_like_matches_macro)] // matches macro requires rust 1.42.0
 fn retriable_error(err: &io::Error) -> bool {
     match err.kind() {
         io::ErrorKind::WouldBlock | io::ErrorKind::NotConnected => true,
