@@ -44,23 +44,13 @@ pub const V_OCSP_CERTSTATUS_UNKNOWN: c_int = 2;
 
 pub enum OCSP_BASICRESP {}
 
-cfg_if! {
-    if #[cfg(any(ossl110, libressl281))] {
-        extern "C" {
-            pub fn OCSP_cert_to_id(
-                dgst: *const EVP_MD,
-                subject: *const X509,
-                issuer: *const X509,
-            ) -> *mut OCSP_CERTID;
-        }
-    } else {
-        extern "C" {
-            pub fn OCSP_cert_to_id(
-                dgst: *const EVP_MD,
-                subject: *mut X509,
-                issuer: *mut X509,
-            ) -> *mut ::OCSP_CERTID;
-        }
+const_ptr_api! {
+    extern "C" {
+        pub fn OCSP_cert_to_id(
+            dgst: *const EVP_MD,
+            subject: #[const_ptr_if(any(ossl110, libressl281))] X509,
+            issuer: #[const_ptr_if(any(ossl110, libressl281))] X509,
+        ) -> *mut OCSP_CERTID;
     }
 }
 

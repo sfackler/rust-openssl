@@ -174,15 +174,9 @@ extern "C" {
         outl: *mut c_int,
     ) -> c_int;
 }
-cfg_if! {
-    if #[cfg(any(ossl111b, libressl280))] {
-        extern "C" {
-            pub fn EVP_PKEY_size(pkey: *const EVP_PKEY) -> c_int;
-        }
-    } else {
-        extern "C" {
-            pub fn EVP_PKEY_size(pkey: *mut EVP_PKEY) -> c_int;
-        }
+const_ptr_api! {
+    extern "C" {
+        pub fn EVP_PKEY_size(pkey: #[const_ptr_if(any(ossl111b, libressl280))] EVP_PKEY) -> c_int;
     }
 }
 cfg_if! {
@@ -206,23 +200,13 @@ cfg_if! {
         }
     }
 }
-cfg_if! {
-    if #[cfg(any(ossl102, libressl280))] {
-        extern "C" {
-            pub fn EVP_DigestVerifyFinal(
-                ctx: *mut EVP_MD_CTX,
-                sigret: *const c_uchar,
-                siglen: size_t,
-            ) -> c_int;
-        }
-    } else {
-        extern "C" {
-            pub fn EVP_DigestVerifyFinal(
-                ctx: *mut EVP_MD_CTX,
-                sigret: *mut c_uchar,
-                siglen: size_t,
-            ) -> c_int;
-        }
+const_ptr_api! {
+    extern "C" {
+        pub fn EVP_DigestVerifyFinal(
+            ctx: *mut EVP_MD_CTX,
+            sigret: #[const_ptr_if(any(ossl102, libressl280))] c_uchar,
+            siglen: size_t,
+        ) -> c_int;
     }
 }
 
@@ -317,15 +301,9 @@ extern "C" {
 
     pub fn EVP_PKEY_id(pkey: *const EVP_PKEY) -> c_int;
 }
-cfg_if! {
-    if #[cfg(any(ossl110, libressl280))] {
-        extern "C" {
-            pub fn EVP_PKEY_bits(key: *const EVP_PKEY) -> c_int;
-        }
-    } else {
-        extern "C" {
-            pub fn EVP_PKEY_bits(key: *mut EVP_PKEY) -> c_int;
-        }
+const_ptr_api! {
+    extern "C" {
+        pub fn EVP_PKEY_bits(key: #[const_ptr_if(any(ossl110, libressl280))] EVP_PKEY) -> c_int;
     }
 }
 extern "C" {
@@ -456,15 +434,9 @@ extern "C" {
     ) -> c_int;
 }
 
-cfg_if! {
-    if #[cfg(any(ossl110, libressl280))] {
-        extern "C" {
-            pub fn EVP_PKCS82PKEY(p8: *const PKCS8_PRIV_KEY_INFO) -> *mut EVP_PKEY;
-        }
-    } else {
-        extern "C" {
-            pub fn EVP_PKCS82PKEY(p8: *mut PKCS8_PRIV_KEY_INFO) -> *mut EVP_PKEY;
-        }
+const_ptr_api! {
+    extern "C" {
+        pub fn EVP_PKCS82PKEY(p8: #[const_ptr_if(any(ossl110, libressl280))] PKCS8_PRIV_KEY_INFO) -> *mut EVP_PKEY;
     }
 }
 

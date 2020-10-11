@@ -17,37 +17,20 @@ extern "C" {
         ca: *mut *mut stack_st_X509,
     ) -> c_int;
 }
-cfg_if! {
-    if #[cfg(any(ossl110, libressl280))] {
-        extern "C" {
-            pub fn PKCS12_create(
-                pass: *const c_char,
-                friendly_name: *const c_char,
-                pkey: *mut EVP_PKEY,
-                cert: *mut X509,
-                ca: *mut stack_st_X509,
-                nid_key: c_int,
-                nid_cert: c_int,
-                iter: c_int,
-                mac_iter: c_int,
-                keytype: c_int,
-            ) -> *mut PKCS12;
-        }
-    } else {
-        extern "C" {
-            pub fn PKCS12_create(
-                pass: *mut c_char,
-                friendly_name: *mut c_char,
-                pkey: *mut EVP_PKEY,
-                cert: *mut X509,
-                ca: *mut stack_st_X509,
-                nid_key: c_int,
-                nid_cert: c_int,
-                iter: c_int,
-                mac_iter: c_int,
-                keytype: c_int,
-            ) -> *mut PKCS12;
-        }
+const_ptr_api! {
+    extern "C" {
+        pub fn PKCS12_create(
+            pass: #[const_ptr_if(any(ossl110, libressl280))] c_char,
+            friendly_name: #[const_ptr_if(any(ossl110, libressl280))] c_char,
+            pkey: *mut EVP_PKEY,
+            cert: *mut X509,
+            ca: *mut stack_st_X509,
+            nid_key: c_int,
+            nid_cert: c_int,
+            iter: c_int,
+            mac_iter: c_int,
+            keytype: c_int,
+        ) -> *mut PKCS12;
     }
 }
 
