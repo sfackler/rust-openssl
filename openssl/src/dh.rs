@@ -8,28 +8,6 @@ use bn::{BigNum, BigNumRef};
 use pkey::{HasParams, HasPrivate, HasPublic, Params, Private};
 use {cvt, cvt_p};
 
-pub struct DhParams {
-    pub p: BigNum,
-    pub g: BigNum,
-    pub q: Option<BigNum>,
-}
-
-pub struct DhParamsRef<'a> {
-    pub p: &'a BigNumRef,
-    pub g: &'a BigNumRef,
-    pub q: Option<&'a BigNumRef>,
-}
-
-impl<'a> DhParamsRef<'a> {
-    pub fn to_owned(&self) -> Result<DhParams, ErrorStack> {
-        Ok(DhParams {
-            p: self.p.to_owned()?,
-            g: self.g.to_owned()?,
-            q: self.q.map(|q| q.to_owned()).transpose()?,
-        })
-    }
-}
-
 generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::DH;
     fn drop = ffi::DH_free;
@@ -68,50 +46,73 @@ where
 
 impl Dh<Params> {
     pub fn from_params(p: BigNum, g: BigNum, q: BigNum) -> Result<Dh<Params>, ErrorStack> {
-        Self::from(DhParams { p, g, q: Some(q) })
+        Self::from_pqg(p, Some(q), g)
     }
 
-    /// Creates a DH instance based upon the given prime and generator params.
+    /// Creates a DH instance based upon the given primes and generator params.
     ///
     /// This corresponds to [`DH_new`] and [`DH_set0_pqg`].
     ///
     /// [`DH_new`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_new.html
     /// [`DH_set0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_set0_pqg.html
-    pub fn from(params: DhParams) -> Result<Dh<Params>, ErrorStack> {
+    pub fn from_pqg(
+        prime_p: BigNum,
+        prime_q: Option<BigNum>,
+        generator: BigNum,
+    ) -> Result<Dh<Params>, ErrorStack> {
         unsafe {
             let dh = Dh::from_ptr(cvt_p(ffi::DH_new())?);
             cvt(DH_set0_pqg(
                 dh.0,
-                params.p.as_ptr(),
-                params.q.as_ref().map_or(ptr::null_mut(), |q| q.as_ptr()),
-                params.g.as_ptr(),
+                prime_p.as_ptr(),
+                prime_q.as_ref().map_or(ptr::null_mut(), |q| q.as_ptr()),
+                generator.as_ptr(),
             ))?;
-            mem::forget(params);
+            mem::forget((prime_p, prime_q, generator));
             Ok(dh)
         }
     }
 
-    /// Gets the prime and generator params from the DH instance.
+    /// Returns the prime `p` from the DH instance.
     ///
     /// This corresponds to [`DH_get0_pqg`].
     ///
     /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
-    pub fn get_params(&self) -> DhParamsRef {
+    pub fn prime_p(&self) -> &BigNumRef {
         let mut p = ptr::null();
-        let mut g = ptr::null();
+        unsafe {
+            DH_get0_pqg(self.0, &mut p, ptr::null_mut(), ptr::null_mut());
+            BigNumRef::from_ptr(p as *mut _)
+        }
+    }
+
+    /// Returns the prime `q` from the DH instance.
+    ///
+    /// This corresponds to [`DH_get0_pqg`].
+    ///
+    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
+    pub fn prime_q(&self) -> Option<&BigNumRef> {
         let mut q = ptr::null();
         unsafe {
-            DH_get0_pqg(self.0, &mut p, &mut q, &mut g);
-            let q = if q.is_null() {
+            DH_get0_pqg(self.0, ptr::null_mut(), &mut q, ptr::null_mut());
+            if q.is_null() {
                 None
             } else {
                 Some(BigNumRef::from_ptr(q as *mut _))
-            };
-            DhParamsRef {
-                p: &BigNumRef::from_ptr(p as *mut _),
-                g: &BigNumRef::from_ptr(g as *mut _),
-                q,
             }
+        }
+    }
+
+    /// Returns the generator from the DH instance.
+    ///
+    /// This corresponds to [`DH_get0_pqg`].
+    ///
+    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
+    pub fn generator(&self) -> &BigNumRef {
+        let mut g = ptr::null();
+        unsafe {
+            DH_get0_pqg(self.0, ptr::null_mut(), ptr::null_mut(), &mut g);
+            BigNumRef::from_ptr(g as *mut _)
         }
     }
 
@@ -201,12 +202,12 @@ impl<T> Dh<T>
 where
     T: HasPublic,
 {
-    /// Gets the public key from the DH instance.
+    /// Returns the public key from the DH instance.
     ///
     /// This corresponds to [`DH_get0_key`].
     ///
     /// [`DH_get0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_key.html
-    pub fn get_public_key(&self) -> &BigNumRef {
+    pub fn public_key(&self) -> &BigNumRef {
         let mut pub_key = ptr::null();
         unsafe {
             DH_get0_key(self.0, &mut pub_key, ptr::null_mut());
@@ -262,9 +263,15 @@ cfg_if! {
             q: *mut *const ffi::BIGNUM,
             g: *mut *const ffi::BIGNUM,
         ) {
-            *p = (*dh).p;
-            *q = (*dh).q;
-            *g = (*dh).g;
+            if !p.is_null() {
+                *p = (*dh).p;
+            }
+            if !q.is_null() {
+                *q = (*dh).q;
+            }
+            if !g.is_null() {
+                *g = (*dh).g;
+            }
         }
 
         #[allow(bad_style)]
@@ -302,7 +309,7 @@ mod tests {
     #[test]
     fn test_dh_params() {
         let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
-        let p = BigNum::from_hex_str(
+        let prime_p = BigNum::from_hex_str(
             "87A8E61DB4B6663CFFBBD19C651959998CEEF608660DD0F25D2CEED4435E3B00E00DF8F1D61957D4FAF7DF\
              4561B2AA3016C3D91134096FAA3BF4296D830E9A7C209E0C6497517ABD5A8A9D306BCF67ED91F9E6725B47\
              58C022E0B1EF4275BF7B6C5BFC11D45F9088B941F54EB1E59BB8BC39A0BF12307F5C4FDB70C581B23F76B6\
@@ -310,7 +317,7 @@ mod tests {
              140564251CCACB83E6B486F6B3CA3F7971506026C0B857F689962856DED4010ABD0BE621C3A3960A54E710\
              C375F26375D7014103A4B54330C198AF126116D2276E11715F693877FAD7EF09CADB094AE91E1A1597",
         ).unwrap();
-        let g = BigNum::from_hex_str(
+        let prime_q = BigNum::from_hex_str(
             "3FB32C9B73134D0B2E77506660EDBD484CA7B18F21EF205407F4793A1A0BA12510DBC15077BE463FFF4FED\
              4AAC0BB555BE3A6C1B0C6B47B1BC3773BF7E8C6F62901228F8C28CBB18A55AE31341000A650196F931C77A\
              57F2DDF463E5E9EC144B777DE62AAAB8A8628AC376D282D6ED3864E67982428EBC831D14348F6F2F9193B5\
@@ -318,23 +325,21 @@ mod tests {
              052588B9B7D2BBD2DF016199ECD06E1557CD0915B3353BBB64E0EC377FD028370DF92B52C7891428CDC67E\
              B6184B523D1DB246C32F63078490F00EF8D647D148D47954515E2327CFEF98C582664B4C0F6CC41659",
         ).unwrap();
-        let q = BigNum::from_hex_str(
+        let generator = BigNum::from_hex_str(
             "8CF83642A709A097B447997640129DA299B1A47D1EB3750BA308B0FE64F5FBD3",
         )
         .unwrap();
         let dh = Dh::from_params(
-            p.to_owned().unwrap(),
-            g.to_owned().unwrap(),
-            q.to_owned().unwrap(),
+            prime_p.to_owned().unwrap(),
+            generator.to_owned().unwrap(),
+            prime_q.to_owned().unwrap(),
         )
         .unwrap();
         ctx.set_tmp_dh(&dh).unwrap();
 
-        let params = dh.get_params();
-
-        assert_eq!(params.p, &p);
-        assert_eq!(params.g, &g);
-        assert_eq!(params.q.unwrap(), &q);
+        assert_eq!(dh.prime_p(), &prime_p);
+        assert_eq!(dh.prime_q().unwrap(), &prime_q);
+        assert_eq!(dh.generator(), &generator);
     }
 
     #[test]
@@ -359,23 +364,27 @@ mod tests {
         let dh1 = Dh::get_2048_224().unwrap().generate_key().unwrap();
         let dh2 = Dh::get_2048_224().unwrap().generate_key().unwrap();
 
-        let shared_a = dh1.compute_key(dh2.get_public_key()).unwrap();
-        let shared_b = dh2.compute_key(dh1.get_public_key()).unwrap();
+        let shared_a = dh1.compute_key(dh2.public_key()).unwrap();
+        let shared_b = dh2.compute_key(dh1.public_key()).unwrap();
 
         assert_eq!(shared_a, shared_b);
     }
 
     #[test]
     fn test_dh_generate_params_generate_key_compute_key() {
-        let dh_params1 = Dh::generate_params(1024, 2).unwrap();
-        let params = dh_params1.get_params().to_owned().unwrap();
-        let dh_params2 = Dh::from(params).unwrap();
+        let dh_params1 = Dh::generate_params(512, 2).unwrap();
+        let dh_params2 = Dh::from_pqg(
+            dh_params1.prime_p().to_owned().unwrap(),
+            None,
+            dh_params1.generator().to_owned().unwrap(),
+        )
+        .unwrap();
 
         let dh1 = dh_params1.generate_key().unwrap();
         let dh2 = dh_params2.generate_key().unwrap();
 
-        let shared_a = dh1.compute_key(dh2.get_public_key()).unwrap();
-        let shared_b = dh2.compute_key(dh1.get_public_key()).unwrap();
+        let shared_a = dh1.compute_key(dh2.public_key()).unwrap();
+        let shared_b = dh2.compute_key(dh1.public_key()).unwrap();
 
         assert_eq!(shared_a, shared_b);
     }
