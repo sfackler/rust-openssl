@@ -852,12 +852,10 @@ cfg_if! {
 
 cfg_if! {
     if #[cfg(ossl110g)] {
-        #[cfg(ossl110g)]
         pub unsafe fn SSL_CTX_get_min_proto_version(ctx: *mut SSL_CTX) -> c_int {
             SSL_CTX_ctrl(ctx, SSL_CTRL_GET_MIN_PROTO_VERSION, 0, ptr::null_mut()) as c_int
         }
 
-        #[cfg(ossl110g)]
         pub unsafe fn SSL_CTX_get_max_proto_version(ctx: *mut SSL_CTX) -> c_int {
             SSL_CTX_ctrl(ctx, SSL_CTRL_GET_MAX_PROTO_VERSION, 0, ptr::null_mut()) as c_int
         }
