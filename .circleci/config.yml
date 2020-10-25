@@ -182,8 +182,6 @@ jobs:
       RUST_BACKTRACE: 1
     steps:
       - checkout
-      - run: sudo mkdir /opt
-      - run: sudo chown -R $USER /usr/local/ /opt
       - run: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain << parameters.image >>
       - run: sudo ln -s ~/.cargo/bin/* /usr/local/bin
       - run: cargo generate-lockfile
