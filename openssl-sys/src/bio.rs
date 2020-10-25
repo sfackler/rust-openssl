@@ -60,17 +60,10 @@ pub unsafe fn BIO_get_mem_data(b: *mut BIO, pp: *mut *mut c_char) -> c_long {
     BIO_ctrl(b, BIO_CTRL_INFO, 0, pp as *mut c_void)
 }
 
-cfg_if! {
-    if #[cfg(any(ossl110, libressl280))] {
-        extern "C" {
-            pub fn BIO_s_file() -> *const BIO_METHOD;
-            pub fn BIO_new(type_: *const BIO_METHOD) -> *mut BIO;
-        }
-    } else {
-        extern "C" {
-            pub fn BIO_s_file() -> *mut BIO_METHOD;
-            pub fn BIO_new(type_: *mut BIO_METHOD) -> *mut BIO;
-        }
+const_ptr_api! {
+    extern "C" {
+        pub fn BIO_s_file() -> #[const_ptr_if(any(ossl110, libressl280))] BIO_METHOD;
+        pub fn BIO_new(type_: #[const_ptr_if(any(ossl110, libressl280))] BIO_METHOD) -> *mut BIO;
     }
 }
 extern "C" {
@@ -88,26 +81,10 @@ extern "C" {
     pub fn BIO_free_all(b: *mut BIO);
 }
 
-cfg_if! {
-    if #[cfg(any(ossl110, libressl280))] {
-        extern "C" {
-            pub fn BIO_s_mem() -> *const BIO_METHOD;
-        }
-    } else {
-        extern "C" {
-            pub fn BIO_s_mem() -> *mut BIO_METHOD;
-        }
-    }
-}
-cfg_if! {
-    if #[cfg(any(ossl102, libressl280))] {
-        extern "C" {
-            pub fn BIO_new_mem_buf(buf: *const c_void, len: c_int) -> *mut BIO;
-        }
-    } else {
-        extern "C" {
-            pub fn BIO_new_mem_buf(buf: *mut c_void, len: c_int) -> *mut BIO;
-        }
+const_ptr_api! {
+    extern "C" {
+        pub fn BIO_s_mem() -> #[const_ptr_if(any(ossl110, libressl280))] BIO_METHOD;
+        pub fn BIO_new_mem_buf(buf: #[const_ptr_if(any(ossl102, libressl280))] c_void, len: c_int) -> *mut BIO;
     }
 }
 
