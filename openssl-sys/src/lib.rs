@@ -9,6 +9,7 @@
     unused_imports
 )]
 #![doc(html_root_url = "https://docs.rs/openssl-sys/0.9")]
+#![recursion_limit = "128"] // configure fixed limit across all rust versions
 
 extern crate libc;
 
