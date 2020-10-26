@@ -973,15 +973,9 @@ extern "C" {
     pub fn SSL_SESSION_up_ref(ses: *mut SSL_SESSION) -> c_int;
     pub fn SSL_SESSION_free(s: *mut SSL_SESSION);
 }
-cfg_if! {
-    if #[cfg(ossl300)] {
-        extern "C" {
-            pub fn i2d_SSL_SESSION(s: *const SSL_SESSION, pp: *mut *mut c_uchar) -> c_int;
-        }
-    } else {
-        extern "C" {
-            pub fn i2d_SSL_SESSION(s: *mut SSL_SESSION, pp: *mut *mut c_uchar) -> c_int;
-        }
+const_ptr_api! {
+    extern "C" {
+        pub fn i2d_SSL_SESSION(s: #[const_ptr_if(ossl300)] SSL_SESSION, pp: *mut *mut c_uchar) -> c_int;
     }
 }
 extern "C" {

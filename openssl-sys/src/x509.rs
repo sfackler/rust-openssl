@@ -185,35 +185,19 @@ extern "C" {
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
 }
 
-cfg_if! {
-    if #[cfg(ossl300)] {
-        extern "C" {
-            pub fn i2d_X509_bio(b: *mut BIO, x: *const X509) -> c_int;
-            pub fn i2d_X509_REQ_bio(b: *mut BIO, x: *const X509_REQ) -> c_int;
-            pub fn i2d_PrivateKey_bio(b: *mut BIO, x: *const EVP_PKEY) -> c_int;
-            pub fn i2d_PUBKEY_bio(b: *mut BIO, x: *const EVP_PKEY) -> c_int;
+const_ptr_api! {
+    extern "C" {
+        pub fn i2d_X509_bio(b: *mut BIO, x: #[const_ptr_if(ossl300)] X509) -> c_int;
+        pub fn i2d_X509_REQ_bio(b: *mut BIO, x: #[const_ptr_if(ossl300)] X509_REQ) -> c_int;
+        pub fn i2d_PrivateKey_bio(b: *mut BIO, x: #[const_ptr_if(ossl300)] EVP_PKEY) -> c_int;
+        pub fn i2d_PUBKEY_bio(b: *mut BIO, x: #[const_ptr_if(ossl300)] EVP_PKEY) -> c_int;
 
-            pub fn i2d_PUBKEY(k: *const EVP_PKEY, buf: *mut *mut u8) -> c_int;
-            pub fn i2d_RSA_PUBKEY(k: *const RSA, buf: *mut *mut u8) -> c_int;
-            pub fn i2d_DSA_PUBKEY(a: *const DSA, pp: *mut *mut c_uchar) -> c_int;
-            pub fn i2d_PrivateKey(k: *const EVP_PKEY, buf: *mut *mut u8) -> c_int;
-            pub fn i2d_ECPrivateKey(ec_key: *const EC_KEY, pp: *mut *mut c_uchar) -> c_int;
-            pub fn i2d_EC_PUBKEY(a: *const EC_KEY, pp: *mut *mut c_uchar) -> c_int;
-        }
-    } else {
-        extern "C" {
-            pub fn i2d_X509_bio(b: *mut BIO, x: *mut X509) -> c_int;
-            pub fn i2d_X509_REQ_bio(b: *mut BIO, x: *mut X509_REQ) -> c_int;
-            pub fn i2d_PrivateKey_bio(b: *mut BIO, x: *mut EVP_PKEY) -> c_int;
-            pub fn i2d_PUBKEY_bio(b: *mut BIO, x: *mut EVP_PKEY) -> c_int;
-
-            pub fn i2d_PUBKEY(k: *mut EVP_PKEY, buf: *mut *mut u8) -> c_int;
-            pub fn i2d_RSA_PUBKEY(k: *mut RSA, buf: *mut *mut u8) -> c_int;
-            pub fn i2d_DSA_PUBKEY(a: *mut DSA, pp: *mut *mut c_uchar) -> c_int;
-            pub fn i2d_PrivateKey(k: *mut EVP_PKEY, buf: *mut *mut u8) -> c_int;
-            pub fn i2d_ECPrivateKey(ec_key: *mut EC_KEY, pp: *mut *mut c_uchar) -> c_int;
-            pub fn i2d_EC_PUBKEY(a: *mut EC_KEY, pp: *mut *mut c_uchar) -> c_int;
-        }
+        pub fn i2d_PUBKEY(k: #[const_ptr_if(ossl300)] EVP_PKEY, buf: *mut *mut u8) -> c_int;
+        pub fn i2d_RSA_PUBKEY(k: #[const_ptr_if(ossl300)] RSA, buf: *mut *mut u8) -> c_int;
+        pub fn i2d_DSA_PUBKEY(a: #[const_ptr_if(ossl300)] DSA, pp: *mut *mut c_uchar) -> c_int;
+        pub fn i2d_PrivateKey(k: #[const_ptr_if(ossl300)] EVP_PKEY, buf: *mut *mut u8) -> c_int;
+        pub fn i2d_ECPrivateKey(ec_key: #[const_ptr_if(ossl300)] EC_KEY, pp: *mut *mut c_uchar) -> c_int;
+        pub fn i2d_EC_PUBKEY(a: #[const_ptr_if(ossl300)] EC_KEY, pp: *mut *mut c_uchar) -> c_int;
     }
 }
 extern "C" {
@@ -298,20 +282,10 @@ extern "C" {
         length: c_long,
     ) -> *mut X509_REQ;
 }
-cfg_if! {
-    if #[cfg(ossl300)] {
-        extern "C" {
-            pub fn i2d_X509_REQ(x: *const X509_REQ, buf: *mut *mut u8) -> c_int;
-        }
-    } else {
-        extern "C" {
-            pub fn i2d_X509_REQ(x: *mut X509_REQ, buf: *mut *mut u8) -> c_int;
-        }
-    }
-}
-
 const_ptr_api! {
     extern "C" {
+        pub fn i2d_X509_REQ(x: #[const_ptr_if(ossl300)] X509_REQ, buf: *mut *mut u8) -> c_int;
+
         #[cfg(any(ossl102, libressl273))]
         pub fn X509_get0_signature(
             psig: *mut #[const_ptr_if(any(ossl110, libressl273))] ASN1_BIT_STRING,

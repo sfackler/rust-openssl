@@ -84,15 +84,9 @@ extern "C" {
     pub fn OCSP_RESPONSE_free(r: *mut OCSP_RESPONSE);
 }
 
-cfg_if! {
-    if #[cfg(ossl300)] {
-        extern "C" {
-            pub fn i2d_OCSP_RESPONSE(a: *const OCSP_RESPONSE, pp: *mut *mut c_uchar) -> c_int;
-        }
-    } else {
-        extern "C" {
-            pub fn i2d_OCSP_RESPONSE(a: *mut OCSP_RESPONSE, pp: *mut *mut c_uchar) -> c_int;
-        }
+const_ptr_api! {
+    extern "C" {
+        pub fn i2d_OCSP_RESPONSE(a: #[const_ptr_if(ossl300)] OCSP_RESPONSE, pp: *mut *mut c_uchar) -> c_int;
     }
 }
 
@@ -108,15 +102,9 @@ extern "C" {
     pub fn OCSP_REQUEST_free(r: *mut OCSP_REQUEST);
 }
 
-cfg_if! {
-    if #[cfg(ossl300)] {
-        extern "C" {
-            pub fn i2d_OCSP_REQUEST(a: *const OCSP_REQUEST, pp: *mut *mut c_uchar) -> c_int;
-        }
-    } else {
-        extern "C" {
-            pub fn i2d_OCSP_REQUEST(a: *mut OCSP_REQUEST, pp: *mut *mut c_uchar) -> c_int;
-        }
+const_ptr_api! {
+    extern "C" {
+        pub fn i2d_OCSP_REQUEST(a: #[const_ptr_if(ossl300)] OCSP_REQUEST, pp: *mut *mut c_uchar) -> c_int;
     }
 }
 
