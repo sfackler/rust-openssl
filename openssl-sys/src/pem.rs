@@ -20,117 +20,61 @@ extern "C" {
     ) -> *mut X509;
 }
 
-cfg_if! {
-    if #[cfg(ossl300)] {
-        extern "C" {
-            pub fn PEM_write_bio_X509(bio: *mut BIO, x509: *const X509) -> c_int;
-            pub fn PEM_write_bio_X509_REQ(bio: *mut BIO, x509: *const X509_REQ) -> c_int;
-            pub fn PEM_write_bio_RSAPrivateKey(
-                bp: *mut BIO,
-                rsa: *const RSA,
-                cipher: *const EVP_CIPHER,
-                kstr: *const c_uchar,
-                klen: c_int,
-                callback: pem_password_cb,
-                user_data: *mut c_void,
-            ) -> c_int;
-            pub fn PEM_write_bio_RSA_PUBKEY(bp: *mut BIO, rsa: *const RSA) -> c_int;
-            pub fn PEM_write_bio_DSAPrivateKey(
-                bp: *mut BIO,
-                dsa: *const DSA,
-                cipher: *const EVP_CIPHER,
-                kstr: *const c_uchar,
-                klen: c_int,
-                callback: pem_password_cb,
-                user_data: *mut c_void,
-            ) -> c_int;
-            pub fn PEM_write_bio_ECPrivateKey(
-                bio: *mut BIO,
-                key: *const EC_KEY,
-                cipher: *const EVP_CIPHER,
-                kstr: *const c_uchar,
-                klen: c_int,
-                callback: pem_password_cb,
-                user_data: *mut c_void,
-            ) -> c_int;
-            pub fn PEM_write_bio_DSA_PUBKEY(bp: *mut BIO, dsa: *const DSA) -> c_int;
-            pub fn PEM_write_bio_PrivateKey(
-                bio: *mut BIO,
-                pkey: *const EVP_PKEY,
-                cipher: *const EVP_CIPHER,
-                kstr: *const c_uchar,
-                klen: c_int,
-                callback: pem_password_cb,
-                user_data: *mut c_void,
-            ) -> c_int;
-            pub fn PEM_write_bio_PUBKEY(bp: *mut BIO, x: *const EVP_PKEY) -> c_int;
-            pub fn PEM_write_bio_PKCS8PrivateKey(
-                bio: *mut BIO,
-                pkey: *const EVP_PKEY,
-                cipher: *const EVP_CIPHER,
-                kstr: *const c_char,
-                klen: c_int,
-                callback: pem_password_cb,
-                user_data: *mut c_void,
-            ) -> c_int;
-            pub fn PEM_write_bio_PKCS7(bp: *mut BIO, x: *const PKCS7) -> c_int;
-            pub fn PEM_write_bio_EC_PUBKEY(bp: *mut BIO, ec: *const EC_KEY) -> c_int;
-        }
-    } else {
-        extern "C" {
-            pub fn PEM_write_bio_X509(bio: *mut BIO, x509: *mut X509) -> c_int;
-            pub fn PEM_write_bio_X509_REQ(bio: *mut BIO, x509: *mut X509_REQ) -> c_int;
-            pub fn PEM_write_bio_RSAPrivateKey(
-                bp: *mut BIO,
-                rsa: *mut RSA,
-                cipher: *const EVP_CIPHER,
-                kstr: *mut c_uchar,
-                klen: c_int,
-                callback: pem_password_cb,
-                user_data: *mut c_void,
-            ) -> c_int;
-            pub fn PEM_write_bio_RSA_PUBKEY(bp: *mut BIO, rsa: *mut RSA) -> c_int;
-            pub fn PEM_write_bio_DSAPrivateKey(
-                bp: *mut BIO,
-                dsa: *mut DSA,
-                cipher: *const EVP_CIPHER,
-                kstr: *mut c_uchar,
-                klen: c_int,
-                callback: pem_password_cb,
-                user_data: *mut c_void,
-            ) -> c_int;
-            pub fn PEM_write_bio_ECPrivateKey(
-                bio: *mut BIO,
-                key: *mut EC_KEY,
-                cipher: *const EVP_CIPHER,
-                kstr: *mut c_uchar,
-                klen: c_int,
-                callback: pem_password_cb,
-                user_data: *mut c_void,
-            ) -> c_int;
-            pub fn PEM_write_bio_DSA_PUBKEY(bp: *mut BIO, dsa: *mut DSA) -> c_int;
-            pub fn PEM_write_bio_PrivateKey(
-                bio: *mut BIO,
-                pkey: *mut EVP_PKEY,
-                cipher: *const EVP_CIPHER,
-                kstr: *mut c_uchar,
-                klen: c_int,
-                callback: pem_password_cb,
-                user_data: *mut c_void,
-            ) -> c_int;
-            pub fn PEM_write_bio_PUBKEY(bp: *mut BIO, x: *mut EVP_PKEY) -> c_int;
-            pub fn PEM_write_bio_PKCS8PrivateKey(
-                bio: *mut BIO,
-                pkey: *mut EVP_PKEY,
-                cipher: *const EVP_CIPHER,
-                kstr: *mut c_char,
-                klen: c_int,
-                callback: pem_password_cb,
-                user_data: *mut c_void,
-            ) -> c_int;
-            pub fn PEM_write_bio_PKCS7(bp: *mut BIO, x: *mut PKCS7) -> c_int;
-            pub fn PEM_write_bio_EC_PUBKEY(bp: *mut BIO, ec: *mut EC_KEY) -> c_int;
-        }
+const_ptr_api! {
+    extern "C" {
+        pub fn PEM_write_bio_X509(bio: *mut BIO, x509: #[const_ptr_if(ossl300)] X509) -> c_int;
+        pub fn PEM_write_bio_X509_REQ(bio: *mut BIO, x509: #[const_ptr_if(ossl300)] X509_REQ) -> c_int;
+        pub fn PEM_write_bio_RSAPrivateKey(
+            bp: *mut BIO,
+            rsa: #[const_ptr_if(ossl300)] RSA,
+            cipher: *const EVP_CIPHER,
+            kstr: *const c_uchar,
+            klen: c_int,
+            callback: pem_password_cb,
+            user_data: *mut c_void,
+        ) -> c_int;
+        pub fn PEM_write_bio_RSA_PUBKEY(bp: *mut BIO, rsa: #[const_ptr_if(ossl300)] RSA) -> c_int;
+        pub fn PEM_write_bio_DSAPrivateKey(
+            bp: *mut BIO,
+            dsa: #[const_ptr_if(ossl300)] DSA,
+            cipher: *const EVP_CIPHER,
+            kstr: *const c_uchar,
+            klen: c_int,
+            callback: pem_password_cb,
+            user_data: *mut c_void,
+        ) -> c_int;
+        pub fn PEM_write_bio_ECPrivateKey(
+            bio: *mut BIO,
+            key: #[const_ptr_if(ossl300)] EC_KEY,
+            cipher: *const EVP_CIPHER,
+            kstr: *const c_uchar,
+            klen: c_int,
+            callback: pem_password_cb,
+            user_data: *mut c_void,
+        ) -> c_int;
+        pub fn PEM_write_bio_DSA_PUBKEY(bp: *mut BIO, dsa: *const DSA) -> c_int;
+        pub fn PEM_write_bio_PrivateKey(
+            bio: *mut BIO,
+            pkey: #[const_ptr_if(ossl300)] EVP_PKEY,
+            cipher: *const EVP_CIPHER,
+            kstr: *const c_uchar,
+            klen: c_int,
+            callback: pem_password_cb,
+            user_data: *mut c_void,
+        ) -> c_int;
+        pub fn PEM_write_bio_PUBKEY(bp: *mut BIO, x: #[const_ptr_if(ossl300)] EVP_PKEY) -> c_int;
+        pub fn PEM_write_bio_PKCS8PrivateKey(
+            bio: *mut BIO,
+            pkey: #[const_ptr_if(ossl300)] EVP_PKEY,
+            cipher: *const EVP_CIPHER,
+            kstr: *const c_char,
+            klen: c_int,
+            callback: pem_password_cb,
+            user_data: *mut c_void,
+        ) -> c_int;
+        pub fn PEM_write_bio_PKCS7(bp: *mut BIO, x: #[const_ptr_if(ossl300)] PKCS7) -> c_int;
+        pub fn PEM_write_bio_EC_PUBKEY(bp: *mut BIO, ec: #[const_ptr_if(ossl300)] EC_KEY) -> c_int;
+        pub fn PEM_write_bio_X509_CRL(bio: *mut BIO, x509: #[const_ptr_if(ossl300)] X509_CRL) -> c_int;
     }
 }
 

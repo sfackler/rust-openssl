@@ -88,6 +88,10 @@ impl Id {
     pub const ED25519: Id = Id(ffi::EVP_PKEY_ED25519);
     #[cfg(ossl111)]
     pub const ED448: Id = Id(ffi::EVP_PKEY_ED448);
+    #[cfg(ossl111)]
+    pub const X25519: Id = Id(ffi::EVP_PKEY_X25519);
+    #[cfg(ossl111)]
+    pub const X448: Id = Id(ffi::EVP_PKEY_X448);
 
     /// Creates a `Id` from an integer representation.
     pub fn from_raw(value: c_int) -> Id {
@@ -492,6 +496,18 @@ impl PKey<Private> {
 
             Ok(PKey::from_ptr(key))
         }
+    }
+
+    /// Generates a new private Ed25519 key
+    #[cfg(ossl111)]
+    pub fn generate_x25519() -> Result<PKey<Private>, ErrorStack> {
+        PKey::generate_eddsa(ffi::EVP_PKEY_X25519)
+    }
+
+    /// Generates a new private Ed448 key
+    #[cfg(ossl111)]
+    pub fn generate_x448() -> Result<PKey<Private>, ErrorStack> {
+        PKey::generate_eddsa(ffi::EVP_PKEY_X448)
     }
 
     /// Generates a new private Ed25519 key

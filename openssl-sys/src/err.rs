@@ -13,8 +13,8 @@ cfg_if! {
 
         pub const ERR_LIB_OFFSET: c_ulong = 23;
         pub const ERR_LIB_MASK: c_ulong = 0xff;
-        pub const ERR_RFLAGS_OFFSET: c_ulong = 19;
-        pub const ERR_RFLAGS_MASK: c_ulong = 0xf;
+        pub const ERR_RFLAGS_OFFSET: c_ulong = 18;
+        pub const ERR_RFLAGS_MASK: c_ulong = 0x1f;
         pub const ERR_REASON_MASK: c_ulong = 0x7FFFFF;
 
         pub const ERR_RFLAG_FATAL: c_ulong = 0x1 << ERR_RFLAGS_OFFSET;

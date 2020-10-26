@@ -61,14 +61,8 @@ extern "C" {
     pub fn ASN1_TIME_set_string_X509(s: *mut ASN1_TIME, str: *const c_char) -> c_int;
 }
 
-cfg_if! {
-    if #[cfg(any(ossl110, libressl280))] {
-        extern "C" {
-            pub fn ASN1_STRING_to_UTF8(out: *mut *mut c_uchar, s: *const ASN1_STRING) -> c_int;
-        }
-    } else {
-        extern "C" {
-            pub fn ASN1_STRING_to_UTF8(out: *mut *mut c_uchar, s: *mut ASN1_STRING) -> c_int;
-        }
+const_ptr_api! {
+    extern "C" {
+        pub fn ASN1_STRING_to_UTF8(out: *mut *mut c_uchar, s: #[const_ptr_if(any(ossl110, libressl280))] ASN1_STRING) -> c_int;
     }
 }

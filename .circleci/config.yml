@@ -177,13 +177,11 @@ jobs:
         type: string
         default: 1.33.0
     macos:
-      xcode: "9.0"
+      xcode: "12.2.0"
     environment:
       RUST_BACKTRACE: 1
     steps:
       - checkout
-      - run: sudo mkdir /opt
-      - run: sudo chown -R $USER /usr/local/ /opt
       - run: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain << parameters.image >>
       - run: sudo ln -s ~/.cargo/bin/* /usr/local/bin
       - run: cargo generate-lockfile
@@ -212,7 +210,7 @@ openssl_300: &openssl_300
   version: 3.0.0-alpha6
 openssl_111: &openssl_111
   library: openssl
-  version: 1.1.1g
+  version: 1.1.1h
 openssl_110: &openssl_110
   library: openssl
   version: 1.1.0l

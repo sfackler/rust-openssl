@@ -30,7 +30,13 @@ pub const X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY: c_int = 20;
 pub const X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE: c_int = 21;
 pub const X509_V_ERR_CERT_CHAIN_TOO_LONG: c_int = 22;
 pub const X509_V_ERR_CERT_REVOKED: c_int = 23;
-pub const X509_V_ERR_INVALID_CA: c_int = 24;
+cfg_if! {
+    if #[cfg(ossl300)] {
+        pub const X509_V_ERR_NO_ISSUER_PUBLIC_KEY: c_int = 24;
+    } else {
+        pub const X509_V_ERR_INVALID_CA: c_int = 24;
+    }
+}
 pub const X509_V_ERR_PATH_LENGTH_EXCEEDED: c_int = 25;
 pub const X509_V_ERR_INVALID_PURPOSE: c_int = 26;
 pub const X509_V_ERR_CERT_UNTRUSTED: c_int = 27;
