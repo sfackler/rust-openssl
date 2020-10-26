@@ -308,15 +308,9 @@ extern "C" {
     pub fn X509_new() -> *mut X509;
     pub fn X509_free(x: *mut X509);
 }
-cfg_if! {
-    if #[cfg(ossl300)] {
-        extern "C" {
-            pub fn i2d_X509(x: *const X509, buf: *mut *mut u8) -> c_int;
-        }
-    } else {
-        extern "C" {
-            pub fn i2d_X509(x: *mut X509, buf: *mut *mut u8) -> c_int;
-        }
+const_ptr_api! {
+    extern "C" {
+        pub fn i2d_X509(x: #[const_ptr_if(ossl300)] X509, buf: *mut *mut u8) -> c_int;
     }
 }
 extern "C" {
@@ -328,15 +322,9 @@ extern "C" {
     pub fn X509_set_serialNumber(x: *mut X509, sn: *mut ASN1_INTEGER) -> c_int;
     pub fn X509_get_serialNumber(x: *mut X509) -> *mut ASN1_INTEGER;
 }
-cfg_if! {
-    if #[cfg(ossl300)] {
-        extern "C" {
-            pub fn X509_set_issuer_name(x: *mut X509, name: *const X509_NAME) -> c_int;
-        }
-    } else {
-        extern "C" {
-            pub fn X509_set_issuer_name(x: *mut X509, name: *mut X509_NAME) -> c_int;
-        }
+const_ptr_api! {
+    extern "C" {
+        pub fn X509_set_issuer_name(x: *mut X509, name: #[const_ptr_if(ossl300)] X509_NAME) -> c_int;
     }
 }
 extern "C" {
@@ -345,21 +333,7 @@ extern "C" {
 const_ptr_api! {
     extern "C" {
         pub fn X509_get_issuer_name(x: #[const_ptr_if(any(ossl110, libressl280))] ::X509) -> *mut ::X509_NAME;
-    }
-}
-cfg_if! {
-    if #[cfg(ossl300)] {
-        extern "C" {
-            pub fn X509_set_subject_name(x: *mut X509, name: *const X509_NAME) -> c_int;
-        }
-    } else {
-        extern "C" {
-            pub fn X509_set_subject_name(x: *mut X509, name: *mut X509_NAME) -> c_int;
-        }
-    }
-}
-const_ptr_api! {
-    extern "C" {
+        pub fn X509_set_subject_name(x: *mut X509, name: #[const_ptr_if(ossl300)] X509_NAME) -> c_int;
         pub fn X509_get_subject_name(x: #[const_ptr_if(any(ossl110, libressl280))] ::X509) -> *mut ::X509_NAME;
     }
 }
@@ -383,15 +357,9 @@ extern "C" {
     #[cfg(ossl110)]
     pub fn X509_REQ_get_subject_name(req: *const X509_REQ) -> *mut X509_NAME;
 }
-cfg_if! {
-    if #[cfg(ossl300)] {
-        extern "C" {
-            pub fn X509_REQ_set_subject_name(req: *mut X509_REQ, name: *const X509_NAME) -> c_int;
-        }
-    } else {
-        extern "C" {
-            pub fn X509_REQ_set_subject_name(req: *mut X509_REQ, name: *mut X509_NAME) -> c_int;
-        }
+const_ptr_api! {
+    extern "C" {
+        pub fn X509_REQ_set_subject_name(req: *mut X509_REQ, name: #[const_ptr_if(ossl300)] X509_NAME) -> c_int;
     }
 }
 extern "C" {
@@ -635,15 +603,10 @@ extern "C" {
     pub fn X509_verify_cert(ctx: *mut X509_STORE_CTX) -> c_int;
 }
 
-cfg_if! {
-    if #[cfg(ossl300)] {
-        extern "C" {
-            pub fn X509_STORE_get0_objects(ctx: *const X509_STORE) -> *mut stack_st_X509_OBJECT;
-        }
-    } else if #[cfg(any(ossl110, libressl270))] {
-        extern "C" {
-            pub fn X509_STORE_get0_objects(ctx: *mut X509_STORE) -> *mut stack_st_X509_OBJECT;
-        }
+const_ptr_api! {
+    extern "C" {
+        #[cfg(any(ossl110, libressl270))]
+        pub fn X509_STORE_get0_objects(ctx: #[const_ptr_if(ossl300)] X509_STORE) -> *mut stack_st_X509_OBJECT;
     }
 }
 #[cfg(any(ossl110, libressl270))]
