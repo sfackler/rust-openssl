@@ -10,16 +10,18 @@ use libc::{c_int, c_long, c_uint};
 use std::ptr;
 
 use crate::asn1::{Asn1IntegerRef, Asn1ObjectRef};
+use crate::bio::MemBioSlice;
 use crate::error::ErrorStack;
 use crate::hash::MessageDigest;
-use crate::x509::X509Algorithm;
+use crate::pkey::{HasPrivate, PKeyRef};
+use crate::x509::{X509Algorithm, X509Ref};
 use crate::{cvt, cvt_p};
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::TS_MSG_IMPRINT;
     fn drop = ffi::TS_MSG_IMPRINT_free;
 
-    /// A message imprint contains the has of the data to be timestamped.
+    /// A message imprint contains the hash of the data to be timestamped.
     pub struct TsMsgImprint;
 
     /// Reference to `TsMsgImprint`.
@@ -255,13 +257,123 @@ impl TsVerifyContext {
     }
 }
 
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::TS_RESP_CTX;
+    fn drop = ffi::TS_RESP_CTX_free;
+
+    /// A context object used to sign timestamp requests.
+    pub struct TsRespContext;
+
+    /// Reference to `TsRespContext`.
+    pub struct TsRespContextRef;
+}
+
+impl TsRespContextRef {
+    /// Creates a signed timestamp response for the request.
+    ///
+    /// This corresponds to `TS_RESP_create_response`.
+    pub fn create_response(&mut self, request: &TsReqRef) -> Result<TsResp, ErrorStack> {
+        unsafe {
+            let der = request.to_der()?;
+            let bio = MemBioSlice::new(&der)?;
+            let response = cvt_p(ffi::TS_RESP_create_response(self.as_ptr(), bio.as_ptr()))?;
+            Ok(TsResp::from_ptr(response))
+        }
+    }
+}
+
+impl TsRespContext {
+    /// Creates a new response context.
+    ///
+    /// This corresponds to `TS_RESP_CTX_new`.
+    pub fn new() -> Result<TsRespContext, ErrorStack> {
+        unsafe {
+            ffi::init();
+            let resp_context: *mut ffi::TS_RESP_CTX = cvt_p(ffi::TS_RESP_CTX_new())?;
+            Ok(TsRespContext::from_ptr(resp_context))
+        }
+    }
+
+    /// Sets the OID of the default policy used by the TSA.
+    ///
+    /// This corresponds to `TS_RESP_CTX_set_def_policy`.
+    pub fn set_default_policy(&mut self, policy: &Asn1ObjectRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::TS_RESP_CTX_set_def_policy(
+                self.as_ptr(),
+                policy.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Sets the certificate the TSA uses to sign the request.
+    ///
+    /// This corresponds to `TS_RESP_CTX_set_signer_cert`.
+    pub fn set_signer_cert(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::TS_RESP_CTX_set_signer_cert(
+                self.as_ptr(),
+                cert.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Sets the private key the TSA uses to sign the request.
+    ///
+    /// The private key match the X.509 certificate set by `set_signer_cert`.
+    ///
+    /// This corresponds to `TS_RESP_CTX_set_signer_key`.
+    pub fn set_signer_key<T>(&mut self, pkey: &PKeyRef<T>) -> Result<(), ErrorStack>
+    where
+        T: HasPrivate,
+    {
+        unsafe {
+            cvt(ffi::TS_RESP_CTX_set_signer_key(
+                self.as_ptr(),
+                pkey.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Sets the message digest algorithm to use for the signature.
+    ///
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    /// This corresponds to `TS_RESP_CTX_set_signer_digest`.
+    #[cfg(ossl110)]
+    pub fn set_signer_digest(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::TS_RESP_CTX_set_signer_digest(
+                self.as_ptr(),
+                md.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Add an accepted message digest algorithm.
+    ///
+    /// At least one accepted digest algorithm should be added to the context.
+    ///
+    /// This corresponds to `TS_RESP_CTX_add_md`.
+    pub fn add_md(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::TS_RESP_CTX_add_md(self.as_ptr(), md.as_ptr())).map(|_| ()) }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use crate::asn1::Asn1Integer;
+    use crate::asn1::{Asn1Integer, Asn1Object};
     use crate::bn::BigNum;
+    use crate::hash::MessageDigest;
+    use crate::pkey::PKey;
     use crate::sha::sha512;
+    use crate::x509::X509;
 
     #[test]
     fn test_request() {
@@ -295,6 +407,26 @@ mod tests {
     fn test_verify() {
         let request = TsReq::from_der(include_bytes!("../test/ts-request.der")).unwrap();
         let response = TsResp::from_der(include_bytes!("../test/ts-response.der")).unwrap();
+
+        let context = TsVerifyContext::from_req(&request).unwrap();
+        response.verify(&context).unwrap();
+    }
+
+    #[test]
+    fn test_response_context() {
+        let mut response_context = TsRespContext::new().unwrap();
+        response_context
+            .set_default_policy(&Asn1Object::from_str("1.2.3.4").unwrap())
+            .unwrap();
+        let cert = X509::from_pem(include_bytes!("../test/ts-cert.pem")).unwrap();
+        response_context.set_signer_cert(&cert).unwrap();
+        let key = PKey::private_key_from_pem(include_bytes!("../test/ts-key.pem")).unwrap();
+        response_context.set_signer_key(&key).unwrap();
+
+        response_context.add_md(MessageDigest::sha512()).unwrap();
+
+        let request = TsReq::from_der(include_bytes!("../test/ts-request.der")).unwrap();
+        let response = response_context.create_response(&request).unwrap();
 
         let context = TsVerifyContext::from_req(&request).unwrap();
         response.verify(&context).unwrap();

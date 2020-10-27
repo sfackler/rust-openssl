@@ -6,6 +6,7 @@ use *;
 pub enum TS_MSG_IMPRINT {}
 pub enum TS_REQ {}
 pub enum TS_RESP {}
+pub enum TS_RESP_CTX {}
 
 cfg_if! {
     if #[cfg(ossl110)] {
@@ -51,6 +52,13 @@ pub const TS_VFY_ALL_DATA: c_uint = TS_VFY_SIGNATURE
     | TS_VFY_SIGNER
     | TS_VFY_TSA_NAME;
 
+pub const TS_STATUS_GRANTED: c_uint = 0;
+pub const TS_STATUS_GRANTED_WITH_MODS: c_uint = 1;
+pub const TS_STATUS_REJECTION: c_uint = 2;
+pub const TS_STATUS_WAITING: c_uint = 3;
+pub const TS_STATUS_REVOCATION_WARNING: c_uint = 4;
+pub const TS_STATUS_REVOCATION_NOTIFICATION: c_uint = 5;
+
 extern "C" {
     pub fn TS_MSG_IMPRINT_new() -> *mut TS_MSG_IMPRINT;
     pub fn TS_MSG_IMPRINT_free(a: *mut TS_MSG_IMPRINT);
@@ -87,6 +95,14 @@ extern "C" {
 
     pub fn TS_REQ_to_TS_VERIFY_CTX(req: *mut TS_REQ, ctx: *mut TS_VERIFY_CTX)
         -> *mut TS_VERIFY_CTX;
+
+    pub fn TS_RESP_CTX_new() -> *mut TS_RESP_CTX;
+    pub fn TS_RESP_CTX_free(ctx: *mut TS_RESP_CTX);
+    pub fn TS_RESP_CTX_set_signer_cert(ctx: *mut TS_RESP_CTX, signer: *mut X509) -> c_int;
+    pub fn TS_RESP_CTX_set_signer_key(ctx: *mut TS_RESP_CTX, key: *mut EVP_PKEY) -> c_int;
+    pub fn TS_RESP_CTX_add_md(ctx: *mut TS_RESP_CTX, md: *const EVP_MD) -> c_int;
+
+    pub fn TS_RESP_create_response(ctx: *mut TS_RESP_CTX, req_bio: *mut BIO) -> *mut TS_RESP;
 }
 
 cfg_if! {
@@ -96,12 +112,31 @@ cfg_if! {
                 a: *mut TS_REQ,
                 policy: *const ASN1_OBJECT
             ) -> c_int;
+            pub fn TS_RESP_CTX_set_def_policy(
+                ctx: *mut TS_RESP_CTX,
+                def_policy: *const ASN1_OBJECT
+            ) -> c_int;
         }
     } else {
         extern "C" {
             pub fn TS_REQ_set_policy_id(
                 a: *mut TS_REQ,
                 policy: *mut ASN1_OBJECT
+            ) -> c_int;
+            pub fn TS_RESP_CTX_set_def_policy(
+                ctx: *mut TS_RESP_CTX,
+                def_policy: *mut ASN1_OBJECT
+            ) -> c_int;
+        }
+    }
+}
+
+cfg_if! {
+    if #[cfg(ossl110)] {
+        extern "C" {
+            pub fn TS_RESP_CTX_set_signer_digest(
+                ctx: *mut TS_RESP_CTX,
+                signer_digest: *const EVP_MD,
             ) -> c_int;
         }
     }
