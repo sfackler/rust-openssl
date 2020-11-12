@@ -862,7 +862,12 @@ impl X509NameBuilder {
     /// This corresponds to [`X509_NAME_add_entry_by_txt`].
     ///
     /// [`X509_NAME_add_entry_by_txt`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_add_entry_by_txt.html
-    pub fn append_entry_by_text_with_type(&mut self, field: &str, value: &str, ty: i32) -> Result<(), ErrorStack> {
+    pub fn append_entry_by_text_with_type(
+        &mut self,
+        field: &str,
+        value: &str,
+        ty: i32,
+    ) -> Result<(), ErrorStack> {
         unsafe {
             let field = CString::new(field).unwrap();
             assert!(value.len() <= c_int::max_value() as usize);
@@ -905,7 +910,12 @@ impl X509NameBuilder {
     /// This corresponds to [`X509_NAME_add_entry_by_NID`].
     ///
     /// [`X509_NAME_add_entry_by_NID`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_add_entry_by_NID.html
-    pub fn append_entry_by_nid_with_type(&mut self, field: Nid, value: &str, ty: i32) -> Result<(), ErrorStack> {
+    pub fn append_entry_by_nid_with_type(
+        &mut self,
+        field: Nid,
+        value: &str,
+        ty: i32,
+    ) -> Result<(), ErrorStack> {
         unsafe {
             assert!(value.len() <= c_int::max_value() as usize);
             cvt(ffi::X509_NAME_add_entry_by_NID(
