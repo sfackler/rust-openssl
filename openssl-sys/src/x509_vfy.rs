@@ -95,6 +95,29 @@ cfg_if! {
     }
 }
 
+pub const X509_V_FLAG_CB_ISSUER_CHECK: c_ulong = 0x0;
+pub const X509_V_FLAG_USE_CHECK_TIME: c_ulong = 0x2;
+pub const X509_V_FLAG_CRL_CHECK: c_ulong = 0x4;
+pub const X509_V_FLAG_CRL_CHECK_ALL: c_ulong = 0x8;
+pub const X509_V_FLAG_IGNORE_CRITICAL: c_ulong = 0x10;
+pub const X509_V_FLAG_X509_STRICT: c_ulong = 0x20;
+pub const X509_V_FLAG_ALLOW_PROXY_CERTS: c_ulong = 0x40;
+pub const X509_V_FLAG_POLICY_CHECK: c_ulong = 0x80;
+pub const X509_V_FLAG_EXPLICIT_POLICY: c_ulong = 0x100;
+pub const X509_V_FLAG_INHIBIT_ANY: c_ulong = 0x200;
+pub const X509_V_FLAG_INHIBIT_MAP: c_ulong = 0x400;
+pub const X509_V_FLAG_NOTIFY_POLICY: c_ulong = 0x800;
+pub const X509_V_FLAG_EXTENDED_CRL_SUPPORT: c_ulong = 0x1000;
+pub const X509_V_FLAG_USE_DELTAS: c_ulong = 0x2000;
+pub const X509_V_FLAG_CHECK_SS_SIGNATURE: c_ulong = 0x4000;
+pub const X509_V_FLAG_TRUSTED_FIRST: c_ulong = 0x8000;
+pub const X509_V_FLAG_SUITEB_128_LOS_ONLY: c_ulong = 0x10000;
+pub const X509_V_FLAG_SUITEB_192_LOS: c_ulong = 0x20000;
+pub const X509_V_FLAG_SUITEB_128_LOS: c_ulong = 0x30000;
+pub const X509_V_FLAG_PARTIAL_CHAIN: c_ulong = 0x80000;
+pub const X509_V_FLAG_NO_ALT_CHAINS: c_ulong = 0x100000;
+pub const X509_V_FLAG_NO_CHECK_TIME: c_ulong = 0x200000;
+
 extern "C" {
     pub fn X509_STORE_new() -> *mut X509_STORE;
     pub fn X509_STORE_free(store: *mut X509_STORE);
@@ -135,6 +158,13 @@ cfg_if! {
 extern "C" {
     #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_free(param: *mut X509_VERIFY_PARAM);
+
+    #[cfg(any(ossl102, libressl261))]
+    pub fn X509_VERIFY_PARAM_set_flags(param: *mut X509_VERIFY_PARAM, flags: c_ulong) -> c_int;
+    #[cfg(any(ossl102, libressl261))]
+    pub fn X509_VERIFY_PARAM_clear_flags(param: *mut X509_VERIFY_PARAM, flags: c_ulong) -> c_int;
+    #[cfg(any(ossl102, libressl261))]
+    pub fn X509_VERIFY_PARAM_get_flags(param: *mut X509_VERIFY_PARAM) -> c_ulong;
 
     #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_set1_host(
