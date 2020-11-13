@@ -119,6 +119,32 @@ pub const X509_V_FLAG_NO_ALT_CHAINS: c_ulong = 0x100000;
 pub const X509_V_FLAG_NO_CHECK_TIME: c_ulong = 0x200000;
 
 extern "C" {
+    pub fn X509_LOOKUP_hash_dir() -> *mut X509_LOOKUP_METHOD;
+    pub fn X509_LOOKUP_ctrl(
+        ctx: *mut X509_LOOKUP,
+        cmd: c_int,
+        argc: *const c_char,
+        argl: c_long,
+        ret: *mut *mut c_char,
+    ) -> c_int;
+}
+
+pub unsafe fn X509_LOOKUP_add_dir(
+    ctx: *mut X509_LOOKUP,
+    name: *const c_char,
+    _type: c_int,
+) -> c_int {
+    const X509_L_ADD_DIR: c_int = 2;
+    X509_LOOKUP_ctrl(
+        ctx,
+        X509_L_ADD_DIR,
+        name,
+        _type as c_long,
+        std::ptr::null_mut(),
+    )
+}
+
+extern "C" {
     pub fn X509_STORE_new() -> *mut X509_STORE;
     pub fn X509_STORE_free(store: *mut X509_STORE);
 
@@ -134,6 +160,11 @@ extern "C" {
     pub fn X509_STORE_CTX_cleanup(ctx: *mut X509_STORE_CTX);
 
     pub fn X509_STORE_add_cert(store: *mut X509_STORE, x: *mut X509) -> c_int;
+
+    pub fn X509_STORE_add_lookup(
+        store: *mut X509_STORE,
+        meth: *mut X509_LOOKUP_METHOD,
+    ) -> *mut X509_LOOKUP;
 
     pub fn X509_STORE_set_default_paths(store: *mut X509_STORE) -> c_int;
 
