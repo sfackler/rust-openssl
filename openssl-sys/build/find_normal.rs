@@ -51,8 +51,8 @@ fn find_openssl_dir(target: &str) -> OsString {
             }
         }
         let port_out = get_macport_openssl();
-        if !port_out.is_empty() {
-            return OsString::from(port_out);
+        if port_out.is_some() {
+            return OsString::from(port_out.unwrap());
         }
     }
 
@@ -241,39 +241,44 @@ fn execute_command_and_get_output(cmd: &str, args: &[&str]) -> Option<String> {
     return None;
 }
 
+
+
 /// find openssl path on macport
-fn get_macport_openssl() -> std::string::String {
+fn get_macport_openssl() -> Option<std::string::String> {
     let out = Command::new("port")
         .arg("-q")
         .arg("installed")
         .arg("openssl")
         .output();
-    let mut result = std::string::String::new();
     if out.is_ok() {
         let res = out.ok().unwrap();
         let outputs = std::str::from_utf8(&res.stdout).unwrap();
         let version = get_macport_openssl_version(outputs);
-        if version >= std::string::String::from("@1.1") {
-            result = std::string::String::from("/opt/local");
+        
+        if version.is_some()
+            && version.unwrap() >= std::string::String::from("@1.1") {
+            Some(std::string::String::from("/opt/local"))
+        } else {
+            None
         }
+    } else {
+        None
     }
-    return result;
 }
 
 /// get openssl version from the string printed out by port command
-fn get_macport_openssl_version(port_outputs: &str) -> std::string::String {
-    let mut result = std::string::String::new();
-
+fn get_macport_openssl_version(port_outputs: &str)
+    -> Option<std::string::String> {
     for elem in port_outputs.split("\n") {
         let active_pos = elem.find("(active)");
         if active_pos.is_some() {
             let ver_start = elem.find("@");
             if ver_start.is_some() {
-                let ver = elem.get(ver_start.unwrap()..active_pos.unwrap()).unwrap();
-                result = std::string::String::from(ver.trim());
-                break;
+                let ver = elem.get(
+                    ver_start.unwrap()..active_pos.unwrap()).unwrap();
+                return Some(std::string::String::from(ver.trim()));
             }
         }
     }
-    return result;
+    None
 }
