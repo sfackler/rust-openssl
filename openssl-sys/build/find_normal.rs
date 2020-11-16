@@ -242,8 +242,6 @@ fn execute_command_and_get_output(cmd: &str, args: &[&str]) -> Option<String> {
     return None;
 }
 
-
-
 /// find openssl path on macport
 fn get_macport_openssl() -> Option<std::string::String> {
     let out = Command::new("port")
@@ -251,14 +249,15 @@ fn get_macport_openssl() -> Option<std::string::String> {
         .arg("installed")
         .arg("openssl")
         .output();
-    if out.is_ok() {
-        let res = out.ok().unwrap();
+    if let Ok(res) = out {
         let outputs = std::str::from_utf8(&res.stdout).unwrap();
-        let version = get_macport_openssl_version(outputs);
-        
-        if version.is_some()
-            && version.unwrap() >= (MacportVersion {major: 1, minor: 1}) {
-            Some(std::string::String::from("/opt/local"))
+        let version_opt = get_macport_openssl_version(outputs);
+        if let Some(version) = version_opt {
+            if version >= (MacportVersion {major: 1, minor: 1}) {
+                Some(std::string::String::from("/opt/local"))
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -270,13 +269,14 @@ fn get_macport_openssl() -> Option<std::string::String> {
 /// get openssl version from the string printed out by port command
 fn get_macport_openssl_version(port_outputs: &str)
     -> Option<MacportVersion> {
-    for elem in port_outputs.split("\n") {
-        let active_pos = elem.find("(active)");
-        if active_pos.is_some() {
+    for elem in port_outputs.split('\n') {
+        let active_opt = elem.find("(active)");
+        if let Some(active_pos) = active_opt {
             let ver_start = elem.find('@');
-            if ver_start.is_some() {
-                let ver_str = elem.get(
-                    ver_start.unwrap() + 1 .. active_pos.unwrap()).unwrap();
+            if let Some(ver_start_pos) = ver_start {
+                let ver_str = elem
+                    .get(ver_start_pos + 1..active_pos)
+                    .unwrap();
                 return parse_macport_version(ver_str);
             }
         }
@@ -286,17 +286,20 @@ fn get_macport_openssl_version(port_outputs: &str)
 
 /// parse macport version 
 fn parse_macport_version(ver_str: &str)-> Option<MacportVersion> {
-    let ver_elems: Vec<&str> = ver_str.split(".").collect();
+    let ver_elems: Vec<&str> = ver_str.split('.').collect();
 
     if ver_elems.len() > 1 {
         let major_res = ver_elems[0].parse::<u64>();
         let minor_res = ver_elems[1].parse::<u64>();
-
-        if major_res.is_ok() && minor_res.is_ok() {
-            Some(MacportVersion {
-                major: major_res.unwrap(),
-                minor: minor_res.unwrap()
-            })
+        if let Ok(major) =  major_res {
+            if let Ok(minor) = minor_res {
+                Some(MacportVersion {
+                    major: major,
+                    minor: minor,
+                })
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -310,7 +313,7 @@ fn parse_macport_version(ver_str: &str)-> Option<MacportVersion> {
 #[derive(Eq, Debug)]
 struct MacportVersion {
     major: u64,
-    minor: u64
+    minor: u64,
 }
 
 impl Ord for MacportVersion {
@@ -334,4 +337,3 @@ impl PartialEq for MacportVersion {
         self.cmp(other) == std::cmp::Ordering::Equal
     }
 }
-
