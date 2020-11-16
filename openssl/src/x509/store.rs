@@ -159,9 +159,9 @@ impl X509LookupRef {
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_LOOKUP_METHOD;
-    fn drop = |method| {
+    fn drop = |_method| {
         #[cfg(ossl110)]
-        ffi::X509_LOOKUP_meth_free(method);
+        ffi::X509_LOOKUP_meth_free(_method);
     };
 
     /// Method used to look up certificates and CRLs.
