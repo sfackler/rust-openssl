@@ -281,7 +281,7 @@ fn get_macport_openssl_version(port_outputs: &str) -> Option<MacportVersion> {
     None
 }
 
-/// parse macport version 
+/// parse macport version
 fn parse_macport_version(ver_str: &str) -> Option<MacportVersion> {
     let ver_elems: Vec<&str> = ver_str.split('.').collect();
 
