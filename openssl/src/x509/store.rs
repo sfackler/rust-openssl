@@ -102,7 +102,7 @@ impl X509StoreBuilderRef {
     /// [`X509_STORE_add_lookup`]: https://www.openssl.org/docs/man1.1.1/man3/X509_STORE_add_lookup.html
     pub fn add_lookup(
         &mut self,
-        method: &X509LookupMethodRef,
+        method: &'static X509LookupMethodRef,
     ) -> Result<&mut X509LookupRef, ErrorStack> {
         let lookup = unsafe { ffi::X509_STORE_add_lookup(self.as_ptr(), method.as_ptr()) };
         cvt_p(lookup).map(|ptr| unsafe { X509LookupRef::from_ptr_mut(ptr) })
