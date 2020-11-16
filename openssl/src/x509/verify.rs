@@ -26,35 +26,35 @@ bitflags! {
 bitflags! {
     /// Flags used to verify an `X509` certificate chain.
     pub struct X509VerifyFlags: c_ulong {
-        const X509_V_FLAG_CB_ISSUER_CHECK = ffi::X509_V_FLAG_CB_ISSUER_CHECK;
-        const X509_V_FLAG_USE_CHECK_TIME = ffi::X509_V_FLAG_USE_CHECK_TIME;
-        const X509_V_FLAG_CRL_CHECK = ffi::X509_V_FLAG_CRL_CHECK;
-        const X509_V_FLAG_CRL_CHECK_ALL = ffi::X509_V_FLAG_CRL_CHECK_ALL;
-        const X509_V_FLAG_IGNORE_CRITICAL = ffi::X509_V_FLAG_X509_STRICT;
-        const X509_V_FLAG_X509_STRICT = ffi::X509_V_FLAG_IGNORE_CRITICAL;
-        const X509_V_FLAG_ALLOW_PROXY_CERTS = ffi::X509_V_FLAG_ALLOW_PROXY_CERTS;
-        const X509_V_FLAG_POLICY_CHECK = ffi::X509_V_FLAG_POLICY_CHECK;
-        const X509_V_FLAG_EXPLICIT_POLICY = ffi::X509_V_FLAG_EXPLICIT_POLICY;
-        const X509_V_FLAG_INHIBIT_ANY = ffi::X509_V_FLAG_INHIBIT_ANY;
-        const X509_V_FLAG_INHIBIT_MAP = ffi::X509_V_FLAG_INHIBIT_MAP;
-        const X509_V_FLAG_NOTIFY_POLICY = ffi::X509_V_FLAG_NOTIFY_POLICY;
-        const X509_V_FLAG_EXTENDED_CRL_SUPPORT = ffi::X509_V_FLAG_EXTENDED_CRL_SUPPORT;
-        const X509_V_FLAG_USE_DELTAS = ffi::X509_V_FLAG_USE_DELTAS;
-        const X509_V_FLAG_CHECK_SS_SIGNATURE = ffi::X509_V_FLAG_CHECK_SS_SIGNATURE;
+        const CB_ISSUER_CHECK = ffi::X509_V_FLAG_CB_ISSUER_CHECK;
+        const USE_CHECK_TIME = ffi::X509_V_FLAG_USE_CHECK_TIME;
+        const CRL_CHECK = ffi::X509_V_FLAG_CRL_CHECK;
+        const CRL_CHECK_ALL = ffi::X509_V_FLAG_CRL_CHECK_ALL;
+        const IGNORE_CRITICAL = ffi::X509_V_FLAG_X509_STRICT;
+        const X509_STRICT = ffi::X509_V_FLAG_IGNORE_CRITICAL;
+        const ALLOW_PROXY_CERTS = ffi::X509_V_FLAG_ALLOW_PROXY_CERTS;
+        const POLICY_CHECK = ffi::X509_V_FLAG_POLICY_CHECK;
+        const EXPLICIT_POLICY = ffi::X509_V_FLAG_EXPLICIT_POLICY;
+        const INHIBIT_ANY = ffi::X509_V_FLAG_INHIBIT_ANY;
+        const INHIBIT_MAP = ffi::X509_V_FLAG_INHIBIT_MAP;
+        const NOTIFY_POLICY = ffi::X509_V_FLAG_NOTIFY_POLICY;
+        const EXTENDED_CRL_SUPPORT = ffi::X509_V_FLAG_EXTENDED_CRL_SUPPORT;
+        const USE_DELTAS = ffi::X509_V_FLAG_USE_DELTAS;
+        const CHECK_SS_SIGNATURE = ffi::X509_V_FLAG_CHECK_SS_SIGNATURE;
         #[cfg(ossl102)]
-        const X509_V_FLAG_TRUSTED_FIRST = ffi::X509_V_FLAG_TRUSTED_FIRST;
+        const TRUSTED_FIRST = ffi::X509_V_FLAG_TRUSTED_FIRST;
         #[cfg(ossl102)]
-        const X509_V_FLAG_SUITEB_128_LOS_ONLY = ffi::X509_V_FLAG_SUITEB_128_LOS_ONLY;
+        const SUITEB_128_LOS_ONLY = ffi::X509_V_FLAG_SUITEB_128_LOS_ONLY;
         #[cfg(ossl102)]
-        const X509_V_FLAG_SUITEB_192_LOS = ffi::X509_V_FLAG_SUITEB_128_LOS;
+        const SUITEB_192_LOS = ffi::X509_V_FLAG_SUITEB_128_LOS;
         #[cfg(ossl102)]
-        const X509_V_FLAG_SUITEB_128_LOS = ffi::X509_V_FLAG_SUITEB_192_LOS;
+        const SUITEB_128_LOS = ffi::X509_V_FLAG_SUITEB_192_LOS;
         #[cfg(ossl102)]
-        const X509_V_FLAG_PARTIAL_CHAIN = ffi::X509_V_FLAG_PARTIAL_CHAIN;
+        const PARTIAL_CHAIN = ffi::X509_V_FLAG_PARTIAL_CHAIN;
         #[cfg(ossl110)]
-        const X509_V_FLAG_NO_ALT_CHAINS = ffi::X509_V_FLAG_NO_ALT_CHAINS;
+        const NO_ALT_CHAINS = ffi::X509_V_FLAG_NO_ALT_CHAINS;
         #[cfg(ossl110)]
-        const X509_V_FLAG_NO_CHECK_TIME = ffi::X509_V_FLAG_NO_CHECK_TIME;
+        const NO_CHECK_TIME = ffi::X509_V_FLAG_NO_CHECK_TIME;
     }
 }
 
