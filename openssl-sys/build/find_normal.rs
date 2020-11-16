@@ -253,7 +253,7 @@ fn get_macport_openssl() -> Option<std::string::String> {
         let outputs = std::str::from_utf8(&res.stdout).unwrap();
         let version_opt = get_macport_openssl_version(outputs);
         if let Some(version) = version_opt {
-            if version >= (MacportVersion {major: 1, minor: 1}) {
+            if version >= (MacportVersion { major: 1, minor: 1 }) {
                 Some(std::string::String::from("/opt/local"))
             } else {
                 None
@@ -267,16 +267,13 @@ fn get_macport_openssl() -> Option<std::string::String> {
 }
 
 /// get openssl version from the string printed out by port command
-fn get_macport_openssl_version(port_outputs: &str)
-    -> Option<MacportVersion> {
+fn get_macport_openssl_version(port_outputs: &str) -> Option<MacportVersion> {
     for elem in port_outputs.split('\n') {
         let active_opt = elem.find("(active)");
         if let Some(active_pos) = active_opt {
             let ver_start = elem.find('@');
             if let Some(ver_start_pos) = ver_start {
-                let ver_str = elem
-                    .get(ver_start_pos + 1..active_pos)
-                    .unwrap();
+                let ver_str = elem.get(ver_start_pos + 1..active_pos).unwrap();
                 return parse_macport_version(ver_str);
             }
         }
@@ -291,11 +288,11 @@ fn parse_macport_version(ver_str: &str)-> Option<MacportVersion> {
     if ver_elems.len() > 1 {
         let major_res = ver_elems[0].parse::<u64>();
         let minor_res = ver_elems[1].parse::<u64>();
-        if let Ok(major) =  major_res {
+        if let Ok(major) = major_res {
             if let Ok(minor) = minor_res {
                 Some(MacportVersion {
-                    major: major,
-                    minor: minor,
+                    major,
+                    minor,
                 })
             } else {
                 None
@@ -307,8 +304,6 @@ fn parse_macport_version(ver_str: &str)-> Option<MacportVersion> {
         None
     }
 }
-
-
 
 #[derive(Eq, Debug)]
 struct MacportVersion {
