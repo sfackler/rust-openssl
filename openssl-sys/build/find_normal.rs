@@ -290,7 +290,7 @@ fn parse_macport_version(ver_str: &str) -> Option<MacportVersion> {
         let minor_res = ver_elems[1].parse::<u64>();
         if let Ok(major) = major_res {
             if let Ok(minor) = minor_res {
-                Some(MacportVersion { major, minor, })
+                Some(MacportVersion { major, minor })
             } else {
                 None
             }
