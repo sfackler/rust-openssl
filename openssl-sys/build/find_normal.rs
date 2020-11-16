@@ -282,7 +282,7 @@ fn get_macport_openssl_version(port_outputs: &str) -> Option<MacportVersion> {
 }
 
 /// parse macport version 
-fn parse_macport_version(ver_str: &str)-> Option<MacportVersion> {
+fn parse_macport_version(ver_str: &str) -> Option<MacportVersion> {
     let ver_elems: Vec<&str> = ver_str.split('.').collect();
 
     if ver_elems.len() > 1 {
@@ -290,10 +290,7 @@ fn parse_macport_version(ver_str: &str)-> Option<MacportVersion> {
         let minor_res = ver_elems[1].parse::<u64>();
         if let Ok(major) = major_res {
             if let Ok(minor) = minor_res {
-                Some(MacportVersion {
-                    major,
-                    minor,
-                })
+                Some(MacportVersion { major, minor, })
             } else {
                 None
             }
