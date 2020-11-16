@@ -50,9 +50,10 @@ fn find_openssl_dir(target: &str) -> OsString {
                 return homebrew.to_path_buf().into();
             }
         }
-        let port_out = get_macport_openssl();
-        if port_out.is_some() {
-            return OsString::from(port_out.unwrap());
+
+        let port_path_opt = get_macport_openssl();
+        if let Some(port_path) = port_path_opt {
+            return OsString::from(port_path);
         }
     }
 
@@ -256,7 +257,7 @@ fn get_macport_openssl() -> Option<std::string::String> {
         let version = get_macport_openssl_version(outputs);
         
         if version.is_some()
-            && version.unwrap() >= std::string::String::from("@1.1") {
+            && version.unwrap() >= (MacportVersion {major: 1, minor: 1}) {
             Some(std::string::String::from("/opt/local"))
         } else {
             None
@@ -268,17 +269,69 @@ fn get_macport_openssl() -> Option<std::string::String> {
 
 /// get openssl version from the string printed out by port command
 fn get_macport_openssl_version(port_outputs: &str)
-    -> Option<std::string::String> {
+    -> Option<MacportVersion> {
     for elem in port_outputs.split("\n") {
         let active_pos = elem.find("(active)");
         if active_pos.is_some() {
-            let ver_start = elem.find("@");
+            let ver_start = elem.find('@');
             if ver_start.is_some() {
-                let ver = elem.get(
-                    ver_start.unwrap()..active_pos.unwrap()).unwrap();
-                return Some(std::string::String::from(ver.trim()));
+                let ver_str = elem.get(
+                    ver_start.unwrap() + 1 .. active_pos.unwrap()).unwrap();
+                return parse_macport_version(ver_str);
             }
         }
     }
     None
 }
+
+/// parse macport version 
+fn parse_macport_version(ver_str: &str)-> Option<MacportVersion> {
+    let ver_elems: Vec<&str> = ver_str.split(".").collect();
+
+    if ver_elems.len() > 1 {
+        let major_res = ver_elems[0].parse::<u64>();
+        let minor_res = ver_elems[1].parse::<u64>();
+
+        if major_res.is_ok() && minor_res.is_ok() {
+            Some(MacportVersion {
+                major: major_res.unwrap(),
+                minor: minor_res.unwrap()
+            })
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
+
+
+#[derive(Eq, Debug)]
+struct MacportVersion {
+    major: u64,
+    minor: u64
+}
+
+impl Ord for MacportVersion {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let res = self.major.cmp(&other.major);
+        if res == std::cmp::Ordering::Equal {
+            self.minor.cmp(&other.minor)
+        } else {
+            res
+        }
+    }
+}
+impl PartialOrd for MacportVersion {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for MacportVersion {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other) == std::cmp::Ordering::Equal
+    }
+}
+
