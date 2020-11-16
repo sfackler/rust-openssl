@@ -119,6 +119,12 @@ pub const X509_V_FLAG_NO_ALT_CHAINS: c_ulong = 0x100000;
 pub const X509_V_FLAG_NO_CHECK_TIME: c_ulong = 0x200000;
 
 extern "C" {
+    #[cfg(ossl110)]
+    pub fn X509_LOOKUP_meth_free(method: *mut X509_LOOKUP_METHOD);
+}
+
+extern "C" {
+    pub fn X509_LOOKUP_free(ctx: *mut X509_LOOKUP);
     pub fn X509_LOOKUP_hash_dir() -> *mut X509_LOOKUP_METHOD;
     pub fn X509_LOOKUP_ctrl(
         ctx: *mut X509_LOOKUP,

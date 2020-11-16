@@ -94,6 +94,80 @@ impl X509StoreBuilderRef {
     pub fn set_default_paths(&mut self) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_STORE_set_default_paths(self.as_ptr())).map(|_| ()) }
     }
+
+    /// Adds a lookup method to the store.
+    ///
+    /// This corresponds to [`X509_STORE_add_lookup`].
+    ///
+    /// [`X509_STORE_add_lookup`]: https://www.openssl.org/docs/man1.1.1/man3/X509_STORE_add_lookup.html
+    pub fn add_lookup(
+        &mut self,
+        method: &X509LookupMethodRef,
+    ) -> Result<&mut X509LookupRef, ErrorStack> {
+        let lookup = unsafe { ffi::X509_STORE_add_lookup(self.as_ptr(), method.as_ptr()) };
+        cvt_p(lookup).map(|ptr| unsafe { X509LookupRef::from_ptr_mut(ptr) })
+    }
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::X509_LOOKUP;
+    fn drop = ffi::X509_LOOKUP_free;
+
+    /// Information used by an `X509Store` to look up certificates and CRLs.
+    pub struct X509Lookup;
+    /// Reference to an `X509Lookup`.
+    pub struct X509LookupRef;
+}
+
+impl X509Lookup {
+    /// Lookup method that loads certificates and CRLs on demand and caches
+    /// them in memory once they are loaded. As of OpenSSL 1.0.0, it also
+    /// checks for newer CRLs upon each lookup, so that newer CRLs are used as
+    /// soon as they appear in the directory.
+    ///
+    /// This corresponds to [`X509_LOOKUP_hash_dir`].
+    ///
+    /// [`X509_LOOKUP_hash_dir`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_LOOKUP_hash_dir.html
+    pub fn hash_dir() -> &'static X509LookupMethodRef {
+        unsafe { X509LookupMethodRef::from_ptr(ffi::X509_LOOKUP_hash_dir()) }
+    }
+}
+
+impl X509LookupRef {
+    /// Specifies a directory from which certificates and CRLs will be loaded
+    /// on-demand. Must be used with `X509Lookup::hash_dir`.
+    ///
+    /// This corresponds to [`X509_LOOKUP_add_dir`].
+    ///
+    /// [`X509_LOOKUP_add_dir`]: https://www.openssl.org/docs/man1.1.1/man3/X509_LOOKUP_add_dir.html
+    pub fn add_dir(
+        &mut self,
+        name: &str,
+        file_type: crate::ssl::SslFiletype,
+    ) -> Result<(), ErrorStack> {
+        let name = std::ffi::CString::new(name).unwrap();
+        unsafe {
+            cvt(ffi::X509_LOOKUP_add_dir(
+                self.as_ptr(),
+                name.as_ptr(),
+                file_type.as_raw(),
+            ))
+            .map(|_| ())
+        }
+    }
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::X509_LOOKUP_METHOD;
+    fn drop = |method| {
+        #[cfg(ossl110)]
+        ffi::X509_LOOKUP_meth_free(method);
+    };
+
+    /// Method used to look up certificates and CRLs.
+    pub struct X509LookupMethod;
+    /// Reference to an `X509LookupMethod`.
+    pub struct X509LookupMethodRef;
 }
 
 foreign_type_and_impl_send_sync! {
