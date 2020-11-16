@@ -95,6 +95,9 @@ cfg_if! {
     }
 }
 
+#[cfg(not(ossl110))]
+pub const X509_V_FLAG_CB_ISSUER_CHECK: c_ulong = 0x1;
+#[cfg(ossl110)]
 pub const X509_V_FLAG_CB_ISSUER_CHECK: c_ulong = 0x0;
 pub const X509_V_FLAG_USE_CHECK_TIME: c_ulong = 0x2;
 pub const X509_V_FLAG_CRL_CHECK: c_ulong = 0x4;
@@ -110,12 +113,19 @@ pub const X509_V_FLAG_NOTIFY_POLICY: c_ulong = 0x800;
 pub const X509_V_FLAG_EXTENDED_CRL_SUPPORT: c_ulong = 0x1000;
 pub const X509_V_FLAG_USE_DELTAS: c_ulong = 0x2000;
 pub const X509_V_FLAG_CHECK_SS_SIGNATURE: c_ulong = 0x4000;
+#[cfg(ossl102)]
 pub const X509_V_FLAG_TRUSTED_FIRST: c_ulong = 0x8000;
+#[cfg(ossl102)]
 pub const X509_V_FLAG_SUITEB_128_LOS_ONLY: c_ulong = 0x10000;
+#[cfg(ossl102)]
 pub const X509_V_FLAG_SUITEB_192_LOS: c_ulong = 0x20000;
+#[cfg(ossl102)]
 pub const X509_V_FLAG_SUITEB_128_LOS: c_ulong = 0x30000;
+#[cfg(ossl102)]
 pub const X509_V_FLAG_PARTIAL_CHAIN: c_ulong = 0x80000;
+#[cfg(ossl110)]
 pub const X509_V_FLAG_NO_ALT_CHAINS: c_ulong = 0x100000;
+#[cfg(ossl110)]
 pub const X509_V_FLAG_NO_CHECK_TIME: c_ulong = 0x200000;
 
 extern "C" {

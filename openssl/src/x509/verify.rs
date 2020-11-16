@@ -41,12 +41,19 @@ bitflags! {
         const X509_V_FLAG_EXTENDED_CRL_SUPPORT = ffi::X509_V_FLAG_EXTENDED_CRL_SUPPORT;
         const X509_V_FLAG_USE_DELTAS = ffi::X509_V_FLAG_USE_DELTAS;
         const X509_V_FLAG_CHECK_SS_SIGNATURE = ffi::X509_V_FLAG_CHECK_SS_SIGNATURE;
+        #[cfg(ossl102)]
         const X509_V_FLAG_TRUSTED_FIRST = ffi::X509_V_FLAG_TRUSTED_FIRST;
+        #[cfg(ossl102)]
         const X509_V_FLAG_SUITEB_128_LOS_ONLY = ffi::X509_V_FLAG_SUITEB_128_LOS_ONLY;
+        #[cfg(ossl102)]
         const X509_V_FLAG_SUITEB_192_LOS = ffi::X509_V_FLAG_SUITEB_128_LOS;
+        #[cfg(ossl102)]
         const X509_V_FLAG_SUITEB_128_LOS = ffi::X509_V_FLAG_SUITEB_192_LOS;
+        #[cfg(ossl102)]
         const X509_V_FLAG_PARTIAL_CHAIN = ffi::X509_V_FLAG_PARTIAL_CHAIN;
+        #[cfg(ossl110)]
         const X509_V_FLAG_NO_ALT_CHAINS = ffi::X509_V_FLAG_NO_ALT_CHAINS;
+        #[cfg(ossl110)]
         const X509_V_FLAG_NO_CHECK_TIME = ffi::X509_V_FLAG_NO_CHECK_TIME;
     }
 }
