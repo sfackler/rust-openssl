@@ -28,5 +28,6 @@ libc = "0.2"
 openssl-sys = { version = "0.9.58", path = "../openssl-sys" }
 
 [dev-dependencies]
+base64 = "0.13.0"
 tempdir = "0.3"
 hex = "0.3"
