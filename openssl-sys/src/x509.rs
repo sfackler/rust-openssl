@@ -203,6 +203,12 @@ extern "C" {
     pub fn i2d_EC_PUBKEY(a: *mut EC_KEY, pp: *mut *mut c_uchar) -> c_int;
     pub fn i2d_PrivateKey(k: *mut EVP_PKEY, buf: *mut *mut u8) -> c_int;
 
+    pub fn i2d_PKCS8_PRIV_KEY_INFO(
+        k: *mut PKCS8_PRIV_KEY_INFO,
+        buf: *mut *mut u8,
+    ) -> c_int;
+    pub fn EVP_PKEY2PKCS8(k: *mut EVP_PKEY) -> *mut PKCS8_PRIV_KEY_INFO;
+
     pub fn d2i_ECPrivateKey(
         k: *mut *mut EC_KEY,
         pp: *mut *const c_uchar,
