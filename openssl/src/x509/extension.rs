@@ -290,6 +290,12 @@ impl ExtendedKeyUsage {
         self
     }
 
+    /// Sets the `emailProtection` flag to `true`.
+    pub fn email_protection(&mut self) -> &mut ExtendedKeyUsage {
+        self.email_protection = true;
+        self
+    }
+
     /// Sets the `timeStamping` flag to `true`.
     pub fn time_stamping(&mut self) -> &mut ExtendedKeyUsage {
         self.time_stamping = true;
