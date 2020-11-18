@@ -104,7 +104,7 @@ jobs:
         id: rust-version
         run: echo "::set-output name=version::$(rustc --version)"
       - name: Set vcpkg root
-        run: echo "::set-env name=VCPKG_ROOT::$Env:VCPKG_INSTALLATION_ROOT"
+        run: echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Install OpenSSL
         run: vcpkg install openssl:x64-windows
       - name: Cache cargo index
