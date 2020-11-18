@@ -100,26 +100,32 @@ impl X509StoreBuilderRef {
     /// This corresponds to [`X509_STORE_add_lookup`].
     ///
     /// [`X509_STORE_add_lookup`]: https://www.openssl.org/docs/man1.1.1/man3/X509_STORE_add_lookup.html
-    pub fn add_lookup(
+    pub fn add_lookup<T>(
         &mut self,
-        method: &'static X509LookupMethodRef,
-    ) -> Result<&mut X509LookupRef, ErrorStack> {
+        method: &'static X509LookupMethodRef<T>,
+    ) -> Result<&mut X509LookupRef<T>, ErrorStack> {
         let lookup = unsafe { ffi::X509_STORE_add_lookup(self.as_ptr(), method.as_ptr()) };
         cvt_p(lookup).map(|ptr| unsafe { X509LookupRef::from_ptr_mut(ptr) })
     }
 }
 
-foreign_type_and_impl_send_sync! {
+generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_LOOKUP;
     fn drop = ffi::X509_LOOKUP_free;
 
     /// Information used by an `X509Store` to look up certificates and CRLs.
-    pub struct X509Lookup;
+    pub struct X509Lookup<T>;
     /// Reference to an `X509Lookup`.
-    pub struct X509LookupRef;
+    pub struct X509LookupRef<T>;
 }
 
-impl X509Lookup {
+/// Marker type for lookup methods that can be pointed at a directory, i.e.
+/// ones that support [`X509_LOOKUP_ctrl`] with the `X509_L_ADD_DIR` command.
+///
+/// [`X509_LOOKUP_ctrl`]: https://www.openssl.org/docs/man1.1.1/man3/X509_LOOKUP_ctrl.html
+pub struct AddDir;
+
+impl X509Lookup<AddDir> {
     /// Lookup method that loads certificates and CRLs on demand and caches
     /// them in memory once they are loaded. As of OpenSSL 1.0.0, it also
     /// checks for newer CRLs upon each lookup, so that newer CRLs are used as
@@ -128,12 +134,12 @@ impl X509Lookup {
     /// This corresponds to [`X509_LOOKUP_hash_dir`].
     ///
     /// [`X509_LOOKUP_hash_dir`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_LOOKUP_hash_dir.html
-    pub fn hash_dir() -> &'static X509LookupMethodRef {
+    pub fn hash_dir() -> &'static X509LookupMethodRef<AddDir> {
         unsafe { X509LookupMethodRef::from_ptr(ffi::X509_LOOKUP_hash_dir()) }
     }
 }
 
-impl X509LookupRef {
+impl X509LookupRef<AddDir> {
     /// Specifies a directory from which certificates and CRLs will be loaded
     /// on-demand. Must be used with `X509Lookup::hash_dir`.
     ///
@@ -157,7 +163,7 @@ impl X509LookupRef {
     }
 }
 
-foreign_type_and_impl_send_sync! {
+generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_LOOKUP_METHOD;
     fn drop = |_method| {
         #[cfg(ossl110)]
@@ -165,9 +171,9 @@ foreign_type_and_impl_send_sync! {
     };
 
     /// Method used to look up certificates and CRLs.
-    pub struct X509LookupMethod;
+    pub struct X509LookupMethod<T>;
     /// Reference to an `X509LookupMethod`.
-    pub struct X509LookupMethodRef;
+    pub struct X509LookupMethodRef<T>;
 }
 
 foreign_type_and_impl_send_sync! {
