@@ -259,6 +259,31 @@ impl Pkcs7Ref {
 
         Ok(())
     }
+
+    /// Get the signers certificates contained by `&self`.
+    ///
+    /// PKCS7_get0_signers() retrieves the signer's certificates from p7,
+    /// it does not check their validity or whether any signatures are valid.
+    /// The certs and flags parameters have the same meanings as in verify().
+    ///
+    /// This corresponds to [`PKCS7_get0_signers`].
+    ///
+    /// [`PKCS7_get0_signers`]: https://www.openssl.org/docs/man1.0.2/crypto/PKCS7_get0_signers.html
+    pub fn signer_certs(
+        &self,
+        certs: &StackRef<X509>,
+        flags: Pkcs7Flags,
+    ) -> Result<&StackRef<X509>, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::PKCS7_get0_signers(
+                self.as_ptr(),
+                certs.as_ptr(),
+                flags.bits,
+            ))?;
+
+            Ok(StackRef::from_ptr(ptr))
+        }
+    }
 }
 
 #[cfg(test)]
