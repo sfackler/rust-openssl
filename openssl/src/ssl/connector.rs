@@ -498,15 +498,10 @@ cfg_if! {
                     hostname = &hostname[..hostname.len() - 1];
                 }
 
-                matches_wildcard(pattern, hostname).unwrap_or_else(|| pattern == hostname)
+                matches_wildcard(pattern, hostname).unwrap_or_else(|| pattern.eq_ignore_ascii_case(hostname))
             }
 
             fn matches_wildcard(pattern: &str, hostname: &str) -> Option<bool> {
-                // internationalized domains can't involved in wildcards
-                if pattern.starts_with("xn--") {
-                    return None;
-                }
-
                 let wildcard_location = match pattern.find('*') {
                     Some(l) => l,
                     None => return None,
@@ -531,8 +526,8 @@ cfg_if! {
                     return None;
                 }
 
-                // Wildcards can only be in the first component
-                if wildcard_location > wildcard_end {
+                // Wildcards can only be in the first component, and must be the entire first label
+                if wildcard_location != 0 || wildcard_end != wildcard_location + 1 {
                     return None;
                 }
 
@@ -541,27 +536,10 @@ cfg_if! {
                     None => return None,
                 };
 
-                // check that the non-wildcard parts are identical
-                if pattern[wildcard_end..] != hostname[hostname_label_end..] {
-                    return Some(false);
-                }
+                let pattern_after_wildcard = &pattern[wildcard_end..];
+                let hostname_after_wildcard = &hostname[hostname_label_end..];
 
-                let wildcard_prefix = &pattern[..wildcard_location];
-                let wildcard_suffix = &pattern[wildcard_location + 1..wildcard_end];
-
-                let hostname_label = &hostname[..hostname_label_end];
-
-                // check the prefix of the first label
-                if !hostname_label.starts_with(wildcard_prefix) {
-                    return Some(false);
-                }
-
-                // and the suffix
-                if !hostname_label[wildcard_prefix.len()..].ends_with(wildcard_suffix) {
-                    return Some(false);
-                }
-
-                Some(true)
+                Some(pattern_after_wildcard.eq_ignore_ascii_case(hostname_after_wildcard))
             }
 
             fn matches_ip(expected: &IpAddr, actual: &[u8]) -> bool {
@@ -569,6 +547,35 @@ cfg_if! {
                     IpAddr::V4(ref addr) => actual == addr.octets(),
                     IpAddr::V6(ref addr) => actual == addr.octets(),
                 }
+            }
+
+            #[test]
+            fn test_dns_match() {
+                use ssl::connector::verify::matches_dns;
+                assert!(matches_dns("website.tld", "website.tld")); // A name should match itself.
+                assert!(matches_dns("website.tld", "wEbSiTe.tLd")); // DNS name matching ignores case of hostname.
+                assert!(matches_dns("wEbSiTe.TlD", "website.tld")); // DNS name matching ignores case of subject.
+
+                assert!(matches_dns("xn--bcher-kva.tld", "xn--bcher-kva.tld")); // Likewise, nothing special to punycode names.
+                assert!(matches_dns("xn--bcher-kva.tld", "xn--BcHer-Kva.tLd")); // And punycode must be compared similarly case-insensitively.
+
+                assert!(matches_dns("*.example.com", "subdomain.example.com")); // Wildcard matching works.
+                assert!(matches_dns("*.eXaMpLe.cOm", "subdomain.example.com")); // Wildcard matching ignores case of subject.
+                assert!(matches_dns("*.example.com", "sUbDoMaIn.eXaMpLe.cOm")); // Wildcard matching ignores case of hostname.
+
+                assert!(!matches_dns("prefix*.example.com", "p.example.com")); // Prefix longer than the label works and does not match.
+                assert!(!matches_dns("*suffix.example.com", "s.example.com")); // Suffix longer than the label works and does not match.
+
+                assert!(!matches_dns("prefix*.example.com", "prefix.example.com")); // Partial wildcards do not work.
+                assert!(!matches_dns("*suffix.example.com", "suffix.example.com")); // Partial wildcards do not work.
+
+                assert!(!matches_dns("prefix*.example.com", "prefixdomain.example.com")); // Partial wildcards do not work.
+                assert!(!matches_dns("*suffix.example.com", "domainsuffix.example.com")); // Partial wildcards do not work.
+
+                assert!(!matches_dns("xn--*.example.com", "subdomain.example.com")); // Punycode domains with wildcard parts do not match.
+                assert!(!matches_dns("xN--*.example.com", "subdomain.example.com")); // And we can't bypass a punycode test with weird casing.
+                assert!(!matches_dns("Xn--*.example.com", "subdomain.example.com")); // And we can't bypass a punycode test with weird casing.
+                assert!(!matches_dns("XN--*.example.com", "subdomain.example.com")); // And we can't bypass a punycode test with weird casing.
             }
         }
     }
