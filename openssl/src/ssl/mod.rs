@@ -203,8 +203,8 @@ bitflags! {
 
         /// Disables the use of TLSv1.3.
         ///
-        /// Requires OpenSSL 1.1.1 or newer.
-        #[cfg(ossl111)]
+        /// Requires OpenSSL 1.1.1 or LibreSSL 3.2.1 or newer.
+        #[cfg(any(ossl111, libressl321))]
         const NO_TLSV1_3 = ffi::SSL_OP_NO_TLSv1_3;
 
         /// Disables the use of DTLSv1.0
