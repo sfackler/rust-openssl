@@ -3972,7 +3972,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    /// LibreSSL 3.2.1 and later's TLSv1.3 support is incomplete
+    // LibreSSL 3.2.1 and later's TLSv1.3 support is incomplete
     if #[cfg(libressl321)] {
         use ffi::{
             TLSv1_2_method as TLS_method, DTLS_method, TLSv1_2_client_method as TLS_client_method,
