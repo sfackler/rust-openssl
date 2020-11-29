@@ -102,8 +102,6 @@ openssl-sys crate build failed: no supported version of OpenSSL found.
 Ways to fix it:
 - Use the `vendored` feature of openssl-sys crate to build OpenSSL from source.
 - Use Homebrew to install the `openssl` package.
-- Downgrade to openssl-sys 0.7 crate to use the old OpenSSL 0.9.8 version
-  provided by macOS.
 
 ",
             );
