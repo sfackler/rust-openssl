@@ -126,9 +126,9 @@ pub struct HashDir;
 
 impl X509Lookup<HashDir> {
     /// Lookup method that loads certificates and CRLs on demand and caches
-    /// them in memory once they are loaded. As of OpenSSL 1.0.0, it also
-    /// checks for newer CRLs upon each lookup, so that newer CRLs are used as
-    /// soon as they appear in the directory.
+    /// them in memory once they are loaded. It also checks for newer CRLs upon
+    /// each lookup, so that newer CRLs are used as soon as they appear in the
+    /// directory.
     ///
     /// This corresponds to [`X509_LOOKUP_hash_dir`].
     ///
