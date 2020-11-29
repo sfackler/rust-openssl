@@ -582,7 +582,7 @@ impl X509Ref {
     }
 
     /// Returns certificate version. If this certificate has no explicit version set, it defaults to
-    /// version&nbsp;1.
+    /// version 1.
     ///
     /// Note that `0` return value stands for version 1, `1`&nbsp;&ndash; for version 2 and so on.
     ///
