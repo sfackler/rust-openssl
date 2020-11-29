@@ -342,6 +342,8 @@ cfg_if! {
     }
 }
 
+pub enum X509_LOOKUP_METHOD {}
+
 pub enum X509_NAME {}
 
 cfg_if! {

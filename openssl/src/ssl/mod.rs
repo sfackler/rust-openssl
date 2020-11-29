@@ -1342,6 +1342,30 @@ impl SslContextBuilder {
         unsafe { X509StoreBuilderRef::from_ptr_mut(ffi::SSL_CTX_get_cert_store(self.as_ptr())) }
     }
 
+    /// Returns a reference to the X509 verification configuration.
+    ///
+    /// Requires OpenSSL 1.0.2 or newer.
+    ///
+    /// This corresponds to [`SSL_CTX_get0_param`].
+    ///
+    /// [`SSL_CTX_get0_param`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_get0_param.html
+    #[cfg(any(ossl102, libressl261))]
+    pub fn verify_param(&self) -> &X509VerifyParamRef {
+        unsafe { X509VerifyParamRef::from_ptr(ffi::SSL_CTX_get0_param(self.as_ptr())) }
+    }
+
+    /// Returns a mutable reference to the X509 verification configuration.
+    ///
+    /// Requires OpenSSL 1.0.2 or newer.
+    ///
+    /// This corresponds to [`SSL_CTX_get0_param`].
+    ///
+    /// [`SSL_CTX_get0_param`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_CTX_get0_param.html
+    #[cfg(any(ossl102, libressl261))]
+    pub fn verify_param_mut(&mut self) -> &mut X509VerifyParamRef {
+        unsafe { X509VerifyParamRef::from_ptr_mut(ffi::SSL_CTX_get0_param(self.as_ptr())) }
+    }
+
     /// Sets the callback dealing with OCSP stapling.
     ///
     /// On the client side, this callback is responsible for validating the OCSP status response
