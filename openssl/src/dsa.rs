@@ -15,6 +15,7 @@ use std::ptr;
 use bn::{BigNum, BigNumRef};
 use error::ErrorStack;
 use pkey::{HasParams, HasPrivate, HasPublic, Private, Public};
+use util::ForeignTypeRefExt;
 use {cvt, cvt_p};
 
 generic_foreign_type_and_impl_send_sync! {
@@ -107,7 +108,7 @@ where
         unsafe {
             let mut pub_key = ptr::null();
             DSA_get0_key(self.as_ptr(), &mut pub_key, ptr::null_mut());
-            BigNumRef::from_ptr(pub_key as *mut _)
+            BigNumRef::from_const_ptr(pub_key)
         }
     }
 }
@@ -141,7 +142,7 @@ where
         unsafe {
             let mut priv_key = ptr::null();
             DSA_get0_key(self.as_ptr(), ptr::null_mut(), &mut priv_key);
-            BigNumRef::from_ptr(priv_key as *mut _)
+            BigNumRef::from_const_ptr(priv_key)
         }
     }
 }
@@ -164,7 +165,7 @@ where
         unsafe {
             let mut p = ptr::null();
             DSA_get0_pqg(self.as_ptr(), &mut p, ptr::null_mut(), ptr::null_mut());
-            BigNumRef::from_ptr(p as *mut _)
+            BigNumRef::from_const_ptr(p)
         }
     }
 
@@ -173,7 +174,7 @@ where
         unsafe {
             let mut q = ptr::null();
             DSA_get0_pqg(self.as_ptr(), ptr::null_mut(), &mut q, ptr::null_mut());
-            BigNumRef::from_ptr(q as *mut _)
+            BigNumRef::from_const_ptr(q)
         }
     }
 
@@ -182,7 +183,7 @@ where
         unsafe {
             let mut g = ptr::null();
             DSA_get0_pqg(self.as_ptr(), ptr::null_mut(), ptr::null_mut(), &mut g);
-            BigNumRef::from_ptr(g as *mut _)
+            BigNumRef::from_const_ptr(g)
         }
     }
 }
