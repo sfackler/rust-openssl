@@ -119,13 +119,12 @@ generic_foreign_type_and_impl_send_sync! {
     pub struct X509LookupRef<T>;
 }
 
-/// Marker type for lookup methods that can be pointed at a directory, i.e.
-/// ones that support [`X509_LOOKUP_ctrl`] with the `X509_L_ADD_DIR` command.
+/// Marker type corresponding to the [`X509_LOOKUP_hash_dir`] lookup method.
 ///
-/// [`X509_LOOKUP_ctrl`]: https://www.openssl.org/docs/man1.1.1/man3/X509_LOOKUP_ctrl.html
-pub struct AddDir;
+/// [`X509_LOOKUP_hash_dir`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_LOOKUP_hash_dir.html
+pub struct HashDir;
 
-impl X509Lookup<AddDir> {
+impl X509Lookup<HashDir> {
     /// Lookup method that loads certificates and CRLs on demand and caches
     /// them in memory once they are loaded. As of OpenSSL 1.0.0, it also
     /// checks for newer CRLs upon each lookup, so that newer CRLs are used as
@@ -134,12 +133,12 @@ impl X509Lookup<AddDir> {
     /// This corresponds to [`X509_LOOKUP_hash_dir`].
     ///
     /// [`X509_LOOKUP_hash_dir`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_LOOKUP_hash_dir.html
-    pub fn hash_dir() -> &'static X509LookupMethodRef<AddDir> {
+    pub fn hash_dir() -> &'static X509LookupMethodRef<HashDir> {
         unsafe { X509LookupMethodRef::from_ptr(ffi::X509_LOOKUP_hash_dir()) }
     }
 }
 
-impl X509LookupRef<AddDir> {
+impl X509LookupRef<HashDir> {
     /// Specifies a directory from which certificates and CRLs will be loaded
     /// on-demand. Must be used with `X509Lookup::hash_dir`.
     ///
