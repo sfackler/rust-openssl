@@ -83,7 +83,7 @@ impl fmt::Display for Asn1GeneralizedTimeRef {
     }
 }
 
-/// An SSL/TLS protocol version.
+/// An ASN.1 tag value
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Asn1Tag(c_int);
 
