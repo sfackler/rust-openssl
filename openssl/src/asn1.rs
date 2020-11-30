@@ -90,7 +90,7 @@ pub struct Asn1Tag(c_int);
 impl Asn1Tag {
     /// Return the underlying c_int value
     pub fn as_c_int(&self) -> c_int {
-        return self.0;
+        self.0
     }
 
     /// Equivalent to OpenSSL Constant: V_ASN1_EOC

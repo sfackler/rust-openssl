@@ -20,7 +20,7 @@ use std::ptr;
 use std::slice;
 use std::str;
 
-use asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef, Asn1Tag};
+use asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1Tag, Asn1TimeRef};
 use bio::MemBioSlice;
 use conf::ConfRef;
 use error::ErrorStack;
