@@ -83,6 +83,101 @@ impl fmt::Display for Asn1GeneralizedTimeRef {
     }
 }
 
+/// An SSL/TLS protocol version.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct Asn1Tag(c_int);
+
+impl Asn1Tag {
+    /// Return the underlying c_int value
+    pub fn as_c_int(&self) -> c_int {
+        return self.0;
+    }
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_EOC
+    pub const EOC: Asn1Tag = Asn1Tag(ffi::V_ASN1_EOC);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_BOOLEAN
+    pub const BOOLEAN: Asn1Tag = Asn1Tag(ffi::V_ASN1_BOOLEAN);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_INTEGER
+    pub const INTEGER: Asn1Tag = Asn1Tag(ffi::V_ASN1_INTEGER);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_BIT_STRING
+    pub const BIT_STRING: Asn1Tag = Asn1Tag(ffi::V_ASN1_BIT_STRING);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_OCTET_STRING
+    pub const OCTET_STRING: Asn1Tag = Asn1Tag(ffi::V_ASN1_OCTET_STRING);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_NULL
+    pub const NULL: Asn1Tag = Asn1Tag(ffi::V_ASN1_NULL);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_OBJECT
+    pub const OBJECT: Asn1Tag = Asn1Tag(ffi::V_ASN1_OBJECT);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_OBJECT_DESCRIPTOR
+    pub const OBJECT_DESCRIPTOR: Asn1Tag = Asn1Tag(ffi::V_ASN1_OBJECT_DESCRIPTOR);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_EXTERNAL
+    pub const EXTERNAL: Asn1Tag = Asn1Tag(ffi::V_ASN1_EXTERNAL);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_REAL
+    pub const REAL: Asn1Tag = Asn1Tag(ffi::V_ASN1_REAL);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_ENUMERATED
+    pub const ENUMERATED: Asn1Tag = Asn1Tag(ffi::V_ASN1_ENUMERATED);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_UTF8STRING
+    pub const UTF8STRING: Asn1Tag = Asn1Tag(ffi::V_ASN1_UTF8STRING);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_SEQUENCE
+    pub const SEQUENCE: Asn1Tag = Asn1Tag(ffi::V_ASN1_SEQUENCE);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_SET
+    pub const SET: Asn1Tag = Asn1Tag(ffi::V_ASN1_SET);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_NUMERICSTRING
+    pub const NUMERICSTRING: Asn1Tag = Asn1Tag(ffi::V_ASN1_NUMERICSTRING);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_PRINTABLESTRING
+    pub const PRINTABLESTRING: Asn1Tag = Asn1Tag(ffi::V_ASN1_PRINTABLESTRING);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_T61STRING
+    pub const T61STRING: Asn1Tag = Asn1Tag(ffi::V_ASN1_T61STRING);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_TELETEXSTRING
+    pub const TELETEXSTRING: Asn1Tag = Asn1Tag(ffi::V_ASN1_TELETEXSTRING);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_VIDEOTEXSTRING
+    pub const VIDEOTEXSTRING: Asn1Tag = Asn1Tag(ffi::V_ASN1_VIDEOTEXSTRING);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_IA5STRING
+    pub const IA5STRING: Asn1Tag = Asn1Tag(ffi::V_ASN1_IA5STRING);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_UTCTIME
+    pub const UTCTIME: Asn1Tag = Asn1Tag(ffi::V_ASN1_UTCTIME);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_GENERALIZEDTIME
+    pub const GENERALIZEDTIME: Asn1Tag = Asn1Tag(ffi::V_ASN1_GENERALIZEDTIME);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_GRAPHICSTRING
+    pub const GRAPHICSTRING: Asn1Tag = Asn1Tag(ffi::V_ASN1_GRAPHICSTRING);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_ISO64STRING
+    pub const ISO64STRING: Asn1Tag = Asn1Tag(ffi::V_ASN1_ISO64STRING);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_VISIBLESTRING
+    pub const VISIBLESTRING: Asn1Tag = Asn1Tag(ffi::V_ASN1_VISIBLESTRING);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_GENERALSTRING
+    pub const GENERALSTRING: Asn1Tag = Asn1Tag(ffi::V_ASN1_GENERALSTRING);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_UNIVERSALSTRING
+    pub const UNIVERSALSTRING: Asn1Tag = Asn1Tag(ffi::V_ASN1_UNIVERSALSTRING);
+
+    /// Equivalent to OpenSSL Constant: V_ASN1_BMPSTRING
+    pub const BMPSTRING: Asn1Tag = Asn1Tag(ffi::V_ASN1_BMPSTRING);
+}
+
 /// Difference between two ASN1 times.
 ///
 /// This `struct` is created by the [`diff`] method on [`Asn1TimeRef`]. See its

@@ -20,7 +20,7 @@ use std::ptr;
 use std::slice;
 use std::str;
 
-use asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef};
+use asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef, Asn1Tag};
 use bio::MemBioSlice;
 use conf::ConfRef;
 use error::ErrorStack;
@@ -857,7 +857,7 @@ impl X509NameBuilder {
         }
     }
 
-    /// Add a field entry by str with a specific type. (ex: 19 for V_ASN1_PRINTABLESTRING)
+    /// Add a field entry by str with a specific type.  See [Asn1Tag](openssl::asn1::Asn1Tag)
     ///
     /// This corresponds to [`X509_NAME_add_entry_by_txt`].
     ///
@@ -866,7 +866,7 @@ impl X509NameBuilder {
         &mut self,
         field: &str,
         value: &str,
-        ty: i32,
+        ty: Asn1Tag,
     ) -> Result<(), ErrorStack> {
         unsafe {
             let field = CString::new(field).unwrap();
@@ -874,7 +874,7 @@ impl X509NameBuilder {
             cvt(ffi::X509_NAME_add_entry_by_txt(
                 self.0.as_ptr(),
                 field.as_ptr() as *mut _,
-                ty,
+                ty.as_c_int(),
                 value.as_ptr(),
                 value.len() as c_int,
                 -1,
@@ -905,7 +905,7 @@ impl X509NameBuilder {
         }
     }
 
-    /// Add a field entry by NID with a specific type. (ex: 19 for V_ASN1_PRINTABLESTRING)
+    /// Add a field entry by NID with a specific type.  See [Asn1Tag](openssl::asn1::Asn1Tag)
     ///
     /// This corresponds to [`X509_NAME_add_entry_by_NID`].
     ///
@@ -914,14 +914,14 @@ impl X509NameBuilder {
         &mut self,
         field: Nid,
         value: &str,
-        ty: i32,
+        ty: Asn1Tag,
     ) -> Result<(), ErrorStack> {
         unsafe {
             assert!(value.len() <= c_int::max_value() as usize);
             cvt(ffi::X509_NAME_add_entry_by_NID(
                 self.0.as_ptr(),
                 field.as_raw(),
-                ty,
+                ty.as_c_int(),
                 value.as_ptr() as *mut _,
                 value.len() as c_int,
                 -1,
