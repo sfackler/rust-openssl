@@ -117,6 +117,7 @@ fn check_rustc_versions() {
 
 /// Validates the header files found in `include_dir` and then returns the
 /// version string of OpenSSL.
+#[allow(clippy::manual_strip)] // we need to support pre-1.45.0
 fn validate_headers(include_dirs: &[PathBuf]) -> Version {
     // This `*-sys` crate only works with OpenSSL 1.0.1, 1.0.2, and 1.1.0. To
     // correctly expose the right API from this crate, take a look at

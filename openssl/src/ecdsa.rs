@@ -10,6 +10,7 @@ use bn::{BigNum, BigNumRef};
 use ec::EcKeyRef;
 use error::ErrorStack;
 use pkey::{HasPrivate, HasPublic};
+use util::ForeignTypeRefExt;
 use {cvt_n, cvt_p};
 
 foreign_type_and_impl_send_sync! {
@@ -45,7 +46,7 @@ impl EcdsaSig {
                 data.len() as c_int,
                 eckey.as_ptr(),
             ))?;
-            Ok(EcdsaSig::from_ptr(sig as *mut _))
+            Ok(EcdsaSig::from_ptr(sig))
         }
     }
 
@@ -60,7 +61,7 @@ impl EcdsaSig {
             let sig = cvt_p(ffi::ECDSA_SIG_new())?;
             ECDSA_SIG_set0(sig, r.as_ptr(), s.as_ptr());
             mem::forget((r, s));
-            Ok(EcdsaSig::from_ptr(sig as *mut _))
+            Ok(EcdsaSig::from_ptr(sig))
         }
     }
 
@@ -117,7 +118,7 @@ impl EcdsaSigRef {
         unsafe {
             let mut r = ptr::null();
             ECDSA_SIG_get0(self.as_ptr(), &mut r, ptr::null_mut());
-            BigNumRef::from_ptr(r as *mut _)
+            BigNumRef::from_const_ptr(r)
         }
     }
 
@@ -130,7 +131,7 @@ impl EcdsaSigRef {
         unsafe {
             let mut s = ptr::null();
             ECDSA_SIG_get0(self.as_ptr(), ptr::null_mut(), &mut s);
-            BigNumRef::from_ptr(s as *mut _)
+            BigNumRef::from_const_ptr(s)
         }
     }
 }

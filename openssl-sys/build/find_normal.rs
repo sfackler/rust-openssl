@@ -97,14 +97,11 @@ openssl-sys = {}
             msg.push_str(
                 "
 
-It looks like you're compiling on macOS, where the system contains a version of
-OpenSSL 0.9.8. This crate no longer supports OpenSSL 0.9.8.
+openssl-sys crate build failed: no supported version of OpenSSL found.
 
-As a consumer of this crate, you can fix this error by using Homebrew to
-install the `openssl` package, or as a maintainer you can use the openssl-sys
-0.7 crate for support with OpenSSL 0.9.8.
-
-Unfortunately though the compile cannot continue, so aborting.
+Ways to fix it:
+- Use the `vendored` feature of openssl-sys crate to build OpenSSL from source.
+- Use Homebrew to install the `openssl` package.
 
 ",
             );

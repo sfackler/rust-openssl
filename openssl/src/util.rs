@@ -1,3 +1,4 @@
+use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_char, c_int, c_void};
 use std::any::Any;
 use std::panic::{self, AssertUnwindSafe};
@@ -65,3 +66,29 @@ where
         }
     }
 }
+
+pub trait ForeignTypeExt: ForeignType {
+    unsafe fn from_ptr_opt(ptr: *mut Self::CType) -> Option<Self> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(Self::from_ptr(ptr))
+        }
+    }
+}
+impl<FT: ForeignType> ForeignTypeExt for FT {}
+
+pub trait ForeignTypeRefExt: ForeignTypeRef {
+    unsafe fn from_const_ptr<'a>(ptr: *const Self::CType) -> &'a Self {
+        Self::from_ptr(ptr as *mut Self::CType)
+    }
+
+    unsafe fn from_const_ptr_opt<'a>(ptr: *const Self::CType) -> Option<&'a Self> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(Self::from_const_ptr(ptr as *mut Self::CType))
+        }
+    }
+}
+impl<FT: ForeignTypeRef> ForeignTypeRefExt for FT {}

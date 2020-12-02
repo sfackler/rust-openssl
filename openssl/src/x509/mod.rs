@@ -31,6 +31,7 @@ use pkey::{HasPrivate, HasPublic, PKey, PKeyRef, Public};
 use ssl::SslRef;
 use stack::{Stack, StackRef, Stackable};
 use string::OpensslString;
+use util::{ForeignTypeExt, ForeignTypeRefExt};
 use {cvt, cvt_n, cvt_p};
 
 #[cfg(any(ossl102, libressl261))]
@@ -40,7 +41,40 @@ pub mod extension;
 pub mod store;
 
 #[cfg(test)]
-mod tests;
+mod tests {
+    #[cfg(ossl110)]
+    use x509::X509Builder;
+
+    /// Tests `X509Ref::version` happy path.
+    #[cfg(ossl110)]
+    #[test]
+    fn x509_ref_version() {
+        let mut builder = X509Builder::new().unwrap();
+        let expected_version = 2;
+        builder
+            .set_version(expected_version)
+            .expect("Failed to set certificate version");
+        let cert = builder.build();
+        let actual_version = cert.version();
+        assert_eq!(
+            expected_version, actual_version,
+            "Obtained certificate version is incorrect",
+        );
+    }
+
+    /// Tests `X509Ref::version`. Checks case when no version has been set, so a default one is
+    /// returned.
+    #[cfg(ossl110)]
+    #[test]
+    fn x509_ref_version_no_version_set() {
+        let cert = X509Builder::new().unwrap().build();
+        let actual_version = cert.version();
+        assert_eq!(
+            0, actual_version,
+            "Default certificate version is incorrect",
+        );
+    }
+}
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE_CTX;
@@ -181,11 +215,7 @@ impl X509StoreContextRef {
     pub fn current_cert(&self) -> Option<&X509Ref> {
         unsafe {
             let ptr = ffi::X509_STORE_CTX_get_current_cert(self.as_ptr());
-            if ptr.is_null() {
-                None
-            } else {
-                Some(X509Ref::from_ptr(ptr))
-            }
+            X509Ref::from_const_ptr_opt(ptr)
         }
     }
 
@@ -393,8 +423,7 @@ impl X509Ref {
     pub fn subject_name(&self) -> &X509NameRef {
         unsafe {
             let name = ffi::X509_get_subject_name(self.as_ptr());
-            assert!(!name.is_null());
-            X509NameRef::from_ptr(name)
+            X509NameRef::from_const_ptr_opt(name).expect("subject name must not be null")
         }
     }
 
@@ -413,8 +442,7 @@ impl X509Ref {
     pub fn issuer_name(&self) -> &X509NameRef {
         unsafe {
             let name = ffi::X509_get_issuer_name(self.as_ptr());
-            assert!(!name.is_null());
-            X509NameRef::from_ptr(name)
+            X509NameRef::from_const_ptr_opt(name).expect("issuer name must not be null")
         }
     }
 
@@ -431,11 +459,7 @@ impl X509Ref {
                 ptr::null_mut(),
                 ptr::null_mut(),
             );
-            if stack.is_null() {
-                None
-            } else {
-                Some(Stack::from_ptr(stack as *mut _))
-            }
+            Stack::from_ptr_opt(stack as *mut _)
         }
     }
 
@@ -452,11 +476,7 @@ impl X509Ref {
                 ptr::null_mut(),
                 ptr::null_mut(),
             );
-            if stack.is_null() {
-                None
-            } else {
-                Some(Stack::from_ptr(stack as *mut _))
-            }
+            Stack::from_ptr_opt(stack as *mut _)
         }
     }
 
@@ -500,8 +520,7 @@ impl X509Ref {
     pub fn not_after(&self) -> &Asn1TimeRef {
         unsafe {
             let date = X509_getm_notAfter(self.as_ptr());
-            assert!(!date.is_null());
-            Asn1TimeRef::from_ptr(date)
+            Asn1TimeRef::from_const_ptr_opt(date).expect("not_after must not be null")
         }
     }
 
@@ -509,8 +528,7 @@ impl X509Ref {
     pub fn not_before(&self) -> &Asn1TimeRef {
         unsafe {
             let date = X509_getm_notBefore(self.as_ptr());
-            assert!(!date.is_null());
-            Asn1TimeRef::from_ptr(date)
+            Asn1TimeRef::from_const_ptr_opt(date).expect("not_before must not be null")
         }
     }
 
@@ -519,8 +537,7 @@ impl X509Ref {
         unsafe {
             let mut signature = ptr::null();
             X509_get0_signature(&mut signature, ptr::null_mut(), self.as_ptr());
-            assert!(!signature.is_null());
-            Asn1BitStringRef::from_ptr(signature as *mut _)
+            Asn1BitStringRef::from_const_ptr_opt(signature).expect("signature must not be null")
         }
     }
 
@@ -529,8 +546,8 @@ impl X509Ref {
         unsafe {
             let mut algor = ptr::null();
             X509_get0_signature(ptr::null_mut(), &mut algor, self.as_ptr());
-            assert!(!algor.is_null());
-            X509AlgorithmRef::from_ptr(algor as *mut _)
+            X509AlgorithmRef::from_const_ptr_opt(algor)
+                .expect("signature algorithm must not be null")
         }
     }
 
@@ -546,6 +563,20 @@ impl X509Ref {
             let r = ffi::X509_check_issued(self.as_ptr(), subject.as_ptr());
             X509VerifyResult::from_raw(r)
         }
+    }
+
+    /// Returns certificate version. If this certificate has no explicit version set, it defaults to
+    /// version 1.
+    ///
+    /// Note that `0` return value stands for version 1, `1` for version 2 and so on.
+    ///
+    /// This corresponds to [`X509_get_version`].
+    ///
+    /// [`X509_get_version`]: https://www.openssl.org/docs/man1.1.1/man3/X509_get_version.html
+    #[cfg(ossl110)]
+    pub fn version(&self) -> i32 {
+        // Covered with `x509_ref_version()`, `x509_ref_version_no_version_set()` tests
+        unsafe { ffi::X509_get_version(self.as_ptr()) as i32 }
     }
 
     /// Check if the certificate is signed using the given public key.
@@ -573,8 +604,7 @@ impl X509Ref {
     pub fn serial_number(&self) -> &Asn1IntegerRef {
         unsafe {
             let r = ffi::X509_get_serialNumber(self.as_ptr());
-            assert!(!r.is_null());
-            Asn1IntegerRef::from_ptr(r)
+            Asn1IntegerRef::from_const_ptr_opt(r).expect("serial number must not be null")
         }
     }
 
@@ -940,9 +970,8 @@ impl<'a> Iterator for X509NameEntries<'a> {
             }
 
             let entry = ffi::X509_NAME_get_entry(self.name.as_ptr(), self.loc);
-            assert!(!entry.is_null());
 
-            Some(X509NameEntryRef::from_ptr(entry))
+            Some(X509NameEntryRef::from_const_ptr_opt(entry).expect("entry must not be null"))
         }
     }
 }
@@ -1186,8 +1215,7 @@ impl X509ReqRef {
     pub fn subject_name(&self) -> &X509NameRef {
         unsafe {
             let name = X509_REQ_get_subject_name(self.as_ptr());
-            assert!(!name.is_null());
-            X509NameRef::from_ptr(name)
+            X509NameRef::from_const_ptr_opt(name).expect("subject name must not be null")
         }
     }
 
@@ -1383,8 +1411,7 @@ impl X509AlgorithmRef {
         unsafe {
             let mut oid = ptr::null();
             X509_ALGOR_get0(&mut oid, ptr::null_mut(), ptr::null_mut(), self.as_ptr());
-            assert!(!oid.is_null());
-            Asn1ObjectRef::from_ptr(oid as *mut _)
+            Asn1ObjectRef::from_const_ptr_opt(oid).expect("algorithm oid must not be null")
         }
     }
 }
@@ -1403,11 +1430,7 @@ impl X509ObjectRef {
     pub fn x509(&self) -> Option<&X509Ref> {
         unsafe {
             let ptr = X509_OBJECT_get0_X509(self.as_ptr());
-            if ptr.is_null() {
-                None
-            } else {
-                Some(X509Ref::from_ptr(ptr))
-            }
+            X509Ref::from_const_ptr_opt(ptr)
         }
     }
 }

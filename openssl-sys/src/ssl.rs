@@ -1013,6 +1013,9 @@ extern "C" {
     pub fn SSL_new(ctx: *mut SSL_CTX) -> *mut SSL;
 
     #[cfg(any(ossl102, libressl261))]
+    pub fn SSL_CTX_get0_param(ctx: *mut SSL_CTX) -> *mut X509_VERIFY_PARAM;
+
+    #[cfg(any(ossl102, libressl261))]
     pub fn SSL_get0_param(ssl: *mut SSL) -> *mut X509_VERIFY_PARAM;
 }
 
