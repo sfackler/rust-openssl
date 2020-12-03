@@ -224,9 +224,15 @@ extern "C" {
     pub fn X509_VERIFY_PARAM_set_flags(param: *mut X509_VERIFY_PARAM, flags: c_ulong) -> c_int;
     #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_clear_flags(param: *mut X509_VERIFY_PARAM, flags: c_ulong) -> c_int;
-    #[cfg(any(ossl102, libressl261))]
-    pub fn X509_VERIFY_PARAM_get_flags(param: *mut X509_VERIFY_PARAM) -> c_ulong;
+}
+const_ptr_api! {
+    extern "C" {
+        #[cfg(any(ossl102, libressl261))]
+        pub fn X509_VERIFY_PARAM_get_flags(param: #[const_ptr_if(ossl300)] X509_VERIFY_PARAM) -> c_ulong;
+    }
+}
 
+extern "C" {
     #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_set1_host(
         param: *mut X509_VERIFY_PARAM,
