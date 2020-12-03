@@ -239,7 +239,6 @@ mod test {
     }
 
     #[test]
-    #[cfg_attr(ossl300, ignore)] // https://github.com/openssl/openssl/issues/11672
     fn create() {
         let subject_name = "ns.example.com";
         let rsa = Rsa::generate(2048).unwrap();
