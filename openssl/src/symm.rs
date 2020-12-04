@@ -224,18 +224,22 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_ocb()) }
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
     pub fn bf_cbc() -> Cipher {
         unsafe { Cipher(ffi::EVP_bf_cbc()) }
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
     pub fn bf_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_bf_ecb()) }
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
     pub fn bf_cfb64() -> Cipher {
         unsafe { Cipher(ffi::EVP_bf_cfb64()) }
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
     pub fn bf_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_bf_ofb()) }
     }

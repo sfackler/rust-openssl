@@ -143,7 +143,7 @@ pub mod aes;
 pub mod asn1;
 pub mod base64;
 pub mod bn;
-#[cfg(not(libressl))]
+#[cfg(all(not(libressl), not(osslconf = "OPENSSL_NO_CMS")))]
 pub mod cms;
 pub mod conf;
 pub mod derive;
