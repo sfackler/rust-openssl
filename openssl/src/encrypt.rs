@@ -309,7 +309,7 @@ mod test {
         let decoded_len = decrypter.decrypt(&encoded, &mut decoded).unwrap();
         let decoded = &decoded[..decoded_len];
 
-        assert_eq!(decoded, input);
+        assert_eq!(decoded, &*input);
     }
 
     #[test]
@@ -337,6 +337,6 @@ mod test {
         let decoded_len = decrypter.decrypt(&encoded, &mut decoded).unwrap();
         let decoded = &decoded[..decoded_len];
 
-        assert_eq!(decoded, input);
+        assert_eq!(decoded, &*input);
     }
 }
