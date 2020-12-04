@@ -49,12 +49,25 @@ pub unsafe fn EVP_PKEY_CTX_set_rsa_mgf1_md(ctx: *mut EVP_PKEY_CTX, md: *mut EVP_
     )
 }
 
+pub unsafe fn EVP_PKEY_CTX_set_rsa_oaep_md(ctx: *mut EVP_PKEY_CTX, md: *mut EVP_MD) -> c_int {
+    EVP_PKEY_CTX_ctrl(
+        ctx,
+        EVP_PKEY_RSA,
+        EVP_PKEY_OP_TYPE_CRYPT,
+        EVP_PKEY_CTRL_RSA_OAEP_MD,
+        0,
+        md as *mut c_void,
+    )
+}
+
 pub const EVP_PKEY_CTRL_RSA_PADDING: c_int = EVP_PKEY_ALG_CTRL + 1;
 pub const EVP_PKEY_CTRL_RSA_PSS_SALTLEN: c_int = EVP_PKEY_ALG_CTRL + 2;
 
 pub const EVP_PKEY_CTRL_RSA_MGF1_MD: c_int = EVP_PKEY_ALG_CTRL + 5;
 
 pub const EVP_PKEY_CTRL_GET_RSA_PADDING: c_int = EVP_PKEY_ALG_CTRL + 6;
+
+pub const EVP_PKEY_CTRL_RSA_OAEP_MD: c_int = EVP_PKEY_ALG_CTRL + 9;
 
 pub const RSA_PKCS1_PADDING: c_int = 1;
 pub const RSA_SSLV23_PADDING: c_int = 2;
