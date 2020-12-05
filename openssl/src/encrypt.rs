@@ -331,13 +331,15 @@ mod test {
         let mut encrypter = Encrypter::new(&pkey).unwrap();
         encrypter.set_rsa_padding(Padding::PKCS1).unwrap();
         let input = Vec::from_hex(INPUT).unwrap();
-        let mut encoded = vec![0u8; INPUT.len() * 3];
+        let buffer_len = encrypter.encrypt_len(&input).unwrap();
+        let mut encoded = vec![0u8; buffer_len];
         let encoded_len = encrypter.encrypt(&input, &mut encoded).unwrap();
         let encoded = &encoded[..encoded_len];
 
         let mut decrypter = Decrypter::new(&pkey).unwrap();
         decrypter.set_rsa_padding(Padding::PKCS1).unwrap();
-        let mut decoded = vec![0u8; encoded.len()];
+        let buffer_len = decrypter.decrypt_len(&encoded).unwrap();
+        let mut decoded = vec![0u8; buffer_len];
         let decoded_len = decrypter.decrypt(&encoded, &mut decoded).unwrap();
         let decoded = &decoded[..decoded_len];
 
@@ -358,7 +360,8 @@ mod test {
         encrypter.set_rsa_oaep_md(md).unwrap();
         encrypter.set_rsa_mgf1_md(md).unwrap();
         let input = Vec::from_hex(INPUT).unwrap();
-        let mut encoded = vec![0u8; INPUT.len() * 3];
+        let buffer_len = encrypter.encrypt_len(&input).unwrap();
+        let mut encoded = vec![0u8; buffer_len];
         let encoded_len = encrypter.encrypt(&input, &mut encoded).unwrap();
         let encoded = &encoded[..encoded_len];
 
@@ -366,7 +369,8 @@ mod test {
         decrypter.set_rsa_padding(Padding::PKCS1_OAEP).unwrap();
         decrypter.set_rsa_oaep_md(md).unwrap();
         decrypter.set_rsa_mgf1_md(md).unwrap();
-        let mut decoded = vec![0u8; encoded.len()];
+        let buffer_len = decrypter.decrypt_len(&encoded).unwrap();
+        let mut decoded = vec![0u8; buffer_len];
         let decoded_len = decrypter.decrypt(&encoded, &mut decoded).unwrap();
         let decoded = &decoded[..decoded_len];
 
