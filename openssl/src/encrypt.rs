@@ -118,6 +118,32 @@ impl<'a> Encrypter<'a> {
     /// Performs public key encryption.
     ///
     /// In order to know the size needed for the output buffer, use [`encrypt_len`](Encrypter::encrypt_len).
+    /// Note that the length of the output buffer can be greater of the length of the encoded data.
+    /// ```
+    /// # use openssl::{
+    /// #   encrypt::Encrypter,
+    /// #   pkey::PKey,
+    /// #   rsa::{Rsa, Padding},
+    /// # };
+    /// #
+    /// # let key = include_bytes!("../test/rsa.pem");
+    /// # let private_key = Rsa::private_key_from_pem(key).unwrap();
+    /// # let pkey = PKey::from_rsa(private_key).unwrap();
+    /// # let input = b"hello world".to_vec();
+    /// #
+    /// let mut encrypter = Encrypter::new(&pkey).unwrap();
+    /// encrypter.set_rsa_padding(Padding::PKCS1).unwrap();
+    ///
+    /// // Get the length of the output buffer
+    /// let buffer_len = encrypter.encrypt_len(&input).unwrap();
+    /// let mut encoded = vec![0u8; buffer_len];
+    ///
+    /// // Encode the data and get its length
+    /// let encoded_len = encrypter.encrypt(&input, &mut encoded).unwrap();
+    ///
+    /// // Use only the part of the buffer with the encoded data
+    /// let encoded = &encoded[..encoded_len];
+    /// ```
     ///
     /// This corresponds to [`EVP_PKEY_encrypt`].
     ///
@@ -268,6 +294,47 @@ impl<'a> Decrypter<'a> {
     /// Performs public key decryption.
     ///
     /// In order to know the size needed for the output buffer, use [`decrypt_len`](Decrypter::decrypt_len).
+    /// Note that the length of the output buffer can be greater of the length of the decoded data.
+    /// ```
+    /// # use openssl::{
+    /// #   encrypt::Decrypter,
+    /// #   pkey::PKey,
+    /// #   rsa::{Rsa, Padding},
+    /// # };
+    /// #
+    /// # const INPUT: &[u8] = b"\
+    /// #     \x26\xa1\xc1\x13\xc5\x7f\xb4\x9f\xa0\xb4\xde\x61\x5e\x2e\xc6\xfb\x76\x5c\xd1\x2b\x5f\
+    /// #     \x1d\x36\x60\xfa\xf8\xe8\xb3\x21\xf4\x9c\x70\xbc\x03\xea\xea\xac\xce\x4b\xb3\xf6\x45\
+    /// #     \xcc\xb3\x80\x9e\xa8\xf7\xc3\x5d\x06\x12\x7a\xa3\x0c\x30\x67\xf1\xe7\x94\x6c\xf6\x26\
+    /// #     \xac\x28\x17\x59\x69\xe1\xdc\xed\x7e\xc0\xe9\x62\x57\x49\xce\xdd\x13\x07\xde\x18\x03\
+    /// #     \x0f\x9d\x61\x65\xb9\x23\x8c\x78\x4b\xad\x23\x49\x75\x47\x64\xa0\xa0\xa2\x90\xc1\x49\
+    /// #     \x1b\x05\x24\xc2\xe9\x2c\x0d\x49\x78\x72\x61\x72\xed\x8b\x6f\x8a\xe8\xca\x05\x5c\x58\
+    /// #     \xd6\x95\xd6\x7b\xe3\x2d\x0d\xaa\x3e\x6d\x3c\x9a\x1c\x1d\xb4\x6c\x42\x9d\x9a\x82\x55\
+    /// #     \xd9\xde\xc8\x08\x7b\x17\xac\xd7\xaf\x86\x7b\x69\x9e\x3c\xf4\x5e\x1c\x39\x52\x6d\x62\
+    /// #     \x50\x51\xbd\xa6\xc8\x4e\xe9\x34\xf0\x37\x0d\xa9\xa9\x77\xe6\xf5\xc2\x47\x2d\xa8\xee\
+    /// #     \x3f\x69\x78\xff\xa9\xdc\x70\x22\x20\x9a\x5c\x9b\x70\x15\x90\xd3\xb4\x0e\x54\x9e\x48\
+    /// #     \xed\xb6\x2c\x88\xfc\xb4\xa9\x37\x10\xfa\x71\xb2\xec\x75\xe7\xe7\x0e\xf4\x60\x2c\x7b\
+    /// #     \x58\xaf\xa0\x53\xbd\x24\xf1\x12\xe3\x2e\x99\x25\x0a\x54\x54\x9d\xa1\xdb\xca\x41\x85\
+    /// #     \xf4\x62\x78\x64";
+    /// #
+    /// # let key = include_bytes!("../test/rsa.pem");
+    /// # let private_key = Rsa::private_key_from_pem(key).unwrap();
+    /// # let pkey = PKey::from_rsa(private_key).unwrap();
+    /// # let input = INPUT.to_vec();
+    /// #
+    /// let mut decrypter = Decrypter::new(&pkey).unwrap();
+    /// decrypter.set_rsa_padding(Padding::PKCS1).unwrap();
+    ///
+    /// // Get the length of the output buffer
+    /// let buffer_len = decrypter.decrypt_len(&input).unwrap();
+    /// let mut decoded = vec![0u8; buffer_len];
+    ///
+    /// // Decrypt the data and get its length
+    /// let decoded_len = decrypter.decrypt(&input, &mut decoded).unwrap();
+    ///
+    /// // Use only the part of the buffer with the decrypted data
+    /// let decoded = &decoded[..decoded_len];
+    /// ```
     ///
     /// This corresponds to [`EVP_PKEY_decrypt`].
     ///
