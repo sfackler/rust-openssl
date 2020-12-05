@@ -104,6 +104,7 @@ impl<'a> Encrypter<'a> {
     /// This corresponds to [`EVP_PKEY_CTX_set_rsa_oaep_md`].
     ///
     /// [`EVP_PKEY_CTX_set_rsa_oaep_md`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_set_rsa_oaep_md.html
+    #[cfg(any(ossl102, libressl310))]
     pub fn set_rsa_oaep_md(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_oaep_md(
@@ -231,6 +232,7 @@ impl<'a> Decrypter<'a> {
     /// This corresponds to [`EVP_PKEY_CTX_set_rsa_oaep_md`].
     ///
     /// [`EVP_PKEY_CTX_set_rsa_oaep_md`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_set_rsa_oaep_md.html
+    #[cfg(any(ossl102, libressl310))]
     pub fn set_rsa_oaep_md(&mut self, md: MessageDigest) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_oaep_md(
@@ -299,6 +301,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(any(ossl102, libressl310))]
     fn rsa_encrypt_decrypt_with_sha256() {
         let key = include_bytes!("../test/rsa.pem");
         let private_key = Rsa::private_key_from_pem(key).unwrap();

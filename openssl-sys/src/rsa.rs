@@ -49,6 +49,7 @@ pub unsafe fn EVP_PKEY_CTX_set_rsa_mgf1_md(ctx: *mut EVP_PKEY_CTX, md: *mut EVP_
     )
 }
 
+#[cfg(any(ossl102, libressl310))]
 pub unsafe fn EVP_PKEY_CTX_set_rsa_oaep_md(ctx: *mut EVP_PKEY_CTX, md: *mut EVP_MD) -> c_int {
     EVP_PKEY_CTX_ctrl(
         ctx,
@@ -67,6 +68,7 @@ pub const EVP_PKEY_CTRL_RSA_MGF1_MD: c_int = EVP_PKEY_ALG_CTRL + 5;
 
 pub const EVP_PKEY_CTRL_GET_RSA_PADDING: c_int = EVP_PKEY_ALG_CTRL + 6;
 
+#[cfg(any(ossl102, libressl310))]
 pub const EVP_PKEY_CTRL_RSA_OAEP_MD: c_int = EVP_PKEY_ALG_CTRL + 9;
 
 pub const RSA_PKCS1_PADDING: c_int = 1;
