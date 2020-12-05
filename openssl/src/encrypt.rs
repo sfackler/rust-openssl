@@ -33,13 +33,6 @@ impl<'a> Encrypter<'a> {
     where
         T: HasPublic,
     {
-        Self::new_intern(pkey)
-    }
-
-    fn new_intern<T>(pkey: &'a PKeyRef<T>) -> Result<Encrypter<'a>, ErrorStack>
-    where
-        T: HasPublic,
-    {
         unsafe {
             ffi::init();
 
@@ -164,13 +157,6 @@ impl<'a> Decrypter<'a> {
     ///
     /// [`EVP_PKEY_decrypt_init`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_decrypt_init.html
     pub fn new<T>(pkey: &'a PKeyRef<T>) -> Result<Decrypter<'a>, ErrorStack>
-    where
-        T: HasPrivate,
-    {
-        Self::new_intern(pkey)
-    }
-
-    fn new_intern<T>(pkey: &'a PKeyRef<T>) -> Result<Decrypter<'a>, ErrorStack>
     where
         T: HasPrivate,
     {
