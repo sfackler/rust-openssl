@@ -117,6 +117,8 @@ impl<'a> Encrypter<'a> {
 
     /// Performs public key encryption.
     ///
+    /// In order to know the size needed for the output buffer, use [`encrypt_len`](Encrypter::encrypt_len).
+    ///
     /// This corresponds to [`EVP_PKEY_encrypt`].
     ///
     /// [`EVP_PKEY_encrypt`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_encrypt.html
@@ -126,6 +128,26 @@ impl<'a> Encrypter<'a> {
             cvt(ffi::EVP_PKEY_encrypt(
                 self.pctx,
                 to.as_mut_ptr(),
+                &mut written,
+                from.as_ptr(),
+                from.len(),
+            ))?;
+        }
+
+        Ok(written)
+    }
+
+    /// Gets the size of the buffer needed to encrypt the input data.
+    ///
+    /// This corresponds to [`EVP_PKEY_encrypt`] called with a null pointer as output argument.
+    ///
+    /// [`EVP_PKEY_encrypt`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_encrypt.html
+    pub fn encrypt_len(&self, from: &[u8]) -> Result<usize, ErrorStack> {
+        let mut written = 0;
+        unsafe {
+            cvt(ffi::EVP_PKEY_encrypt(
+                self.pctx,
+                ptr::null_mut(),
                 &mut written,
                 from.as_ptr(),
                 from.len(),
@@ -245,6 +267,8 @@ impl<'a> Decrypter<'a> {
 
     /// Performs public key decryption.
     ///
+    /// In order to know the size needed for the output buffer, use [`decrypt_len`](Decrypter::decrypt_len).
+    ///
     /// This corresponds to [`EVP_PKEY_decrypt`].
     ///
     /// [`EVP_PKEY_decrypt`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_decrypt.html
@@ -254,6 +278,26 @@ impl<'a> Decrypter<'a> {
             cvt(ffi::EVP_PKEY_decrypt(
                 self.pctx,
                 to.as_mut_ptr(),
+                &mut written,
+                from.as_ptr(),
+                from.len(),
+            ))?;
+        }
+
+        Ok(written)
+    }
+
+    /// Gets the size of the buffer needed to decrypt the input data.
+    ///
+    /// This corresponds to [`EVP_PKEY_decrypt`] called with a null pointer as output argument.
+    ///
+    /// [`EVP_PKEY_decrypt`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_decrypt.html
+    pub fn decrypt_len(&self, from: &[u8]) -> Result<usize, ErrorStack> {
+        let mut written = 0;
+        unsafe {
+            cvt(ffi::EVP_PKEY_decrypt(
+                self.pctx,
+                ptr::null_mut(),
                 &mut written,
                 from.as_ptr(),
                 from.len(),
