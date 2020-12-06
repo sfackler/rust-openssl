@@ -1101,20 +1101,11 @@ cfg_if! {
         extern "C" {
             pub fn TLS_method() -> *const SSL_METHOD;
 
-            #[cfg(libressl321)]
-            pub fn TLSv1_2_method() -> *const SSL_METHOD;
-
             pub fn DTLS_method() -> *const SSL_METHOD;
 
             pub fn TLS_server_method() -> *const SSL_METHOD;
 
-            #[cfg(libressl321)]
-            pub fn TLSv1_2_server_method() -> *const SSL_METHOD;
-
             pub fn TLS_client_method() -> *const SSL_METHOD;
-
-            #[cfg(libressl321)]
-            pub fn TLSv1_2_client_method() -> *const SSL_METHOD;
         }
     } else {
         extern "C" {
