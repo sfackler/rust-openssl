@@ -8,7 +8,6 @@ extern crate pkg_config;
 #[cfg(target_env = "msvc")]
 extern crate vcpkg;
 
-use std::collections::HashSet;
 use std::env;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -93,12 +92,13 @@ fn main() {
         },
     };
 
-    let kind = determine_mode(Path::new(&lib_dir), &libs);
     for lib in libs.into_iter() {
-        println!("cargo:rustc-link-lib={}={}", kind, lib);
+        println!("cargo:rustc-link-lib={}", lib);
     }
 
-    if kind == "static" && target.contains("windows") {
+    // We only need to explicitly link to these when statically linking to openssl, but they'll be pulled in anyway
+    // when dynamically linking so linking them again shouldn't hurt.
+    if target.contains("windows") {
         println!("cargo:rustc-link-lib=dylib=gdi32");
         println!("cargo:rustc-link-lib=dylib=user32");
         println!("cargo:rustc-link-lib=dylib=crypt32");
@@ -284,52 +284,4 @@ fn parse_version(version: &str) -> u64 {
     });
 
     u64::from_str_radix(version, 16).unwrap()
-}
-
-/// Given a libdir for OpenSSL (where artifacts are located) as well as the name
-/// of the libraries we're linking to, figure out whether we should link them
-/// statically or dynamically.
-fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
-    // First see if a mode was explicitly requested
-    let kind = env("OPENSSL_STATIC");
-    match kind.as_ref().and_then(|s| s.to_str()).map(|s| &s[..]) {
-        Some("0") => return "dylib",
-        Some(_) => return "static",
-        None => {}
-    }
-
-    // Next, see what files we actually have to link against, and see what our
-    // possibilities even are.
-    let files = libdir
-        .read_dir()
-        .unwrap()
-        .map(|e| e.unwrap())
-        .map(|e| e.file_name())
-        .filter_map(|e| e.into_string().ok())
-        .collect::<HashSet<_>>();
-    let can_static = libs
-        .iter()
-        .all(|l| files.contains(&format!("lib{}.a", l)) || files.contains(&format!("{}.lib", l)));
-    let can_dylib = libs.iter().all(|l| {
-        files.contains(&format!("lib{}.so", l))
-            || files.contains(&format!("{}.dll", l))
-            || files.contains(&format!("lib{}.dylib", l))
-    });
-    match (can_static, can_dylib) {
-        (true, false) => return "static",
-        (false, true) => return "dylib",
-        (false, false) => {
-            panic!(
-                "OpenSSL libdir at `{}` does not contain the required files \
-                 to either statically or dynamically link OpenSSL",
-                libdir.display()
-            );
-        }
-        (true, true) => {}
-    }
-
-    // Ok, we've got not explicit preference and can *either* link statically or
-    // link dynamically. In the interest of "security upgrades" and/or "best
-    // practices with security libs", let's link dynamically.
-    "dylib"
 }
