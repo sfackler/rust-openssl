@@ -1,3 +1,44 @@
+//! Message encryption.
+//!
+//! The [`Encrypter`] allows for encryption of data given a public key. The [`Decrypter`] can be
+//! used with the corresponding private key to decrypt the data.
+//!
+//! # Examples
+//!
+//! Encrypt and decrypt data given an RSA keypair:
+//!
+//! ```rust
+//! use openssl::encrypt::{Encrypter, Decrypter};
+//! use openssl::rsa::{Rsa, Padding};
+//! use openssl::pkey::PKey;
+//!
+//! // Generate a keypair
+//! let keypair = Rsa::generate(2048).unwrap();
+//! let keypair = PKey::from_rsa(keypair).unwrap();
+//!
+//! let data = b"hello, world!";
+//!
+//! // Encrypt the data with RSA PKCS1
+//! let mut encrypter = Encrypter::new(&keypair).unwrap();
+//! encrypter.set_rsa_padding(Padding::PKCS1).unwrap();
+//! // Create an output buffer
+//! let buffer_len = encrypter.encrypt_len(data).unwrap();
+//! let mut encrypted = vec![0; buffer_len];
+//! // Encrypt and truncate the buffer
+//! let encrypted_len = encrypter.encrypt(data, &mut encrypted).unwrap();
+//! encrypted.truncate(encrypted_len);
+//!
+//! // Decrypt the data
+//! let mut decrypter = Decrypter::new(&keypair).unwrap();
+//! decrypter.set_rsa_padding(Padding::PKCS1).unwrap();
+//! // Create an output buffer
+//! let buffer_len = decrypter.decrypt_len(&encrypted).unwrap();
+//! let mut decrypted = vec![0; buffer_len];
+//! // Encrypt and truncate the buffer
+//! let decrypted_len = decrypter.decrypt(&encrypted, &mut decrypted).unwrap();
+//! decrypted.truncate(decrypted_len);
+//! assert_eq!(&*decrypted, data);
+//! ```
 use std::{marker::PhantomData, ptr};
 
 use error::ErrorStack;
@@ -7,6 +48,7 @@ use pkey::{HasPrivate, HasPublic, PKeyRef};
 use rsa::Padding;
 use {cvt, cvt_p};
 
+/// A type which encrypts data.
 pub struct Encrypter<'a> {
     pctx: *mut ffi::EVP_PKEY_CTX,
     _p: PhantomData<&'a ()>,
@@ -183,6 +225,8 @@ impl<'a> Encrypter<'a> {
         Ok(written)
     }
 }
+
+/// A type which decrypts data.
 pub struct Decrypter<'a> {
     pctx: *mut ffi::EVP_PKEY_CTX,
     _p: PhantomData<&'a ()>,
