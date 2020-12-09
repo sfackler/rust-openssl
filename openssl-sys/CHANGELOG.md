@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [v0.9.59] - 2020-12-09
+
+### Added
+
+* Added support for LibreSSL 3.2.x, 3.3.0, and 3.3.1.
+* Added `DH_generate_parameters`, `DH_generate_key`, `DH_compute_key`, and `DH_size`.
+* Added `NID_X25519`, `NID_X448`, `EVP_PKEY_x25519` and `EVP_PKEY_x448`.
+* Added `OBJ_txt2obj`.
+* Added `d2i_PKCS7` and `i2d_PKCS7`.
+* Added `SRTP_AEAD_AES_128_GCM` and `SRTP_AEAD_AES_256_GCM`.
+
 ## [v0.9.58] - 2020-06-05
 
 ### Added
@@ -145,7 +156,8 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.58...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.59...master
+[v0.9.59]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.58...openssl-sys-v0.9.59
 [v0.9.58]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.57...openssl-sys-v0.9.58
 [v0.9.57]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.56...openssl-sys-v0.9.57
 [v0.9.56]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.55...openssl-sys-v0.9.56
