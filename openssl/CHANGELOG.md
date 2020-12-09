@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## [v0.10.31] - 2020-12-09
+
+### Added
+
+* Added `Asn1Object::from_str`.
+* Added `Dh::from_pgq`, `DhRef::prime_p`, `DhRef::prime_q`, `DhRef::generator`, `DhRef::generate_params`,
+    `DhRef::generate_key`, `DhRef::public_key`, and `DhRef::compute_key`.
+* Added `Pkcs7::from_der` and `Pkcs7Ref::to_der`.
+* Added `Id::X25519`, `Id::X448`, `PKey::generate_x25519`, and `PKey::generate_x448`.
+* Added `SrtpProfileId::SRTP_AEAD_AES_128_GCM` and `SrtpProfileId::SRTP_AEAD_AES_256_GCM`.
+* Added `SslContextBuilder::verify_param` and `SslContextBuilder::verify_param_mut`.
+* Added `X509Ref::subject_name_hash` and `X509Ref::version`.
+* Added `X509StoreBuilderRef::add_lookup`, and the `X509Lookup` type.
+* Added `X509VerifyFlags`, `X509VerifyParamRef::set_flags`, `X509VerifyParamRef::clear_flags`
+    `X509VerifyParamRef::get_flags`.
+
 ## [v0.10.30] - 2020-06-25
 
 ### Fixed
@@ -471,7 +487,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.30...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.31...master
+[v0.10.31]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.30...openssl-v0.10.31
 [v0.10.30]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.29...openssl-v0.10.30
 [v0.10.29]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.28...openssl-v0.10.29
 [v0.10.28]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.27...openssl-v0.10.28
