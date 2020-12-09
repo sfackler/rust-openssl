@@ -554,6 +554,7 @@ fn read_panic() {
 }
 
 #[test]
+#[cfg_attr(libressl321, ignore)]
 #[should_panic(expected = "blammo")]
 fn flush_panic() {
     struct ExplodingStream(TcpStream);
@@ -841,6 +842,7 @@ fn cert_store() {
 }
 
 #[test]
+#[cfg_attr(libressl321, ignore)]
 fn tmp_dh_callback() {
     static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
@@ -887,6 +889,7 @@ fn tmp_ecdh_callback() {
 }
 
 #[test]
+#[cfg_attr(libressl321, ignore)]
 fn tmp_dh_callback_ssl() {
     static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
@@ -944,6 +947,7 @@ fn idle_session() {
 }
 
 #[test]
+#[cfg_attr(libressl321, ignore)]
 fn active_session() {
     let server = Server::builder().build();
 
@@ -999,6 +1003,7 @@ fn status_callbacks() {
 }
 
 #[test]
+#[cfg_attr(libressl321, ignore)]
 fn new_session_callback() {
     static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
@@ -1022,6 +1027,7 @@ fn new_session_callback() {
 }
 
 #[test]
+#[cfg_attr(libressl321, ignore)]
 fn new_session_callback_swapped_ctx() {
     static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
