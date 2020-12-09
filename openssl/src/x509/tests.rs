@@ -1,8 +1,7 @@
-use hex::{self, FromHex};
-
 use asn1::Asn1Time;
 use bn::{BigNum, MsbOption};
 use hash::MessageDigest;
+use hex::{self, FromHex};
 use nid::Nid;
 use pkey::{PKey, Private};
 use rsa::Rsa;
@@ -12,6 +11,8 @@ use x509::extension::{
     SubjectKeyIdentifier,
 };
 use x509::store::X509StoreBuilder;
+#[cfg(ossl110)]
+use x509::X509Builder;
 use x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
 
 fn pkey() -> PKey<Private> {
@@ -377,4 +378,31 @@ fn test_verify_fails() {
     assert!(!context
         .init(&store, &cert, &chain, |c| c.verify_cert())
         .unwrap());
+}
+
+#[cfg(ossl110)]
+#[test]
+fn x509_ref_version() {
+    let mut builder = X509Builder::new().unwrap();
+    let expected_version = 2;
+    builder
+        .set_version(expected_version)
+        .expect("Failed to set certificate version");
+    let cert = builder.build();
+    let actual_version = cert.version();
+    assert_eq!(
+        expected_version, actual_version,
+        "Obtained certificate version is incorrect",
+    );
+}
+
+#[cfg(ossl110)]
+#[test]
+fn x509_ref_version_no_version_set() {
+    let cert = X509Builder::new().unwrap().build();
+    let actual_version = cert.version();
+    assert_eq!(
+        0, actual_version,
+        "Default certificate version is incorrect",
+    );
 }
