@@ -155,7 +155,10 @@ impl Dh<Params> {
     }
 }
 
-impl<T> Dh<T> {
+impl<T> Dh<T>
+where
+    T: HasParams,
+{
     /// Returns the prime `p` from the DH instance.
     ///
     /// This corresponds to [`DH_get0_pqg`].
