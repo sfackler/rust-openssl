@@ -290,10 +290,10 @@ workflows:
           library: libressl
           version: 2.5.5
       - linux:
-          name: x86_64-libressl-3.3.0
+          name: x86_64-libressl-3.3.1
           target: x86_64-unknown-linux-gnu
           library: libressl
-          version: 3.3.0
+          version: 3.3.1
       - macos:
           name: macos
       - macos:
