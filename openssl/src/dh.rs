@@ -73,49 +73,6 @@ impl Dh<Params> {
         }
     }
 
-    /// Returns the prime `p` from the DH instance.
-    ///
-    /// This corresponds to [`DH_get0_pqg`].
-    ///
-    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
-    pub fn prime_p(&self) -> &BigNumRef {
-        let mut p = ptr::null();
-        unsafe {
-            DH_get0_pqg(self.0, &mut p, ptr::null_mut(), ptr::null_mut());
-            BigNumRef::from_ptr(p as *mut _)
-        }
-    }
-
-    /// Returns the prime `q` from the DH instance.
-    ///
-    /// This corresponds to [`DH_get0_pqg`].
-    ///
-    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
-    pub fn prime_q(&self) -> Option<&BigNumRef> {
-        let mut q = ptr::null();
-        unsafe {
-            DH_get0_pqg(self.0, ptr::null_mut(), &mut q, ptr::null_mut());
-            if q.is_null() {
-                None
-            } else {
-                Some(BigNumRef::from_ptr(q as *mut _))
-            }
-        }
-    }
-
-    /// Returns the generator from the DH instance.
-    ///
-    /// This corresponds to [`DH_get0_pqg`].
-    ///
-    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
-    pub fn generator(&self) -> &BigNumRef {
-        let mut g = ptr::null();
-        unsafe {
-            DH_get0_pqg(self.0, ptr::null_mut(), ptr::null_mut(), &mut g);
-            BigNumRef::from_ptr(g as *mut _)
-        }
-    }
-
     /// Generates DH params based on the given `prime_len` and a fixed `generator` value.
     ///
     /// This corresponds to [`DH_generate_parameters`].
@@ -198,7 +155,52 @@ impl Dh<Params> {
     }
 }
 
-impl<T> Dh<T>
+impl<T> Dh<T> {
+    /// Returns the prime `p` from the DH instance.
+    ///
+    /// This corresponds to [`DH_get0_pqg`].
+    ///
+    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
+    pub fn prime_p(&self) -> &BigNumRef {
+        let mut p = ptr::null();
+        unsafe {
+            DH_get0_pqg(self.as_ptr(), &mut p, ptr::null_mut(), ptr::null_mut());
+            BigNumRef::from_ptr(p as *mut _)
+        }
+    }
+
+    /// Returns the prime `q` from the DH instance.
+    ///
+    /// This corresponds to [`DH_get0_pqg`].
+    ///
+    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
+    pub fn prime_q(&self) -> Option<&BigNumRef> {
+        let mut q = ptr::null();
+        unsafe {
+            DH_get0_pqg(self.as_ptr(), ptr::null_mut(), &mut q, ptr::null_mut());
+            if q.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_ptr(q as *mut _))
+            }
+        }
+    }
+
+    /// Returns the generator from the DH instance.
+    ///
+    /// This corresponds to [`DH_get0_pqg`].
+    ///
+    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
+    pub fn generator(&self) -> &BigNumRef {
+        let mut g = ptr::null();
+        unsafe {
+            DH_get0_pqg(self.as_ptr(), ptr::null_mut(), ptr::null_mut(), &mut g);
+            BigNumRef::from_ptr(g as *mut _)
+        }
+    }
+}
+
+impl<T> DhRef<T>
 where
     T: HasPublic,
 {
@@ -210,13 +212,13 @@ where
     pub fn public_key(&self) -> &BigNumRef {
         let mut pub_key = ptr::null();
         unsafe {
-            DH_get0_key(self.0, &mut pub_key, ptr::null_mut());
+            DH_get0_key(self.as_ptr(), &mut pub_key, ptr::null_mut());
             BigNumRef::from_ptr(pub_key as *mut _)
         }
     }
 }
 
-impl<T> Dh<T>
+impl<T> DhRef<T>
 where
     T: HasPrivate,
 {
@@ -227,12 +229,12 @@ where
     /// [`DH_compute_key`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_compute_key.html
     pub fn compute_key(&self, public_key: &BigNumRef) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
-            let key_len = ffi::DH_size(self.0);
+            let key_len = ffi::DH_size(self.as_ptr());
             let mut key = vec![0u8; key_len as usize];
             cvt(ffi::DH_compute_key(
                 key.as_mut_ptr(),
                 public_key.as_ptr(),
-                self.0,
+                self.as_ptr(),
             ))?;
             Ok(key)
         }
