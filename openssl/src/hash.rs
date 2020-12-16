@@ -1,4 +1,5 @@
 use ffi;
+use std::ffi::CString;
 use std::fmt;
 use std::io;
 use std::io::prelude::*;
@@ -38,6 +39,25 @@ impl MessageDigest {
     pub fn from_nid(type_: Nid) -> Option<MessageDigest> {
         unsafe {
             let ptr = ffi::EVP_get_digestbynid(type_.as_raw());
+            if ptr.is_null() {
+                None
+            } else {
+                Some(MessageDigest(ptr))
+            }
+        }
+    }
+
+    /// Returns the `MessageDigest` corresponding to an algorithm name.
+    ///
+    /// This corresponds to [`EVP_get_digestbyname`].
+    ///
+    /// [`EVP_get_digestbyname`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestInit.html
+    pub fn from_name(name: &str) -> Option<MessageDigest> {
+        #[cfg(not(ossl110))]
+        ffi::init();
+        let name = CString::new(name).ok()?;
+        unsafe {
+            let ptr = ffi::EVP_get_digestbyname(name.as_ptr());
             if ptr.is_null() {
                 None
             } else {
@@ -613,5 +633,13 @@ mod tests {
             MessageDigest::from_nid(Nid::SHA256).unwrap().as_ptr(),
             MessageDigest::sha256().as_ptr()
         );
+    }
+
+    #[test]
+    fn from_name() {
+        assert_eq!(
+            MessageDigest::from_name("SHA256").unwrap().as_ptr(),
+            MessageDigest::sha256().as_ptr()
+        )
     }
 }
