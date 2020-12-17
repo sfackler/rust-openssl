@@ -53,7 +53,6 @@ impl MessageDigest {
     ///
     /// [`EVP_get_digestbyname`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestInit.html
     pub fn from_name(name: &str) -> Option<MessageDigest> {
-        #[cfg(not(ossl110))]
         ffi::init();
         let name = CString::new(name).ok()?;
         unsafe {
