@@ -1823,6 +1823,14 @@ foreign_type_and_impl_send_sync! {
 
 impl Clone for SslContext {
     fn clone(&self) -> Self {
+        (**self).to_owned()
+    }
+}
+
+impl ToOwned for SslContextRef {
+    type Owned = SslContext;
+
+    fn to_owned(&self) -> Self::Owned {
         unsafe {
             SSL_CTX_up_ref(self.as_ptr());
             SslContext::from_ptr(self.as_ptr())
@@ -2381,11 +2389,11 @@ impl Ssl {
     ///
     /// [`SSL_new`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_new.html
     // FIXME should take &SslContextRef
-    pub fn new(ctx: &SslContext) -> Result<Ssl, ErrorStack> {
+    pub fn new(ctx: &SslContextRef) -> Result<Ssl, ErrorStack> {
         unsafe {
             let ptr = cvt_p(ffi::SSL_new(ctx.as_ptr()))?;
             let mut ssl = Ssl::from_ptr(ptr);
-            ssl.set_ex_data(*SESSION_CTX_INDEX, ctx.clone());
+            ssl.set_ex_data(*SESSION_CTX_INDEX, ctx.to_owned());
 
             Ok(ssl)
         }
