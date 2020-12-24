@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [v0.9.60] - 2020-12-24
+
+### Added
+
+* Added support for the default Homebrew install directory on ARM.
+* Added `EVP_PKEY_CTX_set_rsa_oaep_md` and `EVP_PKEY_CTRL_RSA_OAEP_MD`.
+
 ## [v0.9.59] - 2020-12-09
 
 ### Added
