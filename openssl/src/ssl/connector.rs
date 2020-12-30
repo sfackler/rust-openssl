@@ -414,10 +414,10 @@ cfg_if! {
                 GeneralName, X509NameRef, X509Ref, X509StoreContext, X509StoreContextRef,
                 X509VerifyResult,
             };
+            use once_cell::sync::Lazy;
 
-            lazy_static! {
-                pub static ref HOSTNAME_IDX: Index<Ssl, String> = Ssl::new_ex_index().unwrap();
-            }
+            pub static HOSTNAME_IDX: Lazy<Index<Ssl, String>> =
+                Lazy::new(|| Ssl::new_ex_index().unwrap());
 
             pub fn verify_callback(preverify_ok: bool, x509_ctx: &mut X509StoreContextRef) -> bool {
                 if !preverify_ok || x509_ctx.error_depth() != 0 {

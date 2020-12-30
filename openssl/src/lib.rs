@@ -116,9 +116,8 @@ extern crate bitflags;
 extern crate cfg_if;
 #[macro_use]
 extern crate foreign_types;
-#[macro_use]
-extern crate lazy_static;
 extern crate libc;
+extern crate once_cell;
 extern crate openssl_sys as ffi;
 
 #[cfg(test)]

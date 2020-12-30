@@ -87,6 +87,7 @@ use ex_data::Index;
 use hash::MessageDigest;
 #[cfg(ossl110)]
 use nid::Nid;
+use once_cell::sync::Lazy;
 use pkey::{HasPrivate, PKeyRef, Params, Private};
 use srtp::{SrtpProtectionProfile, SrtpProtectionProfileRef};
 use ssl::bio::BioMethod;
@@ -512,11 +513,9 @@ impl NameType {
     }
 }
 
-lazy_static! {
-    static ref INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
-    static ref SSL_INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
-    static ref SESSION_CTX_INDEX: Index<Ssl, SslContext> = Ssl::new_ex_index().unwrap();
-}
+static INDEXES: Lazy<Mutex<HashMap<TypeId, c_int>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+static SSL_INDEXES: Lazy<Mutex<HashMap<TypeId, c_int>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+static SESSION_CTX_INDEX: Lazy<Index<Ssl, SslContext>> = Lazy::new(|| Ssl::new_ex_index().unwrap());
 
 unsafe extern "C" fn free_data_box<T>(
     _parent: *mut c_void,
