@@ -22,12 +22,12 @@ use error::ErrorStack;
 use pkey::Params;
 #[cfg(any(ossl102, libressl261))]
 use ssl::AlpnError;
+use ssl::{
+    try_get_session_ctx_index, SniError, Ssl, SslAlert, SslContext, SslContextRef, SslRef,
+    SslSession, SslSessionRef,
+};
 #[cfg(ossl111)]
 use ssl::{ClientHelloResponse, ExtensionContext};
-use ssl::{
-    SniError, Ssl, SslAlert, SslContext, SslContextRef, SslRef, SslSession, SslSessionRef,
-    SESSION_CTX_INDEX,
-};
 use util::ForeignTypeRefExt;
 #[cfg(ossl111)]
 use x509::X509Ref;
@@ -355,9 +355,11 @@ pub unsafe extern "C" fn raw_new_session<F>(
 where
     F: Fn(&mut SslRef, SslSession) + 'static + Sync + Send,
 {
+    let session_ctx_index =
+        try_get_session_ctx_index().expect("BUG: session context index initialization failed");
     let ssl = SslRef::from_ptr_mut(ssl);
     let callback = ssl
-        .ex_data(*SESSION_CTX_INDEX)
+        .ex_data(*session_ctx_index)
         .expect("BUG: session context missing")
         .ex_data(SslContext::cached_ex_index::<F>())
         .expect("BUG: new session callback missing") as *const F;
@@ -401,9 +403,11 @@ pub unsafe extern "C" fn raw_get_session<F>(
 where
     F: Fn(&mut SslRef, &[u8]) -> Option<SslSession> + 'static + Sync + Send,
 {
+    let session_ctx_index =
+        try_get_session_ctx_index().expect("BUG: session context index initialization failed");
     let ssl = SslRef::from_ptr_mut(ssl);
     let callback = ssl
-        .ex_data(*SESSION_CTX_INDEX)
+        .ex_data(*session_ctx_index)
         .expect("BUG: session context missing")
         .ex_data(SslContext::cached_ex_index::<F>())
         .expect("BUG: get session callback missing") as *const F;

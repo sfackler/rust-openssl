@@ -87,6 +87,7 @@ use ex_data::Index;
 use hash::MessageDigest;
 #[cfg(ossl110)]
 use nid::Nid;
+use once_cell::sync::{Lazy, OnceCell};
 use pkey::{HasPrivate, PKeyRef, Params, Private};
 use srtp::{SrtpProtectionProfile, SrtpProtectionProfileRef};
 use ssl::bio::BioMethod;
@@ -512,10 +513,12 @@ impl NameType {
     }
 }
 
-lazy_static! {
-    static ref INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
-    static ref SSL_INDEXES: Mutex<HashMap<TypeId, c_int>> = Mutex::new(HashMap::new());
-    static ref SESSION_CTX_INDEX: Index<Ssl, SslContext> = Ssl::new_ex_index().unwrap();
+static INDEXES: Lazy<Mutex<HashMap<TypeId, c_int>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+static SSL_INDEXES: Lazy<Mutex<HashMap<TypeId, c_int>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+static SESSION_CTX_INDEX: OnceCell<Index<Ssl, SslContext>> = OnceCell::new();
+
+fn try_get_session_ctx_index() -> Result<&'static Index<Ssl, SslContext>, ErrorStack> {
+    SESSION_CTX_INDEX.get_or_try_init(Ssl::new_ex_index)
 }
 
 unsafe extern "C" fn free_data_box<T>(
@@ -2390,10 +2393,11 @@ impl Ssl {
     /// [`SSL_new`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_new.html
     // FIXME should take &SslContextRef
     pub fn new(ctx: &SslContextRef) -> Result<Ssl, ErrorStack> {
+        let session_ctx_index = try_get_session_ctx_index()?;
         unsafe {
             let ptr = cvt_p(ffi::SSL_new(ctx.as_ptr()))?;
             let mut ssl = Ssl::from_ptr(ptr);
-            ssl.set_ex_data(*SESSION_CTX_INDEX, ctx.to_owned());
+            ssl.set_ex_data(*session_ctx_index, ctx.to_owned());
 
             Ok(ssl)
         }
