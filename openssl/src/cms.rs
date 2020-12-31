@@ -1,6 +1,6 @@
 //! SMIME implementation using CMS
 //!
-//! CMS (PKCS#7) is an encyption standard.  It allows signing and ecrypting data using
+//! CMS (PKCS#7) is an encryption standard.  It allows signing and encrypting data using
 //! X.509 certificates.  The OpenSSL implementation of CMS is used in email encryption
 //! generated from a `Vec` of bytes.  This `Vec` follows the smime protocol standards.
 //! Data accepted by this module will be smime type `enveloped-data`.
@@ -13,10 +13,19 @@ use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
 use libc::c_uint;
 use pkey::{HasPrivate, PKeyRef};
-use stack::StackRef;
+<<<<<<< HEAD
+#[cfg(ossl110)]
+use stack::{Stackable, StackRef};
 use symm::Cipher;
 use x509::{X509Ref, X509};
-use {cvt, cvt_p};
+#[cfg(ossl110)]
+use x509::X509NameRef;
+use x509::store::{X509StoreRef, X509StoreRef};
+use symm::Cipher;
+use {cvt, cvt_n, cvt_p};
+
+#[cfg(ossl110)]
+pub use self::recipient_info::*;
 
 bitflags! {
     pub struct CMSOptions : c_uint {
@@ -92,6 +101,81 @@ impl CmsContentInfoRef {
             ))?;
 
             Ok(out.get_buf().to_owned())
+        }
+    }
+
+    /// Verify the sender's signature given an optional sender's certificate `cert` and CA store
+    /// `store`. If the signature is correct, signed data are returned, otherwise `None`.
+    ///
+    /// OpenSSL documentation at [`CMS_verify`]
+    /// 
+    /// [`CMS_verify`]: https://www.openssl.org/docs/manmaster/man3/CMS_verify.html
+    pub fn verify(
+        &self,
+        certs: Option<&StackRef<X509>>,
+        store: &X509StoreRef,
+        flags: CMSOptions,
+    ) -> Result<Option<Vec<u8>>, ErrorStack> {
+        let mut out = MemBio::new()?;
+        let is_valid = self._verify(certs, store, None, Some(&mut out), flags)?;
+        if is_valid {
+            Ok(Some(out.get_buf().to_owned()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Verify the sender's signature given an optional sender's certificate `cert` and CA store
+    /// `store`. If the signature is correct, returns `true`, otherwise `false`.
+    /// This is the version for detached signatures.
+    ///
+    /// OpenSSL documentation at [`CMS_verify`]
+    /// 
+    /// [`CMS_verify`]: https://www.openssl.org/docs/manmaster/man3/CMS_verify.html
+    pub fn verify_detached(
+        &self,
+        certs: Option<&StackRef<X509>>,
+        store: &X509StoreRef,
+        data: &[u8],
+        flags: CMSOptions,
+    ) -> Result<bool, ErrorStack> {
+        let mut in_data = MemBioSlice::new(data)?;
+        self._verify(certs, store, Some(&mut in_data), None, flags)
+    }
+
+    fn _verify(
+        &self,
+        certs: Option<&StackRef<X509>>,
+        store: &X509StoreRef,
+        data: Option<&mut MemBioSlice>,
+        out: Option<&mut MemBio>,
+        flags: CMSOptions,
+    ) -> Result<bool, ErrorStack> {
+        unsafe {
+            let certs = match certs {
+                Some(certs) => certs.as_ptr(),
+                None => ptr::null_mut(),
+            };
+            let store = store.as_ptr();
+            let in_ptr = match data {
+                Some(in_ptr) => in_ptr.as_ptr(),
+                None => ptr::null_mut(),
+            };
+            let out_ptr = match out {
+                Some(out_ptr) => out_ptr.as_ptr(),
+                None => ptr::null_mut(),
+            };
+
+            let is_valid = cvt_n(ffi::CMS_verify(
+                self.as_ptr(),
+                certs,
+                store,
+                in_ptr,
+                out_ptr,
+                flags.bits(),
+            ))? == 1;
+
+            Ok(is_valid)
         }
     }
 
@@ -221,12 +305,162 @@ impl CmsContentInfo {
     }
 }
 
+#[cfg(ossl110)]
+mod recipient_info {
+    use asn1::Asn1IntegerRef;
+    use stack::Stackable;
+    use x509::X509NameRef;
+    use foreign_types::Opaque;
+    use super::*;
+
+    impl CmsContentInfoRef {
+        /// Given that we're dealing with the `EnvelopedData`, returns the recipients of the message.
+        ///
+        /// OpenSSL documentation at [`CMS_get0_RecipientInfos`]
+        ///
+        /// [`CMS_get0_RecipientInfos`]: https://www.openssl.org/docs/manmaster/man3/CMS_RecipientInfo_decrypt.html
+        pub fn get_recipient_infos(&self) -> Result<&StackRef<CmsRecipientInfo>, ErrorStack> {
+            unsafe {
+                let recipient_infos = cvt_p(ffi::CMS_get0_RecipientInfos(self.as_ptr()))?;
+                Ok(StackRef::from_ptr(recipient_infos))
+            }
+        }
+    }
+
+    /// An owned version of [`CmsRecipientInfoRef`]
+    ///
+    /// [`CmsRecipientInfoRef`]:struct.CmsRecipientInfoRef.html
+    pub struct CmsRecipientInfo(*mut ffi::CMS_RecipientInfo);
+
+
+    impl ForeignType for CmsRecipientInfo {
+        type CType = ffi::CMS_RecipientInfo;
+        type Ref = CmsRecipientInfoRef;
+
+        #[inline]
+        unsafe fn from_ptr(ptr: *mut Self::CType) -> Self {
+            CmsRecipientInfo(ptr)
+        }
+
+        #[inline]
+        fn as_ptr(&self) -> *mut Self::CType {
+            self.0
+        }
+    }
+
+    /// Reference to a [`CMS_RecipientInfo`].
+    ///
+    /// [`CMS_RecipientInfo`]: https://www.openssl.org/docs/manmaster/man3/CMS_RecipientInfo_decrypt.html
+    pub struct CmsRecipientInfoRef(Opaque);
+
+    impl ForeignTypeRef for CmsRecipientInfoRef {
+        type CType = ffi::CMS_RecipientInfo;
+    }
+
+    impl Stackable for CmsRecipientInfo {
+        type StackType = ffi::stack_st_CMS_RecipientInfo;
+    }
+
+    /// The bindings to the openssl's type of `CMS_RecipientInfo` which can be extracted with
+    /// openssl's `CMS_RecipientInfo_ktri_get0_singer_id()` function.
+    pub enum RecipientInfo<'cms> {
+        Identifier,
+        Info {
+            issuer: &'cms X509NameRef,
+            serial_number: &'cms Asn1IntegerRef,
+        },
+    }
+
+    impl CmsRecipientInfoRef {
+        /// Implementation of [`CMS_RecipientInfo_ktri_get0_signer_id`].
+        ///
+        /// [`CMS_RecipientInfo_ktri_get0_signer_id`]: https://www.openssl.org/docs/manmaster/man3/CMS_RecipientInfo_decrypt.html
+        pub fn get_recipient_info<'cms>(&'cms self) -> Result<RecipientInfo<'cms>, ErrorStack> {
+            unsafe {
+                let mut key_id = ptr::null_mut();
+                let mut issuer = ptr::null_mut();
+                let mut serial_number = ptr::null_mut();
+                cvt(ffi::CMS_RecipientInfo_ktri_get0_signer_id(
+                    self.as_ptr(),
+                    &mut key_id,
+                    &mut issuer,
+                    &mut serial_number,
+                ))?;
+
+                if !key_id.is_null() {
+                    // TODO: Implement (ffi::ASN1_OCTET_STRING) bindings.
+                    Ok(RecipientInfo::Identifier)
+                } else {
+                    Ok(RecipientInfo::Info {
+                        issuer: X509NameRef::from_ptr(issuer),
+                        serial_number: Asn1IntegerRef::from_ptr(serial_number),
+                    })
+                }
+            }
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+        use stack::Stack;
+
+        #[test]
+        fn extract_recipient_info() {
+            // load cert with public key only
+            let pub_cert_bytes = include_bytes!("../test/cms_pubkey.der");
+            let pub_cert = X509::from_der(pub_cert_bytes).expect("failed to load pub cert");
+
+            // encrypt cms message using public key cert
+            let input = String::from("My Message");
+            let mut cert_stack = Stack::new().expect("failed to create stack");
+            cert_stack.push(pub_cert.clone()).expect("failed to add pub cert to stack");
+
+            let encrypt = CmsContentInfo::encrypt(&cert_stack, &input.as_bytes(), Cipher::des_ede3_cbc(), CMSOptions::empty())
+                .expect("failed create encrypted cms");
+            let encrypt = encrypt.to_der().expect("failed to create der from cms");
+
+            // decrypt cms message using private key cert
+            let enveloped_data = CmsContentInfo::from_der(&encrypt).expect("failed read cms from der");
+
+            // extract the recipient's information
+            let recipients = enveloped_data.get_recipient_infos().expect("failed to get recipient infos");
+            assert_eq!(recipients.len(), 1);
+
+            let recp = recipients.get(0).unwrap().get_recipient_info().expect("failed to get recipient info");
+            match recp {
+                RecipientInfo::Identifier => {
+                panic!("wrong information inside the recipient data");
+                }
+                RecipientInfo::Info { issuer, serial_number } => {
+                    // compare the serial numbers
+                    let pub_cert_serial_number = pub_cert.serial_number()
+                        .to_bn()
+                        .expect("could not convert serial number to bn")
+                        .to_string();
+                    let recp_serial_number = serial_number
+                        .to_bn()
+                        .expect("could not convert recipient's serial number to bn")
+                        .to_string();
+                    assert_eq!(pub_cert_serial_number, recp_serial_number);
+
+                    // compare issuers
+                    for (cert, expected) in pub_cert.issuer_name().entries().zip(issuer.entries()) {
+                        assert_eq!(cert.data().as_slice(), expected.data().as_slice());
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use pkcs12::Pkcs12;
     use stack::Stack;
     use x509::X509;
+    use x509::store::X509StoreBuilder;
 
     #[test]
     fn cms_encrypt_decrypt() {
@@ -281,5 +515,62 @@ mod test {
                 String::from_utf8(decrypt).expect("failed to create string from cms content");
             assert_eq!(input, decrypt);
         }
+    }
+
+    #[test]
+    fn cms_sign_verify() {
+        // load cert with private key
+        let priv_cert_bytes = include_bytes!("../test/cms.p12");
+        let priv_cert = Pkcs12::from_der(priv_cert_bytes).expect("failed to load priv cert");
+        let priv_cert = priv_cert.parse("mypass").expect("failed to parse priv cert");
+
+        // sign cms message using private key cert
+        let input = String::from("My Message");
+        let sign = CmsContentInfo::sign(Some(&priv_cert.cert), Some(&priv_cert.pkey), None, Some(&input.as_bytes()), CMSOptions::empty())
+            .expect("failed create signed cms");
+        let sign = sign.to_der().expect("failed to create der from cms");
+
+        // verify signature on cms message
+        let verify = CmsContentInfo::from_der(&sign).expect("failed read cms from der");
+
+        let mut cert_stack = Stack::new().expect("failed to create stack");
+        cert_stack.push(priv_cert.cert.clone()).expect("failed to add cert to stack");
+
+        let mut store_builder = X509StoreBuilder::new().expect("failed to create store builder");
+        store_builder.add_cert(priv_cert.cert.clone()).expect("failed to add certificate to store");
+        let store = store_builder.build();
+
+        let verify = verify.verify(Some(&cert_stack), &store, CMSOptions::empty()).expect("failed to verify cms");
+        let verify = verify.expect("cms verification returned None");
+        let verify = String::from_utf8(verify).expect("failed to create string from cms content");
+
+        assert_eq!(input, verify);
+    }
+
+    #[test]
+    fn cms_sign_verify_detached() {
+        // load cert with private key
+        let priv_cert_bytes = include_bytes!("../test/cms.p12");
+        let priv_cert = Pkcs12::from_der(priv_cert_bytes).expect("failed to load priv cert");
+        let priv_cert = priv_cert.parse("mypass").expect("failed to parse priv cert");
+
+        // sign cms message using private key cert
+        let input = String::from("My Message");
+        let sign = CmsContentInfo::sign(Some(&priv_cert.cert), Some(&priv_cert.pkey), None, Some(&input.as_bytes()), CMSOptions::DETACHED)
+            .expect("failed create signed cms");
+        let sign = sign.to_der().expect("failed to create der from cms");
+
+        // verify signature on cms message
+        let verify = CmsContentInfo::from_der(&sign).expect("failed read cms from der");
+
+        let mut cert_stack = Stack::new().expect("failed to create stack");
+        cert_stack.push(priv_cert.cert.clone()).expect("failed to add cert to stack");
+
+        let mut store_builder = X509StoreBuilder::new().expect("failed to create store builder");
+        store_builder.add_cert(priv_cert.cert.clone()).expect("failed to add certificate to store");
+        let store = store_builder.build();
+
+        let verify = verify.verify_detached(Some(&cert_stack), &store, input.as_bytes(), CMSOptions::empty()).expect("failed to verify cms");
+        assert!(verify);
     }
 }
