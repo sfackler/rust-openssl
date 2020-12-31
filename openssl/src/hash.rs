@@ -390,7 +390,7 @@ impl AsRef<[u8]> for DigestBytes {
 }
 
 impl fmt::Debug for DigestBytes {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&**self, fmt)
     }
 }

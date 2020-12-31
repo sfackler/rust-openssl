@@ -1122,7 +1122,7 @@ impl BigNum {
 }
 
 impl fmt::Debug for BigNumRef {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.to_dec_str() {
             Ok(s) => f.write_str(&s),
             Err(e) => Err(e.into()),
@@ -1131,7 +1131,7 @@ impl fmt::Debug for BigNumRef {
 }
 
 impl fmt::Debug for BigNum {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.to_dec_str() {
             Ok(s) => f.write_str(&s),
             Err(e) => Err(e.into()),
@@ -1140,7 +1140,7 @@ impl fmt::Debug for BigNum {
 }
 
 impl fmt::Display for BigNumRef {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.to_dec_str() {
             Ok(s) => f.write_str(&s),
             Err(e) => Err(e.into()),
@@ -1149,7 +1149,7 @@ impl fmt::Display for BigNumRef {
 }
 
 impl fmt::Display for BigNum {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.to_dec_str() {
             Ok(s) => f.write_str(&s),
             Err(e) => Err(e.into()),

@@ -1843,7 +1843,7 @@ impl ToOwned for SslContextRef {
 
 // TODO: add useful info here
 impl fmt::Debug for SslContext {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "SslContext")
     }
 }
@@ -2346,7 +2346,7 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl fmt::Debug for Ssl {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&**self, fmt)
     }
 }
@@ -2441,7 +2441,7 @@ impl Ssl {
 }
 
 impl fmt::Debug for SslRef {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("Ssl")
             .field("state", &self.state_string_long())
             .field("verify_result", &self.verify_result())
@@ -3469,7 +3469,7 @@ impl<S> fmt::Debug for SslStream<S>
 where
     S: fmt::Debug,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("SslStream")
             .field("stream", &self.get_ref())
             .field("ssl", &self.ssl())

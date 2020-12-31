@@ -397,7 +397,7 @@ impl SubjectKeyIdentifier {
     }
 
     /// Return a `SubjectKeyIdentifier` extension as an `X509Extension`.
-    pub fn build(&self, ctx: &X509v3Context) -> Result<X509Extension, ErrorStack> {
+    pub fn build(&self, ctx: &X509v3Context<'_>) -> Result<X509Extension, ErrorStack> {
         let mut value = String::new();
         let mut first = true;
         append(&mut value, &mut first, self.critical, "critical");
@@ -449,7 +449,7 @@ impl AuthorityKeyIdentifier {
     }
 
     /// Return a `AuthorityKeyIdentifier` extension as an `X509Extension`.
-    pub fn build(&self, ctx: &X509v3Context) -> Result<X509Extension, ErrorStack> {
+    pub fn build(&self, ctx: &X509v3Context<'_>) -> Result<X509Extension, ErrorStack> {
         let mut value = String::new();
         let mut first = true;
         append(&mut value, &mut first, self.critical, "critical");
@@ -538,7 +538,7 @@ impl SubjectAlternativeName {
     }
 
     /// Return a `SubjectAlternativeName` extension as an `X509Extension`.
-    pub fn build(&self, ctx: &X509v3Context) -> Result<X509Extension, ErrorStack> {
+    pub fn build(&self, ctx: &X509v3Context<'_>) -> Result<X509Extension, ErrorStack> {
         let mut value = String::new();
         let mut first = true;
         append(&mut value, &mut first, self.critical, "critical");

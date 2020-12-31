@@ -292,7 +292,7 @@ where
 }
 
 impl<T> fmt::Debug for PKey<T> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let alg = match self.id() {
             Id::RSA => "RSA",
             Id::HMAC => "HMAC",

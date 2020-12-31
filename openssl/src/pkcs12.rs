@@ -197,10 +197,8 @@ impl Pkcs12Builder {
 
 #[cfg(test)]
 mod test {
-    use crate::hash::MessageDigest;
-    use hex;
-
     use crate::asn1::Asn1Time;
+    use crate::hash::MessageDigest;
     use crate::nid::Nid;
     use crate::pkey::PKey;
     use crate::rsa::Rsa;

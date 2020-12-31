@@ -65,7 +65,7 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl fmt::Display for Asn1GeneralizedTimeRef {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         unsafe {
             let mem_bio = match MemBio::new() {
                 Err(_) => return f.write_str("error"),
@@ -284,7 +284,7 @@ impl<'a> PartialOrd<Asn1Time> for &'a Asn1TimeRef {
 }
 
 impl fmt::Display for Asn1TimeRef {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         unsafe {
             let mem_bio = match MemBio::new() {
                 Err(_) => return f.write_str("error"),
@@ -300,7 +300,7 @@ impl fmt::Display for Asn1TimeRef {
 }
 
 impl fmt::Debug for Asn1TimeRef {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.to_string())
     }
 }
@@ -481,7 +481,7 @@ impl Asn1StringRef {
 }
 
 impl fmt::Debug for Asn1StringRef {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.as_utf8() {
             Ok(openssl_string) => openssl_string.fmt(fmt),
             Err(_) => fmt.write_str("error"),
@@ -636,7 +636,7 @@ impl Asn1ObjectRef {
 }
 
 impl fmt::Display for Asn1ObjectRef {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         unsafe {
             let mut buf = [0; 80];
             let len = ffi::OBJ_obj2txt(
@@ -654,7 +654,7 @@ impl fmt::Display for Asn1ObjectRef {
 }
 
 impl fmt::Debug for Asn1ObjectRef {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.write_str(self.to_string().as_str())
     }
 }

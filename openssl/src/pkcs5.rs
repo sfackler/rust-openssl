@@ -281,8 +281,6 @@ mod tests {
     #[test]
     #[cfg(any(ossl110))]
     fn scrypt() {
-        use hex;
-
         let pass = "pleaseletmein";
         let salt = "SodiumChloride";
         let expected =

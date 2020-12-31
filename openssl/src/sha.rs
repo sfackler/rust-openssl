@@ -341,8 +341,6 @@ impl Sha512 {
 
 #[cfg(test)]
 mod test {
-    use hex;
-
     use super::*;
 
     #[test]

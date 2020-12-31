@@ -109,6 +109,7 @@
 //! ctx.set_ciphersuites("TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256").unwrap();
 //! ```
 #![doc(html_root_url = "https://docs.rs/openssl/0.10")]
+#![warn(rust_2018_idioms)]
 
 #[macro_use]
 extern crate bitflags;
@@ -116,14 +117,11 @@ extern crate bitflags;
 extern crate cfg_if;
 #[macro_use]
 extern crate foreign_types;
-extern crate libc;
-extern crate once_cell;
+
 extern crate openssl_sys as ffi;
 
 #[cfg(test)]
 extern crate hex;
-#[cfg(test)]
-extern crate tempdir;
 
 #[doc(inline)]
 pub use ffi::init;

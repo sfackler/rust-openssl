@@ -99,7 +99,7 @@ impl From<ErrorStack> for Error {
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.code {
             ErrorCode::ZERO_RETURN => fmt.write_str("the SSL session has been shut down"),
             ErrorCode::WANT_READ => match self.io_error() {
@@ -157,7 +157,7 @@ impl<S: fmt::Debug> StdError for HandshakeError<S> {
 }
 
 impl<S: fmt::Debug> fmt::Display for HandshakeError<S> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             HandshakeError::SetupFailure(ref e) => write!(f, "stream setup failed: {}", e)?,
             HandshakeError::Failure(ref s) => {

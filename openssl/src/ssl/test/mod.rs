@@ -1,6 +1,5 @@
 #![allow(unused_imports)]
 
-use hex;
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
@@ -1196,7 +1195,7 @@ fn stateless() {
             self.incoming.get_mut().extend_from_slice(data);
         }
 
-        pub fn take_outgoing(&mut self) -> Outgoing {
+        pub fn take_outgoing(&mut self) -> Outgoing<'_> {
             Outgoing(&mut self.outgoing)
         }
     }
