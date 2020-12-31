@@ -1,6 +1,5 @@
 //! PKCS #12 archives.
 
-use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::ffi::CString;

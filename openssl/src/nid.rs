@@ -1,5 +1,4 @@
 //! A collection of numerical identifiers for OpenSSL objects.
-use ffi;
 use libc::{c_char, c_int};
 
 use std::ffi::CStr;

@@ -1,5 +1,4 @@
 use crate::error::ErrorStack;
-use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use std::mem;
 use std::ptr;

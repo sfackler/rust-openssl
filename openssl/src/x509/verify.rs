@@ -1,4 +1,3 @@
-use ffi;
 use foreign_types::ForeignTypeRef;
 use libc::{c_uint, c_ulong};
 use std::net::IpAddr;

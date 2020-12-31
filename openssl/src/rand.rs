@@ -10,7 +10,6 @@
 //! let mut buf = [0; 256];
 //! rand_bytes(&mut buf).unwrap();
 //! ```
-use ffi;
 use libc::c_int;
 
 use crate::cvt;

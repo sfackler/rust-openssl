@@ -1,7 +1,6 @@
 //! Base64 encoding support.
 use crate::cvt_n;
 use crate::error::ErrorStack;
-use ffi;
 use libc::c_int;
 
 /// Encodes a slice of bytes to a base64 string.

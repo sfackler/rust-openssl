@@ -5,7 +5,6 @@
 //! using the private key that can be validated with the public key but not be generated
 //! without the private key.
 
-use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::fmt;

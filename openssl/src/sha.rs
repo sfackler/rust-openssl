@@ -45,7 +45,6 @@
 //!     println!("Hash = {}", hex::encode(hash));
 //! }
 //! ```
-use ffi;
 use libc::c_void;
 use std::mem;
 

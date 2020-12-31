@@ -1,5 +1,4 @@
 //! Shared secret derivation.
-use ffi;
 use foreign_types::ForeignTypeRef;
 use std::marker::PhantomData;
 use std::ptr;

@@ -5,7 +5,6 @@
 //! generated from a `Vec` of bytes.  This `Vec` follows the smime protocol standards.
 //! Data accepted by this module will be smime type `enveloped-data`.
 
-use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use std::ptr;
 

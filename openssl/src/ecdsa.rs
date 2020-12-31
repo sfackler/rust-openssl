@@ -1,6 +1,5 @@
 //! Low level Elliptic Curve Digital Signature Algorithm (ECDSA) functions.
 
-use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::mem;

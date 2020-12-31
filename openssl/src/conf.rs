@@ -1,5 +1,4 @@
 //! Interface for processing OpenSSL configuration files.
-use ffi;
 
 use crate::cvt_p;
 use crate::error::ErrorStack;

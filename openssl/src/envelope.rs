@@ -30,7 +30,6 @@ use crate::error::ErrorStack;
 use crate::pkey::{HasPrivate, HasPublic, PKey, PKeyRef};
 use crate::symm::Cipher;
 use crate::{cvt, cvt_p};
-use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::cmp;

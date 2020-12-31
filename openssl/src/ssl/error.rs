@@ -1,4 +1,3 @@
-use ffi;
 use libc::c_int;
 use std::error;
 use std::error::Error as StdError;

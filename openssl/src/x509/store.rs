@@ -40,7 +40,6 @@
 //! }
 //! ```
 
-use ffi;
 use foreign_types::ForeignTypeRef;
 use std::mem;
 

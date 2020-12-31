@@ -1,4 +1,3 @@
-use ffi;
 use foreign_types::ForeignTypeRef;
 use libc::{c_char, c_void};
 use std::convert::AsRef;

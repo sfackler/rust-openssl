@@ -118,8 +118,6 @@ extern crate cfg_if;
 #[macro_use]
 extern crate foreign_types;
 
-extern crate openssl_sys as ffi;
-
 #[cfg(test)]
 extern crate hex;
 

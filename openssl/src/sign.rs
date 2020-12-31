@@ -61,7 +61,6 @@
 //! # let target = hmac.clone();
 //! assert!(memcmp::eq(&hmac, &target));
 //! ```
-use ffi;
 use foreign_types::ForeignTypeRef;
 use libc::c_int;
 use std::io::{self, Write};

@@ -1,5 +1,4 @@
 use crate::stack::Stackable;
-use ffi;
 use foreign_types::ForeignTypeRef;
 use libc::c_ulong;
 use std::ffi::CStr;

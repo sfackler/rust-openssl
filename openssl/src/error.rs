@@ -24,8 +24,6 @@ use std::io;
 use std::ptr;
 use std::str;
 
-use ffi;
-
 /// Collection of [`Error`]s from OpenSSL.
 ///
 /// [`Error`]: struct.Error.html

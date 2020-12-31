@@ -1,4 +1,3 @@
-use ffi;
 use std::ffi::CString;
 use std::fmt;
 use std::io;

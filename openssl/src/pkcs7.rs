@@ -6,7 +6,6 @@ use crate::symm::Cipher;
 use crate::x509::store::X509StoreRef;
 use crate::x509::{X509Ref, X509};
 use crate::{cvt, cvt_p};
-use ffi;
 use foreign_types::ForeignTypeRef;
 use libc::c_int;
 use std::ptr;

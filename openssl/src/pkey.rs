@@ -45,7 +45,6 @@
 //! }
 //! ```
 
-use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
 use std::ffi::CString;
