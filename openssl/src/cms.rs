@@ -6,6 +6,7 @@
 //! Data accepted by this module will be smime type `enveloped-data`.
 
 use foreign_types::{ForeignType, ForeignTypeRef};
+use libc::c_uint;
 use std::ptr;
 
 use crate::bio::{MemBio, MemBioSlice};
@@ -15,7 +16,6 @@ use crate::stack::StackRef;
 use crate::symm::Cipher;
 use crate::x509::{X509Ref, X509};
 use crate::{cvt, cvt_p};
-use libc::c_uint;
 
 bitflags! {
     pub struct CMSOptions : c_uint {

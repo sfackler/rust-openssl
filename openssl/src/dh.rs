@@ -1,9 +1,9 @@
-use crate::error::ErrorStack;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use std::mem;
 use std::ptr;
 
 use crate::bn::{BigNum, BigNumRef};
+use crate::error::ErrorStack;
 use crate::pkey::{HasParams, HasPrivate, HasPublic, Params, Private};
 use crate::{cvt, cvt_p};
 

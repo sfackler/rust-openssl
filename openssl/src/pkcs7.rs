@@ -1,3 +1,7 @@
+use foreign_types::ForeignTypeRef;
+use libc::c_int;
+use std::ptr;
+
 use crate::bio::{MemBio, MemBioSlice};
 use crate::error::ErrorStack;
 use crate::pkey::{HasPrivate, PKeyRef};
@@ -6,9 +10,6 @@ use crate::symm::Cipher;
 use crate::x509::store::X509StoreRef;
 use crate::x509::{X509Ref, X509};
 use crate::{cvt, cvt_p};
-use foreign_types::ForeignTypeRef;
-use libc::c_int;
-use std::ptr;
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::PKCS7;
