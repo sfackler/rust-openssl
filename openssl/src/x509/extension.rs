@@ -8,8 +8,6 @@
 //! # Example
 //!
 //! ```rust
-//! extern crate openssl;
-//!
 //! use openssl::x509::extension::BasicConstraints;
 //! use openssl::x509::X509Extension;
 //!

@@ -3,9 +3,6 @@
 //! # Example
 //!
 //! ```rust
-//!
-//! extern crate openssl;
-//!
 //! use openssl::rsa::Rsa;
 //! use openssl::envelope::Seal;
 //! use openssl::pkey::PKey;

@@ -14,9 +14,6 @@
 //! you can create a hasher that you can repeatedly update to add bytes to.
 //!
 //! ```rust
-//! extern crate openssl;
-//! extern crate hex;
-//!
 //! use openssl::sha;
 //!
 //! fn main() {
@@ -35,9 +32,6 @@
 //! to the algorithm you want to use.
 //!
 //! ```rust
-//! extern crate openssl;
-//! extern crate hex;
-//!
 //! use openssl::sha::sha256;
 //!
 //! fn main() {

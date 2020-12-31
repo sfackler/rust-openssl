@@ -6,9 +6,6 @@
 //! # Example
 //!
 //! ```rust
-//!
-//! extern crate openssl;
-//!
 //! use openssl::x509::store::{X509StoreBuilder, X509Store};
 //! use openssl::x509::{X509, X509Name};
 //! use openssl::pkey::PKey;

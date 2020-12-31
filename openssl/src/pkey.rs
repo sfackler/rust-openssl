@@ -29,9 +29,6 @@
 //! Generate a 2048-bit RSA public/private key pair and print the public key.
 //!
 //! ```rust
-//!
-//! extern crate openssl;
-//!
 //! use openssl::rsa::Rsa;
 //! use openssl::pkey::PKey;
 //! use std::str;

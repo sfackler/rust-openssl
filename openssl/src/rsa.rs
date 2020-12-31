@@ -16,9 +16,6 @@
 //! Generate a 2048-bit RSA key pair and use the public key to encrypt some data.
 //!
 //! ```rust
-//!
-//! extern crate openssl;
-//!
 //! use openssl::rsa::{Rsa, Padding};
 //!
 //! fn main() {
