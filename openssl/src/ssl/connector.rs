@@ -398,7 +398,8 @@ cfg_if! {
 
         fn setup_verify_hostname(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
             let domain = domain.to_string();
-            ssl.set_ex_data(*verify::HOSTNAME_IDX, domain);
+            let hostname_idx = verify::try_get_hostname_idx()?;
+            ssl.set_ex_data(*hostname_idx, domain);
             Ok(())
         }
 
@@ -406,6 +407,7 @@ cfg_if! {
             use std::net::IpAddr;
             use std::str;
 
+            use error::ErrorStack;
             use ex_data::Index;
             use nid::Nid;
             use ssl::Ssl;
@@ -414,22 +416,27 @@ cfg_if! {
                 GeneralName, X509NameRef, X509Ref, X509StoreContext, X509StoreContextRef,
                 X509VerifyResult,
             };
-            use once_cell::sync::Lazy;
+            use once_cell::sync::OnceCell;
 
-            pub static HOSTNAME_IDX: Lazy<Index<Ssl, String>> =
-                Lazy::new(|| Ssl::new_ex_index().unwrap());
+            static HOSTNAME_IDX: OnceCell<Index<Ssl, String>> = OnceCell::new();
+
+            pub fn try_get_hostname_idx() -> Result<&'static Index<Ssl, String>, ErrorStack> {
+                HOSTNAME_IDX.get_or_try_init(Ssl::new_ex_index)
+            }
 
             pub fn verify_callback(preverify_ok: bool, x509_ctx: &mut X509StoreContextRef) -> bool {
                 if !preverify_ok || x509_ctx.error_depth() != 0 {
                     return preverify_ok;
                 }
 
+                let hostname_idx =
+                    try_get_hostname_idx.expect("failed to initialize hostname index");
                 let ok = match (
                     x509_ctx.current_cert(),
                     X509StoreContext::ssl_idx()
                         .ok()
                         .and_then(|idx| x509_ctx.ex_data(idx))
-                        .and_then(|ssl| ssl.ex_data(*HOSTNAME_IDX)),
+                        .and_then(|ssl| ssl.ex_data(*hostname_idx)),
                 ) {
                     (Some(x509), Some(domain)) => verify_hostname(domain, &x509),
                     _ => true,
