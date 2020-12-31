@@ -1,5 +1,6 @@
 use std::env;
 
+#[allow(clippy::inconsistent_digit_grouping, clippy::unusual_byte_groupings)]
 #[path = "../openssl-sys/build/cfgs.rs"]
 mod cfgs;
 

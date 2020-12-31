@@ -21,7 +21,7 @@ ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
 -----END DH PARAMETERS-----
 ";
 
-#[allow(clippy::inconsistent_digit_grouping)]
+#[allow(clippy::inconsistent_digit_grouping, clippy::unusual_byte_groupings)]
 fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     let mut ctx = SslContextBuilder::new(method)?;
 
