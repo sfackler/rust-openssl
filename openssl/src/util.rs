@@ -4,7 +4,7 @@ use std::any::Any;
 use std::panic::{self, AssertUnwindSafe};
 use std::slice;
 
-use error::ErrorStack;
+use crate::error::ErrorStack;
 
 /// Wraps a user-supplied callback and a slot for panics thrown inside the callback (while FFI
 /// frames are on the stack).

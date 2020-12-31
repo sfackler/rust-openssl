@@ -35,12 +35,12 @@ use std::ptr;
 use std::slice;
 use std::str;
 
-use bio::MemBio;
-use bn::{BigNum, BigNumRef};
-use error::ErrorStack;
-use nid::Nid;
-use string::OpensslString;
-use {cvt, cvt_p};
+use crate::bio::MemBio;
+use crate::bn::{BigNum, BigNumRef};
+use crate::error::ErrorStack;
+use crate::nid::Nid;
+use crate::string::OpensslString;
+use crate::{cvt, cvt_p};
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_GENERALIZEDTIME;
@@ -526,7 +526,7 @@ impl Asn1IntegerRef {
     #[allow(missing_docs)]
     #[deprecated(since = "0.10.6", note = "use to_bn instead")]
     pub fn get(&self) -> i64 {
-        unsafe { ::ffi::ASN1_INTEGER_get(self.as_ptr()) as i64 }
+        unsafe { ffi::ASN1_INTEGER_get(self.as_ptr()) as i64 }
     }
 
     /// Converts the integer to a `BigNum`.
@@ -536,7 +536,7 @@ impl Asn1IntegerRef {
     /// [`ASN1_INTEGER_to_BN`]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_INTEGER_get.html
     pub fn to_bn(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
-            cvt_p(::ffi::ASN1_INTEGER_to_BN(self.as_ptr(), ptr::null_mut()))
+            cvt_p(ffi::ASN1_INTEGER_to_BN(self.as_ptr(), ptr::null_mut()))
                 .map(|p| BigNum::from_ptr(p))
         }
     }
@@ -549,7 +549,7 @@ impl Asn1IntegerRef {
     /// [`bn`]: ../bn/struct.BigNumRef.html#method.to_asn1_integer
     /// [`ASN1_INTEGER_set`]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_INTEGER_set.html
     pub fn set(&mut self, value: i32) -> Result<(), ErrorStack> {
-        unsafe { cvt(::ffi::ASN1_INTEGER_set(self.as_ptr(), value as c_long)).map(|_| ()) }
+        unsafe { cvt(ffi::ASN1_INTEGER_set(self.as_ptr(), value as c_long)).map(|_| ()) }
     }
 }
 
@@ -674,8 +674,8 @@ cfg_if! {
 mod tests {
     use super::*;
 
-    use bn::BigNum;
-    use nid::Nid;
+    use crate::bn::BigNum;
+    use crate::nid::Nid;
 
     /// Tests conversion between BigNum and Asn1Integer.
     #[test]

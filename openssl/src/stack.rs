@@ -9,9 +9,9 @@ use std::marker::PhantomData;
 use std::mem;
 use std::ops::{Deref, DerefMut, Index, IndexMut, Range};
 
-use error::ErrorStack;
-use util::ForeignTypeExt;
-use {cvt, cvt_p};
+use crate::error::ErrorStack;
+use crate::util::ForeignTypeExt;
+use crate::{cvt, cvt_p};
 
 cfg_if! {
     if #[cfg(ossl110)] {

@@ -22,9 +22,9 @@
 //! ```
 use std::fmt::Write;
 
-use error::ErrorStack;
-use nid::Nid;
-use x509::{X509Extension, X509v3Context};
+use crate::error::ErrorStack;
+use crate::nid::Nid;
+use crate::x509::{X509Extension, X509v3Context};
 
 /// An extension which indicates whether a certificate is a CA certificate.
 pub struct BasicConstraints {

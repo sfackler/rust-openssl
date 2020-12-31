@@ -30,10 +30,10 @@ use std::ffi::CString;
 use std::ops::{Add, Deref, Div, Mul, Neg, Rem, Shl, Shr, Sub};
 use std::{fmt, ptr};
 
-use asn1::Asn1Integer;
-use error::ErrorStack;
-use string::OpensslString;
-use {cvt, cvt_n, cvt_p};
+use crate::asn1::Asn1Integer;
+use crate::error::ErrorStack;
+use crate::string::OpensslString;
+use crate::{cvt, cvt_n, cvt_p};
 
 cfg_if! {
     if #[cfg(ossl110)] {
@@ -1376,7 +1376,7 @@ impl Neg for BigNum {
 
 #[cfg(test)]
 mod tests {
-    use bn::{BigNum, BigNumContext};
+    use crate::bn::{BigNum, BigNumContext};
 
     #[test]
     fn test_to_from_slice() {

@@ -130,7 +130,7 @@ pub use ffi::init;
 
 use libc::c_int;
 
-use error::ErrorStack;
+use crate::error::ErrorStack;
 
 #[macro_use]
 mod macros;

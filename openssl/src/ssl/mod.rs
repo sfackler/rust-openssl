@@ -60,6 +60,7 @@
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
 use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void};
+use once_cell::sync::{Lazy, OnceCell};
 use std::any::TypeId;
 use std::cmp;
 use std::collections::HashMap;
@@ -77,34 +78,33 @@ use std::slice;
 use std::str;
 use std::sync::{Arc, Mutex};
 
-use dh::{Dh, DhRef};
+use crate::dh::{Dh, DhRef};
 #[cfg(all(ossl101, not(ossl110)))]
-use ec::EcKey;
-use ec::EcKeyRef;
-use error::ErrorStack;
-use ex_data::Index;
+use crate::ec::EcKey;
+use crate::ec::EcKeyRef;
+use crate::error::ErrorStack;
+use crate::ex_data::Index;
 #[cfg(ossl111)]
-use hash::MessageDigest;
+use crate::hash::MessageDigest;
 #[cfg(ossl110)]
-use nid::Nid;
-use once_cell::sync::{Lazy, OnceCell};
-use pkey::{HasPrivate, PKeyRef, Params, Private};
-use srtp::{SrtpProtectionProfile, SrtpProtectionProfileRef};
-use ssl::bio::BioMethod;
-use ssl::callbacks::*;
-use ssl::error::InnerError;
-use stack::{Stack, StackRef};
-use util::{ForeignTypeExt, ForeignTypeRefExt};
-use x509::store::{X509Store, X509StoreBuilderRef, X509StoreRef};
+use crate::nid::Nid;
+use crate::pkey::{HasPrivate, PKeyRef, Params, Private};
+use crate::srtp::{SrtpProtectionProfile, SrtpProtectionProfileRef};
+use crate::ssl::bio::BioMethod;
+use crate::ssl::callbacks::*;
+use crate::ssl::error::InnerError;
+use crate::stack::{Stack, StackRef};
+use crate::util::{ForeignTypeExt, ForeignTypeRefExt};
+use crate::x509::store::{X509Store, X509StoreBuilderRef, X509StoreRef};
 #[cfg(any(ossl102, libressl261))]
-use x509::verify::X509VerifyParamRef;
-use x509::{X509Name, X509Ref, X509StoreContextRef, X509VerifyResult, X509};
-use {cvt, cvt_n, cvt_p, init};
+use crate::x509::verify::X509VerifyParamRef;
+use crate::x509::{X509Name, X509Ref, X509StoreContextRef, X509VerifyResult, X509};
+use crate::{cvt, cvt_n, cvt_p, init};
 
-pub use ssl::connector::{
+pub use crate::ssl::connector::{
     ConnectConfiguration, SslAcceptor, SslAcceptorBuilder, SslConnector, SslConnectorBuilder,
 };
-pub use ssl::error::{Error, ErrorCode, HandshakeError};
+pub use crate::ssl::error::{Error, ErrorCode, HandshakeError};
 
 mod bio;
 mod callbacks;

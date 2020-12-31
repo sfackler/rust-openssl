@@ -20,19 +20,21 @@ use std::ptr;
 use std::slice;
 use std::str;
 
-use asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef, Asn1Type};
-use bio::MemBioSlice;
-use conf::ConfRef;
-use error::ErrorStack;
-use ex_data::Index;
-use hash::{DigestBytes, MessageDigest};
-use nid::Nid;
-use pkey::{HasPrivate, HasPublic, PKey, PKeyRef, Public};
-use ssl::SslRef;
-use stack::{Stack, StackRef, Stackable};
-use string::OpensslString;
-use util::{ForeignTypeExt, ForeignTypeRefExt};
-use {cvt, cvt_n, cvt_p};
+use crate::asn1::{
+    Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef, Asn1Type,
+};
+use crate::bio::MemBioSlice;
+use crate::conf::ConfRef;
+use crate::error::ErrorStack;
+use crate::ex_data::Index;
+use crate::hash::{DigestBytes, MessageDigest};
+use crate::nid::Nid;
+use crate::pkey::{HasPrivate, HasPublic, PKey, PKeyRef, Public};
+use crate::ssl::SslRef;
+use crate::stack::{Stack, StackRef, Stackable};
+use crate::string::OpensslString;
+use crate::util::{ForeignTypeExt, ForeignTypeRefExt};
+use crate::{cvt, cvt_n, cvt_p};
 
 #[cfg(any(ossl102, libressl261))]
 pub mod verify;

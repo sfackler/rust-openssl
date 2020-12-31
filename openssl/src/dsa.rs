@@ -12,11 +12,11 @@ use std::fmt;
 use std::mem;
 use std::ptr;
 
-use bn::{BigNum, BigNumRef};
-use error::ErrorStack;
-use pkey::{HasParams, HasPrivate, HasPublic, Private, Public};
-use util::ForeignTypeRefExt;
-use {cvt, cvt_p};
+use crate::bn::{BigNum, BigNumRef};
+use crate::error::ErrorStack;
+use crate::pkey::{HasParams, HasPrivate, HasPublic, Private, Public};
+use crate::util::ForeignTypeRefExt;
+use crate::{cvt, cvt_p};
 
 generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::DSA;
@@ -358,10 +358,10 @@ cfg_if! {
 #[cfg(test)]
 mod test {
     use super::*;
-    use bn::BigNumContext;
-    use hash::MessageDigest;
-    use pkey::PKey;
-    use sign::{Signer, Verifier};
+    use crate::bn::BigNumContext;
+    use crate::hash::MessageDigest;
+    use crate::pkey::PKey;
+    use crate::sign::{Signer, Verifier};
 
     #[test]
     pub fn test_generate() {

@@ -10,8 +10,8 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr;
 use std::slice;
 
-use cvt_p;
-use error::ErrorStack;
+use crate::cvt_p;
+use crate::error::ErrorStack;
 
 pub struct StreamState<S> {
     pub stream: S,
@@ -191,7 +191,7 @@ unsafe extern "C" fn destroy<S>(bio: *mut BIO) -> c_int {
 cfg_if! {
     if #[cfg(any(ossl110, libressl273))] {
         use ffi::{BIO_get_data, BIO_set_data, BIO_set_flags, BIO_set_init};
-        use cvt;
+        use crate::cvt;
 
         #[allow(bad_style)]
         unsafe fn BIO_set_num(_bio: *mut ffi::BIO, _num: c_int) {}

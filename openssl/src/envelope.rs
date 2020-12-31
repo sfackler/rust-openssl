@@ -26,15 +26,15 @@
 //!     encrypted.truncate(enc_len);
 //! }
 //! ```
-use error::ErrorStack;
+use crate::error::ErrorStack;
+use crate::pkey::{HasPrivate, HasPublic, PKey, PKeyRef};
+use crate::symm::Cipher;
+use crate::{cvt, cvt_p};
 use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
-use pkey::{HasPrivate, HasPublic, PKey, PKeyRef};
 use std::cmp;
 use std::ptr;
-use symm::Cipher;
-use {cvt, cvt_p};
 
 /// Represents an EVP_Seal context.
 pub struct Seal {
@@ -259,8 +259,8 @@ impl Drop for Open {
 #[cfg(test)]
 mod test {
     use super::*;
-    use pkey::PKey;
-    use symm::Cipher;
+    use crate::pkey::PKey;
+    use crate::symm::Cipher;
 
     #[test]
     fn public_encrypt_private_decrypt() {

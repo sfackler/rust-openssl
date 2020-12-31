@@ -35,11 +35,11 @@ use std::fmt;
 use std::mem;
 use std::ptr;
 
-use bn::{BigNum, BigNumRef};
-use error::ErrorStack;
-use pkey::{HasPrivate, HasPublic, Private, Public};
-use util::ForeignTypeRefExt;
-use {cvt, cvt_n, cvt_p};
+use crate::bn::{BigNum, BigNumRef};
+use crate::error::ErrorStack;
+use crate::pkey::{HasPrivate, HasPublic, Private, Public};
+use crate::util::ForeignTypeRefExt;
+use crate::{cvt, cvt_n, cvt_p};
 
 /// Type of encryption padding to use.
 ///
@@ -754,7 +754,7 @@ cfg_if! {
 
 #[cfg(test)]
 mod test {
-    use symm::Cipher;
+    use crate::symm::Cipher;
 
     use super::*;
 

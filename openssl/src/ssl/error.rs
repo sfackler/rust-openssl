@@ -5,9 +5,9 @@ use std::error::Error as StdError;
 use std::fmt;
 use std::io;
 
-use error::ErrorStack;
-use ssl::MidHandshakeSslStream;
-use x509::X509VerifyResult;
+use crate::error::ErrorStack;
+use crate::ssl::MidHandshakeSslStream;
+use crate::x509::X509VerifyResult;
 
 /// An error code returned from SSL functions.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

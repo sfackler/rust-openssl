@@ -1,15 +1,15 @@
-use bio::{MemBio, MemBioSlice};
-use error::ErrorStack;
+use crate::bio::{MemBio, MemBioSlice};
+use crate::error::ErrorStack;
+use crate::pkey::{HasPrivate, PKeyRef};
+use crate::stack::StackRef;
+use crate::symm::Cipher;
+use crate::x509::store::X509StoreRef;
+use crate::x509::{X509Ref, X509};
+use crate::{cvt, cvt_p};
 use ffi;
 use foreign_types::ForeignTypeRef;
 use libc::c_int;
-use pkey::{HasPrivate, PKeyRef};
-use stack::StackRef;
 use std::ptr;
-use symm::Cipher;
-use x509::store::X509StoreRef;
-use x509::{X509Ref, X509};
-use {cvt, cvt_p};
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::PKCS7;
@@ -284,12 +284,12 @@ impl Pkcs7Ref {
 
 #[cfg(test)]
 mod tests {
-    use pkcs7::{Pkcs7, Pkcs7Flags};
-    use pkey::PKey;
-    use stack::Stack;
-    use symm::Cipher;
-    use x509::store::X509StoreBuilder;
-    use x509::X509;
+    use crate::pkcs7::{Pkcs7, Pkcs7Flags};
+    use crate::pkey::PKey;
+    use crate::stack::Stack;
+    use crate::symm::Cipher;
+    use crate::x509::store::X509StoreBuilder;
+    use crate::x509::X509;
 
     #[test]
     fn encrypt_decrypt_test() {

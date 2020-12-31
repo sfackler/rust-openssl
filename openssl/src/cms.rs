@@ -9,14 +9,14 @@ use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use std::ptr;
 
-use bio::{MemBio, MemBioSlice};
-use error::ErrorStack;
+use crate::bio::{MemBio, MemBioSlice};
+use crate::error::ErrorStack;
+use crate::pkey::{HasPrivate, PKeyRef};
+use crate::stack::StackRef;
+use crate::symm::Cipher;
+use crate::x509::{X509Ref, X509};
+use crate::{cvt, cvt_p};
 use libc::c_uint;
-use pkey::{HasPrivate, PKeyRef};
-use stack::StackRef;
-use symm::Cipher;
-use x509::{X509Ref, X509};
-use {cvt, cvt_p};
 
 bitflags! {
     pub struct CMSOptions : c_uint {
@@ -224,9 +224,9 @@ impl CmsContentInfo {
 #[cfg(test)]
 mod test {
     use super::*;
-    use pkcs12::Pkcs12;
-    use stack::Stack;
-    use x509::X509;
+    use crate::pkcs12::Pkcs12;
+    use crate::stack::Stack;
+    use crate::x509::X509;
 
     #[test]
     fn cms_encrypt_decrypt() {

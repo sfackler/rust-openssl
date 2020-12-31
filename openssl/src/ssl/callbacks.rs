@@ -15,23 +15,23 @@ use std::slice;
 use std::str;
 use std::sync::Arc;
 
-use dh::Dh;
+use crate::dh::Dh;
 #[cfg(all(ossl101, not(ossl110)))]
-use ec::EcKey;
-use error::ErrorStack;
-use pkey::Params;
+use crate::ec::EcKey;
+use crate::error::ErrorStack;
+use crate::pkey::Params;
 #[cfg(any(ossl102, libressl261))]
-use ssl::AlpnError;
-use ssl::{
+use crate::ssl::AlpnError;
+use crate::ssl::{
     try_get_session_ctx_index, SniError, Ssl, SslAlert, SslContext, SslContextRef, SslRef,
     SslSession, SslSessionRef,
 };
 #[cfg(ossl111)]
-use ssl::{ClientHelloResponse, ExtensionContext};
-use util::ForeignTypeRefExt;
+use crate::ssl::{ClientHelloResponse, ExtensionContext};
+use crate::util::ForeignTypeRefExt;
 #[cfg(ossl111)]
-use x509::X509Ref;
-use x509::{X509StoreContext, X509StoreContextRef};
+use crate::x509::X509Ref;
+use crate::x509::{X509StoreContext, X509StoreContextRef};
 
 pub extern "C" fn raw_verify<F>(preverify_ok: c_int, x509_ctx: *mut ffi::X509_STORE_CTX) -> c_int
 where

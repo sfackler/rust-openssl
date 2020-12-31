@@ -1,6 +1,6 @@
 //! Base64 encoding support.
-use cvt_n;
-use error::ErrorStack;
+use crate::cvt_n;
+use crate::error::ErrorStack;
 use ffi;
 use libc::c_int;
 

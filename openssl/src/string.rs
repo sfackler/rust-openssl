@@ -7,7 +7,7 @@ use std::fmt;
 use std::ops::Deref;
 use std::str;
 
-use stack::Stackable;
+use crate::stack::Stackable;
 
 foreign_type_and_impl_send_sync! {
     type CType = c_char;
@@ -87,7 +87,7 @@ unsafe fn free(buf: *mut c_char) {
 
 #[cfg(ossl110)]
 unsafe fn free(buf: *mut c_char) {
-    ::ffi::CRYPTO_free(
+    ffi::CRYPTO_free(
         buf as *mut c_void,
         concat!(file!(), "\0").as_ptr() as *const c_char,
         line!() as ::libc::c_int,

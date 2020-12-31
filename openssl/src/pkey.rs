@@ -53,16 +53,16 @@ use std::fmt;
 use std::mem;
 use std::ptr;
 
-use bio::MemBioSlice;
-use dh::Dh;
-use dsa::Dsa;
-use ec::EcKey;
-use error::ErrorStack;
-use rsa::Rsa;
+use crate::bio::MemBioSlice;
+use crate::dh::Dh;
+use crate::dsa::Dsa;
+use crate::ec::EcKey;
+use crate::error::ErrorStack;
+use crate::rsa::Rsa;
 #[cfg(ossl110)]
-use symm::Cipher;
-use util::{invoke_passwd_cb, CallbackState};
-use {cvt, cvt_p};
+use crate::symm::Cipher;
+use crate::util::{invoke_passwd_cb, CallbackState};
+use crate::{cvt, cvt_p};
 
 /// A tag type indicating that a key only has parameters.
 pub enum Params {}
@@ -678,12 +678,12 @@ cfg_if! {
 
 #[cfg(test)]
 mod tests {
-    use dh::Dh;
-    use dsa::Dsa;
-    use ec::EcKey;
-    use nid::Nid;
-    use rsa::Rsa;
-    use symm::Cipher;
+    use crate::dh::Dh;
+    use crate::dsa::Dsa;
+    use crate::ec::EcKey;
+    use crate::nid::Nid;
+    use crate::rsa::Rsa;
+    use crate::symm::Cipher;
 
     use super::*;
 

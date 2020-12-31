@@ -13,8 +13,8 @@
 use ffi;
 use libc::c_int;
 
-use cvt;
-use error::ErrorStack;
+use crate::cvt;
+use crate::error::ErrorStack;
 
 /// Fill buffer with cryptographically strong pseudo-random bytes.
 ///
