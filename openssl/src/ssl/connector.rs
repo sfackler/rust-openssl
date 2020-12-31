@@ -430,7 +430,7 @@ cfg_if! {
                 }
 
                 let hostname_idx =
-                    try_get_hostname_idx.expect("failed to initialize hostname index");
+                    try_get_hostname_idx().expect("failed to initialize hostname index");
                 let ok = match (
                     x509_ctx.current_cert(),
                     X509StoreContext::ssl_idx()
