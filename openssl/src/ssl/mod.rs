@@ -57,6 +57,8 @@
 //!     }
 //! }
 //! ```
+use bitflags::bitflags;
+use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
 use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void};
 use once_cell::sync::{Lazy, OnceCell};

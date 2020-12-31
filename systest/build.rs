@@ -1,5 +1,3 @@
-extern crate ctest;
-
 use std::env;
 
 #[path = "../openssl-sys/build/cfgs.rs"]

@@ -35,6 +35,7 @@
 //! let store: X509Store = builder.build();
 //! ```
 
+use cfg_if::cfg_if;
 use foreign_types::ForeignTypeRef;
 use std::mem;
 

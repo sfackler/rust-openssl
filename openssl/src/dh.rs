@@ -1,3 +1,4 @@
+use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use std::mem;
 use std::ptr;

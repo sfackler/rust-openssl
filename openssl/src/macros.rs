@@ -143,7 +143,7 @@ macro_rules! foreign_type_and_impl_send_sync {
         pub struct $borrowed:ident;
     )
         => {
-            foreign_type! {
+            ::foreign_types::foreign_type! {
                 $(#[$impl_attr])*
                 type CType = $ctype;
                 fn drop = $drop;

@@ -1,3 +1,4 @@
+use cfg_if::cfg_if;
 use foreign_types::ForeignType;
 use foreign_types::ForeignTypeRef;
 #[cfg(any(ossl111, not(osslconf = "OPENSSL_NO_PSK")))]

@@ -11,6 +11,7 @@
 // limitations under the License.
 //
 
+use cfg_if::cfg_if;
 use std::ffi::CStr;
 
 cfg_if! {

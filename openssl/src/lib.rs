@@ -111,16 +111,6 @@
 #![doc(html_root_url = "https://docs.rs/openssl/0.10")]
 #![warn(rust_2018_idioms)]
 
-#[macro_use]
-extern crate bitflags;
-#[macro_use]
-extern crate cfg_if;
-#[macro_use]
-extern crate foreign_types;
-
-#[cfg(test)]
-extern crate hex;
-
 #[doc(inline)]
 pub use ffi::init;
 

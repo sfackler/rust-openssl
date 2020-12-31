@@ -1,3 +1,4 @@
+use cfg_if::cfg_if;
 use libc::c_int;
 use std::marker::PhantomData;
 use std::ptr;

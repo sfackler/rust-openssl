@@ -52,6 +52,7 @@
 //! println!("Decrypted: '{}'", output_string);
 //! ```
 
+use cfg_if::cfg_if;
 use libc::c_int;
 use std::cmp;
 use std::ptr;

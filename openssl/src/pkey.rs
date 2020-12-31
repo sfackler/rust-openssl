@@ -40,6 +40,7 @@
 //! println!("{:?}", str::from_utf8(pub_key.as_slice()).unwrap());
 //! ```
 
+use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
 use std::ffi::CString;

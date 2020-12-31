@@ -1,3 +1,4 @@
+use bitflags::bitflags;
 use foreign_types::ForeignTypeRef;
 use libc::c_int;
 use std::ptr;
