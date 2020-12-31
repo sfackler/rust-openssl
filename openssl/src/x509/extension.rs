@@ -11,12 +11,10 @@
 //! use openssl::x509::extension::BasicConstraints;
 //! use openssl::x509::X509Extension;
 //!
-//! fn main() {
-//!     let mut bc = BasicConstraints::new();
-//!     let bc = bc.critical().ca().pathlen(1);
+//! let mut bc = BasicConstraints::new();
+//! let bc = bc.critical().ca().pathlen(1);
 //!
-//!     let extension: X509Extension = bc.build().unwrap();
-//! }
+//! let extension: X509Extension = bc.build().unwrap();
 //! ```
 use std::fmt::Write;
 

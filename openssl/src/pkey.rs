@@ -33,13 +33,11 @@
 //! use openssl::pkey::PKey;
 //! use std::str;
 //!
-//! fn main() {
-//!     let rsa = Rsa::generate(2048).unwrap();
-//!     let pkey = PKey::from_rsa(rsa).unwrap();
+//! let rsa = Rsa::generate(2048).unwrap();
+//! let pkey = PKey::from_rsa(rsa).unwrap();
 //!
-//!     let pub_key: Vec<u8> = pkey.public_key_to_pem().unwrap();
-//!     println!("{:?}", str::from_utf8(pub_key.as_slice()).unwrap());
-//! }
+//! let pub_key: Vec<u8> = pkey.public_key_to_pem().unwrap();
+//! println!("{:?}", str::from_utf8(pub_key.as_slice()).unwrap());
 //! ```
 
 use foreign_types::{ForeignType, ForeignTypeRef};

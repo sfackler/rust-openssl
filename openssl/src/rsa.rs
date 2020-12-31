@@ -18,12 +18,10 @@
 //! ```rust
 //! use openssl::rsa::{Rsa, Padding};
 //!
-//! fn main() {
-//!     let rsa = Rsa::generate(2048).unwrap();
-//!     let data = b"foobar";
-//!     let mut buf = vec![0; rsa.size() as usize];
-//!     let encrypted_len = rsa.public_encrypt(data, &mut buf, Padding::PKCS1).unwrap();
-//! }
+//! let rsa = Rsa::generate(2048).unwrap();
+//! let data = b"foobar";
+//! let mut buf = vec![0; rsa.size() as usize];
+//! let encrypted_len = rsa.public_encrypt(data, &mut buf, Padding::PKCS1).unwrap();
 //! ```
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
