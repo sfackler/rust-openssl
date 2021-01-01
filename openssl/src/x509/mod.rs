@@ -7,7 +7,7 @@
 //! Internet protocols, including SSL/TLS, which is the basis for HTTPS,
 //! the secure protocol for browsing the web.
 
-use ffi;
+use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
 use std::error::Error;
@@ -20,19 +20,21 @@ use std::ptr;
 use std::slice;
 use std::str;
 
-use asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef, Asn1Type};
-use bio::MemBioSlice;
-use conf::ConfRef;
-use error::ErrorStack;
-use ex_data::Index;
-use hash::{DigestBytes, MessageDigest};
-use nid::Nid;
-use pkey::{HasPrivate, HasPublic, PKey, PKeyRef, Public};
-use ssl::SslRef;
-use stack::{Stack, StackRef, Stackable};
-use string::OpensslString;
-use util::{ForeignTypeExt, ForeignTypeRefExt};
-use {cvt, cvt_n, cvt_p};
+use crate::asn1::{
+    Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef, Asn1Type,
+};
+use crate::bio::MemBioSlice;
+use crate::conf::ConfRef;
+use crate::error::ErrorStack;
+use crate::ex_data::Index;
+use crate::hash::{DigestBytes, MessageDigest};
+use crate::nid::Nid;
+use crate::pkey::{HasPrivate, HasPublic, PKey, PKeyRef, Public};
+use crate::ssl::SslRef;
+use crate::stack::{Stack, StackRef, Stackable};
+use crate::string::OpensslString;
+use crate::util::{ForeignTypeExt, ForeignTypeRefExt};
+use crate::{cvt, cvt_n, cvt_p};
 
 #[cfg(any(ossl102, libressl261))]
 pub mod verify;
@@ -676,7 +678,7 @@ impl Clone for X509 {
 }
 
 impl fmt::Debug for X509 {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let serial = match &self.serial_number().to_bn() {
             Ok(bn) => match bn.to_hex_str() {
                 Ok(hex) => hex.to_string(),
@@ -747,7 +749,7 @@ impl X509Extension {
     /// See the extension module for builder types which will construct certain common extensions.
     pub fn new(
         conf: Option<&ConfRef>,
-        context: Option<&X509v3Context>,
+        context: Option<&X509v3Context<'_>>,
         name: &str,
         value: &str,
     ) -> Result<X509Extension, ErrorStack> {
@@ -773,7 +775,7 @@ impl X509Extension {
     /// See the extension module for builder types which will construct certain common extensions.
     pub fn new_nid(
         conf: Option<&ConfRef>,
-        context: Option<&X509v3Context>,
+        context: Option<&X509v3Context<'_>>,
         name: Nid,
         value: &str,
     ) -> Result<X509Extension, ErrorStack> {
@@ -954,7 +956,7 @@ impl X509NameRef {
 }
 
 impl fmt::Debug for X509NameRef {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.debug_list().entries(self.entries()).finish()
     }
 }
@@ -1034,7 +1036,7 @@ impl X509NameEntryRef {
 }
 
 impl fmt::Debug for X509NameEntryRef {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_fmt(format_args!("{:?} = {:?}", self.object(), self.data()))
     }
 }
@@ -1281,7 +1283,7 @@ impl X509ReqRef {
 pub struct X509VerifyResult(c_int);
 
 impl fmt::Debug for X509VerifyResult {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("X509VerifyResult")
             .field("code", &self.0)
             .field("error", &self.error_string())
@@ -1290,7 +1292,7 @@ impl fmt::Debug for X509VerifyResult {
 }
 
 impl fmt::Display for X509VerifyResult {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.write_str(self.error_string())
     }
 }
@@ -1395,7 +1397,7 @@ impl GeneralNameRef {
 }
 
 impl fmt::Debug for GeneralNameRef {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(email) = self.email() {
             formatter.write_str(email)
         } else if let Some(dnsname) = self.dnsname() {

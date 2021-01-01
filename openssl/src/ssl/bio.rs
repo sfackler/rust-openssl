@@ -1,3 +1,4 @@
+use cfg_if::cfg_if;
 use ffi::{
     self, BIO_clear_retry_flags, BIO_new, BIO_set_retry_read, BIO_set_retry_write, BIO,
     BIO_CTRL_DGRAM_QUERY_MTU, BIO_CTRL_FLUSH,
@@ -10,8 +11,8 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr;
 use std::slice;
 
-use cvt_p;
-use error::ErrorStack;
+use crate::cvt_p;
+use crate::error::ErrorStack;
 
 pub struct StreamState<S> {
     pub stream: S,
@@ -191,7 +192,7 @@ unsafe extern "C" fn destroy<S>(bio: *mut BIO) -> c_int {
 cfg_if! {
     if #[cfg(any(ossl110, libressl273))] {
         use ffi::{BIO_get_data, BIO_set_data, BIO_set_flags, BIO_set_init};
-        use cvt;
+        use crate::cvt;
 
         #[allow(bad_style)]
         unsafe fn BIO_set_num(_bio: *mut ffi::BIO, _num: c_int) {}

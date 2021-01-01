@@ -1,4 +1,4 @@
-use ffi;
+use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
 use libc::c_int;
 use std::borrow::Borrow;
@@ -9,9 +9,9 @@ use std::marker::PhantomData;
 use std::mem;
 use std::ops::{Deref, DerefMut, Index, IndexMut, Range};
 
-use error::ErrorStack;
-use util::ForeignTypeExt;
-use {cvt, cvt_p};
+use crate::error::ErrorStack;
+use crate::util::ForeignTypeExt;
+use crate::{cvt, cvt_p};
 
 cfg_if! {
     if #[cfg(ossl110)] {
@@ -50,7 +50,7 @@ where
     T: Stackable,
     T::Ref: fmt::Debug,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_list().entries(self).finish()
     }
 }
@@ -199,14 +199,14 @@ impl<T: Stackable> StackRef<T> {
         self.len() == 0
     }
 
-    pub fn iter(&self) -> Iter<T> {
+    pub fn iter(&self) -> Iter<'_, T> {
         Iter {
             stack: self,
             idxs: 0..self.len() as c_int,
         }
     }
 
-    pub fn iter_mut(&mut self) -> IterMut<T> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, T> {
         IterMut {
             idxs: 0..self.len() as c_int,
             stack: self,
@@ -310,10 +310,7 @@ impl<'a, T: Stackable> iter::IntoIterator for &'a mut Stack<T> {
 }
 
 /// An iterator over the stack's contents.
-pub struct Iter<'a, T: Stackable>
-where
-    T: 'a,
-{
+pub struct Iter<'a, T: Stackable> {
     stack: &'a StackRef<T>,
     idxs: Range<c_int>,
 }
@@ -347,7 +344,7 @@ impl<'a, T: Stackable> DoubleEndedIterator for Iter<'a, T> {
 impl<'a, T: Stackable> ExactSizeIterator for Iter<'a, T> {}
 
 /// A mutable iterator over the stack's contents.
-pub struct IterMut<'a, T: Stackable + 'a> {
+pub struct IterMut<'a, T: Stackable> {
     stack: &'a mut StackRef<T>,
     idxs: Range<c_int>,
 }

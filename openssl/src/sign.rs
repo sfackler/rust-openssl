@@ -61,18 +61,18 @@
 //! # let target = hmac.clone();
 //! assert!(memcmp::eq(&hmac, &target));
 //! ```
-use ffi;
+use cfg_if::cfg_if;
 use foreign_types::ForeignTypeRef;
 use libc::c_int;
 use std::io::{self, Write};
 use std::marker::PhantomData;
 use std::ptr;
 
-use error::ErrorStack;
-use hash::MessageDigest;
-use pkey::{HasPrivate, HasPublic, PKeyRef};
-use rsa::Padding;
-use {cvt, cvt_p};
+use crate::error::ErrorStack;
+use crate::hash::MessageDigest;
+use crate::pkey::{HasPrivate, HasPublic, PKeyRef};
+use crate::rsa::Padding;
+use crate::{cvt, cvt_p};
 
 cfg_if! {
     if #[cfg(ossl110)] {
@@ -639,12 +639,12 @@ mod test {
     use hex::{self, FromHex};
     use std::iter;
 
-    use ec::{EcGroup, EcKey};
-    use hash::MessageDigest;
-    use nid::Nid;
-    use pkey::PKey;
-    use rsa::{Padding, Rsa};
-    use sign::{RsaPssSaltlen, Signer, Verifier};
+    use crate::ec::{EcGroup, EcKey};
+    use crate::hash::MessageDigest;
+    use crate::nid::Nid;
+    use crate::pkey::PKey;
+    use crate::rsa::{Padding, Rsa};
+    use crate::sign::{RsaPssSaltlen, Signer, Verifier};
 
     const INPUT: &str =
         "65794a68624763694f694a53557a49314e694a392e65794a7063334d694f694a71623255694c41304b49434a6c\
@@ -802,7 +802,7 @@ mod test {
     #[test]
     #[cfg(ossl110)]
     fn test_cmac() {
-        let cipher = ::symm::Cipher::aes_128_cbc();
+        let cipher = crate::symm::Cipher::aes_128_cbc();
         let key = Vec::from_hex("9294727a3638bb1c13f48ef8158bfc9d").unwrap();
         let pkey = PKey::cmac(&cipher, &key).unwrap();
         let mut signer = Signer::new_without_digest(&pkey).unwrap();

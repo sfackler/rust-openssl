@@ -1,19 +1,19 @@
-use asn1::Asn1Time;
-use bn::{BigNum, MsbOption};
-use hash::MessageDigest;
-use hex::{self, FromHex};
-use nid::Nid;
-use pkey::{PKey, Private};
-use rsa::Rsa;
-use stack::Stack;
-use x509::extension::{
+use crate::asn1::Asn1Time;
+use crate::bn::{BigNum, MsbOption};
+use crate::hash::MessageDigest;
+use crate::nid::Nid;
+use crate::pkey::{PKey, Private};
+use crate::rsa::Rsa;
+use crate::stack::Stack;
+use crate::x509::extension::{
     AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, KeyUsage, SubjectAlternativeName,
     SubjectKeyIdentifier,
 };
-use x509::store::X509StoreBuilder;
+use crate::x509::store::X509StoreBuilder;
 #[cfg(ossl110)]
-use x509::X509Builder;
-use x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
+use crate::x509::X509Builder;
+use crate::x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
+use hex::{self, FromHex};
 
 fn pkey() -> PKey<Private> {
     let rsa = Rsa::generate(2048).unwrap();

@@ -1,17 +1,17 @@
 //! Low level Elliptic Curve Digital Signature Algorithm (ECDSA) functions.
 
-use ffi;
+use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::mem;
 use std::ptr;
 
-use bn::{BigNum, BigNumRef};
-use ec::EcKeyRef;
-use error::ErrorStack;
-use pkey::{HasPrivate, HasPublic};
-use util::ForeignTypeRefExt;
-use {cvt_n, cvt_p};
+use crate::bn::{BigNum, BigNumRef};
+use crate::ec::EcKeyRef;
+use crate::error::ErrorStack;
+use crate::pkey::{HasPrivate, HasPublic};
+use crate::util::ForeignTypeRefExt;
+use crate::{cvt_n, cvt_p};
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ECDSA_SIG;
@@ -175,10 +175,10 @@ cfg_if! {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ec::EcGroup;
-    use ec::EcKey;
-    use nid::Nid;
-    use pkey::{Private, Public};
+    use crate::ec::EcGroup;
+    use crate::ec::EcKey;
+    use crate::nid::Nid;
+    use crate::pkey::{Private, Public};
 
     fn get_public_key(group: &EcGroup, x: &EcKey<Private>) -> Result<EcKey<Public>, ErrorStack> {
         let public_key_point = x.public_key();

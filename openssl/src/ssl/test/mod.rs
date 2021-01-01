@@ -1,6 +1,5 @@
 #![allow(unused_imports)]
 
-use hex;
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
@@ -16,28 +15,28 @@ use std::thread;
 use std::time::Duration;
 use tempdir::TempDir;
 
-use dh::Dh;
-use error::ErrorStack;
-use hash::MessageDigest;
-use ocsp::{OcspResponse, OcspResponseStatus};
-use pkey::PKey;
-use srtp::SrtpProfileId;
-use ssl;
-use ssl::test::server::Server;
+use crate::dh::Dh;
+use crate::error::ErrorStack;
+use crate::hash::MessageDigest;
+use crate::ocsp::{OcspResponse, OcspResponseStatus};
+use crate::pkey::PKey;
+use crate::srtp::SrtpProfileId;
+use crate::ssl;
+use crate::ssl::test::server::Server;
 #[cfg(any(ossl110, ossl111, libressl261))]
-use ssl::SslVersion;
+use crate::ssl::SslVersion;
 #[cfg(ossl111)]
-use ssl::{ClientHelloResponse, ExtensionContext};
-use ssl::{
+use crate::ssl::{ClientHelloResponse, ExtensionContext};
+use crate::ssl::{
     Error, HandshakeError, MidHandshakeSslStream, ShutdownResult, ShutdownState, Ssl, SslAcceptor,
     SslAcceptorBuilder, SslConnector, SslContext, SslContextBuilder, SslFiletype, SslMethod,
     SslOptions, SslSessionCacheMode, SslStream, SslVerifyMode, StatusType,
 };
 #[cfg(ossl102)]
-use x509::store::X509StoreBuilder;
+use crate::x509::store::X509StoreBuilder;
 #[cfg(ossl102)]
-use x509::verify::X509CheckFlags;
-use x509::{X509Name, X509StoreContext, X509VerifyResult, X509};
+use crate::x509::verify::X509CheckFlags;
+use crate::x509::{X509Name, X509StoreContext, X509VerifyResult, X509};
 
 mod server;
 
@@ -868,8 +867,8 @@ fn tmp_dh_callback() {
 #[test]
 #[cfg(all(ossl101, not(ossl110)))]
 fn tmp_ecdh_callback() {
-    use ec::EcKey;
-    use nid::Nid;
+    use crate::ec::EcKey;
+    use crate::nid::Nid;
 
     static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
@@ -917,8 +916,8 @@ fn tmp_dh_callback_ssl() {
 #[test]
 #[cfg(all(ossl101, not(ossl110)))]
 fn tmp_ecdh_callback_ssl() {
-    use ec::EcKey;
-    use nid::Nid;
+    use crate::ec::EcKey;
+    use crate::nid::Nid;
 
     static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
@@ -1196,7 +1195,7 @@ fn stateless() {
             self.incoming.get_mut().extend_from_slice(data);
         }
 
-        pub fn take_outgoing(&mut self) -> Outgoing {
+        pub fn take_outgoing(&mut self) -> Outgoing<'_> {
             Outgoing(&mut self.outgoing)
         }
     }

@@ -52,14 +52,14 @@
 //! println!("Decrypted: '{}'", output_string);
 //! ```
 
-use ffi;
+use cfg_if::cfg_if;
 use libc::c_int;
 use std::cmp;
 use std::ptr;
 
-use error::ErrorStack;
-use nid::Nid;
-use {cvt, cvt_p};
+use crate::error::ErrorStack;
+use crate::nid::Nid;
+use crate::{cvt, cvt_p};
 
 #[derive(Copy, Clone)]
 pub enum Mode {

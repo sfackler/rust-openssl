@@ -3,9 +3,8 @@
 //! See [OpenSSL's documentation] for details.
 //!
 //! [OpenSSL's documentation]: https://www.openssl.org/docs/fips/UserGuide-2.0.pdf
-use cvt;
-use error::ErrorStack;
-use ffi;
+use crate::cvt;
+use crate::error::ErrorStack;
 
 /// Moves the library into or out of the FIPS 140-2 mode of operation.
 ///

@@ -1,10 +1,10 @@
-use ffi;
+use bitflags::bitflags;
 use foreign_types::ForeignTypeRef;
 use libc::{c_uint, c_ulong};
 use std::net::IpAddr;
 
-use cvt;
-use error::ErrorStack;
+use crate::cvt;
+use crate::error::ErrorStack;
 
 bitflags! {
     /// Flags used to check an `X509` certificate.

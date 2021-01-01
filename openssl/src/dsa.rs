@@ -5,18 +5,18 @@
 //! using the private key that can be validated with the public key but not be generated
 //! without the private key.
 
-use ffi;
+use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::fmt;
 use std::mem;
 use std::ptr;
 
-use bn::{BigNum, BigNumRef};
-use error::ErrorStack;
-use pkey::{HasParams, HasPrivate, HasPublic, Private, Public};
-use util::ForeignTypeRefExt;
-use {cvt, cvt_p};
+use crate::bn::{BigNum, BigNumRef};
+use crate::error::ErrorStack;
+use crate::pkey::{HasParams, HasPrivate, HasPublic, Private, Public};
+use crate::util::ForeignTypeRefExt;
+use crate::{cvt, cvt_p};
 
 generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::DSA;
@@ -288,7 +288,7 @@ impl Dsa<Public> {
 }
 
 impl<T> fmt::Debug for Dsa<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "DSA")
     }
 }
@@ -358,10 +358,10 @@ cfg_if! {
 #[cfg(test)]
 mod test {
     use super::*;
-    use bn::BigNumContext;
-    use hash::MessageDigest;
-    use pkey::PKey;
-    use sign::{Signer, Verifier};
+    use crate::bn::BigNumContext;
+    use crate::hash::MessageDigest;
+    use crate::pkey::PKey;
+    use crate::sign::{Signer, Verifier};
 
     #[test]
     pub fn test_generate() {

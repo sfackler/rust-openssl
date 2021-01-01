@@ -8,23 +8,19 @@
 //! # Example
 //!
 //! ```rust
-//! extern crate openssl;
-//!
 //! use openssl::x509::extension::BasicConstraints;
 //! use openssl::x509::X509Extension;
 //!
-//! fn main() {
-//!     let mut bc = BasicConstraints::new();
-//!     let bc = bc.critical().ca().pathlen(1);
+//! let mut bc = BasicConstraints::new();
+//! let bc = bc.critical().ca().pathlen(1);
 //!
-//!     let extension: X509Extension = bc.build().unwrap();
-//! }
+//! let extension: X509Extension = bc.build().unwrap();
 //! ```
 use std::fmt::Write;
 
-use error::ErrorStack;
-use nid::Nid;
-use x509::{X509Extension, X509v3Context};
+use crate::error::ErrorStack;
+use crate::nid::Nid;
+use crate::x509::{X509Extension, X509v3Context};
 
 /// An extension which indicates whether a certificate is a CA certificate.
 pub struct BasicConstraints {
@@ -397,7 +393,7 @@ impl SubjectKeyIdentifier {
     }
 
     /// Return a `SubjectKeyIdentifier` extension as an `X509Extension`.
-    pub fn build(&self, ctx: &X509v3Context) -> Result<X509Extension, ErrorStack> {
+    pub fn build(&self, ctx: &X509v3Context<'_>) -> Result<X509Extension, ErrorStack> {
         let mut value = String::new();
         let mut first = true;
         append(&mut value, &mut first, self.critical, "critical");
@@ -449,7 +445,7 @@ impl AuthorityKeyIdentifier {
     }
 
     /// Return a `AuthorityKeyIdentifier` extension as an `X509Extension`.
-    pub fn build(&self, ctx: &X509v3Context) -> Result<X509Extension, ErrorStack> {
+    pub fn build(&self, ctx: &X509v3Context<'_>) -> Result<X509Extension, ErrorStack> {
         let mut value = String::new();
         let mut first = true;
         append(&mut value, &mut first, self.critical, "critical");
@@ -538,7 +534,7 @@ impl SubjectAlternativeName {
     }
 
     /// Return a `SubjectAlternativeName` extension as an `X509Extension`.
-    pub fn build(&self, ctx: &X509v3Context) -> Result<X509Extension, ErrorStack> {
+    pub fn build(&self, ctx: &X509v3Context<'_>) -> Result<X509Extension, ErrorStack> {
         let mut value = String::new();
         let mut first = true;
         append(&mut value, &mut first, self.critical, "critical");

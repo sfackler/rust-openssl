@@ -24,8 +24,6 @@ use std::io;
 use std::ptr;
 use std::str;
 
-use ffi;
-
 /// Collection of [`Error`]s from OpenSSL.
 ///
 /// [`Error`]: struct.Error.html
@@ -58,7 +56,7 @@ impl ErrorStack {
 }
 
 impl fmt::Display for ErrorStack {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.0.is_empty() {
             return fmt.write_str("OpenSSL error");
         }
@@ -236,7 +234,7 @@ impl Error {
 }
 
 impl fmt::Debug for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut builder = fmt.debug_struct("Error");
         builder.field("code", &self.code());
         if let Some(library) = self.library() {
@@ -258,7 +256,7 @@ impl fmt::Debug for Error {
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "error:{:08X}", self.code())?;
         match self.library() {
             Some(l) => write!(fmt, ":{}", l)?,

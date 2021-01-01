@@ -1,4 +1,4 @@
-#![allow(clippy::inconsistent_digit_grouping)]
+#![allow(clippy::inconsistent_digit_grouping, clippy::unusual_byte_groupings)]
 
 use std::env;
 

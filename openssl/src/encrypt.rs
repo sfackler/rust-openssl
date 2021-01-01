@@ -41,12 +41,12 @@
 //! ```
 use std::{marker::PhantomData, ptr};
 
-use error::ErrorStack;
+use crate::error::ErrorStack;
+use crate::hash::MessageDigest;
+use crate::pkey::{HasPrivate, HasPublic, PKeyRef};
+use crate::rsa::Padding;
+use crate::{cvt, cvt_p};
 use foreign_types::ForeignTypeRef;
-use hash::MessageDigest;
-use pkey::{HasPrivate, HasPublic, PKeyRef};
-use rsa::Padding;
-use {cvt, cvt_p};
 
 /// A type which encrypts data.
 pub struct Encrypter<'a> {
@@ -423,10 +423,10 @@ impl<'a> Decrypter<'a> {
 mod test {
     use hex::FromHex;
 
-    use encrypt::{Decrypter, Encrypter};
-    use hash::MessageDigest;
-    use pkey::PKey;
-    use rsa::{Padding, Rsa};
+    use crate::encrypt::{Decrypter, Encrypter};
+    use crate::hash::MessageDigest;
+    use crate::pkey::PKey;
+    use crate::rsa::{Padding, Rsa};
 
     const INPUT: &str =
         "65794a68624763694f694a53557a49314e694a392e65794a7063334d694f694a71623255694c41304b49434a6c\

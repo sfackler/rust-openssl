@@ -1,4 +1,4 @@
-use ffi;
+use cfg_if::cfg_if;
 use std::ffi::CString;
 use std::fmt;
 use std::io;
@@ -6,9 +6,9 @@ use std::io::prelude::*;
 use std::ops::{Deref, DerefMut};
 use std::ptr;
 
-use error::ErrorStack;
-use nid::Nid;
-use {cvt, cvt_p};
+use crate::error::ErrorStack;
+use crate::nid::Nid;
+use crate::{cvt, cvt_p};
 
 cfg_if! {
     if #[cfg(ossl110)] {
@@ -390,7 +390,7 @@ impl AsRef<[u8]> for DigestBytes {
 }
 
 impl fmt::Debug for DigestBytes {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&**self, fmt)
     }
 }

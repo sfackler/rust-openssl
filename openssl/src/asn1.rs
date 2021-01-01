@@ -24,7 +24,7 @@
 //! use openssl::asn1::Asn1Time;
 //! let tomorrow = Asn1Time::days_from_now(1);
 //! ```
-use ffi;
+use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_char, c_int, c_long, time_t};
 #[cfg(ossl102)]
@@ -35,12 +35,12 @@ use std::ptr;
 use std::slice;
 use std::str;
 
-use bio::MemBio;
-use bn::{BigNum, BigNumRef};
-use error::ErrorStack;
-use nid::Nid;
-use string::OpensslString;
-use {cvt, cvt_p};
+use crate::bio::MemBio;
+use crate::bn::{BigNum, BigNumRef};
+use crate::error::ErrorStack;
+use crate::nid::Nid;
+use crate::string::OpensslString;
+use crate::{cvt, cvt_p};
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_GENERALIZEDTIME;
@@ -65,7 +65,7 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl fmt::Display for Asn1GeneralizedTimeRef {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         unsafe {
             let mem_bio = match MemBio::new() {
                 Err(_) => return f.write_str("error"),
@@ -284,7 +284,7 @@ impl<'a> PartialOrd<Asn1Time> for &'a Asn1TimeRef {
 }
 
 impl fmt::Display for Asn1TimeRef {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         unsafe {
             let mem_bio = match MemBio::new() {
                 Err(_) => return f.write_str("error"),
@@ -300,7 +300,7 @@ impl fmt::Display for Asn1TimeRef {
 }
 
 impl fmt::Debug for Asn1TimeRef {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.to_string())
     }
 }
@@ -481,7 +481,7 @@ impl Asn1StringRef {
 }
 
 impl fmt::Debug for Asn1StringRef {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.as_utf8() {
             Ok(openssl_string) => openssl_string.fmt(fmt),
             Err(_) => fmt.write_str("error"),
@@ -526,7 +526,7 @@ impl Asn1IntegerRef {
     #[allow(missing_docs)]
     #[deprecated(since = "0.10.6", note = "use to_bn instead")]
     pub fn get(&self) -> i64 {
-        unsafe { ::ffi::ASN1_INTEGER_get(self.as_ptr()) as i64 }
+        unsafe { ffi::ASN1_INTEGER_get(self.as_ptr()) as i64 }
     }
 
     /// Converts the integer to a `BigNum`.
@@ -536,7 +536,7 @@ impl Asn1IntegerRef {
     /// [`ASN1_INTEGER_to_BN`]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_INTEGER_get.html
     pub fn to_bn(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
-            cvt_p(::ffi::ASN1_INTEGER_to_BN(self.as_ptr(), ptr::null_mut()))
+            cvt_p(ffi::ASN1_INTEGER_to_BN(self.as_ptr(), ptr::null_mut()))
                 .map(|p| BigNum::from_ptr(p))
         }
     }
@@ -549,7 +549,7 @@ impl Asn1IntegerRef {
     /// [`bn`]: ../bn/struct.BigNumRef.html#method.to_asn1_integer
     /// [`ASN1_INTEGER_set`]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_INTEGER_set.html
     pub fn set(&mut self, value: i32) -> Result<(), ErrorStack> {
-        unsafe { cvt(::ffi::ASN1_INTEGER_set(self.as_ptr(), value as c_long)).map(|_| ()) }
+        unsafe { cvt(ffi::ASN1_INTEGER_set(self.as_ptr(), value as c_long)).map(|_| ()) }
     }
 }
 
@@ -636,7 +636,7 @@ impl Asn1ObjectRef {
 }
 
 impl fmt::Display for Asn1ObjectRef {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         unsafe {
             let mut buf = [0; 80];
             let len = ffi::OBJ_obj2txt(
@@ -654,7 +654,7 @@ impl fmt::Display for Asn1ObjectRef {
 }
 
 impl fmt::Debug for Asn1ObjectRef {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.write_str(self.to_string().as_str())
     }
 }
@@ -674,8 +674,8 @@ cfg_if! {
 mod tests {
     use super::*;
 
-    use bn::BigNum;
-    use nid::Nid;
+    use crate::bn::BigNum;
+    use crate::nid::Nid;
 
     /// Tests conversion between BigNum and Asn1Integer.
     #[test]
