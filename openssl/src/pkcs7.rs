@@ -1,10 +1,12 @@
+use asn1::Asn1TimeRef;
 use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
 use ffi;
 use foreign_types::ForeignTypeRef;
 use libc::c_int;
+use nid::Nid;
 use pkey::{HasPrivate, PKeyRef};
-use stack::StackRef;
+use stack::{StackRef, Stackable};
 use std::ptr;
 use symm::Cipher;
 use x509::store::X509StoreRef;
@@ -22,6 +24,21 @@ foreign_type_and_impl_send_sync! {
 
     /// Reference to `Pkcs7`
     pub struct Pkcs7Ref;
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::PKCS7_SIGNER_INFO;
+    fn drop = ffi::PKCS7_SIGNER_INFO_free;
+
+    /// A PKCS#7 signer info structure.
+    pub struct Pkcs7SignerInfo;
+
+    /// Reference to `Pkcs7SignerInfo`
+    pub struct Pkcs7SignerInfoRef;
+}
+
+impl Stackable for Pkcs7SignerInfo {
+    type StackType = ffi::stack_st_PKCS7_SIGNER_INFO;
 }
 
 bitflags! {
@@ -282,6 +299,45 @@ impl Pkcs7Ref {
             ))?;
 
             Ok(StackRef::from_ptr(ptr))
+        }
+    }
+
+    pub fn signer_info(&self) -> Result<&StackRef<Pkcs7SignerInfo>, ErrorStack> {
+        unsafe {
+            let prt = cvt_p(ffi::PKCS7_get_signer_info(self.as_ptr()))?;
+
+            Ok(StackRef::from_ptr(prt))
+        }
+    }
+}
+
+impl Pkcs7SignerInfoRef {
+    pub fn signing_time(&self) -> Option<&Asn1TimeRef> {
+        unsafe {
+            let nid = Nid::PKCS9_SIGNINGTIME;
+            let ptr = ffi::PKCS7_get_signed_attribute(self.as_ptr(), nid.as_raw());
+
+            if ptr.is_null() {
+                None
+            } else {
+                #[repr(C)]
+                struct RawAsn1Type {
+                    type_: c_int,
+                    time: *mut ffi::ASN1_TIME,
+                };
+
+                let raw = ptr as *mut RawAsn1Type;
+                let raw = &*raw;
+
+                match raw.type_ {
+                    ffi::V_ASN1_UTCTIME | ffi::V_ASN1_GENERALIZEDTIME => {
+                        let time = Asn1TimeRef::from_ptr(raw.time);
+
+                        Some(time)
+                    }
+                    _ => None,
+                }
+            }
         }
     }
 }

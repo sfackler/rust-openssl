@@ -7,7 +7,10 @@ pub enum PKCS7_ENVELOPE {}
 pub enum PKCS7_SIGN_ENVELOPE {}
 pub enum PKCS7_DIGEST {}
 pub enum PKCS7_ENCRYPT {}
+pub enum PKCS7_SIGNER_INFO {}
 pub enum PKCS7 {}
+
+stack!(stack_st_PKCS7_SIGNER_INFO);
 
 pub const PKCS7_TEXT: c_int = 0x1;
 pub const PKCS7_NOCERTS: c_int = 0x2;
@@ -51,6 +54,10 @@ extern "C" {
         flags: c_int,
     ) -> *mut stack_st_X509;
 
+    pub fn PKCS7_get_signer_info(pkcs7: *mut PKCS7) -> *mut stack_st_PKCS7_SIGNER_INFO;
+
+    pub fn PKCS7_get_signed_attribute(si: *mut PKCS7_SIGNER_INFO, nid: c_int) -> *mut ASN1_TYPE;
+
     pub fn PKCS7_sign(
         signcert: *mut X509,
         pkey: *mut EVP_PKEY,
@@ -68,6 +75,8 @@ extern "C" {
     ) -> c_int;
 
     pub fn PKCS7_free(pkcs7: *mut PKCS7);
+
+    pub fn PKCS7_SIGNER_INFO_free(signer_info: *mut PKCS7_SIGNER_INFO);
 
     pub fn SMIME_write_PKCS7(
         out: *mut BIO,
