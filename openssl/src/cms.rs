@@ -15,7 +15,7 @@ use libc::c_uint;
 use pkey::{HasPrivate, PKeyRef};
 use stack::StackRef;
 use symm::Cipher;
-use x509::{X509Ref, X509};
+use x509::{store::X509StoreRef, X509Ref, X509};
 use {cvt, cvt_p};
 
 bitflags! {
@@ -92,6 +92,60 @@ impl CmsContentInfoRef {
             ))?;
 
             Ok(out.get_buf().to_owned())
+        }
+    }
+
+    /// Verify the data stored in the CMS container.
+    ///
+    /// OpenSSL documentation at [`CMS_verify`]
+    ///
+    /// [`CMS_decrypt`]: https://www.openssl.org/docs/man1.1.0/crypto/CMS_verify.html
+    pub fn verify(
+        &self,
+        certs: &StackRef<X509>,
+        store: &X509StoreRef,
+        indata: Option<&[u8]>,
+        out: Option<&mut Vec<u8>>,
+        flags: CMSOptions,
+    ) -> Result<(), ErrorStack> {
+        let out_bio = MemBio::new()?;
+
+        let indata_bio = match indata {
+            Some(data) => Some(MemBioSlice::new(data)?),
+            None => None,
+        };
+        let indata_bio_ptr = indata_bio.as_ref().map_or(ptr::null_mut(), |p| p.as_ptr());
+
+        unsafe {
+            cvt(ffi::CMS_verify(
+                self.as_ptr(),
+                certs.as_ptr(),
+                store.as_ptr(),
+                indata_bio_ptr,
+                out_bio.as_ptr(),
+                flags.bits,
+            ))
+            .map(|_| ())?
+        }
+
+        if let Some(data) = out {
+            data.clear();
+            data.extend_from_slice(out_bio.get_buf());
+        }
+
+        Ok(())
+    }
+
+    /// Get all signer certificates stored in the CMS container.
+    ///
+    /// OpenSSL documentation at [`CMS_get0_signers`]
+    ///
+    /// [`CMS_decrypt`]: https://www.openssl.org/docs/man1.1.0/crypto/CMS_verify.html
+    pub fn signer_certs(&self) -> Result<&StackRef<X509>, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::CMS_get0_signers(self.as_ptr()))?;
+
+            Ok(StackRef::from_ptr(ptr))
         }
     }
 
