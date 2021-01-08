@@ -9,11 +9,13 @@ use ffi;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use std::ptr;
 
+use asn1::Asn1TimeRef;
 use bio::{MemBio, MemBioSlice};
 use error::ErrorStack;
 use libc::c_uint;
+use nid::Nid;
 use pkey::{HasPrivate, PKeyRef};
-use stack::StackRef;
+use stack::{Stack, StackRef, Stackable};
 use symm::Cipher;
 use x509::{store::X509StoreRef, X509Ref, X509};
 use {cvt, cvt_p};
@@ -64,6 +66,18 @@ foreign_type_and_impl_send_sync! {
     ///
     /// [`CMSContentInfo`]:struct.CmsContentInfo.html
     pub struct CmsContentInfoRef;
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::CMS_SignerInfo;
+    fn drop = ffi::CMS_SignerInfo_free;
+
+    pub struct CmsSignerInfo;
+    pub struct CmsSignerInfoRef;
+}
+
+impl Stackable for CmsSignerInfo {
+    type StackType = ffi::stack_st_CMS_SignerInfo;
 }
 
 impl CmsContentInfoRef {
@@ -136,16 +150,24 @@ impl CmsContentInfoRef {
         Ok(())
     }
 
+    pub fn signer_infos(&self) -> Result<&StackRef<CmsSignerInfo>, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::CMS_get0_SignerInfos(self.as_ptr()))?;
+
+            Ok(StackRef::from_ptr(ptr))
+        }
+    }
+
     /// Get all signer certificates stored in the CMS container.
     ///
     /// OpenSSL documentation at [`CMS_get0_signers`]
     ///
     /// [`CMS_decrypt`]: https://www.openssl.org/docs/man1.1.0/crypto/CMS_verify.html
-    pub fn signer_certs(&self) -> Result<&StackRef<X509>, ErrorStack> {
+    pub fn signer_certs(&self) -> Result<Stack<X509>, ErrorStack> {
         unsafe {
             let ptr = cvt_p(ffi::CMS_get0_signers(self.as_ptr()))?;
 
-            Ok(StackRef::from_ptr(ptr))
+            Ok(Stack::from_ptr(ptr))
         }
     }
 
@@ -271,6 +293,61 @@ impl CmsContentInfo {
             ))?;
 
             Ok(CmsContentInfo::from_ptr(cms))
+        }
+    }
+}
+
+impl CmsSignerInfoRef {
+    pub fn signer(&self) -> Result<&X509Ref, ErrorStack> {
+        unsafe {
+            let mut x509: *mut ffi::X509 = ptr::null_mut();
+            let ptr: *mut *mut ffi::X509 = &mut x509;
+
+            ffi::CMS_SignerInfo_get0_algs(
+                self.as_ptr(),
+                ptr::null_mut(),
+                ptr,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+
+            let x509 = cvt_p(x509)?;
+
+            Ok(X509Ref::from_ptr(x509))
+        }
+    }
+
+    pub fn signing_time(&self) -> Result<Option<&Asn1TimeRef>, ErrorStack> {
+        unsafe {
+            let nid = Nid::PKCS9_SIGNINGTIME;
+
+            let index = ffi::CMS_signed_get_attr_by_NID(self.as_ptr(), nid.as_raw(), -1);
+            if index < 0 {
+                return Ok(None);
+            }
+
+            let attr = ffi::CMS_signed_get_attr(self.as_ptr(), index);
+            if attr.is_null() {
+                return Err(ErrorStack::get());
+            }
+
+            let type_ = cvt_p(ffi::X509_ATTRIBUTE_get0_type(attr, 0))?;
+            let type_ = ffi::ASN1_TYPE_get(type_);
+            match dbg!(type_) {
+                ffi::V_ASN1_UTCTIME | ffi::V_ASN1_GENERALIZEDTIME => (),
+                _ => return Err(ErrorStack::get()),
+            }
+
+            let data = cvt_p(ffi::X509_ATTRIBUTE_get0_data(
+                attr,
+                0,
+                type_,
+                ptr::null_mut(),
+            ))?;
+            let time = data as *mut ffi::ASN1_TIME;
+            let time = Asn1TimeRef::from_ptr(time);
+
+            Ok(Some(time))
         }
     }
 }

@@ -20,6 +20,8 @@ pub enum X509_EXTENSION {}
 
 stack!(stack_st_X509_EXTENSION);
 
+pub enum X509_ATTRIBUTE {}
+
 stack!(stack_st_X509_ATTRIBUTE);
 
 cfg_if! {
@@ -403,4 +405,14 @@ cfg_if! {
             pub fn X509_OBJECT_free_contents(a: *mut X509_OBJECT);
         }
     }
+}
+
+extern "C" {
+    pub fn X509_ATTRIBUTE_get0_data(
+        attr: *mut X509_ATTRIBUTE,
+        idx: c_int,
+        atrtype: c_int,
+        data: *mut c_void,
+    ) -> *mut c_void;
+    pub fn X509_ATTRIBUTE_get0_type(attr: *mut X509_ATTRIBUTE, idx: c_int) -> *mut ASN1_TYPE;
 }

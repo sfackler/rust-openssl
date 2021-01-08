@@ -2,6 +2,9 @@ use libc::*;
 use *;
 
 pub enum CMS_ContentInfo {}
+pub enum CMS_SignerInfo {}
+
+stack!(stack_st_CMS_SignerInfo);
 
 extern "C" {
     #[cfg(ossl101)]
@@ -104,5 +107,31 @@ extern "C" {
     ) -> c_int;
 
     #[cfg(ossl101)]
+    pub fn CMS_get0_SignerInfos(cms: *mut ::CMS_ContentInfo) -> *mut stack_st_CMS_SignerInfo;
+
+    #[cfg(ossl101)]
+    pub fn CMS_SignerInfo_get0_algs(
+        si: *mut CMS_SignerInfo,
+        pkey: *mut *mut EVP_PKEY,
+        signer: *mut *mut X509,
+        pdig: *mut *mut X509_ALGOR,
+        psig: *mut *mut X509_ALGOR,
+    );
+
+    #[cfg(ossl101)]
     pub fn CMS_get0_signers(cms: *mut ::CMS_ContentInfo) -> *mut stack_st_X509;
+
+    #[cfg(ossl101)]
+    pub fn CMS_signed_get_attr_by_NID(
+        si: *const CMS_SignerInfo,
+        nid: c_int,
+        lastpos: c_int,
+    ) -> c_int;
+
+    #[cfg(ossl101)]
+    pub fn CMS_signed_get_attr(si: *mut CMS_SignerInfo, index: c_int) -> *mut X509_ATTRIBUTE;
+}
+
+pub fn CMS_SignerInfo_free(_si: *mut ::CMS_SignerInfo) {
+    panic!("SingerInfo is handles as reference onyl and should never be freed!");
 }

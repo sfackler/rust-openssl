@@ -19,6 +19,7 @@ pub struct ASN1_ENCODING {
 }
 
 extern "C" {
+    pub fn ASN1_TYPE_get(x: *const ASN1_TYPE) -> c_int;
     pub fn ASN1_OBJECT_free(x: *mut ASN1_OBJECT);
 }
 
