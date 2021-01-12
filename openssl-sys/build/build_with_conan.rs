@@ -39,8 +39,8 @@ pub fn try_build_with_conan(conanfile_path: &PathBuf) -> Option<(PathBuf, PathBu
     if let Some(build_info) = command.generate() {
         println!("using conan build info");
         match build_info.get_dependency("openssl") {
-            Some(build_deps) => {
-                if let (Some(lib_dir), Some(include_dir)) = (build_deps.get_library_dir(), build_deps.get_include_dir()) {
+            Some(openssl_build_dep) => {
+                if let (Some(lib_dir), Some(include_dir)) = (openssl_build_dep.get_library_dir(), openssl_build_dep.get_include_dir()) {
                     return Some((PathBuf::from(lib_dir), PathBuf::from(include_dir)))
                 }
             }
