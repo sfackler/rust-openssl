@@ -4,6 +4,10 @@ extern crate autocfg;
 extern crate cc;
 #[cfg(feature = "vendored")]
 extern crate openssl_src;
+
+#[cfg(feature = "try_conan")]
+extern crate conan;
+
 extern crate pkg_config;
 #[cfg(target_env = "msvc")]
 extern crate vcpkg;
@@ -18,6 +22,8 @@ mod cfgs;
 mod find_normal;
 #[cfg(feature = "vendored")]
 mod find_vendored;
+#[cfg(feature = "try_conan")]
+mod build_with_conan;
 
 enum Version {
     Openssl11x,
@@ -44,6 +50,12 @@ fn env(name: &str) -> Option<OsString> {
 }
 
 fn find_openssl(target: &str) -> (PathBuf, PathBuf) {
+    #[cfg(feature = "try_conan")]
+    {
+        if let Some(t) = build_with_conan::build_with_conan() {
+            return t;
+        }
+    }
     #[cfg(feature = "vendored")]
     {
         // vendor if the feature is present, unless
