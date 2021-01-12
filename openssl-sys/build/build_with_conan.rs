@@ -13,8 +13,9 @@ use conan::*;
 ///    preferably with openssl and its options
 ///
 /// Return pair of (Lib dir, Include dir)
-pub fn build_with_conan() -> Option<(PathBuf, PathBuf)> {
+pub fn try_build_with_conan() -> Option<(PathBuf, PathBuf)> {
     println!("cargo:rerun-if-changed=build/build_with_conan.rs");
+
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
     let conan_profile = format!("{}-{}", target_os, target_arch);
@@ -31,18 +32,22 @@ pub fn build_with_conan() -> Option<(PathBuf, PathBuf)> {
         None => Path::new("conanfile.txt").to_owned()
     };
 
-    // emit the conanfile.txt as a directive to cargo to rerun this
-    // in case conanfile.txt changes.
+    // emit changes to the conanfile.txt as a directive to cargo to rerun this
+    // build script in case conanfile.txt changes.
     if let Some(s) = conanfile_path.to_str() {
         println!("cargo:rerun-if-changed={}", s);
     }
 
+    // Try and build a `conan install` command with the profile above,
+    // build any missing packages that conan needs, and use the conanfile.txt
+    // recipe used above
     let command = InstallCommandBuilder::new()
         .with_profile(&conan_profile)
         .build_policy(BuildPolicy::Missing)
         .recipe_path(&conanfile_path)
         .build();
-        
+    
+    // If successful, generate build info and use it
     if let Some(build_info) = command.generate() {
         println!("using conan build info");
         match build_info.get_dependency("openssl") {
@@ -51,10 +56,11 @@ pub fn build_with_conan() -> Option<(PathBuf, PathBuf)> {
                     return Some((PathBuf::from(lib_dir), PathBuf::from(include_dir)))
                 }
             }
+            // User did not specify openssl as a dependency
             None => return None
         }
     }
 
-
+    // Else, return no value
     None
 }
