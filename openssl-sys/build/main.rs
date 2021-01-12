@@ -46,9 +46,11 @@ fn env(name: &str) -> Option<OsString> {
 }
 
 fn find_openssl(target: &str) -> (PathBuf, PathBuf) {
-    // try to build with conan but continue if it was not successful
-    if let Some(t) = build_with_conan::try_build_with_conan() {
-        return t;
+    // if the conanfile.txt exists, try and use it, else continue
+    if let Some(f) = build_with_conan::get_conanfile_path() {
+        if let Some(t) = build_with_conan::try_build_with_conan(&f) {
+            return t;
+        }
     }
     #[cfg(feature = "vendored")]
     {

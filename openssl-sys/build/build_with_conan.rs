@@ -13,24 +13,12 @@ use conan::*;
 ///    preferably with openssl and its options
 ///
 /// Return pair of (Lib dir, Include dir)
-pub fn try_build_with_conan() -> Option<(PathBuf, PathBuf)> {
+pub fn try_build_with_conan(conanfile_path: &PathBuf) -> Option<(PathBuf, PathBuf)> {
     println!("cargo:rerun-if-changed=build/build_with_conan.rs");
 
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
     let conan_profile = format!("{}-{}", target_os, target_arch);
-
-    // Let the user have a chance at configuring where the conanfile.txt file is
-    // else assume it's in the local directory, which may not be where they want.
-    let conanfile_path = match option_env!("CONANFILE_ROOT") {
-        Some(p) => {
-            Path::new(p)
-            .join("conanfile.txt")
-            .as_path()
-            .to_owned()
-        },
-        None => Path::new("conanfile.txt").to_owned()
-    };
 
     // emit changes to the conanfile.txt as a directive to cargo to rerun this
     // build script in case conanfile.txt changes.
@@ -63,4 +51,24 @@ pub fn try_build_with_conan() -> Option<(PathBuf, PathBuf)> {
 
     // Else, return no value
     None
+}
+
+// Let the user have a chance at configuring where the conanfile.txt file is
+// else assume it's in the local directory, which may not be where they want.
+// Return a value if the file exists, or None
+pub fn get_conanfile_path() -> Option<PathBuf> {
+    let conanfile_path = match option_env!("CONANFILE_ROOT") {
+        Some(p) => {
+            Path::new(p)
+            .join("conanfile.txt")
+            .as_path()
+            .to_owned()
+        },
+        None => Path::new("conanfile.txt").to_owned()
+    };
+
+    match conanfile_path.exists() {
+        true => Some(conanfile_path),
+        false => None
+    }
 }
