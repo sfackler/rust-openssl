@@ -2,9 +2,9 @@
 
 extern crate autocfg;
 extern crate cc;
+extern crate conan;
 #[cfg(feature = "vendored")]
 extern crate openssl_src;
-extern crate conan;
 extern crate pkg_config;
 #[cfg(target_env = "msvc")]
 extern crate vcpkg;
@@ -16,10 +16,10 @@ use std::path::{Path, PathBuf};
 
 mod cfgs;
 
+mod build_with_conan;
 mod find_normal;
 #[cfg(feature = "vendored")]
 mod find_vendored;
-mod build_with_conan;
 
 enum Version {
     Openssl11x,

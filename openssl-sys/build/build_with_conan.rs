@@ -34,18 +34,21 @@ pub fn try_build_with_conan(conanfile_path: &PathBuf) -> Option<(PathBuf, PathBu
         .build_policy(BuildPolicy::Missing)
         .recipe_path(&conanfile_path)
         .build();
-    
+
     // If successful, generate build info and use it
     if let Some(build_info) = command.generate() {
         println!("using conan build info");
         match build_info.get_dependency("openssl") {
             Some(openssl_build_dep) => {
-                if let (Some(lib_dir), Some(include_dir)) = (openssl_build_dep.get_library_dir(), openssl_build_dep.get_include_dir()) {
-                    return Some((PathBuf::from(lib_dir), PathBuf::from(include_dir)))
+                if let (Some(lib_dir), Some(include_dir)) = (
+                    openssl_build_dep.get_library_dir(),
+                    openssl_build_dep.get_include_dir(),
+                ) {
+                    return Some((PathBuf::from(lib_dir), PathBuf::from(include_dir)));
                 }
             }
             // User did not specify openssl as a dependency
-            None => return None
+            None => return None,
         }
     }
 
@@ -58,17 +61,12 @@ pub fn try_build_with_conan(conanfile_path: &PathBuf) -> Option<(PathBuf, PathBu
 // Return a value if the file exists, or None
 pub fn get_conanfile_path() -> Option<PathBuf> {
     let conanfile_path = match option_env!("CONANFILE_ROOT") {
-        Some(p) => {
-            Path::new(p)
-            .join("conanfile.txt")
-            .as_path()
-            .to_owned()
-        },
-        None => Path::new("conanfile.txt").to_owned()
+        Some(p) => Path::new(p).join("conanfile.txt").as_path().to_owned(),
+        None => Path::new("conanfile.txt").to_owned(),
     };
 
     match conanfile_path.exists() {
         true => Some(conanfile_path),
-        false => None
+        false => None,
     }
 }
