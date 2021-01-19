@@ -10,6 +10,7 @@ use crate::error::ErrorStack;
 ///
 /// This corresponds to `FIPS_mode_set`.
 pub fn enable(enabled: bool) -> Result<(), ErrorStack> {
+    ffi::init();
     unsafe { cvt(ffi::FIPS_mode_set(enabled as _)).map(|_| ()) }
 }
 
