@@ -439,6 +439,8 @@ pub struct X509V3_CTX {
     crl: *mut c_void,
     db_meth: *mut c_void,
     db: *mut c_void,
+    #[cfg(ossl300)]
+    issuer_pkey: *mut c_void,
     // I like the last comment line, it is copied from OpenSSL sources:
     // Maybe more here
 }
