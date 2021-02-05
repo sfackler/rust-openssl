@@ -55,11 +55,10 @@
 //! assert_eq!(&orig_key[..], &key_to_wrap[..]);
 //! ```
 //!
-use ffi;
 use libc::{c_int, c_uint};
 use std::{mem, ptr};
 
-use symm::Mode;
+use crate::symm::Mode;
 
 /// Provides Error handling for parsing keys.
 #[derive(Debug)]
@@ -240,7 +239,7 @@ mod test {
     use hex::FromHex;
 
     use super::*;
-    use symm::Mode;
+    use crate::symm::Mode;
 
     // From https://www.mgp25.com/AESIGE/
     #[test]

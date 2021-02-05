@@ -1,13 +1,14 @@
+use cfg_if::cfg_if;
 use std::io::{Read, Write};
 use std::ops::{Deref, DerefMut};
 
-use dh::Dh;
-use error::ErrorStack;
-use ssl::{
+use crate::dh::Dh;
+use crate::error::ErrorStack;
+use crate::ssl::{
     HandshakeError, Ssl, SslContext, SslContextBuilder, SslContextRef, SslMethod, SslMode,
     SslOptions, SslRef, SslStream, SslVerifyMode,
 };
-use version;
+use crate::version;
 
 const FFDHE_2048: &str = "
 -----BEGIN DH PARAMETERS-----
@@ -20,7 +21,7 @@ ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
 -----END DH PARAMETERS-----
 ";
 
-#[allow(clippy::inconsistent_digit_grouping)]
+#[allow(clippy::inconsistent_digit_grouping, clippy::unusual_byte_groupings)]
 fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     let mut ctx = SslContextBuilder::new(method)?;
 
@@ -168,13 +169,10 @@ impl ConnectConfiguration {
         self.verify_hostname = verify_hostname;
     }
 
-    /// Initiates a client-side TLS session on a stream.
+    /// Returns an `Ssl` configured to connect to the provided domain.
     ///
     /// The domain is used for SNI and hostname verification if enabled.
-    pub fn connect<S>(mut self, domain: &str, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
-    where
-        S: Read + Write,
-    {
+    pub fn into_ssl(mut self, domain: &str) -> Result<Ssl, ErrorStack> {
         if self.sni {
             self.ssl.set_hostname(domain)?;
         }
@@ -183,7 +181,17 @@ impl ConnectConfiguration {
             setup_verify_hostname(&mut self.ssl, domain)?;
         }
 
-        self.ssl.connect(stream)
+        Ok(self.ssl)
+    }
+
+    /// Initiates a client-side TLS session on a stream.
+    ///
+    /// The domain is used for SNI and hostname verification if enabled.
+    pub fn connect<S>(self, domain: &str, stream: S) -> Result<SslStream<S>, HandshakeError<S>>
+    where
+        S: Read + Write,
+    {
+        self.into_ssl(domain)?.connect(stream)
     }
 }
 
@@ -359,8 +367,8 @@ cfg_if! {
         }
     } else {
         fn setup_curves(ctx: &mut SslContextBuilder) -> Result<(), ErrorStack> {
-            use ec::EcKey;
-            use nid::Nid;
+            use crate::ec::EcKey;
+            use crate::nid::Nid;
 
             let curve = EcKey::from_curve_name(Nid::X9_62_PRIME256V1)?;
             ctx.set_tmp_ecdh(&curve)
@@ -375,7 +383,7 @@ cfg_if! {
         }
 
         fn setup_verify_hostname(ssl: &mut SslRef, domain: &str) -> Result<(), ErrorStack> {
-            use x509::verify::X509CheckFlags;
+            use crate::x509::verify::X509CheckFlags;
 
             let param = ssl.param_mut();
             param.set_hostflags(X509CheckFlags::NO_PARTIAL_WILDCARDS);
@@ -391,25 +399,30 @@ cfg_if! {
 
         fn setup_verify_hostname(ssl: &mut Ssl, domain: &str) -> Result<(), ErrorStack> {
             let domain = domain.to_string();
-            ssl.set_ex_data(*verify::HOSTNAME_IDX, domain);
+            let hostname_idx = verify::try_get_hostname_idx()?;
+            ssl.set_ex_data(*hostname_idx, domain);
             Ok(())
         }
 
         mod verify {
             use std::net::IpAddr;
             use std::str;
+            use once_cell::sync::OnceCell;
 
-            use ex_data::Index;
-            use nid::Nid;
-            use ssl::Ssl;
-            use stack::Stack;
-            use x509::{
+            use crate::error::ErrorStack;
+            use crate::ex_data::Index;
+            use crate::nid::Nid;
+            use crate::ssl::Ssl;
+            use crate::stack::Stack;
+            use crate::x509::{
                 GeneralName, X509NameRef, X509Ref, X509StoreContext, X509StoreContextRef,
                 X509VerifyResult,
             };
 
-            lazy_static! {
-                pub static ref HOSTNAME_IDX: Index<Ssl, String> = Ssl::new_ex_index().unwrap();
+            static HOSTNAME_IDX: OnceCell<Index<Ssl, String>> = OnceCell::new();
+
+            pub fn try_get_hostname_idx() -> Result<&'static Index<Ssl, String>, ErrorStack> {
+                HOSTNAME_IDX.get_or_try_init(Ssl::new_ex_index)
             }
 
             pub fn verify_callback(preverify_ok: bool, x509_ctx: &mut X509StoreContextRef) -> bool {
@@ -417,12 +430,14 @@ cfg_if! {
                     return preverify_ok;
                 }
 
+                let hostname_idx =
+                    try_get_hostname_idx().expect("failed to initialize hostname index");
                 let ok = match (
                     x509_ctx.current_cert(),
                     X509StoreContext::ssl_idx()
                         .ok()
                         .and_then(|idx| x509_ctx.ex_data(idx))
-                        .and_then(|ssl| ssl.ex_data(*HOSTNAME_IDX)),
+                        .and_then(|ssl| ssl.ex_data(*hostname_idx)),
                 ) {
                     (Some(x509), Some(domain)) => verify_hostname(domain, &x509),
                     _ => true,
@@ -551,7 +566,7 @@ cfg_if! {
 
             #[test]
             fn test_dns_match() {
-                use ssl::connector::verify::matches_dns;
+                use crate::ssl::connector::verify::matches_dns;
                 assert!(matches_dns("website.tld", "website.tld")); // A name should match itself.
                 assert!(matches_dns("website.tld", "wEbSiTe.tLd")); // DNS name matching ignores case of hostname.
                 assert!(matches_dns("wEbSiTe.TlD", "website.tld")); // DNS name matching ignores case of subject.

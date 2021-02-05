@@ -1,4 +1,4 @@
-#![allow(clippy::inconsistent_digit_grouping)]
+#![allow(clippy::inconsistent_digit_grouping, clippy::unusual_byte_groupings)]
 
 extern crate autocfg;
 extern crate cc;
@@ -85,7 +85,13 @@ fn main() {
 
     let libs_env = env("OPENSSL_LIBS");
     let libs = match libs_env.as_ref().and_then(|s| s.to_str()) {
-        Some(ref v) => v.split(':').collect(),
+        Some(ref v) => {
+            if v.is_empty() {
+                vec![]
+            } else {
+                v.split(':').collect()
+            }
+        }
         None => match version {
             Version::Openssl10x if target.contains("windows") => vec!["ssleay32", "libeay32"],
             Version::Openssl11x if target.contains("windows-msvc") => vec!["libssl", "libcrypto"],
@@ -226,6 +232,10 @@ See rust-openssl README for more information:
             (3, 1, 0) => ('3', '1', '0'),
             (3, 1, _) => ('3', '1', 'x'),
             (3, 2, 0) => ('3', '2', '0'),
+            (3, 2, 1) => ('3', '2', '1'),
+            (3, 2, _) => ('3', '2', 'x'),
+            (3, 3, 0) => ('3', '3', '0'),
+            (3, 3, 1) => ('3', '3', '1'),
             _ => version_error(),
         };
 
@@ -268,7 +278,7 @@ fn version_error() -> ! {
         "
 
 This crate is only compatible with OpenSSL 1.0.1 through 1.1.1, or LibreSSL 2.5
-through 3.2.0, but a different version of OpenSSL was found. The build is now aborting
+through 3.3.1, but a different version of OpenSSL was found. The build is now aborting
 due to this version mismatch.
 
 "

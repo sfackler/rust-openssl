@@ -1,18 +1,19 @@
-use hex::{self, FromHex};
-
-use asn1::Asn1Time;
-use bn::{BigNum, MsbOption};
-use hash::MessageDigest;
-use nid::Nid;
-use pkey::{PKey, Private};
-use rsa::Rsa;
-use stack::Stack;
-use x509::extension::{
+use crate::asn1::Asn1Time;
+use crate::bn::{BigNum, MsbOption};
+use crate::hash::MessageDigest;
+use crate::nid::Nid;
+use crate::pkey::{PKey, Private};
+use crate::rsa::Rsa;
+use crate::stack::Stack;
+use crate::x509::extension::{
     AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, KeyUsage, SubjectAlternativeName,
     SubjectKeyIdentifier,
 };
-use x509::store::X509StoreBuilder;
-use x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
+use crate::x509::store::X509StoreBuilder;
+#[cfg(ossl110)]
+use crate::x509::X509Builder;
+use crate::x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
+use hex::{self, FromHex};
 
 fn pkey() -> PKey<Private> {
     let rsa = Rsa::generate(2048).unwrap();
@@ -377,4 +378,31 @@ fn test_verify_fails() {
     assert!(!context
         .init(&store, &cert, &chain, |c| c.verify_cert())
         .unwrap());
+}
+
+#[cfg(ossl110)]
+#[test]
+fn x509_ref_version() {
+    let mut builder = X509Builder::new().unwrap();
+    let expected_version = 2;
+    builder
+        .set_version(expected_version)
+        .expect("Failed to set certificate version");
+    let cert = builder.build();
+    let actual_version = cert.version();
+    assert_eq!(
+        expected_version, actual_version,
+        "Obtained certificate version is incorrect",
+    );
+}
+
+#[cfg(ossl110)]
+#[test]
+fn x509_ref_version_no_version_set() {
+    let cert = X509Builder::new().unwrap().build();
+    let actual_version = cert.version();
+    assert_eq!(
+        0, actual_version,
+        "Default certificate version is incorrect",
+    );
 }

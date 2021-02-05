@@ -1,12 +1,12 @@
-use error::ErrorStack;
-use ffi;
+use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use std::mem;
 use std::ptr;
 
-use bn::{BigNum, BigNumRef};
-use pkey::{HasParams, HasPrivate, HasPublic, Params, Private};
-use {cvt, cvt_p};
+use crate::bn::{BigNum, BigNumRef};
+use crate::error::ErrorStack;
+use crate::pkey::{HasParams, HasPrivate, HasPublic, Params, Private};
+use crate::{cvt, cvt_p};
 
 generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::DH;
@@ -70,49 +70,6 @@ impl Dh<Params> {
             ))?;
             mem::forget((prime_p, prime_q, generator));
             Ok(dh)
-        }
-    }
-
-    /// Returns the prime `p` from the DH instance.
-    ///
-    /// This corresponds to [`DH_get0_pqg`].
-    ///
-    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
-    pub fn prime_p(&self) -> &BigNumRef {
-        let mut p = ptr::null();
-        unsafe {
-            DH_get0_pqg(self.0, &mut p, ptr::null_mut(), ptr::null_mut());
-            BigNumRef::from_ptr(p as *mut _)
-        }
-    }
-
-    /// Returns the prime `q` from the DH instance.
-    ///
-    /// This corresponds to [`DH_get0_pqg`].
-    ///
-    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
-    pub fn prime_q(&self) -> Option<&BigNumRef> {
-        let mut q = ptr::null();
-        unsafe {
-            DH_get0_pqg(self.0, ptr::null_mut(), &mut q, ptr::null_mut());
-            if q.is_null() {
-                None
-            } else {
-                Some(BigNumRef::from_ptr(q as *mut _))
-            }
-        }
-    }
-
-    /// Returns the generator from the DH instance.
-    ///
-    /// This corresponds to [`DH_get0_pqg`].
-    ///
-    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
-    pub fn generator(&self) -> &BigNumRef {
-        let mut g = ptr::null();
-        unsafe {
-            DH_get0_pqg(self.0, ptr::null_mut(), ptr::null_mut(), &mut g);
-            BigNumRef::from_ptr(g as *mut _)
         }
     }
 
@@ -200,6 +157,54 @@ impl Dh<Params> {
 
 impl<T> Dh<T>
 where
+    T: HasParams,
+{
+    /// Returns the prime `p` from the DH instance.
+    ///
+    /// This corresponds to [`DH_get0_pqg`].
+    ///
+    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
+    pub fn prime_p(&self) -> &BigNumRef {
+        let mut p = ptr::null();
+        unsafe {
+            DH_get0_pqg(self.as_ptr(), &mut p, ptr::null_mut(), ptr::null_mut());
+            BigNumRef::from_ptr(p as *mut _)
+        }
+    }
+
+    /// Returns the prime `q` from the DH instance.
+    ///
+    /// This corresponds to [`DH_get0_pqg`].
+    ///
+    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
+    pub fn prime_q(&self) -> Option<&BigNumRef> {
+        let mut q = ptr::null();
+        unsafe {
+            DH_get0_pqg(self.as_ptr(), ptr::null_mut(), &mut q, ptr::null_mut());
+            if q.is_null() {
+                None
+            } else {
+                Some(BigNumRef::from_ptr(q as *mut _))
+            }
+        }
+    }
+
+    /// Returns the generator from the DH instance.
+    ///
+    /// This corresponds to [`DH_get0_pqg`].
+    ///
+    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
+    pub fn generator(&self) -> &BigNumRef {
+        let mut g = ptr::null();
+        unsafe {
+            DH_get0_pqg(self.as_ptr(), ptr::null_mut(), ptr::null_mut(), &mut g);
+            BigNumRef::from_ptr(g as *mut _)
+        }
+    }
+}
+
+impl<T> DhRef<T>
+where
     T: HasPublic,
 {
     /// Returns the public key from the DH instance.
@@ -210,13 +215,13 @@ where
     pub fn public_key(&self) -> &BigNumRef {
         let mut pub_key = ptr::null();
         unsafe {
-            DH_get0_key(self.0, &mut pub_key, ptr::null_mut());
+            DH_get0_key(self.as_ptr(), &mut pub_key, ptr::null_mut());
             BigNumRef::from_ptr(pub_key as *mut _)
         }
     }
 }
 
-impl<T> Dh<T>
+impl<T> DhRef<T>
 where
     T: HasPrivate,
 {
@@ -227,12 +232,12 @@ where
     /// [`DH_compute_key`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_compute_key.html
     pub fn compute_key(&self, public_key: &BigNumRef) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
-            let key_len = ffi::DH_size(self.0);
+            let key_len = ffi::DH_size(self.as_ptr());
             let mut key = vec![0u8; key_len as usize];
             cvt(ffi::DH_compute_key(
                 key.as_mut_ptr(),
                 public_key.as_ptr(),
-                self.0,
+                self.as_ptr(),
             ))?;
             Ok(key)
         }
@@ -292,9 +297,9 @@ cfg_if! {
 
 #[cfg(test)]
 mod tests {
-    use bn::BigNum;
-    use dh::Dh;
-    use ssl::{SslContext, SslMethod};
+    use crate::bn::BigNum;
+    use crate::dh::Dh;
+    use crate::ssl::{SslContext, SslMethod};
 
     #[test]
     #[cfg(ossl102)]

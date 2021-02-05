@@ -1,17 +1,17 @@
-use ffi;
+use bitflags::bitflags;
 use foreign_types::ForeignTypeRef;
 use libc::{c_int, c_long, c_ulong};
 use std::mem;
 use std::ptr;
 
-use asn1::Asn1GeneralizedTimeRef;
-use error::ErrorStack;
-use hash::MessageDigest;
-use stack::StackRef;
-use util::ForeignTypeRefExt;
-use x509::store::X509StoreRef;
-use x509::{X509Ref, X509};
-use {cvt, cvt_p};
+use crate::asn1::Asn1GeneralizedTimeRef;
+use crate::error::ErrorStack;
+use crate::hash::MessageDigest;
+use crate::stack::StackRef;
+use crate::util::ForeignTypeRefExt;
+use crate::x509::store::X509StoreRef;
+use crate::x509::{X509Ref, X509};
+use crate::{cvt, cvt_p};
 
 bitflags! {
     pub struct OcspFlag: c_ulong {

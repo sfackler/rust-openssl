@@ -16,30 +16,25 @@
 //! Generate a 2048-bit RSA key pair and use the public key to encrypt some data.
 //!
 //! ```rust
-//!
-//! extern crate openssl;
-//!
 //! use openssl::rsa::{Rsa, Padding};
 //!
-//! fn main() {
-//!     let rsa = Rsa::generate(2048).unwrap();
-//!     let data = b"foobar";
-//!     let mut buf = vec![0; rsa.size() as usize];
-//!     let encrypted_len = rsa.public_encrypt(data, &mut buf, Padding::PKCS1).unwrap();
-//! }
+//! let rsa = Rsa::generate(2048).unwrap();
+//! let data = b"foobar";
+//! let mut buf = vec![0; rsa.size() as usize];
+//! let encrypted_len = rsa.public_encrypt(data, &mut buf, Padding::PKCS1).unwrap();
 //! ```
-use ffi;
+use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::fmt;
 use std::mem;
 use std::ptr;
 
-use bn::{BigNum, BigNumRef};
-use error::ErrorStack;
-use pkey::{HasPrivate, HasPublic, Private, Public};
-use util::ForeignTypeRefExt;
-use {cvt, cvt_n, cvt_p};
+use crate::bn::{BigNum, BigNumRef};
+use crate::error::ErrorStack;
+use crate::pkey::{HasPrivate, HasPublic, Private, Public};
+use crate::util::ForeignTypeRefExt;
+use crate::{cvt, cvt_n, cvt_p};
 
 /// Type of encryption padding to use.
 ///
@@ -651,7 +646,7 @@ impl Rsa<Private> {
 }
 
 impl<T> fmt::Debug for Rsa<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Rsa")
     }
 }
@@ -754,7 +749,7 @@ cfg_if! {
 
 #[cfg(test)]
 mod test {
-    use symm::Cipher;
+    use crate::symm::Cipher;
 
     use super::*;
 

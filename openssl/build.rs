@@ -1,4 +1,4 @@
-#![allow(clippy::inconsistent_digit_grouping)]
+#![allow(clippy::inconsistent_digit_grouping, clippy::unusual_byte_groupings)]
 
 use std::env;
 
@@ -65,6 +65,10 @@ fn main() {
 
         if version >= 0x2_09_01_00_0 {
             println!("cargo:rustc-cfg=libressl291");
+        }
+
+        if version >= 0x3_02_01_00_0 {
+            println!("cargo:rustc-cfg=libressl321");
         }
     }
 }

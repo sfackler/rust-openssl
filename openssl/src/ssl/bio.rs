@@ -1,3 +1,4 @@
+use cfg_if::cfg_if;
 use ffi::{
     self, BIO_clear_retry_flags, BIO_new, BIO_set_retry_read, BIO_set_retry_write, BIO,
     BIO_CTRL_DGRAM_QUERY_MTU, BIO_CTRL_FLUSH,
@@ -10,8 +11,8 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr;
 use std::slice;
 
-use cvt_p;
-use error::ErrorStack;
+use crate::cvt_p;
+use crate::error::ErrorStack;
 
 pub struct StreamState<S> {
     pub stream: S,
@@ -24,8 +25,8 @@ pub struct StreamState<S> {
 pub struct BioMethod(BIO_METHOD);
 
 impl BioMethod {
-    fn new<S: Read + Write>() -> BioMethod {
-        BioMethod(BIO_METHOD::new::<S>())
+    fn new<S: Read + Write>() -> Result<BioMethod, ErrorStack> {
+        BIO_METHOD::new::<S>().map(BioMethod)
     }
 }
 
@@ -33,7 +34,7 @@ unsafe impl Sync for BioMethod {}
 unsafe impl Send for BioMethod {}
 
 pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, BioMethod), ErrorStack> {
-    let method = BioMethod::new::<S>();
+    let method = BioMethod::new::<S>()?;
 
     let state = Box::new(StreamState {
         stream,
@@ -191,6 +192,7 @@ unsafe extern "C" fn destroy<S>(bio: *mut BIO) -> c_int {
 cfg_if! {
     if #[cfg(any(ossl110, libressl273))] {
         use ffi::{BIO_get_data, BIO_set_data, BIO_set_flags, BIO_set_init};
+        use crate::cvt;
 
         #[allow(bad_style)]
         unsafe fn BIO_set_num(_bio: *mut ffi::BIO, _num: c_int) {}
@@ -199,18 +201,17 @@ cfg_if! {
         struct BIO_METHOD(*mut ffi::BIO_METHOD);
 
         impl BIO_METHOD {
-            fn new<S: Read + Write>() -> BIO_METHOD {
+            fn new<S: Read + Write>() -> Result<BIO_METHOD, ErrorStack> {
                 unsafe {
-                    let ptr = ffi::BIO_meth_new(ffi::BIO_TYPE_NONE, b"rust\0".as_ptr() as *const _);
-                    assert!(!ptr.is_null());
-                    let ret = BIO_METHOD(ptr);
-                    assert!(ffi::BIO_meth_set_write(ptr, bwrite::<S>) != 0);
-                    assert!(ffi::BIO_meth_set_read(ptr, bread::<S>) != 0);
-                    assert!(ffi::BIO_meth_set_puts(ptr, bputs::<S>) != 0);
-                    assert!(ffi::BIO_meth_set_ctrl(ptr, ctrl::<S>) != 0);
-                    assert!(ffi::BIO_meth_set_create(ptr, create) != 0);
-                    assert!(ffi::BIO_meth_set_destroy(ptr, destroy::<S>) != 0);
-                    ret
+                    let ptr = cvt_p(ffi::BIO_meth_new(ffi::BIO_TYPE_NONE, b"rust\0".as_ptr() as *const _))?;
+                    let method = BIO_METHOD(ptr);
+                    cvt(ffi::BIO_meth_set_write(method.0, bwrite::<S>))?;
+                    cvt(ffi::BIO_meth_set_read(method.0, bread::<S>))?;
+                    cvt(ffi::BIO_meth_set_puts(method.0, bputs::<S>))?;
+                    cvt(ffi::BIO_meth_set_ctrl(method.0, ctrl::<S>))?;
+                    cvt(ffi::BIO_meth_set_create(method.0, create))?;
+                    cvt(ffi::BIO_meth_set_destroy(method.0, destroy::<S>))?;
+                    Ok(method)
                 }
             }
 
@@ -231,7 +232,7 @@ cfg_if! {
         struct BIO_METHOD(*mut ffi::BIO_METHOD);
 
         impl BIO_METHOD {
-            fn new<S: Read + Write>() -> BIO_METHOD {
+            fn new<S: Read + Write>() -> Result<BIO_METHOD, ErrorStack> {
                 let ptr = Box::new(ffi::BIO_METHOD {
                     type_: ffi::BIO_TYPE_NONE,
                     name: b"rust\0".as_ptr() as *const _,
@@ -245,7 +246,7 @@ cfg_if! {
                     callback_ctrl: None,
                 });
 
-                BIO_METHOD(Box::into_raw(ptr))
+                Ok(BIO_METHOD(Box::into_raw(ptr)))
             }
 
             fn get(&self) -> *mut ffi::BIO_METHOD {

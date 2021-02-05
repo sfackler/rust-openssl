@@ -52,14 +52,14 @@
 //! println!("Decrypted: '{}'", output_string);
 //! ```
 
-use ffi;
+use cfg_if::cfg_if;
 use libc::c_int;
 use std::cmp;
 use std::ptr;
 
-use error::ErrorStack;
-use nid::Nid;
-use {cvt, cvt_p};
+use crate::error::ErrorStack;
+use crate::nid::Nid;
+use crate::{cvt, cvt_p};
 
 #[derive(Copy, Clone)]
 pub enum Mode {
@@ -224,18 +224,22 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_ocb()) }
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
     pub fn bf_cbc() -> Cipher {
         unsafe { Cipher(ffi::EVP_bf_cbc()) }
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
     pub fn bf_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_bf_ecb()) }
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
     pub fn bf_cfb64() -> Cipher {
         unsafe { Cipher(ffi::EVP_bf_cfb64()) }
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
     pub fn bf_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_bf_ofb()) }
     }

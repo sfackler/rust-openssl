@@ -29,7 +29,6 @@
 //! assert!(!eq(&a, &b));
 //! assert!(!eq(&a, &c));
 //! ```
-use ffi;
 use libc::size_t;
 
 /// Returns `true` iff `a` and `b` contain the same bytes.

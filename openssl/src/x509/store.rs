@@ -6,9 +6,6 @@
 //! # Example
 //!
 //! ```rust
-//!
-//! extern crate openssl;
-//!
 //! use openssl::x509::store::{X509StoreBuilder, X509Store};
 //! use openssl::x509::{X509, X509Name};
 //! use openssl::pkey::PKey;
@@ -16,38 +13,36 @@
 //! use openssl::rsa::Rsa;
 //! use openssl::nid::Nid;
 //!
-//! fn main() {
-//!     let rsa = Rsa::generate(2048).unwrap();
-//!     let pkey = PKey::from_rsa(rsa).unwrap();
+//! let rsa = Rsa::generate(2048).unwrap();
+//! let pkey = PKey::from_rsa(rsa).unwrap();
 //!
-//!     let mut name = X509Name::builder().unwrap();
-//!     name.append_entry_by_nid(Nid::COMMONNAME, "foobar.com").unwrap();
-//!     let name = name.build();
+//! let mut name = X509Name::builder().unwrap();
+//! name.append_entry_by_nid(Nid::COMMONNAME, "foobar.com").unwrap();
+//! let name = name.build();
 //!
-//!     let mut builder = X509::builder().unwrap();
-//!     builder.set_version(2).unwrap();
-//!     builder.set_subject_name(&name).unwrap();
-//!     builder.set_issuer_name(&name).unwrap();
-//!     builder.set_pubkey(&pkey).unwrap();
-//!     builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+//! let mut builder = X509::builder().unwrap();
+//! builder.set_version(2).unwrap();
+//! builder.set_subject_name(&name).unwrap();
+//! builder.set_issuer_name(&name).unwrap();
+//! builder.set_pubkey(&pkey).unwrap();
+//! builder.sign(&pkey, MessageDigest::sha256()).unwrap();
 //!
-//!     let certificate: X509 = builder.build();
+//! let certificate: X509 = builder.build();
 //!
-//!     let mut builder = X509StoreBuilder::new().unwrap();
-//!     let _ = builder.add_cert(certificate);
+//! let mut builder = X509StoreBuilder::new().unwrap();
+//! let _ = builder.add_cert(certificate);
 //!
-//!     let store: X509Store = builder.build();
-//! }
+//! let store: X509Store = builder.build();
 //! ```
 
-use ffi;
+use cfg_if::cfg_if;
 use foreign_types::ForeignTypeRef;
 use std::mem;
 
-use error::ErrorStack;
-use stack::StackRef;
-use x509::{X509Object, X509};
-use {cvt, cvt_p};
+use crate::error::ErrorStack;
+use crate::stack::StackRef;
+use crate::x509::{X509Object, X509};
+use crate::{cvt, cvt_p};
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE;

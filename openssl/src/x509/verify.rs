@@ -1,10 +1,10 @@
-use ffi;
+use bitflags::bitflags;
 use foreign_types::ForeignTypeRef;
 use libc::{c_uint, c_ulong};
 use std::net::IpAddr;
 
-use cvt;
-use error::ErrorStack;
+use crate::cvt;
+use crate::error::ErrorStack;
 
 bitflags! {
     /// Flags used to check an `X509` certificate.
@@ -109,7 +109,7 @@ impl X509VerifyParamRef {
     /// This corresponds to [`X509_VERIFY_PARAM_get_flags`].
     ///
     /// [`X509_VERIFY_PARAM_get_flags`]: https://www.openssl.org/docs/man1.0.2/crypto/X509_VERIFY_PARAM_get_flags.html
-    pub fn get_flags(&mut self) -> X509VerifyFlags {
+    pub fn flags(&mut self) -> X509VerifyFlags {
         let bits = unsafe { ffi::X509_VERIFY_PARAM_get_flags(self.as_ptr()) };
         X509VerifyFlags { bits }
     }

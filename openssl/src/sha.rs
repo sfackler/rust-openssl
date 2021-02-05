@@ -14,20 +14,15 @@
 //! you can create a hasher that you can repeatedly update to add bytes to.
 //!
 //! ```rust
-//! extern crate openssl;
-//! extern crate hex;
-//!
 //! use openssl::sha;
 //!
-//! fn main() {
-//!     let mut hasher = sha::Sha256::new();
+//! let mut hasher = sha::Sha256::new();
 //!
-//!     hasher.update(b"Hello, ");
-//!     hasher.update(b"world");
+//! hasher.update(b"Hello, ");
+//! hasher.update(b"world");
 //!
-//!     let hash = hasher.finish();
-//!     println!("Hashed \"Hello, world\" to {}", hex::encode(hash));
-//! }
+//! let hash = hasher.finish();
+//! println!("Hashed \"Hello, world\" to {}", hex::encode(hash));
 //! ```
 //!
 //! On the other hand, if you already have access to all of the data you woud like to hash, you
@@ -35,17 +30,11 @@
 //! to the algorithm you want to use.
 //!
 //! ```rust
-//! extern crate openssl;
-//! extern crate hex;
-//!
 //! use openssl::sha::sha256;
 //!
-//! fn main() {
-//!     let hash = sha256(b"your data or message");
-//!     println!("Hash = {}", hex::encode(hash));
-//! }
+//! let hash = sha256(b"your data or message");
+//! println!("Hash = {}", hex::encode(hash));
 //! ```
-use ffi;
 use libc::c_void;
 use std::mem;
 
@@ -341,8 +330,6 @@ impl Sha512 {
 
 #[cfg(test)]
 mod test {
-    use hex;
-
     use super::*;
 
     #[test]

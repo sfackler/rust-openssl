@@ -1,4 +1,3 @@
-#[allow(clippy::inconsistent_digit_grouping)]
 pub fn get(openssl_version: Option<u64>, libressl_version: Option<u64>) -> Vec<&'static str> {
     let mut cfgs = vec![];
 
@@ -28,6 +27,9 @@ pub fn get(openssl_version: Option<u64>, libressl_version: Option<u64>) -> Vec<&
         }
         if libressl_version >= 0x2_09_01_00_0 {
             cfgs.push("libressl291");
+        }
+        if libressl_version >= 0x3_02_01_00_0 {
+            cfgs.push("libressl321");
         }
     } else {
         let openssl_version = openssl_version.unwrap();
