@@ -15,6 +15,7 @@
 //!     Err(e) => println!("Parsing Error: {:?}", e),
 //! }
 //! ```
+use cfg_if::cfg_if;
 use libc::{c_char, c_int, c_ulong};
 use std::borrow::Cow;
 use std::error;
