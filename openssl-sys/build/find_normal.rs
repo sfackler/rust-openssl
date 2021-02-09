@@ -56,31 +56,33 @@ fn resolve_with_wellknown_homebrew_location(dir: &str) -> Option<PathBuf> {
     None
 }
 
-fn resolve_with_wellknown_pkgsrc_location() -> Option<PathBuf> {
-    let pkgsrc = Path::new("/opt/pkg");
-    let pkgsrc_include_openssl = pkgsrc.join("include/openssl");
-    if pkgsrc_include_openssl.exists() {
-        return Some(pkgsrc.to_path_buf());
+fn resolve_with_wellknown_location(dir: &str) -> Option<PathBuf> {
+    let root_dir = Path::new(dir);
+    let include_openssl = root_dir.join("include/openssl");
+    if include_openssl.exists() {
+        Some(root_dir.to_path_buf())
+    } else {
+        None
     }
-
-    None
 }
 
 fn find_openssl_dir(target: &str) -> OsString {
     let host = env::var("HOST").unwrap();
 
-    if host == target {
-        if target == "aarch64-apple-darwin" {
-            if let Some(dir) = resolve_with_wellknown_homebrew_location("/opt/homebrew/opt/openssl")
-            {
-                return dir.into();
-            }
-        } else if target.contains("apple-darwin") {
-            if let Some(dir) = resolve_with_wellknown_homebrew_location("/usr/local/opt/openssl") {
-                return dir.into();
-            } else if let Some(dir) = resolve_with_wellknown_pkgsrc_location() {
-                return dir.into();
-            }
+    if host == target && target.ends_with("-apple-darwin") {
+        let homebrew_dir = match target {
+            "aarch64-apple-darwin" => "/opt/homebrew/opt/openssl",
+            _ => "/usr/local/opt/openssl",
+        };
+
+        if let Some(dir) = resolve_with_wellknown_homebrew_location(homebrew_dir) {
+            return dir.into();
+        } else if let Some(dir) = resolve_with_wellknown_location("/opt/pkg") {
+            // pkgsrc
+            return dir.into();
+        } else if let Some(dir) = resolve_with_wellknown_location("/opt/local") {
+            // MacPorts
+            return dir.into();
         }
     }
 
