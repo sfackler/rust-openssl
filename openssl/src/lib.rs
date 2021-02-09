@@ -28,8 +28,14 @@
 //! Additionally, it will use `pkg-config` on Unix-like systems to find the system installation.
 //!
 //! ```not_rust
-//! # macOS
+//! # macOS (Homebrew)
 //! $ brew install openssl@1.1
+//!
+//! # macOS (MacPorts)
+//! $ sudo port install openssl
+//!
+//! # macOS (pkgsrc)
+//! $ sudo pkgin install openssl
 //!
 //! # Arch Linux
 //! $ sudo pacman -S pkg-config openssl
