@@ -27,7 +27,7 @@ fn resolve_with_wellknown_homebrew_location(dir: &str) -> Option<PathBuf> {
     //  `pkg-config` on brew doesn't necessarily contain settings for openssl apparently.
     let homebrew = Path::new(dir).join("opt/openssl@1.1");
     if homebrew.exists() {
-        return Some(homebrew.to_path_buf());
+        return Some(homebrew);
     }
 
     // Calling `brew --prefix <package>` command usually slow and
