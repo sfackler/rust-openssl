@@ -920,3 +920,11 @@ pub const NID_X448: c_int = 1035;
 pub const NID_ED25519: c_int = 1087;
 #[cfg(ossl111)]
 pub const NID_ED448: c_int = 1088;
+
+pub const NID_dhpublicnumber: c_int = 920;
+pub const NID_sm2: c_int = 1172;
+pub const NID_id_scrypt: c_int = 973;
+pub const NID_tls1_prf: c_int = 1021;
+pub const NID_hkdf: c_int = 1036;
+pub const NID_poly1305: c_int = 1061;
+pub const NID_siphash: c_int = 1062;

@@ -2,6 +2,9 @@ use libc::*;
 use *;
 
 pub const EVP_MAX_MD_SIZE: c_uint = 64;
+pub const EVP_MAX_KEY_LENGTH: c_uint = 64;
+pub const EVP_MAX_IV_LENGTH: c_uint = 16;
+pub const EVP_MAX_BLOCK_LENGTH: c_uint = 32;
 
 pub const PKCS5_SALT_LEN: c_int = 8;
 pub const PKCS12_DEFAULT_ITER: c_int = 2048;
@@ -53,10 +56,18 @@ cfg_if! {
 }
 
 extern "C" {
-    pub fn EVP_DigestInit_ex(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD, imple: *mut ENGINE)
+    pub fn EVP_DigestInit_ex(
+        ctx: *mut EVP_MD_CTX,
+        typ: *const EVP_MD,
+        imple: *mut ENGINE,
+    ) -> c_int;
+    pub fn EVP_DigestUpdate(
+        ctx: *mut EVP_MD_CTX,
+        data: *const c_void,
+        n: size_t,
+    ) -> c_int;
+    pub fn EVP_DigestFinal_ex(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32)
         -> c_int;
-    pub fn EVP_DigestUpdate(ctx: *mut EVP_MD_CTX, data: *const c_void, n: size_t) -> c_int;
-    pub fn EVP_DigestFinal_ex(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
     pub fn EVP_DigestInit(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD) -> c_int;
     pub fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
     #[cfg(ossl111)]
@@ -95,7 +106,11 @@ extern "C" {
         inbuf: *const u8,
         inlen: c_int,
     ) -> c_int;
-    pub fn EVP_CipherFinal(ctx: *mut EVP_CIPHER_CTX, res: *mut u8, len: *mut c_int) -> c_int;
+    pub fn EVP_CipherFinal(
+        ctx: *mut EVP_CIPHER_CTX,
+        res: *mut u8,
+        len: *mut c_int,
+    ) -> c_int;
 
     pub fn EVP_DigestSignInit(
         ctx: *mut EVP_MD_CTX,
@@ -125,7 +140,11 @@ extern "C" {
         pubk: *mut *mut EVP_PKEY,
         npubk: c_int,
     ) -> c_int;
-    pub fn EVP_SealFinal(ctx: *mut EVP_CIPHER_CTX, out: *mut c_uchar, outl: *mut c_int) -> c_int;
+    pub fn EVP_SealFinal(
+        ctx: *mut EVP_CIPHER_CTX,
+        out: *mut c_uchar,
+        outl: *mut c_int,
+    ) -> c_int;
     pub fn EVP_EncryptInit_ex(
         ctx: *mut EVP_CIPHER_CTX,
         cipher: *const EVP_CIPHER,
@@ -153,7 +172,11 @@ extern "C" {
         iv: *const c_uchar,
         priv_: *mut EVP_PKEY,
     ) -> c_int;
-    pub fn EVP_OpenFinal(ctx: *mut EVP_CIPHER_CTX, out: *mut c_uchar, outl: *mut c_int) -> c_int;
+    pub fn EVP_OpenFinal(
+        ctx: *mut EVP_CIPHER_CTX,
+        out: *mut c_uchar,
+        outl: *mut c_int,
+    ) -> c_int;
     pub fn EVP_DecryptInit_ex(
         ctx: *mut EVP_CIPHER_CTX,
         cipher: *const EVP_CIPHER,
@@ -214,8 +237,14 @@ extern "C" {
     pub fn EVP_CIPHER_CTX_new() -> *mut EVP_CIPHER_CTX;
     pub fn EVP_CIPHER_CTX_free(ctx: *mut EVP_CIPHER_CTX);
     pub fn EVP_MD_CTX_copy_ex(dst: *mut EVP_MD_CTX, src: *const EVP_MD_CTX) -> c_int;
-    pub fn EVP_CIPHER_CTX_set_key_length(ctx: *mut EVP_CIPHER_CTX, keylen: c_int) -> c_int;
-    pub fn EVP_CIPHER_CTX_set_padding(ctx: *mut EVP_CIPHER_CTX, padding: c_int) -> c_int;
+    pub fn EVP_CIPHER_CTX_set_key_length(
+        ctx: *mut EVP_CIPHER_CTX,
+        keylen: c_int,
+    ) -> c_int;
+    pub fn EVP_CIPHER_CTX_set_padding(
+        ctx: *mut EVP_CIPHER_CTX,
+        padding: c_int,
+    ) -> c_int;
     pub fn EVP_CIPHER_CTX_ctrl(
         ctx: *mut EVP_CIPHER_CTX,
         type_: c_int,
@@ -365,6 +394,8 @@ extern "C" {
     ) -> c_int;
 }
 
+pub const EVP_PKEY_OP_UNDEFINED: c_int = 0;
+pub const EVP_PKEY_OP_PARAMGEN: c_int = 1 << 1;
 pub const EVP_PKEY_OP_KEYGEN: c_int = 1 << 2;
 pub const EVP_PKEY_OP_SIGN: c_int = 1 << 3;
 pub const EVP_PKEY_OP_VERIFY: c_int = 1 << 4;
@@ -373,6 +404,7 @@ pub const EVP_PKEY_OP_SIGNCTX: c_int = 1 << 6;
 pub const EVP_PKEY_OP_VERIFYCTX: c_int = 1 << 7;
 pub const EVP_PKEY_OP_ENCRYPT: c_int = 1 << 8;
 pub const EVP_PKEY_OP_DECRYPT: c_int = 1 << 9;
+pub const EVP_PKEY_OP_DERIVE: c_int = 1 << 10;
 
 pub const EVP_PKEY_OP_TYPE_SIG: c_int = EVP_PKEY_OP_SIGN
     | EVP_PKEY_OP_VERIFY
@@ -402,6 +434,19 @@ extern "C" {
         p2: *mut c_void,
     ) -> c_int;
 
+    pub fn EVP_PKEY_CTX_ctrl_str(
+        ctx: *mut EVP_PKEY_CTX,
+        type_: *const c_char,
+        value: *const c_char,
+    ) -> c_int;
+    pub fn EVP_PKEY_CTX_ctrl_uint64(
+        ctx: *mut EVP_PKEY_CTX,
+        keytype: c_int,
+        optype: c_int,
+        cmd: c_int,
+        value: u64,
+    ) -> c_int;
+
     pub fn EVP_PKEY_new_mac_key(
         type_: c_int,
         e: *mut ENGINE,
@@ -410,8 +455,15 @@ extern "C" {
     ) -> *mut EVP_PKEY;
 
     pub fn EVP_PKEY_derive_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
-    pub fn EVP_PKEY_derive_set_peer(ctx: *mut EVP_PKEY_CTX, peer: *mut EVP_PKEY) -> c_int;
-    pub fn EVP_PKEY_derive(ctx: *mut EVP_PKEY_CTX, key: *mut c_uchar, size: *mut size_t) -> c_int;
+    pub fn EVP_PKEY_derive_set_peer(
+        ctx: *mut EVP_PKEY_CTX,
+        peer: *mut EVP_PKEY,
+    ) -> c_int;
+    pub fn EVP_PKEY_derive(
+        ctx: *mut EVP_PKEY_CTX,
+        key: *mut c_uchar,
+        size: *mut size_t,
+    ) -> c_int;
 
     pub fn EVP_PKEY_keygen_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
     pub fn EVP_PKEY_keygen(ctx: *mut EVP_PKEY_CTX, key: *mut *mut EVP_PKEY) -> c_int;
@@ -470,6 +522,40 @@ cfg_if! {
 }
 
 extern "C" {
-    pub fn EVP_EncodeBlock(dst: *mut c_uchar, src: *const c_uchar, src_len: c_int) -> c_int;
-    pub fn EVP_DecodeBlock(dst: *mut c_uchar, src: *const c_uchar, src_len: c_int) -> c_int;
+    pub fn EVP_EncodeBlock(
+        dst: *mut c_uchar,
+        src: *const c_uchar,
+        src_len: c_int,
+    ) -> c_int;
+    pub fn EVP_DecodeBlock(
+        dst: *mut c_uchar,
+        src: *const c_uchar,
+        src_len: c_int,
+    ) -> c_int;
 }
+
+pub const EVP_PK_RSA: c_int = 0x0001;
+pub const EVP_PK_DSA: c_int = 0x0002;
+pub const EVP_PK_DH: c_int = 0x0004;
+pub const EVP_PK_EC: c_int = 0x0008;
+pub const EVP_PKT_SIGN: c_int = 0x0010;
+pub const EVP_PKT_ENC: c_int = 0x0020;
+pub const EVP_PKT_EXCH: c_int = 0x0040;
+pub const EVP_PKS_RSA: c_int = 0x0100;
+pub const EVP_PKS_DSA: c_int = 0x0200;
+pub const EVP_PKS_EC: c_int = 0x0400;
+
+pub const EVP_PKEY_NONE: c_int = crate::obj_mac::NID_undef;
+pub const EVP_PKEY_RSA2: c_int = crate::obj_mac::NID_rsa;
+pub const EVP_PKEY_RSA_PSS: c_int = crate::obj_mac::NID_rsassaPss;
+pub const EVP_PKEY_DSA1: c_int = crate::obj_mac::NID_dsa_2;
+pub const EVP_PKEY_DSA2: c_int = crate::obj_mac::NID_dsaWithSHA;
+pub const EVP_PKEY_DSA3: c_int = crate::obj_mac::NID_dsaWithSHA1;
+pub const EVP_PKEY_DSA4: c_int = crate::obj_mac::NID_dsaWithSHA1_2;
+pub const EVP_PKEY_DHX: c_int = crate::obj_mac::NID_dhpublicnumber;
+pub const EVP_PKEY_SM2: c_int = crate::obj_mac::NID_sm2;
+pub const EVP_PKEY_SCRYPT: c_int = crate::obj_mac::NID_id_scrypt;
+pub const EVP_PKEY_TLS1_PRF: c_int = crate::obj_mac::NID_tls1_prf;
+pub const EVP_PKEY_HKDF: c_int = crate::obj_mac::NID_hkdf;
+pub const EVP_PKEY_POLY1305: c_int = crate::obj_mac::NID_poly1305;
+pub const EVP_PKEY_SIPHASH: c_int = crate::obj_mac::NID_siphash;
