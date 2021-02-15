@@ -60,10 +60,7 @@ pub unsafe fn SSL_set_tlsext_status_type(s: *mut SSL, type_: c_int) -> c_long {
     )
 }
 
-pub unsafe fn SSL_get_tlsext_status_ocsp_resp(
-    ssl: *mut SSL,
-    resp: *mut *mut c_uchar,
-) -> c_long {
+pub unsafe fn SSL_get_tlsext_status_ocsp_resp(ssl: *mut SSL, resp: *mut *mut c_uchar) -> c_long {
     SSL_ctrl(
         ssl,
         SSL_CTRL_GET_TLSEXT_STATUS_REQ_OCSP_RESP,
@@ -98,10 +95,7 @@ pub const SSL_TLSEXT_ERR_ALERT_WARNING: c_int = 1;
 pub const SSL_TLSEXT_ERR_ALERT_FATAL: c_int = 2;
 pub const SSL_TLSEXT_ERR_NOACK: c_int = 3;
 
-pub unsafe fn SSL_CTX_set_tlsext_servername_arg(
-    ctx: *mut SSL_CTX,
-    arg: *mut c_void,
-) -> c_long {
+pub unsafe fn SSL_CTX_set_tlsext_servername_arg(ctx: *mut SSL_CTX, arg: *mut c_void) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG, 0, arg)
 }
 
@@ -112,10 +106,7 @@ pub unsafe fn SSL_CTX_set_tlsext_status_cb(
     SSL_CTX_callback_ctrl(ctx, SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB, mem::transmute(cb))
 }
 
-pub unsafe fn SSL_CTX_set_tlsext_status_arg(
-    ctx: *mut SSL_CTX,
-    arg: *mut c_void,
-) -> c_long {
+pub unsafe fn SSL_CTX_set_tlsext_status_arg(ctx: *mut SSL_CTX, arg: *mut c_void) -> c_long {
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG, 0, arg)
 }
 
@@ -407,31 +398,25 @@ pub const TLS1_CK_RSA_PSK_WITH_ARIA_256_GCM_SHA384: c_int = 0x0300C06F;
 
 pub const TLS_MD_MAX_CONST_SIZE: c_int = 22;
 
-pub const TLS_MD_CLIENT_FINISH_CONST: *const c_char =
-    "client finished\0".as_ptr() as *const _;
+pub const TLS_MD_CLIENT_FINISH_CONST: *const c_char = "client finished\0".as_ptr() as *const _;
 pub const TLS_MD_CLIENT_FINISH_CONST_SIZE: c_int = 15;
 
-pub const TLS_MD_SERVER_FINISH_CONST: *const c_char =
-    "server finished\0".as_ptr() as *const _;
+pub const TLS_MD_SERVER_FINISH_CONST: *const c_char = "server finished\0".as_ptr() as *const _;
 pub const TLS_MD_SERVER_FINISH_CONST_SIZE: c_int = 15;
 
-pub const TLS_MD_KEY_EXPANSION_CONST: *const c_char =
-    "key expansion\0".as_ptr() as *const _;
+pub const TLS_MD_KEY_EXPANSION_CONST: *const c_char = "key expansion\0".as_ptr() as *const _;
 pub const TLS_MD_KEY_EXPANSION_CONST_SIZE: c_int = 13;
 
-pub const TLS_MD_CLIENT_WRITE_KEY_CONST: *const c_char =
-    "client write key\0".as_ptr() as *const _;
+pub const TLS_MD_CLIENT_WRITE_KEY_CONST: *const c_char = "client write key\0".as_ptr() as *const _;
 pub const TLS_MD_CLIENT_WRITE_KEY_CONST_SIZE: c_int = 16;
 
-pub const TLS_MD_SERVER_WRITE_KEY_CONST: *const c_char =
-    "server write key\0".as_ptr() as *const _;
+pub const TLS_MD_SERVER_WRITE_KEY_CONST: *const c_char = "server write key\0".as_ptr() as *const _;
 pub const TLS_MD_SERVER_WRITE_KEY_CONST_SIZE: c_int = 16;
 
 pub const TLS_MD_IV_BLOCK_CONST: *const c_char = "IV block\0".as_ptr() as *const _;
 pub const TLS_MD_IV_BLOCK_CONST_SIZE: c_int = 8;
 
-pub const TLS_MD_MASTER_SECRET_CONST: *const c_char =
-    "master secret\0".as_ptr() as *const _;
+pub const TLS_MD_MASTER_SECRET_CONST: *const c_char = "master secret\0".as_ptr() as *const _;
 pub const TLS_MD_MASTER_SECRET_CONST_SIZE: c_int = 13;
 
 pub const TLS_MD_EXTENDED_MASTER_SECRET_CONST: *const c_char =
