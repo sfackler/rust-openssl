@@ -358,6 +358,7 @@ impl DerefMut for SslAcceptorBuilder {
 
 cfg_if! {
     if #[cfg(ossl110)] {
+        #[allow(clippy::unnecessary_wraps)]
         fn setup_curves(_: &mut SslContextBuilder) -> Result<(), ErrorStack> {
             Ok(())
         }
