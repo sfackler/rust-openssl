@@ -81,6 +81,14 @@ extern "C" {
 
     pub fn EC_GROUP_new_by_curve_name(nid: c_int) -> *mut EC_GROUP;
 
+    pub fn EC_POINT_is_at_infinity(group: *const EC_GROUP, point: *const EC_POINT) -> c_int;
+
+    pub fn EC_POINT_is_on_curve(
+        group: *const EC_GROUP,
+        point: *const EC_POINT,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+
     pub fn EC_POINT_new(group: *const EC_GROUP) -> *mut EC_POINT;
 
     pub fn EC_POINT_free(point: *mut EC_POINT);
