@@ -18,6 +18,7 @@ v110 = []
 v111 = []
 
 vendored = ['ffi/vendored']
+weak-crypto = ["ffi/weak-crypto"]
 
 [dependencies]
 bitflags = "1.0"
