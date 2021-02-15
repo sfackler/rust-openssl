@@ -529,14 +529,22 @@ impl EcPointRef {
     }
 
     /// Checks if point is infinity
-    pub fn is_infinity(&self, group: &EcGroupRef) -> Result<bool, ErrorStack> {
+    ///
+    /// OpenSSL documentation at [`EC_POINT_is_at_infinity`]
+    ///
+    /// [`EC_POINT_is_at_infinity`]: https://www.openssl.org/docs/man1.1.0/man3/EC_POINT_is_at_infinity.html
+    pub fn is_infinity(&self, group: &EcGroupRef) -> bool {
         unsafe {
-            let res = cvt_n(ffi::EC_POINT_is_at_infinity(group.as_ptr(), self.as_ptr()))?;
-            Ok(res == 1)
+            let res = ffi::EC_POINT_is_at_infinity(group.as_ptr(), self.as_ptr());
+            res == 1
         }
     }
 
     /// Checks if point is on a given curve
+    ///
+    /// OpenSSL documentation at [`EC_POINT_is_on_curve`]
+    ///
+    /// [`EC_POINT_is_on_curve`]: https://www.openssl.org/docs/man1.1.0/man3/EC_POINT_is_on_curve.html
     pub fn is_on_curve(
         &self,
         group: &EcGroupRef,
@@ -1104,13 +1112,13 @@ mod test {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let mut ctx = BigNumContext::new().unwrap();
         let g = group.generator();
-        assert_eq!(g.is_infinity(&group).unwrap(), false);
+        assert_eq!(g.is_infinity(&group), false);
 
         let mut order = BigNum::new().unwrap();
         group.order(&mut order, &mut ctx).unwrap();
         let mut inf = EcPoint::new(&group).unwrap();
         inf.mul_generator(&group, &order, &ctx).unwrap();
-        assert_eq!(inf.is_infinity(&group).unwrap(), true);
+        assert_eq!(inf.is_infinity(&group), true);
     }
 
     #[test]
