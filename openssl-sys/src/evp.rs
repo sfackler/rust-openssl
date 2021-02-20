@@ -368,13 +368,13 @@ extern "C" {
 pub const EVP_PKEY_OP_KEYGEN: c_int = 1 << 2;
 cfg_if! {
     if #[cfg(ossl300)] {
-        pub const EVP_PKEY_OP_SIGN: c_int = 1 << 5;
-        pub const EVP_PKEY_OP_VERIFY: c_int = 1 << 6;
-        pub const EVP_PKEY_OP_VERIFYRECOVER: c_int = 1 << 7;
-        pub const EVP_PKEY_OP_SIGNCTX: c_int = 1 << 8;
-        pub const EVP_PKEY_OP_VERIFYCTX: c_int = 1 << 9;
-        pub const EVP_PKEY_OP_ENCRYPT: c_int = 1 << 10;
-        pub const EVP_PKEY_OP_DECRYPT: c_int = 1 << 11;
+        pub const EVP_PKEY_OP_SIGN: c_int = 1 << 4;
+        pub const EVP_PKEY_OP_VERIFY: c_int = 1 << 5;
+        pub const EVP_PKEY_OP_VERIFYRECOVER: c_int = 1 << 6;
+        pub const EVP_PKEY_OP_SIGNCTX: c_int = 1 << 7;
+        pub const EVP_PKEY_OP_VERIFYCTX: c_int = 1 << 8;
+        pub const EVP_PKEY_OP_ENCRYPT: c_int = 1 << 9;
+        pub const EVP_PKEY_OP_DECRYPT: c_int = 1 << 10;
     } else {
         pub const EVP_PKEY_OP_SIGN: c_int = 1 << 3;
         pub const EVP_PKEY_OP_VERIFY: c_int = 1 << 4;
