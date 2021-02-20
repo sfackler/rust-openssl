@@ -25,16 +25,11 @@ fn resolve_with_wellknown_homebrew_location(dir: &str) -> Option<PathBuf> {
     // Check up default aarch 64 Homebrew installation location first
     // for quick resolution if possible.
     //  `pkg-config` on brew doesn't necessarily contain settings for openssl apparently.
-    let mut version_dir = dir.to_owned();
-    version_dir.push_str("@1.1");
-    let homebrew = Path::new(&version_dir);
+    let homebrew = Path::new(dir).join("opt/openssl@1.1");
     if homebrew.exists() {
-        return Some(homebrew.to_path_buf());
+        return Some(homebrew);
     }
-    let homebrew = Path::new(dir);
-    if homebrew.exists() {
-        return Some(homebrew.to_path_buf());
-    }
+
     // Calling `brew --prefix <package>` command usually slow and
     // takes seconds, and will be used only as a last resort.
     let output = execute_command_and_get_output("brew", &["--prefix", "openssl@1.1"]);
@@ -45,42 +40,36 @@ fn resolve_with_wellknown_homebrew_location(dir: &str) -> Option<PathBuf> {
         }
     }
 
-    let output = execute_command_and_get_output("brew", &["--prefix", "openssl"]);
-    if let Some(ref output) = output {
-        let homebrew = Path::new(&output);
-        if homebrew.exists() {
-            return Some(homebrew.to_path_buf());
-        }
-    }
-
     None
 }
 
-fn resolve_with_wellknown_pkgsrc_location() -> Option<PathBuf> {
-    let pkgsrc = Path::new("/opt/pkg");
-    let pkgsrc_include_openssl = pkgsrc.join("include/openssl");
-    if pkgsrc_include_openssl.exists() {
-        return Some(pkgsrc.to_path_buf());
+fn resolve_with_wellknown_location(dir: &str) -> Option<PathBuf> {
+    let root_dir = Path::new(dir);
+    let include_openssl = root_dir.join("include/openssl");
+    if include_openssl.exists() {
+        Some(root_dir.to_path_buf())
+    } else {
+        None
     }
-
-    None
 }
 
 fn find_openssl_dir(target: &str) -> OsString {
     let host = env::var("HOST").unwrap();
 
-    if host == target {
-        if target == "aarch64-apple-darwin" {
-            if let Some(dir) = resolve_with_wellknown_homebrew_location("/opt/homebrew/opt/openssl")
-            {
-                return dir.into();
-            }
-        } else if target.contains("apple-darwin") {
-            if let Some(dir) = resolve_with_wellknown_homebrew_location("/usr/local/opt/openssl") {
-                return dir.into();
-            } else if let Some(dir) = resolve_with_wellknown_pkgsrc_location() {
-                return dir.into();
-            }
+    if host == target && target.ends_with("-apple-darwin") {
+        let homebrew_dir = match target {
+            "aarch64-apple-darwin" => "/opt/homebrew",
+            _ => "/usr/local",
+        };
+
+        if let Some(dir) = resolve_with_wellknown_homebrew_location(homebrew_dir) {
+            return dir.into();
+        } else if let Some(dir) = resolve_with_wellknown_location("/opt/pkg") {
+            // pkgsrc
+            return dir.into();
+        } else if let Some(dir) = resolve_with_wellknown_location("/opt/local") {
+            // MacPorts
+            return dir.into();
         }
     }
 
