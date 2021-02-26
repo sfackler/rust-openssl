@@ -3482,8 +3482,8 @@ impl<S: Read + Write> SslStream<S> {
     /// Creates a new `SslStream`.
     ///
     /// This function performs no IO; the stream will not have performed any part of the handshake
-    /// with the peer. If the `Ssl` was configured with [`SslRef::set_client_state`] or
-    /// [`SslRef::set_server_state`], the handshake can be performed automatically during the first
+    /// with the peer. If the `Ssl` was configured with [`SslRef::set_connect_state`] or
+    /// [`SslRef::set_accept_state`], the handshake can be performed automatically during the first
     /// call to read or write. Otherwise the `connect` and `accept` methods can be used to
     /// explicitly perform the handshake.
     ///
