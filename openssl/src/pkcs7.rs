@@ -1,12 +1,13 @@
 use bitflags::bitflags;
-use foreign_types::ForeignTypeRef;
+use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
+use std::mem;
 use std::ptr;
 
 use crate::bio::{MemBio, MemBioSlice};
 use crate::error::ErrorStack;
 use crate::pkey::{HasPrivate, PKeyRef};
-use crate::stack::StackRef;
+use crate::stack::{Stack, StackRef};
 use crate::symm::Cipher;
 use crate::x509::store::X509StoreRef;
 use crate::x509::{X509Ref, X509};
@@ -281,10 +282,40 @@ impl Pkcs7Ref {
 
         Ok(())
     }
+
+    /// Retrieve the signer's certificates from the PKCS#7 structure without verifying them.
+    ///
+    /// This corresponds to [`PKCS7_get0_signers`].
+    ///
+    /// [`PKCS7_get0_signers`]: https://www.openssl.org/docs/man1.0.2/crypto/PKCS7_verify.html
+    pub fn signers(
+        &self,
+        certs: &StackRef<X509>,
+        flags: Pkcs7Flags,
+    ) -> Result<Stack<X509>, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::PKCS7_get0_signers(
+                self.as_ptr(),
+                certs.as_ptr(),
+                flags.bits,
+            ))?;
+
+            // The returned stack is owned by the caller, but the certs inside are not! Our stack interface can't deal
+            // with that, so instead we just manually bump the refcount of the certs so that the whole stack is properly
+            // owned.
+            let stack = Stack::<X509>::from_ptr(ptr);
+            for cert in &stack {
+                mem::forget(cert.to_owned());
+            }
+
+            Ok(stack)
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::hash::MessageDigest;
     use crate::pkcs7::{Pkcs7, Pkcs7Flags};
     use crate::pkey::PKey;
     use crate::stack::Stack;
@@ -396,6 +427,41 @@ mod tests {
 
         assert_eq!(output, message.as_bytes());
         assert!(content.is_none());
+    }
+
+    #[test]
+    fn signers() {
+        let cert = include_bytes!("../test/cert.pem");
+        let cert = X509::from_pem(cert).unwrap();
+        let cert_digest = cert.digest(MessageDigest::sha256()).unwrap();
+        let certs = Stack::new().unwrap();
+        let message = "foo";
+        let flags = Pkcs7Flags::STREAM;
+        let pkey = include_bytes!("../test/key.pem");
+        let pkey = PKey::private_key_from_pem(pkey).unwrap();
+        let mut store_builder = X509StoreBuilder::new().expect("should succeed");
+
+        let root_ca = include_bytes!("../test/root-ca.pem");
+        let root_ca = X509::from_pem(root_ca).unwrap();
+        store_builder.add_cert(root_ca).expect("should succeed");
+
+        let pkcs7 =
+            Pkcs7::sign(&cert, &pkey, &certs, message.as_bytes(), flags).expect("should succeed");
+
+        let signed = pkcs7
+            .to_smime(message.as_bytes(), flags)
+            .expect("should succeed");
+
+        let (pkcs7_decoded, _) = Pkcs7::from_smime(signed.as_slice()).expect("should succeed");
+
+        let empty_certs = Stack::new().unwrap();
+        let signer_certs = pkcs7_decoded
+            .signers(&empty_certs, flags)
+            .expect("should succeed");
+        assert_eq!(empty_certs.len(), 0);
+        assert_eq!(signer_certs.len(), 1);
+        let signer_digest = signer_certs[0].digest(MessageDigest::sha256()).unwrap();
+        assert_eq!(*cert_digest, *signer_digest);
     }
 
     #[test]

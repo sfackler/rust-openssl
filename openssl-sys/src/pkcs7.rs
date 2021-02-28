@@ -49,6 +49,12 @@ extern "C" {
         flags: c_int,
     ) -> c_int;
 
+    pub fn PKCS7_get0_signers(
+        pkcs7: *mut PKCS7,
+        certs: *mut stack_st_X509,
+        flags: c_int,
+    ) -> *mut stack_st_X509;
+
     pub fn PKCS7_sign(
         signcert: *mut X509,
         pkey: *mut EVP_PKEY,
