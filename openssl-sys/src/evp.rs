@@ -518,3 +518,7 @@ pub const EVP_PKEY_TLS1_PRF: c_int = crate::obj_mac::NID_tls1_prf;
 pub const EVP_PKEY_HKDF: c_int = crate::obj_mac::NID_hkdf;
 pub const EVP_PKEY_POLY1305: c_int = crate::obj_mac::NID_poly1305;
 pub const EVP_PKEY_SIPHASH: c_int = crate::obj_mac::NID_siphash;
+
+extern "C" {
+    pub fn EVP_md5_sha1() -> *const EVP_MD;
+}
