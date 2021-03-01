@@ -151,6 +151,7 @@ pub mod fips;
 pub mod hash;
 pub mod memcmp;
 pub mod nid;
+#[cfg(not(osslconf = "OPENSSL_NO_OCSP"))]
 pub mod ocsp;
 pub mod pkcs12;
 pub mod pkcs5;
