@@ -178,6 +178,24 @@ fn test_subject_alt_name_iter() {
 }
 
 #[test]
+fn test_aia_ca_issuer() {
+    // With AIA
+    let cert = include_bytes!("../../test/aia_test_cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let authority_info = cert.authority_info().unwrap();
+    assert_eq!(authority_info.len(), 1);
+    assert_eq!(authority_info[0].method().to_string(), "CA Issuers");
+    assert_eq!(
+        authority_info[0].location().uri(),
+        Some("http://www.example.com/cert.pem")
+    );
+    // Without AIA
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    assert!(cert.authority_info().is_none());
+}
+
+#[test]
 fn x509_builder() {
     let pkey = pkey();
 
