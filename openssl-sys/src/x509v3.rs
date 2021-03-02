@@ -28,6 +28,18 @@ extern "C" {
 }
 
 #[repr(C)]
+pub struct ACCESS_DESCRIPTION {
+    pub method: *mut ASN1_OBJECT,
+    pub location: *mut GENERAL_NAME,
+}
+
+stack!(stack_st_ACCESS_DESCRIPTION);
+
+extern "C" {
+    pub fn ACCESS_DESCRIPTION_free(ad: *mut ACCESS_DESCRIPTION);
+}
+
+#[repr(C)]
 pub struct AUTHORITY_KEYID {
     pub keyid: *mut ASN1_OCTET_STRING,
     pub issuer: *mut stack_st_GENERAL_NAME,

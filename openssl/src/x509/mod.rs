@@ -449,6 +449,24 @@ impl X509Ref {
         }
     }
 
+    /// Returns this certificate's [`authority information access`] entries, if they exist.
+    ///
+    /// This corresponds to [`X509_get_ext_d2i`] called with `NID_info_access`.
+    ///
+    /// [`X509_get_ext_d2i`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_get_ext_d2i.html
+    /// [`authority information access`]: https://tools.ietf.org/html/rfc5280#section-4.2.2.1
+    pub fn authority_info(&self) -> Option<Stack<AccessDescription>> {
+        unsafe {
+            let stack = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_info_access,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+            Stack::from_ptr_opt(stack as *mut _)
+        }
+    }
+
     pub fn public_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
             let pkey = cvt_p(ffi::X509_get_pubkey(self.as_ptr()))?;
@@ -1415,6 +1433,32 @@ impl fmt::Debug for GeneralNameRef {
 
 impl Stackable for GeneralName {
     type StackType = ffi::stack_st_GENERAL_NAME;
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::ACCESS_DESCRIPTION;
+    fn drop = ffi::ACCESS_DESCRIPTION_free;
+
+    /// `AccessDescription` of certificate authority information.
+    pub struct AccessDescription;
+    /// Reference to `AccessDescription`.
+    pub struct AccessDescriptionRef;
+}
+
+impl AccessDescriptionRef {
+    /// Returns the access method OID.
+    pub fn method(&self) -> &Asn1ObjectRef {
+        unsafe { Asn1ObjectRef::from_ptr((*self.as_ptr()).method) }
+    }
+
+    // Returns the access location.
+    pub fn location(&self) -> &GeneralNameRef {
+        unsafe { GeneralNameRef::from_ptr((*self.as_ptr()).location) }
+    }
+}
+
+impl Stackable for AccessDescription {
+    type StackType = ffi::stack_st_ACCESS_DESCRIPTION;
 }
 
 foreign_type_and_impl_send_sync! {
