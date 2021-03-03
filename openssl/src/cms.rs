@@ -1,6 +1,6 @@
 //! SMIME implementation using CMS
 //!
-//! CMS (PKCS#7) is an encyption standard.  It allows signing and ecrypting data using
+//! CMS (PKCS#7) is an encyption standard.  It allows signing and encrypting data using
 //! X.509 certificates.  The OpenSSL implementation of CMS is used in email encryption
 //! generated from a `Vec` of bytes.  This `Vec` follows the smime protocol standards.
 //! Data accepted by this module will be smime type `enveloped-data`.
@@ -67,19 +67,23 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl CmsContentInfoRef {
-    /// Given the sender's private key, `pkey` and the recipient's certificiate, `cert`,
+    /// Given the sender's private key, `pkey` and the (optional) recipient's certificiate, `cert`,
     /// decrypt the data in `self`.
     ///
-    /// OpenSSL documentation at [`CMS_decrypt`]
+    /// *Warning*: Not providing a certificate may leave you vulnerable to Bleichenbacher's attack on PKCS#1 v1.5 RSA padding.
+    /// See the [`OpenSSL docs`] for more information.
     ///
-    /// [`CMS_decrypt`]: https://www.openssl.org/docs/man1.1.0/crypto/CMS_decrypt.html
-    pub fn decrypt<T>(&self, pkey: &PKeyRef<T>, cert: &X509) -> Result<Vec<u8>, ErrorStack>
+    /// [`OpenSSL docs`]: https://www.openssl.org/docs/man1.1.0/crypto/CMS_decrypt.html
+    pub fn decrypt<T>(&self, pkey: &PKeyRef<T>, cert: Option<&X509>) -> Result<Vec<u8>, ErrorStack>
     where
         T: HasPrivate,
     {
         unsafe {
             let pkey = pkey.as_ptr();
-            let cert = cert.as_ptr();
+            let cert = match cert {
+                Some(wrapped_cert) => wrapped_cert.as_ptr(),
+                None => ptr::null_mut(),
+            };
             let out = MemBio::new()?;
 
             cvt(ffi::CMS_decrypt(
@@ -262,7 +266,7 @@ mod test {
             let decrypt =
                 CmsContentInfo::from_der(&encrypted_der).expect("failed read cms from der");
             let decrypt = decrypt
-                .decrypt(&priv_cert.pkey, &priv_cert.cert)
+                .decrypt(&priv_cert.pkey, Some(&priv_cert.cert))
                 .expect("failed to decrypt cms");
             let decrypt =
                 String::from_utf8(decrypt).expect("failed to create string from cms content");
@@ -274,12 +278,18 @@ mod test {
             let encrypted_pem = encrypt.to_pem().expect("failed to create pem from cms");
             let decrypt =
                 CmsContentInfo::from_pem(&encrypted_pem).expect("failed read cms from pem");
-            let decrypt = decrypt
-                .decrypt(&priv_cert.pkey, &priv_cert.cert)
+            let decrypt_with_cert_check = decrypt
+                .decrypt(&priv_cert.pkey, Some(&priv_cert.cert))
                 .expect("failed to decrypt cms");
-            let decrypt =
-                String::from_utf8(decrypt).expect("failed to create string from cms content");
-            assert_eq!(input, decrypt);
+            let decrypt_with_cert_check = String::from_utf8(decrypt_with_cert_check)
+                .expect("failed to create string from cms content");
+            let decrypt_without_cert_check = decrypt
+                .decrypt(&priv_cert.pkey, None)
+                .expect("failed to decrypt cms");
+            let decrypt_without_cert_check = String::from_utf8(decrypt_without_cert_check)
+                .expect("failed to create string from cms content");
+            assert_eq!(input, decrypt_with_cert_check);
+            assert_eq!(input, decrypt_without_cert_check);
         }
     }
 }
