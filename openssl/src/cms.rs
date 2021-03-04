@@ -66,30 +66,54 @@ foreign_type_and_impl_send_sync! {
     pub struct CmsContentInfoRef;
 }
 
-impl CmsContentInfoRef {
-    /// Given the sender's private key, `pkey` and the (optional) recipient's certificiate, `cert`,
+impl CmsContentInfoRef {    
+    /// Given the sender's private key, `pkey` and the recipient's certificiate, `cert`,
     /// decrypt the data in `self`.
     ///
-    /// *Warning*: Not providing a certificate may leave you vulnerable to Bleichenbacher's attack on PKCS#1 v1.5 RSA padding.
-    /// See the [`OpenSSL docs`] for more information.
+    /// OpenSSL documentation at [`CMS_decrypt`]
     ///
-    /// [`OpenSSL docs`]: https://www.openssl.org/docs/man1.1.0/crypto/CMS_decrypt.html
-    pub fn decrypt<T>(&self, pkey: &PKeyRef<T>, cert: Option<&X509>) -> Result<Vec<u8>, ErrorStack>
+    /// [`CMS_decrypt`]: https://www.openssl.org/docs/man1.1.0/crypto/CMS_decrypt.html
+    pub fn decrypt<T>(&self, pkey: &PKeyRef<T>, cert: &X509) -> Result<Vec<u8>, ErrorStack>
     where
         T: HasPrivate,
     {
         unsafe {
             let pkey = pkey.as_ptr();
-            let cert = match cert {
-                Some(wrapped_cert) => wrapped_cert.as_ptr(),
-                None => ptr::null_mut(),
-            };
+            let cert = cert.as_ptr();
             let out = MemBio::new()?;
 
             cvt(ffi::CMS_decrypt(
                 self.as_ptr(),
                 pkey,
                 cert,
+                ptr::null_mut(),
+                out.as_ptr(),
+                0,
+            ))?;
+
+            Ok(out.get_buf().to_owned())
+        }
+    }
+    
+    /// Given the sender's private key, `pkey`,
+    /// decrypt the data in `self` without validating the recipient certificate.
+    ///
+    /// *Warning*: Not checking the recipient certificate may leave you vulnerable to Bleichenbacher's attack on PKCS#1 v1.5 RSA padding.
+    /// See [`CMS_decrypt`] for more information.
+    ///
+    /// [`CMS_decrypt`]: https://www.openssl.org/docs/man1.1.0/crypto/CMS_decrypt.html
+    pub fn decrypt_without_cert_check<T>(&self, pkey: &PKeyRef<T>) -> Result<Vec<u8>, ErrorStack>
+    where
+        T: HasPrivate,
+    {
+        unsafe {
+            let pkey = pkey.as_ptr();
+            let out = MemBio::new()?;
+
+            cvt(ffi::CMS_decrypt(
+                self.as_ptr(),
+                pkey,
+                ptr::null_mut(),
                 ptr::null_mut(),
                 out.as_ptr(),
                 0,
@@ -279,12 +303,12 @@ mod test {
             let decrypt =
                 CmsContentInfo::from_pem(&encrypted_pem).expect("failed read cms from pem");
             let decrypt_with_cert_check = decrypt
-                .decrypt(&priv_cert.pkey, Some(&priv_cert.cert))
+                .decrypt(&priv_cert.pkey, &priv_cert.cert)
                 .expect("failed to decrypt cms");
             let decrypt_with_cert_check = String::from_utf8(decrypt_with_cert_check)
                 .expect("failed to create string from cms content");
             let decrypt_without_cert_check = decrypt
-                .decrypt(&priv_cert.pkey, None)
+                .decrypt_without_cert_check(&priv_cert.pkey)
                 .expect("failed to decrypt cms");
             let decrypt_without_cert_check = String::from_utf8(decrypt_without_cert_check)
                 .expect("failed to create string from cms content");
