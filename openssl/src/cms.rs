@@ -66,7 +66,7 @@ foreign_type_and_impl_send_sync! {
     pub struct CmsContentInfoRef;
 }
 
-impl CmsContentInfoRef {    
+impl CmsContentInfoRef {
     /// Given the sender's private key, `pkey` and the recipient's certificiate, `cert`,
     /// decrypt the data in `self`.
     ///
@@ -94,7 +94,7 @@ impl CmsContentInfoRef {
             Ok(out.get_buf().to_owned())
         }
     }
-    
+
     /// Given the sender's private key, `pkey`,
     /// decrypt the data in `self` without validating the recipient certificate.
     ///
