@@ -289,12 +289,21 @@ mod test {
             let encrypted_der = encrypt.to_der().expect("failed to create der from cms");
             let decrypt =
                 CmsContentInfo::from_der(&encrypted_der).expect("failed read cms from der");
-            let decrypt = decrypt
-                .decrypt(&priv_cert.pkey, Some(&priv_cert.cert))
+            
+            let decrypt_with_cert_check = decrypt
+                .decrypt(&priv_cert.pkey, &priv_cert.cert)
                 .expect("failed to decrypt cms");
-            let decrypt =
-                String::from_utf8(decrypt).expect("failed to create string from cms content");
-            assert_eq!(input, decrypt);
+            let decrypt_with_cert_check =
+                String::from_utf8(decrypt_with_cert_check).expect("failed to create string from cms content");
+
+            let decrypt_without_cert_check = decrypt
+                .decrypt_without_cert_check(&priv_cert.pkey)
+                .expect("failed to decrypt cms");
+            let decrypt_without_cert_check = String::from_utf8(decrypt_without_cert_check)
+                .expect("failed to create string from cms content");
+
+            assert_eq!(input, decrypt_with_cert_check);
+            assert_eq!(input, decrypt_without_cert_check);
         }
 
         // decrypt cms message using private key cert (PEM)
@@ -302,11 +311,13 @@ mod test {
             let encrypted_pem = encrypt.to_pem().expect("failed to create pem from cms");
             let decrypt =
                 CmsContentInfo::from_pem(&encrypted_pem).expect("failed read cms from pem");
+            
             let decrypt_with_cert_check = decrypt
                 .decrypt(&priv_cert.pkey, &priv_cert.cert)
                 .expect("failed to decrypt cms");
             let decrypt_with_cert_check = String::from_utf8(decrypt_with_cert_check)
                 .expect("failed to create string from cms content");
+            
             let decrypt_without_cert_check = decrypt
                 .decrypt_without_cert_check(&priv_cert.pkey)
                 .expect("failed to decrypt cms");
