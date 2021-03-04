@@ -323,6 +323,7 @@ mod test {
                 .expect("failed to decrypt cms");
             let decrypt_without_cert_check = String::from_utf8(decrypt_without_cert_check)
                 .expect("failed to create string from cms content");
+
             assert_eq!(input, decrypt_with_cert_check);
             assert_eq!(input, decrypt_without_cert_check);
         }
