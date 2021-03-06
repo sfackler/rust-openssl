@@ -1,3 +1,5 @@
+use std::ptr;
+
 use libc::*;
 
 #[allow(unused_imports)]
@@ -119,6 +121,17 @@ cfg_if! {
             pub pkey: *mut c_void,
             pub save_parameters: c_int,
             pub attributes: *mut stack_st_X509_ATTRIBUTE,
+        }
+    }
+}
+
+cfg_if! {
+    if #[cfg(ossl300)] {
+        pub enum EVP_KDF {}
+        #[repr(C)]
+        pub struct EVP_KDF_CTX {
+            pub ameth: *const EVP_KDF,
+            pub data: *mut c_void,
         }
     }
 }
@@ -1032,3 +1045,25 @@ cfg_if! {
 }
 
 pub enum OCSP_RESPONSE {}
+
+cfg_if! {
+    if #[cfg(ossl300)] {
+        #[repr(C)]
+        pub struct OSSL_PARAM {
+            pub key: *const c_char,
+            pub data_type: c_uint,
+            pub data: *mut c_void,
+            pub data_size: size_t,
+            pub return_size: size_t,
+        }
+        pub const OSSL_PARAM_END: ossl_typ::OSSL_PARAM = OSSL_PARAM { key: ptr::null(), data_type: 0, data: ptr::null_mut(), data_size: 0, return_size: 0};
+    }
+}
+
+cfg_if! {
+    if #[cfg(ossl300)] {
+        #[repr(C)]
+        // TODO(baloo): is that safe?
+        pub struct OSSL_LIB_CTX {}
+    }
+}

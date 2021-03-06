@@ -52,6 +52,13 @@ cfg_if! {
         }
     }
 }
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn EVP_MD_name(md: *const EVP_MD) -> *const c_char;
+        }
+    }
+}
 
 extern "C" {
     pub fn EVP_DigestInit_ex(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD, imple: *mut ENGINE)
@@ -208,6 +215,23 @@ const_ptr_api! {
             sigret: #[const_ptr_if(any(ossl102, libressl280))] c_uchar,
             siglen: size_t,
         ) -> c_int;
+    }
+}
+
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn EVP_KDF_fetch(ctx: *mut OSSL_LIB_CTX, name: *const c_char, properties: *const c_char) -> *mut EVP_KDF;
+
+            pub fn EVP_KDF_CTX_new(kdf: *mut EVP_KDF) -> *mut EVP_KDF_CTX;
+            pub fn EVP_KDF_CTX_free(ctx: *mut EVP_KDF_CTX);
+
+            pub fn EVP_KDF_CTX_set_params(ctx: *mut EVP_KDF_CTX, params: *mut OSSL_PARAM)-> c_int;
+            pub fn EVP_KDF_CTX_reset(ctx: *mut EVP_KDF_CTX);
+            pub fn EVP_KDF_CTX_get_kdf_size(ctx: *mut EVP_KDF_CTX) -> size_t;
+            pub fn EVP_KDF_CTX_kdf(ctx: *mut EVP_KDF_CTX) -> *const EVP_KDF;
+            pub fn EVP_KDF_derive(ctx: *mut EVP_KDF_CTX, out: *mut u8, n: size_t) -> c_int;
+        }
     }
 }
 

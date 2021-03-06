@@ -1,0 +1,49 @@
+use *;
+
+/* KDF / PRF parameters */
+pub const OSSL_KDF_PARAM_SECRET: &[u8] = b"secret\0";
+pub const OSSL_KDF_PARAM_KEY: &[u8] = b"key\0";
+pub const OSSL_KDF_PARAM_SALT: &[u8] = b"salt\0";
+pub const OSSL_KDF_PARAM_PASSWORD: &[u8] = b"pass\0";
+pub const OSSL_KDF_PARAM_DIGEST: &[u8] = OSSL_ALG_PARAM_DIGEST;
+pub const OSSL_KDF_PARAM_CIPHER: &[u8] = OSSL_ALG_PARAM_CIPHER;
+pub const OSSL_KDF_PARAM_MAC: &[u8] = OSSL_ALG_PARAM_MAC;
+pub const OSSL_KDF_PARAM_MAC_SIZE: &[u8] = b"maclen\0";
+pub const OSSL_KDF_PARAM_PROPERTIES: &[u8] = OSSL_ALG_PARAM_PROPERTIES;
+pub const OSSL_KDF_PARAM_ITER: &[u8] = b"iter\0";
+pub const OSSL_KDF_PARAM_MODE: &[u8] = b"mode\0";
+pub const OSSL_KDF_PARAM_PKCS5: &[u8] = b"pkcs5\0";
+pub const OSSL_KDF_PARAM_UKM: &[u8] = b"ukm\0";
+pub const OSSL_KDF_PARAM_CEK_ALG: &[u8] = b"cekalg\0";
+pub const OSSL_KDF_PARAM_SCRYPT_N: &[u8] = b"n\0";
+pub const OSSL_KDF_PARAM_SCRYPT_R: &[u8] = b"r\0";
+pub const OSSL_KDF_PARAM_SCRYPT_P: &[u8] = b"p\0";
+pub const OSSL_KDF_PARAM_SCRYPT_MAXMEM: &[u8] = b"maxmem_bytes\0";
+pub const OSSL_KDF_PARAM_INFO: &[u8] = b"info\0";
+pub const OSSL_KDF_PARAM_SEED: &[u8] = b"seed\0";
+pub const OSSL_KDF_PARAM_SSHKDF_XCGHASH: &[u8] = b"xcghash\0";
+pub const OSSL_KDF_PARAM_SSHKDF_SESSION_ID: &[u8] = b"session_id\0";
+pub const OSSL_KDF_PARAM_SSHKDF_TYPE: &[u8] = b"type\0";
+pub const OSSL_KDF_PARAM_SIZE: &[u8] = b"size\0";
+pub const OSSL_KDF_PARAM_CONSTANT: &[u8] = b"constant\0";
+pub const OSSL_KDF_PARAM_PKCS12_ID: &[u8] = b"id\0";
+pub const OSSL_KDF_PARAM_KBKDF_USE_L: &[u8] = b"use-l\0";
+pub const OSSL_KDF_PARAM_KBKDF_USE_SEPARATOR: &[u8] = b"use-separator\0";
+pub const OSSL_KDF_PARAM_X942_PARTYUINFO: &[u8] = b"partyu-info\0";
+pub const OSSL_KDF_PARAM_X942_PARTYVINFO: &[u8] = b"partyv-info\0";
+pub const OSSL_KDF_PARAM_X942_SUPP_PUBINFO: &[u8] = b"supp-pubinfo\0";
+pub const OSSL_KDF_PARAM_X942_SUPP_PRIVINFO: &[u8] = b"supp-privinfo\0";
+pub const OSSL_KDF_PARAM_X942_USE_KEYBITS: &[u8] = b"use-keybits\0";
+
+/* Known KDF names */
+pub const OSSL_KDF_NAME_HKDF: &[u8] = b"HKDF\0";
+pub const OSSL_KDF_NAME_PBKDF2: &[u8] = b"PBKDF2\0";
+pub const OSSL_KDF_NAME_SCRYPT: &[u8] = b"SCRYPT\0";
+pub const OSSL_KDF_NAME_SSHKDF: &[u8] = b"SSHKDF\0";
+pub const OSSL_KDF_NAME_SSKDF: &[u8] = b"SSKDF\0";
+pub const OSSL_KDF_NAME_TLS1_PRF: &[u8] = b"TLS1-PRF\0";
+pub const OSSL_KDF_NAME_X942KDF_ASN1: &[u8] = b"X942KDF-ASN1\0";
+pub const OSSL_KDF_NAME_X942KDF_CONCAT: &[u8] = b"X942KDF-CONCAT\0";
+pub const OSSL_KDF_NAME_X963KDF: &[u8] = b"X963KDF\0";
+pub const OSSL_KDF_NAME_KBKDF: &[u8] = b"KBKDF\0";
+pub const OSSL_KDF_NAME_KRB5KDF: &[u8] = b"KRB5KDF\0";

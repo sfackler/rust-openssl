@@ -30,10 +30,14 @@ pub use ec::*;
 pub use err::*;
 pub use evp::*;
 pub use hmac::*;
+#[cfg(ossl300)]
+pub use kdf::*;
 pub use obj_mac::*;
 pub use object::*;
 pub use ocsp::*;
 pub use ossl_typ::*;
+#[cfg(ossl300)]
+pub use params::*;
 pub use pem::*;
 pub use pkcs12::*;
 pub use pkcs7::*;
@@ -67,10 +71,14 @@ mod ec;
 mod err;
 mod evp;
 mod hmac;
+#[cfg(ossl300)]
+mod kdf;
 mod obj_mac;
 mod object;
 mod ocsp;
 mod ossl_typ;
+#[cfg(ossl300)]
+mod params;
 mod pem;
 mod pkcs12;
 mod pkcs7;
