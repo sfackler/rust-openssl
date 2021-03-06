@@ -63,8 +63,12 @@ fn main() {
         .header("openssl/evp.h")
         .header("openssl/x509_vfy.h");
 
-    if openssl_version.is_some() {
+    if let Some(v) = openssl_version {
         cfg.header("openssl/cms.h");
+        #[allow(clippy::unusual_byte_groupings)]
+        if v >= 0x1_01_01_00_0 {
+            cfg.header("openssl/kdf.h");
+        }
     }
 
     #[allow(clippy::if_same_then_else)]

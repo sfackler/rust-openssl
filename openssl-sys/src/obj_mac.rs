@@ -920,3 +920,5 @@ pub const NID_X448: c_int = 1035;
 pub const NID_ED25519: c_int = 1087;
 #[cfg(ossl111)]
 pub const NID_ED448: c_int = 1088;
+#[cfg(ossl111)]
+pub const NID_hkdf: c_int = 1036;

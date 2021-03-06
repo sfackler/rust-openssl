@@ -1,10 +1,10 @@
 use libc::c_int;
 use std::ptr;
 
-use crate::cvt;
 use crate::error::ErrorStack;
-use crate::hash::MessageDigest;
+use crate::hash::{DigestBytes, MessageDigest};
 use crate::symm::Cipher;
+use crate::{cvt, cvt_p};
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct KeyIvPair {
@@ -135,6 +135,216 @@ pub fn scrypt(
             key.len(),
         ))
         .map(|_| ())
+    }
+}
+
+/// Derive a key using the HKDF algorithm, by applying `hkdf_extract`
+/// followed by `hkdf_expand`.
+///
+/// Requires OpenSSL 1.1.1 or newer.
+#[cfg(any(ossl111))]
+pub fn hkdf(
+    input: &[u8],
+    salt: &[u8],
+    info: &[u8],
+    hash: MessageDigest,
+    key: &mut [u8],
+) -> Result<(), ErrorStack> {
+    unsafe {
+        assert!(input.len() <= c_int::max_value() as usize);
+        assert!(salt.len() <= c_int::max_value() as usize);
+        assert!(info.len() <= c_int::max_value() as usize);
+        assert!(key.len() <= c_int::max_value() as usize);
+
+        ffi::init();
+        let kctx = cvt_p(ffi::EVP_PKEY_CTX_new_id(
+            ffi::EVP_PKEY_HKDF,
+            ptr::null_mut(),
+        ))?;
+
+        let ret = (|| {
+            cvt(ffi::EVP_PKEY_derive_init(kctx))?;
+
+            cvt(ffi::EVP_PKEY_CTX_hkdf_mode(
+                kctx,
+                ffi::EVP_PKEY_HKDEF_MODE_EXTRACT_AND_EXPAND,
+            ))?;
+
+            cvt(ffi::EVP_PKEY_CTX_set_hkdf_md(kctx, hash.as_ptr()))?;
+
+            cvt(ffi::EVP_PKEY_CTX_set1_hkdf_key(
+                kctx,
+                input.as_ptr() as *const _,
+                input.len() as c_int,
+            ))?;
+
+            cvt(ffi::EVP_PKEY_CTX_set1_hkdf_salt(
+                kctx,
+                salt.as_ptr() as *const _,
+                salt.len() as c_int,
+            ))?;
+
+            cvt(ffi::EVP_PKEY_CTX_add1_hkdf_info(
+                kctx,
+                info.as_ptr() as *const _,
+                info.len() as c_int,
+            ))?;
+            Ok(())
+        })();
+
+        if let Err(e) = ret {
+            // Free memory
+            ffi::EVP_PKEY_CTX_free(kctx);
+            return Err(e);
+        }
+
+        let mut len = key.len();
+
+        let ret = cvt(ffi::EVP_PKEY_derive(kctx, key.as_mut_ptr(), &mut len));
+
+        // Free memory
+        ffi::EVP_PKEY_CTX_free(kctx);
+
+        if let Err(e) = ret {
+            return Err(e);
+        }
+
+        Ok(())
+    }
+}
+
+/// Extract a pseudorandom key from an input keying material using the
+/// HKDF algorithm.
+///
+/// Requires OpenSSL 1.1.1 or newer.
+#[cfg(any(ossl111))]
+pub fn hkdf_extract(
+    input: &[u8],
+    salt: &[u8],
+    hash: MessageDigest,
+) -> Result<DigestBytes, ErrorStack> {
+    unsafe {
+        assert!(input.len() <= c_int::max_value() as usize);
+        assert!(salt.len() <= c_int::max_value() as usize);
+
+        ffi::init();
+        let kctx = cvt_p(ffi::EVP_PKEY_CTX_new_id(
+            ffi::EVP_PKEY_HKDF,
+            ptr::null_mut(),
+        ))?;
+
+        let ret = (|| {
+            cvt(ffi::EVP_PKEY_derive_init(kctx))?;
+
+            cvt(ffi::EVP_PKEY_CTX_hkdf_mode(
+                kctx,
+                ffi::EVP_PKEY_HKDEF_MODE_EXTRACT_ONLY,
+            ))?;
+
+            cvt(ffi::EVP_PKEY_CTX_set_hkdf_md(kctx, hash.as_ptr()))?;
+
+            cvt(ffi::EVP_PKEY_CTX_set1_hkdf_key(
+                kctx,
+                input.as_ptr() as *const _,
+                input.len() as c_int,
+            ))?;
+
+            cvt(ffi::EVP_PKEY_CTX_set1_hkdf_salt(
+                kctx,
+                salt.as_ptr() as *const _,
+                salt.len() as c_int,
+            ))?;
+            Ok(())
+        })();
+
+        if let Err(e) = ret {
+            // Free memory
+            ffi::EVP_PKEY_CTX_free(kctx);
+            return Err(e);
+        }
+
+        let mut len = ffi::EVP_MAX_MD_SIZE as usize;
+        let mut buf = [0; ffi::EVP_MAX_MD_SIZE as usize];
+        let ret = cvt(ffi::EVP_PKEY_derive(kctx, buf.as_mut_ptr(), &mut len));
+
+        // Free memory
+        ffi::EVP_PKEY_CTX_free(kctx);
+
+        if let Err(e) = ret {
+            return Err(e);
+        }
+
+        Ok(DigestBytes {
+            buf,
+            len: len as usize,
+        })
+    }
+}
+
+/// Expand a pseudorandom key to an output keying material using the
+/// HKDF algorithm.
+///
+/// Requires OpenSSL 1.1.1 or newer.
+#[cfg(any(ossl111))]
+pub fn hkdf_expand(
+    prk: &[u8],
+    info: &[u8],
+    hash: MessageDigest,
+    key: &mut [u8],
+) -> Result<(), ErrorStack> {
+    unsafe {
+        assert!(prk.len() <= c_int::max_value() as usize);
+        assert!(info.len() <= c_int::max_value() as usize);
+        assert!(key.len() <= c_int::max_value() as usize);
+
+        ffi::init();
+        let kctx = cvt_p(ffi::EVP_PKEY_CTX_new_id(
+            ffi::EVP_PKEY_HKDF,
+            ptr::null_mut(),
+        ))?;
+
+        let ret = (|| {
+            cvt(ffi::EVP_PKEY_derive_init(kctx))?;
+
+            cvt(ffi::EVP_PKEY_CTX_hkdf_mode(
+                kctx,
+                ffi::EVP_PKEY_HKDEF_MODE_EXPAND_ONLY,
+            ))?;
+
+            cvt(ffi::EVP_PKEY_CTX_set_hkdf_md(kctx, hash.as_ptr()))?;
+
+            cvt(ffi::EVP_PKEY_CTX_set1_hkdf_key(
+                kctx,
+                prk.as_ptr() as *const _,
+                prk.len() as c_int,
+            ))?;
+
+            cvt(ffi::EVP_PKEY_CTX_add1_hkdf_info(
+                kctx,
+                info.as_ptr() as *const _,
+                info.len() as c_int,
+            ))?;
+            Ok(())
+        })();
+
+        if let Err(e) = ret {
+            // Free memory
+            ffi::EVP_PKEY_CTX_free(kctx);
+            return Err(e);
+        }
+
+        let mut len = key.len();
+
+        let ret = cvt(ffi::EVP_PKEY_derive(kctx, key.as_mut_ptr(), &mut len));
+
+        // Free memory
+        ffi::EVP_PKEY_CTX_free(kctx);
+
+        if let Err(e) = ret {
+            return Err(e);
+        }
+
+        Ok(())
     }
 }
 
@@ -298,5 +508,64 @@ mod tests {
         )
         .unwrap();
         assert_eq!(hex::encode(&actual[..]), expected);
+    }
+
+    #[test]
+    #[cfg(ossl111)]
+    fn hkdf() {
+        // Test vectors from RFC 5689
+        let input = "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
+        let salt = "000102030405060708090a0b0c";
+        let info = "f0f1f2f3f4f5f6f7f8f9";
+        let mut key = vec![0; 42];
+        let expected =
+            "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865";
+
+        super::hkdf(
+            &hex::decode(input).unwrap(),
+            &hex::decode(salt).unwrap(),
+            &hex::decode(info).unwrap(),
+            MessageDigest::sha256(),
+            &mut key,
+        )
+        .unwrap();
+        assert_eq!(hex::encode(&key[..]), expected);
+    }
+
+    #[test]
+    #[cfg(ossl111)]
+    fn hkdf_extract() {
+        // Test vectors from RFC 5689
+        let input = "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b";
+        let salt = "000102030405060708090a0b0c";
+        let expected = "077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5";
+
+        let prk = super::hkdf_extract(
+            &hex::decode(input).unwrap(),
+            &hex::decode(salt).unwrap(),
+            MessageDigest::sha256(),
+        )
+        .unwrap();
+        assert_eq!(hex::encode(&prk[..]), expected);
+    }
+
+    #[test]
+    #[cfg(ossl111)]
+    fn hkdf_expand() {
+        // Test vectors from RFC 5689
+        let prk = "077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5";
+        let info = "f0f1f2f3f4f5f6f7f8f9";
+        let mut key = vec![0; 42];
+        let expected =
+            "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865";
+
+        super::hkdf_expand(
+            &hex::decode(prk).unwrap(),
+            &hex::decode(info).unwrap(),
+            MessageDigest::sha256(),
+            &mut key,
+        )
+        .unwrap();
+        assert_eq!(hex::encode(&key[..]), expected);
     }
 }
