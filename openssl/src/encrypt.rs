@@ -39,6 +39,7 @@
 //! decrypted.truncate(decrypted_len);
 //! assert_eq!(&*decrypted, data);
 //! ```
+use libc::{c_int, c_void};
 use std::{marker::PhantomData, ptr};
 
 use crate::error::ErrorStack;
@@ -154,6 +155,43 @@ impl<'a> Encrypter<'a> {
                 md.as_ptr() as *mut _,
             ))
             .map(|_| ())
+        }
+    }
+
+    /// Sets the RSA OAEP label.
+    ///
+    /// This is only useful for RSA keys.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_set0_rsa_oaep_label`].
+    ///
+    /// [`EVP_PKEY_CTX_set0_rsa_oaep_label`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_set0_rsa_oaep_label.html
+    #[cfg(any(ossl102, libressl310))]
+    pub fn set_rsa_oaep_label(&mut self, label: &[u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            let p = cvt_p(ffi::CRYPTO_malloc(
+                label.len() as _,
+                concat!(file!(), "\0").as_ptr() as *const _,
+                line!() as c_int,
+            ))?;
+            ptr::copy_nonoverlapping(label.as_ptr(), p as *mut u8, label.len());
+
+            cvt(ffi::EVP_PKEY_CTX_set0_rsa_oaep_label(
+                self.pctx,
+                p as *mut c_void,
+                label.len() as c_int,
+            ))
+            .map(|_| ())
+            .map_err(|e| {
+                #[cfg(not(ossl110))]
+                ::ffi::CRYPTO_free(p as *mut c_void);
+                #[cfg(ossl110)]
+                ::ffi::CRYPTO_free(
+                    p as *mut c_void,
+                    concat!(file!(), "\0").as_ptr() as *const _,
+                    line!() as c_int,
+                );
+                e
+            })
         }
     }
 
