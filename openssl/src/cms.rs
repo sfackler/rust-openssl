@@ -1,6 +1,6 @@
 //! SMIME implementation using CMS
 //!
-//! CMS (PKCS#7) is an encyption standard.  It allows signing and ecrypting data using
+//! CMS (PKCS#7) is an encyption standard.  It allows signing and encrypting data using
 //! X.509 certificates.  The OpenSSL implementation of CMS is used in email encryption
 //! generated from a `Vec` of bytes.  This `Vec` follows the smime protocol standards.
 //! Data accepted by this module will be smime type `enveloped-data`.
@@ -86,6 +86,34 @@ impl CmsContentInfoRef {
                 self.as_ptr(),
                 pkey,
                 cert,
+                ptr::null_mut(),
+                out.as_ptr(),
+                0,
+            ))?;
+
+            Ok(out.get_buf().to_owned())
+        }
+    }
+
+    /// Given the sender's private key, `pkey`,
+    /// decrypt the data in `self` without validating the recipient certificate.
+    ///
+    /// *Warning*: Not checking the recipient certificate may leave you vulnerable to Bleichenbacher's attack on PKCS#1 v1.5 RSA padding.
+    /// See [`CMS_decrypt`] for more information.
+    ///
+    /// [`CMS_decrypt`]: https://www.openssl.org/docs/man1.1.0/crypto/CMS_decrypt.html
+    pub fn decrypt_without_cert_check<T>(&self, pkey: &PKeyRef<T>) -> Result<Vec<u8>, ErrorStack>
+    where
+        T: HasPrivate,
+    {
+        unsafe {
+            let pkey = pkey.as_ptr();
+            let out = MemBio::new()?;
+
+            cvt(ffi::CMS_decrypt(
+                self.as_ptr(),
+                pkey,
+                ptr::null_mut(),
                 ptr::null_mut(),
                 out.as_ptr(),
                 0,
@@ -261,12 +289,21 @@ mod test {
             let encrypted_der = encrypt.to_der().expect("failed to create der from cms");
             let decrypt =
                 CmsContentInfo::from_der(&encrypted_der).expect("failed read cms from der");
-            let decrypt = decrypt
+
+            let decrypt_with_cert_check = decrypt
                 .decrypt(&priv_cert.pkey, &priv_cert.cert)
                 .expect("failed to decrypt cms");
-            let decrypt =
-                String::from_utf8(decrypt).expect("failed to create string from cms content");
-            assert_eq!(input, decrypt);
+            let decrypt_with_cert_check = String::from_utf8(decrypt_with_cert_check)
+                .expect("failed to create string from cms content");
+
+            let decrypt_without_cert_check = decrypt
+                .decrypt_without_cert_check(&priv_cert.pkey)
+                .expect("failed to decrypt cms");
+            let decrypt_without_cert_check = String::from_utf8(decrypt_without_cert_check)
+                .expect("failed to create string from cms content");
+
+            assert_eq!(input, decrypt_with_cert_check);
+            assert_eq!(input, decrypt_without_cert_check);
         }
 
         // decrypt cms message using private key cert (PEM)
@@ -274,12 +311,21 @@ mod test {
             let encrypted_pem = encrypt.to_pem().expect("failed to create pem from cms");
             let decrypt =
                 CmsContentInfo::from_pem(&encrypted_pem).expect("failed read cms from pem");
-            let decrypt = decrypt
+
+            let decrypt_with_cert_check = decrypt
                 .decrypt(&priv_cert.pkey, &priv_cert.cert)
                 .expect("failed to decrypt cms");
-            let decrypt =
-                String::from_utf8(decrypt).expect("failed to create string from cms content");
-            assert_eq!(input, decrypt);
+            let decrypt_with_cert_check = String::from_utf8(decrypt_with_cert_check)
+                .expect("failed to create string from cms content");
+
+            let decrypt_without_cert_check = decrypt
+                .decrypt_without_cert_check(&priv_cert.pkey)
+                .expect("failed to decrypt cms");
+            let decrypt_without_cert_check = String::from_utf8(decrypt_without_cert_check)
+                .expect("failed to create string from cms content");
+
+            assert_eq!(input, decrypt_with_cert_check);
+            assert_eq!(input, decrypt_without_cert_check);
         }
     }
 }
