@@ -102,6 +102,7 @@ impl CmsContentInfoRef {
     /// See [`CMS_decrypt`] for more information.
     ///
     /// [`CMS_decrypt`]: https://www.openssl.org/docs/man1.1.0/crypto/CMS_decrypt.html
+    // FIXME merge into decrypt
     pub fn decrypt_without_cert_check<T>(&self, pkey: &PKeyRef<T>) -> Result<Vec<u8>, ErrorStack>
     where
         T: HasPrivate,
