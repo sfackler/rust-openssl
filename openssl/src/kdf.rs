@@ -91,6 +91,7 @@ pub struct KBKDF {
     mac: Mac,
     salt: Vec<u8>,
     key: Vec<u8>,
+    context: Vec<u8>,
     use_l: bool,
     use_separator: bool,
 }
@@ -101,12 +102,14 @@ impl KBKDF {
         let mac = Mac::Hmac;
         let use_l = true;
         let use_separator = true;
+        let context = Vec::new();
 
         KBKDF {
             md,
             salt,
             key,
             mode,
+            context,
             mac,
             use_l,
             use_separator,
@@ -120,6 +123,11 @@ impl KBKDF {
 
     pub fn set_mac(mut self, mac: Mac) -> Self {
         self.mac = mac;
+        self
+    }
+
+    pub fn set_context(mut self, context: Vec<u8>) -> Self {
+        self.context = context;
         self
     }
 
@@ -140,7 +148,7 @@ impl KDFParams for KBKDF {
     }
 
     fn to_params(&self) -> Result<Params, KDFError> {
-        let mut params = ParamsBuilder::with_capacity(7);
+        let mut params = ParamsBuilder::with_capacity(8);
         let md_name = unsafe { cvt_cp(ffi::EVP_MD_name(self.md.as_ptr())) }?;
         let md_name = unsafe { CStr::from_ptr(md_name) }.to_bytes();
 
@@ -149,6 +157,9 @@ impl KDFParams for KBKDF {
         params.add_string(ffi::OSSL_KDF_PARAM_MODE, self.mode.to_param())?;
         params.add_slice(ffi::OSSL_KDF_PARAM_KEY, &self.key)?;
         params.add_slice(ffi::OSSL_KDF_PARAM_SALT, &self.salt)?;
+        if self.context.len() > 0 {
+            params.add_slice(ffi::OSSL_KDF_PARAM_INFO, &self.context)?;
+        }
         if self.use_l {
             params.add_i32(ffi::OSSL_KDF_PARAM_KBKDF_USE_L, 1)?;
         } else {
