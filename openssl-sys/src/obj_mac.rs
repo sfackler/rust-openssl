@@ -255,8 +255,6 @@ pub const NID_md5: c_int = 4;
 pub const NID_md5_sha1: c_int = 114;
 pub const NID_hmacWithMD5: c_int = 797;
 pub const NID_hmacWithSHA1: c_int = 163;
-pub const NID_sm3: c_int = 1143;
-pub const NID_sm3WithRSAEncryption: c_int = 1144;
 pub const NID_hmacWithSHA224: c_int = 798;
 pub const NID_hmacWithSHA256: c_int = 799;
 pub const NID_hmacWithSHA384: c_int = 800;
@@ -922,3 +920,7 @@ pub const NID_X448: c_int = 1035;
 pub const NID_ED25519: c_int = 1087;
 #[cfg(ossl111)]
 pub const NID_ED448: c_int = 1088;
+#[cfg(any(ossl111, libressl291))]
+pub const NID_sm3: c_int = 1143;
+#[cfg(any(ossl111, libressl291))]
+pub const NID_sm3WithRSAEncryption: c_int = 1144;

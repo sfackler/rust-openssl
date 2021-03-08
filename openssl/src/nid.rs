@@ -367,8 +367,6 @@ impl Nid {
     pub const MD5_SHA1: Nid = Nid(ffi::NID_md5_sha1);
     pub const HMACWITHMD5: Nid = Nid(ffi::NID_hmacWithMD5);
     pub const HMACWITHSHA1: Nid = Nid(ffi::NID_hmacWithSHA1);
-    pub const SM3: Nid = Nid(ffi::NID_sm3);
-    pub const SM3WITHRSAENCRYPTION: Nid = Nid(ffi::NID_sm3WithRSAEncryption);
     pub const HMACWITHSHA224: Nid = Nid(ffi::NID_hmacWithSHA224);
     pub const HMACWITHSHA256: Nid = Nid(ffi::NID_hmacWithSHA256);
     pub const HMACWITHSHA384: Nid = Nid(ffi::NID_hmacWithSHA384);
