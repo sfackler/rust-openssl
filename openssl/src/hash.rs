@@ -128,6 +128,11 @@ impl MessageDigest {
         unsafe { MessageDigest(ffi::EVP_ripemd160()) }
     }
 
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM3")))]
+    pub fn sm3() -> MessageDigest {
+        unsafe { MessageDigest(ffi::EVP_sm3()) }
+    }
+
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn as_ptr(&self) -> *const ffi::EVP_MD {
         self.0
@@ -623,6 +628,19 @@ mod tests {
 
         for test in tests.iter() {
             hash_test(MessageDigest::ripemd160(), test);
+        }
+    }
+
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM3")))]
+    #[test]
+    fn test_sm3() {
+        let tests = [(
+            "616263",
+            "66c7f0f462eeedd9d1f2d46bdc10e4e24167c4875cf2f7a2297da02b8f4ba8e0",
+        )];
+
+        for test in tests.iter() {
+            hash_test(MessageDigest::sm3(), test);
         }
     }
 

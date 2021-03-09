@@ -920,3 +920,11 @@ pub const NID_X448: c_int = 1035;
 pub const NID_ED25519: c_int = 1087;
 #[cfg(ossl111)]
 pub const NID_ED448: c_int = 1088;
+#[cfg(ossl111)]
+pub const NID_sm3: c_int = 1143;
+#[cfg(libressl291)]
+pub const NID_sm3: c_int = 968;
+#[cfg(ossl111)]
+pub const NID_sm3WithRSAEncryption: c_int = 1144;
+#[cfg(libressl291)]
+pub const NID_sm3WithRSAEncryption: c_int = 969;
