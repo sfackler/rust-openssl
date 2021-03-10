@@ -1,4 +1,5 @@
 use cfg_if::cfg_if;
+use std::error;
 use std::ffi::{CStr, CString, NulError};
 use std::fmt;
 use std::io;
@@ -40,6 +41,20 @@ impl From<ErrorStack> for KDFError {
         KDFError::SSL(e)
     }
 }
+
+impl fmt::Display for KDFError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use KDFError::*;
+        match self {
+            Utf8Error(ref e) => e.fmt(f),
+            NulError(ref e) => e.fmt(f),
+            NoSuchKDF => write!(f, "No such KDF"),
+            SSL(ref e) => e.fmt(f),
+        }
+    }
+}
+
+impl error::Error for KDFError {}
 
 pub trait KDFParams {
     fn kdf_name(&self) -> String;
