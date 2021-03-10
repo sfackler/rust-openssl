@@ -1,20 +1,13 @@
-use cfg_if::cfg_if;
 use std::error;
 use std::ffi::{CStr, CString, NulError};
 use std::fmt;
-use std::io;
-use std::io::prelude::*;
-use std::ops::{Deref, DerefMut};
 use std::ptr;
 use std::str;
 
 use crate::error::ErrorStack;
 use crate::hash::MessageDigest;
-use crate::nid::Nid;
 use crate::params::{Params, ParamsBuilder};
 use crate::{cvt, cvt_cp, cvt_p};
-
-use ffi::{EVP_KDF_CTX_free, EVP_KDF_CTX_new};
 
 #[derive(Debug)]
 pub enum KDFError {
@@ -43,7 +36,7 @@ impl From<ErrorStack> for KDFError {
 }
 
 impl fmt::Display for KDFError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use KDFError::*;
         match self {
             Utf8Error(ref e) => e.fmt(f),

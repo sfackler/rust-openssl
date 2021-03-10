@@ -1062,8 +1062,6 @@ cfg_if! {
 
 cfg_if! {
     if #[cfg(ossl300)] {
-        #[repr(C)]
-        // TODO(baloo): is that safe?
-        pub struct OSSL_LIB_CTX {}
+        pub enum OSSL_LIB_CTX {}
     }
 }

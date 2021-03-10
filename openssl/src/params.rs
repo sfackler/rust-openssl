@@ -84,11 +84,11 @@ pub struct ParamsBuilder(Vec<(&'static [u8], Param)>);
 
 impl ParamsBuilder {
     pub fn with_capacity(capacity: usize) -> Self {
-        let mut params = Vec::with_capacity(capacity);
+        let params = Vec::with_capacity(capacity);
         Self(params)
     }
 
-    pub fn build(mut self) -> Params {
+    pub fn build(self) -> Params {
         let len = self.0.len();
 
         let mut params = Params {
@@ -106,17 +106,17 @@ impl ParamsBuilder {
             use Param::*;
             let v = unsafe {
                 match p {
-                    I32(mut v) => {
+                    I32(v) => {
                         let pname = name.as_ptr() as *const i8;
-                        ffi::OSSL_PARAM_construct_int(pname, v)
+                        ffi::OSSL_PARAM_construct_int(pname, *v)
                     }
-                    Vec(mut buf, len) => {
+                    Vec(buf, len) => {
                         let pname = name.as_ptr() as *const i8;
-                        ffi::OSSL_PARAM_construct_octet_string(pname, buf, *len)
+                        ffi::OSSL_PARAM_construct_octet_string(pname, *buf, *len)
                     }
-                    String(mut buf, len) => {
+                    String(buf, len) => {
                         let pname = name.as_ptr() as *const i8;
-                        ffi::OSSL_PARAM_construct_utf8_string(pname, buf, *len)
+                        ffi::OSSL_PARAM_construct_utf8_string(pname, *buf, *len)
                     }
                 }
             };
