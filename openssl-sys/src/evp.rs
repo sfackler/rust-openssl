@@ -36,6 +36,7 @@ extern "C" {
     pub fn EVP_CIPHER_key_length(cipher: *const EVP_CIPHER) -> c_int;
     pub fn EVP_CIPHER_block_size(cipher: *const EVP_CIPHER) -> c_int;
     pub fn EVP_CIPHER_iv_length(cipher: *const EVP_CIPHER) -> c_int;
+    pub fn EVP_CIPHER_nid(cipher: *const EVP_CIPHER) -> c_int;
 }
 
 cfg_if! {
