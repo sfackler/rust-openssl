@@ -77,7 +77,6 @@ impl Dh<Params> {
     ///
     /// This corresponds to [`DH_generate_parameters_ex`].
     ///
-    /// [`DH_new`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_new.html
     /// [`DH_generate_parameters_ex`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_generate_parameters.html
     pub fn generate_params(prime_len: u32, generator: u32) -> Result<Dh<Params>, ErrorStack> {
         unsafe {
