@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+## [v0.9.61] - 2021-03-13
+
+### Added
+
+* Added support for automatic detection of OpenSSL installations via pkgsrc and MacPorts on macOS.
+* Added various `V_ASN1_*` constants.
+* Added `DH_generate_parameters_ex`.
+* Added `EC_POINT_is_at_infinity` and `EC_POINT_is_on_curve`.
+* Added `EVP_CIPHER_nid`.
+* Added `EVP_sm3`.
+* Added `NID_*` constants related to SM3.
+* Added `PKCS7_get0_signers`.
+* Added `EVP_PKEY_CTX_set0_rsa_oaep_label`.
+* Added `ACCESS_DESCRIPTION` and `ACCESS_DESCRIPTION_free`.
+
 ## [v0.9.60] - 2020-12-24
 
 ### Added
