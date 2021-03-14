@@ -216,8 +216,10 @@ pub fn derive<P: KDFParams>(kdf: P, output: &mut [u8]) -> Result<(), KDFError> {
             ctx.as_mut_ptr(),
             output.as_mut_ptr(),
             output.len(),
+            ptr::null(),
         ))?
     };
+    drop(params);
 
     Ok(())
 }

@@ -230,7 +230,7 @@ cfg_if! {
             pub fn EVP_KDF_CTX_reset(ctx: *mut EVP_KDF_CTX);
             pub fn EVP_KDF_CTX_get_kdf_size(ctx: *mut EVP_KDF_CTX) -> size_t;
             pub fn EVP_KDF_CTX_kdf(ctx: *mut EVP_KDF_CTX) -> *const EVP_KDF;
-            pub fn EVP_KDF_derive(ctx: *mut EVP_KDF_CTX, out: *mut u8, n: size_t) -> c_int;
+            pub fn EVP_KDF_derive(ctx: *mut EVP_KDF_CTX, out: *mut u8, n: size_t, params: *const OSSL_PARAM) -> c_int;
         }
     }
 }
