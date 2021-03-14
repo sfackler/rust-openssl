@@ -164,12 +164,13 @@ impl fmt::Debug for Params {
         for o in &self.output {
             write!(f, "OSSL_PARAM {{")?;
             if o.data_type != 0 {
-                write!(f, "name = {:?}", unsafe { CStr::from_ptr(o.key) })?;
+                write!(f, "name = {:?}, ", unsafe { CStr::from_ptr(o.key) })?;
+                write!(f, "buf = {:?}, ", o.data )?;
+                write!(f, "len = {:?}", o.data_size )?;
             } else {
                 write!(f, "END")?;
             }
 
-            //write!(f, "name = \"{:?}\"", unsafe { CStr::from_ptr(o.key) })?;
             write!(f, "}}, ")?;
         }
         write!(f, "])")
