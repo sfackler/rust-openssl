@@ -22,10 +22,7 @@ jobs:
         default: false
       image:
         type: string
-        default: 1.36.0
-      minimal_build:
-        type: boolean
-        default: false
+        default: 1.40.0
     docker:
       - image: rust:<< parameters.image >>
     environment:
@@ -118,10 +115,6 @@ jobs:
       - restore_cache:
           key: registry
       - run: cargo generate-lockfile
-      - when:
-          condition: << parameters.minimal_build >>
-          steps:
-            - run: cargo update -p pkg-config --precise 0.3.14
       - save_cache:
           key: registry-{{ .BuildNum }}
           paths:
@@ -133,27 +126,24 @@ jobs:
             --manifest-path=openssl/Cargo.toml \
             <<# parameters.vendored >>--features vendored<</ parameters.vendored >> \
             --target << parameters.target >>
-      - unless:
-          condition: << parameters.minimal_build >>
-          steps:
-            - run: |
-                cargo run \
-                  --manifest-path=systest/Cargo.toml \
-                  <<# parameters.vendored >>--features vendored<</ parameters.vendored >> \
-                  --target << parameters.target >>
-            - run: |
-                cargo test \
-                  --manifest-path=openssl-errors/Cargo.toml \
-                  <<# parameters.vendored >>--features openssl-sys/vendored<</ parameters.vendored >> \
-                  --target << parameters.target >> \
-                  <<# parameters.no_run >>--no-run<</ parameters.no_run >>
-            - run: |
-                ulimit -c unlimited
-                cargo test \
-                  --manifest-path=openssl/Cargo.toml \
-                  <<# parameters.vendored >>--features vendored<</ parameters.vendored >> \
-                  --target << parameters.target >> \
-                  <<# parameters.no_run >>--no-run<</ parameters.no_run >>
+      - run: |
+          cargo run \
+            --manifest-path=systest/Cargo.toml \
+            <<# parameters.vendored >>--features vendored<</ parameters.vendored >> \
+            --target << parameters.target >>
+      - run: |
+          cargo test \
+            --manifest-path=openssl-errors/Cargo.toml \
+            <<# parameters.vendored >>--features openssl-sys/vendored<</ parameters.vendored >> \
+            --target << parameters.target >> \
+            <<# parameters.no_run >>--no-run<</ parameters.no_run >>
+      - run: |
+          ulimit -c unlimited
+          cargo test \
+            --manifest-path=openssl/Cargo.toml \
+            <<# parameters.vendored >>--features vendored<</ parameters.vendored >> \
+            --target << parameters.target >> \
+            <<# parameters.no_run >>--no-run<</ parameters.no_run >>
       - save_cache:
           key: deps-<< parameters.image >>-<< parameters.target >>-<< parameters.library >>-<< parameters.version >>-{{ checksum "Cargo.lock" }}
           paths:
@@ -175,7 +165,7 @@ jobs:
         default: false
       image:
         type: string
-        default: 1.36.0
+        default: 1.40.0
     macos:
       xcode: "12.2.0"
     environment:
