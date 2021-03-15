@@ -156,6 +156,10 @@ impl Params {
     pub fn as_mut_ptr(&mut self) -> *mut ffi::OSSL_PARAM {
         self.output.as_mut_ptr()
     }
+
+    pub fn as_ptr(&mut self) -> *const ffi::OSSL_PARAM {
+        self.output.as_ptr()
+    }
 }
 
 impl fmt::Debug for Params {

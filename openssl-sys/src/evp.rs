@@ -226,7 +226,6 @@ cfg_if! {
             pub fn EVP_KDF_CTX_new(kdf: *mut EVP_KDF) -> *mut EVP_KDF_CTX;
             pub fn EVP_KDF_CTX_free(ctx: *mut EVP_KDF_CTX);
 
-            pub fn EVP_KDF_CTX_set_params(ctx: *mut EVP_KDF_CTX, params: *mut OSSL_PARAM)-> c_int;
             pub fn EVP_KDF_CTX_reset(ctx: *mut EVP_KDF_CTX);
             pub fn EVP_KDF_CTX_get_kdf_size(ctx: *mut EVP_KDF_CTX) -> size_t;
             pub fn EVP_KDF_CTX_kdf(ctx: *mut EVP_KDF_CTX) -> *const EVP_KDF;

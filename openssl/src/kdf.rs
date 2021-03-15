@@ -202,21 +202,14 @@ pub fn derive<P: KDFParams>(kdf: P, output: &mut [u8]) -> Result<(), KDFError> {
 
     let mut ctx = KDFContext::new(kdf_ptr)?;
     let mut params = kdf.to_params()?;
-    unsafe {
-        cvt(ffi::EVP_KDF_CTX_set_params(
-            ctx.as_mut_ptr(),
-            params.as_mut_ptr(),
-        ))?
-    };
 
     // TODO: Check EVP_KDF_CTX_get_kdf_size ?
-
     unsafe {
         cvt(ffi::EVP_KDF_derive(
             ctx.as_mut_ptr(),
             output.as_mut_ptr(),
             output.len(),
-            ptr::null(),
+            params.as_ptr(),
         ))?
     };
     drop(params);
