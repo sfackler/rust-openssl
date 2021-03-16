@@ -18,18 +18,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install Rust
-        run: rustup update --no-self-update stable && rustup default stable
-      - name: Check formatting
-        run: cargo fmt --all -- --check
+      - uses: sfackler/actions/rustup@master
+      - uses: sfackler/actions/rustfmt@master
 
   clippy:
     name: clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install Rust
-        run: rustup update --no-self-update stable && rustup default stable
+      - uses: sfackler/actions/rustup@master
       - name: Get rust version
         id: rust-version
         run: echo "::set-output name=version::$(rustc --version)"
@@ -62,8 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install Rust
-        run: rustup update --no-self-update 1.36.0 && rustup default 1.36.0
+      - uses: sfackler/actions/rustup@master
       - name: Get rust version
         id: rust-version
         run: echo "::set-output name=version::$(rustc --version)"
@@ -98,8 +94,7 @@ jobs:
       VCPKGRS_DYNAMIC: 1
     steps:
       - uses: actions/checkout@v2
-      - name: Install Rust
-        run: rustup update --no-self-update stable && rustup default stable
+      - uses: sfackler/actions/rustup@master
       - name: Get rust version
         id: rust-version
         run: echo "::set-output name=version::$(rustc --version)"
@@ -134,3 +129,31 @@ jobs:
         run: cargo test -p openssl
       - name: Test openssl-errors
         run: cargo test -p openssl-errors
+  
+  macos-homebrew:
+    name: macos-homebrew
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: sfackler/actions/rustup@master
+      - run: echo "::set-output name=version::$(rustc --version)"
+        id: rust-version
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry/index
+          key: index-${{ runner.os }}-${{ github.run_number }}
+          restore-keys: |
+            index-${{ runner.os }}-
+      - run: cargo generate-lockfile
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry/cache
+          key: registry-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+      - run: cargo fetch
+      - uses: actions/cache@v1
+        with:
+          path: target
+          key: target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+      - run: cargo run -p systest
+      - run: cargo test -p openssl
+      - run: cargo test -p openssl-errors
