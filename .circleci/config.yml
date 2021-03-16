@@ -158,43 +158,6 @@ jobs:
       - store_artifacts:
           path: /tmp/core_dumps
 
-  macos:
-    parameters:
-      vendored:
-        type: boolean
-        default: false
-      image:
-        type: string
-        default: 1.40.0
-    macos:
-      xcode: "12.2.0"
-    environment:
-      RUST_BACKTRACE: 1
-    steps:
-      - checkout
-      - run: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain << parameters.image >>
-      - run: sudo ln -s ~/.cargo/bin/* /usr/local/bin
-      - run: cargo generate-lockfile
-      - restore_cache:
-          key: deps-<< parameters.image >>-macos-<< parameters.vendored >>-{{ checksum "Cargo.lock" }}
-      - run: |
-          cargo run \
-            --manifest-path=systest/Cargo.toml \
-            <<# parameters.vendored >> --features vendored <</ parameters.vendored >>
-      - run: |
-          cargo test \
-            --manifest-path=openssl-errors/Cargo.toml \
-            <<# parameters.vendored >> --features openssl-sys/vendored <</ parameters.vendored >>
-      - run: |
-          cargo test \
-            --manifest-path=openssl/Cargo.toml \
-            <<# parameters.vendored >> --features vendored <</ parameters.vendored >>
-      - save_cache:
-          key: deps-<< parameters.image >>-macos-<< parameters.vendored >>-{{ checksum "Cargo.lock" }}
-          paths:
-            - ~/.cargo/registry/cache
-            - target
-
 openssl_111: &openssl_111
   library: openssl
   version: 1.1.1i
@@ -284,8 +247,3 @@ workflows:
           target: x86_64-unknown-linux-gnu
           library: libressl
           version: 3.3.1
-      - macos:
-          name: macos
-      - macos:
-          name: macos-vendored
-          vendored: true
