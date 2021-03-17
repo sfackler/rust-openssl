@@ -151,13 +151,13 @@ jobs:
               dl-path: /
             - name: openssl
               version: 1.1.0l
-              dl-path: /old
+              dl-path: /old/1.1.0
             - name: openssl
               version: 1.0.2u
-              dl-path: /old
+              dl-path: /old/1.0.2
             - name: openssl
               version: 1.0.1u
-              dl-path: /old
+              dl-path: /old/1.0.1
           include:
             - arch:
                 target: x86_64-unknown-linux-gnu
