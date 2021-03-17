@@ -191,7 +191,7 @@ jobs:
               packages="gcc-multilib"
               ;;
             "arm-unknown-linux-gnueabihf")
-              package="gcc-arm-linux-gnueabihf qemu-user"
+              packages="gcc-arm-linux-gnueabihf qemu-user"
               ;;
             esac
 
