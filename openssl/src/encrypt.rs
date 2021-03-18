@@ -39,6 +39,7 @@
 //! decrypted.truncate(decrypted_len);
 //! assert_eq!(&*decrypted, data);
 //! ```
+#[cfg(any(ossl102, libressl310))]
 use libc::{c_int, c_void};
 use std::{marker::PhantomData, ptr};
 
@@ -462,6 +463,7 @@ mod test {
     use hex::FromHex;
 
     use crate::encrypt::{Decrypter, Encrypter};
+    #[cfg(any(ossl102, libressl310))]
     use crate::hash::MessageDigest;
     use crate::pkey::PKey;
     use crate::rsa::{Padding, Rsa};
