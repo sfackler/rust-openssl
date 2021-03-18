@@ -471,7 +471,7 @@ impl PKey<Private> {
         }
     }
 
-    #[cfg(ossl110)]
+    #[cfg(ossl111)]
     fn generate_eddsa(nid: c_int) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
             let kctx = cvt_p(ffi::EVP_PKEY_CTX_new_id(nid, ptr::null_mut()))?;

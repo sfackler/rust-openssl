@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [v0.10.33] - 2021-03-13
+
+### Fixed
+
+* `Dh::generate_params` now uses `DH_generate_params_ex` rather than the deprecated `DH_generated_params` function.
+
+### Added
+
+* Added `Asn1Type`.
+* Added `CmsContentInfoRef::decrypt_without_cert_check`.
+* Added `EcPointRef::{is_infinity, is_on_curve}`.
+* Added `Encrypter::set_rsa_oaep_label`.
+* Added `MessageDigest::sm3`.
+* Added `Pkcs7Ref::signers`.
+* Added `Cipher::nid`.
+* Added `X509Ref::authority_info` and `AccessDescription::{method, location}`.
+* Added `X509NameBuilder::{append_entry_by_text_with_type, append_entry_by_nid_with_type}`.
+
 ## [v0.10.32] - 2020-12-24
 
 ### Fixed
@@ -509,7 +527,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.32...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.33...master
+[v0.10.33]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.32...openssl-v0.10.33
 [v0.10.32]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.31...openssl-v0.10.32
 [v0.10.31]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.30...openssl-v0.10.31
 [v0.10.30]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.29...openssl-v0.10.30

@@ -644,7 +644,9 @@ mod test {
     use crate::nid::Nid;
     use crate::pkey::PKey;
     use crate::rsa::{Padding, Rsa};
-    use crate::sign::{RsaPssSaltlen, Signer, Verifier};
+    #[cfg(ossl111)]
+    use crate::sign::RsaPssSaltlen;
+    use crate::sign::{Signer, Verifier};
 
     const INPUT: &str =
         "65794a68624763694f694a53557a49314e694a392e65794a7063334d694f694a71623255694c41304b49434a6c\
