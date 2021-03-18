@@ -83,6 +83,7 @@ pub const EVP_PKEY_CTRL_GET_RSA_PADDING: c_int = EVP_PKEY_ALG_CTRL + 6;
 pub const EVP_PKEY_CTRL_RSA_OAEP_MD: c_int = EVP_PKEY_ALG_CTRL + 9;
 
 pub const RSA_PKCS1_PADDING: c_int = 1;
+#[cfg(not(ossl300))]
 pub const RSA_SSLV23_PADDING: c_int = 2;
 pub const RSA_NO_PADDING: c_int = 3;
 pub const RSA_PKCS1_OAEP_PADDING: c_int = 4;
