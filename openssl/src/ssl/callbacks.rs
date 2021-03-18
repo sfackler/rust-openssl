@@ -28,6 +28,7 @@ use crate::ssl::{
 };
 #[cfg(ossl111)]
 use crate::ssl::{ClientHelloResponse, ExtensionContext};
+#[cfg(ossl111)]
 use crate::util::ForeignTypeRefExt;
 #[cfg(ossl111)]
 use crate::x509::X509Ref;

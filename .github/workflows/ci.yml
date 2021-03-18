@@ -27,32 +27,25 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: sfackler/actions/rustup@master
-      - name: Get rust version
+      - run: echo "::set-output name=version::$(rustc --version)"
         id: rust-version
-        run: echo "::set-output name=version::$(rustc --version)"
-      - name: Cache cargo index
-        uses: actions/cache@v1
+      - uses: actions/cache@v1
         with:
           path: ~/.cargo/registry/index
           key: index-${{ runner.os }}-${{ github.run_number }}
           restore-keys: |
             index-${{ runner.os }}-
-      - name: Create lockfile
-        run: cargo generate-lockfile
-      - name: Cache cargo registry
-        uses: actions/cache@v1
+      - run: cargo generate-lockfile
+      - uses: actions/cache@v1
         with:
           path: ~/.cargo/registry/cache
           key: registry-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
-      - name: Fetch dependencies
-        run: cargo fetch
-      - name: Cache target directory
-        uses: actions/cache@v1
+      - run: cargo fetch
+      - uses: actions/cache@v1
         with:
           path: target
-          key: clippy-target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
-      - name: Run clippy
-        run: cargo clippy --all --all-targets
+          key: target-${{ github.job }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+      - run: cargo clippy --all --all-targets
 
   min-version:
     name: min-version
@@ -60,32 +53,25 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: sfackler/actions/rustup@master
-      - name: Get rust version
+      - run: echo "::set-output name=version::$(rustc --version)"
         id: rust-version
-        run: echo "::set-output name=version::$(rustc --version)"
-      - name: Cache cargo index
-        uses: actions/cache@v1
+      - uses: actions/cache@v1
         with:
           path: ~/.cargo/registry/index
           key: index-${{ runner.os }}-${{ github.run_number }}
           restore-keys: |
             index-${{ runner.os }}-
-      - name: Create lockfile
-        run: cargo generate-lockfile
-      - name: Cache cargo registry
-        uses: actions/cache@v1
+      - run: cargo generate-lockfile
+      - uses: actions/cache@v1
         with:
           path: ~/.cargo/registry/cache
           key: registry-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
-      - name: Fetch dependencies
-        run: cargo fetch
-      - name: Cache target directory
-        uses: actions/cache@v1
+      - run: cargo fetch
+      - uses: actions/cache@v1
         with:
           path: target
-          key: min-version-target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
-      - name: Check openssl
-        run: cargo check -p openssl
+          key: target-${{ github.job }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+      - run: cargo check -p openssl
 
   windows-vcpkg:
     name: windows-vcpkg
@@ -95,40 +81,29 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: sfackler/actions/rustup@master
-      - name: Get rust version
+      - run: echo "::set-output name=version::$(rustc --version)"
         id: rust-version
-        run: echo "::set-output name=version::$(rustc --version)"
-      - name: Set vcpkg root
-        run: echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Install OpenSSL
-        run: vcpkg install openssl:x64-windows
-      - name: Cache cargo index
-        uses: actions/cache@v1
+      - run: echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - run: vcpkg install openssl:x64-windows
+      - uses: actions/cache@v1
         with:
           path: ~/.cargo/registry/index
           key: index-${{ runner.os }}-${{ github.run_number }}
           restore-keys: |
             index-${{ runner.os }}-
-      - name: Create lockfile
-        run: cargo generate-lockfile
-      - name: Cache cargo registry
-        uses: actions/cache@v1
+      - run: cargo generate-lockfile
+      - uses: actions/cache@v1
         with:
           path: ~/.cargo/registry/cache
           key: registry-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
-      - name: Fetch dependencies
-        run: cargo fetch
-      - name: Cache target directory
-        uses: actions/cache@v1
+      - run: cargo fetch
+      - uses: actions/cache@v1
         with:
           path: target
-          key: min-version-target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
-      - name: Run systest
-        run: cargo run -p systest
-      - name: Test openssl
-        run: cargo test -p openssl
-      - name: Test openssl-errors
-        run: cargo test -p openssl-errors
+          key: target-${{ github.job }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+      - run: cargo run -p systest
+      - run: cargo test -p openssl
+      - run: cargo test -p openssl-errors
   
   macos-homebrew:
     name: macos-homebrew
@@ -153,7 +128,156 @@ jobs:
       - uses: actions/cache@v1
         with:
           path: target
-          key: target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+          key: target-${{ github.job }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
       - run: cargo run -p systest
       - run: cargo test -p openssl
       - run: cargo test -p openssl-errors
+
+  linux:
+      strategy:
+        fail-fast: false
+        matrix:
+          target:
+            - x86_64-unknown-linux-gnu
+            - i686-unknown-linux-gnu
+            - arm-unknown-linux-gnueabihf
+          library:
+            - name: openssl
+              version: vendored
+            - name: openssl
+              version: 1.1.1j
+              dl-path: /
+            - name: openssl
+              version: 1.1.0l
+              dl-path: /old/1.1.0
+            - name: openssl
+              version: 1.0.2u
+              dl-path: /old/1.0.2
+            - name: openssl
+              version: 1.0.1u
+              dl-path: /old/1.0.1
+          include:
+            - target: x86_64-unknown-linux-gnu
+              library:
+                name: libressl
+                version: 2.5.5
+            - target: x86_64-unknown-linux-gnu
+              library:
+                name: libressl
+                version: 3.3.1
+      name: ${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}
+      runs-on: ubuntu-latest
+      env:
+        OPENSSL_DIR: /opt/openssl
+        CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
+        CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_AR: arm-linux-gnueabihf-ar
+        CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUNNER: qemu-arm -L /usr/arm-linux-gnueabihf
+      steps:
+        - uses: actions/checkout@v2
+        - uses: sfackler/actions/rustup@master
+        - run: echo "::set-output name=version::$(rustc --version)"
+          id: rust-version
+        - run: rustup target add ${{ matrix.target }}
+        - name: Install packages
+          run: |
+            case "${{ matrix.target }}" in
+            "x86_64-unknown-linux-gnu")
+              exit 0
+              ;;
+            "i686-unknown-linux-gnu")
+              packages="gcc-multilib"
+              ;;
+            "arm-unknown-linux-gnueabihf")
+              packages="gcc-arm-linux-gnueabihf qemu-user"
+              ;;
+            esac
+
+            sudo apt-get update
+            sudo apt-get install -y $packages
+        - uses: actions/cache@v2
+          with:
+            path: /opt/openssl
+            key: openssl-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}
+          if: matrix.library.version != 'vendored'
+          id: openssl-cache
+        - name: Build OpenSSL
+          run: |
+            case "${{ matrix.library.name }}" in
+            "openssl")
+              url="https://openssl.org/source${{ matrix.library.dl-path }}/openssl-${{ matrix.library.version }}.tar.gz"
+              ;;
+            "libressl")
+              url="https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-${{ matrix.library.version }}.tar.gz"
+              ;;
+            esac
+
+            case "${{ matrix.target}}" in
+            "x86_64-unknown-linux-gnu")
+              OS_COMPILER=linux-x86_64
+              OS_FLAGS=""
+              ;;
+            "i686-unknown-linux-gnu")
+              OS_COMPILER=linux-elf
+              OS_FLAGS=-m32
+              ;;
+            "arm-unknown-linux-gnueabihf")
+              OS_COMPILER=linux-armv4
+              OS_FLAGS=""
+              export AR=arm-linux-gnueabihf-ar
+              export CC=arm-linux-gnueabihf-gcc
+              ;;
+            esac
+
+            mkdir /tmp/build
+            cd /tmp/build
+
+            curl -L $url | tar --strip-components=1 -xzf -
+
+            case "${{ matrix.library.name }}" in
+            "openssl")
+              ./Configure --prefix=$OPENSSL_DIR $OS_COMPILER -fPIC -g $OS_FLAGS no-shared
+              ;;
+            "libressl")
+              ./configure --prefix=$OPENSSL_DIR --disable-shared --with-pic
+              ;;
+            esac
+
+            make
+            make install_sw
+          if: matrix.library.version != 'vendored' && !steps.openssl-cache.outputs.cache-hit
+        - run: echo "RUST_TEST_THREADS=1" >> $GITHUB_ENV
+          if: matrix.target == 'arm-unknown-linux-gnueabihf'
+        - uses: actions/cache@v1
+          with:
+            path: ~/.cargo/registry/index
+            key: index-${{ runner.os }}-${{ github.run_number }}
+            restore-keys: |
+              index-${{ runner.os }}-
+        - run: cargo generate-lockfile
+        - uses: actions/cache@v1
+          with:
+            path: ~/.cargo/registry/cache
+            key: registry-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+        - run: cargo fetch
+        - uses: actions/cache@v1
+          with:
+            path: target
+            key: target-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+        - name: Run systest
+          run: |
+            if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
+              features="--features vendored"
+            fi
+            cargo run --manifest-path=systest/Cargo.toml --target ${{ matrix.target }} $features
+        - name: Test openssl
+          run: |
+            if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
+              features="--features vendored"
+            fi
+            cargo test --manifest-path=openssl/Cargo.toml --target ${{ matrix.target }} $features
+        - name: Test openssl-errors
+          run: |
+            if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
+              features="--features openssl-sys/vendored"
+            fi
+            cargo test --manifest-path=openssl-errors/Cargo.toml --target ${{ matrix.target }} $features
