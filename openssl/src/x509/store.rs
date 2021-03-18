@@ -159,10 +159,7 @@ impl X509LookupRef<HashDir> {
 
 generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_LOOKUP_METHOD;
-    fn drop = |_method| {
-        #[cfg(ossl110)]
-        ffi::X509_LOOKUP_meth_free(_method);
-    };
+    fn drop = X509_LOOKUP_meth_free;
 
     /// Method used to look up certificates and CRLs.
     pub struct X509LookupMethod<T>;
@@ -195,5 +192,14 @@ cfg_if! {
         unsafe fn X509_STORE_get0_objects(x: *mut ffi::X509_STORE) -> *mut ffi::stack_st_X509_OBJECT {
             (*x).objs
         }
+    }
+}
+
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::X509_LOOKUP_meth_free;
+    } else {
+        #[allow(bad_style)]
+        unsafe fn X509_LOOKUP_meth_free(_x: *mut ffi::X509_LOOKUP_METHOD) {}
     }
 }
