@@ -178,7 +178,8 @@ jobs:
         - run: echo "::set-output name=version::$(rustc --version)"
           id: rust-version
         - run: rustup target add ${{ matrix.target }}
-        - run: |
+        - name: Install packages
+          run: |
             case "${{ matrix.target }}" in
             "x86_64-unknown-linux-gnu")
               exit 0
@@ -199,7 +200,8 @@ jobs:
             key: openssl-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}
           if: matrix.library.version != 'vendored'
           id: openssl-cache
-        - run: |
+        - name: Build OpenSSL
+          run: |
             case "${{ matrix.library.name }}" in
             "openssl")
               url="https://openssl.org/source${{ matrix.library.dl-path }}/openssl-${{ matrix.library.version }}.tar.gz"
@@ -261,17 +263,20 @@ jobs:
           with:
             path: target
             key: target-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
-        - run: |
+        - name: Run systest
+          run: |
             if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
               features="--features vendored"
             fi
             cargo run --manifest-path=systest/Cargo.toml --target ${{ matrix.target }} $features
-        - run: |
+        - name: Test openssl
+          run: |
             if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
               features="--features vendored"
             fi
             cargo test --manifest-path=openssl/Cargo.toml --target ${{ matrix.target }} $features
-        - run: |
+        - name: Test openssl-errors
+          run: |
             if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
               features="--features openssl-sys/vendored"
             fi
