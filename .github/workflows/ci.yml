@@ -174,9 +174,9 @@ jobs:
       steps:
         - uses: actions/checkout@v2
         - uses: sfackler/actions/rustup@master
-        - run: rustup target add ${{ matrix.target }}
         - run: echo "::set-output name=version::$(rustc --version)"
           id: rust-version
+        - run: rustup target add ${{ matrix.target }}
         - run: |
             case "${{ matrix.target }}" in
             "x86_64-unknown-linux-gnu")
@@ -242,6 +242,8 @@ jobs:
             make
             make install_sw
           if: matrix.library.version != 'vendored' && !steps.openssl-cache.outputs.cache-hit
+        - run: echo "RUST_TEST_THREADS=1" >> $GITHUB_ENV
+          if: matrix.target == 'arm-unknown-linux-gnueabihf'
         - uses: actions/cache@v1
           with:
             path: ~/.cargo/registry/index
@@ -262,4 +264,14 @@ jobs:
             if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
               features="--features vendored"
             fi
-            cargo test --manifest-path=systest/Cargo.toml --target ${{ matrix.target }} $features
+            cargo run --manifest-path=systest/Cargo.toml --target ${{ matrix.target }} $features
+        - run: |
+            if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
+              features="--features vendored"
+            fi
+            cargo test --manifest-path=openssl/Cargo.toml --target ${{ matrix.target }} $features
+        - run: |
+            if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
+              features="--features openssl-sys/vendored"
+            fi
+            cargo test --manifest-path=openssl-errors/Cargo.toml --target ${{ matrix.target }} $features
