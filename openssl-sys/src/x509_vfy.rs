@@ -183,6 +183,7 @@ extern "C" {
     ) -> *mut X509_LOOKUP;
 
     pub fn X509_STORE_set_default_paths(store: *mut X509_STORE) -> c_int;
+    pub fn X509_STORE_set_flags(store: *mut X509_STORE, flags: c_ulong) -> c_int;
 
     pub fn X509_STORE_CTX_get_ex_data(ctx: *mut X509_STORE_CTX, idx: c_int) -> *mut c_void;
     pub fn X509_STORE_CTX_get_error(ctx: *mut X509_STORE_CTX) -> c_int;
