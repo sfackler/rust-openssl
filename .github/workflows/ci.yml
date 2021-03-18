@@ -170,7 +170,7 @@ jobs:
         OPENSSL_DIR: /opt/openssl
         CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
         CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_AR: arm-linux-gnueabihf-ar
-        CARGO_TARGET_ARM_UNKNOWN_LINUX_GNU_EABIHF_RUNNER: qemu-arm -L /usr/arm/arm-linux-gnueabihf
+        CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUNNER: qemu-arm -L /usr/arm-linux-gnueabihf
       steps:
         - uses: actions/checkout@v2
         - uses: sfackler/actions/rustup@master
