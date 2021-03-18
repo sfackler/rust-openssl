@@ -136,13 +136,10 @@ jobs:
   linux:
       strategy:
         matrix:
-          arch:
-            - target: x86_64-unknown-linux-gnu
-              run: true
-            - target: i686-unknown-linux-gnu
-              run: true
-            - target: arm-unknown-linux-gnueabihf
-              run: false
+          target:
+            - x86_64-unknown-linux-gnu
+            - i686-unknown-linux-gnu
+            - arm-unknown-linux-gnueabihf
           library:
             - name: openssl
               version: vendored
@@ -159,19 +156,15 @@ jobs:
               version: 1.0.1u
               dl-path: /old/1.0.1
           include:
-            - arch:
-                target: x86_64-unknown-linux-gnu
-                run: true
+            - target: x86_64-unknown-linux-gnu
               library:
                 name: libressl
                 version: 2.5.5
-            - arch:
-                target: x86_64-unknown-linux-gnu
-                run: true
+            - target: x86_64-unknown-linux-gnu
               library:
                 name: libressl
                 version: 3.3.1
-      name: ${{ matrix.arch.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}
+      name: ${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}
       runs-on: ubuntu-latest
       env:
         OPENSSL_DIR: /opt/openssl
@@ -181,9 +174,11 @@ jobs:
       steps:
         - uses: actions/checkout@v2
         - uses: sfackler/actions/rustup@master
-        - run: rustup target add ${{ matrix.arch.target }}
+        - run: rustup target add ${{ matrix.target }}
+        - run: echo "::set-output name=version::$(rustc --version)"
+          id: rust-version
         - run: |
-            case "${{ matrix.arch.target }}" in
+            case "${{ matrix.target }}" in
             "x86_64-unknown-linux-gnu")
               exit 0
               ;;
@@ -200,7 +195,7 @@ jobs:
         - uses: actions/cache@v2
           with:
             path: /opt/openssl
-            key: openssl-${{ matrix.arch.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}
+            key: openssl-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}
           if: matrix.library.version != 'vendored'
           id: openssl-cache
         - run: |
@@ -213,7 +208,7 @@ jobs:
               ;;
             esac
 
-            case "${{ matrix.arch.target}}" in
+            case "${{ matrix.target}}" in
             "x86_64-unknown-linux-gnu")
               OS_COMPILER=linux-x86_64
               OS_FLAGS=""
@@ -247,3 +242,24 @@ jobs:
             make
             make install_sw
           if: matrix.library.version != 'vendored' && !steps.openssl-cache.outputs.cache-hit
+        - uses: actions/cache@v1
+          with:
+            path: ~/.cargo/registry/index
+            key: index-${{ runner.os }}-${{ github.run_number }}
+            restore-keys: |
+              index-${{ runner.os }}-
+        - run: cargo generate-lockfile
+        - uses: actions/cache@v1
+          with:
+            path: ~/.cargo/registry/cache
+            key: registry-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+        - run: cargo fetch
+        - uses: actions/cache@v1
+          with:
+            path: target
+            key: target-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+        - run: |
+            if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
+              features="--features vendored"
+            fi
+            cargo test --manifest-path=systest/Cargo.toml --target ${{ matrix.target }} $features
