@@ -43,6 +43,7 @@
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
+use std::convert::TryFrom;
 use std::ffi::CString;
 use std::fmt;
 use std::mem;
@@ -671,8 +672,74 @@ cfg_if! {
     }
 }
 
+impl<T> TryFrom<EcKey<T>> for PKey<T> {
+    type Error = ErrorStack;
+
+    fn try_from(ec_key: EcKey<T>) -> Result<PKey<T>, ErrorStack> {
+        PKey::from_ec_key(ec_key)
+    }
+}
+
+impl<T> TryFrom<PKey<T>> for EcKey<T> {
+    type Error = ErrorStack;
+
+    fn try_from(pkey: PKey<T>) -> Result<EcKey<T>, ErrorStack> {
+        pkey.ec_key()
+    }
+}
+
+impl<T> TryFrom<Rsa<T>> for PKey<T> {
+    type Error = ErrorStack;
+
+    fn try_from(rsa: Rsa<T>) -> Result<PKey<T>, ErrorStack> {
+        PKey::from_rsa(rsa)
+    }
+}
+
+impl<T> TryFrom<PKey<T>> for Rsa<T> {
+    type Error = ErrorStack;
+
+    fn try_from(pkey: PKey<T>) -> Result<Rsa<T>, ErrorStack> {
+        pkey.rsa()
+    }
+}
+
+impl<T> TryFrom<Dsa<T>> for PKey<T> {
+    type Error = ErrorStack;
+
+    fn try_from(dsa: Dsa<T>) -> Result<PKey<T>, ErrorStack> {
+        PKey::from_dsa(dsa)
+    }
+}
+
+impl<T> TryFrom<PKey<T>> for Dsa<T> {
+    type Error = ErrorStack;
+
+    fn try_from(pkey: PKey<T>) -> Result<Dsa<T>, ErrorStack> {
+        pkey.dsa()
+    }
+}
+
+impl<T> TryFrom<Dh<T>> for PKey<T> {
+    type Error = ErrorStack;
+
+    fn try_from(dh: Dh<T>) -> Result<PKey<T>, ErrorStack> {
+        PKey::from_dh(dh)
+    }
+}
+
+impl<T> TryFrom<PKey<T>> for Dh<T> {
+    type Error = ErrorStack;
+
+    fn try_from(pkey: PKey<T>) -> Result<Dh<T>, ErrorStack> {
+        pkey.dh()
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::convert::TryInto;
+
     use crate::dh::Dh;
     use crate::dsa::Dsa;
     use crate::ec::EcKey;
@@ -791,5 +858,54 @@ mod tests {
         pkey.ec_key().unwrap();
         assert_eq!(pkey.id(), Id::EC);
         assert!(pkey.rsa().is_err());
+    }
+
+    #[test]
+    fn test_rsa_conversion() {
+        let rsa = Rsa::generate(2048).unwrap();
+        let pkey: PKey<Private> = rsa.clone().try_into().unwrap();
+        let rsa_: Rsa<Private> = pkey.try_into().unwrap();
+        // Eq is missing
+        assert_eq!(rsa.p(), rsa_.p());
+        assert_eq!(rsa.q(), rsa_.q());
+    }
+
+    #[test]
+    fn test_dsa_conversion() {
+        let dsa = Dsa::generate(2048).unwrap();
+        let pkey: PKey<Private> = dsa.clone().try_into().unwrap();
+        let dsa_: Dsa<Private> = pkey.try_into().unwrap();
+        // Eq is missing
+        assert_eq!(dsa.priv_key(), dsa_.priv_key());
+    }
+
+    #[test]
+    fn test_ec_key_conversion() {
+        let group = crate::ec::EcGroup::from_curve_name(crate::nid::Nid::X9_62_PRIME256V1).unwrap();
+        let ec_key = EcKey::generate(&group).unwrap();
+        let pkey: PKey<Private> = ec_key.clone().try_into().unwrap();
+        let ec_key_: EcKey<Private> = pkey.try_into().unwrap();
+        // Eq is missing
+        assert_eq!(ec_key.private_key(), ec_key_.private_key());
+    }
+
+    #[test]
+    fn test_dh_conversion() {
+        let dh_params = include_bytes!("../test/dhparams.pem");
+        let dh_params = Dh::params_from_pem(dh_params).unwrap();
+        let dh = dh_params.generate_key().unwrap();
+
+        // Clone is missing for Dh, save the parameters
+        let p = dh.prime_p().to_owned().unwrap();
+        let q = dh.prime_q().map(|q| q.to_owned().unwrap());
+        let g = dh.generator().to_owned().unwrap();
+
+        let pkey: PKey<Private> = dh.try_into().unwrap();
+        let dh_: Dh<Private> = pkey.try_into().unwrap();
+
+        // Eq is missing
+        assert_eq!(&p, dh_.prime_p());
+        assert_eq!(q, dh_.prime_q().map(|q| q.to_owned().unwrap()));
+        assert_eq!(&g, dh_.generator());
     }
 }
