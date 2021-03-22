@@ -10,6 +10,8 @@ use crate::x509::extension::{
     SubjectKeyIdentifier,
 };
 use crate::x509::store::X509StoreBuilder;
+#[cfg(any(ossl102, libressl261))]
+use crate::x509::verify::X509VerifyFlags;
 #[cfg(ossl110)]
 use crate::x509::X509Builder;
 use crate::x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
@@ -396,6 +398,33 @@ fn test_verify_fails() {
     assert!(!context
         .init(&store, &cert, &chain, |c| c.verify_cert())
         .unwrap());
+}
+
+#[test]
+#[cfg(any(ossl102, libressl261))]
+fn test_verify_fails_with_crl_flag_set_and_no_crl() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+    let chain = Stack::new().unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    store_bldr.add_cert(ca).unwrap();
+    store_bldr.set_flags(X509VerifyFlags::CRL_CHECK).unwrap();
+    let store = store_bldr.build();
+
+    let mut context = X509StoreContext::new().unwrap();
+    assert_eq!(
+        context
+            .init(&store, &cert, &chain, |c| {
+                c.verify_cert()?;
+                Ok(c.error())
+            })
+            .unwrap()
+            .error_string(),
+        "unable to get certificate CRL"
+    )
 }
 
 #[cfg(ossl110)]
