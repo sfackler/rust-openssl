@@ -41,6 +41,8 @@ use std::mem;
 
 use crate::error::ErrorStack;
 use crate::stack::StackRef;
+#[cfg(any(ossl102, libressl261))]
+use crate::x509::verify::X509VerifyFlags;
 use crate::x509::{X509Object, X509};
 use crate::{cvt, cvt_p};
 
@@ -101,6 +103,16 @@ impl X509StoreBuilderRef {
     ) -> Result<&mut X509LookupRef<T>, ErrorStack> {
         let lookup = unsafe { ffi::X509_STORE_add_lookup(self.as_ptr(), method.as_ptr()) };
         cvt_p(lookup).map(|ptr| unsafe { X509LookupRef::from_ptr_mut(ptr) })
+    }
+
+    /// Sets certificate chain validation related flags.
+    ///
+    /// This corresponds to [`X509_STORE_set_flags`].
+    ///
+    /// [`X509_STORE_set_flags`]: https://www.openssl.org/docs/man1.1.1/man3/X509_STORE_set_flags.html
+    #[cfg(any(ossl102, libressl261))]
+    pub fn set_flags(&mut self, flags: X509VerifyFlags) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_STORE_set_flags(self.as_ptr(), flags.bits())).map(|_| ()) }
     }
 }
 
