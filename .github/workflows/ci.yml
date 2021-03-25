@@ -52,6 +52,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          version: 1.36.0
       - uses: sfackler/actions/rustup@master
       - run: echo "::set-output name=version::$(rustc --version)"
         id: rust-version
@@ -105,7 +107,7 @@ jobs:
       - run: cargo run -p systest
       - run: cargo test -p openssl
       - run: cargo test -p openssl-errors
-  
+
   macos-homebrew:
     name: macos-homebrew
     runs-on: macos-latest
