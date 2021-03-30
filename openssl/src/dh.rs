@@ -73,6 +73,19 @@ impl Dh<Params> {
         }
     }
 
+    /// Sets the private key on the DH object and recomputes the public key.
+    pub fn set_private_key(self, priv_key: BigNum) -> Result<Dh<Private>, ErrorStack> {
+        unsafe {
+            let dh_ptr = self.0;
+            cvt(DH_set0_key(dh_ptr, ptr::null_mut(), priv_key.as_ptr()))?;
+            mem::forget(priv_key);
+
+            cvt(ffi::DH_generate_key(dh_ptr))?;
+            mem::forget(self);
+            Ok(Dh::from_ptr(dh_ptr))
+        }
+    }
+
     /// Generates DH params based on the given `prime_len` and a fixed `generator` value.
     ///
     /// This corresponds to [`DH_generate_parameters_ex`].
@@ -244,11 +257,24 @@ where
             Ok(key)
         }
     }
+
+    /// Returns the private key from the DH instance.
+    ///
+    /// This corresponds to [`DH_get0_key`].
+    ///
+    /// [`DH_get0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_key.html
+    pub fn private_key(&self) -> &BigNumRef {
+        let mut priv_key = ptr::null();
+        unsafe {
+            DH_get0_key(self.as_ptr(), ptr::null_mut(), &mut priv_key);
+            BigNumRef::from_ptr(priv_key as *mut _)
+        }
+    }
 }
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl270))] {
-        use ffi::{DH_set0_pqg, DH_get0_pqg, DH_get0_key};
+        use ffi::{DH_set0_pqg, DH_get0_pqg, DH_get0_key, DH_set0_key};
     } else {
         #[allow(bad_style)]
         unsafe fn DH_set0_pqg(
@@ -279,6 +305,17 @@ cfg_if! {
             if !g.is_null() {
                 *g = (*dh).g;
             }
+        }
+
+        #[allow(bad_style)]
+        unsafe fn DH_set0_key(
+            dh: *mut ffi::DH,
+            pub_key: *mut ffi::BIGNUM,
+            priv_key: *mut ffi::BIGNUM,
+        ) -> ::libc::c_int {
+            (*dh).pub_key = pub_key;
+            (*dh).priv_key = priv_key;
+            1
         }
 
         #[allow(bad_style)]
@@ -347,6 +384,50 @@ mod tests {
         assert_eq!(dh.prime_p(), &prime_p);
         assert_eq!(dh.prime_q().unwrap(), &prime_q);
         assert_eq!(dh.generator(), &generator);
+    }
+
+    #[test]
+    fn test_dh_stored_restored() {
+        let prime_p = BigNum::from_hex_str(
+            "87A8E61DB4B6663CFFBBD19C651959998CEEF608660DD0F25D2CEED4435E3B00E00DF8F1D61957D4FAF7DF\
+             4561B2AA3016C3D91134096FAA3BF4296D830E9A7C209E0C6497517ABD5A8A9D306BCF67ED91F9E6725B47\
+             58C022E0B1EF4275BF7B6C5BFC11D45F9088B941F54EB1E59BB8BC39A0BF12307F5C4FDB70C581B23F76B6\
+             3ACAE1CAA6B7902D52526735488A0EF13C6D9A51BFA4AB3AD8347796524D8EF6A167B5A41825D967E144E5\
+             140564251CCACB83E6B486F6B3CA3F7971506026C0B857F689962856DED4010ABD0BE621C3A3960A54E710\
+             C375F26375D7014103A4B54330C198AF126116D2276E11715F693877FAD7EF09CADB094AE91E1A1597",
+        ).unwrap();
+        let prime_q = BigNum::from_hex_str(
+            "3FB32C9B73134D0B2E77506660EDBD484CA7B18F21EF205407F4793A1A0BA12510DBC15077BE463FFF4FED\
+             4AAC0BB555BE3A6C1B0C6B47B1BC3773BF7E8C6F62901228F8C28CBB18A55AE31341000A650196F931C77A\
+             57F2DDF463E5E9EC144B777DE62AAAB8A8628AC376D282D6ED3864E67982428EBC831D14348F6F2F9193B5\
+             045AF2767164E1DFC967C1FB3F2E55A4BD1BFFE83B9C80D052B985D182EA0ADB2A3B7313D3FE14C8484B1E\
+             052588B9B7D2BBD2DF016199ECD06E1557CD0915B3353BBB64E0EC377FD028370DF92B52C7891428CDC67E\
+             B6184B523D1DB246C32F63078490F00EF8D647D148D47954515E2327CFEF98C582664B4C0F6CC41659",
+        ).unwrap();
+        let generator = BigNum::from_hex_str(
+            "8CF83642A709A097B447997640129DA299B1A47D1EB3750BA308B0FE64F5FBD3",
+        )
+        .unwrap();
+        let dh1 = Dh::from_params(
+            prime_p.to_owned().unwrap(),
+            generator.to_owned().unwrap(),
+            prime_q.to_owned().unwrap(),
+        )
+        .unwrap();
+        let key1 = dh1.generate_key().unwrap();
+
+        let dh2 = Dh::from_params(
+            prime_p.to_owned().unwrap(),
+            generator.to_owned().unwrap(),
+            prime_q.to_owned().unwrap(),
+        )
+        .unwrap();
+        let key2 = dh2
+            .set_private_key(key1.private_key().to_owned().unwrap())
+            .unwrap();
+
+        assert_eq!(key1.public_key(), key2.public_key());
+        assert_eq!(key1.private_key(), key2.private_key());
     }
 
     #[test]
