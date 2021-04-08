@@ -480,6 +480,32 @@ impl EcPointRef {
     /// Place affine coordinates of a curve over a prime field in the provided
     /// `x` and `y` `BigNum`s
     ///
+    /// OpenSSL documentation at [`EC_POINT_get_affine_coordinates`]
+    ///
+    /// [`EC_POINT_get_affine_coordinates`]: https://www.openssl.org/docs/man1.1.1/man3/EC_POINT_get_affine_coordinates.html
+    #[cfg(ossl111)]
+    pub fn affine_coordinates(
+        &self,
+        group: &EcGroupRef,
+        x: &mut BigNumRef,
+        y: &mut BigNumRef,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_POINT_get_affine_coordinates(
+                group.as_ptr(),
+                self.as_ptr(),
+                x.as_ptr(),
+                y.as_ptr(),
+                ctx.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Place affine coordinates of a curve over a prime field in the provided
+    /// `x` and `y` `BigNum`s
+    ///
     /// OpenSSL documentation at [`EC_POINT_get_affine_coordinates_GFp`]
     ///
     /// [`EC_POINT_get_affine_coordinates_GFp`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_get_affine_coordinates_GFp.html
@@ -1083,8 +1109,33 @@ mod test {
         assert!(ec_key.check_key().is_ok());
     }
 
+    #[cfg(ossl111)]
     #[test]
     fn get_affine_coordinates() {
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let x = Vec::from_hex("30a0424cd21c2944838a2d75c92b37e76ea20d9f00893a3b4eee8a3c0aafec3e")
+            .unwrap();
+        let y = Vec::from_hex("e04b65e92456d9888b52b379bdfbd51ee869ef1f0fc65b6659695b6cce081723")
+            .unwrap();
+
+        let xbn = BigNum::from_slice(&x).unwrap();
+        let ybn = BigNum::from_slice(&y).unwrap();
+
+        let ec_key = EcKey::from_public_key_affine_coordinates(&group, &xbn, &ybn).unwrap();
+
+        let mut xbn2 = BigNum::new().unwrap();
+        let mut ybn2 = BigNum::new().unwrap();
+        let mut ctx = BigNumContext::new().unwrap();
+        let ec_key_pk = ec_key.public_key();
+        ec_key_pk
+            .affine_coordinates(&group, &mut xbn2, &mut ybn2, &mut ctx)
+            .unwrap();
+        assert_eq!(xbn2, xbn);
+        assert_eq!(ybn2, ybn);
+    }
+
+    #[test]
+    fn get_affine_coordinates_gfp() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let x = Vec::from_hex("30a0424cd21c2944838a2d75c92b37e76ea20d9f00893a3b4eee8a3c0aafec3e")
             .unwrap();
