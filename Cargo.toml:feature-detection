@@ -1,0 +1,3 @@
+[dependencies]
+openssl-sys = "0.9"
+openssl = "0.10"
