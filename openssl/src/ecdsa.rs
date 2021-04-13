@@ -181,8 +181,7 @@ mod test {
     use crate::pkey::{Private, Public};
 
     fn get_public_key(group: &EcGroup, x: &EcKey<Private>) -> Result<EcKey<Public>, ErrorStack> {
-        let public_key_point = x.public_key();
-        Ok(EcKey::from_public_key(group, public_key_point)?)
+        EcKey::from_public_key(group, x.public_key())
     }
 
     #[test]

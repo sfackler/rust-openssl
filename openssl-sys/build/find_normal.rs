@@ -171,7 +171,7 @@ https://github.com/sfackler/rust-openssl#windows
         );
     }
 
-    panic!(msg);
+    panic!("{}", msg);
 }
 
 /// Attempt to find OpenSSL through pkg-config.

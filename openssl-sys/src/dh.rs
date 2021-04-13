@@ -43,5 +43,8 @@ extern "C" {
     );
 
     #[cfg(any(ossl110, libressl270))]
+    pub fn DH_set0_key(dh: *mut DH, pub_key: *mut BIGNUM, priv_key: *mut BIGNUM) -> c_int;
+
+    #[cfg(any(ossl110, libressl270))]
     pub fn DH_get0_key(dh: *const DH, pub_key: *mut *const BIGNUM, priv_key: *mut *const BIGNUM);
 }

@@ -53,6 +53,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: sfackler/actions/rustup@master
+        with:
+          version: 1.36.0
       - run: echo "::set-output name=version::$(rustc --version)"
         id: rust-version
       - uses: actions/cache@v1
@@ -105,7 +107,7 @@ jobs:
       - run: cargo run -p systest
       - run: cargo test -p openssl
       - run: cargo test -p openssl-errors
-  
+
   macos-homebrew:
     name: macos-homebrew
     runs-on: macos-latest
@@ -149,7 +151,7 @@ jobs:
               version: 3.0.0-alpha14
               dl-path: /
             - name: openssl
-              version: 1.1.1j
+              version: 1.1.1k
               dl-path: /
             - name: openssl
               version: 1.1.0l
