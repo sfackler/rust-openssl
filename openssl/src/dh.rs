@@ -387,6 +387,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(ossl102)]
     fn test_dh_stored_restored() {
         let dh1 = Dh::get_2048_256().unwrap();
         let key1 = dh1.generate_key().unwrap();
