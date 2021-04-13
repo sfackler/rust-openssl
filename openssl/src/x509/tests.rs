@@ -14,7 +14,9 @@ use crate::x509::store::X509StoreBuilder;
 use crate::x509::verify::X509VerifyFlags;
 #[cfg(ossl110)]
 use crate::x509::X509Builder;
-use crate::x509::{CrlStatus, X509Crl, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
+use crate::x509::{
+    CrlStatus, X509Crl, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509,
+};
 use hex::{self, FromHex};
 
 fn pkey() -> PKey<Private> {

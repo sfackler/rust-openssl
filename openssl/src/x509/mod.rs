@@ -1380,6 +1380,30 @@ pub enum CrlStatus<'a> {
     RemoveFromCrl(&'a X509RevokedRef),
 }
 
+impl<'a> CrlStatus<'a> {
+    // Helper used by the X509_CRL_get0_by_* methods to convert their return
+    // value to the status enum.
+    // Safety note: the returned CrlStatus must not outlive the owner of the
+    // revoked_entry pointer.
+    unsafe fn from_ffi_status(
+        status: c_int,
+        revoked_entry: *mut ffi::X509_REVOKED,
+    ) -> CrlStatus<'a> {
+        match status {
+            0 => CrlStatus::NotRevoked,
+            1 => {
+                assert!(!revoked_entry.is_null());
+                CrlStatus::Revoked(X509RevokedRef::from_ptr(revoked_entry))
+            }
+            2 => {
+                assert!(!revoked_entry.is_null());
+                CrlStatus::RemoveFromCrl(X509RevokedRef::from_ptr(revoked_entry))
+            }
+            _ => unreachable!("X509_CRL_get0_by_{{serial,cert}} should only return 0, 1, or 2."),
+        }
+    }
+}
+
 impl X509Crl {
     from_pem! {
         /// Deserializes a PEM-encoded Certificate Revocation List
@@ -1472,25 +1496,6 @@ impl X509CrlRef {
         }
     }
 
-    // Helper used by the X509_CRL_get0_by_* methods to convert their return value to the status enum
-    unsafe fn to_crl_status<'a>(
-        status: c_int,
-        revoked_entry: *mut ffi::X509_REVOKED,
-    ) -> CrlStatus<'a> {
-        match status {
-            0 => CrlStatus::NotRevoked,
-            1 => {
-                assert!(!revoked_entry.is_null());
-                CrlStatus::Revoked(X509RevokedRef::from_ptr(revoked_entry))
-            }
-            2 => {
-                assert!(!revoked_entry.is_null());
-                CrlStatus::RemoveFromCrl(X509RevokedRef::from_ptr(revoked_entry))
-            }
-            _ => unreachable!("X509_CRL_get0_by_{{serial,cert}} should only return 0, 1, or 2."),
-        }
-    }
-
     /// Get the revocation status of a certificate by its serial number
     ///
     /// This corresponds to [`X509_CRL_get0_by_serial`]
@@ -1501,7 +1506,7 @@ impl X509CrlRef {
             let mut ret = ptr::null_mut::<ffi::X509_REVOKED>();
             let status =
                 ffi::X509_CRL_get0_by_serial(self.as_ptr(), &mut ret as *mut _, serial.as_ptr());
-            Self::to_crl_status(status, ret)
+            CrlStatus::from_ffi_status(status, ret)
         }
     }
 
@@ -1515,7 +1520,7 @@ impl X509CrlRef {
             let mut ret = ptr::null_mut::<ffi::X509_REVOKED>();
             let status =
                 ffi::X509_CRL_get0_by_cert(self.as_ptr(), &mut ret as *mut _, cert.as_ptr());
-            Self::to_crl_status(status, ret)
+            CrlStatus::from_ffi_status(status, ret)
         }
     }
 
