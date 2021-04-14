@@ -9,6 +9,26 @@ pub enum PKCS7_DIGEST {}
 pub enum PKCS7_ENCRYPT {}
 pub enum PKCS7 {}
 
+#[repr(C)]
+pub struct PKCS7_ISSUER_AND_SERIAL {
+    pub issuer: *mut X509_NAME,
+    pub serial: *mut ASN1_INTEGER,
+}
+
+#[repr(C)]
+pub struct PKCS7_SIGNER_INFO {
+    pub version: *mut ASN1_INTEGER,
+    pub issuer_and_serial: *mut PKCS7_ISSUER_AND_SERIAL,
+    pub digest_alg: *mut X509_ALGOR,
+    pub auth_attr: *mut stack_st_X509_ATTRIBUTE,
+    pub digest_enc_alg: *mut X509_ALGOR,
+    pub enc_digest: *mut ASN1_OCTET_STRING,
+    pub unauth_attr: *mut stack_st_X509_ATTRIBUTE,
+    pub pkey: *mut EVP_PKEY,
+}
+
+stack!(stack_st_PKCS7_SIGNER_INFO);
+
 pub const PKCS7_TEXT: c_int = 0x1;
 pub const PKCS7_NOCERTS: c_int = 0x2;
 pub const PKCS7_NOSIGS: c_int = 0x4;
@@ -54,6 +74,18 @@ extern "C" {
         certs: *mut stack_st_X509,
         flags: c_int,
     ) -> *mut stack_st_X509;
+
+    pub fn PKCS7_get_signer_info(p7: *mut PKCS7) -> *mut stack_st_PKCS7_SIGNER_INFO;
+
+    pub fn PKCS7_SIGNER_INFO_get0_algs(
+        si: *mut PKCS7_SIGNER_INFO,
+        pk: *mut *mut EVP_PKEY,
+        pdig: *mut *mut X509_ALGOR,
+        psig: *mut *mut X509_ALGOR,
+    );
+
+    // Not declared in the header, but the symbol exists and is exported
+    pub fn PKCS7_SIGNER_INFO_free(x: *mut PKCS7_SIGNER_INFO);
 
     pub fn PKCS7_sign(
         signcert: *mut X509,
