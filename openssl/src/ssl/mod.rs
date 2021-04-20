@@ -211,14 +211,14 @@ bitflags! {
 
         /// Disables the use of DTLSv1.0
         ///
-        /// Requires OpenSSL 1.0.2 or newer.
-        #[cfg(any(ossl102, ossl110))]
+        /// Requires OpenSSL 1.0.2 or LibreSSL 3.3.2 or newer.
+        #[cfg(any(ossl102, ossl110, libressl332))]
         const NO_DTLSV1 = ffi::SSL_OP_NO_DTLSv1;
 
         /// Disables the use of DTLSv1.2.
         ///
-        /// Requires OpenSSL 1.0.2, or newer.
-        #[cfg(any(ossl102, ossl110))]
+        /// Requires OpenSSL 1.0.2 or LibreSSL 3.3.2 or newer.
+        #[cfg(any(ossl102, ossl110, libressl332))]
         const NO_DTLSV1_2 = ffi::SSL_OP_NO_DTLSv1_2;
 
         /// Disables the use of all (D)TLS protocol versions.

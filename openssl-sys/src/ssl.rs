@@ -311,9 +311,9 @@ pub const SSL_OP_NO_TLSv1_1: c_ulong = 0x10000000;
 pub const SSL_OP_NO_TLSv1_2: c_ulong = 0x08000000;
 
 pub const SSL_OP_NO_TLSv1: c_ulong = 0x04000000;
-#[cfg(ossl102)]
+#[cfg(any(ossl102, libressl332))]
 pub const SSL_OP_NO_DTLSv1: c_ulong = 0x04000000;
-#[cfg(ossl102)]
+#[cfg(any(ossl102, libressl332))]
 pub const SSL_OP_NO_DTLSv1_2: c_ulong = 0x08000000;
 #[cfg(ossl111)]
 pub const SSL_OP_NO_TLSv1_3: c_ulong = 0x20000000;
