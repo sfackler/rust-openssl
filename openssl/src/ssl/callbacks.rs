@@ -228,7 +228,7 @@ where
 {
     let ssl = SslRef::from_const_ptr(ssl);
     let callback = ssl
-        .ex_data(Ssl::cached_ex_index::<F>())
+        .ex_data(Ssl::cached_ex_index::<Arc<F>>())
         .expect("BUG: ssl info callback missing")
         .clone();
 
