@@ -1618,7 +1618,7 @@ impl SslContextBuilder {
     #[cfg(ossl111)]
     pub fn set_info_callback<F>(&mut self, callback: F)
     where
-        F: Fn(SslAlertInformationContext, SslAlertInformationCode) + 'static + Sync + Send,
+        F: Fn(&SslRef, SslAlertInformationContext, SslAlertInformationCode) + 'static + Sync + Send,
     {
         unsafe {
             self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
@@ -2604,7 +2604,7 @@ impl SslRef {
     #[cfg(ossl111)]
     pub fn set_info_callback<F>(&mut self, info: F)
     where
-        F: Fn(SslAlertInformationContext, SslAlertInformationCode) + 'static + Sync + Send,
+        F: Fn(&SslRef, SslAlertInformationContext, SslAlertInformationCode) + 'static + Sync + Send,
     {
         unsafe {
             self.set_ex_data(Ssl::cached_ex_index(), Arc::new(info));

@@ -212,7 +212,7 @@ where
 #[cfg(ossl111)]
 pub unsafe extern "C" fn raw_info<F>(ssl: *const ffi::SSL, type_: c_int, val: c_int)
 where
-    F: Fn(SslAlertInformationContext, SslAlertInformationCode) + 'static + Sync + Send,
+    F: Fn(&SslRef, SslAlertInformationContext, SslAlertInformationCode) + 'static + Sync + Send,
 {
     let ssl = SslRef::from_const_ptr(ssl);
     let callback = ssl
@@ -221,6 +221,7 @@ where
         .expect("BUG: ssl context info callback missing") as *const F;
 
     (*callback)(
+        ssl,
         SslAlertInformationContext { bits: type_ },
         SslAlertInformationCode(val),
     )
@@ -229,7 +230,7 @@ where
 #[cfg(ossl111)]
 pub unsafe extern "C" fn raw_info_ssl<F>(ssl: *const ffi::SSL, type_: c_int, val: c_int)
 where
-    F: Fn(SslAlertInformationContext, SslAlertInformationCode) + 'static + Sync + Send,
+    F: Fn(&SslRef, SslAlertInformationContext, SslAlertInformationCode) + 'static + Sync + Send,
 {
     let ssl = SslRef::from_const_ptr(ssl);
     let callback = ssl
@@ -238,6 +239,7 @@ where
         .clone();
 
     (*callback)(
+        ssl,
         SslAlertInformationContext { bits: type_ },
         SslAlertInformationCode(val),
     )
