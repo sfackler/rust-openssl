@@ -207,6 +207,32 @@ where
     }
 }
 
+pub unsafe extern "C" fn raw_info<F>(ssl: *const ffi::SSL, type_: c_int, val: c_int)
+where
+    F: Fn(i32, i32) + 'static + Sync + Send,
+{
+    let ssl = SslRef::from_const_ptr(ssl);
+    let callback = ssl
+        .ssl_context()
+        .ex_data(SslContext::cached_ex_index::<F>())
+        .expect("BUG: ssl context info callback missing") as *const F;
+
+    (*callback)(type_, val)
+}
+
+pub unsafe extern "C" fn raw_info_ssl<F>(ssl: *const ffi::SSL, type_: c_int, val: c_int)
+where
+    F: Fn(i32, i32) + 'static + Sync + Send,
+{
+    let ssl = SslRef::from_const_ptr(ssl);
+    let callback = ssl
+        .ex_data(Ssl::cached_ex_index::<F>())
+        .expect("BUG: ssl info callback missing")
+        .clone();
+
+    (*callback)(type_, val)
+}
+
 pub unsafe extern "C" fn raw_tmp_dh<F>(
     ssl: *mut ffi::SSL,
     is_export: c_int,

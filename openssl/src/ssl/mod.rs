@@ -1549,6 +1549,16 @@ impl SslContextBuilder {
         }
     }
 
+    pub fn set_info_callback<F>(&mut self, callback: F)
+    where
+        F: Fn(i32, i32) + 'static + Sync + Send,
+    {
+        unsafe {
+            self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
+            ffi::SSL_CTX_set_info_callback(self.as_ptr(), Some(callbacks::raw_info::<F>));
+        }
+    }
+
     /// Sets the session caching mode use for connections made with the context.
     ///
     /// Returns the previous session caching mode.
@@ -2521,6 +2531,16 @@ impl SslRef {
             // this needs to be in an Arc since the callback can register a new callback!
             self.set_ex_data(Ssl::cached_ex_index(), Arc::new(verify));
             ffi::SSL_set_verify(self.as_ptr(), mode.bits as c_int, Some(ssl_raw_verify::<F>));
+        }
+    }
+
+    pub fn set_info_callback<F>(&mut self, info: F)
+    where
+        F: Fn(i32, i32) + 'static + Sync + Send,
+    {
+        unsafe {
+            self.set_ex_data(Ssl::cached_ex_index(), Arc::new(info));
+            ffi::SSL_set_info_callback(self.as_ptr(), Some(raw_info_ssl::<F>))
         }
     }
 

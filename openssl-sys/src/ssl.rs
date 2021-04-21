@@ -508,7 +508,7 @@ cfg_if! {
 extern "C" {
     pub fn SSL_CTX_set_info_callback(
         ctx: *mut SSL_CTX,
-        cb: Option<unsafe extern "C" fn(ssl: *const SSL, type_: c_int, val: c_int) -> c_void>, // use type_ here as type is a keyword in Rust
+        cb: Option<unsafe extern "C" fn(ssl: *const SSL, type_: c_int, val: c_int)>, // use type_ here as type is a keyword in Rust
     );
 }
 
@@ -1231,7 +1231,7 @@ extern "C" {
     pub fn SSL_set_SSL_CTX(ssl: *mut SSL, ctx: *mut SSL_CTX) -> *mut SSL_CTX;
     pub fn SSL_set_info_callback(
         ssl: *mut SSL,
-        cb: Option<unsafe extern "C" fn(ssl: *const SSL, type_: c_int, val: c_int) -> c_void>, // use type_ here as type is a keyword in Rust
+        cb: Option<unsafe extern "C" fn(ssl: *const SSL, type_: c_int, val: c_int)>, // use type_ here as type is a keyword in Rust
     );
 
     pub fn SSL_get_verify_result(ssl: *const SSL) -> c_long;
