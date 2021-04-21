@@ -678,6 +678,7 @@ bitflags! {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct SslAlertInformationCode(c_int);
 
+#[cfg(ossl111)]
 impl Deref for SslAlertInformationCode {
     type Target = c_int;
 
