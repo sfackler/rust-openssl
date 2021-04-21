@@ -996,6 +996,15 @@ extern "C" {
     pub fn SSL_state_string(ssl: *const SSL) -> *const c_char;
     pub fn SSL_state_string_long(ssl: *const SSL) -> *const c_char;
 
+    #[cfg(ossl111)]
+    pub fn SSL_alert_type_string(value: c_int) -> *const c_char;
+    #[cfg(ossl111)]
+    pub fn SSL_alert_type_string_long(value: c_int) -> *const c_char;
+    #[cfg(ossl111)]
+    pub fn SSL_alert_desc_string(value: c_int) -> *const c_char;
+    #[cfg(ossl111)]
+    pub fn SSL_alert_desc_string_long(value: c_int) -> *const c_char;
+
     pub fn SSL_SESSION_get_time(s: *const SSL_SESSION) -> c_long;
     pub fn SSL_SESSION_get_timeout(s: *const SSL_SESSION) -> c_long;
     #[cfg(ossl110)]

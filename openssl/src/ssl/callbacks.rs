@@ -29,6 +29,8 @@ use crate::ssl::{
 #[cfg(ossl111)]
 use crate::ssl::{ClientHelloResponse, ExtensionContext};
 #[cfg(ossl111)]
+use crate::ssl::{SslAlertInformationCode, SslAlertInformationContext};
+#[cfg(ossl111)]
 use crate::util::ForeignTypeRefExt;
 #[cfg(ossl111)]
 use crate::x509::X509Ref;
@@ -210,7 +212,7 @@ where
 #[cfg(ossl111)]
 pub unsafe extern "C" fn raw_info<F>(ssl: *const ffi::SSL, type_: c_int, val: c_int)
 where
-    F: Fn(i32, i32) + 'static + Sync + Send,
+    F: Fn(SslAlertInformationContext, SslAlertInformationCode) + 'static + Sync + Send,
 {
     let ssl = SslRef::from_const_ptr(ssl);
     let callback = ssl
@@ -218,13 +220,16 @@ where
         .ex_data(SslContext::cached_ex_index::<F>())
         .expect("BUG: ssl context info callback missing") as *const F;
 
-    (*callback)(type_, val)
+    (*callback)(
+        SslAlertInformationContext { bits: type_ },
+        SslAlertInformationCode(val),
+    )
 }
 
 #[cfg(ossl111)]
 pub unsafe extern "C" fn raw_info_ssl<F>(ssl: *const ffi::SSL, type_: c_int, val: c_int)
 where
-    F: Fn(i32, i32) + 'static + Sync + Send,
+    F: Fn(SslAlertInformationContext, SslAlertInformationCode) + 'static + Sync + Send,
 {
     let ssl = SslRef::from_const_ptr(ssl);
     let callback = ssl
@@ -232,7 +237,10 @@ where
         .expect("BUG: ssl info callback missing")
         .clone();
 
-    (*callback)(type_, val)
+    (*callback)(
+        SslAlertInformationContext { bits: type_ },
+        SslAlertInformationCode(val),
+    )
 }
 
 pub unsafe extern "C" fn raw_tmp_dh<F>(
