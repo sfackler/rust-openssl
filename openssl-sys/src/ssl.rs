@@ -504,6 +504,14 @@ cfg_if! {
         }
     }
 }
+
+extern "C" {
+    pub fn SSL_CTX_set_info_callback(
+        ctx: *mut SSL_CTX,
+        cb: Option<unsafe extern "C" fn(ssl: *const SSL, type_: c_int, val: c_int) -> c_void>, // use type_ here as type is a keyword in Rust
+    );
+}
+
 extern "C" {
     // FIXME change to unsafe extern "C" fn
     pub fn SSL_CTX_set_cookie_generate_cb(
@@ -680,6 +688,14 @@ extern "C" {
     pub fn SSL_set_max_early_data(ctx: *mut SSL, max_early_data: u32) -> c_int;
     #[cfg(ossl111)]
     pub fn SSL_get_max_early_data(ctx: *const SSL) -> u32;
+    #[cfg(ossl111)]
+    pub fn SSL_CTX_set_recv_max_early_data(ctx: *mut SSL_CTX, recv_max_early_data: u32) -> c_int;
+    #[cfg(ossl111)]
+    pub fn SSL_CTX_get_recv_max_early_data(ctx: *const SSL_CTX) -> u32;
+    #[cfg(ossl111)]
+    pub fn SSL_set_recv_max_early_data(ctx: *mut SSL, recv_max_early_data: u32) -> c_int;
+    #[cfg(ossl111)]
+    pub fn SSL_get_recv_max_early_data(ctx: *const SSL) -> u32;
 
     pub fn SSL_get_finished(s: *const SSL, buf: *mut c_void, count: size_t) -> size_t;
     pub fn SSL_get_peer_finished(s: *const SSL, buf: *mut c_void, count: size_t) -> size_t;
@@ -687,6 +703,23 @@ extern "C" {
     pub fn SSL_CTX_get_verify_mode(ctx: *const SSL_CTX) -> c_int;
     pub fn SSL_get_verify_mode(s: *const SSL) -> c_int;
 }
+
+pub const SSL_ST_CONNECT: c_int = 0x1000;
+pub const SSL_ST_ACCEPT: c_int = 0x2000;
+pub const SSL_ST_MASK: c_int = 0x0FFF;
+pub const SSL_CB_LOOP: c_int = 0x01;
+pub const SSL_CB_EXIT: c_int = 0x02;
+pub const SSL_CB_READ: c_int = 0x04;
+pub const SSL_CB_WRITE: c_int = 0x08;
+pub const SSL_CB_ALERT: c_int = 0x4000;
+pub const SSL_CB_READ_ALERT: c_int = SSL_CB_ALERT | SSL_CB_READ;
+pub const SSL_CB_WRITE_ALERT: c_int = SSL_CB_ALERT | SSL_CB_WRITE;
+pub const SSL_CB_ACCEPT_LOOP: c_int = SSL_ST_ACCEPT | SSL_CB_LOOP;
+pub const SSL_CB_ACCEPT_EXIT: c_int = SSL_ST_ACCEPT | SSL_CB_EXIT;
+pub const SSL_CB_CONNECT_LOOP: c_int = SSL_ST_CONNECT | SSL_CB_LOOP;
+pub const SSL_CB_CONNECT_EXIT: c_int = SSL_ST_CONNECT | SSL_CB_EXIT;
+pub const SSL_CB_HANDSHAKE_START: c_int = 0x10;
+pub const SSL_CB_HANDSHAKE_DONE: c_int = 0x20;
 
 const_ptr_api! {
     extern "C" {
@@ -1196,6 +1229,10 @@ extern "C" {
     pub fn SSL_get_session(s: *const SSL) -> *mut SSL_SESSION;
     pub fn SSL_get_SSL_CTX(ssl: *const SSL) -> *mut SSL_CTX;
     pub fn SSL_set_SSL_CTX(ssl: *mut SSL, ctx: *mut SSL_CTX) -> *mut SSL_CTX;
+    pub fn SSL_set_info_callback(
+        ssl: *mut SSL,
+        cb: Option<unsafe extern "C" fn(ssl: *const SSL, type_: c_int, val: c_int) -> c_void>, // use type_ here as type is a keyword in Rust
+    );
 
     pub fn SSL_get_verify_result(ssl: *const SSL) -> c_long;
     #[cfg(ossl110)]
