@@ -678,6 +678,14 @@ bitflags! {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct SslAlertInformationCode(c_int);
 
+impl Deref for SslAlertInformationCode {
+    type Target = c_int;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 #[cfg(ossl111)]
 pub fn ssl_alert_type_string(val: SslAlertInformationCode) -> &'static str {
     let alert = unsafe {
