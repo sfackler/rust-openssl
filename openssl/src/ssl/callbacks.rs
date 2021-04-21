@@ -207,6 +207,7 @@ where
     }
 }
 
+#[cfg(ossl111)]
 pub unsafe extern "C" fn raw_info<F>(ssl: *const ffi::SSL, type_: c_int, val: c_int)
 where
     F: Fn(i32, i32) + 'static + Sync + Send,
@@ -220,6 +221,7 @@ where
     (*callback)(type_, val)
 }
 
+#[cfg(ossl111)]
 pub unsafe extern "C" fn raw_info_ssl<F>(ssl: *const ffi::SSL, type_: c_int, val: c_int)
 where
     F: Fn(i32, i32) + 'static + Sync + Send,

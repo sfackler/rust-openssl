@@ -1549,6 +1549,7 @@ impl SslContextBuilder {
         }
     }
 
+    #[cfg(ossl111)]
     pub fn set_info_callback<F>(&mut self, callback: F)
     where
         F: Fn(i32, i32) + 'static + Sync + Send,
@@ -2534,6 +2535,7 @@ impl SslRef {
         }
     }
 
+    #[cfg(ossl111)]
     pub fn set_info_callback<F>(&mut self, info: F)
     where
         F: Fn(i32, i32) + 'static + Sync + Send,
