@@ -30,7 +30,6 @@ use crate::ssl::{
 use crate::ssl::{ClientHelloResponse, ExtensionContext};
 #[cfg(ossl111)]
 use crate::ssl::{SslAlertInformationCode, SslAlertInformationContext};
-#[cfg(ossl111)]
 use crate::util::ForeignTypeRefExt;
 #[cfg(ossl111)]
 use crate::x509::X509Ref;
@@ -209,7 +208,6 @@ where
     }
 }
 
-#[cfg(ossl111)]
 pub unsafe extern "C" fn raw_info<F>(ssl: *const ffi::SSL, type_: c_int, val: c_int)
 where
     F: Fn(&SslRef, SslAlertInformationContext, SslAlertInformationCode) + 'static + Sync + Send,
@@ -227,7 +225,6 @@ where
     )
 }
 
-#[cfg(ossl111)]
 pub unsafe extern "C" fn raw_info_ssl<F>(ssl: *const ffi::SSL, type_: c_int, val: c_int)
 where
     F: Fn(&SslRef, SslAlertInformationContext, SslAlertInformationCode) + 'static + Sync + Send,

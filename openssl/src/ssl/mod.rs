@@ -674,11 +674,9 @@ bitflags! {
     }
 }
 
-#[cfg(ossl111)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct SslAlertInformationCode(c_int);
 
-#[cfg(ossl111)]
 impl Deref for SslAlertInformationCode {
     type Target = c_int;
 
@@ -1624,7 +1622,6 @@ impl SslContextBuilder {
         }
     }
 
-    #[cfg(ossl111)]
     pub fn set_info_callback<F>(&mut self, callback: F)
     where
         F: Fn(&SslRef, SslAlertInformationContext, SslAlertInformationCode) + 'static + Sync + Send,
@@ -2610,7 +2607,6 @@ impl SslRef {
         }
     }
 
-    #[cfg(ossl111)]
     pub fn set_info_callback<F>(&mut self, info: F)
     where
         F: Fn(&SslRef, SslAlertInformationContext, SslAlertInformationCode) + 'static + Sync + Send,
