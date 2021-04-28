@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [v0.9.62] - 2021-04-28
+
+### Added
+
+* Added support for LibreSSL 3.3.2.
+* Added `DH_set0_key`.
+* Added `EC_POINT_get_affine_coordinates`.
+
 ## [v0.9.61] - 2021-03-13
 
 ### Added
@@ -178,7 +186,8 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.61...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.62...master
+[v0.9.62]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.61...openssl-sys-v0.9.62
 [v0.9.61]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.60...openssl-sys-v0.9.61
 [v0.9.60]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.59...openssl-sys-v0.9.60
 [v0.9.59]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.58...openssl-sys-v0.9.59
