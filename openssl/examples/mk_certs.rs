@@ -16,7 +16,7 @@ use openssl::x509::{X509NameBuilder, X509Ref, X509Req, X509ReqBuilder, X509Verif
 /// Make a CA certificate and private key
 fn mk_ca_cert() -> Result<(X509, PKey<Private>), ErrorStack> {
     let rsa = Rsa::generate(2048)?;
-    let privkey = PKey::from_rsa(rsa)?;
+    let key_pair = PKey::from_rsa(rsa)?;
 
     let mut x509_name = X509NameBuilder::new()?;
     x509_name.append_entry_by_text("C", "US")?;
@@ -35,7 +35,7 @@ fn mk_ca_cert() -> Result<(X509, PKey<Private>), ErrorStack> {
     cert_builder.set_serial_number(&serial_number)?;
     cert_builder.set_subject_name(&x509_name)?;
     cert_builder.set_issuer_name(&x509_name)?;
-    cert_builder.set_pubkey(&privkey)?;
+    cert_builder.set_pubkey(&key_pair)?;
     let not_before = Asn1Time::days_from_now(0)?;
     cert_builder.set_not_before(&not_before)?;
     let not_after = Asn1Time::days_from_now(365)?;
@@ -54,16 +54,16 @@ fn mk_ca_cert() -> Result<(X509, PKey<Private>), ErrorStack> {
         SubjectKeyIdentifier::new().build(&cert_builder.x509v3_context(None, None))?;
     cert_builder.append_extension(subject_key_identifier)?;
 
-    cert_builder.sign(&privkey, MessageDigest::sha256())?;
+    cert_builder.sign(&key_pair, MessageDigest::sha256())?;
     let cert = cert_builder.build();
 
-    Ok((cert, privkey))
+    Ok((cert, key_pair))
 }
 
 /// Make a X509 request with the given private key
-fn mk_request(privkey: &PKey<Private>) -> Result<X509Req, ErrorStack> {
+fn mk_request(key_pair: &PKey<Private>) -> Result<X509Req, ErrorStack> {
     let mut req_builder = X509ReqBuilder::new()?;
-    req_builder.set_pubkey(&privkey)?;
+    req_builder.set_pubkey(&key_pair)?;
 
     let mut x509_name = X509NameBuilder::new()?;
     x509_name.append_entry_by_text("C", "US")?;
@@ -73,7 +73,7 @@ fn mk_request(privkey: &PKey<Private>) -> Result<X509Req, ErrorStack> {
     let x509_name = x509_name.build();
     req_builder.set_subject_name(&x509_name)?;
 
-    req_builder.sign(&privkey, MessageDigest::sha256())?;
+    req_builder.sign(&key_pair, MessageDigest::sha256())?;
     let req = req_builder.build();
     Ok(req)
 }
@@ -81,12 +81,12 @@ fn mk_request(privkey: &PKey<Private>) -> Result<X509Req, ErrorStack> {
 /// Make a certificate and private key signed by the given CA cert and private key
 fn mk_ca_signed_cert(
     ca_cert: &X509Ref,
-    ca_privkey: &PKeyRef<Private>,
+    ca_key_pair: &PKeyRef<Private>,
 ) -> Result<(X509, PKey<Private>), ErrorStack> {
     let rsa = Rsa::generate(2048)?;
-    let privkey = PKey::from_rsa(rsa)?;
+    let key_pair = PKey::from_rsa(rsa)?;
 
-    let req = mk_request(&privkey)?;
+    let req = mk_request(&key_pair)?;
 
     let mut cert_builder = X509::builder()?;
     cert_builder.set_version(2)?;
@@ -98,7 +98,7 @@ fn mk_ca_signed_cert(
     cert_builder.set_serial_number(&serial_number)?;
     cert_builder.set_subject_name(req.subject_name())?;
     cert_builder.set_issuer_name(ca_cert.subject_name())?;
-    cert_builder.set_pubkey(&privkey)?;
+    cert_builder.set_pubkey(&key_pair)?;
     let not_before = Asn1Time::days_from_now(0)?;
     cert_builder.set_not_before(&not_before)?;
     let not_after = Asn1Time::days_from_now(365)?;
@@ -131,15 +131,15 @@ fn mk_ca_signed_cert(
         .build(&cert_builder.x509v3_context(Some(ca_cert), None))?;
     cert_builder.append_extension(subject_alt_name)?;
 
-    cert_builder.sign(&ca_privkey, MessageDigest::sha256())?;
+    cert_builder.sign(&ca_key_pair, MessageDigest::sha256())?;
     let cert = cert_builder.build();
 
-    Ok((cert, privkey))
+    Ok((cert, key_pair))
 }
 
 fn real_main() -> Result<(), ErrorStack> {
-    let (ca_cert, ca_privkey) = mk_ca_cert()?;
-    let (cert, _privkey) = mk_ca_signed_cert(&ca_cert, &ca_privkey)?;
+    let (ca_cert, ca_key_pair) = mk_ca_cert()?;
+    let (cert, _key_pair) = mk_ca_signed_cert(&ca_cert, &ca_key_pair)?;
 
     // Verify that this cert was issued by this ca
     match ca_cert.issued(&cert) {
