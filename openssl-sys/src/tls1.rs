@@ -1,6 +1,6 @@
+use core::mem;
+use core::ptr;
 use libc::*;
-use std::mem;
-use std::ptr;
 
 use *;
 

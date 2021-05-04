@@ -1,3 +1,4 @@
+#![no_std]
 #![allow(
     clippy::missing_safety_doc,
     clippy::unreadable_literal,
@@ -12,6 +13,7 @@
 #![doc(html_root_url = "https://docs.rs/openssl-sys/0.9")]
 #![recursion_limit = "128"] // configure fixed limit across all rust versions
 
+extern crate conquer_once;
 extern crate libc;
 
 use libc::*;
@@ -97,18 +99,18 @@ pub type PasswordCallback = unsafe extern "C" fn(
 
 #[cfg(ossl110)]
 pub fn init() {
-    use std::ptr;
-    use std::sync::Once;
+    use conquer_once::spin::Once;
+    use core::ptr;
 
     // explicitly initialize to work around https://github.com/openssl/openssl/issues/3505
-    static INIT: Once = Once::new();
+    static INIT: Once = Once::uninit();
 
     #[cfg(not(ossl111b))]
     let init_options = OPENSSL_INIT_LOAD_SSL_STRINGS;
     #[cfg(ossl111b)]
     let init_options = OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_NO_ATEXIT;
 
-    INIT.call_once(|| unsafe {
+    INIT.init_once(|| unsafe {
         OPENSSL_init_ssl(init_options, ptr::null_mut());
     })
 }

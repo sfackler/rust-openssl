@@ -1,5 +1,5 @@
+use core::ptr;
 use libc::*;
-use std::ptr;
 
 use *;
 

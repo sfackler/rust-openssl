@@ -16,6 +16,7 @@ vendored = ['openssl-src']
 
 [dependencies]
 libc = "0.2"
+conquer-once = { version = "0.3.2", use-default-features = false }
 
 [build-dependencies]
 cc = "1.0"

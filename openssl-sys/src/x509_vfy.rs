@@ -156,7 +156,7 @@ pub unsafe fn X509_LOOKUP_add_dir(
         X509_L_ADD_DIR,
         name,
         _type as c_long,
-        std::ptr::null_mut(),
+        core::ptr::null_mut(),
     )
 }
 
