@@ -144,20 +144,16 @@ macro_rules! foreign_type_and_impl_send_sync {
     )
         => {
             ::foreign_types::foreign_type! {
-                $(#[$impl_attr])*
-                type CType = $ctype;
-                fn drop = $drop;
-                $(fn clone = $clone;)*
                 $(#[$owned_attr])*
-                pub struct $owned;
                 $(#[$borrowed_attr])*
-                pub struct $borrowed;
-            }
+                pub unsafe type $owned : Sync + Send {
 
-            unsafe impl Send for $owned{}
-            unsafe impl Send for $borrowed{}
-            unsafe impl Sync for $owned{}
-            unsafe impl Sync for $borrowed{}
+                    $(#[$impl_attr])*
+                    type CType = $ctype;
+                    fn drop = $drop;
+                    $(fn clone = $clone;)*
+                }
+            }
         };
 }
 
@@ -173,97 +169,17 @@ macro_rules! generic_foreign_type_and_impl_send_sync {
         $(#[$borrowed_attr:meta])*
         pub struct $borrowed:ident<T>;
     ) => {
-        $(#[$owned_attr])*
-        pub struct $owned<T>(*mut $ctype, ::std::marker::PhantomData<T>);
+        ::foreign_types::foreign_type! {
+            $(#[$owned_attr])*
+            $(#[$borrowed_attr])*
+            pub unsafe type $owned<T> : Sync + Send {
 
-        $(#[$impl_attr])*
-        impl<T> ::foreign_types::ForeignType for $owned<T> {
-            type CType = $ctype;
-            type Ref = $borrowed<T>;
-
-            #[inline]
-            unsafe fn from_ptr(ptr: *mut $ctype) -> $owned<T> {
-                $owned(ptr, ::std::marker::PhantomData)
-            }
-
-            #[inline]
-            fn as_ptr(&self) -> *mut $ctype {
-                self.0
+                $(#[$impl_attr])*
+                type CType = $ctype;
+                type PhantomData = T;
+                fn drop = $drop;
+                $(fn clone = $clone;)*
             }
         }
-
-        impl<T> Drop for $owned<T> {
-            #[inline]
-            fn drop(&mut self) {
-                unsafe { $drop(self.0) }
-            }
-        }
-
-        $(
-            impl<T> Clone for $owned<T> {
-                #[inline]
-                fn clone(&self) -> $owned<T> {
-                    unsafe {
-                        let handle: *mut $ctype = $clone(self.0);
-                        ::foreign_types::ForeignType::from_ptr(handle)
-                    }
-                }
-            }
-
-            impl<T> ::std::borrow::ToOwned for $borrowed<T> {
-                type Owned = $owned<T>;
-                #[inline]
-                fn to_owned(&self) -> $owned<T> {
-                    unsafe {
-                        let handle: *mut $ctype =
-                            $clone(::foreign_types::ForeignTypeRef::as_ptr(self));
-                        $crate::ForeignType::from_ptr(handle)
-                    }
-                }
-            }
-        )*
-
-        impl<T> ::std::ops::Deref for $owned<T> {
-            type Target = $borrowed<T>;
-
-            #[inline]
-            fn deref(&self) -> &$borrowed<T> {
-                unsafe { ::foreign_types::ForeignTypeRef::from_ptr(self.0) }
-            }
-        }
-
-        impl<T> ::std::ops::DerefMut for $owned<T> {
-            #[inline]
-            fn deref_mut(&mut self) -> &mut $borrowed<T> {
-                unsafe { ::foreign_types::ForeignTypeRef::from_ptr_mut(self.0) }
-            }
-        }
-
-        impl<T> ::std::borrow::Borrow<$borrowed<T>> for $owned<T> {
-            #[inline]
-            fn borrow(&self) -> &$borrowed<T> {
-                &**self
-            }
-        }
-
-        impl<T> ::std::convert::AsRef<$borrowed<T>> for $owned<T> {
-            #[inline]
-            fn as_ref(&self) -> &$borrowed<T> {
-                &**self
-            }
-        }
-
-        $(#[$borrowed_attr])*
-        pub struct $borrowed<T>(::foreign_types::Opaque, ::std::marker::PhantomData<T>);
-
-        $(#[$impl_attr])*
-        impl<T> ::foreign_types::ForeignTypeRef for $borrowed<T> {
-            type CType = $ctype;
-        }
-
-        unsafe impl<T> Send for $owned<T>{}
-        unsafe impl<T> Send for $borrowed<T>{}
-        unsafe impl<T> Sync for $owned<T>{}
-        unsafe impl<T> Sync for $borrowed<T>{}
     };
 }

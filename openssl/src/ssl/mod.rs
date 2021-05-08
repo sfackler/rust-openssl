@@ -2037,7 +2037,7 @@ pub struct CipherBits {
 /// Information about a cipher.
 pub struct SslCipher(*mut ffi::SSL_CIPHER);
 
-impl ForeignType for SslCipher {
+unsafe impl ForeignType for SslCipher {
     type CType = ffi::SSL_CIPHER;
     type Ref = SslCipherRef;
 
@@ -2071,7 +2071,7 @@ impl DerefMut for SslCipher {
 /// [`SslCipher`]: struct.SslCipher.html
 pub struct SslCipherRef(Opaque);
 
-impl ForeignTypeRef for SslCipherRef {
+unsafe impl ForeignTypeRef for SslCipherRef {
     type CType = ffi::SSL_CIPHER;
 }
 
@@ -2229,7 +2229,7 @@ impl ToOwned for SslSessionRef {
     fn to_owned(&self) -> SslSession {
         unsafe {
             SSL_SESSION_up_ref(self.as_ptr());
-            SslSession(self.as_ptr())
+            SslSession::from_ptr(self.as_ptr())
         }
     }
 }

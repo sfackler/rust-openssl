@@ -596,7 +596,7 @@ impl Rsa<Private> {
         unsafe {
             let rsa = Rsa::from_ptr(cvt_p(ffi::RSA_new())?);
             cvt(ffi::RSA_generate_key_ex(
-                rsa.0,
+                rsa.as_ptr(),
                 bits as c_int,
                 e.as_ptr(),
                 ptr::null_mut(),

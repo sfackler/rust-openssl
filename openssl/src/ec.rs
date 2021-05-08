@@ -122,7 +122,7 @@ impl EcGroup {
     pub fn from_curve_name(nid: Nid) -> Result<EcGroup, ErrorStack> {
         unsafe {
             init();
-            cvt_p(ffi::EC_GROUP_new_by_curve_name(nid.as_raw())).map(EcGroup)
+            cvt_p(ffi::EC_GROUP_new_by_curve_name(nid.as_raw())).map(|ptr| EcGroup::from_ptr(ptr))
         }
     }
 }
@@ -452,7 +452,10 @@ impl EcPointRef {
     ///
     /// [`EC_POINT_dup`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_dup.html
     pub fn to_owned(&self, group: &EcGroupRef) -> Result<EcPoint, ErrorStack> {
-        unsafe { cvt_p(ffi::EC_POINT_dup(self.as_ptr(), group.as_ptr())).map(EcPoint) }
+        unsafe {
+            cvt_p(ffi::EC_POINT_dup(self.as_ptr(), group.as_ptr()))
+                .map(|ptr| EcPoint::from_ptr(ptr))
+        }
     }
 
     /// Determines if this point is equal to another.
@@ -594,7 +597,7 @@ impl EcPoint {
     ///
     /// [`EC_POINT_new`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_new.html
     pub fn new(group: &EcGroupRef) -> Result<EcPoint, ErrorStack> {
-        unsafe { cvt_p(ffi::EC_POINT_new(group.as_ptr())).map(EcPoint) }
+        unsafe { cvt_p(ffi::EC_POINT_new(group.as_ptr())).map(|ptr| EcPoint::from_ptr(ptr)) }
     }
 
     /// Creates point from a binary representation

@@ -99,7 +99,7 @@ impl<T: Stackable> Borrow<StackRef<T>> for Stack<T> {
     }
 }
 
-impl<T: Stackable> ForeignType for Stack<T> {
+unsafe impl<T: Stackable> ForeignType for Stack<T> {
     type CType = T::StackType;
     type Ref = StackRef<T>;
 
@@ -180,7 +180,7 @@ pub struct StackRef<T: Stackable>(Opaque, PhantomData<T>);
 unsafe impl<T: Stackable + Send> Send for StackRef<T> {}
 unsafe impl<T: Stackable + Sync> Sync for StackRef<T> {}
 
-impl<T: Stackable> ForeignTypeRef for StackRef<T> {
+unsafe impl<T: Stackable> ForeignTypeRef for StackRef<T> {
     type CType = T::StackType;
 }
 

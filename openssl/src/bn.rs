@@ -105,7 +105,7 @@ impl BigNumContext {
     pub fn new() -> Result<BigNumContext, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(ffi::BN_CTX_new()).map(BigNumContext)
+            cvt_p(ffi::BN_CTX_new()).map(|ptr| BigNumContext::from_ptr(ptr))
         }
     }
 }
@@ -986,7 +986,7 @@ impl BigNum {
     pub fn get_rfc2409_prime_768() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(BN_get_rfc2409_prime_768(ptr::null_mut())).map(BigNum)
+            cvt_p(BN_get_rfc2409_prime_768(ptr::null_mut())).map(|ptr| BigNum::from_ptr(ptr))
         }
     }
 
@@ -1001,7 +1001,7 @@ impl BigNum {
     pub fn get_rfc2409_prime_1024() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(BN_get_rfc2409_prime_1024(ptr::null_mut())).map(BigNum)
+            cvt_p(BN_get_rfc2409_prime_1024(ptr::null_mut())).map(|ptr| BigNum::from_ptr(ptr))
         }
     }
 
@@ -1016,7 +1016,7 @@ impl BigNum {
     pub fn get_rfc3526_prime_1536() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(BN_get_rfc3526_prime_1536(ptr::null_mut())).map(BigNum)
+            cvt_p(BN_get_rfc3526_prime_1536(ptr::null_mut())).map(|ptr| BigNum::from_ptr(ptr))
         }
     }
 
@@ -1031,7 +1031,7 @@ impl BigNum {
     pub fn get_rfc3526_prime_2048() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(BN_get_rfc3526_prime_2048(ptr::null_mut())).map(BigNum)
+            cvt_p(BN_get_rfc3526_prime_2048(ptr::null_mut())).map(|ptr| BigNum::from_ptr(ptr))
         }
     }
 
@@ -1046,7 +1046,7 @@ impl BigNum {
     pub fn get_rfc3526_prime_3072() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(BN_get_rfc3526_prime_3072(ptr::null_mut())).map(BigNum)
+            cvt_p(BN_get_rfc3526_prime_3072(ptr::null_mut())).map(|ptr| BigNum::from_ptr(ptr))
         }
     }
 
@@ -1061,7 +1061,7 @@ impl BigNum {
     pub fn get_rfc3526_prime_4096() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(BN_get_rfc3526_prime_4096(ptr::null_mut())).map(BigNum)
+            cvt_p(BN_get_rfc3526_prime_4096(ptr::null_mut())).map(|ptr| BigNum::from_ptr(ptr))
         }
     }
 
@@ -1076,7 +1076,7 @@ impl BigNum {
     pub fn get_rfc3526_prime_6144() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(BN_get_rfc3526_prime_6144(ptr::null_mut())).map(BigNum)
+            cvt_p(BN_get_rfc3526_prime_6144(ptr::null_mut())).map(|ptr| BigNum::from_ptr(ptr))
         }
     }
 
@@ -1091,7 +1091,7 @@ impl BigNum {
     pub fn get_rfc3526_prime_8192() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
-            cvt_p(BN_get_rfc3526_prime_8192(ptr::null_mut())).map(BigNum)
+            cvt_p(BN_get_rfc3526_prime_8192(ptr::null_mut())).map(|ptr| BigNum::from_ptr(ptr))
         }
     }
 

@@ -2,6 +2,7 @@
 
 use crate::cvt_p;
 use crate::error::ErrorStack;
+use foreign_types::ForeignType;
 
 pub struct ConfMethod(*mut ffi::CONF_METHOD);
 
@@ -50,6 +51,6 @@ impl Conf {
     /// let conf = Conf::new(ConfMethod::default());
     /// ```
     pub fn new(method: ConfMethod) -> Result<Conf, ErrorStack> {
-        unsafe { cvt_p(ffi::NCONF_new(method.as_ptr())).map(Conf) }
+        unsafe { cvt_p(ffi::NCONF_new(method.as_ptr())).map(|ptr| Conf::from_ptr(ptr)) }
     }
 }
