@@ -344,7 +344,12 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl110f)] {
+    if #[cfg(ossl300)] {
+        pub const SSL_OP_ALL: c_ulong = SSL_OP_CRYPTOPRO_TLSEXT_BUG
+            | SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS
+            | SSL_OP_TLSEXT_PADDING
+            | SSL_OP_SAFARI_ECDHE_ECDSA_BUG;
+    } else if #[cfg(ossl110f)] {
         pub const SSL_OP_ALL: c_ulong = SSL_OP_CRYPTOPRO_TLSEXT_BUG
             | SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS
             | SSL_OP_LEGACY_SERVER_CONNECT
