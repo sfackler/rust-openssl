@@ -58,7 +58,7 @@ use crate::rsa::Rsa;
 #[cfg(ossl110)]
 use crate::symm::Cipher;
 use crate::util::{invoke_passwd_cb, CallbackState};
-use crate::{cvt, cvt_p};
+use crate::{cvt, cvt_const_p, cvt_p};
 
 /// A tag type indicating that a key only has parameters.
 pub enum Params {}
@@ -733,6 +733,47 @@ impl<T> TryFrom<PKey<T>> for Dh<T> {
 
     fn try_from(pkey: PKey<T>) -> Result<Dh<T>, ErrorStack> {
         pkey.dh()
+    }
+}
+
+pub struct PKeyMethod(*mut ffi::EVP_PKEY_METHOD);
+
+impl PKeyMethod {
+    pub fn find_and_copy(typ: Id) -> Result<PKeyMethod, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::EVP_PKEY_meth_new(
+                typ.as_raw(),
+                ffi::EVP_PKEY_FLAG_AUTOARGLEN,
+            ))?;
+            let method = PKeyMethod(ptr);
+            let default_ptr = cvt_const_p(ffi::EVP_PKEY_meth_find(typ.as_raw()))?;
+            ffi::EVP_PKEY_meth_copy(ptr, default_ptr);
+            Ok(method)
+        }
+    }
+
+    pub fn set_sign(
+        &mut self,
+        sign_init: extern "C" fn(*mut ffi::EVP_PKEY_CTX) -> i32,
+        sign: extern "C" fn(*mut ffi::EVP_PKEY_CTX, *mut u8, *mut usize, *const u8, usize) -> i32,
+    ) {
+        unsafe {
+            ffi::EVP_PKEY_meth_set_sign(self.0, sign_init, sign);
+        }
+    }
+
+    pub fn add(self) {
+        unsafe {
+            ffi::EVP_PKEY_meth_add0(self.0);
+        }
+    }
+}
+
+impl Drop for PKeyMethod {
+    fn drop(&mut self) {
+        unsafe {
+            ffi::EVP_PKEY_meth_free(self.0);
+        }
     }
 }
 

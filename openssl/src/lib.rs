@@ -177,6 +177,14 @@ fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {
     }
 }
 
+fn cvt_const_p<T>(r: *const T) -> Result<*const T, ErrorStack> {
+    if r.is_null() {
+        Err(ErrorStack::get())
+    } else {
+        Ok(r)
+    }
+}
+
 fn cvt(r: c_int) -> Result<c_int, ErrorStack> {
     if r <= 0 {
         Err(ErrorStack::get())

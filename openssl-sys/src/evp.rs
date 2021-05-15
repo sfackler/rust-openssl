@@ -25,6 +25,8 @@ pub const EVP_CTRL_GCM_SET_IVLEN: c_int = 0x9;
 pub const EVP_CTRL_GCM_GET_TAG: c_int = 0x10;
 pub const EVP_CTRL_GCM_SET_TAG: c_int = 0x11;
 
+pub const EVP_PKEY_FLAG_AUTOARGLEN: c_int = 2;
+
 pub unsafe fn EVP_get_digestbynid(type_: c_int) -> *const EVP_MD {
     EVP_get_digestbyname(OBJ_nid2sn(type_))
 }
@@ -302,6 +304,7 @@ extern "C" {
     pub fn EVP_get_digestbyname(name: *const c_char) -> *const EVP_MD;
     pub fn EVP_get_cipherbyname(name: *const c_char) -> *const EVP_CIPHER;
 
+    pub fn EVP_PKEY_type(typ: c_int) -> c_int;
     pub fn EVP_PKEY_id(pkey: *const EVP_PKEY) -> c_int;
 }
 const_ptr_api! {
@@ -475,4 +478,25 @@ cfg_if! {
 extern "C" {
     pub fn EVP_EncodeBlock(dst: *mut c_uchar, src: *const c_uchar, src_len: c_int) -> c_int;
     pub fn EVP_DecodeBlock(dst: *mut c_uchar, src: *const c_uchar, src_len: c_int) -> c_int;
+}
+
+extern "C" {
+    pub fn EVP_PKEY_meth_new(id: c_int, flags: c_int) -> *mut EVP_PKEY_METHOD;
+    pub fn EVP_PKEY_meth_free(pmeth: *mut EVP_PKEY_METHOD);
+    pub fn EVP_PKEY_meth_copy(dst: *mut EVP_PKEY_METHOD, src: *const EVP_PKEY_METHOD);
+    pub fn EVP_PKEY_meth_find(typ: c_int) -> *const EVP_PKEY_METHOD;
+    pub fn EVP_PKEY_meth_add0(pmeth: *const EVP_PKEY_METHOD) -> c_int;
+
+    pub fn EVP_PKEY_meth_set_sign(
+        pmeth: *mut EVP_PKEY_METHOD,
+        sign_init: extern "C" fn(ctx: *mut EVP_PKEY_CTX) -> c_int,
+        sign: extern "C" fn(
+            ctx: *mut EVP_PKEY_CTX,
+            sig: *mut c_uchar,
+            siglen: *mut size_t,
+            tbs: *const c_uchar,
+            tbslen: size_t,
+        ) -> c_int,
+    );
+
 }

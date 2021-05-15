@@ -123,6 +123,8 @@ cfg_if! {
     }
 }
 
+pub enum EVP_PKEY_METHOD {}
+
 pub enum PKCS8_PRIV_KEY_INFO {}
 
 pub enum EVP_PKEY_ASN1_METHOD {}
