@@ -92,6 +92,14 @@ impl<'a> Deriver<'a> {
     }
 }
 
+impl<'a> Drop for Deriver<'a> {
+    fn drop(&mut self) {
+        unsafe {
+            ffi::EVP_PKEY_CTX_free(self.0);
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
