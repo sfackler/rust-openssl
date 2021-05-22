@@ -80,7 +80,7 @@ impl Drop for Param {
     }
 }
 
-pub struct ParamsBuilder(Vec<(&'static [u8], Param)>);
+pub struct ParamsBuilder(Vec<(*const u8, Param)>);
 
 impl ParamsBuilder {
     pub fn with_capacity(capacity: usize) -> Self {
@@ -107,15 +107,15 @@ impl ParamsBuilder {
             let v = unsafe {
                 match p {
                     I32(v) => {
-                        let pname = name.as_ptr() as *const i8;
+                        let pname = *name as *const i8;
                         ffi::OSSL_PARAM_construct_int(pname, *v)
                     }
                     Vec(buf, len) => {
-                        let pname = name.as_ptr() as *const i8;
+                        let pname = *name as *const i8;
                         ffi::OSSL_PARAM_construct_octet_string(pname, *buf, *len)
                     }
                     String(buf, len) => {
-                        let pname = name.as_ptr() as *const i8;
+                        let pname = *name as *const i8;
                         ffi::OSSL_PARAM_construct_utf8_string(pname, *buf, *len)
                     }
                 }
@@ -130,7 +130,7 @@ impl ParamsBuilder {
 macro_rules! add_construct {
     ($func:ident, $name:ident, $ty:ty) => {
         impl ParamsBuilder {
-            pub fn $func(&mut self, key: &'static [u8], val: $ty) -> Result<(), ErrorStack> {
+            pub fn $func(&mut self, key: *const u8, val: $ty) -> Result<(), ErrorStack> {
                 self.0.push((key, Param::$name(val)?));
                 Ok(())
             }
@@ -144,7 +144,7 @@ add_construct!(add_slice, alloc_vec, &[u8]);
 // TODO(baloo): add u32, etc
 
 pub struct Params {
-    fixed: Vec<(&'static [u8], Param)>,
+    fixed: Vec<(*const u8, Param)>,
     output: Vec<ffi::OSSL_PARAM>,
 }
 
@@ -169,8 +169,8 @@ impl fmt::Debug for Params {
             write!(f, "OSSL_PARAM {{")?;
             if o.data_type != 0 {
                 write!(f, "name = {:?}, ", unsafe { CStr::from_ptr(o.key) })?;
-                write!(f, "buf = {:?}, ", o.data )?;
-                write!(f, "len = {:?}", o.data_size )?;
+                write!(f, "buf = {:?}, ", o.data)?;
+                write!(f, "len = {:?}", o.data_size)?;
             } else {
                 write!(f, "END")?;
             }

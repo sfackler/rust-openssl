@@ -102,8 +102,8 @@ extern "C" {
     pub fn OSSL_PARAM_construct_end() -> OSSL_PARAM;
 }
 
-pub const OSSL_ALG_PARAM_DIGEST: &[u8] = b"digest\0";
-pub const OSSL_ALG_PARAM_CIPHER: &[u8] = b"cipher\0";
-pub const OSSL_ALG_PARAM_ENGINE: &[u8] = b"engine\0";
-pub const OSSL_ALG_PARAM_MAC: &[u8] = b"mac\0";
-pub const OSSL_ALG_PARAM_PROPERTIES: &[u8] = b"properties\0";
+pub const OSSL_ALG_PARAM_DIGEST: *const u8 = b"digest\0" as *const u8;
+pub const OSSL_ALG_PARAM_CIPHER: *const u8 = b"cipher\0" as *const u8;
+pub const OSSL_ALG_PARAM_ENGINE: *const u8 = b"engine\0" as *const u8;
+pub const OSSL_ALG_PARAM_MAC: *const u8 = b"mac\0" as *const u8;
+pub const OSSL_ALG_PARAM_PROPERTIES: *const u8 = b"properties\0" as *const u8;
