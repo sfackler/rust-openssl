@@ -2,12 +2,12 @@ use libc::*;
 use std::ptr;
 use *;
 
-pub type SHA_LONG = c_uint;
-
-pub const SHA_LBLOCK: c_int = 16;
-
 cfg_if! {
     if #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))] {
+        pub type SHA_LONG = c_uint;
+
+        pub const SHA_LBLOCK: c_int = 16;
+
         #[repr(C)]
         #[derive(Clone)]
         pub struct SHA_CTX {
