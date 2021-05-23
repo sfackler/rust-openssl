@@ -254,9 +254,17 @@ bitflags! {
     }
 }
 
+cfg_if! {
+    if #[cfg(ossl300)] {
+        type SslModeRepr = u64;
+    } else {
+        type SslModeRepr = c_long;
+    }
+}
+
 bitflags! {
     /// Options controlling the behavior of an `SslContext`.
-    pub struct SslMode: c_long {
+    pub struct SslMode: SslModeRepr {
         /// Enables "short writes".
         ///
         /// Normally, a write in OpenSSL will always write out all of the requested data, even if it

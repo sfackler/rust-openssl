@@ -429,7 +429,13 @@ pub unsafe fn SSL_CTX_set_mode(ctx: *mut SSL_CTX, op: c_long) -> c_long {
 pub const SSL_COOKIE_LENGTH: c_int = 4096;
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn SSL_CTX_get_options(ctx: *const SSL_CTX) -> u64;
+            pub fn SSL_CTX_set_options(ctx: *mut SSL_CTX, op: c_ulong) -> u64;
+            pub fn SSL_CTX_clear_options(ctx: *mut SSL_CTX, op: c_ulong) -> u64;
+        }
+    } else if #[cfg(ossl110)] {
         extern "C" {
             pub fn SSL_CTX_get_options(ctx: *const SSL_CTX) -> c_ulong;
             pub fn SSL_CTX_set_options(ctx: *mut SSL_CTX, op: c_ulong) -> c_ulong;
