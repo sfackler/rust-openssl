@@ -35,9 +35,9 @@
 //! let hash = sha256(b"your data or message");
 //! println!("Hash = {}", hex::encode(hash));
 //! ```
+use cfg_if::cfg_if;
 use libc::c_void;
 use std::mem;
-use cfg_if::cfg_if;
 
 /// Computes the SHA1 hash of some data.
 ///
