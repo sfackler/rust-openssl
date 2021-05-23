@@ -2460,6 +2460,11 @@ impl SslRef {
         unsafe { ffi::SSL_read(self.as_ptr(), buf.as_ptr() as *mut c_void, len) }
     }
 
+    fn peek(&mut self, buf: &mut [u8]) -> c_int {
+        let len = cmp::min(c_int::max_value() as usize, buf.len()) as c_int;
+        unsafe { ffi::SSL_peek(self.as_ptr(), buf.as_ptr() as *mut c_void, len) }
+    }
+
     fn write(&mut self, buf: &[u8]) -> c_int {
         let len = cmp::min(c_int::max_value() as usize, buf.len()) as c_int;
         unsafe { ffi::SSL_write(self.as_ptr(), buf.as_ptr() as *const c_void, len) }
@@ -3697,6 +3702,25 @@ impl<S: Read + Write> SslStream<S> {
         }
 
         let ret = self.ssl.write(buf);
+        if ret > 0 {
+            Ok(ret as usize)
+        } else {
+            Err(self.make_error(ret))
+        }
+    }
+
+    /// Reads data from the stream, without removing it from the queue.
+    ///
+    /// This corresponds to [`SSL_peek`].
+    ///
+    /// [`SSL_peek`]: https://www.openssl.org/docs/manmaster/man3/SSL_peek.html
+    pub fn ssl_peek(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
+        // See above for why we short-circuit on zero-length buffers
+        if buf.is_empty() {
+            return Ok(0);
+        }
+
+        let ret = self.ssl.peek(buf);
         if ret > 0 {
             Ok(ret as usize)
         } else {
