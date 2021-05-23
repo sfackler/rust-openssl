@@ -1,6 +1,6 @@
-use *;
 use libc::*;
 use std::ptr;
+use *;
 
 pub type SHA_LONG = c_uint;
 
