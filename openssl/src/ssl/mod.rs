@@ -3709,8 +3709,7 @@ impl<S: Read + Write> SslStream<S> {
         }
     }
 
-    /// It is particularly useful with a nonblocking socket, where the error value will identify if
-    /// OpenSSL is waiting on read or write readiness.
+    /// Reads data from the stream, without removing it from the queue.
     ///
     /// This corresponds to [`SSL_peek`].
     ///
