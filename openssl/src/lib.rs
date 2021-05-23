@@ -166,6 +166,7 @@ pub mod ssl;
 pub mod stack;
 pub mod string;
 pub mod symm;
+pub mod types;
 pub mod version;
 pub mod x509;
 
