@@ -58,6 +58,16 @@ extern "C" {
         -> c_int;
     pub fn EVP_DigestUpdate(ctx: *mut EVP_MD_CTX, data: *const c_void, n: size_t) -> c_int;
     pub fn EVP_DigestFinal_ex(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
+    #[cfg(ossl300)]
+    pub fn EVP_Q_digest(
+        libctx: *mut OSSL_LIB_CTX,
+        name: *const c_char,
+        propq: *const c_char,
+        data: *const c_void,
+        count: size_t,
+        md: *mut c_uchar,
+        size: *mut c_int,
+    ) -> c_int;
     pub fn EVP_DigestInit(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD) -> c_int;
     pub fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
     #[cfg(ossl111)]
