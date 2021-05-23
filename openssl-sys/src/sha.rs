@@ -39,10 +39,10 @@ cfg_if! {
                         ptr::null_mut(),
                         concat!(stringify!($name), "\0").as_ptr() as *const c_char,
                         ptr::null(),
-                        d,
+                        d as *const c_void,
                         n,
                         md,
-                        ptr::null(),
+                        ptr::null_mut(),
                     ) != 0 {
                         md
                     } else {
