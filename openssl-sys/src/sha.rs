@@ -32,27 +32,22 @@ cfg_if! {
 
 cfg_if! {
     if #[cfg(ossl300)] {
-        macro_rules! digest {
-            ($name:ident) => {
-                pub unsafe fn $name(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar {
-                    if EVP_Q_digest(
-                        ptr::null_mut(),
-                        concat!(stringify!($name), "\0").as_ptr() as *const c_char,
-                        ptr::null(),
-                        d as *const c_void,
-                        n,
-                        md,
-                        ptr::null_mut(),
-                    ) != 0 {
-                        md
-                    } else {
-                        ptr::null_mut()
-                    }
-                }
+        // Ideally we'd macro define these, but that crashes ctest :(
+        pub unsafe fn SHA1(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar {
+            if EVP_Q_digest(
+                ptr::null_mut(),
+                "SHA1\0".as_ptr() as *const c_char,
+                ptr::null(),
+                d as *const c_void,
+                n,
+                md,
+                ptr::null_mut(),
+            ) != 0 {
+                md
+            } else {
+                ptr::null_mut()
             }
         }
-
-        digest!(SHA1);
     } else {
         extern "C" {
             pub fn SHA1(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
@@ -86,8 +81,37 @@ cfg_if! {
 
 cfg_if! {
     if #[cfg(ossl300)] {
-        digest!(SHA224);
-        digest!(SHA256);
+        pub unsafe fn SHA224(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar {
+            if EVP_Q_digest(
+                ptr::null_mut(),
+                "SHA224\0".as_ptr() as *const c_char,
+                ptr::null(),
+                d as *const c_void,
+                n,
+                md,
+                ptr::null_mut(),
+            ) != 0 {
+                md
+            } else {
+                ptr::null_mut()
+            }
+        }
+
+        pub unsafe fn SHA256(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar {
+            if EVP_Q_digest(
+                ptr::null_mut(),
+                "SHA256\0".as_ptr() as *const c_char,
+                ptr::null(),
+                d as *const c_void,
+                n,
+                md,
+                ptr::null_mut(),
+            ) != 0 {
+                md
+            } else {
+                ptr::null_mut()
+            }
+        }
     } else {
         extern "C" {
             pub fn SHA224(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
@@ -125,8 +149,37 @@ cfg_if! {
 
 cfg_if! {
     if #[cfg(ossl300)] {
-        digest!(SHA384);
-        digest!(SHA512);
+        pub unsafe fn SHA384(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar {
+            if EVP_Q_digest(
+                ptr::null_mut(),
+                "SHA384\0".as_ptr() as *const c_char,
+                ptr::null(),
+                d as *const c_void,
+                n,
+                md,
+                ptr::null_mut(),
+            ) != 0 {
+                md
+            } else {
+                ptr::null_mut()
+            }
+        }
+
+        pub unsafe fn SHA512(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar {
+            if EVP_Q_digest(
+                ptr::null_mut(),
+                "SHA512\0".as_ptr() as *const c_char,
+                ptr::null(),
+                d as *const c_void,
+                n,
+                md,
+                ptr::null_mut(),
+            ) != 0 {
+                md
+            } else {
+                ptr::null_mut()
+            }
+        }
     } else {
         extern "C" {
             pub fn SHA384(d: *const c_uchar, n: size_t, md: *mut c_uchar) -> *mut c_uchar;
