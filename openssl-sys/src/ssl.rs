@@ -432,8 +432,8 @@ cfg_if! {
     if #[cfg(ossl300)] {
         extern "C" {
             pub fn SSL_CTX_get_options(ctx: *const SSL_CTX) -> u64;
-            pub fn SSL_CTX_set_options(ctx: *mut SSL_CTX, op: c_ulong) -> u64;
-            pub fn SSL_CTX_clear_options(ctx: *mut SSL_CTX, op: c_ulong) -> u64;
+            pub fn SSL_CTX_set_options(ctx: *mut SSL_CTX, op: u64) -> u64;
+            pub fn SSL_CTX_clear_options(ctx: *mut SSL_CTX, op: u64) -> u64;
         }
     } else if #[cfg(ossl110)] {
         extern "C" {
