@@ -134,9 +134,17 @@ pub fn cipher_name(std_name: &str) -> &'static str {
     }
 }
 
+cfg_if! {
+    if #[cfg(ossl300)] {
+        type SslOptionsRepr = u64;
+    } else {
+        type SslOptionsRepr = c_ulong;
+    }
+}
+
 bitflags! {
     /// Options controlling the behavior of an `SslContext`.
-    pub struct SslOptions: c_ulong {
+    pub struct SslOptions: SslOptionsRepr {
         /// Disables a countermeasure against an SSLv3/TLSv1.0 vulnerability affecting CBC ciphers.
         const DONT_INSERT_EMPTY_FRAGMENTS = ffi::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
 
@@ -254,17 +262,9 @@ bitflags! {
     }
 }
 
-cfg_if! {
-    if #[cfg(ossl300)] {
-        type SslModeRepr = u64;
-    } else {
-        type SslModeRepr = c_long;
-    }
-}
-
 bitflags! {
     /// Options controlling the behavior of an `SslContext`.
-    pub struct SslMode: SslModeRepr {
+    pub struct SslMode: c_long {
         /// Enables "short writes".
         ///
         /// Normally, a write in OpenSSL will always write out all of the requested data, even if it
