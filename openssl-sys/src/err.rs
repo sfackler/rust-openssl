@@ -4,6 +4,7 @@ pub const ERR_TXT_MALLOCED: c_int = 0x01;
 pub const ERR_TXT_STRING: c_int = 0x02;
 
 pub const ERR_LIB_PEM: c_int = 9;
+pub const ERR_LIB_ASN1: c_int = 13;
 
 const_fn! {
     pub const fn ERR_PACK(l: c_int, f: c_int, r: c_int) -> c_ulong {

@@ -6,6 +6,8 @@ pub const X509_FILETYPE_PEM: c_int = 1;
 pub const X509_FILETYPE_ASN1: c_int = 2;
 pub const X509_FILETYPE_DEFAULT: c_int = 3;
 
+pub const ASN1_R_HEADER_TOO_LONG: c_int = 123;
+
 #[repr(C)]
 pub struct X509_VAL {
     pub notBefore: *mut ASN1_TIME,
@@ -284,6 +286,7 @@ extern "C" {
     pub fn X509_free(x: *mut X509);
     pub fn i2d_X509(x: *mut X509, buf: *mut *mut u8) -> c_int;
     pub fn d2i_X509(a: *mut *mut X509, pp: *mut *const c_uchar, length: c_long) -> *mut X509;
+    pub fn d2i_X509_bio(b: *mut BIO, a: *mut *mut X509) -> *mut X509;
 
     pub fn X509_get_pubkey(x: *mut X509) -> *mut EVP_PKEY;
 
