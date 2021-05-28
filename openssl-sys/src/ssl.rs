@@ -1348,7 +1348,9 @@ cfg_if! {
     }
 }
 
+#[cfg(not(osslconf = "OPENSSL_NO_COMP"))]
 extern "C" {
+    #[cfg(ossl110)]
     pub fn COMP_get_type(meth: *const COMP_METHOD) -> i32;
 }
 
