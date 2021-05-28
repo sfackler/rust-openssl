@@ -581,3 +581,10 @@ cfg_if! {
         }
     }
 }
+
+extern "C" {
+    pub fn X509_get_default_cert_file_env() -> *const c_char;
+    pub fn X509_get_default_cert_file() -> *const c_char;
+    pub fn X509_get_default_cert_dir_env() -> *const c_char;
+    pub fn X509_get_default_cert_dir() -> *const c_char;
+}

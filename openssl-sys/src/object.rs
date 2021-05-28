@@ -5,6 +5,7 @@ use *;
 extern "C" {
     pub fn OBJ_nid2ln(nid: c_int) -> *const c_char;
     pub fn OBJ_nid2sn(nid: c_int) -> *const c_char;
+    pub fn OBJ_nid2obj(n: c_int) -> *mut ASN1_OBJECT;
     pub fn OBJ_obj2nid(o: *const ASN1_OBJECT) -> c_int;
     pub fn OBJ_obj2txt(
         buf: *mut c_char,

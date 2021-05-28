@@ -998,6 +998,9 @@ extern "C" {
     );
     pub fn SSL_CTX_set_verify_depth(ctx: *mut SSL_CTX, depth: c_int);
 
+    #[cfg(ossl111)]
+    pub fn SSL_CTX_set_post_handshake_auth(ctx: *mut SSL_CTX, val: c_int);
+
     pub fn SSL_CTX_check_private_key(ctx: *const SSL_CTX) -> c_int;
 
     pub fn SSL_CTX_set_session_id_context(
@@ -1343,6 +1346,10 @@ cfg_if! {
             pub fn SSL_COMP_get_name(comp: *const COMP_METHOD) -> *const c_char;
         }
     }
+}
+
+extern "C" {
+    pub fn COMP_get_type(meth: *const COMP_METHOD) -> i32;
 }
 
 extern "C" {
