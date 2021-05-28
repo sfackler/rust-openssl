@@ -315,7 +315,7 @@ cfg_if! {
     if #[cfg(ossl102)] {
         pub const SSL_OP_NO_DTLSv1: c_ulong = 0x04000000;
         pub const SSL_OP_NO_DTLSv1_2: c_ulong = 0x08000000;
-    } else if #[cfg(libressl332)] {
+    } else if #[cfg(libressl340)] {
         pub const SSL_OP_NO_DTLSv1: c_ulong = 0x40000000;
         pub const SSL_OP_NO_DTLSv1_2: c_ulong = 0x80000000;
     }
