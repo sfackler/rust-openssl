@@ -34,6 +34,12 @@ pub fn get(openssl_version: Option<u64>, libressl_version: Option<u64>) -> Vec<&
         if libressl_version >= 0x3_03_02_00_0 {
             cfgs.push("libressl332");
         }
+        if libressl_version >= 0x3_03_03_00_0 {
+            cfgs.push("libressl333");
+        }
+        if libressl_version >= 0x3_04_00_00_0 {
+            cfgs.push("libressl340");
+        }
     } else {
         let openssl_version = openssl_version.unwrap();
 
