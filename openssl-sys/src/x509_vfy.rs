@@ -128,6 +128,30 @@ pub const X509_V_FLAG_NO_ALT_CHAINS: c_ulong = 0x100000;
 #[cfg(ossl110)]
 pub const X509_V_FLAG_NO_CHECK_TIME: c_ulong = 0x200000;
 
+pub const X509_PURPOSE_SSL_CLIENT: c_int = 1;
+pub const X509_PURPOSE_SSL_SERVER: c_int = 2;
+pub const X509_PURPOSE_NS_SSL_SERVER: c_int = 3;
+pub const X509_PURPOSE_SMIME_SIGN: c_int = 4;
+pub const X509_PURPOSE_SMIME_ENCRYPT: c_int = 5;
+pub const X509_PURPOSE_CRL_SIGN: c_int = 6;
+pub const X509_PURPOSE_ANY: c_int = 7;
+pub const X509_PURPOSE_OCSP_HELPER: c_int = 8;
+pub const X509_PURPOSE_TIMESTAMP_SIGN: c_int = 9;
+
+#[cfg(not(any(ossl110)))]
+pub const X509_TRUST_DEFAULT: c_int = -1;
+#[cfg(any(ossl110))]
+pub const X509_TRUST_DEFAULT: c_int = 0;
+
+pub const X509_TRUST_COMPAT: c_int = 1;
+pub const X509_TRUST_SSL_CLIENT: c_int = 2;
+pub const X509_TRUST_SSL_SERVER: c_int = 3;
+pub const X509_TRUST_EMAIL: c_int = 4;
+pub const X509_TRUST_OBJECT_SIGN: c_int = 5;
+pub const X509_TRUST_OCSP_SIGN: c_int = 6;
+pub const X509_TRUST_OCSP_REQUEST: c_int = 7;
+pub const X509_TRUST_TSA: c_int = 8;
+
 extern "C" {
     #[cfg(ossl110)]
     pub fn X509_LOOKUP_meth_free(method: *mut X509_LOOKUP_METHOD);
@@ -164,6 +188,24 @@ extern "C" {
     pub fn X509_STORE_new() -> *mut X509_STORE;
     pub fn X509_STORE_free(store: *mut X509_STORE);
 
+    pub fn X509_STORE_add_cert(store: *mut X509_STORE, x: *mut X509) -> c_int;
+    pub fn X509_STORE_add_crl(store: *mut X509_STORE, x: *mut X509_CRL) -> c_int;
+
+    pub fn X509_STORE_set_depth(store: *mut X509_STORE, depth: c_int) -> c_int;
+    pub fn X509_STORE_set_flags(store: *mut X509_STORE, flags: c_ulong) -> c_int;
+    pub fn X509_STORE_set_purpose(store: *mut X509_STORE, purpose: c_int) -> c_int;
+    pub fn X509_STORE_set_trust(store: *mut X509_STORE, trust: c_int) -> c_int;
+    pub fn X509_STORE_add_lookup(
+        store: *mut X509_STORE,
+        method: *mut X509_LOOKUP_METHOD,
+    ) -> *mut X509_LOOKUP;
+    pub fn X509_STORE_load_locations(
+        store: *mut X509_STORE,
+        file: *const c_char,
+        dir: *const c_char,
+    ) -> c_int;
+    pub fn X509_STORE_set_default_paths(store: *mut X509_STORE) -> c_int;
+
     pub fn X509_STORE_CTX_new() -> *mut X509_STORE_CTX;
 
     pub fn X509_STORE_CTX_free(ctx: *mut X509_STORE_CTX);
@@ -174,17 +216,6 @@ extern "C" {
         chain: *mut stack_st_X509,
     ) -> c_int;
     pub fn X509_STORE_CTX_cleanup(ctx: *mut X509_STORE_CTX);
-
-    pub fn X509_STORE_add_cert(store: *mut X509_STORE, x: *mut X509) -> c_int;
-
-    pub fn X509_STORE_add_lookup(
-        store: *mut X509_STORE,
-        meth: *mut X509_LOOKUP_METHOD,
-    ) -> *mut X509_LOOKUP;
-
-    pub fn X509_STORE_set_default_paths(store: *mut X509_STORE) -> c_int;
-    pub fn X509_STORE_set_flags(store: *mut X509_STORE, flags: c_ulong) -> c_int;
-
     pub fn X509_STORE_CTX_get_ex_data(ctx: *mut X509_STORE_CTX, idx: c_int) -> *mut c_void;
     pub fn X509_STORE_CTX_get_error(ctx: *mut X509_STORE_CTX) -> c_int;
     pub fn X509_STORE_CTX_set_error(ctx: *mut X509_STORE_CTX, error: c_int);

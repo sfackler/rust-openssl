@@ -37,7 +37,10 @@
 
 use cfg_if::cfg_if;
 use foreign_types::ForeignTypeRef;
+use libc::c_int;
+use std::ffi::CString;
 use std::mem;
+use std::path::Path;
 
 use crate::error::ErrorStack;
 use crate::stack::StackRef;
@@ -45,6 +48,58 @@ use crate::stack::StackRef;
 use crate::x509::verify::X509VerifyFlags;
 use crate::x509::{X509Object, X509};
 use crate::{cvt, cvt_p};
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct X509Purpose(c_int);
+
+impl X509Purpose {
+    pub const SSL_CLIENT: X509Purpose = X509Purpose(ffi::X509_PURPOSE_SSL_CLIENT);
+    pub const SSL_SERVER: X509Purpose = X509Purpose(ffi::X509_PURPOSE_SSL_SERVER);
+    pub const NS_SSL_SERVER: X509Purpose = X509Purpose(ffi::X509_PURPOSE_NS_SSL_SERVER);
+    pub const SMIME_SIGN: X509Purpose = X509Purpose(ffi::X509_PURPOSE_SMIME_SIGN);
+    pub const SMIME_ENCRYPT: X509Purpose = X509Purpose(ffi::X509_PURPOSE_SMIME_ENCRYPT);
+    pub const CRL_SIGN: X509Purpose = X509Purpose(ffi::X509_PURPOSE_CRL_SIGN);
+    pub const ANY: X509Purpose = X509Purpose(ffi::X509_PURPOSE_ANY);
+    pub const OCSP_HELPER: X509Purpose = X509Purpose(ffi::X509_PURPOSE_OCSP_HELPER);
+    pub const TIMESTAMP_SIGN: X509Purpose = X509Purpose(ffi::X509_PURPOSE_TIMESTAMP_SIGN);
+
+    /// Constructs a `X509Purpose` from a raw OpenSSL value.
+    pub fn from_raw(raw: c_int) -> X509Purpose {
+        X509Purpose(raw)
+    }
+
+    /// Returns the raw OpenSSL value represented by this type.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct X509Trust(c_int);
+
+impl X509Trust {
+    pub const DEFAULT: X509Trust = X509Trust(ffi::X509_TRUST_DEFAULT);
+    pub const COMPAT: X509Trust = X509Trust(ffi::X509_TRUST_COMPAT);
+    pub const SSL_CLIENT: X509Trust = X509Trust(ffi::X509_TRUST_SSL_CLIENT);
+    pub const SSL_SERVER: X509Trust = X509Trust(ffi::X509_TRUST_SSL_SERVER);
+    pub const EMAIL: X509Trust = X509Trust(ffi::X509_TRUST_EMAIL);
+    pub const OBJECT_SIGN: X509Trust = X509Trust(ffi::X509_TRUST_OBJECT_SIGN);
+    pub const OCSP_SIGN: X509Trust = X509Trust(ffi::X509_TRUST_OCSP_SIGN);
+    pub const OCSP_REQUEST: X509Trust = X509Trust(ffi::X509_TRUST_OCSP_REQUEST);
+    pub const TSA: X509Trust = X509Trust(ffi::X509_TRUST_TSA);
+
+    /// Constructs a `X509Trust` from a raw OpenSSL value.
+    pub fn from_raw(raw: c_int) -> X509Trust {
+        X509Trust(raw)
+    }
+
+    /// Returns the raw OpenSSL value represented by this type.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
+}
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE;
@@ -81,6 +136,50 @@ impl X509StoreBuilderRef {
     // FIXME should take an &X509Ref
     pub fn add_cert(&mut self, cert: X509) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_STORE_add_cert(self.as_ptr(), cert.as_ptr())).map(|_| ()) }
+    }
+
+    /// Sets the maximum verification depth, or the maximum number of intermediate CA certificates that can appear in a chain.
+    ///
+    /// This corresponds to [`X509_STORE_set_depth`].
+    ///
+    /// [`X509_STORE_set_depth`]: https://www.openssl.org/docs/man1.1.1/man3/X509_STORE_set_depth.html
+    pub fn set_depth(&mut self, depth: i32) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_STORE_set_depth(self.as_ptr(), depth)).map(|_| ()) }
+    }
+
+    /// Sets the purpose used to verify the certificate chain.
+    ///
+    /// This corresponds to [`X509_STORE_set_purpose`].
+    ///
+    /// [`X509_STORE_set_purpose`]: https://www.openssl.org/docs/man1.1.1/man3/X509_STORE_set_purpose.html
+    pub fn set_purpose(&mut self, purpose: X509Purpose) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_STORE_set_purpose(self.as_ptr(), purpose.as_raw())).map(|_| ()) }
+    }
+
+    /// Sets the trust value used to verify the certificate chain.
+    ///
+    /// This corresponds to [`X509_STORE_set_trust`].
+    ///
+    /// [`X509_STORE_set_trust`]: https://www.openssl.org/docs/man1.1.1/man3/X509_STORE_set_trust.html
+    pub fn set_trust(&mut self, trust: X509Trust) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_STORE_set_trust(self.as_ptr(), trust.as_raw())).map(|_| ()) }
+    }
+
+    /// Load trusted certificate(s) into the `X509Store` from a file or a directory.
+    ///
+    /// The certificates in the file or directory should be in a hashed format.
+    pub fn load_locations<P: AsRef<Path>>(&mut self, file: P, dir: P) -> Result<(), ErrorStack> {
+        let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
+        let dir = CString::new(dir.as_ref().as_os_str().to_str().unwrap()).unwrap();
+
+        unsafe {
+            cvt(ffi::X509_STORE_load_locations(
+                self.as_ptr(),
+                file.as_ptr() as *const _,
+                dir.as_ptr() as *const _,
+            ))
+            .map(|_| ())
+        }
     }
 
     /// Load certificates from their default locations.
