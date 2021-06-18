@@ -29,15 +29,60 @@ pub unsafe fn EVP_get_digestbynid(type_: c_int) -> *const EVP_MD {
     EVP_get_digestbyname(OBJ_nid2sn(type_))
 }
 
-extern "C" {
-    pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
-    pub fn EVP_MD_type(md: *const EVP_MD) -> c_int;
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn EVP_MD_get_size(md: *const EVP_MD) -> c_int;
+            pub fn EVP_MD_get_type(md: *const EVP_MD) -> c_int;
 
-    pub fn EVP_CIPHER_key_length(cipher: *const EVP_CIPHER) -> c_int;
-    pub fn EVP_CIPHER_block_size(cipher: *const EVP_CIPHER) -> c_int;
-    pub fn EVP_CIPHER_iv_length(cipher: *const EVP_CIPHER) -> c_int;
-    pub fn EVP_CIPHER_nid(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_get_key_length(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_get_block_size(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_get_iv_length(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_get_nid(cipher: *const EVP_CIPHER) -> c_int;
+        }
+
+        #[inline]
+        pub unsafe fn EVP_MD_size(md: *const EVP_MD) -> c_int {
+            EVP_MD_get_size(md)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_MD_type(md: *const EVP_MD) -> c_int {
+            EVP_MD_get_type(md)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_key_length(cipher: *const EVP_CIPHER) -> c_int {
+            EVP_CIPHER_get_key_length(cipher)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_block_size(cipher: *const EVP_CIPHER) -> c_int {
+            EVP_CIPHER_get_block_size(cipher)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_iv_length(cipher: *const EVP_CIPHER) -> c_int {
+            EVP_CIPHER_get_iv_length(cipher)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_nid(cipher: *const EVP_CIPHER) -> c_int {
+            EVP_CIPHER_get_nid(cipher)
+        }
+    } else {
+        extern "C" {
+            pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
+            pub fn EVP_MD_type(md: *const EVP_MD) -> c_int;
+
+            pub fn EVP_CIPHER_key_length(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_block_size(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_iv_length(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_nid(cipher: *const EVP_CIPHER) -> c_int;
+        }
+    }
 }
+extern "C" {}
 
 cfg_if! {
     if #[cfg(ossl110)] {
@@ -185,9 +230,22 @@ extern "C" {
         outl: *mut c_int,
     ) -> c_int;
 }
-const_ptr_api! {
-    extern "C" {
-        pub fn EVP_PKEY_size(pkey: #[const_ptr_if(any(ossl111b, libressl280))] EVP_PKEY) -> c_int;
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn EVP_PKEY_get_size(pkey: *const EVP_PKEY) -> c_int;
+        }
+
+        #[inline]
+        pub fn EVP_PKEY_size(pkey: *const EVP_PKEY) -> c_int {
+            EVP_PKEY_get_size(pkey)
+        }
+    } else {
+        const_ptr_api! {
+            extern "C" {
+                pub fn EVP_PKEY_size(pkey: #[const_ptr_if(any(ossl111b, libressl280))] EVP_PKEY) -> c_int;
+            }
+        }
     }
 }
 cfg_if! {
@@ -311,12 +369,33 @@ extern "C" {
 
     pub fn EVP_get_digestbyname(name: *const c_char) -> *const EVP_MD;
     pub fn EVP_get_cipherbyname(name: *const c_char) -> *const EVP_CIPHER;
-
-    pub fn EVP_PKEY_id(pkey: *const EVP_PKEY) -> c_int;
 }
-const_ptr_api! {
-    extern "C" {
-        pub fn EVP_PKEY_bits(key: #[const_ptr_if(any(ossl110, libressl280))] EVP_PKEY) -> c_int;
+
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn EVP_PKEY_get_id(pkey: *const EVP_PKEY) -> c_int;
+            pub fn EVP_PKEY_get_bits(key: *const EVP_PKEY) -> c_int;
+        }
+
+        #[inline]
+        pub unsafe fn EVP_PKEY_id(pkey: *const EVP_PKEY) -> c_int {
+            EVP_PKEY_get_id(pkey)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_PKEY_bits(pkey: *const EVP_PKEY) -> c_int {
+            EVP_PKEY_get_bits(pkey)
+        }
+    } else {
+        extern "C" {
+            pub fn EVP_PKEY_id(pkey: *const EVP_PKEY) -> c_int;
+        }
+        const_ptr_api! {
+            extern "C" {
+                pub fn EVP_PKEY_bits(key: #[const_ptr_if(any(ossl110, libressl280))] EVP_PKEY) -> c_int;
+            }
+        }
     }
 }
 extern "C" {
