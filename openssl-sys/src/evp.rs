@@ -237,7 +237,7 @@ cfg_if! {
         }
 
         #[inline]
-        pub fn EVP_PKEY_size(pkey: *const EVP_PKEY) -> c_int {
+        pub unsafe fn EVP_PKEY_size(pkey: *const EVP_PKEY) -> c_int {
             EVP_PKEY_get_size(pkey)
         }
     } else {
