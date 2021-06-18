@@ -469,6 +469,6 @@ mod tests {
         let input = String::from("Invalid SMIME Message");
         let result = Pkcs7::from_smime(input.as_bytes());
 
-        assert_eq!(result.is_err(), true)
+        assert!(result.is_err());
     }
 }
