@@ -12,7 +12,7 @@
 //!
 //! # Examples
 //!
-//! To perform a constant-time comparision of two arrays of the same length but different
+//! To perform a constant-time comparison of two arrays of the same length but different
 //! values:
 //!
 //! ```
@@ -43,7 +43,7 @@ use libc::size_t;
 ///
 /// # Examples
 ///
-/// To perform a constant-time comparision of two arrays of the same length but different
+/// To perform a constant-time comparison of two arrays of the same length but different
 /// values:
 ///
 /// ```

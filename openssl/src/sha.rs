@@ -3,7 +3,7 @@
 //! SHA, or Secure Hash Algorithms, are a family of cryptographic hashing algorithms published by
 //! the National Institute of Standards and Technology (NIST).  Hash algorithms such as those in
 //! the SHA family are used to map data of an arbitrary size to a fixed-size string of bytes.
-//! As cryptographic hashing algorithms, these mappings have the property of being irreversable.
+//! As cryptographic hashing algorithms, these mappings have the property of being irreversible.
 //! This property makes hash algorithms like these excellent for uses such as verifying the
 //! contents of a file- if you know the hash you expect beforehand, then you can verify that the
 //! data you have is correct if it hashes to the same value.
@@ -25,7 +25,7 @@
 //! println!("Hashed \"Hello, world\" to {}", hex::encode(hash));
 //! ```
 //!
-//! On the other hand, if you already have access to all of the data you woud like to hash, you
+//! On the other hand, if you already have access to all of the data you would like to hash, you
 //! may prefer to use the slightly simpler method of simply calling the hash function corresponding
 //! to the algorithm you want to use.
 //!

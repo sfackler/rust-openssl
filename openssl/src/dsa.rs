@@ -1,7 +1,7 @@
 //! Digital Signatures
 //!
 //! DSA ensures a message originated from a known sender, and was not modified.
-//! DSA uses asymetrical keys and an algorithm to output a signature of the message
+//! DSA uses asymmetrical keys and an algorithm to output a signature of the message
 //! using the private key that can be validated with the public key but not be generated
 //! without the private key.
 
@@ -31,7 +31,7 @@ generic_foreign_type_and_impl_send_sync! {
     /// * `q`: DSA sub-prime parameter
     /// * `g`: DSA base parameter
     ///
-    /// These values are used to calculate a pair of asymetrical keys used for
+    /// These values are used to calculate a pair of asymmetrical keys used for
     /// signing.
     ///
     /// OpenSSL documentation at [`DSA_new`]

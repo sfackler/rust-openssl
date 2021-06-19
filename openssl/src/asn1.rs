@@ -53,7 +53,7 @@ foreign_type_and_impl_send_sync! {
     /// example outside the year range of 1950-2049.
     ///
     /// [ASN1_GENERALIZEDTIME_set] documentation from OpenSSL provides
-    /// further details of implmentation.  Note: these docs are from the master
+    /// further details of implementation.  Note: these docs are from the master
     /// branch as documentation on the 1.1.0 branch did not include this page.
     ///
     /// [ASN1_GENERALIZEDTIME_set]: https://www.openssl.org/docs/manmaster/man3/ASN1_GENERALIZEDTIME_set.html
