@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [v0.10.35] - 2021-06-18
+
+### Fixed
+
+* Fixed a memory leak in `Deriver`.
+
+### Added
+
+* Added support for OpenSSL 3.x.x.
+* Added `SslStream::peek`.
+
 ## [v0.10.34] - 2021-04-28
 
 ### Added
@@ -536,7 +547,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.34...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.35...master
+[v0.10.35]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.34...openssl-v0.10.35
 [v0.10.34]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.33...openssl-v0.10.34
 [v0.10.33]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.32...openssl-v0.10.33
 [v0.10.32]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.31...openssl-v0.10.32
