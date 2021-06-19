@@ -45,7 +45,7 @@
 //! println!("{}", Error::get().unwrap());
 //! ```
 #![warn(missing_docs)]
-#![doc(html_root_url = "https://docs.rs/openssl-errors/0.1")]
+#![doc(html_root_url = "https://docs.rs/openssl-errors/0.2")]
 
 use cfg_if::cfg_if;
 use libc::{c_char, c_int};
