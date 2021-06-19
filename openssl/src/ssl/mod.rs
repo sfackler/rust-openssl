@@ -368,7 +368,7 @@ unsafe impl Sync for SslMethod {}
 unsafe impl Send for SslMethod {}
 
 bitflags! {
-    /// Options controling the behavior of certificate verification.
+    /// Options controlling the behavior of certificate verification.
     pub struct SslVerifyMode: i32 {
         /// Verifies that the peer's certificate is trusted.
         ///
@@ -3309,7 +3309,7 @@ impl SslRef {
 
     /// Returns the random field of the client's hello message.
     ///
-    /// This can only be used inside of the client hello callback. Otherwise, `None` is returend.
+    /// This can only be used inside of the client hello callback. Otherwise, `None` is returned.
     ///
     /// Requires OpenSSL 1.1.1 or newer.
     ///
@@ -3331,7 +3331,7 @@ impl SslRef {
 
     /// Returns the session ID field of the client's hello message.
     ///
-    /// This can only be used inside of the client hello callback. Otherwise, `None` is returend.
+    /// This can only be used inside of the client hello callback. Otherwise, `None` is returned.
     ///
     /// Requires OpenSSL 1.1.1 or newer.
     ///
@@ -3353,7 +3353,7 @@ impl SslRef {
 
     /// Returns the ciphers field of the client's hello message.
     ///
-    /// This can only be used inside of the client hello callback. Otherwise, `None` is returend.
+    /// This can only be used inside of the client hello callback. Otherwise, `None` is returned.
     ///
     /// Requires OpenSSL 1.1.1 or newer.
     ///
@@ -3375,7 +3375,7 @@ impl SslRef {
 
     /// Returns the compression methods field of the client's hello message.
     ///
-    /// This can only be used inside of the client hello callback. Otherwise, `None` is returend.
+    /// This can only be used inside of the client hello callback. Otherwise, `None` is returned.
     ///
     /// Requires OpenSSL 1.1.1 or newer.
     ///
@@ -3678,7 +3678,7 @@ impl<S: Read + Write> SslStream<S> {
     ///
     /// [`SSL_read`]: https://www.openssl.org/docs/manmaster/man3/SSL_read.html
     pub fn ssl_read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
-        // The intepretation of the return code here is a little odd with a
+        // The interpretation of the return code here is a little odd with a
         // zero-length write. OpenSSL will likely correctly report back to us
         // that it read zero bytes, but zero is also the sentinel for "error".
         // To avoid that confusion short-circuit that logic and return quickly

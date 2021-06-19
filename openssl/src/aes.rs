@@ -121,14 +121,14 @@ impl AesKey {
 /// Performs AES IGE encryption or decryption
 ///
 /// AES IGE (Infinite Garble Extension) is a form of AES block cipher utilized in
-/// OpenSSL.  Infinite Garble referes to propogating forward errors.  IGE, like other
-/// block ciphers implemented for AES requires an initalization vector.  The IGE mode
+/// OpenSSL.  Infinite Garble refers to propagating forward errors.  IGE, like other
+/// block ciphers implemented for AES requires an initialization vector.  The IGE mode
 /// allows a stream of blocks to be encrypted or decrypted without having the entire
 /// plaintext available.  For more information, visit [AES IGE Encryption].
 ///
-/// This block cipher uses 16 byte blocks.  The rust implmentation will panic
-/// if the input or output does not meet this 16-byte boundry.  Attention must
-/// be made in this low level implementation to pad the value to the 128-bit boundry.
+/// This block cipher uses 16 byte blocks.  The rust implementation will panic
+/// if the input or output does not meet this 16-byte boundary.  Attention must
+/// be made in this low level implementation to pad the value to the 128-bit boundary.
 ///
 /// [AES IGE Encryption]: http://www.links.org/files/openssl-ige.pdf
 ///
