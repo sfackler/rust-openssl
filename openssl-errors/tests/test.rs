@@ -28,7 +28,7 @@ fn basic() {
         error.file().replace(r"\", "/"),
         "openssl-errors/tests/test.rs"
     );
-    assert_eq!(error.line(), 20);
+    assert_eq!(error.line(), line!() - 11);
     cfg_if! {
         if #[cfg(ossl300)] {
             // https://github.com/openssl/openssl/issues/12530
@@ -41,7 +41,7 @@ fn basic() {
 
 #[test]
 fn static_data() {
-    openssl_errors::put_error!(Test::BAR, Test::NO_BACON, "foobar");
+    openssl_errors::put_error!(Test::BAR, Test::NO_BACON, "foobar {{}}");
 
     let error = Error::get().unwrap();
     assert_eq!(error.library().unwrap(), "test library");
@@ -52,8 +52,8 @@ fn static_data() {
         error.file().replace(r"\", "/"),
         "openssl-errors/tests/test.rs"
     );
-    assert_eq!(error.line(), 44);
-    assert_eq!(error.data(), Some("foobar"));
+    assert_eq!(error.line(), line!() - 11);
+    assert_eq!(error.data(), Some("foobar {}"));
 }
 
 #[test]
@@ -69,6 +69,6 @@ fn dynamic_data() {
         error.file().replace(r"\", "/"),
         "openssl-errors/tests/test.rs"
     );
-    assert_eq!(error.line(), 61);
+    assert_eq!(error.line(), line!() - 11);
     assert_eq!(error.data(), Some("hello world"));
 }

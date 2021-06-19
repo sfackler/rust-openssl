@@ -217,8 +217,9 @@ macro_rules! put_error {
                 $reason,
                 concat!(file!(), "\0"),
                 line!(),
+                // go through format_args to ensure the message string is handled in the same way as the args case
                 $crate::export::Option::Some($crate::export::Cow::Borrowed(
-                    concat!($message, "\0"),
+                    format_args!(concat!($message, "\0")).as_str().unwrap(),
                 )),
             );
         }
