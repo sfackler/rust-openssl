@@ -1,3 +1,4 @@
+use cfg_if::cfg_if;
 use openssl::error::Error;
 
 openssl_errors::openssl_errors! {
@@ -27,8 +28,15 @@ fn basic() {
         error.file().replace(r"\", "/"),
         "openssl-errors/tests/test.rs"
     );
-    assert_eq!(error.line(), 19);
-    assert_eq!(error.data(), None);
+    assert_eq!(error.line(), 20);
+    cfg_if! {
+        if #[cfg(ossl300)] {
+            // https://github.com/openssl/openssl/issues/12530
+            assert!(error.data() == None || error.data() == Some(""));
+        } else {
+            assert_eq!(error.data(), None);
+        }
+    }
 }
 
 #[test]
@@ -44,7 +52,7 @@ fn static_data() {
         error.file().replace(r"\", "/"),
         "openssl-errors/tests/test.rs"
     );
-    assert_eq!(error.line(), 36);
+    assert_eq!(error.line(), 44);
     assert_eq!(error.data(), Some("foobar"));
 }
 
@@ -61,6 +69,6 @@ fn dynamic_data() {
         error.file().replace(r"\", "/"),
         "openssl-errors/tests/test.rs"
     );
-    assert_eq!(error.line(), 53);
+    assert_eq!(error.line(), 61);
     assert_eq!(error.data(), Some("hello world"));
 }

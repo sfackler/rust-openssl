@@ -30,9 +30,15 @@ pub const PKCS7_NO_DUAL_CONTENT: c_int = 0x10000;
 
 extern "C" {
     pub fn d2i_PKCS7(a: *mut *mut PKCS7, pp: *mut *const c_uchar, length: c_long) -> *mut PKCS7;
+}
 
-    pub fn i2d_PKCS7(a: *mut PKCS7, buf: *mut *mut u8) -> c_int;
+const_ptr_api! {
+    extern "C" {
+        pub fn i2d_PKCS7(a: #[const_ptr_if(ossl300)] PKCS7, buf: *mut *mut u8) -> c_int;
+    }
+}
 
+extern "C" {
     pub fn PKCS7_encrypt(
         certs: *mut stack_st_X509,
         b: *mut BIO,

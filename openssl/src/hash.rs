@@ -623,6 +623,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(ossl300, ignore)]
     fn test_ripemd160() {
         let tests = [("616263", "8eb208f7e05d987a9b044a8e98c6b087f15a0bfc")];
 

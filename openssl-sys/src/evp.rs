@@ -29,15 +29,60 @@ pub unsafe fn EVP_get_digestbynid(type_: c_int) -> *const EVP_MD {
     EVP_get_digestbyname(OBJ_nid2sn(type_))
 }
 
-extern "C" {
-    pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
-    pub fn EVP_MD_type(md: *const EVP_MD) -> c_int;
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn EVP_MD_get_size(md: *const EVP_MD) -> c_int;
+            pub fn EVP_MD_get_type(md: *const EVP_MD) -> c_int;
 
-    pub fn EVP_CIPHER_key_length(cipher: *const EVP_CIPHER) -> c_int;
-    pub fn EVP_CIPHER_block_size(cipher: *const EVP_CIPHER) -> c_int;
-    pub fn EVP_CIPHER_iv_length(cipher: *const EVP_CIPHER) -> c_int;
-    pub fn EVP_CIPHER_nid(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_get_key_length(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_get_block_size(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_get_iv_length(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_get_nid(cipher: *const EVP_CIPHER) -> c_int;
+        }
+
+        #[inline]
+        pub unsafe fn EVP_MD_size(md: *const EVP_MD) -> c_int {
+            EVP_MD_get_size(md)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_MD_type(md: *const EVP_MD) -> c_int {
+            EVP_MD_get_type(md)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_key_length(cipher: *const EVP_CIPHER) -> c_int {
+            EVP_CIPHER_get_key_length(cipher)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_block_size(cipher: *const EVP_CIPHER) -> c_int {
+            EVP_CIPHER_get_block_size(cipher)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_iv_length(cipher: *const EVP_CIPHER) -> c_int {
+            EVP_CIPHER_get_iv_length(cipher)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_nid(cipher: *const EVP_CIPHER) -> c_int {
+            EVP_CIPHER_get_nid(cipher)
+        }
+    } else {
+        extern "C" {
+            pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
+            pub fn EVP_MD_type(md: *const EVP_MD) -> c_int;
+
+            pub fn EVP_CIPHER_key_length(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_block_size(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_iv_length(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_nid(cipher: *const EVP_CIPHER) -> c_int;
+        }
+    }
 }
+extern "C" {}
 
 cfg_if! {
     if #[cfg(ossl110)] {
@@ -58,6 +103,16 @@ extern "C" {
         -> c_int;
     pub fn EVP_DigestUpdate(ctx: *mut EVP_MD_CTX, data: *const c_void, n: size_t) -> c_int;
     pub fn EVP_DigestFinal_ex(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
+    #[cfg(ossl300)]
+    pub fn EVP_Q_digest(
+        libctx: *mut OSSL_LIB_CTX,
+        name: *const c_char,
+        propq: *const c_char,
+        data: *const c_void,
+        count: size_t,
+        md: *mut c_uchar,
+        size: *mut c_uint,
+    ) -> c_int;
     pub fn EVP_DigestInit(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD) -> c_int;
     pub fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
     #[cfg(ossl111)]
@@ -175,9 +230,22 @@ extern "C" {
         outl: *mut c_int,
     ) -> c_int;
 }
-const_ptr_api! {
-    extern "C" {
-        pub fn EVP_PKEY_size(pkey: #[const_ptr_if(any(ossl111b, libressl280))] EVP_PKEY) -> c_int;
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn EVP_PKEY_get_size(pkey: *const EVP_PKEY) -> c_int;
+        }
+
+        #[inline]
+        pub unsafe fn EVP_PKEY_size(pkey: *const EVP_PKEY) -> c_int {
+            EVP_PKEY_get_size(pkey)
+        }
+    } else {
+        const_ptr_api! {
+            extern "C" {
+                pub fn EVP_PKEY_size(pkey: #[const_ptr_if(any(ossl111b, libressl280))] EVP_PKEY) -> c_int;
+            }
+        }
     }
 }
 cfg_if! {
@@ -301,12 +369,33 @@ extern "C" {
 
     pub fn EVP_get_digestbyname(name: *const c_char) -> *const EVP_MD;
     pub fn EVP_get_cipherbyname(name: *const c_char) -> *const EVP_CIPHER;
-
-    pub fn EVP_PKEY_id(pkey: *const EVP_PKEY) -> c_int;
 }
-const_ptr_api! {
-    extern "C" {
-        pub fn EVP_PKEY_bits(key: #[const_ptr_if(any(ossl110, libressl280))] EVP_PKEY) -> c_int;
+
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn EVP_PKEY_get_id(pkey: *const EVP_PKEY) -> c_int;
+            pub fn EVP_PKEY_get_bits(key: *const EVP_PKEY) -> c_int;
+        }
+
+        #[inline]
+        pub unsafe fn EVP_PKEY_id(pkey: *const EVP_PKEY) -> c_int {
+            EVP_PKEY_get_id(pkey)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_PKEY_bits(pkey: *const EVP_PKEY) -> c_int {
+            EVP_PKEY_get_bits(pkey)
+        }
+    } else {
+        extern "C" {
+            pub fn EVP_PKEY_id(pkey: *const EVP_PKEY) -> c_int;
+        }
+        const_ptr_api! {
+            extern "C" {
+                pub fn EVP_PKEY_bits(key: #[const_ptr_if(any(ossl110, libressl280))] EVP_PKEY) -> c_int;
+            }
+        }
     }
 }
 extern "C" {
@@ -369,13 +458,25 @@ extern "C" {
 }
 
 pub const EVP_PKEY_OP_KEYGEN: c_int = 1 << 2;
-pub const EVP_PKEY_OP_SIGN: c_int = 1 << 3;
-pub const EVP_PKEY_OP_VERIFY: c_int = 1 << 4;
-pub const EVP_PKEY_OP_VERIFYRECOVER: c_int = 1 << 5;
-pub const EVP_PKEY_OP_SIGNCTX: c_int = 1 << 6;
-pub const EVP_PKEY_OP_VERIFYCTX: c_int = 1 << 7;
-pub const EVP_PKEY_OP_ENCRYPT: c_int = 1 << 8;
-pub const EVP_PKEY_OP_DECRYPT: c_int = 1 << 9;
+cfg_if! {
+    if #[cfg(ossl300)] {
+        pub const EVP_PKEY_OP_SIGN: c_int = 1 << 4;
+        pub const EVP_PKEY_OP_VERIFY: c_int = 1 << 5;
+        pub const EVP_PKEY_OP_VERIFYRECOVER: c_int = 1 << 6;
+        pub const EVP_PKEY_OP_SIGNCTX: c_int = 1 << 7;
+        pub const EVP_PKEY_OP_VERIFYCTX: c_int = 1 << 8;
+        pub const EVP_PKEY_OP_ENCRYPT: c_int = 1 << 9;
+        pub const EVP_PKEY_OP_DECRYPT: c_int = 1 << 10;
+    } else {
+        pub const EVP_PKEY_OP_SIGN: c_int = 1 << 3;
+        pub const EVP_PKEY_OP_VERIFY: c_int = 1 << 4;
+        pub const EVP_PKEY_OP_VERIFYRECOVER: c_int = 1 << 5;
+        pub const EVP_PKEY_OP_SIGNCTX: c_int = 1 << 6;
+        pub const EVP_PKEY_OP_VERIFYCTX: c_int = 1 << 7;
+        pub const EVP_PKEY_OP_ENCRYPT: c_int = 1 << 8;
+        pub const EVP_PKEY_OP_DECRYPT: c_int = 1 << 9;
+    }
+}
 
 pub const EVP_PKEY_OP_TYPE_SIG: c_int = EVP_PKEY_OP_SIGN
     | EVP_PKEY_OP_VERIFY

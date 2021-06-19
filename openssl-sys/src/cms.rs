@@ -6,9 +6,16 @@ pub enum CMS_ContentInfo {}
 extern "C" {
     #[cfg(ossl101)]
     pub fn CMS_ContentInfo_free(cms: *mut ::CMS_ContentInfo);
-    #[cfg(ossl101)]
-    pub fn i2d_CMS_ContentInfo(a: *mut ::CMS_ContentInfo, pp: *mut *mut c_uchar) -> c_int;
+}
 
+const_ptr_api! {
+    extern "C" {
+        #[cfg(ossl101)]
+        pub fn i2d_CMS_ContentInfo(a: #[const_ptr_if(ossl300)] CMS_ContentInfo, pp: *mut *mut c_uchar) -> c_int;
+    }
+}
+
+extern "C" {
     #[cfg(ossl101)]
     pub fn d2i_CMS_ContentInfo(
         a: *mut *mut ::CMS_ContentInfo,

@@ -803,6 +803,7 @@ mod test {
 
     #[test]
     #[cfg(ossl110)]
+    #[cfg_attr(ossl300, ignore)] // https://github.com/openssl/openssl/issues/11671
     fn test_cmac() {
         let cipher = crate::symm::Cipher::aes_128_cbc();
         let key = Vec::from_hex("9294727a3638bb1c13f48ef8158bfc9d").unwrap();

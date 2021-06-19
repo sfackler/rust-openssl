@@ -1020,6 +1020,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(ossl300, ignore)]
     fn test_rc4() {
         let pt = "0000000000000000000000000000000000000000000000000000000000000000000000000000";
         let ct = "A68686B04D686AA107BD8D4CAB191A3EEC0A6294BC78B60F65C25CB47BD7BB3A48EFC4D26BE4";
@@ -1203,6 +1204,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(ossl300, ignore)]
     fn test_bf_cbc() {
         // https://www.schneier.com/code/vectors.txt
 
@@ -1215,6 +1217,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(ossl300, ignore)]
     fn test_bf_ecb() {
         let pt = "5CD54CA83DEF57DA";
         let ct = "B1B8CC0B250F09A0";
@@ -1225,6 +1228,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(ossl300, ignore)]
     fn test_bf_cfb64() {
         let pt = "37363534333231204E6F77206973207468652074696D6520666F722000";
         let ct = "E73214A2822139CAF26ECF6D2EB9E76E3DA3DE04D1517200519D57A6C3";
@@ -1235,6 +1239,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(ossl300, ignore)]
     fn test_bf_ofb() {
         let pt = "37363534333231204E6F77206973207468652074696D6520666F722000";
         let ct = "E73214A2822139CA62B343CC5B65587310DD908D0C241B2263C2CF80DA";
@@ -1245,6 +1250,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(ossl300, ignore)]
     fn test_des_cbc() {
         let pt = "54686973206973206120746573742e";
         let ct = "6f2867cfefda048a4046ef7e556c7132";
@@ -1255,6 +1261,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(ossl300, ignore)]
     fn test_des_ecb() {
         let pt = "54686973206973206120746573742e";
         let ct = "0050ab8aecec758843fe157b4dde938c";
@@ -1296,18 +1303,12 @@ mod tests {
 
     #[test]
     fn test_aes128_gcm() {
-        let key = "0e00c76561d2bd9b40c3c15427e2b08f";
-        let iv = "492cadaccd3ca3fbc9cf9f06eb3325c4e159850b0dbe98199b89b7af528806610b6f63998e1eae80c348e7\
-             4cbb921d8326631631fc6a5d304f39166daf7ea15fa1977f101819adb510b50fe9932e12c5a85aa3fd1e73\
-             d8d760af218be829903a77c63359d75edd91b4f6ed5465a72662f5055999e059e7654a8edc921aa0d496";
-        let pt = "fef03c2d7fb15bf0d2df18007d99f967c878ad59359034f7bb2c19af120685d78e32f6b8b83b032019956c\
-             a9c0195721476b85";
-        let aad = "d8f1163d8c840292a2b2dacf4ac7c36aff8733f18fabb4fa5594544125e03d1e6e5d6d0fd61656c8d8f327\
-             c92839ae5539bb469c9257f109ebff85aad7bd220fdaa95c022dbd0c7bb2d878ad504122c943045d3c5eba\
-             8f1f56c0";
-        let ct = "4f6cf471be7cbd2575cd5a1747aea8fe9dea83e51936beac3e68f66206922060c697ffa7af80ad6bb68f2c\
-             f4fc97416ee52abe";
-        let tag = "e20b6655";
+        let key = "23dc8d23d95b6fd1251741a64f7d4f41";
+        let iv = "f416f48ad44d9efa1179e167";
+        let pt = "6cb9b71dd0ccd42cdf87e8e396fc581fd8e0d700e360f590593b748e105390de";
+        let aad = "45074844c97d515c65bbe37c210a5a4b08c21c588efe5c5f73c4d9c17d34dacddc0bb6a8a53f7bf477b9780c1c2a928660df87016b2873fe876b2b887fb5886bfd63216b7eaecc046372a82c047eb043f0b063226ee52a12c69b";
+        let ct = "8ad20486778e87387efb3f2574e509951c0626816722018129e578b2787969d3";
+        let tag = "91e1bc09";
 
         // this tag is smaller than you'd normally want, but I pulled this test from the part of
         // the NIST test vectors that cover 4 byte tags.

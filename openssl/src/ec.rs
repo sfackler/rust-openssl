@@ -1163,13 +1163,13 @@ mod test {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let mut ctx = BigNumContext::new().unwrap();
         let g = group.generator();
-        assert_eq!(g.is_infinity(&group), false);
+        assert!(!g.is_infinity(&group));
 
         let mut order = BigNum::new().unwrap();
         group.order(&mut order, &mut ctx).unwrap();
         let mut inf = EcPoint::new(&group).unwrap();
         inf.mul_generator(&group, &order, &ctx).unwrap();
-        assert_eq!(inf.is_infinity(&group), true);
+        assert!(inf.is_infinity(&group));
     }
 
     #[test]
@@ -1177,9 +1177,9 @@ mod test {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let mut ctx = BigNumContext::new().unwrap();
         let g = group.generator();
-        assert_eq!(g.is_on_curve(&group, &mut ctx).unwrap(), true);
+        assert!(g.is_on_curve(&group, &mut ctx).unwrap());
 
         let group2 = EcGroup::from_curve_name(Nid::X9_62_PRIME239V3).unwrap();
-        assert_eq!(g.is_on_curve(&group2, &mut ctx).unwrap(), false);
+        assert!(!g.is_on_curve(&group2, &mut ctx).unwrap());
     }
 }
