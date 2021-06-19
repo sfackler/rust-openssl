@@ -4,11 +4,11 @@
 
 ## [v0.2.0] - 2021-06-18
 
-## Changed
+### Changed
 
 * Constructors and accessors on the `Function` and `Reason` types have been made private APIs.
 
-## Added
+### Added
 
 * Added support for OpenSSL 3.x.x.
 
