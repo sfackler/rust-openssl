@@ -11,19 +11,11 @@ pub type pem_password_cb = Option<
     ) -> c_int,
 >;
 
-extern "C" {
-    pub fn PEM_read_bio_X509(
-        bio: *mut BIO,
-        out: *mut *mut X509,
-        callback: pem_password_cb,
-        user_data: *mut c_void,
-    ) -> *mut X509;
-}
-
 const_ptr_api! {
     extern "C" {
         pub fn PEM_write_bio_X509(bio: *mut BIO, x509: #[const_ptr_if(ossl300)] X509) -> c_int;
         pub fn PEM_write_bio_X509_REQ(bio: *mut BIO, x509: #[const_ptr_if(ossl300)] X509_REQ) -> c_int;
+        pub fn PEM_write_bio_X509_CRL(bio: *mut BIO, x509: #[const_ptr_if(ossl300)] X509_CRL) -> c_int;
         pub fn PEM_write_bio_RSAPrivateKey(
             bp: *mut BIO,
             rsa: #[const_ptr_if(ossl300)] RSA,
@@ -74,17 +66,28 @@ const_ptr_api! {
         ) -> c_int;
         pub fn PEM_write_bio_PKCS7(bp: *mut BIO, x: #[const_ptr_if(ossl300)] PKCS7) -> c_int;
         pub fn PEM_write_bio_EC_PUBKEY(bp: *mut BIO, ec: #[const_ptr_if(ossl300)] EC_KEY) -> c_int;
-        pub fn PEM_write_bio_X509_CRL(bio: *mut BIO, x509: #[const_ptr_if(ossl300)] X509_CRL) -> c_int;
     }
 }
 
 extern "C" {
+    pub fn PEM_read_bio_X509(
+        bio: *mut BIO,
+        out: *mut *mut X509,
+        callback: pem_password_cb,
+        user_data: *mut c_void,
+    ) -> *mut X509;
     pub fn PEM_read_bio_X509_REQ(
         bio: *mut BIO,
         out: *mut *mut X509_REQ,
         callback: pem_password_cb,
         user_data: *mut c_void,
     ) -> *mut X509_REQ;
+    pub fn PEM_read_bio_X509_CRL(
+        bio: *mut BIO,
+        out: *mut *mut X509_CRL,
+        callback: pem_password_cb,
+        user_data: *mut c_void,
+    ) -> *mut X509_CRL;
     pub fn PEM_read_bio_RSAPrivateKey(
         bio: *mut BIO,
         rsa: *mut *mut RSA,
