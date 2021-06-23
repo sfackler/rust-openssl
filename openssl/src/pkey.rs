@@ -285,6 +285,21 @@ where
         private_key_to_der,
         ffi::i2d_PrivateKey
     }
+
+    pub fn private_key_to_der_pkcs8(&self) -> Result<Vec<u8>, ::error::ErrorStack> {
+        unsafe {
+            let p8inf = cvt_p(ffi::EVP_PKEY2PKCS8(self.as_ptr()))?;
+
+            let len = ::cvt(ffi::i2d_PKCS8_PRIV_KEY_INFO(p8inf, ptr::null_mut()))?;
+            let mut buf = vec![0; len as usize];
+            ::cvt(ffi::i2d_PKCS8_PRIV_KEY_INFO(p8inf, &mut buf.as_mut_ptr()))?;
+
+            // TODO: p8inf is leaked when error occurs
+            ffi::PKCS8_PRIV_KEY_INFO_free(p8inf);
+
+            Ok(buf)
+        }
+    }
 }
 
 impl<T> fmt::Debug for PKey<T> {
@@ -807,6 +822,30 @@ mod tests {
     fn test_private_key_from_der() {
         let key = include_bytes!("../test/key.der");
         PKey::private_key_from_der(key).unwrap();
+    }
+
+    #[test]
+    fn test_private_key_to_der_vs_pkcs8() {
+        let rsa = Rsa::generate(2048).unwrap();
+        let pkey = PKey::from_rsa(rsa).unwrap();
+        let der = pkey.private_key_to_der_pkcs8().unwrap();
+
+        let pem_vec = pkey.private_key_to_pem_pkcs8().unwrap();
+        let pem_string = String::from_utf8(pem_vec).unwrap();
+        let pem_str = pem_string.trim();
+        let first_newline_idx = pem_str.find('\n').unwrap();
+        let last_newline_idx = pem_str.rfind('\n').unwrap();
+        let pem_without_guards: String = pem_str
+          .chars()
+          .skip(first_newline_idx)
+          .take(last_newline_idx - first_newline_idx)
+          .collect();
+
+        // remove line breaks (base64::decode fails with them)
+        let pem: String = pem_without_guards.split('\n').collect();
+        let other_der = base64::decode(&pem).unwrap();
+
+        assert_eq!(base64::encode(&der), base64::encode(&other_der));
     }
 
     #[test]

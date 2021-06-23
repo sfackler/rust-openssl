@@ -212,6 +212,12 @@ extern "C" {
         length: c_long,
     ) -> *mut EC_KEY;
 
+    pub fn i2d_PKCS8_PRIV_KEY_INFO(
+        k: *mut PKCS8_PRIV_KEY_INFO,
+        buf: *mut *mut u8,
+    ) -> c_int;
+    pub fn EVP_PKEY2PKCS8(k: *mut EVP_PKEY) -> *mut PKCS8_PRIV_KEY_INFO;
+
     pub fn d2i_ECPrivateKey(
         k: *mut *mut EC_KEY,
         pp: *mut *const c_uchar,
