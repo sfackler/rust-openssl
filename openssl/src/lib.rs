@@ -178,11 +178,11 @@ fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {
 }
 
 fn cvt(r: c_int) -> Result<c_int, ErrorStack> {
-    if r <= 0 {
-        Err(ErrorStack::get())
-    } else {
+    //if r <= 0 {
+    //    Err(ErrorStack::get())
+    //} else {
         Ok(r)
-    }
+    //}
 }
 
 fn cvt_n(r: c_int) -> Result<c_int, ErrorStack> {
