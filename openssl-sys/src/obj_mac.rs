@@ -916,6 +916,8 @@ pub const NID_aes_256_cbc_hmac_sha1: c_int = 918;
 pub const NID_X25519: c_int = 1034;
 #[cfg(ossl111)]
 pub const NID_X448: c_int = 1035;
+#[cfg(ossl110)]
+pub const NID_hkdf: c_int = 1036;
 #[cfg(ossl111)]
 pub const NID_ED25519: c_int = 1087;
 #[cfg(ossl111)]
