@@ -250,6 +250,34 @@ where
     {
         unsafe { ffi::EVP_PKEY_cmp(self.as_ptr(), other.as_ptr()) == 1 }
     }
+
+    /// Raw byte representation of a public key
+    ///
+    /// This function only works for algorithms that support raw public keys.
+    /// Currently this is: X25519, ED25519, X448 or ED448
+    ///
+    /// This corresponds to [`EVP_PKEY_get_raw_public_key`].
+    ///
+    /// [`EVP_PKEY_get_raw_public_key`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_PKEY_get_raw_public_key.html
+    #[cfg(ossl111)]
+    pub fn raw_public_key(&self) -> Result<Vec<u8>, ErrorStack> {
+        unsafe {
+            let mut len = 0;
+            cvt(ffi::EVP_PKEY_get_raw_public_key(
+                self.as_ptr(),
+                ptr::null_mut(),
+                &mut len,
+            ))?;
+            let mut buf = vec![0u8; len];
+            cvt(ffi::EVP_PKEY_get_raw_public_key(
+                self.as_ptr(),
+                buf.as_mut_ptr(),
+                &mut len,
+            ))?;
+            buf.truncate(len);
+            Ok(buf)
+        }
+    }
 }
 
 impl<T> PKeyRef<T>
@@ -284,6 +312,34 @@ where
         /// [`i2d_PrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_PrivateKey.html
         private_key_to_der,
         ffi::i2d_PrivateKey
+    }
+
+    /// Raw byte representation of a private key
+    ///
+    /// This function only works for algorithms that support raw private keys.
+    /// Currently this is: HMAC, X25519, ED25519, X448 or ED448
+    ///
+    /// This corresponds to [`EVP_PKEY_get_raw_private_key`].
+    ///
+    /// [`EVP_PKEY_get_raw_private_key`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_PKEY_get_raw_private_key.html
+    #[cfg(ossl111)]
+    pub fn raw_private_key(&self) -> Result<Vec<u8>, ErrorStack> {
+        unsafe {
+            let mut len = 0;
+            cvt(ffi::EVP_PKEY_get_raw_private_key(
+                self.as_ptr(),
+                ptr::null_mut(),
+                &mut len,
+            ))?;
+            let mut buf = vec![0u8; len];
+            cvt(ffi::EVP_PKEY_get_raw_private_key(
+                self.as_ptr(),
+                buf.as_mut_ptr(),
+                &mut len,
+            ))?;
+            buf.truncate(len);
+            Ok(buf)
+        }
     }
 }
 
@@ -627,6 +683,30 @@ impl PKey<Private> {
             .map(|p| PKey::from_ptr(p))
         }
     }
+
+    /// Creates a private key from its raw byte representation
+    ///
+    /// Algorithm types that support raw private keys are HMAC, X25519, ED25519, X448 or ED448
+    ///
+    /// This corresponds to [`EVP_PKEY_new_raw_private_key`].
+    ///
+    /// [`EVP_PKEY_new_raw_private_key`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_PKEY_new_raw_private_key.html
+    #[cfg(ossl111)]
+    pub fn private_key_from_raw_bytes(
+        bytes: &[u8],
+        key_type: Id,
+    ) -> Result<PKey<Private>, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(ffi::EVP_PKEY_new_raw_private_key(
+                key_type.as_raw(),
+                ptr::null_mut(),
+                bytes.as_ptr(),
+                bytes.len(),
+            ))
+            .map(|p| PKey::from_ptr(p))
+        }
+    }
 }
 
 impl PKey<Public> {
@@ -652,6 +732,30 @@ impl PKey<Public> {
         public_key_from_der,
         PKey<Public>,
         ffi::d2i_PUBKEY
+    }
+
+    /// Creates a public key from its raw byte representation
+    ///
+    /// Algorithm types that support raw public keys are X25519, ED25519, X448 or ED448
+    ///
+    /// This corresponds to [`EVP_PKEY_new_raw_public_key`].
+    ///
+    /// [`EVP_PKEY_new_raw_public_key`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_PKEY_new_raw_public_key.html
+    #[cfg(ossl111)]
+    pub fn public_key_from_raw_bytes(
+        bytes: &[u8],
+        key_type: Id,
+    ) -> Result<PKey<Public>, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(ffi::EVP_PKEY_new_raw_public_key(
+                key_type.as_raw(),
+                ptr::null_mut(),
+                bytes.as_ptr(),
+                bytes.len(),
+            ))
+            .map(|p| PKey::from_ptr(p))
+        }
     }
 }
 
@@ -748,6 +852,9 @@ mod tests {
     use crate::symm::Cipher;
 
     use super::*;
+
+    #[cfg(ossl111)]
+    use crate::rand::rand_bytes;
 
     #[test]
     fn test_to_password() {
@@ -907,5 +1014,79 @@ mod tests {
         assert_eq!(&p, dh_.prime_p());
         assert_eq!(q, dh_.prime_q().map(|q| q.to_owned().unwrap()));
         assert_eq!(&g, dh_.generator());
+    }
+
+    #[cfg(ossl111)]
+    fn test_raw_public_key(gen: fn() -> Result<PKey<Private>, ErrorStack>, key_type: Id) {
+        // Generate a new key
+        let key = gen().unwrap();
+
+        // Get the raw bytes, and create a new key from the raw bytes
+        let raw = key.raw_public_key().unwrap();
+        let from_raw = PKey::public_key_from_raw_bytes(&raw, key_type).unwrap();
+
+        // Compare the der encoding of the original and raw / restored public key
+        assert_eq!(
+            key.public_key_to_der().unwrap(),
+            from_raw.public_key_to_der().unwrap()
+        );
+    }
+
+    #[cfg(ossl111)]
+    fn test_raw_private_key(gen: fn() -> Result<PKey<Private>, ErrorStack>, key_type: Id) {
+        // Generate a new key
+        let key = gen().unwrap();
+
+        // Get the raw bytes, and create a new key from the raw bytes
+        let raw = key.raw_private_key().unwrap();
+        let from_raw = PKey::private_key_from_raw_bytes(&raw, key_type).unwrap();
+
+        // Compare the der encoding of the original and raw / restored public key
+        assert_eq!(
+            key.private_key_to_der().unwrap(),
+            from_raw.private_key_to_der().unwrap()
+        );
+    }
+
+    #[cfg(ossl111)]
+    #[test]
+    fn test_raw_public_key_bytes() {
+        test_raw_public_key(PKey::generate_x25519, Id::X25519);
+        test_raw_public_key(PKey::generate_ed25519, Id::ED25519);
+        test_raw_public_key(PKey::generate_x448, Id::X448);
+        test_raw_public_key(PKey::generate_ed448, Id::ED448);
+    }
+
+    #[cfg(ossl111)]
+    #[test]
+    fn test_raw_private_key_bytes() {
+        test_raw_private_key(PKey::generate_x25519, Id::X25519);
+        test_raw_private_key(PKey::generate_ed25519, Id::ED25519);
+        test_raw_private_key(PKey::generate_x448, Id::X448);
+        test_raw_private_key(PKey::generate_ed448, Id::ED448);
+    }
+
+    #[cfg(ossl111)]
+    #[test]
+    fn test_raw_hmac() {
+        let mut test_bytes = vec![0u8; 32];
+        rand_bytes(&mut test_bytes).unwrap();
+
+        let hmac_key = PKey::hmac(&test_bytes).unwrap();
+        assert!(hmac_key.raw_public_key().is_err());
+
+        let key_bytes = hmac_key.raw_private_key().unwrap();
+        assert_eq!(key_bytes, test_bytes);
+    }
+
+    #[cfg(ossl111)]
+    #[test]
+    fn test_raw_key_fail() {
+        // Getting a raw byte representation will not work with Nist curves
+        let group = crate::ec::EcGroup::from_curve_name(Nid::SECP256K1).unwrap();
+        let ec_key = EcKey::generate(&group).unwrap();
+        let pkey = PKey::from_ec_key(ec_key).unwrap();
+        assert!(pkey.raw_private_key().is_err());
+        assert!(pkey.raw_public_key().is_err());
     }
 }
