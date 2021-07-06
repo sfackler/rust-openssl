@@ -86,8 +86,15 @@ jobs:
       - uses: sfackler/actions/rustup@master
       - run: echo "::set-output name=version::$(rustc --version)"
         id: rust-version
-      - run: echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - run: vcpkg install openssl:x64-windows
+      - name: Prepare vcpkg
+        uses: lukka/run-vcpkg@v7
+        id: runvcpkg
+        with:
+          vcpkgArguments: openssl:x64-windows
+          vcpkgDirectory: ${{ runner.workspace }}/vcpkg/
+          vcpkgTriplet: x64-windows
+          # 2021.05.12 release
+          vcpkgGitCommitId: 5568f110b509a9fd90711978a7cb76bae75bb092
       - uses: actions/cache@v1
         with:
           path: ~/.cargo/registry/index
