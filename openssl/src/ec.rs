@@ -1173,6 +1173,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
     fn is_on_curve() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let mut ctx = BigNumContext::new().unwrap();

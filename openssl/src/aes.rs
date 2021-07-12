@@ -56,7 +56,8 @@
 //! ```
 //!
 use libc::{c_int, c_uint};
-use std::{mem, ptr};
+use std::mem::MaybeUninit;
+use std::ptr;
 
 use crate::symm::Mode;
 
@@ -73,19 +74,18 @@ impl AesKey {
     /// # Failure
     ///
     /// Returns an error if the key is not 128, 192, or 256 bits.
-    #[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
     pub fn new_encrypt(key: &[u8]) -> Result<AesKey, KeyError> {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize / 8);
 
-            let mut aes_key = mem::uninitialized();
+            let mut aes_key = MaybeUninit::uninit();
             let r = ffi::AES_set_encrypt_key(
                 key.as_ptr() as *const _,
                 key.len() as c_int * 8,
-                &mut aes_key,
+                aes_key.as_mut_ptr(),
             );
             if r == 0 {
-                Ok(AesKey(aes_key))
+                Ok(AesKey(aes_key.assume_init()))
             } else {
                 Err(KeyError(()))
             }
@@ -97,20 +97,19 @@ impl AesKey {
     /// # Failure
     ///
     /// Returns an error if the key is not 128, 192, or 256 bits.
-    #[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
     pub fn new_decrypt(key: &[u8]) -> Result<AesKey, KeyError> {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize / 8);
 
-            let mut aes_key = mem::uninitialized();
+            let mut aes_key = MaybeUninit::uninit();
             let r = ffi::AES_set_decrypt_key(
                 key.as_ptr() as *const _,
                 key.len() as c_int * 8,
-                &mut aes_key,
+                aes_key.as_mut_ptr(),
             );
 
             if r == 0 {
-                Ok(AesKey(aes_key))
+                Ok(AesKey(aes_key.assume_init()))
             } else {
                 Err(KeyError(()))
             }
