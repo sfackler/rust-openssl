@@ -1185,6 +1185,15 @@ extern "C" {
     #[cfg(not(libressl))]
     pub fn SSL_CTX_add_client_CA(ctx: *mut SSL_CTX, cacert: *mut X509) -> c_int;
 
+    pub fn SSL_CTX_set_client_cert_cb(
+        ctx: *mut SSL_CTX,
+        client_cert_cb: extern "C" fn(
+            ssl: *mut SSL,
+            x509: *mut *mut X509,
+            pkey: *mut *mut EVP_PKEY,
+        ),
+    );
+
     pub fn SSL_CTX_set_default_verify_paths(ctx: *mut SSL_CTX) -> c_int;
     pub fn SSL_CTX_load_verify_locations(
         ctx: *mut SSL_CTX,

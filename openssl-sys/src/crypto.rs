@@ -128,3 +128,9 @@ extern "C" {
 
     pub fn CRYPTO_memcmp(a: *const c_void, b: *const c_void, len: size_t) -> c_int;
 }
+
+#[repr(C)]
+pub struct CRYPTO_EX_DATA {
+    sk: *mut c_void,
+    dummy: c_int,
+}
