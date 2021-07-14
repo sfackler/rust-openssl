@@ -1,0 +1,6 @@
+[requires]
+openssl/1.1.1i@
+
+[options]
+openssl:shared=True
+# add any additional openssl options as needed

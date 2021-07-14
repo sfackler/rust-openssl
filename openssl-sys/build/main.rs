@@ -2,6 +2,7 @@
 
 extern crate autocfg;
 extern crate cc;
+extern crate conan;
 #[cfg(feature = "vendored")]
 extern crate openssl_src;
 extern crate pkg_config;
@@ -15,6 +16,7 @@ use std::path::{Path, PathBuf};
 
 mod cfgs;
 
+mod build_with_conan;
 mod find_normal;
 #[cfg(feature = "vendored")]
 mod find_vendored;
@@ -44,6 +46,12 @@ fn env(name: &str) -> Option<OsString> {
 }
 
 fn find_openssl(target: &str) -> (PathBuf, PathBuf) {
+    // if the conanfile.txt exists, try and use it, else continue
+    if let Some(f) = build_with_conan::get_conanfile_path() {
+        if let Some(t) = build_with_conan::try_build_with_conan(&f) {
+            return t;
+        }
+    }
     #[cfg(feature = "vendored")]
     {
         // vendor if the feature is present, unless
