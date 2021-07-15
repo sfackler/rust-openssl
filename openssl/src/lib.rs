@@ -157,6 +157,7 @@ pub mod pkcs12;
 pub mod pkcs5;
 pub mod pkcs7;
 pub mod pkey;
+pub mod pkey_ctx;
 pub mod rand;
 pub mod rsa;
 pub mod sha;
