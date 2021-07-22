@@ -49,13 +49,12 @@ use std::fmt;
 use std::mem;
 use std::ptr;
 
-use crate::bio::MemBioSlice;
+use crate::bio::{MemBio, MemBioSlice};
 use crate::dh::Dh;
 use crate::dsa::Dsa;
 use crate::ec::EcKey;
 use crate::error::ErrorStack;
 use crate::rsa::Rsa;
-#[cfg(ossl110)]
 use crate::symm::Cipher;
 use crate::util::{invoke_passwd_cb, CallbackState};
 use crate::{cvt, cvt_p};
@@ -684,6 +683,35 @@ impl PKey<Private> {
         }
     }
 
+    /// Serializes a private key into a DER-formatted PKCS#8, using the supplied password to
+    /// encrypt the key.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `passphrase` contains an embedded null.
+    pub fn private_key_to_pkcs8_passphrase(
+        &self,
+        cipher: Cipher,
+        passphrase: &[u8],
+    ) -> Result<Vec<u8>, ErrorStack> {
+        unsafe {
+            let bio = MemBio::new()?;
+            let len = passphrase.len();
+            let passphrase = CString::new(passphrase).unwrap();
+            cvt(ffi::i2d_PKCS8PrivateKey_bio(
+                bio.as_ptr(),
+                self.as_ptr(),
+                cipher.as_ptr(),
+                passphrase.as_ptr() as *const _ as *mut _,
+                len as ::libc::c_int,
+                None,
+                ptr::null_mut(),
+            ))?;
+
+            Ok(bio.get_buf().to_owned())
+        }
+    }
+
     /// Creates a private key from its raw byte representation
     ///
     /// Algorithm types that support raw private keys are HMAC, X25519, ED25519, X448 or ED448
@@ -877,6 +905,17 @@ mod tests {
     fn test_encrypted_pkcs8_passphrase() {
         let key = include_bytes!("../test/pkcs8.der");
         PKey::private_key_from_pkcs8_passphrase(key, b"mypass").unwrap();
+
+        let rsa = Rsa::generate(2048).unwrap();
+        let pkey = PKey::from_rsa(rsa).unwrap();
+        let der = pkey
+            .private_key_to_pkcs8_passphrase(Cipher::aes_128_cbc(), b"mypass")
+            .unwrap();
+        let pkey2 = PKey::private_key_from_pkcs8_passphrase(&der, b"mypass").unwrap();
+        assert_eq!(
+            pkey.private_key_to_der().unwrap(),
+            pkey2.private_key_to_der().unwrap()
+        );
     }
 
     #[test]
