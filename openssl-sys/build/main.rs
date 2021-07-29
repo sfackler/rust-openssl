@@ -85,7 +85,7 @@ fn main() {
 
     let libs_env = env("OPENSSL_LIBS");
     let libs = match libs_env.as_ref().and_then(|s| s.to_str()) {
-        Some(ref v) => {
+        Some(v) => {
             if v.is_empty() {
                 vec![]
             } else {
