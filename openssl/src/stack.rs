@@ -141,6 +141,8 @@ pub struct IntoIter<T: Stackable> {
 impl<T: Stackable> Drop for IntoIter<T> {
     fn drop(&mut self) {
         unsafe {
+            // https://github.com/rust-lang/rust-clippy/issues/7510
+            #[allow(clippy::while_let_on_iterator)]
             while let Some(_) = self.next() {}
             OPENSSL_sk_free(self.stack as *mut _);
         }

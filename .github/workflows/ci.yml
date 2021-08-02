@@ -148,7 +148,7 @@ jobs:
             - name: openssl
               version: vendored
             - name: openssl
-              version: 3.0.0-beta1
+              version: 3.0.0-beta2
               dl-path: /
             - name: openssl
               version: 1.1.1k
@@ -203,7 +203,7 @@ jobs:
         - uses: actions/cache@v2
           with:
             path: /opt/openssl
-            key: openssl-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}
+            key: openssl-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-2
           if: matrix.library.version != 'vendored'
           id: openssl-cache
         - name: Build OpenSSL
@@ -241,7 +241,7 @@ jobs:
 
             case "${{ matrix.library.name }}" in
             "openssl")
-              ./Configure --prefix=$OPENSSL_DIR $OS_COMPILER -fPIC -g $OS_FLAGS no-shared
+              ./Configure --prefix=$OPENSSL_DIR --libdir=lib $OS_COMPILER -fPIC -g $OS_FLAGS no-shared
               ;;
             "libressl")
               ./configure --prefix=$OPENSSL_DIR --disable-shared --with-pic

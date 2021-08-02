@@ -111,7 +111,7 @@ extern "C" {
         data: *const c_void,
         count: size_t,
         md: *mut c_uchar,
-        size: *mut c_uint,
+        size: *mut size_t,
     ) -> c_int;
     pub fn EVP_DigestInit(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD) -> c_int;
     pub fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;

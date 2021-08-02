@@ -272,7 +272,7 @@ mod test {
         let iv = seal.iv();
         let encrypted_key = &seal.encrypted_keys()[0];
 
-        let mut open = Open::new(cipher, &private_key, iv, &encrypted_key).unwrap();
+        let mut open = Open::new(cipher, &private_key, iv, encrypted_key).unwrap();
         let mut decrypted = vec![0; enc_len + cipher.block_size()];
         let mut dec_len = open.update(&encrypted[..enc_len], &mut decrypted).unwrap();
         dec_len += open.finalize(&mut decrypted[dec_len..]).unwrap();

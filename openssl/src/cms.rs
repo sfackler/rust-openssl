@@ -280,7 +280,7 @@ mod test {
 
         let encrypt = CmsContentInfo::encrypt(
             &cert_stack,
-            &input.as_bytes(),
+            input.as_bytes(),
             Cipher::des_ede3_cbc(),
             CMSOptions::empty(),
         )

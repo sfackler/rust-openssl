@@ -489,9 +489,9 @@ mod test {
 
         let mut decrypter = Decrypter::new(&pkey).unwrap();
         decrypter.set_rsa_padding(Padding::PKCS1).unwrap();
-        let buffer_len = decrypter.decrypt_len(&encoded).unwrap();
+        let buffer_len = decrypter.decrypt_len(encoded).unwrap();
         let mut decoded = vec![0u8; buffer_len];
-        let decoded_len = decrypter.decrypt(&encoded, &mut decoded).unwrap();
+        let decoded_len = decrypter.decrypt(encoded, &mut decoded).unwrap();
         let decoded = &decoded[..decoded_len];
 
         assert_eq!(decoded, &*input);
@@ -520,9 +520,9 @@ mod test {
         decrypter.set_rsa_padding(Padding::PKCS1_OAEP).unwrap();
         decrypter.set_rsa_oaep_md(md).unwrap();
         decrypter.set_rsa_mgf1_md(md).unwrap();
-        let buffer_len = decrypter.decrypt_len(&encoded).unwrap();
+        let buffer_len = decrypter.decrypt_len(encoded).unwrap();
         let mut decoded = vec![0u8; buffer_len];
-        let decoded_len = decrypter.decrypt(&encoded, &mut decoded).unwrap();
+        let decoded_len = decrypter.decrypt(encoded, &mut decoded).unwrap();
         let decoded = &decoded[..decoded_len];
 
         assert_eq!(decoded, &*input);
