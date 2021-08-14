@@ -290,6 +290,22 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
     }
 
+    pub fn seed_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_seed_cbc()) }
+    }
+
+    pub fn seed_cfb128() -> Cipher {
+        unsafe { Cipher(ffi::EVP_seed_cfb128()) }
+    }
+
+    pub fn seed_ecb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_seed_ecb()) }
+    }
+
+    pub fn seed_ofb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_seed_ofb()) }
+    }
+
     /// Creates a `Cipher` from a raw pointer to its OpenSSL type.
     ///
     /// # Safety
@@ -1559,5 +1575,43 @@ mod tests {
         )
         .unwrap();
         assert_eq!(pt, hex::encode(out));
+    }
+
+    #[test]
+    fn test_seed_cbc() {
+        let pt = "5363686f6b6f6c6164656e6b756368656e0a";
+        let ct = "c2edf0fb2eb11bf7b2f39417a8528896d34b24b6fd79e5923b116dfcd2aba5a4";
+        let key = "41414141414141414141414141414141";
+        let iv = "41414141414141414141414141414141";
+
+        cipher_test(super::Cipher::seed_cbc(), pt, ct, key, iv);
+    }
+
+    #[test]
+    fn test_seed_cfb128() {
+        let pt = "5363686f6b6f6c6164656e6b756368656e0a";
+        let ct = "71d4d25fc1750cb7789259e7f34061939a41";
+        let key = "41414141414141414141414141414141";
+        let iv = "41414141414141414141414141414141";
+
+        cipher_test(super::Cipher::seed_cfb128(), pt, ct, key, iv);
+    }
+    #[test]
+    fn test_seed_ecb() {
+        let pt = "5363686f6b6f6c6164656e6b756368656e0a";
+        let ct = "0263a9cd498cf0edb0ef72a3231761d00ce601f7d08ad19ad74f0815f2c77f7e";
+        let key = "41414141414141414141414141414141";
+        let iv = "41414141414141414141414141414141";
+
+        cipher_test(super::Cipher::seed_ecb(), pt, ct, key, iv);
+    }
+    #[test]
+    fn test_seed_ofb() {
+        let pt = "5363686f6b6f6c6164656e6b756368656e0a";
+        let ct = "71d4d25fc1750cb7789259e7f34061930afd";
+        let key = "41414141414141414141414141414141";
+        let iv = "41414141414141414141414141414141";
+
+        cipher_test(super::Cipher::seed_ofb(), pt, ct, key, iv);
     }
 }
