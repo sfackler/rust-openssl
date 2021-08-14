@@ -290,18 +290,22 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     pub fn seed_cbc() -> Cipher {
         unsafe { Cipher(ffi::EVP_seed_cbc()) }
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     pub fn seed_cfb128() -> Cipher {
         unsafe { Cipher(ffi::EVP_seed_cfb128()) }
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     pub fn seed_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_seed_ecb()) }
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     pub fn seed_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_seed_ofb()) }
     }
@@ -1578,6 +1582,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     fn test_seed_cbc() {
         let pt = "5363686f6b6f6c6164656e6b756368656e0a";
         let ct = "c2edf0fb2eb11bf7b2f39417a8528896d34b24b6fd79e5923b116dfcd2aba5a4";
@@ -1588,6 +1593,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     fn test_seed_cfb128() {
         let pt = "5363686f6b6f6c6164656e6b756368656e0a";
         let ct = "71d4d25fc1750cb7789259e7f34061939a41";
@@ -1597,6 +1603,7 @@ mod tests {
         cipher_test(super::Cipher::seed_cfb128(), pt, ct, key, iv);
     }
     #[test]
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     fn test_seed_ecb() {
         let pt = "5363686f6b6f6c6164656e6b756368656e0a";
         let ct = "0263a9cd498cf0edb0ef72a3231761d00ce601f7d08ad19ad74f0815f2c77f7e";
@@ -1606,6 +1613,7 @@ mod tests {
         cipher_test(super::Cipher::seed_ecb(), pt, ct, key, iv);
     }
     #[test]
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     fn test_seed_ofb() {
         let pt = "5363686f6b6f6c6164656e6b756368656e0a";
         let ct = "71d4d25fc1750cb7789259e7f34061930afd";
