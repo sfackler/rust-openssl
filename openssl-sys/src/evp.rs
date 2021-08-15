@@ -363,6 +363,14 @@ extern "C" {
     pub fn EVP_chacha20() -> *const ::EVP_CIPHER;
     #[cfg(ossl110)]
     pub fn EVP_chacha20_poly1305() -> *const ::EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    pub fn EVP_seed_cbc() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    pub fn EVP_seed_cfb128() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    pub fn EVP_seed_ecb() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    pub fn EVP_seed_ofb() -> *const EVP_CIPHER;
 
     #[cfg(not(ossl110))]
     pub fn OPENSSL_add_all_algorithms_noconf();
