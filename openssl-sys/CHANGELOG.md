@@ -221,7 +221,8 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.65...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.66...master
+[v0.9.66]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.65...openssl-sys-v0.9.66
 [v0.9.65]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.64...openssl-sys-v0.9.65
 [v0.9.64]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.63...openssl-sys-v0.9.64
 [v0.9.63]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.62...openssl-sys-v0.9.63

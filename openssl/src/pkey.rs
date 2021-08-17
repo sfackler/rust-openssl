@@ -340,6 +340,35 @@ where
             Ok(buf)
         }
     }
+
+    /// Serializes a private key into a DER-formatted PKCS#8, using the supplied password to
+    /// encrypt the key.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `passphrase` contains an embedded null.
+    pub fn private_key_to_pkcs8_passphrase(
+        &self,
+        cipher: Cipher,
+        passphrase: &[u8],
+    ) -> Result<Vec<u8>, ErrorStack> {
+        unsafe {
+            let bio = MemBio::new()?;
+            let len = passphrase.len();
+            let passphrase = CString::new(passphrase).unwrap();
+            cvt(ffi::i2d_PKCS8PrivateKey_bio(
+                bio.as_ptr(),
+                self.as_ptr(),
+                cipher.as_ptr(),
+                passphrase.as_ptr() as *const _ as *mut _,
+                len as ::libc::c_int,
+                None,
+                ptr::null_mut(),
+            ))?;
+
+            Ok(bio.get_buf().to_owned())
+        }
+    }
 }
 
 impl<T> fmt::Debug for PKey<T> {
@@ -680,35 +709,6 @@ impl PKey<Private> {
                 passphrase.as_ptr() as *const _ as *mut _,
             ))
             .map(|p| PKey::from_ptr(p))
-        }
-    }
-
-    /// Serializes a private key into a DER-formatted PKCS#8, using the supplied password to
-    /// encrypt the key.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `passphrase` contains an embedded null.
-    pub fn private_key_to_pkcs8_passphrase(
-        &self,
-        cipher: Cipher,
-        passphrase: &[u8],
-    ) -> Result<Vec<u8>, ErrorStack> {
-        unsafe {
-            let bio = MemBio::new()?;
-            let len = passphrase.len();
-            let passphrase = CString::new(passphrase).unwrap();
-            cvt(ffi::i2d_PKCS8PrivateKey_bio(
-                bio.as_ptr(),
-                self.as_ptr(),
-                cipher.as_ptr(),
-                passphrase.as_ptr() as *const _ as *mut _,
-                len as ::libc::c_int,
-                None,
-                ptr::null_mut(),
-            ))?;
-
-            Ok(bio.get_buf().to_owned())
         }
     }
 
