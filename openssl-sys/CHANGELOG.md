@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [v0.9.66] - 2021-08-17
+
+### Added
+
+* Added `EVP_seed_cbc`, `EVP_seed_cfb128`, `EVP_seed_ecb`, and `EVP_seed_ofb`.
+* Added `OBJ_length` and `OBJ_get0_data`.
+* Added `i2d_PKCS8PrivateKey_bio`.
+
 ## [v0.9.65] - 2021-06-21
 
 ### Fixed
