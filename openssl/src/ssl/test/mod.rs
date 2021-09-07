@@ -295,7 +295,7 @@ fn state() {
     let server = Server::builder().build();
 
     let s = server.client().connect();
-    assert_eq!(s.ssl().state_string(), "SSLOK ");
+    assert_eq!(s.ssl().state_string().trim(), "SSLOK");
     assert_eq!(
         s.ssl().state_string_long(),
         "SSL negotiation finished successfully"
