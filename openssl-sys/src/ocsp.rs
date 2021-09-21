@@ -82,7 +82,15 @@ extern "C" {
     pub fn OCSP_BASICRESP_free(r: *mut OCSP_BASICRESP);
     pub fn OCSP_RESPONSE_new() -> *mut OCSP_RESPONSE;
     pub fn OCSP_RESPONSE_free(r: *mut OCSP_RESPONSE);
-    pub fn i2d_OCSP_RESPONSE(a: *mut OCSP_RESPONSE, pp: *mut *mut c_uchar) -> c_int;
+}
+
+const_ptr_api! {
+    extern "C" {
+        pub fn i2d_OCSP_RESPONSE(a: #[const_ptr_if(ossl300)] OCSP_RESPONSE, pp: *mut *mut c_uchar) -> c_int;
+    }
+}
+
+extern "C" {
     pub fn d2i_OCSP_RESPONSE(
         a: *mut *mut OCSP_RESPONSE,
         pp: *mut *const c_uchar,
@@ -92,7 +100,15 @@ extern "C" {
     pub fn OCSP_CERTID_free(id: *mut OCSP_CERTID);
     pub fn OCSP_REQUEST_new() -> *mut OCSP_REQUEST;
     pub fn OCSP_REQUEST_free(r: *mut OCSP_REQUEST);
-    pub fn i2d_OCSP_REQUEST(a: *mut OCSP_REQUEST, pp: *mut *mut c_uchar) -> c_int;
+}
+
+const_ptr_api! {
+    extern "C" {
+        pub fn i2d_OCSP_REQUEST(a: #[const_ptr_if(ossl300)] OCSP_REQUEST, pp: *mut *mut c_uchar) -> c_int;
+    }
+}
+
+extern "C" {
     pub fn d2i_OCSP_REQUEST(
         a: *mut *mut OCSP_REQUEST,
         pp: *mut *const c_uchar,

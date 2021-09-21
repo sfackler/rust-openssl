@@ -5,6 +5,7 @@ use *;
 extern "C" {
     pub fn OBJ_nid2ln(nid: c_int) -> *const c_char;
     pub fn OBJ_nid2sn(nid: c_int) -> *const c_char;
+    pub fn OBJ_nid2obj(n: c_int) -> *mut ASN1_OBJECT;
     pub fn OBJ_obj2nid(o: *const ASN1_OBJECT) -> c_int;
     pub fn OBJ_obj2txt(
         buf: *mut c_char,
@@ -17,4 +18,8 @@ extern "C" {
         -> c_int;
     pub fn OBJ_sn2nid(sn: *const libc::c_char) -> libc::c_int;
     pub fn OBJ_txt2obj(s: *const libc::c_char, no_name: libc::c_int) -> *mut ASN1_OBJECT;
+    #[cfg(ossl111)]
+    pub fn OBJ_length(obj: *const ASN1_OBJECT) -> libc::size_t;
+    #[cfg(ossl111)]
+    pub fn OBJ_get0_data(obj: *const ASN1_OBJECT) -> *const c_uchar;
 }

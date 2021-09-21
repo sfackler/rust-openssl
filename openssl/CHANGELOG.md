@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+## [v0.10.36] - 2021-08-17
+
+### Added
+
+* Added `Asn1Object::as_slice`.
+* Added `PKeyRef::{raw_public_key, raw_private_key, private_key_to_pkcs8_passphrase}` and
+    `PKey::{private_key_from_raw_bytes, public_key_from_raw_bytes}`.
+* Added `Cipher::{seed_cbc, seed_cfb128, seed_ecb, seed_ofb}`.
+
+## [v0.10.35] - 2021-06-18
+
+### Fixed
+
+* Fixed a memory leak in `Deriver`.
+
+### Added
+
+* Added support for OpenSSL 3.x.x.
+* Added `SslStream::peek`.
+
 ## [v0.10.34] - 2021-04-28
 
 ### Added
@@ -536,7 +556,9 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.34...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.36...master
+[v0.10.36]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.35...openssl-v0.10.36
+[v0.10.35]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.34...openssl-v0.10.35
 [v0.10.34]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.33...openssl-v0.10.34
 [v0.10.33]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.32...openssl-v0.10.33
 [v0.10.32]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.31...openssl-v0.10.32

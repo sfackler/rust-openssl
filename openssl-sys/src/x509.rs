@@ -6,6 +6,8 @@ pub const X509_FILETYPE_PEM: c_int = 1;
 pub const X509_FILETYPE_ASN1: c_int = 2;
 pub const X509_FILETYPE_DEFAULT: c_int = 3;
 
+pub const ASN1_R_HEADER_TOO_LONG: c_int = 123;
+
 #[repr(C)]
 pub struct X509_VAL {
     pub notBefore: *mut ASN1_TIME,
@@ -183,32 +185,38 @@ extern "C" {
     ) -> c_int;
 
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
+}
 
-    pub fn i2d_X509_bio(b: *mut BIO, x: *mut X509) -> c_int;
-    pub fn i2d_X509_REQ_bio(b: *mut BIO, x: *mut X509_REQ) -> c_int;
-    pub fn i2d_PrivateKey_bio(b: *mut BIO, x: *mut EVP_PKEY) -> c_int;
-    pub fn i2d_PUBKEY_bio(b: *mut BIO, x: *mut EVP_PKEY) -> c_int;
+const_ptr_api! {
+    extern "C" {
+        pub fn i2d_X509_bio(b: *mut BIO, x: #[const_ptr_if(ossl300)] X509) -> c_int;
+        pub fn i2d_X509_REQ_bio(b: *mut BIO, x: #[const_ptr_if(ossl300)] X509_REQ) -> c_int;
+        pub fn i2d_PrivateKey_bio(b: *mut BIO, x: #[const_ptr_if(ossl300)] EVP_PKEY) -> c_int;
+        pub fn i2d_PUBKEY_bio(b: *mut BIO, x: #[const_ptr_if(ossl300)] EVP_PKEY) -> c_int;
 
-    pub fn i2d_PUBKEY(k: *mut EVP_PKEY, buf: *mut *mut u8) -> c_int;
+        pub fn i2d_PUBKEY(k: #[const_ptr_if(ossl300)] EVP_PKEY, buf: *mut *mut u8) -> c_int;
+        pub fn i2d_RSA_PUBKEY(k: #[const_ptr_if(ossl300)] RSA, buf: *mut *mut u8) -> c_int;
+        pub fn i2d_DSA_PUBKEY(a: #[const_ptr_if(ossl300)] DSA, pp: *mut *mut c_uchar) -> c_int;
+        pub fn i2d_PrivateKey(k: #[const_ptr_if(ossl300)] EVP_PKEY, buf: *mut *mut u8) -> c_int;
+        pub fn i2d_ECPrivateKey(ec_key: #[const_ptr_if(ossl300)] EC_KEY, pp: *mut *mut c_uchar) -> c_int;
+        pub fn i2d_EC_PUBKEY(a: #[const_ptr_if(ossl300)] EC_KEY, pp: *mut *mut c_uchar) -> c_int;
+    }
+}
+extern "C" {
     pub fn d2i_PUBKEY(k: *mut *mut EVP_PKEY, buf: *mut *const u8, len: c_long) -> *mut EVP_PKEY;
     pub fn d2i_RSA_PUBKEY(k: *mut *mut RSA, buf: *mut *const u8, len: c_long) -> *mut RSA;
-    pub fn i2d_RSA_PUBKEY(k: *mut RSA, buf: *mut *mut u8) -> c_int;
     pub fn d2i_DSA_PUBKEY(k: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long) -> *mut DSA;
-    pub fn i2d_DSA_PUBKEY(a: *mut DSA, pp: *mut *mut c_uchar) -> c_int;
     pub fn d2i_EC_PUBKEY(
         a: *mut *mut EC_KEY,
         pp: *mut *const c_uchar,
         length: c_long,
     ) -> *mut EC_KEY;
-    pub fn i2d_EC_PUBKEY(a: *mut EC_KEY, pp: *mut *mut c_uchar) -> c_int;
-    pub fn i2d_PrivateKey(k: *mut EVP_PKEY, buf: *mut *mut u8) -> c_int;
 
     pub fn d2i_ECPrivateKey(
         k: *mut *mut EC_KEY,
         pp: *mut *const c_uchar,
         length: c_long,
     ) -> *mut EC_KEY;
-    pub fn i2d_ECPrivateKey(ec_key: *mut EC_KEY, pp: *mut *mut c_uchar) -> c_int;
 }
 
 const_ptr_api! {
@@ -232,14 +240,27 @@ extern "C" {
 
     pub fn X509_REVOKED_new() -> *mut X509_REVOKED;
     pub fn X509_REVOKED_free(x: *mut X509_REVOKED);
-    #[cfg(any(ossl110, libressl270))]
-    pub fn X509_REVOKED_dup(rev: *mut X509_REVOKED) -> *mut X509_REVOKED;
+}
+const_ptr_api! {
+    extern "C" {
+        #[cfg(any(ossl110, libressl270))]
+        pub fn X509_REVOKED_dup(rev: #[const_ptr_if(ossl300)] X509_REVOKED) -> *mut X509_REVOKED;
+    }
+}
+
+extern "C" {
     pub fn d2i_X509_REVOKED(
         a: *mut *mut X509_REVOKED,
         pp: *mut *const c_uchar,
         length: c_long,
     ) -> *mut X509_REVOKED;
-    pub fn i2d_X509_REVOKED(x: *mut X509_REVOKED, buf: *mut *mut u8) -> c_int;
+}
+const_ptr_api! {
+    extern "C" {
+        pub fn i2d_X509_REVOKED(x: #[const_ptr_if(ossl300)] X509_REVOKED, buf: *mut *mut u8) -> c_int;
+    }
+}
+extern "C" {
     pub fn X509_CRL_new() -> *mut X509_CRL;
     pub fn X509_CRL_free(x: *mut X509_CRL);
     pub fn d2i_X509_CRL(
@@ -247,8 +268,14 @@ extern "C" {
         pp: *mut *const c_uchar,
         length: c_long,
     ) -> *mut X509_CRL;
-    pub fn i2d_X509_CRL(x: *mut X509_CRL, buf: *mut *mut u8) -> c_int;
+}
+const_ptr_api! {
+    extern "C" {
+        pub fn i2d_X509_CRL(x: #[const_ptr_if(ossl300)] X509_CRL, buf: *mut *mut u8) -> c_int;
+    }
+}
 
+extern "C" {
     pub fn X509_REQ_new() -> *mut X509_REQ;
     pub fn X509_REQ_free(x: *mut X509_REQ);
     pub fn d2i_X509_REQ(
@@ -256,11 +283,11 @@ extern "C" {
         pp: *mut *const c_uchar,
         length: c_long,
     ) -> *mut X509_REQ;
-    pub fn i2d_X509_REQ(x: *mut X509_REQ, buf: *mut *mut u8) -> c_int;
 }
-
 const_ptr_api! {
     extern "C" {
+        pub fn i2d_X509_REQ(x: #[const_ptr_if(ossl300)] X509_REQ, buf: *mut *mut u8) -> c_int;
+
         #[cfg(any(ossl102, libressl273))]
         pub fn X509_get0_signature(
             psig: *mut #[const_ptr_if(any(ossl110, libressl273))] ASN1_BIT_STRING,
@@ -282,8 +309,15 @@ extern "C" {
 
     pub fn X509_new() -> *mut X509;
     pub fn X509_free(x: *mut X509);
-    pub fn i2d_X509(x: *mut X509, buf: *mut *mut u8) -> c_int;
+}
+const_ptr_api! {
+    extern "C" {
+        pub fn i2d_X509(x: #[const_ptr_if(ossl300)] X509, buf: *mut *mut u8) -> c_int;
+    }
+}
+extern "C" {
     pub fn d2i_X509(a: *mut *mut X509, pp: *mut *const c_uchar, length: c_long) -> *mut X509;
+    pub fn d2i_X509_bio(b: *mut BIO, a: *mut *mut X509) -> *mut X509;
 
     pub fn X509_get_pubkey(x: *mut X509) -> *mut EVP_PKEY;
 
@@ -292,20 +326,19 @@ extern "C" {
     pub fn X509_get_version(x: *const X509) -> c_long;
     pub fn X509_set_serialNumber(x: *mut X509, sn: *mut ASN1_INTEGER) -> c_int;
     pub fn X509_get_serialNumber(x: *mut X509) -> *mut ASN1_INTEGER;
-    pub fn X509_set_issuer_name(x: *mut X509, name: *mut X509_NAME) -> c_int;
-
+}
+const_ptr_api! {
+    extern "C" {
+        pub fn X509_set_issuer_name(x: *mut X509, name: #[const_ptr_if(ossl300)] X509_NAME) -> c_int;
+    }
+}
+extern "C" {
     pub fn X509_subject_name_hash(x: *mut ::X509) -> c_ulong;
 }
 const_ptr_api! {
     extern "C" {
         pub fn X509_get_issuer_name(x: #[const_ptr_if(any(ossl110, libressl280))] ::X509) -> *mut ::X509_NAME;
-    }
-}
-extern "C" {
-    pub fn X509_set_subject_name(x: *mut X509, name: *mut X509_NAME) -> c_int;
-}
-const_ptr_api! {
-    extern "C" {
+        pub fn X509_set_subject_name(x: *mut X509, name: #[const_ptr_if(ossl300)] X509_NAME) -> c_int;
         pub fn X509_get_subject_name(x: #[const_ptr_if(any(ossl110, libressl280))] ::X509) -> *mut ::X509_NAME;
     }
 }
@@ -328,12 +361,24 @@ extern "C" {
     pub fn X509_REQ_set_version(req: *mut X509_REQ, version: c_long) -> c_int;
     #[cfg(ossl110)]
     pub fn X509_REQ_get_subject_name(req: *const X509_REQ) -> *mut X509_NAME;
-    pub fn X509_REQ_set_subject_name(req: *mut X509_REQ, name: *mut X509_NAME) -> c_int;
+}
+const_ptr_api! {
+    extern "C" {
+        pub fn X509_REQ_set_subject_name(req: *mut X509_REQ, name: #[const_ptr_if(ossl300)] X509_NAME) -> c_int;
+    }
+}
+extern "C" {
     pub fn X509_REQ_set_pubkey(req: *mut X509_REQ, pkey: *mut EVP_PKEY) -> c_int;
     pub fn X509_REQ_get_pubkey(req: *mut X509_REQ) -> *mut EVP_PKEY;
     pub fn X509_REQ_get_extensions(req: *mut X509_REQ) -> *mut stack_st_X509_EXTENSION;
-    pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: *mut stack_st_X509_EXTENSION)
-        -> c_int;
+}
+const_ptr_api! {
+    extern "C" {
+        pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: #[const_ptr_if(ossl300)] stack_st_X509_EXTENSION)
+            -> c_int;
+    }
+}
+extern "C" {
     pub fn X509_set_pubkey(x: *mut X509, pkey: *mut EVP_PKEY) -> c_int;
     pub fn X509_REQ_verify(req: *mut X509_REQ, pkey: *mut EVP_PKEY) -> c_int;
     #[cfg(any(ossl110, libressl273))]
@@ -366,12 +411,18 @@ extern "C" {
         ret: *mut *mut X509_REVOKED,
         cert: *mut X509,
     ) -> c_int;
-    pub fn X509_CRL_get0_by_serial(
-        x: *mut X509_CRL,
-        ret: *mut *mut X509_REVOKED,
-        serial: *mut ASN1_INTEGER,
-    ) -> c_int;
+}
+const_ptr_api! {
+    extern "C" {
+        pub fn X509_CRL_get0_by_serial(
+            x: *mut X509_CRL,
+            ret: *mut *mut X509_REVOKED,
+            serial: #[const_ptr_if(ossl300)] ASN1_INTEGER,
+        ) -> c_int;
+    }
+}
 
+extern "C" {
     #[cfg(any(ossl110, libressl281))]
     pub fn X509_CRL_get_REVOKED(crl: *mut X509_CRL) -> *mut stack_st_X509_REVOKED;
     #[cfg(any(ossl110, libressl281))]
@@ -385,7 +436,13 @@ extern "C" {
     pub fn X509_get0_extensions(req: *const ::X509) -> *const stack_st_X509_EXTENSION;
 
     pub fn X509_CRL_set_version(crl: *mut X509_CRL, version: c_long) -> c_int;
-    pub fn X509_CRL_set_issuer_name(crl: *mut X509_CRL, name: *mut X509_NAME) -> c_int;
+}
+const_ptr_api! {
+    extern "C" {
+        pub fn X509_CRL_set_issuer_name(crl: *mut X509_CRL, name: #[const_ptr_if(ossl300)] X509_NAME) -> c_int;
+    }
+}
+extern "C" {
     pub fn X509_CRL_sort(crl: *mut X509_CRL) -> c_int;
 
     #[cfg(any(ossl110, libressl270))]
@@ -410,11 +467,7 @@ cfg_if! {
 const_ptr_api! {
     extern "C" {
         pub fn X509_NAME_entry_count(n: #[const_ptr_if(any(ossl110, libressl280))] X509_NAME) -> c_int;
-        pub fn X509_NAME_get_index_by_NID(n: #[const_ptr_if(libressl280)] X509_NAME, nid: c_int, last_pos: c_int) -> c_int;
-    }
-}
-const_ptr_api! {
-    extern "C" {
+        pub fn X509_NAME_get_index_by_NID(n: #[const_ptr_if(any(ossl300, libressl280))] X509_NAME, nid: c_int, last_pos: c_int) -> c_int;
         pub fn X509_NAME_get_entry(n: #[const_ptr_if(any(ossl110, libressl280))] X509_NAME, loc: c_int) -> *mut X509_NAME_ENTRY;
         pub fn X509_NAME_add_entry_by_NID(
             x: *mut X509_NAME,
@@ -561,9 +614,14 @@ extern "C" {
     pub fn X509_verify_cert(ctx: *mut X509_STORE_CTX) -> c_int;
 }
 
+const_ptr_api! {
+    extern "C" {
+        #[cfg(any(ossl110, libressl270))]
+        pub fn X509_STORE_get0_objects(ctx: #[const_ptr_if(ossl300)] X509_STORE) -> *mut stack_st_X509_OBJECT;
+    }
+}
 #[cfg(any(ossl110, libressl270))]
 extern "C" {
-    pub fn X509_STORE_get0_objects(ctx: *mut X509_STORE) -> *mut stack_st_X509_OBJECT;
     pub fn X509_OBJECT_get0_X509(x: *const X509_OBJECT) -> *mut X509;
 }
 
@@ -577,4 +635,11 @@ cfg_if! {
             pub fn X509_OBJECT_free_contents(a: *mut X509_OBJECT);
         }
     }
+}
+
+extern "C" {
+    pub fn X509_get_default_cert_file_env() -> *const c_char;
+    pub fn X509_get_default_cert_file() -> *const c_char;
+    pub fn X509_get_default_cert_dir_env() -> *const c_char;
+    pub fn X509_get_default_cert_dir() -> *const c_char;
 }

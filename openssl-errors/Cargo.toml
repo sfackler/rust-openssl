@@ -1,6 +1,6 @@
 [package]
 name = "openssl-errors"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 edition = "2018"
 license = "MIT/Apache-2.0"
@@ -10,9 +10,10 @@ readme = "README.md"
 categories = ["api-bindings"]
 
 [dependencies]
+cfg-if = "1.0"
 libc = "0.2"
 
-openssl-sys = { version = "0.9.42", path = "../openssl-sys" }
+openssl-sys = { version = "0.9.64", path = "../openssl-sys" }
 
 [dev-dependencies]
 openssl = { version = "0.10.19", path = "../openssl" }

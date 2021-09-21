@@ -1,6 +1,6 @@
 [package]
 name = "openssl"
-version = "0.10.34"
+version = "0.10.36"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
@@ -26,7 +26,7 @@ foreign-types = "0.3.1"
 libc = "0.2"
 once_cell = "1.5.2"
 
-ffi = { package = "openssl-sys", version = "0.9.62", path = "../openssl-sys" }
+ffi = { package = "openssl-sys", version = "0.9.66", path = "../openssl-sys" }
 
 [dev-dependencies]
 tempdir = "0.3"

@@ -439,6 +439,8 @@ pub struct X509V3_CTX {
     crl: *mut c_void,
     db_meth: *mut c_void,
     db: *mut c_void,
+    #[cfg(ossl300)]
+    issuer_pkey: *mut c_void,
     // I like the last comment line, it is copied from OpenSSL sources:
     // Maybe more here
 }
@@ -1010,7 +1012,41 @@ cfg_if! {
     }
 }
 
-pub enum COMP_METHOD {}
+pub enum COMP_CTX {}
+
+cfg_if! {
+    if #[cfg(ossl110)] {
+        pub enum COMP_METHOD {}
+    } else {
+        #[repr(C)]
+        pub struct COMP_METHOD {
+            pub type_: c_int,
+            pub name: *const c_char,
+            init: Option<unsafe extern "C" fn(*mut COMP_CTX) -> c_int>,
+            finish: Option<unsafe extern "C" fn(*mut COMP_CTX)>,
+            compress: Option<
+                unsafe extern "C" fn(
+                    *mut COMP_CTX,
+                    *mut c_uchar,
+                    c_uint,
+                    *mut c_uchar,
+                    c_uint,
+                ) -> c_int,
+            >,
+            expand: Option<
+                unsafe extern "C" fn(
+                    *mut COMP_CTX,
+                    *mut c_uchar,
+                    c_uint,
+                    *mut c_uchar,
+                    c_uint,
+                ) -> c_int,
+            >,
+            ctrl: Option<unsafe extern "C" fn() -> c_long>,
+            callback_ctrl: Option<unsafe extern "C" fn() -> c_long>,
+        }
+    }
+}
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {

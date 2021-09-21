@@ -1,6 +1,6 @@
 //! SMIME implementation using CMS
 //!
-//! CMS (PKCS#7) is an encyption standard.  It allows signing and encrypting data using
+//! CMS (PKCS#7) is an encryption standard.  It allows signing and encrypting data using
 //! X.509 certificates.  The OpenSSL implementation of CMS is used in email encryption
 //! generated from a `Vec` of bytes.  This `Vec` follows the smime protocol standards.
 //! Data accepted by this module will be smime type `enveloped-data`.
@@ -56,7 +56,7 @@ foreign_type_and_impl_send_sync! {
     /// CMS supports nesting various types of data, including signatures, certificates,
     /// encrypted data, smime messages (encrypted email), and data digest.  The ContentInfo
     /// content type is the encapsulation of all those content types.  [`RFC 5652`] describes
-    /// CMS and OpenSSL follows this RFC's implmentation.
+    /// CMS and OpenSSL follows this RFC's implementation.
     ///
     /// [`RFC 5652`]: https://tools.ietf.org/html/rfc5652#page-6
     pub struct CmsContentInfo;
@@ -258,6 +258,7 @@ mod test {
     use crate::x509::X509;
 
     #[test]
+    #[cfg_attr(ossl300, ignore)] // 3.0.0 can't load RC2-40-CBC
     fn cms_encrypt_decrypt() {
         // load cert with public key only
         let pub_cert_bytes = include_bytes!("../test/cms_pubkey.der");
@@ -279,7 +280,7 @@ mod test {
 
         let encrypt = CmsContentInfo::encrypt(
             &cert_stack,
-            &input.as_bytes(),
+            input.as_bytes(),
             Cipher::des_ede3_cbc(),
             CMSOptions::empty(),
         )

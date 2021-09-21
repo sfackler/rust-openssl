@@ -12,7 +12,7 @@ pub fn get_openssl(target: &str) -> (PathBuf, PathBuf) {
     match (lib_dir, include_dir) {
         (Some(lib_dir), Some(include_dir)) => (lib_dir, include_dir),
         (lib_dir, include_dir) => {
-            let openssl_dir = env("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(&target));
+            let openssl_dir = env("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(target));
             let openssl_dir = Path::new(&openssl_dir);
             let lib_dir = lib_dir.unwrap_or_else(|| openssl_dir.join("lib"));
             let include_dir = include_dir.unwrap_or_else(|| openssl_dir.join("include"));

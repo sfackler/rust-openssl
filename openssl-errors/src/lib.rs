@@ -45,8 +45,9 @@
 //! println!("{}", Error::get().unwrap());
 //! ```
 #![warn(missing_docs)]
-#![doc(html_root_url = "https://docs.rs/openssl-errors/0.1")]
+#![doc(html_root_url = "https://docs.rs/openssl-errors/0.2")]
 
+use cfg_if::cfg_if;
 use libc::{c_char, c_int};
 use std::borrow::Cow;
 use std::marker::PhantomData;
@@ -70,19 +71,37 @@ pub trait Library {
     fn id() -> c_int;
 }
 
+cfg_if! {
+    if #[cfg(ossl300)] {
+        type FunctionInner = *const c_char;
+    } else {
+        type FunctionInner = c_int;
+    }
+}
+
 /// A function declaration, parameterized by its error library.
-pub struct Function<T>(c_int, PhantomData<T>);
+pub struct Function<T>(FunctionInner, PhantomData<T>);
+
+// manual impls necessary for the 3.0.0 case
+unsafe impl<T> Sync for Function<T> where T: Sync {}
+unsafe impl<T> Send for Function<T> where T: Send {}
 
 impl<T> Function<T> {
-    /// Creates a function from its raw identifier.
+    /// This is not considered a part of the crate's public API, and is subject to change at any time.
+    ///
+    /// # Safety
+    ///
+    /// The inner value must be valid for the lifetime of the process.
+    #[doc(hidden)]
     #[inline]
-    pub const fn from_raw(raw: c_int) -> Function<T> {
+    pub const unsafe fn __from_raw(raw: FunctionInner) -> Function<T> {
         Function(raw, PhantomData)
     }
 
-    /// Returns the function's raw identifier.
+    /// This is not considered a part of the crate's public API, and is subject to change at any time.
+    #[doc(hidden)]
     #[inline]
-    pub const fn as_raw(&self) -> c_int {
+    pub const fn __as_raw(&self) -> FunctionInner {
         self.0
     }
 }
@@ -91,15 +110,17 @@ impl<T> Function<T> {
 pub struct Reason<T>(c_int, PhantomData<T>);
 
 impl<T> Reason<T> {
-    /// Creates a reason from its raw identifier.
+    /// This is not considered a part of the crate's public API, and is subject to change at any time.
+    #[doc(hidden)]
     #[inline]
-    pub const fn from_raw(raw: c_int) -> Reason<T> {
+    pub const fn __from_raw(raw: c_int) -> Reason<T> {
         Reason(raw, PhantomData)
     }
 
-    /// Returns the reason's raw identifier.
+    /// This is not considered a part of the crate's public API, and is subject to change at any time.
+    #[doc(hidden)]
     #[inline]
-    pub const fn as_raw(&self) -> c_int {
+    pub const fn __as_raw(&self) -> c_int {
         self.0
     }
 }
@@ -119,13 +140,37 @@ pub unsafe fn __put_error<T>(
 ) where
     T: Library,
 {
-    openssl_sys::ERR_put_error(
-        T::id(),
-        func.as_raw(),
-        reason.as_raw(),
-        file.as_ptr() as *const c_char,
-        line as c_int,
-    );
+    put_error_inner(T::id(), func.0, reason.0, file, line, message)
+}
+
+unsafe fn put_error_inner(
+    library: c_int,
+    func: FunctionInner,
+    reason: c_int,
+    file: &'static str,
+    line: u32,
+    message: Option<Cow<'static, str>>,
+) {
+    cfg_if! {
+        if #[cfg(ossl300)] {
+            openssl_sys::ERR_new();
+            openssl_sys::ERR_set_debug(
+                file.as_ptr() as *const c_char,
+                line as c_int,
+                func,
+            );
+            openssl_sys::ERR_set_error(library, reason, ptr::null());
+        } else {
+            openssl_sys::ERR_put_error(
+                library,
+                func,
+                reason,
+                file.as_ptr() as *const c_char,
+                line as c_int,
+            );
+        }
+    }
+
     let data = match message {
         Some(Cow::Borrowed(s)) => Some((s.as_ptr() as *const c_char as *mut c_char, 0)),
         Some(Cow::Owned(s)) => {
@@ -172,8 +217,9 @@ macro_rules! put_error {
                 $reason,
                 concat!(file!(), "\0"),
                 line!(),
+                // go through format_args to ensure the message string is handled in the same way as the args case
                 $crate::export::Option::Some($crate::export::Cow::Borrowed(
-                    concat!($message, "\0"),
+                    format_args!(concat!($message, "\0")).as_str().unwrap(),
                 )),
             );
         }
@@ -223,31 +269,11 @@ macro_rules! openssl_errors {
             fn id() -> $crate::export::c_int {
                 static INIT: $crate::export::Once = $crate::export::Once::new();
                 static mut LIB_NUM: $crate::export::c_int = 0;
-                static mut STRINGS: [
-                    $crate::export::ERR_STRING_DATA;
-                    2 + $crate::openssl_errors!(@count $($func_name;)* $($reason_name;)*)
-                ] = [
-                    $crate::export::ERR_STRING_DATA {
-                        error: 0,
-                        string: concat!($lib_str, "\0").as_ptr() as *const $crate::export::c_char,
-                    },
-                    $(
-                        $crate::export::ERR_STRING_DATA {
-                            error: $crate::export::ERR_PACK(0, $lib_name::$func_name.as_raw(), 0),
-                            string: concat!($func_str, "\0").as_ptr() as *const $crate::export::c_char,
-                        },
-                    )*
-                    $(
-                        $crate::export::ERR_STRING_DATA {
-                            error: $crate::export::ERR_PACK(0, 0, $lib_name::$reason_name.as_raw()),
-                            string: concat!($reason_str, "\0").as_ptr() as *const $crate::export::c_char,
-                        },
-                    )*
-                    $crate::export::ERR_STRING_DATA {
-                        error: 0,
-                        string: $crate::export::null(),
-                    }
-                ];
+                $crate::__openssl_errors_helper! {
+                    @strings $lib_name($lib_str)
+                    functions { $($func_name($func_str);)* }
+                    reasons { $($reason_name($reason_str);)* }
+                }
 
                 unsafe {
                     INIT.call_once(|| {
@@ -263,19 +289,21 @@ macro_rules! openssl_errors {
         }
 
         impl $lib_name {
-            $crate::openssl_errors!(@func_consts $lib_name; 1; $($(#[$func_attr])* $func_name;)*);
+            $crate::openssl_errors!(@func_consts $lib_name; 1; $($(#[$func_attr])* $func_name($func_str);)*);
             $crate::openssl_errors!(@reason_consts $lib_name; 1; $($(#[$reason_attr])* $reason_name;)*);
         }
     )*};
-    (@func_consts $lib_name:ident; $n:expr; $(#[$attr:meta])* $name:ident; $($tt:tt)*) => {
+    (@func_consts $lib_name:ident; $n:expr; $(#[$attr:meta])* $name:ident($str:expr); $($tt:tt)*) => {
         $(#[$attr])*
-        pub const $name: $crate::Function<$lib_name> = $crate::Function::from_raw($n);
+        pub const $name: $crate::Function<$lib_name> = unsafe {
+            $crate::Function::__from_raw($crate::__openssl_errors_helper!(@func_value $n, $str))
+        };
         $crate::openssl_errors!(@func_consts $lib_name; $n + 1; $($tt)*);
     };
     (@func_consts $lib_name:ident; $n:expr;) => {};
     (@reason_consts $lib_name:ident; $n:expr; $(#[$attr:meta])* $name:ident; $($tt:tt)*) => {
         $(#[$attr])*
-        pub const $name: $crate::Reason<$lib_name> = $crate::Reason::from_raw($n);
+        pub const $name: $crate::Reason<$lib_name> = $crate::Reason::__from_raw($n);
         $crate::openssl_errors!(@reason_consts $lib_name; $n + 1; $($tt)*);
     };
     (@reason_consts $lib_name:ident; $n:expr;) => {};
@@ -283,4 +311,78 @@ macro_rules! openssl_errors {
         1 + $crate::openssl_errors!(@count $($tt)*)
     };
     (@count) => { 0 };
+}
+
+cfg_if! {
+    if #[cfg(ossl300)] {
+        #[doc(hidden)]
+        #[macro_export]
+        macro_rules! __openssl_errors_helper {
+            (
+                @strings $lib_name:ident($lib_str:expr)
+                functions { $($func_name:ident($func_str:expr);)* }
+                reasons { $($reason_name:ident($reason_str:expr);)* }
+            ) => {
+                static mut STRINGS: [
+                    $crate::export::ERR_STRING_DATA;
+                    2 + $crate::openssl_errors!(@count $($reason_name;)*)
+                ] = [
+                    $crate::export::ERR_STRING_DATA {
+                        error: 0,
+                        string: concat!($lib_str, "\0").as_ptr() as *const $crate::export::c_char,
+                    },
+                    $(
+                        $crate::export::ERR_STRING_DATA {
+                            error: $crate::export::ERR_PACK(0, 0, $lib_name::$reason_name.__as_raw()),
+                            string: concat!($reason_str, "\0").as_ptr() as *const $crate::export::c_char,
+                        },
+                    )*
+                    $crate::export::ERR_STRING_DATA {
+                        error: 0,
+                        string: $crate::export::null(),
+                    }
+                ];
+            };
+            (@func_value $n:expr, $func_str:expr) => {
+                concat!($func_str, "\0").as_ptr() as *const $crate::export::c_char
+            };
+        }
+    } else {
+        #[doc(hidden)]
+        #[macro_export]
+        macro_rules! __openssl_errors_helper {
+            (
+                @strings $lib_name:ident($lib_str:expr)
+                functions { $($func_name:ident($func_str:expr);)* }
+                reasons { $($reason_name:ident($reason_str:expr);)* }
+            ) => {
+                static mut STRINGS: [
+                    $crate::export::ERR_STRING_DATA;
+                    2 + $crate::openssl_errors!(@count $($func_name;)* $($reason_name;)*)
+                ] = [
+                    $crate::export::ERR_STRING_DATA {
+                        error: 0,
+                        string: concat!($lib_str, "\0").as_ptr() as *const $crate::export::c_char,
+                    },
+                    $(
+                        $crate::export::ERR_STRING_DATA {
+                            error: $crate::export::ERR_PACK(0, $lib_name::$func_name.__as_raw(), 0),
+                            string: concat!($func_str, "\0").as_ptr() as *const $crate::export::c_char,
+                        },
+                    )*
+                    $(
+                        $crate::export::ERR_STRING_DATA {
+                            error: $crate::export::ERR_PACK(0, 0, $lib_name::$reason_name.__as_raw()),
+                            string: concat!($reason_str, "\0").as_ptr() as *const $crate::export::c_char,
+                        },
+                    )*
+                    $crate::export::ERR_STRING_DATA {
+                        error: 0,
+                        string: $crate::export::null(),
+                    }
+                ];
+            };
+            (@func_value $n:expr, $func_str:expr) => {$n};
+        }
+    }
 }

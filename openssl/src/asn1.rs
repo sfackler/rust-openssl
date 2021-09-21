@@ -53,7 +53,7 @@ foreign_type_and_impl_send_sync! {
     /// example outside the year range of 1950-2049.
     ///
     /// [ASN1_GENERALIZEDTIME_set] documentation from OpenSSL provides
-    /// further details of implmentation.  Note: these docs are from the master
+    /// further details of implementation.  Note: these docs are from the master
     /// branch as documentation on the 1.1.0 branch did not include this page.
     ///
     /// [ASN1_GENERALIZEDTIME_set]: https://www.openssl.org/docs/manmaster/man3/ASN1_GENERALIZEDTIME_set.html
@@ -626,6 +626,22 @@ impl Asn1Object {
             Ok(Asn1Object::from_ptr(obj))
         }
     }
+
+    /// Return the OID as an DER encoded array of bytes. This is the ASN.1
+    /// value, not including tag or length.
+    ///
+    /// This corresponds to [`OBJ_get0_data`].
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
+    /// [`OBJ_get0_data`]: https://www.openssl.org/docs/man1.1.0/man3/OBJ_get0_data.html
+    #[cfg(ossl111)]
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe {
+            let len = ffi::OBJ_length(self.as_ptr());
+            slice::from_raw_parts(ffi::OBJ_get0_data(self.as_ptr()), len)
+        }
+    }
 }
 
 impl Asn1ObjectRef {
@@ -764,5 +780,15 @@ mod tests {
         Asn1Object::from_str("NOT AN OID")
             .map(|object| object.to_string())
             .expect_err("parsing invalid OID should fail");
+    }
+
+    #[test]
+    #[cfg(ossl111)]
+    fn object_to_slice() {
+        let object = Asn1Object::from_str("2.16.840.1.101.3.4.2.1").unwrap();
+        assert_eq!(
+            object.as_slice(),
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01],
+        );
     }
 }

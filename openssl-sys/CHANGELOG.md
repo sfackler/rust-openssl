@@ -2,6 +2,35 @@
 
 ## [Unreleased]
 
+## [v0.9.66] - 2021-08-17
+
+### Added
+
+* Added `EVP_seed_cbc`, `EVP_seed_cfb128`, `EVP_seed_ecb`, and `EVP_seed_ofb`.
+* Added `OBJ_length` and `OBJ_get0_data`.
+* Added `i2d_PKCS8PrivateKey_bio`.
+
+## [v0.9.65] - 2021-06-21
+
+### Fixed
+
+* Restored the accidentally deleted `PEM_read_bio_X509_CRL` function.
+
+## [v0.9.64] - 2021-06-18
+
+### Added
+
+* Added support for OpenSSL 3.x.x.
+* Added `SSL_peek`.
+* Added `ERR_LIB_ASN1` and `ASN1_R_HEADER_TOO_LONG`.
+* Added `d2i_X509_bio`.
+* Added `OBJ_nid2obj`.
+* Added `RAND_add`.
+* Added `SSL_CTX_set_post_handshake_auth`.
+* Added `COMP_get_type`.
+* Added `X509_get_default_cert_file_env`, `X509_get_default_cert_file`, `X509_get_default_cert_dir_env`, and
+    `X509_get_default_cirt_dir`.
+
 ## [v0.9.63] - 2021-05-06
 
 ### Added
@@ -192,7 +221,11 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.62...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.66...master
+[v0.9.66]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.65...openssl-sys-v0.9.66
+[v0.9.65]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.64...openssl-sys-v0.9.65
+[v0.9.64]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.63...openssl-sys-v0.9.64
+[v0.9.63]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.62...openssl-sys-v0.9.63
 [v0.9.62]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.61...openssl-sys-v0.9.62
 [v0.9.61]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.60...openssl-sys-v0.9.61
 [v0.9.60]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.59...openssl-sys-v0.9.60

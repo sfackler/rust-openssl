@@ -37,6 +37,9 @@ pub fn get(openssl_version: Option<u64>, libressl_version: Option<u64>) -> Vec<&
     } else {
         let openssl_version = openssl_version.unwrap();
 
+        if openssl_version >= 0x3_00_00_00_0 {
+            cfgs.push("ossl300");
+        }
         if openssl_version >= 0x1_00_01_00_0 {
             cfgs.push("ossl101");
         }

@@ -120,7 +120,7 @@ foreign_type_and_impl_send_sync! {
     /// with [`new`].  Perform standard mathematics on large numbers using
     /// methods from [`Dref<Target = BigNumRef>`]
     ///
-    /// OpenSSL documenation at [`BN_new`].
+    /// OpenSSL documentation at [`BN_new`].
     ///
     /// [`new`]: struct.BigNum.html#method.new
     /// [`Dref<Target = BigNumRef>`]: struct.BigNum.html#deref-methods

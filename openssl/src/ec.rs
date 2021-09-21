@@ -102,7 +102,7 @@ foreign_type_and_impl_send_sync! {
     /// Prime fields use the formula `y^2 mod p = x^3 + ax + b mod p`.  Binary
     /// fields use the formula `y^2 + xy = x^3 + ax^2 + b`.  Named curves have
     /// assured security.  To prevent accidental vulnerabilities, they should
-    /// be prefered.
+    /// be preferred.
     ///
     /// [wiki]: https://wiki.openssl.org/index.php/Command_Line_Elliptic_Curve_Operations
     /// [`Nid`]: ../nid/index.html
@@ -742,7 +742,7 @@ where
 
     /// Checks the key for validity.
     ///
-    /// OpenSSL documenation at [`EC_KEY_check_key`]
+    /// OpenSSL documentation at [`EC_KEY_check_key`]
     ///
     /// [`EC_KEY_check_key`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_check_key.html
     pub fn check_key(&self) -> Result<(), ErrorStack> {
@@ -768,7 +768,7 @@ impl EcKey<Params> {
     /// It will not have an associated public or private key. This kind of key is primarily useful
     /// to be provided to the `set_tmp_ecdh` methods on `Ssl` and `SslContextBuilder`.
     ///
-    /// OpenSSL documenation at [`EC_KEY_new_by_curve_name`]
+    /// OpenSSL documentation at [`EC_KEY_new_by_curve_name`]
     ///
     /// [`EC_KEY_new_by_curve_name`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_new_by_curve_name.html
     pub fn from_curve_name(nid: Nid) -> Result<EcKey<Params>, ErrorStack> {
@@ -1163,23 +1163,24 @@ mod test {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let mut ctx = BigNumContext::new().unwrap();
         let g = group.generator();
-        assert_eq!(g.is_infinity(&group), false);
+        assert!(!g.is_infinity(&group));
 
         let mut order = BigNum::new().unwrap();
         group.order(&mut order, &mut ctx).unwrap();
         let mut inf = EcPoint::new(&group).unwrap();
         inf.mul_generator(&group, &order, &ctx).unwrap();
-        assert_eq!(inf.is_infinity(&group), true);
+        assert!(inf.is_infinity(&group));
     }
 
     #[test]
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
     fn is_on_curve() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let mut ctx = BigNumContext::new().unwrap();
         let g = group.generator();
-        assert_eq!(g.is_on_curve(&group, &mut ctx).unwrap(), true);
+        assert!(g.is_on_curve(&group, &mut ctx).unwrap());
 
         let group2 = EcGroup::from_curve_name(Nid::X9_62_PRIME239V3).unwrap();
-        assert_eq!(g.is_on_curve(&group2, &mut ctx).unwrap(), false);
+        assert!(!g.is_on_curve(&group2, &mut ctx).unwrap());
     }
 }
