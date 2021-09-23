@@ -139,7 +139,7 @@ cfg_if! {
         pub const SSL_OP_NO_DTLSv1_2: ssl_op_type!() = 0x80000000;
     }
 }
-#[cfg(ossl111)]
+#[cfg(any(ossl111, libressl340))]
 pub const SSL_OP_NO_TLSv1_3: ssl_op_type!() = 0x20000000;
 
 #[cfg(ossl110h)]
