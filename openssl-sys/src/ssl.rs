@@ -3,7 +3,7 @@ use std::ptr;
 
 use *;
 
-#[cfg(not(any(libressl, ossl110)))]
+#[cfg(not(ossl110))]
 pub const SSL_MAX_KRB5_PRINCIPAL_LENGTH: c_int = 256;
 
 #[cfg(not(ossl110))]
@@ -11,7 +11,7 @@ pub const SSL_MAX_SSL_SESSION_ID_LENGTH: c_int = 32;
 #[cfg(not(ossl110))]
 pub const SSL_MAX_SID_CTX_LENGTH: c_int = 32;
 
-#[cfg(not(any(libressl, ossl110)))]
+#[cfg(not(ossl110))]
 pub const SSL_MAX_KEY_ARG_LENGTH: c_int = 8;
 #[cfg(not(ossl110))]
 pub const SSL_MAX_MASTER_KEY_LENGTH: c_int = 48;
