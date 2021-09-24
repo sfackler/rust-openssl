@@ -903,7 +903,7 @@ fn tmp_dh_callback_ssl() {
 
     let mut client = server.client();
     // TLS 1.3 has no DH suites, so make sure we don't pick that version
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     client.ctx().set_options(super::SslOptions::NO_TLSV1_3);
     client.ctx().set_cipher_list("EDH").unwrap();
     client.connect();
