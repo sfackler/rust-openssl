@@ -790,7 +790,7 @@ fn connector_client_server_mozilla_intermediate_v5() {
 }
 
 #[test]
-#[cfg(ossl111)]
+#[cfg(any(ossl111, libressl340))]
 fn connector_client_server_mozilla_modern_v5() {
     test_mozilla_server(SslAcceptor::mozilla_modern_v5);
 }
