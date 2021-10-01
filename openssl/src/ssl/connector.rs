@@ -4,7 +4,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::dh::Dh;
 use crate::error::ErrorStack;
-#[cfg(libressl340)]
+#[cfg(any(ossl111, libressl340))]
 use crate::ssl::SslVersion;
 use crate::ssl::{
     HandshakeError, Ssl, SslContext, SslContextBuilder, SslContextRef, SslMethod, SslMode,
@@ -255,9 +255,6 @@ impl SslAcceptor {
     #[cfg(any(ossl111, libressl340))]
     pub fn mozilla_modern_v5(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
         let mut ctx = ctx(method)?;
-        #[cfg(ossl111)]
-        ctx.set_options(SslOptions::NO_SSL_MASK & !SslOptions::NO_TLSV1_3);
-        #[cfg(libressl340)]
         ctx.set_min_proto_version(Some(SslVersion::TLS1_3))?;
         ctx.set_ciphersuites(
             "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256",
