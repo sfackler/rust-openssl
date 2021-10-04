@@ -19,6 +19,8 @@ extern "C" {
     pub fn BN_clear_free(bn: *mut BIGNUM);
     pub fn BN_bin2bn(s: *const u8, size: c_int, ret: *mut BIGNUM) -> *mut BIGNUM;
     pub fn BN_bn2bin(a: *const BIGNUM, to: *mut u8) -> c_int;
+    #[cfg(ossl110)]
+    pub fn BN_bn2binpad(a: *const BIGNUM, to: *mut u8, tolen: c_int) -> c_int;
     pub fn BN_sub(r: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM) -> c_int;
     pub fn BN_add(r: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM) -> c_int;
     pub fn BN_mul(r: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
