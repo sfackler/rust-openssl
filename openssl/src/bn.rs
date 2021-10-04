@@ -885,6 +885,37 @@ impl BigNumRef {
         v
     }
 
+    /// Returns a big-endian byte vector representation of the absolute value of `self` padded
+    /// to `pad_to` bytes.
+    ///
+    /// If `pad_to` is less than `self.num_bytes()` then an error is returned.
+    ///
+    /// `self` can be recreated by using `from_slice`.
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let bn = BigNum::from_u32(0x4543).unwrap();
+    ///
+    /// let bn_vec = bn.to_vec_padded(4).unwrap();
+    /// assert_eq!(&bn_vec, &[0, 0, 0x45, 0x43]);
+    ///
+    /// let r = bn.to_vec_padded(1);
+    /// assert!(r.is_err());
+    ///
+    /// let bn = -BigNum::from_u32(0x4543).unwrap();
+    /// let bn_vec = bn.to_vec_padded(4).unwrap();
+    /// assert_eq!(&bn_vec, &[0, 0, 0x45, 0x43]);
+    /// ```
+    #[cfg(ossl110)]
+    pub fn to_vec_padded(&self, pad_to: i32) -> Result<Vec<u8>, ErrorStack> {
+        let mut v = Vec::with_capacity(pad_to as usize);
+        unsafe {
+            cvt(ffi::BN_bn2binpad(self.as_ptr(), v.as_mut_ptr(), pad_to))?;
+            v.set_len(pad_to as usize);
+        }
+        Ok(v)
+    }
+
     /// Returns a decimal string representation of `self`.
     ///
     /// ```
