@@ -478,6 +478,7 @@ const_ptr_api! {
             loc: c_int,
             set: c_int,
         ) -> c_int;
+        pub fn i2d_X509_NAME(n: #[const_ptr_if(ossl300)] X509_NAME, buf: *mut *mut u8) -> c_int;
         pub fn X509_NAME_ENTRY_get_object(ne: #[const_ptr_if(any(ossl110, libressl280))] X509_NAME_ENTRY) -> *mut ASN1_OBJECT;
         pub fn X509_NAME_ENTRY_get_data(ne: #[const_ptr_if(any(ossl110, libressl280))] X509_NAME_ENTRY) -> *mut ASN1_STRING;
     }
@@ -492,6 +493,11 @@ extern "C" {
         loc: c_int,
         set: c_int,
     ) -> c_int;
+    pub fn d2i_X509_NAME(
+        n: *mut *mut X509_NAME,
+        pp: *mut *const c_uchar,
+        length: c_long,
+    ) -> *mut X509_NAME;
 }
 
 // "raw" X509_EXTENSION related functions
