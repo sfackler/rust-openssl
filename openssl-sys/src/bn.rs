@@ -7,14 +7,31 @@ pub type BN_ULONG = c_ulonglong;
 #[cfg(target_pointer_width = "32")]
 pub type BN_ULONG = c_uint;
 
+#[cfg(ossl110)]
+pub const BN_FLG_MALLOCED: c_int = 0x01;
+#[cfg(ossl110)]
+pub const BN_FLG_STATIC_DATA: c_int = 0x02;
+#[cfg(ossl110)]
+pub const BN_FLG_CONSTTIME: c_int = 0x04;
+#[cfg(ossl110)]
+pub const BN_FLG_SECURE: c_int = 0x08;
+
 extern "C" {
     pub fn BN_CTX_new() -> *mut BN_CTX;
+    #[cfg(ossl110)]
+    pub fn BN_CTX_secure_new() -> *mut BN_CTX;
     pub fn BN_CTX_free(ctx: *mut BN_CTX);
     pub fn BN_rand(r: *mut BIGNUM, bits: c_int, top: c_int, bottom: c_int) -> c_int;
     pub fn BN_pseudo_rand(r: *mut BIGNUM, bits: c_int, top: c_int, bottom: c_int) -> c_int;
     pub fn BN_rand_range(r: *mut BIGNUM, range: *const BIGNUM) -> c_int;
     pub fn BN_pseudo_rand_range(r: *mut BIGNUM, range: *const BIGNUM) -> c_int;
     pub fn BN_new() -> *mut BIGNUM;
+    #[cfg(ossl110)]
+    pub fn BN_secure_new() -> *mut BIGNUM;
+    #[cfg(ossl110)]
+    pub fn BN_set_flags(b: *mut BIGNUM, n: c_int);
+    #[cfg(ossl110)]
+    pub fn BN_get_flags(b: *const BIGNUM, n: c_int) -> c_int;
     pub fn BN_num_bits(bn: *const BIGNUM) -> c_int;
     pub fn BN_clear_free(bn: *mut BIGNUM);
     pub fn BN_bin2bn(s: *const u8, size: c_int, ret: *mut BIGNUM) -> *mut BIGNUM;
