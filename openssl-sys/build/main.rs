@@ -125,8 +125,8 @@ fn check_rustc_versions() {
 /// version string of OpenSSL.
 #[allow(clippy::manual_strip)] // we need to support pre-1.45.0
 fn validate_headers(include_dirs: &[PathBuf]) -> Version {
-    // This `*-sys` crate only works with OpenSSL 1.0.1, 1.0.2, and 1.1.0. To
-    // correctly expose the right API from this crate, take a look at
+    // This `*-sys` crate only works with OpenSSL 1.0.1, 1.0.2, 1.1.0, 1.1.1 and 3.0.0.
+    // To correctly expose the right API from this crate, take a look at
     // `opensslv.h` to see what version OpenSSL claims to be.
     //
     // OpenSSL has a number of build-time configuration options which affect
@@ -280,7 +280,7 @@ fn version_error() -> ! {
     panic!(
         "
 
-This crate is only compatible with OpenSSL 1.0.1 through 1.1.1, or LibreSSL 2.5
+This crate is only compatible with OpenSSL (version 1.0.1 through 1.1.1, or 3.0.0), or LibreSSL 2.5
 through 3.4.0, but a different version of OpenSSL was found. The build is now aborting
 due to this version mismatch.
 
