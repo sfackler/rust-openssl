@@ -127,6 +127,9 @@ fn test_versions() {
     assert!(number() > 0);
     assert!(version().starts_with(expected_name()));
     assert!(c_flags().starts_with("compiler:"));
-    assert!(built_on().starts_with("built on:"));
+    // some distributions patch out dates out of openssl so that the builds are reproducible
+    if !built_on().is_empty() {
+        assert!(built_on().starts_with("built on:"));
+    }
     assert!(dir().starts_with("OPENSSLDIR:"));
 }
