@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [v0.9.68] - 2021-19-27
+
+### Added
+
+* Added `BN_bn2binpad`.
+* Added `i2d_X509_NAME` and `d2i_X509_NAME`.
+* Added `BN_FLG_MALLOCED`, `BN_FLG_STATIC_DATA`, `BN_FLG_CONSTTIME`, and `BN_FLG_SECURE`.
+* Added `BN_CTX_secure_new`, `BN_secure_new`, `BN_set_flags`, and `BN_get_flags`.
+
 ## [v0.9.67] - 2021-09-21
 
 ### Added
@@ -227,7 +236,8 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.67...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.68...master
+[v0.9.68]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.67...openssl-sys-v0.9.68
 [v0.9.67]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.66...openssl-sys-v0.9.67
 [v0.9.66]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.65...openssl-sys-v0.9.66
 [v0.9.65]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.64...openssl-sys-v0.9.65
