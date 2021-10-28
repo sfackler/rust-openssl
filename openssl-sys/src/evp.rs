@@ -525,6 +525,13 @@ extern "C" {
     pub fn EVP_PKEY_derive_set_peer(ctx: *mut EVP_PKEY_CTX, peer: *mut EVP_PKEY) -> c_int;
     pub fn EVP_PKEY_derive(ctx: *mut EVP_PKEY_CTX, key: *mut c_uchar, size: *mut size_t) -> c_int;
 
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_Q_keygen(
+        libctx: *mut OSSL_LIB_CTX,
+        propq: *const c_char,
+        type_: *const c_char,
+        ...
+    ) -> *mut EVP_PKEY;
     pub fn EVP_PKEY_keygen_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
     pub fn EVP_PKEY_keygen(ctx: *mut EVP_PKEY_CTX, key: *mut *mut EVP_PKEY) -> c_int;
 

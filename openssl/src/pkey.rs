@@ -602,6 +602,22 @@ impl PKey<Private> {
         PKey::generate_eddsa(ffi::EVP_PKEY_ED448)
     }
 
+    /// Generates a new EC key using the provided curve.
+    ///
+    /// This corresponds to [`EVP_EC_gen`].
+    ///
+    /// Requires OpenSSL 3.0.0 or newer.
+    ///
+    /// [`EVP_EC_gen`]: https://www.openssl.org/docs/manmaster/man3/EVP_EC_gen.html
+    #[cfg(ossl300)]
+    pub fn ec_gen(curve: &str) -> Result<PKey<Private>, ErrorStack> {
+        let curve = CString::new(curve).unwrap();
+        unsafe {
+            let ptr = cvt_p(ffi::EVP_EC_gen(curve.as_ptr()))?;
+            Ok(PKey::from_ptr(ptr))
+        }
+    }
+
     private_key_from_pem! {
         /// Deserializes a private key from a PEM-encoded key type specific format.
         ///
@@ -1127,5 +1143,12 @@ mod tests {
         let pkey = PKey::from_ec_key(ec_key).unwrap();
         assert!(pkey.raw_private_key().is_err());
         assert!(pkey.raw_public_key().is_err());
+    }
+
+    #[cfg(ossl300)]
+    #[test]
+    fn test_ec_gen() {
+        let key = PKey::ec_gen("prime256v1").unwrap();
+        assert!(key.ec_key().is_ok());
     }
 }
