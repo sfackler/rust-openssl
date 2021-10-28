@@ -27,14 +27,14 @@ fn resolve_with_wellknown_homebrew_location(dir: &str) -> Option<PathBuf> {
     // Check up default aarch 64 Homebrew installation location first
     // for quick resolution if possible.
     //  `pkg-config` on brew doesn't necessarily contain settings for openssl apparently.
-    for version in versions {
+    for version in &versions {
         let homebrew = Path::new(dir).join(format!("opt/{}", version));
         if homebrew.exists() {
             return Some(homebrew);
         }
     }
 
-    for version in versions {
+    for version in &versions {
         // Calling `brew --prefix <package>` command usually slow and
         // takes seconds, and will be used only as a last resort.
         let output = execute_command_and_get_output("brew", &["--prefix", version]);
