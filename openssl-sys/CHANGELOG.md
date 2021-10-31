@@ -2,7 +2,18 @@
 
 ## [Unreleased]
 
-## [v0.9.68] - 2021-19-27
+## [v0.9.69] - 2021-10-31
+
+### Changed
+
+* Upgraded the vendored OpenSSL to 3.0.0.
+
+### Added
+
+* Added support for automatic detection of Homebrew `openssl@3` installs.
+* Added `EVP_PKEY_Q_keygen` and `EVP_EC_gen`.
+
+## [v0.9.68] - 2021-10-27
 
 ### Added
 
