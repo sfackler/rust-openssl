@@ -19,7 +19,9 @@ mod find_normal;
 #[cfg(feature = "vendored")]
 mod find_vendored;
 
+#[derive(PartialEq)]
 enum Version {
+    Openssl3xx,
     Openssl11x,
     Openssl10x,
     Libressl,
@@ -94,7 +96,9 @@ fn main() {
         }
         None => match version {
             Version::Openssl10x if target.contains("windows") => vec!["ssleay32", "libeay32"],
-            Version::Openssl11x if target.contains("windows-msvc") => vec!["libssl", "libcrypto"],
+            Version::Openssl3xx | Version::Openssl11x if target.contains("windows-msvc") => {
+                vec!["libssl", "libcrypto"]
+            }
             _ => vec!["ssl", "crypto"],
         },
     };
@@ -102,6 +106,15 @@ fn main() {
     let kind = determine_mode(Path::new(&lib_dir), &libs);
     for lib in libs.into_iter() {
         println!("cargo:rustc-link-lib={}={}", kind, lib);
+    }
+
+    // https://github.com/openssl/openssl/pull/15086
+    if version == Version::Openssl3xx
+        && kind == "static"
+        && env::var("CARGO_CFG_TARGET_OS").unwrap() == "linux"
+        && env::var("CARGO_CFG_TARGET_POINTER_WIDTH").unwrap() == "32"
+    {
+        println!("cargo:rustc-link-lib=dylib=atomic");
     }
 
     if kind == "static" && target.contains("windows") {
@@ -253,7 +266,7 @@ See rust-openssl README for more information:
         if openssl_version >= 0x4_00_00_00_0 {
             version_error()
         } else if openssl_version >= 0x3_00_00_00_0 {
-            Version::Openssl11x
+            Version::Openssl3xx
         } else if openssl_version >= 0x1_01_01_00_0 {
             println!("cargo:version=111");
             Version::Openssl11x
