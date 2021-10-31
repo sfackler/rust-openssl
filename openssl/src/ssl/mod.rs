@@ -872,6 +872,7 @@ impl SslContextBuilder {
     ///
     /// This corresponds to `SSL_CTX_set_tmp_ecdh_callback`.
     #[cfg(all(ossl101, not(ossl110)))]
+    #[deprecated(note = "this function leaks memory and does not exist on newer OpenSSL versions")]
     pub fn set_tmp_ecdh_callback<F>(&mut self, callback: F)
     where
         F: Fn(&mut SslRef, bool, u32) -> Result<EcKey<Params>, ErrorStack> + 'static + Sync + Send,
@@ -2581,6 +2582,7 @@ impl SslRef {
     ///
     /// [`SslContextBuilder::set_tmp_ecdh_callback`]: struct.SslContextBuilder.html#method.set_tmp_ecdh_callback
     #[cfg(any(all(ossl101, not(ossl110))))]
+    #[deprecated(note = "this function leaks memory and does not exist on newer OpenSSL versions")]
     pub fn set_tmp_ecdh_callback<F>(&mut self, callback: F)
     where
         F: Fn(&mut SslRef, bool, u32) -> Result<EcKey<Params>, ErrorStack> + 'static + Sync + Send,
