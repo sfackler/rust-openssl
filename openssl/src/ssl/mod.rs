@@ -3112,6 +3112,23 @@ impl SslRef {
         }
     }
 
+    /// Determines if current session used Extended Master Secret
+    ///
+    /// Returns `None` if the handshake is still in-progress.
+    ///
+    /// This corresponds to [`SSL_get_extms_support`].
+    ///
+    /// [`SSL_get_extms_support`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_get_extms_support.html
+    #[cfg(ossl110)]
+    pub fn extms_support(&self) -> Option<bool> {
+        unsafe {
+            match ffi::SSL_get_extms_support(self.as_ptr()) {
+                -1 => None,
+                ret => Some(ret != 0),
+            }
+        }
+    }
+
     /// Returns the server's OCSP response, if present.
     ///
     /// This corresponds to [`SSL_get_tlsext_status_ocsp_resp`].
