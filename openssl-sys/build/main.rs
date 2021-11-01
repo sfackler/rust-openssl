@@ -266,6 +266,7 @@ See rust-openssl README for more information:
         if openssl_version >= 0x4_00_00_00_0 {
             version_error()
         } else if openssl_version >= 0x3_00_00_00_0 {
+            println!("cargo:version=300");
             Version::Openssl3xx
         } else if openssl_version >= 0x1_01_01_00_0 {
             println!("cargo:version=111");
