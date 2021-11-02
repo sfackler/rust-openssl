@@ -11,7 +11,7 @@
 //! ## Vendored
 //!
 //! If the `vendored` Cargo feature is enabled, the `openssl-src` crate will be used to compile and statically link to
-//! a copy of OpenSSL. The build process requires a C compiler, perl, and make. The OpenSSL version will generally track
+//! a copy of OpenSSL. The build process requires a C compiler, perl (and perl-core), and make. The OpenSSL version will generally track
 //! the newest OpenSSL release, and changes to the version are *not* considered breaking changes.
 //!
 //! ```toml
