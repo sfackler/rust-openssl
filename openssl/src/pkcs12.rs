@@ -75,16 +75,16 @@ impl Pkcs12 {
     ///
     /// This uses the defaults from the OpenSSL library:
     ///
-    /// * `nid_key` - `nid::PBE_WITHSHA1AND3_KEY_TRIPLEDES_CBC`
-    /// * `nid_cert` - `nid::PBE_WITHSHA1AND40BITRC2_CBC`
+    /// * `nid_key` - `AES_256_CBC` (3.0.0+) or `PBE_WITHSHA1AND3_KEY_TRIPLEDES_CBC`
+    /// * `nid_cert` - `AES_256_CBC` (3.0.0+) or `PBE_WITHSHA1AND40BITRC2_CBC`
     /// * `iter` - `2048`
     /// * `mac_iter` - `2048`
     pub fn builder() -> Pkcs12Builder {
         ffi::init();
 
         Pkcs12Builder {
-            nid_key: Nid::UNDEF,  //nid::PBE_WITHSHA1AND3_KEY_TRIPLEDES_CBC,
-            nid_cert: Nid::UNDEF, //nid::PBE_WITHSHA1AND40BITRC2_CBC,
+            nid_key: Nid::UNDEF,
+            nid_cert: Nid::UNDEF,
             iter: ffi::PKCS12_DEFAULT_ITER,
             mac_iter: ffi::PKCS12_DEFAULT_ITER,
             ca: None,
