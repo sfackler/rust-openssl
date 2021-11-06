@@ -2,6 +2,7 @@
 use libc::{c_char, c_int};
 
 use std::ffi::CStr;
+use std::ffi::CString;
 use std::str;
 
 use crate::cvt_p;
@@ -57,6 +58,24 @@ impl Nid {
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn as_raw(&self) -> c_int {
         self.0
+    }
+
+    /// Creates a new `Nid` for the `oid` with short name `sn` and long name `ln`.
+    ///
+    /// This corresponds to `OBJ_create`
+    pub fn create(oid: &str, sn: &str, ln: &str) -> Result<Nid, ErrorStack> {
+        unsafe {
+            ffi::init();
+            let oid = CString::new(oid).unwrap();
+            let sn = CString::new(sn).unwrap();
+            let ln = CString::new(ln).unwrap();
+            let raw = ffi::OBJ_create(oid.as_ptr(), sn.as_ptr(), ln.as_ptr());
+            if raw == ffi::NID_undef {
+                Err(ErrorStack::get())
+            } else {
+                Ok(Nid(raw))
+            }
+        }
     }
 
     /// Returns the `Nid`s of the digest and public key algorithms associated with a signature ID.
@@ -1118,6 +1137,19 @@ mod test {
         assert!(
             undefined_nid.short_name().is_err(),
             "undefined_nid should not return a valid value"
+        );
+    }
+
+    #[test]
+    fn test_create() {
+        let nid = Nid::create("1.2.3.4", "foo", "foobar").unwrap();
+        assert_eq!(nid.short_name().unwrap(), "foo");
+        assert_eq!(nid.long_name().unwrap(), "foobar");
+
+        let invalid_oid = Nid::create("invalid_oid", "invalid", "invalid");
+        assert!(
+            invalid_oid.is_err(),
+            "invalid_oid should not return a valid value"
         );
     }
 }
