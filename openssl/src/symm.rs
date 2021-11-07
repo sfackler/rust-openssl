@@ -51,10 +51,12 @@
 //! assert_eq!("Foo bar", output_string);
 //! println!("Decrypted: '{}'", output_string);
 //! ```
-use crate::cipher_ctx::CipherCtx;
+use crate::cipher::CipherRef;
+use crate::cipher_ctx::{CipherCtx, CipherCtxRef};
 use crate::error::ErrorStack;
 use crate::nid::Nid;
 use cfg_if::cfg_if;
+use foreign_types::ForeignTypeRef;
 
 #[derive(Copy, Clone)]
 pub enum Mode {
@@ -451,7 +453,18 @@ impl Crypter {
         iv: Option<&[u8]>,
     ) -> Result<Crypter, ErrorStack> {
         let mut ctx = CipherCtx::new()?;
-        ctx.cipher_init(Some(&t), None, None, mode)?;
+
+        let f = match mode {
+            Mode::Encrypt => CipherCtxRef::encrypt_init,
+            Mode::Decrypt => CipherCtxRef::decrypt_init,
+        };
+
+        f(
+            &mut ctx,
+            Some(unsafe { CipherRef::from_ptr(t.as_ptr() as *mut _) }),
+            None,
+            None,
+        )?;
 
         ctx.set_key_length(key.len())?;
 
@@ -459,7 +472,7 @@ impl Crypter {
             ctx.set_iv_length(iv.len())?;
         }
 
-        ctx.cipher_init(None, Some(key), iv, mode)?;
+        f(&mut ctx, None, Some(key), iv)?;
 
         Ok(Crypter { ctx })
     }
@@ -501,7 +514,7 @@ impl Crypter {
     /// is factored into the authentication tag. It must be called before the first call to
     /// `update`.
     pub fn aad_update(&mut self, input: &[u8]) -> Result<(), ErrorStack> {
-        self.ctx.update(input, None)?;
+        self.ctx.cipher_update(input, None)?;
         Ok(())
     }
 
@@ -520,7 +533,7 @@ impl Crypter {
     ///
     /// Panics if `output.len() > c_int::max_value()`.
     pub fn update(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, ErrorStack> {
-        self.ctx.update(input, Some(output))
+        self.ctx.cipher_update(input, Some(output))
     }
 
     /// Finishes the encryption/decryption process, writing any remaining data
@@ -535,7 +548,7 @@ impl Crypter {
     /// Panics for block ciphers if `output.len() < block_size`,
     /// where `block_size` is the block size of the cipher (see `Cipher::block_size`).
     pub fn finalize(&mut self, output: &mut [u8]) -> Result<usize, ErrorStack> {
-        self.ctx.finalize(output)
+        self.ctx.cipher_final(output)
     }
 
     /// Retrieves the authentication tag used to authenticate ciphertext in AEAD ciphers such

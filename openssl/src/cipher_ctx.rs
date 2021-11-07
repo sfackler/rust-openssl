@@ -1,10 +1,62 @@
+//! The symmetric encryption context.
+//!
+//! # Examples
+//!
+//! Encrypt data with AES128 CBC
+//!
+//! ```
+//! use openssl::cipher::Cipher;
+//! use openssl::cipher_ctx::CipherCtx;
+//!
+//! let cipher = Cipher::aes_128_cbc();
+//! let data = b"Some Crypto Text";
+//! let key = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F";
+//! let iv = b"\x00\x01\x02\x03\x04\x05\x06\x07\x00\x01\x02\x03\x04\x05\x06\x07";
+//!
+//! let mut ctx = CipherCtx::new().unwrap();
+//! ctx.encrypt_init(Some(cipher), Some(key), Some(iv)).unwrap();
+//!
+//! let mut ciphertext = vec![];
+//! ctx.cipher_update_vec(data, &mut ciphertext).unwrap();
+//! ctx.cipher_final_vec(&mut ciphertext).unwrap();
+//!
+//! assert_eq!(
+//!     b"\xB4\xB9\xE7\x30\xD6\xD6\xF7\xDE\x77\x3F\x1C\xFF\xB3\x3E\x44\x5A\x91\xD7\x27\x62\x87\x4D\
+//!       \xFB\x3C\x5E\xC4\x59\x72\x4A\xF4\x7C\xA1",
+//!     &ciphertext[..],
+//! );
+//! ```
+//!
+//! Decrypt data with AES128 CBC
+//!
+//! ```
+//! use openssl::cipher::Cipher;
+//! use openssl::cipher_ctx::CipherCtx;
+//!
+//! let cipher = Cipher::aes_128_cbc();
+//! let data = b"\xB4\xB9\xE7\x30\xD6\xD6\xF7\xDE\x77\x3F\x1C\xFF\xB3\x3E\x44\x5A\x91\xD7\x27\x62\
+//!              \x87\x4D\xFB\x3C\x5E\xC4\x59\x72\x4A\xF4\x7C\xA1";
+//! let key = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F";
+//! let iv = b"\x00\x01\x02\x03\x04\x05\x06\x07\x00\x01\x02\x03\x04\x05\x06\x07";
+//!
+//! let mut ctx = CipherCtx::new().unwrap();
+//! ctx.decrypt_init(Some(cipher), Some(key), Some(iv)).unwrap();
+//!
+//! let mut plaintext = vec![];
+//! ctx.cipher_update_vec(data, &mut plaintext).unwrap();
+//! ctx.cipher_final_vec(&mut plaintext).unwrap();
+//!
+//! assert_eq!(b"Some Crypto Text", &plaintext[..]);
+//! ```
+#![warn(missing_docs)]
+
+use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
 use crate::pkey::{HasPrivate, HasPublic, PKey, PKeyRef};
-use crate::symm::{Cipher, Mode};
 use crate::{cvt, cvt_p};
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::c_int;
+use libc::{c_int, c_uchar};
 use std::convert::TryFrom;
 use std::ptr;
 
@@ -20,11 +72,18 @@ foreign_type_and_impl_send_sync! {
     type CType = ffi::EVP_CIPHER_CTX;
     fn drop = ffi::EVP_CIPHER_CTX_free;
 
+    /// A context object used to perform symmetric encryption operations.
     pub struct CipherCtx;
+    /// A reference to a [`CipherCtx`].
     pub struct CipherCtxRef;
 }
 
 impl CipherCtx {
+    /// Creates a new context.
+    ///
+    /// This corresponds to [`EVP_CIPHER_CTX_new`].
+    ///
+    /// [`EVP_CIPHER_CTX_new`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_new.html
     pub fn new() -> Result<Self, ErrorStack> {
         ffi::init();
 
@@ -36,49 +95,107 @@ impl CipherCtx {
 }
 
 impl CipherCtxRef {
-    pub fn cipher_init(
+    /// Initializes the context for encryption.
+    ///
+    /// Normally this is called once to set all of the cipher, key, and IV. However, this process can be split up
+    /// by first setting the cipher with no key or IV and then setting the key and IV with no cipher. This can be used
+    /// to, for example, use a nonstandard IV size.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the key buffer is smaller than the key size of the cipher, the IV buffer is smaller than the IV size
+    /// of the cipher, or if a key or IV is provided before a cipher.
+    ///
+    /// This corresponds to [`EVP_EncryptInit_ex`].
+    ///
+    /// [`EVP_EncryptInit_ex`]: https://www.openssl.org/docs/manmaster/man3/EVP_EncryptInit_ex.html
+    pub fn encrypt_init(
         &mut self,
-        // FIXME CipherRef
-        type_: Option<&Cipher>,
+        type_: Option<&CipherRef>,
         key: Option<&[u8]>,
         iv: Option<&[u8]>,
-        mode: Mode,
+    ) -> Result<(), ErrorStack> {
+        self.cipher_init(type_, key, iv, ffi::EVP_EncryptInit_ex)
+    }
+
+    /// Initializes the context for decryption.
+    ///
+    /// Normally this is called once to set all of the cipher, key, and IV. However, this process can be split up
+    /// by first setting the cipher with no key or IV and then setting the key and IV with no cipher. This can be used
+    /// to, for example, use a nonstandard IV size.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the key buffer is smaller than the key size of the cipher, the IV buffer is smaller than the IV size
+    /// of the cipher, or if a key or IV is provided before a cipher.
+    ///
+    /// This corresponds to [`EVP_EncryptInit_ex`].
+    ///
+    /// [`EVP_EncryptInit_ex`]: https://www.openssl.org/docs/manmaster/man3/EVP_EncryptInit_ex.html
+    pub fn decrypt_init(
+        &mut self,
+        type_: Option<&CipherRef>,
+        key: Option<&[u8]>,
+        iv: Option<&[u8]>,
+    ) -> Result<(), ErrorStack> {
+        self.cipher_init(type_, key, iv, ffi::EVP_DecryptInit_ex)
+    }
+
+    fn cipher_init(
+        &mut self,
+        type_: Option<&CipherRef>,
+        key: Option<&[u8]>,
+        iv: Option<&[u8]>,
+        f: unsafe extern "C" fn(
+            *mut ffi::EVP_CIPHER_CTX,
+            *const ffi::EVP_CIPHER,
+            *mut ffi::ENGINE,
+            *const c_uchar,
+            *const c_uchar,
+        ) -> c_int,
     ) -> Result<(), ErrorStack> {
         if let Some(key) = key {
-            if let Some(len) = self.key_length() {
-                assert_eq!(len, key.len());
-            }
+            let key_len = type_.map_or_else(|| self.key_length(), |c| c.key_length());
+            assert!(key_len <= key.len());
         }
 
         if let Some(iv) = iv {
-            if let Some(len) = self.iv_length() {
-                assert_eq!(len, iv.len());
-            }
+            let iv_len = type_.map_or_else(|| self.iv_length(), |c| c.iv_length());
+            assert!(iv_len <= iv.len());
         }
 
-        let mode = match mode {
-            Mode::Encrypt => 1,
-            Mode::Decrypt => 0,
-        };
-
         unsafe {
-            cvt(ffi::EVP_CipherInit_ex(
+            cvt(f(
                 self.as_ptr(),
-                type_.map_or(ptr::null(), Cipher::as_ptr),
+                type_.map_or(ptr::null(), |p| p.as_ptr()),
                 ptr::null_mut(),
                 key.map_or(ptr::null(), |k| k.as_ptr()),
                 iv.map_or(ptr::null(), |iv| iv.as_ptr()),
-                mode,
             ))?;
         }
 
         Ok(())
     }
 
+    /// Initializes the context to perform envelope encryption.
+    ///
+    /// Normally this is called once to set both the cipher and public keys. However, this process may be split up by
+    /// first providing the cipher with no public keys and then setting the public keys with no cipher.
+    ///
+    /// `encrypted_keys` will contain the generated symmetric key encrypted with each corresponding asymmetric private
+    /// key. The generated IV will be written to `iv`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `pub_keys` is not the same size as `encrypted_keys`, the IV buffer is smaller than the cipher's IV
+    /// size, or if an IV is provided before the cipher.
+    ///
+    /// This corresponds to [`EVP_SealInit`].
+    ///
+    /// [`EVP_SealInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_SealInit.html.
     pub fn seal_init<T>(
         &mut self,
-        // FIXME CipherRef
-        type_: Option<&Cipher>,
+        type_: Option<&CipherRef>,
         pub_keys: &[PKey<T>],
         encrypted_keys: &mut [Vec<u8>],
         iv: Option<&mut [u8]>,
@@ -87,8 +204,8 @@ impl CipherCtxRef {
         T: HasPublic,
     {
         assert_eq!(pub_keys.len(), encrypted_keys.len());
-        let iv_len = type_.map_or_else(|| self.iv_length(), |c| c.iv_len());
-        if let Some(iv_len) = iv_len {
+        if !pub_keys.is_empty() {
+            let iv_len = type_.map_or_else(|| self.iv_length(), |c| c.iv_length());
             assert!(iv.as_ref().map_or(0, |b| b.len()) >= iv_len);
         }
 
@@ -106,7 +223,7 @@ impl CipherCtxRef {
         unsafe {
             cvt(ffi::EVP_SealInit(
                 self.as_ptr(),
-                type_.map_or(ptr::null(), Cipher::as_ptr),
+                type_.map_or(ptr::null(), |p| p.as_ptr()),
                 keys.as_mut_ptr(),
                 key_lengths.as_mut_ptr(),
                 iv.map_or(ptr::null_mut(), |b| b.as_mut_ptr()),
@@ -122,9 +239,22 @@ impl CipherCtxRef {
         Ok(())
     }
 
+    /// Initializes the context to perform envelope decryption.
+    ///
+    /// Normally thisis called once with all of the arguments present. However, this process may be split up by first
+    /// providing the cipher alone and then after providing the rest of the arguments in a second call.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the IV buffer is smaller than the cipher's required IV size or if the IV is provided before the
+    /// cipher.
+    ///
+    /// This corresponds to [`EVP_OpenInit`].
+    ///
+    /// [`EVP_OpenInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_OpenInit.html
     pub fn open_init<T>(
         &mut self,
-        type_: Option<&Cipher>,
+        type_: Option<&CipherRef>,
         encrypted_key: &[u8],
         iv: Option<&[u8]>,
         priv_key: Option<&PKeyRef<T>>,
@@ -132,8 +262,8 @@ impl CipherCtxRef {
     where
         T: HasPrivate,
     {
-        let iv_len = type_.map_or_else(|| self.iv_length(), |c| c.iv_len());
-        if let Some(iv_len) = iv_len {
+        if priv_key.is_some() {
+            let iv_len = type_.map_or_else(|| self.iv_length(), |c| c.iv_length());
             assert!(iv.map_or(0, |b| b.len()) >= iv_len);
         }
 
@@ -141,7 +271,7 @@ impl CipherCtxRef {
         unsafe {
             cvt(ffi::EVP_OpenInit(
                 self.as_ptr(),
-                type_.map_or(ptr::null(), Cipher::as_ptr),
+                type_.map_or(ptr::null(), |p| p.as_ptr()),
                 encrypted_key.as_ptr(),
                 len,
                 iv.map_or(ptr::null(), |b| b.as_ptr()),
@@ -158,32 +288,49 @@ impl CipherCtxRef {
         }
     }
 
-    pub fn block_size(&self) -> Option<usize> {
+    /// Returns the block size of the context's cipher.
+    ///
+    /// Stream ciphers will report a block size of 1.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the context has not been initialized with a cipher.
+    ///
+    /// This corresponds to [`EVP_CIPHER_CTX_block_size`].
+    ///
+    /// [`EVP_CIPHER_CTX_block_size`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_block_size.html
+    pub fn block_size(&self) -> usize {
         self.assert_cipher();
 
-        unsafe {
-            let r = ffi::EVP_CIPHER_CTX_block_size(self.as_ptr());
-            if r > 0 {
-                Some(r as usize)
-            } else {
-                None
-            }
-        }
+        unsafe { ffi::EVP_CIPHER_CTX_block_size(self.as_ptr()) as usize }
     }
 
-    pub fn key_length(&self) -> Option<usize> {
+    /// Returns the key length of the context's cipher.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the context has not been initialized with a cipher.
+    ///
+    /// This corresponds to [`EVP_CIPHER_CTX_key_length`].
+    ///
+    /// [`EVP_CIPHER_CTX_key_length`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_key_length.html
+    pub fn key_length(&self) -> usize {
         self.assert_cipher();
 
-        unsafe {
-            let r = ffi::EVP_CIPHER_CTX_key_length(self.as_ptr());
-            if r > 0 {
-                Some(r as usize)
-            } else {
-                None
-            }
-        }
+        unsafe { ffi::EVP_CIPHER_CTX_key_length(self.as_ptr()) as usize }
     }
 
+    /// Sets the length of the key expected by the context.
+    ///
+    /// Only some ciphers support configurable key lengths.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the context has not been initialized with a cipher.
+    ///
+    /// This corresponds to [`EVP_CIPHER_CTX_set_key_length`].
+    ///
+    /// [`EVP_CIPHER_CTX_set_key_length`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_set_key_length.html
     pub fn set_key_length(&mut self, len: usize) -> Result<(), ErrorStack> {
         self.assert_cipher();
 
@@ -196,19 +343,34 @@ impl CipherCtxRef {
         Ok(())
     }
 
-    pub fn iv_length(&self) -> Option<usize> {
+    /// Returns the length of the IV expected by this context.
+    ///
+    /// Returns 0 if the cipher does not use an IV.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the context has not been initialized with a cipher.
+    ///
+    /// This corresponds to [`EVP_CIPHER_CTX_iv_length`].
+    ///
+    /// [`EVP_CIPHER_CTX_iv_length`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_iv_length.html
+    pub fn iv_length(&self) -> usize {
         self.assert_cipher();
 
-        unsafe {
-            let r = ffi::EVP_CIPHER_CTX_iv_length(self.as_ptr());
-            if r > 0 {
-                Some(r as usize)
-            } else {
-                None
-            }
-        }
+        unsafe { ffi::EVP_CIPHER_CTX_iv_length(self.as_ptr()) as usize }
     }
 
+    /// Sets the length of the IV expected by this context.
+    ///
+    /// Only some ciphers support configurable IV lengths.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the context has not been initialized with a cipher.
+    ///
+    /// This corresponds to [`EVP_CIPHER_CTX_ctrl`] with `EVP_CTRL_AEAD_SET_IVLEN`.
+    ///
+    /// [`EVP_CIPHER_CTX_ctrl`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_ctrl.html
     pub fn set_iv_length(&mut self, len: usize) -> Result<(), ErrorStack> {
         self.assert_cipher();
 
@@ -226,19 +388,33 @@ impl CipherCtxRef {
         Ok(())
     }
 
-    pub fn tag_length(&self) -> Option<usize> {
+    /// Returns the length of the authenticationt tag expected by this context.
+    ///
+    /// Returns 0 if the cipher is not authenticated.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the context has not been initialized with a cipher.
+    ///
+    /// This corresponds to [`EVP_CIPHER_CTX_tag_length`].
+    ///
+    /// [`EVP_CIPHER_CTX_tag_length`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_tag_length.html
+    pub fn tag_length(&self) -> usize {
         self.assert_cipher();
 
-        unsafe {
-            let r = ffi::EVP_CIPHER_CTX_tag_length(self.as_ptr());
-            if r > 0 {
-                Some(r as usize)
-            } else {
-                None
-            }
-        }
+        unsafe { ffi::EVP_CIPHER_CTX_tag_length(self.as_ptr()) as usize }
     }
 
+    /// Retrieves the calculated authentication tag from the context.
+    ///
+    /// This should be called after `[Self::cipher_final]`, and is only supported by authenticated ciphers.
+    ///
+    /// The size of the buffer indicates the size of the tag. While some ciphers support a range of tag sizes, it is
+    /// recommended to pick the maximum size.
+    ///
+    /// This corresponds to [`EVP_CIPHER_CTX_ctrl`] with `EVP_CTRL_AEAD_GET_TAG`.
+    ///
+    /// [`EVP_CIPHER_CTX_ctrl`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_ctrl.html
     pub fn tag(&self, tag: &mut [u8]) -> Result<(), ErrorStack> {
         let len = c_int::try_from(tag.len()).unwrap();
 
@@ -254,6 +430,13 @@ impl CipherCtxRef {
         Ok(())
     }
 
+    /// Sets the length of the generated authentication tag.
+    ///
+    /// This must be called when encrypting with a cipher in CCM mode to use a tag size other than the default.
+    ///
+    /// This corresponds to [`EVP_CIPHER_CTX_ctrl`] with `EVP_CTRL_AEAD_SET_TAG`.
+    ///
+    /// [`EVP_CIPHER_CTX_ctrl`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_ctrl.html
     pub fn set_tag_length(&mut self, len: usize) -> Result<(), ErrorStack> {
         let len = c_int::try_from(len).unwrap();
 
@@ -269,6 +452,11 @@ impl CipherCtxRef {
         Ok(())
     }
 
+    /// Sets the authentication tag for verification during decryption.
+    ///
+    /// This corresponds to [`EVP_CIPHER_CTX_ctrl`] with `EVP_CTRL_AEAD_SET_TAG`.
+    ///
+    /// [`EVP_CIPHER_CTX_ctrl`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_ctrl.html
     pub fn set_tag(&mut self, tag: &[u8]) -> Result<(), ErrorStack> {
         let len = c_int::try_from(tag.len()).unwrap();
 
@@ -284,12 +472,26 @@ impl CipherCtxRef {
         Ok(())
     }
 
+    /// Enables or disables padding.
+    ///
+    /// If padding is disabled, the plaintext must be an exact multiple of the cipher's block size.
+    ///
+    /// This corresponds to [`EVP_CIPHER_CTX_set_padding`].
+    ///
+    /// [`EVP_CIPHER_CTX_set_padding`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_set_padding.html
     pub fn set_padding(&mut self, padding: bool) {
         unsafe {
             ffi::EVP_CIPHER_CTX_set_padding(self.as_ptr(), padding as c_int);
         }
     }
 
+    /// Sets the total length of plaintext data.
+    ///
+    /// This is required for ciphers operating in CCM mode.
+    ///
+    /// This corresponds to [`EVP_CipherUpdate`].
+    ///
+    /// [`EVP_CipherUpdate`]: https://www.openssl.org/docs/manmaster/man3/EVP_CipherUpdate.html
     pub fn set_data_len(&mut self, len: usize) -> Result<(), ErrorStack> {
         let len = c_int::try_from(len).unwrap();
 
@@ -306,10 +508,28 @@ impl CipherCtxRef {
         Ok(())
     }
 
-    pub fn update(&mut self, input: &[u8], output: Option<&mut [u8]>) -> Result<usize, ErrorStack> {
+    /// Writes data into the context.
+    ///
+    /// Providing no output buffer will cause the input to be considered additional authenticated data (AAD).
+    ///
+    /// Returns the number of bytes written to `output`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `output.len()` is less than `input.len()` plus the cipher's block size.
+    ///
+    /// This corresponds to [`EVP_CipherUpdate`].
+    ///
+    /// [`EVP_CipherUpdate`]: https://www.openssl.org/docs/manmaster/man3/EVP_CipherUpdate.html
+    pub fn cipher_update(
+        &mut self,
+        input: &[u8],
+        output: Option<&mut [u8]>,
+    ) -> Result<usize, ErrorStack> {
         let inlen = c_int::try_from(input.len()).unwrap();
 
-        if let (Some(mut block_size), Some(output)) = (self.block_size(), &output) {
+        if let Some(output) = &output {
+            let mut block_size = self.block_size();
             if block_size == 1 {
                 block_size = 0;
             }
@@ -330,11 +550,37 @@ impl CipherCtxRef {
         Ok(outlen as usize)
     }
 
-    pub fn finalize(&mut self, output: &mut [u8]) -> Result<usize, ErrorStack> {
-        if let Some(block_size) = self.block_size() {
-            if block_size > 1 {
-                assert!(output.len() >= block_size);
-            }
+    /// Like [`Self::cipher_update`] except that it appends output to a [`Vec`].
+    pub fn cipher_update_vec(
+        &mut self,
+        input: &[u8],
+        output: &mut Vec<u8>,
+    ) -> Result<usize, ErrorStack> {
+        let base = output.len();
+        output.resize(base + input.len() + self.block_size(), 0);
+        let len = self.cipher_update(input, Some(&mut output[base..]))?;
+        output.truncate(base + len);
+
+        Ok(len)
+    }
+
+    /// Finalizes the encryption or decryption process.
+    ///
+    /// Any remaining data will be written to the output buffer.
+    ///
+    /// Returns the number of bytes written to `output`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `output` is smaller than the cipher's block size.
+    ///
+    /// This corresponds to [`EVP_CipherFinal`].
+    ///
+    /// [`EVP_CipherFinal`]: https://www.openssl.org/docs/manmaster/man3/EVP_CipherFinal.html
+    pub fn cipher_final(&mut self, output: &mut [u8]) -> Result<usize, ErrorStack> {
+        let block_size = self.block_size();
+        if block_size > 1 {
+            assert!(output.len() >= block_size);
         }
 
         let mut outl = 0;
@@ -347,5 +593,54 @@ impl CipherCtxRef {
         }
 
         Ok(outl as usize)
+    }
+
+    /// Like [`Self::cipher_final`] except that it appends output to a [`Vec`].
+    pub fn cipher_final_vec(&mut self, output: &mut Vec<u8>) -> Result<usize, ErrorStack> {
+        let base = output.len();
+        output.resize(base + self.block_size(), 0);
+        let len = self.cipher_final(&mut output[base..])?;
+        output.truncate(base + len);
+
+        Ok(len)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::cipher::Cipher;
+    use std::slice;
+
+    #[test]
+    fn seal_open() {
+        let private_pem = include_bytes!("../test/rsa.pem");
+        let public_pem = include_bytes!("../test/rsa.pem.pub");
+        let private_key = PKey::private_key_from_pem(private_pem).unwrap();
+        let public_key = PKey::public_key_from_pem(public_pem).unwrap();
+        let cipher = Cipher::aes_256_cbc();
+        let secret = b"My secret message";
+
+        let mut ctx = CipherCtx::new().unwrap();
+        let mut encrypted_key = vec![];
+        let mut iv = vec![0; cipher.iv_length()];
+        let mut encrypted = vec![];
+        ctx.seal_init(
+            Some(cipher),
+            &[public_key],
+            slice::from_mut(&mut encrypted_key),
+            Some(&mut iv),
+        )
+        .unwrap();
+        ctx.cipher_update_vec(secret, &mut encrypted).unwrap();
+        ctx.cipher_final_vec(&mut encrypted).unwrap();
+
+        let mut decrypted = vec![];
+        ctx.open_init(Some(cipher), &encrypted_key, Some(&iv), Some(&private_key))
+            .unwrap();
+        ctx.cipher_update_vec(&encrypted, &mut decrypted).unwrap();
+        ctx.cipher_final_vec(&mut decrypted).unwrap();
+
+        assert_eq!(secret, &decrypted[..]);
     }
 }

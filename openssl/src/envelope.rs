@@ -21,10 +21,12 @@
 //! enc_len += seal.finalize(&mut encrypted[enc_len..]).unwrap();
 //! encrypted.truncate(enc_len);
 //! ```
+use crate::cipher::CipherRef;
 use crate::cipher_ctx::CipherCtx;
 use crate::error::ErrorStack;
 use crate::pkey::{HasPrivate, HasPublic, PKey, PKeyRef};
 use crate::symm::Cipher;
+use foreign_types::ForeignTypeRef;
 
 /// Represents an EVP_Seal context.
 pub struct Seal {
@@ -43,7 +45,12 @@ impl Seal {
         let mut enc_keys = vec![vec![]; pub_keys.len()];
 
         let mut ctx = CipherCtx::new()?;
-        ctx.seal_init(Some(&cipher), pub_keys, &mut enc_keys, iv.as_deref_mut())?;
+        ctx.seal_init(
+            Some(unsafe { CipherRef::from_ptr(cipher.as_ptr() as *mut _) }),
+            pub_keys,
+            &mut enc_keys,
+            iv.as_deref_mut(),
+        )?;
 
         Ok(Seal { ctx, iv, enc_keys })
     }
@@ -70,7 +77,7 @@ impl Seal {
     /// the block size of the cipher (see `Cipher::block_size`), or if
     /// `output.len() > c_int::max_value()`.
     pub fn update(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, ErrorStack> {
-        self.ctx.update(input, Some(output))
+        self.ctx.cipher_update(input, Some(output))
     }
 
     /// Finishes the encryption process, writing any remaining data to `output`.
@@ -83,7 +90,7 @@ impl Seal {
     ///
     /// Panics if `output` is less than the cipher's block size.
     pub fn finalize(&mut self, output: &mut [u8]) -> Result<usize, ErrorStack> {
-        self.ctx.finalize(output)
+        self.ctx.cipher_final(output)
     }
 }
 
@@ -104,7 +111,12 @@ impl Open {
         T: HasPrivate,
     {
         let mut ctx = CipherCtx::new()?;
-        ctx.open_init(Some(&cipher), encrypted_key, iv, Some(priv_key))?;
+        ctx.open_init(
+            Some(unsafe { CipherRef::from_ptr(cipher.as_ptr() as *mut _) }),
+            encrypted_key,
+            iv,
+            Some(priv_key),
+        )?;
 
         Ok(Open { ctx })
     }
@@ -120,7 +132,7 @@ impl Open {
     /// `block_size` is the block size of the cipher (see `Cipher::block_size`),
     /// or if `output.len() > c_int::max_value()`.
     pub fn update(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, ErrorStack> {
-        self.ctx.update(input, Some(output))
+        self.ctx.cipher_update(input, Some(output))
     }
 
     /// Finishes the decryption process, writing any remaining data to `output`.
@@ -133,7 +145,7 @@ impl Open {
     ///
     /// Panics if `output` is less than the cipher's block size.
     pub fn finalize(&mut self, output: &mut [u8]) -> Result<usize, ErrorStack> {
-        self.ctx.finalize(output)
+        self.ctx.cipher_final(output)
     }
 }
 

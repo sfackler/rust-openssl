@@ -134,6 +134,7 @@ pub mod aes;
 pub mod asn1;
 pub mod base64;
 pub mod bn;
+pub mod cipher;
 pub mod cipher_ctx;
 #[cfg(all(not(libressl), not(osslconf = "OPENSSL_NO_CMS")))]
 pub mod cms;
