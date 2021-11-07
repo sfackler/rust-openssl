@@ -451,7 +451,7 @@ impl Crypter {
         iv: Option<&[u8]>,
     ) -> Result<Crypter, ErrorStack> {
         let mut ctx = CipherCtx::new()?;
-        ctx.init(Some(&t), None, None, mode)?;
+        ctx.cipher_init(Some(&t), None, None, mode)?;
 
         ctx.set_key_length(key.len())?;
 
@@ -459,7 +459,7 @@ impl Crypter {
             ctx.set_iv_length(iv.len())?;
         }
 
-        ctx.init(None, Some(key), iv, mode)?;
+        ctx.cipher_init(None, Some(key), iv, mode)?;
 
         Ok(Crypter { ctx })
     }

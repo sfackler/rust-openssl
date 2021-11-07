@@ -1,4 +1,5 @@
 use crate::error::ErrorStack;
+use crate::pkey::{HasPrivate, HasPublic, PKey, PKeyRef};
 use crate::symm::{Cipher, Mode};
 use crate::{cvt, cvt_p};
 use cfg_if::cfg_if;
@@ -35,7 +36,7 @@ impl CipherCtx {
 }
 
 impl CipherCtxRef {
-    pub fn init(
+    pub fn cipher_init(
         &mut self,
         // FIXME CipherRef
         type_: Option<&Cipher>,
@@ -68,6 +69,83 @@ impl CipherCtxRef {
                 key.map_or(ptr::null(), |k| k.as_ptr()),
                 iv.map_or(ptr::null(), |iv| iv.as_ptr()),
                 mode,
+            ))?;
+        }
+
+        Ok(())
+    }
+
+    pub fn seal_init<T>(
+        &mut self,
+        // FIXME CipherRef
+        type_: Option<&Cipher>,
+        pub_keys: &[PKey<T>],
+        encrypted_keys: &mut [Vec<u8>],
+        iv: Option<&mut [u8]>,
+    ) -> Result<(), ErrorStack>
+    where
+        T: HasPublic,
+    {
+        assert_eq!(pub_keys.len(), encrypted_keys.len());
+        let iv_len = type_.map_or_else(|| self.iv_length(), |c| c.iv_len());
+        if let Some(iv_len) = iv_len {
+            assert!(iv.as_ref().map_or(0, |b| b.len()) >= iv_len);
+        }
+
+        for (pub_key, buf) in pub_keys.iter().zip(&mut *encrypted_keys) {
+            buf.resize(pub_key.size(), 0);
+        }
+
+        let mut keys = encrypted_keys
+            .iter_mut()
+            .map(|b| b.as_mut_ptr())
+            .collect::<Vec<_>>();
+        let mut key_lengths = vec![0; pub_keys.len()];
+        let pub_keys_len = i32::try_from(pub_keys.len()).unwrap();
+
+        unsafe {
+            cvt(ffi::EVP_SealInit(
+                self.as_ptr(),
+                type_.map_or(ptr::null(), Cipher::as_ptr),
+                keys.as_mut_ptr(),
+                key_lengths.as_mut_ptr(),
+                iv.map_or(ptr::null_mut(), |b| b.as_mut_ptr()),
+                pub_keys.as_ptr() as *mut _,
+                pub_keys_len,
+            ))?;
+        }
+
+        for (buf, len) in encrypted_keys.iter_mut().zip(key_lengths) {
+            buf.truncate(len as usize);
+        }
+
+        Ok(())
+    }
+
+    pub fn open_init<T>(
+        &mut self,
+        type_: Option<&Cipher>,
+        encrypted_key: &[u8],
+        iv: Option<&[u8]>,
+        priv_key: Option<&PKeyRef<T>>,
+    ) -> Result<(), ErrorStack>
+    where
+        T: HasPrivate,
+    {
+        let iv_len = type_.map_or_else(|| self.iv_length(), |c| c.iv_len());
+        if let Some(iv_len) = iv_len {
+            assert!(iv.map_or(0, |b| b.len()) >= iv_len);
+        }
+
+        let len = c_int::try_from(encrypted_key.len()).unwrap();
+        unsafe {
+            cvt(ffi::EVP_OpenInit(
+                self.as_ptr(),
+                type_.map_or(ptr::null(), Cipher::as_ptr),
+                encrypted_key.as_ptr(),
+                len,
+                iv.map_or(ptr::null(), |b| b.as_ptr()),
+                priv_key.map_or(ptr::null_mut(), ForeignTypeRef::as_ptr),
             ))?;
         }
 
