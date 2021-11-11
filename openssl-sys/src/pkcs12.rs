@@ -22,6 +22,16 @@ extern "C" {
         cert: *mut *mut X509,
         ca: *mut *mut stack_st_X509,
     ) -> c_int;
+
+    pub fn PKCS12_set_mac(
+        p12: *mut PKCS12,
+        pass: *const c_char,
+        passlen: c_int,
+        salt: *mut c_uchar,
+        saltlen: c_int,
+        iter: c_int,
+        md_type: *const EVP_MD,
+    ) -> c_int;
 }
 const_ptr_api! {
     extern "C" {
