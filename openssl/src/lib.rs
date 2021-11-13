@@ -134,6 +134,8 @@ pub mod aes;
 pub mod asn1;
 pub mod base64;
 pub mod bn;
+pub mod cipher;
+pub mod cipher_ctx;
 #[cfg(all(not(libressl), not(osslconf = "OPENSSL_NO_CMS")))]
 pub mod cms;
 pub mod conf;
@@ -149,6 +151,8 @@ pub mod ex_data;
 #[cfg(not(any(libressl, ossl300)))]
 pub mod fips;
 pub mod hash;
+#[cfg(ossl300)]
+pub mod lib_ctx;
 pub mod memcmp;
 pub mod nid;
 #[cfg(not(osslconf = "OPENSSL_NO_OCSP"))]

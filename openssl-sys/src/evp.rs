@@ -39,6 +39,18 @@ cfg_if! {
             pub fn EVP_CIPHER_get_block_size(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_get_iv_length(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_get_nid(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_fetch(
+                ctx: *mut OSSL_LIB_CTX,
+                algorithm: *const c_char,
+                properties: *const c_char,
+            ) -> *mut EVP_CIPHER;
+            pub fn EVP_CIPHER_free(cipher: *mut EVP_CIPHER);
+
+            pub fn EVP_CIPHER_CTX_get0_cipher(ctx: *const EVP_CIPHER_CTX) -> *const EVP_CIPHER;
+            pub fn EVP_CIPHER_CTX_get_block_size(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_get_key_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_get_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_get_tag_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
         }
 
         #[inline]
@@ -70,6 +82,21 @@ cfg_if! {
         pub unsafe fn EVP_CIPHER_nid(cipher: *const EVP_CIPHER) -> c_int {
             EVP_CIPHER_get_nid(cipher)
         }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_CTX_block_size(ctx: *const EVP_CIPHER_CTX) -> c_int {
+            EVP_CIPHER_CTX_get_block_size(ctx)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_CTX_key_length(ctx: *const EVP_CIPHER_CTX) -> c_int {
+            EVP_CIPHER_CTX_get_key_length(ctx)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_CTX_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int {
+            EVP_CIPHER_CTX_get_iv_length(ctx)
+        }
     } else {
         extern "C" {
             pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
@@ -79,10 +106,14 @@ cfg_if! {
             pub fn EVP_CIPHER_block_size(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_iv_length(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_nid(cipher: *const EVP_CIPHER) -> c_int;
+
+            pub fn EVP_CIPHER_CTX_cipher(ctx: *const EVP_CIPHER_CTX) -> *const EVP_CIPHER;
+            pub fn EVP_CIPHER_CTX_block_size(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_key_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
         }
     }
 }
-extern "C" {}
 
 cfg_if! {
     if #[cfg(ossl110)] {
@@ -291,6 +322,7 @@ extern "C" {
         arg: c_int,
         ptr: *mut c_void,
     ) -> c_int;
+    pub fn EVP_CIPHER_CTX_rand_key(ctx: *mut EVP_CIPHER_CTX, key: *mut c_uchar) -> c_int;
 
     pub fn EVP_md_null() -> *const EVP_MD;
     pub fn EVP_md5() -> *const EVP_MD;
