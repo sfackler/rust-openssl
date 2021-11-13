@@ -320,6 +320,29 @@ impl CipherCtxRef {
         unsafe { ffi::EVP_CIPHER_CTX_key_length(self.as_ptr()) as usize }
     }
 
+    /// Generates a random key based on the configured cipher.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the context has not been initialized with a cipher or if the buffer is smaller than the cipher's key
+    /// length.
+    ///
+    /// This corresponds to [`EVP_CIPHER_CTX_rand_key`].
+    ///
+    /// [`EVP_CIPHER_CTX_rand_key`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_rand_key.html
+    pub fn rand_key(&self, buf: &mut [u8]) -> Result<(), ErrorStack> {
+        assert!(buf.len() >= self.key_length());
+
+        unsafe {
+            cvt(ffi::EVP_CIPHER_CTX_rand_key(
+                self.as_ptr(),
+                buf.as_mut_ptr(),
+            ))?;
+        }
+
+        Ok(())
+    }
+
     /// Sets the length of the key expected by the context.
     ///
     /// Only some ciphers support configurable key lengths.

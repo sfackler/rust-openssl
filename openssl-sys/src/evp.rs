@@ -323,6 +323,7 @@ extern "C" {
         arg: c_int,
         ptr: *mut c_void,
     ) -> c_int;
+    pub fn EVP_CIPHER_CTX_rand_key(ctx: *mut EVP_CIPHER_CTX, key: *mut c_uchar) -> c_int;
 
     pub fn EVP_md_null() -> *const EVP_MD;
     pub fn EVP_md5() -> *const EVP_MD;
