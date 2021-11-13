@@ -2,8 +2,7 @@
 
 use crate::nid::Nid;
 use cfg_if::cfg_if;
-use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
-use std::ops::{Deref, DerefMut};
+use foreign_types::{ForeignTypeRef, Opaque};
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl273))] {
@@ -28,6 +27,9 @@ cfg_if! {
 
 cfg_if! {
     if #[cfg(ossl300)] {
+        use foreign_types::ForeignType;
+        use std::ops::{Deref, DerefMut};
+
         type Inner = *mut ffi::EVP_CIPHER;
 
         impl Drop for Cipher {

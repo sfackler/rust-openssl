@@ -469,7 +469,9 @@ impl Crypter {
         ctx.set_key_length(key.len())?;
 
         if let Some(iv) = iv {
-            ctx.set_iv_length(iv.len())?;
+            if t.iv_len().unwrap_or(0) != iv.len() {
+                ctx.set_iv_length(iv.len())?;
+            }
         }
 
         f(&mut ctx, None, Some(key), iv)?;
@@ -1104,17 +1106,6 @@ mod tests {
 
     #[test]
     #[cfg_attr(ossl300, ignore)]
-    fn test_bf_ecb() {
-        let pt = "5CD54CA83DEF57DA";
-        let ct = "B1B8CC0B250F09A0";
-        let key = "0131D9619DC1376E";
-        let iv = "0000000000000000";
-
-        cipher_test_nopad(super::Cipher::bf_ecb(), pt, ct, key, iv);
-    }
-
-    #[test]
-    #[cfg_attr(ossl300, ignore)]
     fn test_bf_cfb64() {
         let pt = "37363534333231204E6F77206973207468652074696D6520666F722000";
         let ct = "E73214A2822139CAF26ECF6D2EB9E76E3DA3DE04D1517200519D57A6C3";
@@ -1144,27 +1135,6 @@ mod tests {
         let iv = "0001020304050607";
 
         cipher_test(super::Cipher::des_cbc(), pt, ct, key, iv);
-    }
-
-    #[test]
-    #[cfg_attr(ossl300, ignore)]
-    fn test_des_ecb() {
-        let pt = "54686973206973206120746573742e";
-        let ct = "0050ab8aecec758843fe157b4dde938c";
-        let key = "7cb66337f3d3c0fe";
-        let iv = "0001020304050607";
-
-        cipher_test(super::Cipher::des_ecb(), pt, ct, key, iv);
-    }
-
-    #[test]
-    fn test_des_ede3() {
-        let pt = "9994f4c69d40ae4f34ff403b5cf39d4c8207ea5d3e19a5fd";
-        let ct = "9e5c4297d60582f81071ac8ab7d0698d4c79de8b94c519858207ea5d3e19a5fd";
-        let key = "010203040506070801020304050607080102030405060708";
-        let iv = "5cc118306dc702e4";
-
-        cipher_test(super::Cipher::des_ede3(), pt, ct, key, iv);
     }
 
     #[test]
@@ -1468,16 +1438,7 @@ mod tests {
 
         cipher_test(super::Cipher::seed_cfb128(), pt, ct, key, iv);
     }
-    #[test]
-    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
-    fn test_seed_ecb() {
-        let pt = "5363686f6b6f6c6164656e6b756368656e0a";
-        let ct = "0263a9cd498cf0edb0ef72a3231761d00ce601f7d08ad19ad74f0815f2c77f7e";
-        let key = "41414141414141414141414141414141";
-        let iv = "41414141414141414141414141414141";
 
-        cipher_test(super::Cipher::seed_ecb(), pt, ct, key, iv);
-    }
     #[test]
     #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
     fn test_seed_ofb() {
