@@ -680,10 +680,10 @@ mod test {
             .unwrap();
 
         let mut ctx = CipherCtx::new().unwrap();
-        ctx.set_padding(false);
 
         ctx.encrypt_init(Some(cipher), Some(&key), Some(&iv))
             .unwrap();
+        ctx.set_padding(false);
 
         let mut buf = vec![];
         ctx.cipher_update_vec(&pt, &mut buf).unwrap();
@@ -693,6 +693,7 @@ mod test {
 
         ctx.decrypt_init(Some(cipher), Some(&key), Some(&iv))
             .unwrap();
+        ctx.set_padding(false);
 
         let mut buf = vec![];
         ctx.cipher_update_vec(&ct, &mut buf).unwrap();
