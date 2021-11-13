@@ -92,11 +92,6 @@ cfg_if! {
         pub unsafe fn EVP_CIPHER_CTX_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int {
             EVP_CIPHER_CTX_get_iv_length(ctx)
         }
-
-        #[inline]
-        pub unsafe fn EVP_CIPHER_CTX_tag_length(ctx: *const EVP_CIPHER_CTX) -> c_int {
-            EVP_CIPHER_CTX_get_tag_length(ctx)
-        }
     } else {
         extern "C" {
             pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
@@ -111,7 +106,6 @@ cfg_if! {
             pub fn EVP_CIPHER_CTX_block_size(ctx: *const EVP_CIPHER_CTX) -> c_int;
             pub fn EVP_CIPHER_CTX_key_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
             pub fn EVP_CIPHER_CTX_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
-            pub fn EVP_CIPHER_CTX_tag_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
         }
     }
 }

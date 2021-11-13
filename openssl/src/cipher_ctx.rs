@@ -411,7 +411,7 @@ impl CipherCtxRef {
         Ok(())
     }
 
-    /// Returns the length of the authenticationt tag expected by this context.
+    /// Returns the length of the authentication tag expected by this context.
     ///
     /// Returns 0 if the cipher is not authenticated.
     ///
@@ -421,11 +421,14 @@ impl CipherCtxRef {
     ///
     /// This corresponds to [`EVP_CIPHER_CTX_tag_length`].
     ///
+    /// Requires OpenSSL 3.0.0 or newer.
+    ///
     /// [`EVP_CIPHER_CTX_tag_length`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_tag_length.html
+    #[cfg(ossl300)]
     pub fn tag_length(&self) -> usize {
         self.assert_cipher();
 
-        unsafe { ffi::EVP_CIPHER_CTX_tag_length(self.as_ptr()) as usize }
+        unsafe { ffi::EVP_CIPHER_CTX_get_tag_length(self.as_ptr()) as usize }
     }
 
     /// Retrieves the calculated authentication tag from the context.
