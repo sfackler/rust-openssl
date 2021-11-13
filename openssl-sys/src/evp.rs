@@ -39,6 +39,11 @@ cfg_if! {
             pub fn EVP_CIPHER_get_block_size(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_get_iv_length(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_get_nid(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_fetch(
+                ctx: *mut OSSL_LIB_CTX,
+                algorithm: *const c_char,
+                properties: *const c_char,
+            ) -> *mut EVP_CIPHER;
             pub fn EVP_CIPHER_free(cipher: *mut EVP_CIPHER);
 
             pub fn EVP_CIPHER_CTX_get0_cipher(ctx: *const EVP_CIPHER_CTX) -> *const EVP_CIPHER;

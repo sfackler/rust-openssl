@@ -151,6 +151,8 @@ pub mod ex_data;
 #[cfg(not(any(libressl, ossl300)))]
 pub mod fips;
 pub mod hash;
+#[cfg(ossl300)]
+pub mod lib_ctx;
 pub mod memcmp;
 pub mod nid;
 #[cfg(not(osslconf = "OPENSSL_NO_OCSP"))]

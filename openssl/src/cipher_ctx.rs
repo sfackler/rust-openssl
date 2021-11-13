@@ -669,4 +669,48 @@ mod test {
 
         assert_eq!(secret, &decrypted[..]);
     }
+
+    fn aes_128_cbc(cipher: &CipherRef) {
+        // from https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
+        let key = hex::decode("2b7e151628aed2a6abf7158809cf4f3c").unwrap();
+        let iv = hex::decode("000102030405060708090a0b0c0d0e0f").unwrap();
+        let pt = hex::decode("6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e51")
+            .unwrap();
+        let ct = hex::decode("7649abac8119b246cee98e9b12e9197d5086cb9b507219ee95db113a917678b2")
+            .unwrap();
+
+        let mut ctx = CipherCtx::new().unwrap();
+        ctx.set_padding(false);
+
+        ctx.encrypt_init(Some(cipher), Some(&key), Some(&iv))
+            .unwrap();
+
+        let mut buf = vec![];
+        ctx.cipher_update_vec(&pt, &mut buf).unwrap();
+        ctx.cipher_final_vec(&mut buf).unwrap();
+
+        assert_eq!(buf, ct);
+
+        ctx.decrypt_init(Some(cipher), Some(&key), Some(&iv))
+            .unwrap();
+
+        let mut buf = vec![];
+        ctx.cipher_update_vec(&ct, &mut buf).unwrap();
+        ctx.cipher_final_vec(&mut buf).unwrap();
+
+        assert_eq!(buf, pt);
+    }
+
+    #[test]
+    #[cfg(ossl300)]
+    fn fetched_aes_128_cbc() {
+        let cipher = Cipher::fetch(None, "AES-128-CBC", None).unwrap();
+        aes_128_cbc(&cipher);
+    }
+
+    #[test]
+    fn default_aes_128_cbc() {
+        let cipher = Cipher::aes_128_cbc();
+        aes_128_cbc(cipher);
+    }
 }

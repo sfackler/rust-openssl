@@ -127,4 +127,9 @@ extern "C" {
     pub fn FIPS_mode_set(onoff: c_int) -> c_int;
 
     pub fn CRYPTO_memcmp(a: *const c_void, b: *const c_void, len: size_t) -> c_int;
+
+    #[cfg(ossl300)]
+    pub fn OSSL_LIB_CTX_new() -> *mut OSSL_LIB_CTX;
+    #[cfg(ossl300)]
+    pub fn OSSL_LIB_CTX_free(libcts: *mut OSSL_LIB_CTX);
 }

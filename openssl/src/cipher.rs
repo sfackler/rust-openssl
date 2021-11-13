@@ -1,8 +1,18 @@
 //! Symmetric ciphers.
 
+#[cfg(ossl300)]
+use crate::cvt_p;
+#[cfg(ossl300)]
+use crate::error::ErrorStack;
+#[cfg(ossl300)]
+use crate::lib_ctx::LibCtxRef;
 use crate::nid::Nid;
 use cfg_if::cfg_if;
 use foreign_types::{ForeignTypeRef, Opaque};
+#[cfg(ossl300)]
+use std::ffi::CString;
+#[cfg(ossl300)]
+use std::ptr;
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl273))] {
@@ -102,6 +112,33 @@ impl Cipher {
             } else {
                 Some(CipherRef::from_ptr(ptr as *mut _))
             }
+        }
+    }
+
+    /// Fetches a cipher object corresponding to the specified algorithm name and properties.
+    ///
+    /// This corresponds to [`EVP_CIPHER_fetch`].
+    ///
+    /// Requires OpenSSL 3.0.0 or newer.
+    ///
+    /// [`EVP_CIPHER_fetch`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_fetch.html
+    #[cfg(ossl300)]
+    pub fn fetch(
+        ctx: Option<&LibCtxRef>,
+        algorithm: &str,
+        properties: Option<&str>,
+    ) -> Result<Self, ErrorStack> {
+        let algorithm = CString::new(algorithm).unwrap();
+        let properties = properties.map(|s| CString::new(s).unwrap());
+
+        unsafe {
+            let ptr = cvt_p(ffi::EVP_CIPHER_fetch(
+                ctx.map_or(ptr::null_mut(), ForeignTypeRef::as_ptr),
+                algorithm.as_ptr(),
+                properties.map_or(ptr::null_mut(), |s| s.as_ptr()),
+            ))?;
+
+            Ok(Cipher::from_ptr(ptr))
         }
     }
 
