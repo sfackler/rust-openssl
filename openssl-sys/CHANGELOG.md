@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+* Added support for LibreSSL 3.4.1
+
 ## [v0.9.70] - 2021-10-31
 
 ### Fixed
