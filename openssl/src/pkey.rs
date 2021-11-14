@@ -512,49 +512,34 @@ impl PKey<Private> {
     }
 
     #[cfg(ossl111)]
-    fn generate_eddsa(nid: c_int) -> Result<PKey<Private>, ErrorStack> {
-        unsafe {
-            let kctx = cvt_p(ffi::EVP_PKEY_CTX_new_id(nid, ptr::null_mut()))?;
-            let ret = cvt(ffi::EVP_PKEY_keygen_init(kctx));
-            if let Err(e) = ret {
-                ffi::EVP_PKEY_CTX_free(kctx);
-                return Err(e);
-            }
-            let mut key = ptr::null_mut();
-            let ret = cvt(ffi::EVP_PKEY_keygen(kctx, &mut key));
-
-            ffi::EVP_PKEY_CTX_free(kctx);
-
-            if let Err(e) = ret {
-                return Err(e);
-            }
-
-            Ok(PKey::from_ptr(key))
-        }
+    fn generate_eddsa(id: Id) -> Result<PKey<Private>, ErrorStack> {
+        let mut ctx = PkeyCtx::new_id(id)?;
+        ctx.keygen_init()?;
+        ctx.keygen()
     }
 
     /// Generates a new private Ed25519 key
     #[cfg(ossl111)]
     pub fn generate_x25519() -> Result<PKey<Private>, ErrorStack> {
-        PKey::generate_eddsa(ffi::EVP_PKEY_X25519)
+        PKey::generate_eddsa(Id::X25519)
     }
 
     /// Generates a new private Ed448 key
     #[cfg(ossl111)]
     pub fn generate_x448() -> Result<PKey<Private>, ErrorStack> {
-        PKey::generate_eddsa(ffi::EVP_PKEY_X448)
+        PKey::generate_eddsa(Id::X448)
     }
 
     /// Generates a new private Ed25519 key
     #[cfg(ossl111)]
     pub fn generate_ed25519() -> Result<PKey<Private>, ErrorStack> {
-        PKey::generate_eddsa(ffi::EVP_PKEY_ED25519)
+        PKey::generate_eddsa(Id::ED25519)
     }
 
     /// Generates a new private Ed448 key
     #[cfg(ossl111)]
     pub fn generate_ed448() -> Result<PKey<Private>, ErrorStack> {
-        PKey::generate_eddsa(ffi::EVP_PKEY_ED448)
+        PKey::generate_eddsa(Id::ED448)
     }
 
     /// Generates a new EC key using the provided curve.
