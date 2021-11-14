@@ -21,7 +21,7 @@
 //! ```
 use crate::error::ErrorStack;
 use crate::md::MdRef;
-use crate::pkey::PKeyRef;
+use crate::pkey::{HasPublic, PKeyRef};
 use crate::rsa::Padding;
 #[cfg(any(ossl102, libressl310))]
 use crate::util;
@@ -53,6 +53,48 @@ impl PkeyCtx {
 }
 
 impl PkeyCtxRef {
+    /// Prepares the context for encryption using the public key.
+    ///
+    /// This corresponds to [`EVP_PKEY_encrypt_init`].
+    ///
+    /// [`EVP_PKEY_encrypt_init`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_encrypt_init.html
+    #[inline]
+    pub fn encrypt_init(&mut self) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_encrypt_init(self.as_ptr()))?;
+        }
+
+        Ok(())
+    }
+
+    /// Prepares the context for encryption using the private key.
+    ///
+    /// This corresponds to [`EVP_PKEY_decrypt_init`].
+    ///
+    /// [`EVP_PKEY_decrypt_init`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_decrypt_init.html
+    #[inline]
+    pub fn decrypt_init(&mut self) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_decrypt_init(self.as_ptr()))?;
+        }
+
+        Ok(())
+    }
+
+    /// Prepares the context for shared secret derivation.
+    ///
+    /// This corresponds to [`EVP_PKEY_derive_init`].
+    ///
+    /// [`EVP_PKEY_derive_init`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_derive_init.html
+    #[inline]
+    pub fn derive_init(&mut self) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_derive_init(self.as_ptr()))?;
+        }
+
+        Ok(())
+    }
+
     /// Returns the RSA padding mode in use.
     ///
     /// This is only useful for RSA keys.
@@ -153,29 +195,17 @@ impl PkeyCtxRef {
         Ok(())
     }
 
-    /// Prepares the context for encryption using the public key.
+    /// Sets the peer key used for secret derivation.
     ///
-    /// This corresponds to [`EVP_PKEY_encrypt_init`].
+    /// This corresponds to [`EVP_PKEY_derive_set_peer`].
     ///
-    /// [`EVP_PKEY_encrypt_init`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_encrypt_init.html
-    #[inline]
-    pub fn encrypt_init(&mut self) -> Result<(), ErrorStack> {
+    /// [`EVP_PKEY_derive_set_peer`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_derive_set_peer.html
+    pub fn derive_set_peer<T>(&mut self, key: &PKeyRef<T>) -> Result<(), ErrorStack>
+    where
+        T: HasPublic,
+    {
         unsafe {
-            cvt(ffi::EVP_PKEY_encrypt_init(self.as_ptr()))?;
-        }
-
-        Ok(())
-    }
-
-    /// Prepares the context for encryption using the private key.
-    ///
-    /// This corresponds to [`EVP_PKEY_decrypt_init`].
-    ///
-    /// [`EVP_PKEY_decrypt_init`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_decrypt_init.html
-    #[inline]
-    pub fn decrypt_init(&mut self) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::EVP_PKEY_decrypt_init(self.as_ptr()))?;
+            cvt(ffi::EVP_PKEY_derive_set_peer(self.as_ptr(), key.as_ptr()))?;
         }
 
         Ok(())
@@ -183,7 +213,7 @@ impl PkeyCtxRef {
 
     /// Encrypts data using the public key.
     ///
-    /// If `to` is set to `None`, the an upper bound on the number of bytes required for the output buffer will be
+    /// If `to` is set to `None`, an upper bound on the number of bytes required for the output buffer will be
     /// returned.
     ///
     /// This corresponds to [`EVP_PKEY_encrypt`].
@@ -217,7 +247,7 @@ impl PkeyCtxRef {
 
     /// Decrypts data using the private key.
     ///
-    /// If `to` is set to `None`, the an upper bound on the number of bytes required for the output buffer will be
+    /// If `to` is set to `None`, an upper bound on the number of bytes required for the output buffer will be
     /// returned.
     ///
     /// This corresponds to [`EVP_PKEY_decrypt`].
@@ -248,12 +278,45 @@ impl PkeyCtxRef {
         out.truncate(base + len);
         Ok(len)
     }
+
+    /// Derives a shared secrete between two keys.
+    ///
+    /// If `buf` is set to `None`, an upper bound on the number of bytes required for the buffer will be returned.
+    ///
+    /// This corresponds to [`EVP_PKEY_derive`].
+    ///
+    /// [`EVP_PKEY_derive`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_derive_init.html
+    pub fn derive(&mut self, buf: Option<&mut [u8]>) -> Result<usize, ErrorStack> {
+        let mut len = buf.as_ref().map_or(0, |b| b.len());
+        unsafe {
+            cvt(ffi::EVP_PKEY_derive(
+                self.as_ptr(),
+                buf.map_or(ptr::null_mut(), |b| b.as_mut_ptr()),
+                &mut len,
+            ))?;
+        }
+
+        Ok(len)
+    }
+
+    /// Like [`Self::derive`] but appends the secret to a [`Vec`].
+    pub fn derive_to_vec(&mut self, buf: &mut Vec<u8>) -> Result<usize, ErrorStack> {
+        let base = buf.len();
+        let len = self.derive(None)?;
+        buf.resize(base + len, 0);
+        let len = self.derive(Some(&mut buf[base..]))?;
+        buf.truncate(base + len);
+        Ok(len)
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::dh::Dh;
+    use crate::ec::{EcGroup, EcKey};
     use crate::md::Md;
+    use crate::nid::Nid;
     use crate::pkey::PKey;
     use crate::rsa::Rsa;
 
@@ -324,5 +387,39 @@ mod test {
         ctx.decrypt_to_vec(&ct, &mut out).unwrap();
 
         assert_eq!(pt, out);
+    }
+
+    #[test]
+    fn dh_derive_without_components() {
+        let key1 = Dh::params_from_pem(include_bytes!("../test/dhparams.pem")).unwrap();
+        let key1 = PKey::from_dh(key1).unwrap();
+        let key2 = Dh::params_from_pem(include_bytes!("../test/dhparams.pem"))
+            .unwrap()
+            .generate_key()
+            .unwrap();
+        let key2 = PKey::from_dh(key2).unwrap();
+
+        let mut ctx = PkeyCtx::new(&key1).unwrap();
+        ctx.derive_init().unwrap();
+        ctx.derive_set_peer(&key2).unwrap();
+
+        let mut buf = vec![];
+        ctx.derive_to_vec(&mut buf).unwrap_err();
+    }
+
+    #[test]
+    fn derive() {
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let key1 = EcKey::generate(&group).unwrap();
+        let key1 = PKey::from_ec_key(key1).unwrap();
+        let key2 = EcKey::generate(&group).unwrap();
+        let key2 = PKey::from_ec_key(key2).unwrap();
+
+        let mut ctx = PkeyCtx::new(&key1).unwrap();
+        ctx.derive_init().unwrap();
+        ctx.derive_set_peer(&key2).unwrap();
+
+        let mut buf = vec![];
+        ctx.derive_to_vec(&mut buf).unwrap();
     }
 }
