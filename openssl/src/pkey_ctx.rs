@@ -19,9 +19,24 @@
 //! let mut ciphertext = vec![];
 //! ctx.encrypt_to_vec(data, &mut ciphertext).unwrap();
 //! ```
+//!
+//! Generate a CMAC key
+//!
+//! ```
+//! use openssl::pkey_ctx::PkeyCtx;
+//! use openssl::pkey::Id;
+//! use openssl::cipher::Cipher;
+//!
+//! let mut ctx = PkeyCtx::new_id(Id::CMAC).unwrap();
+//! ctx.keygen_init();
+//! ctx.set_keygen_cipher(Cipher::aes_128_cbc()).unwrap();
+//! ctx.set_keygen_mac_key(b"0123456789abcdef").unwrap();
+//! let cmac_key = ctx.keygen().unwrap();
+//! ```
+use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
 use crate::md::MdRef;
-use crate::pkey::{HasPrivate, HasPublic, PKeyRef};
+use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Private};
 use crate::rsa::Padding;
 #[cfg(any(ossl102, libressl310))]
 use crate::util;
@@ -29,7 +44,6 @@ use crate::{cvt, cvt_p};
 use foreign_types::{ForeignType, ForeignTypeRef};
 #[cfg(any(ossl102, libressl310))]
 use libc::c_int;
-#[cfg(any(ossl102, libressl310))]
 use std::convert::TryFrom;
 use std::ptr;
 
@@ -44,10 +58,30 @@ generic_foreign_type_and_impl_send_sync! {
 }
 
 impl<T> PkeyCtx<T> {
+    /// Creates a new pkey context using the provided key.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_new`].
+    ///
+    /// [`EVP_PKEY_CTX_new`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_new.html
     #[inline]
     pub fn new(pkey: &PKeyRef<T>) -> Result<Self, ErrorStack> {
         unsafe {
             let ptr = cvt_p(ffi::EVP_PKEY_CTX_new(pkey.as_ptr(), ptr::null_mut()))?;
+            Ok(PkeyCtx::from_ptr(ptr))
+        }
+    }
+}
+
+impl PkeyCtx<()> {
+    /// Creates a new pkey context for the specified algorithm ID.
+    ///
+    /// This corresponds to [`EVP_PKEY_new_id`].
+    ///
+    /// [`EVP_PKEY_new_id`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_new_id.html
+    #[inline]
+    pub fn new_id(id: Id) -> Result<Self, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::EVP_PKEY_CTX_new_id(id.as_raw(), ptr::null_mut()))?;
             Ok(PkeyCtx::from_ptr(ptr))
         }
     }
@@ -220,6 +254,19 @@ where
 }
 
 impl<T> PkeyCtxRef<T> {
+    /// Prepares the context for key generation.
+    ///
+    /// This corresponds to [`EVP_PKEY_keygen_init`].
+    ///
+    /// [`EVP_PKEY_keygen_init`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_keygen_init.html
+    pub fn keygen_init(&mut self) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_keygen_init(self.as_ptr()))?;
+        }
+
+        Ok(())
+    }
+
     /// Returns the RSA padding mode in use.
     ///
     /// This is only useful for RSA keys.
@@ -319,11 +366,67 @@ impl<T> PkeyCtxRef<T> {
 
         Ok(())
     }
+
+    /// Sets the cipher used during key generation.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_ctrl`] with `EVP_PKEY_CTRL_CIPHER`.
+    ///
+    /// [`EVP_PKEY_CTX_ctrl`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_ctrl.html
+    pub fn set_keygen_cipher(&mut self, cipher: &CipherRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_ctrl(
+                self.as_ptr(),
+                -1,
+                ffi::EVP_PKEY_OP_KEYGEN,
+                ffi::EVP_PKEY_CTRL_CIPHER,
+                0,
+                cipher.as_ptr() as *mut _,
+            ))?;
+        }
+
+        Ok(())
+    }
+
+    /// Sets the key MAC key used during key generation.
+    ///
+    /// This corresponds to [`EVP_PKEY_CTX_ctrl`] with `EVP_PKEY_CTRL_SET_MAC_KEY`.
+    ///
+    /// [`EVP_PKEY_CTX_ctrl`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_ctrl.html
+    pub fn set_keygen_mac_key(&mut self, key: &[u8]) -> Result<(), ErrorStack> {
+        let len = c_int::try_from(key.len()).unwrap();
+
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_ctrl(
+                self.as_ptr(),
+                -1,
+                ffi::EVP_PKEY_OP_KEYGEN,
+                ffi::EVP_PKEY_CTRL_SET_MAC_KEY,
+                len,
+                key.as_ptr() as *mut _,
+            ))?;
+        }
+
+        Ok(())
+    }
+
+    /// Generates a new public/private keypair.
+    ///
+    /// This corresponds to [`EVP_PKEY_keygen`].
+    ///
+    /// [`EVP_PKEY_keygen`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_ctrl.html
+    pub fn keygen(&mut self) -> Result<PKey<Private>, ErrorStack> {
+        unsafe {
+            let mut key = ptr::null_mut();
+            cvt(ffi::EVP_PKEY_keygen(self.as_ptr(), &mut key))?;
+            Ok(PKey::from_ptr(key))
+        }
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::cipher::Cipher;
     use crate::ec::{EcGroup, EcKey};
     use crate::md::Md;
     use crate::nid::Nid;
@@ -395,5 +498,15 @@ mod test {
 
         let mut buf = vec![];
         ctx.derive_to_vec(&mut buf).unwrap();
+    }
+
+    #[test]
+    fn cmac_keygen() {
+        let mut ctx = PkeyCtx::new_id(Id::CMAC).unwrap();
+        ctx.keygen_init().unwrap();
+        ctx.set_keygen_cipher(Cipher::aes_128_cbc()).unwrap();
+        ctx.set_keygen_mac_key(&hex::decode("9294727a3638bb1c13f48ef8158bfc9d").unwrap())
+            .unwrap();
+        ctx.keygen().unwrap();
     }
 }
