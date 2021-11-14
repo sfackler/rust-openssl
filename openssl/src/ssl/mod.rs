@@ -3155,11 +3155,7 @@ impl SslRef {
     pub fn set_ocsp_status(&mut self, response: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             assert!(response.len() <= c_int::max_value() as usize);
-            let p = cvt_p(ffi::CRYPTO_malloc(
-                response.len() as _,
-                concat!(file!(), "\0").as_ptr() as *const _,
-                line!() as c_int,
-            ))?;
+            let p = cvt_p(ffi::OPENSSL_malloc(response.len() as _))?;
             ptr::copy_nonoverlapping(response.as_ptr(), p as *mut u8, response.len());
             cvt(ffi::SSL_set_tlsext_status_ocsp_resp(
                 self.as_ptr(),

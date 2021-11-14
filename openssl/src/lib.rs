@@ -153,6 +153,7 @@ pub mod fips;
 pub mod hash;
 #[cfg(ossl300)]
 pub mod lib_ctx;
+pub mod md;
 pub mod memcmp;
 pub mod nid;
 #[cfg(not(osslconf = "OPENSSL_NO_OCSP"))]
@@ -161,6 +162,7 @@ pub mod pkcs12;
 pub mod pkcs5;
 pub mod pkcs7;
 pub mod pkey;
+pub mod pkey_ctx;
 pub mod rand;
 pub mod rsa;
 pub mod sha;
@@ -173,6 +175,7 @@ pub mod symm;
 pub mod version;
 pub mod x509;
 
+#[inline]
 fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {
     if r.is_null() {
         Err(ErrorStack::get())
@@ -181,6 +184,7 @@ fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {
     }
 }
 
+#[inline]
 fn cvt(r: c_int) -> Result<c_int, ErrorStack> {
     if r <= 0 {
         Err(ErrorStack::get())
@@ -189,6 +193,7 @@ fn cvt(r: c_int) -> Result<c_int, ErrorStack> {
     }
 }
 
+#[inline]
 fn cvt_n(r: c_int) -> Result<c_int, ErrorStack> {
     if r < 0 {
         Err(ErrorStack::get())

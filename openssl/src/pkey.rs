@@ -39,7 +39,19 @@
 //! let pub_key: Vec<u8> = pkey.public_key_to_pem().unwrap();
 //! println!("{:?}", str::from_utf8(pub_key.as_slice()).unwrap());
 //! ```
-
+use crate::bio::{MemBio, MemBioSlice};
+#[cfg(ossl110)]
+use crate::cipher::CipherRef;
+use crate::dh::Dh;
+use crate::dsa::Dsa;
+use crate::ec::EcKey;
+use crate::error::ErrorStack;
+#[cfg(ossl110)]
+use crate::pkey_ctx::PkeyCtx;
+use crate::rsa::Rsa;
+use crate::symm::Cipher;
+use crate::util::{invoke_passwd_cb, CallbackState};
+use crate::{cvt, cvt_p};
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
@@ -48,16 +60,6 @@ use std::ffi::CString;
 use std::fmt;
 use std::mem;
 use std::ptr;
-
-use crate::bio::{MemBio, MemBioSlice};
-use crate::dh::Dh;
-use crate::dsa::Dsa;
-use crate::ec::EcKey;
-use crate::error::ErrorStack;
-use crate::rsa::Rsa;
-use crate::symm::Cipher;
-use crate::util::{invoke_passwd_cb, CallbackState};
-use crate::{cvt, cvt_p};
 
 /// A tag type indicating that a key only has parameters.
 pub enum Params {}
@@ -75,6 +77,7 @@ pub struct Id(c_int);
 impl Id {
     pub const RSA: Id = Id(ffi::EVP_PKEY_RSA);
     pub const HMAC: Id = Id(ffi::EVP_PKEY_HMAC);
+    pub const CMAC: Id = Id(ffi::EVP_PKEY_CMAC);
     pub const DSA: Id = Id(ffi::EVP_PKEY_DSA);
     pub const DH: Id = Id(ffi::EVP_PKEY_DH);
     pub const EC: Id = Id(ffi::EVP_PKEY_EC);
@@ -503,103 +506,42 @@ impl PKey<Private> {
     #[cfg(ossl110)]
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn cmac(cipher: &Cipher, key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
-        unsafe {
-            assert!(key.len() <= c_int::max_value() as usize);
-            let kctx = cvt_p(ffi::EVP_PKEY_CTX_new_id(
-                ffi::EVP_PKEY_CMAC,
-                ptr::null_mut(),
-            ))?;
-
-            let ret = (|| {
-                cvt(ffi::EVP_PKEY_keygen_init(kctx))?;
-
-                // Set cipher for cmac
-                cvt(ffi::EVP_PKEY_CTX_ctrl(
-                    kctx,
-                    -1,
-                    ffi::EVP_PKEY_OP_KEYGEN,
-                    ffi::EVP_PKEY_CTRL_CIPHER,
-                    0,
-                    cipher.as_ptr() as *mut _,
-                ))?;
-
-                // Set the key data
-                cvt(ffi::EVP_PKEY_CTX_ctrl(
-                    kctx,
-                    -1,
-                    ffi::EVP_PKEY_OP_KEYGEN,
-                    ffi::EVP_PKEY_CTRL_SET_MAC_KEY,
-                    key.len() as c_int,
-                    key.as_ptr() as *mut _,
-                ))?;
-                Ok(())
-            })();
-
-            if let Err(e) = ret {
-                // Free memory
-                ffi::EVP_PKEY_CTX_free(kctx);
-                return Err(e);
-            }
-
-            // Generate key
-            let mut key = ptr::null_mut();
-            let ret = cvt(ffi::EVP_PKEY_keygen(kctx, &mut key));
-
-            // Free memory
-            ffi::EVP_PKEY_CTX_free(kctx);
-
-            if let Err(e) = ret {
-                return Err(e);
-            }
-
-            Ok(PKey::from_ptr(key))
-        }
+        let mut ctx = PkeyCtx::new_id(Id::CMAC)?;
+        ctx.keygen_init()?;
+        ctx.set_keygen_cipher(unsafe { CipherRef::from_ptr(cipher.as_ptr() as *mut _) })?;
+        ctx.set_keygen_mac_key(key)?;
+        ctx.keygen()
     }
 
     #[cfg(ossl111)]
-    fn generate_eddsa(nid: c_int) -> Result<PKey<Private>, ErrorStack> {
-        unsafe {
-            let kctx = cvt_p(ffi::EVP_PKEY_CTX_new_id(nid, ptr::null_mut()))?;
-            let ret = cvt(ffi::EVP_PKEY_keygen_init(kctx));
-            if let Err(e) = ret {
-                ffi::EVP_PKEY_CTX_free(kctx);
-                return Err(e);
-            }
-            let mut key = ptr::null_mut();
-            let ret = cvt(ffi::EVP_PKEY_keygen(kctx, &mut key));
-
-            ffi::EVP_PKEY_CTX_free(kctx);
-
-            if let Err(e) = ret {
-                return Err(e);
-            }
-
-            Ok(PKey::from_ptr(key))
-        }
+    fn generate_eddsa(id: Id) -> Result<PKey<Private>, ErrorStack> {
+        let mut ctx = PkeyCtx::new_id(id)?;
+        ctx.keygen_init()?;
+        ctx.keygen()
     }
 
     /// Generates a new private Ed25519 key
     #[cfg(ossl111)]
     pub fn generate_x25519() -> Result<PKey<Private>, ErrorStack> {
-        PKey::generate_eddsa(ffi::EVP_PKEY_X25519)
+        PKey::generate_eddsa(Id::X25519)
     }
 
     /// Generates a new private Ed448 key
     #[cfg(ossl111)]
     pub fn generate_x448() -> Result<PKey<Private>, ErrorStack> {
-        PKey::generate_eddsa(ffi::EVP_PKEY_X448)
+        PKey::generate_eddsa(Id::X448)
     }
 
     /// Generates a new private Ed25519 key
     #[cfg(ossl111)]
     pub fn generate_ed25519() -> Result<PKey<Private>, ErrorStack> {
-        PKey::generate_eddsa(ffi::EVP_PKEY_ED25519)
+        PKey::generate_eddsa(Id::ED25519)
     }
 
     /// Generates a new private Ed448 key
     #[cfg(ossl111)]
     pub fn generate_ed448() -> Result<PKey<Private>, ErrorStack> {
-        PKey::generate_eddsa(ffi::EVP_PKEY_ED448)
+        PKey::generate_eddsa(Id::ED448)
     }
 
     /// Generates a new EC key using the provided curve.
