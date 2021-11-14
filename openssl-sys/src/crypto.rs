@@ -1,6 +1,32 @@
 use libc::*;
-
 use *;
+
+cfg_if! {
+    if #[cfg(ossl110)] {
+        #[inline]
+        #[track_caller]
+        pub unsafe fn OPENSSL_malloc(num: usize) -> *mut c_void {
+            CRYPTO_malloc(num, concat!(file!(), "\0").as_ptr() as *const _, line!() as _)
+        }
+
+        #[inline]
+        #[track_caller]
+        pub unsafe fn OPENSSL_free(addr: *mut c_void) {
+            CRYPTO_free(addr, concat!(file!(), "\0").as_ptr() as *const _, line!() as _)
+        }
+    } else {
+        #[inline]
+        #[track_caller]
+        pub unsafe fn OPENSSL_malloc(num: c_int) -> *mut c_void {
+            CRYPTO_malloc(num, concat!(file!(), "\0").as_ptr() as *const _, line!() as _)
+        }
+
+        #[inline]
+        pub unsafe fn CRYPTO_free(addr: *mut c_void) {
+            CRYPTO_free(addr)
+        }
+    }
+}
 
 #[cfg(not(ossl110))]
 pub const CRYPTO_LOCK_X509: c_int = 3;

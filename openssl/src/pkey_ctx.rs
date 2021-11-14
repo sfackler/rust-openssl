@@ -38,11 +38,8 @@ use crate::error::ErrorStack;
 use crate::md::MdRef;
 use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Private};
 use crate::rsa::Padding;
-#[cfg(any(ossl102, libressl310))]
-use crate::util;
 use crate::{cvt, cvt_p};
 use foreign_types::{ForeignType, ForeignTypeRef};
-#[cfg(any(ossl102, libressl310))]
 use libc::c_int;
 use std::convert::TryFrom;
 use std::ptr;
@@ -354,12 +351,12 @@ impl<T> PkeyCtxRef<T> {
         let len = c_int::try_from(label.len()).unwrap();
 
         unsafe {
-            let p = util::crypto_malloc(label.len())?;
+            let p = ffi::OPENSSL_malloc(label.len() as _);
             ptr::copy_nonoverlapping(label.as_ptr(), p as *mut _, label.len());
 
             let r = cvt(ffi::EVP_PKEY_CTX_set0_rsa_oaep_label(self.as_ptr(), p, len));
             if r.is_err() {
-                util::crypto_free(p);
+                ffi::OPENSSL_free(p);
             }
             r?;
         }
@@ -428,6 +425,7 @@ mod test {
     use super::*;
     use crate::cipher::Cipher;
     use crate::ec::{EcGroup, EcKey};
+    #[cfg(any(ossl102, libressl310))]
     use crate::md::Md;
     use crate::nid::Nid;
     use crate::pkey::PKey;
