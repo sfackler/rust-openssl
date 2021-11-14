@@ -149,6 +149,16 @@ extern "C" {
     #[cfg(ossl111)]
     pub fn EVP_DigestFinalXOF(ctx: *mut EVP_MD_CTX, res: *mut u8, len: usize) -> c_int;
 
+    #[cfg(ossl300)]
+    pub fn EVP_MD_fetch(
+        ctx: *mut OSSL_LIB_CTX,
+        algorithm: *const c_char,
+        properties: *const c_char,
+    ) -> *mut EVP_MD;
+
+    #[cfg(ossl300)]
+    pub fn EVP_MD_free(md: *mut EVP_MD);
+
     pub fn EVP_BytesToKey(
         typ: *const EVP_CIPHER,
         md: *const EVP_MD,
