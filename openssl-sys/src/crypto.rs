@@ -36,7 +36,7 @@ pub unsafe fn OPENSSL_free(addr: *mut c_void) {
 
 #[cfg(not(ossl110))]
 #[inline]
-pub unsafe fn CRYPTO_free(addr: *mut c_void) {
+pub unsafe fn OPENSSL_free(addr: *mut c_void) {
     CRYPTO_free(addr)
 }
 
