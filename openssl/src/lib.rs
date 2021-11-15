@@ -154,6 +154,7 @@ pub mod hash;
 #[cfg(ossl300)]
 pub mod lib_ctx;
 pub mod md;
+pub mod md_ctx;
 pub mod memcmp;
 pub mod nid;
 #[cfg(not(osslconf = "OPENSSL_NO_OCSP"))]

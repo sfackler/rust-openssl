@@ -201,6 +201,28 @@ extern "C" {
         e: *mut ENGINE,
         pkey: *mut EVP_PKEY,
     ) -> c_int;
+}
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn EVP_DigestSignUpdate(
+                ctx: *mut EVP_MD_CTX,
+                data: *const c_void,
+                dsize: size_t,
+            ) -> c_int;
+        }
+    } else {
+        #[inline]
+        pub unsafe fn EVP_DigestSignUpdate(
+            ctx: *mut EVP_MD_CTX,
+            data: *const c_void,
+            dsize: size_t,
+        ) -> c_int {
+            EVP_DigestUpdate(ctx, data, dsize)
+        }
+    }
+}
+extern "C" {
     pub fn EVP_DigestSignFinal(
         ctx: *mut EVP_MD_CTX,
         sig: *mut c_uchar,

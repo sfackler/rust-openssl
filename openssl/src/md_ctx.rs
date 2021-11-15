@@ -1,0 +1,273 @@
+//! The message digest context.
+//!
+//! # Examples
+//!
+//! Compute the SHA256 checksum of data
+//!
+//! ```
+//! use openssl::md::Md;
+//! use openssl::md_ctx::MdCtx;
+//!
+//! let mut ctx = MdCtx::new().unwrap();
+//! ctx.digest_init(Md::sha256()).unwrap();
+//! ctx.digest_update(b"Some Crypto Text").unwrap();
+//! let mut digest = [0; 32];
+//! ctx.digest_final(&mut digest).unwrap();
+//!
+//! assert_eq!(
+//!     digest,
+//!     *b"\x60\x78\x56\x38\x8a\xca\x5c\x51\x83\xc4\xd1\x4d\xc8\xf9\xcc\xf2\
+//!        \xa5\x21\xb3\x10\x93\x72\xfa\xd6\x7c\x55\xf5\xc9\xe3\xd1\x83\x19",
+//! );
+//! ```
+//!
+//! Sign data with RSA and SHA256
+//!
+//! ```
+//! use openssl::md::Md;
+//! use openssl::md_ctx::MdCtx;
+//! use openssl::pkey::PKey;
+//! use openssl::rsa::Rsa;
+//!
+//! let key = Rsa::generate(4096).unwrap();
+//! let key = PKey::from_rsa(key).unwrap();
+//!
+//! let mut ctx = MdCtx::new().unwrap();
+//! ctx.digest_sign_init(Some(Md::sha256()), &key).unwrap();
+//! ctx.digest_sign_update(b"Some Crypto Text").unwrap();
+//! let mut signature = vec![];
+//! ctx.digest_sign_final_to_vec(&mut signature).unwrap();
+//! ```
+use crate::error::ErrorStack;
+use crate::md::MdRef;
+use crate::pkey::{HasPrivate, PKeyRef};
+use crate::pkey_ctx::PkeyCtxRef;
+use crate::{cvt, cvt_p};
+use foreign_types::{ForeignType, ForeignTypeRef};
+use std::convert::TryFrom;
+use std::ptr;
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::EVP_MD_CTX;
+    fn drop = ffi::EVP_MD_CTX_free;
+
+    pub struct MdCtx;
+    /// A reference to an [`MdCtx`].
+    pub struct MdCtxRef;
+}
+
+impl MdCtx {
+    /// Creates a new context.
+    ///
+    /// This corresponds to [`EVP_MD_CTX_new`].
+    ///
+    /// [`EVP_MD_CTX_new`]: https://www.openssl.org/docs/manmaster/crypto/EVP_MD_CTX_new.html
+    #[inline]
+    pub fn new() -> Result<Self, ErrorStack> {
+        ffi::init();
+
+        unsafe {
+            let ptr = cvt_p(ffi::EVP_MD_CTX_new())?;
+            Ok(MdCtx::from_ptr(ptr))
+        }
+    }
+}
+
+impl MdCtxRef {
+    /// Initializes the context to compute the digest of data.
+    ///
+    /// This corresponds to [`EVP_DigestInit_ex`].
+    ///
+    /// [`EVP_DigestInit_ex`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestInit_ex.html
+    #[inline]
+    pub fn digest_init(&mut self, digest: &MdRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_DigestInit_ex(
+                self.as_ptr(),
+                digest.as_ptr(),
+                ptr::null_mut(),
+            ))?;
+        }
+
+        Ok(())
+    }
+
+    /// Initializes the context to compute the signature of data.
+    ///
+    /// A reference to the context's inner `PkeyCtx` is returned, allowing signature settings to be configured.
+    ///
+    /// This corresponds to [`EVP_DigestSignInit`].
+    ///
+    /// [`EVP_DigestSignInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignInit.html
+    #[inline]
+    pub fn digest_sign_init<'a, T>(
+        &'a mut self,
+        digest: Option<&MdRef>,
+        pkey: &PKeyRef<T>,
+    ) -> Result<&'a mut PkeyCtxRef<T>, ErrorStack>
+    where
+        T: HasPrivate,
+    {
+        unsafe {
+            let mut p = ptr::null_mut();
+            cvt(ffi::EVP_DigestSignInit(
+                self.as_ptr(),
+                &mut p,
+                digest.map_or(ptr::null(), |p| p.as_ptr()),
+                ptr::null_mut(),
+                pkey.as_ptr(),
+            ))?;
+            Ok(PkeyCtxRef::from_ptr_mut(p))
+        }
+    }
+
+    /// Updates the context with more data.
+    ///
+    /// This corresponds to [`EVP_DigestUpdate`].
+    ///
+    /// [`EVP_DigestUpdate`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestUpdate.html
+    #[inline]
+    pub fn digest_update(&mut self, data: &[u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_DigestUpdate(
+                self.as_ptr(),
+                data.as_ptr() as *const _,
+                data.len(),
+            ))?;
+        }
+
+        Ok(())
+    }
+
+    /// Updates the context with more data.
+    ///
+    /// This corresponds to [`EVP_DigestSignUpdate`].
+    ///
+    /// [`EVP_DigestSignUpdate`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignUpdate.html
+    #[inline]
+    pub fn digest_sign_update(&mut self, data: &[u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_DigestSignUpdate(
+                self.as_ptr(),
+                data.as_ptr() as *const _,
+                data.len(),
+            ))?;
+        }
+
+        Ok(())
+    }
+
+    /// Copies the computed digest into the buffer, returning the number of bytes written.
+    ///
+    /// This corresponds to [`EVP_DigestFinal`].
+    ///
+    /// [`EVP_DigestFinal`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestFinal.html
+    #[inline]
+    pub fn digest_final(&mut self, out: &mut [u8]) -> Result<usize, ErrorStack> {
+        let mut len = u32::try_from(out.len()).unwrap_or(u32::MAX);
+
+        unsafe {
+            cvt(ffi::EVP_DigestFinal(
+                self.as_ptr(),
+                out.as_mut_ptr(),
+                &mut len,
+            ))?;
+        }
+
+        Ok(len as usize)
+    }
+
+    /// Copies the computed digest into the buffer.
+    ///
+    /// This corresponds to [`EVP_DigestFinalXOF`].
+    ///
+    /// [`EVP_DigestFinalXOF`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestFinalXOF.html
+    #[inline]
+    pub fn digest_final_xof(&mut self, out: &mut [u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_DigestFinalXOF(
+                self.as_ptr(),
+                out.as_mut_ptr(),
+                out.len(),
+            ))?;
+        }
+
+        Ok(())
+    }
+
+    /// Signs the computed digest.
+    ///
+    /// If `out` is set to `None`, an upper bound on the number of bytes required for the output buffer will be
+    /// returned.
+    ///
+    /// This corresponds to [`EVP_DigestSignFinal`].
+    ///
+    /// [`EVP_DigestSignFinal`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignFinal.html
+    #[inline]
+    pub fn digest_sign_final(&mut self, out: Option<&mut [u8]>) -> Result<usize, ErrorStack> {
+        let mut len = out.as_ref().map_or(0, |b| b.len());
+
+        unsafe {
+            cvt(ffi::EVP_DigestSignFinal(
+                self.as_ptr(),
+                out.map_or(ptr::null_mut(), |b| b.as_mut_ptr()),
+                &mut len,
+            ))?;
+        }
+
+        Ok(len)
+    }
+
+    /// Like [`Self::digest_sign_final`] but appends the signature to a [`Vec`].
+    pub fn digest_sign_final_to_vec(&mut self, out: &mut Vec<u8>) -> Result<usize, ErrorStack> {
+        let base = out.len();
+        let len = self.digest_sign_final(None)?;
+        out.resize(base + len, 0);
+        let len = self.digest_sign_final(Some(&mut out[base..]))?;
+        out.truncate(base + len);
+        Ok(len)
+    }
+
+    /// Computes the signature of the data in `from`.
+    ///
+    /// If `to` is set to `None`, an upper bound on the number of bytes required for the output buffer will be
+    /// returned.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
+    /// This corresponds to [`EVP_DigestSign`].
+    ///
+    /// [`EVP_DigestSign`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSign.html
+    #[cfg(ossl111)]
+    #[inline]
+    pub fn digest_sign(&mut self, from: &[u8], to: Option<&mut [u8]>) -> Result<usize, ErrorStack> {
+        let mut len = to.as_ref().map_or(0, |b| b.len());
+
+        unsafe {
+            cvt(ffi::EVP_DigestSign(
+                self.as_ptr(),
+                to.map_or(ptr::null_mut(), |b| b.as_mut_ptr()),
+                &mut len,
+                from.as_ptr(),
+                from.len(),
+            ))?;
+        }
+
+        Ok(len)
+    }
+
+    /// Like [`Self::digest_sign`] but appends the signature to a [`Vec`].
+    #[cfg(ossl111)]
+    pub fn digest_sign_to_vec(
+        &mut self,
+        from: &[u8],
+        to: &mut Vec<u8>,
+    ) -> Result<usize, ErrorStack> {
+        let base = to.len();
+        let len = self.digest_sign(from, None)?;
+        to.resize(base + len, 0);
+        let len = self.digest_sign(from, Some(&mut to[base..]))?;
+        to.truncate(base + len);
+        Ok(len)
+    }
+}
