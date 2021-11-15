@@ -80,13 +80,22 @@ use crate::md::MdRef;
 use crate::pkey::{HasPrivate, PKeyRef};
 use crate::pkey_ctx::PkeyCtxRef;
 use crate::{cvt, cvt_p};
+use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use std::convert::TryFrom;
 use std::ptr;
 
+cfg_if! {
+    if #[cfg(ossl110)] {
+        use ffi::{EVP_MD_CTX_free, EVP_MD_CTX_new};
+    } else {
+        use ffi::{EVP_MD_CTX_create as EVP_MD_CTX_new, EVP_MD_CTX_destroy as EVP_MD_CTX_free};
+    }
+}
+
 foreign_type_and_impl_send_sync! {
     type CType = ffi::EVP_MD_CTX;
-    fn drop = ffi::EVP_MD_CTX_free;
+    fn drop = EVP_MD_CTX_free;
 
     pub struct MdCtx;
     /// A reference to an [`MdCtx`].
@@ -104,7 +113,7 @@ impl MdCtx {
         ffi::init();
 
         unsafe {
-            let ptr = cvt_p(ffi::EVP_MD_CTX_new())?;
+            let ptr = cvt_p(EVP_MD_CTX_new())?;
             Ok(MdCtx::from_ptr(ptr))
         }
     }
@@ -263,10 +272,13 @@ impl MdCtxRef {
 
     /// Copies the computed digest into the buffer.
     ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
     /// This corresponds to [`EVP_DigestFinalXOF`].
     ///
     /// [`EVP_DigestFinalXOF`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestFinalXOF.html
     #[inline]
+    #[cfg(ossl111)]
     pub fn digest_final_xof(&mut self, out: &mut [u8]) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_DigestFinalXOF(
