@@ -337,7 +337,7 @@ impl MdCtxRef {
         unsafe {
             let r = cvt(ffi::EVP_DigestVerifyFinal(
                 self.as_ptr(),
-                signature.as_ptr(),
+                signature.as_ptr() as *mut _,
                 signature.len(),
             ))?;
             Ok(r == 1)
