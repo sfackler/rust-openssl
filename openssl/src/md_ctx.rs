@@ -35,18 +35,44 @@
 //!
 //! let text = b"Some Crypto Text";
 //!
-//! // Create the signature
+//! // Create the signature.
 //! let mut ctx = MdCtx::new().unwrap();
 //! ctx.digest_sign_init(Some(Md::sha256()), &key).unwrap();
 //! ctx.digest_sign_update(text).unwrap();
 //! let mut signature = vec![];
 //! ctx.digest_sign_final_to_vec(&mut signature).unwrap();
 //!
-//! // Verify the signature
+//! // Verify the signature.
 //! let mut ctx = MdCtx::new().unwrap();
 //! ctx.digest_verify_init(Some(Md::sha256()), &key).unwrap();
 //! ctx.digest_verify_update(text).unwrap();
 //! let valid = ctx.digest_verify_final(&signature).unwrap();
+//! assert!(valid);
+//! ```
+//!
+//! Compute and verify an HMAC-SHA256
+//!
+//! ```
+//! use openssl::md::Md;
+//! use openssl::md_ctx::MdCtx;
+//! use openssl::memcmp;
+//! use openssl::pkey::PKey;
+//!
+//! // Create a key with the HMAC secret.
+//! let key = PKey::hmac(b"my secret").unwrap();
+//!
+//! let text = b"Some Crypto Text";
+//!
+//! // Compute the HMAC.
+//! let mut ctx = MdCtx::new().unwrap();
+//! ctx.digest_sign_init(Some(Md::sha256()), &key).unwrap();
+//! ctx.digest_sign_update(text).unwrap();
+//! let mut hmac = vec![];
+//! ctx.digest_sign_final_to_vec(&mut hmac).unwrap();
+//!
+//! // Verify the HMAC. You can't use MdCtx to do this; instead use a constant time equality check.
+//! # let target = hmac.clone();
+//! let valid = memcmp::eq(&hmac, &target);
 //! assert!(valid);
 //! ```
 use crate::error::ErrorStack;
