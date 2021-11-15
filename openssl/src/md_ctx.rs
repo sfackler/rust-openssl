@@ -21,7 +21,7 @@
 //! );
 //! ```
 //!
-//! Sign data with RSA and SHA256
+//! Sign and verify data with RSA and SHA256
 //!
 //! ```
 //! use openssl::md::Md;
@@ -29,14 +29,25 @@
 //! use openssl::pkey::PKey;
 //! use openssl::rsa::Rsa;
 //!
+//! // Generate a random RSA key.
 //! let key = Rsa::generate(4096).unwrap();
 //! let key = PKey::from_rsa(key).unwrap();
 //!
+//! let text = b"Some Crypto Text";
+//!
+//! // Create the signature
 //! let mut ctx = MdCtx::new().unwrap();
 //! ctx.digest_sign_init(Some(Md::sha256()), &key).unwrap();
-//! ctx.digest_sign_update(b"Some Crypto Text").unwrap();
+//! ctx.digest_sign_update(text).unwrap();
 //! let mut signature = vec![];
 //! ctx.digest_sign_final_to_vec(&mut signature).unwrap();
+//!
+//! // Verify the signature
+//! let mut ctx = MdCtx::new().unwrap();
+//! ctx.digest_verify_init(Some(Md::sha256()), &key).unwrap();
+//! ctx.digest_verify_update(text).unwrap();
+//! let valid = ctx.digest_verify_final(&signature).unwrap();
+//! assert!(valid);
 //! ```
 use crate::error::ErrorStack;
 use crate::md::MdRef;
@@ -121,6 +132,35 @@ impl MdCtxRef {
         }
     }
 
+    /// Initializes the context to verify the signature of data.
+    ///
+    /// A reference to the context's inner `PkeyCtx` is returned, allowing signature settings to be configured.
+    ///
+    /// This corresponds to [`EVP_DigestVerifyInit`].
+    ///
+    /// [`EVP_DigestVerifyInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignInit.html
+    #[inline]
+    pub fn digest_verify_init<'a, T>(
+        &'a mut self,
+        digest: Option<&MdRef>,
+        pkey: &PKeyRef<T>,
+    ) -> Result<&'a mut PkeyCtxRef<T>, ErrorStack>
+    where
+        T: HasPrivate,
+    {
+        unsafe {
+            let mut p = ptr::null_mut();
+            cvt(ffi::EVP_DigestVerifyInit(
+                self.as_ptr(),
+                &mut p,
+                digest.map_or(ptr::null(), |p| p.as_ptr()),
+                ptr::null_mut(),
+                pkey.as_ptr(),
+            ))?;
+            Ok(PkeyCtxRef::from_ptr_mut(p))
+        }
+    }
+
     /// Updates the context with more data.
     ///
     /// This corresponds to [`EVP_DigestUpdate`].
@@ -148,6 +188,24 @@ impl MdCtxRef {
     pub fn digest_sign_update(&mut self, data: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_DigestSignUpdate(
+                self.as_ptr(),
+                data.as_ptr() as *const _,
+                data.len(),
+            ))?;
+        }
+
+        Ok(())
+    }
+
+    /// Updates the context with more data.
+    ///
+    /// This corresponds to [`EVP_DigestVerifyUpdate`].
+    ///
+    /// [`EVP_DigestVerifyUpdate`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestVerifyUpdate.html
+    #[inline]
+    pub fn digest_verify_update(&mut self, data: &[u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_DigestVerifyUpdate(
                 self.as_ptr(),
                 data.as_ptr() as *const _,
                 data.len(),
@@ -228,6 +286,26 @@ impl MdCtxRef {
         Ok(len)
     }
 
+    /// Verifies the provided signature.
+    ///
+    /// Returns `Ok(true)` if the signature is valid, `Ok(false)` if the signature is invalid, and `Err` if an error
+    /// occurred.
+    ///
+    /// This corresponds to [`EVP_DigestVerifyFinal`].
+    ///
+    /// [`EVP_DigestVerifyFinal`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestVerifyFinal.html
+    #[inline]
+    pub fn digest_verify_final(&mut self, signature: &[u8]) -> Result<bool, ErrorStack> {
+        unsafe {
+            let r = cvt(ffi::EVP_DigestVerifyFinal(
+                self.as_ptr(),
+                signature.as_ptr(),
+                signature.len(),
+            ))?;
+            Ok(r == 1)
+        }
+    }
+
     /// Computes the signature of the data in `from`.
     ///
     /// If `to` is set to `None`, an upper bound on the number of bytes required for the output buffer will be
@@ -269,5 +347,30 @@ impl MdCtxRef {
         let len = self.digest_sign(from, Some(&mut to[base..]))?;
         to.truncate(base + len);
         Ok(len)
+    }
+
+    /// Verifies the signature of the data in `data`.
+    ///
+    /// Returns `Ok(true)` if the signature is valid, `Ok(false)` if the signature is invalid, and `Err` if an error
+    /// occurred.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    ///
+    /// This corresponds to [`EVP_DigestVerify`].
+    ///
+    /// [`EVP_DigestVerify`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestVerify.html
+    #[cfg(ossl111)]
+    #[inline]
+    pub fn digest_verify(&mut self, data: &[u8], signature: &[u8]) -> Result<bool, ErrorStack> {
+        unsafe {
+            let r = cvt(ffi::EVP_DigestVerify(
+                self.as_ptr(),
+                signature.as_ptr(),
+                signature.len(),
+                data.as_ptr(),
+                data.len(),
+            ))?;
+            Ok(r == 1)
+        }
     }
 }
