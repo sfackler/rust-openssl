@@ -2,9 +2,26 @@
 
 ## [Unreleased]
 
+## [v0.9.71]
+
+### Fixed
+
+* Fixed linkage to static OpenSSL 3.0.0 libraries on some 32 bit Android targets.
+
 ### Added
 
-* Added support for LibreSSL 3.4.1
+* Added support for LibreSSL 3.4.1.
+* Added `SSL_get_extms_support` and `SSL_CTRL_GET_EXTMS_SUPPORT`.
+* Added `OBJ_create`.
+* Added `EVP_CIPHER_CTX_get0_cipher`, `EVP_CIPHER_CTX_get_block_size`, `EVP_CIPHER_CTX_get_key_length`,
+    `EVP_CIPHER_CTX_get_iv_length`, and `EVP_CIPHER_CTX_get_tag_length`.
+* Added `EVP_CIPHER_free`.
+* Added `EVP_CIPHER_CTX_rand_key`.
+* Added `OSSL_LIB_CTX_new` and `OSSL_LIB_CTX_free`.
+* Added `EVP_CIPHER_fetch`.
+* Added `EVP_MD_fetch` and `EVP_MD_free`.
+* Added `OPENSSL_malloc` and `OPENSSL_free`.
+* Added `EVP_DigestSignUpdate` and `EVP_DigestVerifyUpdate`.
 
 ## [v0.9.70] - 2021-10-31
 
@@ -257,7 +274,8 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.70...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.71...master
+[v0.9.71]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.70...openssl-sys-v0.9.71
 [v0.9.70]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.69...openssl-sys-v0.9.70
 [v0.9.69]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.68...openssl-sys-v0.9.69
 [v0.9.68]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.67...openssl-sys-v0.9.68
