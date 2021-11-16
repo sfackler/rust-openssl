@@ -124,6 +124,19 @@ impl CmsContentInfoRef {
         }
     }
 
+    /// Given that we're dealing with the `SignedData`, returns the signers of the message. It's
+    /// advisory to call this function after successfull `verify()`.
+    ///
+    /// OpenSSL documentation at [`CMS_get0_signers`]
+    ///
+    /// [`CMS_get0_signers`]: https://www.openssl.org/docs/man1.0.2/man3/CMS_get0_signers.html
+    pub fn get_signers(&self) -> Result<&StackRef<X509>, ErrorStack> {
+        unsafe {
+            let signers = cvt_p(ffi::CMS_get0_signers(self.as_ptr()))?;
+            Ok(StackRef::from_ptr(signers))
+        }
+    }
+
     to_der! {
         /// Serializes this CmsContentInfo using DER.
         ///
@@ -329,5 +342,26 @@ mod test {
             assert_eq!(input, decrypt_with_cert_check);
             assert_eq!(input, decrypt_without_cert_check);
         }
+    }
+
+    #[test]
+    fn cms_extract_signers() {
+        // load cert with private key
+        let priv_cert_bytes = include_bytes!("../test/cms.p12");
+        let priv_cert = Pkcs12::from_der(priv_cert_bytes).expect("failed to load priv cert");
+        let priv_cert = priv_cert.parse("mypass").expect("failed to parse priv cert");
+
+        // sign cms message using private key cert
+        let input = String::from("My Message");
+        let sign = CmsContentInfo::sign(Some(&priv_cert.cert), Some(&priv_cert.pkey), None, Some(&input.as_bytes()), CMSOptions::empty())
+            .expect("failed create signed cms");
+
+        let signers = sign.get_signers().expect("failed to get the signers of the SignedData");
+        assert_eq!(signers.len(), 1);
+
+        let signer = signers.get(0).unwrap();
+        let signer_in_der = signer.to_der().expect("failed to write a certificate as DER");
+        let expected_in_der = priv_cert.cert.to_der().expect("failed to write a certificate as DER");
+        assert_eq!(signer_in_der, expected_in_der);
     }
 }
