@@ -12,6 +12,7 @@ use crate::stack::Stack;
 use crate::util::ForeignTypeExt;
 use crate::x509::{X509Ref, X509};
 use crate::{cvt, cvt_p};
+use openssl_macros::corresponds;
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::PKCS12;
@@ -24,15 +25,13 @@ foreign_type_and_impl_send_sync! {
 impl Pkcs12Ref {
     to_der! {
         /// Serializes the `Pkcs12` to its standard DER encoding.
-        ///
-        /// This corresponds to [`i2d_PKCS12`].
-        ///
-        /// [`i2d_PKCS12`]: https://www.openssl.org/docs/manmaster/man3/i2d_PKCS12.html
+        #[corresponds(i2d_PKCS12)]
         to_der,
         ffi::i2d_PKCS12
     }
 
     /// Extracts the contents of the `Pkcs12`.
+    #[corresponds(PKCS12_parse)]
     pub fn parse(&self, pass: &str) -> Result<ParsedPkcs12, ErrorStack> {
         unsafe {
             let pass = CString::new(pass.as_bytes()).unwrap();
@@ -62,10 +61,7 @@ impl Pkcs12Ref {
 impl Pkcs12 {
     from_der! {
         /// Deserializes a DER-encoded PKCS#12 archive.
-        ///
-        /// This corresponds to [`d2i_PKCS12`].
-        ///
-        /// [`d2i_PKCS12`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_PKCS12.html
+        #[corresponds(d2i_PKCS12)]
         from_der,
         Pkcs12,
         ffi::d2i_PKCS12
@@ -149,6 +145,7 @@ impl Pkcs12Builder {
     /// * `friendly_name` - user defined name for the certificate
     /// * `pkey` - key to store
     /// * `cert` - certificate to store
+    #[corresponds(PKCS12_create)]
     pub fn build<T>(
         self,
         password: &str,

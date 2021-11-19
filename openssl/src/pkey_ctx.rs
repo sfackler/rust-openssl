@@ -41,6 +41,7 @@ use crate::rsa::Padding;
 use crate::{cvt, cvt_p};
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
+use openssl_macros::corresponds;
 use std::convert::TryFrom;
 use std::ptr;
 
@@ -56,10 +57,7 @@ generic_foreign_type_and_impl_send_sync! {
 
 impl<T> PkeyCtx<T> {
     /// Creates a new pkey context using the provided key.
-    ///
-    /// This corresponds to [`EVP_PKEY_CTX_new`].
-    ///
-    /// [`EVP_PKEY_CTX_new`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_new.html
+    #[corresponds(EVP_PKEY_CTX_new)]
     #[inline]
     pub fn new(pkey: &PKeyRef<T>) -> Result<Self, ErrorStack> {
         unsafe {
@@ -71,10 +69,7 @@ impl<T> PkeyCtx<T> {
 
 impl PkeyCtx<()> {
     /// Creates a new pkey context for the specified algorithm ID.
-    ///
-    /// This corresponds to [`EVP_PKEY_new_id`].
-    ///
-    /// [`EVP_PKEY_new_id`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_new_id.html
+    #[corresponds(EVP_PKEY_new_id)]
     #[inline]
     pub fn new_id(id: Id) -> Result<Self, ErrorStack> {
         unsafe {
@@ -89,10 +84,7 @@ where
     T: HasPublic,
 {
     /// Prepares the context for encryption using the public key.
-    ///
-    /// This corresponds to [`EVP_PKEY_encrypt_init`].
-    ///
-    /// [`EVP_PKEY_encrypt_init`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_encrypt_init.html
+    #[corresponds(EVP_PKEY_encrypt_init)]
     #[inline]
     pub fn encrypt_init(&mut self) -> Result<(), ErrorStack> {
         unsafe {
@@ -106,10 +98,7 @@ where
     ///
     /// If `to` is set to `None`, an upper bound on the number of bytes required for the output buffer will be
     /// returned.
-    ///
-    /// This corresponds to [`EVP_PKEY_encrypt`].
-    ///
-    /// [`EVP_PKEY_encrypt`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_encrypt.html
+    #[corresponds(EVP_PKEY_encrypt)]
     #[inline]
     pub fn encrypt(&mut self, from: &[u8], to: Option<&mut [u8]>) -> Result<usize, ErrorStack> {
         let mut written = to.as_ref().map_or(0, |b| b.len());
@@ -142,10 +131,7 @@ where
     T: HasPrivate,
 {
     /// Prepares the context for encryption using the private key.
-    ///
-    /// This corresponds to [`EVP_PKEY_decrypt_init`].
-    ///
-    /// [`EVP_PKEY_decrypt_init`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_decrypt_init.html
+    #[corresponds(EVP_PKEY_decrypt_init)]
     #[inline]
     pub fn decrypt_init(&mut self) -> Result<(), ErrorStack> {
         unsafe {
@@ -156,10 +142,7 @@ where
     }
 
     /// Prepares the context for shared secret derivation.
-    ///
-    /// This corresponds to [`EVP_PKEY_derive_init`].
-    ///
-    /// [`EVP_PKEY_derive_init`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_derive_init.html
+    #[corresponds(EVP_PKEY_derive_init)]
     #[inline]
     pub fn derive_init(&mut self) -> Result<(), ErrorStack> {
         unsafe {
@@ -170,10 +153,7 @@ where
     }
 
     /// Sets the peer key used for secret derivation.
-    ///
-    /// This corresponds to [`EVP_PKEY_derive_set_peer`].
-    ///
-    /// [`EVP_PKEY_derive_set_peer`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_derive_set_peer.html
+    #[corresponds(EVP_PKEY_derive_set_peer)]
     pub fn derive_set_peer<U>(&mut self, key: &PKeyRef<U>) -> Result<(), ErrorStack>
     where
         U: HasPublic,
@@ -189,10 +169,7 @@ where
     ///
     /// If `to` is set to `None`, an upper bound on the number of bytes required for the output buffer will be
     /// returned.
-    ///
-    /// This corresponds to [`EVP_PKEY_decrypt`].
-    ///
-    /// [`EVP_PKEY_decrypt`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_encrypt.html
+    #[corresponds(EVP_PKEY_decrypt)]
     #[inline]
     pub fn decrypt(&mut self, from: &[u8], to: Option<&mut [u8]>) -> Result<usize, ErrorStack> {
         let mut written = to.as_ref().map_or(0, |b| b.len());
@@ -222,10 +199,7 @@ where
     /// Derives a shared secrete between two keys.
     ///
     /// If `buf` is set to `None`, an upper bound on the number of bytes required for the buffer will be returned.
-    ///
-    /// This corresponds to [`EVP_PKEY_derive`].
-    ///
-    /// [`EVP_PKEY_derive`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_derive_init.html
+    #[corresponds(EVP_PKEY_derive)]
     pub fn derive(&mut self, buf: Option<&mut [u8]>) -> Result<usize, ErrorStack> {
         let mut len = buf.as_ref().map_or(0, |b| b.len());
         unsafe {
@@ -252,10 +226,7 @@ where
 
 impl<T> PkeyCtxRef<T> {
     /// Prepares the context for key generation.
-    ///
-    /// This corresponds to [`EVP_PKEY_keygen_init`].
-    ///
-    /// [`EVP_PKEY_keygen_init`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_keygen_init.html
+    #[corresponds(EVP_PKEY_keygen_init)]
     pub fn keygen_init(&mut self) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_keygen_init(self.as_ptr()))?;
@@ -267,10 +238,7 @@ impl<T> PkeyCtxRef<T> {
     /// Returns the RSA padding mode in use.
     ///
     /// This is only useful for RSA keys.
-    ///
-    /// This corresponds to [`EVP_PKEY_CTX_get_rsa_padding`].
-    ///
-    /// [`EVP_PKEY_CTX_get_rsa_padding`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_get_rsa_padding.html
+    #[corresponds(EVP_PKEY_CTX_get_rsa_padding)]
     #[inline]
     pub fn rsa_padding(&self) -> Result<Padding, ErrorStack> {
         let mut pad = 0;
@@ -284,10 +252,7 @@ impl<T> PkeyCtxRef<T> {
     /// Sets the RSA padding mode.
     ///
     /// This is only useful for RSA keys.
-    ///
-    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_padding`].
-    ///
-    /// [`EVP_PKEY_CTX_set_rsa_padding`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_CTX_set_rsa_padding.html
+    #[corresponds(EVP_PKEY_CTX_set_rsa_padding)]
     #[inline]
     pub fn set_rsa_padding(&mut self, padding: Padding) -> Result<(), ErrorStack> {
         unsafe {
@@ -303,10 +268,7 @@ impl<T> PkeyCtxRef<T> {
     /// Sets the RSA MGF1 algorithm.
     ///
     /// This is only useful for RSA keys.
-    ///
-    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_mgf1_md`].
-    ///
-    /// [`EVP_PKEY_CTX_set_rsa_mgf1_md`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_set_rsa_mgf1_md.html
+    #[corresponds(EVP_PKEY_CTX_set_rsa_mgf1_md)]
     #[inline]
     pub fn set_rsa_mgf1_md(&mut self, md: &MdRef) -> Result<(), ErrorStack> {
         unsafe {
@@ -322,10 +284,7 @@ impl<T> PkeyCtxRef<T> {
     /// Sets the RSA OAEP algorithm.
     ///
     /// This is only useful for RSA keys.
-    ///
-    /// This corresponds to [`EVP_PKEY_CTX_set_rsa_oaep_md`].
-    ///
-    /// [`EVP_PKEY_CTX_set_rsa_oaep_md`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_set_rsa_oaep_md.html
+    #[corresponds(EVP_PKEY_CTX_set_rsa_oaep_md)]
     #[cfg(any(ossl102, libressl310))]
     #[inline]
     pub fn set_rsa_oaep_md(&mut self, md: &MdRef) -> Result<(), ErrorStack> {
@@ -342,10 +301,7 @@ impl<T> PkeyCtxRef<T> {
     /// Sets the RSA OAEP label.
     ///
     /// This is only useful for RSA keys.
-    ///
-    /// This corresponds to [`EVP_PKEY_CTX_set0_rsa_oaep_label`].
-    ///
-    /// [`EVP_PKEY_CTX_set0_rsa_oaep_label`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_set0_rsa_oaep_label.html
+    #[corresponds(EVP_PKEY_CTX_set0_rsa_oaep_label)]
     #[cfg(any(ossl102, libressl310))]
     pub fn set_rsa_oaep_label(&mut self, label: &[u8]) -> Result<(), ErrorStack> {
         let len = c_int::try_from(label.len()).unwrap();
@@ -365,10 +321,7 @@ impl<T> PkeyCtxRef<T> {
     }
 
     /// Sets the cipher used during key generation.
-    ///
-    /// This corresponds to [`EVP_PKEY_CTX_ctrl`] with `EVP_PKEY_CTRL_CIPHER`.
-    ///
-    /// [`EVP_PKEY_CTX_ctrl`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_ctrl.html
+    #[corresponds(EVP_PKEY_CTX_ctrl)]
     pub fn set_keygen_cipher(&mut self, cipher: &CipherRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_CTX_ctrl(
@@ -385,10 +338,7 @@ impl<T> PkeyCtxRef<T> {
     }
 
     /// Sets the key MAC key used during key generation.
-    ///
-    /// This corresponds to [`EVP_PKEY_CTX_ctrl`] with `EVP_PKEY_CTRL_SET_MAC_KEY`.
-    ///
-    /// [`EVP_PKEY_CTX_ctrl`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_ctrl.html
+    #[corresponds(EVP_PKEY_CTX_ctrl)]
     pub fn set_keygen_mac_key(&mut self, key: &[u8]) -> Result<(), ErrorStack> {
         let len = c_int::try_from(key.len()).unwrap();
 
@@ -407,10 +357,7 @@ impl<T> PkeyCtxRef<T> {
     }
 
     /// Generates a new public/private keypair.
-    ///
-    /// This corresponds to [`EVP_PKEY_keygen`].
-    ///
-    /// [`EVP_PKEY_keygen`]: https://www.openssl.org/docs/manmaster/man3/EVP_PKEY_CTX_ctrl.html
+    #[corresponds(EVP_PKEY_keygen)]
     pub fn keygen(&mut self) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
             let mut key = ptr::null_mut();
