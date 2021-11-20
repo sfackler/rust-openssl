@@ -2,11 +2,13 @@
 
 use crate::cvt_p;
 use crate::error::ErrorStack;
+use openssl_macros::corresponds;
 
 pub struct ConfMethod(*mut ffi::CONF_METHOD);
 
 impl ConfMethod {
     /// Retrieve handle to the default OpenSSL configuration file processing function.
+    #[corresponds(NCONF_default)]
     pub fn default() -> ConfMethod {
         unsafe {
             ffi::init();
@@ -49,6 +51,7 @@ impl Conf {
     ///
     /// let conf = Conf::new(ConfMethod::default());
     /// ```
+    #[corresponds(NCONF_new)]
     pub fn new(method: ConfMethod) -> Result<Conf, ErrorStack> {
         unsafe { cvt_p(ffi::NCONF_new(method.as_ptr())).map(Conf) }
     }

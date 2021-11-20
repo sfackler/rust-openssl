@@ -17,6 +17,7 @@ use crate::error::ErrorStack;
 use crate::pkey::{HasParams, HasPrivate, HasPublic, Private, Public};
 use crate::util::ForeignTypeRefExt;
 use crate::{cvt, cvt_p};
+use openssl_macros::corresponds;
 
 generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::DSA;
@@ -85,25 +86,20 @@ where
         /// Serialies the public key into a PEM-encoded SubjectPublicKeyInfo structure.
         ///
         /// The output will have a header of `-----BEGIN PUBLIC KEY-----`.
-        ///
-        /// This corresponds to [`PEM_write_bio_DSA_PUBKEY`].
-        ///
-        /// [`PEM_write_bio_DSA_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_DSA_PUBKEY.html
+        #[corresponds(PEM_write_bio_DSA_PUBKEY)]
         public_key_to_pem,
         ffi::PEM_write_bio_DSA_PUBKEY
     }
 
     to_der! {
         /// Serializes the public key into a DER-encoded SubjectPublicKeyInfo structure.
-        ///
-        /// This corresponds to [`i2d_DSA_PUBKEY`].
-        ///
-        /// [`i2d_DSA_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_DSA_PUBKEY.html
+        #[corresponds(i2d_DSA_PUBKEY)]
         public_key_to_der,
         ffi::i2d_DSA_PUBKEY
     }
 
     /// Returns a reference to the public key component of `self`.
+    #[corresponds(DSA_get0_key)]
     pub fn pub_key(&self) -> &BigNumRef {
         unsafe {
             let mut pub_key = ptr::null();
@@ -121,23 +117,18 @@ where
         /// Serializes the private key to a PEM-encoded DSAPrivateKey structure.
         ///
         /// The output will have a header of `-----BEGIN DSA PRIVATE KEY-----`.
-        ///
-        /// This corresponds to [`PEM_write_bio_DSAPrivateKey`].
-        ///
-        /// [`PEM_write_bio_DSAPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_DSAPrivateKey.html
+        #[corresponds(PEM_write_bio_DSAPrivateKey)]
         private_key_to_pem,
         /// Serializes the private key to a PEM-encoded encrypted DSAPrivateKey structure.
         ///
         /// The output will have a header of `-----BEGIN DSA PRIVATE KEY-----`.
-        ///
-        /// This corresponds to [`PEM_write_bio_DSAPrivateKey`].
-        ///
-        /// [`PEM_write_bio_DSAPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_DSAPrivateKey.html
+        #[corresponds(PEM_write_bio_DSAPrivateKey)]
         private_key_to_pem_passphrase,
         ffi::PEM_write_bio_DSAPrivateKey
     }
 
     /// Returns a reference to the private key component of `self`.
+    #[corresponds(DSA_get0_key)]
     pub fn priv_key(&self) -> &BigNumRef {
         unsafe {
             let mut priv_key = ptr::null();
@@ -152,15 +143,13 @@ where
     T: HasParams,
 {
     /// Returns the maximum size of the signature output by `self` in bytes.
-    ///
-    /// OpenSSL documentation at [`DSA_size`]
-    ///
-    /// [`DSA_size`]: https://www.openssl.org/docs/man1.1.0/crypto/DSA_size.html
+    #[corresponds(DSA_size)]
     pub fn size(&self) -> u32 {
         unsafe { ffi::DSA_size(self.as_ptr()) as u32 }
     }
 
     /// Returns the DSA prime parameter of `self`.
+    #[corresponds(DSA_get0_pqg)]
     pub fn p(&self) -> &BigNumRef {
         unsafe {
             let mut p = ptr::null();
@@ -170,6 +159,7 @@ where
     }
 
     /// Returns the DSA sub-prime parameter of `self`.
+    #[corresponds(DSA_get0_pqg)]
     pub fn q(&self) -> &BigNumRef {
         unsafe {
             let mut q = ptr::null();
@@ -179,6 +169,7 @@ where
     }
 
     /// Returns the DSA base parameter of `self`.
+    #[corresponds(DSA_get0_pqg)]
     pub fn g(&self) -> &BigNumRef {
         unsafe {
             let mut g = ptr::null();
@@ -245,10 +236,7 @@ impl Dsa<Public> {
         /// Decodes a PEM-encoded SubjectPublicKeyInfo structure containing a DSA key.
         ///
         /// The input should have a header of `-----BEGIN PUBLIC KEY-----`.
-        ///
-        /// This corresponds to [`PEM_read_bio_DSA_PUBKEY`].
-        ///
-        /// [`PEM_read_bio_DSA_PUBKEY`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_read_bio_DSA_PUBKEY.html
+        #[corresponds(PEM_read_bio_DSA_PUBKEY)]
         public_key_from_pem,
         Dsa<Public>,
         ffi::PEM_read_bio_DSA_PUBKEY
@@ -256,10 +244,7 @@ impl Dsa<Public> {
 
     from_der! {
         /// Decodes a DER-encoded SubjectPublicKeyInfo structure containing a DSA key.
-        ///
-        /// This corresponds to [`d2i_DSA_PUBKEY`].
-        ///
-        /// [`d2i_DSA_PUBKEY`]: https://www.openssl.org/docs/man1.0.2/crypto/d2i_DSA_PUBKEY.html
+        #[corresponds(d2i_DSA_PUBKEY)]
         public_key_from_der,
         Dsa<Public>,
         ffi::d2i_DSA_PUBKEY

@@ -9,6 +9,7 @@ use crate::lib_ctx::LibCtxRef;
 use crate::nid::Nid;
 use cfg_if::cfg_if;
 use foreign_types::{ForeignTypeRef, Opaque};
+use openssl_macros::corresponds;
 #[cfg(ossl300)]
 use std::ffi::CString;
 #[cfg(ossl300)]
@@ -100,10 +101,7 @@ unsafe impl Send for Cipher {}
 
 impl Cipher {
     /// Looks up the cipher for a certain nid.
-    ///
-    /// This corresponds to [`EVP_get_cipherbynid`]
-    ///
-    /// [`EVP_get_cipherbynid`]: https://www.openssl.org/docs/man1.0.2/crypto/EVP_get_cipherbyname.html
+    #[corresponds(EVP_get_cipherbynid)]
     pub fn from_nid(nid: Nid) -> Option<&'static CipherRef> {
         unsafe {
             let ptr = ffi::EVP_get_cipherbyname(ffi::OBJ_nid2sn(nid.as_raw()));
@@ -117,11 +115,8 @@ impl Cipher {
 
     /// Fetches a cipher object corresponding to the specified algorithm name and properties.
     ///
-    /// This corresponds to [`EVP_CIPHER_fetch`].
-    ///
     /// Requires OpenSSL 3.0.0 or newer.
-    ///
-    /// [`EVP_CIPHER_fetch`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_fetch.html
+    #[corresponds(EVP_CIPHER_fetch)]
     #[cfg(ossl300)]
     pub fn fetch(
         ctx: Option<&LibCtxRef>,
@@ -359,16 +354,14 @@ unsafe impl Send for CipherRef {}
 
 impl CipherRef {
     /// Returns the cipher's Nid.
-    ///
-    /// This corresponds to [`EVP_CIPHER_nid`]
-    ///
-    /// [`EVP_CIPHER_nid`]: https://www.openssl.org/docs/man1.0.2/crypto/EVP_CIPHER_nid.html
+    #[corresponds(EVP_CIPHER_nid)]
     pub fn nid(&self) -> Nid {
         let nid = unsafe { ffi::EVP_CIPHER_nid(self.as_ptr()) };
         Nid::from_raw(nid)
     }
 
     /// Returns the length of keys used with this cipher.
+    #[corresponds(EVP_CIPHER_key_length)]
     pub fn key_length(&self) -> usize {
         unsafe { EVP_CIPHER_key_length(self.as_ptr()) as usize }
     }
@@ -378,6 +371,7 @@ impl CipherRef {
     /// # Note
     ///
     /// Ciphers that do not use an IV have an IV length of 0.
+    #[corresponds(EVP_CIPHER_iv_length)]
     pub fn iv_length(&self) -> usize {
         unsafe { EVP_CIPHER_iv_length(self.as_ptr()) as usize }
     }
@@ -387,6 +381,7 @@ impl CipherRef {
     /// # Note
     ///
     /// Stream ciphers have a block size of 1.
+    #[corresponds(EVP_CIPHER_block_size)]
     pub fn block_size(&self) -> usize {
         unsafe { EVP_CIPHER_block_size(self.as_ptr()) as usize }
     }
