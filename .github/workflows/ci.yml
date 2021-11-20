@@ -80,7 +80,6 @@ jobs:
     runs-on: windows-latest
     env:
       VCPKGRS_DYNAMIC: 1
-      CARGO_LOG: cargo::core::compiler::fingerprint=trace
     steps:
       - uses: actions/checkout@v2
       - uses: sfackler/actions/rustup@master
