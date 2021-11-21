@@ -28,7 +28,7 @@
 //! use openssl::cipher::Cipher;
 //!
 //! let mut ctx = PkeyCtx::new_id(Id::CMAC).unwrap();
-//! ctx.keygen_init();
+//! ctx.keygen_init().unwrap();
 //! ctx.set_keygen_cipher(Cipher::aes_128_cbc()).unwrap();
 //! ctx.set_keygen_mac_key(b"0123456789abcdef").unwrap();
 //! let cmac_key = ctx.keygen().unwrap();
@@ -44,6 +44,17 @@ use libc::c_int;
 use openssl_macros::corresponds;
 use std::convert::TryFrom;
 use std::ptr;
+
+/// HKDF modes of operation.
+#[cfg(ossl111)]
+pub struct HkdfMode(c_int);
+
+#[cfg(ossl111)]
+impl HkdfMode {
+    pub const EXTRACT_THEN_EXPAND: Self = HkdfMode(ffi::EVP_PKEY_HKDEF_MODE_EXTRACT_AND_EXPAND);
+    pub const EXTRACT_ONLY: Self = HkdfMode(ffi::EVP_PKEY_HKDEF_MODE_EXTRACT_ONLY);
+    pub const EXPAND_ONLY: Self = HkdfMode(ffi::EVP_PKEY_HKDEF_MODE_EXPAND_ONLY);
+}
 
 generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::EVP_PKEY_CTX;
@@ -141,17 +152,6 @@ where
         Ok(())
     }
 
-    /// Prepares the context for shared secret derivation.
-    #[corresponds(EVP_PKEY_derive_init)]
-    #[inline]
-    pub fn derive_init(&mut self) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::EVP_PKEY_derive_init(self.as_ptr()))?;
-        }
-
-        Ok(())
-    }
-
     /// Sets the peer key used for secret derivation.
     #[corresponds(EVP_PKEY_derive_set_peer)]
     pub fn derive_set_peer<U>(&mut self, key: &PKeyRef<U>) -> Result<(), ErrorStack>
@@ -195,36 +195,20 @@ where
         out.truncate(base + len);
         Ok(len)
     }
-
-    /// Derives a shared secrete between two keys.
-    ///
-    /// If `buf` is set to `None`, an upper bound on the number of bytes required for the buffer will be returned.
-    #[corresponds(EVP_PKEY_derive)]
-    pub fn derive(&mut self, buf: Option<&mut [u8]>) -> Result<usize, ErrorStack> {
-        let mut len = buf.as_ref().map_or(0, |b| b.len());
-        unsafe {
-            cvt(ffi::EVP_PKEY_derive(
-                self.as_ptr(),
-                buf.map_or(ptr::null_mut(), |b| b.as_mut_ptr()),
-                &mut len,
-            ))?;
-        }
-
-        Ok(len)
-    }
-
-    /// Like [`Self::derive`] but appends the secret to a [`Vec`].
-    pub fn derive_to_vec(&mut self, buf: &mut Vec<u8>) -> Result<usize, ErrorStack> {
-        let base = buf.len();
-        let len = self.derive(None)?;
-        buf.resize(base + len, 0);
-        let len = self.derive(Some(&mut buf[base..]))?;
-        buf.truncate(base + len);
-        Ok(len)
-    }
 }
 
 impl<T> PkeyCtxRef<T> {
+    /// Prepares the context for shared secret derivation.
+    #[corresponds(EVP_PKEY_derive_init)]
+    #[inline]
+    pub fn derive_init(&mut self) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_derive_init(self.as_ptr()))?;
+        }
+
+        Ok(())
+    }
+
     /// Prepares the context for key generation.
     #[corresponds(EVP_PKEY_keygen_init)]
     pub fn keygen_init(&mut self) -> Result<(), ErrorStack> {
@@ -322,6 +306,7 @@ impl<T> PkeyCtxRef<T> {
 
     /// Sets the cipher used during key generation.
     #[corresponds(EVP_PKEY_CTX_ctrl)]
+    #[inline]
     pub fn set_keygen_cipher(&mut self, cipher: &CipherRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_CTX_ctrl(
@@ -339,6 +324,7 @@ impl<T> PkeyCtxRef<T> {
 
     /// Sets the key MAC key used during key generation.
     #[corresponds(EVP_PKEY_CTX_ctrl)]
+    #[inline]
     pub fn set_keygen_mac_key(&mut self, key: &[u8]) -> Result<(), ErrorStack> {
         let len = c_int::try_from(key.len()).unwrap();
 
@@ -356,8 +342,129 @@ impl<T> PkeyCtxRef<T> {
         Ok(())
     }
 
+    /// Sets the digest used for HKDF derivation.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(EVP_PKEY_CTX_set_hkdf_md)]
+    #[cfg(ossl110)]
+    #[inline]
+    pub fn set_hkdf_md(&mut self, digest: &MdRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_hkdf_md(
+                self.as_ptr(),
+                digest.as_ptr(),
+            ))?;
+        }
+
+        Ok(())
+    }
+
+    /// Sets the HKDF mode of operation.
+    ///
+    /// Defaults to [`HkdfMode::EXTRACT_THEN_EXPAND`].
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    #[corresponds(EVP_PKEY_CTX_set_hkdf_mode)]
+    #[cfg(ossl111)]
+    #[inline]
+    pub fn set_hkdf_mode(&mut self, mode: HkdfMode) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set_hkdf_mode(self.as_ptr(), mode.0))?;
+        }
+
+        Ok(())
+    }
+
+    /// Sets the input keying material for HKDF generation.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(EVP_PKEY_CTX_set1_hkdf_key)]
+    #[cfg(ossl110)]
+    #[inline]
+    pub fn set_hkdf_key(&mut self, key: &[u8]) -> Result<(), ErrorStack> {
+        let len = c_int::try_from(key.len()).unwrap();
+
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set1_hkdf_key(
+                self.as_ptr(),
+                key.as_ptr(),
+                len,
+            ))?;
+        }
+
+        Ok(())
+    }
+
+    /// Sets the salt value for HKDF generation.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(EVP_PKEY_CTX_set1_hkdf_salt)]
+    #[cfg(ossl110)]
+    #[inline]
+    pub fn set_hkdf_salt(&mut self, salt: &[u8]) -> Result<(), ErrorStack> {
+        let len = c_int::try_from(salt.len()).unwrap();
+
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_set1_hkdf_salt(
+                self.as_ptr(),
+                salt.as_ptr(),
+                len,
+            ))?;
+        }
+
+        Ok(())
+    }
+
+    /// Appends info bytes for HKDF generation.
+    ///
+    /// Requires OpenSSL 1.1.0 or newer.
+    #[corresponds(EVP_PKEY_CTX_add1_hkdf_info)]
+    #[cfg(ossl110)]
+    #[inline]
+    pub fn add_hkdf_info(&mut self, info: &[u8]) -> Result<(), ErrorStack> {
+        let len = c_int::try_from(info.len()).unwrap();
+
+        unsafe {
+            cvt(ffi::EVP_PKEY_CTX_add1_hkdf_info(
+                self.as_ptr(),
+                info.as_ptr(),
+                len,
+            ))?;
+        }
+
+        Ok(())
+    }
+
+    /// Derives a shared secret between two keys.
+    ///
+    /// If `buf` is set to `None`, an upper bound on the number of bytes required for the buffer will be returned.
+    #[corresponds(EVP_PKEY_derive)]
+    pub fn derive(&mut self, buf: Option<&mut [u8]>) -> Result<usize, ErrorStack> {
+        let mut len = buf.as_ref().map_or(0, |b| b.len());
+        unsafe {
+            cvt(ffi::EVP_PKEY_derive(
+                self.as_ptr(),
+                buf.map_or(ptr::null_mut(), |b| b.as_mut_ptr()),
+                &mut len,
+            ))?;
+        }
+
+        Ok(len)
+    }
+
+    /// Like [`Self::derive`] but appends the secret to a [`Vec`].
+    pub fn derive_to_vec(&mut self, buf: &mut Vec<u8>) -> Result<usize, ErrorStack> {
+        let base = buf.len();
+        let len = self.derive(None)?;
+        buf.resize(base + len, 0);
+        let len = self.derive(Some(&mut buf[base..]))?;
+        buf.truncate(base + len);
+        Ok(len)
+    }
+
     /// Generates a new public/private keypair.
     #[corresponds(EVP_PKEY_keygen)]
+    #[inline]
     pub fn keygen(&mut self) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
             let mut key = ptr::null_mut();
@@ -453,5 +560,72 @@ mod test {
         ctx.set_keygen_mac_key(&hex::decode("9294727a3638bb1c13f48ef8158bfc9d").unwrap())
             .unwrap();
         ctx.keygen().unwrap();
+    }
+
+    #[test]
+    #[cfg(ossl110)]
+    fn hkdf() {
+        let mut ctx = PkeyCtx::new_id(Id::HKDF).unwrap();
+        ctx.derive_init().unwrap();
+        ctx.set_hkdf_md(Md::sha256()).unwrap();
+        ctx.set_hkdf_key(&hex::decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap())
+            .unwrap();
+        ctx.set_hkdf_salt(&hex::decode("000102030405060708090a0b0c").unwrap())
+            .unwrap();
+        ctx.add_hkdf_info(&hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap())
+            .unwrap();
+        let mut out = [0; 42];
+        ctx.derive(Some(&mut out)).unwrap();
+
+        assert_eq!(
+            &out[..],
+            hex::decode("3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865")
+                .unwrap()
+        );
+    }
+
+    #[test]
+    #[cfg(ossl111)]
+    fn hkdf_expand() {
+        let mut ctx = PkeyCtx::new_id(Id::HKDF).unwrap();
+        ctx.derive_init().unwrap();
+        ctx.set_hkdf_mode(HkdfMode::EXPAND_ONLY).unwrap();
+        ctx.set_hkdf_md(Md::sha256()).unwrap();
+        ctx.set_hkdf_key(
+            &hex::decode("077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5")
+                .unwrap(),
+        )
+        .unwrap();
+        ctx.add_hkdf_info(&hex::decode("f0f1f2f3f4f5f6f7f8f9").unwrap())
+            .unwrap();
+        let mut out = [0; 42];
+        ctx.derive(Some(&mut out)).unwrap();
+
+        assert_eq!(
+            &out[..],
+            hex::decode("3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865")
+                .unwrap()
+        );
+    }
+
+    #[test]
+    #[cfg(ossl111)]
+    fn hkdf_extract() {
+        let mut ctx = PkeyCtx::new_id(Id::HKDF).unwrap();
+        ctx.derive_init().unwrap();
+        ctx.set_hkdf_mode(HkdfMode::EXTRACT_ONLY).unwrap();
+        ctx.set_hkdf_md(Md::sha256()).unwrap();
+        ctx.set_hkdf_key(&hex::decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap())
+            .unwrap();
+        ctx.set_hkdf_salt(&hex::decode("000102030405060708090a0b0c").unwrap())
+            .unwrap();
+        let mut out = vec![];
+        ctx.derive_to_vec(&mut out).unwrap();
+
+        assert_eq!(
+            &out[..],
+            hex::decode("077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5")
+                .unwrap()
+        );
     }
 }
