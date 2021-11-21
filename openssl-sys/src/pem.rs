@@ -66,6 +66,15 @@ const_ptr_api! {
         ) -> c_int;
         pub fn PEM_write_bio_PKCS7(bp: *mut BIO, x: #[const_ptr_if(ossl300)] PKCS7) -> c_int;
         pub fn PEM_write_bio_EC_PUBKEY(bp: *mut BIO, ec: #[const_ptr_if(ossl300)] EC_KEY) -> c_int;
+        pub fn i2d_PKCS8PrivateKey_bio(
+            bp: *mut BIO,
+            x: #[const_ptr_if(ossl300)] EVP_PKEY,
+            enc: *const EVP_CIPHER,
+            kstr: #[const_ptr_if(ossl300)] c_char,
+            klen: c_int,
+            cb: pem_password_cb,
+            u: *mut c_void,
+        ) -> c_int;
     }
 }
 

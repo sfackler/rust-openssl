@@ -40,11 +40,14 @@ use foreign_types::ForeignTypeRef;
 use std::mem;
 
 use crate::error::ErrorStack;
+use crate::ssl::SslFiletype;
 use crate::stack::StackRef;
 #[cfg(any(ossl102, libressl261))]
 use crate::x509::verify::X509VerifyFlags;
 use crate::x509::{X509Object, X509};
 use crate::{cvt, cvt_p};
+use openssl_macros::corresponds;
+use std::ffi::CString;
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE;
@@ -52,7 +55,7 @@ foreign_type_and_impl_send_sync! {
 
     /// A builder type used to construct an `X509Store`.
     pub struct X509StoreBuilder;
-    /// Reference to an `X509StoreBuilder`.
+    /// A reference to an [`X509StoreBuilder`].
     pub struct X509StoreBuilderRef;
 }
 
@@ -60,6 +63,7 @@ impl X509StoreBuilder {
     /// Returns a builder for a certificate store.
     ///
     /// The store is initially empty.
+    #[corresponds(X509_STORE_new)]
     pub fn new() -> Result<X509StoreBuilder, ErrorStack> {
         unsafe {
             ffi::init();
@@ -79,6 +83,7 @@ impl X509StoreBuilder {
 impl X509StoreBuilderRef {
     /// Adds a certificate to the certificate store.
     // FIXME should take an &X509Ref
+    #[corresponds(X509_STORE_add_cert)]
     pub fn add_cert(&mut self, cert: X509) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_STORE_add_cert(self.as_ptr(), cert.as_ptr())).map(|_| ()) }
     }
@@ -88,15 +93,13 @@ impl X509StoreBuilderRef {
     /// These locations are read from the `SSL_CERT_FILE` and `SSL_CERT_DIR`
     /// environment variables if present, or defaults specified at OpenSSL
     /// build time otherwise.
+    #[corresponds(X509_STORE_set_default_paths)]
     pub fn set_default_paths(&mut self) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_STORE_set_default_paths(self.as_ptr())).map(|_| ()) }
     }
 
     /// Adds a lookup method to the store.
-    ///
-    /// This corresponds to [`X509_STORE_add_lookup`].
-    ///
-    /// [`X509_STORE_add_lookup`]: https://www.openssl.org/docs/man1.1.1/man3/X509_STORE_add_lookup.html
+    #[corresponds(X509_STORE_add_lookup)]
     pub fn add_lookup<T>(
         &mut self,
         method: &'static X509LookupMethodRef<T>,
@@ -106,10 +109,7 @@ impl X509StoreBuilderRef {
     }
 
     /// Sets certificate chain validation related flags.
-    ///
-    /// This corresponds to [`X509_STORE_set_flags`].
-    ///
-    /// [`X509_STORE_set_flags`]: https://www.openssl.org/docs/man1.1.1/man3/X509_STORE_set_flags.html
+    #[corresponds(X509_STORE_set_flags)]
     #[cfg(any(ossl102, libressl261))]
     pub fn set_flags(&mut self, flags: X509VerifyFlags) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_STORE_set_flags(self.as_ptr(), flags.bits())).map(|_| ()) }
@@ -122,13 +122,14 @@ generic_foreign_type_and_impl_send_sync! {
 
     /// Information used by an `X509Store` to look up certificates and CRLs.
     pub struct X509Lookup<T>;
-    /// Reference to an `X509Lookup`.
+    /// A reference to an [`X509Lookup`].
     pub struct X509LookupRef<T>;
 }
 
 /// Marker type corresponding to the [`X509_LOOKUP_hash_dir`] lookup method.
 ///
 /// [`X509_LOOKUP_hash_dir`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_LOOKUP_hash_dir.html
+// FIXME should be an enum
 pub struct HashDir;
 
 impl X509Lookup<HashDir> {
@@ -136,10 +137,7 @@ impl X509Lookup<HashDir> {
     /// them in memory once they are loaded. It also checks for newer CRLs upon
     /// each lookup, so that newer CRLs are used as soon as they appear in the
     /// directory.
-    ///
-    /// This corresponds to [`X509_LOOKUP_hash_dir`].
-    ///
-    /// [`X509_LOOKUP_hash_dir`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_LOOKUP_hash_dir.html
+    #[corresponds(X509_LOOKUP_hash_dir)]
     pub fn hash_dir() -> &'static X509LookupMethodRef<HashDir> {
         unsafe { X509LookupMethodRef::from_ptr(ffi::X509_LOOKUP_hash_dir()) }
     }
@@ -148,16 +146,9 @@ impl X509Lookup<HashDir> {
 impl X509LookupRef<HashDir> {
     /// Specifies a directory from which certificates and CRLs will be loaded
     /// on-demand. Must be used with `X509Lookup::hash_dir`.
-    ///
-    /// This corresponds to [`X509_LOOKUP_add_dir`].
-    ///
-    /// [`X509_LOOKUP_add_dir`]: https://www.openssl.org/docs/man1.1.1/man3/X509_LOOKUP_add_dir.html
-    pub fn add_dir(
-        &mut self,
-        name: &str,
-        file_type: crate::ssl::SslFiletype,
-    ) -> Result<(), ErrorStack> {
-        let name = std::ffi::CString::new(name).unwrap();
+    #[corresponds(X509_LOOKUP_add_dir)]
+    pub fn add_dir(&mut self, name: &str, file_type: SslFiletype) -> Result<(), ErrorStack> {
+        let name = CString::new(name).unwrap();
         unsafe {
             cvt(ffi::X509_LOOKUP_add_dir(
                 self.as_ptr(),
@@ -175,7 +166,7 @@ generic_foreign_type_and_impl_send_sync! {
 
     /// Method used to look up certificates and CRLs.
     pub struct X509LookupMethod<T>;
-    /// Reference to an `X509LookupMethod`.
+    /// A reference to an [`X509LookupMethod`].
     pub struct X509LookupMethodRef<T>;
 }
 
@@ -191,6 +182,7 @@ foreign_type_and_impl_send_sync! {
 
 impl X509StoreRef {
     /// Get a reference to the cache of certificates in this store.
+    #[corresponds(X509_STORE_get0_objects)]
     pub fn objects(&self) -> &StackRef<X509Object> {
         unsafe { StackRef::from_ptr(X509_STORE_get0_objects(self.as_ptr())) }
     }

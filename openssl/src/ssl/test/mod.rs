@@ -295,7 +295,7 @@ fn state() {
     let server = Server::builder().build();
 
     let s = server.client().connect();
-    assert_eq!(s.ssl().state_string(), "SSLOK ");
+    assert_eq!(s.ssl().state_string().trim(), "SSLOK");
     assert_eq!(
         s.ssl().state_string_long(),
         "SSL negotiation finished successfully"
@@ -864,6 +864,7 @@ fn tmp_dh_callback() {
 
 #[test]
 #[cfg(all(ossl101, not(ossl110)))]
+#[allow(deprecated)]
 fn tmp_ecdh_callback() {
     use crate::ec::EcKey;
     use crate::nid::Nid;
@@ -913,6 +914,7 @@ fn tmp_dh_callback_ssl() {
 
 #[test]
 #[cfg(all(ossl101, not(ossl110)))]
+#[allow(deprecated)]
 fn tmp_ecdh_callback_ssl() {
     use crate::ec::EcKey;
     use crate::nid::Nid;
@@ -1236,13 +1238,13 @@ fn stateless() {
     impl<'a> ::std::ops::Deref for Outgoing<'a> {
         type Target = [u8];
         fn deref(&self) -> &[u8] {
-            &self.0
+            self.0
         }
     }
 
     impl<'a> AsRef<[u8]> for Outgoing<'a> {
         fn as_ref(&self) -> &[u8] {
-            &self.0
+            self.0
         }
     }
 
@@ -1326,7 +1328,7 @@ fn psk_ciphers() {
     client
         .ctx()
         .set_psk_client_callback(move |_, _, identity, psk| {
-            identity[..CLIENT_IDENT.len()].copy_from_slice(&CLIENT_IDENT);
+            identity[..CLIENT_IDENT.len()].copy_from_slice(CLIENT_IDENT);
             identity[CLIENT_IDENT.len()] = 0;
             psk[..PSK.len()].copy_from_slice(PSK);
             CLIENT_CALLED.store(true, Ordering::SeqCst);

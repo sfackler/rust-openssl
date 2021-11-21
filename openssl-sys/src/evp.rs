@@ -41,6 +41,18 @@ cfg_if! {
             pub fn EVP_CIPHER_get_block_size(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_get_iv_length(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_get_nid(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_fetch(
+                ctx: *mut OSSL_LIB_CTX,
+                algorithm: *const c_char,
+                properties: *const c_char,
+            ) -> *mut EVP_CIPHER;
+            pub fn EVP_CIPHER_free(cipher: *mut EVP_CIPHER);
+
+            pub fn EVP_CIPHER_CTX_get0_cipher(ctx: *const EVP_CIPHER_CTX) -> *const EVP_CIPHER;
+            pub fn EVP_CIPHER_CTX_get_block_size(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_get_key_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_get_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_get_tag_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
         }
 
         #[inline]
@@ -72,6 +84,21 @@ cfg_if! {
         pub unsafe fn EVP_CIPHER_nid(cipher: *const EVP_CIPHER) -> c_int {
             EVP_CIPHER_get_nid(cipher)
         }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_CTX_block_size(ctx: *const EVP_CIPHER_CTX) -> c_int {
+            EVP_CIPHER_CTX_get_block_size(ctx)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_CTX_key_length(ctx: *const EVP_CIPHER_CTX) -> c_int {
+            EVP_CIPHER_CTX_get_key_length(ctx)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_CTX_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int {
+            EVP_CIPHER_CTX_get_iv_length(ctx)
+        }
     } else {
         extern "C" {
             pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
@@ -81,10 +108,14 @@ cfg_if! {
             pub fn EVP_CIPHER_block_size(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_iv_length(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_nid(cipher: *const EVP_CIPHER) -> c_int;
+
+            pub fn EVP_CIPHER_CTX_cipher(ctx: *const EVP_CIPHER_CTX) -> *const EVP_CIPHER;
+            pub fn EVP_CIPHER_CTX_block_size(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_key_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
         }
     }
 }
-extern "C" {}
 
 cfg_if! {
     if #[cfg(ossl110)] {
@@ -113,12 +144,22 @@ extern "C" {
         data: *const c_void,
         count: size_t,
         md: *mut c_uchar,
-        size: *mut c_uint,
+        size: *mut size_t,
     ) -> c_int;
     pub fn EVP_DigestInit(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD) -> c_int;
     pub fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
     #[cfg(ossl111)]
     pub fn EVP_DigestFinalXOF(ctx: *mut EVP_MD_CTX, res: *mut u8, len: usize) -> c_int;
+
+    #[cfg(ossl300)]
+    pub fn EVP_MD_fetch(
+        ctx: *mut OSSL_LIB_CTX,
+        algorithm: *const c_char,
+        properties: *const c_char,
+    ) -> *mut EVP_MD;
+
+    #[cfg(ossl300)]
+    pub fn EVP_MD_free(md: *mut EVP_MD);
 
     pub fn EVP_BytesToKey(
         typ: *const EVP_CIPHER,
@@ -162,6 +203,28 @@ extern "C" {
         e: *mut ENGINE,
         pkey: *mut EVP_PKEY,
     ) -> c_int;
+}
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn EVP_DigestSignUpdate(
+                ctx: *mut EVP_MD_CTX,
+                data: *const c_void,
+                dsize: size_t,
+            ) -> c_int;
+        }
+    } else {
+        #[inline]
+        pub unsafe fn EVP_DigestSignUpdate(
+            ctx: *mut EVP_MD_CTX,
+            data: *const c_void,
+            dsize: size_t,
+        ) -> c_int {
+            EVP_DigestUpdate(ctx, data, dsize)
+        }
+    }
+}
+extern "C" {
     pub fn EVP_DigestSignFinal(
         ctx: *mut EVP_MD_CTX,
         sig: *mut c_uchar,
@@ -174,6 +237,28 @@ extern "C" {
         e: *mut ENGINE,
         pkey: *mut EVP_PKEY,
     ) -> c_int;
+}
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn EVP_DigestVerifyUpdate(
+                ctx: *mut EVP_MD_CTX,
+                data: *const c_void,
+                dsize: size_t,
+            ) -> c_int;
+        }
+    } else {
+        #[inline]
+        pub unsafe fn EVP_DigestVerifyUpdate(
+            ctx: *mut EVP_MD_CTX,
+            data: *const c_void,
+            dsize: size_t,
+        ) -> c_int {
+            EVP_DigestUpdate(ctx, data, dsize)
+        }
+    }
+}
+extern "C" {
     pub fn EVP_SealInit(
         ctx: *mut EVP_CIPHER_CTX,
         type_: *const EVP_CIPHER,
@@ -293,6 +378,7 @@ extern "C" {
         arg: c_int,
         ptr: *mut c_void,
     ) -> c_int;
+    pub fn EVP_CIPHER_CTX_rand_key(ctx: *mut EVP_CIPHER_CTX, key: *mut c_uchar) -> c_int;
 
     pub fn EVP_md_null() -> *const EVP_MD;
     pub fn EVP_md5() -> *const EVP_MD;
@@ -361,10 +447,18 @@ extern "C" {
     pub fn EVP_aes_256_ofb() -> *const EVP_CIPHER;
     #[cfg(ossl110)]
     pub fn EVP_aes_256_ocb() -> *const EVP_CIPHER;
-    #[cfg(ossl110)]
+    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_CHACHA")))]
     pub fn EVP_chacha20() -> *const ::EVP_CIPHER;
-    #[cfg(ossl110)]
+    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_CHACHA")))]
     pub fn EVP_chacha20_poly1305() -> *const ::EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    pub fn EVP_seed_cbc() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    pub fn EVP_seed_cfb128() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    pub fn EVP_seed_ecb() -> *const EVP_CIPHER;
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    pub fn EVP_seed_ofb() -> *const EVP_CIPHER;
 
     #[cfg(not(ossl110))]
     pub fn OPENSSL_add_all_algorithms_noconf();
@@ -545,6 +639,13 @@ extern "C" {
     pub fn EVP_PKEY_derive_set_peer(ctx: *mut EVP_PKEY_CTX, peer: *mut EVP_PKEY) -> c_int;
     pub fn EVP_PKEY_derive(ctx: *mut EVP_PKEY_CTX, key: *mut c_uchar, size: *mut size_t) -> c_int;
 
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_Q_keygen(
+        libctx: *mut OSSL_LIB_CTX,
+        propq: *const c_char,
+        type_: *const c_char,
+        ...
+    ) -> *mut EVP_PKEY;
     pub fn EVP_PKEY_keygen_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
     pub fn EVP_PKEY_keygen(ctx: *mut EVP_PKEY_CTX, key: *mut *mut EVP_PKEY) -> c_int;
 

@@ -51,15 +51,12 @@
 //! assert_eq!("Foo bar", output_string);
 //! println!("Decrypted: '{}'", output_string);
 //! ```
-
-use cfg_if::cfg_if;
-use libc::c_int;
-use std::cmp;
-use std::ptr;
-
+use crate::cipher::CipherRef;
+use crate::cipher_ctx::{CipherCtx, CipherCtxRef};
 use crate::error::ErrorStack;
 use crate::nid::Nid;
-use crate::{cvt, cvt_p};
+use cfg_if::cfg_if;
+use foreign_types::ForeignTypeRef;
 
 #[derive(Copy, Clone)]
 pub enum Mode {
@@ -279,15 +276,35 @@ impl Cipher {
     }
 
     /// Requires OpenSSL 1.1.0 or newer.
-    #[cfg(any(ossl110))]
+    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_CHACHA")))]
     pub fn chacha20() -> Cipher {
         unsafe { Cipher(ffi::EVP_chacha20()) }
     }
 
     /// Requires OpenSSL 1.1.0 or newer.
-    #[cfg(any(ossl110))]
+    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_CHACHA")))]
     pub fn chacha20_poly1305() -> Cipher {
         unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
+    }
+
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    pub fn seed_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_seed_cbc()) }
+    }
+
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    pub fn seed_cfb128() -> Cipher {
+        unsafe { Cipher(ffi::EVP_seed_cfb128()) }
+    }
+
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    pub fn seed_ecb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_seed_ecb()) }
+    }
+
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    pub fn seed_ofb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_seed_ofb()) }
     }
 
     /// Creates a `Cipher` from a raw pointer to its OpenSSL type.
@@ -418,12 +435,8 @@ unsafe impl Send for Cipher {}
 /// assert_eq!(b"Some Stream of Crypto Text", &plaintext[..]);
 /// ```
 pub struct Crypter {
-    ctx: *mut ffi::EVP_CIPHER_CTX,
-    block_size: usize,
+    ctx: CipherCtx,
 }
-
-unsafe impl Sync for Crypter {}
-unsafe impl Send for Crypter {}
 
 impl Crypter {
     /// Creates a new `Crypter`.  The initialisation vector, `iv`, is not necessary for certain
@@ -439,63 +452,31 @@ impl Crypter {
         key: &[u8],
         iv: Option<&[u8]>,
     ) -> Result<Crypter, ErrorStack> {
-        ffi::init();
+        let mut ctx = CipherCtx::new()?;
 
-        unsafe {
-            let ctx = cvt_p(ffi::EVP_CIPHER_CTX_new())?;
-            let crypter = Crypter {
-                ctx,
-                block_size: t.block_size(),
-            };
+        let f = match mode {
+            Mode::Encrypt => CipherCtxRef::encrypt_init,
+            Mode::Decrypt => CipherCtxRef::decrypt_init,
+        };
 
-            let mode = match mode {
-                Mode::Encrypt => 1,
-                Mode::Decrypt => 0,
-            };
+        f(
+            &mut ctx,
+            Some(unsafe { CipherRef::from_ptr(t.as_ptr() as *mut _) }),
+            None,
+            None,
+        )?;
 
-            cvt(ffi::EVP_CipherInit_ex(
-                crypter.ctx,
-                t.as_ptr(),
-                ptr::null_mut(),
-                ptr::null_mut(),
-                ptr::null_mut(),
-                mode,
-            ))?;
+        ctx.set_key_length(key.len())?;
 
-            assert!(key.len() <= c_int::max_value() as usize);
-            cvt(ffi::EVP_CIPHER_CTX_set_key_length(
-                crypter.ctx,
-                key.len() as c_int,
-            ))?;
-
-            let key = key.as_ptr() as *mut _;
-            let iv = match (iv, t.iv_len()) {
-                (Some(iv), Some(len)) => {
-                    if iv.len() != len {
-                        assert!(iv.len() <= c_int::max_value() as usize);
-                        cvt(ffi::EVP_CIPHER_CTX_ctrl(
-                            crypter.ctx,
-                            ffi::EVP_CTRL_GCM_SET_IVLEN,
-                            iv.len() as c_int,
-                            ptr::null_mut(),
-                        ))?;
-                    }
-                    iv.as_ptr() as *mut _
-                }
-                (Some(_), None) | (None, None) => ptr::null_mut(),
-                (None, Some(_)) => panic!("an IV is required for this cipher"),
-            };
-            cvt(ffi::EVP_CipherInit_ex(
-                crypter.ctx,
-                ptr::null(),
-                ptr::null_mut(),
-                key,
-                iv,
-                mode,
-            ))?;
-
-            Ok(crypter)
+        if let (Some(iv), Some(iv_len)) = (iv, t.iv_len()) {
+            if iv.len() != iv_len {
+                ctx.set_iv_length(iv.len())?;
+            }
         }
+
+        f(&mut ctx, None, Some(key), iv)?;
+
+        Ok(Crypter { ctx })
     }
 
     /// Enables or disables padding.
@@ -503,26 +484,14 @@ impl Crypter {
     /// If padding is disabled, total amount of data encrypted/decrypted must
     /// be a multiple of the cipher's block size.
     pub fn pad(&mut self, padding: bool) {
-        unsafe {
-            ffi::EVP_CIPHER_CTX_set_padding(self.ctx, padding as c_int);
-        }
+        self.ctx.set_padding(padding)
     }
 
     /// Sets the tag used to authenticate ciphertext in AEAD ciphers such as AES GCM.
     ///
     /// When decrypting cipher text using an AEAD cipher, this must be called before `finalize`.
     pub fn set_tag(&mut self, tag: &[u8]) -> Result<(), ErrorStack> {
-        unsafe {
-            assert!(tag.len() <= c_int::max_value() as usize);
-            // NB: this constant is actually more general than just GCM.
-            cvt(ffi::EVP_CIPHER_CTX_ctrl(
-                self.ctx,
-                ffi::EVP_CTRL_GCM_SET_TAG,
-                tag.len() as c_int,
-                tag.as_ptr() as *mut _,
-            ))
-            .map(|_| ())
-        }
+        self.ctx.set_tag(tag)
     }
 
     /// Sets the length of the authentication tag to generate in AES CCM.
@@ -530,17 +499,7 @@ impl Crypter {
     /// When encrypting with AES CCM, the tag length needs to be explicitly set in order
     /// to use a value different than the default 12 bytes.
     pub fn set_tag_len(&mut self, tag_len: usize) -> Result<(), ErrorStack> {
-        unsafe {
-            assert!(tag_len <= c_int::max_value() as usize);
-            // NB: this constant is actually more general than just GCM.
-            cvt(ffi::EVP_CIPHER_CTX_ctrl(
-                self.ctx,
-                ffi::EVP_CTRL_GCM_SET_TAG,
-                tag_len as c_int,
-                ptr::null_mut(),
-            ))
-            .map(|_| ())
-        }
+        self.ctx.set_tag_length(tag_len)
     }
 
     /// Feeds total plaintext length to the cipher.
@@ -548,18 +507,7 @@ impl Crypter {
     /// The total plaintext or ciphertext length MUST be passed to the cipher when it operates in
     /// CCM mode.
     pub fn set_data_len(&mut self, data_len: usize) -> Result<(), ErrorStack> {
-        unsafe {
-            assert!(data_len <= c_int::max_value() as usize);
-            let mut len = 0;
-            cvt(ffi::EVP_CipherUpdate(
-                self.ctx,
-                ptr::null_mut(),
-                &mut len,
-                ptr::null_mut(),
-                data_len as c_int,
-            ))
-            .map(|_| ())
-        }
+        self.ctx.set_data_len(data_len)
     }
 
     /// Feeds Additional Authenticated Data (AAD) through the cipher.
@@ -568,18 +516,8 @@ impl Crypter {
     /// is factored into the authentication tag. It must be called before the first call to
     /// `update`.
     pub fn aad_update(&mut self, input: &[u8]) -> Result<(), ErrorStack> {
-        unsafe {
-            assert!(input.len() <= c_int::max_value() as usize);
-            let mut len = 0;
-            cvt(ffi::EVP_CipherUpdate(
-                self.ctx,
-                ptr::null_mut(),
-                &mut len,
-                input.as_ptr(),
-                input.len() as c_int,
-            ))
-            .map(|_| ())
-        }
+        self.ctx.cipher_update(input, None)?;
+        Ok(())
     }
 
     /// Feeds data from `input` through the cipher, writing encrypted/decrypted
@@ -597,27 +535,7 @@ impl Crypter {
     ///
     /// Panics if `output.len() > c_int::max_value()`.
     pub fn update(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, ErrorStack> {
-        unsafe {
-            let block_size = if self.block_size > 1 {
-                self.block_size
-            } else {
-                0
-            };
-            assert!(output.len() >= input.len() + block_size);
-            assert!(output.len() <= c_int::max_value() as usize);
-            let mut outl = output.len() as c_int;
-            let inl = input.len() as c_int;
-
-            cvt(ffi::EVP_CipherUpdate(
-                self.ctx,
-                output.as_mut_ptr(),
-                &mut outl,
-                input.as_ptr(),
-                inl,
-            ))?;
-
-            Ok(outl as usize)
-        }
+        self.ctx.cipher_update(input, Some(output))
     }
 
     /// Finishes the encryption/decryption process, writing any remaining data
@@ -632,20 +550,7 @@ impl Crypter {
     /// Panics for block ciphers if `output.len() < block_size`,
     /// where `block_size` is the block size of the cipher (see `Cipher::block_size`).
     pub fn finalize(&mut self, output: &mut [u8]) -> Result<usize, ErrorStack> {
-        unsafe {
-            if self.block_size > 1 {
-                assert!(output.len() >= self.block_size);
-            }
-            let mut outl = cmp::min(output.len(), c_int::max_value() as usize) as c_int;
-
-            cvt(ffi::EVP_CipherFinal(
-                self.ctx,
-                output.as_mut_ptr(),
-                &mut outl,
-            ))?;
-
-            Ok(outl as usize)
-        }
+        self.ctx.cipher_final(output)
     }
 
     /// Retrieves the authentication tag used to authenticate ciphertext in AEAD ciphers such
@@ -657,24 +562,7 @@ impl Crypter {
     /// range of tag sizes, it is recommended to pick the maximum size. For AES GCM, this is 16
     /// bytes, for example.
     pub fn get_tag(&self, tag: &mut [u8]) -> Result<(), ErrorStack> {
-        unsafe {
-            assert!(tag.len() <= c_int::max_value() as usize);
-            cvt(ffi::EVP_CIPHER_CTX_ctrl(
-                self.ctx,
-                ffi::EVP_CTRL_GCM_GET_TAG,
-                tag.len() as c_int,
-                tag.as_mut_ptr() as *mut _,
-            ))
-            .map(|_| ())
-        }
-    }
-}
-
-impl Drop for Crypter {
-    fn drop(&mut self) {
-        unsafe {
-            ffi::EVP_CIPHER_CTX_free(self.ctx);
-        }
+        self.ctx.tag(tag)
     }
 }
 
@@ -847,6 +735,8 @@ cfg_if! {
     if #[cfg(any(ossl110, libressl273))] {
         use ffi::{EVP_CIPHER_block_size, EVP_CIPHER_iv_length, EVP_CIPHER_key_length};
     } else {
+        use libc::c_int;
+
         #[allow(bad_style)]
         pub unsafe fn EVP_CIPHER_iv_length(ptr: *const ffi::EVP_CIPHER) -> c_int {
             (*ptr).iv_len
@@ -1559,5 +1449,49 @@ mod tests {
         )
         .unwrap();
         assert_eq!(pt, hex::encode(out));
+    }
+
+    #[test]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
+    fn test_seed_cbc() {
+        let pt = "5363686f6b6f6c6164656e6b756368656e0a";
+        let ct = "c2edf0fb2eb11bf7b2f39417a8528896d34b24b6fd79e5923b116dfcd2aba5a4";
+        let key = "41414141414141414141414141414141";
+        let iv = "41414141414141414141414141414141";
+
+        cipher_test(super::Cipher::seed_cbc(), pt, ct, key, iv);
+    }
+
+    #[test]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
+    fn test_seed_cfb128() {
+        let pt = "5363686f6b6f6c6164656e6b756368656e0a";
+        let ct = "71d4d25fc1750cb7789259e7f34061939a41";
+        let key = "41414141414141414141414141414141";
+        let iv = "41414141414141414141414141414141";
+
+        cipher_test(super::Cipher::seed_cfb128(), pt, ct, key, iv);
+    }
+
+    #[test]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
+    fn test_seed_ecb() {
+        let pt = "5363686f6b6f6c6164656e6b756368656e0a";
+        let ct = "0263a9cd498cf0edb0ef72a3231761d00ce601f7d08ad19ad74f0815f2c77f7e";
+        let key = "41414141414141414141414141414141";
+        let iv = "41414141414141414141414141414141";
+
+        cipher_test(super::Cipher::seed_ecb(), pt, ct, key, iv);
+    }
+
+    #[test]
+    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
+    fn test_seed_ofb() {
+        let pt = "5363686f6b6f6c6164656e6b756368656e0a";
+        let ct = "71d4d25fc1750cb7789259e7f34061930afd";
+        let key = "41414141414141414141414141414141";
+        let iv = "41414141414141414141414141414141";
+
+        cipher_test(super::Cipher::seed_ofb(), pt, ct, key, iv);
     }
 }

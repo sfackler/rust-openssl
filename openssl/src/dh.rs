@@ -7,6 +7,7 @@ use crate::bn::{BigNum, BigNumRef};
 use crate::error::ErrorStack;
 use crate::pkey::{HasParams, HasPrivate, HasPublic, Params, Private};
 use crate::{cvt, cvt_p};
+use openssl_macros::corresponds;
 
 generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::DH;
@@ -25,20 +26,14 @@ where
         /// Serializes the parameters into a PEM-encoded PKCS#3 DHparameter structure.
         ///
         /// The output will have a header of `-----BEGIN DH PARAMETERS-----`.
-        ///
-        /// This corresponds to [`PEM_write_bio_DHparams`].
-        ///
-        /// [`PEM_write_bio_DHparams`]: https://www.openssl.org/docs/manmaster/man3/PEM_write_bio_DHparams.html
+        #[corresponds(PEM_write_bio_DHparams)]
         params_to_pem,
         ffi::PEM_write_bio_DHparams
     }
 
     to_der! {
         /// Serializes the parameters into a DER-encoded PKCS#3 DHparameter structure.
-        ///
-        /// This corresponds to [`i2d_DHparams`].
-        ///
-        /// [`i2d_DHparams`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_DHparams.html
+        #[corresponds(i2d_DHparams)]
         params_to_der,
         ffi::i2d_DHparams
     }
@@ -50,11 +45,7 @@ impl Dh<Params> {
     }
 
     /// Creates a DH instance based upon the given primes and generator params.
-    ///
-    /// This corresponds to [`DH_new`] and [`DH_set0_pqg`].
-    ///
-    /// [`DH_new`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_new.html
-    /// [`DH_set0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_set0_pqg.html
+    #[corresponds(DH_set0_pqg)]
     pub fn from_pqg(
         prime_p: BigNum,
         prime_q: Option<BigNum>,
@@ -87,10 +78,7 @@ impl Dh<Params> {
     }
 
     /// Generates DH params based on the given `prime_len` and a fixed `generator` value.
-    ///
-    /// This corresponds to [`DH_generate_parameters_ex`].
-    ///
-    /// [`DH_generate_parameters_ex`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_generate_parameters.html
+    #[corresponds(DH_generate_parameters_ex)]
     pub fn generate_params(prime_len: u32, generator: u32) -> Result<Dh<Params>, ErrorStack> {
         unsafe {
             let dh = Dh::from_ptr(cvt_p(ffi::DH_new())?);
@@ -105,10 +93,7 @@ impl Dh<Params> {
     }
 
     /// Generates a public and a private key based on the DH params.
-    ///
-    /// This corresponds to [`DH_generate_key`].
-    ///
-    /// [`DH_generate_key`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_generate_key.html
+    #[corresponds(DH_generate_key)]
     pub fn generate_key(self) -> Result<Dh<Private>, ErrorStack> {
         unsafe {
             let dh_ptr = self.0;
@@ -122,10 +107,7 @@ impl Dh<Params> {
         /// Deserializes a PEM-encoded PKCS#3 DHpararameters structure.
         ///
         /// The input should have a header of `-----BEGIN DH PARAMETERS-----`.
-        ///
-        /// This corresponds to [`PEM_read_bio_DHparams`].
-        ///
-        /// [`PEM_read_bio_DHparams`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_read_bio_DHparams.html
+        #[corresponds(PEM_read_bio_DHparams)]
         params_from_pem,
         Dh<Params>,
         ffi::PEM_read_bio_DHparams
@@ -133,16 +115,14 @@ impl Dh<Params> {
 
     from_der! {
         /// Deserializes a DER-encoded PKCS#3 DHparameters structure.
-        ///
-        /// This corresponds to [`d2i_DHparams`].
-        ///
-        /// [`d2i_DHparams`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_DHparams.html
+        #[corresponds(d2i_DHparams)]
         params_from_der,
         Dh<Params>,
         ffi::d2i_DHparams
     }
 
     /// Requires OpenSSL 1.0.2 or newer.
+    #[corresponds(DH_get_1024_160)]
     #[cfg(any(ossl102, ossl110))]
     pub fn get_1024_160() -> Result<Dh<Params>, ErrorStack> {
         unsafe {
@@ -152,6 +132,7 @@ impl Dh<Params> {
     }
 
     /// Requires OpenSSL 1.0.2 or newer.
+    #[corresponds(DH_get_2048_224)]
     #[cfg(any(ossl102, ossl110))]
     pub fn get_2048_224() -> Result<Dh<Params>, ErrorStack> {
         unsafe {
@@ -161,6 +142,7 @@ impl Dh<Params> {
     }
 
     /// Requires OpenSSL 1.0.2 or newer.
+    #[corresponds(DH_get_2048_256)]
     #[cfg(any(ossl102, ossl110))]
     pub fn get_2048_256() -> Result<Dh<Params>, ErrorStack> {
         unsafe {
@@ -175,10 +157,7 @@ where
     T: HasParams,
 {
     /// Returns the prime `p` from the DH instance.
-    ///
-    /// This corresponds to [`DH_get0_pqg`].
-    ///
-    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
+    #[corresponds(DH_get0_pqg)]
     pub fn prime_p(&self) -> &BigNumRef {
         let mut p = ptr::null();
         unsafe {
@@ -188,10 +167,7 @@ where
     }
 
     /// Returns the prime `q` from the DH instance.
-    ///
-    /// This corresponds to [`DH_get0_pqg`].
-    ///
-    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
+    #[corresponds(DH_get0_pqg)]
     pub fn prime_q(&self) -> Option<&BigNumRef> {
         let mut q = ptr::null();
         unsafe {
@@ -205,10 +181,7 @@ where
     }
 
     /// Returns the generator from the DH instance.
-    ///
-    /// This corresponds to [`DH_get0_pqg`].
-    ///
-    /// [`DH_get0_pqg`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_pqg.html
+    #[corresponds(DH_get0_pqg)]
     pub fn generator(&self) -> &BigNumRef {
         let mut g = ptr::null();
         unsafe {
@@ -223,10 +196,7 @@ where
     T: HasPublic,
 {
     /// Returns the public key from the DH instance.
-    ///
-    /// This corresponds to [`DH_get0_key`].
-    ///
-    /// [`DH_get0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_key.html
+    #[corresponds(DH_get0_key)]
     pub fn public_key(&self) -> &BigNumRef {
         let mut pub_key = ptr::null();
         unsafe {
@@ -241,10 +211,7 @@ where
     T: HasPrivate,
 {
     /// Computes a shared secret from the own private key and the given `public_key`.
-    ///
-    /// This corresponds to [`DH_compute_key`].
-    ///
-    /// [`DH_compute_key`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_compute_key.html
+    #[corresponds(DH_compute_key)]
     pub fn compute_key(&self, public_key: &BigNumRef) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
             let key_len = ffi::DH_size(self.as_ptr());
@@ -259,10 +226,7 @@ where
     }
 
     /// Returns the private key from the DH instance.
-    ///
-    /// This corresponds to [`DH_get0_key`].
-    ///
-    /// [`DH_get0_key`]: https://www.openssl.org/docs/man1.1.0/crypto/DH_get0_key.html
+    #[corresponds(DH_get0_key)]
     pub fn private_key(&self) -> &BigNumRef {
         let mut priv_key = ptr::null();
         unsafe {

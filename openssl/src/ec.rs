@@ -26,6 +26,7 @@ use crate::nid::Nid;
 use crate::pkey::{HasParams, HasPrivate, HasPublic, Params, Private, Public};
 use crate::util::ForeignTypeRefExt;
 use crate::{cvt, cvt_n, cvt_p, init};
+use openssl_macros::corresponds;
 
 /// Compressed or Uncompressed conversion
 ///
@@ -115,10 +116,7 @@ foreign_type_and_impl_send_sync! {
 
 impl EcGroup {
     /// Returns the group of a standard named curve.
-    ///
-    /// OpenSSL documentation at [`EC_GROUP_new`].
-    ///
-    /// [`EC_GROUP_new`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_new.html
+    #[corresponds(EC_GROUP_new_by_curve_name)]
     pub fn from_curve_name(nid: Nid) -> Result<EcGroup, ErrorStack> {
         unsafe {
             init();
@@ -130,10 +128,7 @@ impl EcGroup {
 impl EcGroupRef {
     /// Places the components of a curve over a prime field in the provided `BigNum`s.
     /// The components make up the formula `y^2 mod p = x^3 + ax + b mod p`.
-    ///
-    /// OpenSSL documentation available at [`EC_GROUP_get_curve_GFp`]
-    ///
-    /// [`EC_GROUP_get_curve_GFp`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_get_curve_GFp.html
+    #[corresponds(EC_GROUP_get_curve_GFp)]
     pub fn components_gfp(
         &self,
         p: &mut BigNumRef,
@@ -159,10 +154,7 @@ impl EcGroupRef {
     /// In this form `p` relates to the irreducible polynomial.  Each bit represents
     /// a term in the polynomial.  It will be set to 3 `1`s or 5 `1`s depending on
     /// using a trinomial or pentanomial.
-    ///
-    /// OpenSSL documentation at [`EC_GROUP_get_curve_GF2m`].
-    ///
-    /// [`EC_GROUP_get_curve_GF2m`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_get_curve_GF2m.html
+    #[corresponds(EC_GROUP_get_curve_GF2m)]
     #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
     pub fn components_gf2m(
         &self,
@@ -184,10 +176,7 @@ impl EcGroupRef {
     }
 
     /// Places the cofactor of the group in the provided `BigNum`.
-    ///
-    /// OpenSSL documentation at [`EC_GROUP_get_cofactor`]
-    ///
-    /// [`EC_GROUP_get_cofactor`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_get_cofactor.html
+    #[corresponds(EC_GROUP_get_cofactor)]
     pub fn cofactor(
         &self,
         cofactor: &mut BigNumRef,
@@ -204,29 +193,20 @@ impl EcGroupRef {
     }
 
     /// Returns the degree of the curve.
-    ///
-    /// OpenSSL documentation at [`EC_GROUP_get_degree`]
-    ///
-    /// [`EC_GROUP_get_degree`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_get_degree.html
+    #[corresponds(EC_GROUP_get_degree)]
     pub fn degree(&self) -> u32 {
         unsafe { ffi::EC_GROUP_get_degree(self.as_ptr()) as u32 }
     }
 
     /// Returns the number of bits in the group order.
-    ///
-    /// OpenSSL documentation at [`EC_GROUP_order_bits`]
-    ///
-    /// [`EC_GROUP_order_bits`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_order_bits.html
+    #[corresponds(EC_GROUP_order_bits)]
     #[cfg(ossl110)]
     pub fn order_bits(&self) -> u32 {
         unsafe { ffi::EC_GROUP_order_bits(self.as_ptr()) as u32 }
     }
 
-    /// Returns the generator for the given curve as a [`EcPoint`].
-    ///
-    /// OpenSSL documentation at [`EC_GROUP_get0_generator`]
-    ///
-    /// [`EC_GROUP_get0_generator`]: https://www.openssl.org/docs/man1.1.0/man3/EC_GROUP_get0_generator.html
+    /// Returns the generator for the given curve as an [`EcPoint`].
+    #[corresponds(EC_GROUP_get0_generator)]
     pub fn generator(&self) -> &EcPointRef {
         unsafe {
             let ptr = ffi::EC_GROUP_get0_generator(self.as_ptr());
@@ -235,10 +215,7 @@ impl EcGroupRef {
     }
 
     /// Places the order of the curve in the provided `BigNum`.
-    ///
-    /// OpenSSL documentation at [`EC_GROUP_get_order`]
-    ///
-    /// [`EC_GROUP_get_order`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_get_order.html
+    #[corresponds(EC_GROUP_get_order)]
     pub fn order(
         &self,
         order: &mut BigNumRef,
@@ -259,6 +236,7 @@ impl EcGroupRef {
     ///
     /// This defaults to `EXPLICIT_CURVE` in OpenSSL 1.0.1 and 1.0.2, but `NAMED_CURVE` in OpenSSL
     /// 1.1.0.
+    #[corresponds(EC_GROUP_set_asn1_flag)]
     pub fn set_asn1_flag(&mut self, flag: Asn1Flag) {
         unsafe {
             ffi::EC_GROUP_set_asn1_flag(self.as_ptr(), flag.0);
@@ -266,10 +244,7 @@ impl EcGroupRef {
     }
 
     /// Returns the name of the curve, if a name is associated.
-    ///
-    /// OpenSSL documentation at [`EC_GROUP_get_curve_name`]
-    ///
-    /// [`EC_GROUP_get_curve_name`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_get_curve_name.html
+    #[corresponds(EC_GROUP_get_curve_name)]
     pub fn curve_name(&self) -> Option<Nid> {
         let nid = unsafe { ffi::EC_GROUP_get_curve_name(self.as_ptr()) };
         if nid > 0 {
@@ -285,23 +260,14 @@ foreign_type_and_impl_send_sync! {
     fn drop = ffi::EC_POINT_free;
 
     /// Represents a point on the curve
-    ///
-    /// OpenSSL documentation at [`EC_POINT_new`]
-    ///
-    /// [`EC_POINT_new`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_new.html
     pub struct EcPoint;
-    /// Reference to [`EcPoint`]
-    ///
-    /// [`EcPoint`]: struct.EcPoint.html
+    /// A reference a borrowed [`EcPoint`].
     pub struct EcPointRef;
 }
 
 impl EcPointRef {
     /// Computes `a + b`, storing the result in `self`.
-    ///
-    /// OpenSSL documentation at [`EC_POINT_add`]
-    ///
-    /// [`EC_POINT_add`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_add.html
+    #[corresponds(EC_POINT_add)]
     pub fn add(
         &mut self,
         group: &EcGroupRef,
@@ -322,10 +288,7 @@ impl EcPointRef {
     }
 
     /// Computes `q * m`, storing the result in `self`.
-    ///
-    /// OpenSSL documentation at [`EC_POINT_mul`]
-    ///
-    /// [`EC_POINT_mul`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_mul.html
+    #[corresponds(EC_POINT_mul)]
     pub fn mul(
         &mut self,
         group: &EcGroupRef,
@@ -348,6 +311,7 @@ impl EcPointRef {
     }
 
     /// Computes `generator * n`, storing the result in `self`.
+    #[corresponds(EC_POINT_mul)]
     pub fn mul_generator(
         &mut self,
         group: &EcGroupRef,
@@ -369,6 +333,7 @@ impl EcPointRef {
     }
 
     /// Computes `generator * n + q * m`, storing the result in `self`.
+    #[corresponds(EC_POINT_mul)]
     pub fn mul_full(
         &mut self,
         group: &EcGroupRef,
@@ -391,10 +356,8 @@ impl EcPointRef {
     }
 
     /// Inverts `self`.
-    ///
-    /// OpenSSL documentation at [`EC_POINT_invert`]
-    ///
-    /// [`EC_POINT_invert`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_invert.html
+    #[corresponds(EC_POINT_invert)]
+    // FIXME should be mutable
     pub fn invert(&mut self, group: &EcGroupRef, ctx: &BigNumContextRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EC_POINT_invert(
@@ -407,10 +370,7 @@ impl EcPointRef {
     }
 
     /// Serializes the point to a binary representation.
-    ///
-    /// OpenSSL documentation at [`EC_POINT_point2oct`]
-    ///
-    /// [`EC_POINT_point2oct`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_point2oct.html
+    #[corresponds(EC_POINT_point2oct)]
     pub fn to_bytes(
         &self,
         group: &EcGroupRef,
@@ -447,19 +407,13 @@ impl EcPointRef {
     }
 
     /// Creates a new point on the specified curve with the same value.
-    ///
-    /// OpenSSL documentation at [`EC_POINT_dup`]
-    ///
-    /// [`EC_POINT_dup`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_dup.html
+    #[corresponds(EC_POINT_dup)]
     pub fn to_owned(&self, group: &EcGroupRef) -> Result<EcPoint, ErrorStack> {
         unsafe { cvt_p(ffi::EC_POINT_dup(self.as_ptr(), group.as_ptr())).map(EcPoint) }
     }
 
     /// Determines if this point is equal to another.
-    ///
-    /// OpenSSL doucmentation at [`EC_POINT_cmp`]
-    ///
-    /// [`EC_POINT_cmp`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_cmp.html
+    #[corresponds(EC_POINT_cmp)]
     pub fn eq(
         &self,
         group: &EcGroupRef,
@@ -477,12 +431,9 @@ impl EcPointRef {
         }
     }
 
-    /// Place affine coordinates of a curve over a prime field in the provided
-    /// `x` and `y` `BigNum`s
-    ///
-    /// OpenSSL documentation at [`EC_POINT_get_affine_coordinates`]
-    ///
-    /// [`EC_POINT_get_affine_coordinates`]: https://www.openssl.org/docs/man1.1.1/man3/EC_POINT_get_affine_coordinates.html
+    /// Places affine coordinates of a curve over a prime field in the provided
+    /// `x` and `y` `BigNum`s.
+    #[corresponds(EC_POINT_get_affine_coordinates)]
     #[cfg(ossl111)]
     pub fn affine_coordinates(
         &self,
@@ -505,10 +456,7 @@ impl EcPointRef {
 
     /// Place affine coordinates of a curve over a prime field in the provided
     /// `x` and `y` `BigNum`s
-    ///
-    /// OpenSSL documentation at [`EC_POINT_get_affine_coordinates_GFp`]
-    ///
-    /// [`EC_POINT_get_affine_coordinates_GFp`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_get_affine_coordinates_GFp.html
+    #[corresponds(EC_POINT_get_affine_coordinates_GFp)]
     pub fn affine_coordinates_gfp(
         &self,
         group: &EcGroupRef,
@@ -530,10 +478,7 @@ impl EcPointRef {
 
     /// Place affine coordinates of a curve over a binary field in the provided
     /// `x` and `y` `BigNum`s
-    ///
-    /// OpenSSL documentation at [`EC_POINT_get_affine_coordinates_GF2m`]
-    ///
-    /// [`EC_POINT_get_affine_coordinates_GF2m`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_get_affine_coordinates_GF2m.html
+    #[corresponds(EC_POINT_get_affine_coordinates_GF2m)]
     #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
     pub fn affine_coordinates_gf2m(
         &self,
@@ -555,10 +500,7 @@ impl EcPointRef {
     }
 
     /// Checks if point is infinity
-    ///
-    /// OpenSSL documentation at [`EC_POINT_is_at_infinity`]
-    ///
-    /// [`EC_POINT_is_at_infinity`]: https://www.openssl.org/docs/man1.1.0/man3/EC_POINT_is_at_infinity.html
+    #[corresponds(EC_POINT_is_at_infinity)]
     pub fn is_infinity(&self, group: &EcGroupRef) -> bool {
         unsafe {
             let res = ffi::EC_POINT_is_at_infinity(group.as_ptr(), self.as_ptr());
@@ -567,10 +509,7 @@ impl EcPointRef {
     }
 
     /// Checks if point is on a given curve
-    ///
-    /// OpenSSL documentation at [`EC_POINT_is_on_curve`]
-    ///
-    /// [`EC_POINT_is_on_curve`]: https://www.openssl.org/docs/man1.1.0/man3/EC_POINT_is_on_curve.html
+    #[corresponds(EC_POINT_is_on_curve)]
     pub fn is_on_curve(
         &self,
         group: &EcGroupRef,
@@ -589,19 +528,13 @@ impl EcPointRef {
 
 impl EcPoint {
     /// Creates a new point on the specified curve.
-    ///
-    /// OpenSSL documentation at [`EC_POINT_new`]
-    ///
-    /// [`EC_POINT_new`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_new.html
+    #[corresponds(EC_POINT_new)]
     pub fn new(group: &EcGroupRef) -> Result<EcPoint, ErrorStack> {
         unsafe { cvt_p(ffi::EC_POINT_new(group.as_ptr())).map(EcPoint) }
     }
 
     /// Creates point from a binary representation
-    ///
-    /// OpenSSL documentation at [`EC_POINT_oct2point`]
-    ///
-    /// [`EC_POINT_oct2point`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_POINT_oct2point.html
+    #[corresponds(EC_POINT_oct2point)]
     pub fn from_bytes(
         group: &EcGroupRef,
         buf: &[u8],
@@ -625,16 +558,9 @@ generic_foreign_type_and_impl_send_sync! {
     type CType = ffi::EC_KEY;
     fn drop = ffi::EC_KEY_free;
 
-    /// Public and optional Private key on the given curve
-    ///
-    /// OpenSSL documentation at [`EC_KEY_new`]
-    ///
-    /// [`EC_KEY_new`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_new.html
+    /// Public and optional private key on the given curve.
     pub struct EcKey<T>;
-
-    /// Reference to [`EcKey`]
-    ///
-    /// [`EcKey`]: struct.EcKey.html
+    /// A reference to an [`EcKey`].
     pub struct EcKeyRef<T>;
 }
 
@@ -646,37 +572,25 @@ where
         /// Serializes the private key to a PEM-encoded ECPrivateKey structure.
         ///
         /// The output will have a header of `-----BEGIN EC PRIVATE KEY-----`.
-        ///
-        /// This corresponds to [`PEM_write_bio_ECPrivateKey`].
-        ///
-        /// [`PEM_write_bio_ECPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_ECPrivateKey.html
+        #[corresponds(PEM_write_bio_ECPrivateKey)]
         private_key_to_pem,
         /// Serializes the private key to a PEM-encoded encrypted ECPrivateKey structure.
         ///
         /// The output will have a header of `-----BEGIN EC PRIVATE KEY-----`.
-        ///
-        /// This corresponds to [`PEM_write_bio_ECPrivateKey`].
-        ///
-        /// [`PEM_write_bio_ECPrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_ECPrivateKey.html
+        #[corresponds(PEM_write_bio_ECPrivateKey)]
         private_key_to_pem_passphrase,
         ffi::PEM_write_bio_ECPrivateKey
     }
 
     to_der! {
         /// Serializes the private key into a DER-encoded ECPrivateKey structure.
-        ///
-        /// This corresponds to [`i2d_ECPrivateKey`].
-        ///
-        /// [`i2d_ECPrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/d2i_ECPrivate_key.html
+        #[corresponds(i2d_ECPrivateKey)]
         private_key_to_der,
         ffi::i2d_ECPrivateKey
     }
 
-    /// Return [`EcPoint`] associated with the private key
-    ///
-    /// OpenSSL documentation at [`EC_KEY_get0_private_key`]
-    ///
-    /// [`EC_KEY_get0_private_key`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_get0_private_key.html
+    /// Returns the private key value.
+    #[corresponds(EC_KEY_get0_private_key)]
     pub fn private_key(&self) -> &BigNumRef {
         unsafe {
             let ptr = ffi::EC_KEY_get0_private_key(self.as_ptr());
@@ -690,10 +604,7 @@ where
     T: HasPublic,
 {
     /// Returns the public key.
-    ///
-    /// OpenSSL documentation at [`EC_KEY_get0_public_key`]
-    ///
-    /// [`EC_KEY_get0_public_key`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_get0_public_key.html
+    #[corresponds(EC_KEY_get0_public_key)]
     pub fn public_key(&self) -> &EcPointRef {
         unsafe {
             let ptr = ffi::EC_KEY_get0_public_key(self.as_ptr());
@@ -705,20 +616,14 @@ where
         /// Serialies the public key into a PEM-encoded SubjectPublicKeyInfo structure.
         ///
         /// The output will have a header of `-----BEGIN PUBLIC KEY-----`.
-        ///
-        /// This corresponds to [`PEM_write_bio_EC_PUBKEY`].
-        ///
-        /// [`PEM_write_bio_EC_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_EC_PUBKEY.html
+        #[corresponds(PEM_write_bio_EC_PUBKEY)]
         public_key_to_pem,
         ffi::PEM_write_bio_EC_PUBKEY
     }
 
     to_der! {
         /// Serializes the public key into a DER-encoded SubjectPublicKeyInfo structure.
-        ///
-        /// This corresponds to [`i2d_EC_PUBKEY`].
-        ///
-        /// [`i2d_EC_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_EC_PUBKEY.html
+        #[corresponds(i2d_EC_PUBKEY)]
         public_key_to_der,
         ffi::i2d_EC_PUBKEY
     }
@@ -728,11 +633,8 @@ impl<T> EcKeyRef<T>
 where
     T: HasParams,
 {
-    /// Return [`EcGroup`] of the `EcKey`
-    ///
-    /// OpenSSL documentation at [`EC_KEY_get0_group`]
-    ///
-    /// [`EC_KEY_get0_group`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_get0_group.html
+    /// Returns the key's group.
+    #[corresponds(EC_KEY_get0_group)]
     pub fn group(&self) -> &EcGroupRef {
         unsafe {
             let ptr = ffi::EC_KEY_get0_group(self.as_ptr());
@@ -741,10 +643,7 @@ where
     }
 
     /// Checks the key for validity.
-    ///
-    /// OpenSSL documentation at [`EC_KEY_check_key`]
-    ///
-    /// [`EC_KEY_check_key`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_check_key.html
+    #[corresponds(EC_KEY_check_key)]
     pub fn check_key(&self) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::EC_KEY_check_key(self.as_ptr())).map(|_| ()) }
     }
@@ -767,10 +666,7 @@ impl EcKey<Params> {
     ///
     /// It will not have an associated public or private key. This kind of key is primarily useful
     /// to be provided to the `set_tmp_ecdh` methods on `Ssl` and `SslContextBuilder`.
-    ///
-    /// OpenSSL documentation at [`EC_KEY_new_by_curve_name`]
-    ///
-    /// [`EC_KEY_new_by_curve_name`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_new_by_curve_name.html
+    #[corresponds(EC_KEY_new_by_curve_name)]
     pub fn from_curve_name(nid: Nid) -> Result<EcKey<Params>, ErrorStack> {
         unsafe {
             init();
@@ -779,10 +675,7 @@ impl EcKey<Params> {
     }
 
     /// Constructs an `EcKey` corresponding to a curve.
-    ///
-    /// This corresponds to [`EC_KEY_set_group`].
-    ///
-    /// [`EC_KEY_set_group`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_KEY_new.html
+    #[corresponds(EC_KEY_set_group)]
     pub fn from_group(group: &EcGroupRef) -> Result<EcKey<Params>, ErrorStack> {
         unsafe {
             cvt_p(ffi::EC_KEY_new())
@@ -816,6 +709,7 @@ impl EcKey<Public> {
     /// let point = EcPoint::from_bytes(&group, &public_key, &mut ctx).unwrap();
     /// let key = EcKey::from_public_key(&group, &point);
     /// ```
+    #[corresponds(EC_KEY_set_public_key)]
     pub fn from_public_key(
         group: &EcGroupRef,
         public_key: &EcPointRef,
@@ -837,6 +731,7 @@ impl EcKey<Public> {
     }
 
     /// Constructs a public key from its affine coordinates.
+    #[corresponds(EC_KEY_set_public_key_affine_coordinates)]
     pub fn from_public_key_affine_coordinates(
         group: &EcGroupRef,
         x: &BigNumRef,
@@ -863,10 +758,7 @@ impl EcKey<Public> {
         /// Decodes a PEM-encoded SubjectPublicKeyInfo structure containing a EC key.
         ///
         /// The input should have a header of `-----BEGIN PUBLIC KEY-----`.
-        ///
-        /// This corresponds to [`PEM_read_bio_EC_PUBKEY`].
-        ///
-        /// [`PEM_read_bio_EC_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_read_bio_EC_PUBKEY.html
+        #[corresponds(PEM_read_bio_EC_PUBKEY)]
         public_key_from_pem,
         EcKey<Public>,
         ffi::PEM_read_bio_EC_PUBKEY
@@ -874,10 +766,7 @@ impl EcKey<Public> {
 
     from_der! {
         /// Decodes a DER-encoded SubjectPublicKeyInfo structure containing a EC key.
-        ///
-        /// This corresponds to [`d2i_EC_PUBKEY`].
-        ///
-        /// [`d2i_EC_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_EC_PUBKEY.html
+        #[corresponds(d2i_EC_PUBKEY)]
         public_key_from_der,
         EcKey<Public>,
         ffi::d2i_EC_PUBKEY
@@ -886,6 +775,7 @@ impl EcKey<Public> {
 
 impl EcKey<Private> {
     /// Generates a new public/private key pair on the specified curve.
+    #[corresponds(EC_KEY_generate_key)]
     pub fn generate(group: &EcGroupRef) -> Result<EcKey<Private>, ErrorStack> {
         unsafe {
             cvt_p(ffi::EC_KEY_new())
@@ -898,6 +788,7 @@ impl EcKey<Private> {
     }
 
     /// Constructs an public/private key pair given a curve, a private key and a public key point.
+    #[corresponds(EC_KEY_set_private_key)]
     pub fn from_private_components(
         group: &EcGroupRef,
         private_number: &BigNumRef,
@@ -930,15 +821,13 @@ impl EcKey<Private> {
         /// Deserializes a private key from a PEM-encoded ECPrivateKey structure.
         ///
         /// The input should have a header of `-----BEGIN EC PRIVATE KEY-----`.
-        ///
-        /// This corresponds to `PEM_read_bio_ECPrivateKey`.
+        #[corresponds(PEM_read_bio_ECPrivateKey)]
         private_key_from_pem,
 
         /// Deserializes a private key from a PEM-encoded encrypted ECPrivateKey structure.
         ///
         /// The input should have a header of `-----BEGIN EC PRIVATE KEY-----`.
-        ///
-        /// This corresponds to `PEM_read_bio_ECPrivateKey`.
+        #[corresponds(PEM_read_bio_ECPrivateKey)]
         private_key_from_pem_passphrase,
 
         /// Deserializes a private key from a PEM-encoded encrypted ECPrivateKey structure.
@@ -946,8 +835,7 @@ impl EcKey<Private> {
         /// The callback should fill the password into the provided buffer and return its length.
         ///
         /// The input should have a header of `-----BEGIN EC PRIVATE KEY-----`.
-        ///
-        /// This corresponds to `PEM_read_bio_ECPrivateKey`.
+        #[corresponds(PEM_read_bio_ECPrivateKey)]
         private_key_from_pem_callback,
         EcKey<Private>,
         ffi::PEM_read_bio_ECPrivateKey
@@ -955,10 +843,7 @@ impl EcKey<Private> {
 
     from_der! {
         /// Decodes a DER-encoded elliptic curve private key structure.
-        ///
-        /// This corresponds to [`d2i_ECPrivateKey`].
-        ///
-        /// [`d2i_ECPrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/d2i_ECPrivate_key.html
+        #[corresponds(d2i_ECPrivateKey)]
         private_key_from_der,
         EcKey<Private>,
         ffi::d2i_ECPrivateKey
@@ -1173,6 +1058,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
     fn is_on_curve() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let mut ctx = BigNumContext::new().unwrap();

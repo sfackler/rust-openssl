@@ -12,7 +12,7 @@ pub fn get_openssl(target: &str) -> (PathBuf, PathBuf) {
     match (lib_dir, include_dir) {
         (Some(lib_dir), Some(include_dir)) => (lib_dir, include_dir),
         (lib_dir, include_dir) => {
-            let openssl_dir = env("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(&target));
+            let openssl_dir = env("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(target));
             let openssl_dir = Path::new(&openssl_dir);
             let lib_dir = lib_dir.unwrap_or_else(|| openssl_dir.join("lib"));
             let include_dir = include_dir.unwrap_or_else(|| openssl_dir.join("include"));
@@ -22,21 +22,27 @@ pub fn get_openssl(target: &str) -> (PathBuf, PathBuf) {
 }
 
 fn resolve_with_wellknown_homebrew_location(dir: &str) -> Option<PathBuf> {
+    let versions = ["openssl@3", "openssl@1.1"];
+
     // Check up default aarch 64 Homebrew installation location first
     // for quick resolution if possible.
     //  `pkg-config` on brew doesn't necessarily contain settings for openssl apparently.
-    let homebrew = Path::new(dir).join("opt/openssl@1.1");
-    if homebrew.exists() {
-        return Some(homebrew);
+    for version in &versions {
+        let homebrew = Path::new(dir).join(format!("opt/{}", version));
+        if homebrew.exists() {
+            return Some(homebrew);
+        }
     }
 
-    // Calling `brew --prefix <package>` command usually slow and
-    // takes seconds, and will be used only as a last resort.
-    let output = execute_command_and_get_output("brew", &["--prefix", "openssl@1.1"]);
-    if let Some(ref output) = output {
-        let homebrew = Path::new(&output);
-        if homebrew.exists() {
-            return Some(homebrew.to_path_buf());
+    for version in &versions {
+        // Calling `brew --prefix <package>` command usually slow and
+        // takes seconds, and will be used only as a last resort.
+        let output = execute_command_and_get_output("brew", &["--prefix", version]);
+        if let Some(ref output) = output {
+            let homebrew = Path::new(&output);
+            if homebrew.exists() {
+                return Some(homebrew.to_path_buf());
+            }
         }
     }
 

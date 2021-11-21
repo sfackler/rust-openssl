@@ -169,11 +169,7 @@ impl<'a> Encrypter<'a> {
     #[cfg(any(ossl102, libressl310))]
     pub fn set_rsa_oaep_label(&mut self, label: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
-            let p = cvt_p(ffi::CRYPTO_malloc(
-                label.len() as _,
-                concat!(file!(), "\0").as_ptr() as *const _,
-                line!() as c_int,
-            ))?;
+            let p = cvt_p(ffi::OPENSSL_malloc(label.len() as _))?;
             ptr::copy_nonoverlapping(label.as_ptr(), p as *mut u8, label.len());
 
             cvt(ffi::EVP_PKEY_CTX_set0_rsa_oaep_label(
@@ -183,14 +179,7 @@ impl<'a> Encrypter<'a> {
             ))
             .map(|_| ())
             .map_err(|e| {
-                #[cfg(not(ossl110))]
-                ::ffi::CRYPTO_free(p as *mut c_void);
-                #[cfg(ossl110)]
-                ::ffi::CRYPTO_free(
-                    p as *mut c_void,
-                    concat!(file!(), "\0").as_ptr() as *const _,
-                    line!() as c_int,
-                );
+                ffi::OPENSSL_free(p);
                 e
             })
         }
@@ -489,9 +478,9 @@ mod test {
 
         let mut decrypter = Decrypter::new(&pkey).unwrap();
         decrypter.set_rsa_padding(Padding::PKCS1).unwrap();
-        let buffer_len = decrypter.decrypt_len(&encoded).unwrap();
+        let buffer_len = decrypter.decrypt_len(encoded).unwrap();
         let mut decoded = vec![0u8; buffer_len];
-        let decoded_len = decrypter.decrypt(&encoded, &mut decoded).unwrap();
+        let decoded_len = decrypter.decrypt(encoded, &mut decoded).unwrap();
         let decoded = &decoded[..decoded_len];
 
         assert_eq!(decoded, &*input);
@@ -520,9 +509,9 @@ mod test {
         decrypter.set_rsa_padding(Padding::PKCS1_OAEP).unwrap();
         decrypter.set_rsa_oaep_md(md).unwrap();
         decrypter.set_rsa_mgf1_md(md).unwrap();
-        let buffer_len = decrypter.decrypt_len(&encoded).unwrap();
+        let buffer_len = decrypter.decrypt_len(encoded).unwrap();
         let mut decoded = vec![0u8; buffer_len];
-        let decoded_len = decrypter.decrypt(&encoded, &mut decoded).unwrap();
+        let decoded_len = decrypter.decrypt(encoded, &mut decoded).unwrap();
         let decoded = &decoded[..decoded_len];
 
         assert_eq!(decoded, &*input);

@@ -41,6 +41,7 @@ use crate::error::ErrorStack;
 use crate::nid::Nid;
 use crate::string::OpensslString;
 use crate::{cvt, cvt_p};
+use openssl_macros::corresponds;
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_GENERALIZEDTIME;
@@ -196,10 +197,7 @@ foreign_type_and_impl_send_sync! {
 
 impl Asn1TimeRef {
     /// Find difference between two times
-    ///
-    /// This corresponds to [`ASN1_TIME_diff`].
-    ///
-    /// [`ASN1_TIME_diff`]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_TIME_diff.html
+    #[corresponds(ASN1_TIME_diff)]
     #[cfg(ossl102)]
     pub fn diff(&self, compare: &Self) -> Result<TimeDiff, ErrorStack> {
         let mut days = 0;
@@ -215,12 +213,7 @@ impl Asn1TimeRef {
     }
 
     /// Compare two times
-    ///
-    /// This corresponds to [`ASN1_TIME_compare`] but is implemented using [`diff`] so that it is
-    /// also supported on older versions of OpenSSL.
-    ///
-    /// [`ASN1_TIME_compare`]: https://www.openssl.org/docs/man1.1.1/man3/ASN1_TIME_compare.html
-    /// [`diff`]: struct.Asn1TimeRef.html#method.diff
+    #[corresponds(ASN1_TIME_compare)]
     #[cfg(ossl102)]
     pub fn compare(&self, other: &Self) -> Result<Ordering, ErrorStack> {
         let d = self.diff(other)?;
@@ -306,6 +299,7 @@ impl fmt::Debug for Asn1TimeRef {
 }
 
 impl Asn1Time {
+    #[corresponds(ASN1_TIME_new)]
     fn new() -> Result<Asn1Time, ErrorStack> {
         ffi::init();
 
@@ -315,6 +309,7 @@ impl Asn1Time {
         }
     }
 
+    #[corresponds(X509_gmtime_adj)]
     fn from_period(period: c_long) -> Result<Asn1Time, ErrorStack> {
         ffi::init();
 
@@ -330,6 +325,7 @@ impl Asn1Time {
     }
 
     /// Creates a new time from the specified `time_t` value
+    #[corresponds(ASN1_TIME_set)]
     pub fn from_unix(time: time_t) -> Result<Asn1Time, ErrorStack> {
         ffi::init();
 
@@ -340,10 +336,7 @@ impl Asn1Time {
     }
 
     /// Creates a new time corresponding to the specified ASN1 time string.
-    ///
-    /// This corresponds to [`ASN1_TIME_set_string`].
-    ///
-    /// [`ASN1_TIME_set_string`]: https://www.openssl.org/docs/manmaster/man3/ASN1_TIME_set_string.html
+    #[corresponds(ASN1_TIME_set_string)]
     #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Result<Asn1Time, ErrorStack> {
         unsafe {
@@ -358,11 +351,8 @@ impl Asn1Time {
 
     /// Creates a new time corresponding to the specified X509 time string.
     ///
-    /// This corresponds to [`ASN1_TIME_set_string_X509`].
-    ///
     /// Requires OpenSSL 1.1.1 or newer.
-    ///
-    /// [`ASN1_TIME_set_string_X509`]: https://www.openssl.org/docs/manmaster/man3/ASN1_TIME_set_string.html
+    #[corresponds(ASN1_TIME_set_string_X509)]
     #[cfg(ossl111)]
     pub fn from_str_x509(s: &str) -> Result<Asn1Time, ErrorStack> {
         unsafe {
@@ -435,9 +425,7 @@ foreign_type_and_impl_send_sync! {
     ///
     /// [ASN1_STRING-to_UTF8]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_STRING_to_UTF8.html
     pub struct Asn1String;
-    /// Reference to [`Asn1String`]
-    ///
-    /// [`Asn1String`]: struct.Asn1String.html
+    /// A reference to an [`Asn1String`].
     pub struct Asn1StringRef;
 }
 
@@ -447,6 +435,7 @@ impl Asn1StringRef {
     /// ASN.1 strings may utilize UTF-16, ASCII, BMP, or UTF8.  This is important to
     /// consume the string in a meaningful way without knowing the underlying
     /// format.
+    #[corresponds(ASN1_STRING_to_UTF8)]
     pub fn as_utf8(&self) -> Result<OpensslString, ErrorStack> {
         unsafe {
             let mut ptr = ptr::null_mut();
@@ -465,11 +454,13 @@ impl Asn1StringRef {
     /// strings in rust, it is preferable to use [`as_utf8`]
     ///
     /// [`as_utf8`]: struct.Asn1String.html#method.as_utf8
+    #[corresponds(ASN1_STRING_get0_data)]
     pub fn as_slice(&self) -> &[u8] {
         unsafe { slice::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr()), self.len()) }
     }
 
     /// Returns the number of bytes in the string.
+    #[corresponds(ASN1_STRING_length)]
     pub fn len(&self) -> usize {
         unsafe { ffi::ASN1_STRING_length(self.as_ptr()) as usize }
     }
@@ -503,9 +494,7 @@ foreign_type_and_impl_send_sync! {
     /// [`bn`]: ../bn/index.html
     /// [`ASN1_INTEGER_set`]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_INTEGER_set.html
     pub struct Asn1Integer;
-    /// Reference to [`Asn1Integer`]
-    ///
-    /// [`Asn1Integer`]: struct.Asn1Integer.html
+    /// A reference to an [`Asn1Integer`].
     pub struct Asn1IntegerRef;
 }
 
@@ -530,10 +519,7 @@ impl Asn1IntegerRef {
     }
 
     /// Converts the integer to a `BigNum`.
-    ///
-    /// This corresponds to [`ASN1_INTEGER_to_BN`].
-    ///
-    /// [`ASN1_INTEGER_to_BN`]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_INTEGER_get.html
+    #[corresponds(ASN1_INTEGER_to_BN)]
     pub fn to_bn(&self) -> Result<BigNum, ErrorStack> {
         unsafe {
             cvt_p(ffi::ASN1_INTEGER_to_BN(self.as_ptr(), ptr::null_mut()))
@@ -544,10 +530,8 @@ impl Asn1IntegerRef {
     /// Sets the ASN.1 value to the value of a signed 32-bit integer, for larger numbers
     /// see [`bn`].
     ///
-    /// OpenSSL documentation at [`ASN1_INTEGER_set`]
-    ///
     /// [`bn`]: ../bn/struct.BigNumRef.html#method.to_asn1_integer
-    /// [`ASN1_INTEGER_set`]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_INTEGER_set.html
+    #[corresponds(ASN1_INTEGER_set)]
     pub fn set(&mut self, value: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::ASN1_INTEGER_set(self.as_ptr(), value as c_long)).map(|_| ()) }
     }
@@ -563,19 +547,19 @@ foreign_type_and_impl_send_sync! {
     ///
     /// [`x509`]: ../x509/struct.X509.html#method.signature
     pub struct Asn1BitString;
-    /// Reference to [`Asn1BitString`]
-    ///
-    /// [`Asn1BitString`]: struct.Asn1BitString.html
+    /// A reference to an [`Asn1BitString`].
     pub struct Asn1BitStringRef;
 }
 
 impl Asn1BitStringRef {
     /// Returns the Asn1BitString as a slice.
+    #[corresponds(ASN1_STRING_get0_data)]
     pub fn as_slice(&self) -> &[u8] {
         unsafe { slice::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr() as *mut _), self.len()) }
     }
 
     /// Returns the number of bytes in the string.
+    #[corresponds(ASN1_STRING_length)]
     pub fn len(&self) -> usize {
         unsafe { ffi::ASN1_STRING_length(self.as_ptr() as *const _) as usize }
     }
@@ -604,19 +588,13 @@ foreign_type_and_impl_send_sync! {
     /// [`nid::COMMONNAME`]: ../nid/constant.COMMONNAME.html
     /// [`OBJ_nid2obj`]: https://www.openssl.org/docs/man1.1.0/crypto/OBJ_obj2nid.html
     pub struct Asn1Object;
-    /// Reference to [`Asn1Object`]
-    ///
-    /// [`Asn1Object`]: struct.Asn1Object.html
+    /// A reference to an [`Asn1Object`].
     pub struct Asn1ObjectRef;
 }
 
 impl Asn1Object {
-    /// Constructs an ASN.1 Object Identifier from a string representation of
-    /// the OID.
-    ///
-    /// This corresponds to [`OBJ_txt2obj`].
-    ///
-    /// [`OBJ_txt2obj`]: https://www.openssl.org/docs/man1.1.0/man3/OBJ_txt2obj.html
+    /// Constructs an ASN.1 Object Identifier from a string representation of the OID.
+    #[corresponds(OBJ_txt2obj)]
     #[allow(clippy::should_implement_trait)]
     pub fn from_str(txt: &str) -> Result<Asn1Object, ErrorStack> {
         unsafe {
@@ -624,6 +602,19 @@ impl Asn1Object {
             let txt = CString::new(txt).unwrap();
             let obj: *mut ffi::ASN1_OBJECT = cvt_p(ffi::OBJ_txt2obj(txt.as_ptr() as *const _, 0))?;
             Ok(Asn1Object::from_ptr(obj))
+        }
+    }
+
+    /// Return the OID as an DER encoded array of bytes. This is the ASN.1
+    /// value, not including tag or length.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    #[corresponds(OBJ_get0_data)]
+    #[cfg(ossl111)]
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe {
+            let len = ffi::OBJ_length(self.as_ptr());
+            slice::from_raw_parts(ffi::OBJ_get0_data(self.as_ptr()), len)
         }
     }
 }
@@ -764,5 +755,15 @@ mod tests {
         Asn1Object::from_str("NOT AN OID")
             .map(|object| object.to_string())
             .expect_err("parsing invalid OID should fail");
+    }
+
+    #[test]
+    #[cfg(ossl111)]
+    fn object_to_slice() {
+        let object = Asn1Object::from_str("2.16.840.1.101.3.4.2.1").unwrap();
+        assert_eq!(
+            object.as_slice(),
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01],
+        );
     }
 }

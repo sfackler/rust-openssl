@@ -37,7 +37,8 @@
 //! ```
 use cfg_if::cfg_if;
 use libc::c_void;
-use std::mem;
+use openssl_macros::corresponds;
+use std::mem::MaybeUninit;
 
 /// Computes the SHA1 hash of some data.
 ///
@@ -45,57 +46,57 @@ use std::mem;
 ///
 /// SHA1 is known to be insecure - it should not be used unless required for
 /// compatibility with existing systems.
+#[corresponds(SHA1)]
 #[inline]
-#[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
 pub fn sha1(data: &[u8]) -> [u8; 20] {
     unsafe {
-        let mut hash: [u8; 20] = mem::uninitialized();
-        ffi::SHA1(data.as_ptr(), data.len(), hash.as_mut_ptr());
-        hash
+        let mut hash = MaybeUninit::<[u8; 20]>::uninit();
+        ffi::SHA1(data.as_ptr(), data.len(), hash.as_mut_ptr() as *mut _);
+        hash.assume_init()
     }
 }
 
 /// Computes the SHA224 hash of some data.
+#[corresponds(SH224)]
 #[inline]
-#[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
 pub fn sha224(data: &[u8]) -> [u8; 28] {
     unsafe {
-        let mut hash: [u8; 28] = mem::uninitialized();
-        ffi::SHA224(data.as_ptr(), data.len(), hash.as_mut_ptr());
-        hash
+        let mut hash = MaybeUninit::<[u8; 28]>::uninit();
+        ffi::SHA224(data.as_ptr(), data.len(), hash.as_mut_ptr() as *mut _);
+        hash.assume_init()
     }
 }
 
 /// Computes the SHA256 hash of some data.
+#[corresponds(SHA256)]
 #[inline]
-#[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
 pub fn sha256(data: &[u8]) -> [u8; 32] {
     unsafe {
-        let mut hash: [u8; 32] = mem::uninitialized();
-        ffi::SHA256(data.as_ptr(), data.len(), hash.as_mut_ptr());
-        hash
+        let mut hash = MaybeUninit::<[u8; 32]>::uninit();
+        ffi::SHA256(data.as_ptr(), data.len(), hash.as_mut_ptr() as *mut _);
+        hash.assume_init()
     }
 }
 
 /// Computes the SHA384 hash of some data.
+#[corresponds(SHA384)]
 #[inline]
-#[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
 pub fn sha384(data: &[u8]) -> [u8; 48] {
     unsafe {
-        let mut hash: [u8; 48] = mem::uninitialized();
-        ffi::SHA384(data.as_ptr(), data.len(), hash.as_mut_ptr());
-        hash
+        let mut hash = MaybeUninit::<[u8; 48]>::uninit();
+        ffi::SHA384(data.as_ptr(), data.len(), hash.as_mut_ptr() as *mut _);
+        hash.assume_init()
     }
 }
 
 /// Computes the SHA512 hash of some data.
+#[corresponds(SHA512)]
 #[inline]
-#[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
 pub fn sha512(data: &[u8]) -> [u8; 64] {
     unsafe {
-        let mut hash: [u8; 64] = mem::uninitialized();
-        ffi::SHA512(data.as_ptr(), data.len(), hash.as_mut_ptr());
-        hash
+        let mut hash = MaybeUninit::<[u8; 64]>::uninit();
+        ffi::SHA512(data.as_ptr(), data.len(), hash.as_mut_ptr() as *mut _);
+        hash.assume_init()
     }
 }
 
@@ -119,19 +120,20 @@ cfg_if! {
 
         impl Sha1 {
             /// Creates a new hasher.
+            #[corresponds(SHA1_Init)]
             #[inline]
-            #[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
             pub fn new() -> Sha1 {
                 unsafe {
-                    let mut ctx = mem::uninitialized();
-                    ffi::SHA1_Init(&mut ctx);
-                    Sha1(ctx)
+                    let mut ctx = MaybeUninit::uninit();
+                    ffi::SHA1_Init( ctx.as_mut_ptr());
+                    Sha1(ctx.assume_init())
                 }
             }
 
             /// Feeds some data into the hasher.
             ///
             /// This can be called multiple times.
+            #[corresponds(SHA1_Update)]
             #[inline]
             pub fn update(&mut self, buf: &[u8]) {
                 unsafe {
@@ -140,13 +142,13 @@ cfg_if! {
             }
 
             /// Returns the hash of the data.
+            #[corresponds(SHA1_Final)]
             #[inline]
-            #[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
             pub fn finish(mut self) -> [u8; 20] {
                 unsafe {
-                    let mut hash: [u8; 20] = mem::uninitialized();
-                    ffi::SHA1_Final(hash.as_mut_ptr(), &mut self.0);
-                    hash
+                    let mut hash = MaybeUninit::<[u8; 20]>::uninit();
+                    ffi::SHA1_Final(hash.as_mut_ptr() as *mut _, &mut self.0);
+                    hash.assume_init()
                 }
             }
         }
@@ -164,19 +166,20 @@ cfg_if! {
 
         impl Sha224 {
             /// Creates a new hasher.
+            #[corresponds(SHA224_Init)]
             #[inline]
-            #[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
             pub fn new() -> Sha224 {
                 unsafe {
-                    let mut ctx = mem::uninitialized();
-                    ffi::SHA224_Init(&mut ctx);
-                    Sha224(ctx)
+                    let mut ctx = MaybeUninit::uninit();
+                    ffi::SHA224_Init(ctx.as_mut_ptr());
+                    Sha224(ctx.assume_init())
                 }
             }
 
             /// Feeds some data into the hasher.
             ///
             /// This can be called multiple times.
+            #[corresponds(SHA224_Update)]
             #[inline]
             pub fn update(&mut self, buf: &[u8]) {
                 unsafe {
@@ -185,13 +188,13 @@ cfg_if! {
             }
 
             /// Returns the hash of the data.
+            #[corresponds(SHA224_Final)]
             #[inline]
-            #[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
             pub fn finish(mut self) -> [u8; 28] {
                 unsafe {
-                    let mut hash: [u8; 28] = mem::uninitialized();
-                    ffi::SHA224_Final(hash.as_mut_ptr(), &mut self.0);
-                    hash
+                    let mut hash = MaybeUninit::<[u8; 28]>::uninit();
+                    ffi::SHA224_Final(hash.as_mut_ptr() as *mut _, &mut self.0);
+                    hash.assume_init()
                 }
             }
         }
@@ -209,19 +212,20 @@ cfg_if! {
 
         impl Sha256 {
             /// Creates a new hasher.
+            #[corresponds(SHA256_Init)]
             #[inline]
-            #[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
             pub fn new() -> Sha256 {
                 unsafe {
-                    let mut ctx = mem::uninitialized();
-                    ffi::SHA256_Init(&mut ctx);
-                    Sha256(ctx)
+                    let mut ctx = MaybeUninit::uninit();
+                    ffi::SHA256_Init(ctx.as_mut_ptr());
+                    Sha256(ctx.assume_init())
                 }
             }
 
             /// Feeds some data into the hasher.
             ///
             /// This can be called multiple times.
+            #[corresponds(SHA256_Update)]
             #[inline]
             pub fn update(&mut self, buf: &[u8]) {
                 unsafe {
@@ -230,13 +234,13 @@ cfg_if! {
             }
 
             /// Returns the hash of the data.
+            #[corresponds(SHA256_Final)]
             #[inline]
-            #[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
             pub fn finish(mut self) -> [u8; 32] {
                 unsafe {
-                    let mut hash: [u8; 32] = mem::uninitialized();
-                    ffi::SHA256_Final(hash.as_mut_ptr(), &mut self.0);
-                    hash
+                    let mut hash = MaybeUninit::<[u8; 32]>::uninit();
+                    ffi::SHA256_Final(hash.as_mut_ptr() as *mut _, &mut self.0);
+                    hash.assume_init()
                 }
             }
         }
@@ -254,19 +258,20 @@ cfg_if! {
 
         impl Sha384 {
             /// Creates a new hasher.
+            #[corresponds(SHA384_Init)]
             #[inline]
-            #[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
             pub fn new() -> Sha384 {
                 unsafe {
-                    let mut ctx = mem::uninitialized();
-                    ffi::SHA384_Init(&mut ctx);
-                    Sha384(ctx)
+                    let mut ctx = MaybeUninit::uninit();
+                    ffi::SHA384_Init(ctx.as_mut_ptr());
+                    Sha384(ctx.assume_init())
                 }
             }
 
             /// Feeds some data into the hasher.
             ///
             /// This can be called multiple times.
+            #[corresponds(SHA384_Update)]
             #[inline]
             pub fn update(&mut self, buf: &[u8]) {
                 unsafe {
@@ -275,13 +280,13 @@ cfg_if! {
             }
 
             /// Returns the hash of the data.
+            #[corresponds(SHA384_Final)]
             #[inline]
-            #[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
             pub fn finish(mut self) -> [u8; 48] {
                 unsafe {
-                    let mut hash: [u8; 48] = mem::uninitialized();
-                    ffi::SHA384_Final(hash.as_mut_ptr(), &mut self.0);
-                    hash
+                    let mut hash = MaybeUninit::<[u8; 48]>::uninit();
+                    ffi::SHA384_Final(hash.as_mut_ptr() as *mut _, &mut self.0);
+                    hash.assume_init()
                 }
             }
         }
@@ -299,19 +304,20 @@ cfg_if! {
 
         impl Sha512 {
             /// Creates a new hasher.
+            #[corresponds(SHA512_Init)]
             #[inline]
-            #[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
             pub fn new() -> Sha512 {
                 unsafe {
-                    let mut ctx = mem::uninitialized();
-                    ffi::SHA512_Init(&mut ctx);
-                    Sha512(ctx)
+                    let mut ctx = MaybeUninit::uninit();
+                    ffi::SHA512_Init(ctx.as_mut_ptr());
+                    Sha512(ctx.assume_init())
                 }
             }
 
             /// Feeds some data into the hasher.
             ///
             /// This can be called multiple times.
+            #[corresponds(SHA512_Update)]
             #[inline]
             pub fn update(&mut self, buf: &[u8]) {
                 unsafe {
@@ -320,13 +326,13 @@ cfg_if! {
             }
 
             /// Returns the hash of the data.
+            #[corresponds(SHA512_Final)]
             #[inline]
-            #[allow(deprecated)] // https://github.com/rust-lang/rust/issues/63566
             pub fn finish(mut self) -> [u8; 64] {
                 unsafe {
-                    let mut hash: [u8; 64] = mem::uninitialized();
-                ffi::SHA512_Final(hash.as_mut_ptr(), &mut self.0);
-                hash
+                    let mut hash= MaybeUninit::<[u8; 64]>::uninit();
+                ffi::SHA512_Final(hash.as_mut_ptr() as *mut _, &mut self.0);
+                hash.assume_init()
             }
         }
     }

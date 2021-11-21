@@ -482,6 +482,11 @@ pub unsafe fn SSL_set_mtu(ssl: *mut SSL, mtu: c_long) -> c_long {
     SSL_ctrl(ssl, SSL_CTRL_SET_MTU, mtu, ptr::null_mut())
 }
 
+#[cfg(ossl110)]
+pub unsafe fn SSL_get_extms_support(ssl: *mut SSL) -> c_long {
+    SSL_ctrl(ssl, SSL_CTRL_GET_EXTMS_SUPPORT, 0, ptr::null_mut())
+}
+
 pub type GEN_SESSION_CB =
     Option<unsafe extern "C" fn(*const SSL, *mut c_uchar, *mut c_uint) -> c_int>;
 
@@ -767,6 +772,8 @@ pub const SSL_CTRL_SET_ECDH_AUTO: c_int = 94;
 pub const SSL_CTRL_SET_SIGALGS_LIST: c_int = 98;
 #[cfg(ossl102)]
 pub const SSL_CTRL_SET_VERIFY_CERT_STORE: c_int = 106;
+#[cfg(ossl110)]
+pub const SSL_CTRL_GET_EXTMS_SUPPORT: c_int = 122;
 #[cfg(ossl110)]
 pub const SSL_CTRL_SET_MIN_PROTO_VERSION: c_int = 123;
 #[cfg(ossl110)]

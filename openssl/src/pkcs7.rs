@@ -12,6 +12,7 @@ use crate::symm::Cipher;
 use crate::x509::store::X509StoreRef;
 use crate::x509::{X509Ref, X509};
 use crate::{cvt, cvt_p};
+use openssl_macros::corresponds;
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::PKCS7;
@@ -54,10 +55,7 @@ impl Pkcs7 {
         /// Deserializes a PEM-encoded PKCS#7 signature
         ///
         /// The input should have a header of `-----BEGIN PKCS7-----`.
-        ///
-        /// This corresponds to [`PEM_read_bio_PKCS7`].
-        ///
-        /// [`PEM_read_bio_PKCS7`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_read_bio_PKCS7.html
+        #[corresponds(PEM_read_bio_PKCS7)]
         from_pem,
         Pkcs7,
         ffi::PEM_read_bio_PKCS7
@@ -65,10 +63,7 @@ impl Pkcs7 {
 
     from_der! {
         /// Deserializes a DER-encoded PKCS#7 signature
-        ///
-        /// This corresponds to [`d2i_PKCS7`].
-        ///
-        /// [`d2i_PKCS7`]: https://www.openssl.org/docs/man1.1.0/man3/d2i_PKCS7.html
+        #[corresponds(d2i_PKCS7)]
         from_der,
         Pkcs7,
         ffi::d2i_PKCS7
@@ -78,10 +73,7 @@ impl Pkcs7 {
     ///
     /// Returns the loaded signature, along with the cleartext message (if
     /// available).
-    ///
-    /// This corresponds to [`SMIME_read_PKCS7`].
-    ///
-    /// [`SMIME_read_PKCS7`]: https://www.openssl.org/docs/man1.1.0/crypto/SMIME_read_PKCS7.html
+    #[corresponds(SMIME_read_PKCS7)]
     pub fn from_smime(input: &[u8]) -> Result<(Pkcs7, Option<Vec<u8>>), ErrorStack> {
         ffi::init();
 
@@ -105,10 +97,7 @@ impl Pkcs7 {
     /// `certs` is a list of recipient certificates. `input` is the content to be
     /// encrypted. `cipher` is the symmetric cipher to use. `flags` is an optional
     /// set of flags.
-    ///
-    /// This corresponds to [`PKCS7_encrypt`].
-    ///
-    /// [`PKCS7_encrypt`]: https://www.openssl.org/docs/man1.0.2/crypto/PKCS7_encrypt.html
+    #[corresponds(PKCS7_encrypt)]
     pub fn encrypt(
         certs: &StackRef<X509>,
         input: &[u8],
@@ -134,10 +123,7 @@ impl Pkcs7 {
     /// private key. `certs` is an optional additional set of certificates to
     /// include in the PKCS#7 structure (for example any intermediate CAs in the
     /// chain).
-    ///
-    /// This corresponds to [`PKCS7_sign`].
-    ///
-    /// [`PKCS7_sign`]: https://www.openssl.org/docs/man1.0.2/crypto/PKCS7_sign.html
+    #[corresponds(PKCS7_sign)]
     pub fn sign<PT>(
         signcert: &X509Ref,
         pkey: &PKeyRef<PT>,
@@ -164,10 +150,7 @@ impl Pkcs7 {
 
 impl Pkcs7Ref {
     /// Converts PKCS#7 structure to S/MIME format
-    ///
-    /// This corresponds to [`SMIME_write_PKCS7`].
-    ///
-    /// [`SMIME_write_PKCS7`]: https://www.openssl.org/docs/man1.1.0/crypto/SMIME_write_PKCS7.html
+    #[corresponds(SMIME_write_PKCS7)]
     pub fn to_smime(&self, input: &[u8], flags: Pkcs7Flags) -> Result<Vec<u8>, ErrorStack> {
         let input_bio = MemBioSlice::new(input)?;
         let output = MemBio::new()?;
@@ -186,20 +169,14 @@ impl Pkcs7Ref {
         /// Serializes the data into a PEM-encoded PKCS#7 structure.
         ///
         /// The output will have a header of `-----BEGIN PKCS7-----`.
-        ///
-        /// This corresponds to [`PEM_write_bio_PKCS7`].
-        ///
-        /// [`PEM_write_bio_PKCS7`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_write_bio_PKCS7.html
+        #[corresponds(PEM_write_bio_PKCS7)]
         to_pem,
         ffi::PEM_write_bio_PKCS7
     }
 
     to_der! {
         /// Serializes the data into a DER-encoded PKCS#7 structure.
-        ///
-        /// This corresponds to [`i2d_PKCS7`].
-        ///
-        /// [`i2d_PKCS7`]: https://www.openssl.org/docs/man1.1.0/man3/i2d_PKCS7.html
+        #[corresponds(i2d_PKCS7)]
         to_der,
         ffi::i2d_PKCS7
     }
@@ -210,10 +187,7 @@ impl Pkcs7Ref {
     /// certificate.
     ///
     /// Returns the decrypted message.
-    ///
-    /// This corresponds to [`PKCS7_decrypt`].
-    ///
-    /// [`PKCS7_decrypt`]: https://www.openssl.org/docs/man1.0.2/crypto/PKCS7_decrypt.html
+    #[corresponds(PKCS7_decrypt)]
     pub fn decrypt<PT>(
         &self,
         pkey: &PKeyRef<PT>,
@@ -243,10 +217,7 @@ impl Pkcs7Ref {
     /// certificate. `store` is a trusted certificate store (used for chain
     /// verification). `indata` is the signed data if the content is not present
     /// in `&self`. The content is written to `out` if it is not `None`.
-    ///
-    /// This corresponds to [`PKCS7_verify`].
-    ///
-    /// [`PKCS7_verify`]: https://www.openssl.org/docs/man1.0.2/crypto/PKCS7_verify.html
+    #[corresponds(PKCS7_verify)]
     pub fn verify(
         &self,
         certs: &StackRef<X509>,
@@ -284,10 +255,7 @@ impl Pkcs7Ref {
     }
 
     /// Retrieve the signer's certificates from the PKCS#7 structure without verifying them.
-    ///
-    /// This corresponds to [`PKCS7_get0_signers`].
-    ///
-    /// [`PKCS7_get0_signers`]: https://www.openssl.org/docs/man1.0.2/crypto/PKCS7_verify.html
+    #[corresponds(PKCS7_get0_signers)]
     pub fn signers(
         &self,
         certs: &StackRef<X509>,
