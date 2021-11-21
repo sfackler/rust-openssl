@@ -9,9 +9,8 @@ pub fn corresponds(attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as ItemFn);
 
     let function = function.to_string();
-    let line1 = format!("This corresponds to [`{}`].", function);
-    let line2 = format!(
-        "[`{0}`]: https://www.openssl.org/docs/manmaster/man3/{0}.html",
+    let line = format!(
+        "This corresponds to [`{0}`](https://www.openssl.org/docs/manmaster/man3/{0}.html).",
         function
     );
 
@@ -23,9 +22,7 @@ pub fn corresponds(attr: TokenStream, item: TokenStream) -> TokenStream {
     let out = quote! {
         #(#attrs)*
         #[doc = ""]
-        #[doc = #line1]
-        #[doc = ""]
-        #[doc = #line2]
+        #[doc = #line]
         #[doc(alias = #function)]
         #vis #sig #block
     };
