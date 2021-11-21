@@ -7,6 +7,7 @@ use std::str;
 
 use crate::cvt_p;
 use crate::error::ErrorStack;
+use openssl_macros::corresponds;
 
 /// The digest and public-key algorithms associated with a signature.
 pub struct SignatureAlgorithms {
@@ -61,8 +62,7 @@ impl Nid {
     }
 
     /// Creates a new `Nid` for the `oid` with short name `sn` and long name `ln`.
-    ///
-    /// This corresponds to `OBJ_create`
+    #[corresponds(OBJ_create)]
     pub fn create(oid: &str, sn: &str, ln: &str) -> Result<Nid, ErrorStack> {
         unsafe {
             ffi::init();
@@ -81,6 +81,7 @@ impl Nid {
     /// Returns the `Nid`s of the digest and public key algorithms associated with a signature ID.
     ///
     /// This corresponds to `OBJ_find_sigid_algs`.
+    #[corresponds(OBJ_find_sigid_algs)]
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn signature_algorithms(&self) -> Option<SignatureAlgorithms> {
         unsafe {
@@ -97,10 +98,8 @@ impl Nid {
         }
     }
 
-    /// Return the string representation of a `Nid` (long)
-    /// This corresponds to [`OBJ_nid2ln`]
-    ///
-    /// [`OBJ_nid2ln`]: https://www.openssl.org/docs/man1.1.0/crypto/OBJ_nid2ln.html
+    /// Returns the string representation of a `Nid` (long).
+    #[corresponds(OBJ_nid2ln)]
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn long_name(&self) -> Result<&'static str, ErrorStack> {
         unsafe {
@@ -109,10 +108,8 @@ impl Nid {
         }
     }
 
-    /// Return the string representation of a `Nid` (short)
-    /// This corresponds to [`OBJ_nid2sn`]
-    ///
-    /// [`OBJ_nid2sn`]: https://www.openssl.org/docs/man1.1.0/crypto/OBJ_nid2sn.html
+    /// Returns the string representation of a `Nid` (short).
+    #[corresponds(OBJ_nid2sn)]
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn short_name(&self) -> Result<&'static str, ErrorStack> {
         unsafe {

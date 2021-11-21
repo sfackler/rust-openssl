@@ -7,6 +7,7 @@ use crate::lib_ctx::LibCtxRef;
 use crate::nid::Nid;
 use cfg_if::cfg_if;
 use foreign_types::{ForeignTypeRef, Opaque};
+use openssl_macros::corresponds;
 #[cfg(ossl300)]
 use std::ffi::CString;
 #[cfg(ossl300)]
@@ -75,10 +76,7 @@ unsafe impl Send for Md {}
 
 impl Md {
     /// Returns the `Md` corresponding to an [`Nid`].
-    ///
-    /// This corresponds to [`EVP_get_digestbynid`].
-    ///
-    /// [`EVP_get_digestbynid`]: https://www.openssl.org/docs/manmaster/crypto/EVP_DigestInit.html
+    #[corresponds(EVP_get_digestbynid)]
     pub fn from_nid(type_: Nid) -> Option<&'static MdRef> {
         unsafe {
             let ptr = ffi::EVP_get_digestbynid(type_.as_raw());
@@ -92,11 +90,8 @@ impl Md {
 
     /// Fetches an `Md` object corresponding to the specified algorithm name and properties.
     ///
-    /// This corresponds to [`EVP_MD_fetch`].
-    ///
     /// Requires OpenSSL 3.0.0 or newer.
-    ///
-    /// [`EVP_MD_fetch`]: https://www.openssl.org/docs/manmaster/man3/EVP_MD_fetch.html
+    #[corresponds(EVP_MD_fetch)]
     #[cfg(ossl300)]
     pub fn fetch(
         ctx: Option<&LibCtxRef>,
@@ -213,20 +208,14 @@ unsafe impl Send for MdRef {}
 
 impl MdRef {
     /// Returns the size of the digest in bytes.
-    ///
-    /// This corresponds to [`EVP_MD_size`].
-    ///
-    /// [`EVP_MD_size`]: https://www.openssl.org/docs/manmaster/man3/EVP_MD_size.html
+    #[corresponds(EVP_MD_size)]
     #[inline]
     pub fn size(&self) -> usize {
         unsafe { ffi::EVP_MD_size(self.as_ptr()) as usize }
     }
 
     /// Returns the [`Nid`] of the digest.
-    ///
-    /// This corresponds to [`EVP_MD_type`].
-    ///
-    /// [`EVP_MD_type`]: https://www.openssl.org/docs/manmaster/man3/EVP_MD_type.html
+    #[corresponds(EVP_MD_type)]
     #[inline]
     pub fn type_(&self) -> Nid {
         unsafe { Nid::from_raw(ffi::EVP_MD_type(self.as_ptr())) }

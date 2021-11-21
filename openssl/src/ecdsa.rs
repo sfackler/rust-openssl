@@ -12,29 +12,21 @@ use crate::error::ErrorStack;
 use crate::pkey::{HasPrivate, HasPublic};
 use crate::util::ForeignTypeRefExt;
 use crate::{cvt_n, cvt_p};
+use openssl_macros::corresponds;
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ECDSA_SIG;
     fn drop = ffi::ECDSA_SIG_free;
 
-    /// A low level interface to ECDSA
-    ///
-    /// OpenSSL documentation at [`ECDSA_sign`]
-    ///
-    /// [`ECDSA_sign`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_sign.html
+    /// A low level interface to ECDSA.
     pub struct EcdsaSig;
-    /// Reference to [`EcdsaSig`]
-    ///
-    /// [`EcdsaSig`]: struct.EcdsaSig.html
+    /// A reference to an [`EcdsaSig`].
     pub struct EcdsaSigRef;
 }
 
 impl EcdsaSig {
     /// Computes a digital signature of the hash value `data` using the private EC key eckey.
-    ///
-    /// OpenSSL documentation at [`ECDSA_do_sign`]
-    ///
-    /// [`ECDSA_do_sign`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_do_sign.html
+    #[corresponds(ECDSA_do_sign)]
     pub fn sign<T>(data: &[u8], eckey: &EcKeyRef<T>) -> Result<EcdsaSig, ErrorStack>
     where
         T: HasPrivate,
@@ -50,12 +42,8 @@ impl EcdsaSig {
         }
     }
 
-    /// Returns a new `EcdsaSig` by setting the `r` and `s` values associated with a
-    /// ECDSA signature.
-    ///
-    /// OpenSSL documentation at [`ECDSA_SIG_set0`]
-    ///
-    /// [`ECDSA_SIG_set0`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_SIG_set0.html
+    /// Returns a new `EcdsaSig` by setting the `r` and `s` values associated with an ECDSA signature.
+    #[corresponds(ECDSA_SIG_set0)]
     pub fn from_private_components(r: BigNum, s: BigNum) -> Result<EcdsaSig, ErrorStack> {
         unsafe {
             let sig = cvt_p(ffi::ECDSA_SIG_new())?;
@@ -67,10 +55,7 @@ impl EcdsaSig {
 
     from_der! {
         /// Decodes a DER-encoded ECDSA signature.
-        ///
-        /// This corresponds to [`d2i_ECDSA_SIG`].
-        ///
-        /// [`d2i_ECDSA_SIG`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_ECDSA_SIG.html
+        #[corresponds(d2i_ECDSA_SIG)]
         from_der,
         EcdsaSig,
         ffi::d2i_ECDSA_SIG
@@ -80,19 +65,13 @@ impl EcdsaSig {
 impl EcdsaSigRef {
     to_der! {
         /// Serializes the ECDSA signature into a DER-encoded ECDSASignature structure.
-        ///
-        /// This corresponds to [`i2d_ECDSA_SIG`].
-        ///
-        /// [`i2d_ECDSA_SIG`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_ECDSA_SIG.html
+        #[corresponds(i2d_ECDSA_SIG)]
         to_der,
         ffi::i2d_ECDSA_SIG
     }
 
     /// Verifies if the signature is a valid ECDSA signature using the given public key.
-    ///
-    /// OpenSSL documentation at [`ECDSA_do_verify`]
-    ///
-    /// [`ECDSA_do_verify`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_do_verify.html
+    #[corresponds(ECDSA_do_verify)]
     pub fn verify<T>(&self, data: &[u8], eckey: &EcKeyRef<T>) -> Result<bool, ErrorStack>
     where
         T: HasPublic,
@@ -110,10 +89,7 @@ impl EcdsaSigRef {
     }
 
     /// Returns internal component: `r` of an `EcdsaSig`. (See X9.62 or FIPS 186-2)
-    ///
-    /// OpenSSL documentation at [`ECDSA_SIG_get0`]
-    ///
-    /// [`ECDSA_SIG_get0`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_SIG_get0.html
+    #[corresponds(ECDSA_SIG_get0)]
     pub fn r(&self) -> &BigNumRef {
         unsafe {
             let mut r = ptr::null();
@@ -123,10 +99,7 @@ impl EcdsaSigRef {
     }
 
     /// Returns internal components: `s` of an `EcdsaSig`. (See X9.62 or FIPS 186-2)
-    ///
-    /// OpenSSL documentation at [`ECDSA_SIG_get0`]
-    ///
-    /// [`ECDSA_SIG_get0`]: https://www.openssl.org/docs/man1.1.0/crypto/ECDSA_SIG_get0.html
+    #[corresponds(ECDSA_SIG_get0)]
     pub fn s(&self) -> &BigNumRef {
         unsafe {
             let mut s = ptr::null();

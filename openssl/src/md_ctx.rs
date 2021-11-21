@@ -82,6 +82,7 @@ use crate::pkey_ctx::PkeyCtxRef;
 use crate::{cvt, cvt_p};
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
+use openssl_macros::corresponds;
 use std::convert::TryFrom;
 use std::ptr;
 
@@ -104,10 +105,7 @@ foreign_type_and_impl_send_sync! {
 
 impl MdCtx {
     /// Creates a new context.
-    ///
-    /// This corresponds to [`EVP_MD_CTX_new`].
-    ///
-    /// [`EVP_MD_CTX_new`]: https://www.openssl.org/docs/manmaster/crypto/EVP_MD_CTX_new.html
+    #[corresponds(EVP_MD_CTX_new)]
     #[inline]
     pub fn new() -> Result<Self, ErrorStack> {
         ffi::init();
@@ -121,10 +119,7 @@ impl MdCtx {
 
 impl MdCtxRef {
     /// Initializes the context to compute the digest of data.
-    ///
-    /// This corresponds to [`EVP_DigestInit_ex`].
-    ///
-    /// [`EVP_DigestInit_ex`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestInit_ex.html
+    #[corresponds(EVP_DigestInit_ex)]
     #[inline]
     pub fn digest_init(&mut self, digest: &MdRef) -> Result<(), ErrorStack> {
         unsafe {
@@ -141,10 +136,7 @@ impl MdCtxRef {
     /// Initializes the context to compute the signature of data.
     ///
     /// A reference to the context's inner `PkeyCtx` is returned, allowing signature settings to be configured.
-    ///
-    /// This corresponds to [`EVP_DigestSignInit`].
-    ///
-    /// [`EVP_DigestSignInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignInit.html
+    #[corresponds(EVP_DigestSignInit)]
     #[inline]
     pub fn digest_sign_init<'a, T>(
         &'a mut self,
@@ -170,10 +162,7 @@ impl MdCtxRef {
     /// Initializes the context to verify the signature of data.
     ///
     /// A reference to the context's inner `PkeyCtx` is returned, allowing signature settings to be configured.
-    ///
-    /// This corresponds to [`EVP_DigestVerifyInit`].
-    ///
-    /// [`EVP_DigestVerifyInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignInit.html
+    #[corresponds(EVP_DigestVerifyInit)]
     #[inline]
     pub fn digest_verify_init<'a, T>(
         &'a mut self,
@@ -197,10 +186,7 @@ impl MdCtxRef {
     }
 
     /// Updates the context with more data.
-    ///
-    /// This corresponds to [`EVP_DigestUpdate`].
-    ///
-    /// [`EVP_DigestUpdate`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestUpdate.html
+    #[corresponds(EVP_DigestUpdate)]
     #[inline]
     pub fn digest_update(&mut self, data: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
@@ -215,10 +201,7 @@ impl MdCtxRef {
     }
 
     /// Updates the context with more data.
-    ///
-    /// This corresponds to [`EVP_DigestSignUpdate`].
-    ///
-    /// [`EVP_DigestSignUpdate`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignUpdate.html
+    #[corresponds(EVP_DigestSignUpdate)]
     #[inline]
     pub fn digest_sign_update(&mut self, data: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
@@ -233,10 +216,7 @@ impl MdCtxRef {
     }
 
     /// Updates the context with more data.
-    ///
-    /// This corresponds to [`EVP_DigestVerifyUpdate`].
-    ///
-    /// [`EVP_DigestVerifyUpdate`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestVerifyUpdate.html
+    #[corresponds(EVP_DigestVerifyUpdate)]
     #[inline]
     pub fn digest_verify_update(&mut self, data: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
@@ -251,10 +231,7 @@ impl MdCtxRef {
     }
 
     /// Copies the computed digest into the buffer, returning the number of bytes written.
-    ///
-    /// This corresponds to [`EVP_DigestFinal`].
-    ///
-    /// [`EVP_DigestFinal`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestFinal.html
+    #[corresponds(EVP_DigestFinal)]
     #[inline]
     pub fn digest_final(&mut self, out: &mut [u8]) -> Result<usize, ErrorStack> {
         let mut len = u32::try_from(out.len()).unwrap_or(u32::MAX);
@@ -273,10 +250,7 @@ impl MdCtxRef {
     /// Copies the computed digest into the buffer.
     ///
     /// Requires OpenSSL 1.1.1 or newer.
-    ///
-    /// This corresponds to [`EVP_DigestFinalXOF`].
-    ///
-    /// [`EVP_DigestFinalXOF`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestFinalXOF.html
+    #[corresponds(EVP_DigestFinalXOF)]
     #[inline]
     #[cfg(ossl111)]
     pub fn digest_final_xof(&mut self, out: &mut [u8]) -> Result<(), ErrorStack> {
@@ -295,10 +269,7 @@ impl MdCtxRef {
     ///
     /// If `out` is set to `None`, an upper bound on the number of bytes required for the output buffer will be
     /// returned.
-    ///
-    /// This corresponds to [`EVP_DigestSignFinal`].
-    ///
-    /// [`EVP_DigestSignFinal`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSignFinal.html
+    #[corresponds(EVP_DigestSignFinal)]
     #[inline]
     pub fn digest_sign_final(&mut self, out: Option<&mut [u8]>) -> Result<usize, ErrorStack> {
         let mut len = out.as_ref().map_or(0, |b| b.len());
@@ -328,10 +299,7 @@ impl MdCtxRef {
     ///
     /// Returns `Ok(true)` if the signature is valid, `Ok(false)` if the signature is invalid, and `Err` if an error
     /// occurred.
-    ///
-    /// This corresponds to [`EVP_DigestVerifyFinal`].
-    ///
-    /// [`EVP_DigestVerifyFinal`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestVerifyFinal.html
+    #[corresponds(EVP_DigestVerifyFinal)]
     #[inline]
     pub fn digest_verify_final(&mut self, signature: &[u8]) -> Result<bool, ErrorStack> {
         unsafe {
@@ -350,10 +318,7 @@ impl MdCtxRef {
     /// returned.
     ///
     /// Requires OpenSSL 1.1.1 or newer.
-    ///
-    /// This corresponds to [`EVP_DigestSign`].
-    ///
-    /// [`EVP_DigestSign`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestSign.html
+    #[corresponds(EVP_DigestSign)]
     #[cfg(ossl111)]
     #[inline]
     pub fn digest_sign(&mut self, from: &[u8], to: Option<&mut [u8]>) -> Result<usize, ErrorStack> {
@@ -393,10 +358,7 @@ impl MdCtxRef {
     /// occurred.
     ///
     /// Requires OpenSSL 1.1.1 or newer.
-    ///
-    /// This corresponds to [`EVP_DigestVerify`].
-    ///
-    /// [`EVP_DigestVerify`]: https://www.openssl.org/docs/manmaster/man3/EVP_DigestVerify.html
+    #[corresponds(EVP_DigestVerify)]
     #[cfg(ossl111)]
     #[inline]
     pub fn digest_verify(&mut self, data: &[u8], signature: &[u8]) -> Result<bool, ErrorStack> {

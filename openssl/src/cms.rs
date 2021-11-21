@@ -17,6 +17,7 @@ use crate::stack::StackRef;
 use crate::symm::Cipher;
 use crate::x509::{X509Ref, X509};
 use crate::{cvt, cvt_p};
+use openssl_macros::corresponds;
 
 bitflags! {
     pub struct CMSOptions : c_uint {
@@ -69,10 +70,7 @@ foreign_type_and_impl_send_sync! {
 impl CmsContentInfoRef {
     /// Given the sender's private key, `pkey` and the recipient's certificiate, `cert`,
     /// decrypt the data in `self`.
-    ///
-    /// OpenSSL documentation at [`CMS_decrypt`]
-    ///
-    /// [`CMS_decrypt`]: https://www.openssl.org/docs/man1.1.0/crypto/CMS_decrypt.html
+    #[corresponds(CMS_decrypt)]
     pub fn decrypt<T>(&self, pkey: &PKeyRef<T>, cert: &X509) -> Result<Vec<u8>, ErrorStack>
     where
         T: HasPrivate,
@@ -99,9 +97,7 @@ impl CmsContentInfoRef {
     /// decrypt the data in `self` without validating the recipient certificate.
     ///
     /// *Warning*: Not checking the recipient certificate may leave you vulnerable to Bleichenbacher's attack on PKCS#1 v1.5 RSA padding.
-    /// See [`CMS_decrypt`] for more information.
-    ///
-    /// [`CMS_decrypt`]: https://www.openssl.org/docs/man1.1.0/crypto/CMS_decrypt.html
+    #[corresponds(CMS_decrypt)]
     // FIXME merge into decrypt
     pub fn decrypt_without_cert_check<T>(&self, pkey: &PKeyRef<T>) -> Result<Vec<u8>, ErrorStack>
     where
@@ -126,20 +122,14 @@ impl CmsContentInfoRef {
 
     to_der! {
         /// Serializes this CmsContentInfo using DER.
-        ///
-        /// OpenSSL documentation at [`i2d_CMS_ContentInfo`]
-        ///
-        /// [`i2d_CMS_ContentInfo`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_CMS_ContentInfo.html
+        #[corresponds(i2d_CMS_ContentInfo)]
         to_der,
         ffi::i2d_CMS_ContentInfo
     }
 
     to_pem! {
         /// Serializes this CmsContentInfo using DER.
-        ///
-        /// OpenSSL documentation at [`PEM_write_bio_CMS`]
-        ///
-        /// [`PEM_write_bio_CMS`]: https://www.openssl.org/docs/man1.1.0/man3/PEM_write_bio_CMS.html
+        #[corresponds(PEM_write_bio_CMS)]
         to_pem,
         ffi::PEM_write_bio_CMS
     }
@@ -147,10 +137,7 @@ impl CmsContentInfoRef {
 
 impl CmsContentInfo {
     /// Parses a smime formatted `vec` of bytes into a `CmsContentInfo`.
-    ///
-    /// OpenSSL documentation at [`SMIME_read_CMS`]
-    ///
-    /// [`SMIME_read_CMS`]: https://www.openssl.org/docs/man1.0.2/crypto/SMIME_read_CMS.html
+    #[corresponds(SMIME_read_CMS)]
     pub fn smime_read_cms(smime: &[u8]) -> Result<CmsContentInfo, ErrorStack> {
         unsafe {
             let bio = MemBioSlice::new(smime)?;
@@ -163,10 +150,7 @@ impl CmsContentInfo {
 
     from_der! {
         /// Deserializes a DER-encoded ContentInfo structure.
-        ///
-        /// This corresponds to [`d2i_CMS_ContentInfo`].
-        ///
-        /// [`d2i_CMS_ContentInfo`]: https://www.openssl.org/docs/manmaster/man3/d2i_X509.html
+        #[corresponds(d2i_CMS_ContentInfo)]
         from_der,
         CmsContentInfo,
         ffi::d2i_CMS_ContentInfo
@@ -174,10 +158,7 @@ impl CmsContentInfo {
 
     from_pem! {
         /// Deserializes a PEM-encoded ContentInfo structure.
-        ///
-        /// This corresponds to [`PEM_read_bio_CMS`].
-        ///
-        /// [`PEM_read_bio_CMS`]: https://www.openssl.org/docs/man1.1.0/man3/PEM_read_bio_CMS.html
+        #[corresponds(PEM_read_bio_CMS)]
         from_pem,
         CmsContentInfo,
         ffi::PEM_read_bio_CMS
@@ -187,10 +168,7 @@ impl CmsContentInfo {
     /// data `data` and flags `flags`, create a CmsContentInfo struct.
     ///
     /// All arguments are optional.
-    ///
-    /// OpenSSL documentation at [`CMS_sign`]
-    ///
-    /// [`CMS_sign`]: https://www.openssl.org/docs/manmaster/man3/CMS_sign.html
+    #[corresponds(CMS_sign)]
     pub fn sign<T>(
         signcert: Option<&X509Ref>,
         pkey: Option<&PKeyRef<T>>,
@@ -229,6 +207,7 @@ impl CmsContentInfo {
     /// OpenSSL documentation at [`CMS_encrypt`]
     ///
     /// [`CMS_encrypt`]: https://www.openssl.org/docs/manmaster/man3/CMS_encrypt.html
+    #[corresponds(CMS_encrypt)]
     pub fn encrypt(
         certs: &StackRef<X509>,
         data: &[u8],

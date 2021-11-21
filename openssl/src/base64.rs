@@ -2,16 +2,14 @@
 use crate::cvt_n;
 use crate::error::ErrorStack;
 use libc::c_int;
+use openssl_macros::corresponds;
 
 /// Encodes a slice of bytes to a base64 string.
-///
-/// This corresponds to [`EVP_EncodeBlock`].
 ///
 /// # Panics
 ///
 /// Panics if the input length or computed output length overflow a signed C integer.
-///
-/// [`EVP_EncodeBlock`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_DecodeBlock.html
+#[corresponds(EVP_EncodeBlock)]
 pub fn encode_block(src: &[u8]) -> String {
     assert!(src.len() <= c_int::max_value() as usize);
     let src_len = src.len() as c_int;
@@ -32,13 +30,10 @@ pub fn encode_block(src: &[u8]) -> String {
 
 /// Decodes a base64-encoded string to bytes.
 ///
-/// This corresponds to [`EVP_DecodeBlock`].
-///
 /// # Panics
 ///
 /// Panics if the input length or computed output length overflow a signed C integer.
-///
-/// [`EVP_DecodeBlock`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_DecodeBlock.html
+#[corresponds(EVP_DecodeBlock)]
 pub fn decode_block(src: &str) -> Result<Vec<u8>, ErrorStack> {
     let src = src.trim();
 
