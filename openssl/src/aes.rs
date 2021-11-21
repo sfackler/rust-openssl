@@ -60,6 +60,7 @@ use std::mem::MaybeUninit;
 use std::ptr;
 
 use crate::symm::Mode;
+use openssl_macros::corresponds;
 
 /// Provides Error handling for parsing keys.
 #[derive(Debug)]
@@ -74,6 +75,7 @@ impl AesKey {
     /// # Failure
     ///
     /// Returns an error if the key is not 128, 192, or 256 bits.
+    #[corresponds(AES_set_encrypt_key)]
     pub fn new_encrypt(key: &[u8]) -> Result<AesKey, KeyError> {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize / 8);
@@ -97,6 +99,7 @@ impl AesKey {
     /// # Failure
     ///
     /// Returns an error if the key is not 128, 192, or 256 bits.
+    #[corresponds(AES_set_decrypt_key)]
     pub fn new_decrypt(key: &[u8]) -> Result<AesKey, KeyError> {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize / 8);
@@ -135,6 +138,7 @@ impl AesKey {
 ///
 /// Panics if `in_` is not the same length as `out`, if that length is not a multiple of 16, or if
 /// `iv` is not at least 32 bytes.
+#[corresponds(AES_ige_encrypt)]
 pub fn aes_ige(in_: &[u8], out: &mut [u8], key: &AesKey, iv: &mut [u8], mode: Mode) {
     unsafe {
         assert!(in_.len() == out.len());
@@ -169,6 +173,7 @@ pub fn aes_ige(in_: &[u8], out: &mut [u8], key: &AesKey, iv: &mut [u8], mode: Mo
 ///
 /// Panics if either `out` or `in_` do not have sizes that are a multiple of 8, or if
 /// `out` is not 8 bytes longer than `in_`
+#[corresponds(AES_wrap_key)]
 pub fn wrap_key(
     key: &AesKey,
     iv: Option<[u8; 8]>,
@@ -207,6 +212,7 @@ pub fn wrap_key(
 ///
 /// Panics if either `out` or `in_` do not have sizes that are a multiple of 8, or
 /// if `in_` is not 8 bytes longer than `out`
+#[corresponds(AES_unwrap_key)]
 pub fn unwrap_key(
     key: &AesKey,
     iv: Option<[u8; 8]>,
