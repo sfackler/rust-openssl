@@ -141,7 +141,7 @@ impl<T> PkeyCtxRef<T>
 where
     T: HasPrivate,
 {
-    /// Prepares the context for encryption using the private key.
+    /// Prepares the context for decryption using the private key.
     #[corresponds(EVP_PKEY_decrypt_init)]
     #[inline]
     pub fn decrypt_init(&mut self) -> Result<(), ErrorStack> {
@@ -211,6 +211,7 @@ impl<T> PkeyCtxRef<T> {
 
     /// Prepares the context for key generation.
     #[corresponds(EVP_PKEY_keygen_init)]
+    #[inline]
     pub fn keygen_init(&mut self) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_keygen_init(self.as_ptr()))?;
