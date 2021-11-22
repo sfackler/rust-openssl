@@ -9,7 +9,7 @@
 
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::{c_int, c_long};
+use libc::{c_char, c_int, c_long, c_uchar};
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -1170,6 +1170,38 @@ impl X509ReqBuilder {
         }
     }
 
+    /// Permits an attribute to be added to the certificate or certificate request.
+    pub fn add_attribute(&mut self, name: &str, value: &str) -> Result<(), ErrorStack> {
+        let name = CString::new(name).unwrap();
+        let len = value.len();
+        let value = CString::new(value).unwrap();
+        unsafe {
+            cvt(ffi::X509_REQ_add1_attr_by_txt(
+                self.0.as_ptr(),
+                name.as_ptr() as *const c_char,
+                ffi::MBSTRING_UTF8,
+                value.as_ptr() as *const c_uchar,
+                len as c_int,
+            ))
+            .map(|_| ())
+        }
+    }
+
+    pub fn add_attribute_by_nid(&mut self, nid: Nid, value: &str) -> Result<(), ErrorStack> {
+        let len = value.len();
+        let value = CString::new(value).unwrap();
+        unsafe {
+            cvt(ffi::X509_REQ_add1_attr_by_NID(
+                self.0.as_ptr(),
+                nid.as_raw(),
+                ffi::MBSTRING_UTF8,
+                value.as_ptr() as *const c_uchar,
+                len as c_int,
+            ))
+            .map(|_| ())
+        }
+    }
+
     /// Sign the request using a private key.
     ///
     /// This corresponds to [`X509_REQ_sign`].
@@ -1314,6 +1346,18 @@ impl X509ReqRef {
             let extensions = cvt_p(ffi::X509_REQ_get_extensions(self.as_ptr()))?;
             Ok(Stack::from_ptr(extensions))
         }
+    }
+}
+
+impl fmt::Debug for X509Req {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut debug_struct = formatter.debug_struct("X509Req");
+        debug_struct.field("version", &self.version());
+        debug_struct.field("subject", &self.subject_name());
+        if let Ok(public_key) = &self.public_key() {
+            debug_struct.field("public_key", public_key);
+        };
+        debug_struct.finish()
     }
 }
 

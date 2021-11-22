@@ -22,7 +22,7 @@ pub enum X509_EXTENSION {}
 
 stack!(stack_st_X509_EXTENSION);
 
-stack!(stack_st_X509_ATTRIBUTE);
+pub enum X509_ATTRIBUTE {}
 
 cfg_if! {
     if #[cfg(ossl110)] {
@@ -302,6 +302,8 @@ extern "C" {
 
     pub fn X509_EXTENSION_free(ext: *mut X509_EXTENSION);
 
+    pub fn X509_ATTRIBUTE_free(attr: *mut X509_ATTRIBUTE);
+
     pub fn X509_NAME_ENTRY_free(x: *mut X509_NAME_ENTRY);
 
     pub fn X509_NAME_new() -> *mut X509_NAME;
@@ -377,6 +379,33 @@ const_ptr_api! {
         pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: #[const_ptr_if(ossl300)] stack_st_X509_EXTENSION)
             -> c_int;
     }
+}
+extern "C" {
+    pub fn X509_REQ_get_attr_count(req: *mut X509_REQ) -> c_int;
+    pub fn X509_REQ_get_attr_by_NID(req: *mut X509_REQ, nid: c_int, lastpos: c_int) -> c_int;
+    pub fn X509_REQ_get_attr(req: *mut X509_REQ, loc: c_int) -> *mut X509_ATTRIBUTE;
+    pub fn X509_REQ_delete_attr(req: *mut X509_REQ, loc: c_int) -> *mut X509_ATTRIBUTE;
+    pub fn X509_REQ_add1_attr_by_txt(
+        req: *mut X509_REQ,
+        attrname: *const c_char,
+        chtype: c_int,
+        bytes: *const c_uchar,
+        len: c_int,
+    ) -> c_int;
+    pub fn X509_REQ_add1_attr_by_NID(
+        req: *mut X509_REQ,
+        nid: c_int,
+        chtype: c_int,
+        bytes: *const c_uchar,
+        len: c_int,
+    ) -> c_int;
+    pub fn X509_REQ_add1_attr_by_OBJ(
+        req: *mut X509_REQ,
+        obj: *const ASN1_OBJECT,
+        chtype: c_int,
+        bytes: *const c_uchar,
+        len: c_int,
+    ) -> c_int;
 }
 extern "C" {
     pub fn X509_set_pubkey(x: *mut X509, pkey: *mut EVP_PKEY) -> c_int;
