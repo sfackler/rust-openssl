@@ -19,20 +19,25 @@
 //! let mut ciphertext = vec![];
 //! ctx.encrypt_to_vec(data, &mut ciphertext).unwrap();
 //! ```
-//!
-//! Generate a CMAC key
-//!
-//! ```
-//! use openssl::pkey_ctx::PkeyCtx;
-//! use openssl::pkey::Id;
-//! use openssl::cipher::Cipher;
-//!
-//! let mut ctx = PkeyCtx::new_id(Id::CMAC).unwrap();
-//! ctx.keygen_init().unwrap();
-//! ctx.set_keygen_cipher(Cipher::aes_128_cbc()).unwrap();
-//! ctx.set_keygen_mac_key(b"0123456789abcdef").unwrap();
-//! let cmac_key = ctx.keygen().unwrap();
-//! ```
+
+#![cfg_attr(
+    not(boringssl),
+    doc = r#"\
+Generate a CMAC key
+
+```
+use openssl::pkey_ctx::PkeyCtx;
+use openssl::pkey::Id;
+use openssl::cipher::Cipher;
+
+let mut ctx = PkeyCtx::new_id(Id::CMAC).unwrap();
+ctx.keygen_init().unwrap();
+ctx.set_keygen_cipher(Cipher::aes_128_cbc()).unwrap();
+ctx.set_keygen_mac_key(b"0123456789abcdef").unwrap();
+let cmac_key = ctx.keygen().unwrap();
+```"#
+)]
+
 //!
 //! Sign and verify data with RSA
 //!
@@ -59,6 +64,7 @@
 //! let valid = ctx.verify(text, &signature).unwrap();
 //! assert!(valid);
 //! ```
+#[cfg(not(boringssl))]
 use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
 use crate::md::MdRef;
@@ -66,6 +72,7 @@ use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Private};
 use crate::rsa::Padding;
 use crate::{cvt, cvt_n, cvt_p};
 use foreign_types::{ForeignType, ForeignTypeRef};
+#[cfg(not(boringssl))]
 use libc::c_int;
 use openssl_macros::corresponds;
 use std::convert::TryFrom;
@@ -396,15 +403,20 @@ impl<T> PkeyCtxRef<T> {
     ///
     /// This is only useful for RSA keys.
     #[corresponds(EVP_PKEY_CTX_set0_rsa_oaep_label)]
-    #[cfg(any(ossl102, libressl310))]
+    #[cfg(any(ossl102, libressl310, boringssl))]
     pub fn set_rsa_oaep_label(&mut self, label: &[u8]) -> Result<(), ErrorStack> {
-        let len = c_int::try_from(label.len()).unwrap();
+        use crate::LenType;
+        let len = LenType::try_from(label.len()).unwrap();
 
         unsafe {
             let p = ffi::OPENSSL_malloc(label.len() as _);
             ptr::copy_nonoverlapping(label.as_ptr(), p as *mut _, label.len());
 
-            let r = cvt(ffi::EVP_PKEY_CTX_set0_rsa_oaep_label(self.as_ptr(), p, len));
+            let r = cvt(ffi::EVP_PKEY_CTX_set0_rsa_oaep_label(
+                self.as_ptr(),
+                p as *mut _,
+                len,
+            ));
             if r.is_err() {
                 ffi::OPENSSL_free(p);
             }
@@ -415,6 +427,7 @@ impl<T> PkeyCtxRef<T> {
     }
 
     /// Sets the cipher used during key generation.
+    #[cfg(not(boringssl))]
     #[corresponds(EVP_PKEY_CTX_ctrl)]
     #[inline]
     pub fn set_keygen_cipher(&mut self, cipher: &CipherRef) -> Result<(), ErrorStack> {
@@ -433,6 +446,7 @@ impl<T> PkeyCtxRef<T> {
     }
 
     /// Sets the key MAC key used during key generation.
+    #[cfg(not(boringssl))]
     #[corresponds(EVP_PKEY_CTX_ctrl)]
     #[inline]
     pub fn set_keygen_mac_key(&mut self, key: &[u8]) -> Result<(), ErrorStack> {
@@ -587,6 +601,7 @@ impl<T> PkeyCtxRef<T> {
 #[cfg(test)]
 mod test {
     use super::*;
+    #[cfg(not(boringssl))]
     use crate::cipher::Cipher;
     use crate::ec::{EcGroup, EcKey};
     #[cfg(any(ossl102, libressl310))]
@@ -663,6 +678,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn cmac_keygen() {
         let mut ctx = PkeyCtx::new_id(Id::CMAC).unwrap();
         ctx.keygen_init().unwrap();

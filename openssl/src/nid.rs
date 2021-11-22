@@ -120,9 +120,11 @@ impl Nid {
 
     pub const UNDEF: Nid = Nid(ffi::NID_undef);
     pub const ITU_T: Nid = Nid(ffi::NID_itu_t);
+    #[cfg(not(boringssl))]
     pub const CCITT: Nid = Nid(ffi::NID_ccitt);
     pub const ISO: Nid = Nid(ffi::NID_iso);
     pub const JOINT_ISO_ITU_T: Nid = Nid(ffi::NID_joint_iso_itu_t);
+    #[cfg(not(boringssl))]
     pub const JOINT_ISO_CCITT: Nid = Nid(ffi::NID_joint_iso_ccitt);
     pub const MEMBER_BODY: Nid = Nid(ffi::NID_member_body);
     pub const IDENTIFIED_ORGANIZATION: Nid = Nid(ffi::NID_identified_organization);

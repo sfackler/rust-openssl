@@ -9,7 +9,7 @@
 
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::{c_int, c_long};
+use libc::{c_int, c_long, c_uint};
 use std::cmp::{self, Ordering};
 use std::error::Error;
 use std::ffi::{CStr, CString};
@@ -369,6 +369,11 @@ foreign_type_and_impl_send_sync! {
     pub struct X509Ref;
 }
 
+#[cfg(boringssl)]
+type X509LenTy = c_uint;
+#[cfg(not(boringssl))]
+type X509LenTy = c_int;
+
 impl X509Ref {
     /// Returns this certificate's subject name.
     #[corresponds(X509_get_subject_name)]
@@ -460,7 +465,7 @@ impl X509Ref {
                 buf: [0; ffi::EVP_MAX_MD_SIZE as usize],
                 len: ffi::EVP_MAX_MD_SIZE as usize,
             };
-            let mut len = ffi::EVP_MAX_MD_SIZE;
+            let mut len = ffi::EVP_MAX_MD_SIZE as c_uint;
             cvt(ffi::X509_digest(
                 self.as_ptr(),
                 hash_type.as_ptr(),
@@ -673,7 +678,7 @@ impl X509 {
                     ffi::PEM_read_bio_X509(bio.as_ptr(), ptr::null_mut(), None, ptr::null_mut());
                 if r.is_null() {
                     let err = ffi::ERR_peek_last_error();
-                    if ffi::ERR_GET_LIB(err) == ffi::ERR_LIB_PEM
+                    if ffi::ERR_GET_LIB(err) as X509LenTy == ffi::ERR_LIB_PEM
                         && ffi::ERR_GET_REASON(err) == ffi::PEM_R_NO_START_LINE
                     {
                         ffi::ERR_clear_error();
@@ -1467,8 +1472,13 @@ impl GeneralNameRef {
                 return None;
             }
 
-            let ptr = ASN1_STRING_get0_data((*self.as_ptr()).d as *mut _);
-            let len = ffi::ASN1_STRING_length((*self.as_ptr()).d as *mut _);
+            #[cfg(boringssl)]
+            let d = (*self.as_ptr()).d.ptr;
+            #[cfg(not(boringssl))]
+            let d = (*self.as_ptr()).d;
+
+            let ptr = ASN1_STRING_get0_data(d as *mut _);
+            let len = ffi::ASN1_STRING_length(d as *mut _);
 
             let slice = slice::from_raw_parts(ptr as *const u8, len as usize);
             // IA5Strings are stated to be ASCII (specifically IA5). Hopefully
@@ -1499,9 +1509,13 @@ impl GeneralNameRef {
             if (*self.as_ptr()).type_ != ffi::GEN_IPADD {
                 return None;
             }
+            #[cfg(boringssl)]
+            let d: *const ffi::ASN1_STRING = std::mem::transmute((*self.as_ptr()).d);
+            #[cfg(not(boringssl))]
+            let d = (*self.as_ptr()).d;
 
-            let ptr = ASN1_STRING_get0_data((*self.as_ptr()).d as *mut _);
-            let len = ffi::ASN1_STRING_length((*self.as_ptr()).d as *mut _);
+            let ptr = ASN1_STRING_get0_data(d as *mut _);
+            let len = ffi::ASN1_STRING_length(d as *mut _);
 
             Some(slice::from_raw_parts(ptr as *const u8, len as usize))
         }
@@ -1600,7 +1614,7 @@ impl Stackable for X509Object {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl273))] {
+    if #[cfg(any(boringssl, ossl110, libressl273))] {
         use ffi::{X509_getm_notAfter, X509_getm_notBefore, X509_up_ref, X509_get0_signature};
     } else {
         #[allow(bad_style)]
@@ -1641,7 +1655,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl350))] {
+    if #[cfg(any(boringssl, ossl110, libressl350))] {
         use ffi::{
             X509_ALGOR_get0, ASN1_STRING_get0_data, X509_STORE_CTX_get0_chain, X509_set1_notAfter,
             X509_set1_notBefore, X509_REQ_get_version, X509_REQ_get_subject_name,
@@ -1681,7 +1695,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl270))] {
+    if #[cfg(any(ossl110, boringssl, libressl270))] {
         use ffi::X509_OBJECT_get0_X509;
     } else {
         #[allow(bad_style)]
@@ -1698,6 +1712,8 @@ cfg_if! {
 cfg_if! {
     if #[cfg(any(ossl110, libressl350))] {
         use ffi::X509_OBJECT_free;
+    } else if #[cfg(boringssl)] {
+        use ffi::X509_OBJECT_free_contents as X509_OBJECT_free;
     } else {
         #[allow(bad_style)]
         unsafe fn X509_OBJECT_free(x: *mut ffi::X509_OBJECT) {

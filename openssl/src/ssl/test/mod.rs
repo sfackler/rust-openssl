@@ -17,6 +17,7 @@ use std::time::Duration;
 use crate::dh::Dh;
 use crate::error::ErrorStack;
 use crate::hash::MessageDigest;
+#[cfg(not(boringssl))]
 use crate::ocsp::{OcspResponse, OcspResponseStatus};
 use crate::pkey::PKey;
 use crate::srtp::SrtpProfileId;
@@ -247,6 +248,7 @@ fn set_ctx_options() {
 }
 
 #[test]
+#[cfg(not(boringssl))]
 fn clear_ctx_options() {
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
     ctx.set_options(SslOptions::ALL);
@@ -294,7 +296,10 @@ fn state() {
     let server = Server::builder().build();
 
     let s = server.client().connect();
+    #[cfg(not(boringssl))]
     assert_eq!(s.ssl().state_string().trim(), "SSLOK");
+    #[cfg(boringssl)]
+    assert_eq!(s.ssl().state_string(), "!!!!!!");
     assert_eq!(
         s.ssl().state_string_long(),
         "SSL negotiation finished successfully"
@@ -838,7 +843,7 @@ fn cert_store() {
 }
 
 #[test]
-#[cfg_attr(all(libressl321, not(libressl340)), ignore)]
+#[cfg_attr(any(all(libressl321, not(libressl340)), boringssl), ignore)]
 fn tmp_dh_callback() {
     static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
@@ -886,7 +891,7 @@ fn tmp_ecdh_callback() {
 }
 
 #[test]
-#[cfg_attr(all(libressl321, not(libressl340)), ignore)]
+#[cfg_attr(any(all(libressl321, not(libressl340)), boringssl), ignore)]
 fn tmp_dh_callback_ssl() {
     static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
@@ -963,6 +968,7 @@ fn active_session() {
 }
 
 #[test]
+#[cfg(not(boringssl))]
 fn status_callbacks() {
     static CALLED_BACK_SERVER: AtomicBool = AtomicBool::new(false);
     static CALLED_BACK_CLIENT: AtomicBool = AtomicBool::new(false);
@@ -1305,7 +1311,7 @@ fn stateless() {
 #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
 #[test]
 fn psk_ciphers() {
-    const CIPHER: &str = "PSK-AES128-CBC-SHA";
+    const CIPHER: &str = "PSK-AES256-CBC-SHA";
     const PSK: &[u8] = b"thisisaverysecurekey";
     const CLIENT_IDENT: &[u8] = b"thisisaclient";
     static CLIENT_CALLED: AtomicBool = AtomicBool::new(false);
@@ -1324,7 +1330,7 @@ fn psk_ciphers() {
 
     let mut client = server.client();
     // This test relies on TLS 1.2 suites
-    #[cfg(ossl111)]
+    #[cfg(any(boringssl, ossl111))]
     client.ctx().set_options(super::SslOptions::NO_TLSV1_3);
     client.ctx().set_cipher_list(CIPHER).unwrap();
     client
@@ -1339,7 +1345,8 @@ fn psk_ciphers() {
 
     client.connect();
 
-    assert!(CLIENT_CALLED.load(Ordering::SeqCst) && SERVER_CALLED.load(Ordering::SeqCst));
+    assert!(SERVER_CALLED.load(Ordering::SeqCst));
+    assert!(CLIENT_CALLED.load(Ordering::SeqCst));
 }
 
 #[test]

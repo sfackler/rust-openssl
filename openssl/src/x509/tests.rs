@@ -41,6 +41,9 @@ fn test_debug() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
     let debugged = format!("{:#?}", cert);
+    #[cfg(boringssl)]
+    assert!(debugged.contains(r#"serial_number: "8771f7bdee982fa5""#));
+    #[cfg(not(boringssl))]
     assert!(debugged.contains(r#"serial_number: "8771F7BDEE982FA5""#));
     assert!(debugged.contains(r#"signature_algorithm: sha256WithRSAEncryption"#));
     assert!(debugged.contains(r#"countryName = "AU""#));
@@ -282,7 +285,7 @@ fn x509_req_builder() {
     let name = name.build();
 
     let mut builder = X509Req::builder().unwrap();
-    builder.set_version(2).unwrap();
+    builder.set_version(0).unwrap();
     builder.set_subject_name(&name).unwrap();
     builder.set_pubkey(&pkey).unwrap();
 

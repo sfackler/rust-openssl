@@ -27,15 +27,19 @@ ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
 fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     let mut ctx = SslContextBuilder::new(method)?;
 
-    let mut opts = SslOptions::ALL
-        | SslOptions::NO_COMPRESSION
-        | SslOptions::NO_SSLV2
-        | SslOptions::NO_SSLV3
-        | SslOptions::SINGLE_DH_USE
-        | SslOptions::SINGLE_ECDH_USE;
-    opts &= !SslOptions::DONT_INSERT_EMPTY_FRAGMENTS;
+    cfg_if! {
+        if #[cfg(not(boringssl))] {
+            let mut opts = SslOptions::ALL
+                | SslOptions::NO_COMPRESSION
+                | SslOptions::NO_SSLV2
+                | SslOptions::NO_SSLV3
+                | SslOptions::SINGLE_DH_USE
+                | SslOptions::SINGLE_ECDH_USE;
+            opts &= !SslOptions::DONT_INSERT_EMPTY_FRAGMENTS;
 
-    ctx.set_options(opts);
+            ctx.set_options(opts);
+        }
+    }
 
     let mut mode =
         SslMode::AUTO_RETRY | SslMode::ACCEPT_MOVING_WRITE_BUFFER | SslMode::ENABLE_PARTIAL_WRITE;

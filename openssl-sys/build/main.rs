@@ -60,8 +60,20 @@ fn find_openssl(target: &str) -> (Vec<PathBuf>, PathBuf) {
     find_normal::get_openssl(target)
 }
 
+fn check_ssl_kind() {
+    if cfg!(feature = "unstable_boringssl") {
+        println!("cargo:rustc-cfg=boringssl");
+        // BoringSSL does not have any build logic, exit early
+        std::process::exit(0);
+    } else {
+        println!("cargo:rustc-cfg=openssl");
+    }
+}
+
 fn main() {
     check_rustc_versions();
+
+    check_ssl_kind();
 
     let target = env::var("TARGET").unwrap();
 

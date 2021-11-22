@@ -34,7 +34,7 @@ use crate::bn::{BigNum, BigNumRef};
 use crate::error::ErrorStack;
 use crate::pkey::{HasPrivate, HasPublic, Private, Public};
 use crate::util::ForeignTypeRefExt;
-use crate::{cvt, cvt_n, cvt_p};
+use crate::{cvt, cvt_n, cvt_p, LenType};
 use openssl_macros::corresponds;
 
 /// Type of encryption padding to use.
@@ -134,7 +134,7 @@ where
 
         unsafe {
             let len = cvt_n(ffi::RSA_private_decrypt(
-                from.len() as c_int,
+                from.len() as LenType,
                 from.as_ptr(),
                 to.as_mut_ptr(),
                 self.as_ptr(),
@@ -162,7 +162,7 @@ where
 
         unsafe {
             let len = cvt_n(ffi::RSA_private_encrypt(
-                from.len() as c_int,
+                from.len() as LenType,
                 from.as_ptr(),
                 to.as_mut_ptr(),
                 self.as_ptr(),
@@ -305,7 +305,7 @@ where
 
         unsafe {
             let len = cvt_n(ffi::RSA_public_decrypt(
-                from.len() as c_int,
+                from.len() as LenType,
                 from.as_ptr(),
                 to.as_mut_ptr(),
                 self.as_ptr(),
@@ -332,7 +332,7 @@ where
 
         unsafe {
             let len = cvt_n(ffi::RSA_public_encrypt(
-                from.len() as c_int,
+                from.len() as LenType,
                 from.as_ptr(),
                 to.as_mut_ptr(),
                 self.as_ptr(),

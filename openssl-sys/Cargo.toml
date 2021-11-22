@@ -15,9 +15,11 @@ build = "build/main.rs"
 
 [features]
 vendored = ['openssl-src']
+unstable_boringssl = ['bssl-sys']
 
 [dependencies]
 libc = "0.2"
+bssl-sys = { version = "0.1.0", optional = true }
 
 [build-dependencies]
 bindgen = { version = "0.59.2", optional = true }

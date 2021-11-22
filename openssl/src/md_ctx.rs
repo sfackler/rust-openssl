@@ -50,31 +50,37 @@
 //! assert!(valid);
 //! ```
 //!
-//! Compute and verify an HMAC-SHA256
-//!
-//! ```
-//! use openssl::md::Md;
-//! use openssl::md_ctx::MdCtx;
-//! use openssl::memcmp;
-//! use openssl::pkey::PKey;
-//!
-//! // Create a key with the HMAC secret.
-//! let key = PKey::hmac(b"my secret").unwrap();
-//!
-//! let text = b"Some Crypto Text";
-//!
-//! // Compute the HMAC.
-//! let mut ctx = MdCtx::new().unwrap();
-//! ctx.digest_sign_init(Some(Md::sha256()), &key).unwrap();
-//! ctx.digest_sign_update(text).unwrap();
-//! let mut hmac = vec![];
-//! ctx.digest_sign_final_to_vec(&mut hmac).unwrap();
-//!
-//! // Verify the HMAC. You can't use MdCtx to do this; instead use a constant time equality check.
-//! # let target = hmac.clone();
-//! let valid = memcmp::eq(&hmac, &target);
-//! assert!(valid);
-//! ```
+
+#![cfg_attr(
+    not(boringssl),
+    doc = r#"\
+Compute and verify an HMAC-SHA256
+
+```
+use openssl::md::Md;
+use openssl::md_ctx::MdCtx;
+use openssl::memcmp;
+use openssl::pkey::PKey;
+
+// Create a key with the HMAC secret.
+let key = PKey::hmac(b"my secret").unwrap();
+
+let text = b"Some Crypto Text";
+
+// Compute the HMAC.
+let mut ctx = MdCtx::new().unwrap();
+ctx.digest_sign_init(Some(Md::sha256()), &key).unwrap();
+ctx.digest_sign_update(text).unwrap();
+let mut hmac = vec![];
+ctx.digest_sign_final_to_vec(&mut hmac).unwrap();
+
+// Verify the HMAC. You can't use MdCtx to do this; instead use a constant time equality check.
+# let target = hmac.clone();
+let valid = memcmp::eq(&hmac, &target);
+assert!(valid);
+```"#
+)]
+
 use crate::error::ErrorStack;
 use crate::md::MdRef;
 use crate::pkey::{HasPrivate, HasPublic, PKeyRef};
