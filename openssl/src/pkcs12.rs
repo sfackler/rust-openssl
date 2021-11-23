@@ -6,6 +6,7 @@ use std::ffi::CString;
 use std::ptr;
 
 use crate::error::ErrorStack;
+use crate::hash::MessageDigest;
 use crate::nid::Nid;
 use crate::pkey::{HasPrivate, PKey, PKeyRef, Private};
 use crate::stack::Stack;
@@ -75,6 +76,7 @@ impl Pkcs12 {
     /// * `nid_cert` - `AES_256_CBC` (3.0.0+) or `PBE_WITHSHA1AND40BITRC2_CBC`
     /// * `iter` - `2048`
     /// * `mac_iter` - `2048`
+    /// * `mac_md` - `SHA-256` (3.0.0+) or `SHA-1`
     pub fn builder() -> Pkcs12Builder {
         ffi::init();
 
@@ -83,6 +85,7 @@ impl Pkcs12 {
             nid_cert: Nid::UNDEF,
             iter: ffi::PKCS12_DEFAULT_ITER,
             mac_iter: ffi::PKCS12_DEFAULT_ITER,
+            mac_md: None,
             ca: None,
         }
     }
@@ -99,6 +102,7 @@ pub struct Pkcs12Builder {
     nid_cert: Nid,
     iter: c_int,
     mac_iter: c_int,
+    mac_md: Option<MessageDigest>,
     ca: Option<Stack<X509>>,
 }
 
@@ -127,6 +131,12 @@ impl Pkcs12Builder {
     /// compatibility is required this should be set to 1.
     pub fn mac_iter(&mut self, mac_iter: u32) -> &mut Self {
         self.mac_iter = mac_iter as c_int;
+        self
+    }
+
+    /// MAC message digest type
+    pub fn mac_md(&mut self, md: MessageDigest) -> &mut Self {
+        self.mac_md = Some(md);
         self
     }
 
@@ -168,13 +178,17 @@ impl Pkcs12Builder {
                 .unwrap_or(ptr::null_mut());
             let nid_key = self.nid_key.as_raw();
             let nid_cert = self.nid_cert.as_raw();
+            let md_type = self
+                .mac_md
+                .map(|md_type| md_type.as_ptr())
+                .unwrap_or(ptr::null());
 
             // According to the OpenSSL docs, keytype is a non-standard extension for MSIE,
             // It's values are KEY_SIG or KEY_EX, see the OpenSSL docs for more information:
             // https://www.openssl.org/docs/man1.0.2/crypto/PKCS12_create.html
             let keytype = 0;
 
-            cvt_p(ffi::PKCS12_create(
+            let pkcs12 = cvt_p(ffi::PKCS12_create(
                 pass.as_ptr() as *const _ as *mut _,
                 friendly_name.as_ptr() as *const _ as *mut _,
                 pkey,
@@ -183,10 +197,22 @@ impl Pkcs12Builder {
                 nid_key,
                 nid_cert,
                 self.iter,
-                self.mac_iter,
+                -1,
                 keytype,
             ))
-            .map(Pkcs12)
+            .map(Pkcs12)?;
+
+            cvt(ffi::PKCS12_set_mac(
+                pkcs12.as_ptr(),
+                pass.as_ptr(),
+                -1,
+                ptr::null_mut(),
+                0,
+                self.mac_iter,
+                md_type,
+            ))?;
+
+            Ok(pkcs12)
         }
     }
 }
