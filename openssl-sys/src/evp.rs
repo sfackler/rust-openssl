@@ -649,6 +649,22 @@ extern "C" {
     pub fn EVP_PKEY_keygen_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
     pub fn EVP_PKEY_keygen(ctx: *mut EVP_PKEY_CTX, key: *mut *mut EVP_PKEY) -> c_int;
 
+    pub fn EVP_PKEY_sign_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
+    pub fn EVP_PKEY_sign(
+        ctx: *mut EVP_PKEY_CTX,
+        sig: *mut c_uchar,
+        siglen: *mut size_t,
+        tbs: *const c_uchar,
+        tbslen: size_t,
+    ) -> c_int;
+    pub fn EVP_PKEY_verify_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
+    pub fn EVP_PKEY_verify(
+        ctx: *mut EVP_PKEY_CTX,
+        sig: *const c_uchar,
+        siglen: size_t,
+        tbs: *const c_uchar,
+        tbslen: size_t,
+    ) -> c_int;
     pub fn EVP_PKEY_encrypt_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
     pub fn EVP_PKEY_encrypt(
         ctx: *mut EVP_PKEY_CTX,
