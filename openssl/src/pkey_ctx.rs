@@ -33,12 +33,38 @@
 //! ctx.set_keygen_mac_key(b"0123456789abcdef").unwrap();
 //! let cmac_key = ctx.keygen().unwrap();
 //! ```
+//!
+//! Sign and verify data with RSA
+//!
+//! ```
+//! use openssl::pkey_ctx::PkeyCtx;
+//! use openssl::pkey::PKey;
+//! use openssl::rsa::Rsa;
+//!
+//! // Generate a random RSA key.
+//! let key = Rsa::generate(4096).unwrap();
+//! let key = PKey::from_rsa(key).unwrap();
+//!
+//! let text = b"Some Crypto Text";
+//!
+//! // Create the signature.
+//! let mut ctx = PkeyCtx::new(&key).unwrap();
+//! ctx.sign_init().unwrap();
+//! let mut signature = vec![];
+//! ctx.sign_to_vec(text, &mut signature).unwrap();
+//!
+//! // Verify the signature.
+//! let mut ctx = PkeyCtx::new(&key).unwrap();
+//! ctx.verify_init().unwrap();
+//! let valid = ctx.verify(text, &signature).unwrap();
+//! assert!(valid);
+//! ```
 use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
 use crate::md::MdRef;
 use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Private};
 use crate::rsa::Padding;
-use crate::{cvt, cvt_p};
+use crate::{cvt, cvt_n, cvt_p};
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use openssl_macros::corresponds;
@@ -105,6 +131,17 @@ where
         Ok(())
     }
 
+    /// Prepares the context for signature verification using the public key.
+    #[corresponds(EVP_PKEY_verify_init)]
+    #[inline]
+    pub fn verify_init(&mut self) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_verify_init(self.as_ptr()))?;
+        }
+
+        Ok(())
+    }
+
     /// Encrypts data using the public key.
     ///
     /// If `to` is set to `None`, an upper bound on the number of bytes required for the output buffer will be
@@ -135,6 +172,31 @@ where
         out.truncate(base + len);
         Ok(len)
     }
+
+    /// Verifies the signature of data using the public key.
+    ///
+    /// Returns `Ok(true)` if the signature is valid, `Ok(false)` if the signature is invalid, and `Err` if an error
+    /// occurred.
+    ///
+    /// # Note
+    ///
+    /// This verifies the signature of the *raw* data. It is more common to compute and verify the signature of the
+    /// cryptographic hash of an arbitrary amount of data. The [`MdCtx`](crate::md_ctx::MdCtx) type can be used to do
+    /// that.
+    #[corresponds(EVP_PKEY_verify)]
+    #[inline]
+    pub fn verify(&mut self, data: &[u8], sig: &[u8]) -> Result<bool, ErrorStack> {
+        unsafe {
+            let r = cvt_n(ffi::EVP_PKEY_verify(
+                self.as_ptr(),
+                sig.as_ptr(),
+                sig.len(),
+                data.as_ptr(),
+                data.len(),
+            ))?;
+            Ok(r == 1)
+        }
+    }
 }
 
 impl<T> PkeyCtxRef<T>
@@ -147,6 +209,17 @@ where
     pub fn decrypt_init(&mut self) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_decrypt_init(self.as_ptr()))?;
+        }
+
+        Ok(())
+    }
+
+    /// Prepares the context for signing using the private key.
+    #[corresponds(EVP_PKEY_sign_init)]
+    #[inline]
+    pub fn sign_init(&mut self) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_PKEY_sign_init(self.as_ptr()))?;
         }
 
         Ok(())
@@ -193,6 +266,42 @@ where
         out.resize(base + len, 0);
         let len = self.decrypt(from, Some(&mut out[base..]))?;
         out.truncate(base + len);
+        Ok(len)
+    }
+
+    /// Signs the contents of `data`.
+    ///
+    /// If `sig` is set to `None`, an upper bound on the number of bytes required for the output buffere will be
+    /// returned.
+    ///
+    /// # Note
+    ///
+    /// This computes the signature of the *raw* bytes of `data`. It is more common to sign the cryptographic hash of
+    /// an arbitrary amount of data. The [`MdCtx`](crate::md_ctx::MdCtx) type can be used to do that.
+    #[corresponds(EVP_PKEY_sign)]
+    #[inline]
+    pub fn sign(&mut self, data: &[u8], sig: Option<&mut [u8]>) -> Result<usize, ErrorStack> {
+        let mut written = sig.as_ref().map_or(0, |b| b.len());
+        unsafe {
+            cvt(ffi::EVP_PKEY_sign(
+                self.as_ptr(),
+                sig.map_or(ptr::null_mut(), |b| b.as_mut_ptr()),
+                &mut written,
+                data.as_ptr(),
+                data.len(),
+            ))?;
+        }
+
+        Ok(written)
+    }
+
+    /// Like [`Self::sign`] but appends the signature to a [`Vec`].
+    pub fn sign_to_vec(&mut self, data: &[u8], sig: &mut Vec<u8>) -> Result<usize, ErrorStack> {
+        let base = sig.len();
+        let len = self.sign(data, None)?;
+        sig.resize(base + len, 0);
+        let len = self.sign(data, Some(&mut sig[base..]))?;
+        sig.truncate(base + len);
         Ok(len)
     }
 }
@@ -628,5 +737,24 @@ mod test {
             hex::decode("077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5")
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn verify_fail() {
+        let key1 = Rsa::generate(4096).unwrap();
+        let key1 = PKey::from_rsa(key1).unwrap();
+
+        let data = b"Some Crypto Text";
+
+        let mut ctx = PkeyCtx::new(&key1).unwrap();
+        ctx.sign_init().unwrap();
+        let mut signature = vec![];
+        ctx.sign_to_vec(data, &mut signature).unwrap();
+
+        let bad_data = b"Some Crypto text";
+
+        ctx.verify_init().unwrap();
+        let valid = ctx.verify(bad_data, &signature).unwrap();
+        assert!(!valid);
     }
 }

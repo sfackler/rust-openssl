@@ -79,7 +79,7 @@ use crate::error::ErrorStack;
 use crate::md::MdRef;
 use crate::pkey::{HasPrivate, PKeyRef};
 use crate::pkey_ctx::PkeyCtxRef;
-use crate::{cvt, cvt_p};
+use crate::{cvt, cvt_n, cvt_p};
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use openssl_macros::corresponds;
@@ -303,7 +303,7 @@ impl MdCtxRef {
     #[inline]
     pub fn digest_verify_final(&mut self, signature: &[u8]) -> Result<bool, ErrorStack> {
         unsafe {
-            let r = cvt(ffi::EVP_DigestVerifyFinal(
+            let r = cvt_n(ffi::EVP_DigestVerifyFinal(
                 self.as_ptr(),
                 signature.as_ptr() as *mut _,
                 signature.len(),
@@ -372,5 +372,35 @@ impl MdCtxRef {
             ))?;
             Ok(r == 1)
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::md::Md;
+    use crate::pkey::PKey;
+    use crate::rsa::Rsa;
+
+    #[test]
+    fn verify_fail() {
+        let key1 = Rsa::generate(4096).unwrap();
+        let key1 = PKey::from_rsa(key1).unwrap();
+
+        let md = Md::sha256();
+        let data = b"Some Crypto Text";
+
+        let mut ctx = MdCtx::new().unwrap();
+        ctx.digest_sign_init(Some(md), &key1).unwrap();
+        ctx.digest_sign_update(data).unwrap();
+        let mut signature = vec![];
+        ctx.digest_sign_final_to_vec(&mut signature).unwrap();
+
+        let bad_data = b"Some Crypto text";
+
+        ctx.digest_verify_init(Some(md), &key1).unwrap();
+        ctx.digest_verify_update(bad_data).unwrap();
+        let valid = ctx.digest_verify_final(&signature).unwrap();
+        assert!(!valid);
     }
 }
