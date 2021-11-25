@@ -185,7 +185,7 @@ jobs:
               library:
                 name: libressl
                 version: 3.4.1
-      name: ${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}
+      name: ${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-${{ matrix.bindgen }}
       runs-on: ubuntu-latest
       env:
         OPENSSL_DIR: /opt/openssl
