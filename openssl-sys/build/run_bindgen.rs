@@ -21,6 +21,7 @@ pub fn run(include_dir: &Path) {
         .allowlist_function("OPENSSL.*")
         .allowlist_function("CRYPTO.*")
         .allowlist_function("EVP.*")
+        .allowlist_function("sk_.*")
         .clang_arg("-I")
         .clang_arg(include_dir.display().to_string())
         .header_contents("includes.h", INCLUDES)
