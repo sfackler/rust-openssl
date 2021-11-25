@@ -1,4 +1,5 @@
 use bindgen::callbacks::{MacroParsingBehavior, ParseCallbacks};
+use bindgen::RustTarget;
 use std::env;
 use std::path::{Path, PathBuf};
 
@@ -11,6 +12,7 @@ pub fn run(include_dir: &Path) {
 
     bindgen::builder()
         .parse_callbacks(Box::new(OpensslCallbacks))
+        .rust_target(RustTarget::Stable_1_47)
         .ctypes_prefix("::libc")
         .clang_arg("-I")
         .clang_arg(include_dir.display().to_string())
