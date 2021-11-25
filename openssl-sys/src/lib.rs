@@ -16,6 +16,9 @@ extern crate libc;
 
 use libc::*;
 
+#[cfg(feature = "bindgen")]
+include!(concat!(env!("OUT_DIR"), "/bindgen.rs"));
+
 pub use aes::*;
 pub use asn1::*;
 pub use bio::*;
@@ -44,6 +47,7 @@ pub use sha::*;
 pub use srtp::*;
 pub use ssl::*;
 pub use ssl3::*;
+#[cfg(not(feature = "bindgen"))]
 pub use stack::*;
 pub use tls1::*;
 pub use types::*;
@@ -82,6 +86,7 @@ mod sha;
 mod srtp;
 mod ssl;
 mod ssl3;
+#[cfg(not(feature = "bindgen"))]
 mod stack;
 mod tls1;
 mod types;

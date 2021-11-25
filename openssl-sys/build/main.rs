@@ -1,6 +1,8 @@
 #![allow(clippy::inconsistent_digit_grouping, clippy::unusual_byte_groupings)]
 
 extern crate autocfg;
+#[cfg(feature = "bindgen")]
+extern crate bindgen;
 extern crate cc;
 #[cfg(feature = "vendored")]
 extern crate openssl_src;
@@ -12,12 +14,13 @@ use std::collections::HashSet;
 use std::env;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-
 mod cfgs;
 
 mod find_normal;
 #[cfg(feature = "vendored")]
 mod find_vendored;
+#[cfg(feature = "bindgen")]
+mod run_bindgen;
 
 #[derive(PartialEq)]
 enum Version {
@@ -63,6 +66,9 @@ fn main() {
     let target = env::var("TARGET").unwrap();
 
     let (lib_dir, include_dir) = find_openssl(&target);
+
+    #[cfg(feature = "bindgen")]
+    run_bindgen::run(&include_dir);
 
     if !Path::new(&lib_dir).exists() {
         panic!(
