@@ -143,6 +143,9 @@ jobs:
             - x86_64-unknown-linux-gnu
             - i686-unknown-linux-gnu
             - arm-unknown-linux-gnueabihf
+          bindgen:
+            - true
+            - false
           library:
             - name: openssl
               version: vendored
@@ -163,10 +166,22 @@ jobs:
               dl-path: /old/1.0.1
           include:
             - target: x86_64-unknown-linux-gnu
+              bindgen: true
               library:
                 name: libressl
                 version: 2.5.5
             - target: x86_64-unknown-linux-gnu
+              bindgen: true
+              library:
+                name: libressl
+                version: 3.4.1
+            - target: x86_64-unknown-linux-gnu
+              bindgen: false
+              library:
+                name: libressl
+                version: 2.5.5
+            - target: x86_64-unknown-linux-gnu
+              bindgen: false
               library:
                 name: libressl
                 version: 3.4.1
@@ -267,11 +282,14 @@ jobs:
         - uses: actions/cache@v1
           with:
             path: target
-            key: target-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+            key: target-${{ matrix.target }}-${{ matrix.bindgen }}-${{ matrix.library.name }}-${{ matrix.library.version }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
         - name: Run systest
           run: |
             if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
               features="--features vendored"
+            fi
+            if [[ "${{ matrix.bindgen }}" == "true" ]]; then
+              features="$features --features bindgen"
             fi
             cargo run --manifest-path=systest/Cargo.toml --target ${{ matrix.target }} $features
         - name: Test openssl
@@ -279,10 +297,16 @@ jobs:
             if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
               features="--features vendored"
             fi
+            if [[ "${{ matrix.bindgen }}" == "true" ]]; then
+              features="$features --features bindgen"
+            fi
             cargo test --manifest-path=openssl/Cargo.toml --target ${{ matrix.target }} $features
         - name: Test openssl-errors
           run: |
             if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
               features="--features openssl-sys/vendored"
+            fi
+            if [[ "${{ matrix.bindgen }}" == "true" ]]; then
+              features="$features --features openssl-sys/bindgen"
             fi
             cargo test --manifest-path=openssl-errors/Cargo.toml --target ${{ matrix.target }} $features
