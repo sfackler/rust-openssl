@@ -17,6 +17,7 @@ pub fn run(include_dir: &Path) {
         .allowlist_type("OPENSSL.*")
         .allowlist_type("CRYPTO.*")
         .allowlist_type("EVP.*")
+        .allowlist_type("_STACK")
         .allowlist_function("OPENSSL.*")
         .allowlist_function("CRYPTO.*")
         .allowlist_function("EVP.*")
