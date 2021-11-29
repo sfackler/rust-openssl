@@ -4,6 +4,7 @@ use std::env;
 use std::path::{Path, PathBuf};
 
 const INCLUDES: &str = "
+#include <openssl/crypto.h>
 #include <openssl/stack.h>
 ";
 
@@ -14,14 +15,13 @@ pub fn run(include_dir: &Path) {
         .parse_callbacks(Box::new(OpensslCallbacks))
         .rust_target(RustTarget::Stable_1_47)
         .ctypes_prefix("::libc")
-        .allowlist_type("OPENSSL.*")
-        .allowlist_type("CRYPTO.*")
-        .allowlist_type("EVP.*")
-        .allowlist_type("_STACK")
-        .allowlist_function("OPENSSL.*")
-        .allowlist_function("CRYPTO.*")
-        .allowlist_function("EVP.*")
-        .allowlist_function("sk_.*")
+        .raw_line("use libc::*;")
+        .blocklist_file("stdlib.h")
+        .blocklist_file("time.h")
+        // libc is missing pthread_once_t on macOS
+        .blocklist_type("CRYPTO_ONCE")
+        .blocklist_function("CRYPTO_THREAD_run_once")
+        .layout_tests(false)
         .clang_arg("-I")
         .clang_arg(include_dir.display().to_string())
         .header_contents("includes.h", INCLUDES)

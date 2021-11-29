@@ -430,6 +430,27 @@ cfg_if! {
     }
 }
 
+cfg_if! {
+    if #[cfg(any(ossl110, libressl270))] {
+        pub enum X509_OBJECT {}
+    } else {
+        #[repr(C)]
+        pub struct X509_OBJECT {
+            pub type_: c_int,
+            pub data: X509_OBJECT_data,
+        }
+        #[repr(C)]
+        pub union X509_OBJECT_data {
+            pub ptr: *mut c_char,
+            pub x509: *mut X509,
+            pub crl: *mut X509_CRL,
+            pub pkey: *mut EVP_PKEY,
+        }
+    }
+}
+
+pub enum X509_LOOKUP {}
+
 #[repr(C)]
 pub struct X509V3_CTX {
     flags: c_int,
@@ -1066,3 +1087,6 @@ cfg_if! {
 }
 
 pub enum OCSP_RESPONSE {}
+
+#[cfg(ossl300)]
+pub enum OSSL_LIB_CTX {}
