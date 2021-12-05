@@ -4,8 +4,21 @@ use std::env;
 use std::path::PathBuf;
 
 const INCLUDES: &str = "
+#include <openssl/asn1.h>
+#include <openssl/bio.h>
+#include <openssl/conf.h>
 #include <openssl/crypto.h>
+#include <openssl/dh.h>
+#include <openssl/dsa.h>
+#include <openssl/ec.h>
+#include <openssl/evp.h>
+#include <openssl/hmac.h>
+#include <openssl/pkcs7.h>
+#include <openssl/rsa.h>
+#include <openssl/sha.h>
 #include <openssl/stack.h>
+#include <openssl/x509_vfy.h>
+#include <openssl/x509.h>
 #include <openssl/x509v3.h>
 ";
 

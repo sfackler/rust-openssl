@@ -31,7 +31,6 @@ pub use err::*;
 pub use evp::*;
 #[cfg(not(feature = "bindgen"))]
 pub use handwritten::*;
-pub use hmac::*;
 pub use obj_mac::*;
 pub use object::*;
 pub use ocsp::*;
@@ -66,7 +65,6 @@ mod err;
 mod evp;
 #[cfg(not(feature = "bindgen"))]
 mod handwritten;
-mod hmac;
 mod obj_mac;
 mod object;
 mod ocsp;
