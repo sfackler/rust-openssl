@@ -231,7 +231,7 @@ fn try_vcpkg() {
         .emit_includes(true)
         .find_package("openssl")
     {
-        Ok(lit) => lib,
+        Ok(lib) => lib,
         Err(e) => {
             println!("note: vcpkg did not find openssl: {}", e);
             return;
