@@ -11,6 +11,14 @@ cfg_if! {
     }
 }
 
+cfg_if! {
+    if #[cfg(ossl300)] {
+        type CRYPTO_EX_dup_from_d = *mut *mut c_void;
+    } else {
+        type CRYPTO_EX_dup_from_d = *mut c_void;
+    }
+}
+
 // FIXME should be options
 pub type CRYPTO_EX_new = unsafe extern "C" fn(
     parent: *mut c_void,
@@ -23,7 +31,7 @@ pub type CRYPTO_EX_new = unsafe extern "C" fn(
 pub type CRYPTO_EX_dup = unsafe extern "C" fn(
     to: *mut CRYPTO_EX_DATA,
     from: CRYPTO_EX_dup_from,
-    from_d: *mut c_void,
+    from_d: CRYPTO_EX_dup_from_d,
     idx: c_int,
     argl: c_long,
     argp: *mut c_void,

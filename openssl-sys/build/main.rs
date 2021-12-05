@@ -86,7 +86,7 @@ fn main() {
     );
     println!("cargo:include={}", include_dir.to_string_lossy());
 
-    let version = postprocess(&[include_dir.clone()]);
+    let version = postprocess(&[include_dir]);
 
     let libs_env = env("OPENSSL_LIBS");
     let libs = match libs_env.as_ref().and_then(|s| s.to_str()) {
@@ -138,6 +138,7 @@ fn check_rustc_versions() {
     }
 }
 
+#[allow(clippy::let_and_return)]
 fn postprocess(include_dirs: &[PathBuf]) -> Version {
     let version = validate_headers(include_dirs);
     #[cfg(feature = "bindgen")]
