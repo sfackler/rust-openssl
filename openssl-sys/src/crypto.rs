@@ -1,6 +1,13 @@
 use libc::*;
 use *;
 
+extern "C" {
+    #[cfg(not(ossl110))]
+    pub fn CRYPTO_set_locking_callback(
+        func: unsafe extern "C" fn(mode: c_int, n: c_int, file: *const c_char, line: c_int),
+    );
+}
+
 cfg_if! {
     if #[cfg(ossl110)] {
         type CRYPTO_EX_new_ret = ();

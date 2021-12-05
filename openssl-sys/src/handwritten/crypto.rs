@@ -31,8 +31,8 @@ extern "C" {
     #[cfg(not(ossl110))]
     pub fn CRYPTO_num_locks() -> c_int;
     #[cfg(not(ossl110))]
-    pub fn CRYPTO_set_locking_callback(
-        func: unsafe extern "C" fn(mode: c_int, n: c_int, file: *const c_char, line: c_int),
+    pub fn CRYPTO_set_locking_callback__fixed_rust(
+        func: Option<unsafe extern "C" fn(mode: c_int, n: c_int, file: *const c_char, line: c_int)>,
     );
 
     #[cfg(not(ossl110))]

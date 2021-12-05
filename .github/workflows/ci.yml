@@ -265,7 +265,9 @@ jobs:
             make
             make install_sw
           if: matrix.library.version != 'vendored' && !steps.openssl-cache.outputs.cache-hit
-        - run: echo "RUST_TEST_THREADS=1" >> $GITHUB_ENV
+        - run: |
+            echo "RUST_TEST_THREADS=1" >> $GITHUB_ENV
+            echo BINDGEN_EXTRA_CLANG_ARGS="--sysroot /usr/arm-linux-gnueabi" >> $GITHUB_ENV
           if: matrix.target == 'arm-unknown-linux-gnueabihf'
         - uses: actions/cache@v1
           with:

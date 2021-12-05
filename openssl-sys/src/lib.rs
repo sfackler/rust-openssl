@@ -176,7 +176,7 @@ pub fn init() {
             Box::new((0..num_locks).map(|_| None).collect());
         GUARDS = mem::transmute(guards);
 
-        CRYPTO_set_locking_callback(locking_function);
+        CRYPTO_set_locking_callback__fixed_rust(Some(locking_function));
         set_id_callback();
     })
 }

@@ -79,7 +79,8 @@ impl ParseCallbacks for OpensslCallbacks {
             | "BIO_meth_set_puts"
             | "BIO_meth_set_ctrl"
             | "BIO_meth_set_create"
-            | "BIO_meth_set_destroy" => Some(format!("{}__fixed_rust", original_item_name)),
+            | "BIO_meth_set_destroy"
+            | "CRYPTO_set_locking_callback" => Some(format!("{}__fixed_rust", original_item_name)),
             _ => None,
         }
     }
