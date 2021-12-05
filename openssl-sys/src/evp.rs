@@ -178,7 +178,7 @@ pub const EVP_PKEY_CTRL_HKDF_INFO: c_int = EVP_PKEY_ALG_CTRL + 6;
 #[cfg(ossl111)]
 pub const EVP_PKEY_CTRL_HKDF_MODE: c_int = EVP_PKEY_ALG_CTRL + 7;
 
-#[cfg(ossl111)]
+#[cfg(all(ossl111, not(ossl300)))]
 pub unsafe fn EVP_PKEY_CTX_set_hkdf_mode(ctx: *mut EVP_PKEY_CTX, mode: c_int) -> c_int {
     EVP_PKEY_CTX_ctrl(
         ctx,
@@ -190,7 +190,7 @@ pub unsafe fn EVP_PKEY_CTX_set_hkdf_mode(ctx: *mut EVP_PKEY_CTX, mode: c_int) ->
     )
 }
 
-#[cfg(ossl110)]
+#[cfg(all(ossl110, not(ossl300)))]
 pub unsafe fn EVP_PKEY_CTX_set_hkdf_md(ctx: *mut EVP_PKEY_CTX, md: *const EVP_MD) -> c_int {
     EVP_PKEY_CTX_ctrl(
         ctx,
@@ -202,7 +202,7 @@ pub unsafe fn EVP_PKEY_CTX_set_hkdf_md(ctx: *mut EVP_PKEY_CTX, md: *const EVP_MD
     )
 }
 
-#[cfg(ossl110)]
+#[cfg(all(ossl110, not(ossl300)))]
 pub unsafe fn EVP_PKEY_CTX_set1_hkdf_salt(
     ctx: *mut EVP_PKEY_CTX,
     salt: *const u8,
@@ -218,7 +218,7 @@ pub unsafe fn EVP_PKEY_CTX_set1_hkdf_salt(
     )
 }
 
-#[cfg(ossl110)]
+#[cfg(all(ossl110, not(ossl300)))]
 pub unsafe fn EVP_PKEY_CTX_set1_hkdf_key(
     ctx: *mut EVP_PKEY_CTX,
     key: *const u8,
@@ -234,7 +234,7 @@ pub unsafe fn EVP_PKEY_CTX_set1_hkdf_key(
     )
 }
 
-#[cfg(ossl110)]
+#[cfg(all(ossl110, not(ossl300)))]
 pub unsafe fn EVP_PKEY_CTX_add1_hkdf_info(
     ctx: *mut EVP_PKEY_CTX,
     info: *const u8,
