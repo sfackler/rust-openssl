@@ -30,14 +30,22 @@ extern "C" {
 
     #[cfg(not(ossl110))]
     pub fn CRYPTO_num_locks() -> c_int;
+}
+
+#[allow(clashing_extern_declarations)]
+extern "C" {
     #[cfg(not(ossl110))]
+    #[link_name = "CRYPTO_set_locking_callback"]
     pub fn CRYPTO_set_locking_callback__fixed_rust(
         func: Option<unsafe extern "C" fn(mode: c_int, n: c_int, file: *const c_char, line: c_int)>,
     );
 
     #[cfg(not(ossl110))]
-    pub fn CRYPTO_set_id_callback(func: unsafe extern "C" fn() -> c_ulong);
+    #[link_name = "CRYPTO_set_id_callback"]
+    pub fn CRYPTO_set_id_callback__fixed_rust(func: Option<unsafe extern "C" fn() -> c_ulong>);
+}
 
+extern "C" {
     #[cfg(not(ossl110))]
     pub fn CRYPTO_add_lock(
         pointer: *mut c_int,

@@ -151,7 +151,7 @@ pub fn init() {
                 }
 
                 unsafe {
-                    CRYPTO_set_id_callback(thread_id);
+                    CRYPTO_set_id_callback__fixed_rust(Some(thread_id));
                 }
             }
         } else {
