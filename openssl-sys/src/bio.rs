@@ -68,7 +68,6 @@ extern "C" {
 
 #[allow(clashing_extern_declarations)]
 extern "C" {
-    // FIXME should wrap in Option
     #[cfg(any(ossl110, libressl273))]
     #[link_name = "BIO_meth_set_write"]
     pub fn BIO_meth_set_write__fixed_rust(

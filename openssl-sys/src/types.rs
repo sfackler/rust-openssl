@@ -1,3 +1,6 @@
+use libc::*;
+use *;
+
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {
         pub enum EVP_PKEY {}

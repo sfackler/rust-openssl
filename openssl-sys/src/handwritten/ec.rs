@@ -238,13 +238,3 @@ extern "C" {
 
     pub fn i2d_ECDSA_SIG(sig: *const ECDSA_SIG, out: *mut *mut c_uchar) -> c_int;
 }
-
-#[cfg(ossl300)]
-pub unsafe fn EVP_EC_gen(curve: *const c_char) -> *mut EVP_PKEY {
-    EVP_PKEY_Q_keygen(
-        ptr::null_mut(),
-        ptr::null_mut(),
-        "EC\0".as_ptr().cast(),
-        curve,
-    )
-}
