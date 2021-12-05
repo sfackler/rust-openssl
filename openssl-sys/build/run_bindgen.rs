@@ -19,7 +19,9 @@ const INCLUDES: &str = "
 #include <openssl/stack.h>
 #include <openssl/x509_vfy.h>
 #include <openssl/x509.h>
+#include <openssl/ocsp.h>
 #include <openssl/x509v3.h>
+#include <openssl/kdf.h>
 ";
 
 pub fn run(include_dirs: &[PathBuf]) {
@@ -30,7 +32,7 @@ pub fn run(include_dirs: &[PathBuf]) {
         .rust_target(RustTarget::Stable_1_47)
         .ctypes_prefix("::libc")
         .raw_line("use libc::*;")
-        .allowlist_file(".*/openssl/[^/]+.h")
+        .allowlist_file(".*/openssl/[^/]+\\.h")
         .allowlist_recursively(false)
         // libc is missing pthread_once_t on macOS
         .blocklist_type("CRYPTO_ONCE")
@@ -38,6 +40,12 @@ pub fn run(include_dirs: &[PathBuf]) {
         // we don't want to mess with va_list
         .blocklist_function("BIO_vprintf")
         .blocklist_function("BIO_vsnprintf")
+        .blocklist_function("ERR_vset_error")
+        .blocklist_function("ERR_add_error_vdata")
+        .blocklist_function("EVP_KDF_vctrl")
+        .blocklist_type("OSSL_FUNC_core_vset_error_fn")
+        .blocklist_type("OSSL_FUNC_BIO_vprintf_fn")
+        .blocklist_type("OSSL_FUNC_BIO_vsnprintf_fn")
         // Maintain compatibility for existing enum definitions
         .rustified_enum("point_conversion_form_t")
         // Maintain compatibility for pre-union definitions
