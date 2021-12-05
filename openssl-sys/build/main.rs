@@ -86,7 +86,7 @@ fn main() {
     );
     println!("cargo:include={}", include_dir.to_string_lossy());
 
-    let version = validate_headers(&[include_dir.clone()]);
+    let version = postprocess(&[include_dir.clone()]);
 
     let libs_env = env("OPENSSL_LIBS");
     let libs = match libs_env.as_ref().and_then(|s| s.to_str()) {
@@ -128,9 +128,6 @@ fn main() {
         println!("cargo:rustc-link-lib=dylib=ws2_32");
         println!("cargo:rustc-link-lib=dylib=advapi32");
     }
-
-    #[cfg(feature = "bindgen")]
-    run_bindgen::run(&include_dir);
 }
 
 fn check_rustc_versions() {
@@ -139,6 +136,14 @@ fn check_rustc_versions() {
     if cfg.probe_rustc_version(1, 31) {
         println!("cargo:rustc-cfg=const_fn");
     }
+}
+
+fn postprocess(include_dirs: &[PathBuf]) -> Version {
+    let version = validate_headers(include_dirs);
+    #[cfg(feature = "bindgen")]
+    run_bindgen::run(&include_dirs);
+
+    version
 }
 
 /// Validates the header files found in `include_dir` and then returns the

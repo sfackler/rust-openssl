@@ -17,31 +17,6 @@ cfg_if! {
     }
 }
 
-// FIXME should be options
-pub type CRYPTO_EX_new = unsafe extern "C" fn(
-    parent: *mut c_void,
-    ptr: *mut c_void,
-    ad: *const CRYPTO_EX_DATA,
-    idx: c_int,
-    argl: c_long,
-    argp: *const c_void,
-) -> c_int;
-pub type CRYPTO_EX_dup = unsafe extern "C" fn(
-    to: *mut CRYPTO_EX_DATA,
-    from: *mut CRYPTO_EX_DATA,
-    from_d: *mut c_void,
-    idx: c_int,
-    argl: c_long,
-    argp: *mut c_void,
-) -> c_int;
-pub type CRYPTO_EX_free = unsafe extern "C" fn(
-    parent: *mut c_void,
-    ptr: *mut c_void,
-    ad: *mut CRYPTO_EX_DATA,
-    idx: c_int,
-    argl: c_long,
-    argp: *mut c_void,
-);
 extern "C" {
     #[cfg(any(ossl110, libressl))]
     pub fn CRYPTO_get_ex_new_index(
@@ -52,9 +27,7 @@ extern "C" {
         dup_func: Option<CRYPTO_EX_dup>,
         free_func: Option<CRYPTO_EX_free>,
     ) -> c_int;
-}
 
-extern "C" {
     #[cfg(not(ossl110))]
     pub fn CRYPTO_num_locks() -> c_int;
     #[cfg(not(ossl110))]
