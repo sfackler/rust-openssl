@@ -1,18 +1,28 @@
 use libc::*;
 use *;
 
+cfg_if! {
+    if #[cfg(ossl110)] {
+        type CRYPTO_EX_new_ret = ();
+        type CRYPTO_EX_dup_from = *const CRYPTO_EX_DATA;
+    } else {
+        type CRYPTO_EX_new_ret = c_int;
+        type CRYPTO_EX_dup_from = *mut CRYPTO_EX_DATA;
+    }
+}
+
 // FIXME should be options
 pub type CRYPTO_EX_new = unsafe extern "C" fn(
     parent: *mut c_void,
     ptr: *mut c_void,
-    ad: *const CRYPTO_EX_DATA,
+    ad: *mut CRYPTO_EX_DATA,
     idx: c_int,
     argl: c_long,
-    argp: *const c_void,
-) -> c_int;
+    argp: *mut c_void,
+) -> CRYPTO_EX_new_ret;
 pub type CRYPTO_EX_dup = unsafe extern "C" fn(
     to: *mut CRYPTO_EX_DATA,
-    from: *mut CRYPTO_EX_DATA,
+    from: CRYPTO_EX_dup_from,
     from_d: *mut c_void,
     idx: c_int,
     argl: c_long,
