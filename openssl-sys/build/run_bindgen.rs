@@ -13,16 +13,20 @@ const INCLUDES: &str = "
 #include <openssl/ec.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
+#include <openssl/ocsp.h>
+#include <openssl/opensslv.h>
 #include <openssl/pkcs7.h>
 #include <openssl/rsa.h>
 #include <openssl/sha.h>
-#include <openssl/stack.h>
-#include <openssl/x509_vfy.h>
-#include <openssl/x509.h>
-#include <openssl/ocsp.h>
-#include <openssl/x509v3.h>
-#include <openssl/kdf.h>
 #include <openssl/ssl.h>
+#include <openssl/stack.h>
+#include <openssl/x509.h>
+#include <openssl/x509_vfy.h>
+#include <openssl/x509v3.h>
+
+#if OPENSSL_VERSION_NUMBER >= 0x010100000
+#include <openssl/kdf.h>
+#endif
 ";
 
 pub fn run(include_dirs: &[PathBuf]) {
