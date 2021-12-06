@@ -3,7 +3,8 @@ use *;
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {
-        pub enum EVP_PKEY {}
+        pub type EVP_PKEY = evp_pkey_st;
+        pub enum evp_pkey_st {}
     } else {
         #[repr(C)]
         pub struct EVP_PKEY {

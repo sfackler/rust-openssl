@@ -612,7 +612,7 @@ pub extern "C" fn raw_custom_ext_free<T>(
     ssl: *mut ffi::SSL,
     _: c_uint,
     _: c_uint,
-    _: *mut *const c_uchar,
+    _: *const c_uchar,
     _: *mut c_void,
 ) where
     T: 'static + Sync + Send,

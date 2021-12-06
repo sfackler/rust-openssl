@@ -22,6 +22,7 @@ const INCLUDES: &str = "
 #include <openssl/ocsp.h>
 #include <openssl/x509v3.h>
 #include <openssl/kdf.h>
+#include <openssl/ssl.h>
 ";
 
 pub fn run(include_dirs: &[PathBuf]) {
@@ -50,7 +51,9 @@ pub fn run(include_dirs: &[PathBuf]) {
         .rustified_enum("point_conversion_form_t")
         // Maintain compatibility for pre-union definitions
         .blocklist_type("GENERAL_NAME")
+        .blocklist_type("GENERAL_NAME_st")
         .blocklist_type("EVP_PKEY")
+        .blocklist_type("evp_pkey_st")
         .layout_tests(false)
         .header_contents("includes.h", INCLUDES);
 
@@ -89,7 +92,13 @@ impl ParseCallbacks for OpensslCallbacks {
             | "BIO_meth_set_create"
             | "BIO_meth_set_destroy"
             | "CRYPTO_set_locking_callback"
-            | "CRYPTO_set_id_callback" => Some(format!("{}__fixed_rust", original_item_name)),
+            | "CRYPTO_set_id_callback"
+            | "SSL_CTX_set_tmp_dh_callback"
+            | "SSL_set_tmp_dh_callback"
+            | "SSL_CTX_set_tmp_ecdh_callback"
+            | "SSL_set_tmp_ecdh_callback"
+            | "SSL_CTX_callback_ctrl"
+            | "SSL_CTX_set_alpn_select_cb" => Some(format!("{}__fixed_rust", original_item_name)),
             _ => None,
         }
     }

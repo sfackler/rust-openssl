@@ -723,9 +723,10 @@ impl SslContextBuilder {
             let arg = self.set_ex_data_inner(SslContext::cached_ex_index::<F>(), callback);
             ffi::SSL_CTX_set_tlsext_servername_arg(self.as_ptr(), arg);
 
-            let f: extern "C" fn(_, _, _) -> _ = raw_sni::<F>;
-            let f: extern "C" fn() = mem::transmute(f);
-            ffi::SSL_CTX_set_tlsext_servername_callback(self.as_ptr(), Some(f));
+            ffi::SSL_CTX_set_tlsext_servername_callback__fixed_rust(
+                self.as_ptr(),
+                Some(raw_sni::<F>),
+            );
         }
     }
 
@@ -1203,9 +1204,9 @@ impl SslContextBuilder {
     {
         unsafe {
             self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
-            ffi::SSL_CTX_set_alpn_select_cb(
+            ffi::SSL_CTX_set_alpn_select_cb__fixed_rust(
                 self.as_ptr(),
-                callbacks::raw_alpn_select::<F>,
+                Some(callbacks::raw_alpn_select::<F>),
                 ptr::null_mut(),
             );
         }
@@ -2284,7 +2285,7 @@ impl SslRef {
         unsafe {
             // this needs to be in an Arc since the callback can register a new callback!
             self.set_ex_data(Ssl::cached_ex_index(), Arc::new(callback));
-            ffi::SSL_set_tmp_dh_callback(self.as_ptr(), raw_tmp_dh_ssl::<F>);
+            ffi::SSL_set_tmp_dh_callback__fixed_rust(self.as_ptr(), Some(raw_tmp_dh_ssl::<F>));
         }
     }
 
@@ -2309,7 +2310,7 @@ impl SslRef {
         unsafe {
             // this needs to be in an Arc since the callback can register a new callback!
             self.set_ex_data(Ssl::cached_ex_index(), Arc::new(callback));
-            ffi::SSL_set_tmp_ecdh_callback(self.as_ptr(), raw_tmp_ecdh_ssl::<F>);
+            ffi::SSL_set_tmp_ecdh_callback__fixed_rust(self.as_ptr(), Some(raw_tmp_ecdh_ssl::<F>));
         }
     }
 
