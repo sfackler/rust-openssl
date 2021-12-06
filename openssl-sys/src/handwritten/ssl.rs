@@ -647,6 +647,7 @@ extern "C" {
     ) -> c_int;
     pub fn SSL_ctrl(ssl: *mut SSL, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
     pub fn SSL_CTX_ctrl(ctx: *mut SSL_CTX, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
+    #[link_name = "SSL_CTX_callback_ctrl"]
     pub fn SSL_CTX_callback_ctrl__fixed_rust(
         ctx: *mut SSL_CTX,
         cmd: c_int,

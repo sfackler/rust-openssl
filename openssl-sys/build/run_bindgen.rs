@@ -33,6 +33,7 @@ pub fn run(include_dirs: &[PathBuf]) {
         .rust_target(RustTarget::Stable_1_47)
         .ctypes_prefix("::libc")
         .raw_line("use libc::*;")
+        .raw_line("type evp_pkey_st = EVP_PKEY;")
         .allowlist_file(".*/openssl/[^/]+\\.h")
         .allowlist_recursively(false)
         // libc is missing pthread_once_t on macOS
