@@ -6,6 +6,7 @@ use std::path::PathBuf;
 const INCLUDES: &str = "
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
+#include <openssl/comp.h>
 #include <openssl/conf.h>
 #include <openssl/crypto.h>
 #include <openssl/dh.h>
