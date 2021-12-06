@@ -132,14 +132,6 @@ cfg_if! {
 
 stack!(stack_st_X509);
 
-cfg_if! {
-    if #[cfg(not(ossl110))] {
-        pub const X509_LU_FAIL: c_int = 0;
-        pub const X509_LU_X509: c_int = 1;
-        pub const X509_LU_CRL: c_int = 2;
-    }
-}
-
 stack!(stack_st_X509_OBJECT);
 
 stack!(stack_st_X509_LOOKUP);
