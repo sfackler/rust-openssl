@@ -24,7 +24,7 @@ const INCLUDES: &str = "
 #include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>
 
-#if OPENSSL_VERSION_NUMBER >= 0x010100000
+#if !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER >= 0x010100000
 #include <openssl/kdf.h>
 #endif
 ";
