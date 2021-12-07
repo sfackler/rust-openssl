@@ -39,6 +39,7 @@
 //! let pub_key: Vec<u8> = pkey.public_key_to_pem().unwrap();
 //! println!("{:?}", str::from_utf8(pub_key.as_slice()).unwrap());
 //! ```
+#![allow(clippy::missing_safety_doc)]
 use crate::bio::{MemBio, MemBioSlice};
 #[cfg(ossl110)]
 use crate::cipher::CipherRef;
