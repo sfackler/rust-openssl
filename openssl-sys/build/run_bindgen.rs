@@ -4,6 +4,7 @@ use std::env;
 use std::path::PathBuf;
 
 const INCLUDES: &str = "
+#include <openssl/aes.h>
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
 #include <openssl/comp.h>
@@ -12,18 +13,29 @@ const INCLUDES: &str = "
 #include <openssl/dh.h>
 #include <openssl/dsa.h>
 #include <openssl/ec.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
+#include <openssl/objects.h>
 #include <openssl/ocsp.h>
 #include <openssl/opensslv.h>
+#include <openssl/pem.h>
+#include <openssl/pkcs12.h>
 #include <openssl/pkcs7.h>
+#include <openssl/rand.h>
 #include <openssl/rsa.h>
+#include <openssl/safestack.h>
 #include <openssl/sha.h>
+#include <openssl/srtp.h>
 #include <openssl/ssl.h>
 #include <openssl/stack.h>
 #include <openssl/x509.h>
 #include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>
+
+#if !defined(LIBRESSL_VERSION_NUMBER)
+#include <openssl/cms.h>
+#endif
 
 #if !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER >= 0x010100000
 #include <openssl/kdf.h>
