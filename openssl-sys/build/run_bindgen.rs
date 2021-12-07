@@ -26,12 +26,14 @@ const INCLUDES: &str = "
 #include <openssl/rsa.h>
 #include <openssl/safestack.h>
 #include <openssl/sha.h>
-#include <openssl/srtp.h>
 #include <openssl/ssl.h>
 #include <openssl/stack.h>
 #include <openssl/x509.h>
 #include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>
+
+// this must be included after ssl.h for libressl!
+#include <openssl/srtp.h>
 
 #if !defined(LIBRESSL_VERSION_NUMBER)
 #include <openssl/cms.h>
