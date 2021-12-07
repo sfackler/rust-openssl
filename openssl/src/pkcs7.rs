@@ -12,7 +12,7 @@ use crate::symm::Cipher;
 use crate::x509::store::X509StoreRef;
 use crate::x509::{X509Ref, X509, X509Attribute};
 use crate::{cvt, cvt_p};
-use crate::asn1::{Asn1Object, Asn1ObjectRef, Asn1Type};
+use crate::asn1::Asn1Type;
 use crate::hash::MessageDigest;
 use crate::nid::Nid;
 
@@ -401,7 +401,12 @@ impl Pkcs7Ref {
     /// This corresponds to [`PKCS7_set_type`].
     ///
     pub fn set_type(&self, nid: Nid) -> Result<(), ErrorStack> {
-        Err(ErrorStack::get()) // TODO bk Not implemented, yet.
+        unsafe {
+            cvt(ffi::PKCS7_set_type(
+                self.as_ptr(),
+                nid.as_raw()
+            )).map(|_| ())
+        }
     }
 
     /// Add the signer certificate to a PKCS#7 structure
@@ -411,7 +416,12 @@ impl Pkcs7Ref {
     /// This corresponds to [`PKCS7_add_certificate`]
     ///
     pub fn add_certificate(&self, cert: &X509Ref) -> Result<(), ErrorStack> {
-        Err(ErrorStack::get()) // TODO bk Not implemented, yet.
+        unsafe {
+            cvt(ffi::PKCS7_add_certificate(
+                self.as_ptr(),
+                cert.as_ptr()
+            )).map(|_| ())
+        }
     }
 
     /// Add signature information to the PKCS#7 structure.
@@ -432,11 +442,20 @@ impl Pkcs7Ref {
     where
         PT: HasPrivate,
     {
-        Err(ErrorStack::get()) // TODO bk Not implemented, yet.
+        unsafe {
+            cvt_p(ffi::PKCS7_add_signature(
+                self.as_ptr(),
+                cert.as_ptr(),
+                pkey.as_ptr(),
+                algorithm.as_ptr()
+            )).map(Pkcs7SignerInfo)
+        }
     }
 
     /// Add the payload to a PKCS#7 structure.
     /// The PKCS#7 structure must be either of type NID_pkcs7_signed or NID_pkcs7_digest.
+    /// Finalize a PKCS#7 structure. If the structure's type is `Nid::PKCS7_SIGNED` or
+    /// `Nid::PKCS7_SIGNEDANDENVELOPED`, it will be signed.
     ///
     /// The `content_type` must be a PKCS#7 typeAllowed values are
     /// - Nid::PKCS7_SIGNED
@@ -450,8 +469,30 @@ impl Pkcs7Ref {
     /// This uses the following OpenSSL functions: [`PKCS7_content_new`],
     /// [`PKCS7_dataInit`], [`BIO_write`]
     ///
-    pub fn add_content(&self, content_type: Nid, content: &[u8]) -> Result<(), ErrorStack> {
-        Err(ErrorStack::get()) // TODO bk Not implemented, yet.
+    pub fn add_contente(&self, content_type: Nid, content: &[u8]) -> Result<MemBio, ErrorStack> {
+        unsafe {
+            // Initialize content
+            cvt(ffi::PKCS7_content_new(
+                self.as_ptr(),
+                content_type.as_raw()
+            )).map(|_| ())?;
+            // Write content
+            let bcont_bio = ptr::null_mut();
+            let bio = cvt_p(ffi::PKCS7_dataInit(self.as_ptr(), bcont_bio))
+                .map(|bio| MemBio::from_ptr(bio))?;
+            let content_length = content.len() as c_int;
+            let len = ffi::BIO_write(
+                bio.as_ptr(),
+                content.as_ptr() as *const c_void,
+                content_length
+            );
+            if len == content_length {
+                Ok(bio)
+            } else {
+                return Err(ErrorStack::get());
+            }
+        }
+
     }
 
     /// Finalize a PKCS#7 structure. If the structure's type is `Nid::PKCS7_SIGNED` or
@@ -459,10 +500,14 @@ impl Pkcs7Ref {
     ///
     /// This corresponds to [`PKCS7_dataFinal`].
     ///
-    pub fn finalize(&self) -> Result<Pkcs7, ErrorStack> {
-        Err(ErrorStack::get()) // TODO bk Not implemented, yet.
+    pub fn finalize(&self, bio: &MemBio) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::PKCS7_dataFinal(
+                self.as_ptr(),
+                bio.as_ptr()
+            )).map(|_| ())
+        }
     }
-
 }
 
 #[cfg(test)]
