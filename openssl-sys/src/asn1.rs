@@ -49,6 +49,8 @@ extern "C" {
     pub fn ASN1_OBJECT_free(x: *mut ASN1_OBJECT);
 }
 
+pub enum ASN1_OBJECT {}
+
 stack!(stack_st_ASN1_OBJECT);
 
 extern "C" {
@@ -60,6 +62,8 @@ extern "C" {
 
     pub fn ASN1_BIT_STRING_free(x: *mut ASN1_BIT_STRING);
 
+    pub fn ASN1_STRING_new() -> *mut ASN1_STRING;
+    pub fn ASN1_STRING_set(str: *mut ASN1_STRING, data: *const c_void, len_in: c_int); // TODO bk const check
     pub fn ASN1_STRING_free(x: *mut ASN1_STRING);
     pub fn ASN1_STRING_length(x: *const ASN1_STRING) -> c_int;
 

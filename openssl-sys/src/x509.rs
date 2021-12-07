@@ -22,8 +22,6 @@ pub enum X509_EXTENSION {}
 
 stack!(stack_st_X509_EXTENSION);
 
-pub enum X509_ATTRIBUTE {}
-
 cfg_if! {
     if #[cfg(ossl110)] {
         pub enum X509_REQ_INFO {}
@@ -34,7 +32,7 @@ cfg_if! {
             pub version: *mut ::ASN1_INTEGER,
             pub subject: *mut ::X509_NAME,
             pubkey: *mut c_void,
-            pub attributes: *mut stack_st_X509_ATTRIBUTE,
+            pub attributes: *mut ::stack_st_X509_ATTRIBUTE,
         }
     }
 }
@@ -302,7 +300,7 @@ extern "C" {
 
     pub fn X509_EXTENSION_free(ext: *mut X509_EXTENSION);
 
-    pub fn X509_ATTRIBUTE_free(attr: *mut X509_ATTRIBUTE);
+    pub fn X509_ATTRIBUTE_free(attr: *mut ::X509_ATTRIBUTE);
 
     pub fn X509_NAME_ENTRY_free(x: *mut X509_NAME_ENTRY);
 
@@ -383,8 +381,8 @@ const_ptr_api! {
 extern "C" {
     pub fn X509_REQ_get_attr_count(req: *mut X509_REQ) -> c_int;
     pub fn X509_REQ_get_attr_by_NID(req: *mut X509_REQ, nid: c_int, lastpos: c_int) -> c_int;
-    pub fn X509_REQ_get_attr(req: *mut X509_REQ, loc: c_int) -> *mut X509_ATTRIBUTE;
-    pub fn X509_REQ_delete_attr(req: *mut X509_REQ, loc: c_int) -> *mut X509_ATTRIBUTE;
+    pub fn X509_REQ_get_attr(req: *mut X509_REQ, loc: c_int) -> *mut ::X509_ATTRIBUTE;
+    pub fn X509_REQ_delete_attr(req: *mut X509_REQ, loc: c_int) -> *mut ::X509_ATTRIBUTE;
     pub fn X509_REQ_add1_attr_by_txt(
         req: *mut X509_REQ,
         attrname: *const c_char,

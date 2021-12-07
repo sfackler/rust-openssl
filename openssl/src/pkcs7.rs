@@ -1,6 +1,6 @@
 use bitflags::bitflags;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::c_int;
+use libc::{c_int, c_void};
 use std::mem;
 use std::ptr;
 
@@ -10,8 +10,28 @@ use crate::pkey::{HasPrivate, PKeyRef};
 use crate::stack::{Stack, StackRef};
 use crate::symm::Cipher;
 use crate::x509::store::X509StoreRef;
-use crate::x509::{X509Ref, X509};
+use crate::x509::{X509Ref, X509, X509Attribute};
 use crate::{cvt, cvt_p};
+use crate::asn1::{Asn1Object, Asn1ObjectRef, Asn1Type};
+use crate::hash::MessageDigest;
+use crate::nid::Nid;
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::PKCS7_SIGNER_INFO;
+    fn drop = ffi::PKCS7_SIGNER_INFO_free;
+
+    /// A `PKCS_SIGNER_INFO` signer info strucuture
+    pub struct Pkcs7SignerInfo;
+
+    /// Reference to `PKCS7_SIGNER_INFO`.
+    pub struct Pkcs7SignerInfoRef;
+}
+
+impl Pkcs7SignerInfo {
+    pub fn as_ptr(&self)-> *mut ffi::PKCS7_SIGNER_INFO {
+        &self.0 as *const _ as *mut _
+    }
+}
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::PKCS7;
@@ -50,6 +70,19 @@ bitflags! {
 }
 
 impl Pkcs7 {
+
+    /// Create a new an empty PKCS#7 object.
+    ///
+    /// This corresponds to [`PKCS7_new`].
+    ///
+    /// [`PKCS7_new`]: https://www.openssl.org/docs/manmaster/man3/PKCS7_new.html
+    pub fn new() -> Result<Pkcs7, ErrorStack> {
+        unsafe {
+            let pkcs7 = cvt_p(ffi::PKCS7_new()).map(Pkcs7)?;
+            Ok(pkcs7)
+        }
+    }
+
     from_pem! {
         /// Deserializes a PEM-encoded PKCS#7 signature
         ///
@@ -158,6 +191,49 @@ impl Pkcs7 {
                 flags.bits,
             ))
             .map(Pkcs7)
+        }
+    }
+
+    /// Set signed attributes in a PKCS#7 structure.
+    ///
+    /// `attributes` is a stack of the attributes to be added.
+    ///
+    /// This corresponds to [`PKCS7_set_signed_attributes`]
+    ///
+    pub fn set_signed_attributes(
+        signer_info: &Pkcs7SignerInfo,
+        attributes: &StackRef<X509Attribute>
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::PKCS7_set_signed_attributes(
+                signer_info.as_ptr(),
+                attributes.as_ptr()
+            ))
+                .map(|_| ())
+        }
+    }
+
+    /// Add a signed attribute to a PKCS7_SIGNER_INFO structure
+    ///
+    /// `nid` is the Nid of the attribute, `atrtype` is the attribute's type (an ASN.1 tag
+    /// value) and `value ` is
+    ///
+    /// Corresponds to [`PKCS7_add_signed_attribute`]
+    ///
+    pub fn add_signed_attribute(
+        signer_info: &Pkcs7SignerInfo,
+        nid: Nid,
+        atrtype: Asn1Type,
+        value: &mut [u8]
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::PKCS7_add_signed_attribute(
+                signer_info.as_ptr(),
+                nid.as_raw(),
+                atrtype.as_raw(),
+                value.as_mut_ptr() as *mut c_void
+            ))
+                .map(|_| ())
         }
     }
 }
@@ -311,6 +387,82 @@ impl Pkcs7Ref {
             Ok(stack)
         }
     }
+
+    /// Set the type of a PKCS#7 structure
+    ///
+    /// `nid` is type's Nid. Allowed values are
+    /// - Nid::PKCS7_SIGNED
+    /// - Nid::PKCS7_DATA
+    /// - Nid::PKCS7_SIGNEDANDENVELOPED
+    /// - Nid::PKCS7_ENVELOPED
+    /// - Nid::PKCS7_ENCRYPTED
+    /// - Nid::PKCS7_DIGEST
+    ///
+    /// This corresponds to [`PKCS7_set_type`].
+    ///
+    pub fn set_type(&self, nid: Nid) -> Result<(), ErrorStack> {
+        Err(ErrorStack::get()) // TODO bk Not implemented, yet.
+    }
+
+    /// Add the signer certificate to a PKCS#7 structure
+    ///
+    /// `cert` is the signer's certificate.
+    ///
+    /// This corresponds to [`PKCS7_add_certificate`]
+    ///
+    pub fn add_certificate(&self, cert: &X509Ref) -> Result<(), ErrorStack> {
+        Err(ErrorStack::get()) // TODO bk Not implemented, yet.
+    }
+
+    /// Add signature information to the PKCS#7 structure.
+    ///
+    /// `cert` is the signer's certificate. `pkey` is the signer's (private) key. `algorithm` is
+    /// the hash algorithm to be used.
+    ///
+    /// Returns a signer info structure, which can be used to add signed attributes.
+    ///
+    /// This corresponds to [`PKCS7_add_signature`]
+    ///
+    pub fn add_signature<PT>(
+        &self,
+        cert: &X509Ref,
+        pkey: &PKeyRef<PT>,
+        algorithm: MessageDigest
+    ) -> Result<Pkcs7SignerInfo, ErrorStack>
+    where
+        PT: HasPrivate,
+    {
+        Err(ErrorStack::get()) // TODO bk Not implemented, yet.
+    }
+
+    /// Add the payload to a PKCS#7 structure.
+    /// The PKCS#7 structure must be either of type NID_pkcs7_signed or NID_pkcs7_digest.
+    ///
+    /// The `content_type` must be a PKCS#7 typeAllowed values are
+    /// - Nid::PKCS7_SIGNED
+    /// - Nid::PKCS7_DATA
+    /// - Nid::PKCS7_SIGNEDANDENVELOPED
+    /// - Nid::PKCS7_ENVELOPED
+    /// - Nid::PKCS7_ENCRYPTED
+    /// - Nid::PKCS7_DIGEST
+    /// `content` is the payload of type `content_type`.
+    ///
+    /// This uses the following OpenSSL functions: [`PKCS7_content_new`],
+    /// [`PKCS7_dataInit`], [`BIO_write`]
+    ///
+    pub fn add_content(&self, content_type: Nid, content: &[u8]) -> Result<(), ErrorStack> {
+        Err(ErrorStack::get()) // TODO bk Not implemented, yet.
+    }
+
+    /// Finalize a PKCS#7 structure. If the structure's type is `Nid::PKCS7_SIGNED` or
+    /// `Nid::PKCS7_SIGNEDANDENVELOPED`, it will be signed.
+    ///
+    /// This corresponds to [`PKCS7_dataFinal`].
+    ///
+    pub fn finalize(&self) -> Result<Pkcs7, ErrorStack> {
+        Err(ErrorStack::get()) // TODO bk Not implemented, yet.
+    }
+
 }
 
 #[cfg(test)]

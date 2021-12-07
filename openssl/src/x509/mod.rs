@@ -9,7 +9,7 @@
 
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::{c_char, c_int, c_long, c_uchar};
+use libc::{c_char, c_int, c_long, c_uchar, c_void};
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -732,6 +732,52 @@ impl AsRef<X509Ref> for X509Ref {
 
 impl Stackable for X509 {
     type StackType = ffi::stack_st_X509;
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::X509_ATTRIBUTE;
+    fn drop = ffi::X509_ATTRIBUTE_free;
+
+    /// Permit additional fields to be added to an `X509` v3 certificate.
+    pub struct X509Attribute;
+    /// Reference to `X509Attribute`.
+    pub struct X509AttributeRef;
+}
+
+impl Stackable for X509Attribute {
+    type StackType = ffi::stack_st_X509_ATTRIBUTE;
+}
+
+impl X509Attribute {
+    /// Creates an X509 attribute, which can be added to X509 certificates, signing requests and
+    /// PKCS7 messages.
+    pub fn from_string(nid: Nid, value: &str) -> Result<X509Attribute, ErrorStack> {
+        let value_len = value.len() as c_int;
+        let value = CString::new(value).unwrap();
+        unsafe {
+            let value = value.as_ptr() as *mut _;
+            let asn1_string = ffi::ASN1_STRING_new();
+            ffi::ASN1_STRING_set(asn1_string, value, value_len);
+            cvt_p(ffi::X509_ATTRIBUTE_create(
+                nid.as_raw(),
+                ffi::V_ASN1_PRINTABLESTRING,
+                asn1_string as *mut c_void
+            )).map(X509Attribute)
+        }
+    }
+    pub fn from_octet(nid: Nid, value: &[u8]) -> Result<X509Attribute, ErrorStack> {
+        let value_len = value.len() as c_int;
+        unsafe {
+            let value = value.as_ptr() as *mut _;
+            let asn1_string = ffi::ASN1_STRING_new();
+            ffi::ASN1_STRING_set(asn1_string, value, value_len);
+            cvt_p(ffi::X509_ATTRIBUTE_create(
+                nid.as_raw(),
+                ffi::V_ASN1_OCTET_STRING,
+                asn1_string as *mut c_void
+            )).map(X509Attribute)
+        }
+    }
 }
 
 /// A context object required to construct certain `X509` extension values.
