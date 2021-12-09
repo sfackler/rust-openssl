@@ -864,6 +864,7 @@ fn tmp_dh_callback() {
 
 #[test]
 #[cfg(all(ossl101, not(ossl110)))]
+#[allow(deprecated)]
 fn tmp_ecdh_callback() {
     use crate::ec::EcKey;
     use crate::nid::Nid;
@@ -913,6 +914,7 @@ fn tmp_dh_callback_ssl() {
 
 #[test]
 #[cfg(all(ossl101, not(ossl110)))]
+#[allow(deprecated)]
 fn tmp_ecdh_callback_ssl() {
     use crate::ec::EcKey;
     use crate::nid::Nid;

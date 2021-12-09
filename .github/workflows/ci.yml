@@ -12,6 +12,10 @@ env:
   RUSTFLAGS: -Dwarnings
   RUST_BACKTRACE: 1
 
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   rustfmt:
     name: rustfmt
@@ -54,7 +58,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: sfackler/actions/rustup@master
         with:
-          version: 1.46.0
+          version: 1.48.0
       - run: echo "::set-output name=version::$(rustc --version)"
         id: rust-version
       - uses: actions/cache@v1
@@ -80,7 +84,6 @@ jobs:
     runs-on: windows-latest
     env:
       VCPKGRS_DYNAMIC: 1
-      CARGO_LOG: cargo::core::compiler::fingerprint=trace
     steps:
       - uses: actions/checkout@v2
       - uses: sfackler/actions/rustup@master
@@ -128,10 +131,10 @@ jobs:
           path: ~/.cargo/registry/cache
           key: registry-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
       - run: cargo fetch
-      - uses: actions/cache@v1
-        with:
-          path: target
-          key: target-${{ github.job }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+      # - uses: actions/cache@v1
+      #   with:
+      #     path: target
+      #     key: target-${{ github.job }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
       - run: cargo run -p systest
       - run: cargo test -p openssl
       - run: cargo test -p openssl-errors
@@ -170,7 +173,7 @@ jobs:
             - target: x86_64-unknown-linux-gnu
               library:
                 name: libressl
-                version: 3.4.0
+                version: 3.4.2
       name: ${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}
       runs-on: ubuntu-latest
       env:

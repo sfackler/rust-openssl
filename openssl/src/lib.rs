@@ -1,7 +1,7 @@
 //! Bindings to OpenSSL
 //!
 //! This crate provides a safe interface to the popular OpenSSL cryptography library. OpenSSL versions 1.0.1 through
-//! 1.1.1 and LibreSSL versions 2.5 through 3.4.0 are supported.
+//! 1.1.1 and LibreSSL versions 2.5 through 3.4.1 are supported.
 //!
 //! # Building
 //!
@@ -11,7 +11,7 @@
 //! ## Vendored
 //!
 //! If the `vendored` Cargo feature is enabled, the `openssl-src` crate will be used to compile and statically link to
-//! a copy of OpenSSL. The build process requires a C compiler, perl, and make. The OpenSSL version will generally track
+//! a copy of OpenSSL. The build process requires a C compiler, perl (and perl-core), and make. The OpenSSL version will generally track
 //! the newest OpenSSL release, and changes to the version are *not* considered breaking changes.
 //!
 //! ```toml
@@ -134,6 +134,8 @@ pub mod aes;
 pub mod asn1;
 pub mod base64;
 pub mod bn;
+pub mod cipher;
+pub mod cipher_ctx;
 #[cfg(all(not(libressl), not(osslconf = "OPENSSL_NO_CMS")))]
 pub mod cms;
 pub mod conf;
@@ -149,6 +151,10 @@ pub mod ex_data;
 #[cfg(not(any(libressl, ossl300)))]
 pub mod fips;
 pub mod hash;
+#[cfg(ossl300)]
+pub mod lib_ctx;
+pub mod md;
+pub mod md_ctx;
 pub mod memcmp;
 pub mod nid;
 #[cfg(not(osslconf = "OPENSSL_NO_OCSP"))]
@@ -157,6 +163,7 @@ pub mod pkcs12;
 pub mod pkcs5;
 pub mod pkcs7;
 pub mod pkey;
+pub mod pkey_ctx;
 pub mod rand;
 pub mod rsa;
 pub mod sha;
@@ -169,6 +176,7 @@ pub mod symm;
 pub mod version;
 pub mod x509;
 
+#[inline]
 fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {
     if r.is_null() {
         Err(ErrorStack::get())
@@ -177,6 +185,7 @@ fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {
     }
 }
 
+#[inline]
 fn cvt(r: c_int) -> Result<c_int, ErrorStack> {
     if r <= 0 {
         Err(ErrorStack::get())
@@ -185,6 +194,7 @@ fn cvt(r: c_int) -> Result<c_int, ErrorStack> {
     }
 }
 
+#[inline]
 fn cvt_n(r: c_int) -> Result<c_int, ErrorStack> {
     if r < 0 {
         Err(ErrorStack::get())

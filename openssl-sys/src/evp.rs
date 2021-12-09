@@ -20,6 +20,8 @@ pub const EVP_PKEY_X448: c_int = NID_X448;
 pub const EVP_PKEY_ED448: c_int = NID_ED448;
 pub const EVP_PKEY_HMAC: c_int = NID_hmac;
 pub const EVP_PKEY_CMAC: c_int = NID_cmac;
+#[cfg(ossl110)]
+pub const EVP_PKEY_HKDF: c_int = NID_hkdf;
 
 pub const EVP_CTRL_GCM_SET_IVLEN: c_int = 0x9;
 pub const EVP_CTRL_GCM_GET_TAG: c_int = 0x10;
@@ -39,6 +41,18 @@ cfg_if! {
             pub fn EVP_CIPHER_get_block_size(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_get_iv_length(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_get_nid(cipher: *const EVP_CIPHER) -> c_int;
+            pub fn EVP_CIPHER_fetch(
+                ctx: *mut OSSL_LIB_CTX,
+                algorithm: *const c_char,
+                properties: *const c_char,
+            ) -> *mut EVP_CIPHER;
+            pub fn EVP_CIPHER_free(cipher: *mut EVP_CIPHER);
+
+            pub fn EVP_CIPHER_CTX_get0_cipher(ctx: *const EVP_CIPHER_CTX) -> *const EVP_CIPHER;
+            pub fn EVP_CIPHER_CTX_get_block_size(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_get_key_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_get_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_get_tag_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
         }
 
         #[inline]
@@ -70,6 +84,21 @@ cfg_if! {
         pub unsafe fn EVP_CIPHER_nid(cipher: *const EVP_CIPHER) -> c_int {
             EVP_CIPHER_get_nid(cipher)
         }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_CTX_block_size(ctx: *const EVP_CIPHER_CTX) -> c_int {
+            EVP_CIPHER_CTX_get_block_size(ctx)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_CTX_key_length(ctx: *const EVP_CIPHER_CTX) -> c_int {
+            EVP_CIPHER_CTX_get_key_length(ctx)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_CTX_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int {
+            EVP_CIPHER_CTX_get_iv_length(ctx)
+        }
     } else {
         extern "C" {
             pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
@@ -79,10 +108,14 @@ cfg_if! {
             pub fn EVP_CIPHER_block_size(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_iv_length(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_nid(cipher: *const EVP_CIPHER) -> c_int;
+
+            pub fn EVP_CIPHER_CTX_cipher(ctx: *const EVP_CIPHER_CTX) -> *const EVP_CIPHER;
+            pub fn EVP_CIPHER_CTX_block_size(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_key_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
         }
     }
 }
-extern "C" {}
 
 cfg_if! {
     if #[cfg(ossl110)] {
@@ -117,6 +150,16 @@ extern "C" {
     pub fn EVP_DigestFinal(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
     #[cfg(ossl111)]
     pub fn EVP_DigestFinalXOF(ctx: *mut EVP_MD_CTX, res: *mut u8, len: usize) -> c_int;
+
+    #[cfg(ossl300)]
+    pub fn EVP_MD_fetch(
+        ctx: *mut OSSL_LIB_CTX,
+        algorithm: *const c_char,
+        properties: *const c_char,
+    ) -> *mut EVP_MD;
+
+    #[cfg(ossl300)]
+    pub fn EVP_MD_free(md: *mut EVP_MD);
 
     pub fn EVP_BytesToKey(
         typ: *const EVP_CIPHER,
@@ -160,6 +203,28 @@ extern "C" {
         e: *mut ENGINE,
         pkey: *mut EVP_PKEY,
     ) -> c_int;
+}
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn EVP_DigestSignUpdate(
+                ctx: *mut EVP_MD_CTX,
+                data: *const c_void,
+                dsize: size_t,
+            ) -> c_int;
+        }
+    } else {
+        #[inline]
+        pub unsafe fn EVP_DigestSignUpdate(
+            ctx: *mut EVP_MD_CTX,
+            data: *const c_void,
+            dsize: size_t,
+        ) -> c_int {
+            EVP_DigestUpdate(ctx, data, dsize)
+        }
+    }
+}
+extern "C" {
     pub fn EVP_DigestSignFinal(
         ctx: *mut EVP_MD_CTX,
         sig: *mut c_uchar,
@@ -172,6 +237,28 @@ extern "C" {
         e: *mut ENGINE,
         pkey: *mut EVP_PKEY,
     ) -> c_int;
+}
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn EVP_DigestVerifyUpdate(
+                ctx: *mut EVP_MD_CTX,
+                data: *const c_void,
+                dsize: size_t,
+            ) -> c_int;
+        }
+    } else {
+        #[inline]
+        pub unsafe fn EVP_DigestVerifyUpdate(
+            ctx: *mut EVP_MD_CTX,
+            data: *const c_void,
+            dsize: size_t,
+        ) -> c_int {
+            EVP_DigestUpdate(ctx, data, dsize)
+        }
+    }
+}
+extern "C" {
     pub fn EVP_SealInit(
         ctx: *mut EVP_CIPHER_CTX,
         type_: *const EVP_CIPHER,
@@ -291,6 +378,7 @@ extern "C" {
         arg: c_int,
         ptr: *mut c_void,
     ) -> c_int;
+    pub fn EVP_CIPHER_CTX_rand_key(ctx: *mut EVP_CIPHER_CTX, key: *mut c_uchar) -> c_int;
 
     pub fn EVP_md_null() -> *const EVP_MD;
     pub fn EVP_md5() -> *const EVP_MD;
@@ -359,9 +447,9 @@ extern "C" {
     pub fn EVP_aes_256_ofb() -> *const EVP_CIPHER;
     #[cfg(ossl110)]
     pub fn EVP_aes_256_ocb() -> *const EVP_CIPHER;
-    #[cfg(ossl110)]
+    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_CHACHA")))]
     pub fn EVP_chacha20() -> *const ::EVP_CIPHER;
-    #[cfg(ossl110)]
+    #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_CHACHA")))]
     pub fn EVP_chacha20_poly1305() -> *const ::EVP_CIPHER;
     #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     pub fn EVP_seed_cbc() -> *const EVP_CIPHER;
@@ -475,6 +563,7 @@ cfg_if! {
         pub const EVP_PKEY_OP_VERIFYCTX: c_int = 1 << 8;
         pub const EVP_PKEY_OP_ENCRYPT: c_int = 1 << 9;
         pub const EVP_PKEY_OP_DECRYPT: c_int = 1 << 10;
+        pub const EVP_PKEY_OP_DERIVE: c_int = 1 << 11;
     } else {
         pub const EVP_PKEY_OP_SIGN: c_int = 1 << 3;
         pub const EVP_PKEY_OP_VERIFY: c_int = 1 << 4;
@@ -483,6 +572,7 @@ cfg_if! {
         pub const EVP_PKEY_OP_VERIFYCTX: c_int = 1 << 7;
         pub const EVP_PKEY_OP_ENCRYPT: c_int = 1 << 8;
         pub const EVP_PKEY_OP_DECRYPT: c_int = 1 << 9;
+        pub const EVP_PKEY_OP_DERIVE: c_int = 1 << 10;
     }
 }
 
@@ -499,6 +589,30 @@ pub const EVP_PKEY_CTRL_SET_MAC_KEY: c_int = 6;
 pub const EVP_PKEY_CTRL_CIPHER: c_int = 12;
 
 pub const EVP_PKEY_ALG_CTRL: c_int = 0x1000;
+
+#[cfg(ossl111)]
+pub const EVP_PKEY_HKDEF_MODE_EXTRACT_AND_EXPAND: c_int = 0;
+
+#[cfg(ossl111)]
+pub const EVP_PKEY_HKDEF_MODE_EXTRACT_ONLY: c_int = 1;
+
+#[cfg(ossl111)]
+pub const EVP_PKEY_HKDEF_MODE_EXPAND_ONLY: c_int = 2;
+
+#[cfg(ossl110)]
+pub const EVP_PKEY_CTRL_HKDF_MD: c_int = EVP_PKEY_ALG_CTRL + 3;
+
+#[cfg(ossl110)]
+pub const EVP_PKEY_CTRL_HKDF_SALT: c_int = EVP_PKEY_ALG_CTRL + 4;
+
+#[cfg(ossl110)]
+pub const EVP_PKEY_CTRL_HKDF_KEY: c_int = EVP_PKEY_ALG_CTRL + 5;
+
+#[cfg(ossl110)]
+pub const EVP_PKEY_CTRL_HKDF_INFO: c_int = EVP_PKEY_ALG_CTRL + 6;
+
+#[cfg(ossl111)]
+pub const EVP_PKEY_CTRL_HKDF_MODE: c_int = EVP_PKEY_ALG_CTRL + 7;
 
 extern "C" {
     pub fn EVP_PKEY_CTX_new(k: *mut EVP_PKEY, e: *mut ENGINE) -> *mut EVP_PKEY_CTX;
@@ -525,9 +639,32 @@ extern "C" {
     pub fn EVP_PKEY_derive_set_peer(ctx: *mut EVP_PKEY_CTX, peer: *mut EVP_PKEY) -> c_int;
     pub fn EVP_PKEY_derive(ctx: *mut EVP_PKEY_CTX, key: *mut c_uchar, size: *mut size_t) -> c_int;
 
+    #[cfg(ossl300)]
+    pub fn EVP_PKEY_Q_keygen(
+        libctx: *mut OSSL_LIB_CTX,
+        propq: *const c_char,
+        type_: *const c_char,
+        ...
+    ) -> *mut EVP_PKEY;
     pub fn EVP_PKEY_keygen_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
     pub fn EVP_PKEY_keygen(ctx: *mut EVP_PKEY_CTX, key: *mut *mut EVP_PKEY) -> c_int;
 
+    pub fn EVP_PKEY_sign_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
+    pub fn EVP_PKEY_sign(
+        ctx: *mut EVP_PKEY_CTX,
+        sig: *mut c_uchar,
+        siglen: *mut size_t,
+        tbs: *const c_uchar,
+        tbslen: size_t,
+    ) -> c_int;
+    pub fn EVP_PKEY_verify_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
+    pub fn EVP_PKEY_verify(
+        ctx: *mut EVP_PKEY_CTX,
+        sig: *const c_uchar,
+        siglen: size_t,
+        tbs: *const c_uchar,
+        tbslen: size_t,
+    ) -> c_int;
     pub fn EVP_PKEY_encrypt_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
     pub fn EVP_PKEY_encrypt(
         ctx: *mut EVP_PKEY_CTX,
@@ -544,6 +681,102 @@ extern "C" {
         pin: *const c_uchar,
         pinlen: size_t,
     ) -> c_int;
+}
+
+// HKDF Functions
+cfg_if! {
+    if #[cfg(ossl300)] {
+        extern "C" {
+            pub fn EVP_PKEY_CTX_set_hkdf_mode(ctx: *mut EVP_PKEY_CTX, mode: c_int) -> c_int;
+            pub fn EVP_PKEY_CTX_set_hkdf_md(ctx: *mut EVP_PKEY_CTX, md: *const EVP_MD) -> c_int;
+            pub fn EVP_PKEY_CTX_set1_hkdf_salt(
+                ctx: *mut EVP_PKEY_CTX,
+                salt: *const u8,
+                saltlen: c_int,
+            ) -> c_int;
+            pub fn EVP_PKEY_CTX_set1_hkdf_key(
+                ctx: *mut EVP_PKEY_CTX,
+                key: *const u8,
+                keylen: c_int,
+            ) -> c_int;
+            pub fn EVP_PKEY_CTX_add1_hkdf_info(
+                ctx: *mut EVP_PKEY_CTX,
+                info: *const u8,
+                infolen: c_int,
+            ) -> c_int;
+        }
+    } else {
+        #[cfg(ossl111)]
+        pub unsafe fn EVP_PKEY_CTX_set_hkdf_mode(ctx: *mut EVP_PKEY_CTX, mode: c_int) -> c_int {
+            EVP_PKEY_CTX_ctrl(
+                ctx,
+                -1,
+                EVP_PKEY_OP_DERIVE,
+                EVP_PKEY_CTRL_HKDF_MODE,
+                mode, std::ptr::null_mut(),
+            )
+        }
+
+        #[cfg(ossl110)]
+        pub unsafe fn EVP_PKEY_CTX_set_hkdf_md(ctx: *mut EVP_PKEY_CTX, md: *const EVP_MD) -> c_int {
+            EVP_PKEY_CTX_ctrl(
+                ctx,
+                -1,
+                EVP_PKEY_OP_DERIVE,
+                EVP_PKEY_CTRL_HKDF_MD,
+                0,
+                md as *mut c_void,
+            )
+        }
+
+        #[cfg(ossl110)]
+        pub unsafe fn EVP_PKEY_CTX_set1_hkdf_salt(
+            ctx: *mut EVP_PKEY_CTX,
+            salt: *const u8,
+            saltlen: c_int,
+        ) -> c_int {
+            EVP_PKEY_CTX_ctrl(
+                ctx,
+                -1,
+                EVP_PKEY_OP_DERIVE,
+                EVP_PKEY_CTRL_HKDF_SALT,
+                saltlen,
+                salt as *mut c_void,
+            )
+        }
+
+        #[cfg(ossl110)]
+        pub unsafe fn EVP_PKEY_CTX_set1_hkdf_key(
+            ctx: *mut EVP_PKEY_CTX,
+            key: *const u8,
+            keylen: c_int,
+        ) -> c_int {
+            EVP_PKEY_CTX_ctrl(
+                ctx,
+                -1,
+                EVP_PKEY_OP_DERIVE,
+                EVP_PKEY_CTRL_HKDF_KEY,
+                keylen,
+                key as *mut c_void,
+            )
+        }
+
+        #[cfg(ossl110)]
+        pub unsafe fn EVP_PKEY_CTX_add1_hkdf_info(
+            ctx: *mut EVP_PKEY_CTX,
+            info: *const u8,
+            infolen: c_int,
+        ) -> c_int {
+            EVP_PKEY_CTX_ctrl(
+                ctx,
+                -1,
+                EVP_PKEY_OP_DERIVE,
+                EVP_PKEY_CTRL_HKDF_INFO,
+                infolen,
+                info as *mut c_void,
+            )
+        }
+    }
 }
 
 const_ptr_api! {

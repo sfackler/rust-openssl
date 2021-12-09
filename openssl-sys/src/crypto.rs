@@ -1,6 +1,44 @@
 use libc::*;
-
 use *;
+
+#[cfg(ossl110)]
+#[inline]
+#[track_caller]
+pub unsafe fn OPENSSL_malloc(num: usize) -> *mut c_void {
+    CRYPTO_malloc(
+        num,
+        concat!(file!(), "\0").as_ptr() as *const _,
+        line!() as _,
+    )
+}
+
+#[cfg(not(ossl110))]
+#[inline]
+#[track_caller]
+pub unsafe fn OPENSSL_malloc(num: c_int) -> *mut c_void {
+    CRYPTO_malloc(
+        num,
+        concat!(file!(), "\0").as_ptr() as *const _,
+        line!() as _,
+    )
+}
+
+#[cfg(ossl110)]
+#[inline]
+#[track_caller]
+pub unsafe fn OPENSSL_free(addr: *mut c_void) {
+    CRYPTO_free(
+        addr,
+        concat!(file!(), "\0").as_ptr() as *const _,
+        line!() as _,
+    )
+}
+
+#[cfg(not(ossl110))]
+#[inline]
+pub unsafe fn OPENSSL_free(addr: *mut c_void) {
+    CRYPTO_free(addr)
+}
 
 #[cfg(not(ossl110))]
 pub const CRYPTO_LOCK_X509: c_int = 3;
@@ -127,4 +165,9 @@ extern "C" {
     pub fn FIPS_mode_set(onoff: c_int) -> c_int;
 
     pub fn CRYPTO_memcmp(a: *const c_void, b: *const c_void, len: size_t) -> c_int;
+
+    #[cfg(ossl300)]
+    pub fn OSSL_LIB_CTX_new() -> *mut OSSL_LIB_CTX;
+    #[cfg(ossl300)]
+    pub fn OSSL_LIB_CTX_free(libcts: *mut OSSL_LIB_CTX);
 }

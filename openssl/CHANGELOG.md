@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [v0.10.38] - 2021-10-31
+
+### Added
+
+* Added `Pkey::ec_gen`.
+
+## [v0.10.37] - 2021-10-27
+
+### Fixed
+
+* Fixed linkage against OpenSSL distributions built with `no-chacha`.
+
+### Added
+
+* Added `BigNumRef::to_vec_padded`.
+* Added `X509Name::from_der` and `X509NameRef::to_der`.
+* Added `BigNum::new_secure`, `BigNumReef::set_const_time`, `BigNumref::is_const_time`, and `BigNumRef::is_secure`.
+
 ## [v0.10.36] - 2021-08-17
 
 ### Added
@@ -556,7 +574,9 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.36...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.38...master
+[v0.10.38]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.37...openssl-v0.10.38
+[v0.10.37]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.36...openssl-v0.10.37
 [v0.10.36]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.35...openssl-v0.10.36
 [v0.10.35]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.34...openssl-v0.10.35
 [v0.10.34]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.33...openssl-v0.10.34

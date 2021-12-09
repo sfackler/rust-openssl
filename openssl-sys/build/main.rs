@@ -19,7 +19,9 @@ mod find_normal;
 #[cfg(feature = "vendored")]
 mod find_vendored;
 
+#[derive(PartialEq)]
 enum Version {
+    Openssl3xx,
     Openssl11x,
     Openssl10x,
     Libressl,
@@ -94,7 +96,9 @@ fn main() {
         }
         None => match version {
             Version::Openssl10x if target.contains("windows") => vec!["ssleay32", "libeay32"],
-            Version::Openssl11x if target.contains("windows-msvc") => vec!["libssl", "libcrypto"],
+            Version::Openssl3xx | Version::Openssl11x if target.contains("windows-msvc") => {
+                vec!["libssl", "libcrypto"]
+            }
             _ => vec!["ssl", "crypto"],
         },
     };
@@ -102,6 +106,16 @@ fn main() {
     let kind = determine_mode(Path::new(&lib_dir), &libs);
     for lib in libs.into_iter() {
         println!("cargo:rustc-link-lib={}={}", kind, lib);
+    }
+
+    // https://github.com/openssl/openssl/pull/15086
+    if version == Version::Openssl3xx
+        && kind == "static"
+        && (env::var("CARGO_CFG_TARGET_OS").unwrap() == "linux"
+            || env::var("CARGO_CFG_TARGET_OS").unwrap() == "android")
+        && env::var("CARGO_CFG_TARGET_POINTER_WIDTH").unwrap() == "32"
+    {
+        println!("cargo:rustc-link-lib=dylib=atomic");
     }
 
     if kind == "static" && target.contains("windows") {
@@ -125,8 +139,8 @@ fn check_rustc_versions() {
 /// version string of OpenSSL.
 #[allow(clippy::manual_strip)] // we need to support pre-1.45.0
 fn validate_headers(include_dirs: &[PathBuf]) -> Version {
-    // This `*-sys` crate only works with OpenSSL 1.0.1, 1.0.2, and 1.1.0. To
-    // correctly expose the right API from this crate, take a look at
+    // This `*-sys` crate only works with OpenSSL 1.0.1, 1.0.2, 1.1.0, 1.1.1 and 3.0.0.
+    // To correctly expose the right API from this crate, take a look at
     // `opensslv.h` to see what version OpenSSL claims to be.
     //
     // OpenSSL has a number of build-time configuration options which affect
@@ -137,6 +151,7 @@ fn validate_headers(include_dirs: &[PathBuf]) -> Version {
     // file of OpenSSL, `opensslconf.h`, and then dump out everything it defines
     // as our own #[cfg] directives. That way the `ossl10x.rs` bindings can
     // account for compile differences and such.
+    println!("cargo:rerun-if-changed=build/expando.c");
     let mut gcc = cc::Build::new();
     for include_dir in include_dirs {
         gcc.include(include_dir);
@@ -238,6 +253,7 @@ See rust-openssl README for more information:
             (3, 3, 1) => ('3', '3', '1'),
             (3, 3, _) => ('3', '3', 'x'),
             (3, 4, 0) => ('3', '4', '0'),
+            (3, 4, _) => ('3', '4', 'x'),
             _ => version_error(),
         };
 
@@ -252,7 +268,7 @@ See rust-openssl README for more information:
         if openssl_version >= 0x4_00_00_00_0 {
             version_error()
         } else if openssl_version >= 0x3_00_00_00_0 {
-            Version::Openssl11x
+            Version::Openssl3xx
         } else if openssl_version >= 0x1_01_01_00_0 {
             println!("cargo:version=111");
             Version::Openssl11x
@@ -279,8 +295,8 @@ fn version_error() -> ! {
     panic!(
         "
 
-This crate is only compatible with OpenSSL 1.0.1 through 1.1.1, or LibreSSL 2.5
-through 3.4.0, but a different version of OpenSSL was found. The build is now aborting
+This crate is only compatible with OpenSSL (version 1.0.1 through 1.1.1, or 3.0.0), or LibreSSL 2.5
+through 3.4.1, but a different version of OpenSSL was found. The build is now aborting
 due to this version mismatch.
 
 "

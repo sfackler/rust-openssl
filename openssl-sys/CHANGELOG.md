@@ -2,6 +2,53 @@
 
 ## [Unreleased]
 
+## [v0.9.71]
+
+### Fixed
+
+* Fixed linkage to static OpenSSL 3.0.0 libraries on some 32 bit Android targets.
+
+### Added
+
+* Added support for LibreSSL 3.4.1.
+* Added `SSL_get_extms_support` and `SSL_CTRL_GET_EXTMS_SUPPORT`.
+* Added `OBJ_create`.
+* Added `EVP_CIPHER_CTX_get0_cipher`, `EVP_CIPHER_CTX_get_block_size`, `EVP_CIPHER_CTX_get_key_length`,
+    `EVP_CIPHER_CTX_get_iv_length`, and `EVP_CIPHER_CTX_get_tag_length`.
+* Added `EVP_CIPHER_free`.
+* Added `EVP_CIPHER_CTX_rand_key`.
+* Added `OSSL_LIB_CTX_new` and `OSSL_LIB_CTX_free`.
+* Added `EVP_CIPHER_fetch`.
+* Added `EVP_MD_fetch` and `EVP_MD_free`.
+* Added `OPENSSL_malloc` and `OPENSSL_free`.
+* Added `EVP_DigestSignUpdate` and `EVP_DigestVerifyUpdate`.
+
+## [v0.9.70] - 2021-10-31
+
+### Fixed
+
+* Fixed linkage to static 3.0.0 OpenSSL libraries on some 32 bit architectures.
+
+## [v0.9.69] - 2021-10-31
+
+### Changed
+
+* Upgraded the vendored OpenSSL to 3.0.0.
+
+### Added
+
+* Added support for automatic detection of Homebrew `openssl@3` installs.
+* Added `EVP_PKEY_Q_keygen` and `EVP_EC_gen`.
+
+## [v0.9.68] - 2021-10-27
+
+### Added
+
+* Added `BN_bn2binpad`.
+* Added `i2d_X509_NAME` and `d2i_X509_NAME`.
+* Added `BN_FLG_MALLOCED`, `BN_FLG_STATIC_DATA`, `BN_FLG_CONSTTIME`, and `BN_FLG_SECURE`.
+* Added `BN_CTX_secure_new`, `BN_secure_new`, `BN_set_flags`, and `BN_get_flags`.
+
 ## [v0.9.67] - 2021-09-21
 
 ### Added
@@ -227,7 +274,11 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.67...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.71...master
+[v0.9.71]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.70...openssl-sys-v0.9.71
+[v0.9.70]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.69...openssl-sys-v0.9.70
+[v0.9.69]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.68...openssl-sys-v0.9.69
+[v0.9.68]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.67...openssl-sys-v0.9.68
 [v0.9.67]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.66...openssl-sys-v0.9.67
 [v0.9.66]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.65...openssl-sys-v0.9.66
 [v0.9.65]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.64...openssl-sys-v0.9.65

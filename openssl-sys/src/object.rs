@@ -18,6 +18,11 @@ extern "C" {
         -> c_int;
     pub fn OBJ_sn2nid(sn: *const libc::c_char) -> libc::c_int;
     pub fn OBJ_txt2obj(s: *const libc::c_char, no_name: libc::c_int) -> *mut ASN1_OBJECT;
+    pub fn OBJ_create(
+        oid: *const libc::c_char,
+        sn: *const libc::c_char,
+        ln: *const libc::c_char,
+    ) -> c_int;
     #[cfg(ossl111)]
     pub fn OBJ_length(obj: *const ASN1_OBJECT) -> libc::size_t;
     #[cfg(ossl111)]

@@ -39,25 +39,29 @@
 //! let pub_key: Vec<u8> = pkey.public_key_to_pem().unwrap();
 //! println!("{:?}", str::from_utf8(pub_key.as_slice()).unwrap());
 //! ```
-
+#![allow(clippy::missing_safety_doc)]
+use crate::bio::{MemBio, MemBioSlice};
+#[cfg(ossl110)]
+use crate::cipher::CipherRef;
+use crate::dh::Dh;
+use crate::dsa::Dsa;
+use crate::ec::EcKey;
+use crate::error::ErrorStack;
+#[cfg(ossl110)]
+use crate::pkey_ctx::PkeyCtx;
+use crate::rsa::Rsa;
+use crate::symm::Cipher;
+use crate::util::{invoke_passwd_cb, CallbackState};
+use crate::{cvt, cvt_p};
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
+use openssl_macros::corresponds;
 use std::convert::TryFrom;
 use std::ffi::CString;
 use std::fmt;
 use std::mem;
 use std::ptr;
-
-use crate::bio::{MemBio, MemBioSlice};
-use crate::dh::Dh;
-use crate::dsa::Dsa;
-use crate::ec::EcKey;
-use crate::error::ErrorStack;
-use crate::rsa::Rsa;
-use crate::symm::Cipher;
-use crate::util::{invoke_passwd_cb, CallbackState};
-use crate::{cvt, cvt_p};
 
 /// A tag type indicating that a key only has parameters.
 pub enum Params {}
@@ -75,9 +79,13 @@ pub struct Id(c_int);
 impl Id {
     pub const RSA: Id = Id(ffi::EVP_PKEY_RSA);
     pub const HMAC: Id = Id(ffi::EVP_PKEY_HMAC);
+    pub const CMAC: Id = Id(ffi::EVP_PKEY_CMAC);
     pub const DSA: Id = Id(ffi::EVP_PKEY_DSA);
     pub const DH: Id = Id(ffi::EVP_PKEY_DH);
     pub const EC: Id = Id(ffi::EVP_PKEY_EC);
+
+    #[cfg(ossl110)]
+    pub const HKDF: Id = Id(ffi::EVP_PKEY_HKDF);
 
     #[cfg(ossl111)]
     pub const ED25519: Id = Id(ffi::EVP_PKEY_ED25519);
@@ -142,10 +150,7 @@ impl<T> ToOwned for PKeyRef<T> {
 
 impl<T> PKeyRef<T> {
     /// Returns a copy of the internal RSA key.
-    ///
-    /// This corresponds to [`EVP_PKEY_get1_RSA`].
-    ///
-    /// [`EVP_PKEY_get1_RSA`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_get1_RSA.html
+    #[corresponds(EVP_PKEY_get1_RSA)]
     pub fn rsa(&self) -> Result<Rsa<T>, ErrorStack> {
         unsafe {
             let rsa = cvt_p(ffi::EVP_PKEY_get1_RSA(self.as_ptr()))?;
@@ -154,10 +159,7 @@ impl<T> PKeyRef<T> {
     }
 
     /// Returns a copy of the internal DSA key.
-    ///
-    /// This corresponds to [`EVP_PKEY_get1_DSA`].
-    ///
-    /// [`EVP_PKEY_get1_DSA`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_get1_DSA.html
+    #[corresponds(EVP_PKEY_get1_DSA)]
     pub fn dsa(&self) -> Result<Dsa<T>, ErrorStack> {
         unsafe {
             let dsa = cvt_p(ffi::EVP_PKEY_get1_DSA(self.as_ptr()))?;
@@ -166,10 +168,7 @@ impl<T> PKeyRef<T> {
     }
 
     /// Returns a copy of the internal DH key.
-    ///
-    /// This corresponds to [`EVP_PKEY_get1_DH`].
-    ///
-    /// [`EVP_PKEY_get1_DH`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_get1_DH.html
+    #[corresponds(EVP_PKEY_get1_DH)]
     pub fn dh(&self) -> Result<Dh<T>, ErrorStack> {
         unsafe {
             let dh = cvt_p(ffi::EVP_PKEY_get1_DH(self.as_ptr()))?;
@@ -178,10 +177,7 @@ impl<T> PKeyRef<T> {
     }
 
     /// Returns a copy of the internal elliptic curve key.
-    ///
-    /// This corresponds to [`EVP_PKEY_get1_EC_KEY`].
-    ///
-    /// [`EVP_PKEY_get1_EC_KEY`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_get1_EC_KEY.html
+    #[corresponds(EVP_PKEY_get1_EC_KEY)]
     pub fn ec_key(&self) -> Result<EcKey<T>, ErrorStack> {
         unsafe {
             let ec_key = cvt_p(ffi::EVP_PKEY_get1_EC_KEY(self.as_ptr()))?;
@@ -190,19 +186,13 @@ impl<T> PKeyRef<T> {
     }
 
     /// Returns the `Id` that represents the type of this key.
-    ///
-    /// This corresponds to [`EVP_PKEY_id`].
-    ///
-    /// [`EVP_PKEY_id`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_id.html
+    #[corresponds(EVP_PKEY_id)]
     pub fn id(&self) -> Id {
         unsafe { Id::from_raw(ffi::EVP_PKEY_id(self.as_ptr())) }
     }
 
     /// Returns the maximum size of a signature in bytes.
-    ///
-    /// This corresponds to [`EVP_PKEY_size`].
-    ///
-    /// [`EVP_PKEY_size`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_PKEY_size.html
+    #[corresponds(EVP_PKEY_size)]
     pub fn size(&self) -> usize {
         unsafe { ffi::EVP_PKEY_size(self.as_ptr()) as usize }
     }
@@ -216,20 +206,14 @@ where
         /// Serializes the public key into a PEM-encoded SubjectPublicKeyInfo structure.
         ///
         /// The output will have a header of `-----BEGIN PUBLIC KEY-----`.
-        ///
-        /// This corresponds to [`PEM_write_bio_PUBKEY`].
-        ///
-        /// [`PEM_write_bio_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_write_bio_PUBKEY.html
+        #[corresponds(PEM_write_bio_PUBKEY)]
         public_key_to_pem,
         ffi::PEM_write_bio_PUBKEY
     }
 
     to_der! {
         /// Serializes the public key into a DER-encoded SubjectPublicKeyInfo structure.
-        ///
-        /// This corresponds to [`i2d_PUBKEY`].
-        ///
-        /// [`i2d_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_PUBKEY.html
+        #[corresponds(i2d_PUBKEY)]
         public_key_to_der,
         ffi::i2d_PUBKEY
     }
@@ -238,11 +222,13 @@ where
     ///
     /// This corresponds to the bit length of the modulus of an RSA key, and the bit length of the
     /// group order for an elliptic curve key, for example.
+    #[corresponds(EVP_PKEY_bits)]
     pub fn bits(&self) -> u32 {
         unsafe { ffi::EVP_PKEY_bits(self.as_ptr()) as u32 }
     }
 
     /// Compares the public component of this key with another.
+    #[corresponds(EVP_PKEY_cmp)]
     pub fn public_eq<U>(&self, other: &PKeyRef<U>) -> bool
     where
         U: HasPublic,
@@ -254,10 +240,7 @@ where
     ///
     /// This function only works for algorithms that support raw public keys.
     /// Currently this is: X25519, ED25519, X448 or ED448
-    ///
-    /// This corresponds to [`EVP_PKEY_get_raw_public_key`].
-    ///
-    /// [`EVP_PKEY_get_raw_public_key`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_PKEY_get_raw_public_key.html
+    #[corresponds(EVP_PKEY_get_raw_public_key)]
     #[cfg(ossl111)]
     pub fn raw_public_key(&self) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
@@ -287,28 +270,19 @@ where
         /// Serializes the private key to a PEM-encoded PKCS#8 PrivateKeyInfo structure.
         ///
         /// The output will have a header of `-----BEGIN PRIVATE KEY-----`.
-        ///
-        /// This corresponds to [`PEM_write_bio_PKCS8PrivateKey`].
-        ///
-        /// [`PEM_write_bio_PKCS8PrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_write_bio_PKCS8PrivateKey.html
+        #[corresponds(PEM_write_bio_PKCS8PrivateKey)]
         private_key_to_pem_pkcs8,
         /// Serializes the private key to a PEM-encoded PKCS#8 EncryptedPrivateKeyInfo structure.
         ///
         /// The output will have a header of `-----BEGIN ENCRYPTED PRIVATE KEY-----`.
-        ///
-        /// This corresponds to [`PEM_write_bio_PKCS8PrivateKey`].
-        ///
-        /// [`PEM_write_bio_PKCS8PrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_write_bio_PKCS8PrivateKey.html
+        #[corresponds(PEM_write_bio_PKCS8PrivateKey)]
         private_key_to_pem_pkcs8_passphrase,
         ffi::PEM_write_bio_PKCS8PrivateKey
     }
 
     to_der! {
         /// Serializes the private key to a DER-encoded key type specific format.
-        ///
-        /// This corresponds to [`i2d_PrivateKey`].
-        ///
-        /// [`i2d_PrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_PrivateKey.html
+        #[corresponds(i2d_PrivateKey)]
         private_key_to_der,
         ffi::i2d_PrivateKey
     }
@@ -317,10 +291,7 @@ where
     ///
     /// This function only works for algorithms that support raw private keys.
     /// Currently this is: HMAC, X25519, ED25519, X448 or ED448
-    ///
-    /// This corresponds to [`EVP_PKEY_get_raw_private_key`].
-    ///
-    /// [`EVP_PKEY_get_raw_private_key`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_PKEY_get_raw_private_key.html
+    #[corresponds(EVP_PKEY_get_raw_private_key)]
     #[cfg(ossl111)]
     pub fn raw_private_key(&self) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
@@ -347,6 +318,7 @@ where
     /// # Panics
     ///
     /// Panics if `passphrase` contains an embedded null.
+    #[corresponds(i2d_PKCS8PrivateKey_bio)]
     pub fn private_key_to_pkcs8_passphrase(
         &self,
         cipher: Cipher,
@@ -398,10 +370,7 @@ impl<T> Clone for PKey<T> {
 
 impl<T> PKey<T> {
     /// Creates a new `PKey` containing an RSA key.
-    ///
-    /// This corresponds to [`EVP_PKEY_assign_RSA`].
-    ///
-    /// [`EVP_PKEY_assign_RSA`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_assign_RSA.html
+    #[corresponds(EVP_PKEY_assign_RSA)]
     pub fn from_rsa(rsa: Rsa<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
@@ -417,10 +386,7 @@ impl<T> PKey<T> {
     }
 
     /// Creates a new `PKey` containing a DSA key.
-    ///
-    /// This corresponds to [`EVP_PKEY_assign_DSA`].
-    ///
-    /// [`EVP_PKEY_assign_DSA`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_assign_DSA.html
+    #[corresponds(EVP_PKEY_assign_DSA)]
     pub fn from_dsa(dsa: Dsa<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
@@ -436,10 +402,7 @@ impl<T> PKey<T> {
     }
 
     /// Creates a new `PKey` containing a Diffie-Hellman key.
-    ///
-    /// This corresponds to [`EVP_PKEY_assign_DH`].
-    ///
-    /// [`EVP_PKEY_assign_DH`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_assign_DH.html
+    #[corresponds(EVP_PKEY_assign_DH)]
     pub fn from_dh(dh: Dh<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
@@ -455,10 +418,7 @@ impl<T> PKey<T> {
     }
 
     /// Creates a new `PKey` containing an elliptic curve key.
-    ///
-    /// This corresponds to [`EVP_PKEY_assign_EC_KEY`].
-    ///
-    /// [`EVP_PKEY_assign_EC_KEY`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_assign_EC_KEY.html
+    #[corresponds(EVP_PKEY_assign_EC_KEY)]
     pub fn from_ec_key(ec_key: EcKey<T>) -> Result<PKey<T>, ErrorStack> {
         unsafe {
             let evp = cvt_p(ffi::EVP_PKEY_new())?;
@@ -480,6 +440,7 @@ impl PKey<Private> {
     /// # Note
     ///
     /// To compute HMAC values, use the `sign` module.
+    #[corresponds(EVP_PKEY_new_mac_key)]
     pub fn hmac(key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize);
@@ -503,127 +464,70 @@ impl PKey<Private> {
     #[cfg(ossl110)]
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn cmac(cipher: &Cipher, key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
-        unsafe {
-            assert!(key.len() <= c_int::max_value() as usize);
-            let kctx = cvt_p(ffi::EVP_PKEY_CTX_new_id(
-                ffi::EVP_PKEY_CMAC,
-                ptr::null_mut(),
-            ))?;
-
-            let ret = (|| {
-                cvt(ffi::EVP_PKEY_keygen_init(kctx))?;
-
-                // Set cipher for cmac
-                cvt(ffi::EVP_PKEY_CTX_ctrl(
-                    kctx,
-                    -1,
-                    ffi::EVP_PKEY_OP_KEYGEN,
-                    ffi::EVP_PKEY_CTRL_CIPHER,
-                    0,
-                    cipher.as_ptr() as *mut _,
-                ))?;
-
-                // Set the key data
-                cvt(ffi::EVP_PKEY_CTX_ctrl(
-                    kctx,
-                    -1,
-                    ffi::EVP_PKEY_OP_KEYGEN,
-                    ffi::EVP_PKEY_CTRL_SET_MAC_KEY,
-                    key.len() as c_int,
-                    key.as_ptr() as *mut _,
-                ))?;
-                Ok(())
-            })();
-
-            if let Err(e) = ret {
-                // Free memory
-                ffi::EVP_PKEY_CTX_free(kctx);
-                return Err(e);
-            }
-
-            // Generate key
-            let mut key = ptr::null_mut();
-            let ret = cvt(ffi::EVP_PKEY_keygen(kctx, &mut key));
-
-            // Free memory
-            ffi::EVP_PKEY_CTX_free(kctx);
-
-            if let Err(e) = ret {
-                return Err(e);
-            }
-
-            Ok(PKey::from_ptr(key))
-        }
+        let mut ctx = PkeyCtx::new_id(Id::CMAC)?;
+        ctx.keygen_init()?;
+        ctx.set_keygen_cipher(unsafe { CipherRef::from_ptr(cipher.as_ptr() as *mut _) })?;
+        ctx.set_keygen_mac_key(key)?;
+        ctx.keygen()
     }
 
     #[cfg(ossl111)]
-    fn generate_eddsa(nid: c_int) -> Result<PKey<Private>, ErrorStack> {
-        unsafe {
-            let kctx = cvt_p(ffi::EVP_PKEY_CTX_new_id(nid, ptr::null_mut()))?;
-            let ret = cvt(ffi::EVP_PKEY_keygen_init(kctx));
-            if let Err(e) = ret {
-                ffi::EVP_PKEY_CTX_free(kctx);
-                return Err(e);
-            }
-            let mut key = ptr::null_mut();
-            let ret = cvt(ffi::EVP_PKEY_keygen(kctx, &mut key));
-
-            ffi::EVP_PKEY_CTX_free(kctx);
-
-            if let Err(e) = ret {
-                return Err(e);
-            }
-
-            Ok(PKey::from_ptr(key))
-        }
+    fn generate_eddsa(id: Id) -> Result<PKey<Private>, ErrorStack> {
+        let mut ctx = PkeyCtx::new_id(id)?;
+        ctx.keygen_init()?;
+        ctx.keygen()
     }
 
     /// Generates a new private Ed25519 key
     #[cfg(ossl111)]
     pub fn generate_x25519() -> Result<PKey<Private>, ErrorStack> {
-        PKey::generate_eddsa(ffi::EVP_PKEY_X25519)
+        PKey::generate_eddsa(Id::X25519)
     }
 
     /// Generates a new private Ed448 key
     #[cfg(ossl111)]
     pub fn generate_x448() -> Result<PKey<Private>, ErrorStack> {
-        PKey::generate_eddsa(ffi::EVP_PKEY_X448)
+        PKey::generate_eddsa(Id::X448)
     }
 
     /// Generates a new private Ed25519 key
     #[cfg(ossl111)]
     pub fn generate_ed25519() -> Result<PKey<Private>, ErrorStack> {
-        PKey::generate_eddsa(ffi::EVP_PKEY_ED25519)
+        PKey::generate_eddsa(Id::ED25519)
     }
 
     /// Generates a new private Ed448 key
     #[cfg(ossl111)]
     pub fn generate_ed448() -> Result<PKey<Private>, ErrorStack> {
-        PKey::generate_eddsa(ffi::EVP_PKEY_ED448)
+        PKey::generate_eddsa(Id::ED448)
+    }
+
+    /// Generates a new EC key using the provided curve.
+    ///
+    /// Requires OpenSSL 3.0.0 or newer.
+    #[corresponds(EVP_EC_gen)]
+    #[cfg(ossl300)]
+    pub fn ec_gen(curve: &str) -> Result<PKey<Private>, ErrorStack> {
+        let curve = CString::new(curve).unwrap();
+        unsafe {
+            let ptr = cvt_p(ffi::EVP_EC_gen(curve.as_ptr()))?;
+            Ok(PKey::from_ptr(ptr))
+        }
     }
 
     private_key_from_pem! {
         /// Deserializes a private key from a PEM-encoded key type specific format.
-        ///
-        /// This corresponds to [`PEM_read_bio_PrivateKey`].
-        ///
-        /// [`PEM_read_bio_PrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_read_bio_PrivateKey.html
+        #[corresponds(PEM_read_bio_PrivateKey)]
         private_key_from_pem,
 
         /// Deserializes a private key from a PEM-encoded encrypted key type specific format.
-        ///
-        /// This corresponds to [`PEM_read_bio_PrivateKey`].
-        ///
-        /// [`PEM_read_bio_PrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_read_bio_PrivateKey.html
+        #[corresponds(PEM_read_bio_PrivateKey)]
         private_key_from_pem_passphrase,
 
         /// Deserializes a private key from a PEM-encoded encrypted key type specific format.
         ///
         /// The callback should fill the password into the provided buffer and return its length.
-        ///
-        /// This corresponds to [`PEM_read_bio_PrivateKey`].
-        ///
-        /// [`PEM_read_bio_PrivateKey`]: https://www.openssl.org/docs/man1.1.0/crypto/PEM_read_bio_PrivateKey.html
+        #[corresponds(PEM_read_bio_PrivateKey)]
         private_key_from_pem_callback,
         PKey<Private>,
         ffi::PEM_read_bio_PrivateKey
@@ -632,13 +536,10 @@ impl PKey<Private> {
     from_der! {
         /// Decodes a DER-encoded private key.
         ///
-        /// This function will automatically attempt to detect the underlying key format, and
+        /// This function will attempt to automatically detect the underlying key format, and
         /// supports the unencrypted PKCS#8 PrivateKeyInfo structures as well as key type specific
         /// formats.
-        ///
-        /// This corresponds to [`d2i_AutoPrivateKey`].
-        ///
-        /// [`d2i_AutoPrivateKey`]: https://www.openssl.org/docs/man1.0.2/crypto/d2i_AutoPrivateKey.html
+        #[corresponds(d2i_AutoPrivateKey)]
         private_key_from_der,
         PKey<Private>,
         ffi::d2i_AutoPrivateKey
@@ -667,6 +568,7 @@ impl PKey<Private> {
     ///
     /// The callback should copy the password into the provided buffer and return the number of
     /// bytes written.
+    #[corresponds(d2i_PKCS8PrivateKey_bio)]
     pub fn private_key_from_pkcs8_callback<F>(
         der: &[u8],
         callback: F,
@@ -694,6 +596,7 @@ impl PKey<Private> {
     /// # Panics
     ///
     /// Panics if `passphrase` contains an embedded null.
+    #[corresponds(d2i_PKCS8PrivateKey_bio)]
     pub fn private_key_from_pkcs8_passphrase(
         der: &[u8],
         passphrase: &[u8],
@@ -715,10 +618,7 @@ impl PKey<Private> {
     /// Creates a private key from its raw byte representation
     ///
     /// Algorithm types that support raw private keys are HMAC, X25519, ED25519, X448 or ED448
-    ///
-    /// This corresponds to [`EVP_PKEY_new_raw_private_key`].
-    ///
-    /// [`EVP_PKEY_new_raw_private_key`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_PKEY_new_raw_private_key.html
+    #[corresponds(EVP_PKEY_new_raw_private_key)]
     #[cfg(ossl111)]
     pub fn private_key_from_raw_bytes(
         bytes: &[u8],
@@ -742,10 +642,7 @@ impl PKey<Public> {
         /// Decodes a PEM-encoded SubjectPublicKeyInfo structure.
         ///
         /// The input should have a header of `-----BEGIN PUBLIC KEY-----`.
-        ///
-        /// This corresponds to [`PEM_read_bio_PUBKEY`].
-        ///
-        /// [`PEM_read_bio_PUBKEY`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_read_bio_PUBKEY.html
+        #[corresponds(PEM_read_bio_PUBKEY)]
         public_key_from_pem,
         PKey<Public>,
         ffi::PEM_read_bio_PUBKEY
@@ -753,10 +650,7 @@ impl PKey<Public> {
 
     from_der! {
         /// Decodes a DER-encoded SubjectPublicKeyInfo structure.
-        ///
-        /// This corresponds to [`d2i_PUBKEY`].
-        ///
-        /// [`d2i_PUBKEY`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_PUBKEY.html
+        #[corresponds(d2i_PUBKEY)]
         public_key_from_der,
         PKey<Public>,
         ffi::d2i_PUBKEY
@@ -765,10 +659,7 @@ impl PKey<Public> {
     /// Creates a public key from its raw byte representation
     ///
     /// Algorithm types that support raw public keys are X25519, ED25519, X448 or ED448
-    ///
-    /// This corresponds to [`EVP_PKEY_new_raw_public_key`].
-    ///
-    /// [`EVP_PKEY_new_raw_public_key`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_PKEY_new_raw_public_key.html
+    #[corresponds(EVP_PKEY_new_raw_public_key)]
     #[cfg(ossl111)]
     pub fn public_key_from_raw_bytes(
         bytes: &[u8],
@@ -1127,5 +1018,12 @@ mod tests {
         let pkey = PKey::from_ec_key(ec_key).unwrap();
         assert!(pkey.raw_private_key().is_err());
         assert!(pkey.raw_public_key().is_err());
+    }
+
+    #[cfg(ossl300)]
+    #[test]
+    fn test_ec_gen() {
+        let key = PKey::ec_gen("prime256v1").unwrap();
+        assert!(key.ec_key().is_ok());
     }
 }
