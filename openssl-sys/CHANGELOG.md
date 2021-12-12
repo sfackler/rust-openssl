@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [v0.9.72]
+
+### Changed
+
+* Temporarily downgraded the vendored OpenSSL back to 1.1.1 due to significant performance regressions. We will move
+    back to 3.0.0 when a future release resolves those issues.
+
+### Added
+
+* Added `PKCS12_set_mac`.
+* Added `EVP_PKEY_sign_init`, `EVP_PKEY_sign`, `EVP_PKEY_verify_init`, and `EVP_PKEY_verify`.
+* Added support for LibreSSL 3.4.x.
+
 ## [v0.9.71]
 
 ### Fixed
@@ -274,7 +287,8 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.71...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.72..master
+[v0.9.72]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.71...openssl-sys-v0.9.72
 [v0.9.71]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.70...openssl-sys-v0.9.71
 [v0.9.70]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.69...openssl-sys-v0.9.70
 [v0.9.69]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.68...openssl-sys-v0.9.69
