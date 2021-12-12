@@ -551,14 +551,17 @@ pub unsafe fn SSL_CTX_set_read_ahead(ctx: *mut SSL_CTX, m: c_long) -> c_long {
 
 #[allow(clashing_extern_declarations)]
 extern "C" {
+    #[deprecated(note = "use SSL_CTX_set_tmp_dh_callback__fixed_rust instead")]
     pub fn SSL_CTX_set_tmp_dh_callback(
         ctx: *mut SSL_CTX,
         dh: unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut DH,
     );
+    #[deprecated(note = "use SSL_set_tmp_dh_callback__fixed_rust instead")]
     pub fn SSL_set_tmp_dh_callback(
         ctx: *mut SSL,
         dh: unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut DH,
     );
+    #[deprecated(note = "use SSL_CTX_set_tmp_ecdh_callback__fixed_rust instead")]
     #[cfg(not(ossl110))]
     pub fn SSL_CTX_set_tmp_ecdh_callback(
         ctx: *mut ::SSL_CTX,
@@ -568,6 +571,7 @@ extern "C" {
             keylength: c_int,
         ) -> *mut ::EC_KEY,
     );
+    #[deprecated(note = "use SSL_set_tmp_ecdh_callback__fixed_rust instead")]
     #[cfg(not(ossl110))]
     pub fn SSL_set_tmp_ecdh_callback(
         ssl: *mut SSL,
@@ -578,12 +582,14 @@ extern "C" {
         ) -> *mut EC_KEY,
     );
 
+    #[deprecated(note = "use SSL_CTX_callback_ctrl__fixed_rust instead")]
     pub fn SSL_CTX_callback_ctrl(
         ctx: *mut SSL_CTX,
         cmd: c_int,
         fp: Option<extern "C" fn()>,
     ) -> c_long;
 
+    #[deprecated(note = "use SSL_CTX_set_alpn_select_cb instead")]
     #[cfg(any(ossl102, libressl261))]
     pub fn SSL_CTX_set_alpn_select_cb(
         ssl: *mut SSL_CTX,

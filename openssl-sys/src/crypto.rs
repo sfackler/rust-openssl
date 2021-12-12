@@ -2,11 +2,13 @@ use libc::*;
 use *;
 
 extern "C" {
+    #[deprecated(note = "use CRYPTO_set_locking_callback__fixed_rust instead")]
     #[cfg(not(ossl110))]
     pub fn CRYPTO_set_locking_callback(
         func: unsafe extern "C" fn(mode: c_int, n: c_int, file: *const c_char, line: c_int),
     );
 
+    #[deprecated(note = "use CRYPTO_set_id_callback__fixed_rust instead")]
     #[cfg(not(ossl110))]
     pub fn CRYPTO_set_id_callback(func: unsafe extern "C" fn() -> c_ulong);
 }

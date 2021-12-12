@@ -56,6 +56,8 @@ pub unsafe fn SSL_set_tlsext_status_ocsp_resp(
     )
 }
 
+#[deprecated(note = "use SSL_CTX_set_tlsext_servername_callback__fixed_rust instead")]
+#[allow(deprecated)]
 pub unsafe fn SSL_CTX_set_tlsext_servername_callback(
     ctx: *mut SSL_CTX,
     // FIXME should have the right signature
