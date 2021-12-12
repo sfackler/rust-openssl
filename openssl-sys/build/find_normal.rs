@@ -209,7 +209,7 @@ fn try_pkg_config() {
         }
     };
 
-    super::validate_headers(&lib.include_paths);
+    super::postprocess(&lib.include_paths);
 
     for include in lib.include_paths.iter() {
         println!("cargo:include={}", include.display());
@@ -227,17 +227,18 @@ fn try_vcpkg() {
     // vcpkg will not emit any metadata if it can not find libraries
     // appropriate for the target triple with the desired linkage.
 
-    let lib = vcpkg::Config::new()
+    let lib = match vcpkg::Config::new()
         .emit_includes(true)
-        .find_package("openssl");
+        .find_package("openssl")
+    {
+        Ok(lib) => lib,
+        Err(e) => {
+            println!("note: vcpkg did not find openssl: {}", e);
+            return;
+        }
+    };
 
-    if let Err(e) = lib {
-        println!("note: vcpkg did not find openssl: {}", e);
-        return;
-    }
-
-    let lib = lib.unwrap();
-    super::validate_headers(&lib.include_paths);
+    super::postprocess(&lib.include_paths);
 
     println!("cargo:rustc-link-lib=user32");
     println!("cargo:rustc-link-lib=gdi32");

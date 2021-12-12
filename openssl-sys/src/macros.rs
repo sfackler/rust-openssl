@@ -1,3 +1,5 @@
+#![allow(unused_macros)]
+
 // vendored from the cfg-if crate to avoid breaking ctest
 macro_rules! cfg_if {
     // match if/else chains with a final `else`

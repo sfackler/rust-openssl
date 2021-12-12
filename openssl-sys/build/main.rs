@@ -1,6 +1,8 @@
 #![allow(clippy::inconsistent_digit_grouping, clippy::unusual_byte_groupings)]
 
 extern crate autocfg;
+#[cfg(feature = "bindgen")]
+extern crate bindgen;
 extern crate cc;
 #[cfg(feature = "vendored")]
 extern crate openssl_src;
@@ -12,12 +14,13 @@ use std::collections::HashSet;
 use std::env;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-
 mod cfgs;
 
 mod find_normal;
 #[cfg(feature = "vendored")]
 mod find_vendored;
+#[cfg(feature = "bindgen")]
+mod run_bindgen;
 
 #[derive(PartialEq)]
 enum Version {
@@ -83,7 +86,7 @@ fn main() {
     );
     println!("cargo:include={}", include_dir.to_string_lossy());
 
-    let version = validate_headers(&[include_dir]);
+    let version = postprocess(&[include_dir]);
 
     let libs_env = env("OPENSSL_LIBS");
     let libs = match libs_env.as_ref().and_then(|s| s.to_str()) {
@@ -133,6 +136,15 @@ fn check_rustc_versions() {
     if cfg.probe_rustc_version(1, 31) {
         println!("cargo:rustc-cfg=const_fn");
     }
+}
+
+#[allow(clippy::let_and_return)]
+fn postprocess(include_dirs: &[PathBuf]) -> Version {
+    let version = validate_headers(include_dirs);
+    #[cfg(feature = "bindgen")]
+    run_bindgen::run(&include_dirs);
+
+    version
 }
 
 /// Validates the header files found in `include_dir` and then returns the

@@ -20,6 +20,7 @@ vendored = ['openssl-src']
 libc = "0.2"
 
 [build-dependencies]
+bindgen = { version = "0.59.2", optional = true }
 cc = "1.0"
 openssl-src = { version = "111", optional = true }
 pkg-config = "0.3.9"

@@ -147,6 +147,9 @@ jobs:
             - x86_64-unknown-linux-gnu
             - i686-unknown-linux-gnu
             - arm-unknown-linux-gnueabihf
+          bindgen:
+            - true
+            - false
           library:
             - name: openssl
               version: vendored
@@ -167,14 +170,26 @@ jobs:
               dl-path: /old/1.0.1
           include:
             - target: x86_64-unknown-linux-gnu
+              bindgen: true
               library:
                 name: libressl
                 version: 2.5.5
             - target: x86_64-unknown-linux-gnu
+              bindgen: true
               library:
                 name: libressl
                 version: 3.4.2
-      name: ${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}
+            - target: x86_64-unknown-linux-gnu
+              bindgen: false
+              library:
+                name: libressl
+                version: 2.5.5
+            - target: x86_64-unknown-linux-gnu
+              bindgen: false
+              library:
+                name: libressl
+                version: 3.4.2
+      name: ${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-${{ matrix.bindgen }}
       runs-on: ubuntu-latest
       env:
         OPENSSL_DIR: /opt/openssl
@@ -203,6 +218,7 @@ jobs:
 
             sudo apt-get update
             sudo apt-get install -y $packages
+        - run: sudo apt-get remove -y libssl-dev
         - uses: actions/cache@v2
           with:
             path: /opt/openssl
@@ -254,7 +270,9 @@ jobs:
             make
             make install_sw
           if: matrix.library.version != 'vendored' && !steps.openssl-cache.outputs.cache-hit
-        - run: echo "RUST_TEST_THREADS=1" >> $GITHUB_ENV
+        - run: |
+            echo "RUST_TEST_THREADS=1" >> $GITHUB_ENV
+            echo BINDGEN_EXTRA_CLANG_ARGS="--sysroot /usr/arm-linux-gnueabihf" >> $GITHUB_ENV
           if: matrix.target == 'arm-unknown-linux-gnueabihf'
         - uses: actions/cache@v1
           with:
@@ -271,11 +289,14 @@ jobs:
         - uses: actions/cache@v1
           with:
             path: target
-            key: target-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+            key: target-${{ matrix.target }}-${{ matrix.bindgen }}-${{ matrix.library.name }}-${{ matrix.library.version }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
         - name: Run systest
           run: |
             if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
               features="--features vendored"
+            fi
+            if [[ "${{ matrix.bindgen }}" == "true" ]]; then
+              features="$features --features bindgen"
             fi
             cargo run --manifest-path=systest/Cargo.toml --target ${{ matrix.target }} $features
         - name: Test openssl
@@ -283,10 +304,16 @@ jobs:
             if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
               features="--features vendored"
             fi
+            if [[ "${{ matrix.bindgen }}" == "true" ]]; then
+              features="$features --features bindgen"
+            fi
             cargo test --manifest-path=openssl/Cargo.toml --target ${{ matrix.target }} $features
         - name: Test openssl-errors
           run: |
             if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
               features="--features openssl-sys/vendored"
+            fi
+            if [[ "${{ matrix.bindgen }}" == "true" ]]; then
+              features="$features --features openssl-sys/bindgen"
             fi
             cargo test --manifest-path=openssl-errors/Cargo.toml --target ${{ matrix.target }} $features
