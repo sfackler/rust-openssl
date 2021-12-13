@@ -5,16 +5,27 @@ use std::process::{self, Command};
 
 use super::env;
 
-pub fn get_openssl(target: &str) -> (PathBuf, PathBuf) {
+pub fn get_openssl(target: &str) -> (Vec<PathBuf>, PathBuf) {
     let lib_dir = env("OPENSSL_LIB_DIR").map(PathBuf::from);
     let include_dir = env("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
 
     match (lib_dir, include_dir) {
-        (Some(lib_dir), Some(include_dir)) => (lib_dir, include_dir),
+        (Some(lib_dir), Some(include_dir)) => (vec![lib_dir], include_dir),
         (lib_dir, include_dir) => {
             let openssl_dir = env("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(target));
             let openssl_dir = Path::new(&openssl_dir);
-            let lib_dir = lib_dir.unwrap_or_else(|| openssl_dir.join("lib"));
+            let lib_dir = lib_dir.map(|d| vec![d]).unwrap_or_else(|| {
+                let mut lib_dirs = vec![];
+                // OpenSSL 3.0 now puts it's libraries in lib64/ by default,
+                // check for both it and lib/.
+                if openssl_dir.join("lib64").exists() {
+                    lib_dirs.push(openssl_dir.join("lib64"));
+                }
+                if openssl_dir.join("lib").exists() {
+                    lib_dirs.push(openssl_dir.join("lib"));
+                }
+                lib_dirs
+            });
             let include_dir = include_dir.unwrap_or_else(|| openssl_dir.join("include"));
             (lib_dir, include_dir)
         }
