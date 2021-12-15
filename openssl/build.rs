@@ -32,6 +32,9 @@ fn main() {
         if version >= 0x1_01_00_07_0 {
             println!("cargo:rustc-cfg=ossl110g");
         }
+        if version >= 0x1_01_00_08_0 {
+            println!("cargo:rustc-cfg=ossl110h");
+        }
         if version >= 0x1_01_01_00_0 {
             println!("cargo:rustc-cfg=ossl111");
         }
