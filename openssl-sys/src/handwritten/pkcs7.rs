@@ -1,7 +1,6 @@
 use libc::*;
 use *;
 
-use ossl_typ::{BIO, EVP_CIPHER, EVP_MD, EVP_PKEY, X509, X509_STORE};
 use x509::stack_st_X509;
 use x509_attr::stack_st_X509_ATTRIBUTE;
 
