@@ -1,4 +1,4 @@
-#![allow(bad_style, clippy::all)]
+#![allow(bad_style, deprecated, clippy::all)]
 
 use libc::*;
 use openssl_sys::*;

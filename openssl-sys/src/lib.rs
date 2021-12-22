@@ -16,35 +16,30 @@ extern crate libc;
 
 use libc::*;
 
+#[cfg(feature = "bindgen")]
+include!(concat!(env!("OUT_DIR"), "/bindgen.rs"));
+
 pub use aes::*;
 pub use asn1::*;
 pub use bio::*;
 pub use bn::*;
 pub use cms::*;
-pub use conf::*;
 pub use crypto::*;
-pub use dh::*;
-pub use dsa::*;
 pub use dtls1::*;
 pub use ec::*;
 pub use err::*;
 pub use evp::*;
-pub use hmac::*;
+#[cfg(not(feature = "bindgen"))]
+pub use handwritten::*;
 pub use obj_mac::*;
-pub use object::*;
 pub use ocsp::*;
-pub use ossl_typ::*;
 pub use pem::*;
-pub use pkcs12::*;
 pub use pkcs7::*;
-pub use rand::*;
 pub use rsa::*;
-pub use safestack::*;
 pub use sha::*;
 pub use srtp::*;
 pub use ssl::*;
 pub use ssl3::*;
-pub use stack::*;
 pub use tls1::*;
 pub use types::*;
 pub use x509::*;
@@ -60,30 +55,22 @@ mod asn1;
 mod bio;
 mod bn;
 mod cms;
-mod conf;
 mod crypto;
-mod dh;
-mod dsa;
 mod dtls1;
 mod ec;
 mod err;
 mod evp;
-mod hmac;
+#[cfg(not(feature = "bindgen"))]
+mod handwritten;
 mod obj_mac;
-mod object;
 mod ocsp;
-mod ossl_typ;
 mod pem;
-mod pkcs12;
 mod pkcs7;
-mod rand;
 mod rsa;
-mod safestack;
 mod sha;
 mod srtp;
 mod ssl;
 mod ssl3;
-mod stack;
 mod tls1;
 mod types;
 mod x509;
@@ -158,7 +145,7 @@ pub fn init() {
                 }
 
                 unsafe {
-                    CRYPTO_set_id_callback(thread_id);
+                    CRYPTO_set_id_callback__fixed_rust(Some(thread_id));
                 }
             }
         } else {
@@ -183,7 +170,7 @@ pub fn init() {
             Box::new((0..num_locks).map(|_| None).collect());
         GUARDS = mem::transmute(guards);
 
-        CRYPTO_set_locking_callback(locking_function);
+        CRYPTO_set_locking_callback__fixed_rust(Some(locking_function));
         set_id_callback();
     })
 }

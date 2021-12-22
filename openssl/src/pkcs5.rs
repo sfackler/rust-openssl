@@ -5,6 +5,7 @@ use crate::cvt;
 use crate::error::ErrorStack;
 use crate::hash::MessageDigest;
 use crate::symm::Cipher;
+use openssl_macros::corresponds;
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct KeyIvPair {
@@ -22,6 +23,7 @@ pub struct KeyIvPair {
 ///
 /// New applications should not use this and instead use
 /// `pbkdf2_hmac` or another more modern key derivation algorithm.
+#[corresponds(EVP_BytesToKey)]
 #[allow(clippy::useless_conversion)]
 pub fn bytes_to_key(
     cipher: Cipher,
@@ -80,6 +82,7 @@ pub fn bytes_to_key(
 }
 
 /// Derives a key from a password and salt using the PBKDF2-HMAC algorithm with a digest function.
+#[corresponds(PKCS5_PBKDF2_HMAC)]
 pub fn pbkdf2_hmac(
     pass: &[u8],
     salt: &[u8],
@@ -110,6 +113,7 @@ pub fn pbkdf2_hmac(
 /// Derives a key from a password and salt using the scrypt algorithm.
 ///
 /// Requires OpenSSL 1.1.0 or newer.
+#[corresponds(EVP_PBE_scrypt)]
 #[cfg(any(ossl110))]
 pub fn scrypt(
     pass: &[u8],

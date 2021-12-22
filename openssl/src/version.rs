@@ -12,6 +12,7 @@
 //
 
 use cfg_if::cfg_if;
+use openssl_macros::corresponds;
 use std::ffi::CStr;
 
 cfg_if! {
@@ -41,24 +42,13 @@ cfg_if! {
 /// `0x000906000 == 0.9.6 dev`
 /// `0x000906023 == 0.9.6b beta 3`
 /// `0x00090605f == 0.9.6e release`
-///
-/// Versions prior to 0.9.3 have identifiers < 0x0930. Versions between 0.9.3 and 0.9.5 had a version identifier with this interpretation:
-///
-/// `MMNNFFRBB major minor fix final beta/patch`
-///
-/// for example
-///
-/// `0x000904100 == 0.9.4 release`
-/// `0x000905000 == 0.9.5 dev`
-///
-/// Version 0.9.5a had an interim interpretation that is like the current one, except the patch level got the highest bit set, to keep continuity. The number was therefore 0x0090581f
-///
-/// The return value of this function can be compared to the macro to make sure that the correct version of the library has been loaded, especially when using DLLs on Windows systems.
+#[corresponds(OpenSSL_version_num)]
 pub fn number() -> i64 {
     unsafe { OpenSSL_version_num() as i64 }
 }
 
 /// The text variant of the version number and the release date. For example, "OpenSSL 0.9.5a 1 Apr 2000".
+#[corresponds(OpenSSL_version)]
 pub fn version() -> &'static str {
     unsafe {
         CStr::from_ptr(OpenSSL_version(OPENSSL_VERSION))
@@ -69,6 +59,7 @@ pub fn version() -> &'static str {
 
 /// The compiler flags set for the compilation process in the form "compiler: ..." if available or
 /// "compiler: information not available" otherwise.
+#[corresponds(OpenSSL_version)]
 pub fn c_flags() -> &'static str {
     unsafe {
         CStr::from_ptr(OpenSSL_version(OPENSSL_CFLAGS))
@@ -78,6 +69,7 @@ pub fn c_flags() -> &'static str {
 }
 
 /// The date of the build process in the form "built on: ..." if available or "built on: date not available" otherwise.
+#[corresponds(OpenSSL_version)]
 pub fn built_on() -> &'static str {
     unsafe {
         CStr::from_ptr(OpenSSL_version(OPENSSL_BUILT_ON))
@@ -87,6 +79,7 @@ pub fn built_on() -> &'static str {
 }
 
 /// The "Configure" target of the library build in the form "platform: ..." if available or "platform: information not available" otherwise.
+#[corresponds(OpenSSL_version)]
 pub fn platform() -> &'static str {
     unsafe {
         CStr::from_ptr(OpenSSL_version(OPENSSL_PLATFORM))
@@ -96,6 +89,7 @@ pub fn platform() -> &'static str {
 }
 
 /// The "OPENSSLDIR" setting of the library build in the form "OPENSSLDIR: "..."" if available or "OPENSSLDIR: N/A" otherwise.
+#[corresponds(OpenSSL_version)]
 pub fn dir() -> &'static str {
     unsafe {
         CStr::from_ptr(OpenSSL_version(OPENSSL_DIR))

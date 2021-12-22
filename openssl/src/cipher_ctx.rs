@@ -57,6 +57,7 @@ use crate::{cvt, cvt_p};
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_uchar};
+use openssl_macros::corresponds;
 use std::convert::TryFrom;
 use std::ptr;
 
@@ -80,10 +81,7 @@ foreign_type_and_impl_send_sync! {
 
 impl CipherCtx {
     /// Creates a new context.
-    ///
-    /// This corresponds to [`EVP_CIPHER_CTX_new`].
-    ///
-    /// [`EVP_CIPHER_CTX_new`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_new.html
+    #[corresponds(EVP_CIPHER_CTX_new)]
     pub fn new() -> Result<Self, ErrorStack> {
         ffi::init();
 
@@ -105,10 +103,7 @@ impl CipherCtxRef {
     ///
     /// Panics if the key buffer is smaller than the key size of the cipher, the IV buffer is smaller than the IV size
     /// of the cipher, or if a key or IV is provided before a cipher.
-    ///
-    /// This corresponds to [`EVP_EncryptInit_ex`].
-    ///
-    /// [`EVP_EncryptInit_ex`]: https://www.openssl.org/docs/manmaster/man3/EVP_EncryptInit_ex.html
+    #[corresponds(EVP_EncryptInit_ex)]
     pub fn encrypt_init(
         &mut self,
         type_: Option<&CipherRef>,
@@ -128,10 +123,7 @@ impl CipherCtxRef {
     ///
     /// Panics if the key buffer is smaller than the key size of the cipher, the IV buffer is smaller than the IV size
     /// of the cipher, or if a key or IV is provided before a cipher.
-    ///
-    /// This corresponds to [`EVP_EncryptInit_ex`].
-    ///
-    /// [`EVP_EncryptInit_ex`]: https://www.openssl.org/docs/manmaster/man3/EVP_EncryptInit_ex.html
+    #[corresponds(EVP_DecryptInit_ex)]
     pub fn decrypt_init(
         &mut self,
         type_: Option<&CipherRef>,
@@ -189,10 +181,7 @@ impl CipherCtxRef {
     ///
     /// Panics if `pub_keys` is not the same size as `encrypted_keys`, the IV buffer is smaller than the cipher's IV
     /// size, or if an IV is provided before the cipher.
-    ///
-    /// This corresponds to [`EVP_SealInit`].
-    ///
-    /// [`EVP_SealInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_SealInit.html.
+    #[corresponds(EVP_SealInit)]
     pub fn seal_init<T>(
         &mut self,
         type_: Option<&CipherRef>,
@@ -248,10 +237,7 @@ impl CipherCtxRef {
     ///
     /// Panics if the IV buffer is smaller than the cipher's required IV size or if the IV is provided before the
     /// cipher.
-    ///
-    /// This corresponds to [`EVP_OpenInit`].
-    ///
-    /// [`EVP_OpenInit`]: https://www.openssl.org/docs/manmaster/man3/EVP_OpenInit.html
+    #[corresponds(EVP_OpenInit)]
     pub fn open_init<T>(
         &mut self,
         type_: Option<&CipherRef>,
@@ -295,10 +281,7 @@ impl CipherCtxRef {
     /// # Panics
     ///
     /// Panics if the context has not been initialized with a cipher.
-    ///
-    /// This corresponds to [`EVP_CIPHER_CTX_block_size`].
-    ///
-    /// [`EVP_CIPHER_CTX_block_size`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_block_size.html
+    #[corresponds(EVP_CIPHER_CTX_block_size)]
     pub fn block_size(&self) -> usize {
         self.assert_cipher();
 
@@ -310,10 +293,7 @@ impl CipherCtxRef {
     /// # Panics
     ///
     /// Panics if the context has not been initialized with a cipher.
-    ///
-    /// This corresponds to [`EVP_CIPHER_CTX_key_length`].
-    ///
-    /// [`EVP_CIPHER_CTX_key_length`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_key_length.html
+    #[corresponds(EVP_CIPHER_CTX_key_length)]
     pub fn key_length(&self) -> usize {
         self.assert_cipher();
 
@@ -330,6 +310,7 @@ impl CipherCtxRef {
     /// This corresponds to [`EVP_CIPHER_CTX_rand_key`].
     ///
     /// [`EVP_CIPHER_CTX_rand_key`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_rand_key.html
+    #[corresponds(EVP_CIPHER_CTX_rand_key)]
     pub fn rand_key(&self, buf: &mut [u8]) -> Result<(), ErrorStack> {
         assert!(buf.len() >= self.key_length());
 
@@ -350,10 +331,7 @@ impl CipherCtxRef {
     /// # Panics
     ///
     /// Panics if the context has not been initialized with a cipher.
-    ///
-    /// This corresponds to [`EVP_CIPHER_CTX_set_key_length`].
-    ///
-    /// [`EVP_CIPHER_CTX_set_key_length`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_set_key_length.html
+    #[corresponds(EVP_CIPHER_CTX_set_key_length)]
     pub fn set_key_length(&mut self, len: usize) -> Result<(), ErrorStack> {
         self.assert_cipher();
 
@@ -373,10 +351,7 @@ impl CipherCtxRef {
     /// # Panics
     ///
     /// Panics if the context has not been initialized with a cipher.
-    ///
-    /// This corresponds to [`EVP_CIPHER_CTX_iv_length`].
-    ///
-    /// [`EVP_CIPHER_CTX_iv_length`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_iv_length.html
+    #[corresponds(EVP_CIPHER_CTX_iv_length)]
     pub fn iv_length(&self) -> usize {
         self.assert_cipher();
 
@@ -390,10 +365,7 @@ impl CipherCtxRef {
     /// # Panics
     ///
     /// Panics if the context has not been initialized with a cipher.
-    ///
-    /// This corresponds to [`EVP_CIPHER_CTX_ctrl`] with `EVP_CTRL_AEAD_SET_IVLEN`.
-    ///
-    /// [`EVP_CIPHER_CTX_ctrl`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_ctrl.html
+    #[corresponds(EVP_CIHPER_CTX_ctrl)]
     pub fn set_iv_length(&mut self, len: usize) -> Result<(), ErrorStack> {
         self.assert_cipher();
 
@@ -419,11 +391,8 @@ impl CipherCtxRef {
     ///
     /// Panics if the context has not been initialized with a cipher.
     ///
-    /// This corresponds to [`EVP_CIPHER_CTX_tag_length`].
-    ///
     /// Requires OpenSSL 3.0.0 or newer.
-    ///
-    /// [`EVP_CIPHER_CTX_tag_length`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_tag_length.html
+    #[corresponds(EVP_CIPHER_CTX_get_tag_length)]
     #[cfg(ossl300)]
     pub fn tag_length(&self) -> usize {
         self.assert_cipher();
@@ -437,10 +406,7 @@ impl CipherCtxRef {
     ///
     /// The size of the buffer indicates the size of the tag. While some ciphers support a range of tag sizes, it is
     /// recommended to pick the maximum size.
-    ///
-    /// This corresponds to [`EVP_CIPHER_CTX_ctrl`] with `EVP_CTRL_AEAD_GET_TAG`.
-    ///
-    /// [`EVP_CIPHER_CTX_ctrl`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_ctrl.html
+    #[corresponds(EVP_CIPHER_CTX_ctrl)]
     pub fn tag(&self, tag: &mut [u8]) -> Result<(), ErrorStack> {
         let len = c_int::try_from(tag.len()).unwrap();
 
@@ -459,10 +425,7 @@ impl CipherCtxRef {
     /// Sets the length of the generated authentication tag.
     ///
     /// This must be called when encrypting with a cipher in CCM mode to use a tag size other than the default.
-    ///
-    /// This corresponds to [`EVP_CIPHER_CTX_ctrl`] with `EVP_CTRL_AEAD_SET_TAG`.
-    ///
-    /// [`EVP_CIPHER_CTX_ctrl`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_ctrl.html
+    #[corresponds(EVP_CIPHER_CTX_ctrl)]
     pub fn set_tag_length(&mut self, len: usize) -> Result<(), ErrorStack> {
         let len = c_int::try_from(len).unwrap();
 
@@ -479,10 +442,7 @@ impl CipherCtxRef {
     }
 
     /// Sets the authentication tag for verification during decryption.
-    ///
-    /// This corresponds to [`EVP_CIPHER_CTX_ctrl`] with `EVP_CTRL_AEAD_SET_TAG`.
-    ///
-    /// [`EVP_CIPHER_CTX_ctrl`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_ctrl.html
+    #[corresponds(EVP_CIPHER_CTX_ctrl)]
     pub fn set_tag(&mut self, tag: &[u8]) -> Result<(), ErrorStack> {
         let len = c_int::try_from(tag.len()).unwrap();
 
@@ -501,10 +461,7 @@ impl CipherCtxRef {
     /// Enables or disables padding.
     ///
     /// If padding is disabled, the plaintext must be an exact multiple of the cipher's block size.
-    ///
-    /// This corresponds to [`EVP_CIPHER_CTX_set_padding`].
-    ///
-    /// [`EVP_CIPHER_CTX_set_padding`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_set_padding.html
+    #[corresponds(EVP_CIPHER_CTX_set_padding)]
     pub fn set_padding(&mut self, padding: bool) {
         unsafe {
             ffi::EVP_CIPHER_CTX_set_padding(self.as_ptr(), padding as c_int);
@@ -514,10 +471,7 @@ impl CipherCtxRef {
     /// Sets the total length of plaintext data.
     ///
     /// This is required for ciphers operating in CCM mode.
-    ///
-    /// This corresponds to [`EVP_CipherUpdate`].
-    ///
-    /// [`EVP_CipherUpdate`]: https://www.openssl.org/docs/manmaster/man3/EVP_CipherUpdate.html
+    #[corresponds(EVP_CipherUpdate)]
     pub fn set_data_len(&mut self, len: usize) -> Result<(), ErrorStack> {
         let len = c_int::try_from(len).unwrap();
 
@@ -543,10 +497,7 @@ impl CipherCtxRef {
     /// # Panics
     ///
     /// Panics if `output.len()` is less than `input.len()` plus the cipher's block size.
-    ///
-    /// This corresponds to [`EVP_CipherUpdate`].
-    ///
-    /// [`EVP_CipherUpdate`]: https://www.openssl.org/docs/manmaster/man3/EVP_CipherUpdate.html
+    #[corresponds(EVP_CipherUpdate)]
     pub fn cipher_update(
         &mut self,
         input: &[u8],
@@ -599,10 +550,7 @@ impl CipherCtxRef {
     /// # Panics
     ///
     /// Panics if `output` is smaller than the cipher's block size.
-    ///
-    /// This corresponds to [`EVP_CipherFinal`].
-    ///
-    /// [`EVP_CipherFinal`]: https://www.openssl.org/docs/manmaster/man3/EVP_CipherFinal.html
+    #[corresponds(EVP_CipherFinal)]
     pub fn cipher_final(&mut self, output: &mut [u8]) -> Result<usize, ErrorStack> {
         let block_size = self.block_size();
         if block_size > 1 {

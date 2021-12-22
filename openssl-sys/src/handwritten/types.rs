@@ -104,23 +104,6 @@ cfg_if! {
         }
     }
 }
-cfg_if! {
-    if #[cfg(any(ossl110, libressl280))] {
-        pub enum EVP_PKEY {}
-    } else {
-        #[repr(C)]
-        pub struct EVP_PKEY {
-            pub type_: c_int,
-            pub save_type: c_int,
-            pub references: c_int,
-            pub ameth: *const EVP_PKEY_ASN1_METHOD,
-            pub engine: *mut ENGINE,
-            pub pkey: *mut c_void,
-            pub save_parameters: c_int,
-            pub attributes: *mut stack_st_X509_ATTRIBUTE,
-        }
-    }
-}
 
 pub enum PKCS8_PRIV_KEY_INFO {}
 
@@ -430,6 +413,27 @@ cfg_if! {
         }
     }
 }
+
+cfg_if! {
+    if #[cfg(any(ossl110, libressl270))] {
+        pub enum X509_OBJECT {}
+    } else {
+        #[repr(C)]
+        pub struct X509_OBJECT {
+            pub type_: c_int,
+            pub data: X509_OBJECT_data,
+        }
+        #[repr(C)]
+        pub union X509_OBJECT_data {
+            pub ptr: *mut c_char,
+            pub x509: *mut X509,
+            pub crl: *mut X509_CRL,
+            pub pkey: *mut EVP_PKEY,
+        }
+    }
+}
+
+pub enum X509_LOOKUP {}
 
 #[repr(C)]
 pub struct X509V3_CTX {
@@ -1067,3 +1071,6 @@ cfg_if! {
 }
 
 pub enum OCSP_RESPONSE {}
+
+#[cfg(ossl300)]
+pub enum OSSL_LIB_CTX {}

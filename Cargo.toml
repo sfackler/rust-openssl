@@ -2,6 +2,10 @@
 members = [
     "openssl",
     "openssl-errors",
+    "openssl-macros",
     "openssl-sys",
     "systest",
 ]
+
+[patch.crates-io]
+bindgen = { git = "https://github.com/daviddrysdale/rust-bindgen", branch = "allowlist-file" }

@@ -37,6 +37,7 @@
 //! ```
 use cfg_if::cfg_if;
 use libc::c_void;
+use openssl_macros::corresponds;
 use std::mem::MaybeUninit;
 
 /// Computes the SHA1 hash of some data.
@@ -45,6 +46,7 @@ use std::mem::MaybeUninit;
 ///
 /// SHA1 is known to be insecure - it should not be used unless required for
 /// compatibility with existing systems.
+#[corresponds(SHA1)]
 #[inline]
 pub fn sha1(data: &[u8]) -> [u8; 20] {
     unsafe {
@@ -55,6 +57,7 @@ pub fn sha1(data: &[u8]) -> [u8; 20] {
 }
 
 /// Computes the SHA224 hash of some data.
+#[corresponds(SH224)]
 #[inline]
 pub fn sha224(data: &[u8]) -> [u8; 28] {
     unsafe {
@@ -65,6 +68,7 @@ pub fn sha224(data: &[u8]) -> [u8; 28] {
 }
 
 /// Computes the SHA256 hash of some data.
+#[corresponds(SHA256)]
 #[inline]
 pub fn sha256(data: &[u8]) -> [u8; 32] {
     unsafe {
@@ -75,6 +79,7 @@ pub fn sha256(data: &[u8]) -> [u8; 32] {
 }
 
 /// Computes the SHA384 hash of some data.
+#[corresponds(SHA384)]
 #[inline]
 pub fn sha384(data: &[u8]) -> [u8; 48] {
     unsafe {
@@ -85,6 +90,7 @@ pub fn sha384(data: &[u8]) -> [u8; 48] {
 }
 
 /// Computes the SHA512 hash of some data.
+#[corresponds(SHA512)]
 #[inline]
 pub fn sha512(data: &[u8]) -> [u8; 64] {
     unsafe {
@@ -114,6 +120,7 @@ cfg_if! {
 
         impl Sha1 {
             /// Creates a new hasher.
+            #[corresponds(SHA1_Init)]
             #[inline]
             pub fn new() -> Sha1 {
                 unsafe {
@@ -126,6 +133,7 @@ cfg_if! {
             /// Feeds some data into the hasher.
             ///
             /// This can be called multiple times.
+            #[corresponds(SHA1_Update)]
             #[inline]
             pub fn update(&mut self, buf: &[u8]) {
                 unsafe {
@@ -134,6 +142,7 @@ cfg_if! {
             }
 
             /// Returns the hash of the data.
+            #[corresponds(SHA1_Final)]
             #[inline]
             pub fn finish(mut self) -> [u8; 20] {
                 unsafe {
@@ -157,6 +166,7 @@ cfg_if! {
 
         impl Sha224 {
             /// Creates a new hasher.
+            #[corresponds(SHA224_Init)]
             #[inline]
             pub fn new() -> Sha224 {
                 unsafe {
@@ -169,6 +179,7 @@ cfg_if! {
             /// Feeds some data into the hasher.
             ///
             /// This can be called multiple times.
+            #[corresponds(SHA224_Update)]
             #[inline]
             pub fn update(&mut self, buf: &[u8]) {
                 unsafe {
@@ -177,6 +188,7 @@ cfg_if! {
             }
 
             /// Returns the hash of the data.
+            #[corresponds(SHA224_Final)]
             #[inline]
             pub fn finish(mut self) -> [u8; 28] {
                 unsafe {
@@ -200,6 +212,7 @@ cfg_if! {
 
         impl Sha256 {
             /// Creates a new hasher.
+            #[corresponds(SHA256_Init)]
             #[inline]
             pub fn new() -> Sha256 {
                 unsafe {
@@ -212,6 +225,7 @@ cfg_if! {
             /// Feeds some data into the hasher.
             ///
             /// This can be called multiple times.
+            #[corresponds(SHA256_Update)]
             #[inline]
             pub fn update(&mut self, buf: &[u8]) {
                 unsafe {
@@ -220,6 +234,7 @@ cfg_if! {
             }
 
             /// Returns the hash of the data.
+            #[corresponds(SHA256_Final)]
             #[inline]
             pub fn finish(mut self) -> [u8; 32] {
                 unsafe {
@@ -243,6 +258,7 @@ cfg_if! {
 
         impl Sha384 {
             /// Creates a new hasher.
+            #[corresponds(SHA384_Init)]
             #[inline]
             pub fn new() -> Sha384 {
                 unsafe {
@@ -255,6 +271,7 @@ cfg_if! {
             /// Feeds some data into the hasher.
             ///
             /// This can be called multiple times.
+            #[corresponds(SHA384_Update)]
             #[inline]
             pub fn update(&mut self, buf: &[u8]) {
                 unsafe {
@@ -263,6 +280,7 @@ cfg_if! {
             }
 
             /// Returns the hash of the data.
+            #[corresponds(SHA384_Final)]
             #[inline]
             pub fn finish(mut self) -> [u8; 48] {
                 unsafe {
@@ -286,6 +304,7 @@ cfg_if! {
 
         impl Sha512 {
             /// Creates a new hasher.
+            #[corresponds(SHA512_Init)]
             #[inline]
             pub fn new() -> Sha512 {
                 unsafe {
@@ -298,6 +317,7 @@ cfg_if! {
             /// Feeds some data into the hasher.
             ///
             /// This can be called multiple times.
+            #[corresponds(SHA512_Update)]
             #[inline]
             pub fn update(&mut self, buf: &[u8]) {
                 unsafe {
@@ -306,6 +326,7 @@ cfg_if! {
             }
 
             /// Returns the hash of the data.
+            #[corresponds(SHA512_Final)]
             #[inline]
             pub fn finish(mut self) -> [u8; 64] {
                 unsafe {
