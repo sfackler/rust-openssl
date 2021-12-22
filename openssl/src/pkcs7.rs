@@ -12,13 +12,14 @@ use crate::symm::Cipher;
 use crate::x509::store::X509StoreRef;
 use crate::x509::{X509Ref, X509, X509Attribute};
 use crate::{cvt, cvt_p};
-use crate::asn1::Asn1Type;
+use crate::asn1::{Asn1ObjectRef, Asn1Type};
 use crate::hash::MessageDigest;
 use crate::nid::Nid;
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::PKCS7_SIGNER_INFO;
-    fn drop = ffi::PKCS7_SIGNER_INFO_free;
+    fn drop = Pkcs7SignerInfo::free; // ffi::PKCS7_SIGNER_INFO_free;
+    // TODO bk fn drop = ffi::PKCS7_SIGNER_INFO_free;
 
     /// A `PKCS_SIGNER_INFO` signer info strucuture
     pub struct Pkcs7SignerInfo;
@@ -31,6 +32,18 @@ impl Pkcs7SignerInfo {
     pub fn as_ptr(&self)-> *mut ffi::PKCS7_SIGNER_INFO {
         &self.0 as *const _ as *mut _
     }
+    pub fn free(slf: *mut ffi::PKCS7_SIGNER_INFO) {
+        unsafe {
+            ffi::PKCS7_SIGNER_INFO_free(slf)
+        }
+    }
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::PKCS7_SIGNED;
+    fn drop = ffi::PKCS7_SIGNED_free;
+    pub struct Pkcs7Signed;
+    pub struct Pkcs7SignedRef;
 }
 
 foreign_type_and_impl_send_sync! {
@@ -70,7 +83,6 @@ bitflags! {
 }
 
 impl Pkcs7 {
-
     /// Create a new an empty PKCS#7 object.
     ///
     /// This corresponds to [`PKCS7_new`].
@@ -157,7 +169,7 @@ impl Pkcs7 {
                 cipher.as_ptr(),
                 flags.bits,
             ))
-            .map(Pkcs7)
+                .map(Pkcs7)
         }
     }
 
@@ -178,8 +190,8 @@ impl Pkcs7 {
         input: &[u8],
         flags: Pkcs7Flags,
     ) -> Result<Pkcs7, ErrorStack>
-    where
-        PT: HasPrivate,
+        where
+            PT: HasPrivate,
     {
         let input_bio = MemBioSlice::new(input)?;
         unsafe {
@@ -190,7 +202,7 @@ impl Pkcs7 {
                 input_bio.as_ptr(),
                 flags.bits,
             ))
-            .map(Pkcs7)
+                .map(Pkcs7)
         }
     }
 
@@ -201,14 +213,15 @@ impl Pkcs7 {
     /// This corresponds to [`PKCS7_set_signed_attributes`]
     ///
     pub fn set_signed_attributes(
-        signer_info: &Pkcs7SignerInfo,
+        signer_info: &Pkcs7SignerInfoRef,
         attributes: &StackRef<X509Attribute>
     ) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::PKCS7_set_signed_attributes(
-                signer_info.as_ptr(),
-                attributes.as_ptr()
-            ))
+            cvt(
+                ffi::PKCS7_set_signed_attributes(
+                    signer_info.as_ptr(),
+                    attributes.as_ptr()
+                ))
                 .map(|_| ())
         }
     }
@@ -220,18 +233,22 @@ impl Pkcs7 {
     ///
     /// Corresponds to [`PKCS7_add_signed_attribute`]
     ///
+    /// Note: `value` is immutable, but the OpenSSL function takes a (non-const) void pointer. Thus,
+    /// we have to cast to mutable in the unsafe block. Yes, that's dirty, but at least, the rust
+    /// api is now correct.
+    ///
     pub fn add_signed_attribute(
-        signer_info: &Pkcs7SignerInfo,
+        signer_info: &Pkcs7SignerInfoRef,
         nid: Nid,
         atrtype: Asn1Type,
-        value: &mut [u8]
+        value: &Asn1ObjectRef
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::PKCS7_add_signed_attribute(
                 signer_info.as_ptr(),
                 nid.as_raw(),
                 atrtype.as_raw(),
-                value.as_mut_ptr() as *mut c_void
+                value.as_ptr() as *mut c_void
             ))
                 .map(|_| ())
         }
@@ -469,7 +486,7 @@ impl Pkcs7Ref {
     /// This uses the following OpenSSL functions: [`PKCS7_content_new`],
     /// [`PKCS7_dataInit`], [`BIO_write`]
     ///
-    pub fn add_contente(&self, content_type: Nid, content: &[u8]) -> Result<MemBio, ErrorStack> {
+    pub fn add_content(&self, content_type: Nid, content: &[u8]) -> Result<MemBio, ErrorStack> {
         unsafe {
             // Initialize content
             cvt(ffi::PKCS7_content_new(
@@ -508,6 +525,7 @@ impl Pkcs7Ref {
             )).map(|_| ())
         }
     }
+
 }
 
 #[cfg(test)]

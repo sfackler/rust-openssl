@@ -93,6 +93,7 @@ macro_rules! to_der {
             unsafe {
                 let len = crate::cvt($f(::foreign_types::ForeignTypeRef::as_ptr(self),
                                         ptr::null_mut()))?;
+                println!("content len in `to_der()`: {}", len);
                 let mut buf = vec![0; len as usize];
                 crate::cvt($f(::foreign_types::ForeignTypeRef::as_ptr(self),
                               &mut buf.as_mut_ptr()))?;
