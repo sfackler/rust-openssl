@@ -1,6 +1,7 @@
 use libc::*;
 
-use asn1::ASN1_OBJECT;
+use *;
+// TODO bk use asn1::ASN1_OBJECT;
 
 pub enum X509_ATTRIBUTE {}
 

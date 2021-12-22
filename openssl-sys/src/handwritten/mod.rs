@@ -27,6 +27,7 @@ pub use handwritten::stack::*;
 pub use handwritten::tls1::*;
 pub use handwritten::types::*;
 pub use handwritten::x509::*;
+pub use handwritten::x509_attr::*;
 pub use handwritten::x509_vfy::*;
 pub use handwritten::x509v3::*;
 
@@ -59,5 +60,6 @@ mod stack;
 mod tls1;
 mod types;
 mod x509;
+mod x509_attr;
 mod x509_vfy;
 mod x509v3;

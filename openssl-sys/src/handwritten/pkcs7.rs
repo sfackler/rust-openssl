@@ -1,8 +1,8 @@
 use libc::*;
 use *;
 
-use x509::stack_st_X509;
-use x509_attr::stack_st_X509_ATTRIBUTE;
+// use x509::stack_st_X509;
+// use x509_attr::stack_st_X509_ATTRIBUTE;
 
 stack!(stack_st_PKCS7_SIGNER_INFO);
 stack!(stack_st_PKCS7_RECIP_INFO);
@@ -107,6 +107,8 @@ extern "C" {
     pub fn PKCS7_DIGEST_free(info: *mut PKCS7_DIGEST);
     pub fn PKCS7_SIGNER_INFO_free(info: *mut PKCS7_SIGNER_INFO);
 }
+
+pub enum PKCS7 {}
 
 // TODO bk
 // TODO bk add other ossl versions?

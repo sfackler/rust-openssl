@@ -43,7 +43,6 @@ pub use ssl3::*;
 pub use tls1::*;
 pub use types::*;
 pub use x509::*;
-pub use x509_attr::*;
 pub use x509_vfy::*;
 pub use x509v3::*;
 
@@ -74,7 +73,6 @@ mod ssl3;
 mod tls1;
 mod types;
 mod x509;
-mod x509_attr;
 mod x509_vfy;
 mod x509v3;
 
