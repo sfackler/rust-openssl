@@ -65,8 +65,12 @@ fn main() {
 
     if let Some(version) = openssl_version {
         cfg.header("openssl/cms.h");
-        if version >= 0x010100000 {
+        if version >= 0x10100000 {
             cfg.header("openssl/kdf.h");
+        }
+
+        if version >= 0x30000000 {
+            cfg.header("openssl/provider.h");
         }
     }
 

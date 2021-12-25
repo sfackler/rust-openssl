@@ -164,6 +164,8 @@ pub mod pkcs5;
 pub mod pkcs7;
 pub mod pkey;
 pub mod pkey_ctx;
+#[cfg(ossl300)]
+pub mod provider;
 pub mod rand;
 pub mod rsa;
 pub mod sha;
