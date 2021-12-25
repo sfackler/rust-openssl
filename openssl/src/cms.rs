@@ -237,8 +237,10 @@ mod test {
     use crate::x509::X509;
 
     #[test]
-    #[cfg_attr(ossl300, ignore)] // 3.0.0 can't load RC2-40-CBC
     fn cms_encrypt_decrypt() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         // load cert with public key only
         let pub_cert_bytes = include_bytes!("../test/cms_pubkey.der");
         let pub_cert = X509::from_der(pub_cert_bytes).expect("failed to load pub cert");

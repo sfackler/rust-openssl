@@ -623,8 +623,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(ossl300, ignore)]
     fn test_ripemd160() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let tests = [("616263", "8eb208f7e05d987a9b044a8e98c6b087f15a0bfc")];
 
         for test in tests.iter() {

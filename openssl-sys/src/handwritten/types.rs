@@ -1072,4 +1072,7 @@ cfg_if! {
 pub enum OCSP_RESPONSE {}
 
 #[cfg(ossl300)]
+pub enum OSSL_PROVIDER {}
+
+#[cfg(ossl300)]
 pub enum OSSL_LIB_CTX {}

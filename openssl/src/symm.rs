@@ -910,8 +910,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(ossl300, ignore)]
     fn test_rc4() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "0000000000000000000000000000000000000000000000000000000000000000000000000000";
         let ct = "A68686B04D686AA107BD8D4CAB191A3EEC0A6294BC78B60F65C25CB47BD7BB3A48EFC4D26BE4";
         let key = "97CD440324DA5FD1F7955C1C13B6B466";
@@ -1094,8 +1096,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(ossl300, ignore)]
     fn test_bf_cbc() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         // https://www.schneier.com/code/vectors.txt
 
         let pt = "37363534333231204E6F77206973207468652074696D6520666F722000000000";
@@ -1107,8 +1111,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(ossl300, ignore)]
     fn test_bf_ecb() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "5CD54CA83DEF57DA";
         let ct = "B1B8CC0B250F09A0";
         let key = "0131D9619DC1376E";
@@ -1118,8 +1124,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(ossl300, ignore)]
     fn test_bf_cfb64() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "37363534333231204E6F77206973207468652074696D6520666F722000";
         let ct = "E73214A2822139CAF26ECF6D2EB9E76E3DA3DE04D1517200519D57A6C3";
         let key = "0123456789ABCDEFF0E1D2C3B4A59687";
@@ -1129,8 +1137,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(ossl300, ignore)]
     fn test_bf_ofb() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "37363534333231204E6F77206973207468652074696D6520666F722000";
         let ct = "E73214A2822139CA62B343CC5B65587310DD908D0C241B2263C2CF80DA";
         let key = "0123456789ABCDEFF0E1D2C3B4A59687";
@@ -1140,8 +1150,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(ossl300, ignore)]
     fn test_des_cbc() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "54686973206973206120746573742e";
         let ct = "6f2867cfefda048a4046ef7e556c7132";
         let key = "7cb66337f3d3c0fe";
@@ -1151,8 +1163,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(ossl300, ignore)]
     fn test_des_ecb() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "54686973206973206120746573742e";
         let ct = "0050ab8aecec758843fe157b4dde938c";
         let key = "7cb66337f3d3c0fe";
@@ -1452,8 +1466,11 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     fn test_seed_cbc() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "5363686f6b6f6c6164656e6b756368656e0a";
         let ct = "c2edf0fb2eb11bf7b2f39417a8528896d34b24b6fd79e5923b116dfcd2aba5a4";
         let key = "41414141414141414141414141414141";
@@ -1463,8 +1480,11 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     fn test_seed_cfb128() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "5363686f6b6f6c6164656e6b756368656e0a";
         let ct = "71d4d25fc1750cb7789259e7f34061939a41";
         let key = "41414141414141414141414141414141";
@@ -1474,8 +1494,11 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     fn test_seed_ecb() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "5363686f6b6f6c6164656e6b756368656e0a";
         let ct = "0263a9cd498cf0edb0ef72a3231761d00ce601f7d08ad19ad74f0815f2c77f7e";
         let key = "41414141414141414141414141414141";
@@ -1485,8 +1508,11 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
+    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     fn test_seed_ofb() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "5363686f6b6f6c6164656e6b756368656e0a";
         let ct = "71d4d25fc1750cb7789259e7f34061930afd";
         let key = "41414141414141414141414141414141";

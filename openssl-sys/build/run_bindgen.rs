@@ -39,8 +39,12 @@ const INCLUDES: &str = "
 #include <openssl/cms.h>
 #endif
 
-#if !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER >= 0x010100000
+#if !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER >= 0x10100000
 #include <openssl/kdf.h>
+#endif
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000
+#include <openssl/provider.h>
 #endif
 ";
 
