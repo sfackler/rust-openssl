@@ -258,6 +258,9 @@ fn clear_ctx_options() {
 
 #[test]
 fn zero_length_buffers() {
+    #[cfg(ossl300)]
+    let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
     let server = Server::builder().build();
 
     let mut s = server.client().connect();
