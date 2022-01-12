@@ -41,9 +41,11 @@ use openssl_macros::corresponds;
 use std::mem::MaybeUninit;
 
 /// Computes the SHA1 hash of some data.
-#[deprecated(
-    note = "SHA1 is known to be insecure - it should not be used unless required for compatibility with existing systems."
-)]
+///
+/// # Warning
+///
+/// SHA1 is known to be insecure - it should not be used unless required for
+/// compatibility with existing systems.
 #[corresponds(SHA1)]
 #[inline]
 pub fn sha1(data: &[u8]) -> [u8; 20] {
@@ -101,7 +103,11 @@ pub fn sha512(data: &[u8]) -> [u8; 64] {
 cfg_if! {
     if #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))] {
         /// An object which calculates a SHA1 hash of some data.
-        #[deprecated(note = "SHA1 is known to be insecure - it should not be used unless required for compatibility with existing systems.")]
+        ///
+        /// # Warning
+        ///
+        /// SHA1 is known to be insecure - it should not be used unless required for
+        /// compatibility with existing systems.
         #[derive(Clone)]
         pub struct Sha1(ffi::SHA_CTX);
 

@@ -172,7 +172,6 @@ bitflags! {
 
         /// Allow legacy insecure renegotiation with servers or clients that do not support secure
         /// renegotiation.
-        #[deprecated(note = "This is insecure and should not be used unless required for compatibility with existing systems.")]
         const ALLOW_UNSAFE_LEGACY_RENEGOTIATION =
             ffi::SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
 
