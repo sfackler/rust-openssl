@@ -298,13 +298,13 @@ mod tests {
         let mut certs = Stack::new().unwrap();
         certs.push(cert.clone()).unwrap();
         let message: String = String::from("foo");
-        let cypher = Cipher::des_ede3_cbc();
+        let cipher = Cipher::des_ede3_cbc();
         let flags = Pkcs7Flags::STREAM;
         let pkey = include_bytes!("../test/key.pem");
         let pkey = PKey::private_key_from_pem(pkey).unwrap();
 
         let pkcs7 =
-            Pkcs7::encrypt(&certs, message.as_bytes(), cypher, flags).expect("should succeed");
+            Pkcs7::encrypt(&certs, message.as_bytes(), cipher, flags).expect("should succeed");
 
         let encrypted = pkcs7
             .to_smime(message.as_bytes(), flags)

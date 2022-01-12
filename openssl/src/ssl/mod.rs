@@ -172,6 +172,7 @@ bitflags! {
 
         /// Allow legacy insecure renegotiation with servers or clients that do not support secure
         /// renegotiation.
+        #[deprecated(note = "This is insecure and should not be used unless required for compatibility with existing systems.")]
         const ALLOW_UNSAFE_LEGACY_RENEGOTIATION =
             ffi::SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
 
@@ -270,7 +271,7 @@ bitflags! {
         const ENABLE_PARTIAL_WRITE = ffi::SSL_MODE_ENABLE_PARTIAL_WRITE;
 
         /// Disables a check that the data buffer has not moved between calls when operating in a
-        /// nonblocking context.
+        /// non-blocking context.
         const ACCEPT_MOVING_WRITE_BUFFER = ffi::SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER;
 
         /// Enables automatic retries after TLS session events such as renegotiations or heartbeats.
@@ -1015,7 +1016,7 @@ impl SslContextBuilder {
     ///
     /// The `set_cipher_list` method controls the cipher suites for protocols before TLSv1.3.
     ///
-    /// The format consists of TLSv1.3 ciphersuite names separated by `:` characters in order of
+    /// The format consists of TLSv1.3 cipher suite names separated by `:` characters in order of
     /// preference.
     ///
     /// Requires OpenSSL 1.1.1 or newer.
@@ -1256,7 +1257,7 @@ impl SslContextBuilder {
     /// `Ok(false)` indicates that the OCSP status is invalid and the handshake should be
     /// terminated.
     ///
-    /// On the server side, this callback is resopnsible for setting the OCSP status response to be
+    /// On the server side, this callback is responsible for setting the OCSP status response to be
     /// returned to clients. The status may be set with the `SslRef::set_ocsp_status` method. A
     /// response of `Ok(true)` indicates that the OCSP status should be returned to the client, and
     /// `Ok(false)` indicates that the status should not be returned to the client.
@@ -2643,9 +2644,9 @@ impl SslRef {
         }
     }
 
-    /// Copies the client_random value sent by the client in the TLS handshake into a buffer.
+    /// Copies the `client_random` value sent by the client in the TLS handshake into a buffer.
     ///
-    /// Returns the number of bytes copied, or if the buffer is empty, the size of the client_random
+    /// Returns the number of bytes copied, or if the buffer is empty, the size of the `client_random`
     /// value.
     ///
     /// Requires OpenSSL 1.1.0 or newer.
@@ -2657,9 +2658,9 @@ impl SslRef {
         }
     }
 
-    /// Copies the server_random value sent by the server in the TLS handshake into a buffer.
+    /// Copies the `server_random` value sent by the server in the TLS handshake into a buffer.
     ///
-    /// Returns the number of bytes copied, or if the buffer is empty, the size of the server_random
+    /// Returns the number of bytes copied, or if the buffer is empty, the size of the `server_random`
     /// value.
     ///
     /// Requires OpenSSL 1.1.0 or newer.
@@ -3257,7 +3258,7 @@ impl<S: Read + Write> SslStream<S> {
 
     /// Like `read`, but returns an `ssl::Error` rather than an `io::Error`.
     ///
-    /// It is particularly useful with a nonblocking socket, where the error value will identify if
+    /// It is particularly useful with a non-blocking socket, where the error value will identify if
     /// OpenSSL is waiting on read or write readiness.
     #[corresponds(SSL_read)]
     pub fn ssl_read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
@@ -3280,7 +3281,7 @@ impl<S: Read + Write> SslStream<S> {
 
     /// Like `write`, but returns an `ssl::Error` rather than an `io::Error`.
     ///
-    /// It is particularly useful with a nonblocking socket, where the error value will identify if
+    /// It is particularly useful with a non-blocking socket, where the error value will identify if
     /// OpenSSL is waiting on read or write readiness.
     #[corresponds(SSL_write)]
     pub fn ssl_write(&mut self, buf: &[u8]) -> Result<usize, Error> {

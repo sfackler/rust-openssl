@@ -230,7 +230,7 @@ impl CipherCtxRef {
 
     /// Initializes the context to perform envelope decryption.
     ///
-    /// Normally thisis called once with all of the arguments present. However, this process may be split up by first
+    /// Normally this is called once with all of the arguments present. However, this process may be split up by first
     /// providing the cipher alone and then after providing the rest of the arguments in a second call.
     ///
     /// # Panics

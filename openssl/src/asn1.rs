@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 
-//! Defines the format of certificiates
+//! Defines the format of certificates
 //!
 //! This module is used by [`x509`] and other certificate building functions
 //! to describe time, strings, and objects.

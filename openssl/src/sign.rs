@@ -343,10 +343,10 @@ impl<'a> Signer<'a> {
         Ok(buf)
     }
 
-    /// Signs the data in data_buf and writes the signature into the buffer sig_buf, returning the
+    /// Signs the data in `data_buf` and writes the signature into the buffer `sig_buf`, returning the
     /// number of bytes written.
     ///
-    /// For PureEdDSA (Ed25519 and Ed448 keys) this is the only way to sign data.
+    /// For PureEdDSA (Ed25519 and Ed448 keys), this is the only way to sign data.
     ///
     /// This method will fail if the buffer is not large enough for the signature. Use the `len`
     /// method to get an upper bound on the required size.
@@ -583,7 +583,7 @@ impl<'a> Verifier<'a> {
         }
     }
 
-    /// Determines if the data given in buf matches the provided signature.
+    /// Determines if the data given in `buf` matches the provided signature.
     ///
     /// OpenSSL documentation at [`EVP_DigestVerify`].
     ///

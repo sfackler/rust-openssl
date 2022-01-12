@@ -83,7 +83,7 @@ where
     T: HasPublic,
 {
     to_pem! {
-        /// Serialies the public key into a PEM-encoded SubjectPublicKeyInfo structure.
+        /// Serializes the public key into a PEM-encoded SubjectPublicKeyInfo structure.
         ///
         /// The output will have a header of `-----BEGIN PUBLIC KEY-----`.
         #[corresponds(PEM_write_bio_DSA_PUBKEY)]

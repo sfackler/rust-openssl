@@ -57,7 +57,7 @@ impl BasicConstraints {
         self
     }
 
-    /// Sets the pathlen to an optional non-negative value. The pathlen is the
+    /// Sets the `pathlen` to an optional non-negative value. The `pathlen` is the
     /// maximum number of CAs that can appear below this one in a chain.
     pub fn pathlen(&mut self, pathlen: u32) -> &mut BasicConstraints {
         self.pathlen = Some(pathlen);
