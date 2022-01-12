@@ -68,7 +68,7 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl CmsContentInfoRef {
-    /// Given the sender's private key, `pkey` and the recipient's certificiate, `cert`,
+    /// Given the sender's private key, `pkey` and the recipient's certificate, `cert`,
     /// decrypt the data in `self`.
     #[corresponds(CMS_decrypt)]
     pub fn decrypt<T>(&self, pkey: &PKeyRef<T>, cert: &X509) -> Result<Vec<u8>, ErrorStack>

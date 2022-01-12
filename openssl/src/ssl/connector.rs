@@ -55,7 +55,7 @@ fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
 /// OpenSSL's default configuration is highly insecure. This connector manages the OpenSSL
 /// structures, configuring cipher suites, session options, hostname verification, and more.
 ///
-/// OpenSSL's built in hostname verification is used when linking against OpenSSL 1.0.2 or 1.1.0,
+/// OpenSSL's built-in hostname verification is used when linking against OpenSSL 1.0.2 or 1.1.0,
 /// and a custom implementation is used when linking against OpenSSL 1.0.1.
 #[derive(Clone, Debug)]
 pub struct SslConnector(SslContext);

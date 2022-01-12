@@ -564,7 +564,7 @@ impl PKey<Private> {
     }
 
     /// Deserializes a DER-formatted PKCS#8 private key, using a callback to retrieve the password
-    /// if the key is encrpyted.
+    /// if the key is encrypted.
     ///
     /// The callback should copy the password into the provided buffer and return the number of
     /// bytes written.

@@ -1,16 +1,16 @@
 //! Elliptic Curve
 //!
-//! Cryptology relies on the difficulty of solving mathematical problems, such as the factor
+//! Cryptography relies on the difficulty of solving mathematical problems, such as the factor
 //! of large integers composed of two large prime numbers and the discrete logarithm of a
-//! random eliptic curve.  This module provides low-level features of the latter.
+//! random elliptic curve.  This module provides low-level features of the latter.
 //! Elliptic Curve protocols can provide the same security with smaller keys.
 //!
 //! There are 2 forms of elliptic curves, `Fp` and `F2^m`.  These curves use irreducible
-//! trinomial or pentanomial .  Being a generic interface to a wide range of algorithms,
-//! the cuves are generally referenced by [`EcGroup`].  There are many built in groups
+//! trinomial or pentanomial.  Being a generic interface to a wide range of algorithms,
+//! the curves are generally referenced by [`EcGroup`].  There are many built-in groups
 //! found in [`Nid`].
 //!
-//! OpenSSL Wiki explains the fields and curves in detail at [Eliptic Curve Cryptography].
+//! OpenSSL Wiki explains the fields and curves in detail at [Elliptic Curve Cryptography].
 //!
 //! [`EcGroup`]: struct.EcGroup.html
 //! [`Nid`]: ../nid/struct.Nid.html
@@ -454,7 +454,7 @@ impl EcPointRef {
         }
     }
 
-    /// Place affine coordinates of a curve over a prime field in the provided
+    /// Places affine coordinates of a curve over a prime field in the provided
     /// `x` and `y` `BigNum`s
     #[corresponds(EC_POINT_get_affine_coordinates_GFp)]
     pub fn affine_coordinates_gfp(
@@ -476,7 +476,7 @@ impl EcPointRef {
         }
     }
 
-    /// Place affine coordinates of a curve over a binary field in the provided
+    /// Places affine coordinates of a curve over a binary field in the provided
     /// `x` and `y` `BigNum`s
     #[corresponds(EC_POINT_get_affine_coordinates_GF2m)]
     #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
@@ -613,7 +613,7 @@ where
     }
 
     to_pem! {
-        /// Serialies the public key into a PEM-encoded SubjectPublicKeyInfo structure.
+        /// Serializes the public key into a PEM-encoded SubjectPublicKeyInfo structure.
         ///
         /// The output will have a header of `-----BEGIN PUBLIC KEY-----`.
         #[corresponds(PEM_write_bio_EC_PUBKEY)]

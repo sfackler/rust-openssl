@@ -21,7 +21,7 @@ pub struct StreamState<S> {
     pub dtls_mtu_size: c_long,
 }
 
-/// Safe wrapper for BIO_METHOD
+/// Safe wrapper for `BIO_METHOD`
 pub struct BioMethod(BIO_METHOD);
 
 impl BioMethod {

@@ -572,7 +572,7 @@ impl Crypter {
 /// and initialization vector `iv`. Padding is enabled.
 ///
 /// This is a convenient interface to `Crypter` to encrypt all data in one go.  To encrypt a stream
-/// of data increamentally , use `Crypter` instead.
+/// of data incrementally , use `Crypter` instead.
 ///
 /// # Examples
 ///
@@ -611,7 +611,7 @@ pub fn encrypt(
 /// and initialization vector `iv`. Padding is enabled.
 ///
 /// This is a convenient interface to `Crypter` to decrypt all data in one go.  To decrypt a  stream
-/// of data increamentally , use `Crypter` instead.
+/// of data incrementally , use `Crypter` instead.
 ///
 /// # Examples
 ///

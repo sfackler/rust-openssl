@@ -13,7 +13,7 @@
 //! [`aes_ige`]: fn.aes_ige.html
 //!
 //! The [`symm`] module should be used in preference to this module in most cases.
-//! The IGE block cypher is a non-traditional cipher mode.  More traditional AES
+//! The IGE block cipher is a non-traditional cipher mode.  More traditional AES
 //! encryption methods are found in the [`Crypter`] and [`Cipher`] structs.
 //!
 //! [`symm`]: ../symm/index.html
