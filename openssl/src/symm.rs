@@ -675,21 +675,35 @@ pub fn encrypt_aead(
     data: &[u8],
     tag: &mut [u8],
 ) -> Result<Vec<u8>, ErrorStack> {
-    let mut c = Crypter::new(t, Mode::Encrypt, key, iv)?;
-    let mut out = vec![0; data.len() + t.block_size()];
+    let mut ctx = CipherCtx::new()?;
+    CipherCtxRef::encrypt_init(
+        &mut ctx,
+        Some(unsafe { CipherRef::from_ptr(t.as_ptr() as *mut _) }),
+        None,
+        None,
+    )?;
 
-    let is_ccm = t.is_ccm();
-    if is_ccm || t.is_ocb() {
-        c.set_tag_len(tag.len())?;
-        if is_ccm {
-            c.set_data_len(data.len())?;
+    if t.is_ccm() || t.is_ocb() {
+        ctx.set_tag_length(tag.len())?;
+    }
+    ctx.set_key_length(key.len())?;
+    if let (Some(iv), Some(iv_len)) = (iv, t.iv_len()) {
+        if iv.len() != iv_len {
+            ctx.set_iv_length(iv.len())?;
         }
     }
+    CipherCtxRef::encrypt_init(&mut ctx, None, Some(key), iv)?;
 
-    c.aad_update(aad)?;
-    let count = c.update(data, &mut out)?;
-    let rest = c.finalize(&mut out[count..])?;
-    c.get_tag(tag)?;
+    let mut out = vec![0; data.len() + t.block_size()];
+
+    if t.is_ccm() {
+        ctx.set_data_len(data.len())?;
+    }
+
+    ctx.cipher_update(aad, None)?;
+    let count = ctx.cipher_update(data, Some(&mut out))?;
+    let rest = ctx.cipher_final(&mut out[count..])?;
+    ctx.tag(tag)?;
     out.truncate(count + rest);
     Ok(out)
 }
@@ -706,25 +720,43 @@ pub fn decrypt_aead(
     data: &[u8],
     tag: &[u8],
 ) -> Result<Vec<u8>, ErrorStack> {
-    let mut c = Crypter::new(t, Mode::Decrypt, key, iv)?;
+    let mut ctx = CipherCtx::new()?;
+    CipherCtxRef::decrypt_init(
+        &mut ctx,
+        Some(unsafe { CipherRef::from_ptr(t.as_ptr() as *mut _) }),
+        None,
+        None,
+    )?;
+
+    if t.is_ccm() || t.is_ocb() {
+        ctx.set_tag_length(tag.len())?;
+    }
+    ctx.set_key_length(key.len())?;
+    if let (Some(iv), Some(iv_len)) = (iv, t.iv_len()) {
+        if iv.len() != iv_len {
+            ctx.set_iv_length(iv.len())?;
+        }
+    }
+    CipherCtxRef::decrypt_init(&mut ctx, None, Some(key), iv)?;
+
     let mut out = vec![0; data.len() + t.block_size()];
 
     let is_ccm = t.is_ccm();
     if is_ccm || t.is_ocb() {
-        c.set_tag(tag)?;
+        ctx.set_tag(tag)?;
         if is_ccm {
-            c.set_data_len(data.len())?;
+            ctx.set_data_len(data.len())?;
         }
     }
 
-    c.aad_update(aad)?;
-    let count = c.update(data, &mut out)?;
+    ctx.cipher_update(aad, None)?;
+    let count = ctx.cipher_update(data, Some(&mut out))?;
 
     let rest = if t.is_ccm() {
         0
     } else {
-        c.set_tag(tag)?;
-        c.finalize(&mut out[count..])?
+        ctx.set_tag(tag)?;
+        ctx.cipher_final(&mut out[count..])?
     };
 
     out.truncate(count + rest);
@@ -1252,6 +1284,44 @@ mod tests {
         let tag = "d6965f5aa6e31302a9cc2b36";
 
         let mut actual_tag = [0; 12];
+        let out = encrypt_aead(
+            Cipher::aes_128_ccm(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(nonce).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(pt).unwrap(),
+            &mut actual_tag,
+        )
+        .unwrap();
+
+        assert_eq!(ct, hex::encode(out));
+        assert_eq!(tag, hex::encode(actual_tag));
+
+        let out = decrypt_aead(
+            Cipher::aes_128_ccm(),
+            &Vec::from_hex(key).unwrap(),
+            Some(&Vec::from_hex(nonce).unwrap()),
+            &Vec::from_hex(aad).unwrap(),
+            &Vec::from_hex(ct).unwrap(),
+            &Vec::from_hex(tag).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(pt, hex::encode(out));
+    }
+
+    #[test]
+    fn test_aes128_ccm_tag16() {
+        // Test case 225 from
+        // https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/mac/ccmtestvectors.zip
+        let key = "26511fb51fcfa75cb4b44da75a6e5a0e";
+        let nonce = "5a8aa485c316e9403aff859fbb";
+        let aad = "a16a2e741f1cd9717285b6d882c1fc53655e9773761ad697a7ee6410184c7982";
+
+        let pt = "8739b4bea1a099fe547499cbc6d1b13d849b8084c9b6acc5";
+        let ct = "50038b5fdd364ee747b70d00bd36840ece4ea19998123375";
+        let tag = "c0a458bfcafa3b2609afe0f825cbf503";
+
+        let mut actual_tag = [0; 16];
         let out = encrypt_aead(
             Cipher::aes_128_ccm(),
             &Vec::from_hex(key).unwrap(),
