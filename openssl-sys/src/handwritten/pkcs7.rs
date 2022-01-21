@@ -110,7 +110,7 @@ extern "C" {
 
 pub enum PKCS7 {}
 
-// TODO bk
+// TODO bk remove, as union not supported?
 // TODO bk add other ossl versions?
 // cfg_if! {
 //     if #[cfg(any(ossl111))] {

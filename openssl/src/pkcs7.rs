@@ -6,21 +6,20 @@ use std::ptr;
 
 use crate::bio::{MemBio, MemBioSlice};
 use crate::error::ErrorStack;
-use crate::pkey::{HasPrivate, PKeyRef};
+use crate::pkey::{HasPrivate, PKey, PKeyRef};
 use crate::stack::{Stack, StackRef};
 use crate::symm::Cipher;
 use crate::x509::store::X509StoreRef;
 use crate::x509::{X509Ref, X509, X509Attribute};
 use crate::{cvt, cvt_p};
-use crate::asn1::{Asn1ObjectRef, Asn1Type};
+use crate::asn1::{Asn1Object, Asn1Type};
 use openssl_macros::corresponds;
 use crate::hash::MessageDigest;
 use crate::nid::Nid;
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::PKCS7_SIGNER_INFO;
-    fn drop = Pkcs7SignerInfo::free; // ffi::PKCS7_SIGNER_INFO_free;
-    // TODO bk fn drop = ffi::PKCS7_SIGNER_INFO_free;
+    fn drop = ffi::PKCS7_SIGNER_INFO_free;
 
     /// A `PKCS_SIGNER_INFO` signer info strucuture
     pub struct Pkcs7SignerInfo;
@@ -200,15 +199,17 @@ impl Pkcs7 {
     ///
     pub fn set_signed_attributes(
         signer_info: &Pkcs7SignerInfoRef,
-        attributes: &StackRef<X509Attribute>
+        attributes: Stack<X509Attribute>
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(
                 ffi::PKCS7_set_signed_attributes(
                     signer_info.as_ptr(),
                     attributes.as_ptr()
-                ))
-                .map(|_| ())
+                )
+            )?;
+            mem::forget(attributes);
+            Ok(())
         }
     }
 
@@ -222,21 +223,25 @@ impl Pkcs7 {
     /// Note: `value` is immutable, but the OpenSSL function takes a (non-const) void pointer. Thus,
     /// we have to cast to mutable in the unsafe block. Yes, that's dirty, but at least, the rust
     /// api is now correct.
+    /// OpenSSL takes ownership of `value`.
     ///
     pub fn add_signed_attribute(
         signer_info: &Pkcs7SignerInfoRef,
         nid: Nid,
         atrtype: Asn1Type,
-        value: &Asn1ObjectRef
+        value: Asn1Object
     ) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::PKCS7_add_signed_attribute(
-                signer_info.as_ptr(),
-                nid.as_raw(),
-                atrtype.as_raw(),
-                value.as_ptr() as *mut c_void
-            ))
-                .map(|_| ())
+            cvt(
+                ffi::PKCS7_add_signed_attribute(
+                    signer_info.as_ptr(),
+                    nid.as_raw(),
+                    atrtype.as_raw(),
+                    value.as_ptr() as *mut c_void
+                )
+            )?;
+            mem::forget(value);
+            Ok(())
         }
     }
 }
@@ -398,14 +403,20 @@ impl Pkcs7Ref {
     ///
     /// `cert` is the signer's certificate.
     ///
+    /// This method moves the ownership of `cert` to the PKCS7 structure.
+    ///
     /// This corresponds to [`PKCS7_add_certificate`]
     ///
-    pub fn add_certificate(&self, cert: &X509Ref) -> Result<(), ErrorStack> {
+    pub fn add_certificate(&self, cert: X509) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(ffi::PKCS7_add_certificate(
-                self.as_ptr(),
-                cert.as_ptr()
-            )).map(|_| ())
+            cvt(
+                ffi::PKCS7_add_certificate(
+                    self.as_ptr(),
+                    cert.as_ptr()
+                )
+            )?;
+            mem::forget(cert);
+            Ok(())
         }
     }
 
@@ -414,26 +425,38 @@ impl Pkcs7Ref {
     /// `cert` is the signer's certificate. `pkey` is the signer's (private) key. `algorithm` is
     /// the hash algorithm to be used.
     ///
-    /// Returns a signer info structure, which can be used to add signed attributes.
+    /// Returns a signer info structure, which can be used to add signed attributes. `cert` is not
+    /// consumed by this method (actually by `PKCS7_add_signature`), but `pkey` is. Create a clone
+    /// before calling `add_signature()`, if you need the key later:
+    /// ```
+    /// let signer_key_clone = signer_key.clone();
+    /// let signer_info = pkcs7_message.add_signature(
+    ///     signer_cert,
+    ///     signer_key_clone,
+    ///     DIGEST_ALGORITHM
+    /// );
+    ///  ```
     ///
     /// This corresponds to [`PKCS7_add_signature`]
     ///
     pub fn add_signature<PT>(
         &self,
         cert: &X509Ref,
-        pkey: &PKeyRef<PT>,
+        pkey: PKey<PT>,
         algorithm: MessageDigest
     ) -> Result<Pkcs7SignerInfo, ErrorStack>
     where
         PT: HasPrivate,
     {
         unsafe {
-            cvt_p(ffi::PKCS7_add_signature(
+            let signer_info = cvt_p(ffi::PKCS7_add_signature(
                 self.as_ptr(),
                 cert.as_ptr(),
                 pkey.as_ptr(),
                 algorithm.as_ptr()
-            )).map(Pkcs7SignerInfo)
+            ));
+            mem::forget(pkey);
+            signer_info.map(Pkcs7SignerInfo)
         }
     }
 
