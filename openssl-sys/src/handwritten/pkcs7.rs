@@ -254,6 +254,8 @@ extern "C" {
 
     pub fn PKCS7_add_certificate(p7: *mut PKCS7, x509: *mut X509) -> c_int;
 
+    pub fn PKCS7_get0_certificates(p7: *mut PKCS7) -> *mut stack_st_X509;
+
     pub fn PKCS7_add_signature(
         p7: *mut PKCS7,
         x509: *mut X509,

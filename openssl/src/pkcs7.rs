@@ -420,6 +420,24 @@ impl Pkcs7Ref {
         }
     }
 
+    /// Get the certificates stored to a PKCS#7 structure
+    ///
+    /// The returned `Stack<X509>` does not own the certificates.
+    ///
+    /// This corresponds to [`PKCS7_get0_certificates`]
+    ///
+    pub fn get_certificates(&self) -> Result<Stack<X509>, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::PKCS7_get0_certificates(self.as_ptr()))?;
+            let stack = Stack::<X509>::from_ptr(ptr);
+            for cert in &stack {
+                mem::forget(cert.to_owned());
+            }
+
+            Ok(stack)
+        }
+    }
+
     /// Add signature information to the PKCS#7 structure.
     ///
     /// `cert` is the signer's certificate. `pkey` is the signer's (private) key. `algorithm` is
