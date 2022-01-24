@@ -48,7 +48,7 @@ fn env(name: &str) -> Option<OsString> {
     env_inner(&prefixed).or_else(|| env_inner(name))
 }
 
-fn find_openssl(target: &str) -> (PathBuf, PathBuf) {
+fn find_openssl(target: &str) -> (Vec<PathBuf>, PathBuf) {
     #[cfg(feature = "vendored")]
     {
         // vendor if the feature is present, unless
@@ -65,13 +65,10 @@ fn main() {
 
     let target = env::var("TARGET").unwrap();
 
-    let (lib_dir, include_dir) = find_openssl(&target);
+    let (lib_dirs, include_dir) = find_openssl(&target);
 
-    if !Path::new(&lib_dir).exists() {
-        panic!(
-            "OpenSSL library directory does not exist: {}",
-            lib_dir.to_string_lossy()
-        );
+    if !lib_dirs.iter().all(|p| Path::new(p).exists()) {
+        panic!("OpenSSL library directory does not exist: {:?}", lib_dirs);
     }
     if !Path::new(&include_dir).exists() {
         panic!(
@@ -80,10 +77,12 @@ fn main() {
         );
     }
 
-    println!(
-        "cargo:rustc-link-search=native={}",
-        lib_dir.to_string_lossy()
-    );
+    for lib_dir in lib_dirs.iter() {
+        println!(
+            "cargo:rustc-link-search=native={}",
+            lib_dir.to_string_lossy()
+        );
+    }
     println!("cargo:include={}", include_dir.to_string_lossy());
 
     let version = postprocess(&[include_dir]);
@@ -106,7 +105,7 @@ fn main() {
         },
     };
 
-    let kind = determine_mode(Path::new(&lib_dir), &libs);
+    let kind = determine_mode(&lib_dirs, &libs);
     for lib in libs.into_iter() {
         println!("cargo:rustc-link-lib={}={}", kind, lib);
     }
@@ -346,7 +345,7 @@ fn parse_new_version(version: &str) -> u64 {
 /// Given a libdir for OpenSSL (where artifacts are located) as well as the name
 /// of the libraries we're linking to, figure out whether we should link them
 /// statically or dynamically.
-fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
+fn determine_mode(libdirs: &[PathBuf], libs: &[&str]) -> &'static str {
     // First see if a mode was explicitly requested
     let kind = env("OPENSSL_STATIC");
     match kind.as_ref().and_then(|s| s.to_str()) {
@@ -357,13 +356,18 @@ fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
 
     // Next, see what files we actually have to link against, and see what our
     // possibilities even are.
-    let files = libdir
-        .read_dir()
-        .unwrap()
-        .map(|e| e.unwrap())
-        .map(|e| e.file_name())
-        .filter_map(|e| e.into_string().ok())
-        .collect::<HashSet<_>>();
+    let mut files = HashSet::new();
+    for dir in libdirs {
+        for path in dir
+            .read_dir()
+            .unwrap()
+            .map(|e| e.unwrap())
+            .map(|e| e.file_name())
+            .filter_map(|e| e.into_string().ok())
+        {
+            files.insert(path);
+        }
+    }
     let can_static = libs
         .iter()
         .all(|l| files.contains(&format!("lib{}.a", l)) || files.contains(&format!("{}.lib", l)));
@@ -377,9 +381,9 @@ fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
         (false, true) => return "dylib",
         (false, false) => {
             panic!(
-                "OpenSSL libdir at `{}` does not contain the required files \
+                "OpenSSL libdir at `{:?}` does not contain the required files \
                  to either statically or dynamically link OpenSSL",
-                libdir.display()
+                libdirs
             );
         }
         (true, true) => {}

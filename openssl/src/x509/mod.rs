@@ -1413,7 +1413,7 @@ impl X509VerifyResult {
         }
     }
 
-    /// Successful peer certifiate verification.
+    /// Successful peer certificate verification.
     pub const OK: X509VerifyResult = X509VerifyResult(ffi::X509_V_OK);
     /// Application verification failure.
     pub const APPLICATION_VERIFICATION: X509VerifyResult =

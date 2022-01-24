@@ -271,7 +271,7 @@ where
 
     /// Signs the contents of `data`.
     ///
-    /// If `sig` is set to `None`, an upper bound on the number of bytes required for the output buffere will be
+    /// If `sig` is set to `None`, an upper bound on the number of bytes required for the output buffer will be
     /// returned.
     ///
     /// # Note
