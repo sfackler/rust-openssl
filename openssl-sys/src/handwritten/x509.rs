@@ -297,6 +297,7 @@ const_ptr_api! {
     }
 }
 extern "C" {
+    pub fn X509_issuer_name_hash(x: *mut ::X509) -> c_ulong;
     pub fn X509_subject_name_hash(x: *mut ::X509) -> c_ulong;
 }
 const_ptr_api! {
