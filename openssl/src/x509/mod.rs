@@ -677,6 +677,35 @@ impl fmt::Debug for X509 {
     }
 }
 
+impl fmt::Debug for X509Ref {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let serial = match &self.serial_number().to_bn() {
+            Ok(bn) => match bn.to_hex_str() {
+                Ok(hex) => hex.to_string(),
+                Err(_) => "".to_string(),
+            },
+            Err(_) => "".to_string(),
+        };
+        let mut debug_struct = formatter.debug_struct("X509");
+        debug_struct.field("serial_number", &serial);
+        debug_struct.field("signature_algorithm", &self.signature_algorithm().object());
+        debug_struct.field("issuer", &self.issuer_name());
+        debug_struct.field("subject", &self.subject_name());
+        if let Some(subject_alt_names) = &self.subject_alt_names() {
+            debug_struct.field("subject_alt_names", subject_alt_names);
+        }
+        debug_struct.field("not_before", &self.not_before());
+        debug_struct.field("not_after", &self.not_after());
+
+        if let Ok(public_key) = &self.public_key() {
+            debug_struct.field("public_key", public_key);
+        };
+        // TODO: Print extensions once they are supported on the X509 struct.
+
+        debug_struct.finish()
+    }
+}
+
 impl AsRef<X509Ref> for X509Ref {
     fn as_ref(&self) -> &X509Ref {
         self
@@ -827,15 +856,17 @@ impl X509NameBuilder {
     ///
     /// [`X509_NAME_add_entry_by_txt`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_add_entry_by_txt.html
     pub fn append_entry_by_text(&mut self, field: &str, value: &str) -> Result<(), ErrorStack> {
+        let value_len = value.len() as c_int;
+        let value_c = CString::new(value).unwrap();
         unsafe {
             let field = CString::new(field).unwrap();
-            assert!(value.len() <= c_int::max_value() as usize);
+            assert!(value_len <= c_int::MAX);
             cvt(ffi::X509_NAME_add_entry_by_txt(
                 self.0.as_ptr(),
                 field.as_ptr() as *mut _,
                 ffi::MBSTRING_UTF8,
-                value.as_ptr(),
-                value.len() as c_int,
+                value_c.as_ptr() as *mut _,
+                value_len,
                 -1,
                 0,
             ))
@@ -854,15 +885,17 @@ impl X509NameBuilder {
         value: &str,
         ty: Asn1Type,
     ) -> Result<(), ErrorStack> {
+        let value_len = value.len() as c_int;
+        let value_c = CString::new(value).unwrap();
         unsafe {
             let field = CString::new(field).unwrap();
-            assert!(value.len() <= c_int::max_value() as usize);
+            assert!(value_len <= c_int::MAX);
             cvt(ffi::X509_NAME_add_entry_by_txt(
                 self.0.as_ptr(),
                 field.as_ptr() as *mut _,
                 ty.as_raw(),
-                value.as_ptr(),
-                value.len() as c_int,
+                value_c.as_ptr() as *mut _,
+                value_len,
                 -1,
                 0,
             ))
@@ -876,14 +909,16 @@ impl X509NameBuilder {
     ///
     /// [`X509_NAME_add_entry_by_NID`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_add_entry_by_NID.html
     pub fn append_entry_by_nid(&mut self, field: Nid, value: &str) -> Result<(), ErrorStack> {
+        let value_len = value.len() as c_int;
+        let value_c = CString::new(value).unwrap();
         unsafe {
-            assert!(value.len() <= c_int::max_value() as usize);
+            assert!(value_len <= c_int::MAX);
             cvt(ffi::X509_NAME_add_entry_by_NID(
                 self.0.as_ptr(),
                 field.as_raw(),
                 ffi::MBSTRING_UTF8,
-                value.as_ptr() as *mut _,
-                value.len() as c_int,
+                value_c.as_ptr() as *mut _,
+                value_len,
                 -1,
                 0,
             ))
@@ -902,14 +937,16 @@ impl X509NameBuilder {
         value: &str,
         ty: Asn1Type,
     ) -> Result<(), ErrorStack> {
+        let value_len = value.len() as c_int;
+        let value_c = CString::new(value).unwrap();
         unsafe {
-            assert!(value.len() <= c_int::max_value() as usize);
+            assert!(value_len <= c_int::MAX);
             cvt(ffi::X509_NAME_add_entry_by_NID(
                 self.0.as_ptr(),
                 field.as_raw(),
                 ty.as_raw(),
-                value.as_ptr() as *mut _,
-                value.len() as c_int,
+                value_c.as_ptr() as *mut _,
+                value_len,
                 -1,
                 0,
             ))
@@ -990,6 +1027,11 @@ impl X509NameRef {
         /// [`i2d_X509_NAME`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_X509_NAME.html
         to_der,
         ffi::i2d_X509_NAME
+    }
+
+    /// Compares the X509Name with another X509Ref
+    pub fn cmp(&self, other: &X509NameRef) -> i32 {
+        unsafe { ffi::X509_NAME_cmp(self.as_ptr() as *const _, other.as_ptr() as *const _) as i32 }
     }
 }
 

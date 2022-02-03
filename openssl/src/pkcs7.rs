@@ -244,6 +244,35 @@ impl Pkcs7 {
             Ok(())
         }
     }
+
+    /// Get the certificates stored to a PKCS#7 structure
+    ///
+    /// Unfortunately, there is no corresponding function in openssl. Thus, we have to enter
+    /// openssl's internal PKCS7 struct. This is also, what openssl does, when e.g.
+    /// `openssl pkcs7 -in pkcs7.pem -print-certs` is called.
+    pub fn certificates(&self) -> Result<Stack<X509>, ErrorStack> {
+        unsafe {
+            let pkcs7: *mut ffi::PKCS7 = self.0;
+            let pkcs7_type: Asn1Object = Asn1Object::from_ptr((*pkcs7).type_);
+            let pkcs7_certs: Stack<X509> = match pkcs7_type.nid() {
+                Nid::PKCS7_SIGNED =>
+                    Stack::from_ptr((*(*pkcs7).d.sign).cert),
+                Nid::PKCS7_SIGNEDANDENVELOPED =>
+                    Stack::from_ptr((*(*pkcs7).d.signed_and_enveloped).cert),
+                _ => Stack::new()?,
+            };
+            let mut certs: Stack<X509> = Stack::new()?;
+            for cert_ref in &pkcs7_certs {
+                // Note: `to_owned()` increases the openssl reference count of the cert, so the
+                // stack becomes an additional owner of the certs.
+                let cert = cert_ref.to_owned();
+                certs.push(cert)?;
+            }
+            mem::forget(pkcs7_certs);  // Otherwise, certs would be removed from self, when this method returns
+            Ok(certs)
+        }
+    }
+
 }
 
 impl Pkcs7Ref {
@@ -367,7 +396,7 @@ impl Pkcs7Ref {
             ))?;
 
             // The returned stack is owned by the caller, but the certs inside are not! Our stack interface can't deal
-            // with that, so instead we just manually bump the refcount of the certs so that the whole stack is properly
+            // with that, so instead we just manually bump up the refcount of the certs so that the whole stack is properly
             // owned.
             let stack = Stack::<X509>::from_ptr(ptr);
             for cert in &stack {
@@ -417,24 +446,6 @@ impl Pkcs7Ref {
             )?;
             mem::forget(cert);
             Ok(())
-        }
-    }
-
-    /// Get the certificates stored to a PKCS#7 structure
-    ///
-    /// The returned `Stack<X509>` does not own the certificates.
-    ///
-    /// This corresponds to [`PKCS7_get0_certificates`]
-    ///
-    pub fn get_certificates(&self) -> Result<Stack<X509>, ErrorStack> {
-        unsafe {
-            let ptr = cvt_p(ffi::PKCS7_get0_certificates(self.as_ptr()))?;
-            let stack = Stack::<X509>::from_ptr(ptr);
-            for cert in &stack {
-                mem::forget(cert.to_owned());
-            }
-
-            Ok(stack)
         }
     }
 
@@ -519,6 +530,30 @@ impl Pkcs7Ref {
             }
         }
 
+    }
+
+    /// Get the content of a PKCS#7 signed object (`pkcs7->d.sign->contents`).
+    pub fn get_content(&self) -> Result<Vec<u8>, ErrorStack> {
+        unsafe {
+            let buffer: [u8; 1024] = [0; 1024];
+            let out_bio = MemBio::new()?;
+            let bcont_bio = ptr::null_mut();
+            let pkcs7_bio = cvt_p(ffi::PKCS7_dataInit(self.as_ptr(), bcont_bio))
+                .map(|bio| MemBio::from_ptr(bio))?;
+            loop {
+                let bytes = ffi::BIO_read(
+                    pkcs7_bio.as_ptr(),
+                    buffer.as_ptr() as *mut c_void,
+                    buffer.len() as i32);
+                if bytes <= 0 { break; }
+                let _len = ffi::BIO_write(
+                    out_bio.as_ptr(),
+                    buffer.as_ptr() as *const c_void,
+                    bytes);
+            }
+            out_bio.flush()?;
+            Ok(out_bio.get_buf().to_vec())
+        }
     }
 
     /// Finalize a PKCS#7 structure. If the structure's type is `Nid::PKCS7_SIGNED` or
@@ -694,5 +729,10 @@ mod tests {
         let result = Pkcs7::from_smime(input.as_bytes());
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn signed_pkcs7_with_content() {
+
     }
 }

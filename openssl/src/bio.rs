@@ -1,10 +1,11 @@
+use std::ffi::c_void;
 use cfg_if::cfg_if;
 use libc::c_int;
 use std::marker::PhantomData;
 use std::ptr;
 use std::slice;
 
-use crate::cvt_p;
+use crate::{cvt, cvt_p};
 use crate::error::ErrorStack;
 
 pub struct MemBioSlice<'a>(*mut ffi::BIO, PhantomData<&'a [u8]>);
@@ -69,6 +70,14 @@ impl MemBio {
 
     pub unsafe fn from_ptr(bio: *mut ffi::BIO) -> MemBio {
         MemBio(bio)
+    }
+
+    pub fn flush(&self) -> Result<(), ErrorStack> {
+        unsafe {
+            let null_ptr: *mut c_void = ptr::null_mut();
+            cvt(ffi::BIO_ctrl(self.0, ffi::BIO_CTRL_FLUSH, 0, null_ptr))?;
+        }
+        Ok(())
     }
 }
 

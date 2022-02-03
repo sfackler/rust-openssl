@@ -7,9 +7,8 @@ use *;
 stack!(stack_st_PKCS7_SIGNER_INFO);
 stack!(stack_st_PKCS7_RECIP_INFO);
 
-// TODO bk add other ossl versions?
 cfg_if! {
-    if #[cfg(any(ossl111))] {
+    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
         #[repr(C)]
         pub struct PKCS7_SIGNED {
             pub version: *mut ASN1_INTEGER, /* version 1 */
@@ -24,9 +23,8 @@ cfg_if! {
     }
 }
 
-// TODO bk add other ossl versions?
 cfg_if! {
-    if #[cfg(any(ossl111))] {
+    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
         #[repr(C)]
         pub struct PKCS7_ENC_CONTENT {
             pub content_type: *mut ASN1_OBJECT,
@@ -39,9 +37,8 @@ cfg_if! {
     }
 }
 
-// TODO bk add other ossl versions?
 cfg_if! {
-    if #[cfg(any(ossl111))] {
+    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
         #[repr(C)]
         pub struct PKCS7_ENVELOPE {
             pub version: *mut ASN1_INTEGER, /* version 0 */
@@ -53,9 +50,8 @@ cfg_if! {
     }
 }
 
-// TODO bk add other ossl versions?
 cfg_if! {
-    if #[cfg(any(ossl111))] {
+    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
         #[repr(C)]
         pub struct PKCS7_SIGN_ENVELOPE {
             pub version: *mut ASN1_INTEGER, /* version 1 */
@@ -71,9 +67,8 @@ cfg_if! {
     }
 }
 
-// TODO bk add other ossl versions?
 cfg_if! {
-    if #[cfg(any(ossl111))] {
+    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
         #[repr(C)]
         pub struct PKCS7_DIGEST {
             pub version: *mut ASN1_INTEGER, /* version 0 */
@@ -86,9 +81,8 @@ cfg_if! {
     }
 }
 
-// TODO bk add other ossl versions?
 cfg_if! {
-    if #[cfg(any(ossl111))] {
+    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
         #[repr(C)]
         pub struct PKCS7_ENCRYPT {
             pub version: *mut ASN1_INTEGER, /* version 0 */
@@ -108,58 +102,54 @@ extern "C" {
     pub fn PKCS7_SIGNER_INFO_free(info: *mut PKCS7_SIGNER_INFO);
 }
 
-pub enum PKCS7 {}
-
-// TODO bk remove, as union not supported?
-// TODO bk add other ossl versions?
-// cfg_if! {
-//     if #[cfg(any(ossl111))] {
-//         #[repr(C)]
-//         pub struct PKCS7 {
-//             /*
-//              * The following is non NULL if it contains ASN1 encoding of this
-//              * structure
-//              */
-//             pub asn1: *mut c_uchar,
-//             pub length: c_long,
-//             // # define PKCS7_S_HEADER  0
-//             // # define PKCS7_S_BODY    1
-//             // # define PKCS7_S_TAIL    2
-//             pub state: c_int, /* used during processing */
-//             pub detached: c_int,
-//             pub r#type: *mut ASN1_OBJECT,
-//             /* content as defined by the type */
-//             /*
-//              * all encryption/message digests are applied to the 'contents', leaving
-//              * out the 'type' field.
-//              */
-//             pub d: *mut PKCS7_SIGNED,
-//             // pub d: union {
-//             //     pub ptr: *mut c_char,
-//             //     /* NID_pkcs7_data */
-//             //     pub data: *mut ASN1_OCTET_STRING,
-//             //     /* NID_pkcs7_signed */
-//             //     pub sign: *mut PKCS7_SIGNED,
-//             //     /* NID_pkcs7_enveloped */
-//             //     pub enveloped: *mut PKCS7_ENVELOPE,
-//             //     /* NID_pkcs7_signedAndEnveloped */
-//             //     pub signed_and_enveloped: *mut PKCS7_SIGN_ENVELOPE,
-//             //     /* NID_pkcs7_digest */
-//             //     pub digest: *mut PKCS7_DIGEST,
-//             //     /* NID_pkcs7_encrypted */
-//             //     pub encrypted: *mut PKCS7_ENCRYPT,
-//             //     /* Anything else */
-//             //     pub other: *mut ASN1_TYPE,
-//             // },
-//         }
-//     } else {
-//          pub enum PKCS7 {}
-//     }
-// }
-
-// TODO bk add other ossl versions?
 cfg_if! {
-    if #[cfg(any(ossl111))] {
+    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
+        #[repr(C)]
+        pub struct PKCS7 {
+            /*
+             * The following is non NULL if it contains ASN1 encoding of this
+             * structure
+             */
+            pub asn1: *mut c_uchar,
+            pub length: c_long,
+            // # define PKCS7_S_HEADER  0
+            // # define PKCS7_S_BODY    1
+            // # define PKCS7_S_TAIL    2
+            pub state: c_int, /* used during processing */
+            pub detached: c_int,
+            pub type_: *mut ASN1_OBJECT,
+            /* content as defined by the type */
+            /*
+             * all encryption/message digests are applied to the 'contents', leaving
+             * out the 'type' field.
+             */
+            pub d: PKCS7_data,
+        }
+        #[repr(C)]
+        pub union PKCS7_data {
+            pub ptr: *mut c_char,
+            /* NID_pkcs7_data */
+            pub data: *mut ASN1_OCTET_STRING,
+            /* NID_pkcs7_signed */
+            pub sign: *mut PKCS7_SIGNED,
+            /* NID_pkcs7_enveloped */
+            pub enveloped: *mut PKCS7_ENVELOPE,
+            /* NID_pkcs7_signedAndEnveloped */
+            pub signed_and_enveloped: *mut PKCS7_SIGN_ENVELOPE,
+            /* NID_pkcs7_digest */
+            pub digest: *mut PKCS7_DIGEST,
+            /* NID_pkcs7_encrypted */
+            pub encrypted: *mut PKCS7_ENCRYPT,
+            /* Anything else */
+            pub other: *mut ASN1_TYPE,
+        }
+    } else {
+         pub enum PKCS7 {}
+    }
+}
+
+cfg_if! {
+    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
         #[repr(C)]
         pub struct PKCS7_ISSUER_AND_SERIAL {
             pub issuer: *mut X509_NAME,
@@ -171,7 +161,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl111))] {
+    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
         #[repr(C)]
         pub struct PKCS7_SIGNER_INFO {
             pub version: *mut ASN1_INTEGER, /* version 1 */
@@ -253,8 +243,6 @@ extern "C" {
     pub fn PKCS7_set_type(p7: *mut PKCS7, nid_pkcs7: c_int) -> c_int;
 
     pub fn PKCS7_add_certificate(p7: *mut PKCS7, x509: *mut X509) -> c_int;
-
-    pub fn PKCS7_get0_certificates(p7: *mut PKCS7) -> *mut stack_st_X509;
 
     pub fn PKCS7_add_signature(
         p7: *mut PKCS7,
