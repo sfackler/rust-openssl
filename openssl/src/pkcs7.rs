@@ -32,9 +32,6 @@ impl Pkcs7SignerInfo {
     pub fn as_ptr(&self) -> *mut ffi::PKCS7_SIGNER_INFO {
         &self.0 as *const _ as *mut _
     }
-    pub fn free(slf: *mut ffi::PKCS7_SIGNER_INFO) {
-        unsafe { ffi::PKCS7_SIGNER_INFO_free(slf) }
-    }
 }
 
 foreign_type_and_impl_send_sync! {
@@ -524,7 +521,7 @@ impl Pkcs7Ref {
             if len == content_length {
                 Ok(bio)
             } else {
-                return Err(ErrorStack::get());
+                Err(ErrorStack::get())
             }
         }
     }
@@ -735,8 +732,7 @@ mod tests {
         fn get_serial() -> Asn1Integer {
             let mut big_number = BigNum::new().unwrap();
             big_number.rand(128, MsbOption::MAYBE_ZERO, true).unwrap();
-            let serial = Asn1Integer::from_bn(&big_number).unwrap();
-            serial
+            Asn1Integer::from_bn(&big_number).unwrap()
         }
 
         // Create an X.509 certificate for encryption

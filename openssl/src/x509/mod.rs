@@ -227,7 +227,7 @@ impl X509Builder {
     /// the X.509 standard should pass `2` to this method.
     #[corresponds(X509_set_version)]
     pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::X509_set_version(self.0.as_ptr(), version.into())).map(|_| ()) }
+        unsafe { cvt(ffi::X509_set_version(self.0.as_ptr(), version)).map(|_| ()) }
     }
 
     /// Sets the serial number of the certificate.
@@ -831,7 +831,6 @@ impl X509NameBuilder {
         let value_c = CString::new(value).unwrap();
         unsafe {
             let field = CString::new(field).unwrap();
-            assert!(value_len <= c_int::MAX);
             cvt(ffi::X509_NAME_add_entry_by_txt(
                 self.0.as_ptr(),
                 field.as_ptr() as *mut _,
@@ -858,7 +857,6 @@ impl X509NameBuilder {
         let value_c = CString::new(value).unwrap();
         unsafe {
             let field = CString::new(field).unwrap();
-            assert!(value_len <= c_int::MAX);
             cvt(ffi::X509_NAME_add_entry_by_txt(
                 self.0.as_ptr(),
                 field.as_ptr() as *mut _,
@@ -879,7 +877,6 @@ impl X509NameBuilder {
         let value_len = value.len() as c_int;
         let value_c = CString::new(value).unwrap();
         unsafe {
-            assert!(value_len <= c_int::MAX);
             cvt(ffi::X509_NAME_add_entry_by_NID(
                 self.0.as_ptr(),
                 field.as_raw(),
@@ -905,7 +902,6 @@ impl X509NameBuilder {
         let value_len = value.len() as c_int;
         let value_c = CString::new(value).unwrap();
         unsafe {
-            assert!(value_len <= c_int::MAX);
             cvt(ffi::X509_NAME_add_entry_by_NID(
                 self.0.as_ptr(),
                 field.as_raw(),
@@ -994,10 +990,10 @@ impl X509NameRef {
         ffi::i2d_X509_NAME
     }
 
-    /// Compares the X509NameRef with another X509NameRef
+    /// Compares the X509NameRef with an`other` X509NameRef
     /// Returns 0 if equal.
     #[corresponds(X509_NAME_cmp)]
-    pub fn cmp(&self, other: &X509NameRef) -> i32 {
+    pub fn cmp_with(&self, other: &X509NameRef) -> i32 {
         unsafe { ffi::X509_NAME_cmp(self.as_ptr() as *const _, other.as_ptr() as *const _) as i32 }
     }
 }
@@ -1110,7 +1106,7 @@ impl X509ReqBuilder {
     ///
     ///[`X509_REQ_set_version`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_set_version.html
     pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::X509_REQ_set_version(self.0.as_ptr(), version.into())).map(|_| ()) }
+        unsafe { cvt(ffi::X509_REQ_set_version(self.0.as_ptr(), version)).map(|_| ()) }
     }
 
     /// Set the issuer name.
