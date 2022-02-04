@@ -215,11 +215,10 @@ impl Pkcs7 {
     /// `nid` is the Nid of the attribute, `atrtype` is the attribute's type (an ASN.1 tag
     /// value) and `value` is the ASN1 object to be added.
     ///
-    ///
-    /// Note: `value` is immutable, but the OpenSSL function takes a (non-const) void pointer. Thus,
-    /// we have to cast to mutable in the unsafe block.
-    /// OpenSSL takes ownership of `value`.
-    ///
+    //  Note: `value` is immutable, but the OpenSSL function takes a (non-const) void pointer. Thus,
+    //  we have to cast to mutable in the unsafe block.
+    //  OpenSSL takes ownership of `value`.
+    //
     #[corresponds(PKCS7_add_signed_attribute)]
     pub fn add_signed_attribute(
         signer_info: &Pkcs7SignerInfoRef,
@@ -243,10 +242,10 @@ impl Pkcs7 {
 
     /// Get the certificates stored to a PKCS#7 structure
     ///
-    /// Unfortunately, there is no corresponding function in openssl. Thus, we have to enter
-    /// openssl's internal PKCS7 struct. This is also, what openssl does, when e.g.
-    /// `openssl pkcs7 -in pkcs7.pem -print-certs` is called.
-    ///
+    // Unfortunately, there is no corresponding function in openssl. Thus, we have to enter
+    // openssl's internal PKCS7 struct. This is also, what openssl does, when e.g.
+    // `openssl pkcs7 -in pkcs7.pem -print-certs` is called.
+    //
     pub fn certificates(&self) -> Result<Stack<X509>, ErrorStack> {
         unsafe {
             let pkcs7: *mut ffi::PKCS7 = self.0;
@@ -489,8 +488,7 @@ impl Pkcs7Ref {
     /// );
     ///  ```
     ///
-    /// #[corresponds(PKCS7_add_signature)]
-    ///
+    #[corresponds(PKCS7_add_signature)]
     pub fn add_signature<PT>(
         &self,
         cert: &X509Ref,
@@ -552,7 +550,10 @@ impl Pkcs7Ref {
 
     }
 
-    /// Get the content of a PKCS#7 signed object (`pkcs7->d.sign->contents`).
+    /// Get the content of a PKCS#7 object (`pkcs7->d.sign->contents`).
+    /// The PKCS#7 structure must be either of type NID_pkcs7_signed or NID_pkcs7_digest.
+    /// There is no 1:1 correspondance to a single api function in openssl.
+    ///
     pub fn get_content(&self) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
             let buffer: [u8; 1024] = [0; 1024];
@@ -580,7 +581,6 @@ impl Pkcs7Ref {
     /// `Nid::PKCS7_SIGNEDANDENVELOPED`, it will be signed.
     ///
     #[corresponds(PKCS7_dataFinal)]
-    ///
     pub fn finalize(&self, bio: &MemBio) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::PKCS7_dataFinal(

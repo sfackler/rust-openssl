@@ -248,19 +248,19 @@ extern "C" {
         p7: *mut PKCS7,
         x509: *mut X509,
         pkey: *mut EVP_PKEY,
-        digest: *const EVP_MD
+        digest: *const EVP_MD,
     ) -> *mut PKCS7_SIGNER_INFO;
 
     pub fn PKCS7_set_signed_attributes(
         p7si: *mut PKCS7_SIGNER_INFO,
-        attributes: *mut stack_st_X509_ATTRIBUTE
+        attributes: *mut stack_st_X509_ATTRIBUTE,
     ) -> c_int;
 
     pub fn PKCS7_add_signed_attribute(
         p7si: *mut PKCS7_SIGNER_INFO,
         nid: c_int,
         attrtype: c_int,
-        data: *mut c_void
+        data: *mut c_void,
     ) -> c_int;
 
     pub fn PKCS7_content_new(p7: *mut PKCS7, nid_pkcs7: c_int) -> c_int;
