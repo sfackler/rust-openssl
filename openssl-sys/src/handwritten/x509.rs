@@ -371,7 +371,8 @@ extern "C" {
         bytes: *const c_uchar,
         len: c_int,
     ) -> c_int;
-}extern "C" {
+}
+extern "C" {
     pub fn X509_set_pubkey(x: *mut X509, pkey: *mut EVP_PKEY) -> c_int;
     pub fn X509_REQ_verify(req: *mut X509_REQ, pkey: *mut EVP_PKEY) -> c_int;
     #[cfg(any(ossl110, libressl273))]
@@ -642,4 +643,3 @@ extern "C" {
     pub fn X509_get_default_cert_dir_env() -> *const c_char;
     pub fn X509_get_default_cert_dir() -> *const c_char;
 }
-

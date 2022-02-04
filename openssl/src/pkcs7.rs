@@ -4,18 +4,18 @@ use libc::{c_int, c_void};
 use std::mem;
 use std::ptr;
 
+use crate::asn1::{Asn1Object, Asn1Type};
 use crate::bio::{MemBio, MemBioSlice};
 use crate::error::ErrorStack;
+use crate::hash::MessageDigest;
+use crate::nid::Nid;
 use crate::pkey::{HasPrivate, PKey, PKeyRef};
 use crate::stack::{Stack, StackRef};
 use crate::symm::Cipher;
 use crate::x509::store::X509StoreRef;
-use crate::x509::{X509Ref, X509, X509Attribute};
+use crate::x509::{X509Attribute, X509Ref, X509};
 use crate::{cvt, cvt_p};
-use crate::asn1::{Asn1Object, Asn1Type};
 use openssl_macros::corresponds;
-use crate::hash::MessageDigest;
-use crate::nid::Nid;
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::PKCS7_SIGNER_INFO;
@@ -29,13 +29,11 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl Pkcs7SignerInfo {
-    pub fn as_ptr(&self)-> *mut ffi::PKCS7_SIGNER_INFO {
+    pub fn as_ptr(&self) -> *mut ffi::PKCS7_SIGNER_INFO {
         &self.0 as *const _ as *mut _
     }
     pub fn free(slf: *mut ffi::PKCS7_SIGNER_INFO) {
-        unsafe {
-            ffi::PKCS7_SIGNER_INFO_free(slf)
-        }
+        unsafe { ffi::PKCS7_SIGNER_INFO_free(slf) }
     }
 }
 
@@ -196,15 +194,13 @@ impl Pkcs7 {
     #[corresponds(PKCS7_set_signed_attributes)]
     pub fn set_signed_attributes(
         signer_info: &Pkcs7SignerInfoRef,
-        attributes: Stack<X509Attribute>
+        attributes: Stack<X509Attribute>,
     ) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(
-                ffi::PKCS7_set_signed_attributes(
-                    signer_info.as_ptr(),
-                    attributes.as_ptr()
-                )
-            )?;
+            cvt(ffi::PKCS7_set_signed_attributes(
+                signer_info.as_ptr(),
+                attributes.as_ptr(),
+            ))?;
             mem::forget(attributes);
             Ok(())
         }
@@ -224,17 +220,15 @@ impl Pkcs7 {
         signer_info: &Pkcs7SignerInfoRef,
         nid: Nid,
         atrtype: Asn1Type,
-        value: Asn1Object
+        value: Asn1Object,
     ) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(
-                ffi::PKCS7_add_signed_attribute(
-                    signer_info.as_ptr(),
-                    nid.as_raw(),
-                    atrtype.as_raw(),
-                    value.as_ptr() as *mut c_void
-                )
-            )?;
+            cvt(ffi::PKCS7_add_signed_attribute(
+                signer_info.as_ptr(),
+                nid.as_raw(),
+                atrtype.as_raw(),
+                value.as_ptr() as *mut c_void,
+            ))?;
             mem::forget(value);
             Ok(())
         }
@@ -251,10 +245,10 @@ impl Pkcs7 {
             let pkcs7: *mut ffi::PKCS7 = self.0;
             let pkcs7_type: Asn1Object = Asn1Object::from_ptr((*pkcs7).type_);
             let pkcs7_certs: Stack<X509> = match pkcs7_type.nid() {
-                Nid::PKCS7_SIGNED =>
-                    Stack::from_ptr((*(*pkcs7).d.sign).cert),
-                Nid::PKCS7_SIGNEDANDENVELOPED =>
-                    Stack::from_ptr((*(*pkcs7).d.signed_and_enveloped).cert),
+                Nid::PKCS7_SIGNED => Stack::from_ptr((*(*pkcs7).d.sign).cert),
+                Nid::PKCS7_SIGNEDANDENVELOPED => {
+                    Stack::from_ptr((*(*pkcs7).d.signed_and_enveloped).cert)
+                }
                 _ => Stack::new()?,
             };
             let mut certs: Stack<X509> = Stack::new()?;
@@ -264,11 +258,10 @@ impl Pkcs7 {
                 let cert = cert_ref.to_owned();
                 certs.push(cert)?;
             }
-            mem::forget(pkcs7_certs);  // Otherwise, certs would be removed from self, when this method returns
+            mem::forget(pkcs7_certs); // Otherwise, certs would be removed from self, when this method returns
             Ok(certs)
         }
     }
-
 }
 
 impl Pkcs7Ref {
@@ -416,12 +409,7 @@ impl Pkcs7Ref {
     #[corresponds(PKCS7_set_type)]
     ///
     pub fn set_type(&self, nid: Nid) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::PKCS7_set_type(
-                self.as_ptr(),
-                nid.as_raw()
-            )).map(|_| ())
-        }
+        unsafe { cvt(ffi::PKCS7_set_type(self.as_ptr(), nid.as_raw())).map(|_| ()) }
     }
 
     /// Add the signer certificate to a PKCS#7 structure
@@ -434,12 +422,7 @@ impl Pkcs7Ref {
     ///
     pub fn add_certificate(&self, cert: X509) -> Result<(), ErrorStack> {
         unsafe {
-            cvt(
-                ffi::PKCS7_add_certificate(
-                    self.as_ptr(),
-                    cert.as_ptr()
-                )
-            )?;
+            cvt(ffi::PKCS7_add_certificate(self.as_ptr(), cert.as_ptr()))?;
             mem::forget(cert);
             Ok(())
         }
@@ -493,7 +476,7 @@ impl Pkcs7Ref {
         &self,
         cert: &X509Ref,
         pkey: PKey<PT>,
-        algorithm: MessageDigest
+        algorithm: MessageDigest,
     ) -> Result<Pkcs7SignerInfo, ErrorStack>
     where
         PT: HasPrivate,
@@ -503,7 +486,7 @@ impl Pkcs7Ref {
                 self.as_ptr(),
                 cert.as_ptr(),
                 pkey.as_ptr(),
-                algorithm.as_ptr()
+                algorithm.as_ptr(),
             ));
             mem::forget(pkey);
             signer_info.map(Pkcs7SignerInfo)
@@ -527,10 +510,7 @@ impl Pkcs7Ref {
     pub fn add_content(&self, content_type: Nid, content: &[u8]) -> Result<MemBio, ErrorStack> {
         unsafe {
             // Initialize content
-            cvt(ffi::PKCS7_content_new(
-                self.as_ptr(),
-                content_type.as_raw()
-            )).map(|_| ())?;
+            cvt(ffi::PKCS7_content_new(self.as_ptr(), content_type.as_raw())).map(|_| ())?;
             // Write content
             let bcont_bio = ptr::null_mut();
             let bio = cvt_p(ffi::PKCS7_dataInit(self.as_ptr(), bcont_bio))
@@ -539,7 +519,7 @@ impl Pkcs7Ref {
             let len = ffi::BIO_write(
                 bio.as_ptr(),
                 content.as_ptr() as *const c_void,
-                content_length
+                content_length,
             );
             if len == content_length {
                 Ok(bio)
@@ -547,7 +527,6 @@ impl Pkcs7Ref {
                 return Err(ErrorStack::get());
             }
         }
-
     }
 
     /// Get the content of a PKCS#7 object (`pkcs7->d.sign->contents`).
@@ -565,12 +544,13 @@ impl Pkcs7Ref {
                 let bytes = ffi::BIO_read(
                     pkcs7_bio.as_ptr(),
                     buffer.as_ptr() as *mut c_void,
-                    buffer.len() as i32);
-                if bytes <= 0 { break; }
-                let _len = ffi::BIO_write(
-                    out_bio.as_ptr(),
-                    buffer.as_ptr() as *const c_void,
-                    bytes);
+                    buffer.len() as i32,
+                );
+                if bytes <= 0 {
+                    break;
+                }
+                let _len =
+                    ffi::BIO_write(out_bio.as_ptr(), buffer.as_ptr() as *const c_void, bytes);
             }
             out_bio.flush()?;
             Ok(out_bio.get_buf().to_vec())
@@ -582,14 +562,8 @@ impl Pkcs7Ref {
     ///
     #[corresponds(PKCS7_dataFinal)]
     pub fn finalize(&self, bio: &MemBio) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::PKCS7_dataFinal(
-                self.as_ptr(),
-                bio.as_ptr()
-            )).map(|_| ())
-        }
+        unsafe { cvt(ffi::PKCS7_dataFinal(self.as_ptr(), bio.as_ptr())).map(|_| ()) }
     }
-
 }
 
 #[cfg(test)]
@@ -603,9 +577,9 @@ mod tests {
     use crate::rsa::Rsa;
     use crate::stack::Stack;
     use crate::symm::Cipher;
-    use crate::x509::store::X509StoreBuilder;
-    use crate::x509::{X509, X509Name, X509Req};
     use crate::x509::extension::{ExtendedKeyUsage, KeyUsage, SubjectAlternativeName};
+    use crate::x509::store::X509StoreBuilder;
+    use crate::x509::{X509Name, X509Req, X509};
 
     #[test]
     fn encrypt_decrypt_test() {
@@ -773,13 +747,19 @@ mod tests {
         let rsa = Rsa::generate(2048).unwrap();
         let pkey = PKey::from_rsa(rsa).unwrap();
         let mut name = X509Name::builder().unwrap();
-        name.append_entry_by_nid(Nid::COMMONNAME, "Example Name").unwrap();
+        name.append_entry_by_nid(Nid::COMMONNAME, "Example Name")
+            .unwrap();
         name.append_entry_by_nid(Nid::COUNTRYNAME, "DE").unwrap();
-        name.append_entry_by_nid(Nid::STATEORPROVINCENAME, "Example State").unwrap();
-        name.append_entry_by_nid(Nid::LOCALITYNAME, "Example Town").unwrap();
-        name.append_entry_by_nid(Nid::ORGANIZATIONNAME, "Example Company").unwrap();
-        name.append_entry_by_nid(Nid::ORGANIZATIONALUNITNAME, "Example Unit").unwrap();
-        name.append_entry_by_nid(Nid::PKCS9_EMAILADDRESS, "info@example.com").unwrap();
+        name.append_entry_by_nid(Nid::STATEORPROVINCENAME, "Example State")
+            .unwrap();
+        name.append_entry_by_nid(Nid::LOCALITYNAME, "Example Town")
+            .unwrap();
+        name.append_entry_by_nid(Nid::ORGANIZATIONNAME, "Example Company")
+            .unwrap();
+        name.append_entry_by_nid(Nid::ORGANIZATIONALUNITNAME, "Example Unit")
+            .unwrap();
+        name.append_entry_by_nid(Nid::PKCS9_EMAILADDRESS, "info@example.com")
+            .unwrap();
         let name = name.build();
         let mut builder = X509::builder().unwrap();
         builder.set_version(2).unwrap(); // 2 -> X509v3
@@ -860,7 +840,7 @@ mod tests {
             cipher,
             Pkcs7Flags::BINARY,
         )
-            .unwrap();
+        .unwrap();
 
         enveloped_data.to_pem().unwrap();
     }

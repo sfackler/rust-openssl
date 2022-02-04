@@ -714,8 +714,9 @@ impl X509Attribute {
             cvt_p(ffi::X509_ATTRIBUTE_create(
                 nid.as_raw(),
                 ffi::V_ASN1_PRINTABLESTRING,
-                asn1_string as *mut c_void
-            )).map(X509Attribute)
+                asn1_string as *mut c_void,
+            ))
+            .map(X509Attribute)
         }
     }
     pub fn from_octet(nid: Nid, value: &[u8]) -> Result<X509Attribute, ErrorStack> {
@@ -727,8 +728,9 @@ impl X509Attribute {
             cvt_p(ffi::X509_ATTRIBUTE_create(
                 nid.as_raw(),
                 ffi::V_ASN1_OCTET_STRING,
-                asn1_string as *mut c_void
-            )).map(X509Attribute)
+                asn1_string as *mut c_void,
+            ))
+            .map(X509Attribute)
         }
     }
 }
@@ -996,12 +998,7 @@ impl X509NameRef {
     /// Returns 0 if equal.
     #[corresponds(X509_NAME_cmp)]
     pub fn cmp(&self, other: &X509NameRef) -> i32 {
-        unsafe {
-            ffi::X509_NAME_cmp(
-                self.as_ptr() as *const _,
-                other.as_ptr() as *const _
-            ) as i32
-        }
+        unsafe { ffi::X509_NAME_cmp(self.as_ptr() as *const _, other.as_ptr() as *const _) as i32 }
     }
 }
 

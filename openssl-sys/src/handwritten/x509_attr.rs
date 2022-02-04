@@ -11,44 +11,41 @@ extern "C" {
     pub fn X509_ATTRIBUTE_create(
         nid: c_int,
         atrtype: c_int,
-        value: *mut c_void
+        value: *mut c_void,
     ) -> *mut X509_ATTRIBUTE;
     pub fn X509_ATTRIBUTE_create_by_NID(
         attr: *mut *mut X509_ATTRIBUTE,
         nid: c_int,
         atrtype: c_int,
         data: *const c_void,
-        len: c_int
+        len: c_int,
     ) -> *mut X509_ATTRIBUTE;
     pub fn X509_ATTRIBUTE_create_by_OBJ(
         attr: *mut *mut X509_ATTRIBUTE,
         obj: *const ASN1_OBJECT,
         atrtype: c_int,
         data: *const c_void,
-        len: c_int
+        len: c_int,
     ) -> *mut X509_ATTRIBUTE;
     pub fn X509_ATTRIBUTE_create_by_txt(
         attr: *mut *mut X509_ATTRIBUTE,
         atrname: *const c_char,
         atrtype: c_int,
         bytes: *const c_uchar,
-        len: c_int
+        len: c_int,
     ) -> *mut X509_ATTRIBUTE;
-    pub fn X509_ATTRIBUTE_set1_object(
-        attr: *mut X509_ATTRIBUTE,
-        obj: *const ASN1_OBJECT
-    ) -> c_int;
+    pub fn X509_ATTRIBUTE_set1_object(attr: *mut X509_ATTRIBUTE, obj: *const ASN1_OBJECT) -> c_int;
     pub fn X509_ATTRIBUTE_set1_data(
         attr: *mut X509_ATTRIBUTE,
         attrtype: c_int,
         data: *const c_void,
-        len: c_int
+        len: c_int,
     ) -> c_int;
     pub fn X509_ATTRIBUTE_get0_data(
         attr: *mut X509_ATTRIBUTE,
         idx: c_int,
         atrtype: c_int,
-        data: *mut c_void
+        data: *mut c_void,
     ) -> *mut c_void;
 }
 const_ptr_api! {

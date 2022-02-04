@@ -1,12 +1,12 @@
-use std::ffi::c_void;
 use cfg_if::cfg_if;
 use libc::c_int;
+use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::ptr;
 use std::slice;
 
-use crate::{cvt, cvt_p};
 use crate::error::ErrorStack;
+use crate::{cvt, cvt_p};
 
 pub struct MemBioSlice<'a>(*mut ffi::BIO, PhantomData<&'a [u8]>);
 

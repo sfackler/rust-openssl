@@ -139,7 +139,7 @@ fn main() {
             || s.ends_with("_cb_ex")
     });
     cfg.field_name(|_s, field| {
-        if field == "type_" || field == "r#type"{
+        if field == "type_" {
             "type".to_string()
         } else {
             field.to_string()
