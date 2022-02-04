@@ -185,6 +185,7 @@ extern "C" {
 const_ptr_api! {
     extern "C" {
         pub fn i2d_PKCS7(a: #[const_ptr_if(ossl300)] PKCS7, buf: *mut *mut u8) -> c_int;
+        pub fn i2d_PKCS7_bio(bio: *mut BIO, p7: #[const_ptr_if(ossl300)]  PKCS7) -> c_int;
     }
 }
 
@@ -268,6 +269,4 @@ extern "C" {
     pub fn PKCS7_dataInit(p7: *mut PKCS7, bio: *mut BIO) -> *mut BIO;
 
     pub fn PKCS7_dataFinal(p7: *mut PKCS7, bio: *mut BIO) -> c_int;
-
-    pub fn i2d_PKCS7_bio(bio: *mut BIO, p7: *mut PKCS7) -> c_int;
 }

@@ -15,8 +15,6 @@ pub enum X509_EXTENSION {}
 
 stack!(stack_st_X509_EXTENSION);
 
-stack!(stack_st_X509_ATTRIBUTE);
-
 cfg_if! {
     if #[cfg(ossl110)] {
         pub enum X509_REQ_INFO {}

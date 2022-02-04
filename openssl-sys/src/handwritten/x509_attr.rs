@@ -51,7 +51,7 @@ extern "C" {
 const_ptr_api! {
     extern "C" {
         pub fn X509_ATTRIBUTE_count(
-            attr: #[const_ptr_if(any(ossl111, ossl300))] X509_ATTRIBUTE // const since OpenSSL v1.1.1
+            attr: #[const_ptr_if(any(ossl110, ossl111, ossl300))] X509_ATTRIBUTE // const since OpenSSL v1.1.0
         ) -> c_int;
     }
 }
