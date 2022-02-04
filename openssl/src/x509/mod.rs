@@ -710,7 +710,7 @@ impl X509Attribute {
         unsafe {
             let value = value.as_ptr() as *mut _;
             let asn1_string = ffi::ASN1_STRING_new();
-            ffi::ASN1_STRING_set(asn1_string, value, value_len);
+            cvt(ffi::ASN1_STRING_set(asn1_string, value, value_len))?;
             cvt_p(ffi::X509_ATTRIBUTE_create(
                 nid.as_raw(),
                 ffi::V_ASN1_PRINTABLESTRING,
@@ -724,7 +724,7 @@ impl X509Attribute {
         unsafe {
             let value = value.as_ptr() as *mut _;
             let asn1_string = ffi::ASN1_STRING_new();
-            ffi::ASN1_STRING_set(asn1_string, value, value_len);
+            cvt(ffi::ASN1_STRING_set(asn1_string, value, value_len))?;
             cvt_p(ffi::X509_ATTRIBUTE_create(
                 nid.as_raw(),
                 ffi::V_ASN1_OCTET_STRING,

@@ -2,11 +2,12 @@ use cfg_if::cfg_if;
 use libc::c_int;
 use std::ffi::c_void;
 use std::marker::PhantomData;
+use std::os::raw::c_long;
 use std::ptr;
 use std::slice;
 
 use crate::error::ErrorStack;
-use crate::{cvt, cvt_p};
+use crate::cvt_p;
 
 pub struct MemBioSlice<'a>(*mut ffi::BIO, PhantomData<&'a [u8]>);
 
@@ -75,9 +76,13 @@ impl MemBio {
     pub fn flush(&self) -> Result<(), ErrorStack> {
         unsafe {
             let null_ptr: *mut c_void = ptr::null_mut();
-            cvt(ffi::BIO_ctrl(self.0, ffi::BIO_CTRL_FLUSH, 0, null_ptr))?;
+            let ret: c_long = ffi::BIO_ctrl(self.0, ffi::BIO_CTRL_FLUSH, 0, null_ptr);
+            if ret <= 0 {
+                Err(ErrorStack::get())
+            } else {
+                Ok(())
+            }
         }
-        Ok(())
     }
 }
 
