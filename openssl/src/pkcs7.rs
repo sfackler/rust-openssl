@@ -213,12 +213,11 @@ impl Pkcs7 {
     /// Add a signed attribute to a PKCS7_SIGNER_INFO structure
     ///
     /// `nid` is the Nid of the attribute, `atrtype` is the attribute's type (an ASN.1 tag
-    /// value) and `value ` is
+    /// value) and `value` is the ASN1 object to be added.
     ///
     ///
     /// Note: `value` is immutable, but the OpenSSL function takes a (non-const) void pointer. Thus,
-    /// we have to cast to mutable in the unsafe block. Yes, that's dirty, but at least, the rust
-    /// api is now correct.
+    /// we have to cast to mutable in the unsafe block.
     /// OpenSSL takes ownership of `value`.
     ///
     #[corresponds(PKCS7_add_signed_attribute)]
@@ -247,6 +246,7 @@ impl Pkcs7 {
     /// Unfortunately, there is no corresponding function in openssl. Thus, we have to enter
     /// openssl's internal PKCS7 struct. This is also, what openssl does, when e.g.
     /// `openssl pkcs7 -in pkcs7.pem -print-certs` is called.
+    ///
     pub fn certificates(&self) -> Result<Stack<X509>, ErrorStack> {
         unsafe {
             let pkcs7: *mut ffi::PKCS7 = self.0;
@@ -525,9 +525,6 @@ impl Pkcs7Ref {
     /// - Nid::PKCS7_ENCRYPTED
     /// - Nid::PKCS7_DIGEST
     /// `content` is the payload of type `content_type`.
-    ///
-    /// This uses the following OpenSSL functions: [`PKCS7_content_new`],
-    /// [`PKCS7_dataInit`], [`BIO_write`]
     ///
     pub fn add_content(&self, content_type: Nid, content: &[u8]) -> Result<MemBio, ErrorStack> {
         unsafe {
