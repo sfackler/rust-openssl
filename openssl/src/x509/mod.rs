@@ -677,35 +677,6 @@ impl fmt::Debug for X509 {
     }
 }
 
-impl fmt::Debug for X509Ref {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let serial = match &self.serial_number().to_bn() {
-            Ok(bn) => match bn.to_hex_str() {
-                Ok(hex) => hex.to_string(),
-                Err(_) => "".to_string(),
-            },
-            Err(_) => "".to_string(),
-        };
-        let mut debug_struct = formatter.debug_struct("X509");
-        debug_struct.field("serial_number", &serial);
-        debug_struct.field("signature_algorithm", &self.signature_algorithm().object());
-        debug_struct.field("issuer", &self.issuer_name());
-        debug_struct.field("subject", &self.subject_name());
-        if let Some(subject_alt_names) = &self.subject_alt_names() {
-            debug_struct.field("subject_alt_names", subject_alt_names);
-        }
-        debug_struct.field("not_before", &self.not_before());
-        debug_struct.field("not_after", &self.not_after());
-
-        if let Ok(public_key) = &self.public_key() {
-            debug_struct.field("public_key", public_key);
-        };
-        // TODO: Print extensions once they are supported on the X509 struct.
-
-        debug_struct.finish()
-    }
-}
-
 impl AsRef<X509Ref> for X509Ref {
     fn as_ref(&self) -> &X509Ref {
         self
@@ -852,9 +823,7 @@ impl X509NameBuilder {
 
     /// Add a field entry by str.
     ///
-    /// This corresponds to [`X509_NAME_add_entry_by_txt`].
-    ///
-    /// [`X509_NAME_add_entry_by_txt`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_add_entry_by_txt.html
+    #[corresponds(X509_NAME_add_entry_by_txt)]
     pub fn append_entry_by_text(&mut self, field: &str, value: &str) -> Result<(), ErrorStack> {
         let value_len = value.len() as c_int;
         let value_c = CString::new(value).unwrap();
@@ -876,9 +845,7 @@ impl X509NameBuilder {
 
     /// Add a field entry by str with a specific type.
     ///
-    /// This corresponds to [`X509_NAME_add_entry_by_txt`].
-    ///
-    /// [`X509_NAME_add_entry_by_txt`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_add_entry_by_txt.html
+    #[corresponds(X509_NAME_add_entry_by_txt)]
     pub fn append_entry_by_text_with_type(
         &mut self,
         field: &str,
@@ -905,9 +872,7 @@ impl X509NameBuilder {
 
     /// Add a field entry by NID.
     ///
-    /// This corresponds to [`X509_NAME_add_entry_by_NID`].
-    ///
-    /// [`X509_NAME_add_entry_by_NID`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_add_entry_by_NID.html
+    #[corresponds(X509_NAME_add_entry_by_NID)]
     pub fn append_entry_by_nid(&mut self, field: Nid, value: &str) -> Result<(), ErrorStack> {
         let value_len = value.len() as c_int;
         let value_c = CString::new(value).unwrap();
@@ -928,9 +893,7 @@ impl X509NameBuilder {
 
     /// Add a field entry by NID with a specific type.
     ///
-    /// This corresponds to [`X509_NAME_add_entry_by_NID`].
-    ///
-    /// [`X509_NAME_add_entry_by_NID`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_add_entry_by_NID.html
+    #[corresponds(X509_NAME_add_entry_by_NID)]
     pub fn append_entry_by_nid_with_type(
         &mut self,
         field: Nid,
@@ -1029,9 +992,16 @@ impl X509NameRef {
         ffi::i2d_X509_NAME
     }
 
-    /// Compares the X509Name with another X509Ref
+    /// Compares the X509NameRef with another X509NameRef
+    /// Returns 0 if equal.
+    #[corresponds(X509_NAME_cmp)]
     pub fn cmp(&self, other: &X509NameRef) -> i32 {
-        unsafe { ffi::X509_NAME_cmp(self.as_ptr() as *const _, other.as_ptr() as *const _) as i32 }
+        unsafe {
+            ffi::X509_NAME_cmp(
+                self.as_ptr() as *const _,
+                other.as_ptr() as *const _
+            ) as i32
+        }
     }
 }
 

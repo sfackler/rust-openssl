@@ -606,10 +606,7 @@ impl Asn1Object {
     }
 
     /// Constructs an ASN.1 Object Identifier from an OID.
-    ///
-    /// This corresponds to [`OBJ_nid2obj`].
-    ///
-    /// [`OBJ_nid2obj`]: https://www.openssl.org/docs/man1.1.0/man3/OBJ_txt2obj.html
+    #[corresponds(OBJ_nid2obj)]
     #[allow(clippy::should_implement_trait)]
     pub fn from_nid(nid: &Nid) -> Result<Asn1Object, ErrorStack> {
         unsafe {

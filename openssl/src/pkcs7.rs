@@ -85,9 +85,7 @@ bitflags! {
 impl Pkcs7 {
     /// Create a new an empty PKCS#7 object.
     ///
-    /// This corresponds to [`PKCS7_new`].
-    ///
-    /// [`PKCS7_new`]: https://www.openssl.org/docs/manmaster/man3/PKCS7_new.html
+    #[corresponds(PKCS7_new)]
     pub fn new() -> Result<Pkcs7, ErrorStack> {
         unsafe {
             let pkcs7 = cvt_p(ffi::PKCS7_new()).map(Pkcs7)?;
@@ -157,7 +155,7 @@ impl Pkcs7 {
                 cipher.as_ptr(),
                 flags.bits,
             ))
-                .map(Pkcs7)
+            .map(Pkcs7)
         }
     }
 
@@ -175,8 +173,8 @@ impl Pkcs7 {
         input: &[u8],
         flags: Pkcs7Flags,
     ) -> Result<Pkcs7, ErrorStack>
-        where
-            PT: HasPrivate,
+    where
+        PT: HasPrivate,
     {
         let input_bio = MemBioSlice::new(input)?;
         unsafe {
@@ -187,7 +185,7 @@ impl Pkcs7 {
                 input_bio.as_ptr(),
                 flags.bits,
             ))
-                .map(Pkcs7)
+            .map(Pkcs7)
         }
     }
 
@@ -195,8 +193,7 @@ impl Pkcs7 {
     ///
     /// `attributes` is a stack of the attributes to be added.
     ///
-    /// This corresponds to [`PKCS7_set_signed_attributes`]
-    ///
+    #[corresponds(PKCS7_set_signed_attributes)]
     pub fn set_signed_attributes(
         signer_info: &Pkcs7SignerInfoRef,
         attributes: Stack<X509Attribute>
@@ -218,13 +215,13 @@ impl Pkcs7 {
     /// `nid` is the Nid of the attribute, `atrtype` is the attribute's type (an ASN.1 tag
     /// value) and `value ` is
     ///
-    /// Corresponds to [`PKCS7_add_signed_attribute`]
     ///
     /// Note: `value` is immutable, but the OpenSSL function takes a (non-const) void pointer. Thus,
     /// we have to cast to mutable in the unsafe block. Yes, that's dirty, but at least, the rust
     /// api is now correct.
     /// OpenSSL takes ownership of `value`.
     ///
+    #[corresponds(PKCS7_add_signed_attribute)]
     pub fn add_signed_attribute(
         signer_info: &Pkcs7SignerInfoRef,
         nid: Nid,
@@ -417,7 +414,7 @@ impl Pkcs7Ref {
     /// - Nid::PKCS7_ENCRYPTED
     /// - Nid::PKCS7_DIGEST
     ///
-    /// This corresponds to [`PKCS7_set_type`].
+    #[corresponds(PKCS7_set_type)]
     ///
     pub fn set_type(&self, nid: Nid) -> Result<(), ErrorStack> {
         unsafe {
@@ -434,7 +431,7 @@ impl Pkcs7Ref {
     ///
     /// This method moves the ownership of `cert` to the PKCS7 structure.
     ///
-    /// This corresponds to [`PKCS7_add_certificate`]
+    #[corresponds(PKCS7_add_certificate)]
     ///
     pub fn add_certificate(&self, cert: X509) -> Result<(), ErrorStack> {
         unsafe {
@@ -456,17 +453,43 @@ impl Pkcs7Ref {
     ///
     /// Returns a signer info structure, which can be used to add signed attributes. `cert` is not
     /// consumed by this method (actually by `PKCS7_add_signature`), but `pkey` is. Create a clone
-    /// before calling `add_signature()`, if you need the key later:
+    /// before calling `add_signature()`, if you need the key later.:
     /// ```
+    /// use openssl::hash::MessageDigest;
+    /// use openssl::pkcs7::Pkcs7;
+    /// use openssl::pkey::PKey;
+    /// use openssl::rsa::Rsa;
+    /// use openssl::x509::X509;
+    ///
+    /// let cert = X509::from_pem("-----BEGIN CERTIFICATE-----\n\
+    /// MIICsTCCAZmgAwIBAgIBADANBgkqhkiG9w0BAQsFADAcMRowGAYDVQQDDBFJU0VD\n\
+    /// IFRlc3QgUm9vdCBDQTAeFw0yMTEyMTUwOTM4MDVaFw0zMTEyMTMwOTM4MDVaMBwx\n\
+    /// GjAYBgNVBAMMEUlTRUMgVGVzdCBSb290IENBMIIBIjANBgkqhkiG9w0BAQEFAAOC\n\
+    /// AQ8AMIIBCgKCAQEAt/0hnw55JtLXN4QjFhmkZ5mSSWQM3Zlz8+n9wq99jkDXEUJ8\n\
+    /// YGoHxpBTb9vz4BXwVcR/3GWtdJ/h5VQinBYcZLwtz5iel4IC7pl40a8Kcco3hm6U\n\
+    /// +qve9wz2YS8coQ1+zQ/pqKxDOLN60BYVkuxZeC4yrg8ovL5YftKzeVmFUjDJ/vdI\n\
+    /// RyDScFpso2UoW6mklW/C94ciJH6O9m9dd2nWow1vUfHJlAEm8nPRxJRQH1bROxmc\n\
+    /// 5hLHMjY5wFD/jo31jzxSeZxNhLTKDwn8nG1AGoHaudUNtAF25tzcU6nLKt6BIS+g\n\
+    /// wqavL3kwp+1O/GwLPQb4xXmPs2+f2M08XMbVKwIDAQABMA0GCSqGSIb3DQEBCwUA\n\
+    /// A4IBAQCKWDHBLlLPDmb1C5FOcJ/wqdwCzkbZEBs3qsiim5EDkt9+nqAfwyn0K+G8\n\
+    /// BLJU+6kgeGW1Z0t3RqJdAq2r+7bfMVF8ubJ4zEu5xJAz9UppI4XZ8sZ8iS5rZ3hq\n\
+    /// zjU+7G8Lnu9gEh18q5foi59Wx0jjMyIOWh8O9j3P0JjLxAR8v4rKlYp89/A+vWfb\n\
+    /// TAj31LhWWTa0kiDP9Wd8cMWCjurv7Wq7U4K9gHMHpmUclxs1ByHtFdd61OXSdfBx\n\
+    /// P1Te4tjxQpVo5zURkwOfZoOC6ikAOYoTAYNHP/qwsX2+KnL/JeGCcU4WtoWIp8mt\n\
+    /// HkHgG5EBGoJmLFNFeQWB2yaqAhfD\n\
+    /// -----END CERTIFICATE-----".as_bytes()).unwrap();
+    /// let rsa = Rsa::generate(2048).unwrap();
+    /// let signer_key = PKey::from_rsa(rsa).unwrap();
     /// let signer_key_clone = signer_key.clone();
-    /// let signer_info = pkcs7_message.add_signature(
-    ///     signer_cert,
+    /// let pkcs7 = Pkcs7::new().unwrap();
+    /// let signer_info = &pkcs7.add_signature(
+    ///     &cert,
     ///     signer_key_clone,
-    ///     DIGEST_ALGORITHM
+    ///     MessageDigest::sha256()
     /// );
     ///  ```
     ///
-    /// This corresponds to [`PKCS7_add_signature`]
+    /// #[corresponds(PKCS7_add_signature)]
     ///
     pub fn add_signature<PT>(
         &self,
@@ -559,7 +582,7 @@ impl Pkcs7Ref {
     /// Finalize a PKCS#7 structure. If the structure's type is `Nid::PKCS7_SIGNED` or
     /// `Nid::PKCS7_SIGNEDANDENVELOPED`, it will be signed.
     ///
-    /// This corresponds to [`PKCS7_dataFinal`].
+    #[corresponds(PKCS7_dataFinal)]
     ///
     pub fn finalize(&self, bio: &MemBio) -> Result<(), ErrorStack> {
         unsafe {
@@ -574,13 +597,18 @@ impl Pkcs7Ref {
 
 #[cfg(test)]
 mod tests {
+    use crate::asn1::{Asn1Integer, Asn1Time};
+    use crate::bn::{BigNum, MsbOption};
     use crate::hash::MessageDigest;
+    use crate::nid::Nid;
     use crate::pkcs7::{Pkcs7, Pkcs7Flags};
     use crate::pkey::PKey;
+    use crate::rsa::Rsa;
     use crate::stack::Stack;
     use crate::symm::Cipher;
     use crate::x509::store::X509StoreBuilder;
-    use crate::x509::X509;
+    use crate::x509::{X509, X509Name, X509Req};
+    use crate::x509::extension::{ExtendedKeyUsage, KeyUsage, SubjectAlternativeName};
 
     #[test]
     fn encrypt_decrypt_test() {
@@ -732,7 +760,111 @@ mod tests {
     }
 
     #[test]
-    fn signed_pkcs7_with_content() {
+    fn enveloped_pkcs7() {
+        fn get_serial() -> Asn1Integer {
+            let mut big_number = BigNum::new().unwrap();
+            big_number.rand(128, MsbOption::MAYBE_ZERO, true).unwrap();
+            let serial = Asn1Integer::from_bn(&big_number).unwrap();
+            serial
+        }
 
+        // Create an X.509 certificate for encryption
+        let days: u32 = 365 * 10;
+        let not_before = Asn1Time::days_from_now(0).unwrap();
+        let not_after = Asn1Time::days_from_now(days).unwrap();
+        let serial = get_serial();
+        let rsa = Rsa::generate(2048).unwrap();
+        let pkey = PKey::from_rsa(rsa).unwrap();
+        let mut name = X509Name::builder().unwrap();
+        name.append_entry_by_nid(Nid::COMMONNAME, "Example Name").unwrap();
+        name.append_entry_by_nid(Nid::COUNTRYNAME, "DE").unwrap();
+        name.append_entry_by_nid(Nid::STATEORPROVINCENAME, "Example State").unwrap();
+        name.append_entry_by_nid(Nid::LOCALITYNAME, "Example Town").unwrap();
+        name.append_entry_by_nid(Nid::ORGANIZATIONNAME, "Example Company").unwrap();
+        name.append_entry_by_nid(Nid::ORGANIZATIONALUNITNAME, "Example Unit").unwrap();
+        name.append_entry_by_nid(Nid::PKCS9_EMAILADDRESS, "info@example.com").unwrap();
+        let name = name.build();
+        let mut builder = X509::builder().unwrap();
+        builder.set_version(2).unwrap(); // 2 -> X509v3
+        builder.set_serial_number(&serial).unwrap();
+        builder.set_subject_name(&name).unwrap();
+        builder.set_issuer_name(&name).unwrap();
+        builder.set_not_before(not_before.as_ref()).unwrap();
+        builder.set_not_after(not_after.as_ref()).unwrap();
+        builder.set_pubkey(&pkey).unwrap();
+        builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+        let encryption_cert = builder.build();
+
+        // Create a CSR
+        let challenge_password = "chaIIenge-passsw0rd";
+        let mut builder = X509Req::builder().unwrap();
+        builder.set_version(0).unwrap(); // 0x00 -> Version: 1
+        builder.set_subject_name(&name).unwrap();
+        // set SANs
+        // set KeyUsage to digital signature and key encipherment
+        let extensions = {
+            let context = builder.x509v3_context(None);
+            let mut ext_stack = Stack::new().unwrap();
+            ext_stack
+                .push(
+                    KeyUsage::new()
+                        .digital_signature()
+                        .key_encipherment()
+                        .build()
+                        .unwrap(),
+                )
+                .unwrap();
+            ext_stack
+                .push(ExtendedKeyUsage::new().server_auth().build().unwrap())
+                .unwrap();
+            ext_stack
+                .push(
+                    SubjectAlternativeName::new()
+                        .dns("server.example.com")
+                        .build(&context)
+                        .unwrap(),
+                )
+                .unwrap();
+            ext_stack
+                .push(
+                    SubjectAlternativeName::new()
+                        .ip("127.0.0.1")
+                        .build(&context)
+                        .unwrap(),
+                )
+                .unwrap();
+            ext_stack
+                .push(
+                    SubjectAlternativeName::new()
+                        .ip("::1")
+                        .build(&context)
+                        .unwrap(),
+                )
+                .unwrap();
+            ext_stack
+        };
+        builder.add_extensions(&extensions).unwrap();
+        builder
+            .add_attribute_by_nid(Nid::PKCS9_CHALLENGEPASSWORD, challenge_password)
+            .unwrap();
+        builder.set_pubkey(&pkey).unwrap();
+        builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+        let csr = builder.build();
+
+        // Create an enveloped PKCS #7 object
+        let cipher = Cipher::aes_256_cbc();
+        let mut encryption_certs: Stack<X509> = Stack::new().unwrap();
+        encryption_certs.push(encryption_cert).unwrap();
+
+        // Encrypt the CSR -> pkcsPKIEnvelope (PKCS#7 envelopedData)
+        let enveloped_data: Pkcs7 = Pkcs7::encrypt(
+            &encryption_certs,
+            &csr.to_der().unwrap(),
+            cipher,
+            Pkcs7Flags::BINARY,
+        )
+            .unwrap();
+
+        enveloped_data.to_pem().unwrap();
     }
 }
