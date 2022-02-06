@@ -31,5 +31,4 @@ openssl-macros = { path = "../openssl-macros" }
 ffi = { package = "openssl-sys", version = "0.9.69", path = "../openssl-sys" }
 
 [dev-dependencies]
-tempdir = "0.3"
 hex = "0.3"
