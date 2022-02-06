@@ -13,7 +13,6 @@ use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
-use tempdir::TempDir;
 
 use crate::dh::Dh;
 use crate::error::ErrorStack;
