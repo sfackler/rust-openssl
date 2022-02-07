@@ -8,7 +8,11 @@ stack!(stack_st_PKCS7_SIGNER_INFO);
 stack!(stack_st_PKCS7_RECIP_INFO);
 
 #[cfg(ossl300)]
-pub enum PKCS7_CTX {}
+#[repr(C)]
+pub struct PKCS7_CTX {
+    libctx: *mut OSSL_LIB_CTX,
+    propq: *mut c_char,
+}
 
 cfg_if! {
     if #[cfg(any(ossl101, libressl251))] {
