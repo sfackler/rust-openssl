@@ -8,7 +8,7 @@ stack!(stack_st_PKCS7_SIGNER_INFO);
 stack!(stack_st_PKCS7_RECIP_INFO);
 
 cfg_if! {
-    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
+    if #[cfg(ossl101)] {
         #[repr(C)]
         pub struct PKCS7_SIGNED {
             pub version: *mut ASN1_INTEGER, /* version 1 */
@@ -24,7 +24,16 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
+    if #[cfg(ossl300)] {
+        #[repr(C)]
+        pub struct PKCS7_ENC_CONTENT {
+            pub content_type: *mut ASN1_OBJECT,
+            pub algorithm: *mut X509_ALGOR,
+            pub enc_data: *mut ASN1_OCTET_STRING, /* [ 0 ] */
+            pub cipher: *const EVP_CIPHER,
+            pub ctx: *const PKCS7_CTX,
+        }
+    } else if #[cfg(ossl101)] {
         #[repr(C)]
         pub struct PKCS7_ENC_CONTENT {
             pub content_type: *mut ASN1_OBJECT,
@@ -38,7 +47,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
+    if #[cfg(ossl101)] {
         #[repr(C)]
         pub struct PKCS7_ENVELOPE {
             pub version: *mut ASN1_INTEGER, /* version 0 */
@@ -51,7 +60,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
+    if #[cfg(ossl101)] {
         #[repr(C)]
         pub struct PKCS7_SIGN_ENVELOPE {
             pub version: *mut ASN1_INTEGER, /* version 1 */
@@ -68,7 +77,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
+    if #[cfg(ossl101)] {
         #[repr(C)]
         pub struct PKCS7_DIGEST {
             pub version: *mut ASN1_INTEGER, /* version 0 */
@@ -82,7 +91,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
+    if #[cfg(ossl101)] {
         #[repr(C)]
         pub struct PKCS7_ENCRYPT {
             pub version: *mut ASN1_INTEGER, /* version 0 */
@@ -103,7 +112,7 @@ extern "C" {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
+    if #[cfg(any(ossl101, libressl251))] {
         #[repr(C)]
         pub struct PKCS7 {
             /*
@@ -149,7 +158,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
+    if #[cfg(ossl101)] {
         #[repr(C)]
         pub struct PKCS7_ISSUER_AND_SERIAL {
             pub issuer: *mut X509_NAME,
@@ -161,7 +170,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl111, ossl110, ossl101, ossl101))] {
+    if #[cfg(ossl101)] {
         #[repr(C)]
         pub struct PKCS7_SIGNER_INFO {
             pub version: *mut ASN1_INTEGER, /* version 1 */
