@@ -7,8 +7,11 @@ use *;
 stack!(stack_st_PKCS7_SIGNER_INFO);
 stack!(stack_st_PKCS7_RECIP_INFO);
 
+#[cfg(ossl300)]
+pub enum PKCS7_CTX {}
+
 cfg_if! {
-    if #[cfg(ossl101)] {
+    if #[cfg(any(ossl101, libressl251))] {
         #[repr(C)]
         pub struct PKCS7_SIGNED {
             pub version: *mut ASN1_INTEGER, /* version 1 */
@@ -24,30 +27,23 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl300)] {
+    if #[cfg(any(ossl101, libressl251))] {
         #[repr(C)]
         pub struct PKCS7_ENC_CONTENT {
             pub content_type: *mut ASN1_OBJECT,
             pub algorithm: *mut X509_ALGOR,
             pub enc_data: *mut ASN1_OCTET_STRING, /* [ 0 ] */
             pub cipher: *const EVP_CIPHER,
+            #[cfg(ossl300)]
             pub ctx: *const PKCS7_CTX,
-        }
-    } else if #[cfg(ossl101)] {
-        #[repr(C)]
-        pub struct PKCS7_ENC_CONTENT {
-            pub content_type: *mut ASN1_OBJECT,
-            pub algorithm: *mut X509_ALGOR,
-            pub enc_data: *mut ASN1_OCTET_STRING, /* [ 0 ] */
-            pub cipher: *const EVP_CIPHER,
-        }
+       }
     } else {
         pub enum PKCS7_ENC_CONTENT {}
     }
 }
 
 cfg_if! {
-    if #[cfg(ossl101)] {
+    if #[cfg(any(ossl101, libressl251))] {
         #[repr(C)]
         pub struct PKCS7_ENVELOPE {
             pub version: *mut ASN1_INTEGER, /* version 0 */
@@ -60,7 +56,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl101)] {
+    if #[cfg(any(ossl101, libressl251))] {
         #[repr(C)]
         pub struct PKCS7_SIGN_ENVELOPE {
             pub version: *mut ASN1_INTEGER, /* version 1 */
@@ -77,7 +73,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl101)] {
+    if #[cfg(any(ossl101, libressl251))] {
         #[repr(C)]
         pub struct PKCS7_DIGEST {
             pub version: *mut ASN1_INTEGER, /* version 0 */
@@ -91,7 +87,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl101)] {
+    if #[cfg(any(ossl101, libressl251))] {
         #[repr(C)]
         pub struct PKCS7_ENCRYPT {
             pub version: *mut ASN1_INTEGER, /* version 0 */
@@ -133,6 +129,8 @@ cfg_if! {
              * out the 'type' field.
              */
             pub d: PKCS7_data,
+            #[cfg(ossl300)]
+            pub ctx: PKCS7_CTX,
         }
         #[repr(C)]
         pub union PKCS7_data {
@@ -181,6 +179,8 @@ cfg_if! {
             pub enc_digest: *mut ASN1_OCTET_STRING,
             pub unauth_attr: *mut stack_st_X509_ATTRIBUTE, /* [ 1 ] */
             pub pkey: *mut EVP_PKEY, /* The private key to sign with */
+            #[cfg(ossl300)]
+            pub ctx: PKCS7_CTX,
         }
     } else {
         pub enum PKCS7_SIGNER_INFO {}
