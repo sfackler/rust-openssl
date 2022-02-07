@@ -180,7 +180,7 @@ cfg_if! {
             pub unauth_attr: *mut stack_st_X509_ATTRIBUTE, /* [ 1 ] */
             pub pkey: *mut EVP_PKEY, /* The private key to sign with */
             #[cfg(ossl300)]
-            pub ctx: PKCS7_CTX,
+            pub ctx: *const PKCS7_CTX,
         }
     } else {
         pub enum PKCS7_SIGNER_INFO {}
