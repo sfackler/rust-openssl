@@ -393,6 +393,12 @@ impl X509Ref {
         }
     }
 
+    /// Returns the hash of the certificates issuer
+    #[corresponds(X509_issuer_name_hash)]
+    pub fn issuer_name_hash(&self) -> u32 {
+        unsafe { ffi::X509_issuer_name_hash(self.as_ptr()) as u32 }
+    }
+
     /// Returns this certificate's subject alternative name entries, if they exist.
     #[corresponds(X509_get_ext_d2i)]
     pub fn subject_alt_names(&self) -> Option<Stack<GeneralName>> {
