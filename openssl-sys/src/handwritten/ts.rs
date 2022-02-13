@@ -6,14 +6,9 @@ pub enum TS_REQ {}
 pub enum TS_ACCURACY {}
 pub enum TS_TST_INFO {}
 
-const_ptr_api! {
-    extern "C" {
-        #[cfg(ossl101)]
-        pub fn i2d_TS_TST_INFO(a: #[const_ptr_if(not(ossl300))] TS_TST_INFO, pp: *mut *mut c_uchar) -> c_int;
-    }
-}
-
 extern "C" {
+    #[cfg(ossl101)]
+    pub fn i2d_TS_TST_INFO(a: *const TS_TST_INFO, pp: *mut *mut c_uchar) -> c_int;
     #[cfg(ossl101)]
     pub fn d2i_TS_TST_INFO(
         a: *mut *mut ::TS_TST_INFO,
