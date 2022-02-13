@@ -19,8 +19,8 @@ foreign_type_and_impl_send_sync! {
     /// High level TS_TST_INFO wrapper
     ///
     /// Time Stamp Token is set of hash of data, hash algorithm used to calculate the hash, and etc.
-    /// Time Stamp Token is used to prove that hash of data exists before the time this info is generated (genTIme).
-    /// Usually this data is generated via TimeStampReq.
+    /// Time Stamp Token is used to prove that hash of data exists before the time this info is generated (genTime).
+    /// Normally this data is generated via sending TimeStampReq.
     ///
     /// [`RFC 3161`]: https://tools.ietf.org/html/rfc3161#page-8
     pub struct TsTstInfo;
@@ -70,6 +70,7 @@ impl TsTstInfoRef {
     }
 
     /// returns TSAPolicyId.
+    ///
     /// policyId is TSA's policy under which response was generated.
     #[corresponds(TS_TST_INFO_get_policy_id)]
     pub fn policy_id(&self) -> &Asn1ObjectRef {
@@ -105,7 +106,8 @@ impl TsTstInfoRef {
         }
     }
 
-    /// returns genTime
+    /// returns genTime.
+    ///
     /// genTime is the time at which the timestamp is generated.
     /// genTime must be UTC time. The last character of genTime is always Z (Zulu timezone).
     /// Granularity of time is not limited. However if the precision does not need to be better than
