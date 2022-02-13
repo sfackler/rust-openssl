@@ -306,8 +306,10 @@ mod tests {
 
     #[test]
     fn test_from_pkcs7() {
-        let pkcs7 = Pkcs7::from_der(RFC3161_DATA).unwrap();
-        let tst_info = TsTstInfo::from_pkcs7(&pkcs7).unwrap();
+        let tst_info = {
+            let pkcs7 = Pkcs7::from_der(RFC3161_DATA).unwrap();
+            TsTstInfo::from_pkcs7(&pkcs7).unwrap()
+        };
 
         test_get(&tst_info);
         test_accuracy(&tst_info);
@@ -317,8 +319,10 @@ mod tests {
 
     #[test]
     fn test_from_cms() {
-        let cms = CmsContentInfo::from_der(RFC3161_DATA).unwrap();
-        let tst_info = TsTstInfo::from_der(cms.content().unwrap().unwrap()).unwrap();
+        let tst_info = {
+            let cms = CmsContentInfo::from_der(RFC3161_DATA).unwrap();
+            TsTstInfo::from_der(cms.content().unwrap().unwrap()).unwrap()
+        };
 
         test_get(&tst_info);
         test_accuracy(&tst_info);
