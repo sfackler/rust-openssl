@@ -66,7 +66,7 @@ impl TsTstInfoRef {
         if version < 0 {
             panic!("Invariant Violation. TS_TST_INFO_get_version must return 1");
         } else {
-            version
+            version as i64
         }
     }
 

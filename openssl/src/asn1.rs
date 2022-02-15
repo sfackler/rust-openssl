@@ -74,7 +74,7 @@ impl Asn1GeneralizedTimeRef {
     pub fn as_utf8(&self) -> Result<OpensslString, ErrorStack> {
         unsafe {
             let mut ptr = ptr::null_mut();
-            let len = ffi::ASN1_STRING_to_UTF8(&mut ptr, self.as_ptr() as *const _);
+            let len = ffi::ASN1_STRING_to_UTF8(&mut ptr, self.as_ptr() as *mut _);
             if len < 0 {
                 return Err(ErrorStack::get());
             }
