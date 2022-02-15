@@ -3,13 +3,13 @@ use std::ptr;
 use crate::{
     asn1::{Asn1GeneralizedTimeRef, Asn1IntegerRef, Asn1ObjectRef, Asn1OctetStringRef},
     cvt_p,
+    error::ErrorStack,
+    pkcs7::Pkcs7Ref,
     stack::StackRef,
     x509::{GeneralNameRef, X509AlgorithmRef, X509Extension},
 };
 use foreign_types::ForeignTypeRef;
 use openssl_macros::corresponds;
-
-use crate::{error::ErrorStack, pkcs7::Pkcs7Ref};
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::TS_TST_INFO;
