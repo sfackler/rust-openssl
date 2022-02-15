@@ -21,6 +21,7 @@ pub const TS_ORDERING: c_int = 0x02;
 pub const TS_ESS_CERT_ID_CHAIN: c_int = 0x04;
 
 pub const TS_MAX_CLOCK_PRECISION_DIGITS: c_int = 6;
+#[cfg(any(ossl102, libressl250))]
 pub const TS_MAX_STATUS_LENGTH: c_int = 1024 * 1024;
 
 pub const TS_VFY_SIGNATURE: c_uint = 1u32 << 0;
