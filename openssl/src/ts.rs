@@ -142,11 +142,7 @@ impl TsTstInfoRef {
     pub fn ordering(&self) -> bool {
         // TS_TST_INFO_get_ordering returns just 1 or 0
         // default is false
-        if unsafe { ffi::TS_TST_INFO_get_ordering(self.as_ptr()) } > 0 {
-            true
-        } else {
-            false
-        }
+        unsafe { ffi::TS_TST_INFO_get_ordering(self.as_ptr()) > 0 }
     }
 
     #[corresponds(TS_TST_INFO_get_nonce)]
@@ -302,8 +298,8 @@ mod tests {
     use super::*;
     use crate::cms::CmsContentInfo;
     use crate::pkcs7::Pkcs7;
-    const RFC3161_DATA: &'static [u8] = include_bytes!("../test/sample_rfc3161_cms.der");
-    const TST_INFO: &'static [u8] = include_bytes!("../test/tst_info.der");
+    const RFC3161_DATA: &[u8] = include_bytes!("../test/sample_rfc3161_cms.der");
+    const TST_INFO: &[u8] = include_bytes!("../test/tst_info.der");
 
     #[test]
     fn test_from_pkcs7() {
@@ -333,15 +329,14 @@ mod tests {
 
     #[test]
     fn test_from_der_to_der() {
-        let der = {
-            let tst_info = TsTstInfo::from_der(TST_INFO).unwrap();
-            let der = tst_info.to_der().unwrap();
-            assert_eq!(TST_INFO, der);
-            // testing dupe.
-            tst_info.to_owned()
-        }
-        .to_der()
-        .unwrap();
+        let tst_info = TsTstInfo::from_der(TST_INFO).unwrap();
+        let der = tst_info.to_der().unwrap();
+        assert_eq!(TST_INFO, der);
+        // testing dupe.
+        let cloned = tst_info.to_owned();
+        drop(tst_info);
+        let der = cloned.to_der().unwrap();
+
         assert_eq!(TST_INFO, der);
     }
 
@@ -360,7 +355,7 @@ mod tests {
             "20211214111051Z",
             tst_info.time().as_utf8().unwrap().to_string()
         );
-        assert_eq!(tst_info.ordering(), false);
+        assert!(!tst_info.ordering());
         assert_eq!(
             "-1578146648116833895",
             tst_info.nonce().unwrap().to_bn().unwrap().to_string()
@@ -390,7 +385,7 @@ mod tests {
         let msg = msg_imprint.msg();
 
         assert_eq!("sha256", algo.object().nid().long_name().unwrap());
-        assert!(msg.as_slice().len() > 0);
+        assert!(!msg.as_slice().is_empty());
     }
 
     fn test_extensions(tst_info: &TsTstInfo) {
