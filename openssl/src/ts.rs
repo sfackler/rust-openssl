@@ -296,6 +296,7 @@ impl TsAccuracy {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(ossl101)]
     use crate::cms::CmsContentInfo;
     use crate::pkcs7::Pkcs7;
     const RFC3161_DATA: &[u8] = include_bytes!("../test/sample_rfc3161_cms.der");
@@ -314,6 +315,7 @@ mod tests {
         test_extensions(&tst_info);
     }
 
+    #[cfg(ossl101)]
     #[test]
     fn test_from_cms() {
         let tst_info = {

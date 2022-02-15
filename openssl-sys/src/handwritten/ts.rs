@@ -6,6 +6,14 @@ pub enum TS_REQ {}
 pub enum TS_ACCURACY {}
 pub enum TS_TST_INFO {}
 
+const_ptr_api! {
+    extern "C" {
+        pub fn TS_TST_INFO_dup(a: #[const_ptr_if(ossl300)] TS_TST_INFO) -> *mut TS_TST_INFO;
+        pub fn TS_MSG_IMPRINT_dup(a: #[const_ptr_if(ossl300)] ::TS_MSG_IMPRINT) -> *mut ::TS_MSG_IMPRINT;
+        pub fn TS_ACCURACY_dup(a: #[const_ptr_if(ossl300)] ::TS_ACCURACY) -> *mut ::TS_ACCURACY;
+    }
+}
+
 extern "C" {
     pub fn i2d_TS_TST_INFO(a: *const TS_TST_INFO, pp: *mut *mut c_uchar) -> c_int;
     pub fn d2i_TS_TST_INFO(
@@ -14,7 +22,6 @@ extern "C" {
         length: c_long,
     ) -> *mut ::TS_TST_INFO;
     pub fn TS_TST_INFO_free(a: *mut ::TS_TST_INFO);
-    pub fn TS_TST_INFO_dup(a: *mut TS_TST_INFO) -> *mut TS_TST_INFO;
 
     pub fn TS_TST_INFO_get_version(a: *const ::TS_TST_INFO) -> c_long;
     pub fn TS_TST_INFO_get_policy_id(a: *mut ::TS_TST_INFO) -> *mut ::ASN1_OBJECT;
@@ -37,7 +44,6 @@ extern "C" {
         pp: *mut *const c_uchar,
         length: c_long,
     ) -> *mut ::TS_MSG_IMPRINT;
-    pub fn TS_MSG_IMPRINT_dup(a: *mut ::TS_MSG_IMPRINT) -> *mut ::TS_MSG_IMPRINT;
 
     pub fn TS_MSG_IMPRINT_get_algo(a: *mut ::TS_MSG_IMPRINT) -> *mut ::X509_ALGOR;
     pub fn TS_MSG_IMPRINT_get_msg(a: *mut ::TS_MSG_IMPRINT) -> *mut ::ASN1_OCTET_STRING;
@@ -50,7 +56,6 @@ extern "C" {
         pp: *mut *const c_uchar,
         length: c_long,
     ) -> *mut ::TS_ACCURACY;
-    pub fn TS_ACCURACY_dup(a: *mut ::TS_ACCURACY) -> *mut ::TS_ACCURACY;
 
     pub fn TS_ACCURACY_get_seconds(a: *const ::TS_ACCURACY) -> *const ::ASN1_INTEGER;
     pub fn TS_ACCURACY_get_millis(a: *const ::TS_ACCURACY) -> *const ::ASN1_INTEGER;
