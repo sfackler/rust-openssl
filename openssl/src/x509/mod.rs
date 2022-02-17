@@ -719,6 +719,7 @@ impl X509Attribute {
                 ffi::V_ASN1_PRINTABLESTRING,
                 value.as_ptr() as *mut c_void,
             ));
+            mem::forget(value);
             attribute.map(X509Attribute)
         }
     }
@@ -734,6 +735,7 @@ impl X509Attribute {
                 ffi::V_ASN1_OCTET_STRING,
                 asn1_string as *mut c_void,
             ));
+            mem::forget(asn1_string);
             attribute.map(X509Attribute)
         }
     }
