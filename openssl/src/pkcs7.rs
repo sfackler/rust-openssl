@@ -479,7 +479,7 @@ impl Pkcs7Ref {
         PT: HasPrivate,
     {
         unsafe {
-            let signer_info = cvt_p(ffi::PKCS7_add_signature(
+            cvt_p(ffi::PKCS7_add_signature(
                 self.as_ptr(),
                 cert.as_ptr(),
                 pkey.as_ptr(),
@@ -488,8 +488,7 @@ impl Pkcs7Ref {
                     None => ptr::null(),
                 },
             ))
-            .map(|ptr| Pkcs7SignerInfo::from_ptr(ptr));
-            signer_info
+            .map(|ptr| Pkcs7SignerInfo::from_ptr(ptr))
         }
     }
 

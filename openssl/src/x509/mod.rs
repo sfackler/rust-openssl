@@ -227,6 +227,7 @@ impl X509Builder {
     /// Note that the version is zero-indexed; that is, a certificate corresponding to version 3 of
     /// the X.509 standard should pass `2` to this method.
     #[corresponds(X509_set_version)]
+    #[allow(clippy::useless_conversion)]
     pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_set_version(self.0.as_ptr(), version.into())).map(|_| ()) }
     }
@@ -718,7 +719,6 @@ impl X509Attribute {
                 ffi::V_ASN1_PRINTABLESTRING,
                 value.as_ptr() as *mut c_void,
             ));
-            mem::forget(value); // OpenSSL takes ownership of the string
             attribute.map(X509Attribute)
         }
     }
@@ -734,7 +734,6 @@ impl X509Attribute {
                 ffi::V_ASN1_OCTET_STRING,
                 asn1_string as *mut c_void,
             ));
-            mem::forget(asn1_string); // OpenSSL takes ownership of the string
             attribute.map(X509Attribute)
         }
     }
@@ -1110,6 +1109,7 @@ impl X509ReqBuilder {
     /// This corresponds to [`X509_REQ_set_version`].
     ///
     ///[`X509_REQ_set_version`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_set_version.html
+    #[allow(clippy::useless_conversion)]
     pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_REQ_set_version(self.0.as_ptr(), version.into())).map(|_| ()) }
     }
