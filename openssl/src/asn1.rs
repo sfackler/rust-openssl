@@ -429,6 +429,18 @@ foreign_type_and_impl_send_sync! {
     pub struct Asn1StringRef;
 }
 
+impl Asn1String {
+    /// Create a new and empty ASN1_STRING.
+    ///
+    #[corresponds(ASN1_STRING_new)]
+    pub fn new() -> Result<Asn1String, ErrorStack> {
+        unsafe {
+            let asn1_string = cvt_p(ffi::ASN1_STRING_new()).map(Asn1String)?;
+            Ok(asn1_string)
+        }
+    }
+}
+
 impl Asn1StringRef {
     /// Converts the ASN.1 underlying format to UTF8
     ///
@@ -468,6 +480,23 @@ impl Asn1StringRef {
     /// Determines if the string is empty.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    /// Set the value of an ASN1_STRING
+    ///
+    /// `value` is consumed by this method
+    ///
+    #[corresponds(ASN1_STRING_set)]
+    pub fn set(&mut self, value: String) -> Result<(), ErrorStack> {
+        unsafe {
+            let value_len = value.len();
+            let value = CString::new(value).unwrap();
+            cvt(ffi::ASN1_STRING_set(
+                self.as_ptr(),
+                value.as_ptr() as *mut _,
+                value_len as c_int,
+            )).map(|_| ())
+        }
     }
 }
 

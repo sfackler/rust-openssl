@@ -20,9 +20,7 @@ use std::ptr;
 use std::slice;
 use std::str;
 
-use crate::asn1::{
-    Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef, Asn1Type,
-};
+use crate::asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1String, Asn1StringRef, Asn1TimeRef, Asn1Type};
 use crate::bio::MemBioSlice;
 use crate::conf::ConfRef;
 use crate::error::ErrorStack;
@@ -710,33 +708,31 @@ impl Stackable for X509Attribute {
 impl X509Attribute {
     /// Creates an X509 attribute, which can be added to X509 certificates, signing requests and
     /// PKCS7 messages.
-    pub fn from_string(nid: Nid, value: &str) -> Result<X509Attribute, ErrorStack> {
-        let value_len = value.len() as c_int;
-        let value = CString::new(value).unwrap();
+    pub fn from_string(nid: Nid, value: Asn1String) -> Result<X509Attribute, ErrorStack> {
         unsafe {
-            let value = value.as_ptr() as *mut _;
-            let asn1_string = ffi::ASN1_STRING_new();
-            cvt(ffi::ASN1_STRING_set(asn1_string, value, value_len))?;
-            cvt_p(ffi::X509_ATTRIBUTE_create(
+            let attribute = cvt_p(ffi::X509_ATTRIBUTE_create(
                 nid.as_raw(),
                 ffi::V_ASN1_PRINTABLESTRING,
-                asn1_string as *mut c_void,
-            ))
-            .map(X509Attribute)
+                value.as_ptr() as *mut c_void,
+            ));
+            mem::forget(value);  // OpenSSL takes ownership of the string
+            attribute.map(X509Attribute)
         }
     }
+
     pub fn from_octet(nid: Nid, value: &[u8]) -> Result<X509Attribute, ErrorStack> {
         let value_len = value.len() as c_int;
         unsafe {
             let value = value.as_ptr() as *mut _;
             let asn1_string = ffi::ASN1_STRING_new();
             cvt(ffi::ASN1_STRING_set(asn1_string, value, value_len))?;
-            cvt_p(ffi::X509_ATTRIBUTE_create(
+            let attribute = cvt_p(ffi::X509_ATTRIBUTE_create(
                 nid.as_raw(),
                 ffi::V_ASN1_OCTET_STRING,
                 asn1_string as *mut c_void,
-            ))
-            .map(X509Attribute)
+            ));
+            mem::forget(asn1_string);  // OpenSSL takes ownership of the string
+            attribute.map(X509Attribute)
         }
     }
 }

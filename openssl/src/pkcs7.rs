@@ -9,7 +9,7 @@ use crate::bio::{MemBio, MemBioSlice};
 use crate::error::ErrorStack;
 use crate::hash::MessageDigest;
 use crate::nid::Nid;
-use crate::pkey::{HasPrivate, PKey, PKeyRef};
+use crate::pkey::{HasPrivate, PKeyRef};
 use crate::stack::{Stack, StackRef};
 use crate::symm::Cipher;
 use crate::x509::store::X509StoreRef;
@@ -30,7 +30,55 @@ foreign_type_and_impl_send_sync! {
 
 impl Pkcs7SignerInfo {
     pub fn as_ptr(&self) -> *mut ffi::PKCS7_SIGNER_INFO {
-        &self.0 as *const _ as *mut _
+        self.0
+    }
+}
+
+impl Pkcs7SignerInfoRef {
+    /// Set signed attributes in a PKCS#7 structure.
+    ///
+    /// `attributes` is a stack of the attributes to be added.
+    ///
+    #[corresponds(PKCS7_set_signed_attributes)]
+    pub fn set_signed_attributes(
+        &self,
+        attributes: &StackRef<X509Attribute>,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::PKCS7_set_signed_attributes(
+                self.as_ptr(),
+                attributes.as_ptr(),
+            ))?;
+            Ok(())
+        }
+    }
+
+    /// Add a signed attribute to a PKCS7_SIGNER_INFO structure
+    ///
+    /// `nid` is the Nid of the attribute, `atrtype` is the attribute's type (an ASN.1 tag
+    /// value) and `value` is the ASN1 object to be added.
+    ///
+    //  Note: `value` is immutable, but the OpenSSL function takes a (non-const) void pointer. Thus,
+    //  we have to cast to mutable in the unsafe block.
+    //  OpenSSL takes ownership of `value`.
+    //
+    #[corresponds(PKCS7_add_signed_attribute)]
+    pub fn add_signed_attribute(
+        &self,
+        nid: Nid,
+        atrtype: Asn1Type,
+        value: Asn1Object,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::PKCS7_add_signed_attribute(
+                self.as_ptr(),
+                nid.as_raw(),
+                atrtype.as_raw(),
+                value.as_ptr() as *mut c_void,
+            ))?;
+            mem::forget(value);
+            Ok(())
+        }
     }
 }
 
@@ -181,53 +229,6 @@ impl Pkcs7 {
                 flags.bits,
             ))
             .map(Pkcs7)
-        }
-    }
-
-    /// Set signed attributes in a PKCS#7 structure.
-    ///
-    /// `attributes` is a stack of the attributes to be added.
-    ///
-    #[corresponds(PKCS7_set_signed_attributes)]
-    pub fn set_signed_attributes(
-        signer_info: &Pkcs7SignerInfoRef,
-        attributes: Stack<X509Attribute>,
-    ) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::PKCS7_set_signed_attributes(
-                signer_info.as_ptr(),
-                attributes.as_ptr(),
-            ))?;
-            mem::forget(attributes);
-            Ok(())
-        }
-    }
-
-    /// Add a signed attribute to a PKCS7_SIGNER_INFO structure
-    ///
-    /// `nid` is the Nid of the attribute, `atrtype` is the attribute's type (an ASN.1 tag
-    /// value) and `value` is the ASN1 object to be added.
-    ///
-    //  Note: `value` is immutable, but the OpenSSL function takes a (non-const) void pointer. Thus,
-    //  we have to cast to mutable in the unsafe block.
-    //  OpenSSL takes ownership of `value`.
-    //
-    #[corresponds(PKCS7_add_signed_attribute)]
-    pub fn add_signed_attribute(
-        signer_info: &Pkcs7SignerInfoRef,
-        nid: Nid,
-        atrtype: Asn1Type,
-        value: Asn1Object,
-    ) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::PKCS7_add_signed_attribute(
-                signer_info.as_ptr(),
-                nid.as_raw(),
-                atrtype.as_raw(),
-                value.as_ptr() as *mut c_void,
-            ))?;
-            mem::forget(value);
-            Ok(())
         }
     }
 
@@ -405,7 +406,7 @@ impl Pkcs7Ref {
     ///
     #[corresponds(PKCS7_set_type)]
     ///
-    pub fn set_type(&self, nid: Nid) -> Result<(), ErrorStack> {
+    pub fn set_type(&mut self, nid: Nid) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::PKCS7_set_type(self.as_ptr(), nid.as_raw())).map(|_| ()) }
     }
 
@@ -427,8 +428,8 @@ impl Pkcs7Ref {
 
     /// Add signature information to the PKCS#7 structure.
     ///
-    /// `cert` is the signer's certificate. `pkey` is the signer's (private) key. `algorithm` is
-    /// the hash algorithm to be used.
+    /// `cert` is the signer's certificate. `pkey` is the signer's (private) key. The optional
+    /// `algorithm` is the hash algorithm to be used.
     ///
     /// Returns a signer info structure, which can be used to add signed attributes. `cert` is not
     /// consumed by this method (actually by `PKCS7_add_signature`), but `pkey` is. Create a clone
@@ -459,12 +460,11 @@ impl Pkcs7Ref {
     /// -----END CERTIFICATE-----".as_bytes()).unwrap();
     /// let rsa = Rsa::generate(2048).unwrap();
     /// let signer_key = PKey::from_rsa(rsa).unwrap();
-    /// let signer_key_clone = signer_key.clone();
     /// let pkcs7 = Pkcs7::new().unwrap();
     /// let signer_info = &pkcs7.add_signature(
     ///     &cert,
-    ///     signer_key_clone,
-    ///     MessageDigest::sha256()
+    ///     &signer_key,
+    ///     Some(MessageDigest::sha256())
     /// );
     ///  ```
     ///
@@ -472,8 +472,8 @@ impl Pkcs7Ref {
     pub fn add_signature<PT>(
         &self,
         cert: &X509Ref,
-        pkey: PKey<PT>,
-        algorithm: MessageDigest,
+        pkey: &PKeyRef<PT>,
+        algorithm: Option<MessageDigest>,
     ) -> Result<Pkcs7SignerInfo, ErrorStack>
     where
         PT: HasPrivate,
@@ -483,10 +483,12 @@ impl Pkcs7Ref {
                 self.as_ptr(),
                 cert.as_ptr(),
                 pkey.as_ptr(),
-                algorithm.as_ptr(),
-            ));
-            mem::forget(pkey);
-            signer_info.map(Pkcs7SignerInfo)
+                match algorithm {
+                    Some(a) => a.as_ptr(),
+                    None => ptr::null(),
+                },
+            )).map(|ptr| Pkcs7SignerInfo::from_ptr(ptr));
+            signer_info
         }
     }
 
@@ -558,25 +560,26 @@ impl Pkcs7Ref {
     /// `Nid::PKCS7_SIGNEDANDENVELOPED`, it will be signed.
     ///
     #[corresponds(PKCS7_dataFinal)]
-    pub fn finalize(&self, bio: &MemBio) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::PKCS7_dataFinal(self.as_ptr(), bio.as_ptr())).map(|_| ()) }
+    pub fn finalize(&self, content_bio: &MemBio) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::PKCS7_dataFinal(self.as_ptr(), content_bio.as_ptr())).map(|_| ()) }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::asn1::{Asn1Integer, Asn1Time};
+    use std::mem;
+    use crate::asn1::{Asn1Integer, Asn1Object, Asn1String, Asn1Time, Asn1Type};
     use crate::bn::{BigNum, MsbOption};
     use crate::hash::MessageDigest;
     use crate::nid::Nid;
-    use crate::pkcs7::{Pkcs7, Pkcs7Flags};
+    use crate::pkcs7::{Pkcs7, Pkcs7Flags, Pkcs7SignerInfo};
     use crate::pkey::PKey;
     use crate::rsa::Rsa;
     use crate::stack::Stack;
     use crate::symm::Cipher;
     use crate::x509::extension::{ExtendedKeyUsage, KeyUsage, SubjectAlternativeName};
     use crate::x509::store::X509StoreBuilder;
-    use crate::x509::{X509Name, X509Req, X509};
+    use crate::x509::{X509Attribute, X509Name, X509Req, X509};
 
     #[test]
     fn encrypt_decrypt_test() {
@@ -839,5 +842,123 @@ mod tests {
         .unwrap();
 
         enveloped_data.to_pem().unwrap();
+    }
+
+    #[test]
+    fn signer_info() {
+        let sender_nonce: Nid = Nid::create("2.16.840.1.113733.1.9.5", "senderNonce", "senderNonce")
+            .unwrap();
+
+        // Make signer key
+        let rsa = Rsa::generate(2048).unwrap();
+        let signer_key = PKey::from_rsa(rsa).unwrap();
+
+        // Make signer cert
+        let mut name = X509Name::builder().unwrap();
+        name.append_entry_by_nid(Nid::COMMONNAME, "test.example.com")
+            .unwrap();
+        let name = name.build();
+        let mut builder = X509::builder().unwrap();
+        builder.set_subject_name(&name).unwrap();
+        builder.set_pubkey(&signer_key).unwrap();
+        builder.sign(&signer_key, MessageDigest::sha256()).unwrap();
+        let signer_cert = builder.build();
+
+        // Now make signed pkcs7
+        let mut signed_pkcs7 = Pkcs7::new().unwrap();
+
+        // Set the PKCS7 type
+        signed_pkcs7.set_type(Nid::PKCS7_SIGNED).unwrap();
+
+        // Add the signature
+        let signer_info: Pkcs7SignerInfo = signed_pkcs7
+            .add_signature(&signer_cert, &signer_key, Some(MessageDigest::sha256()))
+            .unwrap();
+
+        // Add signed attributes (transactionID, (SCEP) messageType, senderNonce)
+        let mut attributes: Stack<X509Attribute> = Stack::new().unwrap();
+        let sender_nonce_attr =
+            X509Attribute::from_octet(sender_nonce, "1234".as_bytes()).unwrap();
+        attributes.push(sender_nonce_attr).unwrap();
+        signer_info.set_signed_attributes(&attributes).unwrap();
+
+        mem::forget(signer_info);
+    }
+
+    #[test]
+    fn signed_pkcs7() {
+        fn get_serial() -> Asn1Integer {
+            let mut big_number = BigNum::new().unwrap();
+            big_number.rand(128, MsbOption::MAYBE_ZERO, true).unwrap();
+            Asn1Integer::from_bn(&big_number).unwrap()
+        }
+
+        let trans_id: Nid = Nid::create("2.16.840.1.113733.1.9.7", "transId", "transId")
+            .unwrap();
+
+        // Make signer key
+        let rsa = Rsa::generate(2048).unwrap();
+        let signer_key = PKey::from_rsa(rsa).unwrap();
+
+        // Make signer cert
+        let days: u32 = 365 * 10;
+        let not_before = Asn1Time::days_from_now(0).unwrap();
+        let not_after = Asn1Time::days_from_now(days).unwrap();
+        let serial = get_serial();
+        let mut name = X509Name::builder().unwrap();
+        name.append_entry_by_nid(Nid::COMMONNAME, "test.example.com")
+            .unwrap();
+        let name = name.build();
+        let mut builder = X509::builder().unwrap();
+        builder.set_version(2).unwrap(); // 2 -> X509v3
+        builder.set_serial_number(&serial).unwrap();
+        builder.set_subject_name(&name).unwrap();
+        builder.set_issuer_name(&name).unwrap();
+        builder.set_not_before(not_before.as_ref()).unwrap();
+        builder.set_not_after(not_after.as_ref()).unwrap();
+        builder.set_pubkey(&signer_key).unwrap();
+        builder.sign(&signer_key, MessageDigest::sha256()).unwrap();
+        let signer_cert = builder.build();
+
+        // Now make signed pkcs7
+        let mut signed_pkcs7 = Pkcs7::new().unwrap();
+
+        // Set the PKCS7 type
+        signed_pkcs7.set_type(Nid::PKCS7_SIGNED).unwrap();
+
+        // Add the client certificate
+        let signer_cert_clone = signer_cert.clone();
+        signed_pkcs7.add_certificate(signer_cert_clone).unwrap();
+
+        // Add the signature
+        let signer_info: Pkcs7SignerInfo = signed_pkcs7
+            .add_signature(&signer_cert, &signer_key, Some(MessageDigest::sha256()))
+            .unwrap();
+
+        // Add signed attributes (transactionID, (SCEP) messageType, senderNonce)
+        let mut attributes: Stack<X509Attribute> = Stack::new().unwrap();
+        let mut transaction_id_asn1 = Asn1String::new().unwrap();
+        transaction_id_asn1
+            .set(String::from("transaction_id"))
+            .unwrap();
+        let transaction_id_attr =
+            X509Attribute::from_string(trans_id, transaction_id_asn1).unwrap();
+        attributes.push(transaction_id_attr).unwrap();
+        signer_info.set_signed_attributes(&attributes).unwrap();
+
+        // Set contentType (signed attribute)
+        let asn1object = Asn1Object::from_nid(&Nid::DATA).unwrap();
+        signer_info
+            .add_signed_attribute(Nid::PKCS9_CONTENTTYPE, Asn1Type::OBJECT, asn1object)
+            .unwrap();
+
+        // Sign
+        let data: [u8; 1] = [42];
+        let bio = signed_pkcs7.add_content(Nid::PKCS7_DATA, &data).unwrap();
+
+        mem::forget(signer_info);
+
+        // Finalize
+        signed_pkcs7.finalize(&bio).unwrap();
     }
 }
