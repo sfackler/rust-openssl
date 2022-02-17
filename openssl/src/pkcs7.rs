@@ -487,7 +487,8 @@ impl Pkcs7Ref {
                     Some(a) => a.as_ptr(),
                     None => ptr::null(),
                 },
-            )).map(|ptr| Pkcs7SignerInfo::from_ptr(ptr));
+            ))
+            .map(|ptr| Pkcs7SignerInfo::from_ptr(ptr));
             signer_info
         }
     }
@@ -567,7 +568,6 @@ impl Pkcs7Ref {
 
 #[cfg(test)]
 mod tests {
-    use std::mem;
     use crate::asn1::{Asn1Integer, Asn1Object, Asn1String, Asn1Time, Asn1Type};
     use crate::bn::{BigNum, MsbOption};
     use crate::hash::MessageDigest;
@@ -580,6 +580,7 @@ mod tests {
     use crate::x509::extension::{ExtendedKeyUsage, KeyUsage, SubjectAlternativeName};
     use crate::x509::store::X509StoreBuilder;
     use crate::x509::{X509Attribute, X509Name, X509Req, X509};
+    use std::mem;
 
     #[test]
     fn encrypt_decrypt_test() {
@@ -846,8 +847,8 @@ mod tests {
 
     #[test]
     fn signer_info() {
-        let sender_nonce: Nid = Nid::create("2.16.840.1.113733.1.9.5", "senderNonce", "senderNonce")
-            .unwrap();
+        let sender_nonce: Nid =
+            Nid::create("2.16.840.1.113733.1.9.5", "senderNonce", "senderNonce").unwrap();
 
         // Make signer key
         let rsa = Rsa::generate(2048).unwrap();
@@ -877,8 +878,7 @@ mod tests {
 
         // Add signed attributes (transactionID, (SCEP) messageType, senderNonce)
         let mut attributes: Stack<X509Attribute> = Stack::new().unwrap();
-        let sender_nonce_attr =
-            X509Attribute::from_octet(sender_nonce, "1234".as_bytes()).unwrap();
+        let sender_nonce_attr = X509Attribute::from_octet(sender_nonce, "1234".as_bytes()).unwrap();
         attributes.push(sender_nonce_attr).unwrap();
         signer_info.set_signed_attributes(&attributes).unwrap();
 
@@ -893,8 +893,7 @@ mod tests {
             Asn1Integer::from_bn(&big_number).unwrap()
         }
 
-        let trans_id: Nid = Nid::create("2.16.840.1.113733.1.9.7", "transId", "transId")
-            .unwrap();
+        let trans_id: Nid = Nid::create("2.16.840.1.113733.1.9.7", "transId", "transId").unwrap();
 
         // Make signer key
         let rsa = Rsa::generate(2048).unwrap();

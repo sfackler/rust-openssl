@@ -495,7 +495,8 @@ impl Asn1StringRef {
                 self.as_ptr(),
                 value.as_ptr() as *mut _,
                 value_len as c_int,
-            )).map(|_| ())
+            ))
+            .map(|_| ())
         }
     }
 }

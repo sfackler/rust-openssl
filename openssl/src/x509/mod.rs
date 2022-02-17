@@ -20,7 +20,10 @@ use std::ptr;
 use std::slice;
 use std::str;
 
-use crate::asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1String, Asn1StringRef, Asn1TimeRef, Asn1Type};
+use crate::asn1::{
+    Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1String, Asn1StringRef, Asn1TimeRef,
+    Asn1Type,
+};
 use crate::bio::MemBioSlice;
 use crate::conf::ConfRef;
 use crate::error::ErrorStack;
@@ -715,7 +718,7 @@ impl X509Attribute {
                 ffi::V_ASN1_PRINTABLESTRING,
                 value.as_ptr() as *mut c_void,
             ));
-            mem::forget(value);  // OpenSSL takes ownership of the string
+            mem::forget(value); // OpenSSL takes ownership of the string
             attribute.map(X509Attribute)
         }
     }
@@ -731,7 +734,7 @@ impl X509Attribute {
                 ffi::V_ASN1_OCTET_STRING,
                 asn1_string as *mut c_void,
             ));
-            mem::forget(asn1_string);  // OpenSSL takes ownership of the string
+            mem::forget(asn1_string); // OpenSSL takes ownership of the string
             attribute.map(X509Attribute)
         }
     }
