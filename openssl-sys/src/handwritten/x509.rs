@@ -26,7 +26,7 @@ cfg_if! {
             pub enc: ASN1_ENCODING,
             pub version: *mut ::ASN1_INTEGER,
             pub subject: *mut ::X509_NAME,
-            pubkey: *mut c_void,
+            pubkey: *mut X509_PUBKEY,
             pub attributes: *mut stack_st_X509_ATTRIBUTE,
         }
     }
@@ -121,11 +121,24 @@ cfg_if! {
             issuer: *mut c_void,
             pub validity: *mut X509_VAL,
             subject: *mut c_void,
-            key: *mut c_void,
+            key: *mut X509_PUBKEY,
             issuerUID: *mut c_void,
             subjectUID: *mut c_void,
             pub extensions: *mut stack_st_X509_EXTENSION,
             enc: ASN1_ENCODING,
+        }
+    }
+}
+
+cfg_if! {
+    if #[cfg(ossl110)] {
+        pub enum X509_PUBKEY {}
+    } else {
+        #[repr(C)]
+        pub struct X509_PUBKEY {
+            algor: *mut X509_ALGOR,
+            public_key: *mut ASN1_BIT_STRING,
+            pkey: *mut EVP_PKEY,
         }
     }
 }
@@ -285,6 +298,8 @@ extern "C" {
 
     pub fn X509_get_pubkey(x: *mut X509) -> *mut EVP_PKEY;
 
+    pub fn X509_get_X509_PUBKEY(x: *const X509) -> *mut X509_PUBKEY;
+
     pub fn X509_set_version(x: *mut X509, version: c_long) -> c_int;
     #[cfg(ossl110)]
     pub fn X509_get_version(x: *const X509) -> c_long;
@@ -335,6 +350,7 @@ const_ptr_api! {
 extern "C" {
     pub fn X509_REQ_set_pubkey(req: *mut X509_REQ, pkey: *mut EVP_PKEY) -> c_int;
     pub fn X509_REQ_get_pubkey(req: *mut X509_REQ) -> *mut EVP_PKEY;
+    pub fn X509_REQ_get_X509_PUBKEY(req: *mut X509_REQ) -> *mut X509_PUBKEY;
     pub fn X509_REQ_get_extensions(req: *mut X509_REQ) -> *mut stack_st_X509_EXTENSION;
 }
 const_ptr_api! {
@@ -578,6 +594,25 @@ const_ptr_api! {
         pub fn X509_EXTENSION_create_by_OBJ(ex: *mut *mut X509_EXTENSION, obj: #[const_ptr_if(any(ossl110, libressl280))] ASN1_OBJECT, crit: c_int, data: *mut ASN1_OCTET_STRING) -> *mut X509_EXTENSION;
         pub fn X509_EXTENSION_set_object(ex: *mut X509_EXTENSION, obj: #[const_ptr_if(any(ossl110, libressl280))] ASN1_OBJECT) -> c_int;
         pub fn X509_EXTENSION_get_critical(ex: #[const_ptr_if(any(ossl110, libressl280))] X509_EXTENSION) -> c_int;
+    }
+}
+
+extern "C" {
+    pub fn X509_PUBKEY_new() -> *mut X509_PUBKEY;
+    pub fn X509_PUBKEY_free(a: *mut X509_PUBKEY);
+
+    pub fn d2i_X509_PUBKEY(
+        a: *mut *mut X509_PUBKEY,
+        pp: *mut *const c_uchar,
+        len: c_long,
+    ) -> *mut X509_PUBKEY;
+    pub fn X509_PUBKEY_set(x: *mut *mut X509_PUBKEY, pkey: *mut EVP_PKEY) -> c_int;
+}
+const_ptr_api! {
+    extern "C" {
+        pub fn X509_PUBKEY_get0(key: #[const_ptr_if(ossl300)] X509_PUBKEY) -> *mut EVP_PKEY;
+        pub fn X509_PUBKEY_get(key: #[const_ptr_if(ossl300)] X509_PUBKEY) -> *mut EVP_PKEY;
+        pub fn i2d_X509_PUBKEY(a: #[const_ptr_if(ossl300)] X509_PUBKEY, out: *mut *mut c_uchar) -> c_int;
     }
 }
 
