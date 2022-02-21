@@ -528,34 +528,6 @@ impl Pkcs7Ref {
         }
     }
 
-    /// Get the content of a PKCS#7 object (`pkcs7->d.sign->contents`).
-    /// The PKCS#7 structure must be either of type NID_pkcs7_signed or NID_pkcs7_digest.
-    /// There is no 1:1 correspondance to a single api function in openssl.
-    ///
-    pub fn get_content(&self) -> Result<Vec<u8>, ErrorStack> {
-        unsafe {
-            let buffer: [u8; 1024] = [0; 1024];
-            let out_bio = MemBio::new()?;
-            let bcont_bio = ptr::null_mut();
-            let pkcs7_bio = cvt_p(ffi::PKCS7_dataInit(self.as_ptr(), bcont_bio))
-                .map(|bio| MemBio::from_ptr(bio))?;
-            loop {
-                let bytes = ffi::BIO_read(
-                    pkcs7_bio.as_ptr(),
-                    buffer.as_ptr() as *mut c_void,
-                    buffer.len() as i32,
-                );
-                if bytes <= 0 {
-                    break;
-                }
-                let _len =
-                    ffi::BIO_write(out_bio.as_ptr(), buffer.as_ptr() as *const c_void, bytes);
-            }
-            out_bio.flush()?;
-            Ok(out_bio.get_buf().to_vec())
-        }
-    }
-
     /// Finalize a PKCS#7 structure. If the structure's type is `Nid::PKCS7_SIGNED` or
     /// `Nid::PKCS7_SIGNEDANDENVELOPED`, it will be signed.
     ///
