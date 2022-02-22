@@ -15,3 +15,15 @@ cfg_if! {
         pub const X509_LU_CRL: c_int = 2;
     }
 }
+
+cfg_if! {
+    if #[cfg(not(ossl110))] {
+        pub unsafe fn X509_get_X509_PUBKEY(x: *const X509) -> *mut X509_PUBKEY {
+            (*(*x).cert_info).key
+        }
+
+        pub unsafe fn X509_REQ_get_X509_PUBKEY(req: *mut X509_REQ) -> *mut X509_PUBKEY {
+            (*(*req).req_info).pubkey
+        }
+    }
+}

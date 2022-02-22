@@ -26,7 +26,7 @@ cfg_if! {
             pub enc: ASN1_ENCODING,
             pub version: *mut ::ASN1_INTEGER,
             pub subject: *mut ::X509_NAME,
-            pubkey: *mut X509_PUBKEY,
+            pub pubkey: *mut X509_PUBKEY,
             pub attributes: *mut stack_st_X509_ATTRIBUTE,
         }
     }
@@ -121,7 +121,7 @@ cfg_if! {
             issuer: *mut c_void,
             pub validity: *mut X509_VAL,
             subject: *mut c_void,
-            key: *mut X509_PUBKEY,
+            pub key: *mut X509_PUBKEY,
             issuerUID: *mut c_void,
             subjectUID: *mut c_void,
             pub extensions: *mut stack_st_X509_EXTENSION,
@@ -297,7 +297,7 @@ extern "C" {
     pub fn d2i_X509_bio(b: *mut BIO, a: *mut *mut X509) -> *mut X509;
 
     pub fn X509_get_pubkey(x: *mut X509) -> *mut EVP_PKEY;
-
+    #[cfg(ossl110)]
     pub fn X509_get_X509_PUBKEY(x: *const X509) -> *mut X509_PUBKEY;
 
     pub fn X509_set_version(x: *mut X509, version: c_long) -> c_int;
@@ -350,6 +350,7 @@ const_ptr_api! {
 extern "C" {
     pub fn X509_REQ_set_pubkey(req: *mut X509_REQ, pkey: *mut EVP_PKEY) -> c_int;
     pub fn X509_REQ_get_pubkey(req: *mut X509_REQ) -> *mut EVP_PKEY;
+    #[cfg(ossl110)]
     pub fn X509_REQ_get_X509_PUBKEY(req: *mut X509_REQ) -> *mut X509_PUBKEY;
     pub fn X509_REQ_get_extensions(req: *mut X509_REQ) -> *mut stack_st_X509_EXTENSION;
 }
@@ -610,7 +611,6 @@ extern "C" {
 }
 const_ptr_api! {
     extern "C" {
-        pub fn X509_PUBKEY_get0(key: #[const_ptr_if(ossl300)] X509_PUBKEY) -> *mut EVP_PKEY;
         pub fn X509_PUBKEY_get(key: #[const_ptr_if(ossl300)] X509_PUBKEY) -> *mut EVP_PKEY;
         pub fn i2d_X509_PUBKEY(a: #[const_ptr_if(ossl300)] X509_PUBKEY, out: *mut *mut c_uchar) -> c_int;
     }

@@ -453,10 +453,10 @@ impl X509Ref {
 
     /// Returns the X509 public key of the certificate request.
     #[corresponds(X509_get_X509_PUBKEY)]
-    pub fn x509_public_key(&self) -> Result<X509PublicKey, ErrorStack> {
+    pub fn x509_public_key(&self) -> Result<&X509PublicKeyRef, ErrorStack> {
         unsafe {
             let key = cvt_p(ffi::X509_get_X509_PUBKEY(self.as_ptr()))?;
-            Ok(X509PublicKey::from_ptr(key))
+            Ok(X509PublicKeyRef::from_ptr(key))
         }
     }
 
@@ -1262,10 +1262,10 @@ impl X509ReqRef {
 
     /// Returns the X509 public key of the certificate request.
     #[corresponds(X509_REQ_get_X509_PUBKEY)]
-    pub fn x509_public_key(&self) -> Result<X509PublicKey, ErrorStack> {
+    pub fn x509_public_key(&self) -> Result<&X509PublicKeyRef, ErrorStack> {
         unsafe {
             let key = cvt_p(ffi::X509_REQ_get_X509_PUBKEY(self.as_ptr()))?;
-            Ok(X509PublicKey::from_ptr(key))
+            Ok(X509PublicKeyRef::from_ptr(key))
         }
     }
 
