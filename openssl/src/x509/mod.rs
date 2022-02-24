@@ -712,11 +712,17 @@ impl Stackable for X509Attribute {
 impl X509Attribute {
     /// Creates an X509 attribute, which can be added to X509 certificates, signing requests and
     /// PKCS7 messages.
+    ///
+    /// The attribute type is derived from the ASN1 string value.
+    ///
     pub fn from_string(nid: Nid, value: Asn1String) -> Result<X509Attribute, ErrorStack> {
         unsafe {
+            let asn1_type = cvt(
+                ffi::ASN1_STRING_type(value.as_ptr() as *const _)
+            )?;
             let attribute = cvt_p(ffi::X509_ATTRIBUTE_create(
                 nid.as_raw(),
-                ffi::V_ASN1_PRINTABLESTRING,
+                asn1_type,
                 value.as_ptr() as *mut c_void,
             ));
             #[allow(clippy::forget_copy)]

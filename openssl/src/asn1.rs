@@ -432,10 +432,25 @@ foreign_type_and_impl_send_sync! {
 impl Asn1String {
     /// Create a new and empty ASN1_STRING.
     ///
+    /// OpenSSL internally sets the string type to `V_ASN1_OCTET_STRING`. Use `new_type()` for
+    /// other `Asn1Type`s.
+    ///
     #[corresponds(ASN1_STRING_new)]
     pub fn new() -> Result<Asn1String, ErrorStack> {
         unsafe {
             let asn1_string = cvt_p(ffi::ASN1_STRING_new()).map(Asn1String)?;
+            Ok(asn1_string)
+        }
+    }
+
+    /// Create a new and empty ASN1_STRING of a given type.
+    ///
+    /// `typ` is the ASN1 type of the string.
+    ///
+    #[corresponds(ASN1_STRING_type_new)]
+    pub fn type_new(ty: Asn1Type) -> Result<Asn1String, ErrorStack> {
+        unsafe {
+            let asn1_string = cvt_p(ffi::ASN1_STRING_type_new(ty.as_raw())).map(Asn1String)?;
             Ok(asn1_string)
         }
     }
@@ -484,10 +499,10 @@ impl Asn1StringRef {
 
     /// Set the value of an ASN1_STRING
     ///
-    /// `value` is consumed by this method
+    /// `value` is consumed by this method. The value is copied by OpenSSL.
     ///
     #[corresponds(ASN1_STRING_set)]
-    pub fn set(&mut self, value: String) -> Result<(), ErrorStack> {
+    pub fn set(&mut self, value: &str) -> Result<(), ErrorStack> {
         unsafe {
             let value_len = value.len();
             let value = CString::new(value).unwrap();
