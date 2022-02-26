@@ -188,7 +188,7 @@ jobs:
               bindgen: false
               library:
                 name: libressl
-                version: 3.4.2
+                version: 3.5.0
       name: ${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-${{ matrix.bindgen }}
       runs-on: ubuntu-latest
       env:
