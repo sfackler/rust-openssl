@@ -134,7 +134,7 @@ cfg_if! {
     if #[cfg(ossl102)] {
         pub const SSL_OP_NO_DTLSv1: ssl_op_type!() = 0x04000000;
         pub const SSL_OP_NO_DTLSv1_2: ssl_op_type!() = 0x08000000;
-    } else if #[cfg(libressl332)] {
+    } else if #[cfg(libressl350)] {
         pub const SSL_OP_NO_DTLSv1: ssl_op_type!() = 0x40000000;
         pub const SSL_OP_NO_DTLSv1_2: ssl_op_type!() = 0x80000000;
     }
