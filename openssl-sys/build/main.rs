@@ -187,6 +187,8 @@ specific to your distribution:
     sudo pacman -S openssl
     # On Fedora
     sudo dnf install openssl-devel
+    # On Alpine Linux
+    apk add openssl-dev
 
 See rust-openssl README for more information:
 
