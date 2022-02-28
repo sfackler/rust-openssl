@@ -29,7 +29,6 @@ extern "C" {
     pub fn ASN1_STRING_free(x: *mut ASN1_STRING);
     pub fn ASN1_STRING_length(x: *const ASN1_STRING) -> c_int;
     pub fn ASN1_STRING_set(x: *mut ASN1_STRING, data: *const c_void, len_in: c_int) -> c_int;
-    pub fn ASN1_STRING_type(x: *const ASN1_STRING) -> c_int;
 
     pub fn ASN1_GENERALIZEDTIME_free(tm: *mut ASN1_GENERALIZEDTIME);
     pub fn ASN1_GENERALIZEDTIME_print(b: *mut BIO, tm: *const ASN1_GENERALIZEDTIME) -> c_int;
@@ -59,5 +58,6 @@ extern "C" {
 const_ptr_api! {
     extern "C" {
         pub fn ASN1_STRING_to_UTF8(out: *mut *mut c_uchar, s: #[const_ptr_if(any(ossl110, libressl280))] ASN1_STRING) -> c_int;
+        pub fn ASN1_STRING_type(x: #[const_ptr_if(any(ossl110, libressl280))]  ASN1_STRING) -> c_int;
     }
 }

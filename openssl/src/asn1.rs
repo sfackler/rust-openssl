@@ -849,6 +849,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(ossl111)]
     fn object_from_nid() {
         let object = Asn1Object::from_nid(&Nid::PKCS7_DATA).unwrap();
         assert_eq!(

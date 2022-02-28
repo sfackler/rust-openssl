@@ -790,6 +790,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(ossl111)]
     fn signed_pkcs7() {
         fn get_serial() -> Asn1Integer {
             let mut big_number = BigNum::new().unwrap();
