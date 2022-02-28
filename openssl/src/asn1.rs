@@ -432,8 +432,10 @@ foreign_type_and_impl_send_sync! {
 impl Asn1String {
     /// Create a new and empty ASN1_STRING.
     ///
-    /// OpenSSL internally sets the string type to `V_ASN1_OCTET_STRING`. Use `new_type()` for
+    /// OpenSSL internally sets the string type to `V_ASN1_OCTET_STRING`. Use `type_new()` for
     /// other `Asn1Type`s.
+    /// Note: according to OpenSSL documentation, the type is undefined. However, implementation
+    /// sets it to `V_ASN1_OCTET_STRING`.
     ///
     #[corresponds(ASN1_STRING_new)]
     pub fn new() -> Result<Asn1String, ErrorStack> {
@@ -445,10 +447,30 @@ impl Asn1String {
 
     /// Create a new and empty ASN1_STRING of a given type.
     ///
-    /// `typ` is the ASN1 type of the string.
+    /// `ty` is the ASN1 type of the string.
     ///
     #[corresponds(ASN1_STRING_type_new)]
     pub fn type_new(ty: Asn1Type) -> Result<Asn1String, ErrorStack> {
+        assert!(
+            [
+                Asn1Type::INTEGER,
+                Asn1Type::ENUMERATED,
+                Asn1Type::BIT_STRING,
+                Asn1Type::OCTET_STRING,
+                Asn1Type::PRINTABLESTRING,
+                Asn1Type::T61STRING,
+                Asn1Type::IA5STRING,
+                Asn1Type::GENERALSTRING,
+                Asn1Type::UNIVERSALSTRING,
+                Asn1Type::BMPSTRING,
+                Asn1Type::UTCTIME,
+                Asn1Type::GENERALIZEDTIME,
+                Asn1Type::VISIBLESTRING,
+                Asn1Type::UTF8STRING,
+            ]
+            .contains(&ty),
+            "Unsupported Asn1Type for Asn1String"
+        );
         unsafe {
             let asn1_string = cvt_p(ffi::ASN1_STRING_type_new(ty.as_raw())).map(Asn1String)?;
             Ok(asn1_string)
@@ -501,11 +523,31 @@ impl Asn1StringRef {
     ///
     /// `value` is consumed by this method. The value is copied by OpenSSL.
     ///
+    /// This can be used for `V_ASN1_OCTET_STRING` as well as for other string types like UTF-8:
+    ///
+    /// ```
+    ///     use openssl::nid::Nid;
+    ///     use openssl::asn1::{Asn1Object, Asn1String, Asn1Type};
+    ///
+    ///    // Octet string
+    ///    let mut octet_string_asn1: Asn1String = Asn1String::new().unwrap();
+    ///    let octet: [u8; 3] = [1, 2, 3];
+    ///    octet_string_asn1.set(&octet).unwrap();
+    ///
+    ///    // Add a printable string
+    ///    let mut printable_string_asn1 = Asn1String::type_new(Asn1Type::PRINTABLESTRING).unwrap();
+    ///    printable_string_asn1.set("A printable string".as_bytes()).unwrap();
+    ///
+    ///    // Add an ASN1 object
+    ///    let asn1object = Asn1Object::from_nid(&Nid::PKCS7_DATA).unwrap();
+    ///    let mut object_string_asn1: Asn1String = Asn1String::new().unwrap();
+    ///    object_string_asn1.set(asn1object.as_slice()).unwrap();
+    /// ```
+    ///
     #[corresponds(ASN1_STRING_set)]
-    pub fn set(&mut self, value: &str) -> Result<(), ErrorStack> {
+    pub fn set(&mut self, value: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             let value_len = value.len();
-            let value = CString::new(value).unwrap();
             cvt(ffi::ASN1_STRING_set(
                 self.as_ptr(),
                 value.as_ptr() as *mut _,
@@ -804,6 +846,15 @@ mod tests {
     fn object_from_str() {
         let object = Asn1Object::from_str("2.16.840.1.101.3.4.2.1").unwrap();
         assert_eq!(object.nid(), Nid::SHA256);
+    }
+
+    #[test]
+    fn object_from_nid() {
+        let object = Asn1Object::from_nid(&Nid::PKCS7_DATA).unwrap();
+        assert_eq!(
+            object.as_slice(),
+            &[0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x01,]
+        );
     }
 
     #[test]

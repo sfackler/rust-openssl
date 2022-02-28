@@ -713,7 +713,8 @@ impl X509Attribute {
     /// Creates an X509 attribute, which can be added to X509 certificates, signing requests and
     /// PKCS7 messages.
     ///
-    /// The attribute type is derived from the ASN1 string value.
+    /// The attribute type is derived from the ASN1 string value. So be sure to use
+    /// Asn1String::type_new() for strings other than octet strings.
     ///
     pub fn from_string(nid: Nid, value: Asn1String) -> Result<X509Attribute, ErrorStack> {
         unsafe {
@@ -727,23 +728,6 @@ impl X509Attribute {
             ));
             #[allow(clippy::forget_copy)]
             mem::forget(value); // Asn1String does not implement the Copy trait, so clippy is wrong here.
-            attribute.map(X509Attribute)
-        }
-    }
-
-    pub fn from_octet(nid: Nid, value: &[u8]) -> Result<X509Attribute, ErrorStack> {
-        let value_len = value.len() as c_int;
-        unsafe {
-            let value = value.as_ptr() as *mut _;
-            let asn1_string = ffi::ASN1_STRING_new();
-            cvt(ffi::ASN1_STRING_set(asn1_string, value, value_len))?;
-            let attribute = cvt_p(ffi::X509_ATTRIBUTE_create(
-                nid.as_raw(),
-                ffi::V_ASN1_OCTET_STRING,
-                asn1_string as *mut c_void,
-            ));
-            #[allow(clippy::forget_copy)]
-            mem::forget(asn1_string); // Asn1String does not implement the Copy trait, so clippy is wrong here.
             attribute.map(X509Attribute)
         }
     }

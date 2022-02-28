@@ -4,7 +4,7 @@ use libc::{c_int, c_void};
 use std::mem;
 use std::ptr;
 
-use crate::asn1::{Asn1Object, Asn1Type};
+use crate::asn1::Asn1Object;
 use crate::bio::{MemBio, MemBioSlice};
 use crate::error::ErrorStack;
 use crate::hash::MessageDigest;
@@ -49,34 +49,6 @@ impl Pkcs7SignerInfoRef {
                 self.as_ptr(),
                 attributes.as_ptr(),
             ))?;
-            Ok(())
-        }
-    }
-
-    /// Add a signed attribute to a PKCS7_SIGNER_INFO structure
-    ///
-    /// `nid` is the Nid of the attribute, `atrtype` is the attribute's type (an ASN.1 tag
-    /// value) and `value` is the ASN1 object to be added.
-    ///
-    //  Note: `value` is immutable, but the OpenSSL function takes a (non-const) void pointer. Thus,
-    //  we have to cast to mutable in the unsafe block.
-    //  OpenSSL takes ownership of `value`.
-    //
-    #[corresponds(PKCS7_add_signed_attribute)]
-    pub fn add_signed_attribute(
-        &self,
-        nid: Nid,
-        atrtype: Asn1Type,
-        value: Asn1Object,
-    ) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::PKCS7_add_signed_attribute(
-                self.as_ptr(),
-                nid.as_raw(),
-                atrtype.as_raw(),
-                value.as_ptr() as *mut c_void,
-            ))?;
-            mem::forget(value);
             Ok(())
         }
     }
@@ -703,6 +675,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn enveloped_pkcs7() {
         fn get_serial() -> Asn1Integer {
             let mut big_number = BigNum::new().unwrap();
@@ -817,54 +790,12 @@ mod tests {
     }
 
     #[test]
-    fn signer_info() {
-        let sender_nonce: Nid =
-            Nid::create("2.16.840.1.113733.1.9.5", "senderNonce", "senderNonce").unwrap();
-
-        // Make signer key
-        let rsa = Rsa::generate(2048).unwrap();
-        let signer_key = PKey::from_rsa(rsa).unwrap();
-
-        // Make signer cert
-        let mut name = X509Name::builder().unwrap();
-        name.append_entry_by_nid(Nid::COMMONNAME, "test.example.com")
-            .unwrap();
-        let name = name.build();
-        let mut builder = X509::builder().unwrap();
-        builder.set_subject_name(&name).unwrap();
-        builder.set_pubkey(&signer_key).unwrap();
-        builder.sign(&signer_key, MessageDigest::sha256()).unwrap();
-        let signer_cert = builder.build();
-
-        // Now make signed pkcs7
-        let mut signed_pkcs7 = Pkcs7::new().unwrap();
-
-        // Set the PKCS7 type
-        signed_pkcs7.set_type(Nid::PKCS7_SIGNED).unwrap();
-
-        // Add the signature
-        let signer_info: Pkcs7SignerInfo = signed_pkcs7
-            .add_signature(&signer_cert, &signer_key, Some(MessageDigest::sha256()))
-            .unwrap();
-
-        // Add signed attributes (transactionID, (SCEP) messageType, senderNonce)
-        let mut attributes: Stack<X509Attribute> = Stack::new().unwrap();
-        let sender_nonce_attr = X509Attribute::from_octet(sender_nonce, "1234".as_bytes()).unwrap();
-        attributes.push(sender_nonce_attr).unwrap();
-        signer_info.set_signed_attributes(&attributes).unwrap();
-
-        mem::forget(signer_info);
-    }
-
-    #[test]
     fn signed_pkcs7() {
         fn get_serial() -> Asn1Integer {
             let mut big_number = BigNum::new().unwrap();
             big_number.rand(128, MsbOption::MAYBE_ZERO, true).unwrap();
             Asn1Integer::from_bn(&big_number).unwrap()
         }
-
-        let trans_id: Nid = Nid::create("2.16.840.1.113733.1.9.7", "transId", "transId").unwrap();
 
         // Make signer key
         let rsa = Rsa::generate(2048).unwrap();
@@ -893,34 +824,48 @@ mod tests {
         // Now make signed pkcs7
         let mut signed_pkcs7 = Pkcs7::new().unwrap();
 
-        // Set the PKCS7 type
+        // Set PKCS7 type
         signed_pkcs7.set_type(Nid::PKCS7_SIGNED).unwrap();
 
-        // Add the client certificate
+        // Add client certificate
         let signer_cert_clone = signer_cert.clone();
         signed_pkcs7.add_certificate(signer_cert_clone).unwrap();
 
-        // Add the signature
+        // Add signature
         let signer_info: Pkcs7SignerInfo = signed_pkcs7
             .add_signature(&signer_cert, &signer_key, Some(MessageDigest::sha256()))
             .unwrap();
 
-        // Add signed attributes (transactionID, (SCEP) messageType, senderNonce)
+        // Add some signed attributes
         let mut attributes: Stack<X509Attribute> = Stack::new().unwrap();
-        let mut transaction_id_asn1 = Asn1String::new().unwrap();
-        transaction_id_asn1
-            .set(String::from("transaction_id"))
-            .unwrap();
+
+        // Add an octet string
+        let sender_nonce_id: Nid =
+            Nid::create("2.16.840.1.113733.1.9.5", "senderNonce", "senderNonce").unwrap();
+        let mut sender_nonce_asn1: Asn1String = Asn1String::new().unwrap();
+        let sender_nonce: [u8; 3] = [1, 2, 3];
+        sender_nonce_asn1.set(&sender_nonce).unwrap();
+        let sender_nonce_attr =
+            X509Attribute::from_string(sender_nonce_id, sender_nonce_asn1).unwrap();
+        attributes.push(sender_nonce_attr).unwrap();
+
+        // Add a printable string
+        let trans_id: Nid = Nid::create("2.16.840.1.113733.1.9.7", "transId", "transId").unwrap();
+        let mut transaction_id_asn1 = Asn1String::type_new(Asn1Type::PRINTABLESTRING).unwrap();
+        transaction_id_asn1.set("tid_1".as_bytes()).unwrap();
         let transaction_id_attr =
             X509Attribute::from_string(trans_id, transaction_id_asn1).unwrap();
         attributes.push(transaction_id_attr).unwrap();
-        signer_info.set_signed_attributes(&attributes).unwrap();
 
-        // Set contentType (signed attribute)
-        let asn1object = Asn1Object::from_nid(&Nid::DATA).unwrap();
-        signer_info
-            .add_signed_attribute(Nid::PKCS9_CONTENTTYPE, Asn1Type::OBJECT, asn1object)
-            .unwrap();
+        // Add an ASN1 object
+        let asn1object = Asn1Object::from_nid(&Nid::PKCS7_DATA).unwrap();
+        let mut content_type_asn1: Asn1String = Asn1String::new().unwrap();
+        content_type_asn1.set(asn1object.as_slice()).unwrap();
+        let content_type_attr =
+            X509Attribute::from_string(Nid::PKCS9_CONTENTTYPE, content_type_asn1).unwrap();
+        attributes.push(content_type_attr).unwrap();
+
+        signer_info.set_signed_attributes(&attributes).unwrap();
 
         // Sign
         let data: [u8; 1] = [42];
