@@ -718,7 +718,7 @@ impl X509Attribute {
     ///
     pub fn from_string(nid: Nid, value: Asn1String) -> Result<X509Attribute, ErrorStack> {
         unsafe {
-            let asn1_type = cvt(ffi::ASN1_STRING_type(value.as_ptr() as *const _))?;
+            let asn1_type = cvt(ffi::ASN1_STRING_type(value.as_ptr()))?;
             let attribute = cvt_p(ffi::X509_ATTRIBUTE_create(
                 nid.as_raw(),
                 asn1_type,
