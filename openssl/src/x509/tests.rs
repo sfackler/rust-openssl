@@ -476,3 +476,34 @@ fn test_load_subject_der() {
     ];
     X509Name::from_der(SUBJECT_DER).unwrap();
 }
+
+fn new_cert(key: &PKey<Private>, callback: impl FnOnce(&mut X509Builder)) -> X509 {
+    let mut builder = X509::builder().unwrap();
+    builder.set_version(2).unwrap();
+    builder.set_pubkey(key).unwrap();
+    callback(&mut builder);
+    builder.sign(key, MessageDigest::sha256()).unwrap();
+    builder.build()
+}
+
+#[test]
+fn test_is_ca() {
+    let key = pkey();
+    let basic_constraints = BasicConstraints::new().ca().critical().build().unwrap();
+    let x509 = new_cert(&key, |builder| {
+        builder.append_extension(basic_constraints).unwrap();
+    });
+    assert!(x509.is_ca());
+
+    let x509 = new_cert(&key, |_| {});
+
+    assert!(!x509.is_ca());
+
+
+    let basic_constraints = BasicConstraints::new().critical().build().unwrap();
+    let x509 = new_cert(&key, |builder| {
+        builder.append_extension(basic_constraints).unwrap();
+    });
+    assert!(!x509.is_ca());
+
+}

@@ -47,6 +47,20 @@ pub mod store;
 mod tests;
 
 foreign_type_and_impl_send_sync! {
+    type CType = ffi::BASIC_CONSTRAINTS;
+    fn drop = ffi::BASIC_CONSTRAINTS_free;
+
+    pub struct BasicConstraints;
+    pub struct BasicConstraintsRef;
+}
+
+impl BasicConstraintsRef {
+    pub fn is_ca(&self) -> bool {
+        unsafe { (*self.as_ptr()).ca > 0 }
+    }
+}
+
+foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE_CTX;
     fn drop = ffi::X509_STORE_CTX_free;
 
@@ -563,6 +577,24 @@ impl X509Ref {
             let r = ffi::X509_get_serialNumber(self.as_ptr());
             Asn1IntegerRef::from_const_ptr_opt(r).expect("serial number must not be null")
         }
+    }
+
+    pub fn is_ca(&self) -> bool {
+        let basic_constraints = unsafe {
+            let raw_basic_constraints = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_basic_constraints,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+            BasicConstraintsRef::from_const_ptr_opt(raw_basic_constraints as *mut _)
+        };
+        if let Some(bc) = basic_constraints {
+            bc.is_ca()
+        } else {
+            false
+        }
+        
     }
 
     to_pem! {
