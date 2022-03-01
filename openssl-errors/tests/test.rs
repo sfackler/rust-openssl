@@ -16,6 +16,7 @@ openssl_errors::openssl_errors! {
 }
 
 #[test]
+#[allow(clippy::single_char_pattern)]
 fn basic() {
     openssl_errors::put_error!(Test::FOO, Test::NO_MILK);
 
@@ -40,6 +41,7 @@ fn basic() {
 }
 
 #[test]
+#[allow(clippy::single_char_pattern)]
 fn static_data() {
     openssl_errors::put_error!(Test::BAR, Test::NO_BACON, "foobar {{}}");
 
@@ -57,6 +59,7 @@ fn static_data() {
 }
 
 #[test]
+#[allow(clippy::single_char_pattern)]
 fn dynamic_data() {
     openssl_errors::put_error!(Test::BAR, Test::NO_MILK, "hello {}", "world");
 
