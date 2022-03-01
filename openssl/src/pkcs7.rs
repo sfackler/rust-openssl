@@ -511,19 +511,28 @@ impl Pkcs7Ref {
 
 #[cfg(test)]
 mod tests {
-    use crate::asn1::{Asn1Integer, Asn1Object, Asn1String, Asn1Time, Asn1Type};
+    use cfg_if::cfg_if;
+    cfg_if! {
+        if #[cfg(ossl111)] {
+            pub use crate::asn1::{Asn1Integer, Asn1Object, Asn1String,  Asn1Time, Asn1Type};
+            use crate::pkcs7::{Pkcs7, Pkcs7Flags, Pkcs7SignerInfo};
+            use crate::x509::{X509Attribute, X509Name, X509Req, X509};
+            use std::mem;
+        } else {
+            use crate::asn1::{Asn1Integer, Asn1Time};
+            use crate::pkcs7::{Pkcs7, Pkcs7Flags};
+            use crate::x509::{X509Name, X509Req, X509};
+        }
+    }
     use crate::bn::{BigNum, MsbOption};
     use crate::hash::MessageDigest;
     use crate::nid::Nid;
-    use crate::pkcs7::{Pkcs7, Pkcs7Flags, Pkcs7SignerInfo};
     use crate::pkey::PKey;
     use crate::rsa::Rsa;
     use crate::stack::Stack;
     use crate::symm::Cipher;
     use crate::x509::extension::{ExtendedKeyUsage, KeyUsage, SubjectAlternativeName};
     use crate::x509::store::X509StoreBuilder;
-    use crate::x509::{X509Attribute, X509Name, X509Req, X509};
-    use std::mem;
 
     #[test]
     fn encrypt_decrypt_test() {
