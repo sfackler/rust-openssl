@@ -538,10 +538,10 @@ impl Asn1StringRef {
     ///    let mut printable_string_asn1 = Asn1String::type_new(Asn1Type::PRINTABLESTRING).unwrap();
     ///    printable_string_asn1.set("A printable string".as_bytes()).unwrap();
     ///
-    ///    // Add an ASN1 object
+    ///    // Add an ASN1 object (OpenSSL 1.1.1 and higher)
     ///    let asn1object = Asn1Object::from_nid(&Nid::PKCS7_DATA).unwrap();
     ///    let mut object_string_asn1: Asn1String = Asn1String::new().unwrap();
-    ///    object_string_asn1.set(asn1object.as_slice()).unwrap();
+    ///    #[cfg(ossl111)] object_string_asn1.set(asn1object.as_slice()).unwrap();
     /// ```
     ///
     #[corresponds(ASN1_STRING_set)]
