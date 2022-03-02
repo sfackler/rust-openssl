@@ -518,6 +518,15 @@ impl Asn1IntegerRef {
         unsafe { ffi::ASN1_INTEGER_get(self.as_ptr()) as i64 }
     }
 
+    /// Converts the integer to i64
+    pub fn get_int64(&self) -> Result<i64, ErrorStack> {
+        let mut result: i64 = 0;
+        unsafe {
+            cvt(ffi::ASN1_INTEGER_get_int64(&mut result, self.as_ptr()))?;
+        }
+        Ok(result)
+    }
+
     /// Converts the integer to a `BigNum`.
     #[corresponds(ASN1_INTEGER_to_BN)]
     pub fn to_bn(&self) -> Result<BigNum, ErrorStack> {

@@ -10,6 +10,7 @@
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
+use std::convert::TryInto;
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -46,17 +47,14 @@ pub mod store;
 #[cfg(test)]
 mod tests;
 
-foreign_type_and_impl_send_sync! {
-    type CType = ffi::BASIC_CONSTRAINTS;
-    fn drop = ffi::BASIC_CONSTRAINTS_free;
+// this mod is only used to make the BasicConstraints glue type private.
+mod basic_constraints {
+    foreign_type_and_impl_send_sync! {
+        type CType = ffi::BASIC_CONSTRAINTS;
+        fn drop = ffi::BASIC_CONSTRAINTS_free;
 
-    pub struct BasicConstraints;
-    pub struct BasicConstraintsRef;
-}
-
-impl BasicConstraintsRef {
-    pub fn is_ca(&self) -> bool {
-        unsafe { (*self.as_ptr()).ca > 0 }
+        pub struct BasicConstraints;
+        pub struct BasicConstraintsRef;
     }
 }
 
@@ -579,22 +577,51 @@ impl X509Ref {
         }
     }
 
-    pub fn is_ca(&self) -> bool {
-        let basic_constraints = unsafe {
+    pub fn basic_constraints(&self) -> Result<Option<extension::BasicConstraints>, ErrorStack> {
+        let bcr = unsafe {
             let raw_basic_constraints = ffi::X509_get_ext_d2i(
                 self.as_ptr(),
                 ffi::NID_basic_constraints,
                 ptr::null_mut(),
                 ptr::null_mut(),
             );
-            BasicConstraintsRef::from_const_ptr_opt(raw_basic_constraints as *mut _)
+            basic_constraints::BasicConstraintsRef::from_const_ptr_opt(
+                raw_basic_constraints as *mut _,
+            )
         };
-        if let Some(bc) = basic_constraints {
-            bc.is_ca()
-        } else {
-            false
+        if bcr.is_none() {
+            return Ok(None);
         }
-        
+        let bcr = bcr.unwrap();
+        let mut result = extension::BasicConstraints::new();
+
+        let ca = unsafe { (*bcr.as_ptr()).ca > 0 };
+        if ca {
+            result.ca();
+        }
+        let raw_path_len = unsafe {
+            let pl = Asn1IntegerRef::from_ptr((*bcr.as_ptr()).pathlen);
+            if pl.as_ptr().is_null() {
+                -1
+            } else {
+                pl.get_int64()?
+            }
+        };
+        if raw_path_len >= 0 {
+            let path_len = raw_path_len.try_into().map_err(|_e| ErrorStack::get())?;
+            result.pathlen(path_len);
+        }
+        unsafe {
+            let loc = ffi::X509_get_ext_by_NID(self.as_ptr(), ffi::NID_basic_constraints, -1);
+            // loc will be -1 if extension is not present.
+            if loc >= 0 {
+                let ex = ffi::X509_get_ext(self.as_ptr(), loc);
+                if ffi::X509_EXTENSION_get_critical(ex) > 0 {
+                    result.critical();
+                }
+            }
+        }
+        Ok(Some(result))
     }
 
     to_pem! {
