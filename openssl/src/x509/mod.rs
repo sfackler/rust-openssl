@@ -694,7 +694,10 @@ impl Stackable for X509 {
 }
 
 /// A context object required to construct certain `X509` extension values.
-pub struct X509v3Context<'a>(ffi::X509V3_CTX, PhantomData<(&'a X509Ref, &'a ConfRef)>);
+pub struct X509v3Context<'a>(
+    pub(crate) ffi::X509V3_CTX,
+    pub(crate) PhantomData<(&'a X509Ref, &'a ConfRef)>,
+);
 
 impl<'a> X509v3Context<'a> {
     pub fn as_ptr(&self) -> *mut ffi::X509V3_CTX {
