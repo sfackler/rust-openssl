@@ -14,6 +14,40 @@ extern "C" {
 
 stack!(stack_st_ASN1_OBJECT);
 
+#[repr(C)]
+pub struct ASN1_TYPE {
+    pub type_: c_int,
+    pub value: ASN1_TYPE_value,
+}
+#[repr(C)]
+pub union ASN1_TYPE_value {
+    pub ptr: *mut c_char,
+    pub boolean: ASN1_BOOLEAN,
+    pub asn1_string: *mut ASN1_STRING,
+    pub object: *mut ASN1_OBJECT,
+    pub integer: *mut ASN1_INTEGER,
+    pub enumerated: *mut ASN1_ENUMERATED,
+    pub bit_string: *mut ASN1_BIT_STRING,
+    pub octet_string: *mut ASN1_OCTET_STRING,
+    pub printablestring: *mut ASN1_PRINTABLESTRING,
+    pub t61string: *mut ASN1_T61STRING,
+    pub ia5string: *mut ASN1_IA5STRING,
+    pub generalstring: *mut ASN1_GENERALSTRING,
+    pub bmpstring: *mut ASN1_BMPSTRING,
+    pub universalstring: *mut ASN1_UNIVERSALSTRING,
+    pub utctime: *mut ASN1_UTCTIME,
+    pub generalizedtime: *mut ASN1_GENERALIZEDTIME,
+    pub visiblestring: *mut ASN1_VISIBLESTRING,
+    pub utf8string: *mut ASN1_UTF8STRING,
+    /*
+     * set and sequence are left complete and still contain the set or
+     * sequence bytes
+     */
+    pub set: *mut ASN1_STRING,
+    pub sequence: *mut ASN1_STRING,
+    pub asn1_value: *mut ASN1_VALUE,
+}
+
 extern "C" {
     pub fn ASN1_STRING_type_new(ty: c_int) -> *mut ASN1_STRING;
     #[cfg(any(ossl110, libressl273))]
@@ -51,6 +85,10 @@ extern "C" {
     pub fn ASN1_TIME_set_string(s: *mut ASN1_TIME, str: *const c_char) -> c_int;
     #[cfg(ossl111)]
     pub fn ASN1_TIME_set_string_X509(s: *mut ASN1_TIME, str: *const c_char) -> c_int;
+
+    pub fn ASN1_TYPE_free(x: *mut ASN1_TYPE);
+
+    pub fn ASN1_generate_v3(str: *const c_char, cnf: *mut X509V3_CTX) -> *mut ASN1_TYPE;
 }
 
 const_ptr_api! {
