@@ -533,23 +533,30 @@ impl fmt::Debug for Asn1StringRef {
 impl FromAsn1Type<Asn1StringRef> for Asn1StringRef {
     fn from_asn1type(ty: &Asn1Type) -> Result<&Asn1StringRef, Asn1Error> {
         unsafe {
+            unsafe fn from_asn1type_ptr(ty: &Asn1Type) -> &Asn1StringRef {
+                Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)
+            }
             match ty.typ()? {
-                Asn1TagValue::BitString => Ok(Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)),
-                Asn1TagValue::BmpString => Ok(Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)),
-                Asn1TagValue::Enumerated => Ok(Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)),
-                Asn1TagValue::GeneralString => Ok(Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)),
-                Asn1TagValue::GraphicString => Ok(Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)),
-                Asn1TagValue::Ia5String => Ok(Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)),
-                Asn1TagValue::Integer => Ok(Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)),
-                Asn1TagValue::NumericString => Ok(Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)),
-                Asn1TagValue::OctetString => Ok(Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)),
-                Asn1TagValue::PrintableString => Ok(Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)),
-                Asn1TagValue::T61String => Ok(Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)),
-                Asn1TagValue::UniversalString => Ok(Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)),
-                Asn1TagValue::Utf8String => Ok(Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)),
-                Asn1TagValue::VideotexString => Ok(Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)),
-                Asn1TagValue::VisibleString => Ok(Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)),
-                _ => Err(Asn1Error { message: String::from("Not a string type. Conversion not supported.") }),
+                Asn1TagValue::BitString => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::BmpString => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::Enumerated => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::GeneralString => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::GeneralizedTime => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::GraphicString => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::Ia5String => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::Integer => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::NumericString => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::OctetString => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::PrintableString => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::T61String => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::UniversalString => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::UtcTime => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::Utf8String => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::VideotexString => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::VisibleString => Ok(from_asn1type_ptr(&ty)),
+                _ => Err(Asn1Error {
+                    message: String::from("Not a string type. Conversion not supported.")
+                }),
             }
         }
     }
