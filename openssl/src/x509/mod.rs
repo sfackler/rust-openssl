@@ -21,8 +21,8 @@ use std::slice;
 use std::str;
 
 use crate::asn1::{
-    Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1String, Asn1StringRef, Asn1TimeRef,
-    Asn1Type,
+    Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1String, Asn1StringRef, Asn1TagValue,
+    Asn1TimeRef,
 };
 use crate::bio::MemBioSlice;
 use crate::conf::ConfRef;
@@ -847,7 +847,7 @@ impl X509NameBuilder {
         &mut self,
         field: &str,
         value: &str,
-        ty: Asn1Type,
+        ty: Asn1TagValue,
     ) -> Result<(), ErrorStack> {
         let value_len = value.len() as c_int;
         let value_c = CString::new(value).unwrap();
@@ -856,7 +856,7 @@ impl X509NameBuilder {
             cvt(ffi::X509_NAME_add_entry_by_txt(
                 self.0.as_ptr(),
                 field.as_ptr() as *mut _,
-                ty.as_raw(),
+                ty as c_int,
                 value_c.as_ptr() as *mut _,
                 value_len,
                 -1,
@@ -893,7 +893,7 @@ impl X509NameBuilder {
         &mut self,
         field: Nid,
         value: &str,
-        ty: Asn1Type,
+        ty: Asn1TagValue,
     ) -> Result<(), ErrorStack> {
         let value_len = value.len() as c_int;
         let value_c = CString::new(value).unwrap();
@@ -901,7 +901,7 @@ impl X509NameBuilder {
             cvt(ffi::X509_NAME_add_entry_by_NID(
                 self.0.as_ptr(),
                 field.as_raw(),
-                ty.as_raw(),
+                ty as c_int,
                 value_c.as_ptr() as *mut _,
                 value_len,
                 -1,

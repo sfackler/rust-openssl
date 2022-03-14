@@ -45,6 +45,9 @@
 //!
 //! # Fedora
 //! $ sudo dnf install pkg-config openssl-devel
+//!
+//! # Alpine Linux
+//! $ apk add pkgconfig openssl-dev
 //! ```
 //!
 //! ## Manual
