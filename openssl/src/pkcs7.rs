@@ -535,10 +535,10 @@ mod tests {
         let signer_digest = signer_certs[0].digest(MessageDigest::sha256()).unwrap();
         assert_eq!(*cert_digest, *signer_digest);
 
-        let signer_infos = pkcs7.signer_infos().unwrap();
-        assert_eq!(signer_infos.len(), 1);
+        let signer_info = pkcs7.signer_info().unwrap();
+        assert_eq!(signer_info.len(), 1);
         assert_eq!(
-            signer_infos[0].serial_number().to_bn().unwrap(),
+            signer_info[0].serial_number().to_bn().unwrap(),
             cert.serial_number().to_bn().unwrap()
         );
 
@@ -557,22 +557,22 @@ mod tests {
         cfg_if! {
             if #[cfg(any(ossl102, libressl310))] {
                 assert_eq!(
-                    signer_infos[0].digest_algorithm().object().nid(),
+                    signer_info[0].digest_algorithm().object().nid(),
                     Nid::SHA256
                 );
             } else {
                 assert_eq!(
-                    signer_infos[0].digest_algorithm().object().nid(),
+                    signer_info[0].digest_algorithm().object().nid(),
                     Nid::SHA1
                 );
             }
         }
         assert_eq!(
-            signer_infos[0].digest_encryption_algorithm().object().nid(),
+            signer_info[0].digest_encryption_algorithm().object().nid(),
             Nid::RSAENCRYPTION
         );
 
-        assert!(!signer_infos[0].signature().is_empty());
+        assert!(!signer_info[0].signature().is_empty());
     }
 
     #[test]
