@@ -70,6 +70,10 @@ fn main() {
             println!("cargo:rustc-cfg=libressl291");
         }
 
+        if version >= 0x3_01_00_00_0 {
+            println!("cargo:rustc-cfg=libressl310");
+        }
+
         if version >= 0x3_02_01_00_0 {
             println!("cargo:rustc-cfg=libressl321");
         }
