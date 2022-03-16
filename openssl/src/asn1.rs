@@ -895,6 +895,19 @@ mod tests {
         }
     }
 
+    // Check (deprecated) `pub const Asn1Type::...` et al.
+    #[test]
+    fn asn1_type_type_compatibility() {
+        let null = null_mut();
+        unsafe {
+            // Create an ASN.1 type object
+            let s = CString::new("UTF8String:Hällö Test").unwrap();
+            let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s.as_ptr(), null))
+                .map(|p| Asn1Type::from_ptr(p)).unwrap();
+            assert_eq!(at.typ().unwrap(), Asn1Type::UTF8STRING);
+        }
+    }
+
     #[test]
     fn asn1_string_from_asn1_type() {
         let null = null_mut();
