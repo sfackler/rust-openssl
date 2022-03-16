@@ -4,16 +4,17 @@ use libc::{c_int, c_void};
 use std::mem;
 use std::ptr;
 
-use crate::asn1::Asn1Object;
+use crate::asn1::{Asn1IntegerRef, Asn1Object, Asn1StringRef};
 use crate::bio::{MemBio, MemBioSlice};
 use crate::error::ErrorStack;
 use crate::hash::MessageDigest;
 use crate::nid::Nid;
 use crate::pkey::{HasPrivate, PKeyRef};
-use crate::stack::{Stack, StackRef};
+use crate::stack::{Stack, StackRef, Stackable};
 use crate::symm::Cipher;
+use crate::util::ForeignTypeRefExt;
 use crate::x509::store::X509StoreRef;
-use crate::x509::{X509Attribute, X509Ref, X509};
+use crate::x509::{X509AlgorithmRef, X509Attribute, X509NameRef, X509Ref, X509};
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
 
@@ -21,10 +22,10 @@ foreign_type_and_impl_send_sync! {
     type CType = ffi::PKCS7_SIGNER_INFO;
     fn drop = ffi::PKCS7_SIGNER_INFO_free;
 
-    /// A `PKCS_SIGNER_INFO` signer info strucuture
+    /// A PKCS#7 SignerInfo structure.
     pub struct Pkcs7SignerInfo;
 
-    /// Reference to `PKCS7_SIGNER_INFO`.
+    /// Reference to `Pkcs7SignerInfo`
     pub struct Pkcs7SignerInfoRef;
 }
 
@@ -52,6 +53,78 @@ impl Pkcs7SignerInfoRef {
             Ok(())
         }
     }
+
+    /// Returns the issuer's subject name.
+    ///
+    /// This corresponds to `PKCS7_SIGNER_INFO`'s `issuer_and_serial.issuer` field.`
+    pub fn subject_name(&self) -> &X509NameRef {
+        unsafe {
+            let ias = (*self.as_ptr()).issuer_and_serial;
+            assert!(!ias.is_null());
+
+            let issuer = (*ias).issuer;
+            X509NameRef::from_const_ptr_opt(issuer).expect("subject name must not be null")
+        }
+    }
+
+    /// Returns the issuer's serial number.
+    ///
+    /// This corresponds to `PKCS7_SIGNER_INFO`'s `issuer_and_serial.serial` field.
+    pub fn serial_number(&self) -> &Asn1IntegerRef {
+        unsafe {
+            let ias = (*self.as_ptr()).issuer_and_serial;
+            assert!(!ias.is_null());
+
+            let serial = (*ias).serial;
+            Asn1IntegerRef::from_const_ptr_opt(serial).expect("serial number must not be null")
+        }
+    }
+
+    /// Returns the signature's digest algorithm.
+    pub fn digest_algorithm(&self) -> &X509AlgorithmRef {
+        unsafe {
+            let mut algor = ptr::null_mut();
+            ffi::PKCS7_SIGNER_INFO_get0_algs(
+                self.as_ptr(),
+                ptr::null_mut(),
+                &mut algor,
+                ptr::null_mut(),
+            );
+
+            X509AlgorithmRef::from_const_ptr_opt(algor).expect("digest algorithm must not be null")
+        }
+    }
+
+    /// Returns the signature's digest encryption algorithm.
+    pub fn digest_encryption_algorithm(&self) -> &X509AlgorithmRef {
+        unsafe {
+            let mut algor = ptr::null_mut();
+            ffi::PKCS7_SIGNER_INFO_get0_algs(
+                self.as_ptr(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                &mut algor,
+            );
+
+            X509AlgorithmRef::from_const_ptr_opt(algor)
+                .expect("digest encryption algorithm must not be null")
+        }
+    }
+
+    /// Returns the raw signature.
+    ///
+    /// This corresponds to `PKCS7_SIGNER_INFO`'s `enc_digest` field.
+    pub fn signature(&self) -> &Asn1StringRef {
+        unsafe {
+            // ASN1_OCTET_STRING is a typedef of ASN1_STRING
+            let ptr = (*self.as_ptr()).enc_digest as *mut ffi::ASN1_STRING;
+            Asn1StringRef::from_const_ptr_opt(ptr).expect("signature must not be null")
+        }
+    }
+}
+
+impl Stackable for Pkcs7SignerInfo {
+    type StackType = ffi::stack_st_PKCS7_SIGNER_INFO;
 }
 
 foreign_type_and_impl_send_sync! {
@@ -507,11 +580,26 @@ impl Pkcs7Ref {
     pub fn finalize(&self, content_bio: &MemBio) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::PKCS7_dataFinal(self.as_ptr(), content_bio.as_ptr())).map(|_| ()) }
     }
+
+    /// Retrieve the SignerInfo entries from the PKCS#7 structure.
+    #[corresponds(PKCS7_get_signer_info)]
+    pub fn signer_info(&self) -> Option<&StackRef<Pkcs7SignerInfo>> {
+        unsafe {
+            let ptr = ffi::PKCS7_get_signer_info(self.as_ptr());
+            if ptr.is_null() {
+                return None;
+            }
+
+            // The returned value is not owned by the caller.
+            Some(StackRef::<Pkcs7SignerInfo>::from_ptr(ptr))
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use cfg_if::cfg_if;
+    use crate::asn1::Asn1TagValue;
     cfg_if! {
         if #[cfg(ossl111)] {
             pub use crate::asn1::{Asn1Integer, Asn1Object, Asn1String,  Asn1Time, Asn1Type};
@@ -673,6 +761,45 @@ mod tests {
         assert_eq!(signer_certs.len(), 1);
         let signer_digest = signer_certs[0].digest(MessageDigest::sha256()).unwrap();
         assert_eq!(*cert_digest, *signer_digest);
+
+        let signer_info = pkcs7.signer_info().unwrap();
+        assert_eq!(signer_info.len(), 1);
+        assert_eq!(
+            signer_info[0].serial_number().to_bn().unwrap(),
+            cert.serial_number().to_bn().unwrap()
+        );
+
+        let cert_subject = cert
+            .subject_name()
+            .entries()
+            .map(|e| (e.data().as_slice(), e.object().nid()))
+            .collect::<Vec<_>>();
+        let signer_subject = cert
+            .subject_name()
+            .entries()
+            .map(|e| (e.data().as_slice(), e.object().nid()))
+            .collect::<Vec<_>>();
+        assert_eq!(cert_subject, signer_subject);
+
+        cfg_if! {
+            if #[cfg(any(ossl102, libressl310))] {
+                assert_eq!(
+                    signer_info[0].digest_algorithm().object().nid(),
+                    Nid::SHA256
+                );
+            } else {
+                assert_eq!(
+                    signer_info[0].digest_algorithm().object().nid(),
+                    Nid::SHA1
+                );
+            }
+        }
+        assert_eq!(
+            signer_info[0].digest_encryption_algorithm().object().nid(),
+            Nid::RSAENCRYPTION
+        );
+
+        assert!(!signer_info[0].signature().is_empty());
     }
 
     #[test]
@@ -861,7 +988,7 @@ mod tests {
 
         // Add a printable string
         let trans_id: Nid = Nid::create("2.16.840.1.113733.1.9.7", "transId", "transId").unwrap();
-        let mut transaction_id_asn1 = Asn1String::type_new(Asn1Type::PRINTABLESTRING).unwrap();
+        let mut transaction_id_asn1 = Asn1String::type_new(Asn1TagValue::PrintableString).unwrap();
         transaction_id_asn1.set("tid_1".as_bytes()).unwrap();
         let transaction_id_attr =
             X509Attribute::from_string(trans_id, transaction_id_asn1).unwrap();

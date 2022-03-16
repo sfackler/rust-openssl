@@ -4,9 +4,6 @@ use *;
 // use x509::stack_st_X509;
 // use x509_attr::stack_st_X509_ATTRIBUTE;
 
-stack!(stack_st_PKCS7_SIGNER_INFO);
-stack!(stack_st_PKCS7_RECIP_INFO);
-
 #[cfg(ossl300)]
 #[repr(C)]
 pub struct PKCS7_CTX {
@@ -191,6 +188,9 @@ cfg_if! {
     }
 }
 
+stack!(stack_st_PKCS7_SIGNER_INFO);
+stack!(stack_st_PKCS7_RECIP_INFO);
+
 extern "C" {
     pub fn d2i_PKCS7(a: *mut *mut PKCS7, pp: *mut *const c_uchar, length: c_long) -> *mut PKCS7;
 }
@@ -282,4 +282,13 @@ extern "C" {
     pub fn PKCS7_dataInit(p7: *mut PKCS7, bio: *mut BIO) -> *mut BIO;
 
     pub fn PKCS7_dataFinal(p7: *mut PKCS7, bio: *mut BIO) -> c_int;
+    
+    pub fn PKCS7_get_signer_info(p7: *mut PKCS7) -> *mut stack_st_PKCS7_SIGNER_INFO;
+
+    pub fn PKCS7_SIGNER_INFO_get0_algs(
+        si: *mut PKCS7_SIGNER_INFO,
+        pk: *mut *mut EVP_PKEY,
+        pdig: *mut *mut X509_ALGOR,
+        psig: *mut *mut X509_ALGOR,
+    );
 }
