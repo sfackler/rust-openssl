@@ -190,6 +190,39 @@ foreign_type_and_impl_send_sync! {
     pub struct Asn1TypeRef;
 }
 
+#[allow(missing_docs)] // no need to document the constants
+#[deprecated(note = "Use Asn1TagValue instead")]
+impl Asn1Type {
+    pub const EOC: Asn1TagValue = Asn1TagValue::Eoc;
+    pub const BOOLEAN: Asn1TagValue = Asn1TagValue::Boolean;
+    pub const INTEGER: Asn1TagValue = Asn1TagValue::Integer;
+    pub const BIT_STRING: Asn1TagValue = Asn1TagValue::BitString;
+    pub const OCTET_STRING: Asn1TagValue = Asn1TagValue::OctetString;
+    pub const NULL: Asn1TagValue = Asn1TagValue::Null;
+    pub const OBJECT: Asn1TagValue = Asn1TagValue::Object;
+    pub const OBJECT_DESCRIPTOR: Asn1TagValue = Asn1TagValue::ObjectDescriptor;
+    pub const EXTERNAL: Asn1TagValue = Asn1TagValue::External;
+    pub const REAL: Asn1TagValue = Asn1TagValue::Real;
+    pub const ENUMERATED: Asn1TagValue = Asn1TagValue::Enumerated;
+    pub const UTF8STRING: Asn1TagValue = Asn1TagValue::Utf8String;
+    pub const SEQUENCE: Asn1TagValue = Asn1TagValue::Sequence;
+    pub const SET: Asn1TagValue = Asn1TagValue::Set;
+    pub const NUMERICSTRING: Asn1TagValue = Asn1TagValue::NumericString;
+    pub const PRINTABLESTRING: Asn1TagValue = Asn1TagValue::PrintableString;
+    pub const T61STRING: Asn1TagValue = Asn1TagValue::T61String;
+    pub const TELETEXSTRING: Asn1TagValue = Asn1TagValue::T61String;
+    pub const VIDEOTEXSTRING: Asn1TagValue = Asn1TagValue::VideotexString;
+    pub const IA5STRING: Asn1TagValue = Asn1TagValue::Ia5String;
+    pub const UTCTIME: Asn1TagValue = Asn1TagValue::UtcTime;
+    pub const GENERALIZEDTIME: Asn1TagValue = Asn1TagValue::GeneralizedTime;
+    pub const GRAPHICSTRING: Asn1TagValue = Asn1TagValue::GraphicString;
+    pub const ISO64STRING: Asn1TagValue = Asn1TagValue::VisibleString;
+    pub const VISIBLESTRING: Asn1TagValue = Asn1TagValue::VisibleString;
+    pub const GENERALSTRING: Asn1TagValue = Asn1TagValue::GeneralString;
+    pub const UNIVERSALSTRING: Asn1TagValue = Asn1TagValue::UniversalString;
+    pub const BMPSTRING: Asn1TagValue = Asn1TagValue::BmpString;
+}
+
 impl Asn1Type {
     /// The type of the value, the Asn1Type contains.
     pub fn typ(&self) -> Result<Asn1TagValue, Asn1Error> {
