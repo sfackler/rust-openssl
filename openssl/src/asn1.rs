@@ -481,6 +481,41 @@ impl fmt::Debug for Asn1StringRef {
 }
 
 foreign_type_and_impl_send_sync! {
+    type CType = ffi::ASN1_OCTET_STRING;
+    fn drop = ffi::ASN1_OCTET_STRING_free;
+    /// ASN.1 type used by OpenSSL for octet strings
+    ///
+    pub struct Asn1OctetString;
+    /// A reference to an [`Asn1OctetString`].
+    pub struct Asn1OctetStringRef;
+}
+
+impl Asn1OctetStringRef {
+    /// Return the octet string as an array of bytes.
+    #[corresponds(ASN1_STRING_get0_data)]
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe { slice::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr() as *mut _), self.len()) }
+    }
+
+    /// Returns the number of bytes in the string.
+    #[corresponds(ASN1_STRING_length)]
+    pub fn len(&self) -> usize {
+        unsafe { ffi::ASN1_STRING_length(self.as_ptr() as *const _) as usize }
+    }
+
+    /// Determines if the string is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+impl fmt::Debug for Asn1OctetStringRef {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.write_str(&format!("{:x?}", self.as_slice()))
+    }
+}
+
+foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_INTEGER;
     fn drop = ffi::ASN1_INTEGER_free;
 
