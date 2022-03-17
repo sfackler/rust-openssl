@@ -90,12 +90,12 @@ extern "C" {
 
     pub fn ASN1_TYPE_free(x: *mut ASN1_TYPE);
 
-    pub fn ASN1_generate_v3(str: *const c_char, cnf: *mut X509V3_CTX) -> *mut ASN1_TYPE;
 }
 
 const_ptr_api! {
     extern "C" {
         pub fn ASN1_STRING_to_UTF8(out: *mut *mut c_uchar, s: #[const_ptr_if(any(ossl110, libressl280))] ASN1_STRING) -> c_int;
         pub fn ASN1_STRING_type(x: #[const_ptr_if(any(ossl110, libressl280))]  ASN1_STRING) -> c_int;
+        pub fn ASN1_generate_v3(str: #[const_ptr_if(any(ossl110, libressl280))] c_char, cnf: *mut X509V3_CTX) -> *mut ASN1_TYPE;
     }
 }

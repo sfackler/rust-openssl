@@ -44,9 +44,9 @@ use crate::bn::{BigNum, BigNumRef};
 use crate::error::ErrorStack;
 use crate::nid::Nid;
 use crate::string::OpensslString;
+use crate::util::ForeignTypeRefExt;
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
-use crate::util::ForeignTypeRefExt;
 
 /// Provides Error handling for asn1.
 #[derive(Debug)]
@@ -57,7 +57,9 @@ pub struct Asn1Error {
 impl Asn1Error {
     /// Create an Asn1Error with a `message`
     pub fn new(msg: &str) -> Asn1Error {
-        Asn1Error { message: msg.to_string() }
+        Asn1Error {
+            message: msg.to_string(),
+        }
     }
 }
 
@@ -72,7 +74,6 @@ impl Error for Asn1Error {
         &self.message
     }
 }
-
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_GENERALIZEDTIME;
@@ -176,7 +177,6 @@ pub enum Asn1TagValue {
     BmpString = ffi::V_ASN1_BMPSTRING as isize,
 }
 
-
 // The type of an ASN.1 value.
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_TYPE;
@@ -190,13 +190,47 @@ foreign_type_and_impl_send_sync! {
     pub struct Asn1TypeRef;
 }
 
+#[allow(missing_docs)] // no need to document the constants
+#[deprecated(note = "Use Asn1TagValue instead")]
+impl Asn1Type {
+    pub const EOC: Asn1TagValue = Asn1TagValue::Eoc;
+    pub const BOOLEAN: Asn1TagValue = Asn1TagValue::Boolean;
+    pub const INTEGER: Asn1TagValue = Asn1TagValue::Integer;
+    pub const BIT_STRING: Asn1TagValue = Asn1TagValue::BitString;
+    pub const OCTET_STRING: Asn1TagValue = Asn1TagValue::OctetString;
+    pub const NULL: Asn1TagValue = Asn1TagValue::Null;
+    pub const OBJECT: Asn1TagValue = Asn1TagValue::Object;
+    pub const OBJECT_DESCRIPTOR: Asn1TagValue = Asn1TagValue::ObjectDescriptor;
+    pub const EXTERNAL: Asn1TagValue = Asn1TagValue::External;
+    pub const REAL: Asn1TagValue = Asn1TagValue::Real;
+    pub const ENUMERATED: Asn1TagValue = Asn1TagValue::Enumerated;
+    pub const UTF8STRING: Asn1TagValue = Asn1TagValue::Utf8String;
+    pub const SEQUENCE: Asn1TagValue = Asn1TagValue::Sequence;
+    pub const SET: Asn1TagValue = Asn1TagValue::Set;
+    pub const NUMERICSTRING: Asn1TagValue = Asn1TagValue::NumericString;
+    pub const PRINTABLESTRING: Asn1TagValue = Asn1TagValue::PrintableString;
+    pub const T61STRING: Asn1TagValue = Asn1TagValue::T61String;
+    pub const TELETEXSTRING: Asn1TagValue = Asn1TagValue::T61String;
+    pub const VIDEOTEXSTRING: Asn1TagValue = Asn1TagValue::VideotexString;
+    pub const IA5STRING: Asn1TagValue = Asn1TagValue::Ia5String;
+    pub const UTCTIME: Asn1TagValue = Asn1TagValue::UtcTime;
+    pub const GENERALIZEDTIME: Asn1TagValue = Asn1TagValue::GeneralizedTime;
+    pub const GRAPHICSTRING: Asn1TagValue = Asn1TagValue::GraphicString;
+    pub const ISO64STRING: Asn1TagValue = Asn1TagValue::VisibleString;
+    pub const VISIBLESTRING: Asn1TagValue = Asn1TagValue::VisibleString;
+    pub const GENERALSTRING: Asn1TagValue = Asn1TagValue::GeneralString;
+    pub const UNIVERSALSTRING: Asn1TagValue = Asn1TagValue::UniversalString;
+    pub const BMPSTRING: Asn1TagValue = Asn1TagValue::BmpString;
+}
+
 impl Asn1Type {
     /// The type of the value, the Asn1Type contains.
     pub fn typ(&self) -> Result<Asn1TagValue, Asn1Error> {
         unsafe {
             let asn1type = self.0;
-            Asn1TagValue::try_from((*asn1type).type_ as isize)
-                .or_else(|_| Err(Asn1Error { message: String::from("Invalid ASN.1 type.")}))
+            Asn1TagValue::try_from((*asn1type).type_ as isize).map_err(|_| Asn1Error {
+                message: String::from("Invalid ASN.1 type."),
+            })
         }
     }
 }
@@ -624,25 +658,25 @@ impl FromAsn1Type<Asn1StringRef> for Asn1StringRef {
                 Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)
             }
             match ty.typ()? {
-                Asn1TagValue::BitString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::BmpString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::Enumerated => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::GeneralString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::GeneralizedTime => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::GraphicString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::Ia5String => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::Integer => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::NumericString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::OctetString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::PrintableString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::T61String => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::UniversalString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::UtcTime => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::Utf8String => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::VideotexString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::VisibleString => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::BitString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::BmpString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::Enumerated => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::GeneralString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::GeneralizedTime => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::GraphicString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::Ia5String => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::Integer => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::NumericString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::OctetString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::PrintableString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::T61String => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::UniversalString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::UtcTime => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::Utf8String => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::VideotexString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::VisibleString => Ok(from_asn1type_ptr(ty)),
                 _ => Err(Asn1Error {
-                    message: String::from("Not a string type. Conversion not supported.")
+                    message: String::from("Not a string type. Conversion not supported."),
                 }),
             }
         }
@@ -843,8 +877,8 @@ cfg_if! {
 
 #[cfg(test)]
 mod tests {
-    use std::ptr::null_mut;
     use super::*;
+    use std::ptr::null_mut;
 
     use crate::bn::BigNum;
     use crate::nid::Nid;
@@ -965,8 +999,24 @@ mod tests {
             // Create an ASN.1 type object
             let s = CString::new("IA5STRING:Hello Test").unwrap();
             let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s.as_ptr(), null))
-                .map(|p| Asn1Type::from_ptr(p)).unwrap();
+                .map(|p| Asn1Type::from_ptr(p))
+                .unwrap();
             assert_eq!(at.typ().unwrap(), Asn1TagValue::Ia5String);
+        }
+    }
+
+    // Check (deprecated) `pub const Asn1Type::...` et al.
+    #[test]
+    #[allow(deprecated)]
+    fn asn1_type_type_compatibility() {
+        let null = null_mut();
+        unsafe {
+            // Create an ASN.1 type object
+            let s = CString::new("UTF8String:Hällö Test").unwrap();
+            let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s.as_ptr(), null))
+                .map(|p| Asn1Type::from_ptr(p))
+                .unwrap();
+            assert_eq!(at.typ().unwrap(), Asn1Type::UTF8STRING);
         }
     }
 
@@ -977,7 +1027,8 @@ mod tests {
             // Create an ASN.1 type object
             let s = CString::new("PRINTABLESTRING:Hello Test").unwrap();
             let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s.as_ptr(), null))
-                .map(|p| Asn1Type::from_ptr(p)).unwrap();
+                .map(|p| Asn1Type::from_ptr(p))
+                .unwrap();
             assert_eq!(at.typ().unwrap(), Asn1TagValue::PrintableString);
             // Get string content from Asn1Type
             let asn1stringref: &Asn1StringRef = Asn1StringRef::from_asn1type(&at).unwrap();
