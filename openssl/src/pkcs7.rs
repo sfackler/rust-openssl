@@ -4,7 +4,7 @@ use libc::{c_int, c_void};
 use std::mem;
 use std::ptr;
 
-use crate::asn1::{Asn1IntegerRef, Asn1Object, Asn1OctetStringRef, Asn1StringRef};
+use crate::asn1::{Asn1IntegerRef, Asn1Object, Asn1OctetStringRef};
 use crate::bio::{MemBio, MemBioSlice};
 use crate::error::ErrorStack;
 use crate::hash::MessageDigest;
