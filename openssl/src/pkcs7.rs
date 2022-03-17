@@ -4,7 +4,7 @@ use libc::{c_int, c_void};
 use std::mem;
 use std::ptr;
 
-use crate::asn1::{Asn1IntegerRef, Asn1Object, Asn1StringRef};
+use crate::asn1::{Asn1IntegerRef, Asn1Object, Asn1OctetStringRef, Asn1StringRef};
 use crate::bio::{MemBio, MemBioSlice};
 use crate::error::ErrorStack;
 use crate::hash::MessageDigest;
@@ -114,11 +114,11 @@ impl Pkcs7SignerInfoRef {
     /// Returns the raw signature.
     ///
     /// This corresponds to `PKCS7_SIGNER_INFO`'s `enc_digest` field.
-    pub fn signature(&self) -> &Asn1StringRef {
+    pub fn signature(&self) -> &Asn1OctetStringRef {
         unsafe {
             // ASN1_OCTET_STRING is a typedef of ASN1_STRING
-            let ptr = (*self.as_ptr()).enc_digest as *mut ffi::ASN1_STRING;
-            Asn1StringRef::from_const_ptr_opt(ptr).expect("signature must not be null")
+            let ptr = (*self.as_ptr()).enc_digest as *mut ffi::ASN1_OCTET_STRING;
+            Asn1OctetStringRef::from_const_ptr_opt(ptr).expect("signature must not be null")
         }
     }
 }
