@@ -20,7 +20,9 @@ use std::ptr;
 use std::slice;
 use std::str;
 
-use crate::asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TagValue, Asn1TimeRef};
+use crate::asn1::{
+    Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TagValue, Asn1TimeRef,
+};
 use crate::bio::MemBioSlice;
 use crate::conf::ConfRef;
 use crate::error::ErrorStack;

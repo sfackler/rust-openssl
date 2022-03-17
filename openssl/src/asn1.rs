@@ -44,9 +44,9 @@ use crate::bn::{BigNum, BigNumRef};
 use crate::error::ErrorStack;
 use crate::nid::Nid;
 use crate::string::OpensslString;
+use crate::util::ForeignTypeRefExt;
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
-use crate::util::ForeignTypeRefExt;
 
 /// Provides Error handling for asn1.
 #[derive(Debug)]
@@ -57,7 +57,9 @@ pub struct Asn1Error {
 impl Asn1Error {
     /// Create an Asn1Error with a `message`
     pub fn new(msg: &str) -> Asn1Error {
-        Asn1Error { message: msg.to_string() }
+        Asn1Error {
+            message: msg.to_string(),
+        }
     }
 }
 
@@ -72,7 +74,6 @@ impl Error for Asn1Error {
         &self.message
     }
 }
-
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_GENERALIZEDTIME;
@@ -176,7 +177,6 @@ pub enum Asn1TagValue {
     BmpString = ffi::V_ASN1_BMPSTRING as isize,
 }
 
-
 // The type of an ASN.1 value.
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_TYPE;
@@ -228,8 +228,11 @@ impl Asn1Type {
     pub fn typ(&self) -> Result<Asn1TagValue, Asn1Error> {
         unsafe {
             let asn1type = self.0;
-            Asn1TagValue::try_from((*asn1type).type_ as isize)
-                .or_else(|_| Err(Asn1Error { message: String::from("Invalid ASN.1 type.")}))
+            Asn1TagValue::try_from((*asn1type).type_ as isize).or_else(|_| {
+                Err(Asn1Error {
+                    message: String::from("Invalid ASN.1 type."),
+                })
+            })
         }
     }
 }
@@ -588,7 +591,7 @@ impl FromAsn1Type<Asn1StringRef> for Asn1StringRef {
                 Asn1TagValue::VideotexString => Ok(from_asn1type_ptr(&ty)),
                 Asn1TagValue::VisibleString => Ok(from_asn1type_ptr(&ty)),
                 _ => Err(Asn1Error {
-                    message: String::from("Not a string type. Conversion not supported.")
+                    message: String::from("Not a string type. Conversion not supported."),
                 }),
             }
         }
@@ -778,8 +781,8 @@ cfg_if! {
 
 #[cfg(test)]
 mod tests {
-    use std::ptr::null_mut;
     use super::*;
+    use std::ptr::null_mut;
 
     use crate::bn::BigNum;
     use crate::nid::Nid;
@@ -890,7 +893,8 @@ mod tests {
             // Create an ASN.1 type object
             let s = CString::new("IA5STRING:Hello Test").unwrap();
             let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s.as_ptr(), null))
-                .map(|p| Asn1Type::from_ptr(p)).unwrap();
+                .map(|p| Asn1Type::from_ptr(p))
+                .unwrap();
             assert_eq!(at.typ().unwrap(), Asn1TagValue::Ia5String);
         }
     }
@@ -903,7 +907,8 @@ mod tests {
             // Create an ASN.1 type object
             let s = CString::new("UTF8String:Hällö Test").unwrap();
             let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s.as_ptr(), null))
-                .map(|p| Asn1Type::from_ptr(p)).unwrap();
+                .map(|p| Asn1Type::from_ptr(p))
+                .unwrap();
             assert_eq!(at.typ().unwrap(), Asn1Type::UTF8STRING);
         }
     }
@@ -915,7 +920,8 @@ mod tests {
             // Create an ASN.1 type object
             let s = CString::new("PRINTABLESTRING:Hello Test").unwrap();
             let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s.as_ptr(), null))
-                .map(|p| Asn1Type::from_ptr(p)).unwrap();
+                .map(|p| Asn1Type::from_ptr(p))
+                .unwrap();
             assert_eq!(at.typ().unwrap(), Asn1TagValue::PrintableString);
             // Get string content from Asn1Type
             let asn1stringref: &Asn1StringRef = Asn1StringRef::from_asn1type(&at).unwrap();
