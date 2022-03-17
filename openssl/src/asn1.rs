@@ -228,10 +228,8 @@ impl Asn1Type {
     pub fn typ(&self) -> Result<Asn1TagValue, Asn1Error> {
         unsafe {
             let asn1type = self.0;
-            Asn1TagValue::try_from((*asn1type).type_ as isize).or_else(|_| {
-                Err(Asn1Error {
-                    message: String::from("Invalid ASN.1 type."),
-                })
+            Asn1TagValue::try_from((*asn1type).type_ as isize).map_err(|_| Asn1Error {
+                message: String::from("Invalid ASN.1 type."),
             })
         }
     }
@@ -573,23 +571,23 @@ impl FromAsn1Type<Asn1StringRef> for Asn1StringRef {
                 Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)
             }
             match ty.typ()? {
-                Asn1TagValue::BitString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::BmpString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::Enumerated => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::GeneralString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::GeneralizedTime => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::GraphicString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::Ia5String => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::Integer => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::NumericString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::OctetString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::PrintableString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::T61String => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::UniversalString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::UtcTime => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::Utf8String => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::VideotexString => Ok(from_asn1type_ptr(&ty)),
-                Asn1TagValue::VisibleString => Ok(from_asn1type_ptr(&ty)),
+                Asn1TagValue::BitString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::BmpString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::Enumerated => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::GeneralString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::GeneralizedTime => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::GraphicString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::Ia5String => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::Integer => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::NumericString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::OctetString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::PrintableString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::T61String => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::UniversalString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::UtcTime => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::Utf8String => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::VideotexString => Ok(from_asn1type_ptr(ty)),
+                Asn1TagValue::VisibleString => Ok(from_asn1type_ptr(ty)),
                 _ => Err(Asn1Error {
                     message: String::from("Not a string type. Conversion not supported."),
                 }),
@@ -901,6 +899,7 @@ mod tests {
 
     // Check (deprecated) `pub const Asn1Type::...` et al.
     #[test]
+    #[allow(deprecated)]
     fn asn1_type_type_compatibility() {
         let null = null_mut();
         unsafe {
