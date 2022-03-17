@@ -1186,6 +1186,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(ossl300))]
     fn test_des_ede3_cbc() {
         let pt = "54686973206973206120746573742e";
         let ct = "6f2867cfefda048a4046ef7e556c7132";
