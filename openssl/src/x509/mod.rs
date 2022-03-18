@@ -22,7 +22,7 @@ use std::str;
 
 use crate::asn1::{
     Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1String, Asn1StringRef, Asn1TagValue,
-    Asn1TimeRef,
+    Asn1TimeRef, Asn1TypeRef,
 };
 use crate::bio::MemBioSlice;
 use crate::conf::ConfRef;
@@ -727,6 +727,25 @@ impl X509Attribute {
             #[allow(clippy::forget_copy)]
             mem::forget(value); // Asn1String does not implement the Copy trait, so clippy is wrong here.
             attribute.map(X509Attribute)
+        }
+    }
+}
+
+impl X509AttributeRef {
+    /// Get object id (NID) of attribute
+    pub fn object(&self) -> Result<&Asn1ObjectRef, ErrorStack> {
+        unsafe {
+            let object_ptr = cvt_p(ffi::X509_ATTRIBUTE_get0_object(self.as_ptr()))?;
+            Ok(Asn1ObjectRef::from_ptr(object_ptr))
+        }
+    }
+
+    /// Get an item from the list of `ASN1_TYPE`s.
+    pub fn typ(&self, idx: isize) -> Result<&Asn1TypeRef, ErrorStack> {
+        unsafe {
+            let type_ptr = cvt_p(ffi::X509_ATTRIBUTE_get0_type(self.as_ptr(), idx as c_int))?;
+            Ok(Asn1TypeRef::from_ptr(type_ptr))
+
         }
     }
 }

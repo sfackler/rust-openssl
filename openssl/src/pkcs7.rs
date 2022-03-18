@@ -4,7 +4,7 @@ use libc::{c_int, c_void};
 use std::mem;
 use std::ptr;
 
-use crate::asn1::{Asn1IntegerRef, Asn1Object, Asn1OctetStringRef};
+use crate::asn1::{Asn1IntegerRef, Asn1Object, Asn1OctetStringRef, Asn1TypeRef};
 use crate::bio::{MemBio, MemBioSlice};
 use crate::error::ErrorStack;
 use crate::hash::MessageDigest;
@@ -119,6 +119,14 @@ impl Pkcs7SignerInfoRef {
             // ASN1_OCTET_STRING is a typedef of ASN1_STRING
             let ptr = (*self.as_ptr()).enc_digest as *mut ffi::ASN1_OCTET_STRING;
             Asn1OctetStringRef::from_const_ptr_opt(ptr).expect("signature must not be null")
+        }
+    }
+
+    /// Get an authenticated (signed) attribute
+    pub fn get_signed_attribute(&self, nid: Nid) -> Result<&Asn1TypeRef, ErrorStack> {
+        unsafe {
+            let type_ptr = cvt_p(ffi::PKCS7_get_signed_attribute(self.as_ptr(), nid.as_raw()))?;
+            Ok(Asn1TypeRef::from_ptr(type_ptr))
         }
     }
 }

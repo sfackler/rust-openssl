@@ -291,4 +291,6 @@ extern "C" {
         pdig: *mut *mut X509_ALGOR,
         psig: *mut *mut X509_ALGOR,
     );
+
+    pub fn PKCS7_get_signed_attribute(si: *mut PKCS7_SIGNER_INFO, nid: c_int) -> *mut ASN1_TYPE;
 }

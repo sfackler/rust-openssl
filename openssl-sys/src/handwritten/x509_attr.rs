@@ -47,6 +47,9 @@ extern "C" {
         atrtype: c_int,
         data: *mut c_void,
     ) -> *mut c_void;
+    pub fn X509_ATTRIBUTE_get0_object(attr: *mut X509_ATTRIBUTE) -> *mut ASN1_OBJECT;
+    pub fn X509_ATTRIBUTE_get0_type(attr: *mut X509_ATTRIBUTE, idx: c_int) -> *mut ASN1_TYPE;
+
 }
 const_ptr_api! {
     extern "C" {
