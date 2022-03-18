@@ -889,14 +889,15 @@ mod tests {
         let null = null_mut();
         unsafe {
             // Create an ASN.1 type object
+            let s = CString::new("IA5STRING:Hello Test").unwrap();
             cfg_if! {
                 if #[cfg(any(ossl110, libressl280))] {
-                    let s = CString::new("IA5STRING:Hello Test").unwrap();
+                    let s_ptr = s.as_ptr() as *const _;
                 } else {
-                    let mut s = CString::new("IA5STRING:Hello Test").unwrap();
+                    let s_ptr = s.as_ptr() as *mut _;
                 }
             }
-            let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s.as_ptr(), null))
+            let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s_ptr, null))
                 .map(|p| Asn1Type::from_ptr(p))
                 .unwrap();
             assert_eq!(at.typ().unwrap(), Asn1TagValue::Ia5String);
@@ -910,14 +911,15 @@ mod tests {
         let null = null_mut();
         unsafe {
             // Create an ASN.1 type object
+            let s = CString::new("UTF8String:Hällö Test").unwrap();
             cfg_if! {
                 if #[cfg(any(ossl110, libressl280))] {
-                    let s = CString::new("UTF8String:Hällö Test").unwrap();
+                    let s_ptr = s.as_ptr() as *const _;
                 } else {
-                    let mut s = CString::new("UTF8String:Hällö Test").unwrap();
+                    let s_ptr = s.as_ptr() as *mut _;
                 }
             }
-            let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s.as_ptr(), null))
+            let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s_ptr, null))
                 .map(|p| Asn1Type::from_ptr(p))
                 .unwrap();
             assert_eq!(at.typ().unwrap(), Asn1Type::UTF8STRING);
@@ -929,14 +931,15 @@ mod tests {
         let null = null_mut();
         unsafe {
             // Create an ASN.1 type object
+            let s = CString::new("PRINTABLESTRING:Hello Test").unwrap();
             cfg_if! {
                 if #[cfg(any(ossl110, libressl280))] {
-                    let s = CString::new("PRINTABLESTRING:Hello Test").unwrap();
+                    let s_ptr = s.as_ptr() as *const _;
                 } else {
-                    let mut s = CString::new("PRINTABLESTRING:Hello Test").unwrap();
+                    let s_ptr = s.as_ptr() as *mut _;
                 }
             }
-            let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s.as_ptr(), null))
+            let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s_ptr, null))
                 .map(|p| Asn1Type::from_ptr(p))
                 .unwrap();
             assert_eq!(at.typ().unwrap(), Asn1TagValue::PrintableString);
