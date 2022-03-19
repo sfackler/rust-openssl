@@ -223,11 +223,11 @@ impl Asn1Type {
     pub const BMPSTRING: Asn1TagValue = Asn1TagValue::BmpString;
 }
 
-impl Asn1Type {
+impl Asn1TypeRef {
     /// The type of the value, the Asn1Type contains.
     pub fn typ(&self) -> Result<Asn1TagValue, Asn1Error> {
         unsafe {
-            let asn1type = self.0;
+            let asn1type = self.as_ptr();
             Asn1TagValue::try_from((*asn1type).type_ as isize).map_err(|_| Asn1Error {
                 message: String::from("Invalid ASN.1 type."),
             })
@@ -238,7 +238,7 @@ impl Asn1Type {
 /// Must be implemented by all ASN.1 object structs
 pub trait FromAsn1Type<T: ForeignTypeRefExt> {
     /// Returns a `T` for the value, that is contained in the Asn1Type
-    fn from_asn1type(ty: &Asn1Type) -> Result<&T, Asn1Error>;
+    fn from_asn1type(ty: &Asn1TypeRef) -> Result<&T, Asn1Error>;
 }
 
 /// Difference between two ASN1 times.
@@ -565,10 +565,10 @@ impl fmt::Debug for Asn1StringRef {
 }
 
 impl FromAsn1Type<Asn1StringRef> for Asn1StringRef {
-    fn from_asn1type(ty: &Asn1Type) -> Result<&Asn1StringRef, Asn1Error> {
+    fn from_asn1type(ty: &Asn1TypeRef) -> Result<&Asn1StringRef, Asn1Error> {
         unsafe {
-            unsafe fn from_asn1type_ptr(ty: &Asn1Type) -> &Asn1StringRef {
-                Asn1StringRef::from_const_ptr((*ty.0).value.asn1_string as *const ffi::ASN1_STRING)
+            unsafe fn from_asn1type_ptr(ty: &Asn1TypeRef) -> &Asn1StringRef {
+                Asn1StringRef::from_const_ptr((*ty.as_ptr()).value.asn1_string as *const ffi::ASN1_STRING)
             }
             match ty.typ()? {
                 Asn1TagValue::BitString => Ok(from_asn1type_ptr(ty)),
@@ -900,7 +900,7 @@ mod tests {
             let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s_ptr, null))
                 .map(|p| Asn1Type::from_ptr(p))
                 .unwrap();
-            assert_eq!(at.typ().unwrap(), Asn1TagValue::Ia5String);
+            assert_eq!(at.as_ref().typ().unwrap(), Asn1TagValue::Ia5String);
         }
     }
 
@@ -922,7 +922,7 @@ mod tests {
             let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s_ptr, null))
                 .map(|p| Asn1Type::from_ptr(p))
                 .unwrap();
-            assert_eq!(at.typ().unwrap(), Asn1Type::UTF8STRING);
+            assert_eq!(at.as_ref().typ().unwrap(), Asn1Type::UTF8STRING);
         }
     }
 
@@ -942,9 +942,9 @@ mod tests {
             let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s_ptr, null))
                 .map(|p| Asn1Type::from_ptr(p))
                 .unwrap();
-            assert_eq!(at.typ().unwrap(), Asn1TagValue::PrintableString);
+            assert_eq!(at.as_ref().typ().unwrap(), Asn1TagValue::PrintableString);
             // Get string content from Asn1Type
-            let asn1stringref: &Asn1StringRef = Asn1StringRef::from_asn1type(&at).unwrap();
+            let asn1stringref: &Asn1StringRef = Asn1StringRef::from_asn1type(&at.as_ref()).unwrap();
             let osslstring: OpensslString = asn1stringref.as_utf8().unwrap();
             let string: &str = osslstring.as_ref();
             assert_eq!("Hello Test", string);
