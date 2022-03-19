@@ -561,7 +561,9 @@ impl FromAsn1Type<Asn1StringRef> for Asn1StringRef {
     fn from_asn1type(ty: &Asn1TypeRef) -> Result<&Asn1StringRef, Asn1Error> {
         unsafe {
             unsafe fn from_asn1type_ptr(ty: &Asn1TypeRef) -> &Asn1StringRef {
-                Asn1StringRef::from_const_ptr((*ty.as_ptr()).value.asn1_string as *const ffi::ASN1_STRING)
+                Asn1StringRef::from_const_ptr(
+                    (*ty.as_ptr()).value.asn1_string as *const ffi::ASN1_STRING,
+                )
             }
             match ty.typ()? {
                 Asn1TagValue::BitString => Ok(from_asn1type_ptr(ty)),
@@ -937,7 +939,7 @@ mod tests {
                 .unwrap();
             assert_eq!(at.as_ref().typ().unwrap(), Asn1TagValue::PrintableString);
             // Get string content from Asn1Type
-            let asn1stringref: &Asn1StringRef = Asn1StringRef::from_asn1type(&at.as_ref()).unwrap();
+            let asn1stringref: &Asn1StringRef = Asn1StringRef::from_asn1type(at.as_ref()).unwrap();
             let osslstring: OpensslString = asn1stringref.as_utf8().unwrap();
             let string: &str = osslstring.as_ref();
             assert_eq!("Hello Test", string);
