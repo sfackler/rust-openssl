@@ -30,7 +30,6 @@ use libc::{c_char, c_int, c_long, time_t};
 #[cfg(ossl102)]
 use std::cmp::Ordering;
 use std::convert::TryFrom;
-use std::error::Error;
 use std::ffi::CString;
 use std::fmt;
 use std::ptr;
@@ -66,12 +65,6 @@ impl Asn1Error {
 impl fmt::Display for Asn1Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.message)
-    }
-}
-
-impl Error for Asn1Error {
-    fn description(&self) -> &str {
-        &self.message
     }
 }
 
