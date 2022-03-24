@@ -21,8 +21,8 @@ use std::slice;
 use std::str;
 
 use crate::asn1::{
-    Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1String, Asn1StringRef, Asn1TagValue,
-    Asn1TimeRef, Asn1TypeRef,
+    Asn1BitStringRef, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1String, Asn1StringRef,
+    Asn1TagValue, Asn1TimeRef, Asn1TypeRef,
 };
 use crate::bio::MemBioSlice;
 use crate::conf::ConfRef;
@@ -719,6 +719,21 @@ impl X509Attribute {
     pub fn from_string(nid: Nid, value: Asn1String) -> Result<X509Attribute, ErrorStack> {
         unsafe {
             let asn1_type = cvt(ffi::ASN1_STRING_type(value.as_ptr()))?;
+            let attribute = cvt_p(ffi::X509_ATTRIBUTE_create(
+                nid.as_raw(),
+                asn1_type,
+                value.as_ptr() as *mut c_void,
+            ));
+            #[allow(clippy::forget_copy)]
+            mem::forget(value); // Asn1String does not implement the Copy trait, so clippy is wrong here.
+            attribute.map(X509Attribute)
+        }
+    }
+
+    /// Creates an X509 attribute from an `Asn1Object`.
+    pub fn from_object(nid: Nid, value: Asn1Object) -> Result<X509Attribute, ErrorStack> {
+        unsafe {
+            let asn1_type = Asn1TagValue::Object as c_int;
             let attribute = cvt_p(ffi::X509_ATTRIBUTE_create(
                 nid.as_raw(),
                 asn1_type,
