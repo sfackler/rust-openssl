@@ -44,6 +44,7 @@ extern "C" {
 
     pub fn ASN1_INTEGER_free(x: *mut ASN1_INTEGER);
     pub fn ASN1_INTEGER_get(dest: *const ASN1_INTEGER) -> c_long;
+    pub fn ASN1_INTEGER_get_int64(x: *mut i64, dest: *const ASN1_INTEGER) -> c_int;
     pub fn ASN1_INTEGER_set(dest: *mut ASN1_INTEGER, value: c_long) -> c_int;
     pub fn BN_to_ASN1_INTEGER(bn: *const BIGNUM, ai: *mut ASN1_INTEGER) -> *mut ASN1_INTEGER;
     pub fn ASN1_INTEGER_to_BN(ai: *const ASN1_INTEGER, bn: *mut BIGNUM) -> *mut BIGNUM;

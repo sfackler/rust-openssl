@@ -81,6 +81,18 @@ impl BasicConstraints {
         }
         X509Extension::new_nid(None, None, Nid::BASIC_CONSTRAINTS, &value)
     }
+
+    pub fn get_pathlen(&self) -> Option<u32> {
+        self.pathlen
+    }
+
+    pub fn get_critical(&self) -> bool {
+        self.critical
+    }
+
+    pub fn get_ca(&self) -> bool {
+        self.ca
+    }
 }
 
 /// An extension consisting of a list of names of the permitted key usages.

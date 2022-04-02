@@ -20,6 +20,16 @@ extern "C" {
 }
 
 #[repr(C)]
+pub struct BASIC_CONSTRAINTS {
+    pub ca: c_int,
+    pub pathlen: *mut ASN1_INTEGER,
+}
+
+extern "C" {
+    pub fn BASIC_CONSTRAINTS_free(bc: *mut BASIC_CONSTRAINTS);
+}
+
+#[repr(C)]
 pub struct AUTHORITY_KEYID {
     pub keyid: *mut ASN1_OCTET_STRING,
     pub issuer: *mut stack_st_GENERAL_NAME,
