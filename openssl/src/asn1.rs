@@ -29,14 +29,11 @@ use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_char, c_int, c_long, time_t};
 #[cfg(ossl102)]
 use std::cmp::Ordering;
-use std::convert::TryFrom;
 use std::ffi::CString;
 use std::fmt;
 use std::ptr;
 use std::slice;
 use std::str;
-
-use num_enum::TryFromPrimitive;
 
 use crate::bio::MemBio;
 use crate::bn::{BigNum, BigNumRef};
@@ -46,27 +43,6 @@ use crate::string::OpensslString;
 use crate::util::ForeignTypeRefExt;
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
-
-/// Provides Error handling for asn1.
-#[derive(Debug)]
-pub struct Asn1Error {
-    message: String,
-}
-
-impl Asn1Error {
-    /// Create an Asn1Error with a `message`
-    pub fn new(msg: &str) -> Asn1Error {
-        Asn1Error {
-            message: msg.to_string(),
-        }
-    }
-}
-
-impl fmt::Display for Asn1Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_GENERALIZEDTIME;
@@ -110,64 +86,75 @@ impl fmt::Display for Asn1GeneralizedTimeRef {
 }
 
 /// See ASN.1 specification for the meaning of Asn1TagValues (e.g. https://www.itu.int/en/ITU-T/asn1)
-#[derive(Clone, Copy, Debug, Eq, PartialEq, TryFromPrimitive)]
-#[repr(isize)]
-pub enum Asn1TagValue {
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Asn1TagValue(c_int);
+
+impl Asn1TagValue {
     /// End-of-contents marker
-    Eoc = ffi::V_ASN1_EOC as isize,
+    pub const EOC: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_EOC);
     /// Boolean value
-    Boolean = ffi::V_ASN1_BOOLEAN as isize,
+    pub const BOOLEAN: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_BOOLEAN);
     /// Integer value
-    Integer = ffi::V_ASN1_INTEGER as isize,
+    pub const INTEGER: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_INTEGER);
     /// Bit string
-    BitString = ffi::V_ASN1_BIT_STRING as isize,
+    pub const BIT_STRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_BIT_STRING);
     /// Octet string
-    OctetString = ffi::V_ASN1_OCTET_STRING as isize,
+    pub const OCTET_STRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_OCTET_STRING);
     /// No-data present
-    Null = ffi::V_ASN1_NULL as isize,
+    pub const NULL: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_NULL);
     /// Representation of the ASN1 OBJECT IDENTIFIER (OID) type
-    Object = ffi::V_ASN1_OBJECT as isize,
+    pub const OBJECT: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_OBJECT);
     /// ASN.1 ObjectDescriptor
-    ObjectDescriptor = ffi::V_ASN1_OBJECT_DESCRIPTOR as isize,
+    pub const OBJECT_DESCRIPTOR: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_OBJECT_DESCRIPTOR);
     /// Hmmm...
-    External = ffi::V_ASN1_EXTERNAL as isize,
+    pub const EXTERNAL: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_EXTERNAL);
     /// ASN.1 Real
-    Real = ffi::V_ASN1_REAL as isize,
+    pub const REAL: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_REAL);
     /// Signed integers of any size
-    Enumerated = ffi::V_ASN1_ENUMERATED as isize,
+    pub const ENUMERATED: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_ENUMERATED);
     /// UTF-8 string
-    Utf8String = ffi::V_ASN1_UTF8STRING as isize,
+    pub const UTF8STRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_UTF8STRING);
     /// ASN.1 sequence
-    Sequence = ffi::V_ASN1_SEQUENCE as isize,
+    pub const SEQUENCE: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_SEQUENCE);
     /// ASN.1 set
-    Set = ffi::V_ASN1_SET as isize,
+    pub const SET: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_SET);
     /// Numeric string to hold characters 0-9 and space
-    NumericString = ffi::V_ASN1_NUMERICSTRING as isize,
+    pub const NUMERICSTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_NUMERICSTRING);
     /// A string holding printable characters "A"-"Z","a"-"z","0"-"9",space and "'()+,-./:=?"
-    PrintableString = ffi::V_ASN1_PRINTABLESTRING as isize,
+    pub const PRINTABLESTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_PRINTABLESTRING);
     /// ASN.1 Teletex string
-    T61String = ffi::V_ASN1_T61STRING as isize,
+    pub const T61STRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_T61STRING);
+    /// ASN.1 Teletex string
+    pub const TELETEXSTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_T61STRING);
     /// ASN.1 VideotexString
-    VideotexString = ffi::V_ASN1_VIDEOTEXSTRING as isize,
+    pub const VIDEOTEXSTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_VIDEOTEXSTRING);
     /// "International Alphabet 5" string
-    Ia5String = ffi::V_ASN1_IA5STRING as isize,
+    pub const IA5STRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_IA5STRING);
     /// Time representation in ASCII
-    UtcTime = ffi::V_ASN1_UTCTIME as isize,
+    pub const UTCTIME: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_UTCTIME);
     /// Another time representation in ASCII
-    GeneralizedTime = ffi::V_ASN1_GENERALIZEDTIME as isize,
+    pub const GENERALIZEDTIME: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_GENERALIZEDTIME);
     /// String based on "International Register of Coded Character Sets to be used with Escape
     /// Sequences".
-    GraphicString = ffi::V_ASN1_GRAPHICSTRING as isize,
-    /// String exxcluding invisible characters. Iso64String is an alias of this type
-    VisibleString = ffi::V_ASN1_VISIBLESTRING as isize,
+    pub const GRAPHICSTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_GRAPHICSTRING);
+    /// String excluding invisible characters. Iso64String is an alias of this type
+    pub const VISIBLESTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_VISIBLESTRING);
+    /// See `Asn1TagValue::VISIBLESTRING`
+    pub const ISO64STRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_VISIBLESTRING);
     /// String based on "International Register of Coded Character Sets to be used with Escape
     /// Sequences".
-    GeneralString = ffi::V_ASN1_GENERALSTRING as isize,
+    pub const GENERALSTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_GENERALSTRING);
     /// Another universal string type that is rareley used after Unicode became the de-facto
     /// standard.
-    UniversalString = ffi::V_ASN1_UNIVERSALSTRING as isize,
+    pub const UNIVERSALSTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_UNIVERSALSTRING);
     /// "Basic Multilingual Plane" string
-    BmpString = ffi::V_ASN1_BMPSTRING as isize,
+    pub const BMPSTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_BMPSTRING);
+
+    /// Returns the integer representation of `Padding`.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn as_raw(&self) -> c_int {
+        self.0
+    }
 }
 
 // The type of an ASN.1 value.
@@ -183,55 +170,21 @@ foreign_type_and_impl_send_sync! {
     pub struct Asn1TypeRef;
 }
 
-#[allow(missing_docs)] // no need to document the constants
-#[deprecated(note = "Use Asn1TagValue instead")]
-impl Asn1Type {
-    pub const EOC: Asn1TagValue = Asn1TagValue::Eoc;
-    pub const BOOLEAN: Asn1TagValue = Asn1TagValue::Boolean;
-    pub const INTEGER: Asn1TagValue = Asn1TagValue::Integer;
-    pub const BIT_STRING: Asn1TagValue = Asn1TagValue::BitString;
-    pub const OCTET_STRING: Asn1TagValue = Asn1TagValue::OctetString;
-    pub const NULL: Asn1TagValue = Asn1TagValue::Null;
-    pub const OBJECT: Asn1TagValue = Asn1TagValue::Object;
-    pub const OBJECT_DESCRIPTOR: Asn1TagValue = Asn1TagValue::ObjectDescriptor;
-    pub const EXTERNAL: Asn1TagValue = Asn1TagValue::External;
-    pub const REAL: Asn1TagValue = Asn1TagValue::Real;
-    pub const ENUMERATED: Asn1TagValue = Asn1TagValue::Enumerated;
-    pub const UTF8STRING: Asn1TagValue = Asn1TagValue::Utf8String;
-    pub const SEQUENCE: Asn1TagValue = Asn1TagValue::Sequence;
-    pub const SET: Asn1TagValue = Asn1TagValue::Set;
-    pub const NUMERICSTRING: Asn1TagValue = Asn1TagValue::NumericString;
-    pub const PRINTABLESTRING: Asn1TagValue = Asn1TagValue::PrintableString;
-    pub const T61STRING: Asn1TagValue = Asn1TagValue::T61String;
-    pub const TELETEXSTRING: Asn1TagValue = Asn1TagValue::T61String;
-    pub const VIDEOTEXSTRING: Asn1TagValue = Asn1TagValue::VideotexString;
-    pub const IA5STRING: Asn1TagValue = Asn1TagValue::Ia5String;
-    pub const UTCTIME: Asn1TagValue = Asn1TagValue::UtcTime;
-    pub const GENERALIZEDTIME: Asn1TagValue = Asn1TagValue::GeneralizedTime;
-    pub const GRAPHICSTRING: Asn1TagValue = Asn1TagValue::GraphicString;
-    pub const ISO64STRING: Asn1TagValue = Asn1TagValue::VisibleString;
-    pub const VISIBLESTRING: Asn1TagValue = Asn1TagValue::VisibleString;
-    pub const GENERALSTRING: Asn1TagValue = Asn1TagValue::GeneralString;
-    pub const UNIVERSALSTRING: Asn1TagValue = Asn1TagValue::UniversalString;
-    pub const BMPSTRING: Asn1TagValue = Asn1TagValue::BmpString;
-}
-
 impl Asn1TypeRef {
     /// The type of the value, the Asn1Type contains.
-    pub fn typ(&self) -> Result<Asn1TagValue, Asn1Error> {
+    /// Returns `None`, if the
+    pub fn typ(&self) -> Asn1TagValue {
         unsafe {
             let asn1type = self.as_ptr();
-            Asn1TagValue::try_from((*asn1type).type_ as isize).map_err(|_| Asn1Error {
-                message: String::from("Invalid ASN.1 type."),
-            })
+            Asn1TagValue((*asn1type).type_ as c_int)
         }
     }
 }
 
 /// Must be implemented by all ASN.1 object structs
-pub trait FromAsn1Type<T: ForeignTypeRefExt> {
+trait FromAsn1Type<T: ForeignTypeRefExt> {
     /// Returns a `T` for the value, that is contained in the Asn1Type
-    fn from_asn1type(ty: &Asn1TypeRef) -> Result<&T, Asn1Error>;
+    fn from_asn1type(ty: &Asn1TypeRef) -> Option<&T>;
 }
 
 /// Difference between two ASN1 times.
@@ -558,34 +511,32 @@ impl fmt::Debug for Asn1StringRef {
 }
 
 impl FromAsn1Type<Asn1StringRef> for Asn1StringRef {
-    fn from_asn1type(ty: &Asn1TypeRef) -> Result<&Asn1StringRef, Asn1Error> {
+    fn from_asn1type(ty: &Asn1TypeRef) -> Option<&Asn1StringRef> {
         unsafe {
             unsafe fn from_asn1type_ptr(ty: &Asn1TypeRef) -> &Asn1StringRef {
                 Asn1StringRef::from_const_ptr(
                     (*ty.as_ptr()).value.asn1_string as *const ffi::ASN1_STRING,
                 )
             }
-            match ty.typ()? {
-                Asn1TagValue::BitString => Ok(from_asn1type_ptr(ty)),
-                Asn1TagValue::BmpString => Ok(from_asn1type_ptr(ty)),
-                Asn1TagValue::Enumerated => Ok(from_asn1type_ptr(ty)),
-                Asn1TagValue::GeneralString => Ok(from_asn1type_ptr(ty)),
-                Asn1TagValue::GeneralizedTime => Ok(from_asn1type_ptr(ty)),
-                Asn1TagValue::GraphicString => Ok(from_asn1type_ptr(ty)),
-                Asn1TagValue::Ia5String => Ok(from_asn1type_ptr(ty)),
-                Asn1TagValue::Integer => Ok(from_asn1type_ptr(ty)),
-                Asn1TagValue::NumericString => Ok(from_asn1type_ptr(ty)),
-                Asn1TagValue::OctetString => Ok(from_asn1type_ptr(ty)),
-                Asn1TagValue::PrintableString => Ok(from_asn1type_ptr(ty)),
-                Asn1TagValue::T61String => Ok(from_asn1type_ptr(ty)),
-                Asn1TagValue::UniversalString => Ok(from_asn1type_ptr(ty)),
-                Asn1TagValue::UtcTime => Ok(from_asn1type_ptr(ty)),
-                Asn1TagValue::Utf8String => Ok(from_asn1type_ptr(ty)),
-                Asn1TagValue::VideotexString => Ok(from_asn1type_ptr(ty)),
-                Asn1TagValue::VisibleString => Ok(from_asn1type_ptr(ty)),
-                _ => Err(Asn1Error {
-                    message: String::from("Not a string type. Conversion not supported."),
-                }),
+            match ty.typ() {
+                Asn1TagValue::BIT_STRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::BMPSTRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::ENUMERATED => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::GENERALSTRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::GENERALIZEDTIME => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::GRAPHICSTRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::IA5STRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::INTEGER => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::NUMERICSTRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::OCTET_STRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::PRINTABLESTRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::T61STRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::UNIVERSALSTRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::UTCTIME => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::UTF8STRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::VIDEOTEXSTRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::VISIBLESTRING => Some(from_asn1type_ptr(ty)),
+                _ => None, // Not a string type. Conversion not supported.
             }
         }
     }
@@ -895,7 +846,7 @@ mod tests {
             let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s_ptr, null))
                 .map(|p| Asn1Type::from_ptr(p))
                 .unwrap();
-            assert_eq!(at.as_ref().typ().unwrap(), Asn1TagValue::Ia5String);
+            assert_eq!(at.as_ref().typ(), Asn1TagValue::IA5STRING);
         }
     }
 
@@ -917,7 +868,7 @@ mod tests {
             let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s_ptr, null))
                 .map(|p| Asn1Type::from_ptr(p))
                 .unwrap();
-            assert_eq!(at.as_ref().typ().unwrap(), Asn1Type::UTF8STRING);
+            assert_eq!(at.as_ref().typ(), Asn1TagValue::UTF8STRING);
         }
     }
 
@@ -937,7 +888,7 @@ mod tests {
             let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s_ptr, null))
                 .map(|p| Asn1Type::from_ptr(p))
                 .unwrap();
-            assert_eq!(at.as_ref().typ().unwrap(), Asn1TagValue::PrintableString);
+            assert_eq!(at.as_ref().typ(), Asn1TagValue::PRINTABLESTRING);
             // Get string content from Asn1Type
             let asn1stringref: &Asn1StringRef = Asn1StringRef::from_asn1type(at.as_ref()).unwrap();
             let osslstring: OpensslString = asn1stringref.as_utf8().unwrap();
