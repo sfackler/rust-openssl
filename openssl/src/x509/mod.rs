@@ -890,7 +890,7 @@ impl X509NameBuilder {
             cvt(ffi::X509_NAME_add_entry_by_txt(
                 self.0.as_ptr(),
                 field.as_ptr() as *mut _,
-                ty as c_int,
+                ty.as_raw(),
                 value_c.as_ptr() as *mut _,
                 value_len,
                 -1,
@@ -935,7 +935,7 @@ impl X509NameBuilder {
             cvt(ffi::X509_NAME_add_entry_by_NID(
                 self.0.as_ptr(),
                 field.as_raw(),
-                ty as c_int,
+                ty.as_raw(),
                 value_c.as_ptr() as *mut _,
                 value_len,
                 -1,

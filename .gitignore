@@ -2,6 +2,5 @@ target/
 Cargo.lock
 .idea/
 *.iml
-*.tmp
 .vscode/
 *.tmp

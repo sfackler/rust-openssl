@@ -16,7 +16,6 @@ openssl_errors::openssl_errors! {
 }
 
 #[test]
-#[allow(clippy::single_char_pattern)]
 fn basic() {
     openssl_errors::put_error!(Test::FOO, Test::NO_MILK);
 
@@ -26,7 +25,7 @@ fn basic() {
     assert_eq!(error.reason().unwrap(), "out of milk");
     // Replace Windows `\` separators with `/`
     assert_eq!(
-        error.file().replace(r"\", "/"),
+        error.file().replace('\\', "/"),
         "openssl-errors/tests/test.rs"
     );
     assert_eq!(error.line(), line!() - 11);
@@ -41,7 +40,6 @@ fn basic() {
 }
 
 #[test]
-#[allow(clippy::single_char_pattern)]
 fn static_data() {
     openssl_errors::put_error!(Test::BAR, Test::NO_BACON, "foobar {{}}");
 
@@ -51,7 +49,7 @@ fn static_data() {
     assert_eq!(error.reason().unwrap(), "out of bacon");
     // Replace Windows `\` separators with `/`
     assert_eq!(
-        error.file().replace(r"\", "/"),
+        error.file().replace('\\', "/"),
         "openssl-errors/tests/test.rs"
     );
     assert_eq!(error.line(), line!() - 11);
@@ -59,7 +57,6 @@ fn static_data() {
 }
 
 #[test]
-#[allow(clippy::single_char_pattern)]
 fn dynamic_data() {
     openssl_errors::put_error!(Test::BAR, Test::NO_MILK, "hello {}", "world");
 
@@ -69,7 +66,7 @@ fn dynamic_data() {
     assert_eq!(error.reason().unwrap(), "out of milk");
     // Replace Windows `\` separators with `/`
     assert_eq!(
-        error.file().replace(r"\", "/"),
+        error.file().replace('\\', "/"),
         "openssl-errors/tests/test.rs"
     );
     assert_eq!(error.line(), line!() - 11);
