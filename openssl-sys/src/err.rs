@@ -28,7 +28,7 @@ cfg_if! {
             pub const fn ERR_GET_LIB(errcode: c_ulong) -> c_int {
                 // hacks since `if` isn't yet stable in const functions :(
                 ((ERR_LIB_SYS as c_ulong * (ERR_SYSTEM_ERROR(errcode) as c_ulong)) |
-                (((errcode >> ERR_LIB_OFFSET) & ERR_LIB_MASK)) * (!ERR_SYSTEM_ERROR(errcode) as c_ulong)) as c_int
+                (((errcode >> ERR_LIB_OFFSET) & ERR_LIB_MASK) * (!ERR_SYSTEM_ERROR(errcode) as c_ulong))) as c_int
             }
 
             pub const fn ERR_GET_FUNC(_errcode: c_ulong) -> c_int {
@@ -38,12 +38,12 @@ cfg_if! {
             pub const fn ERR_GET_REASON(errcode: c_ulong) -> c_int {
                 // hacks since `if` isn't yet stable in const functions :(
                 ((ERR_LIB_SYS as c_ulong * (ERR_SYSTEM_ERROR(errcode) as c_ulong)) |
-                ((errcode & ERR_REASON_MASK)) * (!ERR_SYSTEM_ERROR(errcode) as c_ulong)) as c_int
+                ((errcode & ERR_REASON_MASK) * (!ERR_SYSTEM_ERROR(errcode) as c_ulong))) as c_int
             }
 
             pub const fn ERR_PACK(lib: c_int, _func: c_int, reason: c_int) -> c_ulong {
                 ((lib as c_ulong & ERR_LIB_MASK) << ERR_LIB_OFFSET) |
-                ((reason as c_ulong & ERR_REASON_MASK))
+                (reason as c_ulong & ERR_REASON_MASK)
             }
         }
     } else {
