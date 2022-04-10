@@ -633,3 +633,7 @@ extern "C" {
     pub fn X509_CRL_cmp(a: *const X509_CRL, b: *const X509_CRL) -> c_int;
     pub fn X509_CRL_match(a: *const X509_CRL, b: *const X509_CRL) -> c_int;
 }
+
+extern "C" {
+    pub fn X509_print(bio: *mut BIO, x509: *mut X509) -> c_int;
+}
