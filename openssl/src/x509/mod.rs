@@ -580,6 +580,13 @@ impl X509Ref {
         to_der,
         ffi::i2d_X509
     }
+
+    to_pem! {
+        /// Converts the certificate to human readable text.
+        #[corresponds(X509_print)]
+        to_text,
+        ffi::X509_print
+    }
 }
 
 impl ToOwned for X509Ref {
