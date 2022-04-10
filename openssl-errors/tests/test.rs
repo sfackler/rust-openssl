@@ -25,7 +25,7 @@ fn basic() {
     assert_eq!(error.reason().unwrap(), "out of milk");
     // Replace Windows `\` separators with `/`
     assert_eq!(
-        error.file().replace(r"\", "/"),
+        error.file().replace('\\', "/"),
         "openssl-errors/tests/test.rs"
     );
     assert_eq!(error.line(), line!() - 11);
@@ -49,7 +49,7 @@ fn static_data() {
     assert_eq!(error.reason().unwrap(), "out of bacon");
     // Replace Windows `\` separators with `/`
     assert_eq!(
-        error.file().replace(r"\", "/"),
+        error.file().replace('\\', "/"),
         "openssl-errors/tests/test.rs"
     );
     assert_eq!(error.line(), line!() - 11);
@@ -66,7 +66,7 @@ fn dynamic_data() {
     assert_eq!(error.reason().unwrap(), "out of milk");
     // Replace Windows `\` separators with `/`
     assert_eq!(
-        error.file().replace(r"\", "/"),
+        error.file().replace('\\', "/"),
         "openssl-errors/tests/test.rs"
     );
     assert_eq!(error.line(), line!() - 11);
