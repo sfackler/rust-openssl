@@ -234,6 +234,8 @@ extern "C" {
 const_ptr_api! {
     extern "C" {
         pub fn i2d_X509_CRL(x: #[const_ptr_if(ossl300)] X509_CRL, buf: *mut *mut u8) -> c_int;
+        #[cfg(any(ossl110, libressl270))]
+        pub fn X509_CRL_dup(x: #[const_ptr_if(ossl300)] X509_CRL) -> *mut X509_CRL;
     }
 }
 
@@ -256,6 +258,9 @@ const_ptr_api! {
             palg: *mut #[const_ptr_if(any(ossl110, libressl273))] X509_ALGOR,
             x: *const X509,
         );
+
+        #[cfg(any(ossl110, libressl270))]
+        pub fn X509_REQ_dup(x: #[const_ptr_if(ossl300)] X509_REQ) -> *mut X509_REQ;
     }
 }
 extern "C" {
@@ -278,6 +283,10 @@ extern "C" {
 const_ptr_api! {
     extern "C" {
         pub fn i2d_X509(x: #[const_ptr_if(ossl300)] X509, buf: *mut *mut u8) -> c_int;
+        #[cfg(any(ossl110, libressl270))]
+        pub fn X509_NAME_dup(x: #[const_ptr_if(ossl300)] X509_NAME) -> *mut X509_NAME;
+        #[cfg(any(ossl110, libressl270))]
+        pub fn X509_dup(x: #[const_ptr_if(ossl300)] X509) -> *mut X509;
     }
 }
 extern "C" {
@@ -641,4 +650,18 @@ extern "C" {
     pub fn X509_get_default_cert_file() -> *const c_char;
     pub fn X509_get_default_cert_dir_env() -> *const c_char;
     pub fn X509_get_default_cert_dir() -> *const c_char;
+}
+
+extern "C" {
+    pub fn X509_cmp(a: *const X509, b: *const X509) -> c_int;
+    pub fn X509_NAME_cmp(a: *const X509_NAME, b: *const X509_NAME) -> c_int;
+    pub fn X509_issuer_and_serial_cmp(a: *const X509, b: *const X509) -> c_int;
+    pub fn X509_issuer_name_cmp(a: *const X509, b: *const X509) -> c_int;
+    pub fn X509_subject_name_cmp(a: *const X509, b: *const X509) -> c_int;
+    pub fn X509_CRL_cmp(a: *const X509_CRL, b: *const X509_CRL) -> c_int;
+    pub fn X509_CRL_match(a: *const X509_CRL, b: *const X509_CRL) -> c_int;
+}
+
+extern "C" {
+    pub fn X509_print(bio: *mut BIO, x509: *mut X509) -> c_int;
 }

@@ -476,3 +476,29 @@ fn test_load_subject_der() {
     ];
     X509Name::from_der(SUBJECT_DER).unwrap();
 }
+
+#[test]
+fn test_convert_to_text() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    const SUBSTRINGS: &[&str] = &[
+        "Certificate:\n",
+        "Serial Number:",
+        "Signature Algorithm:",
+        "Issuer: C=AU, ST=Some-State, O=Internet Widgits Pty Ltd\n",
+        "Subject: C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=foobar.com\n",
+        "Subject Public Key Info:",
+    ];
+
+    let text = String::from_utf8(cert.to_text().unwrap()).unwrap();
+
+    for substring in SUBSTRINGS {
+        assert!(
+            text.contains(substring),
+            "{:?} not found inside {}",
+            substring,
+            text
+        );
+    }
+}
