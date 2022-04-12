@@ -740,10 +740,10 @@ impl X509Attribute {
     /// Creates an X509 attribute from an `Asn1Object`.
     pub fn from_object(nid: Nid, value: Asn1Object) -> Result<X509Attribute, ErrorStack> {
         unsafe {
-            let asn1_type = Asn1TagValue::Object as c_int;
+            let asn1_type = Asn1TagValue::OBJECT;
             let attribute = cvt_p(ffi::X509_ATTRIBUTE_create(
                 nid.as_raw(),
-                asn1_type,
+                asn1_type.as_raw(),
                 value.as_ptr() as *mut c_void,
             ));
             #[allow(clippy::forget_copy)]
@@ -767,7 +767,6 @@ impl X509AttributeRef {
         unsafe {
             let type_ptr = cvt_p(ffi::X509_ATTRIBUTE_get0_type(self.as_ptr(), idx as c_int))?;
             Ok(Asn1TypeRef::from_ptr(type_ptr))
-
         }
     }
 }

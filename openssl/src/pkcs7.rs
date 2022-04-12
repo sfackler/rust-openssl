@@ -527,7 +527,7 @@ impl Pkcs7Ref {
         cert: &X509Ref,
         pkey: &PKeyRef<PT>,
         algorithm: Option<MessageDigest>,
-    ) -> Result<Pkcs7SignerInfo, ErrorStack>
+    ) -> Result<&Pkcs7SignerInfoRef, ErrorStack>
     where
         PT: HasPrivate,
     {
@@ -541,7 +541,7 @@ impl Pkcs7Ref {
                     None => ptr::null(),
                 },
             ))
-            .map(|ptr| Pkcs7SignerInfo::from_ptr(ptr))
+            .map(|ptr| Pkcs7SignerInfoRef::from_ptr(ptr))
         }
     }
 
@@ -606,14 +606,13 @@ impl Pkcs7Ref {
 
 #[cfg(test)]
 mod tests {
-    use cfg_if::cfg_if;
     use crate::asn1::Asn1TagValue;
+    use cfg_if::cfg_if;
     cfg_if! {
         if #[cfg(ossl111)] {
             pub use crate::asn1::{Asn1Integer, Asn1Object, Asn1String,  Asn1Time, Asn1Type};
-            use crate::pkcs7::{Pkcs7, Pkcs7Flags, Pkcs7SignerInfo};
+            use crate::pkcs7::{Pkcs7, Pkcs7Flags, Pkcs7SignerInfoRef};
             use crate::x509::{X509Attribute, X509Name, X509Req, X509};
-            use std::mem;
         } else {
             use crate::asn1::{Asn1Integer, Asn1Time};
             use crate::pkcs7::{Pkcs7, Pkcs7Flags};
@@ -977,7 +976,7 @@ mod tests {
         signed_pkcs7.add_certificate(signer_cert_clone).unwrap();
 
         // Add signature
-        let signer_info: Pkcs7SignerInfo = signed_pkcs7
+        let signer_info: &Pkcs7SignerInfoRef = signed_pkcs7
             .add_signature(&signer_cert, &signer_key, Some(MessageDigest::sha256()))
             .unwrap();
 
@@ -996,7 +995,7 @@ mod tests {
 
         // Add a printable string
         let trans_id: Nid = Nid::create("2.16.840.1.113733.1.9.7", "transId", "transId").unwrap();
-        let mut transaction_id_asn1 = Asn1String::type_new(Asn1TagValue::PrintableString).unwrap();
+        let mut transaction_id_asn1 = Asn1String::type_new(Asn1TagValue::PRINTABLESTRING).unwrap();
         transaction_id_asn1.set("tid_1".as_bytes()).unwrap();
         let transaction_id_attr =
             X509Attribute::from_string(trans_id, transaction_id_asn1).unwrap();
@@ -1015,8 +1014,6 @@ mod tests {
         // Sign
         let data: [u8; 1] = [42];
         let bio = signed_pkcs7.add_content(Nid::PKCS7_DATA, &data).unwrap();
-
-        mem::forget(signer_info);
 
         // Finalize
         signed_pkcs7.finalize(&bio).unwrap();

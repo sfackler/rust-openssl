@@ -483,26 +483,28 @@ impl Asn1String {
     pub fn type_new(ty: Asn1TagValue) -> Result<Asn1String, ErrorStack> {
         assert!(
             [
-                Asn1TagValue::BitString,
-                Asn1TagValue::BmpString,
-                Asn1TagValue::Enumerated,
-                Asn1TagValue::GeneralString,
-                Asn1TagValue::GeneralizedTime,
-                Asn1TagValue::Ia5String,
-                Asn1TagValue::Integer,
-                Asn1TagValue::OctetString,
-                Asn1TagValue::PrintableString,
-                Asn1TagValue::T61String,
-                Asn1TagValue::UniversalString,
-                Asn1TagValue::UtcTime,
-                Asn1TagValue::Utf8String,
-                Asn1TagValue::VisibleString,
+                Asn1TagValue::BIT_STRING,
+                Asn1TagValue::BMPSTRING,
+                Asn1TagValue::ENUMERATED,
+                Asn1TagValue::GENERALSTRING,
+                Asn1TagValue::GENERALIZEDTIME,
+                Asn1TagValue::IA5STRING,
+                Asn1TagValue::INTEGER,
+                Asn1TagValue::OCTET_STRING,
+                Asn1TagValue::PRINTABLESTRING,
+                Asn1TagValue::T61STRING,
+                Asn1TagValue::TELETEXSTRING,
+                Asn1TagValue::UNIVERSALSTRING,
+                Asn1TagValue::UTCTIME,
+                Asn1TagValue::UTF8STRING,
+                Asn1TagValue::VISIBLESTRING,
+                Asn1TagValue::VIDEOTEXSTRING,
             ]
             .contains(&ty),
             "Unsupported Asn1Type for Asn1String"
         );
         unsafe {
-            let asn1_string = cvt_p(ffi::ASN1_STRING_type_new(ty as c_int)).map(Asn1String)?;
+            let asn1_string = cvt_p(ffi::ASN1_STRING_type_new(ty.as_raw())).map(Asn1String)?;
             Ok(asn1_string)
         }
     }

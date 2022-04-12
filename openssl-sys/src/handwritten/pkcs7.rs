@@ -282,7 +282,7 @@ extern "C" {
     pub fn PKCS7_dataInit(p7: *mut PKCS7, bio: *mut BIO) -> *mut BIO;
 
     pub fn PKCS7_dataFinal(p7: *mut PKCS7, bio: *mut BIO) -> c_int;
-    
+
     pub fn PKCS7_get_signer_info(p7: *mut PKCS7) -> *mut stack_st_PKCS7_SIGNER_INFO;
 
     pub fn PKCS7_SIGNER_INFO_get0_algs(

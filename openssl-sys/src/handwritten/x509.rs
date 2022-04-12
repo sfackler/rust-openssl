@@ -654,7 +654,6 @@ extern "C" {
 
 extern "C" {
     pub fn X509_cmp(a: *const X509, b: *const X509) -> c_int;
-    pub fn X509_NAME_cmp(a: *const X509_NAME, b: *const X509_NAME) -> c_int;
     pub fn X509_issuer_and_serial_cmp(a: *const X509, b: *const X509) -> c_int;
     pub fn X509_issuer_name_cmp(a: *const X509, b: *const X509) -> c_int;
     pub fn X509_subject_name_cmp(a: *const X509, b: *const X509) -> c_int;
