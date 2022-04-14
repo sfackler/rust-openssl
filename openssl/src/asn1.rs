@@ -182,7 +182,7 @@ impl Asn1TypeRef {
 }
 
 /// Must be implemented by all ASN.1 object structs
-trait FromAsn1Type<T: ForeignTypeRefExt> {
+pub trait FromAsn1Type<T: ForeignTypeRef> {
     /// Returns a `T` for the value, that is contained in the Asn1Type
     fn from_asn1type(ty: &Asn1TypeRef) -> Option<&T>;
 }
