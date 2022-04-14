@@ -169,7 +169,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl101)] {
+    if #[cfg(any(ossl101, libressl))] {
         #[repr(C)]
         pub struct PKCS7_SIGNER_INFO {
             pub version: *mut ASN1_INTEGER, /* version 1 */
@@ -291,6 +291,13 @@ extern "C" {
         pdig: *mut *mut X509_ALGOR,
         psig: *mut *mut X509_ALGOR,
     );
+}
 
-    pub fn PKCS7_get_signed_attribute(si: *mut PKCS7_SIGNER_INFO, nid: c_int) -> *mut ASN1_TYPE;
+const_ptr_api! {
+    extern "C" {
+        pub fn PKCS7_get_signed_attribute(
+            si: #[const_ptr_if(ossl300)] PKCS7_SIGNER_INFO,
+            nid: c_int
+        ) -> *mut ASN1_TYPE;
+    }
 }
