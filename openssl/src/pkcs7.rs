@@ -606,6 +606,7 @@ impl Pkcs7Ref {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(ossl111)]
     use crate::asn1::Asn1TagValue;
     use cfg_if::cfg_if;
     cfg_if! {
@@ -818,7 +819,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn enveloped_pkcs7() {
         fn get_serial() -> Asn1Integer {
             let mut big_number = BigNum::new().unwrap();
