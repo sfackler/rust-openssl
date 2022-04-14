@@ -157,7 +157,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl101)] {
+    if #[cfg(any(ossl101, libressl))] {
         #[repr(C)]
         pub struct PKCS7_ISSUER_AND_SERIAL {
             pub issuer: *mut X509_NAME,
