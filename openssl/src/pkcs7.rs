@@ -284,35 +284,6 @@ impl Pkcs7 {
             .map(Pkcs7)
         }
     }
-
-    /// Get the certificates stored to a PKCS#7 structure
-    ///
-    // Unfortunately, there is no corresponding function in openssl. Thus, we have to enter
-    // openssl's internal PKCS7 struct. This is also, what openssl does, when e.g.
-    // `openssl pkcs7 -in pkcs7.pem -print-certs` is called.
-    //
-    pub fn certificates(&self) -> Result<Stack<X509>, ErrorStack> {
-        unsafe {
-            let pkcs7: *mut ffi::PKCS7 = self.0;
-            let pkcs7_type: Asn1Object = Asn1Object::from_ptr((*pkcs7).type_);
-            let pkcs7_certs: Stack<X509> = match pkcs7_type.nid() {
-                Nid::PKCS7_SIGNED => Stack::from_ptr((*(*pkcs7).d.sign).cert),
-                Nid::PKCS7_SIGNEDANDENVELOPED => {
-                    Stack::from_ptr((*(*pkcs7).d.signed_and_enveloped).cert)
-                }
-                _ => Stack::new()?,
-            };
-            let mut certs: Stack<X509> = Stack::new()?;
-            for cert_ref in &pkcs7_certs {
-                // Note: `to_owned()` increases the openssl reference count of the cert, so the
-                // stack becomes an additional owner of the certs.
-                let cert = cert_ref.to_owned();
-                certs.push(cert)?;
-            }
-            mem::forget(pkcs7_certs); // Otherwise, certs would be removed from self, when this method returns
-            Ok(certs)
-        }
-    }
 }
 
 impl Pkcs7Ref {
@@ -587,6 +558,35 @@ impl Pkcs7Ref {
     #[corresponds(PKCS7_dataFinal)]
     pub fn finalize(&self, content_bio: &MemBioRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::PKCS7_dataFinal(self.as_ptr(), content_bio.as_ptr())).map(|_| ()) }
+    }
+
+    /// Get the certificates stored to a PKCS#7 structure
+    ///
+    // Unfortunately, there is no corresponding function in openssl as for signer_info. Thus,
+    // we have to enter openssl's internal PKCS7 struct. This is also, what openssl does, when e.g.
+    // `openssl pkcs7 -in pkcs7.pem -print-certs` is called.
+    //
+    pub fn certificates(&self) -> Result<Stack<X509>, ErrorStack> {
+        unsafe {
+            let pkcs7: *mut ffi::PKCS7 = self.as_ptr();
+            let pkcs7_type: Asn1Object = Asn1Object::from_ptr((*pkcs7).type_);
+            let pkcs7_certs: Stack<X509> = match pkcs7_type.nid() {
+                Nid::PKCS7_SIGNED => Stack::from_ptr((*(*pkcs7).d.sign).cert),
+                Nid::PKCS7_SIGNEDANDENVELOPED => {
+                    Stack::from_ptr((*(*pkcs7).d.signed_and_enveloped).cert)
+                }
+                _ => Stack::new()?,
+            };
+            let mut certs: Stack<X509> = Stack::new()?;
+            for cert_ref in &pkcs7_certs {
+                // Note: `to_owned()` increases the openssl reference count of the cert, so the
+                // stack becomes an additional owner of the certs.
+                let cert = cert_ref.to_owned();
+                certs.push(cert)?;
+            }
+            mem::forget(pkcs7_certs); // Otherwise, certs would be removed from self, when this method returns
+            Ok(certs)
+        }
     }
 
     /// Retrieve the SignerInfo entries from the PKCS#7 structure.
