@@ -1,8 +1,6 @@
 use cfg_if::cfg_if;
 use libc::c_int;
-use std::ffi::c_void;
 use std::marker::PhantomData;
-use std::os::raw::c_long;
 use std::ptr;
 use std::slice;
 
@@ -23,7 +21,7 @@ impl<'a> MemBioSlice<'a> {
     pub fn new(buf: &'a [u8]) -> Result<MemBioSlice<'a>, ErrorStack> {
         ffi::init();
 
-        assert!(buf.len() <= c_int::max_value() as usize);
+        assert!(buf.len() <= c_int::MAX as usize);
         let bio = unsafe {
             cvt_p(BIO_new_mem_buf(
                 buf.as_ptr() as *const _,
@@ -36,6 +34,19 @@ impl<'a> MemBioSlice<'a> {
 
     pub fn as_ptr(&self) -> *mut ffi::BIO {
         self.0
+    }
+}
+
+// A reference to an OpenSSL memory BIO (binary IO).
+pub struct MemBioRef(*mut ffi::BIO);
+
+impl MemBioRef {
+    pub fn as_ptr(&self) -> *mut ffi::BIO {
+        self.0
+    }
+
+    pub unsafe fn from_ptr(bio: *mut ffi::BIO) -> MemBioRef {
+        MemBioRef(bio)
     }
 }
 
@@ -71,18 +82,6 @@ impl MemBio {
 
     pub unsafe fn from_ptr(bio: *mut ffi::BIO) -> MemBio {
         MemBio(bio)
-    }
-
-    pub fn flush(&self) -> Result<(), ErrorStack> {
-        unsafe {
-            let null_ptr: *mut c_void = ptr::null_mut();
-            let ret: c_long = ffi::BIO_ctrl(self.0, ffi::BIO_CTRL_FLUSH, 0, null_ptr);
-            if ret <= 0 {
-                Err(ErrorStack::get())
-            } else {
-                Ok(())
-            }
-        }
     }
 }
 

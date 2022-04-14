@@ -5,7 +5,7 @@ use std::mem;
 use std::ptr;
 
 use crate::asn1::{Asn1IntegerRef, Asn1Object, Asn1OctetStringRef, Asn1TypeRef};
-use crate::bio::{MemBio, MemBioSlice};
+use crate::bio::{MemBio, MemBioRef, MemBioSlice};
 use crate::error::ErrorStack;
 use crate::hash::MessageDigest;
 use crate::nid::Nid;
@@ -559,14 +559,14 @@ impl Pkcs7Ref {
     /// - Nid::PKCS7_DIGEST
     /// `content` is the payload of type `content_type`.
     ///
-    pub fn add_content(&self, content_type: Nid, content: &[u8]) -> Result<MemBio, ErrorStack> {
+    pub fn add_content(&self, content_type: Nid, content: &[u8]) -> Result<MemBioRef, ErrorStack> {
         unsafe {
             // Initialize content
             cvt(ffi::PKCS7_content_new(self.as_ptr(), content_type.as_raw())).map(|_| ())?;
             // Write content
             let bcont_bio = ptr::null_mut();
             let bio = cvt_p(ffi::PKCS7_dataInit(self.as_ptr(), bcont_bio))
-                .map(|bio| MemBio::from_ptr(bio))?;
+                .map(|ptr| MemBioRef::from_ptr(ptr))?;
             let content_length = content.len() as c_int;
             let len = ffi::BIO_write(
                 bio.as_ptr(),
@@ -585,7 +585,7 @@ impl Pkcs7Ref {
     /// `Nid::PKCS7_SIGNEDANDENVELOPED`, it will be signed.
     ///
     #[corresponds(PKCS7_dataFinal)]
-    pub fn finalize(&self, content_bio: &MemBio) -> Result<(), ErrorStack> {
+    pub fn finalize(&self, content_bio: &MemBioRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::PKCS7_dataFinal(self.as_ptr(), content_bio.as_ptr())).map(|_| ()) }
     }
 
