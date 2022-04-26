@@ -434,6 +434,66 @@ impl Pkcs7Ref {
         unsafe { cvt(ffi::PKCS7_set_type(self.as_ptr(), nid.as_raw())).map(|_| ()) }
     }
 
+    /// Query the type of the Pkcs7Ref
+    #[corresponds(PKCS7_type_is_signed)]
+    pub fn is_signed(&self) -> bool {
+        unsafe {
+            let pkcs7: *mut ffi::PKCS7 = self.as_ptr();
+            let pkcs7_type: Asn1Object = Asn1Object::from_ptr((*pkcs7).type_);
+            pkcs7_type.nid() == Nid::PKCS7_SIGNED
+        }
+    }
+
+    /// Query the type of the Pkcs7Ref
+    #[corresponds(PKCS7_type_is_encrypted)]
+    pub fn is_encrypted(&self) -> bool {
+        unsafe {
+            let pkcs7: *mut ffi::PKCS7 = self.as_ptr();
+            let pkcs7_type: Asn1Object = Asn1Object::from_ptr((*pkcs7).type_);
+            pkcs7_type.nid() == Nid::PKCS7_ENCRYPTED
+        }
+    }
+
+    /// Query the type of the Pkcs7Ref
+    #[corresponds(PKCS7_type_is_enveloped)]
+    pub fn is_enveloped(&self) -> bool {
+        unsafe {
+            let pkcs7: *mut ffi::PKCS7 = self.as_ptr();
+            let pkcs7_type: Asn1Object = Asn1Object::from_ptr((*pkcs7).type_);
+            pkcs7_type.nid() == Nid::PKCS7_ENVELOPED
+        }
+    }
+
+    /// Query the type of the Pkcs7Ref
+    #[corresponds(PKCS7_type_is_signedAndEnveloped)]
+    pub fn is_signed_and_enveloped(&self) -> bool {
+        unsafe {
+            let pkcs7: *mut ffi::PKCS7 = self.as_ptr();
+            let pkcs7_type: Asn1Object = Asn1Object::from_ptr((*pkcs7).type_);
+            pkcs7_type.nid() == Nid::PKCS7_SIGNEDANDENVELOPED
+        }
+    }
+
+    /// Query the type of the Pkcs7Ref
+    #[corresponds(PKCS7_type_is_data)]
+    pub fn is_data(&self) -> bool {
+        unsafe {
+            let pkcs7: *mut ffi::PKCS7 = self.as_ptr();
+            let pkcs7_type: Asn1Object = Asn1Object::from_ptr((*pkcs7).type_);
+            pkcs7_type.nid() == Nid::PKCS7_DATA
+        }
+    }
+
+    /// Query the type of the Pkcs7Ref
+    #[corresponds(PKCS7_type_is_digest)]
+    pub fn is_digest(&self) -> bool {
+        unsafe {
+            let pkcs7: *mut ffi::PKCS7 = self.as_ptr();
+            let pkcs7_type: Asn1Object = Asn1Object::from_ptr((*pkcs7).type_);
+            pkcs7_type.nid() == Nid::PKCS7_DIGEST
+        }
+    }
+
     /// Add the signer certificate to a PKCS#7 structure
     ///
     /// `cert` is the signer's certificate.
@@ -930,6 +990,8 @@ mod tests {
         .unwrap();
 
         enveloped_data.to_pem().unwrap();
+
+        assert!(enveloped_data.is_enveloped());
     }
 
     #[test]
@@ -1017,5 +1079,7 @@ mod tests {
 
         // Finalize
         signed_pkcs7.finalize(&bio).unwrap();
+
+        assert!(signed_pkcs7.is_signed());
     }
 }
