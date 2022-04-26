@@ -666,6 +666,22 @@ impl fmt::Debug for Asn1OctetStringRef {
     }
 }
 
+impl FromAsn1Type<Asn1OctetStringRef> for Asn1OctetStringRef {
+    fn from_asn1type(ty: &Asn1TypeRef) -> Option<&Asn1OctetStringRef> {
+        unsafe {
+            unsafe fn from_asn1type_ptr(ty: &Asn1TypeRef) -> &Asn1OctetStringRef {
+                Asn1OctetStringRef::from_const_ptr(
+                    (*ty.as_ptr()).value.asn1_string as *const ffi::ASN1_OCTET_STRING,
+                )
+            }
+            match ty.typ() {
+                Asn1TagValue::OCTET_STRING => Some(from_asn1type_ptr(ty)),
+                _ => None, // Wrong or not even a string type. Conversion not supported.
+            }
+        }
+    }
+}
+
 foreign_type_and_impl_send_sync! {
     type CType = ffi::ASN1_INTEGER;
     fn drop = ffi::ASN1_INTEGER_free;
@@ -1039,6 +1055,33 @@ mod tests {
             let osslstring: OpensslString = asn1stringref.as_utf8().unwrap();
             let string: &str = osslstring.as_ref();
             assert_eq!("Hello Test", string);
+        }
+    }
+
+    #[test]
+    fn asn1_octet_string_from_asn1_type() {
+        let null = null_mut();
+        unsafe {
+            // Create an ASN.1 type object
+            let s = CString::new("FORMAT:ASCII,OCTETSTRING:1234567890").unwrap();
+            cfg_if! {
+                if #[cfg(any(ossl110, libressl280))] {
+                    let s_ptr = s.as_ptr() as *const _;
+                } else {
+                    let s_ptr = s.as_ptr() as *mut _;
+                }
+            }
+            let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s_ptr, null))
+                .map(|p| Asn1Type::from_ptr(p))
+                .unwrap();
+            assert_eq!(at.as_ref().typ(), Asn1TagValue::OCTET_STRING);
+            // Get string content from Asn1Type
+            let asn1octetstringref: &Asn1OctetStringRef = Asn1OctetStringRef::from_asn1type(
+                at.as_ref()
+            ).unwrap();
+            let stringdata: Vec<u8> = Vec::from(asn1octetstringref.as_slice());
+            let string = String::from_utf8(stringdata).unwrap();
+            assert_eq!("1234567890", string);
         }
     }
 }
