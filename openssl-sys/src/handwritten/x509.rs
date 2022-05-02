@@ -18,7 +18,7 @@ stack!(stack_st_X509_EXTENSION);
 stack!(stack_st_X509_ATTRIBUTE);
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl350))] {
         pub enum X509_REQ_INFO {}
     } else {
         #[repr(C)]
@@ -33,7 +33,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl350))] {
         pub enum X509_CRL {}
     } else {
         #[repr(C)]
@@ -60,7 +60,7 @@ cfg_if! {
 stack!(stack_st_X509_CRL);
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl350))] {
         pub enum X509_CRL_INFO {}
     } else {
         #[repr(C)]
@@ -78,7 +78,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl350))] {
         pub enum X509_REVOKED {}
     } else {
         #[repr(C)]
@@ -96,7 +96,7 @@ cfg_if! {
 stack!(stack_st_X509_REVOKED);
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl350))] {
         pub enum X509_REQ {}
     } else {
         #[repr(C)]
@@ -110,7 +110,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl350))] {
         pub enum X509_CINF {}
     } else {
         #[repr(C)]
@@ -185,12 +185,12 @@ extern "C" {
 
 const_ptr_api! {
     extern "C" {
-        #[cfg(ossl102)]
+        #[cfg(any(ossl102, libressl350))]
         pub fn X509_ALGOR_get0(
-            paobj: *mut #[const_ptr_if(ossl110)] ASN1_OBJECT,
+            paobj: *mut #[const_ptr_if(any(ossl110, libressl350))] ASN1_OBJECT,
             pptype: *mut c_int,
-            ppval: *mut #[const_ptr_if(ossl110)] c_void,
-            alg: #[const_ptr_if(ossl110)] X509_ALGOR,
+            ppval: *mut #[const_ptr_if(any(ossl110, libressl350))] c_void,
+            alg: #[const_ptr_if(any(ossl110, libressl350))] X509_ALGOR,
         );
     }
 }
@@ -317,7 +317,7 @@ const_ptr_api! {
     }
 }
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl350))] {
         extern "C" {
             pub fn X509_set1_notBefore(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
             pub fn X509_set1_notAfter(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
@@ -330,10 +330,10 @@ cfg_if! {
     }
 }
 extern "C" {
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl350))]
     pub fn X509_REQ_get_version(req: *const X509_REQ) -> c_long;
     pub fn X509_REQ_set_version(req: *mut X509_REQ, version: c_long) -> c_int;
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl350))]
     pub fn X509_REQ_get_subject_name(req: *const X509_REQ) -> *mut X509_NAME;
 }
 const_ptr_api! {
@@ -606,7 +606,7 @@ extern "C" {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl350))] {
         extern "C" {
             pub fn X509_OBJECT_free(a: *mut X509_OBJECT);
         }

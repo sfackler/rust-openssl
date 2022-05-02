@@ -28,7 +28,7 @@ extern "C" {
     pub fn BN_mul(r: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn BN_sqr(r: *mut BIGNUM, a: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn BN_set_negative(bn: *mut BIGNUM, n: c_int);
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl350))]
     pub fn BN_is_negative(b: *const ::BIGNUM) -> c_int;
 
     pub fn BN_div(
@@ -138,7 +138,7 @@ extern "C" {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl350))] {
         extern "C" {
             pub fn BN_get_rfc2409_prime_768(bn: *mut BIGNUM) -> *mut BIGNUM;
             pub fn BN_get_rfc2409_prime_1024(bn: *mut BIGNUM) -> *mut BIGNUM;
