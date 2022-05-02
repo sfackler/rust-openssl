@@ -37,7 +37,7 @@ use crate::{cvt, cvt_n, cvt_p};
 use openssl_macros::corresponds;
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl350))] {
         use ffi::{
             BN_get_rfc2409_prime_1024, BN_get_rfc2409_prime_768, BN_get_rfc3526_prime_1536,
             BN_get_rfc3526_prime_2048, BN_get_rfc3526_prime_3072, BN_get_rfc3526_prime_4096,

@@ -1534,7 +1534,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl350))] {
         use ffi::{
             X509_ALGOR_get0, ASN1_STRING_get0_data, X509_STORE_CTX_get0_chain, X509_set1_notAfter,
             X509_set1_notBefore, X509_REQ_get_version, X509_REQ_get_subject_name,
@@ -1589,7 +1589,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl350))] {
         use ffi::X509_OBJECT_free;
     } else {
         #[allow(bad_style)]
