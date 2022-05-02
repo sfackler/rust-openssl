@@ -411,13 +411,13 @@ extern "C" {
     #[cfg(ossl111)]
     pub fn SSL_CTX_set_keylog_callback(ctx: *mut SSL_CTX, cb: SSL_CTX_keylog_cb_func);
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     pub fn SSL_CTX_set_max_early_data(ctx: *mut SSL_CTX, max_early_data: u32) -> c_int;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     pub fn SSL_CTX_get_max_early_data(ctx: *const SSL_CTX) -> u32;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     pub fn SSL_set_max_early_data(ctx: *mut SSL, max_early_data: u32) -> c_int;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     pub fn SSL_get_max_early_data(ctx: *const SSL) -> u32;
 
     pub fn SSL_get_finished(s: *const SSL, buf: *mut c_void, count: size_t) -> size_t;
