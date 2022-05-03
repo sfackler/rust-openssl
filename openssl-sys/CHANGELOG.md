@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [v0.9.73]
+
+### Added
+
+* Added support for installations that place libraries in `$OPENSSL_DIR/lib64` in addition to `$OPENSSL_DIR/lib`.
+* Added `X509_issuer_name_hash`.
+* Added `ASN1_string_set`.
+* Added `X509_CRL_dup`, `X509_REQ_dup`, `X509_NAME_dup`, and `X509_dup`.
+* Added `X509_print`.
+* Added support for LibreSSL 3.5.x.
+
 ## [v0.9.72]
 
 ### Changed
