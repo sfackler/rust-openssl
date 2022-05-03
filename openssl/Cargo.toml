@@ -1,6 +1,6 @@
 [package]
 name = "openssl"
-version = "0.10.38"
+version = "0.10.39"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
 description = "OpenSSL bindings"
@@ -27,7 +27,7 @@ foreign-types = "0.3.1"
 libc = "0.2"
 once_cell = "1.5.2"
 
-openssl-macros = { path = "../openssl-macros" }
+openssl-macros = { version = "0.1.0", path = "../openssl-macros" }
 ffi = { package = "openssl-sys", version = "0.9.69", path = "../openssl-sys" }
 
 [dev-dependencies]

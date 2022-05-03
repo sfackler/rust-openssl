@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+## [v0.10.39] - 2022-05-02
+
+### Deprecated
+
+* Deprecated `SslContextBuilder::set_tmp_ecdh_callback` and `SslRef::set_tmp_ecdh_callback`.
+
+### Added
+
+* Added `SslRef::extms_support`.
+* Added `Nid::create`.
+* Added `CipherCtx`, which exposes a more direct interface to `EVP_CIPHER_CTX`.
+* Added `PkeyCtx`, which exposes a more direct interface to `EVP_PKEY_CTX`.
+* Added `MdCtx`, which exposes a more direct interface to `EVP_MD_CTX`.
+* Added `Pkcs12Builder::mac_md`.
+* Added `Provider`.
+* Added `X509Ref::issuer_name_hash`.
+* Added `Decrypter::set_rsa_oaep_label`.
+* Added `X509Ref::to_text`.
+
 ## [v0.10.38] - 2021-10-31
 
 ### Added
@@ -574,7 +593,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.38...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.39...master
+[v0.10.39]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.38...openssl-v0.10.39
 [v0.10.38]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.37...openssl-v0.10.38
 [v0.10.37]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.36...openssl-v0.10.37
 [v0.10.36]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.35...openssl-v0.10.36
