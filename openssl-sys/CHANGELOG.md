@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [v0.9.73]
+## [v0.9.73] - 2022-05-02
 
 ### Added
 
@@ -13,7 +13,7 @@
 * Added `X509_print`.
 * Added support for LibreSSL 3.5.x.
 
-## [v0.9.72]
+## [v0.9.72] - 2021-12-11
 
 ### Changed
 
@@ -298,7 +298,8 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.72..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.73..master
+[v0.9.73]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.72...openssl-sys-v0.9.73
 [v0.9.72]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.71...openssl-sys-v0.9.72
 [v0.9.71]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.70...openssl-sys-v0.9.71
 [v0.9.70]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.69...openssl-sys-v0.9.70
