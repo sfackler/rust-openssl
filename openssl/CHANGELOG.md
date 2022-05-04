@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [v0.10.40] - 2022-05-04
+
+### Fixed
+
+* Fixed the openssl-sys dependency version.
+
 ## [v0.10.39] - 2022-05-02
 
 ### Deprecated
@@ -593,7 +599,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.39...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.40...master
+[v0.10.40]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.39...openssl-v0.10.40
 [v0.10.39]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.38...openssl-v0.10.39
 [v0.10.38]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.37...openssl-v0.10.38
 [v0.10.37]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.36...openssl-v0.10.37
