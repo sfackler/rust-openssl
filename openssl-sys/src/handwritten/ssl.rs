@@ -411,13 +411,13 @@ extern "C" {
     #[cfg(ossl111)]
     pub fn SSL_CTX_set_keylog_callback(ctx: *mut SSL_CTX, cb: SSL_CTX_keylog_cb_func);
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     pub fn SSL_CTX_set_max_early_data(ctx: *mut SSL_CTX, max_early_data: u32) -> c_int;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     pub fn SSL_CTX_get_max_early_data(ctx: *const SSL_CTX) -> u32;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     pub fn SSL_set_max_early_data(ctx: *mut SSL, max_early_data: u32) -> c_int;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     pub fn SSL_get_max_early_data(ctx: *const SSL) -> u32;
 
     pub fn SSL_get_finished(s: *const SSL, buf: *mut c_void, count: size_t) -> size_t;
@@ -439,6 +439,8 @@ cfg_if! {
         extern "C" {
             pub fn SSL_CTX_set_min_proto_version(ctx: *mut ::SSL_CTX, version: u16) -> c_int;
             pub fn SSL_CTX_set_max_proto_version(ctx: *mut ::SSL_CTX, version: u16) -> c_int;
+            pub fn SSL_set_min_proto_version(s: *mut SSL, version: u16) -> c_int;
+            pub fn SSL_set_max_proto_version(s: *mut SSL, version: u16) -> c_int;
         }
     }
 }
@@ -448,6 +450,8 @@ cfg_if! {
         extern "C" {
             pub fn SSL_CTX_get_min_proto_version(ctx: *mut ::SSL_CTX) -> c_int;
             pub fn SSL_CTX_get_max_proto_version(ctx: *mut ::SSL_CTX) -> c_int;
+            pub fn SSL_get_min_proto_version(s: *mut SSL) -> c_int;
+            pub fn SSL_get_max_proto_version(s: *mut SSL) -> c_int;
         }
     }
 }
@@ -482,9 +486,9 @@ extern "C" {
     pub fn SSL_set_bio(ssl: *mut SSL, rbio: *mut BIO, wbio: *mut BIO);
     pub fn SSL_get_rbio(ssl: *const SSL) -> *mut BIO;
     pub fn SSL_get_wbio(ssl: *const SSL) -> *mut BIO;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     pub fn SSL_CTX_set_ciphersuites(ctx: *mut SSL_CTX, str: *const c_char) -> c_int;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     pub fn SSL_set_ciphersuites(ssl: *mut ::SSL, str: *const c_char) -> c_int;
     pub fn SSL_set_verify(
         ssl: *mut SSL,
@@ -518,12 +522,12 @@ extern "C" {
 
     pub fn SSL_SESSION_get_time(s: *const SSL_SESSION) -> c_long;
     pub fn SSL_SESSION_get_timeout(s: *const SSL_SESSION) -> c_long;
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl270))]
     pub fn SSL_SESSION_get_protocol_version(s: *const SSL_SESSION) -> c_int;
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     pub fn SSL_SESSION_set_max_early_data(ctx: *mut SSL_SESSION, max_early_data: u32) -> c_int;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     pub fn SSL_SESSION_get_max_early_data(ctx: *const SSL_SESSION) -> u32;
 
     pub fn SSL_SESSION_get_id(s: *const SSL_SESSION, len: *mut c_uint) -> *const c_uchar;
@@ -560,7 +564,7 @@ extern "C" {
     );
     pub fn SSL_CTX_set_verify_depth(ctx: *mut SSL_CTX, depth: c_int);
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     pub fn SSL_CTX_set_post_handshake_auth(ctx: *mut SSL_CTX, val: c_int);
 
     pub fn SSL_CTX_check_private_key(ctx: *const SSL_CTX) -> c_int;
@@ -626,7 +630,7 @@ extern "C" {
     pub fn SSL_connect(ssl: *mut SSL) -> c_int;
     pub fn SSL_read(ssl: *mut SSL, buf: *mut c_void, num: c_int) -> c_int;
     pub fn SSL_peek(ssl: *mut SSL, buf: *mut c_void, num: c_int) -> c_int;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     pub fn SSL_read_early_data(
         s: *mut ::SSL,
         buf: *mut c_void,
@@ -637,7 +641,7 @@ extern "C" {
 
 extern "C" {
     pub fn SSL_write(ssl: *mut SSL, buf: *const c_void, num: c_int) -> c_int;
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     pub fn SSL_write_early_data(
         s: *mut SSL,
         buf: *const c_void,
@@ -699,7 +703,6 @@ extern "C" {
 
     pub fn SSL_CTX_set_client_CA_list(ctx: *mut SSL_CTX, list: *mut stack_st_X509_NAME);
 
-    #[cfg(not(libressl))]
     pub fn SSL_CTX_add_client_CA(ctx: *mut SSL_CTX, cacert: *mut X509) -> c_int;
 
     pub fn SSL_CTX_set_default_verify_paths(ctx: *mut SSL_CTX) -> c_int;
@@ -738,9 +741,9 @@ const_ptr_api! {
 }
 
 extern "C" {
-    #[cfg(ossl102)]
+    #[cfg(any(ossl102, libressl270))]
     pub fn SSL_CTX_get0_certificate(ctx: *const SSL_CTX) -> *mut X509;
-    #[cfg(ossl102)]
+    #[cfg(any(ossl102, libressl340))]
     pub fn SSL_CTX_get0_privatekey(ctx: *const SSL_CTX) -> *mut EVP_PKEY;
 
     pub fn SSL_set_shutdown(ss: *mut SSL, mode: c_int);
@@ -754,9 +757,9 @@ extern "C" {
     #[cfg(ossl110)]
     pub fn SSL_get0_verified_chain(ssl: *const SSL) -> *mut stack_st_X509;
 
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl270))]
     pub fn SSL_get_client_random(ssl: *const SSL, out: *mut c_uchar, len: size_t) -> size_t;
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl270))]
     pub fn SSL_get_server_random(ssl: *const SSL, out: *mut c_uchar, len: size_t) -> size_t;
     #[cfg(any(ossl110, libressl273))]
     pub fn SSL_SESSION_get_master_key(
@@ -863,9 +866,9 @@ extern "C" {
 }
 
 extern "C" {
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl270))]
     pub fn SSL_CIPHER_get_cipher_nid(c: *const SSL_CIPHER) -> c_int;
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl270))]
     pub fn SSL_CIPHER_get_digest_nid(c: *const SSL_CIPHER) -> c_int;
 }
 
