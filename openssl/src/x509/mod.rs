@@ -21,10 +21,10 @@ use std::slice;
 use std::str;
 
 use crate::asn1::{
-    Asn1BitStringRef, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1String, Asn1StringRef,
-    Asn1TagValue, Asn1TimeRef, Asn1TypeRef,
+    Asn1BitStringRef, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1OctetStringRef, Asn1String,
+    Asn1StringRef, Asn1TagValue, Asn1TimeRef, Asn1TypeRef,
 };
-use crate::bio::MemBioSlice;
+use crate::bio::{MemBio, MemBioSlice};
 use crate::conf::ConfRef;
 use crate::error::ErrorStack;
 use crate::ex_data::Index;
@@ -445,6 +445,34 @@ impl X509Ref {
         }
     }
 
+    /// Returns this certificate's key usage extension value, if it exists.
+    #[corresponds(X509_get_ext_d2i)]
+    pub fn key_usage(&self) -> Option<&Asn1BitStringRef> {
+        unsafe {
+            let ptr = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_key_usage,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+            Asn1BitStringRef::from_const_ptr_opt(ptr as *const _)
+        }
+    }
+
+    /// Returns this certificate's extended key usage extension value, if it exists.
+    #[corresponds(X509_get_ext_d2i)]
+    pub fn extended_key_usage(&self) -> Option<Stack<Asn1Object>> {
+        unsafe {
+            let ptr = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_ext_key_usage,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+            Stack::from_ptr_opt(ptr as *mut _)
+        }
+    }
+
     #[corresponds(X509_get_pubkey)]
     pub fn public_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
@@ -567,6 +595,61 @@ impl X509Ref {
         }
     }
 
+    /// Returns the certificate's extensions.
+    #[corresponds(X509_get0_extensions)]
+    pub fn extensions(&self) -> Result<&StackRef<X509Extension>, ErrorStack> {
+        unsafe {
+            let result = ffi::X509_get0_extensions(self.as_ptr() as *const _);
+            if result.is_null() {
+                return Err(ErrorStack::get());
+            }
+            Ok(StackRef::from_const_ptr(result))
+        }
+    }
+
+    /// Returns the location of an extension within a certificate.
+    #[corresponds(X509_get_ext_by_NID)]
+    pub fn get_extension_by_nid(&self, nid: &Nid) -> Option<i32> {
+        unsafe {
+            let pos: i32 = ffi::X509_get_ext_by_NID(
+                self.as_ptr(),
+                nid.as_raw(),
+                -1, // start search from first extension
+            );
+            if pos == -1 {
+                None
+            } else {
+                Some(pos)
+            }
+        }
+    }
+
+    /// Returns the X509 extension at position `pos` in an X509 certificate.
+    pub fn get_extension(&self, pos: i32) -> Result<&X509ExtensionRef, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::X509_get_ext(self.as_ptr(), pos as c_int))?;
+            Ok(X509ExtensionRef::from_ptr(ptr))
+        }
+    }
+
+    /// Returns the certificates key usage extension flags. If the extension is not present in the
+    /// certificate, 0 will be returned.
+    /// Note: this does not include the critical flag.
+    #[cfg(ossl110)]
+    #[corresponds(X509_get_key_usage)]
+    pub fn key_usage_flags(&self) -> u32 {
+        unsafe { ffi::X509_get_key_usage(self.as_ptr()) }
+    }
+
+    /// Returns the certificates extended key usage extension flags. If the extension is not
+    /// present in the certificate, 0 will be returned.
+    /// Note: this does not include the critical flag.
+    #[cfg(ossl110)]
+    #[corresponds(X509_get_extended_key_usage)]
+    pub fn extended_key_usage_flags(&self) -> u32 {
+        unsafe { ffi::X509_get_extended_key_usage(self.as_ptr()) }
+    }
+
     to_pem! {
         /// Serializes the certificate into a PEM-encoded X509 structure.
         ///
@@ -686,8 +769,27 @@ impl fmt::Debug for X509 {
         if let Ok(public_key) = &self.public_key() {
             debug_struct.field("public_key", public_key);
         };
-        // TODO: Print extensions once they are supported on the X509 struct.
-
+        unsafe {
+            let extensions = ffi::X509_get0_extensions(self.as_ptr() as *const _);
+            let title = CString::new("X509 Extensions").ok();
+            if !extensions.is_null() && title.is_some() {
+                let title = title.unwrap_unchecked();
+                if let Ok(bio) = MemBio::new() {
+                    let result = cvt(ffi::X509V3_extensions_print(
+                        bio.as_ptr(),
+                        title.as_ptr(),
+                        extensions,
+                        0,
+                        4,
+                    ));
+                    if result.is_ok() {
+                        if let Ok(ext_str) = String::from_utf8(bio.get_buf().to_vec()) {
+                            debug_struct.field("X509 Extensions", &ext_str);
+                        }
+                    }
+                }
+            }
+        }
         debug_struct.finish()
     }
 }
@@ -843,6 +945,29 @@ impl X509Extension {
             let value = value.as_ptr() as *mut _;
 
             cvt_p(ffi::X509V3_EXT_nconf_nid(conf, context, name, value)).map(X509Extension)
+        }
+    }
+}
+
+impl X509ExtensionRef {
+    /// Returns true, if the extension is marked as critical.
+    pub fn is_critical(&self) -> bool {
+        unsafe { ffi::X509_EXTENSION_get_critical(self.as_ptr()) == 1 }
+    }
+
+    /// Returns the extension type.
+    pub fn object(&self) -> Result<&Asn1ObjectRef, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::X509_EXTENSION_get_object(self.as_ptr()))?;
+            Ok(Asn1ObjectRef::from_ptr(ptr))
+        }
+    }
+
+    /// Returns the extension data (DER).
+    pub fn data(&self) -> Result<&Asn1OctetStringRef, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::X509_EXTENSION_get_data(self.as_ptr()))?;
+            Ok(Asn1OctetStringRef::from_ptr(ptr))
         }
     }
 }

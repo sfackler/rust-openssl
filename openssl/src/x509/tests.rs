@@ -1,4 +1,4 @@
-use crate::asn1::Asn1Time;
+use crate::asn1::{Asn1Object, Asn1Time};
 use crate::bn::{BigNum, MsbOption};
 use crate::hash::MessageDigest;
 use crate::nid::Nid;
@@ -501,4 +501,155 @@ fn test_convert_to_text() {
             text
         );
     }
+}
+
+fn prepare_cert_builder() -> (X509Builder, PKey<Private>) {
+    let rsa = Rsa::generate(2048).unwrap();
+    let pkey = PKey::from_rsa(rsa).unwrap();
+    let mut name = X509Name::builder().unwrap();
+    name.append_entry_by_nid(Nid::COMMONNAME, "Example Name")
+        .unwrap();
+    let name = name.build();
+    let mut builder = X509::builder().unwrap();
+    builder.set_version(2).unwrap(); // 2 -> X509v3
+    builder.set_subject_name(&name).unwrap();
+    builder.set_issuer_name(&name).unwrap();
+    builder.set_pubkey(&pkey).unwrap();
+    (builder, pkey)
+}
+
+#[test]
+fn test_key_usage() {
+    // Create an X.509 certificate with an extended key usage extension.
+    let (mut builder, pkey) = prepare_cert_builder();
+    builder
+        .append_extension(
+            KeyUsage::new()
+                .digital_signature()
+                .non_repudiation()
+                .key_encipherment()
+                .data_encipherment()
+                .key_agreement()
+                .key_cert_sign()
+                //.crl_sign()
+                .decipher_only()
+                .encipher_only()
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+    builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+    let cert = builder.build();
+
+    let ku_bit_string = cert.key_usage().unwrap();
+    assert_eq!(ku_bit_string.len(), 2);
+    let mut ku_bits: u32 = 0;
+    ku_bits |= ku_bit_string.as_slice()[0] as u32;
+    ku_bits |= (ku_bit_string.as_slice()[1] as u32) << 8;
+    assert!(ku_bits & ffi::X509v3_KU_DIGITAL_SIGNATURE > 0);
+    assert!(ku_bits & ffi::X509v3_KU_NON_REPUDIATION > 0);
+    assert!(ku_bits & ffi::X509v3_KU_KEY_ENCIPHERMENT > 0);
+    assert!(ku_bits & ffi::X509v3_KU_DATA_ENCIPHERMENT > 0);
+    assert!(ku_bits & ffi::X509v3_KU_KEY_AGREEMENT > 0);
+    assert!(ku_bits & ffi::X509v3_KU_KEY_CERT_SIGN > 0);
+    assert_eq!(ku_bits & ffi::X509v3_KU_CRL_SIGN, 0);
+    assert!(ku_bits & ffi::X509v3_KU_ENCIPHER_ONLY > 0);
+    assert!(ku_bits & ffi::X509v3_KU_DECIPHER_ONLY > 0);
+}
+
+#[test]
+fn test_key_usage_data() {
+    // Create an X.509 certificate with an extended key usage extension.
+    let (mut builder, pkey) = prepare_cert_builder();
+    builder
+        .append_extension(KeyUsage::new().key_cert_sign().build().unwrap())
+        .unwrap();
+    builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+    let cert = builder.build();
+
+    let ku_ext_pos = cert.get_extension_by_nid(&Nid::KEY_USAGE).unwrap();
+    let ku_ext = cert.get_extension(ku_ext_pos).unwrap();
+    assert!(!ku_ext.is_critical());
+    assert_eq!(
+        ku_ext.object().unwrap(),
+        Asn1Object::from_nid(&Nid::KEY_USAGE).unwrap().as_ref()
+    );
+    assert_eq!(
+        ku_ext.data().unwrap().as_slice(),
+        [0x03, 0x02, 0x02, 0x04,] //   BIT STRING (6 bit) 000001
+    );
+}
+
+#[test]
+fn test_extended_key_usage() {
+    // Create an X.509 certificate with an extended key usage extension.
+    let (mut builder, pkey) = prepare_cert_builder();
+    builder
+        .append_extension(
+            ExtendedKeyUsage::new()
+                .critical()
+                .server_auth()
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+    builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+    let cert = builder.build();
+
+    let asn1obj_stack = cert.extended_key_usage().unwrap();
+    assert_eq!(asn1obj_stack.get(0).unwrap().nid(), Nid::SERVER_AUTH)
+}
+
+#[test]
+fn test_extended_key_usage_data() {
+    // Create an X.509 certificate with an extended key usage extension.
+    let (mut builder, pkey) = prepare_cert_builder();
+    builder
+        .append_extension(
+            ExtendedKeyUsage::new()
+                .critical()
+                .server_auth()
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+    builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+    let cert = builder.build();
+
+    let eku_ext_pos = cert.get_extension_by_nid(&Nid::EXT_KEY_USAGE).unwrap();
+    let eku_ext = cert.get_extension(eku_ext_pos).unwrap();
+    assert!(eku_ext.is_critical());
+    assert_eq!(
+        eku_ext.object().unwrap(),
+        Asn1Object::from_nid(&Nid::EXT_KEY_USAGE).unwrap().as_ref()
+    );
+    assert_eq!(
+        eku_ext.data().unwrap().as_slice(),
+        [
+            0x30, 0x0a, // SEQUENCE LENGTH=10
+            0x06, 0x08, //   OBJECT IDENTIFIER LENGTH=8
+            0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x03, 0x01 // 1.3.6.1.5.5.7.3.1 (serverAuth)
+        ]
+    );
+}
+
+#[test]
+fn test_extended_key_usage_flags() {
+    // Create an X.509 certificate with an extended key usage extension.
+    let (mut builder, pkey) = prepare_cert_builder();
+    builder
+        .append_extension(
+            ExtendedKeyUsage::new()
+                .critical()
+                .client_auth()
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+    builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+    let cert = builder.build();
+
+    let eku_flags = cert.extended_key_usage_flags();
+    assert!(eku_flags & ffi::XKU_SSL_SERVER == 0);
+    assert!(eku_flags & ffi::XKU_SSL_CLIENT == ffi::XKU_SSL_CLIENT);
 }

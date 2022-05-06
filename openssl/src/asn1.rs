@@ -39,6 +39,7 @@ use crate::bio::MemBio;
 use crate::bn::{BigNum, BigNumRef};
 use crate::error::ErrorStack;
 use crate::nid::Nid;
+use crate::stack::Stackable;
 use crate::string::OpensslString;
 use crate::util::ForeignTypeRefExt;
 use crate::{cvt, cvt_p};
@@ -832,10 +833,22 @@ impl Asn1Object {
     }
 }
 
+impl Stackable for Asn1Object {
+    type StackType = ffi::stack_st_ASN1_OBJECT;
+}
+
 impl Asn1ObjectRef {
     /// Returns the NID associated with this OID.
     pub fn nid(&self) -> Nid {
         unsafe { Nid::from_raw(ffi::OBJ_obj2nid(self.as_ptr())) }
+    }
+}
+
+impl PartialEq for Asn1ObjectRef {
+    /// Compare two `Asn1Object`s
+    #[corresponds(OBJ_cmp)]
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { ffi::OBJ_cmp(self.as_ptr(), other.as_ptr()) == 0 }
     }
 }
 
@@ -1076,9 +1089,8 @@ mod tests {
                 .unwrap();
             assert_eq!(at.as_ref().typ(), Asn1TagValue::OCTET_STRING);
             // Get string content from Asn1Type
-            let asn1octetstringref: &Asn1OctetStringRef = Asn1OctetStringRef::from_asn1type(
-                at.as_ref()
-            ).unwrap();
+            let asn1octetstringref: &Asn1OctetStringRef =
+                Asn1OctetStringRef::from_asn1type(at.as_ref()).unwrap();
             let stringdata: Vec<u8> = Vec::from(asn1octetstringref.as_slice());
             let string = String::from_utf8(stringdata).unwrap();
             assert_eq!("1234567890", string);

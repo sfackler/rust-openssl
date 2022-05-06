@@ -10,6 +10,7 @@ pub struct ASN1_ENCODING {
 
 extern "C" {
     pub fn ASN1_OBJECT_free(x: *mut ASN1_OBJECT);
+    pub fn OBJ_cmp(a: *const ASN1_OBJECT, b: *const ASN1_OBJECT) -> c_int;
 }
 
 pub enum ASN1_OBJECT {}
@@ -89,7 +90,6 @@ extern "C" {
     pub fn ASN1_TIME_set_string_X509(s: *mut ASN1_TIME, str: *const c_char) -> c_int;
 
     pub fn ASN1_TYPE_free(x: *mut ASN1_TYPE);
-
 }
 
 const_ptr_api! {
