@@ -944,8 +944,9 @@ fn idle_session() {
     assert!(ssl.session().is_none());
 }
 
+/// possible LibreSSL bug since 3.2.1
 #[test]
-#[cfg_attr(all(libressl321, not(libressl340)), ignore)]
+#[cfg_attr(libressl321, ignore)]
 fn active_session() {
     let server = Server::builder().build();
 
@@ -1000,8 +1001,9 @@ fn status_callbacks() {
     assert!(CALLED_BACK_CLIENT.load(Ordering::SeqCst));
 }
 
+/// possible LibreSSL bug since 3.2.1
 #[test]
-#[cfg_attr(all(libressl321, not(libressl340)), ignore)]
+#[cfg_attr(libressl321, ignore)]
 fn new_session_callback() {
     static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
@@ -1024,8 +1026,9 @@ fn new_session_callback() {
     assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
+/// possible LibreSSL bug since 3.2.1
 #[test]
-#[cfg_attr(all(libressl321, not(libressl340)), ignore)]
+#[cfg_attr(libressl321, ignore)]
 fn new_session_callback_swapped_ctx() {
     static CALLED_BACK: AtomicBool = AtomicBool::new(false);
 
