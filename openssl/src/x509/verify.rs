@@ -1,11 +1,11 @@
-use std::ffi::CString;
 use bitflags::bitflags;
 use foreign_types::ForeignTypeRef;
 use libc::{c_uint, c_ulong};
+use std::ffi::CString;
 use std::net::IpAddr;
 
-use crate::cvt;
 use crate::error::ErrorStack;
+use crate::{cvt, cvt_n};
 use openssl_macros::corresponds;
 
 bitflags! {
@@ -169,7 +169,7 @@ impl X509Purpose {
     pub fn get_by_sname(sname: &str) -> Result<i32, ErrorStack> {
         unsafe {
             let sname = CString::new(sname).unwrap();
-            let purpose = cvt(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *const _))?;
+            let purpose = cvt_n(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *const _))?;
             Ok(purpose as i32)
         }
     }
