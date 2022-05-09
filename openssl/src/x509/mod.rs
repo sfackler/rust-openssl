@@ -24,7 +24,9 @@ use crate::asn1::{
     Asn1BitStringRef, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1OctetStringRef, Asn1String,
     Asn1StringRef, Asn1TagValue, Asn1TimeRef, Asn1TypeRef,
 };
-use crate::bio::{MemBio, MemBioSlice};
+#[cfg(ossl110)]
+use crate::bio::MemBio;
+use crate::bio::MemBioSlice;
 use crate::conf::ConfRef;
 use crate::error::ErrorStack;
 use crate::ex_data::Index;

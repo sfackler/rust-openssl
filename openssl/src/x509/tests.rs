@@ -1,4 +1,6 @@
-use crate::asn1::{Asn1Object, Asn1Time};
+#[cfg(ossl110)]
+use crate::asn1::Asn1Object;
+use crate::asn1::Asn1Time;
 use crate::bn::{BigNum, MsbOption};
 use crate::hash::MessageDigest;
 use crate::nid::Nid;
