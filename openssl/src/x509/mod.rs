@@ -773,9 +773,8 @@ impl fmt::Debug for X509 {
         cfg_if! { if #[cfg(ossl110)] {
             unsafe {
                 let extensions = ffi::X509_get0_extensions(self.as_ptr() as *const _);
-                let title = CString::new("X509 Extensions").ok();
-                if !extensions.is_null() && title.is_some() {
-                    let title = title.unwrap_unchecked();
+                let title = CString::new("X509 Extensions").unwrap();
+                if !extensions.is_null() {
                     if let Ok(bio) = MemBio::new() {
                         let result = cvt(ffi::X509V3_extensions_print(
                             bio.as_ptr(),
