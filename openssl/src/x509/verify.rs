@@ -1,3 +1,4 @@
+use std::ffi::CString;
 use bitflags::bitflags;
 use foreign_types::ForeignTypeRef;
 use libc::{c_uint, c_ulong};
@@ -167,6 +168,7 @@ impl X509Purpose {
     //  - "timestampsign"
     pub fn get_by_sname(sname: &str) -> Result<i32, ErrorStack> {
         unsafe {
+            let sname = CString::new(sname).unwrap();
             let purpose = cvt(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *const _))?;
             Ok(purpose as i32)
         }
