@@ -4,6 +4,8 @@ use *;
 #[cfg(any(libressl, all(ossl102, not(ossl110))))]
 pub enum X509_VERIFY_PARAM_ID {}
 
+pub enum X509_PURPOSE {}
+
 extern "C" {
     #[cfg(ossl110)]
     pub fn X509_LOOKUP_meth_free(method: *mut X509_LOOKUP_METHOD);
@@ -45,6 +47,9 @@ extern "C" {
 
     pub fn X509_STORE_set_default_paths(store: *mut X509_STORE) -> c_int;
     pub fn X509_STORE_set_flags(store: *mut X509_STORE, flags: c_ulong) -> c_int;
+    pub fn X509_STORE_set_purpose(ctx: *mut X509_STORE, purpose: c_int) -> c_int;
+    pub fn X509_STORE_set_trust(ctx: *mut X509_STORE, trust: c_int) -> c_int;
+
 }
 
 const_ptr_api! {
@@ -103,4 +108,10 @@ extern "C" {
         ip: *const c_uchar,
         iplen: size_t,
     ) -> c_int;
+}
+
+const_ptr_api! {
+    extern "C" {
+        pub fn X509_PURPOSE_get_by_sname(sname: #[const_ptr_if(any(ossl110, libressl280))] c_char) -> c_int;
+    }
 }

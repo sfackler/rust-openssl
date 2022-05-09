@@ -140,3 +140,35 @@ impl X509VerifyParamRef {
         }
     }
 }
+
+/// fake free method, since X509_PURPOSE is static
+unsafe fn no_free_purpose(_purps: *mut ffi::X509_PURPOSE) {}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::X509_PURPOSE;
+    fn drop = no_free_purpose;
+
+    /// Adjust parameters associated with certificate verification.
+    pub struct X509Purpose;
+    /// Reference to `X509Purpose`.
+    pub struct X509PurposeRef;
+}
+
+impl X509Purpose {
+    /// Get the purpose value for a given short name. Valid short names include
+    //  - "sslclient",
+    //  - "sslserver",
+    //  - "nssslserver",
+    //  - "smimesign",
+    //  - "smimeencrypt",
+    //  - "crlsign",
+    //  - "any",
+    //  - "ocsphelper",
+    //  - "timestampsign"
+    pub fn get_by_sname(sname: &str) -> Result<i32, ErrorStack> {
+        unsafe {
+            let purpose = cvt(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *const _))?;
+            Ok(purpose as i32)
+        }
+    }
+}

@@ -46,6 +46,7 @@ use crate::stack::StackRef;
 use crate::x509::verify::X509VerifyFlags;
 use crate::x509::{X509Object, X509};
 use crate::{cvt, cvt_p};
+use libc::c_int;
 use openssl_macros::corresponds;
 use std::ffi::CString;
 
@@ -113,6 +114,13 @@ impl X509StoreBuilderRef {
     #[cfg(any(ossl102, libressl261))]
     pub fn set_flags(&mut self, flags: X509VerifyFlags) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_STORE_set_flags(self.as_ptr(), flags.bits())).map(|_| ()) }
+    }
+
+    /// Sets the certificate purpose.
+    /// The purpose value can be obtained by `X509Purpose::get_by_sname()`
+    #[corresponds(X509_STORE_set_purpose)]
+    pub fn set_purpose(&mut self, purpose: i32) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_STORE_set_purpose(self.as_ptr(), purpose as c_int)).map(|_| ()) }
     }
 }
 
