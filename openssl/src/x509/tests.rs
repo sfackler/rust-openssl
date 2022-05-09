@@ -503,6 +503,7 @@ fn test_convert_to_text() {
     }
 }
 
+#[cfg(ossl110)]
 fn prepare_cert_builder() -> (X509Builder, PKey<Private>) {
     let rsa = Rsa::generate(2048).unwrap();
     let pkey = PKey::from_rsa(rsa).unwrap();
@@ -519,6 +520,7 @@ fn prepare_cert_builder() -> (X509Builder, PKey<Private>) {
 }
 
 #[test]
+#[cfg(ossl110)]
 fn test_key_usage() {
     // Create an X.509 certificate with an extended key usage extension.
     let (mut builder, pkey) = prepare_cert_builder();
@@ -558,6 +560,7 @@ fn test_key_usage() {
 }
 
 #[test]
+#[cfg(ossl110)]
 fn test_key_usage_data() {
     // Create an X.509 certificate with an extended key usage extension.
     let (mut builder, pkey) = prepare_cert_builder();
@@ -581,6 +584,7 @@ fn test_key_usage_data() {
 }
 
 #[test]
+#[cfg(ossl110)]
 fn test_extended_key_usage() {
     // Create an X.509 certificate with an extended key usage extension.
     let (mut builder, pkey) = prepare_cert_builder();
@@ -601,6 +605,7 @@ fn test_extended_key_usage() {
 }
 
 #[test]
+#[cfg(ossl110)]
 fn test_extended_key_usage_data() {
     // Create an X.509 certificate with an extended key usage extension.
     let (mut builder, pkey) = prepare_cert_builder();
@@ -634,6 +639,7 @@ fn test_extended_key_usage_data() {
 }
 
 #[test]
+#[cfg(ossl110)]
 fn test_extended_key_usage_flags() {
     // Create an X.509 certificate with an extended key usage extension.
     let (mut builder, pkey) = prepare_cert_builder();

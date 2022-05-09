@@ -597,6 +597,7 @@ impl X509Ref {
 
     /// Returns the certificate's extensions.
     #[corresponds(X509_get0_extensions)]
+    #[cfg(ossl110)]
     pub fn extensions(&self) -> Result<&StackRef<X509Extension>, ErrorStack> {
         unsafe {
             let result = ffi::X509_get0_extensions(self.as_ptr() as *const _);
@@ -769,27 +770,29 @@ impl fmt::Debug for X509 {
         if let Ok(public_key) = &self.public_key() {
             debug_struct.field("public_key", public_key);
         };
-        unsafe {
-            let extensions = ffi::X509_get0_extensions(self.as_ptr() as *const _);
-            let title = CString::new("X509 Extensions").ok();
-            if !extensions.is_null() && title.is_some() {
-                let title = title.unwrap_unchecked();
-                if let Ok(bio) = MemBio::new() {
-                    let result = cvt(ffi::X509V3_extensions_print(
-                        bio.as_ptr(),
-                        title.as_ptr(),
-                        extensions,
-                        0,
-                        4,
-                    ));
-                    if result.is_ok() {
-                        if let Ok(ext_str) = String::from_utf8(bio.get_buf().to_vec()) {
-                            debug_struct.field("X509 Extensions", &ext_str);
+        cfg_if! { if #[cfg(ossl110)] {
+            unsafe {
+                let extensions = ffi::X509_get0_extensions(self.as_ptr() as *const _);
+                let title = CString::new("X509 Extensions").ok();
+                if !extensions.is_null() && title.is_some() {
+                    let title = title.unwrap_unchecked();
+                    if let Ok(bio) = MemBio::new() {
+                        let result = cvt(ffi::X509V3_extensions_print(
+                            bio.as_ptr(),
+                            title.as_ptr() as *const _,
+                            extensions,
+                            0,
+                            4,
+                        ));
+                        if result.is_ok() {
+                            if let Ok(ext_str) = String::from_utf8(bio.get_buf().to_vec()) {
+                                debug_struct.field("X509 Extensions", &ext_str);
+                            }
                         }
                     }
                 }
             }
-        }
+        }};
         debug_struct.finish()
     }
 }
