@@ -4,7 +4,16 @@ use *;
 #[cfg(any(libressl, all(ossl102, not(ossl110))))]
 pub enum X509_VERIFY_PARAM_ID {}
 
-pub enum X509_PURPOSE {}
+#[repr(C)]
+pub struct X509_PURPOSE {
+    pub purpose: c_int,
+    pub trust: c_int, // Default trust ID
+    pub flags: c_int,
+    pub check_purpose: Option<unsafe extern "C" fn(*const X509_PURPOSE, *const X509, c_int) -> c_int>,
+    pub name: *mut c_char,
+    pub sname: *mut c_char,
+    pub usr_data: *mut c_void,
+}
 
 extern "C" {
     #[cfg(ossl110)]
@@ -113,5 +122,6 @@ extern "C" {
 const_ptr_api! {
     extern "C" {
         pub fn X509_PURPOSE_get_by_sname(sname: #[const_ptr_if(any(ossl110, libressl280))] c_char) -> c_int;
+        pub fn X509_PURPOSE_get0(idx: c_int) -> *mut X509_PURPOSE;
     }
 }

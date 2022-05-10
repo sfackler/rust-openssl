@@ -18,6 +18,7 @@ use crate::x509::verify::X509VerifyFlags;
 use crate::x509::X509Builder;
 use crate::x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
 use hex::{self, FromHex};
+use crate::x509::verify::X509Purpose;
 
 fn pkey() -> PKey<Private> {
     let rsa = Rsa::generate(2048).unwrap();
@@ -427,6 +428,34 @@ fn test_verify_fails_with_crl_flag_set_and_no_crl() {
             .error_string(),
         "unable to get certificate CRL"
     )
+}
+
+#[test]
+fn test_verify_cert_with_purpose() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+    let chain = Stack::new().unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    let purpose_idx = X509Purpose::get_by_sname("ocsphelper")
+        .expect("Getting certificate purpose 'smimesign' failed");
+    let x509_purpose = X509Purpose::from_idx(purpose_idx)
+        .expect("Getting certificate purpose failed");
+    store_bldr.set_purpose(x509_purpose.purpose())
+        .expect("Setting certificate purpose failed");
+    store_bldr.add_cert(ca).unwrap();
+
+    let store = store_bldr.build();
+
+    let mut context = X509StoreContext::new().unwrap();
+    assert!(context
+        .init(&store, &cert, &chain, |c| c.verify_cert())
+        .unwrap());
+    assert!(context
+        .init(&store, &cert, &chain, |c| c.verify_cert())
+        .unwrap());
 }
 
 #[cfg(ossl110)]

@@ -5,7 +5,7 @@ use std::ffi::CString;
 use std::net::IpAddr;
 
 use crate::error::ErrorStack;
-use crate::{cvt, cvt_n};
+use crate::{cvt, cvt_n, cvt_p};
 use openssl_macros::corresponds;
 
 bitflags! {
@@ -157,20 +157,39 @@ foreign_type_and_impl_send_sync! {
 
 impl X509Purpose {
     /// Get the purpose value for a given short name. Valid short names include
-    //  - "sslclient",
-    //  - "sslserver",
-    //  - "nssslserver",
-    //  - "smimesign",
-    //  - "smimeencrypt",
-    //  - "crlsign",
-    //  - "any",
-    //  - "ocsphelper",
-    //  - "timestampsign"
+    ///  - "sslclient",
+    ///  - "sslserver",
+    ///  - "nssslserver",
+    ///  - "smimesign",
+    ///  - "smimeencrypt",
+    ///  - "crlsign",
+    ///  - "any",
+    ///  - "ocsphelper",
+    ///  - "timestampsign"
     pub fn get_by_sname(sname: &str) -> Result<i32, ErrorStack> {
         unsafe {
             let sname = CString::new(sname).unwrap();
             let purpose = cvt_n(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *const _))?;
             Ok(purpose as i32)
+        }
+    }
+
+    /// Get an `X509PurposeRef` for a given index value. The index can be obtained from e.g.
+    /// `X509Purpose::get_by_sname()`.
+    #[corresponds(X509_PURPOSE_get0)]
+    pub fn from_idx(idx: i32) -> Result<&'static X509PurposeRef, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::X509_PURPOSE_get0(idx))?;
+            Ok(X509PurposeRef::from_ptr(ptr))
+        }
+    }
+}
+
+impl X509PurposeRef {
+    pub fn purpose(&self) -> i32 {
+        unsafe {
+            let x509_purpose: *mut ffi::X509_PURPOSE = self.as_ptr();
+            (*x509_purpose).purpose
         }
     }
 }

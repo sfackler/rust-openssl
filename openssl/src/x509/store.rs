@@ -118,6 +118,16 @@ impl X509StoreBuilderRef {
 
     /// Sets the certificate purpose.
     /// The purpose value can be obtained by `X509Purpose::get_by_sname()`
+    /// `purpose` is one of
+    /// - `X509_PURPOSE_SSL_CLIENT`
+    /// - `X509_PURPOSE_SSL_SERVER`
+    /// - `X509_PURPOSE_NS_SSL_SERVER`
+    /// - `X509_PURPOSE_SMIME_SIGN`
+    /// - `X509_PURPOSE_SMIME_ENCRYPT`
+    /// - `X509_PURPOSE_CRL_SIGN`
+    /// - `X509_PURPOSE_ANY`
+    /// - `X509_PURPOSE_OCSP_HELPER`
+    /// - `X509_PURPOSE_TIMESTAMP_SIGN`
     #[corresponds(X509_STORE_set_purpose)]
     pub fn set_purpose(&mut self, purpose: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_STORE_set_purpose(self.as_ptr(), purpose as c_int)).map(|_| ()) }
