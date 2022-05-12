@@ -156,7 +156,8 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl X509Purpose {
-    /// Get the purpose value for a given short name. Valid short names include
+    /// Get the internal table index of an X509_PURPOSE for a given short name. Valid short
+    /// names include
     ///  - "sslclient",
     ///  - "sslserver",
     ///  - "nssslserver",
@@ -166,6 +167,7 @@ impl X509Purpose {
     ///  - "any",
     ///  - "ocsphelper",
     ///  - "timestampsign"
+    /// The index can be used with `X509Purpose::from_idx()` to get the purpose.
     pub fn get_by_sname(sname: &str) -> Result<i32, ErrorStack> {
         unsafe {
             let sname = CString::new(sname).unwrap();
@@ -186,6 +188,16 @@ impl X509Purpose {
 }
 
 impl X509PurposeRef {
+    /// Get the purpose value from an X509Purpose structure. This value is one of
+    /// - `X509_PURPOSE_SSL_CLIENT`
+    /// - `X509_PURPOSE_SSL_SERVER`
+    /// - `X509_PURPOSE_NS_SSL_SERVER`
+    /// - `X509_PURPOSE_SMIME_SIGN`
+    /// - `X509_PURPOSE_SMIME_ENCRYPT`
+    /// - `X509_PURPOSE_CRL_SIGN`
+    /// - `X509_PURPOSE_ANY`
+    /// - `X509_PURPOSE_OCSP_HELPER`
+    /// - `X509_PURPOSE_TIMESTAMP_SIGN`
     pub fn purpose(&self) -> i32 {
         unsafe {
             let x509_purpose: *mut ffi::X509_PURPOSE = self.as_ptr();
