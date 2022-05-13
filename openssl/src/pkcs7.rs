@@ -630,21 +630,25 @@ impl Pkcs7Ref {
         unsafe {
             let pkcs7: *mut ffi::PKCS7 = self.as_ptr();
             let pkcs7_type: Asn1Object = Asn1Object::from_ptr((*pkcs7).type_);
-            let pkcs7_certs: Stack<X509> = match pkcs7_type.nid() {
-                Nid::PKCS7_SIGNED => Stack::from_ptr((*(*pkcs7).d.sign).cert),
-                Nid::PKCS7_SIGNEDANDENVELOPED => {
-                    Stack::from_ptr((*(*pkcs7).d.signed_and_enveloped).cert)
-                }
-                _ => Stack::new()?,
-            };
+            let cert_ptr: *mut ffi::stack_st_X509 = (*(*pkcs7).d.sign).cert;
             let mut certs: Stack<X509> = Stack::new()?;
-            for cert_ref in &pkcs7_certs {
-                // Note: `to_owned()` increases the openssl reference count of the cert, so the
-                // stack becomes an additional owner of the certs.
-                let cert = cert_ref.to_owned();
-                certs.push(cert)?;
+            if !cert_ptr.is_null() {
+                let pkcs7_certs: Stack<X509> = match pkcs7_type.nid() {
+                    Nid::PKCS7_SIGNED => Stack::from_ptr((*(*pkcs7).d.sign).cert),
+                    Nid::PKCS7_SIGNEDANDENVELOPED => {
+                        Stack::from_ptr((*(*pkcs7).d.signed_and_enveloped).cert)
+                    }
+                    _ => Stack::new()?,
+                };
+
+                for cert_ref in &pkcs7_certs {
+                    // Note: `to_owned()` increases the openssl reference count of the cert, so the
+                    // stack becomes an additional owner of the certs.
+                    let cert = cert_ref.to_owned();
+                    certs.push(cert)?;
+                }
+                mem::forget(pkcs7_certs); // Otherwise, certs would be removed from self, when this method returns
             }
-            mem::forget(pkcs7_certs); // Otherwise, certs would be removed from self, when this method returns
             Ok(certs)
         }
     }
