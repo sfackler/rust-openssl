@@ -156,6 +156,16 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl X509Purpose {
+    pub const SSL_CLIENT: i32 = ffi::X509_PURPOSE_SSL_CLIENT;
+    pub const SSL_SERVER: i32 = ffi::X509_PURPOSE_SSL_SERVER;
+    pub const NS_SSL_SERVER: i32 = ffi::X509_PURPOSE_NS_SSL_SERVER;
+    pub const SMIME_SIGN: i32 = ffi::X509_PURPOSE_SMIME_SIGN;
+    pub const SMIME_ENCRYPT: i32 = ffi::X509_PURPOSE_SMIME_ENCRYPT;
+    pub const CRL_SIGN: i32 = ffi::X509_PURPOSE_CRL_SIGN;
+    pub const ANY: i32 = ffi::X509_PURPOSE_ANY;
+    pub const OCSP_HELPER: i32 = ffi::X509_PURPOSE_OCSP_HELPER;
+    pub const TIMESTAMP_SIGN: i32 = ffi::X509_PURPOSE_TIMESTAMP_SIGN;
+
     /// Get the internal table index of an X509_PURPOSE for a given short name. Valid short
     /// names include
     ///  - "sslclient",
