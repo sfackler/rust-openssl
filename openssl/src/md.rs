@@ -207,6 +207,13 @@ unsafe impl Sync for MdRef {}
 unsafe impl Send for MdRef {}
 
 impl MdRef {
+    /// Returns the block size of the digest in bytes.
+    #[corresponds(EVP_MD_block_size)]
+    #[inline]
+    pub fn block_size(&self) -> usize {
+        unsafe { ffi::EVP_MD_block_size(self.as_ptr()) as usize }
+    }
+
     /// Returns the size of the digest in bytes.
     #[corresponds(EVP_MD_size)]
     #[inline]
