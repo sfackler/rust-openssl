@@ -34,6 +34,11 @@ pub unsafe fn EVP_get_digestbynid(type_: c_int) -> *const EVP_MD {
 cfg_if! {
     if #[cfg(ossl300)] {
         #[inline]
+        pub unsafe fn EVP_MD_block_size(md: *const EVP_MD) -> c_int {
+            EVP_MD_get_block_size(md)
+        }
+
+        #[inline]
         pub unsafe fn EVP_MD_size(md: *const EVP_MD) -> c_int {
             EVP_MD_get_size(md)
         }

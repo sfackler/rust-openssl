@@ -4,6 +4,7 @@ use *;
 cfg_if! {
     if #[cfg(ossl300)] {
         extern "C" {
+            pub fn EVP_MD_get_block_size(md: *const EVP_MD) -> c_int;
             pub fn EVP_MD_get_size(md: *const EVP_MD) -> c_int;
             pub fn EVP_MD_get_type(md: *const EVP_MD) -> c_int;
 
@@ -26,6 +27,7 @@ cfg_if! {
         }
     } else {
         extern "C" {
+            pub fn EVP_MD_block_size(md: *const EVP_MD) -> c_int;
             pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
             pub fn EVP_MD_type(md: *const EVP_MD) -> c_int;
 
