@@ -618,7 +618,7 @@ impl PartialOrd for X509Ref {
 
 impl PartialEq for X509Ref {
     fn eq(&self, other: &Self) -> bool {
-        self.cmp(other).is_eq()
+        self.cmp(other) == cmp::Ordering::Equal
     }
 }
 
