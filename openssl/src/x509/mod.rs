@@ -616,9 +616,21 @@ impl PartialOrd for X509Ref {
     }
 }
 
+impl PartialOrd<X509> for X509Ref {
+    fn partial_cmp(&self, other: &X509) -> Option<cmp::Ordering> {
+        <X509Ref as PartialOrd<X509Ref>>::partial_cmp(self, other)
+    }
+}
+
 impl PartialEq for X509Ref {
     fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == cmp::Ordering::Equal
+    }
+}
+
+impl PartialEq<X509> for X509Ref {
+    fn eq(&self, other: &X509) -> bool {
+        <X509Ref as PartialEq<X509Ref>>::eq(self, other)
     }
 }
 
@@ -736,8 +748,20 @@ impl PartialOrd for X509 {
     }
 }
 
+impl PartialOrd<X509Ref> for X509 {
+    fn partial_cmp(&self, other: &X509Ref) -> Option<cmp::Ordering> {
+        X509Ref::partial_cmp(self, other)
+    }
+}
+
 impl PartialEq for X509 {
     fn eq(&self, other: &Self) -> bool {
+        X509Ref::eq(self, other)
+    }
+}
+
+impl PartialEq<X509Ref> for X509 {
+    fn eq(&self, other: &X509Ref) -> bool {
         X509Ref::eq(self, other)
     }
 }
