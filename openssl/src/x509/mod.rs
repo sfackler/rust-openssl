@@ -10,6 +10,7 @@
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
+use std::cmp;
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -600,6 +601,41 @@ impl ToOwned for X509Ref {
     }
 }
 
+impl Ord for X509Ref {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        // X509_cmp returns a number <0 for less than, 0 for equal and >0 for greater than.
+        // It can't fail if both pointers are valid, which we know is true.
+        let cmp = unsafe { ffi::X509_cmp(self.as_ptr(), other.as_ptr()) };
+        cmp.cmp(&0)
+    }
+}
+
+impl PartialOrd for X509Ref {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialOrd<X509> for X509Ref {
+    fn partial_cmp(&self, other: &X509) -> Option<cmp::Ordering> {
+        <X509Ref as PartialOrd<X509Ref>>::partial_cmp(self, other)
+    }
+}
+
+impl PartialEq for X509Ref {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other) == cmp::Ordering::Equal
+    }
+}
+
+impl PartialEq<X509> for X509Ref {
+    fn eq(&self, other: &X509) -> bool {
+        <X509Ref as PartialEq<X509Ref>>::eq(self, other)
+    }
+}
+
+impl Eq for X509Ref {}
+
 impl X509 {
     /// Returns a new builder.
     pub fn builder() -> Result<X509Builder, ErrorStack> {
@@ -699,6 +735,38 @@ impl AsRef<X509Ref> for X509Ref {
 impl Stackable for X509 {
     type StackType = ffi::stack_st_X509;
 }
+
+impl Ord for X509 {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        X509Ref::cmp(self, other)
+    }
+}
+
+impl PartialOrd for X509 {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        X509Ref::partial_cmp(self, other)
+    }
+}
+
+impl PartialOrd<X509Ref> for X509 {
+    fn partial_cmp(&self, other: &X509Ref) -> Option<cmp::Ordering> {
+        X509Ref::partial_cmp(self, other)
+    }
+}
+
+impl PartialEq for X509 {
+    fn eq(&self, other: &Self) -> bool {
+        X509Ref::eq(self, other)
+    }
+}
+
+impl PartialEq<X509Ref> for X509 {
+    fn eq(&self, other: &X509Ref) -> bool {
+        X509Ref::eq(self, other)
+    }
+}
+
+impl Eq for X509 {}
 
 /// A context object required to construct certain `X509` extension values.
 pub struct X509v3Context<'a>(ffi::X509V3_CTX, PhantomData<(&'a X509Ref, &'a ConfRef)>);
