@@ -842,6 +842,14 @@ impl X509Extension {
             cvt_p(ffi::X509V3_EXT_nconf_nid(conf, context, name, value)).map(X509Extension)
         }
     }
+
+    #[corresponds(X509V3_EXT_add_alias)]
+    pub fn add_alias(to: Nid, from: Nid) -> Result<(), ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt(ffi::X509V3_EXT_add_alias(to.as_raw(), from.as_raw())).map(|_| ())
+        }
+    }
 }
 
 /// A builder used to construct an `X509Name`.
