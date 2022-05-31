@@ -97,6 +97,8 @@ cfg_if! {
         pub const X509_V_ERR_PROXY_SUBJECT_NAME_VIOLATION: c_int = 67;
     }
 }
+#[cfg(ossl300)]
+pub const X509_V_ERR_INVALID_CA: c_int = 79;
 
 #[cfg(not(ossl110))]
 pub const X509_V_FLAG_CB_ISSUER_CHECK: c_ulong = 0x1;
