@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [v0.9.74] - 2022-06-01
+
+### Added
+
+* Added `EVP_MD_block_size`.
+* Added `X509V3_EXT_add_alias`.
+* Added `X509_V_ERR_INVALID_CA` back when building against OpenSSL 3.0.
+
 ## [v0.9.73] - 2022-05-02
 
 ### Added
@@ -298,7 +306,8 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.73..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.74..master
+[v0.9.74]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.73...openssl-sys-v0.9.74
 [v0.9.73]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.72...openssl-sys-v0.9.73
 [v0.9.72]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.71...openssl-sys-v0.9.72
 [v0.9.71]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.70...openssl-sys-v0.9.71
