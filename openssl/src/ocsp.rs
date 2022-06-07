@@ -1,12 +1,13 @@
 use bitflags::bitflags;
 use foreign_types::ForeignTypeRef;
-use libc::{c_int, c_long, c_ulong};
+use libc::{c_int, c_long, c_ulong, c_uchar};
 use std::mem;
 use std::ptr;
 
 use crate::asn1::Asn1GeneralizedTimeRef;
 use crate::error::ErrorStack;
 use crate::hash::MessageDigest;
+use crate::nid::Nid;
 use crate::stack::StackRef;
 use crate::util::ForeignTypeRefExt;
 use crate::x509::store::X509StoreRef;
@@ -337,6 +338,39 @@ impl OcspRequestRef {
             let ptr = cvt_p(ffi::OCSP_request_add0_id(self.as_ptr(), id.as_ptr()))?;
             mem::forget(id);
             Ok(OcspOneReqRef::from_ptr_mut(ptr))
+        }
+    }
+
+    #[corresponds(OCSP_check_nonce)]
+    /// Compares the nonce value in req and resp.
+    pub fn check_nonce(&self, resp: &OcspBasicResponseRef) -> Result<bool, ErrorStack> {
+        unsafe {
+            Ok(cvt(ffi::OCSP_check_nonce(self.as_ptr(), resp.as_ptr()))? > 0)
+        }
+    }
+
+    #[corresponds(OCSP_request_add1_nonce)]
+    /// Adds a nonce of value val and length len to OCSP request req.
+    /// If val is NULL a random nonce is used. If len is zero or negative
+    /// a default length will be used (currently 16 bytes).
+    pub fn add_nonce(&mut self, val: &mut [u8]) -> Result<bool, ErrorStack> {
+        unsafe {
+            Ok(cvt(ffi::OCSP_request_add1_nonce(self.as_ptr(), val.as_ptr() as *mut c_uchar, val.len() as c_int))? > 0)
+        }
+    }
+
+    #[corresponds(OCSP_copy_nonce)]
+    /// copies any nonce value present in req to resp.
+    pub fn copy_nonce(&self, resp: &mut OcspBasicResponseRef) -> Result<bool, ErrorStack> {
+        unsafe {
+            Ok(cvt(ffi::OCSP_copy_nonce(resp.as_ptr(), self.as_ptr()))? > 0)
+        }
+    }
+
+    #[corresponds(OCSP_REQUEST_get_ext_by_NID)]
+    pub fn get_ext_by_nid(&self, nid: Nid, lastpost: i32) -> Result<bool, ErrorStack> {
+        unsafe {
+            Ok(cvt(ffi::OCSP_REQUEST_get_ext_by_NID(self.as_ptr(), nid.as_raw(), lastpost))? > 0)
         }
     }
 }

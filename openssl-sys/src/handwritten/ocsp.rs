@@ -65,6 +65,11 @@ extern "C" {
     pub fn OCSP_CERTID_free(id: *mut OCSP_CERTID);
     pub fn OCSP_REQUEST_new() -> *mut OCSP_REQUEST;
     pub fn OCSP_REQUEST_free(r: *mut OCSP_REQUEST);
+    pub fn OCSP_check_nonce(req: *mut OCSP_REQUEST, resp: *mut OCSP_BASICRESP) -> c_int;
+    pub fn OCSP_request_add1_nonce(req: *mut OCSP_REQUEST, val: *mut c_uchar, len: c_int) -> c_int;
+    pub fn OCSP_copy_nonce(resp: *mut OCSP_BASICRESP, req: *mut OCSP_REQUEST) -> c_int;
+    pub fn OCSP_REQUEST_get_ext_by_NID(req: *mut OCSP_REQUEST, nid: c_int, lastpos: c_int) -> c_int;
+    // pub fn OCSP_basic_add1_nonce(resp: *mut OCSP_BASICRESP, val: *mut c_uchar, len: c_int) -> c_int;
 }
 
 const_ptr_api! {
