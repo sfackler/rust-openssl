@@ -1,6 +1,6 @@
 use bitflags::bitflags;
 use foreign_types::ForeignTypeRef;
-use libc::{c_int, c_long, c_ulong, c_uchar};
+use libc::{c_int, c_long, c_ulong};
 use std::mem;
 use std::ptr;
 
@@ -10,9 +10,10 @@ use crate::hash::MessageDigest;
 use crate::nid::Nid;
 use crate::stack::StackRef;
 use crate::util::ForeignTypeRefExt;
+use crate::x509::X509AlgorithmRef;
 use crate::x509::store::X509StoreRef;
 use crate::x509::{X509Ref, X509};
-use crate::{cvt, cvt_p};
+use crate::{cvt, cvt_n, cvt_p, cvt_cp};
 use openssl_macros::corresponds;
 
 bitflags! {
@@ -208,6 +209,14 @@ impl OcspBasicResponseRef {
             }
         }
     }
+
+    #[corresponds(OCSP_resp_find_status)]
+    pub fn get_signature(&self) -> Result<&X509AlgorithmRef, ErrorStack> {
+        unsafe {
+            let ptr = cvt_cp(ffi::OCSP_resp_get0_tbs_sigalg(self.as_ptr()))?;
+            Ok(X509AlgorithmRef::from_const_ptr(ptr))
+        }
+    }
 }
 
 foreign_type_and_impl_send_sync! {
@@ -353,14 +362,15 @@ impl OcspRequestRef {
     /// Adds a nonce of value val and length len to OCSP request req.
     /// If val is NULL a random nonce is used. If len is zero or negative
     /// a default length will be used (currently 16 bytes).
-    pub fn add_nonce(&mut self, val: &mut [u8]) -> Result<bool, ErrorStack> {
+    pub fn add_nonce(&mut self, val: Option<&mut [u8]>) -> Result<bool, ErrorStack> {
         unsafe {
-            Ok(cvt(ffi::OCSP_request_add1_nonce(self.as_ptr(), val.as_ptr() as *mut c_uchar, val.len() as c_int))? > 0)
+            let (ptr, len) = val.map_or((ptr::null_mut(), 0), |v| (v.as_mut_ptr(), v.len()));
+            Ok(cvt(ffi::OCSP_request_add1_nonce(self.as_ptr(), ptr, len as c_int))? > 0)
         }
     }
 
     #[corresponds(OCSP_copy_nonce)]
-    /// copies any nonce value present in req to resp.
+    /// Copies any nonce value present in req to resp.
     pub fn copy_nonce(&self, resp: &mut OcspBasicResponseRef) -> Result<bool, ErrorStack> {
         unsafe {
             Ok(cvt(ffi::OCSP_copy_nonce(resp.as_ptr(), self.as_ptr()))? > 0)
@@ -368,9 +378,37 @@ impl OcspRequestRef {
     }
 
     #[corresponds(OCSP_REQUEST_get_ext_by_NID)]
+    /// Look for an extension with nid or obj from extension stack x. The search
+    /// starts from the extension after `lastpos` or from the beginning if `lastpos`
+    /// is -1. If the extension is found its index is returned otherwise -1
+    /// is returned.
+    /// example:
+    /// ```Rust
+    /// // This example assumes you're getting raw bytes from a request's body
+    /// let req = OcspRequest::from_der(&body.to_vec())?;
+    /// req.get_ext_by_nid(Nid::ID_PKIX_OCSP_NONCE, -1)?;
+    /// ```
     pub fn get_ext_by_nid(&self, nid: Nid, lastpost: i32) -> Result<bool, ErrorStack> {
         unsafe {
-            Ok(cvt(ffi::OCSP_REQUEST_get_ext_by_NID(self.as_ptr(), nid.as_raw(), lastpost))? > 0)
+            Ok(cvt_n(ffi::OCSP_REQUEST_get_ext_by_NID(self.as_ptr(), nid.as_raw(), lastpost))? > 0)
+        }
+    }
+
+    #[corresponds(OCSP_request_onereq_get0)]
+    /// Returns an internal pointer to the `OcspOneReq` contained in req of index i.
+    /// The index value i runs from 0 to OCSP_request_onereq_count(req) - 1.
+    pub fn get_onereq_at(&self, index: i32) -> Result<&mut OcspOneReqRef, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::OCSP_request_onereq_get0(self.as_ptr(), index as c_int))?;
+            Ok(OcspOneReqRef::from_ptr_mut(ptr))
+        }
+    }
+
+    #[corresponds(OCSP_request_onereq_count)]
+    /// Returns the total number of `OcspOneReq` structures in req.
+    pub fn get_onereq_count(&self) -> Result<i32, ErrorStack> {
+        unsafe {
+            Ok(cvt(ffi::OCSP_request_onereq_count(self.as_ptr()))?)
         }
     }
 }
@@ -381,4 +419,14 @@ foreign_type_and_impl_send_sync! {
 
     pub struct OcspOneReq;
     pub struct OcspOneReqRef;
+}
+
+impl OcspOneReqRef {
+    #[corresponds(OCSP_onereq_get0_id)]
+    pub fn get_cert_id(&self) -> Result<&mut OcspCertIdRef, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::OCSP_onereq_get0_id(self.as_ptr()))?;
+            Ok(OcspCertIdRef::from_ptr_mut(ptr))
+        }
+    }
 }
