@@ -47,6 +47,7 @@ extern "C" {
     pub fn OCSP_BASICRESP_free(r: *mut OCSP_BASICRESP);
     pub fn OCSP_RESPONSE_new() -> *mut OCSP_RESPONSE;
     pub fn OCSP_RESPONSE_free(r: *mut OCSP_RESPONSE);
+    pub fn OCSP_resp_get0_tbs_sigalg(bs: *const OCSP_BASICRESP) -> *const X509_ALGOR;
 }
 
 const_ptr_api! {
@@ -69,6 +70,9 @@ extern "C" {
     pub fn OCSP_request_add1_nonce(req: *mut OCSP_REQUEST, val: *mut c_uchar, len: c_int) -> c_int;
     pub fn OCSP_copy_nonce(resp: *mut OCSP_BASICRESP, req: *mut OCSP_REQUEST) -> c_int;
     pub fn OCSP_REQUEST_get_ext_by_NID(req: *mut OCSP_REQUEST, nid: c_int, lastpos: c_int) -> c_int;
+    pub fn OCSP_request_onereq_count(req: *mut OCSP_REQUEST) -> c_int;
+    pub fn OCSP_request_onereq_get0(req: *mut OCSP_REQUEST, i: c_int) -> *mut OCSP_ONEREQ;
+    pub fn OCSP_onereq_get0_id(one: *mut OCSP_ONEREQ) -> *mut OCSP_CERTID;
     // pub fn OCSP_basic_add1_nonce(resp: *mut OCSP_BASICRESP, val: *mut c_uchar, len: c_int) -> c_int;
 }
 
