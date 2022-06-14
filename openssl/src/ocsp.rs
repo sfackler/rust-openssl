@@ -1,6 +1,6 @@
 use bitflags::bitflags;
 use foreign_types::ForeignTypeRef;
-use libc::{c_int, c_long, c_ulong};
+use libc::{c_int, c_long, c_uchar, c_ulong};
 use std::mem;
 use std::ptr;
 
@@ -353,9 +353,7 @@ impl OcspRequestRef {
     #[corresponds(OCSP_check_nonce)]
     /// Compares the nonce value in req and resp.
     pub fn check_nonce(&self, resp: &OcspBasicResponseRef) -> Result<bool, ErrorStack> {
-        unsafe {
-            Ok(cvt(ffi::OCSP_check_nonce(self.as_ptr(), resp.as_ptr()))? > 0)
-        }
+        unsafe { Ok(cvt(ffi::OCSP_check_nonce(self.as_ptr(), resp.as_ptr()))? > 0) }
     }
 
     #[corresponds(OCSP_request_add1_nonce)]
@@ -364,17 +362,19 @@ impl OcspRequestRef {
     /// a default length will be used (currently 16 bytes).
     pub fn add_nonce(&mut self, val: Option<&mut [u8]>) -> Result<bool, ErrorStack> {
         unsafe {
-            let (ptr, len) = val.map_or((ptr::null_mut(), 0), |v| (v.as_mut_ptr(), v.len()));
-            Ok(cvt(ffi::OCSP_request_add1_nonce(self.as_ptr(), ptr, len as c_int))? > 0)
+            let (bytes, len) = val.map_or_else(|| {(ptr::null_mut(), 0)}, |v| {(v.as_mut_ptr(), v.len())});
+            Ok(cvt(ffi::OCSP_request_add1_nonce(
+                self.as_ptr(),
+                bytes as *mut c_uchar,
+                len as c_int,
+            ))? > 0)
         }
     }
 
     #[corresponds(OCSP_copy_nonce)]
     /// Copies any nonce value present in req to resp.
     pub fn copy_nonce(&self, resp: &mut OcspBasicResponseRef) -> Result<bool, ErrorStack> {
-        unsafe {
-            Ok(cvt(ffi::OCSP_copy_nonce(resp.as_ptr(), self.as_ptr()))? > 0)
-        }
+        unsafe { Ok(cvt(ffi::OCSP_copy_nonce(resp.as_ptr(), self.as_ptr()))? > 0) }
     }
 
     #[corresponds(OCSP_REQUEST_get_ext_by_NID)]
