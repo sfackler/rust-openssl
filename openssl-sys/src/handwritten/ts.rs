@@ -17,22 +17,20 @@ extern "C" {
     pub fn TS_REQ_get_cert_req(a: *const TS_REQ) -> c_int;
     pub fn TS_REQ_set_nonce(a: *mut TS_REQ, nonce: *const ASN1_INTEGER) -> c_int;
     pub fn TS_REQ_get_nonce(a: *const TS_REQ) -> *const ASN1_INTEGER;
+    pub fn TS_REQ_get_ext_count(a: *mut TS_REQ) -> c_int;
+    pub fn TS_REQ_get_ext_by_NID(a: *mut TS_REQ, nid: c_int, lastpos: c_int) -> c_int;
+    pub fn TS_REQ_get_ext_by_OBJ(Ta: *mut TS_REQ, obj: *const ASN1_OBJECT, lastpos: c_int) -> c_int;
+    pub fn TS_REQ_get_ext_by_critical(a: *mut TS_REQ, crit: c_int, lastpos: c_int) -> c_int;
+    pub fn TS_REQ_get_ext(a: *mut TS_REQ, loc: c_int) -> *mut X509_EXTENSION;
+    pub fn TS_REQ_delete_ext(a: *mut TS_REQ, loc: c_int) -> *mut X509_EXTENSION;
+    pub fn TS_REQ_get_exts(a: *mut TS_REQ) -> *mut stack_st_X509_EXTENSION;
+    pub fn i2d_TS_REQ(a: *const TS_REQ, pp: *mut *mut c_uchar) -> c_int;
+    pub fn d2i_TS_REQ(a: *mut *mut TS_REQ, pp: *const *const c_uchar, length: c_long) -> *mut TS_REQ;
 
 /*
-pub fn i2d_TS_REQ(const TS_REQ *a, unsigned char **pp) -> c_int;
-pub fn d2i_TS_REQ(TS_REQ **a, const unsigned char **pp, long length) -> *mut TS_REQ;
-
-STACK_OF(X509_EXTENSION) *TS_REQ_get_exts(TS_REQ *a);
 void TS_REQ_ext_free(TS_REQ *a);
-int TS_REQ_get_ext_count(TS_REQ *a);
-int TS_REQ_get_ext_by_NID(TS_REQ *a, int nid, int lastpos);
-int TS_REQ_get_ext_by_OBJ(TS_REQ *a, const ASN1_OBJECT *obj, int lastpos);
-int TS_REQ_get_ext_by_critical(TS_REQ *a, int crit, int lastpos);
-X509_EXTENSION *TS_REQ_get_ext(TS_REQ *a, int loc);
-X509_EXTENSION *TS_REQ_delete_ext(TS_REQ *a, int loc);
 int TS_REQ_add_ext(TS_REQ *a, X509_EXTENSION *ex, int loc);
 void *TS_REQ_get_ext_d2i(TS_REQ *a, int nid, int *crit, int *idx);
-
 */
 }
 
