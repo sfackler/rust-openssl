@@ -508,6 +508,8 @@ impl PKey<Private> {
     #[corresponds(EVP_EC_gen)]
     #[cfg(ossl300)]
     pub fn ec_gen(curve: &str) -> Result<PKey<Private>, ErrorStack> {
+        ffi::init();
+
         let curve = CString::new(curve).unwrap();
         unsafe {
             let ptr = cvt_p(ffi::EVP_EC_gen(curve.as_ptr()))?;
