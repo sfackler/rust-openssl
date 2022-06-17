@@ -92,7 +92,7 @@ macro_rules! to_der {
         pub fn $n(&self) -> Result<Vec<u8>, crate::error::ErrorStack> {
             unsafe {
                 let len = crate::cvt($f(::foreign_types::ForeignTypeRef::as_ptr(self),
-                                        ptr::null_mut()))?;
+                                        std::ptr::null_mut()))?;
                 let mut buf = vec![0; len as usize];
                 crate::cvt($f(::foreign_types::ForeignTypeRef::as_ptr(self),
                               &mut buf.as_mut_ptr()))?;

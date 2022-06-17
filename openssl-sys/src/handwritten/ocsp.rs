@@ -54,6 +54,7 @@ extern "C" {
     ) -> *mut OCSP_REQUEST;
     pub fn OCSP_request_onereq_count(req: *mut OCSP_REQUEST) -> c_int;
     pub fn OCSP_request_onereq_get0(req: *mut OCSP_REQUEST, i: c_int) -> *mut OCSP_ONEREQ;
+    pub fn OCSP_resp_get0_respdata(bs: *const OCSP_BASICRESP) -> *const OCSP_RESPDATA;
 }
 
 pub enum OCSP_BASICRESP {}
@@ -119,4 +120,10 @@ const_ptr_api! {
             issuer: #[const_ptr_if(any(ossl110, libressl281))] X509,
         ) -> *mut OCSP_CERTID;
     }
+}
+
+pub enum OCSP_RESPDATA {}
+
+extern "C" {
+    pub fn OCSP_RESPDATA_free(r: *mut OCSP_RESPDATA);
 }

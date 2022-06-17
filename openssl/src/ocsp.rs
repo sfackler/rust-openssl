@@ -217,6 +217,14 @@ impl OcspBasicResponseRef {
             Ok(X509AlgorithmRef::from_const_ptr(ptr))
         }
     }
+
+    #[corresponds(OCSP_resp_get0_respdata)]
+    pub fn get_respdata(&self) -> Result<&OcspRespDataRef, ErrorStack> {
+        unsafe {
+            cvt_cp(ffi::OCSP_resp_get0_respdata(self.as_ptr() as *const _))
+                .map(|ptr| OcspRespDataRef::from_const_ptr(ptr))
+        }
+    }
 }
 
 foreign_type_and_impl_send_sync! {
@@ -350,16 +358,16 @@ impl OcspRequestRef {
         }
     }
 
-    #[corresponds(OCSP_check_nonce)]
     /// Compares the nonce value in req and resp.
+    #[corresponds(OCSP_check_nonce)]
     pub fn check_nonce(&self, resp: &OcspBasicResponseRef) -> Result<bool, ErrorStack> {
         unsafe { Ok(cvt(ffi::OCSP_check_nonce(self.as_ptr(), resp.as_ptr()))? > 0) }
     }
 
-    #[corresponds(OCSP_request_add1_nonce)]
     /// Adds a nonce of value val and length len to OCSP request req.
     /// If val is NULL a random nonce is used. If len is zero or negative
     /// a default length will be used (currently 16 bytes).
+    #[corresponds(OCSP_request_add1_nonce)]
     pub fn add_nonce(&mut self, val: Option<&mut [u8]>) -> Result<bool, ErrorStack> {
         unsafe {
             let (bytes, len) = val.map_or_else(|| {(ptr::null_mut(), 0)}, |v| {(v.as_mut_ptr(), v.len())});
@@ -371,13 +379,15 @@ impl OcspRequestRef {
         }
     }
 
-    #[corresponds(OCSP_copy_nonce)]
     /// Copies any nonce value present in req to resp.
-    pub fn copy_nonce(&self, resp: &mut OcspBasicResponseRef) -> Result<bool, ErrorStack> {
-        unsafe { Ok(cvt(ffi::OCSP_copy_nonce(resp.as_ptr(), self.as_ptr()))? > 0) }
+    #[corresponds(OCSP_copy_nonce)]
+    pub fn copy_nonce(&self, resp: &mut OcspBasicResponseRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::OCSP_copy_nonce(resp.as_ptr(), self.as_ptr()))
+                .map(|_| ())
+        }
     }
 
-    #[corresponds(OCSP_REQUEST_get_ext_by_NID)]
     /// Look for an extension with nid or obj from extension stack x. The search
     /// starts from the extension after `lastpos` or from the beginning if `lastpos`
     /// is -1. If the extension is found its index is returned otherwise -1
@@ -388,15 +398,16 @@ impl OcspRequestRef {
     /// let req = OcspRequest::from_der(&body.to_vec())?;
     /// req.get_ext_by_nid(Nid::ID_PKIX_OCSP_NONCE, -1)?;
     /// ```
-    pub fn get_ext_by_nid(&self, nid: Nid, lastpost: i32) -> Result<bool, ErrorStack> {
+    #[corresponds(OCSP_REQUEST_get_ext_by_NID)]
+    pub fn get_ext_by_nid(&self, nid: Nid, lastpost: i32) -> Result<i32, ErrorStack> {
         unsafe {
-            Ok(cvt_n(ffi::OCSP_REQUEST_get_ext_by_NID(self.as_ptr(), nid.as_raw(), lastpost))? > 0)
+            Ok(cvt_n(ffi::OCSP_REQUEST_get_ext_by_NID(self.as_ptr(), nid.as_raw(), lastpost))?)
         }
     }
 
-    #[corresponds(OCSP_request_onereq_get0)]
     /// Returns an internal pointer to the `OcspOneReq` contained in req of index i.
     /// The index value i runs from 0 to OCSP_request_onereq_count(req) - 1.
+    #[corresponds(OCSP_request_onereq_get0)]
     pub fn get_onereq_at(&self, index: i32) -> Result<&mut OcspOneReqRef, ErrorStack> {
         unsafe {
             let ptr = cvt_p(ffi::OCSP_request_onereq_get0(self.as_ptr(), index as c_int))?;
@@ -404,8 +415,8 @@ impl OcspRequestRef {
         }
     }
 
-    #[corresponds(OCSP_request_onereq_count)]
     /// Returns the total number of `OcspOneReq` structures in req.
+    #[corresponds(OCSP_request_onereq_count)]
     pub fn get_onereq_count(&self) -> Result<i32, ErrorStack> {
         unsafe {
             Ok(cvt(ffi::OCSP_request_onereq_count(self.as_ptr()))?)
@@ -429,4 +440,12 @@ impl OcspOneReqRef {
             Ok(OcspCertIdRef::from_ptr_mut(ptr))
         }
     }
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::OCSP_RESPDATA;
+    fn drop = ffi::OCSP_RESPDATA_free;
+
+    pub struct OcspRespData;
+    pub struct OcspRespDataRef;
 }

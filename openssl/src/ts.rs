@@ -14,6 +14,7 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl TSReq {
+    #[corresponds(TS_REQ_new)]
     pub fn new() -> Result<TSReq, ErrorStack> {
         ffi::init();
 
