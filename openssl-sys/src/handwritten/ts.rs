@@ -25,7 +25,7 @@ extern "C" {
     pub fn TS_REQ_delete_ext(a: *mut TS_REQ, loc: c_int) -> *mut X509_EXTENSION;
     pub fn TS_REQ_get_exts(a: *mut TS_REQ) -> *mut stack_st_X509_EXTENSION;
     pub fn i2d_TS_REQ(a: *const TS_REQ, pp: *mut *mut c_uchar) -> c_int;
-    pub fn d2i_TS_REQ(a: *mut *mut TS_REQ, pp: *const *const c_uchar, length: c_long) -> *mut TS_REQ;
+    pub fn d2i_TS_REQ(a: *mut *mut TS_REQ, pp: *mut *const c_uchar, length: c_long) -> *mut TS_REQ;
 
 /*
 void TS_REQ_ext_free(TS_REQ *a);
