@@ -24,16 +24,39 @@ extern "C" {
     pub fn TS_REQ_get_ext(a: *mut TS_REQ, loc: c_int) -> *mut X509_EXTENSION;
     pub fn TS_REQ_delete_ext(a: *mut TS_REQ, loc: c_int) -> *mut X509_EXTENSION;
     pub fn TS_REQ_get_exts(a: *mut TS_REQ) -> *mut stack_st_X509_EXTENSION;
+    pub fn TS_REQ_add_ext(a: *mut TS_REQ, ex: *mut X509_EXTENSION, loc: c_int) -> c_int;
     pub fn i2d_TS_REQ(a: *const TS_REQ, pp: *mut *mut c_uchar) -> c_int;
     pub fn d2i_TS_REQ(a: *mut *mut TS_REQ, pp: *mut *const c_uchar, length: c_long) -> *mut TS_REQ;
 
 /*
 void TS_REQ_ext_free(TS_REQ *a);
-int TS_REQ_add_ext(TS_REQ *a, X509_EXTENSION *ex, int loc);
 void *TS_REQ_get_ext_d2i(TS_REQ *a, int nid, int *crit, int *idx);
 */
 }
 
 pub enum TS_RESP {}
 
+extern "C" {
+    pub fn TS_RESP_get_status_info(a: *mut TS_RESP) -> *mut TS_STATUS_INFO;
+    pub fn TS_RESP_set_status_info(a: *mut TS_RESP, info: *mut TS_STATUS_INFO) -> c_int;
+    pub fn TS_RESP_get_tst_info(a: *mut TS_RESP) -> *mut TS_TST_INFO;
+    pub fn TS_RESP_set_tst_info(a: *mut TS_RESP, p7: *mut PKCS7, tst_info: *mut TS_TST_INFO);
+    pub fn TS_RESP_print_bio(bio: *mut BIO, a: *mut TS_RESP) -> c_int;
+    pub fn TS_RESP_get_token(a: *mut TS_RESP) -> *mut PKCS7;
+    pub fn d2i_TS_RESP_bio(bio: *mut BIO, a: *mut *mut TS_RESP) -> *mut TS_RESP;
+    pub fn i2d_TS_RESP_bio(bio: *mut BIO, a: *const TS_RESP) -> c_int;
+/*
+int TS_RESP_verify_response(TS_VERIFY_CTX *ctx, TS_RESP *response);
+int TS_RESP_verify_token(TS_VERIFY_CTX *ctx, PKCS7 *token);
+*/
+}
+
 pub enum TS_MSG_IMPRINT {}
+
+extern "C" {
+    pub fn TS_MSG_IMPRINT_free(a: *mut TS_MSG_IMPRINT);
+}
+
+pub enum TS_STATUS_INFO {}
+
+pub enum TS_TST_INFO {}
