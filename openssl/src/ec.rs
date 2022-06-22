@@ -20,7 +20,7 @@ use libc::c_int;
 use std::fmt;
 use std::ptr;
 
-use crate::bn::{BigNumContextRef, BigNumRef};
+use crate::bn::{BigNum, BigNumContextRef, BigNumRef};
 use crate::error::ErrorStack;
 use crate::nid::Nid;
 use crate::pkey::{HasParams, HasPrivate, HasPublic, Params, Private, Public};
@@ -123,6 +123,26 @@ impl EcGroup {
             cvt_p(ffi::EC_GROUP_new_by_curve_name(nid.as_raw())).map(EcGroup)
         }
     }
+
+    /// Returns the group for given parameters
+    #[corresponds(EC_GROUP_new_curve_GFp)]
+    pub fn from_components(
+        p: BigNum,
+        a: BigNum,
+        b: BigNum,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<EcGroup, ErrorStack> {
+        unsafe {
+            init();
+            cvt_p(ffi::EC_GROUP_new_curve_GFp(
+                p.as_ptr(),
+                a.as_ptr(),
+                b.as_ptr(),
+                ctx.as_ptr(),
+            ))
+            .map(EcGroup)
+        }
+    }
 }
 
 impl EcGroupRef {
@@ -211,6 +231,25 @@ impl EcGroupRef {
         unsafe {
             let ptr = ffi::EC_GROUP_get0_generator(self.as_ptr());
             EcPointRef::from_const_ptr(ptr)
+        }
+    }
+
+    /// Sets the generator point for the given curve
+    #[corresponds(EC_GROUP_set_generator)]
+    pub fn set_generator(
+        &self,
+        generator: EcPoint,
+        order: BigNum,
+        cofactor: BigNum,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_GROUP_set_generator(
+                self.as_ptr(),
+                generator.as_ptr(),
+                order.as_ptr(),
+                cofactor.as_ptr(),
+            ))
+            .map(|_| ())
         }
     }
 
@@ -466,6 +505,28 @@ impl EcPointRef {
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EC_POINT_get_affine_coordinates_GFp(
+                group.as_ptr(),
+                self.as_ptr(),
+                x.as_ptr(),
+                y.as_ptr(),
+                ctx.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Sets affine coordinates of a curve over a prime field using the provided
+    /// `x` and `y` `BigNum`s
+    #[corresponds(EC_POINT_set_affine_coordinates_GFp)]
+    pub fn set_affine_coordinates_gfp(
+        &self,
+        group: &EcGroupRef,
+        x: &BigNumRef,
+        y: &BigNumRef,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_POINT_set_affine_coordinates_GFp(
                 group.as_ptr(),
                 self.as_ptr(),
                 x.as_ptr(),
