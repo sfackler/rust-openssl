@@ -342,7 +342,7 @@ impl Cipher {
     }
 
     #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
-    pub fn sm4_ecb() -> &'static CipherRef  {
+    pub fn sm4_ecb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_sm4_ecb() as *mut _) }
     }
 

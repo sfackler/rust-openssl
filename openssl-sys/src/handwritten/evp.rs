@@ -348,15 +348,15 @@ extern "C" {
     pub fn EVP_seed_ofb() -> *const EVP_CIPHER;
 
     #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
-    pub fn EVP_sm4_ecb() -> *const ::EVP_CIPHER;
+    pub fn EVP_sm4_ecb() -> *const EVP_CIPHER;
     #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
-    pub fn EVP_sm4_cbc() -> *const ::EVP_CIPHER;
+    pub fn EVP_sm4_cbc() -> *const EVP_CIPHER;
     #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
-    pub fn EVP_sm4_cfb128() -> *const ::EVP_CIPHER;
+    pub fn EVP_sm4_cfb128() -> *const EVP_CIPHER;
     #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
-    pub fn EVP_sm4_ofb() -> *const ::EVP_CIPHER;
+    pub fn EVP_sm4_ofb() -> *const EVP_CIPHER;
     #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
-    pub fn EVP_sm4_ctr() -> *const ::EVP_CIPHER;
+    pub fn EVP_sm4_ctr() -> *const EVP_CIPHER;
 
     #[cfg(not(ossl110))]
     pub fn OPENSSL_add_all_algorithms_noconf();
