@@ -133,7 +133,6 @@ impl EcGroup {
         ctx: &mut BigNumContextRef,
     ) -> Result<EcGroup, ErrorStack> {
         unsafe {
-            init();
             cvt_p(ffi::EC_GROUP_new_curve_GFp(
                 p.as_ptr(),
                 a.as_ptr(),
@@ -237,7 +236,7 @@ impl EcGroupRef {
     /// Sets the generator point for the given curve
     #[corresponds(EC_GROUP_set_generator)]
     pub fn set_generator(
-        &self,
+        &mut self,
         generator: EcPoint,
         order: BigNum,
         cofactor: BigNum,
@@ -519,7 +518,7 @@ impl EcPointRef {
     /// `x` and `y` `BigNum`s
     #[corresponds(EC_POINT_set_affine_coordinates_GFp)]
     pub fn set_affine_coordinates_gfp(
-        &self,
+        &mut self,
         group: &EcGroupRef,
         x: &BigNumRef,
         y: &BigNumRef,
