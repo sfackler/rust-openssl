@@ -154,10 +154,10 @@ jobs:
             - name: openssl
               version: vendored
             - name: openssl
-              version: 3.0.3
+              version: 3.0.4
               dl-path: /
             - name: openssl
-              version: 1.1.1o
+              version: 1.1.1p
               dl-path: /
             - name: openssl
               version: 1.1.0l
