@@ -92,9 +92,9 @@ impl From<ErrorStack> for fmt::Error {
 #[derive(Clone)]
 pub struct Error {
     code: c_ulong,
-    file: *const c_char,
+    file: ShimStr,
     line: c_int,
-    func: *const c_char,
+    func: Option<ShimStr>,
     data: Option<Cow<'static, str>>,
 }
 
@@ -129,6 +129,15 @@ impl Error {
                     } else {
                         None
                     };
+
+                    let file = ShimStr::new(file);
+
+                    let func = if func.is_null() {
+                        None
+                    } else {
+                        Some(ShimStr::new(func))
+                    };
+
                     Some(Error {
                         code,
                         file,
@@ -174,7 +183,11 @@ impl Error {
     fn put_error(&self) {
         unsafe {
             ffi::ERR_new();
-            ffi::ERR_set_debug(self.file, self.line, self.func);
+            ffi::ERR_set_debug(
+                self.file.as_ptr(),
+                self.line,
+                self.func.as_ref().map_or(ptr::null(), |s| s.as_ptr()),
+            );
             ffi::ERR_set_error(
                 ffi::ERR_GET_LIB(self.code),
                 ffi::ERR_GET_REASON(self.code),
@@ -190,7 +203,7 @@ impl Error {
                 ffi::ERR_GET_LIB(self.code),
                 ffi::ERR_GET_FUNC(self.code),
                 ffi::ERR_GET_REASON(self.code),
-                self.file,
+                self.file.as_ptr(),
                 self.line,
             );
         }
@@ -214,14 +227,8 @@ impl Error {
     }
 
     /// Returns the name of the function reporting the error.
-    pub fn function(&self) -> Option<&'static str> {
-        unsafe {
-            if self.func.is_null() {
-                return None;
-            }
-            let bytes = CStr::from_ptr(self.func).to_bytes();
-            Some(str::from_utf8(bytes).unwrap())
-        }
+    pub fn function(&self) -> Option<RetStr<'_>> {
+        self.func.as_ref().map(|s| s.as_str())
     }
 
     /// Returns the reason for the error.
@@ -237,12 +244,8 @@ impl Error {
     }
 
     /// Returns the name of the source file which encountered the error.
-    pub fn file(&self) -> &'static str {
-        unsafe {
-            assert!(!self.file.is_null());
-            let bytes = CStr::from_ptr(self.file as *const _).to_bytes();
-            str::from_utf8(bytes).unwrap()
-        }
+    pub fn file(&self) -> RetStr<'_> {
+        self.file.as_str()
     }
 
     /// Returns the line in the source file which encountered the error.
@@ -308,7 +311,27 @@ impl error::Error for Error {}
 
 cfg_if! {
     if #[cfg(ossl300)] {
+        use std::ffi::{CString};
         use ffi::ERR_get_error_all;
+
+        type RetStr<'a> = &'a str;
+
+        #[derive(Clone)]
+        struct ShimStr(CString);
+
+        impl ShimStr {
+            unsafe fn new(s: *const c_char) -> Self {
+                ShimStr(CStr::from_ptr(s).to_owned())
+            }
+
+            fn as_ptr(&self) -> *const c_char {
+                self.0.as_ptr()
+            }
+
+            fn as_str(&self) -> &str {
+                self.0.to_str().unwrap()
+            }
+        }
     } else {
         #[allow(bad_style)]
         unsafe extern "C" fn ERR_get_error_all(
@@ -321,6 +344,27 @@ cfg_if! {
             let code = ffi::ERR_get_error_line_data(file, line, data, flags);
             *func = ffi::ERR_func_error_string(code);
             code
+        }
+
+        type RetStr<'a> = &'static str;
+
+        #[derive(Clone)]
+        struct ShimStr(*const c_char);
+
+        impl ShimStr {
+            unsafe fn new(s: *const c_char) -> Self {
+                ShimStr(s)
+            }
+
+            fn as_ptr(&self) -> *const c_char {
+                self.0
+            }
+
+            fn as_str(&self) -> &'static str {
+                unsafe {
+                    CStr::from_ptr(self.0).to_str().unwrap()
+                }
+            }
         }
     }
 }
