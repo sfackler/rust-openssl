@@ -845,11 +845,10 @@ impl X509Extension {
 
     /// Adds an alias for an extension
     ///
-    /// This corresponds to [`X509V3_EXT_add_alias`]
-    ///
     /// # Safety
     ///
     /// This method modifies global state without locking and therefore is not thread safe
+    #[corresponds(X509V3_EXT_add_alias)]
     pub unsafe fn add_alias(to: Nid, from: Nid) -> Result<(), ErrorStack> {
         ffi::init();
         cvt(ffi::X509V3_EXT_add_alias(to.as_raw(), from.as_raw())).map(|_| ())
