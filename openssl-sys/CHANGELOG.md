@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [v0.9.75] - 2022-07-09
+
+### Added
+
+* Added SM4 bindings.
+* Added `EC_GROUP_set_generator` and `EC_POINT_set_affine_coordinates_GFp`.
+
 ## [v0.9.74] - 2022-06-01
 
 ### Added
@@ -306,7 +313,8 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.74..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.75..master
+[v0.9.75]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.74...openssl-sys-v0.9.75
 [v0.9.74]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.73...openssl-sys-v0.9.74
 [v0.9.73]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.72...openssl-sys-v0.9.73
 [v0.9.72]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.71...openssl-sys-v0.9.72
