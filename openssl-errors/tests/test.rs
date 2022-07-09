@@ -72,3 +72,24 @@ fn dynamic_data() {
     assert_eq!(error.line(), line!() - 11);
     assert_eq!(error.data(), Some("hello world"));
 }
+
+#[test]
+fn deferred_error_render() {
+    openssl_errors::put_error!(Test::BAR, Test::NO_MILK);
+
+    let error = Error::get().unwrap();
+
+    for _ in 0..100 {
+        openssl_errors::put_error!(Test::FOO, Test::NO_BACON);
+    }
+
+    assert_eq!(error.function().unwrap(), "function bar");
+    // Replace Windows `\` separators with `/`
+    assert_eq!(
+        error.file().replace('\\', "/"),
+        "openssl-errors/tests/test.rs"
+    );
+
+    // clear out the stack for other tests on the same thread
+    while Error::get().is_some() {}
+}
