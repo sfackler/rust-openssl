@@ -82,15 +82,13 @@ jobs:
   windows-vcpkg:
     name: windows-vcpkg
     runs-on: windows-latest
-    env:
-      VCPKGRS_DYNAMIC: 1
     steps:
       - uses: actions/checkout@v2
       - uses: sfackler/actions/rustup@master
       - run: echo "::set-output name=version::$(rustc --version)"
         id: rust-version
       - run: echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - run: vcpkg install openssl:x64-windows
+      - run: vcpkg install openssl:x64-windows-static-md
       - uses: actions/cache@v1
         with:
           path: ~/.cargo/registry/index
