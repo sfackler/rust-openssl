@@ -384,6 +384,8 @@ extern "C" {
             extern "C" fn(*mut SSL, *const c_char, *mut c_uchar, c_uint) -> c_uint,
         >,
     );
+    pub fn SSL_get_psk_identity_hint(ssl: *const SSL) -> *const c_char;
+    pub fn SSL_get_psk_identity(ssl: *const SSL) -> *const c_char;
 }
 
 extern "C" {

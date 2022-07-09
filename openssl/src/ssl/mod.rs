@@ -3007,6 +3007,36 @@ impl SslRef {
     pub fn set_mtu(&mut self, mtu: u32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::SSL_set_mtu(self.as_ptr(), mtu as c_long) as c_int).map(|_| ()) }
     }
+
+    /// Returns the PSK identity hint used during connection setup.
+    ///
+    /// May return `None` if no PSK identity hint was used during the connection setup.
+    #[corresponds(SSL_get_psk_identity_hint)]
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+    pub fn psk_identity_hint(&self) -> Option<&[u8]> {
+        unsafe {
+            let ptr = ffi::SSL_get_psk_identity_hint(self.as_ptr());
+            if ptr.is_null() {
+                None
+            } else {
+                Some(CStr::from_ptr(ptr).to_bytes())
+            }
+        }
+    }
+
+    /// Returns the PSK identity used during connection setup.
+    #[corresponds(SSL_get_psk_identity)]
+    #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
+    pub fn psk_identity(&self) -> Option<&[u8]> {
+        unsafe {
+            let ptr = ffi::SSL_get_psk_identity(self.as_ptr());
+            if ptr.is_null() {
+                None
+            } else {
+                Some(CStr::from_ptr(ptr).to_bytes())
+            }
+        }
+    }
 }
 
 /// An SSL stream midway through the handshake process.
