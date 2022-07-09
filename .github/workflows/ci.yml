@@ -107,7 +107,7 @@ jobs:
         with:
           path: target
           key: target-${{ github.job }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
-      - run: cargo run -p systest
+      # - run: cargo run -p systest
       - run: cargo test -p openssl
       - run: cargo test -p openssl-errors
 
