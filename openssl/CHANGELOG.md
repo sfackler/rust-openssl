@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [v0.10.41] - 2022-06-09
+
+### Fixed
+
+* Fixed a use-after-free in `Error::function` and `Error::file` with OpenSSL 3.x.
+
+### Added
+
+* Added `MessageDigest::block_size` and `MdRef::block_size`.
+* Implemented `Ord` and `Eq` for `X509` and `X509Ref`.
+* Added `X509Extension::add_alias`.
+* Added SM4 support.
+* Added `EcGroup::from_components` `EcGropuRef::set_generator`, and `EcPointRef::set_affine_coordinates_gfp`.
+
 ## [v0.10.40] - 2022-05-04
 
 ### Fixed
@@ -599,7 +613,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.40...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.41...master
+[v0.10.41]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.40...openssl-v0.10.41
 [v0.10.40]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.39...openssl-v0.10.40
 [v0.10.39]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.38...openssl-v0.10.39
 [v0.10.38]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.37...openssl-v0.10.38
