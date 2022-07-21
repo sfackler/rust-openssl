@@ -15,6 +15,7 @@ build = "build/main.rs"
 
 [features]
 vendored = ['openssl-src']
+vendored-engine = ['openssl-src']
 
 [dependencies]
 libc = "0.2"

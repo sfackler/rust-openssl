@@ -2,7 +2,12 @@ use openssl_src;
 use std::path::PathBuf;
 
 pub fn get_openssl(_target: &str) -> (Vec<PathBuf>, PathBuf) {
-    let artifacts = openssl_src::Build::new().build();
+    let mut builder = openssl_src::Build::new();
+
+    #[cfg(feature = "vendored-engine")]
+    builder = builder.force_engine();
+
+    let artifacts = builder.build();
     println!("cargo:vendored=1");
     println!(
         "cargo:root={}",

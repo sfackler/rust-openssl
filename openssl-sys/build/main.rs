@@ -4,7 +4,7 @@ extern crate autocfg;
 #[cfg(feature = "bindgen")]
 extern crate bindgen;
 extern crate cc;
-#[cfg(feature = "vendored")]
+#[cfg(any(feature = "vendored", feature = "vendored-engine"))]
 extern crate openssl_src;
 extern crate pkg_config;
 #[cfg(target_env = "msvc")]
@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 mod cfgs;
 
 mod find_normal;
-#[cfg(feature = "vendored")]
+#[cfg(any(feature = "vendored", feature = "vendored-engine"))]
 mod find_vendored;
 #[cfg(feature = "bindgen")]
 mod run_bindgen;
@@ -49,7 +49,7 @@ fn env(name: &str) -> Option<OsString> {
 }
 
 fn find_openssl(target: &str) -> (Vec<PathBuf>, PathBuf) {
-    #[cfg(feature = "vendored")]
+    #[cfg(any(feature = "vendored", feature = "vendored-engine"))]
     {
         // vendor if the feature is present, unless
         // OPENSSL_NO_VENDOR exists and isn't `0`
