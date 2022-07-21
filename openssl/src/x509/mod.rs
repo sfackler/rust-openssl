@@ -18,13 +18,11 @@ use std::marker::PhantomData;
 use std::mem;
 use std::path::Path;
 use std::ptr;
+use std::ptr::null_mut;
 use std::slice;
 use std::str;
 
-use crate::asn1::{
-    Asn1BitStringRef, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1OctetStringRef, Asn1String,
-    Asn1StringRef, Asn1TagValue, Asn1TimeRef, Asn1TypeRef,
-};
+use crate::asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1OctetStringRef, Asn1String, Asn1StringRef, Asn1TagValue, Asn1TimeRef, Asn1TypeRef};
 #[cfg(ossl110)]
 use crate::bio::MemBio;
 use crate::bio::MemBioSlice;
@@ -1005,7 +1003,7 @@ impl X509Extension {
     pub fn new_nid(
         conf: Option<&ConfRef>,
         context: Option<&X509v3Context<'_>>,
-        name: Nid,
+        nid: Nid,
         value: &str,
     ) -> Result<X509Extension, ErrorStack> {
         let value = CString::new(value).unwrap();
@@ -1013,10 +1011,46 @@ impl X509Extension {
             ffi::init();
             let conf = conf.map_or(ptr::null_mut(), ConfRef::as_ptr);
             let context = context.map_or(ptr::null_mut(), X509v3Context::as_ptr);
-            let name = name.as_raw();
+            let nid = nid.as_raw();
             let value = value.as_ptr() as *mut _;
 
-            cvt_p(ffi::X509V3_EXT_nconf_nid(conf, context, name, value)).map(X509Extension)
+            cvt_p(ffi::X509V3_EXT_nconf_nid(conf, context, nid, value)).map(X509Extension)
+        }
+    }
+
+    /// Create a new X509 extension with OID `oid`. The raw value is used instead of a config
+    /// string as in `new()` and `new_nid()`.
+    pub fn create_by_obj(
+        critical: bool,
+        oid: &Asn1ObjectRef,
+        value: &Asn1OctetStringRef
+    ) -> Result<X509Extension, ErrorStack> {
+        let ex = null_mut();
+        unsafe {
+            cvt_p(ffi::X509_EXTENSION_create_by_OBJ(
+                ex,
+                oid.as_ptr(),
+                if critical {1} else {0},
+                value.as_ptr()
+            )).map(X509Extension)
+        }
+    }
+
+    /// Create a new X509 extension with NID `nid`. The raw value is used instead of a config
+    /// string as in `new()` and `new_nid()`.
+    pub fn create_by_nid(
+        critical: bool,
+        nid: &Nid,
+        value: &Asn1OctetStringRef
+    ) -> Result<X509Extension, ErrorStack> {
+        let ex = null_mut();
+        unsafe {
+            cvt_p(ffi::X509_EXTENSION_create_by_NID(
+                ex,
+                nid.as_raw(),
+                if critical {1} else {0},
+                value.as_ptr()
+            )).map(X509Extension)
         }
     }
 
