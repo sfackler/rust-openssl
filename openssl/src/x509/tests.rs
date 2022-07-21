@@ -12,9 +12,8 @@ use crate::x509::extension::{
     SubjectKeyIdentifier,
 };
 use crate::x509::store::X509StoreBuilder;
-use crate::x509::verify::X509Purpose;
 #[cfg(any(ossl102, libressl261))]
-use crate::x509::verify::X509VerifyFlags;
+use crate::x509::verify::{X509Purpose, X509VerifyFlags};
 #[cfg(ossl110)]
 use crate::x509::X509Builder;
 use crate::x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};

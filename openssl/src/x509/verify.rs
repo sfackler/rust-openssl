@@ -181,7 +181,7 @@ impl X509Purpose {
     pub fn get_by_sname(sname: &str) -> Result<i32, ErrorStack> {
         unsafe {
             let sname = CString::new(sname).unwrap();
-            let purpose = cvt_n(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *const _))?;
+            let purpose = cvt_n(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr()))?;
             Ok(purpose as i32)
         }
     }
