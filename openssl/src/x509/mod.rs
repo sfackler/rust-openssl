@@ -1023,15 +1023,17 @@ impl X509Extension {
     pub fn create_by_obj(
         critical: bool,
         oid: &Asn1ObjectRef,
-        value: &Asn1OctetStringRef
+        value: &[u8]
     ) -> Result<X509Extension, ErrorStack> {
         let ex = null_mut();
+        let mut octet_string = Asn1String::type_new(Asn1TagValue::OCTET_STRING)?;
+        octet_string.set(value)?;
         unsafe {
             cvt_p(ffi::X509_EXTENSION_create_by_OBJ(
                 ex,
                 oid.as_ptr(),
                 if critical {1} else {0},
-                value.as_ptr()
+                octet_string.as_ptr() as *mut ffi::ASN1_OCTET_STRING
             )).map(X509Extension)
         }
     }
@@ -1041,15 +1043,17 @@ impl X509Extension {
     pub fn create_by_nid(
         critical: bool,
         nid: &Nid,
-        value: &Asn1OctetStringRef
+        value: &[u8]
     ) -> Result<X509Extension, ErrorStack> {
         let ex = null_mut();
+        let mut octet_string = Asn1String::type_new(Asn1TagValue::OCTET_STRING)?;
+        octet_string.set(value)?;
         unsafe {
             cvt_p(ffi::X509_EXTENSION_create_by_NID(
                 ex,
                 nid.as_raw(),
                 if critical {1} else {0},
-                value.as_ptr()
+                octet_string.as_ptr() as *mut ffi::ASN1_OCTET_STRING
             )).map(X509Extension)
         }
     }
