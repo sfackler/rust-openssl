@@ -2,7 +2,33 @@
 
 ## [Unreleased]
 
-## [v0.9.72]
+## [v0.9.75] - 2022-07-09
+
+### Added
+
+* Added SM4 bindings.
+* Added `EC_GROUP_set_generator` and `EC_POINT_set_affine_coordinates_GFp`.
+
+## [v0.9.74] - 2022-06-01
+
+### Added
+
+* Added `EVP_MD_block_size`.
+* Added `X509V3_EXT_add_alias`.
+* Added `X509_V_ERR_INVALID_CA` back when building against OpenSSL 3.0.
+
+## [v0.9.73] - 2022-05-02
+
+### Added
+
+* Added support for installations that place libraries in `$OPENSSL_DIR/lib64` in addition to `$OPENSSL_DIR/lib`.
+* Added `X509_issuer_name_hash`.
+* Added `ASN1_string_set`.
+* Added `X509_CRL_dup`, `X509_REQ_dup`, `X509_NAME_dup`, and `X509_dup`.
+* Added `X509_print`.
+* Added support for LibreSSL 3.5.x.
+
+## [v0.9.72] - 2021-12-11
 
 ### Changed
 
@@ -287,7 +313,10 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.72..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.75..master
+[v0.9.75]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.74...openssl-sys-v0.9.75
+[v0.9.74]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.73...openssl-sys-v0.9.74
+[v0.9.73]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.72...openssl-sys-v0.9.73
 [v0.9.72]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.71...openssl-sys-v0.9.72
 [v0.9.71]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.70...openssl-sys-v0.9.71
 [v0.9.70]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.69...openssl-sys-v0.9.70

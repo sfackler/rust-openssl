@@ -52,7 +52,7 @@ cfg_if! {
     }
 }
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl350))] {
         pub enum BIGNUM {}
     } else {
         #[repr(C)]
@@ -1033,7 +1033,7 @@ cfg_if! {
 pub enum COMP_CTX {}
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl350))] {
         pub enum COMP_METHOD {}
     } else {
         #[repr(C)]

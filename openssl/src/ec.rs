@@ -20,7 +20,7 @@ use libc::c_int;
 use std::fmt;
 use std::ptr;
 
-use crate::bn::{BigNumContextRef, BigNumRef};
+use crate::bn::{BigNum, BigNumContextRef, BigNumRef};
 use crate::error::ErrorStack;
 use crate::nid::Nid;
 use crate::pkey::{HasParams, HasPrivate, HasPublic, Params, Private, Public};
@@ -123,6 +123,25 @@ impl EcGroup {
             cvt_p(ffi::EC_GROUP_new_by_curve_name(nid.as_raw())).map(EcGroup)
         }
     }
+
+    /// Returns the group for given parameters
+    #[corresponds(EC_GROUP_new_curve_GFp)]
+    pub fn from_components(
+        p: BigNum,
+        a: BigNum,
+        b: BigNum,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<EcGroup, ErrorStack> {
+        unsafe {
+            cvt_p(ffi::EC_GROUP_new_curve_GFp(
+                p.as_ptr(),
+                a.as_ptr(),
+                b.as_ptr(),
+                ctx.as_ptr(),
+            ))
+            .map(EcGroup)
+        }
+    }
 }
 
 impl EcGroupRef {
@@ -211,6 +230,25 @@ impl EcGroupRef {
         unsafe {
             let ptr = ffi::EC_GROUP_get0_generator(self.as_ptr());
             EcPointRef::from_const_ptr(ptr)
+        }
+    }
+
+    /// Sets the generator point for the given curve
+    #[corresponds(EC_GROUP_set_generator)]
+    pub fn set_generator(
+        &mut self,
+        generator: EcPoint,
+        order: BigNum,
+        cofactor: BigNum,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_GROUP_set_generator(
+                self.as_ptr(),
+                generator.as_ptr(),
+                order.as_ptr(),
+                cofactor.as_ptr(),
+            ))
+            .map(|_| ())
         }
     }
 
@@ -466,6 +504,28 @@ impl EcPointRef {
     ) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EC_POINT_get_affine_coordinates_GFp(
+                group.as_ptr(),
+                self.as_ptr(),
+                x.as_ptr(),
+                y.as_ptr(),
+                ctx.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Sets affine coordinates of a curve over a prime field using the provided
+    /// `x` and `y` `BigNum`s
+    #[corresponds(EC_POINT_set_affine_coordinates_GFp)]
+    pub fn set_affine_coordinates_gfp(
+        &mut self,
+        group: &EcGroupRef,
+        x: &BigNumRef,
+        y: &BigNumRef,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_POINT_set_affine_coordinates_GFp(
                 group.as_ptr(),
                 self.as_ptr(),
                 x.as_ptr(),
@@ -879,6 +939,97 @@ mod test {
     fn generate() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         EcKey::generate(&group).unwrap();
+    }
+
+    #[test]
+    fn ec_group_from_components() {
+        // parameters are from secp256r1
+        let p = BigNum::from_hex_str(
+            "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF",
+        )
+        .unwrap();
+        let a = BigNum::from_hex_str(
+            "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC",
+        )
+        .unwrap();
+        let b = BigNum::from_hex_str(
+            "5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B",
+        )
+        .unwrap();
+        let mut ctx = BigNumContext::new().unwrap();
+
+        let _curve = EcGroup::from_components(p, a, b, &mut ctx).unwrap();
+    }
+
+    #[test]
+    fn ec_point_set_affine() {
+        // parameters are from secp256r1
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let mut ctx = BigNumContext::new().unwrap();
+        let mut gen_point = EcPoint::new(&group).unwrap();
+        let gen_x = BigNum::from_hex_str(
+            "6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296",
+        )
+        .unwrap();
+        let gen_y = BigNum::from_hex_str(
+            "4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5",
+        )
+        .unwrap();
+        gen_point
+            .set_affine_coordinates_gfp(&group, &gen_x, &gen_y, &mut ctx)
+            .unwrap();
+        assert!(gen_point.is_on_curve(&group, &mut ctx).unwrap());
+    }
+
+    #[test]
+    fn ec_group_set_generator() {
+        // parameters are from secp256r1
+        let mut ctx = BigNumContext::new().unwrap();
+        let p = BigNum::from_hex_str(
+            "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF",
+        )
+        .unwrap();
+        let a = BigNum::from_hex_str(
+            "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC",
+        )
+        .unwrap();
+        let b = BigNum::from_hex_str(
+            "5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B",
+        )
+        .unwrap();
+
+        let mut group = EcGroup::from_components(p, a, b, &mut ctx).unwrap();
+
+        let mut gen_point = EcPoint::new(&group).unwrap();
+        let gen_x = BigNum::from_hex_str(
+            "6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296",
+        )
+        .unwrap();
+        let gen_y = BigNum::from_hex_str(
+            "4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5",
+        )
+        .unwrap();
+        gen_point
+            .set_affine_coordinates_gfp(&group, &gen_x, &gen_y, &mut ctx)
+            .unwrap();
+
+        let order = BigNum::from_hex_str(
+            "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551",
+        )
+        .unwrap();
+        let cofactor = BigNum::from_hex_str("01").unwrap();
+        group.set_generator(gen_point, order, cofactor).unwrap();
+        let mut constructed_order = BigNum::new().unwrap();
+        group.order(&mut constructed_order, &mut ctx).unwrap();
+
+        let named_group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let mut named_order = BigNum::new().unwrap();
+        named_group.order(&mut named_order, &mut ctx).unwrap();
+
+        assert_eq!(
+            constructed_order.ucmp(&named_order),
+            std::cmp::Ordering::Equal
+        );
     }
 
     #[test]

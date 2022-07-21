@@ -3,7 +3,7 @@ use std::ptr;
 
 use *;
 
-#[cfg(not(any(libressl, ossl110)))]
+#[cfg(not(ossl110))]
 pub const SSL_MAX_KRB5_PRINCIPAL_LENGTH: c_int = 256;
 
 #[cfg(not(ossl110))]
@@ -11,7 +11,7 @@ pub const SSL_MAX_SSL_SESSION_ID_LENGTH: c_int = 32;
 #[cfg(not(ossl110))]
 pub const SSL_MAX_SID_CTX_LENGTH: c_int = 32;
 
-#[cfg(not(any(libressl, ossl110)))]
+#[cfg(not(ossl110))]
 pub const SSL_MAX_KEY_ARG_LENGTH: c_int = 8;
 #[cfg(not(ossl110))]
 pub const SSL_MAX_MASTER_KEY_LENGTH: c_int = 48;
@@ -139,7 +139,7 @@ cfg_if! {
         pub const SSL_OP_NO_DTLSv1_2: ssl_op_type!() = 0x80000000;
     }
 }
-#[cfg(ossl111)]
+#[cfg(any(ossl111, libressl340))]
 pub const SSL_OP_NO_TLSv1_3: ssl_op_type!() = 0x20000000;
 
 #[cfg(ossl110h)]
@@ -337,7 +337,7 @@ pub const SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP: c_int = 71;
 #[cfg(any(libressl, all(ossl101, not(ossl110))))]
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
 pub const SSL_CTRL_GET_EXTRA_CHAIN_CERTS: c_int = 82;
-#[cfg(ossl111)]
+#[cfg(any(ossl111, libressl252))]
 pub const SSL_CTRL_SET_GROUPS_LIST: c_int = 92;
 #[cfg(any(libressl, all(ossl102, not(ossl110))))]
 pub const SSL_CTRL_SET_ECDH_AUTO: c_int = 94;
@@ -347,13 +347,13 @@ pub const SSL_CTRL_SET_SIGALGS_LIST: c_int = 98;
 pub const SSL_CTRL_SET_VERIFY_CERT_STORE: c_int = 106;
 #[cfg(ossl110)]
 pub const SSL_CTRL_GET_EXTMS_SUPPORT: c_int = 122;
-#[cfg(ossl110)]
+#[cfg(any(ossl110, libressl261))]
 pub const SSL_CTRL_SET_MIN_PROTO_VERSION: c_int = 123;
-#[cfg(ossl110)]
+#[cfg(any(ossl110, libressl261))]
 pub const SSL_CTRL_SET_MAX_PROTO_VERSION: c_int = 124;
-#[cfg(ossl110g)]
+#[cfg(any(ossl110g, libressl270))]
 pub const SSL_CTRL_GET_MIN_PROTO_VERSION: c_int = 130;
-#[cfg(ossl110g)]
+#[cfg(any(ossl110g, libressl270))]
 pub const SSL_CTRL_GET_MAX_PROTO_VERSION: c_int = 131;
 
 pub unsafe fn SSL_CTX_set_tmp_dh(ctx: *mut SSL_CTX, dh: *mut DH) -> c_long {
@@ -388,14 +388,21 @@ pub unsafe fn SSL_CTX_set0_verify_cert_store(ctx: *mut SSL_CTX, st: *mut X509_ST
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_VERIFY_CERT_STORE, 0, st as *mut c_void)
 }
 
-#[cfg(ossl111)]
-pub unsafe fn SSL_CTX_set1_groups_list(ctx: *mut SSL_CTX, s: *const c_char) -> c_long {
-    SSL_CTX_ctrl(
-        ctx,
-        SSL_CTRL_SET_GROUPS_LIST,
-        0,
-        s as *const c_void as *mut c_void,
-    )
+cfg_if! {
+    if #[cfg(ossl111)] {
+        pub unsafe fn SSL_CTX_set1_groups_list(ctx: *mut SSL_CTX, s: *const c_char) -> c_long {
+            SSL_CTX_ctrl(
+                ctx,
+                SSL_CTRL_SET_GROUPS_LIST,
+                0,
+                s as *const c_void as *mut c_void,
+            )
+        }
+    } else if #[cfg(libressl251)] {
+        extern "C" {
+            pub fn SSL_CTX_set1_groups_list(ctx: *mut SSL_CTX, s: *const c_char) -> c_int;
+        }
+    }
 }
 
 #[cfg(ossl102)]
@@ -418,7 +425,7 @@ pub unsafe fn SSL_CTX_set_ecdh_auto(ctx: *mut SSL_CTX, onoff: c_int) -> c_int {
     ) as c_int
 }
 
-#[cfg(any(libress, all(ossl102, not(ossl110))))]
+#[cfg(any(libressl, all(ossl102, not(ossl110))))]
 pub unsafe fn SSL_set_ecdh_auto(ssl: *mut ::SSL, onoff: c_int) -> c_int {
     SSL_ctrl(
         ssl,
@@ -447,6 +454,24 @@ cfg_if! {
                 ptr::null_mut(),
             ) as c_int
         }
+
+        pub unsafe fn SSL_set_min_proto_version(s: *mut SSL, version: c_int) -> c_int {
+            SSL_ctrl(
+                s,
+                SSL_CTRL_SET_MIN_PROTO_VERSION,
+                version as c_long,
+                ptr::null_mut(),
+            ) as c_int
+        }
+
+        pub unsafe fn SSL_set_max_proto_version(s: *mut SSL, version: c_int) -> c_int {
+            SSL_ctrl(
+                s,
+                SSL_CTRL_SET_MAX_PROTO_VERSION,
+                version as c_long,
+                ptr::null_mut(),
+            ) as c_int
+        }
     }
 }
 
@@ -459,37 +484,13 @@ cfg_if! {
         pub unsafe fn SSL_CTX_get_max_proto_version(ctx: *mut SSL_CTX) -> c_int {
             SSL_CTX_ctrl(ctx, SSL_CTRL_GET_MAX_PROTO_VERSION, 0, ptr::null_mut()) as c_int
         }
+        pub unsafe fn SSL_get_min_proto_version(s: *mut SSL) -> c_int {
+            SSL_ctrl(s, SSL_CTRL_GET_MIN_PROTO_VERSION, 0, ptr::null_mut()) as c_int
+        }
+        pub unsafe fn SSL_get_max_proto_version(s: *mut SSL) -> c_int {
+            SSL_ctrl(s, SSL_CTRL_GET_MAX_PROTO_VERSION, 0, ptr::null_mut()) as c_int
+        }
     }
-}
-
-#[cfg(ossl110)]
-pub unsafe fn SSL_set_min_proto_version(s: *mut SSL, version: c_int) -> c_int {
-    SSL_ctrl(
-        s,
-        SSL_CTRL_SET_MIN_PROTO_VERSION,
-        version as c_long,
-        ptr::null_mut(),
-    ) as c_int
-}
-
-#[cfg(ossl110)]
-pub unsafe fn SSL_set_max_proto_version(s: *mut SSL, version: c_int) -> c_int {
-    SSL_ctrl(
-        s,
-        SSL_CTRL_SET_MAX_PROTO_VERSION,
-        version as c_long,
-        ptr::null_mut(),
-    ) as c_int
-}
-
-#[cfg(ossl110g)]
-pub unsafe fn SSL_get_min_proto_version(s: *mut SSL) -> c_int {
-    SSL_ctrl(s, SSL_CTRL_GET_MIN_PROTO_VERSION, 0, ptr::null_mut()) as c_int
-}
-
-#[cfg(ossl110g)]
-pub unsafe fn SSL_get_max_proto_version(s: *mut SSL) -> c_int {
-    SSL_ctrl(s, SSL_CTRL_GET_MAX_PROTO_VERSION, 0, ptr::null_mut()) as c_int
 }
 
 #[cfg(ossl111)]
@@ -499,11 +500,11 @@ pub const SSL_CLIENT_HELLO_ERROR: c_int = 0;
 #[cfg(ossl111)]
 pub const SSL_CLIENT_HELLO_RETRY: c_int = -1;
 
-#[cfg(ossl111)]
+#[cfg(any(ossl111, libressl340))]
 pub const SSL_READ_EARLY_DATA_ERROR: c_int = 0;
-#[cfg(ossl111)]
+#[cfg(any(ossl111, libressl340))]
 pub const SSL_READ_EARLY_DATA_SUCCESS: c_int = 1;
-#[cfg(ossl111)]
+#[cfg(any(ossl111, libressl340))]
 pub const SSL_READ_EARLY_DATA_FINISH: c_int = 2;
 
 cfg_if! {

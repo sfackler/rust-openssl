@@ -7,7 +7,7 @@ use *;
 pub const TLS1_VERSION: c_int = 0x301;
 pub const TLS1_1_VERSION: c_int = 0x302;
 pub const TLS1_2_VERSION: c_int = 0x303;
-#[cfg(ossl111)]
+#[cfg(any(ossl111, libressl340))]
 pub const TLS1_3_VERSION: c_int = 0x304;
 
 pub const TLS1_AD_DECODE_ERROR: c_int = 50;

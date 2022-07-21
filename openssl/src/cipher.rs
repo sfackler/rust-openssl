@@ -340,6 +340,31 @@ impl Cipher {
     pub fn seed_ofb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_seed_ofb() as *mut _) }
     }
+
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
+    pub fn sm4_ecb() -> &'static CipherRef {
+        unsafe { CipherRef::from_ptr(ffi::EVP_sm4_ecb() as *mut _) }
+    }
+
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
+    pub fn sm4_cbc() -> &'static CipherRef {
+        unsafe { CipherRef::from_ptr(ffi::EVP_sm4_cbc() as *mut _) }
+    }
+
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
+    pub fn sm4_ctr() -> &'static CipherRef {
+        unsafe { CipherRef::from_ptr(ffi::EVP_sm4_ctr() as *mut _) }
+    }
+
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
+    pub fn sm4_cfb128() -> &'static CipherRef {
+        unsafe { CipherRef::from_ptr(ffi::EVP_sm4_cfb128() as *mut _) }
+    }
+
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
+    pub fn sm4_ofb() -> &'static CipherRef {
+        unsafe { CipherRef::from_ptr(ffi::EVP_sm4_ofb() as *mut _) }
+    }
 }
 
 /// A reference to a [`Cipher`].

@@ -4,6 +4,7 @@ use *;
 cfg_if! {
     if #[cfg(ossl300)] {
         extern "C" {
+            pub fn EVP_MD_get_block_size(md: *const EVP_MD) -> c_int;
             pub fn EVP_MD_get_size(md: *const EVP_MD) -> c_int;
             pub fn EVP_MD_get_type(md: *const EVP_MD) -> c_int;
 
@@ -26,6 +27,7 @@ cfg_if! {
         }
     } else {
         extern "C" {
+            pub fn EVP_MD_block_size(md: *const EVP_MD) -> c_int;
             pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
             pub fn EVP_MD_type(md: *const EVP_MD) -> c_int;
 
@@ -344,6 +346,17 @@ extern "C" {
     pub fn EVP_seed_ecb() -> *const EVP_CIPHER;
     #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     pub fn EVP_seed_ofb() -> *const EVP_CIPHER;
+
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
+    pub fn EVP_sm4_ecb() -> *const EVP_CIPHER;
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
+    pub fn EVP_sm4_cbc() -> *const EVP_CIPHER;
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
+    pub fn EVP_sm4_cfb128() -> *const EVP_CIPHER;
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
+    pub fn EVP_sm4_ofb() -> *const EVP_CIPHER;
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
+    pub fn EVP_sm4_ctr() -> *const EVP_CIPHER;
 
     #[cfg(not(ossl110))]
     pub fn OPENSSL_add_all_algorithms_noconf();

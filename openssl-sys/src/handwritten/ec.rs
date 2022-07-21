@@ -35,6 +35,13 @@ extern "C" {
 
     pub fn EC_GROUP_get0_generator(group: *const EC_GROUP) -> *const EC_POINT;
 
+    pub fn EC_GROUP_set_generator(
+        group: *mut EC_GROUP,
+        generator: *const EC_POINT,
+        order: *const BIGNUM,
+        cofactor: *const BIGNUM,
+    ) -> c_int;
+
     pub fn EC_GROUP_get_curve_name(group: *const EC_GROUP) -> c_int;
 
     pub fn EC_GROUP_set_asn1_flag(key: *mut EC_GROUP, flag: c_int);
@@ -106,6 +113,14 @@ extern "C" {
         p: *const EC_POINT,
         x: *mut BIGNUM,
         y: *mut BIGNUM,
+        ctx: *mut BN_CTX,
+    ) -> c_int;
+
+    pub fn EC_POINT_set_affine_coordinates_GFp(
+        group: *const EC_GROUP,
+        p: *mut EC_POINT,
+        x: *const BIGNUM,
+        y: *const BIGNUM,
         ctx: *mut BN_CTX,
     ) -> c_int;
 
