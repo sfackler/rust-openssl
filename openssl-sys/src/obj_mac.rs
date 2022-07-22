@@ -958,3 +958,15 @@ pub const NID_sm4_cfb8: c_int = 978;
 pub const NID_sm4_ctr: c_int = 1139;
 #[cfg(libressl291)]
 pub const NID_sm4_ctr: c_int = 979;
+#[cfg(ossl111)]
+pub const NID_sha3_224: c_int = 1096;
+#[cfg(ossl111)]
+pub const NID_sha3_256: c_int = 1097;
+#[cfg(ossl111)]
+pub const NID_sha3_384: c_int = 1098;
+#[cfg(ossl111)]
+pub const NID_sha3_512: c_int = 1099;
+#[cfg(ossl111)]
+pub const NID_shake128: c_int = 1100;
+#[cfg(ossl111)]
+pub const NID_shake256: c_int = 1101;
