@@ -1,4 +1,5 @@
 use bitflags::bitflags;
+use cfg_if::cfg_if;
 use foreign_types::ForeignTypeRef;
 use libc::{c_uint, c_ulong};
 use std::ffi::CString;
@@ -181,7 +182,13 @@ impl X509Purpose {
     pub fn get_by_sname(sname: &str) -> Result<i32, ErrorStack> {
         unsafe {
             let sname = CString::new(sname).unwrap();
-            let purpose = cvt_n(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr()))?;
+            cfg_if! {
+                if #[cfg(any(ossl110, libressl280))] {
+                    let purpose = cvt_n(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *const _))?;
+                } else {
+                    let purpose = cvt_n(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *mut _))?;
+                }
+            }
             Ok(purpose as i32)
         }
     }

@@ -430,6 +430,7 @@ fn test_verify_fails_with_crl_flag_set_and_no_crl() {
 }
 
 #[test]
+#[cfg(any(ossl102, libressl261))]
 fn test_verify_cert_with_purpose() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -456,6 +457,7 @@ fn test_verify_cert_with_purpose() {
 }
 
 #[test]
+#[cfg(any(ossl102, libressl261))]
 fn test_verify_cert_with_wrong_purpose_fails() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
