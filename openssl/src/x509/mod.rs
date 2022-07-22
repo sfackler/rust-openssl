@@ -22,7 +22,10 @@ use std::ptr::null_mut;
 use std::slice;
 use std::str;
 
-use crate::asn1::{Asn1BitStringRef, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1OctetStringRef, Asn1String, Asn1StringRef, Asn1TagValue, Asn1TimeRef, Asn1TypeRef};
+use crate::asn1::{
+    Asn1BitStringRef, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1OctetStringRef, Asn1String,
+    Asn1StringRef, Asn1TagValue, Asn1TimeRef, Asn1TypeRef,
+};
 #[cfg(ossl110)]
 use crate::bio::MemBio;
 use crate::bio::MemBioSlice;
@@ -1023,7 +1026,7 @@ impl X509Extension {
     pub fn create_by_obj(
         critical: bool,
         oid: &Asn1ObjectRef,
-        value: &[u8]
+        value: &[u8],
     ) -> Result<X509Extension, ErrorStack> {
         let ex = null_mut();
         let mut octet_string = Asn1String::type_new(Asn1TagValue::OCTET_STRING)?;
@@ -1032,9 +1035,10 @@ impl X509Extension {
             cvt_p(ffi::X509_EXTENSION_create_by_OBJ(
                 ex,
                 oid.as_ptr(),
-                if critical {1} else {0},
-                octet_string.as_ptr() as *mut ffi::ASN1_OCTET_STRING
-            )).map(X509Extension)
+                if critical { 1 } else { 0 },
+                octet_string.as_ptr() as *mut ffi::ASN1_OCTET_STRING,
+            ))
+            .map(X509Extension)
         }
     }
 
@@ -1043,7 +1047,7 @@ impl X509Extension {
     pub fn create_by_nid(
         critical: bool,
         nid: &Nid,
-        value: &[u8]
+        value: &[u8],
     ) -> Result<X509Extension, ErrorStack> {
         let ex = null_mut();
         let mut octet_string = Asn1String::type_new(Asn1TagValue::OCTET_STRING)?;
@@ -1052,9 +1056,10 @@ impl X509Extension {
             cvt_p(ffi::X509_EXTENSION_create_by_NID(
                 ex,
                 nid.as_raw(),
-                if critical {1} else {0},
-                octet_string.as_ptr() as *mut ffi::ASN1_OCTET_STRING
-            )).map(X509Extension)
+                if critical { 1 } else { 0 },
+                octet_string.as_ptr() as *mut ffi::ASN1_OCTET_STRING,
+            ))
+            .map(X509Extension)
         }
     }
 
