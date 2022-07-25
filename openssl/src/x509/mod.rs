@@ -233,7 +233,7 @@ impl X509Builder {
     #[corresponds(X509_set_version)]
     #[allow(clippy::useless_conversion)]
     pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::X509_set_version(self.0.as_ptr(), version.into())).map(|_| ()) }
+        unsafe { cvt(ffi::X509_set_version(self.0.as_ptr(), version as c_long)).map(|_| ()) }
     }
 
     /// Sets the serial number of the certificate.
@@ -1394,7 +1394,13 @@ impl X509ReqBuilder {
     ///[`X509_REQ_set_version`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_set_version.html
     #[allow(clippy::useless_conversion)]
     pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::X509_REQ_set_version(self.0.as_ptr(), version.into())).map(|_| ()) }
+        unsafe {
+            cvt(ffi::X509_REQ_set_version(
+                self.0.as_ptr(),
+                version as c_long,
+            ))
+            .map(|_| ())
+        }
     }
 
     /// Set the issuer name.
