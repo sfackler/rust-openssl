@@ -10,7 +10,7 @@
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
-use std::cmp;
+use std::cmp::{self, Ordering};
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -1026,6 +1026,21 @@ impl X509NameRef {
             nid: None,
             loc: -1,
         }
+    }
+
+    /// Compare two names, like [`Ord`] but it may fail.
+    ///
+    /// With OpenSSL versions from 3.0.0 this may return an error if the underlying `X509_NAME_cmp`
+    /// call fails.
+    /// For OpenSSL versions before 3.0.0 it will never return an error, but due to a bug it may
+    /// spuriously return `Ordering::Less` if the `X509_NAME_cmp` call fails.
+    #[corresponds(X509_NAME_cmp)]
+    pub fn try_cmp(&self, other: &X509NameRef) -> Result<Ordering, ErrorStack> {
+        let cmp = unsafe { ffi::X509_NAME_cmp(self.as_ptr(), other.as_ptr()) };
+        if cfg!(ossl300) && cmp == -2 {
+            return Err(ErrorStack::get());
+        }
+        Ok(cmp.cmp(&0))
     }
 
     to_der! {
