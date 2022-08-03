@@ -490,8 +490,18 @@ impl RsaPrivateKeyBuilder {
 impl Rsa<Private> {
     /// Creates a new RSA key with private components (public components are assumed).
     ///
-    /// This a convenience method over
-    /// `Rsa::build(n, e, d)?.set_factors(p, q)?.set_crt_params(dmp1, dmq1, iqmp)?.build()`
+    /// This a convenience method over:
+    /// ```
+    /// # use openssl::rsa::RsaPrivateKeyBuilder;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let bn = || openssl::bn::BigNum::new().unwrap();
+    /// # let (n, e, d, p, q, dmp1, dmq1, iqmp) = (bn(), bn(), bn(), bn(), bn(), bn(), bn(), bn());
+    /// RsaPrivateKeyBuilder::new(n, e, d)?
+    ///     .set_factors(p, q)?
+    ///     .set_crt_params(dmp1, dmq1, iqmp)?
+    ///     .build();
+    /// # Ok(()) }
+    /// ```
     #[allow(clippy::too_many_arguments, clippy::many_single_char_names)]
     pub fn from_private_components(
         n: BigNum,
