@@ -77,7 +77,7 @@
 //! ```
 use crate::error::ErrorStack;
 use crate::md::MdRef;
-use crate::pkey::{HasPrivate, PKeyRef};
+use crate::pkey::{HasPrivate, HasPublic, PKeyRef};
 use crate::pkey_ctx::PkeyCtxRef;
 use crate::{cvt, cvt_n, cvt_p};
 use cfg_if::cfg_if;
@@ -170,7 +170,7 @@ impl MdCtxRef {
         pkey: &PKeyRef<T>,
     ) -> Result<&'a mut PkeyCtxRef<T>, ErrorStack>
     where
-        T: HasPrivate,
+        T: HasPublic,
     {
         unsafe {
             let mut p = ptr::null_mut();
@@ -402,5 +402,56 @@ mod test {
         ctx.digest_verify_update(bad_data).unwrap();
         let valid = ctx.digest_verify_final(&signature).unwrap();
         assert!(!valid);
+    }
+
+    #[test]
+    fn verify_success() {
+        let key1 = Rsa::generate(2048).unwrap();
+        let key1 = PKey::from_rsa(key1).unwrap();
+
+        let md = Md::sha256();
+        let data = b"Some Crypto Text";
+
+        let mut ctx = MdCtx::new().unwrap();
+        ctx.digest_sign_init(Some(md), &key1).unwrap();
+        ctx.digest_sign_update(data).unwrap();
+        let mut signature = vec![];
+        ctx.digest_sign_final_to_vec(&mut signature).unwrap();
+
+        let good_data = b"Some Crypto Text";
+
+        ctx.digest_verify_init(Some(md), &key1).unwrap();
+        ctx.digest_verify_update(good_data).unwrap();
+        let valid = ctx.digest_verify_final(&signature).unwrap();
+        assert!(valid);
+    }
+
+    #[test]
+    fn verify_with_public_success() {
+        let rsa = Rsa::generate(2048).unwrap();
+        let key1 = PKey::from_rsa(rsa.clone()).unwrap();
+
+        let md = Md::sha256();
+        let data = b"Some Crypto Text";
+
+        let mut ctx = MdCtx::new().unwrap();
+        ctx.digest_sign_init(Some(md), &key1).unwrap();
+        ctx.digest_sign_update(data).unwrap();
+        let mut signature = vec![];
+        ctx.digest_sign_final_to_vec(&mut signature).unwrap();
+
+        let good_data = b"Some Crypto Text";
+
+        // try to verify using only public components of the key
+        let n = rsa.n().to_owned().unwrap();
+        let e = rsa.e().to_owned().unwrap();
+
+        let rsa = Rsa::from_public_components(n, e).unwrap();
+        let key1 = PKey::from_rsa(rsa).unwrap();
+
+        ctx.digest_verify_init(Some(md), &key1).unwrap();
+        ctx.digest_verify_update(good_data).unwrap();
+        let valid = ctx.digest_verify_final(&signature).unwrap();
+        assert!(valid);
     }
 }
