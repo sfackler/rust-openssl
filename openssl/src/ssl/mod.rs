@@ -256,6 +256,20 @@ bitflags! {
         /// may have this disabled by default.
         #[cfg(ossl111)]
         const ENABLE_MIDDLEBOX_COMPAT = ffi::SSL_OP_ENABLE_MIDDLEBOX_COMPAT;
+
+        /// Prioritize ChaCha ciphers when preferred by clients.
+        ///
+        /// Temporarily reprioritize ChaCha20-Poly1305 ciphers to the top of the server cipher list
+        /// if a ChaCha20-Poly1305 cipher is at the top of the client cipher list. This helps those
+        /// clients (e.g. mobile) use ChaCha20-Poly1305 if that cipher is anywhere in the server
+        /// cipher list; but still allows other clients to use AES and other ciphers.
+        ///
+        /// Requires enable [`SslOptions::CIPHER_SERVER_PREFERENCE`].
+        /// Requires OpenSSL 1.1.1 or newer.
+        ///
+        /// [`SslOptions::CIPHER_SERVER_PREFERENCE`]: struct.SslOptions.html#associatedconstant.CIPHER_SERVER_PREFERENCE
+        #[cfg(ossl111)]
+        const PRIORITIZE_CHACHA = ffi::SSL_OP_PRIORITIZE_CHACHA;
     }
 }
 
