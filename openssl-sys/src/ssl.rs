@@ -109,6 +109,8 @@ cfg_if! {
 
 #[cfg(ossl111)]
 pub const SSL_OP_ENABLE_MIDDLEBOX_COMPAT: ssl_op_type!() = 0x00100000;
+#[cfg(ossl111)]
+pub const SSL_OP_PRIORITIZE_CHACHA: ssl_op_type!() = 0x00200000;
 
 pub const SSL_OP_CIPHER_SERVER_PREFERENCE: ssl_op_type!() = 0x00400000;
 cfg_if! {
