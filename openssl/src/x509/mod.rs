@@ -1310,6 +1310,13 @@ impl X509ReqRef {
         ffi::i2d_X509_REQ
     }
 
+    to_pem! {
+        /// Converts the request to human readable text.
+        #[corresponds(X509_Req_print)]
+        to_text,
+        ffi::X509_REQ_print
+    }
+
     /// Returns the numerical value of the version field of the certificate request.
     ///
     /// This corresponds to [`X509_REQ_get_version`]

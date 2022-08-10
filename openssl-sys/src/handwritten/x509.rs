@@ -636,4 +636,5 @@ extern "C" {
 
 extern "C" {
     pub fn X509_print(bio: *mut BIO, x509: *mut X509) -> c_int;
+    pub fn X509_REQ_print(bio: *mut BIO, req: *mut X509_REQ) -> c_int;
 }
