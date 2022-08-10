@@ -510,7 +510,7 @@ fn test_convert_req_to_text() {
 
     const SUBSTRINGS: &[&str] = &[
         "Certificate Request:\n",
-        "Version: 1",
+        "Version:",
         "Subject: C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=foobar.com\n",
         "Subject Public Key Info:",
         "Signature Algorithm:",
