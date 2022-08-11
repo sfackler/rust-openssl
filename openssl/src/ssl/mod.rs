@@ -662,6 +662,7 @@ pub fn select_next_proto<'a>(server: &[u8], client: &'a [u8]) -> Option<&'a [u8]
 }
 
 /// A builder for `SslContext`s.
+#[derive(Clone)]
 pub struct SslContextBuilder(SslContext);
 
 impl SslContextBuilder {
