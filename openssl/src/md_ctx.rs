@@ -377,7 +377,7 @@ impl MdCtxRef {
     /// Returns the size of the message digest, i.e. the size of the hash
     #[corresponds(EVP_MD_CTX_size)]
     #[inline]
-    pub fn size(&mut self) -> usize {
+    pub fn size(&self) -> usize {
         unsafe { ffi::EVP_MD_CTX_size(self.as_ptr()) as usize }
     }
 }
