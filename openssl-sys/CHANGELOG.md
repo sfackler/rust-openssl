@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+* Added `EVP_MD_CTX_size` and `EVP_MD_CTX_get_size`
+
 ## [v0.9.75] - 2022-07-09
 
 ### Added

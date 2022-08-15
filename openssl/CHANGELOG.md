@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+* Added `MdCtxRef::size`
+
 ## [v0.10.41] - 2022-06-09
 
 ### Fixed

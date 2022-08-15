@@ -373,6 +373,13 @@ impl MdCtxRef {
             Ok(r == 1)
         }
     }
+
+    /// Returns the size of the message digest, i.e. the size of the hash
+    #[corresponds(EVP_MD_CTX_size)]
+    #[inline]
+    pub fn size(&self) -> usize {
+        unsafe { ffi::EVP_MD_CTX_size(self.as_ptr()) as usize }
+    }
 }
 
 #[cfg(test)]
@@ -453,5 +460,28 @@ mod test {
         ctx.digest_verify_update(good_data).unwrap();
         let valid = ctx.digest_verify_final(&signature).unwrap();
         assert!(valid);
+    }
+
+    #[test]
+    fn verify_md_ctx_size() {
+        let mut ctx = MdCtx::new().unwrap();
+        ctx.digest_init(Md::sha224()).unwrap();
+        assert_eq!(Md::sha224().size(), ctx.size());
+        assert_eq!(Md::sha224().size(), 28);
+
+        let mut ctx = MdCtx::new().unwrap();
+        ctx.digest_init(Md::sha256()).unwrap();
+        assert_eq!(Md::sha256().size(), ctx.size());
+        assert_eq!(Md::sha256().size(), 32);
+
+        let mut ctx = MdCtx::new().unwrap();
+        ctx.digest_init(Md::sha384()).unwrap();
+        assert_eq!(Md::sha384().size(), ctx.size());
+        assert_eq!(Md::sha384().size(), 48);
+
+        let mut ctx = MdCtx::new().unwrap();
+        ctx.digest_init(Md::sha512()).unwrap();
+        assert_eq!(Md::sha512().size(), ctx.size());
+        assert_eq!(Md::sha512().size(), 64);
     }
 }

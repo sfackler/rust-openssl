@@ -34,6 +34,21 @@ pub unsafe fn EVP_get_digestbynid(type_: c_int) -> *const EVP_MD {
 cfg_if! {
     if #[cfg(ossl300)] {
         #[inline]
+        pub unsafe fn EVP_MD_CTX_md(ctx: *const EVP_MD_CTX) -> *const EVP_MD {
+            EVP_MD_CTX_get0_md(ctx)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_MD_CTX_get_size(ctx: *const EVP_MD_CTX) -> c_int {
+            EVP_MD_get_size(EVP_MD_CTX_get0_md(ctx))
+        }
+
+        #[inline]
+        pub unsafe fn EVP_MD_CTX_size(ctx: *const EVP_MD_CTX) -> c_int {
+            EVP_MD_CTX_get_size(ctx)
+        }
+
+        #[inline]
         pub unsafe fn EVP_MD_block_size(md: *const EVP_MD) -> c_int {
             EVP_MD_get_block_size(md)
         }
@@ -81,6 +96,10 @@ cfg_if! {
         #[inline]
         pub unsafe fn EVP_CIPHER_CTX_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int {
             EVP_CIPHER_CTX_get_iv_length(ctx)
+        }
+    } else {
+        pub unsafe fn EVP_MD_CTX_size(ctx: *const EVP_MD_CTX) -> c_int {
+            EVP_MD_size(EVP_MD_CTX_md(ctx))
         }
     }
 }
