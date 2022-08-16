@@ -57,7 +57,7 @@ impl Deref for OpensslStringRef {
 
 impl AsRef<str> for OpensslStringRef {
     fn as_ref(&self) -> &str {
-        &*self
+        self
     }
 }
 

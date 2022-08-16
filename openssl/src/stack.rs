@@ -89,13 +89,13 @@ impl<T: Stackable> iter::IntoIterator for Stack<T> {
 
 impl<T: Stackable> AsRef<StackRef<T>> for Stack<T> {
     fn as_ref(&self) -> &StackRef<T> {
-        &*self
+        self
     }
 }
 
 impl<T: Stackable> Borrow<StackRef<T>> for Stack<T> {
     fn borrow(&self) -> &StackRef<T> {
-        &*self
+        self
     }
 }
 
