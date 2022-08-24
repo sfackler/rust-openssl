@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use crate::asn1::Asn1Time;
 use crate::bn::{BigNum, MsbOption};
 use crate::hash::MessageDigest;
@@ -526,4 +528,15 @@ fn test_convert_req_to_text() {
             text
         );
     }
+}
+
+#[test]
+fn test_name_cmp() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    let subject = cert.subject_name();
+    let issuer = cert.issuer_name();
+    assert_eq!(Ordering::Equal, subject.try_cmp(subject).unwrap());
+    assert_eq!(Ordering::Greater, subject.try_cmp(issuer).unwrap());
 }
