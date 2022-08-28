@@ -121,7 +121,7 @@ impl MdCtxRef {
     /// Performs a copy of this instance of `MdCtxRef` to another `MdCtxRef`
     #[corresponds(EVP_MD_CTX_copy_ex)]
     #[inline]
-    pub fn copy(&mut self, other: &mut MdCtxRef) -> Result<(), ErrorStack> {
+    pub fn copy(&self, other: &mut MdCtxRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_MD_CTX_copy_ex(other.as_ptr(), self.as_ptr()))?;
         }
