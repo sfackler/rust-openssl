@@ -382,10 +382,10 @@ impl MdCtxRef {
     }
 
     /// Resets the underlying EVP_MD_CTX instance
-    #[corresponds(EVP_MD_CTX_init)]
+    #[corresponds(EVP_MD_CTX_reset)]
     #[cfg(ossl111)]
     #[inline]
-    pub fn reset(&self) -> Result<(), ErrorStack> {
+    pub fn reset(&mut self) -> Result<(), ErrorStack> {
         unsafe {
             let _ = cvt(ffi::EVP_MD_CTX_reset(self.as_ptr()))?;
             Ok(())
