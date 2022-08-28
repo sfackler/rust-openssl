@@ -383,6 +383,7 @@ impl MdCtxRef {
 
     /// Resets the underlying EVP_MD_CTX instance
     #[corresponds(EVP_MD_CTX_init)]
+    #[cfg(ossl111)]
     #[inline]
     pub fn reset(&self) -> Result<(), ErrorStack> {
         unsafe {
@@ -496,6 +497,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(ossl111)]
     fn verify_md_ctx_reset() {
         let hello_expected = hex::decode("185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969").unwrap();
         let world_expected = hex::decode("78ae647dc5544d227130a0682a51e30bc7777fbb6d8a8f17007463a3ecd1d524").unwrap();
