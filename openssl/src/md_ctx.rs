@@ -117,17 +117,18 @@ impl MdCtx {
     }
 }
 
-impl Clone for MdCtx {
-    fn clone(&self) -> Self {
-        let copy = MdCtx::new().unwrap();
-        unsafe {
-            let _ = cvt(ffi::EVP_MD_CTX_copy(copy.as_ptr(), self.as_ptr())).unwrap();
-            copy
-        }
-    }
-}
-
 impl MdCtxRef {
+    /// Performs a copy of this instance of `MdCtxRef` to another `MdCtxRef`
+    #[corresponds(EVP_MD_CTX_copy_ex)]
+    #[inline]
+    pub fn copy(&mut self, other: &mut MdCtxRef) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EVP_MD_CTX_copy_ex(other.as_ptr(), self.as_ptr()))?;
+        }
+
+        Ok(())
+    }
+
     /// Initializes the context to compute the digest of data.
     #[corresponds(EVP_DigestInit_ex)]
     #[inline]
@@ -556,7 +557,9 @@ mod test {
         ctx.digest_init(Md::sha256()).unwrap();
         ctx.digest_update(b"HelloWorld").unwrap();
 
-        let mut ctx2 = ctx.clone();
+        let mut ctx2 = MdCtx::new().unwrap();
+        ctx.copy(&mut ctx2).unwrap();
+
         ctx.digest_update(b"1").unwrap();
         ctx2.digest_update(b"2").unwrap();
 
