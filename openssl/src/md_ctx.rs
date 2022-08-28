@@ -499,8 +499,12 @@ mod test {
     #[test]
     #[cfg(ossl111)]
     fn verify_md_ctx_reset() {
-        let hello_expected = hex::decode("185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969").unwrap();
-        let world_expected = hex::decode("78ae647dc5544d227130a0682a51e30bc7777fbb6d8a8f17007463a3ecd1d524").unwrap();
+        let hello_expected =
+            hex::decode("185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969")
+                .unwrap();
+        let world_expected =
+            hex::decode("78ae647dc5544d227130a0682a51e30bc7777fbb6d8a8f17007463a3ecd1d524")
+                .unwrap();
         // Calculate SHA-256 digest of "Hello"
         let mut ctx = MdCtx::new().unwrap();
         ctx.digest_init(Md::sha256()).unwrap();
@@ -521,7 +525,7 @@ mod test {
         ctx.digest_init(Md::sha256()).unwrap();
         ctx.digest_update(b"World").unwrap();
 
-        let mut reset_result = vec![0;32];
+        let mut reset_result = vec![0; 32];
         let result_len = ctx.digest_final(reset_result.as_mut_slice()).unwrap();
         assert_eq!(result_len, reset_result.len());
         // Validate result of digest of "World"
