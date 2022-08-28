@@ -117,6 +117,16 @@ impl MdCtx {
     }
 }
 
+impl Clone for MdCtx {
+    fn clone(&self) -> Self {
+        let copy = MdCtx::new().unwrap();
+        unsafe {
+            let _ = cvt(ffi::EVP_MD_CTX_copy(copy.as_ptr(), self.as_ptr())).unwrap();
+            copy
+        }
+    }
+}
+
 impl MdCtxRef {
     /// Initializes the context to compute the digest of data.
     #[corresponds(EVP_DigestInit_ex)]
@@ -483,5 +493,39 @@ mod test {
         ctx.digest_init(Md::sha512()).unwrap();
         assert_eq!(Md::sha512().size(), ctx.size());
         assert_eq!(Md::sha512().size(), 64);
+    }
+
+    #[test]
+    fn verify_md_ctx_clone() {
+        let hello_world_1_result =
+            hex::decode("90b46dd6fad0a8db496945a6be27d95fbb7860482235697056b89b1d0783685e")
+                .unwrap();
+
+        let hello_world_2_result =
+            hex::decode("d8ed225afc4bb09b47efdb9ed4517f2f874e3f6100a36d4fdd4d90b87b707245")
+                .unwrap();
+
+        let mut ctx = MdCtx::new().unwrap();
+        ctx.digest_init(Md::sha256()).unwrap();
+        ctx.digest_update(b"HelloWorld").unwrap();
+
+        let mut ctx2 = ctx.clone();
+        ctx.digest_update(b"1").unwrap();
+        ctx2.digest_update(b"2").unwrap();
+
+        let mut result1 = vec![0; 32];
+        let mut result2 = vec![0; 32];
+
+        assert_eq!(
+            result1.len(),
+            ctx.digest_final(result1.as_mut_slice()).unwrap()
+        );
+        assert_eq!(
+            result2.len(),
+            ctx2.digest_final(result2.as_mut_slice()).unwrap()
+        );
+
+        assert_eq!(result1, hello_world_1_result);
+        assert_eq!(result2, hello_world_2_result);
     }
 }
