@@ -380,6 +380,16 @@ impl MdCtxRef {
     pub fn size(&self) -> usize {
         unsafe { ffi::EVP_MD_CTX_size(self.as_ptr()) as usize }
     }
+
+    /// Resets the underlying EVP_MD_CTX instance
+    #[corresponds(EVP_MD_CTX_init)]
+    #[inline]
+    pub fn reset(&self) -> Result<(), ErrorStack> {
+        unsafe {
+            let _ = cvt(ffi::EVP_MD_CTX_reset(self.as_ptr()))?;
+            Ok(())
+        }
+    }
 }
 
 #[cfg(test)]
@@ -483,5 +493,36 @@ mod test {
         ctx.digest_init(Md::sha512()).unwrap();
         assert_eq!(Md::sha512().size(), ctx.size());
         assert_eq!(Md::sha512().size(), 64);
+    }
+
+    #[test]
+    fn verify_md_ctx_reset() {
+        let hello_expected = hex::decode("185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969").unwrap();
+        let world_expected = hex::decode("78ae647dc5544d227130a0682a51e30bc7777fbb6d8a8f17007463a3ecd1d524").unwrap();
+        // Calculate SHA-256 digest of "Hello"
+        let mut ctx = MdCtx::new().unwrap();
+        ctx.digest_init(Md::sha256()).unwrap();
+        ctx.digest_update(b"Hello").unwrap();
+        let mut result = vec![0; 32];
+        let result_len = ctx.digest_final(result.as_mut_slice()).unwrap();
+        assert_eq!(result_len, result.len());
+        // Validate result of "Hello"
+        assert_eq!(result, hello_expected);
+
+        // Create new context
+        let mut ctx = MdCtx::new().unwrap();
+        // Initialize and update to "Hello"
+        ctx.digest_init(Md::sha256()).unwrap();
+        ctx.digest_update(b"Hello").unwrap();
+        // Now reset, init to SHA-256 and use "World"
+        ctx.reset().unwrap();
+        ctx.digest_init(Md::sha256()).unwrap();
+        ctx.digest_update(b"World").unwrap();
+
+        let mut reset_result = vec![0;32];
+        let result_len = ctx.digest_final(reset_result.as_mut_slice()).unwrap();
+        assert_eq!(result_len, reset_result.len());
+        // Validate result of digest of "World"
+        assert_eq!(reset_result, world_expected);
     }
 }
