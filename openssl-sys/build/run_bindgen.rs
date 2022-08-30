@@ -28,6 +28,7 @@ const INCLUDES: &str = "
 #include <openssl/sha.h>
 #include <openssl/ssl.h>
 #include <openssl/stack.h>
+#include <openssl/ts.h>
 #include <openssl/x509.h>
 #include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>

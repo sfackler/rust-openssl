@@ -65,6 +65,25 @@ foreign_type_and_impl_send_sync! {
     pub struct Asn1GeneralizedTimeRef;
 }
 
+impl Asn1GeneralizedTimeRef {
+    /// Converts the ASN.1 underlying format to UTF8
+    ///
+    /// Internal data is formatted as `YYYYMMDDhhmmss[.s...]Z`.
+    /// This conversion does not ignore milli seconds or better precision part.
+    #[corresponds(ASN1_STRING_to_UTF8)]
+    pub fn as_utf8(&self) -> Result<OpensslString, ErrorStack> {
+        unsafe {
+            let mut ptr = ptr::null_mut();
+            let len = ffi::ASN1_STRING_to_UTF8(&mut ptr, self.as_ptr() as *mut _);
+            if len < 0 {
+                return Err(ErrorStack::get());
+            }
+
+            Ok(OpensslString::from_ptr(ptr as *mut c_char))
+        }
+    }
+}
+
 impl fmt::Display for Asn1GeneralizedTimeRef {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         unsafe {
@@ -553,6 +572,37 @@ foreign_type_and_impl_send_sync! {
 
 impl Asn1BitStringRef {
     /// Returns the Asn1BitString as a slice.
+    #[corresponds(ASN1_STRING_get0_data)]
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe { slice::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr() as *mut _), self.len()) }
+    }
+
+    /// Returns the number of bytes in the string.
+    #[corresponds(ASN1_STRING_length)]
+    pub fn len(&self) -> usize {
+        unsafe { ffi::ASN1_STRING_length(self.as_ptr() as *const _) as usize }
+    }
+
+    /// Determines if the string is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::ASN1_OCTET_STRING;
+    fn drop = ffi::ASN1_OCTET_STRING_free;
+    /// Sequence of bytes
+    ///
+    /// Asn1OctetString is used to represent or return underlying
+    /// raw data.
+    pub struct Asn1OctetString;
+    /// A reference to an [`Asn1OctetString`].
+    pub struct Asn1OctetStringRef;
+}
+
+impl Asn1OctetStringRef {
+    /// Returns the Asn1OctetString as a slice.
     #[corresponds(ASN1_STRING_get0_data)]
     pub fn as_slice(&self) -> &[u8] {
         unsafe { slice::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr() as *mut _), self.len()) }

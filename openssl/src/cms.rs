@@ -10,6 +10,7 @@ use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_uint;
 use std::ptr;
 
+use crate::asn1::Asn1OctetStringRef;
 use crate::bio::{MemBio, MemBioSlice};
 use crate::error::ErrorStack;
 use crate::pkey::{HasPrivate, PKeyRef};
@@ -132,6 +133,24 @@ impl CmsContentInfoRef {
         #[corresponds(PEM_write_bio_CMS)]
         to_pem,
         ffi::PEM_write_bio_CMS
+    }
+
+    /// Gets content depending on its type.
+    /// For exapmle, eContent of EncapsulatedContentInfo for SignedData.
+    /// If CMS Content Info is unsupported type, error is raised.
+    /// If content is detached, returned value is None.
+    #[corresponds(CMS_get0_content)]
+    pub fn content(&self) -> Result<Option<&[u8]>, ErrorStack> {
+        unsafe {
+            let content_ptr = ffi::CMS_get0_content(self.as_ptr());
+            if content_ptr.is_null() {
+                Err(ErrorStack::get())
+            } else if (*content_ptr).is_null() {
+                Ok(None)
+            } else {
+                Ok(Some(Asn1OctetStringRef::from_ptr(*content_ptr).as_slice()))
+            }
+        }
     }
 }
 
