@@ -2474,6 +2474,7 @@ impl SslRef {
     /// This chain should contain all certificates necessary to go from the certificate specified by
     /// `set_certificate` to a trusted root.
     #[corresponds(SSL_add0_chain_cert)]
+    #[cfg(ossl102)]
     pub fn add_chain_cert(&mut self, cert: X509) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_add0_chain_cert(self.as_ptr(), cert.as_ptr()) as c_int)?;
@@ -2502,6 +2503,7 @@ impl SslRef {
 
     /// Like [`SslContext::set_certificate_chain_file`].
     #[corresponds(SSL_use_certificate_chain_file)]
+    #[cfg(ossl111)]
     pub fn set_certificate_chain_file<P: AsRef<Path>>(
         &mut self,
         file: P,

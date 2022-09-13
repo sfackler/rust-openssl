@@ -747,12 +747,8 @@ extern "C" {
         cert_file: *const c_char,
         file_type: c_int,
     ) -> c_int;
-    pub fn SSL_use_certificate_chain_file(
-        ctx: *mut SSL,
-        cert_chain_file: *const c_char,
-    ) -> c_int;
-
-
+    #[cfg(ossl111)]
+    pub fn SSL_use_certificate_chain_file(ctx: *mut SSL, cert_chain_file: *const c_char) -> c_int;
 
     pub fn SSL_get_certificate(ssl: *const SSL) -> *mut X509;
 

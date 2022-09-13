@@ -347,6 +347,7 @@ pub const SSL_CTRL_SET_ECDH_AUTO: c_int = 94;
 pub const SSL_CTRL_SET_SIGALGS_LIST: c_int = 98;
 #[cfg(ossl102)]
 pub const SSL_CTRL_SET_VERIFY_CERT_STORE: c_int = 106;
+#[cfg(ossl102)]
 pub const SSL_CTRL_CHAIN_CERT: c_int = 89;
 #[cfg(ossl110)]
 pub const SSL_CTRL_GET_EXTMS_SUPPORT: c_int = 122;
@@ -379,6 +380,7 @@ pub unsafe fn SSL_CTX_add_extra_chain_cert(ctx: *mut SSL_CTX, x509: *mut X509) -
     SSL_CTX_ctrl(ctx, SSL_CTRL_EXTRA_CHAIN_CERT, 0, x509 as *mut c_void)
 }
 
+#[cfg(ossl102)]
 pub unsafe fn SSL_add0_chain_cert(ctx: *mut SSL, x509: *mut X509) -> c_long {
     SSL_ctrl(ctx, SSL_CTRL_CHAIN_CERT, 0, x509 as *mut c_void)
 }
