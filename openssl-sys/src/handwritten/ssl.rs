@@ -734,7 +734,28 @@ extern "C" {
         size: c_int,
     ) -> *mut c_char;
 
+    pub fn SSL_use_PrivateKey(ssl: *mut SSL, key: *mut EVP_PKEY) -> c_int;
+    pub fn SSL_use_certificate(ssl: *mut SSL, cert: *mut X509) -> c_int;
+
+    pub fn SSL_use_PrivateKey_file(
+        ssl: *mut SSL,
+        key_file: *const c_char,
+        file_type: c_int,
+    ) -> c_int;
+    pub fn SSL_use_certificate_file(
+        ssl: *mut SSL,
+        cert_file: *const c_char,
+        file_type: c_int,
+    ) -> c_int;
+    pub fn SSL_use_certificate_chain_file(
+        ctx: *mut SSL,
+        cert_chain_file: *const c_char,
+    ) -> c_int;
+
+
+
     pub fn SSL_get_certificate(ssl: *const SSL) -> *mut X509;
+
 }
 const_ptr_api! {
     extern "C" {

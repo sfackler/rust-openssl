@@ -2454,12 +2454,92 @@ impl SslRef {
         }
     }
 
+    /// Like [`SslContext::set_certificate`].
+    #[corresponds(SSL_use_certificate)]
+    pub fn set_certificate(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::SSL_use_certificate(self.as_ptr(), cert.as_ptr())).map(|_| ()) }
+    }
+
+    /// Like [`SslContext::set_private_key`].
+    #[corresponds(SSL_use_PrivateKey)]
+    pub fn set_private_key<T>(&mut self, key: &PKeyRef<T>) -> Result<(), ErrorStack>
+    where
+        T: HasPrivate,
+    {
+        unsafe { cvt(ffi::SSL_use_PrivateKey(self.as_ptr(), key.as_ptr())).map(|_| ()) }
+    }
+
+    /// Appends a certificate to the certificate chain.
+    ///
+    /// This chain should contain all certificates necessary to go from the certificate specified by
+    /// `set_certificate` to a trusted root.
+    #[corresponds(SSL_add0_chain_cert)]
+    pub fn add_chain_cert(&mut self, cert: X509) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_add0_chain_cert(self.as_ptr(), cert.as_ptr()) as c_int)?;
+            mem::forget(cert);
+            Ok(())
+        }
+    }
+
+    /// Like [`SslContext::set_certificate_file`].
+    #[corresponds(SSL_use_certificate_file)]
+    pub fn set_certificate_file<P: AsRef<Path>>(
+        &mut self,
+        file: P,
+        file_type: SslFiletype,
+    ) -> Result<(), ErrorStack> {
+        let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
+        unsafe {
+            cvt(ffi::SSL_use_certificate_file(
+                self.as_ptr(),
+                file.as_ptr() as *const _,
+                file_type.as_raw(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Like [`SslContext::set_certificate_chain_file`].
+    #[corresponds(SSL_use_certificate_chain_file)]
+    pub fn set_certificate_chain_file<P: AsRef<Path>>(
+        &mut self,
+        file: P,
+    ) -> Result<(), ErrorStack> {
+        let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
+        unsafe {
+            cvt(ffi::SSL_use_certificate_chain_file(
+                self.as_ptr(),
+                file.as_ptr() as *const _,
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Like [`SslContext::set_private_key_file`].
+    #[corresponds(SSL_use_PrivateKey_file)]
+    pub fn set_private_key_file<P: AsRef<Path>>(
+        &mut self,
+        file: P,
+        file_type: SslFiletype,
+    ) -> Result<(), ErrorStack> {
+        let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
+        unsafe {
+            cvt(ffi::SSL_use_PrivateKey_file(
+                self.as_ptr(),
+                file.as_ptr() as *const _,
+                file_type.as_raw(),
+            ))
+            .map(|_| ())
+        }
+    }
+
     /// Like [`SslContext::private_key`].
     ///
     /// This corresponds to `SSL_get_privatekey`.
     ///
     /// [`SslContext::private_key`]: struct.SslContext.html#method.private_key
-    #[corresponds(SSL_get_certificate)]
+    #[corresponds(SSL_get_privatekey)]
     pub fn private_key(&self) -> Option<&PKeyRef<Private>> {
         unsafe {
             let ptr = ffi::SSL_get_privatekey(self.as_ptr());

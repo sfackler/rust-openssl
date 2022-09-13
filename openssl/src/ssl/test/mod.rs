@@ -42,6 +42,9 @@ mod server;
 static ROOT_CERT: &[u8] = include_bytes!("../../../test/root-ca.pem");
 static CERT: &[u8] = include_bytes!("../../../test/cert.pem");
 static KEY: &[u8] = include_bytes!("../../../test/key.pem");
+static LEAF_CERT: &[u8] = include_bytes!("../../../test/leaf-cert.pem");
+static LEAF_KEY: &[u8] = include_bytes!("../../../test/leaf-cert.key");
+static INTERMEDIATE_CERT: &[u8] = include_bytes!("../../../test/intermediate.pem");
 
 #[test]
 fn verify_untrusted() {
@@ -628,6 +631,14 @@ fn add_extra_chain_cert() {
 }
 
 #[test]
+fn add_chain_cert() {
+    let cert = X509::from_pem(CERT).unwrap();
+    let ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    let mut ssl = Ssl::new(&ctx.build()).unwrap();
+    ssl.add_chain_cert(cert).unwrap();
+}
+
+#[test]
 #[cfg(ossl102)]
 fn verify_valid_hostname() {
     let server = Server::builder().build();
@@ -741,6 +752,43 @@ fn connector_no_hostname_can_disable_verify() {
         .connect("foobar.com", s)
         .unwrap();
     s.read_exact(&mut [0]).unwrap();
+}
+
+#[test]
+fn test_dynamic_cert() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    let t = thread::spawn(move || {
+        let mut acceptor = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+        acceptor.set_servername_callback(|ssl_ref: &mut ssl::SslRef, _ssl_alert: &mut ssl::SslAlert| -> Result<(), ssl::SniError>{
+            let key = PKey::private_key_from_pem(LEAF_KEY).unwrap();
+            let cert = X509::from_pem(LEAF_CERT).unwrap();
+            let intermediate = X509::from_pem(INTERMEDIATE_CERT).unwrap();
+            ssl_ref.set_private_key(&key).unwrap();
+            ssl_ref.set_certificate(&cert).unwrap();
+            ssl_ref.add_chain_cert(intermediate).unwrap();
+            Ok(())
+        });
+        let acceptor = acceptor.build();
+        let stream = listener.accept().unwrap().0;
+        let mut stream = acceptor.accept(stream).unwrap();
+
+        stream.write_all(b"hello").unwrap();
+    });
+
+    let mut connector = SslConnector::builder(SslMethod::tls()).unwrap();
+    connector.set_ca_file("test/root-ca.pem").unwrap();
+    let connector = connector.build();
+
+    let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    let mut stream = connector.connect("foobar.com", stream).unwrap();
+
+    let mut buf = [0; 5];
+    stream.read_exact(&mut buf).unwrap();
+    assert_eq!(b"hello", &buf);
+
+    t.join().unwrap();
 }
 
 fn test_mozilla_server(new: fn(SslMethod) -> Result<SslAcceptorBuilder, ErrorStack>) {
