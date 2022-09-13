@@ -48,6 +48,7 @@ pub const ASN1_STRFLGS_SHOW_TYPE: c_ulong = 0x40;
 pub const ASN1_STRFLGS_DUMP_ALL: c_ulong = 0x80;
 pub const ASN1_STRFLGS_DUMP_UNKNOWN: c_ulong = 0x100;
 pub const ASN1_STRFLGS_DUMP_DER: c_ulong = 0x200;
+#[cfg(ossl110)]
 pub const ASN1_STRFLGS_ESC_2254: c_ulong = 0x400;
 pub const ASN1_STRFLGS_RFC2253: c_ulong = ASN1_STRFLGS_ESC_2253
     | ASN1_STRFLGS_ESC_CTRL

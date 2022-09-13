@@ -91,6 +91,7 @@ bitflags! {
         const STR_DUMP_ALL = ffi::ASN1_STRFLGS_DUMP_ALL;
         const STR_DUMP_UNKNOWN = ffi::ASN1_STRFLGS_DUMP_UNKNOWN;
         const STR_DUMP_DER = ffi::ASN1_STRFLGS_DUMP_DER;
+        #[cfg(ossl110)]
         const STR_ESC_2254 = ffi::ASN1_STRFLGS_ESC_2254;
     }
 }
