@@ -592,7 +592,7 @@ extern "C" {
         fp: Option<extern "C" fn()>,
     ) -> c_long;
 
-    #[deprecated(note = "use SSL_CTX_set_alpn_select_cb instead")]
+    #[deprecated(note = "use SSL_CTX_set_alpn_select_cb__fixed_rust instead")]
     #[cfg(any(ossl102, libressl261))]
     pub fn SSL_CTX_set_alpn_select_cb(
         ssl: *mut SSL_CTX,
