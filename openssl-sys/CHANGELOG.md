@@ -6,6 +6,10 @@
 
 * Added `EVP_MD_CTX_size` and `EVP_MD_CTX_get_size`
 
+### Fixed
+
+* Fixed the deprecation note on `SSL_CTX_set_alpn_select_cb`.
+
 ## [v0.9.75] - 2022-07-09
 
 ### Added
