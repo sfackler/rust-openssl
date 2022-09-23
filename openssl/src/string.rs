@@ -34,7 +34,7 @@ impl Stackable for OpensslString {
 
 impl AsRef<str> for OpensslString {
     fn as_ref(&self) -> &str {
-        &**self
+        self
     }
 }
 

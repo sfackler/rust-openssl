@@ -107,7 +107,7 @@ impl SslConnector {
 
     /// Returns a shared reference to the inner raw `SslContext`.
     pub fn context(&self) -> &SslContextRef {
-        &*self.0
+        &self.0
     }
 }
 
@@ -334,7 +334,7 @@ impl SslAcceptor {
 
     /// Returns a shared reference to the inner raw `SslContext`.
     pub fn context(&self) -> &SslContextRef {
-        &*self.0
+        &self.0
     }
 }
 
