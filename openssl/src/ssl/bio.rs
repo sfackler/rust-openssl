@@ -257,7 +257,7 @@ cfg_if! {
         impl Drop for BIO_METHOD {
             fn drop(&mut self) {
                 unsafe {
-                    Box::<ffi::BIO_METHOD>::from_raw(self.0);
+                    let _ = Box::<ffi::BIO_METHOD>::from_raw(self.0);
                 }
             }
         }
