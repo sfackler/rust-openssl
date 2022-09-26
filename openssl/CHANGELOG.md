@@ -2,9 +2,22 @@
 
 ## [Unreleased]
 
+## [v0.10.42] - 2022-09-26
+
 ### Added
 
-* Added `MdCtxRef::size`
+* Added `SslRef::psk_identity_hint` and  `SslRef::psk_identity`.
+* Added SHA-3 constants to `Nid`.
+* Added `SslOptions::PRIORITIZE_CHACHA`.
+* Added `X509ReqRef::to_text`.
+* Added `MdCtxRef::size`.
+* Added `X509NameRef::try_cmp`.
+* Added `MdCtxRef::reset`.
+* Added experimental, unstable support for BoringSSL.
+
+### Fixed
+
+* Fixed `MdCtxRef::digest_verify_init` to support `PKey`s with only public components.
 
 ## [v0.10.41] - 2022-06-09
 
@@ -617,7 +630,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.41...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.42...master
+[v0.10.42]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.41...openssl-v0.10.42
 [v0.10.41]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.40...openssl-v0.10.41
 [v0.10.40]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.39...openssl-v0.10.40
 [v0.10.39]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.38...openssl-v0.10.39
