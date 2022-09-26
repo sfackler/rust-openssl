@@ -34,33 +34,39 @@
 //! verifier.update(data2).unwrap();
 //! assert!(verifier.verify(&signature).unwrap());
 //! ```
-//!
-//! Compute an HMAC:
-//!
-//! ```rust
-//! use openssl::hash::MessageDigest;
-//! use openssl::memcmp;
-//! use openssl::pkey::PKey;
-//! use openssl::sign::Signer;
-//!
-//! // Create a PKey
-//! let key = PKey::hmac(b"my secret").unwrap();
-//!
-//! let data = b"hello, world!";
-//! let data2 = b"hola, mundo!";
-//!
-//! // Compute the HMAC
-//! let mut signer = Signer::new(MessageDigest::sha256(), &key).unwrap();
-//! signer.update(data).unwrap();
-//! signer.update(data2).unwrap();
-//! let hmac = signer.sign_to_vec().unwrap();
-//!
-//! // `Verifier` cannot be used with HMACs; use the `memcmp::eq` function instead
-//! //
-//! // Do not simply check for equality with `==`!
-//! # let target = hmac.clone();
-//! assert!(memcmp::eq(&hmac, &target));
-//! ```
+
+#![cfg_attr(
+    not(boringssl),
+    doc = r#"\
+
+Compute an HMAC:
+
+```rust
+use openssl::hash::MessageDigest;
+use openssl::memcmp;
+use openssl::pkey::PKey;
+use openssl::sign::Signer;
+
+// Create a PKey
+let key = PKey::hmac(b"my secret").unwrap();
+
+let data = b"hello, world!";
+let data2 = b"hola, mundo!";
+
+// Compute the HMAC
+let mut signer = Signer::new(MessageDigest::sha256(), &key).unwrap();
+signer.update(data).unwrap();
+signer.update(data2).unwrap();
+let hmac = signer.sign_to_vec().unwrap();
+
+// `Verifier` cannot be used with HMACs; use the `memcmp::eq` function instead
+//
+// Do not simply check for equality with `==`!
+# let target = hmac.clone();
+assert!(memcmp::eq(&hmac, &target));
+```"#
+)]
+
 use cfg_if::cfg_if;
 use foreign_types::ForeignTypeRef;
 use libc::c_int;
@@ -637,6 +643,7 @@ unsafe fn EVP_DigestVerifyFinal(
 #[cfg(test)]
 mod test {
     use hex::{self, FromHex};
+    #[cfg(not(boringssl))]
     use std::iter;
 
     use crate::ec::{EcGroup, EcKey};
@@ -700,6 +707,7 @@ mod test {
         assert!(!verifier.verify(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
     }
 
+    #[cfg(not(boringssl))]
     fn test_hmac(ty: MessageDigest, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
         for &(ref key, ref data, ref res) in tests.iter() {
             let pkey = PKey::hmac(key).unwrap();
@@ -710,6 +718,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn hmac_md5() {
         // test vectors from RFC 2202
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [
@@ -756,6 +765,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn hmac_sha1() {
         // test vectors from RFC 2202
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [

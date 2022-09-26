@@ -7,6 +7,11 @@ fn main() {
         println!("cargo:rustc-cfg=libressl");
     }
 
+    if env::var("CARGO_FEATURE_UNSTABLE_BORINGSSL").is_ok() {
+        println!("cargo:rustc-cfg=boringssl");
+        return;
+    }
+
     if let Ok(v) = env::var("DEP_OPENSSL_LIBRESSL_VERSION") {
         println!("cargo:rustc-cfg=libressl{}", v);
     }

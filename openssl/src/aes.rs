@@ -21,22 +21,27 @@
 //! [`Cipher`]: ../symm/struct.Cipher.html
 //!
 //! # Examples
-//!
-//! ## AES IGE
-//! ```rust
-//! use openssl::aes::{AesKey, aes_ige};
-//! use openssl::symm::Mode;
-//!
-//! let key = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F";
-//! let plaintext = b"\x12\x34\x56\x78\x90\x12\x34\x56\x12\x34\x56\x78\x90\x12\x34\x56";
-//! let mut iv = *b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F\
-//!                 \x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D\x1E\x1F";
-//!
-//!  let key = AesKey::new_encrypt(key).unwrap();
-//!  let mut output = [0u8; 16];
-//!  aes_ige(plaintext, &mut output, &key, &mut iv, Mode::Encrypt);
-//!  assert_eq!(output, *b"\xa6\xad\x97\x4d\x5c\xea\x1d\x36\xd2\xf3\x67\x98\x09\x07\xed\x32");
-//! ```
+
+#![cfg_attr(
+    not(boringssl),
+    doc = r#"\
+## AES IGE
+```rust
+use openssl::aes::{AesKey, aes_ige};
+use openssl::symm::Mode;
+
+let key = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F";
+let plaintext = b"\x12\x34\x56\x78\x90\x12\x34\x56\x12\x34\x56\x78\x90\x12\x34\x56";
+let mut iv = *b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F\
+                \x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D\x1E\x1F";
+
+ let key = AesKey::new_encrypt(key).unwrap();
+ let mut output = [0u8; 16];
+ aes_ige(plaintext, &mut output, &key, &mut iv, Mode::Encrypt);
+ assert_eq!(output, *b"\xa6\xad\x97\x4d\x5c\xea\x1d\x36\xd2\xf3\x67\x98\x09\x07\xed\x32");
+```"#
+)]
+
 //!
 //! ## Key wrapping
 //! ```rust
@@ -55,10 +60,12 @@
 //! assert_eq!(&orig_key[..], &key_to_wrap[..]);
 //! ```
 //!
+use cfg_if::cfg_if;
 use libc::{c_int, c_uint};
 use std::mem::MaybeUninit;
 use std::ptr;
 
+#[cfg(not(boringssl))]
 use crate::symm::Mode;
 use openssl_macros::corresponds;
 
@@ -68,6 +75,16 @@ pub struct KeyError(());
 
 /// The key used to encrypt or decrypt cipher blocks.
 pub struct AesKey(ffi::AES_KEY);
+
+cfg_if! {
+    if #[cfg(boringssl)] {
+        type AesBitType = c_uint;
+        type AesSizeType = usize;
+    } else {
+        type AesBitType = c_int;
+        type AesSizeType = c_uint;
+    }
+}
 
 impl AesKey {
     /// Prepares a key for encryption.
@@ -83,7 +100,7 @@ impl AesKey {
             let mut aes_key = MaybeUninit::uninit();
             let r = ffi::AES_set_encrypt_key(
                 key.as_ptr() as *const _,
-                key.len() as c_int * 8,
+                key.len() as AesBitType * 8,
                 aes_key.as_mut_ptr(),
             );
             if r == 0 {
@@ -107,7 +124,7 @@ impl AesKey {
             let mut aes_key = MaybeUninit::uninit();
             let r = ffi::AES_set_decrypt_key(
                 key.as_ptr() as *const _,
-                key.len() as c_int * 8,
+                key.len() as AesBitType * 8,
                 aes_key.as_mut_ptr(),
             );
 
@@ -138,6 +155,7 @@ impl AesKey {
 ///
 /// Panics if `in_` is not the same length as `out`, if that length is not a multiple of 16, or if
 /// `iv` is not at least 32 bytes.
+#[cfg(not(boringssl))]
 #[corresponds(AES_ige_encrypt)]
 pub fn aes_ige(in_: &[u8], out: &mut [u8], key: &AesKey, iv: &mut [u8], mode: Mode) {
     unsafe {
@@ -189,7 +207,7 @@ pub fn wrap_key(
                 .map_or(ptr::null(), |iv| iv.as_ptr() as *const _),
             out.as_ptr() as *mut _,
             in_.as_ptr() as *const _,
-            in_.len() as c_uint,
+            in_.len() as AesSizeType,
         );
         if written <= 0 {
             Err(KeyError(()))
@@ -228,7 +246,7 @@ pub fn unwrap_key(
                 .map_or(ptr::null(), |iv| iv.as_ptr() as *const _),
             out.as_ptr() as *mut _,
             in_.as_ptr() as *const _,
-            in_.len() as c_uint,
+            in_.len() as AesSizeType,
         );
 
         if written <= 0 {
@@ -244,10 +262,12 @@ mod test {
     use hex::FromHex;
 
     use super::*;
+    #[cfg(not(boringssl))]
     use crate::symm::Mode;
 
     // From https://www.mgp25.com/AESIGE/
     #[test]
+    #[cfg(not(boringssl))]
     fn ige_vector_1() {
         let raw_key = "000102030405060708090A0B0C0D0E0F";
         let raw_iv = "000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F";

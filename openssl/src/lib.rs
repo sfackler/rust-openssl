@@ -139,7 +139,7 @@ pub mod base64;
 pub mod bn;
 pub mod cipher;
 pub mod cipher_ctx;
-#[cfg(all(not(libressl), not(osslconf = "OPENSSL_NO_CMS")))]
+#[cfg(all(not(boringssl), not(libressl), not(osslconf = "OPENSSL_NO_CMS")))]
 pub mod cms;
 pub mod conf;
 pub mod derive;
@@ -148,6 +148,7 @@ pub mod dsa;
 pub mod ec;
 pub mod ecdsa;
 pub mod encrypt;
+#[cfg(not(boringssl))]
 pub mod envelope;
 pub mod error;
 pub mod ex_data;
@@ -160,10 +161,12 @@ pub mod md;
 pub mod md_ctx;
 pub mod memcmp;
 pub mod nid;
-#[cfg(not(osslconf = "OPENSSL_NO_OCSP"))]
+#[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_OCSP")))]
 pub mod ocsp;
 pub mod pkcs12;
+#[cfg(not(boringssl))]
 pub mod pkcs5;
+#[cfg(not(boringssl))]
 pub mod pkcs7;
 pub mod pkey;
 pub mod pkey_ctx;
@@ -180,6 +183,11 @@ pub mod string;
 pub mod symm;
 pub mod version;
 pub mod x509;
+
+#[cfg(boringssl)]
+type LenType = libc::size_t;
+#[cfg(not(boringssl))]
+type LenType = libc::c_int;
 
 #[inline]
 fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {

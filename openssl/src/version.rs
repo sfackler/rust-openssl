@@ -109,13 +109,17 @@ fn test_versions() {
     println!("Platform: '{}'", platform());
     println!("Dir: '{}'", dir());
 
-    #[cfg(not(libressl))]
+    #[cfg(not(any(libressl, boringssl)))]
     fn expected_name() -> &'static str {
         "OpenSSL"
     }
     #[cfg(libressl)]
     fn expected_name() -> &'static str {
         "LibreSSL"
+    }
+    #[cfg(boringssl)]
+    fn expected_name() -> &'static str {
+        "BoringSSL"
     }
 
     assert!(number() > 0);

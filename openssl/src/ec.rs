@@ -174,7 +174,7 @@ impl EcGroupRef {
     /// a term in the polynomial.  It will be set to 3 `1`s or 5 `1`s depending on
     /// using a trinomial or pentanomial.
     #[corresponds(EC_GROUP_get_curve_GF2m)]
-    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_EC2M")))]
     pub fn components_gf2m(
         &self,
         p: &mut BigNumRef,
@@ -539,7 +539,7 @@ impl EcPointRef {
     /// Places affine coordinates of a curve over a binary field in the provided
     /// `x` and `y` `BigNum`s
     #[corresponds(EC_POINT_get_affine_coordinates_GF2m)]
-    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_EC2M")))]
     pub fn affine_coordinates_gf2m(
         &self,
         group: &EcGroupRef,
@@ -1209,7 +1209,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_EC2M")))]
     fn is_on_curve() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let mut ctx = BigNumContext::new().unwrap();

@@ -149,6 +149,10 @@ jobs:
             - true
             - false
           library:
+            - name: boringssl
+              version: master
+            - name: boringssl
+              version: 5697a9202615925696f8dc7f4e286d44d474769e
             - name: openssl
               version: vendored
             - name: openssl
@@ -197,6 +201,10 @@ jobs:
               library:
                 name: libressl
                 version: 3.5.2
+          exclude:
+            - library:
+                name: boringssl
+              bindgen: true
       name: ${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-${{ matrix.bindgen }}
       runs-on: ubuntu-latest
       env:
@@ -217,10 +225,10 @@ jobs:
               exit 0
               ;;
             "i686-unknown-linux-gnu")
-              packages="gcc-multilib"
+              packages="gcc-multilib g++-multilib"
               ;;
             "arm-unknown-linux-gnueabihf")
-              packages="gcc-arm-linux-gnueabihf qemu-user"
+              packages="gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf qemu-user"
               ;;
             esac
 
@@ -233,14 +241,24 @@ jobs:
             key: openssl-${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-2
           if: matrix.library.version != 'vendored'
           id: openssl-cache
+        - run: |
+            echo "RUST_TEST_THREADS=1" >> $GITHUB_ENV
+            echo BINDGEN_EXTRA_CLANG_ARGS="--sysroot /usr/arm-linux-gnueabihf" >> $GITHUB_ENV
+          if: matrix.target == 'arm-unknown-linux-gnueabihf'
         - name: Build OpenSSL
           run: |
             case "${{ matrix.library.name }}" in
             "openssl")
               url="https://openssl.org/source${{ matrix.library.dl-path }}/openssl-${{ matrix.library.version }}.tar.gz"
+              tar_flags="--strip-components=1"
               ;;
             "libressl")
               url="https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-${{ matrix.library.version }}.tar.gz"
+              tar_flags="--strip-components=1"
+              ;;
+            "boringssl")
+              url="https://boringssl.googlesource.com/boringssl/+archive/${{ matrix.library.version }}.tar.gz"
+              tar_flags=""
               ;;
             esac
 
@@ -258,30 +276,45 @@ jobs:
               OS_FLAGS=""
               export AR=arm-linux-gnueabihf-ar
               export CC=arm-linux-gnueabihf-gcc
+              export CXX=arm-linux-gnueabihf-g++
               ;;
             esac
 
             mkdir /tmp/build
             cd /tmp/build
 
-            curl -L $url | tar --strip-components=1 -xzf -
+            curl -L $url | tar $tar_flags -xzf -
 
             case "${{ matrix.library.name }}" in
             "openssl")
               ./Configure --prefix=$OPENSSL_DIR --libdir=lib $OS_COMPILER -fPIC -g $OS_FLAGS no-shared
+              make
+              make install_sw
               ;;
             "libressl")
               ./configure --prefix=$OPENSSL_DIR --disable-shared --with-pic
+              make
+              make install_sw
               ;;
+            "boringssl")
+              sed -i rust/CMakeLists.txt -e '1s%^%include_directories(../include)\n%'
+              cpu=`echo ${{ matrix.target }} | cut -d - -f 1`
+              echo "set(CMAKE_SYSTEM_NAME Linux)" > toolchain.cmake
+              echo "set(CMAKE_SYSTEM_PROCESSOR $cpu)" >> toolchain.cmake
+              echo "set(triple ${{ matrix.target }})" >> toolchain.cmake
+              echo 'set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} '$OS_FLAGS '" CACHE STRING "c++ flags")' >> toolchain.cmake
+              echo 'set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   '$OS_FLAGS '" CACHE STRING "c flags")' >> toolchain.cmake
+              echo 'set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} '$OS_FLAGS '" CACHE STRING "asm flags")' >> toolchain.cmake
+              cmake -DRUST_BINDINGS="${{ matrix.target }}" -B $OPENSSL_DIR -DCMAKE_TOOLCHAIN_FILE=toolchain.cmake
+              make -C $OPENSSL_DIR
             esac
 
-            make
-            make install_sw
           if: matrix.library.version != 'vendored' && !steps.openssl-cache.outputs.cache-hit
         - run: |
-            echo "RUST_TEST_THREADS=1" >> $GITHUB_ENV
-            echo BINDGEN_EXTRA_CLANG_ARGS="--sysroot /usr/arm-linux-gnueabihf" >> $GITHUB_ENV
-          if: matrix.target == 'arm-unknown-linux-gnueabihf'
+            mkdir -p .cargo
+            echo '[patch.crates-io]' > .cargo/config.toml
+            echo 'bssl-sys = { path = "'$OPENSSL_DIR'/rust" }' >> .cargo/config.toml
+          if: matrix.library.name == 'boringssl'
         - uses: actions/cache@v1
           with:
             path: ~/.cargo/registry/index
@@ -307,8 +340,12 @@ jobs:
               features="$features --features bindgen"
             fi
             cargo run --manifest-path=systest/Cargo.toml --target ${{ matrix.target }} $features
+          if: matrix.library.name != 'boringssl'
         - name: Test openssl
           run: |
+            if [[ "${{ matrix.library.name }}" == "boringssl" ]]; then
+              features="--features unstable_boringssl"
+            fi
             if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
               features="--features vendored"
             fi
@@ -325,3 +362,4 @@ jobs:
               features="$features --features openssl-sys/bindgen"
             fi
             cargo test --manifest-path=openssl-errors/Cargo.toml --target ${{ matrix.target }} $features
+          if: matrix.library.name != 'boringssl'
