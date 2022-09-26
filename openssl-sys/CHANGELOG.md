@@ -2,9 +2,17 @@
 
 ## [Unreleased]
 
+## [v0.9.76] - 2022-09-26
+
 ### Added
 
+* Added `SSL_get_psk_identity_hint` and `SSL_get_psk_identity`.
+* Added SHA-3 NID constants.
+* Added `SSL_OP_PRIORITIZE_CHACHA`.
+* Added `X509_REQ_print`.
 * Added `EVP_MD_CTX_size` and `EVP_MD_CTX_get_size`
+* Added `EVP_MD_CTX_reset`.
+* Added experimental, unstable support for BoringSSL.
 
 ### Fixed
 
@@ -321,7 +329,8 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.75..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.76..master
+[v0.9.76]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.75...openssl-sys-v0.9.76
 [v0.9.75]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.74...openssl-sys-v0.9.75
 [v0.9.74]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.73...openssl-sys-v0.9.74
 [v0.9.73]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.72...openssl-sys-v0.9.73
