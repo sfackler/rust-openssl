@@ -558,7 +558,7 @@ unsafe extern "C" fn free_data_box<T>(
     _argp: *mut c_void,
 ) {
     if !ptr.is_null() {
-        drop(Box::<T>::from_raw(ptr as *mut T));
+        let _ = Box::<T>::from_raw(ptr as *mut T);
     }
 }
 
