@@ -49,6 +49,12 @@ extern "C" {
 
 const_ptr_api! {
     extern "C" {
+        pub fn X509_STORE_set1_param(store: *mut X509_STORE, pm: #[const_ptr_if(ossl300)] X509_VERIFY_PARAM) -> c_int;
+    }
+}
+
+const_ptr_api! {
+    extern "C" {
         pub fn X509_STORE_CTX_get_ex_data(ctx: #[const_ptr_if(ossl300)] X509_STORE_CTX, idx: c_int) -> *mut c_void;
         pub fn X509_STORE_CTX_get_error(ctx: #[const_ptr_if(ossl300)] X509_STORE_CTX) -> c_int;
         pub fn X509_STORE_CTX_get_error_depth(ctx: #[const_ptr_if(ossl300)] X509_STORE_CTX) -> c_int;
@@ -74,12 +80,20 @@ cfg_if! {
 
 extern "C" {
     #[cfg(any(ossl102, libressl261))]
+    pub fn X509_VERIFY_PARAM_new() -> *mut X509_VERIFY_PARAM;
+    #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_free(param: *mut X509_VERIFY_PARAM);
 
     #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_set_flags(param: *mut X509_VERIFY_PARAM, flags: c_ulong) -> c_int;
     #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_clear_flags(param: *mut X509_VERIFY_PARAM, flags: c_ulong) -> c_int;
+
+    #[cfg(any(ossl102, libressl261))]
+    pub fn X509_VERIFY_PARAM_set_time(param: *mut X509_VERIFY_PARAM, t: time_t);
+
+    #[cfg(any(ossl102, libressl261))]
+    pub fn X509_VERIFY_PARAM_set_depth(param: *mut X509_VERIFY_PARAM, depth: c_int);
 }
 const_ptr_api! {
     extern "C" {

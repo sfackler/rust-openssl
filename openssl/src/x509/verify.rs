@@ -1,10 +1,10 @@
 use bitflags::bitflags;
 use foreign_types::ForeignTypeRef;
-use libc::{c_uint, c_ulong};
+use libc::{c_int, c_uint, c_ulong, time_t};
 use std::net::IpAddr;
 
-use crate::cvt;
 use crate::error::ErrorStack;
+use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
 
 bitflags! {
@@ -67,6 +67,17 @@ foreign_type_and_impl_send_sync! {
     pub struct X509VerifyParam;
     /// Reference to `X509VerifyParam`.
     pub struct X509VerifyParamRef;
+}
+
+impl X509VerifyParam {
+    /// Create an X509VerifyParam
+    #[corresponds(X509_VERIFY_PARAM_new)]
+    pub fn new() -> Result<X509VerifyParam, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(ffi::X509_VERIFY_PARAM_new()).map(X509VerifyParam)
+        }
+    }
 }
 
 impl X509VerifyParamRef {
@@ -138,5 +149,17 @@ impl X509VerifyParamRef {
             ))
             .map(|_| ())
         }
+    }
+
+    /// Set the verification time, where time is of type time_t, traditionaly defined as seconds since the epoch
+    #[corresponds(X509_VERIFY_PARAM_set_time)]
+    pub fn set_time(&mut self, time: time_t) {
+        unsafe { ffi::X509_VERIFY_PARAM_set_time(self.as_ptr(), time) }
+    }
+
+    /// Set the verification depth
+    #[corresponds(X509_VERIFY_PARAM_set_depth)]
+    pub fn set_depth(&mut self, depth: c_int) {
+        unsafe { ffi::X509_VERIFY_PARAM_set_depth(self.as_ptr(), depth) }
     }
 }
