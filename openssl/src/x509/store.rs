@@ -56,6 +56,8 @@ use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
 #[cfg(not(boringssl))]
 use std::ffi::CString;
+#[cfg(not(boringssl))]
+use std::path::Path;
 
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE;
@@ -169,6 +171,37 @@ impl X509LookupRef<HashDir> {
             cvt(ffi::X509_LOOKUP_add_dir(
                 self.as_ptr(),
                 name.as_ptr(),
+                file_type.as_raw(),
+            ))
+            .map(|_| ())
+        }
+    }
+}
+
+/// Marker type corresponding to the [`X509_LOOKUP_file`] lookup method.
+///
+/// [`X509_LOOKUP_file`]: https://www.openssl.org/docs/man1.1.1/man3/X509_LOOKUP_file.html
+pub struct File;
+
+impl X509Lookup<File> {
+    /// Lookup method loads all the certificates or CRLs present in a file
+    /// into memory at the time the file is added as a lookup source.
+    #[corresponds(X509_LOOKUP_file)]
+    pub fn file() -> &'static X509LookupMethodRef<File> {
+        unsafe { X509LookupMethodRef::from_ptr(ffi::X509_LOOKUP_file()) }
+    }
+}
+
+#[cfg(not(boringssl))]
+impl X509LookupRef<File> {
+    #[corresponds(X509_load_cert_file)]
+    /// Specifies a file from which certificates will be loaded
+    pub fn load_cert_file<P: AsRef<Path>>(&mut self, file: P, file_type: SslFiletype) -> Result<(), ErrorStack> {
+        let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
+        unsafe {
+            cvt(ffi::X509_load_cert_file(
+                self.as_ptr(),
+                file.as_ptr(),
                 file_type.as_raw(),
             ))
             .map(|_| ())

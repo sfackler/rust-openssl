@@ -6,11 +6,15 @@ use crate::hash::MessageDigest;
 use crate::nid::Nid;
 use crate::pkey::{PKey, Private};
 use crate::rsa::Rsa;
+#[cfg(not(boringssl))]
+use crate::ssl::SslFiletype;
 use crate::stack::Stack;
 use crate::x509::extension::{
     AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, KeyUsage, SubjectAlternativeName,
     SubjectKeyIdentifier,
 };
+#[cfg(not(boringssl))]
+use crate::x509::store::X509Lookup;
 use crate::x509::store::X509StoreBuilder;
 #[cfg(any(ossl102, libressl261))]
 use crate::x509::verify::{X509VerifyFlags, X509VerifyParam};
@@ -667,4 +671,24 @@ fn test_verify_param_set_depth_fails_verification() {
             .error_string(),
         expected_error
     )
+}
+
+#[test]
+#[cfg(not(boringssl))]
+fn test_load_cert_file() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let chain = Stack::new().unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    let lookup = store_bldr.add_lookup(X509Lookup::file()).unwrap();
+    lookup
+        .load_cert_file("test/root-ca.pem", SslFiletype::PEM)
+        .unwrap();
+    let store = store_bldr.build();
+
+    let mut context = X509StoreContext::new().unwrap();
+    assert!(context
+        .init(&store, &cert, &chain, |c| c.verify_cert())
+        .unwrap());
 }
