@@ -4,6 +4,7 @@ use libc::{c_char, c_int};
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::str;
+use std::str::FromStr;
 
 use crate::cvt_p;
 use crate::error::ErrorStack;
@@ -1090,6 +1091,26 @@ impl Nid {
     pub const SHAKE256: Nid = Nid(ffi::NID_shake256);
 }
 
+impl FromStr for Nid {
+    type Err = ErrorStack;
+
+    /// Returns the `Nid` for the supplied `s` which can be the
+    /// numerical format, short name, or long name
+    #[corresponds(OBJ_txt2nid)]
+    fn from_str(s: &str) -> Result<Nid, ErrorStack> {
+        unsafe {
+            ffi::init();
+            let s = CString::new(s).unwrap();
+            let raw = ffi::OBJ_txt2nid(s.as_ptr());
+            if raw == ffi::NID_undef {
+                Err(ErrorStack::get())
+            } else {
+                Ok(Nid(raw))
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::Nid;
@@ -1170,5 +1191,18 @@ mod test {
             invalid_oid.is_err(),
             "invalid_oid should not return a valid value"
         );
+    }
+
+    #[test]
+    fn test_from_str() {
+        let nid = Nid::create("1.2.3.5", "baz", "foobaz").unwrap();
+        let nid_from_txt: Nid = "1.2.3.5".parse().unwrap();
+        assert_eq!(nid.0, nid_from_txt.0);
+
+        let nonexistant_oid: Result<Nid, _> = "1.2.3.6".parse();
+        assert!(
+            nonexistant_oid.is_err(),
+            "Nid should not be found for non-existant OID"
+        )
     }
 }
