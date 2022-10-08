@@ -1,0 +1,51 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            20:b9:ae:6e:9e:e7:8e:68:46:b7:7c:19:2c:5c:31:e7
+        Signature Algorithm: SM2-with-SM3
+        Issuer: C=CN, ST=HZ, O=ali, OU=ant, CN=www.example.com/emailAddress=client@example.com
+        Validity
+            Not Before: Apr 14 08:02:52 2020 GMT
+            Not After : Apr 12 08:02:52 2030 GMT
+        Subject: C=CN, ST=HZ, O=ali, OU=ant, CN=www.example.com/emailAddress=client@example.com
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: (256 bit)
+                pub:
+                    04:0f:69:9c:d1:cb:58:4b:cc:fa:58:d5:cd:b2:a5:
+                    06:3e:eb:44:90:2c:00:39:73:06:5e:26:14:a5:93:
+                    23:32:ea:97:dd:01:36:ef:09:6a:40:c2:67:c3:ac:
+                    8f:3c:ec:56:8a:f1:d2:ad:d1:f4:e1:83:12:85:ec:
+                    ea:de:50:f2:c6
+                ASN1 OID: SM2
+        X509v3 extensions:
+            X509v3 Subject Key Identifier: 
+                7C:21:1D:07:19:A2:B1:D9:76:1C:B0:95:41:40:6B:BC:36:76:1B:6E
+            X509v3 Authority Key Identifier: 
+                keyid:7C:21:1D:07:19:A2:B1:D9:76:1C:B0:95:41:40:6B:BC:36:76:1B:6E
+
+            X509v3 Basic Constraints: critical
+                CA:TRUE
+            X509v3 Key Usage: critical
+                Digital Signature, Certificate Sign, CRL Sign
+    Signature Algorithm: SM2-with-SM3
+         30:45:02:21:00:9e:aa:d9:99:60:40:88:a8:a9:07:af:0b:c9:
+         4f:06:6b:c0:0e:be:de:40:d1:b4:fd:39:52:42:8c:f8:86:2c:
+         b7:02:20:5f:58:9b:07:10:3d:eb:2d:68:47:9d:a0:ce:ec:a0:
+         91:20:5f:74:91:fa:cb:60:82:72:14:0f:d8:b2:61:d8:7c
+-----BEGIN CERTIFICATE-----
+MIICRzCCAe2gAwIBAgIQILmubp7njmhGt3wZLFwx5zAKBggqgRzPVQGDdTBzMQsw
+CQYDVQQGEwJDTjELMAkGA1UECAwCSFoxDDAKBgNVBAoMA2FsaTEMMAoGA1UECwwD
+YW50MRgwFgYDVQQDDA93d3cuZXhhbXBsZS5jb20xITAfBgkqhkiG9w0BCQEWEmNs
+aWVudEBleGFtcGxlLmNvbTAeFw0yMDA0MTQwODAyNTJaFw0zMDA0MTIwODAyNTJa
+MHMxCzAJBgNVBAYTAkNOMQswCQYDVQQIDAJIWjEMMAoGA1UECgwDYWxpMQwwCgYD
+VQQLDANhbnQxGDAWBgNVBAMMD3d3dy5leGFtcGxlLmNvbTEhMB8GCSqGSIb3DQEJ
+ARYSY2xpZW50QGV4YW1wbGUuY29tMFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQgAE
+D2mc0ctYS8z6WNXNsqUGPutEkCwAOXMGXiYUpZMjMuqX3QE27wlqQMJnw6yPPOxW
+ivHSrdH04YMShezq3lDyxqNjMGEwHQYDVR0OBBYEFHwhHQcZorHZdhywlUFAa7w2
+dhtuMB8GA1UdIwQYMBaAFHwhHQcZorHZdhywlUFAa7w2dhtuMA8GA1UdEwEB/wQF
+MAMBAf8wDgYDVR0PAQH/BAQDAgGGMAoGCCqBHM9VAYN1A0gAMEUCIQCeqtmZYECI
+qKkHrwvJTwZrwA6+3kDRtP05UkKM+IYstwIgX1ibBxA96y1oR52gzuygkSBfdJH6
+y2CCchQP2LJh2Hw=
+-----END CERTIFICATE-----

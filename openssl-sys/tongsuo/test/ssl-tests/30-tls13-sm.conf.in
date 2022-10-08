@@ -1,0 +1,488 @@
+use strict;
+use warnings;
+
+package ssltests;
+use OpenSSL::Test::Utils;
+
+our @tests = (
+    {
+        name => "test ciphersuites TLS_SM4_GCM_SM3",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "Certificate" => test_pem("sm2-first-crt.pem"),
+            "PrivateKey" => test_pem("sm2-first-key.pem"),
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "VerifyCAFile" => test_pem("sm2-root.crt"),
+        },
+        test   => {
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "TLS_SM4_GCM_SM3",
+        },
+    },
+
+    {
+        name => "test series of ciphersuites includes TLS_SM4_GCM_SM3",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "Certificate" => test_pem("sm2-first-crt.pem"),
+            "PrivateKey" => test_pem("sm2-first-key.pem"),
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:TLS_SM4_GCM_SM3",
+            "VerifyCAFile" => test_pem("sm2-root.crt"),
+        },
+        test   => {
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "TLS_SM4_GCM_SM3",
+        },
+    },
+
+    {
+        name => "test ciphersuites TLS_SM4_CCM_SM3",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_CCM_SM3",
+            "Certificate" => test_pem("sm2-first-crt.pem"),
+            "PrivateKey" => test_pem("sm2-first-key.pem"),
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_CCM_SM3",
+            "VerifyCAFile" => test_pem("sm2-root.crt"),
+        },
+        test   => {
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "TLS_SM4_CCM_SM3",
+        },
+    },
+
+    {
+        name => "test series of ciphersuites includes TLS_SM4_CCM_SM3",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_CCM_SM3",
+            "Certificate" => test_pem("sm2-first-crt.pem"),
+            "PrivateKey" => test_pem("sm2-first-key.pem"),
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:TLS_SM4_CCM_SM3",
+            "VerifyCAFile" => test_pem("sm2-root.crt"),
+        },
+        test   => {
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "TLS_SM4_CCM_SM3",
+        },
+    },
+
+    {
+        name => "test sm2-sm3 signature working well in TLS_AES_128_GCM_SHA256",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_AES_128_GCM_SHA256",
+            "Certificate" => test_pem("sm2-first-crt.pem"),
+            "PrivateKey" => test_pem("sm2-first-key.pem"),
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_AES_128_GCM_SHA256",
+            "VerifyCAFile" => test_pem("sm2-root.crt"),
+        },
+        test   => {
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "TLS_AES_128_GCM_SHA256",
+        },
+    },
+
+    {
+        name => "test sm2-sm3 signature working well in TLS_AES_256_GCM_SHA384",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_AES_256_GCM_SHA384",
+            "Certificate" => test_pem("sm2-first-crt.pem"),
+            "PrivateKey" => test_pem("sm2-first-key.pem"),
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_AES_256_GCM_SHA384",
+            "VerifyCAFile" => test_pem("sm2-root.crt"),
+        },
+        test   => {
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "TLS_AES_256_GCM_SHA384",
+        },
+    },
+
+    {
+        name => "test sm2-sm3 signature working well in TLS_CHACHA20_POLY1305_SHA256",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_CHACHA20_POLY1305_SHA256",
+            "Certificate" => test_pem("sm2-first-crt.pem"),
+            "PrivateKey" => test_pem("sm2-first-key.pem"),
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_CHACHA20_POLY1305_SHA256",
+            "VerifyCAFile" => test_pem("sm2-root.crt"),
+        },
+        test   => {
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "TLS_CHACHA20_POLY1305_SHA256",
+        },
+    },
+
+    {
+        name => "test server can not accept TLS_SM4_GCM_SM3 with ecdsa cert when enable sm_tls13_strict tag",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "Certificate" => test_pem("server-ecdsa-cert.pem"),
+            "PrivateKey" => test_pem("server-ecdsa-key.pem"),
+            "Enable_sm_tls13_strict" => "on",
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+        },
+        test   => {
+            "ExpectedResult" => "ServerFail",
+        },
+    },
+
+    {
+        name => "test server accept TLS_SM4_GCM_SM3 with ecdsa cert when disable sm_tls13_strict tag",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "Certificate" => test_pem("server-ecdsa-cert.pem"),
+            "PrivateKey" => test_pem("server-ecdsa-key.pem"),
+            "Enable_sm_tls13_strict" => "off",
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+        },
+        test   => {
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "TLS_SM4_GCM_SM3",
+        },
+    },
+
+    {
+        name => "test server can not accept TLS_SM4_GCM_SM3 with rsa cert when enable sm_tls13_strict tag",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "Certificate" => test_pem("server-pss-cert.pem"),
+            "PrivateKey" => test_pem("server-pss-key.pem"),
+            "Enable_sm_tls13_strict" => "on",
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+        },
+        test   => {
+            "ExpectedResult" => "ServerFail",
+        },
+    },
+
+    {
+        name => "test server can accept TLS_SM4_GCM_SM3 with rsa cert when disable sm_tls13_strict tag",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "Certificate" => test_pem("server-pss-cert.pem"),
+            "PrivateKey" => test_pem("server-pss-key.pem"),
+            "Enable_sm_tls13_strict" => "off",
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+        },
+        test   => {
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "TLS_SM4_GCM_SM3",
+        },
+    },
+
+    {
+        name => "test server can not accept TLS_SM4_CCM_SM3 with ecdsa cert when enable sm_tls13_strict tag",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_CCM_SM3",
+            "Certificate" => test_pem("server-ecdsa-cert.pem"),
+            "PrivateKey" => test_pem("server-ecdsa-key.pem"),
+            "Enable_sm_tls13_strict" => "on",
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_CCM_SM3",
+        },
+        test   => {
+            "ExpectedResult" => "ServerFail",
+        },
+    },
+
+    {
+        name => "test server can accept TLS_SM4_CCM_SM3 with ecdsa cert when disable sm_tls13_strict tag",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_CCM_SM3",
+            "Certificate" => test_pem("server-ecdsa-cert.pem"),
+            "PrivateKey" => test_pem("server-ecdsa-key.pem"),
+            "Enable_sm_tls13_strict" => "off",
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_CCM_SM3",
+        },
+        test   => {
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "TLS_SM4_CCM_SM3",
+        },
+    },
+
+    {
+        name => "test server can not accept TLS_SM4_CCM_SM3 with rsa cert when enable sm_tls13_strict tag",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_CCM_SM3",
+            "Certificate" => test_pem("server-pss-cert.pem"),
+            "PrivateKey" => test_pem("server-pss-key.pem"),
+            "Enable_sm_tls13_strict" => "on",
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_CCM_SM3",
+        },
+        test   => {
+            "ExpectedResult" => "ServerFail",
+        },
+    },
+
+    {
+        name => "test server can accept TLS_SM4_CCM_SM3 with rsa cert when disable sm_tls13_strict tag",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_CCM_SM3",
+            "Certificate" => test_pem("server-pss-cert.pem"),
+            "PrivateKey" => test_pem("server-pss-key.pem"),
+            "Enable_sm_tls13_strict" => "off",
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_CCM_SM3",
+        },
+        test   => {
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "TLS_SM4_CCM_SM3",
+        },
+    },
+
+    {
+        name => "test server can accept TLS_SM4_CCM_SM3 with long sm2 cert chain",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_CCM_SM3",
+            "Certificate" => test_pem("sm2-leaf.crt"),
+            "PrivateKey" => test_pem("sm2-leaf.key"),
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_CCM_SM3",
+            "VerifyCAFile" => test_pem("sm2-chain-ca.crt"),
+        },
+        test   => {
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "TLS_SM4_CCM_SM3",
+        },
+    },
+
+    {
+        name => "test ClientHello1 no SM2 key_share, server should send HRR when enable sm_tls13_strict and choose TLS_SM4_GCM_SM3",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "Certificate" => test_pem("sm2-leaf.crt"),
+            "PrivateKey" => test_pem("sm2-leaf.key"),
+            "Enable_sm_tls13_strict" => "on",
+        },
+        # ClientHello1 send key_share with X25519 only by default
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "VerifyCAFile" => test_pem("sm2-chain-ca.crt"),
+        },
+        test   => {
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "TLS_SM4_GCM_SM3",
+            "ExpectedHRR" => "Yes",
+        },
+    },
+
+    {
+        name => "test client should fail when enable sm_tls13_strict without SM2 key_share",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "Certificate" => test_pem("sm2-leaf.crt"),
+            "PrivateKey" => test_pem("sm2-leaf.key"),
+            "Enable_sm_tls13_strict" => "off",
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "VerifyCAFile" => test_pem("sm2-chain-ca.crt"),
+            "Enable_sm_tls13_strict" => "on",
+        },
+        test   => {
+            "ExpectedResult" => "ClientFail",
+        },
+    },
+
+    {
+        name => "test client success when enable sm_tls13_strict with SM2 key_share",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "Certificate" => test_pem("sm2-leaf.crt"),
+            "PrivateKey" => test_pem("sm2-leaf.key"),
+            "Enable_sm_tls13_strict" => "off",
+            "Groups" => "SM2",
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "VerifyCAFile" => test_pem("sm2-chain-ca.crt"),
+            "Enable_sm_tls13_strict" => "on",
+        },
+        test   => {
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "TLS_SM4_GCM_SM3",
+            "ExpectedHRR" => "Yes",
+        },
+    },
+
+    {
+        name => "test client should fail when enable sm_tls13_strict with ecdsa cert and TLS_SM4_GCM_SM3 cipher",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "Certificate" => test_pem("server-ecdsa-cert.pem"),
+            "PrivateKey" => test_pem("server-ecdsa-key.pem"),
+            "Enable_sm_tls13_strict" => "off",
+            "Groups" => "SM2",
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "Enable_sm_tls13_strict" => "on",
+        },
+        test   => {
+            "ExpectedResult" => "ClientFail",
+            "ExpectedClientAlert" => "BadCertificate",
+        },
+    },
+
+    {
+        name => "test client auth fail when enable sm_tls13_strict, CertificateRequest with other signature algorithms except sm2sig_sm3",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "Certificate" => test_pem("sm2-leaf.crt"),
+            "PrivateKey" => test_pem("sm2-leaf.key"),
+            "Enable_sm_tls13_strict" => "off",
+            "Groups" => "SM2",
+            "VerifyMode" => "Require",
+            "VerifyCAFile" => test_pem("sm2-root.crt"),
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "Enable_sm_tls13_strict" => "on",
+            "VerifyCAFile" => test_pem("sm2-chain-ca.crt"),
+            "Certificate" => test_pem("sm2-first-crt.pem"),
+            "PrivateKey" => test_pem("sm2-first-key.pem"),
+        },
+        test   => {
+            "ExpectedResult" => "ClientFail",
+        },
+    },
+
+    {
+        name => "test client auth success when both enable sm_tls13_strict",
+        server => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "Certificate" => test_pem("sm2-leaf.crt"),
+            "PrivateKey" => test_pem("sm2-leaf.key"),
+            "Enable_sm_tls13_strict" => "on",
+            "VerifyMode" => "Require",
+            "VerifyCAFile" => test_pem("sm2-root.crt"),
+        },
+        client => {
+            "MinProtocol" => "TLSv1.3",
+            "MaxProtocol" => "TLSv1.3",
+            "Ciphersuites" => "TLS_SM4_GCM_SM3",
+            "Enable_sm_tls13_strict" => "on",
+            "VerifyCAFile" => test_pem("sm2-chain-ca.crt"),
+            "Certificate" => test_pem("sm2-first-crt.pem"),
+            "PrivateKey" => test_pem("sm2-first-key.pem"),
+        },
+        test   => {
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "TLS_SM4_GCM_SM3",
+            "ExpectedHRR" => "Yes",
+        },
+    },
+);

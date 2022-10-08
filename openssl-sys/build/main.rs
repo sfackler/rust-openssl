@@ -14,6 +14,7 @@ use std::collections::HashSet;
 use std::env;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 mod cfgs;
 
 mod find_normal;
@@ -71,6 +72,16 @@ fn check_ssl_kind() {
 }
 
 fn main() {
+    let root = env::var("CARGO_MANIFEST_DIR").unwrap();
+    let path_root = PathBuf::from(root);
+    let root_dir = path_root.join("tongsuo");
+    let include_dir = root_dir.join("include");
+    env::set_var("OPENSSL_LIB_DIR", root_dir);
+    env::set_var("OPENSSL_INCLUDE_DIR", include_dir);
+    // 静态链接
+    env::set_var("OPENSSL_STATIC", "1");
+
+    compile_tongsuo_openssl();
     check_rustc_versions();
 
     check_ssl_kind();
@@ -410,4 +421,55 @@ fn determine_mode(libdirs: &[PathBuf], libs: &[&str]) -> &'static str {
     // link dynamically. In the interest of "security upgrades" and/or "best
     // practices with security libs", let's link dynamically.
     "dylib"
+}
+fn compile_tongsuo_openssl() {
+    // println!("cargo:rustc-link-lib=static=ssl");
+    // println!("cargo:rustc-link-lib=static=crypto");
+    let os_folder = env::var("OPENSSL_LIB_DIR").unwrap();
+    println!("cargo:rustc-link-search={}", &*os_folder);
+    // https://wiki.openssl.org/index.php/Compilation_and_Installation#Configure_Options
+    let debug = env::var("DEBUG").unwrap();
+    Command::new("make")
+        .current_dir(os_folder.clone())
+        .arg("clean")
+        .spawn()
+        .expect("make clean")
+        .wait()
+        .unwrap();
+
+    // 取消注释看env
+    // for e in env::vars() {
+    //     p!("{:?}={:?}", e.0, e.1);
+    // }
+
+    let mut cmd = Command::new("perl");
+    cmd.current_dir(os_folder.clone())
+        .arg("./config")
+        // build additional shared object
+        // .arg("-fPIC")
+        // .arg("shared")
+        // 国密特有TLS
+        .arg("enable-ntls")
+        .env("CC", "clang");
+    if debug == "true" {
+        cmd.args([
+            "-d",
+            "no-asm",
+            "-g3",
+            "-O0",
+            "-fno-omit-frame-pointer",
+            "-fno-inline-functions",
+        ]);
+    } else {
+        cmd.args(["-g0", "-O3"]);
+    }
+    cmd.spawn().expect("configure").wait().unwrap();
+
+    Command::new("make")
+        .current_dir(os_folder.clone())
+        .arg("-j")
+        .spawn()
+        .expect("make -j")
+        .wait()
+        .unwrap();
 }

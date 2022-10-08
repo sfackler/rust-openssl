@@ -1,0 +1,65 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            20:b9:ae:6e:9e:e7:8e:68:46:b7:7c:19:2c:5c:31:ea
+        Signature Algorithm: SM2-with-SM3
+        Issuer: C=CN, ST=HZ, O=ali, OU=ant, CN=www.middle.com/emailAddress=test@test.com
+        Validity
+            Not Before: Apr 14 09:07:39 2020 GMT
+            Not After : Apr 12 09:07:39 2030 GMT
+        Subject: C=CN, ST=HZ, O=ali, OU=ant, CN=*.alipay.com
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: (256 bit)
+                pub:
+                    04:31:b8:86:8c:1c:64:0e:b0:b5:af:0b:95:94:80:
+                    bf:e9:f6:c6:76:76:8a:c6:3d:bf:2e:4b:fd:11:c3:
+                    8b:2a:fd:d6:16:e1:62:d5:e6:9e:52:f4:12:90:d7:
+                    11:31:d6:80:8b:1a:4c:f9:12:90:f8:2a:7a:67:7b:
+                    33:25:4a:f4:8d
+                ASN1 OID: SM2
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            Netscape Cert Type: 
+                SSL Server
+            Netscape Comment: 
+                OpenSSL Generated Server Certificate
+            X509v3 Subject Key Identifier: 
+                29:B0:1B:EF:D2:90:55:4A:11:8A:8F:62:1B:DC:C2:EA:0A:BE:D8:F0
+            X509v3 Authority Key Identifier: 
+                keyid:71:50:68:57:73:2A:22:D6:E6:D2:92:0B:3A:09:C5:56:58:00:61:5E
+                DirName:/C=CN/ST=HZ/O=ali/OU=ant/CN=www.example.com/emailAddress=client@example.com
+                serial:20:B9:AE:6E:9E:E7:8E:68:46:B7:7C:19:2C:5C:31:E8
+
+            X509v3 Key Usage: critical
+                Digital Signature, Key Encipherment
+            X509v3 Extended Key Usage: 
+                TLS Web Server Authentication
+            X509v3 Subject Alternative Name: 
+                DNS:alipay.com, DNS:*.alipay.com
+    Signature Algorithm: SM2-with-SM3
+         30:46:02:21:00:9a:e3:02:b9:92:9a:17:7c:d5:61:cd:53:e8:
+         31:86:8b:4f:a1:98:cb:99:8e:91:fb:bb:39:f0:aa:2c:7b:18:
+         9b:02:21:00:8e:8c:1f:e2:1b:e5:b1:3a:f5:33:ff:fb:7f:fd:
+         1b:b5:42:75:62:bc:36:82:11:05:e4:5b:67:57:c9:7f:9f:5a
+-----BEGIN CERTIFICATE-----
+MIIDKjCCAs+gAwIBAgIQILmubp7njmhGt3wZLFwx6jAKBggqgRzPVQGDdTBtMQsw
+CQYDVQQGEwJDTjELMAkGA1UECAwCSFoxDDAKBgNVBAoMA2FsaTEMMAoGA1UECwwD
+YW50MRcwFQYDVQQDDA53d3cubWlkZGxlLmNvbTEcMBoGCSqGSIb3DQEJARYNdGVz
+dEB0ZXN0LmNvbTAeFw0yMDA0MTQwOTA3MzlaFw0zMDA0MTIwOTA3MzlaME0xCzAJ
+BgNVBAYTAkNOMQswCQYDVQQIDAJIWjEMMAoGA1UECgwDYWxpMQwwCgYDVQQLDANh
+bnQxFTATBgNVBAMMDCouYWxpcGF5LmNvbTBZMBMGByqGSM49AgEGCCqBHM9VAYIt
+A0IABDG4howcZA6wta8LlZSAv+n2xnZ2isY9vy5L/RHDiyr91hbhYtXmnlL0EpDX
+ETHWgIsaTPkSkPgqemd7MyVK9I2jggFvMIIBazAJBgNVHRMEAjAAMBEGCWCGSAGG
++EIBAQQEAwIGQDAzBglghkgBhvhCAQ0EJhYkT3BlblNTTCBHZW5lcmF0ZWQgU2Vy
+dmVyIENlcnRpZmljYXRlMB0GA1UdDgQWBBQpsBvv0pBVShGKj2Ib3MLqCr7Y8DCB
+rAYDVR0jBIGkMIGhgBRxUGhXcyoi1ubSkgs6CcVWWABhXqF3pHUwczELMAkGA1UE
+BhMCQ04xCzAJBgNVBAgMAkhaMQwwCgYDVQQKDANhbGkxDDAKBgNVBAsMA2FudDEY
+MBYGA1UEAwwPd3d3LmV4YW1wbGUuY29tMSEwHwYJKoZIhvcNAQkBFhJjbGllbnRA
+ZXhhbXBsZS5jb22CECC5rm6e545oRrd8GSxcMegwDgYDVR0PAQH/BAQDAgWgMBMG
+A1UdJQQMMAoGCCsGAQUFBwMBMCMGA1UdEQQcMBqCCmFsaXBheS5jb22CDCouYWxp
+cGF5LmNvbTAKBggqgRzPVQGDdQNJADBGAiEAmuMCuZKaF3zVYc1T6DGGi0+hmMuZ
+jpH7uznwqix7GJsCIQCOjB/iG+WxOvUz//t//Ru1QnVivDaCEQXkW2dXyX+fWg==
+-----END CERTIFICATE-----

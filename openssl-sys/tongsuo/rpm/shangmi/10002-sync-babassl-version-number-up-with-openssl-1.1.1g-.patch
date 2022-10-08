@@ -1,0 +1,27 @@
+From 8358cf813d9870e79f5c03935df99a3f6cf7ccf6 Mon Sep 17 00:00:00 2001
+From: "YiLin.Li" <YiLin.Li@linux.alibaba.com>
+Date: Thu, 22 Jul 2021 13:45:34 +0800
+Subject: [PATCH] sync babassl version number up with
+ openssl-1.1.1g-15.el8_3.src.rpm
+
+Signed-off-by: Yilin Li <YiLin.Li@linux.alibaba.com>
+---
+ include/openssl/opensslv.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/openssl/opensslv.h b/include/openssl/opensslv.h
+index a09525bc5..c19e8ba88 100644
+--- a/include/openssl/opensslv.h
++++ b/include/openssl/opensslv.h
+@@ -39,7 +39,7 @@ extern "C" {
+  * (Prior to 0.9.5a beta1, a different scheme was used: MMNNFFRBB for
+  *  major minor fix final patch/beta)
+  */
+-# define OPENSSL_VERSION_NUMBER  0x10101080L
++# define OPENSSL_VERSION_NUMBER  0x1010107fL
+ # define OPENSSL_VERSION_TEXT    "OpenSSL 1.1.1h  22 Sep 2020"
+
+ /*-
+--
+2.18.4
+

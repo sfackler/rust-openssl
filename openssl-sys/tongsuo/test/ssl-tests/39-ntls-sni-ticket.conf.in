@@ -1,0 +1,117 @@
+# -*- mode: perl; -*-
+
+## Test NTLS SNI/Session tickets
+
+use strict;
+use warnings;
+
+package ssltests;
+use OpenSSL::Test::Utils;
+
+our @tests = ();
+
+sub generate_tests() {
+    foreach my $c ("SessionTicket", "-SessionTicket") {
+        foreach my $s1 ("SessionTicket", "-SessionTicket") {
+            foreach my $s2 ("SessionTicket", "-SessionTicket") {
+                foreach my $n ("server1", "server2") {
+                    my $ticket_result = expected_result($c, $s1, $s2, $n);
+                    my $session_id_result = "Yes"; # always, even with a ticket
+                    push @tests, {
+                        "name" => "ntls-sni-session-ticket",
+                        "client" => {
+                            "Enable_ntls" => "on",
+                            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+                            "Options" => $c,
+                            "extra" => {
+                                "ServerName" => $n,
+                            },
+                        },
+                        "server" => {
+                            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+                            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+                            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+                            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+                            "Enable_ntls" => "on",
+                            "Options" => $s1,
+                            "extra" => {
+                                # We don't test mismatch here.
+                                "ServerNameCallback" => "IgnoreMismatch",
+                            },
+                        },
+                        "server2" => {
+                            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+                            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+                            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+                            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+                            "Enable_ntls" => "on",
+                            "Options" => $s2,
+                        },
+                        "test" => {
+                            "Method" => "NTLS",
+                            "ExpectedServerName" => $n,
+                            "ExpectedResult" => "Success",
+                            "SessionIdExpected" => $session_id_result,
+                            "SessionTicketExpected" => $ticket_result,
+                            "ExpectedProtocol" => "NTLS",
+                        }
+                    };
+                }
+            }
+        }
+    }
+}
+
+# If the client has session tickets disabled, then No support
+# If the server initial_ctx has session tickets disabled, then No support
+# If SNI is in use, then if the "switched-to" context has session tickets disabled,
+#    then No support
+sub expected_result {
+    my ($c, $s1, $s2, $n) = @_;
+
+    return "No" if $c eq "-SessionTicket";
+    return "No" if $s1 eq "-SessionTicket";
+    return "No" if ($s2 eq "-SessionTicket" && $n eq "server2");
+
+    return "Yes";
+}
+
+# Add a "Broken" case.
+push @tests, {
+    "name" => "ntls-sni-session-ticket",
+    "client" => {
+        "Enable_ntls" => "on",
+        "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+        "Options" => "SessionTicket",
+        "extra" => {
+            "ServerName" => "server1",
+        }
+    },
+    "server" => {
+        "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+        "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+        "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+        "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+        "Enable_ntls" => "on",
+        "Options" => "SessionTicket",
+        "extra" => {
+              "BrokenSessionTicket" => "Yes",
+        },
+    },
+    "server2" => {
+        "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+        "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+        "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+        "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+        "Enable_ntls" => "on",
+        "Options" => "SessionTicket",
+    },
+    "test" => {
+        "Method" => "NTLS",
+        "ExpectedResult" => "Success",
+        "SessionTicketExpected" => "No",
+        "ExpectedProtocol" => "NTLS",
+    }
+};
+
+generate_tests();
