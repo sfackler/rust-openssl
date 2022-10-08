@@ -1,3 +1,31 @@
+# Babassl Rust bindings
+
+openssl-sys/tongsuo 锁定在 <https://github.com/Tongsuo-Project/Tongsuo/commit/d36d0669a206e1c07e1793496124ab38435f9bac>
+
+兼容openssl 1.1.1
+
+Pre installation
+
+```
+git submodule update --init --remote --recursive
+apt install clang pkg-config -y
+```
+
+Building
+
+```
+cargo build
+```
+
+使用
+```
+openssl = { version = "0.10.42", path = "../deps/rust-openssl/openssl/", features = ["tokio", "tongsuo"]}
+```
+
+features
+- tokio: 支持async
+- tongsuo：自动开始rust-openssl bindgen feature。支持gm
+
 # rust-openssl
 
 [![crates.io](https://img.shields.io/crates/v/openssl.svg)](https://crates.io/crates/openssl)

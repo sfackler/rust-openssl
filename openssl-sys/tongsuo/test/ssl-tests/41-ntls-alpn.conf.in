@@ -1,0 +1,504 @@
+# -*- mode: perl; -*-
+
+## Test NTLS ALPN
+
+use strict;
+use warnings;
+
+package ssltests;
+use OpenSSL::Test::Utils;
+
+our @tests = (
+    {
+        name => "alpn-simple",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo",
+            },
+        },
+        client => {
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo",
+            },
+        },
+        test => {
+            "Method" => "NTLS",
+            "ExpectedProtocol" => "NTLS",
+            "ExpectedALPNProtocol" => "foo",
+        },
+    },
+    {
+        name => "alpn-server-finds-match",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "baz,bar",
+            },
+        },
+        client => {
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo,bar",
+            },
+        },
+        test => {
+            "Method" => "NTLS",
+            "ExpectedProtocol" => "NTLS",
+            "ExpectedALPNProtocol" => "bar",
+        },
+    },
+    {
+        name => "alpn-server-honours-server-pref",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "bar,foo",
+            },
+        },
+        client => {
+           "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+           "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo,bar",
+            },
+        },
+        test => {
+            "Method" => "NTLS",
+            "ExpectedProtocol" => "NTLS",
+            "ExpectedALPNProtocol" => "bar",
+        },
+    },
+    {
+        name => "alpn-alert-on-mismatch",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "baz",
+            },
+        },
+        client => {
+           "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+           "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo,bar",
+            },
+        },
+        test => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "ServerFail",
+            "ExpectedServerAlert" => "NoApplicationProtocol",
+        },
+    },
+    {
+        name => "alpn-no-server-support",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+        },
+        client => {
+           "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+           "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo",
+            },
+        },
+        test => {
+            "Method" => "NTLS",
+            "ExpectedProtocol" => "NTLS",
+            "ExpectedALPNProtocol" => undef,
+        },
+    },
+    {
+        name => "alpn-no-client-support",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo",
+            },
+        },
+        client => {
+           "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+           "Enable_ntls" => "on",
+        },
+        test => {
+            "Method" => "NTLS",
+            "ExpectedProtocol" => "NTLS",
+            "ExpectedALPNProtocol" => undef,
+        },
+    },
+    {
+        name => "alpn-with-sni-no-context-switch",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo",
+                "ServerNameCallback" => "IgnoreMismatch",
+            },
+        },
+        server2 => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "bar",
+            },
+        },
+        client => {
+           "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+           "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo,bar",
+                "ServerName" => "server1",
+            },
+        },
+        test => {
+            "Method" => "NTLS",
+            "ExpectedProtocol" => "NTLS",
+            "ExpectedServerName" => "server1",
+            "ExpectedALPNProtocol" => "foo",
+        },
+    },
+    {
+        name => "alpn-with-sni-context-switch",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo",
+                "ServerNameCallback" => "IgnoreMismatch",
+            },
+        },
+        server2 => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "bar",
+            },
+        },
+        client => {
+           "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+           "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo,bar",
+                "ServerName" => "server2",
+            },
+        },
+        test => {
+            "Method" => "NTLS",
+            "ExpectedProtocol" => "NTLS",
+            "ExpectedServerName" => "server2",
+            "ExpectedALPNProtocol" => "bar",
+        },
+    },
+    {
+        name => "alpn-selected-sni-server-supports-alpn",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+               "ServerNameCallback" => "IgnoreMismatch",
+            },
+        },
+        server2 => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "bar",
+            },
+        },
+        client => {
+           "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+           "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo,bar",
+                "ServerName" => "server2",
+            },
+        },
+        test => {
+            "Method" => "NTLS",
+            "ExpectedProtocol" => "NTLS",
+            "ExpectedServerName" => "server2",
+            "ExpectedALPNProtocol" => "bar",
+        },
+    },
+    {
+        name => "alpn-selected-sni-server-does-not-support-alpn",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "bar", 
+                "ServerNameCallback" => "IgnoreMismatch",
+            },
+        },
+        server2 => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo,bar",
+                "ServerName" => "server2",
+            },
+        },
+        test => {
+            "Method" => "NTLS",
+            "ExpectedProtocol" => "NTLS",
+            "ExpectedServerName" => "server2",
+            "ExpectedALPNProtocol" => undef,
+        },
+    },
+    {
+        name => "alpn-simple-resumption",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo",
+            },
+        },
+        client => {
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo",
+            },
+        },
+        test => {
+            "Method" => "NTLS",
+            "ExpectedProtocol" => "NTLS",
+            "HandshakeMode" => "Resume",
+            "ResumptionExpected" => "Yes",
+            "ExpectedALPNProtocol" => "foo",
+        },
+    },
+    {
+        name => "alpn-server-switch-resumption",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "bar,foo",
+            },
+        },
+        resume_server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "baz,foo",
+            },
+        },
+        client => {
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo,bar,baz",
+            },
+        },
+        test => {
+            "Method" => "NTLS",
+            "ExpectedProtocol" => "NTLS",
+            "HandshakeMode" => "Resume",
+            "ResumptionExpected" => "Yes",
+            "ExpectedALPNProtocol" => "baz",
+        },
+    },
+    {
+        name => "alpn-client-switch-resumption",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo,bar,baz",
+            },
+        },
+        client => {
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo,baz",
+            },
+        },
+        resume_client => {
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "bar,baz",
+            },
+        },
+        test => {
+            "Method" => "NTLS",
+            "ExpectedProtocol" => "NTLS",
+            "HandshakeMode" => "Resume",
+            "ResumptionExpected" => "Yes",
+            "ExpectedALPNProtocol" => "bar",
+        },
+    },
+    {
+        name => "alpn-alert-on-mismatch-resumption",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "bar",
+            },
+        },
+        resume_server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "baz",
+            },
+        },
+        client => {
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo,bar",
+            },
+        },
+        test => {
+            "Method" => "NTLS",
+            "ExpectedProtocol" => "NTLS",
+            "HandshakeMode" => "Resume",
+            "ExpectedResult" => "ServerFail",
+            "ExpectedServerAlert" => "NoApplicationProtocol",
+        },
+    },
+    {
+        name => "alpn-no-server-support-resumption",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo",
+            },
+        },
+        resume_server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo",
+            },
+        },
+        test => {
+            "Method" => "NTLS",
+            "ExpectedProtocol" => "NTLS",
+            "HandshakeMode" => "Resume",
+            "ResumptionExpected" => "Yes",
+            "ExpectedALPNProtocol" => undef,
+        },
+    },
+    {
+        name => "alpn-no-client-support-resumption",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo",
+            },
+        },
+        client => {
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+            extra => {
+                "ALPNProtocols" => "foo",
+            },
+        },
+        resume_client => {
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+        },
+        test => {
+            "Method" => "NTLS",
+            "ExpectedProtocol" => "NTLS",
+            "HandshakeMode" => "Resume",
+            "ResumptionExpected" => "Yes",
+            "ExpectedALPNProtocol" => undef,
+        },
+    },
+);

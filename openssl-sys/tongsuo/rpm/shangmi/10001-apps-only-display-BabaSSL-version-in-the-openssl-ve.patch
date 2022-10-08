@@ -1,0 +1,67 @@
+From 03ca67af16f4dcde8fe2ce93652ec132095581dd Mon Sep 17 00:00:00 2001
+From: "YiLin.Li" <YiLin.Li@linux.alibaba.com>
+Date: Fri, 5 Nov 2021 13:46:35 +0800
+Subject: [PATCH] apps: only display BabaSSL version in the openssl version -a
+ command
+
+openssl version command in the BabaSSL should keep same with OpenSSL.
+So we only display BabaSSL version in the openssl version -a command.
+
+Signed-off-by: YiLin.Li <YiLin.Li@linux.alibaba.com>
+---
+ apps/version.c | 18 ++++++++++--------
+ 1 file changed, 10 insertions(+), 8 deletions(-)
+
+diff --git a/apps/version.c b/apps/version.c
+index 84473140c7..ef464ac986 100644
+--- a/apps/version.c
++++ b/apps/version.c
+@@ -63,7 +63,7 @@ static void printlist(const char *prefix, const char **dev)
+ int version_main(int argc, char **argv)
+ {
+     int ret = 1, dirty = 0, seed = 0;
+-    int cflags = 0, version = 0, date = 0, options = 0, platform = 0, dir = 0;
++    int cflags = 0, version = 0, babassl_version = 0, date = 0, options = 0, platform = 0, dir = 0;
+     int engdir = 0, engines = 0;
+     char *prog;
+     OPTION_CHOICE o;
+@@ -105,7 +105,7 @@ opthelp:
+             dirty = version = 1;
+             break;
+         case OPT_A:
+-            seed = options = cflags = version = date = platform = dir = engdir
++            seed = options = cflags = version = babassl_version = date = platform = dir = engdir
+                 = engines = 1;
+             break;
+         }
+@@ -118,12 +118,6 @@ opthelp:
+         version = 1;
+ 
+     if (version) {
+-         /* BabaSSL stuffs */
+-        if (BabaSSL_version_num() == BABASSL_VERSION_NUMBER)
+-            printf("%s\n", OpenSSL_version(BABASSL_VERSION));
+-        else
+-            printf("BabaSSL: %s (BabaSSL-Library: %s)\n",
+-                   BABASSL_VERSION_TEXT, OpenSSL_version(BABASSL_VERSION));
+         if (OpenSSL_version_num() == OPENSSL_VERSION_NUMBER)
+             printf("%s\n", OpenSSL_version(OPENSSL_VERSION));
+         else
+@@ -206,6 +200,14 @@ opthelp:
+         printf("\n");
+ #endif
+     }
++    if (babassl_version) {
++        /* BabaSSL stuffs */
++        if (BabaSSL_version_num() == BABASSL_VERSION_NUMBER)
++            printf("%s\n", OpenSSL_version(BABASSL_VERSION));
++        else
++            printf("BabaSSL: %s (BabaSSL-Library: %s)\n",
++                   BABASSL_VERSION_TEXT, OpenSSL_version(BABASSL_VERSION));
++    }
+     ret = 0;
+  end:
+     return ret;
+-- 
+2.18.4
+

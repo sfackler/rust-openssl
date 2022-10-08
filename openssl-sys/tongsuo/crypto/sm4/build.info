@@ -1,0 +1,14 @@
+LIBS=../../libcrypto
+SOURCE[../../libcrypto]=sm4.c {- $target{sm4_asm_src} -}
+
+GENERATE[sm4-armv8.S]=asm/sm4-armv8.pl $(PERLASM_SCHEME)
+INCLUDE[sm4-armv8.o]=..
+
+BEGINRAW[Makefile]
+##### SM4 assembler implementations
+
+# GNU make "catch all"
+{- $builddir -}/sm4-%.S:	{- $sourcedir -}/asm/sm4-%.pl
+	CC="$(CC)" $(PERL) $< $(PERLASM_SCHEME) $@
+
+ENDRAW[Makefile]

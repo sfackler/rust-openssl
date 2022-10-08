@@ -1,0 +1,53 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 8 (0x8)
+        Signature Algorithm: ecdsa-with-SHA256
+        Issuer: C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=ecc root cert
+        Validity
+            Not Before: Sep 24 13:59:57 2019 GMT
+            Not After : Sep 23 13:59:57 2020 GMT
+        Subject: C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=ecc second level cert
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: (256 bit)
+                pub:
+                    04:7a:1d:ea:52:ef:f0:59:57:fb:16:f4:8b:f7:77:
+                    eb:b5:67:29:7f:f6:8b:81:d0:50:05:fb:77:1f:2b:
+                    a3:16:03:41:0a:91:68:25:46:99:c9:17:42:62:b0:
+                    2c:aa:3f:c0:22:e3:8f:86:a4:6c:d2:46:9f:f2:57:
+                    77:18:4f:db:c0
+                ASN1 OID: prime256v1
+                NIST CURVE: P-256
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            Netscape Comment: 
+                OpenSSL Generated Certificate
+            X509v3 Subject Key Identifier: 
+                EB:68:85:D3:8E:0F:D2:64:83:B2:66:E1:C5:4C:09:0F:1D:BC:25:38
+            X509v3 Authority Key Identifier: 
+                DirName:/C=AU/ST=Some-State/O=Internet Widgits Pty Ltd/CN=ecc root cert
+                serial:20:11:39:61:3D:4B:B1:32:E7:07:69:FC:B1:63:E7:65:AF:7A:D0:52
+    Signature Algorithm: ecdsa-with-SHA256
+    Signature Value:
+        30:46:02:21:00:e0:cd:3f:e3:db:19:45:4c:67:32:8f:cc:17:
+        b3:5b:34:dd:e9:a3:4f:ca:59:2f:2d:a0:46:9a:3a:c6:aa:90:
+        cf:02:21:00:f3:8c:64:75:f9:60:db:c5:16:e6:5b:0d:88:6d:
+        ab:13:20:30:e4:c8:88:02:dc:bf:70:a5:74:8d:5f:f4:3e:0c
+-----BEGIN CERTIFICATE-----
+MIICkzCCAjigAwIBAgIBCDAKBggqhkjOPQQDAjBdMQswCQYDVQQGEwJBVTETMBEG
+A1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50ZXJuZXQgV2lkZ2l0cyBQdHkg
+THRkMRYwFAYDVQQDDA1lY2Mgcm9vdCBjZXJ0MB4XDTE5MDkyNDEzNTk1N1oXDTIw
+MDkyMzEzNTk1N1owZTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUx
+ITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEeMBwGA1UEAwwVZWNj
+IHNlY29uZCBsZXZlbCBjZXJ0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeh3q
+Uu/wWVf7FvSL93frtWcpf/aLgdBQBft3HyujFgNBCpFoJUaZyRdCYrAsqj/AIuOP
+hqRs0kaf8ld3GE/bwKOB4DCB3TAJBgNVHRMEAjAAMCwGCWCGSAGG+EIBDQQfFh1P
+cGVuU1NMIEdlbmVyYXRlZCBDZXJ0aWZpY2F0ZTAdBgNVHQ4EFgQU62iF044P0mSD
+smbhxUwJDx28JTgwgYIGA1UdIwR7MHmhYaRfMF0xCzAJBgNVBAYTAkFVMRMwEQYD
+VQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBM
+dGQxFjAUBgNVBAMMDWVjYyByb290IGNlcnSCFCAROWE9S7Ey5wdp/LFj52WvetBS
+MAoGCCqGSM49BAMCA0kAMEYCIQDgzT/j2xlFTGcyj8wXs1s03emjT8pZLy2gRpo6
+xqqQzwIhAPOMZHX5YNvFFuZbDYhtqxMgMOTIiALcv3CldI1f9D4M
+-----END CERTIFICATE-----

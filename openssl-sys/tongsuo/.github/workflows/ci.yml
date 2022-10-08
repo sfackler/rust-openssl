@@ -1,0 +1,224 @@
+name: GitHub CI
+
+on: [pull_request, push]
+
+# for some reason, this does not work:
+# variables:
+#   BUILDOPTS: "-j4"
+
+# not implemented for v1.1.1: HARNESS_JOBS: "${HARNESS_JOBS:-4}"
+
+# for some reason, this does not work:
+# before_script:
+#     - make="make -s"
+
+jobs:
+  check_update:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: config
+      run: ./config --strict-warnings && perl configdata.pm --dump
+    - name: make build_generated
+      run: make -s build_generated
+    - name: make update
+      run: make -s update
+    - name: git diff
+      run: git diff --exit-code
+
+  check_docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: config
+      run: ./config --strict-warnings && perl configdata.pm --dump
+    - name: make build_generated
+      run: make -s build_generated
+    - name: make doc-nits
+      run: make doc-nits
+
+  basic_gcc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: config
+        run: ./config --strict-warnings && perl configdata.pm --dump
+      - name: make
+        run: make -s -j4
+      - name: make test
+        run: make test
+      - name: make clean
+        run: make clean
+      - name: check dirty
+        run: test $(git status --porcelain | wc -l) -eq "0"
+
+  basic_clang:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: config
+        run: CC=clang ./config --strict-warnings && perl configdata.pm --dump
+      - name: make
+        run: make -s -j4
+      - name: make test
+        run: make test
+      - name: make clean
+        run: make clean
+      - name: check dirty
+        run: test $(git status --porcelain | wc -l) -eq "0"
+
+  minimal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: config
+        run: ./config --strict-warnings no-shared no-dso no-pic no-async no-autoload-config no-blake2 no-bf no-camellia no-cast no-chacha no-cmac no-cms no-comp no-ct no-des no-dgram no-dh no-dsa no-dtls no-ec2m no-engine no-filenames no-gost no-idea no-mdc2 no-md4 no-multiblock no-nextprotoneg no-ocsp no-ocb no-poly1305 no-psk no-rc2 no-rc4 no-rmd160 no-seed no-siphash no-sm2 no-sm3 no-sm4 no-srp no-srtp no-ssl3 no-ssl3-method no-ts no-ui-console no-whirlpool no-asm -DOPENSSL_NO_SECURE_MEMORY -DOPENSSL_SMALL_FOOTPRINT && perl configdata.pm --dump
+      - name: make
+        run: make -s -j4
+      - name: make test
+        run: make test
+      - name: make clean
+        run: make clean
+      - name: check dirty
+        run: test $(git status --porcelain | wc -l) -eq "0"
+
+  out-of-tree_build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: setup build dir
+        run: |
+            set -eux
+            mkdir -p ${myblddir:=../_build/nest/a/little/more}
+            echo "mysrcdir=$(realpath .)" | tee -a $GITHUB_ENV
+            echo "myblddir=$(realpath $myblddir)" | tee -a $GITHUB_ENV
+      - name: config
+        run: set -eux ; cd ${{ env.myblddir }} && ${{ env.mysrcdir }}/config --strict-warnings && perl configdata.pm --dump
+      - name: make build_generated
+        run: set -eux; cd ${{ env.myblddir }} && make -s build_generated
+      - name: make update
+        run: set -eux; cd ${{ env.myblddir }} && make update
+      - name: make
+        run: set -eux; cd ${{ env.myblddir }} && make -s -j4
+      - name: make test (minimal subset)
+        run: set -eux; cd ${{ env.myblddir }} && make test TESTS='0[0-9]'
+
+  no-deprecated:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: config
+        run: ./config --strict-warnings no-deprecated && perl configdata.pm --dump
+      - name: make
+        run: make -s -j4
+      - name: make test
+        run: make test
+      - name: make clean
+        run: make clean
+      - name: check dirty
+        run: test $(git status --porcelain | wc -l) -eq "0"
+
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: config
+        run: ./config --debug enable-asan enable-ubsan enable-rc5 enable-md2 enable-ec_nistp_64_gcc_128 && perl configdata.pm --dump
+      - name: make
+        run: make -s -j4
+      - name: make test
+        run: make test OPENSSL_TEST_RAND_ORDER=0
+      - name: make clean
+        run: make clean
+      - name: check dirty
+        run: test $(git status --porcelain | wc -l) -eq "0"
+
+  enable_non-default_options:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: config
+        run: ./config --strict-warnings enable-asan enable-ubsan enable-ssl-trace enable-zlib enable-zlib-dynamic enable-crypto-mdebug enable-crypto-mdebug-backtrace enable-egd enable-ntls enable-delegated-credential enable-cert-compression && perl configdata.pm --dump
+      - name: make
+        run: make -s -j4
+      - name: make test
+        run: make test
+      - name: make clean
+        run: make clean
+      - name: check dirty
+        run: test $(git status --porcelain | wc -l) -eq "0"
+
+  legacy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: config
+        run: ./config -Werror --debug no-afalgeng no-shared enable-crypto-mdebug enable-rc5 enable-md2 enable-ssl3 enable-ssl3-method enable-weak-ssl-ciphers enable-zlib enable-ec_nistp_64_gcc_128 && perl configdata.pm --dump
+      - name: make
+        run: make -s -j4
+      - name: make test
+        run: make test
+      - name: make clean
+        run: make clean
+      - name: check dirty
+        run: test $(git status --porcelain | wc -l) -eq "0"
+
+  buildtest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: config
+        run: ./config no-makedepend enable-buildtest-c++ --strict-warnings -D_DEFAULT_SOURCE && perl configdata.pm --dump
+      - name: make
+        run: make -s -j4
+      - name: make test
+        run: make test
+      - name: make clean
+        run: make clean
+      - name: check dirty
+        run: test $(git status --porcelain | wc -l) -eq "0"
+
+  ntls-without-sm234:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: config
+        run: ./config enable-ntls no-sm2 no-sm3 no-sm4 --strict-warnings && perl configdata.pm --dump
+      - name: make
+        run: make -s -j4
+      - name: make test
+        run: make test
+      - name: make clean
+        run: make clean
+      - name: check dirty
+        run: test $(git status --porcelain | wc -l) -eq "0"
+
+  ntls-sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: config
+        run: ./config enable-ntls --strict-warnings enable-asan -fsanitize=address -static-libasan enable-crypto-mdebug  enable-crypto-mdebug-backtrace && perl configdata.pm --dump
+      - name: make
+        run: make -s -j4
+      - name: make test
+        run: make test
+      - name: make clean
+        run: make clean
+      - name: check dirty
+        run: test $(git status --porcelain | wc -l) -eq "0"
+
+  ec_elgamal_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: config
+        run: ./config --strict-warnings enable-asan enable-ubsan enable-ssl-trace enable-zlib enable-zlib-dynamic enable-ec_elgamal && perl configdata.pm --dump
+      - name: make
+        run: make -s -j4
+      - name: make test
+        run: make test
+      - name: make clean
+        run: make clean
+      - name: check dirty
+        run: test $(git status --porcelain | wc -l) -eq "0"

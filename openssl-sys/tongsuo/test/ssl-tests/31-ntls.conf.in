@@ -1,0 +1,398 @@
+use strict;
+use warnings;
+
+package ssltests;
+use OpenSSL::Test::Utils;
+
+our @tests = (
+
+    {
+        name => "test cipher ECC-SM2-SM4-CBC-SM3 in NTLS_UNIQUE mode, NTLS_UNIQUE test server and client all use NTLS only",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "CipherString" => "ECC-SM2-SM4-CBC-SM3",
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "ECC-SM2-SM4-CBC-SM3",
+            "ExpectedProtocol" => "NTLS",
+        },
+    },
+
+    {
+        name => "test cipher ECC-SM2-SM4-GCM-SM3 in NTLS_UNIQUE mode, NTLS_UNIQUE test server and client all use NTLS only",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "CipherString" => "ECC-SM2-SM4-GCM-SM3",
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "ECC-SM2-SM4-GCM-SM3",
+            "ExpectedProtocol" => "NTLS",
+        },
+    },
+
+    {
+        name => "test cipher ECDHE-SM2-SM4-CBC-SM3 in NTLS_UNIQUE mode",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "SignCertificate" => test_pem("sm2", "client_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "client_sign.key"),
+            "EncCertificate" => test_pem("sm2", "client_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "client_enc.key"),
+            "CipherString" => "ECDHE-SM2-SM4-CBC-SM3",
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "ECDHE-SM2-SM4-CBC-SM3",
+            "ExpectedProtocol" => "NTLS",
+        },
+    },
+
+    {
+        name => "test cipher ECDHE-SM2-SM4-GCM-SM3 in NTLS_UNIQUE mode",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "SignCertificate" => test_pem("sm2", "client_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "client_sign.key"),
+            "EncCertificate" => test_pem("sm2", "client_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "client_enc.key"),
+            "CipherString" => "ECDHE-SM2-SM4-GCM-SM3",
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "ECDHE-SM2-SM4-GCM-SM3",
+            "ExpectedProtocol" => "NTLS",
+        },
+    },
+
+    {
+        name => "test cipher RSA-SM4-CBC-SM3 in NTLS_UNIQUE mode",
+        server => {
+            "SignCertificate" => test_pem("server-rsa-sign.crt"),
+            "SignPrivateKey" => test_pem("server-rsa-sign.key"),
+            "EncCertificate" => test_pem("server-rsa-enc.crt"),
+            "EncPrivateKey" => test_pem("server-rsa-enc.key"),
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "CipherString" => "RSA-SM4-CBC-SM3",
+            "VerifyCAFile" => test_pem("root-cert.pem"),
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "RSA-SM4-CBC-SM3",
+            "ExpectedProtocol" => "NTLS",
+        },
+    },
+
+    {
+        name => "test cipher RSA-SM4-GCM-SM3 in NTLS_UNIQUE mode",
+        server => {
+            "SignCertificate" => test_pem("server-rsa-sign.crt"),
+            "SignPrivateKey" => test_pem("server-rsa-sign.key"),
+            "EncCertificate" => test_pem("server-rsa-enc.crt"),
+            "EncPrivateKey" => test_pem("server-rsa-enc.key"),
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "CipherString" => "RSA-SM4-GCM-SM3",
+            "VerifyCAFile" => test_pem("root-cert.pem"),
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "RSA-SM4-GCM-SM3",
+            "ExpectedProtocol" => "NTLS",
+        },
+    },
+
+    {
+        name => "test cipher RSA-SM4-CBC-SHA256 in NTLS_UNIQUE mode",
+        server => {
+            "SignCertificate" => test_pem("server-rsa-sign.crt"),
+            "SignPrivateKey" => test_pem("server-rsa-sign.key"),
+            "EncCertificate" => test_pem("server-rsa-enc.crt"),
+            "EncPrivateKey" => test_pem("server-rsa-enc.key"),
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "CipherString" => "RSA-SM4-CBC-SHA256",
+            "VerifyCAFile" => test_pem("root-cert.pem"),
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "RSA-SM4-CBC-SHA256",
+            "ExpectedProtocol" => "NTLS",
+        },
+    },
+
+    {
+        name => "test cipher RSA-SM4-GCM-SHA256 in NTLS_UNIQUE mode",
+        server => {
+            "SignCertificate" => test_pem("server-rsa-sign.crt"),
+            "SignPrivateKey" => test_pem("server-rsa-sign.key"),
+            "EncCertificate" => test_pem("server-rsa-enc.crt"),
+            "EncPrivateKey" => test_pem("server-rsa-enc.key"),
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "CipherString" => "RSA-SM4-GCM-SHA256",
+            "VerifyCAFile" => test_pem("root-cert.pem"),
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "RSA-SM4-GCM-SHA256",
+            "ExpectedProtocol" => "NTLS",
+        },
+    },
+
+    {
+        name => "test ntls client doing handshake without setting certs and pkey",
+        server => {
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "CipherString" => "ECC-SM2-SM4-CBC-SM3",
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "ServerFail",
+        },
+    },
+
+    {
+        name => "test server encryption certificate expired",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc_expire.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "ClientFail",
+            "ExpectedClientAlert" => "CertificateExpired",
+        },
+    },
+
+    {
+        name => "test server sign certificate expired",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign_expire.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "ClientFail",
+            "ExpectedClientAlert" => "CertificateExpired",
+        },
+    },
+
+    {
+        name => "test server certificates expired",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign_expire.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc_expire.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "ClientFail",
+            "ExpectedClientAlert" => "CertificateExpired",
+        },
+    },
+
+    {
+        name => "test server choose ECC-SM2-SM4 with SM2 double certs only",
+        server => {
+            "SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "CipherString" => "RSA-SM4-CBC-SM3:ECC-SM2-SM4-CBC-SM3",
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "CipherString" => "ECC-SM2-SM4-CBC-SM3:RSA-SM4-CBC-SM3",
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "ECC-SM2-SM4-CBC-SM3",
+            "ExpectedProtocol" => "NTLS",
+        },
+    },
+
+    {
+        name => "test server choose RSA-SM4 with RSA double certs only",
+        server => {
+            "SignCertificate" => test_pem("server-rsa-sign.crt"),
+            "SignPrivateKey" => test_pem("server-rsa-sign.key"),
+            "EncCertificate" => test_pem("server-rsa-enc.crt"),
+            "EncPrivateKey" => test_pem("server-rsa-enc.key"),
+            "CipherString" => "ECC-SM2-SM4-CBC-SM3:RSA-SM4-CBC-SM3",
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "CipherString" => "ECC-SM2-SM4-CBC-SM3:RSA-SM4-CBC-SM3",
+            "VerifyCAFile" => test_pem("root-cert.pem"),
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "RSA-SM4-CBC-SM3",
+            "ExpectedProtocol" => "NTLS",
+        },
+    },
+
+    {
+        name => "test server choose the preferred cipher ECC-SM2 with SM2 and RSA double certs",
+        server => {
+            "SM2.SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SM2.SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "SM2.EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "SM2.EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "RSA.SignCertificate" => test_pem("server-rsa-sign.crt"),
+            "RSA.SignPrivateKey" => test_pem("server-rsa-sign.key"),
+            "RSA.EncCertificate" => test_pem("server-rsa-enc.crt"),
+            "RSA.EncPrivateKey" => test_pem("server-rsa-enc.key"),
+            "CipherString" => "ECC-SM2-SM4-CBC-SM3:RSA-SM4-CBC-SM3",
+            "Options" => "ServerPreference",
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "CipherString" => "RSA-SM4-CBC-SM3:ECC-SM2-SM4-CBC-SM3",
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "ECC-SM2-SM4-CBC-SM3",
+            "ExpectedProtocol" => "NTLS",
+        },
+    },
+
+    {
+        name => "test server choose the preferred cipher RSA-SM4 with SM2 and RSA double certs",
+        server => {
+            "SM2.SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SM2.SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "SM2.EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "SM2.EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "RSA.SignCertificate" => test_pem("server-rsa-sign.crt"),
+            "RSA.SignPrivateKey" => test_pem("server-rsa-sign.key"),
+            "RSA.EncCertificate" => test_pem("server-rsa-enc.crt"),
+            "RSA.EncPrivateKey" => test_pem("server-rsa-enc.key"),
+            "CipherString" => "RSA-SM4-CBC-SM3:ECC-SM2-SM4-CBC-SM3",
+            "Options" => "ServerPreference",
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "CipherString" => "ECC-SM2-SM4-CBC-SM3:RSA-SM4-CBC-SM3",
+            "VerifyCAFile" => test_pem("root-cert.pem"),
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "RSA-SM4-CBC-SM3",
+            "ExpectedProtocol" => "NTLS",
+        },
+    },
+
+    {
+        name => "test server choose the client preferred cipher RSA-SM4 with SM2 and RSA double certs",
+        server => {
+            "SM2.SignCertificate" => test_pem("sm2", "server_sign.crt"),
+            "SM2.SignPrivateKey" => test_pem("sm2", "server_sign.key"),
+            "SM2.EncCertificate" => test_pem("sm2", "server_enc.crt"),
+            "SM2.EncPrivateKey" => test_pem("sm2", "server_enc.key"),
+            "RSA.SignCertificate" => test_pem("server-rsa-sign.crt"),
+            "RSA.SignPrivateKey" => test_pem("server-rsa-sign.key"),
+            "RSA.EncCertificate" => test_pem("server-rsa-enc.crt"),
+            "RSA.EncPrivateKey" => test_pem("server-rsa-enc.key"),
+            "CipherString" => "RSA-SM4-CBC-SM3:ECC-SM2-SM4-CBC-SM3",
+            "Enable_ntls" => "on",
+        },
+        client => {
+            "CipherString" => "ECC-SM2-SM4-CBC-SM3:RSA-SM4-CBC-SM3",
+            "VerifyCAFile" => test_pem("sm2", "chain-ca.crt"),
+            "Enable_ntls" => "on",
+        },
+        test   => {
+            "Method" => "NTLS",
+            "ExpectedResult" => "Success",
+            "ExpectedCipher" => "ECC-SM2-SM4-CBC-SM3",
+            "ExpectedProtocol" => "NTLS",
+        },
+    },
+);

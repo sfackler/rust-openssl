@@ -183,7 +183,10 @@ pub mod string;
 pub mod symm;
 pub mod version;
 pub mod x509;
-
+#[cfg(feature = "tokio")]
+pub mod async_stream;
+#[cfg(feature = "tongsuo")]
+pub mod tongsuo;
 #[cfg(boringssl)]
 type LenType = libc::size_t;
 #[cfg(not(boringssl))]

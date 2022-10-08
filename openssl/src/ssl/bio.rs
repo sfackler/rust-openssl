@@ -10,7 +10,8 @@ use std::io::prelude::*;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr;
 use std::slice;
-
+#[cfg(feature = "tongsuo")]
+use std::os::unix::prelude::AsRawFd;
 use crate::cvt_p;
 use crate::error::ErrorStack;
 
@@ -19,6 +20,7 @@ pub struct StreamState<S> {
     pub error: Option<io::Error>,
     pub panic: Option<Box<dyn Any + Send>>,
     pub dtls_mtu_size: c_long,
+    pub fd: Option<i32>,
 }
 
 /// Safe wrapper for `BIO_METHOD`
@@ -41,6 +43,28 @@ pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, BioMethod), ErrorSta
         error: None,
         panic: None,
         dtls_mtu_size: 0,
+        fd: None
+    });
+
+    unsafe {
+        let bio = cvt_p(BIO_new(method.0.get()))?;
+        BIO_set_data(bio, Box::into_raw(state) as *mut _);
+        BIO_set_init(bio, 1);
+
+        Ok((bio, method))
+    }
+}
+
+#[cfg(feature = "tongsuo")]
+pub fn new_tongsuo<S: Read + Write + AsRawFd>(stream: S) -> Result<(*mut BIO, BioMethod), ErrorStack> {
+    let method = BioMethod::new::<S>()?;
+    let fd = stream.as_raw_fd();
+    let state = Box::new(StreamState {
+        stream,
+        error: None,
+        panic: None,
+        dtls_mtu_size: 0,
+        fd: Some(fd)
     });
 
     unsafe {
@@ -141,14 +165,21 @@ unsafe extern "C" fn bputs<S: Write>(bio: *mut BIO, s: *const c_char) -> c_int {
     bwrite::<S>(bio, s, strlen(s) as c_int)
 }
 
+
 unsafe extern "C" fn ctrl<S: Write>(
     bio: *mut BIO,
     cmd: c_int,
     _num: c_long,
-    _ptr: *mut c_void,
+    ptr: *mut c_void,
 ) -> c_long {
     let state = state::<S>(bio);
-
+    #[cfg(feature = "tongsuo")]
+    if cmd == 105 {
+        // BIO_C_GET_FD
+        let p = ptr.cast::<c_int>();
+        *p = state.fd.unwrap();
+        return 1 as i64;
+    }
     if cmd == BIO_CTRL_FLUSH {
         match catch_unwind(AssertUnwindSafe(|| state.stream.flush())) {
             Ok(Ok(())) => 1,
@@ -167,6 +198,7 @@ unsafe extern "C" fn ctrl<S: Write>(
         0
     }
 }
+
 
 unsafe extern "C" fn create(bio: *mut BIO) -> c_int {
     BIO_set_init(bio, 0);
