@@ -24,7 +24,7 @@ openssl = { version = "0.10.42", path = "../deps/rust-openssl/openssl/", feature
 
 features
 - tokio: 支持async
-- tongsuo：自动开始rust-openssl bindgen feature。支持gm
+- tongsuo：开启rust-openssl bindgen feature。支持gm
 
 # rust-openssl
 
