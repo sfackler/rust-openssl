@@ -202,9 +202,9 @@ specific to your distribution:
     # On Alpine Linux
     apk add openssl-dev
 
-See rust-openssl README for more information:
+See rust-openssl documentation for more information:
 
-    https://github.com/sfackler/rust-openssl#linux
+    https://docs.rs/openssl
 ",
                 e
             );
