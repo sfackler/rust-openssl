@@ -361,7 +361,9 @@ mod tests {
         assert_eq!(content.expect("should be non-empty"), message.as_bytes());
     }
 
+    /// https://marc.info/?l=openbsd-cvs&m=166602943014106&w=2
     #[test]
+    #[cfg_attr(all(libressl360, not(libressl361)), ignore)]
     fn sign_verify_test_normal() {
         let cert = include_bytes!("../test/cert.pem");
         let cert = X509::from_pem(cert).unwrap();
@@ -397,7 +399,9 @@ mod tests {
         assert!(content.is_none());
     }
 
+    /// https://marc.info/?l=openbsd-cvs&m=166602943014106&w=2
     #[test]
+    #[cfg_attr(all(libressl360, not(libressl361)), ignore)]
     fn signers() {
         let cert = include_bytes!("../test/cert.pem");
         let cert = X509::from_pem(cert).unwrap();
