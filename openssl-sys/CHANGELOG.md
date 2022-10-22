@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [v0.9.77] - 2022-10-22
+
+### Added
+
+* Added support for LibreSSL 3.6.0
+* Added `assume_init`.
+
 ## [v0.9.76] - 2022-09-26
 
 ### Added
