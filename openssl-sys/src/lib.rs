@@ -85,6 +85,10 @@ mod openssl {
     mod x509_vfy;
     mod x509v3;
 
+    use std::sync::Once;
+    // explicitly initialize to work around https://github.com/openssl/openssl/issues/3505
+    static INIT: Once = Once::new();
+
     // FIXME remove
     pub type PasswordCallback = unsafe extern "C" fn(
         buf: *mut c_char,
@@ -96,10 +100,6 @@ mod openssl {
     #[cfg(ossl110)]
     pub fn init() {
         use std::ptr;
-        use std::sync::Once;
-
-        // explicitly initialize to work around https://github.com/openssl/openssl/issues/3505
-        static INIT: Once = Once::new();
 
         #[cfg(not(ossl111b))]
         let init_options = OPENSSL_INIT_LOAD_SSL_STRINGS;
@@ -116,7 +116,7 @@ mod openssl {
         use std::io::{self, Write};
         use std::mem;
         use std::process;
-        use std::sync::{Mutex, MutexGuard, Once};
+        use std::sync::{Mutex, MutexGuard};
 
         static mut MUTEXES: *mut Vec<Mutex<()>> = 0 as *mut Vec<Mutex<()>>;
         static mut GUARDS: *mut Vec<Option<MutexGuard<'static, ()>>> =
@@ -160,8 +160,6 @@ mod openssl {
             }
         }
 
-        static INIT: Once = Once::new();
-
         INIT.call_once(|| unsafe {
             SSL_library_init();
             SSL_load_error_strings();
@@ -180,6 +178,19 @@ mod openssl {
             CRYPTO_set_locking_callback__fixed_rust(Some(locking_function));
             set_id_callback();
         })
+    }
+
+    /// Disable explicit initialization of the openssl libs.
+    ///
+    /// This is only appropriate to use if the openssl crate is being consumed by an application
+    /// that will be performing the initialization explicitly.
+    ///
+    /// # Safety
+    ///
+    /// In some versions of openssl, skipping initialization will fall back to the default procedure
+    /// while other will cause difficult to debug errors so care must be taken when calling this.
+    pub unsafe fn assume_init() {
+        INIT.call_once(|| {});
     }
 }
 #[cfg(openssl)]
