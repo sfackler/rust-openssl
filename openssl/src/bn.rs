@@ -1080,6 +1080,30 @@ impl BigNum {
             .map(|p| BigNum::from_ptr(p))
         }
     }
+
+    /// Copies data from a slice overwriting what was in the BigNum.
+    ///
+    /// This function can be used to copy data from a slice to a
+    /// [secure BigNum][`BigNum::new_secure`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let mut bignum = BigNum::new().unwrap();
+    /// bignum.copy_from_slice(&[0x12, 0x00, 0x34]).unwrap();
+    ///
+    /// assert_eq!(bignum, BigNum::from_u32(0x120034).unwrap());
+    /// ```
+    #[corresponds(BN_bin2bn)]
+    pub fn copy_from_slice(&mut self, n: &[u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            assert!(n.len() <= LenType::max_value() as usize);
+
+            cvt_p(ffi::BN_bin2bn(n.as_ptr(), n.len() as LenType, self.0))?;
+            Ok(())
+        }
+    }
 }
 
 impl fmt::Debug for BigNumRef {
