@@ -94,6 +94,12 @@ pub const NID_sect409k1: c_int = 731;
 pub const NID_sect409r1: c_int = 732;
 pub const NID_sect571k1: c_int = 733;
 pub const NID_sect571r1: c_int = 734;
+#[cfg(ossl110)]
+pub const NID_brainpoolP256r1: c_int = 927;
+#[cfg(ossl110)]
+pub const NID_brainpoolP384r1: c_int = 931;
+#[cfg(ossl110)]
+pub const NID_brainpoolP512r1: c_int = 933;
 pub const NID_wap_wsg_idm_ecid_wtls1: c_int = 735;
 pub const NID_wap_wsg_idm_ecid_wtls3: c_int = 736;
 pub const NID_wap_wsg_idm_ecid_wtls4: c_int = 737;
