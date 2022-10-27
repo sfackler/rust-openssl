@@ -407,7 +407,7 @@ impl CipherCtxRef {
 
     /// Retrieves the calculated authentication tag from the context.
     ///
-    /// This should be called after `[Self::cipher_final]`, and is only supported by authenticated ciphers.
+    /// This should be called after [`Self::cipher_final`], and is only supported by authenticated ciphers.
     ///
     /// The size of the buffer indicates the size of the tag. While some ciphers support a range of tag sizes, it is
     /// recommended to pick the maximum size.
