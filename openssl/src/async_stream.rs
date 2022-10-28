@@ -115,6 +115,7 @@ impl<S> SslStream<S>
 where
     S: AsyncRead + AsyncWrite + AsRawFd
 {
+    /// get SslStream from raw fd
     pub fn from_fd_stream(ssl: Ssl, stream: S) -> Result<Self, ErrorStack> {
         ssl::SslStream::new_tongsuo_stream(ssl, StreamWrapper { stream, context: 0 }).map(SslStream)
     }
