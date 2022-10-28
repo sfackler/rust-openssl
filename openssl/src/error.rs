@@ -298,26 +298,26 @@ impl fmt::Debug for Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "error:{:08X}", self.code())?;
-        match self.library() {
-            Some(l) => write!(fmt, ":{}", l)?,
-            None => write!(fmt, ":lib({})", ffi::ERR_GET_LIB(self.code()))?,
-        }
-        match self.function() {
-            Some(f) => write!(fmt, ":{}", f)?,
-            None => write!(fmt, ":func({})", ffi::ERR_GET_FUNC(self.code()))?,
-        }
+        write!(fmt, "error 0x{:08X} ", self.code())?;
         match self.reason() {
-            Some(r) => write!(fmt, ":{}", r)?,
-            None => write!(fmt, ":reason({})", ffi::ERR_GET_REASON(self.code()))?,
+            Some(r) => write!(fmt, "'{}", r)?,
+            None => write!(fmt, "'Unknown'")?,
         }
-        write!(
-            fmt,
-            ":{}:{}:{}",
-            self.file(),
-            self.line(),
-            self.data().unwrap_or("")
-        )
+        if let Some(data) = self.data() {
+            write!(fmt, ": {}' ", data)?;
+        } else {
+            write!(fmt, "' ")?;
+        }
+        write!(fmt, "occurred in ")?;
+        match self.function() {
+            Some(f) => write!(fmt, "function '{}' ", f)?,
+            None => write!(fmt, "function 'Unknown' ")?,
+        }
+        write!(fmt, "in file '{}:{}' ", self.file(), self.line())?;
+        match self.library() {
+            Some(l) => write!(fmt, "in library '{}' ", l),
+            None => write!(fmt, "in library 'Unknown' "),
+        }
     }
 }
 
