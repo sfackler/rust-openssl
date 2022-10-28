@@ -69,6 +69,7 @@ pub fn run(include_dirs: &[PathBuf]) {
         .blocklist_function("ERR_add_error_vdata")
         .blocklist_function("EVP_KDF_vctrl")
         .blocklist_function("qfcvt_r")
+        .blocklist_function("qfcvt")
         .blocklist_function("strtold")
         .blocklist_function("qecvt_r")
         .blocklist_function("qecvt")
