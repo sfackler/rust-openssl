@@ -42,7 +42,7 @@ pub fn new<S: Read + Write>(stream: S, fd: i32) -> Result<(*mut BIO, BioMethod),
         error: None,
         panic: None,
         dtls_mtu_size: 0,
-        fd
+        fd,
     });
 
     unsafe {

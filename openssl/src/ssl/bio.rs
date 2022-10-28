@@ -1,3 +1,5 @@
+use crate::cvt_p;
+use crate::error::ErrorStack;
 use cfg_if::cfg_if;
 use ffi::{
     self, BIO_clear_retry_flags, BIO_new, BIO_set_retry_read, BIO_set_retry_write, BIO,
@@ -7,13 +9,11 @@ use libc::{c_char, c_int, c_long, c_void, strlen};
 use std::any::Any;
 use std::io;
 use std::io::prelude::*;
+#[cfg(feature = "tongsuo")]
+use std::os::unix::prelude::AsRawFd;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr;
 use std::slice;
-#[cfg(feature = "tongsuo")]
-use std::os::unix::prelude::AsRawFd;
-use crate::cvt_p;
-use crate::error::ErrorStack;
 
 pub struct StreamState<S> {
     pub stream: S,
@@ -43,7 +43,7 @@ pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, BioMethod), ErrorSta
         error: None,
         panic: None,
         dtls_mtu_size: 0,
-        fd: None
+        fd: None,
     });
 
     unsafe {
@@ -56,7 +56,9 @@ pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, BioMethod), ErrorSta
 }
 
 #[cfg(feature = "tongsuo")]
-pub fn new_tongsuo<S: Read + Write + AsRawFd>(stream: S) -> Result<(*mut BIO, BioMethod), ErrorStack> {
+pub fn new_tongsuo<S: Read + Write + AsRawFd>(
+    stream: S,
+) -> Result<(*mut BIO, BioMethod), ErrorStack> {
     let method = BioMethod::new::<S>()?;
     let fd = stream.as_raw_fd();
     let state = Box::new(StreamState {
@@ -64,7 +66,7 @@ pub fn new_tongsuo<S: Read + Write + AsRawFd>(stream: S) -> Result<(*mut BIO, Bi
         error: None,
         panic: None,
         dtls_mtu_size: 0,
-        fd: Some(fd)
+        fd: Some(fd),
     });
 
     unsafe {
@@ -165,7 +167,6 @@ unsafe extern "C" fn bputs<S: Write>(bio: *mut BIO, s: *const c_char) -> c_int {
     bwrite::<S>(bio, s, strlen(s) as c_int)
 }
 
-
 unsafe extern "C" fn ctrl<S: Write>(
     bio: *mut BIO,
     cmd: c_int,
@@ -198,7 +199,6 @@ unsafe extern "C" fn ctrl<S: Write>(
         0
     }
 }
-
 
 unsafe extern "C" fn create(bio: *mut BIO) -> c_int {
     BIO_set_init(bio, 0);

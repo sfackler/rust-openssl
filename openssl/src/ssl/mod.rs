@@ -71,7 +71,11 @@ use crate::pkey::{HasPrivate, PKeyRef, Params, Private};
 use crate::srtp::{SrtpProtectionProfile, SrtpProtectionProfileRef};
 use crate::ssl::bio::BioMethod;
 use crate::ssl::callbacks::*;
+pub use crate::ssl::connector::{
+    ConnectConfiguration, SslAcceptor, SslAcceptorBuilder, SslConnector, SslConnectorBuilder,
+};
 use crate::ssl::error::InnerError;
+pub use crate::ssl::error::{Error, ErrorCode, HandshakeError};
 use crate::stack::{Stack, StackRef};
 use crate::util::{ForeignTypeExt, ForeignTypeRefExt};
 use crate::x509::store::{X509Store, X509StoreBuilderRef, X509StoreRef};
@@ -102,10 +106,6 @@ use std::ptr;
 use std::slice;
 use std::str;
 use std::sync::{Arc, Mutex};
-pub use crate::ssl::connector::{
-    ConnectConfiguration, SslAcceptor, SslAcceptorBuilder, SslConnector, SslConnectorBuilder,
-};
-pub use crate::ssl::error::{Error, ErrorCode, HandshakeError};
 
 mod bio;
 mod callbacks;
@@ -2269,16 +2269,14 @@ impl fmt::Debug for SslRef {
 }
 
 impl SslRef {
-
     #[cfg(feature = "tongsuo")]
     /// 只能在client hello callback中调用
-    pub fn get_client_cipher_list_name(&self) -> Vec<String>{
+    pub fn get_client_cipher_list_name(&self) -> Vec<String> {
         let mut lists = vec![];
         unsafe {
             let mut ptr = ptr::null();
             let tmp: *mut *const _ = &mut ptr;
-            let len =
-                ffi::SSL_client_hello_get0_ciphers(self.as_ptr(), tmp as *mut _);
+            let len = ffi::SSL_client_hello_get0_ciphers(self.as_ptr(), tmp as *mut _);
             let ciphers = slice::from_raw_parts::<u16>(ptr, len as usize);
             for index in ciphers {
                 let c = ffi::SSL_CIPHER_find(self.as_ptr(), index as *const _ as *const _);
@@ -2294,11 +2292,7 @@ impl SslRef {
     pub fn set_private_key_file<P: AsRef<Path>>(&self, path: P, ssl_file_type: SslFiletype) {
         let key_file = CString::new(path.as_ref().as_os_str().to_str().unwrap()).unwrap();
         unsafe {
-            ffi::SSL_use_PrivateKey_file(
-                self.as_ptr(),
-                key_file.as_ptr(),
-                ssl_file_type.as_raw(),
-            )
+            ffi::SSL_use_PrivateKey_file(self.as_ptr(), key_file.as_ptr(), ssl_file_type.as_raw())
         };
     }
     #[cfg(feature = "tongsuo")]
@@ -2331,29 +2325,25 @@ impl SslRef {
                 sign_key.as_ptr(),
                 SslFiletype::PEM.as_raw(),
             ) == 0
-            {
-            }
+            {}
             if ffi::SSL_use_sign_certificate_file(
                 self.as_ptr(),
                 sign_certificate.as_ptr(),
                 SslFiletype::PEM.as_raw(),
             ) == 0
-            {
-            }
+            {}
             if ffi::SSL_use_enc_PrivateKey_file(
                 self.as_ptr(),
                 enc_key.as_ptr(),
                 SslFiletype::PEM.as_raw(),
             ) == 0
-            {
-            }
+            {}
             if ffi::SSL_use_enc_certificate_file(
                 self.as_ptr(),
                 enc_certificate.as_ptr(),
                 SslFiletype::PEM.as_raw(),
             ) == 0
-            {
-            }
+            {}
         }
         Ok(())
     }
@@ -3314,7 +3304,7 @@ impl<S: Read + Write> SslStream<S> {
     /// [`SslRef::set_accept_state`], the handshake can be performed automatically during the first
     /// call to read or write. Otherwise the `connect` and `accept` methods can be used to
     /// explicitly perform the handshake.
-    /// 
+    ///
     #[corresponds(SSL_set_bio)]
     pub fn new(ssl: Ssl, stream: S) -> Result<Self, ErrorStack> {
         let (bio, method) = bio::new(stream)?;

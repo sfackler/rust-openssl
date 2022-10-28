@@ -5,9 +5,9 @@
 //! blocking [`Read`] and [`Write`] traits.
 #![warn(missing_docs)]
 
-use futures_util::future;
 use crate::error::ErrorStack;
 use crate::ssl::{self, ErrorCode, ShutdownResult, Ssl, SslRef};
+use futures_util::future;
 
 use std::fmt;
 use std::io::{self, Read, Write};
@@ -23,9 +23,9 @@ struct StreamWrapper<S> {
 }
 
 #[cfg(feature = "tongsuo")]
-impl<S> AsRawFd for StreamWrapper<S> 
+impl<S> AsRawFd for StreamWrapper<S>
 where
-    S: AsRawFd
+    S: AsRawFd,
 {
     fn as_raw_fd(&self) -> std::os::unix::prelude::RawFd {
         self.stream.as_raw_fd()
@@ -111,9 +111,9 @@ fn cvt_ossl<T>(r: Result<T, ssl::Error>) -> Poll<Result<T, ssl::Error>> {
 #[derive(Debug)]
 pub struct SslStream<S>(ssl::SslStream<StreamWrapper<S>>);
 #[cfg(feature = "tongsuo")]
-impl<S> SslStream<S> 
+impl<S> SslStream<S>
 where
-    S: AsyncRead + AsyncWrite + AsRawFd
+    S: AsyncRead + AsyncWrite + AsRawFd,
 {
     /// get SslStream from raw fd
     pub fn from_fd_stream(ssl: Ssl, stream: S) -> Result<Self, ErrorStack> {
@@ -128,7 +128,6 @@ where
     pub fn new(ssl: Ssl, stream: S) -> Result<Self, ErrorStack> {
         ssl::SslStream::new(ssl, StreamWrapper { stream, context: 0 }).map(SslStream)
     }
-    
 
     /// Like [`SslStream::connect`](ssl::SslStream::connect).
     pub fn poll_connect(
@@ -286,7 +285,11 @@ impl<S> AsyncWrite for SslStream<S>
 where
     S: AsyncRead + AsyncWrite,
 {
-    fn poll_write(self: Pin<&mut Self>, ctx: &mut Context<'_>, buf: &[u8]) -> Poll<io::Result<usize>> {
+    fn poll_write(
+        self: Pin<&mut Self>,
+        ctx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
         self.with_context(ctx, |s| cvt(s.write(buf)))
     }
 

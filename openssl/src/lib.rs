@@ -135,6 +135,8 @@ mod bio;
 mod util;
 pub mod aes;
 pub mod asn1;
+#[cfg(feature = "tokio")]
+pub mod async_stream;
 pub mod base64;
 pub mod bn;
 pub mod cipher;
@@ -181,12 +183,10 @@ pub mod ssl;
 pub mod stack;
 pub mod string;
 pub mod symm;
-pub mod version;
-pub mod x509;
-#[cfg(feature = "tokio")]
-pub mod async_stream;
 #[cfg(feature = "tongsuo")]
 pub mod tongsuo;
+pub mod version;
+pub mod x509;
 #[cfg(boringssl)]
 type LenType = libc::size_t;
 #[cfg(not(boringssl))]
