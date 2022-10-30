@@ -315,8 +315,8 @@ impl fmt::Display for Error {
         }
         write!(fmt, "in file '{}:{}' ", self.file(), self.line())?;
         match self.library() {
-            Some(l) => write!(fmt, "in library '{}' ", l),
-            None => write!(fmt, "in library 'Unknown' "),
+            Some(l) => write!(fmt, "in library '{}'", l),
+            None => write!(fmt, "in library 'Unknown'"),
         }
     }
 }
