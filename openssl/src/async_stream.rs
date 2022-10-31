@@ -166,7 +166,7 @@ where
             // 然后通过recv(fd, MSG_PEEK)的形式来获取链接的协议的，造成的困扰是如果你实现了一套非socket形式的bio，则无法使用这个功能
             // 该问题我们后续会视情况进行修复
             let mut zero_buf = [0; 0];
-            if let Err(err) = s.get_mut().read(&mut zero_buf) {
+            if let Err(_err) = s.get_mut().read(&mut zero_buf) {
                 // eprintln!("Babassl hacking workaround return {:?}, you can totally ignore it. this message use for debugging purpose", err);
             }
             let ret = s.do_handshake();
