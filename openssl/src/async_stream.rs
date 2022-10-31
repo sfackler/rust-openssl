@@ -167,7 +167,7 @@ where
             // 该问题我们后续会视情况进行修复
             let mut zero_buf = [0; 0];
             if let Err(err) = s.get_mut().read(&mut zero_buf) {
-                eprintln!("Babassl hacking workaround return {:?}, you can totally ignore it. this message use for debugging purpose", err);
+                // eprintln!("Babassl hacking workaround return {:?}, you can totally ignore it. this message use for debugging purpose", err);
             }
             let ret = s.do_handshake();
             cvt_ossl(ret)
