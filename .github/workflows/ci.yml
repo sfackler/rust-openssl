@@ -183,7 +183,7 @@ jobs:
               bindgen: true
               library:
                 name: libressl
-                version: 3.6.0
+                version: 3.6.1
             - target: x86_64-unknown-linux-gnu
               bindgen: false
               library:
@@ -198,7 +198,7 @@ jobs:
               bindgen: false
               library:
                 name: libressl
-                version: 3.6.0
+                version: 3.6.1
           exclude:
             - library:
                 name: boringssl
