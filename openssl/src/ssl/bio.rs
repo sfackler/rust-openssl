@@ -9,8 +9,6 @@ use libc::{c_char, c_int, c_long, c_void, strlen};
 use std::any::Any;
 use std::io;
 use std::io::prelude::*;
-#[cfg(feature = "tongsuo")]
-use std::os::unix::prelude::AsRawFd;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr;
 use std::slice;
@@ -24,10 +22,10 @@ pub struct StreamState<S> {
 }
 
 /// Safe wrapper for `BIO_METHOD`
-pub struct BioMethod(BIO_METHOD);
+pub struct BioMethod(pub(super) BIO_METHOD);
 
 impl BioMethod {
-    fn new<S: Read + Write>() -> Result<BioMethod, ErrorStack> {
+    pub(super) fn new<S: Read + Write>() -> Result<BioMethod, ErrorStack> {
         BIO_METHOD::new::<S>().map(BioMethod)
     }
 }
@@ -44,29 +42,6 @@ pub fn new<S: Read + Write>(stream: S) -> Result<(*mut BIO, BioMethod), ErrorSta
         panic: None,
         dtls_mtu_size: 0,
         fd: None,
-    });
-
-    unsafe {
-        let bio = cvt_p(BIO_new(method.0.get()))?;
-        BIO_set_data(bio, Box::into_raw(state) as *mut _);
-        BIO_set_init(bio, 1);
-
-        Ok((bio, method))
-    }
-}
-
-#[cfg(feature = "tongsuo")]
-pub fn new_tongsuo<S: Read + Write + AsRawFd>(
-    stream: S,
-) -> Result<(*mut BIO, BioMethod), ErrorStack> {
-    let method = BioMethod::new::<S>()?;
-    let fd = stream.as_raw_fd();
-    let state = Box::new(StreamState {
-        stream,
-        error: None,
-        panic: None,
-        dtls_mtu_size: 0,
-        fd: Some(fd),
     });
 
     unsafe {
@@ -230,7 +205,7 @@ cfg_if! {
         unsafe fn BIO_set_num(_bio: *mut ffi::BIO, _num: c_int) {}
 
         #[allow(bad_style, clippy::upper_case_acronyms)]
-        struct BIO_METHOD(*mut ffi::BIO_METHOD);
+        pub(super) struct BIO_METHOD(*mut ffi::BIO_METHOD);
 
         impl BIO_METHOD {
             fn new<S: Read + Write>() -> Result<BIO_METHOD, ErrorStack> {
@@ -247,7 +222,7 @@ cfg_if! {
                 }
             }
 
-            fn get(&self) -> *mut ffi::BIO_METHOD {
+            pub(super) fn get(&self) -> *mut ffi::BIO_METHOD {
                 self.0
             }
         }
@@ -261,7 +236,7 @@ cfg_if! {
         }
     } else {
         #[allow(bad_style, clippy::upper_case_acronyms)]
-        struct BIO_METHOD(*mut ffi::BIO_METHOD);
+        pub(super) struct BIO_METHOD(*mut ffi::BIO_METHOD);
 
         impl BIO_METHOD {
             fn new<S: Read + Write>() -> Result<BIO_METHOD, ErrorStack> {
@@ -281,7 +256,7 @@ cfg_if! {
                 Ok(BIO_METHOD(Box::into_raw(ptr)))
             }
 
-            fn get(&self) -> *mut ffi::BIO_METHOD {
+            fn(super) get(&self) -> *mut ffi::BIO_METHOD {
                 self.0
             }
         }
