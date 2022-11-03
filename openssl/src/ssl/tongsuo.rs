@@ -2,7 +2,7 @@ use std::{mem::ManuallyDrop, marker::PhantomData, path::Path, os::unix::prelude:
 
 use crate::{error::ErrorStack, cvt_p};
 
-use super::{ClientHelloResponse, SslRef, bio::{self, BioMethod, StreamState}, Ssl, SslStream, SslFiletype, SslContextBuilder};
+use super::{ClientHelloResponse, SslRef, bio::{BioMethod, StreamState}, Ssl, SslStream, SslFiletype, SslContextBuilder};
 use ffi::{BIO, BIO_new, BIO_set_data, BIO_set_init};
 use foreign_types::{ForeignType, ForeignTypeRef};
 use openssl_macros::corresponds;
@@ -106,7 +106,6 @@ impl SslRef {
         enc_private_key_file: P,
         enc_cert_file: P,
     ) -> Result<(), ErrorStack> {
-        use std::ffi::CString;
 
         let sign_key =
             CString::new(sign_private_key_file.as_ref().as_os_str().to_str().unwrap()).unwrap();
