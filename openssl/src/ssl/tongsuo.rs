@@ -4,7 +4,7 @@ use crate::{error::ErrorStack, cvt_p};
 
 use super::{ClientHelloResponse, SslRef, bio::{self, BioMethod, StreamState}, Ssl, SslStream, SslFiletype, SslContextBuilder};
 use ffi::{BIO, BIO_new, BIO_set_data, BIO_set_init};
-use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
+use foreign_types::{ForeignType, ForeignTypeRef};
 use openssl_macros::corresponds;
 #[cfg(ossl111)]
 impl ClientHelloResponse {
@@ -26,7 +26,6 @@ impl<S: Read + Write + AsRawFd> SslStream<S> {
     }
 }
 impl SslRef {
-    #[cfg(feature = "tongsuo")]
     /// 只能在client hello callback中调用
     pub fn get_client_cipher_list_name(&mut self) -> Vec<String> {
         use std::{ptr, slice, ffi::CStr};
@@ -46,7 +45,6 @@ impl SslRef {
             lists
         }
     }
-    #[cfg(feature = "tongsuo")]
     #[corresponds(SSL_use_Private_Key_file)]
     pub fn set_private_key_file<P: AsRef<Path>>(&mut self, path: P, ssl_file_type: SslFiletype) {
 
@@ -55,7 +53,6 @@ impl SslRef {
             ffi::SSL_use_PrivateKey_file(self.as_ptr(), key_file.as_ptr(), ssl_file_type.as_raw())
         };
     }
-    #[cfg(feature = "tongsuo")]
     #[corresponds(SSL_use_PrivateKey)]
     pub fn use_private_key_pem(&mut self, key: &[u8]) {
         use crate::pkey;
@@ -64,7 +61,6 @@ impl SslRef {
             ffi::SSL_use_PrivateKey(self.as_ptr(), pkey.as_ptr());
         };
     }
-    #[cfg(feature = "tongsuo")]
     #[corresponds(SSL_use_certificate)]
     pub fn use_certificate_pem(&mut self, cert: &[u8]) {
         use crate::x509;
@@ -74,7 +70,6 @@ impl SslRef {
         };
     }
 
-    #[cfg(feature = "tongsuo")]
     #[corresponds(SSL_use_certificate_chain_file)]
     pub fn set_certificate_chain_file<P: AsRef<Path>>(&mut self, path: P) {
         let cert_file = CString::new(path.as_ref().as_os_str().to_str().unwrap()).unwrap();
@@ -82,7 +77,6 @@ impl SslRef {
             ffi::SSL_use_certificate_chain_file(self.as_ptr(), cert_file.as_ptr());
         };
     }
-    #[cfg(feature = "tongsuo")]
     pub fn use_ntls_key_content_and_cert_content_pem(
         &mut self,
         sign_private_key_content: &[u8],
@@ -105,7 +99,6 @@ impl SslRef {
         };
         Ok(())
     }
-    #[cfg(feature = "tongsuo")]
     pub fn use_ntls_key_and_cert<P: AsRef<Path>>(
         &mut self,
         sign_private_key_file: P,
