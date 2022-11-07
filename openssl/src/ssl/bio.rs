@@ -146,7 +146,7 @@ unsafe extern "C" fn ctrl<S: Write>(
     bio: *mut BIO,
     cmd: c_int,
     _num: c_long,
-    ptr: *mut c_void,
+    #[allow(unused_variables)] ptr: *mut c_void,
 ) -> c_long {
     let state = state::<S>(bio);
     #[cfg(feature = "tongsuo")]
