@@ -113,11 +113,19 @@ pub struct SslStream<S>(ssl::SslStream<StreamWrapper<S>>);
 #[cfg(feature = "tongsuo")]
 impl<S> SslStream<S>
 where
-    S: AsyncRead + AsyncWrite + AsRawFd,
+    S: AsyncRead + AsyncWrite + AsRawFd + Unpin + Send,
 {
     /// get SslStream from raw fd
     pub fn from_fd_stream(ssl: Ssl, stream: S) -> Result<Self, ErrorStack> {
         ssl::SslStream::new_tongsuo_stream(ssl, StreamWrapper { stream, context: 0 }).map(SslStream)
+    }
+}
+#[cfg(feature = "tongsuo")]
+impl<S> AsRawFd for SslStream<S>
+where S: AsRawFd,
+{
+    fn as_raw_fd(&self) -> std::os::unix::prelude::RawFd {
+        self.0.get_ref().as_raw_fd()
     }
 }
 impl<S> SslStream<S>
