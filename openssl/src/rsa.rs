@@ -34,7 +34,7 @@ use crate::bn::{BigNum, BigNumRef};
 use crate::error::ErrorStack;
 use crate::pkey::{HasPrivate, HasPublic, Private, Public};
 use crate::util::ForeignTypeRefExt;
-use crate::{cvt, cvt_n, cvt_p};
+use crate::{cvt, cvt_n, cvt_p, LenType};
 use openssl_macros::corresponds;
 
 /// Type of encryption padding to use.
@@ -134,7 +134,7 @@ where
 
         unsafe {
             let len = cvt_n(ffi::RSA_private_decrypt(
-                from.len() as c_int,
+                from.len() as LenType,
                 from.as_ptr(),
                 to.as_mut_ptr(),
                 self.as_ptr(),
@@ -162,7 +162,7 @@ where
 
         unsafe {
             let len = cvt_n(ffi::RSA_private_encrypt(
-                from.len() as c_int,
+                from.len() as LenType,
                 from.as_ptr(),
                 to.as_mut_ptr(),
                 self.as_ptr(),
@@ -305,7 +305,7 @@ where
 
         unsafe {
             let len = cvt_n(ffi::RSA_public_decrypt(
-                from.len() as c_int,
+                from.len() as LenType,
                 from.as_ptr(),
                 to.as_mut_ptr(),
                 self.as_ptr(),
@@ -332,7 +332,7 @@ where
 
         unsafe {
             let len = cvt_n(ffi::RSA_public_encrypt(
-                from.len() as c_int,
+                from.len() as LenType,
                 from.as_ptr(),
                 to.as_mut_ptr(),
                 self.as_ptr(),
@@ -490,8 +490,18 @@ impl RsaPrivateKeyBuilder {
 impl Rsa<Private> {
     /// Creates a new RSA key with private components (public components are assumed).
     ///
-    /// This a convenience method over
-    /// `Rsa::build(n, e, d)?.set_factors(p, q)?.set_crt_params(dmp1, dmq1, iqmp)?.build()`
+    /// This a convenience method over:
+    /// ```
+    /// # use openssl::rsa::RsaPrivateKeyBuilder;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let bn = || openssl::bn::BigNum::new().unwrap();
+    /// # let (n, e, d, p, q, dmp1, dmq1, iqmp) = (bn(), bn(), bn(), bn(), bn(), bn(), bn(), bn());
+    /// RsaPrivateKeyBuilder::new(n, e, d)?
+    ///     .set_factors(p, q)?
+    ///     .set_crt_params(dmp1, dmq1, iqmp)?
+    ///     .build();
+    /// # Ok(()) }
+    /// ```
     #[allow(clippy::too_many_arguments, clippy::many_single_char_names)]
     pub fn from_private_components(
         n: BigNum,

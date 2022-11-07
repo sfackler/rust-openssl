@@ -34,6 +34,8 @@ fn main() {
         .ok()
         .map(|v| u64::from_str_radix(&v, 16).unwrap());
 
+    cfg.cfg("openssl", None);
+
     for c in cfgs::get(openssl_version, libressl_version) {
         cfg.cfg(c, None);
     }

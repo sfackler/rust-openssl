@@ -78,7 +78,9 @@ pub struct Id(c_int);
 
 impl Id {
     pub const RSA: Id = Id(ffi::EVP_PKEY_RSA);
+    #[cfg(not(boringssl))]
     pub const HMAC: Id = Id(ffi::EVP_PKEY_HMAC);
+    #[cfg(not(boringssl))]
     pub const CMAC: Id = Id(ffi::EVP_PKEY_CMAC);
     pub const DSA: Id = Id(ffi::EVP_PKEY_DSA);
     pub const DH: Id = Id(ffi::EVP_PKEY_DH);
@@ -347,6 +349,7 @@ impl<T> fmt::Debug for PKey<T> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let alg = match self.id() {
             Id::RSA => "RSA",
+            #[cfg(not(boringssl))]
             Id::HMAC => "HMAC",
             Id::DSA => "DSA",
             Id::DH => "DH",
@@ -441,6 +444,7 @@ impl PKey<Private> {
     ///
     /// To compute HMAC values, use the `sign` module.
     #[corresponds(EVP_PKEY_new_mac_key)]
+    #[cfg(not(boringssl))]
     pub fn hmac(key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize);
@@ -461,7 +465,7 @@ impl PKey<Private> {
     /// # Note
     ///
     /// To compute CMAC values, use the `sign` module.
-    #[cfg(ossl110)]
+    #[cfg(all(not(boringssl), ossl110))]
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn cmac(cipher: &Cipher, key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
         let mut ctx = PkeyCtx::new_id(Id::CMAC)?;
@@ -681,7 +685,7 @@ impl PKey<Public> {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl270))] {
+    if #[cfg(any(boringssl, ossl110, libressl270))] {
         use ffi::EVP_PKEY_up_ref;
     } else {
         #[allow(bad_style)]
@@ -765,6 +769,7 @@ impl<T> TryFrom<PKey<T>> for Dh<T> {
 mod tests {
     use std::convert::TryInto;
 
+    #[cfg(not(boringssl))]
     use crate::dh::Dh;
     use crate::dsa::Dsa;
     use crate::ec::EcKey;
@@ -881,6 +886,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_dh_accessor() {
         let dh = include_bytes!("../test/dhparams.pem");
         let dh = Dh::params_from_pem(dh).unwrap();
@@ -929,6 +935,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_dh_conversion() {
         let dh_params = include_bytes!("../test/dhparams.pem");
         let dh_params = Dh::params_from_pem(dh_params).unwrap();

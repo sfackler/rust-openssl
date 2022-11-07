@@ -8,6 +8,7 @@
 //! ```rust
 //! use openssl::x509::store::{X509StoreBuilder, X509Store};
 //! use openssl::x509::{X509, X509Name};
+//! use openssl::asn1::Asn1Time;
 //! use openssl::pkey::PKey;
 //! use openssl::hash::MessageDigest;
 //! use openssl::rsa::Rsa;
@@ -20,11 +21,16 @@
 //! name.append_entry_by_nid(Nid::COMMONNAME, "foobar.com").unwrap();
 //! let name = name.build();
 //!
+//! // Sep 27th, 2016
+//! let sample_time = Asn1Time::from_unix(1474934400).unwrap();
+//!
 //! let mut builder = X509::builder().unwrap();
 //! builder.set_version(2).unwrap();
 //! builder.set_subject_name(&name).unwrap();
 //! builder.set_issuer_name(&name).unwrap();
 //! builder.set_pubkey(&pkey).unwrap();
+//! builder.set_not_before(&sample_time);
+//! builder.set_not_after(&sample_time);
 //! builder.sign(&pkey, MessageDigest::sha256()).unwrap();
 //!
 //! let certificate: X509 = builder.build();
@@ -40,6 +46,7 @@ use foreign_types::ForeignTypeRef;
 use std::mem;
 
 use crate::error::ErrorStack;
+#[cfg(not(boringssl))]
 use crate::ssl::SslFiletype;
 use crate::stack::StackRef;
 #[cfg(any(ossl102, libressl261))]
@@ -48,6 +55,7 @@ use crate::x509::{X509Object, X509};
 use crate::{cvt, cvt_p};
 use libc::c_int;
 use openssl_macros::corresponds;
+#[cfg(not(boringssl))]
 use std::ffi::CString;
 
 foreign_type_and_impl_send_sync! {
@@ -161,6 +169,7 @@ impl X509Lookup<HashDir> {
     }
 }
 
+#[cfg(not(boringssl))]
 impl X509LookupRef<HashDir> {
     /// Specifies a directory from which certificates and CRLs will be loaded
     /// on-demand. Must be used with `X509Lookup::hash_dir`.
@@ -207,7 +216,7 @@ impl X509StoreRef {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl270))] {
+    if #[cfg(any(boringssl, ossl110, libressl270))] {
         use ffi::X509_STORE_get0_objects;
     } else {
         #[allow(bad_style)]

@@ -80,6 +80,7 @@ impl MemBio {
         }
     }
 
+    #[cfg(not(boringssl))]
     pub unsafe fn from_ptr(bio: *mut ffi::BIO) -> MemBio {
         MemBio(bio)
     }

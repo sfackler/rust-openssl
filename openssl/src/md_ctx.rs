@@ -50,34 +50,40 @@
 //! assert!(valid);
 //! ```
 //!
-//! Compute and verify an HMAC-SHA256
-//!
-//! ```
-//! use openssl::md::Md;
-//! use openssl::md_ctx::MdCtx;
-//! use openssl::memcmp;
-//! use openssl::pkey::PKey;
-//!
-//! // Create a key with the HMAC secret.
-//! let key = PKey::hmac(b"my secret").unwrap();
-//!
-//! let text = b"Some Crypto Text";
-//!
-//! // Compute the HMAC.
-//! let mut ctx = MdCtx::new().unwrap();
-//! ctx.digest_sign_init(Some(Md::sha256()), &key).unwrap();
-//! ctx.digest_sign_update(text).unwrap();
-//! let mut hmac = vec![];
-//! ctx.digest_sign_final_to_vec(&mut hmac).unwrap();
-//!
-//! // Verify the HMAC. You can't use MdCtx to do this; instead use a constant time equality check.
-//! # let target = hmac.clone();
-//! let valid = memcmp::eq(&hmac, &target);
-//! assert!(valid);
-//! ```
+
+#![cfg_attr(
+    not(boringssl),
+    doc = r#"\
+Compute and verify an HMAC-SHA256
+
+```
+use openssl::md::Md;
+use openssl::md_ctx::MdCtx;
+use openssl::memcmp;
+use openssl::pkey::PKey;
+
+// Create a key with the HMAC secret.
+let key = PKey::hmac(b"my secret").unwrap();
+
+let text = b"Some Crypto Text";
+
+// Compute the HMAC.
+let mut ctx = MdCtx::new().unwrap();
+ctx.digest_sign_init(Some(Md::sha256()), &key).unwrap();
+ctx.digest_sign_update(text).unwrap();
+let mut hmac = vec![];
+ctx.digest_sign_final_to_vec(&mut hmac).unwrap();
+
+// Verify the HMAC. You can't use MdCtx to do this; instead use a constant time equality check.
+# let target = hmac.clone();
+let valid = memcmp::eq(&hmac, &target);
+assert!(valid);
+```"#
+)]
+
 use crate::error::ErrorStack;
 use crate::md::MdRef;
-use crate::pkey::{HasPrivate, PKeyRef};
+use crate::pkey::{HasPrivate, HasPublic, PKeyRef};
 use crate::pkey_ctx::PkeyCtxRef;
 use crate::{cvt, cvt_n, cvt_p};
 use cfg_if::cfg_if;
@@ -170,7 +176,7 @@ impl MdCtxRef {
         pkey: &PKeyRef<T>,
     ) -> Result<&'a mut PkeyCtxRef<T>, ErrorStack>
     where
-        T: HasPrivate,
+        T: HasPublic,
     {
         unsafe {
             let mut p = ptr::null_mut();
@@ -373,6 +379,24 @@ impl MdCtxRef {
             Ok(r == 1)
         }
     }
+
+    /// Returns the size of the message digest, i.e. the size of the hash
+    #[corresponds(EVP_MD_CTX_size)]
+    #[inline]
+    pub fn size(&self) -> usize {
+        unsafe { ffi::EVP_MD_CTX_size(self.as_ptr()) as usize }
+    }
+
+    /// Resets the underlying EVP_MD_CTX instance
+    #[corresponds(EVP_MD_CTX_reset)]
+    #[cfg(ossl111)]
+    #[inline]
+    pub fn reset(&mut self) -> Result<(), ErrorStack> {
+        unsafe {
+            let _ = cvt(ffi::EVP_MD_CTX_reset(self.as_ptr()))?;
+            Ok(())
+        }
+    }
 }
 
 #[cfg(test)]
@@ -402,5 +426,115 @@ mod test {
         ctx.digest_verify_update(bad_data).unwrap();
         let valid = ctx.digest_verify_final(&signature).unwrap();
         assert!(!valid);
+    }
+
+    #[test]
+    fn verify_success() {
+        let key1 = Rsa::generate(2048).unwrap();
+        let key1 = PKey::from_rsa(key1).unwrap();
+
+        let md = Md::sha256();
+        let data = b"Some Crypto Text";
+
+        let mut ctx = MdCtx::new().unwrap();
+        ctx.digest_sign_init(Some(md), &key1).unwrap();
+        ctx.digest_sign_update(data).unwrap();
+        let mut signature = vec![];
+        ctx.digest_sign_final_to_vec(&mut signature).unwrap();
+
+        let good_data = b"Some Crypto Text";
+
+        ctx.digest_verify_init(Some(md), &key1).unwrap();
+        ctx.digest_verify_update(good_data).unwrap();
+        let valid = ctx.digest_verify_final(&signature).unwrap();
+        assert!(valid);
+    }
+
+    #[test]
+    fn verify_with_public_success() {
+        let rsa = Rsa::generate(2048).unwrap();
+        let key1 = PKey::from_rsa(rsa.clone()).unwrap();
+
+        let md = Md::sha256();
+        let data = b"Some Crypto Text";
+
+        let mut ctx = MdCtx::new().unwrap();
+        ctx.digest_sign_init(Some(md), &key1).unwrap();
+        ctx.digest_sign_update(data).unwrap();
+        let mut signature = vec![];
+        ctx.digest_sign_final_to_vec(&mut signature).unwrap();
+
+        let good_data = b"Some Crypto Text";
+
+        // try to verify using only public components of the key
+        let n = rsa.n().to_owned().unwrap();
+        let e = rsa.e().to_owned().unwrap();
+
+        let rsa = Rsa::from_public_components(n, e).unwrap();
+        let key1 = PKey::from_rsa(rsa).unwrap();
+
+        ctx.digest_verify_init(Some(md), &key1).unwrap();
+        ctx.digest_verify_update(good_data).unwrap();
+        let valid = ctx.digest_verify_final(&signature).unwrap();
+        assert!(valid);
+    }
+
+    #[test]
+    fn verify_md_ctx_size() {
+        let mut ctx = MdCtx::new().unwrap();
+        ctx.digest_init(Md::sha224()).unwrap();
+        assert_eq!(Md::sha224().size(), ctx.size());
+        assert_eq!(Md::sha224().size(), 28);
+
+        let mut ctx = MdCtx::new().unwrap();
+        ctx.digest_init(Md::sha256()).unwrap();
+        assert_eq!(Md::sha256().size(), ctx.size());
+        assert_eq!(Md::sha256().size(), 32);
+
+        let mut ctx = MdCtx::new().unwrap();
+        ctx.digest_init(Md::sha384()).unwrap();
+        assert_eq!(Md::sha384().size(), ctx.size());
+        assert_eq!(Md::sha384().size(), 48);
+
+        let mut ctx = MdCtx::new().unwrap();
+        ctx.digest_init(Md::sha512()).unwrap();
+        assert_eq!(Md::sha512().size(), ctx.size());
+        assert_eq!(Md::sha512().size(), 64);
+    }
+
+    #[test]
+    #[cfg(ossl111)]
+    fn verify_md_ctx_reset() {
+        let hello_expected =
+            hex::decode("185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969")
+                .unwrap();
+        let world_expected =
+            hex::decode("78ae647dc5544d227130a0682a51e30bc7777fbb6d8a8f17007463a3ecd1d524")
+                .unwrap();
+        // Calculate SHA-256 digest of "Hello"
+        let mut ctx = MdCtx::new().unwrap();
+        ctx.digest_init(Md::sha256()).unwrap();
+        ctx.digest_update(b"Hello").unwrap();
+        let mut result = vec![0; 32];
+        let result_len = ctx.digest_final(result.as_mut_slice()).unwrap();
+        assert_eq!(result_len, result.len());
+        // Validate result of "Hello"
+        assert_eq!(result, hello_expected);
+
+        // Create new context
+        let mut ctx = MdCtx::new().unwrap();
+        // Initialize and update to "Hello"
+        ctx.digest_init(Md::sha256()).unwrap();
+        ctx.digest_update(b"Hello").unwrap();
+        // Now reset, init to SHA-256 and use "World"
+        ctx.reset().unwrap();
+        ctx.digest_init(Md::sha256()).unwrap();
+        ctx.digest_update(b"World").unwrap();
+
+        let mut reset_result = vec![0; 32];
+        let result_len = ctx.digest_final(reset_result.as_mut_slice()).unwrap();
+        assert_eq!(result_len, reset_result.len());
+        // Validate result of digest of "World"
+        assert_eq!(reset_result, world_expected);
     }
 }

@@ -65,6 +65,7 @@ impl MessageDigest {
         }
     }
 
+    #[cfg(not(boringssl))]
     pub fn null() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_md_null()) }
     }
@@ -123,7 +124,7 @@ impl MessageDigest {
         unsafe { MessageDigest(ffi::EVP_shake256()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_RMD160"))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_RMD160")))]
     pub fn ripemd160() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_ripemd160()) }
     }
@@ -285,7 +286,10 @@ impl Hasher {
             self.init()?;
         }
         unsafe {
+            #[cfg(not(boringssl))]
             let mut len = ffi::EVP_MAX_MD_SIZE;
+            #[cfg(boringssl)]
+            let mut len = ffi::EVP_MAX_MD_SIZE as u32;
             let mut buf = [0; ffi::EVP_MAX_MD_SIZE as usize];
             cvt(ffi::EVP_DigestFinal_ex(
                 self.ctx,
@@ -706,6 +710,8 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
+    #[cfg_attr(ossl300, ignore)]
     fn test_ripemd160() {
         #[cfg(ossl300)]
         let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();

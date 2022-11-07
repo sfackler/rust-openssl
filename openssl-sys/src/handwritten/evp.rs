@@ -8,6 +8,8 @@ cfg_if! {
             pub fn EVP_MD_get_size(md: *const EVP_MD) -> c_int;
             pub fn EVP_MD_get_type(md: *const EVP_MD) -> c_int;
 
+            pub fn EVP_MD_CTX_get0_md(ctx: *const EVP_MD_CTX) -> *const EVP_MD;
+
             pub fn EVP_CIPHER_get_key_length(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_get_block_size(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_get_iv_length(cipher: *const EVP_CIPHER) -> c_int;
@@ -30,6 +32,8 @@ cfg_if! {
             pub fn EVP_MD_block_size(md: *const EVP_MD) -> c_int;
             pub fn EVP_MD_size(md: *const EVP_MD) -> c_int;
             pub fn EVP_MD_type(md: *const EVP_MD) -> c_int;
+
+            pub fn EVP_MD_CTX_md(ctx: *const EVP_MD_CTX) -> *const EVP_MD;
 
             pub fn EVP_CIPHER_key_length(cipher: *const EVP_CIPHER) -> c_int;
             pub fn EVP_CIPHER_block_size(cipher: *const EVP_CIPHER) -> c_int;
@@ -257,6 +261,8 @@ extern "C" {
     pub fn EVP_CIPHER_CTX_new() -> *mut EVP_CIPHER_CTX;
     pub fn EVP_CIPHER_CTX_free(ctx: *mut EVP_CIPHER_CTX);
     pub fn EVP_MD_CTX_copy_ex(dst: *mut EVP_MD_CTX, src: *const EVP_MD_CTX) -> c_int;
+    #[cfg(ossl111)]
+    pub fn EVP_MD_CTX_reset(ctx: *mut EVP_MD_CTX) -> c_int;
     pub fn EVP_CIPHER_CTX_set_key_length(ctx: *mut EVP_CIPHER_CTX, keylen: c_int) -> c_int;
     pub fn EVP_CIPHER_CTX_set_padding(ctx: *mut EVP_CIPHER_CTX, padding: c_int) -> c_int;
     pub fn EVP_CIPHER_CTX_ctrl(

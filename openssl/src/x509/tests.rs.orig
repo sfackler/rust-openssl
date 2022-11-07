@@ -1,7 +1,10 @@
+<<<<<<< HEAD
 #[cfg(ossl110)]
 use crate::asn1::Asn1Object;
+=======
 use std::cmp::Ordering;
 
+>>>>>>> master
 use crate::asn1::Asn1Time;
 use crate::bn::{BigNum, MsbOption};
 use crate::hash::MessageDigest;
@@ -571,40 +574,7 @@ fn test_convert_to_text() {
     }
 }
 
-#[test]
-fn test_convert_req_to_text() {
-    let csr = include_bytes!("../../test/csr.pem");
-    let csr = X509Req::from_pem(csr).unwrap();
-
-    const SUBSTRINGS: &[&str] = &[
-        "Certificate Request:\n",
-        "Version:",
-        "Subject: C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=foobar.com\n",
-        "Subject Public Key Info:",
-        "Signature Algorithm:",
-    ];
-
-    let text = String::from_utf8(csr.to_text().unwrap()).unwrap();
-
-    for substring in SUBSTRINGS {
-        assert!(
-            text.contains(substring),
-            "{:?} not found inside {}",
-            substring,
-            text
-        );
-    }
-}
-
-#[test]
-fn test_name_cmp() {
-    let cert = include_bytes!("../../test/cert.pem");
-    let cert = X509::from_pem(cert).unwrap();
-
-    let subject = cert.subject_name();
-    let issuer = cert.issuer_name();
-    assert_eq!(Ordering::Equal, subject.try_cmp(subject).unwrap());
-    assert_eq!(Ordering::Greater, subject.try_cmp(issuer).unwrap());
+<<<<<<< HEAD
 #[cfg(ossl110)]
 fn prepare_cert_builder() -> (X509Builder, PKey<Private>) {
     let rsa = Rsa::generate(2048).unwrap();
@@ -760,4 +730,40 @@ fn test_extended_key_usage_flags() {
     let eku_flags = cert.extended_key_usage_flags();
     assert!(eku_flags & ffi::XKU_SSL_SERVER == 0);
     assert!(eku_flags & ffi::XKU_SSL_CLIENT == ffi::XKU_SSL_CLIENT);
+=======
+#[test]
+fn test_convert_req_to_text() {
+    let csr = include_bytes!("../../test/csr.pem");
+    let csr = X509Req::from_pem(csr).unwrap();
+
+    const SUBSTRINGS: &[&str] = &[
+        "Certificate Request:\n",
+        "Version:",
+        "Subject: C=AU, ST=Some-State, O=Internet Widgits Pty Ltd, CN=foobar.com\n",
+        "Subject Public Key Info:",
+        "Signature Algorithm:",
+    ];
+
+    let text = String::from_utf8(csr.to_text().unwrap()).unwrap();
+
+    for substring in SUBSTRINGS {
+        assert!(
+            text.contains(substring),
+            "{:?} not found inside {}",
+            substring,
+            text
+        );
+    }
+}
+
+#[test]
+fn test_name_cmp() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    let subject = cert.subject_name();
+    let issuer = cert.issuer_name();
+    assert_eq!(Ordering::Equal, subject.try_cmp(subject).unwrap());
+    assert_eq!(Ordering::Greater, subject.try_cmp(issuer).unwrap());
+>>>>>>> master
 }

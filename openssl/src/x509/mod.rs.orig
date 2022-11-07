@@ -9,8 +9,13 @@
 
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
+<<<<<<< HEAD
+use libc::{c_char, c_int, c_long, c_uchar, c_void};
+use std::cmp;
+=======
+use libc::{c_int, c_long, c_uint};
 use std::cmp::{self, Ordering};
+>>>>>>> master
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;

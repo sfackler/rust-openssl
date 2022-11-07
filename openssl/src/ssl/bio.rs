@@ -183,7 +183,7 @@ unsafe extern "C" fn destroy<S>(bio: *mut BIO) -> c_int {
 
     let data = BIO_get_data(bio);
     assert!(!data.is_null());
-    Box::<StreamState<S>>::from_raw(data as *mut _);
+    let _ = Box::<StreamState<S>>::from_raw(data as *mut _);
     BIO_set_data(bio, ptr::null_mut());
     BIO_set_init(bio, 0);
     1
@@ -257,7 +257,7 @@ cfg_if! {
         impl Drop for BIO_METHOD {
             fn drop(&mut self) {
                 unsafe {
-                    Box::<ffi::BIO_METHOD>::from_raw(self.0);
+                    let _ = Box::<ffi::BIO_METHOD>::from_raw(self.0);
                 }
             }
         }
