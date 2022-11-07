@@ -29,6 +29,7 @@ pub use self::tls1::*;
 pub use self::types::*;
 pub use self::x509::*;
 pub use self::x509_attr::*;
+pub use self::x509_vfy::*;
 pub use self::x509v3::*;
 
 mod aes;

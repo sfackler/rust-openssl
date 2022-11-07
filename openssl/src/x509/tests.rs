@@ -605,6 +605,8 @@ fn test_name_cmp() {
     let issuer = cert.issuer_name();
     assert_eq!(Ordering::Equal, subject.try_cmp(subject).unwrap());
     assert_eq!(Ordering::Greater, subject.try_cmp(issuer).unwrap());
+}
+
 #[cfg(ossl110)]
 fn prepare_cert_builder() -> (X509Builder, PKey<Private>) {
     let rsa = Rsa::generate(2048).unwrap();
