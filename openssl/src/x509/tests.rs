@@ -625,6 +625,7 @@ fn prepare_cert_builder() -> (X509Builder, PKey<Private>) {
 
 #[test]
 #[cfg(ossl110)]
+#[cfg(not(boringssl))]
 fn test_key_usage() {
     // Create an X.509 certificate with an extended key usage extension.
     let (mut builder, pkey) = prepare_cert_builder();

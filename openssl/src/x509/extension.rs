@@ -219,6 +219,7 @@ impl KeyUsage {
     }
 }
 
+#[cfg(not(boringssl))]
 impl From<u32> for KeyUsage {
     fn from(flags: u32) -> Self {
         let mut ku = KeyUsage::new();

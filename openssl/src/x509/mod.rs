@@ -1040,6 +1040,7 @@ impl X509Extension {
             cvt_p(ffi::X509_EXTENSION_create_by_OBJ(
                 ex,
                 oid.as_ptr(),
+                #[allow(clippy:bool_to_int_with_if)]
                 if critical { 1 } else { 0 },
                 octet_string.as_ptr() as *mut ffi::ASN1_OCTET_STRING,
             ))
@@ -1061,6 +1062,7 @@ impl X509Extension {
             cvt_p(ffi::X509_EXTENSION_create_by_NID(
                 ex,
                 nid.as_raw(),
+                #[allow(clippy:bool_to_int_with_if)]
                 if critical { 1 } else { 0 },
                 octet_string.as_ptr() as *mut ffi::ASN1_OCTET_STRING,
             ))

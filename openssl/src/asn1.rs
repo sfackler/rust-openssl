@@ -1005,6 +1005,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn asn1_type_type() {
         let null = null_mut();
         unsafe {
@@ -1026,6 +1027,7 @@ mod tests {
 
     // Check (deprecated) `pub const Asn1Type::...` et al.
     #[test]
+    #[cfg(not(boringssl))]
     #[allow(deprecated)]
     fn asn1_type_type_compatibility() {
         let null = null_mut();
@@ -1047,6 +1049,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn asn1_string_from_asn1_type() {
         let null = null_mut();
         unsafe {
@@ -1072,6 +1075,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn asn1_octet_string_from_asn1_type() {
         let null = null_mut();
         unsafe {
