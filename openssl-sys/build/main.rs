@@ -364,11 +364,16 @@ fn parse_new_version(version: &str) -> u64 {
 /// statically or dynamically.
 fn determine_mode(libdirs: &[PathBuf], libs: &[&str]) -> &'static str {
     // First see if a mode was explicitly requested
-    let kind = env("OPENSSL_STATIC");
-    match kind.as_ref().and_then(|s| s.to_str()) {
+    let _static = env("OPENSSL_STATIC");
+    match _static.as_ref().and_then(|s| s.to_str()) {
         Some("0") => return "dylib",
         Some(_) => return "static",
         None => {}
+    }
+    let _static_nobundle = env("OPENSSL_STATIC_NOBUNDLE");
+    match _static_nobundle.as_ref().and_then(|s| s.to_str()) {
+        Some("0") | None => {}
+        Some(_) => return "static-nobundle",
     }
 
     // Next, see what files we actually have to link against, and see what our
