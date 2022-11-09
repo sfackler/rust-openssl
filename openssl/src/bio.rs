@@ -38,8 +38,10 @@ impl<'a> MemBioSlice<'a> {
 }
 
 // A reference to an OpenSSL memory BIO (binary IO).
+#[cfg(not(boringssl))]
 pub struct MemBioRef(*mut ffi::BIO);
 
+#[cfg(not(boringssl))]
 impl MemBioRef {
     pub fn as_ptr(&self) -> *mut ffi::BIO {
         self.0

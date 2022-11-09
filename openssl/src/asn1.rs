@@ -890,6 +890,7 @@ cfg_if! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(not(boringssl))]
     use std::ptr::null_mut;
 
     use crate::bn::BigNum;
