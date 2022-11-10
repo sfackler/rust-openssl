@@ -26,6 +26,7 @@ cfg_if! {
             pub fn EVP_CIPHER_CTX_get_key_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
             pub fn EVP_CIPHER_CTX_get_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
             pub fn EVP_CIPHER_CTX_get_tag_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_get_num(ctx: *const EVP_CIPHER_CTX) -> c_int;
         }
     } else {
         extern "C" {
@@ -44,6 +45,8 @@ cfg_if! {
             pub fn EVP_CIPHER_CTX_block_size(ctx: *const EVP_CIPHER_CTX) -> c_int;
             pub fn EVP_CIPHER_CTX_key_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
             pub fn EVP_CIPHER_CTX_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            #[cfg(ossl110)]
+            pub fn EVP_CIPHER_CTX_num(ctx: *const EVP_CIPHER_CTX) -> c_int;
         }
     }
 }

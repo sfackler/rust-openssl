@@ -363,6 +363,22 @@ impl CipherCtxRef {
         unsafe { ffi::EVP_CIPHER_CTX_iv_length(self.as_ptr()) as usize }
     }
 
+    /// Returns the `num` parameter of the cipher.
+    ///
+    /// Built-in ciphers typically use this to track how much of the
+    /// current underlying block has been "used" already.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the context has not been initialized with a cipher.
+    #[corresponds(EVP_CIPHER_CTX_num)]
+    #[cfg(ossl110)]
+    pub fn num(&self) -> usize {
+        self.assert_cipher();
+
+        unsafe { ffi::EVP_CIPHER_CTX_num(self.as_ptr()) as usize }
+    }
+
     /// Sets the length of the IV expected by this context.
     ///
     /// Only some ciphers support configurable IV lengths.
