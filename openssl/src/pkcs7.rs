@@ -598,16 +598,21 @@ impl Pkcs7Ref {
             let bcont_bio = ptr::null_mut();
             let bio = cvt_p(ffi::PKCS7_dataInit(self.as_ptr(), bcont_bio))
                 .map(|ptr| MemBioRef::from_ptr(ptr))?;
-            let content_length = content.len() as c_int;
-            let len = ffi::BIO_write(
-                bio.as_ptr(),
-                content.as_ptr() as *const c_void,
-                content_length,
-            );
-            if len == content_length {
+            if content.is_empty() {
+                // Empty content is allowed
                 Ok(bio)
             } else {
-                Err(ErrorStack::get())
+                let content_length = content.len() as c_int;
+                let len = ffi::BIO_write(
+                    bio.as_ptr(),
+                    content.as_ptr() as *const c_void,
+                    content_length,
+                );
+                if len == content_length {
+                    Ok(bio)
+                } else {
+                    Err(ErrorStack::get())
+                }
             }
         }
     }
