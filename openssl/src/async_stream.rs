@@ -122,7 +122,8 @@ where
 }
 #[cfg(feature = "tongsuo")]
 impl<S> AsRawFd for SslStream<S>
-where S: AsRawFd,
+where
+    S: AsRawFd,
 {
     fn as_raw_fd(&self) -> std::os::unix::prelude::RawFd {
         self.0.get_ref().as_raw_fd()

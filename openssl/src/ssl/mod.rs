@@ -105,14 +105,14 @@ use std::ptr;
 use std::slice;
 use std::str;
 use std::sync::{Arc, Mutex};
-#[cfg(feature = "tongsuo")]
-mod tongsuo;
 mod bio;
 mod callbacks;
 mod connector;
 mod error;
 #[cfg(test)]
 mod test;
+#[cfg(feature = "tongsuo")]
+mod tongsuo;
 
 /// Returns the OpenSSL name of a cipher corresponding to an RFC-standard cipher name.
 ///
@@ -705,7 +705,7 @@ impl SslContextBuilder {
             Ok(SslContextBuilder::from_ptr(ctx))
         }
     }
-    
+
     /// Creates an `SslContextBuilder` from a pointer to a raw OpenSSL value.
     ///
     /// # Safety
@@ -3193,8 +3193,6 @@ where
             .finish()
     }
 }
-
-
 
 impl<S: Read + Write> SslStream<S> {
     /// Creates a new `SslStream`.

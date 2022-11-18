@@ -256,7 +256,7 @@ cfg_if! {
                 Ok(BIO_METHOD(Box::into_raw(ptr)))
             }
 
-            fn(super) get(&self) -> *mut ffi::BIO_METHOD {
+            fn get(&self) -> *mut ffi::BIO_METHOD {
                 self.0
             }
         }

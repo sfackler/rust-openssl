@@ -1,9 +1,19 @@
-use std::{mem::ManuallyDrop, marker::PhantomData, path::Path, os::unix::prelude::AsRawFd, io::{Write, Read}, ffi::CString};
+use std::{
+    ffi::CString,
+    io::{Read, Write},
+    marker::PhantomData,
+    mem::ManuallyDrop,
+    os::unix::prelude::AsRawFd,
+    path::Path,
+};
 
-use crate::{error::ErrorStack, cvt_p};
+use crate::{cvt_p, error::ErrorStack};
 
-use super::{ClientHelloResponse, SslRef, bio::{BioMethod, StreamState}, Ssl, SslStream, SslFiletype, SslContextBuilder};
-use ffi::{BIO, BIO_new, BIO_set_data, BIO_set_init};
+use super::{
+    bio::{BioMethod, StreamState},
+    ClientHelloResponse, Ssl, SslContextBuilder, SslFiletype, SslRef, SslStream,
+};
+use ffi::{BIO_new, BIO_set_data, BIO_set_init, BIO};
 use foreign_types::{ForeignType, ForeignTypeRef};
 use openssl_macros::corresponds;
 #[cfg(ossl111)]
@@ -28,7 +38,7 @@ impl<S: Read + Write + AsRawFd> SslStream<S> {
 impl SslRef {
     /// 只能在client hello callback中调用
     pub fn get_client_cipher_list_name(&mut self) -> Vec<String> {
-        use std::{ptr, slice, ffi::CStr};
+        use std::{ffi::CStr, ptr, slice};
 
         let mut lists = vec![];
         unsafe {
@@ -47,7 +57,6 @@ impl SslRef {
     }
     #[corresponds(SSL_use_Private_Key_file)]
     pub fn set_private_key_file<P: AsRef<Path>>(&mut self, path: P, ssl_file_type: SslFiletype) {
-
         let key_file = CString::new(path.as_ref().as_os_str().to_str().unwrap()).unwrap();
         unsafe {
             ffi::SSL_use_PrivateKey_file(self.as_ptr(), key_file.as_ptr(), ssl_file_type.as_raw())
@@ -106,7 +115,6 @@ impl SslRef {
         enc_private_key_file: P,
         enc_cert_file: P,
     ) -> Result<(), ErrorStack> {
-
         let sign_key =
             CString::new(sign_private_key_file.as_ref().as_os_str().to_str().unwrap()).unwrap();
         let sign_certificate =
