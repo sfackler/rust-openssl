@@ -164,8 +164,8 @@ impl Pkcs12Builder {
         self,
         password: &str,
         friendly_name: &str,
-        pkey: &PKeyRef<T>,
-        cert: &X509Ref,
+        pkey: Option<&PKeyRef<T>>,
+        cert: Option<&X509Ref>,
     ) -> Result<Pkcs12, ErrorStack>
     where
         T: HasPrivate,
@@ -173,8 +173,8 @@ impl Pkcs12Builder {
         unsafe {
             let pass = CString::new(password).unwrap();
             let friendly_name = CString::new(friendly_name).unwrap();
-            let pkey = pkey.as_ptr();
-            let cert = cert.as_ptr();
+            let pkey = pkey.map_or_else(ptr::null_mut, |k| k.as_ptr());
+            let cert = cert.map_or_else(ptr::null_mut, |c| c.as_ptr());
             let ca = self
                 .ca
                 .as_ref()
@@ -304,7 +304,7 @@ mod test {
 
         let pkcs12_builder = Pkcs12::builder();
         let pkcs12 = pkcs12_builder
-            .build("mypass", subject_name, &pkey, &cert)
+            .build("mypass", subject_name, Some(&pkey), Some(&cert))
             .unwrap();
         let der = pkcs12.to_der().unwrap();
 
