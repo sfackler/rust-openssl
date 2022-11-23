@@ -32,7 +32,7 @@ fn basic() {
     cfg_if! {
         if #[cfg(ossl300)] {
             // https://github.com/openssl/openssl/issues/12530
-            assert!(error.data() == None || error.data() == Some(""));
+            assert!(error.data().is_none() || error.data() == Some(""));
         } else {
             assert_eq!(error.data(), None);
         }
