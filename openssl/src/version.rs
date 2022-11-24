@@ -11,6 +11,8 @@
 // limitations under the License.
 //
 
+//! Build and version information.
+
 use cfg_if::cfg_if;
 use openssl_macros::corresponds;
 use std::ffi::CStr;
