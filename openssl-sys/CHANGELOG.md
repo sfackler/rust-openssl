@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [v0.9.78] - 2022-11-23
+
+### Added
+
+* Added support for LibreSSL 3.6.x.
+* Added `NID_brainpoolP256r1`, `NID_brainpoolP384r1`, and `NID_brainpool512r1`.
+* Added `EVP_camellia_128_cfb128`, `EVP_camellia_128_ecb`, `EVP_camellia_192_cfb128`, `EVP_camellia_192_ecb`,
+    `EVP_camellia_256_cfb128`, and `EVP_camellia_256_ecb`.
+* Added `EVP_cast5_cfb64` and `EVP_cast5_ecb`.
+* Added `EVP_idea_cfb64` and `EVP_idea_ecb`.
+* Added `DSA_SIG`, `d2i_DSA_SIG`, `i2d_DSA_SIG`, `DSA_SIG_new`, `DSA_SIG_free`, `DSA_SIG_get0`, and `DSA_SIG_set0`.
+* Added `X509_STORE_set1_param`, `X509_VERIFY_PARAM_new`, `X509_VERIFY_PARAM_set_time`, and
+    `X509_VERIFY_PARAM_set_depth`.
+
 ## [v0.9.77] - 2022-10-22
 
 ### Added
@@ -336,7 +350,8 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.76..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.77..master
+[v0.9.77]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.76...openssl-sys-v0.9.77
 [v0.9.76]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.75...openssl-sys-v0.9.76
 [v0.9.75]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.74...openssl-sys-v0.9.75
 [v0.9.74]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.73...openssl-sys-v0.9.74
