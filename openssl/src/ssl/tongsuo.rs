@@ -11,9 +11,9 @@ use crate::{cvt_p, error::ErrorStack};
 
 use super::{
     bio::{BioMethod, StreamState},
-    ClientHelloResponse, Ssl, SslContextBuilder, SslFiletype, SslRef, SslStream,
+    ClientHelloResponse, Ssl, SslContextBuilder, SslFiletype, SslRef, SslStream, SslMethod,
 };
-use ffi::{BIO_new, BIO_set_data, BIO_set_init, BIO};
+use ffi::{BIO_new, BIO_set_data, BIO_set_init, BIO, NTLS_method};
 use foreign_types::{ForeignType, ForeignTypeRef};
 use openssl_macros::corresponds;
 #[cfg(ossl111)]
@@ -53,6 +53,16 @@ impl SslRef {
                 lists.push(s);
             }
             lists
+        }
+    }
+    pub fn set_ssl_method(&mut self, method: SslMethod){
+        unsafe {
+            ffi::SSL_set_ssl_method(self.as_ptr(), method.as_ptr());
+        }
+    }
+    pub fn disable_ntls(&mut self) {
+        unsafe {
+            ffi::SSL_disable_ntls(self.as_ptr());
         }
     }
     #[corresponds(SSL_use_Private_Key_file)]
@@ -180,5 +190,11 @@ pub fn new_tongsuo<S: Read + Write + AsRawFd>(
         BIO_set_init(bio, 1);
 
         Ok((bio, method))
+    }
+}
+
+impl SslMethod {
+    pub fn ntls() -> SslMethod {
+        unsafe {SslMethod(NTLS_method())}
     }
 }
