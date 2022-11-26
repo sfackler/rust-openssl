@@ -1,40 +1,21 @@
 use std::{
     ffi::CString,
-    io::{Read, Write},
-    marker::PhantomData,
-    mem::ManuallyDrop,
-    os::unix::prelude::AsRawFd,
     path::Path,
 };
 
-use crate::{cvt_p, error::ErrorStack};
+use crate::{error::ErrorStack};
 
 use super::{
-    bio::{BioMethod, StreamState},
-    ClientHelloResponse, Ssl, SslContextBuilder, SslFiletype, SslRef, SslStream, SslMethod,
+    ClientHelloResponse, SslContextBuilder, SslFiletype, SslRef, SslMethod,
 };
-use ffi::{BIO_new, BIO_set_data, BIO_set_init, BIO, NTLS_method};
+use ffi::{ NTLS_method};
 use foreign_types::{ForeignType, ForeignTypeRef};
 use openssl_macros::corresponds;
 #[cfg(ossl111)]
 impl ClientHelloResponse {
     pub const ERROR: ClientHelloResponse = ClientHelloResponse(ffi::SSL_CLIENT_HELLO_ERROR);
 }
-impl<S: Read + Write + AsRawFd> SslStream<S> {
-    #[corresponds(SSL_set_bio)]
-    pub fn new_tongsuo_stream(ssl: Ssl, stream: S) -> Result<Self, ErrorStack> {
-        let (bio, method) = new_tongsuo(stream)?;
-        unsafe {
-            ffi::SSL_set_bio(ssl.as_ptr(), bio, bio);
-        }
 
-        Ok(SslStream {
-            ssl: ManuallyDrop::new(ssl),
-            method: ManuallyDrop::new(method),
-            _p: PhantomData,
-        })
-    }
-}
 impl SslRef {
     /// 只能在client hello callback中调用
     pub fn get_client_cipher_list_name(&mut self) -> Vec<String> {
@@ -168,28 +149,6 @@ impl SslContextBuilder {
         unsafe {
             ffi::SSL_CTX_enable_ntls(self.as_ptr());
         }
-    }
-}
-
-pub fn new_tongsuo<S: Read + Write + AsRawFd>(
-    stream: S,
-) -> Result<(*mut BIO, BioMethod), ErrorStack> {
-    let method = BioMethod::new::<S>()?;
-    let fd = stream.as_raw_fd();
-    let state = Box::new(StreamState {
-        stream,
-        error: None,
-        panic: None,
-        dtls_mtu_size: 0,
-        fd: Some(fd),
-    });
-
-    unsafe {
-        let bio = cvt_p(BIO_new(method.0.get()))?;
-        BIO_set_data(bio, Box::into_raw(state) as *mut _);
-        BIO_set_init(bio, 1);
-
-        Ok((bio, method))
     }
 }
 

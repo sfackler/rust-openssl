@@ -183,8 +183,6 @@ pub mod ssl;
 pub mod stack;
 pub mod string;
 pub mod symm;
-#[cfg(feature = "tongsuo")]
-pub mod tongsuo;
 pub mod version;
 pub mod x509;
 #[cfg(boringssl)]

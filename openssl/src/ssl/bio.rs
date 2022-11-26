@@ -146,16 +146,9 @@ unsafe extern "C" fn ctrl<S: Write>(
     bio: *mut BIO,
     cmd: c_int,
     _num: c_long,
-    #[allow(unused_variables)] ptr: *mut c_void,
+    _ptr: *mut c_void,
 ) -> c_long {
     let state = state::<S>(bio);
-    #[cfg(feature = "tongsuo")]
-    if cmd == 105 {
-        // BIO_C_GET_FD
-        let p = ptr.cast::<c_int>();
-        *p = state.fd.unwrap();
-        return 1 as i64;
-    }
     if cmd == BIO_CTRL_FLUSH {
         match catch_unwind(AssertUnwindSafe(|| state.stream.flush())) {
             Ok(Ok(())) => 1,

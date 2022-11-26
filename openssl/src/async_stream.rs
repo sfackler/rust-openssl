@@ -11,7 +11,6 @@ use futures_util::future;
 
 use std::fmt;
 use std::io::{self, Read, Write};
-use std::os::unix::prelude::AsRawFd;
 use std::pin::Pin;
 use std::slice;
 use std::task::{Context, Poll};
@@ -20,16 +19,6 @@ use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 struct StreamWrapper<S> {
     stream: S,
     context: usize,
-}
-
-#[cfg(feature = "tongsuo")]
-impl<S> AsRawFd for StreamWrapper<S>
-where
-    S: AsRawFd,
-{
-    fn as_raw_fd(&self) -> std::os::unix::prelude::RawFd {
-        self.stream.as_raw_fd()
-    }
 }
 
 impl<S> fmt::Debug for StreamWrapper<S>
@@ -110,25 +99,6 @@ fn cvt_ossl<T>(r: Result<T, ssl::Error>) -> Poll<Result<T, ssl::Error>> {
 /// An asynchronous version of [`openssl::ssl::SslStream`].
 #[derive(Debug)]
 pub struct SslStream<S>(ssl::SslStream<StreamWrapper<S>>);
-#[cfg(feature = "tongsuo")]
-impl<S> SslStream<S>
-where
-    S: AsyncRead + AsyncWrite + AsRawFd + Unpin + Send,
-{
-    /// get SslStream from raw fd
-    pub fn from_fd_stream(ssl: Ssl, stream: S) -> Result<Self, ErrorStack> {
-        ssl::SslStream::new_tongsuo_stream(ssl, StreamWrapper { stream, context: 0 }).map(SslStream)
-    }
-}
-#[cfg(feature = "tongsuo")]
-impl<S> AsRawFd for SslStream<S>
-where
-    S: AsRawFd,
-{
-    fn as_raw_fd(&self) -> std::os::unix::prelude::RawFd {
-        self.0.get_ref().as_raw_fd()
-    }
-}
 impl<S> SslStream<S>
 where
     S: AsyncRead + AsyncWrite,
@@ -167,17 +137,6 @@ where
         cx: &mut Context<'_>,
     ) -> Poll<Result<(), ssl::Error>> {
         self.with_context(cx, |s| {
-            // HACKING. WANT_READ/WRITE 时调用read，确保Future#Context被注册到tokio，确保被重新poll
-            // https://babassl.readthedocs.io/zh/latest/Tutorial/SM/ntls/
-            // 由于国密双证书的握手流程和协议版本号与标准tls流程存在一定的不同，因此我们选择将双证书的实现(代码里命名为ntls)同现有的tls状态机拆分开来，
-            // 然后在入口处通过对请求的版本号进行识别，然后使其进入正确的状态机。
-            // 然而比较麻烦的是，openssl的bio体系并没有实现msg_peek的功能，因此目前的实现是通过获取链接的fd，
-            // 然后通过recv(fd, MSG_PEEK)的形式来获取链接的协议的，造成的困扰是如果你实现了一套非socket形式的bio，则无法使用这个功能
-            // 该问题我们后续会视情况进行修复
-            let mut zero_buf = [0; 0];
-            if let Err(_err) = s.get_mut().read(&mut zero_buf) {
-                // eprintln!("Babassl hacking workaround return {:?}, you can totally ignore it. this message use for debugging purpose", err);
-            }
             let ret = s.do_handshake();
             cvt_ossl(ret)
         })
