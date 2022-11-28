@@ -1,14 +1,9 @@
-use std::{
-    ffi::CString,
-    path::Path,
-};
+use crate::error::ErrorStack;
+use anyhow::anyhow;
+use std::{ffi::CString, path::Path};
 
-use crate::{error::ErrorStack};
-
-use super::{
-    ClientHelloResponse, SslContextBuilder, SslFiletype, SslRef, SslMethod,
-};
-use ffi::{ NTLS_method};
+use super::{ClientHelloResponse, SslContextBuilder, SslFiletype, SslMethod, SslRef};
+use ffi::NTLS_method;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use openssl_macros::corresponds;
 #[cfg(ossl111)]
@@ -36,7 +31,7 @@ impl SslRef {
             lists
         }
     }
-    pub fn set_ssl_method(&mut self, method: SslMethod){
+    pub fn set_ssl_method(&mut self, method: SslMethod) {
         unsafe {
             ffi::SSL_set_ssl_method(self.as_ptr(), method.as_ptr());
         }
@@ -47,50 +42,66 @@ impl SslRef {
         }
     }
     #[corresponds(SSL_use_Private_Key_file)]
-    pub fn set_private_key_file<P: AsRef<Path>>(&mut self, path: P, ssl_file_type: SslFiletype) {
-        let key_file = CString::new(path.as_ref().as_os_str().to_str().unwrap()).unwrap();
+    pub fn set_private_key_file<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+        ssl_file_type: SslFiletype,
+    ) -> anyhow::Result<()> {
+        let p = path
+            .as_ref()
+            .as_os_str()
+            .to_str()
+            .ok_or(anyhow!("path is none"))?;
+        let key_file = CString::new(p).map_err(|_| anyhow!("invalid cstring"))?;
         unsafe {
             ffi::SSL_use_PrivateKey_file(self.as_ptr(), key_file.as_ptr(), ssl_file_type.as_raw())
         };
+        Ok(())
     }
     #[corresponds(SSL_use_PrivateKey)]
-    pub fn use_private_key_pem(&mut self, key: &[u8]) {
+    pub fn use_private_key_pem(&mut self, key: &[u8]) -> Result<(), ErrorStack> {
         use crate::pkey;
-        let pkey = pkey::PKey::private_key_from_pem(key).unwrap();
+        let pkey = pkey::PKey::private_key_from_pem(key)?;
         unsafe {
             ffi::SSL_use_PrivateKey(self.as_ptr(), pkey.as_ptr());
         };
+        Ok(())
     }
     #[corresponds(SSL_use_certificate)]
-    pub fn use_certificate_pem(&mut self, cert: &[u8]) {
+    pub fn use_certificate_pem(&mut self, cert: &[u8]) -> Result<(), ErrorStack> {
         use crate::x509;
-        let cert = x509::X509::from_pem(cert).unwrap();
+        let cert = x509::X509::from_pem(cert)?;
         unsafe {
             ffi::SSL_use_certificate(self.as_ptr(), cert.as_ptr());
         };
+        Ok(())
     }
 
     #[corresponds(SSL_use_certificate_chain_file)]
-    pub fn set_certificate_chain_file<P: AsRef<Path>>(&mut self, path: P) {
-        let cert_file = CString::new(path.as_ref().as_os_str().to_str().unwrap()).unwrap();
+    pub fn set_certificate_chain_file<P: AsRef<Path>>(&mut self, path: P) -> anyhow::Result<()> {
+        let p = path.as_ref()
+        .as_os_str()
+        .to_str()
+        .ok_or(anyhow!("path is none"))?;
+        let cert_file = CString::new(p).map_err(|_| anyhow!("invalid cstring"))?;
         unsafe {
             ffi::SSL_use_certificate_chain_file(self.as_ptr(), cert_file.as_ptr());
         };
+        Ok(())
     }
     pub fn use_ntls_key_content_and_cert_content_pem(
         &mut self,
+
         sign_private_key_content: &[u8],
         sign_cert_content: &[u8],
         enc_private_key_content: &[u8],
         enc_cert_content: &[u8],
     ) -> Result<(), ErrorStack> {
         use crate::{pkey, x509};
-
-        //sign_private_key_content is not null, unwrap is safe
-        let sign_pkey = pkey::PKey::private_key_from_pem(sign_private_key_content).unwrap();
+        let sign_pkey = pkey::PKey::private_key_from_pem(sign_private_key_content)?;
         let sign_cert = x509::X509::from_pem(sign_cert_content)?;
-        let enc_pkey = pkey::PKey::private_key_from_pem(enc_private_key_content).unwrap();
-        let enc_cert = x509::X509::from_pem(enc_cert_content).unwrap();
+        let enc_pkey = pkey::PKey::private_key_from_pem(enc_private_key_content)?;
+        let enc_cert = x509::X509::from_pem(enc_cert_content)?;
         unsafe {
             ffi::SSL_use_sign_PrivateKey(self.as_ptr(), sign_pkey.as_ptr());
             ffi::SSL_use_sign_certificate(self.as_ptr(), sign_cert.as_ptr());
@@ -154,6 +165,6 @@ impl SslContextBuilder {
 
 impl SslMethod {
     pub fn ntls() -> SslMethod {
-        unsafe {SslMethod(NTLS_method())}
+        unsafe { SslMethod(NTLS_method()) }
     }
 }
