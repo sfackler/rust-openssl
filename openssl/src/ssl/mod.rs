@@ -3109,7 +3109,7 @@ impl SslRef {
     pub fn add_chain_certificate_pem(&mut self, chain: &[u8]) -> Result<(), ErrorStack> {
         let cert = X509::from_pem(chain)?;
         let ret = unsafe {
-            ffi::SSL_add_chain_certificate_pem(self.as_ptr(), cert.as_ptr() as *mut _ as *mut _)
+            ffi::SSL_add_chain_certificate_pem(self.as_ptr(), cert.as_ptr() as *mut _ )
         };
         if ret == 1 {
             Ok(())
