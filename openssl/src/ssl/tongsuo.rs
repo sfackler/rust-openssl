@@ -1,8 +1,12 @@
 use crate::error::ErrorStack;
 use anyhow::anyhow;
-use std::{ffi::CString, path::Path};
+use std::{ffi::CString, path::Path, os::raw::c_void};
 
 use super::{ClientHelloResponse, SslContextBuilder, SslFiletype, SslMethod, SslRef};
+use crate::{
+    x509::X509,
+    pkey
+};
 use ffi::NTLS_method;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use openssl_macros::corresponds;
@@ -60,17 +64,23 @@ impl SslRef {
     }
     #[corresponds(SSL_use_PrivateKey)]
     pub fn use_private_key_pem(&mut self, key: &[u8]) -> Result<(), ErrorStack> {
-        use crate::pkey;
         let pkey = pkey::PKey::private_key_from_pem(key)?;
         unsafe {
             ffi::SSL_use_PrivateKey(self.as_ptr(), pkey.as_ptr());
         };
         Ok(())
     }
+    pub fn add_chain_cert_pem(&mut self, cert: &[u8]) -> Result<(), ErrorStack> {
+        let cert = X509::from_pem(cert)?;
+        unsafe {
+            // equal to SSL_add1_chain_cert
+            ffi::SSL_ctrl(self.as_ptr(), ffi::SSL_CTRL_CHAIN_CERT, 1, cert.as_ptr() as *mut _ as *mut _);
+        };
+        Ok(())
+    }
     #[corresponds(SSL_use_certificate)]
     pub fn use_certificate_pem(&mut self, cert: &[u8]) -> Result<(), ErrorStack> {
-        use crate::x509;
-        let cert = x509::X509::from_pem(cert)?;
+        let cert = X509::from_pem(cert)?;
         unsafe {
             ffi::SSL_use_certificate(self.as_ptr(), cert.as_ptr());
         };
@@ -97,11 +107,10 @@ impl SslRef {
         enc_private_key_content: &[u8],
         enc_cert_content: &[u8],
     ) -> Result<(), ErrorStack> {
-        use crate::{pkey, x509};
         let sign_pkey = pkey::PKey::private_key_from_pem(sign_private_key_content)?;
-        let sign_cert = x509::X509::from_pem(sign_cert_content)?;
+        let sign_cert = X509::from_pem(sign_cert_content)?;
         let enc_pkey = pkey::PKey::private_key_from_pem(enc_private_key_content)?;
-        let enc_cert = x509::X509::from_pem(enc_cert_content)?;
+        let enc_cert = X509::from_pem(enc_cert_content)?;
         unsafe {
             ffi::SSL_use_sign_PrivateKey(self.as_ptr(), sign_pkey.as_ptr());
             ffi::SSL_use_sign_certificate(self.as_ptr(), sign_cert.as_ptr());
