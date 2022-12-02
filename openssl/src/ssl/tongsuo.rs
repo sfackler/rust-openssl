@@ -72,11 +72,15 @@ impl SslRef {
     }
     pub fn add_chain_cert_pem(&mut self, cert: &[u8]) -> Result<(), ErrorStack> {
         let cert = X509::from_pem(cert)?;
-        unsafe {
+        let ret = unsafe {
             // equal to SSL_add1_chain_cert
-            ffi::SSL_ctrl(self.as_ptr(), ffi::SSL_CTRL_CHAIN_CERT, 1, cert.as_ptr() as *mut _ as *mut _);
+            ffi::SSL_ctrl(self.as_ptr(), ffi::SSL_CTRL_CHAIN_CERT, 1, cert.as_ptr() as *mut _ as *mut _)
         };
-        Ok(())
+        if ret == 1 {
+            Ok(())
+        }else {
+            Err(ErrorStack::get())
+        }
     }
     #[corresponds(SSL_use_certificate)]
     pub fn use_certificate_pem(&mut self, cert: &[u8]) -> Result<(), ErrorStack> {
