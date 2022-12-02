@@ -13,11 +13,13 @@ use crate::x509::extension::{
 };
 use crate::x509::store::X509StoreBuilder;
 #[cfg(any(ossl102, libressl261))]
-use crate::x509::verify::X509VerifyFlags;
+use crate::x509::verify::{X509VerifyFlags, X509VerifyParam};
 #[cfg(ossl110)]
 use crate::x509::X509Builder;
 use crate::x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
 use hex::{self, FromHex};
+#[cfg(any(ossl102, libressl261))]
+use libc::time_t;
 
 fn pkey() -> PKey<Private> {
     let rsa = Rsa::generate(2048).unwrap();
@@ -542,4 +544,127 @@ fn test_name_cmp() {
     let issuer = cert.issuer_name();
     assert_eq!(Ordering::Equal, subject.try_cmp(subject).unwrap());
     assert_eq!(Ordering::Greater, subject.try_cmp(issuer).unwrap());
+}
+
+#[test]
+#[cfg(any(ossl102, libressl261))]
+fn test_verify_param_set_time_fails_verification() {
+    const TEST_T_2030: time_t = 1893456000;
+
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+    let chain = Stack::new().unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    store_bldr.add_cert(ca).unwrap();
+    let mut verify_params = X509VerifyParam::new().unwrap();
+    verify_params.set_time(TEST_T_2030);
+    store_bldr.set_param(&verify_params).unwrap();
+    let store = store_bldr.build();
+
+    let mut context = X509StoreContext::new().unwrap();
+    assert_eq!(
+        context
+            .init(&store, &cert, &chain, |c| {
+                c.verify_cert()?;
+                Ok(c.error())
+            })
+            .unwrap()
+            .error_string(),
+        "certificate has expired"
+    )
+}
+
+#[test]
+#[cfg(any(ossl102, libressl261))]
+fn test_verify_param_set_time() {
+    const TEST_T_2020: time_t = 1577836800;
+
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+    let chain = Stack::new().unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    store_bldr.add_cert(ca).unwrap();
+    let mut verify_params = X509VerifyParam::new().unwrap();
+    verify_params.set_time(TEST_T_2020);
+    store_bldr.set_param(&verify_params).unwrap();
+    let store = store_bldr.build();
+
+    let mut context = X509StoreContext::new().unwrap();
+    assert!(context
+        .init(&store, &cert, &chain, |c| c.verify_cert())
+        .unwrap());
+}
+
+#[test]
+#[cfg(any(ossl102, libressl261))]
+fn test_verify_param_set_depth() {
+    let cert = include_bytes!("../../test/leaf.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let intermediate_ca = include_bytes!("../../test/intermediate-ca.pem");
+    let intermediate_ca = X509::from_pem(intermediate_ca).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+    let mut chain = Stack::new().unwrap();
+    chain.push(intermediate_ca).unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    store_bldr.add_cert(ca).unwrap();
+    let mut verify_params = X509VerifyParam::new().unwrap();
+    // OpenSSL 1.1.0+ considers the root certificate to not be part of the chain, while 1.0.2 and LibreSSL do
+    let expected_depth = if cfg!(any(ossl110)) { 1 } else { 2 };
+    verify_params.set_depth(expected_depth);
+    store_bldr.set_param(&verify_params).unwrap();
+    let store = store_bldr.build();
+
+    let mut context = X509StoreContext::new().unwrap();
+    assert!(context
+        .init(&store, &cert, &chain, |c| c.verify_cert())
+        .unwrap());
+}
+
+#[test]
+#[cfg(any(ossl102, libressl261))]
+fn test_verify_param_set_depth_fails_verification() {
+    let cert = include_bytes!("../../test/leaf.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let intermediate_ca = include_bytes!("../../test/intermediate-ca.pem");
+    let intermediate_ca = X509::from_pem(intermediate_ca).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+    let mut chain = Stack::new().unwrap();
+    chain.push(intermediate_ca).unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    store_bldr.add_cert(ca).unwrap();
+    let mut verify_params = X509VerifyParam::new().unwrap();
+    // OpenSSL 1.1.0+ considers the root certificate to not be part of the chain, while 1.0.2 and LibreSSL do
+    let expected_depth = if cfg!(any(ossl110)) { 0 } else { 1 };
+    verify_params.set_depth(expected_depth);
+    store_bldr.set_param(&verify_params).unwrap();
+    let store = store_bldr.build();
+
+    // OpenSSL 1.1.0+ added support for X509_V_ERR_CERT_CHAIN_TOO_LONG, while 1.0.2 simply ignores the intermediate
+    let expected_error = if cfg!(any(ossl110, libressl261)) {
+        "certificate chain too long"
+    } else {
+        "unable to get local issuer certificate"
+    };
+
+    let mut context = X509StoreContext::new().unwrap();
+    assert_eq!(
+        context
+            .init(&store, &cert, &chain, |c| {
+                c.verify_cert()?;
+                Ok(c.error())
+            })
+            .unwrap()
+            .error_string(),
+        expected_error
+    )
 }

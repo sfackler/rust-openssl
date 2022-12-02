@@ -50,7 +50,7 @@ use crate::error::ErrorStack;
 use crate::ssl::SslFiletype;
 use crate::stack::StackRef;
 #[cfg(any(ossl102, libressl261))]
-use crate::x509::verify::X509VerifyFlags;
+use crate::x509::verify::{X509VerifyFlags, X509VerifyParamRef};
 use crate::x509::{X509Object, X509};
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
@@ -121,6 +121,13 @@ impl X509StoreBuilderRef {
     #[cfg(any(ossl102, libressl261))]
     pub fn set_flags(&mut self, flags: X509VerifyFlags) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_STORE_set_flags(self.as_ptr(), flags.bits())).map(|_| ()) }
+    }
+
+    /// Sets certificate chain validation related parameters.
+    #[corresponds[X509_STORE_set1_param]]
+    #[cfg(any(ossl102, libressl261))]
+    pub fn set_param(&mut self, param: &X509VerifyParamRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_STORE_set1_param(self.as_ptr(), param.as_ptr())).map(|_| ()) }
     }
 }
 

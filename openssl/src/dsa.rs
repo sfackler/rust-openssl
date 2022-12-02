@@ -344,6 +344,159 @@ cfg_if! {
     }
 }
 
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::DSA_SIG;
+    fn drop = ffi::DSA_SIG_free;
+
+    /// Object representing DSA signature.
+    ///
+    /// DSA signatures consist of two components: `r` and `s`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::convert::TryInto;
+    ///
+    /// use openssl::bn::BigNum;
+    /// use openssl::dsa::{Dsa, DsaSig};
+    /// use openssl::hash::MessageDigest;
+    /// use openssl::pkey::PKey;
+    /// use openssl::sign::{Signer, Verifier};
+    ///
+    /// const TEST_DATA: &[u8] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    /// let dsa_ref = Dsa::generate(1024).unwrap();
+    ///
+    /// let pub_key: PKey<_> = dsa_ref.clone().try_into().unwrap();
+    /// let priv_key: PKey<_> = dsa_ref.try_into().unwrap();
+    ///
+    /// let mut signer = if let Ok(signer) = Signer::new(MessageDigest::sha256(), &priv_key) {
+    ///     signer
+    /// } else {
+    ///     // DSA signing is not supported (eg. BoringSSL)
+    ///     return;
+    /// };
+    ///
+    /// signer.update(TEST_DATA).unwrap();
+    ///
+    /// let signature = signer.sign_to_vec().unwrap();
+    /// // Parse DER-encoded DSA signature
+    /// let signature = DsaSig::from_der(&signature).unwrap();
+    ///
+    /// // Extract components `r` and `s`
+    /// let r = BigNum::from_slice(&signature.r().to_vec()).unwrap();
+    /// let s = BigNum::from_slice(&signature.s().to_vec()).unwrap();
+    ///
+    /// // Construct new DSA signature from components
+    /// let signature = DsaSig::from_private_components(r, s).unwrap();
+    ///
+    /// // Serialize DSA signature to DER
+    /// let signature = signature.to_der().unwrap();
+    ///
+    /// let mut verifier = Verifier::new(MessageDigest::sha256(), &pub_key).unwrap();
+    /// verifier.update(TEST_DATA).unwrap();
+    /// assert!(verifier.verify(&signature[..]).unwrap());
+    /// ```
+    pub struct DsaSig;
+
+    /// Reference to a [`DsaSig`].
+    pub struct DsaSigRef;
+}
+
+impl DsaSig {
+    /// Returns a new `DsaSig` by setting the `r` and `s` values associated with an DSA signature.
+    #[corresponds(DSA_SIG_set0)]
+    pub fn from_private_components(r: BigNum, s: BigNum) -> Result<Self, ErrorStack> {
+        unsafe {
+            let sig = cvt_p(ffi::DSA_SIG_new())?;
+            DSA_SIG_set0(sig, r.as_ptr(), s.as_ptr());
+            mem::forget((r, s));
+            Ok(DsaSig::from_ptr(sig))
+        }
+    }
+
+    from_der! {
+        /// Decodes a DER-encoded DSA signature.
+        #[corresponds(d2i_DSA_SIG)]
+        from_der,
+        DsaSig,
+        ffi::d2i_DSA_SIG
+    }
+}
+
+impl fmt::Debug for DsaSig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DsaSig")
+            .field("r", self.r())
+            .field("s", self.s())
+            .finish()
+    }
+}
+
+impl DsaSigRef {
+    to_der! {
+        /// Serializes the DSA signature into a DER-encoded `DSASignature` structure.
+        #[corresponds(i2d_DSA_SIG)]
+        to_der,
+        ffi::i2d_DSA_SIG
+    }
+
+    /// Returns internal component `r` of an `DsaSig`.
+    #[corresponds(DSA_SIG_get0)]
+    pub fn r(&self) -> &BigNumRef {
+        unsafe {
+            let mut r = ptr::null();
+            DSA_SIG_get0(self.as_ptr(), &mut r, ptr::null_mut());
+            BigNumRef::from_const_ptr(r)
+        }
+    }
+
+    /// Returns internal component `s` of an `DsaSig`.
+    #[corresponds(DSA_SIG_get0)]
+    pub fn s(&self) -> &BigNumRef {
+        unsafe {
+            let mut s = ptr::null();
+            DSA_SIG_get0(self.as_ptr(), ptr::null_mut(), &mut s);
+            BigNumRef::from_const_ptr(s)
+        }
+    }
+}
+
+cfg_if! {
+    if #[cfg(any(ossl110, libressl273))] {
+        use ffi::{DSA_SIG_set0, DSA_SIG_get0};
+    } else {
+        #[allow(bad_style)]
+        unsafe fn DSA_SIG_set0(
+            sig: *mut ffi::DSA_SIG,
+            r: *mut ffi::BIGNUM,
+            s: *mut ffi::BIGNUM,
+        ) -> c_int {
+            if r.is_null() || s.is_null() {
+                return 0;
+            }
+            ffi::BN_clear_free((*sig).r);
+            ffi::BN_clear_free((*sig).s);
+            (*sig).r = r;
+            (*sig).s = s;
+            1
+        }
+
+        #[allow(bad_style)]
+        unsafe fn DSA_SIG_get0(
+            sig: *const ffi::DSA_SIG,
+            pr: *mut *const ffi::BIGNUM,
+            ps: *mut *const ffi::BIGNUM)
+        {
+            if !pr.is_null() {
+                (*pr) = (*sig).r;
+            }
+            if !ps.is_null() {
+                (*ps) = (*sig).s;
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -445,9 +598,50 @@ mod test {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
+    fn test_signature_der() {
+        use std::convert::TryInto;
+
+        const TEST_DATA: &[u8] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let dsa_ref = Dsa::generate(1024).unwrap();
+
+        let pub_key: PKey<_> = dsa_ref.clone().try_into().unwrap();
+        let priv_key: PKey<_> = dsa_ref.try_into().unwrap();
+
+        let mut signer = Signer::new(MessageDigest::sha256(), &priv_key).unwrap();
+        signer.update(TEST_DATA).unwrap();
+
+        let signature = signer.sign_to_vec().unwrap();
+        eprintln!("{:?}", signature);
+        let signature = DsaSig::from_der(&signature).unwrap();
+
+        let r = BigNum::from_slice(&signature.r().to_vec()).unwrap();
+        let s = BigNum::from_slice(&signature.s().to_vec()).unwrap();
+
+        let signature = DsaSig::from_private_components(r, s).unwrap();
+        let signature = signature.to_der().unwrap();
+
+        let mut verifier = Verifier::new(MessageDigest::sha256(), &pub_key).unwrap();
+        verifier.update(TEST_DATA).unwrap();
+        assert!(verifier.verify(&signature[..]).unwrap());
+    }
+
+    #[test]
     #[allow(clippy::redundant_clone)]
     fn clone() {
         let key = Dsa::generate(2048).unwrap();
         drop(key.clone());
+    }
+
+    #[test]
+    fn dsa_sig_debug() {
+        let sig = DsaSig::from_der(&[
+            48, 46, 2, 21, 0, 135, 169, 24, 58, 153, 37, 175, 248, 200, 45, 251, 112, 238, 238, 89,
+            172, 177, 182, 166, 237, 2, 21, 0, 159, 146, 151, 237, 187, 8, 82, 115, 14, 183, 103,
+            12, 203, 46, 161, 208, 251, 167, 123, 131,
+        ])
+        .unwrap();
+        let s = format!("{:?}", sig);
+        assert_eq!(s, "DsaSig { r: 774484690634577222213819810519929266740561094381, s: 910998676210681457251421818099943952372231273347 }");
     }
 }

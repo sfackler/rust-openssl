@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [v0.10.43] - 2022-11-23
+
+### Added
+
+* Added `Nid::BRAINPOOL_P256R1`, `Nid::BRAINPOOL_P384R1`, `Nid::BRAINPOOL_P512R1`.
+* Added `BigNumRef::copy_from_slice`.
+* Added `Cipher` constructors for Camellia, CAST5, and IDEA ciphers.
+* Added `DsaSig`.
+* Added `X509StoreBuilderRef::set_param`.
+* Added `X509VerifyParam::new`, `X509VerifyParamRef::set_time`, and `X509VerifyParamRef::set_depth`.
+
 ## [v0.10.42] - 2022-09-26
 
 ### Added
@@ -630,7 +641,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.42...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.43...master
+[v0.10.43]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.42...openssl-v0.10.43
 [v0.10.42]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.41...openssl-v0.10.42
 [v0.10.41]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.40...openssl-v0.10.41
 [v0.10.40]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.39...openssl-v0.10.40
