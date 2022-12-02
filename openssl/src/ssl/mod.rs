@@ -3113,7 +3113,7 @@ impl SslRef {
         };
         if ret == 1 {
             Ok(())
-        }else {
+        } else {
             Err(ErrorStack::get())
         }
     }
