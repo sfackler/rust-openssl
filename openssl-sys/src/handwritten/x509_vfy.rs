@@ -12,6 +12,7 @@ extern "C" {
 extern "C" {
     pub fn X509_LOOKUP_free(ctx: *mut X509_LOOKUP);
     pub fn X509_LOOKUP_hash_dir() -> *mut X509_LOOKUP_METHOD;
+    pub fn X509_LOOKUP_file() -> *mut X509_LOOKUP_METHOD;
     pub fn X509_LOOKUP_ctrl(
         ctx: *mut X509_LOOKUP,
         cmd: c_int,
@@ -19,6 +20,7 @@ extern "C" {
         argl: c_long,
         ret: *mut *mut c_char,
     ) -> c_int;
+    pub fn X509_load_cert_file(ctx: *mut X509_LOOKUP, file: *const c_char, _type: c_int) -> c_int;
 }
 
 extern "C" {
