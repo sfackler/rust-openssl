@@ -196,7 +196,11 @@ impl X509Lookup<File> {
 impl X509LookupRef<File> {
     #[corresponds(X509_load_cert_file)]
     /// Specifies a file from which certificates will be loaded
-    pub fn load_cert_file<P: AsRef<Path>>(&mut self, file: P, file_type: SslFiletype) -> Result<(), ErrorStack> {
+    pub fn load_cert_file<P: AsRef<Path>>(
+        &mut self,
+        file: P,
+        file_type: SslFiletype,
+    ) -> Result<(), ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
         unsafe {
             cvt(ffi::X509_load_cert_file(
