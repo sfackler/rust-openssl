@@ -1,3 +1,5 @@
+//! Message digest algorithms.
+
 #[cfg(ossl300)]
 use crate::cvt_p;
 #[cfg(ossl300)]

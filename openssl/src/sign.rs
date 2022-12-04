@@ -403,6 +403,8 @@ impl<'a> Write for Signer<'a> {
     }
 }
 
+/// A type which can be used to verify the integrity and authenticity
+/// of data given the signature.
 pub struct Verifier<'a> {
     md_ctx: *mut ffi::EVP_MD_CTX,
     pctx: *mut ffi::EVP_PKEY_CTX,
@@ -426,7 +428,7 @@ impl<'a> Verifier<'a> {
     /// Creates a new `Verifier`.
     ///
     /// This cannot be used with Ed25519 or Ed448 keys. Please refer to
-    /// `new_without_digest`.
+    /// [`Verifier::new_without_digest`].
     ///
     /// OpenSSL documentation at [`EVP_DigestVerifyInit`].
     ///
@@ -553,7 +555,7 @@ impl<'a> Verifier<'a> {
     /// Feeds more data into the `Verifier`.
     ///
     /// Please note that PureEdDSA (Ed25519 and Ed448 keys) do not support streaming.
-    /// Use `verify_oneshot` instead.
+    /// Use [`Verifier::verify_oneshot`] instead.
     ///
     /// OpenSSL documentation at [`EVP_DigestUpdate`].
     ///

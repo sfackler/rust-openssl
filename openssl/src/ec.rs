@@ -116,6 +116,19 @@ foreign_type_and_impl_send_sync! {
 
 impl EcGroup {
     /// Returns the group of a standard named curve.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// use openssl::nid::Nid;
+    /// use openssl::ec::{EcGroup, EcKey};
+    ///
+    /// let nid = Nid::X9_62_PRIME256V1; // NIST P-256 curve
+    /// let group = EcGroup::from_curve_name(nid)?;
+    /// let key = EcKey::generate(&group)?;
+    /// # Ok(()) }
+    /// ```
     #[corresponds(EC_GROUP_new_by_curve_name)]
     pub fn from_curve_name(nid: Nid) -> Result<EcGroup, ErrorStack> {
         unsafe {
@@ -748,26 +761,32 @@ impl EcKey<Params> {
 }
 
 impl EcKey<Public> {
-    /// Constructs an `EcKey` from the specified group with the associated `EcPoint`, public_key.
+    /// Constructs an `EcKey` from the specified group with the associated [`EcPoint`]: `public_key`.
     ///
-    /// This will only have the associated public_key.
+    /// This will only have the associated `public_key`.
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use openssl::bn::BigNumContext;
     /// use openssl::ec::*;
     /// use openssl::nid::Nid;
     /// use openssl::pkey::PKey;
     ///
-    /// // get bytes from somewhere, i.e. this will not produce a valid key
-    /// let public_key: Vec<u8> = vec![];
+    /// let group = EcGroup::from_curve_name(Nid::SECP384R1)?;
+    /// let mut ctx = BigNumContext::new()?;
+    ///
+    /// // get bytes from somewhere
+    /// let public_key = // ...
+    /// # EcKey::generate(&group)?.public_key().to_bytes(&group,
+    /// # PointConversionForm::COMPRESSED, &mut ctx)?;
     ///
     /// // create an EcKey from the binary form of a EcPoint
-    /// let group = EcGroup::from_curve_name(Nid::SECP256K1).unwrap();
-    /// let mut ctx = BigNumContext::new().unwrap();
-    /// let point = EcPoint::from_bytes(&group, &public_key, &mut ctx).unwrap();
-    /// let key = EcKey::from_public_key(&group, &point);
+    /// let point = EcPoint::from_bytes(&group, &public_key, &mut ctx)?;
+    /// let key = EcKey::from_public_key(&group, &point)?;
+    /// key.check_key()?;
+    /// # Ok(()) }
     /// ```
     #[corresponds(EC_KEY_set_public_key)]
     pub fn from_public_key(
@@ -835,6 +854,33 @@ impl EcKey<Public> {
 
 impl EcKey<Private> {
     /// Generates a new public/private key pair on the specified curve.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// use openssl::bn::BigNumContext;
+    /// use openssl::nid::Nid;
+    /// use openssl::ec::{EcGroup, EcKey, PointConversionForm};
+    ///
+    /// let nid = Nid::X9_62_PRIME256V1; // NIST P-256 curve
+    /// let group = EcGroup::from_curve_name(nid)?;
+    /// let key = EcKey::generate(&group)?;
+    ///
+    /// let mut ctx = BigNumContext::new()?;
+    ///
+    /// let public_key = &key.public_key().to_bytes(
+    ///     &group,
+    ///     PointConversionForm::COMPRESSED,
+    ///     &mut ctx,
+    /// )?;
+    /// assert_eq!(public_key.len(), 33);
+    /// assert_ne!(public_key[0], 0x04);
+    ///
+    /// let private_key = key.private_key().to_vec();
+    /// assert!(private_key.len() >= 31);
+    /// # Ok(()) }
+    /// ```
     #[corresponds(EC_KEY_generate_key)]
     pub fn generate(group: &EcGroupRef) -> Result<EcKey<Private>, ErrorStack> {
         unsafe {

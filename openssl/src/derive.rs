@@ -1,4 +1,54 @@
 //! Shared secret derivation.
+//!
+//! # Example
+//!
+//! The following example implements [ECDH] using `NIST P-384` keys:
+//!
+//! ```
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # use std::convert::TryInto;
+//! use openssl::bn::BigNumContext;
+//! use openssl::pkey::PKey;
+//! use openssl::derive::Deriver;
+//! use openssl::ec::{EcGroup, EcKey, EcPoint, PointConversionForm};
+//! use openssl::nid::Nid;
+//!
+//! let group = EcGroup::from_curve_name(Nid::SECP384R1)?;
+//!
+//! let first: PKey<_> = EcKey::generate(&group)?.try_into()?;
+//!
+//! // second party generates an ephemeral key and derives
+//! // a shared secret using first party's public key
+//! let shared_key = EcKey::generate(&group)?;
+//! // shared_public is sent to first party
+//! let mut ctx = BigNumContext::new()?;
+//! let shared_public = shared_key.public_key().to_bytes(
+//!        &group,
+//!        PointConversionForm::COMPRESSED,
+//!        &mut ctx,
+//!    )?;
+//!
+//! let shared_key: PKey<_> = shared_key.try_into()?;
+//! let mut deriver = Deriver::new(&shared_key)?;
+//! deriver.set_peer(&first)?;
+//! // secret can be used e.g. as a symmetric encryption key
+//! let secret = deriver.derive_to_vec()?;
+//! # drop(deriver);
+//!
+//! // first party derives the same shared secret using
+//! // shared_public
+//! let point = EcPoint::from_bytes(&group, &shared_public, &mut ctx)?;
+//! let recipient_key: PKey<_> = EcKey::from_public_key(&group, &point)?.try_into()?;
+//! let mut deriver = Deriver::new(&first)?;
+//! deriver.set_peer(&recipient_key)?;
+//! let first_secret = deriver.derive_to_vec()?;
+//!
+//! assert_eq!(secret, first_secret);
+//! # Ok(()) }
+//! ```
+//!
+//! [ECDH]: https://wiki.openssl.org/index.php/Elliptic_Curve_Diffie_Hellman
+
 use foreign_types::ForeignTypeRef;
 use std::marker::PhantomData;
 use std::ptr;
