@@ -409,7 +409,7 @@ cfg_if! {
     }
 }
 #[cfg(ossl102)]
-pub unsafe fn SSL_add_chain_certificate_pem(ssl: *mut ::SSL, ptr: *mut c_void) -> c_long {
+pub unsafe fn SSL_add1_chain_cert(ssl: *mut ::SSL, ptr: *mut c_void) -> c_long {
     SSL_ctrl(ssl, SSL_CTRL_CHAIN_CERT, 1, ptr)
 }
 
