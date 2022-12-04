@@ -1,12 +1,9 @@
 use crate::error::ErrorStack;
 use anyhow::anyhow;
-use std::{ffi::CString, path::Path, os::raw::c_void};
+use std::{ffi::CString, path::Path};
 
 use super::{ClientHelloResponse, SslContextBuilder, SslFiletype, SslMethod, SslRef};
-use crate::{
-    x509::X509,
-    pkey
-};
+use crate::{pkey, x509::X509};
 use ffi::NTLS_method;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use openssl_macros::corresponds;
@@ -74,11 +71,16 @@ impl SslRef {
         let cert = X509::from_pem(cert)?;
         let ret = unsafe {
             // equal to SSL_add1_chain_cert
-            ffi::SSL_ctrl(self.as_ptr(), ffi::SSL_CTRL_CHAIN_CERT, 1, cert.as_ptr() as *mut _ as *mut _)
+            ffi::SSL_ctrl(
+                self.as_ptr(),
+                ffi::SSL_CTRL_CHAIN_CERT,
+                1,
+                cert.as_ptr() as *mut _ as *mut _,
+            )
         };
         if ret == 1 {
             Ok(())
-        }else {
+        } else {
             Err(ErrorStack::get())
         }
     }
@@ -93,10 +95,11 @@ impl SslRef {
 
     #[corresponds(SSL_use_certificate_chain_file)]
     pub fn set_certificate_chain_file<P: AsRef<Path>>(&mut self, path: P) -> anyhow::Result<()> {
-        let p = path.as_ref()
-        .as_os_str()
-        .to_str()
-        .ok_or(anyhow!("path is none"))?;
+        let p = path
+            .as_ref()
+            .as_os_str()
+            .to_str()
+            .ok_or(anyhow!("path is none"))?;
         let cert_file = CString::new(p).map_err(|_| anyhow!("invalid cstring"))?;
         unsafe {
             ffi::SSL_use_certificate_chain_file(self.as_ptr(), cert_file.as_ptr());
