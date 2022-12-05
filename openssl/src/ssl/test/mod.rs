@@ -1417,6 +1417,7 @@ fn session_cache_size() {
 #[test]
 fn add_chain_cert_pem() {
     let ctx = SslContext::builder(SslMethod::tls()).unwrap().build();
+    let cert = X509::from_pem(CERT).unwrap();
     let mut ssl = Ssl::new(&ctx).unwrap();
-    assert!(ssl.add_chain_cert_pem(CERT).is_ok());
+    assert!(ssl.add_chain_cert_pem(cert).is_ok());
 }
