@@ -3106,7 +3106,7 @@ impl SslRef {
     }
     #[corresponds(SSL_add1_chain_cert)]
     #[cfg(ossl102)]
-    pub fn add_chain_cert_pem(&mut self, chain: X509) -> Result<(), ErrorStack> {
+    pub fn add_chain_cert(&mut self, chain: X509) -> Result<(), ErrorStack> {
         let ret = unsafe { ffi::SSL_add1_chain_cert(self.as_ptr(), chain.as_ptr() as *mut _) };
         if ret == 1 {
             Ok(())
