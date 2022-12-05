@@ -1413,3 +1413,10 @@ fn session_cache_size() {
     let ctx = ctx.build();
     assert_eq!(ctx.session_cache_size(), 1234);
 }
+
+#[test]
+fn add_chain_cert_pem() {
+    let ctx = SslContext::builder(SslMethod::tls()).unwrap().build();
+    let mut ssl = Ssl::new(&ctx).unwrap();
+    assert!(ssl.add_chain_cert_pem(CERT).is_ok());
+}
