@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "openssl",
+    "tongsuo-openssl",
     "openssl-errors",
     "openssl-macros",
     "openssl-sys"

@@ -1,10 +1,10 @@
 [package]
-name = "openssl"
+name = "tongsuo-openssl"
 version = "0.10.43"
 authors = ["Steven Fackler <sfackler@gmail.com>"]
 license = "Apache-2.0"
-description = "OpenSSL bindings"
-repository = "https://github.com/sfackler/rust-openssl"
+description = "Tongsuo bindings"
+repository = "https://github.com/iamwwc/rust-openssl"
 readme = "README.md"
 keywords = ["crypto", "tls", "ssl", "dtls"]
 categories = ["cryptography", "api-bindings"]
