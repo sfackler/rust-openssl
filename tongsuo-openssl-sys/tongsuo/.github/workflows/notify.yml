@@ -1,0 +1,21 @@
+name: Notify CI
+
+on:
+  push:
+    branches:
+      - master
+      - 8.2-stable
+
+jobs:
+  check_update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invoke build docs workflow
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: Build docs
+          repo: BabaSSL/babassl.github.io
+          token: ${{ secrets.BUILD_DOCS_TOKEN }}
+          inputs: '{ "name": "build docs"}'
+          ref: ${{ github.event.pull_request.head.ref }}
+

@@ -1,0 +1,5 @@
+LIBS=../../libcrypto
+SOURCE[../../libcrypto]=\
+        eia3.c \
+        eia3_ameth.c \
+        eia3_pmeth.c

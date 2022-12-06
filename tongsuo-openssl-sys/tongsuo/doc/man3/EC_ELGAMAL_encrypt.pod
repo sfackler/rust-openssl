@@ -1,0 +1,146 @@
+=pod
+
+=head1 NAME
+
+EC_ELGAMAL_CTX_new,
+EC_ELGAMAL_CTX_free,
+EC_ELGAMAL_DECRYPT_TABLE_new,
+EC_ELGAMAL_DECRYPT_TABLE_free,
+EC_ELGAMAL_CTX_set_decrypt_table,
+EC_ELGAMAL_encrypt,
+EC_ELGAMAL_decrypt,
+EC_ELGAMAL_add,
+EC_ELGAMAL_sub,
+EC_ELGAMAL_mul,
+EC_ELGAMAL_CIPHERTEXT_new,
+EC_ELGAMAL_CIPHERTEXT_free,
+EC_ELGAMAL_CIPHERTEXT_encode,
+EC_ELGAMAL_CIPHERTEXT_decode
+- Functions for performing partially homomorphic encryption operations and tests
+
+=head1 SYNOPSIS
+
+ #include <openssl/ec.h>
+
+EC_ELGAMAL_CTX *EC_ELGAMAL_CTX_new(EC_KEY *key);
+void EC_ELGAMAL_CTX_free(EC_ELGAMAL_CTX *ctx);
+EC_ELGAMAL_DECRYPT_TABLE *EC_ELGAMAL_DECRYPT_TABLE_new(EC_ELGAMAL_CTX *ctx,
+                                                       int32_t decrypt_negative);
+void EC_ELGAMAL_DECRYPT_TABLE_free(EC_ELGAMAL_DECRYPT_TABLE *table);
+void EC_ELGAMAL_CTX_set_decrypt_table(EC_ELGAMAL_CTX *ctx,
+                                      EC_ELGAMAL_DECRYPT_TABLE *table);
+int EC_ELGAMAL_encrypt(EC_ELGAMAL_CTX *ctx, EC_ELGAMAL_CIPHERTEXT *r, int32_t plaintext);
+int EC_ELGAMAL_decrypt(EC_ELGAMAL_CTX *ctx, int32_t *r, EC_ELGAMAL_CIPHERTEXT *ciphertext);
+int EC_ELGAMAL_add(EC_ELGAMAL_CTX *ctx, EC_ELGAMAL_CIPHERTEXT *r,
+                   EC_ELGAMAL_CIPHERTEXT *c1, EC_ELGAMAL_CIPHERTEXT *c2);
+int EC_ELGAMAL_sub(EC_ELGAMAL_CTX *ctx, EC_ELGAMAL_CIPHERTEXT *r,
+                   EC_ELGAMAL_CIPHERTEXT *c1, EC_ELGAMAL_CIPHERTEXT *c2);
+int EC_ELGAMAL_mul(EC_ELGAMAL_CTX *ctx, EC_ELGAMAL_CIPHERTEXT *r,
+                   EC_ELGAMAL_CIPHERTEXT *c, int32_t m);
+EC_ELGAMAL_CIPHERTEXT *EC_ELGAMAL_CIPHERTEXT_new(EC_ELGAMAL_CTX *ctx);
+void EC_ELGAMAL_CIPHERTEXT_free(EC_ELGAMAL_CIPHERTEXT *ciphertext);
+size_t EC_ELGAMAL_CIPHERTEXT_encode(EC_ELGAMAL_CTX *ctx, unsigned char *out,
+                                    size_t size, EC_ELGAMAL_CIPHERTEXT *ciphertext,
+                                    int compressed);
+int EC_ELGAMAL_CIPHERTEXT_decode(EC_ELGAMAL_CTX *ctx, EC_ELGAMAL_CIPHERTEXT *r,
+                                 unsigned char *in, size_t size);
+
+
+=head1 DESCRIPTION
+
+A B<EC_ELGAMAL_CTX> is a structure that holds B<EC_ELGAMAL_CTX> temporary
+variables used by library functions. Since dynamic memory allocation to create
+B<BIGNUM>s is rather expensive when used in conjunction with repeated subroutine
+calls, the B<BN_CTX> structure is used.
+
+EC_ELGAMAL_CTX_new() allocates and initializes a B<EC_ELGAMAL_CTX> structure.
+
+EC_ELGAMAL_CTX_free() frees the components of the B<EC_ELGAMAL_CTX> and the
+structure itself. If B<ctx> is NULL, nothing is done.
+
+EC_ELGAMAL_DECRYPT_TABLE_new() allocates and initializes a
+B<EC_ELGAMAL_DECRYPT_TABLE> structure to decrypt the ciphertext, and parameter
+B<decrypt_negative> indicates whether decryption of negative numbers is
+supported. The function creates an ecdlp bsgs hash table that is queried for
+plaintext when decrypted. Because creating the bsgs hash tables uses a lot of
+point operations and store operation results, it takes a long time and memory.
+Therefore, you do not need to create this table when encrypting, you only need
+to create it once when decrypting.
+
+EC_ELGAMAL_DECRYPT_TABLE_free() frees the components of the
+B<EC_ELGAMAL_DECRYPT_TABLE> and the structure itself. If B<table> is NULL,
+nothing is done.
+
+EC_ELGAMAL_CTX_set_decrypt_table() sets decrypt hash B<table> into B<ctx> to
+decrypt the ciphertext, which is not required by the encryptor.
+
+EC_ELGAMAL_encrypt() encrypts an integer B<plaintext> and places the result in
+B<r>.
+
+EC_ELGAMAL_decrypt() decrypts a ciphertext B<ciphertext> and places the result
+in B<r>. If the ecdlp bsgs hash table is set for this ctx before, look up the
+table to improve the decryption efficiency during discrete logarithmic
+operations, otherwise use the brust method to decrypt (this method is
+inefficient, slow, and does not support negative numbers).
+
+EC_ELGAMAL_add() adds the two ciphertexts B<c1> and B<c2> and places the result
+in B<r>: r = c1 + c2.
+
+EC_ELGAMAL_sub() subtracts the two ciphertexts B<c1> and B<c2> and places the
+result in B<r>: r = c1 - c2.
+
+EC_ELGAMAL_mul() calculates the multiplication of a ciphertext B<c> and an
+plaintext B<m> and places the result in B<r>: r = c * m.
+
+EC_ELGAMAL_CIPHERTEXT_new() allocates a B<EC_ELGAMAL_CIPHERTEXT> structure to
+store the result of EC_ELGAMAL_encrypt, EC_ELGAMAL_add, EC_ELGAMAL_sub,
+EC_ELGAMAL_mul, EC_ELGAMAL_CIPHERTEXT_decode.
+
+EC_ELGAMAL_CIPHERTEXT_free() frees the components of the
+B<EC_ELGAMAL_CIPHERTEXT> and the structure itself. If B<ciphertext> is NULL,
+nothing is done.
+
+EC_ELGAMAL_CIPHERTEXT_encode() encodes the structure pointed B<ciphertext> to by
+B<EC_ELGAMAL_CIPHERTEXT> into the buffer B<out> of size B<size> as binary
+format, if compressed is 1 then using compression conversion.
+The function EC_POINT_point2oct() must be supplied with a buffer long enough to
+store the binary form.
+If B<out> is not B<NULL>, it writes the binary encoded data to the buffer
+at B<out>. If the return value is negative an error occurred, otherwise it
+returns the length of the encoded data.
+If B<out> is B<NULL>, it returns number of bytes needed.
+
+EC_ELGAMAL_CIPHERTEXT_decode() decodes a B<EC_ELGAMAL_CIPHERTEXT> into B<r> from
+the binary string contained in the given buffer B<in> of B<size>.
+
+
+=head1 RETURN VALUES
+
+EC_ELGAMAL_CTX_new() return the newly allocated EC_ELGAMAL_CTX or NULL on error.
+
+EC_ELGAMAL_DECRYPT_TABLE_new() return the newly allocated EC_ELGAMAL_DECRYPT_TABLE
+or NULL on error.
+
+EC_ELGAMAL_CIPHERTEXT_new() return the newly allocated EC_ELGAMAL_CIPHERTEXT
+or NULL on error.
+
+The following functions return 1 on success or 0 on error: EC_ELGAMAL_encrypt(),
+EC_ELGAMAL_decrypt(), EC_ELGAMAL_add(), EC_ELGAMAL_sub(), EC_ELGAMAL_mul()
+and EC_ELGAMAL_CIPHERTEXT_decode().
+
+EC_ELGAMAL_CIPHERTEXT_encode() return the length of the required buffer or 0 on error.
+
+=head1 SEE ALSO
+
+L<crypto(7)>
+
+=head1 COPYRIGHT
+
+Copyright 2020-2022 The OpenSSL Project Authors. All Rights Reserved.
+
+Licensed under the Apache-2.0 license (the "License").  You may not use
+this file except in compliance with the License.  You can obtain a copy
+in the file LICENSE in the source distribution or at
+L<http://www.apache.org/licenses/LICENSE-2.0>.
+
+=cut
