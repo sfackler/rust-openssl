@@ -3,5 +3,5 @@ members = [
     "tongsuo-openssl",
     "openssl-errors",
     "openssl-macros",
-    "openssl-sys"
+    "tongsuo-openssl-sys"
 ]
