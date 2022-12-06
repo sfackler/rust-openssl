@@ -7,7 +7,7 @@ authors = [
 ]
 license = "MIT"
 description = "FFI bindings to OpenSSL"
-repository = "https://github.com/sfackler/rust-openssl"
+repository = "https://github.com/iamwwc/rust-openssl"
 readme = "README.md"
 categories = ["cryptography", "external-ffi-bindings"]
 links = "openssl"
