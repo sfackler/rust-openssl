@@ -21,7 +21,7 @@ vendored = ['ffi/vendored']
 bindgen = ['ffi/bindgen']
 tongsuo = ["bindgen"]
 unstable_boringssl = ["ffi/unstable_boringssl"]
-default = []
+default = ["tongsuo","tokio"]
 [dependencies]
 bitflags = "1.0"
 cfg-if = "1.0"
