@@ -21,6 +21,7 @@ extern "C" {
         ret: *mut *mut c_char,
     ) -> c_int;
     pub fn X509_load_cert_file(ctx: *mut X509_LOOKUP, file: *const c_char, _type: c_int) -> c_int;
+    pub fn X509_load_crl_file(ctx: *mut X509_LOOKUP, file: *const c_char, _type: c_int) -> c_int;
 }
 
 extern "C" {
