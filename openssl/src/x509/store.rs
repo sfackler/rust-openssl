@@ -59,6 +59,8 @@ use std::ffi::CString;
 #[cfg(not(boringssl))]
 use std::path::Path;
 
+use super::X509CrlRef;
+
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE;
     fn drop = ffi::X509_STORE_free;
@@ -130,6 +132,12 @@ impl X509StoreBuilderRef {
     #[cfg(any(ossl102, libressl261))]
     pub fn set_param(&mut self, param: &X509VerifyParamRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_STORE_set1_param(self.as_ptr(), param.as_ptr())).map(|_| ()) }
+    }
+
+    /// Adds the CRL to the store
+    #[corresponds(X509_STORE_add_crl)]
+    pub fn add_crl(&mut self, crl: &X509CrlRef) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_STORE_add_crl(self.as_ptr(), crl.as_ptr())).map(|_| ()) }
     }
 }
 
