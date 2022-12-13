@@ -229,6 +229,14 @@ where
         unsafe { ffi::EVP_PKEY_bits(self.as_ptr()) as u32 }
     }
 
+    ///Returns the number of security bits.
+    ///
+    ///Bits of security is defined in NIST SP800-57.
+    #[corresponds(EVP_PKEY_security_bits)]
+    pub fn security_bits(&self) -> u32 {
+        unsafe { ffi::EVP_PKEY_security_bits(self.as_ptr()) as u32 }
+    }
+
     /// Compares the public component of this key with another.
     #[corresponds(EVP_PKEY_cmp)]
     pub fn public_eq<U>(&self, other: &PKeyRef<U>) -> bool
@@ -1016,6 +1024,15 @@ mod tests {
         let ec_key_: EcKey<Private> = pkey.try_into().unwrap();
         // Eq is missing
         assert_eq!(ec_key.private_key(), ec_key_.private_key());
+    }
+
+    #[test]
+    fn test_security_bits() {
+        let group = crate::ec::EcGroup::from_curve_name(crate::nid::Nid::SECP521R1).unwrap();
+        let ec_key = EcKey::generate(&group).unwrap();
+        let pkey: PKey<Private> = ec_key.clone().try_into().unwrap();
+
+        assert_eq!(pkey.security_bits(), 256);
     }
 
     #[test]
