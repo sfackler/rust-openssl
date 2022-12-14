@@ -372,9 +372,9 @@ foreign_type_and_impl_send_sync! {
     pub struct X509Ref;
 }
 
-#[cfg(boringssl)]
+#[cfg(boringssl_flavour)]
 type X509LenTy = c_uint;
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 type X509LenTy = c_int;
 
 impl X509Ref {
@@ -1498,9 +1498,9 @@ impl GeneralNameRef {
                 return None;
             }
 
-            #[cfg(boringssl)]
+            #[cfg(boringssl_flavour)]
             let d = (*self.as_ptr()).d.ptr;
-            #[cfg(not(boringssl))]
+            #[cfg(not(boringssl_flavour))]
             let d = (*self.as_ptr()).d;
 
             let ptr = ASN1_STRING_get0_data(d as *mut _);
@@ -1535,9 +1535,9 @@ impl GeneralNameRef {
             if (*self.as_ptr()).type_ != ffi::GEN_IPADD {
                 return None;
             }
-            #[cfg(boringssl)]
+            #[cfg(boringssl_flavour)]
             let d: *const ffi::ASN1_STRING = std::mem::transmute((*self.as_ptr()).d);
-            #[cfg(not(boringssl))]
+            #[cfg(not(boringssl_flavour))]
             let d = (*self.as_ptr()).d;
 
             let ptr = ASN1_STRING_get0_data(d as *mut _);
@@ -1645,7 +1645,7 @@ impl Stackable for X509Object {
 }
 
 cfg_if! {
-    if #[cfg(any(boringssl, ossl110, libressl273))] {
+    if #[cfg(any(boringssl_flavour, ossl110, libressl273))] {
         use ffi::{X509_getm_notAfter, X509_getm_notBefore, X509_up_ref, X509_get0_signature};
     } else {
         #[allow(bad_style)]
@@ -1686,7 +1686,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(any(boringssl, ossl110, libressl350))] {
+    if #[cfg(any(boringssl_flavour, ossl110, libressl350))] {
         use ffi::{
             X509_ALGOR_get0, ASN1_STRING_get0_data, X509_STORE_CTX_get0_chain, X509_set1_notAfter,
             X509_set1_notBefore, X509_REQ_get_version, X509_REQ_get_subject_name,
@@ -1726,7 +1726,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, boringssl, libressl270))] {
+    if #[cfg(any(ossl110, boringssl_flavour, libressl270))] {
         use ffi::X509_OBJECT_get0_X509;
     } else {
         #[allow(bad_style)]
@@ -1743,7 +1743,7 @@ cfg_if! {
 cfg_if! {
     if #[cfg(any(ossl110, libressl350))] {
         use ffi::X509_OBJECT_free;
-    } else if #[cfg(boringssl)] {
+    } else if #[cfg(boringssl_flavour)] {
         use ffi::X509_OBJECT_free_contents as X509_OBJECT_free;
     } else {
         #[allow(bad_style)]

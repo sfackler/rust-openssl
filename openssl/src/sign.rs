@@ -36,7 +36,7 @@
 //! ```
 
 #![cfg_attr(
-    not(boringssl),
+    not(boringssl_flavour),
     doc = r#"\
 
 Compute an HMAC:
@@ -645,7 +645,7 @@ unsafe fn EVP_DigestVerifyFinal(
 #[cfg(test)]
 mod test {
     use hex::{self, FromHex};
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     use std::iter;
 
     use crate::ec::{EcGroup, EcKey};
@@ -709,7 +709,7 @@ mod test {
         assert!(!verifier.verify(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     fn test_hmac(ty: MessageDigest, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
         for (key, data, res) in tests.iter() {
             let pkey = PKey::hmac(key).unwrap();
@@ -720,7 +720,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     fn hmac_md5() {
         // test vectors from RFC 2202
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [
@@ -767,7 +767,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     fn hmac_sha1() {
         // test vectors from RFC 2202
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [

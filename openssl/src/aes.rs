@@ -23,7 +23,7 @@
 //! # Examples
 
 #![cfg_attr(
-    all(not(boringssl), not(osslconf = "OPENSSL_NO_DEPRECATED_3_0")),
+    all(not(boringssl_flavour), not(osslconf = "OPENSSL_NO_DEPRECATED_3_0")),
     doc = r#"\
 ## AES IGE
 ```rust
@@ -65,7 +65,7 @@ use libc::{c_int, c_uint};
 use std::mem::MaybeUninit;
 use std::ptr;
 
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 use crate::symm::Mode;
 use openssl_macros::corresponds;
 
@@ -77,7 +77,7 @@ pub struct KeyError(());
 pub struct AesKey(ffi::AES_KEY);
 
 cfg_if! {
-    if #[cfg(boringssl)] {
+    if #[cfg(boringssl_flavour)] {
         type AesBitType = c_uint;
         type AesSizeType = usize;
     } else {
@@ -155,7 +155,7 @@ impl AesKey {
 ///
 /// Panics if `in_` is not the same length as `out`, if that length is not a multiple of 16, or if
 /// `iv` is not at least 32 bytes.
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
 #[corresponds(AES_ige_encrypt)]
 pub fn aes_ige(in_: &[u8], out: &mut [u8], key: &AesKey, iv: &mut [u8], mode: Mode) {
@@ -263,12 +263,12 @@ mod test {
     use hex::FromHex;
 
     use super::*;
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     use crate::symm::Mode;
 
     // From https://www.mgp25.com/AESIGE/
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
     fn ige_vector_1() {
         let raw_key = "000102030405060708090A0B0C0D0E0F";

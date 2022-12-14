@@ -22,12 +22,16 @@ impl<'a> MemBioSlice<'a> {
         ffi::init();
 
         assert!(buf.len() <= c_int::max_value() as usize);
-        let bio = unsafe {
-            cvt_p(BIO_new_mem_buf(
-                buf.as_ptr() as *const _,
-                buf.len() as c_int,
-            ))?
-        };
+
+        cfg_if! {
+            if #[cfg(not(boringssl_flavour))] {
+                let len = buf.len() as c_int;
+            } else {
+                let len = buf.len() as isize;
+            }
+        }
+
+        let bio = unsafe { cvt_p(BIO_new_mem_buf(buf.as_ptr() as *const _, len))? };
 
         Ok(MemBioSlice(bio, PhantomData))
     }
@@ -67,14 +71,14 @@ impl MemBio {
         }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     pub unsafe fn from_ptr(bio: *mut ffi::BIO) -> MemBio {
         MemBio(bio)
     }
 }
 
 cfg_if! {
-    if #[cfg(ossl102)] {
+    if #[cfg(any(ossl102, boringssl_flavour))] {
         use ffi::BIO_new_mem_buf;
     } else {
         #[allow(bad_style)]

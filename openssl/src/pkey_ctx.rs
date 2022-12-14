@@ -21,7 +21,7 @@
 //! ```
 
 #![cfg_attr(
-    not(boringssl),
+    not(boringssl_flavour),
     doc = r#"\
 Generate a CMAC key
 
@@ -64,7 +64,7 @@ let cmac_key = ctx.keygen().unwrap();
 //! let valid = ctx.verify(text, &signature).unwrap();
 //! assert!(valid);
 //! ```
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
 use crate::md::MdRef;
@@ -72,7 +72,7 @@ use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Private};
 use crate::rsa::Padding;
 use crate::{cvt, cvt_n, cvt_p};
 use foreign_types::{ForeignType, ForeignTypeRef};
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 use libc::c_int;
 use openssl_macros::corresponds;
 use std::convert::TryFrom;
@@ -403,7 +403,7 @@ impl<T> PkeyCtxRef<T> {
     ///
     /// This is only useful for RSA keys.
     #[corresponds(EVP_PKEY_CTX_set0_rsa_oaep_label)]
-    #[cfg(any(ossl102, libressl310, boringssl))]
+    #[cfg(any(ossl102, libressl310, boringssl_flavour))]
     pub fn set_rsa_oaep_label(&mut self, label: &[u8]) -> Result<(), ErrorStack> {
         use crate::LenType;
         let len = LenType::try_from(label.len()).unwrap();
@@ -427,7 +427,7 @@ impl<T> PkeyCtxRef<T> {
     }
 
     /// Sets the cipher used during key generation.
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     #[corresponds(EVP_PKEY_CTX_ctrl)]
     #[inline]
     pub fn set_keygen_cipher(&mut self, cipher: &CipherRef) -> Result<(), ErrorStack> {
@@ -446,7 +446,7 @@ impl<T> PkeyCtxRef<T> {
     }
 
     /// Sets the key MAC key used during key generation.
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     #[corresponds(EVP_PKEY_CTX_ctrl)]
     #[inline]
     pub fn set_keygen_mac_key(&mut self, key: &[u8]) -> Result<(), ErrorStack> {
@@ -601,7 +601,7 @@ impl<T> PkeyCtxRef<T> {
 #[cfg(test)]
 mod test {
     use super::*;
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     use crate::cipher::Cipher;
     use crate::ec::{EcGroup, EcKey};
     #[cfg(any(ossl102, libressl310))]
@@ -678,7 +678,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     fn cmac_keygen() {
         let mut ctx = PkeyCtx::new_id(Id::CMAC).unwrap();
         ctx.keygen_init().unwrap();

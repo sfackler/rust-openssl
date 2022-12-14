@@ -52,7 +52,7 @@
 
 use crate::cipher::CipherRef;
 use crate::error::ErrorStack;
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 use crate::pkey::{HasPrivate, HasPublic, PKey, PKeyRef};
 use crate::{cvt, cvt_p};
 use cfg_if::cfg_if;
@@ -183,7 +183,7 @@ impl CipherCtxRef {
     /// Panics if `pub_keys` is not the same size as `encrypted_keys`, the IV buffer is smaller than the cipher's IV
     /// size, or if an IV is provided before the cipher.
     #[corresponds(EVP_SealInit)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     pub fn seal_init<T>(
         &mut self,
         type_: Option<&CipherRef>,
@@ -240,7 +240,7 @@ impl CipherCtxRef {
     /// Panics if the IV buffer is smaller than the cipher's required IV size or if the IV is provided before the
     /// cipher.
     #[corresponds(EVP_OpenInit)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     pub fn open_init<T>(
         &mut self,
         type_: Option<&CipherRef>,
@@ -314,7 +314,7 @@ impl CipherCtxRef {
     ///
     /// [`EVP_CIPHER_CTX_rand_key`]: https://www.openssl.org/docs/manmaster/man3/EVP_CIPHER_CTX_rand_key.html
     #[corresponds(EVP_CIPHER_CTX_rand_key)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     pub fn rand_key(&self, buf: &mut [u8]) -> Result<(), ErrorStack> {
         assert!(buf.len() >= self.key_length());
 
@@ -654,11 +654,11 @@ impl CipherCtxRef {
 mod test {
     use super::*;
     use crate::{cipher::Cipher, rand::rand_bytes};
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     use std::slice;
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     fn seal_open() {
         let private_pem = include_bytes!("../test/rsa.pem");
         let public_pem = include_bytes!("../test/rsa.pem.pub");

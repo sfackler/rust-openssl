@@ -98,7 +98,7 @@ impl MessageDigest {
         }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     pub fn null() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_md_null()) }
     }
@@ -157,7 +157,7 @@ impl MessageDigest {
         unsafe { MessageDigest(ffi::EVP_shake256()) }
     }
 
-    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_RMD160")))]
+    #[cfg(not(any(boringssl_flavour, osslconf = "OPENSSL_NO_RMD160")))]
     pub fn ripemd160() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_ripemd160()) }
     }
@@ -295,9 +295,9 @@ impl Hasher {
             self.init()?;
         }
         unsafe {
-            #[cfg(not(boringssl))]
+            #[cfg(not(boringssl_flavour))]
             let mut len = ffi::EVP_MAX_MD_SIZE;
-            #[cfg(boringssl)]
+            #[cfg(boringssl_flavour)]
             let mut len = ffi::EVP_MAX_MD_SIZE as u32;
             let mut buf = [0; ffi::EVP_MAX_MD_SIZE as usize];
             cvt(ffi::EVP_DigestFinal_ex(
@@ -745,7 +745,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     #[cfg_attr(ossl300, ignore)]
     fn test_ripemd160() {
         #[cfg(ossl300)]
