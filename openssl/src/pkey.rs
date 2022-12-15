@@ -233,6 +233,7 @@ where
     ///
     ///Bits of security is defined in NIST SP800-57.
     #[corresponds(EVP_PKEY_security_bits)]
+    #[cfg(ossl110)]
     pub fn security_bits(&self) -> u32 {
         unsafe { ffi::EVP_PKEY_security_bits(self.as_ptr()) as u32 }
     }
