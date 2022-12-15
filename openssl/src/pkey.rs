@@ -1030,7 +1030,7 @@ mod tests {
     fn test_security_bits() {
         let group = crate::ec::EcGroup::from_curve_name(crate::nid::Nid::SECP521R1).unwrap();
         let ec_key = EcKey::generate(&group).unwrap();
-        let pkey: PKey<Private> = ec_key.clone().try_into().unwrap();
+        let pkey: PKey<Private> = ec_key.try_into().unwrap();
 
         assert_eq!(pkey.security_bits(), 256);
     }
