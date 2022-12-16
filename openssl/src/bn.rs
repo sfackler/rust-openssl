@@ -336,6 +336,7 @@ impl BigNumRef {
 
     /// Returns the number of significant bits in `self`.
     #[corresponds(BN_num_bits)]
+    #[allow(clippy::unnecessary_cast)]
     pub fn num_bits(&self) -> i32 {
         unsafe { ffi::BN_num_bits(self.as_ptr()) as i32 }
     }

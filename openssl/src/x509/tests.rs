@@ -634,6 +634,7 @@ fn test_verify_param_set_depth() {
 
 #[test]
 #[cfg(any(ossl102, libressl261))]
+#[allow(clippy::bool_to_int_with_if)]
 fn test_verify_param_set_depth_fails_verification() {
     let cert = include_bytes!("../../test/leaf.pem");
     let cert = X509::from_pem(cert).unwrap();

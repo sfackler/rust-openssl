@@ -234,6 +234,7 @@ where
 
     /// Validates RSA parameters for correctness
     #[corresponds(RSA_check_key)]
+    #[allow(clippy::unnecessary_cast)]
     pub fn check_key(&self) -> Result<bool, ErrorStack> {
         unsafe {
             let result = ffi::RSA_check_key(self.as_ptr()) as i32;

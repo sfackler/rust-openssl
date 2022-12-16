@@ -512,7 +512,7 @@ impl Asn1Integer {
 }
 
 impl Asn1IntegerRef {
-    #[allow(missing_docs)]
+    #[allow(missing_docs, clippy::unnecessary_cast)]
     #[deprecated(since = "0.10.6", note = "use to_bn instead")]
     pub fn get(&self) -> i64 {
         unsafe { ffi::ASN1_INTEGER_get(self.as_ptr()) as i64 }

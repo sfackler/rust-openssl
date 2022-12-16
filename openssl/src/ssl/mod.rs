@@ -1867,7 +1867,7 @@ impl SslContextRef {
     ///
     /// A value of 0 means that the cache size is unbounded.
     #[corresponds(SSL_CTX_sess_get_cache_size)]
-    #[allow(clippy::useless_conversion)]
+    #[allow(clippy::unnecessary_cast)]
     pub fn session_cache_size(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_get_cache_size(self.as_ptr()) as i64 }
     }
@@ -3289,7 +3289,7 @@ impl<S: Read + Write> SslStream<S> {
             )
         };
         if ret > 0 {
-            Ok(written as usize)
+            Ok(written)
         } else {
             Err(self.make_error(ret))
         }
