@@ -143,6 +143,11 @@ cfg_if! {
         pub unsafe fn EVP_PKEY_bits(pkey: *const EVP_PKEY) -> c_int {
             EVP_PKEY_get_bits(pkey)
         }
+
+        #[inline]
+        pub unsafe fn EVP_PKEY_security_bits(pkey: *const EVP_PKEY) -> c_int {
+            EVP_PKEY_get_security_bits(pkey)
+        }
     }
 }
 

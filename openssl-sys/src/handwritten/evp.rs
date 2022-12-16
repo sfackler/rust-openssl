@@ -402,6 +402,7 @@ cfg_if! {
         extern "C" {
             pub fn EVP_PKEY_get_id(pkey: *const EVP_PKEY) -> c_int;
             pub fn EVP_PKEY_get_bits(key: *const EVP_PKEY) -> c_int;
+            pub fn EVP_PKEY_get_security_bits(key: *const EVP_PKEY) -> c_int;
         }
 
         #[inline]
@@ -413,6 +414,12 @@ cfg_if! {
         pub unsafe fn EVP_PKEY_bits(pkey: *const EVP_PKEY) -> c_int {
             EVP_PKEY_get_bits(pkey)
         }
+
+        #[inline]
+        pub unsafe fn EVP_PKEY_security_bits(pkey: *const EVP_PKEY) -> c_int {
+            EVP_PKEY_get_security_bits(pkey)
+        }
+
     } else {
         extern "C" {
             pub fn EVP_PKEY_id(pkey: *const EVP_PKEY) -> c_int;
@@ -420,6 +427,8 @@ cfg_if! {
         const_ptr_api! {
             extern "C" {
                 pub fn EVP_PKEY_bits(key: #[const_ptr_if(any(ossl110, libressl280))] EVP_PKEY) -> c_int;
+                #[cfg(ossl110)]
+                pub fn EVP_PKEY_security_bits(pkey: #[const_ptr_if(any(ossl110, libressl280))] EVP_PKEY) -> c_int;
             }
         }
     }
