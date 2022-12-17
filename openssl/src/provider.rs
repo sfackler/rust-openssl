@@ -1,6 +1,6 @@
-use crate::cvt_p;
 use crate::error::ErrorStack;
 use crate::lib_ctx::LibCtxRef;
+use crate::{cvt, cvt_p};
 use foreign_types::{ForeignType, ForeignTypeRef};
 use openssl_macros::corresponds;
 use std::ffi::CString;
@@ -56,6 +56,22 @@ impl Provider {
             ))?;
 
             Ok(Provider::from_ptr(p))
+        }
+    }
+
+    /// Specifies the default search path that is to be used for looking for providers in the specified library context.
+    /// If left unspecified, an environment variable and a fall back default value will be used instead
+    ///
+    /// If `ctx` is `None`, the provider will be loaded into the default library context.
+    #[corresponds(OSSL_PROVIDER_set_default_search_path)]
+    pub fn set_default_search_path(ctx: Option<&LibCtxRef>, path: &str) -> Result<(), ErrorStack> {
+        let path = CString::new(path).unwrap();
+        unsafe {
+            cvt(ffi::OSSL_PROVIDER_set_default_search_path(
+                ctx.map_or(ptr::null_mut(), ForeignTypeRef::as_ptr),
+                path.as_ptr(),
+            ))
+            .map(|_| ())
         }
     }
 }
