@@ -100,9 +100,9 @@ cfg_if! {
 #[cfg(ossl300)]
 pub const X509_V_ERR_INVALID_CA: c_int = 79;
 
-#[cfg(not(ossl110))]
+#[cfg(not(any(ossl110, libressl370)))]
 pub const X509_V_FLAG_CB_ISSUER_CHECK: c_ulong = 0x1;
-#[cfg(ossl110)]
+#[cfg(any(ossl110, libressl370))]
 pub const X509_V_FLAG_CB_ISSUER_CHECK: c_ulong = 0x0;
 pub const X509_V_FLAG_USE_CHECK_TIME: c_ulong = 0x2;
 pub const X509_V_FLAG_CRL_CHECK: c_ulong = 0x4;
