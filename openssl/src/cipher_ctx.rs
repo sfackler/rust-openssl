@@ -379,49 +379,6 @@ impl CipherCtxRef {
         unsafe { ffi::EVP_CIPHER_CTX_num(self.as_ptr()) as usize }
     }
 
-    /// Returns number of bytes cached in partial block update.
-    #[cfg(ossl110)]
-    fn used_block_size(&self) -> usize {
-        self.num()
-    }
-
-    /// Returns maximum number of bytes that could be cached.
-    #[cfg(not(ossl110))]
-    fn used_block_size(&self) -> usize {
-        self.block_size()
-    }
-
-    /// Calculate the minimal size of the output buffer given the
-    /// input buffer size.
-    ///
-    /// For streaming ciphers the minimal output size is the same as
-    /// the input size. For block ciphers the minimal output size
-    /// additionally depends on the partial blocks that might have
-    /// been written in previous calls to [`Self::cipher_update`].
-    ///
-    /// This function takes into account the number of partially
-    /// written blocks for block ciphers for supported targets
-    /// (OpenSSL >= 1.1). For unsupported targets the number of
-    /// partially written bytes is assumed to contain one full block
-    /// (pessimistic case).
-    ///
-    /// # Panics
-    ///
-    /// Panics if the context has not been initialized with a cipher.
-    pub fn minimal_output_size(&self, inlen: usize) -> usize {
-        let block_size = self.block_size();
-        if block_size > 1 {
-            // block cipher
-            let num = self.used_block_size();
-            let total_size = inlen + num;
-            let num_blocks = total_size / block_size;
-            num_blocks * block_size
-        } else {
-            // streaming cipher
-            inlen
-        }
-    }
-
     /// Sets the length of the IV expected by this context.
     ///
     /// Only some ciphers support configurable IV lengths.
@@ -569,7 +526,11 @@ impl CipherCtxRef {
         output: Option<&mut [u8]>,
     ) -> Result<usize, ErrorStack> {
         if let Some(output) = &output {
-            let min_output_size = self.minimal_output_size(input.len());
+            let mut block_size = self.block_size();
+            if block_size == 1 {
+                block_size = 0;
+            }
+            let min_output_size = input.len() + block_size;
             assert!(
                 output.len() >= min_output_size,
                 "Output buffer size should be at least {} bytes.",
@@ -588,16 +549,13 @@ impl CipherCtxRef {
     ///
     /// This function is the same as [`Self::cipher_update`] but with the
     /// output size check removed. It can be used when the exact
-    /// buffer size control is maintained by the caller and the
-    /// underlying cryptographic library doesn't expose exact block
-    /// cache data (e.g. OpenSSL < 1.1, BoringSSL, LibreSSL).
+    /// buffer size control is maintained by the caller.
     ///
     /// SAFETY: The caller is expected to provide `output` buffer
     /// large enough to contain correct number of bytes. For streaming
     /// ciphers the output buffer size should be at least as big as
     /// the input buffer. For block ciphers the size of the output
-    /// buffer depends on the state of partially updated blocks (see
-    /// [`Self::minimal_output_size`]).
+    /// buffer depends on the state of partially updated blocks.
     #[corresponds(EVP_CipherUpdate)]
     pub unsafe fn cipher_update_unchecked(
         &mut self,
@@ -649,14 +607,34 @@ impl CipherCtxRef {
             assert!(output.len() >= block_size);
         }
 
+        unsafe { self.cipher_final_unchecked(output) }
+    }
+
+    /// Finalizes the encryption or decryption process.
+    ///
+    /// Any remaining data will be written to the output buffer.
+    ///
+    /// Returns the number of bytes written to `output`.
+    ///
+    /// This function is the same as [`Self::cipher_final`] but with
+    /// the output buffer size check removed.
+    ///
+    /// SAFETY: The caller is expected to provide `output` buffer
+    /// large enough to contain correct number of bytes. For streaming
+    /// ciphers the output buffer can be empty, for block ciphers the
+    /// output buffer should be at least as big as the block.
+    #[corresponds(EVP_CipherFinal)]
+    pub unsafe fn cipher_final_unchecked(
+        &mut self,
+        output: &mut [u8],
+    ) -> Result<usize, ErrorStack> {
         let mut outl = 0;
-        unsafe {
-            cvt(ffi::EVP_CipherFinal(
-                self.as_ptr(),
-                output.as_mut_ptr(),
-                &mut outl,
-            ))?;
-        }
+
+        cvt(ffi::EVP_CipherFinal(
+            self.as_ptr(),
+            output.as_mut_ptr(),
+            &mut outl,
+        ))?;
 
         Ok(outl as usize)
     }
@@ -758,75 +736,6 @@ mod test {
     }
 
     #[test]
-    #[cfg(ossl110)]
-    fn partial_block_updates() {
-        test_block_cipher_for_partial_block_updates(Cipher::aes_128_cbc());
-        test_block_cipher_for_partial_block_updates(Cipher::aes_256_cbc());
-        test_block_cipher_for_partial_block_updates(Cipher::des_ede3_cbc());
-    }
-
-    #[cfg(ossl110)]
-    fn test_block_cipher_for_partial_block_updates(cipher: &'static CipherRef) {
-        let mut key = vec![0; cipher.key_length()];
-        rand_bytes(&mut key).unwrap();
-        let mut iv = vec![0; cipher.iv_length()];
-        rand_bytes(&mut iv).unwrap();
-
-        let mut ctx = CipherCtx::new().unwrap();
-
-        ctx.encrypt_init(Some(cipher), Some(&key), Some(&iv))
-            .unwrap();
-        ctx.set_padding(false);
-
-        let block_size = cipher.block_size();
-        assert!(block_size > 1, "Need a block cipher, not a stream cipher");
-
-        // update cipher with non-full block
-        // expect no output until a block is complete
-        let outlen = ctx
-            .cipher_update(&vec![0; block_size - 1], Some(&mut [0; 0]))
-            .unwrap();
-        assert_eq!(0, outlen);
-
-        // update cipher with missing bytes from the previous block
-        // and one additional block, output should contain two blocks
-        let mut two_blocks = vec![0; block_size * 2];
-        let outlen = ctx
-            .cipher_update(&vec![0; block_size + 1], Some(&mut two_blocks))
-            .unwrap();
-        assert_eq!(block_size * 2, outlen);
-
-        ctx.cipher_final_vec(&mut vec![0; 0]).unwrap();
-
-        // try to decrypt
-        ctx.decrypt_init(Some(cipher), Some(&key), Some(&iv))
-            .unwrap();
-        ctx.set_padding(false);
-
-        // update cipher with non-full block
-        // expect no output until a block is complete
-        let outlen = ctx
-            .cipher_update(&two_blocks[0..block_size - 1], Some(&mut [0; 0]))
-            .unwrap();
-        assert_eq!(0, outlen);
-
-        // update cipher with missing bytes from the previous block
-        // and one additional block, output should contain two blocks
-        let mut two_blocks_decrypted = vec![0; block_size * 2];
-        let outlen = ctx
-            .cipher_update(
-                &two_blocks[block_size - 1..],
-                Some(&mut two_blocks_decrypted),
-            )
-            .unwrap();
-        assert_eq!(block_size * 2, outlen);
-
-        ctx.cipher_final_vec(&mut vec![0; 0]).unwrap();
-        // check if the decrypted blocks are the same as input (all zeros)
-        assert_eq!(two_blocks_decrypted, vec![0; block_size * 2]);
-    }
-
-    #[test]
     fn test_stream_ciphers() {
         test_stream_cipher(Cipher::aes_192_ctr());
         test_stream_cipher(Cipher::aes_256_ctr());
@@ -894,43 +803,19 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Output buffer size should be at least 16 bytes.")]
-    #[cfg(ossl110)]
+    #[should_panic(expected = "Output buffer size should be at least 33 bytes.")]
     fn full_block_updates_aes_128() {
         output_buffer_too_small(Cipher::aes_128_cbc());
     }
 
     #[test]
-    #[should_panic(expected = "Output buffer size should be at least 16 bytes.")]
-    #[cfg(ossl110)]
+    #[should_panic(expected = "Output buffer size should be at least 33 bytes.")]
     fn full_block_updates_aes_256() {
         output_buffer_too_small(Cipher::aes_256_cbc());
     }
 
     #[test]
-    #[should_panic(expected = "Output buffer size should be at least 8 bytes.")]
-    #[cfg(ossl110)]
-    fn full_block_updates_3des() {
-        output_buffer_too_small(Cipher::des_ede3_cbc());
-    }
-
-    #[test]
-    #[should_panic(expected = "Output buffer size should be at least 32 bytes.")]
-    #[cfg(not(ossl110))]
-    fn full_block_updates_aes_128() {
-        output_buffer_too_small(Cipher::aes_128_cbc());
-    }
-
-    #[test]
-    #[should_panic(expected = "Output buffer size should be at least 32 bytes.")]
-    #[cfg(not(ossl110))]
-    fn full_block_updates_aes_256() {
-        output_buffer_too_small(Cipher::aes_256_cbc());
-    }
-
-    #[test]
-    #[should_panic(expected = "Output buffer size should be at least 16 bytes.")]
-    #[cfg(not(ossl110))]
+    #[should_panic(expected = "Output buffer size should be at least 17 bytes.")]
     fn full_block_updates_3des() {
         output_buffer_too_small(Cipher::des_ede3_cbc());
     }
