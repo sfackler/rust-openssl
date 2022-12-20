@@ -427,7 +427,7 @@ cfg_if! {
         const_ptr_api! {
             extern "C" {
                 pub fn EVP_PKEY_bits(key: #[const_ptr_if(any(ossl110, libressl280))] EVP_PKEY) -> c_int;
-                #[cfg(ossl110)]
+                #[cfg(any(ossl110, libressl360))]
                 pub fn EVP_PKEY_security_bits(pkey: #[const_ptr_if(any(ossl110, libressl280))] EVP_PKEY) -> c_int;
             }
         }

@@ -233,7 +233,7 @@ where
     ///
     ///Bits of security is defined in NIST SP800-57.
     #[corresponds(EVP_PKEY_security_bits)]
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl360))]
     pub fn security_bits(&self) -> u32 {
         unsafe { ffi::EVP_PKEY_security_bits(self.as_ptr()) as u32 }
     }
@@ -1028,7 +1028,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(ossl110)]
+    #[cfg(any(ossl110, libressl360))]
     fn test_security_bits() {
         let group = crate::ec::EcGroup::from_curve_name(crate::nid::Nid::SECP521R1).unwrap();
         let ec_key = EcKey::generate(&group).unwrap();
