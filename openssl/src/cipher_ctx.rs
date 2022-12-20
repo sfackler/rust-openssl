@@ -607,14 +607,34 @@ impl CipherCtxRef {
             assert!(output.len() >= block_size);
         }
 
+        unsafe { self.cipher_final_unchecked(output) }
+    }
+
+    /// Finalizes the encryption or decryption process.
+    ///
+    /// Any remaining data will be written to the output buffer.
+    ///
+    /// Returns the number of bytes written to `output`.
+    ///
+    /// This function is the same as [`Self::cipher_final`] but with
+    /// the output buffer size check removed.
+    ///
+    /// SAFETY: The caller is expected to provide `output` buffer
+    /// large enough to contain correct number of bytes. For streaming
+    /// ciphers the output buffer can be empty, for block ciphers the
+    /// output buffer should be at least as big as the block.
+    #[corresponds(EVP_CipherFinal)]
+    pub unsafe fn cipher_final_unchecked(
+        &mut self,
+        output: &mut [u8],
+    ) -> Result<usize, ErrorStack> {
         let mut outl = 0;
-        unsafe {
-            cvt(ffi::EVP_CipherFinal(
-                self.as_ptr(),
-                output.as_mut_ptr(),
-                &mut outl,
-            ))?;
-        }
+
+        cvt(ffi::EVP_CipherFinal(
+            self.as_ptr(),
+            output.as_mut_ptr(),
+            &mut outl,
+        ))?;
 
         Ok(outl as usize)
     }
