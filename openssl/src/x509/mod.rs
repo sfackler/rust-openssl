@@ -872,6 +872,21 @@ impl X509NameBuilder {
         }
     }
 
+    /// Add a name entry
+    #[corresponds(X509_NAME_add_entry)]
+    #[cfg(any(ossl101, libressl350))]
+    pub fn append_entry(&mut self, ne: &X509NameEntryRef) -> std::result::Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_NAME_add_entry(
+                self.0.as_ptr(),
+                ne.as_ptr(),
+                -1,
+                0,
+            ))
+            .map(|_| ())
+        }
+    }
+
     /// Add a field entry by str.
     ///
     /// This corresponds to [`X509_NAME_add_entry_by_txt`].

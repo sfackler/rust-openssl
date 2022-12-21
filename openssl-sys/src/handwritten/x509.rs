@@ -286,6 +286,13 @@ const_ptr_api! {
         pub fn X509_NAME_dup(x: #[const_ptr_if(ossl300)] X509_NAME) -> *mut X509_NAME;
         #[cfg(any(ossl110, libressl270))]
         pub fn X509_dup(x: #[const_ptr_if(ossl300)] X509) -> *mut X509;
+        #[cfg(any(ossl101, libressl350))]
+        pub fn X509_NAME_add_entry(
+            name: *mut X509_NAME,
+            ne: #[const_ptr_if(any(ossl110, libressl))] X509_NAME_ENTRY,
+            loc: c_int,
+            set: c_int,
+            ) -> c_int;
     }
 }
 extern "C" {

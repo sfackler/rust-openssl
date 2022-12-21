@@ -768,3 +768,21 @@ fn test_set_purpose_fails_verification() {
         expected_error
     )
 }
+
+#[test]
+#[cfg(any(ossl101, libressl350))]
+fn test_add_name_entry() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let inp_name = cert.subject_name().entries().next().unwrap();
+
+    let mut names = X509Name::builder().unwrap();
+    names.append_entry(inp_name).unwrap();
+    let names = names.build();
+
+    let mut entries = names.entries();
+    let outp_name = entries.next().unwrap();
+    assert_eq!(outp_name.object().nid(), inp_name.object().nid());
+    assert_eq!(outp_name.data().as_slice(), inp_name.data().as_slice());
+    assert!(entries.next().is_none());
+}
