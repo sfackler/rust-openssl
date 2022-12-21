@@ -119,4 +119,10 @@ extern "C" {
         ip: *const c_uchar,
         iplen: size_t,
     ) -> c_int;
+    #[cfg(ossl110)]
+    pub fn X509_VERIFY_PARAM_set_auth_level(param: *mut X509_VERIFY_PARAM, lvl: c_int);
+    #[cfg(ossl110)]
+    pub fn X509_VERIFY_PARAM_get_auth_level(param: *const X509_VERIFY_PARAM) -> c_int;
+    #[cfg(ossl102)]
+    pub fn X509_VERIFY_PARAM_set_purpose(param: *mut X509_VERIFY_PARAM, purpose: c_int) -> c_int;
 }

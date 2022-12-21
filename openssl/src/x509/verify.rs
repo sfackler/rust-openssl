@@ -162,4 +162,48 @@ impl X509VerifyParamRef {
     pub fn set_depth(&mut self, depth: c_int) {
         unsafe { ffi::X509_VERIFY_PARAM_set_depth(self.as_ptr(), depth) }
     }
+
+    /// Sets the authentication security level to auth_level
+    #[corresponds(X509_VERIFY_PARAM_set_auth_level)]
+    #[cfg(ossl110)]
+    pub fn set_auth_level(&mut self, lvl: c_int) {
+        unsafe { ffi::X509_VERIFY_PARAM_set_auth_level(self.as_ptr(), lvl) }
+    }
+
+    /// Gets the current authentication security level
+    #[corresponds(X509_VERIFY_PARAM_get_auth_level)]
+    #[cfg(ossl110)]
+    pub fn auth_level(&self) -> i32 {
+        unsafe { ffi::X509_VERIFY_PARAM_get_auth_level(self.as_ptr()) }
+    }
+
+    /// Sets the verification purpose
+    #[corresponds(X509_VERIFY_PARAM_set_purpose)]
+    #[cfg(ossl102)]
+    pub fn set_purpose(&mut self, purpose: X509PurposeFlags) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_VERIFY_PARAM_set_purpose(
+                self.as_ptr(),
+                purpose.bits,
+            ))
+            .map(|_| ())
+        }
+    }
+}
+
+#[cfg(ossl102)]
+bitflags! {
+    /// Bitflags defining the purpose of the verification
+    pub struct X509PurposeFlags: c_int {
+        const SSL_CLIENT = ffi::X509_PURPOSE_SSL_CLIENT;
+        const SSL_SERVER = ffi::X509_PURPOSE_SSL_SERVER;
+        const NS_SSL_SERVER = ffi::X509_PURPOSE_NS_SSL_SERVER;
+        const SMIME_SIGN = ffi::X509_PURPOSE_SMIME_SIGN;
+        const SMIME_ENCRYPT = ffi::X509_PURPOSE_SMIME_ENCRYPT;
+        const CRL_SIGN = ffi::X509_PURPOSE_CRL_SIGN;
+        const ANY = ffi::X509_PURPOSE_ANY;
+        const OCSP_HELPER = ffi::X509_PURPOSE_OCSP_HELPER;
+        const TIMESTAMP_SIGN = ffi::X509_PURPOSE_TIMESTAMP_SIGN;
+    }
+
 }
