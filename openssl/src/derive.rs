@@ -69,7 +69,7 @@ impl<'a> Deriver<'a> {
     ///
     /// This corresponds to [`EVP_PKEY_derive_init`].
     ///
-    /// [`EVP_PKEY_derive_init`]: https://www.openssl.org/docs/man1.0.2/crypto/EVP_PKEY_derive_init.html
+    /// [`EVP_PKEY_derive_init`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_derive_init.html
     pub fn new<T>(key: &'a PKeyRef<T>) -> Result<Deriver<'a>, ErrorStack>
     where
         T: HasPrivate,
@@ -85,7 +85,7 @@ impl<'a> Deriver<'a> {
     ///
     /// This corresponds to [`EVP_PKEY_derive_set_peer`]:
     ///
-    /// [`EVP_PKEY_derive_set_peer`]: https://www.openssl.org/docs/man1.0.2/crypto/EVP_PKEY_derive_init.html
+    /// [`EVP_PKEY_derive_set_peer`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_derive_init.html
     pub fn set_peer<T>(&mut self, key: &'a PKeyRef<T>) -> Result<(), ErrorStack>
     where
         T: HasPublic,
@@ -100,7 +100,7 @@ impl<'a> Deriver<'a> {
     /// This corresponds to [`EVP_PKEY_derive`].
     ///
     /// [`Deriver::derive`]: #method.derive
-    /// [`EVP_PKEY_derive`]: https://www.openssl.org/docs/man1.0.2/crypto/EVP_PKEY_derive_init.html
+    /// [`EVP_PKEY_derive`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_derive_init.html
     pub fn len(&mut self) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = 0;
@@ -114,7 +114,7 @@ impl<'a> Deriver<'a> {
     ///
     /// This corresponds to [`EVP_PKEY_derive`].
     ///
-    /// [`EVP_PKEY_derive`]: https://www.openssl.org/docs/man1.0.2/crypto/EVP_PKEY_derive_init.html
+    /// [`EVP_PKEY_derive`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_derive_init.html
     pub fn derive(&mut self, buf: &mut [u8]) -> Result<usize, ErrorStack> {
         let mut len = buf.len();
         unsafe {

@@ -44,7 +44,7 @@ pub struct SignatureAlgorithms {
 /// The following documentation provides context about `Nid`s and their usage
 /// in OpenSSL.
 ///
-/// - [Obj_nid2obj](https://www.openssl.org/docs/man1.1.0/crypto/OBJ_create.html)
+/// - [Obj_nid2obj](https://www.openssl.org/docs/manmaster/crypto/OBJ_create.html)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Nid(c_int);
 

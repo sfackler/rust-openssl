@@ -37,7 +37,7 @@ generic_foreign_type_and_impl_send_sync! {
     ///
     /// OpenSSL documentation at [`DSA_new`]
     ///
-    /// [`DSA_new`]: https://www.openssl.org/docs/man1.1.0/crypto/DSA_new.html
+    /// [`DSA_new`]: https://www.openssl.org/docs/manmaster/crypto/DSA_new.html
     ///
     /// # Examples
     ///
@@ -191,8 +191,8 @@ impl Dsa<Private> {
     ///
     /// The `bits` parameter corresponds to the length of the prime `p`.
     ///
-    /// [`DSA_generate_parameters_ex`]: https://www.openssl.org/docs/man1.1.0/crypto/DSA_generate_parameters_ex.html
-    /// [`DSA_generate_key`]: https://www.openssl.org/docs/man1.1.0/crypto/DSA_generate_key.html
+    /// [`DSA_generate_parameters_ex`]: https://www.openssl.org/docs/manmaster/crypto/DSA_generate_parameters_ex.html
+    /// [`DSA_generate_key`]: https://www.openssl.org/docs/manmaster/crypto/DSA_generate_key.html
     pub fn generate(bits: u32) -> Result<Dsa<Private>, ErrorStack> {
         ffi::init();
         unsafe {

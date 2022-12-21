@@ -73,7 +73,7 @@ impl Asn1Flag {
     ///
     /// OpenSSL documentation at [`EC_GROUP`]
     ///
-    /// [`EC_GROUP`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_get_seed_len.html
+    /// [`EC_GROUP`]: https://www.openssl.org/docs/manmaster/crypto/EC_GROUP_get_seed_len.html
     pub const EXPLICIT_CURVE: Asn1Flag = Asn1Flag(0);
 
     /// Standard Curves

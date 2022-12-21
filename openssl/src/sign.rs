@@ -214,7 +214,7 @@ impl<'a> Signer<'a> {
     ///
     /// This corresponds to [`EVP_PKEY_CTX_set_rsa_padding`].
     ///
-    /// [`EVP_PKEY_CTX_set_rsa_padding`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_padding.html
+    /// [`EVP_PKEY_CTX_set_rsa_padding`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_CTX_set_rsa_padding.html
     pub fn set_rsa_padding(&mut self, padding: Padding) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(
@@ -231,7 +231,7 @@ impl<'a> Signer<'a> {
     ///
     /// This corresponds to [`EVP_PKEY_CTX_set_rsa_pss_saltlen`].
     ///
-    /// [`EVP_PKEY_CTX_set_rsa_pss_saltlen`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_pss_saltlen.html
+    /// [`EVP_PKEY_CTX_set_rsa_pss_saltlen`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_CTX_set_rsa_pss_saltlen.html
     pub fn set_rsa_pss_saltlen(&mut self, len: RsaPssSaltlen) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_pss_saltlen(
@@ -285,7 +285,7 @@ impl<'a> Signer<'a> {
     ///
     /// OpenSSL documentation at [`EVP_DigestSignFinal`].
     ///
-    /// [`EVP_DigestSignFinal`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestSignFinal.html
+    /// [`EVP_DigestSignFinal`]: https://www.openssl.org/docs/manmaster/crypto/EVP_DigestSignFinal.html
     pub fn len(&self) -> Result<usize, ErrorStack> {
         self.len_intern()
     }
@@ -325,7 +325,7 @@ impl<'a> Signer<'a> {
     ///
     /// OpenSSL documentation at [`EVP_DigestSignFinal`].
     ///
-    /// [`EVP_DigestSignFinal`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestSignFinal.html
+    /// [`EVP_DigestSignFinal`]: https://www.openssl.org/docs/manmaster/crypto/EVP_DigestSignFinal.html
     pub fn sign(&self, buf: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = buf.len();
@@ -507,7 +507,7 @@ impl<'a> Verifier<'a> {
     ///
     /// This corresponds to [`EVP_PKEY_CTX_set_rsa_padding`].
     ///
-    /// [`EVP_PKEY_CTX_set_rsa_padding`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_padding.html
+    /// [`EVP_PKEY_CTX_set_rsa_padding`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_CTX_set_rsa_padding.html
     pub fn set_rsa_padding(&mut self, padding: Padding) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(
@@ -524,7 +524,7 @@ impl<'a> Verifier<'a> {
     ///
     /// This corresponds to [`EVP_PKEY_CTX_set_rsa_pss_saltlen`].
     ///
-    /// [`EVP_PKEY_CTX_set_rsa_pss_saltlen`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_pss_saltlen.html
+    /// [`EVP_PKEY_CTX_set_rsa_pss_saltlen`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_CTX_set_rsa_pss_saltlen.html
     pub fn set_rsa_pss_saltlen(&mut self, len: RsaPssSaltlen) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_pss_saltlen(

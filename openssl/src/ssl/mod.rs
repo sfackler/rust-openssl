@@ -1047,7 +1047,7 @@ impl SslContextBuilder {
     ///
     /// See [`ciphers`] for details on the format.
     ///
-    /// [`ciphers`]: https://www.openssl.org/docs/man1.1.0/apps/ciphers.html
+    /// [`ciphers`]: https://www.openssl.org/docs/manmaster/apps/ciphers.html
     #[corresponds(SSL_CTX_set_cipher_list)]
     pub fn set_cipher_list(&mut self, cipher_list: &str) -> Result<(), ErrorStack> {
         let cipher_list = CString::new(cipher_list).unwrap();
@@ -2200,7 +2200,7 @@ impl Ssl {
     ///
     /// This corresponds to [`SSL_new`].
     ///
-    /// [`SSL_new`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_new.html
+    /// [`SSL_new`]: https://www.openssl.org/docs/manmaster/ssl/SSL_new.html
     #[corresponds(SSL_new)]
     pub fn new(ctx: &SslContextRef) -> Result<Ssl, ErrorStack> {
         let session_ctx_index = try_get_session_ctx_index()?;

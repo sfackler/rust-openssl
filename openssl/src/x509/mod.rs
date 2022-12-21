@@ -109,8 +109,8 @@ impl X509StoreContextRef {
     /// This corresponds to [`X509_STORE_CTX_init`] before calling `with_context` and to
     /// [`X509_STORE_CTX_cleanup`] after calling `with_context`.
     ///
-    /// [`X509_STORE_CTX_init`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_init.html
-    /// [`X509_STORE_CTX_cleanup`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_cleanup.html
+    /// [`X509_STORE_CTX_init`]:  https://www.openssl.org/docs/manmaster/crypto/X509_STORE_CTX_init.html
+    /// [`X509_STORE_CTX_cleanup`]:  https://www.openssl.org/docs/manmaster/crypto/X509_STORE_CTX_cleanup.html
     pub fn init<F, T>(
         &mut self,
         trust: &store::X509StoreRef,
@@ -891,7 +891,7 @@ impl X509NameBuilder {
     ///
     /// This corresponds to [`X509_NAME_add_entry_by_txt`].
     ///
-    /// [`X509_NAME_add_entry_by_txt`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_add_entry_by_txt.html
+    /// [`X509_NAME_add_entry_by_txt`]: https://www.openssl.org/docs/manmaster/crypto/X509_NAME_add_entry_by_txt.html
     pub fn append_entry_by_text(&mut self, field: &str, value: &str) -> Result<(), ErrorStack> {
         unsafe {
             let field = CString::new(field).unwrap();
@@ -913,7 +913,7 @@ impl X509NameBuilder {
     ///
     /// This corresponds to [`X509_NAME_add_entry_by_txt`].
     ///
-    /// [`X509_NAME_add_entry_by_txt`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_add_entry_by_txt.html
+    /// [`X509_NAME_add_entry_by_txt`]: https://www.openssl.org/docs/manmaster/crypto/X509_NAME_add_entry_by_txt.html
     pub fn append_entry_by_text_with_type(
         &mut self,
         field: &str,
@@ -940,7 +940,7 @@ impl X509NameBuilder {
     ///
     /// This corresponds to [`X509_NAME_add_entry_by_NID`].
     ///
-    /// [`X509_NAME_add_entry_by_NID`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_add_entry_by_NID.html
+    /// [`X509_NAME_add_entry_by_NID`]: https://www.openssl.org/docs/manmaster/crypto/X509_NAME_add_entry_by_NID.html
     pub fn append_entry_by_nid(&mut self, field: Nid, value: &str) -> Result<(), ErrorStack> {
         unsafe {
             assert!(value.len() <= c_int::max_value() as usize);
@@ -961,7 +961,7 @@ impl X509NameBuilder {
     ///
     /// This corresponds to [`X509_NAME_add_entry_by_NID`].
     ///
-    /// [`X509_NAME_add_entry_by_NID`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_add_entry_by_NID.html
+    /// [`X509_NAME_add_entry_by_NID`]: https://www.openssl.org/docs/manmaster/crypto/X509_NAME_add_entry_by_NID.html
     pub fn append_entry_by_nid_with_type(
         &mut self,
         field: Nid,
@@ -1068,7 +1068,7 @@ impl X509NameRef {
         ///
         /// This corresponds to [`i2d_X509_NAME`].
         ///
-        /// [`i2d_X509_NAME`]: https://www.openssl.org/docs/man1.1.0/crypto/i2d_X509_NAME.html
+        /// [`i2d_X509_NAME`]: https://www.openssl.org/docs/manmaster/crypto/i2d_X509_NAME.html
         to_der,
         ffi::i2d_X509_NAME
     }
@@ -1132,7 +1132,7 @@ impl X509NameEntryRef {
     ///
     /// This corresponds to [`X509_NAME_ENTRY_get_data`].
     ///
-    /// [`X509_NAME_ENTRY_get_data`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_ENTRY_get_data.html
+    /// [`X509_NAME_ENTRY_get_data`]: https://www.openssl.org/docs/manmaster/crypto/X509_NAME_ENTRY_get_data.html
     pub fn data(&self) -> &Asn1StringRef {
         unsafe {
             let data = ffi::X509_NAME_ENTRY_get_data(self.as_ptr());
@@ -1145,7 +1145,7 @@ impl X509NameEntryRef {
     ///
     /// This corresponds to [`X509_NAME_ENTRY_get_object`].
     ///
-    /// [`X509_NAME_ENTRY_get_object`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_NAME_ENTRY_get_object.html
+    /// [`X509_NAME_ENTRY_get_object`]: https://www.openssl.org/docs/manmaster/crypto/X509_NAME_ENTRY_get_object.html
     pub fn object(&self) -> &Asn1ObjectRef {
         unsafe {
             let object = ffi::X509_NAME_ENTRY_get_object(self.as_ptr());
@@ -1168,7 +1168,7 @@ impl X509ReqBuilder {
     ///
     /// This corresponds to [`X509_REQ_new`].
     ///
-    ///[`X509_REQ_new`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_new.html
+    ///[`X509_REQ_new`]: https://www.openssl.org/docs/manmaster/crypto/X509_REQ_new.html
     pub fn new() -> Result<X509ReqBuilder, ErrorStack> {
         unsafe {
             ffi::init();
@@ -1180,7 +1180,7 @@ impl X509ReqBuilder {
     ///
     /// This corresponds to [`X509_REQ_set_version`].
     ///
-    ///[`X509_REQ_set_version`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_set_version.html
+    ///[`X509_REQ_set_version`]: https://www.openssl.org/docs/manmaster/crypto/X509_REQ_set_version.html
     pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::X509_REQ_set_version(
@@ -1195,7 +1195,7 @@ impl X509ReqBuilder {
     ///
     /// This corresponds to [`X509_REQ_set_subject_name`].
     ///
-    /// [`X509_REQ_set_subject_name`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_set_subject_name.html
+    /// [`X509_REQ_set_subject_name`]: https://www.openssl.org/docs/manmaster/crypto/X509_REQ_set_subject_name.html
     pub fn set_subject_name(&mut self, subject_name: &X509NameRef) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::X509_REQ_set_subject_name(
@@ -1210,7 +1210,7 @@ impl X509ReqBuilder {
     ///
     /// This corresponds to [`X509_REQ_set_pubkey`].
     ///
-    /// [`X509_REQ_set_pubkey`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_set_pubkey.html
+    /// [`X509_REQ_set_pubkey`]: https://www.openssl.org/docs/manmaster/crypto/X509_REQ_set_pubkey.html
     pub fn set_pubkey<T>(&mut self, key: &PKeyRef<T>) -> Result<(), ErrorStack>
     where
         T: HasPublic,
@@ -1260,7 +1260,7 @@ impl X509ReqBuilder {
     ///
     /// This corresponds to [`X509_REQ_sign`].
     ///
-    /// [`X509_REQ_sign`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_sign.html
+    /// [`X509_REQ_sign`]: https://www.openssl.org/docs/manmaster/crypto/X509_REQ_sign.html
     pub fn sign<T>(&mut self, key: &PKeyRef<T>, hash: MessageDigest) -> Result<(), ErrorStack>
     where
         T: HasPrivate,
@@ -1304,7 +1304,7 @@ impl X509Req {
         ///
         /// This corresponds to [`PEM_read_bio_X509_REQ`].
         ///
-        /// [`PEM_read_bio_X509_REQ`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_read_bio_X509_REQ.html
+        /// [`PEM_read_bio_X509_REQ`]: https://www.openssl.org/docs/manmaster/crypto/PEM_read_bio_X509_REQ.html
         from_pem,
         X509Req,
         ffi::PEM_read_bio_X509_REQ
@@ -1315,7 +1315,7 @@ impl X509Req {
         ///
         /// This corresponds to [`d2i_X509_REQ`].
         ///
-        /// [`d2i_X509_REQ`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_X509_REQ.html
+        /// [`d2i_X509_REQ`]: https://www.openssl.org/docs/manmaster/crypto/d2i_X509_REQ.html
         from_der,
         X509Req,
         ffi::d2i_X509_REQ
@@ -1330,7 +1330,7 @@ impl X509ReqRef {
         ///
         /// This corresponds to [`PEM_write_bio_X509_REQ`].
         ///
-        /// [`PEM_write_bio_X509_REQ`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_write_bio_X509_REQ.html
+        /// [`PEM_write_bio_X509_REQ`]: https://www.openssl.org/docs/manmaster/crypto/PEM_write_bio_X509_REQ.html
         to_pem,
         ffi::PEM_write_bio_X509_REQ
     }
@@ -1340,7 +1340,7 @@ impl X509ReqRef {
         ///
         /// This corresponds to [`i2d_X509_REQ`].
         ///
-        /// [`i2d_X509_REQ`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_X509_REQ.html
+        /// [`i2d_X509_REQ`]: https://www.openssl.org/docs/manmaster/crypto/i2d_X509_REQ.html
         to_der,
         ffi::i2d_X509_REQ
     }
@@ -1356,7 +1356,7 @@ impl X509ReqRef {
     ///
     /// This corresponds to [`X509_REQ_get_version`]
     ///
-    /// [`X509_REQ_get_version`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_get_version.html
+    /// [`X509_REQ_get_version`]: https://www.openssl.org/docs/manmaster/crypto/X509_REQ_get_version.html
     pub fn version(&self) -> i32 {
         unsafe { X509_REQ_get_version(self.as_ptr()) as i32 }
     }
@@ -1365,7 +1365,7 @@ impl X509ReqRef {
     ///
     /// This corresponds to [`X509_REQ_get_subject_name`]
     ///
-    /// [`X509_REQ_get_subject_name`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_get_subject_name.html
+    /// [`X509_REQ_get_subject_name`]: https://www.openssl.org/docs/manmaster/crypto/X509_REQ_get_subject_name.html
     pub fn subject_name(&self) -> &X509NameRef {
         unsafe {
             let name = X509_REQ_get_subject_name(self.as_ptr());
@@ -1377,7 +1377,7 @@ impl X509ReqRef {
     ///
     /// This corresponds to [`X509_REQ_get_pubkey"]
     ///
-    /// [`X509_REQ_get_pubkey`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_get_pubkey.html
+    /// [`X509_REQ_get_pubkey`]: https://www.openssl.org/docs/manmaster/crypto/X509_REQ_get_pubkey.html
     pub fn public_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
             let key = cvt_p(ffi::X509_REQ_get_pubkey(self.as_ptr()))?;
@@ -1391,7 +1391,7 @@ impl X509ReqRef {
     ///
     /// This corresponds to [`X509_REQ_verify"].
     ///
-    /// [`X509_REQ_verify`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_REQ_verify.html
+    /// [`X509_REQ_verify`]: https://www.openssl.org/docs/manmaster/crypto/X509_REQ_verify.html
     pub fn verify<T>(&self, key: &PKeyRef<T>) -> Result<bool, ErrorStack>
     where
         T: HasPublic,
@@ -1452,7 +1452,7 @@ impl X509VerifyResult {
     ///
     /// This corresponds to [`X509_verify_cert_error_string`].
     ///
-    /// [`X509_verify_cert_error_string`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_verify_cert_error_string.html
+    /// [`X509_verify_cert_error_string`]: https://www.openssl.org/docs/manmaster/crypto/X509_verify_cert_error_string.html
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn error_string(&self) -> &'static str {
         ffi::init();

@@ -185,7 +185,7 @@ impl Pkcs12Builder {
 
             // According to the OpenSSL docs, keytype is a non-standard extension for MSIE,
             // It's values are KEY_SIG or KEY_EX, see the OpenSSL docs for more information:
-            // https://www.openssl.org/docs/man1.0.2/crypto/PKCS12_create.html
+            // https://www.openssl.org/docs/manmaster/crypto/PKCS12_create.html
             let keytype = 0;
 
             let pkcs12 = cvt_p(ffi::PKCS12_create(
