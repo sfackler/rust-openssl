@@ -323,6 +323,25 @@ where
         }
     }
 
+    /// Serializes a private key into an unencrypted DER-formatted PKCS#8
+    #[corresponds(i2d_PKCS8PrivateKey_bio)]
+    pub fn private_key_to_pkcs8(&self) -> Result<Vec<u8>, ErrorStack> {
+        unsafe {
+            let bio = MemBio::new()?;
+            cvt(ffi::i2d_PKCS8PrivateKey_bio(
+                bio.as_ptr(),
+                self.as_ptr(),
+                ptr::null(),
+                ptr::null_mut(),
+                0,
+                None,
+                ptr::null_mut(),
+            ))?;
+
+            Ok(bio.get_buf().to_owned())
+        }
+    }
+
     /// Serializes a private key into a DER-formatted PKCS#8, using the supplied password to
     /// encrypt the key.
     ///
@@ -889,7 +908,14 @@ mod tests {
     #[test]
     fn test_unencrypted_pkcs8() {
         let key = include_bytes!("../test/pkcs8-nocrypt.der");
-        PKey::private_key_from_pkcs8(key).unwrap();
+        let pkey = PKey::private_key_from_pkcs8(key).unwrap();
+        let serialized = pkey.private_key_to_pkcs8().unwrap();
+        let pkey2 = PKey::private_key_from_pkcs8(&serialized).unwrap();
+
+        assert_eq!(
+            pkey2.private_key_to_der().unwrap(),
+            pkey.private_key_to_der().unwrap()
+        );
     }
 
     #[test]
