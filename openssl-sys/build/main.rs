@@ -215,12 +215,14 @@ See rust-openssl documentation for more information:
     let mut enabled = vec![];
     let mut openssl_version = None;
     let mut libressl_version = None;
+    let mut is_boringssl = false;
     for line in expanded.lines() {
         let line = line.trim();
 
         let openssl_prefix = "RUST_VERSION_OPENSSL_";
         let new_openssl_prefix = "RUST_VERSION_NEW_OPENSSL_";
         let libressl_prefix = "RUST_VERSION_LIBRESSL_";
+        let boringsl_prefix = "RUST_OPENSSL_IS_BORINGSSL";
         let conf_prefix = "RUST_CONF_";
         if line.starts_with(openssl_prefix) {
             let version = &line[openssl_prefix.len()..];
@@ -233,7 +235,13 @@ See rust-openssl documentation for more information:
             libressl_version = Some(parse_version(version));
         } else if line.starts_with(conf_prefix) {
             enabled.push(&line[conf_prefix.len()..]);
+        } else if line.starts_with(boringsl_prefix) {
+            is_boringssl = true;
         }
+    }
+
+    if is_boringssl {
+        panic!("BoringSSL detected, but `unstable_boringssl` feature wasn't specified.")
     }
 
     for enabled in &enabled {
