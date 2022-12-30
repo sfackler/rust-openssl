@@ -194,8 +194,9 @@ impl X509Lookup<File> {
 
 #[cfg(not(boringssl))]
 impl X509LookupRef<File> {
-    #[corresponds(X509_load_cert_file)]
     /// Specifies a file from which certificates will be loaded
+    #[corresponds(X509_load_cert_file)]
+    // FIXME should return 'Result<i32, ErrorStack' like load_crl_file
     pub fn load_cert_file<P: AsRef<Path>>(
         &mut self,
         file: P,
@@ -209,6 +210,23 @@ impl X509LookupRef<File> {
                 file_type.as_raw(),
             ))
             .map(|_| ())
+        }
+    }
+
+    /// Specifies a file from which certificate revocation lists will be loaded
+    #[corresponds(X509_load_crl_file)]
+    pub fn load_crl_file<P: AsRef<Path>>(
+        &mut self,
+        file: P,
+        file_type: SslFiletype,
+    ) -> Result<i32, ErrorStack> {
+        let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
+        unsafe {
+            cvt(ffi::X509_load_crl_file(
+                self.as_ptr(),
+                file.as_ptr(),
+                file_type.as_raw(),
+            ))
         }
     }
 }
