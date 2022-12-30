@@ -32,9 +32,22 @@ impl Pkcs12Ref {
         ffi::i2d_PKCS12
     }
 
+    /// Deprecated.
+    #[deprecated(note = "Use parse2 instead", since = "0.10.46")]
+    #[allow(deprecated)]
+    pub fn parse(&self, pass: &str) -> Result<ParsedPkcs12, ErrorStack> {
+        let parsed = self.parse2(pass)?;
+
+        Ok(ParsedPkcs12 {
+            pkey: parsed.pkey.unwrap(),
+            cert: parsed.cert.unwrap(),
+            chain: parsed.chain,
+        })
+    }
+
     /// Extracts the contents of the `Pkcs12`.
     #[corresponds(PKCS12_parse)]
-    pub fn parse(&self, pass: &str) -> Result<ParsedPkcs12, ErrorStack> {
+    pub fn parse2(&self, pass: &str) -> Result<ParsedPkcs12_2, ErrorStack> {
         unsafe {
             let pass = CString::new(pass.as_bytes()).unwrap();
 
@@ -50,12 +63,11 @@ impl Pkcs12Ref {
                 &mut chain,
             ))?;
 
-            let pkey = PKey::from_ptr(pkey);
-            let cert = X509::from_ptr(cert);
-
+            let pkey = PKey::from_ptr_opt(pkey);
+            let cert = X509::from_ptr_opt(cert);
             let chain = Stack::from_ptr_opt(chain);
 
-            Ok(ParsedPkcs12 { pkey, cert, chain })
+            Ok(ParsedPkcs12_2 { pkey, cert, chain })
         }
     }
 }
@@ -93,9 +105,16 @@ impl Pkcs12 {
     }
 }
 
+#[deprecated(note = "Use ParsedPkcs12_2 instead", since = "0.10.46")]
 pub struct ParsedPkcs12 {
     pub pkey: PKey<Private>,
     pub cert: X509,
+    pub chain: Option<Stack<X509>>,
+}
+
+pub struct ParsedPkcs12_2 {
+    pub pkey: Option<PKey<Private>>,
+    pub cert: Option<X509>,
     pub chain: Option<Stack<X509>>,
 }
 
@@ -246,10 +265,10 @@ mod test {
 
         let der = include_bytes!("../test/identity.p12");
         let pkcs12 = Pkcs12::from_der(der).unwrap();
-        let parsed = pkcs12.parse("mypass").unwrap();
+        let parsed = pkcs12.parse2("mypass").unwrap();
 
         assert_eq!(
-            hex::encode(parsed.cert.digest(MessageDigest::sha1()).unwrap()),
+            hex::encode(parsed.cert.unwrap().digest(MessageDigest::sha1()).unwrap()),
             "59172d9313e84459bcff27f967e79e6e9217e584"
         );
 
@@ -268,7 +287,7 @@ mod test {
 
         let der = include_bytes!("../test/keystore-empty-chain.p12");
         let pkcs12 = Pkcs12::from_der(der).unwrap();
-        let parsed = pkcs12.parse("cassandra").unwrap();
+        let parsed = pkcs12.parse2("cassandra").unwrap();
         if let Some(stack) = parsed.chain {
             assert_eq!(stack.len(), 0);
         }
@@ -309,12 +328,12 @@ mod test {
         let der = pkcs12.to_der().unwrap();
 
         let pkcs12 = Pkcs12::from_der(&der).unwrap();
-        let parsed = pkcs12.parse("mypass").unwrap();
+        let parsed = pkcs12.parse2("mypass").unwrap();
 
         assert_eq!(
-            &*parsed.cert.digest(MessageDigest::sha1()).unwrap(),
+            &*parsed.cert.unwrap().digest(MessageDigest::sha1()).unwrap(),
             &*cert.digest(MessageDigest::sha1()).unwrap()
         );
-        assert!(parsed.pkey.public_eq(&pkey));
+        assert!(parsed.pkey.unwrap().public_eq(&pkey));
     }
 }
