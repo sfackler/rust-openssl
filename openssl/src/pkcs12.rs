@@ -41,7 +41,7 @@ impl Pkcs12Ref {
         Ok(ParsedPkcs12 {
             pkey: parsed.pkey.unwrap(),
             cert: parsed.cert.unwrap(),
-            chain: parsed.chain,
+            chain: parsed.ca,
         })
     }
 
@@ -53,21 +53,21 @@ impl Pkcs12Ref {
 
             let mut pkey = ptr::null_mut();
             let mut cert = ptr::null_mut();
-            let mut chain = ptr::null_mut();
+            let mut ca = ptr::null_mut();
 
             cvt(ffi::PKCS12_parse(
                 self.as_ptr(),
                 pass.as_ptr(),
                 &mut pkey,
                 &mut cert,
-                &mut chain,
+                &mut ca,
             ))?;
 
             let pkey = PKey::from_ptr_opt(pkey);
             let cert = X509::from_ptr_opt(cert);
-            let chain = Stack::from_ptr_opt(chain);
+            let ca = Stack::from_ptr_opt(ca);
 
-            Ok(ParsedPkcs12_2 { pkey, cert, chain })
+            Ok(ParsedPkcs12_2 { pkey, cert, ca })
         }
     }
 }
@@ -94,13 +94,16 @@ impl Pkcs12 {
         ffi::init();
 
         Pkcs12Builder {
+            name: None,
+            pkey: None,
+            cert: None,
+            ca: None,
             nid_key: Nid::UNDEF,
             nid_cert: Nid::UNDEF,
             iter: ffi::PKCS12_DEFAULT_ITER,
             mac_iter: ffi::PKCS12_DEFAULT_ITER,
             #[cfg(not(boringssl))]
             mac_md: None,
-            ca: None,
         }
     }
 }
@@ -115,20 +118,54 @@ pub struct ParsedPkcs12 {
 pub struct ParsedPkcs12_2 {
     pub pkey: Option<PKey<Private>>,
     pub cert: Option<X509>,
-    pub chain: Option<Stack<X509>>,
+    pub ca: Option<Stack<X509>>,
 }
 
 pub struct Pkcs12Builder {
+    // FIXME borrow
+    name: Option<CString>,
+    pkey: Option<PKey<Private>>,
+    cert: Option<X509>,
+    ca: Option<Stack<X509>>,
     nid_key: Nid,
     nid_cert: Nid,
     iter: c_int,
     mac_iter: c_int,
+    // FIXME remove
     #[cfg(not(boringssl))]
     mac_md: Option<MessageDigest>,
-    ca: Option<Stack<X509>>,
 }
 
 impl Pkcs12Builder {
+    /// The `friendlyName` used for the certificate and private key.
+    pub fn name(&mut self, name: &str) -> &mut Self {
+        self.name = Some(CString::new(name).unwrap());
+        self
+    }
+
+    /// The private key.
+    pub fn pkey<T>(&mut self, pkey: &PKeyRef<T>) -> &mut Self
+    where
+        T: HasPrivate,
+    {
+        let new_pkey = unsafe { PKeyRef::from_ptr(pkey.as_ptr()) };
+        self.pkey = Some(new_pkey.to_owned());
+        self
+    }
+
+    /// The certificate.
+    pub fn cert(&mut self, cert: &X509Ref) -> &mut Self {
+        self.cert = Some(cert.to_owned());
+        self
+    }
+
+    /// An additional set of certificates to include in the archive beyond the one provided to
+    /// `build`.
+    pub fn ca(&mut self, ca: Stack<X509>) -> &mut Self {
+        self.ca = Some(ca);
+        self
+    }
+
     /// The encryption algorithm that should be used for the key
     pub fn key_algorithm(&mut self, nid: Nid) -> &mut Self {
         self.nid_key = nid;
@@ -163,24 +200,13 @@ impl Pkcs12Builder {
         self
     }
 
-    /// An additional set of certificates to include in the archive beyond the one provided to
-    /// `build`.
-    pub fn ca(&mut self, ca: Stack<X509>) -> &mut Self {
-        self.ca = Some(ca);
-        self
-    }
-
-    /// Builds the PKCS #12 object
-    ///
-    /// # Arguments
-    ///
-    /// * `password` - the password used to encrypt the key and certificate
-    /// * `friendly_name` - user defined name for the certificate
-    /// * `pkey` - key to store
-    /// * `cert` - certificate to store
-    #[corresponds(PKCS12_create)]
+    /// Deprecated.
+    #[deprecated(
+        note = "Use Self::{name, pkey, cert, build2} instead.",
+        since = "0.10.46"
+    )]
     pub fn build<T>(
-        self,
+        mut self,
         password: &str,
         friendly_name: &str,
         pkey: &PKeyRef<T>,
@@ -189,11 +215,21 @@ impl Pkcs12Builder {
     where
         T: HasPrivate,
     {
+        self.name(friendly_name)
+            .pkey(pkey)
+            .cert(cert)
+            .build2(password)
+    }
+
+    /// Builds the PKCS#12 object.
+    #[corresponds(PKCS12_create)]
+    pub fn build2(&self, password: &str) -> Result<Pkcs12, ErrorStack> {
         unsafe {
             let pass = CString::new(password).unwrap();
-            let friendly_name = CString::new(friendly_name).unwrap();
-            let pkey = pkey.as_ptr();
-            let cert = cert.as_ptr();
+            let pass = pass.as_ptr();
+            let friendly_name = self.name.as_ref().map_or(ptr::null(), |p| p.as_ptr());
+            let pkey = self.pkey.as_ref().map_or(ptr::null(), |p| p.as_ptr());
+            let cert = self.cert.as_ref().map_or(ptr::null(), |p| p.as_ptr());
             let ca = self
                 .ca
                 .as_ref()
@@ -208,10 +244,10 @@ impl Pkcs12Builder {
             let keytype = 0;
 
             let pkcs12 = cvt_p(ffi::PKCS12_create(
-                pass.as_ptr() as *const _ as *mut _,
-                friendly_name.as_ptr() as *const _ as *mut _,
-                pkey,
-                cert,
+                pass as *mut _,
+                friendly_name as *mut _,
+                pkey as *mut _,
+                cert as *mut _,
                 ca,
                 nid_key,
                 nid_cert,
@@ -232,7 +268,7 @@ impl Pkcs12Builder {
 
                 cvt(ffi::PKCS12_set_mac(
                     pkcs12.as_ptr(),
-                    pass.as_ptr(),
+                    pass,
                     -1,
                     ptr::null_mut(),
                     0,
@@ -272,7 +308,7 @@ mod test {
             "59172d9313e84459bcff27f967e79e6e9217e584"
         );
 
-        let chain = parsed.chain.unwrap();
+        let chain = parsed.ca.unwrap();
         assert_eq!(chain.len(), 1);
         assert_eq!(
             hex::encode(chain[0].digest(MessageDigest::sha1()).unwrap()),
@@ -288,7 +324,7 @@ mod test {
         let der = include_bytes!("../test/keystore-empty-chain.p12");
         let pkcs12 = Pkcs12::from_der(der).unwrap();
         let parsed = pkcs12.parse2("cassandra").unwrap();
-        if let Some(stack) = parsed.chain {
+        if let Some(stack) = parsed.ca {
             assert_eq!(stack.len(), 0);
         }
     }
@@ -321,9 +357,11 @@ mod test {
         builder.sign(&pkey, MessageDigest::sha256()).unwrap();
         let cert = builder.build();
 
-        let pkcs12_builder = Pkcs12::builder();
-        let pkcs12 = pkcs12_builder
-            .build("mypass", subject_name, &pkey, &cert)
+        let pkcs12 = Pkcs12::builder()
+            .name(subject_name)
+            .pkey(&pkey)
+            .cert(&cert)
+            .build2("mypass")
             .unwrap();
         let der = pkcs12.to_der().unwrap();
 
@@ -335,5 +373,20 @@ mod test {
             &*cert.digest(MessageDigest::sha1()).unwrap()
         );
         assert!(parsed.pkey.unwrap().public_eq(&pkey));
+    }
+
+    #[test]
+    fn create_only_ca() {
+        let ca = include_bytes!("../test/root-ca.pem");
+        let ca = X509::from_pem(ca).unwrap();
+        let mut chain = Stack::new().unwrap();
+        chain.push(ca).unwrap();
+
+        let pkcs12 = Pkcs12::builder().ca(chain).build2("hunter2").unwrap();
+        let parsed = pkcs12.parse2("hunter2").unwrap();
+
+        assert!(parsed.cert.is_none());
+        assert!(parsed.pkey.is_none());
+        assert_eq!(parsed.ca.unwrap().len(), 1);
     }
 }
