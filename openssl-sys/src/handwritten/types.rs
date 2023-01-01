@@ -253,7 +253,7 @@ pub enum RSA_METHOD {}
 pub enum EC_KEY {}
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl280))] {
+    if #[cfg(any(ossl110))] {
         pub enum X509 {}
     } else if #[cfg(libressl)] {
         #[repr(C)]

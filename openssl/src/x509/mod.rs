@@ -457,6 +457,15 @@ impl X509Ref {
         }
     }
 
+    /// Returns the X509 public key of the certificate request.
+    #[corresponds(X509_get_X509_PUBKEY)]
+    pub fn x509_public_key(&self) -> Result<&X509PublicKeyRef, ErrorStack> {
+        unsafe {
+            let key = cvt_p(ffi::X509_get_X509_PUBKEY(self.as_ptr()))?;
+            Ok(X509PublicKeyRef::from_ptr(key))
+        }
+    }
+
     /// Returns a digest of the DER representation of the certificate.
     #[corresponds(X509_digest)]
     pub fn digest(&self, hash_type: MessageDigest) -> Result<DigestBytes, ErrorStack> {
@@ -1385,6 +1394,15 @@ impl X509ReqRef {
         }
     }
 
+    /// Returns the X509 public key of the certificate request.
+    #[corresponds(X509_REQ_get_X509_PUBKEY)]
+    pub fn x509_public_key(&self) -> Result<&X509PublicKeyRef, ErrorStack> {
+        unsafe {
+            let key = cvt_p(ffi::X509_REQ_get_X509_PUBKEY(self.as_ptr()))?;
+            Ok(X509PublicKeyRef::from_ptr(key))
+        }
+    }
+
     /// Check if the certificate request is signed using the given public key.
     ///
     /// Returns `true` if verification succeeds.
@@ -1468,6 +1486,57 @@ impl X509VerifyResult {
     /// Application verification failure.
     pub const APPLICATION_VERIFICATION: X509VerifyResult =
         X509VerifyResult(ffi::X509_V_ERR_APPLICATION_VERIFICATION);
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::X509_PUBKEY;
+    fn drop = ffi::X509_PUBKEY_free;
+
+    /// Public key structure used in certificates and certificate requests.
+    pub struct X509PublicKey;
+
+    /// A reference to an [`X509PublicKey`].
+    pub struct X509PublicKeyRef;
+}
+
+impl X509PublicKey {
+    /// Build X509 public key structure from existing public key
+    #[corresponds(X509_PUBKEY_set)]
+    pub fn from_pkey<T>(key: &PKeyRef<T>) -> Result<X509PublicKey, ErrorStack>
+    where
+        T: HasPublic,
+    {
+        let mut pubkey = ptr::null_mut();
+        unsafe {
+            cvt(ffi::X509_PUBKEY_set(&mut pubkey, key.as_ptr()))?;
+            assert!(!pubkey.is_null());
+        }
+        Ok(X509PublicKey(pubkey))
+    }
+
+    from_der! {
+        /// Deserializes a DER-encoded X509_PUBKEY structure.
+        #[corresponds(d2i_X509_PUBKEY)]
+        from_der,
+        X509PublicKey,
+        ffi::d2i_X509_PUBKEY
+    }
+}
+
+impl X509PublicKeyRef {
+    pub fn pkey(&self) -> Result<PKey<Public>, ErrorStack> {
+        unsafe {
+            let pkey = cvt_p(ffi::X509_PUBKEY_get(self.as_ptr()))?;
+            Ok(PKey::from_ptr(pkey))
+        }
+    }
+
+    to_der! {
+        /// Serializes the public key into a DER-encoded X509_PUBKEY structure.
+        #[corresponds(i2d_X509_PUBKEY)]
+        to_der,
+        ffi::i2d_X509_PUBKEY
+    }
 }
 
 foreign_type_and_impl_send_sync! {
