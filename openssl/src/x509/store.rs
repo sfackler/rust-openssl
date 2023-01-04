@@ -196,12 +196,11 @@ impl X509Lookup<File> {
 impl X509LookupRef<File> {
     /// Specifies a file from which certificates will be loaded
     #[corresponds(X509_load_cert_file)]
-    // FIXME should return 'Result<i32, ErrorStack' like load_crl_file
     pub fn load_cert_file<P: AsRef<Path>>(
         &mut self,
         file: P,
         file_type: SslFiletype,
-    ) -> Result<(), ErrorStack> {
+    ) -> Result<i32, ErrorStack> {
         let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
         unsafe {
             cvt(ffi::X509_load_cert_file(
@@ -209,7 +208,6 @@ impl X509LookupRef<File> {
                 file.as_ptr(),
                 file_type.as_raw(),
             ))
-            .map(|_| ())
         }
     }
 
