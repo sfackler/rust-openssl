@@ -1963,7 +1963,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl350))] {
+    if #[cfg(any(ossl110, libressl350, boringssl))] {
         use ffi::{
             X509_CRL_get_issuer, X509_CRL_get0_nextUpdate, X509_CRL_get0_lastUpdate,
             X509_CRL_get_REVOKED,
