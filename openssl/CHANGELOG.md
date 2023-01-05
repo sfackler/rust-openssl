@@ -2,6 +2,95 @@
 
 ## [Unreleased]
 
+## [v0.10.45] - 2022-12-20
+
+### Fixed
+
+* Removed the newly added `CipherCtxRef::minimal_output_size` method, which did not work properly.
+* Added `NO_DEPRECATED_3_0` cfg checks for more APIs.
+
+### Added
+
+* Added `SslRef::add_chain_cert`.
+* Added `PKeyRef::security_bits`.
+* Added `Provider::set_default_search_path`.
+* Added `CipherCtxRef::cipher_final_unchecked`.
+
+## [v0.10.44] - 2022-12-06
+
+### Added
+
+* Added `CipherCtxRef::num`, `CipherCtxRef::minimal_output_size`, and `CipherCtxRef::cipher_update_unchecked`.
+* Improved output buffer size checks in `CipherCtxRef::cipher_update`.
+* Added `X509Lookup::file` and `X509LookupRef::load_cert_file`.
+
+## [v0.10.43] - 2022-11-23
+
+### Added
+
+* Added `Nid::BRAINPOOL_P256R1`, `Nid::BRAINPOOL_P384R1`, `Nid::BRAINPOOL_P512R1`.
+* Added `BigNumRef::copy_from_slice`.
+* Added `Cipher` constructors for Camellia, CAST5, and IDEA ciphers.
+* Added `DsaSig`.
+* Added `X509StoreBuilderRef::set_param`.
+* Added `X509VerifyParam::new`, `X509VerifyParamRef::set_time`, and `X509VerifyParamRef::set_depth`.
+
+## [v0.10.42] - 2022-09-26
+
+### Added
+
+* Added `SslRef::psk_identity_hint` and  `SslRef::psk_identity`.
+* Added SHA-3 constants to `Nid`.
+* Added `SslOptions::PRIORITIZE_CHACHA`.
+* Added `X509ReqRef::to_text`.
+* Added `MdCtxRef::size`.
+* Added `X509NameRef::try_cmp`.
+* Added `MdCtxRef::reset`.
+* Added experimental, unstable support for BoringSSL.
+
+### Fixed
+
+* Fixed `MdCtxRef::digest_verify_init` to support `PKey`s with only public components.
+
+## [v0.10.41] - 2022-06-09
+
+### Fixed
+
+* Fixed a use-after-free in `Error::function` and `Error::file` with OpenSSL 3.x.
+
+### Added
+
+* Added `MessageDigest::block_size` and `MdRef::block_size`.
+* Implemented `Ord` and `Eq` for `X509` and `X509Ref`.
+* Added `X509Extension::add_alias`.
+* Added SM4 support.
+* Added `EcGroup::from_components` `EcGropuRef::set_generator`, and `EcPointRef::set_affine_coordinates_gfp`.
+
+## [v0.10.40] - 2022-05-04
+
+### Fixed
+
+* Fixed the openssl-sys dependency version.
+
+## [v0.10.39] - 2022-05-02
+
+### Deprecated
+
+* Deprecated `SslContextBuilder::set_tmp_ecdh_callback` and `SslRef::set_tmp_ecdh_callback`.
+
+### Added
+
+* Added `SslRef::extms_support`.
+* Added `Nid::create`.
+* Added `CipherCtx`, which exposes a more direct interface to `EVP_CIPHER_CTX`.
+* Added `PkeyCtx`, which exposes a more direct interface to `EVP_PKEY_CTX`.
+* Added `MdCtx`, which exposes a more direct interface to `EVP_MD_CTX`.
+* Added `Pkcs12Builder::mac_md`.
+* Added `Provider`.
+* Added `X509Ref::issuer_name_hash`.
+* Added `Decrypter::set_rsa_oaep_label`.
+* Added `X509Ref::to_text`.
+
 ## [v0.10.38] - 2021-10-31
 
 ### Added
@@ -574,7 +663,14 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.38...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.45...master
+[v0.10.45]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.44...openssl-v0.10.45
+[v0.10.44]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.43...openssl-v0.10.44
+[v0.10.43]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.42...openssl-v0.10.43
+[v0.10.42]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.41...openssl-v0.10.42
+[v0.10.41]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.40...openssl-v0.10.41
+[v0.10.40]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.39...openssl-v0.10.40
+[v0.10.39]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.38...openssl-v0.10.39
 [v0.10.38]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.37...openssl-v0.10.38
 [v0.10.37]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.36...openssl-v0.10.37
 [v0.10.36]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.35...openssl-v0.10.36

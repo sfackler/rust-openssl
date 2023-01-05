@@ -7,6 +7,11 @@ fn main() {
         println!("cargo:rustc-cfg=libressl");
     }
 
+    if env::var("CARGO_FEATURE_UNSTABLE_BORINGSSL").is_ok() {
+        println!("cargo:rustc-cfg=boringssl");
+        return;
+    }
+
     if let Ok(v) = env::var("DEP_OPENSSL_LIBRESSL_VERSION") {
         println!("cargo:rustc-cfg=libressl{}", v);
     }
@@ -32,6 +37,9 @@ fn main() {
         if version >= 0x1_01_00_07_0 {
             println!("cargo:rustc-cfg=ossl110g");
         }
+        if version >= 0x1_01_00_08_0 {
+            println!("cargo:rustc-cfg=ossl110h");
+        }
         if version >= 0x1_01_01_00_0 {
             println!("cargo:rustc-cfg=ossl111");
         }
@@ -42,6 +50,10 @@ fn main() {
 
     if let Ok(version) = env::var("DEP_OPENSSL_LIBRESSL_VERSION_NUMBER") {
         let version = u64::from_str_radix(&version, 16).unwrap();
+
+        if version >= 0x2_05_01_00_0 {
+            println!("cargo:rustc-cfg=libressl251");
+        }
 
         if version >= 0x2_06_01_00_0 {
             println!("cargo:rustc-cfg=libressl261");
@@ -77,6 +89,18 @@ fn main() {
 
         if version >= 0x3_04_00_00_0 {
             println!("cargo:rustc-cfg=libressl340");
+        }
+
+        if version >= 0x3_05_00_00_0 {
+            println!("cargo:rustc-cfg=libressl350");
+        }
+
+        if version >= 0x3_06_00_00_0 {
+            println!("cargo:rustc-cfg=libressl360");
+        }
+
+        if version >= 0x3_06_01_00_0 {
+            println!("cargo:rustc-cfg=libressl361");
         }
     }
 }

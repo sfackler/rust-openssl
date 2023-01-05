@@ -1,7 +1,7 @@
 //! Bindings to OpenSSL
 //!
 //! This crate provides a safe interface to the popular OpenSSL cryptography library. OpenSSL versions 1.0.1 through
-//! 1.1.1 and LibreSSL versions 2.5 through 3.4.1 are supported.
+//! 3.x.x and LibreSSL versions 2.5 through 3.4.1 are supported.
 //!
 //! # Building
 //!
@@ -45,6 +45,9 @@
 //!
 //! # Fedora
 //! $ sudo dnf install pkg-config openssl-devel
+//!
+//! # Alpine Linux
+//! $ apk add pkgconfig openssl-dev
 //! ```
 //!
 //! ## Manual
@@ -136,7 +139,7 @@ pub mod base64;
 pub mod bn;
 pub mod cipher;
 pub mod cipher_ctx;
-#[cfg(all(not(libressl), not(osslconf = "OPENSSL_NO_CMS")))]
+#[cfg(all(not(boringssl), not(libressl), not(osslconf = "OPENSSL_NO_CMS")))]
 pub mod cms;
 pub mod conf;
 pub mod derive;
@@ -145,6 +148,7 @@ pub mod dsa;
 pub mod ec;
 pub mod ecdsa;
 pub mod encrypt;
+#[cfg(not(boringssl))]
 pub mod envelope;
 pub mod error;
 pub mod ex_data;
@@ -157,13 +161,17 @@ pub mod md;
 pub mod md_ctx;
 pub mod memcmp;
 pub mod nid;
-#[cfg(not(osslconf = "OPENSSL_NO_OCSP"))]
+#[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_OCSP")))]
 pub mod ocsp;
 pub mod pkcs12;
+#[cfg(not(boringssl))]
 pub mod pkcs5;
+#[cfg(not(boringssl))]
 pub mod pkcs7;
 pub mod pkey;
 pub mod pkey_ctx;
+#[cfg(ossl300)]
+pub mod provider;
 pub mod rand;
 pub mod rsa;
 pub mod sha;
@@ -175,6 +183,11 @@ pub mod string;
 pub mod symm;
 pub mod version;
 pub mod x509;
+
+#[cfg(boringssl)]
+type LenType = libc::size_t;
+#[cfg(not(boringssl))]
+type LenType = libc::c_int;
 
 #[inline]
 fn cvt_p<T>(r: *mut T) -> Result<*mut T, ErrorStack> {

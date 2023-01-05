@@ -78,7 +78,9 @@ pub struct Id(c_int);
 
 impl Id {
     pub const RSA: Id = Id(ffi::EVP_PKEY_RSA);
+    #[cfg(not(boringssl))]
     pub const HMAC: Id = Id(ffi::EVP_PKEY_HMAC);
+    #[cfg(not(boringssl))]
     pub const CMAC: Id = Id(ffi::EVP_PKEY_CMAC);
     pub const DSA: Id = Id(ffi::EVP_PKEY_DSA);
     pub const DH: Id = Id(ffi::EVP_PKEY_DH);
@@ -227,6 +229,15 @@ where
         unsafe { ffi::EVP_PKEY_bits(self.as_ptr()) as u32 }
     }
 
+    ///Returns the number of security bits.
+    ///
+    ///Bits of security is defined in NIST SP800-57.
+    #[corresponds(EVP_PKEY_security_bits)]
+    #[cfg(any(ossl110, libressl360))]
+    pub fn security_bits(&self) -> u32 {
+        unsafe { ffi::EVP_PKEY_security_bits(self.as_ptr()) as u32 }
+    }
+
     /// Compares the public component of this key with another.
     #[corresponds(EVP_PKEY_cmp)]
     pub fn public_eq<U>(&self, other: &PKeyRef<U>) -> bool
@@ -236,10 +247,10 @@ where
         unsafe { ffi::EVP_PKEY_cmp(self.as_ptr(), other.as_ptr()) == 1 }
     }
 
-    /// Raw byte representation of a public key
+    /// Raw byte representation of a public key.
     ///
     /// This function only works for algorithms that support raw public keys.
-    /// Currently this is: X25519, ED25519, X448 or ED448
+    /// Currently this is: [`Id::X25519`], [`Id::ED25519`], [`Id::X448`] or [`Id::ED448`].
     #[corresponds(EVP_PKEY_get_raw_public_key)]
     #[cfg(ossl111)]
     pub fn raw_public_key(&self) -> Result<Vec<u8>, ErrorStack> {
@@ -287,10 +298,10 @@ where
         ffi::i2d_PrivateKey
     }
 
-    /// Raw byte representation of a private key
+    /// Raw byte representation of a private key.
     ///
     /// This function only works for algorithms that support raw private keys.
-    /// Currently this is: HMAC, X25519, ED25519, X448 or ED448
+    /// Currently this is: [`Id::HMAC`], [`Id::X25519`], [`Id::ED25519`], [`Id::X448`] or [`Id::ED448`].
     #[corresponds(EVP_PKEY_get_raw_private_key)]
     #[cfg(ossl111)]
     pub fn raw_private_key(&self) -> Result<Vec<u8>, ErrorStack> {
@@ -309,6 +320,25 @@ where
             ))?;
             buf.truncate(len);
             Ok(buf)
+        }
+    }
+
+    /// Serializes a private key into an unencrypted DER-formatted PKCS#8
+    #[corresponds(i2d_PKCS8PrivateKey_bio)]
+    pub fn private_key_to_pkcs8(&self) -> Result<Vec<u8>, ErrorStack> {
+        unsafe {
+            let bio = MemBio::new()?;
+            cvt(ffi::i2d_PKCS8PrivateKey_bio(
+                bio.as_ptr(),
+                self.as_ptr(),
+                ptr::null(),
+                ptr::null_mut(),
+                0,
+                None,
+                ptr::null_mut(),
+            ))?;
+
+            Ok(bio.get_buf().to_owned())
         }
     }
 
@@ -347,6 +377,7 @@ impl<T> fmt::Debug for PKey<T> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let alg = match self.id() {
             Id::RSA => "RSA",
+            #[cfg(not(boringssl))]
             Id::HMAC => "HMAC",
             Id::DSA => "DSA",
             Id::DH => "DH",
@@ -441,6 +472,7 @@ impl PKey<Private> {
     ///
     /// To compute HMAC values, use the `sign` module.
     #[corresponds(EVP_PKEY_new_mac_key)]
+    #[cfg(not(boringssl))]
     pub fn hmac(key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
             assert!(key.len() <= c_int::max_value() as usize);
@@ -461,7 +493,7 @@ impl PKey<Private> {
     /// # Note
     ///
     /// To compute CMAC values, use the `sign` module.
-    #[cfg(ossl110)]
+    #[cfg(all(not(boringssl), ossl110))]
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn cmac(cipher: &Cipher, key: &[u8]) -> Result<PKey<Private>, ErrorStack> {
         let mut ctx = PkeyCtx::new_id(Id::CMAC)?;
@@ -478,25 +510,109 @@ impl PKey<Private> {
         ctx.keygen()
     }
 
-    /// Generates a new private Ed25519 key
+    /// Generates a new private X25519 key.
+    ///
+    /// To import a private key from raw bytes see [`PKey::private_key_from_raw_bytes`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// use openssl::pkey::{PKey, Id};
+    /// use openssl::derive::Deriver;
+    ///
+    /// let public = // ...
+    /// # &PKey::generate_x25519()?.raw_public_key()?;
+    /// let public_key = PKey::public_key_from_raw_bytes(public, Id::X25519)?;
+    ///
+    /// let key = PKey::generate_x25519()?;
+    /// let mut deriver = Deriver::new(&key)?;
+    /// deriver.set_peer(&public_key)?;
+    ///
+    /// let secret = deriver.derive_to_vec()?;
+    /// assert_eq!(secret.len(), 32);
+    /// # Ok(()) }
+    /// ```
     #[cfg(ossl111)]
     pub fn generate_x25519() -> Result<PKey<Private>, ErrorStack> {
         PKey::generate_eddsa(Id::X25519)
     }
 
-    /// Generates a new private Ed448 key
+    /// Generates a new private X448 key.
+    ///
+    /// To import a private key from raw bytes see [`PKey::private_key_from_raw_bytes`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// use openssl::pkey::{PKey, Id};
+    /// use openssl::derive::Deriver;
+    ///
+    /// let public = // ...
+    /// # &PKey::generate_x448()?.raw_public_key()?;
+    /// let public_key = PKey::public_key_from_raw_bytes(public, Id::X448)?;
+    ///
+    /// let key = PKey::generate_x448()?;
+    /// let mut deriver = Deriver::new(&key)?;
+    /// deriver.set_peer(&public_key)?;
+    ///
+    /// let secret = deriver.derive_to_vec()?;
+    /// assert_eq!(secret.len(), 56);
+    /// # Ok(()) }
+    /// ```
     #[cfg(ossl111)]
     pub fn generate_x448() -> Result<PKey<Private>, ErrorStack> {
         PKey::generate_eddsa(Id::X448)
     }
 
-    /// Generates a new private Ed25519 key
+    /// Generates a new private Ed25519 key.
+    ///
+    /// To import a private key from raw bytes see [`PKey::private_key_from_raw_bytes`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// use openssl::pkey::{PKey, Id};
+    /// use openssl::sign::Signer;
+    ///
+    /// let key = PKey::generate_ed25519()?;
+    /// let public_key = key.raw_public_key()?;
+    ///
+    /// let mut signer = Signer::new_without_digest(&key)?;
+    /// let digest = // ...
+    /// # &vec![0; 32];
+    /// let signature = signer.sign_oneshot_to_vec(digest)?;
+    /// assert_eq!(signature.len(), 64);
+    /// # Ok(()) }
+    /// ```
     #[cfg(ossl111)]
     pub fn generate_ed25519() -> Result<PKey<Private>, ErrorStack> {
         PKey::generate_eddsa(Id::ED25519)
     }
 
-    /// Generates a new private Ed448 key
+    /// Generates a new private Ed448 key.
+    ///
+    /// To import a private key from raw bytes see [`PKey::private_key_from_raw_bytes`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// use openssl::pkey::{PKey, Id};
+    /// use openssl::sign::Signer;
+    ///
+    /// let key = PKey::generate_ed448()?;
+    /// let public_key = key.raw_public_key()?;
+    ///
+    /// let mut signer = Signer::new_without_digest(&key)?;
+    /// let digest = // ...
+    /// # &vec![0; 32];
+    /// let signature = signer.sign_oneshot_to_vec(digest)?;
+    /// assert_eq!(signature.len(), 114);
+    /// # Ok(()) }
+    /// ```
     #[cfg(ossl111)]
     pub fn generate_ed448() -> Result<PKey<Private>, ErrorStack> {
         PKey::generate_eddsa(Id::ED448)
@@ -508,6 +624,8 @@ impl PKey<Private> {
     #[corresponds(EVP_EC_gen)]
     #[cfg(ossl300)]
     pub fn ec_gen(curve: &str) -> Result<PKey<Private>, ErrorStack> {
+        ffi::init();
+
         let curve = CString::new(curve).unwrap();
         unsafe {
             let ptr = cvt_p(ffi::EVP_EC_gen(curve.as_ptr()))?;
@@ -564,7 +682,7 @@ impl PKey<Private> {
     }
 
     /// Deserializes a DER-formatted PKCS#8 private key, using a callback to retrieve the password
-    /// if the key is encrpyted.
+    /// if the key is encrypted.
     ///
     /// The callback should copy the password into the provided buffer and return the number of
     /// bytes written.
@@ -679,7 +797,7 @@ impl PKey<Public> {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl270))] {
+    if #[cfg(any(boringssl, ossl110, libressl270))] {
         use ffi::EVP_PKEY_up_ref;
     } else {
         #[allow(bad_style)]
@@ -763,6 +881,7 @@ impl<T> TryFrom<PKey<T>> for Dh<T> {
 mod tests {
     use std::convert::TryInto;
 
+    #[cfg(not(boringssl))]
     use crate::dh::Dh;
     use crate::dsa::Dsa;
     use crate::ec::EcKey;
@@ -789,7 +908,14 @@ mod tests {
     #[test]
     fn test_unencrypted_pkcs8() {
         let key = include_bytes!("../test/pkcs8-nocrypt.der");
-        PKey::private_key_from_pkcs8(key).unwrap();
+        let pkey = PKey::private_key_from_pkcs8(key).unwrap();
+        let serialized = pkey.private_key_to_pkcs8().unwrap();
+        let pkey2 = PKey::private_key_from_pkcs8(&serialized).unwrap();
+
+        assert_eq!(
+            pkey2.private_key_to_der().unwrap(),
+            pkey.private_key_to_der().unwrap()
+        );
     }
 
     #[test]
@@ -879,6 +1005,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_dh_accessor() {
         let dh = include_bytes!("../test/dhparams.pem");
         let dh = Dh::params_from_pem(dh).unwrap();
@@ -927,6 +1054,17 @@ mod tests {
     }
 
     #[test]
+    #[cfg(any(ossl110, libressl360))]
+    fn test_security_bits() {
+        let group = crate::ec::EcGroup::from_curve_name(crate::nid::Nid::SECP521R1).unwrap();
+        let ec_key = EcKey::generate(&group).unwrap();
+        let pkey: PKey<Private> = ec_key.try_into().unwrap();
+
+        assert_eq!(pkey.security_bits(), 256);
+    }
+
+    #[test]
+    #[cfg(not(boringssl))]
     fn test_dh_conversion() {
         let dh_params = include_bytes!("../test/dhparams.pem");
         let dh_params = Dh::params_from_pem(dh_params).unwrap();

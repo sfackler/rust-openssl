@@ -68,7 +68,7 @@ pub enum Mode {
 ///
 /// See OpenSSL doc at [`EVP_EncryptInit`] for more information on each algorithms.
 ///
-/// [`EVP_EncryptInit`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_EncryptInit.html
+/// [`EVP_EncryptInit`]: https://www.openssl.org/docs/manmaster/crypto/EVP_EncryptInit.html
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Cipher(*const ffi::EVP_CIPHER);
 
@@ -77,7 +77,7 @@ impl Cipher {
     ///
     /// This corresponds to [`EVP_get_cipherbynid`]
     ///
-    /// [`EVP_get_cipherbynid`]: https://www.openssl.org/docs/man1.0.2/crypto/EVP_get_cipherbyname.html
+    /// [`EVP_get_cipherbynid`]: https://www.openssl.org/docs/manmaster/crypto/EVP_get_cipherbyname.html
     pub fn from_nid(nid: Nid) -> Option<Cipher> {
         let ptr = unsafe { ffi::EVP_get_cipherbyname(ffi::OBJ_nid2sn(nid.as_raw())) };
         if ptr.is_null() {
@@ -91,7 +91,7 @@ impl Cipher {
     ///
     /// This corresponds to [`EVP_CIPHER_nid`]
     ///
-    /// [`EVP_CIPHER_nid`]: https://www.openssl.org/docs/man1.0.2/crypto/EVP_CIPHER_nid.html
+    /// [`EVP_CIPHER_nid`]: https://www.openssl.org/docs/manmaster/crypto/EVP_CIPHER_nid.html
     pub fn nid(&self) -> Nid {
         let nid = unsafe { ffi::EVP_CIPHER_nid(self.0) };
         Nid::from_raw(nid)
@@ -105,6 +105,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_cbc()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_128_xts() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_xts()) }
     }
@@ -113,6 +114,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_ctr()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_128_cfb1() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_cfb1()) }
     }
@@ -121,6 +123,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_cfb128()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_128_cfb8() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_cfb8()) }
     }
@@ -129,6 +132,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_gcm()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_128_ccm() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_128_ccm()) }
     }
@@ -155,6 +159,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_ctr()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_192_cfb1() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_cfb1()) }
     }
@@ -163,6 +168,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_cfb128()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_192_cfb8() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_cfb8()) }
     }
@@ -171,6 +177,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_gcm()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_192_ccm() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_192_ccm()) }
     }
@@ -193,6 +200,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_cbc()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_256_xts() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_xts()) }
     }
@@ -201,6 +209,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_ctr()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_256_cfb1() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_cfb1()) }
     }
@@ -209,6 +218,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_cfb128()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_256_cfb8() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_cfb8()) }
     }
@@ -217,6 +227,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_gcm()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn aes_256_ccm() -> Cipher {
         unsafe { Cipher(ffi::EVP_aes_256_ccm()) }
     }
@@ -241,12 +252,12 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_bf_ecb()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_BF")))]
     pub fn bf_cfb64() -> Cipher {
         unsafe { Cipher(ffi::EVP_bf_cfb64()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_BF"))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_BF")))]
     pub fn bf_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_bf_ofb()) }
     }
@@ -267,6 +278,7 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_des_ede3_cbc()) }
     }
 
+    #[cfg(not(boringssl))]
     pub fn des_ede3_cfb64() -> Cipher {
         unsafe { Cipher(ffi::EVP_des_ede3_cfb64()) }
     }
@@ -287,24 +299,49 @@ impl Cipher {
         unsafe { Cipher(ffi::EVP_chacha20_poly1305()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED")))]
     pub fn seed_cbc() -> Cipher {
         unsafe { Cipher(ffi::EVP_seed_cbc()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED")))]
     pub fn seed_cfb128() -> Cipher {
         unsafe { Cipher(ffi::EVP_seed_cfb128()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED")))]
     pub fn seed_ecb() -> Cipher {
         unsafe { Cipher(ffi::EVP_seed_ecb()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED")))]
     pub fn seed_ofb() -> Cipher {
         unsafe { Cipher(ffi::EVP_seed_ofb()) }
+    }
+
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
+    pub fn sm4_ecb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_sm4_ecb()) }
+    }
+
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
+    pub fn sm4_cbc() -> Cipher {
+        unsafe { Cipher(ffi::EVP_sm4_cbc()) }
+    }
+
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
+    pub fn sm4_ctr() -> Cipher {
+        unsafe { Cipher(ffi::EVP_sm4_ctr()) }
+    }
+
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
+    pub fn sm4_cfb128() -> Cipher {
+        unsafe { Cipher(ffi::EVP_sm4_cfb128()) }
+    }
+
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
+    pub fn sm4_ofb() -> Cipher {
+        unsafe { Cipher(ffi::EVP_sm4_ofb()) }
     }
 
     /// Creates a `Cipher` from a raw pointer to its OpenSSL type.
@@ -352,9 +389,15 @@ impl Cipher {
     }
 
     /// Determines whether the cipher is using CCM mode
+    #[cfg(not(boringssl))]
     fn is_ccm(self) -> bool {
         // NOTE: OpenSSL returns pointers to static structs, which makes this work as expected
         self == Cipher::aes_128_ccm() || self == Cipher::aes_256_ccm()
+    }
+
+    #[cfg(boringssl)]
+    fn is_ccm(self) -> bool {
+        false
     }
 
     /// Determines whether the cipher is using OCB mode
@@ -572,7 +615,7 @@ impl Crypter {
 /// and initialization vector `iv`. Padding is enabled.
 ///
 /// This is a convenient interface to `Crypter` to encrypt all data in one go.  To encrypt a stream
-/// of data increamentally , use `Crypter` instead.
+/// of data incrementally , use `Crypter` instead.
 ///
 /// # Examples
 ///
@@ -611,7 +654,7 @@ pub fn encrypt(
 /// and initialization vector `iv`. Padding is enabled.
 ///
 /// This is a convenient interface to `Crypter` to decrypt all data in one go.  To decrypt a  stream
-/// of data increamentally , use `Crypter` instead.
+/// of data incrementally , use `Crypter` instead.
 ///
 /// # Examples
 ///
@@ -732,23 +775,23 @@ pub fn decrypt_aead(
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl273))] {
+    if #[cfg(any(boringssl, ossl110, libressl273))] {
         use ffi::{EVP_CIPHER_block_size, EVP_CIPHER_iv_length, EVP_CIPHER_key_length};
     } else {
-        use libc::c_int;
+        use crate::LenType;
 
         #[allow(bad_style)]
-        pub unsafe fn EVP_CIPHER_iv_length(ptr: *const ffi::EVP_CIPHER) -> c_int {
+        pub unsafe fn EVP_CIPHER_iv_length(ptr: *const ffi::EVP_CIPHER) -> LenType {
             (*ptr).iv_len
         }
 
         #[allow(bad_style)]
-        pub unsafe fn EVP_CIPHER_block_size(ptr: *const ffi::EVP_CIPHER) -> c_int {
+        pub unsafe fn EVP_CIPHER_block_size(ptr: *const ffi::EVP_CIPHER) -> LenType {
             (*ptr).block_size
         }
 
         #[allow(bad_style)]
-        pub unsafe fn EVP_CIPHER_key_length(ptr: *const ffi::EVP_CIPHER) -> c_int {
+        pub unsafe fn EVP_CIPHER_key_length(ptr: *const ffi::EVP_CIPHER) -> LenType {
             (*ptr).key_len
         }
     }
@@ -878,6 +921,7 @@ mod tests {
         }
     }
 
+    #[cfg(not(boringssl))]
     fn cipher_test_nopad(ciphertype: super::Cipher, pt: &str, ct: &str, key: &str, iv: &str) {
         let pt = Vec::from_hex(pt).unwrap();
         let ct = Vec::from_hex(ct).unwrap();
@@ -910,8 +954,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(ossl300, ignore)]
     fn test_rc4() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "0000000000000000000000000000000000000000000000000000000000000000000000000000";
         let ct = "A68686B04D686AA107BD8D4CAB191A3EEC0A6294BC78B60F65C25CB47BD7BB3A48EFC4D26BE4";
         let key = "97CD440324DA5FD1F7955C1C13B6B466";
@@ -921,6 +967,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_aes256_xts() {
         // Test case 174 from
         // http://csrc.nist.gov/groups/STM/cavp/documents/aes/XTSTestVectors.zip
@@ -948,6 +995,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_aes128_cfb1() {
         // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
 
@@ -960,6 +1008,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_aes128_cfb128() {
         let pt = "6bc1bee22e409f96e93d7e117393172a";
         let ct = "3b3fd92eb72dad20333449f8e83cfb4a";
@@ -970,6 +1019,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_aes128_cfb8() {
         let pt = "6bc1bee22e409f96e93d7e117393172aae2d";
         let ct = "3b79424c9c0dd436bace9e0ed4586a4f32b9";
@@ -1004,6 +1054,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_aes192_cfb1() {
         // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
 
@@ -1016,6 +1067,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_aes192_cfb128() {
         // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
 
@@ -1028,6 +1080,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_aes192_cfb8() {
         // Lifted from http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
 
@@ -1052,6 +1105,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_aes256_cfb1() {
         let pt = "6bc1";
         let ct = "9029";
@@ -1062,6 +1116,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_aes256_cfb128() {
         let pt = "6bc1bee22e409f96e93d7e117393172a";
         let ct = "dc7e84bfda79164b7ecd8486985d3860";
@@ -1072,6 +1127,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_aes256_cfb8() {
         let pt = "6bc1bee22e409f96e93d7e117393172aae2d";
         let ct = "dc1f1a8520a64db55fcc8ac554844e889700";
@@ -1095,7 +1151,11 @@ mod tests {
 
     #[test]
     #[cfg_attr(ossl300, ignore)]
+    #[cfg(not(boringssl))]
     fn test_bf_cbc() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         // https://www.schneier.com/code/vectors.txt
 
         let pt = "37363534333231204E6F77206973207468652074696D6520666F722000000000";
@@ -1108,7 +1168,11 @@ mod tests {
 
     #[test]
     #[cfg_attr(ossl300, ignore)]
+    #[cfg(not(boringssl))]
     fn test_bf_ecb() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "5CD54CA83DEF57DA";
         let ct = "B1B8CC0B250F09A0";
         let key = "0131D9619DC1376E";
@@ -1119,7 +1183,11 @@ mod tests {
 
     #[test]
     #[cfg_attr(ossl300, ignore)]
+    #[cfg(not(boringssl))]
     fn test_bf_cfb64() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "37363534333231204E6F77206973207468652074696D6520666F722000";
         let ct = "E73214A2822139CAF26ECF6D2EB9E76E3DA3DE04D1517200519D57A6C3";
         let key = "0123456789ABCDEFF0E1D2C3B4A59687";
@@ -1130,7 +1198,11 @@ mod tests {
 
     #[test]
     #[cfg_attr(ossl300, ignore)]
+    #[cfg(not(boringssl))]
     fn test_bf_ofb() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "37363534333231204E6F77206973207468652074696D6520666F722000";
         let ct = "E73214A2822139CA62B343CC5B65587310DD908D0C241B2263C2CF80DA";
         let key = "0123456789ABCDEFF0E1D2C3B4A59687";
@@ -1140,8 +1212,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(ossl300, ignore)]
     fn test_des_cbc() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "54686973206973206120746573742e";
         let ct = "6f2867cfefda048a4046ef7e556c7132";
         let key = "7cb66337f3d3c0fe";
@@ -1151,8 +1225,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(ossl300, ignore)]
     fn test_des_ecb() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "54686973206973206120746573742e";
         let ct = "0050ab8aecec758843fe157b4dde938c";
         let key = "7cb66337f3d3c0fe";
@@ -1182,6 +1258,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_des_ede3_cfb64() {
         let pt = "2b1773784b5889dc788477367daa98ad";
         let ct = "6f2867cfefda048a4046ef7e556c7132";
@@ -1228,6 +1305,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_aes128_ccm() {
         let key = "3ee186594f110fb788a8bf8aa8be5d4a";
         let nonce = "44f705d52acf27b7f17196aa9b";
@@ -1264,6 +1342,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_aes128_ccm_verify_fail() {
         let key = "3ee186594f110fb788a8bf8aa8be5d4a";
         let nonce = "44f705d52acf27b7f17196aa9b";
@@ -1284,6 +1363,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_aes256_ccm() {
         let key = "7f4af6765cad1d511db07e33aaafd57646ec279db629048aa6770af24849aa0d";
         let nonce = "dde2a362ce81b2b6913abc3095";
@@ -1320,6 +1400,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn test_aes256_ccm_verify_fail() {
         let key = "7f4af6765cad1d511db07e33aaafd57646ec279db629048aa6770af24849aa0d";
         let nonce = "dde2a362ce81b2b6913abc3095";
@@ -1452,8 +1533,11 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED", ossl300)))]
     fn test_seed_cbc() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "5363686f6b6f6c6164656e6b756368656e0a";
         let ct = "c2edf0fb2eb11bf7b2f39417a8528896d34b24b6fd79e5923b116dfcd2aba5a4";
         let key = "41414141414141414141414141414141";
@@ -1463,8 +1547,11 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED", ossl300)))]
     fn test_seed_cfb128() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "5363686f6b6f6c6164656e6b756368656e0a";
         let ct = "71d4d25fc1750cb7789259e7f34061939a41";
         let key = "41414141414141414141414141414141";
@@ -1474,8 +1561,11 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED", ossl300)))]
     fn test_seed_ecb() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "5363686f6b6f6c6164656e6b756368656e0a";
         let ct = "0263a9cd498cf0edb0ef72a3231761d00ce601f7d08ad19ad74f0815f2c77f7e";
         let key = "41414141414141414141414141414141";
@@ -1485,13 +1575,58 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(any(osslconf = "OPENSSL_NO_SEED", ossl300)))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_SEED", ossl300)))]
     fn test_seed_ofb() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let pt = "5363686f6b6f6c6164656e6b756368656e0a";
         let ct = "71d4d25fc1750cb7789259e7f34061930afd";
         let key = "41414141414141414141414141414141";
         let iv = "41414141414141414141414141414141";
 
         cipher_test(super::Cipher::seed_ofb(), pt, ct, key, iv);
+    }
+
+    // GB/T 32907-2016
+    // http://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=7803DE42D3BC5E80B0C3E5D8E873D56A
+    #[test]
+    #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
+    fn test_sm4_ecb() {
+        use std::mem;
+
+        let key = vec![
+            0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54,
+            0x32, 0x10,
+        ];
+        let pt = vec![
+            0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54,
+            0x32, 0x10,
+        ];
+        let ct = vec![
+            0x68, 0x1e, 0xdf, 0x34, 0xd2, 0x06, 0x96, 0x5e, 0x86, 0xb3, 0xe9, 0x4f, 0x53, 0x6e,
+            0x42, 0x46,
+        ];
+        let ct1 = vec![
+            0x59, 0x52, 0x98, 0xc7, 0xc6, 0xfd, 0x27, 0x1f, 0x04, 0x02, 0xf8, 0x04, 0xc3, 0x3d,
+            0x3f, 0x66,
+        ];
+
+        let block_size = Cipher::sm4_ecb().block_size();
+        let mut c = Crypter::new(Cipher::sm4_ecb(), Mode::Encrypt, &key, None).unwrap();
+        c.pad(false);
+
+        // 1 round
+        let mut r = vec![0; pt.len() + Cipher::sm4_ecb().block_size()];
+        let count = c.update(&pt, &mut r).unwrap();
+        assert_eq!(ct, &r[..count]);
+
+        // 1000000 rounds
+        let mut r1 = vec![0; pt.len() + Cipher::sm4_ecb().block_size()];
+        for _ in 0..999999 {
+            c.update(&r[..block_size], &mut r1).unwrap();
+            mem::swap(&mut r, &mut r1);
+        }
+        assert_eq!(ct1, &r[..count]);
     }
 }

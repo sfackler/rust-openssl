@@ -1,3 +1,35 @@
+//! Message digest (hash) computation support.
+//!
+//! # Examples
+//!
+//! Calculate a hash in one go:
+//!
+//! ```
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! use openssl::hash::{hash, MessageDigest};
+//!
+//! let data = b"\x42\xF4\x97\xE0";
+//! let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
+//! let res = hash(MessageDigest::md5(), data)?;
+//! assert_eq!(&*res, spec);
+//! # Ok(()) }
+//! ```
+//!
+//! Supply the input in chunks:
+//!
+//! ```
+//! use openssl::hash::{Hasher, MessageDigest};
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let mut hasher = Hasher::new(MessageDigest::sha256())?;
+//! hasher.update(b"test")?;
+//! hasher.update(b"this")?;
+//! let digest: &[u8] = &hasher.finish()?;
+//!
+//! let expected = hex::decode("9740e652ab5b4acd997a7cca13d6696702ccb2d441cca59fc6e285127f28cfe6")?;
+//! assert_eq!(digest, expected);
+//! # Ok(()) }
+//! ```
 use cfg_if::cfg_if;
 use std::ffi::CString;
 use std::fmt;
@@ -18,6 +50,7 @@ cfg_if! {
     }
 }
 
+/// A message digest algorithm.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct MessageDigest(*const ffi::EVP_MD);
 
@@ -35,7 +68,7 @@ impl MessageDigest {
     ///
     /// This corresponds to [`EVP_get_digestbynid`].
     ///
-    /// [`EVP_get_digestbynid`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestInit.html
+    /// [`EVP_get_digestbynid`]: https://www.openssl.org/docs/manmaster/crypto/EVP_DigestInit.html
     pub fn from_nid(type_: Nid) -> Option<MessageDigest> {
         unsafe {
             let ptr = ffi::EVP_get_digestbynid(type_.as_raw());
@@ -51,7 +84,7 @@ impl MessageDigest {
     ///
     /// This corresponds to [`EVP_get_digestbyname`].
     ///
-    /// [`EVP_get_digestbyname`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestInit.html
+    /// [`EVP_get_digestbyname`]: https://www.openssl.org/docs/manmaster/crypto/EVP_DigestInit.html
     pub fn from_name(name: &str) -> Option<MessageDigest> {
         ffi::init();
         let name = CString::new(name).ok()?;
@@ -65,6 +98,7 @@ impl MessageDigest {
         }
     }
 
+    #[cfg(not(boringssl))]
     pub fn null() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_md_null()) }
     }
@@ -123,7 +157,7 @@ impl MessageDigest {
         unsafe { MessageDigest(ffi::EVP_shake256()) }
     }
 
-    #[cfg(not(osslconf = "OPENSSL_NO_RMD160"))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_RMD160")))]
     pub fn ripemd160() -> MessageDigest {
         unsafe { MessageDigest(ffi::EVP_ripemd160()) }
     }
@@ -136,6 +170,12 @@ impl MessageDigest {
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn as_ptr(&self) -> *const ffi::EVP_MD {
         self.0
+    }
+
+    /// The block size of the digest in bytes.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn block_size(&self) -> usize {
+        unsafe { ffi::EVP_MD_block_size(self.0) as usize }
     }
 
     /// The size of the digest in bytes.
@@ -167,44 +207,18 @@ use self::State::*;
 ///
 /// # Examples
 ///
-/// Calculate a hash in one go:
-///
-/// ```
-/// use openssl::hash::{hash, MessageDigest};
-///
-/// let data = b"\x42\xF4\x97\xE0";
-/// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
-/// let res = hash(MessageDigest::md5(), data).unwrap();
-/// assert_eq!(&*res, spec);
-/// ```
-///
-/// Supply the input in chunks:
-///
 /// ```
 /// use openssl::hash::{Hasher, MessageDigest};
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let data = [b"\x42\xF4", b"\x97\xE0"];
 /// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
-/// let mut h = Hasher::new(MessageDigest::md5()).unwrap();
-/// h.update(data[0]).unwrap();
-/// h.update(data[1]).unwrap();
-/// let res = h.finish().unwrap();
+/// let mut h = Hasher::new(MessageDigest::md5())?;
+/// h.update(data[0])?;
+/// h.update(data[1])?;
+/// let res = h.finish()?;
 /// assert_eq!(&*res, spec);
-/// ```
-///
-/// Use an XOF hasher (OpenSSL 1.1.1+):
-///
-/// ```
-/// #[cfg(ossl111)]
-/// {
-///     use openssl::hash::{hash_xof, MessageDigest};
-///
-///     let data = b"\x41\x6c\x6c\x20\x79\x6f\x75\x72\x20\x62\x61\x73\x65\x20\x61\x72\x65\x20\x62\x65\x6c\x6f\x6e\x67\x20\x74\x6f\x20\x75\x73";
-///     let spec = b"\x49\xd0\x69\x7f\xf5\x08\x11\x1d\x8b\x84\xf1\x5e\x46\xda\xf1\x35";
-///     let mut buf = vec![0; 16];
-///     hash_xof(MessageDigest::shake_128(), data, buf.as_mut_slice()).unwrap();
-///     assert_eq!(buf, spec);
-/// }
+/// # Ok(()) }
 /// ```
 ///
 /// # Warning
@@ -213,8 +227,10 @@ use self::State::*;
 ///
 /// Don't ever hash passwords, use the functions in the `pkcs5` module or bcrypt/scrypt instead.
 ///
-/// For extendable output functions (XOFs, i.e. SHAKE128/SHAKE256), you must use finish_xof instead
-/// of finish and provide a buf to store the hash. The hash will be as long as the buf.
+/// For extendable output functions (XOFs, i.e. SHAKE128/SHAKE256),
+/// you must use [`Hasher::finish_xof`] instead of [`Hasher::finish`]
+/// and provide a `buf` to store the hash. The hash will be as long as
+/// the `buf`.
 pub struct Hasher {
     ctx: *mut ffi::EVP_MD_CTX,
     md: *const ffi::EVP_MD,
@@ -279,7 +295,10 @@ impl Hasher {
             self.init()?;
         }
         unsafe {
+            #[cfg(not(boringssl))]
             let mut len = ffi::EVP_MAX_MD_SIZE;
+            #[cfg(boringssl)]
+            let mut len = ffi::EVP_MAX_MD_SIZE as u32;
             let mut buf = [0; ffi::EVP_MAX_MD_SIZE as usize];
             cvt(ffi::EVP_DigestFinal_ex(
                 self.ctx,
@@ -401,6 +420,19 @@ impl fmt::Debug for DigestBytes {
 }
 
 /// Computes the hash of the `data` with the non-XOF hasher `t`.
+///
+/// # Examples
+///
+/// ```
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// use openssl::hash::{hash, MessageDigest};
+///
+/// let data = b"\x42\xF4\x97\xE0";
+/// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
+/// let res = hash(MessageDigest::md5(), data)?;
+/// assert_eq!(&*res, spec);
+/// # Ok(()) }
+/// ```
 pub fn hash(t: MessageDigest, data: &[u8]) -> Result<DigestBytes, ErrorStack> {
     let mut h = Hasher::new(t)?;
     h.update(data)?;
@@ -408,6 +440,19 @@ pub fn hash(t: MessageDigest, data: &[u8]) -> Result<DigestBytes, ErrorStack> {
 }
 
 /// Computes the hash of the `data` with the XOF hasher `t` and stores it in `buf`.
+///
+/// # Examples
+///
+/// ```
+/// use openssl::hash::{hash_xof, MessageDigest};
+///
+/// let data = b"\x41\x6c\x6c\x20\x79\x6f\x75\x72\x20\x62\x61\x73\x65\x20\x61\x72\x65\x20\x62\x65\x6c\x6f\x6e\x67\x20\x74\x6f\x20\x75\x73";
+/// let spec = b"\x49\xd0\x69\x7f\xf5\x08\x11\x1d\x8b\x84\xf1\x5e\x46\xda\xf1\x35";
+/// let mut buf = vec![0; 16];
+/// hash_xof(MessageDigest::shake_128(), data, buf.as_mut_slice()).unwrap();
+/// assert_eq!(buf, spec);
+/// ```
+///
 #[cfg(ossl111)]
 pub fn hash_xof(t: MessageDigest, data: &[u8], buf: &mut [u8]) -> Result<(), ErrorStack> {
     let mut h = Hasher::new(t)?;
@@ -471,6 +516,10 @@ mod tests {
         for test in MD5_TESTS.iter() {
             hash_test(MessageDigest::md5(), test);
         }
+
+        assert_eq!(MessageDigest::md5().block_size(), 64);
+        assert_eq!(MessageDigest::md5().size(), 16);
+        assert_eq!(MessageDigest::md5().type_().as_raw(), Nid::MD5.as_raw());
     }
 
     #[test]
@@ -530,6 +579,10 @@ mod tests {
         for test in tests.iter() {
             hash_test(MessageDigest::sha1(), test);
         }
+
+        assert_eq!(MessageDigest::sha1().block_size(), 64);
+        assert_eq!(MessageDigest::sha1().size(), 20);
+        assert_eq!(MessageDigest::sha1().type_().as_raw(), Nid::SHA1.as_raw());
     }
 
     #[test]
@@ -542,6 +595,33 @@ mod tests {
         for test in tests.iter() {
             hash_test(MessageDigest::sha256(), test);
         }
+
+        assert_eq!(MessageDigest::sha256().block_size(), 64);
+        assert_eq!(MessageDigest::sha256().size(), 32);
+        assert_eq!(
+            MessageDigest::sha256().type_().as_raw(),
+            Nid::SHA256.as_raw()
+        );
+    }
+
+    #[test]
+    fn test_sha512() {
+        let tests = [(
+            "737465766566696e647365766572797468696e67",
+            "ba61d1f1af0f2dd80729f6cc900f19c0966bd38ba5c75e4471ef11b771dfe7551afab7fcbd300fdc4418f2\
+            b07a028fcd99e7b6446a566f2d9bcd7c604a1ea801",
+        )];
+
+        for test in tests.iter() {
+            hash_test(MessageDigest::sha512(), test);
+        }
+
+        assert_eq!(MessageDigest::sha512().block_size(), 128);
+        assert_eq!(MessageDigest::sha512().size(), 64);
+        assert_eq!(
+            MessageDigest::sha512().type_().as_raw(),
+            Nid::SHA512.as_raw()
+        );
     }
 
     #[cfg(ossl111)]
@@ -555,6 +635,13 @@ mod tests {
         for test in tests.iter() {
             hash_test(MessageDigest::sha3_224(), test);
         }
+
+        assert_eq!(MessageDigest::sha3_224().block_size(), 144);
+        assert_eq!(MessageDigest::sha3_224().size(), 28);
+        assert_eq!(
+            MessageDigest::sha3_224().type_().as_raw(),
+            Nid::SHA3_224.as_raw()
+        );
     }
 
     #[cfg(ossl111)]
@@ -568,6 +655,13 @@ mod tests {
         for test in tests.iter() {
             hash_test(MessageDigest::sha3_256(), test);
         }
+
+        assert_eq!(MessageDigest::sha3_256().block_size(), 136);
+        assert_eq!(MessageDigest::sha3_256().size(), 32);
+        assert_eq!(
+            MessageDigest::sha3_256().type_().as_raw(),
+            Nid::SHA3_256.as_raw()
+        );
     }
 
     #[cfg(ossl111)]
@@ -581,6 +675,13 @@ mod tests {
         for test in tests.iter() {
             hash_test(MessageDigest::sha3_384(), test);
         }
+
+        assert_eq!(MessageDigest::sha3_384().block_size(), 104);
+        assert_eq!(MessageDigest::sha3_384().size(), 48);
+        assert_eq!(
+            MessageDigest::sha3_384().type_().as_raw(),
+            Nid::SHA3_384.as_raw()
+        );
     }
 
     #[cfg(ossl111)]
@@ -594,6 +695,13 @@ mod tests {
         for test in tests.iter() {
             hash_test(MessageDigest::sha3_512(), test);
         }
+
+        assert_eq!(MessageDigest::sha3_512().block_size(), 72);
+        assert_eq!(MessageDigest::sha3_512().size(), 64);
+        assert_eq!(
+            MessageDigest::sha3_512().type_().as_raw(),
+            Nid::SHA3_512.as_raw()
+        );
     }
 
     #[cfg(ossl111)]
@@ -607,6 +715,13 @@ mod tests {
         for test in tests.iter() {
             hash_xof_test(MessageDigest::shake_128(), test);
         }
+
+        assert_eq!(MessageDigest::shake_128().block_size(), 168);
+        assert_eq!(MessageDigest::shake_128().size(), 16);
+        assert_eq!(
+            MessageDigest::shake_128().type_().as_raw(),
+            Nid::SHAKE128.as_raw()
+        );
     }
 
     #[cfg(ossl111)]
@@ -620,16 +735,34 @@ mod tests {
         for test in tests.iter() {
             hash_xof_test(MessageDigest::shake_256(), test);
         }
+
+        assert_eq!(MessageDigest::shake_256().block_size(), 136);
+        assert_eq!(MessageDigest::shake_256().size(), 32);
+        assert_eq!(
+            MessageDigest::shake_256().type_().as_raw(),
+            Nid::SHAKE256.as_raw()
+        );
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     #[cfg_attr(ossl300, ignore)]
     fn test_ripemd160() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         let tests = [("616263", "8eb208f7e05d987a9b044a8e98c6b087f15a0bfc")];
 
         for test in tests.iter() {
             hash_test(MessageDigest::ripemd160(), test);
         }
+
+        assert_eq!(MessageDigest::ripemd160().block_size(), 64);
+        assert_eq!(MessageDigest::ripemd160().size(), 20);
+        assert_eq!(
+            MessageDigest::ripemd160().type_().as_raw(),
+            Nid::RIPEMD160.as_raw()
+        );
     }
 
     #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM3")))]
@@ -643,6 +776,10 @@ mod tests {
         for test in tests.iter() {
             hash_test(MessageDigest::sm3(), test);
         }
+
+        assert_eq!(MessageDigest::sm3().block_size(), 64);
+        assert_eq!(MessageDigest::sm3().size(), 32);
+        assert_eq!(MessageDigest::sm3().type_().as_raw(), Nid::SM3.as_raw());
     }
 
     #[test]

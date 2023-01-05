@@ -1,3 +1,5 @@
+//! Message digest algorithms.
+
 #[cfg(ossl300)]
 use crate::cvt_p;
 #[cfg(ossl300)]
@@ -113,6 +115,7 @@ impl Md {
     }
 
     #[inline]
+    #[cfg(not(boringssl))]
     pub fn null() -> &'static MdRef {
         unsafe { MdRef::from_ptr(ffi::EVP_md_null() as *mut _) }
     }
@@ -185,12 +188,14 @@ impl Md {
 
     #[cfg(not(osslconf = "OPENSSL_NO_RMD160"))]
     #[inline]
+    #[cfg(not(boringssl))]
     pub fn ripemd160() -> &'static MdRef {
         unsafe { MdRef::from_ptr(ffi::EVP_ripemd160() as *mut _) }
     }
 
     #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM3")))]
     #[inline]
+    #[cfg(not(boringssl))]
     pub fn sm3() -> &'static MdRef {
         unsafe { MdRef::from_ptr(ffi::EVP_sm3() as *mut _) }
     }
@@ -207,6 +212,13 @@ unsafe impl Sync for MdRef {}
 unsafe impl Send for MdRef {}
 
 impl MdRef {
+    /// Returns the block size of the digest in bytes.
+    #[corresponds(EVP_MD_block_size)]
+    #[inline]
+    pub fn block_size(&self) -> usize {
+        unsafe { ffi::EVP_MD_block_size(self.as_ptr()) as usize }
+    }
+
     /// Returns the size of the digest in bytes.
     #[corresponds(EVP_MD_size)]
     #[inline]

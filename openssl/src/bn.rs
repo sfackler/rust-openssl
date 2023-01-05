@@ -33,16 +33,18 @@ use std::{fmt, ptr};
 use crate::asn1::Asn1Integer;
 use crate::error::ErrorStack;
 use crate::string::OpensslString;
-use crate::{cvt, cvt_n, cvt_p};
+use crate::{cvt, cvt_n, cvt_p, LenType};
 use openssl_macros::corresponds;
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl350))] {
         use ffi::{
             BN_get_rfc2409_prime_1024, BN_get_rfc2409_prime_768, BN_get_rfc3526_prime_1536,
             BN_get_rfc3526_prime_2048, BN_get_rfc3526_prime_3072, BN_get_rfc3526_prime_4096,
             BN_get_rfc3526_prime_6144, BN_get_rfc3526_prime_8192, BN_is_negative,
         };
+    } else if #[cfg(boringssl)] {
+        use ffi::BN_is_negative;
     } else {
         use ffi::{
             get_rfc2409_prime_1024 as BN_get_rfc2409_prime_1024,
@@ -89,7 +91,7 @@ foreign_type_and_impl_send_sync! {
     /// to allocate.  BigNumContext and the OpenSSL [`BN_CTX`] structure are used
     /// internally when passing BigNum values between subroutines.
     ///
-    /// [`BN_CTX`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_CTX_new.html
+    /// [`BN_CTX`]: https://www.openssl.org/docs/manmaster/crypto/BN_CTX_new.html
     pub struct BigNumContext;
     /// Reference to [`BigNumContext`]
     ///
@@ -132,7 +134,7 @@ foreign_type_and_impl_send_sync! {
     ///
     /// [`new`]: struct.BigNum.html#method.new
     /// [`Dref<Target = BigNumRef>`]: struct.BigNum.html#deref-methods
-    /// [`BN_new`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_new.html
+    /// [`BN_new`]: https://www.openssl.org/docs/manmaster/crypto/BN_new.html
     ///
     /// # Examples
     /// ```
@@ -215,6 +217,7 @@ impl BigNumRef {
     }
 
     /// The cryptographically weak counterpart to `rand_in_range`.
+    #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
     #[corresponds(BN_pseudo_rand_range)]
     pub fn pseudo_rand_range(&self, rnd: &mut BigNumRef) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::BN_pseudo_rand_range(rnd.as_ptr(), self.as_ptr())).map(|_| ()) }
@@ -334,6 +337,7 @@ impl BigNumRef {
 
     /// Returns the number of significant bits in `self`.
     #[corresponds(BN_num_bits)]
+    #[allow(clippy::unnecessary_cast)]
     pub fn num_bits(&self) -> i32 {
         unsafe { ffi::BN_num_bits(self.as_ptr()) as i32 }
     }
@@ -382,6 +386,7 @@ impl BigNumRef {
     }
 
     /// The cryptographically weak counterpart to `rand`.  Not suitable for key generation.
+    #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
     #[corresponds(BN_pseudo_rand)]
     #[allow(clippy::useless_conversion)]
     pub fn pseudo_rand(&mut self, bits: i32, msb: MsbOption, odd: bool) -> Result<(), ErrorStack> {
@@ -719,6 +724,7 @@ impl BigNumRef {
     /// # Return Value
     ///
     /// Returns `true` if `self` is prime with an error probability of less than `0.25 ^ checks`.
+    #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
     #[corresponds(BN_is_prime_ex)]
     #[allow(clippy::useless_conversion)]
     pub fn is_prime(&self, checks: i32, ctx: &mut BigNumContextRef) -> Result<bool, ErrorStack> {
@@ -742,6 +748,7 @@ impl BigNumRef {
     /// # Return Value
     ///
     /// Returns `true` if `self` is prime with an error probability of less than `0.25 ^ checks`.
+    #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
     #[corresponds(BN_is_prime_fasttest_ex)]
     #[allow(clippy::useless_conversion)]
     pub fn is_prime_fasttest(
@@ -839,7 +846,7 @@ impl BigNumRef {
     /// # use openssl::bn::BigNum;
     /// let s = -BigNum::from_u32(0x99ff).unwrap();
     ///
-    /// assert_eq!(&**s.to_hex_str().unwrap(), "-99FF");
+    /// assert_eq!(s.to_hex_str().unwrap().to_uppercase(), "-99FF");
     /// ```
     #[corresponds(BN_bn2hex)]
     pub fn to_hex_str(&self) -> Result<OpensslString, ErrorStack> {
@@ -946,6 +953,7 @@ impl BigNum {
     ///
     /// [`RFC 2409`]: https://tools.ietf.org/html/rfc2409#page-21
     #[corresponds(BN_get_rfc2409_prime_768)]
+    #[cfg(not(boringssl))]
     pub fn get_rfc2409_prime_768() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -959,6 +967,7 @@ impl BigNum {
     ///
     /// [`RFC 2409`]: https://tools.ietf.org/html/rfc2409#page-21
     #[corresponds(BN_get_rfc2409_prime_1024)]
+    #[cfg(not(boringssl))]
     pub fn get_rfc2409_prime_1024() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -972,6 +981,7 @@ impl BigNum {
     ///
     /// [`RFC 3526`]: https://tools.ietf.org/html/rfc3526#page-3
     #[corresponds(BN_get_rfc3526_prime_1536)]
+    #[cfg(not(boringssl))]
     pub fn get_rfc3526_prime_1536() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -985,6 +995,7 @@ impl BigNum {
     ///
     /// [`RFC 3526`]: https://tools.ietf.org/html/rfc3526#page-3
     #[corresponds(BN_get_rfc3526_prime_2048)]
+    #[cfg(not(boringssl))]
     pub fn get_rfc3526_prime_2048() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -998,6 +1009,7 @@ impl BigNum {
     ///
     /// [`RFC 3526`]: https://tools.ietf.org/html/rfc3526#page-4
     #[corresponds(BN_get_rfc3526_prime_3072)]
+    #[cfg(not(boringssl))]
     pub fn get_rfc3526_prime_3072() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -1011,6 +1023,7 @@ impl BigNum {
     ///
     /// [`RFC 3526`]: https://tools.ietf.org/html/rfc3526#page-4
     #[corresponds(BN_get_rfc3526_prime_4096)]
+    #[cfg(not(boringssl))]
     pub fn get_rfc3526_prime_4096() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -1024,6 +1037,7 @@ impl BigNum {
     ///
     /// [`RFC 3526`]: https://tools.ietf.org/html/rfc3526#page-6
     #[corresponds(BN_get_rfc3526_prime_6114)]
+    #[cfg(not(boringssl))]
     pub fn get_rfc3526_prime_6144() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -1037,6 +1051,7 @@ impl BigNum {
     ///
     /// [`RFC 3526`]: https://tools.ietf.org/html/rfc3526#page-6
     #[corresponds(BN_get_rfc3526_prime_8192)]
+    #[cfg(not(boringssl))]
     pub fn get_rfc3526_prime_8192() -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
@@ -1048,7 +1063,7 @@ impl BigNum {
     ///
     /// OpenSSL documentation at [`BN_bin2bn`]
     ///
-    /// [`BN_bin2bn`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_bin2bn.html
+    /// [`BN_bin2bn`]: https://www.openssl.org/docs/manmaster/crypto/BN_bin2bn.html
     ///
     /// ```
     /// # use openssl::bn::BigNum;
@@ -1060,13 +1075,38 @@ impl BigNum {
     pub fn from_slice(n: &[u8]) -> Result<BigNum, ErrorStack> {
         unsafe {
             ffi::init();
-            assert!(n.len() <= c_int::max_value() as usize);
+            assert!(n.len() <= LenType::max_value() as usize);
+
             cvt_p(ffi::BN_bin2bn(
                 n.as_ptr(),
-                n.len() as c_int,
+                n.len() as LenType,
                 ptr::null_mut(),
             ))
             .map(|p| BigNum::from_ptr(p))
+        }
+    }
+
+    /// Copies data from a slice overwriting what was in the BigNum.
+    ///
+    /// This function can be used to copy data from a slice to a
+    /// [secure BigNum][`BigNum::new_secure`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use openssl::bn::BigNum;
+    /// let mut bignum = BigNum::new().unwrap();
+    /// bignum.copy_from_slice(&[0x12, 0x00, 0x34]).unwrap();
+    ///
+    /// assert_eq!(bignum, BigNum::from_u32(0x120034).unwrap());
+    /// ```
+    #[corresponds(BN_bin2bn)]
+    pub fn copy_from_slice(&mut self, n: &[u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            assert!(n.len() <= LenType::max_value() as usize);
+
+            cvt_p(ffi::BN_bin2bn(n.as_ptr(), n.len() as LenType, self.0))?;
+            Ok(())
         }
     }
 }
@@ -1352,6 +1392,7 @@ mod tests {
         assert_eq!(a, &(&a << 1) >> 1);
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
     #[test]
     fn test_rand_range() {
         let range = BigNum::from_u32(909_829_283).unwrap();
@@ -1360,6 +1401,7 @@ mod tests {
         assert!(result >= BigNum::from_u32(0).unwrap() && result < range);
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
     #[test]
     fn test_pseudo_rand_range() {
         let range = BigNum::from_u32(909_829_283).unwrap();
@@ -1368,6 +1410,7 @@ mod tests {
         assert!(result >= BigNum::from_u32(0).unwrap() && result < range);
     }
 
+    #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
     #[test]
     fn test_prime_numbers() {
         let a = BigNum::from_u32(19_029_017).unwrap();

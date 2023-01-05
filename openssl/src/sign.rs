@@ -34,33 +34,39 @@
 //! verifier.update(data2).unwrap();
 //! assert!(verifier.verify(&signature).unwrap());
 //! ```
-//!
-//! Compute an HMAC:
-//!
-//! ```rust
-//! use openssl::hash::MessageDigest;
-//! use openssl::memcmp;
-//! use openssl::pkey::PKey;
-//! use openssl::sign::Signer;
-//!
-//! // Create a PKey
-//! let key = PKey::hmac(b"my secret").unwrap();
-//!
-//! let data = b"hello, world!";
-//! let data2 = b"hola, mundo!";
-//!
-//! // Compute the HMAC
-//! let mut signer = Signer::new(MessageDigest::sha256(), &key).unwrap();
-//! signer.update(data).unwrap();
-//! signer.update(data2).unwrap();
-//! let hmac = signer.sign_to_vec().unwrap();
-//!
-//! // `Verifier` cannot be used with HMACs; use the `memcmp::eq` function instead
-//! //
-//! // Do not simply check for equality with `==`!
-//! # let target = hmac.clone();
-//! assert!(memcmp::eq(&hmac, &target));
-//! ```
+
+#![cfg_attr(
+    not(boringssl),
+    doc = r#"\
+
+Compute an HMAC:
+
+```rust
+use openssl::hash::MessageDigest;
+use openssl::memcmp;
+use openssl::pkey::PKey;
+use openssl::sign::Signer;
+
+// Create a PKey
+let key = PKey::hmac(b"my secret").unwrap();
+
+let data = b"hello, world!";
+let data2 = b"hola, mundo!";
+
+// Compute the HMAC
+let mut signer = Signer::new(MessageDigest::sha256(), &key).unwrap();
+signer.update(data).unwrap();
+signer.update(data2).unwrap();
+let hmac = signer.sign_to_vec().unwrap();
+
+// `Verifier` cannot be used with HMACs; use the `memcmp::eq` function instead
+//
+// Do not simply check for equality with `==`!
+# let target = hmac.clone();
+assert!(memcmp::eq(&hmac, &target));
+```"#
+)]
+
 use cfg_if::cfg_if;
 use foreign_types::ForeignTypeRef;
 use libc::c_int;
@@ -208,7 +214,7 @@ impl<'a> Signer<'a> {
     ///
     /// This corresponds to [`EVP_PKEY_CTX_set_rsa_padding`].
     ///
-    /// [`EVP_PKEY_CTX_set_rsa_padding`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_padding.html
+    /// [`EVP_PKEY_CTX_set_rsa_padding`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_CTX_set_rsa_padding.html
     pub fn set_rsa_padding(&mut self, padding: Padding) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(
@@ -225,7 +231,7 @@ impl<'a> Signer<'a> {
     ///
     /// This corresponds to [`EVP_PKEY_CTX_set_rsa_pss_saltlen`].
     ///
-    /// [`EVP_PKEY_CTX_set_rsa_pss_saltlen`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_pss_saltlen.html
+    /// [`EVP_PKEY_CTX_set_rsa_pss_saltlen`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_CTX_set_rsa_pss_saltlen.html
     pub fn set_rsa_pss_saltlen(&mut self, len: RsaPssSaltlen) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_pss_saltlen(
@@ -279,7 +285,7 @@ impl<'a> Signer<'a> {
     ///
     /// OpenSSL documentation at [`EVP_DigestSignFinal`].
     ///
-    /// [`EVP_DigestSignFinal`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestSignFinal.html
+    /// [`EVP_DigestSignFinal`]: https://www.openssl.org/docs/manmaster/crypto/EVP_DigestSignFinal.html
     pub fn len(&self) -> Result<usize, ErrorStack> {
         self.len_intern()
     }
@@ -319,7 +325,7 @@ impl<'a> Signer<'a> {
     ///
     /// OpenSSL documentation at [`EVP_DigestSignFinal`].
     ///
-    /// [`EVP_DigestSignFinal`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestSignFinal.html
+    /// [`EVP_DigestSignFinal`]: https://www.openssl.org/docs/manmaster/crypto/EVP_DigestSignFinal.html
     pub fn sign(&self, buf: &mut [u8]) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = buf.len();
@@ -343,10 +349,10 @@ impl<'a> Signer<'a> {
         Ok(buf)
     }
 
-    /// Signs the data in data_buf and writes the signature into the buffer sig_buf, returning the
+    /// Signs the data in `data_buf` and writes the signature into the buffer `sig_buf`, returning the
     /// number of bytes written.
     ///
-    /// For PureEdDSA (Ed25519 and Ed448 keys) this is the only way to sign data.
+    /// For PureEdDSA (Ed25519 and Ed448 keys), this is the only way to sign data.
     ///
     /// This method will fail if the buffer is not large enough for the signature. Use the `len`
     /// method to get an upper bound on the required size.
@@ -397,6 +403,8 @@ impl<'a> Write for Signer<'a> {
     }
 }
 
+/// A type which can be used to verify the integrity and authenticity
+/// of data given the signature.
 pub struct Verifier<'a> {
     md_ctx: *mut ffi::EVP_MD_CTX,
     pctx: *mut ffi::EVP_PKEY_CTX,
@@ -420,7 +428,7 @@ impl<'a> Verifier<'a> {
     /// Creates a new `Verifier`.
     ///
     /// This cannot be used with Ed25519 or Ed448 keys. Please refer to
-    /// `new_without_digest`.
+    /// [`Verifier::new_without_digest`].
     ///
     /// OpenSSL documentation at [`EVP_DigestVerifyInit`].
     ///
@@ -499,7 +507,7 @@ impl<'a> Verifier<'a> {
     ///
     /// This corresponds to [`EVP_PKEY_CTX_set_rsa_padding`].
     ///
-    /// [`EVP_PKEY_CTX_set_rsa_padding`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_padding.html
+    /// [`EVP_PKEY_CTX_set_rsa_padding`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_CTX_set_rsa_padding.html
     pub fn set_rsa_padding(&mut self, padding: Padding) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_padding(
@@ -516,7 +524,7 @@ impl<'a> Verifier<'a> {
     ///
     /// This corresponds to [`EVP_PKEY_CTX_set_rsa_pss_saltlen`].
     ///
-    /// [`EVP_PKEY_CTX_set_rsa_pss_saltlen`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_PKEY_CTX_set_rsa_pss_saltlen.html
+    /// [`EVP_PKEY_CTX_set_rsa_pss_saltlen`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_CTX_set_rsa_pss_saltlen.html
     pub fn set_rsa_pss_saltlen(&mut self, len: RsaPssSaltlen) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_PKEY_CTX_set_rsa_pss_saltlen(
@@ -547,7 +555,7 @@ impl<'a> Verifier<'a> {
     /// Feeds more data into the `Verifier`.
     ///
     /// Please note that PureEdDSA (Ed25519 and Ed448 keys) do not support streaming.
-    /// Use `verify_oneshot` instead.
+    /// Use [`Verifier::verify_oneshot`] instead.
     ///
     /// OpenSSL documentation at [`EVP_DigestUpdate`].
     ///
@@ -583,7 +591,7 @@ impl<'a> Verifier<'a> {
         }
     }
 
-    /// Determines if the data given in buf matches the provided signature.
+    /// Determines if the data given in `buf` matches the provided signature.
     ///
     /// OpenSSL documentation at [`EVP_DigestVerify`].
     ///
@@ -637,6 +645,7 @@ unsafe fn EVP_DigestVerifyFinal(
 #[cfg(test)]
 mod test {
     use hex::{self, FromHex};
+    #[cfg(not(boringssl))]
     use std::iter;
 
     use crate::ec::{EcGroup, EcKey};
@@ -700,6 +709,7 @@ mod test {
         assert!(!verifier.verify(&Vec::from_hex(SIGNATURE).unwrap()).unwrap());
     }
 
+    #[cfg(not(boringssl))]
     fn test_hmac(ty: MessageDigest, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
         for &(ref key, ref data, ref res) in tests.iter() {
             let pkey = PKey::hmac(key).unwrap();
@@ -710,6 +720,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn hmac_md5() {
         // test vectors from RFC 2202
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [
@@ -756,6 +767,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(not(boringssl))]
     fn hmac_sha1() {
         // test vectors from RFC 2202
         let tests: [(Vec<u8>, Vec<u8>, Vec<u8>); 7] = [
@@ -803,7 +815,6 @@ mod test {
 
     #[test]
     #[cfg(ossl110)]
-    #[cfg_attr(ossl300, ignore)] // https://github.com/openssl/openssl/issues/11671
     fn test_cmac() {
         let cipher = crate::symm::Cipher::aes_128_cbc();
         let key = Vec::from_hex("9294727a3638bb1c13f48ef8158bfc9d").unwrap();

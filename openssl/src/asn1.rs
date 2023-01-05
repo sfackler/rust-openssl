@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 
-//! Defines the format of certificiates
+//! Defines the format of certificates
 //!
 //! This module is used by [`x509`] and other certificate building functions
 //! to describe time, strings, and objects.
@@ -187,7 +187,7 @@ foreign_type_and_impl_send_sync! {
     /// [ASN_TIME_set] documentation at OpenSSL explains the ASN.1 implementation
     /// used by OpenSSL.
     ///
-    /// [ASN_TIME_set]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_TIME_set.html
+    /// [ASN_TIME_set]: https://www.openssl.org/docs/manmaster/crypto/ASN1_TIME_set.html
     pub struct Asn1Time;
     /// Reference to an [`Asn1Time`]
     ///
@@ -423,7 +423,7 @@ foreign_type_and_impl_send_sync! {
     /// structures.  This implementation uses [ASN1_STRING-to_UTF8] to preserve
     /// compatibility with Rust's String.
     ///
-    /// [ASN1_STRING-to_UTF8]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_STRING_to_UTF8.html
+    /// [ASN1_STRING-to_UTF8]: https://www.openssl.org/docs/manmaster/crypto/ASN1_STRING_to_UTF8.html
     pub struct Asn1String;
     /// A reference to an [`Asn1String`].
     pub struct Asn1StringRef;
@@ -492,7 +492,7 @@ foreign_type_and_impl_send_sync! {
     /// OpenSSL documentation includes [`ASN1_INTEGER_set`].
     ///
     /// [`bn`]: ../bn/index.html
-    /// [`ASN1_INTEGER_set`]: https://www.openssl.org/docs/man1.1.0/crypto/ASN1_INTEGER_set.html
+    /// [`ASN1_INTEGER_set`]: https://www.openssl.org/docs/manmaster/crypto/ASN1_INTEGER_set.html
     pub struct Asn1Integer;
     /// A reference to an [`Asn1Integer`].
     pub struct Asn1IntegerRef;
@@ -504,7 +504,7 @@ impl Asn1Integer {
     /// Corresponds to [`BN_to_ASN1_INTEGER`]. Also see
     /// [`BigNumRef::to_asn1_integer`].
     ///
-    /// [`BN_to_ASN1_INTEGER`]: https://www.openssl.org/docs/man1.1.0/crypto/BN_to_ASN1_INTEGER.html
+    /// [`BN_to_ASN1_INTEGER`]: https://www.openssl.org/docs/manmaster/crypto/BN_to_ASN1_INTEGER.html
     /// [`BigNumRef::to_asn1_integer`]: ../bn/struct.BigNumRef.html#method.to_asn1_integer
     pub fn from_bn(bn: &BigNumRef) -> Result<Self, ErrorStack> {
         bn.to_asn1_integer()
@@ -512,7 +512,7 @@ impl Asn1Integer {
 }
 
 impl Asn1IntegerRef {
-    #[allow(missing_docs)]
+    #[allow(missing_docs, clippy::unnecessary_cast)]
     #[deprecated(since = "0.10.6", note = "use to_bn instead")]
     pub fn get(&self) -> i64 {
         unsafe { ffi::ASN1_INTEGER_get(self.as_ptr()) as i64 }
@@ -586,7 +586,7 @@ foreign_type_and_impl_send_sync! {
     ///
     /// [`Nid`]: ../nid/index.html
     /// [`nid::COMMONNAME`]: ../nid/constant.COMMONNAME.html
-    /// [`OBJ_nid2obj`]: https://www.openssl.org/docs/man1.1.0/crypto/OBJ_obj2nid.html
+    /// [`OBJ_nid2obj`]: https://www.openssl.org/docs/manmaster/crypto/OBJ_obj2nid.html
     pub struct Asn1Object;
     /// A reference to an [`Asn1Object`].
     pub struct Asn1ObjectRef;

@@ -2,6 +2,102 @@
 
 ## [Unreleased]
 
+## [v0.9.80] - 2022-12-20
+
+### Fixed
+
+* Added `NO_DEPRECATED_3_0` cfg checks for more APIs.
+
+### Added
+
+* Added support for LibreSSL 3.7.0.
+* Added `SSL_CTRL_CHAIN_CERT` and `SSL_add0_chain_cert`.
+* Added `EVP_PKEY_get_security_bits` and `EVP_PKEY_security_bits`.
+* Added `OSSL_PROVIDER_set_default_search_path`.
+
+## [v0.9.79] - 2022-12-06
+
+### Added
+
+* Added `EVP_CIPHER_CTX_num`.
+* Added `X509_LOOKUP_file` and `X509_load_cert_file`.
+
+## [v0.9.78] - 2022-11-23
+
+### Added
+
+* Added support for LibreSSL 3.6.x.
+* Added `NID_brainpoolP256r1`, `NID_brainpoolP384r1`, and `NID_brainpool512r1`.
+* Added `EVP_camellia_128_cfb128`, `EVP_camellia_128_ecb`, `EVP_camellia_192_cfb128`, `EVP_camellia_192_ecb`,
+    `EVP_camellia_256_cfb128`, and `EVP_camellia_256_ecb`.
+* Added `EVP_cast5_cfb64` and `EVP_cast5_ecb`.
+* Added `EVP_idea_cfb64` and `EVP_idea_ecb`.
+* Added `DSA_SIG`, `d2i_DSA_SIG`, `i2d_DSA_SIG`, `DSA_SIG_new`, `DSA_SIG_free`, `DSA_SIG_get0`, and `DSA_SIG_set0`.
+* Added `X509_STORE_set1_param`, `X509_VERIFY_PARAM_new`, `X509_VERIFY_PARAM_set_time`, and
+    `X509_VERIFY_PARAM_set_depth`.
+
+## [v0.9.77] - 2022-10-22
+
+### Added
+
+* Added support for LibreSSL 3.6.0
+* Added `assume_init`.
+
+## [v0.9.76] - 2022-09-26
+
+### Added
+
+* Added `SSL_get_psk_identity_hint` and `SSL_get_psk_identity`.
+* Added SHA-3 NID constants.
+* Added `SSL_OP_PRIORITIZE_CHACHA`.
+* Added `X509_REQ_print`.
+* Added `EVP_MD_CTX_size` and `EVP_MD_CTX_get_size`
+* Added `EVP_MD_CTX_reset`.
+* Added experimental, unstable support for BoringSSL.
+
+### Fixed
+
+* Fixed the deprecation note on `SSL_CTX_set_alpn_select_cb`.
+
+## [v0.9.75] - 2022-07-09
+
+### Added
+
+* Added SM4 bindings.
+* Added `EC_GROUP_set_generator` and `EC_POINT_set_affine_coordinates_GFp`.
+
+## [v0.9.74] - 2022-06-01
+
+### Added
+
+* Added `EVP_MD_block_size`.
+* Added `X509V3_EXT_add_alias`.
+* Added `X509_V_ERR_INVALID_CA` back when building against OpenSSL 3.0.
+
+## [v0.9.73] - 2022-05-02
+
+### Added
+
+* Added support for installations that place libraries in `$OPENSSL_DIR/lib64` in addition to `$OPENSSL_DIR/lib`.
+* Added `X509_issuer_name_hash`.
+* Added `ASN1_string_set`.
+* Added `X509_CRL_dup`, `X509_REQ_dup`, `X509_NAME_dup`, and `X509_dup`.
+* Added `X509_print`.
+* Added support for LibreSSL 3.5.x.
+
+## [v0.9.72] - 2021-12-11
+
+### Changed
+
+* Temporarily downgraded the vendored OpenSSL back to 1.1.1 due to significant performance regressions. We will move
+    back to 3.0.0 when a future release resolves those issues.
+
+### Added
+
+* Added `PKCS12_set_mac`.
+* Added `EVP_PKEY_sign_init`, `EVP_PKEY_sign`, `EVP_PKEY_verify_init`, and `EVP_PKEY_verify`.
+* Added support for LibreSSL 3.4.x.
+
 ## [v0.9.71]
 
 ### Fixed
@@ -274,7 +370,16 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.71...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.80..master
+[v0.9.80]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.79...openssl-sys-v0.9.80
+[v0.9.79]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.78...openssl-sys-v0.9.79
+[v0.9.78]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.77...openssl-sys-v0.9.78
+[v0.9.77]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.76...openssl-sys-v0.9.77
+[v0.9.76]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.75...openssl-sys-v0.9.76
+[v0.9.75]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.74...openssl-sys-v0.9.75
+[v0.9.74]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.73...openssl-sys-v0.9.74
+[v0.9.73]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.72...openssl-sys-v0.9.73
+[v0.9.72]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.71...openssl-sys-v0.9.72
 [v0.9.71]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.70...openssl-sys-v0.9.71
 [v0.9.70]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.69...openssl-sys-v0.9.70
 [v0.9.69]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.68...openssl-sys-v0.9.69

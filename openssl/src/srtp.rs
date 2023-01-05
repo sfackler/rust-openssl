@@ -36,16 +36,22 @@ impl SrtpProtectionProfileRef {
 pub struct SrtpProfileId(c_ulong);
 
 impl SrtpProfileId {
-    pub const SRTP_AES128_CM_SHA1_80: SrtpProfileId = SrtpProfileId(ffi::SRTP_AES128_CM_SHA1_80);
-    pub const SRTP_AES128_CM_SHA1_32: SrtpProfileId = SrtpProfileId(ffi::SRTP_AES128_CM_SHA1_32);
-    pub const SRTP_AES128_F8_SHA1_80: SrtpProfileId = SrtpProfileId(ffi::SRTP_AES128_F8_SHA1_80);
-    pub const SRTP_AES128_F8_SHA1_32: SrtpProfileId = SrtpProfileId(ffi::SRTP_AES128_F8_SHA1_32);
-    pub const SRTP_NULL_SHA1_80: SrtpProfileId = SrtpProfileId(ffi::SRTP_NULL_SHA1_80);
-    pub const SRTP_NULL_SHA1_32: SrtpProfileId = SrtpProfileId(ffi::SRTP_NULL_SHA1_32);
-    #[cfg(ossl110)]
-    pub const SRTP_AEAD_AES_128_GCM: SrtpProfileId = SrtpProfileId(ffi::SRTP_AEAD_AES_128_GCM);
-    #[cfg(ossl110)]
-    pub const SRTP_AEAD_AES_256_GCM: SrtpProfileId = SrtpProfileId(ffi::SRTP_AEAD_AES_256_GCM);
+    pub const SRTP_AES128_CM_SHA1_80: SrtpProfileId =
+        SrtpProfileId(ffi::SRTP_AES128_CM_SHA1_80 as c_ulong);
+    pub const SRTP_AES128_CM_SHA1_32: SrtpProfileId =
+        SrtpProfileId(ffi::SRTP_AES128_CM_SHA1_32 as c_ulong);
+    pub const SRTP_AES128_F8_SHA1_80: SrtpProfileId =
+        SrtpProfileId(ffi::SRTP_AES128_F8_SHA1_80 as c_ulong);
+    pub const SRTP_AES128_F8_SHA1_32: SrtpProfileId =
+        SrtpProfileId(ffi::SRTP_AES128_F8_SHA1_32 as c_ulong);
+    pub const SRTP_NULL_SHA1_80: SrtpProfileId = SrtpProfileId(ffi::SRTP_NULL_SHA1_80 as c_ulong);
+    pub const SRTP_NULL_SHA1_32: SrtpProfileId = SrtpProfileId(ffi::SRTP_NULL_SHA1_32 as c_ulong);
+    #[cfg(any(boringssl, ossl110))]
+    pub const SRTP_AEAD_AES_128_GCM: SrtpProfileId =
+        SrtpProfileId(ffi::SRTP_AEAD_AES_128_GCM as c_ulong);
+    #[cfg(any(boringssl, ossl110))]
+    pub const SRTP_AEAD_AES_256_GCM: SrtpProfileId =
+        SrtpProfileId(ffi::SRTP_AEAD_AES_256_GCM as c_ulong);
 
     /// Creates a `SrtpProfileId` from an integer representation.
     pub fn from_raw(value: c_ulong) -> SrtpProfileId {

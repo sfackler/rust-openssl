@@ -1,26 +1,26 @@
 //! Elliptic Curve
 //!
-//! Cryptology relies on the difficulty of solving mathematical problems, such as the factor
+//! Cryptography relies on the difficulty of solving mathematical problems, such as the factor
 //! of large integers composed of two large prime numbers and the discrete logarithm of a
-//! random eliptic curve.  This module provides low-level features of the latter.
+//! random elliptic curve.  This module provides low-level features of the latter.
 //! Elliptic Curve protocols can provide the same security with smaller keys.
 //!
 //! There are 2 forms of elliptic curves, `Fp` and `F2^m`.  These curves use irreducible
-//! trinomial or pentanomial .  Being a generic interface to a wide range of algorithms,
-//! the cuves are generally referenced by [`EcGroup`].  There are many built in groups
+//! trinomial or pentanomial.  Being a generic interface to a wide range of algorithms,
+//! the curves are generally referenced by [`EcGroup`].  There are many built-in groups
 //! found in [`Nid`].
 //!
-//! OpenSSL Wiki explains the fields and curves in detail at [Eliptic Curve Cryptography].
+//! OpenSSL Wiki explains the fields and curves in detail at [Elliptic Curve Cryptography].
 //!
 //! [`EcGroup`]: struct.EcGroup.html
 //! [`Nid`]: ../nid/struct.Nid.html
-//! [Eliptic Curve Cryptography]: https://wiki.openssl.org/index.php/Elliptic_Curve_Cryptography
+//! [Elliptic Curve Cryptography]: https://wiki.openssl.org/index.php/Elliptic_Curve_Cryptography
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use std::fmt;
 use std::ptr;
 
-use crate::bn::{BigNumContextRef, BigNumRef};
+use crate::bn::{BigNum, BigNumContextRef, BigNumRef};
 use crate::error::ErrorStack;
 use crate::nid::Nid;
 use crate::pkey::{HasParams, HasPrivate, HasPublic, Params, Private, Public};
@@ -73,7 +73,7 @@ impl Asn1Flag {
     ///
     /// OpenSSL documentation at [`EC_GROUP`]
     ///
-    /// [`EC_GROUP`]: https://www.openssl.org/docs/man1.1.0/crypto/EC_GROUP_get_seed_len.html
+    /// [`EC_GROUP`]: https://www.openssl.org/docs/manmaster/crypto/EC_GROUP_get_seed_len.html
     pub const EXPLICIT_CURVE: Asn1Flag = Asn1Flag(0);
 
     /// Standard Curves
@@ -116,11 +116,43 @@ foreign_type_and_impl_send_sync! {
 
 impl EcGroup {
     /// Returns the group of a standard named curve.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// use openssl::nid::Nid;
+    /// use openssl::ec::{EcGroup, EcKey};
+    ///
+    /// let nid = Nid::X9_62_PRIME256V1; // NIST P-256 curve
+    /// let group = EcGroup::from_curve_name(nid)?;
+    /// let key = EcKey::generate(&group)?;
+    /// # Ok(()) }
+    /// ```
     #[corresponds(EC_GROUP_new_by_curve_name)]
     pub fn from_curve_name(nid: Nid) -> Result<EcGroup, ErrorStack> {
         unsafe {
             init();
             cvt_p(ffi::EC_GROUP_new_by_curve_name(nid.as_raw())).map(EcGroup)
+        }
+    }
+
+    /// Returns the group for given parameters
+    #[corresponds(EC_GROUP_new_curve_GFp)]
+    pub fn from_components(
+        p: BigNum,
+        a: BigNum,
+        b: BigNum,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<EcGroup, ErrorStack> {
+        unsafe {
+            cvt_p(ffi::EC_GROUP_new_curve_GFp(
+                p.as_ptr(),
+                a.as_ptr(),
+                b.as_ptr(),
+                ctx.as_ptr(),
+            ))
+            .map(EcGroup)
         }
     }
 }
@@ -155,7 +187,7 @@ impl EcGroupRef {
     /// a term in the polynomial.  It will be set to 3 `1`s or 5 `1`s depending on
     /// using a trinomial or pentanomial.
     #[corresponds(EC_GROUP_get_curve_GF2m)]
-    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_EC2M")))]
     pub fn components_gf2m(
         &self,
         p: &mut BigNumRef,
@@ -211,6 +243,25 @@ impl EcGroupRef {
         unsafe {
             let ptr = ffi::EC_GROUP_get0_generator(self.as_ptr());
             EcPointRef::from_const_ptr(ptr)
+        }
+    }
+
+    /// Sets the generator point for the given curve
+    #[corresponds(EC_GROUP_set_generator)]
+    pub fn set_generator(
+        &mut self,
+        generator: EcPoint,
+        order: BigNum,
+        cofactor: BigNum,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_GROUP_set_generator(
+                self.as_ptr(),
+                generator.as_ptr(),
+                order.as_ptr(),
+                cofactor.as_ptr(),
+            ))
+            .map(|_| ())
         }
     }
 
@@ -454,7 +505,7 @@ impl EcPointRef {
         }
     }
 
-    /// Place affine coordinates of a curve over a prime field in the provided
+    /// Places affine coordinates of a curve over a prime field in the provided
     /// `x` and `y` `BigNum`s
     #[corresponds(EC_POINT_get_affine_coordinates_GFp)]
     pub fn affine_coordinates_gfp(
@@ -476,10 +527,32 @@ impl EcPointRef {
         }
     }
 
-    /// Place affine coordinates of a curve over a binary field in the provided
+    /// Sets affine coordinates of a curve over a prime field using the provided
+    /// `x` and `y` `BigNum`s
+    #[corresponds(EC_POINT_set_affine_coordinates_GFp)]
+    pub fn set_affine_coordinates_gfp(
+        &mut self,
+        group: &EcGroupRef,
+        x: &BigNumRef,
+        y: &BigNumRef,
+        ctx: &mut BigNumContextRef,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::EC_POINT_set_affine_coordinates_GFp(
+                group.as_ptr(),
+                self.as_ptr(),
+                x.as_ptr(),
+                y.as_ptr(),
+                ctx.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Places affine coordinates of a curve over a binary field in the provided
     /// `x` and `y` `BigNum`s
     #[corresponds(EC_POINT_get_affine_coordinates_GF2m)]
-    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_EC2M")))]
     pub fn affine_coordinates_gf2m(
         &self,
         group: &EcGroupRef,
@@ -613,7 +686,7 @@ where
     }
 
     to_pem! {
-        /// Serialies the public key into a PEM-encoded SubjectPublicKeyInfo structure.
+        /// Serializes the public key into a PEM-encoded SubjectPublicKeyInfo structure.
         ///
         /// The output will have a header of `-----BEGIN PUBLIC KEY-----`.
         #[corresponds(PEM_write_bio_EC_PUBKEY)]
@@ -688,26 +761,32 @@ impl EcKey<Params> {
 }
 
 impl EcKey<Public> {
-    /// Constructs an `EcKey` from the specified group with the associated `EcPoint`, public_key.
+    /// Constructs an `EcKey` from the specified group with the associated [`EcPoint`]: `public_key`.
     ///
-    /// This will only have the associated public_key.
+    /// This will only have the associated `public_key`.
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use openssl::bn::BigNumContext;
     /// use openssl::ec::*;
     /// use openssl::nid::Nid;
     /// use openssl::pkey::PKey;
     ///
-    /// // get bytes from somewhere, i.e. this will not produce a valid key
-    /// let public_key: Vec<u8> = vec![];
+    /// let group = EcGroup::from_curve_name(Nid::SECP384R1)?;
+    /// let mut ctx = BigNumContext::new()?;
+    ///
+    /// // get bytes from somewhere
+    /// let public_key = // ...
+    /// # EcKey::generate(&group)?.public_key().to_bytes(&group,
+    /// # PointConversionForm::COMPRESSED, &mut ctx)?;
     ///
     /// // create an EcKey from the binary form of a EcPoint
-    /// let group = EcGroup::from_curve_name(Nid::SECP256K1).unwrap();
-    /// let mut ctx = BigNumContext::new().unwrap();
-    /// let point = EcPoint::from_bytes(&group, &public_key, &mut ctx).unwrap();
-    /// let key = EcKey::from_public_key(&group, &point);
+    /// let point = EcPoint::from_bytes(&group, &public_key, &mut ctx)?;
+    /// let key = EcKey::from_public_key(&group, &point)?;
+    /// key.check_key()?;
+    /// # Ok(()) }
     /// ```
     #[corresponds(EC_KEY_set_public_key)]
     pub fn from_public_key(
@@ -775,6 +854,33 @@ impl EcKey<Public> {
 
 impl EcKey<Private> {
     /// Generates a new public/private key pair on the specified curve.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// use openssl::bn::BigNumContext;
+    /// use openssl::nid::Nid;
+    /// use openssl::ec::{EcGroup, EcKey, PointConversionForm};
+    ///
+    /// let nid = Nid::X9_62_PRIME256V1; // NIST P-256 curve
+    /// let group = EcGroup::from_curve_name(nid)?;
+    /// let key = EcKey::generate(&group)?;
+    ///
+    /// let mut ctx = BigNumContext::new()?;
+    ///
+    /// let public_key = &key.public_key().to_bytes(
+    ///     &group,
+    ///     PointConversionForm::COMPRESSED,
+    ///     &mut ctx,
+    /// )?;
+    /// assert_eq!(public_key.len(), 33);
+    /// assert_ne!(public_key[0], 0x04);
+    ///
+    /// let private_key = key.private_key().to_vec();
+    /// assert!(private_key.len() >= 31);
+    /// # Ok(()) }
+    /// ```
     #[corresponds(EC_KEY_generate_key)]
     pub fn generate(group: &EcGroupRef) -> Result<EcKey<Private>, ErrorStack> {
         unsafe {
@@ -879,6 +985,97 @@ mod test {
     fn generate() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         EcKey::generate(&group).unwrap();
+    }
+
+    #[test]
+    fn ec_group_from_components() {
+        // parameters are from secp256r1
+        let p = BigNum::from_hex_str(
+            "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF",
+        )
+        .unwrap();
+        let a = BigNum::from_hex_str(
+            "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC",
+        )
+        .unwrap();
+        let b = BigNum::from_hex_str(
+            "5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B",
+        )
+        .unwrap();
+        let mut ctx = BigNumContext::new().unwrap();
+
+        let _curve = EcGroup::from_components(p, a, b, &mut ctx).unwrap();
+    }
+
+    #[test]
+    fn ec_point_set_affine() {
+        // parameters are from secp256r1
+        let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let mut ctx = BigNumContext::new().unwrap();
+        let mut gen_point = EcPoint::new(&group).unwrap();
+        let gen_x = BigNum::from_hex_str(
+            "6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296",
+        )
+        .unwrap();
+        let gen_y = BigNum::from_hex_str(
+            "4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5",
+        )
+        .unwrap();
+        gen_point
+            .set_affine_coordinates_gfp(&group, &gen_x, &gen_y, &mut ctx)
+            .unwrap();
+        assert!(gen_point.is_on_curve(&group, &mut ctx).unwrap());
+    }
+
+    #[test]
+    fn ec_group_set_generator() {
+        // parameters are from secp256r1
+        let mut ctx = BigNumContext::new().unwrap();
+        let p = BigNum::from_hex_str(
+            "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF",
+        )
+        .unwrap();
+        let a = BigNum::from_hex_str(
+            "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC",
+        )
+        .unwrap();
+        let b = BigNum::from_hex_str(
+            "5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B",
+        )
+        .unwrap();
+
+        let mut group = EcGroup::from_components(p, a, b, &mut ctx).unwrap();
+
+        let mut gen_point = EcPoint::new(&group).unwrap();
+        let gen_x = BigNum::from_hex_str(
+            "6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296",
+        )
+        .unwrap();
+        let gen_y = BigNum::from_hex_str(
+            "4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5",
+        )
+        .unwrap();
+        gen_point
+            .set_affine_coordinates_gfp(&group, &gen_x, &gen_y, &mut ctx)
+            .unwrap();
+
+        let order = BigNum::from_hex_str(
+            "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551",
+        )
+        .unwrap();
+        let cofactor = BigNum::from_hex_str("01").unwrap();
+        group.set_generator(gen_point, order, cofactor).unwrap();
+        let mut constructed_order = BigNum::new().unwrap();
+        group.order(&mut constructed_order, &mut ctx).unwrap();
+
+        let named_group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+        let mut named_order = BigNum::new().unwrap();
+        named_group.order(&mut named_order, &mut ctx).unwrap();
+
+        assert_eq!(
+            constructed_order.ucmp(&named_order),
+            std::cmp::Ordering::Equal
+        );
     }
 
     #[test]
@@ -1058,7 +1255,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(osslconf = "OPENSSL_NO_EC2M"))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_EC2M")))]
     fn is_on_curve() {
         let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
         let mut ctx = BigNumContext::new().unwrap();

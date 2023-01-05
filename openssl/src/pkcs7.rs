@@ -298,13 +298,13 @@ mod tests {
         let mut certs = Stack::new().unwrap();
         certs.push(cert.clone()).unwrap();
         let message: String = String::from("foo");
-        let cypher = Cipher::des_ede3_cbc();
+        let cipher = Cipher::des_ede3_cbc();
         let flags = Pkcs7Flags::STREAM;
         let pkey = include_bytes!("../test/key.pem");
         let pkey = PKey::private_key_from_pem(pkey).unwrap();
 
         let pkcs7 =
-            Pkcs7::encrypt(&certs, message.as_bytes(), cypher, flags).expect("should succeed");
+            Pkcs7::encrypt(&certs, message.as_bytes(), cipher, flags).expect("should succeed");
 
         let encrypted = pkcs7
             .to_smime(message.as_bytes(), flags)
@@ -361,7 +361,9 @@ mod tests {
         assert_eq!(content.expect("should be non-empty"), message.as_bytes());
     }
 
+    /// https://marc.info/?l=openbsd-cvs&m=166602943014106&w=2
     #[test]
+    #[cfg_attr(all(libressl360, not(libressl361)), ignore)]
     fn sign_verify_test_normal() {
         let cert = include_bytes!("../test/cert.pem");
         let cert = X509::from_pem(cert).unwrap();
@@ -397,7 +399,9 @@ mod tests {
         assert!(content.is_none());
     }
 
+    /// https://marc.info/?l=openbsd-cvs&m=166602943014106&w=2
     #[test]
+    #[cfg_attr(all(libressl360, not(libressl361)), ignore)]
     fn signers() {
         let cert = include_bytes!("../test/cert.pem");
         let cert = X509::from_pem(cert).unwrap();

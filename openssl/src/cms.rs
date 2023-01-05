@@ -68,7 +68,7 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl CmsContentInfoRef {
-    /// Given the sender's private key, `pkey` and the recipient's certificiate, `cert`,
+    /// Given the sender's private key, `pkey` and the recipient's certificate, `cert`,
     /// decrypt the data in `self`.
     #[corresponds(CMS_decrypt)]
     pub fn decrypt<T>(&self, pkey: &PKeyRef<T>, cert: &X509) -> Result<Vec<u8>, ErrorStack>
@@ -237,8 +237,10 @@ mod test {
     use crate::x509::X509;
 
     #[test]
-    #[cfg_attr(ossl300, ignore)] // 3.0.0 can't load RC2-40-CBC
     fn cms_encrypt_decrypt() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
         // load cert with public key only
         let pub_cert_bytes = include_bytes!("../test/cms_pubkey.der");
         let pub_cert = X509::from_der(pub_cert_bytes).expect("failed to load pub cert");
@@ -247,7 +249,7 @@ mod test {
         let priv_cert_bytes = include_bytes!("../test/cms.p12");
         let priv_cert = Pkcs12::from_der(priv_cert_bytes).expect("failed to load priv cert");
         let priv_cert = priv_cert
-            .parse("mypass")
+            .parse2("mypass")
             .expect("failed to parse priv cert");
 
         // encrypt cms message using public key cert
@@ -272,13 +274,16 @@ mod test {
                 CmsContentInfo::from_der(&encrypted_der).expect("failed read cms from der");
 
             let decrypt_with_cert_check = decrypt
-                .decrypt(&priv_cert.pkey, &priv_cert.cert)
+                .decrypt(
+                    priv_cert.pkey.as_ref().unwrap(),
+                    priv_cert.cert.as_ref().unwrap(),
+                )
                 .expect("failed to decrypt cms");
             let decrypt_with_cert_check = String::from_utf8(decrypt_with_cert_check)
                 .expect("failed to create string from cms content");
 
             let decrypt_without_cert_check = decrypt
-                .decrypt_without_cert_check(&priv_cert.pkey)
+                .decrypt_without_cert_check(priv_cert.pkey.as_ref().unwrap())
                 .expect("failed to decrypt cms");
             let decrypt_without_cert_check = String::from_utf8(decrypt_without_cert_check)
                 .expect("failed to create string from cms content");
@@ -294,13 +299,16 @@ mod test {
                 CmsContentInfo::from_pem(&encrypted_pem).expect("failed read cms from pem");
 
             let decrypt_with_cert_check = decrypt
-                .decrypt(&priv_cert.pkey, &priv_cert.cert)
+                .decrypt(
+                    priv_cert.pkey.as_ref().unwrap(),
+                    priv_cert.cert.as_ref().unwrap(),
+                )
                 .expect("failed to decrypt cms");
             let decrypt_with_cert_check = String::from_utf8(decrypt_with_cert_check)
                 .expect("failed to create string from cms content");
 
             let decrypt_without_cert_check = decrypt
-                .decrypt_without_cert_check(&priv_cert.pkey)
+                .decrypt_without_cert_check(priv_cert.pkey.as_ref().unwrap())
                 .expect("failed to decrypt cms");
             let decrypt_without_cert_check = String::from_utf8(decrypt_without_cert_check)
                 .expect("failed to create string from cms content");

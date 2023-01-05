@@ -388,7 +388,7 @@ pub unsafe extern "C" fn raw_remove_session<F>(
 }
 
 cfg_if! {
-    if #[cfg(any(ossl110, libressl280))] {
+    if #[cfg(any(ossl110, libressl280, boringssl))] {
         type DataPtr = *const c_uchar;
     } else {
         type DataPtr = *mut c_uchar;
@@ -482,10 +482,11 @@ where
         .ssl_context()
         .ex_data(SslContext::cached_ex_index::<F>())
         .expect("BUG: stateless cookie verify callback missing") as *const F;
-    let slice = slice::from_raw_parts(cookie as *const c_uchar as *const u8, cookie_len as usize);
+    let slice = slice::from_raw_parts(cookie as *const c_uchar as *const u8, cookie_len);
     (*callback)(ssl, slice) as c_int
 }
 
+#[cfg(not(boringssl))]
 pub extern "C" fn raw_cookie_generate<F>(
     ssl: *mut ffi::SSL,
     cookie: *mut c_uchar,
@@ -517,6 +518,7 @@ where
     }
 }
 
+#[cfg(not(boringssl))]
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {
         type CookiePtr = *const c_uchar;
@@ -525,6 +527,7 @@ cfg_if! {
     }
 }
 
+#[cfg(not(boringssl))]
 pub extern "C" fn raw_cookie_verify<F>(
     ssl: *mut ffi::SSL,
     cookie: CookiePtr,
@@ -612,7 +615,7 @@ pub extern "C" fn raw_custom_ext_free<T>(
     ssl: *mut ffi::SSL,
     _: c_uint,
     _: c_uint,
-    _: *mut *const c_uchar,
+    _: *const c_uchar,
     _: *mut c_void,
 ) where
     T: 'static + Sync + Send,
@@ -651,7 +654,7 @@ where
             .ex_data(SslContext::cached_ex_index::<F>())
             .expect("BUG: custom ext parse callback missing") as *const F;
         let ectx = ExtensionContext::from_bits_truncate(context);
-        let slice = slice::from_raw_parts(input as *const u8, inlen as usize);
+        let slice = slice::from_raw_parts(input as *const u8, inlen);
         let cert = if ectx.contains(ExtensionContext::TLS1_3_CERTIFICATE) {
             Some((chainidx, X509Ref::from_ptr(x)))
         } else {

@@ -34,6 +34,8 @@ fn main() {
         .ok()
         .map(|v| u64::from_str_radix(&v, 16).unwrap());
 
+    cfg.cfg("openssl", None);
+
     for c in cfgs::get(openssl_version, libressl_version) {
         cfg.cfg(c, None);
     }
@@ -53,6 +55,7 @@ fn main() {
         .header("openssl/x509v3.h")
         .header("openssl/safestack.h")
         .header("openssl/hmac.h")
+        .header("openssl/obj_mac.h")
         .header("openssl/ssl.h")
         .header("openssl/err.h")
         .header("openssl/rand.h")
@@ -65,8 +68,12 @@ fn main() {
 
     if let Some(version) = openssl_version {
         cfg.header("openssl/cms.h");
-        if version >= 0x010100000 {
+        if version >= 0x10100000 {
             cfg.header("openssl/kdf.h");
+        }
+
+        if version >= 0x30000000 {
+            cfg.header("openssl/provider.h");
         }
     }
 
