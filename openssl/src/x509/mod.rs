@@ -1426,11 +1426,8 @@ impl Stackable for X509Revoked {
 
 impl X509Revoked {
     from_der! {
-        /// Deserializes a DER-encoded certificate revokation status
-        ///
-        /// This corresponds to [`d2i_X509_REVOKED`].
-        ///
-        /// [`d2i_X509_REVOKED`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_X509_REVOKED.html
+        /// Deserializes a DER-encoded certificate revocation status
+        #[corresponds(d2i_X509_REVOKED)]
         from_der,
         X509Revoked,
         ffi::d2i_X509_REVOKED
@@ -1440,15 +1437,13 @@ impl X509Revoked {
 impl X509RevokedRef {
     to_der! {
         /// Serializes the certificate request to a DER-encoded certificate revocation status
-        ///
-        /// This corresponds to [`i2d_X509_REVOKED`].
-        ///
-        /// [`i2d_X509_REVOKED`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_X509_REQ.html
+        #[corresponds(d2i_X509_REVOKED)]
         to_der,
         ffi::i2d_X509_REVOKED
     }
 
     /// Get the date that the certificate was revoked
+    #[corresponds(X509_REVOKED_get0_revocationDate)]
     pub fn revocation_date(&self) -> &Asn1TimeRef {
         unsafe {
             let r = X509_REVOKED_get0_revocationDate(self.as_ptr() as *const _);
@@ -1458,6 +1453,7 @@ impl X509RevokedRef {
     }
 
     /// Get the serial number of the revoked certificate
+    #[corresponds(X509_REVOKED_get0_serialNumber)]
     pub fn serial_number(&self) -> &Asn1IntegerRef {
         unsafe {
             let r = X509_REVOKED_get0_serialNumber(self.as_ptr() as *const _);
@@ -1513,7 +1509,10 @@ impl<'a> CrlStatus<'a> {
                 assert!(!revoked_entry.is_null());
                 CrlStatus::RemoveFromCrl(X509RevokedRef::from_ptr(revoked_entry))
             }
-            _ => unreachable!("X509_CRL_get0_by_{{serial,cert}} should only return 0, 1, or 2."),
+            _ => unreachable!(
+                "{}",
+                "X509_CRL_get0_by_{{serial,cert}} should only return 0, 1, or 2."
+            ),
         }
     }
 }
@@ -1523,10 +1522,7 @@ impl X509Crl {
         /// Deserializes a PEM-encoded Certificate Revocation List
         ///
         /// The input should have a header of `-----BEGIN X509 CRL-----`.
-        ///
-        /// This corresponds to [`PEM_read_bio_X509_CRL`].
-        ///
-        /// [`PEM_read_bio_X509_CRL`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_read_bio_X509_REQ.html
+        #[corresponds(PEM_read_bio_X509_CRL)]
         from_pem,
         X509Crl,
         ffi::PEM_read_bio_X509_CRL
@@ -1534,10 +1530,7 @@ impl X509Crl {
 
     from_der! {
         /// Deserializes a DER-encoded Certificate Revocation List
-        ///
-        /// This corresponds to [`d2i_X509_CRL`].
-        ///
-        /// [`d2i_X509_CRL`]: https://www.openssl.org/docs/man1.1.0/crypto/d2i_X509_REQ.html
+        #[corresponds(d2i_X509_CRL)]
         from_der,
         X509Crl,
         ffi::d2i_X509_CRL
@@ -1549,20 +1542,14 @@ impl X509CrlRef {
         /// Serializes the certificate request to a PEM-encoded Certificate Revocation List.
         ///
         /// The output will have a header of `-----BEGIN X509 CRL-----`.
-        ///
-        /// This corresponds to [`PEM_write_bio_X509_CRL`].
-        ///
-        /// [`PEM_write_bio_X509_CRL`]: https://www.openssl.org/docs/man1.0.2/crypto/PEM_write_bio_X509_REQ.html
+        #[corresponds(PEM_write_bio_X509_CRL)]
         to_pem,
         ffi::PEM_write_bio_X509_CRL
     }
 
     to_der! {
         /// Serializes the certificate request to a DER-encoded Certificate Revocation List.
-        ///
-        /// This corresponds to [`i2d_X509_CRL`].
-        ///
-        /// [`i2d_X509_CRL`]: https://www.openssl.org/docs/man1.0.2/crypto/i2d_X509_REQ.html
+        #[corresponds(i2d_X509_CRL)]
         to_der,
         ffi::i2d_X509_CRL
     }
@@ -1580,10 +1567,7 @@ impl X509CrlRef {
     }
 
     /// Returns the CRL's `lastUpdate` time.
-    ///
-    /// This corresponds to [`X509_CRL_get0_lastUpdate"]
-    ///
-    /// [`X509_CRL_get0_lastUpdate`]: https://www.openssl.org/docs/man1.1.1/man3/X509_CRL_get0_lastUpdate.html
+    #[corresponds(X509_CRL_get0_lastUpdate)]
     pub fn last_update(&self) -> &Asn1TimeRef {
         unsafe {
             let date = X509_CRL_get0_lastUpdate(self.as_ptr());
@@ -1595,26 +1579,16 @@ impl X509CrlRef {
     /// Returns the CRL's `nextUpdate` time.
     ///
     /// If the `nextUpdate` field is missing, returns `None`.
-    ///
-    /// This corresponds to [`X509_CRL_get0_nextUpdate"]
-    ///
-    /// [`X509_CRL_get0_nextUpdate`]: https://www.openssl.org/docs/man1.1.1/man3/X509_CRL_get0_nextUpdate.html
+    #[corresponds(X509_CRL_get0_nextUpdate)]
     pub fn next_update(&self) -> Option<&Asn1TimeRef> {
         unsafe {
             let date = X509_CRL_get0_nextUpdate(self.as_ptr());
-            if date.is_null() {
-                None
-            } else {
-                Some(Asn1TimeRef::from_ptr(date as *mut _))
-            }
+            Asn1TimeRef::from_const_ptr_opt(date)
         }
     }
 
     /// Get the revocation status of a certificate by its serial number
-    ///
-    /// This corresponds to [`X509_CRL_get0_by_serial`]
-    ///
-    /// [`X509_CRL_get0_by_serial`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_CRL_get0_by_serial.html
+    #[corresponds(X509_CRL_get0_by_serial)]
     pub fn get_by_serial<'a>(&'a self, serial: &Asn1IntegerRef) -> CrlStatus<'a> {
         unsafe {
             let mut ret = ptr::null_mut::<ffi::X509_REVOKED>();
@@ -1625,10 +1599,7 @@ impl X509CrlRef {
     }
 
     /// Get the revocation status of a certificate
-    ///
-    /// This corresponds to [`X509_CRL_get0_by_cert`]
-    ///
-    /// [`X509_CRL_get0_by_cert`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_CRL_get0_by_cert.html
+    #[corresponds(X509_CRL_get0_by_cert)]
     pub fn get_by_cert<'a>(&'a self, cert: &X509) -> CrlStatus<'a> {
         unsafe {
             let mut ret = ptr::null_mut::<ffi::X509_REVOKED>();
@@ -1639,6 +1610,7 @@ impl X509CrlRef {
     }
 
     /// Get the issuer name from the revocation list.
+    #[corresponds(X509_CRL_get_issuer)]
     pub fn issuer_name(&self) -> &X509NameRef {
         unsafe {
             let name = X509_CRL_get_issuer(self.as_ptr());
@@ -1653,10 +1625,7 @@ impl X509CrlRef {
     /// are performed.
     ///
     /// Returns `true` if verification succeeds.
-    ///
-    /// This corresponds to [`X509_CRL_verify"].
-    ///
-    /// [`X509_CRL_verify`]: https://www.openssl.org/docs/man1.1.0/crypto/X509_CRL_verify.html
+    #[corresponds(X509_CRL_verify)]
     pub fn verify<T>(&self, key: &PKeyRef<T>) -> Result<bool, ErrorStack>
     where
         T: HasPublic,
@@ -1994,7 +1963,7 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(ossl110)] {
+    if #[cfg(any(ossl110, libressl350))] {
         use ffi::{
             X509_CRL_get_issuer, X509_CRL_get0_nextUpdate, X509_CRL_get0_lastUpdate,
             X509_CRL_get_REVOKED,
