@@ -492,6 +492,8 @@ extern "C" {
     pub fn SSL_CTX_set_ciphersuites(ctx: *mut SSL_CTX, str: *const c_char) -> c_int;
     #[cfg(any(ossl111, libressl340))]
     pub fn SSL_set_ciphersuites(ssl: *mut ::SSL, str: *const c_char) -> c_int;
+    pub fn SSL_set_cipher_list(ssl: *mut SSL, s: *const c_char) -> c_int;
+    pub fn SSL_set_ssl_method(s: *mut SSL, method: *const SSL_METHOD) -> c_int;
     pub fn SSL_set_verify(
         ssl: *mut SSL,
         mode: c_int,
@@ -515,6 +517,13 @@ extern "C" {
         ctx: *mut SSL_CTX,
         cert_chain_file: *const c_char,
     ) -> c_int;
+    pub fn SSL_use_PrivateKey_file(ssl: *mut SSL, file: *const c_char, type_: c_int) -> c_int;
+    pub fn SSL_use_PrivateKey(ssl: *mut SSL, pkey: *mut EVP_PKEY) -> c_int;
+    pub fn SSL_use_certificate(ssl: *mut SSL, x: *mut X509) -> c_int;
+    #[cfg(any(ossl110, libressl332))]
+    pub fn SSL_use_certificate_chain_file(ssl: *mut SSL, file: *const c_char) -> c_int;
+    pub fn SSL_set_client_CA_list(s: *mut SSL, name_list: *mut stack_st_X509_NAME);
+    pub fn SSL_add_client_CA(ssl: *mut SSL, x: *mut X509) -> c_int;
     pub fn SSL_load_client_CA_file(file: *const c_char) -> *mut stack_st_X509_NAME;
 
     #[cfg(not(ossl110))]
