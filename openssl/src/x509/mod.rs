@@ -1319,6 +1319,7 @@ impl X509NameRef {
     /// Compares the X509NameRef with an`other` X509NameRef
     /// Returns 0 if equal.
     #[corresponds(X509_NAME_cmp)]
+    #[allow(clippy::useless_conversion)]
     pub fn cmp_with(&self, other: &X509NameRef) -> i32 {
         unsafe { ffi::X509_NAME_cmp(self.as_ptr() as *const _, other.as_ptr() as *const _) as i32 }
     }
@@ -2083,6 +2084,7 @@ impl X509Purpose {
     ///  - "ocsphelper",
     ///  - "timestampsign"
     /// The index can be used with `X509Purpose::from_idx()` to get the purpose.
+    #[allow(clippy::useless_conversion)]
     pub fn get_by_sname(sname: &str) -> Result<i32, ErrorStack> {
         unsafe {
             let sname = CString::new(sname).unwrap();
