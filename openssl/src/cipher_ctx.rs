@@ -363,6 +363,22 @@ impl CipherCtxRef {
         unsafe { ffi::EVP_CIPHER_CTX_iv_length(self.as_ptr()) as usize }
     }
 
+    /// Returns the `num` parameter of the cipher.
+    ///
+    /// Built-in ciphers typically use this to track how much of the
+    /// current underlying block has been "used" already.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the context has not been initialized with a cipher.
+    #[corresponds(EVP_CIPHER_CTX_num)]
+    #[cfg(ossl110)]
+    pub fn num(&self) -> usize {
+        self.assert_cipher();
+
+        unsafe { ffi::EVP_CIPHER_CTX_num(self.as_ptr()) as usize }
+    }
+
     /// Sets the length of the IV expected by this context.
     ///
     /// Only some ciphers support configurable IV lengths.
@@ -407,7 +423,7 @@ impl CipherCtxRef {
 
     /// Retrieves the calculated authentication tag from the context.
     ///
-    /// This should be called after `[Self::cipher_final]`, and is only supported by authenticated ciphers.
+    /// This should be called after [`Self::cipher_final`], and is only supported by authenticated ciphers.
     ///
     /// The size of the buffer indicates the size of the tag. While some ciphers support a range of tag sizes, it is
     /// recommended to pick the maximum size.
@@ -501,33 +517,62 @@ impl CipherCtxRef {
     ///
     /// # Panics
     ///
-    /// Panics if `output.len()` is less than `input.len()` plus the cipher's block size.
+    /// Panics if `output` doesn't contain enough space for data to be
+    /// written as specified by [`Self::minimal_output_size`].
     #[corresponds(EVP_CipherUpdate)]
     pub fn cipher_update(
         &mut self,
         input: &[u8],
         output: Option<&mut [u8]>,
     ) -> Result<usize, ErrorStack> {
-        let inlen = c_int::try_from(input.len()).unwrap();
-
         if let Some(output) = &output {
             let mut block_size = self.block_size();
             if block_size == 1 {
                 block_size = 0;
             }
-            assert!(output.len() >= input.len() + block_size);
+            let min_output_size = input.len() + block_size;
+            assert!(
+                output.len() >= min_output_size,
+                "Output buffer size should be at least {} bytes.",
+                min_output_size
+            );
         }
 
+        unsafe { self.cipher_update_unchecked(input, output) }
+    }
+
+    /// Writes data into the context.
+    ///
+    /// Providing no output buffer will cause the input to be considered additional authenticated data (AAD).
+    ///
+    /// Returns the number of bytes written to `output`.
+    ///
+    /// This function is the same as [`Self::cipher_update`] but with the
+    /// output size check removed. It can be used when the exact
+    /// buffer size control is maintained by the caller.
+    ///
+    /// SAFETY: The caller is expected to provide `output` buffer
+    /// large enough to contain correct number of bytes. For streaming
+    /// ciphers the output buffer size should be at least as big as
+    /// the input buffer. For block ciphers the size of the output
+    /// buffer depends on the state of partially updated blocks.
+    #[corresponds(EVP_CipherUpdate)]
+    pub unsafe fn cipher_update_unchecked(
+        &mut self,
+        input: &[u8],
+        output: Option<&mut [u8]>,
+    ) -> Result<usize, ErrorStack> {
+        let inlen = c_int::try_from(input.len()).unwrap();
+
         let mut outlen = 0;
-        unsafe {
-            cvt(ffi::EVP_CipherUpdate(
-                self.as_ptr(),
-                output.map_or(ptr::null_mut(), |b| b.as_mut_ptr()),
-                &mut outlen,
-                input.as_ptr(),
-                inlen,
-            ))?;
-        }
+
+        cvt(ffi::EVP_CipherUpdate(
+            self.as_ptr(),
+            output.map_or(ptr::null_mut(), |b| b.as_mut_ptr()),
+            &mut outlen,
+            input.as_ptr(),
+            inlen,
+        ))?;
 
         Ok(outlen as usize)
     }
@@ -562,14 +607,34 @@ impl CipherCtxRef {
             assert!(output.len() >= block_size);
         }
 
+        unsafe { self.cipher_final_unchecked(output) }
+    }
+
+    /// Finalizes the encryption or decryption process.
+    ///
+    /// Any remaining data will be written to the output buffer.
+    ///
+    /// Returns the number of bytes written to `output`.
+    ///
+    /// This function is the same as [`Self::cipher_final`] but with
+    /// the output buffer size check removed.
+    ///
+    /// SAFETY: The caller is expected to provide `output` buffer
+    /// large enough to contain correct number of bytes. For streaming
+    /// ciphers the output buffer can be empty, for block ciphers the
+    /// output buffer should be at least as big as the block.
+    #[corresponds(EVP_CipherFinal)]
+    pub unsafe fn cipher_final_unchecked(
+        &mut self,
+        output: &mut [u8],
+    ) -> Result<usize, ErrorStack> {
         let mut outl = 0;
-        unsafe {
-            cvt(ffi::EVP_CipherFinal(
-                self.as_ptr(),
-                output.as_mut_ptr(),
-                &mut outl,
-            ))?;
-        }
+
+        cvt(ffi::EVP_CipherFinal(
+            self.as_ptr(),
+            output.as_mut_ptr(),
+            &mut outl,
+        ))?;
 
         Ok(outl as usize)
     }
@@ -588,7 +653,7 @@ impl CipherCtxRef {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::cipher::Cipher;
+    use crate::{cipher::Cipher, rand::rand_bytes};
     #[cfg(not(boringssl))]
     use std::slice;
 
@@ -668,5 +733,109 @@ mod test {
     fn default_aes_128_cbc() {
         let cipher = Cipher::aes_128_cbc();
         aes_128_cbc(cipher);
+    }
+
+    #[test]
+    fn test_stream_ciphers() {
+        test_stream_cipher(Cipher::aes_192_ctr());
+        test_stream_cipher(Cipher::aes_256_ctr());
+    }
+
+    fn test_stream_cipher(cipher: &'static CipherRef) {
+        let mut key = vec![0; cipher.key_length()];
+        rand_bytes(&mut key).unwrap();
+        let mut iv = vec![0; cipher.iv_length()];
+        rand_bytes(&mut iv).unwrap();
+
+        let mut ctx = CipherCtx::new().unwrap();
+
+        ctx.encrypt_init(Some(cipher), Some(&key), Some(&iv))
+            .unwrap();
+        ctx.set_padding(false);
+
+        assert_eq!(
+            1,
+            cipher.block_size(),
+            "Need a stream cipher, not a block cipher"
+        );
+
+        // update cipher with non-full block
+        // this is a streaming cipher so the number of output bytes
+        // will be the same as the number of input bytes
+        let mut output = vec![0; 32];
+        let outlen = ctx
+            .cipher_update(&[1; 15], Some(&mut output[0..15]))
+            .unwrap();
+        assert_eq!(15, outlen);
+
+        // update cipher with missing bytes from the previous block
+        // as previously it will output the same number of bytes as
+        // the input
+        let outlen = ctx
+            .cipher_update(&[1; 17], Some(&mut output[15..]))
+            .unwrap();
+        assert_eq!(17, outlen);
+
+        ctx.cipher_final_vec(&mut vec![0; 0]).unwrap();
+
+        // try to decrypt
+        ctx.decrypt_init(Some(cipher), Some(&key), Some(&iv))
+            .unwrap();
+        ctx.set_padding(false);
+
+        // update cipher with non-full block
+        // expect that the output for stream cipher will contain
+        // the same number of bytes as the input
+        let mut output_decrypted = vec![0; 32];
+        let outlen = ctx
+            .cipher_update(&output[0..15], Some(&mut output_decrypted[0..15]))
+            .unwrap();
+        assert_eq!(15, outlen);
+
+        let outlen = ctx
+            .cipher_update(&output[15..], Some(&mut output_decrypted[15..]))
+            .unwrap();
+        assert_eq!(17, outlen);
+
+        ctx.cipher_final_vec(&mut vec![0; 0]).unwrap();
+        // check if the decrypted blocks are the same as input (all ones)
+        assert_eq!(output_decrypted, vec![1; 32]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Output buffer size should be at least 33 bytes.")]
+    fn full_block_updates_aes_128() {
+        output_buffer_too_small(Cipher::aes_128_cbc());
+    }
+
+    #[test]
+    #[should_panic(expected = "Output buffer size should be at least 33 bytes.")]
+    fn full_block_updates_aes_256() {
+        output_buffer_too_small(Cipher::aes_256_cbc());
+    }
+
+    #[test]
+    #[should_panic(expected = "Output buffer size should be at least 17 bytes.")]
+    fn full_block_updates_3des() {
+        output_buffer_too_small(Cipher::des_ede3_cbc());
+    }
+
+    fn output_buffer_too_small(cipher: &'static CipherRef) {
+        let mut key = vec![0; cipher.key_length()];
+        rand_bytes(&mut key).unwrap();
+        let mut iv = vec![0; cipher.iv_length()];
+        rand_bytes(&mut iv).unwrap();
+
+        let mut ctx = CipherCtx::new().unwrap();
+
+        ctx.encrypt_init(Some(cipher), Some(&key), Some(&iv))
+            .unwrap();
+        ctx.set_padding(false);
+
+        let block_size = cipher.block_size();
+        assert!(block_size > 1, "Need a block cipher, not a stream cipher");
+
+        ctx.cipher_update(&vec![0; block_size + 1], Some(&mut vec![0; block_size - 1]))
+            .unwrap();
     }
 }

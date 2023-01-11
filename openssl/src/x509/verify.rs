@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use cfg_if::cfg_if;
 use foreign_types::ForeignTypeRef;
-use libc::{c_uint, c_ulong};
+use libc::{c_int, c_uint, c_ulong, time_t};
 use std::ffi::CString;
 use std::net::IpAddr;
 
@@ -69,6 +69,17 @@ foreign_type_and_impl_send_sync! {
     pub struct X509VerifyParam;
     /// Reference to `X509VerifyParam`.
     pub struct X509VerifyParamRef;
+}
+
+impl X509VerifyParam {
+    /// Create an X509VerifyParam
+    #[corresponds(X509_VERIFY_PARAM_new)]
+    pub fn new() -> Result<X509VerifyParam, ErrorStack> {
+        unsafe {
+            ffi::init();
+            cvt_p(ffi::X509_VERIFY_PARAM_new()).map(X509VerifyParam)
+        }
+    }
 }
 
 impl X509VerifyParamRef {
@@ -141,6 +152,69 @@ impl X509VerifyParamRef {
             .map(|_| ())
         }
     }
+
+    /// Set the verification time, where time is of type time_t, traditionaly defined as seconds since the epoch
+    #[corresponds(X509_VERIFY_PARAM_set_time)]
+    pub fn set_time(&mut self, time: time_t) {
+        unsafe { ffi::X509_VERIFY_PARAM_set_time(self.as_ptr(), time) }
+    }
+
+    /// Set the verification depth
+    #[corresponds(X509_VERIFY_PARAM_set_depth)]
+    pub fn set_depth(&mut self, depth: c_int) {
+        unsafe { ffi::X509_VERIFY_PARAM_set_depth(self.as_ptr(), depth) }
+    }
+
+    /// Sets the authentication security level to auth_level
+    #[corresponds(X509_VERIFY_PARAM_set_auth_level)]
+    #[cfg(ossl110)]
+    pub fn set_auth_level(&mut self, lvl: c_int) {
+        unsafe { ffi::X509_VERIFY_PARAM_set_auth_level(self.as_ptr(), lvl) }
+    }
+
+    /// Gets the current authentication security level
+    #[corresponds(X509_VERIFY_PARAM_get_auth_level)]
+    #[cfg(ossl110)]
+    pub fn auth_level(&self) -> i32 {
+        unsafe { ffi::X509_VERIFY_PARAM_get_auth_level(self.as_ptr()) }
+    }
+
+    /// Sets the verification purpose
+    #[corresponds(X509_VERIFY_PARAM_set_purpose)]
+    #[cfg(ossl102)]
+    pub fn set_purpose(&mut self, purpose: X509PurposeId) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::X509_VERIFY_PARAM_set_purpose(
+                self.as_ptr(),
+                purpose.0,
+            ))
+                .map(|_| ())
+        }
+    }
+}
+
+pub struct X509PurposeId(i32);
+
+impl X509PurposeId {
+    pub const SSL_CLIENT: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_SSL_CLIENT);
+    pub const SSL_SERVER: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_SSL_SERVER);
+    pub const NS_SSL_SERVER: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_NS_SSL_SERVER);
+    pub const SMIME_SIGN: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_SMIME_SIGN);
+    pub const SMIME_ENCRYPT: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_SMIME_ENCRYPT);
+    pub const CRL_SIGN: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_CRL_SIGN);
+    pub const ANY: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_ANY);
+    pub const OCSP_HELPER: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_OCSP_HELPER);
+    pub const TIMESTAMP_SIGN: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_TIMESTAMP_SIGN);
+
+    pub fn value(&self) -> i32 {
+        self.0
+    }
+}
+
+impl From<i32> for X509PurposeId {
+    fn from(id: i32) -> Self {
+        X509PurposeId(id)
+    }
 }
 
 /// fake free method, since X509_PURPOSE is static
@@ -157,16 +231,6 @@ foreign_type_and_impl_send_sync! {
 }
 
 impl X509Purpose {
-    pub const SSL_CLIENT: i32 = ffi::X509_PURPOSE_SSL_CLIENT;
-    pub const SSL_SERVER: i32 = ffi::X509_PURPOSE_SSL_SERVER;
-    pub const NS_SSL_SERVER: i32 = ffi::X509_PURPOSE_NS_SSL_SERVER;
-    pub const SMIME_SIGN: i32 = ffi::X509_PURPOSE_SMIME_SIGN;
-    pub const SMIME_ENCRYPT: i32 = ffi::X509_PURPOSE_SMIME_ENCRYPT;
-    pub const CRL_SIGN: i32 = ffi::X509_PURPOSE_CRL_SIGN;
-    pub const ANY: i32 = ffi::X509_PURPOSE_ANY;
-    pub const OCSP_HELPER: i32 = ffi::X509_PURPOSE_OCSP_HELPER;
-    pub const TIMESTAMP_SIGN: i32 = ffi::X509_PURPOSE_TIMESTAMP_SIGN;
-
     /// Get the internal table index of an X509_PURPOSE for a given short name. Valid short
     /// names include
     ///  - "sslclient",
@@ -215,10 +279,10 @@ impl X509PurposeRef {
     /// - `X509_PURPOSE_ANY`
     /// - `X509_PURPOSE_OCSP_HELPER`
     /// - `X509_PURPOSE_TIMESTAMP_SIGN`
-    pub fn purpose(&self) -> i32 {
+    pub fn purpose(&self) -> X509PurposeId {
         unsafe {
             let x509_purpose: *mut ffi::X509_PURPOSE = self.as_ptr();
-            (*x509_purpose).purpose
+            X509PurposeId::from((*x509_purpose).purpose)
         }
     }
 }

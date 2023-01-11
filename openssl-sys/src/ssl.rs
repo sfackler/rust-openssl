@@ -339,6 +339,8 @@ pub const SSL_CTRL_SET_TLSEXT_STATUS_REQ_OCSP_RESP: c_int = 71;
 #[cfg(any(libressl, all(ossl101, not(ossl110))))]
 pub const SSL_CTRL_CLEAR_OPTIONS: c_int = 77;
 pub const SSL_CTRL_GET_EXTRA_CHAIN_CERTS: c_int = 82;
+#[cfg(ossl102)]
+pub const SSL_CTRL_CHAIN_CERT: c_int = 89;
 #[cfg(any(ossl111, libressl252))]
 pub const SSL_CTRL_SET_GROUPS_LIST: c_int = 92;
 #[cfg(any(libressl, all(ossl102, not(ossl110))))]
@@ -405,6 +407,11 @@ cfg_if! {
             pub fn SSL_CTX_set1_groups_list(ctx: *mut SSL_CTX, s: *const c_char) -> c_int;
         }
     }
+}
+
+#[cfg(ossl102)]
+pub unsafe fn SSL_add0_chain_cert(ssl: *mut ::SSL, ptr: *mut X509) -> c_long {
+    SSL_ctrl(ssl, SSL_CTRL_CHAIN_CERT, 0, ptr as *mut c_void)
 }
 
 #[cfg(ossl102)]

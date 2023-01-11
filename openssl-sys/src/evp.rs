@@ -97,6 +97,11 @@ cfg_if! {
         pub unsafe fn EVP_CIPHER_CTX_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int {
             EVP_CIPHER_CTX_get_iv_length(ctx)
         }
+
+        #[inline]
+        pub unsafe fn EVP_CIPHER_CTX_num(ctx: *const EVP_CIPHER_CTX) -> c_int {
+            EVP_CIPHER_CTX_get_num(ctx)
+        }
     } else {
         pub unsafe fn EVP_MD_CTX_size(ctx: *const EVP_MD_CTX) -> c_int {
             EVP_MD_size(EVP_MD_CTX_md(ctx))
@@ -137,6 +142,11 @@ cfg_if! {
         #[inline]
         pub unsafe fn EVP_PKEY_bits(pkey: *const EVP_PKEY) -> c_int {
             EVP_PKEY_get_bits(pkey)
+        }
+
+        #[inline]
+        pub unsafe fn EVP_PKEY_security_bits(pkey: *const EVP_PKEY) -> c_int {
+            EVP_PKEY_get_security_bits(pkey)
         }
     }
 }

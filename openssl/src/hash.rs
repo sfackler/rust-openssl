@@ -1,3 +1,35 @@
+//! Message digest (hash) computation support.
+//!
+//! # Examples
+//!
+//! Calculate a hash in one go:
+//!
+//! ```
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! use openssl::hash::{hash, MessageDigest};
+//!
+//! let data = b"\x42\xF4\x97\xE0";
+//! let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
+//! let res = hash(MessageDigest::md5(), data)?;
+//! assert_eq!(&*res, spec);
+//! # Ok(()) }
+//! ```
+//!
+//! Supply the input in chunks:
+//!
+//! ```
+//! use openssl::hash::{Hasher, MessageDigest};
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let mut hasher = Hasher::new(MessageDigest::sha256())?;
+//! hasher.update(b"test")?;
+//! hasher.update(b"this")?;
+//! let digest: &[u8] = &hasher.finish()?;
+//!
+//! let expected = hex::decode("9740e652ab5b4acd997a7cca13d6696702ccb2d441cca59fc6e285127f28cfe6")?;
+//! assert_eq!(digest, expected);
+//! # Ok(()) }
+//! ```
 use cfg_if::cfg_if;
 use std::ffi::CString;
 use std::fmt;
@@ -18,6 +50,7 @@ cfg_if! {
     }
 }
 
+/// A message digest algorithm.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct MessageDigest(*const ffi::EVP_MD);
 
@@ -35,7 +68,7 @@ impl MessageDigest {
     ///
     /// This corresponds to [`EVP_get_digestbynid`].
     ///
-    /// [`EVP_get_digestbynid`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestInit.html
+    /// [`EVP_get_digestbynid`]: https://www.openssl.org/docs/manmaster/crypto/EVP_DigestInit.html
     pub fn from_nid(type_: Nid) -> Option<MessageDigest> {
         unsafe {
             let ptr = ffi::EVP_get_digestbynid(type_.as_raw());
@@ -51,7 +84,7 @@ impl MessageDigest {
     ///
     /// This corresponds to [`EVP_get_digestbyname`].
     ///
-    /// [`EVP_get_digestbyname`]: https://www.openssl.org/docs/man1.1.0/crypto/EVP_DigestInit.html
+    /// [`EVP_get_digestbyname`]: https://www.openssl.org/docs/manmaster/crypto/EVP_DigestInit.html
     pub fn from_name(name: &str) -> Option<MessageDigest> {
         ffi::init();
         let name = CString::new(name).ok()?;
@@ -174,44 +207,18 @@ use self::State::*;
 ///
 /// # Examples
 ///
-/// Calculate a hash in one go:
-///
-/// ```
-/// use openssl::hash::{hash, MessageDigest};
-///
-/// let data = b"\x42\xF4\x97\xE0";
-/// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
-/// let res = hash(MessageDigest::md5(), data).unwrap();
-/// assert_eq!(&*res, spec);
-/// ```
-///
-/// Supply the input in chunks:
-///
 /// ```
 /// use openssl::hash::{Hasher, MessageDigest};
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let data = [b"\x42\xF4", b"\x97\xE0"];
 /// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
-/// let mut h = Hasher::new(MessageDigest::md5()).unwrap();
-/// h.update(data[0]).unwrap();
-/// h.update(data[1]).unwrap();
-/// let res = h.finish().unwrap();
+/// let mut h = Hasher::new(MessageDigest::md5())?;
+/// h.update(data[0])?;
+/// h.update(data[1])?;
+/// let res = h.finish()?;
 /// assert_eq!(&*res, spec);
-/// ```
-///
-/// Use an XOF hasher (OpenSSL 1.1.1+):
-///
-/// ```
-/// #[cfg(ossl111)]
-/// {
-///     use openssl::hash::{hash_xof, MessageDigest};
-///
-///     let data = b"\x41\x6c\x6c\x20\x79\x6f\x75\x72\x20\x62\x61\x73\x65\x20\x61\x72\x65\x20\x62\x65\x6c\x6f\x6e\x67\x20\x74\x6f\x20\x75\x73";
-///     let spec = b"\x49\xd0\x69\x7f\xf5\x08\x11\x1d\x8b\x84\xf1\x5e\x46\xda\xf1\x35";
-///     let mut buf = vec![0; 16];
-///     hash_xof(MessageDigest::shake_128(), data, buf.as_mut_slice()).unwrap();
-///     assert_eq!(buf, spec);
-/// }
+/// # Ok(()) }
 /// ```
 ///
 /// # Warning
@@ -220,8 +227,10 @@ use self::State::*;
 ///
 /// Don't ever hash passwords, use the functions in the `pkcs5` module or bcrypt/scrypt instead.
 ///
-/// For extendable output functions (XOFs, i.e. SHAKE128/SHAKE256), you must use finish_xof instead
-/// of finish and provide a buf to store the hash. The hash will be as long as the buf.
+/// For extendable output functions (XOFs, i.e. SHAKE128/SHAKE256),
+/// you must use [`Hasher::finish_xof`] instead of [`Hasher::finish`]
+/// and provide a `buf` to store the hash. The hash will be as long as
+/// the `buf`.
 pub struct Hasher {
     ctx: *mut ffi::EVP_MD_CTX,
     md: *const ffi::EVP_MD,
@@ -411,6 +420,19 @@ impl fmt::Debug for DigestBytes {
 }
 
 /// Computes the hash of the `data` with the non-XOF hasher `t`.
+///
+/// # Examples
+///
+/// ```
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// use openssl::hash::{hash, MessageDigest};
+///
+/// let data = b"\x42\xF4\x97\xE0";
+/// let spec = b"\x7c\x43\x0f\x17\x8a\xef\xdf\x14\x87\xfe\xe7\x14\x4e\x96\x41\xe2";
+/// let res = hash(MessageDigest::md5(), data)?;
+/// assert_eq!(&*res, spec);
+/// # Ok(()) }
+/// ```
 pub fn hash(t: MessageDigest, data: &[u8]) -> Result<DigestBytes, ErrorStack> {
     let mut h = Hasher::new(t)?;
     h.update(data)?;
@@ -418,6 +440,19 @@ pub fn hash(t: MessageDigest, data: &[u8]) -> Result<DigestBytes, ErrorStack> {
 }
 
 /// Computes the hash of the `data` with the XOF hasher `t` and stores it in `buf`.
+///
+/// # Examples
+///
+/// ```
+/// use openssl::hash::{hash_xof, MessageDigest};
+///
+/// let data = b"\x41\x6c\x6c\x20\x79\x6f\x75\x72\x20\x62\x61\x73\x65\x20\x61\x72\x65\x20\x62\x65\x6c\x6f\x6e\x67\x20\x74\x6f\x20\x75\x73";
+/// let spec = b"\x49\xd0\x69\x7f\xf5\x08\x11\x1d\x8b\x84\xf1\x5e\x46\xda\xf1\x35";
+/// let mut buf = vec![0; 16];
+/// hash_xof(MessageDigest::shake_128(), data, buf.as_mut_slice()).unwrap();
+/// assert_eq!(buf, spec);
+/// ```
+///
 #[cfg(ossl111)]
 pub fn hash_xof(t: MessageDigest, data: &[u8], buf: &mut [u8]) -> Result<(), ErrorStack> {
     let mut h = Hasher::new(t)?;

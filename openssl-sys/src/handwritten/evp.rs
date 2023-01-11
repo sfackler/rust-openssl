@@ -26,6 +26,7 @@ cfg_if! {
             pub fn EVP_CIPHER_CTX_get_key_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
             pub fn EVP_CIPHER_CTX_get_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
             pub fn EVP_CIPHER_CTX_get_tag_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            pub fn EVP_CIPHER_CTX_get_num(ctx: *const EVP_CIPHER_CTX) -> c_int;
         }
     } else {
         extern "C" {
@@ -44,6 +45,8 @@ cfg_if! {
             pub fn EVP_CIPHER_CTX_block_size(ctx: *const EVP_CIPHER_CTX) -> c_int;
             pub fn EVP_CIPHER_CTX_key_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
             pub fn EVP_CIPHER_CTX_iv_length(ctx: *const EVP_CIPHER_CTX) -> c_int;
+            #[cfg(ossl110)]
+            pub fn EVP_CIPHER_CTX_num(ctx: *const EVP_CIPHER_CTX) -> c_int;
         }
     }
 }
@@ -364,6 +367,29 @@ extern "C" {
     #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
     pub fn EVP_sm4_ctr() -> *const EVP_CIPHER;
 
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
+    pub fn EVP_camellia_128_cfb128() -> *const EVP_CIPHER;
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
+    pub fn EVP_camellia_128_ecb() -> *const EVP_CIPHER;
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
+    pub fn EVP_camellia_192_cfb128() -> *const EVP_CIPHER;
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
+    pub fn EVP_camellia_192_ecb() -> *const EVP_CIPHER;
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
+    pub fn EVP_camellia_256_cfb128() -> *const EVP_CIPHER;
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
+    pub fn EVP_camellia_256_ecb() -> *const EVP_CIPHER;
+
+    #[cfg(not(boringssl))]
+    pub fn EVP_cast5_cfb64() -> *const EVP_CIPHER;
+    #[cfg(not(boringssl))]
+    pub fn EVP_cast5_ecb() -> *const EVP_CIPHER;
+
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_IDEA")))]
+    pub fn EVP_idea_cfb64() -> *const EVP_CIPHER;
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_IDEA")))]
+    pub fn EVP_idea_ecb() -> *const EVP_CIPHER;
+
     #[cfg(not(ossl110))]
     pub fn OPENSSL_add_all_algorithms_noconf();
 
@@ -376,6 +402,7 @@ cfg_if! {
         extern "C" {
             pub fn EVP_PKEY_get_id(pkey: *const EVP_PKEY) -> c_int;
             pub fn EVP_PKEY_get_bits(key: *const EVP_PKEY) -> c_int;
+            pub fn EVP_PKEY_get_security_bits(key: *const EVP_PKEY) -> c_int;
         }
 
         #[inline]
@@ -387,6 +414,12 @@ cfg_if! {
         pub unsafe fn EVP_PKEY_bits(pkey: *const EVP_PKEY) -> c_int {
             EVP_PKEY_get_bits(pkey)
         }
+
+        #[inline]
+        pub unsafe fn EVP_PKEY_security_bits(pkey: *const EVP_PKEY) -> c_int {
+            EVP_PKEY_get_security_bits(pkey)
+        }
+
     } else {
         extern "C" {
             pub fn EVP_PKEY_id(pkey: *const EVP_PKEY) -> c_int;
@@ -394,6 +427,8 @@ cfg_if! {
         const_ptr_api! {
             extern "C" {
                 pub fn EVP_PKEY_bits(key: #[const_ptr_if(any(ossl110, libressl280))] EVP_PKEY) -> c_int;
+                #[cfg(any(ossl110, libressl360))]
+                pub fn EVP_PKEY_security_bits(pkey: #[const_ptr_if(any(ossl110, libressl280))] EVP_PKEY) -> c_int;
             }
         }
     }

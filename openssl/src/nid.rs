@@ -44,7 +44,7 @@ pub struct SignatureAlgorithms {
 /// The following documentation provides context about `Nid`s and their usage
 /// in OpenSSL.
 ///
-/// - [Obj_nid2obj](https://www.openssl.org/docs/man1.1.0/crypto/OBJ_create.html)
+/// - [Obj_nid2obj](https://www.openssl.org/docs/manmaster/crypto/OBJ_create.html)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Nid(c_int);
 
@@ -215,6 +215,12 @@ impl Nid {
     pub const SECT409R1: Nid = Nid(ffi::NID_sect409r1);
     pub const SECT571K1: Nid = Nid(ffi::NID_sect571k1);
     pub const SECT571R1: Nid = Nid(ffi::NID_sect571r1);
+    #[cfg(ossl110)]
+    pub const BRAINPOOL_P256R1: Nid = Nid(ffi::NID_brainpoolP256r1);
+    #[cfg(ossl110)]
+    pub const BRAINPOOL_P384R1: Nid = Nid(ffi::NID_brainpoolP384r1);
+    #[cfg(ossl110)]
+    pub const BRAINPOOL_P512R1: Nid = Nid(ffi::NID_brainpoolP512r1);
     pub const WAP_WSG_IDM_ECID_WTLS1: Nid = Nid(ffi::NID_wap_wsg_idm_ecid_wtls1);
     pub const WAP_WSG_IDM_ECID_WTLS3: Nid = Nid(ffi::NID_wap_wsg_idm_ecid_wtls3);
     pub const WAP_WSG_IDM_ECID_WTLS4: Nid = Nid(ffi::NID_wap_wsg_idm_ecid_wtls4);

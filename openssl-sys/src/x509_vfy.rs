@@ -100,9 +100,9 @@ cfg_if! {
 #[cfg(ossl300)]
 pub const X509_V_ERR_INVALID_CA: c_int = 79;
 
-#[cfg(not(ossl110))]
+#[cfg(not(any(ossl110, libressl370)))]
 pub const X509_V_FLAG_CB_ISSUER_CHECK: c_ulong = 0x1;
-#[cfg(ossl110)]
+#[cfg(any(ossl110, libressl370))]
 pub const X509_V_FLAG_CB_ISSUER_CHECK: c_ulong = 0x0;
 pub const X509_V_FLAG_USE_CHECK_TIME: c_ulong = 0x2;
 pub const X509_V_FLAG_CRL_CHECK: c_ulong = 0x4;
@@ -147,3 +147,15 @@ pub unsafe fn X509_LOOKUP_add_dir(
         std::ptr::null_mut(),
     )
 }
+
+pub const X509_PURPOSE_SSL_CLIENT: c_int = 1;
+pub const X509_PURPOSE_SSL_SERVER: c_int = 2;
+pub const X509_PURPOSE_NS_SSL_SERVER: c_int = 3;
+pub const X509_PURPOSE_SMIME_SIGN: c_int = 4;
+pub const X509_PURPOSE_SMIME_ENCRYPT: c_int = 5;
+pub const X509_PURPOSE_CRL_SIGN: c_int = 6;
+pub const X509_PURPOSE_ANY: c_int = 7;
+pub const X509_PURPOSE_OCSP_HELPER: c_int = 8;
+pub const X509_PURPOSE_TIMESTAMP_SIGN: c_int = 9;
+pub const X509_PURPOSE_MIN: c_int = 1;
+pub const X509_PURPOSE_MAX: c_int = 9;

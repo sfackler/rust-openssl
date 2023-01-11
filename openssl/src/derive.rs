@@ -1,4 +1,54 @@
 //! Shared secret derivation.
+//!
+//! # Example
+//!
+//! The following example implements [ECDH] using `NIST P-384` keys:
+//!
+//! ```
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # use std::convert::TryInto;
+//! use openssl::bn::BigNumContext;
+//! use openssl::pkey::PKey;
+//! use openssl::derive::Deriver;
+//! use openssl::ec::{EcGroup, EcKey, EcPoint, PointConversionForm};
+//! use openssl::nid::Nid;
+//!
+//! let group = EcGroup::from_curve_name(Nid::SECP384R1)?;
+//!
+//! let first: PKey<_> = EcKey::generate(&group)?.try_into()?;
+//!
+//! // second party generates an ephemeral key and derives
+//! // a shared secret using first party's public key
+//! let shared_key = EcKey::generate(&group)?;
+//! // shared_public is sent to first party
+//! let mut ctx = BigNumContext::new()?;
+//! let shared_public = shared_key.public_key().to_bytes(
+//!        &group,
+//!        PointConversionForm::COMPRESSED,
+//!        &mut ctx,
+//!    )?;
+//!
+//! let shared_key: PKey<_> = shared_key.try_into()?;
+//! let mut deriver = Deriver::new(&shared_key)?;
+//! deriver.set_peer(&first)?;
+//! // secret can be used e.g. as a symmetric encryption key
+//! let secret = deriver.derive_to_vec()?;
+//! # drop(deriver);
+//!
+//! // first party derives the same shared secret using
+//! // shared_public
+//! let point = EcPoint::from_bytes(&group, &shared_public, &mut ctx)?;
+//! let recipient_key: PKey<_> = EcKey::from_public_key(&group, &point)?.try_into()?;
+//! let mut deriver = Deriver::new(&first)?;
+//! deriver.set_peer(&recipient_key)?;
+//! let first_secret = deriver.derive_to_vec()?;
+//!
+//! assert_eq!(secret, first_secret);
+//! # Ok(()) }
+//! ```
+//!
+//! [ECDH]: https://wiki.openssl.org/index.php/Elliptic_Curve_Diffie_Hellman
+
 use foreign_types::ForeignTypeRef;
 use std::marker::PhantomData;
 use std::ptr;
@@ -19,7 +69,7 @@ impl<'a> Deriver<'a> {
     ///
     /// This corresponds to [`EVP_PKEY_derive_init`].
     ///
-    /// [`EVP_PKEY_derive_init`]: https://www.openssl.org/docs/man1.0.2/crypto/EVP_PKEY_derive_init.html
+    /// [`EVP_PKEY_derive_init`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_derive_init.html
     pub fn new<T>(key: &'a PKeyRef<T>) -> Result<Deriver<'a>, ErrorStack>
     where
         T: HasPrivate,
@@ -35,7 +85,7 @@ impl<'a> Deriver<'a> {
     ///
     /// This corresponds to [`EVP_PKEY_derive_set_peer`]:
     ///
-    /// [`EVP_PKEY_derive_set_peer`]: https://www.openssl.org/docs/man1.0.2/crypto/EVP_PKEY_derive_init.html
+    /// [`EVP_PKEY_derive_set_peer`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_derive_init.html
     pub fn set_peer<T>(&mut self, key: &'a PKeyRef<T>) -> Result<(), ErrorStack>
     where
         T: HasPublic,
@@ -50,7 +100,7 @@ impl<'a> Deriver<'a> {
     /// This corresponds to [`EVP_PKEY_derive`].
     ///
     /// [`Deriver::derive`]: #method.derive
-    /// [`EVP_PKEY_derive`]: https://www.openssl.org/docs/man1.0.2/crypto/EVP_PKEY_derive_init.html
+    /// [`EVP_PKEY_derive`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_derive_init.html
     pub fn len(&mut self) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = 0;
@@ -64,7 +114,7 @@ impl<'a> Deriver<'a> {
     ///
     /// This corresponds to [`EVP_PKEY_derive`].
     ///
-    /// [`EVP_PKEY_derive`]: https://www.openssl.org/docs/man1.0.2/crypto/EVP_PKEY_derive_init.html
+    /// [`EVP_PKEY_derive`]: https://www.openssl.org/docs/manmaster/crypto/EVP_PKEY_derive_init.html
     pub fn derive(&mut self, buf: &mut [u8]) -> Result<usize, ErrorStack> {
         let mut len = buf.len();
         unsafe {

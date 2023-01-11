@@ -12,4 +12,9 @@ extern "C" {
     ) -> *mut OSSL_PROVIDER;
     #[cfg(ossl300)]
     pub fn OSSL_PROVIDER_unload(prov: *mut OSSL_PROVIDER) -> c_int;
+    #[cfg(ossl300)]
+    pub fn OSSL_PROVIDER_set_default_search_path(
+        ctx: *mut OSSL_LIB_CTX,
+        path: *const c_char,
+    ) -> c_int;
 }

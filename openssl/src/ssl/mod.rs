@@ -1047,7 +1047,7 @@ impl SslContextBuilder {
     ///
     /// See [`ciphers`] for details on the format.
     ///
-    /// [`ciphers`]: https://www.openssl.org/docs/man1.1.0/apps/ciphers.html
+    /// [`ciphers`]: https://www.openssl.org/docs/manmaster/apps/ciphers.html
     #[corresponds(SSL_CTX_set_cipher_list)]
     pub fn set_cipher_list(&mut self, cipher_list: &str) -> Result<(), ErrorStack> {
         let cipher_list = CString::new(cipher_list).unwrap();
@@ -1867,7 +1867,7 @@ impl SslContextRef {
     ///
     /// A value of 0 means that the cache size is unbounded.
     #[corresponds(SSL_CTX_sess_get_cache_size)]
-    #[allow(clippy::useless_conversion)]
+    #[allow(clippy::unnecessary_cast)]
     pub fn session_cache_size(&self) -> i64 {
         unsafe { ffi::SSL_CTX_sess_get_cache_size(self.as_ptr()) as i64 }
     }
@@ -2200,7 +2200,7 @@ impl Ssl {
     ///
     /// This corresponds to [`SSL_new`].
     ///
-    /// [`SSL_new`]: https://www.openssl.org/docs/man1.0.2/ssl/SSL_new.html
+    /// [`SSL_new`]: https://www.openssl.org/docs/manmaster/ssl/SSL_new.html
     #[corresponds(SSL_new)]
     pub fn new(ctx: &SslContextRef) -> Result<Ssl, ErrorStack> {
         let session_ctx_index = try_get_session_ctx_index()?;
@@ -3104,6 +3104,16 @@ impl SslRef {
             }
         }
     }
+
+    #[corresponds(SSL_add0_chain_cert)]
+    #[cfg(ossl102)]
+    pub fn add_chain_cert(&mut self, chain: X509) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_add0_chain_cert(self.as_ptr(), chain.as_ptr()) as c_int).map(|_| ())?;
+            mem::forget(chain);
+        }
+        Ok(())
+    }
 }
 
 /// An SSL stream midway through the handshake process.
@@ -3279,7 +3289,7 @@ impl<S: Read + Write> SslStream<S> {
             )
         };
         if ret > 0 {
-            Ok(written as usize)
+            Ok(written)
         } else {
             Err(self.make_error(ret))
         }

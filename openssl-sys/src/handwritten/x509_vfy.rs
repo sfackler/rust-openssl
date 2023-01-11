@@ -24,6 +24,7 @@ extern "C" {
 extern "C" {
     pub fn X509_LOOKUP_free(ctx: *mut X509_LOOKUP);
     pub fn X509_LOOKUP_hash_dir() -> *mut X509_LOOKUP_METHOD;
+    pub fn X509_LOOKUP_file() -> *mut X509_LOOKUP_METHOD;
     pub fn X509_LOOKUP_ctrl(
         ctx: *mut X509_LOOKUP,
         cmd: c_int,
@@ -31,6 +32,8 @@ extern "C" {
         argl: c_long,
         ret: *mut *mut c_char,
     ) -> c_int;
+    pub fn X509_load_cert_file(ctx: *mut X509_LOOKUP, file: *const c_char, _type: c_int) -> c_int;
+    pub fn X509_load_crl_file(ctx: *mut X509_LOOKUP, file: *const c_char, _type: c_int) -> c_int;
 }
 
 extern "C" {
@@ -64,6 +67,12 @@ extern "C" {
 
 const_ptr_api! {
     extern "C" {
+        pub fn X509_STORE_set1_param(store: *mut X509_STORE, pm: #[const_ptr_if(ossl300)] X509_VERIFY_PARAM) -> c_int;
+    }
+}
+
+const_ptr_api! {
+    extern "C" {
         pub fn X509_STORE_CTX_get_ex_data(ctx: #[const_ptr_if(ossl300)] X509_STORE_CTX, idx: c_int) -> *mut c_void;
         pub fn X509_STORE_CTX_get_error(ctx: #[const_ptr_if(ossl300)] X509_STORE_CTX) -> c_int;
         pub fn X509_STORE_CTX_get_error_depth(ctx: #[const_ptr_if(ossl300)] X509_STORE_CTX) -> c_int;
@@ -89,12 +98,20 @@ cfg_if! {
 
 extern "C" {
     #[cfg(any(ossl102, libressl261))]
+    pub fn X509_VERIFY_PARAM_new() -> *mut X509_VERIFY_PARAM;
+    #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_free(param: *mut X509_VERIFY_PARAM);
 
     #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_set_flags(param: *mut X509_VERIFY_PARAM, flags: c_ulong) -> c_int;
     #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_clear_flags(param: *mut X509_VERIFY_PARAM, flags: c_ulong) -> c_int;
+
+    #[cfg(any(ossl102, libressl261))]
+    pub fn X509_VERIFY_PARAM_set_time(param: *mut X509_VERIFY_PARAM, t: time_t);
+
+    #[cfg(any(ossl102, libressl261))]
+    pub fn X509_VERIFY_PARAM_set_depth(param: *mut X509_VERIFY_PARAM, depth: c_int);
 }
 const_ptr_api! {
     extern "C" {
@@ -118,6 +135,12 @@ extern "C" {
         ip: *const c_uchar,
         iplen: size_t,
     ) -> c_int;
+    #[cfg(ossl110)]
+    pub fn X509_VERIFY_PARAM_set_auth_level(param: *mut X509_VERIFY_PARAM, lvl: c_int);
+    #[cfg(ossl110)]
+    pub fn X509_VERIFY_PARAM_get_auth_level(param: *const X509_VERIFY_PARAM) -> c_int;
+    #[cfg(ossl102)]
+    pub fn X509_VERIFY_PARAM_set_purpose(param: *mut X509_VERIFY_PARAM, purpose: c_int) -> c_int;
 }
 
 const_ptr_api! {
