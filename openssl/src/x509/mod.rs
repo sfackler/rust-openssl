@@ -405,6 +405,18 @@ impl X509Ref {
         unsafe { ffi::X509_issuer_name_hash(self.as_ptr()) as u32 }
     }
 
+    /// Returns the extension index for the nid, starting at lastpos, if it exists.
+    #[corresponds(X509_get_ext_by_NID)]
+    pub fn ext_by_nid(&self, nid: Nid, lastpos: c_int) -> Result<c_int, ErrorStack> {
+        unsafe {
+            cvt_n(ffi::X509_get_ext_by_NID(
+                self.as_ptr(),
+                nid.as_raw(),
+                lastpos,
+            ))
+        }
+    }
+
     /// Returns this certificate's subject alternative name entries, if they exist.
     #[corresponds(X509_get_ext_d2i)]
     pub fn subject_alt_names(&self) -> Option<Stack<GeneralName>> {

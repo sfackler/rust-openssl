@@ -795,3 +795,22 @@ fn test_load_crl_file_fail() {
     let res = lookup.load_crl_file("test/root-ca.pem", SslFiletype::PEM);
     assert!(res.is_err());
 }
+
+#[test]
+fn test_ext_by_nid() {
+    let cert = include_bytes!("../../test/alt_name_cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    // NID is found and no error is returned
+    cert.ext_by_nid(Nid::SUBJECT_ALT_NAME, -1).unwrap();
+}
+
+#[test]
+fn test_ext_by_nid_missing() {
+    let cert = include_bytes!("../../test/alt_name_cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let nid = Nid::create("2.3.4.5", "bar", "barfoo").unwrap();
+    assert!(
+        cert.ext_by_nid(nid, -1).is_err(),
+        "An extension should not be found for a non-existant OID"
+    );
+}
