@@ -392,6 +392,11 @@ pub unsafe fn SSL_CTX_set0_verify_cert_store(ctx: *mut SSL_CTX, st: *mut X509_ST
     SSL_CTX_ctrl(ctx, SSL_CTRL_SET_VERIFY_CERT_STORE, 0, st as *mut c_void)
 }
 
+#[cfg(ossl102)]
+pub unsafe fn SSL_set0_verify_cert_store(ssl: *mut SSL, st: *mut X509_STORE) -> c_long {
+    SSL_ctrl(ssl, SSL_CTRL_SET_VERIFY_CERT_STORE, 0, st as *mut c_void)
+}
+
 cfg_if! {
     if #[cfg(ossl111)] {
         pub unsafe fn SSL_CTX_set1_groups_list(ctx: *mut SSL_CTX, s: *const c_char) -> c_long {
