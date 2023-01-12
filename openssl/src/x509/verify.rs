@@ -4,6 +4,7 @@ use libc::{c_int, c_uint, c_ulong, time_t};
 use std::net::IpAddr;
 
 use crate::error::ErrorStack;
+#[cfg(ossl102)]
 use crate::x509::X509PurposeId;
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
