@@ -22,11 +22,11 @@ use crate::x509::store::X509StoreBuilder;
 use crate::x509::verify::{X509VerifyFlags, X509VerifyParam};
 #[cfg(ossl110)]
 use crate::x509::X509Builder;
-use crate::x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
 #[cfg(any(ossl102, libressl261))]
 use crate::x509::X509Purpose;
 #[cfg(ossl102)]
 use crate::x509::X509PurposeId;
+use crate::x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
 use hex::{self, FromHex};
 #[cfg(any(ossl102, libressl261))]
 use libc::time_t;
