@@ -380,9 +380,9 @@ extern "C" {
     #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
     pub fn EVP_camellia_256_ecb() -> *const EVP_CIPHER;
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAST")))]
     pub fn EVP_cast5_cfb64() -> *const EVP_CIPHER;
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAST")))]
     pub fn EVP_cast5_ecb() -> *const EVP_CIPHER;
 
     #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_IDEA")))]
