@@ -21,7 +21,7 @@ impl<'a> MemBioSlice<'a> {
     pub fn new(buf: &'a [u8]) -> Result<MemBioSlice<'a>, ErrorStack> {
         ffi::init();
 
-        assert!(buf.len() <= c_int::max_value() as usize);
+        assert!(buf.len() <= c_int::MAX as usize);
         let bio = unsafe {
             cvt_p(BIO_new_mem_buf(
                 buf.as_ptr() as *const _,
@@ -34,6 +34,21 @@ impl<'a> MemBioSlice<'a> {
 
     pub fn as_ptr(&self) -> *mut ffi::BIO {
         self.0
+    }
+}
+
+// A reference to an OpenSSL memory BIO (binary IO).
+#[cfg(not(boringssl))]
+pub struct MemBioRef(*mut ffi::BIO);
+
+#[cfg(not(boringssl))]
+impl MemBioRef {
+    pub fn as_ptr(&self) -> *mut ffi::BIO {
+        self.0
+    }
+
+    pub unsafe fn from_ptr(bio: *mut ffi::BIO) -> MemBioRef {
+        MemBioRef(bio)
     }
 }
 

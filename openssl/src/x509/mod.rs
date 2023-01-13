@@ -9,7 +9,7 @@
 
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
-use libc::{c_int, c_long, c_uint};
+use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use std::cmp::{self, Ordering};
 use std::error::Error;
 use std::ffi::{CStr, CString};
@@ -18,12 +18,16 @@ use std::marker::PhantomData;
 use std::mem;
 use std::path::Path;
 use std::ptr;
+use std::ptr::null_mut;
 use std::slice;
 use std::str;
 
 use crate::asn1::{
-    Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef, Asn1Type,
+    Asn1BitStringRef, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1OctetStringRef, Asn1String,
+    Asn1StringRef, Asn1TagValue, Asn1TimeRef, Asn1TypeRef,
 };
+#[cfg(ossl110)]
+use crate::bio::MemBio;
 use crate::bio::MemBioSlice;
 use crate::conf::ConfRef;
 use crate::error::ErrorStack;
@@ -227,6 +231,7 @@ impl X509Builder {
     /// Note that the version is zero-indexed; that is, a certificate corresponding to version 3 of
     /// the X.509 standard should pass `2` to this method.
     #[corresponds(X509_set_version)]
+    #[allow(clippy::useless_conversion)]
     pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_set_version(self.0.as_ptr(), version as c_long)).map(|_| ()) }
     }
@@ -449,6 +454,34 @@ impl X509Ref {
         }
     }
 
+    /// Returns this certificate's key usage extension value, if it exists.
+    #[corresponds(X509_get_ext_d2i)]
+    pub fn key_usage(&self) -> Option<&Asn1BitStringRef> {
+        unsafe {
+            let ptr = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_key_usage,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+            Asn1BitStringRef::from_const_ptr_opt(ptr as *const _)
+        }
+    }
+
+    /// Returns this certificate's extended key usage extension value, if it exists.
+    #[corresponds(X509_get_ext_d2i)]
+    pub fn extended_key_usage(&self) -> Option<Stack<Asn1Object>> {
+        unsafe {
+            let ptr = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_ext_key_usage,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+            Stack::from_ptr_opt(ptr as *mut _)
+        }
+    }
+
     #[corresponds(X509_get_pubkey)]
     pub fn public_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
@@ -569,6 +602,62 @@ impl X509Ref {
             let r = ffi::X509_get_serialNumber(self.as_ptr());
             Asn1IntegerRef::from_const_ptr_opt(r).expect("serial number must not be null")
         }
+    }
+
+    /// Returns the certificate's extensions.
+    #[corresponds(X509_get0_extensions)]
+    #[cfg(ossl110)]
+    pub fn extensions(&self) -> Result<&StackRef<X509Extension>, ErrorStack> {
+        unsafe {
+            let result = ffi::X509_get0_extensions(self.as_ptr() as *const _);
+            if result.is_null() {
+                return Err(ErrorStack::get());
+            }
+            Ok(StackRef::from_const_ptr(result))
+        }
+    }
+
+    /// Returns the location of an extension within a certificate.
+    #[corresponds(X509_get_ext_by_NID)]
+    pub fn get_extension_by_nid(&self, nid: &Nid) -> Option<i32> {
+        unsafe {
+            let pos: i32 = ffi::X509_get_ext_by_NID(
+                self.as_ptr(),
+                nid.as_raw(),
+                -1, // start search from first extension
+            );
+            if pos == -1 {
+                None
+            } else {
+                Some(pos)
+            }
+        }
+    }
+
+    /// Returns the X509 extension at position `pos` in an X509 certificate.
+    pub fn get_extension(&self, pos: i32) -> Result<&X509ExtensionRef, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::X509_get_ext(self.as_ptr(), pos as c_int))?;
+            Ok(X509ExtensionRef::from_ptr(ptr))
+        }
+    }
+
+    /// Returns the certificates key usage extension flags. If the extension is not present in the
+    /// certificate, 0 will be returned.
+    /// Note: this does not include the critical flag.
+    #[cfg(ossl110)]
+    #[corresponds(X509_get_key_usage)]
+    pub fn key_usage_flags(&self) -> u32 {
+        unsafe { ffi::X509_get_key_usage(self.as_ptr()) }
+    }
+
+    /// Returns the certificates extended key usage extension flags. If the extension is not
+    /// present in the certificate, 0 will be returned.
+    /// Note: this does not include the critical flag.
+    #[cfg(ossl110)]
+    #[corresponds(X509_get_extended_key_usage)]
+    pub fn extended_key_usage_flags(&self) -> u32 {
+        unsafe { ffi::X509_get_extended_key_usage(self.as_ptr()) }
     }
 
     to_pem! {
@@ -725,8 +814,28 @@ impl fmt::Debug for X509 {
         if let Ok(public_key) = &self.public_key() {
             debug_struct.field("public_key", public_key);
         };
-        // TODO: Print extensions once they are supported on the X509 struct.
-
+        cfg_if! { if #[cfg(ossl110)] {
+            unsafe {
+                let extensions = ffi::X509_get0_extensions(self.as_ptr() as *const _);
+                let title = CString::new("X509 Extensions").unwrap();
+                if !extensions.is_null() {
+                    if let Ok(bio) = MemBio::new() {
+                        let result = cvt(ffi::X509V3_extensions_print(
+                            bio.as_ptr(),
+                            title.as_ptr() as *const _,
+                            extensions,
+                            0,
+                            4,
+                        ));
+                        if result.is_ok() {
+                            if let Ok(ext_str) = String::from_utf8(bio.get_buf().to_vec()) {
+                                debug_struct.field("X509 Extensions", &ext_str);
+                            }
+                        }
+                    }
+                }
+            }
+        }};
         debug_struct.finish()
     }
 }
@@ -772,6 +881,75 @@ impl PartialEq<X509Ref> for X509 {
 }
 
 impl Eq for X509 {}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::X509_ATTRIBUTE;
+    fn drop = ffi::X509_ATTRIBUTE_free;
+
+    /// Permit additional fields to be added to an `X509` v3 certificate.
+    pub struct X509Attribute;
+    /// Reference to `X509Attribute`.
+    pub struct X509AttributeRef;
+}
+
+impl Stackable for X509Attribute {
+    type StackType = ffi::stack_st_X509_ATTRIBUTE;
+}
+
+impl X509Attribute {
+    /// Creates an X509 attribute, which can be added to X509 certificates, signing requests and
+    /// PKCS7 messages.
+    ///
+    /// The attribute type is derived from the ASN1 string value. So be sure to use
+    /// Asn1String::type_new() for strings other than octet strings.
+    ///
+    pub fn from_string(nid: Nid, value: Asn1String) -> Result<X509Attribute, ErrorStack> {
+        unsafe {
+            let asn1_type = cvt(ffi::ASN1_STRING_type(value.as_ptr()))?;
+            let attribute = cvt_p(ffi::X509_ATTRIBUTE_create(
+                nid.as_raw(),
+                asn1_type,
+                value.as_ptr() as *mut c_void,
+            ));
+            #[allow(clippy::forget_copy)]
+            mem::forget(value); // Asn1String does not implement the Copy trait, so clippy is wrong here.
+            attribute.map(X509Attribute)
+        }
+    }
+
+    /// Creates an X509 attribute from an `Asn1Object`.
+    pub fn from_object(nid: Nid, value: Asn1Object) -> Result<X509Attribute, ErrorStack> {
+        unsafe {
+            let asn1_type = Asn1TagValue::OBJECT;
+            let attribute = cvt_p(ffi::X509_ATTRIBUTE_create(
+                nid.as_raw(),
+                asn1_type.as_raw(),
+                value.as_ptr() as *mut c_void,
+            ));
+            #[allow(clippy::forget_copy)]
+            mem::forget(value); // Asn1String does not implement the Copy trait, so clippy is wrong here.
+            attribute.map(X509Attribute)
+        }
+    }
+}
+
+impl X509AttributeRef {
+    /// Get object id (NID) of attribute
+    pub fn object(&self) -> Result<&Asn1ObjectRef, ErrorStack> {
+        unsafe {
+            let object_ptr = cvt_p(ffi::X509_ATTRIBUTE_get0_object(self.as_ptr()))?;
+            Ok(Asn1ObjectRef::from_ptr(object_ptr))
+        }
+    }
+
+    /// Get an item from the list of `ASN1_TYPE`s.
+    pub fn typ(&self, idx: isize) -> Result<&Asn1TypeRef, ErrorStack> {
+        unsafe {
+            let type_ptr = cvt_p(ffi::X509_ATTRIBUTE_get0_type(self.as_ptr(), idx as c_int))?;
+            Ok(Asn1TypeRef::from_ptr(type_ptr))
+        }
+    }
+}
 
 /// A context object required to construct certain `X509` extension values.
 pub struct X509v3Context<'a>(ffi::X509V3_CTX, PhantomData<(&'a X509Ref, &'a ConfRef)>);
@@ -833,7 +1011,7 @@ impl X509Extension {
     pub fn new_nid(
         conf: Option<&ConfRef>,
         context: Option<&X509v3Context<'_>>,
-        name: Nid,
+        nid: Nid,
         value: &str,
     ) -> Result<X509Extension, ErrorStack> {
         let value = CString::new(value).unwrap();
@@ -841,10 +1019,52 @@ impl X509Extension {
             ffi::init();
             let conf = conf.map_or(ptr::null_mut(), ConfRef::as_ptr);
             let context = context.map_or(ptr::null_mut(), X509v3Context::as_ptr);
-            let name = name.as_raw();
+            let nid = nid.as_raw();
             let value = value.as_ptr() as *mut _;
 
-            cvt_p(ffi::X509V3_EXT_nconf_nid(conf, context, name, value)).map(X509Extension)
+            cvt_p(ffi::X509V3_EXT_nconf_nid(conf, context, nid, value)).map(X509Extension)
+        }
+    }
+
+    /// Create a new X509 extension with OID `oid`. The raw value is used instead of a config
+    /// string as in `new()` and `new_nid()`.
+    pub fn create_by_obj(
+        critical: bool,
+        oid: &Asn1ObjectRef,
+        value: &[u8],
+    ) -> Result<X509Extension, ErrorStack> {
+        let ex = null_mut();
+        let mut octet_string = Asn1String::type_new(Asn1TagValue::OCTET_STRING)?;
+        octet_string.set(value)?;
+        unsafe {
+            cvt_p(ffi::X509_EXTENSION_create_by_OBJ(
+                ex,
+                oid.as_ptr(),
+                c_int::from(critical),
+                octet_string.as_ptr() as *mut ffi::ASN1_OCTET_STRING,
+            ))
+            .map(X509Extension)
+        }
+    }
+
+    /// Create a new X509 extension with NID `nid`. The raw value is used instead of a config
+    /// string as in `new()` and `new_nid()`.
+    pub fn create_by_nid(
+        critical: bool,
+        nid: &Nid,
+        value: &[u8],
+    ) -> Result<X509Extension, ErrorStack> {
+        let ex = null_mut();
+        let mut octet_string = Asn1String::type_new(Asn1TagValue::OCTET_STRING)?;
+        octet_string.set(value)?;
+        unsafe {
+            cvt_p(ffi::X509_EXTENSION_create_by_NID(
+                ex,
+                nid.as_raw(),
+                c_int::from(critical),
+                octet_string.as_ptr() as *mut ffi::ASN1_OCTET_STRING,
+            ))
+            .map(X509Extension)
         }
     }
 
@@ -857,6 +1077,29 @@ impl X509Extension {
     pub unsafe fn add_alias(to: Nid, from: Nid) -> Result<(), ErrorStack> {
         ffi::init();
         cvt(ffi::X509V3_EXT_add_alias(to.as_raw(), from.as_raw())).map(|_| ())
+    }
+}
+
+impl X509ExtensionRef {
+    /// Returns true, if the extension is marked as critical.
+    pub fn is_critical(&self) -> bool {
+        unsafe { ffi::X509_EXTENSION_get_critical(self.as_ptr()) == 1 }
+    }
+
+    /// Returns the extension type.
+    pub fn object(&self) -> Result<&Asn1ObjectRef, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::X509_EXTENSION_get_object(self.as_ptr()))?;
+            Ok(Asn1ObjectRef::from_ptr(ptr))
+        }
+    }
+
+    /// Returns the extension data (DER).
+    pub fn data(&self) -> Result<&Asn1OctetStringRef, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::X509_EXTENSION_get_data(self.as_ptr()))?;
+            Ok(Asn1OctetStringRef::from_ptr(ptr))
+        }
     }
 }
 
@@ -918,7 +1161,7 @@ impl X509NameBuilder {
         &mut self,
         field: &str,
         value: &str,
-        ty: Asn1Type,
+        ty: Asn1TagValue,
     ) -> Result<(), ErrorStack> {
         unsafe {
             let field = CString::new(field).unwrap();
@@ -966,7 +1209,7 @@ impl X509NameBuilder {
         &mut self,
         field: Nid,
         value: &str,
-        ty: Asn1Type,
+        ty: Asn1TagValue,
     ) -> Result<(), ErrorStack> {
         unsafe {
             assert!(value.len() <= c_int::max_value() as usize);
@@ -1071,6 +1314,14 @@ impl X509NameRef {
         /// [`i2d_X509_NAME`]: https://www.openssl.org/docs/manmaster/crypto/i2d_X509_NAME.html
         to_der,
         ffi::i2d_X509_NAME
+    }
+
+    /// Compares the X509NameRef with an`other` X509NameRef
+    /// Returns 0 if equal.
+    #[corresponds(X509_NAME_cmp)]
+    #[allow(clippy::unnecessary_cast)]
+    pub fn cmp_with(&self, other: &X509NameRef) -> i32 {
+        unsafe { ffi::X509_NAME_cmp(self.as_ptr() as *const _, other.as_ptr() as *const _) as i32 }
     }
 }
 
@@ -1181,6 +1432,7 @@ impl X509ReqBuilder {
     /// This corresponds to [`X509_REQ_set_version`].
     ///
     ///[`X509_REQ_set_version`]: https://www.openssl.org/docs/manmaster/crypto/X509_REQ_set_version.html
+    #[allow(clippy::useless_conversion)]
     pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::X509_REQ_set_version(
@@ -1251,6 +1503,38 @@ impl X509ReqBuilder {
             cvt(ffi::X509_REQ_add_extensions(
                 self.0.as_ptr(),
                 extensions.as_ptr(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Permits an attribute to be added to the certificate or certificate request.
+    pub fn add_attribute(&mut self, name: &str, value: &str) -> Result<(), ErrorStack> {
+        let name = CString::new(name).unwrap();
+        let len = value.len();
+        let value = CString::new(value).unwrap();
+        unsafe {
+            cvt(ffi::X509_REQ_add1_attr_by_txt(
+                self.0.as_ptr(),
+                name.as_ptr() as *const c_char,
+                ffi::MBSTRING_UTF8,
+                value.as_ptr() as *const c_uchar,
+                len as c_int,
+            ))
+            .map(|_| ())
+        }
+    }
+
+    pub fn add_attribute_by_nid(&mut self, nid: Nid, value: &str) -> Result<(), ErrorStack> {
+        let len = value.len();
+        let value = CString::new(value).unwrap();
+        unsafe {
+            cvt(ffi::X509_REQ_add1_attr_by_NID(
+                self.0.as_ptr(),
+                nid.as_raw(),
+                ffi::MBSTRING_UTF8,
+                value.as_ptr() as *const c_uchar,
+                len as c_int,
             ))
             .map(|_| ())
         }
@@ -1407,6 +1691,18 @@ impl X509ReqRef {
             let extensions = cvt_p(ffi::X509_REQ_get_extensions(self.as_ptr()))?;
             Ok(Stack::from_ptr(extensions))
         }
+    }
+}
+
+impl fmt::Debug for X509Req {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut debug_struct = formatter.debug_struct("X509Req");
+        debug_struct.field("version", &self.version());
+        debug_struct.field("subject", &self.subject_name());
+        if let Ok(public_key) = &self.public_key() {
+            debug_struct.field("public_key", public_key);
+        };
+        debug_struct.finish()
     }
 }
 
@@ -1734,6 +2030,101 @@ cfg_if! {
         unsafe fn X509_OBJECT_free(x: *mut ffi::X509_OBJECT) {
             ffi::X509_OBJECT_free_contents(x);
             ffi::CRYPTO_free(x as *mut libc::c_void);
+        }
+    }
+}
+
+pub struct X509PurposeId(i32);
+
+impl X509PurposeId {
+    pub const SSL_CLIENT: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_SSL_CLIENT);
+    pub const SSL_SERVER: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_SSL_SERVER);
+    pub const NS_SSL_SERVER: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_NS_SSL_SERVER);
+    pub const SMIME_SIGN: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_SMIME_SIGN);
+    pub const SMIME_ENCRYPT: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_SMIME_ENCRYPT);
+    pub const CRL_SIGN: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_CRL_SIGN);
+    pub const ANY: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_ANY);
+    pub const OCSP_HELPER: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_OCSP_HELPER);
+    pub const TIMESTAMP_SIGN: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_TIMESTAMP_SIGN);
+
+    pub fn value(&self) -> i32 {
+        self.0
+    }
+}
+
+impl From<i32> for X509PurposeId {
+    fn from(id: i32) -> Self {
+        X509PurposeId(id)
+    }
+}
+
+/// fake free method, since X509_PURPOSE is static
+unsafe fn no_free_purpose(_purps: *mut ffi::X509_PURPOSE) {}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::X509_PURPOSE;
+    fn drop = no_free_purpose;
+
+    /// Adjust parameters associated with certificate verification.
+    pub struct X509Purpose;
+    /// Reference to `X509Purpose`.
+    pub struct X509PurposeRef;
+}
+
+impl X509Purpose {
+    /// Get the internal table index of an X509_PURPOSE for a given short name. Valid short
+    /// names include
+    ///  - "sslclient",
+    ///  - "sslserver",
+    ///  - "nssslserver",
+    ///  - "smimesign",
+    ///  - "smimeencrypt",
+    ///  - "crlsign",
+    ///  - "any",
+    ///  - "ocsphelper",
+    ///  - "timestampsign"
+    /// The index can be used with `X509Purpose::from_idx()` to get the purpose.
+    #[allow(clippy::unnecessary_cast)]
+    pub fn get_by_sname(sname: &str) -> Result<i32, ErrorStack> {
+        unsafe {
+            let sname = CString::new(sname).unwrap();
+            cfg_if! {
+                if #[cfg(any(ossl110, libressl280))] {
+                    let purpose = cvt_n(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *const _))?;
+                } else {
+                    let purpose = cvt_n(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *mut _))?;
+                }
+            }
+            Ok(purpose as i32)
+        }
+    }
+
+    /// Get an `X509PurposeRef` for a given index value. The index can be obtained from e.g.
+    /// `X509Purpose::get_by_sname()`.
+    #[corresponds(X509_PURPOSE_get0)]
+    pub fn from_idx(idx: i32) -> Result<&'static X509PurposeRef, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::X509_PURPOSE_get0(idx))?;
+            Ok(X509PurposeRef::from_ptr(ptr))
+        }
+    }
+}
+
+impl X509PurposeRef {
+    /// Get the purpose value from an X509Purpose structure. This value is one of
+    /// - `X509_PURPOSE_SSL_CLIENT`
+    /// - `X509_PURPOSE_SSL_SERVER`
+    /// - `X509_PURPOSE_NS_SSL_SERVER`
+    /// - `X509_PURPOSE_SMIME_SIGN`
+    /// - `X509_PURPOSE_SMIME_ENCRYPT`
+    /// - `X509_PURPOSE_CRL_SIGN`
+    /// - `X509_PURPOSE_ANY`
+    /// - `X509_PURPOSE_OCSP_HELPER`
+    /// - `X509_PURPOSE_TIMESTAMP_SIGN`
+    pub fn purpose(&self) -> X509PurposeId {
+        unsafe {
+            let x509_purpose: *mut ffi::X509_PURPOSE = self.as_ptr();
+            X509PurposeId::from((*x509_purpose).purpose)
         }
     }
 }

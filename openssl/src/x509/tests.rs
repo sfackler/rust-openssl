@@ -1,3 +1,5 @@
+#[cfg(ossl110)]
+use crate::asn1::Asn1Object;
 use std::cmp::Ordering;
 
 use crate::asn1::Asn1Time;
@@ -16,12 +18,14 @@ use crate::x509::extension::{
 #[cfg(not(boringssl))]
 use crate::x509::store::X509Lookup;
 use crate::x509::store::X509StoreBuilder;
-#[cfg(ossl102)]
-use crate::x509::verify::X509PurposeFlags;
 #[cfg(any(ossl102, libressl261))]
 use crate::x509::verify::{X509VerifyFlags, X509VerifyParam};
 #[cfg(ossl110)]
 use crate::x509::X509Builder;
+#[cfg(any(ossl102, libressl261))]
+use crate::x509::X509Purpose;
+#[cfg(ossl102)]
+use crate::x509::X509PurposeId;
 use crate::x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
 use hex::{self, FromHex};
 #[cfg(any(ossl102, libressl261))]
@@ -440,6 +444,67 @@ fn test_verify_fails_with_crl_flag_set_and_no_crl() {
     )
 }
 
+#[test]
+#[cfg(any(ossl102, libressl261))]
+fn test_verify_cert_with_purpose() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+    let chain = Stack::new().unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    let purpose_idx = X509Purpose::get_by_sname("sslserver")
+        .expect("Getting certificate purpose 'sslserver' failed");
+    let x509_purpose =
+        X509Purpose::from_idx(purpose_idx).expect("Getting certificate purpose failed");
+    store_bldr
+        .set_purpose(x509_purpose.purpose())
+        .expect("Setting certificate purpose failed");
+    store_bldr.add_cert(ca).unwrap();
+
+    let store = store_bldr.build();
+
+    let mut context = X509StoreContext::new().unwrap();
+    assert!(context
+        .init(&store, &cert, &chain, |c| c.verify_cert())
+        .unwrap());
+}
+
+#[test]
+#[cfg(any(ossl102, libressl261))]
+fn test_verify_cert_with_wrong_purpose_fails() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+    let chain = Stack::new().unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    let purpose_idx = X509Purpose::get_by_sname("timestampsign")
+        .expect("Getting certificate purpose 'timestampsign' failed");
+    let x509_purpose =
+        X509Purpose::from_idx(purpose_idx).expect("Getting certificate purpose failed");
+    store_bldr
+        .set_purpose(x509_purpose.purpose())
+        .expect("Setting certificate purpose failed");
+    store_bldr.add_cert(ca).unwrap();
+
+    let store = store_bldr.build();
+
+    let mut context = X509StoreContext::new().unwrap();
+    assert_eq!(
+        context
+            .init(&store, &cert, &chain, |c| {
+                c.verify_cert()?;
+                Ok(c.error())
+            })
+            .unwrap()
+            .error_string(),
+        "unsupported certificate purpose"
+    )
+}
+
 #[cfg(ossl110)]
 #[test]
 fn x509_ref_version() {
@@ -550,6 +615,163 @@ fn test_name_cmp() {
     let issuer = cert.issuer_name();
     assert_eq!(Ordering::Equal, subject.try_cmp(subject).unwrap());
     assert_eq!(Ordering::Greater, subject.try_cmp(issuer).unwrap());
+}
+
+#[cfg(ossl110)]
+fn prepare_cert_builder() -> (X509Builder, PKey<Private>) {
+    let rsa = Rsa::generate(2048).unwrap();
+    let pkey = PKey::from_rsa(rsa).unwrap();
+    let mut name = X509Name::builder().unwrap();
+    name.append_entry_by_nid(Nid::COMMONNAME, "Example Name")
+        .unwrap();
+    let name = name.build();
+    let mut builder = X509::builder().unwrap();
+    builder.set_version(2).unwrap(); // 2 -> X509v3
+    builder.set_subject_name(&name).unwrap();
+    builder.set_issuer_name(&name).unwrap();
+    builder.set_pubkey(&pkey).unwrap();
+    (builder, pkey)
+}
+
+#[test]
+#[cfg(ossl110)]
+#[cfg(not(boringssl))]
+fn test_key_usage() {
+    // Create an X.509 certificate with an extended key usage extension.
+    let (mut builder, pkey) = prepare_cert_builder();
+    builder
+        .append_extension(
+            KeyUsage::new()
+                .digital_signature()
+                .non_repudiation()
+                .key_encipherment()
+                .data_encipherment()
+                .key_agreement()
+                .key_cert_sign()
+                //.crl_sign()
+                .decipher_only()
+                .encipher_only()
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+    builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+    let cert = builder.build();
+
+    let ku_bit_string = cert.key_usage().unwrap();
+    assert_eq!(ku_bit_string.len(), 2);
+    let mut ku_bits: u32 = 0;
+    ku_bits |= ku_bit_string.as_slice()[0] as u32;
+    ku_bits |= (ku_bit_string.as_slice()[1] as u32) << 8;
+    assert!(ku_bits & ffi::X509v3_KU_DIGITAL_SIGNATURE > 0);
+    assert!(ku_bits & ffi::X509v3_KU_NON_REPUDIATION > 0);
+    assert!(ku_bits & ffi::X509v3_KU_KEY_ENCIPHERMENT > 0);
+    assert!(ku_bits & ffi::X509v3_KU_DATA_ENCIPHERMENT > 0);
+    assert!(ku_bits & ffi::X509v3_KU_KEY_AGREEMENT > 0);
+    assert!(ku_bits & ffi::X509v3_KU_KEY_CERT_SIGN > 0);
+    assert_eq!(ku_bits & ffi::X509v3_KU_CRL_SIGN, 0);
+    assert!(ku_bits & ffi::X509v3_KU_ENCIPHER_ONLY > 0);
+    assert!(ku_bits & ffi::X509v3_KU_DECIPHER_ONLY > 0);
+}
+
+#[test]
+#[cfg(ossl110)]
+fn test_key_usage_data() {
+    // Create an X.509 certificate with an extended key usage extension.
+    let (mut builder, pkey) = prepare_cert_builder();
+    builder
+        .append_extension(KeyUsage::new().key_cert_sign().build().unwrap())
+        .unwrap();
+    builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+    let cert = builder.build();
+
+    let ku_ext_pos = cert.get_extension_by_nid(&Nid::KEY_USAGE).unwrap();
+    let ku_ext = cert.get_extension(ku_ext_pos).unwrap();
+    assert!(!ku_ext.is_critical());
+    assert_eq!(
+        ku_ext.object().unwrap(),
+        Asn1Object::from_nid(&Nid::KEY_USAGE).unwrap().as_ref()
+    );
+    assert_eq!(
+        ku_ext.data().unwrap().as_slice(),
+        [0x03, 0x02, 0x02, 0x04,] //   BIT STRING (6 bit) 000001
+    );
+}
+
+#[test]
+#[cfg(ossl110)]
+fn test_extended_key_usage() {
+    // Create an X.509 certificate with an extended key usage extension.
+    let (mut builder, pkey) = prepare_cert_builder();
+    builder
+        .append_extension(
+            ExtendedKeyUsage::new()
+                .critical()
+                .server_auth()
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+    builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+    let cert = builder.build();
+
+    let asn1obj_stack = cert.extended_key_usage().unwrap();
+    assert_eq!(asn1obj_stack.get(0).unwrap().nid(), Nid::SERVER_AUTH)
+}
+
+#[test]
+#[cfg(ossl110)]
+fn test_extended_key_usage_data() {
+    // Create an X.509 certificate with an extended key usage extension.
+    let (mut builder, pkey) = prepare_cert_builder();
+    builder
+        .append_extension(
+            ExtendedKeyUsage::new()
+                .critical()
+                .server_auth()
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+    builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+    let cert = builder.build();
+
+    let eku_ext_pos = cert.get_extension_by_nid(&Nid::EXT_KEY_USAGE).unwrap();
+    let eku_ext = cert.get_extension(eku_ext_pos).unwrap();
+    assert!(eku_ext.is_critical());
+    assert_eq!(
+        eku_ext.object().unwrap(),
+        Asn1Object::from_nid(&Nid::EXT_KEY_USAGE).unwrap().as_ref()
+    );
+    assert_eq!(
+        eku_ext.data().unwrap().as_slice(),
+        [
+            0x30, 0x0a, // SEQUENCE LENGTH=10
+            0x06, 0x08, //   OBJECT IDENTIFIER LENGTH=8
+            0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x03, 0x01 // 1.3.6.1.5.5.7.3.1 (serverAuth)
+        ]
+    );
+}
+
+#[test]
+#[cfg(ossl110)]
+fn test_extended_key_usage_flags() {
+    // Create an X.509 certificate with an extended key usage extension.
+    let (mut builder, pkey) = prepare_cert_builder();
+    builder
+        .append_extension(
+            ExtendedKeyUsage::new()
+                .critical()
+                .client_auth()
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+    builder.sign(&pkey, MessageDigest::sha256()).unwrap();
+    let cert = builder.build();
+    let eku_flags = cert.extended_key_usage_flags();
+    assert!(eku_flags & ffi::XKU_SSL_SERVER == 0);
+    assert!(eku_flags & ffi::XKU_SSL_CLIENT == ffi::XKU_SSL_CLIENT);
 }
 
 #[test]
@@ -724,7 +946,7 @@ fn test_set_purpose() {
     let mut store_bldr = X509StoreBuilder::new().unwrap();
     store_bldr.add_cert(ca).unwrap();
     let mut verify_params = X509VerifyParam::new().unwrap();
-    verify_params.set_purpose(X509PurposeFlags::ANY).unwrap();
+    verify_params.set_purpose(X509PurposeId::ANY).unwrap();
     store_bldr.set_param(&verify_params).unwrap();
     let store = store_bldr.build();
     let mut context = X509StoreContext::new().unwrap();
@@ -750,7 +972,7 @@ fn test_set_purpose_fails_verification() {
     store_bldr.add_cert(ca).unwrap();
     let mut verify_params = X509VerifyParam::new().unwrap();
     verify_params
-        .set_purpose(X509PurposeFlags::TIMESTAMP_SIGN)
+        .set_purpose(X509PurposeId::TIMESTAMP_SIGN)
         .unwrap();
     store_bldr.set_param(&verify_params).unwrap();
     let store = store_bldr.build();

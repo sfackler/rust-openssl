@@ -58,15 +58,25 @@ pub const EXFLAG_FRESHEST: u32 = 0x1000;
 #[cfg(any(ossl102, libressl261))]
 pub const EXFLAG_SS: u32 = 0x2000;
 
+#[cfg(not(boringssl))]
 pub const X509v3_KU_DIGITAL_SIGNATURE: u32 = 0x0080;
+#[cfg(not(boringssl))]
 pub const X509v3_KU_NON_REPUDIATION: u32 = 0x0040;
+#[cfg(not(boringssl))]
 pub const X509v3_KU_KEY_ENCIPHERMENT: u32 = 0x0020;
+#[cfg(not(boringssl))]
 pub const X509v3_KU_DATA_ENCIPHERMENT: u32 = 0x0010;
+#[cfg(not(boringssl))]
 pub const X509v3_KU_KEY_AGREEMENT: u32 = 0x0008;
+#[cfg(not(boringssl))]
 pub const X509v3_KU_KEY_CERT_SIGN: u32 = 0x0004;
+#[cfg(not(boringssl))]
 pub const X509v3_KU_CRL_SIGN: u32 = 0x0002;
+#[cfg(not(boringssl))]
 pub const X509v3_KU_ENCIPHER_ONLY: u32 = 0x0001;
+#[cfg(not(boringssl))]
 pub const X509v3_KU_DECIPHER_ONLY: u32 = 0x8000;
+#[cfg(not(boringssl))]
 pub const X509v3_KU_UNDEF: u32 = 0xffff;
 
 pub const XKU_SSL_SERVER: u32 = 0x1;
@@ -79,3 +89,15 @@ pub const XKU_TIMESTAMP: u32 = 0x40;
 pub const XKU_DVCS: u32 = 0x80;
 #[cfg(ossl110)]
 pub const XKU_ANYEKU: u32 = 0x100;
+
+pub const X509_PURPOSE_SSL_CLIENT: c_int = 1;
+pub const X509_PURPOSE_SSL_SERVER: c_int = 2;
+pub const X509_PURPOSE_NS_SSL_SERVER: c_int = 3;
+pub const X509_PURPOSE_SMIME_SIGN: c_int = 4;
+pub const X509_PURPOSE_SMIME_ENCRYPT: c_int = 5;
+pub const X509_PURPOSE_CRL_SIGN: c_int = 6;
+pub const X509_PURPOSE_ANY: c_int = 7;
+pub const X509_PURPOSE_OCSP_HELPER: c_int = 8;
+pub const X509_PURPOSE_TIMESTAMP_SIGN: c_int = 9;
+pub const X509_PURPOSE_MIN: c_int = 1;
+pub const X509_PURPOSE_MAX: c_int = 9;

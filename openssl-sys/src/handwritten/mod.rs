@@ -28,6 +28,7 @@ pub use self::stack::*;
 pub use self::tls1::*;
 pub use self::types::*;
 pub use self::x509::*;
+pub use self::x509_attr::*;
 pub use self::x509_vfy::*;
 pub use self::x509v3::*;
 
@@ -61,5 +62,6 @@ mod stack;
 mod tls1;
 mod types;
 mod x509;
+mod x509_attr;
 mod x509_vfy;
 mod x509v3;
