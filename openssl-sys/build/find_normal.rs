@@ -211,7 +211,7 @@ fn try_pkg_config() {
 
     let lib = match pkg_config::Config::new()
         .print_system_libs(false)
-        .find("openssl")
+        .probe("openssl")
     {
         Ok(lib) => lib,
         Err(e) => {

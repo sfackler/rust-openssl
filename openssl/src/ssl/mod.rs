@@ -2507,10 +2507,8 @@ impl SslRef {
 
     /// Like [`SslContext::private_key`].
     ///
-    /// This corresponds to `SSL_get_privatekey`.
-    ///
     /// [`SslContext::private_key`]: struct.SslContext.html#method.private_key
-    #[corresponds(SSL_get_certificate)]
+    #[corresponds(SSL_get_privatekey)]
     pub fn private_key(&self) -> Option<&PKeyRef<Private>> {
         unsafe {
             let ptr = ffi::SSL_get_privatekey(self.as_ptr());
@@ -3113,6 +3111,177 @@ impl SslRef {
             mem::forget(chain);
         }
         Ok(())
+    }
+
+    /// Sets a new default TLS/SSL method for SSL objects
+    #[cfg(not(boringssl))]
+    pub fn set_method(&mut self, method: SslMethod) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_set_ssl_method(self.as_ptr(), method.as_ptr()))?;
+        };
+        Ok(())
+    }
+
+    /// Loads the private key from a file.
+    #[corresponds(SSL_use_Private_Key_file)]
+    pub fn set_private_key_file<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+        ssl_file_type: SslFiletype,
+    ) -> Result<(), ErrorStack> {
+        let p = path.as_ref().as_os_str().to_str().unwrap();
+        let key_file = CString::new(p).unwrap();
+        unsafe {
+            cvt(ffi::SSL_use_PrivateKey_file(
+                self.as_ptr(),
+                key_file.as_ptr(),
+                ssl_file_type.as_raw(),
+            ))?;
+        };
+        Ok(())
+    }
+
+    /// Sets the private key.
+    #[corresponds(SSL_use_PrivateKey)]
+    pub fn set_private_key(&mut self, pkey: &PKeyRef<Private>) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_use_PrivateKey(self.as_ptr(), pkey.as_ptr()))?;
+        };
+        Ok(())
+    }
+
+    /// Sets the certificate
+    #[corresponds(SSL_use_certificate)]
+    pub fn set_certificate(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_use_certificate(self.as_ptr(), cert.as_ptr()))?;
+        };
+        Ok(())
+    }
+
+    /// Loads a certificate chain from a file.
+    ///
+    /// The file should contain a sequence of PEM-formatted certificates, the first being the leaf
+    /// certificate, and the remainder forming the chain of certificates up to and including the
+    /// trusted root certificate.
+    #[corresponds(SSL_use_certificate_chain_file)]
+    #[cfg(any(ossl110, libressl332))]
+    pub fn set_certificate_chain_file<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+    ) -> Result<(), ErrorStack> {
+        let p = path.as_ref().as_os_str().to_str().unwrap();
+        let cert_file = CString::new(p).unwrap();
+        unsafe {
+            cvt(ffi::SSL_use_certificate_chain_file(
+                self.as_ptr(),
+                cert_file.as_ptr(),
+            ))?;
+        };
+        Ok(())
+    }
+
+    /// Sets ca certificate that client trusted
+    #[corresponds(SSL_add_client_CA)]
+    pub fn add_client_ca(&mut self, cacert: &X509Ref) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_add_client_CA(self.as_ptr(), cacert.as_ptr()))?;
+        };
+        Ok(())
+    }
+
+    // Sets the list of CAs sent to the client when requesting a client certificate for the chosen ssl
+    #[corresponds(SSL_set_client_CA_list)]
+    pub fn set_client_ca_list(&mut self, list: Stack<X509Name>) {
+        unsafe { ffi::SSL_set_client_CA_list(self.as_ptr(), list.as_ptr()) }
+        mem::forget(list);
+    }
+
+    /// Sets the minimum supported protocol version.
+    ///
+    /// A value of `None` will enable protocol versions down the the lowest version supported by
+    /// OpenSSL.
+    ///
+    /// Requires OpenSSL 1.1.0 or LibreSSL 2.6.1 or newer.
+    #[corresponds(SSL_set_min_proto_version)]
+    #[cfg(any(ossl110, libressl261))]
+    pub fn set_min_proto_version(&mut self, version: Option<SslVersion>) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_set_min_proto_version(
+                self.as_ptr(),
+                version.map_or(0, |v| v.0 as _),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Sets the maximum supported protocol version.
+    ///
+    /// A value of `None` will enable protocol versions down the the highest version supported by
+    /// OpenSSL.
+    ///
+    /// Requires OpenSSL 1.1.0 or or LibreSSL 2.6.1 or newer.
+    #[corresponds(SSL_set_max_proto_version)]
+    #[cfg(any(ossl110, libressl261))]
+    pub fn set_max_proto_version(&mut self, version: Option<SslVersion>) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_set_max_proto_version(
+                self.as_ptr(),
+                version.map_or(0, |v| v.0 as _),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Sets the list of supported ciphers for the TLSv1.3 protocol.
+    ///
+    /// The `set_cipher_list` method controls the cipher suites for protocols before TLSv1.3.
+    ///
+    /// The format consists of TLSv1.3 cipher suite names separated by `:` characters in order of
+    /// preference.
+    ///
+    /// Requires OpenSSL 1.1.1 or LibreSSL 3.4.0 or newer.
+    #[corresponds(SSL_set_ciphersuites)]
+    #[cfg(any(ossl111, libressl340))]
+    pub fn set_ciphersuites(&mut self, cipher_list: &str) -> Result<(), ErrorStack> {
+        let cipher_list = CString::new(cipher_list).unwrap();
+        unsafe {
+            cvt(ffi::SSL_set_ciphersuites(
+                self.as_ptr(),
+                cipher_list.as_ptr() as *const _,
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Sets the list of supported ciphers for protocols before TLSv1.3.
+    ///
+    /// The `set_ciphersuites` method controls the cipher suites for TLSv1.3.
+    ///
+    /// See [`ciphers`] for details on the format.
+    ///
+    /// [`ciphers`]: https://www.openssl.org/docs/manmaster/apps/ciphers.html
+    #[corresponds(SSL_set_cipher_list)]
+    pub fn set_cipher_list(&mut self, cipher_list: &str) -> Result<(), ErrorStack> {
+        let cipher_list = CString::new(cipher_list).unwrap();
+        unsafe {
+            cvt(ffi::SSL_set_cipher_list(
+                self.as_ptr(),
+                cipher_list.as_ptr() as *const _,
+            ))
+            .map(|_| ())
+        }
+    }
+
+    /// Set the certificate store used for certificate verification
+    #[corresponds(SSL_set_cert_store)]
+    #[cfg(ossl102)]
+    pub fn set_verify_cert_store(&mut self, cert_store: X509Store) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_set0_verify_cert_store(self.as_ptr(), cert_store.as_ptr()) as c_int)?;
+            mem::forget(cert_store);
+            Ok(())
+        }
     }
 }
 
