@@ -227,6 +227,7 @@ impl X509Builder {
     /// Note that the version is zero-indexed; that is, a certificate corresponding to version 3 of
     /// the X.509 standard should pass `2` to this method.
     #[corresponds(X509_set_version)]
+    #[allow(clippy::useless_conversion)]
     pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_set_version(self.0.as_ptr(), version as c_long)).map(|_| ()) }
     }
@@ -1181,6 +1182,7 @@ impl X509ReqBuilder {
     /// This corresponds to [`X509_REQ_set_version`].
     ///
     ///[`X509_REQ_set_version`]: https://www.openssl.org/docs/manmaster/crypto/X509_REQ_set_version.html
+    #[allow(clippy::useless_conversion)]
     pub fn set_version(&mut self, version: i32) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::X509_REQ_set_version(
@@ -1734,6 +1736,101 @@ cfg_if! {
         unsafe fn X509_OBJECT_free(x: *mut ffi::X509_OBJECT) {
             ffi::X509_OBJECT_free_contents(x);
             ffi::CRYPTO_free(x as *mut libc::c_void);
+        }
+    }
+}
+
+pub struct X509PurposeId(i32);
+
+impl X509PurposeId {
+    pub const SSL_CLIENT: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_SSL_CLIENT);
+    pub const SSL_SERVER: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_SSL_SERVER);
+    pub const NS_SSL_SERVER: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_NS_SSL_SERVER);
+    pub const SMIME_SIGN: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_SMIME_SIGN);
+    pub const SMIME_ENCRYPT: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_SMIME_ENCRYPT);
+    pub const CRL_SIGN: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_CRL_SIGN);
+    pub const ANY: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_ANY);
+    pub const OCSP_HELPER: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_OCSP_HELPER);
+    pub const TIMESTAMP_SIGN: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_TIMESTAMP_SIGN);
+
+    pub fn value(&self) -> i32 {
+        self.0
+    }
+}
+
+impl From<i32> for X509PurposeId {
+    fn from(id: i32) -> Self {
+        X509PurposeId(id)
+    }
+}
+
+/// fake free method, since X509_PURPOSE is static
+unsafe fn no_free_purpose(_purps: *mut ffi::X509_PURPOSE) {}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::X509_PURPOSE;
+    fn drop = no_free_purpose;
+
+    /// Adjust parameters associated with certificate verification.
+    pub struct X509Purpose;
+    /// Reference to `X509Purpose`.
+    pub struct X509PurposeRef;
+}
+
+impl X509Purpose {
+    /// Get the internal table index of an X509_PURPOSE for a given short name. Valid short
+    /// names include
+    ///  - "sslclient",
+    ///  - "sslserver",
+    ///  - "nssslserver",
+    ///  - "smimesign",
+    ///  - "smimeencrypt",
+    ///  - "crlsign",
+    ///  - "any",
+    ///  - "ocsphelper",
+    ///  - "timestampsign"
+    /// The index can be used with `X509Purpose::from_idx()` to get the purpose.
+    #[allow(clippy::unnecessary_cast)]
+    pub fn get_by_sname(sname: &str) -> Result<i32, ErrorStack> {
+        unsafe {
+            let sname = CString::new(sname).unwrap();
+            cfg_if! {
+                if #[cfg(any(ossl110, libressl280))] {
+                    let purpose = cvt_n(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *const _))?;
+                } else {
+                    let purpose = cvt_n(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *mut _))?;
+                }
+            }
+            Ok(purpose as i32)
+        }
+    }
+
+    /// Get an `X509PurposeRef` for a given index value. The index can be obtained from e.g.
+    /// `X509Purpose::get_by_sname()`.
+    #[corresponds(X509_PURPOSE_get0)]
+    pub fn from_idx(idx: i32) -> Result<&'static X509PurposeRef, ErrorStack> {
+        unsafe {
+            let ptr = cvt_p(ffi::X509_PURPOSE_get0(idx))?;
+            Ok(X509PurposeRef::from_ptr(ptr))
+        }
+    }
+}
+
+impl X509PurposeRef {
+    /// Get the purpose value from an X509Purpose structure. This value is one of
+    /// - `X509_PURPOSE_SSL_CLIENT`
+    /// - `X509_PURPOSE_SSL_SERVER`
+    /// - `X509_PURPOSE_NS_SSL_SERVER`
+    /// - `X509_PURPOSE_SMIME_SIGN`
+    /// - `X509_PURPOSE_SMIME_ENCRYPT`
+    /// - `X509_PURPOSE_CRL_SIGN`
+    /// - `X509_PURPOSE_ANY`
+    /// - `X509_PURPOSE_OCSP_HELPER`
+    /// - `X509_PURPOSE_TIMESTAMP_SIGN`
+    pub fn purpose(&self) -> X509PurposeId {
+        unsafe {
+            let x509_purpose: *mut ffi::X509_PURPOSE = self.as_ptr();
+            X509PurposeId::from((*x509_purpose).purpose)
         }
     }
 }

@@ -147,26 +147,3 @@ pub unsafe fn X509_LOOKUP_add_dir(
         std::ptr::null_mut(),
     )
 }
-
-#[cfg(ossl102)]
-pub const X509_PURPOSE_SSL_CLIENT: c_int = 1;
-#[cfg(ossl102)]
-pub const X509_PURPOSE_SSL_SERVER: c_int = 2;
-#[cfg(ossl102)]
-pub const X509_PURPOSE_NS_SSL_SERVER: c_int = 3;
-#[cfg(ossl102)]
-pub const X509_PURPOSE_SMIME_SIGN: c_int = 4;
-#[cfg(ossl102)]
-pub const X509_PURPOSE_SMIME_ENCRYPT: c_int = 5;
-#[cfg(ossl102)]
-pub const X509_PURPOSE_CRL_SIGN: c_int = 6;
-#[cfg(ossl102)]
-pub const X509_PURPOSE_ANY: c_int = 7;
-#[cfg(ossl102)]
-pub const X509_PURPOSE_OCSP_HELPER: c_int = 8;
-#[cfg(ossl102)]
-pub const X509_PURPOSE_TIMESTAMP_SIGN: c_int = 9;
-#[cfg(ossl102)]
-pub const X509_PURPOSE_MIN: c_int = 1;
-#[cfg(ossl102)]
-pub const X509_PURPOSE_MAX: c_int = 9;

@@ -4,6 +4,8 @@ use libc::{c_int, c_uint, c_ulong, time_t};
 use std::net::IpAddr;
 
 use crate::error::ErrorStack;
+#[cfg(ossl102)]
+use crate::x509::X509PurposeId;
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
 
@@ -180,30 +182,7 @@ impl X509VerifyParamRef {
     /// Sets the verification purpose
     #[corresponds(X509_VERIFY_PARAM_set_purpose)]
     #[cfg(ossl102)]
-    pub fn set_purpose(&mut self, purpose: X509PurposeFlags) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::X509_VERIFY_PARAM_set_purpose(
-                self.as_ptr(),
-                purpose.bits,
-            ))
-            .map(|_| ())
-        }
+    pub fn set_purpose(&mut self, purpose: X509PurposeId) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_VERIFY_PARAM_set_purpose(self.as_ptr(), purpose.0)).map(|_| ()) }
     }
-}
-
-#[cfg(ossl102)]
-bitflags! {
-    /// Bitflags defining the purpose of the verification
-    pub struct X509PurposeFlags: c_int {
-        const SSL_CLIENT = ffi::X509_PURPOSE_SSL_CLIENT;
-        const SSL_SERVER = ffi::X509_PURPOSE_SSL_SERVER;
-        const NS_SSL_SERVER = ffi::X509_PURPOSE_NS_SSL_SERVER;
-        const SMIME_SIGN = ffi::X509_PURPOSE_SMIME_SIGN;
-        const SMIME_ENCRYPT = ffi::X509_PURPOSE_SMIME_ENCRYPT;
-        const CRL_SIGN = ffi::X509_PURPOSE_CRL_SIGN;
-        const ANY = ffi::X509_PURPOSE_ANY;
-        const OCSP_HELPER = ffi::X509_PURPOSE_OCSP_HELPER;
-        const TIMESTAMP_SIGN = ffi::X509_PURPOSE_TIMESTAMP_SIGN;
-    }
-
 }
