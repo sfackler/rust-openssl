@@ -15,8 +15,6 @@ pub enum X509_EXTENSION {}
 
 stack!(stack_st_X509_EXTENSION);
 
-stack!(stack_st_X509_ATTRIBUTE);
-
 cfg_if! {
     if #[cfg(any(ossl110, libressl350))] {
         pub enum X509_REQ_INFO {}
@@ -27,7 +25,7 @@ cfg_if! {
             pub version: *mut ::ASN1_INTEGER,
             pub subject: *mut ::X509_NAME,
             pubkey: *mut c_void,
-            pub attributes: *mut stack_st_X509_ATTRIBUTE,
+            pub attributes: *mut ::stack_st_X509_ATTRIBUTE,
         }
     }
 }
@@ -271,9 +269,12 @@ extern "C" {
 
     pub fn X509_EXTENSION_free(ext: *mut X509_EXTENSION);
 
+    pub fn X509_ATTRIBUTE_free(attr: *mut ::X509_ATTRIBUTE);
+
     pub fn X509_NAME_ENTRY_free(x: *mut X509_NAME_ENTRY);
 
     pub fn X509_NAME_new() -> *mut X509_NAME;
+    pub fn X509_NAME_cmp(x: *const X509_NAME, y: *const X509_NAME) -> c_int;
     pub fn X509_NAME_free(x: *mut X509_NAME);
 
     pub fn X509_new() -> *mut X509;
@@ -358,6 +359,33 @@ const_ptr_api! {
         pub fn X509_REQ_add_extensions(req: *mut X509_REQ, exts: #[const_ptr_if(ossl300)] stack_st_X509_EXTENSION)
             -> c_int;
     }
+}
+extern "C" {
+    pub fn X509_REQ_get_attr_count(req: *const X509_REQ) -> c_int;
+    pub fn X509_REQ_get_attr_by_NID(req: *const X509_REQ, nid: c_int, lastpos: c_int) -> c_int;
+    pub fn X509_REQ_get_attr(req: *const X509_REQ, loc: c_int) -> *mut ::X509_ATTRIBUTE;
+    pub fn X509_REQ_delete_attr(req: *mut X509_REQ, loc: c_int) -> *mut ::X509_ATTRIBUTE;
+    pub fn X509_REQ_add1_attr_by_txt(
+        req: *mut X509_REQ,
+        attrname: *const c_char,
+        chtype: c_int,
+        bytes: *const c_uchar,
+        len: c_int,
+    ) -> c_int;
+    pub fn X509_REQ_add1_attr_by_NID(
+        req: *mut X509_REQ,
+        nid: c_int,
+        chtype: c_int,
+        bytes: *const c_uchar,
+        len: c_int,
+    ) -> c_int;
+    pub fn X509_REQ_add1_attr_by_OBJ(
+        req: *mut X509_REQ,
+        obj: *const ASN1_OBJECT,
+        chtype: c_int,
+        bytes: *const c_uchar,
+        len: c_int,
+    ) -> c_int;
 }
 extern "C" {
     pub fn X509_set_pubkey(x: *mut X509, pkey: *mut EVP_PKEY) -> c_int;
@@ -607,6 +635,7 @@ const_ptr_api! {
         pub fn X509_STORE_get0_objects(ctx: #[const_ptr_if(ossl300)] X509_STORE) -> *mut stack_st_X509_OBJECT;
     }
 }
+
 #[cfg(any(ossl110, libressl270))]
 extern "C" {
     pub fn X509_OBJECT_get0_X509(x: *const X509_OBJECT) -> *mut X509;
@@ -633,7 +662,6 @@ extern "C" {
 
 extern "C" {
     pub fn X509_cmp(a: *const X509, b: *const X509) -> c_int;
-    pub fn X509_NAME_cmp(a: *const X509_NAME, b: *const X509_NAME) -> c_int;
     pub fn X509_issuer_and_serial_cmp(a: *const X509, b: *const X509) -> c_int;
     pub fn X509_issuer_name_cmp(a: *const X509, b: *const X509) -> c_int;
     pub fn X509_subject_name_cmp(a: *const X509, b: *const X509) -> c_int;
