@@ -37,6 +37,21 @@ impl<'a> MemBioSlice<'a> {
     }
 }
 
+// A reference to an OpenSSL memory BIO (binary IO).
+#[cfg(not(boringssl))]
+pub struct MemBioRef(*mut ffi::BIO);
+
+#[cfg(not(boringssl))]
+impl MemBioRef {
+    pub fn as_ptr(&self) -> *mut ffi::BIO {
+        self.0
+    }
+
+    pub unsafe fn from_ptr(bio: *mut ffi::BIO) -> MemBioRef {
+        MemBioRef(bio)
+    }
+}
+
 pub struct MemBio(*mut ffi::BIO);
 
 impl Drop for MemBio {
