@@ -16,6 +16,7 @@
 //!
 //! let extension: X509Extension = bc.build().unwrap();
 //! ```
+use cfg_if::cfg_if;
 use std::fmt::Write;
 
 use crate::error::ErrorStack;
@@ -218,22 +219,84 @@ impl KeyUsage {
     }
 }
 
-/// An extension consisting of a list of usages indicating purposes
-/// for which the certificate public key can be used for.
-pub struct ExtendedKeyUsage {
-    critical: bool,
-    server_auth: bool,
-    client_auth: bool,
-    code_signing: bool,
-    email_protection: bool,
-    time_stamping: bool,
-    ms_code_ind: bool,
-    ms_code_com: bool,
-    ms_ctl_sign: bool,
-    ms_sgc: bool,
-    ms_efs: bool,
-    ns_sgc: bool,
-    other: Vec<String>,
+#[cfg(not(boringssl))]
+impl From<u32> for KeyUsage {
+    fn from(flags: u32) -> Self {
+        let mut ku = KeyUsage::new();
+        if flags & ffi::X509v3_KU_DIGITAL_SIGNATURE > 0 {
+            ku.digital_signature();
+        }
+        if flags & ffi::X509v3_KU_NON_REPUDIATION > 0 {
+            ku.non_repudiation();
+        }
+        if flags & ffi::X509v3_KU_KEY_ENCIPHERMENT > 0 {
+            ku.key_encipherment();
+        }
+        if flags & ffi::X509v3_KU_DATA_ENCIPHERMENT > 0 {
+            ku.data_encipherment();
+        }
+        if flags & ffi::X509v3_KU_KEY_AGREEMENT > 0 {
+            ku.key_agreement();
+        }
+        if flags & ffi::X509v3_KU_KEY_CERT_SIGN > 0 {
+            ku.key_cert_sign();
+        }
+        if flags & ffi::X509v3_KU_CRL_SIGN > 0 {
+            ku.crl_sign();
+        }
+        if flags & ffi::X509v3_KU_ENCIPHER_ONLY > 0 {
+            ku.encipher_only();
+        }
+        if flags & ffi::X509v3_KU_DECIPHER_ONLY > 0 {
+            ku.decipher_only();
+        }
+        ku
+    }
+}
+
+cfg_if! {
+    if #[cfg(ossl110)] {
+        /// An extension consisting of a list of usages indicating purposes
+        /// for which the certificate public key can be used for.
+        pub struct ExtendedKeyUsage {
+            critical: bool,
+            server_auth: bool,
+            client_auth: bool,
+            code_signing: bool,
+            email_protection: bool,
+            time_stamping: bool,
+            ocsp_signing: bool,
+            ms_code_ind: bool,
+            ms_code_com: bool,
+            ms_ctl_sign: bool,
+            ms_sgc: bool,
+            ms_efs: bool,
+            ns_sgc: bool,
+            dvcs: bool,
+            any_extended_key_usage: bool,
+            other: Vec<String>,
+        }
+    } else {
+        /// An extension consisting of a list of usages indicating purposes
+        /// for which the certificate public key can be used for.
+        pub struct ExtendedKeyUsage {
+            critical: bool,
+            server_auth: bool,
+            client_auth: bool,
+            code_signing: bool,
+            email_protection: bool,
+            time_stamping: bool,
+            ocsp_signing: bool,
+            ms_code_ind: bool,
+            ms_code_com: bool,
+            ms_ctl_sign: bool,
+            ms_sgc: bool,
+            ms_efs: bool,
+            ns_sgc: bool,
+            dvcs: bool,
+            other: Vec<String>,
+        }
+    }
 }
 
 impl Default for ExtendedKeyUsage {
@@ -243,22 +306,50 @@ impl Default for ExtendedKeyUsage {
 }
 
 impl ExtendedKeyUsage {
-    /// Construct a new `ExtendedKeyUsage` extension.
-    pub fn new() -> ExtendedKeyUsage {
-        ExtendedKeyUsage {
-            critical: false,
-            server_auth: false,
-            client_auth: false,
-            code_signing: false,
-            email_protection: false,
-            time_stamping: false,
-            ms_code_ind: false,
-            ms_code_com: false,
-            ms_ctl_sign: false,
-            ms_sgc: false,
-            ms_efs: false,
-            ns_sgc: false,
-            other: vec![],
+    cfg_if! {
+        if #[cfg(ossl110)] {
+            /// Construct a new `ExtendedKeyUsage` extension.
+            pub fn new() -> ExtendedKeyUsage {
+                ExtendedKeyUsage {
+                    critical: false,
+                    server_auth: false,
+                    client_auth: false,
+                    code_signing: false,
+                    email_protection: false,
+                    time_stamping: false,
+                    ocsp_signing: false,
+                    ms_code_ind: false,
+                    ms_code_com: false,
+                    ms_ctl_sign: false,
+                    ms_sgc: false,
+                    ms_efs: false,
+                    ns_sgc: false,
+                    dvcs: false,
+                    any_extended_key_usage: false,
+                    other: vec![],
+                }
+            }
+        } else {
+            /// Construct a new `ExtendedKeyUsage` extension.
+            pub fn new() -> ExtendedKeyUsage {
+                ExtendedKeyUsage {
+                    critical: false,
+                    server_auth: false,
+                    client_auth: false,
+                    code_signing: false,
+                    email_protection: false,
+                    time_stamping: false,
+                    ocsp_signing: false,
+                    ms_code_ind: false,
+                    ms_code_com: false,
+                    ms_ctl_sign: false,
+                    ms_sgc: false,
+                    ms_efs: false,
+                    ns_sgc: false,
+                    dvcs: false,
+                    other: vec![],
+                }
+            }
         }
     }
 
@@ -298,6 +389,12 @@ impl ExtendedKeyUsage {
         self
     }
 
+    /// Sets the `OCSPSigning` flag to `true`.
+    pub fn ocsp_signing(&mut self) -> &mut ExtendedKeyUsage {
+        self.ocsp_signing = true;
+        self
+    }
+
     /// Sets the `msCodeInd` flag to `true`.
     pub fn ms_code_ind(&mut self) -> &mut ExtendedKeyUsage {
         self.ms_code_ind = true;
@@ -334,6 +431,22 @@ impl ExtendedKeyUsage {
         self
     }
 
+    /// Sets the `DVCS` flag to `true`.
+    pub fn dvcs(&mut self) -> &mut ExtendedKeyUsage {
+        self.dvcs = true;
+        self
+    }
+
+    cfg_if! {
+        if #[cfg(ossl110)] {
+            /// Sets the `anyExtendedKeyUsage` flag to `true`.
+            pub fn any_extended_key_usage(&mut self) -> &mut ExtendedKeyUsage {
+                self.any_extended_key_usage = true;
+                self
+            }
+        }
+    }
+
     /// Sets a flag not already defined.
     pub fn other(&mut self, other: &str) -> &mut ExtendedKeyUsage {
         self.other.push(other.to_owned());
@@ -355,12 +468,24 @@ impl ExtendedKeyUsage {
             "emailProtection",
         );
         append(&mut value, &mut first, self.time_stamping, "timeStamping");
+        append(&mut value, &mut first, self.ocsp_signing, "OCSPSigning");
         append(&mut value, &mut first, self.ms_code_ind, "msCodeInd");
         append(&mut value, &mut first, self.ms_code_com, "msCodeCom");
         append(&mut value, &mut first, self.ms_ctl_sign, "msCTLSign");
         append(&mut value, &mut first, self.ms_sgc, "msSGC");
         append(&mut value, &mut first, self.ms_efs, "msEFS");
         append(&mut value, &mut first, self.ns_sgc, "nsSGC");
+        append(&mut value, &mut first, self.dvcs, "DVCS");
+        cfg_if! {
+            if #[cfg(ossl110)] {
+                append(
+                    &mut value,
+                    &mut first,
+                    self.any_extended_key_usage,
+                    "anyExtendedKeyUsage"
+                );
+            }
+        }
         for other in &self.other {
             append(&mut value, &mut first, true, other);
         }

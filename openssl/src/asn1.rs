@@ -39,7 +39,9 @@ use crate::bio::MemBio;
 use crate::bn::{BigNum, BigNumRef};
 use crate::error::ErrorStack;
 use crate::nid::Nid;
+use crate::stack::Stackable;
 use crate::string::OpensslString;
+use crate::util::ForeignTypeRefExt;
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
 
@@ -84,77 +86,106 @@ impl fmt::Display for Asn1GeneralizedTimeRef {
     }
 }
 
-/// The type of an ASN.1 value.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct Asn1Type(c_int);
+/// See ASN.1 specification for the meaning of Asn1TagValues (e.g. https://www.itu.int/en/ITU-T/asn1)
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Asn1TagValue(c_int);
 
-#[allow(missing_docs)] // no need to document the constants
-impl Asn1Type {
-    pub const EOC: Asn1Type = Asn1Type(ffi::V_ASN1_EOC);
+impl Asn1TagValue {
+    /// End-of-contents marker
+    pub const EOC: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_EOC);
+    /// Boolean value
+    pub const BOOLEAN: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_BOOLEAN);
+    /// Integer value
+    pub const INTEGER: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_INTEGER);
+    /// Bit string
+    pub const BIT_STRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_BIT_STRING);
+    /// Octet string
+    pub const OCTET_STRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_OCTET_STRING);
+    /// No-data present
+    pub const NULL: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_NULL);
+    /// Representation of the ASN1 OBJECT IDENTIFIER (OID) type
+    pub const OBJECT: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_OBJECT);
+    /// ASN.1 ObjectDescriptor
+    pub const OBJECT_DESCRIPTOR: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_OBJECT_DESCRIPTOR);
+    /// Hmmm...
+    pub const EXTERNAL: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_EXTERNAL);
+    /// ASN.1 Real
+    pub const REAL: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_REAL);
+    /// Signed integers of any size
+    pub const ENUMERATED: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_ENUMERATED);
+    /// UTF-8 string
+    pub const UTF8STRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_UTF8STRING);
+    /// ASN.1 sequence
+    pub const SEQUENCE: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_SEQUENCE);
+    /// ASN.1 set
+    pub const SET: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_SET);
+    /// Numeric string to hold characters 0-9 and space
+    pub const NUMERICSTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_NUMERICSTRING);
+    /// A string holding printable characters "A"-"Z","a"-"z","0"-"9",space and "'()+,-./:=?"
+    pub const PRINTABLESTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_PRINTABLESTRING);
+    /// ASN.1 Teletex string
+    pub const T61STRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_T61STRING);
+    /// ASN.1 Teletex string
+    pub const TELETEXSTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_T61STRING);
+    /// ASN.1 VideotexString
+    pub const VIDEOTEXSTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_VIDEOTEXSTRING);
+    /// "International Alphabet 5" string
+    pub const IA5STRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_IA5STRING);
+    /// Time representation in ASCII
+    pub const UTCTIME: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_UTCTIME);
+    /// Another time representation in ASCII
+    pub const GENERALIZEDTIME: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_GENERALIZEDTIME);
+    /// String based on "International Register of Coded Character Sets to be used with Escape
+    /// Sequences".
+    pub const GRAPHICSTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_GRAPHICSTRING);
+    /// String excluding invisible characters. Iso64String is an alias of this type
+    pub const VISIBLESTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_VISIBLESTRING);
+    /// See `Asn1TagValue::VISIBLESTRING`
+    pub const ISO64STRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_VISIBLESTRING);
+    /// String based on "International Register of Coded Character Sets to be used with Escape
+    /// Sequences".
+    pub const GENERALSTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_GENERALSTRING);
+    /// Another universal string type that is rareley used after Unicode became the de-facto
+    /// standard.
+    pub const UNIVERSALSTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_UNIVERSALSTRING);
+    /// "Basic Multilingual Plane" string
+    pub const BMPSTRING: Asn1TagValue = Asn1TagValue(ffi::V_ASN1_BMPSTRING);
 
-    pub const BOOLEAN: Asn1Type = Asn1Type(ffi::V_ASN1_BOOLEAN);
-
-    pub const INTEGER: Asn1Type = Asn1Type(ffi::V_ASN1_INTEGER);
-
-    pub const BIT_STRING: Asn1Type = Asn1Type(ffi::V_ASN1_BIT_STRING);
-
-    pub const OCTET_STRING: Asn1Type = Asn1Type(ffi::V_ASN1_OCTET_STRING);
-
-    pub const NULL: Asn1Type = Asn1Type(ffi::V_ASN1_NULL);
-
-    pub const OBJECT: Asn1Type = Asn1Type(ffi::V_ASN1_OBJECT);
-
-    pub const OBJECT_DESCRIPTOR: Asn1Type = Asn1Type(ffi::V_ASN1_OBJECT_DESCRIPTOR);
-
-    pub const EXTERNAL: Asn1Type = Asn1Type(ffi::V_ASN1_EXTERNAL);
-
-    pub const REAL: Asn1Type = Asn1Type(ffi::V_ASN1_REAL);
-
-    pub const ENUMERATED: Asn1Type = Asn1Type(ffi::V_ASN1_ENUMERATED);
-
-    pub const UTF8STRING: Asn1Type = Asn1Type(ffi::V_ASN1_UTF8STRING);
-
-    pub const SEQUENCE: Asn1Type = Asn1Type(ffi::V_ASN1_SEQUENCE);
-
-    pub const SET: Asn1Type = Asn1Type(ffi::V_ASN1_SET);
-
-    pub const NUMERICSTRING: Asn1Type = Asn1Type(ffi::V_ASN1_NUMERICSTRING);
-
-    pub const PRINTABLESTRING: Asn1Type = Asn1Type(ffi::V_ASN1_PRINTABLESTRING);
-
-    pub const T61STRING: Asn1Type = Asn1Type(ffi::V_ASN1_T61STRING);
-
-    pub const TELETEXSTRING: Asn1Type = Asn1Type(ffi::V_ASN1_TELETEXSTRING);
-
-    pub const VIDEOTEXSTRING: Asn1Type = Asn1Type(ffi::V_ASN1_VIDEOTEXSTRING);
-
-    pub const IA5STRING: Asn1Type = Asn1Type(ffi::V_ASN1_IA5STRING);
-
-    pub const UTCTIME: Asn1Type = Asn1Type(ffi::V_ASN1_UTCTIME);
-
-    pub const GENERALIZEDTIME: Asn1Type = Asn1Type(ffi::V_ASN1_GENERALIZEDTIME);
-
-    pub const GRAPHICSTRING: Asn1Type = Asn1Type(ffi::V_ASN1_GRAPHICSTRING);
-
-    pub const ISO64STRING: Asn1Type = Asn1Type(ffi::V_ASN1_ISO64STRING);
-
-    pub const VISIBLESTRING: Asn1Type = Asn1Type(ffi::V_ASN1_VISIBLESTRING);
-
-    pub const GENERALSTRING: Asn1Type = Asn1Type(ffi::V_ASN1_GENERALSTRING);
-
-    pub const UNIVERSALSTRING: Asn1Type = Asn1Type(ffi::V_ASN1_UNIVERSALSTRING);
-
-    pub const BMPSTRING: Asn1Type = Asn1Type(ffi::V_ASN1_BMPSTRING);
-
-    /// Constructs an `Asn1Type` from a raw OpenSSL value.
-    pub fn from_raw(value: c_int) -> Self {
-        Asn1Type(value)
-    }
-
-    /// Returns the raw OpenSSL value represented by this type.
+    /// Returns the integer representation of `Padding`.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn as_raw(&self) -> c_int {
         self.0
     }
+}
+
+// The type of an ASN.1 value.
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::ASN1_TYPE;
+    fn drop = ffi::ASN1_TYPE_free;
+    /// ASN.1 type
+    ///
+    /// The OpenSSL ASN1_TYPE holds a type information as well as an ASN.1 value of that type.
+    /// Attributes are normally returned by OpenSSL as (generic) ASN1_TYPE.
+    pub struct Asn1Type;
+    /// Reference to an [`Asn1Type`]
+    pub struct Asn1TypeRef;
+}
+
+impl Asn1TypeRef {
+    /// The type of the value, the Asn1Type contains.
+    /// Returns `None`, if the
+    pub fn typ(&self) -> Asn1TagValue {
+        unsafe {
+            let asn1type = self.as_ptr();
+            Asn1TagValue((*asn1type).type_ as c_int)
+        }
+    }
+}
+
+/// Must be implemented by all ASN.1 object structs
+pub trait FromAsn1Type<T: ForeignTypeRef> {
+    /// Returns a `T` for the value, that is contained in the Asn1Type
+    fn from_asn1type(ty: &Asn1TypeRef) -> Option<&T>;
 }
 
 /// Difference between two ASN1 times.
@@ -429,6 +460,57 @@ foreign_type_and_impl_send_sync! {
     pub struct Asn1StringRef;
 }
 
+impl Asn1String {
+    /// Create a new and empty ASN1_STRING.
+    ///
+    /// OpenSSL internally sets the string type to `V_ASN1_OCTET_STRING`. Use `type_new()` for
+    /// other `Asn1Type`s.
+    /// Note: according to OpenSSL documentation, the type is undefined. However, implementation
+    /// sets it to `V_ASN1_OCTET_STRING`.
+    ///
+    #[corresponds(ASN1_STRING_new)]
+    pub fn new() -> Result<Asn1String, ErrorStack> {
+        unsafe {
+            let asn1_string = cvt_p(ffi::ASN1_STRING_new()).map(Asn1String)?;
+            Ok(asn1_string)
+        }
+    }
+
+    /// Create a new and empty ASN1_STRING of a given type.
+    ///
+    /// `ty` is the ASN1 type of the string.
+    ///
+    #[corresponds(ASN1_STRING_type_new)]
+    pub fn type_new(ty: Asn1TagValue) -> Result<Asn1String, ErrorStack> {
+        assert!(
+            [
+                Asn1TagValue::BIT_STRING,
+                Asn1TagValue::BMPSTRING,
+                Asn1TagValue::ENUMERATED,
+                Asn1TagValue::GENERALSTRING,
+                Asn1TagValue::GENERALIZEDTIME,
+                Asn1TagValue::IA5STRING,
+                Asn1TagValue::INTEGER,
+                Asn1TagValue::OCTET_STRING,
+                Asn1TagValue::PRINTABLESTRING,
+                Asn1TagValue::T61STRING,
+                Asn1TagValue::TELETEXSTRING,
+                Asn1TagValue::UNIVERSALSTRING,
+                Asn1TagValue::UTCTIME,
+                Asn1TagValue::UTF8STRING,
+                Asn1TagValue::VISIBLESTRING,
+                Asn1TagValue::VIDEOTEXSTRING,
+            ]
+            .contains(&ty),
+            "Unsupported Asn1Type for Asn1String"
+        );
+        unsafe {
+            let asn1_string = cvt_p(ffi::ASN1_STRING_type_new(ty.as_raw())).map(Asn1String)?;
+            Ok(asn1_string)
+        }
+    }
+}
+
 impl Asn1StringRef {
     /// Converts the ASN.1 underlying format to UTF8
     ///
@@ -469,6 +551,44 @@ impl Asn1StringRef {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
+    /// Set the value of an ASN1_STRING
+    ///
+    /// `value` is consumed by this method. The value is copied by OpenSSL.
+    ///
+    /// This can be used for `V_ASN1_OCTET_STRING` as well as for other string types like UTF-8:
+    ///
+    /// ```
+    ///     use openssl::nid::Nid;
+    ///     use openssl::asn1::{Asn1Object, Asn1String, Asn1TagValue, Asn1Type};
+    ///
+    ///    // Octet string
+    ///    let mut octet_string_asn1: Asn1String = Asn1String::new().unwrap();
+    ///    let octet: [u8; 3] = [1, 2, 3];
+    ///    octet_string_asn1.set(&octet).unwrap();
+    ///
+    ///    // Add a printable string
+    ///    let mut printable_string_asn1 = Asn1String::type_new(Asn1TagValue::PRINTABLESTRING).unwrap();
+    ///    printable_string_asn1.set("A printable string".as_bytes()).unwrap();
+    ///
+    ///    // Add an ASN1 object (OpenSSL 1.1.1 and higher)
+    ///    let asn1object = Asn1Object::from_nid(&Nid::PKCS7_DATA).unwrap();
+    ///    let mut object_string_asn1: Asn1String = Asn1String::new().unwrap();
+    ///    #[cfg(ossl111)] object_string_asn1.set(asn1object.as_slice()).unwrap();
+    /// ```
+    ///
+    #[corresponds(ASN1_STRING_set)]
+    pub fn set(&mut self, value: &[u8]) -> Result<(), ErrorStack> {
+        unsafe {
+            let value_len = value.len();
+            cvt(ffi::ASN1_STRING_set(
+                self.as_ptr(),
+                value.as_ptr() as *mut _,
+                value_len as c_int,
+            ))
+            .map(|_| ())
+        }
+    }
 }
 
 impl fmt::Debug for Asn1StringRef {
@@ -476,6 +596,89 @@ impl fmt::Debug for Asn1StringRef {
         match self.as_utf8() {
             Ok(openssl_string) => openssl_string.fmt(fmt),
             Err(_) => fmt.write_str("error"),
+        }
+    }
+}
+
+impl FromAsn1Type<Asn1StringRef> for Asn1StringRef {
+    fn from_asn1type(ty: &Asn1TypeRef) -> Option<&Asn1StringRef> {
+        unsafe {
+            unsafe fn from_asn1type_ptr(ty: &Asn1TypeRef) -> &Asn1StringRef {
+                Asn1StringRef::from_const_ptr(
+                    (*ty.as_ptr()).value.asn1_string as *const ffi::ASN1_STRING,
+                )
+            }
+            match ty.typ() {
+                Asn1TagValue::BIT_STRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::BMPSTRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::ENUMERATED => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::GENERALSTRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::GENERALIZEDTIME => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::GRAPHICSTRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::IA5STRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::INTEGER => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::NUMERICSTRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::OCTET_STRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::PRINTABLESTRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::T61STRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::UNIVERSALSTRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::UTCTIME => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::UTF8STRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::VIDEOTEXSTRING => Some(from_asn1type_ptr(ty)),
+                Asn1TagValue::VISIBLESTRING => Some(from_asn1type_ptr(ty)),
+                _ => None, // Not a string type. Conversion not supported.
+            }
+        }
+    }
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::ASN1_OCTET_STRING;
+    fn drop = ffi::ASN1_OCTET_STRING_free;
+    /// ASN.1 type used by OpenSSL for octet strings
+    ///
+    pub struct Asn1OctetString;
+    /// A reference to an [`Asn1OctetString`].
+    pub struct Asn1OctetStringRef;
+}
+
+impl Asn1OctetStringRef {
+    /// Return the octet string as an array of bytes.
+    #[corresponds(ASN1_STRING_get0_data)]
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe { slice::from_raw_parts(ASN1_STRING_get0_data(self.as_ptr() as *mut _), self.len()) }
+    }
+
+    /// Returns the number of bytes in the string.
+    #[corresponds(ASN1_STRING_length)]
+    pub fn len(&self) -> usize {
+        unsafe { ffi::ASN1_STRING_length(self.as_ptr() as *const _) as usize }
+    }
+
+    /// Determines if the string is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+impl fmt::Debug for Asn1OctetStringRef {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.write_str(&format!("{:x?}", self.as_slice()))
+    }
+}
+
+impl FromAsn1Type<Asn1OctetStringRef> for Asn1OctetStringRef {
+    fn from_asn1type(ty: &Asn1TypeRef) -> Option<&Asn1OctetStringRef> {
+        unsafe {
+            unsafe fn from_asn1type_ptr(ty: &Asn1TypeRef) -> &Asn1OctetStringRef {
+                Asn1OctetStringRef::from_const_ptr(
+                    (*ty.as_ptr()).value.asn1_string as *const ffi::ASN1_OCTET_STRING,
+                )
+            }
+            match ty.typ() {
+                Asn1TagValue::OCTET_STRING => Some(from_asn1type_ptr(ty)),
+                _ => None, // Wrong or not even a string type. Conversion not supported.
+            }
         }
     }
 }
@@ -605,6 +808,17 @@ impl Asn1Object {
         }
     }
 
+    /// Constructs an ASN.1 Object Identifier from an OID.
+    #[corresponds(OBJ_nid2obj)]
+    #[allow(clippy::should_implement_trait)]
+    pub fn from_nid(nid: &Nid) -> Result<Asn1Object, ErrorStack> {
+        unsafe {
+            ffi::init();
+            let obj: *mut ffi::ASN1_OBJECT = cvt_p(ffi::OBJ_nid2obj(nid.as_raw()))?;
+            Ok(Asn1Object::from_ptr(obj))
+        }
+    }
+
     /// Return the OID as an DER encoded array of bytes. This is the ASN.1
     /// value, not including tag or length.
     ///
@@ -619,10 +833,22 @@ impl Asn1Object {
     }
 }
 
+impl Stackable for Asn1Object {
+    type StackType = ffi::stack_st_ASN1_OBJECT;
+}
+
 impl Asn1ObjectRef {
     /// Returns the NID associated with this OID.
     pub fn nid(&self) -> Nid {
         unsafe { Nid::from_raw(ffi::OBJ_obj2nid(self.as_ptr())) }
+    }
+}
+
+impl PartialEq for Asn1ObjectRef {
+    /// Compare two `Asn1Object`s
+    #[corresponds(OBJ_cmp)]
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { ffi::OBJ_cmp(self.as_ptr(), other.as_ptr()) == 0 }
     }
 }
 
@@ -664,6 +890,8 @@ cfg_if! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(not(boringssl))]
+    use std::ptr::null_mut;
 
     use crate::bn::BigNum;
     use crate::nid::Nid;
@@ -751,6 +979,16 @@ mod tests {
     }
 
     #[test]
+    #[cfg(ossl111)]
+    fn object_from_nid() {
+        let object = Asn1Object::from_nid(&Nid::PKCS7_DATA).unwrap();
+        assert_eq!(
+            object.as_slice(),
+            &[0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x01,]
+        );
+    }
+
+    #[test]
     fn object_from_str_with_invalid_input() {
         Asn1Object::from_str("NOT AN OID")
             .map(|object| object.to_string())
@@ -765,5 +1003,102 @@ mod tests {
             object.as_slice(),
             &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01],
         );
+    }
+
+    #[test]
+    #[cfg(not(boringssl))]
+    fn asn1_type_type() {
+        let null = null_mut();
+        unsafe {
+            // Create an ASN.1 type object
+            let s = CString::new("IA5STRING:Hello Test").unwrap();
+            cfg_if! {
+                if #[cfg(any(ossl110, libressl280))] {
+                    let s_ptr = s.as_ptr() as *const _;
+                } else {
+                    let s_ptr = s.as_ptr() as *mut _;
+                }
+            }
+            let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s_ptr, null))
+                .map(|p| Asn1Type::from_ptr(p))
+                .unwrap();
+            assert_eq!(at.as_ref().typ(), Asn1TagValue::IA5STRING);
+        }
+    }
+
+    // Check (deprecated) `pub const Asn1Type::...` et al.
+    #[test]
+    #[cfg(not(boringssl))]
+    #[allow(deprecated)]
+    fn asn1_type_type_compatibility() {
+        let null = null_mut();
+        unsafe {
+            // Create an ASN.1 type object
+            let s = CString::new("UTF8String:Hällö Test").unwrap();
+            cfg_if! {
+                if #[cfg(any(ossl110, libressl280))] {
+                    let s_ptr = s.as_ptr() as *const _;
+                } else {
+                    let s_ptr = s.as_ptr() as *mut _;
+                }
+            }
+            let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s_ptr, null))
+                .map(|p| Asn1Type::from_ptr(p))
+                .unwrap();
+            assert_eq!(at.as_ref().typ(), Asn1TagValue::UTF8STRING);
+        }
+    }
+
+    #[test]
+    #[cfg(not(boringssl))]
+    fn asn1_string_from_asn1_type() {
+        let null = null_mut();
+        unsafe {
+            // Create an ASN.1 type object
+            let s = CString::new("PRINTABLESTRING:Hello Test").unwrap();
+            cfg_if! {
+                if #[cfg(any(ossl110, libressl280))] {
+                    let s_ptr = s.as_ptr() as *const _;
+                } else {
+                    let s_ptr = s.as_ptr() as *mut _;
+                }
+            }
+            let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s_ptr, null))
+                .map(|p| Asn1Type::from_ptr(p))
+                .unwrap();
+            assert_eq!(at.as_ref().typ(), Asn1TagValue::PRINTABLESTRING);
+            // Get string content from Asn1Type
+            let asn1stringref: &Asn1StringRef = Asn1StringRef::from_asn1type(at.as_ref()).unwrap();
+            let osslstring: OpensslString = asn1stringref.as_utf8().unwrap();
+            let string: &str = osslstring.as_ref();
+            assert_eq!("Hello Test", string);
+        }
+    }
+
+    #[test]
+    #[cfg(not(boringssl))]
+    fn asn1_octet_string_from_asn1_type() {
+        let null = null_mut();
+        unsafe {
+            // Create an ASN.1 type object
+            let s = CString::new("FORMAT:ASCII,OCTETSTRING:1234567890").unwrap();
+            cfg_if! {
+                if #[cfg(any(ossl110, libressl280))] {
+                    let s_ptr = s.as_ptr() as *const _;
+                } else {
+                    let s_ptr = s.as_ptr() as *mut _;
+                }
+            }
+            let at: Asn1Type = cvt_p(ffi::ASN1_generate_v3(s_ptr, null))
+                .map(|p| Asn1Type::from_ptr(p))
+                .unwrap();
+            assert_eq!(at.as_ref().typ(), Asn1TagValue::OCTET_STRING);
+            // Get string content from Asn1Type
+            let asn1octetstringref: &Asn1OctetStringRef =
+                Asn1OctetStringRef::from_asn1type(at.as_ref()).unwrap();
+            let stringdata: Vec<u8> = Vec::from(asn1octetstringref.as_slice());
+            let string = String::from_utf8(stringdata).unwrap();
+            assert_eq!("1234567890", string);
+        }
     }
 }
