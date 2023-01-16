@@ -16,12 +16,14 @@ use crate::x509::extension::{
 #[cfg(not(boringssl))]
 use crate::x509::store::X509Lookup;
 use crate::x509::store::X509StoreBuilder;
-#[cfg(ossl102)]
-use crate::x509::verify::X509PurposeFlags;
 #[cfg(any(ossl102, libressl261))]
 use crate::x509::verify::{X509VerifyFlags, X509VerifyParam};
 #[cfg(ossl110)]
 use crate::x509::X509Builder;
+#[cfg(ossl102)]
+use crate::x509::X509PurposeId;
+#[cfg(any(ossl102, libressl261))]
+use crate::x509::X509PurposeRef;
 use crate::x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
 use hex::{self, FromHex};
 #[cfg(any(ossl102, libressl261))]
@@ -440,6 +442,67 @@ fn test_verify_fails_with_crl_flag_set_and_no_crl() {
     )
 }
 
+#[test]
+#[cfg(any(ossl102, libressl261))]
+fn test_verify_cert_with_purpose() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+    let chain = Stack::new().unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    let purpose_idx = X509PurposeRef::get_by_sname("sslserver")
+        .expect("Getting certificate purpose 'sslserver' failed");
+    let x509_purposeref =
+        X509PurposeRef::from_idx(purpose_idx).expect("Getting certificate purpose failed");
+    store_bldr
+        .set_purpose(x509_purposeref.purpose())
+        .expect("Setting certificate purpose failed");
+    store_bldr.add_cert(ca).unwrap();
+
+    let store = store_bldr.build();
+
+    let mut context = X509StoreContext::new().unwrap();
+    assert!(context
+        .init(&store, &cert, &chain, |c| c.verify_cert())
+        .unwrap());
+}
+
+#[test]
+#[cfg(any(ossl102, libressl261))]
+fn test_verify_cert_with_wrong_purpose_fails() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+    let chain = Stack::new().unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    let purpose_idx = X509PurposeRef::get_by_sname("timestampsign")
+        .expect("Getting certificate purpose 'timestampsign' failed");
+    let x509_purpose =
+        X509PurposeRef::from_idx(purpose_idx).expect("Getting certificate purpose failed");
+    store_bldr
+        .set_purpose(x509_purpose.purpose())
+        .expect("Setting certificate purpose failed");
+    store_bldr.add_cert(ca).unwrap();
+
+    let store = store_bldr.build();
+
+    let mut context = X509StoreContext::new().unwrap();
+    assert_eq!(
+        context
+            .init(&store, &cert, &chain, |c| {
+                c.verify_cert()?;
+                Ok(c.error())
+            })
+            .unwrap()
+            .error_string(),
+        "unsupported certificate purpose"
+    )
+}
+
 #[cfg(ossl110)]
 #[test]
 fn x509_ref_version() {
@@ -724,7 +787,7 @@ fn test_set_purpose() {
     let mut store_bldr = X509StoreBuilder::new().unwrap();
     store_bldr.add_cert(ca).unwrap();
     let mut verify_params = X509VerifyParam::new().unwrap();
-    verify_params.set_purpose(X509PurposeFlags::ANY).unwrap();
+    verify_params.set_purpose(X509PurposeId::ANY).unwrap();
     store_bldr.set_param(&verify_params).unwrap();
     let store = store_bldr.build();
     let mut context = X509StoreContext::new().unwrap();
@@ -750,7 +813,7 @@ fn test_set_purpose_fails_verification() {
     store_bldr.add_cert(ca).unwrap();
     let mut verify_params = X509VerifyParam::new().unwrap();
     verify_params
-        .set_purpose(X509PurposeFlags::TIMESTAMP_SIGN)
+        .set_purpose(X509PurposeId::TIMESTAMP_SIGN)
         .unwrap();
     store_bldr.set_param(&verify_params).unwrap();
     let store = store_bldr.build();

@@ -51,7 +51,7 @@ use crate::ssl::SslFiletype;
 use crate::stack::StackRef;
 #[cfg(any(ossl102, libressl261))]
 use crate::x509::verify::{X509VerifyFlags, X509VerifyParamRef};
-use crate::x509::{X509Object, X509};
+use crate::x509::{X509Object, X509PurposeId, X509};
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
 #[cfg(not(boringssl))]
@@ -123,6 +123,13 @@ impl X509StoreBuilderRef {
     #[cfg(any(ossl102, libressl261))]
     pub fn set_flags(&mut self, flags: X509VerifyFlags) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::X509_STORE_set_flags(self.as_ptr(), flags.bits())).map(|_| ()) }
+    }
+
+    /// Sets the certificate purpose.
+    /// The purpose value can be obtained by `X509PurposeRef::get_by_sname()`
+    #[corresponds(X509_STORE_set_purpose)]
+    pub fn set_purpose(&mut self, purpose: X509PurposeId) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::X509_STORE_set_purpose(self.as_ptr(), purpose.as_raw())).map(|_| ()) }
     }
 
     /// Sets certificate chain validation related parameters.
