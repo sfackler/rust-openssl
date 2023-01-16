@@ -58,25 +58,15 @@ pub const EXFLAG_FRESHEST: u32 = 0x1000;
 #[cfg(any(ossl102, libressl261))]
 pub const EXFLAG_SS: u32 = 0x2000;
 
-#[cfg(not(boringssl))]
 pub const X509v3_KU_DIGITAL_SIGNATURE: u32 = 0x0080;
-#[cfg(not(boringssl))]
 pub const X509v3_KU_NON_REPUDIATION: u32 = 0x0040;
-#[cfg(not(boringssl))]
 pub const X509v3_KU_KEY_ENCIPHERMENT: u32 = 0x0020;
-#[cfg(not(boringssl))]
 pub const X509v3_KU_DATA_ENCIPHERMENT: u32 = 0x0010;
-#[cfg(not(boringssl))]
 pub const X509v3_KU_KEY_AGREEMENT: u32 = 0x0008;
-#[cfg(not(boringssl))]
 pub const X509v3_KU_KEY_CERT_SIGN: u32 = 0x0004;
-#[cfg(not(boringssl))]
 pub const X509v3_KU_CRL_SIGN: u32 = 0x0002;
-#[cfg(not(boringssl))]
 pub const X509v3_KU_ENCIPHER_ONLY: u32 = 0x0001;
-#[cfg(not(boringssl))]
 pub const X509v3_KU_DECIPHER_ONLY: u32 = 0x8000;
-#[cfg(not(boringssl))]
 pub const X509v3_KU_UNDEF: u32 = 0xffff;
 
 pub const XKU_SSL_SERVER: u32 = 0x1;

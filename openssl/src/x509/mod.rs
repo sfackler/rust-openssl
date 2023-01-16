@@ -8,7 +8,7 @@
 //! the secure protocol for browsing the web.
 
 use cfg_if::cfg_if;
-use foreign_types::{ForeignType, ForeignTypeRef};
+use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
 use libc::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use std::cmp::{self, Ordering};
 use std::error::Error;
@@ -2034,7 +2034,8 @@ cfg_if! {
     }
 }
 
-pub struct X509PurposeId(i32);
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct X509PurposeId(c_int);
 
 impl X509PurposeId {
     pub const SSL_CLIENT: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_SSL_CLIENT);
@@ -2047,31 +2048,26 @@ impl X509PurposeId {
     pub const OCSP_HELPER: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_OCSP_HELPER);
     pub const TIMESTAMP_SIGN: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_TIMESTAMP_SIGN);
 
-    pub fn value(&self) -> i32 {
+    /// Constructs an `X509PurposeId` from a raw OpenSSL value.
+    pub fn from_raw(id: c_int) -> Self {
+        X509PurposeId(id)
+    }
+
+    /// Returns the raw OpenSSL value represented by this type.
+    pub fn as_raw(&self) -> c_int {
         self.0
     }
 }
 
-impl From<i32> for X509PurposeId {
-    fn from(id: i32) -> Self {
-        X509PurposeId(id)
-    }
-}
+/// A reference to an [`X509_PURPOSE`].
+pub struct X509PurposeRef(Opaque);
 
-/// fake free method, since X509_PURPOSE is static
-unsafe fn no_free_purpose(_purps: *mut ffi::X509_PURPOSE) {}
-
-foreign_type_and_impl_send_sync! {
+/// Implements a wrapper type for the static `X509_PURPOSE` table in OpenSSL.
+impl ForeignTypeRef for X509PurposeRef {
     type CType = ffi::X509_PURPOSE;
-    fn drop = no_free_purpose;
-
-    /// Adjust parameters associated with certificate verification.
-    pub struct X509Purpose;
-    /// Reference to `X509Purpose`.
-    pub struct X509PurposeRef;
 }
 
-impl X509Purpose {
+impl X509PurposeRef {
     /// Get the internal table index of an X509_PURPOSE for a given short name. Valid short
     /// names include
     ///  - "sslclient",
@@ -2083,9 +2079,9 @@ impl X509Purpose {
     ///  - "any",
     ///  - "ocsphelper",
     ///  - "timestampsign"
-    /// The index can be used with `X509Purpose::from_idx()` to get the purpose.
+    /// The index can be used with `X509PurposeRef::from_idx()` to get the purpose.
     #[allow(clippy::unnecessary_cast)]
-    pub fn get_by_sname(sname: &str) -> Result<i32, ErrorStack> {
+    pub fn get_by_sname(sname: &str) -> Result<c_int, ErrorStack> {
         unsafe {
             let sname = CString::new(sname).unwrap();
             cfg_if! {
@@ -2095,22 +2091,19 @@ impl X509Purpose {
                     let purpose = cvt_n(ffi::X509_PURPOSE_get_by_sname(sname.as_ptr() as *mut _))?;
                 }
             }
-            Ok(purpose as i32)
+            Ok(purpose)
         }
     }
-
     /// Get an `X509PurposeRef` for a given index value. The index can be obtained from e.g.
-    /// `X509Purpose::get_by_sname()`.
+    /// `X509PurposeRef::get_by_sname()`.
     #[corresponds(X509_PURPOSE_get0)]
-    pub fn from_idx(idx: i32) -> Result<&'static X509PurposeRef, ErrorStack> {
+    pub fn from_idx(idx: c_int) -> Result<&'static X509PurposeRef, ErrorStack> {
         unsafe {
             let ptr = cvt_p(ffi::X509_PURPOSE_get0(idx))?;
             Ok(X509PurposeRef::from_ptr(ptr))
         }
     }
-}
 
-impl X509PurposeRef {
     /// Get the purpose value from an X509Purpose structure. This value is one of
     /// - `X509_PURPOSE_SSL_CLIENT`
     /// - `X509_PURPOSE_SSL_SERVER`
@@ -2124,7 +2117,7 @@ impl X509PurposeRef {
     pub fn purpose(&self) -> X509PurposeId {
         unsafe {
             let x509_purpose: *mut ffi::X509_PURPOSE = self.as_ptr();
-            X509PurposeId::from((*x509_purpose).purpose)
+            X509PurposeId::from_raw((*x509_purpose).purpose)
         }
     }
 }
