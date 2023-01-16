@@ -1755,7 +1755,9 @@ impl X509PurposeId {
     pub const TIMESTAMP_SIGN: X509PurposeId = X509PurposeId(ffi::X509_PURPOSE_TIMESTAMP_SIGN);
 
     /// Constructs an `X509PurposeId` from a raw OpenSSL value.
-    pub fn from_raw(id: c_int) -> Self { X509PurposeId(id) }
+    pub fn from_raw(id: c_int) -> Self {
+        X509PurposeId(id)
+    }
 
     /// Returns the raw OpenSSL value represented by this type.
     pub fn as_raw(&self) -> c_int {

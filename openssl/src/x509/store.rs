@@ -129,13 +129,7 @@ impl X509StoreBuilderRef {
     /// The purpose value can be obtained by `X509PurposeRef::get_by_sname()`
     #[corresponds(X509_STORE_set_purpose)]
     pub fn set_purpose(&mut self, purpose: X509PurposeId) -> Result<(), ErrorStack> {
-        unsafe {
-            cvt(ffi::X509_STORE_set_purpose(
-                self.as_ptr(),
-                purpose.as_raw(),
-            ))
-            .map(|_| ())
-        }
+        unsafe { cvt(ffi::X509_STORE_set_purpose(self.as_ptr(), purpose.as_raw())).map(|_| ()) }
     }
 
     /// Sets certificate chain validation related parameters.
