@@ -868,3 +868,40 @@ fn test_load_crl_file_fail() {
     let res = lookup.load_crl_file("test/root-ca.pem", SslFiletype::PEM);
     assert!(res.is_err());
 }
+
+#[cfg(ossl110)]
+fn ipaddress_as_subject_alternative_name_is_formatted_in_debug<T>(expected_ip: T)
+where
+    T: Into<std::net::IpAddr>,
+{
+    let expected_ip = format!("{:?}", expected_ip.into());
+    let mut builder = X509Builder::new().unwrap();
+    let san = SubjectAlternativeName::new()
+        .ip(&expected_ip)
+        .build(&builder.x509v3_context(None, None))
+        .unwrap();
+    builder.append_extension(san).unwrap();
+    let cert = builder.build();
+    let actual_ip = cert
+        .subject_alt_names()
+        .into_iter()
+        .flatten()
+        .map(|n| format!("{:?}", *n))
+        .next()
+        .unwrap();
+    assert_eq!(actual_ip, expected_ip);
+}
+
+#[cfg(ossl110)]
+#[test]
+fn ipv4_as_subject_alternative_name_is_formatted_in_debug() {
+    ipaddress_as_subject_alternative_name_is_formatted_in_debug([8u8, 8, 8, 128]);
+}
+
+#[cfg(ossl110)]
+#[test]
+fn ipv6_as_subject_alternative_name_is_formatted_in_debug() {
+    ipaddress_as_subject_alternative_name_is_formatted_in_debug([
+        8u8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 128,
+    ]);
+}
