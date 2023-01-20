@@ -6,9 +6,9 @@ extern crate bindgen;
 extern crate cc;
 #[cfg(feature = "vendored")]
 extern crate openssl_src;
+extern crate pkg_config;
 #[cfg(feature = "unstable_tongsuo")]
 extern crate tongsuo_src;
-extern crate pkg_config;
 #[cfg(target_env = "msvc")]
 extern crate vcpkg;
 
@@ -19,10 +19,10 @@ use std::path::{Path, PathBuf};
 mod cfgs;
 
 mod find_normal;
-#[cfg(feature = "vendored")]
-mod find_vendored;
 #[cfg(feature = "unstable_tongsuo")]
 mod find_tongsuo_vendored;
+#[cfg(feature = "vendored")]
+mod find_vendored;
 #[cfg(feature = "bindgen")]
 mod run_bindgen;
 

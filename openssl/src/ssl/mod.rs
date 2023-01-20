@@ -1071,7 +1071,13 @@ impl SslContextBuilder {
     #[cfg(babassl)]
     #[corresponds(SSL_CTX_use_enc_certificate)]
     pub fn set_enc_certificate(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::SSL_CTX_use_enc_certificate(self.as_ptr(), cert.as_ptr())).map(|_| ()) }
+        unsafe {
+            cvt(ffi::SSL_CTX_use_enc_certificate(
+                self.as_ptr(),
+                cert.as_ptr(),
+            ))
+            .map(|_| ())
+        }
     }
 
     #[cfg(babassl)]
@@ -1095,7 +1101,13 @@ impl SslContextBuilder {
     #[cfg(babassl)]
     #[corresponds(SSL_CTX_use_sign_certificate)]
     pub fn set_sign_certificate(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
-        unsafe { cvt(ffi::SSL_CTX_use_sign_certificate(self.as_ptr(), cert.as_ptr())).map(|_| ()) }
+        unsafe {
+            cvt(ffi::SSL_CTX_use_sign_certificate(
+                self.as_ptr(),
+                cert.as_ptr(),
+            ))
+            .map(|_| ())
+        }
     }
 
     /// Loads the private key from a file.
@@ -1176,7 +1188,13 @@ impl SslContextBuilder {
     where
         T: HasPrivate,
     {
-        unsafe { cvt(ffi::SSL_CTX_use_sign_PrivateKey(self.as_ptr(), key.as_ptr())).map(|_| ()) }
+        unsafe {
+            cvt(ffi::SSL_CTX_use_sign_PrivateKey(
+                self.as_ptr(),
+                key.as_ptr(),
+            ))
+            .map(|_| ())
+        }
     }
 
     /// Sets the list of supported ciphers for protocols before TLSv1.3.
