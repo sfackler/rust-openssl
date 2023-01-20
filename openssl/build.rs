@@ -16,6 +16,10 @@ fn main() {
         println!("cargo:rustc-cfg=libressl{}", v);
     }
 
+    if env::var("CARGO_FEATURE_TONGSUO_VENDORED").is_ok() {
+        println!("cargo:rustc-cfg=babassl");
+    }
+
     if let Ok(vars) = env::var("DEP_OPENSSL_CONF") {
         for var in vars.split(',') {
             println!("cargo:rustc-cfg=osslconf=\"{}\"", var);

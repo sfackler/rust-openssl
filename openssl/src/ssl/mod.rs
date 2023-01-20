@@ -357,6 +357,18 @@ impl SslMethod {
         unsafe { SslMethod(TLS_server_method()) }
     }
 
+    #[cfg(babssl)]
+    #[corresponds(NTLS_client_method)]
+    pub fn ntls_client() -> SslMethod {
+        unsafe { SslMethod(ffi::NTLS_client_method()) }
+    }
+
+    #[cfg(babssl)]
+    #[corresponds(NTLS_server_method)]
+    pub fn ntls_server() -> SslMethod {
+        unsafe { SslMethod(ffi::NTLS_server_method()) }
+    }
+
     /// Constructs an `SslMethod` from a pointer to the underlying OpenSSL value.
     ///
     /// # Safety
@@ -720,6 +732,30 @@ impl SslContextBuilder {
         self.0.as_ptr()
     }
 
+    #[cfg(babassl)]
+    #[corresponds(SSL_CTX_enable_ntls)]
+    pub fn enable_ntls(&mut self) {
+        unsafe { ffi::SSL_CTX_enable_ntls(self.as_ptr()) }
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_CTX_disable_ntls)]
+    pub fn disable_ntls(&mut self) {
+        unsafe { ffi::SSL_CTX_disable_ntls(self.as_ptr()) }
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_CTX_enable_sm_tls13_strict)]
+    pub fn enable_sm_tls13_strict(&mut self) {
+        unsafe { ffi::SSL_CTX_enable_sm_tls13_strict(self.as_ptr()) }
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_CTX_disable_sm_tls13_strict)]
+    pub fn disable_sm_tls13_strict(&mut self) {
+        unsafe { ffi::SSL_CTX_disable_sm_tls13_strict(self.as_ptr()) }
+    }
+
     /// Configures the certificate verification method for new connections.
     #[corresponds(SSL_CTX_set_verify)]
     pub fn set_verify(&mut self, mode: SslVerifyMode) {
@@ -1014,6 +1050,54 @@ impl SslContextBuilder {
         }
     }
 
+    #[cfg(babassl)]
+    #[corresponds(SSL_CTX_use_enc_certificate_file)]
+    pub fn set_enc_certificate_file<P: AsRef<Path>>(
+        &mut self,
+        file: P,
+        file_type: SslFiletype,
+    ) -> Result<(), ErrorStack> {
+        let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
+        unsafe {
+            cvt(ffi::SSL_CTX_use_enc_certificate_file(
+                self.as_ptr(),
+                file.as_ptr() as *const _,
+                file_type.as_raw(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_CTX_use_enc_certificate)]
+    pub fn set_enc_certificate(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::SSL_CTX_use_enc_certificate(self.as_ptr(), cert.as_ptr())).map(|_| ()) }
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_CTX_use_sign_certificate_file)]
+    pub fn set_sign_certificate_file<P: AsRef<Path>>(
+        &mut self,
+        file: P,
+        file_type: SslFiletype,
+    ) -> Result<(), ErrorStack> {
+        let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
+        unsafe {
+            cvt(ffi::SSL_CTX_use_sign_certificate_file(
+                self.as_ptr(),
+                file.as_ptr() as *const _,
+                file_type.as_raw(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_CTX_use_sign_certificate)]
+    pub fn set_sign_certificate(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::SSL_CTX_use_sign_certificate(self.as_ptr(), cert.as_ptr())).map(|_| ()) }
+    }
+
     /// Loads the private key from a file.
     #[corresponds(SSL_CTX_use_PrivateKey_file)]
     pub fn set_private_key_file<P: AsRef<Path>>(
@@ -1039,6 +1123,60 @@ impl SslContextBuilder {
         T: HasPrivate,
     {
         unsafe { cvt(ffi::SSL_CTX_use_PrivateKey(self.as_ptr(), key.as_ptr())).map(|_| ()) }
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_CTX_use_enc_PrivateKey_file)]
+    pub fn set_enc_private_key_file<P: AsRef<Path>>(
+        &mut self,
+        file: P,
+        file_type: SslFiletype,
+    ) -> Result<(), ErrorStack> {
+        let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
+        unsafe {
+            cvt(ffi::SSL_CTX_use_enc_PrivateKey_file(
+                self.as_ptr(),
+                file.as_ptr() as *const _,
+                file_type.as_raw(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_CTX_use_enc_PrivateKey)]
+    pub fn set_enc_private_key<T>(&mut self, key: &PKeyRef<T>) -> Result<(), ErrorStack>
+    where
+        T: HasPrivate,
+    {
+        unsafe { cvt(ffi::SSL_CTX_use_enc_PrivateKey(self.as_ptr(), key.as_ptr())).map(|_| ()) }
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_CTX_use_sign_PrivateKey_file)]
+    pub fn set_sign_private_key_file<P: AsRef<Path>>(
+        &mut self,
+        file: P,
+        file_type: SslFiletype,
+    ) -> Result<(), ErrorStack> {
+        let file = CString::new(file.as_ref().as_os_str().to_str().unwrap()).unwrap();
+        unsafe {
+            cvt(ffi::SSL_CTX_use_sign_PrivateKey_file(
+                self.as_ptr(),
+                file.as_ptr() as *const _,
+                file_type.as_raw(),
+            ))
+            .map(|_| ())
+        }
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_CTX_use_sign_PrivateKey)]
+    pub fn set_sign_private_key<T>(&mut self, key: &PKeyRef<T>) -> Result<(), ErrorStack>
+    where
+        T: HasPrivate,
+    {
+        unsafe { cvt(ffi::SSL_CTX_use_sign_PrivateKey(self.as_ptr(), key.as_ptr())).map(|_| ()) }
     }
 
     /// Sets the list of supported ciphers for protocols before TLSv1.3.
@@ -2297,6 +2435,30 @@ impl SslRef {
         unsafe { ffi::SSL_set_accept_state(self.as_ptr()) }
     }
 
+    #[cfg(babassl)]
+    #[corresponds(SSL_enable_ntls)]
+    pub fn enable_ntls(&mut self) {
+        unsafe { ffi::SSL_enable_ntls(self.as_ptr()) }
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_disable_ntls)]
+    pub fn disable_ntls(&mut self) {
+        unsafe { ffi::SSL_disable_ntls(self.as_ptr()) }
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_enable_sm_tls13_strict)]
+    pub fn enable_sm_tls13_strict(&mut self) {
+        unsafe { ffi::SSL_enable_sm_tls13_strict(self.as_ptr()) }
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_disable_sm_tls13_strict)]
+    pub fn disable_sm_tls13_strict(&mut self) {
+        unsafe { ffi::SSL_disable_sm_tls13_strict(self.as_ptr()) }
+    }
+
     /// Like [`SslContextBuilder::set_verify`].
     ///
     /// [`SslContextBuilder::set_verify`]: struct.SslContextBuilder.html#method.set_verify
@@ -3150,11 +3312,85 @@ impl SslRef {
         Ok(())
     }
 
+    #[cfg(babassl)]
+    #[corresponds(SSL_use_enc_Private_Key_file)]
+    pub fn set_enc_private_key_file<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+        ssl_file_type: SslFiletype,
+    ) -> Result<(), ErrorStack> {
+        let p = path.as_ref().as_os_str().to_str().unwrap();
+        let key_file = CString::new(p).unwrap();
+        unsafe {
+            cvt(ffi::SSL_use_enc_PrivateKey_file(
+                self.as_ptr(),
+                key_file.as_ptr(),
+                ssl_file_type.as_raw(),
+            ))?;
+        };
+        Ok(())
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_use_enc_PrivateKey)]
+    pub fn set_enc_private_key(&mut self, pkey: &PKeyRef<Private>) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_use_enc_PrivateKey(self.as_ptr(), pkey.as_ptr()))?;
+        };
+        Ok(())
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_use_sign_Private_Key_file)]
+    pub fn set_sign_private_key_file<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+        ssl_file_type: SslFiletype,
+    ) -> Result<(), ErrorStack> {
+        let p = path.as_ref().as_os_str().to_str().unwrap();
+        let key_file = CString::new(p).unwrap();
+        unsafe {
+            cvt(ffi::SSL_use_sign_PrivateKey_file(
+                self.as_ptr(),
+                key_file.as_ptr(),
+                ssl_file_type.as_raw(),
+            ))?;
+        };
+        Ok(())
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_use_sign_PrivateKey)]
+    pub fn set_sign_private_key(&mut self, pkey: &PKeyRef<Private>) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_use_sign_PrivateKey(self.as_ptr(), pkey.as_ptr()))?;
+        };
+        Ok(())
+    }
+
     /// Sets the certificate
     #[corresponds(SSL_use_certificate)]
     pub fn set_certificate(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_use_certificate(self.as_ptr(), cert.as_ptr()))?;
+        };
+        Ok(())
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_use_enc_certificate)]
+    pub fn set_enc_certificate(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_use_enc_certificate(self.as_ptr(), cert.as_ptr()))?;
+        };
+        Ok(())
+    }
+
+    #[cfg(babassl)]
+    #[corresponds(SSL_use_sign_certificate)]
+    pub fn set_sign_certificate(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
+        unsafe {
+            cvt(ffi::SSL_use_sign_certificate(self.as_ptr(), cert.as_ptr()))?;
         };
         Ok(())
     }

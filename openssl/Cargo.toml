@@ -18,6 +18,7 @@ v110 = []
 v111 = []
 
 vendored = ['ffi/vendored']
+tongsuo-vendored = ['ffi/tongsuo-vendored']
 bindgen = ['ffi/bindgen']
 unstable_boringssl = ["ffi/unstable_boringssl"]
 default = []
