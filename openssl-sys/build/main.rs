@@ -6,7 +6,7 @@ extern crate bindgen;
 extern crate cc;
 #[cfg(feature = "vendored")]
 extern crate openssl_src;
-#[cfg(feature = "tongsuo-vendored")]
+#[cfg(feature = "unstable_tongsuo")]
 extern crate tongsuo_src;
 extern crate pkg_config;
 #[cfg(target_env = "msvc")]
@@ -21,7 +21,7 @@ mod cfgs;
 mod find_normal;
 #[cfg(feature = "vendored")]
 mod find_vendored;
-#[cfg(feature = "tongsuo-vendored")]
+#[cfg(feature = "unstable_tongsuo")]
 mod find_tongsuo_vendored;
 #[cfg(feature = "bindgen")]
 mod run_bindgen;
@@ -61,7 +61,7 @@ fn find_openssl(target: &str) -> (Vec<PathBuf>, PathBuf) {
             return find_vendored::get_openssl(target);
         }
     }
-    #[cfg(feature = "tongsuo-vendored")]
+    #[cfg(feature = "unstable_tongsuo")]
     {
         // vendor if the feature is present, unless
         // OPENSSL_NO_VENDOR exists and isn't `0`
