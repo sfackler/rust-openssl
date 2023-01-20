@@ -35,6 +35,10 @@ const INCLUDES: &str = "
 // this must be included after ssl.h for libressl!
 #include <openssl/srtp.h>
 
+#if defined(BABASSL_VERSION_NUMBER)
+#include <openssl/ntls.h>
+#endif
+
 #if !defined(LIBRESSL_VERSION_NUMBER)
 #include <openssl/cms.h>
 #endif

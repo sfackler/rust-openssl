@@ -366,6 +366,13 @@ extern "C" {
     pub fn EVP_sm4_ofb() -> *const EVP_CIPHER;
     #[cfg(all(any(ossl111, libressl291), not(osslconf = "OPENSSL_NO_SM4")))]
     pub fn EVP_sm4_ctr() -> *const EVP_CIPHER;
+    #[cfg(babassl)]
+    pub fn EVP_sm4_gcm() -> *const EVP_CIPHER;
+    #[cfg(babassl)]
+    pub fn EVP_sm4_ccm() -> *const EVP_CIPHER;
+
+    #[cfg(babassl)]
+    pub fn EVP_eea3() -> *const EVP_CIPHER;
 
     #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
     pub fn EVP_camellia_128_cfb128() -> *const EVP_CIPHER;
@@ -590,6 +597,15 @@ cfg_if! {
                 key: *const c_uchar,
                 keylen: size_t,
             ) -> *mut EVP_PKEY;
+        }
+    }
+}
+
+cfg_if! {
+    if #[cfg(babassl)] {
+        extern "C" {
+            pub fn EVP_PKEY_get0_eia3(pkey: *const EVP_PKEY, len: *mut size_t) -> *const ::libc::c_uchar;
+            pub fn EVP_PKEY_is_sm2(pkey: *mut EVP_PKEY) -> ::libc::c_int;
         }
     }
 }

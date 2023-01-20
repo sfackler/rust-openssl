@@ -6,6 +6,8 @@ extern crate bindgen;
 extern crate cc;
 #[cfg(feature = "vendored")]
 extern crate openssl_src;
+#[cfg(feature = "tongsuo-vendored")]
+extern crate tongsuo_src;
 extern crate pkg_config;
 #[cfg(target_env = "msvc")]
 extern crate vcpkg;
@@ -19,6 +21,8 @@ mod cfgs;
 mod find_normal;
 #[cfg(feature = "vendored")]
 mod find_vendored;
+#[cfg(feature = "tongsuo-vendored")]
+mod find_tongsuo_vendored;
 #[cfg(feature = "bindgen")]
 mod run_bindgen;
 
@@ -55,6 +59,14 @@ fn find_openssl(target: &str) -> (Vec<PathBuf>, PathBuf) {
         // OPENSSL_NO_VENDOR exists and isn't `0`
         if env("OPENSSL_NO_VENDOR").map_or(true, |s| s == "0") {
             return find_vendored::get_openssl(target);
+        }
+    }
+    #[cfg(feature = "tongsuo-vendored")]
+    {
+        // vendor if the feature is present, unless
+        // OPENSSL_NO_VENDOR exists and isn't `0`
+        if env("OPENSSL_NO_VENDOR").map_or(true, |s| s == "0") {
+            return find_tongsuo_vendored::get_openssl(target);
         }
     }
     find_normal::get_openssl(target)
@@ -206,6 +218,7 @@ See rust-openssl documentation for more information:
     let mut openssl_version = None;
     let mut libressl_version = None;
     let mut is_boringssl = false;
+    let mut is_babassl = false;
     for line in expanded.lines() {
         let line = line.trim();
 
@@ -213,6 +226,7 @@ See rust-openssl documentation for more information:
         let new_openssl_prefix = "RUST_VERSION_NEW_OPENSSL_";
         let libressl_prefix = "RUST_VERSION_LIBRESSL_";
         let boringsl_prefix = "RUST_OPENSSL_IS_BORINGSSL";
+        let babassl_prefix = "RUST_OPENSSL_IS_BABASSL";
         let conf_prefix = "RUST_CONF_";
         if line.starts_with(openssl_prefix) {
             let version = &line[openssl_prefix.len()..];
@@ -227,6 +241,8 @@ See rust-openssl documentation for more information:
             enabled.push(&line[conf_prefix.len()..]);
         } else if line.starts_with(boringsl_prefix) {
             is_boringssl = true;
+        } else if line.starts_with(babassl_prefix) {
+            is_babassl = true;
         }
     }
 
@@ -241,6 +257,9 @@ See rust-openssl documentation for more information:
 
     for cfg in cfgs::get(openssl_version, libressl_version) {
         println!("cargo:rustc-cfg={}", cfg);
+    }
+    if is_babassl {
+        println!("cargo:rustc-cfg=babassl");
     }
 
     if let Some(libressl_version) = libressl_version {

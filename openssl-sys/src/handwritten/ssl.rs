@@ -546,6 +546,45 @@ extern "C" {
     pub fn SSL_SESSION_up_ref(ses: *mut SSL_SESSION) -> c_int;
     pub fn SSL_SESSION_free(s: *mut SSL_SESSION);
 }
+cfg_if! {
+    if #[cfg(babassl)] {
+        extern "C" {
+            pub fn SSL_CTX_use_enc_PrivateKey(ctx: *mut SSL_CTX, pkey: *mut EVP_PKEY) -> c_int;
+            pub fn SSL_CTX_use_sign_PrivateKey(ctx: *mut SSL_CTX, pkey: *mut EVP_PKEY) -> c_int;
+            pub fn SSL_CTX_use_enc_PrivateKey_file(ctx: *mut SSL_CTX, file: *const c_char, type_: c_int) -> c_int;
+            pub fn SSL_CTX_use_sign_PrivateKey_file(ctx: *mut SSL_CTX, file: *const c_char, type_: c_int) -> c_int;
+            pub fn SSL_CTX_enable_ntls(ctx: *mut SSL_CTX);
+            pub fn SSL_CTX_disable_ntls(ctx: *mut SSL_CTX);
+            pub fn SSL_enable_ntls(s: *mut SSL);
+            pub fn SSL_disable_ntls(s: *mut SSL);
+            pub fn SSL_CTX_enable_sm_tls13_strict(ctx: *mut SSL_CTX);
+            pub fn SSL_CTX_disable_sm_tls13_strict(ctx: *mut SSL_CTX);
+            pub fn SSL_enable_sm_tls13_strict(s: *mut SSL);
+            pub fn SSL_disable_sm_tls13_strict(s: *mut SSL);
+            pub fn SSL_CTX_use_enc_certificate(ctx: *mut SSL_CTX, x: *mut X509) -> c_int;
+            pub fn SSL_CTX_use_sign_certificate(ctx: *mut SSL_CTX, x: *mut X509) -> c_int;
+            pub fn SSL_CTX_use_enc_certificate_file(ctx: *mut SSL_CTX, file: *const c_char, type_: c_int) -> c_int;
+            pub fn SSL_CTX_use_sign_certificate_file(ctx: *mut SSL_CTX, file: *const c_char, type_: c_int) -> c_int;
+            pub fn SSL_is_ntls(s: *const SSL) -> c_int;
+            pub fn NTLS_method() -> *const SSL_METHOD;
+            pub fn NTLS_server_method() -> *const SSL_METHOD;
+            pub fn NTLS_client_method() -> *const SSL_METHOD;
+            pub fn SSL_set_ciphers(s: *mut SSL, cipher_list: *mut stack_st_SSL_CIPHER) -> c_int;
+            pub fn SSL_set_ciphers_by_id(s: *mut SSL, cipher_list_by_id: *mut stack_st_SSL_CIPHER) -> c_int;
+            pub fn SSL_CTX_set_ciphers(ctx: *mut SSL_CTX, cipher_list: *mut stack_st_SSL_CIPHER) -> c_int;
+            pub fn SSL_CTX_get_ciphers_by_id(ctx: *const SSL_CTX) -> *mut stack_st_SSL_CIPHER;
+            pub fn SSL_CTX_set_ciphers_by_id(ctx: *mut SSL_CTX, cipher_list_by_id: *mut stack_st_SSL_CIPHER) -> c_int;
+            pub fn SSL_use_sign_certificate(ssl: *mut SSL, x: *mut X509) -> c_int;
+            pub fn SSL_use_sign_certificate_file(ssl: *mut SSL, file: *const c_char, type_: c_int) -> c_int;
+            pub fn SSL_use_enc_certificate(ssl: *mut SSL, x: *mut X509) -> c_int;
+            pub fn SSL_use_enc_certificate_file(ssl: *mut SSL, file: *const c_char, type_: c_int) -> c_int;
+            pub fn SSL_use_enc_PrivateKey(ssl: *mut SSL, pkey: *mut EVP_PKEY) -> c_int;
+            pub fn SSL_use_enc_PrivateKey_file(ssl: *mut SSL, file: *const c_char, type_: c_int) -> c_int;
+            pub fn SSL_use_sign_PrivateKey(ssl: *mut SSL, pkey: *mut EVP_PKEY) -> c_int;
+            pub fn SSL_use_sign_PrivateKey_file(ssl: *mut SSL, file: *const c_char, type_: c_int) -> c_int;
+        }
+    }
+}
 const_ptr_api! {
     extern "C" {
         pub fn i2d_SSL_SESSION(s: #[const_ptr_if(ossl300)] SSL_SESSION, pp: *mut *mut c_uchar) -> c_int;
