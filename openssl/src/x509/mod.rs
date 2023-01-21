@@ -11,11 +11,13 @@ use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
 use libc::{c_int, c_long, c_uint};
 use std::cmp::{self, Ordering};
+use std::convert::TryFrom;
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::marker::PhantomData;
 use std::mem;
+use std::net::IpAddr;
 use std::path::Path;
 use std::ptr;
 use std::slice;
@@ -1555,8 +1557,13 @@ impl fmt::Debug for GeneralNameRef {
         } else if let Some(uri) = self.uri() {
             formatter.write_str(uri)
         } else if let Some(ipaddress) = self.ipaddress() {
-            let result = String::from_utf8_lossy(ipaddress);
-            formatter.write_str(&result)
+            let address = <[u8; 16]>::try_from(ipaddress)
+                .map(IpAddr::from)
+                .or_else(|_| <[u8; 4]>::try_from(ipaddress).map(IpAddr::from));
+            match address {
+                Ok(a) => fmt::Debug::fmt(&a, formatter),
+                Err(_) => fmt::Debug::fmt(ipaddress, formatter),
+            }
         } else {
             formatter.write_str("(empty)")
         }
