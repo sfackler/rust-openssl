@@ -357,13 +357,13 @@ impl SslMethod {
         unsafe { SslMethod(TLS_server_method()) }
     }
 
-    #[cfg(babssl)]
+    #[cfg(babassl)]
     #[corresponds(NTLS_client_method)]
     pub fn ntls_client() -> SslMethod {
         unsafe { SslMethod(ffi::NTLS_client_method()) }
     }
 
-    #[cfg(babssl)]
+    #[cfg(babassl)]
     #[corresponds(NTLS_server_method)]
     pub fn ntls_server() -> SslMethod {
         unsafe { SslMethod(ffi::NTLS_server_method()) }
