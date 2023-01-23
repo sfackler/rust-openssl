@@ -2455,8 +2455,8 @@ impl SslRef {
 
     #[cfg(babassl)]
     #[corresponds(SSL_is_ntls)]
-    pub fn is_ntls(&mut self) {
-        unsafe { ffi::SSL_is_ntls(self.as_ptr()) }
+    pub fn is_ntls(&mut self) -> bool {
+        unsafe { ffi::SSL_is_ntls(self.as_ptr()) != 0 }
     }
 
     #[cfg(babassl)]
