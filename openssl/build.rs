@@ -16,7 +16,7 @@ fn main() {
         println!("cargo:rustc-cfg=libressl{}", v);
     }
 
-    if env::var("CARGO_FEATURE_TONGSUO_VENDORED").is_ok() {
+    if env::var("CARGO_FEATURE_UNSTABLE_TONGSUO").is_ok() {
         println!("cargo:rustc-cfg=babassl");
     }
 
