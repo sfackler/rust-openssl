@@ -9,6 +9,8 @@ pub struct X509_VAL {
 
 pub enum X509_NAME_ENTRY {}
 
+stack!(stack_st_X509_NAME_ENTRY);
+
 stack!(stack_st_X509_NAME);
 
 pub enum X509_EXTENSION {}

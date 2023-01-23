@@ -423,6 +423,20 @@ impl X509Ref {
         }
     }
 
+    /// Returns this certificate's CRL distribution points, if they exist.
+    #[corresponds(X509_get_ext_d2i)]
+    pub fn crl_distribution_points(&self) -> Option<Stack<DistPoint>> {
+        unsafe {
+            let stack = ffi::X509_get_ext_d2i(
+                self.as_ptr(),
+                ffi::NID_crl_distribution_points,
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+            Stack::from_ptr_opt(stack as *mut _)
+        }
+    }
+
     /// Returns this certificate's issuer alternative name entries, if they exist.
     #[corresponds(X509_get_ext_d2i)]
     pub fn issuer_alt_names(&self) -> Option<Stack<GeneralName>> {
@@ -1925,6 +1939,49 @@ impl fmt::Debug for GeneralNameRef {
 
 impl Stackable for GeneralName {
     type StackType = ffi::stack_st_GENERAL_NAME;
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::DIST_POINT;
+    fn drop = ffi::DIST_POINT_free;
+
+    /// A `X509` distribution point.
+    pub struct DistPoint;
+    /// Reference to `DistPoint`.
+    pub struct DistPointRef;
+}
+
+impl DistPointRef {
+    /// Returns the name of this distribution point if it exists
+    pub fn distpoint(&self) -> Option<&DistPointNameRef> {
+        unsafe { DistPointNameRef::from_const_ptr_opt((*self.as_ptr()).distpoint) }
+    }
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::DIST_POINT_NAME;
+    fn drop = ffi::DIST_POINT_NAME_free;
+
+    /// A `X509` distribution point.
+    pub struct DistPointName;
+    /// Reference to `DistPointName`.
+    pub struct DistPointNameRef;
+}
+
+impl DistPointNameRef {
+    /// Returns the contents of this DistPointName if it is a fullname.
+    pub fn fullname(&self) -> Option<&StackRef<GeneralName>> {
+        unsafe {
+            if (*self.as_ptr()).type_ != 0 {
+                return None;
+            }
+            StackRef::from_const_ptr_opt((*self.as_ptr()).name.fullname)
+        }
+    }
+}
+
+impl Stackable for DistPoint {
+    type StackType = ffi::stack_st_DIST_POINT;
 }
 
 foreign_type_and_impl_send_sync! {
