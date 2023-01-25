@@ -656,6 +656,9 @@ impl SslVersion {
     /// Requires OpenSSL 1.1.1 or LibreSSL 3.4.0 or newer.
     #[cfg(any(ossl111, libressl340))]
     pub const TLS1_3: SslVersion = SslVersion(ffi::TLS1_3_VERSION);
+
+    #[cfg(babassl)]
+    pub const NTLS1_1: SslVersion = SslVersion(ffi::NTLS1_1_VERSION);
 }
 
 cfg_if! {
