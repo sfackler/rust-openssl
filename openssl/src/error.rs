@@ -297,19 +297,24 @@ impl fmt::Debug for Error {
 }
 
 impl fmt::Display for Error {
+    // On BoringSSL ERR_GET_{LIB,FUNC,REASON} are `unsafe`, but on
+    // OpenSSL/LibreSSL they're safe.
+    #[allow(unused_unsafe)]
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "error:{:08X}", self.code())?;
         match self.library() {
             Some(l) => write!(fmt, ":{}", l)?,
-            None => write!(fmt, ":lib({})", ffi::ERR_GET_LIB(self.code()))?,
+            None => write!(fmt, ":lib({})", unsafe { ffi::ERR_GET_LIB(self.code()) })?,
         }
         match self.function() {
             Some(f) => write!(fmt, ":{}", f)?,
-            None => write!(fmt, ":func({})", ffi::ERR_GET_FUNC(self.code()))?,
+            None => write!(fmt, ":func({})", unsafe { ffi::ERR_GET_FUNC(self.code()) })?,
         }
         match self.reason() {
             Some(r) => write!(fmt, ":{}", r)?,
-            None => write!(fmt, ":reason({})", ffi::ERR_GET_REASON(self.code()))?,
+            None => write!(fmt, ":reason({})", unsafe {
+                ffi::ERR_GET_REASON(self.code())
+            })?,
         }
         write!(
             fmt,

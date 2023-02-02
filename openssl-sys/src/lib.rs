@@ -17,9 +17,18 @@ extern crate libc;
 pub use libc::*;
 
 #[cfg(boringssl)]
-extern crate bssl_sys;
+#[path = "."]
+mod boringssl {
+    include!(env!("BORINGSSL_RUST_WRAPPER"));
+
+    pub fn init() {
+        unsafe {
+            CRYPTO_library_init();
+        }
+    }
+}
 #[cfg(boringssl)]
-pub use bssl_sys::*;
+pub use boringssl::*;
 
 #[cfg(openssl)]
 #[path = "."]

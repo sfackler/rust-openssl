@@ -32,6 +32,7 @@ enum Version {
     Openssl11x,
     Openssl10x,
     Libressl,
+    Boringssl,
 }
 
 fn env_inner(name: &str) -> Option<OsString> {
@@ -64,20 +65,8 @@ fn find_openssl(target: &str) -> (Vec<PathBuf>, PathBuf) {
     find_normal::get_openssl(target)
 }
 
-fn check_ssl_kind() {
-    if cfg!(feature = "unstable_boringssl") {
-        println!("cargo:rustc-cfg=boringssl");
-        // BoringSSL does not have any build logic, exit early
-        std::process::exit(0);
-    } else {
-        println!("cargo:rustc-cfg=openssl");
-    }
-}
-
 fn main() {
     check_rustc_versions();
-
-    check_ssl_kind();
 
     let target = env::var("TARGET").unwrap();
 
@@ -235,9 +224,21 @@ See rust-openssl documentation for more information:
     }
 
     if is_boringssl {
-        panic!("BoringSSL detected, but `unstable_boringssl` feature wasn't specified.")
+        let rust_dir = include_dirs[0].join("..").join("rust");
+        println!("cargo:rustc-cfg=boringssl");
+        println!("cargo:boringssl=true");
+        println!(
+            "cargo:rustc-env=BORINGSSL_RUST_WRAPPER={}/wrapper_{}.rs",
+            rust_dir.display(),
+            env::var("TARGET").unwrap()
+        );
+        println!("cargo:rustc-link-search=native={}", rust_dir.display());
+        println!("cargo:rustc-link-lib=static=rust_wrapper");
+        // BoringSSL does not have any additional build logic, exit early
+        return Version::Boringssl;
     }
 
+    println!("cargo:rustc-cfg=openssl");
     for enabled in &enabled {
         println!("cargo:rustc-cfg=osslconf=\"{}\"", enabled);
     }
