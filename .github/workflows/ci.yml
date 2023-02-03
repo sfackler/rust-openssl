@@ -57,11 +57,16 @@ jobs:
   min-version:
     name: min-version
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Current MSRV and expected next MSRV
+        RUST: ["1.48.0", "1.56.0"]
     steps:
       - uses: actions/checkout@v2
       - uses: sfackler/actions/rustup@master
         with:
-          version: 1.56.0
+          version: ${{ matrix.RUST }}
       - run: echo "::set-output name=version::$(rustc --version)"
         id: rust-version
       - uses: actions/cache@v1
@@ -71,6 +76,13 @@ jobs:
           restore-keys: |
             index-${{ runner.os }}-
       - run: cargo generate-lockfile
+      - run: |
+          cargo update -p once_cell --precise '1.14.0'
+          cargo update -p clap --precise '3.1.18'
+          cargo update -p clap_lex --precise '0.2.0'
+          cargo update -p indexmap --precise '1.8.2'
+          cargo update -p os_str_bytes --precise '6.1.0'
+        if: matrix.RUST == '1.48.0'
       - uses: actions/cache@v1
         with:
           path: ~/.cargo/registry/cache
