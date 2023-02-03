@@ -629,6 +629,7 @@ fn default_verify_paths() {
 fn add_extra_chain_cert() {
     let cert = X509::from_pem(CERT).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    ctx.add_extra_chain_cert_ref(cert.as_ref()).unwrap();
     ctx.add_extra_chain_cert(cert).unwrap();
 }
 

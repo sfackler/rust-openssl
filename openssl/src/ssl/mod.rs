@@ -1006,12 +1006,18 @@ impl SslContextBuilder {
     /// This chain should contain all certificates necessary to go from the certificate specified by
     /// `set_certificate` to a trusted root.
     #[corresponds(SSL_CTX_add_extra_chain_cert)]
-    pub fn add_extra_chain_cert(&mut self, cert: X509) -> Result<(), ErrorStack> {
+    pub fn add_extra_chain_cert_ref(&mut self, cert: &X509Ref) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_CTX_add_extra_chain_cert(self.as_ptr(), cert.as_ptr()) as c_int)?;
             mem::forget(cert);
             Ok(())
         }
+    }
+
+    #[corresponds(SSL_CTX_add_extra_chain_cert)]
+    #[deprecated(note = "prefer add_extra_chain_cert_ref variant")]
+    pub fn add_extra_chain_cert(&mut self, cert: X509) -> Result<(), ErrorStack> {
+        self.add_extra_chain_cert_ref(cert.as_ref())
     }
 
     /// Loads the private key from a file.
