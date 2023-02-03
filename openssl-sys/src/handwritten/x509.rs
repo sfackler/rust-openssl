@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 #[repr(C)]
 pub struct X509_VAL {
@@ -24,8 +24,8 @@ cfg_if! {
         #[repr(C)]
         pub struct X509_REQ_INFO {
             pub enc: ASN1_ENCODING,
-            pub version: *mut ::ASN1_INTEGER,
-            pub subject: *mut ::X509_NAME,
+            pub version: *mut ASN1_INTEGER,
+            pub subject: *mut X509_NAME,
             pubkey: *mut c_void,
             pub attributes: *mut stack_st_X509_ATTRIBUTE,
         }
@@ -313,26 +313,26 @@ const_ptr_api! {
     }
 }
 extern "C" {
-    pub fn X509_issuer_name_hash(x: *mut ::X509) -> c_ulong;
-    pub fn X509_subject_name_hash(x: *mut ::X509) -> c_ulong;
+    pub fn X509_issuer_name_hash(x: *mut X509) -> c_ulong;
+    pub fn X509_subject_name_hash(x: *mut X509) -> c_ulong;
 }
 const_ptr_api! {
     extern "C" {
-        pub fn X509_get_issuer_name(x: #[const_ptr_if(any(ossl110, libressl280))] ::X509) -> *mut ::X509_NAME;
+        pub fn X509_get_issuer_name(x: #[const_ptr_if(any(ossl110, libressl280))] X509) -> *mut X509_NAME;
         pub fn X509_set_subject_name(x: *mut X509, name: #[const_ptr_if(ossl300)] X509_NAME) -> c_int;
-        pub fn X509_get_subject_name(x: #[const_ptr_if(any(ossl110, libressl280))] ::X509) -> *mut ::X509_NAME;
+        pub fn X509_get_subject_name(x: #[const_ptr_if(any(ossl110, libressl280))] X509) -> *mut X509_NAME;
     }
 }
 cfg_if! {
     if #[cfg(any(ossl110, libressl350))] {
         extern "C" {
-            pub fn X509_set1_notBefore(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
-            pub fn X509_set1_notAfter(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
+            pub fn X509_set1_notBefore(x: *mut X509, tm: *const ASN1_TIME) -> c_int;
+            pub fn X509_set1_notAfter(x: *mut X509, tm: *const ASN1_TIME) -> c_int;
         }
     } else {
         extern "C" {
-            pub fn X509_set_notBefore(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
-            pub fn X509_set_notAfter(x: *mut ::X509, tm: *const ::ASN1_TIME) -> c_int;
+            pub fn X509_set_notBefore(x: *mut X509, tm: *const ASN1_TIME) -> c_int;
+            pub fn X509_set_notAfter(x: *mut X509, tm: *const ASN1_TIME) -> c_int;
         }
     }
 }
@@ -414,7 +414,7 @@ extern "C" {
     pub fn X509_CRL_get_issuer(x: *const X509_CRL) -> *mut X509_NAME;
 
     #[cfg(ossl110)]
-    pub fn X509_get0_extensions(req: *const ::X509) -> *const stack_st_X509_EXTENSION;
+    pub fn X509_get0_extensions(req: *const X509) -> *const stack_st_X509_EXTENSION;
 
     pub fn X509_CRL_set_version(crl: *mut X509_CRL, version: c_long) -> c_int;
 }
@@ -559,7 +559,7 @@ const_ptr_api! {
         pub fn X509_get_ext_by_critical(x: #[const_ptr_if(any(ossl110, libressl280))] X509, crit: c_int, lastpos: c_int) -> c_int;
         pub fn X509_get_ext(x: #[const_ptr_if(any(ossl110, libressl280))] X509, loc: c_int) -> *mut X509_EXTENSION;
         pub fn X509_get_ext_d2i(
-            x: #[const_ptr_if(any(ossl110, libressl280))] ::X509,
+            x: #[const_ptr_if(any(ossl110, libressl280))] X509,
             nid: c_int,
             crit: *mut c_int,
             idx: *mut c_int,
@@ -571,7 +571,7 @@ const_ptr_api! {
         pub fn X509_CRL_get_ext_by_critical(x: #[const_ptr_if(any(ossl110, libressl280))] X509_CRL, crit: c_int, lastpos: c_int) -> c_int;
         pub fn X509_CRL_get_ext(x: #[const_ptr_if(any(ossl110, libressl280))] X509_CRL, loc: c_int) -> *mut X509_EXTENSION;
         pub fn X509_CRL_get_ext_d2i(
-            x: #[const_ptr_if(any(ossl110, libressl280))] ::X509_CRL,
+            x: #[const_ptr_if(any(ossl110, libressl280))] X509_CRL,
             nid: c_int,
             crit: *mut c_int,
             idx: *mut c_int,
@@ -583,7 +583,7 @@ const_ptr_api! {
         pub fn X509_REVOKED_get_ext_by_critical(x: #[const_ptr_if(any(ossl110, libressl280))] X509_REVOKED, crit: c_int, lastpos: c_int) -> c_int;
         pub fn X509_REVOKED_get_ext(x: #[const_ptr_if(any(ossl110, libressl280))] X509_REVOKED, loc: c_int) -> *mut X509_EXTENSION;
         pub fn X509_REVOKED_get_ext_d2i(
-            x: #[const_ptr_if(any(ossl110, libressl280))] ::X509_REVOKED,
+            x: #[const_ptr_if(any(ossl110, libressl280))] X509_REVOKED,
             nid: c_int,
             crit: *mut c_int,
             idx: *mut c_int,

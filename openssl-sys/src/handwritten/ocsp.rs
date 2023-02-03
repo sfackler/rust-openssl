@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 pub enum OCSP_CERTID {}
 

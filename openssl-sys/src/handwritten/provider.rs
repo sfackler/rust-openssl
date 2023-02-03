@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 extern "C" {
     #[cfg(ossl300)]

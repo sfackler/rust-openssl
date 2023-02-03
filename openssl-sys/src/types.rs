@@ -1,5 +1,6 @@
 use libc::*;
-use *;
+
+use super::*;
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {

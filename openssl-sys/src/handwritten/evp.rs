@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 cfg_if! {
     if #[cfg(ossl300)] {
@@ -344,9 +344,9 @@ extern "C" {
     #[cfg(ossl110)]
     pub fn EVP_aes_256_ocb() -> *const EVP_CIPHER;
     #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_CHACHA")))]
-    pub fn EVP_chacha20() -> *const ::EVP_CIPHER;
+    pub fn EVP_chacha20() -> *const EVP_CIPHER;
     #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_CHACHA")))]
-    pub fn EVP_chacha20_poly1305() -> *const ::EVP_CIPHER;
+    pub fn EVP_chacha20_poly1305() -> *const EVP_CIPHER;
     #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     pub fn EVP_seed_cbc() -> *const EVP_CIPHER;
     #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]

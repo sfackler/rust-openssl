@@ -1,6 +1,6 @@
 use libc::*;
 
-use *;
+use super::*;
 
 pub const X509_V_OK: c_int = 0;
 #[cfg(ossl102f)]
