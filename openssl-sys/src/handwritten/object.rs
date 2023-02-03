@@ -1,6 +1,6 @@
 use libc::*;
 
-use *;
+use super::super::*;
 
 extern "C" {
     pub fn OBJ_nid2ln(nid: c_int) -> *const c_char;

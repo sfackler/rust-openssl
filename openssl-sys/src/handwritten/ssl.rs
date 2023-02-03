@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 pub enum SSL_METHOD {}
 pub enum SSL_CIPHER {}
@@ -13,15 +13,15 @@ cfg_if! {
             pub master_key_length: c_int,
             pub master_key: [c_uchar; 48],
             session_id_length: c_uint,
-            session_id: [c_uchar; ::SSL_MAX_SSL_SESSION_ID_LENGTH as usize],
+            session_id: [c_uchar; SSL_MAX_SSL_SESSION_ID_LENGTH as usize],
             sid_ctx_length: c_uint,
-            sid_ctx: [c_uchar; ::SSL_MAX_SID_CTX_LENGTH as usize],
-            peer: *mut ::X509,
+            sid_ctx: [c_uchar; SSL_MAX_SID_CTX_LENGTH as usize],
+            peer: *mut X509,
             verify_result: c_long,
             timeout: c_long,
             time: time_t,
             pub references: c_int,
-            cipher: *const ::SSL_CIPHER,
+            cipher: *const SSL_CIPHER,
             cipher_id: c_long,
             ciphers: *mut stack_st_SSL_CIPHER,
             tlsext_hostname: *mut c_char,
@@ -50,7 +50,7 @@ cfg_if! {
             cipher: *const c_void,
             cipher_id: c_ulong,
             ciphers: *mut c_void,
-            ex_data: ::CRYPTO_EX_DATA,
+            ex_data: CRYPTO_EX_DATA,
             prev: *mut c_void,
             next: *mut c_void,
             tlsext_hostname: *mut c_char,
@@ -93,7 +93,7 @@ cfg_if! {
             cipher: *const c_void,
             cipher_id: c_ulong,
             ciphers: *mut c_void,
-            ex_data: ::CRYPTO_EX_DATA,
+            ex_data: CRYPTO_EX_DATA,
             prev: *mut c_void,
             next: *mut c_void,
             #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
@@ -156,12 +156,12 @@ pub type tls_session_secret_cb_fn = Option<
 #[cfg(ossl111)]
 pub type SSL_custom_ext_add_cb_ex = Option<
     unsafe extern "C" fn(
-        ssl: *mut ::SSL,
+        ssl: *mut SSL,
         ext_type: c_uint,
         context: c_uint,
         out: *mut *const c_uchar,
         outlen: *mut size_t,
-        x: *mut ::X509,
+        x: *mut X509,
         chainidx: size_t,
         al: *mut c_int,
         add_arg: *mut c_void,
@@ -171,7 +171,7 @@ pub type SSL_custom_ext_add_cb_ex = Option<
 #[cfg(ossl111)]
 pub type SSL_custom_ext_free_cb_ex = Option<
     unsafe extern "C" fn(
-        ssl: *mut ::SSL,
+        ssl: *mut SSL,
         ext_type: c_uint,
         context: c_uint,
         out: *const c_uchar,
@@ -182,12 +182,12 @@ pub type SSL_custom_ext_free_cb_ex = Option<
 #[cfg(ossl111)]
 pub type SSL_custom_ext_parse_cb_ex = Option<
     unsafe extern "C" fn(
-        ssl: *mut ::SSL,
+        ssl: *mut SSL,
         ext_type: c_uint,
         context: c_uint,
         input: *const c_uchar,
         inlen: size_t,
-        x: *mut ::X509,
+        x: *mut X509,
         chainidx: size_t,
         al: *mut c_int,
         parse_arg: *mut c_void,
@@ -228,18 +228,18 @@ cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {
         extern "C" {
             pub fn SSL_CTX_sess_set_get_cb(
-                ctx: *mut ::SSL_CTX,
+                ctx: *mut SSL_CTX,
                 get_session_cb: Option<
-                    unsafe extern "C" fn(*mut ::SSL, *const c_uchar, c_int, *mut c_int) -> *mut SSL_SESSION,
+                    unsafe extern "C" fn(*mut SSL, *const c_uchar, c_int, *mut c_int) -> *mut SSL_SESSION,
                 >,
             );
         }
     } else {
         extern "C" {
             pub fn SSL_CTX_sess_set_get_cb(
-                ctx: *mut ::SSL_CTX,
+                ctx: *mut SSL_CTX,
                 get_session_cb: Option<
-                    unsafe extern "C" fn(*mut ::SSL, *mut c_uchar, c_int, *mut c_int) -> *mut SSL_SESSION,
+                    unsafe extern "C" fn(*mut SSL, *mut c_uchar, c_int, *mut c_int) -> *mut SSL_SESSION,
                 >,
             );
         }
@@ -391,7 +391,7 @@ extern "C" {
 extern "C" {
     #[cfg(ossl111)]
     pub fn SSL_CTX_add_custom_ext(
-        ctx: *mut ::SSL_CTX,
+        ctx: *mut SSL_CTX,
         ext_type: c_uint,
         context: c_uint,
         add_cb: SSL_custom_ext_add_cb_ex,
@@ -439,8 +439,8 @@ const_ptr_api! {
 cfg_if! {
     if #[cfg(libressl261)] {
         extern "C" {
-            pub fn SSL_CTX_set_min_proto_version(ctx: *mut ::SSL_CTX, version: u16) -> c_int;
-            pub fn SSL_CTX_set_max_proto_version(ctx: *mut ::SSL_CTX, version: u16) -> c_int;
+            pub fn SSL_CTX_set_min_proto_version(ctx: *mut SSL_CTX, version: u16) -> c_int;
+            pub fn SSL_CTX_set_max_proto_version(ctx: *mut SSL_CTX, version: u16) -> c_int;
             pub fn SSL_set_min_proto_version(s: *mut SSL, version: u16) -> c_int;
             pub fn SSL_set_max_proto_version(s: *mut SSL, version: u16) -> c_int;
         }
@@ -450,8 +450,8 @@ cfg_if! {
 cfg_if! {
     if #[cfg(libressl270)] {
         extern "C" {
-            pub fn SSL_CTX_get_min_proto_version(ctx: *mut ::SSL_CTX) -> c_int;
-            pub fn SSL_CTX_get_max_proto_version(ctx: *mut ::SSL_CTX) -> c_int;
+            pub fn SSL_CTX_get_min_proto_version(ctx: *mut SSL_CTX) -> c_int;
+            pub fn SSL_CTX_get_max_proto_version(ctx: *mut SSL_CTX) -> c_int;
             pub fn SSL_get_min_proto_version(s: *mut SSL) -> c_int;
             pub fn SSL_get_max_proto_version(s: *mut SSL) -> c_int;
         }
@@ -477,7 +477,7 @@ const_ptr_api! {
 }
 extern "C" {
     #[cfg(ossl111)]
-    pub fn SSL_CIPHER_get_handshake_digest(cipher: *const ::SSL_CIPHER) -> *const ::EVP_MD;
+    pub fn SSL_CIPHER_get_handshake_digest(cipher: *const SSL_CIPHER) -> *const EVP_MD;
     pub fn SSL_CIPHER_get_name(cipher: *const SSL_CIPHER) -> *const c_char;
     #[cfg(ossl111)]
     pub fn SSL_CIPHER_standard_name(cipher: *const SSL_CIPHER) -> *const c_char;
@@ -491,7 +491,7 @@ extern "C" {
     #[cfg(any(ossl111, libressl340))]
     pub fn SSL_CTX_set_ciphersuites(ctx: *mut SSL_CTX, str: *const c_char) -> c_int;
     #[cfg(any(ossl111, libressl340))]
-    pub fn SSL_set_ciphersuites(ssl: *mut ::SSL, str: *const c_char) -> c_int;
+    pub fn SSL_set_ciphersuites(ssl: *mut SSL, str: *const c_char) -> c_int;
     pub fn SSL_set_cipher_list(ssl: *mut SSL, s: *const c_char) -> c_int;
     pub fn SSL_set_ssl_method(s: *mut SSL, method: *const SSL_METHOD) -> c_int;
     pub fn SSL_set_verify(
@@ -643,7 +643,7 @@ extern "C" {
     pub fn SSL_peek(ssl: *mut SSL, buf: *mut c_void, num: c_int) -> c_int;
     #[cfg(any(ossl111, libressl340))]
     pub fn SSL_read_early_data(
-        s: *mut ::SSL,
+        s: *mut SSL,
         buf: *mut c_void,
         num: size_t,
         readbytes: *mut size_t,
@@ -797,9 +797,9 @@ extern "C" {
     pub fn SSL_CTX_get_ex_new_index(
         argl: c_long,
         argp: *mut c_void,
-        new_func: Option<::CRYPTO_EX_new>,
-        dup_func: Option<::CRYPTO_EX_dup>,
-        free_func: Option<::CRYPTO_EX_free>,
+        new_func: Option<CRYPTO_EX_new>,
+        dup_func: Option<CRYPTO_EX_dup>,
+        free_func: Option<CRYPTO_EX_free>,
     ) -> c_int;
 
     pub fn SSL_CTX_set_ex_data(ctx: *mut SSL_CTX, idx: c_int, data: *mut c_void) -> c_int;
@@ -826,13 +826,9 @@ extern "C" {
     #[cfg(not(ossl110))]
     #[link_name = "SSL_CTX_set_tmp_ecdh_callback"]
     pub fn SSL_CTX_set_tmp_ecdh_callback__fixed_rust(
-        ctx: *mut ::SSL_CTX,
+        ctx: *mut SSL_CTX,
         ecdh: Option<
-            unsafe extern "C" fn(
-                ssl: *mut ::SSL,
-                is_export: c_int,
-                keylength: c_int,
-            ) -> *mut ::EC_KEY,
+            unsafe extern "C" fn(ssl: *mut SSL, is_export: c_int, keylength: c_int) -> *mut EC_KEY,
         >,
     );
     #[cfg(not(ossl110))]

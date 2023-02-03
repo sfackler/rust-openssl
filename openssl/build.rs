@@ -1,4 +1,8 @@
-#![allow(clippy::inconsistent_digit_grouping, clippy::unusual_byte_groupings)]
+#![allow(
+    clippy::inconsistent_digit_grouping,
+    clippy::uninlined_format_args,
+    clippy::unusual_byte_groupings
+)]
 
 use std::env;
 

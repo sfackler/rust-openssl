@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 extern "C" {
     pub fn BN_CTX_new() -> *mut BN_CTX;
@@ -31,7 +31,7 @@ extern "C" {
     pub fn BN_sqr(r: *mut BIGNUM, a: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
     pub fn BN_set_negative(bn: *mut BIGNUM, n: c_int);
     #[cfg(any(ossl110, libressl350))]
-    pub fn BN_is_negative(b: *const ::BIGNUM) -> c_int;
+    pub fn BN_is_negative(b: *const BIGNUM) -> c_int;
 
     pub fn BN_div(
         dv: *mut BIGNUM,

@@ -1,7 +1,5 @@
 use libc::*;
 
-use *;
-
 pub const PKCS7_TEXT: c_int = 0x1;
 pub const PKCS7_NOCERTS: c_int = 0x2;
 pub const PKCS7_NOSIGS: c_int = 0x4;

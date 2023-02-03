@@ -12,6 +12,7 @@ readme = "README.md"
 categories = ["cryptography", "external-ffi-bindings"]
 links = "openssl"
 build = "build/main.rs"
+edition = "2018"
 
 [features]
 vendored = ['openssl-src']

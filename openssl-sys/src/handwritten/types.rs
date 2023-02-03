@@ -1,7 +1,7 @@
 use libc::*;
 
 #[allow(unused_imports)]
-use *;
+use super::super::*;
 
 pub enum ASN1_INTEGER {}
 pub enum ASN1_GENERALIZEDTIME {}
@@ -136,22 +136,22 @@ cfg_if! {
         pub struct DH {
             pub pad: c_int,
             pub version: c_int,
-            pub p: *mut ::BIGNUM,
-            pub g: *mut ::BIGNUM,
+            pub p: *mut BIGNUM,
+            pub g: *mut BIGNUM,
             pub length: c_long,
-            pub pub_key: *mut ::BIGNUM,
-            pub priv_key: *mut ::BIGNUM,
+            pub pub_key: *mut BIGNUM,
+            pub priv_key: *mut BIGNUM,
             pub flags: c_int,
-            pub method_mont_p: *mut ::BN_MONT_CTX,
-            pub q: *mut ::BIGNUM,
-            pub j: *mut ::BIGNUM,
+            pub method_mont_p: *mut BN_MONT_CTX,
+            pub q: *mut BIGNUM,
+            pub j: *mut BIGNUM,
             pub seed: *mut c_uchar,
             pub seedlen: c_int,
-            pub counter: *mut ::BIGNUM,
+            pub counter: *mut BIGNUM,
             pub references: c_int,
-            pub ex_data: ::CRYPTO_EX_DATA,
-            pub meth: *const ::DH_METHOD,
-            pub engine: *mut ::ENGINE,
+            pub ex_data: CRYPTO_EX_DATA,
+            pub meth: *const DH_METHOD,
+            pub engine: *mut ENGINE,
         }
     }
 }
@@ -194,57 +194,57 @@ cfg_if! {
         pub struct RSA {
             pub pad: c_int,
             pub version: c_long,
-            pub meth: *const ::RSA_METHOD,
+            pub meth: *const RSA_METHOD,
 
-            pub engine: *mut ::ENGINE,
-            pub n: *mut ::BIGNUM,
-            pub e: *mut ::BIGNUM,
-            pub d: *mut ::BIGNUM,
-            pub p: *mut ::BIGNUM,
-            pub q: *mut ::BIGNUM,
-            pub dmp1: *mut ::BIGNUM,
-            pub dmq1: *mut ::BIGNUM,
-            pub iqmp: *mut ::BIGNUM,
+            pub engine: *mut ENGINE,
+            pub n: *mut BIGNUM,
+            pub e: *mut BIGNUM,
+            pub d: *mut BIGNUM,
+            pub p: *mut BIGNUM,
+            pub q: *mut BIGNUM,
+            pub dmp1: *mut BIGNUM,
+            pub dmq1: *mut BIGNUM,
+            pub iqmp: *mut BIGNUM,
 
-            pub ex_data: ::CRYPTO_EX_DATA,
+            pub ex_data: CRYPTO_EX_DATA,
             pub references: c_int,
             pub flags: c_int,
 
-            pub _method_mod_n: *mut ::BN_MONT_CTX,
-            pub _method_mod_p: *mut ::BN_MONT_CTX,
-            pub _method_mod_q: *mut ::BN_MONT_CTX,
+            pub _method_mod_n: *mut BN_MONT_CTX,
+            pub _method_mod_p: *mut BN_MONT_CTX,
+            pub _method_mod_q: *mut BN_MONT_CTX,
 
-            pub blinding: *mut ::BN_BLINDING,
-            pub mt_blinding: *mut ::BN_BLINDING,
+            pub blinding: *mut BN_BLINDING,
+            pub mt_blinding: *mut BN_BLINDING,
         }
     } else {
         #[repr(C)]
         pub struct RSA {
             pub pad: c_int,
             pub version: c_long,
-            pub meth: *const ::RSA_METHOD,
+            pub meth: *const RSA_METHOD,
 
-            pub engine: *mut ::ENGINE,
-            pub n: *mut ::BIGNUM,
-            pub e: *mut ::BIGNUM,
-            pub d: *mut ::BIGNUM,
-            pub p: *mut ::BIGNUM,
-            pub q: *mut ::BIGNUM,
-            pub dmp1: *mut ::BIGNUM,
-            pub dmq1: *mut ::BIGNUM,
-            pub iqmp: *mut ::BIGNUM,
+            pub engine: *mut ENGINE,
+            pub n: *mut BIGNUM,
+            pub e: *mut BIGNUM,
+            pub d: *mut BIGNUM,
+            pub p: *mut BIGNUM,
+            pub q: *mut BIGNUM,
+            pub dmp1: *mut BIGNUM,
+            pub dmq1: *mut BIGNUM,
+            pub iqmp: *mut BIGNUM,
 
-            pub ex_data: ::CRYPTO_EX_DATA,
+            pub ex_data: CRYPTO_EX_DATA,
             pub references: c_int,
             pub flags: c_int,
 
-            pub _method_mod_n: *mut ::BN_MONT_CTX,
-            pub _method_mod_p: *mut ::BN_MONT_CTX,
-            pub _method_mod_q: *mut ::BN_MONT_CTX,
+            pub _method_mod_n: *mut BN_MONT_CTX,
+            pub _method_mod_p: *mut BN_MONT_CTX,
+            pub _method_mod_q: *mut BN_MONT_CTX,
 
             pub bignum_data: *mut c_char,
-            pub blinding: *mut ::BN_BLINDING,
-            pub mt_blinding: *mut ::BN_BLINDING,
+            pub blinding: *mut BN_BLINDING,
+            pub mt_blinding: *mut BN_BLINDING,
         }
     }
 }
@@ -259,12 +259,12 @@ cfg_if! {
         #[repr(C)]
         pub struct X509 {
             pub cert_info: *mut X509_CINF,
-            pub sig_alg: *mut ::X509_ALGOR,
-            pub signature: *mut ::ASN1_BIT_STRING,
+            pub sig_alg: *mut X509_ALGOR,
+            pub signature: *mut ASN1_BIT_STRING,
             pub valid: c_int,
             pub references: c_int,
             pub name: *mut c_char,
-            pub ex_data: ::CRYPTO_EX_DATA,
+            pub ex_data: CRYPTO_EX_DATA,
             pub ex_pathlen: c_long,
             pub ex_pcpathlen: c_long,
             pub ex_flags: c_ulong,
@@ -319,7 +319,7 @@ cfg_if! {
     } else {
         #[repr(C)]
         pub struct X509_ALGOR {
-            pub algorithm: *mut ::ASN1_OBJECT,
+            pub algorithm: *mut ASN1_OBJECT,
             parameter: *mut c_void,
         }
     }
@@ -460,10 +460,10 @@ cfg_if! {
         #[repr(C)]
         pub struct SSL {
             version: c_int,
-            method: *const ::SSL_METHOD,
-            rbio: *mut ::BIO,
-            wbio: *mut ::BIO,
-            bbio: *mut ::BIO,
+            method: *const SSL_METHOD,
+            rbio: *mut BIO,
+            wbio: *mut BIO,
+            bbio: *mut BIO,
             pub server: c_int,
             s3: *mut c_void,
             d1: *mut c_void,
@@ -471,20 +471,20 @@ cfg_if! {
             cipher_list: *mut stack_st_SSL_CIPHER,
             cert: *mut c_void,
             sid_ctx_length: c_uint,
-            sid_ctx: [c_uchar; ::SSL_MAX_SID_CTX_LENGTH as usize],
-            session: *mut ::SSL_SESSION,
+            sid_ctx: [c_uchar; SSL_MAX_SID_CTX_LENGTH as usize],
+            session: *mut SSL_SESSION,
             verify_mode: c_int,
             error: c_int,
             error_code: c_int,
-            ctx: *mut ::SSL_CTX,
+            ctx: *mut SSL_CTX,
             verify_result: c_long,
             references: c_int,
             client_version: c_int,
             max_send_fragment: c_uint,
             tlsext_hostname: *mut c_char,
             tlsext_status_type: c_int,
-            initial_ctx: *mut ::SSL_CTX,
-            enc_read_ctx: *mut ::EVP_CIPHER_CTX,
+            initial_ctx: *mut SSL_CTX,
+            enc_read_ctx: *mut EVP_CIPHER_CTX,
             read_hash: *mut EVP_MD_CTX,
             internal: *mut c_void,
         }
@@ -493,7 +493,7 @@ cfg_if! {
         pub struct SSL {
             version: c_int,
             type_: c_int,
-            method: *const ::SSL_METHOD,
+            method: *const SSL_METHOD,
             rbio: *mut c_void,
             wbio: *mut c_void,
             bbio: *mut c_void,
@@ -531,25 +531,25 @@ cfg_if! {
             cipher_list_by_id: *mut stack_st_SSL_CIPHER,
             mac_flags: c_int,
             aead_read_ctx: *mut c_void,
-            enc_read_ctx: *mut ::EVP_CIPHER_CTX,
-            read_hash: *mut ::EVP_MD_CTX,
+            enc_read_ctx: *mut EVP_CIPHER_CTX,
+            read_hash: *mut EVP_MD_CTX,
             aead_write_ctx: *mut c_void,
-            enc_write_ctx: *mut ::EVP_CIPHER_CTX,
-            write_hash: *mut ::EVP_MD_CTX,
+            enc_write_ctx: *mut EVP_CIPHER_CTX,
+            write_hash: *mut EVP_MD_CTX,
             cert: *mut c_void,
             sid_ctx_length: c_uint,
-            sid_ctx: [c_uchar; ::SSL_MAX_SID_CTX_LENGTH as usize],
-            session: *mut ::SSL_SESSION,
-            generate_session_id: ::GEN_SESSION_CB,
+            sid_ctx: [c_uchar; SSL_MAX_SID_CTX_LENGTH as usize],
+            session: *mut SSL_SESSION,
+            generate_session_id: GEN_SESSION_CB,
             verify_mode: c_int,
-            verify_callback: Option<unsafe extern "C" fn(c_int, *mut ::X509_STORE_CTX) -> c_int>,
+            verify_callback: Option<unsafe extern "C" fn(c_int, *mut X509_STORE_CTX) -> c_int>,
             info_callback: Option<unsafe extern "C" fn(*mut SSL, c_int, c_int)>,
             error: c_int,
             error_code: c_int,
-            ctx: *mut ::SSL_CTX,
+            ctx: *mut SSL_CTX,
             debug: c_int,
             verify_result: c_long,
-            ex_data: ::CRYPTO_EX_DATA,
+            ex_data: CRYPTO_EX_DATA,
             client_CA: *mut stack_st_X509_NAME,
             references: c_int,
             options: c_ulong,
@@ -575,11 +575,11 @@ cfg_if! {
             tlsext_ellipticcurvelist_length: size_t,
             tlsext_ellipticcurvelist: *mut c_uchar,
             tlsext_session_ticket: *mut c_void,
-            tlsext_session_ticket_ext_cb: ::tls_session_ticket_ext_cb_fn,
+            tlsext_session_ticket_ext_cb: tls_session_ticket_ext_cb_fn,
             tls_session_ticket_ext_cb_arg: *mut c_void,
-            tls_session_secret_cb: ::tls_session_secret_cb_fn,
+            tls_session_secret_cb: tls_session_secret_cb_fn,
             tls_session_secret_cb_arg: *mut c_void,
-            initial_ctx: *mut ::SSL_CTX,
+            initial_ctx: *mut SSL_CTX,
             next_proto_negotiated: *mut c_uchar,
             next_proto_negotiated_len: c_uchar,
             srtp_profiles: *mut c_void,
@@ -596,7 +596,7 @@ cfg_if! {
         pub struct SSL {
             version: c_int,
             type_: c_int,
-            method: *const ::SSL_METHOD,
+            method: *const SSL_METHOD,
             rbio: *mut c_void,
             wbio: *mut c_void,
             bbio: *mut c_void,
@@ -628,19 +628,19 @@ cfg_if! {
             cipher_list: *mut stack_st_SSL_CIPHER,
             cipher_list_by_id: *mut stack_st_SSL_CIPHER,
             mac_flags: c_int,
-            enc_read_ctx: *mut ::EVP_CIPHER_CTX,
-            read_hash: *mut ::EVP_MD_CTX,
+            enc_read_ctx: *mut EVP_CIPHER_CTX,
+            read_hash: *mut EVP_MD_CTX,
             expand: *mut c_void,
-            enc_write_ctx: *mut ::EVP_CIPHER_CTX,
-            write_hash: *mut ::EVP_MD_CTX,
+            enc_write_ctx: *mut EVP_CIPHER_CTX,
+            write_hash: *mut EVP_MD_CTX,
             compress: *mut c_void,
             cert: *mut c_void,
             sid_ctx_length: c_uint,
-            sid_ctx: [c_uchar; ::SSL_MAX_SID_CTX_LENGTH as usize],
-            session: *mut ::SSL_SESSION,
-            generate_session_id: ::GEN_SESSION_CB,
+            sid_ctx: [c_uchar; SSL_MAX_SID_CTX_LENGTH as usize],
+            session: *mut SSL_SESSION,
+            generate_session_id: GEN_SESSION_CB,
             verify_mode: c_int,
-            verify_callback: Option<unsafe extern "C" fn(c_int, *mut ::X509_STORE_CTX) -> c_int>,
+            verify_callback: Option<unsafe extern "C" fn(c_int, *mut X509_STORE_CTX) -> c_int>,
             info_callback: Option<unsafe extern "C" fn(*mut SSL, c_int, c_int)>,
             error: c_int,
             error_code: c_int,
@@ -654,10 +654,10 @@ cfg_if! {
             #[cfg(not(osslconf = "OPENSSL_NO_PSK"))]
             psk_server_callback:
                 Option<unsafe extern "C" fn(*mut SSL, *const c_char, *mut c_uchar, c_uint) -> c_uint>,
-            ctx: *mut ::SSL_CTX,
+            ctx: *mut SSL_CTX,
             debug: c_int,
             verify_result: c_long,
-            ex_data: ::CRYPTO_EX_DATA,
+            ex_data: CRYPTO_EX_DATA,
             client_CA: *mut stack_st_X509_NAME,
             references: c_int,
             options: c_ulong,
@@ -716,15 +716,15 @@ cfg_if! {
             #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
             tlsext_session_ticket: *mut c_void,
             #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-            tlsext_session_ticket_ext_cb: ::tls_session_ticket_ext_cb_fn,
+            tlsext_session_ticket_ext_cb: tls_session_ticket_ext_cb_fn,
             #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
             tls_session_ticket_ext_cb_arg: *mut c_void,
             #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-            tls_session_secret_cb: ::tls_session_secret_cb_fn,
+            tls_session_secret_cb: tls_session_secret_cb_fn,
             #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
             tls_session_secret_cb_arg: *mut c_void,
             #[cfg(not(osslconf = "OPENSSL_NO_TLSEXT"))]
-            initial_ctx: *mut ::SSL_CTX,
+            initial_ctx: *mut SSL_CTX,
             #[cfg(all(
                 not(osslconf = "OPENSSL_NO_TLSEXT"),
                 not(osslconf = "OPENSSL_NO_NEXTPROTONEG")
@@ -747,7 +747,7 @@ cfg_if! {
             tlsext_hb_seq: c_uint,
             renegotiate: c_int,
             #[cfg(not(osslconf = "OPENSSL_NO_SRP"))]
-            srp_ctx: ::SRP_CTX,
+            srp_ctx: SRP_CTX,
             #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))]
             alpn_client_proto_list: *mut c_uchar,
             #[cfg(all(not(osslconf = "OPENSSL_NO_TLSEXT"), ossl102))]
@@ -761,7 +761,7 @@ cfg_if! {
     } else if #[cfg(libressl251)] {
         #[repr(C)]
         pub struct SSL_CTX {
-            method: *const ::SSL_METHOD,
+            method: *const SSL_METHOD,
             cipher_list: *mut stack_st_SSL_CIPHER,
             cert_store: *mut c_void,
             session_timeout: c_long,
@@ -769,8 +769,8 @@ cfg_if! {
             extra_certs: *mut stack_st_X509,
             verify_mode: c_int,
             sid_ctx_length: c_uint,
-            sid_ctx: [c_uchar; ::SSL_MAX_SID_CTX_LENGTH as usize],
-            param: *mut ::X509_VERIFY_PARAM,
+            sid_ctx: [c_uchar; SSL_MAX_SID_CTX_LENGTH as usize],
+            param: *mut X509_VERIFY_PARAM,
             default_passwd_callback: *mut c_void,
             default_passwd_callback_userdata: *mut c_void,
             internal: *mut c_void,
@@ -800,7 +800,7 @@ cfg_if! {
             client_cert_cb: *mut c_void,
             app_gen_cookie_cb: *mut c_void,
             app_verify_cookie_cb: *mut c_void,
-            ex_dat: ::CRYPTO_EX_DATA,
+            ex_dat: CRYPTO_EX_DATA,
             rsa_md5: *mut c_void,
             md5: *mut c_void,
             sha1: *mut c_void,
@@ -870,7 +870,7 @@ cfg_if! {
             client_cert_cb: *mut c_void,
             app_gen_cookie_cb: *mut c_void,
             app_verify_cookie_cb: *mut c_void,
-            ex_dat: ::CRYPTO_EX_DATA,
+            ex_dat: CRYPTO_EX_DATA,
             rsa_md5: *mut c_void,
             md5: *mut c_void,
             sha1: *mut c_void,
@@ -1058,7 +1058,7 @@ cfg_if! {
     } else if #[cfg(libressl)] {
         #[repr(C)]
         pub struct CRYPTO_EX_DATA {
-            pub sk: *mut ::stack_st_void,
+            pub sk: *mut stack_st_void,
         }
     } else {
         #[repr(C)]

@@ -2,7 +2,7 @@ use libc::*;
 use std::mem;
 use std::ptr;
 
-use *;
+use super::*;
 
 pub const TLS1_VERSION: c_int = 0x301;
 pub const TLS1_1_VERSION: c_int = 0x302;

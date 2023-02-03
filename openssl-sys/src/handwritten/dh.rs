@@ -1,4 +1,4 @@
-use *;
+use super::super::*;
 
 extern "C" {
     pub fn DH_new() -> *mut DH;

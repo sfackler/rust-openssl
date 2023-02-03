@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 extern "C" {
     pub fn SSL_CTX_set_tlsext_use_srtp(ctx: *mut SSL_CTX, profiles: *const c_char) -> c_int;
