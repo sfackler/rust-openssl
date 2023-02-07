@@ -1,0 +1,3 @@
+[submodule "openssl-wasm"]
+	path = openssl-wasm
+	url = https://github.com/jedisct1/openssl-wasm.git
