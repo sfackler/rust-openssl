@@ -5,6 +5,7 @@
 )]
 
 extern crate autocfg;
+
 #[cfg(feature = "bindgen")]
 extern crate bindgen;
 extern crate cc;
@@ -61,6 +62,7 @@ fn find_openssl(target: &str) -> (Vec<PathBuf>, PathBuf) {
             return find_vendored::get_openssl(target);
         }
     }
+
     find_normal::get_openssl(target)
 }
 
@@ -78,6 +80,12 @@ fn main() {
     check_rustc_versions();
 
     check_ssl_kind();
+    
+    let src_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+
+    println!("cargo:rustc-link-lib=static=ssl");
+    println!("cargo:rustc-link-lib=static=crypto");
+    println!("cargo:rustc-link-search=native={}/../precompiled/lib", src_dir);
 
     let target = env::var("TARGET").unwrap();
 

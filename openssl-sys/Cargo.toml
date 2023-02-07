@@ -7,10 +7,9 @@ authors = [
 ]
 license = "MIT"
 description = "FFI bindings to OpenSSL WASM"
-repository = "https://github.com/sfackler/rust-openssl"
+repository = "https://github.com/fastly/rust-openssl-wasm"
 readme = "README.md"
 categories = ["cryptography", "external-ffi-bindings"]
-links = "openssl"
 build = "build/main.rs"
 edition = "2018"
 
