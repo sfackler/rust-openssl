@@ -469,16 +469,18 @@ fn test_verify_cert_with_purpose() {
         .unwrap());
 }
 
+#[test]
 fn ver_ge(a: &'static str, b: &'static str) -> bool {
   a == b || std::iter::zip(a.split("."), b.split(".")).any( |(x, y)| x > y )
 }
 
+#[cfg(any(ossl102, libressl261))]
 fn wrong_purpose_message() -> &'static str {
     let ver: Vec<_> = crate::version::version().split(" ").collect();
     if ver[0] == "OpenSSL" && ver_ge(ver[1], "3.0.8") {
-      "unsuitable certificate purpose"
+        "unsuitable certificate purpose"
     } else {
-      "unsupported certificate purpose"
+        "unsupported certificate purpose"
     }
 }
 
