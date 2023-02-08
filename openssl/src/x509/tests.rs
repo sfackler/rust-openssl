@@ -469,6 +469,19 @@ fn test_verify_cert_with_purpose() {
         .unwrap());
 }
 
+fn ver_ge(a: &'static str, b: &'static str) -> bool {
+  a == b || std::iter::zip(a.split("."), a.split(".")).any( |(x, y)| x > y )
+}
+
+fn wrong_purpose_message() -> &'static str {
+    let ver: Vec<&'static str> = crate::version::version().split(" ").collect()
+    if ver[0] == "OpenSSL" && ver_ge(ver[1], "3.0.8") {
+      "unsuitable certificate purpose"
+    } else {
+      "unsupported certificate purpose"
+    }
+}
+
 #[test]
 #[cfg(any(ossl102, libressl261))]
 fn test_verify_cert_with_wrong_purpose_fails() {
@@ -490,6 +503,7 @@ fn test_verify_cert_with_wrong_purpose_fails() {
 
     let store = store_bldr.build();
 
+    let expected_error = wrong_purpose_message();
     let mut context = X509StoreContext::new().unwrap();
     assert_eq!(
         context
@@ -499,7 +513,7 @@ fn test_verify_cert_with_wrong_purpose_fails() {
             })
             .unwrap()
             .error_string(),
-        "unsupported certificate purpose"
+        expected_error
     )
 }
 
@@ -828,7 +842,7 @@ fn test_set_purpose_fails_verification() {
     store_bldr.set_param(&verify_params).unwrap();
     let store = store_bldr.build();
 
-    let expected_error = "unsupported certificate purpose";
+    let expected_error = wrong_purpose_message();
     let mut context = X509StoreContext::new().unwrap();
     assert_eq!(
         context
