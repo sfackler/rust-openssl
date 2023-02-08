@@ -469,7 +469,7 @@ fn test_verify_cert_with_purpose() {
         .unwrap());
 }
 
-#[test]
+#[cfg(any(ossl102, libressl261))]
 fn ver_ge(a: &'static str, b: &'static str) -> bool {
   a == b || std::iter::zip(a.split("."), b.split(".")).any( |(x, y)| x > y )
 }
