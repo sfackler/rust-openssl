@@ -433,14 +433,14 @@ mod test {
         let priv_cert_bytes = include_bytes!("../test/cms.p12");
         let priv_cert = Pkcs12::from_der(priv_cert_bytes).expect("failed to load priv cert");
         let priv_cert = priv_cert
-            .parse("mypass")
+            .parse2("mypass")
             .expect("failed to parse priv cert");
 
         // sign cms message using public key cert
         let data = b"Hello world!";
         let mut cms = CmsContentInfo::sign(
-            Some(&priv_cert.cert),
-            Some(&priv_cert.pkey),
+            Some(&priv_cert.cert.unwrap()),
+            Some(&priv_cert.pkey.unwrap()),
             None,
             Some(data),
             CMSOptions::empty(),
