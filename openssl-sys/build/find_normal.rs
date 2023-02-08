@@ -31,18 +31,8 @@ pub fn get_openssl(target: &str) -> (Vec<PathBuf>, PathBuf) {
     }
 }
 
-fn resolve_with_wellknown_homebrew_location(dir: &str) -> Option<PathBuf> {
+fn resolve_with_homebrew() -> Option<PathBuf> {
     let versions = ["openssl@3", "openssl@1.1"];
-
-    // Check up default aarch 64 Homebrew installation location first
-    // for quick resolution if possible.
-    //  `pkg-config` on brew doesn't necessarily contain settings for openssl apparently.
-    for version in &versions {
-        let homebrew = Path::new(dir).join(format!("opt/{}", version));
-        if homebrew.exists() {
-            return Some(homebrew);
-        }
-    }
 
     for version in &versions {
         // Calling `brew --prefix <package>` command usually slow and
@@ -73,12 +63,7 @@ fn find_openssl_dir(target: &str) -> OsString {
     let host = env::var("HOST").unwrap();
 
     if host == target && target.ends_with("-apple-darwin") {
-        let homebrew_dir = match target {
-            "aarch64-apple-darwin" => "/opt/homebrew",
-            _ => "/usr/local",
-        };
-
-        if let Some(dir) = resolve_with_wellknown_homebrew_location(homebrew_dir) {
+        if let Some(dir) = resolve_with_homebrew() {
             return dir.into();
         } else if let Some(dir) = resolve_with_wellknown_location("/opt/pkg") {
             // pkgsrc
