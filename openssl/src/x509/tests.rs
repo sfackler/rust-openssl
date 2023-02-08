@@ -474,7 +474,7 @@ fn ver_ge(a: &'static str, b: &'static str) -> bool {
 }
 
 fn wrong_purpose_message() -> &'static str {
-    let ver: Vec<&'static str> = crate::version::version().split(" ").collect();
+    let ver: Vec<_> = crate::version::version().split(" ").collect();
     if ver[0] == "OpenSSL" && ver_ge(ver[1], "3.0.8") {
       "unsuitable certificate purpose"
     } else {
