@@ -31,14 +31,18 @@ pub fn get_openssl(target: &str) -> (Vec<PathBuf>, PathBuf) {
     }
 }
 
+fn brew_prefix(formula: &str) -> Option<_> {
+    let brew = "env HOMEBREW_NO_AUTO_UPDATE=1 brew shellenv";
+    let sed = format!("sed '/HOMEBREW_PREFIX/!d;s/[^\"]*\"//;s!\".*!/opt/{}!'", version);
+    let pipe = format!("{} | {}", brew, sed);
+    execute_command_and_get_output("bash", &["-c", pipe])
+}
+
 fn resolve_with_homebrew() -> Option<PathBuf> {
     let versions = ["openssl@3", "openssl@1.1"];
 
     for version in &versions {
-        // Calling `brew --prefix <package>` command usually slow and
-        // takes seconds, and will be used only as a last resort.
-        let output = execute_command_and_get_output("brew", &["--prefix", version]);
-        if let Some(ref output) = output {
+        if let Some(ref output) = brew_prefix(version) {
             let homebrew = Path::new(&output);
             if homebrew.exists() {
                 return Some(homebrew.to_path_buf());
