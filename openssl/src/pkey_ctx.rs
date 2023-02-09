@@ -71,11 +71,20 @@ use crate::md::MdRef;
 use crate::pkey::{HasPrivate, HasPublic, Id, PKey, PKeyRef, Private};
 use crate::rsa::Padding;
 use crate::{cvt, cvt_n, cvt_p};
+use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::c_int;
 use openssl_macros::corresponds;
 use std::convert::TryFrom;
 use std::ptr;
+
+cfg_if! {
+    if #[cfg(boringssl)] {
+        use ffi::EVP_PKEY_CTX_hkdf_mode as EVP_PKEY_CTX_set_hkdf_mode;
+    } else {
+        use ffi::EVP_PKEY_CTX_set_hkdf_mode;
+    }
+}
 
 /// HKDF modes of operation.
 #[cfg(any(ossl111, boringssl))]
@@ -492,15 +501,8 @@ impl<T> PkeyCtxRef<T> {
     #[inline]
     pub fn set_hkdf_mode(&mut self, mode: HkdfMode) -> Result<(), ErrorStack> {
         unsafe {
-            cfg_if::cfg_if! {
-                if #[cfg(boringssl)] {
-                    cvt(ffi::EVP_PKEY_CTX_hkdf_mode(self.as_ptr(), mode.0))?;
-                } else {
-                    cvt(ffi::EVP_PKEY_CTX_set_hkdf_mode(self.as_ptr(), mode.0))?;
-                }
-            }
+            cvt(EVP_PKEY_CTX_set_hkdf_mode(self.as_ptr(), mode.0))?;
         }
-
         Ok(())
     }
 
