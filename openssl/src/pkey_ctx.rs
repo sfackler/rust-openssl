@@ -568,7 +568,7 @@ impl<T> PkeyCtxRef<T> {
     /// Appends info bytes for HKDF generation.
     ///
     /// If performing HKDF-Extract only, this parameter is ignored.
-    /// 
+    ///
     /// Requires OpenSSL 1.1.0 or newer.
     #[corresponds(EVP_PKEY_CTX_add1_hkdf_info)]
     #[cfg(ossl110)]
