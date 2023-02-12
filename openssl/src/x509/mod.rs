@@ -1421,6 +1421,230 @@ impl X509ReqRef {
     }
 }
 
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::X509_REVOKED;
+    fn drop = ffi::X509_REVOKED_free;
+
+    /// An `X509` certificate request.
+    pub struct X509Revoked;
+    /// Reference to `X509Crl`.
+    pub struct X509RevokedRef;
+}
+
+impl Stackable for X509Revoked {
+    type StackType = ffi::stack_st_X509_REVOKED;
+}
+
+impl X509Revoked {
+    from_der! {
+        /// Deserializes a DER-encoded certificate revocation status
+        #[corresponds(d2i_X509_REVOKED)]
+        from_der,
+        X509Revoked,
+        ffi::d2i_X509_REVOKED
+    }
+}
+
+impl X509RevokedRef {
+    to_der! {
+        /// Serializes the certificate request to a DER-encoded certificate revocation status
+        #[corresponds(d2i_X509_REVOKED)]
+        to_der,
+        ffi::i2d_X509_REVOKED
+    }
+
+    /// Get the date that the certificate was revoked
+    #[corresponds(X509_REVOKED_get0_revocationDate)]
+    pub fn revocation_date(&self) -> &Asn1TimeRef {
+        unsafe {
+            let r = X509_REVOKED_get0_revocationDate(self.as_ptr() as *const _);
+            assert!(!r.is_null());
+            Asn1TimeRef::from_ptr(r as *mut _)
+        }
+    }
+
+    /// Get the serial number of the revoked certificate
+    #[corresponds(X509_REVOKED_get0_serialNumber)]
+    pub fn serial_number(&self) -> &Asn1IntegerRef {
+        unsafe {
+            let r = X509_REVOKED_get0_serialNumber(self.as_ptr() as *const _);
+            assert!(!r.is_null());
+            Asn1IntegerRef::from_ptr(r as *mut _)
+        }
+    }
+}
+
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::X509_CRL;
+    fn drop = ffi::X509_CRL_free;
+
+    /// An `X509` certificate request.
+    pub struct X509Crl;
+    /// Reference to `X509Crl`.
+    pub struct X509CrlRef;
+}
+
+/// The status of a certificate in a revoction list
+///
+/// Corresponds to the return value from the [`X509_CRL_get0_by_*`] methods.
+///
+/// [`X509_CRL_get0_by_*`]: https://www.openssl.org/docs/man1.1.0/man3/X509_CRL_get0_by_serial.html
+pub enum CrlStatus<'a> {
+    /// The certificate is not present in the list
+    NotRevoked,
+    /// The certificate is in the list and is revoked
+    Revoked(&'a X509RevokedRef),
+    /// The certificate is in the list, but has the "removeFromCrl" status.
+    ///
+    /// This can occur if the certificate was revoked with the "CertificateHold"
+    /// reason, and has since been unrevoked.
+    RemoveFromCrl(&'a X509RevokedRef),
+}
+
+impl<'a> CrlStatus<'a> {
+    // Helper used by the X509_CRL_get0_by_* methods to convert their return
+    // value to the status enum.
+    // Safety note: the returned CrlStatus must not outlive the owner of the
+    // revoked_entry pointer.
+    unsafe fn from_ffi_status(
+        status: c_int,
+        revoked_entry: *mut ffi::X509_REVOKED,
+    ) -> CrlStatus<'a> {
+        match status {
+            0 => CrlStatus::NotRevoked,
+            1 => {
+                assert!(!revoked_entry.is_null());
+                CrlStatus::Revoked(X509RevokedRef::from_ptr(revoked_entry))
+            }
+            2 => {
+                assert!(!revoked_entry.is_null());
+                CrlStatus::RemoveFromCrl(X509RevokedRef::from_ptr(revoked_entry))
+            }
+            _ => unreachable!(
+                "{}",
+                "X509_CRL_get0_by_{{serial,cert}} should only return 0, 1, or 2."
+            ),
+        }
+    }
+}
+
+impl X509Crl {
+    from_pem! {
+        /// Deserializes a PEM-encoded Certificate Revocation List
+        ///
+        /// The input should have a header of `-----BEGIN X509 CRL-----`.
+        #[corresponds(PEM_read_bio_X509_CRL)]
+        from_pem,
+        X509Crl,
+        ffi::PEM_read_bio_X509_CRL
+    }
+
+    from_der! {
+        /// Deserializes a DER-encoded Certificate Revocation List
+        #[corresponds(d2i_X509_CRL)]
+        from_der,
+        X509Crl,
+        ffi::d2i_X509_CRL
+    }
+}
+
+impl X509CrlRef {
+    to_pem! {
+        /// Serializes the certificate request to a PEM-encoded Certificate Revocation List.
+        ///
+        /// The output will have a header of `-----BEGIN X509 CRL-----`.
+        #[corresponds(PEM_write_bio_X509_CRL)]
+        to_pem,
+        ffi::PEM_write_bio_X509_CRL
+    }
+
+    to_der! {
+        /// Serializes the certificate request to a DER-encoded Certificate Revocation List.
+        #[corresponds(i2d_X509_CRL)]
+        to_der,
+        ffi::i2d_X509_CRL
+    }
+
+    /// Get the stack of revocation entries
+    pub fn get_revoked(&self) -> Option<&StackRef<X509Revoked>> {
+        unsafe {
+            let revoked = X509_CRL_get_REVOKED(self.as_ptr());
+            if revoked.is_null() {
+                None
+            } else {
+                Some(StackRef::from_ptr(revoked))
+            }
+        }
+    }
+
+    /// Returns the CRL's `lastUpdate` time.
+    #[corresponds(X509_CRL_get0_lastUpdate)]
+    pub fn last_update(&self) -> &Asn1TimeRef {
+        unsafe {
+            let date = X509_CRL_get0_lastUpdate(self.as_ptr());
+            assert!(!date.is_null());
+            Asn1TimeRef::from_ptr(date as *mut _)
+        }
+    }
+
+    /// Returns the CRL's `nextUpdate` time.
+    ///
+    /// If the `nextUpdate` field is missing, returns `None`.
+    #[corresponds(X509_CRL_get0_nextUpdate)]
+    pub fn next_update(&self) -> Option<&Asn1TimeRef> {
+        unsafe {
+            let date = X509_CRL_get0_nextUpdate(self.as_ptr());
+            Asn1TimeRef::from_const_ptr_opt(date)
+        }
+    }
+
+    /// Get the revocation status of a certificate by its serial number
+    #[corresponds(X509_CRL_get0_by_serial)]
+    pub fn get_by_serial<'a>(&'a self, serial: &Asn1IntegerRef) -> CrlStatus<'a> {
+        unsafe {
+            let mut ret = ptr::null_mut::<ffi::X509_REVOKED>();
+            let status =
+                ffi::X509_CRL_get0_by_serial(self.as_ptr(), &mut ret as *mut _, serial.as_ptr());
+            CrlStatus::from_ffi_status(status, ret)
+        }
+    }
+
+    /// Get the revocation status of a certificate
+    #[corresponds(X509_CRL_get0_by_cert)]
+    pub fn get_by_cert<'a>(&'a self, cert: &X509) -> CrlStatus<'a> {
+        unsafe {
+            let mut ret = ptr::null_mut::<ffi::X509_REVOKED>();
+            let status =
+                ffi::X509_CRL_get0_by_cert(self.as_ptr(), &mut ret as *mut _, cert.as_ptr());
+            CrlStatus::from_ffi_status(status, ret)
+        }
+    }
+
+    /// Get the issuer name from the revocation list.
+    #[corresponds(X509_CRL_get_issuer)]
+    pub fn issuer_name(&self) -> &X509NameRef {
+        unsafe {
+            let name = X509_CRL_get_issuer(self.as_ptr());
+            assert!(!name.is_null());
+            X509NameRef::from_ptr(name)
+        }
+    }
+
+    /// Check if the CRL is signed using the given public key.
+    ///
+    /// Only the signature is checked: no other checks (such as certificate chain validity)
+    /// are performed.
+    ///
+    /// Returns `true` if verification succeeds.
+    #[corresponds(X509_CRL_verify)]
+    pub fn verify<T>(&self, key: &PKeyRef<T>) -> Result<bool, ErrorStack>
+    where
+        T: HasPublic,
+    {
+        unsafe { cvt_n(ffi::X509_CRL_verify(self.as_ptr(), key.as_ptr())).map(|n| n != 0) }
+    }
+}
+
 /// The result of peer certificate verification.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct X509VerifyResult(c_int);
@@ -1750,6 +1974,41 @@ cfg_if! {
         unsafe fn X509_OBJECT_free(x: *mut ffi::X509_OBJECT) {
             ffi::X509_OBJECT_free_contents(x);
             ffi::CRYPTO_free(x as *mut libc::c_void);
+        }
+    }
+}
+
+cfg_if! {
+    if #[cfg(any(ossl110, libressl350, boringssl))] {
+        use ffi::{
+            X509_CRL_get_issuer, X509_CRL_get0_nextUpdate, X509_CRL_get0_lastUpdate,
+            X509_CRL_get_REVOKED,
+            X509_REVOKED_get0_revocationDate, X509_REVOKED_get0_serialNumber,
+        };
+    } else {
+        #[allow(bad_style)]
+        unsafe fn X509_CRL_get0_lastUpdate(x: *const ffi::X509_CRL) -> *mut ffi::ASN1_TIME {
+            (*(*x).crl).lastUpdate
+        }
+        #[allow(bad_style)]
+        unsafe fn X509_CRL_get0_nextUpdate(x: *const ffi::X509_CRL) -> *mut ffi::ASN1_TIME {
+            (*(*x).crl).nextUpdate
+        }
+        #[allow(bad_style)]
+        unsafe fn X509_CRL_get_issuer(x: *const ffi::X509_CRL) -> *mut ffi::X509_NAME {
+            (*(*x).crl).issuer
+        }
+        #[allow(bad_style)]
+        unsafe fn X509_CRL_get_REVOKED(x: *const ffi::X509_CRL) -> *mut ffi::stack_st_X509_REVOKED {
+            (*(*x).crl).revoked
+        }
+        #[allow(bad_style)]
+        unsafe fn X509_REVOKED_get0_serialNumber(x: *const ffi::X509_REVOKED) -> *mut ffi::ASN1_INTEGER {
+            (*x).serialNumber
+        }
+        #[allow(bad_style)]
+        unsafe fn X509_REVOKED_get0_revocationDate(x: *const ffi::X509_REVOKED) -> *mut ffi::ASN1_TIME {
+            (*x).revocationDate
         }
     }
 }
