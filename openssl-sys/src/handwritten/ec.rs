@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 #[repr(C)]
 #[derive(Copy, Clone)]

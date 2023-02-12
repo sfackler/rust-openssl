@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 extern "C" {
     pub fn BIO_set_flags(b: *mut BIO, flags: c_int);
@@ -17,14 +17,14 @@ cfg_if! {
         pub struct BIO_METHOD {
             pub type_: c_int,
             pub name: *const c_char,
-            pub bwrite: Option<unsafe extern "C" fn(*mut ::BIO, *const c_char, c_int) -> c_int>,
-            pub bread: Option<unsafe extern "C" fn(*mut ::BIO, *mut c_char, c_int) -> c_int>,
-            pub bputs: Option<unsafe extern "C" fn(*mut ::BIO, *const c_char) -> c_int>,
-            pub bgets: Option<unsafe extern "C" fn(*mut ::BIO, *mut c_char, c_int) -> c_int>,
-            pub ctrl: Option<unsafe extern "C" fn(*mut ::BIO, c_int, c_long, *mut c_void) -> c_long>,
-            pub create: Option<unsafe extern "C" fn(*mut ::BIO) -> c_int>,
-            pub destroy: Option<unsafe extern "C" fn(*mut ::BIO) -> c_int>,
-            pub callback_ctrl: Option<unsafe extern "C" fn(*mut ::BIO, c_int, ::bio_info_cb) -> c_long>,
+            pub bwrite: Option<unsafe extern "C" fn(*mut BIO, *const c_char, c_int) -> c_int>,
+            pub bread: Option<unsafe extern "C" fn(*mut BIO, *mut c_char, c_int) -> c_int>,
+            pub bputs: Option<unsafe extern "C" fn(*mut BIO, *const c_char) -> c_int>,
+            pub bgets: Option<unsafe extern "C" fn(*mut BIO, *mut c_char, c_int) -> c_int>,
+            pub ctrl: Option<unsafe extern "C" fn(*mut BIO, c_int, c_long, *mut c_void) -> c_long>,
+            pub create: Option<unsafe extern "C" fn(*mut BIO) -> c_int>,
+            pub destroy: Option<unsafe extern "C" fn(*mut BIO) -> c_int>,
+            pub callback_ctrl: Option<unsafe extern "C" fn(*mut BIO, c_int, bio_info_cb) -> c_long>,
         }
     }
 }
@@ -39,11 +39,11 @@ extern "C" {
     #[cfg(not(osslconf = "OPENSSL_NO_STDIO"))]
     pub fn BIO_new_fp(stream: *mut FILE, close_flag: c_int) -> *mut BIO;
     #[cfg(any(ossl110, libressl273))]
-    pub fn BIO_set_data(a: *mut ::BIO, data: *mut c_void);
+    pub fn BIO_set_data(a: *mut BIO, data: *mut c_void);
     #[cfg(any(ossl110, libressl273))]
-    pub fn BIO_get_data(a: *mut ::BIO) -> *mut c_void;
+    pub fn BIO_get_data(a: *mut BIO) -> *mut c_void;
     #[cfg(any(ossl110, libressl273))]
-    pub fn BIO_set_init(a: *mut ::BIO, init: c_int);
+    pub fn BIO_set_init(a: *mut BIO, init: c_int);
     pub fn BIO_write(b: *mut BIO, buf: *const c_void, len: c_int) -> c_int;
     pub fn BIO_read(b: *mut BIO, buf: *mut c_void, len: c_int) -> c_int;
     pub fn BIO_ctrl(b: *mut BIO, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;

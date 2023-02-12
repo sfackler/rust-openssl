@@ -1,7 +1,5 @@
 use libc::*;
 
-use *;
-
 pub const SRTP_AES128_CM_SHA1_80: c_ulong = 0x0001;
 pub const SRTP_AES128_CM_SHA1_32: c_ulong = 0x0002;
 pub const SRTP_AES128_F8_SHA1_80: c_ulong = 0x0003;

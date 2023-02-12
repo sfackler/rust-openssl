@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 pub enum PKCS7_SIGNED {}
 pub enum PKCS7_ENVELOPE {}

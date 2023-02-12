@@ -1,7 +1,5 @@
 use libc::*;
 
-use *;
-
 pub const X509_FILETYPE_PEM: c_int = 1;
 pub const X509_FILETYPE_ASN1: c_int = 2;
 pub const X509_FILETYPE_DEFAULT: c_int = 3;

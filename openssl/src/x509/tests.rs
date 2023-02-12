@@ -16,12 +16,14 @@ use crate::x509::extension::{
 #[cfg(not(boringssl))]
 use crate::x509::store::X509Lookup;
 use crate::x509::store::X509StoreBuilder;
-#[cfg(ossl102)]
-use crate::x509::verify::X509PurposeFlags;
 #[cfg(any(ossl102, libressl261))]
 use crate::x509::verify::{X509VerifyFlags, X509VerifyParam};
 #[cfg(ossl110)]
 use crate::x509::X509Builder;
+#[cfg(ossl102)]
+use crate::x509::X509PurposeId;
+#[cfg(any(ossl102, libressl261))]
+use crate::x509::X509PurposeRef;
 use crate::x509::{
     CrlStatus, X509Crl, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509,
 };
@@ -442,6 +444,68 @@ fn test_verify_fails_with_crl_flag_set_and_no_crl() {
     )
 }
 
+#[test]
+#[cfg(any(ossl102, libressl261))]
+fn test_verify_cert_with_purpose() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+    let chain = Stack::new().unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    let purpose_idx = X509PurposeRef::get_by_sname("sslserver")
+        .expect("Getting certificate purpose 'sslserver' failed");
+    let x509_purposeref =
+        X509PurposeRef::from_idx(purpose_idx).expect("Getting certificate purpose failed");
+    store_bldr
+        .set_purpose(x509_purposeref.purpose())
+        .expect("Setting certificate purpose failed");
+    store_bldr.add_cert(ca).unwrap();
+
+    let store = store_bldr.build();
+
+    let mut context = X509StoreContext::new().unwrap();
+    assert!(context
+        .init(&store, &cert, &chain, |c| c.verify_cert())
+        .unwrap());
+}
+
+#[test]
+#[cfg(any(ossl102, libressl261))]
+fn test_verify_cert_with_wrong_purpose_fails() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let ca = include_bytes!("../../test/root-ca.pem");
+    let ca = X509::from_pem(ca).unwrap();
+    let chain = Stack::new().unwrap();
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    let purpose_idx = X509PurposeRef::get_by_sname("timestampsign")
+        .expect("Getting certificate purpose 'timestampsign' failed");
+    let x509_purpose =
+        X509PurposeRef::from_idx(purpose_idx).expect("Getting certificate purpose failed");
+    store_bldr
+        .set_purpose(x509_purpose.purpose())
+        .expect("Setting certificate purpose failed");
+    store_bldr.add_cert(ca).unwrap();
+
+    let store = store_bldr.build();
+
+    let expected_error = ffi::X509_V_ERR_INVALID_PURPOSE;
+    let mut context = X509StoreContext::new().unwrap();
+    assert_eq!(
+        context
+            .init(&store, &cert, &chain, |c| {
+                c.verify_cert()?;
+                Ok(c.error())
+            })
+            .unwrap()
+            .as_raw(),
+        expected_error
+    )
+}
+
 #[cfg(ossl110)]
 #[test]
 fn x509_ref_version() {
@@ -576,6 +640,16 @@ fn test_name_cmp() {
     let issuer = cert.issuer_name();
     assert_eq!(Ordering::Equal, subject.try_cmp(subject).unwrap());
     assert_eq!(Ordering::Greater, subject.try_cmp(issuer).unwrap());
+}
+
+#[test]
+#[cfg(any(boringssl, ossl110, libressl270))]
+fn test_name_to_owned() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let name = cert.subject_name();
+    let copied_name = name.to_owned().unwrap();
+    assert_eq!(Ordering::Equal, name.try_cmp(&copied_name).unwrap());
 }
 
 #[test]
@@ -750,7 +824,7 @@ fn test_set_purpose() {
     let mut store_bldr = X509StoreBuilder::new().unwrap();
     store_bldr.add_cert(ca).unwrap();
     let mut verify_params = X509VerifyParam::new().unwrap();
-    verify_params.set_purpose(X509PurposeFlags::ANY).unwrap();
+    verify_params.set_purpose(X509PurposeId::ANY).unwrap();
     store_bldr.set_param(&verify_params).unwrap();
     let store = store_bldr.build();
     let mut context = X509StoreContext::new().unwrap();
@@ -776,12 +850,12 @@ fn test_set_purpose_fails_verification() {
     store_bldr.add_cert(ca).unwrap();
     let mut verify_params = X509VerifyParam::new().unwrap();
     verify_params
-        .set_purpose(X509PurposeFlags::TIMESTAMP_SIGN)
+        .set_purpose(X509PurposeId::TIMESTAMP_SIGN)
         .unwrap();
     store_bldr.set_param(&verify_params).unwrap();
     let store = store_bldr.build();
 
-    let expected_error = "unsupported certificate purpose";
+    let expected_error = ffi::X509_V_ERR_INVALID_PURPOSE;
     let mut context = X509StoreContext::new().unwrap();
     assert_eq!(
         context
@@ -790,7 +864,7 @@ fn test_set_purpose_fails_verification() {
                 Ok(c.error())
             })
             .unwrap()
-            .error_string(),
+            .as_raw(),
         expected_error
     )
 }
@@ -820,4 +894,41 @@ fn test_load_crl_file_fail() {
     let lookup = store_bldr.add_lookup(X509Lookup::file()).unwrap();
     let res = lookup.load_crl_file("test/root-ca.pem", SslFiletype::PEM);
     assert!(res.is_err());
+}
+
+#[cfg(ossl110)]
+fn ipaddress_as_subject_alternative_name_is_formatted_in_debug<T>(expected_ip: T)
+where
+    T: Into<std::net::IpAddr>,
+{
+    let expected_ip = format!("{:?}", expected_ip.into());
+    let mut builder = X509Builder::new().unwrap();
+    let san = SubjectAlternativeName::new()
+        .ip(&expected_ip)
+        .build(&builder.x509v3_context(None, None))
+        .unwrap();
+    builder.append_extension(san).unwrap();
+    let cert = builder.build();
+    let actual_ip = cert
+        .subject_alt_names()
+        .into_iter()
+        .flatten()
+        .map(|n| format!("{:?}", *n))
+        .next()
+        .unwrap();
+    assert_eq!(actual_ip, expected_ip);
+}
+
+#[cfg(ossl110)]
+#[test]
+fn ipv4_as_subject_alternative_name_is_formatted_in_debug() {
+    ipaddress_as_subject_alternative_name_is_formatted_in_debug([8u8, 8, 8, 128]);
+}
+
+#[cfg(ossl110)]
+#[test]
+fn ipv6_as_subject_alternative_name_is_formatted_in_debug() {
+    ipaddress_as_subject_alternative_name_is_formatted_in_debug([
+        8u8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 128,
+    ]);
 }

@@ -1,4 +1,3 @@
-use pkg_config;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
@@ -211,7 +210,7 @@ fn try_pkg_config() {
 
     let lib = match pkg_config::Config::new()
         .print_system_libs(false)
-        .find("openssl")
+        .probe("openssl")
     {
         Ok(lib) => lib,
         Err(e) => {

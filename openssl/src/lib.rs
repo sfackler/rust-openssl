@@ -29,7 +29,7 @@
 //!
 //! ```not_rust
 //! # macOS (Homebrew)
-//! $ brew install openssl@1.1
+//! $ brew install openssl@3
 //!
 //! # macOS (MacPorts)
 //! $ sudo port install openssl
@@ -119,6 +119,7 @@
 //! ```
 #![doc(html_root_url = "https://docs.rs/openssl/0.10")]
 #![warn(rust_2018_idioms)]
+#![allow(clippy::uninlined_format_args)]
 
 #[doc(inline)]
 pub use ffi::init;

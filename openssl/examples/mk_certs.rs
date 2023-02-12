@@ -1,3 +1,5 @@
+#![allow(clippy::uninlined_format_args)]
+
 //! A program that generates ca certs, certs verified by the ca, and public
 //! and private keys.
 

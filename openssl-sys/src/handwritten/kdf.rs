@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 cfg_if! {
     if #[cfg(ossl300)] {
