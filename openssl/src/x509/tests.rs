@@ -490,6 +490,7 @@ fn test_verify_cert_with_wrong_purpose_fails() {
 
     let store = store_bldr.build();
 
+    let expected_error = ffi::X509_V_ERR_INVALID_PURPOSE;
     let mut context = X509StoreContext::new().unwrap();
     assert_eq!(
         context
@@ -498,8 +499,8 @@ fn test_verify_cert_with_wrong_purpose_fails() {
                 Ok(c.error())
             })
             .unwrap()
-            .error_string(),
-        "unsupported certificate purpose"
+            .as_raw(),
+        expected_error
     )
 }
 
@@ -828,7 +829,7 @@ fn test_set_purpose_fails_verification() {
     store_bldr.set_param(&verify_params).unwrap();
     let store = store_bldr.build();
 
-    let expected_error = "unsupported certificate purpose";
+    let expected_error = ffi::X509_V_ERR_INVALID_PURPOSE;
     let mut context = X509StoreContext::new().unwrap();
     assert_eq!(
         context
@@ -837,7 +838,7 @@ fn test_set_purpose_fails_verification() {
                 Ok(c.error())
             })
             .unwrap()
-            .error_string(),
+            .as_raw(),
         expected_error
     )
 }
