@@ -411,7 +411,7 @@ mod test {
 
         // check verification result -  valid signature
         res.unwrap();
-        assert_eq!(data.len(), out_data.len());
+        assert_eq!(data.to_vec(), out_data);
     }
 
     #[test]
