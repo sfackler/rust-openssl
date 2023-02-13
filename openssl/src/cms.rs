@@ -240,24 +240,24 @@ impl CmsContentInfo {
         &mut self,
         certs: Option<&StackRef<X509>>,
         store: &X509StoreRef,
-        indata: Option<&[u8]>,
+        detached_data: Option<&[u8]>,
         output_data: Option<&mut Vec<u8>>,
         flags: CMSOptions,
     ) -> Result<(), ErrorStack> {
         unsafe {
             let certs_ptr = certs.map_or(ptr::null_mut(), |p| p.as_ptr());
-            let indata_bio = match indata {
+            let detached_data_bio = match detached_data {
                 Some(data) => Some(MemBioSlice::new(data)?),
                 None => None,
             };
-            let indata_bio_ptr = indata_bio.as_ref().map_or(ptr::null_mut(), |p| p.as_ptr());
+            let detached_data_bio_ptr = detached_data_bio.as_ref().map_or(ptr::null_mut(), |p| p.as_ptr());
             let out_bio = MemBio::new()?;
 
             cvt(ffi::CMS_verify(
                 self.as_ptr(),
                 certs_ptr,
                 store.as_ptr(),
-                indata_bio_ptr,
+                detached_data_bio_ptr,
                 out_bio.as_ptr(),
                 flags.bits(),
             ))?;
