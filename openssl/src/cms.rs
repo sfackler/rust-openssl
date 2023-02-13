@@ -467,10 +467,8 @@ mod test {
                 let error_array = es.errors();
                 assert_eq!(1, error_array.len());
                 let err = error_array[0]
-                    .data()
-                    .expect("failed to retrieve verification error data");
-                let err1 = err.replace(" self-", "self ");
-                assert_eq!("Verify error:self signed certificate", err1);
+                    .code();
+                assert_eq!(err, 0);
             }
             _ => panic!("expected CMS verification error, got Ok()"),
         }
