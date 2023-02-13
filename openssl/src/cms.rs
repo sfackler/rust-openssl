@@ -239,13 +239,14 @@ impl CmsContentInfo {
     pub fn verify(
         &mut self,
         certs: Option<&StackRef<X509>>,
-        store: &X509StoreRef,
+        store: Option<&X509StoreRef>,
         detached_data: Option<&[u8]>,
         output_data: Option<&mut Vec<u8>>,
         flags: CMSOptions,
     ) -> Result<(), ErrorStack> {
         unsafe {
             let certs_ptr = certs.map_or(ptr::null_mut(), |p| p.as_ptr());
+            let store_ptr = store.map_or(ptr::null_mut(), |p| p.as_ptr());
             let detached_data_bio = match detached_data {
                 Some(data) => Some(MemBioSlice::new(data)?),
                 None => None,
@@ -256,7 +257,7 @@ impl CmsContentInfo {
             cvt(ffi::CMS_verify(
                 self.as_ptr(),
                 certs_ptr,
-                store.as_ptr(),
+                store_ptr,
                 detached_data_bio_ptr,
                 out_bio.as_ptr(),
                 flags.bits(),
@@ -403,7 +404,7 @@ mod test {
         let mut out_data: Vec<u8> = Vec::new();
         let res = cms.verify(
             None,
-            &store,
+            Some(&store),
             ext_data,
             Some(&mut out_data),
             CMSOptions::empty(),
@@ -458,7 +459,7 @@ mod test {
             .build();
 
         // verify CMS signature
-        let res = cms.verify(None, &empty_store, Some(data), None, CMSOptions::empty());
+        let res = cms.verify(None, Some(&empty_store), Some(data), None, CMSOptions::empty());
 
         // check verification result - this is an invalid signature
         match res {
