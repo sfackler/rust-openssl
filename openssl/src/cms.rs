@@ -228,14 +228,14 @@ impl CmsContentInfo {
         }
     }
 
-    /// Verify this CmsContentInfo's signature, given a stack of certificates
-    /// in certs, an X509 store in store. If the signature is detached, the
-    /// data can be passed in data. The data sans signature will be copied
-    /// into output_data if it is present.
+    /// Verify this CmsContentInfo's signature,
+    /// This will search the 'certs' list for the signing certificate.      
+    /// Additional certificates, needed for building the certificate chain, may be
+    /// given in 'store' as well as additional CRLs.
+    /// A detached signature may be passed in `detached_data`. The signed content 
+    /// without signature, will be copied into output_data if it is present.
     ///
-    /// OpenSSL documentation at [`CMS_verify`]
-    ///
-    /// [`CMS_verify`]: https://www.openssl.org/docs/manmaster/man3/CMS_verify.html
+    #[corresponds(CMS_verify)]
     pub fn verify(
         &mut self,
         certs: Option<&StackRef<X509>>,
