@@ -263,8 +263,9 @@ impl CmsContentInfo {
                 flags.bits(),
             ))?;
 
-            if let Some(out_data) = output_data {
-                *out_data = out_bio.get_buf().to_vec();
+            if let Some(data) = output_data {
+                data.clear();
+                data.extend_from_slice(out_bio.get_buf());
             };
 
             Ok(())
