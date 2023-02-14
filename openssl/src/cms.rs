@@ -232,7 +232,7 @@ impl CmsContentInfo {
     /// This will search the 'certs' list for the signing certificate.      
     /// Additional certificates, needed for building the certificate chain, may be
     /// given in 'store' as well as additional CRLs.
-    /// A detached signature may be passed in `detached_data`. The signed content 
+    /// A detached signature may be passed in `detached_data`. The signed content
     /// without signature, will be copied into output_data if it is present.
     ///
     #[corresponds(CMS_verify)]
@@ -251,7 +251,9 @@ impl CmsContentInfo {
                 Some(data) => Some(MemBioSlice::new(data)?),
                 None => None,
             };
-            let detached_data_bio_ptr = detached_data_bio.as_ref().map_or(ptr::null_mut(), |p| p.as_ptr());
+            let detached_data_bio_ptr = detached_data_bio
+                .as_ref()
+                .map_or(ptr::null_mut(), |p| p.as_ptr());
             let out_bio = MemBio::new()?;
 
             cvt(ffi::CMS_verify(
@@ -460,7 +462,13 @@ mod test {
             .build();
 
         // verify CMS signature
-        let res = cms.verify(None, Some(&empty_store), Some(data), None, CMSOptions::empty());
+        let res = cms.verify(
+            None,
+            Some(&empty_store),
+            Some(data),
+            None,
+            CMSOptions::empty(),
+        );
 
         // check verification result - this is an invalid signature
         // defined in openssl crypto/cms/cms.h
