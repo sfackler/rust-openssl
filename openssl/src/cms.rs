@@ -462,13 +462,14 @@ mod test {
         let res = cms.verify(None, Some(&empty_store), Some(data), None, CMSOptions::empty());
 
         // check verification result - this is an invalid signature
+        // defined in openssl crypto/cms/cms.h
+        const CMS_R_CERTIFICATE_VERIFY_ERROR: i32 = 100;
         match res {
             Err(es) => {
                 let error_array = es.errors();
                 assert_eq!(1, error_array.len());
-                let err = error_array[0]
-                    .code();
-                assert_eq!(err, 0);
+                let code = error_array[0].code();
+                assert_eq!(ffi::ERR_GET_REASON(code), CMS_R_CERTIFICATE_VERIFY_ERROR);
             }
             _ => panic!("expected CMS verification error, got Ok()"),
         }
