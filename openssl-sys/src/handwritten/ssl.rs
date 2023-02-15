@@ -897,3 +897,17 @@ extern "C" {
     #[cfg(ossl110)]
     pub fn OPENSSL_init_ssl(opts: u64, settings: *const OPENSSL_INIT_SETTINGS) -> c_int;
 }
+
+extern "C" {
+    #[cfg(ossl111)]
+    pub fn SSL_CTX_set_num_tickets(ctx: *mut SSL_CTX, num_tickets: size_t) -> c_int;
+
+    #[cfg(ossl111)]
+    pub fn SSL_set_num_tickets(s: *mut SSL, num_tickets: size_t) -> c_int;
+
+    #[cfg(ossl111)]
+    pub fn SSL_CTX_get_num_tickets(ctx: *const SSL_CTX) -> size_t;
+
+    #[cfg(ossl111)]
+    pub fn SSL_get_num_tickets(s: *const SSL) -> size_t;
+}
