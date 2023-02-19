@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+* Added `CMS_verify`.
+
 ## [v0.10.45] - 2022-12-20
 
 ### Fixed

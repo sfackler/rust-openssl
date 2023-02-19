@@ -15,7 +15,7 @@ use crate::error::ErrorStack;
 use crate::pkey::{HasPrivate, PKeyRef};
 use crate::stack::StackRef;
 use crate::symm::Cipher;
-use crate::x509::{X509Ref, X509};
+use crate::x509::{store::X509StoreRef, X509Ref, X509};
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
 
@@ -227,14 +227,65 @@ impl CmsContentInfo {
             Ok(CmsContentInfo::from_ptr(cms))
         }
     }
+
+    /// Verify this CmsContentInfo's signature,
+    /// This will search the 'certs' list for the signing certificate.      
+    /// Additional certificates, needed for building the certificate chain, may be
+    /// given in 'store' as well as additional CRLs.
+    /// A detached signature may be passed in `detached_data`. The signed content
+    /// without signature, will be copied into output_data if it is present.
+    ///
+    #[corresponds(CMS_verify)]
+    pub fn verify(
+        &mut self,
+        certs: Option<&StackRef<X509>>,
+        store: Option<&X509StoreRef>,
+        detached_data: Option<&[u8]>,
+        output_data: Option<&mut Vec<u8>>,
+        flags: CMSOptions,
+    ) -> Result<(), ErrorStack> {
+        unsafe {
+            let certs_ptr = certs.map_or(ptr::null_mut(), |p| p.as_ptr());
+            let store_ptr = store.map_or(ptr::null_mut(), |p| p.as_ptr());
+            let detached_data_bio = match detached_data {
+                Some(data) => Some(MemBioSlice::new(data)?),
+                None => None,
+            };
+            let detached_data_bio_ptr = detached_data_bio
+                .as_ref()
+                .map_or(ptr::null_mut(), |p| p.as_ptr());
+            let out_bio = MemBio::new()?;
+
+            cvt(ffi::CMS_verify(
+                self.as_ptr(),
+                certs_ptr,
+                store_ptr,
+                detached_data_bio_ptr,
+                out_bio.as_ptr(),
+                flags.bits(),
+            ))?;
+
+            if let Some(data) = output_data {
+                data.clear();
+                data.extend_from_slice(out_bio.get_buf());
+            };
+
+            Ok(())
+        }
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
     use crate::pkcs12::Pkcs12;
+    use crate::pkey::PKey;
     use crate::stack::Stack;
-    use crate::x509::X509;
+    use crate::x509::{
+        store::{X509Store, X509StoreBuilder},
+        X509,
+    };
 
     #[test]
     fn cms_encrypt_decrypt() {
@@ -315,6 +366,121 @@ mod test {
 
             assert_eq!(input, decrypt_with_cert_check);
             assert_eq!(input, decrypt_without_cert_check);
+        }
+    }
+
+    fn cms_sign_verify_generic_helper(is_detached: bool) {
+        // load cert with private key
+        let cert_bytes = include_bytes!("../test/cert.pem");
+        let cert = X509::from_pem(cert_bytes).expect("failed to load cert.pem");
+
+        let key_bytes = include_bytes!("../test/key.pem");
+        let key = PKey::private_key_from_pem(key_bytes).expect("failed to load key.pem");
+
+        let root_bytes = include_bytes!("../test/root-ca.pem");
+        let root = X509::from_pem(root_bytes).expect("failed to load root-ca.pem");
+
+        // sign cms message using public key cert
+        let data = b"Hello world!";
+
+        let (opt, ext_data): (CMSOptions, Option<&[u8]>) = if is_detached {
+            (CMSOptions::DETACHED | CMSOptions::BINARY, Some(data))
+        } else {
+            (CMSOptions::empty(), None)
+        };
+
+        let mut cms = CmsContentInfo::sign(Some(&cert), Some(&key), None, Some(data), opt)
+            .expect("failed to CMS sign a message");
+
+        // check CMS signature length
+        let pem_cms = cms
+            .to_pem()
+            .expect("failed to pack CmsContentInfo into PEM");
+        assert!(!pem_cms.is_empty());
+
+        // verify CMS signature
+        let mut builder = X509StoreBuilder::new().expect("failed to create X509StoreBuilder");
+        builder
+            .add_cert(root)
+            .expect("failed to add root-ca into X509StoreBuilder");
+        let store: X509Store = builder.build();
+        let mut out_data: Vec<u8> = Vec::new();
+        let res = cms.verify(
+            None,
+            Some(&store),
+            ext_data,
+            Some(&mut out_data),
+            CMSOptions::empty(),
+        );
+
+        // check verification result -  valid signature
+        res.unwrap();
+        assert_eq!(data.to_vec(), out_data);
+    }
+
+    #[test]
+    fn cms_sign_verify_ok() {
+        cms_sign_verify_generic_helper(false);
+    }
+
+    #[test]
+    fn cms_sign_verify_detached_ok() {
+        cms_sign_verify_generic_helper(true);
+    }
+
+    #[test]
+    fn cms_sign_verify_error() {
+        #[cfg(ossl300)]
+        let _provider = crate::provider::Provider::try_load(None, "legacy", true).unwrap();
+
+        // load cert with private key
+        let priv_cert_bytes = include_bytes!("../test/cms.p12");
+        let priv_cert = Pkcs12::from_der(priv_cert_bytes).expect("failed to load priv cert");
+        let priv_cert = priv_cert
+            .parse2("mypass")
+            .expect("failed to parse priv cert");
+
+        // sign cms message using public key cert
+        let data = b"Hello world!";
+        let mut cms = CmsContentInfo::sign(
+            Some(&priv_cert.cert.unwrap()),
+            Some(&priv_cert.pkey.unwrap()),
+            None,
+            Some(data),
+            CMSOptions::empty(),
+        )
+        .expect("failed to CMS sign a message");
+
+        // check CMS signature length
+        let pem_cms = cms
+            .to_pem()
+            .expect("failed to pack CmsContentInfo into PEM");
+        assert!(!pem_cms.is_empty());
+
+        let empty_store = X509StoreBuilder::new()
+            .expect("failed to create X509StoreBuilder")
+            .build();
+
+        // verify CMS signature
+        let res = cms.verify(
+            None,
+            Some(&empty_store),
+            Some(data),
+            None,
+            CMSOptions::empty(),
+        );
+
+        // check verification result - this is an invalid signature
+        // defined in openssl crypto/cms/cms.h
+        const CMS_R_CERTIFICATE_VERIFY_ERROR: i32 = 100;
+        match res {
+            Err(es) => {
+                let error_array = es.errors();
+                assert_eq!(1, error_array.len());
+                let code = error_array[0].code();
+                assert_eq!(ffi::ERR_GET_REASON(code), CMS_R_CERTIFICATE_VERIFY_ERROR);
+            }
+            _ => panic!("expected CMS verification error, got Ok()"),
         }
     }
 }
