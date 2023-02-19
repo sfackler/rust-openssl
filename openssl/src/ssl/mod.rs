@@ -1687,6 +1687,16 @@ impl SslContextBuilder {
         }
     }
 
+    /// Sets the number of TLS 1.3 session tickets that will be sent to a client after a full
+    /// handshake.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    #[corresponds(SSL_CTX_set_num_tickets)]
+    #[cfg(ossl111)]
+    pub fn set_num_tickets(&mut self, num_tickets: usize) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::SSL_CTX_set_num_tickets(self.as_ptr(), num_tickets)).map(|_| ()) }
+    }
+
     /// Consumes the builder, returning a new `SslContext`.
     pub fn build(self) -> SslContext {
         self.0
@@ -1879,6 +1889,16 @@ impl SslContextRef {
     pub fn verify_mode(&self) -> SslVerifyMode {
         let mode = unsafe { ffi::SSL_CTX_get_verify_mode(self.as_ptr()) };
         SslVerifyMode::from_bits(mode).expect("SSL_CTX_get_verify_mode returned invalid mode")
+    }
+
+    /// Gets the number of TLS 1.3 session tickets that will be sent to a client after a full
+    /// handshake.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    #[corresponds(SSL_CTX_get_num_tickets)]
+    #[cfg(ossl111)]
+    pub fn num_tickets(&self) -> usize {
+        unsafe { ffi::SSL_CTX_get_num_tickets(self.as_ptr()) }
     }
 }
 
@@ -3282,6 +3302,26 @@ impl SslRef {
             mem::forget(cert_store);
             Ok(())
         }
+    }
+
+    /// Sets the number of TLS 1.3 session tickets that will be sent to a client after a full
+    /// handshake.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    #[corresponds(SSL_set_num_tickets)]
+    #[cfg(ossl111)]
+    pub fn set_num_tickets(&mut self, num_tickets: usize) -> Result<(), ErrorStack> {
+        unsafe { cvt(ffi::SSL_set_num_tickets(self.as_ptr(), num_tickets)).map(|_| ()) }
+    }
+
+    /// Gets the number of TLS 1.3 session tickets that will be sent to a client after a full
+    /// handshake.
+    ///
+    /// Requires OpenSSL 1.1.1 or newer.
+    #[corresponds(SSL_get_num_tickets)]
+    #[cfg(ossl111)]
+    pub fn num_tickets(&self) -> usize {
+        unsafe { ffi::SSL_get_num_tickets(self.as_ptr()) }
     }
 }
 
