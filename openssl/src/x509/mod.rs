@@ -1737,6 +1737,40 @@ impl X509CrlRef {
     }
 }
 
+impl Ord for X509CrlRef {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        // X509_cmp returns a number <0 for less than, 0 for equal and >0 for greater than.
+        // It can't fail if both pointers are valid, which we know is true.
+        let cmp = unsafe { ffi::X509_CRL_cmp(self.as_ptr(), other.as_ptr()) };
+        cmp.cmp(&0)
+    }
+}
+
+impl PartialOrd for X509CrlRef {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialOrd<X509Crl> for X509CrlRef {
+    fn partial_cmp(&self, other: &X509Crl) -> Option<cmp::Ordering> {
+        <X509CrlRef as PartialOrd<X509CrlRef>>::partial_cmp(self, other)
+    }
+}
+
+impl PartialEq for X509CrlRef {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other) == cmp::Ordering::Equal
+    }
+}
+
+impl PartialEq<X509Crl> for X509CrlRef {
+    fn eq(&self, other: &X509Crl) -> bool {
+        <X509CrlRef as PartialEq<X509CrlRef>>::eq(self, other)
+    }
+}
+impl Eq for X509CrlRef {}
+
 /// The result of peer certificate verification.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct X509VerifyResult(c_int);
