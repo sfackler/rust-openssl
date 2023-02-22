@@ -386,7 +386,7 @@ impl CipherCtxRef {
     /// # Panics
     ///
     /// Panics if the context has not been initialized with a cipher.
-    #[corresponds(EVP_CIHPER_CTX_ctrl)]
+    #[corresponds(EVP_CIPHER_CTX_ctrl)]
     pub fn set_iv_length(&mut self, len: usize) -> Result<(), ErrorStack> {
         self.assert_cipher();
 
