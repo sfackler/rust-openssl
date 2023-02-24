@@ -388,7 +388,10 @@ impl X509Ref {
     /// Returns the hash of the certificates subject
     #[corresponds(X509_subject_name_hash)]
     pub fn subject_name_hash(&self) -> u32 {
-        unsafe { ffi::X509_subject_name_hash(self.as_ptr()) as u32 }
+        #[allow(clippy::unnecessary_cast)]
+        unsafe {
+            ffi::X509_subject_name_hash(self.as_ptr()) as u32
+        }
     }
 
     /// Returns this certificate's issuer name.
@@ -403,7 +406,10 @@ impl X509Ref {
     /// Returns the hash of the certificates issuer
     #[corresponds(X509_issuer_name_hash)]
     pub fn issuer_name_hash(&self) -> u32 {
-        unsafe { ffi::X509_issuer_name_hash(self.as_ptr()) as u32 }
+        #[allow(clippy::unnecessary_cast)]
+        unsafe {
+            ffi::X509_issuer_name_hash(self.as_ptr()) as u32
+        }
     }
 
     /// Returns this certificate's subject alternative name entries, if they exist.
@@ -545,6 +551,7 @@ impl X509Ref {
     /// Note that `0` return value stands for version 1, `1` for version 2 and so on.
     #[corresponds(X509_get_version)]
     #[cfg(ossl110)]
+    #[allow(clippy::unnecessary_cast)]
     pub fn version(&self) -> i32 {
         unsafe { ffi::X509_get_version(self.as_ptr()) as i32 }
     }
@@ -1359,6 +1366,7 @@ impl X509ReqRef {
     /// This corresponds to [`X509_REQ_get_version`]
     ///
     /// [`X509_REQ_get_version`]: https://www.openssl.org/docs/manmaster/crypto/X509_REQ_get_version.html
+    #[allow(clippy::unnecessary_cast)]
     pub fn version(&self) -> i32 {
         unsafe { X509_REQ_get_version(self.as_ptr()) as i32 }
     }
