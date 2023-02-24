@@ -3,16 +3,18 @@ use libc::*;
 #[allow(unused_imports)]
 use *;
 
-#[derive(Copy, Clone)]
-pub enum ASN1_BOOLEAN {}
+pub enum ASN1_OBJECT {}
+pub enum ASN1_VALUE {}
+
+pub type ASN1_BOOLEAN = c_int;
 pub enum ASN1_ENUMERATED {}
 pub enum ASN1_INTEGER {}
 pub enum ASN1_GENERALIZEDTIME {}
 pub enum ASN1_STRING {}
 pub enum ASN1_BIT_STRING {}
 pub enum ASN1_TIME {}
-pub enum ASN1_OBJECT {}
 pub enum ASN1_OCTET_STRING {}
+pub enum ASN1_NULL {}
 pub enum ASN1_PRINTABLESTRING {}
 pub enum ASN1_T61STRING {}
 pub enum ASN1_IA5STRING {}
@@ -22,7 +24,6 @@ pub enum ASN1_UNIVERSALSTRING {}
 pub enum ASN1_UTCTIME {}
 pub enum ASN1_VISIBLESTRING {}
 pub enum ASN1_UTF8STRING {}
-pub enum ASN1_VALUE {}
 
 pub enum bio_st {} // FIXME remove
 cfg_if! {

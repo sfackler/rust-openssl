@@ -27,4 +27,5 @@ extern "C" {
     pub fn OBJ_length(obj: *const ASN1_OBJECT) -> libc::size_t;
     #[cfg(ossl111)]
     pub fn OBJ_get0_data(obj: *const ASN1_OBJECT) -> *const c_uchar;
+    pub fn OBJ_cmp(a: *const ASN1_OBJECT, b: *const ASN1_OBJECT) -> c_int;
 }

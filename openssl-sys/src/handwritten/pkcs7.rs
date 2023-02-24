@@ -1,9 +1,6 @@
 use libc::*;
 use *;
 
-// use x509::stack_st_X509;
-// use x509_attr::stack_st_X509_ATTRIBUTE;
-
 #[cfg(ossl300)]
 #[repr(C)]
 pub struct PKCS7_CTX {
@@ -106,6 +103,9 @@ extern "C" {
     pub fn PKCS7_SIGN_ENVELOPE_free(info: *mut PKCS7_SIGN_ENVELOPE);
     pub fn PKCS7_DIGEST_free(info: *mut PKCS7_DIGEST);
     pub fn PKCS7_SIGNER_INFO_free(info: *mut PKCS7_SIGNER_INFO);
+    pub fn PKCS7_ENCRYPT_free(enc: *mut PKCS7_ENCRYPT);
+    pub fn PKCS7_ISSUER_AND_SERIAL_free(ias: *mut PKCS7_ISSUER_AND_SERIAL);
+    pub fn PKCS7_RECIP_INFO_free(info: *mut PKCS7_RECIP_INFO);
 }
 
 cfg_if! {
@@ -189,6 +189,18 @@ cfg_if! {
 }
 
 stack!(stack_st_PKCS7_SIGNER_INFO);
+
+#[repr(C)]
+pub struct PKCS7_RECIP_INFO {
+    pub version: *mut ASN1_INTEGER, /* version 0 */
+    pub issuer_and_serial: *mut PKCS7_ISSUER_AND_SERIAL,
+    pub key_enc_algor: *mut X509_ALGOR,
+    pub enc_key: *mut ASN1_OCTET_STRING,
+    pub cert: *mut X509, /* get the pub-key from this */
+    #[cfg(ossl300)]
+    pub ctx: *const PKCS7_CTX,
+}
+
 stack!(stack_st_PKCS7_RECIP_INFO);
 
 extern "C" {
