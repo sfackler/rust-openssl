@@ -29,7 +29,7 @@ cfg_if! {
             pub version: *mut ::ASN1_INTEGER,
             pub subject: *mut ::X509_NAME,
             pubkey: *mut c_void,
-            pub attributes: *mut ::stack_st_X509_ATTRIBUTE,
+            pub attributes: *mut stack_st_X509_ATTRIBUTE,
         }
     }
 }
