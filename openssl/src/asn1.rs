@@ -1009,7 +1009,7 @@ mod tests {
     // observed in CI and it looks like `ffi::ASN1_generate_v3` is not thread-safe.
 
     #[test]
-    #[serial]
+    #[serial_test::serial]
     #[cfg(not(boringssl))]
     fn asn1_type_type() {
         let null = null_mut();
@@ -1032,7 +1032,7 @@ mod tests {
 
     // Check (deprecated) `pub const Asn1Type::...` et al.
     #[test]
-    #[serial]
+    #[serial_test::serial]
     #[cfg(not(boringssl))]
     #[allow(deprecated)]
     fn asn1_type_type_compatibility() {
@@ -1055,7 +1055,7 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    #[serial_test::serial]
     #[cfg(not(boringssl))]
     fn asn1_string_from_asn1_type() {
         let null = null_mut();
@@ -1082,7 +1082,7 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    #[serial_test::serial]
     #[cfg(not(boringssl))]
     fn asn1_octet_string_from_asn1_type() {
         let null = null_mut();
