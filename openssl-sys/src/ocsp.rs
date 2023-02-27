@@ -1,7 +1,5 @@
 use libc::*;
 
-use *;
-
 pub const OCSP_REVOKED_STATUS_NOSTATUS: c_int = -1;
 pub const OCSP_REVOKED_STATUS_UNSPECIFIED: c_int = 0;
 pub const OCSP_REVOKED_STATUS_KEYCOMPROMISE: c_int = 1;

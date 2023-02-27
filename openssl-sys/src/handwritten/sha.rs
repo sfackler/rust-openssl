@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 cfg_if! {
     if #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))] {

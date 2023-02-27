@@ -1,6 +1,7 @@
 #![allow(
     clippy::missing_safety_doc,
     clippy::unreadable_literal,
+    clippy::uninlined_format_args,
     clippy::upper_case_acronyms,
     dead_code,
     non_camel_case_types,
@@ -130,7 +131,7 @@ mod openssl {
         ) {
             let mutex = &(*MUTEXES)[n as usize];
 
-            if mode & ::CRYPTO_LOCK != 0 {
+            if mode & CRYPTO_LOCK != 0 {
                 (*GUARDS)[n as usize] = Some(mutex.lock().unwrap());
             } else {
                 if let None = (*GUARDS)[n as usize].take() {
@@ -165,7 +166,7 @@ mod openssl {
             SSL_load_error_strings();
             OPENSSL_add_all_algorithms_noconf();
 
-            let num_locks = ::CRYPTO_num_locks();
+            let num_locks = CRYPTO_num_locks();
             let mut mutexes = Box::new(Vec::new());
             for _ in 0..num_locks {
                 mutexes.push(Mutex::new(()));

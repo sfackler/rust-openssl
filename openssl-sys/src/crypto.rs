@@ -1,5 +1,5 @@
+use super::*;
 use libc::*;
-use *;
 
 extern "C" {
     #[deprecated(note = "use CRYPTO_set_locking_callback__fixed_rust instead")]

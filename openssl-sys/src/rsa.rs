@@ -1,7 +1,7 @@
 use libc::*;
 use std::ptr;
 
-use *;
+use super::super::*;
 
 pub const RSA_F4: c_long = 0x10001;
 

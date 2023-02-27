@@ -1,7 +1,7 @@
 use libc::*;
 use std::ptr;
 
-use *;
+use super::*;
 
 #[cfg(not(ossl110))]
 pub const SSL_MAX_KRB5_PRINCIPAL_LENGTH: c_int = 256;
@@ -415,7 +415,7 @@ cfg_if! {
 }
 
 #[cfg(ossl102)]
-pub unsafe fn SSL_add0_chain_cert(ssl: *mut ::SSL, ptr: *mut X509) -> c_long {
+pub unsafe fn SSL_add0_chain_cert(ssl: *mut SSL, ptr: *mut X509) -> c_long {
     SSL_ctrl(ssl, SSL_CTRL_CHAIN_CERT, 0, ptr as *mut c_void)
 }
 
@@ -440,7 +440,7 @@ pub unsafe fn SSL_CTX_set_ecdh_auto(ctx: *mut SSL_CTX, onoff: c_int) -> c_int {
 }
 
 #[cfg(any(libressl, all(ossl102, not(ossl110))))]
-pub unsafe fn SSL_set_ecdh_auto(ssl: *mut ::SSL, onoff: c_int) -> c_int {
+pub unsafe fn SSL_set_ecdh_auto(ssl: *mut SSL, onoff: c_int) -> c_int {
     SSL_ctrl(
         ssl,
         SSL_CTRL_SET_ECDH_AUTO,
@@ -579,12 +579,12 @@ extern "C" {
     #[deprecated(note = "use SSL_CTX_set_tmp_ecdh_callback__fixed_rust instead")]
     #[cfg(not(ossl110))]
     pub fn SSL_CTX_set_tmp_ecdh_callback(
-        ctx: *mut ::SSL_CTX,
+        ctx: *mut SSL_CTX,
         ecdh: unsafe extern "C" fn(
-            ssl: *mut ::SSL,
+            ssl: *mut SSL,
             is_export: c_int,
             keylength: c_int,
-        ) -> *mut ::EC_KEY,
+        ) -> *mut EC_KEY,
     );
     #[deprecated(note = "use SSL_set_tmp_ecdh_callback__fixed_rust instead")]
     #[cfg(not(ossl110))]

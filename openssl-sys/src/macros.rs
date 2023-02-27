@@ -63,7 +63,7 @@ macro_rules! stack {
             } else {
                 #[repr(C)]
                 pub struct $t {
-                    pub stack: ::_STACK,
+                    pub stack: $crate::_STACK,
                 }
             }
         }

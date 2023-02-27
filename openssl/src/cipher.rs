@@ -358,12 +358,12 @@ impl Cipher {
         unsafe { CipherRef::from_ptr(ffi::EVP_camellia_256_ecb() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAST")))]
     pub fn cast5_cfb64() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_cast5_cfb64() as *mut _) }
     }
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAST")))]
     pub fn cast5_ecb() -> &'static CipherRef {
         unsafe { CipherRef::from_ptr(ffi::EVP_cast5_ecb() as *mut _) }
     }
