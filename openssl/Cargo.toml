@@ -35,3 +35,4 @@ ffi = { package = "openssl-sys", version = "0.9.80", path = "../openssl-sys" }
 
 [dev-dependencies]
 hex = "0.3"
+serial_test = "1.0"

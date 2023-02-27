@@ -1005,7 +1005,11 @@ mod tests {
         );
     }
 
+    // Tests calling `ffi::ASN1_generate_v3` must not run in parallel. Spurious errors have been
+    // observed in CI and it looks like `ffi::ASN1_generate_v3` is not thread-safe.
+
     #[test]
+    #[serial]
     #[cfg(not(boringssl))]
     fn asn1_type_type() {
         let null = null_mut();
@@ -1028,6 +1032,7 @@ mod tests {
 
     // Check (deprecated) `pub const Asn1Type::...` et al.
     #[test]
+    #[serial]
     #[cfg(not(boringssl))]
     #[allow(deprecated)]
     fn asn1_type_type_compatibility() {
@@ -1050,8 +1055,7 @@ mod tests {
     }
 
     #[test]
-    // Calls ffi::ASN1_generate_v3 which doesn't seem to be thread safe. This makes problems in CI.
-    #[ignore]
+    #[serial]
     #[cfg(not(boringssl))]
     fn asn1_string_from_asn1_type() {
         let null = null_mut();
@@ -1078,6 +1082,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     #[cfg(not(boringssl))]
     fn asn1_octet_string_from_asn1_type() {
         let null = null_mut();
