@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 pub type pem_password_cb = Option<
     unsafe extern "C" fn(

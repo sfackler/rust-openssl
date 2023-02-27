@@ -1,6 +1,6 @@
 use libc::*;
 
-use *;
+use super::*;
 
 #[repr(C)]
 pub struct GENERAL_NAME {

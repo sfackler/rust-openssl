@@ -1,6 +1,6 @@
 use libc::*;
 
-use *;
+use super::super::*;
 
 pub enum PKCS12 {}
 

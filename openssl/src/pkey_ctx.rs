@@ -84,8 +84,23 @@ pub struct HkdfMode(c_int);
 
 #[cfg(ossl111)]
 impl HkdfMode {
+    /// This is the default mode. Calling [`derive`][PkeyCtxRef::derive] on a [`PkeyCtxRef`] set up
+    /// for HKDF will perform an extract followed by an expand operation in one go. The derived key
+    /// returned will be the result after the expand operation. The intermediate fixed-length
+    /// pseudorandom key K is not returned.
     pub const EXTRACT_THEN_EXPAND: Self = HkdfMode(ffi::EVP_PKEY_HKDEF_MODE_EXTRACT_AND_EXPAND);
+
+    /// In this mode calling [`derive`][PkeyCtxRef::derive] will just perform the extract operation.
+    /// The value returned will be the intermediate fixed-length pseudorandom key K.
+    ///
+    /// The digest, key and salt values must be set before a key is derived or an error occurs.
     pub const EXTRACT_ONLY: Self = HkdfMode(ffi::EVP_PKEY_HKDEF_MODE_EXTRACT_ONLY);
+
+    /// In this mode calling [`derive`][PkeyCtxRef::derive] will just perform the expand operation.
+    /// The input key should be set to the intermediate fixed-length pseudorandom key K returned
+    /// from a previous extract operation.
+    ///
+    /// The digest, key and info values must be set before a key is derived or an error occurs.
     pub const EXPAND_ONLY: Self = HkdfMode(ffi::EVP_PKEY_HKDEF_MODE_EXPAND_ONLY);
 }
 
@@ -487,6 +502,10 @@ impl<T> PkeyCtxRef<T> {
     ///
     /// Defaults to [`HkdfMode::EXTRACT_THEN_EXPAND`].
     ///
+    /// WARNING: Although this API calls it a "mode", HKDF-Extract and HKDF-Expand are distinct
+    /// operations with distinct inputs and distinct kinds of keys. Callers should not pass input
+    /// secrets for one operation into the other.
+    ///
     /// Requires OpenSSL 1.1.1 or newer.
     #[corresponds(EVP_PKEY_CTX_set_hkdf_mode)]
     #[cfg(ossl111)]
@@ -499,7 +518,12 @@ impl<T> PkeyCtxRef<T> {
         Ok(())
     }
 
-    /// Sets the input keying material for HKDF generation.
+    /// Sets the input material for HKDF generation as the "key".
+    ///
+    /// Which input is the key depends on the "mode" (see [`set_hkdf_mode`][Self::set_hkdf_mode]).
+    /// If [`HkdfMode::EXTRACT_THEN_EXPAND`] or [`HkdfMode::EXTRACT_ONLY`], this function specifies
+    /// the input keying material (IKM) for HKDF-Extract. If [`HkdfMode::EXPAND_ONLY`], it instead
+    /// specifies the pseudorandom key (PRK) for HKDF-Expand.
     ///
     /// Requires OpenSSL 1.1.0 or newer.
     #[corresponds(EVP_PKEY_CTX_set1_hkdf_key)]
@@ -521,6 +545,8 @@ impl<T> PkeyCtxRef<T> {
 
     /// Sets the salt value for HKDF generation.
     ///
+    /// If performing HKDF-Expand only, this parameter is ignored.
+    ///
     /// Requires OpenSSL 1.1.0 or newer.
     #[corresponds(EVP_PKEY_CTX_set1_hkdf_salt)]
     #[cfg(ossl110)]
@@ -540,6 +566,8 @@ impl<T> PkeyCtxRef<T> {
     }
 
     /// Appends info bytes for HKDF generation.
+    ///
+    /// If performing HKDF-Extract only, this parameter is ignored.
     ///
     /// Requires OpenSSL 1.1.0 or newer.
     #[corresponds(EVP_PKEY_CTX_add1_hkdf_info)]

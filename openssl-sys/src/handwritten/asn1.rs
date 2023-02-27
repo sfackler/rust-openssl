@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 #[repr(C)]
 pub struct ASN1_ENCODING {
@@ -10,10 +10,7 @@ pub struct ASN1_ENCODING {
 
 extern "C" {
     pub fn ASN1_OBJECT_free(x: *mut ASN1_OBJECT);
-    pub fn OBJ_cmp(a: *const ASN1_OBJECT, b: *const ASN1_OBJECT) -> c_int;
 }
-
-pub enum ASN1_OBJECT {}
 
 stack!(stack_st_ASN1_OBJECT);
 
@@ -42,10 +39,6 @@ pub union ASN1_TYPE_value {
     pub generalizedtime: *mut ASN1_GENERALIZEDTIME,
     pub visiblestring: *mut ASN1_VISIBLESTRING,
     pub utf8string: *mut ASN1_UTF8STRING,
-    /*
-     * set and sequence are left complete and still contain the set or
-     * sequence bytes
-     */
     pub set: *mut ASN1_STRING,
     pub sequence: *mut ASN1_STRING,
     pub asn1_value: *mut ASN1_VALUE,

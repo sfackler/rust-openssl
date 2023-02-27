@@ -1,5 +1,4 @@
 use libc::*;
-use *;
 
 #[cfg(ossl101)]
 pub const CMS_TEXT: c_uint = 0x1;

@@ -1,6 +1,6 @@
 use libc::*;
 
-use *;
+use super::*;
 
 pub const BIO_TYPE_NONE: c_int = 0;
 

@@ -711,7 +711,7 @@ mod test {
 
     #[cfg(not(boringssl))]
     fn test_hmac(ty: MessageDigest, tests: &[(Vec<u8>, Vec<u8>, Vec<u8>)]) {
-        for &(ref key, ref data, ref res) in tests.iter() {
+        for (key, data, res) in tests.iter() {
             let pkey = PKey::hmac(key).unwrap();
             let mut signer = Signer::new(ty, &pkey).unwrap();
             signer.update(data).unwrap();

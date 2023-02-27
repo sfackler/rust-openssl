@@ -1,7 +1,5 @@
 use libc::*;
 
-use *;
-
 #[cfg(target_pointer_width = "64")]
 pub type BN_ULONG = c_ulonglong;
 #[cfg(target_pointer_width = "32")]

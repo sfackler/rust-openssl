@@ -26,7 +26,9 @@ use crate::x509::X509Builder;
 use crate::x509::X509PurposeId;
 #[cfg(any(ossl102, libressl261))]
 use crate::x509::X509PurposeRef;
-use crate::x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
+use crate::x509::{
+    CrlStatus, X509Crl, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509,
+};
 use hex::{self, FromHex};
 #[cfg(any(ossl102, libressl261))]
 use libc::time_t;
@@ -492,6 +494,7 @@ fn test_verify_cert_with_wrong_purpose_fails() {
 
     let store = store_bldr.build();
 
+    let expected_error = ffi::X509_V_ERR_INVALID_PURPOSE;
     let mut context = X509StoreContext::new().unwrap();
     assert_eq!(
         context
@@ -500,8 +503,8 @@ fn test_verify_cert_with_wrong_purpose_fails() {
                 Ok(c.error())
             })
             .unwrap()
-            .error_string(),
-        "unsupported certificate purpose"
+            .as_raw(),
+        expected_error
     )
 }
 
@@ -529,6 +532,30 @@ fn x509_ref_version_no_version_set() {
     assert_eq!(
         0, actual_version,
         "Default certificate version is incorrect",
+    );
+}
+
+#[test]
+fn test_load_crl() {
+    let ca = include_bytes!("../../test/crl-ca.crt");
+    let ca = X509::from_pem(ca).unwrap();
+
+    let crl = include_bytes!("../../test/test.crl");
+    let crl = X509Crl::from_der(crl).unwrap();
+    assert!(crl.verify(&ca.public_key().unwrap()).unwrap());
+
+    let cert = include_bytes!("../../test/subca.crt");
+    let cert = X509::from_pem(cert).unwrap();
+
+    let revoked = match crl.get_by_cert(&cert) {
+        CrlStatus::Revoked(revoked) => revoked,
+        _ => panic!("cert should be revoked"),
+    };
+
+    assert_eq!(
+        revoked.serial_number().to_bn().unwrap(),
+        cert.serial_number().to_bn().unwrap(),
+        "revoked and cert serial numbers should match"
     );
 }
 
@@ -775,6 +802,16 @@ fn test_extended_key_usage_flags() {
 }
 
 #[test]
+#[cfg(any(boringssl, ossl110, libressl270))]
+fn test_name_to_owned() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let name = cert.subject_name();
+    let copied_name = name.to_owned().unwrap();
+    assert_eq!(Ordering::Equal, name.try_cmp(&copied_name).unwrap());
+}
+
+#[test]
 #[cfg(any(ossl102, libressl261))]
 fn test_verify_param_set_time_fails_verification() {
     const TEST_T_2030: time_t = 1893456000;
@@ -977,7 +1014,7 @@ fn test_set_purpose_fails_verification() {
     store_bldr.set_param(&verify_params).unwrap();
     let store = store_bldr.build();
 
-    let expected_error = "unsupported certificate purpose";
+    let expected_error = ffi::X509_V_ERR_INVALID_PURPOSE;
     let mut context = X509StoreContext::new().unwrap();
     assert_eq!(
         context
@@ -986,7 +1023,7 @@ fn test_set_purpose_fails_verification() {
                 Ok(c.error())
             })
             .unwrap()
-            .error_string(),
+            .as_raw(),
         expected_error
     )
 }
@@ -1016,4 +1053,41 @@ fn test_load_crl_file_fail() {
     let lookup = store_bldr.add_lookup(X509Lookup::file()).unwrap();
     let res = lookup.load_crl_file("test/root-ca.pem", SslFiletype::PEM);
     assert!(res.is_err());
+}
+
+#[cfg(ossl110)]
+fn ipaddress_as_subject_alternative_name_is_formatted_in_debug<T>(expected_ip: T)
+where
+    T: Into<std::net::IpAddr>,
+{
+    let expected_ip = format!("{:?}", expected_ip.into());
+    let mut builder = X509Builder::new().unwrap();
+    let san = SubjectAlternativeName::new()
+        .ip(&expected_ip)
+        .build(&builder.x509v3_context(None, None))
+        .unwrap();
+    builder.append_extension(san).unwrap();
+    let cert = builder.build();
+    let actual_ip = cert
+        .subject_alt_names()
+        .into_iter()
+        .flatten()
+        .map(|n| format!("{:?}", *n))
+        .next()
+        .unwrap();
+    assert_eq!(actual_ip, expected_ip);
+}
+
+#[cfg(ossl110)]
+#[test]
+fn ipv4_as_subject_alternative_name_is_formatted_in_debug() {
+    ipaddress_as_subject_alternative_name_is_formatted_in_debug([8u8, 8, 8, 128]);
+}
+
+#[cfg(ossl110)]
+#[test]
+fn ipv6_as_subject_alternative_name_is_formatted_in_debug() {
+    ipaddress_as_subject_alternative_name_is_formatted_in_debug([
+        8u8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 128,
+    ]);
 }

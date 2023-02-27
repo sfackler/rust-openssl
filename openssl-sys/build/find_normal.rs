@@ -1,4 +1,3 @@
-use pkg_config;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
