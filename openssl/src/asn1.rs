@@ -1050,6 +1050,8 @@ mod tests {
     }
 
     #[test]
+    // Calls ffi::ASN1_generate_v3 which doesn't seem to be thread safe. This makes problems in CI.
+    #[ignore]
     #[cfg(not(boringssl))]
     fn asn1_string_from_asn1_type() {
         let null = null_mut();
