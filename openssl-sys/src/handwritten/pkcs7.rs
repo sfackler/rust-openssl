@@ -10,10 +10,10 @@ pub struct PKCS7_CTX {
 
 #[repr(C)]
 pub struct PKCS7_SIGNED {
-    pub version: *mut ASN1_INTEGER, /* version 1 */
+    pub version: *mut ASN1_INTEGER,        /* version 1 */
     pub md_algs: *mut stack_st_X509_ALGOR, /* md used */
-    pub cert: *mut stack_st_X509, /* [ 0 ] */
-    pub crl: *mut stack_st_X509_CRL, /* [ 1 ] */
+    pub cert: *mut stack_st_X509,          /* [ 0 ] */
+    pub crl: *mut stack_st_X509_CRL,       /* [ 1 ] */
     pub signer_info: *mut stack_st_PKCS7_SIGNER_INFO,
     pub contents: *mut PKCS7,
 }
@@ -34,18 +34,18 @@ pub struct PKCS7_ENVELOPE {
 }
 #[repr(C)]
 pub struct PKCS7_SIGN_ENVELOPE {
-    pub version: *mut ASN1_INTEGER, /* version 1 */
+    pub version: *mut ASN1_INTEGER,        /* version 1 */
     pub md_algs: *mut stack_st_X509_ALGOR, /* md used */
-    pub cert: *mut stack_st_X509, /* [ 0 ] */
-    pub crl: *mut stack_st_X509_CRL, /* [ 1 ] */
+    pub cert: *mut stack_st_X509,          /* [ 0 ] */
+    pub crl: *mut stack_st_X509_CRL,       /* [ 1 ] */
     pub signer_info: *mut stack_st_PKCS7_SIGNER_INFO,
     pub enc_data: *mut PKCS7_ENC_CONTENT,
-    pub recipientinfo: *mut stack_st_PKCS7_RECIP_INFO
+    pub recipientinfo: *mut stack_st_PKCS7_RECIP_INFO,
 }
 #[repr(C)]
 pub struct PKCS7_DIGEST {
     pub version: *mut ASN1_INTEGER, /* version 0 */
-    pub md: *mut X509_ALGOR, /* md used */
+    pub md: *mut X509_ALGOR,        /* md used */
     pub contents: *mut PKCS7,
     pub digest: *mut ASN1_OCTET_STRING,
 }
@@ -125,7 +125,7 @@ pub struct PKCS7_SIGNER_INFO {
     pub digest_enc_alg: *mut X509_ALGOR,
     pub enc_digest: *mut ASN1_OCTET_STRING,
     pub unauth_attr: *mut stack_st_X509_ATTRIBUTE, /* [ 1 ] */
-    pub pkey: *mut EVP_PKEY, /* The private key to sign with */
+    pub pkey: *mut EVP_PKEY,                       /* The private key to sign with */
     #[cfg(ossl300)]
     pub ctx: *const PKCS7_CTX,
 }
