@@ -23,7 +23,6 @@ mod cfgs;
 mod find_normal;
 #[cfg(feature = "vendored")]
 mod find_vendored;
-#[cfg(feature = "bindgen")]
 mod run_bindgen;
 
 #[derive(PartialEq)]
@@ -32,6 +31,7 @@ enum Version {
     Openssl11x,
     Openssl10x,
     Libressl,
+    Boringssl,
 }
 
 fn env_inner(name: &str) -> Option<OsString> {
@@ -67,10 +67,9 @@ fn find_openssl(target: &str) -> (Vec<PathBuf>, PathBuf) {
 fn check_ssl_kind() {
     if cfg!(feature = "unstable_boringssl") {
         println!("cargo:rustc-cfg=boringssl");
+        println!("cargo:boringssl=true");
         // BoringSSL does not have any build logic, exit early
         std::process::exit(0);
-    } else {
-        println!("cargo:rustc-cfg=openssl");
     }
 }
 
@@ -146,8 +145,12 @@ fn check_rustc_versions() {
 #[allow(clippy::let_and_return)]
 fn postprocess(include_dirs: &[PathBuf]) -> Version {
     let version = validate_headers(include_dirs);
-    #[cfg(feature = "bindgen")]
-    run_bindgen::run(&include_dirs);
+
+    // Never run bindgen for BoringSSL, if it was needed we already ran it.
+    if version != Version::Boringssl {
+        #[cfg(feature = "bindgen")]
+        run_bindgen::run(&include_dirs);
+    }
 
     version
 }
@@ -235,8 +238,14 @@ See rust-openssl documentation for more information:
     }
 
     if is_boringssl {
-        panic!("BoringSSL detected, but `unstable_boringssl` feature wasn't specified.")
+        println!("cargo:rustc-cfg=boringssl");
+        println!("cargo:boringssl=true");
+        run_bindgen::run_boringssl(include_dirs);
+        return Version::Boringssl;
     }
+
+    // We set this for any non-BoringSSL lib.
+    println!("cargo:rustc-cfg=openssl");
 
     for enabled in &enabled {
         println!("cargo:rustc-cfg=osslconf=\"{}\"", enabled);
