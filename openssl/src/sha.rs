@@ -57,7 +57,7 @@ pub fn sha1(data: &[u8]) -> [u8; 20] {
 }
 
 /// Computes the SHA224 hash of some data.
-#[corresponds(SH224)]
+#[corresponds(SHA224)]
 #[inline]
 pub fn sha224(data: &[u8]) -> [u8; 28] {
     unsafe {
