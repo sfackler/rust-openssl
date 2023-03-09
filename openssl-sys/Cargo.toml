@@ -15,8 +15,6 @@ build = "build/main.rs"
 edition = "2018"
 
 [features]
-default = ["maybe-vendored"]
-
 maybe-vendored = ["openssl-src"]
 vendored = ['openssl-src']
 unstable_boringssl = ['bssl-sys']

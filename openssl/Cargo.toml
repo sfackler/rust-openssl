@@ -21,7 +21,7 @@ vendored = ['ffi/vendored']
 maybe-vendored = ["ffi/maybe-vendored"]
 bindgen = ['ffi/bindgen']
 unstable_boringssl = ["ffi/unstable_boringssl"]
-default = ["maybe-vendored"]
+default = []
 
 [dependencies]
 bitflags = "1.0"
