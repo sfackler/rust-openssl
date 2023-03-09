@@ -24,7 +24,7 @@ use std::slice;
 use std::str;
 
 use crate::asn1::{
-    Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef, Asn1Type,
+    Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TagValue, Asn1TimeRef,
 };
 use crate::bio::MemBioSlice;
 use crate::conf::ConfRef;
@@ -921,7 +921,7 @@ impl X509NameBuilder {
         &mut self,
         field: &str,
         value: &str,
-        ty: Asn1Type,
+        ty: Asn1TagValue,
     ) -> Result<(), ErrorStack> {
         unsafe {
             let field = CString::new(field).unwrap();
@@ -969,7 +969,7 @@ impl X509NameBuilder {
         &mut self,
         field: Nid,
         value: &str,
-        ty: Asn1Type,
+        ty: Asn1TagValue,
     ) -> Result<(), ErrorStack> {
         unsafe {
             assert!(value.len() <= c_int::max_value() as usize);
