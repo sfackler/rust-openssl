@@ -65,9 +65,23 @@ fn find_openssl(target: &str) -> (Vec<PathBuf>, PathBuf) {
 }
 
 fn check_ssl_kind() {
-    if cfg!(feature = "unstable_boringssl") {
+    let boringssl = cfg!(feature = "unstable_boringssl");
+    let aws_lc = cfg!(feature = "aws-lc");
+
+    let mutually_exclusives_count = vec![boringssl, aws_lc].iter().filter(|x| **x).count();
+
+    if mutually_exclusives_count > 1 {
+        eprint!("unstable_boringssl, aws-lc are mutually exclusive crate features");
+        std::process::exit(1);
+    }
+
+    if boringssl {
         println!("cargo:rustc-cfg=boringssl");
         // BoringSSL does not have any build logic, exit early
+        std::process::exit(0);
+    } else if aws_lc {
+        println!("cargo:rustc-cfg=aws_lc");
+        // AWS-LC does not have any build logic, exit early
         std::process::exit(0);
     } else {
         println!("cargo:rustc-cfg=openssl");

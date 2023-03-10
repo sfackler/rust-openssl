@@ -178,9 +178,9 @@ where
         }
     }
 }
-#[cfg(boringssl)]
+#[cfg(boringssl_flavour)]
 type BitType = libc::c_uint;
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 type BitType = c_int;
 
 impl Dsa<Private> {
@@ -501,11 +501,11 @@ cfg_if! {
 mod test {
     use super::*;
     use crate::bn::BigNumContext;
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     use crate::hash::MessageDigest;
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     use crate::pkey::PKey;
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     use crate::sign::{Signer, Verifier};
 
     #[test]
@@ -557,7 +557,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     fn test_signature() {
         const TEST_DATA: &[u8] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         let dsa_ref = Dsa::generate(1024).unwrap();
@@ -598,7 +598,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     fn test_signature_der() {
         use std::convert::TryInto;
 

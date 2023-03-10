@@ -46,7 +46,7 @@ use foreign_types::ForeignTypeRef;
 use std::mem;
 
 use crate::error::ErrorStack;
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 use crate::ssl::SslFiletype;
 use crate::stack::StackRef;
 #[cfg(any(ossl102, libressl261))]
@@ -54,9 +54,9 @@ use crate::x509::verify::{X509VerifyFlags, X509VerifyParamRef};
 use crate::x509::{X509Object, X509PurposeId, X509};
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 use std::ffi::CString;
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 use std::path::Path;
 
 foreign_type_and_impl_send_sync! {
@@ -167,7 +167,7 @@ impl X509Lookup<HashDir> {
     }
 }
 
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 impl X509LookupRef<HashDir> {
     /// Specifies a directory from which certificates and CRLs will be loaded
     /// on-demand. Must be used with `X509Lookup::hash_dir`.
@@ -199,7 +199,7 @@ impl X509Lookup<File> {
     }
 }
 
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 impl X509LookupRef<File> {
     /// Specifies a file from which certificates will be loaded
     #[corresponds(X509_load_cert_file)]
@@ -267,7 +267,7 @@ impl X509StoreRef {
 }
 
 cfg_if! {
-    if #[cfg(any(boringssl, ossl110, libressl270))] {
+    if #[cfg(any(boringssl_flavour, ossl110, libressl270))] {
         use ffi::X509_STORE_get0_objects;
     } else {
         #[allow(bad_style)]

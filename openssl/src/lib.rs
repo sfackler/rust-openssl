@@ -140,7 +140,11 @@ pub mod base64;
 pub mod bn;
 pub mod cipher;
 pub mod cipher_ctx;
-#[cfg(all(not(boringssl), not(libressl), not(osslconf = "OPENSSL_NO_CMS")))]
+#[cfg(all(
+    not(boringssl_flavour),
+    not(libressl),
+    not(osslconf = "OPENSSL_NO_CMS")
+))]
 pub mod cms;
 pub mod conf;
 pub mod derive;
@@ -149,7 +153,7 @@ pub mod dsa;
 pub mod ec;
 pub mod ecdsa;
 pub mod encrypt;
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 pub mod envelope;
 pub mod error;
 pub mod ex_data;
@@ -162,12 +166,12 @@ pub mod md;
 pub mod md_ctx;
 pub mod memcmp;
 pub mod nid;
-#[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_OCSP")))]
+#[cfg(not(any(boringssl_flavour, osslconf = "OPENSSL_NO_OCSP")))]
 pub mod ocsp;
 pub mod pkcs12;
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 pub mod pkcs5;
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 pub mod pkcs7;
 pub mod pkey;
 pub mod pkey_ctx;
@@ -185,9 +189,9 @@ pub mod symm;
 pub mod version;
 pub mod x509;
 
-#[cfg(boringssl)]
+#[cfg(boringssl_flavour)]
 type LenType = libc::size_t;
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 type LenType = libc::c_int;
 
 #[inline]

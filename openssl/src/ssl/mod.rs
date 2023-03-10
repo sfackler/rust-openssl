@@ -134,7 +134,7 @@ pub fn cipher_name(std_name: &str) -> &'static str {
 cfg_if! {
     if #[cfg(ossl300)] {
         type SslOptionsRepr = u64;
-    } else if #[cfg(boringssl)] {
+    } else if #[cfg(boringssl_flavour)] {
         type SslOptionsRepr = u32;
     } else {
         type SslOptionsRepr = libc::c_ulong;
@@ -148,7 +148,7 @@ bitflags! {
         const DONT_INSERT_EMPTY_FRAGMENTS = ffi::SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS as SslOptionsRepr;
 
         /// A "reasonable default" set of options which enables compatibility flags.
-        #[cfg(not(boringssl))]
+        #[cfg(not(boringssl_flavour))]
         const ALL = ffi::SSL_OP_ALL as SslOptionsRepr;
 
         /// Do not query the MTU.
@@ -161,19 +161,19 @@ bitflags! {
         /// Only affects DTLS connections.
         ///
         /// [RFC 4347 Section 4.2.1]: https://tools.ietf.org/html/rfc4347#section-4.2.1
-        #[cfg(not(boringssl))]
+        #[cfg(not(boringssl_flavour))]
         const COOKIE_EXCHANGE = ffi::SSL_OP_COOKIE_EXCHANGE as SslOptionsRepr;
 
         /// Disables the use of session tickets for session resumption.
         const NO_TICKET = ffi::SSL_OP_NO_TICKET as SslOptionsRepr;
 
         /// Always start a new session when performing a renegotiation on the server side.
-        #[cfg(not(boringssl))]
+        #[cfg(not(boringssl_flavour))]
         const NO_SESSION_RESUMPTION_ON_RENEGOTIATION =
             ffi::SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION as SslOptionsRepr;
 
         /// Disables the use of TLS compression.
-        #[cfg(not(boringssl))]
+        #[cfg(not(boringssl_flavour))]
         const NO_COMPRESSION = ffi::SSL_OP_NO_COMPRESSION as SslOptionsRepr;
 
         /// Allow legacy insecure renegotiation with servers or clients that do not support secure
@@ -217,19 +217,19 @@ bitflags! {
         /// Disables the use of TLSv1.3.
         ///
         /// Requires OpenSSL 1.1.1 or LibreSSL 3.4.0 or newer.
-        #[cfg(any(boringssl, ossl111, libressl340))]
+        #[cfg(any(boringssl_flavour, ossl111, libressl340))]
         const NO_TLSV1_3 = ffi::SSL_OP_NO_TLSv1_3 as SslOptionsRepr;
 
         /// Disables the use of DTLSv1.0
         ///
         /// Requires OpenSSL 1.0.2 or LibreSSL 3.3.2 or newer.
-        #[cfg(any(boringssl, ossl102, ossl110, libressl332))]
+        #[cfg(any(boringssl_flavour, ossl102, ossl110, libressl332))]
         const NO_DTLSV1 = ffi::SSL_OP_NO_DTLSv1 as SslOptionsRepr;
 
         /// Disables the use of DTLSv1.2.
         ///
         /// Requires OpenSSL 1.0.2 or LibreSSL 3.3.2 or newer.
-        #[cfg(any(boringssl, ossl102, ossl110, libressl332))]
+        #[cfg(any(boringssl_flavour, ossl102, ossl110, libressl332))]
         const NO_DTLSV1_2 = ffi::SSL_OP_NO_DTLSv1_2 as SslOptionsRepr;
 
         /// Disables the use of all (D)TLS protocol versions.
@@ -253,7 +253,7 @@ bitflags! {
         /// Disallow all renegotiation in TLSv1.2 and earlier.
         ///
         /// Requires OpenSSL 1.1.0h or newer.
-        #[cfg(any(boringssl, ossl110h))]
+        #[cfg(any(boringssl_flavour, ossl110h))]
         const NO_RENEGOTIATION = ffi::SSL_OP_NO_RENEGOTIATION as SslOptionsRepr;
 
         /// Enable TLSv1.3 Compatibility mode.
@@ -398,14 +398,14 @@ bitflags! {
     }
 }
 
-#[cfg(boringssl)]
+#[cfg(boringssl_flavour)]
 type SslBitType = c_int;
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 type SslBitType = c_long;
 
-#[cfg(boringssl)]
+#[cfg(boringssl_flavour)]
 type SslTimeTy = u64;
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 type SslTimeTy = c_long;
 
 bitflags! {
@@ -647,7 +647,7 @@ impl SslVersion {
 }
 
 cfg_if! {
-    if #[cfg(boringssl)] {
+    if #[cfg(boringssl_flavour)] {
         type SslCacheTy = i64;
         type SslCacheSize = libc::c_ulong;
         type MtuTy = u32;
@@ -766,9 +766,9 @@ impl SslContextBuilder {
             // still stored in ex data to manage the lifetime.
             let arg = self.set_ex_data_inner(SslContext::cached_ex_index::<F>(), callback);
             ffi::SSL_CTX_set_tlsext_servername_arg(self.as_ptr(), arg);
-            #[cfg(boringssl)]
+            #[cfg(boringssl_flavour)]
             ffi::SSL_CTX_set_tlsext_servername_callback(self.as_ptr(), Some(raw_sni::<F>));
-            #[cfg(not(boringssl))]
+            #[cfg(not(boringssl_flavour))]
             ffi::SSL_CTX_set_tlsext_servername_callback__fixed_rust(
                 self.as_ptr(),
                 Some(raw_sni::<F>),
@@ -852,9 +852,9 @@ impl SslContextBuilder {
         unsafe {
             self.set_ex_data(SslContext::cached_ex_index::<F>(), callback);
 
-            #[cfg(not(boringssl))]
+            #[cfg(not(boringssl_flavour))]
             ffi::SSL_CTX_set_tmp_dh_callback__fixed_rust(self.as_ptr(), Some(raw_tmp_dh::<F>));
-            #[cfg(boringssl)]
+            #[cfg(boringssl_flavour)]
             ffi::SSL_CTX_set_tmp_dh_callback(self.as_ptr(), Some(raw_tmp_dh::<F>));
         }
     }
@@ -1516,7 +1516,7 @@ impl SslContextBuilder {
     /// The callback will be called with the SSL context and a slice into which the cookie
     /// should be written. The callback should return the number of bytes written.
     #[corresponds(SSL_CTX_set_cookie_generate_cb)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     pub fn set_cookie_generate_cb<F>(&mut self, callback: F)
     where
         F: Fn(&mut SslRef, &mut [u8]) -> Result<usize, ErrorStack> + 'static + Sync + Send,
@@ -1532,7 +1532,7 @@ impl SslContextBuilder {
     /// The callback will be called with the SSL context and the cookie supplied by the
     /// client. It should return true if and only if the cookie is valid.
     #[corresponds(SSL_CTX_set_cookie_verify_cb)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     pub fn set_cookie_verify_cb<F>(&mut self, callback: F)
     where
         F: Fn(&mut SslRef, &[u8]) -> bool + 'static + Sync + Send,
@@ -1760,9 +1760,9 @@ impl SslContext {
     {
         unsafe {
             ffi::init();
-            #[cfg(boringssl)]
+            #[cfg(boringssl_flavour)]
             let idx = cvt_n(get_new_idx(Some(free_data_box::<T>)))?;
-            #[cfg(not(boringssl))]
+            #[cfg(not(boringssl_flavour))]
             let idx = cvt_n(get_new_idx(free_data_box::<T>))?;
             Ok(Index::from_raw(idx))
         }
@@ -2193,9 +2193,9 @@ impl Ssl {
     {
         unsafe {
             ffi::init();
-            #[cfg(boringssl)]
+            #[cfg(boringssl_flavour)]
             let idx = cvt_n(get_new_ssl_idx(Some(free_data_box::<T>)))?;
-            #[cfg(not(boringssl))]
+            #[cfg(not(boringssl_flavour))]
             let idx = cvt_n(get_new_ssl_idx(free_data_box::<T>))?;
             Ok(Index::from_raw(idx))
         }
@@ -2366,9 +2366,9 @@ impl SslRef {
         unsafe {
             // this needs to be in an Arc since the callback can register a new callback!
             self.set_ex_data(Ssl::cached_ex_index(), Arc::new(callback));
-            #[cfg(boringssl)]
+            #[cfg(boringssl_flavour)]
             ffi::SSL_set_tmp_dh_callback(self.as_ptr(), Some(raw_tmp_dh_ssl::<F>));
-            #[cfg(not(boringssl))]
+            #[cfg(not(boringssl_flavour))]
             ffi::SSL_set_tmp_dh_callback__fixed_rust(self.as_ptr(), Some(raw_tmp_dh_ssl::<F>));
         }
     }
@@ -2853,7 +2853,7 @@ impl SslRef {
 
     /// Returns the server's OCSP response, if present.
     #[corresponds(SSL_get_tlsext_status_ocsp_resp)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     pub fn ocsp_status(&self) -> Option<&[u8]> {
         unsafe {
             let mut p = ptr::null_mut();
@@ -2869,7 +2869,7 @@ impl SslRef {
 
     /// Sets the OCSP response to be returned to the client.
     #[corresponds(SSL_set_tlsext_status_oscp_resp)]
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     pub fn set_ocsp_status(&mut self, response: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             assert!(response.len() <= c_int::max_value() as usize);
@@ -3138,7 +3138,7 @@ impl SslRef {
     }
 
     /// Sets a new default TLS/SSL method for SSL objects
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     pub fn set_method(&mut self, method: SslMethod) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::SSL_set_ssl_method(self.as_ptr(), method.as_ptr()))?;
@@ -3997,7 +3997,7 @@ bitflags! {
 }
 
 cfg_if! {
-    if #[cfg(any(boringssl, ossl110, libressl273))] {
+    if #[cfg(any(boringssl_flavour, ossl110, libressl273))] {
         use ffi::{SSL_CTX_up_ref, SSL_SESSION_get_master_key, SSL_SESSION_up_ref, SSL_is_server};
     } else {
         #[allow(bad_style)]
@@ -4055,7 +4055,7 @@ cfg_if! {
     }
 }
 cfg_if! {
-    if #[cfg(any(boringssl, ossl110, libressl291))] {
+    if #[cfg(any(boringssl_flavour, ossl110, libressl291))] {
         use ffi::{TLS_method, DTLS_method, TLS_client_method, TLS_server_method};
     } else {
         use ffi::{
@@ -4095,7 +4095,7 @@ cfg_if! {
             static ONCE: Once = Once::new();
             ONCE.call_once(|| {
                 cfg_if! {
-                    if #[cfg(not(boringssl))] {
+                    if #[cfg(not(boringssl_flavour))] {
                         ffi::SSL_CTX_get_ex_new_index(0, ptr::null_mut(), None, None, None);
                     } else {
                         ffi::SSL_CTX_get_ex_new_index(0, ptr::null_mut(), ptr::null_mut(), None, None);
@@ -4104,7 +4104,7 @@ cfg_if! {
             });
 
             cfg_if! {
-                if #[cfg(not(boringssl))] {
+                if #[cfg(not(boringssl_flavour))] {
                     ffi::SSL_CTX_get_ex_new_index(0, ptr::null_mut(), None, None, Some(f))
                 } else {
                     ffi::SSL_CTX_get_ex_new_index(0, ptr::null_mut(), ptr::null_mut(), None, f)
@@ -4116,15 +4116,15 @@ cfg_if! {
             // hack around https://rt.openssl.org/Ticket/Display.html?id=3710&user=guest&pass=guest
             static ONCE: Once = Once::new();
             ONCE.call_once(|| {
-                #[cfg(not(boringssl))]
+                #[cfg(not(boringssl_flavour))]
                 ffi::SSL_get_ex_new_index(0, ptr::null_mut(), None, None, None);
-                #[cfg(boringssl)]
+                #[cfg(boringssl_flavour)]
                 ffi::SSL_get_ex_new_index(0, ptr::null_mut(), ptr::null_mut(), None, None);
             });
 
-            #[cfg(not(boringssl))]
+            #[cfg(not(boringssl_flavour))]
             return ffi::SSL_get_ex_new_index(0, ptr::null_mut(), None, None, Some(f));
-            #[cfg(boringssl)]
+            #[cfg(boringssl_flavour)]
             return ffi::SSL_get_ex_new_index(0, ptr::null_mut(), ptr::null_mut(), None, f);
         }
     }

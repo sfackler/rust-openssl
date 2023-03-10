@@ -52,7 +52,7 @@
 //!
 
 #![cfg_attr(
-    not(boringssl),
+    not(boringssl_flavour),
     doc = r#"\
 Compute and verify an HMAC-SHA256
 

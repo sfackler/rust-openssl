@@ -153,7 +153,9 @@ jobs:
             - false
           library:
             - name: boringssl
-              version: 5697a9202615925696f8dc7f4e286d44d474769e
+              version: 3c7053975b35a631f477f42f07502003d35aa2ff
+            - name: aws-lc
+              version: vendored
             - name: openssl
               version: vendored
             - name: openssl
@@ -219,6 +221,12 @@ jobs:
             - library:
                 name: boringssl
               bindgen: true
+            - library:
+                name: aws-lc
+              bindgen: true
+            - target: arm-unknown-linux-gnueabihf # aws-lc-sys does not provide generated bindings for 32bit arm.
+              library:
+                name: aws-lc
       name: ${{ matrix.target }}-${{ matrix.library.name }}-${{ matrix.library.version }}-${{ matrix.bindgen }}
       runs-on: ubuntu-latest
       env:
@@ -360,7 +368,10 @@ jobs:
             if [[ "${{ matrix.library.name }}" == "boringssl" ]]; then
               features="--features unstable_boringssl"
             fi
-            if [[ "${{ matrix.library.version }}" == "vendored" ]]; then
+            if [[ "${{ matrix.library.name }}" == "aws-lc" ]]; then
+              features="--features aws-lc"
+            fi
+            if [[ "${{ matrix.library.name }}" == "openssl" && "${{ matrix.library.version }}" == "vendored" ]]; then
               features="--features vendored"
             fi
             if [[ "${{ matrix.bindgen }}" == "true" ]]; then

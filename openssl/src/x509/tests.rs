@@ -6,14 +6,14 @@ use crate::hash::MessageDigest;
 use crate::nid::Nid;
 use crate::pkey::{PKey, Private};
 use crate::rsa::Rsa;
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 use crate::ssl::SslFiletype;
 use crate::stack::Stack;
 use crate::x509::extension::{
     AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, KeyUsage, SubjectAlternativeName,
     SubjectKeyIdentifier,
 };
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 use crate::x509::store::X509Lookup;
 use crate::x509::store::X509StoreBuilder;
 #[cfg(any(ossl102, libressl261))]
@@ -53,9 +53,9 @@ fn test_debug() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
     let debugged = format!("{:#?}", cert);
-    #[cfg(boringssl)]
+    #[cfg(boringssl_flavour)]
     assert!(debugged.contains(r#"serial_number: "8771f7bdee982fa5""#));
-    #[cfg(not(boringssl))]
+    #[cfg(not(boringssl_flavour))]
     assert!(debugged.contains(r#"serial_number: "8771F7BDEE982FA5""#));
     assert!(debugged.contains(r#"signature_algorithm: sha256WithRSAEncryption"#));
     assert!(debugged.contains(r#"countryName = "AU""#));
@@ -777,7 +777,7 @@ fn test_verify_param_set_depth_fails_verification() {
 }
 
 #[test]
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 fn test_load_cert_file() {
     let cert = include_bytes!("../../test/cert.pem");
     let cert = X509::from_pem(cert).unwrap();
@@ -888,7 +888,7 @@ fn test_add_name_entry() {
 }
 
 #[test]
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 fn test_load_crl_file_fail() {
     let mut store_bldr = X509StoreBuilder::new().unwrap();
     let lookup = store_bldr.add_lookup(X509Lookup::file()).unwrap();

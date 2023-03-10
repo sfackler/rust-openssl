@@ -18,7 +18,7 @@
 use cfg_if::cfg_if;
 use libc::{c_char, c_int};
 use std::borrow::Cow;
-#[cfg(boringssl)]
+#[cfg(boringssl_flavour)]
 use std::convert::TryInto;
 use std::error;
 use std::ffi::CStr;
@@ -27,9 +27,9 @@ use std::io;
 use std::ptr;
 use std::str;
 
-#[cfg(not(boringssl))]
+#[cfg(not(boringssl_flavour))]
 type ErrType = libc::c_ulong;
-#[cfg(boringssl)]
+#[cfg(boringssl_flavour)]
 type ErrType = libc::c_uint;
 
 /// Collection of [`Error`]s from OpenSSL.
@@ -127,13 +127,13 @@ impl Error {
                     let data = if flags & ffi::ERR_TXT_STRING != 0 {
                         let bytes = CStr::from_ptr(data as *const _).to_bytes();
                         let data = str::from_utf8(bytes).unwrap();
-                        #[cfg(not(boringssl))]
+                        #[cfg(not(boringssl_flavour))]
                         let data = if flags & ffi::ERR_TXT_MALLOCED != 0 {
                             Cow::Owned(data.to_string())
                         } else {
                             Cow::Borrowed(data)
                         };
-                        #[cfg(boringssl)]
+                        #[cfg(boringssl_flavour)]
                         let data = Cow::Borrowed(data);
                         Some(data)
                     } else {
@@ -208,9 +208,9 @@ impl Error {
 
     #[cfg(not(ossl300))]
     fn put_error(&self) {
-        #[cfg(not(boringssl))]
+        #[cfg(not(boringssl_flavour))]
         let line = self.line;
-        #[cfg(boringssl)]
+        #[cfg(boringssl_flavour)]
         let line = self.line.try_into().unwrap();
         unsafe {
             ffi::ERR_put_error(
