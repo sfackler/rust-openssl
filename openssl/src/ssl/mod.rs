@@ -2881,6 +2881,10 @@ impl SslRef {
                 response.len() as c_long,
             ) as c_int)
             .map(|_| ())
+            .map_err(|e| {
+                ffi::OPENSSL_free(p);
+                e
+            })
         }
     }
 
