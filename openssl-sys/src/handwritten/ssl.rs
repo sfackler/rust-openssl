@@ -680,9 +680,6 @@ cfg_if! {
 
             pub fn TLS_client_method() -> *const SSL_METHOD;
 
-            // DTLS 1.2 support doesn't exist in LibresSSL 2.9.1
-            #[cfg(ossl110)]
-            pub fn DTLSv1_2_method() -> *const SSL_METHOD;
         }
     } else {
         extern "C" {
@@ -709,6 +706,13 @@ cfg_if! {
         }
     }
 }
+
+extern "C" {
+    #[cfg(ossl110)]
+    pub fn DTLSv1_2_method() -> *const SSL_METHOD;
+}
+
+
 
 extern "C" {
     pub fn SSL_get_error(ssl: *const SSL, ret: c_int) -> c_int;
