@@ -712,8 +712,6 @@ extern "C" {
     pub fn DTLSv1_2_method() -> *const SSL_METHOD;
 }
 
-
-
 extern "C" {
     pub fn SSL_get_error(ssl: *const SSL, ret: c_int) -> c_int;
     pub fn SSL_get_version(ssl: *const SSL) -> *const c_char;
