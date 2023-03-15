@@ -679,7 +679,6 @@ cfg_if! {
             pub fn TLS_server_method() -> *const SSL_METHOD;
 
             pub fn TLS_client_method() -> *const SSL_METHOD;
-
         }
     } else {
         extern "C" {
@@ -700,16 +699,10 @@ cfg_if! {
 
             pub fn DTLSv1_method() -> *const SSL_METHOD;
 
-            // DTLS 1.2 support started in OpenSSL 1.0.2, LibreSSL 3.3.2
-            #[cfg(any(ossl102,libressl332))]
+            #[cfg(ossl102)]
             pub fn DTLSv1_2_method() -> *const SSL_METHOD;
         }
     }
-}
-
-extern "C" {
-    #[cfg(ossl110)]
-    pub fn DTLSv1_2_method() -> *const SSL_METHOD;
 }
 
 extern "C" {
