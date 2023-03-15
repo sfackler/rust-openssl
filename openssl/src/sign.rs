@@ -290,7 +290,7 @@ impl<'a> Signer<'a> {
         self.len_intern()
     }
 
-    #[cfg(all(not(ossl111), not(boringssl)))]
+    #[cfg(all(not(ossl111), not(boringssl), not(libressl370)))]
     fn len_intern(&self) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = 0;
@@ -303,7 +303,7 @@ impl<'a> Signer<'a> {
         }
     }
 
-    #[cfg(any(ossl111, boringssl))]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     fn len_intern(&self) -> Result<usize, ErrorStack> {
         unsafe {
             let mut len = 0;
@@ -360,7 +360,7 @@ impl<'a> Signer<'a> {
     /// OpenSSL documentation at [`EVP_DigestSign`].
     ///
     /// [`EVP_DigestSign`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_DigestSign.html
-    #[cfg(any(ossl111, boringssl))]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     pub fn sign_oneshot(
         &mut self,
         sig_buf: &mut [u8],
@@ -382,7 +382,7 @@ impl<'a> Signer<'a> {
     /// Returns the signature.
     ///
     /// This is a simple convenience wrapper over `len` and `sign_oneshot`.
-    #[cfg(any(ossl111, boringssl))]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     pub fn sign_oneshot_to_vec(&mut self, data_buf: &[u8]) -> Result<Vec<u8>, ErrorStack> {
         let mut sig_buf = vec![0; self.len()?];
         let len = self.sign_oneshot(&mut sig_buf, data_buf)?;
@@ -596,7 +596,7 @@ impl<'a> Verifier<'a> {
     /// OpenSSL documentation at [`EVP_DigestVerify`].
     ///
     /// [`EVP_DigestVerify`]: https://www.openssl.org/docs/man1.1.1/man3/EVP_DigestVerify.html
-    #[cfg(any(ossl111, boringssl))]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     pub fn verify_oneshot(&mut self, signature: &[u8], buf: &[u8]) -> Result<bool, ErrorStack> {
         unsafe {
             let r = ffi::EVP_DigestVerify(
@@ -846,7 +846,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(any(ossl111, boringssl))]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     fn eddsa() {
         let key = PKey::generate_ed25519().unwrap();
 

@@ -230,7 +230,7 @@ cfg_if! {
     }
 }
 cfg_if! {
-    if #[cfg(ossl111)] {
+    if #[cfg(any(ossl111, libressl370))] {
         extern "C" {
             pub fn EVP_DigestSign(
                 ctx: *mut EVP_MD_CTX,
@@ -566,7 +566,7 @@ const_ptr_api! {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl111))] {
+    if #[cfg(any(ossl111, libressl370))] {
         extern "C" {
             pub fn EVP_PKEY_get_raw_public_key(
                 pkey: *const EVP_PKEY,
