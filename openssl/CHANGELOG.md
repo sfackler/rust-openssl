@@ -2,7 +2,32 @@
 
 ## [Unreleased]
 
-* Added `CMS_verify`.
+## [v0.10.46] - 2023-03-14
+
+### Fixed
+
+* Fixed a potential null-pointer deref when parsing a PKCS#12 archive with no identity.
+* Fixed builds against OpenSSL built with `no-cast`.
+* Fixed debug formatting of `GeneralName`.
+
+### Deprecated
+
+* Deprecated `PKcs12Ref::parse` in favor of `Pkcs12Ref::parse2`.
+* Deprecated `ParsedPkcs12` in favor of `ParsedPkcs12_2`.
+* Deprecated `Pkcs12Builder::build` in favor of `Pkcs12Builder::build2`.
+
+### Added
+
+* Added `X509VerifyParamRef::set_auth_level`, `X509VerifyParamRef::auth_level`, and `X509VerifyParamRef::set_purpose`.
+* Added `X509PurposeId` and `X509Purpose`.
+* Added `X509NameBuilder::append_entry`.
+* Added `PKeyRef::private_key_to_pkcs8`.
+* Added `X509LookupRef::load_crl_file`.
+* Added `Pkcs12Builder::name`, `Pkcs12Builder::pkey`, and `Pkcs12Builder::cert`.
+* Added `SslRef::set_method`, `SslRef::set_private_key_file`, `SslRef::set_private_key`, `SslRef::set_certificate`, `SslRef::set_certificate_chain_file`, `SslRef::add_client_ca`, `SslRef::set_client_ca_list`, `SslRef::set_min_proto_version`, `SslREf::set_max_proto_version`, `SslRef::set_ciphersuites`, `SslRef::set_cipher_list`, `SslRef::set_verify_cert_store`.
+* Added `X509NameRef::to_owned`.
+* Added `SslContextBuilder::set_num_tickets`, `SslContextRef::num_tickets`, `SslRef::set_num_tickets`, and `SslRef::num_tickets`.
+* Added `CmsContentInfo::verify`.
 
 ## [v0.10.45] - 2022-12-20
 
@@ -665,7 +690,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.45...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.46...master
+[v0.10.46]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.45...openssl-v0.10.46
 [v0.10.45]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.44...openssl-v0.10.45
 [v0.10.44]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.43...openssl-v0.10.44
 [v0.10.43]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.42...openssl-v0.10.43
