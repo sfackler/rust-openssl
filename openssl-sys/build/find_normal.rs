@@ -5,13 +5,17 @@ use std::process::{self, Command};
 use super::env;
 
 pub fn get_openssl(target: &str) -> (Vec<PathBuf>, PathBuf) {
+    try_get_openssl(target).expect("Failed to find openssl on your system")
+}
+
+pub fn try_get_openssl(target: &str) -> Option<(Vec<PathBuf>, PathBuf)> {
     let lib_dir = env("OPENSSL_LIB_DIR").map(PathBuf::from);
     let include_dir = env("OPENSSL_INCLUDE_DIR").map(PathBuf::from);
 
     match (lib_dir, include_dir) {
-        (Some(lib_dir), Some(include_dir)) => (vec![lib_dir], include_dir),
+        (Some(lib_dir), Some(include_dir)) => Some((vec![lib_dir], include_dir)),
         (lib_dir, include_dir) => {
-            let openssl_dir = env("OPENSSL_DIR").unwrap_or_else(|| find_openssl_dir(target));
+            let openssl_dir = env("OPENSSL_DIR").or_else(|| find_openssl_dir(target))?;
             let openssl_dir = Path::new(&openssl_dir);
             let lib_dir = lib_dir.map(|d| vec![d]).unwrap_or_else(|| {
                 let mut lib_dirs = vec![];
@@ -26,7 +30,7 @@ pub fn get_openssl(target: &str) -> (Vec<PathBuf>, PathBuf) {
                 lib_dirs
             });
             let include_dir = include_dir.unwrap_or_else(|| openssl_dir.join("include"));
-            (lib_dir, include_dir)
+            Some((lib_dir, include_dir))
         }
     }
 }
@@ -69,7 +73,7 @@ fn resolve_with_wellknown_location(dir: &str) -> Option<PathBuf> {
     }
 }
 
-fn find_openssl_dir(target: &str) -> OsString {
+fn find_openssl_dir(target: &str) -> Option<OsString> {
     let host = env::var("HOST").unwrap();
 
     if host == target && target.ends_with("-apple-darwin") {
@@ -79,13 +83,13 @@ fn find_openssl_dir(target: &str) -> OsString {
         };
 
         if let Some(dir) = resolve_with_wellknown_homebrew_location(homebrew_dir) {
-            return dir.into();
+            return Some(dir.into());
         } else if let Some(dir) = resolve_with_wellknown_location("/opt/pkg") {
             // pkgsrc
-            return dir.into();
+            return Some(dir.into());
         } else if let Some(dir) = resolve_with_wellknown_location("/opt/local") {
             // MacPorts
-            return dir.into();
+            return Some(dir.into());
         }
     }
 
@@ -94,12 +98,12 @@ fn find_openssl_dir(target: &str) -> OsString {
 
     // FreeBSD ships with OpenSSL but doesn't include a pkg-config file :(
     if host == target && target.contains("freebsd") {
-        return OsString::from("/usr");
+        return Some(OsString::from("/usr"));
     }
 
     // DragonFly has libressl (or openssl) in ports, but this doesn't include a pkg-config file
     if host == target && target.contains("dragonfly") {
-        return OsString::from("/usr/local");
+        return Some(OsString::from("/usr/local"));
     }
 
     let mut msg = format!(
@@ -187,7 +191,9 @@ https://github.com/sfackler/rust-openssl#windows
         );
     }
 
-    panic!("{}", msg);
+    eprintln!("{}", msg);
+
+    None
 }
 
 /// Attempt to find OpenSSL through pkg-config.
