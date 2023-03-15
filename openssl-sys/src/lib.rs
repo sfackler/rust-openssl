@@ -16,10 +16,24 @@
 extern crate libc;
 pub use libc::*;
 
-#[cfg(boringssl)]
+#[cfg(feature = "unstable_boringssl")]
 extern crate bssl_sys;
-#[cfg(boringssl)]
+#[cfg(feature = "unstable_boringssl")]
 pub use bssl_sys::*;
+
+#[cfg(all(boringssl, not(feature = "unstable_boringssl")))]
+#[path = "."]
+mod boringssl {
+    include!(concat!(env!("OUT_DIR"), "/bindgen.rs"));
+
+    pub fn init() {
+        unsafe {
+            CRYPTO_library_init();
+        }
+    }
+}
+#[cfg(all(boringssl, not(feature = "unstable_boringssl")))]
+pub use boringssl::*;
 
 #[cfg(openssl)]
 #[path = "."]
