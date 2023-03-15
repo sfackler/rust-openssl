@@ -2,6 +2,28 @@
 
 ## [Unreleased]
 
+## [v0.9.81] - 2023-03-14
+
+### Fixed
+
+Fixed builds against OpenSSL built with `no-cast`.
+
+### Added
+
+* Added experimental bindgen support for BoringSSL.
+* Added `X509_VERIFY_PARAM_set_auth_level`, `X509_VERIFY_PARAM_get_auth_level`, and `X509_VERIFY_PARAM_set_purpose`.
+* Added `X509_PURPOSE_*` consts.
+* Added `X509_NAME_add_entry`.
+* Added `X509_load_crl_file`.
+* Added `SSL_set_cipher_list`, `SSL_set_ssl_method`, `SSL_use_PrivateKey_file`, `SSL_use_PrivateKey`, `SSL_use_certificate`, `SSL_use_certificate_chain_file`, `SSL_set_client_CA_list`, `SSL_add_client_CA`, and `SSL_set0_verify_cert_store`.
+* Added `X509_PURPOSE`, `X509_STORE_set_purpose`, and `X509_STORE_set_trust`.
+* Added `SSL_CTX_set_num_tickets`, `SSL_set_num_tickets`, `SSL_CTX_get_num_tickets`, and `SSL_get_num_tickets`.
+* Added `CMS_verify`.
+
+### Removed
+
+* Removed an unnecessary link to libatomic for 32-bit android targets.
+
 ## [v0.9.80] - 2022-12-20
 
 ### Fixed
