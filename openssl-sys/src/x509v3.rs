@@ -91,3 +91,14 @@ pub const X509_PURPOSE_OCSP_HELPER: c_int = 8;
 pub const X509_PURPOSE_TIMESTAMP_SIGN: c_int = 9;
 pub const X509_PURPOSE_MIN: c_int = 1;
 pub const X509_PURPOSE_MAX: c_int = 9;
+
+pub const CRL_REASON_UNSPECIFIED: c_int = 0;
+pub const CRL_REASON_KEY_COMPROMISE: c_int = 1;
+pub const CRL_REASON_CA_COMPROMISE: c_int = 2;
+pub const CRL_REASON_AFFILIATION_CHANGED: c_int = 3;
+pub const CRL_REASON_SUPERSEDED: c_int = 4;
+pub const CRL_REASON_CESSATION_OF_OPERATION: c_int = 5;
+pub const CRL_REASON_CERTIFICATE_HOLD: c_int = 6;
+pub const CRL_REASON_REMOVE_FROM_CRL: c_int = 8;
+pub const CRL_REASON_PRIVILEGE_WITHDRAWN: c_int = 9;
+pub const CRL_REASON_AA_COMPROMISE: c_int = 10;

@@ -24,8 +24,8 @@ use std::slice;
 use std::str;
 
 use crate::asn1::{
-    Asn1BitStringRef, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef,
-    Asn1Type,
+    Asn1BitStringRef, Asn1Enumerated, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1StringRef,
+    Asn1TimeRef, Asn1Type,
 };
 use crate::bio::MemBioSlice;
 use crate::conf::ConfRef;
@@ -1481,6 +1481,37 @@ impl X509ReqRef {
     }
 }
 
+/// The reason that a certificate was revoked.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct CrlReason(i64);
+
+#[allow(missing_docs)] // no need to document the constants
+impl CrlReason {
+    pub const UNSPECIFIED: CrlReason = CrlReason(ffi::CRL_REASON_UNSPECIFIED as i64);
+    pub const KEY_COMPROMISE: CrlReason = CrlReason(ffi::CRL_REASON_KEY_COMPROMISE as i64);
+    pub const CA_COMPROMISE: CrlReason = CrlReason(ffi::CRL_REASON_CA_COMPROMISE as i64);
+    pub const AFFILIATION_CHANGED: CrlReason =
+        CrlReason(ffi::CRL_REASON_AFFILIATION_CHANGED as i64);
+    pub const SUPERSEDED: CrlReason = CrlReason(ffi::CRL_REASON_SUPERSEDED as i64);
+    pub const CESSATION_OF_OPERATION: CrlReason =
+        CrlReason(ffi::CRL_REASON_CESSATION_OF_OPERATION as i64);
+    pub const CERTIFICATE_HOLD: CrlReason = CrlReason(ffi::CRL_REASON_CERTIFICATE_HOLD as i64);
+    pub const REMOVE_FROM_CRL: CrlReason = CrlReason(ffi::CRL_REASON_REMOVE_FROM_CRL as i64);
+    pub const PRIVILEGE_WITHDRAWN: CrlReason =
+        CrlReason(ffi::CRL_REASON_PRIVILEGE_WITHDRAWN as i64);
+    pub const AA_COMPROMISE: CrlReason = CrlReason(ffi::CRL_REASON_AA_COMPROMISE as i64);
+
+    /// Constructs an `CrlReason` from a raw OpenSSL value.
+    pub fn from_raw(value: i64) -> Self {
+        CrlReason(value)
+    }
+
+    /// Returns the raw OpenSSL value represented by this type.
+    pub fn as_raw(&self) -> i64 {
+        self.0
+    }
+}
+
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_REVOKED;
     fn drop = ffi::X509_REVOKED_free;
@@ -1513,6 +1544,13 @@ impl X509RevokedRef {
         ffi::i2d_X509_REVOKED
     }
 
+    /// Copies the entry to a new `X509Revoked`.
+    #[corresponds(X509_NAME_dup)]
+    #[cfg(any(boringssl, ossl110, libressl270))]
+    pub fn to_owned(&self) -> Result<X509Revoked, ErrorStack> {
+        unsafe { cvt_p(ffi::X509_REVOKED_dup(self.as_ptr())).map(|n| X509Revoked::from_ptr(n)) }
+    }
+
     /// Get the date that the certificate was revoked
     #[corresponds(X509_REVOKED_get0_revocationDate)]
     pub fn revocation_date(&self) -> &Asn1TimeRef {
@@ -1531,6 +1569,46 @@ impl X509RevokedRef {
             assert!(!r.is_null());
             Asn1IntegerRef::from_ptr(r as *mut _)
         }
+    }
+
+    /// Get the issuer name of the revoked certificate
+    #[corresponds(X509_REVOKED_get_ext_d2i)]
+    pub fn issuer_name(&self) -> Option<Stack<GeneralName>> {
+        // SAFETY: self.as_ptr() is a valid pointer to an X509_REVOKED.
+        unsafe {
+            let issuer_names = ffi::X509_REVOKED_get_ext_d2i(
+                self.as_ptr() as *const _,
+                // NID_certificate_issuer is a X509_REVOKED extension that
+                // returns a GENERAL_NAMES, which is a Stack<GeneralName>
+                ffi::NID_certificate_issuer,
+                // Only one instance of the extension is permissable
+                ptr::null_mut(),
+                // Don't care if the extension is critical
+                ptr::null_mut(),
+            );
+            Stack::from_ptr_opt(issuer_names as *mut _)
+        }
+    }
+
+    /// Get the reason that the certificate was revoked
+    #[corresponds(X509_REVOKED_get_ext_d2i)]
+    #[cfg(ossl110)]
+    pub fn reason_code(&self) -> Option<Result<CrlReason, ErrorStack>> {
+        let reason_code = unsafe {
+            // The return value may be NULL if the extension wasn't found or
+            // there were multiple, and we require only one.
+            Asn1Enumerated::from_ptr_opt(ffi::X509_REVOKED_get_ext_d2i(
+                // self.as_ptr() is a valid pointer to a X509_REVOKED
+                self.as_ptr() as *const _,
+                // NID_crl_reason is an X509_REVOKED extension that is an ASN1_ENUMERATED
+                ffi::NID_crl_reason,
+                // Only one instance of the extension is permissable
+                ptr::null_mut(),
+                // Don't care if the extension is critical
+                ptr::null_mut(),
+            ) as *mut _)
+        }?;
+        Some(reason_code.get_i64().map(CrlReason::from_raw))
     }
 }
 
@@ -1870,6 +1948,17 @@ impl GeneralNameRef {
     /// Returns the contents of this `GeneralName` if it is an `rfc822Name`.
     pub fn email(&self) -> Option<&str> {
         self.ia5_string(ffi::GEN_EMAIL)
+    }
+
+    /// Returns the contents of this `GeneralName` if it is a `directoryName`.
+    pub fn directory_name(&self) -> Option<&X509NameRef> {
+        unsafe {
+            if (*self.as_ptr()).type_ != ffi::GEN_DIRNAME {
+                return None;
+            }
+
+            Some(X509NameRef::from_const_ptr((*self.as_ptr()).d as *const _))
+        }
     }
 
     /// Returns the contents of this `GeneralName` if it is a `dNSName`.

@@ -51,6 +51,10 @@ extern "C" {
     pub fn ASN1_TIME_set_string(s: *mut ASN1_TIME, str: *const c_char) -> c_int;
     #[cfg(ossl111)]
     pub fn ASN1_TIME_set_string_X509(s: *mut ASN1_TIME, str: *const c_char) -> c_int;
+
+    pub fn ASN1_ENUMERATED_free(a: *mut ASN1_ENUMERATED);
+    #[cfg(ossl110)]
+    pub fn ASN1_ENUMERATED_get_int64(pr: *mut i64, a: *const ASN1_ENUMERATED) -> c_int;
 }
 
 const_ptr_api! {

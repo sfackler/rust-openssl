@@ -666,6 +666,32 @@ cfg_if! {
     }
 }
 
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::ASN1_ENUMERATED;
+    fn drop = ffi::ASN1_ENUMERATED_free;
+
+    /// An ASN.1 enumerated.
+    pub struct Asn1Enumerated;
+    /// A reference to an [`Asn1Enumerated`].
+    pub struct Asn1EnumeratedRef;
+}
+
+impl Asn1EnumeratedRef {
+    /// Get the value, if it fits in the required bounds.
+    #[corresponds(ASN1_ENUMERATED_get)]
+    #[cfg(ossl110)]
+    pub fn get_i64(&self) -> Result<i64, ErrorStack> {
+        let mut crl_reason = 0;
+        unsafe {
+            cvt(ffi::ASN1_ENUMERATED_get_int64(
+                &mut crl_reason,
+                self.as_ptr(),
+            ))?;
+        }
+        Ok(crl_reason)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
