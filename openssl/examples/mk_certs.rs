@@ -7,14 +7,21 @@ use openssl::asn1::Asn1Time;
 use openssl::bn::{BigNum, MsbOption};
 use openssl::error::ErrorStack;
 use openssl::hash::MessageDigest;
+use openssl::nid::Nid;
 use openssl::pkey::{PKey, PKeyRef, Private};
 use openssl::rsa::Rsa;
+use openssl::stack::Stack;
 use openssl::x509::extension::{
-    AuthorityKeyIdentifier, BasicConstraints, KeyUsage, SubjectAlternativeName,
+    AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, KeyUsage, SubjectAlternativeName,
     SubjectKeyIdentifier,
 };
 use openssl::x509::{X509NameBuilder, X509Ref, X509Req, X509ReqBuilder, X509VerifyResult, X509};
 
+fn mk_key_pair() -> Result<PKey<Private>, ErrorStack> {
+    let rsa = Rsa::generate(2048)?;
+    let key_pair = PKey::from_rsa(rsa)?;
+    Ok(key_pair)
+}
 /// Make a CA certificate and private key
 fn mk_ca_cert() -> Result<(X509, PKey<Private>), ErrorStack> {
     let rsa = Rsa::generate(2048)?;
@@ -74,6 +81,49 @@ fn mk_request(key_pair: &PKey<Private>) -> Result<X509Req, ErrorStack> {
     x509_name.append_entry_by_text("CN", "www.example.com")?;
     let x509_name = x509_name.build();
     req_builder.set_subject_name(&x509_name)?;
+
+    req_builder.sign(key_pair, MessageDigest::sha256())?;
+    let req = req_builder.build();
+    Ok(req)
+}
+
+/// Make a X509 request with the given private key and a challengePassword attribute
+fn mk_request_with_attribute(key_pair: &PKey<Private>) -> Result<X509Req, ErrorStack> {
+    let mut req_builder = X509ReqBuilder::new()?;
+    req_builder.set_pubkey(key_pair)?;
+
+    let mut x509_name = X509NameBuilder::new()?;
+    x509_name.append_entry_by_text("CN", "myserver.localhost")?;
+    let x509_name = x509_name.build();
+
+    req_builder.set_version(0)?; // 0x00 -> Version: 1
+    req_builder.set_subject_name(&x509_name)?;
+    let extensions = {
+        let context = req_builder.x509v3_context(None);
+        let mut ext_stack = Stack::new()?;
+        ext_stack.push(
+            KeyUsage::new()
+                .digital_signature()
+                .key_encipherment()
+                .build()?,
+        )?;
+        ext_stack.push(ExtendedKeyUsage::new().server_auth().build()?)?;
+        ext_stack.push(
+            SubjectAlternativeName::new()
+                .dns("myserver.localhost")
+                .build(&context)?,
+        )?;
+        ext_stack.push(
+            SubjectAlternativeName::new()
+                .ip("127.0.0.1")
+                .build(&context)?,
+        )?;
+        ext_stack.push(SubjectAlternativeName::new().ip("::1").build(&context)?)?;
+        ext_stack
+    };
+    req_builder.add_extensions(&extensions)?;
+    req_builder
+        .add_attribute_by_nid(Nid::PKCS9_CHALLENGEPASSWORD, "my_secret_challenge_password")?;
 
     req_builder.sign(key_pair, MessageDigest::sha256())?;
     let req = req_builder.build();
@@ -148,6 +198,11 @@ fn real_main() -> Result<(), ErrorStack> {
         X509VerifyResult::OK => println!("Certificate verified!"),
         ver_err => println!("Failed to verify certificate: {}", ver_err),
     };
+
+    let server_key_pair = mk_key_pair()?;
+    let csr = mk_request_with_attribute(&server_key_pair)?;
+    println!("CSR with challengePassword was created:");
+    println!("{}", std::str::from_utf8(&csr.to_pem()?).unwrap());
 
     Ok(())
 }
