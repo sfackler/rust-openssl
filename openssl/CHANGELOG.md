@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [v0.10.47] - 2023-03-19
+
+### Added
+
+* Added support for X25519 and Ed25519 on LibreSSL and BoringSSL.
+* Added `Error::library_code` and `Error::reason_code`.
+
 ## [v0.10.46] - 2023-03-14
 
 ### Fixed
@@ -690,7 +697,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.46...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.47...master
+[v0.10.47]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.46...openssl-v0.10.47
 [v0.10.46]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.45...openssl-v0.10.46
 [v0.10.45]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.44...openssl-v0.10.45
 [v0.10.44]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.43...openssl-v0.10.44
