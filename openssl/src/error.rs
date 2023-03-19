@@ -198,11 +198,7 @@ impl Error {
                 self.line,
                 self.func.as_ref().map_or(ptr::null(), |s| s.as_ptr()),
             );
-            ffi::ERR_set_error(
-                ffi::ERR_GET_LIB(self.code),
-                ffi::ERR_GET_REASON(self.code),
-                ptr::null(),
-            );
+            ffi::ERR_set_error(self.library_code(), self.reason_code(), ptr::null());
         }
     }
 
@@ -214,9 +210,9 @@ impl Error {
         let line = self.line.try_into().unwrap();
         unsafe {
             ffi::ERR_put_error(
-                ffi::ERR_GET_LIB(self.code),
+                self.library_code(),
                 ffi::ERR_GET_FUNC(self.code),
-                ffi::ERR_GET_REASON(self.code),
+                self.reason_code(),
                 self.file.as_ptr(),
                 line,
             );
@@ -240,6 +236,15 @@ impl Error {
         }
     }
 
+    /// Returns the raw OpenSSL error constant for the library reporting the
+    /// error.
+    // On BoringSSL ERR_GET_{LIB,FUNC,REASON} are `unsafe`, but on
+    // OpenSSL/LibreSSL they're safe.
+    #[allow(unused_unsafe)]
+    pub fn library_code(&self) -> libc::c_int {
+        unsafe { ffi::ERR_GET_LIB(self.code) }
+    }
+
     /// Returns the name of the function reporting the error.
     pub fn function(&self) -> Option<RetStr<'_>> {
         self.func.as_ref().map(|s| s.as_str())
@@ -255,6 +260,14 @@ impl Error {
             let bytes = CStr::from_ptr(cstr as *const _).to_bytes();
             Some(str::from_utf8(bytes).unwrap())
         }
+    }
+
+    /// Returns the raw OpenSSL error constant for the reason for the error.
+    // On BoringSSL ERR_GET_{LIB,FUNC,REASON} are `unsafe`, but on
+    // OpenSSL/LibreSSL they're safe.
+    #[allow(unused_unsafe)]
+    pub fn reason_code(&self) -> libc::c_int {
+        unsafe { ffi::ERR_GET_REASON(self.code) }
     }
 
     /// Returns the name of the source file which encountered the error.
@@ -304,7 +317,7 @@ impl fmt::Display for Error {
         write!(fmt, "error:{:08X}", self.code())?;
         match self.library() {
             Some(l) => write!(fmt, ":{}", l)?,
-            None => write!(fmt, ":lib({})", unsafe { ffi::ERR_GET_LIB(self.code()) })?,
+            None => write!(fmt, ":lib({})", self.library_code())?,
         }
         match self.function() {
             Some(f) => write!(fmt, ":{}", f)?,
@@ -312,9 +325,7 @@ impl fmt::Display for Error {
         }
         match self.reason() {
             Some(r) => write!(fmt, ":{}", r)?,
-            None => write!(fmt, ":reason({})", unsafe {
-                ffi::ERR_GET_REASON(self.code())
-            })?,
+            None => write!(fmt, ":reason({})", self.reason_code())?,
         }
         write!(
             fmt,
@@ -385,5 +396,20 @@ cfg_if! {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::nid::Nid;
+
+    #[test]
+    fn test_error_library_code() {
+        let stack = Nid::create("not-an-oid", "invalid", "invalid").unwrap_err();
+        let errors = stack.errors();
+        #[cfg(not(boringssl))]
+        assert_eq!(errors[0].library_code(), ffi::ERR_LIB_ASN1);
+        #[cfg(boringssl)]
+        assert_eq!(errors[0].library_code(), ffi::ERR_LIB_OBJ as libc::c_int);
     }
 }
