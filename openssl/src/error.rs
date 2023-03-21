@@ -401,9 +401,12 @@ cfg_if! {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(not(ossl310))]
     use crate::nid::Nid;
 
     #[test]
+    // Due to a bug in OpenSSL 3.1.0, this test can hang there. Skip for now.
+    #[cfg(not(ossl310))]
     fn test_error_library_code() {
         let stack = Nid::create("not-an-oid", "invalid", "invalid").unwrap_err();
         let errors = stack.errors();
