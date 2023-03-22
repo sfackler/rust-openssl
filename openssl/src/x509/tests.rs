@@ -326,6 +326,14 @@ fn x509_extension_to_der() {
 }
 
 #[test]
+fn eku_invalid_other() {
+    assert!(ExtendedKeyUsage::new()
+        .other("1.1.1.1.1,2.2.2.2.2")
+        .build()
+        .is_err());
+}
+
+#[test]
 fn x509_req_builder() {
     let pkey = pkey();
 

@@ -39,6 +39,7 @@ use crate::bio::MemBio;
 use crate::bn::{BigNum, BigNumRef};
 use crate::error::ErrorStack;
 use crate::nid::Nid;
+use crate::stack::Stackable;
 use crate::string::OpensslString;
 use crate::{cvt, cvt_p};
 use openssl_macros::corresponds;
@@ -590,6 +591,10 @@ foreign_type_and_impl_send_sync! {
     pub struct Asn1Object;
     /// A reference to an [`Asn1Object`].
     pub struct Asn1ObjectRef;
+}
+
+impl Stackable for Asn1Object {
+    type StackType = ffi::stack_st_ASN1_OBJECT;
 }
 
 impl Asn1Object {
