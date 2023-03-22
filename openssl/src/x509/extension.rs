@@ -20,7 +20,8 @@ use std::fmt::Write;
 
 use crate::error::ErrorStack;
 use crate::nid::Nid;
-use crate::x509::{X509Extension, X509v3Context};
+use crate::x509::{Asn1Object, GeneralName, Stack, X509Extension, X509v3Context};
+use foreign_types::ForeignType;
 
 /// An extension which indicates whether a certificate is a CA certificate.
 pub struct BasicConstraints {
@@ -463,11 +464,19 @@ impl AuthorityKeyIdentifier {
     }
 }
 
+enum RustGeneralName {
+    Dns(String),
+    Email(String),
+    Uri(String),
+    Ip(String),
+    Rid(String),
+}
+
 /// An extension that allows additional identities to be bound to the subject
 /// of the certificate.
 pub struct SubjectAlternativeName {
     critical: bool,
-    names: Vec<String>,
+    items: Vec<RustGeneralName>,
 }
 
 impl Default for SubjectAlternativeName {
@@ -481,7 +490,7 @@ impl SubjectAlternativeName {
     pub fn new() -> SubjectAlternativeName {
         SubjectAlternativeName {
             critical: false,
-            names: vec![],
+            items: vec![],
         }
     }
 
@@ -493,55 +502,73 @@ impl SubjectAlternativeName {
 
     /// Sets the `email` flag.
     pub fn email(&mut self, email: &str) -> &mut SubjectAlternativeName {
-        self.names.push(format!("email:{}", email));
+        self.items.push(RustGeneralName::Email(email.to_string()));
         self
     }
 
     /// Sets the `uri` flag.
     pub fn uri(&mut self, uri: &str) -> &mut SubjectAlternativeName {
-        self.names.push(format!("URI:{}", uri));
+        self.items.push(RustGeneralName::Uri(uri.to_string()));
         self
     }
 
     /// Sets the `dns` flag.
     pub fn dns(&mut self, dns: &str) -> &mut SubjectAlternativeName {
-        self.names.push(format!("DNS:{}", dns));
+        self.items.push(RustGeneralName::Dns(dns.to_string()));
         self
     }
 
     /// Sets the `rid` flag.
     pub fn rid(&mut self, rid: &str) -> &mut SubjectAlternativeName {
-        self.names.push(format!("RID:{}", rid));
+        self.items.push(RustGeneralName::Rid(rid.to_string()));
         self
     }
 
     /// Sets the `ip` flag.
     pub fn ip(&mut self, ip: &str) -> &mut SubjectAlternativeName {
-        self.names.push(format!("IP:{}", ip));
+        self.items.push(RustGeneralName::Ip(ip.to_string()));
         self
     }
 
     /// Sets the `dirName` flag.
-    pub fn dir_name(&mut self, dir_name: &str) -> &mut SubjectAlternativeName {
-        self.names.push(format!("dirName:{}", dir_name));
-        self
+    ///
+    /// Not currently actually supported, always panics.
+    #[deprecated = "dir_name is deprecated and always panics. Please file a bug if you have a use case for this."]
+    pub fn dir_name(&mut self, _dir_name: &str) -> &mut SubjectAlternativeName {
+        unimplemented!(
+            "This has not yet been adapted for the new internals. File a bug if you need this."
+        );
     }
 
     /// Sets the `otherName` flag.
-    pub fn other_name(&mut self, other_name: &str) -> &mut SubjectAlternativeName {
-        self.names.push(format!("otherName:{}", other_name));
-        self
+    ///
+    /// Not currently actually supported, always panics.
+    #[deprecated = "other_name is deprecated and always panics. Please file a bug if you have a use case for this."]
+    pub fn other_name(&mut self, _other_name: &str) -> &mut SubjectAlternativeName {
+        unimplemented!(
+            "This has not yet been adapted for the new internals. File a bug if you need this."
+        );
     }
 
     /// Return a `SubjectAlternativeName` extension as an `X509Extension`.
-    pub fn build(&self, ctx: &X509v3Context<'_>) -> Result<X509Extension, ErrorStack> {
-        let mut value = String::new();
-        let mut first = true;
-        append(&mut value, &mut first, self.critical, "critical");
-        for name in &self.names {
-            append(&mut value, &mut first, true, name);
+    pub fn build(&self, _ctx: &X509v3Context<'_>) -> Result<X509Extension, ErrorStack> {
+        let mut stack = Stack::new()?;
+        for item in &self.items {
+            let gn = match item {
+                RustGeneralName::Dns(s) => GeneralName::new_dns(s.as_bytes())?,
+                RustGeneralName::Email(s) => GeneralName::new_email(s.as_bytes())?,
+                RustGeneralName::Uri(s) => GeneralName::new_uri(s.as_bytes())?,
+                RustGeneralName::Ip(s) => {
+                    GeneralName::new_ip(s.parse().map_err(|_| ErrorStack::get())?)?
+                }
+                RustGeneralName::Rid(s) => GeneralName::new_rid(Asn1Object::from_str(s)?)?,
+            };
+            stack.push(gn)?;
         }
-        X509Extension::new_nid(None, Some(ctx), Nid::SUBJECT_ALT_NAME, &value)
+
+        unsafe {
+            X509Extension::new_internal(Nid::SUBJECT_ALT_NAME, self.critical, stack.as_ptr().cast())
+        }
     }
 }
 

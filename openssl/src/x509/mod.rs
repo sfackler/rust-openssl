@@ -9,9 +9,9 @@
 
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
-use libc::{c_int, c_long, c_uint};
+use libc::{c_int, c_long, c_uint, c_void};
 use std::cmp::{self, Ordering};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::fmt;
@@ -24,7 +24,8 @@ use std::slice;
 use std::str;
 
 use crate::asn1::{
-    Asn1BitStringRef, Asn1IntegerRef, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef, Asn1Type,
+    Asn1BitStringRef, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1StringRef, Asn1TimeRef,
+    Asn1Type,
 };
 use crate::bio::MemBioSlice;
 use crate::conf::ConfRef;
@@ -851,6 +852,15 @@ impl X509Extension {
         }
     }
 
+    pub(crate) unsafe fn new_internal(
+        nid: Nid,
+        critical: bool,
+        value: *mut c_void,
+    ) -> Result<X509Extension, ErrorStack> {
+        ffi::init();
+        cvt_p(ffi::X509V3_EXT_i2d(nid.as_raw(), critical as _, value)).map(X509Extension)
+    }
+
     /// Adds an alias for an extension
     ///
     /// # Safety
@@ -860,6 +870,15 @@ impl X509Extension {
     pub unsafe fn add_alias(to: Nid, from: Nid) -> Result<(), ErrorStack> {
         ffi::init();
         cvt(ffi::X509V3_EXT_add_alias(to.as_raw(), from.as_raw())).map(|_| ())
+    }
+}
+
+impl X509ExtensionRef {
+    to_der! {
+        /// Serializes the Extension to its standard DER encoding.
+        #[corresponds(i2d_X509_EXTENSION)]
+        to_der,
+        ffi::i2d_X509_EXTENSION
     }
 }
 
@@ -1713,6 +1732,75 @@ foreign_type_and_impl_send_sync! {
     pub struct GeneralName;
     /// Reference to `GeneralName`.
     pub struct GeneralNameRef;
+}
+
+impl GeneralName {
+    unsafe fn new(
+        type_: c_int,
+        asn1_type: Asn1Type,
+        value: &[u8],
+    ) -> Result<GeneralName, ErrorStack> {
+        ffi::init();
+        let gn = GeneralName::from_ptr(cvt_p(ffi::GENERAL_NAME_new())?);
+        (*gn.as_ptr()).type_ = type_;
+        let s = cvt_p(ffi::ASN1_STRING_type_new(asn1_type.as_raw()))?;
+        ffi::ASN1_STRING_set(s, value.as_ptr().cast(), value.len().try_into().unwrap());
+
+        #[cfg(boringssl)]
+        {
+            (*gn.as_ptr()).d.ptr = s.cast();
+        }
+        #[cfg(not(boringssl))]
+        {
+            (*gn.as_ptr()).d = s.cast();
+        }
+
+        Ok(gn)
+    }
+
+    pub(crate) fn new_email(email: &[u8]) -> Result<GeneralName, ErrorStack> {
+        unsafe { GeneralName::new(ffi::GEN_EMAIL, Asn1Type::IA5STRING, email) }
+    }
+
+    pub(crate) fn new_dns(dns: &[u8]) -> Result<GeneralName, ErrorStack> {
+        unsafe { GeneralName::new(ffi::GEN_DNS, Asn1Type::IA5STRING, dns) }
+    }
+
+    pub(crate) fn new_uri(uri: &[u8]) -> Result<GeneralName, ErrorStack> {
+        unsafe { GeneralName::new(ffi::GEN_URI, Asn1Type::IA5STRING, uri) }
+    }
+
+    pub(crate) fn new_ip(ip: IpAddr) -> Result<GeneralName, ErrorStack> {
+        match ip {
+            IpAddr::V4(addr) => unsafe {
+                GeneralName::new(ffi::GEN_IPADD, Asn1Type::OCTET_STRING, &addr.octets())
+            },
+            IpAddr::V6(addr) => unsafe {
+                GeneralName::new(ffi::GEN_IPADD, Asn1Type::OCTET_STRING, &addr.octets())
+            },
+        }
+    }
+
+    pub(crate) fn new_rid(oid: Asn1Object) -> Result<GeneralName, ErrorStack> {
+        unsafe {
+            ffi::init();
+            let gn = cvt_p(ffi::GENERAL_NAME_new())?;
+            (*gn).type_ = ffi::GEN_RID;
+
+            #[cfg(boringssl)]
+            {
+                (*gn).d.registeredID = oid.as_ptr();
+            }
+            #[cfg(not(boringssl))]
+            {
+                (*gn).d = oid.as_ptr().cast();
+            }
+
+            mem::forget(oid);
+
+            Ok(GeneralName::from_ptr(gn))
+        }
+    }
 }
 
 impl GeneralNameRef {
