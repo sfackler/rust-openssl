@@ -807,6 +807,9 @@ impl X509Extension {
     /// Some extension types, such as `subjectAlternativeName`, require an `X509v3Context` to be
     /// provided.
     ///
+    /// DO NOT CALL THIS WITH UNTRUSTED `value`: `value` is an OpenSSL
+    /// mini-language that can read arbitrary files.
+    ///
     /// See the extension module for builder types which will construct certain common extensions.
     pub fn new(
         conf: Option<&ConfRef>,
@@ -848,6 +851,9 @@ impl X509Extension {
     ///
     /// Some extension types, such as `nid::SUBJECT_ALTERNATIVE_NAME`, require an `X509v3Context` to
     /// be provided.
+    ///
+    /// DO NOT CALL THIS WITH UNTRUSTED `value`: `value` is an OpenSSL
+    /// mini-language that can read arbitrary files.
     ///
     /// See the extension module for builder types which will construct certain common extensions.
     pub fn new_nid(
