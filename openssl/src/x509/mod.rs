@@ -1045,7 +1045,10 @@ impl X509NameBuilder {
 
     /// Return an `X509Name`.
     pub fn build(self) -> X509Name {
-        self.0
+        // Round-trip through bytes because OpenSSL is not const correct and
+        // names in a "modified" state compute various things lazily. This can
+        // lead to data-races because OpenSSL doesn't have locks or anything.
+        X509Name::from_der(&self.0.to_der().unwrap()).unwrap()
     }
 }
 
