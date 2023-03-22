@@ -25,7 +25,7 @@ use crate::x509::X509PurposeId;
 #[cfg(any(ossl102, libressl261))]
 use crate::x509::X509PurposeRef;
 use crate::x509::{
-    CrlStatus, X509Crl, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509,
+    CrlStatus, X509Crl, X509Extension, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509,
 };
 use hex::{self, FromHex};
 #[cfg(any(ossl102, libressl261))]
@@ -285,6 +285,14 @@ fn x509_builder() {
         .unwrap();
     assert_eq!(cn.data().as_slice(), b"foobar.com");
     assert_eq!(serial, x509.serial_number().to_bn().unwrap());
+}
+
+#[test]
+fn x509_extension_new() {
+    assert!(X509Extension::new(None, None, "crlDistributionPoints", "section").is_err());
+    assert!(X509Extension::new(None, None, "proxyCertInfo", "").is_err());
+    assert!(X509Extension::new(None, None, "certificatePolicies", "").is_err());
+    assert!(X509Extension::new(None, None, "subjectAltName", "dirName:section").is_err());
 }
 
 #[test]
