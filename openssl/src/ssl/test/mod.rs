@@ -84,17 +84,21 @@ fn verify_trusted_with_set_cert() {
 
 #[test]
 fn verify_untrusted_callback_override_ok() {
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
+
     let server = Server::builder().build();
 
     let mut client = server.client();
     client
         .ctx()
         .set_verify_callback(SslVerifyMode::PEER, |_, x509| {
+            CALLED_BACK.store(true, Ordering::SeqCst);
             assert!(x509.current_cert().is_some());
             true
         });
 
     client.connect();
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
 #[test]
@@ -113,6 +117,8 @@ fn verify_untrusted_callback_override_bad() {
 
 #[test]
 fn verify_trusted_callback_override_ok() {
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
+
     let server = Server::builder().build();
 
     let mut client = server.client();
@@ -120,11 +126,13 @@ fn verify_trusted_callback_override_ok() {
     client
         .ctx()
         .set_verify_callback(SslVerifyMode::PEER, |_, x509| {
+            CALLED_BACK.store(true, Ordering::SeqCst);
             assert!(x509.current_cert().is_some());
             true
         });
 
     client.connect();
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
 #[test]
@@ -144,21 +152,27 @@ fn verify_trusted_callback_override_bad() {
 
 #[test]
 fn verify_callback_load_certs() {
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
+
     let server = Server::builder().build();
 
     let mut client = server.client();
     client
         .ctx()
         .set_verify_callback(SslVerifyMode::PEER, |_, x509| {
+            CALLED_BACK.store(true, Ordering::SeqCst);
             assert!(x509.current_cert().is_some());
             true
         });
 
     client.connect();
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
 #[test]
 fn verify_trusted_get_error_ok() {
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
+
     let server = Server::builder().build();
 
     let mut client = server.client();
@@ -166,11 +180,13 @@ fn verify_trusted_get_error_ok() {
     client
         .ctx()
         .set_verify_callback(SslVerifyMode::PEER, |_, x509| {
+            CALLED_BACK.store(true, Ordering::SeqCst);
             assert_eq!(x509.error(), X509VerifyResult::OK);
             true
         });
 
     client.connect();
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
 #[test]
@@ -469,8 +485,11 @@ fn test_alpn_server_select_none_fatal() {
 #[test]
 #[cfg(any(ossl102, libressl261))]
 fn test_alpn_server_select_none() {
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
+
     let mut server = Server::builder();
     server.ctx().set_alpn_select_callback(|_, client| {
+        CALLED_BACK.store(true, Ordering::SeqCst);
         ssl::select_next_proto(b"\x08http/1.1\x08spdy/3.1", client).ok_or(ssl::AlpnError::NOACK)
     });
     let server = server.build();
@@ -479,6 +498,7 @@ fn test_alpn_server_select_none() {
     client.ctx().set_alpn_protos(b"\x06http/2").unwrap();
     let s = client.connect();
     assert_eq!(None, s.ssl().selected_alpn_protocol());
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
 #[test]
@@ -595,7 +615,7 @@ fn refcount_ssl_context() {
 
     {
         let new_ctx_a = SslContext::builder(SslMethod::tls()).unwrap().build();
-        let _new_ctx_b = ssl.set_ssl_context(&new_ctx_a);
+        ssl.set_ssl_context(&new_ctx_a).unwrap();
     }
 }
 
@@ -731,7 +751,7 @@ fn connector_no_hostname_still_verifies() {
 }
 
 #[test]
-fn connector_no_hostname_can_disable_verify() {
+fn connector_can_disable_verify() {
     let server = Server::builder().build();
 
     let mut connector = SslConnector::builder(SslMethod::tls()).unwrap();
@@ -742,8 +762,7 @@ fn connector_no_hostname_can_disable_verify() {
     let mut s = connector
         .configure()
         .unwrap()
-        .verify_hostname(false)
-        .connect("foobar.com", s)
+        .connect("fizzbuzz.com", s)
         .unwrap();
     s.read_exact(&mut [0]).unwrap();
 }
