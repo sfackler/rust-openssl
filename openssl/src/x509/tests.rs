@@ -25,7 +25,7 @@ use crate::x509::X509PurposeId;
 #[cfg(any(ossl102, libressl261))]
 use crate::x509::X509PurposeRef;
 use crate::x509::{
-    CrlStatus, X509Crl, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509,
+    CrlStatus, X509Crl, X509Extension, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509,
 };
 use hex::{self, FromHex};
 #[cfg(any(ossl102, libressl261))]
@@ -285,6 +285,60 @@ fn x509_builder() {
         .unwrap();
     assert_eq!(cn.data().as_slice(), b"foobar.com");
     assert_eq!(serial, x509.serial_number().to_bn().unwrap());
+}
+
+#[test]
+fn x509_extension_new() {
+    assert!(X509Extension::new(None, None, "crlDistributionPoints", "section").is_err());
+    assert!(X509Extension::new(None, None, "proxyCertInfo", "").is_err());
+    assert!(X509Extension::new(None, None, "certificatePolicies", "").is_err());
+    assert!(X509Extension::new(None, None, "subjectAltName", "dirName:section").is_err());
+}
+
+#[test]
+fn x509_extension_to_der() {
+    let builder = X509::builder().unwrap();
+
+    for (ext, expected) in [
+        (
+            BasicConstraints::new().critical().ca().build().unwrap(),
+            b"0\x0f\x06\x03U\x1d\x13\x01\x01\xff\x04\x050\x03\x01\x01\xff" as &[u8],
+        ),
+        (
+            SubjectAlternativeName::new()
+                .dns("example.com,DNS:example2.com")
+                .build(&builder.x509v3_context(None, None))
+                .unwrap(),
+            b"0'\x06\x03U\x1d\x11\x04 0\x1e\x82\x1cexample.com,DNS:example2.com",
+        ),
+        (
+            SubjectAlternativeName::new()
+                .rid("1.2.3.4")
+                .uri("https://example.com")
+                .build(&builder.x509v3_context(None, None))
+                .unwrap(),
+            b"0#\x06\x03U\x1d\x11\x04\x1c0\x1a\x88\x03*\x03\x04\x86\x13https://example.com",
+        ),
+        (
+            ExtendedKeyUsage::new()
+                .server_auth()
+                .other("2.999.1")
+                .other("clientAuth")
+                .build()
+                .unwrap(),
+            b"0\x22\x06\x03U\x1d%\x04\x1b0\x19\x06\x08+\x06\x01\x05\x05\x07\x03\x01\x06\x03\x887\x01\x06\x08+\x06\x01\x05\x05\x07\x03\x02",
+        ),
+    ] {
+        assert_eq!(&ext.to_der().unwrap(), expected);
+    }
+}
+
+#[test]
+fn eku_invalid_other() {
+    assert!(ExtendedKeyUsage::new()
+        .other("1.1.1.1.1,2.2.2.2.2")
+        .build()
+        .is_err());
 }
 
 #[test]

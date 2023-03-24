@@ -550,6 +550,13 @@ extern "C" {
     pub fn X509_EXTENSION_get_object(ext: *mut X509_EXTENSION) -> *mut ASN1_OBJECT;
     pub fn X509_EXTENSION_get_data(ext: *mut X509_EXTENSION) -> *mut ASN1_OCTET_STRING;
 }
+
+const_ptr_api! {
+    extern "C" {
+        pub fn i2d_X509_EXTENSION(ext: #[const_ptr_if(ossl300)] X509_EXTENSION, pp: *mut *mut c_uchar) -> c_int;
+    }
+}
+
 const_ptr_api! {
     extern "C" {
         // in X509
