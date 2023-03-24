@@ -7,7 +7,7 @@
 ### Fixed
 
 * Fixed injection vulnerabilities where OpenSSL's configuration mini-language could be used via `x509::extension::SubjectAlternativeName` and `x509::extension::ExtendedKeyUsage`. The mini-language can read arbitrary files amongst other things.
-  * As part of fixing this `SubjectAlternativeName::dir_name` and `SubjectAlternativeName::other_name` are deprected and their implementations always `panic!`. If you have a use case for these, please file an issue.
+  * As part of fixing this `SubjectAlternativeName::dir_name` and `SubjectAlternativeName::other_name` are deprecated and their implementations always `panic!`. If you have a use case for these, please file an issue.
 * Fixed several NULL pointer dereferences in OpenSSL that could be triggered via `x509::X509Extension::new` and `x509::X509Extension::new_nid`. Note that these methods still accept OpenSSL's configuration mini-language, and therefore should not be used with untrusted data.
 * Fixed a data-race with `x509::X509Name` that are created with `x509::X509NameBuilder` and then used concurrently.
 * Fixed LibreSSL version checking. More functions should now be correctly available on LibreSSL.
