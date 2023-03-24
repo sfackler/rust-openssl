@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [v0.10.48] - 2023-03-23
+
+### Fixed
+
+* Fixed injection vulnerabilities where OpenSSL's configuration mini-language could be used via `x509::extension::SubjectAlternativeName` and `x509::extension::ExtendedKeyUsage`. The mini-language can read arbitrary files amongst other things.
+  * As part of fixing this `SubjectAlternativeName::dir_name` and `SubjectAlternativeName::other_name` are deprecated and their implementations always `panic!`. If you have a use case for these, please file an issue.
+* Fixed several NULL pointer dereferences in OpenSSL that could be triggered via `x509::X509Extension::new` and `x509::X509Extension::new_nid`. Note that these methods still accept OpenSSL's configuration mini-language, and therefore should not be used with untrusted data.
+* Fixed a data-race with `x509::X509Name` that are created with `x509::X509NameBuilder` and then used concurrently.
+* Fixed LibreSSL version checking. More functions should now be correctly available on LibreSSL.
+
 ## [v0.10.47] - 2023-03-19
 
 ### Added
@@ -697,7 +707,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.47...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.48...master
+[v0.10.48]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.47...openssl-v0.10.48
 [v0.10.47]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.46...openssl-v0.10.47
 [v0.10.46]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.45...openssl-v0.10.46
 [v0.10.45]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.44...openssl-v0.10.45
