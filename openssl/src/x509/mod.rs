@@ -50,6 +50,15 @@ pub mod store;
 #[cfg(test)]
 mod tests;
 
+/// A type of X509 extension.
+///
+/// # Safety
+/// The value of NID and Output must match those in OpenSSL so that
+pub unsafe trait ExtensionType {
+    const NID: Nid;
+    type Output: ForeignType;
+}
+
 foreign_type_and_impl_send_sync! {
     type CType = ffi::X509_STORE_CTX;
     fn drop = ffi::X509_STORE_CTX_free;
@@ -1483,31 +1492,28 @@ impl X509ReqRef {
 
 /// The reason that a certificate was revoked.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct CrlReason(i64);
+pub struct CrlReason(c_int);
 
 #[allow(missing_docs)] // no need to document the constants
 impl CrlReason {
-    pub const UNSPECIFIED: CrlReason = CrlReason(ffi::CRL_REASON_UNSPECIFIED as i64);
-    pub const KEY_COMPROMISE: CrlReason = CrlReason(ffi::CRL_REASON_KEY_COMPROMISE as i64);
-    pub const CA_COMPROMISE: CrlReason = CrlReason(ffi::CRL_REASON_CA_COMPROMISE as i64);
-    pub const AFFILIATION_CHANGED: CrlReason =
-        CrlReason(ffi::CRL_REASON_AFFILIATION_CHANGED as i64);
-    pub const SUPERSEDED: CrlReason = CrlReason(ffi::CRL_REASON_SUPERSEDED as i64);
-    pub const CESSATION_OF_OPERATION: CrlReason =
-        CrlReason(ffi::CRL_REASON_CESSATION_OF_OPERATION as i64);
-    pub const CERTIFICATE_HOLD: CrlReason = CrlReason(ffi::CRL_REASON_CERTIFICATE_HOLD as i64);
-    pub const REMOVE_FROM_CRL: CrlReason = CrlReason(ffi::CRL_REASON_REMOVE_FROM_CRL as i64);
-    pub const PRIVILEGE_WITHDRAWN: CrlReason =
-        CrlReason(ffi::CRL_REASON_PRIVILEGE_WITHDRAWN as i64);
-    pub const AA_COMPROMISE: CrlReason = CrlReason(ffi::CRL_REASON_AA_COMPROMISE as i64);
+    pub const UNSPECIFIED: CrlReason = CrlReason(ffi::CRL_REASON_UNSPECIFIED);
+    pub const KEY_COMPROMISE: CrlReason = CrlReason(ffi::CRL_REASON_KEY_COMPROMISE);
+    pub const CA_COMPROMISE: CrlReason = CrlReason(ffi::CRL_REASON_CA_COMPROMISE);
+    pub const AFFILIATION_CHANGED: CrlReason = CrlReason(ffi::CRL_REASON_AFFILIATION_CHANGED);
+    pub const SUPERSEDED: CrlReason = CrlReason(ffi::CRL_REASON_SUPERSEDED);
+    pub const CESSATION_OF_OPERATION: CrlReason = CrlReason(ffi::CRL_REASON_CESSATION_OF_OPERATION);
+    pub const CERTIFICATE_HOLD: CrlReason = CrlReason(ffi::CRL_REASON_CERTIFICATE_HOLD);
+    pub const REMOVE_FROM_CRL: CrlReason = CrlReason(ffi::CRL_REASON_REMOVE_FROM_CRL);
+    pub const PRIVILEGE_WITHDRAWN: CrlReason = CrlReason(ffi::CRL_REASON_PRIVILEGE_WITHDRAWN);
+    pub const AA_COMPROMISE: CrlReason = CrlReason(ffi::CRL_REASON_AA_COMPROMISE);
 
     /// Constructs an `CrlReason` from a raw OpenSSL value.
-    pub fn from_raw(value: i64) -> Self {
+    pub const fn from_raw(value: c_int) -> Self {
         CrlReason(value)
     }
 
     /// Returns the raw OpenSSL value represented by this type.
-    pub fn as_raw(&self) -> i64 {
+    pub const fn as_raw(&self) -> c_int {
         self.0
     }
 }
@@ -1571,45 +1577,59 @@ impl X509RevokedRef {
         }
     }
 
-    /// Get the issuer name of the revoked certificate
+    /// Get the criticality and value of an extension.
+    ///
+    /// This returns None if the extension is not present or occurs multiple times.
     #[corresponds(X509_REVOKED_get_ext_d2i)]
-    pub fn issuer_name(&self) -> Option<Stack<GeneralName>> {
-        // SAFETY: self.as_ptr() is a valid pointer to an X509_REVOKED.
-        unsafe {
-            let issuer_names = ffi::X509_REVOKED_get_ext_d2i(
-                self.as_ptr() as *const _,
-                // NID_certificate_issuer is a X509_REVOKED extension that
-                // returns a GENERAL_NAMES, which is a Stack<GeneralName>
-                ffi::NID_certificate_issuer,
-                // Only one instance of the extension is permissable
-                ptr::null_mut(),
-                // Don't care if the extension is critical
+    pub fn extension<T: ExtensionType>(&self) -> Result<Option<(bool, T::Output)>, ErrorStack> {
+        let mut critical = -1;
+        let out = unsafe {
+            // SAFETY: self.as_ptr() is a valid pointer to an X509_REVOKED.
+            let ext = ffi::X509_REVOKED_get_ext_d2i(
+                self.as_ptr(),
+                T::NID.as_raw(),
+                &mut critical as *mut _,
                 ptr::null_mut(),
             );
-            Stack::from_ptr_opt(issuer_names as *mut _)
+            // SAFETY: Extensions's contract promises that the type returned by
+            // OpenSSL here is T::Output.
+            T::Output::from_ptr_opt(ext as *mut _)
+        };
+        match (critical, out) {
+            (0, Some(out)) => Ok(Some((false, out))),
+            (1, Some(out)) => Ok(Some((true, out))),
+            // -1 means the extension wasn't found, -2 means multiple were found.
+            (-1 | -2, _) => Ok(None),
+            // A critical value of 0 or 1 suggests success, but a null pointer
+            // was returned so something went wrong.
+            (0 | 1, None) => Err(ErrorStack::get()),
+            (..=-3 | 2.., _) => panic!("OpenSSL should only return -2, -1, 0, or 1 for an extension's criticality but it returned {}", critical),
         }
     }
+}
 
-    /// Get the reason that the certificate was revoked
-    #[corresponds(X509_REVOKED_get_ext_d2i)]
-    #[cfg(ossl110)]
-    pub fn reason_code(&self) -> Option<Result<CrlReason, ErrorStack>> {
-        let reason_code = unsafe {
-            // The return value may be NULL if the extension wasn't found or
-            // there were multiple, and we require only one.
-            Asn1Enumerated::from_ptr_opt(ffi::X509_REVOKED_get_ext_d2i(
-                // self.as_ptr() is a valid pointer to a X509_REVOKED
-                self.as_ptr() as *const _,
-                // NID_crl_reason is an X509_REVOKED extension that is an ASN1_ENUMERATED
-                ffi::NID_crl_reason,
-                // Only one instance of the extension is permissable
-                ptr::null_mut(),
-                // Don't care if the extension is critical
-                ptr::null_mut(),
-            ) as *mut _)
-        }?;
-        Some(reason_code.get_i64().map(CrlReason::from_raw))
-    }
+/// The CRL entry extension identifying the reason for revocation see [`CrlReason`],
+/// this is as defined in RFC 5280 Section 5.3.1.
+pub enum ReasonCode {}
+
+// SAFETY: CertificateIssuer is defined to be a stack of GeneralName in the RFC
+// and in OpenSSL.
+unsafe impl ExtensionType for ReasonCode {
+    const NID: Nid = Nid::from_raw(ffi::NID_crl_reason);
+
+    type Output = Asn1Enumerated;
+}
+
+/// The CRL entry extension identifying the issuer of a certificate used in
+/// indirect CRLs, as defined in RFC 5280 Section 5.3.3.
+pub enum CertificateIssuer {}
+
+// SAFETY: CertificateIssuer is defined to be a stack of GeneralName in the RFC
+// and in OpenSSL.
+unsafe impl ExtensionType for CertificateIssuer {
+    const NID: Nid = Nid::from_raw(ffi::NID_certificate_issuer);
+
+    type Output = Stack<GeneralName>;
 }
 
 foreign_type_and_impl_send_sync! {
@@ -1957,7 +1977,12 @@ impl GeneralNameRef {
                 return None;
             }
 
-            Some(X509NameRef::from_const_ptr((*self.as_ptr()).d as *const _))
+            #[cfg(boringssl)]
+            let d = (*self.as_ptr()).d.ptr;
+            #[cfg(not(boringssl))]
+            let d = (*self.as_ptr()).d;
+
+            Some(X509NameRef::from_const_ptr(d as *const _))
         }
     }
 

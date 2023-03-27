@@ -678,7 +678,7 @@ foreign_type_and_impl_send_sync! {
 
 impl Asn1EnumeratedRef {
     /// Get the value, if it fits in the required bounds.
-    #[corresponds(ASN1_ENUMERATED_get)]
+    #[corresponds(ASN1_ENUMERATED_get_int64)]
     #[cfg(ossl110)]
     pub fn get_i64(&self) -> Result<i64, ErrorStack> {
         let mut crl_reason = 0;
