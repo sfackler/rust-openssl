@@ -1603,7 +1603,7 @@ impl X509RevokedRef {
             // A critical value of 0 or 1 suggests success, but a null pointer
             // was returned so something went wrong.
             (0 | 1, None) => Err(ErrorStack::get()),
-            (..=-3 | 2.., _) => panic!("OpenSSL should only return -2, -1, 0, or 1 for an extension's criticality but it returned {}", critical),
+            (c_int::MIN..=-2 | 2.., _) => panic!("OpenSSL should only return -2, -1, 0, or 1 for an extension's criticality but it returned {}", critical),
         }
     }
 }
