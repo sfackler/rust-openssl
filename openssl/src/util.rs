@@ -75,6 +75,14 @@ pub trait ForeignTypeExt: ForeignType {
         }
     }
 }
+
+pub fn opt_to_ptr<T: ForeignTypeRef>(o: Option<&T>) -> *mut T::CType {
+    match o {
+        None => std::ptr::null_mut(),
+        Some(p) => p.as_ptr(),
+    }
+}
+
 impl<FT: ForeignType> ForeignTypeExt for FT {}
 
 pub trait ForeignTypeRefExt: ForeignTypeRef {

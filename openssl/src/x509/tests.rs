@@ -986,3 +986,31 @@ fn ipv6_as_subject_alternative_name_is_formatted_in_debug() {
         8u8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 128,
     ]);
 }
+
+#[test]
+#[cfg(ossl110)]
+fn test_store_ctx_crls() {
+    let ca = include_bytes!("../../test/crl-ca.crt");
+    let ca = X509::from_pem(ca).unwrap();
+    let crl = include_bytes!("../../test/test.crl");
+    let crl = X509Crl::from_der(crl).unwrap();
+    let cert = include_bytes!("../../test/leaf.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    assert!(crl.verify(&ca.public_key().unwrap()).unwrap());
+
+    let mut store_bldr = X509StoreBuilder::new().unwrap();
+    store_bldr.add_crl(&crl).unwrap();
+    let store = store_bldr.build();
+
+    let mut context = X509StoreContext::new().unwrap();
+    assert_eq!(
+        context
+            .init_opt(&store, None, None, |c| c.crls(ca.subject_name()))
+            .unwrap()
+            .len(),
+        1
+    );
+    assert!(context
+        .init_opt(&store, None, None, |c| c.crls(cert.subject_name()))
+        .is_err());
+}

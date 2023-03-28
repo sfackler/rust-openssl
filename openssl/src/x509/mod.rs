@@ -37,7 +37,7 @@ use crate::pkey::{HasPrivate, HasPublic, PKey, PKeyRef, Public};
 use crate::ssl::SslRef;
 use crate::stack::{Stack, StackRef, Stackable};
 use crate::string::OpensslString;
-use crate::util::{ForeignTypeExt, ForeignTypeRefExt};
+use crate::util::{opt_to_ptr, ForeignTypeExt, ForeignTypeRefExt};
 use crate::{cvt, cvt_n, cvt_p};
 use openssl_macros::corresponds;
 
@@ -144,6 +144,65 @@ impl X509StoreContextRef {
 
             let cleanup = Cleanup(self);
             with_context(cleanup.0)
+        }
+    }
+
+    /// Initializes this context with the given certificate, certificates chain and certificate
+    /// store. After initializing the context, the `with_context` closure is called with the prepared
+    /// context. As long as the closure is running, the context stays initialized and can be used
+    /// to e.g. verify a certificate. The context will be cleaned up, after the closure finished.
+    ///
+    /// * `trust` - The certificate store with the trusted certificates.
+    /// * `cert` - The certificate that should be verified.
+    /// * `cert_chain` - The certificates chain.
+    /// * `with_context` - The closure that is called with the initialized context.
+    ///
+    /// This corresponds to [`X509_STORE_CTX_init`] before calling `with_context` and to
+    /// [`X509_STORE_CTX_cleanup`] after calling `with_context`.
+    ///
+    /// [`X509_STORE_CTX_init`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_init.html
+    /// [`X509_STORE_CTX_cleanup`]:  https://www.openssl.org/docs/man1.0.2/crypto/X509_STORE_CTX_cleanup.html
+    /// similar to [`X509StoreContextRef::init()`] but with optional cert and cert_chain.
+    /// Useful to call [`X509StoreContextRef::crls()`] on it.
+    pub fn init_opt<F, T>(
+        &mut self,
+        trust: &store::X509StoreRef,
+        cert: Option<&X509Ref>,
+        cert_chain: Option<&StackRef<X509>>,
+        with_context: F,
+    ) -> Result<T, ErrorStack>
+    where
+        F: FnOnce(&mut X509StoreContextRef) -> std::result::Result<T, ErrorStack>,
+    {
+        struct Cleanup<'a>(&'a mut X509StoreContextRef);
+
+        impl<'a> Drop for Cleanup<'a> {
+            fn drop(&mut self) {
+                unsafe {
+                    ffi::X509_STORE_CTX_cleanup(self.0.as_ptr());
+                }
+            }
+        }
+
+        unsafe {
+            cvt(ffi::X509_STORE_CTX_init(
+                self.as_ptr(),
+                trust.as_ptr(),
+                opt_to_ptr(cert),
+                opt_to_ptr(cert_chain),
+            ))?;
+        }
+        let cleanup = Cleanup(self);
+        with_context(cleanup.0)
+    }
+
+    /// Get all Certificate Revocation Lists with the subject currently stored
+    #[cfg(ossl110)]
+    #[corresponds(X509_STORE_CTX_get1_crls)]
+    pub fn crls(&mut self, subj: &X509NameRef) -> std::result::Result<Stack<X509Crl>, ErrorStack> {
+        unsafe {
+            let crls = cvt_p(ffi::X509_STORE_CTX_get1_crls(self.as_ptr(), subj.as_ptr()))?;
+            Ok(Stack::from_ptr(crls))
         }
     }
 
@@ -1518,8 +1577,7 @@ impl X509RevokedRef {
     pub fn revocation_date(&self) -> &Asn1TimeRef {
         unsafe {
             let r = X509_REVOKED_get0_revocationDate(self.as_ptr() as *const _);
-            assert!(!r.is_null());
-            Asn1TimeRef::from_ptr(r as *mut _)
+            Asn1TimeRef::from_const_ptr_opt(r).expect("revocation date must not be null")
         }
     }
 
@@ -1528,8 +1586,7 @@ impl X509RevokedRef {
     pub fn serial_number(&self) -> &Asn1IntegerRef {
         unsafe {
             let r = X509_REVOKED_get0_serialNumber(self.as_ptr() as *const _);
-            assert!(!r.is_null());
-            Asn1IntegerRef::from_ptr(r as *mut _)
+            Asn1IntegerRef::from_const_ptr_opt(r).expect("serial number must not be null")
         }
     }
 }
@@ -1542,6 +1599,10 @@ foreign_type_and_impl_send_sync! {
     pub struct X509Crl;
     /// Reference to `X509Crl`.
     pub struct X509CrlRef;
+}
+
+impl Stackable for X509Crl {
+    type StackType = ffi::stack_st_X509_CRL;
 }
 
 /// The status of a certificate in a revoction list
@@ -1572,14 +1633,14 @@ impl<'a> CrlStatus<'a> {
     ) -> CrlStatus<'a> {
         match status {
             0 => CrlStatus::NotRevoked,
-            1 => {
-                assert!(!revoked_entry.is_null());
-                CrlStatus::Revoked(X509RevokedRef::from_ptr(revoked_entry))
-            }
-            2 => {
-                assert!(!revoked_entry.is_null());
-                CrlStatus::RemoveFromCrl(X509RevokedRef::from_ptr(revoked_entry))
-            }
+            1 => CrlStatus::Revoked(
+                X509RevokedRef::from_const_ptr_opt(revoked_entry)
+                    .expect("revoked entry must no be null"),
+            ),
+            2 => CrlStatus::RemoveFromCrl(
+                X509RevokedRef::from_const_ptr_opt(revoked_entry)
+                    .expect("revoked entry must no be null"),
+            ),
             _ => unreachable!(
                 "{}",
                 "X509_CRL_get0_by_{{serial,cert}} should only return 0, 1, or 2."
@@ -1605,6 +1666,39 @@ impl X509Crl {
         from_der,
         X509Crl,
         ffi::d2i_X509_CRL
+    }
+
+    #[corresponds(PEM_read_bio_X509_CRL)]
+    pub fn stack_from_pem(pem: &[u8]) -> Result<Vec<X509Crl>, ErrorStack> {
+        unsafe {
+            ffi::init();
+            let bio = MemBioSlice::new(pem)?;
+
+            let mut crls = vec![];
+            loop {
+                let r = ffi::PEM_read_bio_X509_CRL(
+                    bio.as_ptr(),
+                    ptr::null_mut(),
+                    None,
+                    ptr::null_mut(),
+                );
+                if r.is_null() {
+                    let err = ffi::ERR_peek_last_error();
+                    if ffi::ERR_GET_LIB(err) as X509LenTy == ffi::ERR_LIB_PEM
+                        && ffi::ERR_GET_REASON(err) == ffi::PEM_R_NO_START_LINE
+                    {
+                        ffi::ERR_clear_error();
+                        break;
+                    }
+
+                    return Err(ErrorStack::get());
+                } else {
+                    crls.push(X509Crl(r));
+                }
+            }
+
+            Ok(crls)
+        }
     }
 }
 
@@ -1642,8 +1736,7 @@ impl X509CrlRef {
     pub fn last_update(&self) -> &Asn1TimeRef {
         unsafe {
             let date = X509_CRL_get0_lastUpdate(self.as_ptr());
-            assert!(!date.is_null());
-            Asn1TimeRef::from_ptr(date as *mut _)
+            Asn1TimeRef::from_const_ptr_opt(date).expect("last update must not be null")
         }
     }
 
@@ -1685,8 +1778,7 @@ impl X509CrlRef {
     pub fn issuer_name(&self) -> &X509NameRef {
         unsafe {
             let name = X509_CRL_get_issuer(self.as_ptr());
-            assert!(!name.is_null());
-            X509NameRef::from_ptr(name)
+            X509NameRef::from_const_ptr_opt(name).expect("issuer name must not be null")
         }
     }
 
@@ -1704,6 +1796,40 @@ impl X509CrlRef {
         unsafe { cvt_n(ffi::X509_CRL_verify(self.as_ptr(), key.as_ptr())).map(|n| n != 0) }
     }
 }
+
+impl Ord for X509CrlRef {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        // X509_cmp returns a number <0 for less than, 0 for equal and >0 for greater than.
+        // It can't fail if both pointers are valid, which we know is true.
+        let cmp = unsafe { ffi::X509_CRL_cmp(self.as_ptr(), other.as_ptr()) };
+        cmp.cmp(&0)
+    }
+}
+
+impl PartialOrd for X509CrlRef {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialOrd<X509Crl> for X509CrlRef {
+    fn partial_cmp(&self, other: &X509Crl) -> Option<cmp::Ordering> {
+        <X509CrlRef as PartialOrd<X509CrlRef>>::partial_cmp(self, other)
+    }
+}
+
+impl PartialEq for X509CrlRef {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other) == cmp::Ordering::Equal
+    }
+}
+
+impl PartialEq<X509Crl> for X509CrlRef {
+    fn eq(&self, other: &X509Crl) -> bool {
+        <X509CrlRef as PartialEq<X509CrlRef>>::eq(self, other)
+    }
+}
+impl Eq for X509CrlRef {}
 
 /// The result of peer certificate verification.
 #[derive(Copy, Clone, PartialEq, Eq)]
