@@ -54,6 +54,7 @@ mod tests;
 ///
 /// # Safety
 /// The value of NID and Output must match those in OpenSSL so that
+/// `Output::from_ptr_opt(*_get_ext_d2i(*, NID, ...))` is valid.
 pub unsafe trait ExtensionType {
     const NID: Nid;
     type Output: ForeignType;
