@@ -790,6 +790,28 @@ mod tests {
     }
 
     #[test]
+    fn integer_to_owned() {
+        let a = Asn1Integer::from_bn(&BigNum::from_dec_str("42").unwrap()).unwrap();
+        let b = a.to_owned().unwrap();
+        assert_eq!(
+            a.to_bn().unwrap().to_dec_str().unwrap().to_string(),
+            b.to_bn().unwrap().to_dec_str().unwrap().to_string(),
+        );
+        assert_ne!(a.as_ptr(), b.as_ptr());
+    }
+
+    #[test]
+    fn integer_cmp() {
+        let a = Asn1Integer::from_bn(&BigNum::from_dec_str("42").unwrap()).unwrap();
+        let b = Asn1Integer::from_bn(&BigNum::from_dec_str("42").unwrap()).unwrap();
+        let c = Asn1Integer::from_bn(&BigNum::from_dec_str("43").unwrap()).unwrap();
+        assert!(a == b);
+        assert!(a != c);
+        assert!(a < c);
+        assert!(c > b);
+    }
+
+    #[test]
     fn object_from_str() {
         let object = Asn1Object::from_str("2.16.840.1.101.3.4.2.1").unwrap();
         assert_eq!(object.nid(), Nid::SHA256);
