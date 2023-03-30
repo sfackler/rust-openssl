@@ -1166,7 +1166,7 @@ mod test {
         assert_eq!(nid.long_name().unwrap(), "foobar");
 
         // Due to a bug in OpenSSL 3.1.0, this test crashes on Windows
-        if !cfg(ossl310) {
+        if !cfg!(ossl310) {
             let invalid_oid = Nid::create("invalid_oid", "invalid", "invalid");
             assert!(
                 invalid_oid.is_err(),
