@@ -4,7 +4,6 @@
     clippy::unusual_byte_groupings
 )]
 
-extern crate autocfg;
 #[cfg(feature = "bindgen")]
 extern crate bindgen;
 extern crate cc;
@@ -74,8 +73,6 @@ fn check_ssl_kind() {
 }
 
 fn main() {
-    check_rustc_versions();
-
     check_ssl_kind();
 
     let target = env::var("TARGET").unwrap();
@@ -131,14 +128,6 @@ fn main() {
         println!("cargo:rustc-link-lib=dylib=crypt32");
         println!("cargo:rustc-link-lib=dylib=ws2_32");
         println!("cargo:rustc-link-lib=dylib=advapi32");
-    }
-}
-
-fn check_rustc_versions() {
-    let cfg = autocfg::new();
-
-    if cfg.probe_rustc_version(1, 31) {
-        println!("cargo:rustc-cfg=const_fn");
     }
 }
 
