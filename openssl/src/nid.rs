@@ -1165,10 +1165,13 @@ mod test {
         assert_eq!(nid.short_name().unwrap(), "foo");
         assert_eq!(nid.long_name().unwrap(), "foobar");
 
-        let invalid_oid = Nid::create("invalid_oid", "invalid", "invalid");
-        assert!(
-            invalid_oid.is_err(),
-            "invalid_oid should not return a valid value"
-        );
+        // Due to a bug in OpenSSL 3.1.0, this test crashes on Windows
+        if !cfg(ossl310) {
+            let invalid_oid = Nid::create("invalid_oid", "invalid", "invalid");
+            assert!(
+                invalid_oid.is_err(),
+                "invalid_oid should not return a valid value"
+            );
+        }
     }
 }
