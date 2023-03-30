@@ -21,10 +21,10 @@ use crate::hash::MessageDigest;
 use crate::ocsp::{OcspResponse, OcspResponseStatus};
 use crate::pkey::PKey;
 use crate::srtp::SrtpProfileId;
-use crate::ssl;
 use crate::ssl::test::server::Server;
 #[cfg(any(ossl110, ossl111, libressl261))]
 use crate::ssl::SslVersion;
+use crate::ssl::{self, NameType, SslConnectorBuilder};
 #[cfg(ossl111)]
 use crate::ssl::{ClientHelloResponse, ExtensionContext};
 use crate::ssl::{
@@ -765,6 +765,61 @@ fn connector_can_disable_verify() {
         .connect("fizzbuzz.com", s)
         .unwrap();
     s.read_exact(&mut [0]).unwrap();
+}
+
+#[test]
+fn connector_does_use_sni_with_dnsnames() {
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
+
+    let mut builder = Server::builder();
+    builder.ctx().set_servername_callback(|ssl, _| {
+        assert_eq!(ssl.servername(NameType::HOST_NAME), Some("foobar.com"));
+        CALLED_BACK.store(true, Ordering::SeqCst);
+        Ok(())
+    });
+    let server = builder.build();
+
+    let mut connector = SslConnector::builder(SslMethod::tls()).unwrap();
+    connector.set_ca_file("test/root-ca.pem").unwrap();
+
+    let s = server.connect_tcp();
+    let mut s = connector
+        .build()
+        .configure()
+        .unwrap()
+        .connect("foobar.com", s)
+        .unwrap();
+    s.read_exact(&mut [0]).unwrap();
+
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
+}
+
+#[test]
+fn connector_doesnt_use_sni_with_ips() {
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
+
+    let mut builder = Server::builder();
+    builder.ctx().set_servername_callback(|ssl, _| {
+        assert_eq!(ssl.servername(NameType::HOST_NAME), None);
+        CALLED_BACK.store(true, Ordering::SeqCst);
+        Ok(())
+    });
+    let server = builder.build();
+
+    let mut connector = SslConnector::builder(SslMethod::tls()).unwrap();
+    // The server's cert isn't issued for 127.0.0.1 but we don't care for this test.
+    connector.set_verify(SslVerifyMode::NONE);
+
+    let s = server.connect_tcp();
+    let mut s = connector
+        .build()
+        .configure()
+        .unwrap()
+        .connect("127.0.0.1", s)
+        .unwrap();
+    s.read_exact(&mut [0]).unwrap();
+
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
 fn test_mozilla_server(new: fn(SslMethod) -> Result<SslAcceptorBuilder, ErrorStack>) {

@@ -11,6 +11,7 @@ use crate::ssl::{
     SslOptions, SslRef, SslStream, SslVerifyMode,
 };
 use crate::version;
+use std::net::IpAddr;
 
 const FFDHE_2048: &str = "
 -----BEGIN DH PARAMETERS-----
@@ -177,9 +178,9 @@ impl ConnectConfiguration {
 
     /// Returns an `Ssl` configured to connect to the provided domain.
     ///
-    /// The domain is used for SNI and hostname verification if enabled.
+    /// The domain is used for SNI (if it is not an IP address) and hostname verification if enabled.
     pub fn into_ssl(mut self, domain: &str) -> Result<Ssl, ErrorStack> {
-        if self.sni {
+        if self.sni && domain.parse::<IpAddr>().is_err() {
             self.ssl.set_hostname(domain)?;
         }
 
