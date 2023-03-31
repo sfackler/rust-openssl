@@ -578,6 +578,7 @@ impl Asn1StringRef {
     /// ```
     ///
     #[corresponds(ASN1_STRING_set)]
+    #[allow(clippy::useless_conversion)]
     pub fn set(&mut self, value: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             let value_len = value.len();
