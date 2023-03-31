@@ -21,10 +21,10 @@ use crate::hash::MessageDigest;
 use crate::ocsp::{OcspResponse, OcspResponseStatus};
 use crate::pkey::PKey;
 use crate::srtp::SrtpProfileId;
-use crate::ssl;
 use crate::ssl::test::server::Server;
 #[cfg(any(ossl110, ossl111, libressl261))]
 use crate::ssl::SslVersion;
+use crate::ssl::{self, NameType, SslConnectorBuilder};
 #[cfg(ossl111)]
 use crate::ssl::{ClientHelloResponse, ExtensionContext};
 use crate::ssl::{
@@ -84,17 +84,21 @@ fn verify_trusted_with_set_cert() {
 
 #[test]
 fn verify_untrusted_callback_override_ok() {
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
+
     let server = Server::builder().build();
 
     let mut client = server.client();
     client
         .ctx()
         .set_verify_callback(SslVerifyMode::PEER, |_, x509| {
+            CALLED_BACK.store(true, Ordering::SeqCst);
             assert!(x509.current_cert().is_some());
             true
         });
 
     client.connect();
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
 #[test]
@@ -113,6 +117,8 @@ fn verify_untrusted_callback_override_bad() {
 
 #[test]
 fn verify_trusted_callback_override_ok() {
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
+
     let server = Server::builder().build();
 
     let mut client = server.client();
@@ -120,11 +126,13 @@ fn verify_trusted_callback_override_ok() {
     client
         .ctx()
         .set_verify_callback(SslVerifyMode::PEER, |_, x509| {
+            CALLED_BACK.store(true, Ordering::SeqCst);
             assert!(x509.current_cert().is_some());
             true
         });
 
     client.connect();
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
 #[test]
@@ -144,21 +152,27 @@ fn verify_trusted_callback_override_bad() {
 
 #[test]
 fn verify_callback_load_certs() {
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
+
     let server = Server::builder().build();
 
     let mut client = server.client();
     client
         .ctx()
         .set_verify_callback(SslVerifyMode::PEER, |_, x509| {
+            CALLED_BACK.store(true, Ordering::SeqCst);
             assert!(x509.current_cert().is_some());
             true
         });
 
     client.connect();
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
 #[test]
 fn verify_trusted_get_error_ok() {
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
+
     let server = Server::builder().build();
 
     let mut client = server.client();
@@ -166,11 +180,13 @@ fn verify_trusted_get_error_ok() {
     client
         .ctx()
         .set_verify_callback(SslVerifyMode::PEER, |_, x509| {
+            CALLED_BACK.store(true, Ordering::SeqCst);
             assert_eq!(x509.error(), X509VerifyResult::OK);
             true
         });
 
     client.connect();
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
 #[test]
@@ -469,8 +485,11 @@ fn test_alpn_server_select_none_fatal() {
 #[test]
 #[cfg(any(ossl102, libressl261))]
 fn test_alpn_server_select_none() {
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
+
     let mut server = Server::builder();
     server.ctx().set_alpn_select_callback(|_, client| {
+        CALLED_BACK.store(true, Ordering::SeqCst);
         ssl::select_next_proto(b"\x08http/1.1\x08spdy/3.1", client).ok_or(ssl::AlpnError::NOACK)
     });
     let server = server.build();
@@ -479,6 +498,7 @@ fn test_alpn_server_select_none() {
     client.ctx().set_alpn_protos(b"\x06http/2").unwrap();
     let s = client.connect();
     assert_eq!(None, s.ssl().selected_alpn_protocol());
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
 #[test]
@@ -595,7 +615,7 @@ fn refcount_ssl_context() {
 
     {
         let new_ctx_a = SslContext::builder(SslMethod::tls()).unwrap().build();
-        let _new_ctx_b = ssl.set_ssl_context(&new_ctx_a);
+        ssl.set_ssl_context(&new_ctx_a).unwrap();
     }
 }
 
@@ -731,7 +751,7 @@ fn connector_no_hostname_still_verifies() {
 }
 
 #[test]
-fn connector_no_hostname_can_disable_verify() {
+fn connector_can_disable_verify() {
     let server = Server::builder().build();
 
     let mut connector = SslConnector::builder(SslMethod::tls()).unwrap();
@@ -742,10 +762,64 @@ fn connector_no_hostname_can_disable_verify() {
     let mut s = connector
         .configure()
         .unwrap()
-        .verify_hostname(false)
+        .connect("fizzbuzz.com", s)
+        .unwrap();
+    s.read_exact(&mut [0]).unwrap();
+}
+
+#[test]
+fn connector_does_use_sni_with_dnsnames() {
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
+
+    let mut builder = Server::builder();
+    builder.ctx().set_servername_callback(|ssl, _| {
+        assert_eq!(ssl.servername(NameType::HOST_NAME), Some("foobar.com"));
+        CALLED_BACK.store(true, Ordering::SeqCst);
+        Ok(())
+    });
+    let server = builder.build();
+
+    let mut connector = SslConnector::builder(SslMethod::tls()).unwrap();
+    connector.set_ca_file("test/root-ca.pem").unwrap();
+
+    let s = server.connect_tcp();
+    let mut s = connector
+        .build()
+        .configure()
+        .unwrap()
         .connect("foobar.com", s)
         .unwrap();
     s.read_exact(&mut [0]).unwrap();
+
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
+}
+
+#[test]
+fn connector_doesnt_use_sni_with_ips() {
+    static CALLED_BACK: AtomicBool = AtomicBool::new(false);
+
+    let mut builder = Server::builder();
+    builder.ctx().set_servername_callback(|ssl, _| {
+        assert_eq!(ssl.servername(NameType::HOST_NAME), None);
+        CALLED_BACK.store(true, Ordering::SeqCst);
+        Ok(())
+    });
+    let server = builder.build();
+
+    let mut connector = SslConnector::builder(SslMethod::tls()).unwrap();
+    // The server's cert isn't issued for 127.0.0.1 but we don't care for this test.
+    connector.set_verify(SslVerifyMode::NONE);
+
+    let s = server.connect_tcp();
+    let mut s = connector
+        .build()
+        .configure()
+        .unwrap()
+        .connect("127.0.0.1", s)
+        .unwrap();
+    s.read_exact(&mut [0]).unwrap();
+
+    assert!(CALLED_BACK.load(Ordering::SeqCst));
 }
 
 fn test_mozilla_server(new: fn(SslMethod) -> Result<SslAcceptorBuilder, ErrorStack>) {

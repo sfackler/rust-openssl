@@ -1120,7 +1120,7 @@ impl SslContextBuilder {
 
     /// Sets the minimum supported protocol version.
     ///
-    /// A value of `None` will enable protocol versions down the the lowest version supported by
+    /// A value of `None` will enable protocol versions down to the lowest version supported by
     /// OpenSSL.
     ///
     /// Requires OpenSSL 1.1.0 or LibreSSL 2.6.1 or newer.
@@ -1138,7 +1138,7 @@ impl SslContextBuilder {
 
     /// Sets the maximum supported protocol version.
     ///
-    /// A value of `None` will enable protocol versions down the the highest version supported by
+    /// A value of `None` will enable protocol versions up to the highest version supported by
     /// OpenSSL.
     ///
     /// Requires OpenSSL 1.1.0 or or LibreSSL 2.6.1 or newer.
@@ -1156,7 +1156,7 @@ impl SslContextBuilder {
 
     /// Gets the minimum supported protocol version.
     ///
-    /// A value of `None` indicates that all versions down the the lowest version supported by
+    /// A value of `None` indicates that all versions down to the lowest version supported by
     /// OpenSSL are enabled.
     ///
     /// Requires OpenSSL 1.1.0g or LibreSSL 2.7.0 or newer.
@@ -1175,7 +1175,7 @@ impl SslContextBuilder {
 
     /// Gets the maximum supported protocol version.
     ///
-    /// A value of `None` indicates that all versions down the the highest version supported by
+    /// A value of `None` indicates that all versions up to the highest version supported by
     /// OpenSSL are enabled.
     ///
     /// Requires OpenSSL 1.1.0g or LibreSSL 2.7.0 or newer.
@@ -2881,6 +2881,10 @@ impl SslRef {
                 response.len() as c_long,
             ) as c_int)
             .map(|_| ())
+            .map_err(|e| {
+                ffi::OPENSSL_free(p);
+                e
+            })
         }
     }
 
@@ -3219,7 +3223,7 @@ impl SslRef {
 
     /// Sets the minimum supported protocol version.
     ///
-    /// A value of `None` will enable protocol versions down the the lowest version supported by
+    /// A value of `None` will enable protocol versions down to the lowest version supported by
     /// OpenSSL.
     ///
     /// Requires OpenSSL 1.1.0 or LibreSSL 2.6.1 or newer.
@@ -3237,7 +3241,7 @@ impl SslRef {
 
     /// Sets the maximum supported protocol version.
     ///
-    /// A value of `None` will enable protocol versions down the the highest version supported by
+    /// A value of `None` will enable protocol versions up to the highest version supported by
     /// OpenSSL.
     ///
     /// Requires OpenSSL 1.1.0 or or LibreSSL 2.6.1 or newer.

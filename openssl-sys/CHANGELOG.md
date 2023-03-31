@@ -2,6 +2,46 @@
 
 ## [Unreleased]
 
+## [v0.9.83] - 2023-03-23
+
+### Fixed
+
+* Fixed version checks for LibreSSL.
+
+### Added
+
+* Added `i2d_X509_EXTENSION`.
+* Added `GENERAL_NAME_new`.
+
+## [v0.9.82] - 2023-03-19
+
+### Added
+
+* Added support for LibreSSL 3.7.1.
+* Added support for X25519 and Ed25519 on LibreSSL and BoringSSL.
+
+## [v0.9.81] - 2023-03-14
+
+### Fixed
+
+Fixed builds against OpenSSL built with `no-cast`.
+
+### Added
+
+* Added experimental bindgen support for BoringSSL.
+* Added `X509_VERIFY_PARAM_set_auth_level`, `X509_VERIFY_PARAM_get_auth_level`, and `X509_VERIFY_PARAM_set_purpose`.
+* Added `X509_PURPOSE_*` consts.
+* Added `X509_NAME_add_entry`.
+* Added `X509_load_crl_file`.
+* Added `SSL_set_cipher_list`, `SSL_set_ssl_method`, `SSL_use_PrivateKey_file`, `SSL_use_PrivateKey`, `SSL_use_certificate`, `SSL_use_certificate_chain_file`, `SSL_set_client_CA_list`, `SSL_add_client_CA`, and `SSL_set0_verify_cert_store`.
+* Added `X509_PURPOSE`, `X509_STORE_set_purpose`, and `X509_STORE_set_trust`.
+* Added `SSL_CTX_set_num_tickets`, `SSL_set_num_tickets`, `SSL_CTX_get_num_tickets`, and `SSL_get_num_tickets`.
+* Added `CMS_verify`.
+
+### Removed
+
+* Removed an unnecessary link to libatomic for 32-bit android targets.
+
 ## [v0.9.80] - 2022-12-20
 
 ### Fixed
@@ -370,7 +410,10 @@
 * Added `X509_verify` and `X509_REQ_verify`.
 * Added `EVP_MD_type` and `EVP_GROUP_get_curve_name`.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.80..master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.83..master
+[v0.9.83]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.82...openssl-sys-v0.9.83
+[v0.9.82]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.81...openssl-sys-v0.9.82
+[v0.9.81]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.80...openssl-sys-v0.9.81
 [v0.9.80]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.79...openssl-sys-v0.9.80
 [v0.9.79]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.78...openssl-sys-v0.9.79
 [v0.9.78]: https://github.com/sfackler/rust-openssl/compare/openssl-sys-v0.9.77...openssl-sys-v0.9.78

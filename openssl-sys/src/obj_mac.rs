@@ -920,12 +920,16 @@ pub const NID_aes_192_cbc_hmac_sha1: c_int = 917;
 pub const NID_aes_256_cbc_hmac_sha1: c_int = 918;
 #[cfg(ossl111)]
 pub const NID_X25519: c_int = 1034;
+#[cfg(libressl370)]
+pub const NID_X25519: c_int = 950;
 #[cfg(ossl111)]
 pub const NID_X448: c_int = 1035;
 #[cfg(ossl110)]
 pub const NID_hkdf: c_int = 1036;
 #[cfg(ossl111)]
 pub const NID_ED25519: c_int = 1087;
+#[cfg(libressl370)]
+pub const NID_ED25519: c_int = 952;
 #[cfg(ossl111)]
 pub const NID_ED448: c_int = 1088;
 #[cfg(ossl111)]

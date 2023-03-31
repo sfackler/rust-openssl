@@ -27,7 +27,6 @@
 use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_char, c_int, c_long, time_t};
-#[cfg(ossl102)]
 use std::cmp::Ordering;
 use std::ffi::CString;
 use std::fmt;
@@ -714,6 +713,23 @@ impl Asn1Integer {
     }
 }
 
+impl Ord for Asn1Integer {
+    fn cmp(&self, other: &Self) -> Ordering {
+        Asn1IntegerRef::cmp(self, other)
+    }
+}
+impl PartialOrd for Asn1Integer {
+    fn partial_cmp(&self, other: &Asn1Integer) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Eq for Asn1Integer {}
+impl PartialEq for Asn1Integer {
+    fn eq(&self, other: &Asn1Integer) -> bool {
+        Asn1IntegerRef::eq(self, other)
+    }
+}
+
 impl Asn1IntegerRef {
     #[allow(missing_docs, clippy::unnecessary_cast)]
     #[deprecated(since = "0.10.6", note = "use to_bn instead")]
@@ -737,6 +753,30 @@ impl Asn1IntegerRef {
     #[corresponds(ASN1_INTEGER_set)]
     pub fn set(&mut self, value: i32) -> Result<(), ErrorStack> {
         unsafe { cvt(ffi::ASN1_INTEGER_set(self.as_ptr(), value as c_long)).map(|_| ()) }
+    }
+
+    /// Creates a new Asn1Integer with the same value.
+    #[corresponds(ASN1_INTEGER_dup)]
+    pub fn to_owned(&self) -> Result<Asn1Integer, ErrorStack> {
+        unsafe { cvt_p(ffi::ASN1_INTEGER_dup(self.as_ptr())).map(|p| Asn1Integer::from_ptr(p)) }
+    }
+}
+
+impl Ord for Asn1IntegerRef {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let res = unsafe { ffi::ASN1_INTEGER_cmp(self.as_ptr(), other.as_ptr()) };
+        res.cmp(&0)
+    }
+}
+impl PartialOrd for Asn1IntegerRef {
+    fn partial_cmp(&self, other: &Asn1IntegerRef) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Eq for Asn1IntegerRef {}
+impl PartialEq for Asn1IntegerRef {
+    fn eq(&self, other: &Asn1IntegerRef) -> bool {
+        self.cmp(other) == Ordering::Equal
     }
 }
 
@@ -793,6 +833,10 @@ foreign_type_and_impl_send_sync! {
     pub struct Asn1Object;
     /// A reference to an [`Asn1Object`].
     pub struct Asn1ObjectRef;
+}
+
+impl Stackable for Asn1Object {
+    type StackType = ffi::stack_st_ASN1_OBJECT;
 }
 
 impl Asn1Object {
@@ -970,6 +1014,28 @@ mod tests {
         assert!(a_ref > c_ref);
         assert!(b_ref <= a_ref);
         assert!(c_ref < a_ref);
+    }
+
+    #[test]
+    fn integer_to_owned() {
+        let a = Asn1Integer::from_bn(&BigNum::from_dec_str("42").unwrap()).unwrap();
+        let b = a.to_owned().unwrap();
+        assert_eq!(
+            a.to_bn().unwrap().to_dec_str().unwrap().to_string(),
+            b.to_bn().unwrap().to_dec_str().unwrap().to_string(),
+        );
+        assert_ne!(a.as_ptr(), b.as_ptr());
+    }
+
+    #[test]
+    fn integer_cmp() {
+        let a = Asn1Integer::from_bn(&BigNum::from_dec_str("42").unwrap()).unwrap();
+        let b = Asn1Integer::from_bn(&BigNum::from_dec_str("42").unwrap()).unwrap();
+        let c = Asn1Integer::from_bn(&BigNum::from_dec_str("43").unwrap()).unwrap();
+        assert!(a == b);
+        assert!(a != c);
+        assert!(a < c);
+        assert!(c > b);
     }
 
     #[test]
