@@ -28,6 +28,7 @@ use cfg_if::cfg_if;
 use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_char, c_int, c_long, time_t};
 use std::cmp::Ordering;
+use std::convert::TryInto;
 use std::ffi::CString;
 use std::fmt;
 use std::ptr;
@@ -583,7 +584,7 @@ impl Asn1StringRef {
             cvt(ffi::ASN1_STRING_set(
                 self.as_ptr(),
                 value.as_ptr() as *mut _,
-                value_len as c_int,
+                (value_len as c_int).try_into().unwrap(),
             ))
             .map(|_| ())
         }
