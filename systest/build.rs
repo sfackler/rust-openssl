@@ -112,7 +112,7 @@ fn main() {
     cfg.skip_struct(|s| {
         s == "ProbeResult" ||
             s == "X509_OBJECT_data" || // inline union
-            s == "DIST_POINT_NAME_st_anon_union" // inline union
+            s == "DIST_POINT_NAME_st_anon_union" || // inline union
             s == "PKCS7_data" ||
             s == "ASN1_TYPE_value"
     });
