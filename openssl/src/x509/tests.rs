@@ -1145,3 +1145,30 @@ fn ipv6_as_subject_alternative_name_is_formatted_in_debug() {
         8u8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 128,
     ]);
 }
+
+#[test]
+fn test_dist_point() {
+    let cert = include_bytes!("../../test/certv3.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    let dps = cert.crl_distribution_points().unwrap();
+    let dp = dps.get(0).unwrap();
+    let dp_nm = dp.distpoint().unwrap();
+    let dp_gns = dp_nm.fullname().unwrap();
+    let dp_gn = dp_gns.get(0).unwrap();
+    assert_eq!(dp_gn.uri().unwrap(), "http://example.com/crl.pem");
+
+    let dp = dps.get(1).unwrap();
+    let dp_nm = dp.distpoint().unwrap();
+    let dp_gns = dp_nm.fullname().unwrap();
+    let dp_gn = dp_gns.get(0).unwrap();
+    assert_eq!(dp_gn.uri().unwrap(), "http://example.com/crl2.pem");
+    assert!(dps.get(2).is_none())
+}
+
+#[test]
+fn test_dist_point_null() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    assert!(cert.crl_distribution_points().is_none());
+}
