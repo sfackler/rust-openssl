@@ -877,10 +877,6 @@ impl Asn1Object {
     }
 }
 
-impl Stackable for Asn1Object {
-    type StackType = ffi::stack_st_ASN1_OBJECT;
-}
-
 impl Asn1ObjectRef {
     /// Returns the NID associated with this OID.
     pub fn nid(&self) -> Nid {

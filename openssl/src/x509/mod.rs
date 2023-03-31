@@ -26,7 +26,7 @@ use std::str;
 
 use crate::asn1::{
     Asn1BitStringRef, Asn1IntegerRef, Asn1Object, Asn1ObjectRef, Asn1OctetStringRef, Asn1String,
-    Asn1StringRef, Asn1TagValue, Asn1TimeRef, Asn1Type, Asn1TypeRef,
+    Asn1StringRef, Asn1TagValue, Asn1TimeRef, Asn1TypeRef,
 };
 #[cfg(ossl110)]
 use crate::bio::MemBio;
@@ -2077,7 +2077,7 @@ foreign_type_and_impl_send_sync! {
 impl GeneralName {
     unsafe fn new(
         type_: c_int,
-        asn1_type: Asn1Type,
+        asn1_type: Asn1TagValue,
         value: &[u8],
     ) -> Result<GeneralName, ErrorStack> {
         ffi::init();
@@ -2099,24 +2099,24 @@ impl GeneralName {
     }
 
     pub(crate) fn new_email(email: &[u8]) -> Result<GeneralName, ErrorStack> {
-        unsafe { GeneralName::new(ffi::GEN_EMAIL, Asn1Type::IA5STRING, email) }
+        unsafe { GeneralName::new(ffi::GEN_EMAIL, Asn1TagValue::IA5STRING, email) }
     }
 
     pub(crate) fn new_dns(dns: &[u8]) -> Result<GeneralName, ErrorStack> {
-        unsafe { GeneralName::new(ffi::GEN_DNS, Asn1Type::IA5STRING, dns) }
+        unsafe { GeneralName::new(ffi::GEN_DNS, Asn1TagValue::IA5STRING, dns) }
     }
 
     pub(crate) fn new_uri(uri: &[u8]) -> Result<GeneralName, ErrorStack> {
-        unsafe { GeneralName::new(ffi::GEN_URI, Asn1Type::IA5STRING, uri) }
+        unsafe { GeneralName::new(ffi::GEN_URI, Asn1TagValue::IA5STRING, uri) }
     }
 
     pub(crate) fn new_ip(ip: IpAddr) -> Result<GeneralName, ErrorStack> {
         match ip {
             IpAddr::V4(addr) => unsafe {
-                GeneralName::new(ffi::GEN_IPADD, Asn1Type::OCTET_STRING, &addr.octets())
+                GeneralName::new(ffi::GEN_IPADD, Asn1TagValue::OCTET_STRING, &addr.octets())
             },
             IpAddr::V6(addr) => unsafe {
-                GeneralName::new(ffi::GEN_IPADD, Asn1Type::OCTET_STRING, &addr.octets())
+                GeneralName::new(ffi::GEN_IPADD, Asn1TagValue::OCTET_STRING, &addr.octets())
             },
         }
     }
