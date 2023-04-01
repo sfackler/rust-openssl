@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [v0.10.49] - 2023-04-01
+
+### Fixed
+
+* `SslConnector` no longer sets the SNI extension when connecting to an IP address.
+
+### Added
+
+* Implemented `Ord`, `PartialOrd`, `Eq`, and `PartialEq` for `Asn1Integer` and `Asn1IntegerRef`.
+* Added `X509Ref::crl_distribution_points`, and `DistPoint`.
+
 ## [v0.10.48] - 2023-03-23
 
 ### Fixed
@@ -707,7 +718,8 @@
 
 Look at the [release tags] for information about older releases.
 
-[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.48...master
+[Unreleased]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.49...master
+[v0.10.49]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.48...openssl-v0.10.49
 [v0.10.48]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.47...openssl-v0.10.48
 [v0.10.47]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.46...openssl-v0.10.47
 [v0.10.46]: https://github.com/sfackler/rust-openssl/compare/openssl-v0.10.45...openssl-v0.10.46
