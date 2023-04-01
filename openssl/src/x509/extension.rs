@@ -18,9 +18,11 @@
 //! ```
 use std::fmt::Write;
 
+use crate::asn1::Asn1Object;
 use crate::error::ErrorStack;
 use crate::nid::Nid;
-use crate::x509::{X509Extension, X509v3Context};
+use crate::x509::{GeneralName, Stack, X509Extension, X509v3Context};
+use foreign_types::ForeignType;
 
 /// An extension which indicates whether a certificate is a CA certificate.
 pub struct BasicConstraints {
@@ -222,18 +224,7 @@ impl KeyUsage {
 /// for which the certificate public key can be used for.
 pub struct ExtendedKeyUsage {
     critical: bool,
-    server_auth: bool,
-    client_auth: bool,
-    code_signing: bool,
-    email_protection: bool,
-    time_stamping: bool,
-    ms_code_ind: bool,
-    ms_code_com: bool,
-    ms_ctl_sign: bool,
-    ms_sgc: bool,
-    ms_efs: bool,
-    ns_sgc: bool,
-    other: Vec<String>,
+    items: Vec<String>,
 }
 
 impl Default for ExtendedKeyUsage {
@@ -247,18 +238,7 @@ impl ExtendedKeyUsage {
     pub fn new() -> ExtendedKeyUsage {
         ExtendedKeyUsage {
             critical: false,
-            server_auth: false,
-            client_auth: false,
-            code_signing: false,
-            email_protection: false,
-            time_stamping: false,
-            ms_code_ind: false,
-            ms_code_com: false,
-            ms_ctl_sign: false,
-            ms_sgc: false,
-            ms_efs: false,
-            ns_sgc: false,
-            other: vec![],
+            items: vec![],
         }
     }
 
@@ -270,101 +250,74 @@ impl ExtendedKeyUsage {
 
     /// Sets the `serverAuth` flag to `true`.
     pub fn server_auth(&mut self) -> &mut ExtendedKeyUsage {
-        self.server_auth = true;
-        self
+        self.other("serverAuth")
     }
 
     /// Sets the `clientAuth` flag to `true`.
     pub fn client_auth(&mut self) -> &mut ExtendedKeyUsage {
-        self.client_auth = true;
-        self
+        self.other("clientAuth")
     }
 
     /// Sets the `codeSigning` flag to `true`.
     pub fn code_signing(&mut self) -> &mut ExtendedKeyUsage {
-        self.code_signing = true;
-        self
+        self.other("codeSigning")
     }
 
     /// Sets the `emailProtection` flag to `true`.
     pub fn email_protection(&mut self) -> &mut ExtendedKeyUsage {
-        self.email_protection = true;
-        self
+        self.other("emailProtection")
     }
 
     /// Sets the `timeStamping` flag to `true`.
     pub fn time_stamping(&mut self) -> &mut ExtendedKeyUsage {
-        self.time_stamping = true;
-        self
+        self.other("timeStamping")
     }
 
     /// Sets the `msCodeInd` flag to `true`.
     pub fn ms_code_ind(&mut self) -> &mut ExtendedKeyUsage {
-        self.ms_code_ind = true;
-        self
+        self.other("msCodeInd")
     }
 
     /// Sets the `msCodeCom` flag to `true`.
     pub fn ms_code_com(&mut self) -> &mut ExtendedKeyUsage {
-        self.ms_code_com = true;
-        self
+        self.other("msCodeCom")
     }
 
     /// Sets the `msCTLSign` flag to `true`.
     pub fn ms_ctl_sign(&mut self) -> &mut ExtendedKeyUsage {
-        self.ms_ctl_sign = true;
-        self
+        self.other("msCTLSign")
     }
 
     /// Sets the `msSGC` flag to `true`.
     pub fn ms_sgc(&mut self) -> &mut ExtendedKeyUsage {
-        self.ms_sgc = true;
-        self
+        self.other("msSGC")
     }
 
     /// Sets the `msEFS` flag to `true`.
     pub fn ms_efs(&mut self) -> &mut ExtendedKeyUsage {
-        self.ms_efs = true;
-        self
+        self.other("msEFS")
     }
 
     /// Sets the `nsSGC` flag to `true`.
     pub fn ns_sgc(&mut self) -> &mut ExtendedKeyUsage {
-        self.ns_sgc = true;
-        self
+        self.other("nsSGC")
     }
 
     /// Sets a flag not already defined.
     pub fn other(&mut self, other: &str) -> &mut ExtendedKeyUsage {
-        self.other.push(other.to_owned());
+        self.items.push(other.to_string());
         self
     }
 
     /// Return the `ExtendedKeyUsage` extension as an `X509Extension`.
     pub fn build(&self) -> Result<X509Extension, ErrorStack> {
-        let mut value = String::new();
-        let mut first = true;
-        append(&mut value, &mut first, self.critical, "critical");
-        append(&mut value, &mut first, self.server_auth, "serverAuth");
-        append(&mut value, &mut first, self.client_auth, "clientAuth");
-        append(&mut value, &mut first, self.code_signing, "codeSigning");
-        append(
-            &mut value,
-            &mut first,
-            self.email_protection,
-            "emailProtection",
-        );
-        append(&mut value, &mut first, self.time_stamping, "timeStamping");
-        append(&mut value, &mut first, self.ms_code_ind, "msCodeInd");
-        append(&mut value, &mut first, self.ms_code_com, "msCodeCom");
-        append(&mut value, &mut first, self.ms_ctl_sign, "msCTLSign");
-        append(&mut value, &mut first, self.ms_sgc, "msSGC");
-        append(&mut value, &mut first, self.ms_efs, "msEFS");
-        append(&mut value, &mut first, self.ns_sgc, "nsSGC");
-        for other in &self.other {
-            append(&mut value, &mut first, true, other);
+        let mut stack = Stack::new()?;
+        for item in &self.items {
+            stack.push(Asn1Object::from_str(item)?)?;
         }
-        X509Extension::new_nid(None, None, Nid::EXT_KEY_USAGE, &value)
+        unsafe {
+            X509Extension::new_internal(Nid::EXT_KEY_USAGE, self.critical, stack.as_ptr().cast())
+        }
     }
 }
 
@@ -463,11 +416,19 @@ impl AuthorityKeyIdentifier {
     }
 }
 
+enum RustGeneralName {
+    Dns(String),
+    Email(String),
+    Uri(String),
+    Ip(String),
+    Rid(String),
+}
+
 /// An extension that allows additional identities to be bound to the subject
 /// of the certificate.
 pub struct SubjectAlternativeName {
     critical: bool,
-    names: Vec<String>,
+    items: Vec<RustGeneralName>,
 }
 
 impl Default for SubjectAlternativeName {
@@ -481,7 +442,7 @@ impl SubjectAlternativeName {
     pub fn new() -> SubjectAlternativeName {
         SubjectAlternativeName {
             critical: false,
-            names: vec![],
+            items: vec![],
         }
     }
 
@@ -493,55 +454,73 @@ impl SubjectAlternativeName {
 
     /// Sets the `email` flag.
     pub fn email(&mut self, email: &str) -> &mut SubjectAlternativeName {
-        self.names.push(format!("email:{}", email));
+        self.items.push(RustGeneralName::Email(email.to_string()));
         self
     }
 
     /// Sets the `uri` flag.
     pub fn uri(&mut self, uri: &str) -> &mut SubjectAlternativeName {
-        self.names.push(format!("URI:{}", uri));
+        self.items.push(RustGeneralName::Uri(uri.to_string()));
         self
     }
 
     /// Sets the `dns` flag.
     pub fn dns(&mut self, dns: &str) -> &mut SubjectAlternativeName {
-        self.names.push(format!("DNS:{}", dns));
+        self.items.push(RustGeneralName::Dns(dns.to_string()));
         self
     }
 
     /// Sets the `rid` flag.
     pub fn rid(&mut self, rid: &str) -> &mut SubjectAlternativeName {
-        self.names.push(format!("RID:{}", rid));
+        self.items.push(RustGeneralName::Rid(rid.to_string()));
         self
     }
 
     /// Sets the `ip` flag.
     pub fn ip(&mut self, ip: &str) -> &mut SubjectAlternativeName {
-        self.names.push(format!("IP:{}", ip));
+        self.items.push(RustGeneralName::Ip(ip.to_string()));
         self
     }
 
     /// Sets the `dirName` flag.
-    pub fn dir_name(&mut self, dir_name: &str) -> &mut SubjectAlternativeName {
-        self.names.push(format!("dirName:{}", dir_name));
-        self
+    ///
+    /// Not currently actually supported, always panics.
+    #[deprecated = "dir_name is deprecated and always panics. Please file a bug if you have a use case for this."]
+    pub fn dir_name(&mut self, _dir_name: &str) -> &mut SubjectAlternativeName {
+        unimplemented!(
+            "This has not yet been adapted for the new internals. File a bug if you need this."
+        );
     }
 
     /// Sets the `otherName` flag.
-    pub fn other_name(&mut self, other_name: &str) -> &mut SubjectAlternativeName {
-        self.names.push(format!("otherName:{}", other_name));
-        self
+    ///
+    /// Not currently actually supported, always panics.
+    #[deprecated = "other_name is deprecated and always panics. Please file a bug if you have a use case for this."]
+    pub fn other_name(&mut self, _other_name: &str) -> &mut SubjectAlternativeName {
+        unimplemented!(
+            "This has not yet been adapted for the new internals. File a bug if you need this."
+        );
     }
 
     /// Return a `SubjectAlternativeName` extension as an `X509Extension`.
-    pub fn build(&self, ctx: &X509v3Context<'_>) -> Result<X509Extension, ErrorStack> {
-        let mut value = String::new();
-        let mut first = true;
-        append(&mut value, &mut first, self.critical, "critical");
-        for name in &self.names {
-            append(&mut value, &mut first, true, name);
+    pub fn build(&self, _ctx: &X509v3Context<'_>) -> Result<X509Extension, ErrorStack> {
+        let mut stack = Stack::new()?;
+        for item in &self.items {
+            let gn = match item {
+                RustGeneralName::Dns(s) => GeneralName::new_dns(s.as_bytes())?,
+                RustGeneralName::Email(s) => GeneralName::new_email(s.as_bytes())?,
+                RustGeneralName::Uri(s) => GeneralName::new_uri(s.as_bytes())?,
+                RustGeneralName::Ip(s) => {
+                    GeneralName::new_ip(s.parse().map_err(|_| ErrorStack::get())?)?
+                }
+                RustGeneralName::Rid(s) => GeneralName::new_rid(Asn1Object::from_str(s)?)?,
+            };
+            stack.push(gn)?;
         }
-        X509Extension::new_nid(None, Some(ctx), Nid::SUBJECT_ALT_NAME, &value)
+
+        unsafe {
+            X509Extension::new_internal(Nid::SUBJECT_ALT_NAME, self.critical, stack.as_ptr().cast())
+        }
     }
 }
 

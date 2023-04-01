@@ -1,9 +1,10 @@
+use super::super::*;
 use libc::*;
-use *;
 
 pub enum CONF_METHOD {}
 
 extern "C" {
+    pub fn GENERAL_NAME_new() -> *mut GENERAL_NAME;
     pub fn GENERAL_NAME_free(name: *mut GENERAL_NAME);
 }
 
@@ -101,4 +102,31 @@ extern "C" {
     pub fn X509_get_key_usage(x: *mut X509) -> u32;
     #[cfg(ossl110)]
     pub fn X509_get_extended_key_usage(x: *mut X509) -> u32;
+}
+
+#[repr(C)]
+pub struct DIST_POINT_NAME {
+    pub type_: c_int,
+    pub name: DIST_POINT_NAME_st_anon_union,
+    pub dpname: *mut X509_NAME,
+}
+
+#[repr(C)]
+pub union DIST_POINT_NAME_st_anon_union {
+    pub fullname: *mut stack_st_GENERAL_NAME,
+    pub relativename: *mut stack_st_X509_NAME_ENTRY,
+}
+
+#[repr(C)]
+pub struct DIST_POINT {
+    pub distpoint: *mut DIST_POINT_NAME,
+    pub reasons: *mut ASN1_BIT_STRING,
+    pub CRLissuer: *mut stack_st_GENERAL_NAME,
+    pub dp_reasons: c_int,
+}
+stack!(stack_st_DIST_POINT);
+
+extern "C" {
+    pub fn DIST_POINT_free(dist_point: *mut DIST_POINT);
+    pub fn DIST_POINT_NAME_free(dist_point: *mut DIST_POINT_NAME);
 }

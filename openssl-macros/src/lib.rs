@@ -1,3 +1,5 @@
+#![allow(clippy::uninlined_format_args)]
+
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
 use quote::quote;

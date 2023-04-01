@@ -24,7 +24,9 @@ use crate::x509::X509Builder;
 use crate::x509::X509PurposeId;
 #[cfg(any(ossl102, libressl261))]
 use crate::x509::X509PurposeRef;
-use crate::x509::{X509Name, X509Req, X509StoreContext, X509VerifyResult, X509};
+use crate::x509::{
+    CrlStatus, X509Crl, X509Extension, X509Name, X509Req, X509StoreContext, X509VerifyResult, X509,
+};
 use hex::{self, FromHex};
 #[cfg(any(ossl102, libressl261))]
 use libc::time_t;
@@ -286,6 +288,60 @@ fn x509_builder() {
 }
 
 #[test]
+fn x509_extension_new() {
+    assert!(X509Extension::new(None, None, "crlDistributionPoints", "section").is_err());
+    assert!(X509Extension::new(None, None, "proxyCertInfo", "").is_err());
+    assert!(X509Extension::new(None, None, "certificatePolicies", "").is_err());
+    assert!(X509Extension::new(None, None, "subjectAltName", "dirName:section").is_err());
+}
+
+#[test]
+fn x509_extension_to_der() {
+    let builder = X509::builder().unwrap();
+
+    for (ext, expected) in [
+        (
+            BasicConstraints::new().critical().ca().build().unwrap(),
+            b"0\x0f\x06\x03U\x1d\x13\x01\x01\xff\x04\x050\x03\x01\x01\xff" as &[u8],
+        ),
+        (
+            SubjectAlternativeName::new()
+                .dns("example.com,DNS:example2.com")
+                .build(&builder.x509v3_context(None, None))
+                .unwrap(),
+            b"0'\x06\x03U\x1d\x11\x04 0\x1e\x82\x1cexample.com,DNS:example2.com",
+        ),
+        (
+            SubjectAlternativeName::new()
+                .rid("1.2.3.4")
+                .uri("https://example.com")
+                .build(&builder.x509v3_context(None, None))
+                .unwrap(),
+            b"0#\x06\x03U\x1d\x11\x04\x1c0\x1a\x88\x03*\x03\x04\x86\x13https://example.com",
+        ),
+        (
+            ExtendedKeyUsage::new()
+                .server_auth()
+                .other("2.999.1")
+                .other("clientAuth")
+                .build()
+                .unwrap(),
+            b"0\x22\x06\x03U\x1d%\x04\x1b0\x19\x06\x08+\x06\x01\x05\x05\x07\x03\x01\x06\x03\x887\x01\x06\x08+\x06\x01\x05\x05\x07\x03\x02",
+        ),
+    ] {
+        assert_eq!(&ext.to_der().unwrap(), expected);
+    }
+}
+
+#[test]
+fn eku_invalid_other() {
+    assert!(ExtendedKeyUsage::new()
+        .other("1.1.1.1.1,2.2.2.2.2")
+        .build()
+        .is_err());
+}
+
+#[test]
 fn x509_req_builder() {
     let pkey = pkey();
 
@@ -490,6 +546,7 @@ fn test_verify_cert_with_wrong_purpose_fails() {
 
     let store = store_bldr.build();
 
+    let expected_error = ffi::X509_V_ERR_INVALID_PURPOSE;
     let mut context = X509StoreContext::new().unwrap();
     assert_eq!(
         context
@@ -498,8 +555,8 @@ fn test_verify_cert_with_wrong_purpose_fails() {
                 Ok(c.error())
             })
             .unwrap()
-            .error_string(),
-        "unsupported certificate purpose"
+            .as_raw(),
+        expected_error
     )
 }
 
@@ -527,6 +584,30 @@ fn x509_ref_version_no_version_set() {
     assert_eq!(
         0, actual_version,
         "Default certificate version is incorrect",
+    );
+}
+
+#[test]
+fn test_load_crl() {
+    let ca = include_bytes!("../../test/crl-ca.crt");
+    let ca = X509::from_pem(ca).unwrap();
+
+    let crl = include_bytes!("../../test/test.crl");
+    let crl = X509Crl::from_der(crl).unwrap();
+    assert!(crl.verify(&ca.public_key().unwrap()).unwrap());
+
+    let cert = include_bytes!("../../test/subca.crt");
+    let cert = X509::from_pem(cert).unwrap();
+
+    let revoked = match crl.get_by_cert(&cert) {
+        CrlStatus::Revoked(revoked) => revoked,
+        _ => panic!("cert should be revoked"),
+    };
+
+    assert_eq!(
+        revoked.serial_number().to_bn().unwrap(),
+        cert.serial_number().to_bn().unwrap(),
+        "revoked and cert serial numbers should match"
     );
 }
 
@@ -613,6 +694,16 @@ fn test_name_cmp() {
     let issuer = cert.issuer_name();
     assert_eq!(Ordering::Equal, subject.try_cmp(subject).unwrap());
     assert_eq!(Ordering::Greater, subject.try_cmp(issuer).unwrap());
+}
+
+#[test]
+#[cfg(any(boringssl, ossl110, libressl270))]
+fn test_name_to_owned() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    let name = cert.subject_name();
+    let copied_name = name.to_owned().unwrap();
+    assert_eq!(Ordering::Equal, name.try_cmp(&copied_name).unwrap());
 }
 
 #[test]
@@ -818,7 +909,7 @@ fn test_set_purpose_fails_verification() {
     store_bldr.set_param(&verify_params).unwrap();
     let store = store_bldr.build();
 
-    let expected_error = "unsupported certificate purpose";
+    let expected_error = ffi::X509_V_ERR_INVALID_PURPOSE;
     let mut context = X509StoreContext::new().unwrap();
     assert_eq!(
         context
@@ -827,7 +918,7 @@ fn test_set_purpose_fails_verification() {
                 Ok(c.error())
             })
             .unwrap()
-            .error_string(),
+            .as_raw(),
         expected_error
     )
 }
@@ -857,4 +948,68 @@ fn test_load_crl_file_fail() {
     let lookup = store_bldr.add_lookup(X509Lookup::file()).unwrap();
     let res = lookup.load_crl_file("test/root-ca.pem", SslFiletype::PEM);
     assert!(res.is_err());
+}
+
+#[cfg(ossl110)]
+fn ipaddress_as_subject_alternative_name_is_formatted_in_debug<T>(expected_ip: T)
+where
+    T: Into<std::net::IpAddr>,
+{
+    let expected_ip = format!("{:?}", expected_ip.into());
+    let mut builder = X509Builder::new().unwrap();
+    let san = SubjectAlternativeName::new()
+        .ip(&expected_ip)
+        .build(&builder.x509v3_context(None, None))
+        .unwrap();
+    builder.append_extension(san).unwrap();
+    let cert = builder.build();
+    let actual_ip = cert
+        .subject_alt_names()
+        .into_iter()
+        .flatten()
+        .map(|n| format!("{:?}", *n))
+        .next()
+        .unwrap();
+    assert_eq!(actual_ip, expected_ip);
+}
+
+#[cfg(ossl110)]
+#[test]
+fn ipv4_as_subject_alternative_name_is_formatted_in_debug() {
+    ipaddress_as_subject_alternative_name_is_formatted_in_debug([8u8, 8, 8, 128]);
+}
+
+#[cfg(ossl110)]
+#[test]
+fn ipv6_as_subject_alternative_name_is_formatted_in_debug() {
+    ipaddress_as_subject_alternative_name_is_formatted_in_debug([
+        8u8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 128,
+    ]);
+}
+
+#[test]
+fn test_dist_point() {
+    let cert = include_bytes!("../../test/certv3.pem");
+    let cert = X509::from_pem(cert).unwrap();
+
+    let dps = cert.crl_distribution_points().unwrap();
+    let dp = dps.get(0).unwrap();
+    let dp_nm = dp.distpoint().unwrap();
+    let dp_gns = dp_nm.fullname().unwrap();
+    let dp_gn = dp_gns.get(0).unwrap();
+    assert_eq!(dp_gn.uri().unwrap(), "http://example.com/crl.pem");
+
+    let dp = dps.get(1).unwrap();
+    let dp_nm = dp.distpoint().unwrap();
+    let dp_gns = dp_nm.fullname().unwrap();
+    let dp_gn = dp_gns.get(0).unwrap();
+    assert_eq!(dp_gn.uri().unwrap(), "http://example.com/crl2.pem");
+    assert!(dps.get(2).is_none())
+}
+
+#[test]
+fn test_dist_point_null() {
+    let cert = include_bytes!("../../test/cert.pem");
+    let cert = X509::from_pem(cert).unwrap();
+    assert!(cert.crl_distribution_points().is_none());
 }

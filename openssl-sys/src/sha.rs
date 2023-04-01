@@ -1,6 +1,6 @@
+use super::*;
 use libc::*;
 use std::ptr;
-use *;
 
 #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
 pub const SHA_LBLOCK: c_int = 16;

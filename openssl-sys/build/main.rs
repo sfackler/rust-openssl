@@ -1,6 +1,9 @@
-#![allow(clippy::inconsistent_digit_grouping, clippy::unusual_byte_groupings)]
+#![allow(
+    clippy::inconsistent_digit_grouping,
+    clippy::uninlined_format_args,
+    clippy::unusual_byte_groupings
+)]
 
-extern crate autocfg;
 #[cfg(feature = "bindgen")]
 extern crate bindgen;
 extern crate cc;
@@ -19,7 +22,6 @@ mod cfgs;
 mod find_normal;
 #[cfg(feature = "vendored")]
 mod find_vendored;
-#[cfg(feature = "bindgen")]
 mod run_bindgen;
 
 #[derive(PartialEq)]
@@ -28,6 +30,7 @@ enum Version {
     Openssl11x,
     Openssl10x,
     Libressl,
+    Boringssl,
 }
 
 fn env_inner(name: &str) -> Option<OsString> {
@@ -63,16 +66,13 @@ fn find_openssl(target: &str) -> (Vec<PathBuf>, PathBuf) {
 fn check_ssl_kind() {
     if cfg!(feature = "unstable_boringssl") {
         println!("cargo:rustc-cfg=boringssl");
+        println!("cargo:boringssl=true");
         // BoringSSL does not have any build logic, exit early
         std::process::exit(0);
-    } else {
-        println!("cargo:rustc-cfg=openssl");
     }
 }
 
 fn main() {
-    check_rustc_versions();
-
     check_ssl_kind();
 
     let target = env::var("TARGET").unwrap();
@@ -131,19 +131,15 @@ fn main() {
     }
 }
 
-fn check_rustc_versions() {
-    let cfg = autocfg::new();
-
-    if cfg.probe_rustc_version(1, 31) {
-        println!("cargo:rustc-cfg=const_fn");
-    }
-}
-
 #[allow(clippy::let_and_return)]
 fn postprocess(include_dirs: &[PathBuf]) -> Version {
     let version = validate_headers(include_dirs);
-    #[cfg(feature = "bindgen")]
-    run_bindgen::run(&include_dirs);
+
+    // Never run bindgen for BoringSSL, if it was needed we already ran it.
+    if version != Version::Boringssl {
+        #[cfg(feature = "bindgen")]
+        run_bindgen::run(&include_dirs);
+    }
 
     version
 }
@@ -231,8 +227,14 @@ See rust-openssl documentation for more information:
     }
 
     if is_boringssl {
-        panic!("BoringSSL detected, but `unstable_boringssl` feature wasn't specified.")
+        println!("cargo:rustc-cfg=boringssl");
+        println!("cargo:boringssl=true");
+        run_bindgen::run_boringssl(include_dirs);
+        return Version::Boringssl;
     }
+
+    // We set this for any non-BoringSSL lib.
+    println!("cargo:rustc-cfg=openssl");
 
     for enabled in &enabled {
         println!("cargo:rustc-cfg=osslconf=\"{}\"", enabled);
@@ -281,6 +283,7 @@ See rust-openssl documentation for more information:
             (3, 6, 0) => ('3', '6', '0'),
             (3, 6, _) => ('3', '6', 'x'),
             (3, 7, 0) => ('3', '7', '0'),
+            (3, 7, 1) => ('3', '7', '1'),
             _ => version_error(),
         };
 
@@ -323,7 +326,7 @@ fn version_error() -> ! {
         "
 
 This crate is only compatible with OpenSSL (version 1.0.1 through 1.1.1, or 3.0.0), or LibreSSL 2.5
-through 3.7.0, but a different version of OpenSSL was found. The build is now aborting
+through 3.7.1, but a different version of OpenSSL was found. The build is now aborting
 due to this version mismatch.
 
 "

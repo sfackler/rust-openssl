@@ -1,5 +1,5 @@
+use super::*;
 use libc::*;
-use *;
 
 pub const EVP_MAX_MD_SIZE: c_uint = 64;
 
@@ -10,9 +10,9 @@ pub const EVP_PKEY_RSA: c_int = NID_rsaEncryption;
 pub const EVP_PKEY_DSA: c_int = NID_dsa;
 pub const EVP_PKEY_DH: c_int = NID_dhKeyAgreement;
 pub const EVP_PKEY_EC: c_int = NID_X9_62_id_ecPublicKey;
-#[cfg(ossl111)]
+#[cfg(any(ossl111, libressl370))]
 pub const EVP_PKEY_X25519: c_int = NID_X25519;
-#[cfg(ossl111)]
+#[cfg(any(ossl111, libressl370))]
 pub const EVP_PKEY_ED25519: c_int = NID_ED25519;
 #[cfg(ossl111)]
 pub const EVP_PKEY_X448: c_int = NID_X448;

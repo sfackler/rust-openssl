@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 cfg_if! {
     if #[cfg(ossl300)] {
@@ -18,36 +18,31 @@ extern "C" {
     pub fn RSA_size(k: *const RSA) -> c_int;
 
     #[cfg(any(ossl110, libressl273))]
-    pub fn RSA_set0_key(
-        r: *mut ::RSA,
-        n: *mut ::BIGNUM,
-        e: *mut ::BIGNUM,
-        d: *mut ::BIGNUM,
-    ) -> c_int;
+    pub fn RSA_set0_key(r: *mut RSA, n: *mut BIGNUM, e: *mut BIGNUM, d: *mut BIGNUM) -> c_int;
     #[cfg(any(ossl110, libressl273))]
-    pub fn RSA_set0_factors(r: *mut ::RSA, p: *mut ::BIGNUM, q: *mut ::BIGNUM) -> c_int;
+    pub fn RSA_set0_factors(r: *mut RSA, p: *mut BIGNUM, q: *mut BIGNUM) -> c_int;
     #[cfg(any(ossl110, libressl273))]
     pub fn RSA_set0_crt_params(
-        r: *mut ::RSA,
-        dmp1: *mut ::BIGNUM,
-        dmq1: *mut ::BIGNUM,
-        iqmp: *mut ::BIGNUM,
+        r: *mut RSA,
+        dmp1: *mut BIGNUM,
+        dmq1: *mut BIGNUM,
+        iqmp: *mut BIGNUM,
     ) -> c_int;
     #[cfg(any(ossl110, libressl273))]
     pub fn RSA_get0_key(
-        r: *const ::RSA,
-        n: *mut *const ::BIGNUM,
-        e: *mut *const ::BIGNUM,
-        d: *mut *const ::BIGNUM,
+        r: *const RSA,
+        n: *mut *const BIGNUM,
+        e: *mut *const BIGNUM,
+        d: *mut *const BIGNUM,
     );
     #[cfg(any(ossl110, libressl273))]
-    pub fn RSA_get0_factors(r: *const ::RSA, p: *mut *const ::BIGNUM, q: *mut *const ::BIGNUM);
+    pub fn RSA_get0_factors(r: *const RSA, p: *mut *const BIGNUM, q: *mut *const BIGNUM);
     #[cfg(any(ossl110, libressl273))]
     pub fn RSA_get0_crt_params(
-        r: *const ::RSA,
-        dmp1: *mut *const ::BIGNUM,
-        dmq1: *mut *const ::BIGNUM,
-        iqmp: *mut *const ::BIGNUM,
+        r: *const RSA,
+        dmp1: *mut *const BIGNUM,
+        dmq1: *mut *const BIGNUM,
+        iqmp: *mut *const BIGNUM,
     );
 
     #[cfg(not(ossl110))]
@@ -93,7 +88,7 @@ extern "C" {
         k: *mut RSA,
         pad: c_int,
     ) -> c_int;
-    pub fn RSA_check_key(r: *const ::RSA) -> c_int;
+    pub fn RSA_check_key(r: *const RSA) -> c_int;
     pub fn RSA_free(rsa: *mut RSA);
     pub fn RSA_up_ref(rsa: *mut RSA) -> c_int;
 

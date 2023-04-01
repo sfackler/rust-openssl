@@ -63,29 +63,11 @@ macro_rules! stack {
             } else {
                 #[repr(C)]
                 pub struct $t {
-                    pub stack: ::_STACK,
+                    pub stack: $crate::_STACK,
                 }
             }
         }
     };
-}
-
-#[cfg(const_fn)]
-macro_rules! const_fn {
-    ($(pub const fn $name:ident($($arg:ident: $t:ty),*) -> $ret:ty $b:block)*) => {
-        $(
-            pub const fn $name($($arg: $t),*) -> $ret $b
-        )*
-    }
-}
-
-#[cfg(not(const_fn))]
-macro_rules! const_fn {
-    ($(pub const fn $name:ident($($arg:ident: $t:ty),*) -> $ret:ty $b:block)*) => {
-        $(
-            pub fn $name($($arg: $t),*) -> $ret $b
-        )*
-    }
 }
 
 // openssl changes `*mut` to `*const` in certain parameters in certain versions;

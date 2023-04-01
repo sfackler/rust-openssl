@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 cfg_if! {
     if #[cfg(ossl300)] {
@@ -230,7 +230,7 @@ cfg_if! {
     }
 }
 cfg_if! {
-    if #[cfg(ossl111)] {
+    if #[cfg(any(ossl111, libressl370))] {
         extern "C" {
             pub fn EVP_DigestSign(
                 ctx: *mut EVP_MD_CTX,
@@ -344,9 +344,9 @@ extern "C" {
     #[cfg(ossl110)]
     pub fn EVP_aes_256_ocb() -> *const EVP_CIPHER;
     #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_CHACHA")))]
-    pub fn EVP_chacha20() -> *const ::EVP_CIPHER;
+    pub fn EVP_chacha20() -> *const EVP_CIPHER;
     #[cfg(all(ossl110, not(osslconf = "OPENSSL_NO_CHACHA")))]
-    pub fn EVP_chacha20_poly1305() -> *const ::EVP_CIPHER;
+    pub fn EVP_chacha20_poly1305() -> *const EVP_CIPHER;
     #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
     pub fn EVP_seed_cbc() -> *const EVP_CIPHER;
     #[cfg(not(osslconf = "OPENSSL_NO_SEED"))]
@@ -380,9 +380,9 @@ extern "C" {
     #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAMELLIA")))]
     pub fn EVP_camellia_256_ecb() -> *const EVP_CIPHER;
 
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAST")))]
     pub fn EVP_cast5_cfb64() -> *const EVP_CIPHER;
-    #[cfg(not(boringssl))]
+    #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_CAST")))]
     pub fn EVP_cast5_ecb() -> *const EVP_CIPHER;
 
     #[cfg(not(any(boringssl, osslconf = "OPENSSL_NO_IDEA")))]
@@ -566,7 +566,7 @@ const_ptr_api! {
 }
 
 cfg_if! {
-    if #[cfg(any(ossl111))] {
+    if #[cfg(any(ossl111, libressl370))] {
         extern "C" {
             pub fn EVP_PKEY_get_raw_public_key(
                 pkey: *const EVP_PKEY,

@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 extern "C" {
     pub fn SSL_get_servername(ssl: *const SSL, name_type: c_int) -> *const c_char;
@@ -17,7 +17,7 @@ extern "C" {
 
     #[cfg(ossl111)]
     pub fn SSL_export_keying_material_early(
-        s: *mut ::SSL,
+        s: *mut SSL,
         out: *mut c_uchar,
         olen: size_t,
         label: *const c_char,

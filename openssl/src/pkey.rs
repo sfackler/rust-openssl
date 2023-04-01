@@ -47,7 +47,7 @@ use crate::dh::Dh;
 use crate::dsa::Dsa;
 use crate::ec::EcKey;
 use crate::error::ErrorStack;
-#[cfg(ossl110)]
+#[cfg(any(ossl110, boringssl, libressl370))]
 use crate::pkey_ctx::PkeyCtx;
 use crate::rsa::Rsa;
 use crate::symm::Cipher;
@@ -89,11 +89,11 @@ impl Id {
     #[cfg(ossl110)]
     pub const HKDF: Id = Id(ffi::EVP_PKEY_HKDF);
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     pub const ED25519: Id = Id(ffi::EVP_PKEY_ED25519);
     #[cfg(ossl111)]
     pub const ED448: Id = Id(ffi::EVP_PKEY_ED448);
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     pub const X25519: Id = Id(ffi::EVP_PKEY_X25519);
     #[cfg(ossl111)]
     pub const X448: Id = Id(ffi::EVP_PKEY_X448);
@@ -252,7 +252,7 @@ where
     /// This function only works for algorithms that support raw public keys.
     /// Currently this is: [`Id::X25519`], [`Id::ED25519`], [`Id::X448`] or [`Id::ED448`].
     #[corresponds(EVP_PKEY_get_raw_public_key)]
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     pub fn raw_public_key(&self) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
             let mut len = 0;
@@ -303,7 +303,7 @@ where
     /// This function only works for algorithms that support raw private keys.
     /// Currently this is: [`Id::HMAC`], [`Id::X25519`], [`Id::ED25519`], [`Id::X448`] or [`Id::ED448`].
     #[corresponds(EVP_PKEY_get_raw_private_key)]
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     pub fn raw_private_key(&self) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
             let mut len = 0;
@@ -503,7 +503,7 @@ impl PKey<Private> {
         ctx.keygen()
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     fn generate_eddsa(id: Id) -> Result<PKey<Private>, ErrorStack> {
         let mut ctx = PkeyCtx::new_id(id)?;
         ctx.keygen_init()?;
@@ -533,7 +533,7 @@ impl PKey<Private> {
     /// assert_eq!(secret.len(), 32);
     /// # Ok(()) }
     /// ```
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     pub fn generate_x25519() -> Result<PKey<Private>, ErrorStack> {
         PKey::generate_eddsa(Id::X25519)
     }
@@ -587,7 +587,7 @@ impl PKey<Private> {
     /// assert_eq!(signature.len(), 64);
     /// # Ok(()) }
     /// ```
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     pub fn generate_ed25519() -> Result<PKey<Private>, ErrorStack> {
         PKey::generate_eddsa(Id::ED25519)
     }
@@ -737,7 +737,7 @@ impl PKey<Private> {
     ///
     /// Algorithm types that support raw private keys are HMAC, X25519, ED25519, X448 or ED448
     #[corresponds(EVP_PKEY_new_raw_private_key)]
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     pub fn private_key_from_raw_bytes(
         bytes: &[u8],
         key_type: Id,
@@ -778,7 +778,7 @@ impl PKey<Public> {
     ///
     /// Algorithm types that support raw public keys are X25519, ED25519, X448 or ED448
     #[corresponds(EVP_PKEY_new_raw_public_key)]
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     pub fn public_key_from_raw_bytes(
         bytes: &[u8],
         key_type: Id,
@@ -1084,7 +1084,7 @@ mod tests {
         assert_eq!(&g, dh_.generator());
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     fn test_raw_public_key(gen: fn() -> Result<PKey<Private>, ErrorStack>, key_type: Id) {
         // Generate a new key
         let key = gen().unwrap();
@@ -1100,7 +1100,7 @@ mod tests {
         );
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     fn test_raw_private_key(gen: fn() -> Result<PKey<Private>, ErrorStack>, key_type: Id) {
         // Generate a new key
         let key = gen().unwrap();
@@ -1111,26 +1111,30 @@ mod tests {
 
         // Compare the der encoding of the original and raw / restored public key
         assert_eq!(
-            key.private_key_to_der().unwrap(),
-            from_raw.private_key_to_der().unwrap()
+            key.private_key_to_pkcs8().unwrap(),
+            from_raw.private_key_to_pkcs8().unwrap()
         );
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     #[test]
     fn test_raw_public_key_bytes() {
         test_raw_public_key(PKey::generate_x25519, Id::X25519);
         test_raw_public_key(PKey::generate_ed25519, Id::ED25519);
+        #[cfg(all(not(boringssl), not(libressl370)))]
         test_raw_public_key(PKey::generate_x448, Id::X448);
+        #[cfg(all(not(boringssl), not(libressl370)))]
         test_raw_public_key(PKey::generate_ed448, Id::ED448);
     }
 
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, boringssl, libressl370))]
     #[test]
     fn test_raw_private_key_bytes() {
         test_raw_private_key(PKey::generate_x25519, Id::X25519);
         test_raw_private_key(PKey::generate_ed25519, Id::ED25519);
+        #[cfg(all(not(boringssl), not(libressl370)))]
         test_raw_private_key(PKey::generate_x448, Id::X448);
+        #[cfg(all(not(boringssl), not(libressl370)))]
         test_raw_private_key(PKey::generate_ed448, Id::ED448);
     }
 

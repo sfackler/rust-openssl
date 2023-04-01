@@ -1,5 +1,5 @@
+use super::super::*;
 use libc::*;
-use *;
 
 #[cfg(ossl300)]
 #[repr(C)]
