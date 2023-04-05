@@ -24,7 +24,7 @@ bssl-sys = { version = "0.1.0", optional = true }
 
 [build-dependencies]
 bindgen = { version = "0.64.0", optional = true, features = ["experimental"] }
-cc = "1.0"
+cc = "1.0.52"
 openssl-src = { version = "111", optional = true }
 pkg-config = "0.3.9"
 
